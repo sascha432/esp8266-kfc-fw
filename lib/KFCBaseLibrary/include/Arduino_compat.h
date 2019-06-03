@@ -2,16 +2,30 @@
  * Author: sascha_lammers@gmx.de
  */
 
+/**
+ * Quick and dirty library to compile ESP8266 code with MSVC++ as native win32 console app
+ */
+
 #pragma once
 
-#define forward_delete(iterator) ({ auto next = iterator + 1; delete *iterator; next; })
-#define reverse_delete(iterator) ({ auto next = iterator - 1; delete *iterator; next; })
+#define forward_delete(iterator)  \
+    ({                            \
+        auto next = iterator + 1; \
+        delete *iterator;         \
+        next;                     \
+    })
+#define reverse_delete(iterator)  \
+    ({                            \
+        auto prev = iterator - 1; \
+        delete *iterator;         \
+        prev;                     \
+    })
 
 #if defined(ESP32)
 
 #include <Arduino.h>
-#include <WiFi.h>
 #include <SPIFFS.h>
+#include <WiFi.h>
 
 #elif defined(ESP8266)
 
@@ -25,20 +39,26 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
+#include <winsock.h>
 #include <iostream>
-#include "winsock.h"
 
 #define F(str) str
 #define PSTR(str) str
 #define FPSTR(str) str
 #define snprintf_P snprintf
 #define sprintf_P sprintf
+
 typedef const char *PGM_P;
 class __FlashStringHelper;
+
 //#define FPSTR(pstr_pointer) (reinterpret_cast<const __FlashStringHelper *>(pstr_pointer))
 //#define F(string_literal) (FPSTR(PSTR(string_literal)))
+
 #define strcpy_P strcpy
 #define strncpy_P strncpy_s
+
+const char *str_P(const char *str, uint8_t index = 0);  // not the same function as in misc.cpp just a dummy
 
 #if DEBUG
 #define if_debug_printf(...) printf(__VA_ARGS__);
@@ -48,11 +68,18 @@ class __FlashStringHelper;
 #define if_debug_printf_P(...) ;
 #endif
 
+#define strcasecmp_P _stricmp
+#define strcmp_P _strcmp
+
+#define strdup _strdup
 void throwException(PGM_P message);
 
 uint16_t _crc16_update(uint16_t crc = ~0x0, const uint8_t a = 0);
 uint16_t crc16_calc(uint8_t const *data, size_t length);
 
+unsigned long millis();
+
+void delay(uint32_t time_ms);
 
 class Print;
 
@@ -276,6 +303,29 @@ class String : public std::string {
             pos = find(fromStr, pos + toStr.length());
         }
     }
+
+    unsigned char concat(const char *cstr, unsigned int length) {
+        if (!cstr) {
+            return 0;
+        }
+        if (length == 0) {
+            return 1;
+        }
+        this->append(cstr, length);
+        return length;
+    }
+
+    unsigned char concat(char c) {
+        this->append(1, c);
+        return 1;
+    }
+
+    bool startsWith(const String &str) {
+        if (length() < str.length()) {
+            return false;
+        }
+        return (strncmp(c_str(), str.c_str(), str.length()) == 0);
+    }
 };
 
 enum SeekMode { SeekSet = SEEK_SET, SeekCur = SEEK_CUR, SeekEnd = SEEK_END };
@@ -286,9 +336,11 @@ class Stream : public Print {
         _fp = nullptr;
     }
     Stream(FILE *fp) : _fp(fp) {
-        seek(0, SeekEnd);
-        _size = position();
-        seek(0);
+        if (fp) {
+            seek(0, SeekEnd);
+            _size = position();
+            seek(0);
+        }
     }
 
     FILE *getFile() {
@@ -328,8 +380,8 @@ class Stream : public Print {
 
     virtual int read() {
         if (!_fp) {
-			return -1;
-		}
+            return -1;
+        }
         uint8_t b;
         if (read(&b, sizeof(b)) != 1) {
             if (ferror(_fp)) {
@@ -350,12 +402,12 @@ class Stream : public Print {
     }
 
     int read(uint8_t *buffer, size_t len) {
-		uint8_t *ptr = buffer;
+        uint8_t *ptr = buffer;
         while (len--) {
             int ch = read();
             if (ch == -1) {
-				break;
-			}
+                break;
+            }
             *ptr++ = ch;
         }
         return ptr - buffer;
@@ -399,7 +451,7 @@ class Stream : public Print {
     size_t write(uint8_t data) {
         return write(&data, sizeof(data));
     }
-    virtual size_t write(uint8_t *data, size_t len) {
+    virtual size_t write(const uint8_t *data, size_t len) {
         size_t size = fwrite(data, 1, len, _fp);
         if (ferror(_fp)) {
             perror("write");
@@ -632,7 +684,7 @@ class Stdout : public Stream {
         _position = 0;
         _buffer = (uint8_t *)calloc(_size, 1);
     }
-	~Stdout() {
+    ~Stdout() {
         close();
     }
 
@@ -738,14 +790,69 @@ class FakeSerial : public Stdout {
     }
     void flush(void) override {
         fflush(stdout);
-	}
+    }
     virtual size_t write(uint8_t c) {
-		::printf("%c", c);
+        ::printf("%c", c);
         return 1;
     }
 };
 
 extern FakeSerial Serial;
+
+#pragma comment(lib, "Ws2_32.lib")
+
+class WiFiUDP : public Stream {
+   public:
+    WiFiUDP();
+    ~WiFiUDP();
+
+    int beginPacket(const char *host, uint16_t port);
+    int beginPacket(IPAddress ip, uint16_t port);
+    size_t write(uint8_t byte);
+    size_t write(const uint8_t *buffer, size_t size);
+    void flush();
+    int endPacket();
+
+   private:
+    int _beginPacket(uint16_t port);
+    void _clear();
+
+    int available() override {
+        return 0;
+    }
+    int read() override {
+        return -1;
+    }
+    int peek() override {
+        return -1;
+    }
+
+
+   private:
+    SOCKET _socket;
+    sockaddr_in _dst;
+    char *_buffer;
+    uint16_t _len;
+};
+
+class ESP8266WiFiClass {
+   public:
+    ESP8266WiFiClass() {
+        _isConnected = true;
+    }
+
+    bool isConnected() {
+        return _isConnected;
+    }
+    void setIsConnected(bool connected) {
+        _isConnected = connected;
+    }
+
+   private:
+    bool _isConnected;
+};
+
+extern ESP8266WiFiClass WiFi;
 
 #else
 

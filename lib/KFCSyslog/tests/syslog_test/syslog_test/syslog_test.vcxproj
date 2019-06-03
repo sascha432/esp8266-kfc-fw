@@ -153,12 +153,26 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\Arduino_compat.cpp" />
+    <ClCompile Include="..\..\..\src\Syslog.cpp" />
+    <ClCompile Include="..\..\..\src\SyslogFile.cpp" />
+    <ClCompile Include="..\..\..\src\SyslogFilter.cpp" />
+    <ClCompile Include="..\..\..\src\SyslogParameter.cpp" />
+    <ClCompile Include="..\..\..\src\SyslogQueue.cpp" />
     <ClCompile Include="..\..\..\src\SyslogStream.cpp" />
+    <ClCompile Include="..\..\..\src\SyslogTCP.cpp" />
+    <ClCompile Include="..\..\..\src\SyslogUDP.cpp" />
     <ClCompile Include="syslog_test.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\..\KFCBaseLibrary\include\Arduino_compat.h" />
+    <ClInclude Include="..\..\..\include\Syslog.h" />
+    <ClInclude Include="..\..\..\include\SyslogFile.h" />
+    <ClInclude Include="..\..\..\include\SyslogFilter.h" />
+    <ClInclude Include="..\..\..\include\SyslogParameter.h" />
+    <ClInclude Include="..\..\..\include\SyslogQueue.h" />
     <ClInclude Include="..\..\..\include\SyslogStream.h" />
+    <ClInclude Include="..\..\..\include\SyslogTCP.h" />
+    <ClInclude Include="..\..\..\include\SyslogUDP.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

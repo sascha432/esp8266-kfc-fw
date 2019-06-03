@@ -13,6 +13,18 @@ void throwException(PGM_P message) {
     exit(-1);
 }
 
+size_t strftime_P(char *buf, size_t size, PGM_P format, const tm *tm) {
+	return strftime(buf, size, str_P(FPSTR(format)), tm);
+}
+
+tm *timezone_localtime(const time_t *timer) {
+	static struct tm tm;
+	if (localtime_s(&tm, timer)) {
+        memset(&tm, 0, sizeof(tm));
+	}
+	return &tm;
+}
+
 uint16_t _crc16_update(uint16_t crc, const uint8_t a) {
     crc ^= a;
     for (uint8_t i = 0; i < 8; ++i) {
@@ -419,5 +431,23 @@ void WiFiUDP::_clear() {
 }
 
 ESP8266WiFiClass WiFi;
+
+void Dir::__test() {
+	Dir dir = SPIFFS.openDir("./");
+	while (dir.next()) {
+		if (dir.isFile()) {
+			printf("is_file: Dir::fileName() %s Dir::fileSize() %d\n", dir.fileName().c_str(), dir.fileSize());
+			File file = dir.openFile("r");
+			printf("File::size %d\n", file.size());
+			file.close();
+		} else if (dir.isDirectory()) {
+            printf("is_dir: Dir::fileName() %s\n", dir.fileName().c_str());
+		}
+	}
+}
+
+File Dir::openFile(const char *mode) {
+    return SPIFFS.open(fileName(), mode);
+}
 
 #endif

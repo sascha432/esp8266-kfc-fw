@@ -18,7 +18,7 @@ class SyslogFile : public Syslog {
     void transmit(const char *message, size_t length, SyslogCallback callback) override;
     bool canSend() override;
 
-    void _rotateLogfile(const String filename, size_t maxSize, uint16_t maxRotate);
+    void _rotateLogfile(const String filename, uint16_t maxRotate);
 
    private:
     String _filename;

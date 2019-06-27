@@ -32,7 +32,11 @@
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
 #include <ESP8266WiFiType.h>
+#include <WiFiUdp.h>
 #include <FS.h>
+
+#include "C:/Users/sascha/Documents/PlatformIO/Projects/kfc_fw/include/debug_helper.h"
+#include "C:/Users/sascha/Documents/PlatformIO/Projects/kfc_fw/include/misc.h"
 
 #elif _WIN32 || _WIN64
 
@@ -44,17 +48,32 @@
 #include <strsafe.h>
 #include <iostream>
 
-#define F(str) str
+//#define F(str) (reinterpret_cast<char *>(str))
 #define PSTR(str) str
 #define FPSTR(str) str
 #define snprintf_P snprintf
 #define sprintf_P sprintf
+#define strstr_P strstr
+#define strlen_P strlen
+#define pgm_read_byte(a) (*a)
+
+#ifndef WIFI_CB_EVENT_CONNECTED
+
+#define WIFI_CB_EVENT_CONNECTED        0x01
+#define WIFI_CB_EVENT_DISCONNECTED     0x02
+#define WIFI_CB_EVENT_MODE_CHANGE      0x04
+#define WIFI_CB_EVENT_ANY              (WIFI_CB_EVENT_CONNECTED|WIFI_CB_EVENT_DISCONNECTED|WIFI_CB_EVENT_MODE_CHANGE)
+
+typedef void(*WiFiEventFunc)(uint8_t event, void *payload);
+
+#endif
 
 typedef const char *PGM_P;
 class __FlashStringHelper;
 
-//#define FPSTR(pstr_pointer) (reinterpret_cast<const __FlashStringHelper *>(pstr_pointer))
-//#define F(string_literal) (FPSTR(PSTR(string_literal)))
+#define __FPSTR(pstr_pointer) (reinterpret_cast<const __FlashStringHelper *>(pstr_pointer))
+#define __PSTR(s) ((const char *)s)
+#define F(string_literal) (__FPSTR(__PSTR(string_literal)))
 
 #define strcpy_P strcpy
 #define strncpy_P strncpy_s
@@ -64,9 +83,11 @@ const char *str_P(const char *str, uint8_t index = 0);  // not the same function
 #if DEBUG
 #define if_debug_printf(...) printf(__VA_ARGS__);
 #define if_debug_printf_P(...) printf(__VA_ARGS__);
+#define debug_printf_P(...) printf(__VA_ARGS__);
 #else
 #define if_debug_printf(...) ;
 #define if_debug_printf_P(...) ;
+#define debug_printf_P(...) ;
 #endif
 
 #define strcasecmp_P _stricmp
@@ -74,11 +95,6 @@ const char *str_P(const char *str, uint8_t index = 0);  // not the same function
 
 #define strdup _strdup
 void throwException(PGM_P message);
-
-size_t strftime_P(char *buf, size_t size, PGM_P format, const struct tm *tm);
-tm *timezone_localtime(const time_t *timer);
-#define timezone_strftime_P strftime_P
-#define timezone_strftime strftime
 
 uint16_t _crc16_update(uint16_t crc = ~0x0, const uint8_t a = 0);
 uint16_t crc16_calc(uint8_t const *data, size_t length);
@@ -98,6 +114,8 @@ class Printable {
 #define HEX 16
 #define OCT 8
 #define BIN 2
+
+class String;
 
 class Print {
    private:
@@ -134,7 +152,7 @@ class Print {
     size_t printf(const char *format, ...);
     size_t printf_P(PGM_P format, ...);
     size_t print(const __FlashStringHelper *);
-    //    size_t print(const String &);
+    size_t print(const String &);
     size_t print(const char[]);
     size_t print(char);
     size_t print(unsigned char, int = DEC);
@@ -146,7 +164,7 @@ class Print {
     size_t print(const Printable &);
 
     size_t println(const __FlashStringHelper *);
-    //    size_t println(const String &s);
+    size_t println(const String &s);
     size_t println(const char[]);
     size_t println(char);
     size_t println(unsigned char, int = DEC);
@@ -221,6 +239,9 @@ class String : public std::string {
     }
     String(const char *str) : std::string(str) {
     }
+	String(const __FlashStringHelper *str) : std::string(reinterpret_cast<const char *>(str)) {
+
+	}
     int indexOf(const String &find, int index = 0) const {
         return find_first_of(find, index);
     }
@@ -338,6 +359,28 @@ class String : public std::string {
             return false;
         }
 		return strcmp(c_str() + length() - str.length(), str.c_str()) == 0;
+	}
+
+	String & operator += (String str) {
+		concat(str.c_str(), str.length());
+		return (*this);
+	}
+	String & operator += (char *str) {
+		concat(str, strlen(str));
+		return (*this);
+	}
+	String & operator += (const char *str) {
+		concat(str, strlen(str));
+		return (*this);
+	}
+	String & operator += (const char ch){
+		concat(ch);
+		return (*this);
+	}
+	String & operator += (const __FlashStringHelper *str) {
+		const char *ptr = reinterpret_cast<const char *>(str);
+		concat(ptr, strlen(ptr));
+		return (*this);
 	}
 };
 
@@ -461,6 +504,13 @@ class Stream : public Print {
             buf += (char)ch;
         }
         return buf;
+    }
+
+	virtual size_t readBytes(char *buffer, size_t length) {
+		return read((uint8_t *)buffer, length);
+	}
+    virtual size_t readBytes(uint8_t *buffer, size_t length) {
+        return readBytes((char *)buffer, length);
     }
 
     size_t write(char data) {
@@ -959,7 +1009,49 @@ class ESP8266WiFiClass {
     bool _isConnected;
 };
 
+class StringStream : public Stream {
+public:
+	StringStream(String &string);
+	virtual ~StringStream();
+
+	virtual int available() override;
+	virtual int read() override;
+	virtual int peek() override;
+	virtual size_t write(uint8_t data);
+
+private:
+	uint16_t _position;
+	String &_string;
+};
+
+class BufferStream;
+
+class HTTPClient {
+public:
+	HTTPClient();
+	virtual ~HTTPClient();
+
+	void begin(String url);
+	void end();
+
+	int GET();
+	size_t getSize();
+	Stream &getStream();
+
+private:
+	void _close();
+
+	SOCKET _socket;
+	String _url;
+	String _host;
+	uint16_t _port;
+	String _path;
+	BufferStream *_body;
+	int _httpCode;
+};
+
 extern ESP8266WiFiClass WiFi;
+extern String _sharedEmptyString;
 
 #else
 

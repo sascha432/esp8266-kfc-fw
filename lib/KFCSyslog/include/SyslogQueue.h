@@ -4,84 +4,38 @@
 
 #pragma once
 
-#include <Arduino_compat.h>
-#include "Syslog.h"
-
 #define SYSLOG_MEMORY_QUEUE_ITEM_SIZE sizeof(SyslogMemoryQueueItem) + 1
 
 typedef uint32_t SyslogQueueId_t;
 typedef uint16_t SyslogQueueIndex_t;
 
 class SyslogMemoryQueueItem {
-   public:
-    SyslogMemoryQueueItem() {
-        clear();
-    }
-    SyslogMemoryQueueItem(SyslogQueueId_t id, const String message, Syslog *syslog) {
-        _id = id;
-        _message = message;
-        _locked = 0;
-        _failureCount = 0;
-        _syslog = syslog;
-    }
+public:
+	SyslogMemoryQueueItem();
+	SyslogMemoryQueueItem(SyslogQueueId_t id, const String message, Syslog *syslog);
 
-    void clear() {
-        _id = 0;
-        _message = String();
-        _locked = 0;
-        _failureCount = 0;
-        _syslog = nullptr;
-    }
+	void clear();
 
-    void setId(SyslogQueueId_t id) {
-        _id = id;
-    }
-    SyslogQueueId_t getId() const {
-        return _id;
-    }
+	void setId(SyslogQueueId_t id);
+	SyslogQueueId_t getId() const;
 
-    void setMessage(const String message) {
-        _message = message;
-    }
-    const String &getMessage() const {
-        return _message;
-    }
+	void setMessage(const String message);
+	const String &getMessage() const;
 
-    void setSyslog(Syslog *syslog) {
-        _syslog = syslog;
-    }
-    bool isSyslog(Syslog *syslog) const {
-        return (syslog == nullptr || syslog == _syslog);
-    }
+	void setSyslog(Syslog *syslog);
+	Syslog *getSyslog();
+	bool isSyslog(Syslog *syslog) const;
 
-    bool lock() {
-        if (_locked) {
-            return false;
-        }
-        _locked = 1;
-        return true;
-    }
-    bool unlock() {
-        if (_locked) {
-            _locked = 0;
-            return true;
-        }
-        return false;
-    }
-    bool isLocked() const {
-        return !!_locked;
-    }
+	bool lock();
+	bool unlock();
+	bool isLocked() const;
 
-    uint8_t incrFailureCount() {
-        return ++_failureCount;
-    }
-    uint8_t getFailureCount() {
-        return _failureCount;
-    }
+	uint8_t incrFailureCount();
+	uint8_t getFailureCount();
 
     void transmit(SyslogCallback callback);
 
-   private:
+private:
     SyslogQueueId_t _id;
     String _message;
     Syslog *_syslog;
@@ -92,7 +46,7 @@ class SyslogMemoryQueueItem {
 class SyslogQueue;
 
 class SyslogQueueIterator {
-   public:
+public:
     SyslogQueueIterator(SyslogQueueIndex_t index, SyslogQueue *queue);
 
     SyslogQueueIterator &operator++();
@@ -102,15 +56,16 @@ class SyslogQueueIterator {
     bool operator=(const SyslogQueueIterator &item);
     SyslogMemoryQueueItem *operator*();
 
-   private:
+private:
     SyslogQueueIndex_t _index;
     SyslogQueue *_queue;
 };
 
 // Stores a single message in memory and supports only a single filter/destination
 class SyslogQueue {
-   public:
+public:
     SyslogQueue();
+    virtual ~SyslogQueue() {}
 
     virtual SyslogQueueId_t add(const String message, Syslog *syslog);
     virtual void remove(SyslogMemoryQueueItem *item, bool success);
@@ -122,7 +77,7 @@ class SyslogQueue {
 
     virtual void cleanUp();
 
-   private:
+private:
     SyslogMemoryQueueItem _item;
 };
 
@@ -130,7 +85,7 @@ typedef std::vector<SyslogMemoryQueueItem> SyslogMemoryQueueVector;
 
 // Stores multiple messages in memory to resend them if an error occurs. If it runs out of space, new messages are dropped
 class SyslogMemoryQueue : public SyslogQueue {
-   public:
+public:
     SyslogMemoryQueue(size_t maxSize);
 
     SyslogQueueId_t add(const String message, Syslog *syslog) override;
@@ -143,7 +98,7 @@ class SyslogMemoryQueue : public SyslogQueue {
 
     void cleanUp() override;
 
-   private:
+private:
     size_t _maxSize;
     size_t _curSize;
     SyslogQueueId_t _id;

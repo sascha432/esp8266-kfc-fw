@@ -2,19 +2,22 @@
  * Author: sascha_lammers@gmx.de
  */
 
+#include <Arduino_compat.h>
 #include <algorithm>
+#include "SyslogParameter.h"
+#include "Syslog.h"
 #include "SyslogQueue.h"
 
 SyslogQueue::SyslogQueue() {
 }
 
-SyslogQueueId_t SyslogQueue::add(const String message, Syslog* syslog) {
+SyslogQueueId_t SyslogQueue::add(const String message, Syslog *syslog) {
     _item.setMessage(message);
     _item.setId(1);
     return 1;
 }
 
-void SyslogQueue::remove(SyslogMemoryQueueItem* item, bool success) {
+void SyslogQueue::remove(SyslogMemoryQueueItem *item, bool success) {
     item->clear();
 }
 
@@ -30,7 +33,7 @@ SyslogQueueIterator SyslogQueue::end() {
     return SyslogQueueIterator(_item.getId() ? 1 : 0, this);
 }
 
-SyslogMemoryQueueItem* SyslogQueue::getItem(SyslogQueueIndex_t index) {
+SyslogMemoryQueueItem *SyslogQueue::getItem(SyslogQueueIndex_t index) {
     return &_item;
 }
 
@@ -44,7 +47,7 @@ SyslogMemoryQueue::SyslogMemoryQueue(size_t maxSize) {
     _count = 0;
 }
 
-SyslogQueueId_t SyslogMemoryQueue::add(const String message, Syslog* syslog) {
+SyslogQueueId_t SyslogMemoryQueue::add(const String message, Syslog *syslog) {
     size_t size = message.length() + SYSLOG_MEMORY_QUEUE_ITEM_SIZE;
     if (size + _curSize > _maxSize) {
         return 0;  // no space left, discard message
@@ -55,7 +58,7 @@ SyslogQueueId_t SyslogMemoryQueue::add(const String message, Syslog* syslog) {
     return _id;
 }
 
-void SyslogMemoryQueue::remove(SyslogMemoryQueueItem* item, bool success) {
+void SyslogMemoryQueue::remove(SyslogMemoryQueueItem *item, bool success) {
     if (item->getId()) {
         item->clear();
         _count--;
@@ -74,7 +77,7 @@ SyslogQueueIterator SyslogMemoryQueue::end() {
     return SyslogQueueIterator((SyslogQueueIndex_t)_items.size(), this);
 }
 
-SyslogMemoryQueueItem* SyslogMemoryQueue::getItem(SyslogQueueIndex_t index) {
+SyslogMemoryQueueItem *SyslogMemoryQueue::getItem(SyslogQueueIndex_t index) {
     return &_items[index];
 }
 
@@ -89,7 +92,7 @@ void SyslogMemoryQueue::cleanUp() {
     _items.erase(newEnd, _items.end());
 }
 
-SyslogQueueIterator::SyslogQueueIterator(SyslogQueueIndex_t index, SyslogQueue* queue) : _index(index), _queue(queue) {
+SyslogQueueIterator::SyslogQueueIterator(SyslogQueueIndex_t index, SyslogQueue *queue) : _index(index), _queue(queue) {
 }
 
 SyslogQueueIterator& SyslogQueueIterator::operator++() {
@@ -112,6 +115,90 @@ SyslogMemoryQueueItem* SyslogQueueIterator::operator*() {
     return _queue->getItem(_index);
 }
 
+SyslogMemoryQueueItem::SyslogMemoryQueueItem() {
+	clear();
+}
+
+SyslogMemoryQueueItem::SyslogMemoryQueueItem(SyslogQueueId_t id, const String message, Syslog * syslog) {
+	_id = id;
+	_message = message;
+	_locked = 0;
+	_failureCount = 0;
+	_syslog = syslog;
+}
+
+void SyslogMemoryQueueItem::clear() {
+	_id = 0;
+	_message = String();
+	_locked = 0;
+	_failureCount = 0;
+	_syslog = nullptr;
+}
+
+void SyslogMemoryQueueItem::setId(SyslogQueueId_t id) {
+	_id = id;
+}
+
+SyslogQueueId_t SyslogMemoryQueueItem::getId() const {
+	return _id;
+}
+
+void SyslogMemoryQueueItem::setMessage(const String message) {
+	_message = message;
+}
+
+const String & SyslogMemoryQueueItem::getMessage() const {
+	return _message;
+}
+
+void SyslogMemoryQueueItem::setSyslog(Syslog * syslog) {
+	_syslog = syslog;
+}
+
+Syslog * SyslogMemoryQueueItem::getSyslog() {
+	return _syslog;
+}
+
+bool SyslogMemoryQueueItem::isSyslog(Syslog * syslog) const {
+	return (syslog == nullptr || syslog == _syslog);
+}
+
+bool SyslogMemoryQueueItem::lock() {
+	if (_locked) {
+		return false;
+	}
+	_locked = 1;
+	return true;
+}
+
+bool SyslogMemoryQueueItem::unlock() {
+	if (_locked) {
+		_locked = 0;
+		return true;
+	}
+	return false;
+}
+
+bool SyslogMemoryQueueItem::isLocked() const {
+	return !!_locked;
+}
+
+uint8_t SyslogMemoryQueueItem::incrFailureCount() {
+	return ++_failureCount;
+}
+
+uint8_t SyslogMemoryQueueItem::getFailureCount() {
+	return _failureCount;
+}
+
 void SyslogMemoryQueueItem::transmit(SyslogCallback callback) {
-    _syslog->transmit(_message, callback);
+	if (_syslog->canSend()) {
+		if (lock()) {
+            _syslog->transmit(_message, [this, callback](bool success) {
+				if (unlock()) {
+                    callback(success);
+				}
+			});
+		}
+	}
 }

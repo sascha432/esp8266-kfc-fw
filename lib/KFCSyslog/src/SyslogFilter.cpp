@@ -2,10 +2,13 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#include "SyslogFilter.h"
+#include <Arduino_compat.h>
+#include "SyslogParameter.h"
+#include "Syslog.h"
 #include "SyslogUDP.h"
 #include "SyslogTCP.h"
 #include "SyslogFile.h"
+#include "SyslogFilter.h"
 
 SyslogFilter::SyslogFilter(const SyslogParameter parameter) {
     _parameter = parameter;
@@ -67,6 +70,8 @@ Syslog* SyslogFilter::createSyslogFromString(const String str) {
     uint8_t tok_count = 0;
     Syslog* syslog = nullptr;
 
+    debug_printf_P(PSTR("createSyslogFromString(%s)\n"), str.c_str());
+
     for (auto item = _syslogObjects.begin(); item != _syslogObjects.end(); ++item) {
         if (item->first == str) {
             return item->second;
@@ -79,11 +84,10 @@ Syslog* SyslogFilter::createSyslogFromString(const String str) {
         return nullptr;
     }
 
-    char* ntok = nullptr;
     const char* sep = ":";
-    tok[tok_count] = strtok_s(ptr, sep, &ntok);
+    tok[tok_count] = strtok(ptr, sep);
     while (tok[tok_count++] && tok_count < 3) {
-        tok[tok_count] = strtok_s(nullptr, sep, &ntok);
+        tok[tok_count] = strtok(nullptr, sep);
     }
     if (tok_count > 1) {
         tok[tok_count] = nullptr;
@@ -107,6 +111,6 @@ Syslog* SyslogFilter::createSyslogFromString(const String str) {
         }
     }
     free(dupStr);
-    _syslogObjects.push_back(make_pair(str, syslog));
+    _syslogObjects.push_back(std::make_pair(str, syslog));
     return syslog;
 }

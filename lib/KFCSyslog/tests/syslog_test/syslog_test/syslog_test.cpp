@@ -2,17 +2,23 @@
  * Author: sascha_lammers@gmx.de
  */
 
+#include <Arduino_compat.h>
+#include "SyslogParameter.h"
+#include "Syslog.h"
+#include "SyslogFactory.h"
+#include "SyslogFilter.h"
+#include "SyslogQueue.h"
 #include "SyslogStream.h"
 
 int main() {
-    SyslogParameter parameter;
+	SyslogParameter parameter;
     parameter.setHostname(F("TESTHOST"));
     parameter.setAppName(F("TestApp"));
     parameter.setProcessId(F("Dummy"));
 	parameter.setSeverity(SYSLOG_ERR);
 
     SyslogFilter *filter = new SyslogFilter(parameter);
-    filter->addFilter("*.*", "./log/all.log:1024:2");
+    filter->addFilter("*.*", "./log/all.log:1024:10");
     filter->addFilter("*.debug", "./log/debug.log:65535:10");
 //    filter->addFilter("*.debug", "@192.168.0.61");
 	filter->addFilter("*.debug", SYSLOG_FILTER_STOP);
@@ -24,7 +30,7 @@ int main() {
 
 	syslog.setFacility(SYSLOG_FACILITY_USER);
     Syslog_log_P(syslog, SYSLOG_INFO, PSTR("test %s"), syslog.getLevel().c_str());
-
+	B
     WiFi.setIsConnected(false);
     Syslog_log_P(syslog, SYSLOG_ERR, PSTR("test %s"), syslog.getLevel().c_str());
     Syslog_log_P(syslog, SYSLOG_WARN, PSTR("test %s"), syslog.getLevel().c_str());
@@ -49,16 +55,14 @@ int main() {
 
     WiFi.setIsConnected(true);
 
-    syslog.printf_P("test %d", 123);
-    syslog.flush();
+	delay(10000);
 
-	//int timeout = 10;
- //   do {
- //       //syslog.poll();
- //       delay(1000);
- //       printf("timeout %d...\n", timeout--);
- //   } while (syslog.hasQueuedMessages() && timeout);
-
+	int timeout = 10;
+	while (syslog.hasQueuedMessages() && timeout) {
+        delay(1000);
+        printf("timeout %d...\n", timeout--);
+		syslog.deliverQueue();
+    }
 
     return 0;
 }

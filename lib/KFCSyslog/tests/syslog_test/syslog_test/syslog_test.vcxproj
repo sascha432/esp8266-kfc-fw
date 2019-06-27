@@ -72,7 +72,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>..\..\..\..\KFCBaseLibrary\include;..\..\..\include;$(IncludePath)</IncludePath>
+    <IncludePath>..\..\..\include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
@@ -89,9 +89,10 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;DEBUG=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>..\..\..\..\KFCTimezone\include;..\..\..\..\KFCBaseLibrary\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>DEBUG=1;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -121,9 +122,10 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>DEBUG=1;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>..\..\..\..\KFCTimezone\include;..\..\..\..\KFCBaseLibrary\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -154,6 +156,7 @@
   <ItemGroup>
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\Arduino_compat.cpp" />
     <ClCompile Include="..\..\..\src\Syslog.cpp" />
+    <ClCompile Include="..\..\..\src\SyslogFactory.cpp" />
     <ClCompile Include="..\..\..\src\SyslogFile.cpp" />
     <ClCompile Include="..\..\..\src\SyslogFilter.cpp" />
     <ClCompile Include="..\..\..\src\SyslogParameter.cpp" />
@@ -166,6 +169,7 @@
   <ItemGroup>
     <ClInclude Include="..\..\..\..\KFCBaseLibrary\include\Arduino_compat.h" />
     <ClInclude Include="..\..\..\include\Syslog.h" />
+    <ClInclude Include="..\..\..\include\SyslogFactory.h" />
     <ClInclude Include="..\..\..\include\SyslogFile.h" />
     <ClInclude Include="..\..\..\include\SyslogFilter.h" />
     <ClInclude Include="..\..\..\include\SyslogParameter.h" />

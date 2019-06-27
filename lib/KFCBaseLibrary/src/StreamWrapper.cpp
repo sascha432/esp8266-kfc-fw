@@ -2,6 +2,7 @@
  * Author: sascha_lammers@gmx.de
  */
 
+#include <algorithm>
 #include "StreamWrapper.h"
 
 StreamWrapper::StreamWrapper() {

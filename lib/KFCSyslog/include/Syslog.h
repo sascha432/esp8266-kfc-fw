@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include <Arduino_compat.h>
 #include <functional>
 #include <vector>
-#include "SyslogParameter.h"
+
+// #define if_debug_printf_P
 
 #define USE_RFC5424 0  // does not seem to be supported by many syslog daemons
 
@@ -58,6 +58,7 @@ class Syslog {
 
     virtual void addHeader(String &buffer);
     virtual bool canSend();
+	virtual bool isSending();
 
 	static bool isNumeric(const char *str);
 	static SyslogFacility facilityToInt(const String str);

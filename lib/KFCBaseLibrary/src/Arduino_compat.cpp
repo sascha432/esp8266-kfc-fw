@@ -6,23 +6,13 @@
 
 #if _WIN32 || _WIN64
 
+#include <BufferStream.h>
+
 _SPIFFS SPIFFS;
 
 void throwException(PGM_P message) {
     printf("EXCEPTION: %s\n", (const char *)message);
     exit(-1);
-}
-
-size_t strftime_P(char *buf, size_t size, PGM_P format, const tm *tm) {
-	return strftime(buf, size, str_P(FPSTR(format)), tm);
-}
-
-tm *timezone_localtime(const time_t *timer) {
-	static struct tm tm;
-	if (localtime_s(&tm, timer)) {
-        memset(&tm, 0, sizeof(tm));
-	}
-	return &tm;
 }
 
 uint16_t _crc16_update(uint16_t crc, const uint8_t a) {
@@ -133,9 +123,9 @@ size_t Print::printf_P(PGM_P format, ...) {
     return len;
 }
 
-// size_t Print::print(const String &s) {
-//    return write(s.c_str(), s.length());
-//}
+size_t Print::print(const String &s) {
+    return write(s.c_str(), s.length());
+}
 
 size_t Print::print(const char str[]) {
     return write(str);
@@ -189,6 +179,11 @@ size_t Print::println(const __FlashStringHelper *ifsh) {
     return n;
 }
 
+size_t Print::println(const String & s)
+{
+	return println(s.c_str());
+}
+
 size_t Print::print(const Printable &x) {
     return x.printTo(*this);
 }
@@ -196,12 +191,6 @@ size_t Print::print(const Printable &x) {
 size_t Print::println(void) {
     return print("\r\n");
 }
-
-// size_t Print::println(const String &s) {
-//    size_t n = print(s);
-//    n += println();
-//    return n;
-//}
 
 size_t Print::println(const char c[]) {
     size_t n = print(c);
@@ -334,20 +323,20 @@ size_t Print::print(const __FlashStringHelper *ifsh) {
 static bool winsock_initialized = false;
 
 static void init_winsock() {
-    int iResult;
-    WSADATA wsaData;
-    iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
-    if (iResult != NO_ERROR) {
-        wprintf(L"WSAStartup failed with error: %d\n", iResult);
-        exit(-1);
-    }
-    winsock_initialized = true;
+	if (!winsock_initialized) {
+		int iResult;
+		WSADATA wsaData;
+		iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
+		if (iResult != NO_ERROR) {
+			wprintf(L"WSAStartup failed with error: %d\n", iResult);
+			exit(-1);
+		}
+		winsock_initialized = true;
+	}
 }
 
 WiFiUDP::WiFiUDP() {
-    if (!winsock_initialized) {
-        init_winsock();
-    }
+    init_winsock();
     _socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     _buffer = nullptr;
     _clear();
@@ -382,7 +371,7 @@ int WiFiUDP::_beginPacket(uint16_t port) {
         return 0;
     }
     _dst.sin_family = AF_INET;
-    _dst.sin_port = port;
+    _dst.sin_port = htons(port);
     return 1;
 }
 
@@ -448,6 +437,188 @@ void Dir::__test() {
 
 File Dir::openFile(const char *mode) {
     return SPIFFS.open(fileName(), mode);
+}
+
+String _sharedEmptyString;
+
+HTTPClient::HTTPClient() {
+	init_winsock();
+	_body = new BufferStream();
+	_httpCode = 0;
+}
+
+HTTPClient::~HTTPClient() {
+	_close();
+	delete _body;
+}
+
+void HTTPClient::begin(String url) {
+	_url = url;
+	if (!_url.startsWith("http://")) {
+		printf("Only http:// is supported\n");
+		exit(-1);
+	}
+	_host = _url.substring(7);
+	int pos = _host.indexOf('/');
+	if (pos != -1) {
+		_path = _host.substring(pos);
+		_host.remove(pos);
+	}
+	pos = _host.indexOf(':');
+	if (pos != -1) {
+		_port = (uint16_t)_host.substring(pos + 1).toInt();
+		_host.remove(pos);
+	}
+	else {
+		_port = 80;
+	}
+}
+
+void HTTPClient::end() {
+	_body->clear();
+	_url = String();
+	_host = String();
+	_path = String();
+}
+
+int HTTPClient::GET() {
+	sockaddr_in addr;
+	char buffer[1024];
+	int iResult;
+
+	_httpCode = 0;
+	_body->clear();
+
+	memset(&addr, 0, sizeof(addr));
+	addr.sin_family = AF_INET;
+	addr.sin_port = htons(_port);
+	struct hostent *dns;
+	if (!(dns = gethostbyname(_host.c_str()))) {
+		return 0;
+	}
+	if (dns->h_addrtype != AF_INET) {
+		return 0;
+	}
+	addr.sin_addr.S_un.S_addr = *(u_long *)dns->h_addr_list[0];
+
+	_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	if (_socket == INVALID_SOCKET) {
+		return 0;
+	}
+
+	iResult = connect(_socket, (SOCKADDR *)&addr, sizeof(addr));
+	if (iResult == SOCKET_ERROR) {
+		_close();
+		return WSAGetLastError();
+	}
+
+	if (_port != 80) {
+		snprintf(buffer, sizeof(buffer), "GET %s HTTP/1.1\r\nHost: %s:%u\r\nConnection: close\r\n\r\n", _path.c_str(), _host.c_str(), _port);
+	} else {
+		snprintf(buffer, sizeof(buffer), "GET %s HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n\r\n", _path.c_str(), _host.c_str());
+	}
+	iResult = send(_socket, buffer, strlen(buffer), 0);
+	if (iResult == SOCKET_ERROR) {
+		_close();
+		return WSAGetLastError();
+	}
+
+	iResult = shutdown(_socket, 1);
+	if (iResult == SOCKET_ERROR) {
+		_close();
+		return WSAGetLastError();
+	}
+
+	bool isHeader = true;
+	String header;
+
+	do {
+		iResult = recv(_socket, buffer, sizeof(buffer) - 1, 0);
+		if (iResult > 0) {
+			buffer[iResult] = 0;
+			if (isHeader) {
+				int size = 2;
+				char *ptr = strstr(buffer, "\n\n"); // TODO this fails if \n\n was truncated during the last read (recv)
+				if (!ptr) {
+					size = 4;
+					ptr = strstr(buffer, "\r\n\r\n");
+				}
+				if (!ptr) {
+					header += buffer;
+				} else {
+					isHeader = false;
+					*ptr = 0;
+					header += buffer;
+					_body->write((const uint8_t *)ptr + size, iResult - (ptr - buffer + size));
+				}
+			} else {
+				_body->write((const uint8_t *)buffer, iResult);
+			}
+		} else if (iResult < 0) {
+			_close();
+			return WSAGetLastError();
+		}
+	} while( iResult > 0 );
+	_close();
+
+	if (!header.startsWith("HTTP/1")) {
+		_httpCode = 500;
+		return _httpCode;
+	}
+
+	int pos = header.indexOf(' ');
+		if (pos == -1) {
+		_httpCode = 500;
+		return _httpCode;
+	}
+	_httpCode = header.substring(pos + 1).toInt();
+
+	return _httpCode;
+}
+
+size_t HTTPClient::getSize() {
+	return _body->length();
+}
+
+Stream &HTTPClient::getStream() {
+	return *_body;
+}
+
+void HTTPClient::_close()
+{
+	if (_socket != INVALID_SOCKET) {
+		closesocket(_socket);
+		_socket = INVALID_SOCKET;
+	}
+}
+
+StringStream::StringStream(String & string) : _string(string), Stream() {
+	_position = 0;
+}
+
+StringStream::~StringStream() {
+}
+
+int StringStream::available() {
+	return _string.length() - _position;
+}
+
+int StringStream::read() {
+	if (_position < _string.length()) {
+		return _string.at(_position++);
+	}
+	return -1;
+}
+
+int StringStream::peek() {
+	if (_position < _string.length()) {
+		return _string.at(_position);
+	}
+	return -1;
+}
+
+size_t StringStream::write(uint8_t data) {
+	return 0;
 }
 
 #endif

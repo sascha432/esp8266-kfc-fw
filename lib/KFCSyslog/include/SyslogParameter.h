@@ -4,8 +4,6 @@
 
 #pragma once
 
-#include <Arduino_compat.h>
-
 enum SyslogSeverity {
     SYSLOG_EMERG = 0,
     SYSLOG_ALERT,

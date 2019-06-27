@@ -4,9 +4,6 @@
 
 #pragma once
 
-#include <Arduino_compat.h>
-#include "Syslog.h"
-
 typedef std::function<void(SyslogFileFilterItem &)> SyslogFilterCallback;
 
 typedef std::vector<SyslogFileFilterItem> SyslogFiltersVector;

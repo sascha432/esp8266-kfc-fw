@@ -4,9 +4,6 @@
 
 #pragma once
 
-#include <Arduino_compat.h>
-#include "Syslog.h"
-
 #define SYSLOG_FILE_MAX_SIZE 0xffff
 #define SYSLOG_FILE_MAX_ROTATE 10
 

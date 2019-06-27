@@ -12,10 +12,7 @@
 
 #pragma once
 
-#include <Arduino_compat.h>
-#include "Syslog.h"
-#include "SyslogFilter.h"
-#include "SyslogQueue.h"
+#define SYSLOG_STREAM_MAX_FAILURES 10
 
 #define Syslog_log(syslog, severity, format, ...) \
     {                                               \
@@ -31,11 +28,10 @@
     }
 
 class SyslogStream : public Stream {
-   public:
-    const uint8_t MAX_FAILURES = 10;
-
+public:
+	SyslogStream(const SyslogParameter parameter, SyslogProtocol protocol, const char *host, uint16_t port = SYSLOG_DEFAULT_PORT, uint16_t queueSize = 1024);
     SyslogStream(SyslogFilter *filter, SyslogQueue *queue);
-    ~SyslogStream();
+    virtual ~SyslogStream();
 
     void setFacility(SyslogFacility facility);
     void setSeverity(SyslogSeverity severity);
@@ -56,8 +52,18 @@ class SyslogStream : public Stream {
 
     const String getLevel();
 
+    SyslogQueue *getQueue() {
+        return _queue;
+    }
+    SyslogFilter *getFilter() {
+        return _filter;
+    }
+    SyslogParameter *getParameter() {
+        return _parameter;
+    }
+
    private:
-    SyslogParameter &_parameter;
+    SyslogParameter *_parameter;
     SyslogFilter *_filter;
     SyslogQueue *_queue;
     String _message;

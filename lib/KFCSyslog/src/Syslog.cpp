@@ -2,45 +2,49 @@
  * Author: sascha_lammers@gmx.de
  */
 
+#include <Arduino_compat.h>
+#include <KFCTimezone.h>
+#include "SyslogParameter.h"
 #include "Syslog.h"
 
 SyslogFilterItem syslogFilterFacilityItems[] = {
-    {PSTR("kern"), SYSLOG_FACILITY_KERN},
-    {PSTR("user"), SYSLOG_FACILITY_USER},
-    {PSTR("user"), SYSLOG_FACILITY_USER},
-    {PSTR("mail"), SYSLOG_FACILITY_MAIL},
-    {PSTR("daemon"), SYSLOG_FACILITY_DAEMON},
-    {PSTR("secure"), SYSLOG_FACILITY_SECURE},
-    {PSTR("syslog"), SYSLOG_FACILITY_SYSLOG},
-    {PSTR("ntp"), SYSLOG_FACILITY_NTP},
-    {PSTR("local0"), SYSLOG_FACILITY_LOCAL0},
-    {PSTR("local1"), SYSLOG_FACILITY_LOCAL1},
-    {PSTR("local2"), SYSLOG_FACILITY_LOCAL2},
-    {PSTR("local3"), SYSLOG_FACILITY_LOCAL3},
-    {PSTR("local4"), SYSLOG_FACILITY_LOCAL4},
-    {PSTR("local5"), SYSLOG_FACILITY_LOCAL5},
-    {PSTR("local6"), SYSLOG_FACILITY_LOCAL6},
-    {PSTR("local7"), SYSLOG_FACILITY_LOCAL7},
+    {("kern"), SYSLOG_FACILITY_KERN},
+    {("user"), SYSLOG_FACILITY_USER},
+    {("user"), SYSLOG_FACILITY_USER},
+    {("mail"), SYSLOG_FACILITY_MAIL},
+    {("daemon"), SYSLOG_FACILITY_DAEMON},
+    {("secure"), SYSLOG_FACILITY_SECURE},
+    {("syslog"), SYSLOG_FACILITY_SYSLOG},
+    {("ntp"), SYSLOG_FACILITY_NTP},
+    {("local0"), SYSLOG_FACILITY_LOCAL0},
+    {("local1"), SYSLOG_FACILITY_LOCAL1},
+    {("local2"), SYSLOG_FACILITY_LOCAL2},
+    {("local3"), SYSLOG_FACILITY_LOCAL3},
+    {("local4"), SYSLOG_FACILITY_LOCAL4},
+    {("local5"), SYSLOG_FACILITY_LOCAL5},
+    {("local6"), SYSLOG_FACILITY_LOCAL6},
+    {("local7"), SYSLOG_FACILITY_LOCAL7},
     {nullptr, 0xff},
 };
 
 SyslogFilterItem syslogFilterSeverityItems[] = {
-    {PSTR("emerg"), SYSLOG_EMERG}, 
-	{PSTR("emergency"), SYSLOG_EMERG}, 
-	{PSTR("alert"), SYSLOG_ALERT},   
-	{PSTR("crit"), SYSLOG_CRIT}, 
-	{PSTR("critical"), SYSLOG_CRIT}, 
-	{PSTR("err"), SYSLOG_ERR}, 
-	{PSTR("error"), SYSLOG_ERR},
-	{PSTR("warn"), SYSLOG_WARN},   
-	{PSTR("warning"), SYSLOG_WARN},    
-	{PSTR("notice"), SYSLOG_NOTICE}, 
-	{PSTR("info"), SYSLOG_INFO}, 
-	{PSTR("debug"), SYSLOG_DEBUG},   
+    {("emerg"), SYSLOG_EMERG},
+	{("emergency"), SYSLOG_EMERG},
+	{("alert"), SYSLOG_ALERT},
+	{("crit"), SYSLOG_CRIT},
+	{("critical"), SYSLOG_CRIT},
+	{("err"), SYSLOG_ERR},
+	{("error"), SYSLOG_ERR},
+	{("warn"), SYSLOG_WARN},
+	{("warning"), SYSLOG_WARN},
+	{("notice"), SYSLOG_NOTICE},
+	{("info"), SYSLOG_INFO},
+	{("debug"), SYSLOG_DEBUG},
 	{nullptr, 0xff},
 };
 
 Syslog::Syslog(SyslogParameter &parameter) : _parameter(parameter) {
+	debug_printf_P(PSTR("Syslog::Syslog %s,%s,%s\n"), parameter.getHostname().c_str(), parameter.getAppName().c_str(), parameter.getProcessId().c_str());
 }
 
 void Syslog::transmit(const char* message, size_t length, SyslogCallback callback) {
@@ -52,7 +56,7 @@ void Syslog::_addTimestamp(String& buffer, PGM_P format) {
 	auto tm = timezone_localtime(&now);
 	if (tm) {
 		char buf2[40];
-		timezone_strftime_P(buf2, sizeof(buf2), PSTR(format), tm);
+		timezone_strftime_P(buf2, sizeof(buf2), format, tm);
 		buffer += buf2;
 	} else {
 		buffer += '-';
@@ -61,7 +65,7 @@ void Syslog::_addTimestamp(String& buffer, PGM_P format) {
 }
 
 void Syslog::_addParameter(String& buffer, const String& value) {
-	if (value.empty()) {
+	if (value.length() == 0) {
 		buffer += '-';
 	} else {
 		buffer += value;
@@ -148,13 +152,13 @@ void Syslog::addHeader(String& buffer) {
 	// the process id part is optional
 
 	buffer += '<';
-	buffer += String(_parameter.getFacility() << 3 | _parameter.getSeverity());
+	buffer += String((_parameter.getFacility() << 3) | _parameter.getSeverity());
 	buffer += '>';
 	_addTimestamp(buffer);
 	_addParameter(buffer, _parameter.getHostname());
-	if (!_parameter.getAppName().empty()) {
+	if (_parameter.getAppName().length()) {
 		buffer += _parameter.getAppName();
-		if (!_parameter.getProcessId().empty()) {
+		if (_parameter.getProcessId().length()) {
 			buffer += '[';
 			buffer += _parameter.getProcessId();
 			buffer += ']';
@@ -167,6 +171,10 @@ void Syslog::addHeader(String& buffer) {
 
 bool Syslog::canSend() {
 	return WiFi.isConnected();
+}
+
+bool Syslog::isSending() {
+	return false;
 }
 
 bool Syslog::isNumeric(const char *str) {

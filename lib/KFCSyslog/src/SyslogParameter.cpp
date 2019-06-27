@@ -2,7 +2,9 @@
  * Author: sascha_lammers@gmx.de
  */
 
+#include <Arduino_compat.h>
 #include "SyslogParameter.h"
+#include "Syslog.h"
 
 SyslogParameter::SyslogParameter() {
     _facility = SYSLOG_FACILITY_KERN;

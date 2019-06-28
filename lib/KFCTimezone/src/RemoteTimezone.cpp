@@ -5,6 +5,13 @@
 #include <JsonCallbackReader.h>
 #include "Timezone.h"
 #include "RemoteTimezone.h"
+// #include "logger.h"
+
+#if TIMEZONE_USE_HTTP_CLIENT == 0
+#include <BufferStream.h>
+#include <PrintString.h>
+#include "asyncHTTPrequest.h"
+#endif
 
 #if 0
 
@@ -250,6 +257,14 @@ void timezone_update_check_enable() {
 RemoteTimezone::RemoteTimezone() {
 	_callback = nullptr;
 	_zoneEnd = 0;
+#if TIMEZONE_USE_HTTP_CLIENT == 0
+	_httpClient = nullptr;
+#endif
+}
+RemoteTimezone::~RemoteTimezone() {
+#if TIMEZONE_USE_HTTP_CLIENT == 0
+	delete _httpClient;
+#endif
 }
 
 void RemoteTimezone::setUrl(const String url) {
@@ -268,32 +283,73 @@ void RemoteTimezone::get() {
 
 	_zoneEnd = 0;
 
-	if (WiFi.isConnected()) {
-		String url = _url;
-		if (_zoneName.length()) {
-			url.replace(F("${timezone}"), _zoneName);
+	String url = _url;
+	if (_zoneName.length()) {
+		url.replace(F("${timezone}"), _zoneName);
+	}
+
+	debug_printf_P(PSTR("RemoteTimezone:get(): URL %s\n"), url.c_str());
+
+#if TIMEZONE_USE_HTTP_CLIENT
+	HTTPClient http;
+
+	http.begin(url);
+	int httpCode = http.GET();
+	if (httpCode == 200) {
+		Stream &stream = http.getStream();
+		_responseHandler(url, stream);
+	} else {
+		debug_printf_P(PSTR("RemoteTimezone error HTTP code %d\n"), httpCode);
+
+		if (_callback) {
+			PrintString message;
+			message.printf_P(PSTR("HTTP error, code %d"), httpCode);
+			_callback(false, message, 0);
 		}
+	}
+	http.end();
+#else
 
-		debug_printf_P(PSTR("RemoteTimezone:get(): URL %s\n"), url.c_str());
+	if (_httpClient != nullptr) {
+		delete _httpClient;
+	}
 
-#if USE_HTTP_CLIENT
-		HTTPClient http;
+	_httpClient = new asyncHTTPrequest();
+	_httpClient->onReadyStateChange([url, this](void *, asyncHTTPrequest *request, int readyState) {
+		if (readyState == 4) {
+			int httpCode;
+			if ((httpCode = request->responseHTTPcode()) == 200) {
+				String response = request->responseText();
+				BufferStream stream;
 
-		http.begin(url);
-		int httpCode = http.GET();
-		if (httpCode == 200) {
-			Stream &stream = http.getStream();
-			_responseHandler(url, stream);
-		} else {
-			debug_printf_P(PSTR("RemoteTimezone error HTTP Code %d\n"), httpCode);
+				stream.write(response.c_str());
+				_responseHandler(url, stream);
 
-			if (_callback) {
-				_callback(false, F("HTTP error"), 0);
+			} else {
+				debug_printf_P(PSTR("RemoteTimezone error HTTP code %d\n"), httpCode);
+
+				PrintString message;
+				message.printf_P(PSTR("HTTP error, code %d"), httpCode);
+				if (_callback) {
+					_callback(false, message, 0);
+				}
 			}
 		}
-		http.end();
-#endif
+	});
+	_httpClient->setTimeout(30);
+
+	debug_printf_P(PSTR("timezone remote api %s\n"), url.c_str());
+
+	if (!_httpClient->open("GET", url.c_str())) {
+		if (_callback) {
+			_callback(false, F("HTTP Client: open() failed"), 0);
+		}
+	} else if (!_httpClient->send()) {
+		if (_callback) {
+			_callback(false, F("HTTP Client: send() failed"), 0);
+		}
 	}
+#endif
 }
 
 time_t RemoteTimezone::getZoneEnd() {

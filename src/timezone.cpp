@@ -9,6 +9,7 @@
 #include <PrintHtmlEntitiesString.h>
 #include "templates.h"
 #include "event_scheduler.h"
+#include "progmem_data.h"
 #include "logger.h"
 
 #define DEBUG_TIMEZONE  1

@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.28307.421
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "webframe_test", "webframe_test\webframe_test.vcxproj", "{DE7715EA-3411-4AD5-AE56-0D58618C8355}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "forms_test", "forms_test\forms_test.vcxproj", "{DE7715EA-3411-4AD5-AE56-0D58618C8355}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

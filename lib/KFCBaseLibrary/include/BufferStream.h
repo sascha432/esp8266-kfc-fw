@@ -8,14 +8,15 @@
 
 class BufferStream : public Buffer, public Stream {
 public:
-	BufferStream();
+    BufferStream();
 
-	int available() override;
+    int available() override;
 
-	bool seek(long pos, int mode);
-	size_t position() const;
+    bool seek(long pos, int mode);
+    size_t position() const;
 
-	int read() override;
+    int read() override;
+    int peek() override;
 
     size_t write(uint8_t data) override {
         return Buffer::write(data);

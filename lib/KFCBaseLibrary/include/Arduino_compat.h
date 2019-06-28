@@ -32,6 +32,7 @@
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
 #include <ESP8266WiFiType.h>
+#include <ESP8266HttpClient.h>
 #include <WiFiUdp.h>
 #include <FS.h>
 
@@ -91,6 +92,7 @@ const char *str_P(const char *str, uint8_t index = 0);  // not the same function
 #endif
 
 #define strcasecmp_P _stricmp
+#define strncasecmp _strnicmp
 #define strcmp_P _strcmp
 
 #define strdup _strdup
@@ -239,9 +241,9 @@ class String : public std::string {
     }
     String(const char *str) : std::string(str) {
     }
-	String(const __FlashStringHelper *str) : std::string(reinterpret_cast<const char *>(str)) {
+    String(const __FlashStringHelper *str) : std::string(reinterpret_cast<const char *>(str)) {
 
-	}
+    }
     int indexOf(const String &find, int index = 0) const {
         return find_first_of(find, index);
     }
@@ -354,34 +356,38 @@ class String : public std::string {
         return (strncmp(c_str(), str.c_str(), str.length()) == 0);
     }
 
-	bool endsWith(const String str) const {
+    bool endsWith(const String str) const {
         if (length() < str.length()) {
             return false;
         }
-		return strcmp(c_str() + length() - str.length(), str.c_str()) == 0;
-	}
+        return strcmp(c_str() + length() - str.length(), str.c_str()) == 0;
+    }
 
-	String & operator += (String str) {
-		concat(str.c_str(), str.length());
-		return (*this);
-	}
-	String & operator += (char *str) {
-		concat(str, strlen(str));
-		return (*this);
-	}
-	String & operator += (const char *str) {
-		concat(str, strlen(str));
-		return (*this);
-	}
-	String & operator += (const char ch){
-		concat(ch);
-		return (*this);
-	}
-	String & operator += (const __FlashStringHelper *str) {
-		const char *ptr = reinterpret_cast<const char *>(str);
-		concat(ptr, strlen(ptr));
-		return (*this);
-	}
+    char charAt(size_t idx) const {
+        return at(idx);
+    }
+
+    String & operator += (String str) {
+        concat(str.c_str(), str.length());
+        return (*this);
+    }
+    String & operator += (char *str) {
+        concat(str, strlen(str));
+        return (*this);
+    }
+    String & operator += (const char *str) {
+        concat(str, strlen(str));
+        return (*this);
+    }
+    String & operator += (const char ch){
+        concat(ch);
+        return (*this);
+    }
+    String & operator += (const __FlashStringHelper *str) {
+        const char *ptr = reinterpret_cast<const char *>(str);
+        concat(ptr, strlen(ptr));
+        return (*this);
+    }
 };
 
 enum SeekMode { SeekSet = SEEK_SET, SeekCur = SEEK_CUR, SeekEnd = SEEK_END };
@@ -398,11 +404,11 @@ class Stream : public Print {
             seek(0);
         }
     }
-	//virtual ~Stream() {
-	//	if (_fp) {
+    //virtual ~Stream() {
+    //	if (_fp) {
  //           fclose(_fp);
-	//	}
-	//}
+    //	}
+    //}
 
     FILE *getFile() {
         return _fp;
@@ -506,9 +512,9 @@ class Stream : public Print {
         return buf;
     }
 
-	virtual size_t readBytes(char *buffer, size_t length) {
-		return read((uint8_t *)buffer, length);
-	}
+    virtual size_t readBytes(char *buffer, size_t length) {
+        return read((uint8_t *)buffer, length);
+    }
     virtual size_t readBytes(uint8_t *buffer, size_t length) {
         return readBytes((char *)buffer, length);
     }
@@ -528,9 +534,9 @@ class Stream : public Print {
     }
 
     virtual void close() {
-		if (_fp) {
-			fclose(_fp);
-		}
+        if (_fp) {
+            fclose(_fp);
+        }
     }
 
     virtual void flush() {
@@ -557,69 +563,69 @@ class File : public Stream {
 class Dir {
 public:
 
-	static void __test();
+    static void __test();
 
-	Dir(const String directory) : _handle(INVALID_HANDLE_VALUE) {
-		_directory = directory;
-		_directory.replace('/', '\\');
-		if (!_directory.endsWith("\\")) {
-			_directory += '\\';
-		}
-	}
-	~Dir() {
-		if (_handle != INVALID_HANDLE_VALUE) {
-			FindClose(_handle);
-			_handle = INVALID_HANDLE_VALUE;
-		}
-	}
+    Dir(const String directory) : _handle(INVALID_HANDLE_VALUE) {
+        _directory = directory;
+        _directory.replace('/', '\\');
+        if (!_directory.endsWith("\\")) {
+            _directory += '\\';
+        }
+    }
+    ~Dir() {
+        if (_handle != INVALID_HANDLE_VALUE) {
+            FindClose(_handle);
+            _handle = INVALID_HANDLE_VALUE;
+        }
+    }
 
-	bool next() {
-		bool result;
-		if (_handle == INVALID_HANDLE_VALUE) {
-			TCHAR path[MAX_PATH];
-			size_t convertedChars = 0;
-			mbstowcs_s(&convertedChars, path, MAX_PATH, _directory.c_str(), _TRUNCATE);
-			StringCchCat(path, MAX_PATH, TEXT("*"));
-			if ((_handle = FindFirstFile(path, &_ffd)) == INVALID_HANDLE_VALUE) {
-				return false;
-			}
-			result = true;
-		} else {
-			result = FindNextFile(_handle, &_ffd);
-		}
-		return result;
-	}
+    bool next() {
+        bool result;
+        if (_handle == INVALID_HANDLE_VALUE) {
+            TCHAR path[MAX_PATH];
+            size_t convertedChars = 0;
+            mbstowcs_s(&convertedChars, path, MAX_PATH, _directory.c_str(), _TRUNCATE);
+            StringCchCat(path, MAX_PATH, TEXT("*"));
+            if ((_handle = FindFirstFile(path, &_ffd)) == INVALID_HANDLE_VALUE) {
+                return false;
+            }
+            result = true;
+        } else {
+            result = FindNextFile(_handle, &_ffd);
+        }
+        return result;
+    }
 
-	bool isDirectory() const {
-		return (_handle != INVALID_HANDLE_VALUE) && (_ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY);
-	}
+    bool isDirectory() const {
+        return (_handle != INVALID_HANDLE_VALUE) && (_ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY);
+    }
 
-	bool isFile() const {
-		return (_handle != INVALID_HANDLE_VALUE) && !(_ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY);
-	}
+    bool isFile() const {
+        return (_handle != INVALID_HANDLE_VALUE) && !(_ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY);
+    }
 
-	const String fileName() const {
-		String tmp;
-		tmp.reserve(wcslen(_ffd.cFileName) + 1);
+    const String fileName() const {
+        String tmp;
+        tmp.reserve(wcslen(_ffd.cFileName) + 1);
         size_t convertedChars;
         wcstombs_s(&convertedChars, tmp.begin(), tmp.capacity(), _ffd.cFileName, _TRUNCATE);
         tmp.replace('\\', '/');
-		return tmp;
-	}
+        return tmp;
+    }
 
-	uint32_t fileSize() const {
-		if (isFile()) {
+    uint32_t fileSize() const {
+        if (isFile()) {
             return _ffd.nFileSizeLow;
-		}
-		return 0;
-	}
+        }
+        return 0;
+    }
 
-	File openFile(const char *mode);
+    File openFile(const char *mode);
 
 private:
-	HANDLE _handle;
-	WIN32_FIND_DATA _ffd;
-	String _directory;
+    HANDLE _handle;
+    WIN32_FIND_DATA _ffd;
+    String _directory;
 };
 
 
@@ -631,24 +637,24 @@ class _SPIFFS {
         return File(fp);
     }
 
-	Dir openDir(const String dir) {
-		return Dir(dir);
-	}
+    Dir openDir(const String dir) {
+        return Dir(dir);
+    }
 
-	bool exists(const String filename) {
-		File file = open(filename, "r");
-		bool result = !!file;
-		file.close();
-		return result;
-	}
+    bool exists(const String filename) {
+        File file = open(filename, "r");
+        bool result = !!file;
+        file.close();
+        return result;
+    }
 
-	bool remove(const String filename) {
-		return ::remove(filename.c_str()) == 0;
-	}
+    bool remove(const String filename) {
+        return ::remove(filename.c_str()) == 0;
+    }
 
-	bool rename(const String fromPath, const String toPath) {
-		return ::rename(fromPath.c_str(), toPath.c_str()) == 0;
-	}
+    bool rename(const String fromPath, const String toPath) {
+        return ::rename(fromPath.c_str(), toPath.c_str()) == 0;
+    }
 };
 
 class IPAddress {
@@ -1011,43 +1017,43 @@ class ESP8266WiFiClass {
 
 class StringStream : public Stream {
 public:
-	StringStream(String &string);
-	virtual ~StringStream();
+    StringStream(String &string);
+    virtual ~StringStream();
 
-	virtual int available() override;
-	virtual int read() override;
-	virtual int peek() override;
-	virtual size_t write(uint8_t data);
+    virtual int available() override;
+    virtual int read() override;
+    virtual int peek() override;
+    virtual size_t write(uint8_t data);
 
 private:
-	uint16_t _position;
-	String &_string;
+    uint16_t _position;
+    String &_string;
 };
 
 class BufferStream;
 
 class HTTPClient {
 public:
-	HTTPClient();
-	virtual ~HTTPClient();
+    HTTPClient();
+    virtual ~HTTPClient();
 
-	void begin(String url);
-	void end();
+    void begin(String url);
+    void end();
 
-	int GET();
-	size_t getSize();
-	Stream &getStream();
+    int GET();
+    size_t getSize();
+    Stream &getStream();
 
 private:
-	void _close();
+    void _close();
 
-	SOCKET _socket;
-	String _url;
-	String _host;
-	uint16_t _port;
-	String _path;
-	BufferStream *_body;
-	int _httpCode;
+    SOCKET _socket;
+    String _url;
+    String _host;
+    uint16_t _port;
+    String _path;
+    BufferStream *_body;
+    int _httpCode;
 };
 
 extern ESP8266WiFiClass WiFi;

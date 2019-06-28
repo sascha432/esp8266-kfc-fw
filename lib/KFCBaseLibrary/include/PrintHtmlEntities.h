@@ -28,3 +28,4 @@ public:
 
     virtual size_t _write(uint8_t data) = 0;
 };
+

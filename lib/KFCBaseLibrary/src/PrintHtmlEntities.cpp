@@ -8,7 +8,7 @@ PrintHtmlEntities::PrintHtmlEntities() {
 }
 
 size_t PrintHtmlEntities::__write(uint8_t data) {
-	return _write(data);
+    return _write(data);
 }
 
 size_t PrintHtmlEntities::translate(uint8_t data) {
@@ -28,19 +28,19 @@ size_t PrintHtmlEntities::translate(uint8_t data) {
 }
 
 size_t PrintHtmlEntities::translate(const uint8_t * buffer, size_t size) {
-	size_t written = 0;
-	while (size--) {
-		written = translate(*buffer++);
-	}
-	return written;
+    size_t written = 0;
+    while (size--) {
+        written = translate(*buffer++);
+    }
+    return written;
 }
 
 size_t PrintHtmlEntities::_writeString(const __FlashStringHelper * str) {
-	PGM_P ptr = reinterpret_cast<PGM_P>(str);
-	size_t count = strlen_P(ptr);
-	size_t written = 0;
-	while (count--) {
-		written += __write(pgm_read_byte(ptr++));
-	}
-	return written;
+    PGM_P ptr = reinterpret_cast<PGM_P>(str);
+    size_t count = strlen_P(ptr);
+    size_t written = 0;
+    while (count--) {
+        written += __write(pgm_read_byte(ptr++));
+    }
+    return written;
 }

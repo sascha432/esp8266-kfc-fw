@@ -34,6 +34,9 @@
 #define FSPGM(name) FPSTR(SPGM(name))
 #define PSPGM(name) (PGM_P)(SPGM(name))
 
+#define constexpr_strlen strlen
+#define constexpr_strlen_P strlen_P
+
 #elif defined(ESP8266)
 
 #include <Arduino.h>
@@ -50,6 +53,9 @@
 #define FSPGM(name) FPSTR(SPGM(name))
 #define PSPGM(name) (PGM_P)(SPGM(name))
 
+#define constexpr_strlen strlen
+#define constexpr_strlen_P strlen_P
+
 #include "C:/Users/sascha/Documents/PlatformIO/Projects/kfc_fw/include/debug_helper.h"
 #include "C:/Users/sascha/Documents/PlatformIO/Projects/kfc_fw/include/misc.h"
 
@@ -63,8 +69,8 @@
 #include <strsafe.h>
 #include <iostream>
 
-#define PROGMEM_STRING_DECL(name)               extern const char *_shared_progmem_string_##name;
-#define PROGMEM_STRING_DEF(name, value)         const char *_shared_progmem_string_##name = value;
+#define PROGMEM_STRING_DECL(name)               extern const char * const _shared_progmem_string_##name;
+#define PROGMEM_STRING_DEF(name, value)         const char * const _shared_progmem_string_##name = value;
 
 #define SPGM(name) _shared_progmem_string_##name
 #define FSPGM(name) FPSTR(SPGM(name))
@@ -78,6 +84,12 @@
 #define strstr_P strstr
 #define strlen_P strlen
 #define pgm_read_byte(a) (*a)
+
+int constexpr constexpr_strlen(const char* str) {
+    return *str ? 1 + constexpr_strlen(str + 1) : 0;
+}
+
+#define constexpr_strlen_P constexpr_strlen
 
 #ifndef WIFI_CB_EVENT_CONNECTED
 

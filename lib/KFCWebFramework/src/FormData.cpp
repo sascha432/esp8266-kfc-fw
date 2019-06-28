@@ -4,6 +4,8 @@
 
 #include "FormData.h"
 
+#if !FORM_DATA_CLASS_OVERRIDE
+
 FormData::FormData() {
 }
 
@@ -29,3 +31,5 @@ bool FormData::hasArg(const String &name) const {
 void FormData::set(const String &name, const String &value) {
     _data[name] = value;
 }
+
+#endif

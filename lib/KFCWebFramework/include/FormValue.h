@@ -30,7 +30,7 @@ public:
         return FormField::setValue(String(value.toInt()));
     }
     T getValue() {
-        return FormField::getValue().toInt();
+        return (T)FormField::getValue().toInt();
     }
 
     // these modify the value that was passed to FormValue, not the value of the form

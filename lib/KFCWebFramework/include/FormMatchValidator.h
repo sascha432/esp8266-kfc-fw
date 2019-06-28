@@ -19,4 +19,3 @@ public:
 private:
     std::function <bool(FormField *field)> _validatorcb;
 };
-

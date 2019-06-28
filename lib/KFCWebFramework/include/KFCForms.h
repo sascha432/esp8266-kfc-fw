@@ -10,3 +10,5 @@
 #include "FormRangeValidator.h"
 #include "FormLengthValidator.h"
 #include "FormEnumValidator.h"
+#include "FormValidHostOrIpValidator.h"
+#include "FormMatchValidator.h"

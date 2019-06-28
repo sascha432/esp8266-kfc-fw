@@ -17,8 +17,14 @@ public:
     virtual bool validate() override {
         if (FormValidator::validate()) {
             const char *ptr = getField()->getValue().c_str();
-            if (_allowEmpty && !*ptr) {
-                return true;
+            if (_allowEmpty) {
+                const char *trimmed = ptr;
+                while (isspace(*trimmed)) {
+                    trimmed++;
+                }
+                if (!*trimmed) {
+                    return true;
+                }
             }
             IPAddress addr;
             if (!addr.fromString(getField()->getValue())) {
@@ -37,4 +43,3 @@ public:
 private:
     bool _allowEmpty;
 };
-

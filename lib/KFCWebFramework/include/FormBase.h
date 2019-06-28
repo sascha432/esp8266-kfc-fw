@@ -35,6 +35,6 @@ extern const char FormValidator_max_macro[] PROGMEM;
 #define DEBUG_FORMS_PREFIX "Forms: "
 #define if_debug_forms_printf_P           debug_printf_P
 #else
+#define DEBUG_FORMS_PREFIX "Forms: "
 #define if_debug_forms_printf_P(...) ;
 #endif
-

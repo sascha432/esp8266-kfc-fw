@@ -54,7 +54,7 @@ void Syslog::transmit(const char* message, size_t length, SyslogCallback callbac
 void Syslog::_addTimestamp(String& buffer, PGM_P format) {
 	auto now = time(nullptr);
 	auto tm = timezone_localtime(&now);
-	if (tm) {
+	if (tm && now > 86400 * 7) {
 		char buf2[40];
 		timezone_strftime_P(buf2, sizeof(buf2), format, tm);
 		buffer += buf2;

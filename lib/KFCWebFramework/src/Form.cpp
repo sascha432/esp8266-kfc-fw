@@ -119,7 +119,7 @@ bool Form::validateOnly() {
             }
         }
         else if (_invalidMissing) {
-            _errors.push_back(FormError(field, FPSTR(Form_value_missing_default_message)));
+            _errors.push_back(FormError(field, FSPGM(Form_value_missing_default_message)));
         }
     }
 #if DEBUG && DEBUG_FORMS

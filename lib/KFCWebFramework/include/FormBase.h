@@ -6,28 +6,14 @@
 
 #include <Arduino_compat.h>
 
-#if _WIN32 || _WIN64
-
-extern const char *FormRangeValidator_default_message;
-extern const char *FormLengthValidator_default_message;
-extern const char *FormEnumValidator_default_message;
-extern const char *FormValidHostOrIpValidator_default_message;
-extern const char *Form_value_missing_default_message;
-extern const char *FormValidator_allowed_macro;
-extern const char *FormValidator_min_macro;
-extern const char *FormValidator_max_macro;
-
-#else
-extern const char FormRangeValidator_default_message[] PROGMEM;
-extern const char FormLengthValidator_default_message[] PROGMEM;
-extern const char FormEnumValidator_default_message[] PROGMEM;
-extern const char FormValidHostOrIpValidator_default_message[] PROGMEM;
-extern const char Form_value_missing_default_message[] PROGMEM;
-extern const char FormValidator_allowed_macro[] PROGMEM;
-extern const char FormValidator_min_macro[] PROGMEM;
-extern const char FormValidator_max_macro[] PROGMEM;
-
-#endif
+PROGMEM_STRING_DECL(FormRangeValidator_default_message);
+PROGMEM_STRING_DECL(FormLengthValidator_default_message);
+PROGMEM_STRING_DECL(FormEnumValidator_default_message);
+PROGMEM_STRING_DECL(FormValidHostOrIpValidator_default_message);
+PROGMEM_STRING_DECL(Form_value_missing_default_message);
+PROGMEM_STRING_DECL(FormValidator_allowed_macro);
+PROGMEM_STRING_DECL(FormValidator_min_macro);
+PROGMEM_STRING_DECL(FormValidator_max_macro);
 
 #define DEBUG_FORMS 0
 

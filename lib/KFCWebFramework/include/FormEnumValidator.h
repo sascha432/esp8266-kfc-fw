@@ -10,7 +10,7 @@
 template <typename T, size_t N>
 class FormEnumValidator : public FormValidator {
 public:
-    FormEnumValidator(std::array<T, N> values) : FormEnumValidator(FPSTR(FormEnumValidator_default_message), values) {
+    FormEnumValidator(std::array<T, N> values) : FormEnumValidator(FSPGM(FormEnumValidator_default_message), values) {
     }
     FormEnumValidator(const String &message, std::array<T, N> values) : FormValidator(message) {
         _values = values;
@@ -30,7 +30,7 @@ public:
 
     virtual String getMessage() override {
         String message = FormValidator::getMessage();
-        if (message.indexOf(FPSTR(FormValidator_allowed_macro)) != -1) {
+        if (message.indexOf(FSPGM(FormValidator_allowed_macro)) != -1) {
             String allowed = "[";
             for(auto value = _values.begin(); value != _values.end(); ++value) {
                 allowed += String((long)*value);
@@ -39,7 +39,7 @@ public:
                 }
             }
             allowed += "]";
-            message.replace(FPSTR(FormValidator_allowed_macro), allowed);
+            message.replace(FSPGM(FormValidator_allowed_macro), allowed);
         }
         return message;
     }

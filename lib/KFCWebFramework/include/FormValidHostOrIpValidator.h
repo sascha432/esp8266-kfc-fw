@@ -8,7 +8,7 @@
 
 class FormValidHostOrIpValidator : public FormValidator {
 public:
-    FormValidHostOrIpValidator(bool allowEmpty = false) : FormValidHostOrIpValidator(FPSTR(FormValidHostOrIpValidator_default_message), allowEmpty) {
+    FormValidHostOrIpValidator(bool allowEmpty = false) : FormValidHostOrIpValidator(FSPGM(FormValidHostOrIpValidator_default_message), allowEmpty) {
     }
     FormValidHostOrIpValidator(const String &message, bool allowEmpty = false) : FormValidator(message) {
         _allowEmpty = allowEmpty;

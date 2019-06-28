@@ -27,6 +27,13 @@
 #include <SPIFFS.h>
 #include <WiFi.h>
 
+#define PROGMEM_STRING_DECL(name)               extern const char _shared_progmem_string_##name[] PROGMEM;
+#define PROGMEM_STRING_DEF(name, value)         const char _shared_progmem_string_##name[] PROGMEM = { value };
+
+#define SPGM(name) _shared_progmem_string_##name
+#define FSPGM(name) FPSTR(SPGM(name))
+#define PSPGM(name) (PGM_P)(SPGM(name))
+
 #elif defined(ESP8266)
 
 #include <Arduino.h>
@@ -35,6 +42,13 @@
 #include <ESP8266HttpClient.h>
 #include <WiFiUdp.h>
 #include <FS.h>
+
+#define PROGMEM_STRING_DECL(name)               extern const char _shared_progmem_string_##name[] PROGMEM;
+#define PROGMEM_STRING_DEF(name, value)         const char _shared_progmem_string_##name[] PROGMEM = { value };
+
+#define SPGM(name) _shared_progmem_string_##name
+#define FSPGM(name) FPSTR(SPGM(name))
+#define PSPGM(name) (PGM_P)(SPGM(name))
 
 #include "C:/Users/sascha/Documents/PlatformIO/Projects/kfc_fw/include/debug_helper.h"
 #include "C:/Users/sascha/Documents/PlatformIO/Projects/kfc_fw/include/misc.h"
@@ -48,6 +62,13 @@
 #include <winsock.h>
 #include <strsafe.h>
 #include <iostream>
+
+#define PROGMEM_STRING_DECL(name)               extern const char *_shared_progmem_string_##name;
+#define PROGMEM_STRING_DEF(name, value)         const char *_shared_progmem_string_##name = value;
+
+#define SPGM(name) _shared_progmem_string_##name
+#define FSPGM(name) FPSTR(SPGM(name))
+#define PSPGM(name) (PGM_P)(SPGM(name))
 
 //#define F(str) (reinterpret_cast<char *>(str))
 #define PSTR(str) str
@@ -687,8 +708,9 @@ class IPAddress {
         return _addr = addr._addr;
     }
 
-    void fromString(const String &addr) {
+    bool fromString(const String &addr) {
         _addr = inet_addr(addr.c_str());
+        return _addr != 0;
     }
     String toString() const {
         in_addr a;

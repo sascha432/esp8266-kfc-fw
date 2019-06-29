@@ -64,11 +64,10 @@ HttpHeader::~HttpHeader() {
 
 const String HttpHeader::getHeader() {
     String tmp = getName();
-    tmp += ':';
-    tmp += ' ';
+    tmp += F(": ");
     tmp += getValue();
     return tmp;
-    //return getName() + F(": ") + getValue();
+    // return getName() + F(": ") + getValue();
 }
 
 bool HttpHeader::equals(const HttpHeaderPtr &header) const {
@@ -114,9 +113,8 @@ HttpCacheControlHeader::HttpCacheControlHeader() : HttpHeader(FSPGM(Cache_Contro
     _maxAge = MAX_AGE_AUTO; // MAX_AGE_NOT_SET
 }
 
-const String  HttpCacheControlHeader::getValue() const {
+const String HttpCacheControlHeader::getValue() const {
     String tmp;
-    const String seperator = FSPGM(comma_);
     uint32_t maxAge = _maxAge;
 
     if (maxAge == MAX_AGE_AUTO && !_noCache) {
@@ -128,31 +126,31 @@ const String  HttpCacheControlHeader::getValue() const {
     }
     if (_noStore) {
         if (tmp.length()) {
-            tmp += seperator;
+            tmp += FSPGM(comma_);
         }
         tmp += F("no-store");
     }
     if (_mustRevalidate) {
         if (tmp.length()) {
-            tmp += seperator;
+            tmp += FSPGM(comma_);
         }
         tmp += F("must-revalidate");
     }
     if (_publicOrPrivate == CACHE_CONTROL_PRIVATE) {
         if (tmp.length()) {
-            tmp += seperator;
+            tmp += FSPGM(comma_);
         }
-        tmp += SPGM(private);
+        tmp += FSPGM(private);
     }
     if (_publicOrPrivate == CACHE_CONTROL_PUBLIC) {
         if (tmp.length()) {
-            tmp += seperator;
+            tmp += FSPGM(comma_);
         }
-        tmp += SPGM(public);
+        tmp += FSPGM(public);
     }
     if (maxAge != MAX_AGE_AUTO && maxAge != MAX_AGE_NOT_SET) {
         if (tmp.length()) {
-            tmp += seperator;
+            tmp += FSPGM(comma_);
         }
         tmp += F("max-age=");
         tmp += String(maxAge);
@@ -172,7 +170,7 @@ HttpCookieHeader::HttpCookieHeader(const String &name) : HttpHeader(FSPGM(Set_Co
 
 const String  HttpCookieHeader::getValue() const {
     PrintString header;
-    header += _cookieName;
+    header.print(_cookieName);
     header += '=';
     if (_expires != COOKIE_EXPIRED) {
         header += _value;

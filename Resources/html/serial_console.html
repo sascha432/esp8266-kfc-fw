@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<!--%%HEAD-->
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" debug_loader="1">
+    <link rel="stylesheet" href="../../lib/ESPWebFramework/Resources/css/bootstrap.min.css" debug_loader="1">
+    <link rel="stylesheet" href="../css/styles.css" debug_loader="1">
+    <link rel="stylesheet" href="../../lib/ESPWebFramework/Resources/css/open-iconic-bootstrap.css" debug_loader="1">
+    <title>KFC FW</title>
+</head>
+<!--HEAD%%-->
+
+<body>
+    <!--%%NAV-->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <a class="navbar-brand" href="index.html">KFC FW</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        </div>
+    </nav>
+    <!--NAV%%-->
+    <style>
+        html, body {
+    height: 100%;
+}
+</style>
+    <div class="container-fluid serial-console">
+        <div class="form-row">
+            <div class="form-group col-lg-12">
+                <div class="input-group">
+                    <input class="form-control single-select input_field" id="command-input" autocomplete="off"
+                        spellcheck="off">
+                    <div class="input-group-append" id="button-addon3">
+                        <button class="btn btn-outline-secondary" type="button" id="sendbutton">Send</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-row serial-console">
+            <div class="form-group col-lg-12 serial-console">
+                <textarea id="rxConsole" readonly>
+Available commands: /disconnect /reconnect /clear
+-----------------------------------------------------------------------------
+</textarea>
+            </div>
+        </div>
+        <!--%%FOOT-->
+        <div class="row">
+            <div class="col footer">&nbsp;</div>
+        </div>
+        <!--FOOT%%-->
+    </div>
+    <!--%%JAVASCRIPT-->
+	<script debug_loader="1" type="text/javascript" src="../../lib/ESPWebFramework/Resources/js/jquery-3.3.1.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/ESPWebFramework/Resources/js/popper.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/ESPWebFramework/Resources/js/popper.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/ESPWebFramework/Resources/js/bootstrap.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/ESPWebFramework/Resources/js/js.cookie.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../js/main.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../js/debug.js"></script>
+    <!--JAVASCRIPT%%-->
+
+    <script>
+// serial_console.html
+if ($('.serial-console').length) {
+
+    var wsc;
+	var input_field;
+	var authenticated;
+    var auto_reconnect = true;
+    var packet_counter;
+
+    function http2serial_data_handler(e) {
+        if (packet_counter++ == 0 && e.data.substring(0, 3) == "\tAT") {
+            add_commands(e.data);
+        } else {
+            console_write(e.data);
+        }
+    }
+
+    $('#command-input').focus().on('keypress', function(e) {
+        if (e.charCode == 13) {
+            e.preventDefault();
+            send_command();
+        }
+    });
+
+    $('#sendbutton').on('click', function(e) {
+        e.preventDefault();
+        send_command();
+    });
+
+	function add_commands(s) {
+		var dataList;
+		var pos = 0;
+		var list = $('#command-input')[0].selectize;
+		try {
+			list.clearOptions();
+			while((pos = s.indexOf("\t", pos + 1)) !== -1) {
+				e = s.indexOf("\t", pos + 1);
+				if (e != -1) {
+					item = s.substr(pos, e - pos + 1);
+					console.log(item);
+					list.addOption({text: item, value: item});
+				}
+			}
+			list.refreshOptions();
+        } catch(e) {
+        }
+	}
+
+	function console_write(message) {
+		var console = document.getElementById("rxConsole");
+		console.value += message;
+		console.scrollTop = console.scrollHeight;
+	}
+
+	function send_action(disabled) {
+		// $('#sendbutton').prop('disabled', disabled);
+		// $('#command-input').prop('disabled', disabled);
+		// try {
+			// if (disabled) {
+				// $('#command-input')[0].selectize.disable();
+			// } else {
+				// $('#command-input')[0].selectize.enable();
+			// }
+		// }catch(e) {
+		// }
+	}
+
+	function start() {
+		if (!auto_reconnect) {
+			return;
+		}
+		send_action(true);
+        packet_counter = 0;
+        wsc = new WS_Console($.getWebSocketLocation('/serial_console'), $.getSessionId(), 10, http2serial_data_handler);
+        wsc.connect();
+
+		// Socket.onopen = function() {
+		// 	console_write("Connection has been established\n");
+		// 	Socket.send((window.location.hostname == '' ? "92c245bcae0086aab8a8f0e5d8605cce8775459de228b34f245a84d41c5c43840391b11971bae6fe" : Cookies.get("SID"))); //TODO DEBUG
+		// }
+		// Socket.onclose = Socket.onerror = function() {
+		// 	send_action(true);
+		// 	console_write("Connection lost. Reconnecting...\n");
+		// 	start();
+		// }
+		// Socket.onerror = function(evt) {
+		// 	send_action(true);
+		// }
+	}
+
+	function send_command() {
+		var input = $("#command-input");
+		var val = input.val();
+		console.log("send "+val);
+		if (val.trim() != "") {
+			if (val.toLowerCase() == "/disconnect") {
+				auto_reconnect = false;
+				wsc.disconnect();
+				return;
+			} else if (val.toLowerCase() == "/reconnect") {
+				auto_reconnect = true;
+				wsc.disconnect();
+				start();
+				return;
+			} else if (val.toLowerCase() == "/clear") {
+				document.getElementById("rxConsole").value = "";
+				return;
+			}
+			try {
+				wsc.socket.send(val + "\r\n");
+				console_write(val + "\n");
+				input.val("");
+			} catch(e) {
+				console_write(e + "\nConnection lost. Reconnecting...\n");
+				start();
+			}
+		} else {
+			input.val("");
+		}
+	}
+
+	$(function() {
+		$('#command-input')./*selectize({
+			create: true,
+			maxItems: 1,
+			options: [
+				{ value: "AT", text: "AT" },
+				{ value: "AT?", text: "AT" },
+			],
+			onChange: function(value) {
+				send_command();
+			}
+		}).*/keypress(function(event) {
+			if(event.keyCode == 13) {
+				send_command();
+			}
+        });
+		send_action(true);
+		start();
+	});
+}
+    </script>
+</body>
+
+</html>

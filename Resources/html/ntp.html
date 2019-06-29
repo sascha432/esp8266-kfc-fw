@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<!--%%HEAD-->
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" debug_loader="1">
+    <link rel="stylesheet" href="../../lib/ESPWebFramework/Resources/css/bootstrap.min.css" debug_loader="1">
+    <link rel="stylesheet" href="../css/styles.css" debug_loader="1">
+    <link rel="stylesheet" href="../../lib/ESPWebFramework/Resources/css/open-iconic-bootstrap.css" debug_loader="1">
+    <title>KFC FW</title>
+</head>
+<!--HEAD%%-->
+
+<body>
+    <!--%%NAV-->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <a class="navbar-brand" href="index.html">KFC FW</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        </div>
+    </nav>
+    <!--NAV%%-->
+    <div class="container">
+        <h1>NTP Client Configuration</h1>
+        <form method="POST" action="ntp.html">
+            <div class="form-group">
+                <label for="ntp_enabled">NTP Client:</label>
+                <select class="form-control" name="ntp_enabled" id="ntp_enabled">
+                    <option value="0" %NTP_ENABLED_0%>Disabled</option>
+                    <option value="1" %NTP_ENABLED_1%>Enabled</option>
+                </select>
+            </div>
+            <span id="ntp_settings">
+                <div class="form-group">
+                    <label for="ntp_timezone">Timezone:</label>
+                    <select class="form-control" name="ntp_timezone" id="ntp_timezone">
+<script>(function(){var timezone_list =
+/*--%%TIMEZONE_LIST_JS--*/[];
+/*--TIMEZONE_LIST_JS%%--*/
+    var s = '';
+    for (i = 0; i < timezone_list.length; i++) {
+        s += '<option value="' + timezone_list[i] + '"' + ('%NTP_TIMEZONE%' == timezone_list[i] ? ' selected' : '') + '>' + timezone_list[i] + '</option>';
+    }
+    document.getElementById('ntp_timezone').innerHTML = s;
+})();
+</script>
+</select>
+                </div>
+                <div class="form-group">
+                    <label for="ntp_server1">NTP Server 1:</label>
+                    <input type="text" class="form-control" name="ntp_server1" id="ntp_server1" value="%NTP_SERVER1%" size="64">
+                </div>
+                <div class="form-group">
+                    <label for="ntp_server1">NTP Server 2:</label>
+                    <input type="text" class="form-control" name="ntp_server2" id="ntp_server2" value="%NTP_SERVER2%" size="64">
+                </div>
+                <div class="form-group">
+                    <label for="ntp_server1">NTP Server 3:</label>
+                    <input type="text" class="form-control" name="ntp_server3" id="ntp_server3" value="%NTP_SERVER3%" size="64">
+                </div>
+                <!--#if USE_REMOTE_TIMEZONE-->
+                <div class="form-group">
+                    <label for="ntp_remote_tz_url">Remote Timezone URL: (Register at <a href="https://timezonedb.com/register" target="_blank">https://timezonedb.com/register</a> or see documentation how to self-host the timezone script)</label>
+                    <input type="text" class="form-control" name="ntp_remote_tz_url" id="ntp_remote_tz_url" value="%NTP_REMOTE_TZ_URL%" size="254">
+                </div>
+                <!--#endif-->
+            </span>
+            <div class="form-group">
+                <button type="submit" class="btn btn-primary">Save Changes...</button>
+            </div>
+        </form>
+        <!--%%FOOT-->
+        <div class="row">
+            <div class="col footer">&nbsp;</div>
+        </div>
+        <!--FOOT%%-->
+    </div>
+    <!--%%JAVASCRIPT-->
+	<script debug_loader="1" type="text/javascript" src="../../lib/ESPWebFramework/Resources/js/jquery-3.3.1.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/ESPWebFramework/Resources/js/popper.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/ESPWebFramework/Resources/js/popper.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/ESPWebFramework/Resources/js/bootstrap.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/ESPWebFramework/Resources/js/js.cookie.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../js/main.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../js/debug.js"></script>
+    <!--JAVASCRIPT%%-->
+
+
+</body>
+
+</html>

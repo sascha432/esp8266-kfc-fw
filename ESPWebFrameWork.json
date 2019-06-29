@@ -1,0 +1,181 @@
+{
+    "name": "KFC firmware webui builder",
+    "platformio_ini": "./platformio.ini",
+    "global_defines_header": "./include/global.h",
+    "spiffs": {
+        "data_dir": "./data",
+        "web_target_dir": "./data/webui",
+        "mappings_file": "${spiffs.web_target_dir}/.mappings"
+    },
+    "configuration": {
+        "set_env": [
+            { "name": "PYTHONIOENCODING", "value": "UTF-8" }
+        ],
+        "cleanup_temp_dir_on_failure": true,
+        "package_hash_file": "./logs/web_builder.hash",
+        "log_file": "./logs/builder.log",
+        "log_level": "debug"
+    },
+    "web_builder": {
+        "branchesx": [
+            "spiffs",
+            "test_www"
+        ],
+        "conditional_excludes": {
+            "#if !IOT_ATOMIC_SUN_V2": [ "./Resources/html/atomic_sun.html", "./Resources/html/atomic_sun_cfg.html" ],
+            "#if !FILE_MANAGER": "./Resources/html/file_manager.html",
+            "#if !MQTT_SUPPORT": "./Resources/html/mqtt.html",
+            "#if !SYSLOG": "./Resources/html/syslog.html",
+            "#if !NTP_CLIENT": [ "./Resources/html/ntp.html", "./Resources/html/timezone.html" ],
+            "#if !HTTP2SERIAL": [ "./Resources/html/serial_console.html", "./lib/ESPWebFrameWork/Resources/js/selectize.min.js" ],
+            "#if !PING_SUPPORT": "./Resources/html/ping.html",
+            "#if !PING_MONITOR": "./Resources/html/ping_monitor.html",
+            "#if !WEMO_EMULATION": "./Resources/html/wemo.html",
+            "#if !HUE_EMULATION": "./Resources/html/hue.html",
+            "#if !REST_API_SUPPORT": "./Resources/html/rest_api.html",
+            "#if !HOME_ASSISTANT_INTEGRATION": "./Resources/html/home_assistant.html",
+            "#if !PING_SUPPORT && !HTTP2SERIAL": [
+                "./Resources/js/ws_console.js",
+                { "#if !FILE_MANAGER": "./lib/ESPWebFrameWork/Resources/js/js.cookie.min.js" }
+            ],
+            "#if !WEB_SOCKET_ENCRYPTION": [ "./Resources/js/aes.js", "./Resources/js/sha512.js" ],
+            "#if !SERIAL2TCP": "./Resources/html/serial2tcp.html"
+        },
+        "groups": {
+            "js_main": {
+                "target_dirs": {
+                    "/data/webui/js": [
+                        "./lib/ESPWebFrameWork/Resources/js/jquery-3.3.1.min.js",
+                        "./lib/ESPWebFrameWork/Resources/js/popper.min.js",
+                        "./lib/ESPWebFrameWork/Resources/js/bootstrap.min.js",
+                        "./lib/ESPWebFrameWork/Resources/js/js.cookie.min.js",
+                        "./lib/ESPWebFrameWork/Resources/js/selectize.min.js",
+                        "./Resources/js/aes.js",
+                        "./Resources/js/sha512.js",
+                        "./Resources/js/main.min.js",
+                        "./Resources/js/ws_console.js"
+                    ]
+                },
+                "processors":  {
+                    "uglify_js": {
+                        "branch": [ "!use_closure_compiler" ],
+                        "condition": "#if MINIFY_WEBUI",
+                        "command": "${commands.uglify_js}"
+                    },
+                    "combine": {
+                        "command": "@copy-combined"
+                    },
+                    "minify_js": {
+                        "branch": [ "use_closure_compiler" ],
+                        "condition": "#if MINIFY_WEBUI",
+                        "command": "${commands.minify_js}"
+                    },
+                    "compress": {
+                        "branch": [ "!test_www" ],
+                        "command": "${commands.compress_gzip}"
+                    },
+                    "assign_name": {
+                        "command": {
+                            "type": "php_eval",
+                            "code": "$file->setTmpOut($file->getTmpIn()); $file->setTarget($file->getTargetDir().DIRECTORY_SEPARATOR.substr(md5_file($file->getTmpIn()), 0, 8).'.js'); $this->addAsset('ASSETS_JS', $file->getTarget()); return 0;"
+                        }
+                    }
+                }
+            },
+            "css_main": {
+                "target_dirs": {
+                    "./data/webui/css": [
+                        "./lib/ESPWebFrameWork/Resources/css/bootstrap.min.css",
+                        "./lib/ESPWebFrameWork/Resources/css/selectize.bootstrap4.css",
+                        "./lib/ESPWebFrameWork/Resources/css/open-iconic-bootstrap.css",
+                        "./Resources/css/styles.css"
+                    ]
+                },
+                "processors":  {
+                    "minify": {
+                        "condition": "#if MINIFY_WEBUI",
+                        "command": "${commands.minify_css}"
+                    },
+                    "combine": {
+                        "command": "@copy-combined"
+                    },
+                    "compress": {
+                        "branch": [ "!test_www" ],
+                        "command": "${commands.compress_gzip}"
+                    },
+                    "assign_name": {
+                        "command": {
+                            "type": "php_eval",
+                            "code": "$file->setTmpOut($file->getTmpIn()); $file->setTarget($file->getTargetDir().DIRECTORY_SEPARATOR.substr(md5_file($file->getTmpIn()), 0, 8).'.css'); $this->addAsset('ASSETS_CSS', $file->getTarget()); return 0;"
+                        }
+                    }
+                }
+            },
+            "html" : {
+                "target_dirs": {
+                    "./data/webui": {
+                            "./Resources/html": "/\\.html$/"
+                        }
+                    },
+                    "processors": {
+                        "remove_dot_files": {
+                            "filename_pattern": "/^\\.[^.]+\\.html$/",
+                            "command": "@remove-file"
+                        },
+                        "template2html": {
+                            "command": "@create-html-template"
+                        },
+                        "minify": {
+                            "condition": "#if MINIFY_WEBUI",
+                            "command": "${commands.minify_html}"
+                        },
+                        "compress": {
+                            "branch": [ "!test_www" ],
+                            "command": "${commands.compress_gzip}",
+                            "content_pattern": "/%[A-Z0-9_]{1,33}%/!"
+                        }
+                    }
+            },
+            "static_content": {
+                "target_dirs": {
+                    "./data/webui/images": [ "./lib/ESPWebFrameWork/Resources/images/spinner.gif" ],
+                    "./data/webui/fonts": { "./lib/ESPWebFrameWork/Resources/fonts": "/^open-iconic\\..*/" }
+                },
+                "processors":  {
+                    "compress": {
+                        "branch": [ "!test_www" ],
+                        "command": "${commands.compress_gzip}"
+                    }
+                }
+            },
+            "after": {
+                "append": [ "js_main", "css_main", "html", "static_content" ],
+                "processors":  {
+                    "test": {
+                        "branch": [ "test_www" ],
+                        "command": {
+                            "type": "php_eval",
+                            "code": "$file->passThru(); global $__my_data; $__my_data['dir'] = $__my_data['dir'] ?? strftime('C:/Users/sascha/Desktop/test/%Y%m%d%H%M%S/'); @mkdir($__my_data['dir'], 0777, true); $file->setTarget(str_replace($this->getWebTargetDir(), $__my_data['dir'], $file->getTarget())); return 0;"
+                        }
+                    },
+                    "publish": {
+                        "branch": [ "test_www" ],
+                        "command": "@copy",
+                        "publish": true
+                    },
+                    "map": {
+                        "branch": [ "spiffs" ],
+                        "command": {
+                            "type": "php_class",
+                            "class_name": "\\ESPWebFramework\\Mapper"
+                        },
+                        "publish": true
+                    }
+                }
+            }
+        }
+    },
+    "includes": [
+        "./lib/ESPWebFrameWork/ESPWebFrameWork.json"
+    ]
+}

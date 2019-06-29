@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<!--%%HEAD-->
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" debug_loader="1">
+    <link rel="stylesheet" href="../../lib/ESPWebFramework/Resources/css/bootstrap.min.css" debug_loader="1">
+    <link rel="stylesheet" href="../css/styles.css" debug_loader="1">
+    <link rel="stylesheet" href="../../lib/ESPWebFramework/Resources/css/open-iconic-bootstrap.css" debug_loader="1">
+    <title>KFC FW</title>
+</head>
+<!--HEAD%%-->
+
+<body>
+    <!--%%NAV-->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <a class="navbar-brand" href="index.html">KFC FW</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        </div>
+    </nav>
+    <!--NAV%%-->
+    <div class="container">
+        <h1>Status%SAFEMODE%</h1>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th colspan="2">System overview</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Hardware</td>
+                    <td>%HARDWARE%</td>
+                </tr>
+                <tr>
+                    <td>Software</td>
+                    <td>%SOFTWARE%</td>
+                </tr>
+                <!--#if NTP_CLIENT || RTC_SUPPORT-->
+                <tr>
+                    <td>System time</td>
+                    <td>%TIME%</td>
+                </tr>
+                <!--#endif-->
+                <tr>
+                    <td>System up time</td>
+                    <td>%UPTIME%</td>
+                </tr>
+                <tr>
+                    <td>WiFi up time</td>
+                    <td>%WIFI_UPTIME%</td>
+                </tr>
+            </tbody>
+            <thead>
+                <tr>
+                    <th colspan="2">Network overview</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>IP Address / Gateway</td>
+                    <td>%IP_ADDRESS% / %GATEWAY%</td>
+                </tr>
+                <tr>
+                    <td>DNS</td>
+                    <td>%DNS%</td>
+                </tr>
+            </tbody>
+            <thead>
+                <tr>
+                    <th colspan="2">WiFi overview</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Hostname</td>
+                    <td>%WIFI_HOSTNAME%</td>
+                </tr>
+                <tr>
+                    <td>SSID</td>
+                    <td>%WIFI_SSID%</td>
+                </tr>
+                <tr>
+                    <td>Mode</td>
+                    <td>%WIFI_MODE%</td>
+                </tr>
+                <tr>
+                    <td>Status</td>
+                    <td>%WIFI_STATUS%</td>
+                </tr>
+            </tbody>
+            <thead>
+                <tr>
+                    <th colspan="2">Services</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!--#if WEBSERVER_SUPPORT-->
+                <tr>
+                    <td>Web server</td>
+                    <td>%REMOTE_STATUS%</td>
+                </tr>
+                <!--#endif-->
+                <!--#if ASYNC_TCP_SSL_ENABLED-->
+                <tr>
+                    <td>SSL/TLS</td>
+                    <td>%SSL_STATUS%</td>
+                </tr>
+                <!--#endif-->
+                <!--#if SYSLOG-->
+                <tr>
+                    <td>Syslog</td>
+                    <td>%SYSLOG_STATUS%</td>
+                </tr>
+                <!--#endif-->
+                <!--#if MDNS_SUPPORT-->
+                <tr>
+                    <td>MDNS</td>
+                    <td>%MDNS_STATUS%</td>
+                </tr>
+                <!--#endif-->
+                <!--#if NTP_CLIENT-->
+                <tr>
+                    <td>NTP Client</td>
+                    <td>%NTP_STATUS%</td>
+                </tr>
+                <!--#endif-->
+                <!--#if MQTT_SUPPORT-->
+                <tr>
+                    <td>MQTT</td>
+                    <td>%MQTT_STATUS%</td>
+                </tr>
+                <!--#endif-->
+
+                <!--#if HOME_ASSISTANT_INTEGRATION-->
+                <tr>
+                    <td>Home Assistant</td>
+                    <td>%HOMEASSISTANT_STATUS%</td>
+                </tr>
+                <!--#endif-->
+                <!--#if HOME_ASSISTANT_INTEGRATION-->
+                <tr>
+                    <td>WEMO</td>
+                    <td>%WEMO_STATUS%</td>
+                </tr>
+                <!--#endif-->
+                <!--#if HUE_EMULATION-->
+                <tr>
+                    <td>HUE</td>
+                    <td>%HUE_STATUS%</td>
+                </tr>
+                <!--#endif-->
+                <!--#if REST_API_SUPPORT-->
+                <tr>
+                    <td>REST API</td>
+                    <td>%REST_STATUS%</td>
+                </tr>
+                <!--#endif-->
+                <!--#if PING_MONITOR-->
+                <tr>
+                    <td>Ping Monitor</td>
+                    <td>%PING_STATUS%</td>
+                </tr>
+                <!--#endif-->
+                <!--#if SERIAL2TCP-->
+                <tr>
+                    <td>Serial2TCP</td>
+                    <td>%SERIAL2TCP_STATUS%</td>
+                </tr>
+                <!--#endif-->
+                <!--#if IOT_SWITCH-->
+                <tr>
+                    <td>Switch</td>
+                    <td>%IOT_SWITCH_STATUS%</td>
+                </tr>
+                <!--#endif-->
+                <!--#if IOT_ATOMIC_SUN_V1-->
+                <tr>
+                    <td>Atomic Sun V1</td>
+                    <td>%IOT_4CH_DIMMER_STATUS%</td>
+                </tr>
+                <!--#endif-->
+                <!--#if IOT_ATOMIC_SUN_V2-->
+                <tr>
+                    <td>Atomic Sun V2</td>
+                    <td>%IOT_4CH_DIMMER_STATUS%</td>
+                </tr>
+                <!--#endif-->
+            </tbody>
+            <!--#if 0 && MDNS_SUPPORT-->
+            <thead>
+                <tr>
+                    <th colspan="2">MDNS Auto discovery</th>
+                </tr>
+            </thead>
+            <tbody id="pollm_dns">
+                <tr>
+                    <td colspan="2"><img src="images/spinner.gif" width="16" height="16"></td>
+                <tr>
+            </tbody>
+            <!--#endif-->
+        </table>
+        <!--%%FOOT-->
+        <div class="row">
+            <div class="col footer">&nbsp;</div>
+        </div>
+        <!--FOOT%%-->
+    </div>
+    <!--%%JAVASCRIPT-->
+	<script debug_loader="1" type="text/javascript" src="../../lib/ESPWebFramework/Resources/js/jquery-3.3.1.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/ESPWebFramework/Resources/js/popper.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/ESPWebFramework/Resources/js/popper.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/ESPWebFramework/Resources/js/bootstrap.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/ESPWebFramework/Resources/js/js.cookie.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../js/main.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../js/debug.js"></script>
+    <!--JAVASCRIPT%%-->
+
+</body>
+
+</html>

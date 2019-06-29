@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<!--%%HEAD-->
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" debug_loader="1">
+    <link rel="stylesheet" href="../../lib/ESPWebFramework/Resources/css/bootstrap.min.css" debug_loader="1">
+    <link rel="stylesheet" href="../css/styles.css" debug_loader="1">
+    <link rel="stylesheet" href="../../lib/ESPWebFramework/Resources/css/open-iconic-bootstrap.css" debug_loader="1">
+    <title>KFC FW</title>
+</head>
+<!--HEAD%%-->
+
+<body>
+    <!--%%NAV-->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <a class="navbar-brand" href="index.html">KFC FW</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        </div>
+    </nav>
+    <!--NAV%%-->
+    <style>
+html, body {
+    height: 100%;
+}
+</style>
+    <div class="container ping-console">
+        <div class="form-row">
+            <div class="form-group col-lg-12">
+                <label for="host">Host:</label>
+                <div class="input-group">
+                        <input class="form-control" id="host" autocomplete="off" spellcheck="off" value="8.8.8.8">
+                        <input class="form-control" id="count" autocomplete="off" spellcheck="off" placeholder="Ping count 4" style="max-width:140px">
+                        <input class="form-control" id="timeout" autocomplete="off" spellcheck="off" placeholder="Timeout 5000ms" style="max-width:155px">
+                        <div class="input-group-append" id="button-addon3">
+                            <button class="btn btn-outline-primary" type="button" id="start_button">Start</button>
+                            <button class="btn btn-outline-secondary" type="button" id="stop_button">Stop</button>
+                            <button class="btn btn-outline-secondary" type="button" id="clear_button">Clear</button>
+                        </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-row ping-console">
+            <div class="form-group col-lg-12 ping-console">
+                <textarea id="rxConsole" readonly></textarea>
+            </div>
+        </div>
+        <!--%%FOOT-->
+        <div class="row">
+            <div class="col footer">&nbsp;</div>
+        </div>
+        <!--FOOT%%-->
+    </div>
+    <!--%%JAVASCRIPT-->
+	<script debug_loader="1" type="text/javascript" src="../../lib/ESPWebFramework/Resources/js/jquery-3.3.1.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/ESPWebFramework/Resources/js/popper.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/ESPWebFramework/Resources/js/popper.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/ESPWebFramework/Resources/js/bootstrap.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/ESPWebFramework/Resources/js/js.cookie.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../js/main.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../js/debug.js"></script>
+    <!--JAVASCRIPT%%-->
+
+    <script>
+        // ping.html
+        if ($('.ping-console').length) {
+
+            var wsc;
+
+            function ping_data_handler(e) {
+                wsc.console_log("Data " + e.data);
+            }
+
+            function stop_ping() {
+                wsc.disconnect();
+            }
+
+            function ping(host, count, timeout) {
+                wsc.console_log("Pinging " + host + " " + count + " time(s) with a timeout of " + timeout + "ms");
+                wsc.socket.send("+PING " + count + " " + timeout + " " + host);
+            }
+
+            function start_ping(host) {
+                var host = $('#host').val().trim();
+                var count = $('#count').val() * 1;
+                var timeout = $('#timeout').val() * 1;
+                if (count < 1) {
+                    count = 4;
+                }
+                if (timeout < 1) {
+                    timeout = 5000;
+                }
+                if (host == "") {
+                    wsc.console_log("Enter a hostname or IP address");
+                } else {
+                    if (wsc.is_authenticated()) {
+                        ping(host, count, timeout);
+                    } else {
+                        wsc.connect(function() {
+                            ping(host, count, timeout);
+                        });
+                    }
+                }
+            }
+
+            $('#host').focus().on('keypress', function(e) {
+                if (e.charCode == 13) {
+                    e.preventDefault();
+                    start_ping();
+                }
+            });
+
+            $('#start_button').on('click', function(e) {
+                e.preventDefault();
+                start_ping();
+            });
+
+            $('#stop_button').on('click', function(e) {
+                e.preventDefault();
+                stop_ping();
+            });
+
+            $('#clear_button').on('click', function(e) {
+                e.preventDefault();
+                wsc.console_clear();
+            });
+
+            wsc = new WS_Console($.getWebSocketLocation('/ping'), $.getSessionId(), 10, ping_data_handler);
+        }
+    </script>
+</body>
+</html>

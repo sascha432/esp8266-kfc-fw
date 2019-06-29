@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<!--%%HEAD-->
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" debug_loader="1">
+    <link rel="stylesheet" href="../../lib/ESPWebFramework/Resources/css/bootstrap.min.css" debug_loader="1">
+    <link rel="stylesheet" href="../css/styles.css" debug_loader="1">
+    <link rel="stylesheet" href="../../lib/ESPWebFramework/Resources/css/open-iconic-bootstrap.css" debug_loader="1">
+    <title>KFC FW</title>
+</head>
+<!--HEAD%%-->
+
+<body onload="config_init('%NETWORK_MODE%', true)">
+    <!--%%NAV-->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <a class="navbar-brand" href="index.html">KFC FW</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+            ,0
+        </button>
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        </div>
+    </nav>
+    <!--NAV%%-->
+    <div class="container">
+        <h1>WiFi Configuration</h1>
+        <form method="POST" action="wifi.html" id="wifi_settings">
+            <div class="form-group">
+                <label for="mode">Mode:</label>
+                <select class="form-control" name="mode" id="mode">
+                    <option value="1" %MODE_1%>Station Mode</option>
+                    <option value="2" %MODE_2%>Access Point</option>
+                    <option value="3" %MODE_3%>Access Point and Station Mode</option>
+                </select>
+            </div>
+            <span id="station_mode">
+                <div class="form-group">
+                    <h2>Station</h2>
+                </div>
+                <div class="form-group">
+                </div>
+                <div class="form-group">
+                    <label for="ssid">SSID:</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" name="wifi_ssid" id="wifi_ssid" value="%WIFI_SSID%" />
+                        <div class="input-group-append">
+                            <button class="btn btn-default" type="button" id="wifi_scan_button" data-toggle="modal" data-target="#network_dialog">Scan...</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="password">Passphrase:</label>
+                    <input type="text" class="form-control visible-password" name="wifi_password" id="wifi_password" value="%WIFI_PASSWORD%">
+                </div>
+            </span>
+            <span id="ap_mode">
+                <div class="form-group">
+                    <h2>Access Point</h2>
+                </div>
+                <div class="form-group">
+                    <label for="ap_ssid">SSID:</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" name="ap_wifi_ssid" id="ap_wifi_ssid" value="%AP_WIFI_SSID%">
+                        <div class="input-group-append">
+                            <span class="button-checkbox">
+                                <button type="button" class="btn" data-color="primary">HIDDEN</button>
+                                <input type="checkbox" class="hidden" name="_ap_hidden" id="_ap_hidden" value="1" %AP_HIDDEN%
+                                    data-label="HIDDEN">
+                                    <input type="hidden" name="ap_hidden" id="ap_hidden">
+                            </span>
+                        </div>
+                    </div>
+
+                </div>
+                <div class="form-group">
+                    <label for="ap_password">Passphrase:</label>
+                    <input type="text" class="form-control visible-password" name="ap_wifi_password" id="ap_wifi_password" value="%AP_WIFI_PASSWORD%">
+                </div>
+                <div class="form-group">
+                    <label for="channel">Channel</label>
+                    <select class="form-control" name="channel" id="channel">
+                        <option value="0" %CHANNEL_0%>Auto</option>
+                        <option value="1" %CHANNEL_1%>1</option>
+                        <option value="2" %CHANNEL_2%>2</option>
+                        <option value="3" %CHANNEL_3%>3</option>
+                        <option value="4" %CHANNEL_4%>4</option>
+                        <option value="5" %CHANNEL_5%>5</option>
+                        <option value="6" %CHANNEL_6%>6</option>
+                        <option value="7" %CHANNEL_7%>7</option>
+                        <option value="8" %CHANNEL_8%>8</option>
+                        <option value="9" %CHANNEL_9%>9</option>
+                        <option value="10" %CHANNEL_10%>10</option>
+                        <option value="11" %CHANNEL_11%>11</option>
+                        <option value="12" %CHANNEL_12%>12</option>
+                        <option value="13" %CHANNEL_13%>13</option>
+                        <option value="14" %CHANNEL_14%>14</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="encryption">Encryption</label>
+                    <select class="form-control" name="encryption" id="encryption">
+                        <option value="7" %ENCRYPTION_7%>None</option>
+                        <option value="5" %ENCRYPTION_5%>WEP</option>
+                        <option value="2" %ENCRYPTION_2%>WPA TKIP</option>
+                        <option value="4" %ENCRYPTION_4%>WPA CCMP</option>
+                        <option value="8" %ENCRYPTION_8%>Auto</option>
+                    </select>
+                </div>
+            </span>
+            <div class="form-group">
+                <button type="submit" class="btn btn-primary">Save Changes...</button>
+            </div>
+        </form>
+
+        <div class="modal" tabindex="-1" role="dialog" id="network_dialog">
+            <div class="modal-dialog modal-lg" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">WiFi Networks <span id="wifi_networks_title"></span></h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="networks">
+                        </div>
+                        <div class="scanning text-center">
+                            <p>Scanning for available networks...</p>
+                            <img src="images/spinner.gif" width="64" height="64">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary">Select Network</button>
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!--%%FOOT-->
+        <div class="row">
+            <div class="col footer">&nbsp;</div>
+        </div>
+        <!--FOOT%%-->
+    </div>
+    <!--%%JAVASCRIPT-->
+	<script debug_loader="1" type="text/javascript" src="../../lib/ESPWebFramework/Resources/js/jquery-3.3.1.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/ESPWebFramework/Resources/js/popper.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/ESPWebFramework/Resources/js/popper.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/ESPWebFramework/Resources/js/bootstrap.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/ESPWebFramework/Resources/js/js.cookie.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../js/main.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../js/debug.js"></script>
+    <!--JAVASCRIPT%%-->
+
+    %FORM_VALIDATOR%
+</body>
+
+</html>

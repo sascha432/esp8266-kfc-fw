@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<!--%%HEAD-->
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" debug_loader="1">
+    <link rel="stylesheet" href="../../lib/ESPWebFramework/Resources/css/bootstrap.min.css" debug_loader="1">
+    <link rel="stylesheet" href="../css/styles.css" debug_loader="1">
+    <link rel="stylesheet" href="../../lib/ESPWebFramework/Resources/css/open-iconic-bootstrap.css" debug_loader="1">
+    <title>KFC FW</title>
+</head>
+<!--HEAD%%-->
+
+<body>
+    <!--%%NAV-->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <a class="navbar-brand" href="index.html">KFC FW</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        </div>
+    </nav>
+    <!--NAV%%-->
+    <div class="container">
+        <h1>Serial2TCP</h1>
+        <form method="POST" action="serial2tcp.html" id="serial2tcp_settings">
+            <div class="form-group">
+                <label for="serial2tcp_enabled">Mode:</label>
+                <select class="form-control" name="serial2tcp_enabled" id="serial2tcp_enabled">
+                    <option value="0" %SERIAL2TCP_ENABLED_0%>Disabled</option>
+                    <option value="1" %SERIAL2TCP_ENABLED_1%>Secure Server (TLS)</option>
+                    <option value="2" %SERIAL2TCP_ENABLED_2%>Unsecure Server</option>
+                    <option value="3" %SERIAL2TCP_ENABLED_3%>Secure Client (TLS)</option>
+                    <option value="4" %SERIAL2TCP_ENABLED_4%>Unsecure Client</option>
+                </select>
+            </div>
+            <span class="serial2tcp_client_settings">
+                <div class="form-group">
+                    <label for="serial2tcp_host">Host:</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" name="serial2tcp_host" id="serial2tcp_host" value="%SERIAL2TCP_HOST%">
+                        <div class="input-group-append">
+                            <span class="button-checkbox" style="margin-right:3px; margin-left:3px;">
+                                <button type="button" class="btn" data-color="primary">Auto Connect</button>
+                                <input type="checkbox" class="hidden" name="_serial2tcp_auto_connect" id="_serial2tcp_auto_connect"
+                                    value="1" %SERIAL2TCP_AUTO_CONNECT% data-label="HIDDEN">
+                                <input type="hidden" name="serial2tcp_auto_connect" id="serial2tcp_auto_connect">
+                            </span>
+                            <span class="button-checkbox">
+                                <button type="button" class="btn" data-color="primary">Reconnect</button>
+                                <input type="checkbox" class="hidden" name="_serial2tcp_auto_reconnect" id="_serial2tcp_auto_reconnect"
+                                    value="1" %SERIAL2TCP_AUTO_RECONNECT% data-label="HIDDEN">
+                                <input type="hidden" name="serial2tcp_auto_reconnect" id="serial2tcp_auto_reconnect">
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </span>
+            <span class="serial2tcp_server_settings serial2tcp_client_settings">
+                <div class="form-group">
+                    <label for="serial2tcp_port">TCP Port:</label>
+                    <input type="text" class="form-control" name="serial2tcp_port" id="serial2tcp_port" value="%SERIAL2TCP_PORT%"
+                        placeholder="23">
+                </div>
+                <div class="form-group">
+                    <label for="serial2tcp_serial_port">Serial Port:</label>
+                    <select class="form-control" name="serial2tcp_serial_port" id="serial2tcp_serial_port">
+                        <option value="0" %SERIAL2TCP_SERIAL_PORT_0%>Hardware Serial Port 0 (Serial)</option>
+                        <option value="1" %SERIAL2TCP_SERIAL_PORT_1%>Hardware Serial Port 1 (Serial1)</option>
+                        <option value="2" %SERIAL2TCP_SERIAL_PORT_2%>Software Serial Custom</option>
+                    </select>
+                </div>
+            </span>
+            <span class="serial2tcp_server_settings serial2tcp_client_settings">
+                <div class="form-group">
+                    <label for="serial2tcp_baud_rate">Baud Rate:</label>
+                    <input type="text" class="form-control" name="serial2tcp_baud_rate" id="serial2tcp_baud_rate" value="%SERIAL2TCP_BAUD_RATE%"
+                        placeholder="115200">
+                </div>
+            </span>
+            <span class="serial2tcp_custom serial2tcp_settings">
+                <div class="form-group">
+                    <label for="serial2tcp_baud_rate">RX Pin:</label>
+                    <input type="text" class="form-control" name="serial2tcp_rx_pin" id="serial2tcp_rx_pin" value="%SERIAL2TCP_RX_PIN%"
+                        placeholder="">
+                </div>
+                <div class="form-group">
+                    <label for="serial2tcp_baud_rate">TX Pin:</label>
+                    <input type="text" class="form-control" name="serial2tcp_tx_pin" id="serial2tcp_tx_pin" value="%SERIAL2TCP_TX_PIN%"
+                        placeholder="">
+                </div>
+            </span>
+            <span class="serial2tcp_server_settings serial2tcp_client_settings serial2tcp_settings">
+                <div class="form-group">
+                    <label for="serial2tcp_auth">Authentication:</label>
+                    <select class="form-control" name="serial2tcp_auth" id="serial2tcp_auth">
+                        <option value="0" %SERIAL2TCP_AUTH_0%>Disabled</option>
+                        <option value="1" %SERIAL2TCP_AUTH_1%>Enabled</option>
+                    </select>
+                </div>
+            </span>
+            <div class="form-group serial2tcp_authentication serial2tcp_settings">
+                <div class="form-group">
+                    <label for="password">Username:</label>
+                    <input type="text" class="form-control" name="serial2tcp_username" id="serial2tcp_username" value="%SERIAL2TCP_USERNAME%">
+                </div>
+                <div class="form-group">
+                    <label for="password">Password:</label>
+                    <input type="text" class="form-control visible-password" name="serial2tcp_password" id="serial2tcp_password"
+                        value="%SERIAL2TCP_PASSWORD%">
+                </div>
+            </div>
+            <div class="form-group">
+                <button type="submit" class="btn btn-primary">Save Changes...</button>
+            </div>
+        </form>
+        <!--%%FOOT-->
+        <div class="row">
+            <div class="col footer">&nbsp;</div>
+        </div>
+        <!--FOOT%%-->
+    </div>
+    <!--%%JAVASCRIPT-->
+    <script debug_loader="1" type="text/javascript" src="../../lib/ESPWebFramework/Resources/js/jquery-3.3.1.min.js"></script>
+    <script debug_loader="1" type="text/javascript" src="../../lib/ESPWebFramework/Resources/js/popper.min.js"></script>
+    <script debug_loader="1" type="text/javascript" src="../../lib/ESPWebFramework/Resources/js/popper.min.js"></script>
+    <script debug_loader="1" type="text/javascript" src="../../lib/ESPWebFramework/Resources/js/bootstrap.min.js"></script>
+    <script debug_loader="1" type="text/javascript" src="../../lib/ESPWebFramework/Resources/js/js.cookie.min.js"></script>
+    <script debug_loader="1" type="text/javascript" src="../js/main.min.js"></script>
+    <script debug_loader="1" type="text/javascript" src="../js/debug.js"></script>
+    <!--JAVASCRIPT%%-->
+
+</body>
+
+</html>

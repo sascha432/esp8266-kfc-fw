@@ -6,11 +6,13 @@
 
 #include <sntp.h>
 #include <KFCTimezone.h>
+#include <KFCForms.h>
 #include <PrintHtmlEntitiesString.h>
-#include "templates.h"
+#include "web_forms.h"
 #include "event_scheduler.h"
 #include "progmem_data.h"
 #include "logger.h"
+#include "plugins.h"
 
 #define DEBUG_TIMEZONE  1
 
@@ -19,7 +21,6 @@
 #else
 #include "debug_local_undef.h"
 #endif
-
 
 class TimezoneData;
 
@@ -40,7 +41,7 @@ public:
     void retry(const String &message);
 
     static void wifiConnectedCallback(uint8_t event, void *payload);
-    static String getStatus();
+    static const String getStatus();
 
     static void updateLoop(void *);
 
@@ -160,7 +161,7 @@ void TimezoneData::wifiConnectedCallback(uint8_t event, void *payload) {
 }
 
 
-String TimezoneData::getStatus() {
+const String TimezoneData::getStatus() {
     if (_Config.getOptions().isNTPClient()) {
         PrintHtmlEntitiesString out;
         auto &config = _Config.get();
@@ -203,21 +204,24 @@ void TimezoneData::updateLoop(void *) {
 /*
  * Enable SNTP and remote timezone check if configured
  */
-void timezone_setup() {
+void timezone_setup(bool isSafeMode) {
 
-	WebTemplate::registerVariable(F("NTP_STATUS"), TimezoneData::getStatus);
+    if (isSafeMode) {
+        return;
+    }
 
     if (_Config.getOptions().isNTPClient()) {
-
-        if (!timezoneData) {
-            timezoneData = new TimezoneData();
-        }
 
         auto &config = _Config.get();
         configTime(0, 0, config.ntp.servers[0], config.ntp.servers[1], config.ntp.servers[2]);
 
-        if (WiFi.isConnected()) { // simulate event if WiFi is already connected
-            TimezoneData::wifiConnectedCallback(WIFI_CB_EVENT_CONNECTED, nullptr);
+        if (strlen(_Config.get().ntp.remote_tz_dst_ofs_url)) {
+            if (!timezoneData) {
+                timezoneData = new TimezoneData();
+            }
+            if (WiFi.isConnected()) { // simulate event if WiFi is already connected
+                TimezoneData::wifiConnectedCallback(WIFI_CB_EVENT_CONNECTED, nullptr);
+            }
         }
 
     } else {
@@ -233,6 +237,67 @@ void timezone_setup() {
             timezoneData = nullptr;
         }
     }
+}
+
+void ntp_client_creaste_settings_form(AsyncWebServerRequest *request, Form &form) {
+
+    auto &_config = _Config.get();
+
+    form.add<ConfigFlags_t, 2>(F("ntp_enabled"), &_Config.get().flags, array_of<ConfigFlags_t>(FormBitValue_UNSET_ALL, FLAGS_NTP_ENABLED));
+
+    form.add<sizeof _config.ntp.servers[0]>(F("ntp_server1"), _config.ntp.servers[0]);
+    form.addValidator(new FormValidHostOrIpValidator(true));
+
+    form.add<sizeof _config.ntp.servers[1]>(F("ntp_server2"), _config.ntp.servers[1]);
+    form.addValidator(new FormValidHostOrIpValidator(true));
+
+    form.add<sizeof _config.ntp.servers[2]>(F("ntp_server3"), _config.ntp.servers[2]);
+    form.addValidator(new FormValidHostOrIpValidator(true));
+
+    form.add<sizeof _config.ntp.timezone>(F("ntp_timezone"), _config.ntp.timezone);
+
+#if USE_REMOTE_TIMEZONE
+    form.add<sizeof _config.ntp.remote_tz_dst_ofs_url>(F("ntp_remote_tz_url"), _config.ntp.remote_tz_dst_ofs_url);
+#endif
+
+    form.finalize();
+}
+
+bool ntp_client_at_mode_command_handler(Stream &serial, const String &command, uint8_t argc, char **argv) {
+
+    if (command == F("?")) {
+        serial.print(F(" AT+NOW\n    Display current time\n"));
+    } else if (command.equalsIgnoreCase(F("NOW"))) {
+        time_t now = time(nullptr);
+        char timestamp[64];
+        if (now == 0) {
+            serial.printf_P(PSTR("Time is currently not set. NTP is %s\n"), _Config.getOptions().isNTPClient() ? "enabled" : "disabled");
+        } else {
+            strftime_P(timestamp, sizeof(timestamp), PSTR("%FT%T %Z"), gmtime(&now));
+            serial.printf_P(PSTR("+NOW %s\n"), timestamp);
+            timezone_strftime_P(timestamp, sizeof(timestamp), PSTR("%FT%T %Z"), timezone_localtime(&now));
+            serial.printf_P(PSTR("+NOW %s\n"), timestamp);
+        }
+        return true;
+    }
+    return false;
+}
+
+void add_plugin_ntp_client() {
+    Plugin_t plugin;
+
+    init_plugin(F("ntp"), plugin, 20);
+
+    plugin.setupPlugin = timezone_setup;
+    plugin.statusTemplate = TimezoneData::getStatus;
+    plugin.configureForm = ntp_client_creaste_settings_form;
+    plugin.reconfigurePlugin = []() {
+        timezone_setup(false);
+    };
+#if AT_MODE_SUPPORTED
+    plugin.atModeCommandHandler = ntp_client_at_mode_command_handler;
+#endif
+    register_plugin(plugin);
 }
 
 #endif

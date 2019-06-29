@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+<!--%%HEAD-->
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" debug_loader="1">
+    <link rel="stylesheet" href="../../lib/ESPWebFramework/Resources/css/bootstrap.min.css" debug_loader="1">
+    <link rel="stylesheet" href="../css/styles.css" debug_loader="1">
+    <link rel="stylesheet" href="../../lib/ESPWebFramework/Resources/css/open-iconic-bootstrap.css" debug_loader="1">
+    <title>KFC FW</title>
+</head>
+<!--HEAD%%-->
+
+<body>
+    <!--%%NAV-->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <a class="navbar-brand" href="index.html">KFC FW</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        </div>
+    </nav>
+    <!--NAV%%-->
+    <div class="container file-manager" id="file_manager">
+        <h1>File Manager</h1>
+        <div class="row">
+            <div class="col">
+                <button type="submit" class="btn btn-primary" id="mkdir" data-target="#mkdir_dialog" data-toggle="modal">Create directory</button>
+                <button type="submit" class="btn btn-primary" id="upload" data-target="#upload_dialog" data-toggle="modal">Upload file</button>
+                <div>Total size: <strong><span id="total_size"><span class="oi oi-clock"></span></span></strong> Used space: <strong><span id="used_space"><span class="oi oi-clock"></span></span></strong></div>
+            </div>
+        </div>
+        <div class="row extra-top-space">
+            <div class="col">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                    </ol>
+                </nav>
+            </div>
+        </div>
+        <div class="row extra-top-space">
+            <div class="col">
+                <table class="table table-striped">
+                    <thead class="thead-light">
+                        <tr>
+                            <th>#</th>
+                            <th>Filename</th>
+                            <th>Modified</th>
+                            <th class="text-right">Size</th>
+                        </tr>
+                    </thead>
+                    <tbody id="spinner">
+                        <tr scope="row">
+                            <td colspan="4" class="text-center bg-white">
+                                <img src="images/spinner.gif" width="64" height="64">
+                            </td>
+                        </tr>
+                    </tbody>
+                    <tbody id="files">
+                    </tbody>
+                    <tbody id="dirs_prototype" class="hidden">
+                        <tr scope="row">
+                            <td><a href="#${FULLNAME}" class="dir"><span class="oi oi-folder" title="View contents" aria-hidden="true"></span></a>
+                                <a href="#" data-target="#rename_dialog" data-toggle="modal" data-filename="${FULLNAME}" data-name="${FILENAME}" data-type="dir"><span class="oi oi-wrench" title="Edit directory name" aria-hidden="true"></span></a>
+                                <a href="#" data-target="#remove_dialog" data-toggle="modal" data-filename="${FULLNAME}" data-name="${FILENAME}" data-type="dir"><span class="oi oi-trash" title="Delete directory" aria-hidden="true"></span></a></td>
+                            <td><a href="${LINK}" class="${CLASS}">${FILENAME}/</a></td>
+                            <td>${MODIFIED}</td>
+                            <td class="text-right">&lt;DIR&gt;</td>
+                        </tr>
+                    </tbody>
+                    <tbody id="dirs_ro_prototype" class="hidden">
+                        <tr scope="row">
+                            <td><a href="#${FULLNAME}" class="dir"><span class="oi oi-folder" title="View contents" aria-hidden="true"></span></a>
+                                <span class="oi oi-wrench oi-disabled" title="Read only" aria-hidden="true"></span>
+                                <span class="oi oi-trash oi-disabled" title="Read only" aria-hidden="true"></span></td>
+                            <td><a href="${LINK}" class="${CLASS}">${FILENAME}/</a></td>
+                            <td>${MODIFIED}</td>
+                            <td class="text-right">&lt;DIR&gt;</td>
+                        </tr>
+                    </tbody>
+                    <tbody id="files_prototype" class="hidden">
+                        <tr scope="row">
+                            <td><a href="./file_manager/view?filename=${FULLNAME}" target="_blank"><span class="oi oi-eye" title="View file" aria-hidden="true"></span></a>
+                                <a href="#" data-target="#rename_dialog" data-toggle="modal" data-filename="${FULLNAME}" data-name="${FILENAME}" data-type="file"><span class="oi oi-wrench" title="Edit filename" aria-hidden="true"></span></a>
+                                <a href="#" data-target="#remove_dialog" data-toggle="modal" data-filename="${FULLNAME}" data-name="${FILENAME}" data-type="file"><span class="oi oi-trash" title="Delete file" aria-hidden="true"></span></a></td>
+                            <td><a href="${LINK}" class="${CLASS}">${FILENAME}</a></td>
+                            <td>${MODIFIED}</td>
+                            <td class="text-right">${SIZE}</td>
+                        </tr>
+                    </tbody>
+                    <tbody id="files_ro_prototype" class="hidden">
+                        <tr scope="row">
+                            <td><a href="./file_manager/view?filename=${FULLNAME}" target="_blank"><span class="oi oi-eye" title="View file" aria-hidden="true"></span></a>
+                                <span class="oi oi-wrench oi-disabled" title="Read only" aria-hidden="true"></span>
+                                <span class="oi oi-trash oi-disabled" title="Read only" aria-hidden="true"></span></td>
+                            <td><a href="${LINK}" class="${CLASS}">${FILENAME}</a></td>
+                            <td>${MODIFIED}</td>
+                            <td class="text-right">${SIZE}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <!--%%FOOT-->
+        <div class="row">
+            <div class="col footer">&nbsp;</div>
+        </div>
+        <!--FOOT%%-->
+    </div>
+
+    <div class="modal" tabindex="-1" role="dialog" id="mkdir_dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Create directory</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div>
+                        <div class="form-group">
+                            <label for="dir">Name:</label>
+                            <input type="text" class="form-control" name="new_dir" id="new_dir" maxlength="31">
+                        </div>
+                        <button type="button" class="btn btn-primary">Create directory</button>
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" tabindex="-1" role="dialog" id="upload_dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Upload </h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div id="upload_status" class="hidden">
+                        Uploading file...
+                    </div>
+                    <form method="POST" action="./file_manager/upload" enctype="multipart/form-data" id="upload_form">
+                        <div>
+                            <div class="form-group">
+                                <label for="upload_file">File to upload:</label>
+                                <input type="file" class="form-control-file" name="upload_file" id="upload_file">
+                            </div>
+                            <div class="form-group">
+                                <label for="upload_filename">Name:</label>
+                                <input type="text" class="form-control" name="upload_filename" id="upload_filename" maxlength="31">
+                            </div>
+                            <input type="hidden" name="upload_current_dir" id="upload_current_dir" value="">
+                            <input type="hidden" name="ajax_upload" id="ajax_upload" value="0">
+                            <button type="submit" class="btn btn-primary">Upload...</button>
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" tabindex="-1" role="dialog" id="remove_dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Delete</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p></p>
+                    <input type="hidden" name="remove_name" id="remove_name">
+                    <input type="hidden" name="remove_type" id="remove_type">
+                    <div>
+                        <button type="button" class="btn btn-primary">Remove</button>
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" tabindex="-1" role="dialog" id="rename_dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Rename</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div>
+                        <div class="form-group">
+                            <label for="dir">New Name:</label>
+                            <input type="hidden" name="old_name" id="old_name">
+                            <input type="hidden" name="rename_type" id="rename_type">
+                            <input type="text" class="form-control" name="new_name" id="new_name" maxlength="31">
+                        </div>
+                        <button type="button" class="btn btn-primary">Rename</button>
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!--%%JAVASCRIPT-->
+	<script debug_loader="1" type="text/javascript" src="../../lib/ESPWebFramework/Resources/js/jquery-3.3.1.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/ESPWebFramework/Resources/js/popper.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/ESPWebFramework/Resources/js/popper.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/ESPWebFramework/Resources/js/bootstrap.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/ESPWebFramework/Resources/js/js.cookie.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../js/main.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../js/debug.js"></script>
+    <!--JAVASCRIPT%%-->
+
+</body>
+
+</html>

@@ -7,6 +7,8 @@
 #include <Arduino_compat.h>
 #include "virtual_fs_struct.h"
 
+extern File _vfs_file;
+
 uint16_t crc16_calc(const uint8_t *data, size_t len);
 
 int vfs_get_cached_header(vfs_image_header *headerPtr);
@@ -31,7 +33,7 @@ public:
     bool seek(long pos, int mode);
     size_t read(uint8_t *buffer, size_t len);
     size_t write(uint8_t *data, size_t len);
-	int available();    
+	int available();
     size_t position() const;
     size_t size() const;
 	void flush() override;

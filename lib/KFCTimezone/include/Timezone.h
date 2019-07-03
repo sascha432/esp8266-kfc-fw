@@ -7,6 +7,8 @@
 #include <Arduino_compat.h>
 #include <time.h>
 
+#define IS_TIME_VALID(time) (time > (30 * 86400))
+
 class Timezone {
    public:
 	Timezone();

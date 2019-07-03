@@ -10,7 +10,6 @@
 #include <KFCSyslog.h>
 #include <PrintHtmlEntitiesString.h>
 #include "templates.h"
-#include "web_forms.h"
 #include "plugins.h"
 
 
@@ -162,9 +161,9 @@ void syslog_create_settings_form(AsyncWebServerRequest *request, Form &form) {
     form.finalize();
 }
 
-bool syslog_at_mode_command_handler(Stream &serial, const String &command, uint8_t argc, char **argv) {
+bool syslog_at_mode_command_handler(Stream &serial, const String &command, int8_t argc, char **argv) {
 
-    if (command == F("?")) {
+    if (command.length() == 0) {
         serial.print(F(
             " AT+SQC\n"
             "    Clear syslog queue\n"

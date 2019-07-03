@@ -6,7 +6,9 @@
 #include "Timezone.h"
 #include "RemoteTimezone.h"
 
-#if TIMEZONE_USE_HTTP_CLIENT == 0
+#if TIMEZONE_USE_HTTP_CLIENT
+#include <ESP8266HttpClient.h>
+#else
 #include <BufferStream.h>
 #include <PrintString.h>
 #include "asyncHTTPrequest.h"

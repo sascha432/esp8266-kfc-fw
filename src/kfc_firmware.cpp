@@ -12,7 +12,9 @@
 #include "event_scheduler.h"
 #include "reset_detector.h"
 #include "plugins.h"
-//  #include "GDBStub.h"
+#if USE_GDBSTUB
+//#include <GDBStub.h>
+#endif
 
 static bool wifi_connected = false;
 unsigned long wifi_up = -1UL;
@@ -20,21 +22,30 @@ static unsigned long offline_since = 0;
 
 void check_flash_size() {
 
+#if ESP8266
     uint32_t realSize = ESP.getFlashChipRealSize();
+#endif
     uint32_t ideSize = ESP.getFlashChipSize();
     FlashMode_t ideMode = ESP.getFlashChipMode();
 
+#if ESP32
+    MySerial.printf_P(PSTR("Flash chip rev.: %08X\n"), ESP.getChipRevision());
+#endif
+#if ESP8266
     MySerial.printf_P(PSTR("Flash real id:   %08X\n"), ESP.getFlashChipId());
     MySerial.printf_P(PSTR("Flash real size: %u\n"), realSize);
+#endif
     MySerial.printf_P(PSTR("Flash ide  size: %u\n"), ideSize);
     MySerial.printf_P(PSTR("Flash ide speed: %u\n"), ESP.getFlashChipSpeed());
     MySerial.printf_P(PSTR("Flash ide mode:  %s\n"), (ideMode == FM_QIO ? str_P(F("QIO")) : ideMode == FM_QOUT ? str_P(F("QOUT")) : ideMode == FM_DIO ? str_P(F("DIO")) : ideMode == FM_DOUT ? str_P(F("DOUT")) : str_P(F("UNKNOWN"))));
 
+#if ESP8266
     if (ideSize != realSize) {
         MySerial.printf_P(PSTR("Flash Chip configuration wrong!\n\n"));
     } else {
         MySerial.printf_P(PSTR("Flash Chip configuration ok.\n\n"));
     }
+#endif
 }
 
 void setup_wifi_callbacks() {
@@ -128,17 +139,20 @@ void setup() {
     Serial.begin(115200);
     Serial.println(F("Booting KFC firmware..."));
 
+#if SPIFFS_SUPPORT
+    SPIFFS.begin();
+#endif
 #if SYSTEM_STATS
     system_stats_read();
 #endif
 
-    KFC_SAFE_MODE_SERIAL_PORT.printf("safe mode %d reset counter %d\n", resetDetector.getSafeMode(), resetDetector.getResetCounter());
+    KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("safe mode %d reset counter %d\n"), resetDetector.getSafeMode(), resetDetector.getResetCounter());
 
     if (resetDetector.getSafeMode()) {
 
         safe_mode = true;
 
-        KFC_SAFE_MODE_SERIAL_PORT.println("Starting in safe mode...");
+        KFC_SAFE_MODE_SERIAL_PORT.println(F("Starting in safe mode..."));
         delay(2000);
         resetDetector.setSafeMode(false);
 
@@ -151,7 +165,7 @@ void setup() {
 
         if (resetDetector.getResetCounter() > 1) {
 
-            KFC_SAFE_MODE_SERIAL_PORT.println(F("Multiple resets detected. Reboot continues in 30 seconds..."));
+            KFC_SAFE_MODE_SERIAL_PORT.println(F("Multiple resets detected. Reboot continues in 20 seconds..."));
             KFC_SAFE_MODE_SERIAL_PORT.println(F("Press reset again to start in safe mode."));
 
             KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("\nCrash detected: %d\nReset counter: %d\n\n"), resetDetector.hasCrashDetected(), resetDetector.getResetCounter());
@@ -159,11 +173,10 @@ void setup() {
             config_set_blink(BLINK_SOS);
             resetDetector.setSafeMode(1);
 
-            uint16_t count = 30;
+            uint16_t count = 20;
             while(count--) {
-                KFC_SAFE_MODE_SERIAL_PORT.print(".");
+                KFC_SAFE_MODE_SERIAL_PORT.print('.');
                 delay(1000);
-
             }
             // reset has not been pressed, disable safe mode
             resetDetector.setSafeMode(false);
@@ -171,16 +184,7 @@ void setup() {
 
     }
 
-#if SPIFFS_SUPPORT
-    SPIFFS.begin();
-#endif
-
     config_read(true);
-    if (resetDetector.hasCrashDetected() && _Config.getOptions().isTestMode()) {
-        MySerial.println(F("Crash detected, disabling test mode and restoring previous configuration"));
-        config_read(false, sizeof(Config));
-    }
-
     if (safe_mode) {
 
         MySerialWrapper.replace(&KFC_SAFE_MODE_SERIAL_PORT, true);

@@ -15,28 +15,9 @@ void init_plugin(const String &name, Plugin_t &plugin, uint8_t priority) {
     plugin.setupPriority = priority;
 }
 
-bool register_plugin(Plugin_t &plugin) {
-
+void register_plugin(Plugin_t &plugin) {
     debug_printf_P(PSTR("register_plugin %s priority %d\n"), plugin.pluginName.c_str(), plugin.setupPriority);
-
     plugins.push_back(plugin);
-
-    // register callbacks with old plugin API
-    // TODO use vector directly in WebTemplate
-    if (plugin.statusTemplate) {
-        String variable = plugin.pluginName;
-        variable.toUpperCase();
-        variable += F("_STATUS");
-        WebTemplate::registerVariable(variable, plugin.statusTemplate);
-    }
-    if (plugin.configureForm) {
-        String filename = plugin.pluginName;
-        filename.toLowerCase();
-        filename += F(".html");
-        WebTemplate::registerForm(filename, plugin.configureForm, plugin.reconfigurePlugin);
-    }
-
-    return true;
 }
 
 void setup_plugins(bool isSafeMode) {
@@ -115,8 +96,10 @@ Plugin_t *get_plugin_by_name(const String &name) {
     for(auto it = plugins.begin(); it != plugins.end(); ++it) {
         auto plugin = &*it;
         if (plugin->pluginName.equals(name)) {
+            debug_printf_P(PSTR("get_plugin_by_name(%s) = %p\n"), name.c_str(), plugin);
             return plugin;
         }
     }
+    debug_printf_P(PSTR("get_plugin_by_name(%s) = nullptr\n"), name.c_str());
     return nullptr;
 }

@@ -54,14 +54,20 @@ void Syslog::transmit(const char* message, size_t length, SyslogCallback callbac
 void Syslog::_addTimestamp(String& buffer, PGM_P format) {
 	auto now = time(nullptr);
 	auto tm = timezone_localtime(&now);
-	if (tm && now > 86400 * 7) {
+	if (tm && IS_TIME_VALID(now)) {
 		char buf2[40];
 		timezone_strftime_P(buf2, sizeof(buf2), format, tm);
 		buffer += buf2;
-	} else {
+#if SEND_NILVALUE_IF_INVALID_TIMESTAMP == 0
+		buffer += ' ';
+#endif
+	}
+#if SEND_NILVALUE_IF_INVALID_TIMESTAMP
+	else {
 		buffer += '-';
 	}
 	buffer += ' ';
+#endif
 }
 
 void Syslog::_addParameter(String& buffer, const String& value) {
@@ -133,7 +139,7 @@ NILVALUE        = "-"
 */
 
 void Syslog::addHeader(String& buffer) {
-#if USE_RFC5424
+#if SYSLOG_USE_RFC5424
 
 	buffer += '<';
 	buffer += String(_parameter.getFacility() << 3 | _parameter.getSeverity());

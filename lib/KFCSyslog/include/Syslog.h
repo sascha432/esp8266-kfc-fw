@@ -7,11 +7,17 @@
 #include <functional>
 #include <vector>
 
-// #define if_debug_printf_P
 
-#define USE_RFC5424 0  // does not seem to be supported by many syslog daemons
+#ifndef SYSLOG_USE_RFC5424
+#define SYSLOG_USE_RFC5424                      0   // does not seem to be supported by many syslog daemons
+#endif
+#if SYSLOG_USE_RFC5424
+#define SEND_NILVALUE_IF_INVALID_TIMESTAMP      1
+#else
+#define SEND_NILVALUE_IF_INVALID_TIMESTAMP      0   // if the client cannot determine the time, it is supposed to send a NILVALUE, but this confuses some syslog servers
+#endif
 
-#if USE_RFC5424
+#if SYSLOG_USE_RFC5424
 #define SYSLOG_VERSION "1"
 #define SYSLOG_TIMESTAMP_FORMAT "%FT%TZ"
 #else  // old/fall-back format

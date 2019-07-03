@@ -8,17 +8,11 @@
 
 #pragma once
 
-#define forward_delete(iterator)  \
-    ({                            \
-        auto next = iterator + 1; \
-        delete *iterator;         \
-        next;                     \
-    })
-#define reverse_delete(iterator)  \
-    ({                            \
-        auto prev = iterator - 1; \
-        delete *iterator;         \
-        prev;                     \
+#define forward_delete(vector, iterator)    \
+    ({                                      \
+        auto next = vector.erase(iterator); \
+        delete *iterator;                   \
+        next;                               \
     })
 
 #if defined(ESP32)
@@ -26,13 +20,25 @@
 #include <Arduino.h>
 #include <SPIFFS.h>
 #include <WiFi.h>
+#include <FS.h>
+
+#include <esp_timer.h>
+typedef struct esp_timer os_timer_t;
+#define os_timer_disarm esp_timer_stop
+
+#include <esp_wifi.h>
+#define wifi_get_country esp_wifi_get_country
+
+#include <esp_wifi_types.h>
+typedef wifi_err_reason_t WiFiDisconnectReason;
+
 
 #define PROGMEM_STRING_DECL(name)               extern const char _shared_progmem_string_##name[] PROGMEM;
 #define PROGMEM_STRING_DEF(name, value)         const char _shared_progmem_string_##name[] PROGMEM = { value };
 
-#define SPGM(name) _shared_progmem_string_##name
-#define FSPGM(name) FPSTR(SPGM(name))
-#define PSPGM(name) (PGM_P)(SPGM(name))
+#define SPGM(name)                              _shared_progmem_string_##name
+#define FSPGM(name)                             FPSTR(SPGM(name))
+#define PSPGM(name)                             (PGM_P)(SPGM(name))
 
 #define constexpr_strlen strlen
 #define constexpr_strlen_P strlen_P
@@ -42,16 +48,15 @@
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
 #include <ESP8266WiFiType.h>
-#include <ESP8266HttpClient.h>
 #include <WiFiUdp.h>
 #include <FS.h>
 
 #define PROGMEM_STRING_DECL(name)               extern const char _shared_progmem_string_##name[] PROGMEM;
 #define PROGMEM_STRING_DEF(name, value)         const char _shared_progmem_string_##name[] PROGMEM = { value };
 
-#define SPGM(name) _shared_progmem_string_##name
-#define FSPGM(name) FPSTR(SPGM(name))
-#define PSPGM(name) (PGM_P)(SPGM(name))
+#define SPGM(name)                              _shared_progmem_string_##name
+#define FSPGM(name)                             FPSTR(SPGM(name))
+#define PSPGM(name)                             (PGM_P)(SPGM(name))
 
 #define constexpr_strlen strlen
 #define constexpr_strlen_P strlen_P
@@ -72,9 +77,9 @@
 #define PROGMEM_STRING_DECL(name)               extern const char * const _shared_progmem_string_##name;
 #define PROGMEM_STRING_DEF(name, value)         const char * const _shared_progmem_string_##name = value;
 
-#define SPGM(name) _shared_progmem_string_##name
-#define FSPGM(name) FPSTR(SPGM(name))
-#define PSPGM(name) (PGM_P)(SPGM(name))
+#define SPGM(name)                              _shared_progmem_string_##name
+#define FSPGM(name)                             FPSTR(SPGM(name))
+#define PSPGM(name)                             (PGM_P)(SPGM(name))
 
 //#define F(str) (reinterpret_cast<char *>(str))
 #define PSTR(str) str

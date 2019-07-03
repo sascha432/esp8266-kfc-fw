@@ -8,7 +8,7 @@
 #include <KFCTimezone.h>
 #include <KFCForms.h>
 #include <PrintHtmlEntitiesString.h>
-#include "web_forms.h"
+#include "templates.h"
 #include "event_scheduler.h"
 #include "progmem_data.h"
 #include "logger.h"
@@ -21,6 +21,8 @@
 #else
 #include "debug_local_undef.h"
 #endif
+
+PROGMEM_STRING_DEF(strftime_date_time_zone, "%FT%T %Z");
 
 class TimezoneData;
 
@@ -42,6 +44,7 @@ public:
 
     static void wifiConnectedCallback(uint8_t event, void *payload);
     static const String getStatus();
+    static const time_t getZoneEnd();
 
     static void updateLoop(void *);
 
@@ -101,6 +104,11 @@ void TimezoneData::setZoneEnd(time_t zoneEnd) {
 const time_t *TimezoneData::getZoneEndPtr() const {
     return &_zoneEnd;
 }
+
+const time_t TimezoneData::getZoneEnd() {
+    return _zoneEnd;
+}
+
 
 void TimezoneData::retry(const String &message) {
 
@@ -263,20 +271,58 @@ void ntp_client_creaste_settings_form(AsyncWebServerRequest *request, Form &form
     form.finalize();
 }
 
-bool ntp_client_at_mode_command_handler(Stream &serial, const String &command, uint8_t argc, char **argv) {
+bool ntp_client_at_mode_command_handler(Stream &serial, const String &command, int8_t argc, char **argv) {
 
-    if (command == F("?")) {
-        serial.print(F(" AT+NOW\n    Display current time\n"));
+    if (command.length() == 0) {
+        serial.print(F(
+            " AT+NOW\n"
+            "    Display current time\n"
+            " AT+TZ?\n"
+            "    Show timezone information\n"
+            " AT+TZ <timezone>\n"
+            "    Set timezone\n"
+        ));
     } else if (command.equalsIgnoreCase(F("NOW"))) {
         time_t now = time(nullptr);
         char timestamp[64];
-        if (now == 0) {
-            serial.printf_P(PSTR("Time is currently not set. NTP is %s\n"), _Config.getOptions().isNTPClient() ? "enabled" : "disabled");
+        if (IS_TIME_VALID(now)) {
+            serial.print(F("Time is currently not set. NTP is "));
+            if (_Config.getOptions().isNTPClient()) {
+                serial.println(FSPGM(enabled));
+            } else {
+                serial.println(FSPGM(disabled));
+            }
         } else {
-            strftime_P(timestamp, sizeof(timestamp), PSTR("%FT%T %Z"), gmtime(&now));
+            strftime_P(timestamp, sizeof(timestamp), SPGM(strftime_date_time_zone), gmtime(&now));
             serial.printf_P(PSTR("+NOW %s\n"), timestamp);
-            timezone_strftime_P(timestamp, sizeof(timestamp), PSTR("%FT%T %Z"), timezone_localtime(&now));
+            timezone_strftime_P(timestamp, sizeof(timestamp), SPGM(strftime_date_time_zone), timezone_localtime(&now));
             serial.printf_P(PSTR("+NOW %s\n"), timestamp);
+        }
+        return true;
+    } else if (command.equalsIgnoreCase(F("TZ"))) {
+        auto &timezone = get_default_timezone();
+        if (argc == ATMODE_QUERY_COMMAND) { // TZ?
+            if (timezone.isValid()) {
+                char buf[32];
+                time_t zoneEnd = TimezoneData::getZoneEnd();
+                if (!zoneEnd) {
+                    strcpy_P(buf, PSTR("not scheduled"));
+                } else {
+                    timezone_strftime_P(buf, sizeof(buf), SPGM(strftime_date_time_zone), timezone_localtime(&zoneEnd));
+                }
+                serial.printf_P(PSTR("Timezone %s abbreviation %s offset %0.2d:%0.2u next update %s\n"), timezone.getTimezone().c_str(), timezone.getAbbreviation().c_str(), timezone.getOffset() / 3600, timezone.getOffset() % 60, buf);
+            } else {
+                serial.println(F("No valid timezone set"));
+            }
+        } else if (argc == 1) {
+            if (_Config.getOptions().isNTPClient()) {
+                strncpy(_Config.get().ntp.timezone, argv[0], sizeof(_Config.get().ntp.timezone) - 1);
+                serial.printf_P(PSTR("Timezone set to %s\n"), _Config.get().ntp.timezone);
+                timezone_setup(false);
+            } else {
+                serial.print(F("NTP "));
+                serial.println(FSPGM(disabled));
+            }
         }
         return true;
     }

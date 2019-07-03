@@ -201,7 +201,7 @@ bool  HttpCookieHeader::parseCookie(AsyncWebServerRequest *request, const String
 }
 #endif
 
-bool  HttpCookieHeader::parseCookie(const String &cookies, const String &name, String &value) {
+bool HttpCookieHeader::parseCookie(const String &cookies, const String &name, String &value) {
 
     int start = 0, end = 0;
     do {

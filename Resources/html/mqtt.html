@@ -33,7 +33,7 @@
                     <option value="1" %MQTT_ENABLED_1%>Enabled</option>
                     <!--#if ASYNC_TCP_SSL_ENABLED-->
                     <option value="2" %MQTT_ENABLED_2%>TLS/Secure MQTT</option>
-                    <!--#endif-->>
+                    <!--#endif-->
                 </select>
             </div>
             <span id="mqtt_settings">
@@ -55,9 +55,32 @@
                 </div>
                 <div class="form-group">
                     <label for="mqtt_topic">Topic:</label>
-                        <input type="text" class="form-control" name="mqtt_topic" id="mqtt_topic" value="%MQTT_TOPIC%">
+                    <input type="text" class="form-control" name="mqtt_topic" id="mqtt_topic" value="%MQTT_TOPIC%">
+                </div>
+                <div class="form-group">
+                    <label for="mqtt_qos">Quality of Service</label>
+                    <select class="form-control" name="mqtt_qos" id="mqtt_qos">
+                        <option value="0" %MQTT_QOS_0%>At most once (0)</option>
+                        <option value="1" %MQTT_QOS_1%>At least once (1)</option>
+                        <option value="2" %MQTT_QOS_2%>Exactly once (2)</option>
+                    </select>
+                </div>
+                <!--#if MQTT_AUTO_DISCOVERY-->
+                <div class="form-group">
+                    <label for="mqtt_auto_discovery">Home Assistant Auto Discovery</label>
+                    <select class="form-control" name="mqtt_auto_discovery" id="mqtt_auto_discovery">
+                        <option value="0" %MQTT_AUTO_DISCOVERY_0%>Disabled</option>
+                        <option value="1" %MQTT_AUTO_DISCOVERY_1%>Enabled</option>
+                    </select>
+                </div>
+                <span id="mqtt_discovery">
+                    <div class="form-group">
+                        <label for="mqtt_discovery_prefix">Auto Discovery Prefix:</label>
+                        <input type="text" class="form-control" name="mqtt_discovery_prefix" id="mqtt_discovery_prefix" value="%MQTT_DISCOVERY_PREFIX%">
                     </div>
                 </span>
+                <!--#endif-->
+            </span>
             <div class="form-group">
                 <button type="submit" class="btn btn-primary">Save Changes...</button>
             </div>

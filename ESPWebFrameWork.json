@@ -39,7 +39,8 @@
                 { "#if !FILE_MANAGER": "./lib/ESPWebFrameWork/Resources/js/js.cookie.min.js" }
             ],
             "#if !WEB_SOCKET_ENCRYPTION": [ "./Resources/js/aes.js", "./Resources/js/sha512.js" ],
-            "#if !SERIAL2TCP": "./Resources/html/serial2tcp.html"
+            "#if !SERIAL2TCP": "./Resources/html/serial2tcp.html",
+            "#if !SYSTEM_STATS": "./Resources/html/syst.html"
         },
         "groups": {
             "js_main": {

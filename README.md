@@ -35,3 +35,7 @@ https://github.com/me-no-dev/ESPAsyncWebServer
 ### asyncHTTPrequest
 
 https://github.com/boblemaire/asyncHTTPrequest
+
+### AsyncMqttClient
+
+https://github.com/marvinroger/async-mqtt-client

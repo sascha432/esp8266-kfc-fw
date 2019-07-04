@@ -46,9 +46,13 @@ void setup_plugins(bool isSafeMode) {
     void add_plugin_ping_monitor();
     add_plugin_ping_monitor();
 #endif
-#if SERIAL2HTTP
-    void add_plugin_serial2http();
-    add_plugin_serial2http();
+#if HTTP2SERIAL
+    void add_plugin_http2serial();
+    add_plugin_http2serial();
+#endif
+#if SERIAL2TCP
+    void add_plugin_serial2tcp();
+    add_plugin_serial2tcp();
 #endif
 #if HOME_ASSISTANT_INTEGRATION
     void add_plugin_homeassistant();
@@ -77,6 +81,10 @@ void setup_plugins(bool isSafeMode) {
 #if I2CSCANNER_PLUGIN
     void add_plugin_i2cscanner_plugin();
     add_plugin_i2cscanner_plugin();
+#endif
+#if ESP8266_AT_MODE_SUPPORT
+    void add_plugin_esp8266_at_mode();
+    add_plugin_esp8266_at_mode();
 #endif
 
     debug_printf_P(PSTR("setup_plugins(%d) counter %d\n"), isSafeMode, plugins.size());

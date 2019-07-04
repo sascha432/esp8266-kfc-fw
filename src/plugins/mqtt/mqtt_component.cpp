@@ -23,7 +23,7 @@ PROGMEM_STRING_DEF(mqtt_payload_off, "payload_off");
 PROGMEM_STRING_DEF(mqtt_brightness_state_topic, "brightness_state_topic");
 PROGMEM_STRING_DEF(mqtt_brightness_command_topic, "brightness_command_topic");
 PROGMEM_STRING_DEF(mqtt_brightness_scale, "brightness_scale");
-PROGMEM_STRING_DEF(mqtt_color_temp_state_topic, "color_state_topic");
-PROGMEM_STRING_DEF(mqtt_color_temp_command_topic, "color_command_topic");
+PROGMEM_STRING_DEF(mqtt_color_temp_state_topic, "color_temp_state_topic");
+PROGMEM_STRING_DEF(mqtt_color_temp_command_topic, "color_temp_command_topic");
 
 #endif

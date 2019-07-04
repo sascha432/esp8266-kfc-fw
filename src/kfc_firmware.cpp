@@ -263,7 +263,7 @@ void setup() {
     }
 
 #if DEBUG
-    myWdt.startTimer(100, true); // dummy spinner for the serial port
+    // myWdt.startTimer(100, true); // dummy spinner for the serial port
 #endif
 }
 

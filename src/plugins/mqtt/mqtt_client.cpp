@@ -226,7 +226,7 @@ void MQTTClient::onConnect(bool sessionPresent) {
     debug_printf_P(PSTR("MQTTClient::onConnect(%d)\n"), sessionPresent);
     Logger_notice(F("Connected to MQTT server %s"), connectionDetailsString().c_str());
 
-    publish(_lastWillTopic, getDefaultQos(), 0, FSPGM(1));
+    publish(_lastWillTopic, getDefaultQos(), 1, FSPGM(1));
 
     _autoReconnectTimeout = DEFAULT_RECONNECT_TIMEOUT;
     for(auto component: _components) {
@@ -265,7 +265,8 @@ void MQTTClient::onMessageRaw(char *topic, char *payload, AsyncMqttClientMessage
         _messageBuffer->write(payload, len);
     }
     if (_messageBuffer && _messageBuffer->length() == total) {
-        onMessage(topic, (char *)_messageBuffer->getBuffer(), properties, _messageBuffer->length());
+        _messageBuffer->write(0);
+        onMessage(topic, (char *)_messageBuffer->getBuffer(), properties, total);
         delete _messageBuffer;
         _messageBuffer = nullptr;
     }

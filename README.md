@@ -7,7 +7,7 @@ The firmware offers a plugin interface to easily extend its functionality. The p
 
 ### KFCSyslog
 
-Send messages to a syslog server via UDP or TCP
+Send messages to a syslog server via UDP (or TCP not implemented yet)
 
 ### KFCTimezone
 
@@ -36,6 +36,10 @@ https://github.com/me-no-dev/ESPAsyncWebServer
 
 https://github.com/boblemaire/asyncHTTPrequest
 
-### AsyncMqttClient
+### AsyncMqttClient (MQTT plugin)
 
 https://github.com/marvinroger/async-mqtt-client
+
+### AsyncWebSocket (Http2Serial plugin)
+
+https://github.com/me-no-dev/ESPAsyncWebServer/blob/master/src/AsyncWebSocket.h

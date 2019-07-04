@@ -38,8 +38,6 @@ void MQTTAutoDiscovery::create(MQTTComponent *component, Format_t format) {
     addParameter(FSPGM(mqtt_availability_topic), MQTTClient::formatTopic(-1, FSPGM(mqtt_status_topic)));
     addParameter(FSPGM(mqtt_payload_available), FSPGM(1));
     addParameter(FSPGM(mqtt_payload_not_available), FSPGM(0));
-    addParameter(FSPGM(mqtt_payload_on), FSPGM(1));
-    addParameter(FSPGM(mqtt_payload_off), FSPGM(0));
 
     if (_format == FORMAT_JSON) {
         _discovery += F("\"device\":{\"identifiers\":[\"");

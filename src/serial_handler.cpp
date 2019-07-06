@@ -89,10 +89,11 @@ void SerialHandler::writeToTransmit(SerialDataType_t type, const uint8_t *buffer
 
 void SerialHandler::writeToTransmit(SerialDataType_t type, SerialHandlerCb callback, const uint8_t *buffer, size_t len) {
     static bool locked = false;
-    if (!locked) {
+    if (locked) {
         debug_printf_P(PSTR("SerialHandler::writeToTransmit(%d, %p, len %d, locked %d)\n"), type, callback, len, locked);
         return;
     }
+    locked = true;
     // debug_printf_P(PSTR("SerialHandler::writeToTransmit(%d, %p, len %d, locked %d)\n"), type, callback, len, locked);
     for(const auto &handler: _handlers) {
         // debug_printf_P(PSTR("SerialHandler::writeToTransmit(): Handler %p flags %02x match %d\n"), handler.cb, handler.flags, ((handler.flags & type) && handler.cb != callback));
@@ -116,7 +117,6 @@ void SerialHandler::writeToReceive(SerialDataType_t type, SerialHandlerCb callba
     }
     // debug_printf_P(PSTR("SerialHandler::writeToReceive(%d, %p, len %d, locked %d)\n"), type, callback, len, locked);
     locked = true;
-
     if (len) {
         // debug_printf_P(PSTR("Raw data, len %d, type %s\n"), len, (type == REMOTE_RX ? "remoteRX" : "RX"));
         for(auto it = _handlers.rbegin(); it != _handlers.rend(); ++it) {

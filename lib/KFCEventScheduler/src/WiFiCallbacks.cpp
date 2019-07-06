@@ -41,7 +41,11 @@ void WiFiCallbacks::callEvent(WiFiCallbacks::EventEnum_t event, void *payload) {
     debug_printf_P(PSTR("WiFiCallbacks::callEvent(%u, %p)\n"), event, payload);
     for (const auto entry : _callbacks) {
         if (entry.events & event) {
-            entry.callback(event, payload);
+            if (entry.callback) {
+                entry.callback(event, payload);
+            } else {
+                entry.callbackPtr(event, payload);
+            }
         }
     }
 }

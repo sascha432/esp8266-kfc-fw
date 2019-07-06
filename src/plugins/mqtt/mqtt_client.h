@@ -9,9 +9,9 @@
 #include <Arduino_compat.h>
 #include <AsyncMqttClient.h>
 #include <Buffer.h>
+#include <EventScheduler.h>
 #include <vector>
 #include "mqtt_component.h"
-#include "event_scheduler.h"
 
 typedef struct {
     String topic;
@@ -30,11 +30,9 @@ public:
     virtual ~MQTTClient();
 
     void connect();
-    void disconnect(bool forceDisconnect = false, uint32_t autoReconnectTimeout = 0);
+    void disconnect(bool forceDisconnect = false);
     bool isConnected() const;
-    void setAutoReconnect(uint32_t timeout) {
-        _autoReconnectTimeout = timeout;
-    }
+    void setAutoReconnect(uint32_t timeout);
 
     void registerComponent(MQTTComponent *component);
     void unregisterComponent(MQTTComponent *component);
@@ -52,6 +50,7 @@ public:
     static const String connectionStatusString();
     static const String getStatus();
     static MQTTClient *getClient();
+    static void handleWiFiEvents(uint8_t event, void *payload);
     static uint8_t getDefaultQos() {
         return _Config.get().mqtt_qos;
     }

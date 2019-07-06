@@ -15,7 +15,7 @@ Platform independent timezone implementation with remote API support (Self hoste
 
 ### KFCWebBuilder
 
-Framework to build Web UIs with bootstrap and store them in a virtual file system
+Framework to build Web UIs with bootstrap and store them mostly compressed in a virtual file system
 
 ### KFCVirtualFileSystem
 
@@ -25,6 +25,20 @@ Read only file system with long filename support, optimized for low memory envir
 
 Library to read streamed JSON documents
 
+
+## Plugins
+
+### MQTT Client
+
+MQTT Client with API to easily add components that work with Home Assistant, as well as auto discovery
+
+### Http2Serial
+
+Serial console access over the web UI using web sockets
+
+### NTP Client
+
+NTP Client with timezone support via REST API
 
 ## Required third party libraries
 

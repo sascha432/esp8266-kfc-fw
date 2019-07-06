@@ -30,7 +30,6 @@
             "#if !HTTP2SERIAL": [ "./Resources/html/serial_console.html", "./lib/ESPWebFrameWork/Resources/js/selectize.min.js" ],
             "#if !PING_SUPPORT": "./Resources/html/ping.html",
             "#if !PING_MONITOR": "./Resources/html/ping_monitor.html",
-            "#if !WEMO_EMULATION": "./Resources/html/wemo.html",
             "#if !HUE_EMULATION": "./Resources/html/hue.html",
             "#if !REST_API_SUPPORT": "./Resources/html/rest_api.html",
             "#if !HOME_ASSISTANT_INTEGRATION": "./Resources/html/home_assistant.html",

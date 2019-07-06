@@ -62,10 +62,6 @@ void setup_plugins(bool isSafeMode) {
     void add_plugin_hue();
     add_plugin_hue();
 #endif
-#if WEMO_EMULATION
-    void add_plugin_wemo();
-    add_plugin_wemo();
-#endif
 #if IOT_ATOMIC_SUN_V1
     void add_plugin_atomic_sun_v1();
     add_plugin_atomic_sun_v1();

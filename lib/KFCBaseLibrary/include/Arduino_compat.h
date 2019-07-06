@@ -61,8 +61,8 @@ typedef wifi_err_reason_t WiFiDisconnectReason;
 #define constexpr_strlen strlen
 #define constexpr_strlen_P strlen_P
 
-#include "C:/Users/sascha/Documents/PlatformIO/Projects/kfc_fw/include/debug_helper.h"
-#include "C:/Users/sascha/Documents/PlatformIO/Projects/kfc_fw/include/misc.h"
+#include "debug_helper.h"
+#include "misc.h"
 
 #elif _WIN32 || _WIN64
 

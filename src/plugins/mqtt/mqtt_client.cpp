@@ -7,8 +7,8 @@
 #include <ESPAsyncWebServer.h>
 #include <KFCForms.h>
 #include <kfc_fw_config.h>
-// #include <PrintString.h>
 #include <PrintHtmlEntitiesString.h>
+#include <WiFiCallbacks.h>
 #include "progmem_data.h"
 #include "mqtt_client.h"
 #include "logger.h"
@@ -70,7 +70,11 @@ MQTTClient::MQTTClient() {
     //     this->onUnsubscribe(packetId);
     // });
 
-    connect();
+    WiFiCallbacks::add(WiFiCallbacks::EventEnum_t::ANY, MQTTClient::handleWiFiEvents);
+
+    if (WiFi.isConnected()) {
+        connect();
+    }
 }
 
 MQTTClient::~MQTTClient() {
@@ -85,58 +89,6 @@ MQTTClient::~MQTTClient() {
     delete _client;
     if (_messageBuffer) {
         delete _messageBuffer;
-    }
-}
-
-bool MQTTClient::isConnected() const {
-    return _client->connected();
-}
-
-void MQTTClient::connect() {
-    debug_printf_P(PSTR("MQTTClient::connect(): status %s\n"), connectionStatusString().c_str());
-    if (Scheduler.hasTimer(_timer)) {
-        Scheduler.removeTimer(_timer);
-        _timer = nullptr;
-    }
-    if (isConnected()) {
-        disconnect(true); //TODO check when the ondisconnect event occurs, could be duplicated code
-    }
-
-    _client->setCleanSession(true);
-
-    static const char *lastWillPayload = "0";
-    _lastWillTopic = formatTopic(-1, FSPGM(mqtt_status_topic));
-    debug_printf_P(PSTR("MQTTClient::setWill(%s) = %s\n"), _lastWillTopic.c_str(), lastWillPayload);
-    _client->setWill(_lastWillTopic.c_str(), getDefaultQos(), 1, lastWillPayload, strlen(lastWillPayload));
-
-    _client->connect();
-    autoReconnect(_autoReconnectTimeout);
-}
-
-void MQTTClient::disconnect(bool forceDisconnect, uint32_t autoReconnectTimeout) {
-    debug_printf_P(PSTR("MQTTClient::disconnect(%d, %u): status %s\n"), forceDisconnect, autoReconnectTimeout, connectionStatusString().c_str());
-    if (!forceDisconnect) {
-        String availableTopic = formatTopic(-1, FSPGM(mqtt_status_topic));
-        publish(_lastWillTopic, getDefaultQos(), 1, FSPGM(0));
-    }
-
-    _client->disconnect(forceDisconnect);
-    autoReconnect(autoReconnectTimeout); //TODO check when the ondisconnect event occurs, could be duplicated code
-}
-
-void MQTTClient::autoReconnect(uint32_t timeout) {
-    debug_printf_P(PSTR("MQTTClient::autoReconnect(%u) start\n"), timeout);
-    if (timeout) {
-        if (Scheduler.hasTimer(_timer)) {
-            Scheduler.removeTimer(_timer);
-            _timer = nullptr;
-        }
-        _timer = Scheduler.addTimer(timeout, false, [this](EventScheduler::EventTimerPtr timer) {
-            debug_printf_P(PSTR("MQTTClient::autoReconnectTimer() timer = isConnected() %d\n"), this->isConnected());
-            if (!this->isConnected()) {
-                this->connect();
-            }
-        });
     }
 }
 
@@ -195,6 +147,101 @@ String MQTTClient::formatTopic(uint8_t num, const __FlashStringHelper *format, .
     return topic;
 }
 
+bool MQTTClient::isConnected() const {
+    return _client->connected();
+}
+
+void MQTTClient::setAutoReconnect(uint32_t timeout) {
+    debug_printf_P(PSTR("MQTTClient::setAutoReconnect(%d)\n"), timeout);
+    _autoReconnectTimeout = timeout;
+}
+
+void MQTTClient::connect() {
+    debug_printf_P(PSTR("MQTTClient::connect(): status %s\n"), connectionStatusString().c_str());
+
+    // remove reconnect timer if running and force disconnect
+    auto timeout = _autoReconnectTimeout;
+    if (Scheduler.hasTimer(_timer)) {
+        Scheduler.removeTimer(_timer);
+        _timer = nullptr;
+    }
+    if (isConnected()) {
+        _autoReconnectTimeout = 0; // disable auto reconnect
+        disconnect(true);
+        _autoReconnectTimeout = timeout;
+    }
+
+    _client->setCleanSession(true);
+
+    // set last will to mark component as offline on disconnect
+    static const char *lastWillPayload = "0";
+    _lastWillTopic = formatTopic(-1, FSPGM(mqtt_status_topic));
+    debug_printf_P(PSTR("MQTTClient::setWill(%s) = %s\n"), _lastWillTopic.c_str(), lastWillPayload);
+    _client->setWill(_lastWillTopic.c_str(), getDefaultQos(), 1, lastWillPayload, strlen(lastWillPayload));
+
+    _client->connect();
+//    autoReconnect(_autoReconnectTimeout);
+}
+
+void MQTTClient::disconnect(bool forceDisconnect) {
+    debug_printf_P(PSTR("MQTTClient::disconnect(%d): status %s\n"), forceDisconnect, connectionStatusString().c_str());
+    if (!forceDisconnect) {
+        // set offline
+        publish(_lastWillTopic, getDefaultQos(), 1, FSPGM(0));
+    }
+    _client->disconnect(forceDisconnect);
+}
+
+void MQTTClient::autoReconnect(uint32_t timeout) {
+    debug_printf_P(PSTR("MQTTClient::autoReconnect(%u) start\n"), timeout);
+    if (timeout) {
+        if (Scheduler.hasTimer(_timer)) {
+            Scheduler.removeTimer(_timer);
+            _timer = nullptr;
+        }
+        _timer = Scheduler.addTimer(timeout, false, [this](EventScheduler::EventTimerPtr timer) {
+            debug_printf_P(PSTR("MQTTClient::autoReconnectTimer() timer = isConnected() %d\n"), this->isConnected());
+            if (!this->isConnected()) {
+                this->connect();
+            }
+        });
+
+        // increase timeout on each reconnect attempt
+        setAutoReconnect(timeout + timeout * 0.3);
+    }
+}
+
+void MQTTClient::onConnect(bool sessionPresent) {
+    debug_printf_P(PSTR("MQTTClient::onConnect(%d)\n"), sessionPresent);
+    Logger_notice(F("Connected to MQTT server %s"), connectionDetailsString().c_str());
+
+    // set online
+    publish(_lastWillTopic, getDefaultQos(), 1, FSPGM(1));
+
+    // reset reconnect timer if connection was successful
+    setAutoReconnect(DEFAULT_RECONNECT_TIMEOUT);
+
+    for(auto component: _components) {
+        component->onConnect(this);
+    }
+}
+
+void MQTTClient::onDisconnect(AsyncMqttClientDisconnectReason reason) {
+    debug_printf_P(PSTR("MQTTClient::onDisconnect(%d): auto reconnect %d\n"), reason, _autoReconnectTimeout);
+    PrintString str;
+    if (_autoReconnectTimeout) {
+        str.printf_P(PSTR(", reconnecting in %d ms"), _autoReconnectTimeout);
+    }
+    Logger_notice(F("Disconnected from MQTT server %s, reason: %s%s"), connectionDetailsString().c_str(), _reasonToString(reason).c_str(), str.c_str());
+    for(auto component: _components) {
+        component->onDisconnect(this, reason);
+    }
+    _topics.clear();
+
+    // reconnect automatically
+    autoReconnect(_autoReconnectTimeout);
+}
+
 void MQTTClient::subscribe(MQTTComponent *component, const String &topic, uint8_t qos) {
     debug_printf_P(PSTR("MQTTClient::subscribe(%s, %s, qos %u)\n"), component ? component->getName().c_str() : "<nullptr>", topic.c_str(), qos);
     _client->subscribe(topic.c_str(), qos);
@@ -219,29 +266,6 @@ void MQTTClient::unsubscribe(MQTTComponent *component, const String &topic) {
 void MQTTClient::publish(const String &topic, uint8_t qos, bool retain, const String &payload) {
     debug_printf_P(PSTR("MQTTClient::publish(%s, qos %u, retain %d, %s)\n"), topic.c_str(), qos, retain, payload.c_str());
     _client->publish(topic.c_str(), qos, retain, payload.c_str(), payload.length());
-}
-
-
-void MQTTClient::onConnect(bool sessionPresent) {
-    debug_printf_P(PSTR("MQTTClient::onConnect(%d)\n"), sessionPresent);
-    Logger_notice(F("Connected to MQTT server %s"), connectionDetailsString().c_str());
-
-    publish(_lastWillTopic, getDefaultQos(), 1, FSPGM(1));
-
-    _autoReconnectTimeout = DEFAULT_RECONNECT_TIMEOUT;
-    for(auto component: _components) {
-        component->onConnect(this);
-    }
-}
-
-void MQTTClient::onDisconnect(AsyncMqttClientDisconnectReason reason) {
-    debug_printf_P(PSTR("MQTTClient::onDisconnect(%d)\n"), reason);
-    Logger_notice(F("Disconnected from MQTT server %s, reason: %s"), connectionDetailsString().c_str(), _reasonToString(reason).c_str());
-    for(auto component: _components) {
-        component->onDisconnect(this, reason);
-    }
-    _topics.clear();
-    autoReconnect(_autoReconnectTimeout);
 }
 
 void MQTTClient::onMessageRaw(char *topic, char *payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total) {
@@ -428,6 +452,24 @@ MQTTClient *MQTTClient::getClient() {
     return mqttClient;
 }
 
+void MQTTClient::handleWiFiEvents(uint8_t event, void *payload) {
+    auto client = getClient();
+    debug_printf_P(PSTR("MQTTClient::handleWiFiEvents(%d, %p): client %p connected %d\n"), event, payload, client, client ? client->isConnected() : false);
+    if (client) {
+        if (event == WiFiCallbacks::EventEnum_t::CONNECTED) {
+            if (!client->isConnected()) {
+                client->setAutoReconnect(MQTTClient::DEFAULT_RECONNECT_TIMEOUT);
+                client->connect();
+            }
+        } else if (event == WiFiCallbacks::EventEnum_t::DISCONNECTED) {
+            if (client->isConnected()) {
+                client->setAutoReconnect(0);
+                client->disconnect(true);
+            }
+        }
+    }
+}
+
 void mqtt_client_create_settings_form(AsyncWebServerRequest *request, Form &form) {
 
     auto &config = _Config.get();
@@ -501,11 +543,10 @@ bool mqtt_at_mode_command_handler(Stream &serial, const String &command, int8_t 
                 mqttClient->setAutoReconnect(MQTTClient::DEFAULT_RECONNECT_TIMEOUT);
                 mqttClient->connect();
             } else if (strcmp_P(argv[0], PSTR("disconnect")) == 0) {
-                mqttClient->setAutoReconnect(0);
-                mqttClient->disconnect(false, 0);
+                mqttClient->disconnect(false);
             } else if (strcmp_P(argv[0], PSTR("force-disconnect")) == 0) {
                 mqttClient->setAutoReconnect(0);
-                mqttClient->disconnect(true, 0);
+                mqttClient->disconnect(true);
             }
         }
         return true;

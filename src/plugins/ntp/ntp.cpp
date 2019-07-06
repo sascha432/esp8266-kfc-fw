@@ -8,8 +8,10 @@
 #include <KFCTimezone.h>
 #include <KFCForms.h>
 #include <PrintHtmlEntitiesString.h>
+#include <EventScheduler.h>
+#include <LoopFunctions.h>
+#include <WiFiCallbacks.h>
 #include "templates.h"
-#include "event_scheduler.h"
 #include "progmem_data.h"
 #include "logger.h"
 #include "plugins.h"
@@ -46,7 +48,7 @@ public:
     static const String getStatus();
     static const time_t getZoneEnd();
 
-    static void updateLoop(void *);
+    static void updateLoop();
 
 private:
     static time_t _zoneEnd;
@@ -63,11 +65,11 @@ TimezoneData::TimezoneData() {
     _failureCount = 0;
     _remoteTimezone = nullptr;
     _updateTimer = nullptr;
-    add_wifi_event_callback(TimezoneData::wifiConnectedCallback, WIFI_CB_EVENT_CONNECTED);
+    WiFiCallbacks::add(WiFiCallbacks::EventEnum_t::CONNECTED, TimezoneData::wifiConnectedCallback);
 }
 
 TimezoneData::~TimezoneData() {
-    remove_wifi_event_callback(TimezoneData::wifiConnectedCallback, WIFI_CB_EVENT_CONNECTED);
+    WiFiCallbacks::remove(WiFiCallbacks::EventEnum_t::ANY, TimezoneData::wifiConnectedCallback);
     removeUpdateTimer();
     deleteRemoteTimezone();
 }
@@ -121,7 +123,7 @@ void TimezoneData::retry(const String &message) {
 
     _updateTimer = Scheduler.addTimer((int64_t)next_check * (int64_t)1000, false, [](EventScheduler::EventTimerPtr timer) {
         if (WiFi.isConnected()) { // retry if WiFi is connected, otherwise wait for connected event
-            wifiConnectedCallback(WIFI_CB_EVENT_CONNECTED, nullptr);
+            wifiConnectedCallback(WiFiCallbacks::EventEnum_t::CONNECTED, nullptr);
         }
     });
     _failureCount++;
@@ -149,7 +151,7 @@ void TimezoneData::wifiConnectedCallback(uint8_t event, void *payload) {
                 // sntp_set_daylight(0);
 
                 timezoneData->setZoneEnd(zoneEnd);
-                add_loop_function(TimezoneData::updateLoop); // on success install loop function instead of timer since those are limited to 7 at a time
+                LoopFunctions::add(TimezoneData::updateLoop);
                 auto tmp = timezoneData;
                 Scheduler.addTimer(1000, false, [tmp](EventScheduler::EventTimerPtr timer) { // delete outside the callback or deleting the async http client causes a crash in ~RemoteTimezone()
                     delete tmp;
@@ -198,13 +200,13 @@ const String TimezoneData::getStatus() {
     }
 }
 
-void TimezoneData::updateLoop(void *) {
+void TimezoneData::updateLoop() {
     if (_zoneEnd != 0 && time(nullptr) >= _zoneEnd) {
         if_debug_printf_P(PSTR("Remote timezone: updateLoop triggered\n"));
-        remove_loop_function(TimezoneData::updateLoop); // remove once triggered
+        LoopFunctions::remove(TimezoneData::updateLoop); // remove once triggered
         timezoneData = new TimezoneData();
         if (WiFi.isConnected()) { // simulate event if WiFi is already connected
-            timezoneData->wifiConnectedCallback(WIFI_CB_EVENT_CONNECTED, nullptr);
+            timezoneData->wifiConnectedCallback(WiFiCallbacks::EventEnum_t::CONNECTED, nullptr);
         }
     }
 }
@@ -228,7 +230,7 @@ void timezone_setup(bool isSafeMode) {
                 timezoneData = new TimezoneData();
             }
             if (WiFi.isConnected()) { // simulate event if WiFi is already connected
-                TimezoneData::wifiConnectedCallback(WIFI_CB_EVENT_CONNECTED, nullptr);
+                TimezoneData::wifiConnectedCallback(WiFiCallbacks::EventEnum_t::CONNECTED, nullptr);
             }
         }
 
@@ -238,7 +240,7 @@ void timezone_setup(bool isSafeMode) {
 		configTime(0, 0, str, str, str);
         sntp_set_timezone(0);
 
-        remove_loop_function(TimezoneData::updateLoop);
+        LoopFunctions::remove(TimezoneData::updateLoop);
 
         if (timezoneData) {
             delete timezoneData;
@@ -285,7 +287,7 @@ bool ntp_client_at_mode_command_handler(Stream &serial, const String &command, i
     } else if (command.equalsIgnoreCase(F("NOW"))) {
         time_t now = time(nullptr);
         char timestamp[64];
-        if (IS_TIME_VALID(now)) {
+        if (!IS_TIME_VALID(now)) {
             serial.print(F("Time is currently not set. NTP is "));
             if (_Config.getOptions().isNTPClient()) {
                 serial.println(FSPGM(enabled));

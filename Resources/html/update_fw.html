@@ -25,11 +25,27 @@
     </nav>
     <!--NAV%%-->
     <div class="container">
+        <div id="firmware_upgrade_failure" class="%FIRMWARE_UPGRADE_FAILURE_CLASS%">
+            %FIRMWARE_UPGRADE_FAILURE%
+            <br><br><br>
+        </div>
+        <div id="firmware_upgrade_status" class="hidden">
+            <h1><span>Firmware</span> upgrade successful!</h1>
+            <br><br><br>
+        </div>
         <h1>Update Firmware</h1>
         <form method="POST" action="/update" enctype="multipart/form-data" id="firmware_update">
             <div class="form-group">
                 <label for="firmware_image">Firmware Image:</label>
                 <input type="file" class="form-control-file" name="firmware_image" id="firmware_image">
+            </div>
+            <div class="form-group">
+                <label for="image_type">Image Type:</label>
+                <select class="form-control" name="image_type" id="image_type">
+                    <option value="">Auto Select</option>
+                    <option value="u_flash">Firmware</option>
+                    <option value="u_spiffs">SPI Flash File System</option>
+                </select>
             </div>
             <div class="form-group">
                 <button type="submit" class="btn btn-primary">Start Update Process...</button>
@@ -56,4 +72,3 @@
 </body>
 
 </html>
-

@@ -10,6 +10,7 @@
 #include <ESPAsyncWebServer.h>
 // #include <Stream.h>
 #include <Buffer.h>
+#include <LoopFunctions.h>
 #include "debug_helper.h"
 #include "http2serial.h"
 #include "kfc_fw_config.h"
@@ -18,8 +19,8 @@
 #include "web_server.h"
 #include "web_socket.h"
 // #include "misc.h"
-#include "event_scheduler.h"
 #include "plugins.h"
+#include "global.h"
 
 //TODO lots of old code here, refactor
 
@@ -48,18 +49,20 @@ Http2Serial::Http2Serial() {
     _outputBufferEnabled = true;
 
 #if HTTP2SERIAL_SERIAL_HANDLER
-    add_loop_function(Http2Serial::inputLoop);
+    LoopFunctions::add(Http2Serial::inputLoop);
 #endif
-    add_loop_function_arg(_outputLoopFunction, this);
-    _serialHandler->addHandler(IF_DEBUG("Http2Serial"), onData, SerialHandler::RECEIVE|SerialHandler::LOCAL_TX);
+    LoopFunctions::add([this]() {
+        this->outputLoop();
+    }, reinterpret_cast<LoopFunctions::CallbackPtr_t>(this));
+    _serialHandler->addHandler(onData, SerialHandler::RECEIVE|SerialHandler::LOCAL_TX);
 }
 
 
 Http2Serial::~Http2Serial() {
 #if HTTP2SERIAL_SERIAL_HANDLER
-    remove_loop_function(Http2Serial::inputLoop);
+    LoopFunctions::remove(Http2Serial::inputLoop);
 #endif
-    remove_loop_function_arg(_outputLoopFunction, this);
+    LoopFunctions::remove(reinterpret_cast<LoopFunctions::CallbackPtr_t>(this));
     _serialHandler->removeHandler(onData);
 #ifdef HTTP2SERIAL_BAUD
     Serial.flush();
@@ -68,11 +71,6 @@ Http2Serial::~Http2Serial() {
 #if AT_MODE_SUPPORTED && HTTP2SERIAL_DISABLE_AT_MODE
     enable_at_mode();
 #endif
-}
-
-void Http2Serial::_outputLoopFunction(void *arg) {
-     Http2Serial *handler = reinterpret_cast<Http2Serial *>(arg);
-     handler->outputLoop();
 }
 
 void Http2Serial::broadcast(WsConsoleClient *sender, const uint8_t *message, size_t len) {
@@ -196,16 +194,35 @@ void http2serial_setup(bool isSafeMode) {
     http2serial_install_web_server_hook();
 }
 
+bool http2_serial_at_mode_command_handler(Stream &serial, const String &command, int8_t argc, char **argv) {
+
+    if (command.length() == 0) {
+        serial.print(F(
+            " AT+H2SBD <baud>\n"
+            "    Set serial port rate\n"
+        ));
+    } else if (command.equalsIgnoreCase(F("H2SBD"))) {
+        if (argc == 1) {
+            uint32_t rate = atoi(argv[0]);
+            if (rate) {
+                Serial.flush();
+                Serial.begin(rate);
+                serial.printf_P(PSTR("Set serial rate to %d\n"), (unsigned)rate);
+            }
+            return true;
+        }
+    }
+    return false;
+}
+
 void add_plugin_http2serial() {
     Plugin_t plugin;
 
     init_plugin(F("http2serial"), plugin, 200);
 
     plugin.setupPlugin = http2serial_setup;
-    // plugin.statusTemplate = ;
-    // plugin.configureForm = ;
 #if AT_MODE_SUPPORTED
-    // plugin.atModeCommandHandler = ;
+    plugin.atModeCommandHandler = http2_serial_at_mode_command_handler;
 #endif
     register_plugin(plugin);
 }

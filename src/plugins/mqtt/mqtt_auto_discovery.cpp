@@ -6,13 +6,14 @@
 
 #include <Arduino_compat.h>
 #include <PrintString.h>
+#include <debug_helper.h>
 #include <kfc_fw_config.h>
 #include "mqtt_auto_discovery.h"
 #include "mqtt_component.h"
 #include "mqtt_client.h"
 #include "progmem_data.h"
 
-void MQTTAutoDiscovery::create(MQTTComponent *component, Format_t format) {
+void MQTTAutoDiscovery::create(MQTTComponent *component, MQTTAutoDiscovery::Format_t format) {
     auto &config = _Config.get();
     String name = MQTTClient::getComponentName(component->getNumber());
 

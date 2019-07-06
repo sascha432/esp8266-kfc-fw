@@ -6,14 +6,15 @@
 
 #include "kfc_fw_config.h"
 #include <Buffer.h>
-#include "progmem_data.h"
 #include <KFCSyslog.h>
 #include <PrintHtmlEntitiesString.h>
+#include <LoopFunctions.h>
+#include "progmem_data.h"
 #include "templates.h"
 #include "plugins.h"
 
 
-void syslog_process_queue(void *);
+void syslog_process_queue();
 
 #if DEBUG_USE_SYSLOG
 
@@ -37,7 +38,7 @@ void syslog_setup_debug_logger() {
 
     debug_printf_P(PSTR("Debug Syslog enabled, target " DEBUG_USE_SYSLOG_TARGET "\n"));
 
-    add_loop_function(syslog_process_queue);
+    LoopFunctions::add(syslog_process_queue);
 }
 
 #endif
@@ -51,7 +52,7 @@ void syslog_setup_logger() {
         delete syslog;
         syslog = nullptr;
 #if DEBUG_USE_SYSLOG == 0
-        remove_loop_function(syslog_process_queue);
+        LoopFunctions::remove(syslog_process_queue);
 #endif
     }
 
@@ -70,7 +71,7 @@ void syslog_setup_logger() {
         syslog = new SyslogStream(filter, queue);
 
         _logger.setSyslog(syslog);
-        add_loop_function(syslog_process_queue);
+        LoopFunctions::add(syslog_process_queue);
     }
 }
 
@@ -82,7 +83,7 @@ void syslog_setup(bool isSafeMode) {
     syslog_setup_logger();
 }
 
-void syslog_process_queue(void *) {
+void syslog_process_queue() {
     static MillisTimer timer(1000UL);
     if (timer.reached()) {
         if (debugSyslog) {

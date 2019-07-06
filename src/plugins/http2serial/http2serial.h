@@ -10,7 +10,6 @@
 #include <Buffer.h>
 #include "ws_console_client.h"
 #include "serial_handler.h"
-#include "event_scheduler.h"
 
 #ifndef DEBUG_HTTP2SERIAL
 #define DEBUG_HTTP2SERIAL 1
@@ -48,7 +47,6 @@ public:
     void resetOutputBufferTimer();
     void clearOutputBuffer();
     void outputLoop();
-    static void _outputLoopFunction(void *arg);
     static void onData(uint8_t type, const uint8_t *buffer, size_t len);
 
     SerialHandler *getSerialHandler();

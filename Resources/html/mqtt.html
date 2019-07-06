@@ -58,7 +58,7 @@
                     <input type="text" class="form-control" name="mqtt_topic" id="mqtt_topic" value="%MQTT_TOPIC%">
                 </div>
                 <div class="form-group">
-                    <label for="mqtt_qos">Quality of Service</label>
+                    <label for="mqtt_qos">Quality of Service:</label>
                     <select class="form-control" name="mqtt_qos" id="mqtt_qos">
                         <option value="0" %MQTT_QOS_0%>At most once (0)</option>
                         <option value="1" %MQTT_QOS_1%>At least once (1)</option>
@@ -67,7 +67,7 @@
                 </div>
                 <!--#if MQTT_AUTO_DISCOVERY-->
                 <div class="form-group">
-                    <label for="mqtt_auto_discovery">Home Assistant Auto Discovery</label>
+                    <label for="mqtt_auto_discovery">Home Assistant Auto Discovery:</label>
                     <select class="form-control" name="mqtt_auto_discovery" id="mqtt_auto_discovery">
                         <option value="0" %MQTT_AUTO_DISCOVERY_0%>Disabled</option>
                         <option value="1" %MQTT_AUTO_DISCOVERY_1%>Enabled</option>

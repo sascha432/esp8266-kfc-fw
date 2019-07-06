@@ -2,8 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if MQTT_AUTO_DISCOVERY
-
 #pragma once
 
 #include <Arduino_compat.h>
@@ -34,5 +32,3 @@ private:
     PrintString _discovery;
     String _topic;
 };
-
-#endif

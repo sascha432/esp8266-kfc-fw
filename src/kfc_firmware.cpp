@@ -6,10 +6,12 @@
 #include <algorithm>
 #include <vector>
 #include <functional>
+#include <LoopFunctions.h>
+#include <WiFiCallbacks.h>
+#include <OSTimer.h>
 #include "kfc_fw_config.h"
 #include "at_mode.h"
 #include "serial_handler.h"
-#include "event_scheduler.h"
 #include "reset_detector.h"
 #include "plugins.h"
 #if USE_GDBSTUB
@@ -19,6 +21,35 @@
 static bool wifi_connected = false;
 unsigned long wifi_up = -1UL;
 static unsigned long offline_since = 0;
+
+#if SPIFFS_TMP_FILES_TTL
+
+void cleanup_tmp_dir() {
+    static MillisTimer timer(SPIFFS_TMP_CLEAUP_INTERVAL * 1000UL);
+    if (timer.reached()) {
+        ulong now = (millis() / 1000UL);
+        String tmp_dir = sys_get_temp_dir();
+        Dir dir = SPIFFS.openDir(tmp_dir);
+#if DEBUG
+        int deleted = 0;
+#endif
+        while(dir.next()) {
+            String filename = dir.fileName();
+            ulong ttl = strtoul(filename.substring(tmp_dir.length()).c_str(), nullptr, HEX);
+            if (ttl && now > ttl) {
+                if (SPIFFS.remove(dir.fileName())) {
+#if DEBUG
+                    deleted++;
+#endif
+                }
+            }
+        }
+        // debug_printf_P(PSTR("Cleanup %s: Removed %d file(s)\n"), tmp_dir.c_str(), deleted);
+
+        timer.restart();
+    }
+}
+#endif
 
 void check_flash_size() {
 
@@ -70,7 +101,7 @@ void setup_wifi_callbacks() {
 
         wifi_set_sleep_type(MODEM_SLEEP_T);
 
-        wifi_events_execute_callbacks(WIFI_CB_EVENT_CONNECTED, nullptr);
+        WiFiCallbacks::callEvent(WiFiCallbacks::EventEnum_t::CONNECTED, (void *)&event);
     });
 
     static auto _disconnectedHandler = WiFi.onStationModeDisconnected([](const WiFiEventStationModeDisconnected& event) {
@@ -83,8 +114,7 @@ void setup_wifi_callbacks() {
             offline_since = millis();
             wifi_connected = false;
             wifi_up = -1UL;
-            wifi_events_execute_callbacks(WIFI_CB_EVENT_DISCONNECTED, (void *)&event);
-            // time_to_sleep = 0;
+            WiFiCallbacks::callEvent(WiFiCallbacks::EventEnum_t::DISCONNECTED, (void *)&event);
         }
     });
 
@@ -248,7 +278,7 @@ void setup() {
         }
 #endif
 #if SPIFFS_TMP_FILES_TTL
-        add_loop_function(cleanup_tmp_dir);
+        LoopFunctions::add(cleanup_tmp_dir);
 #endif
 
         setup_plugins(false);
@@ -268,15 +298,15 @@ void setup() {
 }
 
 void loop() {
-    for(uint8_t i = 0; i < loop_functions.size(); i++) {    // do not use iterators since the vector can be modifed inside the callback
-        auto func = loop_functions[i];
-        if(func.callback == nullptr) {
-            panic();
-        } else if (func.delete_callback) {
-            loop_functions.erase(loop_functions.begin() + i);
+    auto &loopFunctions = LoopFunctions::getVector();
+    for(uint8_t i = 0; i < loopFunctions.size(); i++) { // do not use iterators since the vector can be modifed inside the callback
+        if (loopFunctions[i].deleteCallback) {
+            loopFunctions.erase(loopFunctions.begin() + i);
             i--;
+        } else if (loopFunctions[i].callback) {
+            loopFunctions[i].callback();
         } else {
-            func.callback(func.argument);
+            reinterpret_cast<void(*)()>(loopFunctions[i].callbackPtr)();
         }
     }
 }

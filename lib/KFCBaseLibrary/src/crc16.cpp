@@ -4,7 +4,7 @@
 
 #include "crc16.h"
 
-uint16_t _crc16_update(uint16_t crc, uint8_t a) {
+uint16_t crc16_compute(uint16_t crc, uint8_t a) {
     crc ^= a;
     for (uint8_t i = 0; i < 8; ++i) {
         if (crc & 1) {
@@ -18,7 +18,7 @@ uint16_t _crc16_update(uint16_t crc, uint8_t a) {
 
 uint16_t crc16_update(uint16_t crc, const uint8_t *data, size_t len) {
     while(len--) {
-        crc = _crc16_update(crc, *data++);
+        crc = crc16_compute(crc, *data++);
     }
     return crc;
 }

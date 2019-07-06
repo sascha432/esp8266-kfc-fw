@@ -29,6 +29,10 @@ Library to read streamed JSON documents
 
 Platform indepentend Timer, Scheduler, WiFi Callbacks and loop function callbacks
 
+### KFCResetDetector
+
+Detect crashes and offer safe mode by pressing reset button during boot, count number of resets for extended functionality (reset configuration, open public hotspot etc...)
+
 ## Plugins
 
 ### MQTT Client

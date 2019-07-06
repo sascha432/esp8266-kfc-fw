@@ -25,6 +25,9 @@ Read only file system with long filename support, optimized for low memory envir
 
 Library to read streamed JSON documents
 
+### KFCEventScheduler
+
+Platform indepentend Timer, Scheduler, WiFi Callbacks and loop function callbacks
 
 ## Plugins
 

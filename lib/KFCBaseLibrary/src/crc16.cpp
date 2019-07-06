@@ -26,3 +26,4 @@ uint16_t crc16_update(uint16_t crc, const uint8_t *data, size_t len) {
 uint16_t crc16_calc(const uint8_t *data, size_t len) {
     return crc16_update(~0, data, len);
 }
+

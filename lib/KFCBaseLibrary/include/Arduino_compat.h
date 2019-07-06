@@ -50,6 +50,7 @@ typedef wifi_err_reason_t WiFiDisconnectReason;
 #include <ESP8266WiFiType.h>
 #include <WiFiUdp.h>
 #include <FS.h>
+#include <EEPROM.h>
 
 #define PROGMEM_STRING_DECL(name)               extern const char _shared_progmem_string_##name[] PROGMEM;
 #define PROGMEM_STRING_DEF(name, value)         const char _shared_progmem_string_##name[] PROGMEM = { value };
@@ -89,6 +90,10 @@ typedef wifi_err_reason_t WiFiDisconnectReason;
 #define strstr_P strstr
 #define strlen_P strlen
 #define pgm_read_byte(a) (*a)
+#define memcmp_P memcmp
+#define strcpy_P strcpy
+#define strncpy_P strncpy_s
+#define memcpy_P memcpy
 
 int constexpr constexpr_strlen(const char* str) {
     return *str ? 1 + constexpr_strlen(str + 1) : 0;
@@ -114,9 +119,6 @@ class __FlashStringHelper;
 #define __PSTR(s) ((const char *)s)
 #define F(string_literal) (__FPSTR(__PSTR(string_literal)))
 
-#define strcpy_P strcpy
-#define strncpy_P strncpy_s
-
 const char *str_P(const char *str, uint8_t index = 0);  // not the same function as in misc.cpp just a dummy
 
 #if DEBUG
@@ -135,9 +137,6 @@ const char *str_P(const char *str, uint8_t index = 0);  // not the same function
 
 #define strdup _strdup
 void throwException(PGM_P message);
-
-uint16_t _crc16_update(uint16_t crc = ~0x0, const uint8_t a = 0);
-uint16_t crc16_calc(uint8_t const *data, size_t length);
 
 unsigned long millis();
 
@@ -754,7 +753,53 @@ class EEPROMFile : public Stream {
         close();
     }
 
-    bool begin() {
+    void clear() {
+        memset(_eeprom, 0, _size);
+    }
+
+    size_t length() const {
+        return _size;
+    }
+
+    uint8_t *getDataPtr() const {
+        return _eeprom;
+    }
+
+    uint8_t& operator[](int const address) {
+        return _eeprom[address];
+    }
+
+    uint8_t const & operator[](int const address) const {
+        return _eeprom[address];
+    }
+
+    uint8_t read(int const address) {
+        return _eeprom[address];
+    }
+
+    void write(int const address, uint8_t const val) {
+        _eeprom[address] = val;
+    }
+
+    template<typename T> 
+    T &get(int const address, T &t) {
+        if (address < 0 || address + sizeof(T) > _size)
+            return t;
+
+        memcpy((uint8_t*) &t, _eeprom + address, sizeof(T));
+        return t;
+    }
+
+    template<typename T> 
+    const T &put(int const address, const T &t) {
+        if (address < 0 || address + sizeof(T) > _size) {
+            return t;
+        }
+        memcpy(_eeprom + address, (const uint8_t*)&t, sizeof(T));
+        return t;
+    }
+
+    bool begin(int size = -1) {
         if (_eeprom) {
             free(_eeprom);
         }
@@ -783,8 +828,8 @@ class EEPROMFile : public Stream {
     void end() {
         if (_eeprom) {
             commit();
-            free(_eeprom);
-            _eeprom = nullptr;
+            //free(_eeprom);
+            //_eeprom = nullptr;
         }
     }
 
@@ -870,7 +915,7 @@ class EEPROMFile : public Stream {
         return _size - _position;
     }
 
-   private:
+private:
     FILE *fp;
     uint8_t *_eeprom;
     uint16_t _position;
@@ -1097,6 +1142,7 @@ private:
 
 extern ESP8266WiFiClass WiFi;
 extern String _sharedEmptyString;
+extern EEPROMFile EEPROM;
 
 #else
 

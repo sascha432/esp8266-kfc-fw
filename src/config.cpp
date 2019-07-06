@@ -497,7 +497,7 @@ void config_version() {
     MySerial.printf_P(PSTR("KFC Firmware %s\nFlash size %s\n"), config_firmware_version().c_str(), formatBytes(ESP.getFlashChipRealSize()).c_str());
 }
 
-void  config_info() {
+void config_info() {
     config_version();
     if (config.flags & FLAGS_MODE_AP) {
         MySerial.printf_P(PSTR("AP Mode SSID %s\n"), config.soft_ap.wifi_ssid);

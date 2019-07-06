@@ -118,11 +118,6 @@ struct SoftAP {
     char wifi_pass[33];
 };
 
-struct WemoConfig {
-    uint16_t tcp_base_port;
-    char devices[255]; // \n is separator
-};
-
 struct HueConfig {
     uint16_t tcp_port;
     char devices[255]; // \n is separator

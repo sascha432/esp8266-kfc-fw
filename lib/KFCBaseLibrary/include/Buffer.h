@@ -23,6 +23,8 @@ public:
     const char *getConstChar() const;
     char *getNulByteString();
 
+    void setBuffer(uint8_t *buffer, size_t size);
+
     size_t size() const;
     size_t length() const;
 

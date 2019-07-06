@@ -64,6 +64,13 @@ char *Buffer::getNulByteString() {
     return (char *)_buffer;
 }
 
+void Buffer::setBuffer(uint8_t * buffer, size_t size)
+{
+    _free();
+    _buffer = buffer;
+    _size = size;
+}
+
 size_t Buffer::size() const {
     return _size;
 }

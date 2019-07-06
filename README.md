@@ -33,6 +33,10 @@ Platform indepentend Timer, Scheduler, WiFi Callbacks and loop function callback
 
 Detect crashes and offer safe mode by pressing reset button during boot, count number of resets for extended functionality (reset configuration, open public hotspot etc...)
 
+### KFCConfiguration
+
+Library to handle configurations stored in the EEPROM, read on demand to save memory, manage changes in structure automatically, store history/backups on SPIFFS
+
 ## Plugins
 
 ### MQTT Client

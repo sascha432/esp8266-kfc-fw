@@ -15,26 +15,6 @@ void throwException(PGM_P message) {
     exit(-1);
 }
 
-uint16_t _crc16_update(uint16_t crc, const uint8_t a) {
-    crc ^= a;
-    for (uint8_t i = 0; i < 8; ++i) {
-        if (crc & 1) {
-            crc = (crc >> 1) ^ 0xA001;
-        } else {
-            crc = (crc >> 1);
-        }
-    }
-    return crc;
-}
-
-uint16_t crc16_calc(uint8_t const *data, size_t length) {
-    uint16_t crc = ~0;
-    for (size_t index = 0; index < length; ++index) {
-        crc = _crc16_update(crc, data[index]);
-    }
-    return crc;
-}
-
 static bool init_millis();
 
 static ULONG64 millis_start_time = 0;

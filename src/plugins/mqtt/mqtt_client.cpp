@@ -18,10 +18,7 @@ PROGMEM_STRING_DEF(Anonymous, "Anonymous");
 
 MQTTClient *mqttClient = nullptr;
 
-void MQTTClient::setup(bool isSafeMode) {
-    if (isSafeMode) {
-        return;
-    }
+void MQTTClient::setup() {
     if (config._H_GET(Config().flags).mqttMode != MQTT_MODE_DISABLED) {
         mqttClient = new MQTTClient();
     }
@@ -559,7 +556,7 @@ bool mqtt_at_mode_command_handler(Stream &serial, const String &command, int8_t 
 void add_plugin_mqtt() {
     Plugin_t plugin;
 
-    init_plugin(F("mqtt"), plugin, 100);
+    init_plugin(F("mqtt"), plugin, false, true, 100);
 
     plugin.setupPlugin = MQTTClient::setup;
     plugin.statusTemplate = MQTTClient::getStatus;
@@ -570,7 +567,7 @@ void add_plugin_mqtt() {
             mqttClient = nullptr;
         }
         if (config._H_GET(Config().flags).mqttMode != MQTT_MODE_DISABLED) {
-            MQTTClient::setup(false);
+            MQTTClient::setup();
         }
     };
 #if AT_MODE_SUPPORTED

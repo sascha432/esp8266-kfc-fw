@@ -267,6 +267,16 @@ void EventScheduler::removeLoopFunc() {
     }
 }
 
+void EventScheduler::terminate() {
+    LoopFunctions::remove(scheduler_loop_function);
+    _loopFunctionInstalled = false;
+    cli();
+    for(auto timer: _timers) {
+        timer->detach();
+    }
+    sei();
+}
+
 // void wifi_list_callbacks() {
 // #if DEBUG_EVENT_SCHEDULER
 //     if_debug_println("+++listing loop callbacks");

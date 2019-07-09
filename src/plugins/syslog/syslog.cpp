@@ -75,10 +75,7 @@ void syslog_setup_logger() {
     }
 }
 
-void syslog_setup(bool isSafeMode) {
-    if (isSafeMode) {
-        return;
-    }
+void syslog_setup() {
     syslog_setup_debug_logger();
     syslog_setup_logger();
 }
@@ -200,15 +197,38 @@ bool syslog_at_mode_command_handler(Stream &serial, const String &command, int8_
     return false;
 }
 
+void syslog_prepare_deep_sleep(uint32_t time, RFMode mode) {
+
+    //TODO the send timeout could be reduces for short sleep intervals
+
+    if (WiFi.isConnected()) {
+        if (debugSyslog) {
+            ulong timeout = millis() + 2000;    // long timeout in debug mode
+            while(debugSyslog->hasQueuedMessages() && millis() < timeout) {
+                debugSyslog->deliverQueue();
+                delay(1);
+            }
+        }
+        if (syslog) {
+            ulong timeout = millis() + 150;
+            while(syslog->hasQueuedMessages() && millis() < timeout) {
+                syslog->deliverQueue();
+                delay(1);
+            }
+        }
+    }
+}
+
 void add_plugin_syslog() {
     Plugin_t plugin;
 
-    init_plugin(F("syslog"), plugin, 20);
+    init_plugin(F("syslog"), plugin, false, true, 20);
 
     plugin.setupPlugin = syslog_setup;
     plugin.statusTemplate = syslog_get_status;
     plugin.configureForm = syslog_create_settings_form;
     plugin.reconfigurePlugin = syslog_setup_logger;
+    plugin.prepareDeepSleep = syslog_prepare_deep_sleep;
 #if AT_MODE_SUPPORTED
     plugin.atModeCommandHandler = syslog_at_mode_command_handler;
 #endif

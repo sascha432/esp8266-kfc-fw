@@ -6,13 +6,16 @@
 #include <ESPAsyncWebServer.h>
 #include "templates.h"
 #include "plugins.h"
+#include <EventScheduler.h>
 
 PluginsVector plugins;
 
-void init_plugin(const String &name, Plugin_t &plugin, uint8_t priority) {
+void init_plugin(const String &name, Plugin_t &plugin, bool allowSafeMode, bool autoSetupDeepSleep, uint8_t priority) {
     memset(&plugin, 0, sizeof(plugin));
     plugin.pluginName = name;
     plugin.setupPriority = priority;
+    plugin.allowSafeMode = allowSafeMode;
+    plugin.autoSetupDeepSleep = autoSetupDeepSleep;
 }
 
 void register_plugin(Plugin_t &plugin) {
@@ -20,7 +23,9 @@ void register_plugin(Plugin_t &plugin) {
     plugins.push_back(plugin);
 }
 
-void setup_plugins(bool isSafeMode) {
+void setup_plugins(PluginSetupMode_t mode) {
+
+    if (mode != PLUGIN_SETUP_DELAYED_AUTO_WAKE_UP) {
 
 #if MDNS_SUPPORT
     void add_plugin_mdns_plugin();
@@ -83,16 +88,28 @@ void setup_plugins(bool isSafeMode) {
     add_plugin_esp8266_at_mode();
 #endif
 
-    debug_printf_P(PSTR("setup_plugins(%d) counter %d\n"), isSafeMode, plugins.size());
+        debug_printf_P(PSTR("setup_plugins(%d) counter %d\n"), mode, plugins.size());
 
-    std::sort(plugins.begin(), plugins.end(), [](const Plugin_t &a, const Plugin_t &b) {
-        return b.setupPriority >= a.setupPriority;
-    });
+        std::sort(plugins.begin(), plugins.end(), [](const Plugin_t &a, const Plugin_t &b) {
+            return b.setupPriority >= a.setupPriority;
+        });
+    }
+
     for(const auto plugin : plugins) {
-        debug_printf_P(PSTR("setup_plugins(%d) %s priority %d\n"), isSafeMode, plugin.pluginName.c_str(), plugin.setupPriority);
-        if (plugin.setupPlugin) {
-            plugin.setupPlugin(isSafeMode);
+        bool runSetup =
+            (mode == PLUGIN_SETUP_DEFAULT) ||
+            (mode == PLUGIN_SETUP_SAFE_MODE && plugin.allowSafeMode) ||
+            (mode == PLUGIN_SETUP_AUTO_WAKE_UP && plugin.autoSetupDeepSleep) ||
+            (mode == PLUGIN_SETUP_DELAYED_AUTO_WAKE_UP && !plugin.autoSetupDeepSleep);
+        debug_printf_P(PSTR("setup_plugins(%d) %s priority %d run setup %d\n"), mode, plugin.pluginName.c_str(), plugin.setupPriority, runSetup);
+        if (runSetup && plugin.setupPlugin) {
+            plugin.setupPlugin();
         }
+    }
+    if (mode == PLUGIN_SETUP_AUTO_WAKE_UP) {
+        Scheduler.addTimer(30000, false, [](EventScheduler::EventTimerPtr timer) {
+            setup_plugins(PLUGIN_SETUP_DELAYED_AUTO_WAKE_UP);
+        });
     }
 }
 

@@ -212,11 +212,7 @@ void TimezoneData::updateLoop() {
 /*
  * Enable SNTP and remote timezone check if configured
  */
-void timezone_setup(bool isSafeMode) {
-
-    if (isSafeMode) {
-        return;
-    }
+void timezone_setup() {
 
     if (config.get<ConfigFlags>(_H(Config().flags)).ntpClientEnabled) {
 
@@ -247,7 +243,7 @@ void timezone_setup(bool isSafeMode) {
     }
 }
 
-void ntp_client_creaste_settings_form(AsyncWebServerRequest *request, Form &form) {
+void ntp_client_create_settings_form(AsyncWebServerRequest *request, Form &form) {
 
     form.add<bool>(F("ntp_enabled"), config.get<ConfigFlags>(_H(Config().flags)).ntpClientEnabled, [](bool value, FormField *field) {
         auto &flags = config._H_W_GET(Config().flags);
@@ -319,7 +315,7 @@ bool ntp_client_at_mode_command_handler(Stream &serial, const String &command, i
             if (config.get<ConfigFlags>(_H(Config().flags)).ntpClientEnabled) {
                 config.setString(_H(Config().ntp.timezone), argv[0]);
                 serial.printf_P(PSTR("Timezone set to %s\n"), config._H_STR(_Config.ntp.timezone));
-                timezone_setup(false);
+                timezone_setup();
             } else {
                 serial.print(F("NTP "));
                 serial.println(FSPGM(disabled));
@@ -330,17 +326,22 @@ bool ntp_client_at_mode_command_handler(Stream &serial, const String &command, i
     return false;
 }
 
+void ntp_client_deep_sleep(uint32_t time, RFMode mode) {
+    // TODO store offset (and abbreviation?) in RTC memory to restore it after sleep mode
+}
+
 void add_plugin_ntp_client() {
     Plugin_t plugin;
 
-    init_plugin(F("ntp"), plugin, 20);
+    init_plugin(F("ntp"), plugin, false, false, 20);
 
     plugin.setupPlugin = timezone_setup;
     plugin.statusTemplate = TimezoneData::getStatus;
-    plugin.configureForm = ntp_client_creaste_settings_form;
+    plugin.configureForm = ntp_client_create_settings_form;
     plugin.reconfigurePlugin = []() {
-        timezone_setup(false);
+        timezone_setup();
     };
+    plugin.prepareDeepSleep = ntp_client_deep_sleep;
 #if AT_MODE_SUPPORTED
     plugin.atModeCommandHandler = ntp_client_at_mode_command_handler;
 #endif

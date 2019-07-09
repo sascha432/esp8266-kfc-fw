@@ -172,10 +172,7 @@ void http2serial_install_web_server_hook() {
     }
 }
 
-void http2serial_setup(bool isSafeMode) {
-    if (isSafeMode) {
-        return;
-    }
+void http2serial_setup() {
     auto plugin = get_plugin_by_name(F("remote"));
     if (plugin) {
         static auto prev_callback = plugin->reconfigurePlugin;
@@ -213,7 +210,7 @@ bool http2_serial_at_mode_command_handler(Stream &serial, const String &command,
 void add_plugin_http2serial() {
     Plugin_t plugin;
 
-    init_plugin(F("http2serial"), plugin, 200);
+    init_plugin(F("http2serial"), plugin, false, false, 200);
 
     plugin.setupPlugin = http2serial_setup;
 #if AT_MODE_SUPPORTED

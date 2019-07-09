@@ -10,6 +10,8 @@
 #if defined(ESP8266)
 #include <osapi.h>
 #include <user_interface.h>
+#else
+#error Platform not supported
 #endif
 
 #define RESET_DETECTOR_TIMEOUT              5000
@@ -39,9 +41,13 @@ public:
     bool hasCrashDetected() const;
     bool hasResetDetected() const;
     bool hasRebootDetected() const;
+    bool hasWakeUpDetected() const;
     const String getResetReason() const;
     const String getResetInfo() const;
 
+    os_timer_t *getTimer();
+    void armTimer();
+    void disarmTimer();
     static void _timerCallback(void *arg);
     void clearCounter();
 

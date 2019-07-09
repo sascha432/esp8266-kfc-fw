@@ -9,6 +9,7 @@
 #include <LoopFunctions.h>
 #include <WiFiCallbacks.h>
 #include <OSTimer.h>
+#include <PrintString.h>
 #include "kfc_fw_config.h"
 #include "at_mode.h"
 #include "serial_handler.h"
@@ -85,7 +86,7 @@ void setup_wifi_callbacks() {
         if (!wifi_connected) {
             String str = formatTime((millis() - offline_since) / 1000, true);
             Logger_notice(F("WiFi connected to %s (offline for %s)"), event.ssid.c_str(), str.c_str());
-            debug_printf_P(PSTR("Station: WiFi connected to %s, offline for %s\n"), event.ssid.c_str(), str.c_str());
+            debug_printf_P(PSTR("Station: WiFi connected to %s, offline for %s, millis %lu\n"), event.ssid.c_str(), str.c_str(), millis());
             debug_printf_P(PSTR("Free heap %s\n"), formatBytes(ESP.getFreeHeap()).c_str());
             wifi_connected = true;
         }
@@ -93,13 +94,28 @@ void setup_wifi_callbacks() {
 
     static auto _gotIpHJandler = WiFi.onStationModeGotIP([](const WiFiEventStationModeGotIP &event) {
         Logger_notice(F("%s: IP/Net %s/%s GW %s DNS: %s, %s"), wifi_station_dhcpc_status() == DHCP_STOPPED ? "Static configuration" : "DHCP", to_c_str(WiFi.localIP()), to_c_str(WiFi.subnetMask()), to_c_str(WiFi.gatewayIP()), to_c_str(WiFi.dnsIP()), to_c_str(WiFi.dnsIP(1)));
-        debug_printf_P(PSTR("Station: Got IP %s\n"), to_c_str(WiFi.localIP()));
+        debug_printf_P(PSTR("Station: Got IP %s, millis %lu\n"), to_c_str(WiFi.localIP()), millis());
         config_set_blink(BLINK_SOLID);
         wifi_up = millis();
         _systemStats.station_reconnects++;
-        // time_to_sleep = millis() + 5000; // allow deep sleep 5 seconds after WiFi has been connected
 
-        wifi_set_sleep_type(MODEM_SLEEP_T);
+        // store last DHCP configation in config
+        if (wifi_station_dhcpc_status() != DHCP_STOPPED && config._H_GET(Config().flags).useStaticIPDuringWakeUp) {
+            struct StoredDHCPConfig dhcpConfig;
+            struct StoredDHCPConfig storedConfig = config._H_GET(Config().last_dhcp_config);
+
+            dhcpConfig.local_ip = (uint32_t)WiFi.localIP();
+            dhcpConfig.subnet = (uint32_t)WiFi.subnetMask();
+            dhcpConfig.gateway = (uint32_t)WiFi.gatewayIP();
+            dhcpConfig.dns1 = (uint32_t)WiFi.dnsIP();
+            dhcpConfig.dns2 = (uint32_t)WiFi.dnsIP(1);
+
+            if (memcmp(&dhcpConfig, &storedConfig, sizeof(dhcpConfig)) != 0) {
+                debug_printf_P(PSTR("Storing DHCP configuration\n"))
+                config._H_SET(Config().last_dhcp_config, dhcpConfig);
+                config_write();
+            }
+        }
 
         WiFiCallbacks::callEvent(WiFiCallbacks::EventEnum_t::CONNECTED, (void *)&event);
     });
@@ -163,10 +179,22 @@ WatchDogTimer myWdt;
 #endif
 
 bool safe_mode = false;
-
 void setup() {
 
     Serial.begin(115200);
+
+    if (resetDetector.getResetCounter() >= 20) { // protection against EEPROM/Flash memory damage during boot loops
+        Serial.println(F("Too many resets detected. Pausing boot for 30 seconds..."));
+        resetDetector.disarmTimer();
+        delete resetDetector.getTimer();
+        uint8_t count = 30;
+        while(count--) {
+            Serial.print('.');
+            delay(1000);
+        }
+        Serial.println();
+        resetDetector.armTimer();
+    }
     Serial.println(F("Booting KFC firmware..."));
 
 #if SPIFFS_SUPPORT
@@ -176,7 +204,10 @@ void setup() {
     system_stats_read();
 #endif
 
-    KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("SAFE MODE %d, reset counter %d\n"), resetDetector.getSafeMode(), resetDetector.getResetCounter());
+    if (resetDetector.hasWakeUpDetected()) {
+        resetDetector.clearCounter();
+    }
+    Serial.printf_P(PSTR("SAFE MODE %d, reset counter %d, wake up %d\n"), resetDetector.getSafeMode(), resetDetector.getResetCounter(), resetDetector.hasWakeUpDetected());
 
     if (resetDetector.hasResetDetected()) {
 
@@ -235,6 +266,8 @@ void setup() {
                 KFC_SAFE_MODE_SERIAL_PORT.print('.');
                 delay(1000);
             }
+            KFC_SAFE_MODE_SERIAL_PORT.println();
+
             // reset has not been pressed, disable safe mode
             resetDetector.setSafeMode(false);
         }
@@ -255,7 +288,7 @@ void setup() {
             at_mode_setup();
         #endif
 
-        setup_plugins(true);
+        setup_plugins(PLUGIN_SETUP_SAFE_MODE);
         setup_wifi_callbacks();
 
         config_setup();
@@ -266,17 +299,19 @@ void setup() {
 
     } else {
 
-#if SERIAL_HANDLER
-        serialHandler.begin();
-#endif
+        #if SERIAL_HANDLER
+            serialHandler.begin();
+        #endif
 
-#if AT_MODE_SUPPORTED
-        at_mode_setup();
-#endif
+        #if AT_MODE_SUPPORTED
+            at_mode_setup();
+        #endif
 
         if (resetDetector.hasCrashDetected()) {
-            Logger_error(F("System crash detected: %s"), resetDetector.getResetInfo().c_str());
-            debug_printf_P(PSTR("System crash detected: %s\n"), resetDetector.getResetInfo().c_str());
+            PrintString message;
+            message.printf_P(PSTR("System crash detected: %s\n"), resetDetector.getResetInfo().c_str());
+            Logger_error(message);
+            debug_println(message);
             #if SYSTEM_STATS
                 _systemStats.crash_counter++;
             #endif
@@ -291,34 +326,45 @@ void setup() {
 #endif
 
 #if DEBUG
-        check_flash_size();
-        debug_printf_P(PSTR("Free Sketch Space %u\n"), ESP.getFreeSketchSpace());
-        debug_printf_P(PSTR("CPU frequency %d\n"), system_get_cpu_freq());
+        if (!resetDetector.hasWakeUpDetected()) {
+            check_flash_size();
+            debug_printf_P(PSTR("Free Sketch Space %u\n"), ESP.getFreeSketchSpace());
+            debug_printf_P(PSTR("CPU frequency %d\n"), system_get_cpu_freq());
+        }
 #endif
 
 #if SPIFFS_CLEANUP_TMP_DURING_BOOT
-        debug_println(F("Cleaning up /tmp directory"));
-        Dir dir = SPIFFS.openDir(sys_get_temp_dir());
-        while(dir.next()) {
-            bool status = SPIFFS.remove(dir.fileName());
-            debug_printf_P(PSTR("Remove(%s) = %d\n"), dir.fileName().c_str(), status);
+        if (!resetDetector.hasWakeUpDetected()) {
+            debug_println(F("Cleaning up /tmp directory"));
+            Dir dir = SPIFFS.openDir(sys_get_temp_dir());
+            while(dir.next()) {
+                bool status = SPIFFS.remove(dir.fileName());
+                debug_printf_P(PSTR("Remove(%s) = %d\n"), dir.fileName().c_str(), status);
+            }
         }
 #endif
 #if SPIFFS_TMP_FILES_TTL
         LoopFunctions::add(cleanup_tmp_dir);
 #endif
 
-        setup_plugins(false);
+        setup_plugins(resetDetector.hasWakeUpDetected() ? PLUGIN_SETUP_AUTO_WAKE_UP : PLUGIN_SETUP_DEFAULT);
         setup_wifi_callbacks();
         config_setup();
 
         config_info();
-        if (!config_apply_wifi_settings()) {
-            MySerial.printf_P(PSTR("ERROR - %s\n"), config.getLastError());
+        if (resetDetector.hasWakeUpDetected()) {
+            if (!config_wakeup_wifi()) {
+                MySerial.printf_P(PSTR("ERROR - %s\n"), config.getLastError());
+            }
+        } else {
+            if (!config_apply_wifi_settings()) {
+                MySerial.printf_P(PSTR("ERROR - %s\n"), config.getLastError());
 #if DEBUG
-            config.dump(MySerial);
+                config.dump(MySerial);
 #endif
+            }
         }
+
     }
 
 #if DEBUG

@@ -19,12 +19,13 @@ ResetDetector resetDetector;
 #endif
 
 ResetDetector::ResetDetector() {
-    _init();
+     _timer = nullptr;
+   _init();
 }
 
 void ResetDetector::_init() {
     ResetDetectorData_t data;
-    bool isValid = false;
+    auto isValid = false;
     uint16_t crc = ~0;
 
 #if DEBUG_RESET_DETECTOR
@@ -59,8 +60,17 @@ void ResetDetector::_init() {
         getResetReason().c_str(), _resetReason, ESP.getResetReason().c_str(), getResetInfo().c_str(), hasCrashDetected(), hasResetDetected(), hasRebootDetected());
 
     _writeData();
+    armTimer();
+}
 
+os_timer_t *ResetDetector::getTimer() {
+    return _timer;
+}
 
+void ResetDetector::armTimer() {
+    if (_timer) {
+        disarmTimer();
+    }
 #if defined(ESP8266)
     _timer = new os_timer_t();
     os_timer_setfn(_timer, reinterpret_cast<os_timer_func_t *>(_timerCallback), reinterpret_cast<void *>(this));
@@ -68,12 +78,21 @@ void ResetDetector::_init() {
 #else
     #error Platform not supported
 #endif
-
 }
 
+void ResetDetector::disarmTimer() {
+    if (_timer) {
+        os_timer_disarm(_timer);
+        delete _timer;
+        _timer = nullptr;
+    }
+}
+
+
 void ResetDetector::_timerCallback(void *arg) {
-    ResetDetector *rd = reinterpret_cast<ResetDetector *>(arg);
-    rd->clearCounter();
+    auto &rd = *reinterpret_cast<ResetDetector *>(arg);
+    rd.clearCounter();
+    rd.disarmTimer();
 }
 
 void ResetDetector::clearCounter() {
@@ -92,13 +111,15 @@ bool ResetDetector::hasCrashDetected() const {
 }
 
 bool ResetDetector::hasResetDetected() const {
-    return
-        _resetReason == REASON_DEFAULT_RST ||
-        _resetReason == REASON_EXT_SYS_RST;
+    return (_resetReason == REASON_DEFAULT_RST || _resetReason == REASON_EXT_SYS_RST);
 }
 
 bool ResetDetector::hasRebootDetected()  const {
     return (_resetReason == REASON_SOFT_RESTART);
+}
+
+bool ResetDetector::hasWakeUpDetected() const {
+    return (_resetReason == REASON_DEEP_SLEEP_AWAKE);
 }
 
 const String ResetDetector::getResetReason() const {

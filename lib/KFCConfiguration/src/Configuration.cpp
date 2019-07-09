@@ -88,6 +88,7 @@ bool Configuration::read() {
     bool result;
     clear();
     if (false == (result = _readParams())) {
+        debug_printf_P(PSTR("Configuration::_readParams() = false\n"));
         clear();
     }
     return result;
@@ -384,11 +385,11 @@ ConfigurationParameter *Configuration::_findParam(ConfigurationParameter::TypeEn
     for (auto &parameter : _params) {
         auto &param = parameter.getParam();
         if (param.handle == handle && param.type == type) {
-            debug_printf_P(PSTR("Configuration::_findParam(%d, %04x (%s)) = %p, data offset %d\n"), (int)type, handle, getHandleName(handle), (void *)&parameter, calculateOffset(handle));
+            //debug_printf_P(PSTR("Configuration::_findParam(%d, %04x (%s)) = %p, data offset %d\n"), (int)type, handle, getHandleName(handle), (void *)&parameter, calculateOffset(handle));
             return &parameter;
         }
     }
-    debug_printf_P(PSTR("Configuration::_findParam(%d, %04x (%s)) = nullptr\n"), (int)type, handle, getHandleName(handle));
+    //debug_printf_P(PSTR("Configuration::_findParam(%d, %04x (%s)) = nullptr\n"), (int)type, handle, getHandleName(handle));
     return nullptr;
 }
 
@@ -465,6 +466,7 @@ bool Configuration::_readParams() {
                 return true;
             }
         }
+        debug_printf_P(PSTR("Configuration::_readParams(): failure before reading all parameters %d/%d\n"), _params.size(), header.params);
         break;
 
     }

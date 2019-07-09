@@ -45,7 +45,7 @@ public:
     void unsubscribe(MQTTComponent *component, const String &topic);
     void publish(const String &topic, uint8_t qos, bool retain, const String &payload);
 
-    static void setup(bool isSafeMode);
+    static void setup();
     static const String connectionDetailsString();
     static const String connectionStatusString();
     static const String getStatus();

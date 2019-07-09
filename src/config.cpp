@@ -8,7 +8,9 @@
 #include <KFCTimezone.h>
 #include <time.h>
 #include <OSTimer.h>
+#include <EventScheduler.h>
 #include <LoopFunctions.h>
+#include <WiFiCallbacks.h>
 #include <crc16.h>
 #include "progmem_data.h"
 #include "fs_mapping.h"
@@ -16,6 +18,7 @@
 #include "session.h"
 #include "kfc_fw_config.h"
 #include "reset_detector.h"
+#include "plugins.h"
 #include "build.h"
 
 PROGMEM_STRING_DEF(default_password_warning, "WARNING! Default password has not been changed");
@@ -294,12 +297,13 @@ bool config_read(bool init, size_t ofs) {
 //             _Config.restoreFactorySettings();
 //         }
 //     }
-    auto &version = config._H_W_GET(Config().version);
+    auto version = config._H_GET(Config().version);
     if (FIRMWARE_VERSION > version) {
         PrintString message;
         message.printf_P(PSTR("Upgrading EEPROM configuration from %d.%d.%d to " FIRMWARE_VERSION_STR), (version >> 16), (version >> 8) & 0xff, (version & 0xff));
         Logger_warning(message);
         debug_println(message);
+        config._H_SET(Config().version, FIRMWARE_VERSION);
         config_write();
     }
     return success;
@@ -372,17 +376,75 @@ void config_info() {
 #endif
 }
 
-int  config_apply_wifi_settings() {
+// time in milliseconds
+void config_deep_sleep(uint32_t time, RFMode mode) {
+    debug_printf_P(PSTR("Prepearing device for deep sleep\n"));
+    WiFiCallbacks::getVector().clear(); // disable WiFi callbacks to speed up shutdown
+    Scheduler.terminate(); // halt scheduler
+    for(auto &plugin: plugins) {
+        if (plugin.prepareDeepSleep) {
+            plugin.prepareDeepSleep(time, mode);
+        }
+    }
+    debug_printf_P(PSTR("Entering deep sleep for %.3f seconds\n"), time / 1000.0);
+    ESP.deepSleep(time * (uint64_t)1000, mode);
+}
 
-    bool station_mode_success = false;
-    bool ap_mode_success = false;
+bool config_wifi_station_config(bool dhcpClient, bool useStoredDHCP) {
+    bool result;
+    if (dhcpClient) {
+        if (useStoredDHCP) {
+            struct StoredDHCPConfig dhcpConfig = config._H_GET(Config().last_dhcp_config);
+            if (dhcpConfig.local_ip) {
+                debug_printf_P(PSTR("Using stored DHCP configuration as static IP and disabling DHCP client\n"));
+                result = WiFi.config(dhcpConfig.local_ip, dhcpConfig.gateway, dhcpConfig.subnet, dhcpConfig.dns1, dhcpConfig.dns2);
+                if (result) {
+                    return true;
+                }
+            }
+        }
+        result = WiFi.config((uint32_t)0, (uint32_t)0, (uint32_t)0, (uint32_t)0, (uint32_t)0);
+    } else {
+        result = WiFi.config(config._H_GET_IP(Config().local_ip), config._H_GET_IP(Config().gateway), config._H_GET_IP(Config().subnet), config._H_GET_IP(Config().dns1), config._H_GET_IP(Config().dns2));
+    }
+    return result;
+}
 
-    Logger_notice(F("Applying WiFi settings"));
-    // config_set_blink(BLINK_FAST);
+bool config_wakeup_wifi() {
 
     WiFi.persistent(false);
     WiFi.disconnect(true);
     WiFi.softAPdisconnect(true);
+    WiFi.enableAP(false);
+    WiFi.hostname(config._H_STR(Config().device_name));
+
+    auto flags = config._H_GET(Config().flags);
+    if (flags.wifiMode & WIFI_STA) { // activate station mode only directly after wakeup
+        WiFi.enableSTA(true);
+        WiFi.setAutoConnect(true);
+        WiFi.setAutoReconnect(true);
+
+        auto result = config_wifi_station_config(flags.stationModeDHCPEnabled, flags.useStaticIPDuringWakeUp);
+        if (!result || !WiFi.begin(config._H_STR(Config().wifi_ssid), config._H_STR(Config().wifi_pass))) {
+            Logger_error(F("Failed to start Station Mode after wake up"));
+        } else {
+            debug_printf_P(PSTR("Station Mode SSID %s\n"), WiFi.SSID().c_str());
+            return true;
+        }
+
+    }
+    return false;
+}
+
+bool config_apply_wifi_settings() {
+
+    bool station_mode_success = false;
+    bool ap_mode_success = false;
+
+    WiFi.persistent(false);
+    WiFi.disconnect(true);
+    WiFi.softAPdisconnect(true);
+    WiFi.hostname(config._H_STR(Config().device_name));
 
     auto flags = config._H_GET(Config().flags);
 
@@ -390,15 +452,8 @@ int  config_apply_wifi_settings() {
         WiFi.enableSTA(true);
         WiFi.setAutoConnect(true);
         WiFi.setAutoReconnect(true);
-        WiFi.hostname(config._H_STR(Config().device_name));
 
-        bool result;
-        if (flags.stationModeDHCPEnabled) {
-            result = WiFi.config((uint32_t)0, (uint32_t)0, (uint32_t)0, (uint32_t)0, (uint32_t)0);
-        } else {
-            result = WiFi.config(config._H_GET_IP(Config().local_ip), config._H_GET_IP(Config().gateway), config._H_GET_IP(Config().subnet), config._H_GET_IP(Config().dns1), config._H_GET_IP(Config().dns2));
-        }
-
+        auto result = config_wifi_station_config(flags.stationModeDHCPEnabled, false);
         if (!result) {
             Logger_error(F("Failed to configure Station Mode with %s"), flags.stationModeDHCPEnabled ? String(F("DHCP")).c_str() : String(F("static address")).c_str());
         } else {
@@ -414,7 +469,7 @@ int  config_apply_wifi_settings() {
     if (flags.wifiMode & WIFI_AP_STA) {
 
         WiFi.enableAP(true);
-        if (config.get<uint8_t>(_H(Config().soft_ap.encryption)) == -1) {
+        if (config._H_GET(Config().soft_ap.encryption) == -1) {
             Logger_error(F("Encryption for AP mode could not be set"));
         } else {
             if (!WiFi.softAPConfig(config._H_GET_IP(Config().soft_ap.address), config._H_GET_IP(Config().soft_ap.gateway), config._H_GET_IP(Config().soft_ap.subnet))) {
@@ -474,8 +529,7 @@ uint8_t WiFi_mode_connected(uint8_t mode, uint32_t *station_ip, uint32_t *ap_ip)
     struct ip_info ip_info;
     uint8_t connected_mode = 0;
 
-    auto flags = config.get<ConfigFlags>(_H(Config().flags));
-
+    auto flags = config._H_GET(Config().flags);
     if (flags.wifiMode & mode) { // is any modes active?
         if ((mode & WIFI_STA) && flags.wifiMode & WIFI_STA && wifi_station_get_connect_status() == STATION_GOT_IP) { // station connected?
             if (wifi_get_ip_info(STATION_IF, &ip_info) && ip_info.ip.addr) { // verify that is has a valid IP address
@@ -530,6 +584,7 @@ void KFCFWConfiguration::restoreFactorySettings() {
     flags.mqttAutoDiscoveryEnabled = true;
     flags.ledMode = MODE_SINGLE_LED;
     flags.hueEnabled = true;
+    flags.useStaticIPDuringWakeUp = true;
     _H_SET(Config().flags, flags);
 
     uint8_t mac[6];
@@ -552,6 +607,10 @@ void KFCFWConfiguration::restoreFactorySettings() {
     _H_SET_IP(Config().soft_ap.dhcp_end, IPAddress(192, 168, 4, 100));
     _H_SET(Config().soft_ap.encryption, ENC_TYPE_CCMP);
     _H_SET(Config().soft_ap.channel, 7);
+
+    StoredDHCPConfig dhcpConfig;
+    memset(&dhcpConfig, 0, sizeof(dhcpConfig));
+    _H_SET(Config().last_dhcp_config, dhcpConfig);
 
 #if WEBSERVER_TLS_SUPPORT
     _H_SET(Config().http_port, flags.webServerMode == HTTP_MODE_SECURE ? 443 : 80);
@@ -582,14 +641,14 @@ void KFCFWConfiguration::restoreFactorySettings() {
 #  endif
 #endif
 #if SYSLOG
-    set<uint16_t>(_H(Config().syslog_port), 514);
+    _H_SET(Config().syslog_port, 514);
 #endif
 #if HOME_ASSISTANT_INTEGRATION
     _H_SET_STR(Config().homeassistant.api_endpoint, F("http://<CHANGE_ME>:8123/api/"));
 #endif
 #if HUE_EMULATION
-    set<uint16_t>(_H(Config().hue.tcp_port), HUE_BASE_PORT);
-    _H_SET_STR(Config().hue.devices), F("lamp 1\nlamp 2"));
+    _H_SET(Config().hue.tcp_port, HUE_BASE_PORT);
+    _H_SET_STR(Config().hue.devices, F("lamp 1\nlamp 2"));
 #endif
 #if PING_MONITOR
 // #error causes an execption somewhere in here

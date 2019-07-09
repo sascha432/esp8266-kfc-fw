@@ -62,6 +62,9 @@ public:
     void installLoopFunc();
     void removeLoopFunc();
 
+    // this stops the scheduler and removes all timers, but does not invoke any callbacks and does not free memory
+    void terminate();
+
     static void _timerCallback(void *arg);
 
     void _list();

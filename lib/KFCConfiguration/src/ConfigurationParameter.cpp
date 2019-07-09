@@ -17,7 +17,7 @@ ConfigurationParameter::ConfigurationParameter(const Param_t &param) {
 
 uint8_t *ConfigurationParameter::allocate(uint16_t size) {
     uint8_t *ptr;
-    if (1 || size > sizeof(ptr)) {
+    if (1 || size > sizeof(ptr)) {//TODO broken after moving *data to structure
         _info.alloc = 1;
         _info.data = (uint8_t *)calloc(size, 1);
         return _info.data;

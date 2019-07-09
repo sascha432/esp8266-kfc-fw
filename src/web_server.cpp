@@ -131,13 +131,13 @@ bool init_request_filter(AsyncWebServerRequest *request) {
     return true;
 }
 
-void init_web_server(bool isSafeMode) {
+void init_web_server() {
 
     if (config.get<ConfigFlags>(_H(Config().flags)).webServerMode == HTTP_MODE_DISABLED) {
         return;
     }
 
-    server = new AsyncWebServer(config.get<uint16_t>(_H(Config().http_port)));
+    server = new AsyncWebServer(config._H_GET(Config().http_port));
     // server->addHandler(&events);
 
     loginFailures.readFromSPIFFS();
@@ -363,7 +363,7 @@ void init_web_server(bool isSafeMode) {
    }).setFilter(init_request_filter);
 
     server->begin();
-    debug_printf_P(PSTR("HTTP running on port %hu\n"), config.get<uint16_t>(_H(Config().http_port)));
+    debug_printf_P(PSTR("HTTP running on port %hu\n"), config._H_GET(Config().http_port));
 }
 
 void web_server_reconfigure() {
@@ -371,7 +371,7 @@ void web_server_reconfigure() {
         delete server;
         server = nullptr;
     }
-    init_web_server(false);
+    init_web_server();
 }
 
 String get_content_type(const String &path) {
@@ -673,7 +673,7 @@ void web_server_create_settings_form(AsyncWebServerRequest *request, Form &form)
 void add_plugin_web_server() {
     Plugin_t plugin;
 
-    init_plugin(F("remote"), plugin, 10);
+    init_plugin(F("remote"), plugin, false, false, 10);
     plugin.setupPlugin = init_web_server;
     plugin.statusTemplate = web_server_get_status;
     plugin.configureForm = web_server_create_settings_form;

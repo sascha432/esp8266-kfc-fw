@@ -95,6 +95,7 @@ struct ConfigFlags {
     ConfigFlags_t restApiEnabled:1;
     ConfigFlags_t serial2TCPMode:3;
     ConfigFlags_t hueEnabled:1;
+    ConfigFlags_t useStaticIPDuringWakeUp:1;
 };
 
 struct SoftAP {
@@ -153,8 +154,16 @@ struct HomeAssistant {
     char token[250];
 };
 
+struct StoredDHCPConfig {
+    uint32_t local_ip;
+    uint32_t dns1;
+    uint32_t dns2;
+    uint32_t subnet;
+    uint32_t gateway;
+};
+
 struct Config {
-    uint16_t version;
+    uint32_t version;
     char device_name[17];
     char device_pass[33];
     char wifi_ssid[33];
@@ -165,6 +174,7 @@ struct Config {
     IPAddress local_ip;
     IPAddress subnet;
     IPAddress gateway;
+    struct StoredDHCPConfig last_dhcp_config;
     SoftAP soft_ap;
 #if WEBSERVER_SUPPORT
     uint16_t http_port;
@@ -229,7 +239,9 @@ bool config_read(bool init = false, size_t ofs = 0);
 void config_write(bool factory_reset = false, size_t ofs = 0);
 void config_version();
 void config_info();
-int config_apply_wifi_settings();
+void config_deep_sleep(uint32_t time, RFMode mode);
+bool config_wakeup_wifi();
+bool config_apply_wifi_settings();
 void config_restart();
 
 ulong system_stats_get_runtime(ulong *runtime_since_reboot = NULL);

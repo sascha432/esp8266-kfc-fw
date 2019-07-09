@@ -138,9 +138,8 @@ void TimezoneData::wifiConnectedCallback(uint8_t event, void *payload) {
     if (timezoneData->updateRequired()) {
 
         auto rtz = timezoneData->createRemoteTimezone();
-
-        rtz->setUrl(_Config.get().ntp.remote_tz_dst_ofs_url);
-        rtz->setTimezone(_Config.get().ntp.timezone);
+        rtz->setUrl(config.getString(_H(Config().ntp.remote_tz_dst_ofs_url)));
+        rtz->setTimezone(config.getString(_H(Config().ntp.timezone)));
         rtz->setStatusCallback([](bool status, const String message, time_t zoneEnd) {
             if_debug_printf_P(PSTR("remote timezone callback: status %d message %s zoneEnd %ld\n"), status, message.c_str(), (long)zoneEnd);
             if (status) {
@@ -172,26 +171,25 @@ void TimezoneData::wifiConnectedCallback(uint8_t event, void *payload) {
 
 
 const String TimezoneData::getStatus() {
-    if (_Config.getOptions().isNTPClient()) {
+    if (config.get<ConfigFlags>(_H(Config().flags)).ntpClientEnabled) {
         PrintHtmlEntitiesString out;
-        auto &config = _Config.get();
         auto firstServer = true;
         auto &timezone = get_default_timezone();
         out.print(F("Timezone "));
         if (timezone.isValid()) {
             out.printf_P(PSTR("%s, %0.2d:%0.2u %s"), timezone.getTimezone().c_str(), timezone.getOffset() / 3600, timezone.getOffset() % 60, timezone.getAbbreviation().c_str());
         } else {
-            out.printf_P(PSTR("%s, status invalid"), config.ntp.timezone);
+            out.printf_P(PSTR("%s, status invalid"), config._H_STR(ntp.timezone));
         }
         for (int i = 0; i < 3; i++) {
-            if (config.ntp.servers[i]) {
+            if (config._H_STR(ntp.servers[i])) {
                 if (firstServer) {
                     firstServer = false;
                     out.print(F(HTML_S(br) "Servers "));
                 } else {
                     out.print(FSPGM(comma_));
                 }
-                out.print(config.ntp.servers[i]);
+                out.print(config._H_STR(ntp.servers[i]));
             }
         }
         return out;
@@ -220,12 +218,12 @@ void timezone_setup(bool isSafeMode) {
         return;
     }
 
-    if (_Config.getOptions().isNTPClient()) {
+    if (config.get<ConfigFlags>(_H(Config().flags)).ntpClientEnabled) {
 
-        auto &config = _Config.get();
-        configTime(0, 0, config.ntp.servers[0], config.ntp.servers[1], config.ntp.servers[2]);
+        configTime(0, 0, config.getString(_H(Config().ntp.servers[0])), config.getString(_H(Config().ntp.servers[1])), config.getString(_H(Config().ntp.servers[2])));
 
-        if (strlen(_Config.get().ntp.remote_tz_dst_ofs_url)) {
+        auto remoteUrl = config.getString(_H(Config().ntp.remote_tz_dst_ofs_url));
+        if (*remoteUrl) {
             if (!timezoneData) {
                 timezoneData = new TimezoneData();
             }
@@ -251,23 +249,24 @@ void timezone_setup(bool isSafeMode) {
 
 void ntp_client_creaste_settings_form(AsyncWebServerRequest *request, Form &form) {
 
-    auto &_config = _Config.get();
+    form.add<bool>(F("ntp_enabled"), config.get<ConfigFlags>(_H(Config().flags)).ntpClientEnabled, [](bool value, FormField *field) {
+        auto &flags = config._H_W_GET(Config().flags);
+        flags.ntpClientEnabled = value;
+    });
 
-    form.add<ConfigFlags_t, 2>(F("ntp_enabled"), &_Config.get().flags, array_of<ConfigFlags_t>(FormBitValue_UNSET_ALL, FLAGS_NTP_ENABLED));
-
-    form.add<sizeof _config.ntp.servers[0]>(F("ntp_server1"), _config.ntp.servers[0]);
+    form.add<sizeof Config().ntp.servers[0]>(F("ntp_server1"), config._H_W_STR(Config().ntp.servers[0]));
     form.addValidator(new FormValidHostOrIpValidator(true));
 
-    form.add<sizeof _config.ntp.servers[1]>(F("ntp_server2"), _config.ntp.servers[1]);
+    form.add<sizeof Config().ntp.servers[1]>(F("ntp_server2"), config._H_W_STR(Config().ntp.servers[1]));
     form.addValidator(new FormValidHostOrIpValidator(true));
 
-    form.add<sizeof _config.ntp.servers[2]>(F("ntp_server3"), _config.ntp.servers[2]);
+    form.add<sizeof Config().ntp.servers[2]>(F("ntp_server3"), config._H_W_STR(Config().ntp.servers[2]));
     form.addValidator(new FormValidHostOrIpValidator(true));
 
-    form.add<sizeof _config.ntp.timezone>(F("ntp_timezone"), _config.ntp.timezone);
+    form.add<sizeof Config().ntp.timezone>(F("ntp_timezone"), config._H_W_STR(Config().ntp.timezone));
 
 #if USE_REMOTE_TIMEZONE
-    form.add<sizeof _config.ntp.remote_tz_dst_ofs_url>(F("ntp_remote_tz_url"), _config.ntp.remote_tz_dst_ofs_url);
+    form.add<sizeof Config().ntp.remote_tz_dst_ofs_url>(F("ntp_remote_tz_url"), config._H_W_STR(Config().ntp.remote_tz_dst_ofs_url));
 #endif
 
     form.finalize();
@@ -289,7 +288,7 @@ bool ntp_client_at_mode_command_handler(Stream &serial, const String &command, i
         char timestamp[64];
         if (!IS_TIME_VALID(now)) {
             serial.print(F("Time is currently not set. NTP is "));
-            if (_Config.getOptions().isNTPClient()) {
+            if (config.get<ConfigFlags>(_H(Config().flags)).ntpClientEnabled) {
                 serial.println(FSPGM(enabled));
             } else {
                 serial.println(FSPGM(disabled));
@@ -317,9 +316,9 @@ bool ntp_client_at_mode_command_handler(Stream &serial, const String &command, i
                 serial.println(F("No valid timezone set"));
             }
         } else if (argc == 1) {
-            if (_Config.getOptions().isNTPClient()) {
-                strncpy(_Config.get().ntp.timezone, argv[0], sizeof(_Config.get().ntp.timezone) - 1);
-                serial.printf_P(PSTR("Timezone set to %s\n"), _Config.get().ntp.timezone);
+            if (config.get<ConfigFlags>(_H(Config().flags)).ntpClientEnabled) {
+                config.setString(_H(Config().ntp.timezone), argv[0]);
+                serial.printf_P(PSTR("Timezone set to %s\n"), config._H_STR(_Config.ntp.timezone));
                 timezone_setup(false);
             } else {
                 serial.print(F("NTP "));

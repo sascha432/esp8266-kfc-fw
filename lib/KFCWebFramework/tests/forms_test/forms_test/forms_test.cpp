@@ -70,6 +70,10 @@ public:
         add<sizeof mqtt_host>(F("mqtt_host"), mqtt_host);
         addValidator(new FormValidHostOrIpValidator());
 
+        add(new FormObject<IPAddress&>(F("dns1"), dns1, FormField::INPUT_TEXT));
+        add(new FormObject<IPAddress>(F("dns2"), dns2, [this](const IPAddress &addr, FormField *) {
+            dns2 = addr;
+        }));
 
         finalize();
     }
@@ -81,6 +85,8 @@ public:
     uint8_t is_hidden_ssid;
     char wifi_ssid[32];
     char mqtt_host[128];
+    IPAddress dns1;
+    IPAddress dns2;
 };
 
 
@@ -98,6 +104,8 @@ int main()
     data.set("syslog_enabled", "2"); // FLAGS_SYSLOG_TCP
     data.set("mqtt_enabled", "1");  // FLAGS_MQTT_ENABLED
     data.set("mqtt_host", "google.de");
+    data.set("dns1", "8.8.8.8");
+    data.set("dns2", "8.8.4.4");
 
     // creating form object with submitted data
     TestForm f1(&data);
@@ -110,6 +118,8 @@ int main()
     f1.is_hidden_ssid = true;
     strcpy(f1.wifi_ssid, "OLDSSID");
     strcpy(f1.mqtt_host, "google.com");
+    f1.dns1 = IPAddress(4, 4, 4, 1);
+    f1.dns2 = IPAddress(4, 3, 2, 1);
 
     // create form with assigned values
     f1.createForm(); 
@@ -131,6 +141,9 @@ int main()
     assert(String(f1.process("SYSLOG_ENABLED")) == "3");
     assert(String(f1.process("MQTT_ENABLED")) == "2");
 
+    assert(String(f1.process("DNS1")) == "4.4.4.1");
+    assert(String(f1.process("DNS2")) == "4.3.2.1");
+
     // submit user data to form without errors using the validate method
 
     assert(f1.validate());
@@ -140,6 +153,8 @@ int main()
     assert(strcmp(f1.wifi_ssid, "MYSSID") == 0);
     assert(f1.encryption == 8);
     assert(f1.is_hidden_ssid == 123);
+    assert(f1.dns1.toString() == "8.8.8.8");
+    assert(f1.dns2.toString() == "8.8.4.4");
 
     // submit invalid data
 

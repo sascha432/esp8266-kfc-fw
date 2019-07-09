@@ -7,9 +7,17 @@
 #include "async_web_handler.h"
 #include "web_server.h"
 #include "misc.h"
-#include "global.h"
 
 PROGMEM_STRING_DECL(text_plain);
+
+ AsyncFileUploadWebHandler::AsyncFileUploadWebHandler(const String &uri, ArRequestHandlerFunction _onRequest) : AsyncCallbackWebHandler() {
+    setUri(uri);
+    setMethod(HTTP_POST);
+    onRequest(_onRequest);
+    onUpload([this](AsyncWebServerRequest *request, const String &filename, size_t index, uint8_t *data, size_t len, bool final) { 
+        this->_handleUpload(request, filename, index, data, len, final); 
+    });
+}
 
 void AsyncFileUploadWebHandler::markTemporaryFileAsProcessed(AsyncWebServerRequest *request) {
     *(char *)request->_tempObject = 0;

@@ -176,7 +176,36 @@ void setup() {
     system_stats_read();
 #endif
 
-    KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("safe mode %d reset counter %d\n"), resetDetector.getSafeMode(), resetDetector.getResetCounter());
+    KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("SAFE MODE %d, reset counter %d\n"), resetDetector.getSafeMode(), resetDetector.getResetCounter());
+
+    if (resetDetector.hasResetDetected()) {
+
+        if (resetDetector.getResetCounter() >= 10) {
+            KFC_SAFE_MODE_SERIAL_PORT.println(F("Entering deep sleep until next reset in 5 seconds..."));
+            for(uint8_t i = 0; i < (RESET_DETECTOR_TIMEOUT + 200) / (10 + 25); i++) {
+                config_set_blink(BLINK_SOLID, LED_BUILTIN);
+                delay(10);
+                config_set_blink(BLINK_OFF, LED_BUILTIN);
+                delay(25);
+            }
+            for(;;) {
+                ESP.deepSleep(ESP.deepSleepMax(), WAKE_RF_DISABLED);
+            }
+        }
+
+        if (resetDetector.getResetCounter() >= 4) {
+            KFC_SAFE_MODE_SERIAL_PORT.println(F("4x reset detected. Restoring factory defaults in a 5 seconds..."));
+            for(uint8_t i = 0; i < (RESET_DETECTOR_TIMEOUT + 500) / (100 + 250); i++) {
+                config_set_blink(BLINK_SOLID, LED_BUILTIN);
+                delay(100);
+                config_set_blink(BLINK_OFF, LED_BUILTIN);
+                delay(250);
+            }
+            config_write(true);
+            resetDetector.setSafeMode(false);
+        }
+
+    }
 
     if (resetDetector.getSafeMode()) {
 
@@ -184,23 +213,21 @@ void setup() {
 
         KFC_SAFE_MODE_SERIAL_PORT.println(F("Starting in safe mode..."));
         delay(2000);
+        resetDetector.clearCounter();
         resetDetector.setSafeMode(false);
 
     } else {
-
-        if (resetDetector.getResetCounter() > 2) {
-            KFC_SAFE_MODE_SERIAL_PORT.println(F("Triple resets detected. Restoring factory defaults..."));
-            config_write(true);
-        }
 
         if (resetDetector.getResetCounter() > 1) {
 
             KFC_SAFE_MODE_SERIAL_PORT.println(F("Multiple resets detected. Reboot continues in 20 seconds..."));
             KFC_SAFE_MODE_SERIAL_PORT.println(F("Press reset again to start in safe mode."));
+            KFC_SAFE_MODE_SERIAL_PORT.println(F("\nTo restore factory defaults, press reset once a second until the LED starts to flash. After 5 seconds the normal boot process continues. To put the device to deep sleep until next reset, continue to press reset till the LED starts to flicker"));
 
             KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("\nCrash detected: %d\nReset counter: %d\n\n"), resetDetector.hasCrashDetected(), resetDetector.getResetCounter());
 
-            config_set_blink(BLINK_SOS);
+            config_set_blink(BLINK_SOS, LED_BUILTIN);
+            resetDetector.clearCounter();
             resetDetector.setSafeMode(1);
 
             uint16_t count = 20;
@@ -234,7 +261,7 @@ void setup() {
         config_setup();
         config_info();
         if (!config_apply_wifi_settings()) {
-            MySerial.printf_P(PSTR("ERROR - %s\n"), _Config.getLastError());
+            MySerial.printf_P(PSTR("ERROR - %s\n"), config.getLastError());
         }
 
     } else {
@@ -287,8 +314,10 @@ void setup() {
 
         config_info();
         if (!config_apply_wifi_settings()) {
-            MySerial.printf_P(PSTR("ERROR - %s\n"), _Config.getLastError());
-            config_dump(MySerial);
+            MySerial.printf_P(PSTR("ERROR - %s\n"), config.getLastError());
+#if DEBUG
+            config.dump(MySerial);
+#endif
         }
     }
 

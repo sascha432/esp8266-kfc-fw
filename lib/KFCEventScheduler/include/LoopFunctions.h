@@ -8,7 +8,6 @@
 #include <Arduino_compat.h>
 #include <functional>
 #include <vector>
-#include <debug_helper.h>
 
 class LoopFunctions {
 public:

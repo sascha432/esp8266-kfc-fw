@@ -8,19 +8,14 @@
 
 #include <Arduino_compat.h>
 #include <ESPAsyncWebServer.h>
-// #include <Stream.h>
 #include <Buffer.h>
 #include <LoopFunctions.h>
-#include "debug_helper.h"
 #include "http2serial.h"
 #include "kfc_fw_config.h"
-// #include "session.h"
 #include "serial_handler.h"
 #include "web_server.h"
 #include "web_socket.h"
-// #include "misc.h"
 #include "plugins.h"
-#include "global.h"
 
 //TODO lots of old code here, refactor
 
@@ -173,7 +168,7 @@ void http2serial_install_web_server_hook() {
             WsClient::onWsEvent(server, client, type, data, len, arg, WsConsoleClient::getInstance);
         });
         server->addHandler(ws_console);
-        if_debug_printf_P(PSTR("Web socket for http2serial running on port %hu\n"), _Config.get().http_port);
+        if_debug_printf_P(PSTR("Web socket for http2serial running on port %hu\n"), config.get<uint16_t>(_H(Config().http_port)));
     }
 }
 

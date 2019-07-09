@@ -6,7 +6,6 @@
 
 #include <Arduino_compat.h>
 #include <PrintString.h>
-#include <debug_helper.h>
 #include <kfc_fw_config.h>
 #include "mqtt_auto_discovery.h"
 #include "mqtt_component.h"
@@ -14,11 +13,10 @@
 #include "progmem_data.h"
 
 void MQTTAutoDiscovery::create(MQTTComponent *component, MQTTAutoDiscovery::Format_t format) {
-    auto &config = _Config.get();
     String name = MQTTClient::getComponentName(component->getNumber());
 
     _format = format;
-    _topic = config.mqtt_discovery_prefix;
+    _topic = config._H_STR(Config().mqtt_discovery_prefix);
     _topic += '/';
     _topic += FPSTR(component->getComponentName());
     _topic += '/';
@@ -42,7 +40,7 @@ void MQTTAutoDiscovery::create(MQTTComponent *component, MQTTAutoDiscovery::Form
 
     if (_format == FORMAT_JSON) {
         _discovery += F("\"device\":{\"identifiers\":[\"");
-        _discovery.printf_P(PSTR("%s\"],name=\"%s\",\"sw_version\":\"%s\""), uniqueId.c_str(), config.device_name, config_firmware_version().c_str());
+        _discovery.printf_P(PSTR("%s\"],name=\"%s\",\"sw_version\":\"%s\""), uniqueId.c_str(), config._H_STR(Config().device_name), KFCFWConfiguration::getFirmwareVersion().c_str());
         _discovery += F("},");
     }
 }
@@ -74,7 +72,7 @@ String MQTTAutoDiscovery::getTopic() {
 
 bool MQTTAutoDiscovery::isEnabled() {
 #if MQTT_AUTO_DISCOVERY
-    return _Config.getOptions().isMQTTAutoDiscovery();
+    return config._H_GET(Config().flags).mqttAutoDiscoveryEnabled;
 #else
     return false;
 #endif
@@ -91,7 +89,7 @@ const String MQTTAutoDiscovery::_getUnqiueId() {
     crc[2] = crc16_update(crc[1], (uint8_t *)deviceId.c_str(), deviceId.length());
 
     PrintString uniqueId;
-    uniqueId = _Config.get().device_name;
+    uniqueId = config.getString(_H(Config().device_name));
     uniqueId += '_';
     for(uint8_t i = 0; i < 3; i++) {
         uniqueId.printf("%04x", crc[i]);

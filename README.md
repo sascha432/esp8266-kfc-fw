@@ -35,7 +35,7 @@ Detect crashes and offer safe mode by pressing reset button during boot, count n
 
 ### KFCConfiguration
 
-Library to handle configurations stored in the EEPROM, read on demand to save memory, manage changes in structure automatically, store history/backups on SPIFFS
+Library to handle configurations stored in the EEPROM, read on demand to save memory, manage changes in structure automatically
 
 ## Plugins
 

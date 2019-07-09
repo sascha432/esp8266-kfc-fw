@@ -9,12 +9,12 @@
 #include <PrintString.h>
 #include <PrintHtmlEntitiesString.h>
 #include <EventScheduler.h>
+#include "progmem_data.h"
 #include "web_server.h"
 #include "rest_api.h"
 #include "async_web_response.h"
 #include "async_web_handler.h"
 #include "kfc_fw_config.h"
-#include "debug_helper.h"
 #include "failure_counter.h"
 #include "fs_mapping.h"
 #include "session.h"
@@ -43,9 +43,8 @@ AsyncWebServer *get_web_server_object() {
 
 const String web_server_get_status() {
     PrintString out = F("Web server ");
-    auto &_config = _Config.get();
-    if (_Config.getOptions().isHttpServer()) {
-        out.printf_P(PSTR("running on port %u"), _config.http_port);
+    if (config._H_GET(Config().flags).webServerMode != HTTP_MODE_DISABLED) {
+        out.printf_P(PSTR("running on port %u"), config.get<uint16_t>(_H(Config().http_port)));
         #if WEBSERVER_TLS_SUPPORT
             out.print(F(", TLS "));
             if (_Config.getOptions().isHttpServerTLS()) {
@@ -86,7 +85,7 @@ bool is_authenticated(AsyncWebServerRequest *request) {
         if (SID.length() == 0) {
             return false;
         }
-        if (verify_session_id(SID.c_str(), _Config.get().device_name, _Config.get().device_pass)) {
+        if (verify_session_id(SID.c_str(), config._H_STR(Config().device_name), config._H_STR(Config().device_pass))) {
             return true;
         }
     }
@@ -94,13 +93,11 @@ bool is_authenticated(AsyncWebServerRequest *request) {
     return false;
 }
 
-uint8_t set_cpu_speed_for_request_stack_counter = 0;
-
 void set_cpu_speed_for_request(AsyncWebServerRequest *request) {
 
-    set_cpu_speed_for_request_stack_counter++;
 #if defined(ESP8266)
-    if (set_cpu_speed_for_request_stack_counter == 1 && _Config.getOptions().isHttpPerformanceMode() && system_get_cpu_freq() != SYS_CPU_160MHZ) {
+
+    if (config._H_GET(Config().flags).webServerPerformanceModeEnabled && system_get_cpu_freq() != SYS_CPU_160MHZ) {
         system_update_cpu_freq(SYS_CPU_160MHZ);
     }
 #endif
@@ -112,13 +109,12 @@ void set_cpu_speed_for_request(AsyncWebServerRequest *request) {
 #else
     request->onDisconnect([url]() {
 #endif
-        set_cpu_speed_for_request_stack_counter--;
 #if DEBUG
         int dur = millis() - start;
-        debug_printf_P(PSTR("request %s took %.4fs @ %dMhz, stack %d\n"), url.c_str(), dur / 1000.0, system_get_cpu_freq(), set_cpu_speed_for_request_stack_counter);
+        debug_printf_P(PSTR("request %s took %.4fs @ %dMhz\n"), url.c_str(), dur / 1000.0, system_get_cpu_freq());
 #endif
 #if defined(ESP8266)
-    if (set_cpu_speed_for_request_stack_counter == 0 && _Config.getOptions().isHttpPerformanceMode()) {
+    if (config._H_GET(Config().flags).webServerPerformanceModeEnabled) {
         system_update_cpu_freq(SYS_CPU_80MHZ);
     }
 #endif
@@ -137,11 +133,11 @@ bool init_request_filter(AsyncWebServerRequest *request) {
 
 void init_web_server(bool isSafeMode) {
 
-    if (!_Config.getOptions().isHttpServer()) {
+    if (config.get<ConfigFlags>(_H(Config().flags)).webServerMode == HTTP_MODE_DISABLED) {
         return;
     }
 
-    server = new AsyncWebServer(_Config.get().http_port);
+    server = new AsyncWebServer(config.get<uint16_t>(_H(Config().http_port)));
     // server->addHandler(&events);
 
     loginFailures.readFromSPIFFS();
@@ -167,7 +163,7 @@ void init_web_server(bool isSafeMode) {
 #if HUE_EMULATION
 
     server->onRequestBody(hue_onRequestBody);
-    hue_register_port(_Config.get().http_port);
+    hue_register_port(config.get<uint16_t>(_H(Config().http_port)));
 
 #endif
 
@@ -367,7 +363,7 @@ void init_web_server(bool isSafeMode) {
    }).setFilter(init_request_filter);
 
     server->begin();
-    debug_printf_P(PSTR("HTTP running on port %hu\n"), _Config.get().http_port);
+    debug_printf_P(PSTR("HTTP running on port %hu\n"), config.get<uint16_t>(_H(Config().http_port)));
 }
 
 void web_server_reconfigure() {
@@ -527,12 +523,11 @@ bool handle_file_read(String path, bool client_accepts_gzip, AsyncWebServerReque
 
         // no_cache_headers();
         if (request->method() == HTTP_POST && request->hasArg(F("username")) && request->hasArg(F("password"))) {
-            Config &config = _Config.get();
             IPAddress remote_addr = request->client()->remoteIP();
 
-            if (loginFailures.isAddressBlocked(remote_addr) == false && request->arg(F("username")) == config.device_name && request->arg(F("password")) == config.device_pass) {
+            if (loginFailures.isAddressBlocked(remote_addr) == false && request->arg(F("username")) == config._H_STR(Config().device_name) && request->arg(F("password")) == config._H_STR(Config().device_pass)) {
                 HttpCookieHeader cookie = HttpCookieHeader(FSPGM(SID));
-                cookie.setValue(generate_session_id(config.device_name, config.device_pass, NULL));
+                cookie.setValue(generate_session_id(config._H_STR(Config().device_name), config._H_STR(Config().device_pass), NULL));
                 cookie.setPath(FSPGM(slash));
                 if (request->arg(F("keep")) == FSPGM(1)) {
                     cookie.setExpires(time(NULL) + 86400 * 30);
@@ -630,17 +625,23 @@ bool handle_file_read(String path, bool client_accepts_gzip, AsyncWebServerReque
 
 void web_server_create_settings_form(AsyncWebServerRequest *request, Form &form) {
 
-    auto &_config = _Config.get();
+    form.add<uint8_t>(F("http_enabled"), config._H_GET(Config().flags).webServerMode, [](uint8_t value, FormField *) {
+        auto &flags = config._H_W_GET(Config().flags);
+        flags.webServerMode = value;
 
-    form.add<ConfigFlags_t, 3>(F("http_enabled"), &_config.flags, std::array<ConfigFlags_t, 3>({FormBitValue_UNSET_ALL, FLAGS_HTTP_ENABLED, FLAGS_HTTP_TLS}));
+    });
+    form.addValidator(new FormRangeValidator(0, HTTP_MODE_SECURE));
 #  if WEBSERVER_TLS_SUPPORT
     addValidator(new FormMatchValidator(F("There is not enough free RAM for TLS support"), [](FormField *field) {
         return (field->getValue().toInt() != HTTP_MODE_SECURE) || (ESP.getFreeHeap() > 24000);
     }));
 #  endif
 
-    form.add<ConfigFlags_t, 2>(F("http_perf"), &_Config.get().flags, std::array<ConfigFlags_t, 2>({FormBitValue_UNSET_ALL, FLAGS_HTTP_PERF_160}));
-    form.add<uint16_t>(F("http_port"), _config.http_port, [&](uint16_t port, FormField *field) {
+    form.add<bool>(F("http_perf"), config._H_GET(Config().flags).webServerPerformanceModeEnabled, [](bool value, FormField *) {
+        auto &flags = config._H_W_GET(Config().flags);
+        flags.webServerPerformanceModeEnabled = value;
+    });
+    form.add<uint16_t>(F("http_port"), config._H_GET(Config().http_port), [&](uint16_t port, FormField *field) {
 #  if WEBSERVER_TLS_SUPPORT
         assert(field->getForm()->getField(0)->getName().equals(F("http_enabled")) == true);
         if (field->getForm()->getField(0)->getValue().toInt() == HTTP_MODE_SECURE) {
@@ -655,7 +656,7 @@ void web_server_create_settings_form(AsyncWebServerRequest *request, Form &form)
             }
             field->setValue(String(port));
         }
-        _config.http_port = port;
+        config._H_SET(Config().http_port, port);
     });
     form.addValidator(new FormRangeValidator(F("Invalid port"), 0, 65535));
 

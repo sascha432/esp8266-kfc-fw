@@ -3,7 +3,6 @@
  */
 
 #include "ProgmemFileImpl.h"
-#include "debug_helper.h"
 
 ProgmemFileImpl::ProgmemFileImpl(const ProgmemStream & stream, const char * name) {
     _stream = stream;

@@ -52,7 +52,7 @@ public:
     static MQTTClient *getClient();
     static void handleWiFiEvents(uint8_t event, void *payload);
     static uint8_t getDefaultQos() {
-        return _Config.get().mqtt_qos;
+        return config._H_GET(Config().mqtt_qos);
     }
 
     void onConnect(bool sessionPresent);

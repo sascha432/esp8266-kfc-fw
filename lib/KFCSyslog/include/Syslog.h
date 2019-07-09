@@ -25,7 +25,7 @@
 #endif
 #define SYSLOG_FILE_TIMESTAMP_FORMAT "%FT%TZ"
 
-enum SyslogProtocol {
+enum SyslogProtocol : uint8_t {
     SYSLOG_PROTOCOL_NONE = 0,
     SYSLOG_PROTOCOL_UDP,
     SYSLOG_PROTOCOL_TCP,

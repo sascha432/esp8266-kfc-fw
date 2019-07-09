@@ -51,8 +51,8 @@ public:
     }
 
     template <class C, bool O>
-    FormField *add(const String &name, C *obj, FormField::FieldType_t type = FormField::INPUT_TEXT) {
-        return _add(new FormObject<C>(name, obj, type));
+    FormField *add(const String &name, C *object, FormField::FieldType_t type = FormField::INPUT_TEXT) {
+        return _add(new FormObject<C>(name, object, type));
     }
 
     FormValidator *addValidator(int index, FormValidator *validator);
@@ -85,4 +85,3 @@ private:
     bool _invalidMissing;
     bool _hasChanged;
 };
-

@@ -6,7 +6,7 @@
 
 #if _WIN32 || _WIN64
 #define VFS_PACKED
-#pragma pack(push,1)
+#pragma pack(push, 1)
 #else
 #define VFS_PACKED   __attribute__((packed))
 #endif

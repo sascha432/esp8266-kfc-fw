@@ -23,7 +23,7 @@ SyslogStream *debugSyslog = nullptr;
 void syslog_setup_debug_logger() {
 
     SyslogParameter parameter;
-    parameter.setHostname(_Config.get().device_name);
+    parameter.setHostname(config.getString(_H(Config().device_name)));
     parameter.setAppName(SPGM(kfcfw));
     parameter.setProcessId(F("DEBUG"));
 	parameter.setSeverity(SYSLOG_DEBUG);
@@ -56,16 +56,16 @@ void syslog_setup_logger() {
 #endif
     }
 
-    if (_Config.getOptions().getSyslogProtocol() != SYSLOG_PROTOCOL_NONE) {
+    if (config._H_GET(Config().flags).syslogProtocol != SYSLOG_PROTOCOL_NONE) {
 
         SyslogParameter parameter;
-        parameter.setHostname(_Config.get().device_name);
+        parameter.setHostname(config.getString(_H(Config().device_name)));
         parameter.setAppName(SPGM(kfcfw));
         parameter.setFacility(SYSLOG_FACILITY_KERN);
         parameter.setSeverity(SYSLOG_NOTICE);
 
         SyslogFilter *filter = new SyslogFilter(parameter);
-        filter->addFilter(F("*.*"), SyslogFactory::create(filter->getParameter(), _Config.getOptions().getSyslogProtocol(), _Config.get().syslog_host, _Config.get().syslog_port));
+        filter->addFilter(F("*.*"), SyslogFactory::create(filter->getParameter(), (SyslogProtocol)config._H_GET(Config().flags).syslogProtocol, config._H_STR(Config().syslog_host), config._H_GET(Config().syslog_port)));
 
         SyslogQueue *queue = debugSyslog ? debugSyslog->getQueue() : new SyslogMemoryQueue(512);
         syslog = new SyslogStream(filter, queue);
@@ -105,16 +105,15 @@ void syslog_process_queue() {
 const String syslog_get_status() {
 #if SYSLOG
     PrintHtmlEntitiesString out;
-    auto &_config = _Config.get();
-    switch (_Config.getOptions().getSyslogProtocol()) {
+    switch(config._H_GET(Config().flags).syslogProtocol) {
         case SYSLOG_PROTOCOL_UDP:
-            out.printf_P(PSTR("UDP @ %s:%u"), _config.syslog_host, _config.syslog_port);
+            out.printf_P(PSTR("UDP @ %s:%u"), config._H_STR(Config().syslog_host), config._H_GET(Config().syslog_port));
             break;
         case SYSLOG_PROTOCOL_TCP:
-            out.printf_P(PSTR("TCP @ %s:%u"), _config.syslog_host, _config.syslog_port);
+            out.printf_P(PSTR("TCP @ %s:%u"), config._H_STR(Config().syslog_host), config._H_GET(Config().syslog_port));
             break;
         case SYSLOG_PROTOCOL_TCP_TLS:
-            out.printf_P(PSTR("TCP TLS @ %s:%u"), _config.syslog_host, _config.syslog_port);
+            out.printf_P(PSTR("TCP TLS @ %s:%u"), config._H_STR(Config().syslog_host), config._H_GET(Config().syslog_port));
             break;
         default:
             out += SPGM(Disabled);
@@ -143,19 +142,21 @@ const String syslog_get_status() {
 
 void syslog_create_settings_form(AsyncWebServerRequest *request, Form &form) {
 
-    auto &_config = _Config.get();
+    form.add<uint8_t>(F("syslog_enabled"), config._H_GET(Config().flags).syslogProtocol, [](uint8_t value, FormField *) {
+        auto &flags = config._H_W_GET(Config().flags);
+        flags.syslogProtocol = value;
+    });
+    form.addValidator(new FormRangeValidator(0, (long)SYSLOG_PROTOCOL_FILE));
 
-    form.add<ConfigFlags_t, 4>(F("syslog_enabled"), &_config.flags, array_of<ConfigFlags_t>(FormBitValue_UNSET_ALL, FLAGS_SYSLOG_UDP, FLAGS_SYSLOG_TCP, FLAGS_SYSLOG_TCP_TLS));
-
-    form.add<sizeof _config.syslog_host>(F("syslog_host"), _config.syslog_host);
+    form.add<sizeof Config().syslog_host>(F("syslog_host"), config._H_W_STR(Config().syslog_host));
     form.addValidator(new FormValidHostOrIpValidator(true));
 
-    form.add<uint16_t>(F("syslog_port"), _config.syslog_port, [&](uint16_t port, FormField *field) {
+    form.add<uint16_t>(F("syslog_port"), config._H_GET(Config().syslog_port), [&](uint16_t port, FormField *field) {
         if (port == 0) {
             port = 514;
             field->setValue(String(port));
         }
-        _config.syslog_port = port;
+        config._H_SET(Config().syslog_port, port);
     });
     form.addValidator(new FormRangeValidator(F("Invalid port"), 0, 65535));
 

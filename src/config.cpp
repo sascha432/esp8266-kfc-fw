@@ -4,29 +4,26 @@
 
 #include <Arduino_compat.h>
 #include <EEPROM.h>
+#include <PrintString.h>
 #include <KFCTimezone.h>
 #include <time.h>
 #include <OSTimer.h>
 #include <LoopFunctions.h>
+#include <crc16.h>
 #include "progmem_data.h"
 #include "fs_mapping.h"
-#include "debug_helper.h"
-#include "global.h"
 #include "misc.h"
 #include "session.h"
 #include "kfc_fw_config.h"
 #include "reset_detector.h"
 #include "build.h"
 
-/**
- *
- * TODO remove configuration from RAM and store it in flash ram. copy on write for changes
- * all paramters can be objects that load the data from flash and store changes as a copy until it is saved
- *
-DEBUG (config.cpp:209 config_setup): Size of configuration: 1356
-**/
-Config config;
-Configuration _Config(config);
+PROGMEM_STRING_DEF(default_password_warning, "WARNING! Default password has not been changed");
+PROGMEM_STRING_DEF(safe_mode_enabled, "SAFE MODE enabled");
+PROGMEM_STRING_DEF(SPIFF_configuration_backup, "/configuration.backup");
+PROGMEM_STRING_DEF(SPIFF_system_stats, "/system.stats");
+
+KFCFWConfiguration config;
 String last_error;
 
 const char  *WiFi_encryption_type(uint8_t type) {
@@ -40,7 +37,7 @@ const char  *WiFi_encryption_type(uint8_t type) {
 uint16_t eeprom_crc(uint8_t *eeprom, unsigned int length) {
     uint16_t crc = ~0;
     for (unsigned short index = sizeof(crc); index < length; ++index) {
-        crc = _crc16_update(crc, eeprom[index]);
+        crc = crc16_compute(crc, eeprom[index]);
     }
     return crc;
 }
@@ -69,8 +66,6 @@ void  system_stats_display(String prefix, Stream &output) {
     output.printf_P(PSTR("Ping timeout: %lu\n"), _systemStats.ping_timeout);
 }
 
-const char system_stats_filename[] PROGMEM = { "/system.stats" };
-
 #define SYSTEM_STATS_CRC_OFS (uint8_t)sizeof(_systemStats.crc)
 
 uint16_t  system_stats_crc() {
@@ -88,7 +83,7 @@ ulong  system_stats_get_runtime(ulong *runtime_since_reboot) {
     return _systemStats.runtime + _current_runtime - system_stats_last_runtime_update;
 }
 
-void  system_stats_update(bool open_eeprom) {
+void system_stats_update(bool open_eeprom) {
 
     debug_println(F("Saving system stats..."));
 
@@ -107,7 +102,7 @@ void  system_stats_update(bool open_eeprom) {
     }
 
 #if SPIFFS_SUPPORT
-    File file = SPIFFS.open(FPSTR(system_stats_filename), file_mode_write());
+    File file = SPIFFS.open(FSPGM(SPIFF_system_stats), file_mode_write());
     if (file) {
         file.write((uint8_t *)&_systemStats, sizeof(_systemStats));
         file.close();
@@ -117,7 +112,7 @@ void  system_stats_update(bool open_eeprom) {
     system_stats_next_update = current_runtime + SYSTEM_STATS_UPDATE_INTERVAL;
 }
 
-void  system_stats_read() {
+void system_stats_read() {
     uint16_t crc;
 
     bzero(&_systemStats, sizeof(_systemStats));
@@ -128,15 +123,15 @@ void  system_stats_read() {
     crc = system_stats_crc();
     if (_systemStats.crc != crc) {
 
-#if SPIFFS_SUPPORT
-        File file = SPIFFS.open(FPSTR(system_stats_filename), file_mode_read());
-        if (file) {
-            bzero(&_systemStats, sizeof(_systemStats));
-            file.read((uint8_t *)&_systemStats, sizeof(_systemStats));
-            file.close();
-            crc = system_stats_crc();
-        }
-#endif
+// #if SPIFFS_SUPPORT
+//         File file = SPIFFS.open(FSPGM(SPIFF_system_stats), file_mode_read());
+//         if (file) {
+//             bzero(&_systemStats, sizeof(_systemStats));
+//             file.read((uint8_t *)&_systemStats, sizeof(_systemStats));
+//             file.close();
+//             crc = system_stats_crc();
+//         }
+// #endif
 
         if (_systemStats.crc != crc) {
             bzero(&_systemStats, sizeof(_systemStats));
@@ -150,14 +145,14 @@ void  system_stats_read() {
 
 #endif
 
-class BlinkLEDTimer : public OSTimer {
+class BlinkLEDTimer : public OSTimer {  // PIN is inverted
 public:
     BlinkLEDTimer() : OSTimer() {
         _pin = -1;
     }
 
     virtual void run() override {
-        digitalWrite(_pin, _pattern.test(_counter++ % _pattern.size()) ? HIGH : LOW);
+        digitalWrite(_pin, _pattern.test(_counter++ % _pattern.size()) ? LOW : HIGH);
     }
 
     void set(uint32_t delay, int8_t pin, dynamic_bitset &pattern) {
@@ -166,7 +161,7 @@ public:
             _pin = pin;
             pinMode(_pin, OUTPUT);
             analogWrite(pin, 0);
-            digitalWrite(pin, LOW);
+            digitalWrite(pin, HIGH);
         }
         _counter = 0;
         startTimer(delay, true);
@@ -175,7 +170,7 @@ public:
     void detach() {
         if (_pin != -1) {
             analogWrite(_pin, 0);
-            digitalWrite(_pin, LOW);
+            digitalWrite(_pin, HIGH);
         }
         OSTimer::detach();
     }
@@ -196,11 +191,14 @@ void blink_led(int8_t pin, int delay, dynamic_bitset &pattern) {
     led_timer->set(delay, pin, pattern);
 }
 
-void config_set_blink(uint16_t delay, int8_t pin) {
+void config_set_blink(uint16_t delay, int8_t pin) { // PIN is inverted
+
+    auto flags = config._H_GET(Config().flags);
 
     if (pin == -1) {
-        debug_printf_P(PSTR("Using configured LED type %d, PIN %d, blink %d\n"), _Config.getOptions().getLedMode(), config.led_pin, delay);
-        pin = (_Config.getOptions().getLedMode() != MODE_NO_LED && config.led_pin != -1) ? config.led_pin : -1;
+        auto ledPin = config._H_GET(Config().led_pin);
+        debug_printf_P(PSTR("Using configured LED type %d, PIN %d, blink %d\n"), flags.ledMode, ledPin, delay);
+        pin = (flags.ledMode != MODE_NO_LED && ledPin != -1) ? ledPin : -1;
     } else {
         debug_printf_P(PSTR("PIN %d, blink %d\n"), pin, delay);
     }
@@ -219,8 +217,8 @@ void config_set_blink(uint16_t delay, int8_t pin) {
         } else {
             dynamic_bitset pattern;
             if (delay == BLINK_SOS) {
-                pattern.setMaxSize(36);
-                pattern.setBytes((uint8_t *)"\x0a\x8e\xee\x2a\x00", 5);
+                pattern.setMaxSize(24);
+                pattern.setValue(0xcc1c71d5);
                 delay = 200;
             } else {
                 pattern.setMaxSize(2);
@@ -238,7 +236,7 @@ void  config_setup() {
 #else
 #define __DEBUG_CFS_APPEND ""
 #endif
-    Logger_notice(F("Starting KFCFW %s"), config_firmware_version().c_str());
+    Logger_notice(F("Starting KFCFW %s"), KFCFWConfiguration::getFirmwareVersion().c_str());
     rng.begin(str_P(F("KFC FW " FIRMWARE_VERSION_STR " " __BUILD_NUMBER)));
     rng.stir((const uint8_t *)WiFi.macAddress().c_str(), WiFi.macAddress().length());
 
@@ -260,64 +258,48 @@ void config_loop() {
 #endif
 }
 
-const char config_filename[] PROGMEM = { "/configuration.backup" };
-
-#define CONFIG_CRC_OFS (uint8_t)(sizeof(config.crc))
-
-uint16_t  config_crc(uint8_t *src = nullptr, size_t ofs = 0) {
-    if (src != nullptr) {
-        return eeprom_crc(&src[CONFIG_CRC_OFS + ofs], sizeof(config) - CONFIG_CRC_OFS);
-    }
-    return eeprom_crc(&((uint8_t *)&config)[CONFIG_CRC_OFS], sizeof(config) - CONFIG_CRC_OFS);
-}
-
 bool config_read(bool init, size_t ofs) {
-    uint16_t crc;
     bool success = true;
     debug_printf_P(PSTR("Reading configuration, offset %u\n"), ofs);
 
-    EEPROM.begin(sizeof(config) + CONFIG_EEPROM_OFFSET + ofs);
-    EEPROM.get(CONFIG_EEPROM_OFFSET + ofs, config);
-    crc = config_crc();
-    EEPROM.end();
-#if DEBUG
-    if (config.crc != crc) {
-        debug_printf_P(PSTR("config_read: CRC mismatch. %08X != %08X\n"), config.crc, crc);
+    if (!config.read()) {
+        config.restoreFactorySettings();
     }
-    if (config.ident != FIRMWARE_IDENT) {
-        debug_println(F("config_read: firmware identification mismatch"));
-    }
-#endif
-    if ((config.crc != crc) || (config.ident != FIRMWARE_IDENT)) {
-        success = false;
-#if SPIFFS_SUPPORT
-        MySerial.println(F("EEPROM CRC mismatch, trying to read backup configuration from file system"));
-        String filename = FPSTR(config_filename);
-        File file = SPIFFS.open(filename, file_mode_read());
-#if DEBUG
-        if (!file) {
-            debug_printf_P(PSTR("Failed to open %s\n"), filename.c_str());
-        }
-        if (file.size() != sizeof(config)) {
-            debug_printf_P(PSTR("File size mismatch %d != %d\n"), file.size(), sizeof(config));
-        }
-#endif
-        if (file && file.size() == sizeof(config)) {
-            if (file.readBytes((char *)&config, sizeof(config)) == sizeof(config)) {
-                crc = config_crc();
-                if ((config.crc == crc) && (config.ident == FIRMWARE_IDENT)) {
-                    config_write();
-                }
-            }
-        }
-#endif
-        if ((config.crc != crc) || (config.ident != FIRMWARE_IDENT)) {
-            MySerial.println(F("Failed to load EEPROM settings, using factory defaults"));
-            _Config.restoreFactorySettings();
-        }
-    }
-    if (FIRMWARE_VERSION > config.version) {
-        debug_printf_P(PSTR("Upgrading EEPROM settings from %d.%d.%d to " FIRMWARE_VERSION_STR "\n"), (config.version >> 16), (config.version >> 8) & 0xff, (config.version & 0xff));
+
+//     if ((config.crc != crc) || (config.ident != FIRMWARE_IDENT)) {
+//         success = false;
+// #if SPIFFS_SUPPORT
+//         MySerial.println(F("EEPROM CRC mismatch, trying to read backup configuration from file system"));
+//         String filename = FPSTR(config_filename);
+//         File file = SPIFFS.open(filename, file_mode_read());
+// #if DEBUG
+//         if (!file) {
+//             debug_printf_P(PSTR("Failed to open %s\n"), filename.c_str());
+//         }
+//         if (file.size() != sizeof(config)) {
+//             debug_printf_P(PSTR("File size mismatch %d != %d\n"), file.size(), sizeof(config));
+//         }
+// #endif
+//         if (file && file.size() == sizeof(config)) {
+//             if (file.readBytes((char *)&config, sizeof(config)) == sizeof(config)) {
+//                 crc = config_crc();
+//                 if ((config.crc == crc) && (config.ident == FIRMWARE_IDENT)) {
+//                     config_write();
+//                 }
+//             }
+//         }
+// #endif
+//         if ((config.crc != crc) || (config.ident != FIRMWARE_IDENT)) {
+//             MySerial.println(F("Failed to load EEPROM settings, using factory defaults"));
+//             _Config.restoreFactorySettings();
+//         }
+//     }
+    auto &version = config._H_W_GET(Config().version);
+    if (FIRMWARE_VERSION > version) {
+        PrintString message;
+        message.printf_P(PSTR("Upgrading EEPROM configuration from %d.%d.%d to " FIRMWARE_VERSION_STR), (version >> 16), (version >> 8) & 0xff, (version & 0xff));
+        Logger_warning(message);
+        debug_println(message);
         config_write();
     }
     return success;
@@ -328,14 +310,17 @@ void config_write(bool factory_reset, size_t ofs) {
     debug_printf_P(PSTR("Writing configuration, offset %u, factory reset %d\n"), ofs, factory_reset);
 
     if (factory_reset) {
-        _Config.restoreFactorySettings();
+        config.restoreFactorySettings();
     } else {
-        config.flags &= ~FLAGS_FACTORY_SETTINGS;
+        auto &flags = config._H_W_GET(Config().flags);
+        flags.isFactorySettings = false;
     }
-    config.crc = config_crc();
-    EEPROM.begin(sizeof(config) + CONFIG_EEPROM_OFFSET + ofs);
-    EEPROM.put(CONFIG_EEPROM_OFFSET + ofs, config);
-    debug_printf_P(PSTR("CRC %08X, offset %d\n"), (unsigned int)config.crc, ofs);
+
+    config.write();
+#if DEBUG
+    //config.dumpEEPROM(MySerial);
+    config.dump(MySerial);
+#endif
 
 #if SYSTEM_STATS
     if (ofs == 0) {
@@ -343,176 +328,45 @@ void config_write(bool factory_reset, size_t ofs) {
     }
 #endif
 
-#if DEBUG
-    EEPROM.commit();
-    debug_printf_P(PSTR("reread CRC %08X %08X, offset %u\n"), config.crc, config_crc(EEPROM.getDataPtr(), CONFIG_EEPROM_OFFSET + ofs), ofs);
-#endif
-    EEPROM.end();
-
-    if (!factory_reset && ofs == 0) {
-        File file = SPIFFS.open(FPSTR(config_filename), file_mode_write());
-        if (file) {
-            file.write((const uint8_t *)&config, sizeof(config));
-            file.close();
-        }
-    }
-}
-
-#if DEBUG
-
-typedef struct {
-    PGM_P name;
-    ConfigFlags_t value;
-} config_flags_to_str_t;
-
-void  config_dump(Stream &stream) {
-    static config_flags_to_str_t _flags[] = {
-        { PSTR("FLAGS_FACTORY_SETTINGS"),       0x00000001 },
-        { PSTR("FLAGS_MODE_STATION"),           0x00000002 },
-        { PSTR("FLAGS_MODE_AP"),                0x00000004 },
-        { PSTR("FLAGS_AT_MODE"),                0x00000008 },
-        { PSTR("FLAGS_SOFTAP_DHCPD"),           0x00000010 },
-        { PSTR("FLAGS_STATION_DHCP"),           0x00000020 },
-        { PSTR("FLAGS_MQTT_ENABLED"),           0x00000040 },
-        { PSTR("FLAGS_NTP_ENABLED"),            0x00000080 },
-        { PSTR("FLAGS_SYSLOG_UDP"),             0x00000200 },
-        { PSTR("FLAGS_SYSLOG_TCP"),             0x00000400 },
-        { PSTR("FLAGS_SYSLOG_TCP_TLS"),         0x00000600 },
-        { PSTR("FLAGS_HTTP_ENABLED"),           0x00001000 },
-        { PSTR("FLAGS_HTTP_TLS"),               0x00002000 },
-        { PSTR("FLAGS_REST_API_ENABLED"),       0x00004000 },
-        { PSTR("FLAGS_SECURE_MQTT"),            0x00008000 },
-        { PSTR("FLAGS_LED_SINGLE"),             0x00010000 },
-        { PSTR("FLAGS_LED_TWO"),                0x00020000 },
-        { PSTR("FLAGS_LED_RGB"),                0x00030000 },
-        { PSTR("FLAGS_LED_MODES"),              0x00030000 },
-        { PSTR("FLAGS_SERIAL2TCP_CLIENT"),      0x00040000 },
-        { PSTR("FLAGS_SERIAL2TCP_SERVER"),      0x00080000 },
-        { PSTR("FLAGS_SERIAL2TCP_TLS"),         0x00100000 },
-        { PSTR("FLAGS_HUE_ENABLED"),            0x00200000 },
-        { PSTR("FLAGS_MQTT_AUTO_DISCOVERY"),    0x00400000 },
-        { PSTR("FLAGS_HIDDEN_SSID"),            0x00800000 },
-        { PSTR("FLAGS_HTTP_PERF_160"),          0x01000000 },
-
-        { NULL , 0 }
-    };
-
-    debug_port_println(stream, F("--- config ---"));
-    debug_port_print_hex(stream, config.crc);
-    debug_port_print_hex(stream, config.ident);
-    debug_port_print_hex(stream, config.version);
-    debug_port_print_char_ptr(stream, config.device_name);
-    debug_port_print_char_ptr(stream, config.device_pass);
-    debug_port_print_char_ptr(stream, config.wifi_ssid);
-    debug_port_print_char_ptr(stream, config.wifi_pass);
-    String buf;
-    for (int i = 0; _flags[i].value; i++) {
-        if (config.flags & _flags[i].value) {
-            buf += String(FSPGM(comma_));
-            buf += String(FPSTR(_flags[i].name));
-        }
-    }
-    // for (int i = 0; _flags[i].value; i++) {
-    //     if (config.flags2 & _flags[i].value) {
-    //         buf += String(FSPGM(comma_));
-    //         buf += String(FPSTR(_flags[i].name));
-    //     }
+    // File file = SPIFFS.open(FSPGM(SPIFF_configuration_backup), file_mode_write());
+    // if (file) {
+    //     EEPROM.begin(EEPROM.length());
+    //     file.write(EEPROM.getConstDataPtr(), config.getEEPROMSize());
+    //     file.close();
+    //     EEPROM.end();
     // }
-    debug_port_print_hex(stream,  config.flags);
-    // debug_port_print_hex(stream, config.flags2);
-    debug_port_printf_P(stream, PSTR("flags=%s\n"), buf.substring(2).c_str());
-    debug_port_print_IPAddress(stream, config.dns1);
-    debug_port_print_IPAddress(stream, config.dns2);
-    debug_port_print_IPAddress(stream, config.local_ip);
-    debug_port_print_IPAddress(stream, config.subnet);
-    debug_port_print_IPAddress(stream, config.gateway);
-    debug_port_print_char_ptr(stream, config.soft_ap.wifi_ssid);
-    debug_port_print_char_ptr(stream, config.soft_ap.wifi_pass);
-    debug_port_print_IPAddress(stream, config.soft_ap.address);
-    debug_port_print_IPAddress(stream, config.soft_ap.subnet);
-    debug_port_print_IPAddress(stream, config.soft_ap.gateway);
-    debug_port_print_IPAddress(stream, config.soft_ap.dhcp_start);
-    debug_port_print_IPAddress(stream, config.soft_ap.dhcp_end);
-    debug_port_print_int(stream, config.soft_ap.channel);
-    debug_port_print_int(stream, config.soft_ap.encryption);
-#if WEBSERVER_SUPPORT
-    debug_port_print_int(stream, config.http_port);
-#endif
-#if ASYNC_TCP_SSL_ENABLED
-    debug_port_print_char_ptr(stream, config.cert_passphrase);
-#endif
-#if NTP_CLIENT
-    debug_port_print_char_ptr(stream, config.ntp.timezone);
-    debug_port_print_char_ptr(stream, config.ntp.servers[0]);
-    debug_port_print_char_ptr(stream, config.ntp.servers[1]);
-    debug_port_print_char_ptr(stream, config.ntp.servers[2]);
-    debug_port_print_char_ptr(stream, config.ntp.remote_tz_dst_ofs_url);
-#endif
-    debug_port_print_int(stream, config.led_pin);
-#if SYSLOG
-    debug_port_print_char_ptr(stream, config.syslog_host);
-    debug_port_print_int(stream, config.syslog_port);
-#endif
-#if MQTT_SUPPORT
-    debug_port_print_char_ptr(stream, config.mqtt_host);
-    debug_port_print_int(stream, config.mqtt_port);
-    debug_port_print_char_ptr(stream, config.mqtt_username);
-    debug_port_print_char_ptr(stream, config.mqtt_password);
-    debug_port_print_char_ptr(stream, config.mqtt_topic);
-    debug_port_print_int(stream, config.mqtt_keepalive);
-    debug_port_print_int(stream, config.mqtt_qos);
-    String hexStr;
-    bin2hex_append(hexStr, config.mqtt_fingerprint, sizeof(config.mqtt_fingerprint));
-    debug_port_printf_P(stream, PSTR("config.mqtt_fingerprint=%s\n"), hexStr.c_str());
-#  if MQTT_AUTO_DISCOVERY
-    debug_port_print_char_ptr(stream, config.mqtt_discovery_prefix);
-#  endif
-#endif
-#if HUE_EMULATION
-    debug_port_print_char_ptr(stream, config.hue.devices);
-    debug_port_print_int(stream, config.hue.tcp_port);
-#endif
-#if SERIAL2TCP
-    debug_port_print_char_ptr(stream, config.serial2tcp.host);
-    debug_port_print_int(stream, config.serial2tcp.port);
-    debug_port_print_int(stream, config.serial2tcp.auth_mode);
-    debug_port_print_char_ptr(stream, config.serial2tcp.username);
-    debug_port_print_char_ptr(stream, config.serial2tcp.password);
-    debug_port_print_int(stream, config.serial2tcp.auto_connect);
-    debug_port_print_int(stream, config.serial2tcp.auto_reconnect);
-    debug_port_print_int(stream, config.serial2tcp.baud_rate);
-    debug_port_print_int(stream, config.serial2tcp.serial_port);
-    debug_port_print_int(stream, config.serial2tcp.rx_pin);
-    debug_port_print_int(stream, config.serial2tcp.tx_pin);
-#endif
-    debug_port_println(stream, F("---"));
-}
-#endif
-
-const String config_firmware_version() {
-    return F(FIRMWARE_VERSION_STR " Build " __BUILD_NUMBER " " __DATE__ __DEBUG_CFS_APPEND);
 }
 
 void config_version() {
-    MySerial.printf_P(PSTR("KFC Firmware %s\nFlash size %s\n"), config_firmware_version().c_str(), formatBytes(ESP.getFlashChipRealSize()).c_str());
+    MySerial.printf_P(PSTR("KFC Firmware %s\nFlash size %s\n"), KFCFWConfiguration::getFirmwareVersion().c_str(), formatBytes(ESP.getFlashChipRealSize()).c_str());
 }
 
 void config_info() {
     config_version();
-    if (config.flags & FLAGS_MODE_AP) {
-        MySerial.printf_P(PSTR("AP Mode SSID %s\n"), config.soft_ap.wifi_ssid);
-    } else if (config.flags & FLAGS_MODE_STATION) {
-        MySerial.printf_P(PSTR("Station Mode SSID %s\n"), config.wifi_ssid);
+
+    auto flags = config._H_GET(Config().flags);
+
+    if (flags.wifiMode & WIFI_AP) {
+        MySerial.printf_P(PSTR("AP Mode SSID %s\n"), config._H_STR(Config().soft_ap.wifi_ssid));
+    } else if (flags.wifiMode & WIFI_STA) {
+        MySerial.printf_P(PSTR("Station Mode SSID %s\n"), config._H_STR(Config().wifi_ssid));
     }
-    if (config.flags & FLAGS_FACTORY_SETTINGS) {
+    if (flags.isFactorySettings) {
         MySerial.println(F("Running on factory settings."));
     }
-    MySerial.printf_P(PSTR("Device %s ready!\n"), config.device_name);
+    if (flags.isDefaultPassword) {
+        String str = FSPGM(default_password_warning);
+        Logger_security(str);
+        MySerial.println(str);
+    }
+    MySerial.printf_P(PSTR("Device %s ready!\n"), config._H_STR(Config().device_name));
 #if AT_MODE_SUPPORTED
-    if (config.flags & FLAGS_AT_MODE) {
+    if (flags.atModeEnabled) {
         MySerial.println(F("Modified AT instruction set available.\n\nType AT? for help"));
         if (resetDetector.getSafeMode()) {
-            MySerial.print(F("SAFE MODE> "));
+            String str = FSPGM(safe_mode_enabled);
+            Logger_notice(str);
+            MySerial.println(str);
         }
     }
 #endif
@@ -530,31 +384,25 @@ int  config_apply_wifi_settings() {
     WiFi.disconnect(true);
     WiFi.softAPdisconnect(true);
 
-    if (config.flags & FLAGS_MODE_STATION) {
+    auto flags = config._H_GET(Config().flags);
+
+    if (flags.wifiMode & WIFI_STA) {
         WiFi.enableSTA(true);
         WiFi.setAutoConnect(true);
         WiFi.setAutoReconnect(true);
-        WiFi.hostname(config.device_name);
+        WiFi.hostname(config._H_STR(Config().device_name));
 
-        uint32_t local_ip = 0;
-        uint32_t gateway = 0;
-        uint32_t subnet = 0;
-        uint32_t dns1 = 0;
-        uint32_t dns2 = 0;
-
-        if (!_Config.getOptions().isStationDhcp()) {
-
-            local_ip = static_cast<uint32_t>(config.local_ip);
-            gateway = static_cast<uint32_t>(config.gateway);
-            subnet = static_cast<uint32_t>(config.subnet);
-            dns1 = static_cast<uint32_t>(config.dns1);
-            dns2 = static_cast<uint32_t>(config.dns2);
+        bool result;
+        if (flags.stationModeDHCPEnabled) {
+            result = WiFi.config((uint32_t)0, (uint32_t)0, (uint32_t)0, (uint32_t)0, (uint32_t)0);
+        } else {
+            result = WiFi.config(config._H_GET_IP(Config().local_ip), config._H_GET_IP(Config().gateway), config._H_GET_IP(Config().subnet), config._H_GET_IP(Config().dns1), config._H_GET_IP(Config().dns2));
         }
 
-        if (!WiFi.config(local_ip, gateway, subnet, dns1, dns2)) {
-            Logger_error(F("Failed to configure Station Mode with %s"), _Config.getOptions().isStationDhcp() ? str_P(F("DHCP")) : str_P(F("static address")));
+        if (!result) {
+            Logger_error(F("Failed to configure Station Mode with %s"), flags.stationModeDHCPEnabled ? String(F("DHCP")).c_str() : String(F("static address")).c_str());
         } else {
-            if (!WiFi.begin(config.wifi_ssid, config.wifi_pass)) {
+            if (!WiFi.begin(config._H_STR(Config().wifi_ssid), config._H_STR(Config().wifi_pass))) {
                 Logger_error(F("Failed to start Station Mode"));
             } else {
                 debug_printf_P(PSTR("Station Mode SSID %s\n"), WiFi.SSID().c_str());
@@ -563,27 +411,27 @@ int  config_apply_wifi_settings() {
         }
     }
 
-    if (config.flags & FLAGS_MODE_AP) {
+    if (flags.wifiMode & WIFI_AP_STA) {
 
         WiFi.enableAP(true);
-        if (WiFi.encryptionType(config.soft_ap.encryption) == -1) {
+        if (config.get<uint8_t>(_H(Config().soft_ap.encryption)) == -1) {
             Logger_error(F("Encryption for AP mode could not be set"));
         } else {
-            if (!WiFi.softAPConfig(config.soft_ap.address, config.soft_ap.gateway, config.soft_ap.subnet)) {
+            if (!WiFi.softAPConfig(config._H_GET_IP(Config().soft_ap.address), config._H_GET_IP(Config().soft_ap.gateway), config._H_GET_IP(Config().soft_ap.subnet))) {
                 Logger_error(F("Cannot configure AP mode"));
             } else {
-                if (!WiFi.softAP(config.soft_ap.wifi_ssid, config.soft_ap.wifi_pass, config.soft_ap.channel, _Config.getOptions().isHiddenSSID())) {
+                if (!WiFi.softAP(config._H_STR(Config().soft_ap.wifi_ssid), config._H_STR(Config().soft_ap.wifi_pass), config._H_GET(Config().soft_ap.channel), flags.hiddenSSID)) {
                     Logger_error(F("Cannot start AP mode"));
                 } else {
                     struct dhcps_lease dhcp_lease;
                     wifi_softap_dhcps_stop();
-                    dhcp_lease.start_ip.addr = static_cast<uint32_t>(config.soft_ap.dhcp_start);
-                    dhcp_lease.end_ip.addr = static_cast<uint32_t>(config.soft_ap.dhcp_end);
-                    dhcp_lease.enable = (config.flags & FLAGS_SOFTAP_DHCPD);
+                    dhcp_lease.start_ip.addr = config._H_GET_IP(Config().soft_ap.dhcp_start);
+                    dhcp_lease.end_ip.addr = config._H_GET_IP(Config().soft_ap.dhcp_end);
+                    dhcp_lease.enable = flags.stationModeDHCPEnabled;
                     if (!wifi_softap_set_dhcps_lease(&dhcp_lease)) {
                         Logger_error(F("Failed to configure DHCP server"));
                     } else {
-                        if (_Config.getOptions().isSoftApDhcpd()) {
+                        if (flags.stationModeDHCPEnabled) {
                             if (!wifi_softap_dhcps_start()) {
                                 Logger_error(F("Failed to start DHCP server"));
                             } else {
@@ -622,191 +470,14 @@ void  config_restart() {
     ESP.restart();
 }
 
-Configuration::Configuration(Config &config) : _options(config), _config(config) {
-    _dirty = false;
-}
-
-const char  *Configuration::getLastError() {
-    return last_error.c_str();
-}
-
-#if SYSLOG
-
-SyslogProtocol ConfigOptions::getSyslogProtocol() {
-    if (_config.flags & FLAGS_SYSLOG_UDP) {
-        return SYSLOG_PROTOCOL_UDP;
-    } else if (_config.flags & FLAGS_SYSLOG_TCP) {
-#  if ASYNC_TCP_SSL_ENABLED
-        if (_config.flags & FLAGS_SYSLOG_TCP_TLS) {
-            return SYSLOG_PROTOCOL_TCP_TLS;
-        }
-#  endif
-        return SYSLOG_PROTOCOL_TCP;
-    }
-    return SYSLOG_PROTOCOL_NONE;
-}
-
-bool  ConfigOptions::isSyslogProtocol(SyslogProtocol protocol) {
-    return (getSyslogProtocol() == protocol);
-}
-
-void  ConfigOptions::setSyslogProtocol(SyslogProtocol protocol) {
-    _config.flags &= ~FLAGS_SYSLOG_MASK;
-    switch (protocol) {
-        case SYSLOG_PROTOCOL_UDP:
-            _config.flags |= FLAGS_SYSLOG_UDP;
-            break;
-        case SYSLOG_PROTOCOL_TCP:
-            _config.flags |= FLAGS_SYSLOG_TCP;
-            break;
-#  if ASYNC_TCP_SSL_ENABLED
-        case SYSLOG_PROTOCOL_TCP_TLS:
-            _config.flags |= FLAGS_SYSLOG_TCP_TLS;
-            break;
-#  else
-        case SYSLOG_PROTOCOL_TCP_TLS:
-#  endif
-        case SYSLOG_PROTOCOL_FILE:
-        case SYSLOG_PROTOCOL_NONE:
-            break;
-    }
-}
-#endif
-
-void ConfigOptions::_setFlags(uint32_t bitset, bool enabled, uint32_t mask) {
-    _config.flags &= ~mask;
-    if (enabled) {
-        _config.flags |= bitset;
-    } else {
-        _config.flags &= ~bitset;
-    }
-}
-
-void  ConfigOptions::_setFlags(ConfigFlags_t bitset, bool enabled) {
-    if (enabled) {
-        _config.flags |= bitset;
-    } else {
-        _config.flags &= ~bitset;
-    }
-}
-
-uint32_t ConfigOptions::_getFlags(ConfigFlags_t bitset) {
-    return (_config.flags & bitset);
-}
-
-bool ConfigOptions::_isFlags(ConfigFlags_t bitset) {
-    return (_config.flags & bitset) == bitset;
-}
-
-void  Configuration::restoreFactorySettings() {
-    debug_printf_P(PSTR("restoreFactorySettings()\n"));
-
-    memset(&_config, 0, sizeof(_config));
-    _config.ident = FIRMWARE_IDENT;
-    _config.version = FIRMWARE_VERSION;
-    _config.flags = FLAGS_MODE_AP | FLAGS_FACTORY_SETTINGS | FLAGS_AT_MODE | FLAGS_SOFTAP_DHCPD | FLAGS_STATION_DHCP | FLAGS_NTP_ENABLED | FLAGS_HTTP_ENABLED | FLAGS_REST_API_ENABLED | FLAGS_SECURE_MQTT | FLAGS_LED_SINGLE | FLAGS_HUE_ENABLED | FLAGS_HTTP_PERF_160 | FLAGS_MQTT_AUTO_DISCOVERY;
-    uint8_t mac[6];
-    wifi_get_macaddr(STATION_IF, mac);
-    snprintf_P(_config.device_name, sizeof(_config.device_name), PSTR("KFC%02X%02X%02X"), mac[3], mac[4], mac[5]);
-    strcpy(_config.soft_ap.wifi_ssid, _config.device_name);
-    strcpy(_config.wifi_ssid, _config.device_name);
-    strcpy_P(_config.device_pass, PSTR("12345678"));
-    strcpy(_config.soft_ap.wifi_pass, _config.device_pass);
-    strcpy(_config.soft_ap.wifi_pass, _config.device_pass);
-    _config.dns1 = IPAddress(8, 8, 8, 8);
-    _config.dns2 = IPAddress(8, 8, 4, 4);
-    _config.local_ip = IPAddress(192, 168, 4, mac[5] <= 1 || mac[5] >= 253 ? (mac[4] <= 1 || mac[4] >= 253 ? (mac[3] <= 1 || mac[3] >= 253 ? mac[3] : rand() % 98 + 1) : mac[4]) : mac[5]);
-    _config.subnet = IPAddress(255, 255, 255, 0);
-    _config.gateway = IPAddress(192, 168, 4, 1);
-    _config.soft_ap.address = IPAddress(192, 168, 4, 1);
-    _config.soft_ap.subnet = IPAddress(255, 255, 255, 0);
-    _config.soft_ap.gateway = IPAddress(192, 168, 4, 1);
-    _config.soft_ap.dhcp_start = IPAddress(192, 168, 4, 2);
-    _config.soft_ap.dhcp_end = IPAddress(192, 168, 4, 100);
-    _config.soft_ap.encryption = ENC_TYPE_CCMP;
-    _config.soft_ap.channel = 7;
-#if WEBSERVER_TLS_SUPPORT
-    _config.http_port = _Config.getOptions().isHttpServerTLS() ? 443 : 80;
-#elif WEBSERVER_SUPPORT
-    _config.http_port = 80;
-#endif
-#if NTP_CLIENT
-    strcpy_P(_config.ntp.timezone, PSTR("UTC"));
-    strcpy_P(_config.ntp.servers[0], PSTR("pool.ntp.org"));
-    strcpy_P(_config.ntp.servers[1], PSTR("time.nist.gov"));
-    strcpy_P(_config.ntp.servers[2], PSTR("time.windows.com"));
-#if USE_REMOTE_TIMEZONE
-    // https://timezonedb.com/register
-    strncpy_P(_config.ntp.remote_tz_dst_ofs_url, PSTR("http://api.timezonedb.com/v2.1/get-time-zone?key=_YOUR_API_KEY_&by=zone&format=json&zone=${timezone}"), sizeof(_config.ntp.remote_tz_dst_ofs_url));
-#endif
-#endif
-    _config.led_pin = 2;
-#if MQTT_SUPPORT
-    config.mqtt_keepalive = 15;
-    strcpy_P(_config.mqtt_topic, PSTR("home/${device_name}"));
-#  if ASYNC_TCP_SSL_ENABLED
-    _config.mqtt_port = 8883;
-#  else
-    _config.mqtt_port = 1883;
-#  endif
-#  if MQTT_AUTO_DISCOVERY
-    strcpy_P(_config.mqtt_discovery_prefix, PSTR("homeassistant"));
-#  endif
-#endif
-#if SYSLOG
-    _config.syslog_port = 514;
-#endif
-#if HOME_ASSISTANT_INTEGRATION
-    strcpy_P(_config.homeassistant.api_endpoint, PSTR("http://ip_address:8123/api/"));
-#endif
-#if HUE_EMULATION
-    _config.hue.tcp_port = HUE_BASE_PORT;
-    strcpy_P(_config.hue.devices, PSTR("lamp 1\nlamp 2"));
-#endif
-#if PING_MONITOR
-// #error causes an execption somewhere in here
-    strncpy(_config.ping.host1, to_c_str(_config.gateway), sizeof(_config.ping.host1));
-    strcpy_P(_config.ping.host2, PSTR("8.8.8.8"));
-    strcpy_P(_config.ping.host3, PSTR("www.google.com"));
-    _config.ping.interval = 60;
-    _config.ping.count = 4;
-    _config.ping.timeout = 2000;
-#endif
-#if SERIAL2TCP
-    _config.serial2tcp.port = 2323;
-    _config.serial2tcp.auth_mode = true;
-    _config.serial2tcp.auto_connect = false;
-    _config.serial2tcp.auto_reconnect = 15;
-    _config.serial2tcp.port = 2323;
-    _config.serial2tcp.serial_port = SERIAL2TCP_HARDWARE_SERIAL;
-    _config.serial2tcp.rx_pin = D7;
-    _config.serial2tcp.tx_pin = D8;
-    _config.serial2tcp.baud_rate = 115200;
-    _config.serial2tcp.idle_timeout = 300;
-    _config.serial2tcp.keep_alive = 60;
-#endif
-
-
-#if CUSTOM_CONFIG_PRESET
-    #include "retracted/custom_config.h"
-#endif
-    debug_printf_P(PSTR("restoreFactorySettings() return\n"));
-}
-
-void  Configuration::setDirty(bool dirty) {
-    _dirty = dirty;
-}
-
-bool  Configuration::isDirty() {
-    return _dirty;
-}
-
 uint8_t WiFi_mode_connected(uint8_t mode, uint32_t *station_ip, uint32_t *ap_ip) {
     struct ip_info ip_info;
     uint8_t connected_mode = 0;
 
-    if (_Config.getOptions().getWiFiMode() & mode) { // is any modes active?
-        if ((mode & WIFI_STA) && _Config.getOptions().isWiFiStationMode() && wifi_station_get_connect_status() == STATION_GOT_IP) { // station connected?
+    auto flags = config.get<ConfigFlags>(_H(Config().flags));
+
+    if (flags.wifiMode & mode) { // is any modes active?
+        if ((mode & WIFI_STA) && flags.wifiMode & WIFI_STA && wifi_station_get_connect_status() == STATION_GOT_IP) { // station connected?
             if (wifi_get_ip_info(STATION_IF, &ip_info) && ip_info.ip.addr) { // verify that is has a valid IP address
                 connected_mode |= WIFI_STA;
                 if (station_ip) {
@@ -814,7 +485,7 @@ uint8_t WiFi_mode_connected(uint8_t mode, uint32_t *station_ip, uint32_t *ap_ip)
                 }
             }
         }
-        if ((mode & WIFI_AP) && _Config.getOptions().isWiFiSoftApMode()) { // AP mode active?
+        if ((mode & WIFI_AP) && flags.wifiMode & WIFI_AP) { // AP mode active?
             if (wifi_get_ip_info(SOFTAP_IF, &ip_info) && ip_info.ip.addr) { // verify that is has a valid IP address
                 connected_mode |= WIFI_AP;
                 if (ap_ip) {
@@ -824,4 +495,166 @@ uint8_t WiFi_mode_connected(uint8_t mode, uint32_t *station_ip, uint32_t *ap_ip)
         }
     }
     return connected_mode;
+}
+
+KFCFWConfiguration::KFCFWConfiguration() : Configuration(CONFIG_EEPROM_OFFSET, EEPROM.length() - CONFIG_EEPROM_OFFSET) {
+    _garbageCollectionCycleDelay = 5000;
+    LoopFunctions::add([this]() {
+        this->garbageCollector();
+    }, reinterpret_cast<LoopFunctions::CallbackPtr_t>(this));
+}
+
+KFCFWConfiguration::~KFCFWConfiguration() {
+    LoopFunctions::remove(reinterpret_cast<LoopFunctions::CallbackPtr_t>(this));
+}
+
+void KFCFWConfiguration::restoreFactorySettings() {
+    debug_printf_P(PSTR("restoreFactorySettings()\n"));
+    PrintString str;
+
+    clear();
+    _H_SET(Config().version, FIRMWARE_VERSION);
+
+    ConfigFlags flags;
+    memset(&flags, 0, sizeof(flags));
+    flags.wifiMode = WIFI_AP;
+    flags.isFactorySettings = true;
+    flags.isDefaultPassword = true;
+    flags.atModeEnabled = true;
+    flags.softAPDHCPDEnabled = true;
+    flags.stationModeDHCPEnabled = true;
+    flags.ntpClientEnabled = true;
+    flags.webServerMode = HTTP_MODE_UNSECURE;
+    flags.webServerPerformanceModeEnabled = true;
+    flags.mqttMode = MQTT_MODE_SECURE;
+    flags.mqttAutoDiscoveryEnabled = true;
+    flags.ledMode = MODE_SINGLE_LED;
+    flags.hueEnabled = true;
+    _H_SET(Config().flags, flags);
+
+    uint8_t mac[6];
+    wifi_get_macaddr(STATION_IF, mac);
+    str.printf_P(PSTR("KFC%02X%02X%02X"), mac[3], mac[4], mac[5]);
+    _H_SET_STR(Config().device_name, str);
+    _H_SET_STR(Config().device_pass, F("12345678"));
+
+    _H_SET_STR(Config().soft_ap.wifi_ssid, str);
+    _H_SET_STR(Config().wifi_ssid, str);
+
+    _H_SET_IP(Config().dns1, IPAddress(8, 8, 8, 8));
+    _H_SET_IP(Config().dns2, IPAddress(8, 8, 4, 4));
+    _H_SET_IP(Config().local_ip, IPAddress(192, 168, 4, mac[5] <= 1 || mac[5] >= 253 ? (mac[4] <= 1 || mac[4] >= 253 ? (mac[3] <= 1 || mac[3] >= 253 ? mac[3] : rand() % 98 + 1) : mac[4]) : mac[5]));
+    _H_SET_IP(Config().gateway, IPAddress(192, 168, 4, 1));
+    _H_SET_IP(Config().soft_ap.address, IPAddress(192, 168, 4, 1));
+    _H_SET_IP(Config().soft_ap.subnet, IPAddress(255, 255, 255, 0));
+    _H_SET_IP(Config().soft_ap.gateway, IPAddress(192, 168, 4, 1));
+    _H_SET_IP(Config().soft_ap.dhcp_start, IPAddress(192, 168, 4, 2));
+    _H_SET_IP(Config().soft_ap.dhcp_end, IPAddress(192, 168, 4, 100));
+    _H_SET(Config().soft_ap.encryption, ENC_TYPE_CCMP);
+    _H_SET(Config().soft_ap.channel, 7);
+
+#if WEBSERVER_TLS_SUPPORT
+    _H_SET(Config().http_port, flags.webServerMode == HTTP_MODE_SECURE ? 443 : 80);
+#elif WEBSERVER_SUPPORT
+    _H_SET(Config().http_port, 80);
+#endif
+#if NTP_CLIENT
+    _H_SET_STR(Config().ntp.timezone, F("UTC"));
+    _H_SET_STR(Config().ntp.servers[0], F("pool.ntp.org"));
+    _H_SET_STR(Config().ntp.servers[1], F("time.nist.gov"));
+    _H_SET_STR(Config().ntp.servers[2], F("time.windows.com"));
+#if USE_REMOTE_TIMEZONE
+    // https://timezonedb.com/register
+    _H_SET_STR(Config().ntp.remote_tz_dst_ofs_url, F("http://api.timezonedb.com/v2.1/get-time-zone?key=_YOUR_API_KEY_&by=zone&format=json&zone=${timezone}"));
+#endif
+#endif
+    _H_SET(Config().led_pin, LED_BUILTIN);
+#if MQTT_SUPPORT
+    _H_SET(Config().mqtt_keepalive, 15);
+    _H_SET_STR(Config().mqtt_topic, F("home/${device_name}"));
+#  if ASYNC_TCP_SSL_ENABLED
+    _H_SET(Config().mqtt_port, flags. flags.mqttMode == MQTT_MODE_SECURE ? 8883 : 1883);
+#  else
+    _H_SET(Config().mqtt_port, 1883);
+#  endif
+#  if MQTT_AUTO_DISCOVERY
+    _H_SET_STR(Config().mqtt_discovery_prefix, F("homeassistant"));
+#  endif
+#endif
+#if SYSLOG
+    set<uint16_t>(_H(Config().syslog_port), 514);
+#endif
+#if HOME_ASSISTANT_INTEGRATION
+    _H_SET_STR(Config().homeassistant.api_endpoint, F("http://<CHANGE_ME>:8123/api/"));
+#endif
+#if HUE_EMULATION
+    set<uint16_t>(_H(Config().hue.tcp_port), HUE_BASE_PORT);
+    _H_SET_STR(Config().hue.devices), F("lamp 1\nlamp 2"));
+#endif
+#if PING_MONITOR
+// #error causes an execption somewhere in here
+    _H_SET_STR(Config().ping.host1, F("${gateway}"));
+    _H_SET_STR(Config().ping.host2, F("8.8.8.8"));
+    _H_SET_STR(Config().ping.host3, F("www.google.com"));
+    _H_SET(Config().ping.count, 4);
+    _H_SET(Config().ping.interval, 60);
+    _H_SET(Config().ping.timeout, 2000);
+#endif
+#if SERIAL2TCP
+    _H_SET(Config().serial2tcp.port, 2323);
+    _H_SET(Config().serial2tcp.auth_mode, true);
+    _H_SET(Config().serial2tcp.auto_connect, false);
+    _H_SET(Config().serial2tcp.auto_reconnect, 15);
+    _H_SET(Config().serial2tcp.port, 2323);
+    _H_SET(Config().serial2tcp.serial_port, SERIAL2TCP_HARDWARE_SERIAL);
+    _H_SET(Config().serial2tcp.rx_pin, D7);
+    _H_SET(Config().serial2tcp.tx_pin, D8);
+    _H_SET(Config().serial2tcp.baud_rate, 115200);
+    _H_SET(Config().serial2tcp.idle_timeout, 300);
+    _H_SET(Config().serial2tcp.keep_alive, 60);
+#endif
+
+
+#if CUSTOM_CONFIG_PRESET
+    #include "retracted/custom_config.h"
+#endif
+
+}
+
+void KFCFWConfiguration::setLastError(const String &error) {
+    _lastError = error;
+}
+
+const char *KFCFWConfiguration::getLastError() const {
+    return _lastError.c_str();
+}
+
+uint8_t KFCFWConfiguration::getMaxChannels() {
+    wifi_country_t country;
+    if (!wifi_get_country(&country)) {
+        country.nchan = 255;
+    }
+    return country.nchan;
+}
+
+
+void KFCFWConfiguration::garbageCollector() {
+    if (_readAccess && millis() > _readAccess + _garbageCollectionCycleDelay) {
+        debug_println(F("KFCFWConfiguration::garbageCollector(): releasing memory"));
+        _readAccess = 0;
+        release();
+    }
+}
+
+void KFCFWConfiguration::setConfigDirty(bool dirty) {
+    _dirty = dirty;
+}
+
+bool KFCFWConfiguration::isConfigDirty() const {
+    return _dirty;
+}
+
+
+const String KFCFWConfiguration::getFirmwareVersion() {
+    return F(FIRMWARE_VERSION_STR " Build " __BUILD_NUMBER " " __DATE__ __DEBUG_CFS_APPEND);
 }

@@ -18,6 +18,7 @@
 #if defined(ESP32)
 
 #include <Arduino.h>
+#include <global.h>
 #include <SPIFFS.h>
 #include <WiFi.h>
 #include <FS.h>
@@ -46,11 +47,11 @@ typedef wifi_err_reason_t WiFiDisconnectReason;
 #elif defined(ESP8266)
 
 #include <Arduino.h>
+#include <global.h>
 #include <ESP8266WiFi.h>
 #include <ESP8266WiFiType.h>
 #include <WiFiUdp.h>
 #include <FS.h>
-#include <EEPROM.h>
 
 #define PROGMEM_STRING_DECL(name)               extern const char _shared_progmem_string_##name[] PROGMEM;
 #define PROGMEM_STRING_DEF(name, value)         const char _shared_progmem_string_##name[] PROGMEM = { value };
@@ -67,6 +68,8 @@ typedef wifi_err_reason_t WiFiDisconnectReason;
 
 #elif _WIN32 || _WIN64
 
+#define NOMINMAX
+
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -74,6 +77,9 @@ typedef wifi_err_reason_t WiFiDisconnectReason;
 #include <winsock.h>
 #include <strsafe.h>
 #include <iostream>
+#include <global.h>
+
+void panic();
 
 #define PROGMEM_STRING_DECL(name)               extern const char * const _shared_progmem_string_##name;
 #define PROGMEM_STRING_DEF(name, value)         const char * const _shared_progmem_string_##name = value;
@@ -122,13 +128,17 @@ class __FlashStringHelper;
 const char *str_P(const char *str, uint8_t index = 0);  // not the same function as in misc.cpp just a dummy
 
 #if DEBUG
-#define if_debug_printf(...) printf(__VA_ARGS__);
-#define if_debug_printf_P(...) printf(__VA_ARGS__);
-#define debug_printf_P(...) printf(__VA_ARGS__);
+#define IF_DEBUG(...)                           __VA_ARGS__
+#define if_debug_printf(...)                    printf(__VA_ARGS__);
+#define if_debug_printf_P(...)                  printf(__VA_ARGS__);
+#define debug_printf_P(...)                     printf(__VA_ARGS__);
+#define debug_printf(...)                       printf(__VA_ARGS__);
 #else
+#define IF_DEBUG(...) ;
 #define if_debug_printf(...) ;
 #define if_debug_printf_P(...) ;
 #define debug_printf_P(...) ;
+#define debug_printf(...) ;
 #endif
 
 #define strcasecmp_P _stricmp
@@ -716,6 +726,10 @@ class IPAddress {
         ((_address *)&_addr)->byte[3] = d;
     }
 
+    operator uint32_t() const {
+        return *(uint32_t *)&_addr;
+    }
+
     IPAddress &operator=(uint32_t addr) {
         _addr = addr;
         return *this;
@@ -765,6 +779,10 @@ class EEPROMFile : public Stream {
         return _eeprom;
     }
 
+    uint8_t *getConstDataPtr() const {
+        return _eeprom;
+    }
+
     uint8_t& operator[](int const address) {
         return _eeprom[address];
     }
@@ -781,7 +799,7 @@ class EEPROMFile : public Stream {
         _eeprom[address] = val;
     }
 
-    template<typename T> 
+    template<typename T>
     T &get(int const address, T &t) {
         if (address < 0 || address + sizeof(T) > _size)
             return t;
@@ -790,7 +808,7 @@ class EEPROMFile : public Stream {
         return t;
     }
 
-    template<typename T> 
+    template<typename T>
     const T &put(int const address, const T &t) {
         if (address < 0 || address + sizeof(T) > _size) {
             return t;
@@ -983,22 +1001,22 @@ class Stdout : public Stream {
     size_t write(uint8_t data) {
         return write(&data, sizeof(data));
     }
-    size_t write(uint8_t *data, size_t len) {
+    size_t write(const uint8_t *data, size_t len) override {
         if (_position + len >= _size) {
             len = _size - _position;
         }
-        printf("%04x-%04x: ", _position, _position + len - 1);
+        ::printf("%04x-%04x: ", _position, _position + len - 1);
         for (size_t i = 0; i < len; i++) {
-            printf("%02x ", data[i]);
+            ::printf("%02x ", data[i]);
         }
         for (size_t i = 0; i < len; i++) {
             if (isalnum(data[i])) {
-                printf("%c", data[i]);
+                ::printf("%c", data[i]);
             } else {
-                printf(".");
+                ::printf(".");
             }
         }
-        printf("\n");
+        ::printf("\n");
         memcpy(_buffer + _position, data, len);
         _position += (uint16_t)len;
         return len;
@@ -1038,9 +1056,17 @@ class FakeSerial : public Stdout {
     void flush(void) override {
         fflush(stdout);
     }
-    virtual size_t write(uint8_t c) {
+    virtual size_t write(uint8_t c) override {
         ::printf("%c", c);
         return 1;
+    }
+    virtual size_t write(const uint8_t *data, size_t len) override {
+        auto ptr = (const char *)data;
+        auto pos = len;
+        while(pos--) {
+            ::printf("%c", *ptr++);
+        }
+        return len;
     }
 };
 

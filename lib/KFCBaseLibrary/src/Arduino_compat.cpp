@@ -39,6 +39,11 @@ void delay(uint32_t time_ms) {
 
 FakeSerial Serial;
 
+void panic() {
+    printf("panic() called\n");
+    abort();
+}
+
 const char *str_P(const char *str, uint8_t index) {
     return str;
 }

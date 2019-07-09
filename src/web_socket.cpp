@@ -15,8 +15,6 @@
 #include "session.h"
 #include "kfc_fw_config.h"
 #include "logger.h"
-#include "debug_helper.h"
-#include "misc.h"
 #include "progmem_data.h"
 #include "web_socket.h"
 #if HTTP2SERIAL
@@ -244,7 +242,55 @@ void WsClient::_displayData(WsClient *wsClient, AwsFrameInfo *info, uint8_t *dat
 }
 #endif
 
-void WsClient::onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, int type, uint8_t *data, size_t len, void *arg, WsGetInstance getInstance) {
+ WsClient::WsClient(AsyncWebSocketClient * client) {
+     _authenticated = false;
+     _isEncryped = false;
+     _client = client;
+#if WEB_SOCKET_ENCRYPTION
+     _iv = nullptr;
+     _salt = nullptr;
+#endif
+ }
+
+ WsClient::~WsClient() {
+#if WEB_SOCKET_ENCRYPTION
+     if (_iv != nullptr) {
+         free(_iv);
+         free(_salt);
+     }
+#endif
+ }
+
+ void WsClient::setAuthenticated(bool authenticated) {
+     _authenticated = authenticated;
+ }
+
+ bool WsClient::isAuthenticated() {
+     return _authenticated;
+ }
+
+#if WEB_SOCKET_ENCRYPTION
+
+ bool WsClient::isEncrypted() {
+     return _iv != nullptr;
+ }
+
+ void WsClient::initEncryption(uint8_t * iv, uint8_t * salt) {
+     _iv = iv;
+     _salt = salt;
+ }
+
+#endif
+
+ void WsClient::setClient(AsyncWebSocketClient * client) {
+     _client = client;
+ }
+
+ AsyncWebSocketClient * WsClient::getClient() {
+     return _client;
+ }
+
+ void WsClient::onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, int type, uint8_t *data, size_t len, void *arg, WsGetInstance getInstance) {
 
     WsClient *wsClient = getInstance ? getInstance(client) : nullptr;
     WsClientManager *manager;
@@ -326,7 +372,7 @@ void WsClient::onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, i
             }
 #endif
             manager = WsClientManager::getWsClientManager();
-            if (verify_session_id(ptr, _Config.get().device_name, _Config.get().device_pass)) {
+            if (verify_session_id(ptr, config.getString(_H(Config().device_name)), config.getString(_H(Config().device_pass)))) {
 
                 wsClient->setAuthenticated(true);
                 manager->setClientAuthenticated(wsClient, true);

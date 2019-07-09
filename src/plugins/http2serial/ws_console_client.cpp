@@ -30,7 +30,7 @@ void WsConsoleClient::onDisconnect(uint8_t *data, size_t len) {
     if_debug_printf_P(PSTR("WsConsoleClient::onDisconnect(%s, %d)\n"), printable_string(data, std::min((size_t)32, len)).c_str(), len);
 }
 
-void WsConsoleClient::onError(WsErrorType type, uint8_t *data, size_t len) {
+void WsConsoleClient::onError(WsConsoleClient::WsErrorType type, uint8_t *data, size_t len) {
     if_debug_printf_P(PSTR("WsConsoleClient::onError(%d, %s, %d)\n"), type, printable_string(data, std::min((size_t)32, len)).c_str(), len);
 }
 

@@ -3,7 +3,6 @@ Author: sascha_lammers@gmx.de
 */
 
 #include "WiFiCallbacks.h"
-#include <debug_helper.h>
 
 static WiFiCallbacks::CallbackVector _callbacks;
 

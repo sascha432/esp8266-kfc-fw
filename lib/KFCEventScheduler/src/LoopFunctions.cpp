@@ -3,7 +3,6 @@
 */
 
 #include "LoopFunctions.h"
-#include "debug_helper.h"
 
 static LoopFunctions::FunctionsVector _functions;
 

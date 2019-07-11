@@ -195,7 +195,7 @@ void MQTTClient::autoReconnect(uint32_t timeout) {
             Scheduler.removeTimer(_timer);
             _timer = nullptr;
         }
-        _timer = Scheduler.addTimer(timeout, false, [this](EventScheduler::EventTimerPtr timer) {
+        _timer = Scheduler.addTimer(timeout, false, [this](EventScheduler::TimerPtr timer) {
             debug_printf_P(PSTR("MQTTClient::autoReconnectTimer() timer = isConnected() %d\n"), this->isConnected());
             if (!this->isConnected()) {
                 this->connect();
@@ -556,7 +556,7 @@ bool mqtt_at_mode_command_handler(Stream &serial, const String &command, int8_t 
 void add_plugin_mqtt() {
     Plugin_t plugin;
 
-    init_plugin(F("mqtt"), plugin, false, true, 100);
+    init_plugin(PSTR("mqtt"), plugin, false, true, 10);
 
     plugin.setupPlugin = MQTTClient::setup;
     plugin.statusTemplate = MQTTClient::getStatus;

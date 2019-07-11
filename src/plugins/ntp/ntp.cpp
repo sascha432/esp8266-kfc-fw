@@ -24,7 +24,18 @@
 #include "debug_local_undef.h"
 #endif
 
+#include <push_pack.h>
+
+typedef struct __attribute__packed__ {
+    int32_t offset;
+    char abbreviation[4];
+} NTPClientData_t;
+
+#include <pop_pack.h>
+
 PROGMEM_STRING_DEF(strftime_date_time_zone, "%FT%T %Z");
+
+#define NTP_CLIENT_RTC_MEM_ID 3
 
 class TimezoneData;
 
@@ -55,7 +66,7 @@ private:
 
     RemoteTimezone *_remoteTimezone;
     uint16_t _failureCount;
-    EventScheduler::EventTimerPtr _updateTimer;
+    EventScheduler::TimerPtr _updateTimer;
 };
 
 time_t TimezoneData::_zoneEnd = 0;
@@ -121,7 +132,7 @@ void TimezoneData::retry(const String &message) {
     // 10, 13, 23, 40, 63, 93, 130, 173, 223, 280, 343, 413, 490, 573, 663, 760, 863, 973, 1090, 1213, 1343, 1480, 1623, 1773, 1930, 2093, 2263, 2440, 2623, 2813, ...
     uint32_t next_check = 10 * (1 + (_failureCount * _failureCount / 3));
 
-    _updateTimer = Scheduler.addTimer((int64_t)next_check * (int64_t)1000, false, [](EventScheduler::EventTimerPtr timer) {
+    _updateTimer = Scheduler.addTimer((int64_t)next_check * (int64_t)1000, false, [](EventScheduler::TimerPtr timer) {
         if (WiFi.isConnected()) { // retry if WiFi is connected, otherwise wait for connected event
             wifiConnectedCallback(WiFiCallbacks::EventEnum_t::CONNECTED, nullptr);
         }
@@ -152,7 +163,7 @@ void TimezoneData::wifiConnectedCallback(uint8_t event, void *payload) {
                 timezoneData->setZoneEnd(zoneEnd);
                 LoopFunctions::add(TimezoneData::updateLoop);
                 auto tmp = timezoneData;
-                Scheduler.addTimer(1000, false, [tmp](EventScheduler::EventTimerPtr timer) { // delete outside the callback or deleting the async http client causes a crash in ~RemoteTimezone()
+                Scheduler.addTimer(1000, false, [tmp](EventScheduler::TimerPtr timer) { // delete outside the callback or deleting the async http client causes a crash in ~RemoteTimezone()
                     delete tmp;
                 });
                 timezoneData = nullptr;
@@ -160,6 +171,12 @@ void TimezoneData::wifiConnectedCallback(uint8_t event, void *payload) {
                 char buf[32];
                 timezone_strftime_P(buf, sizeof(buf), PSTR("%a, %d %b %Y %T %Z"), timezone_localtime(timezoneData->getZoneEndPtr()));
                 Logger_notice(F("Remote timezone: %s offset %0.2d:%0.2u. Next check at %s"), timezone.getAbbreviation().c_str(), offset / 3600, offset % 60, buf);
+
+                // store timezone in RTC memory that it is available after wake up
+                NTPClientData_t ntp;
+                ntp.offset = offset;
+                strncpy(ntp.abbreviation, timezone.getAbbreviation().c_str(), sizeof(ntp.abbreviation) - 1)[sizeof(ntp.abbreviation) - 1] = 0;
+                plugin_write_rtc_memory(NTP_CLIENT_RTC_MEM_ID, &ntp, sizeof(ntp));
 
             } else {
                 timezoneData->retry(message);
@@ -283,7 +300,7 @@ bool ntp_client_at_mode_command_handler(Stream &serial, const String &command, i
         time_t now = time(nullptr);
         char timestamp[64];
         if (!IS_TIME_VALID(now)) {
-            serial.print(F("Time is currently not set. NTP is "));
+            serial.printf_P(PSTR("Time is currently not set (%lu). NTP is "), now);
             if (config.get<ConfigFlags>(_H(Config().flags)).ntpClientEnabled) {
                 serial.println(FSPGM(enabled));
             } else {
@@ -326,22 +343,41 @@ bool ntp_client_at_mode_command_handler(Stream &serial, const String &command, i
     return false;
 }
 
-void ntp_client_deep_sleep(uint32_t time, RFMode mode) {
-    // TODO store offset (and abbreviation?) in RTC memory to restore it after sleep mode
+// data is stored after retrieval
+// void ntp_client_prepare_deep_sleep(uint32_t time, RFMode mode) {
+// }
+
+void ntp_client_reconfigure_plugin() {
+    timezone_setup();
 }
+
+PROGMEM_PLUGIN_CONFIG_DEF(ntp, 6, false, false, NTP_CLIENT_RTC_MEM_ID, timezone_setup, TimezoneData::getStatus, ntp_client_create_settings_form, ntp_client_reconfigure_plugin, nullptr, ntp_client_at_mode_command_handler);
+
+
+// const PluginProgmemConfig_t __ntp_client_plugin_config PROGMEM = {
+//     SPGM(__plugin_config_name_ntp),
+//     timezone_setup,
+//     TimezoneData::getStatus,
+//     ntp_client_create_settings_form,
+//     ntp_client_reconfigure_plugin,
+//     nullptr,
+// #if AT_MODE_SUPPORTED
+//     ntp_client_at_mode_command_handler
+// #endif
+// };
 
 void add_plugin_ntp_client() {
     Plugin_t plugin;
 
-    init_plugin(F("ntp"), plugin, false, false, 20);
+    init_plugin(SPGM(__plugin_config_name_ntp), plugin, false, false, 6);
 
+    //plugin.progmemPtr = __ntp_client_plugin_config;
+    plugin.rtcMemoryId = NTP_CLIENT_RTC_MEM_ID;
     plugin.setupPlugin = timezone_setup;
     plugin.statusTemplate = TimezoneData::getStatus;
     plugin.configureForm = ntp_client_create_settings_form;
-    plugin.reconfigurePlugin = []() {
-        timezone_setup();
-    };
-    plugin.prepareDeepSleep = ntp_client_deep_sleep;
+    plugin.reconfigurePlugin = ntp_client_reconfigure_plugin;
+    //plugin.prepareDeepSleep = ntp_client_prepare_deep_sleep;
 #if AT_MODE_SUPPORTED
     plugin.atModeCommandHandler = ntp_client_at_mode_command_handler;
 #endif

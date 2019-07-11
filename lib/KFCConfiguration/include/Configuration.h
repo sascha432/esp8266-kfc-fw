@@ -48,12 +48,7 @@ uint16_t constexpr getHandle(const char *name) {
 const char *getHandleName(uint16_t crc);
 #endif
 
-#if _WIN32 || _WIN64
-#define CONFIGURATION_PACKED
-#pragma pack(push, 1)
-#else
-#define CONFIGURATION_PACKED   __attribute__((packed))
-#endif
+#include <push_pack.h>
 
 class Configuration {
 public:
@@ -194,6 +189,4 @@ protected:
     static unsigned long _readAccess;
 };
 
-#if _WIN32 || _WIN64
-#pragma pack(pop)
-#endif
+#include <pop_pack.h>

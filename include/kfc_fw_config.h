@@ -154,13 +154,17 @@ struct HomeAssistant {
     char token[250];
 };
 
-struct StoredDHCPConfig {
+#define CONFIG_RTC_MEM_ID 2
+
+typedef struct  {
     uint32_t local_ip;
     uint32_t dns1;
     uint32_t dns2;
     uint32_t subnet;
     uint32_t gateway;
-};
+    uint8_t channel;  // 1 byte,   5 in total
+    uint8_t bssid[6]; // 6 bytes, 11 in total
+} WiFiQuickConnect_t;
 
 struct Config {
     uint32_t version;
@@ -174,7 +178,6 @@ struct Config {
     IPAddress local_ip;
     IPAddress subnet;
     IPAddress gateway;
-    struct StoredDHCPConfig last_dhcp_config;
     SoftAP soft_ap;
 #if WEBSERVER_SUPPORT
     uint16_t http_port;

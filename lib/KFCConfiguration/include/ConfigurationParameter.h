@@ -7,12 +7,7 @@
 #include <Arduino_compat.h>
 #include <type_traits>
 
-#if _WIN32 || _WIN64
-#define CONFIGURATION_PACKED
-#pragma pack(push, 1)
-#else
-#define CONFIGURATION_PACKED   __attribute__((packed))
-#endif
+#include <push_pack.h>
 
 class Buffer;
 
@@ -28,13 +23,13 @@ public:
         _INVALID = 0b1111
     } TypeEnum_t;
 
-    typedef struct CONFIGURATION_PACKED {
+    typedef struct __attribute__packed__ {
         uint16_t handle;            // 16
         uint16_t type : 4;          // 4
         uint16_t length : 12;       // 16
     } Param_t;
 
-    typedef struct CONFIGURATION_PACKED {
+    typedef struct __attribute__packed__ {
         uint8_t *data;              // 32           data or ptr to data
         uint16_t size : 12;         // 44           max. size of data
         uint16_t dirty : 1;         // 45           data has been changed and needs to be stored in EEPROM
@@ -91,6 +86,4 @@ private:
     Info_t _info;
 };
 
-#if _WIN32 || _WIN64
-#pragma pack(pop)
-#endif
+#include <pop_pack.h>

@@ -14,8 +14,8 @@ PROGMEM_STRING_DECL(text_plain);
     setUri(uri);
     setMethod(HTTP_POST);
     onRequest(_onRequest);
-    onUpload([this](AsyncWebServerRequest *request, const String &filename, size_t index, uint8_t *data, size_t len, bool final) { 
-        this->_handleUpload(request, filename, index, data, len, final); 
+    onUpload([this](AsyncWebServerRequest *request, const String &filename, size_t index, uint8_t *data, size_t len, bool final) {
+        this->_handleUpload(request, filename, index, data, len, final);
     });
 }
 

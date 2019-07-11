@@ -89,6 +89,13 @@ void setup_wifi_callbacks() {
             debug_printf_P(PSTR("Station: WiFi connected to %s, offline for %s, millis %lu\n"), event.ssid.c_str(), str.c_str(), millis());
             debug_printf_P(PSTR("Free heap %s\n"), formatBytes(ESP.getFreeHeap()).c_str());
             wifi_connected = true;
+
+            WiFiQuickConnect_t quickConnect;
+            plugin_read_rtc_memory(CONFIG_RTC_MEM_ID, &quickConnect, sizeof(quickConnect));
+            quickConnect.channel = WiFi.channel();
+            memcpy(quickConnect.bssid, WiFi.BSSID(), sizeof(quickConnect.bssid));
+            plugin_write_rtc_memory(CONFIG_RTC_MEM_ID, &quickConnect, sizeof(quickConnect));
+
         }
     });
 
@@ -101,19 +108,15 @@ void setup_wifi_callbacks() {
 
         // store last DHCP configation in config
         if (wifi_station_dhcpc_status() != DHCP_STOPPED && config._H_GET(Config().flags).useStaticIPDuringWakeUp) {
-            struct StoredDHCPConfig dhcpConfig;
-            struct StoredDHCPConfig storedConfig = config._H_GET(Config().last_dhcp_config);
 
-            dhcpConfig.local_ip = (uint32_t)WiFi.localIP();
-            dhcpConfig.subnet = (uint32_t)WiFi.subnetMask();
-            dhcpConfig.gateway = (uint32_t)WiFi.gatewayIP();
-            dhcpConfig.dns1 = (uint32_t)WiFi.dnsIP();
-            dhcpConfig.dns2 = (uint32_t)WiFi.dnsIP(1);
-
-            if (memcmp(&dhcpConfig, &storedConfig, sizeof(dhcpConfig)) != 0) {
-                debug_printf_P(PSTR("Storing DHCP configuration\n"))
-                config._H_SET(Config().last_dhcp_config, dhcpConfig);
-                config_write();
+            WiFiQuickConnect_t quickConnect;
+            if (plugin_read_rtc_memory(CONFIG_RTC_MEM_ID, &quickConnect, sizeof(quickConnect))) {
+                quickConnect.local_ip = (uint32_t)WiFi.localIP();
+                quickConnect.subnet = (uint32_t)WiFi.subnetMask();
+                quickConnect.gateway = (uint32_t)WiFi.gatewayIP();
+                quickConnect.dns1 = (uint32_t)WiFi.dnsIP();
+                quickConnect.dns2 = (uint32_t)WiFi.dnsIP(1);
+                plugin_write_rtc_memory(CONFIG_RTC_MEM_ID, &quickConnect, sizeof(quickConnect));
             }
         }
 
@@ -182,6 +185,14 @@ bool safe_mode = false;
 void setup() {
 
     Serial.begin(115200);
+
+
+resetDetector._init();//TODO remove
+
+#if DEBUG && 1
+    Serial.println(resetDetector._init_millis);
+    Serial.println(millis());
+#endif
 
     if (resetDetector.getResetCounter() >= 20) { // protection against EEPROM/Flash memory damage during boot loops
         Serial.println(F("Too many resets detected. Pausing boot for 30 seconds..."));

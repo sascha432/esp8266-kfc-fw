@@ -6,7 +6,9 @@
 #include "EventTimer.h"
 #include "LoopFunctions.h"
 
+#if !defined(DISABLE_EVENT_SCHEDULER)
 EventScheduler Scheduler;
+#endif
 
 /**
  *
@@ -18,8 +20,8 @@ EventScheduler Scheduler;
  *
  */
 
-// EventScheduler::EventTimerPtr EventScheduler::_addTimer(int64_t delay, int repeat, Callback callback, Priority_t priority) {
-//     EventTimerPtr timer;
+// EventScheduler::TimerPtr EventScheduler::_addTimer(int64_t delay, int repeat, Callback callback, Priority_t priority) {
+//     TimerPtr timer;
 //     _timers.push_back(timer = new EventTimer(callback, delay, repeat, priority));
 // #if DEBUG
 //     timer->__source = _debug_filename;
@@ -32,9 +34,9 @@ EventScheduler Scheduler;
 //     return _timers.back();
 // }
 
-EventScheduler::EventTimerPtr EventScheduler::addTimer(int64_t delay, int repeat, Callback callback, Callback removeCallback, Priority_t priority) {
+EventScheduler::TimerPtr EventScheduler::addTimer(int64_t delay, int repeat, Callback callback, Callback removeCallback, Priority_t priority) {
 #if DEBUG_EVENT_SCHEDULER
-    EventTimerPtr timer;
+    TimerPtr timer;
     _timers.push_back(timer = new EventTimer(callback, removeCallback, delay, repeat, priority));
     if_debug_printf_P(PSTR("add timer %p (%s), delay %.3f, repeat %d, priority %d\n"), timer, timer->_getTimerSource().c_str(), delay / 1000.0, repeat, priority);
 #else
@@ -45,17 +47,17 @@ EventScheduler::EventTimerPtr EventScheduler::addTimer(int64_t delay, int repeat
     return _timers.back();
 }
 
-bool EventScheduler::hasTimer(EventTimerPtr timer) {
+bool EventScheduler::hasTimer(TimerPtr timer) {
     if (!timer) {
         return false;
     }
-    const auto &it = std::find_if(_timers.begin(), _timers.end(), [&timer](const EventTimerPtr _timer) {
+    const auto &it = std::find_if(_timers.begin(), _timers.end(), [&timer](const TimerPtr _timer) {
         return _timer == timer;
     });
     return it != _timers.end();
 }
 
-void EventScheduler::removeTimer(EventTimerPtr timer, bool deleteObject) {
+void EventScheduler::removeTimer(TimerPtr timer, bool deleteObject) {
   debug_printf_P(PSTR("EventScheduler::removeTimer(%p, %d)\n"), timer, deleteObject);
     if (!timer) {
         return;
@@ -70,7 +72,7 @@ void EventScheduler::removeTimer(EventTimerPtr timer, bool deleteObject) {
     timer->detach();
 
     // remove from list of timers
-    _timers.erase(std::remove_if(_timers.begin(), _timers.end(), [&timer](const EventTimerPtr _timer) {
+    _timers.erase(std::remove_if(_timers.begin(), _timers.end(), [&timer](const TimerPtr _timer) {
         return _timer == timer;
     }), _timers.end());
 
@@ -81,7 +83,7 @@ void EventScheduler::removeTimer(EventTimerPtr timer, bool deleteObject) {
             it.removed = true;
         }
     }
-    // _callbacks.erase(std::remove_if(_callbacks.begin(), _callbacks.end(), [&timer](const EventTimerPtr _timer) {
+    // _callbacks.erase(std::remove_if(_callbacks.begin(), _callbacks.end(), [&timer](const TimerPtr _timer) {
     //     return _timer == timer;
     // }), _callbacks.end());
 
@@ -104,7 +106,7 @@ void EventScheduler::removeTimer(EventTimerPtr timer, bool deleteObject) {
 }
 
 void EventScheduler::_timerCallback(void *arg) {
-    EventTimerPtr timer = reinterpret_cast<EventTimerPtr>(arg);
+    TimerPtr timer = reinterpret_cast<TimerPtr>(arg);
     if (timer->_remainingDelay > MAX_DELAY) {
         timer->_remainingDelay -= MAX_DELAY;
         debug_printf_P(PSTR("EventScheduler::_timerCallback(%p): timer %p is greater max delay %d, remaining delay %.3f\n"), arg, timer, MAX_DELAY, timer->_remainingDelay / 1000.0);
@@ -131,7 +133,7 @@ void EventScheduler::_timerCallback(void *arg) {
     }
 }
 
-void EventScheduler::callTimer(EventTimerPtr timer) {
+void EventScheduler::callTimer(TimerPtr timer) {
     debug_printf_P(PSTR("EventScheduler::callTimer(%p): priority %d\n"), timer, timer->_priority);
 #if DEBUG_EVENT_SCHEDULER
     // debug_printf_P(PSTR("real delay %lu / %lu\n"), millis() - timer->_start, (unsigned long)timer->getDelay());

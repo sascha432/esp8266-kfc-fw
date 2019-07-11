@@ -162,7 +162,7 @@ SerialHandler *Http2Serial::getSerialHandler() {
 void http2serial_install_web_server_hook() {
     auto server = get_web_server_object();
     if (server) {
-        AsyncWebSocket *ws_console = new AsyncWebSocket("/serial_console");
+        AsyncWebSocket *ws_console = new AsyncWebSocket(F("/serial_console"));
 
         ws_console->onEvent([](AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len) {
             WsClient::onWsEvent(server, client, type, data, len, arg, WsConsoleClient::getInstance);
@@ -173,7 +173,7 @@ void http2serial_install_web_server_hook() {
 }
 
 void http2serial_setup() {
-    auto plugin = get_plugin_by_name(F("remote"));
+    auto plugin = get_plugin_by_name(PSTR("remote"));
     if (plugin) {
         static auto prev_callback = plugin->reconfigurePlugin;
         plugin->reconfigurePlugin = [] {
@@ -210,7 +210,7 @@ bool http2_serial_at_mode_command_handler(Stream &serial, const String &command,
 void add_plugin_http2serial() {
     Plugin_t plugin;
 
-    init_plugin(F("http2serial"), plugin, false, false, 200);
+    init_plugin(PSTR("http2serial"), plugin, false, false, 12);
 
     plugin.setupPlugin = http2serial_setup;
 #if AT_MODE_SUPPORTED

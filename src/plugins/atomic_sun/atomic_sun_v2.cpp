@@ -435,11 +435,11 @@ void Driver_4ChDimmer::setup(bool isSafeMode) {
 void add_plugin_atomic_sun_v2() {
     Plugin_t plugin;
 
-    init_plugin(F("iot_4ch_dimmer"), plugin, 200);
+    init_plugin(PSTR("iot_4ch_dimmer"), plugin, false, false, 12);
 
     plugin.setupPlugin = Driver_4ChDimmer::setup;
     plugin.statusTemplate = Driver_4ChDimmer::getStatus;
-    // plugin.atModeCommandHandler = atomic_sun_v2_at_mode_command_handler;
+    // plugin..atModeCommandHandler = atomic_sun_v2_at_mode_command_handler;
     register_plugin(plugin);
 }
 

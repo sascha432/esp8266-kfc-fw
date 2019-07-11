@@ -6,7 +6,9 @@
 
 #if _WIN32 || _WIN64
 
+#include <algorithm>
 #include <BufferStream.h>
+#include <DumpBinary.h>
 
 _SPIFFS SPIFFS;
 
@@ -31,11 +33,6 @@ unsigned long millis() {
     time_t now = time(nullptr);
     return (unsigned long)((sysTime.wMilliseconds + now * 1000) - millis_start_time);
 }
-
-void delay(uint32_t time_ms) {
-    Sleep(time_ms);
-}
-
 
 FakeSerial Serial;
 
@@ -604,6 +601,90 @@ int StringStream::peek() {
 
 size_t StringStream::write(uint8_t data) {
     return 0;
+}
+
+EspClass ESP;
+
+void EspClass::rtcMemDump() {
+    if (_rtcMemory) {
+        DumpBinary dump(Serial);
+        dump.dump(_rtcMemory + rtcMemoryReserved, rtcMemoryUser);
+    }
+}
+
+void EspClass::rtcClear() {
+    if (_rtcMemory) {
+        memset(_rtcMemory, 0, rtcMemorySize);
+        _writeRtcMemory();
+    }
+}
+
+ESPTimerThread timerThread;
+static bool timerThreadExitFuncRegistered = false;
+
+
+void ESPTimerThread::begin() {
+    if (!_handle) {
+    }
+}
+
+void ESPTimerThread::end() {
+    if (_handle) {
+        _handle = nullptr;
+    }
+}
+
+ESPTimerThread::TimerVector &ESPTimerThread::getVector() {
+    return _timers;
+}
+
+void ESPTimerThread::run() {
+    unsigned long time = millis();
+    for (auto timer : _timers) {
+        if (timer->_nextCall && time >= timer->_nextCall) {
+            timer->_nextCall = timer->_repeat ? time + timer->_interval : 0;
+            timer->_func(timer->_arg);
+        }
+    }
+    _removeEndedTimers();
+}
+
+void ESPTimerThread::_removeEndedTimers() {
+    _timers.erase(std::remove_if(_timers.begin(), _timers.end(), [](const os_timer_t *_timer) {
+        return _timer->_nextCall == 0;
+    }), _timers.end());
+}
+
+
+void delay(uint32_t time_ms) {
+    unsigned long _endSleep = millis() + time_ms;
+    timerThread.run();
+    while (millis() < _endSleep) {
+        Sleep(1);
+        timerThread.run();
+    }
+}
+
+void yield() {
+    delay(1);
+}
+
+void os_timer_setfn(os_timer_t * timer, os_timer_func_t func, void * arg) {
+    timer->_arg = arg;
+    timer->_func = func;
+}
+
+void os_timer_arm(os_timer_t * timer, int interval, int repeat) {
+    timer->_interval = interval;
+    timer->_repeat = repeat;
+    timer->_nextCall = millis() + timer->_interval;
+    timerThread.getVector().push_back(timer);
+}
+
+void os_timer_disarm(os_timer_t * timer) {
+    timerThread.getVector().erase(std::remove_if(timerThread.getVector().begin(), timerThread.getVector().end(), [timer](const os_timer_t *_timer) {
+        return (timer == _timer);
+    }), timerThread.getVector().end());
 }
 
 #endif

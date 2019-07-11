@@ -326,8 +326,8 @@ void Configuration::copyEEPROM(uint8_t *dst, uint16_t offset, uint16_t length, u
         eeprom_start_address -= alignment;
     }
     uint16_t requiredSize = length + alignment;
-    if (requiredSize % 4 != 0) {
-        requiredSize += 4 - (requiredSize % 4);
+    if (requiredSize & 0x3) {
+        requiredSize = (requiredSize + 4) & ~0x3;
     }
 
     if (requiredSize > size) {

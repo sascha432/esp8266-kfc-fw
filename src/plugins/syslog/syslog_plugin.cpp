@@ -222,7 +222,7 @@ void syslog_prepare_deep_sleep(uint32_t time, RFMode mode) {
 void add_plugin_syslog() {
     Plugin_t plugin;
 
-    init_plugin(F("syslog"), plugin, false, true, 20);
+    init_plugin(PSTR("syslog"), plugin, false, true, 5);
 
     plugin.setupPlugin = syslog_setup;
     plugin.statusTemplate = syslog_get_status;

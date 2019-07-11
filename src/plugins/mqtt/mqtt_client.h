@@ -72,7 +72,7 @@ private:
 
 private:
     AsyncMqttClient *_client;
-    EventScheduler::EventTimerPtr _timer;
+    EventScheduler::TimerPtr _timer;
     uint32_t _autoReconnectTimeout;
     uint16_t _maxMessageSize;
     MQTTComponentVector _components;

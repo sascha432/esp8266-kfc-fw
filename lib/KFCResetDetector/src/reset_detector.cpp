@@ -9,29 +9,40 @@
 ResetDetector resetDetector;
 
 #ifndef DEBUG_RESET_DETECTOR
-#define DEBUG_RESET_DETECTOR 0
+#define DEBUG_RESET_DETECTOR        1
 #endif
-
 #if DEBUG_RESET_DETECTOR
-#define DEBUG_PRINT(...) Serial.printf_P(__VA_ARGS__)
+#include <debug_helper_enable.h>
 #else
-#define DEBUG_PRINT(...) ;
+#include <debug_helper_disable.h>
 #endif
 
 ResetDetector::ResetDetector() {
-     _timer = nullptr;
-   _init();
+//    _init();
 }
 
 void ResetDetector::_init() {
-    ResetDetectorData_t data;
-    auto isValid = false;
-    uint16_t crc = ~0;
-
-#if DEBUG_RESET_DETECTOR
+#if DEBUG
     Serial.begin(115200);
+    _debug_printf_P(PSTR("ResetDetector::init()\n"));
+    _init_millis = millis();
+#endif
+     _timer = nullptr;
+#if HAVE_KFC_PLUGINS
+    register_all_plugins();
 #endif
 
+    ResetDetectorData_t data;
+    auto isValid = false;
+
+#if HAVE_KFC_PLUGINS
+
+    if (plugin_read_rtc_memory(RESET_DETECTOR_RTC_MEM_ID, &data, sizeof(data))) {
+        isValid = true;
+    }
+
+#else
+    uint16_t crc = ~0;
     memset(&data, 0, sizeof(data));
 
     if (ESP.rtcUserMemoryRead(RESET_DETECTOR_RTC_MEM_ADDRESS, (uint32_t *)&data, sizeof(data))) {
@@ -42,6 +53,7 @@ void ResetDetector::_init() {
             }
         }
     }
+#endif
 
     struct rst_info *reset_info = ESP.getResetInfoPtr();
     _resetReason = reset_info->reason;
@@ -54,10 +66,16 @@ void ResetDetector::_init() {
         _safeMode = 0;
         _resetCounter = 0;
     }
-    DEBUG_PRINT(PSTR("\n\n\nRD: valid %d, magic word %08x, safe mode: %d, reset counter %d, crc: %04x = %04x\n"),
-        isValid, data.magic_word, data.safe_mode, data.reset_counter, crc, data.crc);
-    DEBUG_PRINT(PSTR("RD: reset reason: %s (%d) / %s, reset info: %s, is crash: %d, is reset: %d, is reboot: %d\n"),
-        getResetReason().c_str(), _resetReason, ESP.getResetReason().c_str(), getResetInfo().c_str(), hasCrashDetected(), hasResetDetected(), hasRebootDetected());
+    _initialResetCounter = _resetCounter;
+
+
+#if HAVE_KFC_PLUGINS
+    _debug_printf_P(PSTR("\n\n\nRD: valid %d, safe mode: %d, reset counter %d\n"), isValid, data.safe_mode, data.reset_counter);
+    _debug_printf_P(PSTR("RD: reset reason: %s (%d), reset info: %s, is crash: %d, is reset: %d, is reboot: %d\n"), getResetReason().c_str(), _resetReason, getResetInfo().c_str(), hasCrashDetected(), hasResetDetected(), hasRebootDetected());
+#else
+    _debug_printf_P(PSTR("\n\n\nRD: valid %d, magic word %08x, safe mode: %d, reset counter %d, crc: %04x = %04x\n"), isValid, data.magic_word, data.safe_mode, data.reset_counter, crc, data.crc);
+    _debug_printf_P(PSTR("RD: reset reason: %s (%d), reset info: %s, is crash: %d, is reset: %d, is reboot: %d\n"), getResetReason().c_str(), _resetReason, getResetInfo().c_str(), hasCrashDetected(), hasResetDetected(), hasRebootDetected());
+#endif
 
     _writeData();
     armTimer();
@@ -71,13 +89,9 @@ void ResetDetector::armTimer() {
     if (_timer) {
         disarmTimer();
     }
-#if defined(ESP8266)
     _timer = new os_timer_t();
     os_timer_setfn(_timer, reinterpret_cast<os_timer_func_t *>(_timerCallback), reinterpret_cast<void *>(this));
     os_timer_arm(_timer, RESET_DETECTOR_TIMEOUT, 0);
-#else
-    #error Platform not supported
-#endif
 }
 
 void ResetDetector::disarmTimer() {
@@ -96,7 +110,7 @@ void ResetDetector::_timerCallback(void *arg) {
 }
 
 void ResetDetector::clearCounter() {
-    DEBUG_PRINT(PSTR("RD: set reset counter = 0 (%d)\n"), _resetCounter);
+    _debug_printf_P(PSTR("RD: set reset counter = 0 (%d)\n"), _resetCounter);
     _resetCounter = 0;
     _writeData();
 }
@@ -123,6 +137,9 @@ bool ResetDetector::hasWakeUpDetected() const {
 }
 
 const String ResetDetector::getResetReason() const {
+#if USE_ESP_GET_RESET_REASON
+    return ESP.getResetReason();
+#else
     switch(_resetReason) {
         case REASON_DEFAULT_RST:
             return F("Normal startup");
@@ -140,6 +157,7 @@ const String ResetDetector::getResetReason() const {
             return F("External system reset");
     }
     return F("Unknown");
+#endif
 }
 
 const String ResetDetector::getResetInfo() const {
@@ -148,6 +166,10 @@ const String ResetDetector::getResetInfo() const {
 
 uint8_t ResetDetector::getResetCounter() const {
     return _resetCounter;
+}
+
+uint8_t ResetDetector::getInitialResetCounter() const {
+    return _initialResetCounter;
 }
 
 uint8_t ResetDetector::getSafeMode() const {
@@ -159,18 +181,83 @@ void ResetDetector::setSafeMode(uint8_t safeMode) {
     _writeData();
 }
 
+#if DEBUG
+void ResetDetector::__setResetCounter(uint8_t counter) {
+    _initialResetCounter = _resetCounter = counter;
+    _writeData();
+}
+#endif
+
 void ResetDetector::_writeData() {
 
     ResetDetectorData_t data;
     memset((uint8_t *)&data, 0, sizeof(data));
 
-    data.magic_word = RESET_DETECTOR_MAGIC_WORD;
     data.reset_counter = _resetCounter;
     data.safe_mode = _safeMode;
+
+#if HAVE_KFC_PLUGINS
+
+    plugin_write_rtc_memory(RESET_DETECTOR_RTC_MEM_ID, (void *)&data, sizeof(data));
+
+#else
+
+    data.magic_word = RESET_DETECTOR_MAGIC_WORD;
     data.crc = crc16_calc((uint8_t *)&data, sizeof(data) - sizeof(data.crc));
 
     if (!ESP.rtcUserMemoryWrite(RESET_DETECTOR_RTC_MEM_ADDRESS, (uint32_t *)&data, sizeof(data))) {
-        DEBUG_PRINT(PSTR("RD: Failed to write to RTC MEM\n"));
+        _debug_printf_P(PSTR("RD: Failed to write to RTC MEM\n"));
     }
 
+#endif
+
 }
+
+#if HAVE_KFC_PLUGINS
+
+bool reset_detector_command_handler(Stream &serial, const String &command, int8_t argc, char **argv) {
+
+    if (command.length() == 0) {
+        serial.print(F(
+            " AT+RD?\n"
+            "    Display information\n"
+            " AT+RDCLEAR\n"
+            "    Reset detector clear counter\n"
+        ));
+    } else if (command.equalsIgnoreCase(F("RDCLEAR"))) {
+        if (argc == -1) {
+            serial.printf_P(PSTR("safe mode: %d\nreset counter: %d\ninitial reset counter: %d\ncrash: %d\nreboot: %d\nreset: %d\nreset reason: %s / %s\n"),
+                resetDetector.getSafeMode(),
+                resetDetector.getResetCounter(),
+                resetDetector.getInitialResetCounter(),
+                resetDetector.hasCrashDetected(),
+                resetDetector.hasRebootDetected(),
+                resetDetector.hasResetDetected(),
+                resetDetector.getResetReason().c_str(),
+                ESP.getResetReason().c_str()
+            );
+
+        } else {
+            resetDetector.clearCounter();
+        }
+    }
+    return false;
+}
+
+void add_plugin_reset_detector() {
+    Plugin_t plugin;
+
+#if AT_MODE_SUPPORTED && DEBUG
+    init_plugin(PSTR("rd"), plugin, false, false, PLUGIN_MAX_PRIORITY);
+#else
+    init_plugin(PSTR("rd"), plugin, false, false, PLUGIN_MAX_PRIORITY);
+#endif
+
+    plugin.rtcMemoryId = RESET_DETECTOR_RTC_MEM_ID;
+#if AT_MODE_SUPPORTED && DEBUG
+    plugin.atModeCommandHandler = reset_detector_command_handler;
+#endif
+    register_plugin(plugin);
+}
+
+#endif

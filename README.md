@@ -61,6 +61,10 @@ https://github.com/me-no-dev/ESPAsyncWebServer
 
 https://github.com/boblemaire/asyncHTTPrequest
 
+### Arduino Cryptography Library
+
+https://github.com/rweather/arduinolibs
+
 ### AsyncMqttClient (MQTT plugin)
 
 https://github.com/marvinroger/async-mqtt-client

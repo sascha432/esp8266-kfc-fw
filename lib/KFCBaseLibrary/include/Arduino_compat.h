@@ -76,6 +76,7 @@ typedef wifi_err_reason_t WiFiDisconnectReason;
 #include <time.h>
 #include <winsock.h>
 #include <strsafe.h>
+#include <vector>
 #include <iostream>
 #include <global.h>
 
@@ -143,7 +144,7 @@ const char *str_P(const char *str, uint8_t index = 0);  // not the same function
 
 #define strcasecmp_P _stricmp
 #define strncasecmp _strnicmp
-#define strcmp_P _strcmp
+#define strcmp_P strcmp
 
 #define strdup _strdup
 void throwException(PGM_P message);
@@ -151,6 +152,7 @@ void throwException(PGM_P message);
 unsigned long millis();
 
 void delay(uint32_t time_ms);
+void yield();
 
 class Print;
 
@@ -1044,6 +1046,10 @@ class FakeSerial : public Stdout {
    public:
     FakeSerial() : Stdout() {
     }
+    void begin(int baud) {
+    }
+    void end() {
+    }
     virtual int available() {
         return 0;
     }
@@ -1166,9 +1172,159 @@ private:
     int _httpCode;
 };
 
+struct rst_info{
+    uint32_t reason;
+    uint32_t exccause;
+    uint32_t epc1;
+    uint32_t epc2;
+    uint32_t epc3;
+    uint32_t excvaddr;
+    uint32_t depc;
+};
+
+
+enum rst_reason {
+    REASON_DEFAULT_RST      = 0,    /* normal startup by power on */
+    REASON_WDT_RST          = 1,    /* hardware watch dog reset */
+    REASON_EXCEPTION_RST    = 2,    /* exception reset, GPIO status won’t change */
+    REASON_SOFT_WDT_RST     = 3,    /* software watch dog reset, GPIO status won’t change */
+    REASON_SOFT_RESTART     = 4,    /* software restart ,system_restart , GPIO status won’t change */
+    REASON_DEEP_SLEEP_AWAKE = 5,    /* wake up from deep-sleep */
+    REASON_EXT_SYS_RST      = 6     /* external system reset */
+};
+
+enum RFMode {
+    RF_DEFAULT = 0, // RF_CAL or not after deep-sleep wake up, depends on init data byte 108.
+    RF_CAL = 1,      // RF_CAL after deep-sleep wake up, there will be large current.
+    RF_NO_CAL = 2,   // no RF_CAL after deep-sleep wake up, there will only be small current.
+    RF_DISABLED = 4 // disable RF after deep-sleep wake up, just like modem sleep, there will be the smallest current.
+};
+
+class EspClass {
+public:
+    EspClass() {
+        memset(&resetInfo, 0, sizeof(resetInfo));
+        _rtcMemory = nullptr;
+        _readRtcMemory();
+    }
+
+    bool rtcUserMemoryRead(uint32_t offset, uint32_t *data, size_t size)  {
+        offset = (offset * rtcMemoryBlkSize) + rtcMemoryReserved;
+        if (size + offset > rtcMemorySize) {
+            return false;
+        } else {
+            memcpy(data, _rtcMemory + offset, size);
+            return true;
+        }
+    }
+
+    bool rtcUserMemoryWrite(uint32_t offset, uint32_t *data, size_t size)    {
+        offset = (offset * rtcMemoryBlkSize) + rtcMemoryReserved;
+        if (size + offset > rtcMemorySize) {
+            return false;
+        } else {
+            memcpy(_rtcMemory + offset, data, size);
+            _writeRtcMemory();
+            return true;
+        }
+    }
+
+    void rtcMemDump();
+    void rtcClear();
+
+    String getResetReason(void) {
+        return "Unknown";
+    }
+
+    String getResetInfo(void) {
+        return "Info 0";
+    }
+
+    struct rst_info *getResetInfoPtr(void) {
+        return &resetInfo;
+    }
+
+private:
+    void _readRtcMemory() {
+        if (_rtcMemory) {
+            free(_rtcMemory);
+        }
+        _rtcMemory = (uint8_t *)calloc(rtcMemorySize, 1);
+        FILE *fp = fopen("rtcmemory.bin", "rb");
+        if (fp) {
+            fread(_rtcMemory, 1, rtcMemorySize, fp);
+            fclose(fp);
+        }
+    }
+    void _writeRtcMemory() {
+        if (!_rtcMemory) {
+            return;
+        }
+        FILE *fp = fopen("rtcmemory.bin", "wb");
+        if (fp) {
+            fwrite(_rtcMemory, 1, rtcMemorySize, fp);
+            fclose(fp);
+        }
+    }
+
+    static const uint16_t rtcMemoryReserved = 256;
+    static const uint16_t rtcMemoryUser = 512;
+    static const uint16_t rtcMemorySize = rtcMemoryReserved + rtcMemoryUser;
+    static const uint8_t rtcMemoryBlkSize = 4;
+public:
+    uint8_t *_rtcMemory;
+
+    struct rst_info resetInfo;
+};
+
 extern ESP8266WiFiClass WiFi;
 extern String _sharedEmptyString;
 extern EEPROMFile EEPROM;
+extern EspClass ESP;
+
+struct os_timer_t;
+
+class ESPTimerThread {
+public:
+    typedef std::vector<os_timer_t *> TimerVector;
+
+    ESPTimerThread() {
+        _handle = nullptr;
+    }
+    virtual ~ESPTimerThread() {
+        end();
+    }
+
+    void begin();
+    void end();
+    TimerVector &getVector();
+    void run();
+
+private:
+    void _removeEndedTimers();
+
+    HANDLE _handle;
+    TimerVector _timers;
+};
+
+extern ESPTimerThread timerThread;
+
+
+typedef void os_timer_func_t(void *timer_arg);
+
+struct os_timer_t {
+    int _interval;
+    int _repeat;
+    os_timer_func_t *_func;
+    void *_arg;
+    unsigned long _nextCall;
+};
+
+void os_timer_setfn(os_timer_t *timer, os_timer_func_t func, void *arg);
+void os_timer_arm(os_timer_t *timer, int interval, int repeat);
+void os_timer_disarm(os_timer_t *timer);
+
+#include "debug_helper_enable.h"
 
 #else
 

@@ -86,8 +86,7 @@ bool i2cscanner_at_mode_command_handler(Stream &serial, const String &command, i
 void add_plugin_i2cscanner_plugin() {
     Plugin_t plugin;
 
-    init_plugin(F("i2scanner"), plugin, false, false, 200);
-
+    init_plugin(PSTR("i2scanner"), plugin, false, false, PLUGIN_MIN_PRIORITY);
     plugin.atModeCommandHandler = i2cscanner_at_mode_command_handler;
     register_plugin(plugin);
 }

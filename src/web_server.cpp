@@ -257,7 +257,7 @@ void init_web_server() {
                     config_set_blink(BLINK_SLOW);
                     request->onDisconnect([]() {
                         Logger_notice(F("Rebooting after upgrade"));
-                        Scheduler.addTimer(2000, false, [](EventScheduler::EventTimerPtr timer) {
+                        Scheduler.addTimer(2000, false, [](EventScheduler::TimerPtr timer) {
                             config_restart();
                         });
                     });
@@ -673,7 +673,7 @@ void web_server_create_settings_form(AsyncWebServerRequest *request, Form &form)
 void add_plugin_web_server() {
     Plugin_t plugin;
 
-    init_plugin(F("remote"), plugin, false, false, 10);
+    init_plugin(PSTR("remote"), plugin, false, false, 3);
     plugin.setupPlugin = init_web_server;
     plugin.statusTemplate = web_server_get_status;
     plugin.configureForm = web_server_create_settings_form;

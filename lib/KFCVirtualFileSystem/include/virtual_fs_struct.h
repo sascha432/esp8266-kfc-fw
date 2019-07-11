@@ -4,12 +4,7 @@
 
 #pragma once
 
-#if _WIN32 || _WIN64
-#define VFS_PACKED
-#pragma pack(push, 1)
-#else
-#define VFS_PACKED   __attribute__((packed))
-#endif
+#include <push_pack.h>
 
 #include <stdint.h>
 
@@ -22,7 +17,7 @@
 #define VFS_OFFSET_VIRTUAL_PATH(header, ofs)    header.data_block_offset + ofs
 #define VFS_OFFSET_INLINE_CONTENT(header)       header.content_offset + sizeof(vfs_content_header)
 
-typedef struct VFS_PACKED {
+typedef struct __attribute__packed__ {
     uint16_t entries;                           // number of file entries
     uint16_t data_block_offset;                 // location of the data block
     uint32_t content_offset;
@@ -37,7 +32,7 @@ typedef uint16_t vfs_crc_t;
 typedef uint16_t vfs_offset_t;
 typedef uint32_t vfs_long_offset_t;
 
-typedef struct VFS_PACKED {
+typedef struct __attribute__packed__ {
     vfs_crc_t crc;                                      // crc of the path
     vfs_offset_t virtual_path_offset;                   // offset of the virtual path int he data block
     vfs_offset_t hash_offset;
@@ -46,19 +41,19 @@ typedef struct VFS_PACKED {
     uint32_t modification_time;
 } vfs_file_entry;
 
-typedef struct VFS_PACKED {
+typedef struct __attribute__packed__ {
     vfs_crc_t crc;                                      // crc of the path
     uint16_t path_offset;                               // offset to the path
 } vfs_lookup_table_entry;
 
-typedef struct VFS_PACKED {
+typedef struct __attribute__packed__ {
     uint16_t file_entry_num;
     uint8_t dir_len;                                     // length of the directory of the virutal file
     uint8_t extra_len;
     vfs_long_offset_t content_offset;                    // offset to the files content if it isn't stored in an external file
 } vfs_data_header;
 
-typedef struct VFS_PACKED {
+typedef struct __attribute__packed__ {
     uint16_t file_entry_num;
     uint16_t ___reserved;
 } vfs_content_header;
@@ -74,6 +69,4 @@ byte*extra_len              preserved for the future
 
 */
 
-#if _WIN32 || _WIN64
-#pragma pack(pop)
-#endif
+#include <pop_pack.h>

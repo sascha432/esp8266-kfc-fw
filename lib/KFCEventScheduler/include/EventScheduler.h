@@ -32,33 +32,33 @@ public:
         bool removed;
     };
 
-    typedef EventTimer *EventTimerPtr;
-    typedef std::function<void(EventTimerPtr timer)> Callback;
+    typedef EventTimer *TimerPtr;
+    typedef std::function<void(TimerPtr timer)> Callback;
     typedef std::vector<ActiveCallbackTimer> CallbackVector;
-    typedef std::vector<EventTimerPtr> TimerVector;
-    typedef std::vector<EventTimerPtr>::iterator TimerIterator;
+    typedef std::vector<TimerPtr> TimerVector;
+    typedef std::vector<TimerPtr>::iterator TimerIterator;
 
     EventScheduler() {
         _loopFunctionInstalled = false;
         _runtimeLimit = 250;
     }
 
-    EventTimerPtr addTimer(int64_t delayMillis, int repeat, Callback callback, Callback removeCallback, Priority_t priority = PRIO_LOW);
+    TimerPtr addTimer(int64_t delayMillis, int repeat, Callback callback, Callback removeCallback, Priority_t priority = PRIO_LOW);
 
-    EventTimerPtr addTimer(int64_t delayMillis, int repeat, Callback callback, Priority_t priority = PRIO_LOW) {
+    TimerPtr addTimer(int64_t delayMillis, int repeat, Callback callback, Priority_t priority = PRIO_LOW) {
         return addTimer(delayMillis, repeat, callback, nullptr, priority);
     }
-    EventTimerPtr addTimer(int64_t delayMillis, bool repeat, Callback callback, Priority_t priority = PRIO_LOW) {
+    TimerPtr addTimer(int64_t delayMillis, bool repeat, Callback callback, Priority_t priority = PRIO_LOW) {
         return addTimer(delayMillis, (int)(repeat ? EventScheduler::UNLIMTIED : EventScheduler::DONT), callback, priority);
     }
-    EventTimerPtr addTimer(int64_t delayMillis, bool repeat, Callback callback, Callback removeCallback, Priority_t priority = PRIO_LOW) {
+    TimerPtr addTimer(int64_t delayMillis, bool repeat, Callback callback, Callback removeCallback, Priority_t priority = PRIO_LOW) {
         return addTimer (delayMillis, (int)(repeat ? EventScheduler::UNLIMTIED : EventScheduler::DONT), callback, removeCallback, priority);
     }
-    bool hasTimer(EventTimerPtr timer);
-    void removeTimer(EventTimerPtr timer, bool deleteObject = true);
+    bool hasTimer(TimerPtr timer);
+    void removeTimer(TimerPtr timer, bool deleteObject = true);
 
     void loopFunc();
-    void callTimer(EventTimerPtr timer);
+    void callTimer(TimerPtr timer);
     void installLoopFunc();
     void removeLoopFunc();
 

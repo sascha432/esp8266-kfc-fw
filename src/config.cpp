@@ -382,9 +382,7 @@ void config_deep_sleep(uint32_t time, RFMode mode) {
     WiFiCallbacks::getVector().clear(); // disable WiFi callbacks to speed up shutdown
     Scheduler.terminate(); // halt scheduler
     for(auto &plugin: plugins) {
-        if (plugin.prepareDeepSleep) {
-            plugin.prepareDeepSleep(time, mode);
-        }
+        plugin.prepareDeepSleep(time, mode);
     }
     debug_printf_P(PSTR("Entering deep sleep for %.3f seconds\n"), time / 1000.0);
     ESP.deepSleep(time * (uint64_t)1000, mode);
@@ -393,11 +391,11 @@ void config_deep_sleep(uint32_t time, RFMode mode) {
 bool config_wifi_station_config(bool dhcpClient, bool useStoredDHCP) {
     bool result;
     if (dhcpClient) {
-        if (useStoredDHCP) {
-            struct StoredDHCPConfig dhcpConfig = config._H_GET(Config().last_dhcp_config);
-            if (dhcpConfig.local_ip) {
+        WiFiQuickConnect_t quickConnect;
+        if (useStoredDHCP && plugin_read_rtc_memory(CONFIG_RTC_MEM_ID, &quickConnect, sizeof(quickConnect))) {
+            if (quickConnect.local_ip) {
                 debug_printf_P(PSTR("Using stored DHCP configuration as static IP and disabling DHCP client\n"));
-                result = WiFi.config(dhcpConfig.local_ip, dhcpConfig.gateway, dhcpConfig.subnet, dhcpConfig.dns1, dhcpConfig.dns2);
+                result = WiFi.config(quickConnect.local_ip, quickConnect.gateway, quickConnect.subnet, quickConnect.dns1, quickConnect.dns2);
                 if (result) {
                     return true;
                 }
@@ -608,10 +606,6 @@ void KFCFWConfiguration::restoreFactorySettings() {
     _H_SET(Config().soft_ap.encryption, ENC_TYPE_CCMP);
     _H_SET(Config().soft_ap.channel, 7);
 
-    StoredDHCPConfig dhcpConfig;
-    memset(&dhcpConfig, 0, sizeof(dhcpConfig));
-    _H_SET(Config().last_dhcp_config, dhcpConfig);
-
 #if WEBSERVER_TLS_SUPPORT
     _H_SET(Config().http_port, flags.webServerMode == HTTP_MODE_SECURE ? 443 : 80);
 #elif WEBSERVER_SUPPORT
@@ -716,4 +710,12 @@ bool KFCFWConfiguration::isConfigDirty() const {
 
 const String KFCFWConfiguration::getFirmwareVersion() {
     return F(FIRMWARE_VERSION_STR " Build " __BUILD_NUMBER " " __DATE__ __DEBUG_CFS_APPEND);
+}
+
+
+void add_deep_sleep_plugin() {
+    Plugin_t plugin;
+    init_plugin(PSTR("dpslp"), plugin, false, false, 0);
+    plugin.rtcMemoryId = CONFIG_RTC_MEM_ID;
+    register_plugin(plugin);
 }

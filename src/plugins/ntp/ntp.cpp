@@ -343,7 +343,7 @@ bool ntp_client_at_mode_command_handler(Stream &serial, const String &command, i
     return false;
 }
 
-// data is stored after retrieval
+// data is stored after retrieval already
 // void ntp_client_prepare_deep_sleep(uint32_t time, RFMode mode) {
 // }
 
@@ -351,37 +351,18 @@ void ntp_client_reconfigure_plugin() {
     timezone_setup();
 }
 
-PROGMEM_PLUGIN_CONFIG_DEF(ntp, 6, false, false, NTP_CLIENT_RTC_MEM_ID, timezone_setup, TimezoneData::getStatus, ntp_client_create_settings_form, ntp_client_reconfigure_plugin, nullptr, ntp_client_at_mode_command_handler);
-
-
-// const PluginProgmemConfig_t __ntp_client_plugin_config PROGMEM = {
-//     SPGM(__plugin_config_name_ntp),
-//     timezone_setup,
-//     TimezoneData::getStatus,
-//     ntp_client_create_settings_form,
-//     ntp_client_reconfigure_plugin,
-//     nullptr,
-// #if AT_MODE_SUPPORTED
-//     ntp_client_at_mode_command_handler
-// #endif
-// };
-
-void add_plugin_ntp_client() {
-    Plugin_t plugin;
-
-    init_plugin(SPGM(__plugin_config_name_ntp), plugin, false, false, 6);
-
-    //plugin.progmemPtr = __ntp_client_plugin_config;
-    plugin.rtcMemoryId = NTP_CLIENT_RTC_MEM_ID;
-    plugin.setupPlugin = timezone_setup;
-    plugin.statusTemplate = TimezoneData::getStatus;
-    plugin.configureForm = ntp_client_create_settings_form;
-    plugin.reconfigurePlugin = ntp_client_reconfigure_plugin;
-    //plugin.prepareDeepSleep = ntp_client_prepare_deep_sleep;
-#if AT_MODE_SUPPORTED
-    plugin.atModeCommandHandler = ntp_client_at_mode_command_handler;
-#endif
-    register_plugin(plugin);
-}
+PROGMEM_PLUGIN_CONFIG_DEF(
+/* pluginName               */ ntp,
+/* setupPriority            */ 10,
+/* allowSafeMode            */ false,
+/* autoSetupWakeUp          */ false,
+/* rtcMemoryId              */ NTP_CLIENT_RTC_MEM_ID,
+/* setupPlugin              */ timezone_setup,
+/* statusTemplate           */ TimezoneData::getStatus,
+/* configureForm            */ ntp_client_create_settings_form,
+/* reconfigurePlugin        */ ntp_client_reconfigure_plugin,
+/* prepareDeepSleep         */ nullptr,
+/* atModeCommandHandler     */ ntp_client_at_mode_command_handler
+);
 
 #endif

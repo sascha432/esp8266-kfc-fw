@@ -382,7 +382,7 @@ void config_deep_sleep(uint32_t time, RFMode mode) {
     WiFiCallbacks::getVector().clear(); // disable WiFi callbacks to speed up shutdown
     Scheduler.terminate(); // halt scheduler
     for(auto &plugin: plugins) {
-        plugin.prepareDeepSleep(time, mode);
+        plugin.callPrepareDeepSleep(time, mode);
     }
     debug_printf_P(PSTR("Entering deep sleep for %.3f seconds\n"), time / 1000.0);
     ESP.deepSleep(time * (uint64_t)1000, mode);
@@ -707,15 +707,21 @@ bool KFCFWConfiguration::isConfigDirty() const {
     return _dirty;
 }
 
-
 const String KFCFWConfiguration::getFirmwareVersion() {
     return F(FIRMWARE_VERSION_STR " Build " __BUILD_NUMBER " " __DATE__ __DEBUG_CFS_APPEND);
 }
 
 
-void add_deep_sleep_plugin() {
-    Plugin_t plugin;
-    init_plugin(PSTR("dpslp"), plugin, false, false, 0);
-    plugin.rtcMemoryId = CONFIG_RTC_MEM_ID;
-    register_plugin(plugin);
-}
+PROGMEM_PLUGIN_CONFIG_DEF(
+/* pluginName               */ dpslp,
+/* setupPriority            */ 1,
+/* allowSafeMode            */ false,
+/* autoSetupWakeUp          */ false,
+/* rtcMemoryId              */ CONFIG_RTC_MEM_ID,
+/* setupPlugin              */ nullptr,
+/* statusTemplate           */ nullptr,
+/* configureForm            */ nullptr,
+/* reconfigurePlugin        */ nullptr,
+/* prepareDeepSleep         */ nullptr,
+/* atModeCommandHandler     */ nullptr
+);

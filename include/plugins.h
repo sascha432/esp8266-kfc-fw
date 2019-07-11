@@ -14,8 +14,8 @@
 #include <push_pack.h>
 
 #define PLUGIN_MAX_PRIORITY         0
-#define PLUGIN_DEFAULT_PRIORITY     10
-#define PLUGIN_MIN_PRIORITY         15
+#define PLUGIN_DEFAULT_PRIORITY     127
+#define PLUGIN_MIN_PRIORITY         255
 
 #define ATMODE_QUERY_COMMAND        -1
 
@@ -26,17 +26,6 @@ typedef enum {
     PLUGIN_SETUP_DELAYED_AUTO_WAKE_UP,          // called after a delay to initialize services that have been skipped during wake up
 } PluginSetupMode_t;
 
-// RTC memory structure
-#define PLUGIN_RTC_MEM_SIZE             512
-#define PLUGIN_RTC_MEM_BLK_SIZE         4
-#define PLUGIN_RTC_MEM_DATA_BLK_SIZE    __plugin_calculate_header_block_size()
-#define PLUGIN_RTC_MEM_DATA_SIZE        (PLUGIN_RTC_MEM_DATA_BLK_SIZE * PLUGIN_RTC_MEM_BLK_SIZE)
-#define PLUGIN_RTC_MEM_ADDRESS          ((PLUGIN_RTC_MEM_SIZE - PLUGIN_RTC_MEM_DATA_SIZE) / PLUGIN_RTC_MEM_BLK_SIZE)
-// internal structure
-#define PLUGIN_RTC_MEM_OFFSET           (PLUGIN_RTC_MEM_ADDRESS * PLUGIN_RTC_MEM_BLK_SIZE)
-#define PLUGIN_RTC_MEM_MAX_ID           32
-#define PLUGIN_RTC_MEM_MAX_SIZE         64
-
 typedef struct __attribute__packed__ {
     uint16_t length;
     uint16_t crc;
@@ -45,12 +34,7 @@ typedef struct __attribute__packed__ {
 typedef struct __attribute__packed__ {
     uint8_t mem_id;
     uint8_t length;
-} rtc_memory_record_header;
-
-constexpr int __plugin_calculate_header_block_size() {
-    return ((sizeof(rtc_memory_header) & (PLUGIN_RTC_MEM_BLK_SIZE - 1) ? ((sizeof(rtc_memory_header) + 4) & ~(PLUGIN_RTC_MEM_BLK_SIZE - 1)) : sizeof(rtc_memory_header)) / PLUGIN_RTC_MEM_BLK_SIZE);
-}
-
+} rtc_memory_entry_header;
 
 class AsyncWebServerRequest;
 class Form;
@@ -65,24 +49,26 @@ typedef bool(* AtModeCommandHandlerCallback)(Stream &serial, const String &comma
 #endif
 
 
+// pretty nasty but saves a lot RAM
+
 #if AT_MODE_SUPPORTED
 #define PLUGIN_HAS_ATMODE_COMMAND_HANDLER(...) __VA_ARGS__
 #else
 #define PLUGIN_HAS_ATMODE_COMMAND_HANDLER(...)
 #endif
 
-// pretty nasty but saves a lot RAM
+#define PROGMEM_PLUGIN_CONFIG_DECL(pluginName)          extern const PluginConfig_t __shared_progmem_plugin_config_##pluginName PROGMEM;
+#define PGM_PLUGIN_CONFIG_P                             const PluginConfig_t *
+#define SPGM_PLUGIN_CONFIG_P(pluginName)                &__shared_progmem_plugin_config_##pluginName
 
-#define PROGMEM_PLUGIN_CONFIG_DECL(pluginName)      extern const PluginProgmemConfig_t __shared_progmem_plugin_config_##pluginName PROGMEM;
-#define PROGMEM_PLUGIN_CONFIG_PGM(pluginName)       __shared_progmem_plugin_config_##pluginName
-
-#define PROGMEM_PLUGIN_CONFIG_DEF(pluginName, setupPriority, allowSafeMode, autoSetupDeepSleep, rtcMemoryId, setupPlugin, statusTemplate, configureForm, reconfigurePlugin, prepareDeepSleep, atModeCommandHandler) \
-    const char _shared_progmem_string___plugin_config_name_##pluginName[] PROGMEM = { CONFIG_STRINGIFY(pluginName) }; \
-    const PluginProgmemConfig_t __shared_progmem_plugin_config_##pluginName PROGMEM = { \
-        SPGM(__plugin_config_name_##pluginName), \
+#define PROGMEM_PLUGIN_CONFIG_DEF(pluginName, setupPriority, allowSafeMode, autoSetupAfterDeepSleep, rtcMemoryId, setupPlugin, statusTemplate, configureForm, reconfigurePlugin, prepareDeepSleep, atModeCommandHandler) \
+    PROGMEM_PLUGIN_CONFIG_DECL(pluginName); \
+    const char _shared_progmem_string_plugin_config_name__##pluginName[] PROGMEM = { _STRINGIFY(pluginName) }; \
+    const PluginConfig_t __shared_progmem_plugin_config_##pluginName PROGMEM = { \
+        _shared_progmem_string_plugin_config_name__##pluginName, \
         setupPriority, \
         allowSafeMode, \
-        autoSetupDeepSleep, \
+        autoSetupAfterDeepSleep, \
         rtcMemoryId, \
         setupPlugin, \
         statusTemplate, \
@@ -92,12 +78,32 @@ typedef bool(* AtModeCommandHandlerCallback)(Stream &serial, const String &comma
         PLUGIN_HAS_ATMODE_COMMAND_HANDLER(atModeCommandHandler,) \
     };
 
+// Example
+
+//register_plugin(SPGM_PLUGIN_CONFIG_P(NAME));
+//
+//PROGMEM_PLUGIN_CONFIG_DEF(NAME)
+//
+//PROGMEM_PLUGIN_CONFIG_DEF(
+///* pluginName               */ NAME,
+///* setupPriority            */ 15,
+///* allowSafeMode            */ false,
+///* autoSetupWakeUp          */ false,
+///* rtcMemoryId              */ 0,
+///* setupPlugin              */ nullptr,
+///* statusTemplate           */ nullptr,
+///* configureForm            */ nullptr,
+///* reconfigurePlugin        */ nullptr,
+///* prepareDeepSleep         */ nullptr,
+///* atModeCommandHandler     */ nullptr
+//);
+
 
 typedef struct {
     PGM_P pluginName;
     uint8_t setupPriority;
     bool allowSafeMode;
-    bool autoSetupDeepSleep;
+    bool autoSetupAfterDeepSleep;
     uint8_t rtcMemoryId;
     SetupPluginCallback setupPlugin;
     StatusTemplateCallback statusTemplate;
@@ -107,42 +113,96 @@ typedef struct {
 #if AT_MODE_SUPPORTED
     AtModeCommandHandlerCallback atModeCommandHandler;
 #endif
-} PluginProgmemConfig_t;
+} PluginConfig_t;
 
-// TODO move to PROGMEM
+class Plugin_t {
+public:
+    PGM_PLUGIN_CONFIG_P config;
 
-typedef struct __attribute__packed__ {
+    bool pluginNameEquals(const String &string) const {
+        auto name = reinterpret_cast<PGM_P>(pgm_read_ptr(&config->pluginName));
+        return strcmp_P(string.c_str(), name) == 0;
+    }
+    bool pluginNameEquals(const __FlashStringHelper *string) const {
+        auto namePtr = reinterpret_cast<PGM_P>(pgm_read_ptr(&config->pluginName));
+        auto stringPtr = reinterpret_cast<PGM_P>(string);
+        uint8_t ch;
+        do {
+            ch = pgm_read_byte(namePtr);
+            if (ch != pgm_read_byte(stringPtr)) {
+                return false;
+            }
+            namePtr++;
+            stringPtr++;
+        } while(ch);
+        return true;
+    }
+    String getPluginName() const {
+        PGM_P name = reinterpret_cast<PGM_P>(pgm_read_ptr(&config->pluginName));
+        return FPSTR(name);
+    }
+    PGM_P getPluginName_PGM_P() {
+        return reinterpret_cast<PGM_P>(pgm_read_ptr(&config->pluginName));
+    }
 
-    //const PluginProgmemConfig_t *progmemPtr;
-
-    // unique name of the plugin (currently not checked if unique)
-    PGM_P pluginName;
-
-    // function to setup the plugin during boot
-    SetupPluginCallback setupPlugin;
-    // return HTML code for the status page. the template variable is %<PLUGIN NAME>_STATUS%
-    StatusTemplateCallback statusTemplate;
-    // function to create a form for the configuration. request is either null or contains the POST data from the http request. the filename for the web interface is /<plugin name>.html
-    ConfigureFormCallback configureForm;
-    // this function gets called when the configuration has changed and the plugin needs to get reconfigured
-    ReconfigurePluginCallback reconfigurePlugin;
+    uint8_t getSetupPriority() const {
+        return pgm_read_byte(&config->setupPriority);
+    }
+    bool isAllowSafeMode() const {
+        return pgm_read_byte(&config->allowSafeMode);
+    }
+    bool isAutoSetupAfterDeepSleep() const {
+        return pgm_read_byte(&config->autoSetupAfterDeepSleep);
+    }
+    uint8_t getRtcMemoryId() const {
+        return pgm_read_byte(&config->rtcMemoryId);
+    }
+    SetupPluginCallback getSetupPlugin() const {
+        return reinterpret_cast<SetupPluginCallback>(pgm_read_ptr(&config->setupPlugin));
+    }
+    void callSetupPlugin() {
+        auto callback = getSetupPlugin();
+        if (callback) {
+            callback();
+        }
+    }
+    StatusTemplateCallback getStatusTemplate() const {
+        return reinterpret_cast<StatusTemplateCallback>(pgm_read_ptr(&config->statusTemplate));
+    }
+    ConfigureFormCallback getConfigureForm() const {
+        return reinterpret_cast<ConfigureFormCallback>(pgm_read_ptr(&config->configureForm));
+    }
+    ReconfigurePluginCallback getReconfigurePlugin() const {
+        return reinterpret_cast<ReconfigurePluginCallback>(pgm_read_ptr(&config->reconfigurePlugin));
+    }
+    void callReconfigurePlugin() {
+        auto callback = getReconfigurePlugin();
+        if (callback) {
+            callback();
+        }
+    }
+    PrepareDeepSleepCallback getPrepareDeepSleep() const {
+        return reinterpret_cast<PrepareDeepSleepCallback>(pgm_read_ptr(&config->prepareDeepSleep));
+    }
+    void callPrepareDeepSleep(uint32_t time, RFMode mode) {
+        auto callback = getPrepareDeepSleep();
+        if (callback) {
+            callback(time, mode);
+        }
+    }
 #if AT_MODE_SUPPORTED
-    // handler for AT commands, returns true if the command was handled. an empty command.length == 0 can display the help/usage. argc == ATMODE_COMMAND_QUERY means "AT+CMD?" was sent. The command itself is "CMD" and cannot have any arguments passed
-    AtModeCommandHandlerCallback atModeCommandHandler;
+    AtModeCommandHandlerCallback getAtModeCommandHandler() const {
+        return reinterpret_cast<AtModeCommandHandlerCallback>(pgm_read_ptr(&config->atModeCommandHandler));
+    }
+    bool callAtModeCommandHandler(Stream &serial, const String &command, int8_t argc, char **argv) {
+        auto callback = getAtModeCommandHandler();
+        if (callback) {
+            return callback(serial, command, argc, argv);
+        }
+        return false;
+    }
 #endif
-    // prepare device for deep sleep
-    PrepareDeepSleepCallback prepareDeepSleep;
-
-    // unique id of the data stored in the RTC memory
-    // 0 = not used, 1 = reset detector, 2 = WiFi deep sleep quick connect, 3 NTP client, ... PLUGIN_RTC_MEM_MAX_ID
-    uint8_t rtcMemoryId;
-    // the order of setup functions being called
-    uint8_t setupPriority: 4;
-    // initialize plugin in safe mode
-    uint8_t allowSafeMode: 1;
-    // automatically initialize plugin after wake up
-    uint8_t autoSetupDeepSleep: 1;
-} Plugin_t;
+};
 
 typedef std::vector<Plugin_t> PluginsVector;
 
@@ -151,13 +211,11 @@ extern PluginsVector plugins;
 // register all available plugins
 void register_all_plugins();
 
+// dump list of plugins and some details
 void dump_plugin_list(Print &output);
 
-// initialize plugin structure and set name
-void init_plugin(PGM_P name, Plugin_t &plugin, bool allowSafeMode, bool autoSetupDeepSleep, uint8_t priority);
-
 // register plugin
-void register_plugin(Plugin_t &plugin);
+void register_plugin(PGM_PLUGIN_CONFIG_P config);
 
 // setup all plugins
 void setup_plugins(PluginSetupMode_t mode);
@@ -168,6 +226,23 @@ Plugin_t *get_plugin_by_name(PGM_P name);
 // get plugin configuration by name
 Plugin_t *get_plugin_by_name(const String &name);
 
+// RTC Memory manager
+
+// RTC memory structure
+#define PLUGIN_RTC_MEM_SIZE             512
+#define PLUGIN_RTC_MEM_BLK_SIZE         4
+#define PLUGIN_RTC_MEM_DATA_BLK_SIZE    ((sizeof(rtc_memory_header) & (PLUGIN_RTC_MEM_BLK_SIZE - 1) ? ((sizeof(rtc_memory_header) + 4) & ~(PLUGIN_RTC_MEM_BLK_SIZE - 1)) : (sizeof(rtc_memory_header))) / PLUGIN_RTC_MEM_BLK_SIZE)
+#define PLUGIN_RTC_MEM_DATA_SIZE        (PLUGIN_RTC_MEM_DATA_BLK_SIZE * PLUGIN_RTC_MEM_BLK_SIZE)
+#define PLUGIN_RTC_MEM_ADDRESS          ((PLUGIN_RTC_MEM_SIZE - PLUGIN_RTC_MEM_DATA_SIZE) / PLUGIN_RTC_MEM_BLK_SIZE)
+// internal structure
+#define PLUGIN_RTC_MEM_OFFSET           (PLUGIN_RTC_MEM_ADDRESS * PLUGIN_RTC_MEM_BLK_SIZE)
+#define PLUGIN_RTC_MEM_MAX_ID           32
+#define PLUGIN_RTC_MEM_MAX_SIZE         64
+
+constexpr bool __plugin_is_rtc_memory_header_aligned() {
+    return (sizeof(rtc_memory_header) & (PLUGIN_RTC_MEM_BLK_SIZE - 1)) == 0;
+}
+
 #if DEBUG
 void plugin_debug_dump_rtc_memory(Print &output);
 #endif
@@ -177,5 +252,8 @@ bool plugin_read_rtc_memory(uint8_t id, void *, uint8_t maxSize);
 
 // write RTC memory
 bool plugin_write_rtc_memory(uint8_t id, void *, uint8_t maxSize);
+
+// clear RTC memory by overwriting the header only
+bool plugin_clear_rtc_memory();
 
 #include <pop_pack.h>

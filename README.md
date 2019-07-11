@@ -32,6 +32,7 @@ Platform indepentend Timer, Scheduler, WiFi Callbacks and loop function callback
 ### KFCResetDetector
 
 Detect crashes and offer safe mode by pressing reset button during boot, count number of resets for extended functionality (reset configuration, open public hotspot etc...)
+It also offers a RTC memory mananger to store data identified by an unqiue id
 
 ### KFCConfiguration
 

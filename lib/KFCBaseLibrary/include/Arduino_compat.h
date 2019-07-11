@@ -8,13 +8,6 @@
 
 #pragma once
 
-#define forward_delete(vector, iterator)    \
-    ({                                      \
-        auto next = vector.erase(iterator); \
-        delete *iterator;                   \
-        next;                               \
-    })
-
 #if defined(ESP32)
 
 #include <Arduino.h>
@@ -85,6 +78,8 @@ void panic();
 #define PROGMEM_STRING_DECL(name)               extern const char * const _shared_progmem_string_##name;
 #define PROGMEM_STRING_DEF(name, value)         const char * const _shared_progmem_string_##name = value;
 
+#define PROGMEM
+
 #define SPGM(name)                              _shared_progmem_string_##name
 #define FSPGM(name)                             FPSTR(SPGM(name))
 #define PSPGM(name)                             (PGM_P)(SPGM(name))
@@ -97,6 +92,7 @@ void panic();
 #define strstr_P strstr
 #define strlen_P strlen
 #define pgm_read_byte(a) (*a)
+#define pgm_read_ptr(addr) (*reinterpret_cast<const void* const *>(addr))
 #define memcmp_P memcmp
 #define strcpy_P strcpy
 #define strncpy_P strncpy_s
@@ -1186,9 +1182,9 @@ struct rst_info{
 enum rst_reason {
     REASON_DEFAULT_RST      = 0,    /* normal startup by power on */
     REASON_WDT_RST          = 1,    /* hardware watch dog reset */
-    REASON_EXCEPTION_RST    = 2,    /* exception reset, GPIO status won’t change */
-    REASON_SOFT_WDT_RST     = 3,    /* software watch dog reset, GPIO status won’t change */
-    REASON_SOFT_RESTART     = 4,    /* software restart ,system_restart , GPIO status won’t change */
+    REASON_EXCEPTION_RST    = 2,    /* exception reset, GPIO status wonï¿½t change */
+    REASON_SOFT_WDT_RST     = 3,    /* software watch dog reset, GPIO status wonï¿½t change */
+    REASON_SOFT_RESTART     = 4,    /* software restart ,system_restart , GPIO status wonï¿½t change */
     REASON_DEEP_SLEEP_AWAKE = 5,    /* wake up from deep-sleep */
     REASON_EXT_SYS_RST      = 6     /* external system reset */
 };
@@ -1331,3 +1327,11 @@ void os_timer_disarm(os_timer_t *timer);
 #error Platform not supported
 
 #endif
+
+#ifndef _STRINGIFY
+#define _STRINGIFY(s)                   __STRINGIFY(s)
+#endif
+#ifndef __STRINGIFY
+#define __STRINGIFY(s)                  #s
+#endif
+

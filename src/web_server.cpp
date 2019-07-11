@@ -436,10 +436,13 @@ bool send_file(String path, bool client_accepts_gzip, FSMapping *mapping, AsyncW
     if (webTemplate == nullptr) {
         if (path.charAt(0) == '/' && path.endsWith(F(".html"))) {
             auto plugin = get_plugin_by_name(path.substring(1, path.length() - 5));
-            if (plugin && plugin->configureForm) {
-                Form *form = new SettingsForm(nullptr);
-                plugin->configureForm(nullptr, *form);
-                webTemplate = new ConfigTemplate(form);
+            if (plugin) {
+                auto callback = plugin->getConfigureForm();
+                if (callback) {
+                    Form *form = new SettingsForm(nullptr);
+                    callback(nullptr, *form);
+                    webTemplate = new ConfigTemplate(form);
+                }
             }
         }
         if (webTemplate == nullptr) {
@@ -562,15 +565,16 @@ bool handle_file_read(String path, bool client_accepts_gzip, AsyncWebServerReque
 
         if (path.charAt(0) == '/' && path.endsWith(F(".html"))) {
             auto plugin = get_plugin_by_name(path.substring(1, path.length() - 5));
-            if (plugin && plugin->configureForm) {
-                Form *form = new SettingsForm(request);
-                plugin->configureForm(request, *form);
-                webTemplate = new ConfigTemplate(form);
-                if (form->validate()) {
-                    config_write();
-                }
-                if (plugin->reconfigurePlugin) {
-                    plugin->reconfigurePlugin();
+            if (plugin) {
+                auto callback = plugin->getConfigureForm();
+                if (callback) {
+                    Form *form = new SettingsForm(request);
+                    callback(request, *form);
+                    webTemplate = new ConfigTemplate(form);
+                    if (form->validate()) {
+                        config_write();
+                    }
+                    plugin->callReconfigurePlugin();
                 }
             }
         }
@@ -670,15 +674,18 @@ void web_server_create_settings_form(AsyncWebServerRequest *request, Form &form)
     form.finalize();
 }
 
-void add_plugin_web_server() {
-    Plugin_t plugin;
-
-    init_plugin(PSTR("remote"), plugin, false, false, 3);
-    plugin.setupPlugin = init_web_server;
-    plugin.statusTemplate = web_server_get_status;
-    plugin.configureForm = web_server_create_settings_form;
-    plugin.reconfigurePlugin = web_server_reconfigure;
-    register_plugin(plugin);
-}
+PROGMEM_PLUGIN_CONFIG_DEF(
+/* pluginName               */ http,
+/* setupPriority            */ 15,
+/* allowSafeMode            */ true,
+/* autoSetupWakeUp          */ false,
+/* rtcMemoryId              */ 0,
+/* setupPlugin              */ init_web_server,
+/* statusTemplate           */ web_server_get_status,
+/* configureForm            */ web_server_create_settings_form,
+/* reconfigurePlugin        */ web_server_reconfigure,
+/* prepareDeepSleep         */ nullptr,
+/* atModeCommandHandler     */ nullptr
+);
 
 #endif

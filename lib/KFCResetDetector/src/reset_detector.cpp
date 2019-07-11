@@ -18,15 +18,13 @@ ResetDetector resetDetector;
 #endif
 
 ResetDetector::ResetDetector() {
-//    _init();
+#if DEBUG_RESET_DETECTOR
+    Serial.begin(115200);
+#endif
+    // _init();
 }
 
 void ResetDetector::_init() {
-#if DEBUG
-    Serial.begin(115200);
-    _debug_printf_P(PSTR("ResetDetector::init()\n"));
-    _init_millis = millis();
-#endif
      _timer = nullptr;
 #if HAVE_KFC_PLUGINS
     register_all_plugins();
@@ -244,20 +242,18 @@ bool reset_detector_command_handler(Stream &serial, const String &command, int8_
     return false;
 }
 
-void add_plugin_reset_detector() {
-    Plugin_t plugin;
-
-#if AT_MODE_SUPPORTED && DEBUG
-    init_plugin(PSTR("rd"), plugin, false, false, PLUGIN_MAX_PRIORITY);
-#else
-    init_plugin(PSTR("rd"), plugin, false, false, PLUGIN_MAX_PRIORITY);
-#endif
-
-    plugin.rtcMemoryId = RESET_DETECTOR_RTC_MEM_ID;
-#if AT_MODE_SUPPORTED && DEBUG
-    plugin.atModeCommandHandler = reset_detector_command_handler;
-#endif
-    register_plugin(plugin);
-}
+PROGMEM_PLUGIN_CONFIG_DEF(
+    /* pluginName               */ rd,
+    /* setupPriority            */ 0,
+    /* allowSafeMode            */ false,
+    /* autoSetupWakeUp          */ false,
+    /* rtcMemoryId              */ RESET_DETECTOR_RTC_MEM_ID,
+    /* setupPlugin              */ nullptr,
+    /* statusTemplate           */ nullptr,
+    /* configureForm            */ nullptr,
+    /* reconfigurePlugin        */ nullptr,
+    /* prepareDeepSleep         */ nullptr,
+    /* atModeCommandHandler     */ reset_detector_command_handler
+);
 
 #endif

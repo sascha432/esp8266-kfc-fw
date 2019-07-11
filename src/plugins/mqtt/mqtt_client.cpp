@@ -411,7 +411,7 @@ const String MQTTClient::getStatus() {
         out.print(F(HTML_S(br)));
         // auto &lwt = mqtt_session->getWill();
         // out.printf_P(PSTR("Last will: %s, qos %d, retain %s, available %s, not available %s" HTML_S(br) HTML_S(br) "Subscribed to:" HTML_S(br)), lwt.topic.c_str(), lwt.qos, lwt.retain ? "yes" : "no", lwt.available.c_str(), lwt.not_available.c_str());
-        // for(const auto &topic: mqtt_session->getTopics()) {
+        // for(auto &topic: mqtt_session->getTopics()) {
         //     out.print(topic.topic);
         //     out.printf_P(PSTR("<%u>"), topic.qos & ~0xc0);
         //     out.print(topic.qos & 0x080 ? F(" waiting for ack") : topic.qos & 0x040 ? F(" removal pending") : F(" acknowledged"));
@@ -553,27 +553,28 @@ bool mqtt_at_mode_command_handler(Stream &serial, const String &command, int8_t 
     return false;
 }
 
-void add_plugin_mqtt() {
-    Plugin_t plugin;
-
-    init_plugin(PSTR("mqtt"), plugin, false, true, 10);
-
-    plugin.setupPlugin = MQTTClient::setup;
-    plugin.statusTemplate = MQTTClient::getStatus;
-    plugin.configureForm = mqtt_client_create_settings_form;
-    plugin.reconfigurePlugin = []() {
-        if (mqttClient) {
-            delete mqttClient;
-            mqttClient = nullptr;
-        }
-        if (config._H_GET(Config().flags).mqttMode != MQTT_MODE_DISABLED) {
-            MQTTClient::setup();
-        }
-    };
-#if AT_MODE_SUPPORTED
-    plugin.atModeCommandHandler = mqtt_at_mode_command_handler;
-#endif
-    register_plugin(plugin);
+void mqtt_reconfigure_plugin() {
+    if (mqttClient) {
+        delete mqttClient;
+        mqttClient = nullptr;
+    }
+    if (config._H_GET(Config().flags).mqttMode != MQTT_MODE_DISABLED) {
+        MQTTClient::setup();
+    }
 }
+
+PROGMEM_PLUGIN_CONFIG_DEF(
+/* pluginName               */ mqtt,
+/* setupPriority            */ 20,
+/* allowSafeMode            */ false,
+/* autoSetupWakeUp          */ false,
+/* rtcMemoryId              */ 0,
+/* setupPlugin              */ MQTTClient::setup,
+/* statusTemplate           */ MQTTClient::getStatus,
+/* configureForm            */ mqtt_client_create_settings_form,
+/* reconfigurePlugin        */ mqtt_reconfigure_plugin,
+/* prepareDeepSleep         */ nullptr,
+/* atModeCommandHandler     */ mqtt_at_mode_command_handler
+);
 
 #endif

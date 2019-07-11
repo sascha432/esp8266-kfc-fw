@@ -432,15 +432,18 @@ void Driver_4ChDimmer::setup(bool isSafeMode) {
 //     return false;
 // }
 
-void add_plugin_atomic_sun_v2() {
-    Plugin_t plugin;
-
-    init_plugin(PSTR("iot_4ch_dimmer"), plugin, false, false, 12);
-
-    plugin.setupPlugin = Driver_4ChDimmer::setup;
-    plugin.statusTemplate = Driver_4ChDimmer::getStatus;
-    // plugin..atModeCommandHandler = atomic_sun_v2_at_mode_command_handler;
-    register_plugin(plugin);
-}
+PROGMEM_PLUGIN_CONFIG_DEF(
+/* pluginName               */ atomicsun,
+/* setupPriority            */ 127,
+/* allowSafeMode            */ false,
+/* autoSetupWakeUp          */ false,
+/* rtcMemoryId              */ 0,
+/* setupPlugin              */ Driver_4ChDimmer::setup,
+/* statusTemplate           */ Driver_4ChDimmer::getStatus,
+/* configureForm            */ nullptr,
+/* reconfigurePlugin        */ nullptr,
+/* prepareDeepSleep         */ nullptr,
+/* atModeCommandHandler     */ atomic_sun_v2_at_mode_command_handler
+);
 
 #endif

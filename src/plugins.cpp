@@ -2,6 +2,7 @@
   Author: sascha_lammers@gmx.de
 */
 
+#include <Arduino_compat.h>
 #include <Form.h>
 #include <algorithm>
 #include <crc16.h>
@@ -19,122 +20,120 @@
 
 PluginsVector plugins;
 
-void init_plugin(PGM_P name, Plugin_t &plugin, bool allowSafeMode, bool autoSetupDeepSleep, uint8_t priority) {
-    _debug_printf_P(PSTR("init_plugin(%s, %p, allowSafeMode %d, autoSetupDeepSleep %d, priority %d)\n"), str_P(FPSTR(name)), &plugin, allowSafeMode, autoSetupDeepSleep, priority);
-    memset(&plugin, 0, sizeof(plugin));
-    plugin.pluginName = name;
-    plugin.setupPriority = priority;
-    plugin.allowSafeMode = allowSafeMode;
-    plugin.autoSetupDeepSleep = autoSetupDeepSleep;
-}
-
-//PluginExtraCallbacks_t &plugin_get_extra_callbacks(Plugin_t &plugin) {
-//    if (!plugin.extraCallbacks) {
-//        plugin.extraCallbacks = (PluginExtraCallbacks_t *)calloc(sizeof(plugin.extraCallbacks), 1);
-//    }
-//    return *plugin.extraCallbacks;
-//}
-
-void register_plugin(Plugin_t &plugin) {
-    _debug_printf_P(PSTR("register_plugin %s priority %d\n"), String(FPSTR(plugin.pluginName)).c_str(), plugin.setupPriority);
+void register_plugin(PGM_PLUGIN_CONFIG_P config) {
+    Plugin_t plugin;
+    plugin.config = config;
+    _debug_printf_P(PSTR("register_plugin %s priority %d\n"), plugin.getPluginName().c_str(), plugin.getSetupPriority());
     plugins.push_back(plugin);
 }
 
+// PROGMEM_PLUGIN_CONFIG_DEF(
+// /* pluginName               */ NAME,
+// /* setupPriority            */ 15,
+// /* allowSafeMode            */ false,
+// /* autoSetupWakeUp          */ false,
+// /* rtcMemoryId              */ 0,
+// /* setupPlugin              */ nullptr,
+// /* statusTemplate           */ nullptr,
+// /* configureForm            */ nullptr,
+// /* reconfigurePlugin        */ nullptr,
+// /* prepareDeepSleep         */ nullptr,
+// /* atModeCommandHandler     */ nullptr
+// );
+
+PROGMEM_PLUGIN_CONFIG_DECL(rd);
+PROGMEM_PLUGIN_CONFIG_DECL(dpslp);
+PROGMEM_PLUGIN_CONFIG_DECL(mdns);
+PROGMEM_PLUGIN_CONFIG_DECL(esp8266atc);
+PROGMEM_PLUGIN_CONFIG_DECL(http);
+PROGMEM_PLUGIN_CONFIG_DECL(syslog);
+PROGMEM_PLUGIN_CONFIG_DECL(ntp);
+PROGMEM_PLUGIN_CONFIG_DECL(mqtt);
+PROGMEM_PLUGIN_CONFIG_DECL(pingmon);
+PROGMEM_PLUGIN_CONFIG_DECL(http2ser);
+PROGMEM_PLUGIN_CONFIG_DECL(ser2tcp);
+PROGMEM_PLUGIN_CONFIG_DECL(hass);
+PROGMEM_PLUGIN_CONFIG_DECL(hue);
+PROGMEM_PLUGIN_CONFIG_DECL(atomicsun);
+PROGMEM_PLUGIN_CONFIG_DECL(filemgr);
+PROGMEM_PLUGIN_CONFIG_DECL(I2Cscan);
+
 void register_all_plugins() {
-    void add_plugin_reset_detector();
-    add_plugin_reset_detector();
-    void add_deep_sleep_plugin();
-    add_deep_sleep_plugin();
+
+    register_plugin(SPGM_PLUGIN_CONFIG_P(rd));
+    register_plugin(SPGM_PLUGIN_CONFIG_P(dpslp));
+
 #if MDNS_SUPPORT
-    void add_plugin_mdns_plugin();
-    add_plugin_mdns_plugin();
+    register_plugin(SPGM_PLUGIN_CONFIG_P(mdns));
 #endif
 #if ESP8266_AT_MODE_SUPPORT
-    void add_plugin_esp8266_at_mode();
-    add_plugin_esp8266_at_mode();
+    register_plugin(SPGM_PLUGIN_CONFIG_P(esp8266atc));
 #endif
 #if WEBSERVER_SUPPORT
-    void add_plugin_web_server();
-    add_plugin_web_server();
+    register_plugin(SPGM_PLUGIN_CONFIG_P(http));
 #endif
 #if SYSLOG
-    void add_plugin_syslog();
-    add_plugin_syslog();
+    register_plugin(SPGM_PLUGIN_CONFIG_P(syslog));
 #endif
 #if NTP_CLIENT
-    void add_plugin_ntp_client();
-    add_plugin_ntp_client();
+    register_plugin(SPGM_PLUGIN_CONFIG_P(ntp));
 #endif
 #if MQTT_SUPPORT
-    void add_plugin_mqtt();
-    add_plugin_mqtt();
+    register_plugin(SPGM_PLUGIN_CONFIG_P(mqtt));
 #endif
 #if PING_MONITOR
-    void add_plugin_ping_monitor();
-    add_plugin_ping_monitor();
+    register_plugin(SPGM_PLUGIN_CONFIG_P(pingmon));
 #endif
 #if HTTP2SERIAL
-    void add_plugin_http2serial();
-    add_plugin_http2serial();
+    register_plugin(SPGM_PLUGIN_CONFIG_P(http2ser));
 #endif
 #if SERIAL2TCP
-    void add_plugin_serial2tcp();
-    add_plugin_serial2tcp();
+    register_plugin(SPGM_PLUGIN_CONFIG_P(ser2tcp));
 #endif
 #if HOME_ASSISTANT_INTEGRATION
-    void add_plugin_homeassistant();
-    add_plugin_homeassistant();
+    register_plugin(SPGM_PLUGIN_CONFIG_P(hass));
 #endif
 #if HUE_EMULATION
-    void add_plugin_hue();
-    add_plugin_hue();
-#endif
-#if IOT_ATOMIC_SUN_V1
-    void add_plugin_atomic_sun_v1();
-    add_plugin_atomic_sun_v1();
+    register_plugin(SPGM_PLUGIN_CONFIG_P(hue));
 #endif
 #if IOT_ATOMIC_SUN_V2
-    void add_plugin_atomic_sun_v2();
-    add_plugin_atomic_sun_v2();
+    register_plugin(SPGM_PLUGIN_CONFIG_P(atomicsun));
 #endif
 #if FILE_MANAGER
-    void add_plugin_file_manager();
-    add_plugin_file_manager();
+    register_plugin(SPGM_PLUGIN_CONFIG_P(filemgr));
 #endif
 #if I2CSCANNER_PLUGIN
-    void add_plugin_i2cscanner_plugin();
-    add_plugin_i2cscanner_plugin();
+    register_plugin(SPGM_PLUGIN_CONFIG_P(I2Cscan));
 #endif
 
+#if DEBUG
     uint8_t i = 0;
     for(auto &plugin: plugins) {
-        if (plugin.rtcMemoryId > PLUGIN_RTC_MEM_MAX_ID) {
-            _debug_printf_P(PSTR("WARNING! Plugin %s is using an invalid id %d\n"), String(FPSTR(plugin.pluginName)).c_str(), plugin.rtcMemoryId);
-            plugin.rtcMemoryId = 0;
+        if (plugin.getRtcMemoryId() > PLUGIN_RTC_MEM_MAX_ID) {
+            _debug_printf_P(PSTR("WARNING! Plugin %s is using an invalid id %d\n"), plugin.getPluginName().c_str(), plugin.getRtcMemoryId());
         }
-        if (plugin.rtcMemoryId) {
+        if (plugin.getRtcMemoryId()) {
             uint8_t j = 0;
             for(auto &plugin2: plugins) {
-                if (i != j && plugin2.rtcMemoryId && plugin.rtcMemoryId == plugin2.rtcMemoryId) {
-                    _debug_printf_P(PSTR("WARNING! Plugin %s and %s use the same id (%d) to identify the RTC memory data\n"), String(FPSTR(plugin.pluginName)).c_str(), String(FPSTR(plugin2.pluginName)).c_str(), plugin.rtcMemoryId);
-                    plugin2.rtcMemoryId = 0;
+                if (i != j && plugin2.getRtcMemoryId() && plugin.getRtcMemoryId() == plugin2.getRtcMemoryId()) {
+                    _debug_printf_P(PSTR("WARNING! Plugin %s and %s use the same id (%d) to identify the RTC memory data\n"), plugin.getPluginName().c_str(), plugin2.getPluginName().c_str(), plugin.getRtcMemoryId());
                 }
                 j++;
             }
         }
         i++;
     }
+#endif
 }
 
 void dump_plugin_list(Print &output) {
     for(auto plugin : plugins) {
-        MySerial.printf_P(PSTR("name %s priority %d setup %p status %p form %p reconfigure %p prepare deep sleep %p\n"),
-            String(FPSTR(plugin.pluginName)).c_str(),
-            plugin.setupPriority,
-            plugin.setupPlugin,
-            plugin.statusTemplate,
-            plugin.configureForm,
-            plugin.reconfigurePlugin
+        output.printf_P(PSTR("name %s priority %d allow_safe_mode %d setup %p\n"),
+            plugin.getPluginName().c_str(),
+            plugin.getSetupPriority(),
+            plugin.isAllowSafeMode(),
+            plugin.getSetupPlugin()
+            //TOOD all missing items
         );
     }
 }
@@ -146,19 +145,19 @@ void setup_plugins(PluginSetupMode_t mode) {
         _debug_printf_P(PSTR("setup_plugins(%d) counter %d\n"), mode, plugins.size());
 
         std::sort(plugins.begin(), plugins.end(), [](const Plugin_t &a, const Plugin_t &b) {
-            return b.setupPriority >= a.setupPriority;
+            return b.getSetupPriority() >= a.getSetupPriority();
         });
     }
 
-    for(const auto plugin : plugins) {
+    for(auto &plugin : plugins) {
         bool runSetup =
             (mode == PLUGIN_SETUP_DEFAULT) ||
-            (mode == PLUGIN_SETUP_SAFE_MODE && plugin.allowSafeMode) ||
-            (mode == PLUGIN_SETUP_AUTO_WAKE_UP && plugin.autoSetupDeepSleep) ||
-            (mode == PLUGIN_SETUP_DELAYED_AUTO_WAKE_UP && !plugin.autoSetupDeepSleep);
-        _debug_printf_P(PSTR("setup_plugins(%d) %s priority %d run setup %d\n"), mode, String(FPSTR(plugin.pluginName)).c_str(), plugin.setupPriority, runSetup);
-        if (runSetup && plugin.setupPlugin) {
-            plugin.setupPlugin();
+            (mode == PLUGIN_SETUP_SAFE_MODE && plugin.isAllowSafeMode()) ||
+            (mode == PLUGIN_SETUP_AUTO_WAKE_UP && plugin.isAutoSetupAfterDeepSleep()) ||
+            (mode == PLUGIN_SETUP_DELAYED_AUTO_WAKE_UP && !plugin.isAutoSetupAfterDeepSleep());
+        _debug_printf_P(PSTR("setup_plugins(%d) %s priority %d run setup %d\n"), mode, plugin.getPluginName().c_str(), plugin.getSetupPriority(), runSetup);
+        if (runSetup) {
+            plugin.callSetupPlugin();
         }
     }
 
@@ -172,12 +171,19 @@ void setup_plugins(PluginSetupMode_t mode) {
 }
 
 Plugin_t *get_plugin_by_name(PGM_P name) {
-    return get_plugin_by_name(String(FPSTR(name)));
+    for(auto &plugin: plugins) {
+        if (plugin.pluginNameEquals(FPSTR(name))) {
+            _debug_printf_P(PSTR("get_plugin_by_name(%s) = %p\n"), String(FPSTR(name)).c_str(), &plugin);
+            return &plugin;
+        }
+    }
+    _debug_printf_P(PSTR("get_plugin_by_name(%s) = nullptr\n"), String(FPSTR(name)).c_str());
+    return nullptr;
 }
 
 Plugin_t *get_plugin_by_name(const String &name) {
     for(auto &plugin: plugins) {
-        if (strcmp_P(name.c_str(), plugin.pluginName) == 0) {
+        if (plugin.pluginNameEquals(name)) {
             _debug_printf_P(PSTR("get_plugin_by_name(%s) = %p\n"), name.c_str(), &plugin);
             return &plugin;
         }
@@ -192,7 +198,7 @@ static Plugin_t *get_plugin_by_rtc_memory_id(uint8_t id) {
         return nullptr;
     }
     for(auto &plugin: plugins) {
-        if (plugin.rtcMemoryId == id) {
+        if (plugin.getRtcMemoryId() == id) {
             return &plugin;
         }
     }
@@ -270,7 +276,7 @@ bool plugin_read_rtc_memory(uint8_t id, void *dataPtr, uint8_t maxSize) {
             }
             length -= 4;  // check length?
             bool match = false;
-            auto entry = (rtc_memory_record_header *)(&data[entryOffset]);
+            auto entry = (rtc_memory_entry_header *)(&data[entryOffset]);
             if (!entry->mem_id) {
                 break; // done
             }
@@ -328,7 +334,7 @@ bool plugin_read_rtc_memory(uint8_t id, void *dataPtr, uint8_t maxSize) {
     auto ptr = (uint8_t *)memPtr;
     auto endPtr = ((uint8_t *)memPtr) + length;
     while(ptr < endPtr) {
-        auto entry = (rtc_memory_record_header *)ptr;
+        auto entry = (rtc_memory_entry_header *)ptr;
         ptr += sizeof(*entry);
         if (ptr + entry->length > endPtr) {
             _debug_printf_P(PSTR("RTC memory: entry length exceeds total size. id %d, length %d\n"), entry->mem_id, entry->length);
@@ -348,7 +354,7 @@ bool plugin_read_rtc_memory(uint8_t id, void *dataPtr, uint8_t maxSize) {
     return false;
 }
 
-// write RTC memory. if max size is smaller than Plugin_t.rtcMemorySize, it is padded with NUL bytes
+// write data to RTC memory
 bool plugin_write_rtc_memory(uint8_t id, void *dataPtr, uint8_t dataLength) {
 
     _debug_printf_P(PSTR("plugin_write_rtc_memory(%d, %d)\n"), id, dataLength);
@@ -373,7 +379,7 @@ bool plugin_write_rtc_memory(uint8_t id, void *dataPtr, uint8_t dataLength) {
         auto ptr = (uint8_t *)memPtr;
         auto endPtr = ((uint8_t *)memPtr) + length;
         while(ptr < endPtr) {
-            auto entry = (rtc_memory_record_header *)ptr;
+            auto entry = (rtc_memory_entry_header *)ptr;
             if (!entry->mem_id) { // invalid id, probably aligned data
                 break;
             }
@@ -387,7 +393,7 @@ bool plugin_write_rtc_memory(uint8_t id, void *dataPtr, uint8_t dataLength) {
     }
 
     // append new data
-    rtc_memory_record_header newEntry;
+    rtc_memory_entry_header newEntry;
     newData.reserve(newData.length() + sizeof(newEntry) + dataLength);
     newEntry.mem_id = id;
     newEntry.length = dataLength;
@@ -398,7 +404,7 @@ bool plugin_write_rtc_memory(uint8_t id, void *dataPtr, uint8_t dataLength) {
     // align before adding header
     rtc_memory_header header;
     header.length = (uint16_t)newData.length();
-    if (header.length & (PLUGIN_RTC_MEM_BLK_SIZE - 1)) {
+    if (!__plugin_is_rtc_memory_header_aligned()) {
         uint8_t alignment = PLUGIN_RTC_MEM_BLK_SIZE - (header.length % PLUGIN_RTC_MEM_BLK_SIZE);
         while (alignment--) {
             header.length++;
@@ -410,13 +416,12 @@ bool plugin_write_rtc_memory(uint8_t id, void *dataPtr, uint8_t dataLength) {
     uint16_t crcPosition = (uint16_t)(newData.length() + sizeof(header) - sizeof(header.crc));
     newData.write((const uint8_t *)&header, sizeof(header));
 
-    constexpr uint8_t _alignment = PLUGIN_RTC_MEM_DATA_SIZE - sizeof(header);
-#if _alignment != 0
-    uint8_t alignment = _alignment;
-    while (alignment--) {
-        newData.write(0);
+    if ((sizeof(rtc_memory_header) & (PLUGIN_RTC_MEM_BLK_SIZE - 1)) != 0) {
+        uint8_t alignment = PLUGIN_RTC_MEM_DATA_SIZE - sizeof(rtc_memory_header);
+        while (alignment--) {
+            newData.write(0);
+        }
     }
-#endif
 
     // update CRC in newData and store
     *(uint16_t *)(newData.get() + crcPosition) = crc16_calc(newData.get(), header.length + sizeof(header) - sizeof(header.crc));
@@ -425,6 +430,18 @@ bool plugin_write_rtc_memory(uint8_t id, void *dataPtr, uint8_t dataLength) {
     //ESP.rtcMemDump();
 
     return result;
+}
+
+bool plugin_clear_rtc_memory() {
+    uint8_t blocks = PLUGIN_RTC_MEM_DATA_BLK_SIZE;
+    uint32_t offset = PLUGIN_RTC_MEM_ADDRESS;
+    uint32_t data = 0;
+    while (blocks--) {
+        if (!ESP.rtcUserMemoryWrite(offset++, &data, sizeof(data))) {
+            return false;
+        }
+    }
+    return true;
 }
 
 #if DEBUG
@@ -444,7 +461,7 @@ void plugin_debug_dump_rtc_memory(Print &output) {
     auto ptr = (uint8_t *)memPtr;
     auto endPtr = ((uint8_t *)memPtr) + length;
     while(ptr < endPtr) {
-        auto entry = (rtc_memory_record_header *)ptr;
+        auto entry = (rtc_memory_entry_header *)ptr;
         if (!entry->mem_id) {
             break;
         }
@@ -454,7 +471,7 @@ void plugin_debug_dump_rtc_memory(Print &output) {
             break;
         }
         auto plugin = get_plugin_by_rtc_memory_id(entry->mem_id);
-        output.printf_P(PSTR("id: %d (%s), length %d "), entry->mem_id, plugin ? String(FPSTR(plugin->pluginName)).c_str() : String(F("<no plugin found>")).c_str(), entry->length);
+        output.printf_P(PSTR("id: %d (%s), length %d "), entry->mem_id, plugin ? plugin->getPluginName().c_str() : String(F("<no plugin found>")).c_str(), entry->length);
         dumper.dump(ptr, entry->length);
         ptr += entry->length;
     }

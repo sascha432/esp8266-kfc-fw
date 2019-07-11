@@ -83,12 +83,18 @@ bool i2cscanner_at_mode_command_handler(Stream &serial, const String &command, i
     return false;
 }
 
-void add_plugin_i2cscanner_plugin() {
-    Plugin_t plugin;
-
-    init_plugin(PSTR("i2scanner"), plugin, false, false, PLUGIN_MIN_PRIORITY);
-    plugin.atModeCommandHandler = i2cscanner_at_mode_command_handler;
-    register_plugin(plugin);
-}
+PROGMEM_PLUGIN_CONFIG_DEF(
+/* pluginName               */ I2Cscan,
+/* setupPriority            */ PLUGIN_MIN_PRIORITY,
+/* allowSafeMode            */ false,
+/* autoSetupWakeUp          */ false,
+/* rtcMemoryId              */ 0,
+/* setupPlugin              */ nullptr,
+/* statusTemplate           */ nullptr,
+/* configureForm            */ nullptr,
+/* reconfigurePlugin        */ nullptr,
+/* prepareDeepSleep         */ nullptr,
+/* atModeCommandHandler     */ i2cscanner_at_mode_command_handler
+);
 
 #endif

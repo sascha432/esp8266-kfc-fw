@@ -44,9 +44,6 @@
 
 class ResetDetector {
 public:
-#if DEBUG
-    unsigned long _init_millis;
-#endif
 #if HAVE_KFC_PLUGINS
     typedef struct __attribute__packed__ {
         uint8_t reset_counter;

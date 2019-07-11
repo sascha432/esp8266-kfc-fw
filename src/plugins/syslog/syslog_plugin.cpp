@@ -219,21 +219,20 @@ void syslog_prepare_deep_sleep(uint32_t time, RFMode mode) {
     }
 }
 
-void add_plugin_syslog() {
-    Plugin_t plugin;
+PROGMEM_PLUGIN_CONFIG_DEF(
+/* pluginName               */ syslog,
+/* setupPriority            */ 9,
+/* allowSafeMode            */ false,
+/* autoSetupWakeUp          */ true,
+/* rtcMemoryId              */ 0,
+/* setupPlugin              */ syslog_setup,
+/* statusTemplate           */ syslog_get_status,
+/* configureForm            */ syslog_create_settings_form,
+/* reconfigurePlugin        */ syslog_setup_logger,
+/* prepareDeepSleep         */ syslog_prepare_deep_sleep,
+/* atModeCommandHandler     */ syslog_at_mode_command_handler
+);
 
-    init_plugin(PSTR("syslog"), plugin, false, true, 5);
-
-    plugin.setupPlugin = syslog_setup;
-    plugin.statusTemplate = syslog_get_status;
-    plugin.configureForm = syslog_create_settings_form;
-    plugin.reconfigurePlugin = syslog_setup_logger;
-    plugin.prepareDeepSleep = syslog_prepare_deep_sleep;
-#if AT_MODE_SUPPORTED
-    plugin.atModeCommandHandler = syslog_at_mode_command_handler;
-#endif
-    register_plugin(plugin);
-}
 
 #if 0
 size_t SyslogMemoryQueue::store(const String &message) {

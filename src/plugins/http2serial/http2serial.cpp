@@ -173,14 +173,15 @@ void http2serial_install_web_server_hook() {
 }
 
 void http2serial_setup() {
-    auto plugin = get_plugin_by_name(PSTR("remote"));
+    auto plugin = get_plugin_by_name(PSTR("http"));
     if (plugin) {
-        static auto prev_callback = plugin->reconfigurePlugin;
-        plugin->reconfigurePlugin = [] {
-            // call previous reconfigure function and install web server hook again
-            prev_callback();
-            http2serial_install_web_server_hook();
-        };
+        // TODO cannot change callback in PROGMEM
+        // static auto prev_callback = plugin->reconfigurePlugin;
+        // plugin->reconfigurePlugin = [] {
+        //     // call previous reconfigure function and install web server hook again
+        //     prev_callback();
+        //     http2serial_install_web_server_hook();
+        // };
     }
 
     http2serial_install_web_server_hook();
@@ -207,16 +208,19 @@ bool http2_serial_at_mode_command_handler(Stream &serial, const String &command,
     return false;
 }
 
-void add_plugin_http2serial() {
-    Plugin_t plugin;
 
-    init_plugin(PSTR("http2serial"), plugin, false, false, 12);
-
-    plugin.setupPlugin = http2serial_setup;
-#if AT_MODE_SUPPORTED
-    plugin.atModeCommandHandler = http2_serial_at_mode_command_handler;
-#endif
-    register_plugin(plugin);
-}
+PROGMEM_PLUGIN_CONFIG_DEF(
+/* pluginName               */ http2ser,
+/* setupPriority            */ 10,
+/* allowSafeMode            */ false,
+/* autoSetupWakeUp          */ false,
+/* rtcMemoryId              */ 0,
+/* setupPlugin              */ http2serial_setup,
+/* statusTemplate           */ nullptr,
+/* configureForm            */ nullptr,
+/* reconfigurePlugin        */ nullptr,
+/* prepareDeepSleep         */ nullptr,
+/* atModeCommandHandler     */ http2_serial_at_mode_command_handler
+);
 
 #endif

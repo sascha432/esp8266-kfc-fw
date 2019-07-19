@@ -177,10 +177,10 @@ public:
 
     virtual const String getValue() const override;
 private:
-    bool _noCache;
-    bool _noStore;
-    bool _mustRevalidate;
-    uint8_t _publicOrPrivate;
+    uint8_t _noCache: 1;
+    uint8_t _noStore: 1;
+    uint8_t _mustRevalidate: 1;
+    uint8_t _publicOrPrivate: 2;
     uint32_t _maxAge;
 };
 
@@ -216,7 +216,17 @@ public:
         return *this;
     }
 
+    HttpCookieHeader &setName(const __FlashStringHelper *name) {
+        _cookieName = name;
+        return *this;
+    }
+
     HttpCookieHeader &setPath(const String &path) {
+        _path = path;
+        return *this;
+    }
+
+    HttpCookieHeader &setPath(const __FlashStringHelper *path) {
         _path = path;
         return *this;
     }
@@ -294,6 +304,7 @@ private:
 class HttpHeaders {
 public:
     HttpHeaders();
+    HttpHeaders(bool addDefault);
     virtual ~HttpHeaders();
 
     static const String getRFC7231Date(const time_t *time);

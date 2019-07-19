@@ -1,3 +1,7 @@
+/**
+* Author: sascha_lammers@gmx.de
+*/
+
 #include "PrintHtmlEntitiesString.h"
 
 PrintHtmlEntitiesString::PrintHtmlEntitiesString(const String & str) : PrintString(), PrintHtmlEntities() {

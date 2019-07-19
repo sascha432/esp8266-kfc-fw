@@ -28,11 +28,11 @@ void syslog_setup_debug_logger() {
     parameter.setProcessId(F("DEBUG"));
 	parameter.setSeverity(SYSLOG_DEBUG);
 
-    SyslogFilter *filter = new SyslogFilter(parameter);
+    SyslogFilter *filter = _debug_new SyslogFilter(parameter);
     filter->addFilter(F("*.*"), F(DEBUG_USE_SYSLOG_TARGET));
 
-	SyslogQueue *queue = new SyslogMemoryQueue(2048);
-    debugSyslog = new SyslogStream(filter, queue);
+	SyslogQueue *queue = _debug_new SyslogMemoryQueue(2048);
+    debugSyslog = _debug_new SyslogStream(filter, queue);
 
     DEBUG_OUTPUT = *debugSyslog;
 
@@ -64,11 +64,11 @@ void syslog_setup_logger() {
         parameter.setFacility(SYSLOG_FACILITY_KERN);
         parameter.setSeverity(SYSLOG_NOTICE);
 
-        SyslogFilter *filter = new SyslogFilter(parameter);
+        SyslogFilter *filter = _debug_new SyslogFilter(parameter);
         filter->addFilter(F("*.*"), SyslogFactory::create(filter->getParameter(), (SyslogProtocol)config._H_GET(Config().flags).syslogProtocol, config._H_STR(Config().syslog_host), config._H_GET(Config().syslog_port)));
 
-        SyslogQueue *queue = debugSyslog ? debugSyslog->getQueue() : new SyslogMemoryQueue(512);
-        syslog = new SyslogStream(filter, queue);
+        SyslogQueue *queue = debugSyslog ? debugSyslog->getQueue() : _debug_new SyslogMemoryQueue(512);
+        syslog = _debug_new SyslogStream(filter, queue);
 
         _logger.setSyslog(syslog);
         LoopFunctions::add(syslog_process_queue);
@@ -160,29 +160,34 @@ void syslog_create_settings_form(AsyncWebServerRequest *request, Form &form) {
     form.finalize();
 }
 
+#if AT_MODE_SUPPORTED
+
+#include "at_mode.h"
+
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(SQC, "SQC", "Clear syslog queue");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(SQI, "SQI", "Display syslog queue info");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(SQD, "SQD", "Display syslog queue");
+
 bool syslog_at_mode_command_handler(Stream &serial, const String &command, int8_t argc, char **argv) {
 
     if (command.length() == 0) {
-        serial.print(F(
-            " AT+SQC\n"
-            "    Clear syslog queue\n"
-            " AT+SQI\n"
-            "    Display syslog queue info\n"
-            " AT+SQD\n"
-            "    Display syslog queue\n"
-        ));
-    } else if (command.equalsIgnoreCase(F("SQC"))) {
+
+        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SQC));
+        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SQI));
+        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SQD));
+
+    } else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SQC))) {
         if (syslog) {
             syslog->getQueue()->cleanUp();
             serial.println(F("Syslog queue cleared"));
         }
         return true;
-    } else if (command.equalsIgnoreCase(F("SQI"))) {
+    } else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SQI))) {
         if (syslog) {
             serial.printf_P(PSTR("Syslog queue size: %d\n"), syslog->getQueue()->size());
         }
         return true;
-    } else if (command.equalsIgnoreCase(F("SQD"))) {
+    } else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SQD))) {
         if (syslog) {
             auto *queue = syslog->getQueue();
             for(auto it = queue->begin(); it != queue->end(); ++it) {
@@ -196,6 +201,8 @@ bool syslog_at_mode_command_handler(Stream &serial, const String &command, int8_
     }
     return false;
 }
+
+#endif
 
 void syslog_prepare_deep_sleep(uint32_t time, RFMode mode) {
 
@@ -221,7 +228,7 @@ void syslog_prepare_deep_sleep(uint32_t time, RFMode mode) {
 
 PROGMEM_PLUGIN_CONFIG_DEF(
 /* pluginName               */ syslog,
-/* setupPriority            */ 9,
+/* setupPriority            */ PLUGIN_PRIO_SYSLOG,
 /* allowSafeMode            */ false,
 /* autoSetupWakeUp          */ true,
 /* rtcMemoryId              */ 0,
@@ -229,6 +236,7 @@ PROGMEM_PLUGIN_CONFIG_DEF(
 /* statusTemplate           */ syslog_get_status,
 /* configureForm            */ syslog_create_settings_form,
 /* reconfigurePlugin        */ syslog_setup_logger,
+/* reconfigure Dependencies */ nullptr,
 /* prepareDeepSleep         */ syslog_prepare_deep_sleep,
 /* atModeCommandHandler     */ syslog_at_mode_command_handler
 );
@@ -261,7 +269,7 @@ bool SyslogTCP::_connect() {
     if (_client != nullptr) {
         delete _client;
     }
-    _client = new SyncClient();
+    _client = _debug_new SyncClient();
     int status = _client->connect(_host, _port, _useTLS); // connect does not use setTimeout()
     _client->setTimeout(5);
     if_debug_printf_P(PSTR("Connect status %d\n"), status);
@@ -431,7 +439,7 @@ void SyslogAsyncTCP::transmit(const String &message) {
         }
         if (_client == nullptr || !_client->connected()) {
             if_debug_println(F("TCP connection open"));
-            _client = new AsyncClient(); // open connection and wait for ack
+            _client = _debug_new AsyncClient(); // open connection and wait for ack
             _client->setAckTimeout(ASYNC_MAX_ACK_TIME);
             _client->setRxTimeout(15000); // close idle connection after 15 seconds
             _client->onConnect(SyslogAsyncTCP::_onConnect, this);

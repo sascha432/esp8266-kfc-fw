@@ -8,6 +8,14 @@
 
 #pragma once
 
+#if _DEBUG && _MSC_VER
+#define _debug_new new ( _NORMAL_BLOCK , __FILE__ , __LINE__ )
+// Replace _NORMAL_BLOCK with _CLIENT_BLOCK if you want the
+// allocations to be of _CLIENT_BLOCK type
+#else
+#define _debug_new new
+#endif
+
 #if defined(ESP32)
 
 #include <Arduino.h>
@@ -37,6 +45,8 @@ typedef wifi_err_reason_t WiFiDisconnectReason;
 #define constexpr_strlen strlen
 #define constexpr_strlen_P strlen_P
 
+#include "misc.h"
+
 #elif defined(ESP8266)
 
 #include <Arduino.h>
@@ -62,15 +72,22 @@ typedef wifi_err_reason_t WiFiDisconnectReason;
 #elif _WIN32 || _WIN64
 
 #define NOMINMAX
+#define _CRTDBG_MAP_ALLOC
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <crtdbg.h>
 #include <string.h>
 #include <time.h>
 #include <winsock.h>
 #include <strsafe.h>
 #include <vector>
 #include <iostream>
+#include <Psapi.h>
+
+#ifndef DEBUG_OUTPUT
+#define DEBUG_OUTPUT Serial
+#endif
 #include <global.h>
 
 void panic();
@@ -91,11 +108,13 @@ void panic();
 #define sprintf_P sprintf
 #define strstr_P strstr
 #define strlen_P strlen
-#define pgm_read_byte(a) (*a)
-#define pgm_read_ptr(addr) (*reinterpret_cast<const void* const *>(addr))
+#define pgm_read_byte(a)                        (*a)
+#define pgm_read_word(addr)                     (*reinterpret_cast<const uint16_t*>(addr))
+#define pgm_read_dword(addr) 		            (*reinterpret_cast<const uint32_t*>(addr))
+#define pgm_read_ptr(addr)                      (*reinterpret_cast<const void* const *>(addr))
 #define memcmp_P memcmp
 #define strcpy_P strcpy
-#define strncpy_P strncpy_s
+#define strncpy_P strncpy
 #define memcpy_P memcpy
 
 int constexpr constexpr_strlen(const char* str) {
@@ -104,45 +123,22 @@ int constexpr constexpr_strlen(const char* str) {
 
 #define constexpr_strlen_P constexpr_strlen
 
-#ifndef WIFI_CB_EVENT_CONNECTED
-
-#define WIFI_CB_EVENT_CONNECTED        0x01
-#define WIFI_CB_EVENT_DISCONNECTED     0x02
-#define WIFI_CB_EVENT_MODE_CHANGE      0x04
-#define WIFI_CB_EVENT_ANY              (WIFI_CB_EVENT_CONNECTED|WIFI_CB_EVENT_DISCONNECTED|WIFI_CB_EVENT_MODE_CHANGE)
-
-typedef void(*WiFiEventFunc)(uint8_t event, void *payload);
-
-#endif
-
+#ifndef PGM_P
 typedef const char *PGM_P;
+#endif
 class __FlashStringHelper;
 
 #define __FPSTR(pstr_pointer) (reinterpret_cast<const __FlashStringHelper *>(pstr_pointer))
 #define __PSTR(s) ((const char *)s)
 #define F(string_literal) (__FPSTR(__PSTR(string_literal)))
 
-const char *str_P(const char *str, uint8_t index = 0);  // not the same function as in misc.cpp just a dummy
-
-#if DEBUG
-#define IF_DEBUG(...)                           __VA_ARGS__
-#define if_debug_printf(...)                    printf(__VA_ARGS__);
-#define if_debug_printf_P(...)                  printf(__VA_ARGS__);
-#define debug_printf_P(...)                     printf(__VA_ARGS__);
-#define debug_printf(...)                       printf(__VA_ARGS__);
-#else
-#define IF_DEBUG(...) ;
-#define if_debug_printf(...) ;
-#define if_debug_printf_P(...) ;
-#define debug_printf_P(...) ;
-#define debug_printf(...) ;
-#endif
-
 #define strcasecmp_P _stricmp
 #define strncasecmp _strnicmp
 #define strcmp_P strcmp
 
+#ifndef strdup
 #define strdup _strdup
+#endif
 void throwException(PGM_P message);
 
 unsigned long millis();
@@ -246,16 +242,16 @@ class String : public std::string {
         snprintf(buf, sizeof(buf), "%d", value);
         assign(buf);
     }
-    String(int32_t value) : std::string() {
-        char buf[16];
-        snprintf(buf, sizeof(buf), "%d", value);
-        assign(buf);
-    }
-    String(uint32_t value) : std::string() {
-        char buf[16];
-        snprintf(buf, sizeof(buf), "%u", value);
-        assign(buf);
-    }
+    //String(int32_t value) : std::string() {
+    //    char buf[16];
+    //    snprintf(buf, sizeof(buf), "%d", value);
+    //    assign(buf);
+    //}
+    //String(uint32_t value) : std::string() {
+    //    char buf[16];
+    //    snprintf(buf, sizeof(buf), "%u", value);
+    //    assign(buf);
+    //}
     String(int64_t value) : std::string() {
         char buf[32];
         snprintf(buf, sizeof(buf), "%lld", value);
@@ -266,16 +262,16 @@ class String : public std::string {
         snprintf(buf, sizeof(buf), "%llu", value);
         assign(buf);
     }
-    String(long value) : std::string() {
-        char buf[16];
-        snprintf(buf, sizeof(buf), "%ld", value);
-        assign(buf);
-    }
-    String(unsigned long value) : std::string() {
-        char buf[16];
-        snprintf(buf, sizeof(buf), "%lu", value);
-        assign(buf);
-    }
+    //String(long value) : std::string() {
+    //    char buf[16];
+    //    snprintf(buf, sizeof(buf), "%ld", value);
+    //    assign(buf);
+    //}
+    //String(unsigned long value) : std::string() {
+    //    char buf[16];
+    //    snprintf(buf, sizeof(buf), "%lu", value);
+    //    assign(buf);
+    //}
     String(float value) : std::string() {
         char buf[32];
         snprintf(buf, sizeof(buf), "%f", value);
@@ -286,6 +282,27 @@ class String : public std::string {
     }
     String(const char *str) : std::string(str) {
     }
+    explicit String(int value, unsigned char base = 10) {
+        char buf[65]; // max 64bit + NUL
+        _itoa(value, buf, base);
+        *this = buf;
+    }
+    explicit String(unsigned int value, unsigned char base = 10) {
+        char buf[65]; // max 64bit + NUL
+        _itoa(value, buf, base);
+        *this = buf;
+    }
+    explicit String(long value, unsigned char base = 10) {
+        char buf[65]; // max 64bit + NUL
+        _ltoa(value, buf, base);
+        *this = buf;
+    }
+    explicit String(unsigned long value, unsigned char base = 10) {
+        char buf[65]; // max 64bit + NUL
+        _ltoa(value, buf, base);
+        *this = buf;
+    }
+
     String(const __FlashStringHelper *str) : std::string(reinterpret_cast<const char *>(str)) {
 
     }
@@ -333,6 +350,9 @@ class String : public std::string {
             assign(substr(0, index) + substr(index + count));
         }
     }
+    //virtual ~String() {
+    //    printf("~String(%s)\n", this->c_str());
+    //}
     char *begin() {
         return (char *)c_str();
     }
@@ -766,7 +786,9 @@ class EEPROMFile : public Stream {
     }
 
     void clear() {
+        begin();
         memset(_eeprom, 0, _size);
+        commit();
     }
 
     size_t length() const {
@@ -1178,6 +1200,38 @@ struct rst_info{
     uint32_t depc;
 };
 
+enum WiFiDisconnectReason
+{
+    WIFI_DISCONNECT_REASON_UNSPECIFIED              = 1,
+    WIFI_DISCONNECT_REASON_AUTH_EXPIRE              = 2,
+    WIFI_DISCONNECT_REASON_AUTH_LEAVE               = 3,
+    WIFI_DISCONNECT_REASON_ASSOC_EXPIRE             = 4,
+    WIFI_DISCONNECT_REASON_ASSOC_TOOMANY            = 5,
+    WIFI_DISCONNECT_REASON_NOT_AUTHED               = 6,
+    WIFI_DISCONNECT_REASON_NOT_ASSOCED              = 7,
+    WIFI_DISCONNECT_REASON_ASSOC_LEAVE              = 8,
+    WIFI_DISCONNECT_REASON_ASSOC_NOT_AUTHED         = 9,
+    WIFI_DISCONNECT_REASON_DISASSOC_PWRCAP_BAD      = 10,  /* 11h */
+    WIFI_DISCONNECT_REASON_DISASSOC_SUPCHAN_BAD     = 11,  /* 11h */
+    WIFI_DISCONNECT_REASON_IE_INVALID               = 13,  /* 11i */
+    WIFI_DISCONNECT_REASON_MIC_FAILURE              = 14,  /* 11i */
+    WIFI_DISCONNECT_REASON_4WAY_HANDSHAKE_TIMEOUT   = 15,  /* 11i */
+    WIFI_DISCONNECT_REASON_GROUP_KEY_UPDATE_TIMEOUT = 16,  /* 11i */
+    WIFI_DISCONNECT_REASON_IE_IN_4WAY_DIFFERS       = 17,  /* 11i */
+    WIFI_DISCONNECT_REASON_GROUP_CIPHER_INVALID     = 18,  /* 11i */
+    WIFI_DISCONNECT_REASON_PAIRWISE_CIPHER_INVALID  = 19,  /* 11i */
+    WIFI_DISCONNECT_REASON_AKMP_INVALID             = 20,  /* 11i */
+    WIFI_DISCONNECT_REASON_UNSUPP_RSN_IE_VERSION    = 21,  /* 11i */
+    WIFI_DISCONNECT_REASON_INVALID_RSN_IE_CAP       = 22,  /* 11i */
+    WIFI_DISCONNECT_REASON_802_1X_AUTH_FAILED       = 23,  /* 11i */
+    WIFI_DISCONNECT_REASON_CIPHER_SUITE_REJECTED    = 24,  /* 11i */
+
+    WIFI_DISCONNECT_REASON_BEACON_TIMEOUT           = 200,
+    WIFI_DISCONNECT_REASON_NO_AP_FOUND              = 201,
+    WIFI_DISCONNECT_REASON_AUTH_FAIL                = 202,
+    WIFI_DISCONNECT_REASON_ASSOC_FAIL               = 203,
+    WIFI_DISCONNECT_REASON_HANDSHAKE_TIMEOUT        = 204,
+};
 
 enum rst_reason {
     REASON_DEFAULT_RST      = 0,    /* normal startup by power on */
@@ -1203,6 +1257,9 @@ public:
         _rtcMemory = nullptr;
         _readRtcMemory();
     }
+    ~EspClass() {
+        free(_rtcMemory);
+    }
 
     bool rtcUserMemoryRead(uint32_t offset, uint32_t *data, size_t size)  {
         offset = (offset * rtcMemoryBlkSize) + rtcMemoryReserved;
@@ -1225,6 +1282,12 @@ public:
         }
     }
 
+    int getFreeHeap() {
+        PROCESS_MEMORY_COUNTERS pmc;
+        GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
+        return pmc.WorkingSetSize;
+    }
+
     void rtcMemDump();
     void rtcClear();
 
@@ -1239,6 +1302,23 @@ public:
     struct rst_info *getResetInfoPtr(void) {
         return &resetInfo;
     }
+
+#if _DEBUG && _MSC_VER // MSVC memory debug
+    void _enableMSVCMemdebug() {
+        // Get current flag
+        int tmpFlag = _CrtSetDbgFlag( _CRTDBG_REPORT_FLAG );
+
+        // Turn on leak-checking bit.
+        tmpFlag |= _CRTDBG_LEAK_CHECK_DF|_CRTDBG_ALLOC_MEM_DF|_CRTDBG_DELAY_FREE_MEM_DF|_CRTDBG_CHECK_ALWAYS_DF|_CRTDBG_CHECK_CRT_DF|_CRTDBG_LEAK_CHECK_DF;
+
+        // Turn off CRT block checking bit.
+        tmpFlag &= ~_CRTDBG_CHECK_CRT_DF;
+
+        // Set flag to the new value.
+        _CrtSetDbgFlag(tmpFlag);
+    }
+#endif
+
 
 private:
     void _readRtcMemory() {
@@ -1274,7 +1354,6 @@ public:
 };
 
 extern ESP8266WiFiClass WiFi;
-extern String _sharedEmptyString;
 extern EEPROMFile EEPROM;
 extern EspClass ESP;
 
@@ -1320,6 +1399,7 @@ void os_timer_setfn(os_timer_t *timer, os_timer_func_t func, void *arg);
 void os_timer_arm(os_timer_t *timer, int interval, int repeat);
 void os_timer_disarm(os_timer_t *timer);
 
+#include "debug_helper.h"
 #include "debug_helper_enable.h"
 
 #else
@@ -1334,4 +1414,3 @@ void os_timer_disarm(os_timer_t *timer);
 #ifndef __STRINGIFY
 #define __STRINGIFY(s)                  #s
 #endif
-

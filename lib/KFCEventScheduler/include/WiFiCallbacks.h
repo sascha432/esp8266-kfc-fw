@@ -5,6 +5,10 @@
 
 #pragma once
 
+#ifndef DEBUG_WIFICALLBACKS
+#define DEBUG_WIFICALLBACKS 0
+#endif
+
 #include <Arduino_compat.h>
 #include <functional>
 #include <vector>

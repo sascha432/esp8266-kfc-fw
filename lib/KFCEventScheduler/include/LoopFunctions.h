@@ -2,8 +2,11 @@
   Author: sascha_lammers@gmx.de
 */
 
-
 #pragma once
+
+#ifndef DEBUG_LOOP_FUNCTIONS
+#define DEBUG_LOOP_FUNCTIONS 0
+#endif
 
 #include <Arduino_compat.h>
 #include <functional>

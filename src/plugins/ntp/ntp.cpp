@@ -4,6 +4,10 @@
 
 #if NTP_CLIENT
 
+#ifndef DEBUG_NTP_CLIENT
+#define DEBUG_NTP_CLIENT 0
+#endif
+
 #include <sntp.h>
 #include <KFCTimezone.h>
 #include <KFCForms.h>
@@ -16,12 +20,10 @@
 #include "logger.h"
 #include "plugins.h"
 
-#define DEBUG_TIMEZONE  1
-
-#if DEBUG_TIMEZONE
-#include "debug_local_def.h"
+#if DEBUG_NTP_CLIENT
+#include <debug_helper_enable.h>
 #else
-#include "debug_local_undef.h"
+#include <debug_helper_disable.h>
 #endif
 
 #include <push_pack.h>
@@ -30,8 +32,6 @@ typedef struct __attribute__packed__ {
     int32_t offset;
     char abbreviation[4];
 } NTPClientData_t;
-
-#include <pop_pack.h>
 
 PROGMEM_STRING_DEF(strftime_date_time_zone, "%FT%T %Z");
 
@@ -86,12 +86,12 @@ TimezoneData::~TimezoneData() {
 }
 
 RemoteTimezone *TimezoneData::createRemoteTimezone() {
-    if_debug_printf_P(PSTR("creating RemoteTimezone object %p\n"), _remoteTimezone);
-    return (_remoteTimezone = new RemoteTimezone());
+    _debug_printf_P(PSTR("creating RemoteTimezone object %p\n"), _remoteTimezone);
+    return (_remoteTimezone = _debug_new RemoteTimezone());
 }
 
 void TimezoneData::deleteRemoteTimezone() {
-    if_debug_printf_P(PSTR("deleting RemoteTimezone object %p\n"), _remoteTimezone);
+    _debug_printf_P(PSTR("deleting RemoteTimezone object %p\n"), _remoteTimezone);
     if (_remoteTimezone) {
         delete _remoteTimezone;
         _remoteTimezone = nullptr;
@@ -144,7 +144,14 @@ void TimezoneData::retry(const String &message) {
 
 void TimezoneData::wifiConnectedCallback(uint8_t event, void *payload) {
 
-    if_debug_printf_P(PSTR("Remote timezone: wifiConnectedCallback: updateRequired() = %d\n"), timezoneData->updateRequired());
+#if DEBUG
+    if (!timezoneData) {
+        _debug_printf_P(PSTR("Remote timezone: wifiConnectedCallback(%d): timezoneData = nullptr\n"), event);
+        return;
+    }
+#endif
+
+    _debug_printf_P(PSTR("Remote timezone: wifiConnectedCallback(%d): updateRequired() = %d\n"), event, timezoneData->updateRequired());
 
     if (timezoneData->updateRequired()) {
 
@@ -152,7 +159,7 @@ void TimezoneData::wifiConnectedCallback(uint8_t event, void *payload) {
         rtz->setUrl(config.getString(_H(Config().ntp.remote_tz_dst_ofs_url)));
         rtz->setTimezone(config.getString(_H(Config().ntp.timezone)));
         rtz->setStatusCallback([](bool status, const String message, time_t zoneEnd) {
-            if_debug_printf_P(PSTR("remote timezone callback: status %d message %s zoneEnd %ld\n"), status, message.c_str(), (long)zoneEnd);
+            _debug_printf_P(PSTR("remote timezone callback: status %d message %s zoneEnd %ld\n"), status, message.c_str(), (long)zoneEnd);
             if (status) {
                 auto &timezone = get_default_timezone();
                 auto offset = timezone.getOffset();
@@ -176,7 +183,7 @@ void TimezoneData::wifiConnectedCallback(uint8_t event, void *payload) {
                 NTPClientData_t ntp;
                 ntp.offset = offset;
                 strncpy(ntp.abbreviation, timezone.getAbbreviation().c_str(), sizeof(ntp.abbreviation) - 1)[sizeof(ntp.abbreviation) - 1] = 0;
-                plugin_write_rtc_memory(NTP_CLIENT_RTC_MEM_ID, &ntp, sizeof(ntp));
+                RTCMemoryManager::write(NTP_CLIENT_RTC_MEM_ID, &ntp, sizeof(ntp));
 
             } else {
                 timezoneData->retry(message);
@@ -199,14 +206,29 @@ const String TimezoneData::getStatus() {
             out.printf_P(PSTR("%s, status invalid"), config._H_STR(ntp.timezone));
         }
         for (int i = 0; i < 3; i++) {
-            if (config._H_STR(ntp.servers[i])) {
+            const char *server;
+            switch(i) { // _H_STR() = constexpr
+                case 0:
+                    server = config._H_STR(ntp.servers[0]);
+                    break;
+                case 1:
+                    server = config._H_STR(ntp.servers[1]);
+                    break;
+                case 2:
+                    server = config._H_STR(ntp.servers[2]);
+                    break;
+                case 3:
+                    server = config._H_STR(ntp.servers[3]);
+                    break;
+            }
+            if (*server) {
                 if (firstServer) {
                     firstServer = false;
                     out.print(F(HTML_S(br) "Servers "));
                 } else {
                     out.print(FSPGM(comma_));
                 }
-                out.print(config._H_STR(ntp.servers[i]));
+                out.print(server);
             }
         }
         return out;
@@ -217,9 +239,9 @@ const String TimezoneData::getStatus() {
 
 void TimezoneData::updateLoop() {
     if (_zoneEnd != 0 && time(nullptr) >= _zoneEnd) {
-        if_debug_printf_P(PSTR("Remote timezone: updateLoop triggered\n"));
+        _debug_printf_P(PSTR("Remote timezone: updateLoop triggered\n"));
         LoopFunctions::remove(TimezoneData::updateLoop); // remove once triggered
-        timezoneData = new TimezoneData();
+        timezoneData = _debug_new TimezoneData();
         if (WiFi.isConnected()) { // simulate event if WiFi is already connected
             timezoneData->wifiConnectedCallback(WiFiCallbacks::EventEnum_t::CONNECTED, nullptr);
         }
@@ -238,7 +260,7 @@ void timezone_setup() {
         auto remoteUrl = config.getString(_H(Config().ntp.remote_tz_dst_ofs_url));
         if (*remoteUrl) {
             if (!timezoneData) {
-                timezoneData = new TimezoneData();
+                timezoneData = _debug_new TimezoneData();
             }
             if (WiFi.isConnected()) { // simulate event if WiFi is already connected
                 TimezoneData::wifiConnectedCallback(WiFiCallbacks::EventEnum_t::CONNECTED, nullptr);
@@ -285,18 +307,21 @@ void ntp_client_create_settings_form(AsyncWebServerRequest *request, Form &form)
     form.finalize();
 }
 
+#if AT_MODE_SUPPORTED
+
+#include "at_mode.h"
+
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(NOW, "NOW", "Display current time");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF(TZ, "TZ", "<timezone>", "Set timezone", "Show timezone information");
+
 bool ntp_client_at_mode_command_handler(Stream &serial, const String &command, int8_t argc, char **argv) {
 
     if (command.length() == 0) {
-        serial.print(F(
-            " AT+NOW\n"
-            "    Display current time\n"
-            " AT+TZ?\n"
-            "    Show timezone information\n"
-            " AT+TZ <timezone>\n"
-            "    Set timezone\n"
-        ));
-    } else if (command.equalsIgnoreCase(F("NOW"))) {
+
+        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(NOW));
+        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(TZ));
+
+    } else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(NOW))) {
         time_t now = time(nullptr);
         char timestamp[64];
         if (!IS_TIME_VALID(now)) {
@@ -313,9 +338,9 @@ bool ntp_client_at_mode_command_handler(Stream &serial, const String &command, i
             serial.printf_P(PSTR("+NOW %s\n"), timestamp);
         }
         return true;
-    } else if (command.equalsIgnoreCase(F("TZ"))) {
+    } else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(TZ))) {
         auto &timezone = get_default_timezone();
-        if (argc == ATMODE_QUERY_COMMAND) { // TZ?
+        if (argc == AT_MODE_QUERY_COMMAND) { // TZ?
             if (timezone.isValid()) {
                 char buf[32];
                 time_t zoneEnd = TimezoneData::getZoneEnd();
@@ -343,6 +368,8 @@ bool ntp_client_at_mode_command_handler(Stream &serial, const String &command, i
     return false;
 }
 
+#endif
+
 // data is stored after retrieval already
 // void ntp_client_prepare_deep_sleep(uint32_t time, RFMode mode) {
 // }
@@ -353,7 +380,7 @@ void ntp_client_reconfigure_plugin() {
 
 PROGMEM_PLUGIN_CONFIG_DEF(
 /* pluginName               */ ntp,
-/* setupPriority            */ 10,
+/* setupPriority            */ PLUGIN_PRIO_NTP,
 /* allowSafeMode            */ false,
 /* autoSetupWakeUp          */ false,
 /* rtcMemoryId              */ NTP_CLIENT_RTC_MEM_ID,
@@ -361,8 +388,11 @@ PROGMEM_PLUGIN_CONFIG_DEF(
 /* statusTemplate           */ TimezoneData::getStatus,
 /* configureForm            */ ntp_client_create_settings_form,
 /* reconfigurePlugin        */ ntp_client_reconfigure_plugin,
+/* reconfigure Dependencies */ nullptr,
 /* prepareDeepSleep         */ nullptr,
 /* atModeCommandHandler     */ ntp_client_at_mode_command_handler
 );
 
 #endif
+
+#include <pop_pack.h>

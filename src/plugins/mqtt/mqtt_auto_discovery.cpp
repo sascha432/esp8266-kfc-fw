@@ -12,6 +12,12 @@
 #include "mqtt_client.h"
 #include "progmem_data.h"
 
+#if DEBUG_MQTT_CLIENT
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
+#endif
+
 void MQTTAutoDiscovery::create(MQTTComponent *component, MQTTAutoDiscovery::Format_t format) {
     String name = MQTTClient::getComponentName(component->getNumber());
 

@@ -44,4 +44,4 @@ Timezone &get_default_timezone();
 tm *timezone_localtime(const time_t *timer);
 size_t strftime_P(char *buf, size_t size, PGM_P format, const struct tm *tm);
 size_t timezone_strftime_P(char *buf, size_t size, PGM_P format, const struct tm *tm);
-size_t timezone_strftime(char *buf, size_t size, const char *format, const struct tm *tm);
+size_t timezone_strftime(char *buf, size_t size, PGM_P format, const struct tm *tm);

@@ -25,7 +25,7 @@ void AsyncFileUploadWebHandler::markTemporaryFileAsProcessed(AsyncWebServerReque
 
 void AsyncFileUploadWebHandler::_handleUpload(AsyncWebServerRequest *request, const String& filename, size_t index, uint8_t *data, size_t len, bool final) {
     if (index == 0 && !request->_tempObject) {
-        if (!is_authenticated(request)) {
+        if (!web_server_is_authenticated(request)) {
             request->send(403);
         } else {
             request->_tempFile = tmpfile(sys_get_temp_dir(), F("_fm_tmp_upload"));

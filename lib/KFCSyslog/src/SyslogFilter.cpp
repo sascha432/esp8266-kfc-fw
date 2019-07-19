@@ -57,7 +57,7 @@ SyslogFilterItemVector SyslogFilter::_parseFilter(const String filter) {
 }
 
 bool SyslogFilter::_matchFilterExpression(const SyslogFilterItemVector& filter, SyslogFacility facility, SyslogSeverity severity) {
-    for (auto item : filter) {
+    for (auto &item : filter) {
         if ((item.first == SYSLOG_FACILITY_ANY || item.first == facility) && (item.second == SYSLOG_SEVERITY_ANY || item.second == severity)) {
             return true;
         }
@@ -100,14 +100,14 @@ Syslog* SyslogFilter::createSyslogFromString(const String str) {
                     useTLS = true;
                     ptr++;
                 }
-                syslog = new SyslogTCP(_parameter, ptr, tok[1] ? atoi(tok[1]) : (useTLS ? SYSLOG_PORT_TCP_TLS : SYSLOG_PORT_TCP), useTLS);
+                syslog = _debug_new SyslogTCP(_parameter, ptr, tok[1] ? atoi(tok[1]) : (useTLS ? SYSLOG_PORT_TCP_TLS : SYSLOG_PORT_TCP), useTLS);
             } else if (*ptr) {  // UDP
-                syslog = new SyslogUDP(_parameter, ptr, tok[1] ? atoi(tok[1]) : SYSLOG_PORT_UDP);
+                syslog = _debug_new SyslogUDP(_parameter, ptr, tok[1] ? atoi(tok[1]) : SYSLOG_PORT_UDP);
             }
         } else if (strcasecmp_P(ptr, PSTR("stop")) == 0) {
             syslog = SYSLOG_FILTER_STOP;
         } else {
-            syslog = new SyslogFile(_parameter, tok[0], tok[1] ? atoi(tok[1]) : SYSLOG_FILE_MAX_SIZE, tok[2] ? atoi(tok[2]) : SYSLOG_FILE_MAX_ROTATE);
+            syslog = _debug_new SyslogFile(_parameter, tok[0], tok[1] ? atoi(tok[1]) : SYSLOG_FILE_MAX_SIZE, tok[2] ? atoi(tok[2]) : SYSLOG_FILE_MAX_ROTATE);
         }
     }
     free(dupStr);

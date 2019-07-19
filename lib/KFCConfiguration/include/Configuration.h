@@ -4,25 +4,37 @@
 
 #pragma once
 
+#ifndef DEBUG_CONFIGURATION
+#define DEBUG_CONFIGURATION 0
+#endif
+
 #include <Arduino_compat.h>
 #include <crc16.h>
 #include <map>
 #include <vector>
 #include <Buffer.h>
+#include <DumpBinary.h>
 #include "ConfigurationParameter.h"
+#if !_WIN32
+#include <EEPROM.h>
+#endif
 
 #ifdef NO_GLOBAL_EEPROM
 #include <EEPROM.h>
 extern EEPROMClass EEPROM;
 #endif
 
+#if DEBUG_CONFIGURATION
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
+#endif
+
 #ifndef CONFIG_MAGIC_DWORD
 #define CONFIG_MAGIC_DWORD              0xfef31211
 #endif
 
-#define CONFIG_STRINGIFY(s)             _CONFIG_STRINGIFY(s)
-#define _CONFIG_STRINGIFY(s)            #s
-#define CONFIG_GET_HANDLE(name)         getHandle(CONFIG_STRINGIFY(name))
+#define CONFIG_GET_HANDLE(name)         getHandle(_STRINGIFY(name))
 #define _H(name)                        CONFIG_GET_HANDLE(name)
 
 #define _H_GET(name)                    get<decltype(name)>(_H(name))
@@ -35,24 +47,28 @@ extern EEPROMClass EEPROM;
 #define _H_W_GET_IP(name)               getWriteable<uint32_t>(_H(name))
 #define _H_SET_IP(name, value)          set<uint32_t>(_H(name), (uint32_t)value)
 
-#if DEBUG && 1
-// needs a lot RAM
+#if DEBUG && DEBUG_CONFIGURATION
+// store all configuration handle names for debugging. needs a lot RAM
 #define DEBUG_GETHANDLE 1
+#define CONSTEXPR_CONFIG_HANDLE_T ConfigurationParameter::Handle_t
 uint16_t getHandle(const char *name);
-const char *getHandleName(uint16_t crc);
+const char *getHandleName(ConfigurationParameter::Handle_t crc);
 #else
 #define DEBUG_GETHANDLE 0
+#define CONSTEXPR_CONFIG_HANDLE_T constexpr ConfigurationParameter::Handle_t
 uint16_t constexpr getHandle(const char *name) {
     return constexpr_crc16_calc((const uint8_t *)name, constexpr_strlen(name));
 }
-const char *getHandleName(uint16_t crc);
+const char *getHandleName(ConfigurationParameter::Handle_t crc);
 #endif
 
 #include <push_pack.h>
 
 class Configuration {
 public:
-    typedef struct CONFIGURATION_PACKED {
+    typedef ConfigurationParameter::Handle_t Handle_t;
+
+    typedef struct __attribute__packed__ {
         uint32_t magic;             // 32
         uint16_t crc;               // 48
         uint32_t length : 12;       // 60
@@ -60,6 +76,7 @@ public:
     } Header_t;
 
     typedef std::vector<ConfigurationParameter> ParameterVector;
+    typedef std::vector<ConfigurationParameter>::iterator ParameterVectorIterator;
 
     Configuration(uint16_t offset, uint16_t size);
     ~Configuration();
@@ -71,122 +88,177 @@ public:
     // write data to EEPROM
     bool write();
 
-    const char *getString(uint16_t handle);
-    char *getWriteableString(uint16_t handle, uint16_t maxLength);
-    const void *getBinary(uint16_t handle, uint16_t &length);
-
-    void setString(uint16_t handle, const char *string);
-    void setString(uint16_t handle, const String &string);
-    void setString(uint16_t handle, const __FlashStringHelper *string);
-    void setBinary(uint16_t handle, const void *data, uint16_t length);
-
-    const bool getBool(uint16_t handle) {
-        return get<uint8_t>(handle) ? true : false;
-    }
-    template<typename T>
-    const T &getBinary(uint16_t handle, T &ptr, uint16_t &length) {
-        return ptr = (T)getBinary(handle, length);
-    }
-    template<typename T>
-    const T *getStruct(uint16_t handle, T &data) {
-        uint16_t length;
-        const void *dataPtr = getBinary(handle, length);
-        if (!dataPtr || length != sizeof(T)) {
-#if DEBUG
-            if (dataPtr && length != sizeof(T)) {
-                debug_printf("Configuration::getStruct() size does not match, handle %04x (%s)\n", handle, getHandleName(handle));
+    // the reference returned cannot be used to access the parameter safely
+    // use ConfigurationParameterFactory::get()
+    template <typename T>
+    ConfigurationParameterT<T> &getWritableParameter(Handle_t handle, uint16_t maxLength = 0) {
+        uint16_t offset;
+        auto &param = _getOrCreateParam(ConfigurationParameter::getType<T>(), handle, offset);
+        if (param.isWriteable(sizeof(T))) {
+            return static_cast<ConfigurationParameterT<T>&>(param);
+        }
+        if (std::is_same<T, char *>::value) {
+            char *ptr = (char *)param.getString(this, offset);
+            if (ptr) {
+                if (maxLength < param.getSize()) {
+                    maxLength = param.getSize();
+                }
             }
-#endif
+            char *data = (char *)calloc(maxLength + 1, 1);
+            if (ptr) {
+                strncpy(data, ptr, maxLength + 1);
+            }
+            param.setDataPtr((uint8_t *)data, maxLength);
+        }
+        else {
+            uint16_t length;
+            auto dataPtr = reinterpret_cast<T *>(param.getBinary(this, length, offset));
+            if (!dataPtr || (dataPtr && length != sizeof(T))) {
+                dataPtr = reinterpret_cast<T *>(param.allocate(sizeof(T))); // discard data if size does not fit
+                param.setSize(sizeof(T));
+                param.getParam().length = sizeof(T);
+            }
+        }
+        return static_cast<ConfigurationParameterT<T>&>(param);
+    }
+
+    template <typename T>
+    ConfigurationParameterT<T> *getParameter(Handle_t handle) {
+        uint16_t offset;
+        auto iterator = _findParam(ConfigurationParameter::getType<T>(), handle, offset);
+        if (iterator == _params.end()) {
             return nullptr;
         }
-        memcpy(&data, dataPtr, length);
-        return reinterpret_cast<const T *>(dataPtr);
+        return static_cast<ConfigurationParameterT<T> *>(&(*iterator));
     }
-    template<typename T>
-    const T get(uint16_t handle) {
-        auto param = _findParam(ConfigurationParameter::getType<T>(), handle);
-        if (!param) {
+
+
+    const char *getString(Handle_t handle);
+    char *getWriteableString(Handle_t handle, uint16_t maxLength);
+    const void *getBinary(Handle_t handle, uint16_t &length);
+
+    void setString(Handle_t handle, const char *string);
+    void setString(Handle_t handle, const String &string);
+    void setString(Handle_t handle, const __FlashStringHelper *string);
+    void setBinary(Handle_t handle, const void *data, uint16_t length);
+
+    const bool getBool(Handle_t handle) {
+        return get<uint8_t>(handle) ? true : false;
+    }
+
+    void setBool(Handle_t handle, const bool flag) {
+        set<bool>(handle, flag ? true : false);
+    }
+
+    template <typename T>
+    bool exists(Handle_t handle) {
+        uint16_t offset;
+        return _findParam(ConfigurationParameter::getType<T>(), handle, offset) != _params.end();
+    }
+
+    template <typename T>
+    const T get(Handle_t handle) {
+        uint16_t offset;
+        auto param = _findParam(ConfigurationParameter::getType<T>(), handle, offset);
+        if (param == _params.end()) {
             T empty;
             memset(&empty, 0, sizeof(empty));
             return empty;
         }
-        uint16_t length = sizeof(T);
-        T *dataPtr = (T *)param->getBinary(length, _offset);
+        uint16_t length;
+        auto dataPtr = reinterpret_cast<const T *>(param->getBinary(this, length, offset));
         if (!dataPtr || length != sizeof(T)) {
-#if DEBUG
+#if DEBUG_CONFIGURATION
             if (dataPtr && length != sizeof(T)) {
-                debug_printf("Configuration::get<%s>() size does not match, handle %04x (%s)\n", ConfigurationParameter::getTypeString(param->getType()).c_str(), handle, getHandleName(handle));
+                _debug_printf("Configuration::get<%s>() size does not match, handle %04x (%s)\n", ConfigurationParameter::getTypeString(param->getType()).c_str(), handle, getHandleName(handle));
             }
 #endif
             T empty;
             memset(&empty, 0, sizeof(empty));
             return empty;
         }
-        return (const T)*dataPtr;
-    }
-    template<typename T>
-    T &getWriteable(uint16_t handle) {
-        auto &param = _getParam(ConfigurationParameter::getType<T>(), handle);
-        if (param.isWriteable(sizeof(T))) {
-            return (T &)*((T *)param.getDataPtr());
-        }
-        uint16_t length;
-        T *ptr = (T *)param.getBinary(length, _offset);
-        if (ptr && length != sizeof(T)) {
-            param.free();
-            ptr = nullptr;
-        }
-        T *data = (T *)calloc(sizeof(T), 1);
-        if (ptr) {
-            memcpy(data, ptr, sizeof(T));
-            param.free();
-        }
-        param.setDataPtr((uint8_t *)data, sizeof(T));
-        param.setDirty(true);
-        return (T &)*data;
+        return *dataPtr;
     }
 
-    void setBool(uint16_t handle, const bool flag) {
-        set<bool>(handle, flag ? true : false);
+    template <typename T>
+    T &getWriteable(Handle_t handle) {
+        auto &param = getWritableParameter<T>(handle);
+        param.setDirty(true);
+        return param.get();
     }
-    template<typename T>
-    const T set(uint16_t handle, const T data) {
-        auto &param = _getParam(ConfigurationParameter::getType<T>(), handle);
+
+    template <typename T>
+    const T set(Handle_t handle, const T data) {
+        uint16_t offset;
+        auto &param = _getOrCreateParam(ConfigurationParameter::getType<T>(), handle, offset);
         param.setData((const uint8_t *)&data, sizeof(T));
         return data;
     }
 
-    void dumpEEPROM(Print &output);
+    ConfigurationParameter &getParameterByPosition(uint16_t position);
+    uint16_t getPosition(const ConfigurationParameter *parameter) const;
+
+    void dumpEEPROM(Print &output, bool asByteArray = true, uint16_t offset = 0, uint16_t length = 0);
     void dump(Print &output);
     void release();
     bool isDirty() const;
 
-    static void beginEEPROM();
-    static void endEEPROM();
-    static void commitEEPROM();
-    static bool isEEPROMInitialized();
-    static uint16_t getEEPROMSize();
-#if ESP8266
-    static void copyEEPROM(uint8_t *dst, uint16_t offset, uint16_t length, uint16_t size);
-#endif
-    static unsigned long getLastReadAccess();
+    inline void beginEEPROM() {
+        if (!_eepromInitialized) {
+            _eepromInitialized = true;
+            _debug_printf("Configuration::beginEEPROM() = %d\n", _eepromSize);
+            EEPROM.begin(_eepromSize);
+        }
+    }
+
+    inline bool isEEPROMInitialized() {
+        return _eepromInitialized;
+    }
+
+    void endEEPROM();
+    void commitEEPROM();
+    void getEEPROM(uint8_t *dst, uint16_t offset, uint16_t length, uint16_t size);
+
+    // return time of last readData call that allocated memory
+    inline unsigned long getLastReadAccess() {
+        return _readAccess;
+    }
+    inline void setLastReadAccess() {
+        _readAccess = millis();
+    }
+
+    virtual void setLastError(const String &error) {
+    }
+    virtual const char *getLastError() const {
+        return nullptr;
+    }
+
 
 private:
-    ConfigurationParameter *_findParam(ConfigurationParameter::TypeEnum_t type, uint16_t handle);
-    ConfigurationParameter &_getParam(ConfigurationParameter::TypeEnum_t type, uint16_t handle);
+    // find a parameter, type can be _ANY or a specific type
+    ParameterVectorIterator _findParam(ConfigurationParameter::TypeEnum_t type, Handle_t handle, uint16_t &offset);
+
+    ConfigurationParameter &_getOrCreateParam(ConfigurationParameter::TypeEnum_t type, Handle_t handle, uint16_t &offset);
+
+    // read parameter headers
     bool _readParams();
-    uint16_t calculateOffset(uint16_t handle);
+
+#if DEBUG_CONFIGURATION
+    uint16_t calculateOffset(Handle_t handle);
+#endif
 
 private:
     uint16_t _offset;
     uint16_t _dataOffset;
     uint16_t _size;
     ParameterVector _params;
-    static bool _eepromInitialized;
-    static uint16_t _eepromSize;
+    bool _eepromInitialized;
+    uint16_t _eepromSize;
 
 protected:
-    static unsigned long _readAccess;
+    unsigned long _readAccess;
 };
 
 #include <pop_pack.h>
+
+#include <debug_helper_enable.h>

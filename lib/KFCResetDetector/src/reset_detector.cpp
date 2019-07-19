@@ -6,25 +6,24 @@
 #include <Arduino_compat.h>
 #include "reset_detector.h"
 
-ResetDetector resetDetector;
-
-#ifndef DEBUG_RESET_DETECTOR
-#define DEBUG_RESET_DETECTOR        1
-#endif
 #if DEBUG_RESET_DETECTOR
 #include <debug_helper_enable.h>
 #else
 #include <debug_helper_disable.h>
 #endif
 
+ResetDetector resetDetector;
+
 ResetDetector::ResetDetector() {
-#if DEBUG_RESET_DETECTOR
-    Serial.begin(115200);
+#if !DEBUG_RESET_DETECTOR
+    // for debugging call init in setup() after Serial.begin()
+    _init();
 #endif
-    // _init();
 }
 
 void ResetDetector::_init() {
+    _debug_println(F("ResetDetector::_init()"));
+
      _timer = nullptr;
 #if HAVE_KFC_PLUGINS
     register_all_plugins();
@@ -35,7 +34,7 @@ void ResetDetector::_init() {
 
 #if HAVE_KFC_PLUGINS
 
-    if (plugin_read_rtc_memory(RESET_DETECTOR_RTC_MEM_ID, &data, sizeof(data))) {
+    if (RTCMemoryManager::read(RESET_DETECTOR_RTC_MEM_ID, &data, sizeof(data))) {
         isValid = true;
     }
 
@@ -87,7 +86,7 @@ void ResetDetector::armTimer() {
     if (_timer) {
         disarmTimer();
     }
-    _timer = new os_timer_t();
+    _timer = _debug_new os_timer_t();
     os_timer_setfn(_timer, reinterpret_cast<os_timer_func_t *>(_timerCallback), reinterpret_cast<void *>(this));
     os_timer_arm(_timer, RESET_DETECTOR_TIMEOUT, 0);
 }
@@ -196,7 +195,7 @@ void ResetDetector::_writeData() {
 
 #if HAVE_KFC_PLUGINS
 
-    plugin_write_rtc_memory(RESET_DETECTOR_RTC_MEM_ID, (void *)&data, sizeof(data));
+    RTCMemoryManager::write(RESET_DETECTOR_RTC_MEM_ID, (void *)&data, sizeof(data));
 
 #else
 
@@ -213,16 +212,19 @@ void ResetDetector::_writeData() {
 
 #if HAVE_KFC_PLUGINS
 
+#if AT_MODE_SUPPORTED
+
+#include "at_mode.h"
+
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPP(RD, "RD", "Reset detector clear counter", "Display information");
+
 bool reset_detector_command_handler(Stream &serial, const String &command, int8_t argc, char **argv) {
 
     if (command.length() == 0) {
-        serial.print(F(
-            " AT+RD?\n"
-            "    Display information\n"
-            " AT+RDCLEAR\n"
-            "    Reset detector clear counter\n"
-        ));
-    } else if (command.equalsIgnoreCase(F("RDCLEAR"))) {
+
+        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(RD));
+
+    } else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(RD))) {
         if (argc == -1) {
             serial.printf_P(PSTR("safe mode: %d\nreset counter: %d\ninitial reset counter: %d\ncrash: %d\nreboot: %d\nreset: %d\nreset reason: %s / %s\n"),
                 resetDetector.getSafeMode(),
@@ -242,9 +244,11 @@ bool reset_detector_command_handler(Stream &serial, const String &command, int8_
     return false;
 }
 
+#endif
+
 PROGMEM_PLUGIN_CONFIG_DEF(
     /* pluginName               */ rd,
-    /* setupPriority            */ 0,
+    /* setupPriority            */ PLUGIN_PRIO_RESET_DETECTOR,
     /* allowSafeMode            */ false,
     /* autoSetupWakeUp          */ false,
     /* rtcMemoryId              */ RESET_DETECTOR_RTC_MEM_ID,
@@ -252,6 +256,7 @@ PROGMEM_PLUGIN_CONFIG_DEF(
     /* statusTemplate           */ nullptr,
     /* configureForm            */ nullptr,
     /* reconfigurePlugin        */ nullptr,
+    /* reconfigure Dependencies */ nullptr,
     /* prepareDeepSleep         */ nullptr,
     /* atModeCommandHandler     */ reset_detector_command_handler
 );

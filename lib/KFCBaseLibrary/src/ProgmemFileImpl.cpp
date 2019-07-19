@@ -6,7 +6,7 @@
 
 ProgmemFileImpl::ProgmemFileImpl(const ProgmemStream & stream, const char * name) {
     _stream = stream;
-    _name.reset(new char[strlen(name) + 1]);
+    _name.reset(_debug_new char[strlen(name) + 1]);
     strcpy(_name.get(), name);
 }
 

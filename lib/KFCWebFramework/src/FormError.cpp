@@ -19,14 +19,14 @@ FormError::FormError(FormField * field, const String & message) {
     _message = message;
 }
 
-const String & FormError::getName() {
+const String & FormError::getName() const {
     if (!_field) {
         return _sharedEmptyString;
     }
     return _field->getName();
 }
 
-const String & FormError::getMessage() {
+const String & FormError::getMessage() const {
     return _message;
 }
 

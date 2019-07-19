@@ -159,9 +159,13 @@
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\Buffer.cpp" />
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\BufferStream.cpp" />
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\crc16.cpp" />
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\debug_helper.cpp" />
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\DumpBinary.cpp" />
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\misc.cpp" />
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\TableDumper.cpp" />
     <ClCompile Include="..\..\..\src\Configuration.cpp" />
     <ClCompile Include="..\..\..\src\ConfigurationParameter.cpp" />
+    <ClCompile Include="..\..\..\src\ConfigurationParameterReference.cpp" />
     <ClCompile Include="test_config.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -169,8 +173,10 @@
     <ClInclude Include="..\..\..\..\KFCBaseLibrary\include\Buffer.h" />
     <ClInclude Include="..\..\..\..\KFCBaseLibrary\include\BufferStream.h" />
     <ClInclude Include="..\..\..\..\KFCBaseLibrary\include\crc16.h" />
+    <ClInclude Include="..\..\..\..\KFCBaseLibrary\include\TableDumper.h" />
     <ClInclude Include="..\..\..\include\Configuration.h" />
     <ClInclude Include="..\..\..\include\ConfigurationParameter.h" />
+    <ClInclude Include="..\..\..\include\ConfigurationParameterReference.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

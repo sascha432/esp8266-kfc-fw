@@ -4,6 +4,7 @@
 
 #if HTTP2SERIAL
 
+#include <PrintString.h>
 #include "ws_console_client.h"
 #include "http2serial.h"
 #include "at_mode.h"
@@ -12,7 +13,7 @@ WsClient *WsConsoleClient::getInstance(AsyncWebSocketClient *socket) {
 
     WsClient *wsClient = WsClientManager::getWsClientManager()->getWsClient(socket);
     if (!wsClient) {
-        wsClient = new WsConsoleClient(socket);
+        wsClient = _debug_new WsConsoleClient(socket);
     }
     return wsClient;
 }
@@ -20,7 +21,9 @@ WsClient *WsConsoleClient::getInstance(AsyncWebSocketClient *socket) {
 void WsConsoleClient::onAuthenticated(uint8_t *data, size_t len) {
     if_debug_printf_P(PSTR("WsConsoleClient::onAuthenticated(%s, %d)\n"), printable_string(data, std::min((size_t)32, len)).c_str(), len);
 #if AT_MODE_SUPPORTED
-    getClient()->text(get_atmode_commands());
+    PrintString commands;
+    at_mode_print_command_string(commands, '\t');
+    getClient()->text(commands);
 #endif
 }
 
@@ -48,7 +51,7 @@ void WsConsoleClient::onText(uint8_t *data, size_t len) {
 void WsConsoleClient::onStart() {
     if_debug_printf_P(PSTR("WsConsoleClient::onStart() - first client has been authenticated, Http2Serial instance %p\n"), Http2Serial::_instance);
     if (!Http2Serial::_instance) {
-        Http2Serial::_instance = new Http2Serial();
+        Http2Serial::_instance = _debug_new Http2Serial();
     }
 
 }

@@ -162,39 +162,29 @@ SerialHandler *Http2Serial::getSerialHandler() {
 void http2serial_install_web_server_hook() {
     auto server = get_web_server_object();
     if (server) {
-        AsyncWebSocket *ws_console = new AsyncWebSocket(F("/serial_console"));
+        AsyncWebSocket *ws_console = _debug_new AsyncWebSocket(F("/serial_console"));
 
         ws_console->onEvent([](AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len) {
             WsClient::onWsEvent(server, client, type, data, len, arg, WsConsoleClient::getInstance);
         });
         server->addHandler(ws_console);
-        if_debug_printf_P(PSTR("Web socket for http2serial running on port %hu\n"), config.get<uint16_t>(_H(Config().http_port)));
+        if_debug_printf_P(PSTR("Web socket for http2serial running on port %u\n"), config.get<uint16_t>(_H(Config().http_port)));
     }
 }
 
-void http2serial_setup() {
-    auto plugin = get_plugin_by_name(PSTR("http"));
-    if (plugin) {
-        // TODO cannot change callback in PROGMEM
-        // static auto prev_callback = plugin->reconfigurePlugin;
-        // plugin->reconfigurePlugin = [] {
-        //     // call previous reconfigure function and install web server hook again
-        //     prev_callback();
-        //     http2serial_install_web_server_hook();
-        // };
-    }
+#if AT_MODE_SUPPORTED
 
-    http2serial_install_web_server_hook();
-}
+#include "at_mode.h"
+
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(H2SBD, "H2SBD", "<baud>", "Set serial port rate");
 
 bool http2_serial_at_mode_command_handler(Stream &serial, const String &command, int8_t argc, char **argv) {
 
     if (command.length() == 0) {
-        serial.print(F(
-            " AT+H2SBD <baud>\n"
-            "    Set serial port rate\n"
-        ));
-    } else if (command.equalsIgnoreCase(F("H2SBD"))) {
+
+        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(H2SBD));
+
+    } else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(H2SBD))) {
         if (argc == 1) {
             uint32_t rate = atoi(argv[0]);
             if (rate) {
@@ -208,6 +198,9 @@ bool http2_serial_at_mode_command_handler(Stream &serial, const String &command,
     return false;
 }
 
+#endif
+
+PROGMEM_STRING_DECL(plugin_config_name_http);
 
 PROGMEM_PLUGIN_CONFIG_DEF(
 /* pluginName               */ http2ser,
@@ -215,10 +208,11 @@ PROGMEM_PLUGIN_CONFIG_DEF(
 /* allowSafeMode            */ false,
 /* autoSetupWakeUp          */ false,
 /* rtcMemoryId              */ 0,
-/* setupPlugin              */ http2serial_setup,
+/* setupPlugin              */ http2serial_install_web_server_hook,
 /* statusTemplate           */ nullptr,
 /* configureForm            */ nullptr,
-/* reconfigurePlugin        */ nullptr,
+/* reconfigurePlugin        */ http2serial_install_web_server_hook,
+/* reconfigure Dependencies */ SPGM(plugin_config_name_http),
 /* prepareDeepSleep         */ nullptr,
 /* atModeCommandHandler     */ http2_serial_at_mode_command_handler
 );

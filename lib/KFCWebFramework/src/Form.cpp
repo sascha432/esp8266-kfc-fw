@@ -75,7 +75,7 @@ FormValidator * Form::addValidator(const String & name, FormValidator * validato
 }
 
 FormField * Form::getField(const String & name) const {
-    for (auto &field : _fields) {
+    for (auto field : _fields) {
         if (field->getName().equals(name)) {
             return field;
         }
@@ -137,7 +137,7 @@ const bool Form::hasChanged() const {
 }
 
 const bool Form::hasError(FormField * field) const {
-    for (auto error : _errors) {
+    for (const auto &error : _errors) {
         if (error.is(field)) {
             return true;
         }
@@ -197,7 +197,7 @@ void Form::createJavascript(Print &out) {
         out.println(F("<script>"));
         out.print(F("$.formValidator(["));
         uint8_t idx = 0;
-        for(auto error : _errors) {
+        for(const auto &error : _errors) {
             if (!idx++) {
                 out.print(F(","));
             }
@@ -216,7 +216,7 @@ void Form::dump(Print &out, const String &prefix) const {
         out.print(prefix);
         out.println(F("None"));
     } else {
-        for(auto error : _errors) {
+        for(const auto &error : _errors) {
             out.print(prefix);
             out.print(error.getName());
             out.print(F(": "));

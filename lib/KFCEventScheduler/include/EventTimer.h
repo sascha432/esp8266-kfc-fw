@@ -61,10 +61,10 @@ private:
     int32_t _callCounter;
     EventScheduler::Priority_t _priority;
     bool _callbackScheduled;
-#if DEBUG
 public:
     String _getTimerSource();
 
+#if DEBUG
     String __source;
     int __line;
     String __function;

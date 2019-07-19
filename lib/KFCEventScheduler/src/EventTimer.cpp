@@ -4,6 +4,12 @@
 
 #include "EventTimer.h"
 
+#if DEBUG_EVENT_SCHEDULER
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
+#endif
+
 EventTimer::EventTimer(EventScheduler::Callback loopCallback, EventScheduler::Callback removeCallback, int64_t delay, int repeat, EventScheduler::Priority_t priority) {
 
     if (delay < 0) {
@@ -22,25 +28,25 @@ EventTimer::EventTimer(EventScheduler::Callback loopCallback, EventScheduler::Ca
     _callCounter = 0;
     _priority = priority;
 
-    _timer = new os_timer_t();
+    _timer = _debug_new os_timer_t();
     _installTimer();
 }
 
 EventTimer::~EventTimer() {
-    debug_printf_P(PSTR("EventTimer::~EventTimer() os_timer %p\n"), _timer);
+    _debug_printf_P(PSTR("EventTimer::~EventTimer() os_timer %p\n"), _timer);
     detach();
     if (_removeCallback) {
-        debug_printf_P(PSTR("EventTimer::~EventTimer(): removeCallback(%p)\n"), this);
+        _debug_printf_P(PSTR("EventTimer::~EventTimer(): removeCallback(%p)\n"), this);
         _removeCallback(this);
     }
     if (Scheduler.hasTimer(this))  {
-        debug_printf_P(PSTR("EventTimer::~EventTimer() Calling ::removeTimer(%p) to remove destroyed object from scheduler\n"), this);
+        _debug_printf_P(PSTR("EventTimer::~EventTimer() Calling ::removeTimer(%p) to remove destroyed object from scheduler\n"), this);
         Scheduler.removeTimer(this);
     }
 }
 
 void EventTimer::_installTimer() {
-    debug_printf_P(PSTR("EventTimer::_installTimer(): Installing os_timer %p, delay %.3f, repeat %d\n"), _timer, _delay / 1000.0, _repeat);
+    _debug_printf_P(PSTR("EventTimer::_installTimer(): Installing os_timer %p, delay %.3f, repeat %d\n"), _timer, _delay / 1000.0, _repeat);
 
     if (_delay > MAX_DELAY) {
         _remainingDelay = _delay - MAX_DELAY;
@@ -51,7 +57,7 @@ void EventTimer::_installTimer() {
     os_timer_arm(_timer, max(MIN_DELAY, (int32_t)(_remainingDelay ? MAX_DELAY : _delay)), (_remainingDelay || _repeat) ? 1 : 0);
 #if DEBUG_EVENT_SCHEDULER
     if (_start) {
-        debug_printf_P(PSTR("EventTimer::_installTimer(): %p, real delay %lu / %lu\n"), this, millis() - _start, (unsigned long)_delay);
+        _debug_printf_P(PSTR("EventTimer::_installTimer(): %p, real delay %lu / %lu\n"), this, millis() - _start, (unsigned long)_delay);
     }
     _start = millis();
 #endif
@@ -101,7 +107,7 @@ void EventTimer::changeOptions(int delay, int repeat, EventScheduler::Priority_t
         }
         os_timer_disarm(_timer);
     } else {
-        _timer = new os_timer_t();
+        _timer = _debug_new os_timer_t();
     }
     _installTimer();
 }
@@ -143,7 +149,7 @@ String EventTimer::_getTimerSource() {
 
 void EventTimer::detach() {
     if (_timer) {
-        debug_printf_P(PSTR("EventTimer::detach(): %p\n"), _timer);
+        _debug_printf_P(PSTR("EventTimer::detach(): %p\n"), _timer);
         os_timer_disarm(_timer);
         delete _timer;
         _timer = nullptr;

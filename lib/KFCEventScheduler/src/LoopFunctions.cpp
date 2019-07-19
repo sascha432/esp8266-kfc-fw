@@ -4,11 +4,17 @@
 
 #include "LoopFunctions.h"
 
+#if DEBUG_LOOP_FUNCTIONS
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
+#endif
+
 static LoopFunctions::FunctionsVector _functions;
 
 void LoopFunctions::add(LoopFunctions::Callback_t callback, CallbackPtr_t callbackPtr) {
 
-    debug_printf_P(PSTR("LoopFunctions::add(%p)\n"), callbackPtr);
+    _debug_printf_P(PSTR("LoopFunctions::add(%p)\n"), callbackPtr);
 
     auto result = std::find_if(_functions.begin(), _functions.end(), [&](const FunctionEntry_t &entry) {
         return (entry.callbackPtr == callbackPtr);
@@ -16,7 +22,7 @@ void LoopFunctions::add(LoopFunctions::Callback_t callback, CallbackPtr_t callba
     if (result == _functions.end()) {
         _functions.push_back({callback, callbackPtr, false});
     } else {
-        debug_printf_P(PSTR("LoopFunctions::add(): callbackPtr already exists, deleted state %d\n"), result->deleteCallback);
+        _debug_printf_P(PSTR("LoopFunctions::add(): callbackPtr already exists, deleted state %d\n"), result->deleteCallback);
         if (result->deleteCallback) {
             result->deleteCallback = 0;
         }
@@ -25,7 +31,7 @@ void LoopFunctions::add(LoopFunctions::Callback_t callback, CallbackPtr_t callba
 
 void LoopFunctions::remove(CallbackPtr_t callbackPtr) {
 
-    debug_printf_P(PSTR("LoopFunctions::remove(%p)\n"), callbackPtr);
+    _debug_printf_P(PSTR("LoopFunctions::remove(%p)\n"), callbackPtr);
 
     auto result = std::find_if(_functions.begin(), _functions.end(), [&](const FunctionEntry_t &entry) {
         return (entry.callbackPtr == callbackPtr);
@@ -35,7 +41,7 @@ void LoopFunctions::remove(CallbackPtr_t callbackPtr) {
             result->deleteCallback = 1;
         }
     } else {
-        debug_printf_P(PSTR("LoopFunctions::_remove(): Cannot find callbackPtr\n"));
+        _debug_printf_P(PSTR("LoopFunctions::_remove(): Cannot find callbackPtr\n"));
     }
 }
 

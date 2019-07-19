@@ -55,7 +55,7 @@ PGM_P Driver_4ChDimmer::getComponentName() {
 }
 
 MQTTAutoDiscovery *Driver_4ChDimmer::createAutoDiscovery(MQTTAutoDiscovery::Format_t format) {
-    auto discovery = new MQTTAutoDiscovery();
+    auto discovery = _debug_new MQTTAutoDiscovery();
     discovery->create(this, format);
     discovery->addParameter(FSPGM(mqtt_state_topic), _data.state.state);
     discovery->addParameter(FSPGM(mqtt_command_topic), _data.state.set);
@@ -424,7 +424,7 @@ void Driver_4ChDimmer::setup(bool isSafeMode) {
     if (isSafeMode) {
         return;
     }
-    _dimmer = new Driver_4ChDimmer(Serial);
+    _dimmer = _debug_new Driver_4ChDimmer(Serial);
     _dimmer->begin();
 }
 
@@ -442,6 +442,7 @@ PROGMEM_PLUGIN_CONFIG_DEF(
 /* statusTemplate           */ Driver_4ChDimmer::getStatus,
 /* configureForm            */ nullptr,
 /* reconfigurePlugin        */ nullptr,
+/* reconfigure Dependencies */ nullptr,
 /* prepareDeepSleep         */ nullptr,
 /* atModeCommandHandler     */ atomic_sun_v2_at_mode_command_handler
 );

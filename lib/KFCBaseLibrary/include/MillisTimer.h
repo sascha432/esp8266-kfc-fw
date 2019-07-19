@@ -6,26 +6,30 @@
 
 #include <Arduino_compat.h>
 
-// provides a timer based on millis that doesnt suffer from unsigned long overflow and doesnt use 64bit counters
+#include <push_pack.h>
+
+// provides a timer based on millis that doesn't suffer from unsigned long overflow and doesn't use 64bit counters
 class MillisTimer {
 public:
-    MillisTimer(long delay) {
-        set(delay);
-    }
-    MillisTimer() {
-        _active = false;
-    }
+    typedef struct __attribute__packed__ {
+        unsigned long time;
+        unsigned long delay;
+        uint8_t active: 1;
+        uint8_t overflow: 1;
+    } timer_t;
+
+    MillisTimer(long delay);
+    MillisTimer();
 
     void set(long delay);
-    long get() const;
+    long get() const; // does not change the state, reached() or disable() must be called
     void disable();
-    bool isActive() const;
+    bool isActive() const; // does not change the state, reached() or disable() must be called
     bool reached(bool reset = false);
     void restart();
 
 private:
-    bool _active;
-    bool _overflow;
-    ulong _time;
-    long _delay;
+    timer_t _data;
 };
+
+#include <pop_pack.h>

@@ -4,6 +4,10 @@
 
 #if MQTT_SUPPORT
 
+#ifndef DEBUG_MQTT_CLIENT
+#define DEBUG_MQTT_CLIENT 0
+#endif
+
 #pragma once
 
 #include <Arduino_compat.h>

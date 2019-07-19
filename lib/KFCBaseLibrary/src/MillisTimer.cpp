@@ -4,65 +4,71 @@
 
 #include "MillisTimer.h"
 
-void MillisTimer::set(long delay) {
-    ulong _millis = millis();
-    _time = _millis + delay;
-    _overflow = _millis > _time;
-    if (_overflow) {
-        _time += 0x7fffffff;
-    }
-    _active = true;
-    _delay = delay;
+MillisTimer::MillisTimer(long delay) {
+    set(delay);
 }
 
-// get and active do not change the state, reached() or disable() must be called
+MillisTimer::MillisTimer() {
+      _data.active = false;
+  }
+
+void MillisTimer::set(long delay) {
+    unsigned long _millis = millis();
+    _data.time = _millis + delay;
+    _data.overflow = _millis > _data.time;
+    if (_data.overflow) {
+        _data.time += 0x7fffffff;
+    }
+    _data.active = true;
+    _data.delay = delay;
+}
+
 long MillisTimer::get() const {
-    if (!_active) {
+    if (!_data.active) {
         return -1;
     }
-    if (_overflow) {
-        ulong _millis = millis() + 0x7fffffff;
-        return _time - _millis;
+    if (_data.overflow) {
+        unsigned long _millis = millis() + 0x7fffffff;
+        return _data.time - _millis;
     } else {
-        if (millis() > _time) {
+        if (millis() > _data.time) {
             return 0;
         } else {
-            return _time - millis();
+            return _data.time - millis();
         }
     }
 }
 
-// get and active do not change the state, reached() or disable() must be called
 bool MillisTimer::isActive() const {
-    return _active;
+    return _data.active;
 }
 
 void MillisTimer::disable() {
-    _active = false;
+    _data.active = false;
 }
 
 bool MillisTimer::reached(bool reset) {
     bool result;
-    if (!_active)  {
+    if (!_data.active)  {
         return false;
     }
-    if (_overflow) {
-        ulong _millis = millis();
+    if (_data.overflow) {
+        unsigned long _millis = millis();
         _millis += 0x7fffffff;
-        result = _millis > _time;
+        result = _millis > _data.time;
     } else {
-        result = millis() > _time;
+        result = millis() > _data.time;
     }
     if (result) {
         if (reset) {
-            set(_delay);
+            set(_data.delay);
         } else {
-            _active = false;
+            _data.active = false;
         }
     }
     return result;
 }
 
 void MillisTimer::restart() {
-    set(_delay);
+    set(_data.delay);
 }

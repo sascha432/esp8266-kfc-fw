@@ -11,9 +11,9 @@
 #include "SyslogStream.h"
 
 SyslogStream::SyslogStream(const SyslogParameter parameter, SyslogProtocol protocol, const char * host, uint16_t port, uint16_t queueSize) {
-	_filter = new SyslogFilter(parameter);
+	_filter = _debug_new SyslogFilter(parameter);
 	_parameter = &_filter->getParameter();
-	_queue = new SyslogMemoryQueue(queueSize);
+	_queue = _debug_new SyslogMemoryQueue(queueSize);
 	_filter->addFilter(F("*.*"), SyslogFactory::create(*_parameter, protocol, host, port));
 }
 

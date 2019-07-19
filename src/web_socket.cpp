@@ -36,7 +36,7 @@ String web_socket_getStatus() {
 
 WsClientManager *WsClientManager::getWsClientManager() {
     if (!wsClientManager) {
-        wsClientManager = new WsClientManager();
+        wsClientManager = _debug_new WsClientManager();
     }
     return wsClientManager;
 }
@@ -212,7 +212,7 @@ void WsClientManager::setClientAuthenticated(WsClient *wsClient, bool isAuthenti
 
 //     WsClient *wsClient = WsClientManager::getWsClientManager()->getWsClient(socket);
 //     if (!wsClient) {
-//         wsClient = new WsClient(socket);
+//         wsClient = _debug_new WsClient(socket);
 //     }
 //     return wsClient;
 // }
@@ -223,7 +223,7 @@ void WsClient::_displayData(WsClient *wsClient, AwsFrameInfo *info, uint8_t *dat
     AsyncWebSocketClient *client = wsClient->getClient();
     AsyncWebSocket *server = client->server();
 
-    debug_printf_P(PSTR(WS_PREFIX "WS_EVT_DATA %s[%u], wsClient %p\n"), WS_PREFIX_ARGS, info->opcode == WS_TEXT ? "Text" : "Binary", (unsigned int)info->len, wsClient);
+    debug_printf_P(PSTR(WS_PREFIX "WS_EVT_DATA %s[%u], wsClient %p\n"), WS_PREFIX_ARGS, info->opcode == WS_TEXT ? F("Text") : F("Binary"), (unsigned int)info->len, wsClient);
     if (info->final && info->index == 0 && info->len == len) {
         String msg;
         if (info->opcode == WS_TEXT) {
@@ -237,7 +237,7 @@ void WsClient::_displayData(WsClient *wsClient, AwsFrameInfo *info, uint8_t *dat
                 msg += buff;
             }
         }
-        debug_printf_P(PSTR(WS_PREFIX "%s-message[%u] %s\n"), WS_PREFIX_ARGS, (info->opcode == WS_TEXT) ? str_P(F("text")) : str_P(F("binary")), (unsigned)info->len, msg.c_str());
+        debug_printf_P(PSTR(WS_PREFIX "%s-message[%u] %s\n"), WS_PREFIX_ARGS, (info->opcode == WS_TEXT) ? F("text") : F("binary"), (unsigned)info->len, msg.c_str());
     }
 }
 #endif
@@ -306,14 +306,14 @@ void WsClient::_displayData(WsClient *wsClient, AwsFrameInfo *info, uint8_t *dat
         manager->add(wsClient, client);
         client->ping();
 
-        Logger_notice(F(WS_PREFIX "%s: Client connected"), WS_PREFIX_ARGS, to_c_str(client->remoteIP()));
+        Logger_notice(F(WS_PREFIX "%s: Client connected"), WS_PREFIX_ARGS, client->remoteIP().toString().c_str());
         client->text(F("+REQ_AUTH"));
 
         wsClient->onConnect(data, len);
 
     } else if (type == WS_EVT_DISCONNECT) {
 
-        Logger_notice(F(WS_PREFIX "%s: Client disconnected"), WS_PREFIX_ARGS, to_c_str(client->remoteIP()));
+        Logger_notice(F(WS_PREFIX "%s: Client disconnected"), WS_PREFIX_ARGS, client->remoteIP().toString().c_str());
         wsClient->onDisconnect(data, len);
         WsClientManager::removeWsClient(wsClient);
 

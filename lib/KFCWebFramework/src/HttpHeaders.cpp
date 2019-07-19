@@ -29,17 +29,18 @@ PROGMEM_STRING_DEF(public, "public");
 PROGMEM_STRING_DEF(private, "private");
 PROGMEM_STRING_DEF(comma_, ", ");
 
-HttpHeaders HttpHeaders::_instance;
-
 HttpHeaders::HttpHeaders() {
+    init();
+}
+
+HttpHeaders::HttpHeaders(bool addDefault) {
+    if (addDefault) {
+        init();
+    }
 }
 
 HttpHeaders::~HttpHeaders() {
     clear(-1);
-}
-
-HttpHeaders  &HttpHeaders::getInstance() {
-    return _instance;
 }
 
 const String  HttpHeaders::getRFC7231Date(const time_t *time) {

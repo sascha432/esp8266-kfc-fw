@@ -4,11 +4,15 @@
 
 #pragma once
 
+#ifndef DEBUG_KFC_CONFIG
+#define DEBUG_KFC_CONFIG 1
+#endif
+
 #include <Arduino_compat.h>
 #include <vector>
 #include <functional>
 #include <bitset>
-#include "Configuration.h"
+#include <Configuration.h>
 #if SYSLOG
 #include <KFCSyslog.h>
 #endif
@@ -18,7 +22,7 @@
 #include "reset_detector.h"
 #include "dyn_bitset.h"
 
-#ifdef dhcp_start
+#ifdef dhcp_start // defined in framework-arduinoespressif8266@2.20402.4/tools/sdk/lwip2/include/arch/cc.h
 #undef dhcp_start
 #endif
 
@@ -74,6 +78,8 @@ void blink_led(int8_t pin, int delay, dynamic_bitset &pattern);
 #error MAX_NTP_SERVER does not match SNTP_MAX_SERVERS
 #endif
 #endif
+
+#define CONFIG_RTC_MEM_ID 2
 
 typedef uint32_t ConfigFlags_t;
 
@@ -154,136 +160,147 @@ struct HomeAssistant {
     char token[250];
 };
 
-#define CONFIG_RTC_MEM_ID 2
-
 typedef struct  {
+    int16_t channel: 15;                    //  0
+    int16_t use_static_ip: 1;               // +2 byte
+    uint8_t bssid[WL_MAC_ADDR_LENGTH];      // +6 byte
     uint32_t local_ip;
     uint32_t dns1;
     uint32_t dns2;
     uint32_t subnet;
     uint32_t gateway;
-    uint8_t channel;  // 1 byte,   5 in total
-    uint8_t bssid[6]; // 6 bytes, 11 in total
 } WiFiQuickConnect_t;
 
 struct Config {
     uint32_t version;
+    ConfigFlags flags;
     char device_name[17];
     char device_pass[33];
     char wifi_ssid[33];
     char wifi_pass[33];
-    ConfigFlags flags;
     IPAddress dns1;
     IPAddress dns2;
     IPAddress local_ip;
     IPAddress subnet;
     IPAddress gateway;
-    SoftAP soft_ap;
-#if WEBSERVER_SUPPORT
+
     uint16_t http_port;
-#endif
-#if ASYNC_TCP_SSL_ENABLED
     char cert_passphrase[33];
-#endif
-#if NTP_CLIENT
-    struct NTP ntp;
-#endif
+
     uint8_t led_pin;
-#if MQTT_SUPPORT
+
     char mqtt_host[65];
-    uint16_t mqtt_port;
     char mqtt_username[33];
     char mqtt_password[33];
     char mqtt_topic[128];
     char mqtt_fingerprint[20];
+    char mqtt_discovery_prefix[32];
+
+    // comparing memory usage
+    uint16_t mqtt_port;
     uint16_t mqtt_keepalive;
     uint8_t mqtt_qos;
-#if MQTT_AUTO_DISCOVERY
-    char mqtt_discovery_prefix[32];
-#endif
-#endif
-#if HOME_ASSISTANT_INTEGRATION
-    HomeAssistant homeassistant;
-#endif
-#if SYSLOG
+
+    // comparing memory usage
+    // struct {
+    //     uint16_t port;
+    //     uint16_t keepalive;
+    //     uint8_t qos;
+    // } mqtt_options;
+
     char syslog_host[65];
     uint16_t syslog_port;
-#endif
-#if SERIAL2TCP
+
+    struct NTP ntp;
+    HomeAssistant homeassistant;
+    SoftAP soft_ap;
     struct Serial2Tcp serial2tcp;
-#endif
-#if HUE_EMULATION
     struct HueConfig hue;
-#endif
-#if PING_MONITOR
     struct Ping ping;
-#endif
 };
-
-struct SystemStats {
-    uint16_t crc;
-    uint8_t size;
-    time_t runtime;
-    uint16_t reboot_counter;
-    uint16_t reset_counter;
-    uint16_t crash_counter;
-    uint16_t ap_clients_connected;
-    uint16_t station_reconnects;
-    uint32_t ping_success;
-    uint32_t ping_timeout;
-};
-
-const char *WiFi_encryption_type(uint8_t type);
 
 void config_set_blink(uint16_t milliseconds, int8_t pin = -1);
-void config_setup();
-void config_loop();
-bool config_read(bool init = false, size_t ofs = 0);
-void config_write(bool factory_reset = false, size_t ofs = 0);
-void config_version();
-void config_info();
 void config_deep_sleep(uint32_t time, RFMode mode);
-bool config_wakeup_wifi();
-bool config_apply_wifi_settings();
-void config_restart();
-
-ulong system_stats_get_runtime(ulong *runtime_since_reboot = NULL);
-void system_stats_display(String prefix, Stream &output);
-void system_stats_update(bool open_eeprom = true);
-void system_stats_read();
-
-extern SystemStats _systemStats;
-extern bool safe_mode;
 
 uint8_t WiFi_mode_connected(uint8_t mode = WIFI_AP_STA, uint32_t *station_ip = nullptr, uint32_t *ap_ip = nullptr);
 
-
 #define _H_IP_FORM_OBJECT(name)                     config._H_GET_IP(name), [](const IPAddress &addr, FormField *) { config._H_SET_IP(name, addr); }
 #define _H_STRUCT_FORMVALUE(name, type, field)      config._H_GET(name).field, [](type value, FormField *) { auto &data = config._H_W_GET(name); data.field = value; }
+
+// NOTE using the new handlers (USE_WIFI_SET_EVENT_HANDLER_CB=0) costs 896 byte RAM with 5 handlers, by using lambda functions even 1016 byte
+#ifndef USE_WIFI_SET_EVENT_HANDLER_CB
+#define USE_WIFI_SET_EVENT_HANDLER_CB           1
+#endif
 
 class KFCFWConfiguration : public Configuration {
 public:
     KFCFWConfiguration();
     ~KFCFWConfiguration();
 
+    void setLastError(const String &error) override;
+    const char *getLastError() const override;
+
     void restoreFactorySettings();
     static const String getFirmwareVersion();
-
-    void setLastError(const String &error);
-    const char *getLastError() const;
-
-    uint8_t getMaxChannels();
-
-    void garbageCollector();
 
     // flag to tell if the device has to be rebooted to apply all configuration changes
     void setConfigDirty(bool dirty);
     bool isConfigDirty() const;
 
+    void storeQuickConnect(const uint8_t *bssid, int8_t channel);
+    void storeStationConfig(uint32_t ip, uint32_t netmask, uint32_t gateway);
+
+    void setup();
+    bool reconfigureWiFi();
+    bool connectWiFi();
+    void read();
+    void write();
+
+    void wakeUpFromDeepSleep();
+    void enterDeepSleep(uint32_t time_in_ms, RFMode mode, uint16_t delayAfterPrepare = 0);
+    void restartDevice();
+
+    static void printVersion(Print &output);
+    void printInfo(Print &output);
+
+    static void loop();
+    void garbageCollector();
+    static uint8_t getMaxWiFiChannels();
+    static String getWiFiEncryptionType(uint8_t type);
+
+private:
+    void _setupWiFiCallbacks();
+#if USE_WIFI_SET_EVENT_HANDLER_CB
+    static void _onWiFiEvent(System_Event_t *orgEvent);
+#endif
+
+public:
+    void _onWiFiConnectCb(const WiFiEventStationModeConnected &);
+    void _onWiFiDisconnectCb(const WiFiEventStationModeDisconnected &);
+    void _onWiFiGotIPCb(const WiFiEventStationModeGotIP&);
+    void _onWiFiOnDHCPTimeoutCb();
+    void _softAPModeStationConnectedCb(const WiFiEventSoftAPModeStationConnected &);
+    void _softAPModeStationDisconnectedCb(const WiFiEventSoftAPModeStationDisconnected &);
+
+    static bool isWiFiUp();
+    static unsigned long getWiFiUp();
+
 private:
     String _lastError;
     int16_t _garbageCollectionCycleDelay;
     bool _dirty;
+    bool _wifiConnected;
+    unsigned long _wifiUp;
+    unsigned long _offlineSince;
+
+#if USE_WIFI_SET_EVENT_HANDLER_CB != 1
+    WiFiEventHandler _onWiFiConnect;
+    WiFiEventHandler _onWiFiDisconnect;
+    WiFiEventHandler _onWiFiGotIP;
+    WiFiEventHandler _onWiFiOnDHCPTimeout;
+    WiFiEventHandler _softAPModeStationConnected;
+    WiFiEventHandler _softAPModeStationDisconnected;
+#endif
 };
 
 extern KFCFWConfiguration config;

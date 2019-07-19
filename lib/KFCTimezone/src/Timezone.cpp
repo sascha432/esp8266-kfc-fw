@@ -30,16 +30,17 @@ tm *timezone_localtime(const time_t *timer) {
 }
 
 size_t strftime_P(char *buf, size_t size, PGM_P format, const struct tm *tm) {
-    return strftime(buf, size, str_P(FPSTR(format)), tm);
+    String fmt = FPSTR(format);
+    return strftime(buf, size, fmt.c_str(), tm);
 }
 
 size_t timezone_strftime_P(char *buf, size_t size, PGM_P format, const struct tm *tm) {
-    return timezone_strftime(buf, size, str_P(FPSTR(format)), tm);
+    return timezone_strftime(buf, size, format, tm);
 }
 
-size_t timezone_strftime(char *buf, size_t size, const char *format, const struct tm *tm) {
+size_t timezone_strftime(char *buf, size_t size, PGM_P format, const struct tm *tm) {
 	String _z = F("%z");
-    String fmt = format;
+    String fmt = FPSTR(format);
     if (default_timezone.isValid()) {
         if (fmt.indexOf(_z) != -1) {
             int32_t ofs = default_timezone.getOffset();

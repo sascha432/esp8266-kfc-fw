@@ -24,6 +24,12 @@
 #include "kfc_fw_config.h"
 #include "plugins.h"
 
+#if DEBUG_WEB_SERVER
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
+#endif
+
 PROGMEM_STRING_DEF(status, "status");
 PROGMEM_STRING_DEF(enabled, "enabled");
 PROGMEM_STRING_DEF(disabled, "disabled");
@@ -42,12 +48,13 @@ AsyncWebServer *get_web_server_object() {
 }
 
 const String web_server_get_status() {
+    auto flags = config._H_GET(Config().flags);
     PrintString out = F("Web server ");
-    if (config._H_GET(Config().flags).webServerMode != HTTP_MODE_DISABLED) {
-        out.printf_P(PSTR("running on port %u"), config.get<uint16_t>(_H(Config().http_port)));
+    if (flags.webServerMode != HTTP_MODE_DISABLED) {
+        out.printf_P(PSTR("running on port %u"), config._H_GET(Config().http_port));
         #if WEBSERVER_TLS_SUPPORT
             out.print(F(", TLS "));
-            if (_Config.getOptions().isHttpServerTLS()) {
+            if (flags.webServerMode == HTTP_MODE_SECURE) {
                 out += SPGM(enabled);
             } else {
                 out += SPGM(disabled);
@@ -69,19 +76,30 @@ const String web_server_get_status() {
 //     // 127.0.0.1 - frank "GET /apache_pb.gif HTTP/1.0" 200 2326 "http://www.example.com/start.html" "Mozilla/4.08 [en] (Win98; I ;Nav)"
 // //
 //     AsyncWebServerRequest::send(response);
-//     debug_printf_P("log %s %d\n", url().c_str(), response->_);
+//     _debug_printf_P("log %s %d\n", url().c_str(), response->_);
 // }
 // #endif
 
-bool is_public(String path) {
-    return path.indexOf(F("..")) == -1 && (path.startsWith(F("/css/")) || path.startsWith(F("/js/")) || path.startsWith(F("/images/")) || path.startsWith(F("/fonts/")));
+bool web_server_is_public_path(const String &pathString) {
+    auto path = pathString.c_str();
+    if (strstr_P(path, PSTR(".."))) {
+        return false;
+    } else if (*path++ == '/') {
+        return (
+            !strncmp_P(path, PSTR("css/"), 4) ||
+            !strncmp_P(path, PSTR("js/"), 3) ||
+            !strncmp_P(path, PSTR("images/"), 7) ||
+            !strncmp_P(path, PSTR("fonts/"), 6)
+        );
+    }
+    return false;
 }
 
-bool is_authenticated(AsyncWebServerRequest *request) {
+bool web_server_is_authenticated(AsyncWebServerRequest *request) {
     String SID;
     if ((request->hasArg(FSPGM(SID)) && (SID = request->arg(FSPGM(SID)))) || HttpCookieHeader::parseCookie(request, FSPGM(SID), SID)) {
 
-        debug_printf_P(PSTR("is_authenticated with SID '%s' from %s\n"), SID.c_str(), request->client()->remoteIP().toString().c_str());
+        _debug_printf_P(PSTR("web_server_is_authenticated with SID '%s' from %s\n"), SID.c_str(), request->client()->remoteIP().toString().c_str());
         if (SID.length() == 0) {
             return false;
         }
@@ -89,7 +107,7 @@ bool is_authenticated(AsyncWebServerRequest *request) {
             return true;
         }
     }
-    debug_println(F("is_authenticated failed"));
+    _debug_println(F("web_server_is_authenticated failed"));
     return false;
 }
 
@@ -103,15 +121,15 @@ void set_cpu_speed_for_request(AsyncWebServerRequest *request) {
 #endif
 
     String url = request->url();
-#if DEBUG
+#if DEBUG_WEB_SERVER
     ulong start = millis();
     request->onDisconnect([start, url]() {
 #else
     request->onDisconnect([url]() {
 #endif
-#if DEBUG
+#if DEBUG_WEB_SERVER
         int dur = millis() - start;
-        debug_printf_P(PSTR("request %s took %.4fs @ %dMhz\n"), url.c_str(), dur / 1000.0, system_get_cpu_freq());
+        _debug_printf_P(PSTR("request %s took %.4fs @ %dMhz\n"), url.c_str(), dur / 1000.0, system_get_cpu_freq());
 #endif
 #if defined(ESP8266)
     if (config._H_GET(Config().flags).webServerPerformanceModeEnabled) {
@@ -121,9 +139,9 @@ void set_cpu_speed_for_request(AsyncWebServerRequest *request) {
     });
 }
 
-bool _client_accepts_gzip(AsyncWebServerRequest *request) {
-    String acceptEncoding = request->header(FSPGM(Accept_Encoding));
-    return (acceptEncoding.indexOf(F("gzip")) != -1 || acceptEncoding.indexOf(F("deflate")) != -1);
+bool web_server_client_accepts_gzip(AsyncWebServerRequest *request) {
+    auto acceptEncoding = request->header(FSPGM(Accept_Encoding)).c_str();
+    return (strstr_P(acceptEncoding, PSTR("gzip")) || strstr_P(acceptEncoding, PSTR("deflate")));
 }
 
 bool init_request_filter(AsyncWebServerRequest *request) {
@@ -131,33 +149,205 @@ bool init_request_filter(AsyncWebServerRequest *request) {
     return true;
 }
 
+// server->on()
+#define on(a, ...)    on(String(a).c_str(), __VA_ARGS__)
+
+void web_server_not_found_handler(AsyncWebServerRequest *request) {
+
+#if HUE_EMULATION
+    if (hue_onNotFound(request)) {
+        return;
+    }
+#endif
+
+    set_cpu_speed_for_request(request);
+
+    if (!web_server_handle_file_read(request->url(), web_server_client_accepts_gzip(request), request)) {
+        request->send(404);
+    }
+}
+
+
+void web_server_scan_wifi_handler(AsyncWebServerRequest *request) {
+    if (web_server_is_authenticated(request)) {
+        HttpHeaders httpHeaders(false);
+        httpHeaders.addNoCache();
+        AsyncWebServerResponse *response = new AsyncNetworkScanResponse(request->arg(F("hidden")).toInt());
+        httpHeaders.setWebServerResponseHeaders(response);
+        request->send(response);
+    } else {
+        request->send(403);
+    }
+}
+
+void web_server_logout_handler(AsyncWebServerRequest *request) {
+    AsyncWebServerResponse *response = request->beginResponse(302);
+    HttpHeaders httpHeaders;
+    httpHeaders.addNoCache(true);
+    httpHeaders.add(HttpCookieHeader(FSPGM(SID)));
+    // httpHeaders.add((HttpCookieHeader(F("_SID")))->hasExpired());
+    httpHeaders.add(HttpLocationHeader(FSPGM(slash)));
+    httpHeaders.setWebServerResponseHeaders(response);
+    request->send(response);
+}
+
+void web_server_is_alive_handler(AsyncWebServerRequest *request) {
+    AsyncWebServerResponse *response = request->beginResponse(200, FSPGM(text_plain), String(request->arg(F("p")).toInt()));
+    HttpHeaders httpHeaders;
+    httpHeaders.addNoCache();
+    httpHeaders.setWebServerResponseHeaders(response);
+    request->send(response);
+}
+
+void web_server_update_handler(AsyncWebServerRequest *request) {
+    if (request->_tempObject) {
+        UploadStatus_t *status = reinterpret_cast<UploadStatus_t *>(request->_tempObject);
+        AsyncWebServerResponse *response = nullptr;
+        if (!Update.hasError()) {
+            Logger_security(F("Firmware upgrade successful"));
+
+            if (status->command == U_FLASH) {
+                config_set_blink(BLINK_SLOW);
+                request->onDisconnect([]() {
+                    Logger_notice(F("Rebooting after upgrade"));
+                    Scheduler.addTimer(2000, false, [](EventScheduler::TimerPtr timer) {
+                        config.restartDevice();
+                    });
+                });
+            } else {
+                config_set_blink(BLINK_OFF);
+            }
+
+            String location;
+            switch(status->command) {
+                case U_FLASH:
+                    location += F("/rebooting.html#u_flash");
+                    break;
+                case U_SPIFFS:
+                    location += F("/update_fw.html#u_spiffs");
+                    break;
+            }
+            response = request->beginResponse(302);
+            HttpHeaders httpHeaders(false);
+            httpHeaders.add(HttpLocationHeader(location));
+            httpHeaders.replace(HttpConnectionHeader(HttpConnectionHeader::HTTP_CONNECTION_CLOSE));
+            httpHeaders.setWebServerResponseHeaders(response);
+            request->send(response);
+
+        } else {
+            // SPIFFS.begin();
+
+            config_set_blink(BLINK_SOS);
+            PrintString errorStr;
+            Update.printError(errorStr);
+            Logger_error(F("Firmware upgrade failed: %s"), errorStr.c_str());
+
+            String message = F("<h2>Firmware update failed with an error:<br></h2><h3>");
+            message += errorStr;
+            message += F("</h3>");
+
+            HttpHeaders httpHeaders(false);
+            httpHeaders.addNoCache();
+            if (!web_server_send_file(F("/update_fw.html"), httpHeaders, web_server_client_accepts_gzip(request), nullptr, request, new UpgradeTemplate(message))) {
+                request->send(404);
+            }
+        }
+
+    } else {
+        request->send(403);
+    }
+}
+
+void web_server_update_upload_handler(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
+    if (index == 0 && !request->_tempObject && web_server_is_authenticated(request)) {
+        request->_tempObject = calloc(sizeof(UploadStatus_t), 1);
+        Logger_notice(F("Firmware upload started"));
+    }
+    UploadStatus_t *status = reinterpret_cast<UploadStatus_t *>(request->_tempObject);
+    if (status && !status->error) {
+        PrintString out;
+        bool error = false;
+        if (!index) {
+            config_set_blink(BLINK_FLICKER);
+
+            Update.runAsync(true);
+            size_t size;
+            uint8_t command;
+
+            uint8_t spiffs = 0;
+
+            if (constexpr_String_equals(request->arg(F("image_type")), PSTR("u_flash"))) { // firmware selected
+                spiffs = 0;
+            } else if (constexpr_String_equals(request->arg(F("image_type")), PSTR("u_spiffs"))) { // spiffs selected
+                spiffs = 1;
+            } else if (strstr_P(filename.c_str(), PSTR("spiffs"))) { // auto select
+                spiffs = 2;
+            }
+
+            if (spiffs) {
+                size = 1048576;
+                command = U_SPIFFS;
+                // SPIFFS.end();
+                // SPIFFS.format();
+            } else {
+                size = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
+                command = U_FLASH;
+            }
+            status->command = command;
+            _debug_printf_P(PSTR("Update Start: %s, spiffs %d, size %d, command %d\n"), filename.c_str(), spiffs, (int)size, command);
+
+            if (!Update.begin(size, command)) {
+                error = true;
+            }
+        }
+        if (!error && !Update.hasError()) {
+            if (Update.write(data, len) != len) {
+                error = true;
+            }
+        }
+        if (final) {
+            if (Update.end(true)) {
+                _debug_printf_P(PSTR("Update Success: %uB\n"), index + len);
+            } else {
+                error = true;
+            }
+        }
+        if (error) {
+#if DEBUG
+            Update.printError(DEBUG_OUTPUT);
+#endif
+            status->error = true;
+        }
+    }
+}
+
 void init_web_server() {
 
-    if (config.get<ConfigFlags>(_H(Config().flags)).webServerMode == HTTP_MODE_DISABLED) {
+    if (config._H_GET(Config().flags).webServerMode == HTTP_MODE_DISABLED) {
         return;
     }
 
-    server = new AsyncWebServer(config._H_GET(Config().http_port));
+    server = _debug_new AsyncWebServer(config._H_GET(Config().http_port));
     // server->addHandler(&events);
 
     loginFailures.readFromSPIFFS();
 
 #if REST_API_SUPPORT
     // // download /.mappings
-    // server->on(str_P(F("/rest/KFC/webui_details")), [](AsyncWebServerRequest *request) {
-    //     if (is_authenticated(request)) {
+    // server->on(F("/rest/KFC/webui_details"), [](AsyncWebServerRequest *request) {
+    //     if (web_server_is_authenticated(request)) {
     //         rest_api_kfc_webui_details(request);
     //     } else {
     //         request->send(403);
     //     }
     // });
-    server->addHandler(new AsyncFileUploadWebHandler(F("/rest/KFC/update_webui"), [](AsyncWebServerRequest *request) {
-        if (request->_tempObject) {
-            rest_api_kfc_update_webui(request);
-        } else {
-            request->send(403);
-        }
-    }));
+    // server->addHandler(_debug_new AsyncFileUploadWebHandler(F("/rest/KFC/update_webui"), [](AsyncWebServerRequest *request) {
+    //     if (request->_tempObject) {
+    //         rest_api_kfc_update_webui(request);
+    //     } else {
+    //         request->send(403);
+    //     }
+    // }));
 #endif
 
 #if HUE_EMULATION
@@ -167,36 +357,20 @@ void init_web_server() {
 
 #endif
 
-    server->onNotFound([](AsyncWebServerRequest *request) {
-
-#if HUE_EMULATION
-        if (hue_onNotFound(request)) {
-            return;
-        }
-#endif
-
-        set_cpu_speed_for_request(request);
-
-        if (!handle_file_read(request->url(), _client_accepts_gzip(request), request)) {
-            request->send(404);
-        }
-
-    });
-
-    HttpHeaders &httpHeaders = HttpHeaders::getInstance();
+    server->onNotFound(web_server_not_found_handler);
 
 // #if MDNS_SUPPORT
-//     server->on(str_P(F("/poll_mdns/")), [&httpHeaders](AsyncWebServerRequest *request) {
+//     server->on(F("/poll_mdns/"), [&httpHeaders](AsyncWebServerRequest *request) {
 
 //         set_cpu_speed_for_request(request);
 
 //         httpHeaders.addNoCache();
-//         if (is_authenticated(request)) {
+//         if (web_server_is_authenticated(request)) {
 //             AsyncWebServerResponse *response;
 //             bool isRunning = false;//MDNS_async_query_running();
 //             String &result = MDNS_get_html_result();
 
-//             debug_printf_P(PSTR("HTTP MDS: Query running %d, response length %d\n"), isRunning, result.length());
+//             _debug_printf_P(PSTR("HTTP MDS: Query running %d, response length %d\n"), isRunning, result.length());
 
 //             if (result.length()) {
 //                 response = request->beginResponse(200, FSPGM(text_html), result);
@@ -216,154 +390,13 @@ void init_web_server() {
 //     }).setFilter(init_request_filter);
 // #endif
 
-    server->on(str_P(F("/scan_wifi/")), [&httpHeaders](AsyncWebServerRequest *request) {
-        httpHeaders.addNoCache();
-        if (is_authenticated(request)) {
-            AsyncWebServerResponse *response = new AsyncNetworkScanResponse(request->arg(F("hidden")).toInt());
-            httpHeaders.setWebServerResponseHeaders(response);
-            request->send(response);
-        } else {
-            request->send(403);
-        }
-    }).setFilter(init_request_filter);
-
-    server->on(str_P(F("/logout")), [&httpHeaders](AsyncWebServerRequest *request) {
-        AsyncWebServerResponse *response = request->beginResponse(302);
-        httpHeaders.init();
-        httpHeaders.addNoCache(true);
-        httpHeaders.add(HttpCookieHeader(FSPGM(SID)));
-        // httpHeaders.add((HttpCookieHeader(F("_SID")))->hasExpired());
-        httpHeaders.add(HttpLocationHeader(FSPGM(slash)));
-        httpHeaders.setWebServerResponseHeaders(response);
-        request->send(response);
-    }).setFilter(init_request_filter);
-
-    server->on(str_P(F("/is_alive")), [&httpHeaders](AsyncWebServerRequest *request) {
-        AsyncWebServerResponse *response = request->beginResponse(200, FSPGM(text_plain), String(request->arg(F("p")).toInt()));
-        httpHeaders.init();
-        httpHeaders.addNoCache();
-        httpHeaders.setWebServerResponseHeaders(response);
-        request->send(response);
-    }).setFilter(init_request_filter);
-
-    server->on(str_P(F("/update")), HTTP_POST, [&httpHeaders](AsyncWebServerRequest *request) {
-        if (request->_tempObject) {
-            UploadStatus_t *status = reinterpret_cast<UploadStatus_t *>(request->_tempObject);
-            AsyncWebServerResponse *response = nullptr;
-            if (!Update.hasError()) {
-                Logger_security(F("Firmware upgrade successful"));
-
-                if (status->command == U_FLASH) {
-                    config_set_blink(BLINK_SLOW);
-                    request->onDisconnect([]() {
-                        Logger_notice(F("Rebooting after upgrade"));
-                        Scheduler.addTimer(2000, false, [](EventScheduler::TimerPtr timer) {
-                            config_restart();
-                        });
-                    });
-                } else {
-                    config_set_blink(BLINK_OFF);
-                }
-
-                String location;
-                switch(status->command) {
-                    case U_FLASH:
-                        location += F("/rebooting.html#u_flash");
-                        break;
-                    case U_SPIFFS:
-                        location += F("/update_fw.html#u_spiffs");
-                        break;
-                }
-                response = request->beginResponse(302);
-                httpHeaders.add(HttpLocationHeader(location));
-                httpHeaders.replace(HttpConnectionHeader(HttpConnectionHeader::HTTP_CONNECTION_CLOSE));
-                httpHeaders.setWebServerResponseHeaders(response);
-                request->send(response);
-
-            } else {
-                // SPIFFS.begin();
-
-                config_set_blink(BLINK_SOS);
-                PrintString errorStr;
-                Update.printError(errorStr);
-                Logger_error(F("Firmware upgrade failed: %s"), errorStr.c_str());
-
-                String message = F("<h2>Firmware update failed with an error:<br></h2><h3>");
-                message += errorStr;
-                message += F("</h3>");
-
-                if (!send_file(F("/update_fw.html"), _client_accepts_gzip(request), nullptr, request, new UpgradeTemplate(message))) {
-                    request->send(404);
-                }
-            }
-
-        } else {
-            request->send(403);
-        }
-    }, [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
-        if (index == 0 && !request->_tempObject && is_authenticated(request)) {
-            request->_tempObject = calloc(sizeof(UploadStatus_t), 1);
-            Logger_notice(F("Firmware upload started"));
-        }
-        UploadStatus_t *status = reinterpret_cast<UploadStatus_t *>(request->_tempObject);
-        if (status && !status->error) {
-            PrintString out;
-            bool error = false;
-            if (!index) {
-                config_set_blink(BLINK_FLICKER);
-
-                Update.runAsync(true);
-                size_t size;
-                uint8_t command;
-
-                uint8_t spiffs = 0;
-                if (request->arg(F("image_type")).equals(F("u_flash"))) { // firmware selected
-                    spiffs = 0;
-                } else if (request->arg(F("image_type")).equals(F("u_spiffs"))) { // spiffs selected
-                    spiffs = 1;
-                } else if (filename.indexOf(F("spiffs")) != -1) { // auto select
-                    spiffs = 2;
-                }
-
-                if (spiffs) {
-                    size = 1048576;
-                    command = U_SPIFFS;
-                    // SPIFFS.end();
-                    // SPIFFS.format();
-                } else {
-                    size = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
-                    command = U_FLASH;
-                }
-                status->command = command;
-                debug_printf_P(PSTR("Update Start: %s, spiffs %d, size %d, command %d\n"), filename.c_str(), spiffs, (int)size, command);
-
-                if (!Update.begin(size, command)) {
-                    error = true;
-                }
-            }
-            if (!error && !Update.hasError()) {
-                if (Update.write(data, len) != len) {
-                    error = true;
-                }
-            }
-            if (final) {
-                if (Update.end(true)) {
-                    debug_printf_P(PSTR("Update Success: %uB\n"), index + len);
-                } else {
-                    error = true;
-                }
-            }
-            if (error) {
-#if DEBUG
-                Update.printError(DEBUG_OUTPUT);
-#endif
-                status->error = true;
-            }
-        }
-   }).setFilter(init_request_filter);
+    server->on(F("/scan_wifi/"), web_server_scan_wifi_handler).setFilter(init_request_filter);
+    server->on(F("/logout"), web_server_logout_handler).setFilter(init_request_filter);
+    server->on(F("/is_alive"), web_server_is_alive_handler).setFilter(init_request_filter);
+    server->on(F("/update"), HTTP_POST, web_server_update_handler, web_server_update_upload_handler).setFilter(init_request_filter);
 
     server->begin();
-    debug_printf_P(PSTR("HTTP running on port %hu\n"), config._H_GET(Config().http_port));
+    _debug_printf_P(PSTR("HTTP running on port %u\n"), config._H_GET(Config().http_port));
 }
 
 void web_server_reconfigure() {
@@ -374,56 +407,59 @@ void web_server_reconfigure() {
     init_web_server();
 }
 
-String get_content_type(const String &path) {
-    if (path.endsWith(F(".html")))
-        return F("text/html");
-    else if (path.endsWith(F(".htm")))
-        return F("text/html");
-    else if (path.endsWith(F(".css")))
-        return F("text/css");
-    else if (path.endsWith(F(".json")))
-        return F("application/json");
-    else if (path.endsWith(F(".js")))
-        return F("application/javascript");
-    else if (path.endsWith(F(".png")))
-        return F("image/png");
-    else if (path.endsWith(F(".gif")))
-        return F("image/gif");
-    else if (path.endsWith(F(".jpg")))
-        return F("image/jpeg");
-    else if (path.endsWith(F(".ico")))
-        return F("image/x-icon");
-    else if (path.endsWith(F(".svg")))
-        return F("image/svg+xml");
-    else if (path.endsWith(F(".eot")))
-        return F("font/eot");
-    else if (path.endsWith(F(".woff")))
-        return F("font/woff");
-    else if (path.endsWith(F(".woff2")))
-        return F("font/woff2");
-    else if (path.endsWith(F(".ttf")))
-        return F("font/ttf");
-    else if (path.endsWith(F(".xml")))
-        return F("text/xml");
-    else if (path.endsWith(F(".pdf")))
-        return F("application/pdf");
-    else if (path.endsWith(F(".zip")))
-        return F("application/zip");
-    else if (path.endsWith(F(".gz")))
-        return F("application/x-gzip");
+PGM_P web_server_get_content_type(const String &path) {
+
+    const char *cPath = path.c_str();
+    size_t pathLen = path.length();
+
+    if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".html")) || !constexpr_strcmp_end_P(cPath, pathLen, PSTR(".htm"))) {
+        return PSTR("text/html");
+    } else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".css"))) {
+        return PSTR("text/css");
+    } else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".css"))) {
+        return PSTR("text/css");
+    } else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".json")))
+        return PSTR("application/json");
+    else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".js")))
+        return PSTR("application/javascript");
+    else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".png")))
+        return PSTR("image/png");
+    else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".gif")))
+        return PSTR("image/gif");
+    else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".jpg")))
+        return PSTR("image/jpeg");
+    else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".ico")))
+        return PSTR("image/x-icon");
+    else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".svg")))
+        return PSTR("image/svg+xml");
+    else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".eot")))
+        return PSTR("font/eot");
+    else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".woff")))
+        return PSTR("font/woff");
+    else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".woff2")))
+        return PSTR("font/woff2");
+    else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".ttf")))
+        return PSTR("font/ttf");
+    else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".xml")))
+        return PSTR("text/xml");
+    else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".pdf")))
+        return PSTR("application/pdf");
+    else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".zip")))
+        return PSTR("application/zip");
+    else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".gz")))
+        return PSTR("application/x-gzip");
     else
-        return F("text/plain");
+        return PSTR("text/plain");
 }
 
-bool send_file(String path, bool client_accepts_gzip, FSMapping *mapping, AsyncWebServerRequest *request, WebTemplate *webTemplate) {
+bool web_server_send_file(String path, HttpHeaders &httpHeaders, bool client_accepts_gzip, FSMapping *mapping, AsyncWebServerRequest *request, WebTemplate *webTemplate) {
 
     AsyncWebServerResponse *response = nullptr;
-    HttpHeaders &httpHeaders = HttpHeaders::getInstance();
 
-    debug_printf_P(PSTR("send_file(%s)\n"), path.c_str());
+    _debug_printf_P(PSTR("web_server_send_file(%s)\n"), path.c_str());
     if (!mapping) {
         if (!(mapping = Mappings::getInstance().find(path))) {
-            debug_printf_P(PSTR("Not found: %s\n"), path.c_str());
+            _debug_printf_P(PSTR("Not found: %s\n"), path.c_str());
             if (webTemplate) {
                 delete webTemplate;
             }
@@ -431,50 +467,46 @@ bool send_file(String path, bool client_accepts_gzip, FSMapping *mapping, AsyncW
         }
     }
 
-    // debug_printf_P(PSTR("Mapping %s, %s, %d, content type %s\n"), mapping->getPath(), mapping->getMappedPath(), mapping->getFileSize(), get_content_type(path).c_str());
+    // _debug_printf_P(PSTR("Mapping %s, %s, %d, content type %s\n"), mapping->getPath(), mapping->getMappedPath(), mapping->getFileSize(), web_server_get_content_type(path));
 
     if (webTemplate == nullptr) {
-        if (path.charAt(0) == '/' && path.endsWith(F(".html"))) {
+        if (path.charAt(0) == '/' && constexpr_endsWith(path, PSTR(".html"))) {
             auto plugin = get_plugin_by_name(path.substring(1, path.length() - 5));
             if (plugin) {
                 auto callback = plugin->getConfigureForm();
                 if (callback) {
-                    Form *form = new SettingsForm(nullptr);
+                    Form *form = _debug_new SettingsForm(nullptr);
                     callback(nullptr, *form);
-                    webTemplate = new ConfigTemplate(form);
+                    webTemplate = _debug_new ConfigTemplate(form);
                 }
             }
         }
         if (webTemplate == nullptr) {
-            if (path.equals(F("/network.html"))) {
-                webTemplate = new ConfigTemplate(new NetworkSettingsForm(nullptr));
-            } else if (path.equals(F("/wifi.html"))) {
-                webTemplate = new ConfigTemplate(new WifiSettingsForm(nullptr));
-#if SYSTEM_STATS
-            } else if (path.equals(F("/syst.html"))) {
-                webTemplate = new StatusTemplate();
-#endif
-            } else if (path.equals(F("/index.html"))) {
-                webTemplate = new StatusTemplate();
-            } else if (path.equals(F("/status.html"))) {
-                webTemplate = new StatusTemplate();
+            if (constexpr_String_equals(path, PSTR("/network.html"))) {
+                webTemplate = _debug_new ConfigTemplate(_debug_new NetworkSettingsForm(nullptr));
+            } else if (constexpr_String_equals(path, PSTR("/wifi.html"))) {
+                webTemplate = _debug_new ConfigTemplate(_debug_new WifiSettingsForm(nullptr));
+            } else if (constexpr_String_equals(path, PSTR("/index.html"))) {
+                webTemplate = _debug_new StatusTemplate();
+            } else if (constexpr_String_equals(path, PSTR("/status.html"))) {
+                webTemplate = _debug_new StatusTemplate();
 // #if MDNS_SUPPORT
 //                 MDNS_async_query_service(); // query service inside loop() and cache results
 // #endif
-            } else if (path.endsWith(F(".html"))) {
-                webTemplate = new WebTemplate();
+            } else if (constexpr_endsWith(path, PSTR(".html"))) {
+                webTemplate = _debug_new WebTemplate();
             }
         }
     }
 
     if (webTemplate != nullptr) {
-         response = new AsyncTemplateResponse(get_content_type(path), mapping, webTemplate);
+         response = _debug_new AsyncTemplateResponse(FPSTR(web_server_get_content_type(path)), mapping, webTemplate);
          httpHeaders.addNoCache(request->method() == HTTP_POST);
     } else {
-        response = new AsyncProgmemFileResponse(get_content_type(path), mapping);
+        response = new AsyncProgmemFileResponse(FPSTR(web_server_get_content_type(path)), mapping);
         httpHeaders.replace(HttpDateHeader(FSPGM(Expires), 86400 * 30));
         httpHeaders.replace(HttpDateHeader(FSPGM(Last_Modified), mapping->getModificatonTime()));
-        if (is_public(path)) {
+        if (web_server_is_public_path(path)) {
             HttpCacheControlHeader header = HttpCacheControlHeader();
             header.setPublic();
             header.setMaxAge(HttpCacheControlHeader::MAX_AGE_AUTO);
@@ -490,37 +522,37 @@ bool send_file(String path, bool client_accepts_gzip, FSMapping *mapping, AsyncW
 }
 
 
-bool handle_file_read(String path, bool client_accepts_gzip, AsyncWebServerRequest *request) {
-    debug_printf_P(PSTR("handle_file_read: %s\n"), path.c_str());
+bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWebServerRequest *request) {
+    _debug_printf_P(PSTR("web_server_handle_file_read: %s\n"), path.c_str());
 
-    if (path.endsWith(FSPGM(slash))) {
+    if (constexpr_endsWith(path, SPGM(slash))) {
         path += F("index.html");
     }
 
-    if (path.startsWith(F("/settings/"))) { // deny access
+    if (constexpr_startsWith(path, PSTR("/settings/"))) { // deny access
         request->send(404);
         return false;
     }
 
     FSMapping *mapping = Mappings::getInstance().find(path);
     if (!mapping) {
-        debug_printf_P(PSTR("Not found: %s\n"), path.c_str());
+        _debug_printf_P(PSTR("Not found: %s\n"), path.c_str());
         return false;
     }
     if (mapping->isGzipped() && !client_accepts_gzip) {
-        debug_printf_P(PSTR("Client does not accept gzip encoding: %s\n"), path.c_str());
+        _debug_printf_P(PSTR("Client does not accept gzip encoding: %s\n"), path.c_str());
         request->send_P(503, FSPGM(text_plain), PSTR("503: Client does not support gzip Content Encoding"));
         return true;
     }
 
-    bool _is_authenticated = is_authenticated(request);
+    bool _is_authenticated = web_server_is_authenticated(request);
     WebTemplate *webTemplate = nullptr;
-    HttpHeaders &httpHeaders = HttpHeaders::getInstance();
+    HttpHeaders httpHeaders;
 
-    if (!is_public(path) && !_is_authenticated) {
+    if (!web_server_is_public_path(path) && !_is_authenticated) {
         String loginError = F("Your session has expired.");
 
-        Logger_security(F("Authentication failed for %s"), to_c_str(IPAddress(request->client()->getRemoteAddress())));
+        Logger_security(F("Authentication failed for %s"), IPAddress(request->client()->getRemoteAddress()).toString().c_str());
 
         httpHeaders.addNoCache(true);
 
@@ -537,19 +569,19 @@ bool handle_file_read(String path, bool client_accepts_gzip, AsyncWebServerReque
                 }
                 httpHeaders.add(cookie);
 
-                debug_printf_P(PSTR("Login successful, cookie %s\n"), cookie.getValue().c_str());
+                _debug_printf_P(PSTR("Login successful, cookie %s\n"), cookie.getValue().c_str());
                 _is_authenticated = true;
-                Logger_security(F("Login successful from %s"), to_c_str(remote_addr));
+                Logger_security(F("Login successful from %s"), remote_addr.toString().c_str());
             } else {
                 loginError = F("Invalid username or password.");
                 const FailureCounter &failure = loginFailures.addFailure(remote_addr);
-                Logger_security(F("Login from %s failed %d times since %s"), to_c_str(remote_addr), failure.getCounter(), failure.getFirstFailure().c_str());
-                return send_file(FSPGM(login_html), client_accepts_gzip, nullptr, request, new LoginTemplate(loginError));
+                Logger_security(F("Login from %s failed %d times since %s"), remote_addr.toString().c_str(), failure.getCounter(), failure.getFirstFailure().c_str());
+                return web_server_send_file(FSPGM(login_html), httpHeaders, client_accepts_gzip, nullptr, request, new LoginTemplate(loginError));
 
             }
         } else {
-            if (path.endsWith(F(".html"))) {
-                return send_file(FSPGM(login_html), client_accepts_gzip, nullptr, request, new LoginTemplate(loginError));
+            if (constexpr_endsWith(path, PSTR(".html"))) {
+                return web_server_send_file(FSPGM(login_html), httpHeaders, client_accepts_gzip, nullptr, request, new LoginTemplate(loginError));
             } else {
                 request->send(403);
                 return true;
@@ -559,11 +591,11 @@ bool handle_file_read(String path, bool client_accepts_gzip, AsyncWebServerReque
 
     if (_is_authenticated && request->method() == HTTP_POST) {  // http POST processing
 
-        debug_printf_P(PSTR("HTTP post %s\n"), path.c_str());
+        _debug_printf_P(PSTR("HTTP post %s\n"), path.c_str());
 
         httpHeaders.addNoCache(true);
 
-        if (path.charAt(0) == '/' && path.endsWith(F(".html"))) {
+        if (path.charAt(0) == '/' && constexpr_endsWith(path, PSTR(".html"))) {
             auto plugin = get_plugin_by_name(path.substring(1, path.length() - 5));
             if (plugin) {
                 auto callback = plugin->getConfigureForm();
@@ -572,35 +604,35 @@ bool handle_file_read(String path, bool client_accepts_gzip, AsyncWebServerReque
                     callback(request, *form);
                     webTemplate = new ConfigTemplate(form);
                     if (form->validate()) {
-                        config_write();
+                        config.write();
                     }
                     plugin->callReconfigurePlugin();
                 }
             }
         }
         if (!webTemplate) {
-            if (path.equals(F("/wifi.html"))) {
+            if (constexpr_String_equals(path, PSTR("/wifi.html"))) {
                 Form *form = new WifiSettingsForm(request);
                 webTemplate = new ConfigTemplate(form);
                 if (form->validate()) {
-                    config_write();
+                    config.write();
                 }
-            } else if (path.equals(F("/network.html"))) {
+            } else if (constexpr_String_equals(path, PSTR("/network.html"))) {
                 Form *form = new NetworkSettingsForm(request);
                 webTemplate = new ConfigTemplate(form);
                 if (form->validate()) {
-                    config_write();
+                    config.write();
                 }
-            } else if (path.equals(F("/password.html"))) {
+            } else if (constexpr_String_equals(path, PSTR("/password.html"))) {
                 Form *form = new PasswordSettingsForm(request);
                 webTemplate = new ConfigTemplate(form);
                 if (form->validate()) {
-                    config_write();
+                    config.write();
                 }
-            } else if (path.equals(F("/reboot.html"))) {
+            } else if (constexpr_String_equals(path, PSTR("/reboot.html"))) {
                 if (request->hasArg(F("yes"))) {
                     request->onDisconnect([]() {
-                        config_restart();
+                        config.restartDevice();
                     });
                     mapping = Mappings::getInstance().find(F("/rebooting.html"));
                 } else {
@@ -612,7 +644,7 @@ bool handle_file_read(String path, bool client_accepts_gzip, AsyncWebServerReque
 /*        Config &config = _Config.get();
 
 
-        } else if (path.equals(F("/pins.html"))) {
+        } else if (constexpr_String_equals(path, PSTR("/pins.html"))) {
             if (request->hasArg(F("led_type"))) {
                 config_set_blink(BLINK_OFF);
                 _Config.getOptions().setLedMode((LedMode_t)request->arg(F("led_type")).toInt());
@@ -624,7 +656,7 @@ bool handle_file_read(String path, bool client_accepts_gzip, AsyncWebServerReque
         */
     }
 
-    return send_file(path, client_accepts_gzip, mapping, request, webTemplate);
+    return web_server_send_file(path, httpHeaders, client_accepts_gzip, mapping, request, webTemplate);
 }
 
 void web_server_create_settings_form(AsyncWebServerRequest *request, Form &form) {
@@ -647,7 +679,6 @@ void web_server_create_settings_form(AsyncWebServerRequest *request, Form &form)
     });
     form.add<uint16_t>(F("http_port"), config._H_GET(Config().http_port), [&](uint16_t port, FormField *field) {
 #  if WEBSERVER_TLS_SUPPORT
-        assert(field->getForm()->getField(0)->getName().equals(F("http_enabled")) == true);
         if (field->getForm()->getField(0)->getValue().toInt() == HTTP_MODE_SECURE) {
             if (port == 0) {
                 port = 443;
@@ -676,7 +707,7 @@ void web_server_create_settings_form(AsyncWebServerRequest *request, Form &form)
 
 PROGMEM_PLUGIN_CONFIG_DEF(
 /* pluginName               */ http,
-/* setupPriority            */ 15,
+/* setupPriority            */ PLUGIN_PRIO_HTTP,
 /* allowSafeMode            */ true,
 /* autoSetupWakeUp          */ false,
 /* rtcMemoryId              */ 0,
@@ -684,6 +715,7 @@ PROGMEM_PLUGIN_CONFIG_DEF(
 /* statusTemplate           */ web_server_get_status,
 /* configureForm            */ web_server_create_settings_form,
 /* reconfigurePlugin        */ web_server_reconfigure,
+/* reconfigure Dependencies */ nullptr,
 /* prepareDeepSleep         */ nullptr,
 /* atModeCommandHandler     */ nullptr
 );

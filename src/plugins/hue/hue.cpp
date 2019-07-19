@@ -69,7 +69,7 @@ void hue_setup_emulation() {
         return;
     }
 
-    fauxmo = new fauxmoESP();
+    fauxmo = _debug_new fauxmoESP();
 
     if_debug_printf_P(PSTR("Starting HUE emulation @ port %d %s\n"), _Config.get().hue.tcp_port, _Config.get().hue.tcp_port != hue_port ? "as standalone server" : "shared web server");
     fauxmo->createServer(_Config.get().hue.tcp_port != hue_port); // web server already exists and supportrs callbacks

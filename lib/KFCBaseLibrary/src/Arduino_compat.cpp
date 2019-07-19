@@ -41,10 +41,6 @@ void panic() {
     abort();
 }
 
-const char *str_P(const char *str, uint8_t index) {
-    return str;
-}
-
 /* default implementation: may be overridden */
 size_t Print::write(const uint8_t *buffer, size_t size) {
     size_t n = 0;
@@ -67,7 +63,7 @@ size_t Print::printf(const char *format, ...) {
     size_t len = vsnprintf(temp, sizeof(temp), format, arg);
     va_end(arg);
     if (len > sizeof(temp) - 1) {
-        buffer = new char[len + 1];
+        buffer = _debug_new char[len + 1];
         if (!buffer) {
             return 0;
         }
@@ -90,7 +86,7 @@ size_t Print::printf_P(PGM_P format, ...) {
     size_t len = vsnprintf(temp, sizeof(temp), format, arg);
     va_end(arg);
     if (len > sizeof(temp) - 1) {
-        buffer = new char[len + 1];
+        buffer = _debug_new char[len + 1];
         if (!buffer) {
             return 0;
         }
@@ -421,11 +417,9 @@ File Dir::openFile(const char *mode) {
     return SPIFFS.open(fileName(), mode);
 }
 
-String _sharedEmptyString;
-
 HTTPClient::HTTPClient() {
     init_winsock();
-    _body = new BufferStream();
+    _body = _debug_new BufferStream();
     _httpCode = 0;
 }
 

@@ -4,6 +4,10 @@
 
 #pragma once
 
+#ifndef DEBUG_RESET_DETECTOR
+#define DEBUG_RESET_DETECTOR        1
+#endif
+
 #include <Arduino_compat.h>
 
 #if defined(ESP8266)
@@ -23,7 +27,8 @@
 
 #if HAVE_KFC_PLUGINS
 
-#include "plugins.h"
+#include <plugins.h>
+#include <RTCMemoryManager.h>
 
 #define RESET_DETECTOR_RTC_MEM_ID           1
 

@@ -17,7 +17,7 @@ void DumpBinary::setGroupBytes(uint8_t groupBytes) {
     _groupBytes = groupBytes;
 }
 
-void DumpBinary::dump(const uint8_t * data, size_t length) {
+void DumpBinary::dump(const uint8_t *data, size_t length) {
     uint16_t pos = 0;
     while (pos < length) {
         _output.printf_P(PSTR("[%04X] "), pos);
@@ -40,5 +40,8 @@ void DumpBinary::dump(const uint8_t * data, size_t length) {
             }
         }
         _output.println();
+#if ESP8266
+        delay(1);
+#endif
     }
 }

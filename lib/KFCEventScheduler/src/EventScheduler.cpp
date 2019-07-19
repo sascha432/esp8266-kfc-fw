@@ -6,6 +6,13 @@
 #include "EventTimer.h"
 #include "LoopFunctions.h"
 
+#if DEBUG_EVENT_SCHEDULER
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
+#endif
+
+
 #if !defined(DISABLE_EVENT_SCHEDULER)
 EventScheduler Scheduler;
 #endif
@@ -22,13 +29,13 @@ EventScheduler Scheduler;
 
 // EventScheduler::TimerPtr EventScheduler::_addTimer(int64_t delay, int repeat, Callback callback, Priority_t priority) {
 //     TimerPtr timer;
-//     _timers.push_back(timer = new EventTimer(callback, delay, repeat, priority));
+//     _timers.push_back(timer = _debug_new EventTimer(callback, delay, repeat, priority));
 // #if DEBUG
 //     timer->__source = _debug_filename;
 //     timer->__line = _debug_lineno;
 //     timer->__function = _debug_function;
 // #endif
-//     if_debug_printf_P(PSTR("add timer %p (%s), delay %.3f, repeat %d, priority %d\n"), timer, timer->_getTimerSource().c_str(), delay / 1000.0, repeat, priority);
+//     _debug_printf_P(PSTR("add timer %p (%s), delay %.3f, repeat %d, priority %d\n"), timer, timer->_getTimerSource().c_str(), delay / 1000.0, repeat, priority);
 //     installLoopFunc();
 //     Scheduler._list();
 //     return _timers.back();
@@ -37,10 +44,10 @@ EventScheduler Scheduler;
 EventScheduler::TimerPtr EventScheduler::addTimer(int64_t delay, int repeat, Callback callback, Callback removeCallback, Priority_t priority) {
 #if DEBUG_EVENT_SCHEDULER
     TimerPtr timer;
-    _timers.push_back(timer = new EventTimer(callback, removeCallback, delay, repeat, priority));
-    if_debug_printf_P(PSTR("add timer %p (%s), delay %.3f, repeat %d, priority %d\n"), timer, timer->_getTimerSource().c_str(), delay / 1000.0, repeat, priority);
+    _timers.push_back(timer = _debug_new EventTimer(callback, removeCallback, delay, repeat, priority));
+    _debug_printf_P(PSTR("add timer %p (%s), delay %.3f, repeat %d, priority %d\n"), timer, timer->_getTimerSource().c_str(), delay / 1000.0, repeat, priority);
 #else
-    _timers.push_back(new EventTimer(callback, removeCallback, delay, repeat, priority));
+    _timers.push_back(_debug_new EventTimer(callback, removeCallback, delay, repeat, priority));
 #endif
     installLoopFunc();
     Scheduler._list();
@@ -58,13 +65,13 @@ bool EventScheduler::hasTimer(TimerPtr timer) {
 }
 
 void EventScheduler::removeTimer(TimerPtr timer, bool deleteObject) {
-  debug_printf_P(PSTR("EventScheduler::removeTimer(%p, %d)\n"), timer, deleteObject);
+  _debug_printf_P(PSTR("EventScheduler::removeTimer(%p, %d)\n"), timer, deleteObject);
     if (!timer) {
         return;
     }
 #if DEBUG_EVENT_SCHEDULER
     if (!hasTimer(timer)) {
-        debug_printf_P(PSTR("EventScheduler::removeTimer(): timer %p is not active or has been deleted already\n"), timer);
+        _debug_printf_P(PSTR("EventScheduler::removeTimer(): timer %p is not active or has been deleted already\n"), timer);
         panic();
     }
 #endif
@@ -98,7 +105,7 @@ void EventScheduler::removeTimer(TimerPtr timer, bool deleteObject) {
     #endif
 
     if (deleteObject) {
-        debug_printf_P(PSTR("EventScheduler::removeTimer(): Deleting timer %p\n"), timer);
+        _debug_printf_P(PSTR("EventScheduler::removeTimer(): Deleting timer %p\n"), timer);
         delete timer;
     }
 
@@ -109,15 +116,15 @@ void EventScheduler::_timerCallback(void *arg) {
     TimerPtr timer = reinterpret_cast<TimerPtr>(arg);
     if (timer->_remainingDelay > MAX_DELAY) {
         timer->_remainingDelay -= MAX_DELAY;
-        debug_printf_P(PSTR("EventScheduler::_timerCallback(%p): timer %p is greater max delay %d, remaining delay %.3f\n"), arg, timer, MAX_DELAY, timer->_remainingDelay / 1000.0);
+        _debug_printf_P(PSTR("EventScheduler::_timerCallback(%p): timer %p is greater max delay %d, remaining delay %.3f\n"), arg, timer, MAX_DELAY, timer->_remainingDelay / 1000.0);
     } else if (timer->_remainingDelay) {
-        debug_printf_P(PSTR("EventScheduler::_timerCallback(%p): timer %p is below max delay %d, ajusting next callback to %.3f ms\n"), arg, timer, MAX_DELAY, timer->_remainingDelay / 1000.0);
+        _debug_printf_P(PSTR("EventScheduler::_timerCallback(%p): timer %p is below max delay %d, ajusting next callback to %.3f ms\n"), arg, timer, MAX_DELAY, timer->_remainingDelay / 1000.0);
         timer->_updateInterval(timer->_remainingDelay, false);
         timer->_remainingDelay = 0;
     } else {
          // immediately reschedule if the delay exceeds the max. interval
         if (timer->_delay > MAX_DELAY && !timer->_maxRepeat()) {
-            debug_printf_P(PSTR("EventScheduler::_timerCallback(%p): timer %p is in 'repeat mode'. Rescheduling, next remaining time update in %d ms\n"), arg, timer, timer->_getTimerSource().c_str(), MAX_DELAY)
+            _debug_printf_P(PSTR("EventScheduler::_timerCallback(%p): timer %p is in 'repeat mode'. Rescheduling, next remaining time update in %d ms\n"), arg, timer, timer->_getTimerSource().c_str(), MAX_DELAY)
             timer->_remainingDelay = timer->_delay - MAX_DELAY;
             timer->_updateInterval(MAX_DELAY, true);
         }
@@ -134,25 +141,25 @@ void EventScheduler::_timerCallback(void *arg) {
 }
 
 void EventScheduler::callTimer(TimerPtr timer) {
-    debug_printf_P(PSTR("EventScheduler::callTimer(%p): priority %d\n"), timer, timer->_priority);
+    _debug_printf_P(PSTR("EventScheduler::callTimer(%p): priority %d\n"), timer, timer->_priority);
 #if DEBUG_EVENT_SCHEDULER
-    // debug_printf_P(PSTR("real delay %lu / %lu\n"), millis() - timer->_start, (unsigned long)timer->getDelay());
+    // _debug_printf_P(PSTR("real delay %lu / %lu\n"), millis() - timer->_start, (unsigned long)timer->getDelay());
     timer->_start = millis();
 #endif
     timer->_loopCallback(timer);
     if (hasTimer(timer)) {
         timer->_callCounter++;
         if (timer->_maxRepeat()) {
-            debug_printf_P(PSTR("EventScheduler::callTimer(%p): detaching os_timer %p max repeat reached\n"), timer, timer->_timer);
+            _debug_printf_P(PSTR("EventScheduler::callTimer(%p): detaching os_timer %p max repeat reached\n"), timer, timer->_timer);
             timer->detach();
         }
         if (!timer->active()) {
-            debug_printf_P(PSTR("EventScheduler::callTimer(%p): remove EventTimer, os_timer is not active\n"));
+            _debug_printf_P(PSTR("EventScheduler::callTimer(%p): remove EventTimer, os_timer is not active\n"));
             removeTimer(timer);
         }
     } else {
         if (timer) {
-          debug_printf_P(PSTR("EventScheduler::callTimer(%p): WARNING! timer has been removed already\n"), timer);
+          _debug_printf_P(PSTR("EventScheduler::callTimer(%p): WARNING! timer has been removed already\n"), timer);
         }
     }
 }
@@ -174,7 +181,7 @@ void EventScheduler::loopFunc() {
                 _timers[i]->_callbackScheduled = false;
                 callTimer(_timers[i]);
                 if ((runtime = millis() - start) > _runtimeLimit) {
-                    debug_printf_P(PSTR("void EventScheduler::loopFunc(): runtime limit %d/%d reached, exiting loop\n"), runtime, _runtimeLimit);
+                    _debug_printf_P(PSTR("void EventScheduler::loopFunc(): runtime limit %d/%d reached, exiting loop\n"), runtime, _runtimeLimit);
                     break;
                 }
             }
@@ -191,7 +198,7 @@ void EventScheduler::loopFunc() {
             removeLoopFunc();
         } else {
 
-            debug_printf_P(PSTR("void EventScheduler::loopFunc(): %d callbacks still need to be scheduled after this loop\n"), left);
+            _debug_printf_P(PSTR("void EventScheduler::loopFunc(): %d callbacks still need to be scheduled after this loop\n"), left);
         }
 
         #else
@@ -202,7 +209,7 @@ void EventScheduler::loopFunc() {
                 it->removed = true;
             }
             if ((runtime = millis() - start) > _runtimeLimit) {
-                if_debug_printf("runtime limit %d/%d reached, exiting loop\n", runtime, _runtimeLimit);
+                _debug_printf("runtime limit %d/%d reached, exiting loop\n", runtime, _runtimeLimit);
                 break;
             }
         } while (++it != _callbacks.end());
@@ -222,28 +229,28 @@ void EventScheduler::loopFunc() {
 void EventScheduler::_list() {
 #if DEBUG_EVENT_SCHEDULER
     if (_timers.empty()) {
-        if_debug_printf_P(PSTR("No timers left\n"));
+        _debug_printf_P(PSTR("No timers left\n"));
     } else {
         #if 0
-        if_debug_printf_P(PSTR("Timers %d, active %d:\n"), _timers.size(), _callbacks.size());
+        _debug_printf_P(PSTR("Timers %d, active %d:\n"), _timers.size(), _callbacks.size());
         for(auto &timer: _timers) {
-            //if_debug_printf_P(PSTR("%p (%s): delay %.3f repeat %d/%d\n"), timer, timer->_getTimerSource().c_str(), timer->_delay / 1000.0, timer->_callCounter, timer->_repeat);
-            if_debug_printf_P(PSTR("%p: delay %.3f repeat %d/%d\n"), timer, timer->_delay / 1000.0, timer->_callCounter, timer->_repeat);
+            //_debug_printf_P(PSTR("%p (%s): delay %.3f repeat %d/%d\n"), timer, timer->_getTimerSource().c_str(), timer->_delay / 1000.0, timer->_callCounter, timer->_repeat);
+            _debug_printf_P(PSTR("%p: delay %.3f repeat %d/%d\n"), timer, timer->_delay / 1000.0, timer->_callCounter, timer->_repeat);
         }
         #else
         int scheduled = 0;
         for(auto &timer: _timers) {
             #if DEBUG_INCLUDE_SOURCE_INFO
-                if_debug_printf_P(PSTR("%p(%s): delay %.3f repeat %d/%d, scheduled %d\n"),
+                _debug_printf_P(PSTR("%p(%s): delay %.3f repeat %d/%d, scheduled %d\n"),
                     timer, timer->_getTimerSource().c_str(), timer->_delay / 1000.0, timer->_callCounter, timer->_repeat, timer->_callbackScheduled);
             #else
-                if_debug_printf_P(PSTR("%p: delay %.3f repeat %d/%d, scheduled %d\n"), timer, timer->_delay / 1000.0, timer->_callCounter, timer->_repeat, timer->_callbackScheduled);
+                _debug_printf_P(PSTR("%p: delay %.3f repeat %d/%d, scheduled %d\n"), timer, timer->_delay / 1000.0, timer->_callCounter, timer->_repeat, timer->_callbackScheduled);
             #endif
             if (timer->_callbackScheduled) {
                 scheduled++;
             }
         }
-        if_debug_printf_P(PSTR("Timers %d, scheduled %d\n"), _timers.size(), scheduled);
+        _debug_printf_P(PSTR("Timers %d, scheduled %d\n"), _timers.size(), scheduled);
         #endif
     }
 #endif
@@ -255,7 +262,7 @@ static void scheduler_loop_function() {
 
 void EventScheduler::installLoopFunc() {
     if (!_loopFunctionInstalled) {
-        // if_debug_printf_P(PSTR("Loop function installed\n"));
+        // _debug_printf_P(PSTR("Loop function installed\n"));
         LoopFunctions::add(scheduler_loop_function);
         _loopFunctionInstalled = true;
     }
@@ -263,7 +270,7 @@ void EventScheduler::installLoopFunc() {
 
 void EventScheduler::removeLoopFunc() {
     if (_loopFunctionInstalled) {
-        // if_debug_printf_P(PSTR("Removing Loop function\n"));
+        // _debug_printf_P(PSTR("Removing Loop function\n"));
         // LoopFunctions::remove(scheduler_loop_function);
         // _loopFunctionInstalled = false;
     }
@@ -273,7 +280,7 @@ void EventScheduler::terminate() {
     LoopFunctions::remove(scheduler_loop_function);
     _loopFunctionInstalled = false;
     cli();
-    for(auto timer: _timers) {
+    for(auto &timer: _timers) {
         timer->detach();
     }
     sei();
@@ -281,20 +288,20 @@ void EventScheduler::terminate() {
 
 // void wifi_list_callbacks() {
 // #if DEBUG_EVENT_SCHEDULER
-//     if_debug_println("+++listing loop callbacks");
+//     _debug_println("+++listing loop callbacks");
 //     for(const auto &cb : loop_functions) {
 //         #if DEBUG_INCLUDE_SOURCE_INFO
-//             if_debug_printf_P(PSTR("callbacks %p events %d source " DEBUG_SOURCE_FORMAT "\n"), cb.callback, cb.__source.c_str(), cb.__line, cb.__function.c_str());
+//             _debug_printf_P(PSTR("callbacks %p events %d source " DEBUG_SOURCE_FORMAT "\n"), cb.callback, cb.__source.c_str(), cb.__line, cb.__function.c_str());
 //         #else
-//             if_debug_printf_P(PSTR("callbacks %p events %d\n"), cb.callback);
+//             _debug_printf_P(PSTR("callbacks %p events %d\n"), cb.callback);
 //         #endif
 //     }
-//     if_debug_println("+++listing fifi event callbacks");
+//     _debug_println("+++listing fifi event callbacks");
 //     for(const auto &cb : wifi_event_callbacks) {
 //         #if DEBUG_INCLUDE_SOURCE_INFO
-//             if_debug_printf_P(PSTR("callbacks %p events %d, source " DEBUG_SOURCE_FORMAT "\n"), cb.callback, cb.events, cb.__source.c_str(), cb.__line, cb.__function.c_str());
+//             _debug_printf_P(PSTR("callbacks %p events %d, source " DEBUG_SOURCE_FORMAT "\n"), cb.callback, cb.events, cb.__source.c_str(), cb.__line, cb.__function.c_str());
 //         #else
-//             if_debug_printf_P(PSTR("callbacks %p events %d\n"), cb.callback, cb.events);
+//             _debug_printf_P(PSTR("callbacks %p events %d\n"), cb.callback, cb.events);
 //         #endif
 //     }
 // #endif

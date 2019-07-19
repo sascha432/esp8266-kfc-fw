@@ -6,6 +6,10 @@
 
 #include <Arduino_compat.h>
 
+#ifndef DEBUG_EVENT_SCHEDULER
+#define DEBUG_EVENT_SCHEDULER 0
+#endif
+
 class EventTimer;
 class EventScheduler;
 

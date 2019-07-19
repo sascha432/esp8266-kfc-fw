@@ -70,21 +70,28 @@ void check_if_exist_I2C(Print &output) {
   //delay(1000);           // wait 1 seconds for next scan, did not find it necessary
 }
 
+#if AT_MODE_SUPPORTED
+
+#include "at_mode.h"
+
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(SCANI2C, "SCANI2C", "Scan for I2C bus and devices");
+
 bool i2cscanner_at_mode_command_handler(Stream &serial, const String &command, int8_t argc, char **argv) {
     if (command.length() == 0) {
-        serial.print(F(
-          " AT+SCANI2C\n"
-          "    Scan for I2C bus and devices\n"
-        ));
-    } else if (command.equalsIgnoreCase(F("SCANI2C"))) {
+
+      at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SCANI2C));
+
+    } else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SCANI2C))) {
         scanPorts(serial);
         return true;
     }
     return false;
 }
 
+#endif
+
 PROGMEM_PLUGIN_CONFIG_DEF(
-/* pluginName               */ I2Cscan,
+/* pluginName               */ i2c_scan,
 /* setupPriority            */ PLUGIN_MIN_PRIORITY,
 /* allowSafeMode            */ false,
 /* autoSetupWakeUp          */ false,
@@ -93,6 +100,7 @@ PROGMEM_PLUGIN_CONFIG_DEF(
 /* statusTemplate           */ nullptr,
 /* configureForm            */ nullptr,
 /* reconfigurePlugin        */ nullptr,
+/* reconfigure Dependencies */ nullptr,
 /* prepareDeepSleep         */ nullptr,
 /* atModeCommandHandler     */ i2cscanner_at_mode_command_handler
 );

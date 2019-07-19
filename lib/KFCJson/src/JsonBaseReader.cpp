@@ -349,7 +349,7 @@ bool JsonBaseReader::_addCharacter(char ch) {
 
 String JsonBaseReader::getPath() const {
 	String _path;
-	for (auto &state : _state) {
+	for (const auto &state : _state) {
 		if (state.key.length()) {
 			if (_path.length()) {
 				_path += '.';

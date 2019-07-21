@@ -293,7 +293,7 @@ private:
     unsigned long _wifiUp;
     unsigned long _offlineSince;
 
-#if USE_WIFI_SET_EVENT_HANDLER_CB != 1
+#if USE_WIFI_SET_EVENT_HANDLER_CB == 0
     WiFiEventHandler _onWiFiConnect;
     WiFiEventHandler _onWiFiDisconnect;
     WiFiEventHandler _onWiFiGotIP;

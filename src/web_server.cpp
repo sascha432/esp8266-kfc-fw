@@ -43,6 +43,31 @@ struct UploadStatus_t {
     uint8_t command;
 };
 
+#if defined(ESP8266)
+uint8_t WebServerSetCPUSpeedHelper::_counter = 0;
+#endif
+
+WebServerSetCPUSpeedHelper::WebServerSetCPUSpeedHelper() {
+#if defined(ESP8266)
+    _enabled = config._H_GET(Config().flags).webServerPerformanceModeEnabled;
+    _debug_printf_P(PSTR("WebServerSetCPUSpeedHelper(): counter=%d, CPU=%d, boost=%d\n"), _counter, system_get_cpu_freq(), _enabled);
+    _counter++;
+    if (_counter == 1 && system_get_cpu_freq() != SYS_CPU_160MHZ && _enabled) {
+        system_update_cpu_freq(SYS_CPU_160MHZ);
+    }
+#endif
+}
+
+WebServerSetCPUSpeedHelper::~WebServerSetCPUSpeedHelper() {
+#if defined(ESP8266)
+    _counter--;
+    if (_counter == 0 && _enabled) {
+        system_update_cpu_freq(SYS_CPU_80MHZ);
+    }
+    _debug_printf_P(PSTR("~WebServerSetCPUSpeedHelper(): counter=%d, CPU=%d, boost=%d\n"), _counter, system_get_cpu_freq(), _enabled);
+#endif
+}
+
 AsyncWebServer *get_web_server_object() {
     return server;
 }
@@ -111,42 +136,13 @@ bool web_server_is_authenticated(AsyncWebServerRequest *request) {
     return false;
 }
 
-void set_cpu_speed_for_request(AsyncWebServerRequest *request) {
-
-#if defined(ESP8266)
-
-    if (config._H_GET(Config().flags).webServerPerformanceModeEnabled && system_get_cpu_freq() != SYS_CPU_160MHZ) {
-        system_update_cpu_freq(SYS_CPU_160MHZ);
-    }
-#endif
-
-    String url = request->url();
-#if DEBUG_WEB_SERVER
-    ulong start = millis();
-    request->onDisconnect([start, url]() {
-#else
-    request->onDisconnect([url]() {
-#endif
-#if DEBUG_WEB_SERVER
-        int dur = millis() - start;
-        _debug_printf_P(PSTR("request %s took %.4fs @ %dMhz\n"), url.c_str(), dur / 1000.0, system_get_cpu_freq());
-#endif
-#if defined(ESP8266)
-    if (config._H_GET(Config().flags).webServerPerformanceModeEnabled) {
-        system_update_cpu_freq(SYS_CPU_80MHZ);
-    }
-#endif
-    });
-}
-
 bool web_server_client_accepts_gzip(AsyncWebServerRequest *request) {
     auto acceptEncoding = request->header(FSPGM(Accept_Encoding)).c_str();
     return (strstr_P(acceptEncoding, PSTR("gzip")) || strstr_P(acceptEncoding, PSTR("deflate")));
 }
 
-bool init_request_filter(AsyncWebServerRequest *request) {
-    set_cpu_speed_for_request(request);
-    return true;
+void web_server_add_handler(AsyncWebHandler* handler) {
+    server->addHandler(handler);
 }
 
 // server->on()
@@ -154,13 +150,12 @@ bool init_request_filter(AsyncWebServerRequest *request) {
 
 void web_server_not_found_handler(AsyncWebServerRequest *request) {
 
+    WebServerSetCPUSpeedHelper setCPUSpeed;
 #if HUE_EMULATION
     if (hue_onNotFound(request)) {
         return;
     }
 #endif
-
-    set_cpu_speed_for_request(request);
 
     if (!web_server_handle_file_read(request->url(), web_server_client_accepts_gzip(request), request)) {
         request->send(404);
@@ -192,6 +187,7 @@ void web_server_logout_handler(AsyncWebServerRequest *request) {
 }
 
 void web_server_is_alive_handler(AsyncWebServerRequest *request) {
+    WebServerSetCPUSpeedHelper setCPUSpeed;
     AsyncWebServerResponse *response = request->beginResponse(200, FSPGM(text_plain), String(request->arg(F("p")).toInt()));
     HttpHeaders httpHeaders;
     httpHeaders.addNoCache();
@@ -362,7 +358,7 @@ void init_web_server() {
 // #if MDNS_SUPPORT
 //     server->on(F("/poll_mdns/"), [&httpHeaders](AsyncWebServerRequest *request) {
 
-//         set_cpu_speed_for_request(request);
+//         web_server_set_cpu_speed_for_request(request);
 
 //         httpHeaders.addNoCache();
 //         if (web_server_is_authenticated(request)) {
@@ -387,13 +383,13 @@ void init_web_server() {
 //         } else {
 //             request->send(403);
 //         }
-//     }).setFilter(init_request_filter);
+//     });
 // #endif
 
-    server->on(F("/scan_wifi/"), web_server_scan_wifi_handler).setFilter(init_request_filter);
-    server->on(F("/logout"), web_server_logout_handler).setFilter(init_request_filter);
-    server->on(F("/is_alive"), web_server_is_alive_handler).setFilter(init_request_filter);
-    server->on(F("/update"), HTTP_POST, web_server_update_handler, web_server_update_upload_handler).setFilter(init_request_filter);
+    server->on(F("/scan_wifi/"), web_server_scan_wifi_handler);
+    server->on(F("/logout"), web_server_logout_handler);
+    server->on(F("/is_alive"), web_server_is_alive_handler);
+    server->on(F("/update"), HTTP_POST, web_server_update_handler, web_server_update_upload_handler);
 
     server->begin();
     _debug_printf_P(PSTR("HTTP running on port %u\n"), config._H_GET(Config().http_port));
@@ -453,7 +449,7 @@ PGM_P web_server_get_content_type(const String &path) {
 }
 
 bool web_server_send_file(String path, HttpHeaders &httpHeaders, bool client_accepts_gzip, FSMapping *mapping, AsyncWebServerRequest *request, WebTemplate *webTemplate) {
-
+    WebServerSetCPUSpeedHelper setCPUSpeed;
     AsyncWebServerResponse *response = nullptr;
 
     _debug_printf_P(PSTR("web_server_send_file(%s)\n"), path.c_str());
@@ -524,6 +520,7 @@ bool web_server_send_file(String path, HttpHeaders &httpHeaders, bool client_acc
 
 bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWebServerRequest *request) {
     _debug_printf_P(PSTR("web_server_handle_file_read: %s\n"), path.c_str());
+    WebServerSetCPUSpeedHelper setCPUSpeed;
 
     if (constexpr_endsWith(path, SPGM(slash))) {
         path += F("index.html");
@@ -627,6 +624,8 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
                 Form *form = new PasswordSettingsForm(request);
                 webTemplate = new ConfigTemplate(form);
                 if (form->validate()) {
+                    auto &flags = config._H_W_GET(Config().flags);
+                    flags.isDefaultPassword = false;
                     config.write();
                 }
             } else if (constexpr_String_equals(path, PSTR("/reboot.html"))) {

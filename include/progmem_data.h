@@ -4,7 +4,9 @@
 
 #pragma once
 
-extern const char _shared_progmem_string_empty[] PROGMEM;
+PROGMEM_STRING_DECL(default_password_warning);
+PROGMEM_STRING_DECL(empty);
+//extern const char _shared_progmem_string_empty[] PROGMEM;
 extern const char _shared_progmem_string__checked[] PROGMEM;
 extern const char _shared_progmem_string__selected[] PROGMEM;
 extern const char _shared_progmem_string__hidden[] PROGMEM;

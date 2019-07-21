@@ -70,7 +70,12 @@ String WebTemplate::process(const String &key) {
 #error Platform not supported
 #endif
     } else if (key == F("SOFTWARE")) {
-        _return(F("KFC FW " FIRMWARE_VERSION_STR " " __DATE__ " Build " __BUILD_NUMBER));
+        PrintHtmlEntitiesString out = F("KFC FW ");
+        out += config.getFirmwareVersion();
+        if (config._H_GET(Config().flags).isDefaultPassword) {
+            out.printf_P(PSTR(HTML_S(br) HTML_S(strong) "%s" HTML_E(strong)), SPGM(default_password_warning));
+        }
+        _return(out);
 #  if NTP_CLIENT || RTC_SUPPORT
     } else if (key == F("TIME")) {
         time_t now = time(NULL);
@@ -122,11 +127,6 @@ String WebTemplate::process(const String &key) {
                 return callback();
             }
         }
-        // for(auto callback: _variables) {
-        //     if (callback.first.equals(key)) {
-        //         return callback.second();
-        //     }
-        // }
         _return(SPGM(Not_supported));
     }
 
@@ -212,7 +212,7 @@ String ConfigTemplate::process(const String &key) {
         _return(String(config._H_GET(Config().led_pin)));
     } else if (key == F("SSL_CERT")) {
 #if SPIFFS_SUPPORT
-        File file = SPIFFS.open(F("/server.crt"), "r");
+        File file = SPIFFS.open(FSPGM(server_crt), "r");
         if (file) {
             _return(file.readString());
         }
@@ -220,7 +220,7 @@ String ConfigTemplate::process(const String &key) {
         _return(_sharedEmptyString);
     } else if (key == F("SSL_KEY")) {
 #if SPIFFS_SUPPORT
-        File file = SPIFFS.open(F("/server.key"), "r");
+        File file = SPIFFS.open(SPGM(server_key), "r");
         if (file) {
             _return(file.readString());
         }
@@ -245,7 +245,7 @@ String StatusTemplate::process(const String &key) {
         #if ASYNC_TCP_SSL_ENABLED
             PrintHtmlEntitiesString out;
             #if WEBSERVER_TLS_SUPPORT
-                out.printf_P(PSTR("TLS enabled, HTTPS %s"), _Config.getOptions().isHttpServerTLS() ? F("enabled") : SPGM(Disabled));
+                out.printf_P(PSTR("TLS enabled, HTTPS %s"), _Config.getOptions().isHttpServerTLS() ? PSTR("enabled") : SPGM(Disabled));
             #else
                 out.printf_P(PSTR("TLS enabled, HTTPS not supported"));
             #endif
@@ -348,10 +348,7 @@ NetworkSettingsForm::NetworkSettingsForm(AsyncWebServerRequest *request) : Setti
     add(new FormObject<IPAddress>(F("dns1"), _H_IP_FORM_OBJECT(Config().dns1)));
     add(new FormObject<IPAddress>(F("dns2"), _H_IP_FORM_OBJECT(Config().dns2)));
 
-    add<bool>(F("softap_dhcpd"), config._H_GET(Config().flags).softAPDHCPDEnabled, [](bool value, FormField *) {
-        auto &flags = config._H_W_GET(Config().flags);
-        flags.softAPDHCPDEnabled = value;
-    });
+    add<bool>(F("softap_dhcpd"), _H_STRUCT_FORMVALUE(Config().flags, bool, softAPDHCPDEnabled));
 
     add(new FormObject<IPAddress>(F("dhcp_start"), _H_IP_FORM_OBJECT(Config().soft_ap.dhcp_start)));
     add(new FormObject<IPAddress>(F("dhcp_end"), _H_IP_FORM_OBJECT(Config().soft_ap.dhcp_end)));
@@ -370,6 +367,7 @@ PasswordSettingsForm::PasswordSettingsForm(AsyncWebServerRequest *request) : Set
 
     add<sizeof Config().device_pass>(F("password2"), config._H_W_STR(Config().device_pass))
         ->setValue(_sharedEmptyString);
+
     addValidator(new FormRangeValidator(F("The password has to be at least %min% characters long"), 6, 0));
     addValidator(new FormRangeValidator(6, sizeof(Config().device_pass) - 1))
         ->setValidateIfValid(false);

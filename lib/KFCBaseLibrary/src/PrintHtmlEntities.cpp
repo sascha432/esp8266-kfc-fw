@@ -41,6 +41,8 @@ size_t PrintHtmlEntities::translate(uint8_t data) {
             return __write('<');
         case '\2':
             return __write('>');
+        case '\3':
+            return __write('&');
         case 39:
         default:
             if (data >= 0xa0 && data <= 0xbf) {

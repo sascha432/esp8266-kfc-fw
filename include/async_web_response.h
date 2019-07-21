@@ -11,19 +11,22 @@
 #include <functional>
 #include <KFCTimezone.h>
 #include <Buffer.h>
+#include "web_server.h"
 #include "templates.h"
 #include "fs_mapping.h"
 
-#define DEBUG_ASYNC_WEB_RESPONSE 1
+#define DEBUG_ASYNC_WEB_RESPONSE 0
 
 class AsyncProgmemFileResponse : public AsyncAbstractResponse {
 public:
     AsyncProgmemFileResponse(const String &contentType, FSMapping *mapping, AwsTemplateProcessor templateCallback = nullptr);
+
     bool _sourceValid() const;
     virtual size_t _fillBuffer(uint8_t *data, size_t len) override;
 
 private:
     File _content;
+    WebServerSetCPUSpeedHelper _setCPUSpeed;
 };
 
 class AsyncTemplateResponse : public AsyncProgmemFileResponse {
@@ -37,6 +40,7 @@ public:
 
 private:
     WebTemplate *_webTemplate;
+    WebServerSetCPUSpeedHelper _setCPUSpeed;
 };
 
 class AsyncBufferResponse : public AsyncAbstractResponse {
@@ -52,14 +56,17 @@ public:
 private:
     Buffer *_content;
     size_t _position;
+    WebServerSetCPUSpeedHelper _setCPUSpeed;
 };
 
 class AsyncDirWrapper {
-    typedef std::vector<String> AsyncDirWrapperList;
+    typedef std::vector<String> AsyncDirWrapperVector;
 
-    static const uint8_t DIR_TYPE_INVALID =         0;
-    static const uint8_t DIR_TYPE_DIRECTORY =       1;
-    static const uint8_t DIR_TYPE_FILE =            2;
+    typedef enum {
+        INVALID = 0,
+        DIR,
+        FILE
+    } TypeEnum_t;
 
 public:
     AsyncDirWrapper();
@@ -70,23 +77,23 @@ public:
 
     String &getDirName();;
 
-    bool isValid();
+    bool isValid() const;
     bool _fileInside(const String &path);
-    bool isDir();
-    bool isFile();
+    bool isDir() const;
+    bool isFile() const;
     bool next();
 
     File openFile(const char *mode);
     String fileName();
     String mappedFile();
-    bool isMapped();
+    bool isMapped() const;
     void getModificatonTime(char *modified, size_t size, PGM_P format);
     size_t fileSize();
 
 private:
     bool _isValid;
     bool _firstNext;
-    uint8_t _type;
+    TypeEnum_t _type;
     Dir _dir;
     String _dirName;
     String _fileName;
@@ -95,7 +102,7 @@ private:
     FileMappingsListIterator _iterator;
     FileMappingsListIterator _begin;
     FileMappingsListIterator _end;
-    AsyncDirWrapperList _dirs;
+    AsyncDirWrapperVector _dirs;
 };
 
 class AsyncDirResponse : public AsyncAbstractResponse {
@@ -117,7 +124,8 @@ private:
     bool _next;
     AsyncDirWrapper _dir;
     String _dirName;
-    int _dirNameLen;
+    size_t _dirNameLen;
+    WebServerSetCPUSpeedHelper _setCPUSpeed;
 };
 
 class AsyncNetworkScanResponse : public AsyncAbstractResponse {
@@ -132,8 +140,11 @@ public:
     static void setLocked(bool locked = true);
 
 private:
+    uint16_t _strcpy_P_safe(char *&dst, PGM_P str, int16_t &space);
+
     uint8_t _position;
     bool _hidden;
     bool _done;
     static bool _locked;
+    WebServerSetCPUSpeedHelper _setCPUSpeed;
 };

@@ -10,6 +10,10 @@
 #define DEBUG_AT_MODE 0
 #endif
 
+#ifndef AT_MODE_ALLOW_PLUS_WITHOUT_AT
+#define AT_MODE_ALLOW_PLUS_WITHOUT_AT 1     // treat + and AT+ the same
+#endif
+
 typedef struct {
     PGM_P command;
     PGM_P arguments;
@@ -77,8 +81,9 @@ typedef struct {
 void at_mode_setup();
 void at_mode_add_help(const ATModeCommandHelp_t *help);
 void serial_handle_event(String command);
-String at_mode_print_command_string(Print &output, char separator);
+String at_mode_print_command_string(Print &output, char separator, bool trailingSeparator = true);
 void at_mode_serial_input_handler(uint8_t type, const uint8_t *buffer, size_t len);
+void at_mode_print_invalid_arguments(Print &output);
 void enable_at_mode();
 void disable_at_mode();
 

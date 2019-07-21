@@ -80,7 +80,9 @@ String implode(const __FlashStringHelper *glue, const char **pieces, int count);
 String url_encode(const String &str);
 String printable_string(const uint8_t *buffer, size_t length);
 
-String append_slash(const String &dir);
+String append_slash_copy(const String &dir);
+void append_slash(String &dir);
+void remove_trailing_slash(String &dir);
 
 const String sys_get_temp_dir();
 #if SPIFFS_TMP_FILES_TTL

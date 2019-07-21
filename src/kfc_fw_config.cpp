@@ -10,6 +10,7 @@
 #include <EventScheduler.h>
 #include <session.h>
 #include <misc.h>
+#include "progmem_data.h"
 #include "build.h"
 
 #if DEBUG_KFC_CONFIG
@@ -18,7 +19,6 @@
 #include <debug_helper_disable.h>
 #endif
 
-PROGMEM_STRING_DEF(default_password_warning, "WARNING! Default password has not been changed");
 PROGMEM_STRING_DEF(safe_mode_enabled, "Device started in SAFE MODE");
 PROGMEM_STRING_DEF(SPIFF_configuration_backup, "/configuration.backup");
 
@@ -152,7 +152,7 @@ void KFCFWConfiguration::_softAPModeStationDisconnectedCb(const WiFiEventSoftAPM
     Logger_notice(F("Station disconnected [%s]"), mac2String(event.mac).c_str());
 }
 
-#if USE_WIFI_SET_EVENT_HANDLER_CB != 1
+#if USE_WIFI_SET_EVENT_HANDLER_CB == 0
 
 static void __onWiFiConnectCb(const WiFiEventStationModeConnected &event) {
     config._onWiFiConnectCb(event);

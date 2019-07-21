@@ -6,35 +6,34 @@
 #include <PrintHtmlEntities.h>
 #include "progmem_data.h"
 
-const char _shared_progmem_string_empty[] PROGMEM = "";
-const char _shared_progmem_string_0[] PROGMEM = "0";
-const char _shared_progmem_string_1[] PROGMEM = "1";
-const char _shared_progmem_string_OK[] PROGMEM = "OK";
-const char _shared_progmem_string_Enabled[] PROGMEM = "Enabled";
-const char _shared_progmem_string_Disabled[] PROGMEM = "Disabled";
-const char _shared_progmem_string_application_json[] PROGMEM = "application/json";
-const char _shared_progmem_string_text_plain[] PROGMEM = "text/plain";
-const char _shared_progmem_string_text_html[] PROGMEM = "text/html";
-const char _shared_progmem_string_auto_discovery_html[] PROGMEM = HTML_S(tr) HTML_S(td) "%s" HTML_E(td) HTML_S(td) "%s" HTML_E(td) HTML_E(tr);
-const char _shared_progmem_string_slash[] PROGMEM = "/";
-const char _shared_progmem_string_dot[] PROGMEM = ".";
-const char _shared_progmem_string_comma[] PROGMEM = ",";
-const char _shared_progmem_string_slash_dot[] PROGMEM = "/.";
-const char _shared_progmem_string_filename[] PROGMEM = "filename";
-const char _shared_progmem_string_dir[] PROGMEM = "dir";
-const char _shared_progmem_string_SPIFFS_tmp_dir[] PROGMEM = "/tmp/";
-const char _shared_progmem_string_SID[] PROGMEM = "SID";
-const char _shared_progmem_string_login_html[] PROGMEM = "/login.html";
+PROGMEM_STRING_DEF(default_password_warning, "WARNING! Default password has not been changed");
+PROGMEM_STRING_DEF(empty, "");
+PROGMEM_STRING_DEF(0, "0");
+PROGMEM_STRING_DEF(1, "1");
+PROGMEM_STRING_DEF(OK, "OK");
+PROGMEM_STRING_DEF(Enabled, "Enabled");
+PROGMEM_STRING_DEF(Disabled, "Disabled");
+PROGMEM_STRING_DEF(application_json, "application/json");
+PROGMEM_STRING_DEF(text_plain, "text/plain");
+PROGMEM_STRING_DEF(text_html, "text/html");
+PROGMEM_STRING_DEF(auto_discovery_html, HTML_S(tr) HTML_S(td) "%s" HTML_E(td) HTML_S(td) "%s" HTML_E(td) HTML_E(tr));
+PROGMEM_STRING_DEF(slash, "/");
+PROGMEM_STRING_DEF(dot, ".");
+PROGMEM_STRING_DEF(comma, ",");
+PROGMEM_STRING_DEF(slash_dot, "/.");
+PROGMEM_STRING_DEF(filename, "filename");
+PROGMEM_STRING_DEF(dir, "dir");
+PROGMEM_STRING_DEF(SPIFFS_tmp_dir, "/tmp/");
+PROGMEM_STRING_DEF(SID, "SID");
+PROGMEM_STRING_DEF(login_html, "/login.html");
+PROGMEM_STRING_DEF(Accept_Encoding, "Accept-Encoding");
+PROGMEM_STRING_DEF(server_crt, "/server.crt");
+PROGMEM_STRING_DEF(server_key, "/server.key");
+PROGMEM_STRING_DEF(kfcfw, "kfcfw");
+PROGMEM_STRING_DEF(Failed_to_reserve_string_size, "Failed to reserve string size %d\n");
+PROGMEM_STRING_DEF(invalid_flash_ptr, "INVALID_FLASH_PTR");
+
 // const char _shared_progmem_string_webui_mappings[] PROGMEM = "/webui/.mappings";
-const char _shared_progmem_string_Accept_Encoding[] PROGMEM = "Accept-Encoding";
-const char _shared_progmem_string_server_crt[] PROGMEM = "/server.crt";
-const char _shared_progmem_string_server_key[] PROGMEM = "/server.key";
-const char _shared_progmem_string_kfcfw[] PROGMEM = "kfcfw";
-
-const char _shared_progmem_string_Failed_to_reserve_string_size[] PROGMEM = "Failed to reserve string size %d\n";
-const char _shared_progmem_string_invalid_flash_ptr[] PROGMEM = "INVALID_FLASH_PTR";
-
-
 
 String spgm_concat(PGM_P str1, PGM_P str2) {
     size_t len = strlen_P(str1) + strlen_P(str2) + 1;

@@ -6,14 +6,16 @@
 
 #include <Arduino_compat.h>
 
-// \1 and \2 are changed to < and > to preserve it, otherwise it gets replaced by &lt; and &gt;
-#define HTML_TAG_S "\1"
-#define HTML_TAG_E "\2"
+// <, > and & are changed to \1, \2 and \3 to avoid encoding
+#define HTML_TAG_S  "\1"
+#define HTML_TAG_E  "\2"
+#define HTML_AMP    "\3"
+#define HTML_SPACE  "\3nbsp;"
 #define HTML_S HTML_OPEN_TAG
 #define HTML_E HTML_CLOSE_TAG
 #define HTML_OPEN_TAG(tag) HTML_TAG_S #tag HTML_TAG_E
 #define HTML_CLOSE_TAG(tag) HTML_TAG_S "/" #tag HTML_TAG_E
-#define HTML_NEW_2COL_ROW HTML_E(td) HTML_E(tr) HTML_S(tr) HTML_S(td) "&nbsp;" HTML_E(td) HTML_S(td)
+#define HTML_NEW_2COL_ROW HTML_E(td) HTML_E(tr) HTML_S(tr) HTML_S(td) HTML_SPACE HTML_E(td) HTML_S(td)
 
 class PrintHtmlEntities {
 public:
@@ -28,4 +30,3 @@ public:
 
     virtual size_t _write(uint8_t data) = 0;
 };
-

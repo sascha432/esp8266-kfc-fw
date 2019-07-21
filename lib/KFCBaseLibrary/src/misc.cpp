@@ -38,7 +38,7 @@ String formatTime(unsigned long seconds, bool days_if_not_zero) {
     if (!days_if_not_zero || days) {
         out.printf_P(PSTR("%u days "), days);
     }
-    out.printf_P(PSTR("%02huh:%02hum:%02hus"), (unsigned short)((seconds / 3600) % 24), (unsigned short)((seconds / 60) % 60), (unsigned short)(seconds % 60));
+    out.printf_P(PSTR("%02uh:%02um:%02us"), (seconds / 3600) % 24, (seconds / 60) % 60, seconds % 60);
     return out;
 }
 
@@ -82,13 +82,25 @@ String printable_string(const uint8_t *buffer, size_t length) {
     return out_str;
 }
 
-String append_slash(const String &dir) {
-    if (dir.endsWith(FSPGM(slash))) {
+String append_slash_copy(const String &dir) {
+    if (dir.length() == 0 || (dir.length() != 0 && dir.charAt(dir.length() - 1) != '/')) {
         return dir;
     } else {
         String tmp = dir;
         tmp += '/';
         return tmp;
+    }
+}
+
+void append_slash(String &dir) {
+    if (dir.length() == 0 || (dir.length() != 0 && dir.charAt(dir.length() - 1) != '/')) {
+        dir += '/';
+    }
+}
+
+void remove_trailing_slash(String &dir) {
+    if (dir.length() && dir.charAt(dir.length() - 1) == '/') {
+        dir.remove(dir.length() - 1);
     }
 }
 
@@ -98,7 +110,7 @@ const String sys_get_temp_dir() {
 
 #if SPIFFS_TMP_FILES_TTL
 File tmpfile(const String &dir, const String &prefix, long ttl) {
-    String tmp = append_slash(dir);
+    String tmp = append_slash_copy(dir);
     tmp += String((millis() / 1000UL) + ttl, HEX);
     if (isxdigit(prefix.charAt(0))) {
         tmp += F("_"); // add separator if next character is a hex digit
@@ -106,7 +118,7 @@ File tmpfile(const String &dir, const String &prefix, long ttl) {
     tmp += prefix;
 #else
 File tmpfile(const String &dir, const String &prefix) {
-    String tmp = append_slash(dir);
+    String tmp = append_slash_copy(dir);
     tmp += prefix;
 #endif
     do {

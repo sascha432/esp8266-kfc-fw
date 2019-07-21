@@ -46,38 +46,37 @@ void at_mode_display_help_indent(Print &output, PGM_P text) {
     if (ch) {
         output.print(FPSTR(indent));
         do {
-            output.print(ch);
+            output.print((char)ch);
             if (ch == '\n') {
                 output.print(FPSTR(indent));
             }
         } while((ch = pgm_read_byte(text++)));
     }
+    output.println();
 }
 
 void at_mode_display_help(Print &output) {
 
-    for(auto commandHelp: at_mode_help) {
-        PGM_P ptr = (PGM_P)&commandHelp;
-        PGM_P command = (PGM_P)pgm_read_ptr(ptr++);
-        PGM_P arguments = (PGM_P)pgm_read_ptr(ptr++);
-        PGM_P help = (PGM_P)pgm_read_ptr(ptr++);
-        PGM_P helpQueryMode = (PGM_P)pgm_read_ptr(ptr);
+    _debug_printf_P(PSTR("at_mode_display_help(): size=%d\n"), at_mode_help.size());
 
-        if (helpQueryMode) {
-            if (command) {
-                output.printf_P(PSTR(" AT+%s?\n"), command);
+    for(const auto commandHelp: at_mode_help) {
+
+        if (commandHelp->helpQueryMode) {
+            if (commandHelp->command) {
+                output.printf_P(PSTR(" AT+%s?\n"), commandHelp->command);
             } else {
                 output.print(F(" AT?\n"));
             }
-            at_mode_display_help_indent(output, helpQueryMode);
+            at_mode_display_help_indent(output, commandHelp->helpQueryMode);
         }
 
-        if (command) {
-            output.printf_P(PSTR(" AT+%s"), command);
+        if (commandHelp->command) {
+            output.printf_P(PSTR(" AT+%s"), commandHelp->command);
         } else {
             output.print(F(" AT"));
         }
-        if (arguments) {
+        if (commandHelp->arguments) {
+            PGM_P arguments = commandHelp->arguments;
             auto ch = pgm_read_byte(arguments);
             if (ch == '[') {
                 output.print('[');
@@ -89,7 +88,7 @@ void at_mode_display_help(Print &output) {
             output.print(FPSTR(arguments));
         }
         output.println();
-        at_mode_display_help_indent(output, help);
+        at_mode_display_help_indent(output, commandHelp->help);
     }
 }
 
@@ -153,7 +152,7 @@ void at_mode_generate_help(Stream &output) {
     at_mode_help.clear();
 }
 
-String at_mode_print_command_string(Print &output, char separator) {
+String at_mode_print_command_string(Print &output, char separator, bool trailingSeparator) {
     String commands;
     StreamString nullStream;
 
@@ -163,10 +162,17 @@ String at_mode_print_command_string(Print &output, char separator) {
         plugin.callAtModeCommandHandler(nullStream, String(), AT_MODE_QUERY_COMMAND, nullptr);
     }
 
-    for(auto commandHelp: at_mode_help) {
-        PGM_P command = (PGM_P)pgm_read_ptr(commandHelp->command);
-        output.print(FPSTR(command));
-        output.print(separator);
+    for(const auto commandHelp: at_mode_help) {
+        if (commandHelp->command) {
+            output.print(FPSTR(commandHelp->command));
+            if (commandHelp == at_mode_help.back()) {
+                if (trailingSeparator) {
+                    output.print(separator);
+                }
+            } else {
+                output.print(separator);
+            }
+        }
     }
 
     at_mode_help.clear();
@@ -209,7 +215,7 @@ void at_mode_wifi_callback(uint8_t event, void *payload) {
 
 void at_mode_setup() {
     serialHandler.addHandler(at_mode_serial_input_handler, SerialHandler::RECEIVE|SerialHandler::REMOTE_RX);
-    WiFiCallbacks::add(WiFiCallbacks::EventEnum_t::CONNECTED|WiFiCallbacks::EventEnum_t::DISCONNECTED, at_mode_wifi_callback, reinterpret_cast<WiFiCallbacks::CallbackPtr_t>(at_mode_setup));
+    WiFiCallbacks::add(WiFiCallbacks::EventEnum_t::CONNECTED|WiFiCallbacks::EventEnum_t::DISCONNECTED, at_mode_wifi_callback);
 }
 
 void enable_at_mode() {
@@ -273,13 +279,13 @@ void at_mode_print_invalid_arguments(Print &output) {
 }
 
 void at_mode_print_ok(Print &output) {
-    output.println(F("OK"));
+    output.println(FSPGM(OK));
 }
 
 void at_mode_serial_handle_event(String &commandString) {
     auto &output = MySerial;
     commandString.trim();
-#if 1
+#if AT_MODE_ALLOW_PLUS_WITHOUT_AT
     // allow using AT+COMMAND and +COMMAND
     if (!strncasecmp_P(commandString.c_str(), PSTR("AT"), 2)) {
         commandString.remove(0, 2);
@@ -301,7 +307,7 @@ void at_mode_serial_handle_event(String &commandString) {
     } else {
         char *command = commandString.begin();
         if (!strcmp_P(command, PSTR("?"))) { // AT?
-            at_mode_display_help(output);
+            at_mode_generate_help(output);
         } else {
 
             int argc;
@@ -319,20 +325,20 @@ void at_mode_serial_handle_event(String &commandString) {
                 argc = 0;
                 ptr = strchr(command, '=');
                 if (ptr) {  // tokenize arguments into args
-                    const char *separators = ",";
+                    const char *delimiters = ",";
                     *ptr++ = 0;
-                    ptr = strtok(ptr, separators);
+                    ptr = strtok(ptr, delimiters);
                     while(ptr) {
                         args[argc++] = ptr;
                         if (argc >= AT_MODE_MAX_ARGUMENTS) {
                             break;
                         }
-                        ptr = strtok(nullptr, separators);
+                        ptr = strtok(nullptr, delimiters);
                     }
                 }
             }
 
-            debug_printf_P(PSTR("Command '%s' argc %d arguments '%s'\n"), command, argc, implode(F("','"), (const char **)args, argc).c_str());
+            _debug_printf_P(PSTR("Command '%s' argc %d arguments '%s'\n"), command, argc, implode(F("','"), (const char **)args, argc).c_str());
 
             if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(DSLP))) {
                 uint32_t time = 0;
@@ -354,7 +360,8 @@ void at_mode_serial_handle_event(String &commandString) {
             }
             else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(CMDS))) {
                 output.print(F("+CMDS="));
-                at_mode_print_command_string(output, '\n');
+                at_mode_print_command_string(output, ',', false);
+                output.println();
             }
             else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(LOAD))) {
                 config.read();

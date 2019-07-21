@@ -12,7 +12,7 @@
 #include "serial_handler.h"
 
 #ifndef DEBUG_HTTP2SERIAL
-#define DEBUG_HTTP2SERIAL 1
+#define DEBUG_HTTP2SERIAL 0
 #endif
 
 class Http2Serial {

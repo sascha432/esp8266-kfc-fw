@@ -17,21 +17,18 @@
 #include "web_socket.h"
 #include "plugins.h"
 
-//TODO lots of old code here, refactor
-
-// TODO http//s://terminal.jcubic.pl/
-
 #if DEBUG_HTTP2SERIAL
-#include "debug_local_def.h"
+#include <debug_helper_enable.h>
 #else
-#include "debug_local_undef.h"
+#include <debug_helper_disable.h>
 #endif
+
 
 Http2Serial *Http2Serial::_instance = nullptr;
 
 Http2Serial::Http2Serial() {
 #ifdef HTTP2SERIAL_BAUD
-    if_debug_printf_P(PSTR("Reconfiguring serial port to %d baud\n"), HTTP2SERIAL_BAUD);
+    _debug_printf_P(PSTR("Reconfiguring serial port to %d baud\n"), HTTP2SERIAL_BAUD);
     Serial.flush();
     Serial.begin(HTTP2SERIAL_BAUD);
 #endif
@@ -84,6 +81,7 @@ void Http2Serial::broadcast(WsConsoleClient *sender, const uint8_t *message, siz
  */
 void Http2Serial::broadcastOutputBuffer() {
 
+    //os_printf("Http2Serial::broadcastOutputBuffer(%d)\n", _outputBuffer.length());
     if (_outputBuffer.length()) {
         broadcast(_outputBuffer);
         _outputBuffer.clear();
@@ -112,12 +110,10 @@ void Http2Serial::writeOutputBuffer(const uint8_t *buffer, size_t len) {
             break;
         }
         broadcastOutputBuffer();
-        resetOutputBufferTimer();
     }
 
     if (millis() > _outputBufferFlushDelay || !_outputBufferFlushDelay) {
         broadcastOutputBuffer();
-        resetOutputBufferTimer();
     }
 }
 
@@ -145,6 +141,7 @@ void Http2Serial::outputLoop() {
 }
 
 void Http2Serial::onData(uint8_t type, const uint8_t *buffer, size_t len) {
+    //os_printf("Http2Serial::onData(%d, %p, %d)\n", type, buffer, len);
     if (Http2Serial::_instance) {
         static bool locked = false;
         if (!locked) {
@@ -159,16 +156,16 @@ SerialHandler *Http2Serial::getSerialHandler() {
     return _serialHandler;
 }
 
-void http2serial_install_web_server_hook() {
-    auto server = get_web_server_object();
-    if (server) {
-        AsyncWebSocket *ws_console = _debug_new AsyncWebSocket(F("/serial_console"));
+void http2serial_event_handler(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len) {
+    WsClient::onWsEvent(server, client, type, data, len, arg, WsConsoleClient::getInstance);
+}
 
-        ws_console->onEvent([](AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len) {
-            WsClient::onWsEvent(server, client, type, data, len, arg, WsConsoleClient::getInstance);
-        });
-        server->addHandler(ws_console);
-        if_debug_printf_P(PSTR("Web socket for http2serial running on port %u\n"), config.get<uint16_t>(_H(Config().http_port)));
+void http2serial_install_web_server_hook() {
+    if (get_web_server_object()) {
+        AsyncWebSocket *ws_console = _debug_new AsyncWebSocket(F("/serial_console"));
+        ws_console->onEvent(http2serial_event_handler);
+        web_server_add_handler(ws_console);
+        _debug_printf_P(PSTR("Web socket for http2serial running on port %u\n"), config.get<uint16_t>(_H(Config().http_port)));
     }
 }
 

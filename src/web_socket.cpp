@@ -12,6 +12,7 @@
 #include <functional>
 #include <PrintString.h>
 #include <Buffer.h>
+#include <DumpBinary.h>
 #include "session.h"
 #include "kfc_fw_config.h"
 #include "logger.h"
@@ -22,9 +23,9 @@
 #endif
 
 #if DEBUG_WEB_SOCKETS
-#include "debug_local_def.h"
+#include <debug_helper_enable.h>
 #else
-#include "debug_local_undef.h"
+#include <debug_helper_disable.h>
 #endif
 
 WsClientManager *WsClientManager::wsClientManager = nullptr;
@@ -74,7 +75,7 @@ WsClientManager::~WsClientManager() {
         delete client.wsClient;
     }
     _list.clear();
-#if DEBUG
+#if DEBUG_WEB_SOCKETS
     if (_authenticated.size() != 0) {
         debug_println(F("WsClientManager::~WsClientManager() manager still has authenticated clients attached"));
         panic();
@@ -82,7 +83,7 @@ WsClientManager::~WsClientManager() {
 #endif
 }
 
-#if DEBUG
+#if DEBUG_WEB_SOCKETS
 void WsClientManager::_displayStats() {
 #if DEBUG_WEB_SOCKETS
 
@@ -98,7 +99,7 @@ void WsClientManager::_displayStats() {
 
 void WsClientManager::add(WsClient *wsClient, AsyncWebSocketClient *socket) {
     _list.push_back({ wsClient, socket });
-#if DEBUG
+#if DEBUG_WEB_SOCKETS
     _displayStats();
 #endif
 }
@@ -111,7 +112,7 @@ void WsClientManager::remove(WsClient *wsClient) {
         setClientAuthenticated(wsClient, false);
     }
     delete wsClient;
-#if DEBUG
+#if DEBUG_WEB_SOCKETS
     _displayStats();
 #endif
 }
@@ -128,7 +129,7 @@ void WsClientManager::remove(AsyncWebSocketClient *socket) {
             return false;
         }
     }), _list.end());
-#if DEBUG
+#if DEBUG_WEB_SOCKETS
     _displayStats();
 #endif
 }
@@ -140,6 +141,15 @@ WsClient *WsClientManager::getClient(AsyncWebSocketClient *socket) {
         }
     }
     return nullptr;
+}
+
+bool WsClientManager::safeSend(AsyncWebSocketClient *socket, const String &message) {
+    auto wsClient = getClient(socket);
+    if (wsClient) {
+        socket->text(message);
+    }
+    _debug_printf_P(PSTR("WsClientManager::safeSend(%p, %s): invalid socket\n"), socket, message.c_str());
+    return wsClient != nullptr;
 }
 
 int WsClientManager::getClientCount(bool isAuthenticated) {
@@ -179,7 +189,7 @@ void WsClientManager::setClientAuthenticated(WsClient *wsClient, bool isAuthenti
                 wsClient->onStart();
             }
         }
-#if DEBUG
+#if DEBUG_WEB_SOCKETS
         else {
             debug_println(F("WsClientManager::setClientAuthenticated() client already exists in authentication list"));
         }
@@ -191,7 +201,7 @@ void WsClientManager::setClientAuthenticated(WsClient *wsClient, bool isAuthenti
         if (_authenticated.size() == 0) {
             wsClient->onEnd();
         }
-#if DEBUG
+#if DEBUG_WEB_SOCKETS
         else {
             debug_println(F("client not found in authenticated list"));
         }
@@ -217,7 +227,7 @@ void WsClientManager::setClientAuthenticated(WsClient *wsClient, bool isAuthenti
 //     return wsClient;
 // }
 
-#if DEBUG
+#if DEBUG_WEB_SOCKETS
 void WsClient::_displayData(WsClient *wsClient, AwsFrameInfo *info, uint8_t *data, size_t len) {
 
     AsyncWebSocketClient *client = wsClient->getClient();
@@ -295,9 +305,9 @@ void WsClient::_displayData(WsClient *wsClient, AwsFrameInfo *info, uint8_t *dat
     WsClient *wsClient = getInstance ? getInstance(client) : nullptr;
     WsClientManager *manager;
 
-    if_debug_printf_P(PSTR("WsClient::onWsEvent(event %d, wsClient %p)\n"), onWsEvent, wsClient);
+    _debug_printf_P(PSTR("WsClient::onWsEvent(event %d, wsClient %p)\n"), onWsEvent, wsClient);
     if (!wsClient) {
-        if_debug_printf_P(PSTR("WsClient::onWsEvent(): getInstance() returned nullptr\n"));
+        debug_printf_P(PSTR("WsClient::onWsEvent(): getInstance() returned nullptr\n"));
         panic();
     }
 
@@ -319,18 +329,27 @@ void WsClient::_displayData(WsClient *wsClient, AwsFrameInfo *info, uint8_t *dat
 
     } else if (type == WS_EVT_ERROR) {
 
-        if_debug_printf_P(PSTR("WsClient::onWsEvent(): WS_EVT_ERROR wsClient %p\n"), wsClient);
-        Logger_notice(F(WS_PREFIX "Error(%u): %s"), WS_PREFIX_ARGS, (unsigned)*((uint16_t*)arg), (char *)data, wsClient);
+        _debug_printf_P(PSTR("WsClient::onWsEvent(): WS_EVT_ERROR wsClient %p\n"), wsClient);
+
+        unsigned int error = *reinterpret_cast<uint16_t *>(arg);
+
+        PrintString str;
+        DumpBinary dumper(str);
+        dumper.dump(data, len);
+
+        str.replace(F("\n"), F(" "));
+
+        Logger_notice(F(WS_PREFIX "Error(%u): data='%s', length=%d"), WS_PREFIX_ARGS, error, str.c_str(), len);
         wsClient->onError(WsClient::ERROR_FROM_SERVER, data, len);
 
     } else if (type == WS_EVT_PONG) {
 
-        if_debug_printf_P(PSTR("WsClient::onWsEvent(): WS_EVT_PONG wsClient %p\n"), wsClient);
+        _debug_printf_P(PSTR("WsClient::onWsEvent(): WS_EVT_PONG wsClient %p\n"), wsClient);
         wsClient->onPong(data, len);
 
     } else if (type == WS_EVT_DATA) {
 
-        #if DEBUG
+        #if DEBUG_WEB_SOCKETS
             wsClient->_displayData(wsClient, (AwsFrameInfo*)arg, data, len);
         #endif
 
@@ -355,7 +374,7 @@ void WsClient::_displayData(WsClient *wsClient, AwsFrameInfo *info, uint8_t *dat
             dataPtr += 5;
             len -= 5;
             if (!buffer.reserve(len + 1)) {
-                if_debug_printf_P(PSTR("WsClient::onWsEvent(): WebSocket buffer allocation failed: %d\n"), len + 1);
+                _debug_printf_P(PSTR("WsClient::onWsEvent(): WebSocket buffer allocation failed: %d\n"), len + 1);
                 return;
             }
             char *ptr = buffer.getChar();
@@ -395,14 +414,14 @@ void WsClient::_displayData(WsClient *wsClient, AwsFrameInfo *info, uint8_t *dat
  *  gets called when the first client has been authenticated.
  **/
 void WsClient::onStart() {
-    if_debug_println(F("WebSocket::onConnect()"));
+    _debug_println(F("WebSocket::onConnect()"));
 }
 /**
  * gets called once all authenticated clients have been disconnected. onStart() will be called
  * again when authenticated clients become available.
  **/
 void WsClient::onEnd() {
-    if_debug_println(F("WebSocket::onEnd()"));
+    _debug_println(F("WebSocket::onEnd()"));
 }
 
 void WsClient::onData(AwsFrameType type, uint8_t *data, size_t len) {
@@ -411,7 +430,7 @@ void WsClient::onData(AwsFrameType type, uint8_t *data, size_t len) {
     } else if (type == WS_BINARY) {
         onBinary(data, len);
     } else {
-        if_debug_printf_P(PSTR("WsClient::onData(): WebSocket Data received with type %d\n"), (int)type);
+        _debug_printf_P(PSTR("WsClient::onData(): WebSocket Data received with type %d\n"), (int)type);
     }
 }
 

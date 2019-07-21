@@ -156,8 +156,8 @@ void TimezoneData::wifiConnectedCallback(uint8_t event, void *payload) {
     if (timezoneData->updateRequired()) {
 
         auto rtz = timezoneData->createRemoteTimezone();
-        rtz->setUrl(config.getString(_H(Config().ntp.remote_tz_dst_ofs_url)));
-        rtz->setTimezone(config.getString(_H(Config().ntp.timezone)));
+        rtz->setUrl(config._H_STR(Config().ntp.remote_tz_dst_ofs_url));
+        rtz->setTimezone(config._H_STR(Config().ntp.timezone));
         rtz->setStatusCallback([](bool status, const String message, time_t zoneEnd) {
             _debug_printf_P(PSTR("remote timezone callback: status %d message %s zoneEnd %ld\n"), status, message.c_str(), (long)zoneEnd);
             if (status) {
@@ -195,7 +195,7 @@ void TimezoneData::wifiConnectedCallback(uint8_t event, void *payload) {
 
 
 const String TimezoneData::getStatus() {
-    if (config.get<ConfigFlags>(_H(Config().flags)).ntpClientEnabled) {
+    if (config._H_GET(Config().flags).ntpClientEnabled) {
         PrintHtmlEntitiesString out;
         auto firstServer = true;
         auto &timezone = get_default_timezone();
@@ -203,24 +203,11 @@ const String TimezoneData::getStatus() {
         if (timezone.isValid()) {
             out.printf_P(PSTR("%s, %0.2d:%0.2u %s"), timezone.getTimezone().c_str(), timezone.getOffset() / 3600, timezone.getOffset() % 60, timezone.getAbbreviation().c_str());
         } else {
-            out.printf_P(PSTR("%s, status invalid"), config._H_STR(ntp.timezone));
+            out.printf_P(PSTR("%s, status invalid"), config._H_STR(Config().ntp.timezone));
         }
+        const ConfigurationParameter::Handle_t handles[] = { _H(Config().ntp.servers[0]), _H(Config().ntp.servers[1]), _H(Config().ntp.servers[2]), _H(Config().ntp.servers[3]) };
         for (int i = 0; i < 3; i++) {
-            const char *server;
-            switch(i) { // _H_STR() = constexpr
-                case 0:
-                    server = config._H_STR(ntp.servers[0]);
-                    break;
-                case 1:
-                    server = config._H_STR(ntp.servers[1]);
-                    break;
-                case 2:
-                    server = config._H_STR(ntp.servers[2]);
-                    break;
-                case 3:
-                    server = config._H_STR(ntp.servers[3]);
-                    break;
-            }
+            auto server = config.getString(handles[i]);
             if (*server) {
                 if (firstServer) {
                     firstServer = false;

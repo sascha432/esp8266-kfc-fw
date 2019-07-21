@@ -37,28 +37,6 @@ void WiFi_get_status(Print &out) {
     uint8_t mode = WiFi.getMode();
     if (mode & WIFI_STA) {
 
-// struct dhcps_lease {
-//     bool enable;
-//     struct ip_addr start_ip;
-//     struct ip_addr end_ip;
-// };
-
-// wifi_softap_get_station_info
-
-
-// #define STATION_IF      0x00
-// #define SOFTAP_IF       0x01
-// struct ip_info {
-//     struct ip_addr ip;
-//     struct ip_addr netmask;
-//     struct ip_addr gw;
-// };
-
-// wifi_get_ip_info(SOFTAP_IF, ip_info);
-
-// bool wifi_get_ip_info(uint8 if_index, struct ip_info *info);
-// bool wifi_set_ip_info(uint8 if_index, struct ip_info *info);
-
         out.printf_P(PSTR(HTML_S(strong) "Station:" HTML_E(strong) HTML_S(br)));
         switch (wifi_station_get_connect_status()) {
             case STATION_GOT_IP:
@@ -74,10 +52,10 @@ void WiFi_get_status(Print &out) {
                         out.print(F("802.11n"));
                         break;
                 }
-                // wifi_country_t country;
-                // if (wifi_get_country(&country)) {
-                //     out.printf_P(PSTR(", WiFi Country %s"), country.cc);
-                // }
+                wifi_country_t country;
+                if (wifi_get_country(&country)) {
+                    out.printf_P(PSTR(", country %.2s"), country.cc);
+                }
                 break;
             case STATION_NO_AP_FOUND:
                 out.print(F("No SSID available"));
@@ -97,6 +75,9 @@ void WiFi_get_status(Print &out) {
             default:
                 out.print(F("Disconnected"));
                 break;
+            }
+            if (wifi_station_dhcpc_status() == DHCP_STARTED) {
+                out.print(F(HTML_S(br) "DHCP client running"));
             }
             out.print(F(HTML_S(br) "IP Address/Network "));
             WiFi.localIP().printTo(out);

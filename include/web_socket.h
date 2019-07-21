@@ -12,7 +12,7 @@
 #define WS_PREFIX "ws[%s][%u] "
 #define WS_PREFIX_ARGS server->url(), client->id()
 
-#define DEBUG_WEB_SOCKETS 1
+#define DEBUG_WEB_SOCKETS 0
 
 #if DEBUG_WEB_SOCKETS
 #include "debug_local_def.h"
@@ -41,6 +41,9 @@ public:
     void add(WsClient *wsClient, AsyncWebSocketClient *socket);
     void remove(WsClient *wsClient);
     void remove(AsyncWebSocketClient *wsClient);
+
+    // send message if socket is valid
+    bool safeSend(AsyncWebSocketClient *socket, const String &message);
 protected:
     WsClient *getClient(AsyncWebSocketClient *socket);
     int getClientCount(bool isAuthenticated = false);
@@ -56,7 +59,7 @@ public:
 
 
 private:
-#if DEBUG
+#if DEBUG_WEB_SOCKETS
     void _displayStats();
 #endif
 
@@ -129,8 +132,8 @@ public:
 
     // static WsClient *getInstance(AsyncWebSocketClient *socket);
 
-//private:
-#if DEBUG
+#if DEBUG_WEB_SOCKETS
+public:
     void _displayData(WsClient *wsClient, AwsFrameInfo *info, uint8_t *data, size_t len);
 #endif
 

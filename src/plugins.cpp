@@ -31,7 +31,7 @@ void register_plugin(PGM_PLUGIN_CONFIG_P config) {
 PROGMEM_PLUGIN_CONFIG_DECL(rd);
 PROGMEM_PLUGIN_CONFIG_DECL(cfg);
 PROGMEM_PLUGIN_CONFIG_DECL(mdns);
-PROGMEM_PLUGIN_CONFIG_DECL(esp8266atc);
+PROGMEM_PLUGIN_CONFIG_DECL(esp8266at);
 PROGMEM_PLUGIN_CONFIG_DECL(http);
 PROGMEM_PLUGIN_CONFIG_DECL(syslog);
 PROGMEM_PLUGIN_CONFIG_DECL(ntp);
@@ -54,7 +54,7 @@ void register_all_plugins() {
     register_plugin(SPGM_PLUGIN_CONFIG_P(mdns));
 #endif
 #if ESP8266_AT_MODE_SUPPORT
-    register_plugin(SPGM_PLUGIN_CONFIG_P(esp8266atc));
+    register_plugin(SPGM_PLUGIN_CONFIG_P(esp8266at));
 #endif
 #if WEBSERVER_SUPPORT
     register_plugin(SPGM_PLUGIN_CONFIG_P(http));

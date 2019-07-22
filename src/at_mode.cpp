@@ -255,21 +255,6 @@ void at_mode_dump_fs_info(Print &output) {
     );
 }
 
-String validate_wifi_arguments(char *ssid, char *pass, int channel, int encryption) {
-    if (encryption < -1 && encryption > 4) {
-        return F("ERROR - Invalid encryption");
-    } else if (channel < 0) {
-        return F("ERROR - Invalid channel");
-    } else if (strlen(ssid) > 32) {
-        return F("ERROR - SSID is limited to 32 characters");
-    } else if (strlen(pass) < 8) {
-        return F("ERROR - Password needs to be at least 8 characters");
-    } else if (strlen(pass) > 32) {
-        return F("ERROR - Password is limited to 32 characters");
-    }
-    return _sharedEmptyString;
-}
-
 void at_mode_print_invalid_command(Print &output) {
     output.println(F("ERROR - Invalid command. AT? for help"));
 }

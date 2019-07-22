@@ -229,9 +229,11 @@ void KFCFWConfiguration::restoreFactorySettings() {
     wifi_get_macaddr(STATION_IF, mac);
     str.printf_P(PSTR("KFC%02X%02X%02X"), mac[3], mac[4], mac[5]);
     _H_SET_STR(Config().device_name, str);
-    _H_SET_STR(Config().device_pass, F("12345678"));
+    const char *defaultPassword = PSTR("12345678");
+    _H_SET_STR(Config().device_pass, defaultPassword);
 
     _H_SET_STR(Config().soft_ap.wifi_ssid, str);
+    _H_SET_STR(Config().soft_ap.wifi_pass, defaultPassword);
     _H_SET_STR(Config().wifi_ssid, str);
 
     _H_SET_IP(Config().dns1, IPAddress(8, 8, 8, 8));
@@ -576,6 +578,7 @@ bool KFCFWConfiguration::connectWiFi() {
     }
 #endif
     _debug_println(F("KFCFWConfiguration::connectWiFi()"));
+    setLastError(String());
 
     bool station_mode_success = false;
     bool ap_mode_success = false;
@@ -595,24 +598,36 @@ bool KFCFWConfiguration::connectWiFi() {
             result = WiFi.config(config._H_GET_IP(Config().local_ip), config._H_GET_IP(Config().gateway), config._H_GET_IP(Config().subnet), config._H_GET_IP(Config().dns1), config._H_GET_IP(Config().dns2));
         }
         if (!result) {
-            Logger_error(F("Failed to configure Station Mode with %s"), flags.stationModeDHCPEnabled ? F("DHCP") : F("static address"));
+            PrintString message;
+            message.printf_P(PSTR("Failed to configure Station Mode with %s"), flags.stationModeDHCPEnabled ? PSTR("DHCP") : PSTR("static address"));
+            setLastError(message);
+            Logger_error(message);
         } else {
             if (WiFi.begin(config._H_STR(Config().wifi_ssid), config._H_STR(Config().wifi_pass)) == WL_CONNECT_FAILED) {
-                Logger_error(F("Failed to start Station Mode"));
+                String message = F("Failed to start Station Mode");
+                setLastError(message);
+                Logger_error(message);
             } else {
                 _debug_printf_P(PSTR("Station Mode SSID %s\n"), WiFi.SSID().c_str());
                 station_mode_success = true;
             }
         }
     }
+    else {
+        _debug_println(F("KFCFWConfiguration::connectWiFi(): disabling station mode"));
+        WiFi.disconnect(true);
+        station_mode_success = true;
+    }
 
-    if (flags.wifiMode & WIFI_AP_STA) {
+    if (flags.wifiMode & WIFI_AP) {
         _debug_println(F("KFCFWConfiguration::connectWiFi(): ap mode"));
 
         // config._H_GET(Config().soft_ap.encryption not used
 
         if (!WiFi.softAPConfig(config._H_GET_IP(Config().soft_ap.address), config._H_GET_IP(Config().soft_ap.gateway), config._H_GET_IP(Config().soft_ap.subnet))) {
-            Logger_error(F("Cannot configure AP mode"));
+            String message = F("Cannot configure AP mode");
+            setLastError(message);
+            Logger_error(message);
         } else {
 
             // setup after WiFi.softAPConfig()
@@ -622,11 +637,15 @@ bool KFCFWConfiguration::connectWiFi() {
             dhcp_lease.end_ip.addr = config._H_GET_IP(Config().soft_ap.dhcp_end);
             dhcp_lease.enable = flags.stationModeDHCPEnabled;
             if (!wifi_softap_set_dhcps_lease(&dhcp_lease)) {
-                Logger_error(F("Failed to configure DHCP server"));
+                String message = F("Failed to configure DHCP server");
+                setLastError(message);
+                Logger_error(message);
             } else {
                 if (flags.stationModeDHCPEnabled) {
                     if (!wifi_softap_dhcps_start()) {
-                        Logger_error(F("Failed to start DHCP server"));
+                        String message = F("Failed to start DHCP server");
+                        setLastError(message);
+                        Logger_error(message);
                     } else {
                         ap_mode_success = true;
                         Logger_notice(F("AP Mode sucessfully initialized"));
@@ -637,24 +656,23 @@ bool KFCFWConfiguration::connectWiFi() {
             }
 
             if (!WiFi.softAP(config._H_STR(Config().soft_ap.wifi_ssid), config._H_STR(Config().soft_ap.wifi_pass), config._H_GET(Config().soft_ap.channel), flags.hiddenSSID)) {
-                Logger_error(F("Cannot start AP mode"));
+                String message = F("Cannot start AP mode");
+                setLastError(message);
+                Logger_error(message);
             }
         }
     }
+    else {
+        _debug_println(F("KFCFWConfiguration::connectWiFi(): disabling AP mode"));
+        WiFi.softAPdisconnect(true);
+        ap_mode_success = true;
+    }
 
-    if (station_mode_success || ap_mode_success) {
+    if (!station_mode_success || !ap_mode_success) {
         config_set_blink(BLINK_FAST);
     }
-    if (!station_mode_success) {
-        WiFi.enableSTA(false);
-        WiFi.disconnect(false);
-    }
-    if (!ap_mode_success) {
-        WiFi.enableAP(false);
-        WiFi.softAPdisconnect(false);
-    }
 
-    return (station_mode_success || ap_mode_success);
+    return (station_mode_success && ap_mode_success);
 
 }
 

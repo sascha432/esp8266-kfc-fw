@@ -16,13 +16,12 @@
 #include "fauxmoESP.h"
 
 #if DEBUG_HUE_EMULATION
-#include "debug_local_def.h"
+#include <debug_helper_enable.h>
 #else
-#include "debug_local_undef.h"
+#include <debug_helper_disable.h>
 #endif
 
 
-// Driver_4ChDimmer dimmer = Driver_4ChDimmer(Serial, 9600);
 fauxmoESP *fauxmo = nullptr;
 HueDeviceList hue_devices;
 static uint16_t hue_port = 0; // points to the port the web server callbacks are registered to, usually 80 or 433. if the port does not match with the fauxmo port, a standalove server is opened
@@ -31,16 +30,16 @@ void hue_onWifiConnected(uint8_t event, void *) {
 
     if (event == WIFI_CB_EVENT_CONNECTED) {
         if (_Config.getOptions().isHueEmulation()) {
-            if_debug_println(F("Enabling fauxmoESP"));
+            _debug_println(F("Enabling fauxmoESP"));
             fauxmo->enable(true);
             dimmer.begin();
         } else {
-            if_debug_println(F("Disabling fauxmoESP"));
+            _debug_println(F("Disabling fauxmoESP"));
             fauxmo->enable(false);
             dimmer.end();
         }
     } else if (WIFI_CB_EVENT_DISCONNECTED) {
-        if_debug_println(F("Disabling fauxmoESP after wifi disconnect"));
+        _debug_println(F("Disabling fauxmoESP after wifi disconnect"));
         dimmer.end();
         fauxmo->enable(false);
     }
@@ -64,14 +63,14 @@ void hue_setup_emulation() {
     });
 
     if (!_Config.getOptions().isHueEmulation()) {
-        if_debug_println(F("HUE emulation disabled"));
+        _debug_println(F("HUE emulation disabled"));
         hue_clearDevices();
         return;
     }
 
     fauxmo = _debug_new fauxmoESP();
 
-    if_debug_printf_P(PSTR("Starting HUE emulation @ port %d %s\n"), _Config.get().hue.tcp_port, _Config.get().hue.tcp_port != hue_port ? "as standalone server" : "shared web server");
+    _debug_printf_P(PSTR("Starting HUE emulation @ port %d %s\n"), _Config.get().hue.tcp_port, _Config.get().hue.tcp_port != hue_port ? "as standalone server" : "shared web server");
     fauxmo->createServer(_Config.get().hue.tcp_port != hue_port); // web server already exists and supportrs callbacks
     fauxmo->setPort(_Config.get().hue.tcp_port);
 
@@ -101,7 +100,7 @@ void hue_setup_emulation() {
 }
 
 void hue_update_config() {
-    if_debug_println(F("hue_update_config"));
+    _debug_println(F("hue_update_config"));
     if (fauxmo) {
         LoopFunctions.remove(hue_loop);
         delete fauxmo;

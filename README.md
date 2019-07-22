@@ -1,7 +1,7 @@
 # esp8266-kfc-fw
 Firmware for ESP8266 and IoT devices
 
-The firmware offers a plugin interface to easily extend its functionality. The plugins can be configured via web interface and have access to the network, file system, logging, serial console, I2C bus, GPIO, EEPROM etc... via API functions.
+The firmware offers a plugin interface to easily extend its functionality. The plugins can be configured via web interface and have access to the network, file system, logging, serial console, I2C bus, GPIO, EEPROM, RTC memory etc... via API functions. Support for deep sleep and WiFi quick connect (~400-500ms) after wake up.
 
 ## Libraries
 
@@ -38,7 +38,15 @@ It also offers a RTC memory mananger to store data identified by an unqiue id
 
 Library to handle configurations stored in the EEPROM, read on demand to save memory, manage changes in structure automatically
 
+### printf wrapper
+
+snprintf/vsnprintf replacement that allows to print from PROGMEM directly
+
 ## Plugins
+
+### AT Mode
+
+Configure and control the device with AT commands via serial interface or web UI
 
 ### MQTT Client
 
@@ -51,6 +59,22 @@ Serial console access over the web UI using web sockets
 ### NTP Client
 
 NTP Client with timezone support via REST API
+
+### Syslog
+
+Send log messages to a syslog server
+
+### Ping Monitor
+
+Ping remote hosts over the webui and run background ping statistics
+
+### I2C Scanner
+
+Scan all GPIO pins for I2C devices
+
+### File Manager
+
+Web UI to explore and modify SPIFFS and KFCVirtualFileSystem
 
 ## Required third party libraries
 

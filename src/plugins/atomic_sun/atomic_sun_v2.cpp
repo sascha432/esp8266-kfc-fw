@@ -16,9 +16,9 @@
 #define DEBUG_4CH_DIMMER 1
 
 #ifdef DEBUG_4CH_DIMMER
-#include "debug_local_def.h"
+#include <debug_helper_enable.h>
 #else
-#include "debug_local_undef.h"
+#include <debug_helper_disable.h>
 #endif
 
 #define DIMMER_COMPONENT SPGM(component_light)
@@ -136,7 +136,7 @@ void Driver_4ChDimmer::onMessage(MQTTClient *client, char *topic, char *payload,
 
 void Driver_4ChDimmer::_publishState(MQTTClient *client) {
 
-    debug_printf_P(PSTR("Driver_4ChDimmer::_publishState()\n"));
+    _debug_printf_P(PSTR("Driver_4ChDimmer::_publishState()\n"));
 
     client->publish(_data.state.state, MQTTClient::getDefaultQos(), 1, String(_data.state.value));
     client->publish(_data.brightness.state, MQTTClient::getDefaultQos(), 1, String(_data.brightness.value));
@@ -144,7 +144,7 @@ void Driver_4ChDimmer::_publishState(MQTTClient *client) {
 }
 
 void Driver_4ChDimmer::begin() {
-    debug_printf_P(PSTR("Driver_4ChDimmer::begin()\n"));
+    _debug_printf_P(PSTR("Driver_4ChDimmer::begin()\n"));
 #if AT_MODE_SUPPORTED
     disable_at_mode();
     if (DIMMER_BAUDRATE != 115200) {
@@ -170,7 +170,7 @@ void Driver_4ChDimmer::begin() {
 }
 
 void Driver_4ChDimmer::end() {
-    debug_printf_P(PSTR("Driver_4ChDimmer::end()\n"));
+    _debug_printf_P(PSTR("Driver_4ChDimmer::end()\n"));
 #if SERIAL_HANDLER
     serialHandler.removeHandler(onData);
 #endif
@@ -254,7 +254,7 @@ void Driver_4ChDimmer::setLevel(float fadetime) {
     uint8_t color = (_data.color.value - 153) * 255 / (500 - 153);
     auto channel12 = _data.brightness.value * color * 2 / 255;
     auto channel34 = _data.brightness.value * (255 - color) * 2 / 255;
-    debug_printf_P(PSTR("Driver_4ChDimmer::setBrightness() _brightness %d _color %d = %d, %d\n"), _data.brightness.value, color, channel12, channel34);
+    _debug_printf_P(PSTR("Driver_4ChDimmer::setBrightness() _brightness %d _color %d = %d, %d\n"), _data.brightness.value, color, channel12, channel34);
     _setChannels(channel12, channel12, channel34, channel34, fadetime);
 }
 
@@ -297,7 +297,7 @@ void Driver_4ChDimmer::_getChannels() {
 
 // parse serial response from dimmer and extract temperature, voltage and brightness levels
 int Driver_4ChDimmer::_parseLine(const String &response) {
-    // debug_printf_P(PSTR("Driver_4ChDimmer::_parseLine(%s)\n"), response.c_str());
+    // _debug_printf_P(PSTR("Driver_4ChDimmer::_parseLine(%s)\n"), response.c_str());
 #if AT_MODE_SUPPORTED
     if (response.startsWith(F("~~~~"))) { // re-enable at mode for debugging purposes
         enable_at_mode();
@@ -337,7 +337,7 @@ int Driver_4ChDimmer::_parseLine(const String &response) {
             int level = response.substring(pos + 4).toInt();
             if (channel >= 0 && channel < 4) {
                 _channels[channel] = (int16_t)level;
-                debug_printf_P(PSTR("_parseLine(%s) channel %d value %d\n"), response.c_str(), channel, level);
+                _debug_printf_P(PSTR("_parseLine(%s) channel %d value %d\n"), response.c_str(), channel, level);
                 return level;
             }
         }
@@ -348,7 +348,7 @@ int Driver_4ChDimmer::_parseLine(const String &response) {
 #if SERIAL_HANDLER
 
 void Driver_4ChDimmer::onData(uint8_t type, const uint8_t *buffer, size_t len) {
-    // debug_printf_P(PSTR("_onData(%p, %s, %u)\n"), _dimmer, printable_string(buffer, len).c_str(), len);
+    // _debug_printf_P(PSTR("_onData(%p, %s, %u)\n"), _dimmer, printable_string(buffer, len).c_str(), len);
     if (_dimmer) {
         _dimmer->_onData(buffer, len);
     }
@@ -375,12 +375,12 @@ void Driver_4ChDimmer::_onData(const uint8_t *buffer, size_t len) {
 
 // wait for "count" responses or until a timeout occurs
 int Driver_4ChDimmer::_waitForResponse(int count) {
-    // debug_printf_P(PSTR("Driver_4ChDimmer::_waitForResponse(%u)\n"), count);
+    // _debug_printf_P(PSTR("Driver_4ChDimmer::_waitForResponse(%u)\n"), count);
     ulong timeout = millis() + 100;
     while(millis() < timeout && _responseCount < count) {
         delay(1);
     }
-    // debug_printf_P(PSTR("Driver_4ChDimmer::_waitForResponse(%u) = %d, time %d ms\n"), count, _responseCount, (int)(millis() - (timeout - 100)));
+    // _debug_printf_P(PSTR("Driver_4ChDimmer::_waitForResponse(%u) = %d, time %d ms\n"), count, _responseCount, (int)(millis() - (timeout - 100)));
     return _responseCount;
 }
 
@@ -416,7 +416,7 @@ void Driver_4ChDimmer::_serialWrite(PGM_P format, ...) {
     va_start(arg, format);
     vsnprintf_P(buf, sizeof(buf), format, arg);
     va_end(arg);
-    // debug_printf_P(PSTR("Driver_4ChDimmer::_serialWrite: %s"), buf);
+    // _debug_printf_P(PSTR("Driver_4ChDimmer::_serialWrite: %s"), buf);
     _serial.print(buf);
 }
 

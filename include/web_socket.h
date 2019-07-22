@@ -4,6 +4,10 @@
 
 #pragma once
 
+#ifndef DEBUG_WEB_SOCKETS
+#define DEBUG_WEB_SOCKETS 0
+#endif
+
 #include <Arduino_compat.h>
 #include <algorithm>
 #include <vector>
@@ -11,14 +15,6 @@
 
 #define WS_PREFIX "ws[%s][%u] "
 #define WS_PREFIX_ARGS server->url(), client->id()
-
-#define DEBUG_WEB_SOCKETS 0
-
-#if DEBUG_WEB_SOCKETS
-#include "debug_local_def.h"
-#else
-#include "debug_local_undef.h"
-#endif
 
 class WsClient;
 

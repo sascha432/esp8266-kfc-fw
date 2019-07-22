@@ -1,0 +1,59 @@
+{
+    "__comment": "Defaults file",
+    "os": {
+        "#if OS_UNIX": "Unix",
+        "#elif OS_WIN": "Windows",
+        "#elif OS_OSX": "OSX",
+        "#else": "Unknown"
+    },
+    "configuration": {
+        "run_command_on_success": "${path.current_config}/../../scripts/vfs_builder/run.bat ; ${commands.pio_upload_spiffs}",
+        //  "run_command_on_success": "${commands.pio_upload_spiffs}",
+        "scanner_database_dir": "${path.sys_temp_dir}",
+        "package_hash_file": "${path.shared_temp_dir}/kfcfw-package.hash"
+    },
+    "platformio_ini": "./platformio.ini",
+    "commands": {
+        "minify_js": "${bin.java} -jar ${bin.closure_compiler} --compilation_level=ADVANCED --warning_level=QUIET --js_output_file=${file.tmp_out} ${file.all_sources}",
+        "uglify_js": "${bin.nodejs} ${bin.uglify_js} --compress --mangle -o ${file.tmp_out} ${file.tmp_in}",
+        "minify_html": "${bin.java} -jar ${bin.html_compressor} --type html --compress-js --compress-css --output ${file.tmp_out} ${file.tmp_in}",
+        "minify_css": "${bin.java} -jar ${bin.yui_compressor} --type css ${file.tmp_in} > ${file.tmp_out}",
+        "compress_gzip": "${bin.gzip} -9 -k -n -c ${file.tmp_in} > ${file.tmp_out}",
+        "pio_upload_spiffs": "${bin.platformio_activate} && ${bin.platformio} run --target uploadfs"
+    },
+    "bin": {
+        "platformio_activate": {
+            "#if OS_WIN": "~/.platformio/penv/Scripts/activate.bat",
+            "#else": "~/.platformio/penv/bin/activate"
+        },
+        "platformio": {
+            "#if OS_WIN": "~/.platformio/penv/Scripts/platformio.exe",
+            "#else": "~/.platformio/penv/bin/platformio"
+        },
+        "java": {
+            "#if OS_WIN": "java.exe",
+            "#else": "java"
+        },
+        "nodejs": {
+            "#if OS_WIN": "${env.ProgramFiles}/nodejs/node.exe",
+            "#elif OS_OSX": "/usr/local/opt/nodejs",
+            "#else OS_UNIX": "/usr/bin/nodejs"
+        },
+        "php": {
+            "#if OS_WIN": "C:/Users/sascha/Desktop/dev/bin/php7.2/php.exe",
+            "#elif OS_OSX": "/usr/bin/php",
+            "#else OS_UNIX": "/usr/local/bin/php"
+        },
+        "gzip": {
+            "#if OS_WIN": "C:/Program Files/Git/usr/bin/gzip.exe",
+            "#else OS_UNIX": "/bin/gzip"
+        },
+        "uglify_js": {
+            "#if OS_WIN": "%APPDATA%/npm/node_modules/uglify-js/bin/uglifyjs",
+            "#else": "/usr/local/lib/node_modules/uglify-js/bin/uglifyjs"
+        },
+        "closure_compiler": "${path.current_config}/bin/closure-compiler-v20181210.jar",
+        "html_compressor": "${path.current_config}/bin/htmlcompressor-1.5.3.jar",
+        "yui_compressor": "${path.current_config}/bin/yuicompressor-2.4.8.jar"
+    }
+}

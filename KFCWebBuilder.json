@@ -27,7 +27,7 @@
             "#if !MQTT_SUPPORT": "./Resources/html/mqtt.html",
             "#if !SYSLOG": "./Resources/html/syslog.html",
             "#if !NTP_CLIENT": [ "./Resources/html/ntp.html", "./Resources/html/timezone.html" ],
-            "#if !HTTP2SERIAL": [ "./Resources/html/serial_console.html", "./lib/ESPWebFrameWork/Resources/js/selectize.min.js" ],
+            "#if !HTTP2SERIAL": [ "./Resources/html/serial_console.html", "./lib/KFCWebBuilder/Resources/js/selectize.min.js" ],
             "#if !PING_SUPPORT": "./Resources/html/ping.html",
             "#if !PING_MONITOR": "./Resources/html/ping_monitor.html",
             "#if !HUE_EMULATION": "./Resources/html/hue.html",
@@ -35,7 +35,7 @@
             "#if !HOME_ASSISTANT_INTEGRATION": "./Resources/html/home_assistant.html",
             "#if !PING_SUPPORT && !HTTP2SERIAL": [
                 "./Resources/js/ws_console.js",
-                { "#if !FILE_MANAGER": "./lib/ESPWebFrameWork/Resources/js/js.cookie.min.js" }
+                { "#if !FILE_MANAGER": "./lib/KFCWebBuilder/Resources/js/js.cookie.min.js" }
             ],
             "#if !WEB_SOCKET_ENCRYPTION": [ "./Resources/js/aes.js", "./Resources/js/sha512.js" ],
             "#if !SERIAL2TCP": "./Resources/html/serial2tcp.html"
@@ -44,11 +44,11 @@
             "js_main": {
                 "target_dirs": {
                     "/data/webui/js": [
-                        "./lib/ESPWebFrameWork/Resources/js/jquery-3.3.1.min.js",
-                        "./lib/ESPWebFrameWork/Resources/js/popper.min.js",
-                        "./lib/ESPWebFrameWork/Resources/js/bootstrap.min.js",
-                        "./lib/ESPWebFrameWork/Resources/js/js.cookie.min.js",
-                        "./lib/ESPWebFrameWork/Resources/js/selectize.min.js",
+                        "./lib/KFCWebBuilder/Resources/js/jquery-3.3.1.min.js",
+                        "./lib/KFCWebBuilder/Resources/js/popper.min.js",
+                        "./lib/KFCWebBuilder/Resources/js/bootstrap.min.js",
+                        "./lib/KFCWebBuilder/Resources/js/js.cookie.min.js",
+                        "./lib/KFCWebBuilder/Resources/js/selectize.min.js",
                         "./Resources/js/aes.js",
                         "./Resources/js/sha512.js",
                         "./Resources/js/main.min.js",
@@ -84,9 +84,9 @@
             "css_main": {
                 "target_dirs": {
                     "./data/webui/css": [
-                        "./lib/ESPWebFrameWork/Resources/css/bootstrap.min.css",
-                        "./lib/ESPWebFrameWork/Resources/css/selectize.bootstrap4.css",
-                        "./lib/ESPWebFrameWork/Resources/css/open-iconic-bootstrap.css",
+                        "./lib/KFCWebBuilder/Resources/css/bootstrap.min.css",
+                        "./lib/KFCWebBuilder/Resources/css/selectize.bootstrap4.css",
+                        "./lib/KFCWebBuilder/Resources/css/open-iconic-bootstrap.css",
                         "./Resources/css/styles.css"
                     ]
                 },
@@ -137,8 +137,8 @@
             },
             "static_content": {
                 "target_dirs": {
-                    "./data/webui/images": [ "./lib/ESPWebFrameWork/Resources/images/spinner.gif" ],
-                    "./data/webui/fonts": { "./lib/ESPWebFrameWork/Resources/fonts": "/^open-iconic\\..*/" }
+                    "./data/webui/images": [ "./lib/KFCWebBuilder/Resources/images/spinner.gif" ],
+                    "./data/webui/fonts": { "./lib/KFCWebBuilder/Resources/fonts": "/^open-iconic\\..*/" }
                 },
                 "processors":  {
                     "compress": {
@@ -175,6 +175,6 @@
         }
     },
     "includes": [
-        "./lib/ESPWebFrameWork/ESPWebFrameWork.json"
+        "./lib/KFCWebBuilder/KFCWebBuilder.json"
     ]
 }

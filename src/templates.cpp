@@ -78,8 +78,8 @@ String WebTemplate::process(const String &key) {
         _return(out);
 #  if NTP_CLIENT || RTC_SUPPORT
     } else if (key == F("TIME")) {
-        time_t now = time(NULL);
-        if (now == 0) {
+        time_t now = time(nullptr);
+        if (IS_TIME_VALID(now)) {
             _return(F("No time available"));
         } else {
             char buf[32];

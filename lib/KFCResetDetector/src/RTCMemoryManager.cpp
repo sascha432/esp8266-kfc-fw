@@ -68,7 +68,8 @@ bool RTCMemoryManager::read(uint8_t id, void *dataPtr, uint8_t maxSize)
     }
     uint16_t length;
 
-    // TODO this function could save memory by reading from RTC and storing the result directly in dataPtr instead of using __plugin_read_rtc_memory()
+    // TODO this function could save memory by reading from RTC memory and storing the result directly in dataPtr instead of using __plugin_read_rtc_memory()
+    // it has to read the entire data set to generate the CRC though
 #if 0
     // not well tested, variable "data" seems to get corrupted
     Header_t header;

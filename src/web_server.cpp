@@ -562,7 +562,7 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
                 cookie.setValue(generate_session_id(config._H_STR(Config().device_name), config._H_STR(Config().device_pass), NULL));
                 cookie.setPath(FSPGM(slash));
                 if (request->arg(F("keep")) == FSPGM(1)) {
-                    cookie.setExpires(time(NULL) + 86400 * 30);
+                    cookie.setExpires(time(nullptr) + 86400 * 30);
                 }
                 httpHeaders.add(cookie);
 

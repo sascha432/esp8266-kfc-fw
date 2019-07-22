@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include <push_pack.h>
-
 #include <stdint.h>
+
+#include <push_pack.h>
 
 #define VFS_MAX_PATH                            160
 

@@ -12,7 +12,7 @@
 #include "web_socket.h"
 
 #ifndef DEBUG_PING_MONITOR
-#define DEBUG_PING_MONITOR 1
+#define DEBUG_PING_MONITOR 0
 #endif
 
 class WsPingClient : public WsClient {
@@ -30,8 +30,52 @@ public:
 
 private:
     void _cancelPing();
-    String _getHost(uint8_t num) const;
     AsyncPing _ping;
+};
+
+class PingMonitorTask {
+public:
+  typedef struct {
+    String host;
+    uint32_t success;
+    uint32_t failure;
+  } PingHost_t;
+
+  typedef std::vector<PingHost_t> PingVector;
+
+  PingMonitorTask();
+  ~PingMonitorTask();
+
+  void setInterval(uint16_t interval);
+  void setCount(uint8_t count);
+  void setTimeout(uint16_t timeout);
+
+  void clearHosts();
+  void addHost(const char *host);
+
+  void start();
+  void stop();
+
+  void addAnswer(bool answer);
+  void next();
+  void begin();
+
+  void printStats(Print &out);
+
+  inline ulong isNext() const {
+    return (_nextHost != 0 && millis() > _nextHost);
+  }
+
+private:
+  void _cancelPing();
+
+  uint8_t _currentServer;
+  uint8_t _count;
+  uint16_t _interval;
+  uint16_t _timeout;
+  unsigned long _nextHost;
+  PingVector _pingHosts;
+  AsyncPing *_ping;
 };
 
 #endif

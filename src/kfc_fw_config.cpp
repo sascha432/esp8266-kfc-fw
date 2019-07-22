@@ -12,6 +12,9 @@
 #include <misc.h>
 #include "progmem_data.h"
 #include "build.h"
+#if NTP_CLIENT
+#include "./plugins/ntp/ntp_plugin.h"
+#endif
 
 #if DEBUG_KFC_CONFIG
 #include <debug_helper_enable.h>
@@ -289,7 +292,7 @@ void KFCFWConfiguration::restoreFactorySettings() {
     _H_SET_STR(Config().ping.host3, F("www.google.com"));
     _H_SET(Config().ping.count, 4);
     _H_SET(Config().ping.interval, 60);
-    _H_SET(Config().ping.timeout, 2000);
+    _H_SET(Config().ping.timeout, 5000);
 #endif
 #if SERIAL2TCP
     _H_SET(Config().serial2tcp.port, 2323);
@@ -498,11 +501,14 @@ void KFCFWConfiguration::enterDeepSleep(uint32_t time_in_ms, RFMode mode, uint16
         plugin.callPrepareDeepSleep(time_in_ms, mode);
     }
     if (delayAfterPrepare) {
-        yield();
         delay(delayAfterPrepare);
-        yield();
     }
     _debug_printf_P(PSTR("Entering deep sleep for %d milliseconds, RF mode %d\n"), time_in_ms, mode);
+
+#if NTP_RESTORE_SYSTEM_TIME_AFTER_WAKEUP
+    // save current time to restore when waking up
+    ntp_client_prepare_deep_sleep(time_in_ms);
+#endif
     ESP.deepSleep(time_in_ms * 1000ULL, mode);
 }
 

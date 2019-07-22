@@ -6,13 +6,12 @@
 
 PROGMEM_STRING_DECL(default_password_warning);
 PROGMEM_STRING_DECL(empty);
-//extern const char _shared_progmem_string_empty[] PROGMEM;
+PROGMEM_STRING_DECL(0);
+PROGMEM_STRING_DECL(1);
+PROGMEM_STRING_DECL(OK);
 extern const char _shared_progmem_string__checked[] PROGMEM;
 extern const char _shared_progmem_string__selected[] PROGMEM;
 extern const char _shared_progmem_string__hidden[] PROGMEM;
-extern const char _shared_progmem_string_0[] PROGMEM;
-extern const char _shared_progmem_string_1[] PROGMEM;
-extern const char _shared_progmem_string_OK[] PROGMEM;
 extern const char _shared_progmem_string_Not_supported[] PROGMEM;
 extern const char _shared_progmem_string_enabled[] PROGMEM;
 extern const char _shared_progmem_string_disabled[] PROGMEM;

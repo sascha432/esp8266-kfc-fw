@@ -73,3 +73,7 @@ https://github.com/marvinroger/async-mqtt-client
 ### AsyncWebSocket (Http2Serial plugin)
 
 https://github.com/me-no-dev/ESPAsyncWebServer/blob/master/src/AsyncWebSocket.h
+
+### AsyncPing (Ping Monitor plugin)
+
+https://github.com/akaJes/AsyncPing

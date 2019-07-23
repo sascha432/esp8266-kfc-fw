@@ -212,7 +212,7 @@ String TableDumperColumn::_getString() const {
     case STR_BOOL:
         return TableDumper::getInstance()->getStrBoolValue(_data._bool);
     case BOOL:
-        return _data._bool ? SPGM(TableDumper_BOOL_true) : SPGM(TableDumper_BOOL_false);
+        return _data._bool ? FSPGM(TableDumper_BOOL_true) : FSPGM(TableDumper_BOOL_false);
     case POINTER: {
             PrintString str(F("%p"), _data._pointer);
             return str;
@@ -240,10 +240,10 @@ TableDumperColumn::Length_t TableDumperColumn::_unsignedValueLength(unsigned lon
 TableDumper::TableDumper(Print &output, bool autoWidth) : _output(output) {
     _autoCalc = autoWidth;
     _hasTitles = false;
-    _boolValues[0] = SPGM(TableDumper_STR_BOOL_true);
-    _boolValues[1] = SPGM(TableDumper_STR_BOOL_false);
-    _strValueNull = SPGM(TableDumper_STR_nullptr);
-    _floatFormat = SPGM(TableDumper_FLOAT_format);
+    _boolValues[0] = FSPGM(TableDumper_STR_BOOL_true);
+    _boolValues[1] = FSPGM(TableDumper_STR_BOOL_false);
+    _strValueNull = FSPGM(TableDumper_STR_nullptr);
+    _floatFormat = FSPGM(TableDumper_FLOAT_format);
 }
 
 TableDumper::~TableDumper() {

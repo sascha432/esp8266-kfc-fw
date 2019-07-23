@@ -21,7 +21,7 @@
 #define PLUGIN_DEFAULT_PRIORITY     64
 #define PLUGIN_MIN_PRIORITY         127         // lowest
 
-#define AT_MODE_QUERY_COMMAND        -1
+#define AT_MODE_QUERY_COMMAND       -1
 
 typedef enum {
     PLUGIN_SETUP_DEFAULT = 0,                   // normal boot

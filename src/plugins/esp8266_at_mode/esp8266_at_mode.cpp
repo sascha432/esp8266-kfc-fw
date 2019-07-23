@@ -211,12 +211,13 @@ bool esp8266_at_commands_handler(Stream &serial, const String &command, int8_t a
             serial.printf_P(PSTR("+CWJAP:\"%s\",\"%s\"\n"), config._H_STR(Config().wifi_ssid), config._H_STR(Config().wifi_pass));
             serial.printf_P(PSTR("+CWJAP: WiFi is %s\n"), WiFi.isConnected() ? PSTR("connected") : PSTR("disconnected"));
         }
-        else if (argc < 2) {
-            at_mode_print_invalid_arguments(serial);
-        }
         else {
-            config._H_SET_STR(Config().wifi_ssid, remove_quotes(argv[0]));
-            config._H_SET_STR(Config().wifi_pass, remove_quotes(argv[1]));
+            if (argc >= 1) {
+                config._H_SET_STR(Config().wifi_ssid, remove_quotes(argv[0]));
+                if (argc >= 2) {
+                    config._H_SET_STR(Config().wifi_pass, remove_quotes(argv[1]));
+                }
+            }
             esp8266_at_commands_reconfigure_wifi(serial);
         }
         return true;

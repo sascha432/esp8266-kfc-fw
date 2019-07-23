@@ -6,13 +6,16 @@
 
 #include "ntp_plugin.h"
 #include <sntp.h>
+#include <time.h>
+#include <sys/time.h>
 #include <KFCTimezone.h>
 #include <KFCForms.h>
 #include <PrintHtmlEntitiesString.h>
 #include <EventScheduler.h>
 #include <LoopFunctions.h>
 #include <WiFiCallbacks.h>
-#include "templates.h"
+#include "kfc_fw_config.h"
+#include "../include/templates.h"
 #include "progmem_data.h"
 #include "logger.h"
 #include "plugins.h"
@@ -218,8 +221,8 @@ const String TimezoneData::getStatus() {
         } else {
             out.printf_P(PSTR("%s, status invalid"), config._H_STR(Config().ntp.timezone));
         }
-        const ConfigurationParameter::Handle_t handles[] = { _H(Config().ntp.servers[0]), _H(Config().ntp.servers[1]), _H(Config().ntp.servers[2]), _H(Config().ntp.servers[3]) };
-        for (int i = 0; i < 3; i++) {
+        const ConfigurationParameter::Handle_t handles[] = { _H(Config().ntp.servers[0]), _H(Config().ntp.servers[1]), _H(Config().ntp.servers[2]) };
+        for (int i = 0; i < 2; i++) {
             auto server = config.getString(handles[i]);
             if (*server) {
                 if (firstServer) {
@@ -233,7 +236,7 @@ const String TimezoneData::getStatus() {
         }
         return out;
     } else {
-        return SPGM(Disabled);
+        return FSPGM(Disabled);
     }
 }
 
@@ -287,7 +290,7 @@ void timezone_setup() {
 
         timezone_config_time();
 
-        auto remoteUrl = config.getString(_H(Config().ntp.remote_tz_dst_ofs_url));
+        auto remoteUrl = config._H_STR(Config().ntp.remote_tz_dst_ofs_url);
         if (*remoteUrl) {
             if (!timezoneData) {
                 timezoneData = _debug_new TimezoneData();
@@ -299,7 +302,7 @@ void timezone_setup() {
 
     } else {
 
-		auto *str = _sharedEmptyString.c_str();
+		auto str = _sharedEmptyString.c_str();
 		configTime(0, 0, str, str, str);
         sntp_set_timezone(0);
 
@@ -314,10 +317,7 @@ void timezone_setup() {
 
 void ntp_client_create_settings_form(AsyncWebServerRequest *request, Form &form) {
 
-    form.add<bool>(F("ntp_enabled"), config.get<ConfigFlags>(_H(Config().flags)).ntpClientEnabled, [](bool value, FormField *field) {
-        auto &flags = config._H_W_GET(Config().flags);
-        flags.ntpClientEnabled = value;
-    });
+    form.add<bool>(F("ntp_enabled"), _H_STRUCT_FORMVALUE(Config().flags, bool, ntpClientEnabled));
 
     form.add<sizeof Config().ntp.servers[0]>(F("ntp_server1"), config._H_W_STR(Config().ntp.servers[0]));
     form.addValidator(new FormValidHostOrIpValidator(true));
@@ -355,7 +355,7 @@ bool ntp_client_at_mode_command_handler(Stream &serial, const String &command, i
         char timestamp[64];
         if (!IS_TIME_VALID(now)) {
             serial.printf_P(PSTR("Time is currently not set (%lu). NTP is "), now);
-            if (config.get<ConfigFlags>(_H(Config().flags)).ntpClientEnabled) {
+            if (config._H_GET(Config().flags).ntpClientEnabled) {
                 serial.println(FSPGM(enabled));
             }
             else {
@@ -388,8 +388,8 @@ bool ntp_client_at_mode_command_handler(Stream &serial, const String &command, i
             }
         }
         else if (argc == 1) {
-            if (config.get<ConfigFlags>(_H(Config().flags)).ntpClientEnabled) {
-                config.setString(_H(Config().ntp.timezone), argv[0]);
+            if (config._H_GET(Config().flags).ntpClientEnabled) {
+                config._H_SET_STR(Config().ntp.timezone, argv[0]);
                 serial.printf_P(PSTR("Timezone set to %s\n"), config._H_STR(_Config.ntp.timezone));
                 timezone_setup();
             }
@@ -438,7 +438,6 @@ PROGMEM_PLUGIN_CONFIG_DEF(
 /* prepareDeepSleep         */ nullptr,
 /* atModeCommandHandler     */ ntp_client_at_mode_command_handler
 );
-
 
 #include <pop_pack.h>
 

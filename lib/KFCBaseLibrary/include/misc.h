@@ -84,7 +84,7 @@ String append_slash_copy(const String &dir);
 void append_slash(String &dir);
 void remove_trailing_slash(String &dir);
 
-const String sys_get_temp_dir();
+String sys_get_temp_dir();
 #if SPIFFS_TMP_FILES_TTL
 File tmpfile(const String &dir, const String &prefix, long ttl = SPIFFS_TMP_FILES_TTL);
 #else

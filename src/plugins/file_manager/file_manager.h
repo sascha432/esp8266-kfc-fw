@@ -58,8 +58,8 @@ private:
 
 class FileManagerWebHandler : public AsyncWebHandler {
 public:
-    FileManagerWebHandler(PGM_P uri) : AsyncWebHandler() {
-        _uri = uri;
+    FileManagerWebHandler(const __FlashStringHelper *uri) : AsyncWebHandler() {
+        _uri = reinterpret_cast<PGM_P>(uri);
     }
 
     virtual bool canHandle(AsyncWebServerRequest *request) override;

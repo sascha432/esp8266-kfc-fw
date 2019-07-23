@@ -104,8 +104,8 @@ void remove_trailing_slash(String &dir) {
     }
 }
 
-const String sys_get_temp_dir() {
-    return SPGM(SPIFFS_tmp_dir);
+String sys_get_temp_dir() {
+    return FSPGM(SPIFFS_tmp_dir);
 }
 
 #if SPIFFS_TMP_FILES_TTL

@@ -44,7 +44,7 @@ void file_manager_install_web_server_hook() {
         String uploadDir = FSPGM(file_manager_base_uri);
         uploadDir += FSPGM(upload);
         web_server_add_handler(new AsyncFileUploadWebHandler(uploadDir, file_manager_upload_handler));
-        web_server_add_handler(new FileManagerWebHandler(SPGM(file_manager_base_uri)));
+        web_server_add_handler(new FileManagerWebHandler(FSPGM(file_manager_base_uri)));
     }
 }
 

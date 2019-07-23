@@ -148,14 +148,18 @@ void prepare_plugins() {
     // check for duplicate RTC memory ids
     uint8_t i = 0;
     for(auto &plugin: plugins) {
+#if DEBUG_PLUGINS
+        _debug_printf_P(PSTR("%s prio %d\n"), plugin.getPluginNamePSTR(), plugin.getSetupPriority());
+#endif
+
         if (plugin.getRtcMemoryId() > PLUGIN_RTC_MEM_MAX_ID) {
-            _debug_printf_P(PSTR("WARNING! Plugin %s is using an invalid id %d\n"), plugin.getPluginName().c_str(), plugin.getRtcMemoryId());
+            _debug_printf_P(PSTR("WARNING! Plugin %s is using an invalid id %d\n"), plugin.getPluginNamePSTR(), plugin.getRtcMemoryId());
         }
         if (plugin.getRtcMemoryId()) {
             uint8_t j = 0;
             for(auto &plugin2: plugins) {
                 if (i != j && plugin2.getRtcMemoryId() && plugin.getRtcMemoryId() == plugin2.getRtcMemoryId()) {
-                    _debug_printf_P(PSTR("WARNING! Plugin %s and %s use the same id (%d) to identify the RTC memory data\n"), plugin.getPluginName().c_str(), plugin2.getPluginName().c_str(), plugin.getRtcMemoryId());
+                    _debug_printf_P(PSTR("WARNING! Plugin %s and %s use the same id (%d) to identify the RTC memory data\n"), plugin.getPluginNamePSTR(), plugin2.getPluginNamePSTR(), plugin.getRtcMemoryId());
                 }
                 j++;
             }
@@ -176,7 +180,7 @@ void setup_plugins(PluginSetupMode_t mode) {
             (mode == PLUGIN_SETUP_SAFE_MODE && plugin.isAllowSafeMode()) ||
             (mode == PLUGIN_SETUP_AUTO_WAKE_UP && plugin.isAutoSetupAfterDeepSleep()) ||
             (mode == PLUGIN_SETUP_DELAYED_AUTO_WAKE_UP && !plugin.isAutoSetupAfterDeepSleep());
-        _debug_printf_P(PSTR("setup_plugins(%d) %s priority %d run setup %d\n"), mode, plugin.getPluginName().c_str(), plugin.getSetupPriority(), runSetup);
+        _debug_printf_P(PSTR("setup_plugins(%d) %s priority %d run setup %d\n"), mode, plugin.getPluginNamePSTR(), plugin.getSetupPriority(), runSetup);
         if (runSetup) {
             plugin.callSetupPlugin();
         }
@@ -235,8 +239,7 @@ PluginConfiguration::PluginConfiguration(PGM_PLUGIN_CONFIG_P configPtr) {
 }
 
 bool PluginConfiguration::pluginNameEquals(const String & string) const {
-    auto name = reinterpret_cast<PGM_P>(pgm_read_ptr(&config->pluginName));
-    return strcmp_P(string.c_str(), name) == 0;
+    return strcmp_P(string.c_str(), reinterpret_cast<PGM_P>(pgm_read_ptr(&config->pluginName))) == 0;
 }
 
 bool PluginConfiguration::pluginNameEquals(const __FlashStringHelper * string) const {
@@ -244,8 +247,7 @@ bool PluginConfiguration::pluginNameEquals(const __FlashStringHelper * string) c
 }
 
 String PluginConfiguration::getPluginName() const {
-    PGM_P name = reinterpret_cast<PGM_P>(pgm_read_ptr(&config->pluginName));
-    return FPSTR(name);
+    return reinterpret_cast<const __FlashStringHelper *>(pgm_read_ptr(&config->pluginName));
 }
 
 PGM_P PluginConfiguration::getPluginNamePSTR() const {

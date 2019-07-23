@@ -12,7 +12,7 @@
 #include <KFCTimezone.h>
 #include <Buffer.h>
 #include "web_server.h"
-#include "templates.h"
+#include "../include/templates.h"
 #include "fs_mapping.h"
 
 #define DEBUG_ASYNC_WEB_RESPONSE 0

@@ -427,7 +427,7 @@ const String MQTTClient::getStatus() {
 
         return out;
     }
-    return SPGM(Disabled);
+    return FSPGM(Disabled);
 }
 
 const String MQTTClient::_createHASSYaml() {

@@ -7,7 +7,7 @@
 // v2 uses a 4 channel mosfet dimmer with a different serial protocol
 
 #include <PrintHtmlEntitiesString.h>
-#include "templates.h"
+#include "../include/templates.h"
 #include "progmem_data.h"
 #include "plugins.h"
 #include "atomic_sun_v2.h"

@@ -10,7 +10,7 @@
 #include <PrintHtmlEntitiesString.h>
 #include <LoopFunctions.h>
 #include "progmem_data.h"
-#include "templates.h"
+#include "../include/templates.h"
 #include "plugins.h"
 
 
@@ -24,7 +24,7 @@ void syslog_setup_debug_logger() {
 
     SyslogParameter parameter;
     parameter.setHostname(config.getString(_H(Config().device_name)));
-    parameter.setAppName(SPGM(kfcfw));
+    parameter.setAppName(FSPGM(kfcfw));
     parameter.setProcessId(F("DEBUG"));
 	parameter.setSeverity(SYSLOG_DEBUG);
 
@@ -60,7 +60,7 @@ void syslog_setup_logger() {
 
         SyslogParameter parameter;
         parameter.setHostname(config.getString(_H(Config().device_name)));
-        parameter.setAppName(SPGM(kfcfw));
+        parameter.setAppName(FSPGM(kfcfw));
         parameter.setFacility(SYSLOG_FACILITY_KERN);
         parameter.setSeverity(SYSLOG_NOTICE);
 
@@ -113,7 +113,7 @@ const String syslog_get_status() {
             out.printf_P(PSTR("TCP TLS @ %s:%u"), config._H_STR(Config().syslog_host), config._H_GET(Config().syslog_port));
             break;
         default:
-            out += SPGM(Disabled);
+            out += FSPGM(Disabled);
             break;
     }
     // #if SYSLOG_SPIFF_QUEUE_SIZE
@@ -133,7 +133,7 @@ const String syslog_get_status() {
 #endif
     return out;
 #else
-    return SPGM(Not_supported);
+    return FSPGM(Not_supported);
 #endif
 }
 

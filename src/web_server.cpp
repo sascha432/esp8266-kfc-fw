@@ -18,11 +18,14 @@
 #include "failure_counter.h"
 #include "fs_mapping.h"
 #include "session.h"
-#include "templates.h"
+#include "../include/templates.h"
 #include "timezone.h"
 #include "web_socket.h"
 #include "kfc_fw_config.h"
 #include "plugins.h"
+#if HUE_EMULATION
+#include "./plugins/hue/hue.h"
+#endif
 
 #if DEBUG_WEB_SERVER
 #include <debug_helper_enable.h>
@@ -150,13 +153,13 @@ void web_server_add_handler(AsyncWebHandler* handler) {
 
 void web_server_not_found_handler(AsyncWebServerRequest *request) {
 
-    WebServerSetCPUSpeedHelper setCPUSpeed;
 #if HUE_EMULATION
-    if (hue_onNotFound(request)) {
-        return;
+    if (HueEmulation::onNotFound(request)) {
+        return; // request was handled
     }
 #endif
 
+    WebServerSetCPUSpeedHelper setCPUSpeed;
     if (!web_server_handle_file_read(request->url(), web_server_client_accepts_gzip(request), request)) {
         request->send(404);
     }
@@ -347,10 +350,8 @@ void init_web_server() {
 #endif
 
 #if HUE_EMULATION
-
-    server->onRequestBody(hue_onRequestBody);
-    hue_register_port(config.get<uint16_t>(_H(Config().http_port)));
-
+    // adding handler here instead of the plugin setup method that it is more visible
+    server->onRequestBody(HueEmulation::onRequestBody);
 #endif
 
     server->onNotFound(web_server_not_found_handler);

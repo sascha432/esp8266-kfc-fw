@@ -2,7 +2,7 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#include "templates.h"
+#include "../include/templates.h"
 #include <PrintString.h>
 #include <PrintHtmlEntitiesString.h>
 #include "progmem_data.h"
@@ -79,7 +79,7 @@ String WebTemplate::process(const String &key) {
 #  if NTP_CLIENT || RTC_SUPPORT
     } else if (key == F("TIME")) {
         time_t now = time(nullptr);
-        if (IS_TIME_VALID(now)) {
+        if (!IS_TIME_VALID(now)) {
             _return(F("No time available"));
         } else {
             char buf[32];
@@ -104,9 +104,9 @@ String WebTemplate::process(const String &key) {
     } else if (key == F("FIRMWARE_UPGRADE_FAILURE")) {
         return _sharedEmptyString;
     } else if (key == F("FIRMWARE_UPGRADE_FAILURE_CLASS")) {
-        return SPGM(_hidden);
+        return FSPGM(_hidden);
     } else if (key == F("CONFIG_DIRTY_CLASS")) {
-        _return(config.isConfigDirty() ? _sharedEmptyString : SPGM(_hidden));
+        _return(config.isConfigDirty() ? _sharedEmptyString : FSPGM(_hidden));
     } else if (key == F("FORM_VALIDATOR")) {
         if (_form) {
             PrintString response;
@@ -127,7 +127,7 @@ String WebTemplate::process(const String &key) {
                 return callback();
             }
         }
-        _return(SPGM(Not_supported));
+        _return(FSPGM(Not_supported));
     }
 
     PrintHtmlEntitiesString out;
@@ -173,7 +173,7 @@ String LoginTemplate::process(const String &key) {
     if (key == F("LOGIN_ERROR_MESSAGE")) {
         _return(_errorMessage);
     } else if (key == F("LOGIN_ERROR_CLASS")) {
-        _return((_errorMessage.length() != 0) ? _sharedEmptyString : SPGM(_hidden));
+        _return((_errorMessage.length() != 0) ? _sharedEmptyString : FSPGM(_hidden));
     }
     _return(WebTemplate::process(key));
 }
@@ -220,7 +220,7 @@ String ConfigTemplate::process(const String &key) {
         _return(_sharedEmptyString);
     } else if (key == F("SSL_KEY")) {
 #if SPIFFS_SUPPORT
-        File file = SPIFFS.open(SPGM(server_key), "r");
+        File file = SPIFFS.open(FSPGM(server_key), "r");
         if (file) {
             _return(file.readString());
         }
@@ -251,7 +251,7 @@ String StatusTemplate::process(const String &key) {
             #endif
                 _return(out);
         #else
-            _return(SPGM(Not_supported));
+            _return(FSPGM(Not_supported));
         #endif
     } else if (key == F("WIFI_MODE")) {
         int n;

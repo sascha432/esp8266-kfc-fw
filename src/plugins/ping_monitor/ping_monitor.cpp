@@ -31,7 +31,7 @@ const String ping_monitor_get_status() {
         pingMonitorTask->printStats(out);
         return out;
     } else {
-        return SPGM(Disabled);
+        return FSPGM(Disabled);
     }
 }
 
@@ -59,6 +59,11 @@ WsClient *WsPingClient::getInstance(AsyncWebSocketClient *socket) {
 }
 
 bool ping_monitor_resolve_host(char *host, IPAddress &addr, PrintString &errorMessage) {
+
+    if (!*host || !strcmp_P(host, SPGM(0))) {
+        errorMessage.printf_P(PSTR("ping cancelled"));
+        return false;
+    }
 
     if (addr.fromString(host) || WiFi.hostByName(host, addr)) {
         _debug_printf_P(PSTR("ping_monitor_resolve_host: resolved host %s = %s\n"), host, addr.toString().c_str());
@@ -251,6 +256,10 @@ bool ping_monitor_at_mode_command_handler(Stream &serial, const String &command,
             char *host = argv[0];
             IPAddress addr;
             PrintString message;
+            if (_ping) {
+                _debug_println(F("ping_monitor: previous ping cancelled"));
+                _ping->cancel();
+            }
             if (ping_monitor_resolve_host(host, addr, message)) {
                 int count = 0;
                 int timeout = 0;
@@ -260,10 +269,7 @@ bool ping_monitor_at_mode_command_handler(Stream &serial, const String &command,
                         timeout = atoi(argv[2]);
                     }
                 }
-                if (_ping) {
-                    _debug_println(F("ping_monitor: previous ping cancelled"));
-                    _ping->cancel();
-                } else {
+                if (!_ping) {
                     _ping = new AsyncPing();
                     _ping->on(true, [&serial](const AsyncPingResponse &response) {
                         IPAddress addr(response.addr);

@@ -11,7 +11,7 @@
 #include <Arduino_compat.h>
 
 class PrintString : public String, public Print {
-   public:
+public:
     PrintString() : String(), Print() {
     }
 //    PrintString(const char *format, ...) __attribute__((format(printf, 2, 3))) : String(), Print() {

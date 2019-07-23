@@ -70,15 +70,6 @@ enum Serial2Tcp_SerialPort_t : uint8_t {
 
 void blink_led(int8_t pin, int delay, dynamic_bitset &pattern);
 
-#define MAX_NTP_SERVER          3
-#ifndef SNTP_MAX_SERVERS
-//#warning SNTP_MAX_SERVERS not defined
-#else
-#if MAX_NTP_SERVER != SNTP_MAX_SERVERS
-#error MAX_NTP_SERVER does not match SNTP_MAX_SERVERS
-#endif
-#endif
-
 #define CONFIG_RTC_MEM_ID 2
 
 typedef uint32_t ConfigFlags_t;
@@ -123,7 +114,7 @@ struct HueConfig {
 
 struct NTP {
     char timezone[33];
-    char servers[MAX_NTP_SERVER][65];
+    char servers[3][65];
 #if USE_REMOTE_TIMEZONE
     char remote_tz_dst_ofs_url[255];
 #endif
@@ -247,6 +238,7 @@ public:
 
     void restoreFactorySettings();
     static const String getFirmwareVersion();
+    static const String getShortFirmwareVersion();
 
     // flag to tell if the device has to be rebooted to apply all configuration changes
     void setConfigDirty(bool dirty);
@@ -276,7 +268,7 @@ public:
 private:
     void _setupWiFiCallbacks();
 #if defined(ESP32)
-    static void _onWiFiEvent(WiFiEvent_t  event);
+    static void _onWiFiEvent(WiFiEvent_t event, WiFiEventInfo_t info);
 #elif USE_WIFI_SET_EVENT_HANDLER_CB
     static void _onWiFiEvent(System_Event_t *orgEvent);
 #endif

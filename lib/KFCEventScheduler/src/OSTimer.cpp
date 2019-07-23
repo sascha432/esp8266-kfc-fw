@@ -27,7 +27,7 @@ void OSTimer::startTimer(uint32_t delay, bool repeat) {
     if (_timer) {
         os_timer_disarm(_timer);
     } else {
-        os_timer_create(&_timer, reinterpret_cast<os_timer_func_t_ptr>(repeat ? _callback : _callbackOnce), reinterpret_cast<void *>(this));
+        os_timer_create(_timer, reinterpret_cast<os_timer_func_t_ptr>(repeat ? _callback : _callbackOnce), reinterpret_cast<void *>(this));
         os_timer_arm(_timer, delay, repeat);
         if (delay < MIN_DELAY) {
             _debug_printf_P(PSTR("ERROR! delay %.3f < %d is not supported\n"), delay / 1000.0, MIN_DELAY);

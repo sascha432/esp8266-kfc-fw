@@ -5,7 +5,7 @@
 #if MQTT_SUPPORT
 
 #ifndef DEBUG_MQTT_CLIENT
-#define DEBUG_MQTT_CLIENT 0
+#define DEBUG_MQTT_CLIENT 1
 #endif
 
 #pragma once

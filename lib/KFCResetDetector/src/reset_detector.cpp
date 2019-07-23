@@ -90,7 +90,7 @@ void ResetDetector::armTimer() {
     if (_timer) {
         disarmTimer();
     }
-    os_timer_create(&_timer, reinterpret_cast<os_timer_func_t_ptr>(_timerCallback), reinterpret_cast<void *>(this));
+    os_timer_create(_timer, reinterpret_cast<os_timer_func_t_ptr>(_timerCallback), reinterpret_cast<void *>(this));
     os_timer_arm(_timer, RESET_DETECTOR_TIMEOUT, 0);
 }
 

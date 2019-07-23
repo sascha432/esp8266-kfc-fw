@@ -18,17 +18,28 @@ extern RNGClass rng;
 #endif
 
 #ifndef SESSION_CONFIGURATION_SET
-// #include <SHA256.h>
-// #define SESSION_ROUNDS              128
-// #define SESSION_HASH_LENGTH         32
-// #define SESSION_HASH_CLASSNAME      SHA256
+#define SESSION_CONFIGURATION_SET   1
+
+#if defined(ESP32)
+
+#include <SHA256.h>
+#define SESSION_ROUNDS              128
+#define SESSION_HASH_LENGTH         32
+#define SESSION_HASH_CLASSNAME      SHA256
+
+#elif defined(ESP8266)
 
 #include "SHA1.h"
 #define SESSION_ROUNDS              1024
 #define SESSION_HASH_LENGTH         20
 #define SESSION_HASH_CLASSNAME      SHA1
 
-#define SESSION_CONFIGURATION_SET   1
+#else
+
+#error Platform not supported
+
+#endif
+
 #endif
 
 void bin2hex_append(String &str, char *data, int length);

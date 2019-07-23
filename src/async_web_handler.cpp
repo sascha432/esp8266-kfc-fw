@@ -66,14 +66,15 @@ void AsyncFileUploadWebHandler::_cleanUp(AsyncWebServerRequest *request) {
 
         request->_tempFile.close();
 
-        if (*(char *)request->_tempObject) {
-            debug_printf_P(PSTR("AsyncFileUploadWebHandler::_cleanUp(): Deleting %s\n"), request->_tempObject);
-            SPIFFS.remove((char *)request->_tempObject);
+        auto tmpFile = reinterpret_cast<char *>(request->_tempObject);
+        if (*tmpFile) {
+            debug_printf_P(PSTR("AsyncFileUploadWebHandler::_cleanUp(): Deleting %s\n"), tmpFile);
+            SPIFFS.remove(tmpFile);
         } else {
             debug_println(F("AsyncFileUploadWebHandler::_cleanUp(): Temporary file already removed"));
         }
 
-        free(request->_tempObject);
+        free(tmpFile);
         request->_tempObject = nullptr;
     }
 }

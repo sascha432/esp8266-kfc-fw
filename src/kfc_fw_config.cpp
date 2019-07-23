@@ -39,10 +39,119 @@ KFCFWConfiguration::~KFCFWConfiguration() {
     LoopFunctions::remove(KFCFWConfiguration::loop);
 }
 
+void KFCFWConfiguration::_onWiFiConnectCb(const WiFiEventStationModeConnected &event) {
+    _debug_printf_P(PSTR("KFCFWConfiguration::_onWiFiConnectCb(%s, %d, %s)\n"), event.ssid.c_str(), (int)event.channel, mac2String(event.bssid).c_str());
+    if (!_wifiConnected) {
+
+        if (resetDetector.hasWakeUpDetected() && _offlineSince == -1UL) {
+            Logger_notice(F("WiFi connected to %s after %lu ms"), event.ssid.c_str(), millis());
+        } else{
+            Logger_notice(F("WiFi connected to %s"), event.ssid.c_str());
+        }
+
+        _debug_printf_P(PSTR("Station: WiFi connected to %s, offline for %.3f, millis = %lu\n"), event.ssid.c_str(), _offlineSince == -1UL ? 0 : ((millis() - _offlineSince) / 1000.0), millis());
+        _debug_printf_P(PSTR("Free heap %s\n"), formatBytes(ESP.getFreeHeap()).c_str());
+        _wifiConnected = true;
+        config.storeQuickConnect(event.bssid, event.channel);
+    }
+}
+
+void KFCFWConfiguration::_onWiFiDisconnectCb(const WiFiEventStationModeDisconnected &event) {
+    _debug_printf_P(PSTR("KFCFWConfiguration::_onWiFiDisconnectCb(%d = %s)\n"), (int)event.reason, WiFi_disconnect_reason(event.reason).c_str());
+    if (_wifiConnected) {
+        config_set_blink(BLINK_FAST);
+        _debug_printf_P(PSTR("WiFi disconnected after %.3f seconds, millis = %lu\n"), ((_wifiUp == -1UL) ? -1.0 : ((millis() - _wifiUp) / 1000.0)), millis());
+
+        Logger_notice(F("WiFi disconnected, SSID %s, reason %s"), event.ssid.c_str(), WiFi_disconnect_reason(event.reason).c_str());
+        _offlineSince = millis();
+        _wifiConnected = false;
+        _wifiUp = -1UL;
+        WiFiCallbacks::callEvent(WiFiCallbacks::EventEnum_t::DISCONNECTED, (void *)&event);
+    }
+}
+
+void KFCFWConfiguration::_onWiFiGotIPCb(const WiFiEventStationModeGotIP &event) {
+
+    auto ip = event.ip.toString();
+    auto mask = event.mask.toString();
+    auto gw = event.gw.toString();
+    auto dns1 = WiFi.dnsIP().toString();
+    auto dns2 = WiFi.dnsIP(1).toString();
+    _debug_printf_P(PSTR("KFCFWConfiguration::_onWiFiGotIPCb(%s, %s, %s DNS %s, %s)\n"), ip.c_str(), mask.c_str(), gw.c_str(), dns1.c_str(), dns2.c_str());
+
+    Logger_notice(F("%s: IP/Net %s/%s GW %s DNS: %s, %s"), config._H_GET(Config().flags).stationModeDHCPEnabled ? PSTR("DHCP") : PSTR("Static configuration"), ip.c_str(), mask.c_str(), gw.c_str(), dns1.c_str(), dns2.c_str());
+
+    config_set_blink(BLINK_SOLID);
+    _wifiUp = millis();
+    config.storeStationConfig(event.ip, event.mask, event.gw);
+
+    WiFiCallbacks::callEvent(WiFiCallbacks::EventEnum_t::CONNECTED, (void *)&event);
+}
+
+void KFCFWConfiguration::_onWiFiOnDHCPTimeoutCb() {
+    _debug_printf_P(PSTR("KFCFWConfiguration::_onWiFiOnDHCPTimeoutCb()\n"));
+    Logger_error(F("DHCP timeout"));
+    config_set_blink(BLINK_FLICKER);
+}
+
+void KFCFWConfiguration::_softAPModeStationConnectedCb(const WiFiEventSoftAPModeStationConnected &event) {
+    _debug_printf_P(PSTR("KFCFWConfiguration::_softAPModeStationConnectedCb()\n"));
+    Logger_notice(F("Station connected [%s]"), mac2String(event.mac).c_str());
+}
+
+void KFCFWConfiguration::_softAPModeStationDisconnectedCb(const WiFiEventSoftAPModeStationDisconnected &event) {
+    _debug_printf_P(PSTR("KFCFWConfiguration::_softAPModeStationDisconnectedCb()\n"));
+    Logger_notice(F("Station disconnected [%s]"), mac2String(event.mac).c_str());
+}
+
 #if defined(ESP32)
 
-void KFCFWConfiguration::_onWiFiEvent(WiFiEvent_t  event) {
-    //TODO
+void KFCFWConfiguration::_onWiFiEvent(WiFiEvent_t event, WiFiEventInfo_t info) {
+    switch(event) {
+        case WiFiEvent_t::SYSTEM_EVENT_STA_CONNECTED: {
+                WiFiEventStationModeConnected dst;
+                dst.ssid = reinterpret_cast<const char *>(info.connected.ssid);
+                MEMNCPY_S(dst.bssid, info.connected.bssid);
+                dst.channel = info.connected.channel;
+                config._onWiFiConnectCb(dst);
+            } break;
+        case WiFiEvent_t::SYSTEM_EVENT_STA_DISCONNECTED: {
+                WiFiEventStationModeDisconnected dst;
+                dst.ssid = reinterpret_cast<const char *>(info.disconnected.ssid);
+                MEMNCPY_S(dst.bssid, info.disconnected.bssid);
+                dst.reason = (WiFiDisconnectReason)info.disconnected.reason;
+                config._onWiFiDisconnectCb(dst);
+            } break;
+#if DEBUG
+        case WiFiEvent_t::SYSTEM_EVENT_GOT_IP6: {
+                debug_printf_P(PSTR("_nWiFiEvent(SYSTEM_EVENT_GOT_IP6, addr=%04X:%04X:%04X:%04X)\n"), info.got_ip6.ip6_info.ip.addr[0], info.got_ip6.ip6_info.ip.addr[1], info.got_ip6.ip6_info.ip.addr[2], info.got_ip6.ip6_info.ip.addr[3]);
+            } break;
+#endif
+        case WiFiEvent_t::SYSTEM_EVENT_STA_GOT_IP: {
+                WiFiEventStationModeGotIP dst;
+                dst.ip = info.got_ip.ip_info.ip.addr;
+                dst.gw = info.got_ip.ip_info.gw.addr;
+                dst.mask = info.got_ip.ip_info.netmask.addr;
+                config._onWiFiGotIPCb(dst);
+            } break;
+        case WiFiEvent_t::SYSTEM_EVENT_STA_LOST_IP: {
+                config._onWiFiOnDHCPTimeoutCb(); // TODO esp32
+            } break;
+        case WiFiEvent_t::SYSTEM_EVENT_AP_STACONNECTED: {
+                WiFiEventSoftAPModeStationConnected dst;
+                dst.aid = info.sta_connected.aid;
+                MEMNCPY_S(dst.mac, info.sta_connected.mac);
+                config._softAPModeStationConnectedCb(dst);
+            } break;
+        case WiFiEvent_t::SYSTEM_EVENT_AP_STADISCONNECTED: {
+                WiFiEventSoftAPModeStationDisconnected dst;
+                dst.aid = info.sta_connected.aid;
+                MEMNCPY_S(dst.mac, info.sta_connected.mac);
+                config._softAPModeStationDisconnectedCb(dst);
+            } break;
+        default:
+            break;
+    }
 }
 
 #elif USE_WIFI_SET_EVENT_HANDLER_CB
@@ -94,74 +203,7 @@ void KFCFWConfiguration::_onWiFiEvent(System_Event_t *orgEvent) {
     }
 }
 
-#endif
-
-void KFCFWConfiguration::_onWiFiConnectCb(const WiFiEventStationModeConnected &event) {
-    _debug_printf_P(PSTR("KFCFWConfiguration::_onWiFiConnectCb(%s, %d, %s)\n"), event.ssid.c_str(), (int)event.channel, mac2String(event.bssid).c_str());
-    if (!_wifiConnected) {
-
-        if (resetDetector.hasWakeUpDetected() && _offlineSince == -1UL) {
-            Logger_notice(F("WiFi connected to %s after %lu ms"), event.ssid.c_str(), millis());
-        } else{
-            Logger_notice(F("WiFi connected to %s"), event.ssid.c_str());
-        }
-
-        _debug_printf_P(PSTR("Station: WiFi connected to %s, offline for %.3f, millis = %lu\n"), event.ssid.c_str(), _offlineSince == -1UL ? 0 : ((millis() - _offlineSince) / 1000.0), millis());
-        _debug_printf_P(PSTR("Free heap %s\n"), formatBytes(ESP.getFreeHeap()).c_str());
-        _wifiConnected = true;
-        config.storeQuickConnect(event.bssid, event.channel);
-    }
-}
-
-void KFCFWConfiguration::_onWiFiDisconnectCb(const WiFiEventStationModeDisconnected &event) {
-    _debug_printf_P(PSTR("KFCFWConfiguration::_onWiFiDisconnectCb(%d = %s)\n"), (int)event.reason, WiFi_disconnect_reason(event.reason).c_str());
-    if (_wifiConnected) {
-        config_set_blink(BLINK_FAST);
-        _debug_printf_P(PSTR("WiFi disconnected after %.3f seconds, millis = %lu\n"), ((_wifiUp == -1UL) ? -1.0 : ((millis() - _wifiUp) / 1000.0)), millis());
-
-        Logger_notice(F("WiFi disconnected, SSID %s, reason %s"), event.ssid.c_str(), WiFi_disconnect_reason(event.reason).c_str());
-        _offlineSince = millis();
-        _wifiConnected = false;
-        _wifiUp = -1UL;
-        WiFiCallbacks::callEvent(WiFiCallbacks::EventEnum_t::DISCONNECTED, (void *)&event);
-    }
-}
-
-void KFCFWConfiguration::_onWiFiGotIPCb(const WiFiEventStationModeGotIP &event) {
-
-    auto ip = event.ip.toString();
-    auto mask = event.mask.toString();
-    auto gw = event.gw.toString();
-    auto dns1 = WiFi.dnsIP().toString();
-    auto dns2 = WiFi.dnsIP(1).toString();
-    _debug_printf_P(PSTR("KFCFWConfiguration::_onWiFiGotIPCb(%s, %s, %s DNS %s, %s)\n"), ip.c_str(), mask.c_str(), gw.c_str(), dns1.c_str(), dns2.c_str());
-
-    Logger_notice(F("%s: IP/Net %s/%s GW %s DNS: %s, %s"), wifi_station_dhcpc_status() == DHCP_STOPPED ? F("Static configuration") : F("DHCP"), ip.c_str(), mask.c_str(), gw.c_str(), dns1.c_str(), dns2.c_str());
-
-    config_set_blink(BLINK_SOLID);
-    _wifiUp = millis();
-    config.storeStationConfig(event.ip, event.mask, event.gw);
-
-    WiFiCallbacks::callEvent(WiFiCallbacks::EventEnum_t::CONNECTED, (void *)&event);
-}
-
-void KFCFWConfiguration::_onWiFiOnDHCPTimeoutCb() {
-    _debug_printf_P(PSTR("KFCFWConfiguration::_onWiFiOnDHCPTimeoutCb()\n"));
-    Logger_error(F("DHCP timeout"));
-    config_set_blink(BLINK_FLICKER);
-}
-
-void KFCFWConfiguration::_softAPModeStationConnectedCb(const WiFiEventSoftAPModeStationConnected &event) {
-    _debug_printf_P(PSTR("KFCFWConfiguration::_softAPModeStationConnectedCb()\n"));
-    Logger_notice(F("Station connected [%s]"), mac2String(event.mac).c_str());
-}
-
-void KFCFWConfiguration::_softAPModeStationDisconnectedCb(const WiFiEventSoftAPModeStationDisconnected &event) {
-    _debug_printf_P(PSTR("KFCFWConfiguration::_softAPModeStationDisconnectedCb()\n"));
-    Logger_notice(F("Station disconnected [%s]"), mac2String(event.mac).c_str());
-}
-
-#if USE_WIFI_SET_EVENT_HANDLER_CB == 0
+#else
 
 static void __onWiFiConnectCb(const WiFiEventStationModeConnected &event) {
     config._onWiFiConnectCb(event);
@@ -194,7 +236,15 @@ void KFCFWConfiguration::_setupWiFiCallbacks() {
 
 #if defined(ESP32)
 
-//TODO esp32
+    WiFi.onEvent(_onWiFiEvent, WiFiEvent_t::SYSTEM_EVENT_STA_CONNECTED);
+    WiFi.onEvent(_onWiFiEvent, WiFiEvent_t::SYSTEM_EVENT_STA_DISCONNECTED);
+    WiFi.onEvent(_onWiFiEvent, WiFiEvent_t::SYSTEM_EVENT_STA_GOT_IP);
+#if DEBUG
+    WiFi.onEvent(_onWiFiEvent, WiFiEvent_t::SYSTEM_EVENT_GOT_IP6);
+#endif
+    WiFi.onEvent(_onWiFiEvent, WiFiEvent_t::SYSTEM_EVENT_STA_LOST_IP);
+    WiFi.onEvent(_onWiFiEvent, WiFiEvent_t::SYSTEM_EVENT_AP_STACONNECTED);
+    WiFi.onEvent(_onWiFiEvent, WiFiEvent_t::SYSTEM_EVENT_AP_STADISCONNECTED);
 
 #elif USE_WIFI_SET_EVENT_HANDLER_CB
 
@@ -361,7 +411,11 @@ const String KFCFWConfiguration::getFirmwareVersion() {
 #else
 #define __DEBUG_CFS_APPEND ""
 #endif
-    return F(FIRMWARE_VERSION_STR " Build " __BUILD_NUMBER " " __DATE__ __DEBUG_CFS_APPEND);
+    return getShortFirmwareVersion() + F(" " __DATE__ __DEBUG_CFS_APPEND);
+}
+
+const String KFCFWConfiguration::getShortFirmwareVersion() {
+    return F(FIRMWARE_VERSION_STR " Build " __BUILD_NUMBER);
 }
 
 void KFCFWConfiguration::storeQuickConnect(const uint8_t *bssid, int8_t channel) {
@@ -423,7 +477,7 @@ void KFCFWConfiguration::read() {
 
     if (!Configuration::read()) {
         config.restoreFactorySettings();
-        write();
+        Configuration::write();
     } else {
         auto version = config._H_GET(Config().version);
         if (FIRMWARE_VERSION > version) {
@@ -432,7 +486,7 @@ void KFCFWConfiguration::read() {
             Logger_warning(message);
             _debug_println(message);
             config._H_SET(Config().version, FIRMWARE_VERSION);
-            write();
+            Configuration::write();
         }
     }
 }

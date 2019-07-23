@@ -294,7 +294,12 @@ void at_mode_serial_handle_event(String &commandString) {
     if (commandString.length() == 0) { // AT
         at_mode_print_ok(output);
     } else {
-        String_begin(commandString, command);
+#if defined(ESP8266)
+        auto command = commandString.begin();
+#else
+        std::unique_ptr<char []> __command(new char[commandString.length() + 1]);
+        auto command = strcpy(__command.get(), commandString.c_str());
+#endif
         if (!strcmp_P(command, PSTR("?"))) { // AT?
             at_mode_generate_help(output);
         } else {

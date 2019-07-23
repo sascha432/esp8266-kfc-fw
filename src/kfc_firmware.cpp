@@ -68,7 +68,7 @@ void check_flash_size() {
 #endif
     MySerial.printf_P(PSTR("Flash ide  size: %u\n"), ideSize);
     MySerial.printf_P(PSTR("Flash ide speed: %u\n"), ESP.getFlashChipSpeed());
-    MySerial.printf_P(PSTR("Flash ide mode:  %s\n"), (ideMode == FM_QIO ? F("QIO") : ideMode == FM_QOUT ? F("QOUT") : ideMode == FM_DIO ? F("DIO") : ideMode == FM_DOUT ? F("DOUT") : F("UNKNOWN")));
+    MySerial.printf_P(PSTR("Flash ide mode:  %s\n"), (ideMode == FM_QIO ? PSTR("QIO") : ideMode == FM_QOUT ? PSTR("QOUT") : ideMode == FM_DIO ? PSTR("DIO") : ideMode == FM_DOUT ? PSTR("DOUT") : PSTR("UNKNOWN")));
 
 #if ESP8266
     if (ideSize != realSize) {
@@ -132,7 +132,7 @@ void setup() {
 #if DEBUG
         Serial.println(F("Too many resets detected. Pausing boot for 30 seconds. Press 'x' to continue..."));
         resetDetector.disarmTimer();
-        delete resetDetector.getTimer();
+        os_timer_delete(resetDetector.getTimer());
         __while(30e3, []() {
             if (Serial.read() == 'x') {
                 resetDetector.clearCounter();

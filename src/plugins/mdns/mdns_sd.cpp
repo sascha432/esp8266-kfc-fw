@@ -59,7 +59,7 @@ void MDNS_setup() {
         http_ptr = strcpy_P(ptr, PSTR("https"));
         ptr += 6;
         MDNS.addService(http_ptr,  tcp_ptr, _Config.get().http_port);
-#    if PING_SUPPORT || HTTP2SERIAL
+#    if PING_MONITOR || HTTP2SERIAL
         // ws_ptr = strcpy_P(ptr, PSTR("wss"));
         ptr += 4;
         MDNS.addService(ws_ptr, tcp_ptr, _Config.get().http_port);
@@ -70,7 +70,7 @@ void MDNS_setup() {
         http_ptr = strcpy_P(ptr, PSTR("http"));
         ptr += 5;
         MDNS.addService(http_ptr, tcp_ptr, config._H_GET(Config().http_port));
-#  if PING_SUPPORT || HTTP2SERIAL
+#  if PING_MONITOR || HTTP2SERIAL
         ws_ptr = strcpy_P(ptr, PSTR("ws"));
         // ptr += 3:
         MDNS.addService(ws_ptr, tcp_ptr, config._H_GET(Config().http_port));

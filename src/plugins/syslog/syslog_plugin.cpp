@@ -14,6 +14,11 @@
 #include "../include/templates.h"
 #include "plugins.h"
 
+#if defined(ESP32)
+#define SYSLOG_PLUGIN_QUEUE_SIZE        4096
+#elif defined(ESP8266)
+#define SYSLOG_PLUGIN_QUEUE_SIZE        512
+#endif
 
 void syslog_process_queue();
 
@@ -32,7 +37,7 @@ void syslog_setup_debug_logger() {
     SyslogFilter *filter = _debug_new SyslogFilter(parameter);
     filter->addFilter(F("*.*"), F(DEBUG_USE_SYSLOG_TARGET));
 
-	SyslogQueue *queue = _debug_new SyslogMemoryQueue(2048);
+	SyslogQueue *queue = _debug_new SyslogMemoryQueue(SYSLOG_PLUGIN_QUEUE_SIZE * 4);
     debugSyslog = _debug_new SyslogStream(filter, queue);
 
     DEBUG_OUTPUT = *debugSyslog;
@@ -68,7 +73,11 @@ void syslog_setup_logger() {
         SyslogFilter *filter = _debug_new SyslogFilter(parameter);
         filter->addFilter(F("*.*"), SyslogFactory::create(filter->getParameter(), (SyslogProtocol)config._H_GET(Config().flags).syslogProtocol, config._H_STR(Config().syslog_host), config._H_GET(Config().syslog_port)));
 
-        SyslogQueue *queue = debugSyslog ? debugSyslog->getQueue() : _debug_new SyslogMemoryQueue(512);
+#if DEBUG_USE_SYSLOG
+        SyslogQueue *queue = debugSyslog ? debugSyslog->getQueue() : _debug_new SyslogMemoryQueue(SYSLOG_PLUGIN_QUEUE_SIZE);
+#else
+        SyslogQueue *queue = _debug_new SyslogMemoryQueue(SYSLOG_PLUGIN_QUEUE_SIZE);
+#endif
         syslog = _debug_new SyslogStream(filter, queue);
 
         _logger.setSyslog(syslog);
@@ -77,18 +86,22 @@ void syslog_setup_logger() {
 }
 
 void syslog_setup() {
+#if DEBUG_USE_SYSLOG
     syslog_setup_debug_logger();
+#endif
     syslog_setup_logger();
 }
 
 void syslog_process_queue() {
     static MillisTimer timer(1000UL);
     if (timer.reached()) {
+#if DEBUG_USE_SYSLOG
         if (debugSyslog) {
             if (debugSyslog->hasQueuedMessages()) {
                 debugSyslog->deliverQueue();
             }
         }
+#endif
         if (syslog) {
             if (syslog->hasQueuedMessages()) {
                 syslog->deliverQueue();
@@ -208,6 +221,7 @@ void syslog_prepare_deep_sleep(uint32_t time, RFMode mode) {
     //TODO the send timeout could be reduces for short sleep intervals
 
     if (WiFi.isConnected()) {
+#if DEBUG_USE_SYSLOG
         if (debugSyslog) {
             ulong timeout = millis() + 2000;    // long timeout in debug mode
             while(debugSyslog->hasQueuedMessages() && millis() < timeout) {
@@ -215,6 +229,7 @@ void syslog_prepare_deep_sleep(uint32_t time, RFMode mode) {
                 delay(1);
             }
         }
+#endif
         if (syslog) {
             ulong timeout = millis() + 150;
             while(syslog->hasQueuedMessages() && millis() < timeout) {

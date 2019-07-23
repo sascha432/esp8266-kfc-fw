@@ -28,7 +28,7 @@ EventTimer::EventTimer(EventScheduler::Callback loopCallback, EventScheduler::Ca
     _callCounter = 0;
     _priority = priority;
 
-    os_timer_create(&_timer, reinterpret_cast<os_timer_func_t_ptr>(EventScheduler::_timerCallback), reinterpret_cast<void *>(this));
+    os_timer_create(_timer, reinterpret_cast<os_timer_func_t_ptr>(EventScheduler::_timerCallback), reinterpret_cast<void *>(this));
     _installTimer();
 }
 
@@ -109,7 +109,7 @@ void EventTimer::changeOptions(int delay, int repeat, EventScheduler::Priority_t
     } else {
         os_timer_disarm(_timer);
         os_timer_delete(_timer);
-        os_timer_create(&_timer, reinterpret_cast<os_timer_func_t_ptr>(EventScheduler::_timerCallback), reinterpret_cast<void *>(this));
+        os_timer_create(_timer, reinterpret_cast<os_timer_func_t_ptr>(EventScheduler::_timerCallback), reinterpret_cast<void *>(this));
     }
     _installTimer();
 }

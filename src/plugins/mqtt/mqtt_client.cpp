@@ -227,7 +227,7 @@ void MQTTClient::onConnect(bool sessionPresent) {
 }
 
 void MQTTClient::onDisconnect(AsyncMqttClientDisconnectReason reason) {
-    _debug_printf_P(PSTR("MQTTClient::onDisconnect(%d): auto reconnect %d\n"), reason, _autoReconnectTimeout);
+    _debug_printf_P(PSTR("MQTTClient::onDisconnect(%d): auto reconnect %d\n"), (int)reason, _autoReconnectTimeout);
     PrintString str;
     if (_autoReconnectTimeout) {
         str.printf_P(PSTR(", reconnecting in %d ms"), _autoReconnectTimeout);

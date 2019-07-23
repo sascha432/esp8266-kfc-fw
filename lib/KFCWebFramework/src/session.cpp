@@ -47,7 +47,7 @@ void free_pepper_and_salt(char *org_salt, char *salt) {
     }
 }
 
-String  generate_session_id(const char *username, const char *password, char *salt) {
+String generate_session_id(const char *username, const char *password, char *salt) {
 
     String sid;
     SESSION_HASH_CLASSNAME hash;

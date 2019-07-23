@@ -11,14 +11,11 @@
 
 #define WiFi_isHidden(num)          WiFi.isHidden(num)
 
-#define String_begin(str, cstr)     char *cstr = str.begin();
-
-
 typedef os_timer_func_t *           os_timer_func_t_ptr;
 
-#define os_timer_create(timerPtr, cb, arg) \
-    *timerPtr = new os_timer_t(); \
-    os_timer_setfn(*timerPtr, cb, arg);
+#define os_timer_create(timer, cb, arg) \
+    timer = new os_timer_t(); \
+    os_timer_setfn(timer, cb, arg);
 
 #define os_timer_delete(timer)      delete timer;
 

@@ -124,7 +124,7 @@
 #endif
 
 #if defined(DEBUG_USE_SYSLOG_HOST) && !defined(DEBUG_USE_SYSLOG)
-#define DEBUG_USE_SYSLOG 1
+#define DEBUG_USE_SYSLOG                1
 #endif
 
 #if DEBUG_USE_SYSLOG
@@ -173,7 +173,7 @@ extern class Stream &MySerial;
 extern class Stream &DebugSerial;
 
 #ifndef SERIAL2TCP
-#define SERIAL2TCP                      1               // connect serial ports to tcp sockets
+#define SERIAL2TCP                      0               // connect serial ports to tcp sockets
 #endif
 #ifndef HTTP2SERIAL_DISABLE_AT_MODE
 #define HTTP2SERIAL_DISABLE_AT_MODE     0
@@ -209,11 +209,7 @@ extern class Stream &DebugSerial;
 #endif
 
 #ifndef HUE_EMULATION
-#define HUE_EMULATION                   1               // replaces WEMO emulation via fauxmoESP@~3.1
-#endif
-
-#ifndef HUE_BASE_PORT
-#define HUE_BASE_PORT                   80
+#define HUE_EMULATION                   0               // HUE emulation for ALEXA
 #endif
 
 #ifndef AUGUST_LOCK_SUPPORT
@@ -254,22 +250,8 @@ extern class Stream &DebugSerial;
 #define WEBSERVER_TLS_SUPPORT           0               // Enable TLS support for the embded web server
 #endif
 
-#ifndef PING_SUPPORT
-#define PING_SUPPORT                    1               // Utility to ping remote hosts
-#endif
-
 #ifndef PING_MONITOR
-#define PING_MONITOR                    1               // Automated pings with statistics
-#endif
-
-#if PING_SUPPORT && !WEBSERVER_SUPPORT
-#undef PING_SUPPORT
-#define PING_SUPPORT 0
-#endif
-#if PING_MONITOR && !PING_SUPPORT
-#warning PING_MONITOR requires PING_SUPPORT. Automatically disabled!
-#undef PING_MONITOR
-#define PING_MONITOR 0
+#define PING_MONITOR                    0               // Automated pings with statistics
 #endif
 
 #ifndef FILE_MANAGER
@@ -308,14 +290,14 @@ extern class Stream &DebugSerial;
 
 #ifndef SERIAL_HANDLER
 #if SERIAL2TCP || HTTP2SERIAL || AT_MODE_SUPPORTED
-#define SERIAL_HANDLER 1
+#define SERIAL_HANDLER                  1
 #else
-#define SERIAL_HANDLER 0
+#define SERIAL_HANDLER                  0
 #endif
 #endif
 
 #ifndef IOT_SWITCH
-#define IOT_SWITCH 0
+#define IOT_SWITCH                      0
 #endif
 
 #ifndef SERIAL_HANDLER_INPUT_BUFFER_MAX

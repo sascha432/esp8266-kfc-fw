@@ -103,7 +103,7 @@ void WiFi_get_status(Print &out) {
             }
 #elif defined(ESP32)
             if (WiFi.isConnected()) {
-                out.printf_P(PSTR("Connected, signal strength %d dBm, channel %d, tx power %s"), WiFi.RSSI(), WiFi.channel(), WiFi_get_tx_power().c_str());
+                out.printf_P(PSTR("Connected, signal strength %d dBm, channel %d, TX power %s"), WiFi.RSSI(), WiFi.channel(), WiFi_get_tx_power().c_str());
                 wifi_country_t country;
                 if (esp_wifi_get_country(&country) == ESP_OK) {
                     out.printf_P(PSTR(", country %.2s"), country.cc);
@@ -126,6 +126,9 @@ void WiFi_get_status(Print &out) {
                         out.print(F("Disconnected"));
                         break;
                 }
+            }
+            if (config._H_GET(Config().flags).stationModeDHCPEnabled) {
+                out.print(F(HTML_S(br) "DHCP client running"));
             }
 #else
 #error Platform not supported

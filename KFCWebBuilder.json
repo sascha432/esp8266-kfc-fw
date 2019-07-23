@@ -28,12 +28,11 @@
             "#if !SYSLOG": "./Resources/html/syslog.html",
             "#if !NTP_CLIENT": [ "./Resources/html/ntp.html", "./Resources/html/timezone.html" ],
             "#if !HTTP2SERIAL": [ "./Resources/html/serial_console.html", "./lib/KFCWebBuilder/Resources/js/selectize.min.js" ],
-            "#if !PING_SUPPORT": "./Resources/html/ping.html",
-            "#if !PING_MONITOR": "./Resources/html/ping_monitor.html",
+            "#if !PING_MONITOR":  [ "./Resources/html/ping.html", "./Resources/html/ping_monitor.html" ],
             "#if !HUE_EMULATION": "./Resources/html/hue.html",
             "#if !REST_API_SUPPORT": "./Resources/html/rest_api.html",
             "#if !HOME_ASSISTANT_INTEGRATION": "./Resources/html/home_assistant.html",
-            "#if !PING_SUPPORT && !HTTP2SERIAL": [
+            "#if !PING_MONITOR && !HTTP2SERIAL": [
                 "./Resources/js/ws_console.js",
                 { "#if !FILE_MANAGER": "./lib/KFCWebBuilder/Resources/js/js.cookie.min.js" }
             ],

@@ -206,10 +206,10 @@ String ConfigTemplate::process(const String &key) {
     } else if (key.startsWith(F("MAX_CHANNELS"))) {
         _return(String(config.getMaxWiFiChannels()));
     } else if (key.startsWith(F("MODE_"))) {
-        _return((config._H_GET(Config().flags).wifiMode == key.substring(5).toInt()) ? SPGM(_selected) : _sharedEmptyString);
+        _return((config._H_GET(Config().flags).wifiMode == key.substring(5).toInt()) ? FSPGM(_selected) : _sharedEmptyString);
     } else if (key.startsWith(F("LED_TYPE_"))) {
         uint8_t type = key.substring(9).toInt();
-        _return(config._H_GET(Config().flags).ledMode == type ? SPGM(_selected) : _sharedEmptyString);
+        _return(config._H_GET(Config().flags).ledMode == type ? FSPGM(_selected) : _sharedEmptyString);
     } else if (key == F("LED_PIN")) {
         _return(String(config._H_GET(Config().led_pin)));
     } else if (key == F("SSL_CERT")) {
@@ -247,7 +247,7 @@ String StatusTemplate::process(const String &key) {
         #if ASYNC_TCP_SSL_ENABLED
             PrintHtmlEntitiesString out;
             #if WEBSERVER_TLS_SUPPORT
-                out.printf_P(PSTR("TLS enabled, HTTPS %s"), _Config.getOptions().isHttpServerTLS() ? PSTR("enabled") : SPGM(Disabled));
+                out.printf_P(PSTR("TLS enabled, HTTPS %s"), _Config.getOptions().isHttpServerTLS() ? F("enabled") : FSPGM(Disabled));
             #else
                 out.printf_P(PSTR("TLS enabled, HTTPS not supported"));
             #endif
@@ -305,7 +305,7 @@ String PasswordTemplate::process(const String &key) {
     if (key == F("PASSWORD_ERROR_MESSAGE")) {
         _return(PrintHtmlEntitiesString(_errorMessage));
     } else if (key == F("PASSWORD_ERROR_CLASS")) {
-        _return((_errorMessage.length() != 0) ? _sharedEmptyString : SPGM(_hidden));
+        _return((_errorMessage.length() != 0) ? _sharedEmptyString : FSPGM(_hidden));
     }
     _return(WebTemplate::process(key));
 }

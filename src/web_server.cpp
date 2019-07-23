@@ -84,13 +84,13 @@ const String web_server_get_status() {
         #if WEBSERVER_TLS_SUPPORT
             out.print(F(", TLS "));
             if (flags.webServerMode == HTTP_MODE_SECURE) {
-                out += SPGM(enabled);
+                out += FSPGM(enabled);
             } else {
-                out += SPGM(disabled);
+                out += FSPGM(disabled);
             }
         #endif
     } else {
-        out += SPGM(disabled);
+        out += FSPGM(disabled);
     }
     return out;
 }

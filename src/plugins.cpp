@@ -44,6 +44,7 @@ PROGMEM_PLUGIN_CONFIG_DECL(hue);
 PROGMEM_PLUGIN_CONFIG_DECL(atomicsun);
 PROGMEM_PLUGIN_CONFIG_DECL(filemgr);
 PROGMEM_PLUGIN_CONFIG_DECL(i2c_scan);
+PROGMEM_PLUGIN_CONFIG_DECL(ssd1306);
 
 void register_all_plugins() {
 
@@ -92,6 +93,10 @@ void register_all_plugins() {
 #if I2CSCANNER_PLUGIN
     register_plugin(SPGM_PLUGIN_CONFIG_P(i2c_scan));
 #endif
+#if SSD1306_PLUGIN
+    register_plugin(SPGM_PLUGIN_CONFIG_P(ssd1306));
+#endif
+
 }
 
 void dump_plugin_list(Print &output) {
@@ -105,7 +110,7 @@ void dump_plugin_list(Print &output) {
     dumper.setStrNullValue(F("<none>"));
 
     dumper.startTable();
-    dumper.addColumn(F("Name"), __defaultLength);
+    dumper.addColumn(F("Name"), __defaultLength + 3);
     dumper.addColumn(F("Priority"), __defaultLength, TableDumperColumn::RIGHT);
     dumper.addColumn(F("Safe mode"), __defaultLength);
     dumper.addColumn(F("Auto Wake-Up"), __defaultLength);

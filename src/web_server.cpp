@@ -9,6 +9,7 @@
 #include <PrintString.h>
 #include <PrintHtmlEntitiesString.h>
 #include <EventScheduler.h>
+#include <StreamString.h>
 #include "progmem_data.h"
 #include "web_server.h"
 #include "rest_api.h"
@@ -237,7 +238,7 @@ void web_server_update_handler(AsyncWebServerRequest *request) {
             // SPIFFS.begin();
 
             config_set_blink(BLINK_SOS);
-            PrintString errorStr;
+            StreamString errorStr;
             Update.printError(errorStr);
             Logger_error(F("Firmware upgrade failed: %s"), errorStr.c_str());
 
@@ -269,7 +270,9 @@ void web_server_update_upload_handler(AsyncWebServerRequest *request, String fil
         if (!index) {
             config_set_blink(BLINK_FLICKER);
 
+#if defined(ESP8266)
             Update.runAsync(true);
+#endif
             size_t size;
             uint8_t command;
 

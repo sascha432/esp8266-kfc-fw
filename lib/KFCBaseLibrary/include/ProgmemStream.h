@@ -25,7 +25,7 @@ public:
     operator void*() const {
         return _content == nullptr ? nullptr : (void *)*this;
     }
-    
+
     virtual int available() override;
     virtual int read() override;
     virtual int peek() override;
@@ -42,6 +42,10 @@ public:
     virtual size_t size() const;
 
     void close();
+
+#if defined(ESP32)
+    virtual void flush() {}
+#endif
 
 protected:
     PGM_P _content;

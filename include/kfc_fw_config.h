@@ -231,6 +231,11 @@ uint8_t WiFi_mode_connected(uint8_t mode = WIFI_AP_STA, uint32_t *station_ip = n
 #ifndef USE_WIFI_SET_EVENT_HANDLER_CB
 #define USE_WIFI_SET_EVENT_HANDLER_CB           1
 #endif
+#if defined(ESP32)
+#if USE_WIFI_SET_EVENT_HANDLER_CB == 0
+#error ESP32 requires USE_WIFI_SET_EVENT_HANDLER_CB=1
+#endif
+#endif
 
 class KFCFWConfiguration : public Configuration {
 public:
@@ -270,7 +275,9 @@ public:
 
 private:
     void _setupWiFiCallbacks();
-#if USE_WIFI_SET_EVENT_HANDLER_CB
+#if defined(ESP32)
+    static void _onWiFiEvent(WiFiEvent_t  event);
+#elif USE_WIFI_SET_EVENT_HANDLER_CB
     static void _onWiFiEvent(System_Event_t *orgEvent);
 #endif
 

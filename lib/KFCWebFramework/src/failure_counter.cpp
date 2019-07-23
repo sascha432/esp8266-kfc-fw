@@ -39,7 +39,7 @@ const time_t FailureCounter::getTimeframe() const {
 
 const bool FailureCounter::isBlocked(const IPAddress &addr) const {
     if (_counter > SECURITY_LOGIN_ATTEMPTS && getTimeframe() <= SECURITY_LOGIN_TIMEFRAME) {
-        debug_printf_P(PSTR("Failed attempt from %s #u, timeframe %u, access blocked\n"), _addr.toString().c_str(), _counter, (unsigned)getTimeframe());
+        debug_printf_P(PSTR("Failed attempt from %s #%u, timeframe %u, access blocked\n"), _addr.toString().c_str(), (unsigned)_counter, (unsigned)getTimeframe());
         return true;
     }
     return false;

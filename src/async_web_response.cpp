@@ -62,7 +62,7 @@ size_t AsyncDirResponse::_fillBuffer(uint8_t *data, size_t len) {
     int16_t result = 0;
     if (_state == 0) {
         FSInfo info;
-        SPIFFS.info(info);
+        SPIFFS_info(info);
 
         _dirName = _dir.getDirName();
         _dirNameLen = _dirName.length();
@@ -263,13 +263,13 @@ size_t AsyncNetworkScanResponse::_fillBuffer(uint8_t *data, size_t len) {
         uint16_t l;
         while (_position < n && space > 0) {
             _strcpy_P_safe(ptr, PSTR("{\"tr_class\":\""), space);
-            if (WiFi.isHidden(_position)) {
+            if (WiFi_isHidden(_position)) {
                 _strcpy_P_safe(ptr, PSTR("table-secondary"), space);
             } else {
                 _strcpy_P_safe(ptr, PSTR("has-network-name\",\"td_class\":\"network-name"), space);
             }
             _strcpy_P_safe(ptr, PSTR("\",\"ssid\":\""), space);
-            if (WiFi.isHidden(_position)) {
+            if (WiFi_isHidden(_position)) {
                 _strcpy_P_safe(ptr, PSTR("<i>HIDDEN</i>"), space);
             }
             else {

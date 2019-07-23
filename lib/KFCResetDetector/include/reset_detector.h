@@ -13,6 +13,7 @@
 #if defined(ESP8266)
 #include <osapi.h>
 #include <user_interface.h>
+#elif defined(ESP32)
 #elif _WIN32 || _WIN64
 #else
 #error Platform not supported
@@ -22,7 +23,11 @@
 
 #define RESET_DETECTOR_TIMEOUT              5000
 #ifndef USE_ESP_GET_RESET_REASON
+#if defined(ESP8266)
 #define USE_ESP_GET_RESET_REASON            1
+#else
+#define USE_ESP_GET_RESET_REASON            0
+#endif
 #endif
 
 #if HAVE_KFC_PLUGINS

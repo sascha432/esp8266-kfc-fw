@@ -114,7 +114,11 @@ bool Configuration::write() {
         if (parameter.isDirty()) {
             _eepromPtr.push_back(nullptr);
         } else {
+#if defined(ESP32)
+            _eepromPtr.push_back(EEPROM.getDataPtr() + dataOffset);
+#else
             _eepromPtr.push_back(EEPROM.getConstDataPtr() + dataOffset);
+#endif
         }
         dataOffset += parameter.getParam().length;
     }
@@ -301,7 +305,7 @@ void Configuration::dumpEEPROM(Print & output, bool asByteArray, uint16_t offset
     if (asByteArray) {
         uint16_t pos = offset;
         while (pos < _eepromSize) {
-            output.printf_P(PSTR("0x%02x, "), EEPROM[pos]);
+            output.printf_P(PSTR("0x%02x, "), EEPROM.read(pos));
             if (++pos % (76 / 6) == 0) {
                 output.println();
             }
@@ -311,7 +315,11 @@ void Configuration::dumpEEPROM(Print & output, bool asByteArray, uint16_t offset
         output.printf_P(PSTR("%d,\n"), _eepromSize);
     } else {
         DumpBinary dumper(output);
+#if defined(ESP32)
+        dumper.dump(EEPROM.getDataPtr() + offset, length);
+#else
         dumper.dump(EEPROM.getConstDataPtr() + offset, length);
+#endif
     }
     EEPROM.end();
 }
@@ -343,8 +351,8 @@ void Configuration::release() {
 }
 
 bool Configuration::isDirty() const {
-    for (auto it = _params.begin(); it != _params.end(); ++it) {
-        if (it->isDirty()) {
+    for(const auto &param: _params) {
+        if (param.isDirty()) {
             return true;
         }
     }
@@ -370,7 +378,7 @@ void Configuration::commitEEPROM() {
     }
 }
 
-#if ESP8266
+#if defined(ESP8266)
 
 // if the EEPROM is not intialized, copy data from flash directly
 
@@ -428,7 +436,12 @@ void Configuration::getEEPROM(uint8_t *dst, uint16_t offset, uint16_t length, ui
 
 void Configuration::getEEPROM(uint8_t *dst, uint16_t offset, uint16_t length, uint16_t size) {
     beginEEPROM();
+#if defined(ESP32)
+    //TODO esp32 read from flash
+    memcpy(dst, EEPROM.getDataPtr() + offset, length);
+#else
     memcpy(dst, EEPROM.getConstDataPtr() + offset, length);
+#endif
 }
 
 #endif
@@ -522,7 +535,11 @@ bool Configuration::_readParams() {
         _eepromSize = _offset + sizeof(hdr.header) + hdr.header.length;
         beginEEPROM();
 
+#if defined(ESP32)
+        uint16_t crc = crc16_calc(EEPROM.getDataPtr() + _offset + sizeof(hdr.header), hdr.header.length);
+#else
         uint16_t crc = crc16_calc(EEPROM.getConstDataPtr() + _offset + sizeof(hdr.header), hdr.header.length);
+#endif
         if (hdr.header.crc != crc) {
             _debug_printf_P(PSTR("Configuration::_readParams(): CRC mismatch %04x != %04x\n"), crc, hdr.header.crc);
             break;

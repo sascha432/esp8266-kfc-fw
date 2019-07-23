@@ -12,13 +12,33 @@
 #include "debug_helper_disable.h"
 #endif
 
+#if defined(ESP8266)
+
+#define system_rtc_mem_read                     ESP.rtcUserMemoryRead
+#define system_rtc_mem_write                    ESP.rtcUserMemoryWrite
+
+#elif defined(ESP32)
+
+RTC_DATA_ATTR uint8_t RTCMemoryManager_allocated_block[RTCMemoryManager::__memorySize];
+
+bool system_rtc_mem_read(size_t ofs, uint32_t *data, size_t len) {
+    memcpy(data, RTCMemoryManager_allocated_block + ofs * RTCMemoryManager::__blockSize, len);
+    return true;
+}
+
+bool system_rtc_mem_write(size_t ofs, uint32_t *data, size_t len) {
+    memcpy(RTCMemoryManager_allocated_block + ofs * RTCMemoryManager::__blockSize, data, len);
+    return true;
+}
+
+#endif
 
 bool RTCMemoryManager::_readHeader(RTCMemoryManager::Header_t &header, uint32_t &offset, uint16_t &length) {
 
     bool result = false;
     offset = __headerOffset;
 
-    if (ESP.rtcUserMemoryRead(offset / __blockSize, (uint32_t *)&header, sizeof(header))) {
+    if (system_rtc_mem_read(offset / __blockSize, (uint32_t *)&header, sizeof(header))) {
         if (header.length == 0) {
             _debug_printf_P(PSTR("RTC memory: Empty\n"));
         } else if (header.length & __blockSizeMask) {
@@ -49,7 +69,7 @@ uint32_t *RTCMemoryManager::_readMemory(uint16_t &length) {
         uint16_t size = __memorySize - offset;
         memPtr = (uint32_t *)calloc(1, size);
         uint16_t crc = -1;
-        if (!ESP.rtcUserMemoryRead(offset / __blockSize, memPtr, size) || ((crc = crc16_calc((const uint8_t *)memPtr, header.length + sizeof(header) - sizeof(header.crc))) != header.crc)) {
+        if (!system_rtc_mem_read(offset / __blockSize, memPtr, size) || ((crc = crc16_calc((const uint8_t *)memPtr, header.length + sizeof(header) - sizeof(header.crc))) != header.crc)) {
             _debug_printf(PSTR("RTC memory: CRC mismatch %04x != %04x, length %d\n"), crc, header.crc, size);
             free(memPtr);
             return nullptr;
@@ -235,7 +255,7 @@ bool RTCMemoryManager::write(uint8_t id, void *dataPtr, uint8_t dataLength) {
 
     // update CRC in newData and store
     *(uint16_t *)(newData.get() + crcPosition) = crc16_calc(newData.get(), header.length + sizeof(header) - sizeof(header.crc));
-    auto result = ESP.rtcUserMemoryWrite((__memorySize - newData.length()) / __blockSize, (uint32_t *)newData.get(), newData.length());
+    auto result = system_rtc_mem_write((__memorySize - newData.length()) / __blockSize, (uint32_t *)newData.get(), newData.length());
 
     //ESP.rtcMemDump();
 
@@ -243,14 +263,22 @@ bool RTCMemoryManager::write(uint8_t id, void *dataPtr, uint8_t dataLength) {
 }
 
 bool RTCMemoryManager::clear() {
+#if defined(ESP8266)
+
     uint8_t blocks = sizeof(Header_t) / __blockSize;
     uint32_t offset = __headerAddress;
     uint32_t data = 0;
     while (blocks--) {
-        if (!ESP.rtcUserMemoryWrite(offset++, &data, sizeof(data))) {
+        if (!system_rtc_mem_write(offset++, &data, sizeof(data))) {
             return false;
         }
     }
+
+#elif defined(ESP32)
+
+    memset(RTCMemoryManager_allocated_block, 0, sizeof(RTCMemoryManager_allocated_block));
+
+#endif
     return true;
 }
 

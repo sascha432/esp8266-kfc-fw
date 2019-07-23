@@ -29,7 +29,11 @@ public:
     virtual size_t write(uint8_t data) override;
     virtual size_t write(const uint8_t *data, size_t len) override;
     virtual size_t write(const char *buffer);
+#if defined(ESP32)
+    virtual void flush();
+#else
     virtual void flush() override;
+#endif
 
     virtual int available() override {
         return _serial.available();
@@ -40,6 +44,7 @@ public:
     virtual int peek() override {
         return _serial.peek();
     }
+
 
 private:
     Stream &_serial;
@@ -110,8 +115,13 @@ public:
     virtual size_t write(uint8_t) override { return 0; }
     virtual size_t write(const uint8_t *buffer, size_t size) override { return 0; }
     bool seek(uint32_t pos, SeekMode mode) { return false; }
+#if defined(ESP32)
+    virtual void flush() { }
+#else
+    virtual void flush() override { }
     virtual size_t position() const { return 0; }
     virtual size_t size() const { return 0; }
+#endif
 };
 
 extern StreamWrapper MySerialWrapper;

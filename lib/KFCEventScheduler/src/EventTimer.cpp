@@ -28,7 +28,7 @@ EventTimer::EventTimer(EventScheduler::Callback loopCallback, EventScheduler::Ca
     _callCounter = 0;
     _priority = priority;
 
-    _timer = _debug_new os_timer_t();
+    os_timer_create(&_timer, reinterpret_cast<os_timer_func_t_ptr>(EventScheduler::_timerCallback), reinterpret_cast<void *>(this));
     _installTimer();
 }
 
@@ -53,7 +53,7 @@ void EventTimer::_installTimer() {
     } else {
         _remainingDelay = 0;
     }
-    os_timer_setfn(_timer, reinterpret_cast<os_timer_func_t *>(EventScheduler::_timerCallback), reinterpret_cast<void *>(this));
+
     os_timer_arm(_timer, max(MIN_DELAY, (int32_t)(_remainingDelay ? MAX_DELAY : _delay)), (_remainingDelay || _repeat) ? 1 : 0);
 #if DEBUG_EVENT_SCHEDULER
     if (_start) {
@@ -107,7 +107,9 @@ void EventTimer::changeOptions(int delay, int repeat, EventScheduler::Priority_t
         }
         os_timer_disarm(_timer);
     } else {
-        _timer = _debug_new os_timer_t();
+        os_timer_disarm(_timer);
+        os_timer_delete(_timer);
+        os_timer_create(&_timer, reinterpret_cast<os_timer_func_t_ptr>(EventScheduler::_timerCallback), reinterpret_cast<void *>(this));
     }
     _installTimer();
 }
@@ -151,7 +153,7 @@ void EventTimer::detach() {
     if (_timer) {
         _debug_printf_P(PSTR("EventTimer::detach(): %p\n"), _timer);
         os_timer_disarm(_timer);
-        delete _timer;
+        os_timer_delete(_timer);
         _timer = nullptr;
     }
 }

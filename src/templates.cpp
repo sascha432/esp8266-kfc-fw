@@ -61,14 +61,16 @@ String WebTemplate::process(const String &key) {
     if (key.equals(F("HOSTNAME"))) {
         PrintHtmlEntitiesString out(config._H_STR(Config().device_name));
         _return(out);
-#if ESP8266
     } else if (key == F("HARDWARE")) {
         PrintHtmlEntitiesString out;
+#if defined(ESP8266)
         out.printf_P(PSTR("ESP8266 %s Flash, %d Mhz, Free RAM %s"), formatBytes(ESP.getFlashChipRealSize()).c_str(), system_get_cpu_freq(), formatBytes(ESP.getFreeHeap()).c_str());
-        _return(out);
+#elif defined(ESP32)
+        out.printf_P(PSTR("ESP32 %s Flash, %d Mhz, Free RAM %s"), formatBytes(ESP.getFlashChipSize()).c_str(), ESP.getCpuFreqMHz(), formatBytes(ESP.getFreeHeap()).c_str());
 #else
 #error Platform not supported
 #endif
+        _return(out);
     } else if (key == F("SOFTWARE")) {
         PrintHtmlEntitiesString out = F("KFC FW ");
         out += config.getFirmwareVersion();
@@ -285,7 +287,7 @@ String StatusTemplate::process(const String &key) {
         _return(out);
     } else if (key == F("WIFI_HOSTNAME")) {
         PrintHtmlEntitiesString out;
-        out.print(wifi_station_get_hostname());
+        out.print(WiFi.getHostname());
         _return(out);
     } else if (key == F("WIFI_STATUS")) {
         PrintHtmlEntitiesString out;
@@ -329,7 +331,14 @@ WifiSettingsForm::WifiSettingsForm(AsyncWebServerRequest *request) : SettingsFor
     addValidator(new FormRangeValidator(1, config.getMaxWiFiChannels()));
 
     add<uint8_t>(F("encryption"), &config._H_W_GET(Config().soft_ap.encryption));
+#if defined(ESP32)
+    addValidator(new FormEnumValidator<uint8_t, 6>(F("Invalid encryption"), array_of<uint8_t>(WIFI_AUTH_OPEN, WIFI_AUTH_WEP, WIFI_AUTH_WPA_PSK, WIFI_AUTH_WPA2_PSK, WIFI_AUTH_WPA_WPA2_PSK, WIFI_AUTH_WPA2_ENTERPRISE)));
+#elif defined(ESP8266)
     addValidator(new FormEnumValidator<uint8_t, 5>(F("Invalid encryption"), array_of<uint8_t>(ENC_TYPE_NONE, ENC_TYPE_TKIP, ENC_TYPE_WEP, ENC_TYPE_CCMP, ENC_TYPE_AUTO)));
+#else
+#error Platform not supported
+#endif
+
 
     add<bool>(F("ap_hidden"), _H_STRUCT_FORMVALUE(Config().flags, bool, hiddenSSID), FormField::INPUT_CHECK);
 

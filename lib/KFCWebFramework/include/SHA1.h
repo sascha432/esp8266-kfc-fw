@@ -6,11 +6,34 @@
 
 #include <Arduino.h>
 #if ESP32
+
+//TODO esp32
+class SHA1
+{
+public:
+    SHA1() {
+        reset();
+    }
+
+    size_t hashSize() const {
+        return 20;
+    }
+
+    void reset() {
+    }
+    void update(const void *data, size_t len) {
+    }
+    void finalize(void *hash, size_t len) {
+    }
+
+private:
+};
+
 #else
+
 extern "C" {
-#include "sha1/sha1.h"
+    #include "sha1/sha1.h"
 }
-#endif
 
 class SHA1
 {
@@ -43,3 +66,5 @@ public:
 private:
     SHA1_CTX context;
 };
+
+#endif

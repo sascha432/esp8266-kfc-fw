@@ -3,7 +3,7 @@
  */
 
 /**
- * Quick and dirty library to compile ESP8266 code with MSVC++ as native Win32 Console Application
+ * Quick and dirty library to compile ESP8266 and ESP32 code with MSVC++ as native Win32 Console Application
  */
 
 #pragma once
@@ -24,27 +24,21 @@
 #include <WiFi.h>
 #include <FS.h>
 
-#include <esp_timer.h>
-typedef struct esp_timer os_timer_t;
-#define os_timer_disarm esp_timer_stop
-
-#include <esp_wifi.h>
-#define wifi_get_country esp_wifi_get_country
-
-#include <esp_wifi_types.h>
-typedef wifi_err_reason_t WiFiDisconnectReason;
-
+#include "esp32_compat.h"
 
 #define PROGMEM_STRING_DECL(name)               extern const char _shared_progmem_string_##name[] PROGMEM;
 #define PROGMEM_STRING_DEF(name, value)         const char _shared_progmem_string_##name[] PROGMEM = { value };
 
+class __FlashStringHelper;
+
 #define SPGM(name)                              _shared_progmem_string_##name
-#define FSPGM(name)                             FPSTR(SPGM(name))
+#define FSPGM(name)                             reinterpret_cast<const __FlashStringHelper *>(SPGM(name))
 #define PSPGM(name)                             (PGM_P)(SPGM(name))
 
-#define constexpr_strlen strlen
-#define constexpr_strlen_P strlen_P
+#define constexpr_strlen                        strlen
+#define constexpr_strlen_P                      strlen_P
 
+#include "debug_helper.h"
 #include "misc.h"
 
 #elif defined(ESP8266)
@@ -56,6 +50,8 @@ typedef wifi_err_reason_t WiFiDisconnectReason;
 #include <WiFiUdp.h>
 #include <FS.h>
 
+#include "esp8266_compat.h"
+
 #define PROGMEM_STRING_DECL(name)               extern const char _shared_progmem_string_##name[] PROGMEM;
 #define PROGMEM_STRING_DEF(name, value)         const char _shared_progmem_string_##name[] PROGMEM = { value };
 
@@ -63,8 +59,8 @@ typedef wifi_err_reason_t WiFiDisconnectReason;
 #define FSPGM(name)                             FPSTR(SPGM(name))
 #define PSPGM(name)                             (PGM_P)(SPGM(name))
 
-#define constexpr_strlen strlen
-#define constexpr_strlen_P strlen_P
+#define constexpr_strlen                        strlen
+#define constexpr_strlen_P                      strlen_P
 
 #include "debug_helper.h"
 #include "misc.h"

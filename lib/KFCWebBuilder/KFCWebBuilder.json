@@ -7,7 +7,7 @@
         "#else": "Unknown"
     },
     "configuration": {
-        "run_command_on_success": "${path.current_config}/../../scripts/vfs_builder/run.bat ; ${commands.pio_upload_spiffs}",
+        "run_command_on_success": "${path.current_config}/../../lib/KFCVirtualFileSystem/vfs_builder/run.bat ; ${commands.pio_upload_spiffs}",
         //  "run_command_on_success": "${commands.pio_upload_spiffs}",
         "scanner_database_dir": "${path.sys_temp_dir}",
         "package_hash_file": "${path.shared_temp_dir}/kfcfw-package.hash"

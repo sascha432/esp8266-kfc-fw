@@ -18,7 +18,8 @@ void WiFi_get_address(Print &out) {
         if (mode & WIFI_AP) {
             out.print(F("Client IP "));
         }
-        if (wifi_station_get_connect_status() == STATION_GOT_IP) {
+        if (WiFi.isConnected()) {
+        // if (wifi_station_get_connect_status() == STATION_GOT_IP) {
             WiFi.localIP().printTo(out);
         } else {
             out.print(F(HTML_S(i) "Offline" HTML_E(i)));
@@ -33,11 +34,32 @@ void WiFi_get_address(Print &out) {
     }
 }
 
+#if defined(ESP32)
+String WiFi_get_tx_power() {
+    switch(WiFi.getTxPower()) {
+        case WIFI_POWER_19_5dBm: return F("19.5dBm");
+        case WIFI_POWER_19dBm: return F("19dBm");
+        case WIFI_POWER_18_5dBm: return F("18.5dBm");
+        case WIFI_POWER_17dBm: return F("17dBm");
+        case WIFI_POWER_15dBm: return F("15dBm");
+        case WIFI_POWER_13dBm: return F("13dBm");
+        case WIFI_POWER_11dBm: return F("11dBm");
+        case WIFI_POWER_8_5dBm: return F("8.5dBm");
+        case WIFI_POWER_7dBm: return F("7dBm");
+        case WIFI_POWER_5dBm: return F("5dBm");
+        case WIFI_POWER_2dBm: return F("2dBm");
+        case WIFI_POWER_MINUS_1dBm: return F("-1dBm");
+    }
+    return F("Unknown");
+}
+#endif
+
 void WiFi_get_status(Print &out) {
     uint8_t mode = WiFi.getMode();
     if (mode & WIFI_STA) {
 
         out.printf_P(PSTR(HTML_S(strong) "Station:" HTML_E(strong) HTML_S(br)));
+#if defined(ESP8266)
         switch (wifi_station_get_connect_status()) {
             case STATION_GOT_IP:
                 out.printf_P(PSTR("Connected, signal strength %d dBm, channel %d, PHY mode "), WiFi.RSSI(), WiFi.channel());
@@ -79,6 +101,35 @@ void WiFi_get_status(Print &out) {
             if (wifi_station_dhcpc_status() == DHCP_STARTED) {
                 out.print(F(HTML_S(br) "DHCP client running"));
             }
+#elif defined(ESP32)
+            if (WiFi.isConnected()) {
+                out.printf_P(PSTR("Connected, signal strength %d dBm, channel %d, tx power %s"), WiFi.RSSI(), WiFi.channel(), WiFi_get_tx_power().c_str());
+                wifi_country_t country;
+                if (esp_wifi_get_country(&country) == ESP_OK) {
+                    out.printf_P(PSTR(", country %.2s"), country.cc);
+                }
+            } else {
+                switch(WiFi.status()) {
+                    case WL_NO_SSID_AVAIL:
+                        out.print(F("No SSID available"));
+                        break;
+                    case WL_CONNECT_FAILED:
+                        out.print(F("Connect failed"));
+                        break;
+                    case WL_CONNECTION_LOST:
+                        out.print(F("Connection lost"));
+                        break;
+                    case WL_IDLE_STATUS:
+                        out.print(F("Idle"));
+                        break;
+                    default:
+                        out.print(F("Disconnected"));
+                        break;
+                }
+            }
+#else
+#error Platform not supported
+#endif
             out.print(F(HTML_S(br) "IP Address/Network "));
             WiFi.localIP().printTo(out);
             out.print(FSPGM(slash));
@@ -94,6 +145,8 @@ void WiFi_get_status(Print &out) {
     if (mode & WIFI_AP_STA) {
         out.print(F(HTML_NEW_2COL_ROW));
     }
+
+#if defined(ESP8266)
     if (mode & WIFI_AP) {
         ip_info if_cfg;
 
@@ -147,11 +200,26 @@ void WiFi_get_status(Print &out) {
         }
         wifi_softap_free_station_info();
     }
+#elif defined(ESP32)
+    if (mode & WIFI_AP) {
+        out.print(F(HTML_S(strong) "Access point:" HTML_E(strong) HTML_S(br)));
+        out.print(F("IP Address "));
+        WiFi.softAPIP().printTo(out);
+        out.printf_P(PSTR(HTML_S(br) "Clients connected %d" HTML_S(br)), WiFi.softAPgetStationNum());
+
+        //TODO esp32
+        // see code for esp8266
+
+    }
+#else
+#error Platform not supported
+#endif
 }
 
 
 void WiFi_Station_SSID(Print &out) {
-    if (wifi_station_get_connect_status() == STATION_GOT_IP) {
+    if (WiFi.isConnected()) {
+    //if (wifi_station_get_connect_status() == STATION_GOT_IP) {
         out.print(WiFi.SSID());
     } else {
         out.print(config._H_STR(Config().wifi_ssid));
@@ -159,15 +227,20 @@ void WiFi_Station_SSID(Print &out) {
 }
 
 void WiFi_SoftAP_SSID(Print &out) {
+#if defined(ESP32)
+    if (false) {
+        //TODO esp32
+    }
+#elif defined(ESP8266)
     softap_config config;
     if (wifi_softap_get_config(&config)) {
-        for (uint8_t i = 0; i < config.ssid_len; i++) {
-            out.write(config.ssid[i]);
-        }
+        out.write(config.ssid, config.ssid_len);
         if (config.ssid_hidden) {
             out.print(F(" (" HTML_S(i) "HIDDEN" HTML_E(i) ")"));
         }
-    } else {
+    }
+#endif
+    else {
         out.print(F("*Unavailable*"));
     }
 }

@@ -1,5 +1,5 @@
 # esp8266-kfc-fw
-Firmware for ESP8266 and IoT devices
+Firmware for ESP8266/ESP32 and IoT devices
 
 The firmware offers a plugin interface to easily extend its functionality. The plugins can be configured via web interface and have access to the network, file system, logging, serial console, I2C bus, GPIO, EEPROM, RTC memory etc... via API functions. Support for deep sleep and WiFi quick connect (~250-300ms) after wake up.
 

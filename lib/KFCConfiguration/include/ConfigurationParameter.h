@@ -126,13 +126,13 @@ public:
 
     template <typename T>
     static TypeEnum_t constexpr getType() {
-        return std::is_same<T, char *>::value ? STRING : 
-            (std::is_same<T, float>::value ? FLOAT : 
-                (std::is_same<T, double>::value ? DOUBLE : 
-                    ((std::is_same<T, char>::value || std::is_same<T, signed char>::value || std::is_same<T, unsigned char>::value) ? BYTE : 
-                        ((std::is_same<T, int16_t>::value || std::is_same<T, uint16_t>::value) ? WORD : 
-                            ((std::is_same<T, int32_t>::value || std::is_same<T, uint32_t>::value) ? DWORD : 
-                                ((std::is_same<T, int64_t>::value || std::is_same<T, uint64_t>::value) ? QWORD : 
+        return std::is_same<T, char *>::value ? STRING :
+            (std::is_same<T, float>::value ? FLOAT :
+                (std::is_same<T, double>::value ? DOUBLE :
+                    ((std::is_same<T, char>::value || std::is_same<T, signed char>::value || std::is_same<T, unsigned char>::value) ? BYTE :
+                        ((std::is_same<T, int16_t>::value || std::is_same<T, uint16_t>::value) ? WORD :
+                            ((std::is_same<T, int32_t>::value || std::is_same<T, uint32_t>::value) ? DWORD :
+                                ((std::is_same<T, int64_t>::value || std::is_same<T, uint64_t>::value) ? QWORD :
                                     BINARY
         ))))));
     }
@@ -150,6 +150,14 @@ public:
     uint16_t read(Configuration *conf, uint16_t offset);
 
     void dump(Print &output);
+
+    inline Handle_t getHandle() const {
+        return _param.handle;
+    }
+
+    inline uint16_t getLength() const {
+        return _param.length;
+    }
 
     inline Param_t &getParam() {
         return _param;

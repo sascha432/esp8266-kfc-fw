@@ -39,7 +39,13 @@ KFCFWConfiguration::~KFCFWConfiguration() {
     LoopFunctions::remove(KFCFWConfiguration::loop);
 }
 
-#if USE_WIFI_SET_EVENT_HANDLER_CB
+#if defined(ESP32)
+
+void KFCFWConfiguration::_onWiFiEvent(WiFiEvent_t  event) {
+    //TODO
+}
+
+#elif USE_WIFI_SET_EVENT_HANDLER_CB
 
 void KFCFWConfiguration::_onWiFiEvent(System_Event_t *orgEvent) {
     //event->event_info.connected
@@ -186,7 +192,11 @@ static void __softAPModeStationDisconnectedCb(const WiFiEventSoftAPModeStationDi
 void KFCFWConfiguration::_setupWiFiCallbacks() {
     _debug_println(F("KFCFWConfiguration::_setupWiFiCallbacks()"));
 
-#if USE_WIFI_SET_EVENT_HANDLER_CB
+#if defined(ESP32)
+
+//TODO esp32
+
+#elif USE_WIFI_SET_EVENT_HANDLER_CB
 
     wifi_set_event_handler_cb((wifi_event_handler_cb_t)&KFCFWConfiguration::_onWiFiEvent);
 
@@ -225,8 +235,9 @@ void KFCFWConfiguration::restoreFactorySettings() {
     flags.useStaticIPDuringWakeUp = true;
     _H_SET(Config().flags, flags);
 
+
     uint8_t mac[6];
-    wifi_get_macaddr(STATION_IF, mac);
+    WiFi.macAddress(mac);
     str.printf_P(PSTR("KFC%02X%02X%02X"), mac[3], mac[4], mac[5]);
     _H_SET_STR(Config().device_name, str);
     const char *defaultPassword = PSTR("12345678");
@@ -245,7 +256,11 @@ void KFCFWConfiguration::restoreFactorySettings() {
     _H_SET_IP(Config().soft_ap.gateway, IPAddress(192, 168, 4, 1));
     _H_SET_IP(Config().soft_ap.dhcp_start, IPAddress(192, 168, 4, 2));
     _H_SET_IP(Config().soft_ap.dhcp_end, IPAddress(192, 168, 4, 100));
+#if defined(ESP32)
+    _H_SET(Config().soft_ap.encryption, WIFI_AUTH_WPA2_PSK);
+#elif defined(ESP8266)
     _H_SET(Config().soft_ap.encryption, ENC_TYPE_CCMP);
+#endif
     _H_SET(Config().soft_ap.channel, 7);
 
 #if WEBSERVER_TLS_SUPPORT
@@ -367,6 +382,7 @@ void KFCFWConfiguration::storeStationConfig(uint32_t ip, uint32_t netmask, uint3
         (wifi_station_dhcpc_status() == DHCP_STARTED)
     );
 
+
     WiFiQuickConnect_t quickConnect;
     if (RTCMemoryManager::read(CONFIG_RTC_MEM_ID, &quickConnect, sizeof(quickConnect))) {
         quickConnect.local_ip = ip;
@@ -395,7 +411,6 @@ void KFCFWConfiguration::setup() {
     rng.begin(version.c_str());
     uint8_t mac[WL_MAC_ADDR_LENGTH];
     rng.stir(WiFi.macAddress(mac), WL_MAC_ADDR_LENGTH);
-    rng.stir(WiFi.BSSID(), WL_MAC_ADDR_LENGTH);
     auto channel = WiFi.channel();
     rng.stir((const uint8_t *)&channel, sizeof(channel));
     rng.stir((const uint8_t *)&config, sizeof(config));
@@ -437,8 +452,14 @@ void KFCFWConfiguration::write() {
 void KFCFWConfiguration::wakeUpFromDeepSleep() {
     _debug_println(F("KFCFWConfiguration::wakeUpFromDeepSleep()"));
 
+#if defined(ESP32)
+    wifi_config_t _config;
+    wifi_sta_config_t &config = _config.sta;
+    if (esp_wifi_get_config(ESP_IF_WIFI_STA, &_config) == ESP_OK) {
+#elif defined(ESP8266)
     struct station_config config;
     if (wifi_station_get_config_default(&config)) {
+#endif
         int32_t channel;
         uint8_t *bssidPtr;
         WiFiQuickConnect_t quickConnect;
@@ -511,7 +532,11 @@ void KFCFWConfiguration::enterDeepSleep(uint32_t time_in_ms, RFMode mode, uint16
     // save current time to restore when waking up
     ntp_client_prepare_deep_sleep(time_in_ms);
 #endif
+#if defined(ESP8266)
     ESP.deepSleep(time_in_ms * 1000ULL, mode);
+#else
+    ESP.deepSleep(time_in_ms * 1000UL);
+#endif
 }
 
 void KFCFWConfiguration::restartDevice() {
@@ -537,6 +562,22 @@ uint8_t KFCFWConfiguration::getMaxWiFiChannels() {
 }
 
 String KFCFWConfiguration::getWiFiEncryptionType(uint8_t type) {
+#if defined(ESP32)
+    switch(type) {
+        case WIFI_AUTH_OPEN:
+            return F("open");
+        case WIFI_AUTH_WEP:
+            return F("WEP");
+        case WIFI_AUTH_WPA_PSK:
+            return F("WPA/PSK");
+        case WIFI_AUTH_WPA2_PSK:
+            return F("WPA2/PSK");
+        case WIFI_AUTH_WPA_WPA2_PSK:
+            return F("WPA/WPA2/PSK");
+        case WIFI_AUTH_WPA2_ENTERPRISE:
+            return F("WPA2/ENTERPRISE");
+    }
+#else
     switch(type) {
         case ENC_TYPE_NONE:
             return F("open");
@@ -549,6 +590,7 @@ String KFCFWConfiguration::getWiFiEncryptionType(uint8_t type) {
         case ENC_TYPE_AUTO:
             return F("auto");
     }
+#endif
     return F("N/A");
 }
 
@@ -583,7 +625,8 @@ bool KFCFWConfiguration::connectWiFi() {
     bool station_mode_success = false;
     bool ap_mode_success = false;
 
-    WiFi.hostname(config._H_STR(Config().device_name));
+    WiFi.setHostname(config._H_STR(Config().device_name));
+    // WiFi.hostname(config._H_STR(Config().device_name));
 
     auto flags = config._H_GET(Config().flags);
     if (flags.wifiMode & WIFI_STA) {
@@ -630,6 +673,8 @@ bool KFCFWConfiguration::connectWiFi() {
             Logger_error(message);
         } else {
 
+#if defined(ESP8266)
+
             // setup after WiFi.softAPConfig()
             struct dhcps_lease dhcp_lease;
             wifi_softap_dhcps_stop();
@@ -655,6 +700,8 @@ bool KFCFWConfiguration::connectWiFi() {
                 }
             }
 
+#endif
+
             if (!WiFi.softAP(config._H_STR(Config().soft_ap.wifi_ssid), config._H_STR(Config().soft_ap.wifi_pass), config._H_GET(Config().soft_ap.channel), flags.hiddenSSID)) {
                 String message = F("Cannot start AP mode");
                 setLastError(message);
@@ -677,7 +724,7 @@ bool KFCFWConfiguration::connectWiFi() {
 }
 
 void KFCFWConfiguration::printVersion(Print &output) {
-    output.printf_P(PSTR("KFC Firmware %s\nFlash size %s\n"), KFCFWConfiguration::getFirmwareVersion().c_str(), formatBytes(ESP.getFlashChipRealSize()).c_str());
+    output.printf_P(PSTR("KFC Firmware %s\nFlash size %s\n"), KFCFWConfiguration::getFirmwareVersion().c_str(), formatBytes(ESP.getFlashChipSize()).c_str());
     if (resetDetector.getSafeMode()) {
         Logger_notice(FSPGM(safe_mode_enabled));
         output.println(FSPGM(safe_mode_enabled));

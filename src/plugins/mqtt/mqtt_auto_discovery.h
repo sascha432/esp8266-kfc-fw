@@ -4,6 +4,8 @@
 
 #pragma once
 
+#if MQTT_SUPPORT
+
 #include <Arduino_compat.h>
 #include <PrintString.h>
 
@@ -32,3 +34,5 @@ private:
     PrintString _discovery;
     String _topic;
 };
+
+#endif

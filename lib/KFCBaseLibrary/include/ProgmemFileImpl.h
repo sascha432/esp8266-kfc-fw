@@ -16,20 +16,42 @@ public:
     virtual size_t write(const uint8_t *, size_t) override  {
         return 0;
     }
-    virtual void flush() override {
+    virtual void flush() {
     }
 
     virtual bool seek(uint32_t pos, SeekMode mode);
-    virtual size_t position() const override;
-    virtual size_t size() const override;
+    virtual size_t position() const;
+    virtual size_t size() const;
 
-    virtual void close() override {
+    virtual void close() {
         _stream.close();
     }
 
     virtual const char *name() const;
 
-#if  defined(ARDUINO_ESP8266_RELEASE_2_5_2)
+#if defined(ESP32)
+
+    virtual time_t getLastWrite() {
+        return 0;
+    }
+
+    virtual boolean isDirectory(void) {
+        return false;
+    }
+
+    virtual fs::FileImplPtr openNextFile(const char* mode) {
+        return nullptr;
+    }
+
+    virtual void rewindDirectory(void) {
+    }
+
+    virtual operator bool() {
+        return (bool)_stream;
+    }
+
+
+#elif defined(ARDUINO_ESP8266_RELEASE_2_5_2)
 
     virtual bool truncate(uint32_t size) override {
         return false;

@@ -266,7 +266,7 @@ uint16_t FileManager::upload() {
 
         } else if (SPIFFSWrapper::rename((char *)_request->_tempObject, filename)) {
 
-            _debug_printf_P(PSTR("Renamed upload %s to %s\n"), _request->_tempObject, filename.c_str());
+            _debug_printf_P(PSTR("Renamed upload %s to %s\n"), (char *)_request->_tempObject, filename.c_str());
             AsyncFileUploadWebHandler::markTemporaryFileAsProcessed(_request);
 
             success = true;
@@ -382,7 +382,7 @@ uint16_t FileManager::rename() {
         message += requestFilename;
     } else {
         FSInfo info;
-        SPIFFS.info(info);
+        SPIFFS_info(info);
         String renameFrom = file.name();
         file.close();
 

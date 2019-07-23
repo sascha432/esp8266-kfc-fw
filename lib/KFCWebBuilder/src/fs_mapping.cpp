@@ -415,5 +415,5 @@ bool SPIFFSWrapper::remove(const char *path) {
 }
 
 Dir SPIFFSWrapper::openDir(const char *path) {
-    return SPIFFS.openDir(path);
+    return SPIFFS_openDir(path);
 }

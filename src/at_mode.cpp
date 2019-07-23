@@ -104,7 +104,9 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(FACTORY, "FACTORY", "Restore factory setti
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(PLUGINS, "PLUGINS", "List plugins");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HEAP, "HEAP", "[interval in seconds|0=disable]", "Display free heap");
+#if defined(ESP8266)
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(CPU, "CPU", "<80|160>", "Set CPU speed", "Display CPU speed");
+#endif
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DUMP, "DUMP", "Display settings");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DUMPFS, "DUMPFS", "Display file system information");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPEE, "DUMPEE", "[<offset>[,<length>]", "Dump EEPROM");
@@ -129,7 +131,9 @@ void at_mode_help_commands() {
 #if DEBUG
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(PLUGINS));
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(HEAP));
+#if defined(ESP8266)
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CPU));
+#endif
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DUMP));
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DUMPFS));
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DUMPEE));
@@ -243,7 +247,7 @@ void disable_at_mode() {
 
 void at_mode_dump_fs_info(Print &output) {
     FSInfo info;
-    SPIFFS.info(info);
+    SPIFFS_info(info);
     output.printf_P(PSTR(
         "+FS: Block size           %d\n"
         "+FS: Max. open files      %d\n"
@@ -290,7 +294,7 @@ void at_mode_serial_handle_event(String &commandString) {
     if (commandString.length() == 0) { // AT
         at_mode_print_ok(output);
     } else {
-        char *command = commandString.begin();
+        String_begin(commandString, command);
         if (!strcmp_P(command, PSTR("?"))) { // AT?
             at_mode_generate_help(output);
         } else {
@@ -383,6 +387,7 @@ void at_mode_serial_handle_event(String &commandString) {
                     at_mode_print_invalid_arguments(output);
                 }
             }
+#if defined(ESP8266)
             else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(CPU))) {
                 if (argc == 1) {
                     uint8_t speed = atoi(args[0]);
@@ -391,6 +396,7 @@ void at_mode_serial_handle_event(String &commandString) {
                 }
                 output.printf_P(PSTR("+CPU: %d MHz\n"), ESP.getCpuFreqMHz());
             }
+#endif
             else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(DUMP))) {
                 config.dump(output);
             }

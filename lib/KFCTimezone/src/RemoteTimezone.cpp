@@ -3,15 +3,19 @@
 */
 
 #include <JsonCallbackReader.h>
+#include <BufferStream.h>
+#include <PrintString.h>
 #include "Timezone.h"
 #include "RemoteTimezone.h"
 
 #if TIMEZONE_USE_HTTP_CLIENT
-#include <ESP8266HttpClient.h>
+	#if defined(ESP8266)
+		#include <ESP8266HttpClient.h>
+	#elif defined(ESP32)
+		#include <HTTPClient.h>
+	#endif
 #else
-#include <BufferStream.h>
-#include <PrintString.h>
-#include "asyncHTTPrequest.h"
+	#include "asyncHTTPrequest.h"
 #endif
 
 RemoteTimezone::RemoteTimezone() {

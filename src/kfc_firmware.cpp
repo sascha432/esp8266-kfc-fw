@@ -29,7 +29,7 @@ void cleanup_tmp_dir() {
     if (timer.reached()) {
         ulong now = (millis() / 1000UL);
         String tmp_dir = sys_get_temp_dir();
-        Dir dir = SPIFFS.openDir(tmp_dir);
+        Dir dir = SPIFFS_openDir(tmp_dir);
 #if DEBUG
         int deleted = 0;
 #endif
@@ -107,7 +107,13 @@ WatchDogTimer myWdt;
 
 static void deep_sleep_forever() {
     for(;;) {
+#if defined(ESP8266)
         ESP.deepSleep(ESP.deepSleepMax() / 2, WAKE_RF_DISABLED); // NOTE using ESP.deepSleepMax() reports "too long"
+#else
+        ESP.deepSleep(UINT32_MAX);
+#endif
+
+
         delay(1);
     }
 }
@@ -323,14 +329,16 @@ void setup() {
         if (!resetDetector.hasWakeUpDetected()) {
             check_flash_size();
             debug_printf_P(PSTR("Free Sketch Space %u\n"), ESP.getFreeSketchSpace());
+#if defined(ESP8266)
             debug_printf_P(PSTR("CPU frequency %d\n"), system_get_cpu_freq());
+#endif
         }
 #endif
 
 #if SPIFFS_CLEANUP_TMP_DURING_BOOT
         if (!resetDetector.hasWakeUpDetected()) {
             debug_println(F("Cleaning up /tmp directory"));
-            Dir dir = SPIFFS.openDir(sys_get_temp_dir());
+            Dir dir = SPIFFS_openDir(sys_get_temp_dir());
             while(dir.next()) {
                 bool status = SPIFFS.remove(dir.fileName());
                 debug_printf_P(PSTR("Remove(%s) = %d\n"), dir.fileName().c_str(), status);

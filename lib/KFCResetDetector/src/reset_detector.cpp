@@ -52,8 +52,12 @@ void ResetDetector::_init() {
     }
 #endif
 
+#if defined(ESP32)
+    _resetReason = esp_reset_reason();
+#elif defined(ESP8266)
     struct rst_info *reset_info = ESP.getResetInfoPtr();
     _resetReason = reset_info->reason;
+#endif
 
     if (isValid) {
         data.reset_counter++;
@@ -86,15 +90,14 @@ void ResetDetector::armTimer() {
     if (_timer) {
         disarmTimer();
     }
-    _timer = _debug_new os_timer_t();
-    os_timer_setfn(_timer, reinterpret_cast<os_timer_func_t *>(_timerCallback), reinterpret_cast<void *>(this));
+    os_timer_create(&_timer, reinterpret_cast<os_timer_func_t_ptr>(_timerCallback), reinterpret_cast<void *>(this));
     os_timer_arm(_timer, RESET_DETECTOR_TIMEOUT, 0);
 }
 
 void ResetDetector::disarmTimer() {
     if (_timer) {
         os_timer_disarm(_timer);
-        delete _timer;
+        os_timer_delete(_timer);
         _timer = nullptr;
     }
 }
@@ -113,29 +116,76 @@ void ResetDetector::clearCounter() {
 }
 
 bool ResetDetector::hasCrashDetected() const {
+#if defined(ESP32)
+    return (
+        _resetReason == ESP_RST_WDT ||
+        _resetReason == ESP_RST_PANIC ||
+        _resetReason == ESP_RST_INT_WDT ||
+        _resetReason == ESP_RST_TASK_WDT ||
+        _resetReason == ESP_RST_WDT
+    );
+#elif defined(ESP8266)
     return (
         _resetReason != REASON_DEFAULT_RST &&
         _resetReason != REASON_EXT_SYS_RST &&
         _resetReason != REASON_SOFT_RESTART &&
         _resetReason != REASON_DEEP_SLEEP_AWAKE &&
-        _resetReason != REASON_EXT_SYS_RST);
+        _resetReason != REASON_EXT_SYS_RST
+    );
+#endif
 }
 
 bool ResetDetector::hasResetDetected() const {
+#if defined(ESP32)
+    return (_resetReason == ESP_RST_UNKNOWN || _resetReason == ESP_RST_EXT || _resetReason == ESP_RST_BROWNOUT || _resetReason == ESP_RST_SDIO);
+#elif defined(ESP8266)
     return (_resetReason == REASON_DEFAULT_RST || _resetReason == REASON_EXT_SYS_RST);
+#endif
 }
 
 bool ResetDetector::hasRebootDetected()  const {
+#if defined(ESP32)
+    return (_resetReason == ESP_RST_SW);
+#elif defined(ESP8266)
     return (_resetReason == REASON_SOFT_RESTART);
+#endif
 }
 
 bool ResetDetector::hasWakeUpDetected() const {
+#if defined(ESP32)
+    return (_resetReason == ESP_RST_DEEPSLEEP);
+#elif defined(ESP8266)
     return (_resetReason == REASON_DEEP_SLEEP_AWAKE);
+#endif
 }
 
 const String ResetDetector::getResetReason() const {
 #if USE_ESP_GET_RESET_REASON
     return ESP.getResetReason();
+#elif defined(ESP32)
+    switch(_resetReason) {
+        case ESP_RST_POWERON:
+            return F("Normal startup");
+        case ESP_RST_PANIC:
+            return F("Panic reset");
+        case ESP_RST_INT_WDT:
+            return F("Int. WDT reset");
+        case ESP_RST_TASK_WDT:
+            return F("Task WDT reset");
+        case ESP_RST_WDT:
+            return F("WDT reset");
+        case ESP_RST_SW:
+            return F("System restart");
+        case ESP_RST_DEEPSLEEP:
+            return F("Wake up from deep-sleep");
+        case ESP_RST_EXT:
+            return F("External system reset");
+        case ESP_RST_BROWNOUT:
+            return F("Brownout");
+        case ESP_RST_SDIO:
+            return F("Reset over SDIO");
+    }
+    return F("Unknown");
 #else
     switch(_resetReason) {
         case REASON_DEFAULT_RST:
@@ -158,7 +208,11 @@ const String ResetDetector::getResetReason() const {
 }
 
 const String ResetDetector::getResetInfo() const {
+#if defined(ESP32)
+    return getResetReason();
+#else
     return ESP.getResetInfo();
+#endif
 }
 
 uint8_t ResetDetector::getResetCounter() const {
@@ -226,15 +280,14 @@ bool reset_detector_command_handler(Stream &serial, const String &command, int8_
 
     } else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(RD))) {
         if (argc == -1) {
-            serial.printf_P(PSTR("safe mode: %d\nreset counter: %d\ninitial reset counter: %d\ncrash: %d\nreboot: %d\nreset: %d\nreset reason: %s / %s\n"),
+            serial.printf_P(PSTR("safe mode: %d\nreset counter: %d\ninitial reset counter: %d\ncrash: %d\nreboot: %d\nreset: %d\nreset reason: %s\n"),
                 resetDetector.getSafeMode(),
                 resetDetector.getResetCounter(),
                 resetDetector.getInitialResetCounter(),
                 resetDetector.hasCrashDetected(),
                 resetDetector.hasRebootDetected(),
                 resetDetector.hasResetDetected(),
-                resetDetector.getResetReason().c_str(),
-                ESP.getResetReason().c_str()
+                resetDetector.getResetReason().c_str()
             );
 
         } else {

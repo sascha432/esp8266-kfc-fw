@@ -4,6 +4,8 @@
 
 // Yaml code for Home Assistant and auto discovery
 
+#if MQTT_SUPPORT
+
 #include <Arduino_compat.h>
 #include <PrintString.h>
 #include <kfc_fw_config.h>
@@ -87,10 +89,20 @@ bool MQTTAutoDiscovery::isEnabled() {
 const String MQTTAutoDiscovery::_getUnqiueId() {
     uint16_t crc[3];
 
+#if defined(ESP8266)
     String deviceId = String(ESP.getChipId(), HEX);
     crc[0] = crc16_update(~0, (uint8_t *)deviceId.c_str(), deviceId.length());
     deviceId += String(ESP.getFlashChipId(), HEX);
     crc[1] = crc16_update(crc[0], (uint8_t *)deviceId.c_str(), deviceId.length());
+#elif defined(ESP32)
+    String deviceId = String(ESP.getChipRevision(), HEX);
+    crc[0] = crc16_update(~0, (uint8_t *)deviceId.c_str(), deviceId.length());
+    deviceId += String(ESP.getFlashChipSize(), HEX);
+    crc[1] = crc16_update(crc[0], (uint8_t *)deviceId.c_str(), deviceId.length());
+#else
+#error Platform not supported
+#endif
+
     deviceId += WiFi.macAddress();
     crc[2] = crc16_update(crc[1], (uint8_t *)deviceId.c_str(), deviceId.length());
 
@@ -102,3 +114,5 @@ const String MQTTAutoDiscovery::_getUnqiueId() {
     }
     return uniqueId;
 }
+
+#endif

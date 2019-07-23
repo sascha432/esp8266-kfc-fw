@@ -244,7 +244,11 @@ void ConfigurationParameter::dump(Print &output) {
         } break;
         case QWORD: {
             auto value = *(uint64_t *)getDataPtr();
+#if defined(ESP32)
+            output.printf_P(PSTR("%llu (%lld, %08llX)\n"), value, value, value);
+#else
             output.printf_P(PSTR("%lu (%ld, %08lX)\n"), value, value, value);
+#endif
         } break;
         case FLOAT: {
                 auto value = *(float *)getDataPtr();

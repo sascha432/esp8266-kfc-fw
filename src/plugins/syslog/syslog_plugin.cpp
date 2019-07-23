@@ -4,11 +4,12 @@
 
 #if SYSLOG
 
-#include "kfc_fw_config.h"
+#include <Arduino_compat.h>
 #include <Buffer.h>
 #include <KFCSyslog.h>
 #include <PrintHtmlEntitiesString.h>
 #include <LoopFunctions.h>
+#include "kfc_fw_config.h"
 #include "progmem_data.h"
 #include "../include/templates.h"
 #include "plugins.h"
@@ -96,8 +97,6 @@ void syslog_process_queue() {
         timer.restart();
     }
 }
-
-#endif
 
 const String syslog_get_status() {
 #if SYSLOG
@@ -241,6 +240,7 @@ PROGMEM_PLUGIN_CONFIG_DEF(
 /* atModeCommandHandler     */ syslog_at_mode_command_handler
 );
 
+#endif
 
 #if 0
 size_t SyslogMemoryQueue::store(const String &message) {

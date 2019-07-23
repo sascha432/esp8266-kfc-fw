@@ -5,19 +5,7 @@
 #ifndef SESSION_H_INCLUDED
 #define SESSION_H_INCLUDED
 
-#include <Arduino.h>
-// __AUTOMATED_HEADERS_STRART
-#if defined(ESP32)
-#include <WiFi.h>
-#include <SPIFFS.h>
-#elif defined(ESP8266)
-#include <ESP8266WiFi.h>
-#include <ESP8266WiFiType.h>
-#include <FS.h>
-#else
-#error Platform not supported
-#endif
-// __AUTOMATED_HEADERS_END
+#include <Arduino_compat.h>
 
 #ifndef SESSION_CONFIGURATION_SET
 #define SESSION_RNG_RANDOM              1

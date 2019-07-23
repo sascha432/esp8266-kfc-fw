@@ -142,7 +142,7 @@ bool JsonBaseReader::_isValidNumber(String value, JsonType_t &_type) const {
 	return false;
 #else
 	JsonType_t newType = JSON_TYPE_INT;
-	char *ptr = value.begin();
+	const char *ptr = value.c_str();
 	// -?
 	if (*ptr == '-') {
 		ptr++;

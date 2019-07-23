@@ -27,9 +27,14 @@ public:
     static const uint8_t __maxId = 32;
     static const uint8_t __maxLength = 64;
 
-private:
+public:
+#if defined(ESP8266)
     static const uint16_t __memorySize = 512;
     static const uint8_t __blockSize = 4;
+#elif defined(ESP32)
+    static const uint16_t __memorySize = 256;
+    static const uint8_t __blockSize = 4;
+#endif
     static const uint8_t __blockSizeMask = __blockSize - 1;
     static const uint16_t __dataBlockSize = (sizeof(Header_t) & __blockSizeMask ? ((sizeof(Header_t) + 4) & ~__blockSizeMask) : (sizeof(Header_t))) / __blockSize;
     static const uint16_t __dataSize = __dataBlockSize * __blockSize;

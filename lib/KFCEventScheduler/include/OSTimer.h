@@ -5,6 +5,10 @@
 
 #pragma once
 
+#ifndef DEBUG_OSTIMER
+#define DEBUG_OSTIMER 0
+#endif
+
 #include <Arduino_compat.h>
 #if defined(ESP8266)
 #include <osapi.h>

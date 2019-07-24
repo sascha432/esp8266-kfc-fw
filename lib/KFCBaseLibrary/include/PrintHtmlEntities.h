@@ -6,11 +6,12 @@
 
 #include <Arduino_compat.h>
 
-// <, > and & are changed to \1, \2 and \3 to avoid encoding
-#define HTML_TAG_S  "\1"
-#define HTML_TAG_E  "\2"
-#define HTML_AMP    "\3"
-#define HTML_SPACE  "\3nbsp;"
+#define HTML_TAG_S  "\x01"
+#define HTML_TAG_E  "\x02"
+#define HTML_AMP    "\x03"
+#define HTML_SPACE  "\x03nbsp;"
+#define HTML_QUOTE  "\x04"
+#define HTML_EQUALS "\x05"
 #define HTML_S HTML_OPEN_TAG
 #define HTML_E HTML_CLOSE_TAG
 #define HTML_OPEN_TAG(tag) HTML_TAG_S #tag HTML_TAG_E

@@ -62,7 +62,7 @@ public:
         return _parameter;
     }
 
-   private:
+private:
     SyslogParameter *_parameter;
     SyslogFilter *_filter;
     SyslogQueue *_queue;

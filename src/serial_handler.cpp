@@ -37,25 +37,25 @@ void SerialHandler::clear() {
 }
 
 void SerialHandler::begin() {
-    LoopFunctions::add([this]() {
-        this->serialLoop();
-    }, reinterpret_cast<LoopFunctions::CallbackPtr_t>(this));
+    _debug_println(F("SerialHandler::begin()"));
+    LoopFunctions::add(SerialHandler::serialLoop);
 }
 
 void SerialHandler::end() {
-    LoopFunctions::remove(reinterpret_cast<LoopFunctions::CallbackPtr_t>(this));
+    _debug_println(F("SerialHandler::end()"));
+    LoopFunctions::remove(SerialHandler::serialLoop);
 }
 
-void SerialHandler::addHandler(SerialHandlerCb callback, uint8_t flags) {
+void SerialHandler::addHandler(SerialHandlerCallback_t callback, uint8_t flags) {
 
     _debug_printf_P(PSTR("SerialHandler::addHandler(%p, rx %d tx %d remoterx %d localtx %d buffered %d)\n"), callback, (flags & RECEIVE ? 1 : 0), (flags & TRANSMIT ? 1 : 0), (flags & REMOTE_RX ? 1 : 0), (flags & LOCAL_TX ? 1 : 0), 0);
-    _handlers.push_back({callback, flags});
+    _handlers.push_back({ callback, flags });
 }
 
-void SerialHandler::removeHandler(SerialHandlerCb callback) {
+void SerialHandler::removeHandler(SerialHandlerCallback_t callback) {
 
     _debug_printf_P(PSTR("SerialHandler::removeHandler(%p)\n"), callback);
-    _handlers.erase(std::remove_if(_handlers.begin(), _handlers.end(), [&](SerialHandlers &handlers) {
+    _handlers.erase(std::remove_if(_handlers.begin(), _handlers.end(), [&callback](SerialHandler_t &handlers) {
         if (handlers.cb == callback) {
             return true;
         }
@@ -64,22 +64,29 @@ void SerialHandler::removeHandler(SerialHandlerCb callback) {
 }
 
 void SerialHandler::serialLoop() {
+    serialHandler._serialLoop();
+}
+
+void SerialHandler::_serialLoop() {
 
     while(_wrapper.available()) {
         uint8_t buf[128];
-        uint8_t i;
-        for(i = 0; i < sizeof(buf) && _wrapper.available(); i++) {
-            buf[i] = _wrapper.read();
+        uint8_t *ptr = buf;
+        uint8_t len;
+        for(len = 0; len < sizeof(buf) && _wrapper.available(); len++) {
+            *ptr++ = _wrapper.read();
         }
-        writeToReceive(RECEIVE, buf, i);
+        //Serial.printf_P(PSTR("SerialHandler::_serialLoop(): len=%d\n"), len);
+        writeToReceive(RECEIVE, buf, len);
     }
 }
 
 void SerialHandler::writeToTransmit(SerialDataType_t type, const uint8_t *buffer, size_t len) {
+    // Serial.printf_P(PSTR("SerialHandler::writeToTransmit(%d, %p, %u)\n"), type, buffer, len);
     writeToTransmit(type, nullptr, buffer, len);
 }
 
-void SerialHandler::writeToTransmit(SerialDataType_t type, SerialHandlerCb callback, const uint8_t *buffer, size_t len) {
+void SerialHandler::writeToTransmit(SerialDataType_t type, SerialHandlerCallback_t callback, const uint8_t *buffer, size_t len) {
     static bool locked = false;
     if (locked) {
         _debug_printf_P(PSTR("SerialHandler::writeToTransmit(%d, %p, len %d, locked %d)\n"), type, callback, len, locked);
@@ -90,7 +97,7 @@ void SerialHandler::writeToTransmit(SerialDataType_t type, SerialHandlerCb callb
     for(const auto &handler: _handlers) {
         // _debug_printf_P(PSTR("SerialHandler::writeToTransmit(): Handler %p flags %02x match %d\n"), handler.cb, handler.flags, ((handler.flags & type) && handler.cb != callback));
         if ((handler.flags & type) && handler.cb != callback) {
-            (*(handler.cb))(type, buffer, len);
+            handler.cb(type, buffer, len);
         }
     }
     locked = false;
@@ -101,7 +108,7 @@ void SerialHandler::writeToReceive(SerialDataType_t type, const uint8_t *buffer,
 }
 
 // sends to rx callbacks (=receiving data from serial)
-void SerialHandler::writeToReceive(SerialDataType_t type, SerialHandlerCb callback, const uint8_t *buffer, size_t len) {
+void SerialHandler::writeToReceive(SerialDataType_t type, SerialHandlerCallback_t callback, const uint8_t *buffer, size_t len) {
     static bool locked = false;
     if (locked) {
         _debug_printf_P(PSTR("SerialHandler::writeToReceive(%d, %p, len %d, locked %d)\n"), type, callback, len, locked);
@@ -115,14 +122,14 @@ void SerialHandler::writeToReceive(SerialDataType_t type, SerialHandlerCb callba
             const auto &handler = *it;
             // _debug_printf_P(PSTR("SerialHandler::writeToReceive(): Handler %p flags %02x match %d\n"), handler.cb, handler.flags, ((handler.flags & type) && callback != handler.cb));
             if ((handler.flags & type) && callback != handler.cb) {
-                (*(handler.cb))(type, (const uint8_t *)buffer, len);
+                handler.cb(type, (const uint8_t *)buffer, len);
             }
         }
     }
     locked = false;
 }
 
-void SerialHandler::receivedFromRemote(SerialHandlerCb callback, const uint8_t *buffer, size_t len) {
+void SerialHandler::receivedFromRemote(SerialHandlerCallback_t callback, const uint8_t *buffer, size_t len) {
     // _debug_printf_P(PSTR("SerialHandler::receivedFromRemote(%p, %d)\n"), callback, len);
     _wrapper.getSerial().write(buffer, len);
     writeToReceive(REMOTE_RX, callback, buffer, len);

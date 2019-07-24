@@ -5,7 +5,7 @@
 #pragma once
 
 #ifndef DEBUG_CONFIGURATION
-#define DEBUG_CONFIGURATION 1
+#define DEBUG_CONFIGURATION 0
 #endif
 
 #include <Arduino_compat.h>
@@ -19,9 +19,15 @@
 #include <EEPROM.h>
 #endif
 
+#if defined(ESP8266)
 #ifdef NO_GLOBAL_EEPROM
 #include <EEPROM.h>
 extern EEPROMClass EEPROM;
+#endif
+#endif
+
+#if defined(ESP32)
+#include <esp_partition.h>
 #endif
 
 #if DEBUG_CONFIGURATION
@@ -254,6 +260,10 @@ private:
     ParameterVector _params;
     bool _eepromInitialized;
     uint16_t _eepromSize;
+
+#if defined(ESP32)
+    const esp_partition_t *_partition;
+#endif
 
 protected:
     unsigned long _readAccess;

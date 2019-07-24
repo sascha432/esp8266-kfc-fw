@@ -7,16 +7,22 @@
 #include "Syslog.h"
 #include "SyslogUDP.h"
 
+#if DEBUG_SYSLOG
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
+#endif
+
 SyslogUDP::SyslogUDP(SyslogParameter& parameter, const char* host, uint16_t port) : Syslog(parameter) {
     _host = host;
     _port = port;
-    debug_printf_P(PSTR("SyslogUDP::SyslogUDP %s:%d\n"), host, port);
+    _debug_printf_P(PSTR("SyslogUDP::SyslogUDP %s:%d\n"), host, port);
 }
 
 void SyslogUDP::transmit(const char* message, size_t length, SyslogCallback callback) {
-#if DEBUG
+#if DEBUG_SYSLOG
     if (!strstr_P(message, PSTR("SyslogUDP::transmit"))) {
-        debug_printf_P(PSTR("SyslogUDP::transmit '%s' length %d\n"), message, length);
+        _debug_printf_P(PSTR("SyslogUDP::transmit '%s' length %d\n"), message, length);
     }
 #endif
 

@@ -203,7 +203,7 @@ String WiFi_disconnect_reason(WiFiDisconnectReason reason) {
             out.printf_P(PSTR("UKNOWN_REASON_%d"), reason);
             return out;
     }
-#elif defined(ESP8266)
+#elif defined(ESP8266) || _WIN32 || _WIN64
     switch(reason) {
         case WIFI_DISCONNECT_REASON_UNSPECIFIED:
             return F("UNSPECIFIED");
@@ -411,6 +411,78 @@ String inet_ntoString(uint32_t ip) {
 
 const char *inet_ntoa_s(char *dst, size_t size, uint32_t ip) {
     uint8_t *bip = (uint8_t *)&ip;
-    snprintf_P(dst, size, PSTR("%u.%u.%u.%u"), bip[0], bip[1], bip[2], bip[3]);
+    snprintf_P(dst, size, PSTR("%u.%u.%u.%u"), (unsigned)bip[0], (unsigned)bip[1], (unsigned)bip[2], (unsigned)bip[3]);
     return dst;
+}
+
+uint8_t tokenizer(char *ptr, char **args, uint8_t maxArgs, bool hasCommand) {
+    uint8_t argc = 0;
+    if (hasCommand) {
+        while(*ptr && *ptr != '=' && *ptr != ' ') {     // find end of command
+            ptr++;
+        }
+    }
+    if (*ptr) {  // tokenize arguments into args
+        bool quoted = false;
+        *ptr++ = 0;
+        while(*ptr) {
+            if (argc >= maxArgs) {
+                break;
+            }
+            // trim white space for quoted arguments only
+            quoted = false;
+            char *wptr = ptr;
+            while (isspace(*wptr)) {
+                *wptr++;
+            }
+            if (*wptr == '"') {
+                quoted = true;
+                ptr = wptr + 1;
+            }
+
+            args[argc++] = ptr;
+            if (quoted) {
+                while (*ptr) {  // find end of argument
+                    // handle escaped characters
+                    if (*ptr == '"') {
+                        ptr++;
+                        if (*ptr == '"') { // double quote, keep one
+                            strcpy(ptr, ptr + 1);
+                            continue;
+                        }
+                        *(ptr - 1) = 0; // end quote, find next token
+                        while (*ptr && *ptr != ',') {
+                            ptr++;
+                        }
+                        break;
+                    }
+                    else if (*ptr == '\\') {
+                        ptr++;
+                        if (*ptr == '\\') { // double backslash
+                            strcpy(ptr, ptr + 1);
+                        }
+                        else if (*ptr == '"') { // escaped quote
+                            strcpy(ptr - 1, ptr);
+                        }
+                        continue; // single backslash
+                    }
+                    ptr++;
+                }
+                if (!*ptr) {
+                    break;
+                }
+            }
+            else {
+                while (*ptr && *ptr != ',') {
+                    ptr++;
+                }
+                if (!*ptr) {
+                    break;
+                }
+                *ptr = 0;
+            }
+            ptr++;
+        }
+    }
+    return argc;
 }

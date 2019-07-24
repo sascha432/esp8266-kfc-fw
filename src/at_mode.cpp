@@ -39,7 +39,7 @@ void at_mode_add_help(const ATModeCommandHelp_t *help) {
     at_mode_help.push_back(help);
 }
 
-void at_mode_display_help_indent(Print &output, PGM_P text) {
+void at_mode_display_help_indent(Stream &output, PGM_P text) {
     PGM_P indent = PSTR("    ");
     uint8_t ch;
     ch = pgm_read_byte(text++);
@@ -55,7 +55,7 @@ void at_mode_display_help_indent(Print &output, PGM_P text) {
     output.println();
 }
 
-void at_mode_display_help(Print &output) {
+void at_mode_display_help(Stream &output) {
 
     _debug_printf_P(PSTR("at_mode_display_help(): size=%d\n"), at_mode_help.size());
 
@@ -110,11 +110,13 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF(CPU, "CPU", "<80|160>", "Set CPU speed", "Displ
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DUMP, "DUMP", "Display settings");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DUMPFS, "DUMPFS", "Display file system information");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPEE, "DUMPEE", "[<offset>[,<length>]", "Dump EEPROM");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WRTC, "WRTC", "<id,data>", "Write uint32 to RTC memory");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DUMPRTC, "DUMPRTC", "Dump RTC memory");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(RTCCLR, "RTCCLR", "Clear RTC memory");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RTCQCC, "RTCQCC", "<0=channel/bssid|1=static ip config.>", "Clear quick connect RTC memory");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WIMO, "WIMO", "<0=off|1=STA|2=AP|3=STA+AP>", "Set WiFi mode, store configuration and reboot");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LOG, "LOG", "<message", "Send an error to the logger component");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(PANIC, "PANIC", "Cause an exception by calling panic()");
 
 #endif
 
@@ -137,11 +139,13 @@ void at_mode_help_commands() {
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DUMP));
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DUMPFS));
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DUMPEE));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(WRTC));
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DUMPRTC));
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(RTCCLR));
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(RTCQCC));
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(WIMO));
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(LOG));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(PANIC));
 #endif
 
 }
@@ -156,7 +160,7 @@ void at_mode_generate_help(Stream &output) {
     at_mode_help.clear();
 }
 
-String at_mode_print_command_string(Print &output, char separator, bool trailingSeparator) {
+String at_mode_print_command_string(Stream &output, char separator, bool trailingSeparator) {
     String commands;
     StreamString nullStream;
 
@@ -245,7 +249,7 @@ void disable_at_mode() {
     }
 }
 
-void at_mode_dump_fs_info(Print &output) {
+void at_mode_dump_fs_info(Stream &output) {
     FSInfo info;
     SPIFFS_info(info);
     output.printf_P(PSTR(
@@ -259,15 +263,15 @@ void at_mode_dump_fs_info(Print &output) {
     );
 }
 
-void at_mode_print_invalid_command(Print &output) {
+void at_mode_print_invalid_command(Stream &output) {
     output.println(F("ERROR - Invalid command. AT? for help"));
 }
 
-void at_mode_print_invalid_arguments(Print &output) {
+void at_mode_print_invalid_arguments(Stream &output) {
     output.println(F("ERROR - Invalid arguments. AT? for help"));
 }
 
-void at_mode_print_ok(Print &output) {
+void at_mode_print_ok(Stream &output) {
     output.println(FSPGM(OK));
 }
 
@@ -304,7 +308,7 @@ void at_mode_serial_handle_event(String &commandString) {
             at_mode_generate_help(output);
         } else {
 
-            int argc;
+            int8_t argc;
             char *args[AT_MODE_MAX_ARGUMENTS];
             memset(args, 0, sizeof(args));
 
@@ -316,20 +320,8 @@ void at_mode_serial_handle_event(String &commandString) {
                 *ptr = 0;
                 argc = AT_MODE_QUERY_COMMAND;
             } else {
-                argc = 0;
-                ptr = strchr(command, '=');
-                if (ptr) {  // tokenize arguments into args
-                    const char *delimiters = ",";
-                    *ptr++ = 0;
-                    ptr = strtok(ptr, delimiters);
-                    while(ptr) {
-                        args[argc++] = ptr;
-                        if (argc >= AT_MODE_MAX_ARGUMENTS) {
-                            break;
-                        }
-                        ptr = strtok(nullptr, delimiters);
-                    }
-                }
+                _debug_printf_P(PSTR("tokenizer('%s')\n"), command);
+                argc = (int8_t)tokenizer(command, args, AT_MODE_MAX_ARGUMENTS, true);
             }
 
             _debug_printf_P(PSTR("Command '%s' argc %d arguments '%s'\n"), command, argc, implode(F("','"), (const char **)args, argc).c_str());
@@ -419,8 +411,20 @@ void at_mode_serial_handle_event(String &commandString) {
                 }
                 config.dumpEEPROM(output, false, offset, length);
             }
+            else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(WRTC))) {
+                if (argc < 2) {
+                    at_mode_print_invalid_arguments(output);
+                }
+                else {
+                    uint8_t rtcMemId = (uint8_t)atoi(args[0]);
+                    uint32_t data = (uint32_t)atoi(args[1]);
+                    RTCMemoryManager::write(rtcMemId, &data, sizeof(data));
+                    output.printf_P(PSTR("+WRTC: id=%u, data=%u\n"), rtcMemId, data);
+                }
+            }
             else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(DUMPRTC))) {
-                RTCMemoryManager::dump(MySerial);            }
+                RTCMemoryManager::dump(MySerial);
+            }
             else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(RTCCLR))) {
                 RTCMemoryManager::clear();
                 output.println(F("+RTCCLR: Memory cleared"));
@@ -459,6 +463,11 @@ void at_mode_serial_handle_event(String &commandString) {
                 } else {
                     Logger_error(F("+LOG: %s"), implode(FSPGM(comma), (const char **)args, argc).c_str());
                 }
+            }
+            else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(PANIC))) {
+                output.println(F("Calling panic()"));
+                delay(100);
+                panic();
 #endif
             } else {
                 bool commandWasHandled = false;

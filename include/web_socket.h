@@ -77,16 +77,16 @@ public:
     virtual ~WsClient();
 
     void setAuthenticated(bool authenticated);
-    bool isAuthenticated();
+    bool isAuthenticated() const;
 
 #if WEB_SOCKET_ENCRYPTION
-    bool isEncrypted();
+    bool isEncrypted() const;
 
     void initEncryption(uint8_t *iv, uint8_t *salt);
 #endif
 
     void setClient(AsyncWebSocketClient *client);
-    AsyncWebSocketClient *getClient();
+    AsyncWebSocketClient *getClient() const;
 
     static void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, int type, uint8_t *data, size_t len, void *arg = nullptr, WsGetInstance getInstance = nullptr);
 

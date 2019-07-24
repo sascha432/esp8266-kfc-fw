@@ -6,14 +6,14 @@
 
 #pragma once
 
+#ifndef DEBUG_HTTP2SERIAL
+#define DEBUG_HTTP2SERIAL 0
+#endif
+
 #include <Arduino_compat.h>
 #include <Buffer.h>
 #include "ws_console_client.h"
 #include "serial_handler.h"
-
-#ifndef DEBUG_HTTP2SERIAL
-#define DEBUG_HTTP2SERIAL 0
-#endif
 
 class Http2Serial {
 public:
@@ -46,21 +46,26 @@ public:
     bool isTimeToSend();
     void resetOutputBufferTimer();
     void clearOutputBuffer();
-    void outputLoop();
+
+    static void outputLoop();
     static void onData(uint8_t type, const uint8_t *buffer, size_t len);
+    static Http2Serial *getInstance();
+    static void createInstance();
+    static void destroyInstance();
 
-    SerialHandler *getSerialHandler();
-
-public:
-    static Http2Serial *_instance;
+    SerialHandler *getSerialHandler() const;
 
 private:
+    void _outputLoop();
+
+    static Http2Serial *_instance;
+
+    bool _locked;
     bool _outputBufferEnabled;
     unsigned long _outputBufferFlushDelay;
     Buffer _outputBuffer;
     SerialHandler *_serialHandler;
-    SerialWrapper *_serialWrapper;
-
+    //SerialWrapper *_serialWrapper;
 };
 
 #endif

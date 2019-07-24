@@ -4,9 +4,12 @@
 
 #pragma once
 
+#ifndef DEBUG_SYSLOG
+#define DEBUG_SYSLOG                            1
+#endif
+
 #include <functional>
 #include <vector>
-
 
 #ifndef SYSLOG_USE_RFC5424
 #define SYSLOG_USE_RFC5424                      0   // does not seem to be supported by many syslog daemons
@@ -50,8 +53,8 @@ struct SyslogFilterItem {
     uint8_t value;
 };
 
-extern SyslogFilterItem syslogFilterFacilityItems[];
-extern SyslogFilterItem syslogFilterSeverityItems[];
+extern const SyslogFilterItem syslogFilterFacilityItems[] PROGMEM;
+extern const SyslogFilterItem syslogFilterSeverityItems[] PROGMEM;
 
 class Syslog {
    public:
@@ -63,7 +66,7 @@ class Syslog {
     virtual void transmit(const char *message, size_t length, SyslogCallback callback);
 
     virtual void addHeader(String &buffer);
-    virtual bool canSend();
+    virtual bool canSend() const;
 	virtual bool isSending();
 
 	static bool isNumeric(const char *str);

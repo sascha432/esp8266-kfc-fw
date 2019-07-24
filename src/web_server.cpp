@@ -16,6 +16,7 @@
 #include "async_web_response.h"
 #include "async_web_handler.h"
 #include "kfc_fw_config.h"
+#include "blink_led_timer.h"
 #include "failure_counter.h"
 #include "fs_mapping.h"
 #include "session.h"
@@ -207,7 +208,7 @@ void web_server_update_handler(AsyncWebServerRequest *request) {
             Logger_security(F("Firmware upgrade successful"));
 
             if (status->command == U_FLASH) {
-                config_set_blink(BLINK_SLOW);
+                BlinkLEDTimer::setBlink(BlinkLEDTimer::SLOW);
                 request->onDisconnect([]() {
                     Logger_notice(F("Rebooting after upgrade"));
                     Scheduler.addTimer(2000, false, [](EventScheduler::TimerPtr timer) {
@@ -215,7 +216,7 @@ void web_server_update_handler(AsyncWebServerRequest *request) {
                     });
                 });
             } else {
-                config_set_blink(BLINK_OFF);
+                BlinkLEDTimer::setBlink(BlinkLEDTimer::OFF);
             }
 
             String location;
@@ -237,7 +238,7 @@ void web_server_update_handler(AsyncWebServerRequest *request) {
         } else {
             // SPIFFS.begin();
 
-            config_set_blink(BLINK_SOS);
+            BlinkLEDTimer::setBlink(BlinkLEDTimer::SOS);
             StreamString errorStr;
             Update.printError(errorStr);
             Logger_error(F("Firmware upgrade failed: %s"), errorStr.c_str());
@@ -268,7 +269,7 @@ void web_server_update_upload_handler(AsyncWebServerRequest *request, String fil
         PrintString out;
         bool error = false;
         if (!index) {
-            config_set_blink(BLINK_FLICKER);
+            BlinkLEDTimer::setBlink(BlinkLEDTimer::FLICKER);
 
 #if defined(ESP8266)
             Update.runAsync(true);
@@ -649,12 +650,12 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
 
         } else if (constexpr_String_equals(path, PSTR("/pins.html"))) {
             if (request->hasArg(F("led_type"))) {
-                config_set_blink(BLINK_OFF);
+                BlinkLEDTimer::setBlink(BlinkLEDTimer::OFF);
                 _Config.getOptions().setLedMode((LedMode_t)request->arg(F("led_type")).toInt());
                 //FormBitValue {FLAGS2_LED_NONE, FLAGS2_LED_SINGLE, FLAGS2_LED_TWO, FLAGS2_LED_RGB}
                 config.led_pin = request->arg(F("led_pin")).toInt();
                 config_write(false);
-                config_set_blink(BLINK_SOLID);
+                BlinkLEDTimer::setBlink(BlinkLEDTimer::SOLID);
             }
         */
     }
@@ -671,7 +672,7 @@ void web_server_create_settings_form(AsyncWebServerRequest *request, Form &form)
     });
     form.addValidator(new FormRangeValidator(0, HTTP_MODE_SECURE));
 #  if WEBSERVER_TLS_SUPPORT
-    addValidator(new FormMatchValidator(F("There is not enough free RAM for TLS support"), [](FormField *field) {
+    form.addValidator(new FormMatchValidator(F("There is not enough free RAM for TLS support"), [](FormField *field) {
         return (field->getValue().toInt() != HTTP_MODE_SECURE) || (ESP.getFreeHeap() > 24000);
     }));
 #  endif
@@ -700,8 +701,8 @@ void web_server_create_settings_form(AsyncWebServerRequest *request, Form &form)
 
 #  if SPIFFS_SUPPORT && WEBSERVER_TLS_SUPPORT
 
-    form.add(new FormObject<File2String>(F("ssl_certificate"), File2String(FSPGM(server_crt))));
-    form.add(new FormObject<File2String>(F("ssl_key"), File2String(FSPGM(server_key))));
+    form.add(new FormObject<File2String>(F("ssl_certificate"), File2String(FSPGM(server_crt)), nullptr));
+    form.add(new FormObject<File2String>(F("ssl_key"), File2String(FSPGM(server_key)), nullptr));
 
 #  endif
 

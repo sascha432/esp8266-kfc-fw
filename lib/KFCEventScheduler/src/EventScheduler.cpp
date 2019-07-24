@@ -129,14 +129,16 @@ void EventScheduler::_timerCallback(void *arg) {
             timer->_updateInterval(MAX_DELAY, true);
         }
         if (timer->_priority == EventScheduler::PRIO_HIGH) {
+            // call high priortiy timer directly
             Scheduler.callTimer(timer);
         } else {
             #if 0
             Scheduler._callbacks.push_back(ActiveCallbackTimer({timer, false}));
             #endif
+            // mark timer as due and install loop function
             timer->_setScheduleCallback(true);
+            Scheduler.installLoopFunc();
         }
-        Scheduler.installLoopFunc();
     }
 }
 

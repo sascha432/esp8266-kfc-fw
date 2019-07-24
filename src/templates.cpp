@@ -287,7 +287,11 @@ String StatusTemplate::process(const String &key) {
         _return(out);
     } else if (key == F("WIFI_HOSTNAME")) {
         PrintHtmlEntitiesString out;
+#if defined(ESP32)
         out.print(WiFi.getHostname());
+#else
+        out.print(WiFi.hostname());
+#endif
         _return(out);
     } else if (key == F("WIFI_STATUS")) {
         PrintHtmlEntitiesString out;
@@ -391,12 +395,13 @@ PasswordSettingsForm::PasswordSettingsForm(AsyncWebServerRequest *request) : Set
 }
 
 SettingsForm::SettingsForm(AsyncWebServerRequest * request) : Form(&_data) {
-    _data.setCallbacks([request](const String &name) {
-        if (!request) {
-            return String();
-        }
-        return request->arg(name);
-    },
+    _data.setCallbacks(
+        [request](const String &name) {
+            if (!request) {
+                return String();
+            }
+            return request->arg(name);
+        },
         [request](const String &name) {
         if (!request) {
             return false;

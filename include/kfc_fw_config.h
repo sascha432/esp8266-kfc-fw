@@ -61,15 +61,6 @@ enum Serial2Tcp_SerialPort_t : uint8_t {
     SERIAL2TCP_SOFTWARE_CUSTOM,
 };
 
-#define BLINK_SLOW              1000
-#define BLINK_FAST              250
-#define BLINK_FLICKER           50
-#define BLINK_OFF               0
-#define BLINK_SOLID             1
-#define BLINK_SOS               2
-
-void blink_led(int8_t pin, int delay, dynamic_bitset &pattern);
-
 #define CONFIG_RTC_MEM_ID 2
 
 typedef uint32_t ConfigFlags_t;
@@ -210,15 +201,12 @@ struct Config {
     struct Ping ping;
 };
 
-void config_set_blink(uint16_t milliseconds, int8_t pin = -1);
-void config_deep_sleep(uint32_t time, RFMode mode);
-
 uint8_t WiFi_mode_connected(uint8_t mode = WIFI_AP_STA, uint32_t *station_ip = nullptr, uint32_t *ap_ip = nullptr);
 
 #define _H_IP_FORM_OBJECT(name)                     config._H_GET_IP(name), [](const IPAddress &addr, FormField *) { config._H_SET_IP(name, addr); }
 #define _H_STRUCT_FORMVALUE(name, type, field)      config._H_GET(name).field, [](type value, FormField *) { auto &data = config._H_W_GET(name); data.field = value; }
 
-// NOTE using the new handlers (USE_WIFI_SET_EVENT_HANDLER_CB=0) costs 896 byte RAM with 5 handlers, by using lambda functions even 1016 byte
+// NOTE using the new handlers (USE_WIFI_SET_EVENT_HANDLER_CB=0) costs 896 byte RAM with 5 handlers
 #ifndef USE_WIFI_SET_EVENT_HANDLER_CB
 #define USE_WIFI_SET_EVENT_HANDLER_CB           1
 #endif

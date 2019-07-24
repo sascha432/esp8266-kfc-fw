@@ -212,17 +212,12 @@ extern class Stream &DebugSerial;
 #define HUE_EMULATION                   0               // HUE emulation for ALEXA
 #endif
 
-#ifndef AUGUST_LOCK_SUPPORT
-#define AUGUST_LOCK_SUPPORT             0               // Support for august lock over bluetooth without any additional hardware
-                                                        // Requires BLE 4.0 and extracting the keys from the firmware
-#endif
-
 #ifndef REST_API_SUPPORT
 #define REST_API_SUPPORT                1               // rest API support
 #endif
 
 #ifndef HOME_ASSISTANT_INTEGRATION
-#define HOME_ASSISTANT_INTEGRATION      1               // home assistant integration https://www.home-assistant.io/
+#define HOME_ASSISTANT_INTEGRATION      0               // home assistant integration https://www.home-assistant.io/
 #endif
 
 #ifndef WEBSERVER_SUPPORT
@@ -239,15 +234,15 @@ extern class Stream &DebugSerial;
 #endif
 
 #ifndef MINIFY_WEBUI
-#if DEBUG
-#define MINIFY_WEBUI                    0
-#else
 #define MINIFY_WEBUI                    1               // Compress html, css and js
-#endif
 #endif
 
 #if WEBSERVER_SUPPORT && !defined(WEBSERVER_TLS_SUPPORT)
-#define WEBSERVER_TLS_SUPPORT           0               // Enable TLS support for the embded web server
+#if defined(ESP32)
+#define WEBSERVER_TLS_SUPPORT           1               // TLS support for the web server
+#elif defined(ESP8266)
+#define WEBSERVER_TLS_SUPPORT           0               // TLS support for the web server
+#endif
 #endif
 
 #ifndef PING_MONITOR
@@ -263,12 +258,17 @@ extern class Stream &DebugSerial;
 #define FILE_MANAGER 0
 #endif
 
-#if ASYNC_TCP_SSL_ENABLED && WEBSERVER_TLS_SUPPORT
-#warning Using SSL requires a lot RAM and processing power. It is not recommended to run the web server with TLS. This might lead to poor performance and stability.
-#endif
-
-#if WEBSERVER_TLS_SUPPORT && !ASYNC_TCP_SSL_ENABLED
-#error TLS support for ESPAsyncTCP is not enabled
+#if defined(ESP32)
+    #if ASYNC_TCP_SSL_ENABLED
+        #error ASYNC_TCP_SSL_ENABLED not supported
+    #endif
+#elif defined(ESP8266)
+    #if ASYNC_TCP_SSL_ENABLED && WEBSERVER_TLS_SUPPORT
+        #warning Using SSL requires a lot RAM and processing power. It is not recommended to run the web server with TLS. This might lead to poor performance and stability.
+    #endif
+    #if WEBSERVER_TLS_SUPPORT && !ASYNC_TCP_SSL_ENABLED
+        #error TLS support for ESPAsyncTCP is not enabled
+    #endif
 #endif
 
 #ifndef CONFIG_EEPROM_OFFSET

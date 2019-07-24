@@ -399,11 +399,13 @@ const String MQTTClient::connectionStatusString() {
     message += F("topic ");
 
     message += formatTopic(-1, FSPGM(empty));
+#if MQTT_AUTO_DISCOVERY
     if (config._H_GET(Config().flags).mqttAutoDiscoveryEnabled) {
         message += F(", discovery prefix '");
         message += config._H_STR(Config().mqtt_discovery_prefix);
         message += '\'';
     }
+#endif
     return message;
 }
 

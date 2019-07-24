@@ -19,7 +19,7 @@
 
 #elif defined(ESP32)
 
-RTC_DATA_ATTR uint8_t RTCMemoryManager_allocated_block[RTCMemoryManager::__memorySize];
+RTC_NOINIT_ATTR uint8_t RTCMemoryManager_allocated_block[RTCMemoryManager::__memorySize];
 
 bool system_rtc_mem_read(size_t ofs, uint32_t *data, size_t len) {
     memcpy(data, RTCMemoryManager_allocated_block + ofs * RTCMemoryManager::__blockSize, len);
@@ -66,14 +66,24 @@ uint32_t *RTCMemoryManager::_readMemory(uint16_t &length) {
     uint32_t offset;
 
     if (_readHeader(header, offset, length)) {
+#if defined(ESP32)
+        // we can use the RTC memory directly
+        memPtr = reinterpret_cast<uint32_t *>(RTCMemoryManager_allocated_block + offset);
+        uint16_t crc = crc16_calc((const uint8_t *)memPtr, header.length + sizeof(header) - sizeof(header.crc));
+        if (crc != header.crc) {
+            _debug_printf(PSTR("RTC memory: CRC mismatch %04x != %04x, length %d\n"), crc, header.crc, size);
+            return nullptr;
+        }
+#else
         uint16_t size = __memorySize - offset;
         memPtr = (uint32_t *)calloc(1, size);
         uint16_t crc = -1;
         if (!system_rtc_mem_read(offset / __blockSize, memPtr, size) || ((crc = crc16_calc((const uint8_t *)memPtr, header.length + sizeof(header) - sizeof(header.crc))) != header.crc)) {
             _debug_printf(PSTR("RTC memory: CRC mismatch %04x != %04x, length %d\n"), crc, header.crc, size);
-            free(memPtr);
+            freeMemPtr(memPtr);
             return nullptr;
         }
+#endif
     }
     return memPtr;
 }
@@ -82,82 +92,7 @@ bool RTCMemoryManager::read(uint8_t id, void *dataPtr, uint8_t maxSize)
 {
     memset(dataPtr, 0, maxSize);
     _debug_printf_P(PSTR("plugin_read_rtc_memory(%d, %d)\n"), id, maxSize);
-    if (id > __maxId) {
-        _debug_printf_P(PSTR("plugin_read_rtc_memory(%d): invalid id\n"), id);
-        return false;
-    }
     uint16_t length;
-
-    // TODO this function could save memory by reading from RTC memory and storing the result directly in dataPtr instead of using __plugin_read_rtc_memory()
-    // it has to read the entire data set to generate the CRC though
-#if 0
-    // not well tested, variable "data" seems to get corrupted
-    Header_t header;
-    uint32_t offset;
-    uint16_t crc = ~0;
-    bool result = true;
-
-    if (_readHeader(header, offset, length)) {
-        uint8_t *ptr = (uint8_t *)dataPtr;
-        uint8_t entryOffset = 0;
-        offset /= PLUGIN_RTC_MEM_BLK_SIZE;
-        while(length) {
-            uint8_t data[4];
-            if (!ESP.rtcUserMemoryRead(offset++, (uint32_t *)&data, sizeof(data))) {
-                result = false;
-                break;
-            }
-            length -= 4;  // check length?
-            bool match = false;
-            auto entry = (Entry_t *)(&data[entryOffset]);
-            if (!entry->mem_id) {
-                break; // done
-            }
-            else if (entry->mem_id == id) {
-                match = true;
-            }
-
-            // here it gets a bit complicated
-            // it needs to calculate the number of DWORDS to read and the offset for the next entry, since it isn't aligned
-
-            uint16_t bytes = entry->length + sizeof(*entry);
-            uint8_t dwords = bytes / 4;
-            uint8_t copyOffset = entryOffset + sizeof(*entry);
-            if (match && copyOffset < sizeof(data)) {
-                memcpy(ptr, data, sizeof(data) - copyOffset);
-                ptr += sizeof(data) - copyOffset;
-            }
-
-            entryOffset = bytes % 4; // new offset inside the 4 byte data block
-            if (!entryOffset) { // no offset for the next DWORD, read it here
-                dwords++;
-            }
-            while(--dwords) { // we got the first DWORD already
-                if (!ESP.rtcUserMemoryRead(offset++, (uint32_t *)&data, sizeof(data))) {
-                    result = false;
-                    break;
-                }
-                length -= 4; // check length?
-                crc = crc16_update(crc, (const uint8_t *)&data, sizeof(data));
-                if (match) {
-                    memcpy(ptr, &data, sizeof(data));
-                    ptr += sizeof(data);
-                }
-            }
-            if (match && entryOffset) { // copy the missing bytes from the beginning of the next DWORD
-                if (!ESP.rtcUserMemoryRead(offset, (uint32_t *)ptr, sizeof(data) - entryOffset)) {
-                    result = false;
-                    break;
-                }
-                ptr += sizeof(data) - entryOffset;
-            }
-        }
-
-        // update the CRC with the partial header
-        crc = crc16_update(crc, (const uint8_t *)&header, sizeof(header) - sizeof(header.crc));
-
-    }
-#endif
 
     auto memPtr = _readMemory(length);
     if (!memPtr) {
@@ -178,12 +113,12 @@ bool RTCMemoryManager::read(uint8_t id, void *dataPtr, uint8_t maxSize)
                 entry->length = maxSize;
             }
             memcpy(dataPtr, ptr, entry->length);
-            free(memPtr);
+            freeMemPtr(memPtr);
             return true;
         }
         ptr += entry->length;
     }
-    free(memPtr);
+    freeMemPtr(memPtr);
     return false;
 
 }
@@ -191,17 +126,7 @@ bool RTCMemoryManager::read(uint8_t id, void *dataPtr, uint8_t maxSize)
 bool RTCMemoryManager::write(uint8_t id, void *dataPtr, uint8_t dataLength) {
     _debug_printf_P(PSTR("plugin_write_rtc_memory(%d, %d)\n"), id, dataLength);
 
-    if (id > __maxId) {
-        _debug_printf_P(PSTR("plugin_read_rtc_memory(%d): invalid id\n"), id);
-        return false;
-    }
-    if (dataLength > __maxLength) {
-        _debug_printf_P(PSTR("plugin_read_rtc_memory(%d, %d): max size exceeded\n"), id, dataLength);
-        return false;
-    }
-
     Buffer newData;
-
     uint16_t length;
     auto memPtr = _readMemory(length);
     if (memPtr) {
@@ -219,7 +144,7 @@ bool RTCMemoryManager::write(uint8_t id, void *dataPtr, uint8_t dataLength) {
             }
             ptr += entry->length;
         }
-        free(memPtr);
+        freeMemPtr(memPtr);
     }
 
     // append new data
@@ -265,6 +190,7 @@ bool RTCMemoryManager::write(uint8_t id, void *dataPtr, uint8_t dataLength) {
 bool RTCMemoryManager::clear() {
 #if defined(ESP8266)
 
+    // clear header only
     uint8_t blocks = sizeof(Header_t) / __blockSize;
     uint32_t offset = __headerAddress;
     uint32_t data = 0;
@@ -276,6 +202,7 @@ bool RTCMemoryManager::clear() {
 
 #elif defined(ESP32)
 
+    // clear entire block
     memset(RTCMemoryManager_allocated_block, 0, sizeof(RTCMemoryManager_allocated_block));
 
 #endif
@@ -295,6 +222,8 @@ void RTCMemoryManager::dump(Print &output) {
         _debug_printf_P(PSTR("plugin_debug_dump_rtc_memory(): read returned nullptr\n"));
         return;
     }
+
+    output.printf_P(PSTR("RTC data length: %u\n"), length);
 
     DumpBinary dumper(output);
     auto ptr = (uint8_t *)memPtr;
@@ -319,6 +248,6 @@ void RTCMemoryManager::dump(Print &output) {
         ptr += entry->length;
     }
 
-    free(memPtr);
+    freeMemPtr(memPtr);
 }
 #endif

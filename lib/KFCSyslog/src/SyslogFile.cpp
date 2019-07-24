@@ -7,6 +7,12 @@
 #include "Syslog.h"
 #include "SyslogFile.h"
 
+#if DEBUG_SYSLOG
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
+#endif
+
 SyslogFile::SyslogFile(SyslogParameter& parameter, const String filename, size_t maxSize, uint16_t maxRotate) : Syslog(parameter) {
     _filename = filename;
     _maxSize = maxSize;
@@ -31,7 +37,7 @@ void SyslogFile::addHeader(String& buffer) {
 }
 
 void SyslogFile::transmit(const char* message, size_t length, SyslogCallback callback) {
-    debug_printf_P(PSTR("SyslogFile::transmit '%s' length %d\n"), message, length);
+    _debug_printf_P(PSTR("SyslogFile::transmit '%s' length %d\n"), message, length);
 
     auto logFile = SPIFFS.open(_filename, "a+"); // TODO "a+" required to get the file size with size() ?
     if (logFile) {
@@ -52,7 +58,7 @@ void SyslogFile::transmit(const char* message, size_t length, SyslogCallback cal
     }
 }
 
-bool SyslogFile::canSend() {
+bool SyslogFile::canSend() const {
     return true;
 }
 
@@ -80,6 +86,6 @@ void SyslogFile::_rotateLogfile(const String filename, uint16_t maxRotate) {
 #endif
 			SPIFFS.rename(from, to);
 		}
-		debug_printf_P(PSTR("rename = %d: %s => %s\n"), renameResult, from.c_str(), to.c_str());
+		_debug_printf_P(PSTR("rename = %d: %s => %s\n"), renameResult, from.c_str(), to.c_str());
 	}
 }

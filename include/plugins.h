@@ -8,7 +8,7 @@
 #include <vector>
 
 #ifndef DEBUG_PLUGINS
-#define DEBUG_PLUGINS               0
+#define DEBUG_PLUGINS               1
 #endif
 
 #define PLUGIN_PRIO_RESET_DETECTOR  -127

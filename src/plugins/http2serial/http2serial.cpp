@@ -27,12 +27,13 @@
 Http2Serial *Http2Serial::_instance = nullptr;
 
 Http2Serial::Http2Serial() {
+    _locked = false;
 #ifdef HTTP2SERIAL_BAUD
     _debug_printf_P(PSTR("Reconfiguring serial port to %d baud\n"), HTTP2SERIAL_BAUD);
     Serial.flush();
     Serial.begin(HTTP2SERIAL_BAUD);
 #endif
-    _serialWrapper = &serialHandler.getWrapper();
+    //_serialWrapper = &serialHandler.getWrapper();
     _serialHandler = &serialHandler;
 #if AT_MODE_SUPPORTED && HTTP2SERIAL_DISABLE_AT_MODE
     disable_at_mode();
@@ -43,10 +44,8 @@ Http2Serial::Http2Serial() {
 #if HTTP2SERIAL_SERIAL_HANDLER
     LoopFunctions::add(Http2Serial::inputLoop);
 #endif
-    LoopFunctions::add([this]() {
-        this->outputLoop();
-    }, reinterpret_cast<LoopFunctions::CallbackPtr_t>(this));
-    _serialHandler->addHandler(onData, SerialHandler::RECEIVE|SerialHandler::LOCAL_TX);
+    LoopFunctions::add(Http2Serial::outputLoop);
+    _serialHandler->addHandler(onData, SerialHandler::RECEIVE|SerialHandler::LOCAL_TX); // RECEIVE=data received by Serial, LOCAL_TX=data sent to Serial
 }
 
 
@@ -54,7 +53,7 @@ Http2Serial::~Http2Serial() {
 #if HTTP2SERIAL_SERIAL_HANDLER
     LoopFunctions::remove(Http2Serial::inputLoop);
 #endif
-    LoopFunctions::remove(reinterpret_cast<LoopFunctions::CallbackPtr_t>(this));
+    LoopFunctions::remove(Http2Serial::outputLoop);
     _serialHandler->removeHandler(onData);
 #ifdef HTTP2SERIAL_BAUD
     Serial.flush();
@@ -69,8 +68,10 @@ void Http2Serial::broadcast(WsConsoleClient *sender, const uint8_t *message, siz
 
     if (WsClientManager::getWsClientCount(true)) {
         for(const auto &pair: WsClientManager::getWsClientManager()->getClients()) {
+            // Serial.printf_P(PSTR("status %d, isSender %d, auth %d\n"), pair.socket->status(), pair.wsClient != sender, pair.wsClient->isAuthenticated());
             if (pair.socket->status() == WS_CONNECTED && pair.wsClient != sender && pair.wsClient->isAuthenticated()) {
-                pair.socket->text((uint8_t *)message, len);
+                //TODO esp32 message are stuck in the queue
+                pair.socket->text(reinterpret_cast<const char *>(message), len);
             }
         }
     }
@@ -92,6 +93,7 @@ void Http2Serial::broadcastOutputBuffer() {
 void Http2Serial::writeOutputBuffer(const uint8_t *buffer, size_t len) {
 
     if (!_outputBufferEnabled) {
+        // Serial.println(F("_outputBufferEnabled=false"));
         return;
     }
 
@@ -130,29 +132,47 @@ void Http2Serial::clearOutputBuffer() {
     resetOutputBufferTimer();
 }
 
-void Http2Serial::outputLoop() {
+void Http2Serial::_outputLoop() {
     if (isTimeToSend()) {
         broadcastOutputBuffer();
     }
-    auto *handler = getSerialHandler();
+    auto handler = getSerialHandler();
     if (handler != &serialHandler) {
         handler->serialLoop();
     }
 }
 
+void Http2Serial::outputLoop() {
+    Http2Serial::_instance->_outputLoop();
+}
+
 void Http2Serial::onData(uint8_t type, const uint8_t *buffer, size_t len) {
-    //os_printf("Http2Serial::onData(%d, %p, %d)\n", type, buffer, len);
-    if (Http2Serial::_instance) {
-        static bool locked = false;
-        if (!locked) {
-            locked = true;
-            Http2Serial::_instance->writeOutputBuffer(buffer, len);  // store data before sending
-            locked = false;
-        }
+    // Serial.printf_P(PSTR("Http2Serial::onData(%d, %p, %d): instance %p, locked %d\n"), type, buffer, len, Http2Serial::_instance, Http2Serial::_instance ? Http2Serial::_instance->_locked : -1);
+    if (Http2Serial::_instance && !Http2Serial::_instance->_locked) {
+        Http2Serial::_instance->_locked = true;
+        Http2Serial::_instance->writeOutputBuffer(buffer, len);  // store data before sending
+        Http2Serial::_instance->_locked = false;
     }
 }
 
-SerialHandler *Http2Serial::getSerialHandler() {
+Http2Serial *Http2Serial::getInstance() {
+    return _instance;
+}
+
+void Http2Serial::createInstance() {
+    if (!_instance) {
+        _instance = _debug_new Http2Serial();
+    }
+}
+
+void Http2Serial::destroyInstance() {
+    if (_instance) {
+        delete _instance;
+        _instance = nullptr;
+    }
+}
+
+SerialHandler *Http2Serial::getSerialHandler() const {
     return _serialHandler;
 }
 

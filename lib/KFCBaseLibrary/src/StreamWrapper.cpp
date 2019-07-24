@@ -31,8 +31,7 @@ void StreamWrapper::add(Stream *output) {
 }
 
 void StreamWrapper::remove(Stream *output) {
-    auto newEnd = std::remove(_children.begin(), _children.end(), output);
-    _children.erase(newEnd, _children.end());
+    _children.erase(std::remove(_children.begin(), _children.end(), output), _children.end());
 }
 
 void StreamWrapper::clear() {
@@ -48,14 +47,14 @@ void StreamWrapper::replace(Stream *output, bool input) {
 }
 
 Stream *StreamWrapper::first() {
-    if (count()) {
+    if (_children.size()) {
         return _children.front();
     }
     return nullptr;
 }
 
 Stream *StreamWrapper::last() {
-    if (count()) {
+    if (_children.size()) {
         return _children.back();
     }
     return nullptr;
@@ -86,6 +85,7 @@ size_t StreamWrapper::readBytes(char *buffer, size_t length) {
 }
 
 size_t StreamWrapper::write(uint8_t data) {
+    // Serial.printf_P(PSTR("StreamWrapper::write(%u)\n"), data);
     size_t res = 0;
     for(auto child: _children) {
         res = child->write(data);
@@ -94,6 +94,7 @@ size_t StreamWrapper::write(uint8_t data) {
 }
 
 size_t StreamWrapper::write(const uint8_t *buffer, size_t size) {
+    // Serial.printf_P(PSTR("StreamWrapper::write(%p, %d)\n"), buffer, size);
     size_t res = 0;
     for(auto child: _children) {
         res = child->write(buffer, size);

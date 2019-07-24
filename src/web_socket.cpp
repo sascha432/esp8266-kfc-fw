@@ -89,7 +89,7 @@ void WsClientManager::_displayStats() {
 
     debug_printf_P(PSTR("WsClientManager::_displayStats() Clients connected %d, authenticated %d\n"), getClientCount(false), getClientCount(true));
 #if HTTP2SERIAL
-    debug_printf_P(PSTR("WsClientManager::_displayStats() Http2Serial enabled, object %p\n"), Http2Serial::_instance);
+    debug_printf_P(PSTR("WsClientManager::_displayStats() Http2Serial enabled, object %p\n"), Http2Serial::getInstance());
 #endif
 
 #endif
@@ -105,7 +105,7 @@ void WsClientManager::add(WsClient *wsClient, AsyncWebSocketClient *socket) {
 }
 
 void WsClientManager::remove(WsClient *wsClient) {
-    _list.erase(std::remove_if(_list.begin(), _list.end(), [wsClient](const WsClientPair &pair) {
+    _list.erase(std::remove_if(_list.begin(), _list.end(), [&wsClient](const WsClientPair &pair) {
         return (pair.wsClient == wsClient);
     }));
     if (wsClient->isAuthenticated()) {
@@ -179,7 +179,7 @@ void WsClientManager::setClientAuthenticated(WsClient *wsClient, bool isAuthenti
 
     // debug_printf_P(PSTR("WsClientManager::setClientAuthenticated(%p, %d)\n"), wsClient, isAuthenticated);
 
-    auto it = std::find_if(_authenticated.begin(), _authenticated.end(), [wsClient](WsClient *client) {
+    auto it = std::find_if(_authenticated.begin(), _authenticated.end(), [&wsClient](WsClient *client) {
         return client == wsClient;
     });
     if (isAuthenticated) {
@@ -275,13 +275,13 @@ void WsClient::_displayData(WsClient *wsClient, AwsFrameInfo *info, uint8_t *dat
      _authenticated = authenticated;
  }
 
- bool WsClient::isAuthenticated() {
+ bool WsClient::isAuthenticated() const {
      return _authenticated;
  }
 
 #if WEB_SOCKET_ENCRYPTION
 
- bool WsClient::isEncrypted() {
+ bool WsClient::isEncrypted() const {
      return _iv != nullptr;
  }
 
@@ -296,7 +296,7 @@ void WsClient::_displayData(WsClient *wsClient, AwsFrameInfo *info, uint8_t *dat
      _client = client;
  }
 
- AsyncWebSocketClient * WsClient::getClient() {
+ AsyncWebSocketClient * WsClient::getClient() const {
      return _client;
  }
 

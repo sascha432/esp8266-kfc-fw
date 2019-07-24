@@ -11,6 +11,7 @@
 #include <OSTimer.h>
 #include <PrintString.h>
 #include "kfc_fw_config.h"
+#include "blink_led_timer.h"
 #include "at_mode.h"
 #include "serial_handler.h"
 #include "reset_detector.h"
@@ -164,9 +165,9 @@ void setup() {
         if (resetDetector.getResetCounter() >= 10) {
             KFC_SAFE_MODE_SERIAL_PORT.println(F("Entering deep sleep until next reset in 5 seconds..."));
             for(uint8_t i = 0; i < (RESET_DETECTOR_TIMEOUT + 200) / (10 + 25); i++) {
-                config_set_blink(BLINK_SOLID, LED_BUILTIN);
+                BlinkLEDTimer::setBlink(LED_BUILTIN, BlinkLEDTimer::SOLID);
                 delay(10);
-                config_set_blink(BLINK_OFF, LED_BUILTIN);
+                BlinkLEDTimer::setBlink(LED_BUILTIN, BlinkLEDTimer::OFF);
                 delay(25);
             }
             deep_sleep_forever();
@@ -175,9 +176,9 @@ void setup() {
         if (resetDetector.getResetCounter() >= 4) {
             KFC_SAFE_MODE_SERIAL_PORT.println(F("4x reset detected. Restoring factory defaults in a 5 seconds..."));
             for(uint8_t i = 0; i < (RESET_DETECTOR_TIMEOUT + 500) / (100 + 250); i++) {
-                config_set_blink(BLINK_SOLID, LED_BUILTIN);
+                BlinkLEDTimer::setBlink(LED_BUILTIN, BlinkLEDTimer::SOLID);
                 delay(100);
-                config_set_blink(BLINK_OFF, LED_BUILTIN);
+                BlinkLEDTimer::setBlink(LED_BUILTIN, BlinkLEDTimer::OFF);
                 delay(250);
             }
             config.restoreFactorySettings();
@@ -223,7 +224,7 @@ void setup() {
             ));
 #endif
 
-            config_set_blink(BLINK_SOS, LED_BUILTIN);
+            BlinkLEDTimer::setBlink(LED_BUILTIN, BlinkLEDTimer::SOS);
             resetDetector.clearCounter();
             resetDetector.setSafeMode(1);
 

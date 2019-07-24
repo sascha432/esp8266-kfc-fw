@@ -10,6 +10,7 @@
 #include <EventScheduler.h>
 #include <session.h>
 #include <misc.h>
+#include "blink_led_timer.h"
 #include "progmem_data.h"
 #include "build.h"
 #if NTP_CLIENT
@@ -53,21 +54,39 @@ void KFCFWConfiguration::_onWiFiConnectCb(const WiFiEventStationModeConnected &e
         _debug_printf_P(PSTR("Free heap %s\n"), formatBytes(ESP.getFreeHeap()).c_str());
         _wifiConnected = true;
         config.storeQuickConnect(event.bssid, event.channel);
+
+#if defined(ESP32)
+        auto hostname = config._H_STR(Config().device_name);
+        _debug_printf_P(PSTR("WiFi.setHostname(%s)\n"), hostname);
+        if (!WiFi.setHostname(hostname)) {
+            _debug_printf_P(PSTR("WiFi.setHostname(%s) failed\n"), hostname);
+        }
+#endif
+
     }
 }
 
 void KFCFWConfiguration::_onWiFiDisconnectCb(const WiFiEventStationModeDisconnected &event) {
     _debug_printf_P(PSTR("KFCFWConfiguration::_onWiFiDisconnectCb(%d = %s)\n"), (int)event.reason, WiFi_disconnect_reason(event.reason).c_str());
     if (_wifiConnected) {
-        config_set_blink(BLINK_FAST);
+        BlinkLEDTimer::setBlink(BlinkLEDTimer::FAST);
         _debug_printf_P(PSTR("WiFi disconnected after %.3f seconds, millis = %lu\n"), ((_wifiUp == -1UL) ? -1.0 : ((millis() - _wifiUp) / 1000.0)), millis());
 
         Logger_notice(F("WiFi disconnected, SSID %s, reason %s"), event.ssid.c_str(), WiFi_disconnect_reason(event.reason).c_str());
         _offlineSince = millis();
         _wifiConnected = false;
         _wifiUp = -1UL;
-        WiFiCallbacks::callEvent(WiFiCallbacks::EventEnum_t::DISCONNECTED, (void *)&event);
+        WiFiCallbacks::callEvent(WiFiCallbacks::DISCONNECTED, (void *)&event);
     }
+#if defined(ESP32)
+    else {
+        //TODO esp32
+        //_onWiFiDisconnectCb 202 = AUTH_FAIL
+        BlinkLEDTimer::setBlink(BlinkLEDTimer::FAST);
+        _debug_println(F("force WiFi reconnect"));
+        WiFi.begin(); // force reconnect
+    }
+#endif
 }
 
 void KFCFWConfiguration::_onWiFiGotIPCb(const WiFiEventStationModeGotIP &event) {
@@ -81,17 +100,21 @@ void KFCFWConfiguration::_onWiFiGotIPCb(const WiFiEventStationModeGotIP &event) 
 
     Logger_notice(F("%s: IP/Net %s/%s GW %s DNS: %s, %s"), config._H_GET(Config().flags).stationModeDHCPEnabled ? PSTR("DHCP") : PSTR("Static configuration"), ip.c_str(), mask.c_str(), gw.c_str(), dns1.c_str(), dns2.c_str());
 
-    config_set_blink(BLINK_SOLID);
+    BlinkLEDTimer::setBlink(BlinkLEDTimer::SOLID);
     _wifiUp = millis();
     config.storeStationConfig(event.ip, event.mask, event.gw);
 
-    WiFiCallbacks::callEvent(WiFiCallbacks::EventEnum_t::CONNECTED, (void *)&event);
+    WiFiCallbacks::callEvent(WiFiCallbacks::CONNECTED, (void *)&event);
 }
 
 void KFCFWConfiguration::_onWiFiOnDHCPTimeoutCb() {
     _debug_printf_P(PSTR("KFCFWConfiguration::_onWiFiOnDHCPTimeoutCb()\n"));
+#if defined(ESP32)
+    Logger_error(F("Lost DHCP IP"));
+#else
     Logger_error(F("DHCP timeout"));
-    config_set_blink(BLINK_FLICKER);
+#endif
+    BlinkLEDTimer::setBlink(BlinkLEDTimer::FLICKER);
 }
 
 void KFCFWConfiguration::_softAPModeStationConnectedCb(const WiFiEventSoftAPModeStationConnected &event) {
@@ -135,7 +158,7 @@ void KFCFWConfiguration::_onWiFiEvent(WiFiEvent_t event, WiFiEventInfo_t info) {
                 config._onWiFiGotIPCb(dst);
             } break;
         case WiFiEvent_t::SYSTEM_EVENT_STA_LOST_IP: {
-                config._onWiFiOnDHCPTimeoutCb(); // TODO esp32
+                config._onWiFiOnDHCPTimeoutCb();
             } break;
         case WiFiEvent_t::SYSTEM_EVENT_AP_STACONNECTED: {
                 WiFiEventSoftAPModeStationConnected dst;
@@ -279,7 +302,9 @@ void KFCFWConfiguration::restoreFactorySettings() {
     flags.webServerMode = HTTP_MODE_UNSECURE;
     flags.webServerPerformanceModeEnabled = true;
     flags.mqttMode = MQTT_MODE_SECURE;
+#if MQTT_AUTO_DISCOVERY
     flags.mqttAutoDiscoveryEnabled = true;
+#endif
     flags.ledMode = MODE_SINGLE_LED;
     flags.hueEnabled = true;
     flags.useStaticIPDuringWakeUp = true;
@@ -339,9 +364,9 @@ void KFCFWConfiguration::restoreFactorySettings() {
 //     mqttOptions.port = 1883;
 //     mqttOptions.keepalive = 15;
 // #  endif
-#  if MQTT_AUTO_DISCOVERY
-    _H_SET_STR(Config().mqtt_discovery_prefix, F("homeassistant"));
-#  endif
+    #if MQTT_AUTO_DISCOVERY
+        _H_SET_STR(Config().mqtt_discovery_prefix, F("homeassistant"));
+    #endif
 #endif
 #if SYSLOG
     _H_SET(Config().syslog_port, 514);
@@ -458,7 +483,7 @@ void KFCFWConfiguration::setup() {
     String version = KFCFWConfiguration::getFirmwareVersion();
     if (!resetDetector.hasWakeUpDetected()) {
         Logger_notice(F("Starting KFCFW %s"), version.c_str());
-        config_set_blink(BLINK_FLICKER);
+        BlinkLEDTimer::setBlink(BlinkLEDTimer::FLICKER);
     }
 
     // ~5ms
@@ -502,11 +527,11 @@ void KFCFWConfiguration::write() {
     }
 }
 
-// TODO restore system time and timezone
 void KFCFWConfiguration::wakeUpFromDeepSleep() {
     _debug_println(F("KFCFWConfiguration::wakeUpFromDeepSleep()"));
 
 #if defined(ESP32)
+    WiFi.mode(WIFI_STA); // needs to be called to initialize wifi
     wifi_config_t _config;
     wifi_sta_config_t &config = _config.sta;
     if (esp_wifi_get_config(ESP_IF_WIFI_STA, &_config) == ESP_OK) {
@@ -529,7 +554,7 @@ void KFCFWConfiguration::wakeUpFromDeepSleep() {
         if (channel <= 0 || !bssidPtr) {
 
             _debug_printf_P(PSTR("Cannot read quick connect from RTC memory, running WiFi.begin(%s, ***) only\n"), config.ssid);
-            if (WiFi.begin((const char*)config.ssid, (const char*)config.password, channel, bssidPtr, true) == WL_CONNECT_FAILED) {
+            if (WiFi.begin(reinterpret_cast<char *>(config.ssid), reinterpret_cast<char *>(config.password)) != WL_DISCONNECTED) {
                 Logger_error(F("Failed to start WiFi"));
             }
 
@@ -541,7 +566,7 @@ void KFCFWConfiguration::wakeUpFromDeepSleep() {
             }
 
             wl_status_t result;
-            if ((result = WiFi.begin((const char*)config.ssid, (const char*)config.password, channel, bssidPtr, true)) == WL_CONNECT_FAILED) {
+            if ((result = WiFi.begin(reinterpret_cast<char *>(config.ssid), reinterpret_cast<char *>(config.password), channel, bssidPtr, true)) != WL_DISCONNECTED) {
                 Logger_error(F("Failed to start WiFi"));
             }
 
@@ -597,7 +622,7 @@ void KFCFWConfiguration::restartDevice() {
     _debug_println(F("KFCFWConfiguration::restartDevice()"));
 
     Logger_notice(F("Device is being restarted"));
-    config_set_blink(BLINK_FLICKER);
+    BlinkLEDTimer::setBlink(BlinkLEDTimer::FLICKER);
     ESP.restart();
 }
 
@@ -669,7 +694,7 @@ bool KFCFWConfiguration::connectWiFi() {
 #if DEBUG
     if (__debug_block_wifi_connect) {
         _debug_println(F("KFCFWConfiguration::connectWiFi() blocked"));
-        config_set_blink(BLINK_SOLID);
+        BlinkLEDTimer::setBlink(BlinkLEDTimer::SOLID);
         return true;
     }
 #endif
@@ -679,13 +704,10 @@ bool KFCFWConfiguration::connectWiFi() {
     bool station_mode_success = false;
     bool ap_mode_success = false;
 
-    WiFi.setHostname(config._H_STR(Config().device_name));
-    // WiFi.hostname(config._H_STR(Config().device_name));
-
     auto flags = config._H_GET(Config().flags);
     if (flags.wifiMode & WIFI_STA) {
         _debug_println(F("KFCFWConfiguration::connectWiFi(): station mode"));
-        WiFi.setAutoConnect(false); // WiFi callbacks have to be installed first
+        WiFi.setAutoConnect(false); // WiFi callbacks have to be installed first during boot
         WiFi.setAutoReconnect(true);
 
         bool result;
@@ -705,7 +727,7 @@ bool KFCFWConfiguration::connectWiFi() {
                 setLastError(message);
                 Logger_error(message);
             } else {
-                _debug_printf_P(PSTR("Station Mode SSID %s\n"), WiFi.SSID().c_str());
+                _debug_printf_P(PSTR("Station Mode SSID %s\n"), config._H_STR(Config().wifi_ssid));
                 station_mode_success = true;
             }
         }
@@ -727,30 +749,47 @@ bool KFCFWConfiguration::connectWiFi() {
             Logger_error(message);
         } else {
 
-#if defined(ESP8266)
+#if defined(ESP32)
+
+            if (tcpip_adapter_dhcps_stop(TCPIP_ADAPTER_IF_AP) != ESP_OK) {
+                _debug_println(F("tcpip_adapter_dhcps_stop(TCPIP_ADAPTER_IF_AP) failed"));
+            }
+
+            dhcps_lease_t lease;
+            lease.enable = flags.softAPDHCPDEnabled;
+            lease.start_ip.addr = config._H_GET_IP(Config().soft_ap.dhcp_start);
+            lease.end_ip.addr = config._H_GET_IP(Config().soft_ap.dhcp_end);
+
+            if (tcpip_adapter_dhcps_option(TCPIP_ADAPTER_OP_SET, TCPIP_ADAPTER_REQUESTED_IP_ADDRESS, &lease, sizeof(lease)) != ESP_OK) {
+                String message = F("Failed to configure DHCP server");
+                setLastError(message);
+                Logger_error(message);
+            }
+            else if (flags.softAPDHCPDEnabled && tcpip_adapter_dhcps_start(TCPIP_ADAPTER_IF_AP) != ESP_OK) {
+                String message = F("Failed to start DHCP server");
+                setLastError(message);
+                Logger_error(message);
+            }
+
+#elif defined(ESP8266)
 
             // setup after WiFi.softAPConfig()
             struct dhcps_lease dhcp_lease;
             wifi_softap_dhcps_stop();
+            dhcp_lease.enable = flags.softAPDHCPDEnabled;
             dhcp_lease.start_ip.addr = config._H_GET_IP(Config().soft_ap.dhcp_start);
             dhcp_lease.end_ip.addr = config._H_GET_IP(Config().soft_ap.dhcp_end);
-            dhcp_lease.enable = flags.stationModeDHCPEnabled;
             if (!wifi_softap_set_dhcps_lease(&dhcp_lease)) {
                 String message = F("Failed to configure DHCP server");
                 setLastError(message);
                 Logger_error(message);
             } else {
-                if (flags.stationModeDHCPEnabled) {
+                if (flags.softAPDHCPDEnabled) {
                     if (!wifi_softap_dhcps_start()) {
                         String message = F("Failed to start DHCP server");
                         setLastError(message);
                         Logger_error(message);
-                    } else {
-                        ap_mode_success = true;
-                        Logger_notice(F("AP Mode sucessfully initialized"));
                     }
-                } else {
-                    Logger_notice(F("DHCP server disabled"));
                 }
             }
 
@@ -760,6 +799,9 @@ bool KFCFWConfiguration::connectWiFi() {
                 String message = F("Cannot start AP mode");
                 setLastError(message);
                 Logger_error(message);
+            } else {
+                Logger_notice(F("AP Mode sucessfully initialized"));
+                ap_mode_success = true;
             }
         }
     }
@@ -770,8 +812,16 @@ bool KFCFWConfiguration::connectWiFi() {
     }
 
     if (!station_mode_success || !ap_mode_success) {
-        config_set_blink(BLINK_FAST);
+        BlinkLEDTimer::setBlink(BlinkLEDTimer::FAST);
     }
+
+    auto hostname = config._H_STR(Config().device_name);
+#if defined(ESP32)
+    WiFi.setHostname(hostname);
+    WiFi.softAPsetHostname(hostname);
+#elif defined(ESP8266)
+    WiFi.hostname(hostname);
+#endif
 
     return (station_mode_success && ap_mode_success);
 

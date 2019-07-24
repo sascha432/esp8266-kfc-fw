@@ -13,7 +13,7 @@ class SyslogFile : public Syslog {
 
     void addHeader(String &buffer) override;
     void transmit(const char *message, size_t length, SyslogCallback callback) override;
-    bool canSend() override;
+    bool canSend() const override;
 
     void _rotateLogfile(const String filename, uint16_t maxRotate);
 

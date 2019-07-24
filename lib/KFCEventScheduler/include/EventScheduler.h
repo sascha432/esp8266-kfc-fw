@@ -20,8 +20,8 @@ public:
     enum Priority_t {
         PRIO_NONE = -1,
         PRIO_LOW = 0,
-        PRIO_NORMAL,
-        PRIO_HIGH,          // HIGH runs the timer callback directly inside the timer interrupt without any delay, but it has its limitations
+        PRIO_NORMAL,        // below HIGH, the timer callback is executed in the main loop and might be considerably delayed
+        PRIO_HIGH,          // HIGH runs the timer callback directly inside the timer interrupt/task without any delay
     };
 
     enum Repeat_t {

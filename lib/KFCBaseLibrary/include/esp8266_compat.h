@@ -6,6 +6,8 @@
 
 #if defined(ESP8266)
 
+#include <os_type.h>
+
 #define SPIFFS_info(info)           SPIFFS.info(info)
 #define SPIFFS_openDir(dirname)     SPIFFS.openDir(dirname)
 

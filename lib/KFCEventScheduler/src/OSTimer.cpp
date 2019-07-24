@@ -6,9 +6,6 @@
 #include "EventTimer.h"
 #include "OSTimer.h"
 
-#ifndef DEBUG_OSTIMER
-#define DEBUG_OSTIMER 0
-#endif
 #if DEBUG_OSTIMER
 #include <debug_helper_enable.h>
 #else
@@ -24,18 +21,21 @@ OSTimer::~OSTimer() {
 }
 
 void OSTimer::startTimer(uint32_t delay, bool repeat) {
+    if (delay < MIN_DELAY) {
+        _debug_printf_P(PSTR("ERROR: delay %u < %u is not supported\n"), delay, MIN_DELAY);
+        delay = MIN_DELAY;
+    }
+    else if (delay > MAX_DELAY) {
+        _debug_printf_P(PSTR("ERROR: delay %u > %u is not supported\n"), delay, MAX_DELAY);
+        delay = MAX_DELAY;
+    }
     if (_timer) {
         os_timer_disarm(_timer);
-    } else {
-        os_timer_create(_timer, reinterpret_cast<os_timer_func_t_ptr>(repeat ? _callback : _callbackOnce), reinterpret_cast<void *>(this));
-        os_timer_arm(_timer, delay, repeat);
-        if (delay < MIN_DELAY) {
-            _debug_printf_P(PSTR("ERROR! delay %.3f < %d is not supported\n"), delay / 1000.0, MIN_DELAY);
-        }
-        if (delay > MAX_DELAY) {
-            _debug_printf_P(PSTR("ERROR! delay %.3f > %d is not supported\n"), delay / 1000.0, MAX_DELAY);
-        }
     }
+    else {
+        os_timer_create(_timer, reinterpret_cast<os_timer_func_t_ptr>(repeat ? _callback : _callbackOnce), reinterpret_cast<void *>(this));
+    }
+    os_timer_arm(_timer, delay, repeat);
 }
 
 void OSTimer::detach() {

@@ -166,3 +166,14 @@ bool __while(uint32_t time_in_ms, std::function<bool()> loop, uint16_t interval_
 bool __while(uint32_t time_in_ms, uint16_t interval_in_ms, std::function<bool()> intervalLoop);
 // call loop every millisecond for time_in_ms
 bool __while(uint32_t time_in_ms, std::function<bool()> loop);
+
+// parse arguments into tokens
+// return value == maxArgs might indicate that arguments have been truncated
+// str='command=t1,t2,t3,"t3-1,t3-2", "t4-1""t4-2" , "t5-1\"t5-2\t5-3\\t5-4"'
+// 0='t1'
+// 1='t2'
+// 2='t3'
+// 3='t3-1,t3-2'
+// 4='t4-1"t4-2'
+// 5='t5-1"t5-2\t5-3\t5-4'
+uint8_t tokenizer(char *str, char **args, uint8_t maxArgs, bool hasCommand = true);

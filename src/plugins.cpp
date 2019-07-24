@@ -12,7 +12,7 @@
 #include <EventScheduler.h>
 #endif
 
-#define PLUGIN_RTC_MEM_MAX_ID       RTCMemoryManager::__maxId
+#define PLUGIN_RTC_MEM_MAX_ID       255
 
 #if DEBUG_PLUGINS
 #include "debug_helper_enable.h"

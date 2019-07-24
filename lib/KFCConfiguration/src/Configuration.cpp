@@ -8,12 +8,11 @@
 
 #include "DumpBinary.h"
 
-#if ESP8266
+#if defined(ESP8266)
 extern "C" {
     #include "spi_flash.h"
 }
 extern "C" uint32_t _SPIFFS_end;
-#endif
 
 #ifdef NO_GLOBAL_EEPROM
 // allows to use a different sector in flash memory
@@ -27,6 +26,12 @@ EEPROMClass EEPROM((((uint32_t)&_SPIFFS_end - EEPROM_ADDR) / SPI_FLASH_SEC_SIZE)
 #else
 #define EEPROM_ADDR 0x40200000           // sector of the configuration for direct access
 #endif
+#endif
+
+#if defined(ESP32)
+PROGMEM_STRING_DEF(EEPROM_partition_name, "eeprom");
+#endif
+
 
 #if DEBUG_CONFIGURATION
 #include <debug_helper_enable.h>
@@ -65,6 +70,9 @@ const char *getHandleName(ConfigurationParameter::Handle_t crc) {
 #endif
 
 Configuration::Configuration(uint16_t offset, uint16_t size) {
+#if defined(ESP32)
+    _partition = nullptr;
+#endif
     _offset = offset;
     _size = size;
     _eepromSize = 0;
@@ -378,12 +386,10 @@ void Configuration::commitEEPROM() {
     }
 }
 
-#if defined(ESP8266)
-
-// if the EEPROM is not intialized, copy data from flash directly
-
 void Configuration::getEEPROM(uint8_t *dst, uint16_t offset, uint16_t length, uint16_t size) {
 
+#if defined(ESP8266)
+    // if the EEPROM is not intialized, copy data from flash directly
     if (_eepromInitialized) {
         memcpy(dst, EEPROM.getConstDataPtr() + offset, length); // data is already in RAM
         return;
@@ -417,7 +423,9 @@ void Configuration::getEEPROM(uint8_t *dst, uint16_t offset, uint16_t length, ui
             _debug_printf_P(PSTR("Configuration::getEEPROM(): allocating read buffer %d (%d, %d)\n"), readSize, length, size); // large read operation should have an aligned address already to avoid this
         }
         noInterrupts();
-        spi_flash_read(eeprom_start_address, reinterpret_cast<uint32_t *>(ptr), readSize);
+        if (spi_flash_read(eeprom_start_address, reinterpret_cast<uint32_t *>(ptr), readSize) != SPI_FLASH_RESULT_OK) {
+            memset(ptr, 0, readSize);
+        }
         interrupts();
         memcpy(dst, ptr + alignment, length); // add alignment offset
         if (buf != ptr) {
@@ -425,32 +433,44 @@ void Configuration::getEEPROM(uint8_t *dst, uint16_t offset, uint16_t length, ui
         }
     } else {
         noInterrupts();
-        spi_flash_read(eeprom_start_address, reinterpret_cast<uint32_t*>(dst), readSize);
+        if (spi_flash_read(eeprom_start_address, reinterpret_cast<uint32_t*>(dst), readSize) != SPI_FLASH_RESULT_OK) {
+            memset(dst, 0, length);
+        }
         interrupts();
     }
 
     //_debug_printf_P(PSTR("Configuration::getEEPROM(): spi_flash_read(%08x, %d) = %d\n"), eeprom_start_address, readSize, result);
-}
+
+#elif defined(ESP32)
+
+    if (_eepromInitialized) {
+        if (!EEPROM.readBytes(offset, dst, length)) {
+            memset(dst, 0, length);
+        }
+    }
+    else {
+        if (!_partition) {
+            _partition = esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_ANY, SPGM(EEPROM_partition_name));
+        }
+        _debug_printf_P(PSTR("Configuration::getEEPROM(offset %d, length %d): using esp_partition_read(%p)\n"), offset, length, _partition);
+        if (esp_partition_read(_partition, offset, (void *)dst, length) != ESP_OK) {
+            memset(dst, 0, length);
+        }
+    }
 
 #else
 
-void Configuration::getEEPROM(uint8_t *dst, uint16_t offset, uint16_t length, uint16_t size) {
     beginEEPROM();
-#if defined(ESP32)
-    //TODO esp32 read from flash
-    memcpy(dst, EEPROM.getDataPtr() + offset, length);
-#else
     memcpy(dst, EEPROM.getConstDataPtr() + offset, length);
-#endif
-}
 
 #endif
+}
 
 Configuration::ParameterVectorIterator Configuration::_findParam(ConfigurationParameter::TypeEnum_t type, Handle_t handle, uint16_t &offset) {
     offset = _dataOffset;
     if (type == ConfigurationParameter::_ANY) {
         for (auto it = _params.begin(); it != _params.end(); ++it) {
-            if (it->getParam().handle == handle) {
+            if (it->getHandle() == handle) {
                 return it;
             }
             offset += it->getParam().length;
@@ -458,7 +478,7 @@ Configuration::ParameterVectorIterator Configuration::_findParam(ConfigurationPa
     }
     else {
         for (auto it = _params.begin(); it != _params.end(); ++it) {
-            if (it->getParam().handle == handle && it->getParam().type == type) {
+            if (it->getHandle() == handle && it->getParam().type == type) {
                 return it;
             }
             offset += it->getParam().length;
@@ -502,7 +522,7 @@ bool Configuration::_readParams() {
     memset(&hdr, 0, sizeof(hdr));
 
     endEEPROM();
-#if ESP8266
+#if defined(ESP8266) || defined(ESP32)
     // read header directly from flash since we do not know the size of the configuration
     getEEPROM(hdr.headerBuffer, (uint16_t)offset, (uint16_t)sizeof(hdr.header), (uint16_t)sizeof(hdr.headerBuffer));
 #else
@@ -589,7 +609,7 @@ bool Configuration::_readParams() {
 uint16_t Configuration::calculateOffset(Handle_t handle) {
     uint16_t offset = _dataOffset;
     for (auto &parameter: _params) {
-        if (parameter.getParam().handle == handle) {
+        if (parameter.getHandle() == handle) {
             return offset;
         }
         offset += parameter.getParam().length;

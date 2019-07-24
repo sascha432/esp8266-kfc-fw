@@ -162,13 +162,13 @@ void Logger::writeLog(LogLevel logLevel, const char *message, va_list arg) {
 
     size_t len;
     len = vsnprintf(temp, sizeof(temp), message, arg);
-    if (len >= sizeof(temp) - 1) {
+    if (len > sizeof(temp) - 1) {
         buffer = (char *)malloc(len + 1);
         if (!buffer) {
             buffer = temp; // just send the limited size
             len = sizeof(temp) - 1;
         } else {
-            vsnprintf(buffer, len + 1, message, arg);
+            len = vsnprintf(buffer, len + 1, message, arg);
         }
     }
 
@@ -250,7 +250,7 @@ const String Logger::getLogFilename(LogLevel logLevel) {
 
 bool Logger::openLog(LogLevel logLevel) {
 
-    const String fileName = this->getLogFilename(logLevel);
+    auto fileName = this->getLogFilename(logLevel);
     return (bool)SPIFFS.open(fileName, SPIFFS.exists(fileName) ? "a" : "w");
 }
 

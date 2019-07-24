@@ -7,44 +7,78 @@
 #include "SyslogParameter.h"
 #include "Syslog.h"
 
-SyslogFilterItem syslogFilterFacilityItems[] = {
-    {("kern"), SYSLOG_FACILITY_KERN},
-    {("user"), SYSLOG_FACILITY_USER},
-    {("user"), SYSLOG_FACILITY_USER},
-    {("mail"), SYSLOG_FACILITY_MAIL},
-    {("daemon"), SYSLOG_FACILITY_DAEMON},
-    {("secure"), SYSLOG_FACILITY_SECURE},
-    {("syslog"), SYSLOG_FACILITY_SYSLOG},
-    {("ntp"), SYSLOG_FACILITY_NTP},
-    {("local0"), SYSLOG_FACILITY_LOCAL0},
-    {("local1"), SYSLOG_FACILITY_LOCAL1},
-    {("local2"), SYSLOG_FACILITY_LOCAL2},
-    {("local3"), SYSLOG_FACILITY_LOCAL3},
-    {("local4"), SYSLOG_FACILITY_LOCAL4},
-    {("local5"), SYSLOG_FACILITY_LOCAL5},
-    {("local6"), SYSLOG_FACILITY_LOCAL6},
-    {("local7"), SYSLOG_FACILITY_LOCAL7},
-    {nullptr, 0xff},
+#if DEBUG_SYSLOG
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
+#endif
+
+PROGMEM_STRING_DEF(kern, "kern");
+PROGMEM_STRING_DEF(user, "user");
+PROGMEM_STRING_DEF(mail, "mail");
+PROGMEM_STRING_DEF(daemon, "daemon");
+PROGMEM_STRING_DEF(secure, "secure");
+PROGMEM_STRING_DEF(syslog, "syslog");
+PROGMEM_STRING_DEF(ntp, "ntp");
+PROGMEM_STRING_DEF(local0, "local0");
+PROGMEM_STRING_DEF(local1, "local1");
+PROGMEM_STRING_DEF(local2, "local2");
+PROGMEM_STRING_DEF(local3, "local3");
+PROGMEM_STRING_DEF(local4, "local4");
+PROGMEM_STRING_DEF(local5, "local5");
+PROGMEM_STRING_DEF(local6, "local6");
+PROGMEM_STRING_DEF(local7, "local7");
+
+PROGMEM_STRING_DEF(emerg, "emerg");
+PROGMEM_STRING_DEF(emergency, "emergency");
+PROGMEM_STRING_DEF(alert, "alert");
+PROGMEM_STRING_DEF(crit, "crit");
+PROGMEM_STRING_DEF(critical, "critical");
+PROGMEM_STRING_DEF(err, "err");
+PROGMEM_STRING_DEF(error, "error");
+PROGMEM_STRING_DEF(warn, "warn");
+PROGMEM_STRING_DEF(warning, "warning");
+PROGMEM_STRING_DEF(notice, "notice");
+PROGMEM_STRING_DEF(info, "info");
+PROGMEM_STRING_DEF(debug, "debug");
+
+const SyslogFilterItem syslogFilterFacilityItems[] PROGMEM = {
+    { SPGM(kern), SYSLOG_FACILITY_KERN },
+    { SPGM(user), SYSLOG_FACILITY_USER },
+    { SPGM(mail), SYSLOG_FACILITY_MAIL },
+    { SPGM(daemon), SYSLOG_FACILITY_DAEMON },
+    { SPGM(secure), SYSLOG_FACILITY_SECURE },
+    { SPGM(syslog), SYSLOG_FACILITY_SYSLOG },
+    { SPGM(ntp), SYSLOG_FACILITY_NTP },
+    { SPGM(local0), SYSLOG_FACILITY_LOCAL0 },
+    { SPGM(local1), SYSLOG_FACILITY_LOCAL1 },
+    { SPGM(local2), SYSLOG_FACILITY_LOCAL2 },
+    { SPGM(local3), SYSLOG_FACILITY_LOCAL3 },
+    { SPGM(local4), SYSLOG_FACILITY_LOCAL4 },
+    { SPGM(local5), SYSLOG_FACILITY_LOCAL5 },
+    { SPGM(local6), SYSLOG_FACILITY_LOCAL6 },
+    { SPGM(local7), SYSLOG_FACILITY_LOCAL7 },
+    { nullptr, 0xff },
 };
 
-SyslogFilterItem syslogFilterSeverityItems[] = {
-    {("emerg"), SYSLOG_EMERG},
-	{("emergency"), SYSLOG_EMERG},
-	{("alert"), SYSLOG_ALERT},
-	{("crit"), SYSLOG_CRIT},
-	{("critical"), SYSLOG_CRIT},
-	{("err"), SYSLOG_ERR},
-	{("error"), SYSLOG_ERR},
-	{("warn"), SYSLOG_WARN},
-	{("warning"), SYSLOG_WARN},
-	{("notice"), SYSLOG_NOTICE},
-	{("info"), SYSLOG_INFO},
-	{("debug"), SYSLOG_DEBUG},
-	{nullptr, 0xff},
+const SyslogFilterItem syslogFilterSeverityItems[] PROGMEM = {
+    { SPGM(emerg), SYSLOG_EMERG },
+	{ SPGM(emergency), SYSLOG_EMERG },
+	{ SPGM(alert), SYSLOG_ALERT },
+	{ SPGM(crit), SYSLOG_CRIT },
+	{ SPGM(critical), SYSLOG_CRIT },
+	{ SPGM(err), SYSLOG_ERR },
+	{ SPGM(error), SYSLOG_ERR },
+	{ SPGM(warn), SYSLOG_WARN },
+	{ SPGM(warning), SYSLOG_WARN },
+	{ SPGM(notice), SYSLOG_NOTICE },
+	{ SPGM(info), SYSLOG_INFO },
+	{ SPGM(debug), SYSLOG_DEBUG },
+	{ nullptr, 0xff },
 };
 
 Syslog::Syslog(SyslogParameter &parameter) : _parameter(parameter) {
-	debug_printf_P(PSTR("Syslog::Syslog %s,%s,%s\n"), parameter.getHostname().c_str(), parameter.getAppName().c_str(), parameter.getProcessId().c_str());
+	_debug_printf_P(PSTR("Syslog::Syslog(%s,%s,%s)\n"), parameter.getHostname().c_str(), parameter.getAppName().c_str(), parameter.getProcessId().c_str());
 }
 
 void Syslog::transmit(const char* message, size_t length, SyslogCallback callback) {
@@ -55,9 +89,9 @@ void Syslog::_addTimestamp(String& buffer, PGM_P format) {
 	auto now = time(nullptr);
 	auto tm = timezone_localtime(&now);
 	if (tm && IS_TIME_VALID(now)) {
-		char buf2[40];
-		timezone_strftime_P(buf2, sizeof(buf2), format, tm);
-		buffer += buf2;
+		char buf[40];
+		timezone_strftime_P(buf, sizeof(buf), format, tm);
+		buffer += buf;
 #if SEND_NILVALUE_IF_INVALID_TIMESTAMP == 0
 		buffer += ' ';
 #endif
@@ -175,7 +209,7 @@ void Syslog::addHeader(String& buffer) {
 #endif
 }
 
-bool Syslog::canSend() {
+bool Syslog::canSend() const {
 	return WiFi.isConnected();
 }
 
@@ -193,7 +227,7 @@ bool Syslog::isNumeric(const char *str) {
 }
 
 SyslogFacility Syslog::facilityToInt(const String str) {
-    if (str.length() != 0 && str != F("*")) {
+    if (str.length() != 0 && strcmp_P(str.c_str(), PSTR("*"))) {
         if (isNumeric(str.c_str())) {
             return (SyslogFacility)str.toInt();
         }
@@ -207,7 +241,7 @@ SyslogFacility Syslog::facilityToInt(const String str) {
 }
 
 SyslogSeverity Syslog::severityToInt(const String str) {
-    if (str.length() != 0 && str != F("*")) {
+    if (str.length() != 0 && strcmp_P(str.c_str(), PSTR("*"))) {
         if (isNumeric(str.c_str())) {
             return (SyslogSeverity)str.toInt();
         }

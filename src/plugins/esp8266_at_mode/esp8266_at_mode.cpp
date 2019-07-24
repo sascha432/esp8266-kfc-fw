@@ -15,18 +15,7 @@
 // https://www.espressif.com/sites/default/files/documentation/4a-esp8266_at_instruction_set_en.pdf
 
 
-static String remove_quotes(const char *str) {
-    String tmp = str;
-    if (tmp.charAt(0) == '"') {
-        tmp.remove(0, 1);
-        if (tmp.length() && tmp.charAt(tmp.length() - 1) == '"') {
-            tmp.remove(tmp.length() - 1);
-        }
-    }
-    return tmp;
-}
-
-bool esp8266_at_commands_require_mode(Print &output, WiFiMode_t mode) {
+bool esp8266_at_commands_require_mode(Stream &output, WiFiMode_t mode) {
     if (!(config._H_GET(Config().flags).wifiMode & mode)) {
         output.print(F("ERROR - "));
         if (mode == WIFI_AP) {
@@ -42,7 +31,7 @@ bool esp8266_at_commands_require_mode(Print &output, WiFiMode_t mode) {
     return false;
 }
 
-void esp8266_at_commands_reconfigure_wifi(Print &output) {
+void esp8266_at_commands_reconfigure_wifi(Stream &output) {
     if (config.reconfigureWiFi()) {
         at_mode_print_ok(output);
     } else {
@@ -57,7 +46,9 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(CWQAP, "CWQAP", "Disconnect from AP");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(CIPSTATUS, "CIPSTATUS", "Get the connection status");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(CIFSR, "CIFSR", "Get IP address");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(CWSAP, "CWSAP", "<ssid>,<password>[,<channel>[,<encryption>]]", "Configure SoftAP\nEncryption: 0=OPEN, 2=WPA_PSK, 3=WPA2_PSK, 4=WPA_WPA2_PSK", "Display SoftAP settings");
+#if defined(ESP8266)
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(CWAPDHCP, "CWAPDHCP", "<0=disable|1=enable>[,<dhcp-lease-start>[,<dhcp-lease-end>]]>", "Configure DHCP server", "Display DHCP server settings");
+#endif
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(GMR, "GMR", "Print firmware version");
 
 bool esp8266_at_commands_handler(Stream &serial, const String &command, int8_t argc, char **argv) {
@@ -71,7 +62,9 @@ bool esp8266_at_commands_handler(Stream &serial, const String &command, int8_t a
         at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CIPSTATUS));
         at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CIFSR));
         at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CWSAP));
+#if defined(ESP8266)
         at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CWAPDHCP));
+#endif
         at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(GMR));
 
     }
@@ -109,8 +102,8 @@ bool esp8266_at_commands_handler(Stream &serial, const String &command, int8_t a
             at_mode_print_invalid_arguments(serial);
         }
         else {
-            config._H_SET_STR(Config().soft_ap.wifi_ssid, remove_quotes(argv[0]));
-            config._H_SET_STR(Config().soft_ap.wifi_pass, remove_quotes(argv[1]));
+            config._H_SET_STR(Config().soft_ap.wifi_ssid, argv[0]);
+            config._H_SET_STR(Config().soft_ap.wifi_pass, argv[1]);
             if (argc >= 3) {
                 config._H_SET(Config().soft_ap.channel, atoi(argv[2]));
                 if (argc >= 4) {
@@ -121,6 +114,7 @@ bool esp8266_at_commands_handler(Stream &serial, const String &command, int8_t a
         }
         return true;
     }
+#if defined(ESP8266)
     else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(CWAPDHCP))) {
         if (esp8266_at_commands_require_mode(serial, WIFI_STA)) {
         }
@@ -186,6 +180,7 @@ bool esp8266_at_commands_handler(Stream &serial, const String &command, int8_t a
         }
         return true;
     }
+#endif
     else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(CWLAP))) {
         uint8_t count = 15;
         while(AsyncNetworkScanResponse::isLocked() && count--) {
@@ -213,9 +208,9 @@ bool esp8266_at_commands_handler(Stream &serial, const String &command, int8_t a
         }
         else {
             if (argc >= 1) {
-                config._H_SET_STR(Config().wifi_ssid, remove_quotes(argv[0]));
+                config._H_SET_STR(Config().wifi_ssid, argv[0]);
                 if (argc >= 2) {
-                    config._H_SET_STR(Config().wifi_pass, remove_quotes(argv[1]));
+                    config._H_SET_STR(Config().wifi_pass, argv[1]);
                 }
             }
             esp8266_at_commands_reconfigure_wifi(serial);

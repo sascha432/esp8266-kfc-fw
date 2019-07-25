@@ -4,7 +4,7 @@ import datetime
 def build_webui(source, target, env):
     print "build_webui"
 
-    env.Execute("php lib\\KFCWebBuilder\\bin\\include\\cli_tool.php .\KFCWebBuilder.json -b spiffs -e env:${PIOENV} -v --clean-exit-code")
+    env.Execute("php lib\\KFCWebBuilder\\bin\\include\\cli_tool.php .\KFCWebBuilder.json -b spiffs -e env:${PIOENV} --clean-exit-code")
 
 def before_clean(source, target, env):
 

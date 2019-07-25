@@ -475,48 +475,42 @@ void mqtt_client_create_settings_form(AsyncWebServerRequest *request, Form &form
 
     //TODO save form doesnt work
 
-    form.add<uint8_t>(F("mqtt_enabled"), config._H_GET(Config().flags).mqttMode, [](uint8_t value, FormField *) {
-        auto &flags = config._H_W_GET(Config().flags);
-        flags.mqttMode = value;
-    });
-    form.addValidator(new FormRangeValidator(0, MQTT_MODE_UNSECURE));
+    form.add<uint8_t>(F("mqtt_enabled"), _H_STRUCT_FORMVALUE(Config().flags, uint8_t, mqttMode));
+    form.addValidator(new FormRangeValidator(MQTT_MODE_DISABLED, MQTT_MODE_SECURE));
 
     form.add<sizeof Config().mqtt_host>(F("mqtt_host"), config._H_W_STR(Config().mqtt_host));
     form.addValidator(new FormValidHostOrIpValidator());
 
-    form.add<uint16_t>(F("mqtt_port"), config._H_GET(Config().mqtt_port), [&](uint16_t port, FormField *field) {
+    form.add<uint16_t>(F("mqtt_port"), &config._H_W_GET(Config().mqtt_port));
+    form.addValidator(new FormTCallbackValidator<uint16_t>([](uint16_t value, FormField &field) {
 #if ASYNC_TCP_SSL_ENABLED
-        assert(field->getForm()->getField(0)->getName().equals(F("mqtt_enabled")));
-        if (port == 0 && static_cast<FormBitValue<ConfigFlags_t, 3> *>(field->getForm()->getField(0))->getValue() == MQTT_MODE_SECURE) {
+        if (port == 0 && static_cast<FormBitValue<ConfigFlags_t, 3> *>(field.getForm().getField(F("mqtt_enabled")))->getValue() == MQTT_MODE_SECURE) {
             port = 8883;
             field->setValue(String(port));
         } else
 #endif
-        if (port == 0) {
-            port = 1883;
-            field->setValue(String(port));
+        if (value == 0) {
+            value = 1883;
+            field.setValue(String(value));
         }
-        config._H_SET(Config().mqtt_port, port);
-    });
-    form.addValidator(new FormRangeValidator(F("Invalid port"), 0, 65535));
+        return true;
+    }));
+    form.addValidator(new FormRangeValidator(F("Invalid port"), 1, 65535));
 
     form.add<sizeof Config().mqtt_username>(F("mqtt_username"), config._H_W_STR(Config().mqtt_username));
     form.addValidator(new FormLengthValidator(0, sizeof(Config().mqtt_username) - 1));
 
     form.add<sizeof Config().mqtt_password>(F("mqtt_password"), config._H_W_STR(Config().mqtt_password));
-    form.addValidator(new FormLengthValidator(8, sizeof(Config().mqtt_password) - 1));
+    // form.addValidator(new FormLengthValidator(8, sizeof(Config().mqtt_password) - 1));
 
     form.add<sizeof Config().mqtt_topic>(F("mqtt_topic"), config._H_W_STR(Config().mqtt_topic));
     form.addValidator(new FormLengthValidator(3, sizeof(Config().mqtt_topic) - 1));
 
-    form.add<uint16_t>(F("mqtt_qos"), config._H_GET(Config().mqtt_qos), [&](uint16_t qos, FormField *field) {
-        config._H_SET(Config().mqtt_qos, std::min((uint16_t)2, std::max((uint16_t)0, qos)));
-    });
+    form.add<uint8_t>(F("mqtt_qos"), &config._H_W_GET(Config().mqtt_qos));
+    form.addValidator(new FormRangeValidator(F("Invalid value for QoS"), 0, 2));
 
 #if MQTT_AUTO_DISCOVERY
-    form.add<bool>(F("mqtt_auto_discovery"), config._H_GET(Config().flags).mqttAutoDiscoveryEnabled, [](bool value, FormField *) {
-        config._H_W_GET(Config().flags).mqttAutoDiscoveryEnabled = value;
-    });
+    form.add<bool>(F("mqtt_auto_discovery"), _H_STRUCT_FORMVALUE(Config().flags, bool, mqttAutoDiscoveryEnabled));
 
     form.add<sizeof Config().mqtt_discovery_prefix>(F("mqtt_discovery_prefix"), config._H_W_STR(Config().mqtt_discovery_prefix));
     form.addValidator(new FormLengthValidator(0, sizeof(Config().mqtt_discovery_prefix) - 1));
@@ -564,7 +558,7 @@ bool mqtt_at_mode_command_handler(Stream &serial, const String &command, int8_t 
 
 #endif
 
-void mqtt_reconfigure_plugin() {
+void mqtt_reconfigure_plugin(PGM_P source) {
     if (mqttClient) {
         delete mqttClient;
         mqttClient = nullptr;

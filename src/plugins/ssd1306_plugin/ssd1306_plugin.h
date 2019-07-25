@@ -38,7 +38,7 @@
 
 #ifndef SSD1306_PLUGIN_DISPLAY_STATUS_DELAY
 // delay after start before displaying wifi and date/time. 0 to disable
-#define SSD1306_PLUGIN_DISPLAY_STATUS_DELAY 5000
+#define SSD1306_PLUGIN_DISPLAY_STATUS_DELAY 1000
 #endif
 
 // display WiFi SSID, IP, date and time

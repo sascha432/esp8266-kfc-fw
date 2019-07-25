@@ -8,7 +8,7 @@
 #include <vector>
 
 #ifndef DEBUG_PLUGINS
-#define DEBUG_PLUGINS               1
+#define DEBUG_PLUGINS               0
 #endif
 
 #define PLUGIN_PRIO_RESET_DETECTOR  -127
@@ -37,7 +37,7 @@ class Form;
 typedef void(* SetupPluginCallback)();
 typedef const String(* StatusTemplateCallback)();
 typedef void(* ConfigureFormCallback)(AsyncWebServerRequest *request, Form &form);
-typedef void(* ReconfigurePluginCallback)();
+typedef void(* ReconfigurePluginCallback)(PGM_P source);
 typedef void(* PrepareDeepSleepCallback)(uint32_t timeout, RFMode mode);
 #if AT_MODE_SUPPORTED
 typedef bool(* AtModeCommandHandlerCallback)(Stream &serial, const String &command, int8_t argc, char **argv);
@@ -111,7 +111,9 @@ typedef struct {
     StatusTemplateCallback statusTemplate;
     ConfigureFormCallback configureForm;
     ReconfigurePluginCallback reconfigurePlugin;
-    PGM_P reconfigurePluginDependencies;                // call all reconfigurePlugin callbacks of the plugins listed in here after the actual reconfigurePlugin callback
+    // call all reconfigurePlugin callbacks of the plugins listed in here after the actual reconfigurePlugin callback
+    // the system configuration has following plugin names: wifi, network, password
+    PGM_P reconfigurePluginDependencies;
     PrepareDeepSleepCallback prepareDeepSleep;
 #if AT_MODE_SUPPORTED
     AtModeCommandHandlerCallback atModeCommandHandler;
@@ -138,7 +140,8 @@ public:
     StatusTemplateCallback getStatusTemplate() const;
     ConfigureFormCallback getConfigureForm() const;
     ReconfigurePluginCallback getReconfigurePlugin() const;
-    void callReconfigurePlugin();
+    void callReconfigurePlugin(PGM_P source);
+    void callReconfigureSystem(PGM_P name);
     bool isDependency(PGM_P pluginName) const;
     String getReconfigurePluginDependecies() const;
     PGM_P getReconfigurePluginDependeciesPSTR() const;

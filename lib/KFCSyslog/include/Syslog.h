@@ -5,7 +5,7 @@
 #pragma once
 
 #ifndef DEBUG_SYSLOG
-#define DEBUG_SYSLOG                            1
+#define DEBUG_SYSLOG                            0
 #endif
 
 #include <functional>
@@ -21,12 +21,12 @@
 #endif
 
 #if SYSLOG_USE_RFC5424
-#define SYSLOG_VERSION "1"
-#define SYSLOG_TIMESTAMP_FORMAT "%FT%TZ"
+#define SYSLOG_VERSION                          "1"
+#define SYSLOG_TIMESTAMP_FORMAT                 "%FT%TZ"
 #else  // old/fall-back format
-#define SYSLOG_TIMESTAMP_FORMAT "%h %d %T"
+#define SYSLOG_TIMESTAMP_FORMAT                 "%h %d %T"
 #endif
-#define SYSLOG_FILE_TIMESTAMP_FORMAT "%FT%TZ"
+#define SYSLOG_FILE_TIMESTAMP_FORMAT            "%FT%TZ"
 
 enum SyslogProtocol : uint8_t {
     SYSLOG_PROTOCOL_NONE = 0,

@@ -21,8 +21,8 @@ void FormValidator::setField(FormField * field) {
     _field = field;
 }
 
-FormField * FormValidator::getField() {
-    return _field;
+FormField & FormValidator::getField() {
+    return *_field;
 }
 
 String FormValidator::getMessage() {
@@ -31,7 +31,7 @@ String FormValidator::getMessage() {
 
 bool FormValidator::validate() {
     if (_validateIfValid) {
-        if (!_field->getForm()->isValid()) {
+        if (!_field->getForm().isValid()) {
             return false;
         }
     }

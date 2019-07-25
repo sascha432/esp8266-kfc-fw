@@ -870,3 +870,40 @@ bool KFCFWConfiguration::isWiFiUp() {
 unsigned long KFCFWConfiguration::getWiFiUp() {
     return config._wifiUp;
 }
+
+void config_init() {
+    _debug_printf_P(PSTR("config_init(): safe mode %d, wake up %d\n"), resetDetector.getSafeMode(), resetDetector.hasWakeUpDetected());
+
+    config.setup();
+
+    // during wake up, the WiFI is already configured at this point
+    if (!resetDetector.hasWakeUpDetected()) {
+        config.printInfo(MySerial);
+
+        if (!config.connectWiFi()) {
+            MySerial.printf_P(PSTR("Configuring WiFi failed: %s\n"), config.getLastError());
+#if DEBUG
+            config.dump(MySerial);
+#endif
+        }
+    }
+}
+
+void config_reconfigure(PGM_P source) {
+    config.reconfigureWiFi();
+}
+
+PROGMEM_PLUGIN_CONFIG_DEF(
+/* pluginName               */ cfg,
+/* setupPriority            */ PLUGIN_PRIO_CONFIG,
+/* allowSafeMode            */ false,
+/* autoSetupWakeUp          */ true,
+/* rtcMemoryId              */ CONFIG_RTC_MEM_ID,
+/* setupPlugin              */ config_init,
+/* statusTemplate           */ nullptr,
+/* configureForm            */ nullptr,
+/* reconfigurePlugin        */ config_reconfigure,
+/* reconfigure Dependencies */ nullptr,
+/* prepareDeepSleep         */ nullptr,
+/* atModeCommandHandler     */ nullptr
+);

@@ -16,7 +16,7 @@ FormRangeValidator::FormRangeValidator(const String & message, long min, long ma
 
 bool FormRangeValidator::validate() {
     if (FormValidator::validate()) {
-        long value = getField()->getValue().toInt();
+        long value = getField().getValue().toInt();
         return (value >= _min && value <= _max);
     }
     return false;

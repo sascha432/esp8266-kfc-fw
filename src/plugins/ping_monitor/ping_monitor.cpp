@@ -425,7 +425,6 @@ void PingMonitorTask::_cancelPing() {
     }
 }
 
-
 void ping_monitor_setup() {
     ping_monitor_install_web_server_hook();
 
@@ -451,6 +450,10 @@ void ping_monitor_setup() {
     }
 }
 
+void ping_monitor_reconfigure(PGM_P source) {
+    ping_monitor_setup();
+}
+
 PROGMEM_STRING_DECL(plugin_config_name_http);
 
 PROGMEM_PLUGIN_CONFIG_DEF(
@@ -462,7 +465,7 @@ PROGMEM_PLUGIN_CONFIG_DEF(
 /* setupPlugin              */ ping_monitor_setup,
 /* statusTemplate           */ ping_monitor_get_status,
 /* configureForm            */ ping_monitor_create_settings_form,
-/* reconfigurePlugin        */ ping_monitor_setup,
+/* reconfigurePlugin        */ ping_monitor_reconfigure,
 /* reconfigure Dependencies */ SPGM(plugin_config_name_http),
 /* prepareDeepSleep         */ nullptr,
 /* atModeCommandHandler     */ ping_monitor_at_mode_command_handler

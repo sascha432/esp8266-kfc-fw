@@ -272,7 +272,7 @@ String WiFi_disconnect_reason(WiFiDisconnectReason reason) {
 }
 
 int16_t stringlist_find_P_P(PGM_P list, PGM_P find, char separator) {
-    char separator_str[2] = { separator, 0 };
+    const char separator_str[2] = { separator, 0 };
     return stringlist_find_P_P(list, find, separator_str);
 }
 
@@ -281,11 +281,14 @@ int16_t stringlist_find_P_P(PGM_P list, PGM_P find, const char *separator/*, int
     PGM_P ptr2 = find;
     uint8_t ch;
     int16_t num = 0;
+    if (!list || !find) {
+        return -1;
+    }
     // position = 0;
     do {
         ch = pgm_read_byte(ptr1);
         if (strchr(separator, ch)) {    // end of one string
-            if (ptr2 && pgm_read_byte(ptr2) == 0) { // match
+            if (ptr2 && pgm_read_byte(ptr2++) == 0) { // match
                 return num;
             } else {
                 // position = ptr1 - list;
@@ -293,12 +296,13 @@ int16_t stringlist_find_P_P(PGM_P list, PGM_P find, const char *separator/*, int
                 num++;
             }
         } else {
-            if (ptr2 && pgm_read_byte(ptr2) != ch) { // mismatch, stop comparing
+            if (ptr2 && pgm_read_byte(ptr2++) != ch) { // mismatch, stop comparing
                 ptr2 = nullptr;
             } else if (ptr2 && !ch) { // match
                 return num;
             }
         }
+        ptr1++;
     } while(ch);
 
     // position = -1;
@@ -308,8 +312,8 @@ int16_t stringlist_find_P_P(PGM_P list, PGM_P find, const char *separator/*, int
 int strcmp_P_P(PGM_P str1, PGM_P str2) {
     uint8_t ch;
     do {
-        ch = pgm_read_byte(str1);
-        if (ch != pgm_read_byte(str2)) {
+        ch = pgm_read_byte(str1++);
+        if (ch != pgm_read_byte(str2++)) {
             return -1;
         }
     } while (ch);
@@ -319,8 +323,8 @@ int strcmp_P_P(PGM_P str1, PGM_P str2) {
 int strcasecmp_P_P(PGM_P str1, PGM_P str2) {
     uint8_t ch;
     do {
-        ch = pgm_read_byte(str1);
-        if (tolower(ch) != tolower(pgm_read_byte(str2))) {
+        ch = pgm_read_byte(str1++);
+        if (tolower(ch) != tolower(pgm_read_byte(str2++))) {
             return -1;
         }
     } while (ch);

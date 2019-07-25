@@ -188,6 +188,10 @@ void hue_setup() {
     }
 }
 
+void hue_reconfigure(PGM_P source) {
+    hue_setup();
+}
+
 // String hue_getDevices() {
 //     String out;
 //     uint8_t n = 0;
@@ -236,7 +240,7 @@ PROGMEM_PLUGIN_CONFIG_DEF(
 /* setupPlugin              */ hue_setup,
 /* statusTemplate           */ HueEmulation::getStatus,
 /* configureForm            */ hue_create_settings_form,
-/* reconfigurePlugin        */ hue_setup,
+/* reconfigurePlugin        */ hue_reconfigure,
 /* reconfigure Dependencies */ SPGM(plugin_config_name_http),
 /* prepareDeepSleep         */ nullptr,
 /* atModeCommandHandler     */ nullptr

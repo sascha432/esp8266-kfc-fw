@@ -244,19 +244,19 @@ PluginConfiguration::PluginConfiguration(PGM_PLUGIN_CONFIG_P configPtr) {
 }
 
 bool PluginConfiguration::pluginNameEquals(const String & string) const {
-    return strcmp_P(string.c_str(), reinterpret_cast<PGM_P>(pgm_read_ptr(&config->pluginName))) == 0;
+    return strcmp_P(string.c_str(), config->pluginName) == 0;
 }
 
 bool PluginConfiguration::pluginNameEquals(const __FlashStringHelper * string) const {
-    return strcmp_P_P(reinterpret_cast<PGM_P>(pgm_read_ptr(&config->pluginName)), reinterpret_cast<PGM_P>(string)) == 0;
+    return strcmp_P_P(config->pluginName, reinterpret_cast<PGM_P>(string)) == 0;
 }
 
 String PluginConfiguration::getPluginName() const {
-    return reinterpret_cast<const __FlashStringHelper *>(pgm_read_ptr(&config->pluginName));
+    return FPSTR(config->pluginName);
 }
 
 PGM_P PluginConfiguration::getPluginNamePSTR() const {
-    return reinterpret_cast<PGM_P>(pgm_read_ptr(&config->pluginName));
+    return config->pluginName;
 }
 
 int8_t PluginConfiguration::getSetupPriority() const {
@@ -276,7 +276,7 @@ uint8_t PluginConfiguration::getRtcMemoryId() const {
 }
 
 SetupPluginCallback PluginConfiguration::getSetupPlugin() const {
-    return reinterpret_cast<SetupPluginCallback>(pgm_read_ptr(&config->setupPlugin));
+    return config->setupPlugin;
 }
 
 void PluginConfiguration::callSetupPlugin() {
@@ -287,46 +287,54 @@ void PluginConfiguration::callSetupPlugin() {
 }
 
 StatusTemplateCallback PluginConfiguration::getStatusTemplate() const {
-    return reinterpret_cast<StatusTemplateCallback>(pgm_read_ptr(&config->statusTemplate));
+    return config->statusTemplate;
 }
 
 ConfigureFormCallback PluginConfiguration::getConfigureForm() const {
-    return reinterpret_cast<ConfigureFormCallback>(pgm_read_ptr(&config->configureForm));
+    return config->configureForm;
 }
 
 ReconfigurePluginCallback PluginConfiguration::getReconfigurePlugin() const {
-    return reinterpret_cast<ReconfigurePluginCallback>(pgm_read_ptr(&config->reconfigurePlugin));
+    return config->reconfigurePlugin;
 }
 
-void PluginConfiguration::callReconfigurePlugin() {
+void PluginConfiguration::callReconfigurePlugin(PGM_P source) {
     auto callback = getReconfigurePlugin();
     if (callback) {
-        callback();
+        callback(source);
         for(auto &plugin: plugins) {
             if (plugin.getConfigureForm() && plugin.isDependency(getPluginNamePSTR())) {
-                plugin.callReconfigurePlugin();
+                plugin.callReconfigurePlugin(getPluginNamePSTR());
             }
         }
     }
 }
 
+void PluginConfiguration::callReconfigureSystem(PGM_P name) {
+    for(auto &plugin: plugins) {
+        if (plugin.getConfigureForm() && plugin.isDependency(name)) {
+            plugin.callReconfigurePlugin(name);
+        }
+    }
+}
+
 String PluginConfiguration::getReconfigurePluginDependecies() const {
-    if (!getConfigureForm()) {
+    if (!getConfigureForm() || !config->reconfigurePluginDependencies) {
         return _sharedEmptyString;
     }
-    return FPSTR(pgm_read_ptr(&config->reconfigurePluginDependencies));
+    return FPSTR(config->reconfigurePluginDependencies);
 }
 
 PGM_P PluginConfiguration::getReconfigurePluginDependeciesPSTR() const {
-    return reinterpret_cast<PGM_P>(pgm_read_ptr(&config->reconfigurePluginDependencies));
+    return config->reconfigurePluginDependencies;
 }
 
 bool PluginConfiguration::isDependency(PGM_P pluginName) const {
-    return stringlist_find_P_P(reinterpret_cast<PGM_P>(pgm_read_ptr(&config->reconfigurePluginDependencies)), pluginName) != -1;
+    return stringlist_find_P_P(config->reconfigurePluginDependencies, pluginName) != -1;
 }
 
 PrepareDeepSleepCallback PluginConfiguration::getPrepareDeepSleep() const {
-    return reinterpret_cast<PrepareDeepSleepCallback>(pgm_read_ptr(&config->prepareDeepSleep));
+    return config->prepareDeepSleep;
 }
 
 void PluginConfiguration::callPrepareDeepSleep(uint32_t time, RFMode mode) {
@@ -339,7 +347,8 @@ void PluginConfiguration::callPrepareDeepSleep(uint32_t time, RFMode mode) {
 #if AT_MODE_SUPPORTED
 
 AtModeCommandHandlerCallback PluginConfiguration::getAtModeCommandHandler() const {
-    return reinterpret_cast<AtModeCommandHandlerCallback>(pgm_read_ptr(&config->atModeCommandHandler));
+    return config->atModeCommandHandler;
+    //return reinterpret_cast<AtModeCommandHandlerCallback>(pgm_read_ptr(&config->atModeCommandHandler));
 }
 
 bool PluginConfiguration::callAtModeCommandHandler(Stream & serial, const String & command, int8_t argc, char ** argv) {

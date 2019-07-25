@@ -15,7 +15,7 @@ public:
     virtual ~FormValidator();
 
     void setField(FormField *field);
-    FormField *getField();
+    FormField &getField();
 
     virtual String getMessage();
 

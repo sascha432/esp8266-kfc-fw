@@ -48,6 +48,10 @@ void file_manager_install_web_server_hook() {
     }
 }
 
+void file_manager_reconfigure(PGM_P source) {
+    file_manager_install_web_server_hook();
+}
+
 FileManager::FileManager() {
     _request = nullptr;
     _response = nullptr;
@@ -442,7 +446,7 @@ PROGMEM_PLUGIN_CONFIG_DEF(
 /* setupPlugin              */ file_manager_install_web_server_hook,
 /* statusTemplate           */ nullptr,
 /* configureForm            */ nullptr,
-/* reconfigurePlugin        */ file_manager_install_web_server_hook,
+/* reconfigurePlugin        */ file_manager_reconfigure,
 /* reconfigure Dependencies */ SPGM(plugin_config_name_http),
 /* prepareDeepSleep         */ nullptr,
 /* atModeCommandHandler     */ nullptr

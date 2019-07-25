@@ -5,11 +5,14 @@
 #pragma once
 
 #include <Arduino_compat.h>
+#include <type_traits>
 
 template <typename T>
 class FormValue : public FormField {
 public:
-    FormValue(const String &name, T value, std::function<void(T, FormField *)> setter = nullptr, FormField::FieldType_t type = FormField::INPUT_SELECT) : FormField(name, String(value), type) {
+    typedef std::function<void(T, FormField &)> SetterCallback_t;
+
+    FormValue(const String &name, T value, SetterCallback_t setter = nullptr, FormField::FieldType_t type = FormField::INPUT_SELECT) : FormField(name, String(value), type) {
         _value = nullptr;
         _setter = setter;
     }
@@ -22,7 +25,7 @@ public:
         if (_value) {
             *_value = (T)getValue();
         } else if (_setter) {
-            _setter((T)getValue(), this);
+            _setter((T)getValue(), *this);
         }
     }
 
@@ -43,5 +46,5 @@ public:
 
 private:
     T *_value;
-    std::function<void(T, FormField *)> _setter;
+    SetterCallback_t _setter;
 };

@@ -1397,6 +1397,7 @@ void os_timer_disarm(os_timer_t *timer);
 
 #include "debug_helper.h"
 #include "debug_helper_enable.h"
+#include "misc.h"
 
 #else
 

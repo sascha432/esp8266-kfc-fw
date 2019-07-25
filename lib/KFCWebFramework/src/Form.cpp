@@ -8,6 +8,12 @@
 #include "FormError.h"
 #include "FormValidator.h"
 
+#if DEBUG_KFC_FORMS
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
+#endif
+
 Form::Form() {
     _data = nullptr;
     _invalidMissing = true;
@@ -83,8 +89,8 @@ FormField * Form::getField(const String & name) const {
     return nullptr;
 }
 
-FormField * Form::getField(int index) const {
-    return _fields.at(index);
+FormField & Form::getField(int index) const {
+    return *_fields.at(index);
 }
 
 const size_t Form::hasFields() const {
@@ -108,7 +114,7 @@ bool Form::validateOnly() {
     _errors.clear();
     for (auto field : _fields) {
         if (_data->hasArg(field->getName())) {
-            if_debug_forms_printf_P(PSTR(DEBUG_FORMS_PREFIX "Set value %s = %s\n"), field->getName().c_str(), _data->arg(field->getName()).c_str());
+            _debug_printf_P(PSTR("Form::validateOnly() Set value %s = %s\n"), field->getName().c_str(), _data->arg(field->getName()).c_str());
             if (field->setValue(_data->arg(field->getName()))) {
                 _hasChanged = true;
             }
@@ -122,8 +128,8 @@ bool Form::validateOnly() {
             _errors.push_back(FormError(field, FSPGM(Form_value_missing_default_message)));
         }
     }
-#if DEBUG && DEBUG_FORMS
-    dump(DEBUG_OUTPUT, DEBUG_FORMS_PREFIX);
+#if DEBUG_KFC_FORMS
+    dump(DEBUG_OUTPUT, "Form Dump: ");
 #endif
     return isValid();
 }
@@ -158,8 +164,8 @@ const std::vector<FormError>& Form::getErrors() const {
 }
 
 void Form::finalize() const {
-#if DEBUG && DEBUG_FORMS
-    dump(DEBUG_OUTPUT, DEBUG_FORMS_PREFIX);
+#if DEBUG_KFC_FORMS
+    dump(DEBUG_OUTPUT, "Form Dump: ");
 #endif
 }
 
@@ -167,38 +173,39 @@ const char *Form::process(const String &name) const {
     for(auto field : _fields) {
         uint8_t len = (uint8_t)field->getName().length();
         if (field->getType() == FormField::INPUT_TEXT && name.equalsIgnoreCase(field->getName())) {
-            if_debug_forms_printf_P(PSTR("Form::process(%s) INPUT_TEXT = %s\n"), name.c_str(), field->getValue().c_str());
+            _debug_printf_P(PSTR("Form::process(%s) INPUT_TEXT = %s\n"), name.c_str(), field->getValue().c_str());
             return field->getValue().c_str();
         } else if (field->getType() == FormField::INPUT_CHECK && name.equalsIgnoreCase(field->getName())) {
-            if_debug_forms_printf_P(PSTR("Form::process(%s) INPUT_CHECK = %d\n"), name.c_str(), field->getValue().toInt());
+            _debug_printf_P(PSTR("Form::process(%s) INPUT_CHECK = %d\n"), name.c_str(), field->getValue().toInt());
             return field->getValue().toInt() ? " checked" : "";
         } else if (field->getType() == FormField::INPUT_SELECT && strncasecmp(field->getName().c_str(), name.c_str(), len) == 0) {
             if (name.length() == len) {
-                if_debug_forms_printf_P(PSTR("Form::process(%s) INPUT_SELECT = %s\n"), name.c_str(), field->getValue().c_str());
+                _debug_printf_P(PSTR("Form::process(%s) INPUT_SELECT = %s\n"), name.c_str(), field->getValue().c_str());
                 return field->getValue().c_str();
             } else if (name.charAt(len) == '_') {
                 int value = name.substring(len + 1).toInt();
                 if (value == field->getValue().toInt()) {
-                    if_debug_forms_printf_P(PSTR("Form::process(%s) INPUT_SELECT %d = %d\n"), name.c_str(), value, field->getValue().toInt());
+                    _debug_printf_P(PSTR("Form::process(%s) INPUT_SELECT %d = %d\n"), name.c_str(), value, field->getValue().toInt());
                     return " selected";
                 } else {
-                    if_debug_forms_printf_P(PSTR("Form::process(%s) INPUT_SELECT %d != %d\n"), name.c_str(), value, field->getValue().toInt());
+                    _debug_printf_P(PSTR("Form::process(%s) INPUT_SELECT %d != %d\n"), name.c_str(), value, field->getValue().toInt());
                     return "";
                 }
             }
         }
     }
-    if_debug_forms_printf_P(PSTR("Form::process(%s) not found\n"), name.c_str());
+    _debug_printf_P(PSTR("Form::process(%s) not found\n"), name.c_str());
     return nullptr;
 }
 
 void Form::createJavascript(Print &out) {
     if (!isValid()) {
+        _debug_printf_P(PSTR("Form::createJavascript(): errors=%d\n"), _errors.size());
         out.println(F("<script>"));
-        out.print(F("$.formValidator(["));
+        out.print(F("$.formValidator.addErrors(["));
         uint8_t idx = 0;
         for(const auto &error : _errors) {
-            if (!idx++) {
+            if (idx++) {
                 out.print(F(","));
             }
             out.printf_P(PSTR("{'target':'#%s','error':'%s'}"), error.getName().c_str(), error.getMessage().c_str());

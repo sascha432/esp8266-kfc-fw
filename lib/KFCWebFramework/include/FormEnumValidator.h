@@ -10,15 +10,17 @@
 template <typename T, size_t N>
 class FormEnumValidator : public FormValidator {
 public:
-    FormEnumValidator(std::array<T, N> values) : FormEnumValidator(FSPGM(FormEnumValidator_default_message), values) {
+    typedef std::array<T, N> ValuesArray_t;
+
+    FormEnumValidator(ValuesArray_t values) : FormEnumValidator(FSPGM(FormEnumValidator_default_message), values) {
     }
-    FormEnumValidator(const String &message, std::array<T, N> values) : FormValidator(message) {
+    FormEnumValidator(const String &message, ValuesArray_t values) : FormValidator(message) {
         _values = values;
     }
 
     virtual bool validate() override {
         if (FormValidator::validate()) {
-            T tmp = (T)getField()->getValue().toInt();
+            T tmp = (T)getField().getValue().toInt();
             for(auto value: _values) {
                 if (value == tmp) {
                     return true;
@@ -45,6 +47,6 @@ public:
     }
 
 private:
-    std::array<T, N> _values;
+    ValuesArray_t _values;
 };
 

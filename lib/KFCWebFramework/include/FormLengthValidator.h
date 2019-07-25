@@ -17,7 +17,7 @@ public:
 
     virtual bool validate() override {
         if (FormValidator::validate()) {
-            size_t len = getField()->getValue().length();
+            size_t len = getField().getValue().length();
             return (len >= _min && len <= _max);
         }
         return false;

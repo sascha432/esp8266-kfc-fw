@@ -36,8 +36,8 @@ void FormField::setForm(Form * form) {
     _form = form;
 }
 
-Form * FormField::getForm() const {
-    return _form;
+Form &FormField::getForm() const {
+    return *_form;
 }
 
 const String & FormField::getName() const {

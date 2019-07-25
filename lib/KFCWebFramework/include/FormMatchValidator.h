@@ -8,14 +8,16 @@
 
 class FormMatchValidator : public FormValidator {
 public:
-    FormMatchValidator(const String &message, std::function<bool(FormField *field)> validatorcb) : FormValidator(message) {
-        _validatorcb = validatorcb;
+    typedef std::function<bool(FormField &field)> Callback_t;
+
+    FormMatchValidator(const String &message, Callback_t callback) : FormValidator(message) {
+        _callback = callback;
     }
 
     virtual bool validate() override {
-        return FormValidator::validate() && _validatorcb(getField());
+        return FormValidator::validate() && _callback(getField());
     }
 
 private:
-    std::function <bool(FormField *field)> _validatorcb;
+    Callback_t _callback;
 };

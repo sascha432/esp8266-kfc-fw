@@ -92,6 +92,10 @@ void syslog_setup() {
     syslog_setup_logger();
 }
 
+void syslog_reconfigure(PGM_P source) {
+    syslog_setup();
+}
+
 void syslog_process_queue() {
     static MillisTimer timer(1000UL);
     if (timer.reached()) {
@@ -151,23 +155,21 @@ const String syslog_get_status() {
 
 void syslog_create_settings_form(AsyncWebServerRequest *request, Form &form) {
 
-    form.add<uint8_t>(F("syslog_enabled"), config._H_GET(Config().flags).syslogProtocol, [](uint8_t value, FormField *) {
-        auto &flags = config._H_W_GET(Config().flags);
-        flags.syslogProtocol = value;
-    });
-    form.addValidator(new FormRangeValidator(0, (long)SYSLOG_PROTOCOL_FILE));
+    form.add<uint8_t>(F("syslog_enabled"), _H_STRUCT_FORMVALUE(Config().flags, uint8_t, syslogProtocol));
+    form.addValidator(new FormRangeValidator(SYSLOG_PROTOCOL_NONE, SYSLOG_PROTOCOL_FILE));
 
     form.add<sizeof Config().syslog_host>(F("syslog_host"), config._H_W_STR(Config().syslog_host));
     form.addValidator(new FormValidHostOrIpValidator(true));
 
-    form.add<uint16_t>(F("syslog_port"), config._H_GET(Config().syslog_port), [&](uint16_t port, FormField *field) {
-        if (port == 0) {
-            port = 514;
-            field->setValue(String(port));
+    form.add<uint16_t>(F("syslog_port"), &config._H_W_GET(Config().syslog_port));
+    form.addValidator(new FormTCallbackValidator<uint16_t>([](uint16_t value, FormField &field) {
+        if (value == 0) {
+            value = 514;
+            field.setValue(String(value));
         }
-        config._H_SET(Config().syslog_port, port);
-    });
-    form.addValidator(new FormRangeValidator(F("Invalid port"), 0, 65535));
+        return true;
+    }));
+    form.addValidator(new FormRangeValidator(F("Invalid port"), 1, 65535));
 
     form.finalize();
 }
@@ -249,7 +251,7 @@ PROGMEM_PLUGIN_CONFIG_DEF(
 /* setupPlugin              */ syslog_setup,
 /* statusTemplate           */ syslog_get_status,
 /* configureForm            */ syslog_create_settings_form,
-/* reconfigurePlugin        */ syslog_setup_logger,
+/* reconfigurePlugin        */ syslog_reconfigure,
 /* reconfigure Dependencies */ nullptr,
 /* prepareDeepSleep         */ syslog_prepare_deep_sleep,
 /* atModeCommandHandler     */ syslog_at_mode_command_handler

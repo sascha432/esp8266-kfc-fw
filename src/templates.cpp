@@ -285,14 +285,6 @@ String StatusTemplate::process(const String &key) {
             WiFi_SoftAP_SSID(out);
         }
         _return(out);
-    } else if (key == F("WIFI_HOSTNAME")) {
-        PrintHtmlEntitiesString out;
-#if defined(ESP32)
-        out.print(WiFi.getHostname());
-#else
-        out.print(WiFi.hostname());
-#endif
-        _return(out);
     } else if (key == F("WIFI_STATUS")) {
         PrintHtmlEntitiesString out;
         WiFi_get_status(out);
@@ -374,8 +366,8 @@ NetworkSettingsForm::NetworkSettingsForm(AsyncWebServerRequest *request) : Setti
 PasswordSettingsForm::PasswordSettingsForm(AsyncWebServerRequest *request) : SettingsForm(request) {
 
     add(new FormField(F("password"), config._H_STR(Config().device_pass)));
-    addValidator(new FormMatchValidator(F("The entered password is not correct"), [&](FormField *field) {
-        return field->getValue().equals(config._H_STR(Config().device_pass));
+    addValidator(new FormMatchValidator(F("The entered password is not correct"), [](FormField &field) {
+        return field.getValue().equals(config._H_STR(Config().device_pass));
     }));
 
     add<sizeof Config().device_pass>(F("password2"), config._H_W_STR(Config().device_pass))
@@ -386,9 +378,9 @@ PasswordSettingsForm::PasswordSettingsForm(AsyncWebServerRequest *request) : Set
         ->setValidateIfValid(false);
 
     add(F("password3"), _sharedEmptyString);
-    addValidator(new FormMatchValidator(F("The password confirmation does not match"), [](FormField *field) {
-        return field->equals(field->getForm()->getField(F("password2")));
-    }))
+    addValidator(new FormMatchValidator(F("The password confirmation does not match"), [](FormField &field) {
+            return field.equals(field.getForm().getField(F("password2")));
+        }))
         ->setValidateIfValid(false);
 
     finalize();

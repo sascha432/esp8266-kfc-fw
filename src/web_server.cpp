@@ -400,7 +400,7 @@ void init_web_server() {
     _debug_printf_P(PSTR("HTTP running on port %u\n"), config._H_GET(Config().http_port));
 }
 
-void web_server_reconfigure() {
+void web_server_reconfigure(PGM_P source) {
     if (server) {
         delete server;
         server = nullptr;
@@ -411,7 +411,7 @@ void web_server_reconfigure() {
 PGM_P web_server_get_content_type(const String &path) {
 
     const char *cPath = path.c_str();
-    size_t pathLen = path.length();
+    auto pathLen = path.length();
 
     if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".html")) || !constexpr_strcmp_end_P(cPath, pathLen, PSTR(".htm"))) {
         return PSTR("text/html");
@@ -607,8 +607,10 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
                     webTemplate = new ConfigTemplate(form);
                     if (form->validate()) {
                         config.write();
+                        plugin->callReconfigurePlugin(nullptr);
+                    } else {
+                        config.clear();
                     }
-                    plugin->callReconfigurePlugin();
                 }
             }
         }
@@ -618,12 +620,20 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
                 webTemplate = new ConfigTemplate(form);
                 if (form->validate()) {
                     config.write();
+                    config.setConfigDirty(true);
+                    get_plugin_by_name(PSTR("cfg"))->callReconfigureSystem(PSTR("wifi"));
+                } else {
+                    config.clear();
                 }
             } else if (constexpr_String_equals(path, PSTR("/network.html"))) {
                 Form *form = new NetworkSettingsForm(request);
                 webTemplate = new ConfigTemplate(form);
                 if (form->validate()) {
                     config.write();
+                    config.setConfigDirty(true);
+                    get_plugin_by_name(PSTR("cfg"))->callReconfigureSystem(PSTR("network"));
+                } else {
+                    config.clear();
                 }
             } else if (constexpr_String_equals(path, PSTR("/password.html"))) {
                 Form *form = new PasswordSettingsForm(request);
@@ -632,6 +642,9 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
                     auto &flags = config._H_W_GET(Config().flags);
                     flags.isDefaultPassword = false;
                     config.write();
+                    get_plugin_by_name(PSTR("cfg"))->callReconfigureSystem(PSTR("password"));
+                } else {
+                    config.clear();
                 }
             } else if (constexpr_String_equals(path, PSTR("/reboot.html"))) {
                 if (request->hasArg(F("yes"))) {
@@ -665,25 +678,19 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
 
 void web_server_create_settings_form(AsyncWebServerRequest *request, Form &form) {
 
-    form.add<uint8_t>(F("http_enabled"), config._H_GET(Config().flags).webServerMode, [](uint8_t value, FormField *) {
-        auto &flags = config._H_W_GET(Config().flags);
-        flags.webServerMode = value;
-
-    });
+    form.add<uint8_t>(F("http_enabled"), _H_STRUCT_FORMVALUE(Config().flags, uint8_t, webServerMode));
     form.addValidator(new FormRangeValidator(0, HTTP_MODE_SECURE));
 #  if WEBSERVER_TLS_SUPPORT
-    form.addValidator(new FormMatchValidator(F("There is not enough free RAM for TLS support"), [](FormField *field) {
-        return (field->getValue().toInt() != HTTP_MODE_SECURE) || (ESP.getFreeHeap() > 24000);
+    form.addValidator(new FormMatchValidator(F("There is not enough free RAM for TLS support"), [](FormField &field) {
+        return (field.getValue().toInt() != HTTP_MODE_SECURE) || (ESP.getFreeHeap() > 24000);
     }));
 #  endif
 
-    form.add<bool>(F("http_perf"), config._H_GET(Config().flags).webServerPerformanceModeEnabled, [](bool value, FormField *) {
-        auto &flags = config._H_W_GET(Config().flags);
-        flags.webServerPerformanceModeEnabled = value;
-    });
-    form.add<uint16_t>(F("http_port"), config._H_GET(Config().http_port), [&](uint16_t port, FormField *field) {
+    form.add<bool>(F("http_perf"), _H_STRUCT_FORMVALUE(Config().flags, bool, webServerPerformanceModeEnabled));
+    form.add<uint16_t>(F("http_port"), &config._H_W_GET(Config().http_port));
+    form.addValidator(new FormTCallbackValidator<uint16_t>([](uint16_t port, FormField &field) {
 #  if WEBSERVER_TLS_SUPPORT
-        if (field->getForm()->getField(0)->getValue().toInt() == HTTP_MODE_SECURE) {
+        if (field.getForm().getField(F("http_enabled"))->getValue().toInt() == HTTP_MODE_SECURE) {
             if (port == 0) {
                 port = 443;
             }
@@ -693,11 +700,11 @@ void web_server_create_settings_form(AsyncWebServerRequest *request, Form &form)
             if (port == 0) {
                 port = 80;
             }
-            field->setValue(String(port));
+            field.setValue(String(port));
         }
-        config._H_SET(Config().http_port, port);
-    });
-    form.addValidator(new FormRangeValidator(F("Invalid port"), 0, 65535));
+        return true;
+    }));
+    form.addValidator(new FormRangeValidator(F("Invalid port"), 1, 65535));
 
 #  if SPIFFS_SUPPORT && WEBSERVER_TLS_SUPPORT
 

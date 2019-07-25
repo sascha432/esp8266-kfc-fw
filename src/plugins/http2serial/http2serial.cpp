@@ -189,6 +189,10 @@ void http2serial_install_web_server_hook() {
     }
 }
 
+void http2serial_reconfigure(PGM_P source) {
+    http2serial_install_web_server_hook();
+}
+
 #if AT_MODE_SUPPORTED
 
 #include "at_mode.h"
@@ -228,7 +232,7 @@ PROGMEM_PLUGIN_CONFIG_DEF(
 /* setupPlugin              */ http2serial_install_web_server_hook,
 /* statusTemplate           */ nullptr,
 /* configureForm            */ nullptr,
-/* reconfigurePlugin        */ http2serial_install_web_server_hook,
+/* reconfigurePlugin        */ http2serial_reconfigure,
 /* reconfigure Dependencies */ SPGM(plugin_config_name_http),
 /* prepareDeepSleep         */ nullptr,
 /* atModeCommandHandler     */ http2_serial_at_mode_command_handler

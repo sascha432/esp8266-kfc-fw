@@ -16,7 +16,7 @@ public:
 
     virtual bool validate() override {
         if (FormValidator::validate()) {
-            const char *ptr = getField()->getValue().c_str();
+            const char *ptr = getField().getValue().c_str();
             if (_allowEmpty) {
                 const char *trimmed = ptr;
                 while (isspace(*trimmed)) {
@@ -27,7 +27,7 @@ public:
                 }
             }
             IPAddress addr;
-            if (!addr.fromString(getField()->getValue())) {
+            if (!addr.fromString(getField().getValue())) {
                 while(*ptr) {
                     if (!((*ptr >= 'A' && *ptr <= 'Z') || (*ptr >= 'a' && *ptr <= 'z') || (*ptr >= '0' && *ptr <= '9') || *ptr == '_' || *ptr == '-' || *ptr == '.')) {
                         return false;

@@ -335,6 +335,10 @@ void timezone_setup() {
     }
 }
 
+void ntp_client_reconfigure_plugin(PGM_P source) {
+    timezone_setup();
+}
+
 void ntp_client_create_settings_form(AsyncWebServerRequest *request, Form &form) {
 
     form.add<bool>(F("ntp_enabled"), _H_STRUCT_FORMVALUE(Config().flags, bool, ntpClientEnabled));
@@ -456,10 +460,6 @@ void ntp_client_prepare_deep_sleep(uint32_t time) {
     }
 }
 #endif
-
-void ntp_client_reconfigure_plugin() {
-    timezone_setup();
-}
 
 PROGMEM_PLUGIN_CONFIG_DEF(
 /* pluginName               */ ntp,

@@ -12,6 +12,8 @@ class FormValidator;
 
 class FormField {
 public:
+    typedef std::vector <FormValidator *> ValidatorsVector;
+
     enum FieldType_t {
         INPUT_NONE = 0,
         INPUT_CHECK,
@@ -28,7 +30,7 @@ public:
     virtual ~FormField();
 
     void setForm(Form *form);
-    Form *getForm() const;
+    Form &getForm() const;
 
     // void setOptional(bool optional) {
     //     _optional = optional;
@@ -69,12 +71,12 @@ public:
     const FieldType_t getType() const;
 
     void addValidator(FormValidator *validator);
-    const std::vector<FormValidator *> &getValidators() const;
+    const ValidatorsVector &getValidators() const;
 
 private:
     String _name;
     String _value;
-    std::vector <FormValidator *> _validators;
+    ValidatorsVector _validators;
     FieldType_t _type;
     Form *_form;
     bool _hasChanged;

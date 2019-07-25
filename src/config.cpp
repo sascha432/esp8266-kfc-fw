@@ -2,26 +2,9 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#include "kfc_fw_config.h"
-#include <EEPROM.h>
-#include <KFCTimezone.h>
-#include <time.h>
-#include <OSTimer.h>
-#include <EventScheduler.h>
-// #include <LoopFunctions.h>
-// #include <WiFiCallbacks.h>
-#include <crc16.h>
-#include "progmem_data.h"
-#include "fs_mapping.h"
-#include "misc.h"
-#include "reset_detector.h"
-#include "plugins.h"
+//TODO remove
 
-#if DEBUG_CONFIG
-#include <debug_helper_enable.h>
-#else
-#include <debug_helper_disable.h>
-#endif
+/*
 
 uint8_t WiFi_mode_connected(uint8_t mode, uint32_t *station_ip, uint32_t *ap_ip) {
 #if defined(ESP8266)
@@ -70,40 +53,4 @@ uint8_t WiFi_mode_connected(uint8_t mode, uint32_t *station_ip, uint32_t *ap_ip)
     return connected_mode;
 #endif
 }
-
-void config_init() {
-    _debug_printf_P(PSTR("config_init(): safe mode %d, wake up %d\n"), resetDetector.getSafeMode(), resetDetector.hasWakeUpDetected());
-
-    config.setup();
-
-    // during wake up, the WiFI is already configured at this point
-    if (!resetDetector.hasWakeUpDetected()) {
-        config.printInfo(MySerial);
-
-        if (!config.connectWiFi()) {
-            MySerial.printf_P(PSTR("Configuring WiFi failed: %s\n"), config.getLastError());
-#if DEBUG
-            config.dump(MySerial);
-#endif
-        }
-    }
-}
-
-void config_reconfigure() {
-    config.reconfigureWiFi();
-}
-
-PROGMEM_PLUGIN_CONFIG_DEF(
-/* pluginName               */ cfg,
-/* setupPriority            */ PLUGIN_PRIO_CONFIG,
-/* allowSafeMode            */ false,
-/* autoSetupWakeUp          */ true,
-/* rtcMemoryId              */ CONFIG_RTC_MEM_ID,
-/* setupPlugin              */ config_init,
-/* statusTemplate           */ nullptr,
-/* configureForm            */ nullptr,
-/* reconfigurePlugin        */ config_reconfigure,
-/* reconfigure Dependencies */ nullptr,
-/* prepareDeepSleep         */ nullptr,
-/* atModeCommandHandler     */ nullptr
-);
+*/

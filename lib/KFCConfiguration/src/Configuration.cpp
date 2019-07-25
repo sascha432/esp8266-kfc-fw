@@ -177,10 +177,10 @@ bool Configuration::write() {
     uint16_t index = 0;
     for (auto &parameter : _params) {
 #if DEBUG_CONFIGURATION
-        _debug_printf_P(PSTR("Configuration::write(): %04x (%s), data offset %d, size %d\n"),
-            parameter.getParam().handle, getHandleName(parameter.getParam().handle), (int)(buffer.length() + _offset + sizeof(Header_t)), parameter.getParam().length);
+        _debug_printf_P(PSTR("Configuration::write(): %04x (%s), data offset %d, size %d, dirty %d, eeprom offset %p\n"),
+            parameter.getParam().handle, getHandleName(parameter.getParam().handle), (int)(buffer.length() + _offset + sizeof(Header_t)), parameter.getParam().length, parameter.isDirty(), _eepromPtr[index]);
 #endif
-        if (isDirty()) {
+        if (parameter.isDirty()) {
             buffer.write(parameter.getDataPtr(), parameter.getParam().length); // store new data
         } else {
             buffer.write(_eepromPtr[index], parameter.getParam().length); // copy data

@@ -18,6 +18,9 @@ class FormData;
 
 class Form {
 public:
+    typedef std::vector<FormField *> FieldsVector;
+    typedef std::vector<FormError> ErrorsVector;
+
     Form();
     Form(FormData *data);
     virtual ~Form();
@@ -31,7 +34,7 @@ public:
     FormField *add(const String &name, const String &value, FormField::FieldType_t type = FormField::INPUT_TEXT);
 
     template <typename T>
-    FormField *add(const String &name, T value, std::function<void(T, FormField *)> setter = nullptr, FormField::FieldType_t type = FormField::INPUT_SELECT) {
+    FormField *add(const String &name, T value, std::function<void(T, FormField &)> setter = nullptr, FormField::FieldType_t type = FormField::INPUT_SELECT) {
         return _add(new FormValue<T>(name, value, setter, type));
     }
 
@@ -60,7 +63,7 @@ public:
     FormValidator *addValidator(const String &name, FormValidator *validator);
 
     FormField *getField(const String &name) const;
-    FormField *getField(int index) const;
+    FormField &getField(int index) const;
     const size_t hasFields() const;
 
     void clearErrors();
@@ -70,7 +73,7 @@ public:
     const bool hasChanged() const;
     const bool hasError(FormField *field) const;
     void copyValidatedData();
-    const std::vector<FormError> &getErrors() const;
+    const ErrorsVector &getErrors() const;
     void finalize() const;
 
     const char *process(const String &name) const;
@@ -80,8 +83,8 @@ public:
 
 private:
     FormData *_data;
-    std::vector<FormField *> _fields;
-    std::vector<FormError> _errors;
+    FieldsVector _fields;
+    ErrorsVector _errors;
     bool _invalidMissing;
     bool _hasChanged;
 };

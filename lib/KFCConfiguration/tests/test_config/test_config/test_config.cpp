@@ -86,9 +86,31 @@ void test(Configuration &config) {
     printf("%s\n%s\n%s\n", (const char *)str1, (const char *)str2, str3.get());
 }
 
+
+void test_tokenizer() {
+    int8_t argc;
+    char *args[10];
+
+    char *cmd = strdup("command=t1,t2,t3,\"t3-1,t3-2\", \"t4-1\"\"t4-2\" , \"t5-1\\\"t5-2\\t5-3\\\\t5-4\",0");
+    //char *cmd = strdup("command=\"\"");
+    printf("cmd='%s'\n", cmd);
+    argc = tokenizer(cmd, args, 10, true);
+    int count = 0;
+    while (count < argc) {
+        printf("%d='%s'\n", count, args[count]);
+        count++;
+    }
+    free(cmd);
+    exit(-1);
+
+}
+
 int main() {
 
     ESP._enableMSVCMemdebug();
+
+    //test_tokenizer();
+
 
 #if 0
     memcpy(EEPROM.getDataPtr(), tmp, sizeof(tmp));

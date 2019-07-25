@@ -24,9 +24,23 @@ class PlatformIOParser {
     private $environment;
 
     /**
+     * [platformio] env_default
+     *
+     * @var string
+     */
+    private $defaultEnvironment;
+
+    /**
      * @var array
      */
     private $environments;
+
+    /**
+     * Configuration per environment
+     *
+     * @var array
+     */
+    private $envConfig;
 
     public function __construct()
     {
@@ -119,13 +133,62 @@ class PlatformIOParser {
     }
 
     /**
+     * Store keywords
+     *
      * @param string $keyword
      * @param string $line
      */
-    private function processIniLine(?string $keyword, string $line): void
+    private function processIniLine(?string $environment, ?string $keyword, string $line): void
     {
-        if ($keyword === 'build_flags') {
+        if ($environment !== null && $keyword !== null) {
+            $this->envConfig[$environment][$keyword] = $line;
+            // echo "[$environment],$keyword:$line\n";
+        }
+    }
 
+    /**
+     * Resolve variables from the environment in $line
+     *
+     * @param string $line
+     * @return string
+     */
+    private function resolveVariables(string $line): string
+    {
+        if (preg_match_all('/\$\{(?:([a-zA-Z0-9_-]+)\.)([a-zA-Z0-9_-]+)\}/', $line, $out)) {
+            foreach($out[0] as $num => $var) {
+                $env = $out[1][$num];
+                $keyword = $out[2][$num];
+
+                if (!isset($this->envConfig[$env][$keyword])) {
+                    throw new \RuntimeException("Variable '$var' does not exist");
+                }
+                $line = str_replace($var, $this->envConfig[$env][$keyword], $line);
+            }
+        }
+        return $line;
+    }
+
+    /**
+     * Merge devault environment "env" into active environment
+     *
+     * @return void
+     */
+    private function mergeDefaultEnv(string $environment): void
+    {
+        $selectedEnv = &$this->envConfig[$environment];
+        foreach($this->envConfig['env'] as $keyword => $value) {
+            if (isset($selectedEnv[$keyword])) {
+                $selectedEnv[$keyword] .= ' '.$value;
+            } else {
+                $selectedEnv[$keyword] = $value;
+            }
+        }
+
+        if (isset($selectedEnv['build_flags'])) { // get all preprocessor defines
+
+            $line = $this->resolveVariables($selectedEnv['build_flags']);
+
+            // TODO there might be quoted strings with space
             $token = strtok($line, "\t ");
             while($token) {
                 if ($token === '-D') {
@@ -153,6 +216,7 @@ class PlatformIOParser {
 
         $section = $this->environment;
         $sectionFound = false;
+        $environment = null;
 
         $keyword = null;
         $skip = $section !== null;
@@ -162,29 +226,33 @@ class PlatformIOParser {
 
             $ch = substr(ltrim($line), 0, 1);
             if ($ch === '#' || $ch === ';') {
-                continue;
+                continue; // line starts with a comment
             }
+            //TODO trim comments
 
             if (preg_match('/^\s*\[([^\]]+)\]\s*$/', $line, $out)) {
+                if ($keyword !== null) {
+                    $this->processIniLine($environment, $keyword, $fullLine);
+                }
+                $keyword = null;
+                $fullLine = '';
+
                 $this->environments[] = $out[1];
+                $environment = $out[1];
                 if ($section !== null) {
                     $skip = ($out[1] !== $section);
                     if (!$skip) {
                         $sectionFound = true;
                     }
                 }
-            } else if (!$skip) {
-                if (preg_match('/^(build_flags)\s*=\s*(.*)/', $line, $out)) {
+            } else {
+                if (preg_match('/^([a-zA-Z0-9_-]+)\s*=\s*(.*)/', $line, $out)) {
                     list(, $keyword, $fullLine) = $out;
-                } else if (trim($line) === '') {
-                    $this->processIniLine($keyword, $fullLine);
-                    $keyword = null;
-                    $fullLine = '';
                 } else if ($keyword !== null) {
-                    if (preg_match('/^\s/', $line)) {
+                    if (preg_match('/^\s/', $line)) { // line starts with white space
                         $fullLine .= $line;
-                    } else if (trim($line) !== '') {
-                        $this->processIniLine($keyword, $fullLine);
+                    } else { // new configuration keyword, process full line
+                        $this->processIniLine($environment, $keyword, $fullLine);
                         $keyword = null;
                         $fullLine = '';
                     }
@@ -193,12 +261,20 @@ class PlatformIOParser {
 
         }
 
-        if (!$skip && $keyword !== null) {
-            $this->processIniLine($keyword, $fullLine);
+        if ($keyword !== null) {
+            $this->processIniLine($environment, $keyword, $fullLine);
         }
 
-        if ($this->environment && !$sectionFound) {
-            throw new \RuntimeException(sprintf('Environment %s not found in %s', $this->environment, $filename));
+        if (isset($this->envConfig['platformio']) && isset($this->envConfig['platformio']['env_default'])) { // is a default environment configured?
+            $this->defaultEnvironment = $this->envConfig['platformio']['env_default'];
+        }
+
+
+        if ($this->environment !== null) {
+            if (!$sectionFound) {
+                throw new \RuntimeException(sprintf('Environment %s not found in %s', $this->environment, $filename));
+            }
+            $this->mergeDefaultEnv($this->environment);
         }
     }
 

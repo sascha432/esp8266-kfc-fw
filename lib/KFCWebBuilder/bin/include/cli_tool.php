@@ -3,9 +3,9 @@
  * Author: sascha_lammers@gmx.de
  */
 
-use ESPWebFramework\ConfigReader;
 use ESPWebFramework\DumpConfig;
 use ESPWebFramework\WebBuilder;
+use ESPWebFramework\ConfigReader;
 
 require_once __DIR__.'/misc/argv.php';
 

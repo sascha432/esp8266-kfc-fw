@@ -207,10 +207,8 @@ class PlatformIOParser {
     private function mergeDefaultEnv(string $environment): void
     {
         $selectedEnv = &$this->envConfig[$environment];
-        foreach($this->envConfig['env'] as $keyword => $value) {
-            if (isset($selectedEnv[$keyword])) {
-                $selectedEnv[$keyword] .= ' '.$value;
-            } else {
+        foreach($this->envConfig['env'] as $keyword => $value) { // copy config from default environment if it does not exist
+            if (!isset($selectedEnv[$keyword])) {
                 $selectedEnv[$keyword] = $value;
             }
         }

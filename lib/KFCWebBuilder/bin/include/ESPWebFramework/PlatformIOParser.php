@@ -169,6 +169,37 @@ class PlatformIOParser {
     }
 
     /**
+     * Strip comments from the line
+     *
+     * @param string $line
+     * @param boolean $cStyle
+     * @return string
+     */
+    private function stripComments(string $line, bool $cStyle): string
+    {
+        if ($cStyle) { // "//" and "/* */"
+
+            $line = preg_replace_callback('/(".*?")|\/\*[\s\S]*?\*\/|([^:]|^)\/\/.*$/', function($matches) {
+                if ($matches[0]{0} == '"') {
+                    return $matches[0];
+                }
+                return @$matches[2];
+            }, $line);
+
+        } else { // "#", ";"
+
+            $line = preg_replace_callback('/(".*?")|[#;].*$/', function($matches) {
+                if ($matches[0]{0} == '"') {
+                    return $matches[0];
+                }
+                return '';
+            }, $line);
+
+        }
+        return $line;
+    }
+
+    /**
      * Merge devault environment "env" into active environment
      *
      * @return void
@@ -228,7 +259,7 @@ class PlatformIOParser {
             if ($ch === '#' || $ch === ';') {
                 continue; // line starts with a comment
             }
-            //TODO trim comments
+            $line = $this->stripComments($line, false);
 
             if (preg_match('/^\s*\[([^\]]+)\]\s*$/', $line, $out)) {
                 if ($keyword !== null) {
@@ -279,6 +310,8 @@ class PlatformIOParser {
     }
 
     /**
+     * Resolve preprocessor macros with eval()
+     *
      * @param string $expr
      * @return bool
      */
@@ -289,10 +322,15 @@ class PlatformIOParser {
                 $expr = str_replace($value, isset($this->defines[$out[1][$key]]) ? 'true' : 'false', $expr);
             }
         }
-        $expr = strtr($expr, $this->defines);
+        foreach($this->defines as $define => $value) {
+            $define = preg_quote($define);
+            $expr = preg_replace("/(?<![a-zA-Z0-9_-])$define(?![a-zA-Z0-9_-])/", $value, $expr);
+        }
+
+        $expr = $this->stripComments($expr, true);
 
         $____result = false;
-        eval('$____result = '.$expr.';');
+        @eval('$____result = '.$expr.';');
         return $____result;
     }
 

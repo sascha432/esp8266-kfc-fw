@@ -7,7 +7,7 @@ The firmware offers a plugin interface to easily extend its functionality. The p
 
 ### KFCSyslog
 
-Send messages to a syslog server via UDP (or TCP not implemented yet)
+Send messages to a syslog server via UDP, TCP and TLS
 
 ### KFCTimezone
 

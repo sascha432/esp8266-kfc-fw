@@ -57,23 +57,20 @@ extern const SyslogFilterItem syslogFilterFacilityItems[] PROGMEM;
 extern const SyslogFilterItem syslogFilterSeverityItems[] PROGMEM;
 
 class Syslog {
-   public:
+public:
     Syslog(SyslogParameter &parameter);
 
-    void transmit(const String message, SyslogCallback callback) {
-        transmit(message.c_str(), message.length(), callback);
-    }
-    virtual void transmit(const char *message, size_t length, SyslogCallback callback);
+    virtual void transmit(const String &message, SyslogCallback callback);
 
     virtual void addHeader(String &buffer);
     virtual bool canSend() const;
 	virtual bool isSending();
 
 	static bool isNumeric(const char *str);
-	static SyslogFacility facilityToInt(const String str);
-	static SyslogSeverity severityToInt(const String str);
+	static SyslogFacility facilityToInt(const String &str);
+	static SyslogSeverity severityToInt(const String &str);
 
-   protected:
+protected:
     void _addTimestamp(String &buffer, PGM_P format = SYSLOG_TIMESTAMP_FORMAT);
     void _addParameter(String &buffer, const String &value);
 

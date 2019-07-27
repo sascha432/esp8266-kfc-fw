@@ -81,7 +81,8 @@ Syslog::Syslog(SyslogParameter &parameter) : _parameter(parameter) {
 	_debug_printf_P(PSTR("Syslog::Syslog(%s,%s,%s)\n"), parameter.getHostname().c_str(), parameter.getAppName().c_str(), parameter.getProcessId().c_str());
 }
 
-void Syslog::transmit(const char* message, size_t length, SyslogCallback callback) {
+void Syslog::transmit(const String &message, SyslogCallback callback) {
+	_debug_printf_P(PSTR("Syslog::transmit(%s)\n"), message.c_str());
 	callback(true);
 }
 
@@ -226,7 +227,7 @@ bool Syslog::isNumeric(const char *str) {
     return true;
 }
 
-SyslogFacility Syslog::facilityToInt(const String str) {
+SyslogFacility Syslog::facilityToInt(const String &str) {
     if (str.length() != 0 && strcmp_P(str.c_str(), PSTR("*"))) {
         if (isNumeric(str.c_str())) {
             return (SyslogFacility)str.toInt();
@@ -240,7 +241,7 @@ SyslogFacility Syslog::facilityToInt(const String str) {
     return SYSLOG_FACILITY_ANY;
 }
 
-SyslogSeverity Syslog::severityToInt(const String str) {
+SyslogSeverity Syslog::severityToInt(const String &str) {
     if (str.length() != 0 && strcmp_P(str.c_str(), PSTR("*"))) {
         if (isNumeric(str.c_str())) {
             return (SyslogSeverity)str.toInt();

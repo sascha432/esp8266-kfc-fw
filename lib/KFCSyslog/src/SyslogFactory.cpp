@@ -9,7 +9,13 @@
 #include "SyslogUDP.h"
 #include "SyslogFactory.h"
 
-Syslog *SyslogFactory::create(SyslogParameter &parameter, SyslogProtocol protocol, const char *host, uint16_t port) {
+#if DEBUG_SYSLOG
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
+#endif
+
+Syslog *SyslogFactory::create(SyslogParameter &parameter, SyslogProtocol protocol, const String &host, uint16_t port) {
 	switch (protocol) {
 		case SYSLOG_PROTOCOL_UDP:
 			return _debug_new SyslogUDP(parameter, host, port == SYSLOG_DEFAULT_PORT ? SYSLOG_PORT_UDP : port);

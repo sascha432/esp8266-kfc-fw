@@ -10,15 +10,21 @@
 #include "SyslogFile.h"
 #include "SyslogFilter.h"
 
-SyslogFilter::SyslogFilter(const SyslogParameter parameter) {
+#if DEBUG_SYSLOG
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
+#endif
+
+SyslogFilter::SyslogFilter(const SyslogParameter &parameter) {
     _parameter = parameter;
 }
 
-void SyslogFilter::addFilter(const String filter, const String destination) {
+void SyslogFilter::addFilter(const String &filter, const String &destination) {
     _filters.push_back({_parseFilter(filter), createSyslogFromString(destination)});
 }
 
-void SyslogFilter::addFilter(const String filter, Syslog* syslog) {
+void SyslogFilter::addFilter(const String &filter, Syslog* syslog) {
     _filters.push_back({_parseFilter(filter), syslog});
 }
 
@@ -37,7 +43,7 @@ void SyslogFilter::applyFilters(SyslogFilterCallback callback) {
     }
 }
 
-SyslogFilterItemVector SyslogFilter::_parseFilter(const String filter) {
+SyslogFilterItemVector SyslogFilter::_parseFilter(const String &filter) {
     SyslogFilterItemVector filters;
     int startPos = 0;
     do {
@@ -65,12 +71,12 @@ bool SyslogFilter::_matchFilterExpression(const SyslogFilterItemVector& filter, 
     return false;
 }
 
-Syslog* SyslogFilter::createSyslogFromString(const String str) {
+Syslog* SyslogFilter::createSyslogFromString(const String &str) {
     char* tok[4];
     uint8_t tok_count = 0;
     Syslog* syslog = nullptr;
 
-    debug_printf_P(PSTR("createSyslogFromString(%s)\n"), str.c_str());
+    _debug_printf_P(PSTR("SyslogFilter::createSyslogFromString(%s)\n"), str.c_str());
 
     for (auto item = _syslogObjects.begin(); item != _syslogObjects.end(); ++item) {
         if (item->first == str) {
@@ -78,11 +84,8 @@ Syslog* SyslogFilter::createSyslogFromString(const String str) {
         }
     }
 
-    char* dupStr = strdup(str.c_str());
-    char* ptr = dupStr;
-    if (!ptr) {
-        return nullptr;
-    }
+    std::unique_ptr<char []> _strCopy(new char[str.length() + 1]);
+    char* ptr = strcpy(_strCopy.get(), str.c_str());
 
     const char* sep = ":";
     tok[tok_count] = strtok(ptr, sep);
@@ -110,7 +113,6 @@ Syslog* SyslogFilter::createSyslogFromString(const String str) {
             syslog = _debug_new SyslogFile(_parameter, tok[0], tok[1] ? atoi(tok[1]) : SYSLOG_FILE_MAX_SIZE, tok[2] ? atoi(tok[2]) : SYSLOG_FILE_MAX_ROTATE);
         }
     }
-    free(dupStr);
     _syslogObjects.push_back(std::make_pair(str, syslog));
     return syslog;
 }

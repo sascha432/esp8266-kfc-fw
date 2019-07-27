@@ -13,7 +13,7 @@
 #include <debug_helper_disable.h>
 #endif
 
-SyslogFile::SyslogFile(SyslogParameter& parameter, const String filename, size_t maxSize, uint16_t maxRotate) : Syslog(parameter) {
+SyslogFile::SyslogFile(SyslogParameter &parameter, const String &filename, size_t maxSize, uint16_t maxRotate) : Syslog(parameter) {
     _filename = filename;
     _maxSize = maxSize;
     _maxRotate = maxRotate;
@@ -36,22 +36,22 @@ void SyslogFile::addHeader(String& buffer) {
     }
 }
 
-void SyslogFile::transmit(const char* message, size_t length, SyslogCallback callback) {
-    _debug_printf_P(PSTR("SyslogFile::transmit '%s' length %d\n"), message, length);
+void SyslogFile::transmit(const String &message, SyslogCallback callback) {
+    _debug_printf_P(PSTR("SyslogFile::transmit '%s' length %d\n"), message.c_str(), message.length());
 
     auto logFile = SPIFFS.open(_filename, "a+"); // TODO "a+" required to get the file size with size() ?
     if (logFile) {
-        if (_maxSize && (length + logFile.size() + 1) >= _maxSize) {
+        if (_maxSize && (message.length() + logFile.size() + 1) >= _maxSize) {
             logFile.close();
             _rotateLogfile(_filename, _maxRotate);
             logFile = SPIFFS.open(_filename, "a"); // if the rotation fails, just append to the existing file
         }
 		if (logFile) {
-            auto written = logFile.write((const uint8_t *)message, length);
+            auto written = logFile.write((const uint8_t *)message.c_str(), message.length());
             written += logFile.write('\n');
             logFile.close();
 
-            callback(written == length + 1);
+            callback(written == message.length() + 1);
 		}
     } else {
         callback(false);
@@ -62,17 +62,21 @@ bool SyslogFile::canSend() const {
     return true;
 }
 
-void SyslogFile::_rotateLogfile(const String filename, uint16_t maxRotate) {
+void SyslogFile::_rotateLogfile(const String &filename, uint16_t maxRotate) {
 
 	for (uint16_t num = maxRotate; num >= 1; num--) {
-		PrintString from, to;
+		String from, to;
 
 		if (num == 1) {
-			from = filename.c_str();
+			from = filename; //.c_str();
 		} else {
-            from.printf_P("%s.%u", filename.c_str(), num - 1);
+            from += filename;
+            from += '.';
+            from += String(num - 1);
 		}
-		to.printf_P("%s.%u", filename.c_str(), num);
+        to = filename;
+        to += '.';
+        to += String(num);
 
 #if DEBUG
 		int renameResult = -1;

@@ -5,7 +5,7 @@
 /**
  * Asynchronous syslog library with queue and different storage types
  *
- * SyslogStream -> SyslogFilter -> SyslogQueue(Memory/File) -> SyslogUDP/TCP/File
+ * SyslogStream -> SyslogFilter -> SyslogQueue(Memory/File) -> SyslogUDP/TCP/File -> destination server -> callback to SyslogQueue -> callback to SyslogStream
  *
  *
  */
@@ -29,7 +29,7 @@
 
 class SyslogStream : public Stream {
 public:
-	SyslogStream(const SyslogParameter parameter, SyslogProtocol protocol, const char *host, uint16_t port = SYSLOG_DEFAULT_PORT, uint16_t queueSize = 1024);
+	SyslogStream(const SyslogParameter &parameter, SyslogProtocol protocol, const String &host, uint16_t port = SYSLOG_DEFAULT_PORT, uint16_t queueSize = 1024);
     SyslogStream(SyslogFilter *filter, SyslogQueue *queue);
     virtual ~SyslogStream();
 
@@ -48,7 +48,7 @@ public:
 
     void deliverQueue(Syslog *syslog = nullptr);
 
-    void transmitCallback(SyslogMemoryQueueItem *item, bool success);
+    void transmitCallback(SyslogQueue::SyslogQueueItemPtr &item, bool success);
 
     const String getLevel();
 

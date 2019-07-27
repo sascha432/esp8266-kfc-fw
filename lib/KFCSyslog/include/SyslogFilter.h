@@ -14,7 +14,7 @@ typedef std::vector<std::pair<const String, Syslog *>> SyslogObjectsVector;
 
 class SyslogFilter {
 public:
-	SyslogFilter(const SyslogParameter parameter);
+	SyslogFilter(const SyslogParameter &parameter);
 
 	/**
 	* @HOST[:PORT]             forward to UDP (port is 514 by default)
@@ -24,16 +24,16 @@ public:
 	*                          store in file (max size = 64K, max rotate = 10)
 	* stop                     discard message
 	*/
-	void addFilter(const String filter, const String destination);
-	void addFilter(const String filter, Syslog *syslog);
+	void addFilter(const String &filter, const String &destination);
+	void addFilter(const String &filter, Syslog *syslog);
 	SyslogParameter &getParameter();
 
 	void applyFilters(SyslogFilterCallback callback);
 
-	Syslog *createSyslogFromString(const String str);
+	Syslog *createSyslogFromString(const String &str);
 
 private:
-	SyslogFilterItemVector _parseFilter(const String filter);
+	SyslogFilterItemVector _parseFilter(const String &filter);
 	bool _matchFilterExpression(const SyslogFilterItemVector &filter, SyslogFacility facility, SyslogSeverity severity);
 
 	SyslogFiltersVector _filters;

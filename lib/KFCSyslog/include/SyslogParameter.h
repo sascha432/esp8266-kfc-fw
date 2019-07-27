@@ -40,9 +40,8 @@ enum {
 class SyslogParameter {
    public:
     SyslogParameter();
-    SyslogParameter(const char *hostname, const char *appName, const char *processId);
-    SyslogParameter(const String hostname, const String appName);
-    SyslogParameter(const String hostname, const String appName, const String processId);
+    SyslogParameter(const String &hostname, const String &appName);
+    SyslogParameter(const String &hostname, const String &appName, const String &processId);
 
     void setFacility(SyslogFacility facility);
     SyslogFacility getFacility();
@@ -50,16 +49,13 @@ class SyslogParameter {
     void setSeverity(SyslogSeverity severity);
     SyslogSeverity getSeverity();
 
-    void setHostname(const char *hostname);
-    void setHostname(const String hostname);
+    void setHostname(const String &hostname);
     const String &getHostname();
 
-    void setAppName(const char *appName);
-    void setAppName(const String appName);
+    void setAppName(const String &appName);
     const String &getAppName();
 
-    void setProcessId(const char *processId);
-    void setProcessId(const String processId);
+    void setProcessId(const String &processId);
     const String &getProcessId();
 
    private:

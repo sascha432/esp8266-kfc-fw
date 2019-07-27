@@ -10,7 +10,7 @@
 #include "SyslogQueue.h"
 #include "SyslogStream.h"
 
-SyslogStream::SyslogStream(const SyslogParameter parameter, SyslogProtocol protocol, const char * host, uint16_t port, uint16_t queueSize) {
+SyslogStream::SyslogStream(const SyslogParameter &parameter, SyslogProtocol protocol, const String &host, uint16_t port, uint16_t queueSize) {
 	_filter = _debug_new SyslogFilter(parameter);
 	_parameter = &_filter->getParameter();
 	_queue = _debug_new SyslogMemoryQueue(queueSize);
@@ -87,23 +87,45 @@ int SyslogStream::peek() {
 }
 
 void SyslogStream::deliverQueue(Syslog *syslog) {
-	for (auto _item = _queue->begin(); _item != _queue->end(); ++_item) {
-		auto item = *_item;
-		if (item->isSyslog(syslog) && !item->getSyslog()->isSending()) {
-			item->transmit([this, item](bool success) {
-				transmitCallback(item, success);
+    size_t pos = 0;
+    while(pos < _queue->size()) {
+		auto &item = _queue->at(pos++);
+		if (item && item->isSyslog(syslog) && !item->getSyslog()->isSending()) {
+
+            // TODO review. passing &item leads to dangling references (by resizing the vector for example)
+
+            auto *itemPtr = item.get();
+            auto itemUniqueId = itemPtr->getId();
+            _debug_printf_P(PSTR("SyslogStream::deliverQueue(): 1,item=%p,itemPtr=%p,itemUniqueId=%u\n"), &item, itemPtr, itemUniqueId);
+
+            // "item" has a new address, _queue->at(pos++) has become invalid, but we can use the pointer to find the new reference inside the vector
+            // DEBUG00005803 (SyslogStream.cpp:95<33912> deliverQueue): SyslogStream::deliverQueue(): 1,item=0x3fff3154,itemPtr=0x3fff11cc
+            // DEBUG00006015 (SyslogStream.cpp:110<33488> operator()): SyslogStream::deliverQueue(): 2,item=0x3fff469c,itemPtr=0x3fff11cc,(bool)*item=1
+
+            // the issue is that it would be theoretically possible that another SyslogQueueItem points to the same address (itemPtr) later in time, that
+            // is up to malloc. using a real unique id like getId()+SyslogQueueItem * would work, but redesigning that part is probably a better idea
+
+			item->transmit([this, itemPtr, itemUniqueId](bool success) {
+                SyslogQueue::SyslogQueueItemPtr *item = nullptr;
+                for(size_t pos = 0; pos < _queue->size(); pos++) {
+                    auto &itemCmp = _queue->at(pos);
+                    if (itemCmp && itemCmp.get() == itemPtr && itemCmp.get()->getId() == itemUniqueId) {
+                        item = &itemCmp;
+                        break;
+                    }
+                }
+                _debug_printf_P(PSTR("SyslogStream::deliverQueue(): 2,item=%p,itemPtr=%p,(bool)*item=%d,itemUniqueId=%u\n"), item, itemPtr, item ? (bool)*item : -1, itemUniqueId);
+                if (item) {
+				    transmitCallback(*item, success);
+                }
 			});
 		}
 	}
 	_queue->cleanUp();
 }
 
-void SyslogStream::transmitCallback(SyslogMemoryQueueItem *item, bool success) {
-#if DEBUG
-	if (item->isLocked()) {
-		debug_printf_P(PSTR("transmitCallback(%d): syslog queue item '%s' locked\n"), success, item->getMessage().c_str());
-	}
-#endif
+void SyslogStream::transmitCallback(SyslogQueue::SyslogQueueItemPtr &item, bool success) {
+    _debug_printf_P(PSTR("SyslogStream::transmitCallback(): success=%d,message='%s',locked=%d\n"), success, item->getMessage().c_str(), item->isLocked());
     if (success) {
         _queue->remove(item, true);
     } else {

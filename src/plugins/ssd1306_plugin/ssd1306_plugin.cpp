@@ -12,27 +12,175 @@
 #include "EventScheduler.h"
 #include "plugins.h"
 
+#if DEBUG_SSD1306_PLUGIN
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
+#endif
+
+#include <crc16.h>
+
+class GFXfontContainer {
+public:
+    typedef std::unique_ptr<GFXfontContainer> Ptr;
+
+    const static uint8_t VERSION = 0x02;
+    const static uint16_t OPTIONS_HAS_CRC16 = 0x01 << 8;
+
+    GFXfontContainer() {
+        _gfxFont.bitmap = nullptr;
+        _gfxFont.glyph = nullptr;
+    }
+    ~GFXfontContainer() {
+        if (_gfxFont.bitmap) {
+            free(_gfxFont.bitmap);
+        }
+        if (_gfxFont.glyph) {
+            free(_gfxFont.glyph);
+        }
+    }
+
+    const GFXfont *getFontPtr() const {
+        _debug_printf_P(PSTR("GFXfontContainer::getFontPtr(): _gfxFont.bitmap=%p\n"), _gfxFont.bitmap);
+        if (_gfxFont.bitmap) {
+            return &_gfxFont;
+        }
+        return nullptr;
+    }
+
+    static bool readFromFile(const String &filename, GFXfontContainer::Ptr &target) {
+        _debug_printf_P(PSTR("GFXfontContainer::readFromFile(%s)\n"), filename.c_str());
+
+        File file = SPIFFS.open(filename, "r");
+        if (file && file.size()) {
+            return readFromStream(file, target);
+        }
+        return false;
+    }
+
+    static bool readFromStream(Stream &stream, GFXfontContainer::Ptr &target) {
+        _debug_printf_P(PSTR("GFXfontContainer::readFromStream()\n"));
+
+        GFXfontContainer::Ptr font(new GFXfontContainer());
+        uint16_t length, options, headerCrc;
+        uint16_t crc = ~0;
+
+        if (stream.readBytes((uint8_t *)&options, sizeof(options)) != sizeof(options) || stream.readBytes((uint8_t *)&headerCrc, sizeof(headerCrc)) != sizeof(headerCrc)) {
+            return false;
+        }
+        if ((options & 0xff) > VERSION) {
+            _debug_printf_P(PSTR("Version not supported\n"));
+            return false;
+        }
+        _debug_printf_P(PSTR("Version=%02x, flags=%02x, CRC=%04x\n"), (options & 0xff), ((options >> 8) & 0xff), headerCrc);
+        if ((options & OPTIONS_HAS_CRC16) != OPTIONS_HAS_CRC16) {
+            if (headerCrc != 0xffff) { // CRC16 is always 0xffff for version 1
+                _debug_printf_P(PSTR("Invalid CRC\n"));
+                return false;
+            }
+        }
+
+        auto &_font = font->getFont();
+        if (
+            stream.readBytes((uint8_t *)&_font.first, sizeof(_font.first)) +
+            stream.readBytes((uint8_t *)&_font.last, sizeof(_font.last)) +
+            stream.readBytes((uint8_t *)&_font.yAdvance, sizeof(_font.yAdvance)) != 3
+        ) {
+            return false;
+        }
+
+        crc = crc16_update(crc, &_font.first, sizeof(_font.first));
+        crc = crc16_update(crc, &_font.last, sizeof(_font.last));
+        crc = crc16_update(crc, &_font.yAdvance, sizeof(_font.yAdvance));
+
+        _debug_printf_P(PSTR("First '%c' last '%c' yAdvance %u\n"), _font.first, _font.last, _font.yAdvance);
+
+        if (stream.readBytes((uint8_t *)&length, sizeof(length)) != sizeof(length)) {
+            return false;
+        }
+        crc = crc16_update(crc, (uint8_t *)&length, sizeof(length));
+
+        _debug_printf_P(PSTR("Bitmap size %u\n"), length);
+        _font.bitmap = (uint8_t *)malloc(length);
+        if (!_font.bitmap || stream.readBytes((uint8_t *)_font.bitmap, length) != length) {
+            return false;
+        }
+        crc = crc16_update(crc, (uint8_t *)_font.bitmap, length);
+
+        if (stream.readBytes((uint8_t *)&length, sizeof(length)) != sizeof(length)) {
+            return false;
+        }
+        crc = crc16_update(crc, (uint8_t *)&length, sizeof(length));
+
+        _debug_printf_P(PSTR("Glyph table size %u\n"), length);
+        _font.glyph = (GFXglyph *)malloc(length);
+        if (!_font.glyph || stream.readBytes((uint8_t *)_font.glyph, length) != length) {
+            return false;
+        }
+        crc = crc16_update(crc, (uint8_t *)_font.glyph, length);
+        if (options & OPTIONS_HAS_CRC16 && crc != headerCrc) {
+            _debug_printf_P(PSTR("CRC mismatch %04x!=%04x\n"), crc, headerCrc);
+            return false;
+        }
+
+        _debug_printf_P(PSTR("CRC=%04x,stored CRC=%04x\n"), crc, headerCrc);
+        font.swap(target);
+        return true;
+    }
+
+private:
+    GFXfont &getFont() {
+        return _gfxFont;
+    }
+
+private:
+    GFXfont _gfxFont;
+};
+
 Adafruit_SSD1306 Display(SSD1306_PLUGIN_WIDTH, SSD1306_PLUGIN_HEIGHT, &Wire, SSD1306_PLUGIN_RESET_PIN);
+GFXfontContainer::Ptr clockFont;
 
 static EventScheduler::TimerPtr ssd1306_status_timer = nullptr;
 
 void ssd1306_update_time(EventScheduler::TimerPtr timer) {
+    _debug_println(F("ssd1306_update_time()"));
     char buf[32];
     time_t now = time(nullptr);
     Display.setCursor(0, 24);
-    Display.fillRect(0, 24, SSD1306_PLUGIN_WIDTH, 16, BLACK);
-    timezone_strftime_P(buf, sizeof(buf), PSTR("%F\n%T %Z"), timezone_localtime(&now));
+#if SSD1306_PLUGIN_HEIGHT == 64
+    timezone_strftime_P(buf, sizeof(buf), PSTR("%F %Z\n%T"), timezone_localtime(&now));
+    Display.fillRect(0, 24, SSD1306_PLUGIN_WIDTH, SSD1306_PLUGIN_HEIGHT - 24, BLACK);
+    Display.print(strtok(buf, "\n"));
+    if (clockFont) {
+        Display.setFont(clockFont->getFontPtr());
+        Display.setCursor(0, 60);
+    } else {
+        Display.setCursor(0, 24);
+        Display.setTextSize(2, 3);
+    }
+    Display.print(strtok(nullptr, ""));
+    Display.setTextSize(1);
+    Display.setFont(nullptr);
+#else
+    Display.fillRect(0, 24, SSD1306_PLUGIN_WIDTH, SSD1306_PLUGIN_HEIGHT - 24, BLACK);
+    timezone_strftime_P(buf, sizeof(buf), PSTR("%F %T"), timezone_localtime(&now));
     Display.print(buf);
+#endif
     Display.display();
 }
 
 void ssd1306_clear_display() {
+    _debug_println(F("ssd1306_clear_display()"));
+    Display.setTextColor(WHITE);
+    Display.setFont(nullptr);
+    Display.setTextSize(1);
     Display.clearDisplay();
     Display.setCursor(0, 0);
     Display.display();
 }
 
 void ssd1306_update_status() {
+    _debug_println(F("ssd1306_update_status()"));
     Display.clearDisplay();
     Display.setTextColor(WHITE);
     Display.setTextSize(1);
@@ -49,12 +197,14 @@ void ssd1306_update_status() {
 }
 
 void ssd1306_wifi_event(uint8_t event, void *payload) {
+    _debug_println(F("ssd1306_wifi_event()"));
     if (ssd1306_status_timer) {
         ssd1306_update_status();
     }
 }
 
 void ssd1306_disable_status() {
+    _debug_println(F("ssd1306_disable_status()"));
     if (Scheduler.hasTimer(ssd1306_status_timer)) {
         Scheduler.removeTimer(ssd1306_status_timer);
         ssd1306_status_timer = nullptr;
@@ -63,12 +213,22 @@ void ssd1306_disable_status() {
 }
 
 void ssd1306_enable_status() {
+    _debug_println(F("ssd1306_enable_status()"));
     Scheduler.removeTimer(ssd1306_status_timer);
+    ssd1306_clear_display();
     ssd1306_update_status();
     ssd1306_status_timer = Scheduler.addTimer(1000, true, ssd1306_update_time);
 }
 
 void ssd1306_setup() {
+    _debug_printf_P(PSTR("ssd1306_setup(): sda=%d, scl=%d, rst=%d, i2c_addr=%02x, width=%d, height=%d\n"),
+        SSD1306_PLUGIN_SDA_PIN,
+        SSD1306_PLUGIN_SCL_PIN,
+        SSD1306_PLUGIN_RESET_PIN,
+        SSD1306_PLUGIN_I2C_ADDR,
+        SSD1306_PLUGIN_WIDTH,
+        SSD1306_PLUGIN_HEIGHT
+    );
 
     Wire.begin(SSD1306_PLUGIN_SDA_PIN, SSD1306_PLUGIN_SCL_PIN);
     if (!Display.begin(SSD1306_SWITCHCAPVCC, SSD1306_PLUGIN_I2C_ADDR)) {
@@ -90,6 +250,9 @@ void ssd1306_setup() {
     Display.print(config.getShortFirmwareVersion());
     Display.display();
 
+
+    GFXfontContainer::readFromFile(F("/fonts/7digit"), clockFont);
+
 #if SSD1306_PLUGIN_DISPLAY_STATUS_DELAY
     Scheduler.addTimer(SSD1306_PLUGIN_DISPLAY_STATUS_DELAY, false, [](EventScheduler::TimerPtr timer) {
         ssd1306_enable_status();
@@ -101,24 +264,97 @@ void ssd1306_setup() {
 
 #if AT_MODE_SUPPORTED
 
+#if defined(ESP8266)
+    #include <ESP8266HttpClient.h>
+#elif defined(ESP32)
+    #include <HTTPClient.h>
+#endif
+
+GFXfontContainer::Ptr currentFont;
+
 #include "at_mode.h"
 
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(SSDCLR, "SSDCLR", "Clear display");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(SSDST, "SSDST", "Display time and WiFi status continuously");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(SSDCLR, "SSDCLR", "Clear display and reset to detault");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(SSDXY, "SSDXY", "<x,y>", "Set cursor");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(SSDW, "SSDW", "<line1[,line2,...]>", "Display text");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(SSDST, "SSDST", "Display time and WiFi status");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(SSDRF, "SSDRF", "<filename>", "Read font from SPIFFS");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(SSDDF, "SSDDF", "<url>", "Download font");
 
 bool ssd1306_at_mode_command_handler(Stream &serial, const String &command, int8_t argc, char **argv) {
 
     if (command.length() == 0) {
         at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SSDCLR));
-        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SSDW));
         at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SSDST));
+        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SSDXY));
+        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SSDW));
+        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SSDRF));
+        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SSDDF));
     }
     else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SSDCLR))) {
         ssd1306_disable_status();
         ssd1306_clear_display();
         at_mode_print_ok(serial);
         return true;
+    }
+    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SSDDF))) {
+        if (argc != 1) {
+            at_mode_print_invalid_arguments(serial);
+        } else {
+            HTTPClient http;
+            http.begin(argv[0]);
+            int httpCode = http.GET();
+            if (httpCode == 200) {
+                Stream &stream = http.getStream();
+                serial.printf_P("+SSDDF: Downloading %d bytes from %s...\n", http.getSize(), argv[0]);
+                if (GFXfontContainer::readFromStream(stream, currentFont)) {
+                    at_mode_print_ok(serial);
+                } else {
+                    serial.println(F("+SSDDF: Failed to load font"));
+                }
+            } else {
+                serial.printf_P(PSTR("+SSDDF: HTTP error, code %d"), httpCode);
+            }
+            http.end();
+            if (currentFont) {
+                Display.setFont(currentFont->getFontPtr());
+            }
+        }
+        return true;
+    }
+    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SSDRF))) {
+        if (argc != 1) {
+            at_mode_print_invalid_arguments(serial);
+        } else {
+            auto file = SPIFFS.open(argv[0], "r");
+            if  (file) {
+                ssd1306_disable_status();
+                serial.printf_P("+SSDRF: Reading %d bytes from %s...\n", file.size(), argv[0]);
+                if (GFXfontContainer::readFromStream(file, currentFont)) {
+                    at_mode_print_ok(serial);
+                } else {
+                    serial.println(F("+SSDRF: Failed to load font"));
+                }
+                file.close();
+                if (currentFont) {
+                    Display.setFont(currentFont->getFontPtr());
+                }
+            } else {
+                serial.printf_P(PSTR("+SSDRF: Cannot open %s\n"), argv[0]);
+            }
+        }
+        return true;
+    }
+    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SSDXY))) {
+        if (argc != 2) {
+            at_mode_print_invalid_arguments(serial);
+        } else {
+            ssd1306_disable_status();
+            uint16_t x = (uint16_t)atoi(argv[0]);
+            uint16_t y = (uint16_t)atoi(argv[1]);
+            Display.setCursor(x, y);
+            serial.printf_P(PSTR("+SSDXY: x=%d,y=%d\n"), x, y);
+        }
     }
     else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SSDW))) {
         ssd1306_disable_status();

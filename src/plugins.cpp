@@ -24,12 +24,13 @@ PluginsVector plugins;
 
 void register_plugin(PGM_PLUGIN_CONFIG_P config) {
     PluginConfiguration plugin(config);
-    _debug_printf_P(PSTR("register_plugin %s priority %d\n"), plugin.getPluginName().c_str(), plugin.getSetupPriority());
+    _debug_printf_P(PSTR("register_plugin %s priority %d\n"), plugin.getPluginNamePSTR(), plugin.getSetupPriority());
     plugins.push_back(plugin);
 }
 
 PROGMEM_PLUGIN_CONFIG_DECL(rd);
 PROGMEM_PLUGIN_CONFIG_DECL(cfg);
+PROGMEM_PLUGIN_CONFIG_DECL(pinmon);
 PROGMEM_PLUGIN_CONFIG_DECL(mdns);
 PROGMEM_PLUGIN_CONFIG_DECL(esp8266at);
 PROGMEM_PLUGIN_CONFIG_DECL(http);
@@ -47,12 +48,16 @@ PROGMEM_PLUGIN_CONFIG_DECL(i2c_scan);
 PROGMEM_PLUGIN_CONFIG_DECL(ssd1306);
 
 void register_all_plugins() {
+    _debug_println(F("register_all_plugins()"));
 
     register_plugin(SPGM_PLUGIN_CONFIG_P(rd));
     register_plugin(SPGM_PLUGIN_CONFIG_P(cfg));
 
 #if MDNS_SUPPORT
     register_plugin(SPGM_PLUGIN_CONFIG_P(mdns));
+#endif
+#if PIN_MONITOR
+    register_plugin(SPGM_PLUGIN_CONFIG_P(pinmon));
 #endif
 #if ESP8266_AT_MODE_SUPPORT
     register_plugin(SPGM_PLUGIN_CONFIG_P(esp8266at));
@@ -109,7 +114,6 @@ void dump_plugin_list(Print &output) {
     dumper.setStrBoolValues(F("yes"), F("no"));
     dumper.setStrNullValue(F("<none>"));
 
-    dumper.startTable();
     dumper.addColumn(F("Name"), __defaultLength + 3);
     dumper.addColumn(F("Priority"), __defaultLength, TableDumperColumn::RIGHT);
     dumper.addColumn(F("Safe mode"), __defaultLength);
@@ -122,6 +126,7 @@ void dump_plugin_list(Print &output) {
     dumper.addColumn(F("Reconfigure Deps"), __defaultLength);
     dumper.addColumn(F("Deep Sleep"), __defaultLength);
     dumper.addColumn(F("AT Mode"), __defaultLength);
+    dumper.startTable();
     for(const auto &plugin : plugins) {
         dumper.addData(plugin.getPluginNamePSTR());
         dumper.addData(plugin.getSetupPriority());
@@ -280,9 +285,9 @@ SetupPluginCallback PluginConfiguration::getSetupPlugin() const {
 }
 
 void PluginConfiguration::callSetupPlugin() {
-    auto callback = getSetupPlugin();
-    if (callback) {
-        callback();
+    // auto callback = getSetupPlugin();
+    if (config->setupPlugin) {
+        config->setupPlugin();
     }
 }
 
@@ -299,9 +304,9 @@ ReconfigurePluginCallback PluginConfiguration::getReconfigurePlugin() const {
 }
 
 void PluginConfiguration::callReconfigurePlugin(PGM_P source) {
-    auto callback = getReconfigurePlugin();
-    if (callback) {
-        callback(source);
+    // auto callback = getReconfigurePlugin();
+    if (config->reconfigurePlugin) {
+        config->reconfigurePlugin(source);
         for(auto &plugin: plugins) {
             if (plugin.getConfigureForm() && plugin.isDependency(getPluginNamePSTR())) {
                 plugin.callReconfigurePlugin(getPluginNamePSTR());
@@ -319,7 +324,7 @@ void PluginConfiguration::callReconfigureSystem(PGM_P name) {
 }
 
 String PluginConfiguration::getReconfigurePluginDependecies() const {
-    if (!getConfigureForm() || !config->reconfigurePluginDependencies) {
+    if (!config->configureForm || !config->reconfigurePluginDependencies) {
         return _sharedEmptyString;
     }
     return FPSTR(config->reconfigurePluginDependencies);
@@ -330,6 +335,9 @@ PGM_P PluginConfiguration::getReconfigurePluginDependeciesPSTR() const {
 }
 
 bool PluginConfiguration::isDependency(PGM_P pluginName) const {
+    if (!config->reconfigurePluginDependencies) {
+        return false;
+    }
     return stringlist_find_P_P(config->reconfigurePluginDependencies, pluginName) != -1;
 }
 
@@ -338,9 +346,9 @@ PrepareDeepSleepCallback PluginConfiguration::getPrepareDeepSleep() const {
 }
 
 void PluginConfiguration::callPrepareDeepSleep(uint32_t time, RFMode mode) {
-    auto callback = getPrepareDeepSleep();
-    if (callback) {
-        callback(time, mode);
+    //auto callback = getPrepareDeepSleep();
+    if (config->prepareDeepSleep) {
+        config->prepareDeepSleep(time, mode);
     }
 }
 
@@ -352,9 +360,9 @@ AtModeCommandHandlerCallback PluginConfiguration::getAtModeCommandHandler() cons
 }
 
 bool PluginConfiguration::callAtModeCommandHandler(Stream & serial, const String & command, int8_t argc, char ** argv) {
-    auto callback = getAtModeCommandHandler();
-    if (callback) {
-        return callback(serial, command, argc, argv);
+    // auto callback = getAtModeCommandHandler();
+    if (config->atModeCommandHandler) {
+        return config->atModeCommandHandler(serial, command, argc, argv);
     }
     return false;
 }

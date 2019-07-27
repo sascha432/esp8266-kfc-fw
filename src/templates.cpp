@@ -15,7 +15,7 @@
 #include "reset_detector.h"
 #include "plugins.h"
 
-#if DEBUG_TEMPLATE
+#if DEBUG_TEMPLATES
 #include <debug_helper_enable.h>
 #else
 #include <debug_helper_disable.h>

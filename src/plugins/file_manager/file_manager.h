@@ -7,7 +7,7 @@
 #pragma once
 
 #ifndef DEBUG_FILE_MANAGER
-#define DEBUG_FILE_MANAGER 1
+#define DEBUG_FILE_MANAGER 0
 #endif
 
 #include <Arduino_compat.h>

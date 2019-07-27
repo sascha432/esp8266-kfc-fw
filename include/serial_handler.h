@@ -5,7 +5,7 @@
 #pragma once
 
 #ifndef DEBUG_SERIAL_HANDLER
-#define DEBUG_SERIAL_HANDLER 1
+#define DEBUG_SERIAL_HANDLER        0
 #endif
 
 #include <Arduino.h>

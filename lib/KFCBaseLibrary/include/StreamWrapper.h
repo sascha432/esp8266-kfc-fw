@@ -11,12 +11,19 @@
 #include <Arduino_compat.h>
 #include <vector>
 
-typedef std::vector<Stream *> streamWrapperVector;
+#ifndef HAVE_MYSERIAL_AND_DEBUGSERIAL
+#define HAVE_MYSERIAL_AND_DEBUGSERIAL 1
+#endif
 
 class StreamWrapper : public Stream {
 public:
+    typedef std::vector<Stream *> StreamWrapperVector;
+
     StreamWrapper();
     StreamWrapper(Stream *output, Stream *input = nullptr);
+#if HAVE_MYSERIAL_AND_DEBUGSERIAL
+    StreamWrapper(Stream *output, Stream *input, bool setWrapperAsDefault);
+#endif
     ~StreamWrapper();
 
     // set stream used as input
@@ -31,7 +38,7 @@ public:
     Stream *first();
     Stream *last();
     size_t count() const;
-    streamWrapperVector &getChildren();
+    StreamWrapperVector &getChildren();
 
     virtual int available();
     virtual int read();
@@ -44,6 +51,6 @@ public:
     virtual void flush() {}
 
 private:
-    streamWrapperVector _children;
+    StreamWrapperVector _children;
     Stream *_input;
 };

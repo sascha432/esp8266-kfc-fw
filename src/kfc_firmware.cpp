@@ -19,9 +19,7 @@
 #if PRINTF_WRAPPER_ENABLED
 #include <printf_wrapper.h>
 #endif
-#if USE_GDBSTUB
 //#include <GDBStub.h>
-#endif
 
 #if SPIFFS_TMP_FILES_TTL
 
@@ -54,16 +52,16 @@ void cleanup_tmp_dir() {
 
 void check_flash_size() {
 
-#if ESP8266
+#if defined(ESP8266)
     uint32_t realSize = ESP.getFlashChipRealSize();
 #endif
     uint32_t ideSize = ESP.getFlashChipSize();
     FlashMode_t ideMode = ESP.getFlashChipMode();
 
-#if ESP32
+#if defined(ESP32)
     MySerial.printf_P(PSTR("Flash chip rev.: %08X\n"), ESP.getChipRevision());
 #endif
-#if ESP8266
+#if defined(ESP8266)
     MySerial.printf_P(PSTR("Flash real id:   %08X\n"), ESP.getFlashChipId());
     MySerial.printf_P(PSTR("Flash real size: %u\n"), realSize);
 #endif
@@ -71,7 +69,7 @@ void check_flash_size() {
     MySerial.printf_P(PSTR("Flash ide speed: %u\n"), ESP.getFlashChipSpeed());
     MySerial.printf_P(PSTR("Flash ide mode:  %s\n"), (ideMode == FM_QIO ? PSTR("QIO") : ideMode == FM_QOUT ? PSTR("QOUT") : ideMode == FM_DIO ? PSTR("DIO") : ideMode == FM_DOUT ? PSTR("DOUT") : PSTR("UNKNOWN")));
 
-#if ESP8266
+#if defined(ESP8266)
     if (ideSize != realSize) {
         MySerial.printf_P(PSTR("Flash Chip configuration wrong!\n\n"));
     } else {
@@ -124,6 +122,7 @@ bool safe_mode = false;
 void setup() {
 
     Serial.begin(115200);
+    DEBUG_HELPER_INIT();
 
 #if DEBUG_RESET_DETECTOR
     resetDetector._init();
@@ -151,8 +150,7 @@ void setup() {
         resetDetector.armTimer();
     }
     Serial.println(F("Booting KFC firmware..."));
-
-    DebugHelper::__state = DEBUG_HELPER_STATE_ACTIVE;
+     register_all_plugins();
 
     if (resetDetector.hasWakeUpDetected()) {
         config.wakeUpFromDeepSleep();
@@ -187,11 +185,6 @@ void setup() {
         }
 
     }
-// void __debug_at_mode_create_heap_timer(int seconds);
-// extern bool __debug_block_wifi_connect;
-// __debug_at_mode_create_heap_timer(1);
-// __debug_block_wifi_connect = true;
-
 
     if (resetDetector.getSafeMode()) {
 
@@ -258,14 +251,6 @@ void setup() {
                             resetDetector.setSafeMode(1);
                             resetDetector.clearCounter();
                             return false;
-                        // case 'o':
-                        //     void __debug_at_mode_create_heap_timer(int seconds);
-                        //     extern bool __debug_block_wifi_connect;
-                        //     __debug_at_mode_create_heap_timer(1);
-                        //     __debug_block_wifi_connect = true;
-                        //     resetDetector.setSafeMode(false);
-                        //     resetDetector.clearCounter();
-                        //     return false;
                     }
                 }
                 return true;
@@ -352,10 +337,6 @@ void setup() {
 
         prepare_plugins();
         setup_plugins(resetDetector.hasWakeUpDetected() ? PLUGIN_SETUP_AUTO_WAKE_UP : PLUGIN_SETUP_DEFAULT);
-        // if (resetDetector.hasWakeUpDetected()) {
-        //     config.wakeUpFromDeepSleep();
-        // }
-
     }
 
 #if DEBUG

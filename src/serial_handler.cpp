@@ -15,18 +15,18 @@
 #include <debug_helper_disable.h>
 #endif
 
+// Point to "Serial" until StreamWrapper has been intialized
+Stream &MySerial = Serial;
+Stream &DebugSerial = Serial;
+
 #if !SERIAL_HANDLER
 
-StreamWrapper MySerialWrapper(&KFC_SERIAL_PORT, &KFC_SERIAL_PORT);
-Stream &MySerial = MySerialWrapper;
-Stream &DebugSerial = MySerialWrapper;
+StreamWrapper MySerialWrapper(&KFC_SERIAL_PORT, &KFC_SERIAL_PORT, true);
 
 #else
 
 static SerialWrapper _MySerial(KFC_SERIAL_PORT);
-StreamWrapper MySerialWrapper(&_MySerial, &_MySerial);
-Stream &MySerial = MySerialWrapper;
-Stream &DebugSerial = MySerialWrapper;
+StreamWrapper MySerialWrapper(&_MySerial, &_MySerial, true);
 SerialHandler serialHandler(_MySerial);
 
 SerialHandler::SerialHandler(SerialWrapper &wrapper) : _wrapper(wrapper) {

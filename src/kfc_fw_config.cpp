@@ -478,7 +478,6 @@ void KFCFWConfiguration::storeStationConfig(uint32_t ip, uint32_t netmask, uint3
 }
 
 void KFCFWConfiguration::setup() {
-    _debug_println(F("KFCFWConfiguration::setup()"));
 
     String version = KFCFWConfiguration::getFirmwareVersion();
     if (!resetDetector.hasWakeUpDetected()) {
@@ -656,7 +655,7 @@ String KFCFWConfiguration::getWiFiEncryptionType(uint8_t type) {
         case WIFI_AUTH_WPA2_ENTERPRISE:
             return F("WPA2/ENTERPRISE");
     }
-#else
+#elif defined(ESP8266)
     switch(type) {
         case ENC_TYPE_NONE:
             return F("open");
@@ -686,18 +685,7 @@ bool KFCFWConfiguration::reconfigureWiFi() {
     return connectWiFi();
 }
 
-#if DEBUG
-bool __debug_block_wifi_connect = false;
-#endif
-
 bool KFCFWConfiguration::connectWiFi() {
-#if DEBUG
-    if (__debug_block_wifi_connect) {
-        _debug_println(F("KFCFWConfiguration::connectWiFi() blocked"));
-        BlinkLEDTimer::setBlink(BlinkLEDTimer::SOLID);
-        return true;
-    }
-#endif
     _debug_println(F("KFCFWConfiguration::connectWiFi()"));
     setLastError(String());
 

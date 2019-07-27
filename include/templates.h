@@ -4,8 +4,8 @@
 
 #pragma once
 
-#ifndef DEBUG_TEMPLATE
-#define DEBUG_TEMPLATE 0
+#ifndef DEBUG_TEMPLATES
+#define DEBUG_TEMPLATES         0
 #endif
 
 #include <Arduino_compat.h>

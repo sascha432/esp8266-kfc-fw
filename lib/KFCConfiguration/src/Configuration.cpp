@@ -75,9 +75,9 @@ Configuration::Configuration(uint16_t offset, uint16_t size) {
 #endif
     _offset = offset;
     _size = size;
-    _eepromSize = 0;
     _eepromInitialized = false;
     _readAccess = 0;
+    _eepromSize = 4096;
 }
 
 Configuration::~Configuration() {
@@ -394,7 +394,7 @@ void Configuration::getEEPROM(uint8_t *dst, uint16_t offset, uint16_t length, ui
         memcpy(dst, EEPROM.getConstDataPtr() + offset, length); // data is already in RAM
         return;
     }
-    // _debug_printf_P(PSTR("Configuration::getEEPROM(%p, %d, %d, %d)\n"), dst, offset, length, size);
+    _debug_printf_P(PSTR("Configuration::getEEPROM(%p, %d, %d, %d)\n"), dst, offset, length, size);
 
     auto eeprom_start_address = ((uint32_t)&_SPIFFS_end - EEPROM_ADDR) + offset;
 
@@ -407,7 +407,7 @@ void Configuration::getEEPROM(uint8_t *dst, uint16_t offset, uint16_t length, ui
         readSize = (readSize + 0x4) & ~0x3; // align read length
     }
 
-    _debug_printf_P(PSTR("Configuration::getEEPROM(offset %d, length %d): alignment %d\n"), offset, length, alignment);
+    // _debug_printf_P(PSTR("Configuration::getEEPROM(offset %d, length %d): alignment %d\n"), offset, length, alignment);
 
 
     // _debug_printf_P(PSTR("Configuration::getEEPROM(): flash: %08X:%08X (%d) aligned: %08X:%08X (%d)\n"),
@@ -415,31 +415,32 @@ void Configuration::getEEPROM(uint8_t *dst, uint16_t offset, uint16_t length, ui
     //     eeprom_start_address, eeprom_start_address + readSize, readSize
     // );
 
+    SpiFlashOpResult result;
     if (readSize > size) { // does not fit into the buffer
         uint8_t buf[64];
         uint8_t *ptr = buf;
         if (readSize > 64) {
-            ptr = (uint8_t *)malloc(readSize);
             _debug_printf_P(PSTR("Configuration::getEEPROM(): allocating read buffer %d (%d, %d)\n"), readSize, length, size); // large read operation should have an aligned address already to avoid this
+            ptr = (uint8_t *)malloc(readSize);
         }
         noInterrupts();
-        if (spi_flash_read(eeprom_start_address, reinterpret_cast<uint32_t *>(ptr), readSize) != SPI_FLASH_RESULT_OK) {
-            memset(ptr, 0, readSize);
-        }
+        result = spi_flash_read(eeprom_start_address, reinterpret_cast<uint32_t *>(ptr), readSize);
         interrupts();
-        memcpy(dst, ptr + alignment, length); // add alignment offset
+        if (result == SPI_FLASH_RESULT_OK) {
+            memcpy(dst, ptr + alignment, length); // add alignment offset
+        }
         if (buf != ptr) {
             ::free(ptr);
         }
     } else {
         noInterrupts();
-        if (spi_flash_read(eeprom_start_address, reinterpret_cast<uint32_t*>(dst), readSize) != SPI_FLASH_RESULT_OK) {
-            memset(dst, 0, length);
-        }
+        result = spi_flash_read(eeprom_start_address, reinterpret_cast<uint32_t*>(dst), readSize);
         interrupts();
     }
-
-    //_debug_printf_P(PSTR("Configuration::getEEPROM(): spi_flash_read(%08x, %d) = %d\n"), eeprom_start_address, readSize, result);
+    if (result != SPI_FLASH_RESULT_OK) {
+        memset(dst, 0, length);
+    }
+    // _debug_printf_P(PSTR("Configuration::getEEPROM(): spi_flash_read(%08x, %d) = %d\n"), eeprom_start_address, readSize, result);
 
 #elif defined(ESP32)
 

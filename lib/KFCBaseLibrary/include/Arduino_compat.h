@@ -507,11 +507,11 @@ class Stream : public Print {
     }
 
     virtual int read() {
-        if (!_fp) {
+        if (!_fp || ferror(_fp)) {
             return -1;
         }
         uint8_t b;
-        if (read(&b, sizeof(b)) != 1) {
+        if (fread(&b, sizeof(b), 1, _fp) != 1) {
             if (ferror(_fp)) {
                 perror("read");
             }
@@ -519,7 +519,8 @@ class Stream : public Print {
             return -1;
         }
         // printf("DEBUG read byte\n");
-        return b;
+        unsigned val = b;
+        return val;
     }
 
     virtual int peek() {

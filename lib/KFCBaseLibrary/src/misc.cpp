@@ -437,7 +437,7 @@ uint8_t tokenizer(char *ptr, char **args, uint8_t maxArgs, bool hasCommand) {
             quoted = false;
             char *wptr = ptr;
             while (isspace(*wptr)) {
-                *wptr++;
+                wptr++;
             }
             if (*wptr == '"') {
                 quoted = true;

@@ -9,7 +9,7 @@
 String DebugHelper::__file;
 unsigned DebugHelper::__line = 0;
 String DebugHelper::__function;
-uint8_t DebugHelper::__state = DEBUG_HELPER_STATE_DEFAULT;
+uint8_t DebugHelper::__state = DEBUG_HELPER_STATE_DISABLED; // needs to be disabled until the output stream has been initialized
 DebugHelperFilterVector DebugHelper::__filters;
 
 #if DEBUG_INCLUDE_SOURCE_INFO

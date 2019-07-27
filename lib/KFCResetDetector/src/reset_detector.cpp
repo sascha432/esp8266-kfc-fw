@@ -14,9 +14,13 @@
 
 ResetDetector resetDetector;
 
+extern Stream &MySerial;
+extern Stream &DebugSerial;
+
+
 ResetDetector::ResetDetector() {
 #if !DEBUG_RESET_DETECTOR
-    // for debugging call init in setup() after Serial.begin()
+    // for debugging call _init() in setup() after Serial.begin() and DEBUG_HELPER_INIT()
     _init();
 #endif
 }
@@ -25,10 +29,6 @@ void ResetDetector::_init() {
     _debug_println(F("ResetDetector::_init()"));
 
      _timer = nullptr;
-#if HAVE_KFC_PLUGINS
-    register_all_plugins();
-#endif
-
     ResetDetectorData_t data;
     auto isValid = false;
 
@@ -299,13 +299,17 @@ bool reset_detector_command_handler(Stream &serial, const String &command, int8_
 
 #endif
 
+void temp_test() {
+
+}
+
 PROGMEM_PLUGIN_CONFIG_DEF(
     /* pluginName               */ rd,
     /* setupPriority            */ PLUGIN_PRIO_RESET_DETECTOR,
     /* allowSafeMode            */ false,
     /* autoSetupWakeUp          */ false,
     /* rtcMemoryId              */ RESET_DETECTOR_RTC_MEM_ID,
-    /* setupPlugin              */ nullptr,
+    /* setupPlugin              */ temp_test,
     /* statusTemplate           */ nullptr,
     /* configureForm            */ nullptr,
     /* reconfigurePlugin        */ nullptr,

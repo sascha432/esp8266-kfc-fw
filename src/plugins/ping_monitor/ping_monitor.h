@@ -6,14 +6,14 @@
 
 #pragma once
 
+#ifndef DEBUG_PING_MONITOR
+#define DEBUG_PING_MONITOR 0
+#endif
+
 #include <Arduino_compat.h>
 #include <ESPAsyncWebServer.h>
 #include "AsyncPing.h"
 #include "web_socket.h"
-
-#ifndef DEBUG_PING_MONITOR
-#define DEBUG_PING_MONITOR 0
-#endif
 
 class WsPingClient : public WsClient {
 public:

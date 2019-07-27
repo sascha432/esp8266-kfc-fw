@@ -13,7 +13,7 @@
 #include "atomic_sun_v2.h"
 
 #define COMMAND_PREFIX "~$"
-#define DEBUG_4CH_DIMMER 1
+#define DEBUG_4CH_DIMMER 0
 
 #ifdef DEBUG_4CH_DIMMER
 #include <debug_helper_enable.h>

@@ -5,7 +5,7 @@
 #pragma once
 
 #ifndef DEBUG_RESET_DETECTOR
-#define DEBUG_RESET_DETECTOR        1
+#define DEBUG_RESET_DETECTOR        0
 #endif
 
 #include <Arduino_compat.h>

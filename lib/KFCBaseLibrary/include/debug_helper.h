@@ -9,6 +9,9 @@
 
 #if DEBUG
 
+// call in setup, after initializing the output stream
+#define DEBUG_HELPER_INIT()                             DebugHelper::__state = DEBUG_HELPER_STATE_DEFAULT;
+
 #define debug_helper_set_src()                          { DebugHelper::__file = DebugHelper::basename(__FILE__); DebugHelper::__line = __LINE__; __function = __FUNCTION__; }
 
 #ifndef DEBUG_HELPER_STATE_DEFAULT
@@ -128,6 +131,8 @@ T _debug_helper_print_result_P(const char *file, int line, const char *function,
 #define DEBUG_CHECK_P_STR(str) ((uint32_t)(void *)str)<0x40108000 ? str : SPGM(invalid_flash_ptr)
 
 #else
+
+#define DEBUG_HELPER_INIT()         ;
 
 #define debug_print(...)            ;
 #define debug_println(...)          ;

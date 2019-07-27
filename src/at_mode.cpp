@@ -278,6 +278,7 @@ void at_mode_print_ok(Stream &output) {
 void at_mode_serial_handle_event(String &commandString) {
     auto &output = MySerial;
     commandString.trim();
+    bool isQueryMode = commandString.endsWith(F("?"));
 #if AT_MODE_ALLOW_PLUS_WITHOUT_AT
     // allow using AT+COMMAND and +COMMAND
     if (!strncasecmp_P(commandString.c_str(), PSTR("AT"), 2)) {
@@ -316,7 +317,7 @@ void at_mode_serial_handle_event(String &commandString) {
             command++;
 
             char *ptr = strchr(command, '?');
-            if (ptr) { // query mode has no arguments
+            if (isQueryMode && ptr) { // query mode has no arguments
                 *ptr = 0;
                 argc = AT_MODE_QUERY_COMMAND;
             } else {

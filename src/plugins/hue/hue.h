@@ -11,7 +11,7 @@
 #include "fauxmoESP.h"
 
 #ifndef DEBUG_HUE_EMULATION
-#define DEBUG_HUE_EMULATION                     1
+#define DEBUG_HUE_EMULATION                     0
 #endif
 
 #ifndef HUE_EMULATION_USE_WIFI_CALLBACK

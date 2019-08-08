@@ -19,7 +19,7 @@ SyslogUDP::SyslogUDP(SyslogParameter& parameter, const String &host, uint16_t po
     _port = port;
 }
 
-void SyslogUDP::transmit(const String &message, SyslogCallback callback) {
+void SyslogUDP::transmit(const String &message, Callback_t callback) {
 #if DEBUG_SYSLOG
     if (message.indexOf("SyslogUDP::transmit") != - 1) {
         _debug_printf_P(PSTR("SyslogUDP::transmit '%s' length %d\n"), message.c_str(), message.length());

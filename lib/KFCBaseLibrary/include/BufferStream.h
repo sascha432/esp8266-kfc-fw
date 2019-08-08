@@ -14,9 +14,12 @@ public:
 
     bool seek(long pos, int mode);
     size_t position() const;
+    void clear();
 
     int read() override;
     int peek() override;
+
+    char charAt(size_t pos) const;
 
     size_t write(uint8_t data) override {
         return Buffer::write(data);

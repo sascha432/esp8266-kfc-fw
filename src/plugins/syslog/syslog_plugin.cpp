@@ -132,18 +132,6 @@ const String syslog_get_status() {
             out += FSPGM(Disabled);
             break;
     }
-    // #if SYSLOG_SPIFF_QUEUE_SIZE
-    // if (!_Config.getOptions().isSyslogProtocol(SYSLOG_PROTOCOL_NONE) && syslogQueue && syslogQueue->hasSyslog()) {
-    //     SyslogQueueInfo *info = syslogQueue->getQueueInfo();
-    //     size_t currentSize = /*Syslog::*/syslogQueue->getSize();
-    //     out.printf_P(PSTR(HTML_S(br) "Queue buffer on SPIFF %s/%s (%.2f%%)"), formatBytes(currentSize).c_str(), formatBytes(SYSLOG_SPIFF_QUEUE_SIZE).c_str(), currentSize * 100.0 / (float)SYSLOG_SPIFF_QUEUE_SIZE);
-    //     if (info->transmitted || info->dropped) {
-    //         out.printf_P(PSTR(HTML_S(br) "Transmitted %u, dropped %u"), info->transmitted, info->dropped);
-    //     }
-    // } else {
-    //     return F("Syslog disabled");
-    // }
-    // #endif
 #if DEBUG_USE_SYSLOG
     out.print(F(HTML_S(br) "Debugging enabled, target " DEBUG_USE_SYSLOG_TARGET));
 #endif
@@ -182,6 +170,10 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(SQC, "SQC", "Clear syslog queue");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(SQI, "SQI", "Display syslog queue info");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(SQD, "SQD", "Display syslog queue");
 
+void print_syslog_disabled(Stream &output) {
+    output.println(F("+SQx: Syslog is disabled"));
+}
+
 bool syslog_at_mode_command_handler(Stream &serial, const String &command, int8_t argc, char **argv) {
 
     if (command.length() == 0) {
@@ -192,25 +184,35 @@ bool syslog_at_mode_command_handler(Stream &serial, const String &command, int8_
 
     } else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SQC))) {
         if (syslog) {
-            syslog->getQueue()->cleanUp();
-            serial.println(F("Syslog queue cleared"));
+            syslog->getQueue()->clear();
+            serial.println(F("+SQC: Queue cleared"));
+        }
+        else {
+            print_syslog_disabled(serial);
         }
         return true;
     } else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SQI))) {
         if (syslog) {
-            serial.printf_P(PSTR("Syslog queue size: %d\n"), syslog->getQueue()->size());
+            serial.printf_P(PSTR("+SQI: %d\n"), syslog->getQueue()->size());
+        }
+        else {
+            print_syslog_disabled(serial);
         }
         return true;
     } else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SQD))) {
         if (syslog) {
             auto queue = syslog->getQueue();
             size_t index = 0;
+            serial.printf_P(PSTR("+SQD: messages in queue %d\n"), queue->size());
             while(index < queue->size()) {
                 auto &item = queue->at(index++);
                 if (item) {
-                    serial.printf_P(PSTR("Syslog queue id %d (failures %d): %s\n"), item->getId(), item->getFailureCount(), item->getMessage().c_str());
+                    serial.printf_P(PSTR("+SQD: id %d (failures %d): %s\n"), item->getId(), item->getFailureCount(), item->getMessage().c_str());
                 }
             }
+        }
+        else {
+            print_syslog_disabled(serial);
         }
         return true;
     }
@@ -221,24 +223,25 @@ bool syslog_at_mode_command_handler(Stream &serial, const String &command, int8_
 
 void syslog_prepare_deep_sleep(uint32_t time, RFMode mode) {
 
-    //TODO the send timeout could be reduces for short sleep intervals
+    uint16_t defaultWaitTime = 250;
+    if (time > 60e3) {  // longer than 1min, increase wait time
+        defaultWaitTime *= 4;
+    }
 
-    if (WiFi.isConnected()) {
 #if DEBUG_USE_SYSLOG
-        if (debugSyslog) {
-            ulong timeout = millis() + 2000;    // long timeout in debug mode
-            while(debugSyslog->hasQueuedMessages() && millis() < timeout) {
-                debugSyslog->deliverQueue();
-                delay(1);
-            }
+    if (debugSyslog) {
+        ulong timeout = millis() + defaultWaitTime * 8;    // long timeout in debug mode
+        while(debugSyslog->hasQueuedMessages() && millis() < timeout) {
+            debugSyslog->deliverQueue();
+            delay(1);
         }
+    }
 #endif
-        if (syslog) {
-            ulong timeout = millis() + 150;
-            while(syslog->hasQueuedMessages() && millis() < timeout) {
-                syslog->deliverQueue();
-                delay(1);
-            }
+    if (syslog) {
+        ulong timeout = millis() + defaultWaitTime;
+        while(syslog->hasQueuedMessages() && millis() < timeout) {
+            syslog->deliverQueue();
+            delay(1);
         }
     }
 }

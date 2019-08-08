@@ -4,6 +4,10 @@
 
 #pragma once
 
+#ifndef DEBUG_ASYNC_WEB_RESPONSE
+#define DEBUG_ASYNC_WEB_RESPONSE        0
+#endif
+
 #include <Arduino_compat.h>
 #include <ESPAsyncWebServer.h>
 #include <vector>
@@ -14,8 +18,6 @@
 #include "web_server.h"
 #include "../include/templates.h"
 #include "fs_mapping.h"
-
-#define DEBUG_ASYNC_WEB_RESPONSE 0
 
 class AsyncProgmemFileResponse : public AsyncAbstractResponse {
 public:

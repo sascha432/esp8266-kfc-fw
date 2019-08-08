@@ -6,6 +6,7 @@
 #include <PrintString.h>
 #include <algorithm>
 
+
 dynamic_bitset::dynamic_bitset() : dynamic_bitset((uint32_t)0, 0, 0) {
 }
 

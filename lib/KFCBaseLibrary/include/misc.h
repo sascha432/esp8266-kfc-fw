@@ -144,20 +144,20 @@ int strcmp_P_P(PGM_P str1, PGM_P str2);
 // compare two PROGMEM strings case insensitive
 int strcasecmp_P_P(PGM_P str1, PGM_P str2);
 
-#define constexpr_String_equals(str1, str2)                 String_equals(str1, str2, constexpr_strlen(str2))
+#define constexpr_String_equals(str1, str2)                 String_equals(str1, str2, constexpr_strlen_P(str2))
 
-#define constexpr_String_equalsIgnoreCase(str1, str2)       String_equalsIgnoreCase(str1, str2, constexpr_strlen(str2))
+#define constexpr_String_equalsIgnoreCase(str1, str2)       String_equalsIgnoreCase(str1, str2, constexpr_strlen_P(str2))
 
 bool String_equals(const String &str1, PGM_P str2, size_t strlen2);
 
 bool String_equalsIgnoreCase(const String &str1, PGM_P str2, size_t strlen2);
 
-#define constexpr_startsWith(str1, str2)                    !strncmp_P(str1.c_str(), str2, constexpr_strlen(str2))
+#define constexpr_startsWith(str1, str2)                    !strncmp_P(str1.c_str(), str2, constexpr_strlen_P(str2))
 
 // for String objects
-#define constexpr_endsWith(str1, str2)                      !strcmp_end_P(str1.c_str(), str1.length(), str2, constexpr_strlen(str2))
+#define constexpr_endsWith(str1, str2)                      !strcmp_end_P(str1.c_str(), str1.length(), str2, constexpr_strlen_P(str2))
 
-#define constexpr_strcmp_end_P(str1, len1, str2)            strcmp_end_P(str1, len1, str2, constexpr_strlen(str2))
+#define constexpr_strcmp_end_P(str1, len1, str2)            strcmp_end_P(str1, len1, str2, constexpr_strlen_P(str2))
 
 int strcmp_end_P(const char *str1, size_t len1, PGM_P str2, size_t len2);
 

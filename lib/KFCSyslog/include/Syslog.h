@@ -38,8 +38,6 @@ enum SyslogProtocol : uint8_t {
 
 typedef std::vector<std::pair<SyslogFacility, SyslogSeverity>> SyslogFilterItemVector;
 
-typedef std::function<void(bool success)> SyslogCallback;
-
 class Syslog;
 
 struct SyslogFileFilterItem {
@@ -58,15 +56,24 @@ extern const SyslogFilterItem syslogFilterSeverityItems[] PROGMEM;
 
 class Syslog {
 public:
+    typedef std::function<void(bool success)> Callback_t;
+
     Syslog(SyslogParameter &parameter);
 
-    virtual void transmit(const String &message, SyslogCallback callback);
+    virtual void transmit(const String &message, Callback_t callback);
 
     virtual void addHeader(String &buffer);
+
+    // able to send?
     virtual bool canSend() const;
+    // busy sending?
 	virtual bool isSending();
 
 	static bool isNumeric(const char *str);
+    static inline bool isWildcard(const String &string) {
+        return string.length() == 1 && string.charAt(0) == '*';
+    }
+
 	static SyslogFacility facilityToInt(const String &str);
 	static SyslogSeverity severityToInt(const String &str);
 

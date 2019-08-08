@@ -99,6 +99,8 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(CMDS, "CMDS", "Send a list of available AT
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(LOAD, "LOAD", "Discard changes and load settings from EEPROM");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(STORE, "STORE", "Store current settings in EEPROM");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(FACTORY, "FACTORY", "Restore factory settings (but do not store in EEPROM)");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(ATMODE, "ATMODE", "<1|0>", "Enable/disable AT Mode");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DLY, "DLY", "<milliseconds>", "Call delay(milliseconds)");
 
 #if DEBUG
 
@@ -129,6 +131,8 @@ void at_mode_help_commands() {
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(LOAD));
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(STORE));
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(FACTORY));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(ATMODE));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DLY));
 
 #if DEBUG
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(PLUGINS));
@@ -226,23 +230,18 @@ void at_mode_setup() {
     WiFiCallbacks::add(WiFiCallbacks::EventEnum_t::CONNECTED|WiFiCallbacks::EventEnum_t::DISCONNECTED, at_mode_wifi_callback);
 }
 
-void enable_at_mode() {
+void enable_at_mode(Stream &output) {
     auto &flags = config._H_W_GET(Config().flags);
     if (!flags.atModeEnabled) {
-        _debug_println(F("Enabling AT MODE."));
-        MySerial.println(F("Enabling AT MODE."));
+        output.println(F("Enabling AT MODE."));
         flags.atModeEnabled = true;
-        // if (!heapTimer) {
-        //     create_heap_timer(60);
-        // }
     }
 }
 
-void disable_at_mode() {
+void disable_at_mode(Stream &output) {
     auto &flags = config._H_W_GET(Config().flags);
     if (flags.atModeEnabled) {
-        _debug_println(F("Disabling AT MODE."));
-        MySerial.println(F("Disabling AT MODE."));
+        output.println(F("Disabling AT MODE."));
         Scheduler.removeTimer(heapTimer);
         heapTimer = nullptr;
         flags.atModeEnabled = false;
@@ -360,6 +359,26 @@ void at_mode_serial_handle_event(String &commandString) {
             }
             else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(FACTORY))) {
                 config.restoreFactorySettings();
+                at_mode_print_ok(output);
+            }
+            else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(ATMODE))) {
+                if (argc != 1) {
+                    at_mode_print_invalid_arguments(output);
+                } else {
+                    if (atoi(args[0])) {
+                        enable_at_mode(output);
+                    } else {
+                        disable_at_mode(output);
+                    }
+                }
+            }
+            else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(DLY))) {
+                unsigned long ms = 1;
+                if (argc > 0) {
+                    ms = atol(args[0]);
+                }
+                output.printf_P(PSTR("+DLY: %lu\n"), ms);
+                delay(ms);
                 at_mode_print_ok(output);
             }
 #if DEBUG

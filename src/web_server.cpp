@@ -142,7 +142,11 @@ bool web_server_is_authenticated(AsyncWebServerRequest *request) {
 }
 
 bool web_server_client_accepts_gzip(AsyncWebServerRequest *request) {
-    auto acceptEncoding = request->header(FSPGM(Accept_Encoding)).c_str();
+    auto header = request->getHeader(String(FSPGM(Accept_Encoding)));
+    if (!header) {
+        return false;
+    }
+    auto acceptEncoding = header->value().c_str();
     return (strstr_P(acceptEncoding, PSTR("gzip")) || strstr_P(acceptEncoding, PSTR("deflate")));
 }
 

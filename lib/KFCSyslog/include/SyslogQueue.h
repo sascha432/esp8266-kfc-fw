@@ -34,7 +34,7 @@ public:
 	uint8_t incrFailureCount();
 	uint8_t getFailureCount();
 
-    void transmit(SyslogCallback callback);
+    void transmit(Syslog::Callback_t callback);
 
 private:
     SyslogQueueId_t _id;
@@ -59,7 +59,15 @@ public:
 
     virtual SyslogQueueItemPtr &at(SyslogQueueIndex_t index);
 
-    virtual void cleanUp();
+    // gets called after a new message has been added and each time the queue is checked
+    virtual void cleanUp() {
+    }
+
+    virtual void clear() {
+        while(size()) {
+            remove(at(0), false);
+        }
+    }
 
 private:
     SyslogQueueItemPtr _item;
@@ -79,12 +87,41 @@ public:
 
     SyslogQueueItemPtr &at(SyslogQueueIndex_t index) override;
 
-    void cleanUp() override;
-
 private:
     size_t _maxSize;
     size_t _curSize;
-    SyslogQueueId_t _id;
     SyslogMemoryQueueVector _items;
-    SyslogQueueIndex_t _count;
+    SyslogQueueIndex_t _uniqueId;
 };
+
+
+#if 0
+// persistant storage that survives reboots and can store a significant amount of messages if the syslog server isn't available
+// TODO
+class SyslogSPIFFSQueue : public SyslogQueue {
+public:
+    SyslogSPIFFSQueue(const String &filename, size_t maxSize) {
+        _maxSize = maxSize;
+        _filename = filename;
+    }
+
+    SyslogQueueId_t add(const String &message, Syslog *syslog) override {
+    }
+
+    void remove(SyslogQueueItemPtr &item, bool success) override {
+    }
+
+    size_t size() const override {
+        return 0;
+    }
+
+    SyslogQueueItemPtr &at(SyslogQueueIndex_t index) override;
+
+private:
+    String _filename;
+    File _file;
+    size_t _maxSize;
+    SyslogQueueId_t _uniqueId;
+};
+
+#endif

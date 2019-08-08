@@ -34,6 +34,13 @@ bool BufferStream::seek(long pos, int mode) {
     return true;
 }
 
+char BufferStream::charAt(size_t pos) const {
+    if (pos < length()) {
+        return _buffer[pos];
+    }
+    return 0;
+}
+
 size_t BufferStream::position() const {
     return _position;
 }
@@ -50,4 +57,9 @@ int BufferStream::peek() {
         return _buffer[_position];
     }
     return -1;
+}
+
+void BufferStream::clear() {
+    Buffer::clear();
+    _position = 0;
 }

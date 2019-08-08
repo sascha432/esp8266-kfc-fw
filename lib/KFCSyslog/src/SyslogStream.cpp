@@ -10,6 +10,12 @@
 #include "SyslogQueue.h"
 #include "SyslogStream.h"
 
+#if DEBUG_SYSLOG
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
+#endif
+
 SyslogStream::SyslogStream(const SyslogParameter &parameter, SyslogProtocol protocol, const String &host, uint16_t port, uint16_t queueSize) {
 	_filter = _debug_new SyslogFilter(parameter);
 	_parameter = &_filter->getParameter();
@@ -89,26 +95,20 @@ int SyslogStream::peek() {
 void SyslogStream::deliverQueue(Syslog *syslog) {
     size_t pos = 0;
     while(pos < _queue->size()) {
+        _debug_printf_P(PSTR("SyslogStream::deliverQueue(): %u/%u\n"), pos + 1, _queue->size());
 		auto &item = _queue->at(pos++);
 		if (item && item->isSyslog(syslog) && !item->getSyslog()->isSending()) {
 
-            // TODO review. passing &item leads to dangling references (by resizing the vector for example)
-
+            // get pointer and id of SyslogQueueItem to find it inside the vector later
+            // SyslogQueueItemPtr might became a dangling reference
             auto *itemPtr = item.get();
-            auto itemUniqueId = itemPtr->getId();
+            auto itemUniqueId = item->getId();
             _debug_printf_P(PSTR("SyslogStream::deliverQueue(): 1,item=%p,itemPtr=%p,itemUniqueId=%u\n"), &item, itemPtr, itemUniqueId);
 
-            // "item" has a new address, _queue->at(pos++) has become invalid, but we can use the pointer to find the new reference inside the vector
-            // DEBUG00005803 (SyslogStream.cpp:95<33912> deliverQueue): SyslogStream::deliverQueue(): 1,item=0x3fff3154,itemPtr=0x3fff11cc
-            // DEBUG00006015 (SyslogStream.cpp:110<33488> operator()): SyslogStream::deliverQueue(): 2,item=0x3fff469c,itemPtr=0x3fff11cc,(bool)*item=1
-
-            // the issue is that it would be theoretically possible that another SyslogQueueItem points to the same address (itemPtr) later in time, that
-            // is up to malloc. using a real unique id like getId()+SyslogQueueItem * would work, but redesigning that part is probably a better idea
-
 			item->transmit([this, itemPtr, itemUniqueId](bool success) {
-                SyslogQueue::SyslogQueueItemPtr *item = nullptr;
-                for(size_t pos = 0; pos < _queue->size(); pos++) {
-                    auto &itemCmp = _queue->at(pos);
+                SyslogQueue::SyslogQueueItemPtr *item = nullptr; // find "item" again
+                for(size_t pos2 = 0; pos2 < _queue->size(); pos2++) {
+                    auto &itemCmp = _queue->at(pos2);
                     if (itemCmp && itemCmp.get() == itemPtr && itemCmp.get()->getId() == itemUniqueId) {
                         item = &itemCmp;
                         break;

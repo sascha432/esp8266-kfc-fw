@@ -10,7 +10,7 @@ class SyslogUDP : public Syslog {
 public:
     SyslogUDP(SyslogParameter &parameter, const String &host, uint16_t port = SYSLOG_PORT_UDP);
 
-    void transmit(const String &message, SyslogCallback callback) override;
+    void transmit(const String &message, Callback_t callback) override;
 
 private:
     String _host;

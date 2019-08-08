@@ -12,7 +12,7 @@ public:
     SyslogFile(SyslogParameter &parameter, const String &filename, size_t maxSize = SYSLOG_FILE_MAX_SIZE, uint16_t maxRotate = SYSLOG_FILE_MAX_ROTATE);
 
     void addHeader(String &buffer) override;
-    void transmit(const String &message, SyslogCallback callback) override;
+    void transmit(const String &message, Callback_t callback) override;
     bool canSend() const override;
 
     void _rotateLogfile(const String &filename, uint16_t maxRotate);

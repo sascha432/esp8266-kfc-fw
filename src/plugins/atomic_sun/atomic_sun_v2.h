@@ -50,7 +50,7 @@ public:
 
     virtual ~Driver_4ChDimmer();
 
-    static void setup(bool isSafeMode);
+    static void setup();
 
     const String getName() override;
     PGM_P getComponentName() override;
@@ -65,6 +65,8 @@ public:
 
     static const String getStatus();
     static void onData(uint8_t type, const uint8_t *buffer, size_t len);
+
+    static void onReceive(int length);
 
 private:
     void printStatus(PrintHtmlEntitiesString &out);
@@ -81,18 +83,16 @@ private:
     void _setChannels(int16_t ch1, int16_t ch2, int16_t ch3, int16_t ch4, float fadetime = FADE_TIME_NORMAL);
     void _getChannels();
 
-    void _clearResponse();
-    int _waitForResponse(int count);
-    int _parseLine(const String &response);
-    void _serialWrite(PGM_P format, ...);
+    void _fade(uint8_t channel, int16_t toLevel, float fadeTime);
+    void _onReceive(int length);
+
+    void _writeShort(int16_t value);
+    void _writeFloat(float value);
 
 private:
     HardwareSerial &_serial;
     Driver_4ChDimmer_MQTTComponentData_t _data;
     Driver_4ChDimmer_Level_t _stored;
-
-    String _response;
-    uint8_t _responseCount;
     int16_t _channels[4];
 
     static Driver_4ChDimmer *_dimmer;

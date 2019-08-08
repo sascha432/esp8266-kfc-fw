@@ -85,7 +85,7 @@ String at_mode_print_command_string(Stream &output, char separator, bool trailin
 void at_mode_serial_input_handler(uint8_t type, const uint8_t *buffer, size_t len);
 void at_mode_print_invalid_arguments(Stream &output);
 void at_mode_print_ok(Stream &output);
-void enable_at_mode();
-void disable_at_mode();
+void enable_at_mode(Stream &output);
+void disable_at_mode(Stream &output);
 
 #endif

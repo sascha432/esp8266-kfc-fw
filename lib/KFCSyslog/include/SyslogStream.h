@@ -12,7 +12,10 @@
 
 #pragma once
 
-#define SYSLOG_STREAM_MAX_FAILURES 10
+#define SYSLOG_STREAM_MAX_FAILURES                      10
+#if SYSLOG_STREAM_MAX_FAILURES >= 0x7e
+#error SyslogQueueItem._failureCount is 7bit only
+#endif
 
 #define Syslog_log(syslog, severity, format, ...) \
     {                                               \

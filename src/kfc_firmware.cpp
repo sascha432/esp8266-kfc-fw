@@ -19,7 +19,9 @@
 #if PRINTF_WRAPPER_ENABLED
 #include <printf_wrapper.h>
 #endif
-//#include <GDBStub.h>
+// #include <GDBStub.h>
+// extern "C" void gdbstub_do_break();
+
 
 #if SPIFFS_TMP_FILES_TTL
 
@@ -78,32 +80,6 @@ void check_flash_size() {
 #endif
 }
 
-#if DEBUG
-class WatchDogTimer : public OSTimer {
-public:
-    WatchDogTimer() : OSTimer() {
-    }
-
-    virtual void run() {
-        static const char *spinner = "-/|\\-/|\\";
-        _count++;
-        if (_count % 2 == 0) {
-            Serial.print(spinner[(_count / 2) % 8]);
-            Serial.print('\b');
-        }
-    }
-
-    void setCount(int count) {
-        _count = count;
-    }
-
-private:
-    int _count = 0;
-};
-
-WatchDogTimer myWdt;
-#endif
-
 static void deep_sleep_forever() {
     for(;;) {
 #if defined(ESP8266)
@@ -127,6 +103,9 @@ void setup() {
 #if DEBUG_RESET_DETECTOR
     resetDetector._init();
 #endif
+
+    // gdbstub_do_break();
+    // disable_at_mode(Serial);
 
     if (resetDetector.getResetCounter() >= 20) { // protection against EEPROM/Flash memory damage during boot loops
 #if DEBUG
@@ -338,10 +317,6 @@ void setup() {
         prepare_plugins();
         setup_plugins(resetDetector.hasWakeUpDetected() ? PLUGIN_SETUP_AUTO_WAKE_UP : PLUGIN_SETUP_DEFAULT);
     }
-
-#if DEBUG
-    // myWdt.startTimer(100, true); // dummy spinner for the serial port
-#endif
 }
 
 void loop() {
@@ -353,7 +328,7 @@ void loop() {
         } else if (loopFunctions[i].callback) {
             loopFunctions[i].callback();
         } else {
-            reinterpret_cast<void(*)()>(loopFunctions[i].callbackPtr)();
+            loopFunctions[i].callbackPtr();
         }
     }
 }

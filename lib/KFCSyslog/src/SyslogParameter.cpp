@@ -6,6 +6,12 @@
 #include "SyslogParameter.h"
 #include "Syslog.h"
 
+#if DEBUG_SYSLOG
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
+#endif
+
 SyslogParameter::SyslogParameter() {
     _facility = SYSLOG_FACILITY_KERN;
     _severity = SYSLOG_ERR;

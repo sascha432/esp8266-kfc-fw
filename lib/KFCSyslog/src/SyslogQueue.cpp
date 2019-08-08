@@ -19,14 +19,14 @@ SyslogQueue::SyslogQueue() {
 
 SyslogQueueId_t SyslogQueue::add(const String &message, Syslog *syslog) {
     SyslogQueueItemPtr newItem(new SyslogQueueItem(message, syslog));
-    newItem->setId(_item ? _item->getId() + 1 : 1);
+    newItem->setId(_item ? _item->getId() + 1 : 1); // id only increases above 2 if add is called multiple times without remove, which resets the id to 1
     _item.swap(newItem);
     return _item->getId();
 }
 
 void SyslogQueue::remove(SyslogQueueItemPtr &item, bool success) {
     if (item) {
-        item.release();
+        item.reset();
     }
 }
 
@@ -38,19 +38,15 @@ SyslogQueue::SyslogQueueItemPtr &SyslogQueue::at(SyslogQueueIndex_t index) {
     return _item;
 }
 
-void SyslogQueue::cleanUp() {
-}
-
 
 SyslogMemoryQueue::SyslogMemoryQueue(size_t maxSize) {
     _maxSize = maxSize;
     _curSize = 0;
-    _id = 0;
-    _count = 0;
+    _uniqueId = 0;
 }
 
 SyslogQueueId_t SyslogMemoryQueue::add(const String &message, Syslog *syslog) {
-    _debug_printf_P(PSTR("SyslogMemoryQueue::add(): id=%d,queue_size=%u,mem_size=%u,message='%s'\n"), (_count + 1), _items.size(), _curSize, message.c_str());
+    _debug_printf_P(PSTR("SyslogMemoryQueue::add(): id=%d,queue_size=%u,mem_size=%u,message='%s'\n"), (_uniqueId + 1), _items.size(), _curSize, message.c_str());
     size_t size = message.length() + SYSLOG_MEMORY_QUEUE_ITEM_SIZE;
     if (size + _curSize > _maxSize) {
         _debug_printf_P(PSTR("SyslogMemoryQueue::add(): queue full (%d > %d), discarding last message\n"), size + _curSize, _maxSize);
@@ -58,14 +54,14 @@ SyslogQueueId_t SyslogMemoryQueue::add(const String &message, Syslog *syslog) {
     }
     ;
     _items.push_back(SyslogQueueItemPtr(new SyslogQueueItem(message, syslog)));
-    _items.back()->setId(++_count);
+    _items.back()->setId(++_uniqueId);
     _curSize += size;
-    return _id;
+    return _uniqueId;
 }
 
 void SyslogMemoryQueue::remove(SyslogQueue::SyslogQueueItemPtr &removeItem, bool success) {
     if (!removeItem) {
-        _debug_printf_P(PSTR("SyslogMemoryQueue::invalid pointer\n"));
+        _debug_printf_P(PSTR("SyslogMemoryQueue::remove(): invalid pointer\n"));
         panic();
     }
     _debug_printf_P(PSTR("SyslogMemoryQueue::remove(): id=%d,success=%d,queue_size=%u,mem_size=%u,message='%s'\n"), removeItem->getId(), success, _items.size(), _curSize, removeItem->getMessage().c_str());
@@ -86,15 +82,7 @@ SyslogQueue::SyslogQueueItemPtr &SyslogMemoryQueue::at(SyslogQueueIndex_t index)
     return _items.at(index);
 }
 
-void SyslogMemoryQueue::cleanUp() {
-    // _items.erase(std::remove_if(_items.begin(), _items.end(), [this](const SyslogQueueItemPtr &item) {
-    //     if (item.getId() == 0) {
-    //         _curSize -= item.getMessage().length() + SYSLOG_MEMORY_QUEUE_ITEM_SIZE;
-    //         return true;
-    //     }
-    //     return false;
-    // }), _items.end());
-}
+
 
 SyslogQueueItem::SyslogQueueItem() {
     _id = 0;
@@ -168,7 +156,7 @@ uint8_t SyslogQueueItem::getFailureCount() {
 	return _failureCount;
 }
 
-void SyslogQueueItem::transmit(SyslogCallback callback) {
+void SyslogQueueItem::transmit(Syslog::Callback_t callback) {
     _debug_printf_P(PSTR("SyslogMemoryQueueItem::transmit(): canSend=%d, callback %p\n"), _syslog->canSend(), &callback);
 	if (_syslog->canSend()) {
 		if (lock()) {

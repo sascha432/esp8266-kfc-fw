@@ -11,9 +11,11 @@
 #include "progmem_data.h"
 #include "plugins.h"
 #include "atomic_sun_v2.h"
+#include "SerialTwoWire.h"
 
-#define COMMAND_PREFIX "~$"
+#ifndef DEBUG_4CH_DIMMER
 #define DEBUG_4CH_DIMMER 0
+#endif
 
 #ifdef DEBUG_4CH_DIMMER
 #include <debug_helper_enable.h>
@@ -23,6 +25,9 @@
 
 #define DIMMER_COMPONENT SPGM(component_light)
 
+#include "../../trailing_edge_dimmer/src/dimmer_protocol.h"
+
+SerialTwoWire SerialWire;
 Driver_4ChDimmer *Driver_4ChDimmer::_dimmer = nullptr;
 
 Driver_4ChDimmer::Driver_4ChDimmer(HardwareSerial &serial) : _serial(serial) {
@@ -146,14 +151,14 @@ void Driver_4ChDimmer::_publishState(MQTTClient *client) {
 void Driver_4ChDimmer::begin() {
     _debug_printf_P(PSTR("Driver_4ChDimmer::begin()\n"));
 #if AT_MODE_SUPPORTED
-    disable_at_mode();
+    disable_at_mode(Serial);
     if (DIMMER_BAUDRATE != 115200) {
         Serial.flush();
         Serial.begin(DIMMER_BAUDRATE);
     }
 #endif
 #if SERIAL_HANDLER
-    serialHandler.addHandler(IF_DEBUG("4ChDimmer"), onData, SerialHandler::RECEIVE);//|SerialHandler::LOCAL_TX);
+    serialHandler.addHandler(onData, SerialHandler::RECEIVE);//|SerialHandler::LOCAL_TX);
 #endif
     _getChannels();
     // calculate color and brightness values from dimmer channels
@@ -179,7 +184,7 @@ void Driver_4ChDimmer::end() {
         Serial.begin(115200);
     }
 #if AT_MODE_SUPPORTED
-    enable_at_mode();
+    enable_at_mode(Serial);
 #endif
 }
 
@@ -233,10 +238,8 @@ bool Driver_4ChDimmer::off() {
     if (_data.state.value) {
         memset(&_channels, 0, sizeof(_channels));
 
-        _clearResponse();
-        _serialWrite(PSTR("fade=-1,0,30.0,-1\n"));
+        _fade(0xff, 0, 30);
         _writeState();
-        _waitForResponse(2);
 
         _stored.brightness = _data.brightness.value;
         _data.state.value = false;
@@ -258,172 +261,102 @@ void Driver_4ChDimmer::setLevel(float fadetime) {
     _setChannels(channel12, channel12, channel34, channel34, fadetime);
 }
 
-void Driver_4ChDimmer::_clearResponse() {
-    _responseCount = 0;
-    _response = String();
+void Driver_4ChDimmer::_fade(uint8_t channel, int16_t toLevel, float fadeTime) {
+    _debug_printf_P(PSTR("Driver_4ChDimmer::_fade(%u, %u, %f)\n"), channel, toLevel, fadeTime);
+
+    SerialWire.beginTransmission(DIMMER_I2C_ADDRESS);
+    SerialWire.write(DIMMER_REGISTER_CHANNEL);
+    SerialWire.write(channel);
+    _writeShort(toLevel);
+    _writeFloat(fadeTime);
+    SerialWire.write(DIMMER_COMMAND_FADE);
+    SerialWire.endTransmission();
+}
+
+void Driver_4ChDimmer::onReceive(int length) {
+    _dimmer->_onReceive(length);
+}
+
+void Driver_4ChDimmer::_onReceive(int length) {
+
+    auto type = SerialWire.read();
+
+    _debug_printf_P(PSTR("Driver_4ChDimmer::_onReceive(%u): type %02x\n"), length, type);
+
+    if (type == DIMMER_TEMPERATURE_REPORT && length == 4) {
+        uint8_t temperature = SerialWire.read();
+        uint16_t vcc;
+        SerialWire.readBytes(reinterpret_cast<uint8_t *>(&vcc), sizeof(vcc));
+        if (_stored.temperature != temperature || _stored.vcc != vcc) { // publish temp. or voltage if values have changed
+            _stored.temperature = temperature;
+            _stored.vcc = vcc;
+            auto client = MQTTClient::getClient();
+            if (client) {
+                String topic = MQTTClient::formatTopic(-1, F("/metrics/"));
+                if (_stored.temperature) {
+                    client->publish(topic + F("temperature"), MQTTClient::getDefaultQos(), 1, String(_stored.temperature));
+                }
+                if (_stored.vcc) {
+                    client->publish(topic + F("vcc"), MQTTClient::getDefaultQos(), 1, String(_stored.vcc / 1000.0, 3));
+                }
+            }
+        }
+    }
+}
+
+void Driver_4ChDimmer::_writeShort(int16_t value) {
+    SerialWire.write(reinterpret_cast<const uint8_t *>(&value), sizeof(value));
+}
+
+void Driver_4ChDimmer::_writeFloat(float value) {
+    SerialWire.write(reinterpret_cast<const uint8_t *>(&value), sizeof(value));
 }
 
 // store brightness in EEPROM
 void Driver_4ChDimmer::_writeState() {
-    _serialWrite(PSTR(COMMAND_PREFIX "write\n"));
-}
-
-// send command to set a single channel
-void Driver_4ChDimmer::_setChannel(uint8_t channel, int16_t brightness, float fadetime) {
-    if (channel < 0 || channel >= 4) {
-        return;
-    }
-    _channels[channel] = brightness;
-    _serialWrite(PSTR(COMMAND_PREFIX "fade=-1,%u,%.3f,%u\n"), brightness, fadetime, channel);
+    _debug_printf_P(PSTR("Driver_4ChDimmer::_writeState()\n"));
+    SerialWire.beginTransmission(DIMMER_I2C_ADDRESS);
+    SerialWire.write(DIMMER_REGISTER_COMMAND);
+    SerialWire.write(DIMMER_COMMAND_WRITE_EEPROM);
+    SerialWire.endTransmission();
 }
 
 // set all 4 channels and store brightness in EEPROM
 void Driver_4ChDimmer::_setChannels(int16_t ch1, int16_t ch2, int16_t ch3, int16_t ch4, float fadetime) {
-    _clearResponse();
-    _setChannel(0, ch1, fadetime);
-    _setChannel(1, ch2, fadetime);
-    _setChannel(2, ch3, fadetime);
-    _setChannel(3, ch4, fadetime);
+    _fade(0, ch1, fadetime);
+    _fade(1, ch2, fadetime);
+    _fade(2, ch3, fadetime);
+    _fade(3, ch4, fadetime);
     _writeState();
-    _waitForResponse(5);
 }
 
 // get brightness values from dimmer
 void Driver_4ChDimmer::_getChannels() {
-    _clearResponse();
-    _serialWrite(PSTR(COMMAND_PREFIX "get\n"));
-    _waitForResponse(4);
-}
-
-// parse serial response from dimmer and extract temperature, voltage and brightness levels
-int Driver_4ChDimmer::_parseLine(const String &response) {
-    // _debug_printf_P(PSTR("Driver_4ChDimmer::_parseLine(%s)\n"), response.c_str());
-#if AT_MODE_SUPPORTED
-    if (response.startsWith(F("~~~~"))) { // re-enable at mode for debugging purposes
-        enable_at_mode();
-    }
-#endif
-    uint8_t temperature = _stored.temperature;
-    uint16_t vcc = _stored.vcc;
-    int pos = response.indexOf(F("temp="));
-    if (pos != -1) {
-        temperature = response.substring(pos + 5).toInt();
-    }
-    pos = response.indexOf(F("vcc="));
-    if (pos != -1) {
-        vcc = response.substring(pos + 4).toInt();
-    }
-    if (_stored.temperature != temperature || _stored.vcc != vcc) { // publish temp. or voltage if values have changed
-        _stored.temperature = temperature;
-        _stored.vcc = vcc;
-        auto client = MQTTClient::getClient();
-        if (client) {
-            String topic = MQTTClient::formatTopic(-1, F("/metrics/"));
-            if (_stored.temperature) {
-                client->publish(topic + F("temperature"), MQTTClient::getDefaultQos(), 1, String(_stored.temperature));
-            }
-            if (_stored.vcc) {
-                client->publish(topic + F("vcc"), MQTTClient::getDefaultQos(), 1, String(_stored.vcc / 1000.0, 3));
-            }
+    _debug_printf_P(PSTR("Driver_4ChDimmer::_getChannels()\n"));
+    SerialWire.beginTransmission(DIMMER_I2C_ADDRESS);
+    SerialWire.write(DIMMER_REGISTER_COMMAND);
+    SerialWire.write(DIMMER_COMMAND_READ_CHANNELS);
+    SerialWire.write((uint8_t)((sizeof(_channels) / sizeof(_channels[0])) << 4));
+    if (SerialWire.endTransmission() == 0) {
+        if (SerialWire.requestFrom(DIMMER_I2C_ADDRESS, sizeof(_channels)) == sizeof(_channels)) {
+            SerialWire.readBytes(reinterpret_cast<uint8_t *>(&_channels), sizeof(_channels));
+            _debug_printf_P(PSTR("Driver_4ChDimmer::_getChannels(): %u, %u, %u, %u\n"), _channels[0], _channels[1], _channels[2], _channels[3]);
         }
     }
-
-    // brightness
-    pos = response.indexOf(F("ch="));
-    if (pos != -1) {
-        int channel = response.substring(pos + 3).toInt();
-        pos = response.indexOf(F("lvl="));
-        if (pos != -1) {
-            int level = response.substring(pos + 4).toInt();
-            if (channel >= 0 && channel < 4) {
-                _channels[channel] = (int16_t)level;
-                _debug_printf_P(PSTR("_parseLine(%s) channel %d value %d\n"), response.c_str(), channel, level);
-                return level;
-            }
-        }
-    }
-    return -1;
 }
-
-#if SERIAL_HANDLER
 
 void Driver_4ChDimmer::onData(uint8_t type, const uint8_t *buffer, size_t len) {
-    // _debug_printf_P(PSTR("_onData(%p, %s, %u)\n"), _dimmer, printable_string(buffer, len).c_str(), len);
-    if (_dimmer) {
-        _dimmer->_onData(buffer, len);
-    }
-}
-
-void Driver_4ChDimmer::_onData(const uint8_t *buffer, size_t len) {
-    const char *ptr = (const char *)buffer;
+    _debug_printf_P(PSTR("Driver_4ChDimmer::onData(): length %u\n"), len);
     while(len--) {
-        if (*ptr == '\n') {
-            _parseLine(_response);
-            if (!_response.startsWith(F("temp="))) { // do not count temperature report as response
-                _responseCount++;
-            }
-            _response = String();
-        } else if (*ptr == '\r') {
-        } else {
-            if (_response.length() < 64) { // discard additional data
-                _response += (char)*ptr;
-            }
-        }
-        ptr++;
+        SerialWire.feed(*buffer++);
     }
 }
 
-// wait for "count" responses or until a timeout occurs
-int Driver_4ChDimmer::_waitForResponse(int count) {
-    // _debug_printf_P(PSTR("Driver_4ChDimmer::_waitForResponse(%u)\n"), count);
-    ulong timeout = millis() + 100;
-    while(millis() < timeout && _responseCount < count) {
-        delay(1);
-    }
-    // _debug_printf_P(PSTR("Driver_4ChDimmer::_waitForResponse(%u) = %d, time %d ms\n"), count, _responseCount, (int)(millis() - (timeout - 100)));
-    return _responseCount;
-}
-
-#else
-
-int Driver_4ChDimmer::_waitForResponse(int count) {
-    int ch;
-    _response = String();
-    _responseCount = 0;
-    ulong timeout = millis() + 100;
-    while(millis() < timeout && _responseCount < count) {
-        if (_serial.available()) {
-            ch = _serial.read();
-            if (ch == '\r' || ch == -1) {
-            } else if (ch == '\n') {
-                _responseCount++;
-                _getValue(_response);
-                _response = String();
-            } else {
-                _response += (char)ch;
-            }
-        }
-        delay(1);
-    }
-    return _responseCount;
-}
-
-#endif
-
-void Driver_4ChDimmer::_serialWrite(PGM_P format, ...) {
-    char buf[128];
-    va_list arg;
-    va_start(arg, format);
-    vsnprintf_P(buf, sizeof(buf), format, arg);
-    va_end(arg);
-    // _debug_printf_P(PSTR("Driver_4ChDimmer::_serialWrite: %s"), buf);
-    _serial.print(buf);
-}
-
-void Driver_4ChDimmer::setup(bool isSafeMode) {
-    if (isSafeMode) {
-        return;
-    }
+void Driver_4ChDimmer::setup() {
+    SerialWire.begin(DIMMER_I2C_ADDRESS + 1);
+    SerialWire.setSerial(Serial);
+    SerialWire.onReadSerial(SerialHandler::serialLoop);
+    SerialWire.onReceive(Driver_4ChDimmer::onReceive);
     _dimmer = _debug_new Driver_4ChDimmer(Serial);
     _dimmer->begin();
 }
@@ -444,7 +377,7 @@ PROGMEM_PLUGIN_CONFIG_DEF(
 /* reconfigurePlugin        */ nullptr,
 /* reconfigure Dependencies */ nullptr,
 /* prepareDeepSleep         */ nullptr,
-/* atModeCommandHandler     */ atomic_sun_v2_at_mode_command_handler
+/* atModeCommandHandler     */ nullptr
 );
 
 #endif

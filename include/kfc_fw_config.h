@@ -142,6 +142,16 @@ struct HomeAssistant {
     char token[250];
 };
 
+struct DimmerModule {
+    float fade_time;
+    float on_fade_time;
+    float linear_correction;
+    uint8_t max_temperature;
+    uint8_t temp_check_int;
+    uint8_t report_temp;
+    uint8_t restore_level;
+};
+
 typedef struct  {
     int16_t channel: 15;                    //  0
     int16_t use_static_ip: 1;               // +2 byte
@@ -178,23 +188,16 @@ struct Config {
     char mqtt_fingerprint[20];
     char mqtt_discovery_prefix[32];
 
-    // comparing memory usage
     uint16_t mqtt_port;
     uint16_t mqtt_keepalive;
     uint8_t mqtt_qos;
-
-    // comparing memory usage
-    // struct {
-    //     uint16_t port;
-    //     uint16_t keepalive;
-    //     uint8_t qos;
-    // } mqtt_options;
 
     char syslog_host[65];
     uint16_t syslog_port;
 
     struct NTP ntp;
     HomeAssistant homeassistant;
+    DimmerModule dimmer;
     SoftAP soft_ap;
     struct Serial2Tcp serial2tcp;
     struct HueConfig hue;

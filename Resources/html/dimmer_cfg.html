@@ -25,22 +25,34 @@
     </nav>
     <!--NAV%%-->
     <div class="container">
-        <h1>Atomic Sun Configuration</h1>
-        <form method="POST" action="atomic_sun_cfg.html" id="atomic_sun_settings">
+        <h1>Dimmer Configuration</h1>
+        <form method="POST" action="dimmer_cfg.html" id="dimmer_settings">
 			<div class="form-group">
 				<label for="fade_time">Fade in/out time (seconds):</label>
-				<input type="text" class="form-control" name="fade_time" id="fade_time" value="%FADFE_TIME%" placeholder="7.5">
+				<input type="text" class="form-control" name="fade_time" id="fade_time" value="%FADE_TIME%" placeholder="5">
+			</div>
+			<div class="form-group">
+				<label for="on_fade_time">Turn on/off fade time (seconds):</label>
+				<input type="text" class="form-control" name="on_fade_time" id="on_fade_time" value="%ON_FADE_TIME%" placeholder="7.5">
+			</div>
+			<div class="form-group">
+				<label for="linear_correction">Linear Correction Factor:</label>
+				<input type="text" class="form-control" name="linear_correction" id="linear_correction" value="%LINEAR_CORRECTION%" placeholder="1.0">
 			</div>
             <div class="form-group">
-                <label for="restore_level">On power failure:</label>
+                <label for="restore_level">On Power Failure:</label>
                 <select class="form-control" name="restore_level" id="restore_level">
                     <option value="0" %RESTORE_LEVEL_0%>Do not turn on</option>
                     <option value="1" %RESTORE_LEVEL_1%>Restore last brightness level</option>
                 </select>
             </div>
 			<div class="form-group">
-				<label for="max_temp">Max. Temperature (°C):</label>
-				<input type="text" class="form-control" name="max_temp" id="max_temp" value="%MAX_TEMP%" placeholder="64">
+				<label for="max_temperature">Max. Temperature (°C):</label>
+				<input type="text" class="form-control" name="max_temperature" id="max_temperature" value="%MAX_TEMPERATURE%" placeholder="75">
+			</div>
+			<div class="form-group">
+				<label for="temp_check_int">Temperature Check Interval (seconds):</label>
+				<input type="text" class="form-control" name="temp_check_int" id="temp_check_int" value="%TEMP_CHECK_INT%" placeholder="30">
 			</div>
             <div class="form-group">
                 <button type="submit" class="btn btn-primary">Save Changes...</button>

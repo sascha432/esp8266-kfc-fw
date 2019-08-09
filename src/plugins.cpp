@@ -43,6 +43,7 @@ PROGMEM_PLUGIN_CONFIG_DECL(ser2tcp);
 PROGMEM_PLUGIN_CONFIG_DECL(hass);
 PROGMEM_PLUGIN_CONFIG_DECL(hue);
 PROGMEM_PLUGIN_CONFIG_DECL(atomicsun);
+PROGMEM_PLUGIN_CONFIG_DECL(dimmer);
 PROGMEM_PLUGIN_CONFIG_DECL(filemgr);
 PROGMEM_PLUGIN_CONFIG_DECL(i2c_scan);
 PROGMEM_PLUGIN_CONFIG_DECL(ssd1306);
@@ -91,6 +92,9 @@ void register_all_plugins() {
 #endif
 #if IOT_ATOMIC_SUN_V2
     register_plugin(SPGM_PLUGIN_CONFIG_P(atomicsun));
+#endif
+#if IOT_DIMMER_MODULE
+    register_plugin(SPGM_PLUGIN_CONFIG_P(dimmer));
 #endif
 #if FILE_MANAGER
     register_plugin(SPGM_PLUGIN_CONFIG_P(filemgr));
@@ -214,6 +218,21 @@ PluginConfiguration *get_plugin_by_name(PGM_P name) {
     }
     _debug_printf_P(PSTR("get_plugin_by_name(%s) = nullptr\n"), name);
     return nullptr;
+}
+
+PluginConfiguration *get_plugin_by_form(const String &name) {
+    // custom filenames hack
+#if IOT_ATOMIC_SUN_V2
+    if (name.equals(F("dimmer_cfg"))) {
+        return get_plugin_by_name(PSTR("atomicsun"));
+    }
+#endif
+#if IOT_DIMMER_MODULE
+    if (name.equals(F("dimmer_cfg"))) {
+        return get_plugin_by_name(PSTR("dimmer"));
+    }
+#endif
+    return get_plugin_by_name(name);
 }
 
 PluginConfiguration *get_plugin_by_name(const String &name) {

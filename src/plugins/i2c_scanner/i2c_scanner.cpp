@@ -85,7 +85,7 @@ static int __toint(const char *s) {
     } else if (*s == '0' && *(s + 1) == 'x') {
         return strtoul(s + 2, 0, 16);
     } else {
-        return atoi(s);
+        return strtoul(s, 0, 16);
     }
 }
 

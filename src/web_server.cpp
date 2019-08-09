@@ -476,7 +476,7 @@ bool web_server_send_file(String path, HttpHeaders &httpHeaders, bool client_acc
 
     if (webTemplate == nullptr) {
         if (path.charAt(0) == '/' && constexpr_endsWith(path, PSTR(".html"))) {
-            auto plugin = get_plugin_by_name(path.substring(1, path.length() - 5));
+            auto plugin = get_plugin_by_form(path.substring(1, path.length() - 5));
             if (plugin) {
                 auto callback = plugin->getConfigureForm();
                 if (callback) {
@@ -602,7 +602,7 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
         httpHeaders.addNoCache(true);
 
         if (path.charAt(0) == '/' && constexpr_endsWith(path, PSTR(".html"))) {
-            auto plugin = get_plugin_by_name(path.substring(1, path.length() - 5));
+            auto plugin = get_plugin_by_form(path.substring(1, path.length() - 5));
             if (plugin) {
                 auto callback = plugin->getConfigureForm();
                 if (callback) {

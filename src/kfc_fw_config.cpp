@@ -399,7 +399,17 @@ void KFCFWConfiguration::restoreFactorySettings() {
     _H_SET(Config().serial2tcp.idle_timeout, 300);
     _H_SET(Config().serial2tcp.keep_alive, 60);
 #endif
-
+#if DEBUG_IOT_DIMMER_MODULE || IOT_ATOMIC_SUN_V2
+    DimmerModule dimmer;
+    dimmer.fade_time = 5;
+    dimmer.on_fade_time = 7.5;
+    dimmer.linear_correction = 1.0;
+    dimmer.max_temperature = 75;
+    dimmer.temp_check_int = 30;
+    dimmer.restore_level = true;
+    dimmer.report_temp = true;
+    _H_SET(Config().dimmer, dimmer);
+#endif
 
 #if CUSTOM_CONFIG_PRESET
     #include "retracted/custom_config.h"

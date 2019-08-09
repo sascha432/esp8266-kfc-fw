@@ -181,4 +181,7 @@ PluginConfiguration *get_plugin_by_name(PGM_P name);
 // get plug in configuration by name
 PluginConfiguration *get_plugin_by_name(const String &name);
 
+// get plug in configuration by form name
+PluginConfiguration *get_plugin_by_form(const String &name);
+
 PluginConfiguration *get_plugin_by_rtc_memory_id(uint8_t id);

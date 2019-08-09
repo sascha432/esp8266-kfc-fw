@@ -10,6 +10,7 @@
 #define HTML_TAG_E  "\x02"
 #define HTML_AMP    "\x03"
 #define HTML_SPACE  "\x03nbsp;"
+#define HTML_DEG    "\003deg;"
 #define HTML_QUOTE  "\x04"
 #define HTML_EQUALS "\x05"
 #define HTML_S HTML_OPEN_TAG

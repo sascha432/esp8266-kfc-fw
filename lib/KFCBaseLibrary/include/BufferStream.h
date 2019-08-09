@@ -11,6 +11,7 @@ public:
     BufferStream();
 
     int available() override;
+    size_t length() const;
 
     bool seek(long pos, int mode);
     size_t position() const;

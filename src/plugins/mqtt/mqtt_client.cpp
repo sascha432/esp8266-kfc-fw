@@ -141,7 +141,7 @@ String MQTTClient::formatTopic(uint8_t num, const __FlashStringHelper *format, .
     va_list arg;
 
     va_start(arg, format);
-    topic.printf_P(reinterpret_cast<PGM_P>(format), arg);
+    topic.vprintf_P(reinterpret_cast<PGM_P>(format), arg);
     va_end(arg);
     topic.replace(F("${device_name}"), getComponentName(num));
     return topic;

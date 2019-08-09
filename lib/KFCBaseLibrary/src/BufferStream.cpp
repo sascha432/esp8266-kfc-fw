@@ -9,33 +9,38 @@ BufferStream::BufferStream() : Buffer(), Stream() {
 }
 
 int BufferStream::available() {
-    return length() - _position;
+    return length() > 0;
 }
+
+size_t BufferStream::length() const {
+    return Buffer::length() - _position;
+}
+
 
 bool BufferStream::seek(long pos, int mode) {
     if (mode == SEEK_SET) {
-        if ((size_t)pos >= Buffer::size()) {
+        if ((size_t)pos >= Buffer::length()) {
             return false;
         }
         _position = pos;
     }
     else if (mode == SEEK_CUR) {
-        if ((size_t)(_position + pos) >= Buffer::size()) {
+        if ((size_t)(_position + pos) >= Buffer::length()) {
             return false;
         }
         _position += pos;
     }
     else if (mode == SEEK_END) {
-        if ((size_t)pos > Buffer::size()) {
+        if ((size_t)pos > Buffer::length()) {
             return false;
         }
-        _position = Buffer::size() - pos;
+        _position = Buffer::length() - pos;
     }
     return true;
 }
 
 char BufferStream::charAt(size_t pos) const {
-    if (pos < length()) {
+    if (pos < Buffer::length()) {
         return _buffer[pos];
     }
     return 0;
@@ -46,14 +51,14 @@ size_t BufferStream::position() const {
 }
 
 int BufferStream::read() {
-    if (_position < length()) {
+    if (_position < Buffer::length()) {
         return _buffer[_position++];
     }
     return -1;
 }
 
 int BufferStream::peek() {
-    if (_position < length()) {
+    if (_position < Buffer::length()) {
         return _buffer[_position];
     }
     return -1;

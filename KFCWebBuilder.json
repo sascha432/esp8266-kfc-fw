@@ -86,7 +86,8 @@
                         "./lib/KFCWebBuilder/Resources/css/bootstrap.min.css",
                         "./lib/KFCWebBuilder/Resources/css/selectize.bootstrap4.css",
                         "./lib/KFCWebBuilder/Resources/css/open-iconic-bootstrap.css",
-                        "./Resources/css/styles.css"
+                        "./Resources/css/styles.css",
+                        "./Resources/css/dimmer.css"
                     ]
                 },
                 "processors":  {

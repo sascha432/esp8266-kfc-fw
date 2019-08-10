@@ -28,7 +28,7 @@ public:
     static bool isEnabled();
 
 private:
-    const String _getUnqiueId();
+    const String _getUnqiueId(const String &name);
 
     Format_t _format;
     PrintString _discovery;

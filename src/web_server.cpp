@@ -28,6 +28,9 @@
 #if HUE_EMULATION
 #include "./plugins/hue/hue.h"
 #endif
+#if IOT_DIMMER_MODULE
+#include "./plugins/dimmer_module/dimmer_web_socket.h"
+#endif
 
 #if DEBUG_WEB_SERVER
 #include <debug_helper_enable.h>
@@ -495,6 +498,10 @@ bool web_server_send_file(String path, HttpHeaders &httpHeaders, bool client_acc
                 webTemplate = _debug_new StatusTemplate();
             } else if (constexpr_String_equals(path, PSTR("/status.html"))) {
                 webTemplate = _debug_new StatusTemplate();
+#if IOT_DIMMER_MODULE
+            } else if (constexpr_String_equals(path, PSTR("/dimmer.html"))) {
+                webTemplate = _debug_new DimmerTemplate();
+#endif
 // #if MDNS_SUPPORT
 //                 MDNS_async_query_service(); // query service inside loop() and cache results
 // #endif

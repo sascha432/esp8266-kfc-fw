@@ -129,7 +129,7 @@ bool MQTTClient::hasMultipleComponments() const {
 const String MQTTClient::getComponentName(uint8_t num) {
     String deviceName = config._H_STR(Config().device_name);
     auto mqttClient = getClient();
-    if (num != -1 && mqttClient && mqttClient->hasMultipleComponments()) {
+    if (num != 0xff && mqttClient && mqttClient->hasMultipleComponments()) {
         deviceName += '_';
         deviceName += String(num);
     }

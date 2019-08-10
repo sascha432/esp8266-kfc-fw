@@ -422,7 +422,7 @@ bool FileManagerWebHandler::canHandle(AsyncWebServerRequest *request) {
     if (strncmp_P(request->url().c_str(), _uri, strlen_P(_uri))) {
         return false;
     }
-    request->addInterestingHeader("ANY");
+    request->addInterestingHeader(F("ANY"));
     return true;
 }
 

@@ -35,7 +35,7 @@
                     <!--#if REST_API_SUPPORT-->
                     <a class="dropdown-item" href="rest_api.html">REST API</a>
                     <!--#endif-->
-                    <!--#if IOT_ATOMIC_SUN_V2 || DEBUG_IOT_DIMMER_MODULE-->
+                    <!--#if IOT_ATOMIC_SUN_V2 || IOT_DIMMER_MODULE-->
                     <a class="dropdown-item" href="dimmer_cfg.html">Dimmer</a>
                     <!--#endif-->
                     <!--#if HOME_ASSISTANT_INTEGRATION-->
@@ -49,12 +49,10 @@
                     Device
                 </a>
                 <div class="dropdown-menu" aria-labelledby="navbarDropdownDevice">
-                    <a class="dropdown-item" href="pins.html">Pin Configuration</a>
-                    <a class="dropdown-item" href="i2c_devices.html">I2C devices</a>
                     <!--#if IOT_ATOMIC_SUN_V2-->
                     <a class="dropdown-item" href="atomic_sun.html">Atomic Sun</a>
                     <!--#endif-->
-                    <!--#if DEBUG_IOT_DIMMER_MODULE-->
+                    <!--#if IOT_DIMMER_MODULE-->
                     <a class="dropdown-item" href="dimmer.html">Dimmer</a>
                     <!--#endif-->
                     <!--#if HUE_EMULATION-->

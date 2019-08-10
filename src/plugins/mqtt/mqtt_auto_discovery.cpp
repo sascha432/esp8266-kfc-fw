@@ -40,7 +40,7 @@ void MQTTAutoDiscovery::create(MQTTComponent *component, MQTTAutoDiscovery::Form
     }
     addParameter(F("name"), name);
     addParameter(F("platform"), F("mqtt"));
-    String uniqueId = _getUnqiueId();
+    String uniqueId = _getUnqiueId(name);
     addParameter(FSPGM(mqtt_unique_id), uniqueId);
     addParameter(FSPGM(mqtt_availability_topic), MQTTClient::formatTopic(-1, FSPGM(mqtt_status_topic)));
     addParameter(FSPGM(mqtt_payload_available), FSPGM(1));
@@ -48,7 +48,7 @@ void MQTTAutoDiscovery::create(MQTTComponent *component, MQTTAutoDiscovery::Form
 
     if (_format == FORMAT_JSON) {
         _discovery += F("\"device\":{\"identifiers\":[\"");
-        _discovery.printf_P(PSTR("%s\"],name=\"%s\",\"sw_version\":\"%s\""), uniqueId.c_str(), config._H_STR(Config().device_name), KFCFWConfiguration::getFirmwareVersion().c_str());
+        _discovery.printf_P(PSTR("%s\"],name=\"%s\",\"sw_version\":\"%s\""), uniqueId.c_str(), name.c_str(), KFCFWConfiguration::getFirmwareVersion().c_str());
         _discovery += F("},");
     }
 }
@@ -86,7 +86,7 @@ bool MQTTAutoDiscovery::isEnabled() {
 #endif
 }
 
-const String MQTTAutoDiscovery::_getUnqiueId() {
+const String MQTTAutoDiscovery::_getUnqiueId(const String &name) {
     uint16_t crc[3];
 
 #if defined(ESP8266)
@@ -107,7 +107,7 @@ const String MQTTAutoDiscovery::_getUnqiueId() {
     crc[2] = crc16_update(crc[1], (uint8_t *)deviceId.c_str(), deviceId.length());
 
     PrintString uniqueId;
-    uniqueId = config.getString(_H(Config().device_name));
+    uniqueId += name;
     uniqueId += '_';
     for(uint8_t i = 0; i < 3; i++) {
         uniqueId.printf("%04x", crc[i]);

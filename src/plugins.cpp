@@ -231,6 +231,9 @@ PluginConfiguration *get_plugin_by_form(const String &name) {
     if (name.equals(F("dimmer_cfg"))) {
         return get_plugin_by_name(PSTR("dimmer"));
     }
+    else if (name.equals(F("dimmer"))) {
+        return nullptr;
+    }
 #endif
     return get_plugin_by_name(name);
 }

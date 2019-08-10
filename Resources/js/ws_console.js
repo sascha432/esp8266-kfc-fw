@@ -22,22 +22,26 @@ WS_Console.prototype.get_sid = function() {
 }
 
 WS_Console.prototype.console_log = function(message) {
-    var console = document.getElementById(this.consoleId);
+    if (this.consoleId) {
+        var console = document.getElementById(this.consoleId);
 
-    var pos;
-    while (pos = message.indexOf('\033[2J') != -1) {
-        message = message.substr(pos, 4);
-        console.value = "";
+        var pos;
+        while (pos = message.indexOf('\033[2J') != -1) {
+            message = message.substr(pos, 4);
+            console.value = "";
+        }
+        message.replace(/\\033\[\d(;\d)?H/g, '');
+    
+        console.value += message + "\n";
+        console.scrollTop = console.scrollHeight;
     }
-    message.replace(/\\033\[\d(;\d)?H/g, '');
-
-    console.value += message + "\n";
-    console.scrollTop = console.scrollHeight;
 }
 
 WS_Console.prototype.console_clear = function() {
-    var console = document.getElementById(this.consoleId);
-    console.value = "";
+    if (this.consoleId) {
+        var console = document.getElementById(this.consoleId);
+        console.value = "";
+    }
 }
 
 WS_Console.prototype.is_connected = function() {

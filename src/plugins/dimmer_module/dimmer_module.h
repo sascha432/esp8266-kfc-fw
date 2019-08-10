@@ -18,27 +18,54 @@
 #include <HardwareSerial.h>
 #include <PrintString.h>
 #include <PrintHtmlEntitiesString.h>
+#include "kfc_fw_config.h"
 #include "../mqtt/mqtt_client.h"
 #include "serial_handler.h"
+#include "dimmer_channel.h"
 
 #ifndef DEBUG_IOT_DIMMER_MODULE
 #define DEBUG_IOT_DIMMER_MODULE             0
 #endif
 
+// number of channels
 #ifndef IOT_DIMMER_MODULE_CHANNELS
 #define IOT_DIMMER_MODULE_CHANNELS          1
 #endif
 
+// use UART instead of I2C
 #ifndef IOT_DIMMER_MODULE_INTERFACE_UART
-#define IOT_DIMMER_MODULE_INTERFACE_UART    1
+#define IOT_DIMMER_MODULE_INTERFACE_UART    0
 #endif
 
+#if IOT_DIMMER_MODULE_INTERFACE_UART
+
+// UART only change baud rate of the Serial port to match the dimmer module
 #ifndef IOT_DIMMER_MODULE_BAUD_RATE
 #define IOT_DIMMER_MODULE_BAUD_RATE         57600
 #endif
 
+#else
+
+// I2C only. SDA PIN
+#ifndef IOT_DIMMER_MODULE_INTERFACE_SDA
+#define IOT_DIMMER_MODULE_INTERFACE_SDA     0
+#endif
+
+// I2C only. SCL PIN
+#ifndef IOT_DIMMER_MODULE_INTERFACE_SCL
+#define IOT_DIMMER_MODULE_INTERFACE_SCL     14
+#endif
+
+#endif
+
+// max. brightness level
 #ifndef IOT_DIMMER_MODULE_MAX_BRIGHTNESS
 #define IOT_DIMMER_MODULE_MAX_BRIGHTNESS    16666
+#endif
+
+// Set this PIN to HIGH when the dimmer is initialized
+#ifndef IOT_DIMMER_MODULE_LVL_SHIFTER_ENABLE
+//#define IOT_DIMMER_MODULE_LVL_SHIFTER_ENABLE 14
 #endif
 
 #if IOT_DIMMER_MODULE_INTERFACE_UART
@@ -47,34 +74,7 @@
 #include <Wire.h>
 #endif
 
-#ifndef IOT_DIMMER_MODULE_INTERFACE_SDA
-#define IOT_DIMMER_MODULE_INTERFACE_SDA     0
-#endif
-
-#ifndef IOT_DIMMER_MODULE_INTERFACE_SCL
-#define IOT_DIMMER_MODULE_INTERFACE_SCL     14
-#endif
-
-typedef struct {
-    struct {
-        String set;
-        String state;
-        bool value;
-    } state;
-    struct {
-        String set;
-        String state;
-        uint16_t value;
-    } brightness;
-} Driver_DimmerModule_MQTTComponentData_t;
-
-typedef struct {
-    uint16_t brightness[IOT_DIMMER_MODULE_CHANNELS];
-    uint16_t vcc;
-    uint8_t temperature;
-} Driver_DimmerModule_Level_t;
-
-class Driver_DimmerModule : public MQTTComponent
+class Driver_DimmerModule //: public MQTTComponent
 {
 private:
 #if IOT_DIMMER_MODULE_INTERFACE_UART
@@ -88,17 +88,11 @@ public:
 
     static void setup();
 
-    const String getName() override;
-    PGM_P getComponentName() override;
-    MQTTAutoDiscovery *createAutoDiscovery(MQTTAutoDiscovery::Format_t format) override;
-    MQTTAutoDiscovery *createAutoDiscovery(MQTTAutoDiscovery::Format_t format, Driver_DimmerModule_MQTTComponentData_t *data);
-
-    void onConnect(MQTTClient *client) override;
-    void onMessage(MQTTClient *client, char *topic, char *payload, size_t len) override;
+    void onConnect(MQTTClient *client, DimmerChannel *channel);
+    void onMessage(MQTTClient *client, DimmerChannel *channel, char *topic, char *payload, size_t len);
 
     bool on(uint8_t channel);
     bool off(uint8_t channel);
-    void setLevel(uint8_t channel, float fadetime);
 
     static const String getStatus();
 
@@ -110,22 +104,23 @@ public:
 
     void writeConfig();
 
+    int16_t getChannel(uint8_t channel);
+    void setChannel(uint8_t channel, int16_t level, float time = -1);
+    void writeEEPROM();
+
+    static Driver_DimmerModule *getInstance();
+
 public:
-    // for AT mode
-    int16_t *getChannels() {
-        _getChannels();
-        return _channels;
+    // friend class DimmerModule;
+    
+    inline float getFadeTime() {
+        return _fadeTime;
     }
-    void setChannel(uint8_t channel, int16_t level, float time) {
-        _data[channel].brightness.value = level;
-        _data[channel].state.value = (level != 0);
-        setLevel(channel, time);
+    inline float getOnOffFadeTime() {
+        return _onOffFadeTime;
     }
-    void writeEEPROM() {
-        _writeState();
-    }
-    static Driver_DimmerModule *getInstance() {
-        return _dimmer;
+    inline void _setChannel(uint8_t channel, int16_t level, float time) {
+        _fade(channel, level, time);
     }
 
 private:
@@ -149,11 +144,10 @@ private:
     void _onReceive(int length);
 
 private:
-    Driver_DimmerModule_MQTTComponentData_t _data[IOT_DIMMER_MODULE_CHANNELS];
-    Driver_DimmerModule_Level_t _stored;
-    int16_t _channels[IOT_DIMMER_MODULE_CHANNELS];
-    uint8_t _qos;
-    String _metricsTopic;
+    DimmerChannel _channels[IOT_DIMMER_MODULE_CHANNELS];
+
+    uint16_t _vcc;
+    uint8_t _temperature;
     float _fadeTime;
     float _onOffFadeTime;
 

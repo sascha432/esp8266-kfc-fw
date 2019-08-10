@@ -25,6 +25,7 @@
 
 
 Http2Serial *Http2Serial::_instance = nullptr;
+AsyncWebSocket *wsSerialConsole = nullptr;
 
 Http2Serial::Http2Serial() {
     _locked = false;
@@ -69,7 +70,7 @@ void Http2Serial::broadcast(WsConsoleClient *sender, const uint8_t *message, siz
     if (WsClientManager::getWsClientCount(true)) {
         for(const auto &pair: WsClientManager::getWsClientManager()->getClients()) {
             // Serial.printf_P(PSTR("status %d, isSender %d, auth %d\n"), pair.socket->status(), pair.wsClient != sender, pair.wsClient->isAuthenticated());
-            if (pair.socket->status() == WS_CONNECTED && pair.wsClient != sender && pair.wsClient->isAuthenticated()) {
+            if (pair.socket->server() == wsSerialConsole && pair.socket->status() == WS_CONNECTED && pair.wsClient != sender && pair.wsClient->isAuthenticated()) {
                 //TODO esp32 message are stuck in the queue
                 pair.socket->text(reinterpret_cast<const char *>(message), len);
             }
@@ -182,9 +183,9 @@ void http2serial_event_handler(AsyncWebSocket *server, AsyncWebSocketClient *cli
 
 void http2serial_install_web_server_hook() {
     if (get_web_server_object()) {
-        AsyncWebSocket *ws_console = _debug_new AsyncWebSocket(F("/serial_console"));
-        ws_console->onEvent(http2serial_event_handler);
-        web_server_add_handler(ws_console);
+        wsSerialConsole = _debug_new AsyncWebSocket(F("/serial_console"));
+        wsSerialConsole->onEvent(http2serial_event_handler);
+        web_server_add_handler(wsSerialConsole);
         _debug_printf_P(PSTR("Web socket for http2serial running on port %u\n"), config.get<uint16_t>(_H(Config().http_port)));
     }
 }

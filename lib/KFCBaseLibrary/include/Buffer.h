@@ -16,11 +16,21 @@ public:
     void clear();
     uint8_t *dupClear();
 
-    uint8_t *get() const;
-    const uint8_t *getConst() const;
-    char *getChar() const;
-    const char *getBuffer() const;
-    const char *getConstChar() const;
+    inline uint8_t *get() const {
+        return _buffer;
+    }
+    inline const uint8_t *getConst() const {
+        return reinterpret_cast<const uint8_t *>(_buffer);
+    }
+    inline char *getChar() const {
+        return reinterpret_cast<char *>(_buffer);
+    }
+    inline const char *getBuffer() const {
+        return reinterpret_cast<const char *>(_buffer);
+    }
+    inline const char *getConstChar() const {
+        return reinterpret_cast<const char *>(_buffer);
+    }
     char *getNulByteString();
 
     void setBuffer(uint8_t *buffer, size_t size);

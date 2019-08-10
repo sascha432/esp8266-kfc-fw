@@ -34,26 +34,6 @@ uint8_t *Buffer::dupClear() { // return unfreed buffer
     return tmp;
 }
 
-uint8_t * Buffer::get() const {
-    return _buffer;
-}
-
-const uint8_t * Buffer::getConst() const {
-    return _buffer;
-}
-
-char * Buffer::getChar() const {
-    return (char *)_buffer;
-}
-
-const char * Buffer::getBuffer() const {
-    return getConstChar();
-}
-
-const char * Buffer::getConstChar() const {
-    return (const char *)_buffer;
-}
-
 void Buffer::_free() {
     free(_buffer);
     _buffer = nullptr;
@@ -61,11 +41,10 @@ void Buffer::_free() {
 
 char *Buffer::getNulByteString() {
     _length -= write(0);
-    return (char *)_buffer;
+    return getChar();
 }
 
-void Buffer::setBuffer(uint8_t * buffer, size_t size)
-{
+void Buffer::setBuffer(uint8_t * buffer, size_t size) {
     _free();
     _buffer = buffer;
     _size = size;
@@ -134,18 +113,6 @@ size_t Buffer::write(uint8_t *data, size_t len) {
 }
 
 void Buffer::remove(unsigned int index, size_t count) {
-#if 0
-    size_t _index = index;
-    size_t _count = count;
-    size_t __length = _length;
-    char buf[_length + 1];
-    if (_length) {
-        memcpy(buf, _buffer, _length);
-        buf[_length - 1] = 0;
-    } else {
-        *buf = 0;
-    }
-#endif
     if(index >= _length) {
         return;
     }
@@ -157,18 +124,6 @@ void Buffer::remove(unsigned int index, size_t count) {
     }
     _length = _length - count;
     memmove(_buffer + index, _buffer + index + count, _length - index);
-#if 0
-    char buf2[_length + 1];
-    if (_length) {
-        memcpy(buf2, _buffer, _length);
-        buf2[_length - 1] = 0;
-    } else {
-        *buf2 = 0;
-    }
-    debug_printf_P(PSTR("remove(%u, %u)=(%u, %u) len %d,%d string '%s','%s'\n"), _index, _count, index, count, __length, _length, buf, buf2);
-#endif
-
-
 }
 
 void Buffer::removeAndShrink(unsigned int index, size_t count) {

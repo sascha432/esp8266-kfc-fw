@@ -10,7 +10,7 @@
 #include "progmem_data.h"
 #include <PrintString.h>
 
-#ifdef DEBUG_IOT_DIMMER_MODULE
+#if DEBUG_IOT_DIMMER_MODULE
 #include <debug_helper_enable.h>
 #else
 #include <debug_helper_disable.h>

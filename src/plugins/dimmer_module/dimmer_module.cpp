@@ -11,7 +11,7 @@
 #include "dimmer_web_socket.h"
 #include "dimmer_module_form.h"
 
-#ifdef DEBUG_IOT_DIMMER_MODULE
+#if DEBUG_IOT_DIMMER_MODULE
 #include <debug_helper_enable.h>
 #else
 #include <debug_helper_disable.h>

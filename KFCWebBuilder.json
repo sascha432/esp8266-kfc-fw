@@ -22,7 +22,9 @@
             "test_www"
         ],
         "conditional_excludes": {
-            "#if !IOT_ATOMIC_SUN_V2": [ "./Resources/html/atomic_sun.html", "./Resources/html/atomic_sun_cfg.html" ],
+            "#if !IOT_ATOMIC_SUN_V2": "./Resources/html/atomic_sun.html",
+            "#if !IOT_DIMMER_MODULE": [ "./Resources/html/dimmer.html", "./Resources/css/dimmer.css" ],
+            "#if !IOT_DIMMER_MODULE && !IOT_ATOMIC_SUN_V2": "./Resources/html/dimmer_cfg.html",
             "#if !FILE_MANAGER": "./Resources/html/file_manager.html",
             "#if !MQTT_SUPPORT": "./Resources/html/mqtt.html",
             "#if !SYSLOG": "./Resources/html/syslog.html",
@@ -32,7 +34,7 @@
             "#if !HUE_EMULATION": "./Resources/html/hue.html",
             "#if !REST_API_SUPPORT": "./Resources/html/rest_api.html",
             "#if !HOME_ASSISTANT_INTEGRATION": "./Resources/html/home_assistant.html",
-            "#if !PING_MONITOR && !HTTP2SERIAL": [
+            "#if !PING_MONITOR && !HTTP2SERIAL && !IOT_DIMMER_MODULE": [
                 "./Resources/js/ws_console.js",
                 { "#if !FILE_MANAGER": "./lib/KFCWebBuilder/Resources/js/js.cookie.min.js" }
             ],

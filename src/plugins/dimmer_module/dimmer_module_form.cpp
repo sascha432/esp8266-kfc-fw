@@ -6,6 +6,12 @@
 #include "progmem_data.h"
 #include "plugins.h"
 
+#if DEBUG_IOT_DIMMER_MODULE
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
+#endif
+
 void dimmer_module_create_settings_form(AsyncWebServerRequest *request, Form &form) {
 
     auto dimmer = config._H_W_GET(Config().dimmer);

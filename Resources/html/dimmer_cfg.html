@@ -36,28 +36,33 @@
 				<input type="text" class="form-control" name="on_fade_time" id="on_fade_time" value="%ON_FADE_TIME%" placeholder="7.5">
 			</div>
 			<div class="form-group">
-				<label for="linear_correction">Linear Correction Factor:</label>
+				<label for="linear_correction">Linear correction factor:</label>
 				<input type="text" class="form-control" name="linear_correction" id="linear_correction" value="%LINEAR_CORRECTION%" placeholder="1.0">
 			</div>
             <div class="form-group">
-                <label for="restore_level">On Power Failure:</label>
+                <label for="restore_level">On power failure:</label>
                 <select class="form-control" name="restore_level" id="restore_level">
                     <option value="0" %RESTORE_LEVEL_0%>Do not turn on</option>
                     <option value="1" %RESTORE_LEVEL_1%>Restore last brightness level</option>
                 </select>
             </div>
 			<div class="form-group">
-				<label for="max_temperature">Max. Temperature (°C):</label>
+				<label for="max_temperature">Max. temperature (°C):</label>
 				<input type="text" class="form-control" name="max_temperature" id="max_temperature" value="%MAX_TEMPERATURE%" placeholder="75">
 			</div>
 			<div class="form-group">
-				<label for="temp_check_int">Temperature Check Interval (seconds):</label>
+				<label for="temp_check_int">Temperature check interval (seconds):</label>
 				<input type="text" class="form-control" name="temp_check_int" id="temp_check_int" value="%TEMP_CHECK_INT%" placeholder="30">
 			</div>
             <div class="form-group">
                 <button type="submit" class="btn btn-primary">Save Changes...</button>
             </div>
         </form>
+        <div class="form-group">
+            <textarea id="hass_yaml" style="width:100%%;height:40px" class="form-control" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"># Home Assistant YAML Code
+
+%HASS_YAML%</textarea>
+        </div>
         <!--%%FOOT-->
         <div class="row">
             <div class="col footer">&nbsp;</div>
@@ -73,7 +78,5 @@
 	<script debug_loader="1" type="text/javascript" src="../js/main.min.js"></script>
 	<script debug_loader="1" type="text/javascript" src="../js/debug.js"></script>
     <!--JAVASCRIPT%%-->
-
 </body>
-
 </html>

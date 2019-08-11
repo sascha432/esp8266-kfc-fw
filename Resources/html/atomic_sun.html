@@ -7,6 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" debug_loader="1">
     <link rel="stylesheet" href="../../lib/ESPWebFramework/Resources/css/bootstrap.min.css" debug_loader="1">
     <link rel="stylesheet" href="../css/styles.css" debug_loader="1">
+    <link rel="stylesheet" href="../css/atomic_sun.css" debug_loader="1">
     <link rel="stylesheet" href="../../lib/ESPWebFramework/Resources/css/open-iconic-bootstrap.css" debug_loader="1">
     <title>KFC FW</title>
 </head>
@@ -26,9 +27,14 @@
     <!--NAV%%-->
     <div class="container">
         <h1>Atomic Sun</h1>
-        <form method="POST" action="atomic_sun.html" id="atomic_sun_status">
-		N/A
-        </form>
+        <div id="dimmer-ctrl-container">
+            <div class="slidecontainer" id="brightness">
+                <input type="range" min="0" max="%MAX_BRIGHTNESS%" value="%BRIGHTNESS%" class="slider" id="brightness_slider">
+            </div>
+            <div class="slidecontainer slider-gradient" id="color">
+                <input type="range" min="153" max="500" value="%COLOR%" class="slider" id="color_slider">
+            </div>
+        </div>
         <!--%%FOOT-->
         <div class="row">
             <div class="col footer">&nbsp;</div>
@@ -44,7 +50,81 @@
 	<script debug_loader="1" type="text/javascript" src="../js/main.min.js"></script>
 	<script debug_loader="1" type="text/javascript" src="../js/debug.js"></script>
     <!--JAVASCRIPT%%-->
+    <script>
+        $(function() {
+            if ($('#dimmer-ctrl-container').length) {
+                var webSocket;
+                var channels = new Array(2);
+                var pending = new Array(2);
 
+                function adjust_class(slider, level) {
+                    if (level == 0) {
+                        slider.addClass('slider-off');
+                    } else {
+                        slider.removeClass('slider-off');
+                    }
+                }
+
+                var slider = $('#brightness_slider');
+                var level = parseInt(slider.val());
+                adjust_class(slider, level);
+
+                slider.on('input', function() {
+                    var level = parseInt($(this).val());
+                    adjust_class($(this), level);
+                    send_request(0, level);
+                });
+                $('#color_slider').on('input', function() {
+                    send_request(1, parseInt($(this).val()));
+                });
+                
+                function send_request(channel, level) {
+                     console.log("send_request "+channel+" "+level+" "+pending[channel]);
+                    if (pending[channel]) {
+                        channels[channel] = level;
+                    } else {
+                        pending[channel] = true;
+                        channels[channel] = level;
+                        if (channel == 0) {
+                            webSocket.socket.send("+SET " + level);
+                        } else {
+                            webSocket.socket.send("+COLOR " + level);
+                        }
+                        window.setTimeout(function() { // max. update rate 100ms
+                            pending[channel] = false;
+                            if (channels[channel] != level) {
+                                send_request(channel, channels[channel]);
+                            }
+                        }, 100);
+                    }
+                }
+
+                function dimmer_data_handler(e) {
+                    // console.log("dimmer_data_handler " + e.data);
+                    if (e.data.substring(0, 7).toLowerCase() == "+setbc ") {
+                        var arr = e.data.substring(7).split(/ /);
+                        var brightness = parseInt(arr[0]);
+                        var color = parseInt(arr[1]);
+
+                        var slider = $('#brightness_slider');
+                        if (parseInt(slider.val()) != brightness) {
+                            slider.val(brightness);
+                            adjust_class(slider, brightness);
+                        }
+                        slider = $('#color_slider');
+                        if (parseInt(slider.val()) != color) {
+                            slider.val(color);
+                        }
+                    }
+                }
+
+                webSocket = new WS_Console($.getWebSocketLocation('/atomic_sun_ws'), $.getSessionId(), 10, dimmer_data_handler);
+                webSocket.setConsoleId(null);
+                webSocket.connect();
+            }
+        });
+    </script>
+    
 </body>
 
 </html>

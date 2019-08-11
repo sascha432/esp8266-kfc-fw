@@ -22,7 +22,7 @@
             "test_www"
         ],
         "conditional_excludes": {
-            "#if !IOT_ATOMIC_SUN_V2": "./Resources/html/atomic_sun.html",
+            "#if !IOT_ATOMIC_SUN_V2": [ "./Resources/html/atomic_sun.html", "./Resources/css/atomic_sun.css" ],
             "#if !IOT_DIMMER_MODULE": [ "./Resources/html/dimmer.html", "./Resources/css/dimmer.css" ],
             "#if !IOT_DIMMER_MODULE && !IOT_ATOMIC_SUN_V2": "./Resources/html/dimmer_cfg.html",
             "#if !FILE_MANAGER": "./Resources/html/file_manager.html",
@@ -89,7 +89,8 @@
                         "./lib/KFCWebBuilder/Resources/css/selectize.bootstrap4.css",
                         "./lib/KFCWebBuilder/Resources/css/open-iconic-bootstrap.css",
                         "./Resources/css/styles.css",
-                        "./Resources/css/dimmer.css"
+                        "./Resources/css/dimmer.css",
+                        "./Resources/css/atomic_sun.css"
                     ]
                 },
                 "processors":  {

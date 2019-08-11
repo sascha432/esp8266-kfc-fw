@@ -14,23 +14,22 @@ class PrintString : public String, public Print {
 public:
     PrintString() : String(), Print() {
     }
-//    PrintString(const char *format, ...) __attribute__((format(printf, 2, 3))) : String(), Print() {
-    PrintString(const char *format, ...) : String(), Print() {
+    PrintString(const char *format, ...) : PrintString() {
         va_list arg;
         va_start(arg, format);
         vprintf(format, arg);
         va_end(arg);
     }
-    PrintString(const char *format, va_list arg) : String(), Print() {
+    PrintString(const char *format, va_list arg) : PrintString() {
         vprintf(format, arg);
     }
-    PrintString(const __FlashStringHelper *format, ...) : String(), Print() {
+    PrintString(const __FlashStringHelper *format, ...) : PrintString() {
         va_list arg;
         va_start(arg, format);
         vprintf_P(reinterpret_cast<PGM_P>(format), arg);
         va_end(arg);
     }
-    PrintString(const __FlashStringHelper *format, va_list arg) : String(), Print() {
+    PrintString(const __FlashStringHelper *format, va_list arg) : PrintString() {
         vprintf_P(reinterpret_cast<PGM_P>(format), arg);
     }
 
@@ -49,7 +48,7 @@ public:
             // }
             // vsnprintf(buffer, len + 1, format, arg);
         }
-        return write((const uint8_t *)temp, len);;
+        return write(reinterpret_cast<const uint8_t *>(temp), len);
         // len = write((const uint8_t *)buffer, len);
         // if (buffer != temp) {
         //     delete[] buffer;
@@ -72,7 +71,7 @@ public:
             // }
             // vsnprintf_P(buffer, len + 1, format, arg);
         }
-        return write((const uint8_t *)temp, len);;
+        return write(reinterpret_cast<const uint8_t *>(temp), len);
         // len = write((const uint8_t *)buffer, len);
         // if (buffer != temp) {
         //     delete[] buffer;
@@ -81,9 +80,26 @@ public:
     }
 
     virtual size_t write(uint8_t data) override {
-        return concat((char)data) ? 1 : 0;
+        *this += (char)data;
+        return 1;
+        //return concat((char)data) ? 1 : 0;
     }
     virtual size_t write(const uint8_t *buffer, size_t size) override {
-        return concat((const char *)buffer, size);
+        size_t count = size;
+        if (!reserve(length() + size)) {
+            return 0;
+        }
+        const char *ptr = reinterpret_cast<const char *>(buffer);
+        while(count--) {
+            *this += *ptr++;
+        }
+        return size;
+
+        // concat keeps crashing for an unknown reason (when the string is being free'd)
+        // sample code, which works perfectly using the + operator and loop above
+        // PrintString command;
+        // command.write(data, len);
+
+        //return concat((const char *)buffer, size) ? size : 0;
     }
 };

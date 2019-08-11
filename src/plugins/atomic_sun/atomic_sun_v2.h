@@ -9,11 +9,20 @@
 #include <Arduino_compat.h>
 #include <HardwareSerial.h>
 #include <PrintString.h>
+#include <PrintHtmlEntitiesString.h>
 #include "../mqtt/mqtt_client.h"
 #include "serial_handler.h"
 
 #ifndef DEBUG_4CH_DIMMER
 #define DEBUG_4CH_DIMMER 0
+#endif
+
+#ifndef IOT_ATOMIC_SUN_BAUD_RATE
+#define IOT_ATOMIC_SUN_BAUD_RATE            57600
+#endif
+
+#ifndef IOT_ATOMIC_SUN_MAX_BRIGHTNESS
+#define IOT_ATOMIC_SUN_MAX_BRIGHTNESS       8333
 #endif
 
 typedef struct {
@@ -25,7 +34,7 @@ typedef struct {
     struct {
         String set;
         String state;
-        uint16_t value;
+        int16_t value;
     } brightness;
     struct {
         String set;
@@ -46,9 +55,6 @@ private:
     Driver_4ChDimmer(HardwareSerial &serial);
 
 public:
-    static const int MAX_BRIGHTNESS = 8333;
-    static const int DIMMER_BAUDRATE = 57600;
-
     virtual ~Driver_4ChDimmer();
 
     static void setup();
@@ -74,8 +80,28 @@ public:
         return _dimmer;
     }
 
+    inline bool getOnState() const {
+        return _data.state.value;
+    }
+    inline int16_t getBrightness() const {
+        return _data.brightness.value;
+    }
+    inline uint16_t getColor() const {
+        return _data.color.value;
+    }
+    inline void setColor(uint16_t color) {
+        _data.color.value = color;
+    }
+    void setBrightness(int16_t level) {
+        _data.brightness.value = level;
+        _data.state.value = level != 0;
+    }
+
+    void publishState(MQTTClient *client = nullptr);
+
 private:
-    void printStatus(PrintHtmlEntitiesString &out);
+    void _printStatus(PrintHtmlEntitiesString &out);
+    void _createTopics();
 
     void begin();
     void end();
@@ -91,6 +117,19 @@ private:
     void _onReceive(int length);
 
 private:
+#if DEBUG_4CH_DIMMER
+    uint8_t endTransmission();
+#else
+    inline uint8_t endTransmission();
+#endif
+
+    inline float _getFadeTime() {
+        return _fadeTime;
+    }
+    inline float _getOnOffFadeTime() {
+        return _onOffFadeTime;
+    }
+
     HardwareSerial &_serial;
     Driver_4ChDimmer_MQTTComponentData_t _data;
     Driver_4ChDimmer_Level_t _stored;

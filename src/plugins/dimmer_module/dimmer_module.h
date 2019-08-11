@@ -63,11 +63,6 @@
 #define IOT_DIMMER_MODULE_MAX_BRIGHTNESS    16666
 #endif
 
-// Set this PIN to HIGH when the dimmer is initialized
-#ifndef IOT_DIMMER_MODULE_LVL_SHIFTER_ENABLE
-//#define IOT_DIMMER_MODULE_LVL_SHIFTER_ENABLE 14
-#endif
-
 #if IOT_DIMMER_MODULE_INTERFACE_UART
 #include "SerialTwoWire.h"
 #else
@@ -88,8 +83,7 @@ public:
 
     static void setup();
 
-    void onConnect(MQTTClient *client, DimmerChannel *channel);
-    void onMessage(MQTTClient *client, DimmerChannel *channel, char *topic, char *payload, size_t len);
+    void createAutoDiscovery(MQTTAutoDiscovery::Format_t format, PrintHtmlEntitiesString &payload);
 
     bool on(uint8_t channel);
     bool off(uint8_t channel);
@@ -131,7 +125,7 @@ private:
         return _wire->endTransmission();
     }
 #endif
-    void printStatus(PrintHtmlEntitiesString &out);
+    void _printStatus(PrintHtmlEntitiesString &out);
 
     void begin();
     void end();

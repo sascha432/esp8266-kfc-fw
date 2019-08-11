@@ -2,6 +2,8 @@
  * Author: sascha_lammers@gmx.de
  */
 
+#if IOT_DIMMER_MODULE
+
 // web socket for dimmer.html
 
 #include "dimmer_web_socket.h"
@@ -10,7 +12,7 @@
 #include "progmem_data.h"
 #include "web_socket.h"
 
-#ifdef DEBUG_IOT_DIMMER_MODULE
+#if DEBUG_IOT_DIMMER_MODULE
 #include <debug_helper_enable.h>
 #else
 #include <debug_helper_disable.h>
@@ -56,18 +58,24 @@ WsClient *WsDimmerClient::getInstance(AsyncWebSocketClient *socket) {
     return wsClient;
 }
 
+
+
 void WsDimmerClient::onText(uint8_t *data, size_t len) {
 
     _debug_printf_P(PSTR("WsDimmerClient::onText(%p, %d)\n"), data, len);
-    auto client = getClient();
     auto dimmer = Driver_DimmerModule::getInstance();
     if (dimmer && isAuthenticated()) {
-        Buffer buffer;
+        PrintString command;
+        command.write(data, len);
+        command.toLowerCase();
 
-        if (len > 5 && strncmp_P(reinterpret_cast<char *>(data), PSTR("+SET "), 5) == 0 && buffer.reserve(len + 1 - 5)) {
-            auto buf = buffer.getChar();
-            len -= 5;
-            strncpy(buf, reinterpret_cast<char *>(data + 5), len)[len] = 0;
+        if (command.startsWith(F("+set "))) {
+#if defined(ESP8266)
+            char *buf = command.begin() + 5;
+#else
+            std::unique_ptr<char []> _command(new char[command.length() + 1 - 5]);
+            char *buf = strcpy(_command.get(), command.c_str() + 5);
+#endif
 
             const char *delimiters = " ";
             char *channel_str = strtok(buf, delimiters);
@@ -107,3 +115,5 @@ String DimmerTemplate::process(const String &key) {
     }
     return WebTemplate::process(key);
 }
+
+#endif

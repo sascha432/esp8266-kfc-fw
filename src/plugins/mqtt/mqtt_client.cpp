@@ -425,28 +425,9 @@ const String MQTTClient::getStatus() {
         // }
         // out.printf_P(PSTR(HTML_S(br) "Published/Acknowledged: %d/%d " HTML_S(br) "Received: %d " HTML_S(br)), mqtt_session->getPublished(), mqtt_session->getPublishedAck(), mqtt_session->getReceived());
 
-        out += mqttClient->_createHASSYaml();
-
         return out;
     }
     return FSPGM(Disabled);
-}
-
-const String MQTTClient::_createHASSYaml() {
-
-    PrintHtmlEntitiesString out;
-    for(auto component: _components) {
-        auto discovery = component->createAutoDiscovery(MQTTAutoDiscovery::FORMAT_YAML);
-        String yaml = discovery->getPayload();
-        yaml.replace(F("\n"), F("\\n"));
-        yaml.replace(F("'"), F("\\'"));
-        yaml.replace(F("\""), F("&quot;"));
-        out.print(F(HTML_S(br) HTML_TAG_S "a href=\"javascript:console.log('")); //TODO replace with a popup
-        out.print(yaml);
-        out.print(F("')\"" HTML_TAG_E "Write HASS YAML to console" HTML_E(a)));
-        delete discovery;
-    }
-    return out;
 }
 
 MQTTClient *MQTTClient::getClient() {

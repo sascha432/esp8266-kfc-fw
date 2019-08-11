@@ -22,6 +22,7 @@
 
 void MQTTAutoDiscovery::create(MQTTComponent *component, MQTTAutoDiscovery::Format_t format) {
     String name = MQTTClient::getComponentName(component->getNumber());
+    String uniqueId;
 
     _format = format;
     _topic = config._H_STR(Config().mqtt_discovery_prefix);
@@ -40,8 +41,10 @@ void MQTTAutoDiscovery::create(MQTTComponent *component, MQTTAutoDiscovery::Form
     }
     addParameter(F("name"), name);
     addParameter(F("platform"), F("mqtt"));
-    String uniqueId = _getUnqiueId(name);
-    addParameter(FSPGM(mqtt_unique_id), uniqueId);
+    if (format == FORMAT_JSON) {
+        uniqueId = _getUnqiueId(name);
+        addParameter(FSPGM(mqtt_unique_id), uniqueId);
+    }
     addParameter(FSPGM(mqtt_availability_topic), MQTTClient::formatTopic(-1, FSPGM(mqtt_status_topic)));
     addParameter(FSPGM(mqtt_payload_available), FSPGM(1));
     addParameter(FSPGM(mqtt_payload_not_available), FSPGM(0));

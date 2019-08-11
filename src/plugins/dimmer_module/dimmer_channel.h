@@ -56,6 +56,7 @@ public:
 
 private:
     void _publishState(MQTTClient *client);
+    void _createTopics();
 
     Driver_DimmerModule_MQTTComponentData_t _data;
     uint16_t _storedBrightness;

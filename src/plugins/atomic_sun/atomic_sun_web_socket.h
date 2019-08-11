@@ -2,7 +2,7 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if IOT_DIMMER_MODULE
+#if IOT_ATOMIC_SUN_V2
 
 #pragma once
 
@@ -10,10 +10,10 @@
 #include "templates.h"
 #include "web_socket.h"
 
-class WsDimmerClient : public WsClient {
+class WsAtomicSunClient : public WsClient {
 public:
-    WsDimmerClient( AsyncWebSocketClient *socket);
-    virtual ~WsDimmerClient() {
+    WsAtomicSunClient( AsyncWebSocketClient *socket);
+    virtual ~WsAtomicSunClient() {
     }
 
     static WsClient *getInstance(AsyncWebSocketClient *socket);
@@ -24,11 +24,11 @@ public:
     static void setup();
 
 private:
-    static WsDimmerClient *_sender;
+    static WsAtomicSunClient *_sender;
 };
 
 
-class DimmerTemplate : public WebTemplate {
+class AtomicSunTemplate : public WebTemplate {
 public:
     virtual String process(const String &key) override;
 };

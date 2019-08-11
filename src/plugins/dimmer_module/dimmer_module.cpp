@@ -36,12 +36,6 @@ Driver_DimmerModule::Driver_DimmerModule() {
     _wire->begin(DIMMER_I2C_ADDRESS + 1);
     _wire->onReceive(Driver_DimmerModule::onReceive);
 
-#if defined(IOT_DIMMER_MODULE_LVL_SHIFTER_ENABLE)
-    pinMode(IOT_DIMMER_MODULE_LVL_SHIFTER_ENABLE, OUTPUT);
-    digitalWrite(IOT_DIMMER_MODULE_LVL_SHIFTER_ENABLE, HIGH);
-    _debug_printf_P(PSTR("Driver_DimmerModule::Driver_DimmerModule(): Setting PIN %u HIGH\n"), IOT_DIMMER_MODULE_LVL_SHIFTER_ENABLE);
-#endif
-
     // memset(&_channels, 0, sizeof(_channels));
     auto mqttClient = MQTTClient::getClient();
     if (mqttClient) {
@@ -71,11 +65,15 @@ Driver_DimmerModule::~Driver_DimmerModule() {
 #if IOT_DIMMER_MODULE_INTERFACE_UART
     delete _wire;
 #endif
-#if defined(IOT_DIMMER_MODULE_LVL_SHIFTER_ENABLE)
-    digitalWrite(IOT_DIMMER_MODULE_LVL_SHIFTER_ENABLE, LOW);
-    pinMode(IOT_DIMMER_MODULE_LVL_SHIFTER_ENABLE, INPUT);
-#endif
 
+}
+
+void Driver_DimmerModule::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, PrintHtmlEntitiesString &payload) {
+    for (uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
+        auto discovery = _channels[i].createAutoDiscovery(format);
+        payload.print(discovery->getPayload());
+        delete discovery;
+    }
 }
 
 void Driver_DimmerModule::begin() {
@@ -111,7 +109,7 @@ void Driver_DimmerModule::end() {
 #endif
 }
 
-void Driver_DimmerModule::printStatus(PrintHtmlEntitiesString &out) {
+void Driver_DimmerModule::_printStatus(PrintHtmlEntitiesString &out) {
     out.print(F(", Fading enabled" HTML_S(br)));
     for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
         out.printf_P(PSTR("Channel %u: "), i);
@@ -143,7 +141,7 @@ const String Driver_DimmerModule::getStatus() {
     out.print(F("I2C"));
 #endif
     if (_dimmer)  {
-        _dimmer->printStatus(out);
+        _dimmer->_printStatus(out);
     }
     return out;
 }
@@ -214,6 +212,11 @@ void Driver_DimmerModule::_onReceive(int length) {
                 }
             }
         }
+    }
+    else if (type == DIMMER_TEMPERATURE_ALERT && length == 3) {
+        uint8_t temperature = _wire->read();
+        uint8_t max_temperature = _wire->read();
+        Logger_error(F("Dimmer temperature alarm triggered: %u > %u"), temperature, max_temperature);
     }
 }
 

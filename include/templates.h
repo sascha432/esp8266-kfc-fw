@@ -96,10 +96,17 @@ private:
 
 class SettingsForm : public Form {
 public:
+    typedef std::vector<std::pair<String, String>> TokenVector;
+
     SettingsForm(AsyncWebServerRequest *request);
+
+    inline TokenVector &getTokens() {
+        return _tokens;
+    }
 
 protected:
     FormData _data;
+    TokenVector _tokens;
 };
 
 class WifiSettingsForm : public SettingsForm {

@@ -22,16 +22,14 @@
 #endif
 
 
-#if false && DEBUG
-static String display_result(const char *file, int line, const char *func, const String &key, String str) {
-    DEBUG_OUTPUT.printf(_debugPrefix.c_str(), basename(file), line, func);
-    DEBUG_OUTPUT.printf_P(PSTR("Macro %s = %s\n"), key.c_str(), str.c_str());
+#if DEBUG_TEMPLATES
+static const String &display_result(const String &key, const String &str) {
+    debug_printf_P(PSTR("Macro '%s' = '%s'\n"), key.c_str(), str.c_str());
     return str;
 }
-#define _return(str)                        return display_result(__FILE__, __LINE__, __FUNCTION__, key, str);
-#define debug_display_return(key, result)   display_result(__FILE__, __LINE__, __FUNCTION__, key, result)
+#define _return(str)                        return display_result(key, str);
 #else
-#define _return(str)                       return str
+#define _return(str)                        return str
 #endif
 
 PROGMEM_STRING_DEF(_hidden, " hidden");
@@ -189,6 +187,15 @@ String ConfigTemplate::process(const String &key) {
         const char *str = getForm()->process(key);
         if (str) {
             _return(str);
+        }
+        SettingsForm *form = static_cast<SettingsForm *>(getForm());
+        auto &tokens = form->getTokens();
+        if (tokens.size()) {
+            for(const auto &token: tokens) {
+                if (token.first.equals(key)) {
+                    _return(token.second);
+                }
+            }
         }
     }
     if (key == F("NETWORK_MODE")) {

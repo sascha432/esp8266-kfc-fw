@@ -55,7 +55,7 @@ public:
     static const String getStatus();
     static MQTTClient *getClient();
     static void handleWiFiEvents(uint8_t event, void *payload);
-    static uint8_t getDefaultQos() {
+    inline static uint8_t getDefaultQos() {
         return config._H_GET(Config().mqtt_qos);
     }
 
@@ -72,7 +72,6 @@ private:
 
     bool _isTopicMatch(const char *topic, const char *match) const;
     const String _reasonToString(AsyncMqttClientDisconnectReason reason) const;
-    const String _createHASSYaml();
 
 private:
     AsyncMqttClient *_client;

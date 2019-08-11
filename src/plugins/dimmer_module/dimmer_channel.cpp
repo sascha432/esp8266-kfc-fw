@@ -35,6 +35,9 @@ PGM_P DimmerChannel::getComponentName() {
 }
 
 MQTTAutoDiscovery *DimmerChannel::createAutoDiscovery(MQTTAutoDiscovery::Format_t format) {
+    if (_data.state.state.length() == 0) {
+        _createTopics();
+    }
     auto discovery = _debug_new MQTTAutoDiscovery();
     discovery->create(this, format);
     discovery->addParameter(FSPGM(mqtt_state_topic), _data.state.state);
@@ -48,14 +51,19 @@ MQTTAutoDiscovery *DimmerChannel::createAutoDiscovery(MQTTAutoDiscovery::Format_
     return discovery;
 }
 
-void DimmerChannel::onConnect(MQTTClient *client) {
-
-    uint8_t _qos = MQTTClient::getDefaultQos();
-
+void DimmerChannel::_createTopics() {
+    
     _data.state.set = MQTTClient::formatTopic(getNumber(), F("/set"));
     _data.state.state = MQTTClient::formatTopic(getNumber(), F("/state"));
     _data.brightness.set = MQTTClient::formatTopic(getNumber(), F("/brightness/set"));
     _data.brightness.state = MQTTClient::formatTopic(getNumber(), F("/brightness/state"));
+}
+
+void DimmerChannel::onConnect(MQTTClient *client) {
+
+    uint8_t _qos = MQTTClient::getDefaultQos();
+
+    _createTopics();
 
 #if MQTT_AUTO_DISCOVERY
     if (MQTTAutoDiscovery::isEnabled()) {

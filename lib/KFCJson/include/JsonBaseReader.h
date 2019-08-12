@@ -70,10 +70,10 @@ public:
 	}
 
 	void initParser();
-	boolean parseStream();
+	bool parseStream();
 
 	// initParser() and parseStream() combined
-	boolean parse();
+	bool parse();
 
 	virtual int readByte();
 	virtual size_t position() const;
@@ -89,7 +89,7 @@ public:
 	}
 
 	// returns true if it is an array
-	inline boolean isArrayElement() const {
+	inline bool isArrayElement() const {
 		return _array != -1;
 	}
 
@@ -124,19 +124,19 @@ public:
 	JsonError getLastError() const;
 	String getLastErrorMessage() const;
 
-	virtual boolean beginObject(bool isArray) { return true; }
-	virtual boolean endObject() { return true; }
-	virtual boolean processElement() = 0;
+	virtual bool beginObject(bool isArray) { return true; }
+	virtual bool endObject() { return true; }
+	virtual bool processElement() = 0;
 
 protected:
-	inline boolean _addCharacter(char ch) {
+	inline bool _addCharacter(char ch) {
 		_valueStr += ch;
 		return true;
 	}
 
-	boolean _prepareElement();
+	bool _prepareElement();
 	void _appendIndex(int16_t index, String &str) const;
-	boolean _isValidNumber(const String &value, JsonType_t &_type) const;
+	bool _isValidNumber(const String &value, JsonType_t &_type) const;
 
 protected:
 	Stream &_stream;

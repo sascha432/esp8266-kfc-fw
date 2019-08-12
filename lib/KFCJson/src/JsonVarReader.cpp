@@ -14,11 +14,11 @@ JsonReadVar::JsonReadVar(const String &path, JsonBaseReader::JsonType_t expected
     _type = JsonBaseReader::JsonType_t::JSON_TYPE_INVALID;
 }
 
-JsonReadVar::operator boolean() {
+JsonReadVar::operator bool() {
     return _path.length() && isTypeValid();
 }
 
-boolean JsonReadVar::getBoolean() const {
+bool JsonReadVar::getBoolean() const {
     return _value.equalsIgnoreCase(F("true"));
 }
 
@@ -39,7 +39,7 @@ void JsonVarReader::dumpVar(Print &out, const JsonReadVar &var) {
     }
 }
 
-boolean JsonVarReader::processElement() {
+bool JsonVarReader::processElement() {
     auto var = find(getPath());
     if (var) {
         var->setValue(getValue());

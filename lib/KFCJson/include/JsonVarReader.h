@@ -13,9 +13,9 @@ public:
 	JsonReadVar(const String &path, JsonBaseReader::JsonType_t expectedType);
 
 	// valid value found?
-	operator boolean();
+	operator bool();
 
-	inline boolean equals(const String &path) const {
+	inline bool equals(const String &path) const {
 		return _path.equals(path);
 	}
 
@@ -24,15 +24,15 @@ public:
 	}
 
 	// invalid class / path not found
-	inline boolean isEmpty() const {
+	inline bool isEmpty() const {
 		return _path.length() == 0;
 	}
 
-	inline boolean notFoundInResponse() {
+	inline bool notFoundInResponse() {
 		return (_type == JsonBaseReader::JsonType_t::JSON_TYPE_INVALID);
 	}
 
-	inline boolean isTypeValid() {
+	inline bool isTypeValid() {
 		return (_type != JsonBaseReader::JsonType_t::JSON_TYPE_INVALID) && (_expectedType == _type || _expectedType == JsonBaseReader::JsonType_t::JSON_TYPE_ANY);
 	}
 
@@ -66,9 +66,9 @@ public:
 		return _value.toFloat();
 	}
 
-	boolean getBoolean() const;
+	bool getBoolean() const;
 
-	inline boolean isTrue() const {
+	inline bool isTrue() const {
 		return getBoolean();
 	}
 
@@ -140,7 +140,7 @@ public:
 	}
 
 private:
-	virtual boolean processElement() override;
+	virtual bool processElement() override;
 
 private:
 	JsonVarReaderVector _list;

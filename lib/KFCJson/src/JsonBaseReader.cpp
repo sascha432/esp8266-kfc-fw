@@ -127,7 +127,7 @@ String JsonBaseReader::jsonType2String(JsonType_t type) {
 	return F("INVALID TYPE");
 }
 
-boolean JsonBaseReader::_isValidNumber(const String &value, JsonType_t &_type) const {
+bool JsonBaseReader::_isValidNumber(const String &value, JsonType_t &_type) const {
 #if HAVE_REGEX
 	std::smatch match;
 	if (std::regex_match(value, match, std::regex("^-?(?=[1-9]|0(?!\\d))\\d+(\\.\\d+)?([eE][+-]?\\d+)?$"))) {
@@ -196,7 +196,7 @@ boolean JsonBaseReader::_isValidNumber(const String &value, JsonType_t &_type) c
 #endif
 }
 
-boolean JsonBaseReader::_prepareElement() {
+bool JsonBaseReader::_prepareElement() {
 	if (_keyStr.length() == 0 && _valueStr.length() == 0) {
 		_type = JSON_TYPE_INVALID;
 		_debug_printf_P(PSTR("key and data length 0\n"));
@@ -232,7 +232,7 @@ boolean JsonBaseReader::_prepareElement() {
 	return result;
 }
 
-boolean JsonBaseReader::parseStream() {
+bool JsonBaseReader::parseStream() {
 	_debug_printf_P(PSTR("JSONparseStream available %d\n"), _stream.available());
 
 	int ch;
@@ -374,7 +374,7 @@ String JsonBaseReader::getPath() const {
 	return _path;
 }
 
-boolean JsonBaseReader::parse() {
+bool JsonBaseReader::parse() {
 	initParser();
 	return parseStream();
 }

@@ -24,10 +24,24 @@ public:
 
     void _installTimer();
 
-    bool active() const;
-    int getRepeat() const;
-    int64_t getDelay() const;
-    int getCallCounter() const;
+    bool active() const {
+        return _timer;
+    }
+
+    inline int getRepeat() const {
+        return _repeat;
+    }
+
+    inline int64_t getDelay() const {
+        return _delay;
+    }
+
+    inline int getCallCounter() const {
+        return _callCounter;
+    }
+    inline void setCallCounter(int callCounter) {
+        _callCounter = callCounter;
+    }
 
     void setCallback(EventScheduler::Callback loopCallback) {
         _loopCallback = loopCallback;

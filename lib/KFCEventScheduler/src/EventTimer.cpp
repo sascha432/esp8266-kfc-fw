@@ -63,21 +63,22 @@ void EventTimer::_installTimer() {
 #endif
 }
 
-bool EventTimer::active() const {
-    return _timer;
-}
 
-int EventTimer::getRepeat() const {
-    return _repeat;
-}
+// bool EventTimer::active() const {
+//     return _timer;
+// }
 
-int64_t EventTimer::getDelay() const {
-    return _delay;
-}
+// int EventTimer::getRepeat() const {
+//     return _repeat;
+// }
 
-int EventTimer::getCallCounter() const {
-    return _callCounter;
-}
+// int64_t EventTimer::getDelay() const {
+//     return _delay;
+// }
+
+// int EventTimer::getCallCounter() const {
+//     return _callCounter;
+// }
 
 void EventTimer::setPriority(EventScheduler::Priority_t priority) {
     _priority = priority;

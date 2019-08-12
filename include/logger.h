@@ -49,6 +49,8 @@ public:
     void access(const __FlashStringHelper *message, ...);
     void debug(const String &message, ...);
     void debug(const __FlashStringHelper *message, ...);
+    void log(LogLevel level, const String &message, ...);
+    void log(LogLevel level, const char *message, ...);
 
     const String getLogLevelAsString(LogLevel logLevel);
     void setLogLevel(LogLevel logLevel);

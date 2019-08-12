@@ -20,18 +20,18 @@
 
 Logger _logger;
 
-void Logger::error(const __FlashStringHelper *message, ...) {
-    va_list arg;
-    va_start(arg, message);
-    this->writeLog(LOGLEVEL_ERROR, reinterpret_cast<PGM_P>(message), arg);
-    va_end(arg);
-}
-
 Logger::Logger() {
     _logLevel = LOGLEVEL_DEBUG;
 #if SYSLOG
     _syslog = nullptr;
 #endif
+}
+
+void Logger::error(const __FlashStringHelper *message, ...) {
+    va_list arg;
+    va_start(arg, message);
+    this->writeLog(LOGLEVEL_ERROR, message, arg);
+    va_end(arg);
 }
 
 void Logger::error(const String &message, ...) {
@@ -44,7 +44,7 @@ void Logger::error(const String &message, ...) {
 void Logger::security(const __FlashStringHelper *message, ...) {
     va_list arg;
     va_start(arg, message);
-    this->writeLog(LOGLEVEL_SECURITY, reinterpret_cast<PGM_P>(message), arg);
+    this->writeLog(LOGLEVEL_SECURITY, message, arg);
     va_end(arg);
 }
 
@@ -58,7 +58,7 @@ void Logger::security(const String &message, ...) {
 void Logger::warning(const __FlashStringHelper *message, ...) {
     va_list arg;
     va_start(arg, message);
-    this->writeLog(LOGLEVEL_WARNING, reinterpret_cast<PGM_P>(message), arg);
+    this->writeLog(LOGLEVEL_WARNING, message, arg);
     va_end(arg);
 }
 
@@ -72,7 +72,7 @@ void Logger::warning(const String &message, ...) {
 void Logger::notice(const __FlashStringHelper *message, ...) {
     va_list arg;
     va_start(arg, message);
-    this->writeLog(LOGLEVEL_NOTICE, reinterpret_cast<PGM_P>(message), arg);
+    this->writeLog(LOGLEVEL_NOTICE, message, arg);
     va_end(arg);
 }
 
@@ -86,7 +86,7 @@ void Logger::notice(const String &message, ...) {
 void Logger::access(const __FlashStringHelper *message, ...) {
     va_list arg;
     va_start(arg, message);
-    this->writeLog(LOGLEVEL_ACCESS, reinterpret_cast<PGM_P>(message), arg);
+    this->writeLog(LOGLEVEL_ACCESS, message, arg);
     va_end(arg);
 }
 
@@ -100,7 +100,7 @@ void Logger::access(const String &message, ...) {
 void Logger::debug(const __FlashStringHelper *message, ...) {
     va_list arg;
     va_start(arg, message);
-    this->writeLog(LOGLEVEL_DEBUG, reinterpret_cast<PGM_P>(message), arg);
+    this->writeLog(LOGLEVEL_DEBUG, message, arg);
     va_end(arg);
 }
 
@@ -108,6 +108,20 @@ void Logger::debug(const String &message, ...) {
     va_list arg;
     va_start(arg, message);
     this->writeLog(LOGLEVEL_DEBUG, message, arg);
+    va_end(arg);
+}
+
+void Logger::log(LogLevel level, const String &message, ...) {
+    va_list arg;
+    va_start(arg, message);
+    this->writeLog(level, message, arg);
+    va_end(arg);
+}
+
+void Logger::log(LogLevel level, const char *message, ...) {
+    va_list arg;
+    va_start(arg, message);
+    this->writeLog(level, message, arg);
     va_end(arg);
 }
 

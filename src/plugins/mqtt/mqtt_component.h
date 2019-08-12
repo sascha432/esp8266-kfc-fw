@@ -48,10 +48,10 @@ public:
     virtual void onMessage(MQTTClient *client, char *topic, char *payload, size_t len) {
     }
 
-    void setNumber(uint8_t num) {
+    inline void setNumber(uint8_t num) {
         _num = num;
     }
-    uint8_t getNumber() {
+    inline uint8_t getNumber() {
         return _num;
     }
 

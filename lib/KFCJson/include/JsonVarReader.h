@@ -9,78 +9,67 @@
 
 class JsonReadVar {
 public:
-	JsonReadVar() {
-		_expectedType = JsonBaseReader::JsonType_t::JSON_TYPE_INVALID;
-		_type = JsonBaseReader::JsonType_t::JSON_TYPE_INVALID;
-	}
-	JsonReadVar(const String &path, JsonBaseReader::JsonType_t expectedType) {
-		_path = path;
-		_expectedType = expectedType;
-		_type = JsonBaseReader::JsonType_t::JSON_TYPE_INVALID;
-	}
+	JsonReadVar();
+	JsonReadVar(const String &path, JsonBaseReader::JsonType_t expectedType);
 
 	// valid value found?
-	operator boolean() {
-		return _path.length() && isTypeValid();
-	}
+	operator boolean();
 
-	boolean equals(const String &path) const {
+	inline boolean equals(const String &path) const {
 		return _path.equals(path);
 	}
 
-	bool equals(const JsonReadVar &var) const {
-		return var.getPath() == _path;
-	}
-
-	const String &getPath() const {
+	inline const String &getPath() const {
 		return _path;
 	}
 
 	// invalid class / path not found
-	bool isEmpty() const {
+	inline boolean isEmpty() const {
 		return _path.length() == 0;
 	}
 
-	bool notFoundInResponse() {
+	inline boolean notFoundInResponse() {
 		return (_type == JsonBaseReader::JsonType_t::JSON_TYPE_INVALID);
 	}
 
-	bool isTypeValid() {
+	inline boolean isTypeValid() {
 		return (_type != JsonBaseReader::JsonType_t::JSON_TYPE_INVALID) && (_expectedType == _type || _expectedType == JsonBaseReader::JsonType_t::JSON_TYPE_ANY);
 	}
 
-	JsonBaseReader::JsonType_t getExpectedType() const {
+	inline JsonBaseReader::JsonType_t getExpectedType() const {
 		return _expectedType;
 	}
 
-	String getValue() const {
+	inline String getValue() const {
 		return _value;
 	}
-	void setValue(const String &value) {
+	inline void setValue(const String &value) {
 		_value = value;
 	}
 
-	JsonBaseReader::JsonType_t getType() const {
+	inline JsonBaseReader::JsonType_t getType() const {
 		return _type;
 	}
-	void setType(JsonBaseReader::JsonType_t type) {
+	inline void setType(JsonBaseReader::JsonType_t type) {
 		_type = type;
 	}
 
-	long getLong() {
+	inline long getLong() const {
 		return _value.toInt();
 	}
 
-	int getInt() {
+	inline int getInt() const {
 		return (int)_value.toInt();
 	}
 
-	float getFloat() {
+	inline float getFloat() const {
 		return _value.toFloat();
 	}
 
-	bool getBoolean() {
-		return _value.equalsIgnoreCase(F("true"));
+	boolean getBoolean() const;
+
+	inline boolean isTrue() const {
+		return getBoolean();
 	}
 
 private:
@@ -137,46 +126,21 @@ public:
 	}
 
 
-	JsonReadVar &find(const String &path) {
-		for (auto &element : _list) {
-			if (element.equals(path)) {
-				return element;
-			}
-		}
-		return (JsonReadVar &)_invalidJsonReadVar;
-	}
+	JsonReadVar *find(const String &path);
 
-	void dumpVar(Print &out, const JsonReadVar &var) {
-		if (var.isEmpty()) {
-			out.printf("Invalid variable\n");
-		} else {
-			out.printf("addr %p\npath %s\nexcpectedType %s\ntype %s\nvalue %s\n", &var, var.getPath().c_str(), jsonType2String(var.getExpectedType()).c_str(), jsonType2String(var.getType()).c_str(), var.getValue().c_str());
-		}
-	}
+	void dumpVar(Print &out, const JsonReadVar &var);
+	void dump(Print &out);
 
-	void dump(Print &out) {
-		for (const auto &element : _list) {
-			dumpVar(out, element);
-		}
-	}
-
-	void reserve(size_t n) {
+	inline void reserve(size_t n) {
 		_list.reserve(n);
 	}
 
-	JsonReadVar &get(int index) {
-		return _list[index];
+	inline JsonReadVar &get(int index) {
+		return _list.at(index);
 	}
 
 private:
-	virtual bool processElement() override {
-		JsonReadVar &var = find(getPath());
-		if (!var.isEmpty()) {
-			var.setValue(getValue());
-			var.setType(getType());
-		}
-		return true;
-	}
+	virtual boolean processElement() override;
 
 private:
 	JsonVarReaderVector _list;

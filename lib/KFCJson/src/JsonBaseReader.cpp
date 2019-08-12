@@ -10,7 +10,11 @@
 #include <memory>
 #include "JsonBaseReader.h"
 
-#define if_debug_printf_P(...) ;
+#if DEBUG_JSON_READER
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
+#endif
 
 void JsonBaseReader::initParser() {
 	_level = 0;
@@ -24,7 +28,7 @@ void JsonBaseReader::initParser() {
 	_valueStr = String();
 }
 
-String JsonBaseReader::formatValue(String value, JsonType_t type) {
+String JsonBaseReader::formatValue(const String &value, JsonType_t type) {
 	String tmp;
 	switch (type) {
 	case JSON_TYPE_EMPTY_ARRAY:
@@ -34,23 +38,18 @@ String JsonBaseReader::formatValue(String value, JsonType_t type) {
 	case JSON_TYPE_NULL:
 		return F("null");
 	case JSON_TYPE_BOOLEAN:
-		value.toLowerCase();
-		return value;
+		tmp = value;
+		tmp.toLowerCase();
+		return tmp;
 	case JSON_TYPE_INT:
 		return String(value.toInt());
 	case JSON_TYPE_FLOAT:
 		return String(value.toFloat());
 	case JSON_TYPE_STRING:
-		value.replace(F("\""), F("\\\""));
-		value.replace(F("\\"), F("\\\\"));
-#if _WIN32 || _WIN64
-		tmp = '"';
-		tmp += value;
-		tmp += '"';
-		return tmp;
-#else
-		return '"' + value + '"';
-#endif
+		tmp = value;
+		tmp.replace(F("\""), F("\\\""));
+		tmp.replace(F("\\"), F("\\\\"));
+		return '"' + tmp + '"';
 	case JSON_TYPE_INVALID:
 	case JSON_TYPE_ANY:
 		break;
@@ -58,8 +57,8 @@ String JsonBaseReader::formatValue(String value, JsonType_t type) {
 	return F("<invalid type>");
 }
 
-void JsonBaseReader::error(String message) {
-	if_debug_printf_P(PSTR("JSON error: %s at %d\n"), message.c_str(), position());
+void JsonBaseReader::error(const String &message) {
+	_debug_printf_P(PSTR("JSON error: %s at %d\n"), message.c_str(), position());
 	_lastError.message = message;
 	_lastError.position = position();
 	//#if _WIN32 || _WIN64
@@ -84,7 +83,7 @@ String JsonBaseReader::getLastErrorMessage() const {
 	error += String(_lastError.position);
 	error += F(": ");
 	error += _lastError.message;
-#if DEBUG
+#if DEBUG_JSON_READER
 	error += '\n';
 	error += _jsonSource;
 	int count = 48;
@@ -128,7 +127,7 @@ String JsonBaseReader::jsonType2String(JsonType_t type) {
 	return F("INVALID TYPE");
 }
 
-bool JsonBaseReader::_isValidNumber(String value, JsonType_t &_type) const {
+boolean JsonBaseReader::_isValidNumber(const String &value, JsonType_t &_type) const {
 #if HAVE_REGEX
 	std::smatch match;
 	if (std::regex_match(value, match, std::regex("^-?(?=[1-9]|0(?!\\d))\\d+(\\.\\d+)?([eE][+-]?\\d+)?$"))) {
@@ -197,10 +196,10 @@ bool JsonBaseReader::_isValidNumber(String value, JsonType_t &_type) const {
 #endif
 }
 
-bool JsonBaseReader::_prepareElement() {
+boolean JsonBaseReader::_prepareElement() {
 	if (_keyStr.length() == 0 && _valueStr.length() == 0) {
 		_type = JSON_TYPE_INVALID;
-		if_debug_printf_P(PSTR("key and data length 0\n"));
+		_debug_printf_P(PSTR("key and data length 0\n"));
 		return true;
 	}
 	if (_array == -1 && !_keyStr.length()) {
@@ -224,7 +223,7 @@ bool JsonBaseReader::_prepareElement() {
 	}
 
 	_count++;
-	if_debug_printf_P(PSTR("processing key '%s' data %s type %d level %d at %d\n"), _keyStr.c_str(), formatValue(_valueStr, getType()).c_str(), (int)getType(), (int)getLevel(), (int)getPosition());
+	_debug_printf_P(PSTR("processing key '%s' data %s type %d level %d at %d\n"), _keyStr.c_str(), formatValue(_valueStr, getType()).c_str(), (int)getType(), (int)getLevel(), (int)getPosition());
 
 	bool result = processElement();
 	_keyStr = String();
@@ -233,8 +232,8 @@ bool JsonBaseReader::_prepareElement() {
 	return result;
 }
 
-bool JsonBaseReader::parseStream() {
-	if_debug_printf_P(PSTR("JSONparseStream available %d\n"), _stream.available());
+boolean JsonBaseReader::parseStream() {
+	_debug_printf_P(PSTR("JSONparseStream available %d\n"), _stream.available());
 
 	int ch;
 	while ((ch = readByte()) != -1) {
@@ -248,7 +247,7 @@ bool JsonBaseReader::parseStream() {
 				return false;
 			}
 		} else if (!_quoted && (ch == '{' || ch == '[')) {
-			if_debug_printf_P(PSTR("open %s level %d key %s array %d count %d\n"), (ch == '[' ? "array" : "object"), _level + 1, _keyStr.c_str(), _array, _count);
+			_debug_printf_P(PSTR("open %s level %d key %s array %d count %d\n"), (ch == '[' ? "array" : "object"), _level + 1, _keyStr.c_str(), _array, _count);
 			_state.push_back({_keyStr, _array, _count});
 			if (++_level == 255) {
 				error(F("Maximum nested level reached"));
@@ -269,7 +268,7 @@ bool JsonBaseReader::parseStream() {
 			_valueStr = String();
 			_count = 0;
 		} else if (!_quoted && (ch == '}' || ch == ']')) {
-			if_debug_printf_P(PSTR("closing %s level %d key %s data %s array %d count %d\n"), (ch == ']' ? "array" : "object"), _level, _keyStr.c_str(), _valueStr.c_str(), _array, _count);
+			_debug_printf_P(PSTR("closing %s level %d key %s data %s array %d count %d\n"), (ch == ']' ? "array" : "object"), _level, _keyStr.c_str(), _valueStr.c_str(), _array, _count);
 			if (_count == 0 && _keyStr.length() == 0 && _valueStr.length() == 0) {
 				_type = ch == ']' ? JSON_TYPE_EMPTY_ARRAY : JSON_TYPE_EMPTY_OBJECT;
 				if (!processElement()) {
@@ -298,7 +297,7 @@ bool JsonBaseReader::parseStream() {
 				error(F("keys are not allowed inside arrays"));
 				return false;
 			}
-			if_debug_printf_P(PSTR("got key '%s' at %d\n"), _valueStr.c_str(), getPosition());
+			_debug_printf_P(PSTR("got key '%s' at %d\n"), _valueStr.c_str(), getPosition());
 
 			_keyStr = _valueStr;
 			_valueStr = String();
@@ -317,7 +316,7 @@ bool JsonBaseReader::parseStream() {
 			return false;
 		}
 	}
-	if_debug_printf_P(PSTR("JSON parser end\n"));
+	_debug_printf_P(PSTR("JSON parser end\n"));
 	return true;
 }
 
@@ -328,7 +327,7 @@ int JsonBaseReader::readByte() {
 	int ch = _stream.read();
 	if (ch != -1) {
 		_position++;
-#if DEBUG
+#if DEBUG_JSON_READER
 		_jsonSource += ch;
 		if (_jsonSource.length() > 16) {
 			_jsonSource.remove(0, _jsonSource.length() - 16);
@@ -342,9 +341,11 @@ size_t JsonBaseReader::position() const {
 	return _position;
 }
 
-bool JsonBaseReader::_addCharacter(char ch) {
-	_valueStr += ch;
-	return true;
+String JsonBaseReader::getPath(uint8_t index) const {
+	if (index < _state.size()) {
+		return _state.at(index).key;
+	}
+	return String();
 }
 
 String JsonBaseReader::getPath() const {
@@ -373,33 +374,9 @@ String JsonBaseReader::getPath() const {
 	return _path;
 }
 
-bool JsonBaseReader::parse() {
+boolean JsonBaseReader::parse() {
 	initParser();
 	return parseStream();
-}
-
-String JsonBaseReader::getKey() const {
-	return _keyStr;
-}
-
-String JsonBaseReader::getValue() const {
-	return _valueStr;
-}
-
-int16_t JsonBaseReader::getIndex() const {
-	return _array;
-}
-
-int8_t JsonBaseReader::getLevel() const {
-	return _level;
-}
-
-JsonBaseReader::JsonType_t JsonBaseReader::getType() const {
-	return _type;
-}
-
-bool JsonBaseReader::isArrayElement() const {
-	return _array != -1;
 }
 
 void JsonBaseReader::_appendIndex(int16_t index, String &str) const {

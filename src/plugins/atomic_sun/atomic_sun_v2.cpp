@@ -28,7 +28,7 @@
 SerialTwoWire SerialWire;
 Driver_4ChDimmer *Driver_4ChDimmer::_dimmer = nullptr;
 
-Driver_4ChDimmer::Driver_4ChDimmer(HardwareSerial &serial) : _serial(serial) {
+Driver_4ChDimmer::Driver_4ChDimmer(HardwareSerial &serial) : MQTTComponent(LIGHT), _serial(serial) {
     memset(&_channels, 0, sizeof(_channels));
     auto mqttClient = MQTTClient::getClient();
     if (mqttClient) {
@@ -54,27 +54,19 @@ Driver_4ChDimmer::~Driver_4ChDimmer() {
     _dimmer = nullptr;
 }
 
-const String Driver_4ChDimmer::getName() {
-    return F("Atomic Sun v2");
-}
-
-PGM_P Driver_4ChDimmer::getComponentName() {
-    return SPGM(mqtt_component_light);
-}
-
 MQTTAutoDiscovery *Driver_4ChDimmer::createAutoDiscovery(MQTTAutoDiscovery::Format_t format) {
     if (_data.state.set.length() == 0) {
         _createTopics();
     }
     auto discovery = _debug_new MQTTAutoDiscovery();
     discovery->create(this, format);
-    discovery->addParameter(FSPGM(mqtt_state_topic), _data.state.state);
-    discovery->addParameter(FSPGM(mqtt_command_topic), _data.state.set);
-    discovery->addParameter(FSPGM(mqtt_payload_on), FSPGM(1));
-    discovery->addParameter(FSPGM(mqtt_payload_off), FSPGM(0));
-    discovery->addParameter(FSPGM(mqtt_brightness_state_topic), _data.brightness.state);
-    discovery->addParameter(FSPGM(mqtt_brightness_command_topic), _data.brightness.set);
-    discovery->addParameter(FSPGM(mqtt_brightness_scale), String(IOT_ATOMIC_SUN_MAX_BRIGHTNESS));
+    discovery->addStateTopic(_data.state.state);
+    discovery->addCommandTopic(_data.state.set);
+    discovery->addPayloadOn(FSPGM(1));
+    discovery->addPayloadOff(FSPGM(0));
+    discovery->addBrightnessStateTopic(_data.brightness.state);
+    discovery->addBrightnessCommandTopic(_data.brightness.set);
+    discovery->addBrightnessScale(IOT_ATOMIC_SUN_MAX_BRIGHTNESS);
     discovery->addParameter(FSPGM(mqtt_color_temp_state_topic), _data.color.state);
     discovery->addParameter(FSPGM(mqtt_color_temp_command_topic), _data.color.set);
     discovery->finalize();
@@ -180,7 +172,7 @@ void Driver_4ChDimmer::begin() {
     _debug_printf_P(PSTR("Driver_4ChDimmer::begin()\n"));
 #if AT_MODE_SUPPORTED
     disable_at_mode(Serial);
-    if (IOT_ATOMIC_SUN_BAUD_RATE != 115200) {
+    if (IOT_ATOMIC_SUN_BAUD_RATE != KFC_SERIAL_RATE) {
         Serial.flush();
         Serial.begin(IOT_ATOMIC_SUN_BAUD_RATE);
     }
@@ -207,9 +199,9 @@ void Driver_4ChDimmer::end() {
 #if SERIAL_HANDLER
     serialHandler.removeHandler(onData);
 #endif
-    if (IOT_ATOMIC_SUN_BAUD_RATE != 115200) {
+    if (IOT_ATOMIC_SUN_BAUD_RATE != KFC_SERIAL_RATE) {
         Serial.flush();
-        Serial.begin(115200);
+        Serial.begin(KFC_SERIAL_RATE);
     }
 #if AT_MODE_SUPPORTED
     enable_at_mode(Serial);
@@ -424,7 +416,38 @@ void Driver_4ChDimmer::setup() {
 }
 
 
-void dimmer_module_reconfigure(PGM_P source) {
+class AtomicSunPlugin : public PluginComponent, public DimmerModuleForm {
+public:
+    AtomicSunPlugin() {
+        register_plugin(this);
+    }    
+    PGM_P getName() const;
+    PluginPriorityEnum_t getSetupPriority() const override;
+    void setup(PluginSetupMode_t mode) override;
+    void reconfigure(PGM_P source) override;
+    bool hasReconfigureDependecy(PluginComponent *plugin) const override;
+    bool hasStatus() const override;
+    const String getStatus() override;
+
+    using DimmerModuleForm::canHandleForm;
+    using DimmerModuleForm::createConfigureForm;
+};
+
+static AtomicSunPlugin plugin; 
+
+PGM_P AtomicSunPlugin::getName() const {
+    return PSTR("atomicsun");
+}
+
+AtomicSunPlugin::PluginPriorityEnum_t AtomicSunPlugin::getSetupPriority() const {
+    return PRIO_LOW;
+}
+
+void AtomicSunPlugin::setup(PluginSetupMode_t mode) {
+    Driver_4ChDimmer::setup();
+}
+
+void AtomicSunPlugin::reconfigure(PGM_P source) {
     if (!source) {
         auto dimmer = Driver_4ChDimmer::getInstance();
         if (dimmer) {
@@ -436,21 +459,23 @@ void dimmer_module_reconfigure(PGM_P source) {
     }
 }
 
-PROGMEM_STRING_DECL(plugin_config_name_http);
+bool AtomicSunPlugin::hasReconfigureDependecy(PluginComponent *plugin) const {
+    return plugin->nameEquals(F("http"));
+}
 
-PROGMEM_PLUGIN_CONFIG_DEF(
-/* pluginName               */ atomicsun,
-/* setupPriority            */ 127,
-/* allowSafeMode            */ false,
-/* autoSetupWakeUp          */ false,
-/* rtcMemoryId              */ 0,
-/* setupPlugin              */ Driver_4ChDimmer::setup,
-/* statusTemplate           */ Driver_4ChDimmer::getStatus,
-/* configureForm            */ dimmer_module_create_settings_form,
-/* reconfigurePlugin        */ dimmer_module_reconfigure,
-/* reconfigure Dependencies */ SPGM(plugin_config_name_http),
-/* prepareDeepSleep         */ nullptr,
-/* atModeCommandHandler     */ nullptr
-);
+bool AtomicSunPlugin::hasStatus() const {
+    return true;
+}
+
+const String AtomicSunPlugin::getStatus() {
+    return Driver_4ChDimmer::getStatus;
+}
+
+bool AtomicSunPlugin::canHandleForm(const String &formName) const {
+    return true;
+}
+
+void AtomicSunPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form) {
+}
 
 #endif

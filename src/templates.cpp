@@ -121,10 +121,9 @@ String WebTemplate::process(const String &key) {
         }
     } else if (key.endsWith(F("_STATUS"))) {
         uint8_t cmp_length = key.length() - 7;
-        for(auto &plugin: plugins) {
-            auto callback = plugin.getStatusTemplate();
-            if (callback && strncasecmp_P(key.c_str(), plugin.getPluginNamePSTR(), cmp_length) == 0) {
-                return callback();
+        for(auto plugin: plugins) {
+            if (plugin->hasStatus() && strncasecmp_P(key.c_str(), plugin->getName(), cmp_length) == 0) {
+                return plugin->getStatus();
             }
         }
         _return(FSPGM(Not_supported));

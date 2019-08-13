@@ -92,10 +92,6 @@ void syslog_setup() {
     syslog_setup_logger();
 }
 
-void syslog_reconfigure(PGM_P source) {
-    syslog_setup();
-}
-
 void syslog_process_queue() {
     static MillisTimer timer(1000UL);
     if (timer.reached()) {
@@ -115,7 +111,55 @@ void syslog_process_queue() {
     }
 }
 
-const String syslog_get_status() {
+class SyslogPlugin : public PluginComponent {
+public:
+    SyslogPlugin() {
+        register_plugin(this);
+    }
+    PGM_P getName() const;
+    PluginPriorityEnum_t getSetupPriority() const override;
+    bool autoSetupAfterDeepSleep() const override;
+    void setup(PluginSetupMode_t mode) override;
+    void reconfigure(PGM_P source) override;
+    bool hasStatus() const override;
+    const String getStatus() override;
+    bool canHandleForm(const String &formName) const override;
+    void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
+    void prepareDeepSleep(uint32_t sleepTimeMillis) override;
+#if AT_MODE_SUPPORTED
+    bool hasAtMode() const override;
+    void atModeHelpGenerator() override;
+    bool atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) override;
+#endif
+};
+
+static SyslogPlugin plugin; 
+
+PGM_P SyslogPlugin::getName() const {
+    return PSTR("syslog");
+}
+
+SyslogPlugin::PluginPriorityEnum_t SyslogPlugin::getSetupPriority() const {
+    return (PluginPriorityEnum_t)PRIO_SYSLOG;
+}
+
+bool SyslogPlugin::autoSetupAfterDeepSleep() const {
+    return true;
+}
+
+void SyslogPlugin::setup(PluginSetupMode_t mode) {
+    syslog_setup();
+}
+
+void SyslogPlugin::reconfigure(PGM_P source) {
+    syslog_setup();
+}
+
+bool SyslogPlugin::hasStatus() const {
+    return true;
+}
+
+const String SyslogPlugin::getStatus() {
 #if SYSLOG
     PrintHtmlEntitiesString out;
     switch(config._H_GET(Config().flags).syslogProtocol) {
@@ -141,7 +185,11 @@ const String syslog_get_status() {
 #endif
 }
 
-void syslog_create_settings_form(AsyncWebServerRequest *request, Form &form) {
+bool SyslogPlugin::canHandleForm(const String &formName) const {
+    return true;
+}
+
+void SyslogPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form) {
 
     form.add<uint8_t>(F("syslog_enabled"), _H_STRUCT_FORMVALUE(Config().flags, uint8_t, syslogProtocol));
     form.addValidator(new FormRangeValidator(SYSLOG_PROTOCOL_NONE, SYSLOG_PROTOCOL_FILE));
@@ -162,6 +210,30 @@ void syslog_create_settings_form(AsyncWebServerRequest *request, Form &form) {
     form.finalize();
 }
 
+void SyslogPlugin::prepareDeepSleep(uint32_t sleepTimeMillis) {
+    uint16_t defaultWaitTime = 250;
+    if (sleepTimeMillis > 60e3) {  // longer than 1min, increase wait time
+        defaultWaitTime *= 4;
+    }
+
+#if DEBUG_USE_SYSLOG
+    if (debugSyslog) {
+        ulong timeout = millis() + defaultWaitTime * 8;    // long timeout in debug mode
+        while(debugSyslog->hasQueuedMessages() && millis() < timeout) {
+            debugSyslog->deliverQueue();
+            delay(1);
+        }
+    }
+#endif
+    if (syslog) {
+        ulong timeout = millis() + defaultWaitTime;
+        while(syslog->hasQueuedMessages() && millis() < timeout) {
+            syslog->deliverQueue();
+            delay(1);
+        }
+    }
+}
+
 #if AT_MODE_SUPPORTED
 
 #include "at_mode.h"
@@ -174,15 +246,18 @@ void print_syslog_disabled(Stream &output) {
     output.println(F("+SQx: Syslog is disabled"));
 }
 
-bool syslog_at_mode_command_handler(Stream &serial, const String &command, int8_t argc, char **argv) {
+bool SyslogPlugin::hasAtMode() const {
+    return true;
+}
 
-    if (command.length() == 0) {
+void SyslogPlugin::atModeHelpGenerator() {
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SQC));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SQI));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SQD));
+}
 
-        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SQC));
-        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SQI));
-        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SQD));
-
-    } else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SQC))) {
+bool SyslogPlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) {
+    if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SQC))) {
         if (syslog) {
             syslog->getQueue()->clear();
             serial.println(F("+SQC: Queue cleared"));
@@ -220,45 +295,5 @@ bool syslog_at_mode_command_handler(Stream &serial, const String &command, int8_
 }
 
 #endif
-
-void syslog_prepare_deep_sleep(uint32_t time, RFMode mode) {
-
-    uint16_t defaultWaitTime = 250;
-    if (time > 60e3) {  // longer than 1min, increase wait time
-        defaultWaitTime *= 4;
-    }
-
-#if DEBUG_USE_SYSLOG
-    if (debugSyslog) {
-        ulong timeout = millis() + defaultWaitTime * 8;    // long timeout in debug mode
-        while(debugSyslog->hasQueuedMessages() && millis() < timeout) {
-            debugSyslog->deliverQueue();
-            delay(1);
-        }
-    }
-#endif
-    if (syslog) {
-        ulong timeout = millis() + defaultWaitTime;
-        while(syslog->hasQueuedMessages() && millis() < timeout) {
-            syslog->deliverQueue();
-            delay(1);
-        }
-    }
-}
-
-PROGMEM_PLUGIN_CONFIG_DEF(
-/* pluginName               */ syslog,
-/* setupPriority            */ PLUGIN_PRIO_SYSLOG,
-/* allowSafeMode            */ false,
-/* autoSetupWakeUp          */ true,
-/* rtcMemoryId              */ 0,
-/* setupPlugin              */ syslog_setup,
-/* statusTemplate           */ syslog_get_status,
-/* configureForm            */ syslog_create_settings_form,
-/* reconfigurePlugin        */ syslog_reconfigure,
-/* reconfigure Dependencies */ nullptr,
-/* prepareDeepSleep         */ syslog_prepare_deep_sleep,
-/* atModeCommandHandler     */ syslog_at_mode_command_handler
-);
 
 #endif

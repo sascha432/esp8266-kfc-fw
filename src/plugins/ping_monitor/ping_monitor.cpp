@@ -25,16 +25,6 @@
 
 PingMonitorTask *pingMonitorTask = nullptr;
 
-const String ping_monitor_get_status() {
-    if (pingMonitorTask) {
-        PrintHtmlEntitiesString out;
-        pingMonitorTask->printStats(out);
-        return out;
-    } else {
-        return FSPGM(Disabled);
-    }
-}
-
 void ping_monitor_event_handler(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len) {
     WsPingClient::onWsEvent(server, client, (int)type, data, len, arg, WsPingClient::getInstance);
 }
@@ -209,106 +199,6 @@ String ping_monitor_get_translated_host(String host) {
     return host;
 }
 
-void ping_monitor_create_settings_form(AsyncWebServerRequest *request, Form &form) {
-
-    form.add<sizeof Config().ping.host1>(F("ping_host1"), config._H_W_STR(Config().ping.host1));
-    form.addValidator(new FormValidHostOrIpValidator(true));
-
-    form.add<sizeof Config().ping.host2>(F("ping_host2"), config._H_W_STR(Config().ping.host2));
-    form.addValidator(new FormValidHostOrIpValidator(true));
-
-    form.add<sizeof Config().ping.host3>(F("ping_host3"), config._H_W_STR(Config().ping.host3));
-    form.addValidator(new FormValidHostOrIpValidator(true));
-
-    form.add<sizeof Config().ping.host4>(F("ping_host4"), config._H_W_STR(Config().ping.host4));
-    form.addValidator(new FormValidHostOrIpValidator(true));
-
-    form.add<uint16_t>(F("ping_interval"), &config._H_W_GET(Config().ping.interval));
-    form.addValidator(new FormRangeValidator(0, 65535));
-
-    form.add<uint8_t>(F("ping_count"), &config._H_W_GET(Config().ping.count));
-    form.addValidator(new FormRangeValidator(0, 255));
-
-    form.add<uint16_t>(F("ping_timeout"), &config._H_W_GET(Config().ping.timeout));
-    form.addValidator(new FormRangeValidator(0, 65535));
-
-    form.finalize();
-}
-
-#if AT_MODE_SUPPORTED
-
-#include "at_mode.h"
-
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PING, "PING", "<target[,count=4[,timeout=5000]]>", "Ping host or IP address");
-
-bool ping_monitor_at_mode_command_handler(Stream &serial, const String &command, int8_t argc, char **argv) {
-    static AsyncPing *_ping = nullptr;
-
-    if (command.length() == 0) {
-
-        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(PING));
-
-    } else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(PING))) {
-
-        if (argc < 1) {
-            at_mode_print_invalid_arguments(serial);
-        } else {
-            char *host = argv[0];
-            IPAddress addr;
-            PrintString message;
-            if (_ping) {
-                _debug_println(F("ping_monitor: previous ping cancelled"));
-                _ping->cancel();
-            }
-            if (ping_monitor_resolve_host(host, addr, message)) {
-                int count = 0;
-                int timeout = 0;
-                if (argc >= 2) {
-                    count = atoi(argv[1]);
-                    if (argc >= 3) {
-                        timeout = atoi(argv[2]);
-                    }
-                }
-                if (!_ping) {
-                    _ping = new AsyncPing();
-                    _ping->on(true, [&serial](const AsyncPingResponse &response) {
-                        IPAddress addr(response.addr);
-                        if (response.answer) {
-                            serial.printf_P(SPGM(ping_monitor_response), response.size, addr.toString().c_str(), response.icmp_seq, response.ttl, response.time);
-                            serial.println();
-                        } else {
-                            serial.println(FSPGM(ping_monitor_request_timeout));
-                        }
-                        return false;
-                    });
-                    _ping->on(false, [&serial](const AsyncPingResponse &response) {
-                        IPAddress addr(response.addr);
-                        serial.printf_P(SPGM(ping_monitor_end_response), addr.toString().c_str(), response.total_sent, response.total_recv, response.total_time);
-                        serial.println();
-                        if (response.mac) {
-                            serial.printf_P(SPGM(ping_monitor_ethernet_detected), mac2String(response.mac->addr).c_str());
-                            serial.println();
-                        }
-                        delete _ping;
-                        _ping = nullptr;
-                        return true;
-                    });
-                }
-                ping_monitor_begin(_ping, host, addr, count, timeout, message);
-                serial.println(message);
-
-            } else {
-                serial.println(message);
-            }
-        }
-        return true;
-
-    }
-    return false;
-}
-
-#endif
-
 void ping_monitor_loop_function() {
     if (pingMonitorTask && pingMonitorTask->isNext()) {
         pingMonitorTask->begin();
@@ -450,25 +340,169 @@ void ping_monitor_setup() {
     }
 }
 
-void ping_monitor_reconfigure(PGM_P source) {
+class PingMonitorPlugin : public PluginComponent {
+public:
+    PingMonitorPlugin() {
+        register_plugin(this);
+    }
+    PGM_P getName() const;
+    PluginPriorityEnum_t getSetupPriority() const override;
+    void setup(PluginSetupMode_t mode) override;
+    void reconfigure(PGM_P source) override;
+    bool hasReconfigureDependecy(PluginComponent *plugin) const override;
+    bool hasStatus() const override;
+    const String getStatus() override;
+    bool canHandleForm(const String &formName) const override;
+    void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
+#if AT_MODE_SUPPORTED
+    bool hasAtMode() const override;
+    void atModeHelpGenerator() override;
+    bool atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) override;
+#endif
+};
+
+static PingMonitorPlugin plugin; 
+
+PGM_P PingMonitorPlugin::getName() const {
+    return PSTR("pingmon");
+}
+
+PingMonitorPlugin::PluginPriorityEnum_t PingMonitorPlugin::getSetupPriority() const {
+    return (PluginPriorityEnum_t)100;
+}
+
+void PingMonitorPlugin::setup(PluginSetupMode_t mode) {
     ping_monitor_setup();
 }
 
-PROGMEM_STRING_DECL(plugin_config_name_http);
+void PingMonitorPlugin::reconfigure(PGM_P source) {
+    ping_monitor_setup();
+}
 
-PROGMEM_PLUGIN_CONFIG_DEF(
-/* pluginName               */ pingmon,
-/* setupPriority            */ 100,
-/* allowSafeMode            */ false,
-/* autoSetupWakeUp          */ false,
-/* rtcMemoryId              */ 0,
-/* setupPlugin              */ ping_monitor_setup,
-/* statusTemplate           */ ping_monitor_get_status,
-/* configureForm            */ ping_monitor_create_settings_form,
-/* reconfigurePlugin        */ ping_monitor_reconfigure,
-/* reconfigure Dependencies */ SPGM(plugin_config_name_http),
-/* prepareDeepSleep         */ nullptr,
-/* atModeCommandHandler     */ ping_monitor_at_mode_command_handler
-);
+bool PingMonitorPlugin::hasReconfigureDependecy(PluginComponent *plugin) const {
+    return plugin->nameEquals(F("http"));
+}
+
+bool PingMonitorPlugin::hasStatus() const {
+    return true;
+}
+
+const String PingMonitorPlugin::getStatus() {
+    if (pingMonitorTask) {
+        PrintHtmlEntitiesString out;
+        pingMonitorTask->printStats(out);
+        return out;
+    } else {
+        return FSPGM(Disabled);
+    }
+}
+
+bool PingMonitorPlugin::canHandleForm(const String &formName) const {
+    return nameEquals(formName);
+}
+
+void PingMonitorPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form) {
+
+    form.add<sizeof Config().ping.host1>(F("ping_host1"), config._H_W_STR(Config().ping.host1));
+    form.addValidator(new FormValidHostOrIpValidator(true));
+
+    form.add<sizeof Config().ping.host2>(F("ping_host2"), config._H_W_STR(Config().ping.host2));
+    form.addValidator(new FormValidHostOrIpValidator(true));
+
+    form.add<sizeof Config().ping.host3>(F("ping_host3"), config._H_W_STR(Config().ping.host3));
+    form.addValidator(new FormValidHostOrIpValidator(true));
+
+    form.add<sizeof Config().ping.host4>(F("ping_host4"), config._H_W_STR(Config().ping.host4));
+    form.addValidator(new FormValidHostOrIpValidator(true));
+
+    form.add<uint16_t>(F("ping_interval"), &config._H_W_GET(Config().ping.interval));
+    form.addValidator(new FormRangeValidator(0, 65535));
+
+    form.add<uint8_t>(F("ping_count"), &config._H_W_GET(Config().ping.count));
+    form.addValidator(new FormRangeValidator(0, 255));
+
+    form.add<uint16_t>(F("ping_timeout"), &config._H_W_GET(Config().ping.timeout));
+    form.addValidator(new FormRangeValidator(0, 65535));
+
+    form.finalize();
+}
+
+#if AT_MODE_SUPPORTED
+
+#include "at_mode.h"
+
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PING, "PING", "<target[,count=4[,timeout=5000]]>", "Ping host or IP address");
+
+bool PingMonitorPlugin::hasAtMode() const {
+    return true;
+}
+
+void PingMonitorPlugin::atModeHelpGenerator() {
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(PING));
+}
+
+bool PingMonitorPlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) {
+    static AsyncPing *_ping = nullptr;
+
+    if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(PING))) {
+
+        if (argc < 1) {
+            at_mode_print_invalid_arguments(serial);
+        } else {
+            char *host = argv[0];
+            IPAddress addr;
+            PrintString message;
+            if (_ping) {
+                _debug_println(F("ping_monitor: previous ping cancelled"));
+                _ping->cancel();
+            }
+            if (ping_monitor_resolve_host(host, addr, message)) {
+                int count = 0;
+                int timeout = 0;
+                if (argc >= 2) {
+                    count = atoi(argv[1]);
+                    if (argc >= 3) {
+                        timeout = atoi(argv[2]);
+                    }
+                }
+                if (!_ping) {
+                    _ping = new AsyncPing();
+                    _ping->on(true, [&serial](const AsyncPingResponse &response) {
+                        IPAddress addr(response.addr);
+                        if (response.answer) {
+                            serial.printf_P(SPGM(ping_monitor_response), response.size, addr.toString().c_str(), response.icmp_seq, response.ttl, response.time);
+                            serial.println();
+                        } else {
+                            serial.println(FSPGM(ping_monitor_request_timeout));
+                        }
+                        return false;
+                    });
+                    _ping->on(false, [&serial](const AsyncPingResponse &response) {
+                        IPAddress addr(response.addr);
+                        serial.printf_P(SPGM(ping_monitor_end_response), addr.toString().c_str(), response.total_sent, response.total_recv, response.total_time);
+                        serial.println();
+                        if (response.mac) {
+                            serial.printf_P(SPGM(ping_monitor_ethernet_detected), mac2String(response.mac->addr).c_str());
+                            serial.println();
+                        }
+                        delete _ping;
+                        _ping = nullptr;
+                        return true;
+                    });
+                }
+                ping_monitor_begin(_ping, host, addr, count, timeout, message);
+                serial.println(message);
+
+            } else {
+                serial.println(message);
+            }
+        }
+        return true;
+
+    }
+    return false;
+}
+
+#endif
 
 #endif

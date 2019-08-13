@@ -83,25 +83,6 @@ AsyncWebServer *get_web_server_object() {
     return server;
 }
 
-const String web_server_get_status() {
-    auto flags = config._H_GET(Config().flags);
-    PrintString out = F("Web server ");
-    if (flags.webServerMode != HTTP_MODE_DISABLED) {
-        out.printf_P(PSTR("running on port %u"), config._H_GET(Config().http_port));
-        #if WEBSERVER_TLS_SUPPORT
-            out.print(F(", TLS "));
-            if (flags.webServerMode == HTTP_MODE_SECURE) {
-                out += FSPGM(enabled);
-            } else {
-                out += FSPGM(disabled);
-            }
-        #endif
-    } else {
-        out += FSPGM(disabled);
-    }
-    return out;
-}
-
 // #if LOGGER
 // void MyAsyncWebServerRequest::send(AsyncWebServerResponse *response) {
 //     uint32_t remoteAddr =  client()->getRemoteAddress();
@@ -410,14 +391,6 @@ void init_web_server() {
     _debug_printf_P(PSTR("HTTP running on port %u\n"), config._H_GET(Config().http_port));
 }
 
-void web_server_reconfigure(PGM_P source) {
-    if (server) {
-        delete server;
-        server = nullptr;
-    }
-    init_web_server();
-}
-
 PGM_P web_server_get_content_type(const String &path) {
 
     const char *cPath = path.c_str();
@@ -482,14 +455,11 @@ bool web_server_send_file(String path, HttpHeaders &httpHeaders, bool client_acc
 
     if (webTemplate == nullptr) {
         if (path.charAt(0) == '/' && constexpr_endsWith(path, PSTR(".html"))) {
-            auto plugin = get_plugin_by_form(path.substring(1, path.length() - 5));
+            auto plugin = PluginComponent::getForm(path.substring(1, path.length() - 5));
             if (plugin) {
-                auto callback = plugin->getConfigureForm();
-                if (callback) {
-                    Form *form = _debug_new SettingsForm(nullptr);
-                    callback(nullptr, *form);
-                    webTemplate = _debug_new ConfigTemplate(form);
-                }
+                Form *form = _debug_new SettingsForm(nullptr);
+                plugin->createConfigureForm(nullptr, *form);
+                webTemplate = _debug_new ConfigTemplate(form);
             }
         }
         if (webTemplate == nullptr) {
@@ -616,19 +586,16 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
         httpHeaders.addNoCache(true);
 
         if (path.charAt(0) == '/' && constexpr_endsWith(path, PSTR(".html"))) {
-            auto plugin = get_plugin_by_form(path.substring(1, path.length() - 5));
+            auto plugin = PluginComponent::getForm(path.substring(1, path.length() - 5));
             if (plugin) {
-                auto callback = plugin->getConfigureForm();
-                if (callback) {
-                    Form *form = new SettingsForm(request);
-                    callback(request, *form);
-                    webTemplate = new ConfigTemplate(form);
-                    if (form->validate()) {
-                        config.write();
-                        plugin->callReconfigurePlugin(nullptr);
-                    } else {
-                        config.clear();
-                    }
+                Form *form = new SettingsForm(request);
+                plugin->createConfigureForm(request, *form);
+                webTemplate = new ConfigTemplate(form);
+                if (form->validate()) {
+                    config.write();
+                    plugin->invokeReconfigure(nullptr);
+                } else {
+                    config.clear();
                 }
             }
         }
@@ -639,7 +606,7 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
                 if (form->validate()) {
                     config.write();
                     config.setConfigDirty(true);
-                    get_plugin_by_name(PSTR("cfg"))->callReconfigureSystem(PSTR("wifi"));
+                    PluginComponent::getByName(PSTR("cfg"))->invokeReconfigure(PSTR("wifi"));
                 } else {
                     config.clear();
                 }
@@ -649,7 +616,7 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
                 if (form->validate()) {
                     config.write();
                     config.setConfigDirty(true);
-                    get_plugin_by_name(PSTR("cfg"))->callReconfigureSystem(PSTR("network"));
+                    PluginComponent::getByName(PSTR("cfg"))->invokeReconfigure(PSTR("network"));
                 } else {
                     config.clear();
                 }
@@ -660,7 +627,7 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
                     auto &flags = config._H_W_GET(Config().flags);
                     flags.isDefaultPassword = false;
                     config.write();
-                    get_plugin_by_name(PSTR("cfg"))->callReconfigureSystem(PSTR("password"));
+                    PluginComponent::getByName(PSTR("cfg"))->invokeReconfigure(PSTR("password"));
                 } else {
                     config.clear();
                 }
@@ -694,7 +661,80 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
     return web_server_send_file(path, httpHeaders, client_accepts_gzip, mapping, request, webTemplate);
 }
 
-void web_server_create_settings_form(AsyncWebServerRequest *request, Form &form) {
+class WebServerPlugin : public PluginComponent {
+public:
+    WebServerPlugin() {
+        register_plugin(this);
+    }
+    PGM_P getName() const;
+    PluginPriorityEnum_t getSetupPriority() const override;
+    bool allowSafeMode() const override;
+    void setup(PluginSetupMode_t mode) override;
+    void reconfigure(PGM_P source) override;
+    bool hasReconfigureDependecy(PluginComponent *plugin) const override;
+    bool hasStatus() const override;
+    const String getStatus() override;
+    bool canHandleForm(const String &formName) const override;
+    void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
+};
+
+static WebServerPlugin plugin; 
+
+PGM_P WebServerPlugin::getName() const {
+    return PSTR("http");
+}
+
+WebServerPlugin::PluginPriorityEnum_t WebServerPlugin::getSetupPriority() const {
+    return PRIO_HTTP;
+}
+
+bool WebServerPlugin::allowSafeMode() const {
+    return true;
+}
+
+void WebServerPlugin::setup(PluginSetupMode_t mode) {
+    init_web_server();
+}
+
+void WebServerPlugin::reconfigure(PGM_P source) {
+    if (server) {
+        delete server;
+        server = nullptr;
+    }
+    init_web_server();
+}
+
+bool WebServerPlugin::hasReconfigureDependecy(PluginComponent *plugin) const {
+    return false;
+}
+
+bool WebServerPlugin::hasStatus() const {
+    return true;
+}
+const String WebServerPlugin::getStatus() {
+    auto flags = config._H_GET(Config().flags);
+    PrintString out = F("Web server ");
+    if (flags.webServerMode != HTTP_MODE_DISABLED) {
+        out.printf_P(PSTR("running on port %u"), config._H_GET(Config().http_port));
+        #if WEBSERVER_TLS_SUPPORT
+            out.print(F(", TLS "));
+            if (flags.webServerMode == HTTP_MODE_SECURE) {
+                out += FSPGM(enabled);
+            } else {
+                out += FSPGM(disabled);
+            }
+        #endif
+    } else {
+        out += FSPGM(disabled);
+    }
+    return out;
+}
+
+bool WebServerPlugin::canHandleForm(const String &formName) const {
+    return formName.equals(F("remote"));
+}
+
+void WebServerPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form) {
 
     form.add<uint8_t>(F("http_enabled"), _H_STRUCT_FORMVALUE(Config().flags, uint8_t, webServerMode));
     form.addValidator(new FormRangeValidator(0, HTTP_MODE_SECURE));
@@ -733,20 +773,5 @@ void web_server_create_settings_form(AsyncWebServerRequest *request, Form &form)
 
     form.finalize();
 }
-
-PROGMEM_PLUGIN_CONFIG_DEF(
-/* pluginName               */ http,
-/* setupPriority            */ PLUGIN_PRIO_HTTP,
-/* allowSafeMode            */ true,
-/* autoSetupWakeUp          */ false,
-/* rtcMemoryId              */ 0,
-/* setupPlugin              */ init_web_server,
-/* statusTemplate           */ web_server_get_status,
-/* configureForm            */ web_server_create_settings_form,
-/* reconfigurePlugin        */ web_server_reconfigure,
-/* reconfigure Dependencies */ nullptr,
-/* prepareDeepSleep         */ nullptr,
-/* atModeCommandHandler     */ nullptr
-);
 
 #endif

@@ -23,6 +23,11 @@
 #endif
 #endif
 
+// enable callbacks for QoS. onSubscribe(), onPublish() and onUnsubscribe()
+#ifndef MQTT_USE_PACKET_CALLBACKS
+#define MQTT_USE_PACKET_CALLBACKS           0
+#endif
+
 #include <Arduino_compat.h>
 #include <AsyncMqttClient.h>
 #include <Buffer.h>
@@ -46,6 +51,7 @@ public:
 
     typedef struct {
         MQTTQueueEnum_t type;
+        MQTTComponent *component;
         String topic;
         uint8_t qos: 2;
         uint8_t retain: 1;
@@ -88,8 +94,16 @@ public:
     void subscribe(MQTTComponent *component, const String &topic, uint8_t qos);
     void unsubscribe(MQTTComponent *component, const String &topic);
     void remove(MQTTComponent *component);
-
     void publish(const String &topic, uint8_t qos, bool retain, const String &payload);
+
+    // return values
+    // 0: failed to send
+    // -1: success, but nothing was sent (in particular for unsubscribe if another component is still subscribed to the same topic)
+    // for qos 1 and 2: >= 1 packet id, confirmation will be received by callbacks once delivered
+    // for qos 0: 1 = successfully delivered to tcp stack
+    int subscribeWithId(MQTTComponent *component, const String &topic, uint8_t qos);
+    int unsubscribeWithId(MQTTComponent *component, const String &topic);
+    int publishWithId(const String &topic, uint8_t qos, bool retain, const String &payload);
 
     static void setupInstance();
     static void deleteInstance();
@@ -111,24 +125,37 @@ public:
     void onDisconnect(AsyncMqttClientDisconnectReason reason);
     void onMessageRaw(char *topic, char *payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total);
     void onMessage(char *topic, char *payload, AsyncMqttClientMessageProperties properties, size_t len);
+
+#if MQTT_USE_PACKET_CALLBACKS
     void onPublish(uint16_t packetId);
     void onSubscribe(uint16_t packetId, uint8_t qos);
     void onUnsubscribe(uint16_t packetId);
+#endif
 
 private:
     void autoReconnect(uint32_t timeout);
 
-    bool _isTopicMatch(const char *topic, const char *match) const;
     const String _reasonToString(AsyncMqttClientDisconnectReason reason) const;
+
+    // match wild cards
+    bool _isTopicMatch(const char *topic, const char *match) const;
     // check if the topic is in use by another component
     bool _topicInUse(MQTTComponent *component, const String &topic);
-    // if subscribe/unsubscribe/publush fails cause of the tcp client's buffer being full, retry later. the payload can be quite large for auto discovery
+
+private:
+    // if subscribe/unsubscribe/publish fails cause of the tcp client's buffer being full, retry later
+    // the payload can be quite large for auto discovery for example
+    // messages might be delivered in a different sequence. use subscribe/unsubscribe/publishWithId for full control
+    // to deliver messages in sequence, use QoS and callbacks (onPublish() etc... requires MQTT_USE_PACKET_CALLBACKS=1)
     void _addQueue(MQTTQueue_t queue);
     // stop timer and clear queue
     void _clearQueue();
     // process queue
     void _queueTimerCallback(EventScheduler::TimerPtr timer);
     
+    MQTTQueueVector _queue;
+    EventScheduler::TimerPtr _queueTimer;
+
 public:
     static void queueTimerCallback(EventScheduler::TimerPtr timer);
 
@@ -140,8 +167,6 @@ private:
     uint8_t _useNodeId: 1;
     MQTTComponentVector _components;
     MQTTTopicVector _topics;
-    MQTTQueueVector _queue;
-    EventScheduler::TimerPtr _queueTimer;
     Buffer *_messageBuffer;
     String _lastWillTopic;
 

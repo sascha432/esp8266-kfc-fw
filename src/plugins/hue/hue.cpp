@@ -229,8 +229,6 @@ void hue_create_settings_form(AsyncWebServerRequest *request, Form &form) {
     form.finalize();
 }
 
-PROGMEM_STRING_DECL(plugin_config_name_http);
-
 PROGMEM_PLUGIN_CONFIG_DEF(
 /* pluginName               */ hue,
 /* setupPriority            */ 100,

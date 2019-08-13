@@ -97,7 +97,7 @@ bool safe_mode = false;
 
 void setup() {
 
-    Serial.begin(115200);
+    Serial.begin(KFC_SERIAL_RATE);
     DEBUG_HELPER_INIT();
 
 #if DEBUG_RESET_DETECTOR
@@ -129,7 +129,6 @@ void setup() {
         resetDetector.armTimer();
     }
     Serial.println(F("Booting KFC firmware..."));
-     register_all_plugins();
 
     if (resetDetector.hasWakeUpDetected()) {
         config.wakeUpFromDeepSleep();
@@ -271,7 +270,7 @@ void setup() {
         #endif
 
         prepare_plugins();
-        setup_plugins(PLUGIN_SETUP_SAFE_MODE);
+        setup_plugins(PluginComponent::PLUGIN_SETUP_SAFE_MODE);
 
     } else {
 
@@ -315,7 +314,7 @@ void setup() {
 #endif
 
         prepare_plugins();
-        setup_plugins(resetDetector.hasWakeUpDetected() ? PLUGIN_SETUP_AUTO_WAKE_UP : PLUGIN_SETUP_DEFAULT);
+        setup_plugins(resetDetector.hasWakeUpDetected() ? PluginComponent::PLUGIN_SETUP_AUTO_WAKE_UP : PluginComponent::PLUGIN_SETUP_DEFAULT);
     }
 }
 

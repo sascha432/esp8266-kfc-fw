@@ -17,8 +17,6 @@
 #include <debug_helper_disable.h>
 #endif
 
-#define DIMMER_COMPONENT SPGM(component_light)
-
 #include "../../trailing_edge_dimmer/src/dimmer_protocol.h"
 
 Driver_DimmerModule *Driver_DimmerModule::_dimmer = nullptr;
@@ -27,33 +25,39 @@ Driver_DimmerModule *Driver_DimmerModule::_dimmer = nullptr;
 Driver_DimmerModule::Driver_DimmerModule(HardwareSerial &serial) : _serial(serial) {
     _wire = new SerialTwoWire(serial);
     _wire->onReadSerial(SerialHandler::serialLoop);
+    _wire->begin(DIMMER_I2C_ADDRESS + 1);
+    _wire->onReceive(Driver_DimmerModule::onReceive);
 #else
 Driver_DimmerModule::Driver_DimmerModule() {
     _wire = &Wire;
     _wire->begin(IOT_DIMMER_MODULE_INTERFACE_SDA, IOT_DIMMER_MODULE_INTERFACE_SCL);
+    //_wire->begin(IOT_DIMMER_MODULE_INTERFACE_SDA, IOT_DIMMER_MODULE_INTERFACE_SCL, DIMMER_I2C_ADDRESS + 1);
     _wire->setClockStretchLimit(45000);
+
+    // ESP I2C does not support slave mode. Use timer to poll metrics instead
+    _timer = Scheduler.addTimer(30e3, true, Driver_DimmerModule::fetchMetrics);
 #endif
-    _wire->begin(DIMMER_I2C_ADDRESS + 1);
-    _wire->onReceive(Driver_DimmerModule::onReceive);
 
     // memset(&_channels, 0, sizeof(_channels));
     auto mqttClient = MQTTClient::getClient();
     if (mqttClient) {
+        mqttClient->setUseNodeId(true);
         for (uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
             _channels[i].setup(this, i);
             mqttClient->registerComponent(&_channels[i]);
         }
     }
-    // memset(&_data, 0, sizeof(_data));
-    // memset(&_stored, 0, sizeof(_stored));
-    _temperature = 0;
-    _vcc = 0;
     auto dimmer = config._H_GET(Config().dimmer);
     _fadeTime = dimmer.fade_time;
     _onOffFadeTime = dimmer.on_fade_time;
+    _temperature = 0;
+    _vcc = 0;
 }
 
 Driver_DimmerModule::~Driver_DimmerModule() {
+#if !IOT_DIMMER_MODULE_INTERFACE_UART
+    Scheduler.removeTimer(_timer);
+#endif    
     end();
     auto mqttClient = MQTTClient::getClient();
     if (mqttClient) {
@@ -76,12 +80,36 @@ void Driver_DimmerModule::createAutoDiscovery(MQTTAutoDiscovery::Format_t format
     }
 }
 
+void Driver_DimmerModule::onConnect(MQTTClient *client) {
+
+#if MQTT_AUTO_DISCOVERY
+    String topic = MQTTClient::formatTopic(-1, F("/metrics/"));
+    MQTTComponentHelper component(MQTTComponent::SENSOR);
+
+    component.setNumber(IOT_DIMMER_MODULE_CHANNELS);
+    auto discovery = component.createAutoDiscovery();
+    discovery->addStateTopic(topic + F("temperature"));
+    discovery->addUnitOfMeasurement(F("°C"));
+    discovery->finalize();
+    client->publish(discovery->getTopic(), MQTTClient::getDefaultQos(), true, discovery->getPayload());
+    delete discovery;
+
+    component.setNumber(IOT_DIMMER_MODULE_CHANNELS + 1);
+    discovery = component.createAutoDiscovery();
+    discovery->addStateTopic(topic + F("vcc"));
+    discovery->addUnitOfMeasurement(F("V"));
+    discovery->finalize();
+    client->publish(discovery->getTopic(), MQTTClient::getDefaultQos(), true, discovery->getPayload());
+    delete discovery;
+#endif
+}
+
 void Driver_DimmerModule::begin() {
     _debug_printf_P(PSTR("Driver_DimmerModule::begin()\n"));
 #if IOT_DIMMER_MODULE_INTERFACE_UART
     #if AT_MODE_SUPPORTED
         disable_at_mode(Serial);
-        if (IOT_DIMMER_MODULE_BAUD_RATE != 115200) {
+        if (IOT_DIMMER_MODULE_BAUD_RATE != KFC_SERIAL_RATE) {
             Serial.flush();
             Serial.begin(IOT_DIMMER_MODULE_BAUD_RATE);
         }
@@ -99,9 +127,9 @@ void Driver_DimmerModule::end() {
     #if SERIAL_HANDLER
         serialHandler.removeHandler(onData);
     #endif
-        if (IOT_DIMMER_MODULE_BAUD_RATE != 115200) {
+        if (IOT_DIMMER_MODULE_BAUD_RATE != KFC_SERIAL_RATE) {
             Serial.flush();
-            Serial.begin(115200);
+            Serial.begin(KFC_SERIAL_RATE);
         }
     #if AT_MODE_SUPPORTED
         enable_at_mode(Serial);
@@ -185,6 +213,50 @@ void Driver_DimmerModule::_fade(uint8_t channel, int16_t toLevel, float fadeTime
     endTransmission();
 }
 
+// store brightness in EEPROM
+void Driver_DimmerModule::_writeState() {
+    _debug_printf_P(PSTR("Driver_DimmerModule::_writeState()\n"));
+    _wire->beginTransmission(DIMMER_I2C_ADDRESS);
+    _wire->write(DIMMER_REGISTER_COMMAND);
+    _wire->write(DIMMER_COMMAND_WRITE_EEPROM);
+    endTransmission();
+}
+
+// get brightness values from dimmer
+void Driver_DimmerModule::_getChannels() {
+    _debug_printf_P(PSTR("Driver_DimmerModule::_getChannels()\n"));
+
+    _wire->beginTransmission(DIMMER_I2C_ADDRESS);
+    _wire->write(DIMMER_REGISTER_COMMAND);
+    _wire->write(DIMMER_COMMAND_READ_CHANNELS);
+    _wire->write(IOT_DIMMER_MODULE_CHANNELS << 4);
+    int16_t level;
+    const int len = IOT_DIMMER_MODULE_CHANNELS * sizeof(level);
+    if (endTransmission() == 0 && _wire->requestFrom(DIMMER_I2C_ADDRESS, len) == len) {
+        for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
+            _wire->readBytes(reinterpret_cast<uint8_t *>(&level), sizeof(level));
+            _channels[i].setLevel(level);
+        }
+#if DEBUG_IOT_DIMMER_MODULE
+        String str;
+        for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
+            str += String(_channels[i].getLevel());
+            str += ' ';
+        }
+        _debug_printf_P(PSTR("Driver_DimmerModule::_getChannels(): %s\n"), str.c_str());
+#endif
+    }
+}
+
+#if IOT_DIMMER_MODULE_INTERFACE_UART
+
+void Driver_DimmerModule::onData(uint8_t type, const uint8_t *buffer, size_t len) {
+    _debug_printf_P(PSTR("Driver_DimmerModule::onData(): length %u\n"), len);
+    while(len--) {
+        _dimmer->_wire->feed(*buffer++);
+    }
+}
+
 void Driver_DimmerModule::onReceive(int length) {
     // _debug_printf_P(PSTR("Driver_DimmerModule::onReceive(%u)\n"), length);
     _dimmer->_onReceive(length);
@@ -220,58 +292,52 @@ void Driver_DimmerModule::_onReceive(int length) {
     }
 }
 
-// store brightness in EEPROM
-void Driver_DimmerModule::_writeState() {
-    _debug_printf_P(PSTR("Driver_DimmerModule::_writeState()\n"));
-    _wire->beginTransmission(DIMMER_I2C_ADDRESS);
-    _wire->write(DIMMER_REGISTER_COMMAND);
-    _wire->write(DIMMER_COMMAND_WRITE_EEPROM);
-    endTransmission();
-}
-
-// get brightness values from dimmer
-void Driver_DimmerModule::_getChannels() {
-    int16_t level;
-    _debug_printf_P(PSTR("Driver_DimmerModule::_getChannels()\n"));
-    _wire->beginTransmission(DIMMER_I2C_ADDRESS);
-    _wire->write(DIMMER_REGISTER_COMMAND);
-    _wire->write(DIMMER_COMMAND_READ_CHANNELS);
-    _wire->write(IOT_DIMMER_MODULE_CHANNELS << 4);
-    if (endTransmission() == 0 && _wire->requestFrom(DIMMER_I2C_ADDRESS, IOT_DIMMER_MODULE_CHANNELS * sizeof(level)) == IOT_DIMMER_MODULE_CHANNELS * sizeof(level)) {
-        for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
-            _wire->readBytes(reinterpret_cast<uint8_t *>(&level), sizeof(level));
-            _channels[i].setLevel(level);
-        }
-#if DEBUG_IOT_DIMMER_MODULE
-        String str;
-        for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
-            str += String(_channels[i].getLevel());
-            str += ' ';
-        }
-        _debug_printf_P(PSTR("Driver_DimmerModule::_getChannels(): %s\n"), str.c_str());
-#endif
-    }
-}
-
-#if IOT_DIMMER_MODULE_INTERFACE_UART
-
-void Driver_DimmerModule::onData(uint8_t type, const uint8_t *buffer, size_t len) {
-    _debug_printf_P(PSTR("Driver_DimmerModule::onData(): length %u\n"), len);
-    while(len--) {
-        _dimmer->_wire->feed(*buffer++);
-    }
-}
-
-#endif
-
-void Driver_DimmerModule::setup() {
-#if IOT_DIMMER_MODULE_INTERFACE_UART
-    _dimmer = _debug_new Driver_DimmerModule(Serial);
 #else
-    _dimmer = _debug_new Driver_DimmerModule();
+
+void Driver_DimmerModule::_fetchMetrics() {
+    float temp;
+    uint16_t vcc;
+
+    _wire->beginTransmission(DIMMER_I2C_ADDRESS);
+    _wire->write(DIMMER_REGISTER_COMMAND);
+    _wire->write(DIMMER_COMMAND_READ_INT_TEMP);
+    _wire->write(DIMMER_REGISTER_COMMAND);
+    _wire->write(DIMMER_COMMAND_READ_VCC);
+    _wire->write(DIMMER_REGISTER_READ_LENGTH);
+    const int len = sizeof(temp) + sizeof(vcc);
+    _wire->write(len);
+    _wire->write(DIMMER_REGISTER_TEMP);
+    if (endTransmission() == 0) {
+        delay(100);
+
+        if (_wire->requestFrom(DIMMER_I2C_ADDRESS, len) == len) {
+            _wire->readBytes(reinterpret_cast<uint8_t *>(&temp), sizeof(temp));
+            uint8_t temperature = temp;
+            debug_printf("%f %d\n", temp, temperature);
+            _wire->readBytes(reinterpret_cast<uint8_t *>(&vcc), sizeof(vcc));
+
+            _updateMetrics(temperature, vcc);
+        }
+    }
+}
+
 #endif
-    _dimmer->begin();
-    WsDimmerClient::setup();
+
+void Driver_DimmerModule::_updateMetrics(uint8_t temperature, uint16_t vcc) {
+    if (_temperature != temperature || _vcc != vcc) { // publish temp. or voltage if values have changed
+        _temperature = temperature;
+        _vcc = vcc;
+        auto client = MQTTClient::getClient();
+        if (client) {
+            String topic = MQTTClient::formatTopic(-1, F("/metrics/"));
+            if (_temperature) {
+                client->publish(topic + F("temperature"), MQTTClient::getDefaultQos(), 1, String(_temperature));
+            }
+            if (_vcc) {
+                client->publish(topic + F("vcc"), MQTTClient::getDefaultQos(), 1, String(_vcc / 1000.0, 3));
+            }
+        }
+    }
 }
 
 void Driver_DimmerModule::writeConfig() {
@@ -324,16 +390,14 @@ Driver_DimmerModule *Driver_DimmerModule::getInstance() {
     return _dimmer;
 }
 
-void dimmer_module_reconfigure(PGM_P source) {
-    auto dimmer = Driver_DimmerModule::getInstance();
-    if (dimmer) {
-        if (source == nullptr) {
-            dimmer->writeConfig();
-        } 
-        else {
-            WsDimmerClient::setup();
-        }
-    }
+void Driver_DimmerModule::setup() {
+#if IOT_DIMMER_MODULE_INTERFACE_UART
+    _dimmer = _debug_new Driver_DimmerModule(Serial);
+#else
+    _dimmer = _debug_new Driver_DimmerModule();
+#endif
+    _dimmer->begin();
+    WsDimmerClient::setup();
 }
 
 #if AT_MODE_SUPPORTED && !IOT_DIMMER_MODULE_INTERFACE_UART
@@ -348,15 +412,76 @@ void at_mode_dimmer_not_initialized(Stream &serial) {
     serial.println(F("Dimmer not initizialized"));
 }
 
-bool dimmer_module_at_mode_command_handler(Stream &serial, const String &command, int8_t argc, char **argv) {
-    if (command.length() == 0) {
+#endif
 
-        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DIMG));
-        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DIMS));
-        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DIMW));
+class DimmerModulePlugin : public PluginComponent, public DimmerModuleForm {
+public:
+    DimmerModulePlugin() {
+        register_plugin(this);
+    }
 
-    } 
-    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(DIMW))) {
+    PGM_P getName() const;
+
+    void setup(PluginSetupMode_t mode) override;
+    void reconfigure(PGM_P source) override;
+
+    using DimmerModuleForm::canHandleForm;
+    using DimmerModuleForm::createConfigureForm;
+
+    bool hasStatus() const override;
+    const String getStatus() override;
+
+#if AT_MODE_SUPPORTED && !IOT_DIMMER_MODULE_INTERFACE_UART
+    bool hasAtMode() const override;
+    void atModeHelpGenerator() override;
+    bool atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) override;
+#endif
+};
+
+static DimmerModulePlugin plugin;
+
+PGM_P DimmerModulePlugin::getName() const {
+    return PSTR("dimmer");
+}
+
+void DimmerModulePlugin::setup(PluginSetupMode_t mode) {
+    Driver_DimmerModule::setup();
+}
+
+void DimmerModulePlugin::reconfigure(PGM_P source) {
+    auto dimmer = Driver_DimmerModule::getInstance();
+    if (dimmer) {
+        if (source == nullptr) {
+            dimmer->writeConfig();
+        } 
+        else {
+            WsDimmerClient::setup();
+        }
+    }
+}
+
+bool DimmerModulePlugin::hasStatus() const {
+    return !!Driver_DimmerModule::getInstance();
+}
+
+const String DimmerModulePlugin::getStatus() {
+    return Driver_DimmerModule::getInstance()->getStatus();
+}
+
+#if AT_MODE_SUPPORTED && !IOT_DIMMER_MODULE_INTERFACE_UART
+
+bool DimmerModulePlugin::hasAtMode() const {
+    return true;
+}
+
+void DimmerModulePlugin::atModeHelpGenerator() {
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DIMG));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DIMS));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DIMW));
+}
+
+bool DimmerModulePlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) {
+    if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(DIMW))) {
         auto dimmer = Driver_DimmerModule::getInstance();
         if (!dimmer) {
             at_mode_dimmer_not_initialized(serial);
@@ -408,27 +533,5 @@ bool dimmer_module_at_mode_command_handler(Stream &serial, const String &command
 }
 
 #endif
-
-
-PROGMEM_STRING_DECL(plugin_config_name_http);
-
-PROGMEM_PLUGIN_CONFIG_DEF(
-/* pluginName               */ dimmer,
-/* setupPriority            */ 127,
-/* allowSafeMode            */ false,
-/* autoSetupWakeUp          */ false,
-/* rtcMemoryId              */ 0,
-/* setupPlugin              */ Driver_DimmerModule::setup,
-/* statusTemplate           */ Driver_DimmerModule::getStatus,
-/* configureForm            */ dimmer_module_create_settings_form,
-/* reconfigurePlugin        */ dimmer_module_reconfigure,
-/* reconfigure Dependencies */ SPGM(plugin_config_name_http),
-/* prepareDeepSleep         */ nullptr,
-#if IOT_DIMMER_MODULE_INTERFACE_UART
-/* atModeCommandHandler     */ nullptr
-#else
-/* atModeCommandHandler     */ dimmer_module_at_mode_command_handler
-#endif
-);
 
 #endif

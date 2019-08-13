@@ -157,8 +157,8 @@ void at_mode_help_commands() {
 void at_mode_generate_help(Stream &output) {
     // call handler to gather help for all commands
     at_mode_help_commands();
-    for(auto &plugin : plugins) {
-        plugin.callAtModeCommandHandler(output, String(), AT_MODE_QUERY_COMMAND, nullptr);
+    for(auto plugin : plugins) {
+        plugin->atModeHelpGenerator();
     }
     at_mode_display_help(output);
     at_mode_help.clear();
@@ -170,8 +170,8 @@ String at_mode_print_command_string(Stream &output, char separator, bool trailin
 
     // call handler to gather help for all commands
     at_mode_help_commands();
-    for(auto &plugin : plugins) {
-        plugin.callAtModeCommandHandler(nullStream, String(), AT_MODE_QUERY_COMMAND, nullptr);
+    for(auto plugin : plugins) {
+        plugin->atModeHelpGenerator();
     }
 
     for(const auto commandHelp: at_mode_help) {
@@ -491,10 +491,9 @@ void at_mode_serial_handle_event(String &commandString) {
 #endif
             } else {
                 bool commandWasHandled = false;
-                for(auto &plugin : plugins) { // send command to plugins
-                    auto handler = plugin.getAtModeCommandHandler();
-                    if (handler) {
-                        if (true == (commandWasHandled = handler(MySerial, command, argc, args))) {
+                for(auto plugin : plugins) { // send command to plugins
+                    if (plugin->hasAtMode()) {
+                        if (true == (commandWasHandled = plugin->atModeHandler(MySerial, command, argc, args))) {
                             break;
                         }
                     }

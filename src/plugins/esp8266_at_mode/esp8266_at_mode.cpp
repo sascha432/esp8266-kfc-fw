@@ -51,24 +51,48 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF(CWAPDHCP, "CWAPDHCP", "<0=disable|1=enable>[,<d
 #endif
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(GMR, "GMR", "Print firmware version");
 
-bool esp8266_at_commands_handler(Stream &serial, const String &command, int8_t argc, char **argv) {
+class ESP8266ATModePlugin : public PluginComponent {
+public:
+    ESP8266ATModePlugin() {
+        register_plugin(this);
+    }    
 
-    if (command.length() == 0) {
+    PGM_P getName() const;
 
-        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CWMODE));
-        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CWLAP));
-        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CWJAP));
-        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CWQAP));
-        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CIPSTATUS));
-        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CIFSR));
-        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CWSAP));
-#if defined(ESP8266)
-        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CWAPDHCP));
-#endif
-        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(GMR));
-
+    PluginPriorityEnum_t getSetupPriority() const override {
+        return MIN_PRIORITY;
     }
-    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(CWMODE))) {
+
+    bool hasAtMode() const override {
+        return true;
+    }
+
+    void atModeHelpGenerator() override;
+    bool atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) override;
+};
+
+static ESP8266ATModePlugin plugin;
+
+PGM_P ESP8266ATModePlugin::getName() const {
+    return PSTR("esp8266atmode");
+}
+
+void ESP8266ATModePlugin::atModeHelpGenerator() {
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CWMODE));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CWLAP));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CWJAP));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CWQAP));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CIPSTATUS));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CIFSR));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CWSAP));
+#if defined(ESP8266)
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CWAPDHCP));
+#endif
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(GMR));
+}
+
+bool ESP8266ATModePlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) {
+    if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(CWMODE))) {
         if (argc == AT_MODE_QUERY_COMMAND) {
             serial.printf_P(PSTR("+CWMODE:%d\n"), config._H_GET(Config().flags).wifiMode);
         }
@@ -280,21 +304,5 @@ bool esp8266_at_commands_handler(Stream &serial, const String &command, int8_t a
     }
     return false;
 }
-
-
-PROGMEM_PLUGIN_CONFIG_DEF(
-/* pluginName               */ esp8266at,
-/* setupPriority            */ PLUGIN_MIN_PRIORITY,
-/* allowSafeMode            */ false,
-/* autoSetupWakeUp          */ false,
-/* rtcMemoryId              */ 0,
-/* setupPlugin              */ nullptr,
-/* statusTemplate           */ nullptr,
-/* configureForm            */ nullptr,
-/* reconfigurePlugin        */ nullptr,
-/* reconfigure Dependencies */ nullptr,
-/* prepareDeepSleep         */ nullptr,
-/* atModeCommandHandler     */ esp8266_at_commands_handler
-);
 
 #endif

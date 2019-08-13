@@ -2,9 +2,9 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if IOT_DIMMER_MODULE
-
 #pragma once
+
+#if IOT_DIMMER_MODULE
 
 #include <Arduino_compat.h>
 #include "kfc_fw_config.h"
@@ -32,10 +32,7 @@ public:
 
     void setup(Driver_DimmerModule *dimmer, uint8_t channel);
 
-    const String getName() override;
-    PGM_P getComponentName() override;
     MQTTAutoDiscovery *createAutoDiscovery(MQTTAutoDiscovery::Format_t format) override;
-
     void onConnect(MQTTClient *client) override;
     void onMessage(MQTTClient *client, char *topic, char *payload, size_t len) override;
 

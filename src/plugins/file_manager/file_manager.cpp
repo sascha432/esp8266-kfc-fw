@@ -49,7 +49,7 @@ void file_manager_install_web_server_hook() {
 }
 
 void file_manager_reconfigure(PGM_P source) {
-    file_manager_install_web_server_hook();
+    
 }
 
 FileManager::FileManager() {
@@ -435,21 +435,39 @@ void FileManagerWebHandler::handleRequest(AsyncWebServerRequest *request) {
     fm.handleRequest();
 }
 
-PROGMEM_STRING_DECL(plugin_config_name_http);
+class FileManagerPlugin : public PluginComponent {
+public:
+    FileManagerPlugin() {
+        register_plugin(this);
+    }    
 
-PROGMEM_PLUGIN_CONFIG_DEF(
-/* pluginName               */ filemgr,
-/* setupPriority            */ PLUGIN_MAX_PRIORITY,
-/* allowSafeMode            */ false,
-/* autoSetupWakeUp          */ false,
-/* rtcMemoryId              */ 0,
-/* setupPlugin              */ file_manager_install_web_server_hook,
-/* statusTemplate           */ nullptr,
-/* configureForm            */ nullptr,
-/* reconfigurePlugin        */ file_manager_reconfigure,
-/* reconfigure Dependencies */ SPGM(plugin_config_name_http),
-/* prepareDeepSleep         */ nullptr,
-/* atModeCommandHandler     */ nullptr
-);
+    PGM_P getName() const;
+    PluginPriorityEnum_t getSetupPriority() const override;
+    void setup(PluginSetupMode_t mode) override;
+    void reconfigure(PGM_P source) override;
+    bool hasReconfigureDependecy(PluginComponent *plugin) const override;
+};
+
+static FileManagerPlugin plugin; 
+
+PGM_P FileManagerPlugin::getName() const {
+    return PSTR("filemgr");
+}
+
+FileManagerPlugin::PluginPriorityEnum_t FileManagerPlugin::getSetupPriority() const {
+    return PLUGIN_MAX_PRIORITY;
+}
+
+FileManagerPlugin::setup(PluginSetupMode_t mode) {
+    file_manager_install_web_server_hook();
+}
+
+void FileManagerPlugin::reconfigure(PGM_P source) {
+    file_manager_install_web_server_hook();
+}
+
+bool FileManagerPlugin::hasReconfigureDependecy(PluginComponent *plugin) const {
+    return plugin->nameEquals(F("http"));
+}
 
 #endif

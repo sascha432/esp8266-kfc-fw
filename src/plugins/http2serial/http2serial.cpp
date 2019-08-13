@@ -30,9 +30,11 @@ AsyncWebSocket *wsSerialConsole = nullptr;
 Http2Serial::Http2Serial() {
     _locked = false;
 #ifdef HTTP2SERIAL_BAUD
-    _debug_printf_P(PSTR("Reconfiguring serial port to %d baud\n"), HTTP2SERIAL_BAUD);
-    Serial.flush();
-    Serial.begin(HTTP2SERIAL_BAUD);
+    if (KFC_SERIAL_RATE != HTTP2SERIAL_BAUD) {
+        _debug_printf_P(PSTR("Reconfiguring serial port to %d baud\n"), HTTP2SERIAL_BAUD);
+        Serial.flush();
+        Serial.begin(HTTP2SERIAL_BAUD);
+    }
 #endif
     //_serialWrapper = &serialHandler.getWrapper();
     _serialHandler = &serialHandler;
@@ -58,7 +60,7 @@ Http2Serial::~Http2Serial() {
     _serialHandler->removeHandler(onData);
 #ifdef HTTP2SERIAL_BAUD
     Serial.flush();
-    Serial.begin(115200);
+    Serial.begin(KFC_SERIAL_RATE);
 #endif
 #if AT_MODE_SUPPORTED && HTTP2SERIAL_DISABLE_AT_MODE
     enable_at_mode();
@@ -181,7 +183,34 @@ void http2serial_event_handler(AsyncWebSocket *server, AsyncWebSocketClient *cli
     WsClient::onWsEvent(server, client, type, data, len, arg, WsConsoleClient::getInstance);
 }
 
-void http2serial_install_web_server_hook() {
+class Http2SerialPlugin : public PluginComponent {
+public:
+    Http2SerialPlugin() {
+        register_plugin(this);
+    }        
+    PGM_P getName() const;
+    PluginPriorityEnum_t getSetupPriority() const override;
+    void setup(PluginSetupMode_t mode) override;
+    void reconfigure(PGM_P source) override;
+    bool hasReconfigureDependecy(PluginComponent *plugin) const override;
+#if AT_MODE_SUPPORTED
+    bool hasAtMode() const override;
+    void atModeHelpGenerator() override;
+    bool atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) override;
+#endif
+};
+
+static Http2SerialPlugin plugin;
+
+PGM_P Http2SerialPlugin::getName() const {
+    return PSTR("http2ser");
+}
+
+Http2SerialPlugin::PluginPriorityEnum_t Http2SerialPlugin::getSetupPriority() const {
+    return (PluginPriorityEnum_t)10;
+}
+
+void Http2SerialPlugin::setup(PluginSetupMode_t mode) {
     if (get_web_server_object()) {
         wsSerialConsole = _debug_new AsyncWebSocket(F("/serial_console"));
         wsSerialConsole->onEvent(http2serial_event_handler);
@@ -190,8 +219,12 @@ void http2serial_install_web_server_hook() {
     }
 }
 
-void http2serial_reconfigure(PGM_P source) {
-    http2serial_install_web_server_hook();
+void Http2SerialPlugin::reconfigure(PGM_P source) {
+    setup(PLUGIN_SETUP_DEFAULT);
+}
+
+bool Http2SerialPlugin::hasReconfigureDependecy(PluginComponent *plugin) const {
+    return plugin->nameEquals(F("http"));
 }
 
 #if AT_MODE_SUPPORTED
@@ -200,13 +233,16 @@ void http2serial_reconfigure(PGM_P source) {
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(H2SBD, "H2SBD", "<baud>", "Set serial port rate");
 
-bool http2_serial_at_mode_command_handler(Stream &serial, const String &command, int8_t argc, char **argv) {
+bool Http2SerialPlugin::hasAtMode() const {
+    return true;
+}
 
-    if (command.length() == 0) {
+void Http2SerialPlugin::atModeHelpGenerator() {
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(H2SBD));
+}
 
-        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(H2SBD));
-
-    } else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(H2SBD))) {
+bool Http2SerialPlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) {
+    if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(H2SBD))) {
         if (argc == 1) {
             uint32_t rate = atoi(argv[0]);
             if (rate) {
@@ -221,22 +257,5 @@ bool http2_serial_at_mode_command_handler(Stream &serial, const String &command,
 }
 
 #endif
-
-PROGMEM_STRING_DECL(plugin_config_name_http);
-
-PROGMEM_PLUGIN_CONFIG_DEF(
-/* pluginName               */ http2ser,
-/* setupPriority            */ 10,
-/* allowSafeMode            */ false,
-/* autoSetupWakeUp          */ false,
-/* rtcMemoryId              */ 0,
-/* setupPlugin              */ http2serial_install_web_server_hook,
-/* statusTemplate           */ nullptr,
-/* configureForm            */ nullptr,
-/* reconfigurePlugin        */ http2serial_reconfigure,
-/* reconfigure Dependencies */ SPGM(plugin_config_name_http),
-/* prepareDeepSleep         */ nullptr,
-/* atModeCommandHandler     */ http2_serial_at_mode_command_handler
-);
 
 #endif

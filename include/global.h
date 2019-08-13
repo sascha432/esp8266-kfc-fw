@@ -52,6 +52,10 @@
 #define KFC_SERIAL_PORT                 Serial
 #endif
 
+#ifndef KFC_SERIAL_RATE
+#define KFC_SERIAL_RATE                 115200
+#endif
+
 #ifndef KFC_SAFE_MODE_SERIAL_PORT
 #define KFC_SAFE_MODE_SERIAL_PORT       KFC_SERIAL_PORT
 #endif

@@ -2,6 +2,7 @@
  * Author: sascha_lammers@gmx.de
  */
 
+#include "dimmer_module_form.h"
 #include <PrintHtmlEntitiesString.h>
 #include "../include/templates.h"
 #include "progmem_data.h"
@@ -18,7 +19,7 @@
 #include <debug_helper_disable.h>
 #endif
 
-void dimmer_module_create_settings_form(AsyncWebServerRequest *request, Form &form) {
+void DimmerModuleForm::createConfigureForm(AsyncWebServerRequest *request, Form &form) {
 
     auto dimmer = config._H_W_GET(Config().dimmer);
 

@@ -239,8 +239,8 @@ void RTCMemoryManager::dump(Print &output) {
             break;
         }
 #if HAVE_KFC_PLUGINS
-        auto plugin = get_plugin_by_rtc_memory_id(entry->mem_id);
-        output.printf_P(PSTR("id: %d (%s), length %d "), entry->mem_id, plugin ? plugin->getPluginName().c_str() : PSTR("<no plugin found>"), entry->length);
+        auto plugin = PluginComponent::getByMemoryId(entry->mem_id);
+        output.printf_P(PSTR("id: %d (%s), length %d "), entry->mem_id, plugin ? plugin->getName() : PSTR("<no plugin found>"), entry->length);
 #else
         output.printf_P(PSTR("id: %d, length %d "), entry->mem_id, entry->length);
 #endif

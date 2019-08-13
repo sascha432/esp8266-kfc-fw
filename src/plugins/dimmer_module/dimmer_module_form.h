@@ -7,4 +7,10 @@
 #include "ESPAsyncWebServer.h"
 #include "Form.h"
 
-void dimmer_module_create_settings_form(AsyncWebServerRequest *request, Form &form);
+class DimmerModuleForm {
+public:
+    bool canHandleForm(const String &formName) const {
+        return formName.equals(F("dimmer_cfg"));
+    }
+    void createConfigureForm(AsyncWebServerRequest *request, Form &form);
+};

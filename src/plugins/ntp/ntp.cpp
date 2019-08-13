@@ -361,6 +361,75 @@ void ntp_client_create_settings_form(AsyncWebServerRequest *request, Form &form)
     form.finalize();
 }
 
+class NTPPlugin : public PluginComponent {
+public:
+    NTPPlugin() {
+        register_plugin(this);
+    }
+    PGM_P getName() const;
+    PluginPriorityEnum_t getSetupPriority() const override;
+    uint8_t getRtcMemoryId() const override;
+#if NTP_RESTORE_TIMEZONE_AFTER_WAKEUP
+    bool autoSetupAfterDeepSleep() const override {
+        return true;
+    }
+    void prepareDeepSleep(uint32_t sleepTimeMillis) override;
+#endif
+    void setup(PluginSetupMode_t mode) override;
+    void reconfigure(PGM_P source) override;
+    bool hasStatus() const override;
+    const String getStatus() override;
+#if AT_MODE_SUPPORTED
+    bool hasAtMode() const override;
+    void atModeHelpGenerator() override;
+    bool atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) override;
+#endif
+};
+
+
+static NTPPlugin plugin; 
+
+PGM_P NTPPlugin::getName() const {
+    return PSTR("ntp");
+}
+
+NTPPlugin::PluginPriorityEnum_t NTPPlugin::getSetupPriority() const {
+    return PRIO_NTP;
+}
+
+uint8_t NTPPlugin::getRtcMemoryId() const {
+    return NTP_CLIENT_RTC_MEM_ID;
+}
+
+void NTPPlugin::setup(PluginSetupMode_t mode) {
+    timezone_setup();
+}
+
+void NTPPlugin::reconfigure(PGM_P source) {
+    ntp_client_reconfigure_plugin(source);
+}
+
+bool NTPPlugin::hasStatus() const {
+    return true;
+}
+
+const String NTPPlugin::getStatus() {
+    return TimezoneData::getStatus();
+}
+
+#if NTP_RESTORE_SYSTEM_TIME_AFTER_WAKEUP
+
+void NTPPlugin::prepareDeepSleep(uint32_t sleepTimeMillis) {
+    NTPClientData_t ntp;
+    if (RTCMemoryManager::read(NTP_CLIENT_RTC_MEM_ID, &ntp, sizeof(ntp))) {
+        ntp.currentTime = time(nullptr);
+        ntp.sleepTime = time;
+        RTCMemoryManager::write(NTP_CLIENT_RTC_MEM_ID, &ntp, sizeof(ntp));
+    }
+}
+
+#endif
+
 #if AT_MODE_SUPPORTED
 
 #include "at_mode.h"
@@ -371,17 +440,21 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(SNTPFU, "SNTPFU", "Force SNTP to update ti
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(NOW, "NOW", "Display current time");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(TZ, "TZ", "<timezone>", "Set timezone", "Show timezone information");
 
-bool ntp_client_at_mode_command_handler(Stream &serial, const String &command, int8_t argc, char **argv) {
+bool NTPPlugin::hasAtMode() const {
+    return true;
+}
 
-    if (command.length() == 0) {
+void NTPPlugin::atModeHelpGenerator() {
 #if DEBUG
-        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SNTPFU));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SNTPFU));
 #endif
-        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(NOW));
-        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(TZ));
-    }
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(NOW));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(TZ));
+}
+
+bool NTPPlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) {
 #if DEBUG
-    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SNTPFU))) {
+    if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SNTPFU))) {
         TimezoneData::configTime();
         serial.println(F("+SNTPFU: Waiting up to 5 seconds for a valid time..."));
         ulong end = millis() + 5000;
@@ -449,36 +522,6 @@ commandNow:
 }
 
 #endif
-
-#if NTP_RESTORE_SYSTEM_TIME_AFTER_WAKEUP
-void ntp_client_prepare_deep_sleep(uint32_t time) {
-    NTPClientData_t ntp;
-    if (RTCMemoryManager::read(NTP_CLIENT_RTC_MEM_ID, &ntp, sizeof(ntp))) {
-        ntp.currentTime = time(nullptr);
-        ntp.sleepTime = time;
-        RTCMemoryManager::write(NTP_CLIENT_RTC_MEM_ID, &ntp, sizeof(ntp));
-    }
-}
-#endif
-
-PROGMEM_PLUGIN_CONFIG_DEF(
-/* pluginName               */ ntp,
-/* setupPriority            */ PLUGIN_PRIO_NTP,
-/* allowSafeMode            */ false,
-#if NTP_RESTORE_TIMEZONE_AFTER_WAKEUP
-/* autoSetupWakeUp          */ true,
-#else
-/* autoSetupWakeUp          */ false,
-#endif
-/* rtcMemoryId              */ NTP_CLIENT_RTC_MEM_ID,
-/* setupPlugin              */ timezone_setup,
-/* statusTemplate           */ TimezoneData::getStatus,
-/* configureForm            */ ntp_client_create_settings_form,
-/* reconfigurePlugin        */ ntp_client_reconfigure_plugin,
-/* reconfigure Dependencies */ nullptr,
-/* prepareDeepSleep         */ nullptr,
-/* atModeCommandHandler     */ ntp_client_at_mode_command_handler
-);
 
 #include <pop_pack.h>
 

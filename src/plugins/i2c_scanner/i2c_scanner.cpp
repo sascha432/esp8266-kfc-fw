@@ -60,7 +60,7 @@ void check_if_exist_I2C(Print &output) {
         }
     } //for loop
     if (nDevices == 0) {
-        output.println("No I2C devices found");
+        output.println(F("No I2C devices found"));
     }
     else {
         output.println(F("**********************************\n"));
@@ -99,19 +99,48 @@ void i2cscanner_device_error(Stream &output) {
     output.println(F("+I2C: An error occured"));
 }
 
-bool i2cscanner_at_mode_command_handler(Stream &serial, const String &command, int8_t argc, char **argv) {
-    if (command.length() == 0) {
+#endif
 
-        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SCANI2C));
-        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SCAND));
-        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CS));
-        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CT));
-        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CR));
-        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CBME280));
-        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CLM75A));
+class I2CScannerPlugin : public PluginComponent {
+public:
+    I2CScannerPlugin() {
+        register_plugin(this);
+    }
+    PGM_P getName() const;
 
-    } 
-    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(I2CS))) {
+    PluginPriorityEnum_t getSetupPriority() const {
+        return MIN_PRIORITY;
+    }
+
+#if AT_MODE_SUPPORTED
+    bool hasAtMode() const override {
+        return true;
+    }
+    void atModeHelpGenerator() override;
+    bool atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) override;
+#endif
+};
+
+static I2CScannerPlugin plugin;
+
+PGM_P I2CScannerPlugin::getName() const {
+    return PSTR("i2c_scan");
+}
+
+#if AT_MODE_SUPPORTED
+
+void I2CScannerPlugin::atModeHelpGenerator() {
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SCANI2C));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SCAND));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CS));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CT));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CR));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CBME280));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CLM75A));
+}
+
+bool I2CScannerPlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) {
+    if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(I2CS))) {
         if (argc < 2) {
             at_mode_print_invalid_arguments(serial);
         } 
@@ -228,21 +257,5 @@ bool i2cscanner_at_mode_command_handler(Stream &serial, const String &command, i
 }
 
 #endif
-
-PROGMEM_PLUGIN_CONFIG_DEF(
-/* pluginName               */ i2c_scan,
-/* setupPriority            */ PLUGIN_MIN_PRIORITY,
-/* allowSafeMode            */ false,
-/* autoSetupWakeUp          */ false,
-/* rtcMemoryId              */ 0,
-/* setupPlugin              */ i2cscanner_setup,
-// /* setupPlugin              */ nullptr,
-/* statusTemplate           */ nullptr,
-/* configureForm            */ nullptr,
-/* reconfigurePlugin        */ nullptr,
-/* reconfigure Dependencies */ nullptr,
-/* prepareDeepSleep         */ nullptr,
-/* atModeCommandHandler     */ i2cscanner_at_mode_command_handler
-);
 
 #endif

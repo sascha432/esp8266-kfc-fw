@@ -35,7 +35,7 @@ public:
         return 0;
     }
 
-    virtual boolean isDirectory(void) {
+    virtual bool isDirectory(void) {
         return false;
     }
 

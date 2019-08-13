@@ -395,7 +395,7 @@ void KFCFWConfiguration::restoreFactorySettings() {
     _H_SET(Config().serial2tcp.serial_port, SERIAL2TCP_HARDWARE_SERIAL);
     _H_SET(Config().serial2tcp.rx_pin, D7);
     _H_SET(Config().serial2tcp.tx_pin, D8);
-    _H_SET(Config().serial2tcp.baud_rate, 115200);
+    _H_SET(Config().serial2tcp.baud_rate, KFC_SERIAL_RATE);
     _H_SET(Config().serial2tcp.idle_timeout, 300);
     _H_SET(Config().serial2tcp.keep_alive, 60);
 #endif
@@ -427,7 +427,7 @@ const char *KFCFWConfiguration::getLastError() const {
 
 void KFCFWConfiguration::garbageCollector() {
     if (_readAccess && millis() > _readAccess + _garbageCollectionCycleDelay) {
-        _debug_println(F("KFCFWConfiguration::garbageCollector(): releasing memory"));
+        // _debug_println(F("KFCFWConfiguration::garbageCollector(): releasing memory"));
         release();
     }
 }
@@ -442,7 +442,7 @@ bool KFCFWConfiguration::isConfigDirty() const {
 
 const String KFCFWConfiguration::getFirmwareVersion() {
 #if DEBUG
-#define __DEBUG_CFS_APPEND " DEBUG MODE ENABLED"
+#define __DEBUG_CFS_APPEND " DEBUG"
 #else
 #define __DEBUG_CFS_APPEND ""
 #endif
@@ -608,8 +608,8 @@ void KFCFWConfiguration::enterDeepSleep(uint32_t time_in_ms, RFMode mode, uint16
 
     delay(1);
 
-    for(auto &plugin: plugins) {
-        plugin.callPrepareDeepSleep(time_in_ms, mode);
+    for(auto plugin: plugins) {
+        plugin->prepareDeepSleep(time_in_ms);
     }
     if (delayAfterPrepare) {
         delay(delayAfterPrepare);
@@ -869,7 +869,39 @@ unsigned long KFCFWConfiguration::getWiFiUp() {
     return config._wifiUp;
 }
 
-void config_init() {
+class KFCConfigurationPlugin : public PluginComponent {
+public:
+    KFCConfigurationPlugin() {
+        register_plugin(this);
+    }
+
+    PGM_P getName() const;
+
+    PluginPriorityEnum_t getSetupPriority() const {
+        return PluginComponent::PRIO_CONFIG;
+    }
+
+    virtual uint8_t getRtcMemoryId() const {
+        return CONFIG_RTC_MEM_ID;
+
+    }
+
+    bool autoSetupAfterDeepSleep() const {
+        return true;
+    }
+
+
+    void setup(PluginSetupMode_t mode) override;
+    void reconfigure(PGM_P source) override;
+};
+
+static KFCConfigurationPlugin plugin;
+
+PGM_P KFCConfigurationPlugin::getName() const {
+    return PSTR("cfg");
+}
+
+void KFCConfigurationPlugin::setup(PluginSetupMode_t mode) {
     _debug_printf_P(PSTR("config_init(): safe mode %d, wake up %d\n"), resetDetector.getSafeMode(), resetDetector.hasWakeUpDetected());
 
     config.setup();
@@ -887,21 +919,6 @@ void config_init() {
     }
 }
 
-void config_reconfigure(PGM_P source) {
+void KFCConfigurationPlugin::reconfigure(PGM_P source) {
     config.reconfigureWiFi();
 }
-
-PROGMEM_PLUGIN_CONFIG_DEF(
-/* pluginName               */ cfg,
-/* setupPriority            */ PLUGIN_PRIO_CONFIG,
-/* allowSafeMode            */ false,
-/* autoSetupWakeUp          */ true,
-/* rtcMemoryId              */ CONFIG_RTC_MEM_ID,
-/* setupPlugin              */ config_init,
-/* statusTemplate           */ nullptr,
-/* configureForm            */ nullptr,
-/* reconfigurePlugin        */ config_reconfigure,
-/* reconfigure Dependencies */ nullptr,
-/* prepareDeepSleep         */ nullptr,
-/* atModeCommandHandler     */ nullptr
-);

@@ -266,19 +266,51 @@ void ResetDetector::_writeData() {
 
 #if HAVE_KFC_PLUGINS
 
+class ResetDetectorPlugin : public PluginComponent {
+public:
+    ResetDetectorPlugin() {
+        register_plugin(this);
+    }    
+    PGM_P getName() const;
+    PluginPriorityEnum_t getSetupPriority() const override;
+    uint8_t getRtcMemoryId() const override;
+#if AT_MODE_SUPPORTED
+    bool hasAtMode() const override;
+    void atModeHelpGenerator() override;
+    bool atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) override;
+#endif
+};
+
+static ResetDetectorPlugin plugin; 
+
+PGM_P ResetDetectorPlugin::getName() const {
+    return PSTR("rd");
+}
+
+ResetDetectorPlugin::PluginPriorityEnum_t ResetDetectorPlugin::getSetupPriority() const {
+    return PRIO_RESET_DETECTOR;
+}
+
+uint8_t ResetDetectorPlugin::getRtcMemoryId() const {
+    return RESET_DETECTOR_RTC_MEM_ID;
+}
+
 #if AT_MODE_SUPPORTED
 
 #include "at_mode.h"
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPP(RD, "RD", "Reset detector clear counter", "Display information");
 
-bool reset_detector_command_handler(Stream &serial, const String &command, int8_t argc, char **argv) {
+bool ResetDetectorPlugin::hasAtMode() const {
+    return true;
+}
 
-    if (command.length() == 0) {
+void ResetDetectorPlugin::atModeHelpGenerator() {
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(RD));
+}
 
-        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(RD));
-
-    } else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(RD))) {
+bool ResetDetectorPlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) {
+    if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(RD))) {
         if (argc == -1) {
             serial.printf_P(PSTR("safe mode: %d\nreset counter: %d\ninitial reset counter: %d\ncrash: %d\nreboot: %d\nreset: %d\nreset reason: %s\n"),
                 resetDetector.getSafeMode(),
@@ -298,24 +330,5 @@ bool reset_detector_command_handler(Stream &serial, const String &command, int8_
 }
 
 #endif
-
-void temp_test() {
-
-}
-
-PROGMEM_PLUGIN_CONFIG_DEF(
-    /* pluginName               */ rd,
-    /* setupPriority            */ PLUGIN_PRIO_RESET_DETECTOR,
-    /* allowSafeMode            */ false,
-    /* autoSetupWakeUp          */ false,
-    /* rtcMemoryId              */ RESET_DETECTOR_RTC_MEM_ID,
-    /* setupPlugin              */ temp_test,
-    /* statusTemplate           */ nullptr,
-    /* configureForm            */ nullptr,
-    /* reconfigurePlugin        */ nullptr,
-    /* reconfigure Dependencies */ nullptr,
-    /* prepareDeepSleep         */ nullptr,
-    /* atModeCommandHandler     */ reset_detector_command_handler
-);
 
 #endif

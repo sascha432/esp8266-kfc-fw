@@ -2,9 +2,9 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if IOT_ATOMIC_SUN_V2
-
 #pragma once
+
+#if IOT_ATOMIC_SUN_V2
 
 #include <Arduino_compat.h>
 #include <HardwareSerial.h>
@@ -59,10 +59,7 @@ public:
 
     static void setup();
 
-    const String getName() override;
-    PGM_P getComponentName() override;
     MQTTAutoDiscovery *createAutoDiscovery(MQTTAutoDiscovery::Format_t format) override;
-
     void onConnect(MQTTClient *client) override;
     void onMessage(MQTTClient *client, char *topic, char *payload, size_t len) override;
 

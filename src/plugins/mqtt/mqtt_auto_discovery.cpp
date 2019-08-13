@@ -30,6 +30,7 @@ void MQTTAutoDiscovery::create(MQTTComponent *component, MQTTAutoDiscovery::Form
     _topic += FPSTR(component->getComponentName());
     _topic += '/';
     _topic += name;
+    _topic += F("/config");
 
     _discovery = PrintString();
     if (_format == FORMAT_JSON) {
@@ -50,10 +51,34 @@ void MQTTAutoDiscovery::create(MQTTComponent *component, MQTTAutoDiscovery::Form
     addParameter(FSPGM(mqtt_payload_not_available), FSPGM(0));
 
     if (_format == FORMAT_JSON) {
+        String model;
+#if IOT_DIMMER_MODULE
+    #if IOT_DIMMER_MODULE_CHANNELS
+        model += F(_STRINGIFY(IOT_DIMMER_MODULE_CHANNELS) " Channel MOSFET Dimmer/");
+    #else
+        model += F("MOSFET Dimmer/");
+    #endif
+#elif IOT_ATOMIC_SUN_V2
+        model += F("Atomic Sun V2/");
+#else
+        model = F("Generic/");
+#endif
+#if defined(ESP8266)
+        model += F("ESP8266");
+#elif defined(ESP32)
+        model += F("ESP32");
+#elif defined(__AVR__) || defined(__avr__)
+        model += F("AVR");
+#else
+        model += F("Unknown");
+#endif
+
         _discovery += F("\"device\":{\"identifiers\":[\"");
-        _discovery.printf_P(PSTR("%s\"],name=\"%s\",\"sw_version\":\"%s\""), uniqueId.c_str(), name.c_str(), KFCFWConfiguration::getFirmwareVersion().c_str());
+        _discovery.printf_P(PSTR("%s\"],\"name\":\"%s\",\"model\":\"%s\",\"sw_version\":\"KFC FW %s\",\"manufacturer\":\"KFCLabs\""), uniqueId.c_str(), name.c_str(), model.c_str(), KFCFWConfiguration::getFirmwareVersion().c_str());
         _discovery += F("},");
     }
+
+    _debug_printf_P(PSTR("MQTT auto discovery topic '%s', name %s, number %d\n"), _topic.c_str(), component->getComponentName(), component->getNumber());
 }
 
 void MQTTAutoDiscovery::addParameter(const String &name, const String &value) {
@@ -64,6 +89,38 @@ void MQTTAutoDiscovery::addParameter(const String &name, const String &value) {
     }
 }
 
+void MQTTAutoDiscovery::addStateTopic(const String &value) {
+    addParameter(FSPGM(mqtt_state_topic), value);
+}
+
+void MQTTAutoDiscovery::addCommandTopic(const String &value) {
+    addParameter(FSPGM(mqtt_command_topic), value);
+}
+
+void MQTTAutoDiscovery::addPayloadOn(const String &value) {
+    addParameter(FSPGM(mqtt_payload_on), value);
+}
+
+void MQTTAutoDiscovery::addPayloadOff(const String &value) {
+    addParameter(FSPGM(mqtt_payload_off), value);
+}
+
+void MQTTAutoDiscovery::addBrightnessStateTopic(const String &value) {
+    addParameter(FSPGM(mqtt_brightness_state_topic), value);
+}
+
+void MQTTAutoDiscovery::addBrightnessCommandTopic(const String &value) {
+    addParameter(FSPGM(mqtt_brightness_command_topic), value);
+}
+
+void MQTTAutoDiscovery::addBrightnessScale(uint32_t brightness) {
+    addParameter(FSPGM(mqtt_brightness_scale), String(brightness));
+}
+
+void MQTTAutoDiscovery::addUnitOfMeasurement(const String &value) {
+    addParameter(FSPGM(mqtt_unit_of_measurement), value);
+}
+
 void MQTTAutoDiscovery::finalize() {
     if (_format == FORMAT_JSON) {
         _discovery.remove(_discovery.length() - 1);
@@ -71,6 +128,7 @@ void MQTTAutoDiscovery::finalize() {
     } else {
         _discovery.remove(_discovery.length() - 4);
     }
+    _debug_printf_P(PSTR("MQTT auto discovery payload '%s'\n"), _discovery.c_str());
 }
 
 String MQTTAutoDiscovery::getPayload() {

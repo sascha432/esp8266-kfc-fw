@@ -16,7 +16,7 @@
 #include <debug_helper_disable.h>
 #endif
 
-DimmerChannel::DimmerChannel() {
+DimmerChannel::DimmerChannel() : MQTTComponent(LIGHT) {
     memset(&_data, 0, sizeof(_data));
     _storedBrightness = 0;
 }
@@ -26,27 +26,19 @@ void DimmerChannel::setup(Driver_DimmerModule *dimmer, uint8_t channel) {
     _channel = channel;
 }
 
-const String DimmerChannel::getName() {
-    return F("Dimmer Module");
-}
-    
-PGM_P DimmerChannel::getComponentName() {
-    return SPGM(mqtt_component_light);
-}
-
 MQTTAutoDiscovery *DimmerChannel::createAutoDiscovery(MQTTAutoDiscovery::Format_t format) {
     if (_data.state.state.length() == 0) {
         _createTopics();
     }
     auto discovery = _debug_new MQTTAutoDiscovery();
     discovery->create(this, format);
-    discovery->addParameter(FSPGM(mqtt_state_topic), _data.state.state);
-    discovery->addParameter(FSPGM(mqtt_command_topic), _data.state.set);
-    discovery->addParameter(FSPGM(mqtt_payload_on), FSPGM(1));
-    discovery->addParameter(FSPGM(mqtt_payload_off), FSPGM(0));
-    discovery->addParameter(FSPGM(mqtt_brightness_state_topic), _data.brightness.state);
-    discovery->addParameter(FSPGM(mqtt_brightness_command_topic), _data.brightness.set);
-    discovery->addParameter(FSPGM(mqtt_brightness_scale), String(IOT_DIMMER_MODULE_MAX_BRIGHTNESS));
+    discovery->addStateTopic(_data.state.state);
+    discovery->addCommandTopic(_data.state.set);
+    discovery->addPayloadOn(FSPGM(1));
+    discovery->addPayloadOff(FSPGM(0));
+    discovery->addBrightnessStateTopic(_data.brightness.state);
+    discovery->addBrightnessCommandTopic(_data.brightness.set);
+    discovery->addBrightnessScale(IOT_DIMMER_MODULE_MAX_BRIGHTNESS);
     discovery->finalize();
     return discovery;
 }
@@ -82,6 +74,10 @@ void DimmerChannel::onConnect(MQTTClient *client) {
     client->subscribe(this, _data.brightness.set, _qos);
 
     publishState(client);
+
+    if (_channel == IOT_DIMMER_MODULE_CHANNELS - 1) {
+        _dimmer->onConnect(client);
+    }
 }
 
 void DimmerChannel::onMessage(MQTTClient *client, char *topic, char *payload, size_t len) {

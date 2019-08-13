@@ -73,15 +73,17 @@ MQTTClient::MQTTClient() {
     _client->onMessage([this](char *topic, char *payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total) {
         this->onMessageRaw(topic, payload, properties, len, index, total);
     });
-    // _client->onPublish([this](uint16_t packetId) {
-    //     this->onPublish(packetId);
-    // });
-    // _client->onSubscribe([this](uint16_t packetId, uint8_t qos) {
-    //     this->onSubscribe(packetId, qos);
-    // });
-    // _client->onUnsubscribe([this](uint16_t packetId) {
-    //     this->onUnsubscribe(packetId);
-    // });
+#if MQTT_USE_PACKET_CALLBACKS
+    _client->onPublish([this](uint16_t packetId) {
+        this->onPublish(packetId);
+    });
+    _client->onSubscribe([this](uint16_t packetId, uint8_t qos) {
+        this->onSubscribe(packetId, qos);
+    });
+    _client->onUnsubscribe([this](uint16_t packetId) {
+        this->onUnsubscribe(packetId);
+    });
+#endif
 
     WiFiCallbacks::add(WiFiCallbacks::EventEnum_t::ANY, MQTTClient::handleWiFiEvents);
 
@@ -92,9 +94,7 @@ MQTTClient::MQTTClient() {
 
 MQTTClient::~MQTTClient() {
     _debug_printf_P(PSTR("MQTTClient::~MQTTClient()\n"));
-    if (Scheduler.hasTimer(_queueTimer)) {
-        Scheduler.removeTimer(_queueTimer);
-    }
+    _clearQueue();
     if (Scheduler.hasTimer(_timer)) {
         Scheduler.removeTimer(_timer);
     }
@@ -179,6 +179,7 @@ void MQTTClient::connect() {
     _client->setCleanSession(true);
 
     // set last will to mark component as offline on disconnect
+    // last will topic and payload need to be static
     static const char *lastWillPayload = "0";
     _lastWillTopic = formatTopic(-1, FSPGM(mqtt_status_topic));
     _debug_printf_P(PSTR("MQTTClient::setWill(%s) = %s\n"), _lastWillTopic.c_str(), lastWillPayload);
@@ -251,23 +252,33 @@ void MQTTClient::onDisconnect(AsyncMqttClientDisconnectReason reason) {
 }
 
 void MQTTClient::subscribe(MQTTComponent *component, const String &topic, uint8_t qos) {
+    if (subscribeWithId(component, topic, qos) == 0) {
+        _addQueue({QUEUE_SUBSCRIBE, component, topic, qos});
+    } 
+}
+
+int MQTTClient::subscribeWithId(MQTTComponent *component, const String &topic, uint8_t qos) {
     _debug_printf_P(PSTR("MQTTClient::subscribe(%s, %s, qos %u)\n"), component ? component->getName().c_str() : PSTR("<nullptr>"), topic.c_str(), qos);
-    if (_client->subscribe(topic.c_str(), qos) == 0) {
-        _queue.push_back({QUEUE_SUBSCRIBE, topic, qos});
-    }
-    if (component) {
+    auto result = _client->subscribe(topic.c_str(), qos);
+    if (result && component) {
         _topics.push_back({topic, component});
     }
+    return result;
 }
 
 void MQTTClient::unsubscribe(MQTTComponent *component, const String &topic) {
+    if (unsubscribeWithId(component, topic) == 0) {
+        _addQueue({QUEUE_UNSUBSCRIBE, component, topic});
+    }
+}
+
+int MQTTClient::unsubscribeWithId(MQTTComponent *component, const String &topic) {
+    int result = -1;
     _debug_printf_P(PSTR("MQTTClient::unsubscribe(%s, %s): topic in use %d\n"), component ? component->getName().c_str() : PSTR("<nullptr>"), topic.c_str(), _topicInUse(component, topic));
     if (!_topicInUse(component, topic)) {
-        if (_client->unsubscribe(topic.c_str()) == 0) {
-            _queue.push_back({QUEUE_UNSUBSCRIBE, topic});
-        }
+        result = _client->unsubscribe(topic.c_str());
     }
-    if (component) {
+    if (result && component) {
         _topics.erase(std::remove_if(_topics.begin(), _topics.end(), [component, topic](const MQTTTopic_t &mqttTopic) {
             if (mqttTopic.component == component && mqttTopic.topic.equals(topic)) {
                 return true;
@@ -275,24 +286,21 @@ void MQTTClient::unsubscribe(MQTTComponent *component, const String &topic) {
             return false;
         }), _topics.end());
     }
+    return result;
 }
 
 void MQTTClient::remove(MQTTComponent *component) {
     _debug_printf_P(PSTR("MQTTClient::remove(%s)\n"), component->getName().c_str());
-    if (component) {
-        _topics.erase(std::remove_if(_topics.begin(), _topics.end(), [this, component](const MQTTTopic_t &mqttTopic) {
-            if (mqttTopic.component == component) {
-                _debug_printf_P(PSTR("MQTTClient::remove(): topic %s in use %d\n"), mqttTopic.topic.c_str(), _topicInUse(component, mqttTopic.topic));
-                if (!_topicInUse(component, mqttTopic.topic)) {
-                    if (_client->unsubscribe(mqttTopic.topic.c_str()) == 0) {
-                        _queue.push_back({QUEUE_UNSUBSCRIBE, mqttTopic.topic});
-                    }
-                }
-                return true;
+    _topics.erase(std::remove_if(_topics.begin(), _topics.end(), [this, component](const MQTTTopic_t &mqttTopic) {
+        if (mqttTopic.component == component) {
+            _debug_printf_P(PSTR("MQTTClient::remove(): topic %s in use %d\n"), mqttTopic.topic.c_str(), _topicInUse(component, mqttTopic.topic));
+            if (!_topicInUse(component, mqttTopic.topic)) {
+                unsubscribe(nullptr, mqttTopic.topic.c_str());
             }
-            return false;
-        }), _topics.end());
-    }
+            return true;
+        }
+        return false;
+    }), _topics.end());
 }
 
 bool MQTTClient::_topicInUse(MQTTComponent *component, const String &topic) {
@@ -305,10 +313,14 @@ bool MQTTClient::_topicInUse(MQTTComponent *component, const String &topic) {
 }
 
 void MQTTClient::publish(const String &topic, uint8_t qos, bool retain, const String &payload) {
-    _debug_printf_P(PSTR("MQTTClient::publish(%s, qos %u, retain %d, %s)\n"), topic.c_str(), qos, retain, payload.c_str());
-    if (_client->publish(topic.c_str(), qos, retain, payload.c_str(), payload.length()) == 0) {
-        _queue.push_back({QUEUE_PUBLISH, topic, qos, retain, payload});
+    if (publishWithId(topic, qos, retain, payload) == 0) {
+        _addQueue({QUEUE_PUBLISH, nullptr, topic, qos, retain, payload});
     }
+}
+
+int MQTTClient::publishWithId(const String &topic, uint8_t qos, bool retain, const String &payload) {
+    _debug_printf_P(PSTR("MQTTClient::publish(%s, qos %u, retain %d, %s)\n"), topic.c_str(), qos, retain, payload.c_str());
+    return _client->publish(topic.c_str(), qos, retain, payload.c_str(), payload.length());
 }
 
 void MQTTClient::onMessageRaw(char *topic, char *payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total) {
@@ -348,6 +360,8 @@ void MQTTClient::onMessage(char *topic, char *payload, AsyncMqttClientMessagePro
     }
 }
 
+#if MQTT_USE_PACKET_CALLBACKS
+
 void MQTTClient::onPublish(uint16_t packetId) {
     _debug_printf_P(PSTR("MQTTClient::onPublish(%u)\n"), packetId);
 }
@@ -359,6 +373,8 @@ void MQTTClient::onSubscribe(uint16_t packetId, uint8_t qos) {
 void MQTTClient::onUnsubscribe(uint16_t packetId) {
     _debug_printf_P(PSTR("MQTTClient::onUnsubscribe(%u)\n"), packetId);
 }
+
+#endif
 
 bool MQTTClient::_isTopicMatch(const char *topic, const char *match) const {
     while(*topic) {
@@ -492,33 +508,33 @@ void MQTTClient::handleWiFiEvents(uint8_t event, void *payload) {
 }
 
 void MQTTClient::_addQueue(MQTTQueue_t queue) {
-    debug_printf_P(PSTR("MQTTClient::_addQueue(type %u): topic=%s\n"), queue.type, queue.topic.c_str());
+    _debug_printf_P(PSTR("MQTTClient::_addQueue(type %u): topic=%s\n"), queue.type, queue.topic.c_str());
 
     _queue.push_back(queue);
     if (Scheduler.hasTimer(_queueTimer)) {
         _queueTimer->setCallCounter(0); // reset retry counter for each new queue entry
     } else {
-        _queueTimer = Scheduler.addTimer(500, 10, MQTTClient::queueTimerCallback); // retry 10 times x 0.5s = 5s
+        _queueTimer = Scheduler.addTimer(250, 20, MQTTClient::queueTimerCallback); // retry 20 times x 0.25s = 5s
     }
 }
 
 void MQTTClient::_queueTimerCallback(EventScheduler::TimerPtr timer) {
-    debug_printf_P(PSTR("MQTTClient::_queueTimerCallback(): attempt %u\n"), timer->getCallCounter());
+    _debug_printf_P(PSTR("MQTTClient::_queueTimerCallback(): attempt %u\n"), timer->getCallCounter());
 
     _queue.erase(std::remove_if(_queue.begin(), _queue.end(), [this](const MQTTQueue_t &queue) {
         switch(queue.type) {
             case QUEUE_SUBSCRIBE:
-                if (_client->subscribe(queue.topic.c_str(), queue.qos) != 0) {
+                if (subscribeWithId(queue.component, queue.topic, queue.qos) != 0) {
                     return true;
                 }
                 break;
             case QUEUE_UNSUBSCRIBE:
-                if (_client->unsubscribe(queue.topic.c_str()) != 0) {
+                if (unsubscribeWithId(queue.component, queue.topic) != 0) {
                     return true;
                 }
                 break;
             case QUEUE_PUBLISH:
-                if (_client->publish(queue.topic.c_str(), queue.qos, queue.retain, queue.payload.c_str(), queue.payload.length()) != 0) {
+                if (publishWithId(queue.topic, queue.qos, queue.retain, queue.payload) != 0) {
                     return true;
                 }
                 break;
@@ -553,7 +569,65 @@ void MQTTClient::_clearQueue() {
 }
 
 
-void mqtt_client_create_settings_form(AsyncWebServerRequest *request, Form &form) {
+class MQTTPlugin : public PluginComponent {
+public:
+    MQTTPlugin() {
+        register_plugin(this);
+    }
+    PGM_P getName() const;
+    PluginPriorityEnum_t getSetupPriority() const override;
+    bool autoSetupAfterDeepSleep() const override;
+    void setup(PluginSetupMode_t mode) override;
+    void reconfigure(PGM_P source) override;
+    bool hasStatus() const override;
+    const String getStatus() override;
+    bool canHandleForm(const String &formName) const override;
+    void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
+#if AT_MODE_SUPPORTED
+    bool hasAtMode() const override;
+    void atModeHelpGenerator() override;
+    bool atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) override;
+#endif
+};
+
+static MQTTPlugin plugin; 
+
+PGM_P MQTTPlugin::getName() const {
+    return PSTR("mqtt");
+}
+
+MQTTPlugin::PluginPriorityEnum_t MQTTPlugin::getSetupPriority() const {
+    return (PluginPriorityEnum_t)20;
+}
+
+bool MQTTPlugin::autoSetupAfterDeepSleep() const {
+    return true;
+}
+
+void MQTTPlugin::setup(PluginSetupMode_t mode) {
+    MQTTClient::setupInstance();
+}
+
+void MQTTPlugin::reconfigure(PGM_P source) {
+    MQTTClient::deleteInstance();
+    if (config._H_GET(Config().flags).mqttMode != MQTT_MODE_DISABLED) {
+        MQTTClient::setupInstance();
+    }
+}
+
+bool MQTTPlugin::hasStatus() const {
+    return true;
+}
+
+const String MQTTPlugin::getStatus() {
+    return MQTTClient::getStatus();
+}
+
+bool MQTTPlugin::canHandleForm(const String &formName) const {
+    return true;
+}
+
+void MQTTPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form) {
 
     //TODO save form doesnt work
 
@@ -643,19 +717,21 @@ bool mqtt_at_mode_auto_recovery_client(Stream &serial) {
     return true;
 }
 
-bool mqtt_at_mode_command_handler(Stream &serial, const String &command, int8_t argc, char **argv) {
-    _debug_printf_P(PSTR("MQTTClient mqtt_at_mode_command_handler(%s, %d, %s)\n"), command.c_str(), argc, argc > 0 ? implode(F(","), (const char **)argv, argc).c_str() : _sharedEmptyString.c_str());
+bool MQTTPlugin::hasAtMode() const {
+    return true;
+}
 
-    if (command.length() == 0) {
-
-        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(MQTT));
+void MQTTPlugin::atModeHelpGenerator() {
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(MQTT));
 #if MQTT_AUTO_DISCOVERY_CLIENT
-        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(MQTTAD));
-        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(MQTTLAD));
-        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(MQTTDAD));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(MQTTAD));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(MQTTLAD));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(MQTTDAD));
 #endif
+}
 
-    } else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(MQTT))) {
+bool MQTTPlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) {
+    if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(MQTT))) {
         if (argc == AT_MODE_QUERY_COMMAND) {
             if (MQTTClient::getClient()) {
                 serial.println(MQTTClient::connectionStatusString());
@@ -742,27 +818,5 @@ bool mqtt_at_mode_command_handler(Stream &serial, const String &command, int8_t 
 }
 
 #endif
-
-void mqtt_reconfigure_plugin(PGM_P source) {
-    MQTTClient::deleteInstance();
-    if (config._H_GET(Config().flags).mqttMode != MQTT_MODE_DISABLED) {
-        MQTTClient::setupInstance();
-    }
-}
-
-PROGMEM_PLUGIN_CONFIG_DEF(
-/* pluginName               */ mqtt,
-/* setupPriority            */ 20,
-/* allowSafeMode            */ false,
-/* autoSetupWakeUp          */ true,
-/* rtcMemoryId              */ 0,
-/* setupPlugin              */ MQTTClient::setupInstance,
-/* statusTemplate           */ MQTTClient::getStatus,
-/* configureForm            */ mqtt_client_create_settings_form,
-/* reconfigurePlugin        */ mqtt_reconfigure_plugin,
-/* reconfigure Dependencies */ nullptr,
-/* prepareDeepSleep         */ nullptr,
-/* atModeCommandHandler     */ mqtt_at_mode_command_handler
-);
 
 #endif

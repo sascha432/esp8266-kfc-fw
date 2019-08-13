@@ -40,7 +40,59 @@ void MDNS_setup_wifi_event_callback() {
 
 #endif
 
-void MDNS_setup() {
+void MDNS_query_service(const char *service, const char *proto, Stream *output) {
+#if defined(ESP32)
+    String serviceStr = service;
+    String protoStr = proto;
+    Scheduler.addTimer(10, false, [output, serviceStr, protoStr](EventScheduler::TimerPtr timer) {
+        auto results = (uint8_t)MDNS.queryService(serviceStr, protoStr);
+        if (results) {
+            for(uint8_t i = 0; i < results; i++) {
+                output->printf_P(PSTR("+MDNS: host=%s,ip=%s,port=%u,txts="), MDNS.hostname(i).c_str(), MDNS.IP(i).toString().c_str(), MDNS.port(i));
+                auto numTxt = (uint8_t)MDNS.numTxt(i);
+                for(uint8_t j = 0; j < numTxt; j++) {
+                    if (j) {
+                        output->print(',');
+                    }
+                    output->print(MDNS.txt(i, j));
+                }
+                output->println();
+            }
+        } else {
+            output->println(F("+MDNS: Query did not return any results"));
+        }
+    });
+#endif
+}
+
+class MDNSPlugin : public PluginComponent {
+public:
+    MDNSPlugin() {
+        register_plugin(this);
+    }
+    PGM_P getName() const;
+    PluginPriorityEnum_t getSetupPriority() const override;
+    void setup(PluginSetupMode_t mode) override;
+    bool hasStatus() const override;
+    const String getStatus() override;
+#if AT_MODE_SUPPORTED
+    bool hasAtMode() const override;
+    void atModeHelpGenerator() override;
+    bool atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) override;
+#endif
+};
+
+static MDNSPlugin plugin;
+
+PGM_P MDNSPlugin::getName() const {
+    return PSTR("mdns");
+}
+
+MDNSPlugin::PluginPriorityEnum_t MDNSPlugin::getSetupPriority() const {
+    return PRIO_MDNS;
+}
+
+void MDNSPlugin::setup(PluginSetupMode_t mode) {
     auto flags = config._H_GET(Config().flags);
     auto httpPort = config._H_GET(Config().http_port);
 
@@ -69,32 +121,11 @@ void MDNS_setup() {
 #endif
 }
 
-void MDNS_query_service(const char *service, const char *proto, Stream *output) {
-#if defined(ESP32)
-    String serviceStr = service;
-    String protoStr = proto;
-    Scheduler.addTimer(10, false, [output, serviceStr, protoStr](EventScheduler::TimerPtr timer) {
-        auto results = (uint8_t)MDNS.queryService(serviceStr, protoStr);
-        if (results) {
-            for(uint8_t i = 0; i < results; i++) {
-                output->printf_P(PSTR("+MDNS: host=%s,ip=%s,port=%u,txts="), MDNS.hostname(i).c_str(), MDNS.IP(i).toString().c_str(), MDNS.port(i));
-                auto numTxt = (uint8_t)MDNS.numTxt(i);
-                for(uint8_t j = 0; j < numTxt; j++) {
-                    if (j) {
-                        output->print(',');
-                    }
-                    output->print(MDNS.txt(i, j));
-                }
-                output->println();
-            }
-        } else {
-            output->println(F("+MDNS: Query did not return any results"));
-        }
-    });
-#endif
+bool MDNSPlugin::hasStatus() const {
+    return true;
 }
 
-const String MDNS_get_status() {
+const String MDNSPlugin::getStatus() {
     PrintString message;
     message.printf_P(PSTR("Hostname '%s'"), config._H_STR(Config().device_name));
     return message;
@@ -107,15 +138,17 @@ const String MDNS_get_status() {
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(MDNS, "MDNS", "<service>,<proto>", "Query MDNS");
 // PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(MDNSBSD, "MDNSBSD", "Broadcast service discovery on selected interfaces");
 
-bool mdns_at_mode_command_handler(Stream &serial, const String &command, int8_t argc, char **argv) {
+bool MDNSPlugin::hasAtMode() const {
+    return true;
+}
 
-    if (command.length() == 0) {
+void MDNSPlugin::atModeHelpGenerator() {
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(MDNS));
+    // at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(MDNSBSD));
+}
 
-        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(MDNS));
-        // at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(MDNSBSD));
-
-    }
-    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(MDNS))) {
+bool MDNSPlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) {
+    if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(MDNS))) {
         if (argc != 2) {
             serial.println(F("ERROR - Invalid arguments"));
         }
@@ -133,20 +166,5 @@ bool mdns_at_mode_command_handler(Stream &serial, const String &command, int8_t 
 }
 
 #endif
-
-PROGMEM_PLUGIN_CONFIG_DEF(
-/* pluginName               */ mdns,
-/* setupPriority            */ PLUGIN_PRIO_MDNS,
-/* allowSafeMode            */ false,
-/* autoSetupWakeUp          */ false,
-/* rtcMemoryId              */ 0,
-/* setupPlugin              */ MDNS_setup,
-/* statusTemplate           */ MDNS_get_status,
-/* configureForm            */ nullptr,
-/* reconfigurePlugin        */ nullptr,
-/* reconfigure Dependencies */ nullptr,
-/* prepareDeepSleep         */ nullptr,
-/* atModeCommandHandler     */ mdns_at_mode_command_handler
-);
 
 #endif

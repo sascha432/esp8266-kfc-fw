@@ -2,6 +2,8 @@
  * Author: sascha_lammers@gmx.de
  */
 
+#pragma once
+
 #if IOT_DIMMER_MODULE
 
 // Trailing edge dimmer module
@@ -11,8 +13,6 @@
 //
 // default I2C pins are D3 (0) and D5 (14)
 // NOTE: Wire.onReceive() is not working on ESP8266
-
-#pragma once
 
 #include <Arduino_compat.h>
 #include <HardwareSerial.h>
@@ -48,12 +48,12 @@
 
 // I2C only. SDA PIN
 #ifndef IOT_DIMMER_MODULE_INTERFACE_SDA
-#define IOT_DIMMER_MODULE_INTERFACE_SDA     0
+#define IOT_DIMMER_MODULE_INTERFACE_SDA     D3
 #endif
 
 // I2C only. SCL PIN
 #ifndef IOT_DIMMER_MODULE_INTERFACE_SCL
-#define IOT_DIMMER_MODULE_INTERFACE_SCL     14
+#define IOT_DIMMER_MODULE_INTERFACE_SCL     D5
 #endif
 
 #endif
@@ -84,6 +84,7 @@ public:
     static void setup();
 
     void createAutoDiscovery(MQTTAutoDiscovery::Format_t format, PrintHtmlEntitiesString &payload);
+    void onConnect(MQTTClient *client);
 
     bool on(uint8_t channel);
     bool off(uint8_t channel);
@@ -92,9 +93,14 @@ public:
 
 #if IOT_DIMMER_MODULE_INTERFACE_UART
     static void onData(uint8_t type, const uint8_t *buffer, size_t len);
-#endif
-
     static void onReceive(int length);
+#else
+    static void fetchMetrics(EventScheduler::TimerPtr timer) {
+        if (_dimmer) {
+            _dimmer->_fetchMetrics();
+        }
+    }
+#endif
 
     void writeConfig();
 
@@ -126,6 +132,7 @@ private:
     }
 #endif
     void _printStatus(PrintHtmlEntitiesString &out);
+    void _updateMetrics(uint8_t temperature, uint16_t vcc);
 
     void begin();
     void end();
@@ -135,21 +142,25 @@ private:
 
     void _getChannels();
     void _fade(uint8_t channel, int16_t toLevel, float fadeTime);
-    void _onReceive(int length);
 
 private:
     DimmerChannel _channels[IOT_DIMMER_MODULE_CHANNELS];
 
-    uint16_t _vcc;
     uint8_t _temperature;
+    uint16_t _vcc;
     float _fadeTime;
     float _onOffFadeTime;
 
 #if IOT_DIMMER_MODULE_INTERFACE_UART
     HardwareSerial &_serial;
     SerialTwoWire *_wire;
+
+    void _onReceive(int length);
 #else
     TwoWire *_wire;
+    EventScheduler::TimerPtr _timer;
+
+    void _fetchMetrics();
 #endif
 
     static Driver_DimmerModule *_dimmer;

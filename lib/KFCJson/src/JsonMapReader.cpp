@@ -4,41 +4,33 @@
 
 #include "JsonMapReader.h"
 
-JsonVar::JsonVar() {
-	_type = JsonBaseReader::JSON_TYPE_INVALID;
+#if DEBUG_KFC_JSON
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
+#endif
+
+JsonMapReader::JsonMapReader(Stream & stream) : JsonBaseReader(stream) {
+    _filter = nullptr;
 }
 
-JsonVar::JsonVar(JsonBaseReader::JsonType_t type) {
-	_type = type;
+void JsonMapReader::setFilter(FilterCallback_t filter)
+{
+    _filter = filter;
 }
-
-JsonVar::JsonVar(JsonBaseReader::JsonType_t type, const String &value) {
-	_type = type;
-	_value = value;
-}
-
-void JsonVar::setValue(const String &value) {
-	_value = value;
-}
-
-String JsonVar::getValue() const {
-	return _value;
-}
-
-JsonBaseReader::JsonType_t JsonVar::getType() const {
-	return _type;
-}
-
 
 bool JsonMapReader::processElement() {
-	_map[getPath()] = JsonVar(getType(), getValue());
+    String path = getPath();
+    if (!_filter || _filter(path, getValue(), getType(), *this)) {
+        _map[path] = JsonVar(getType(), getValue());
+    }
 	return true;
 }
 
 void JsonMapReader::dump(Print &out) {
 	for (auto &element : _map) {
 		auto &var = element.second;
-		out.printf_P(PSTR("%s=%s (%s)\n"), element.first.c_str(), formatValue(var.getValue().c_str(), var.getType()).c_str(), jsonType2String(var.getType()).c_str());
+		out.printf_P(PSTR("%s=%s (%s)\n"), element.first.c_str(), JsonVar::formatValue(var.getValue().c_str(), var.getType()).c_str(), jsonType2String(var.getType()).c_str());
 	}
 }
 

@@ -18,6 +18,9 @@
 
 class JsonCallbackReader;
 
+// the callback function can receive JSON_TYPE_INVALID and JSON_TYPE_NUMBER
+// JSON_TYPE_INVALID: a type that was not recognized
+// JSON_TYPE_NUMBER: number in E notation, might need special parsing see class JsonVar
 typedef std::function<bool(const String &key, const String &value, size_t partialLength, JsonBaseReader &json)> JsonReaderCallback;
 
 class JsonCallbackReader : public JsonBaseReader {

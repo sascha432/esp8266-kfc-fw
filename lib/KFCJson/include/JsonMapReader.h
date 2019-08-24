@@ -6,37 +6,27 @@
 
 #include <Arduino_compat.h>
 #include "JsonBaseReader.h"
+#include "JsonVar.h"
 
-class JsonVar {
-public:
-	JsonVar();
-	JsonVar(JsonBaseReader::JsonType_t type);
-	JsonVar(JsonBaseReader::JsonType_t type, const String &value);
-
-	void setValue(const String &value);
-	String getValue() const;
-	JsonBaseReader::JsonType_t getType() const;
-
-private:
-	JsonBaseReader::JsonType_t _type;
-	String _value;
-};
-
-class JsonReadVar;
+// read (and filter) JSON into key/value pairs
 
 typedef std::map<String, JsonVar> JsonMemoryMap;
 
 class JsonMapReader : public JsonBaseReader {
 public:
-	JsonMapReader(Stream &stream) : JsonBaseReader(stream) {
-	}
+    typedef std::function<bool(const String &path, const String &value, JsonBaseReader::JsonType_t type, JsonMapReader &reader)> FilterCallback_t;
+
+    JsonMapReader(Stream &stream);
+
+    void setFilter(FilterCallback_t filter);
 
 	virtual bool processElement() override;
 
-	void dump(Print &out);
+    JsonVar get(const String &path);
 
-	JsonVar get(const String &path);
+    void dump(Print &out);
 
 private:
+    FilterCallback_t _filter;
 	JsonMemoryMap _map;
 };

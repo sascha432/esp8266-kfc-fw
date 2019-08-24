@@ -2,15 +2,12 @@
 * Author: sascha_lammers@gmx.de
 */
 
-#define HAVE_REGEX 0
-
-#if HAVE_REGEX
-#include <regex>
-#endif
 #include <memory>
 #include "JsonBaseReader.h"
+#include "JsonVar.h"
+#include "JsonTools.h"
 
-#if DEBUG_JSON_READER
+#if DEBUG_KFC_JSON
 #include <debug_helper_enable.h>
 #else
 #include <debug_helper_disable.h>
@@ -20,7 +17,7 @@ void JsonBaseReader::initParser() {
 	_level = 0;
 	_quoted = false;
 	_escaped = false;
-	_array = -1;
+    _arrayIndex = -1;
 	_type = JSON_TYPE_INVALID;
 	_position = 0;
 	_count = 0;
@@ -28,39 +25,11 @@ void JsonBaseReader::initParser() {
 	_valueStr = String();
 }
 
-String JsonBaseReader::formatValue(const String &value, JsonType_t type) {
-	String tmp;
-	switch (type) {
-	case JSON_TYPE_EMPTY_ARRAY:
-		return F("[]");
-	case JSON_TYPE_EMPTY_OBJECT:
-		return F("{}");
-	case JSON_TYPE_NULL:
-		return F("null");
-	case JSON_TYPE_BOOLEAN:
-		tmp = value;
-		tmp.toLowerCase();
-		return tmp;
-	case JSON_TYPE_INT:
-		return String(value.toInt());
-	case JSON_TYPE_FLOAT:
-		return String(value.toFloat());
-	case JSON_TYPE_STRING:
-		tmp = value;
-		tmp.replace(F("\""), F("\\\""));
-		tmp.replace(F("\\"), F("\\\\"));
-		return '"' + tmp + '"';
-	case JSON_TYPE_INVALID:
-	case JSON_TYPE_ANY:
-		break;
-	}
-	return F("<invalid type>");
-}
-
-void JsonBaseReader::error(const String &message) {
+void JsonBaseReader::error(const String &message, JsonErrorEnum_t type) {
 	_debug_printf_P(PSTR("JSON error: %s at %d\n"), message.c_str(), position());
 	_lastError.message = message;
 	_lastError.position = position();
+    _lastError.type = type;
 	//#if _WIN32 || _WIN64
 	//    throw JsonException(getLastErrorMessage().c_str());
 	//#endif
@@ -69,9 +38,10 @@ void JsonBaseReader::error(const String &message) {
 void JsonBaseReader::clearLastError() {
 	_lastError.position = (size_t)(~0);
 	_lastError.message = String();
+    _lastError.type = JSON_ERROR_NONE;
 }
 
-JsonError JsonBaseReader::getLastError() const {
+JsonBaseReader::JsonError_t JsonBaseReader::getLastError() const {
 	return _lastError;
 }
 
@@ -104,14 +74,22 @@ String JsonBaseReader::getLastErrorMessage() const {
 	return error;
 }
 
+bool JsonBaseReader::beginObject(bool isArray) {
+    return true;
+}
+
+bool JsonBaseReader::endObject() {
+    return true;
+}
+
+bool JsonBaseReader::recoverableError(JsonErrorEnum_t errorType) {
+    return true;
+}
+
 String JsonBaseReader::jsonType2String(JsonType_t type) {
 	switch (type) {
 	case JSON_TYPE_BOOLEAN:
 		return F("boolean");
-	case JSON_TYPE_EMPTY_ARRAY:
-		return F("array");
-	case JSON_TYPE_EMPTY_OBJECT:
-		return F("object");
 	case JSON_TYPE_FLOAT:
 		return F("float");
 	case JSON_TYPE_INT:
@@ -120,112 +98,84 @@ String JsonBaseReader::jsonType2String(JsonType_t type) {
 		return F("string");
 	case JSON_TYPE_NULL:
 		return F("null");
-	case JSON_TYPE_INVALID:
+    case JSON_TYPE_OBJECT_END:
+    case JSON_TYPE_INVALID:
 	case JSON_TYPE_ANY:
 		break;
 	}
 	return F("INVALID TYPE");
 }
 
-bool JsonBaseReader::_isValidNumber(const String &value, JsonType_t &_type) const {
-#if HAVE_REGEX
-	std::smatch match;
-	if (std::regex_match(value, match, std::regex("^-?(?=[1-9]|0(?!\\d))\\d+(\\.\\d+)?([eE][+-]?\\d+)?$"))) {
-		if (match.str(1).length() || match.str(2).length()) {  // group 1=fraction, 2=exponent
-			_type = JSON_TYPE_FLOAT;
-		} else {
-			_type = JSON_TYPE_INT;
-		}
-		return true;
-	}
-	return false;
-#else
-	JsonType_t newType = JSON_TYPE_INT;
-	const char *ptr = value.c_str();
-	// -?
-	if (*ptr == '-') {
-		ptr++;
-	}
-	// (?=[1-9] | 0(?!\d))
-	if (!((*ptr != '0' && isdigit(*ptr)) || (*ptr == '0' && !isdigit(*(ptr + 1))))) {
-		return false;
-	}
-	ptr++;
-	// \d+
-	while (isdigit(*ptr)) {
-		ptr++;
-	}
-	// (
-	// \\.
-	if (*ptr == '.') {
-		newType = JSON_TYPE_FLOAT;  // with a fraction type is float
-		ptr++;
-		// \d+
-		if (!isdigit(*ptr++)) {
-			return false;
-		}
-		while (isdigit(*ptr)) {
-			ptr++;
-		}
-	}
-	// )?
+bool JsonBaseReader::_isValidNumber(const String &value, JsonType_t &_type) {
+    auto type = JsonVar::getNumberType(value.c_str());
+    if (type & JsonVar::NumberType_t::EXPONENT) {
+        _type = JSON_TYPE_NUMBER;
+        return true;
+    }
+    type &= JsonVar::NumberType_t::TYPE_MASK;
+    if (type == JsonVar::NumberType_t::INVALID) {
+        return false;
+    } 
+    else if (type == JsonVar::NumberType_t::FLOAT) {
+        _type = JSON_TYPE_FLOAT;
+    }
+    else if (type == JsonVar::NumberType_t::INT) {
+        _type = JSON_TYPE_INT;
+    }
+    return true;
+}
 
-	// (
-	// [eE]
-	if (tolower(*ptr) == 'e') {
-		newType = JSON_TYPE_FLOAT;  // an exponent indicates float
-		ptr++;
-		// [+-]?
-		if (*ptr == '+' && *ptr == '-') {
-			ptr++;
-		}
-		// \d+
-		if (!isdigit(*ptr++)) {
-			return false;
-		}
-		while (isdigit(*ptr)) {
-			ptr++;
-		}
-	}
-	// )?
-	if (*ptr) {
-		return false;
-	}
-	_type = newType;  // number validated, set type
-	return true;
-#endif
+bool JsonBaseReader::_addCharacter(char ch) {
+    if (!_quoted && isspace(ch)) {
+        return true;
+    }
+    if (_valueStr.length() == 0) {
+        _valuePosition = _position - 1;
+    }
+    _valueStr += ch;
+    return true;
 }
 
 bool JsonBaseReader::_prepareElement() {
-	if (_keyStr.length() == 0 && _valueStr.length() == 0) {
-		_type = JSON_TYPE_INVALID;
-		_debug_printf_P(PSTR("key and data length 0\n"));
-		return true;
-	}
-	if (_array == -1 && !_keyStr.length()) {
-		error(F("An object requires a key"));
-		return false;
-	}
-	if (_type == JSON_TYPE_INVALID) {
-		//size_t fake_pos = max(0, (int)(position - _valueStr.length() - 1));
-		_valueStr.trim();
-		if (_valueStr.equalsIgnoreCase(F("true")) || _valueStr.equalsIgnoreCase(F("false"))) {
-			_type = JSON_TYPE_BOOLEAN;
-		} else if (_valueStr.equalsIgnoreCase(F("null"))) {
-			_type = JSON_TYPE_NULL;
-		} else if (_isValidNumber(_valueStr, _type)) {
-			//_type = JSON_TYPE_NUMBER;  // _isValidNumber sets _type to int or float
-		} else {
-			//_position = fake_pos++;
-			error(F("Invalid value"));
-			return false;
-		}
-	}
+    bool result = true;
+    if (_type != JSON_TYPE_OBJECT_END) {
+        if (_keyStr.length() == 0 && _valueStr.length() == 0) {
+		    _type = JSON_TYPE_INVALID;
+            error(F("Empty value not allowed"), JSON_ERROR_EMPTY_VALUE);
+		    return recoverableError(JSON_ERROR_EMPTY_VALUE);
+	    }
+	    if (_arrayIndex == -1 && !_keyStr.length()) {
+		    error(F("An object requires a key"), JSON_ERROR_OBJECT_VALUE_WITHOUT_KEY);
+            return recoverableError(JSON_ERROR_OBJECT_VALUE_WITHOUT_KEY);
+	    }
+	    if (_type == JSON_TYPE_INVALID) {
+		    //size_t fake_pos = max(0, (int)(position - _valueStr.length() - 1));
+		    _valueStr.trim();
+            if (strcasecmp_P(_valueStr.c_str(), SPGM(true)) == 0 || strcasecmp_P(_valueStr.c_str(), SPGM(false)) == 0) {
+		    //if (_valueStr.equalsIgnoreCase(FSPGM(true)) || _valueStr.equalsIgnoreCase(F("false"))) {
+			    _type = JSON_TYPE_BOOLEAN;
+		    } 
+            else if (strcasecmp_P(_valueStr.c_str(), SPGM(null)) == 0) {
+            //else if (_valueStr.equalsIgnoreCase(F("null"))) {
+                _type = JSON_TYPE_NULL;
+		    } 
+            else if (_isValidNumber(_valueStr, _type)) {
+                // _isValidNumber() sets _type
+		    } 
+            else {
+			    //_position = fake_pos++;
+			    error(F("Invalid value"), JSON_ERROR_INVALID_VALUE);
+                if (!recoverableError(JSON_ERROR_INVALID_VALUE)) {
+                    return false;
+                }
+		    }
+	    }
 
-	_count++;
-	_debug_printf_P(PSTR("processing key '%s' data %s type %d level %d at %d\n"), _keyStr.c_str(), formatValue(_valueStr, getType()).c_str(), (int)getType(), (int)getLevel(), (int)getPosition());
+	    _count++;
+	    _debug_printf_P(PSTR("processing key '%s' data %s type %d level %d at %d\n"), _keyStr.c_str(), JsonVar::formatValue(_valueStr, getType()).c_str(), (int)getType(), (int)getLevel(), (int)getLength());
 
-	bool result = processElement();
+	    result = processElement();
+    }
 	_keyStr = String();
 	_valueStr = String();
 	_type = JSON_TYPE_INVALID;
@@ -238,7 +188,7 @@ bool JsonBaseReader::parseStream() {
 	int ch;
 	while ((ch = readByte()) != -1) {
 		if (ch == 0) {
-			error("NUL byte found");
+			error("NUL byte found", JSON_ERROR_NUL_TERMINATOR);
 			return false;
 		}
 		if (_escaped) {
@@ -246,73 +196,88 @@ bool JsonBaseReader::parseStream() {
 			if (!_addCharacter(ch)) {
 				return false;
 			}
-		} else if (!_quoted && (ch == '{' || ch == '[')) {
-			_debug_printf_P(PSTR("open %s level %d key %s array %d count %d\n"), (ch == '[' ? "array" : "object"), _level + 1, _keyStr.c_str(), _array, _count);
-			_state.push_back({_keyStr, _array, _count});
-			if (++_level == 255) {
-				error(F("Maximum nested level reached"));
+		} 
+        else if (!_quoted && (ch == '{' || ch == '[')) {
+			_debug_printf_P(PSTR("open %s level %d key %s array %d count %d\n"), (ch == '[' ? "array" : "object"), _level + 1, _keyStr.c_str(), _arrayIndex, _count);
+			_stack.push_back({_keyStr, _keyPosition, _arrayIndex, _count});
+			if (++_level <= 0) {
+				error(F("Maximum nested level reached"), JSON_ERROR_MAX_NESTED_LEVEL);
 				return false;
 			}
 			if (ch == '[') {
+                // array
 				if (!beginObject(true)) {
 					return false;
 				}
-				_array = 0;
+                _arrayIndex = 0;
 			} else {
+                // object
 				if (!beginObject(false)) {
 					return false;
 				}
-				_array = -1;
+                _arrayIndex = -1;
 			}
 			_keyStr = String();
 			_valueStr = String();
 			_count = 0;
-		} else if (!_quoted && (ch == '}' || ch == ']')) {
-			_debug_printf_P(PSTR("closing %s level %d key %s data %s array %d count %d\n"), (ch == ']' ? "array" : "object"), _level, _keyStr.c_str(), _valueStr.c_str(), _array, _count);
+		} 
+        else if (!_quoted && (ch == '}' || ch == ']')) {
+			_debug_printf_P(PSTR("closing %s level %d key %s data %s array %d count %d\n"), (ch == ']' ? "array" : "object"), _level, _keyStr.c_str(), _valueStr.c_str(), _arrayIndex, _count);
+            if ((_arrayIndex == -1 && ch == ']') || (_arrayIndex != -1 && ch == '}')) {
+                error(F("Invalid array or object end"), JSON_ERROR_INVALID_END);
+                return false;
+            }
+            else
 			if (_count == 0 && _keyStr.length() == 0 && _valueStr.length() == 0) {
-				_type = ch == ']' ? JSON_TYPE_EMPTY_ARRAY : JSON_TYPE_EMPTY_OBJECT;
-				if (!processElement()) {
-					return false;
-				}
-				_type = JSON_TYPE_INVALID;
-			} else if (!_prepareElement()) {
-				return false;
-			}
+			    _type = JSON_TYPE_OBJECT_END;
+			} 
+            else if (!_prepareElement()) {
+                return false;
+            }
 			if (!endObject()) {
 				return false;
 			}
-			if (--_level == 255) {
-				error(F("Out of bounds"));
+			if (_level-- == 0) {
+				error(F("Out of bounds"), JSON_ERROR_OUT_OF_BOUNDS);
 				return false;
 			}
-			_array = _state.back().arrayState;
-			_count = _state.back().count;
-			_state.pop_back();
-		} else if (ch == _quoteChar) {
+            _arrayIndex = _stack.back().arrayIndex;
+			_count = _stack.back().count;
+			_stack.pop_back();
+            _type = JSON_TYPE_OBJECT_END;
+		} 
+        else if (ch == _quoteChar) {
 			_quoted = !_quoted;
 			_type = JSON_TYPE_STRING;
-
-		} else if (!_quoted && ch == ':') {
-			if (_array != -1) {
-				error(F("keys are not allowed inside arrays"));
-				return false;
+		} 
+        else if (!_quoted && ch == ':') {
+			if (_arrayIndex != -1) {
+				error(F("Key not allowed inside array"), JSON_ERROR_ARRAY_WITH_KEY);
+                if (!recoverableError(JSON_ERROR_ARRAY_WITH_KEY)) {
+                    return false;
+                }
+                //_valueStr = String();
 			}
-			_debug_printf_P(PSTR("got key '%s' at %d\n"), _valueStr.c_str(), getPosition());
+			_debug_printf_P(PSTR("got key '%s' at %d\n"), _valueStr.c_str(), getLength());
 
 			_keyStr = _valueStr;
+            _keyPosition = _valuePosition;
 			_valueStr = String();
 			_type = JSON_TYPE_INVALID;
 
-		} else if (!_quoted && ch == ',') {
+		} 
+        else if (!_quoted && ch == ',') {
 			if (!_prepareElement()) {
 				return false;
 			}
-			if (_array != -1) {
-				_array++;
+			if (_arrayIndex != -1) {
+                _arrayIndex++;
 			}
-		} else if (ch == '\\') {
+		} 
+        else if (ch == '\\') {
 			_escaped = true;
-		} else if (!_addCharacter(ch)) {
+		} 
+        else if (!_addCharacter(ch)) {
 			return false;
 		}
 	}
@@ -325,15 +290,13 @@ int JsonBaseReader::readByte() {
 		return -1;
 	}
 	int ch = _stream.read();
-	if (ch != -1) {
-		_position++;
+	_position++;
 #if DEBUG_JSON_READER
-		_jsonSource += ch;
-		if (_jsonSource.length() > 16) {
-			_jsonSource.remove(0, _jsonSource.length() - 16);
-		}
-#endif
+	_jsonSource += ch;
+	if (_jsonSource.length() > 16) {
+		_jsonSource.remove(0, _jsonSource.length() - 16);
 	}
+#endif
 	return ch;
 }
 
@@ -342,33 +305,42 @@ size_t JsonBaseReader::position() const {
 }
 
 String JsonBaseReader::getPath(uint8_t index) const {
-	if (index < _state.size()) {
-		return _state.at(index).key;
-	}
-	return String();
+    if (index < _stack.size()) {
+        return _stack.at(index).key;
+    }
+    return String();
+}
+
+String JsonBaseReader::getPath(uint8_t index, size_t &keyPosition) const {
+    if (index < _stack.size()) {
+        auto &state = _stack.at(index);
+        keyPosition = state.keyPosition;
+        return state.key;
+    }
+    return String();
 }
 
 String JsonBaseReader::getPath() const {
 	String _path;
-	for (const auto &state : _state) {
+	for (const auto &state : _stack) {
 		if (state.key.length()) {
 			if (_path.length()) {
 				_path += '.';
 			}
 			_path += state.key;
-			if (state.arrayState != -1) {
-				_appendIndex(state.arrayState, _path);
+			if (state.arrayIndex != -1) {
+				_appendIndex(state.arrayIndex, _path);
 			}
-		} else if (state.arrayState != -1) {
-			_appendIndex(state.arrayState, _path);
+		} else if (state.arrayIndex != -1) {
+			_appendIndex(state.arrayIndex, _path);
 		}
 	}
 	if (_keyStr.length() && _path.length()) {
 		_path += '.';
 	}
 	_path += _keyStr;
-	if (_array != -1) {
-		_appendIndex(_array, _path);
+	if (_arrayIndex != -1) {
+		_appendIndex(_arrayIndex, _path);
 	}
 
 	return _path;

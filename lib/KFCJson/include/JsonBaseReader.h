@@ -13,11 +13,6 @@
 #define DEBUG_JSON_READER 	0
 #endif
 
-struct JsonError {
-	String message;
-	size_t position;
-};
-
 #if _WIN32 || _WIN64
 
 class JsonException : public std::exception {
@@ -28,27 +23,48 @@ public:
 
 #endif
 
-struct JsonNestedState {
-	String key;
-	int16_t arrayState;
-	uint16_t count;
-};
-
-typedef std::vector<JsonNestedState> JsonVector;
 
 class JsonBaseReader {
 public:
-	enum JsonType_t : int8_t { 
+    typedef struct  {
+        String key;
+        size_t keyPosition;
+        int16_t arrayIndex;
+        uint16_t count;
+    } JsonStack_t;
+
+    typedef enum {
+        JSON_ERROR_NONE = 0,
+        JSON_ERROR_OBJECT_VALUE_WITHOUT_KEY,
+        JSON_ERROR_ARRAY_WITH_KEY,
+        JSON_ERROR_INVALID_VALUE,
+        JSON_ERROR_EMPTY_VALUE,
+        JSON_ERROR_NUL_TERMINATOR,                  // NUL terminator found while reading stream
+        JSON_ERROR_MAX_NESTED_LEVEL,
+        JSON_ERROR_OUT_OF_BOUNDS,                   // array or object terminator without array or object
+        JSON_ERROR_USER_ABORT,
+        JSON_ERROR_INVALID_END,                     // array closed with } or object closed with ]
+    } JsonErrorEnum_t ;
+
+    typedef struct {
+        String message;
+        size_t position;
+        JsonErrorEnum_t type;
+    } JsonError_t;
+
+    typedef std::vector<JsonStack_t> JsonStackVector;
+
+    typedef enum : int8_t { 
 		JSON_TYPE_ANY = -1, 
 		JSON_TYPE_INVALID = 0, 
 		JSON_TYPE_STRING, 
 		JSON_TYPE_BOOLEAN, 
 		JSON_TYPE_INT, 
-		JSON_TYPE_FLOAT, 
-		JSON_TYPE_NULL, 
-		JSON_TYPE_EMPTY_ARRAY, 
-		JSON_TYPE_EMPTY_OBJECT 
-	};
+        JSON_TYPE_FLOAT, 
+        JSON_TYPE_NUMBER,                   // number in E notation, might need special parsing function see class JsonVar
+        JSON_TYPE_NULL, 
+        JSON_TYPE_OBJECT_END, 
+	} JsonType_t;
 
 	JsonBaseReader(Stream &stream) : _stream(stream) {
 		_quoteChar = '"';
@@ -61,11 +77,21 @@ public:
 		_stream = stream;
 	}
 
-	inline size_t getPosition() const {
+	inline size_t getLength() const {
 		return _position;
 	}
 
-	inline void setQuoteChar(char quoteChar) {
+    // position is undefined if the value is an empty string
+    inline size_t getValuePosition() const {
+        return _valuePosition;
+    }
+
+    // position is undefined if the key is an empty string
+    inline size_t getKeyPosition() const {
+        return _keyPosition;
+    }
+
+    inline void setQuoteChar(char quoteChar) {
 		_quoteChar = quoteChar;
 	}
 
@@ -85,12 +111,12 @@ public:
 	
 	// returns -1 if it isn't an array, otherwise the index
 	inline int16_t getIndex() const {
-		return _array;
+		return _arrayIndex;
 	}
 
 	// returns true if it is an array
 	inline bool isArrayElement() const {
-		return _array != -1;
+		return _arrayIndex != -1;
 	}
 
 	// return value
@@ -104,7 +130,10 @@ public:
 	}
 
 	// index is 1 based, 0 points to an unnamed array or object
-	String getPath(uint8_t index) const;
+    String getPath(uint8_t index) const;
+
+    // get path and key position. key position is undefined if path.length() == 0
+    String getPath(uint8_t index, size_t &keyPosition) const;
 
 	// get full path
 	String getPath() const;
@@ -114,49 +143,47 @@ public:
 		return _level;
 	}
 
-	String formatValue(const String &value, JsonType_t type);
-
-	// return type of json value as String
+	// return type of JSON value as String
 	String jsonType2String(JsonType_t type);
 
-	void error(const String &message);
+	void error(const String &message, JsonErrorEnum_t type);
 	void clearLastError();
-	JsonError getLastError() const;
+	JsonError_t getLastError() const;
 	String getLastErrorMessage() const;
 
-	virtual bool beginObject(bool isArray) { return true; }
-	virtual bool endObject() { return true; }
+    virtual bool beginObject(bool isArray);
+    virtual bool endObject();
 	virtual bool processElement() = 0;
+    virtual bool recoverableError(JsonErrorEnum_t errorType);
 
 protected:
-	inline bool _addCharacter(char ch) {
-		_valueStr += ch;
-		return true;
-	}
-
+    bool _addCharacter(char ch);
 	bool _prepareElement();
 	void _appendIndex(int16_t index, String &str) const;
-	bool _isValidNumber(const String &value, JsonType_t &_type) const;
+    bool _isValidNumber(const String &value, JsonType_t &_type);
 
 protected:
 	Stream &_stream;
 	size_t _position;
+    size_t _valuePosition;
+    size_t _keyPosition;
 
 	uint8_t _level;			// byte 1 (alignment)
-	uint8_t _quoted: 1;		// byte 2
-	uint8_t _key: 1;
-	uint8_t _escaped: 1;
+	uint8_t _quoted : 1;	// byte 2
+	uint8_t _key : 1;
+	uint8_t _escaped : 1;
 	char _quoteChar;		// byte 3
 	JsonType_t _type;		// byte 4
 
+    int16_t _arrayIndex;
+
 	uint16_t _count;
-	int16_t _array;
 
 	String _keyStr;
 	String _valueStr;
-	JsonError _lastError;
-	JsonVector _state;
-#if DEBUG
+	JsonError_t _lastError;
+	JsonStackVector _stack;
+#if DEBUG_JSON_READER
 	String _jsonSource;
 #endif
 };

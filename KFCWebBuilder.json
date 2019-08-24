@@ -22,8 +22,6 @@
             "test_www"
         ],
         "conditional_excludes": {
-            "#if !IOT_ATOMIC_SUN_V2": [ "./Resources/html/atomic_sun.html", "./Resources/css/atomic_sun.css" ],
-            "#if !IOT_DIMMER_MODULE": [ "./Resources/html/dimmer.html", "./Resources/css/dimmer.css" ],
             "#if !IOT_DIMMER_MODULE && !IOT_ATOMIC_SUN_V2": "./Resources/html/dimmer_cfg.html",
             "#if !FILE_MANAGER": "./Resources/html/file_manager.html",
             "#if !MQTT_SUPPORT": "./Resources/html/mqtt.html",
@@ -34,10 +32,6 @@
             "#if !HUE_EMULATION": "./Resources/html/hue.html",
             "#if !REST_API_SUPPORT": "./Resources/html/rest_api.html",
             "#if !HOME_ASSISTANT_INTEGRATION": "./Resources/html/home_assistant.html",
-            "#if !PING_MONITOR && !HTTP2SERIAL && !IOT_DIMMER_MODULE": [
-                "./Resources/js/ws_console.js",
-                { "#if !FILE_MANAGER": "./lib/KFCWebBuilder/Resources/js/js.cookie.min.js" }
-            ],
             "#if !WEB_SOCKET_ENCRYPTION": [ "./Resources/js/aes.js", "./Resources/js/sha512.js" ],
             "#if !SERIAL2TCP": "./Resources/html/serial2tcp.html"
         },
@@ -50,10 +44,12 @@
                         "./lib/KFCWebBuilder/Resources/js/bootstrap.min.js",
                         "./lib/KFCWebBuilder/Resources/js/js.cookie.min.js",
                         "./lib/KFCWebBuilder/Resources/js/selectize.min.js",
+                        "./lib/KFCWebBuilder/Resources/js/rangeslider.min.js",
                         "./Resources/js/aes.js",
                         "./Resources/js/sha512.js",
                         "./Resources/js/main.min.js",
-                        "./Resources/js/ws_console.js"
+                        "./Resources/js/ws_console.js",
+                        "./Resources/js/webui.js"
                     ]
                 },
                 "processors":  {
@@ -88,9 +84,8 @@
                         "./lib/KFCWebBuilder/Resources/css/bootstrap.min.css",
                         "./lib/KFCWebBuilder/Resources/css/selectize.bootstrap4.css",
                         "./lib/KFCWebBuilder/Resources/css/open-iconic-bootstrap.css",
-                        "./Resources/css/styles.css",
-                        "./Resources/css/dimmer.css",
-                        "./Resources/css/atomic_sun.css"
+                        "./lib/KFCWebBuilder/Resources/css/rangeslider.css",
+                        "./Resources/css/styles.css"
                     ]
                 },
                 "processors":  {

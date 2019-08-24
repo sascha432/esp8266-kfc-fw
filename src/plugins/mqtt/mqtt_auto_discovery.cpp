@@ -8,6 +8,7 @@
 
 #include <Arduino_compat.h>
 #include <PrintString.h>
+#include <JsonTools.h>
 #include <kfc_fw_config.h>
 #include "mqtt_auto_discovery.h"
 #include "mqtt_component.h"

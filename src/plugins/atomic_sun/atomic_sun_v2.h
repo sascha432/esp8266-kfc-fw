@@ -10,8 +10,11 @@
 #include <HardwareSerial.h>
 #include <PrintString.h>
 #include <PrintHtmlEntitiesString.h>
+#include <WebUIComponent.h>
 #include "../mqtt/mqtt_client.h"
 #include "serial_handler.h"
+#include "../dimmer_module/dimmer_base.h"
+#include "../dimmer_module/dimmer_module_form.h"
 
 #ifndef DEBUG_4CH_DIMMER
 #define DEBUG_4CH_DIMMER 0
@@ -43,75 +46,35 @@ typedef struct {
     } color;
 } Driver_4ChDimmer_MQTTComponentData_t;
 
-typedef struct {
-    uint16 brightness;
-    uint16_t vcc;
-    uint8_t temperature;
-} Driver_4ChDimmer_Level_t;
-
-class Driver_4ChDimmer : public MQTTComponent
+class Driver_4ChDimmer : public MQTTComponent, public Dimmer_Base
 {
-private:
-    Driver_4ChDimmer(HardwareSerial &serial);
-
 public:
-    virtual ~Driver_4ChDimmer();
+    Driver_4ChDimmer();
 
-    static void setup();
+    virtual MQTTAutoDiscovery *createAutoDiscovery(MQTTAutoDiscovery::Format_t format) override;
+    virtual void onConnect(MQTTClient *client) override;
+    virtual void onMessage(MQTTClient *client, char *topic, char *payload, size_t len) override;
 
-    MQTTAutoDiscovery *createAutoDiscovery(MQTTAutoDiscovery::Format_t format) override;
-    void onConnect(MQTTClient *client) override;
-    void onMessage(MQTTClient *client, char *topic, char *payload, size_t len) override;
+    virtual bool on(uint8_t channel = -1) override;
+    virtual bool off(uint8_t channel = -1) override;
+    virtual int16_t getChannel(uint8_t channel) const override;
+    virtual bool getChannelState(uint8_t channel) const override;
+    virtual void setChannel(uint8_t channel, int16_t level, float time) override;
+    virtual uint8_t getChannelCount() const override;
 
-    bool on();
-    bool off();
-    void setLevel(float fadetime);
+   void publishState(MQTTClient *client = nullptr);
 
-    static const String getStatus();
-    static void onData(uint8_t type, const uint8_t *buffer, size_t len);
-
-    static void onReceive(int length);
-
-    void writeConfig();
-    static Driver_4ChDimmer *getInstance() {
-        return _dimmer;
-    }
-
-    inline bool getOnState() const {
-        return _data.state.value;
-    }
-    inline int16_t getBrightness() const {
-        return _data.brightness.value;
-    }
-    inline uint16_t getColor() const {
-        return _data.color.value;
-    }
-    inline void setColor(uint16_t color) {
-        _data.color.value = color;
-    }
-    void setBrightness(int16_t level) {
-        _data.brightness.value = level;
-        _data.state.value = level != 0;
-    }
-
-    void publishState(MQTTClient *client = nullptr);
+protected:
+    void _begin();
+    void _end();
+    void _printStatus(PrintHtmlEntitiesString &out);
 
 private:
-    void _printStatus(PrintHtmlEntitiesString &out);
     void _createTopics();
-
-    void begin();
-    void end();
-
     void _publishState(MQTTClient *client);
-    void _writeState();
 
-    void _setChannel(uint8_t channel, int16_t brightness, float fadetime);
-    void _setChannels(int16_t ch1, int16_t ch2, int16_t ch3, int16_t ch4, float fadetime);
+    void _setChannels(float fadetime);
     void _getChannels();
-
-    void _fade(uint8_t channel, int16_t toLevel, float fadeTime);
-    void _onReceive(int length);
 
 private:
 #if DEBUG_4CH_DIMMER
@@ -120,23 +83,30 @@ private:
     inline uint8_t endTransmission();
 #endif
 
-    inline float _getFadeTime() {
-        return _fadeTime;
-    }
-    inline float _getOnOffFadeTime() {
-        return _onOffFadeTime;
-    }
-
-    HardwareSerial &_serial;
     Driver_4ChDimmer_MQTTComponentData_t _data;
-    Driver_4ChDimmer_Level_t _stored;
+    int16_t _storedBrightness;
     int16_t _channels[4];
     uint8_t _qos;
     String _metricsTopic;
-    float _fadeTime;
-    float _onOffFadeTime;
+};
 
-    static Driver_4ChDimmer *_dimmer;
+class AtomicSunPlugin : public Driver_4ChDimmer, public DimmerModuleForm {
+public:
+    AtomicSunPlugin() {
+        register_plugin(this);
+    }
+    virtual PGM_P getName() const;
+    virtual PluginPriorityEnum_t getSetupPriority() const override;
+
+    virtual void setup(PluginSetupMode_t mode) override;
+    virtual void reconfigure(PGM_P source) override;
+
+    virtual bool hasWebUI() const override;
+    virtual void createWebUI(WebUI &webUI) override;
+    virtual WebUIInterface *getWebUIInterface() override;
+
+    virtual bool hasStatus() const override;
+    virtual const String getStatus() override;
 };
 
 #endif

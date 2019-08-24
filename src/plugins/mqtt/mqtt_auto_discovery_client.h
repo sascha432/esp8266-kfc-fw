@@ -7,6 +7,7 @@
 #if MQTT_SUPPORT
 
 #include <Arduino_compat.h>
+#include <LString.h>
 #include <vector>
 #include <memory>
 #include "mqtt_component.h"
@@ -16,11 +17,11 @@ public:
     typedef struct {
         uint16_t id;
         String topic;
-        size_t payloadLength;
+        String payload;
         String name;
-        String swVersion;
-        String model;
-        String manufacturer;
+        LString swVersion;
+        LString model;
+        LString manufacturer;
     } Discovery_t;
 
     typedef std::unique_ptr<Discovery_t> DiscoveryPtr_t;

@@ -624,7 +624,7 @@ const String MQTTPlugin::getStatus() {
 }
 
 bool MQTTPlugin::canHandleForm(const String &formName) const {
-    return true;
+    return nameEquals(formName);
 }
 
 void MQTTPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form) {
@@ -683,14 +683,18 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF(MQTT, "MQTT", "<connect|disconnect|force-discon
 #if MQTT_AUTO_DISCOVERY_CLIENT
 
 #include "mqtt_auto_discovery_client.h"
+#include <JsonCallbackReader.h>
+#include <JsonVar.h>
+#include <BufferStream.h>
 
 #if LOGGER
 #include "logger_stream.h"
 #endif
 
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(MQTTAD, "MQTTAD", "<enable=1|disable=0>", "Enable MQTT auto discovery");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(MQTTAD, "MQTTAD", "<1=enable|0=disable>", "Enable MQTT auto discovery");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(MQTTLAD, "MQTTLAD", "List MQTT auto discovery");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(MQTTDAD, "MQTTDAD", "<id>", "Delete MQTT auto discovery");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(MQTTPAD, "MQTTPAD", "[<id>][,<parsed|raw>]", "Print auto discovery payload");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(MQTTDAD, "MQTTDAD", "<id>[,<id>,...]", "Delete MQTT auto discovery");
 #endif
 
 bool mqtt_at_mode_is_connected(Stream &serial) {
@@ -726,6 +730,7 @@ void MQTTPlugin::atModeHelpGenerator() {
 #if MQTT_AUTO_DISCOVERY_CLIENT
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(MQTTAD));
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(MQTTLAD));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(MQTTPAD));
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(MQTTDAD));
 #endif
 }
@@ -779,36 +784,90 @@ bool MQTTPlugin::atModeHandler(Stream &serial, const String &command, int8_t arg
          if (mqtt_at_mode_auto_recovery(serial) && mqtt_at_mode_auto_recovery_client(serial)) {
              for(const auto &devicePtr: MQTTAutoDiscoveryClient::getInstance()->getDiscovery()) {
                  const auto &device = *devicePtr;
-                 serial.printf_P(PSTR("+MQTTLAD: id=%03u, name='%s' topic='%s' payload=%u model='%s' sw_version='%s' manufacturer='%s'\n"), 
+                 serial.printf_P(PSTR("+MQTTLAD: id=%03u, name='%s' topic='%s' payload=%u model='%*.*s' sw_version='%*.*s' manufacturer='%*.*s'\n"), 
                     device.id, 
                     device.name.c_str(), 
                     device.topic.c_str(), 
-                    device.payloadLength,
-                    device.model.c_str(), 
-                    device.swVersion.c_str(), 
-                    device.manufacturer.c_str()
+                    device.payload.length(),
+                    device.model.length(), device.model.length(), device.model.getData(), 
+                    device.swVersion.length(), device.swVersion.length(), device.swVersion.getData(), 
+                    device.manufacturer.length(), device.manufacturer.length(), device.manufacturer.getData()
                 );
              }            
         }
         return true;
     }
-    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(MQTTDAD))) {
-        if (argc != 1) {
-            at_mode_print_invalid_arguments(serial);
-        } 
-        else if (mqtt_at_mode_auto_recovery(serial) && mqtt_at_mode_auto_recovery_client(serial)) {
-            auto id = atoi(argv[0]);
+    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(MQTTPAD))) {
+        if (mqtt_at_mode_auto_recovery(serial) && mqtt_at_mode_auto_recovery_client(serial)) {
+            uint16_t id = (argc >= 1) ? (uint16_t)atoi(argv[0]) : 0;
+            auto formatRaw = (argc >= 2) && !strcasecmp_P(argv[1], PSTR("raw"));
             bool found = false;
+
             for(const auto &devicePtr: MQTTAutoDiscoveryClient::getInstance()->getDiscovery()) {
-                if (devicePtr->id == id) {
-                    serial.printf_P(PSTR("+MQTTDAD: Sending empty payload to %s\n"), devicePtr->topic.c_str());
-                    MQTTClient::getClient()->publish(devicePtr->topic, 2, true, _sharedEmptyString);
+                if (devicePtr->id == id || id == 0) {
+                    const auto &device = *devicePtr;
                     found = true;
-                    break;
+                    serial.printf_P(PSTR("+MQTTPAD: %s (%u):\n"), device.name.c_str(), device.id);
+
+                    if (id == 0) {
+                        repeat(78, serial.write(repeat_last_iteration ? '\n' : '-'));
+                    }
+                    if (formatRaw) {
+                        serial.println(device.payload);
+                    }
+                    else {
+                        BufferStream payload;
+                        payload.write(reinterpret_cast<const uint8_t *>(device.payload.c_str()), device.payload.length());
+                        JsonCallbackReader reader(payload, [&serial](const String &key, const String &value, size_t partialLength, JsonBaseReader &json) {
+                            serial.printf_P(PSTR("%s = %s\n"), json.getPath().c_str(), JsonVar::formatValue(value, json.getType()).c_str());
+                            return true;
+                        });
+                        reader.parse();
+                    }
+                    if (id == 0) {
+                        repeat(78, serial.write(repeat_last_iteration ? '\n' : '-'));
+                    }
                 }
             }
             if (!found) {
-                serial.printf_P(PSTR("+MQTTDAD: Id %u not found\n"), id);
+                if (id) {
+                    serial.printf_P(PSTR("+MQTTPAD: Could not find id %u\n"), id);
+                } 
+                else {
+                    serial.printf_P(PSTR("+MQTTPAD: No devices found\n"));
+                }
+            }
+        }
+        return true;
+    }
+    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(MQTTDAD))) {
+        if (argc < 1) {
+            at_mode_print_invalid_arguments(serial);
+        } 
+        else if (mqtt_at_mode_auto_recovery(serial) && mqtt_at_mode_auto_recovery_client(serial)) {
+            std::vector<uint16_t> ids;
+            ids.reserve(argc);
+            for(int8_t i = 0; i < argc; i++) {
+                ids.push_back(atoi(argv[i]));
+            }
+            for(const auto &devicePtr: MQTTAutoDiscoveryClient::getInstance()->getDiscovery()) {
+                auto iterator = std::find(ids.begin(), ids.end(), devicePtr->id);
+                if (iterator != ids.end()) {
+                    serial.printf_P(PSTR("+MQTTDAD: Sending empty payload to %s\n"), devicePtr->topic.c_str());
+                    MQTTClient::getClient()->publish(devicePtr->topic, 2, true, _sharedEmptyString);
+                    ids.erase(iterator);
+                    if (!ids.size()) {
+                        break;
+                    }
+                }
+            }
+            if (ids.size()) {
+                serial.printf_P(PSTR("+MQTTDAD: Could not find: "));
+                for(auto id: ids) {
+                    serial.print(id);
+                    serial.print(' ');
+                }
+                serial.println();
             }
          }
          return true;

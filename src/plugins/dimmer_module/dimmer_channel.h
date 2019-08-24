@@ -40,10 +40,10 @@ public:
     bool off();
     void publishState(MQTTClient *client = nullptr);
 
-    inline bool getOnState() {
+    inline bool getOnState() const {
         return _data.state.value;
     }
-    inline int16_t getLevel() {
+    inline int16_t getLevel() const {
         return _data.brightness.value;
     }
     void setLevel(int16_t level) {
@@ -52,7 +52,6 @@ public:
     }
 
 private:
-    void _publishState(MQTTClient *client);
     void _createTopics();
 
     Driver_DimmerModule_MQTTComponentData_t _data;

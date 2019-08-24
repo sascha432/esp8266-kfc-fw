@@ -49,7 +49,6 @@ public:
         return _serial.peek();
     }
 
-
 private:
     Stream &_serial;
 };
@@ -73,11 +72,15 @@ public:
 
     typedef std::vector<SerialHandler_t> HandlersVector;
 
+    static SerialHandler &getInstance();
+
+private:
     SerialHandler(SerialWrapper &wrapper);
     // virtual ~SerialHandler() {
     //     end();
     // }
 
+public:
     void clear();
 
     void begin();
@@ -108,6 +111,7 @@ private:
 private:
     HandlersVector _handlers;
     SerialWrapper &_wrapper;
+    static SerialHandler *_instance;
 };
 
 // class NulStream : public Stream {
@@ -133,4 +137,4 @@ private:
 extern StreamWrapper MySerialWrapper;
 extern Stream &MySerial;
 extern Stream &DebugSerial;
-extern SerialHandler serialHandler;
+

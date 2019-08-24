@@ -162,9 +162,6 @@ void WsPingClient::onText(uint8_t *data, size_t len) {
     }
 }
 
-WsPingClient::WsPingClient( AsyncWebSocketClient *socket) : WsClient(socket) {
-}
-
 WsPingClient::~WsPingClient() {
     _cancelPing();
 }
@@ -361,7 +358,7 @@ public:
 #endif
 };
 
-static PingMonitorPlugin plugin; 
+static PingMonitorPlugin plugin;
 
 PGM_P PingMonitorPlugin::getName() const {
     return PSTR("pingmon");

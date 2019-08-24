@@ -6,9 +6,9 @@
 
 #include "dimmer_channel.h"
 #include "dimmer_module.h"
-#include "dimmer_web_socket.h"
 #include "progmem_data.h"
 #include <PrintString.h>
+#include "WebUISocket.h"
 
 #if DEBUG_IOT_DIMMER_MODULE
 #include <debug_helper_enable.h>
@@ -44,7 +44,7 @@ MQTTAutoDiscovery *DimmerChannel::createAutoDiscovery(MQTTAutoDiscovery::Format_
 }
 
 void DimmerChannel::_createTopics() {
-    
+
     _data.state.set = MQTTClient::formatTopic(getNumber(), F("/set"));
     _data.state.state = MQTTClient::formatTopic(getNumber(), F("/state"));
     _data.brightness.set = MQTTClient::formatTopic(getNumber(), F("/brightness/set"));
@@ -111,7 +111,7 @@ void DimmerChannel::onMessage(MQTTClient *client, char *topic, char *payload, si
             _data.state.value = false;
             _data.brightness.value = 0;
         }
-        _dimmer->_setChannel(_channel, _data.brightness.value, fadetime);
+        _dimmer->_fade(_channel, _data.brightness.value, fadetime);
         publishState(client);
     }
 }
@@ -123,7 +123,7 @@ bool DimmerChannel::on() {
             _data.brightness.value = IOT_DIMMER_MODULE_MAX_BRIGHTNESS;
         }
         _data.state.value = true;
-        _dimmer->_setChannel(_channel, _data.brightness.value, _dimmer->getOnOffFadeTime());
+        _dimmer->_fade(_channel, _data.brightness.value, _dimmer->getOnOffFadeTime());
 
         publishState();
         return true;
@@ -136,7 +136,7 @@ bool DimmerChannel::off() {
         _storedBrightness = _data.brightness.value;
         _data.brightness.value = 0;
         _data.state.value = false;
-        _dimmer->_setChannel(_channel, 0, _dimmer->getOnOffFadeTime());
+        _dimmer->_fade(_channel, 0, _dimmer->getOnOffFadeTime());
 
         publishState();
         return true;
@@ -147,21 +147,25 @@ bool DimmerChannel::off() {
 void DimmerChannel::publishState(MQTTClient *client) {
     if (!client) {
         client = MQTTClient::getClient();
-    } 
-    if (client) {
-        _publishState(client);
     }
-    PrintString message(F("+SET %u %d"), _channel, _data.brightness.value);
-    WsDimmerClient::broadcast(message);
-}
+    if (client) {
+        _debug_printf_P(PSTR("DimmerChannel[%u]::publishState(): brightness %d, state %u, client %p\n"), _channel, _data.brightness.value, _data.state.value, client);
+        uint8_t _qos = MQTTClient::getDefaultQos();
 
-void DimmerChannel::_publishState(MQTTClient *client) {
-    _debug_printf_P(PSTR("DimmerChannel[%u]::_publishState(): brightness %d, state %u\n"), _channel, _data.brightness.value, _data.state.value);
+        client->publish(_data.state.state, _qos, 1, String(_data.state.value));
+        client->publish(_data.brightness.state, _qos, 1, String(_data.brightness.value));
+    }
 
-    uint8_t _qos = MQTTClient::getDefaultQos(); 
-
-    client->publish(_data.state.state, _qos, 1, String(_data.state.value));
-    client->publish(_data.brightness.state, _qos, 1, String(_data.brightness.value));
+    JsonUnnamedObject json(2);
+    json.add(JJ(type), JJ(ue));
+    auto &events = json.addArray(JJ(events), 1);
+    auto &obj = events.addObject(3);
+    PrintString id(F("dimmer_channel%u"), _channel);
+    obj.add(JJ(id), id);
+    obj.add(JJ(value), _data.brightness.value);
+    obj.add(JJ(state), _data.state.value);
+    WsWebUISocket::broadcast(json);
 }
 
 #endif
+

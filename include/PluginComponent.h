@@ -6,8 +6,10 @@
 
 #include <Arduino_compat.h>
 #include <vector>
+#include "WebUIComponent.h"
 
 class AsyncWebServerRequest;
+class WebTemplate;
 class Form;
 
 class PluginComponent {
@@ -28,15 +30,15 @@ public:
         PRIO_HTTP = -60,
         MAX_PRIORITY = 0,           // highest prio, -127 to -1 is reserved for the system
         DEFAULT_PRIORITY = 64,
-        MIN_PRIORITY = 127         // lowest    
+        MIN_PRIORITY = 127
     } PluginPriorityEnum_t;
 
-    const static int ATModeQueryCommand =           -1;
+    const static int ATModeQueryCommand = -1;
 
     virtual PGM_P getName() const = 0;
-    bool nameEquals(const __FlashStringHelper *name);
-    bool nameEquals(const char *name);
-    bool nameEquals(const String &name);
+    bool nameEquals(const __FlashStringHelper *name) const;
+    bool nameEquals(const char *name) const;
+    bool nameEquals(const String &name) const;
 
     virtual PluginPriorityEnum_t getSetupPriority() const;
     virtual uint8_t getRtcMemoryId() const;
@@ -61,6 +63,14 @@ public:
     virtual bool canHandleForm(const String &formName) const;
     virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form);
 
+    // executed to get the template for the web ui
+    virtual bool hasWebTemplate(const String &formName) const;
+    virtual WebTemplate *getWebTemplate(const String &formName);
+
+    virtual bool hasWebUI() const;
+    virtual void createWebUI(WebUI &webUI);
+    virtual WebUIInterface *getWebUIInterface();
+
     // executed before entering deep sleep
     virtual void prepareDeepSleep(uint32_t sleepTimeMillis);
 
@@ -70,6 +80,7 @@ public:
     virtual bool atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv);
 
     static PluginComponent *getForm(const String &formName);
+    static PluginComponent *getTemplate(const String &formName);
     static PluginComponent *getByName(PGM_P name);
     static PluginComponent *getByMemoryId(uint8_t memoryId);
 };
@@ -90,6 +101,10 @@ public:
     bool hasStatus() const override;
     const String getStatus() override;
     bool canHandleForm(const String &formName) const override;
+    bool hasWebTemplate(const String &formName) const;
+    WebTemplate *getWebTemplate(const String &formName);
+    bool hasWebUI() const override;
+    void createWebUI(WebUI &webUI) override;
     void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
     void prepareDeepSleep(uint32_t sleepTimeMillis) override;
     bool hasAtMode() const override;
@@ -97,7 +112,7 @@ public:
     bool atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) override;
 };
 
-static MYPLUGINNAME plugin; 
+static MYPLUGINNAME plugin;
 
 MYPLUGINNAME::MYPLUGINNAME() {
     register_plugin(this);
@@ -138,6 +153,7 @@ bool MYPLUGINNAME::hasReconfigureDependecy(PluginComponent *plugin) const {
 bool MYPLUGINNAME::hasStatus() const {
     return true;
 }
+
 const String MYPLUGINNAME::getStatus() {
 
 }
@@ -147,6 +163,22 @@ bool MYPLUGINNAME::canHandleForm(const String &formName) const {
 }
 
 void MYPLUGINNAME::createConfigureForm(AsyncWebServerRequest *request, Form &form) {
+}
+
+bool MYPLUGINNAME::hasWebTemplate(const String &formName) const {
+
+}
+
+WebTemplate *MYPLUGINNAME::getWebTemplate(const String &formName) {
+
+}
+
+bool MYPLUGINNAME::hasWebUI() const {
+
+}
+
+void MYPLUGINNAME::createWebUI(WebUI &webUI) {
+
 }
 
 void MYPLUGINNAME::prepareDeepSleep(uint32_t sleepTimeMillis) {

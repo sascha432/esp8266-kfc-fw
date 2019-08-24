@@ -77,6 +77,7 @@ String formatBytes(size_t bytes);
 String formatTime(unsigned long seconds, bool days_if_not_zero = false);
 
 String implode(const __FlashStringHelper *glue, const char **pieces, int count);
+String implode(const __FlashStringHelper *glue, String *pieces, int count);
 String url_encode(const String &str);
 String printable_string(const uint8_t *buffer, size_t length);
 
@@ -177,3 +178,14 @@ bool __while(uint32_t time_in_ms, std::function<bool()> loop);
 // 4='t4-1"t4-2'
 // 5='t5-1"t5-2\t5-3\t5-4'
 uint8_t tokenizer(char *str, char **args, uint8_t maxArgs, bool hasCommand = true);
+
+#define repeat_first_iteration \
+    (__repeat_iteration == 0)
+#define repeat_last_iteration \
+    (__repeat_iteration == (__repeat_count - 1))
+#define repeat(count, ...) { \
+        const auto  __repeat_count = count; \
+        for(auto __repeat_iteration = 0; __repeat_iteration < __repeat_count; ++__repeat_iteration) { \
+            __VA_ARGS__; \
+        } \
+    }

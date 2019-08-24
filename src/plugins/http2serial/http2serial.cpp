@@ -36,8 +36,8 @@ Http2Serial::Http2Serial() {
         Serial.begin(HTTP2SERIAL_BAUD);
     }
 #endif
-    //_serialWrapper = &serialHandler.getWrapper();
-    _serialHandler = &serialHandler;
+    //_serialWrapper = &SerialHandler::getInstance().getWrapper();
+    _serialHandler = &SerialHandler::getInstance();
 #if AT_MODE_SUPPORTED && HTTP2SERIAL_DISABLE_AT_MODE
     disable_at_mode();
 #endif
@@ -140,7 +140,7 @@ void Http2Serial::_outputLoop() {
         broadcastOutputBuffer();
     }
     auto handler = getSerialHandler();
-    if (handler != &serialHandler) {
+    if (handler != &SerialHandler::getInstance()) {
         handler->serialLoop();
     }
 }

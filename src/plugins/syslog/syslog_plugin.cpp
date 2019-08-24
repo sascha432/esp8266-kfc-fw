@@ -186,7 +186,7 @@ const String SyslogPlugin::getStatus() {
 }
 
 bool SyslogPlugin::canHandleForm(const String &formName) const {
-    return true;
+    return nameEquals(formName);
 }
 
 void SyslogPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form) {

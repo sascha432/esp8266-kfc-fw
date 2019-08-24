@@ -13,6 +13,7 @@
 #include <WiFiCallbacks.h>
 #include <StreamString.h>
 #include <vector>
+#include <JsonTools.h>
 #include "at_mode.h"
 #include "kfc_fw_config.h"
 #include "progmem_data.h"
@@ -33,7 +34,9 @@
 
 #define AT_MODE_MAX_ARGUMENTS 16
 
-static std::vector<const ATModeCommandHelp_t *> at_mode_help;
+typedef std::vector<const ATModeCommandHelp_t *> ATModeHelpVector;
+
+static ATModeHelpVector at_mode_help;
 
 void at_mode_add_help(const ATModeCommandHelp_t *help) {
     at_mode_help.push_back(help);
@@ -56,7 +59,6 @@ void at_mode_display_help_indent(Stream &output, PGM_P text) {
 }
 
 void at_mode_display_help(Stream &output) {
-
     _debug_printf_P(PSTR("at_mode_display_help(): size=%d\n"), at_mode_help.size());
 
     for(const auto commandHelp: at_mode_help) {
@@ -101,6 +103,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(STORE, "STORE", "Store current settings in
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(FACTORY, "FACTORY", "Restore factory settings (but do not store in EEPROM)");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(ATMODE, "ATMODE", "<1|0>", "Enable/disable AT Mode");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DLY, "DLY", "<milliseconds>", "Call delay(milliseconds)");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(REM, "REM", "Ignore comment");
 
 #if DEBUG
 
@@ -133,6 +136,7 @@ void at_mode_help_commands() {
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(FACTORY));
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(ATMODE));
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DLY));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(REM));
 
 #if DEBUG
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(PLUGINS));
@@ -201,16 +205,20 @@ static void heap_timer_callback(EventScheduler::TimerPtr timer) {
 }
 
 static void create_heap_timer(int seconds) {
-    heapTimer = Scheduler.addTimer(seconds * 1000, true, heap_timer_callback, EventScheduler::PRIO_LOW);
+    if (Scheduler.hasTimer(heapTimer)) {
+        heapTimer->changeOptions(seconds * 1000);
+    } else {
+        heapTimer = Scheduler.addTimer(seconds * 1000, true, heap_timer_callback, EventScheduler::PRIO_LOW);
+    }
 }
 
 void at_mode_create_heap_timer(int seconds) {
-    if (Scheduler.hasTimer(heapTimer)) {
-        Scheduler.removeTimer(heapTimer);
-    }
     if (seconds) {
         create_heap_timer(seconds);
     } else {
+        if (Scheduler.hasTimer(heapTimer)) {
+            Scheduler.removeTimer(heapTimer);
+        }
         heapTimer = nullptr;
     }
 }
@@ -226,7 +234,7 @@ void at_mode_wifi_callback(uint8_t event, void *payload) {
 }
 
 void at_mode_setup() {
-    serialHandler.addHandler(at_mode_serial_input_handler, SerialHandler::RECEIVE|SerialHandler::REMOTE_RX);
+    SerialHandler::getInstance().addHandler(at_mode_serial_input_handler, SerialHandler::RECEIVE|SerialHandler::REMOTE_RX);
     WiFiCallbacks::add(WiFiCallbacks::EventEnum_t::CONNECTED|WiFiCallbacks::EventEnum_t::DISCONNECTED, at_mode_wifi_callback);
 }
 
@@ -277,37 +285,33 @@ void at_mode_print_ok(Stream &output) {
 void at_mode_serial_handle_event(String &commandString) {
     auto &output = MySerial;
     commandString.trim();
-    bool isQueryMode = commandString.endsWith(F("?"));
-#if AT_MODE_ALLOW_PLUS_WITHOUT_AT
-    // allow using AT+COMMAND and +COMMAND
+    bool isQueryMode = commandString.length() && (commandString.charAt(commandString.length() - 1) == '?');
+
     if (!strncasecmp_P(commandString.c_str(), PSTR("AT"), 2)) {
         commandString.remove(0, 2);
+#if AT_MODE_ALLOW_PLUS_WITHOUT_AT
+    // allow using AT+COMMAND and +COMMAND
     } else if (commandString.charAt(0) == '+') {
-    } else {
-        at_mode_print_invalid_command(output);
-        return;
-    }
-#else
-    if (!strncasecmp_P(commandString, PSTR("AT"))) {
-        commandString.remove(0, 2);
-    } else {
-        at_mode_print_invalid_command(output);
-        return;
-    }
 #endif
+    } else {
+        at_mode_print_invalid_command(output);
+        return;
+    }
+
     if (commandString.length() == 0) { // AT
         at_mode_print_ok(output);
-    } else {
-#if defined(ESP8266)
-        auto command = commandString.begin();
-#else
-        std::unique_ptr<char []> __command(new char[commandString.length() + 1]);
-        auto command = strcpy(__command.get(), commandString.c_str());
-#endif
-        if (!strcmp_P(command, PSTR("?"))) { // AT?
+    }
+    else {
+        if (commandString.length() == 1 && commandString.charAt(0) == '?') { // AT?
             at_mode_generate_help(output);
-        } else {
-
+        }
+        else {
+#if defined(ESP8266)
+            auto command = commandString.begin();
+#else
+            std::unique_ptr<char []> __command(new char[commandString.length() + 1]);
+            auto command = strcpy(__command.get(), commandString.c_str());
+#endif
             int8_t argc;
             char *args[AT_MODE_MAX_ARGUMENTS];
             memset(args, 0, sizeof(args));
@@ -372,6 +376,9 @@ void at_mode_serial_handle_event(String &commandString) {
                     }
                 }
             }
+            else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(REM))) {
+                // ignore comment
+            }
             else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(DLY))) {
                 unsigned long ms = 1;
                 if (argc > 0) {
@@ -394,11 +401,7 @@ void at_mode_serial_handle_event(String &commandString) {
                         output.println(F("+HEAP: Interval disabled"));
                     } else {
                         output.printf("+HEAP: Interval set to %d seconds\n", interval);
-                        if (heapTimer) {
-                            heapTimer->changeOptions(interval * 1000);
-                        } else {
-                            create_heap_timer(interval);
-                        }
+                        create_heap_timer(interval);
                     }
                 } else {
                     at_mode_print_invalid_arguments(output);
@@ -488,29 +491,35 @@ void at_mode_serial_handle_event(String &commandString) {
                 output.println(F("Calling panic()"));
                 delay(100);
                 panic();
+            }
 #endif
-            } else {
+#if DEBUG_COLLECT_STRING_ENABLE
+            else if (!strcasecmp_P(command, PSTR("JSONSTRDUMP"))) {
+                __debug_json_string_dump(output);
+            }
+#endif
+            else {
                 bool commandWasHandled = false;
                 for(auto plugin : plugins) { // send command to plugins
                     if (plugin->hasAtMode()) {
-                        if (true == (commandWasHandled = plugin->atModeHandler(MySerial, command, argc, args))) {
+                        if (true == (commandWasHandled = plugin->atModeHandler(output, command, argc, args))) {
                             break;
                         }
                     }
                 }
                 if (!commandWasHandled) {
-                    at_mode_print_invalid_command(MySerial);
+                    at_mode_print_invalid_command(output);
                 }
             }
         }
     }
 }
 
-String line_buffer;
 
 void at_mode_serial_input_handler(uint8_t type, const uint8_t *buffer, size_t len) {
+    static String line_buffer;
 
-    Stream *echoStream = (type == SerialHandler::RECEIVE) ? &serialHandler.getSerial() : nullptr;
+    Stream *echoStream = (type == SerialHandler::RECEIVE) ? &SerialHandler::getInstance().getSerial() : nullptr;
     if (config._H_GET(Config().flags).atModeEnabled) {
         char *ptr = (char *)buffer;
         while(len--) {

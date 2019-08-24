@@ -93,7 +93,50 @@ static void deep_sleep_forever() {
     }
 }
 
-bool safe_mode = false;
+// #include "ESPAsyncWebServer.h"
+
+// String callback_func(const String &str) {
+//     if (str == "REPLACE_ME") {
+//         return "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+//     }
+//     return String();
+// }
+
+// class TestAsyncAbstractResponse : public AsyncAbstractResponse {
+// public:
+//     TestAsyncAbstractResponse(AwsTemplateProcessor callback) : AsyncAbstractResponse(callback) {
+//         _template = "01234567890test_%REPLACE_ME%_test01234567890";
+//         _code = 200;
+//     }
+//     virtual size_t _fillBuffer(uint8_t *buf, size_t maxLen) {
+//         maxLen = std::min(_template.length(), maxLen);
+//         memcpy(buf, _template.c_str(), maxLen);
+//         _template.remove(0, maxLen);
+//         return maxLen;
+//     }
+// private:
+//     String _template;
+// };
+
+// void test_abstract_response() {
+//     TestAsyncAbstractResponse *resp = new TestAsyncAbstractResponse(callback_func);
+//     char *out = (char *)malloc(1024);
+//     char *ptr = out;
+//     uint8_t buf[64];
+//     size_t len;
+
+//     Serial.println();
+//     while((len = resp->_fillBufferAndProcessTemplates(buf, sizeof(buf)))) {
+//         Serial.printf("[%u]|%*.*s|\n", len, len, len, buf);
+//         memcpy(ptr, buf, len);
+//         ptr += len;
+//     }
+//     *ptr = 0;
+//     Serial.println("---");
+//     Serial.printf("[%u]|%s|\n", strlen(out), out);
+//     free(out);
+// }
+
 
 void setup() {
 
@@ -138,16 +181,16 @@ void setup() {
 
     if (resetDetector.hasResetDetected()) {
 
-        if (resetDetector.getResetCounter() >= 10) {
-            KFC_SAFE_MODE_SERIAL_PORT.println(F("Entering deep sleep until next reset in 5 seconds..."));
-            for(uint8_t i = 0; i < (RESET_DETECTOR_TIMEOUT + 200) / (10 + 25); i++) {
-                BlinkLEDTimer::setBlink(LED_BUILTIN, BlinkLEDTimer::SOLID);
-                delay(10);
-                BlinkLEDTimer::setBlink(LED_BUILTIN, BlinkLEDTimer::OFF);
-                delay(25);
-            }
-            deep_sleep_forever();
-        }
+        // if (resetDetector.getResetCounter() >= 10) {
+        //     KFC_SAFE_MODE_SERIAL_PORT.println(F("Entering deep sleep until next reset in 5 seconds..."));
+        //     for(uint8_t i = 0; i < (RESET_DETECTOR_TIMEOUT + 200) / (10 + 25); i++) {
+        //         BlinkLEDTimer::setBlink(LED_BUILTIN, BlinkLEDTimer::SOLID);
+        //         delay(10);
+        //         BlinkLEDTimer::setBlink(LED_BUILTIN, BlinkLEDTimer::OFF);
+        //         delay(25);
+        //     }
+        //     deep_sleep_forever();
+        // }
 
         if (resetDetector.getResetCounter() >= 4) {
             KFC_SAFE_MODE_SERIAL_PORT.println(F("4x reset detected. Restoring factory defaults in a 5 seconds..."));
@@ -164,6 +207,7 @@ void setup() {
 
     }
 
+    bool safe_mode = false;
     if (resetDetector.getSafeMode()) {
 
         safe_mode = true;
@@ -261,10 +305,6 @@ void setup() {
         MySerialWrapper.replace(&KFC_SAFE_MODE_SERIAL_PORT, true);
         DebugSerial = MySerialWrapper;
 
-        #if SERIAL_HANDLER
-            serialHandler.begin();
-        #endif
-
         #if AT_MODE_SUPPORTED
             at_mode_setup();
         #endif
@@ -274,9 +314,6 @@ void setup() {
 
     } else {
 
-        #if SERIAL_HANDLER
-            serialHandler.begin();
-        #endif
 
         #if AT_MODE_SUPPORTED
             at_mode_setup();
@@ -315,6 +352,7 @@ void setup() {
 
         prepare_plugins();
         setup_plugins(resetDetector.hasWakeUpDetected() ? PluginComponent::PLUGIN_SETUP_AUTO_WAKE_UP : PluginComponent::PLUGIN_SETUP_DEFAULT);
+
     }
 }
 

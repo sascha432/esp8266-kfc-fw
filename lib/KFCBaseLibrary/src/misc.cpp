@@ -54,6 +54,18 @@ String implode(const __FlashStringHelper *glue, const char **pieces, int count) 
     return tmp;
 }
 
+String implode(const __FlashStringHelper *glue, String *pieces, int count) {
+    String tmp;
+    if (count > 0) {
+        tmp += *pieces++;
+        for(int i = 1; i < count; i++) {
+            tmp += glue;
+            tmp += *pieces++;
+        }
+    }
+    return tmp;
+}
+
 String url_encode(const String &str) {
     PrintString out_str;
     const char *ptr = str.c_str();

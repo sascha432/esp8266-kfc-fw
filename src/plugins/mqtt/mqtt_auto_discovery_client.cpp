@@ -72,23 +72,24 @@ void MQTTAutoDiscoveryClient::onMessage(MQTTClient *client, char *topic, char *p
     auto &discovery = *discoveryPtr;
     discovery.id = _uniqueId;
     discovery.topic = topic;
-    discovery.payloadLength = len;
+    discovery.payload = payload;
 
     JsonCallbackReader reader(stream, [&discovery](const String &key, const String &value, size_t partialLength, JsonBaseReader &json) {
         DEBUG_JSON_CALLBACK_P(_debug_printf_P, key, value, json);
+        auto valuePtr = &discovery.payload.c_str()[json.getValuePosition()];
 
         if (key.equals(F("name")) && json.getLevel() == 1) {
             discovery.name = value;
         }
         else if (json.getLevel() == 2 && json.getPath(1).equals(F("device"))) {
             if (key.equals(F("sw_version"))) {
-                discovery.swVersion = value;
+                discovery.swVersion = LString(valuePtr, value.length());
             }
             else if (key.equals(F("model"))) {
-                discovery.model = value;
+                discovery.model = LString(valuePtr, value.length());
             }
             else if (key.equals(F("manufacturer"))) {
-                discovery.manufacturer = value;
+                discovery.manufacturer = LString(valuePtr, value.length());
             }
             else if (key.equals(F("name")) && !discovery.name.length()) { // do not override name 
                 discovery.name = value;
@@ -101,7 +102,7 @@ void MQTTAutoDiscoveryClient::onMessage(MQTTClient *client, char *topic, char *p
     // check if we have that topic already
     for(auto iterator = _discovery.begin(); iterator != _discovery.end(); ++iterator) {
         if ((*iterator)->topic.equals(discovery.topic)) {
-            if (discovery.payloadLength) {
+            if (discovery.payload.length()) {
                 // we keep the id, name and update the other info
                 discovery.id = (*iterator)->id;
                 discovery.name = (*iterator)->name;

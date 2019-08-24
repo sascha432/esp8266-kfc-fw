@@ -4,13 +4,13 @@ Author: sascha_lammers@gmx.de
 
 #pragma once
 
-//#define F(str) (reinterpret_cast<char *>(str))
-#define PSTR(str) str
-#define FPSTR(str) str
+#define PSTR(str)                               str
+#define FPSTR(str)                              (reinterpret_cast<const __FlashStringHelper *>(str))
 #define snprintf_P snprintf
 #define sprintf_P sprintf
 #define strstr_P strstr
 #define strlen_P strlen
+#define vsnprintf_P vsnprintf
 #ifndef pgm_read_byte
 #define pgm_read_byte(a)                        (*a)
 #endif
@@ -19,7 +19,9 @@ Author: sascha_lammers@gmx.de
 #define pgm_read_ptr(addr)                      (*reinterpret_cast<const void* const *>(addr))
 #define memcmp_P memcmp
 #define strcpy_P strcpy
+#define strcat_P strcpy
 #define strncpy_P strncpy
+#define strncat_P strcpy
 #define memcpy_P memcpy
 
 int constexpr constexpr_strlen(const char* str) {

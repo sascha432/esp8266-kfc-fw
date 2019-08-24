@@ -72,3 +72,168 @@
   .btn-default:focus, .btn-default.focus {
     box-shadow: 0 0 0 0.2rem rgba(221, 221, 221, 0.5);
   }
+
+
+
+.webuicomponent {
+	border: 2px solid white;
+	border-radius: 10px;
+	padding: 2px;
+	margin-top: 5px;
+	margin-bottom: 5px;
+	margin-left: -11px;
+	margin-right: -11px;
+	box-shadow: 2px 2px 2px grey;
+	background-color: #f0f0f0;
+}
+.webuicomponent-top {
+    box-shadow: 0 0 0;
+    background: none;
+}
+.webuicomponent.title {
+	background-color: #dceaf4;
+}
+
+.webuicomponent .group {
+	padding-left: 10px;
+	padding-top: 2px;
+}
+.webuicomponent .group .switch {
+    padding: 10px;
+    padding-top: 18px;
+    min-height: 54px;
+    width: 120px;
+    margin-right: 0;
+    margin-left: auto;
+}
+.webuicomponent > .switch {
+    padding: 10px;
+    padding-top: 24px;
+	min-height: 66px;
+}
+.webuicomponent > .slider {
+    padding: 10px;
+    padding-top: 24px;
+	min-height: 66px;
+}
+.webuicomponent > .color-slider {
+    padding: 10px;
+    padding-top: 24px;
+	min-height: 66px;
+	border-radius: 10px;
+	background-image: linear-gradient(to right, rgb(130, 130, 255), rgb(255, 255, 255), rgb(255, 170, 40));
+}
+.webuicomponent > .badge-sensor {
+	font-size: 16px;
+    color: #000000;
+}
+.webuicomponent .outer-badge {
+	border: 2px solid white;
+    border-radius: 50%;
+    width: 98px;
+	padding: 2px;
+	margin: auto;
+	margin-top: 5px;
+	margin-bottom: 4px;
+	box-shadow: 2px 2px 2px 2px grey;
+    background-color: #f0f0f0;
+}
+.webuicomponent .inner-badge {
+    padding: 6px;
+    width: 90px;
+	min-height: 86px;
+    border-radius: 50%;
+	border: 2px solid #aaaaaa;
+	background-color: #dceaf4;
+	text-align: center;
+}
+.webuicomponent .inner-badge h4 {
+	color: #303030;
+	font-size: 22px;
+    margin-top: 16px;
+    margin-bottom: 0;
+}
+.webuicomponent .inner-badge div.unit {
+	font-size: 16px;
+	color: #a0a0a0;
+    margin-top: 0;
+	margin-bottom: 0;
+}
+.webuicomponent > .sensor {
+    padding: 10px;
+	min-height: 160px;
+	text-align: center;
+}
+.webuicomponent > .sensor h1 {
+	color: #303030;
+	font-size: 52px;
+}
+.webuicomponent > .sensor h3 {
+	padding-top: 14px;
+	padding-bottom: 10px;
+	font-size: 20px;
+	color: #000000;
+}
+.webuicomponent > .sensor span.unit {
+	font-size: 38px;
+	color: #a0a0a0;
+	position: relative;
+	top: -4px;
+	margin-left: 4px;
+}
+
+.rangeslider,
+.rangeslider__fill {
+  display: block;
+  -moz-box-shadow: inset 0px 1px 3px rgba(0, 0, 0, 0.3);
+  -webkit-box-shadow: inset 0px 1px 3px rgba(0, 0, 0, 0.3);
+  box-shadow: inset 0px 1px 3px rgba(0, 0, 0, 0.3);
+  -moz-border-radius: 10px;
+  -webkit-border-radius: 10px;
+  border-radius: 10px;
+ }
+
+ .rangeslider__fill {
+  background-color: #a8bdd4;
+  position: absolute;
+}
+
+.rangeslider--horizontal {
+  height: 20px;
+  width: 100%;
+}
+
+.rangeslider__handle {
+    background-color: #f0f0f0;
+    border: 1px solid #a0a0a0;
+    -webkit-transition: .2s;
+    transition: border .2s;
+    transition: opacity .2s;
+    transition: box-shadow .2s;
+}
+
+.rangeslider__handle.off {
+    background-color: #e03e3e;
+    border: 1px solid #850b0b;
+}
+
+.rangeslider__handle.on {
+    background-color: #1bbb0d;
+    border: 1px solid #036203;
+}
+
+.rangeslider__handle:hover {
+    box-shadow: 0 0 12px rgba(0,0,0,0.7);
+    background-image: -webkit-gradient(linear, 50% 0%, 50% 100%, color-stop(0%, rgba(255, 255, 255, 0.1)), color-stop(100%, rgba(255, 255, 255, 0.12)));
+    background-image: -moz-linear-gradient(rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.12));
+    background-image: -webkit-linear-gradient(rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.12));
+    background-image: linear-gradient(rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.12));
+}
+
+.rangeslider__handle:active, .rangeslider--active .rangeslider__handle, .rangeslider--active .rangeslider__handle:hover {
+    box-shadow: 0 0 12px rgba(0, 0, 0, 0.7);
+    background-image: -webkit-gradient(linear, 50% 0%, 50% 100%, color-stop(0%, rgba(255, 255, 255, 0.1)), color-stop(100%, rgba(255, 255, 255, 0.35)));
+    background-image: -moz-linear-gradient(rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.35));
+    background-image: -webkit-linear-gradient(rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.35));
+    background-image: linear-gradient(rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.35));
+}

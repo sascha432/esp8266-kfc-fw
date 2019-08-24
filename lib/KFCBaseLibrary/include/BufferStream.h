@@ -22,14 +22,17 @@ public:
 
     char charAt(size_t pos) const;
 
-    size_t write(uint8_t data) override {
+    inline size_t write(uint8_t data) override {
         return Buffer::write(data);
     }
-    size_t write(const char *str) {
+    inline size_t write(const char *str) {
         return Buffer::write(str, strlen(str));
     }
-    size_t write(const uint8_t *data, size_t len) override {
+    inline size_t write(const uint8_t *data, size_t len) override {
         return Buffer::write((uint8_t *)data, len);
+    }
+    inline size_t write(const String &str) {
+        return Buffer::write(str.c_str(), str.length());
     }
 
 private:

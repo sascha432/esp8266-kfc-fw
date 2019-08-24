@@ -54,7 +54,7 @@ void check_if_exist_I2C(Print &output) {
         if (error == 0 || error == 3) { // 0=ACK, 3=NACK for data
             output.printf_P(PSTR("I2C device found at address 0x%02x\n"), address);
             nDevices++;
-        } 
+        }
         else if (error == 4) {
             output.printf_P(PSTR("Unknown error at address 0x%02x\n"), address);
         }
@@ -143,7 +143,7 @@ bool I2CScannerPlugin::atModeHandler(Stream &serial, const String &command, int8
     if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(I2CS))) {
         if (argc < 2) {
             at_mode_print_invalid_arguments(serial);
-        } 
+        }
         else {
             int sda, scl, speed = 100, setClockStretchLimit = 0;
             Wire.begin(sda = __toint(argv[0]), scl = __toint(argv[1]));
@@ -210,7 +210,7 @@ bool I2CScannerPlugin::atModeHandler(Stream &serial, const String &command, int8
             serial.println();
         }
         return true;
-    } 
+    }
     else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SCANI2C))) {
         scanPorts(serial);
         return true;
@@ -245,7 +245,7 @@ bool I2CScannerPlugin::atModeHandler(Stream &serial, const String &command, int8
             if (Wire.endTransmission() == 0 && Wire.requestFrom(address, 2) == 2) {
                 auto temp = (((uint8_t)Wire.read() << 8) | (uint8_t)Wire.read()) / 256.0;
                 serial.printf_P(PSTR("%.2f °C\n"), temp);
-            } 
+            }
             else {
                 serial.println();
                 i2cscanner_device_error(serial);

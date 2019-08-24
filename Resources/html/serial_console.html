@@ -5,9 +5,9 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" debug_loader="1">
-    <link rel="stylesheet" href="../../lib/ESPWebFramework/Resources/css/bootstrap.min.css" debug_loader="1">
+    <link rel="stylesheet" href="../../lib/KFCWebBuilder/Resources/css/bootstrap.min.css" debug_loader="1">
     <link rel="stylesheet" href="../css/styles.css" debug_loader="1">
-    <link rel="stylesheet" href="../../lib/ESPWebFramework/Resources/css/open-iconic-bootstrap.css" debug_loader="1">
+    <link rel="stylesheet" href="../../lib/KFCWebBuilder/Resources/css/open-iconic-bootstrap.css" debug_loader="1">
     <title>KFC FW</title>
 </head>
 <!--HEAD%%-->
@@ -57,11 +57,11 @@ Available commands: /disconnect /reconnect /clear
         <!--FOOT%%-->
     </div>
     <!--%%JAVASCRIPT-->
-	<script debug_loader="1" type="text/javascript" src="../../lib/ESPWebFramework/Resources/js/jquery-3.3.1.min.js"></script>
-	<script debug_loader="1" type="text/javascript" src="../../lib/ESPWebFramework/Resources/js/popper.min.js"></script>
-	<script debug_loader="1" type="text/javascript" src="../../lib/ESPWebFramework/Resources/js/popper.min.js"></script>
-	<script debug_loader="1" type="text/javascript" src="../../lib/ESPWebFramework/Resources/js/bootstrap.min.js"></script>
-	<script debug_loader="1" type="text/javascript" src="../../lib/ESPWebFramework/Resources/js/js.cookie.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/jquery-3.3.1.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/popper.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/popper.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/bootstrap.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/js.cookie.min.js"></script>
 	<script debug_loader="1" type="text/javascript" src="../js/main.min.js"></script>
 	<script debug_loader="1" type="text/javascript" src="../js/debug.js"></script>
     <!--JAVASCRIPT%%-->
@@ -140,7 +140,7 @@ if ($('.serial-console').length) {
 		}
 		send_action(true);
         packet_counter = 0;
-        wsc = new WS_Console($.getWebSocketLocation('/serial_console'), $.getSessionId(), 10, http2serial_data_handler);
+        wsc = new WS_Console($.getWebSocketLocation('/serial_console'), $.getSessionId(), 1, http2serial_data_handler, "rxConsole");
         wsc.connect();
 
 		// Socket.onopen = function() {

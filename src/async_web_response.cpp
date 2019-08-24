@@ -14,6 +14,28 @@
 #include <debug_helper_disable.h>
 #endif
 
+AsyncJsonResponse::AsyncJsonResponse() : _jsonBuffer(_json) {
+    _code = 200;
+    _contentType = F("application/json");
+    _sendContentLength = true;
+    _chunked = false;
+}
+
+bool AsyncJsonResponse::_sourceValid() const {
+    return true;
+}
+size_t AsyncJsonResponse::_fillBuffer(uint8_t *data, size_t len) {
+    return _jsonBuffer.fillBuffer(data, len);
+}
+
+JsonUnnamedObject &AsyncJsonResponse::getJsonObject() {
+    return _json;
+}
+
+void AsyncJsonResponse::updateLength() {
+    _contentLength = _json.length();
+}
+
 
 AsyncProgmemFileResponse::AsyncProgmemFileResponse(const String &contentType, FSMapping *mapping, AwsTemplateProcessor templateCallback) : AsyncAbstractResponse(templateCallback) {
     _code = 200;

@@ -93,13 +93,13 @@ MDNSPlugin::PluginPriorityEnum_t MDNSPlugin::getSetupPriority() const {
 }
 
 void MDNSPlugin::setup(PluginSetupMode_t mode) {
-    auto flags = config._H_GET(Config().flags);
     auto httpPort = config._H_GET(Config().http_port);
 
     MDNS.begin(config._H_STR(Config().device_name));
     debug_printf_P(PSTR("Setting MDNS hostname %s\n"), config._H_STR(Config().device_name));
 #if WEBSERVER_SUPPORT
 #  if WEBSERVER_TLS_SUPPORT
+    auto flags = config._H_GET(Config().flags);
     if (flags.webServerMode == HTTP_MODE_SECURE) {
         MDNS.addService(FSPGM(https), FSPGM(tcp), httpPort);
 #    if PING_MONITOR || HTTP2SERIAL

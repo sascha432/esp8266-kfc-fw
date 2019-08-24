@@ -5,7 +5,7 @@ $(function() {
     $.get("http://www.d0g3.space/dev/nav.php", function(data) {
         $('nav:first').replaceWith(data);
 
-        var imgarr = [['images/spinner.gif', '../../lib/ESPWebFramework/Resources/images/spinner.gif']];
+        var imgarr = [['images/spinner.gif', '../../lib/KFCWebBuilder/Resources/images/spinner.gif']];
 
         $('img').each(function() {
             if (this.complete && this.naturalHeight == 0) {

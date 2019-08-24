@@ -78,14 +78,14 @@ void SyslogFile::_rotateLogfile(const String &filename, uint16_t maxRotate) {
         to += '.';
         to += String(num);
 
-#if DEBUG
+#if DEBUG_SYSLOG
 		int renameResult = -1;
 #endif
         if (SPIFFS.exists(from)) {
 			if (SPIFFS.exists(to)) {
 				SPIFFS.remove(to);
 			}
-#if DEBUG
+#if DEBUG_SYSLOG
 			renameResult =
 #endif
 			SPIFFS.rename(from, to);

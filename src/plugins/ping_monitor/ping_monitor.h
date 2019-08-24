@@ -17,7 +17,8 @@
 
 class WsPingClient : public WsClient {
 public:
-    WsPingClient( AsyncWebSocketClient *socket);
+    using WsClient::WsClient;
+
     virtual ~WsPingClient();
 
     static WsClient *getInstance(AsyncWebSocketClient *socket);

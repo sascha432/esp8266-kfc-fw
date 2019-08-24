@@ -10,6 +10,7 @@
 
 #include <Arduino_compat.h>
 #include <ESPAsyncWebServer.h>
+#include <KFCJson.h>
 #include <vector>
 #include <map>
 #include <functional>
@@ -18,6 +19,21 @@
 #include "web_server.h"
 #include "../include/templates.h"
 #include "fs_mapping.h"
+
+class AsyncJsonResponse : public AsyncAbstractResponse {
+public:
+    AsyncJsonResponse();
+
+    bool _sourceValid() const;
+    virtual size_t _fillBuffer(uint8_t *data, size_t len) override;
+
+    JsonUnnamedObject &getJsonObject();
+    void updateLength();
+
+private:
+    JsonUnnamedObject _json;
+    JsonBuffer _jsonBuffer;
+};
 
 class AsyncProgmemFileResponse : public AsyncAbstractResponse {
 public:

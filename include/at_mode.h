@@ -2,8 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if AT_MODE_SUPPORTED
-
 #pragma once
 
 #ifndef DEBUG_AT_MODE
@@ -87,5 +85,3 @@ void at_mode_print_invalid_arguments(Stream &output);
 void at_mode_print_ok(Stream &output);
 void enable_at_mode(Stream &output);
 void disable_at_mode(Stream &output);
-
-#endif

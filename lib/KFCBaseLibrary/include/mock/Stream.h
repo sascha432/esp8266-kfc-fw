@@ -15,6 +15,7 @@ class Stream : public Print {
 public:
     Stream() : Print() {
         _fp = nullptr;
+        _size = 0;
     }
     Stream(FILE *fp) : _fp(fp) {
         if (fp) {

@@ -12,8 +12,7 @@
 
 class WsConsoleClient : public WsClient {
 public:
-    WsConsoleClient(AsyncWebSocketClient *socket) : WsClient(socket) {
-    }
+    using WsClient::WsClient;
 
     static WsClient *getInstance(AsyncWebSocketClient *socket);
 

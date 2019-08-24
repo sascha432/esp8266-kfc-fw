@@ -5,7 +5,6 @@
 #include "plugins.h"
 #include <Form.h>
 #include <algorithm>
-#include <TableDumper.h>
 #include "RTCMemoryManager.h"
 #include "misc.h"
 #ifndef DISABLE_EVENT_SCHEDULER
@@ -27,13 +26,13 @@ static PluginsVector *pluginsPtr = nullptr;
 
 void register_plugin(PluginComponent *plugin) {
     if (plugins.size()) {
-        debug_println(F("Cannot register plugins anymore"));
-        panic();
+        _debug_printf(PSTR("Registering plugins completed already, skipping %s\n"), plugin->getName());
+        return;
     }
     _debug_printf_P(PSTR("register_plugin %s priority %d\n"), plugin->getName(), plugin->getSetupPriority());
     if (!pluginsPtr) {
         pluginsPtr = new PluginsVector();
-        pluginsPtr->reserve(24);
+        pluginsPtr->reserve(16);
     }
     pluginsPtr->push_back(plugin);
 }
@@ -42,57 +41,45 @@ void dump_plugin_list(Print &output) {
 
 #if DEBUG
 
-    constexpr const TableDumper::Length_t __defaultLength = 6;
+    PGM_P yesStr = PSTR("yes");
+    PGM_P noStr = PSTR("no");
+    #define BOOL_STR(value) (value ? yesStr : noStr)
 
-    TableDumper dumper(Serial);
-    dumper.setStrBoolValues(F("yes"), F("no"));
-    dumper.setStrNullValue(F("<none>"));
+    //                    123456789   12345   123456789   123456789012   1234567890    123456   123456  12345
+    PGM_P header = PSTR("+-----------+------+-----------+--------------+------------+--------+--------+-------+\n");
+    PGM_P titles = PSTR("| Name      | Prio | Safe Mode | Auto Wake-Up | RTC Mem Id | Status | ATMode | WebUI |\n");
+    PGM_P format = PSTR("| %-9.9s | % 4d | %-9.9s | %-12.12s | % 10u | %-6.6s | %-6.6s | %-5.5s |\n");
 
-    dumper.addColumn(F("Name"), __defaultLength + 3);
-    dumper.addColumn(F("Priority"), __defaultLength, TableDumperColumn::RIGHT);
-    dumper.addColumn(F("Safe mode"), __defaultLength);
-    dumper.addColumn(F("Auto Wake-Up"), __defaultLength);
-    dumper.addColumn(F("RTC Mem Id"), __defaultLength, TableDumperColumn::RIGHT);
-    dumper.addColumn(F("Setup"), __defaultLength);
-    dumper.addColumn(F("Status"), __defaultLength);
-    dumper.addColumn(F("Conf Form"), __defaultLength);
-    dumper.addColumn(F("Reconfigure"), __defaultLength);
-    dumper.addColumn(F("Reconfigure Deps"), __defaultLength);
-    dumper.addColumn(F("Deep Sleep"), __defaultLength);
-    dumper.addColumn(F("AT Mode"), __defaultLength);
-    dumper.startTable();
+    output.print(FPSTR(header));
+    output.printf_P(titles);
+    output.print(FPSTR(header));
     for(const auto plugin : plugins) {
-        dumper.addData(plugin->getName());
-        dumper.addData(plugin->getSetupPriority());
-        dumper.addData(plugin->allowSafeMode());
-        dumper.addData(plugin->autoSetupAfterDeepSleep());
-        dumper.addData(plugin->getRtcMemoryId());
-        // dumper.addStrBoolData(plugin->hasStatus());
-        // dumper.addStrBoolData(plugin->rec);
-        // dumper.addStrBoolData(plugin.getReconfigurePlugin());
-        // dumper.addData(plugin.getReconfigurePluginDependeciesPSTR());
-        // dumper.addStrBoolData(plugin.getPrepareDeepSleep());
-        // dumper.addStrBoolData(plugin.getAtModeCommandHandler());
+        output.printf_P(format,
+            plugin->getName(),
+            plugin->getSetupPriority(),
+            BOOL_STR(plugin->allowSafeMode()),
+            BOOL_STR(plugin->autoSetupAfterDeepSleep()),
+            plugin->getRtcMemoryId(),
+            BOOL_STR(plugin->hasStatus()),
+            BOOL_STR(plugin->hasAtMode()),
+            BOOL_STR(plugin->hasWebUI())
+        );
     }
-    dumper.endTable();
+    output.print(FPSTR(header));
 #endif
 
 }
 
 void prepare_plugins() {
 
-    // copy plugins and free temporary data
-    plugins.reserve(pluginsPtr->size());
-    for(auto plugin: *pluginsPtr) {
-         plugins.push_back(plugin);
-    }
+    // copy & sort plugins and free temporary data
+    plugins.resize(pluginsPtr->size());
+    std::partial_sort_copy(pluginsPtr->begin(), pluginsPtr->end(), plugins.begin(), plugins.end(), [](const PluginComponent *a, const PluginComponent *b) {
+         return b->getSetupPriority() >= a->getSetupPriority();
+    });
     free(pluginsPtr);
 
     _debug_printf_P(PSTR("prepare_plugins() counter %d\n"), plugins.size());
-
-    std::sort(plugins.begin(), plugins.end(), [](const PluginComponent *a, const PluginComponent *b) {
-        return b->getSetupPriority() >= a->getSetupPriority();
-    });
 
 #if DEBUG
     // check for duplicate RTC memory ids

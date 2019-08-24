@@ -11,9 +11,9 @@
 #include "progmem_data.h"
 #include "plugins.h"
 #include "atomic_sun_v2.h"
-#include "atomic_sun_web_socket.h"
 #include "../dimmer_module/dimmer_module_form.h"
 #include "SerialTwoWire.h"
+#include "WebUISocket.h"
 
 #ifdef DEBUG_4CH_DIMMER
 #include <debug_helper_enable.h>
@@ -25,10 +25,13 @@
 
 #include "../../trailing_edge_dimmer/src/dimmer_protocol.h"
 
-SerialTwoWire SerialWire;
-Driver_4ChDimmer *Driver_4ChDimmer::_dimmer = nullptr;
+//Driver_4ChDimmer *Driver_4ChDimmer::_dimmer = nullptr;
 
-Driver_4ChDimmer::Driver_4ChDimmer(HardwareSerial &serial) : MQTTComponent(LIGHT), _serial(serial) {
+Driver_4ChDimmer::Driver_4ChDimmer() : MQTTComponent(LIGHT), Dimmer_Base() {
+}
+
+void Driver_4ChDimmer::_begin() {
+    Dimmer_Base::_begin();
     memset(&_channels, 0, sizeof(_channels));
     auto mqttClient = MQTTClient::getClient();
     if (mqttClient) {
@@ -37,21 +40,36 @@ Driver_4ChDimmer::Driver_4ChDimmer(HardwareSerial &serial) : MQTTComponent(LIGHT
     _data.state.value = false;
     _data.brightness.value = 0;
     _data.color.value = 0;
-    memset(&_stored, 0, sizeof(_stored));
+    _storedBrightness = 0;
     _qos = 0;
-
-    auto dimmer = config._H_GET(Config().dimmer);
-    _fadeTime = dimmer.fade_time;
-    _onOffFadeTime = dimmer.on_fade_time;
+    _getChannels();
+    // calculate color and brightness values from dimmer channels
+    int32_t sum = _channels[0] + _channels[1] + _channels[2] + _channels[3];
+    if (sum) {
+        _data.color.value = round((_channels[0] + _channels[1]) / sum * (500 - 153)) + 153;
+        _data.brightness.value = sum * IOT_ATOMIC_SUN_MAX_BRIGHTNESS / 4;
+        _data.state.value = true;
+    } else {
+        _data.brightness.value = 0;
+        _data.color.value = 333;
+        _data.state.value = false;
+    }
 }
 
-Driver_4ChDimmer::~Driver_4ChDimmer() {
-    end();
+void Driver_4ChDimmer::_end() {
     auto mqttClient = MQTTClient::getClient();
     if (mqttClient) {
         mqttClient->unregisterComponent(this);
     }
     _dimmer = nullptr;
+    Dimmer_Base::_end();
+}
+
+const String AtomicSunPlugin::getStatus() {
+    PrintHtmlEntitiesString out;
+    out = F("4 Channel MOSFET Dimmer enabled on Serial Port");
+    _printStatus(out);
+    return out;
 }
 
 MQTTAutoDiscovery *Driver_4ChDimmer::createAutoDiscovery(MQTTAutoDiscovery::Format_t format) {
@@ -88,13 +106,41 @@ void Driver_4ChDimmer::onConnect(MQTTClient *client) {
     _metricsTopic = MQTTClient::formatTopic(-1, F("/metrics/"));
 
     _createTopics();
-    
+
 #if MQTT_AUTO_DISCOVERY
     if (MQTTAutoDiscovery::isEnabled()) {
         auto discovery = createAutoDiscovery(MQTTAutoDiscovery::FORMAT_JSON);
         client->publish(discovery->getTopic(), _qos, true, discovery->getPayload());
         delete discovery;
+
+        String topic = MQTTClient::formatTopic(-1, F("/metrics/"));
+        MQTTComponentHelper component(MQTTComponent::SENSOR);
+
+        component.setNumber(IOT_DIMMER_MODULE_CHANNELS);
+        discovery = component.createAutoDiscovery();
+        discovery->addStateTopic(topic + F("temperature"));
+        discovery->addUnitOfMeasurement(F("°C"));
+        discovery->finalize();
+        client->publish(discovery->getTopic(), MQTTClient::getDefaultQos(), true, discovery->getPayload());
+        delete discovery;
+
+        component.setNumber(IOT_DIMMER_MODULE_CHANNELS + 1);
+        discovery = component.createAutoDiscovery();
+        discovery->addStateTopic(topic + F("vcc"));
+        discovery->addUnitOfMeasurement(F("V"));
+        discovery->finalize();
+        client->publish(discovery->getTopic(), MQTTClient::getDefaultQos(), true, discovery->getPayload());
+        delete discovery;
+
+        component.setNumber(IOT_DIMMER_MODULE_CHANNELS + 2);
+        discovery = component.createAutoDiscovery();
+        discovery->addStateTopic(topic + F("frequency"));
+        discovery->addUnitOfMeasurement(F("Hz"));
+        discovery->finalize();
+        client->publish(discovery->getTopic(), MQTTClient::getDefaultQos(), true, discovery->getPayload());
+        delete discovery;
     }
+
 #endif
 
     client->subscribe(this, _data.state.set, _qos);
@@ -127,85 +173,49 @@ void Driver_4ChDimmer::onMessage(MQTTClient *client, char *topic, char *payload,
 
         // if brightness changes, also turn dimmer on or off
         if (value > 0) {
-            fadetime = _data.state.value ? _getFadeTime() : _getOnOffFadeTime();
+            fadetime = _data.state.value ? getFadeTime() : getOnOffFadeTime();
             _data.state.value = true;
             _data.brightness.value = std::min(value, IOT_ATOMIC_SUN_MAX_BRIGHTNESS);
         } else {
-            fadetime = _data.state.value ? _getOnOffFadeTime() : _getFadeTime();
+            fadetime = _data.state.value ? getOnOffFadeTime() : getFadeTime();
             _data.state.value = false;
             _data.brightness.value = 0;
         }
-        setLevel(fadetime);
+        _setChannels(fadetime);
         publishState(client);
 
     } else if (_data.color.set.equals(topic)) {
 
         _data.color.value = value;
-        setLevel(_getFadeTime());
+        _setChannels(getFadeTime());
         publishState(client);
 
     }
 }
 
 void Driver_4ChDimmer::publishState(MQTTClient *client) {
+    _debug_printf_P(PSTR("Driver_4ChDimmer::publishState()\n"));
     if (!client) {
         client = MQTTClient::getClient();
-    } 
+    }
     if (client) {
-        _publishState(client);
+        client->publish(_data.state.state, _qos, 1, String(_data.state.value));
+        client->publish(_data.brightness.state, _qos, 1, String(_data.brightness.value));
+        client->publish(_data.color.state, _qos, 1, String(_data.color.value));
     }
 
-    PrintString message(F("+SETBC %d %u"), getBrightness(), getColor());
-    WsAtomicSunClient::broadcast(message);
-}
+    JsonUnnamedObject json(2);
+    json.add(JJ(type), JJ(ue));
+    auto &events = json.addArray(JJ(events), 2);
+    auto obj = &events.addObject(3);
+    obj->add(JJ(id), JF("dimmer_channel0"));
+    obj->add(JJ(value), _data.brightness.value);
+    obj->add(JJ(state), _data.state.value);
+    obj = &events.addObject(2);
+    obj->add(JJ(id), JF("dimmer_channel1"));
+    obj->add(JJ(value), _data.color.value);
+    WsWebUISocket::broadcast(json);
 
-void Driver_4ChDimmer::_publishState(MQTTClient *client) {
-
-    _debug_printf_P(PSTR("Driver_4ChDimmer::_publishState()\n"));
-
-    client->publish(_data.state.state, _qos, 1, String(_data.state.value));
-    client->publish(_data.brightness.state, _qos, 1, String(_data.brightness.value));
-    client->publish(_data.color.state, _qos, 1, String(_data.color.value));
-}
-
-void Driver_4ChDimmer::begin() {
-    _debug_printf_P(PSTR("Driver_4ChDimmer::begin()\n"));
-#if AT_MODE_SUPPORTED
-    disable_at_mode(Serial);
-    if (IOT_ATOMIC_SUN_BAUD_RATE != KFC_SERIAL_RATE) {
-        Serial.flush();
-        Serial.begin(IOT_ATOMIC_SUN_BAUD_RATE);
-    }
-#endif
-#if SERIAL_HANDLER
-    serialHandler.addHandler(onData, SerialHandler::RECEIVE);
-#endif
-    _getChannels();
-    // calculate color and brightness values from dimmer channels
-    int32_t sum = _channels[0] + _channels[1] + _channels[2] + _channels[3];
-    if (sum) {
-        _data.color.value = round((_channels[0] + _channels[1]) / sum * (500 - 153)) + 153;
-        _data.brightness.value = sum * IOT_ATOMIC_SUN_MAX_BRIGHTNESS / 4;
-        _data.state.value = true;
-    } else {
-        _data.brightness.value = 0;
-        _data.color.value = 333;
-        _data.state.value = false;
-    }
-}
-
-void Driver_4ChDimmer::end() {
-    _debug_printf_P(PSTR("Driver_4ChDimmer::end()\n"));
-#if SERIAL_HANDLER
-    serialHandler.removeHandler(onData);
-#endif
-    if (IOT_ATOMIC_SUN_BAUD_RATE != KFC_SERIAL_RATE) {
-        Serial.flush();
-        Serial.begin(KFC_SERIAL_RATE);
-    }
-#if AT_MODE_SUPPORTED
-    enable_at_mode(Serial);
-#endif
 }
 
 void Driver_4ChDimmer::_printStatus(PrintHtmlEntitiesString &out) {
@@ -217,265 +227,138 @@ void Driver_4ChDimmer::_printStatus(PrintHtmlEntitiesString &out) {
     }
     out.printf_P(PSTR(", brightness %.1f%%"), _data.brightness.value / (float)IOT_ATOMIC_SUN_MAX_BRIGHTNESS * 100);
     out.printf_P(PSTR(", color temperature %d K" HTML_S(br)), 1000000 / _data.color.value);
-    if (_stored.temperature) {
-        out.printf_P(PSTR("Temperature %d" HTML_DEG "C"), _stored.temperature);
-    }
-    if (_stored.vcc) {
-        if (_stored.temperature) {
-            out.print(F(", v"));
-        } else {
-            out.print('V');
-        }
-        out.printf_P(PSTR("oltage %.3fV"), _stored.vcc / 1000.0);
-    }
+    Dimmer_Base::_printStatus(out);
 }
 
-const String Driver_4ChDimmer::getStatus() {
-    PrintHtmlEntitiesString out;
-    out = F("4 Channel MOSFET Dimmer enabled on Serial Port");
-    if (_dimmer)  {
-        _dimmer->_printStatus(out);
-    }
-    return out;
-}
-
-bool Driver_4ChDimmer::on() {
+bool Driver_4ChDimmer::on(uint8_t channel) {
     if (!_data.state.value) {
-        _data.brightness.value = _stored.brightness;
+        _data.brightness.value = _storedBrightness;
         _data.state.value = true;
-        setLevel(_getOnOffFadeTime());
+        _setChannels(getOnOffFadeTime());
         publishState();
         return true;
     }
     return false;
 }
 
-bool Driver_4ChDimmer::off() {
+bool Driver_4ChDimmer::off(uint8_t channel) {
     if (_data.state.value) {
-        memset(&_channels, 0, sizeof(_channels));
-
-        _fade(0xff, 0, _getOnOffFadeTime());
-        _writeState();
-
-        _stored.brightness = _data.brightness.value;
+        _storedBrightness = _data.brightness.value;
         _data.state.value = false;
         _data.brightness.value = 0;
+        _setChannels(getOnOffFadeTime());
         publishState();
         return true;
     }
     return false;
 }
 
-void Driver_4ChDimmer::setLevel(float fadetime) {
+int16_t Driver_4ChDimmer::getChannel(uint8_t channel) const {
+    if (channel) {
+            return _data.color.value;
+    } else {
+        return _data.brightness.value;
+    }
+
+}
+bool Driver_4ChDimmer::getChannelState(uint8_t channel) const {
+    return _data.state.value;
+}
+
+void Driver_4ChDimmer::setChannel(uint8_t channel, int16_t level, float time) {
+    if (channel) {
+        _data.color.value = level;
+        _setChannels(time);
+    } else {
+        _data.brightness.value = level;
+        _data.state.value = level != 0;
+        _setChannels(time);
+    }
+}
+
+uint8_t Driver_4ChDimmer::getChannelCount() const {
+    return 2;
+}
+
+void Driver_4ChDimmer::_setChannels(float fadetime) {
     if (fadetime == -1) {
-        fadetime = _getFadeTime();
+        fadetime = getFadeTime();
     }
     uint8_t color = (_data.color.value - 153) * 255 / (500 - 153);
     auto channel12 = _data.brightness.value * color * 2 / 255;
     auto channel34 = _data.brightness.value * (255 - color) * 2 / 255;
     _debug_printf_P(PSTR("Driver_4ChDimmer::setBrightness() time=%.3f brightness=%d color=%d ch1/2=%d ch3/4=%d\n"), fadetime, _data.brightness.value, color, channel12, channel34);
-    _setChannels(channel12, channel12, channel34, channel34, fadetime);
-}
 
-void Driver_4ChDimmer::_fade(uint8_t channel, int16_t toLevel, float fadeTime) {
-    _debug_printf_P(PSTR("Driver_4ChDimmer::_fade(%u, %u, %f)\n"), channel, toLevel, fadeTime);
-
-    SerialWire.beginTransmission(DIMMER_I2C_ADDRESS);
-    SerialWire.write(DIMMER_REGISTER_CHANNEL);
-    SerialWire.write(channel);
-    SerialWire.write(reinterpret_cast<const uint8_t *>(&toLevel), sizeof(toLevel));
-    SerialWire.write(reinterpret_cast<const uint8_t *>(&fadeTime), sizeof(fadeTime));
-    SerialWire.write(DIMMER_COMMAND_FADE);
-    SerialWire.endTransmission();
-}
-
-void Driver_4ChDimmer::onReceive(int length) {
-    _dimmer->_onReceive(length);
-}
-
-void Driver_4ChDimmer::_onReceive(int length) {
-
-    auto type = SerialWire.read();
-
-    _debug_printf_P(PSTR("Driver_4ChDimmer::_onReceive(%u): type %02x\n"), length, type);
-
-    if (type == DIMMER_TEMPERATURE_REPORT && length == 4) {
-        uint8_t temperature = SerialWire.read();
-        uint16_t vcc;
-        SerialWire.readBytes(reinterpret_cast<uint8_t *>(&vcc), sizeof(vcc));
-        if (_stored.temperature != temperature || _stored.vcc != vcc) { // publish temp. or voltage if values have changed
-            _stored.temperature = temperature;
-            _stored.vcc = vcc;
-            auto client = MQTTClient::getClient();
-            if (client) {
-                if (_stored.temperature) {
-                    client->publish(_metricsTopic + F("temperature"), _qos, 1, String(_stored.temperature));
-                }
-                if (_stored.vcc) {
-                    client->publish(_metricsTopic + F("vcc"), _qos, 1, String(_stored.vcc / 1000.0, 3));
-                }
-            }
-        }
-    }
-    else if (type == DIMMER_TEMPERATURE_ALERT && length == 3) {
-        uint8_t temperature = SerialWire.read();
-        uint8_t max_temperature = SerialWire.read();
-        Logger_error(F("Atomic Sun: Temperature alarm triggered: %u > %u"), temperature, max_temperature);
-    }
-}
-
-// store brightness in EEPROM
-void Driver_4ChDimmer::_writeState() {
-    _debug_printf_P(PSTR("Driver_4ChDimmer::_writeState()\n"));
-    SerialWire.beginTransmission(DIMMER_I2C_ADDRESS);
-    SerialWire.write(DIMMER_REGISTER_COMMAND);
-    SerialWire.write(DIMMER_COMMAND_WRITE_EEPROM);
-    SerialWire.endTransmission();
-}
-
-// set all 4 channels and store brightness in EEPROM
-void Driver_4ChDimmer::_setChannels(int16_t ch1, int16_t ch2, int16_t ch3, int16_t ch4, float fadetime) {
-    _fade(0, ch1, fadetime);
-    _fade(1, ch2, fadetime);
-    _fade(2, ch3, fadetime);
-    _fade(3, ch4, fadetime);
-    _writeState();
+    _fade(0, channel12, fadetime);
+    _fade(1, channel12, fadetime);
+    _fade(2, channel34, fadetime);
+    _fade(3, channel34, fadetime);
+    writeEEPROM();
 }
 
 // get brightness values from dimmer
 void Driver_4ChDimmer::_getChannels() {
     _debug_printf_P(PSTR("Driver_4ChDimmer::_getChannels()\n"));
-    SerialWire.beginTransmission(DIMMER_I2C_ADDRESS);
-    SerialWire.write(DIMMER_REGISTER_COMMAND);
-    SerialWire.write(DIMMER_COMMAND_READ_CHANNELS);
-    SerialWire.write((uint8_t)(sizeof(_channels) / sizeof(_channels[0])) << 4);
-    if (SerialWire.endTransmission() == 0) {
-        if (SerialWire.requestFrom(DIMMER_I2C_ADDRESS, sizeof(_channels)) == sizeof(_channels)) {
-            SerialWire.readBytes(reinterpret_cast<uint8_t *>(&_channels), sizeof(_channels));
+    _wire.beginTransmission(DIMMER_I2C_ADDRESS);
+    _wire.write(DIMMER_REGISTER_COMMAND);
+    _wire.write(DIMMER_COMMAND_READ_CHANNELS);
+    _wire.write((uint8_t)(sizeof(_channels) / sizeof(_channels[0])) << 4);
+    if (_endTransmission() == 0) {
+        if (_wire.requestFrom(DIMMER_I2C_ADDRESS, sizeof(_channels)) == sizeof(_channels)) {
+            _wire.readBytes(reinterpret_cast<uint8_t *>(&_channels), sizeof(_channels));
             _debug_printf_P(PSTR("Driver_4ChDimmer::_getChannels(): %u, %u, %u, %u\n"), _channels[0], _channels[1], _channels[2], _channels[3]);
         }
     }
 }
 
-#if DEBUG_4CH_DIMMER
-uint8_t Driver_4ChDimmer::endTransmission() {
-    auto result = SerialWire.endTransmission();
-    _debug_printf_P(PSTR("Driver_4ChDimmer::endTransmission(): returned %u\n"), result);
-    return result;
-}
-#else
-inline uint8_t Driver_4ChDimmer::endTransmission() {
-    return SerialWire.endTransmission();
-}
-#endif
-
-void Driver_4ChDimmer::onData(uint8_t type, const uint8_t *buffer, size_t len) {
-    _debug_printf_P(PSTR("Driver_4ChDimmer::onData(): length %u\n"), len);
-    while(len--) {
-        SerialWire.feed(*buffer++);
-    }
-}
-
-void Driver_4ChDimmer::writeConfig() {
-    auto dimmer = config._H_GET(Config().dimmer);
-    auto _wire = &SerialWire;
-
-    _wire->beginTransmission(DIMMER_I2C_ADDRESS);
-    _wire->write(DIMMER_REGISTER_OPTIONS);
-    if (endTransmission() == 0 && _wire->requestFrom(DIMMER_I2C_ADDRESS, 1) == 1) {
-        uint8_t options = _wire->read();
-
-        if (dimmer.restore_level) {
-            options |= DIMMER_OPTIONS_RESTORE_LEVEL;
-        } else {
-            options &= ~DIMMER_OPTIONS_RESTORE_LEVEL;
-        }
-
-        _wire->beginTransmission(DIMMER_I2C_ADDRESS);
-        _wire->write(DIMMER_REGISTER_OPTIONS);
-        _wire->write(options);
-        _wire->write(dimmer.max_temperature);
-        _wire->write(reinterpret_cast<const uint8_t *>(&dimmer.on_fade_time), sizeof(dimmer.on_fade_time));
-        _wire->write(dimmer.temp_check_int);
-        _wire->write(reinterpret_cast<const uint8_t *>(&dimmer.linear_correction), sizeof(dimmer.linear_correction));
-        if (endTransmission() == 0) {
-            _writeState();
-        }
-    }
-
-}
-
-void Driver_4ChDimmer::setup() {
-    SerialWire.begin(DIMMER_I2C_ADDRESS + 1);
-    SerialWire.setSerial(Serial);
-    SerialWire.onReadSerial(SerialHandler::serialLoop);
-    SerialWire.onReceive(Driver_4ChDimmer::onReceive);
-    _dimmer = _debug_new Driver_4ChDimmer(Serial);
-    _dimmer->begin();
-    WsAtomicSunClient::setup();
-}
-
-
-class AtomicSunPlugin : public PluginComponent, public DimmerModuleForm {
-public:
-    AtomicSunPlugin() {
-        register_plugin(this);
-    }    
-    PGM_P getName() const;
-    PluginPriorityEnum_t getSetupPriority() const override;
-    void setup(PluginSetupMode_t mode) override;
-    void reconfigure(PGM_P source) override;
-    bool hasReconfigureDependecy(PluginComponent *plugin) const override;
-    bool hasStatus() const override;
-    const String getStatus() override;
-
-    using DimmerModuleForm::canHandleForm;
-    using DimmerModuleForm::createConfigureForm;
-};
-
-static AtomicSunPlugin plugin; 
+static AtomicSunPlugin plugin;
 
 PGM_P AtomicSunPlugin::getName() const {
     return PSTR("atomicsun");
 }
 
 AtomicSunPlugin::PluginPriorityEnum_t AtomicSunPlugin::getSetupPriority() const {
-    return PRIO_LOW;
+    return (AtomicSunPlugin::PluginPriorityEnum_t)100;
 }
 
 void AtomicSunPlugin::setup(PluginSetupMode_t mode) {
-    Driver_4ChDimmer::setup();
+    _begin();
 }
 
 void AtomicSunPlugin::reconfigure(PGM_P source) {
     if (!source) {
-        auto dimmer = Driver_4ChDimmer::getInstance();
-        if (dimmer) {
-            dimmer->writeConfig();
-        }
-    }
-    else {
-        WsAtomicSunClient::setup();
+        writeConfig();
     }
 }
 
-bool AtomicSunPlugin::hasReconfigureDependecy(PluginComponent *plugin) const {
-    return plugin->nameEquals(F("http"));
+bool AtomicSunPlugin::hasWebUI() const {
+    return true;
+}
+
+void AtomicSunPlugin::createWebUI(WebUI &webUI) {
+
+    auto row = &webUI.addRow();
+    row->setExtraClass(JF("title"));
+    row->addGroup(JF("Atomic Sun"), true);
+
+    row = &webUI.addRow();
+    row->addSlider(F("dimmer_channel0"), JF("Atomic Sun Brightness"), 0, IOT_ATOMIC_SUN_MAX_BRIGHTNESS);
+
+    row = &webUI.addRow();
+    row->addColorSlider(F("dimmer_channel1"), JF("Atomic Sun Color"));
+
+    row = &webUI.addRow();
+    row->addBadgeSensor(F("dimmer_vcc"), JF("Atomic Sun VCC"), JF("V"));
+    row->addBadgeSensor(F("dimmer_frequency"), JF("Atomic Sun Frequency"), JF("Hz"));
+    row->addBadgeSensor(F("dimmer_temp"), JF("Atomic Sun Internal Temperature"), JF("°C"));
+}
+
+WebUIInterface *AtomicSunPlugin::getWebUIInterface() {
+    return this;
 }
 
 bool AtomicSunPlugin::hasStatus() const {
     return true;
-}
-
-const String AtomicSunPlugin::getStatus() {
-    return Driver_4ChDimmer::getStatus;
-}
-
-bool AtomicSunPlugin::canHandleForm(const String &formName) const {
-    return true;
-}
-
-void AtomicSunPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form) {
 }
 
 #endif

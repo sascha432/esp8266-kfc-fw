@@ -15,13 +15,15 @@
 // NOTE: Wire.onReceive() is not working on ESP8266
 
 #include <Arduino_compat.h>
-#include <HardwareSerial.h>
 #include <PrintString.h>
 #include <PrintHtmlEntitiesString.h>
+#include <WebUIComponent.h>
 #include "kfc_fw_config.h"
 #include "../mqtt/mqtt_client.h"
 #include "serial_handler.h"
+#include "dimmer_module_form.h"
 #include "dimmer_channel.h"
+#include "dimmer_base.h"
 
 #ifndef DEBUG_IOT_DIMMER_MODULE
 #define DEBUG_IOT_DIMMER_MODULE             0
@@ -69,101 +71,60 @@
 #include <Wire.h>
 #endif
 
-class Driver_DimmerModule //: public MQTTComponent
+class Driver_DimmerModule: public Dimmer_Base
 {
-private:
-#if IOT_DIMMER_MODULE_INTERFACE_UART
-    Driver_DimmerModule(HardwareSerial &serial);
-#else
-    Driver_DimmerModule();
-#endif
-
 public:
-    virtual ~Driver_DimmerModule();
-
-    static void setup();
+    Driver_DimmerModule();
 
     void createAutoDiscovery(MQTTAutoDiscovery::Format_t format, PrintHtmlEntitiesString &payload);
     void onConnect(MQTTClient *client);
 
-    bool on(uint8_t channel);
-    bool off(uint8_t channel);
+    virtual bool on(uint8_t channel = -1) override;
+    virtual bool off(uint8_t channel = -1) override;
+    virtual int16_t getChannel(uint8_t channel) const override;
+    virtual bool getChannelState(uint8_t channel) const override;
+    virtual void setChannel(uint8_t channel, int16_t level, float time = -1) override;
+    virtual uint8_t getChannelCount() const override;
 
-    static const String getStatus();
-
-#if IOT_DIMMER_MODULE_INTERFACE_UART
-    static void onData(uint8_t type, const uint8_t *buffer, size_t len);
-    static void onReceive(int length);
-#else
-    static void fetchMetrics(EventScheduler::TimerPtr timer) {
-        if (_dimmer) {
-            _dimmer->_fetchMetrics();
-        }
-    }
-#endif
-
-    void writeConfig();
-
-    int16_t getChannel(uint8_t channel);
-    void setChannel(uint8_t channel, int16_t level, float time = -1);
-    void writeEEPROM();
-
-    static Driver_DimmerModule *getInstance();
-
-public:
-    // friend class DimmerModule;
-    
-    inline float getFadeTime() {
-        return _fadeTime;
-    }
-    inline float getOnOffFadeTime() {
-        return _onOffFadeTime;
-    }
-    inline void _setChannel(uint8_t channel, int16_t level, float time) {
-        _fade(channel, level, time);
-    }
-
-private:
-#if DEBUG_IOT_DIMMER_MODULE
-    uint8_t endTransmission();
-#else
-    inline uint8_t endTransmission() {
-        return _wire->endTransmission();
-    }
-#endif
+protected:
+    void _begin();
+    void _end();
     void _printStatus(PrintHtmlEntitiesString &out);
-    void _updateMetrics(uint8_t temperature, uint16_t vcc);
-
-    void begin();
-    void end();
-
-    void _publishState(uint8_t channel, MQTTClient *client);
-    void _writeState();
-
-    void _getChannels();
-    void _fade(uint8_t channel, int16_t toLevel, float fadeTime);
 
 private:
+    void _getChannels();
+
     DimmerChannel _channels[IOT_DIMMER_MODULE_CHANNELS];
-
-    uint8_t _temperature;
-    uint16_t _vcc;
-    float _fadeTime;
-    float _onOffFadeTime;
-
-#if IOT_DIMMER_MODULE_INTERFACE_UART
-    HardwareSerial &_serial;
-    SerialTwoWire *_wire;
-
-    void _onReceive(int length);
-#else
-    TwoWire *_wire;
-    EventScheduler::TimerPtr _timer;
-
-    void _fetchMetrics();
-#endif
-
-    static Driver_DimmerModule *_dimmer;
 };
+
+class DimmerModulePlugin : public Driver_DimmerModule, public DimmerModuleForm {
+public:
+    DimmerModulePlugin() : Driver_DimmerModule() {
+        register_plugin(this);
+    }
+
+    virtual PGM_P getName() const override;
+    virtual PluginPriorityEnum_t getSetupPriority() const override {
+        return (PluginPriorityEnum_t)100;
+    }
+
+    virtual void setup(PluginSetupMode_t mode) override;
+    virtual void reconfigure(PGM_P source) override;
+
+    virtual bool hasStatus() const override;
+    virtual const String getStatus() override;
+
+    virtual bool hasWebUI() const override;
+    virtual void createWebUI(WebUI &webUI) override;
+    virtual WebUIInterface *getWebUIInterface() override;
+
+#if AT_MODE_SUPPORTED && !IOT_DIMMER_MODULE_INTERFACE_UART
+    virtual bool hasAtMode() const override;
+    virtual void atModeHelpGenerator() override;
+    virtual bool atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) override;
+#endif
+};
+
+
 
 #endif

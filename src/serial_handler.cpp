@@ -27,7 +27,17 @@ StreamWrapper MySerialWrapper(&KFC_SERIAL_PORT, &KFC_SERIAL_PORT, true);
 
 static SerialWrapper _MySerial(KFC_SERIAL_PORT);
 StreamWrapper MySerialWrapper(&_MySerial, &_MySerial, true);
-SerialHandler serialHandler(_MySerial);
+SerialHandler *SerialHandler::_instance = nullptr;
+
+
+SerialHandler &SerialHandler::getInstance() {
+    if (!_instance) {
+        _instance = new SerialHandler(_MySerial);
+        _instance->begin();
+    }
+    return *_instance;
+}
+
 
 SerialHandler::SerialHandler(SerialWrapper &wrapper) : _wrapper(wrapper) {
 }
@@ -64,7 +74,7 @@ void SerialHandler::removeHandler(SerialHandlerCallback_t callback) {
 }
 
 void SerialHandler::serialLoop() {
-    serialHandler._serialLoop();
+    _instance->_serialLoop();
 }
 
 void SerialHandler::_serialLoop() {
@@ -144,7 +154,7 @@ SerialWrapper::SerialWrapper(Stream &serial) : _serial(serial) {
 size_t SerialWrapper::write(uint8_t data) {
     size_t written = _serial.write(data);
     if (written) {
-        serialHandler.writeToTransmit(SerialHandler::LOCAL_TX, &data, written);
+        SerialHandler::getInstance().writeToTransmit(SerialHandler::LOCAL_TX, &data, written);
     }
     return written;
 }
@@ -152,7 +162,7 @@ size_t SerialWrapper::write(uint8_t data) {
 size_t SerialWrapper::write(const uint8_t *data, size_t len) {
     size_t written = _serial.write(data, len);
     if (written) {
-        serialHandler.writeToTransmit(SerialHandler::LOCAL_TX, data, written);
+        SerialHandler::getInstance().writeToTransmit(SerialHandler::LOCAL_TX, data, written);
     }
     return written;
 }

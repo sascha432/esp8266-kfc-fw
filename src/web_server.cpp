@@ -23,16 +23,11 @@
 #include "../include/templates.h"
 #include "timezone.h"
 #include "web_socket.h"
+#include "WebUISocket.h"
 #include "kfc_fw_config.h"
 #include "plugins.h"
 #if HUE_EMULATION
 #include "./plugins/hue/hue.h"
-#endif
-#if IOT_ATOMIC_SUN_V2
-#include "./plugins/atomic_sun/atomic_sun_web_socket.h"
-#endif
-#if IOT_DIMMER_MODULE
-#include "./plugins/dimmer_module/dimmer_web_socket.h"
 #endif
 
 #if DEBUG_WEB_SERVER
@@ -185,6 +180,17 @@ void web_server_logout_handler(AsyncWebServerRequest *request) {
 void web_server_is_alive_handler(AsyncWebServerRequest *request) {
     WebServerSetCPUSpeedHelper setCPUSpeed;
     AsyncWebServerResponse *response = request->beginResponse(200, FSPGM(text_plain), String(request->arg(F("p")).toInt()));
+    HttpHeaders httpHeaders;
+    httpHeaders.addNoCache();
+    httpHeaders.setWebServerResponseHeaders(response);
+    request->send(response);
+}
+
+void web_server_get_webui_json(AsyncWebServerRequest *request) {
+    WebServerSetCPUSpeedHelper setCPUSpeed;
+    AsyncJsonResponse *response = new AsyncJsonResponse();
+    WsWebUISocket::createWebUIJSON(response->getJsonObject());
+    response->updateLength();
     HttpHeaders httpHeaders;
     httpHeaders.addNoCache();
     httpHeaders.setWebServerResponseHeaders(response);
@@ -349,6 +355,8 @@ void init_web_server() {
     server->onRequestBody(HueEmulation::onRequestBody);
 #endif
 
+    WsWebUISocket::setup();
+
     server->onNotFound(web_server_not_found_handler);
 
 // #if MDNS_SUPPORT
@@ -385,6 +393,7 @@ void init_web_server() {
     server->on(F("/scan_wifi/"), web_server_scan_wifi_handler);
     server->on(F("/logout"), web_server_logout_handler);
     server->on(F("/is_alive"), web_server_is_alive_handler);
+    server->on(F("/webui_get"), web_server_get_webui_json);
     server->on(F("/update"), HTTP_POST, web_server_update_handler, web_server_update_upload_handler);
 
     server->begin();
@@ -455,8 +464,11 @@ bool web_server_send_file(String path, HttpHeaders &httpHeaders, bool client_acc
 
     if (webTemplate == nullptr) {
         if (path.charAt(0) == '/' && constexpr_endsWith(path, PSTR(".html"))) {
-            auto plugin = PluginComponent::getForm(path.substring(1, path.length() - 5));
+            String filename = path.substring(1, path.length() - 5);
+            auto plugin = PluginComponent::getTemplate(filename);
             if (plugin) {
+                webTemplate = plugin->getWebTemplate(filename);
+            } else if (nullptr != (plugin = PluginComponent::getForm(filename))) {
                 Form *form = _debug_new SettingsForm(nullptr);
                 plugin->createConfigureForm(nullptr, *form);
                 webTemplate = _debug_new ConfigTemplate(form);
@@ -471,14 +483,6 @@ bool web_server_send_file(String path, HttpHeaders &httpHeaders, bool client_acc
                 webTemplate = _debug_new StatusTemplate();
             } else if (constexpr_String_equals(path, PSTR("/status.html"))) {
                 webTemplate = _debug_new StatusTemplate();
-#if IOT_ATOMIC_SUN_V2
-            } else if (constexpr_String_equals(path, PSTR("/atomic_sun.html"))) {
-                webTemplate = _debug_new AtomicSunTemplate();
-#endif
-#if IOT_DIMMER_MODULE
-            } else if (constexpr_String_equals(path, PSTR("/dimmer.html"))) {
-                webTemplate = _debug_new DimmerTemplate();
-#endif
 // #if MDNS_SUPPORT
 //                 MDNS_async_query_service(); // query service inside loop() and cache results
 // #endif
@@ -678,7 +682,7 @@ public:
     void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
 };
 
-static WebServerPlugin plugin; 
+static WebServerPlugin plugin;
 
 PGM_P WebServerPlugin::getName() const {
     return PSTR("http");
@@ -711,6 +715,7 @@ bool WebServerPlugin::hasReconfigureDependecy(PluginComponent *plugin) const {
 bool WebServerPlugin::hasStatus() const {
     return true;
 }
+
 const String WebServerPlugin::getStatus() {
     auto flags = config._H_GET(Config().flags);
     PrintString out = F("Web server ");
@@ -731,7 +736,7 @@ const String WebServerPlugin::getStatus() {
 }
 
 bool WebServerPlugin::canHandleForm(const String &formName) const {
-    return formName.equals(F("remote"));
+    return strcmp_P(formName.c_str(), PSTR("remote")) == 0;
 }
 
 void WebServerPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form) {

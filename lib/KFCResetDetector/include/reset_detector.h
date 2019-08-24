@@ -21,7 +21,7 @@
 
 #include <push_pack.h>
 
-#define RESET_DETECTOR_TIMEOUT              10000
+#define RESET_DETECTOR_TIMEOUT              5000
 #ifndef USE_ESP_GET_RESET_REASON
 #if defined(ESP8266)
 #define USE_ESP_GET_RESET_REASON            1

@@ -101,13 +101,14 @@ protected:
         _str.ptr = (char *)ptr;
     }
 
+    // using buffer_size 8, length might overlap with the type stored in the last byte
+    // works with ESP8266 and MSVC/win32
     inline length_t _getLength() const {
         return _str.length;
         //return *(length_t *)&_raw[offsetof(_str_t, length)];
     }
     inline void _setLength(length_t length) {
         _str.length = length;
-        // using buffer_size 8, length might overlap with the type stored in the last byte
         //*(length_t *)&_raw[offsetof(_str_t, length)] = length;
     }
 

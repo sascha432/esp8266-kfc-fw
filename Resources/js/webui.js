@@ -374,12 +374,13 @@ var webUIComponent = {
         var url = $.getHttpLocation('/webui_get')
         var SID = $.getSessionId();
 
-        var url = 'http://192.168.0.56/webui_get';
-        SID = 'd7b264b26a72903f812990ba02b1d7999ad37b6893e6d98f33430d3f';
-        url += '?SID=' + SID;
+        if (window._webui_debug) {
+            var url = 'http://192.168.0.56/webui_get';
+            SID = 'd7b264b26a72903f812990ba02b1d7999ad37b6893e6d98f33430d3f'; // password 12345678
+        }
 
         var self = this;
-        $.get(url, function(data) {
+        $.get(url + '?SID=' + SID, function(data) {
             console.log(data);
             self.updateUI(data.data);
             self.updateEvents(data.values);
@@ -402,9 +403,12 @@ var webUIComponent = {
     init: function() {
         var url = $.getWebSocketLocation('/webui_ws');
         var SID = $.getSessionId();
-        url = 'ws://192.168.0.56/webui_ws';
-        SID = 'd7b264b26a72903f812990ba02b1d7999ad37b6893e6d98f33430d3f';
-        // window.ws_console_is_debug = true;
+
+        if (window._webui_debug) {
+            url = 'ws://192.168.0.56/webui_ws';
+            SID = 'd7b264b26a72903f812990ba02b1d7999ad37b6893e6d98f33430d3f';
+            // window.ws_console_is_debug = true;
+        }
 
         var self = this;
         this.socket = new WS_Console(url, SID, 1, function(event) {

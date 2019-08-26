@@ -210,7 +210,7 @@ void DimmerModulePlugin::createWebUI(WebUI &webUI) {
 
     auto row = &webUI.addRow();
     row->setExtraClass(JJ(title));
-    row->addGroup(JF("Dimmer"), true);
+    row->addGroup(F("Dimmer"), true);
 
     for (uint8_t i = 0; i < getChannelCount(); i++) {
         row = &webUI.addRow();
@@ -218,9 +218,9 @@ void DimmerModulePlugin::createWebUI(WebUI &webUI) {
     }
 
     row = &webUI.addRow();
-    row->addBadgeSensor(F("dimmer_vcc"), JF("Dimmer VCC"), JF("V"));
-    row->addBadgeSensor(F("dimmer_frequency"), JF("Dimmer Frequency"), JF("Hz"));
-    row->addBadgeSensor(F("dimmer_temp"), JF("Dimmer Internal Temperature"), JF("°C"));
+    row->addBadgeSensor(F("dimmer_vcc"), F("Dimmer VCC"), F("V"));
+    row->addBadgeSensor(F("dimmer_frequency"), F("Dimmer Frequency"), F("Hz"));
+    row->addBadgeSensor(F("dimmer_temp"), F("Dimmer Internal Temperature"), F("°C"));
 }
 
 

@@ -223,7 +223,7 @@ void Dimmer_Base::_updateMetrics(float temperature, uint16_t vcc, float frequenc
                 auto tempStr = String(_temperature, 2);
                 client->publish(topic + F("temperature"), MQTTClient::getDefaultQos(), 1, tempStr);
                 auto &value = events.addObject(3);
-                value.add(JJ(id), JF("dimmer_temp"));
+                value.add(JJ(id), F("dimmer_temp"));
                 value.add(JJ(state), true);
                 value.add(JJ(value), JsonNumber(tempStr));
             }
@@ -232,7 +232,7 @@ void Dimmer_Base::_updateMetrics(float temperature, uint16_t vcc, float frequenc
                 auto vccStr = String(_vcc / 1000.0, 3);
                 client->publish(topic + F("vcc"), MQTTClient::getDefaultQos(), 1, vccStr);
                 auto &value = events.addObject(3);
-                value.add(JJ(id), JF("dimmer_vcc"));
+                value.add(JJ(id), F("dimmer_vcc"));
                 value.add(JJ(state), true);
                 value.add(JJ(value), JsonNumber(vccStr));
             }
@@ -241,7 +241,7 @@ void Dimmer_Base::_updateMetrics(float temperature, uint16_t vcc, float frequenc
                 auto freqStr = String(_frequency, 2);
                 client->publish(topic + F("frequency"), MQTTClient::getDefaultQos(), 1, freqStr);
                 auto &value = events.addObject(3);
-                value.add(JJ(id), JF("dimmer_frequency"));
+                value.add(JJ(id), F("dimmer_frequency"));
                 value.add(JJ(state), true);
                 value.add(JJ(value), JsonNumber(freqStr));
             }
@@ -295,17 +295,17 @@ void Dimmer_Base::getValues(JsonArray &array) {
     }
 
     obj = &array.addObject();
-    obj->add(JJ(id), JF("dimmer_temp"));
+    obj->add(JJ(id), F("dimmer_temp"));
     obj->add(JJ(state), _temperature != 0);
     obj->add(JJ(value), JsonNumber(_temperature, 2));
 
     obj = &array.addObject();
-    obj->add(JJ(id), JF("dimmer_vcc"));
+    obj->add(JJ(id), F("dimmer_vcc"));
     obj->add(JJ(state), _vcc != 0);
     obj->add(JJ(value), JsonNumber(_vcc / 1000.0, 3));
 
     obj = &array.addObject();
-    obj->add(JJ(id), JF("dimmer_frequency"));
+    obj->add(JJ(id), F("dimmer_frequency"));
     obj->add(JJ(state), _frequency != 0);
     obj->add(JJ(value), JsonNumber(_frequency, 2));
 }

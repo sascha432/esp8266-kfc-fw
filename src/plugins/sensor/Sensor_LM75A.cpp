@@ -38,7 +38,7 @@ void Sensor_LM75A::getValues(JsonArray &array) {
 void Sensor_LM75A::createWebUI(WebUI &webUI, WebUIRow **row) {
     _debug_printf_P(PSTR("Sensor_LM75A::createWebUI()\n"));
 
-    (*row)->addSensor(_getId(), _name, JF("°C"));
+    (*row)->addSensor(_getId(), _name, F("°C"));
 }
 
 void Sensor_LM75A::publishState(MQTTClient *client) {
@@ -57,7 +57,7 @@ float Sensor_LM75A::_readSensor() {
     _wire.write(0x00);
     if (_wire.endTransmission() == 0 && _wire.requestFrom(_address, (uint8_t)2) == 2) {
         float temp = (((uint8_t)Wire.read() << 8) | (uint8_t)Wire.read()) / 256.0;
-        _debug_printf_P(PSTR("Sensor_LM75A::_readSensor(): address 0x%02x: %f\n"), _address, temp);
+        _debug_printf_P(PSTR("Sensor_LM75A::_readSensor(): address 0x%02x: %.2f\n"), _address, temp);
         return temp;
     }
     _debug_printf_P(PSTR("Sensor_LM75A::_readSensor(): address 0x%02x: error\n"), _address);

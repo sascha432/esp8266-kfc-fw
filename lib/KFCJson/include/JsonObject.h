@@ -70,52 +70,52 @@ public:
     }
 
     AbstractJsonValue &replace(const JsonString &name, const __FlashStringHelper *value) {
-        return replace(name, new JsonNamedVariant<const __FlashStringHelper *>(name, value));
+        return replace(name, _debug_new JsonNamedVariant<const __FlashStringHelper *>(name, value));
     }
     AbstractJsonValue &replace(const JsonString &name, const char *value) {
-        return replace(name, new JsonNamedVariant<const char *>(name, value));
+        return replace(name, _debug_new JsonNamedVariant<const char *>(name, value));
     }
     AbstractJsonValue &replace(const JsonString &name, const JsonString &value) {
         if (value.isProgMem()) {
-            return replace(name, new JsonNamedVariant<const __FlashStringHelper *>(name, value.getFPStr()));
+            return replace(name, _debug_new JsonNamedVariant<const __FlashStringHelper *>(name, value.getFPStr()));
         }
-        return replace(name, new JsonNamedVariant<JsonString>(name, value));
+        return replace(name, _debug_new JsonNamedVariant<JsonString>(name, value));
     }
     AbstractJsonValue &replace(const JsonString &name, JsonString &&value) {
         if (value.isProgMem()) {
-            return replace(name, new JsonNamedVariant<const __FlashStringHelper *>(name, value.getFPStr()));
+            return replace(name, _debug_new JsonNamedVariant<const __FlashStringHelper *>(name, value.getFPStr()));
         }
-        return replace(name, new JsonNamedVariant<JsonString>(name, std::move(value)));
+        return replace(name, _debug_new JsonNamedVariant<JsonString>(name, std::move(value)));
     }
     AbstractJsonValue &replace(const JsonString &name, const JsonNumber &value) {
-        return replace(name, new JsonNamedVariant<JsonNumber>(name, value));
+        return replace(name, _debug_new JsonNamedVariant<JsonNumber>(name, value));
     }
     AbstractJsonValue &replace(const JsonString &name, JsonNumber &&value) {
-        return replace(name, new JsonNamedVariant<JsonNumber>(name, std::move(value)));
+        return replace(name, _debug_new JsonNamedVariant<JsonNumber>(name, std::move(value)));
     }
     AbstractJsonValue &replace(const JsonString &name, const String &value) {
-        return replace(name, new JsonNamedVariant<String>(name, value));
+        return replace(name, _debug_new JsonNamedVariant<String>(name, value));
     }
     AbstractJsonValue &replace(const JsonString &name, bool value) {
-        return replace(name, new JsonNamedVariant<bool>(name, value));
+        return replace(name, _debug_new JsonNamedVariant<bool>(name, value));
     }
     AbstractJsonValue &replace(const JsonString &name, std::nullptr_t value) {
-        return replace(name, new JsonNamedVariant<std::nullptr_t>(name, value));
+        return replace(name, _debug_new JsonNamedVariant<std::nullptr_t>(name, value));
     }
     AbstractJsonValue &replace(const JsonString &name, int value) {
-        return replace(name, new JsonNamedVariant<long>(name, (long)value));
+        return replace(name, _debug_new JsonNamedVariant<long>(name, (long)value));
     }
     AbstractJsonValue &replace(const JsonString &name, unsigned int value) {
-        return replace(name, new JsonNamedVariant<unsigned long>(name, (unsigned long)value));
+        return replace(name, _debug_new JsonNamedVariant<unsigned long>(name, (unsigned long)value));
     }
     AbstractJsonValue &replace(const JsonString &name, long value) {
-        return replace(name, new JsonNamedVariant<long>(name, value));
+        return replace(name, _debug_new JsonNamedVariant<long>(name, value));
     }
     AbstractJsonValue &replace(const JsonString &name, unsigned long value) {
-        return replace(name, new JsonNamedVariant<unsigned long>(name, value));
+        return replace(name, _debug_new JsonNamedVariant<unsigned long>(name, value));
     }
     AbstractJsonValue &replace(const JsonString &name, double value) {
-        return replace(name, new JsonNamedVariant<double>(name, value));
+        return replace(name, _debug_new JsonNamedVariant<double>(name, value));
     }
 
     AbstractJsonValue *find(const String &name);

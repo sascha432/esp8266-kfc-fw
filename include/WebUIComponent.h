@@ -15,7 +15,6 @@
 
 #define J(str)                                  FSPGM(webui_json_##str)
 #define JJ(str)                                 JsonString(FSPGM(webui_json_##str), true)
-#define JF(str)                                 JsonString(F(str), true)
 #if DEBUG_COLLECT_STRING_ENABLE
 #define WEBUI_PROGMEM_STRING_DEF(str) \
     int __webui_json_##str = __debug_json_string_skip(String(__STRINGIFY(str))); \

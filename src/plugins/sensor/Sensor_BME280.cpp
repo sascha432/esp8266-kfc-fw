@@ -65,9 +65,9 @@ void Sensor_BME280::getValues(JsonArray &array) {
 void Sensor_BME280::createWebUI(WebUI &webUI, WebUIRow **row) {
     _debug_printf_P(PSTR("Sensor_BME280::createWebUI()\n"));
 
-    (*row)->addSensor(_getId(F("temperature")), _name + F(" Temperature"), JF("°C"));
-    (*row)->addSensor(_getId(F("humidity")), _name + F(" Humidity"), JF("%"));
-    (*row)->addSensor(_getId(F("pressure")), _name + F(" Pressure"), JF("hPa"));
+    (*row)->addSensor(_getId(F("temperature")), _name + F(" Temperature"), F("°C"));
+    (*row)->addSensor(_getId(F("humidity")), _name + F(" Humidity"), F("%"));
+    (*row)->addSensor(_getId(F("pressure")), _name + F(" Pressure"), F("hPa"));
 }
 
 void Sensor_BME280::getStatus(PrintHtmlEntitiesString &output) {
@@ -79,9 +79,9 @@ void Sensor_BME280::publishState(MQTTClient *client) {
         auto sensor = _readSensor();
         PrintString str;
         JsonUnnamedObject json;
-        json.add(JF("temperature"), JsonNumber(sensor.temperature, 2));
-        json.add(JF("humidity"), JsonNumber(sensor.humidity, 2));
-        json.add(JF("pressure"), JsonNumber(sensor.pressure, 2));
+        json.add(F("temperature"), JsonNumber(sensor.temperature, 2));
+        json.add(F("humidity"), JsonNumber(sensor.humidity, 2));
+        json.add(F("pressure"), JsonNumber(sensor.pressure, 2));
         json.printTo(str);
         client->publish(_topic, _qos, 1, str);
     }

@@ -221,15 +221,15 @@ void WsWebUISocket::createWebUIJSON(JsonUnnamedObject &json) {
     WebUI webUI(json);
 
     // auto row = &webUI.addRow();
-    // row->setExtraClass(JF("webuicomponent-top"));
+    // row->setExtraClass(F("webuicomponent-top"));
     // row->setAlignment(WebUIRow::CENTER);
 
-    // row->addBadgeSensor(F("temperature"), JF("Temperature"), JF("°C")).setValue(JF("25.78"));
-    // row->addBadgeSensor(F("humidity"), JF("Humidity"), JF("%")).setValue(JF("47.23"));
-    // row->addBadgeSensor(F("pressure"), JF("Pressure"), JF("hPa")).setValue(JF("1023.42"));
-    // row->addBadgeSensor(F("vcc"), JF("VCC"), JF("V")).setValue(JF("3.286"));
-    // row->addBadgeSensor(F("frequency"), JF("Frequency"), JF("Hz")).setValue(JF("59.869"));
-    // row->addBadgeSensor(F("int_temp"), JF("Int. Temp"), JF("°C")).setValue(JF("47.28"));
+    // row->addBadgeSensor(F("temperature"), F("Temperature"), F("°C")).setValue(F("25.78"));
+    // row->addBadgeSensor(F("humidity"), F("Humidity"), F("%")).setValue(F("47.23"));
+    // row->addBadgeSensor(F("pressure"), F("Pressure"), F("hPa")).setValue(F("1023.42"));
+    // row->addBadgeSensor(F("vcc"), F("VCC"), F("V")).setValue(F("3.286"));
+    // row->addBadgeSensor(F("frequency"), F("Frequency"), F("Hz")).setValue(F("59.869"));
+    // row->addBadgeSensor(F("int_temp"), F("Int. Temp"), F("°C")).setValue(F("47.28"));
 
     for(auto plugin: plugins) {
         if (plugin->hasWebUI()) {
@@ -239,12 +239,12 @@ void WsWebUISocket::createWebUIJSON(JsonUnnamedObject &json) {
 
     // row = &webUI.addRow();
     // row->setExtraClass(JJ(title));
-    // row->addGroup(JF("Sensors"), false);
+    // row->addGroup(F("Sensors"), false);
 
     // row = &webUI.addRow();
-    // row->addSensor(F("temperature"), JF("Temperature"), JF("°C")).setValue(JF("25.78"));
-    // row->addSensor(F("humidity"), JF("Humidity"), JF("%")).setValue(JF("47.23"));
-    // row->addSensor(F("pressure"), JF("Pressure"), JF("hPa")).setValue(JF("1023.42"));
+    // row->addSensor(F("temperature"), F("Temperature"), F("°C")).setValue(F("25.78"));
+    // row->addSensor(F("humidity"), F("Humidity"), F("%")).setValue(F("47.23"));
+    // row->addSensor(F("pressure"), F("Pressure"), F("hPa")).setValue(F("1023.42"));
 
     webUI.addValues();
 }

@@ -204,11 +204,11 @@ void Driver_4ChDimmer::publishState(MQTTClient *client) {
     json.add(JJ(type), JJ(ue));
     auto &events = json.addArray(JJ(events), 2);
     auto obj = &events.addObject(3);
-    obj->add(JJ(id), JF("dimmer_channel0"));
+    obj->add(JJ(id), F("dimmer_channel0"));
     obj->add(JJ(value), _data.brightness.value);
     obj->add(JJ(state), _data.state.value);
     obj = &events.addObject(2);
-    obj->add(JJ(id), JF("dimmer_channel1"));
+    obj->add(JJ(id), F("dimmer_channel1"));
     obj->add(JJ(value), _data.color.value);
     WsWebUISocket::broadcast(json);
 }
@@ -333,19 +333,19 @@ bool AtomicSunPlugin::hasWebUI() const {
 void AtomicSunPlugin::createWebUI(WebUI &webUI) {
 
     auto row = &webUI.addRow();
-    row->setExtraClass(JF("title"));
-    row->addGroup(JF("Atomic Sun"), true);
+    row->setExtraClass(F("title"));
+    row->addGroup(F("Atomic Sun"), true);
 
     row = &webUI.addRow();
-    row->addSlider(F("dimmer_channel0"), JF("Atomic Sun Brightness"), 0, IOT_ATOMIC_SUN_MAX_BRIGHTNESS);
+    row->addSlider(F("dimmer_channel0"), F("Atomic Sun Brightness"), 0, IOT_ATOMIC_SUN_MAX_BRIGHTNESS);
 
     row = &webUI.addRow();
-    row->addColorSlider(F("dimmer_channel1"), JF("Atomic Sun Color"));
+    row->addColorSlider(F("dimmer_channel1"), F("Atomic Sun Color"));
 
     row = &webUI.addRow();
-    row->addBadgeSensor(F("dimmer_vcc"), JF("Atomic Sun VCC"), JF("V"));
-    row->addBadgeSensor(F("dimmer_frequency"), JF("Atomic Sun Frequency"), JF("Hz"));
-    row->addBadgeSensor(F("dimmer_temp"), JF("Atomic Sun Internal Temperature"), JF("°C"));
+    row->addBadgeSensor(F("dimmer_vcc"), F("Atomic Sun VCC"), F("V"));
+    row->addBadgeSensor(F("dimmer_frequency"), F("Atomic Sun Frequency"), F("Hz"));
+    row->addBadgeSensor(F("dimmer_temp"), F("Atomic Sun Internal Temperature"), F("°C"));
 }
 
 WebUIInterface *AtomicSunPlugin::getWebUIInterface() {

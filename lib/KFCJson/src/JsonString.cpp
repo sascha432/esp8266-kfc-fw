@@ -18,18 +18,18 @@ JsonString::JsonString() {
 }
 
 JsonString::JsonString(const String & str) {
-    _init(str.c_str(), str.length());
+    _init(str.c_str(), (length_t)str.length());
 }
 
 JsonString::JsonString(const char * str, bool forceCopy) {
-    _init(str, strlen(str));
+    _init(str, (length_t)strlen(str));
 }
 
 JsonString::JsonString(const char * str) {
     if (*str) {
         _setType(POINTER);
-        _str.ptr = (char *)str;
-        _str.length = strlen(str);
+        _setPtr(str);
+        _setLength((length_t)strlen(str));
     }
     else {
         _setType(STORED);
@@ -54,26 +54,26 @@ JsonString::JsonString(const __FlashStringHelper * str) {
     }
     else {
         _setType(FLASH);
-        _str.ptr = (char *)str;
-        _str.length = length;
+        _setPtr(reinterpret_cast<const char *>(str));
+        _setLength(length);
     }
 }
 
 JsonString::JsonString(const __FlashStringHelper * str, bool forceFlash) {
     _setType(FLASH);
-    _str.ptr = (char *)str;
-    _str.length = strlen_P(reinterpret_cast<PGM_P>(str));
+    _setPtr(reinterpret_cast<const char *>(str));
+    _setLength((length_t)strlen_P(reinterpret_cast<PGM_P>(str)));
 }
 
 JsonString::~JsonString() {
     if (_getType() == ALLOC) {
-        free(_str.ptr);
+        free(_getPtr());
     }
 }
 
 JsonString & JsonString::operator=(const JsonString & str) {
     if (str._getType() == ALLOC) {
-        _init(str._str.ptr, str._str.length);
+        _init(str._getConstPtr(), str._getLength());
     }
     else {
         memmove(_raw, str._raw, sizeof(_raw));
@@ -84,8 +84,8 @@ JsonString & JsonString::operator=(const JsonString & str) {
 JsonString & JsonString::operator=(JsonString && str) {
     if (str._getType() == ALLOC) {
         _setType(ALLOC);
-        _str.ptr = str._str.ptr;
-        _str.length = str._str.length;
+        _setPtr(str._getPtr());
+        _setLength(str._getLength());
     }
     else {
         memmove(_raw, str._raw, sizeof(_raw));
@@ -113,7 +113,7 @@ bool JsonString::operator==(const __FlashStringHelper * str) const {
 
 bool JsonString::equals(const char * str) const {
     if (isProgMem()) {
-        return strcmp_P(str, getPtr()) == 0;
+        return strcmp_P(str, _getConstPtr()) == 0;
     }
     return strcmp(str, getPtr()) == 0;
 }
@@ -146,7 +146,7 @@ bool JsonString::equals(const __FlashStringHelper *str) const {
 
 void JsonString::clear() {
     if (_getType() == ALLOC) {
-        free(_str.ptr);
+        free(_getPtr());
     }
     _setType(STORED);
     *_raw = 0;
@@ -156,17 +156,17 @@ size_t JsonString::length() const {
     if (_getType() == STORED) {
         return strlen(_raw);
     }
-    return _str.length;
+    return _getLength();
 }
 
 String JsonString::toString() const {
     if (_getType() == FLASH) {
-        return String(FPSTR(_str.ptr));
+        return String(FPSTR(_getConstPtr()));
     }
     else if (_getType() == STORED) {
         return String(_raw);
     }
-    return String(_str.ptr);
+    return String(_getConstPtr());
 }
 
 bool JsonString::isProgMem() const {
@@ -177,31 +177,33 @@ const char * JsonString::getPtr() const {
     if (_getType() == STORED) {
         return _raw;
     }
-    return _str.ptr;
+    return _getConstPtr();
 }
 
 size_t JsonString::printTo(Print & p) const {
     if (_getType() == FLASH) {
-        return p.print(FPSTR(_str.ptr));
+        return p.print(FPSTR(_getConstPtr()));
     }
     else if (_getType() == STORED) {
         return p.write(_raw, strlen(_raw));
     }
-    return p.write(_str.ptr, length());
+    return p.write(_getConstPtr(), _getLength());
 }
 
-char * JsonString::_allocate(size_t length) {
+char * JsonString::_allocate(length_t length) {
     _setType(ALLOC);
-    return _str.ptr = (char *)malloc(length + 1);
+    auto ptr = (char *)malloc(length + 1);
+    _setPtr(ptr);
+    return ptr;
 }
 
-void JsonString::_init(const char * str, size_t length) {
+void JsonString::_init(const char * str, length_t length) {
     if (length < buffer_size) {
         _setType(STORED);
         strncpy(_raw, str, length)[length] = 0;
     }
     else {
          strncpy(_allocate(length), str, length)[length] = 0;
-        _str.length = length;
+         _setLength(length);
     }
 }

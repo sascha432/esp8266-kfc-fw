@@ -38,7 +38,7 @@ PGM_P SensorPlugin::getName() const {
 void SensorPlugin::setup(PluginSetupMode_t mode) {
     _timer = Scheduler.addTimer(1e4, true, SensorPlugin::timerEvent);
 #if IOT_SENSOR_HAVE_LM75A
-    _sensors.push_back(new Sensor_LM75A(JF("LM75A Temperature"), Wire, IOT_SENSOR_HAVE_LM75A));
+    _sensors.push_back(new Sensor_LM75A(F("LM75A Temperature"), Wire, IOT_SENSOR_HAVE_LM75A));
 #endif
 #if IOT_SENSOR_HAVE_BME280
     _sensors.push_back(new Sensor_BME280(F("BME280"), Wire, IOT_SENSOR_HAVE_BME280));
@@ -78,7 +78,7 @@ WebUIInterface *SensorPlugin::getWebUIInterface() {
 void SensorPlugin::createWebUI(WebUI &webUI) {
     auto row = &webUI.addRow();
     row->setExtraClass(JJ(title));
-    row->addGroup(JF("Sensors"), false);
+    row->addGroup(F("Sensors"), false);
 
     if (_sensors.size()) {
         row = &webUI.addRow();

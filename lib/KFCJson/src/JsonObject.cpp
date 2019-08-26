@@ -23,10 +23,9 @@ AbstractJsonValue & JsonObjectMethods::replace(const JsonString & name, Abstract
     auto vector = getVector();
     for (auto iterator = vector->begin(); iterator != vector->end(); ++iterator) {
         if (*(*iterator)->getName() == name) {
-            auto &oldValue = *iterator;
-            std::swap(oldValue, value);
-            delete value;
-            return *oldValue;
+            delete *iterator;
+            *iterator = value;
+            return *value;
         }
     }
     return add(name, value);

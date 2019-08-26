@@ -49,11 +49,8 @@
                     Device
                 </a>
                 <div class="dropdown-menu" aria-labelledby="navbarDropdownDevice">
-                    <!--#if IOT_ATOMIC_SUN_V2-->
-                    <a class="dropdown-item" href="atomic_sun.html">Atomic Sun</a>
-                    <!--#endif-->
-                    <!--#if IOT_DIMMER_MODULE-->
-                    <a class="dropdown-item" href="dimmer.html">Dimmer</a>
+                    <!--#if IOT_DIMMER_MODULE || IOT_ATOMIC_SUN_V2 || IOT_SENSOR -->
+                    <a class="dropdown-item" href="webui.html">Web UI</a>
                     <!--#endif-->
                     <!--#if HUE_EMULATION-->
                     <a class="dropdown-item" href="hue.html">HUE device emulation</a>

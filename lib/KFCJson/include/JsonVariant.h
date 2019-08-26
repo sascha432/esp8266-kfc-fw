@@ -18,9 +18,13 @@ public:
     }
     JsonUnnamedVariant(const JsonNumber &value) : _value(value) {
     }
+    JsonUnnamedVariant(JsonNumber &&value) : _value(std::move(value)) {
+    }
     JsonUnnamedVariant(const JsonVar &value) : _value(value) {
     }
     JsonUnnamedVariant(const JsonString &value) : _value(value) {
+    }
+    JsonUnnamedVariant(JsonString &&value) : _value(std::move(value)) {
     }
     JsonUnnamedVariant(const String &value) : _value(value) {
     }
@@ -65,19 +69,11 @@ protected:
     size_t _printTo(Print &output, const char *value) const {
         return output.write('"') + JsonTools::printToEscaped(output, value, strlen(value)) + output.write('"');
     }
-    size_t _printTo(Print &output, const JsonNumber &value) const {
-        auto ptr = value.getPtr();
-        if (ptr) {
-            if (value.isProgMem()) {
-                return output.print(FPSTR(ptr));
-            } else {
-                return output.write((const uint8_t *)ptr, value.length());
-            }
-        }
-        return 0;
-    }
     size_t _printTo(Print &output, const JsonVar &value) const {
         return output.print(JsonVar::formatValue(value.getValue(), value.getType()));
+    }
+    size_t _printTo(Print &output, const JsonNumber &value) const {
+        return value.printTo(output);
     }
     size_t _printTo(Print &output, const JsonString &value) const {
         return output.write('"') + JsonTools::printToEscaped(output, value) + output.write('"');
@@ -140,12 +136,10 @@ protected:
         return 4;
     }
     size_t _length(long value) const {
-        char buf[2];
-        return snprintf_P(buf, 2, PSTR("%ld"), value);
+        return snprintf_P(nullptr, 0, PSTR("%ld"), value);
     }
     size_t _length(unsigned long value) const {
-        char buf[2];
-        return snprintf_P(buf, 2, PSTR("%lu"), value);
+        return snprintf_P(nullptr, 0, PSTR("%lu"), value);
     }
     size_t _length(double value) const {
         char buf[64];
@@ -172,7 +166,7 @@ protected:
     }
 
 protected:
-    T &_getValue() {
+    inline T &_getValue() {
         return _value;
     }
 
@@ -193,14 +187,12 @@ private:
         }
         auto len = snprintf_P(buf, size, PSTR("%.*f"), precision, value);
         char *ptr;
-        if (len < size) {
-            ptr = strchr(buf, '.');
-            if (ptr++) {
-                char *endPtr = ptr + strlen(ptr);
-                while(--endPtr > ptr && *endPtr == '0') {
-                    *endPtr = 0;
-                    len--;
-                }
+        if (len < size && (ptr = strchr(buf, '.'))) {
+            ptr++;
+            char *endPtr = ptr + strlen(ptr);
+            while(--endPtr > ptr && *endPtr == '0') {
+                *endPtr = 0;
+                len--;
             }
         }
         return len;
@@ -222,7 +214,11 @@ public:
     }
     JsonNamedVariant(const JsonString &name, const JsonString &value) : JsonUnnamedVariant<T>(value), _name(name) {
     }
+    JsonNamedVariant(const JsonString &name, JsonString &&value) : JsonUnnamedVariant<T>(std::move(value)), _name(name) {
+    }
     JsonNamedVariant(const JsonString &name, const JsonNumber &value) : JsonUnnamedVariant<T>(value), _name(name) {
+    }
+    JsonNamedVariant(const JsonString &name, JsonNumber &&value) : JsonUnnamedVariant<T>(std::move(value)), _name(name) {
     }
     JsonNamedVariant(const JsonString &name, const String &value) : JsonUnnamedVariant<T>(value), _name(name) {
     }
@@ -272,7 +268,3 @@ protected:
 
     JsonString _name;
 };
-
-//class JsonVectorVariant {
-//public:
-//};

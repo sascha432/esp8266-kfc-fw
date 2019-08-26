@@ -88,10 +88,10 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCJson\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\include\mock;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCJson\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -104,9 +104,10 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\include\mock;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCJson\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -121,10 +122,10 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCJson\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\include\mock;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCJson\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -141,9 +142,10 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\include\mock;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCJson\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -156,32 +158,45 @@
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\Arduino_compat.cpp" />
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\Buffer.cpp" />
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\BufferStream.cpp" />
-    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\PrintBuffer.cpp" />
-    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\PrintHtmlEntities.cpp" />
-    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\PrintHtmlEntitiesStaticString.cpp" />
-    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\PrintHtmlEntitiesString.cpp" />
-    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\PrintStaticString.cpp" />
-    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\PrintString.cpp" />
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\debug_helper.cpp" />
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\DumpBinary.cpp" />
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\LString.cpp" />
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\misc.cpp" />
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\mock\EEPROM.cpp" />
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\mock\ESP8266HttpClient.cpp" />
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\mock\FS.cpp" />
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\mock\Print.cpp" />
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\mock\Serial.cpp" />
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\mock\SPI.cpp" />
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\mock\Stream.cpp" />
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\mock\WiFi.cpp" />
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\mock\WiFiUDP.cpp" />
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\mock\WString.cpp" />
+    <ClCompile Include="..\..\..\src\JsonArray.cpp" />
     <ClCompile Include="..\..\..\src\JsonBaseReader.cpp" />
     <ClCompile Include="..\..\..\src\JsonCallbackReader.cpp" />
+    <ClCompile Include="..\..\..\src\JsonBuffer.cpp" />
+    <ClCompile Include="..\..\..\src\JsonConverter.cpp" />
     <ClCompile Include="..\..\..\src\JsonMapReader.cpp" />
-    <ClCompile Include="..\..\..\src\JsonVarReader.cpp" />
+    <ClCompile Include="..\..\..\src\JsonNumber.cpp" />
+    <ClCompile Include="..\..\..\src\JsonObject.cpp" />
+    <ClCompile Include="..\..\..\src\JsonString.cpp" />
+    <ClCompile Include="..\..\..\src\JsonTools.cpp" />
+    <ClCompile Include="..\..\..\src\JsonValue.cpp" />
+    <ClCompile Include="..\..\..\src\JsonVar.cpp" />
     <ClCompile Include="json_test.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\..\KFCBaseLibrary\include\Arduino_compat.h" />
-    <ClInclude Include="..\..\..\..\KFCBaseLibrary\include\Buffer.h" />
-    <ClInclude Include="..\..\..\..\KFCBaseLibrary\include\BufferStream.h" />
-    <ClInclude Include="..\..\..\..\KFCBaseLibrary\include\PrintBuffer.h" />
-    <ClInclude Include="..\..\..\..\KFCBaseLibrary\include\PrintHtmlEntities.h" />
-    <ClInclude Include="..\..\..\..\KFCBaseLibrary\include\PrintHtmlEntitiesStaticString.h" />
-    <ClInclude Include="..\..\..\..\KFCBaseLibrary\include\PrintHtmlEntitiesString.h" />
-    <ClInclude Include="..\..\..\..\KFCBaseLibrary\include\PrintStaticString.h" />
-    <ClInclude Include="..\..\..\..\KFCBaseLibrary\include\PrintString.h" />
+    <ClInclude Include="..\..\..\include\JsonArray.h" />
     <ClInclude Include="..\..\..\include\JsonBaseReader.h" />
+    <ClInclude Include="..\..\..\include\JsonBuffer.h" />
     <ClInclude Include="..\..\..\include\JsonCallbackReader.h" />
+    <ClInclude Include="..\..\..\include\JsonVariant.h" />
     <ClInclude Include="..\..\..\include\JsonMapReader.h" />
-    <ClInclude Include="..\..\..\include\JsonVarReader.h" />
+    <ClInclude Include="..\..\..\include\JsonObject.h" />
+    <ClInclude Include="..\..\..\include\JsonTools.h" />
+    <ClInclude Include="..\..\..\include\JsonValue.h" />
+    <ClInclude Include="..\..\..\include\JsonVar.h" />
     <ClInclude Include="..\..\..\include\KFCJson.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

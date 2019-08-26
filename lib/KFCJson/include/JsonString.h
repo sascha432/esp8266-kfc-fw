@@ -22,6 +22,9 @@ public:
 
     const static size_t buffer_size = 16;
 
+    JsonString(const JsonString &str);
+    JsonString(JsonString &&str);
+
     JsonString();
     JsonString(const String &str);
     JsonString(const char *str, bool forceCopy);
@@ -29,6 +32,9 @@ public:
     JsonString(const __FlashStringHelper *str);
     JsonString(const __FlashStringHelper *str, bool forceFlash);
     ~JsonString();
+
+    JsonString &operator =(const JsonString &str);
+    JsonString &operator =(JsonString &&str);
 
     bool operator ==(const char *str) const;
     bool operator ==(const String &str) const;

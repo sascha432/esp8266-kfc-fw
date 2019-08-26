@@ -98,9 +98,7 @@ String JsonBaseReader::jsonType2String(JsonType_t type) {
 		return F("string");
 	case JSON_TYPE_NULL:
 		return F("null");
-    case JSON_TYPE_OBJECT_END:
-    case JSON_TYPE_INVALID:
-	case JSON_TYPE_ANY:
+	default:
 		break;
 	}
 	return F("INVALID TYPE");
@@ -115,7 +113,7 @@ bool JsonBaseReader::_isValidNumber(const String &value, JsonType_t &_type) {
     type &= JsonVar::NumberType_t::TYPE_MASK;
     if (type == JsonVar::NumberType_t::INVALID) {
         return false;
-    } 
+    }
     else if (type == JsonVar::NumberType_t::FLOAT) {
         _type = JSON_TYPE_FLOAT;
     }
@@ -154,14 +152,14 @@ bool JsonBaseReader::_prepareElement() {
             if (strcasecmp_P(_valueStr.c_str(), SPGM(true)) == 0 || strcasecmp_P(_valueStr.c_str(), SPGM(false)) == 0) {
 		    //if (_valueStr.equalsIgnoreCase(FSPGM(true)) || _valueStr.equalsIgnoreCase(F("false"))) {
 			    _type = JSON_TYPE_BOOLEAN;
-		    } 
+		    }
             else if (strcasecmp_P(_valueStr.c_str(), SPGM(null)) == 0) {
             //else if (_valueStr.equalsIgnoreCase(F("null"))) {
                 _type = JSON_TYPE_NULL;
-		    } 
+		    }
             else if (_isValidNumber(_valueStr, _type)) {
                 // _isValidNumber() sets _type
-		    } 
+		    }
             else {
 			    //_position = fake_pos++;
 			    error(F("Invalid value"), JSON_ERROR_INVALID_VALUE);
@@ -196,7 +194,7 @@ bool JsonBaseReader::parseStream() {
 			if (!_addCharacter(ch)) {
 				return false;
 			}
-		} 
+		}
         else if (!_quoted && (ch == '{' || ch == '[')) {
 			_debug_printf_P(PSTR("open %s level %d key %s array %d count %d\n"), (ch == '[' ? "array" : "object"), _level + 1, _keyStr.c_str(), _arrayIndex, _count);
 			_stack.push_back({_keyStr, _keyPosition, _arrayIndex, _count});
@@ -220,7 +218,7 @@ bool JsonBaseReader::parseStream() {
 			_keyStr = String();
 			_valueStr = String();
 			_count = 0;
-		} 
+		}
         else if (!_quoted && (ch == '}' || ch == ']')) {
 			_debug_printf_P(PSTR("closing %s level %d key %s data %s array %d count %d\n"), (ch == ']' ? "array" : "object"), _level, _keyStr.c_str(), _valueStr.c_str(), _arrayIndex, _count);
             if ((_arrayIndex == -1 && ch == ']') || (_arrayIndex != -1 && ch == '}')) {
@@ -230,7 +228,7 @@ bool JsonBaseReader::parseStream() {
             else
 			if (_count == 0 && _keyStr.length() == 0 && _valueStr.length() == 0) {
 			    _type = JSON_TYPE_OBJECT_END;
-			} 
+			}
             else if (!_prepareElement()) {
                 return false;
             }
@@ -245,11 +243,11 @@ bool JsonBaseReader::parseStream() {
 			_count = _stack.back().count;
 			_stack.pop_back();
             _type = JSON_TYPE_OBJECT_END;
-		} 
+		}
         else if (ch == _quoteChar) {
 			_quoted = !_quoted;
 			_type = JSON_TYPE_STRING;
-		} 
+		}
         else if (!_quoted && ch == ':') {
 			if (_arrayIndex != -1) {
 				error(F("Key not allowed inside array"), JSON_ERROR_ARRAY_WITH_KEY);
@@ -265,7 +263,7 @@ bool JsonBaseReader::parseStream() {
 			_valueStr = String();
 			_type = JSON_TYPE_INVALID;
 
-		} 
+		}
         else if (!_quoted && ch == ',') {
 			if (!_prepareElement()) {
 				return false;
@@ -273,10 +271,10 @@ bool JsonBaseReader::parseStream() {
 			if (_arrayIndex != -1) {
                 _arrayIndex++;
 			}
-		} 
+		}
         else if (ch == '\\') {
 			_escaped = true;
-		} 
+		}
         else if (!_addCharacter(ch)) {
 			return false;
 		}

@@ -4,6 +4,14 @@
 
 #include "JsonString.h"
 
+JsonString::JsonString(const JsonString &str) {
+    *this = str;
+}
+
+JsonString::JsonString(JsonString && str) {
+    *this = std::move(str);
+}
+
 JsonString::JsonString() {
     _setType(STORED);
     *_raw = 0;
@@ -61,6 +69,30 @@ JsonString::~JsonString() {
     if (_getType() == ALLOC) {
         free(_str.ptr);
     }
+}
+
+JsonString & JsonString::operator=(const JsonString & str) {
+    if (str._getType() == ALLOC) {
+        _init(str._str.ptr, str._str.length);
+    }
+    else {
+        memmove(_raw, str._raw, sizeof(_raw));
+    }
+    return *this;
+}
+
+JsonString & JsonString::operator=(JsonString && str) {
+    if (str._getType() == ALLOC) {
+        _setType(ALLOC);
+        _str.ptr = str._str.ptr;
+        _str.length = str._str.length;
+    }
+    else {
+        memmove(_raw, str._raw, sizeof(_raw));
+    }
+    str._setType(STORED);
+    *str._raw = 0;
+    return *this;
 }
 
 bool JsonString::operator==(const char * str) const {
@@ -169,7 +201,7 @@ void JsonString::_init(const char * str, size_t length) {
         strncpy(_raw, str, length)[length] = 0;
     }
     else {
-        strncpy(_allocate(length), str, length)[length] = 0;
+         strncpy(_allocate(length), str, length)[length] = 0;
         _str.length = length;
     }
 }

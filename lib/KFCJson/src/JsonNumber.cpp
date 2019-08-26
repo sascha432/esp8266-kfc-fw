@@ -6,6 +6,17 @@
 #include "JsonVar.h"
 #include "JsonTools.h"
 
+JsonNumber::JsonNumber(double value, uint8_t decimalPlaces) {
+    if (isnan(value) || isinf(value)) {
+        invalidate();
+    }
+    else {
+        char buf[32];
+        int len = snprintf(buf, sizeof(buf), "%.*f", decimalPlaces, value);
+        _init(buf, len);
+    }
+}
+
 bool JsonNumber::validate() {
     auto strPtr = getPtr();
     char *ptr = (char *)strPtr;

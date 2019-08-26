@@ -32,17 +32,26 @@ public:
         }
         return add(_debug_new JsonUnnamedVariant<JsonString>(value));
     }
+    AbstractJsonValue &add(JsonString &&value) {
+        if (value.isProgMem()) {
+            return add(_debug_new JsonUnnamedVariant<const __FlashStringHelper *>(value.getFPStr()));
+        }
+        return add(_debug_new JsonUnnamedVariant<JsonString>(std::move(value)));
+    }
     AbstractJsonValue &add(const JsonNumber &value) {
         return add(_debug_new JsonUnnamedVariant<JsonNumber>(value));
+    }
+    AbstractJsonValue &add(JsonNumber &&value) {
+        return add(_debug_new JsonUnnamedVariant<JsonNumber>(std::move(value)));
     }
     AbstractJsonValue &add(const String &value) {
         return add(_debug_new JsonUnnamedVariant<JsonString>(value));
     }
     AbstractJsonValue &add(bool value) {
-        return add(_debug_new JsonUnnamedVariant<bool>((bool)value));
+        return add(_debug_new JsonUnnamedVariant<bool>(value));
     }
     AbstractJsonValue &add(std::nullptr_t value) {
-        return add(_debug_new JsonUnnamedVariant<std::nullptr_t>((std::nullptr_t)value));
+        return add(_debug_new JsonUnnamedVariant<std::nullptr_t>(value));
     }
     AbstractJsonValue &add(int value) {
         return add(_debug_new JsonUnnamedVariant<long>((long)value));
@@ -51,10 +60,10 @@ public:
         return add(_debug_new JsonUnnamedVariant<unsigned long>((unsigned long)value));
     }
     AbstractJsonValue &add(long value) {
-        return add(_debug_new JsonUnnamedVariant<long>((long)value));
+        return add(_debug_new JsonUnnamedVariant<long>(value));
     }
     AbstractJsonValue &add(unsigned long value) {
-        return add(_debug_new JsonUnnamedVariant<unsigned long>((unsigned long)value));
+        return add(_debug_new JsonUnnamedVariant<unsigned long>(value));
     }
     AbstractJsonValue &add(double value) {
         return add(_debug_new JsonUnnamedVariant<double>(value));
@@ -84,25 +93,14 @@ public:
     using JsonArrayMethods::JsonArrayMethods::size;
     using JsonArrayMethods::JsonArrayMethods::elements;
 
-    JsonUnnamedArray(size_t reserve = 0) : JsonUnnamedVariant<AbstractJsonValue::JsonVariantVector>(nullptr, reserve) {
-    }
+    JsonUnnamedArray(size_t reserve = 0);
 
-    virtual size_t printTo(Print &output) const {
-        return output.write('[') + JsonUnnamedVariant<AbstractJsonValue::JsonVariantVector>::printTo(output) + output.write(']');
-    }
+    virtual size_t printTo(Print &output) const;
+    virtual AbstractJsonValue::JsonVariantEnum_t getType() const;
+    virtual AbstractJsonValue &add(AbstractJsonValue *value);
 
-    virtual JsonVariantEnum_t getType() const {
-        return JsonVariantEnum_t::JSON_UNNAMED_ARRAY;
-    }
-
-    virtual AbstractJsonValue &add(AbstractJsonValue *value) {
-        _getValue().push_back(value);
-        return *_getValue().back();
-    }
 protected:
-    virtual AbstractJsonValue::JsonVariantVector *getVector() {
-        return &_getValue();
-    }
+    virtual AbstractJsonValue::JsonVariantVector *getVector();
 };
 
 class JsonArray : public JsonNamedVariant<AbstractJsonValue::JsonVariantVector>, public JsonArrayMethods {
@@ -113,23 +111,12 @@ public:
     using JsonArrayMethods::JsonArrayMethods::size;
     using JsonArrayMethods::JsonArrayMethods::elements;
 
-    JsonArray(const JsonString &name, size_t reserve = 0) : JsonNamedVariant<AbstractJsonValue::JsonVariantVector>(name, nullptr, reserve) {
-    }
+    JsonArray(const JsonString &name, size_t reserve = 0);
 
-    virtual size_t printTo(Print &output) const {
-        return JsonNamedVariant<AbstractJsonValue::JsonVariantVector>::_printName(output) + output.write('[') + JsonUnnamedVariant<AbstractJsonValue::JsonVariantVector>::printTo(output) + output.write(']');
-    }
+    virtual size_t printTo(Print &output) const;
+    virtual AbstractJsonValue::JsonVariantEnum_t getType() const;
+    virtual AbstractJsonValue &add(AbstractJsonValue *value);
 
-    virtual JsonVariantEnum_t getType() const {
-        return JsonVariantEnum_t::JSON_ARRAY;
-    }
-
-    virtual AbstractJsonValue &add(AbstractJsonValue *value) {
-        _getValue().push_back(value);
-        return *_getValue().back();
-    }
 protected:
-    virtual AbstractJsonValue::JsonVariantVector *getVector() {
-        return &_getValue();
-    }
+    virtual AbstractJsonValue::JsonVariantVector *getVector();
 };

@@ -71,12 +71,14 @@
 #include <Wire.h>
 #endif
 
-class Driver_DimmerModule: public Dimmer_Base
+class DimmerModuleForm;
+
+class Driver_DimmerModule: public Dimmer_Base, public DimmerModuleForm
 {
 public:
     Driver_DimmerModule();
 
-    void createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTComponent::MQTTAutoDiscoveryVector &vector);
+    virtual void createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTComponent::MQTTAutoDiscoveryVector &vector);
     void onConnect(MQTTClient *client);
 
     virtual bool on(uint8_t channel = -1) override;
@@ -97,7 +99,7 @@ private:
     DimmerChannel _channels[IOT_DIMMER_MODULE_CHANNELS];
 };
 
-class DimmerModulePlugin : public Driver_DimmerModule, public DimmerModuleForm {
+class DimmerModulePlugin : public Driver_DimmerModule {
 public:
     DimmerModulePlugin() : Driver_DimmerModule() {
         register_plugin(this);

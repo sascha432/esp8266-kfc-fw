@@ -44,7 +44,7 @@ void DimmerModuleForm::createConfigureForm(AsyncWebServerRequest *request, Form 
 
     PrintHtmlEntitiesString code;
     MQTTComponent::MQTTAutoDiscoveryVector vector;
-    reinterpret_cast<MQTTComponent *>(this)->createAutoDiscovery(MQTTAutoDiscovery::FORMAT_YAML, vector);
+    createAutoDiscovery(MQTTAutoDiscovery::FORMAT_YAML, vector);
     for(auto &&discovery: vector) {
         code.print(discovery->getPayload());
     }

@@ -46,7 +46,7 @@ typedef struct {
     } color;
 } Driver_4ChDimmer_MQTTComponentData_t;
 
-class Driver_4ChDimmer : public MQTTComponent, public Dimmer_Base
+class Driver_4ChDimmer : public MQTTComponent, public Dimmer_Base, public DimmerModuleForm
 {
 public:
     Driver_4ChDimmer();
@@ -90,7 +90,7 @@ private:
     String _metricsTopic;
 };
 
-class AtomicSunPlugin : public Driver_4ChDimmer, public DimmerModuleForm {
+class AtomicSunPlugin : public Driver_4ChDimmer {
 public:
     AtomicSunPlugin() {
         register_plugin(this);

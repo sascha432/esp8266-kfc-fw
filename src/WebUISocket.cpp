@@ -237,14 +237,5 @@ void WsWebUISocket::createWebUIJSON(JsonUnnamedObject &json) {
         }
     }
 
-    // row = &webUI.addRow();
-    // row->setExtraClass(JJ(title));
-    // row->addGroup(F("Sensors"), false);
-
-    // row = &webUI.addRow();
-    // row->addSensor(F("temperature"), F("Temperature"), F("°C")).setValue(F("25.78"));
-    // row->addSensor(F("humidity"), F("Humidity"), F("%")).setValue(F("47.23"));
-    // row->addSensor(F("pressure"), F("Pressure"), F("hPa")).setValue(F("1023.42"));
-
     webUI.addValues();
 }

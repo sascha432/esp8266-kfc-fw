@@ -122,6 +122,7 @@ void Dimmer_Base::_onReceive(int length) {
 #else
 
 void Dimmer_Base::fetchMetrics(EventScheduler::TimerPtr timer) {
+    // using dimmer_plugin avoids adding extra static variable to Dimmer_Base
     dimmer_plugin._fetchMetrics();
 }
 

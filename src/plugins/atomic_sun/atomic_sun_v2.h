@@ -51,7 +51,7 @@ class Driver_4ChDimmer : public MQTTComponent, public Dimmer_Base
 public:
     Driver_4ChDimmer();
 
-    virtual MQTTAutoDiscovery *createAutoDiscovery(MQTTAutoDiscovery::Format_t format) override;
+    virtual void createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector) override;
     virtual void onConnect(MQTTClient *client) override;
     virtual void onMessage(MQTTClient *client, char *topic, char *payload, size_t len) override;
 
@@ -108,5 +108,7 @@ public:
     virtual bool hasStatus() const override;
     virtual const String getStatus() override;
 };
+
+extern AtomicSunPlugin dimmer_plugin;
 
 #endif

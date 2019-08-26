@@ -43,13 +43,11 @@ void DimmerModuleForm::createConfigureForm(AsyncWebServerRequest *request, Form 
     form.finalize();
 
     PrintHtmlEntitiesString code;
-#if IOT_ATOMIC_SUN_V2
-    auto discovery = reinterpret_cast<Driver_4ChDimmer *>(this)->createAutoDiscovery(MQTTAutoDiscovery::FORMAT_YAML);
-    code.print(discovery->getPayload());
-    delete discovery;
-#else
-    auto discovery = reinterpret_cast<Driver_DimmerModule *>(this)->createAutoDiscovery(MQTTAutoDiscovery::FORMAT_YAML, code);
-#endif
+    MQTTComponent::MQTTAutoDiscoveryVector vector;
+    reinterpret_cast<MQTTComponent *>(this)->createAutoDiscovery(MQTTAutoDiscovery::FORMAT_YAML, vector);
+    for(auto &&discovery: vector) {
+        code.print(discovery->getPayload());
+    }
 
     reinterpret_cast<SettingsForm &>(form).getTokens().push_back(std::make_pair<String, String>(F("HASS_YAML"), code.c_str()));
 }

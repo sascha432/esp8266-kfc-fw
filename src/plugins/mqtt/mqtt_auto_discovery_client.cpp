@@ -49,6 +49,9 @@ MQTTAutoDiscoveryClient::~MQTTAutoDiscoveryClient() {
     }
 }
 
+void MQTTAutoDiscoveryClient::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector) {
+}
+
 void MQTTAutoDiscoveryClient::onConnect(MQTTClient *client) {
     _discovery.clear();
 
@@ -91,7 +94,7 @@ void MQTTAutoDiscoveryClient::onMessage(MQTTClient *client, char *topic, char *p
             else if (key.equals(F("manufacturer"))) {
                 discovery.manufacturer = LString(valuePtr, value.length());
             }
-            else if (key.equals(F("name")) && !discovery.name.length()) { // do not override name 
+            else if (key.equals(F("name")) && !discovery.name.length()) { // do not override name
                 discovery.name = value;
             }
         }

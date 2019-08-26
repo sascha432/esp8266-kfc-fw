@@ -7,14 +7,20 @@
 #if IOT_SENSOR
 
 #include <Arduino_compat.h>
+#include <vector>
+#include <EventScheduler.h>
 #include "WebUIComponent.h"
 #include "plugins.h"
+#include "MQTTSensor.h"
 
 #ifndef DEBUG_IOT_SENSOR
 #define DEBUG_IOT_SENSOR 0
 #endif
 
 class SensorPlugin : public PluginComponent, public WebUIInterface {
+public:
+    typedef std::vector<MQTTSensor *> SensorVector;
+
 // WebUIInterface
 public:
     virtual void getValues(JsonArray &array) override;
@@ -40,6 +46,14 @@ public:
     virtual bool hasWebUI() const override;
     virtual void createWebUI(WebUI &webUI) override;
     virtual WebUIInterface *getWebUIInterface() override;
+
+    static void timerEvent(EventScheduler::TimerPtr timer);
+
+private:
+    void _timerEvent();
+
+    SensorVector _sensors;
+    EventScheduler::TimerPtr _timer;
 };
 
 #endif

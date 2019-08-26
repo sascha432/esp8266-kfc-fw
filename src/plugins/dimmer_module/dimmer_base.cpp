@@ -7,6 +7,9 @@
 #include "WebUISocket.h"
 #include "../mqtt/mqtt_client.h"
 #include "dimmer_module.h"
+#if IOT_ATOMIC_SUN_V2
+#include "../atomic_sun/atomic_sun_v2.h"
+#endif
 #include "serial_handler.h"
 
 #include "../../trailing_edge_dimmer/src/dimmer_protocol.h"
@@ -16,8 +19,6 @@
 #else
 #include <debug_helper_disable.h>
 #endif
-
-Dimmer_Base *Dimmer_Base::_dimmer = nullptr;
 
 #if IOT_DIMMER_MODULE_INTERFACE_UART
 Dimmer_Base::Dimmer_Base() : _serial(Serial), _wire(*new SerialTwoWire(serial)) {
@@ -88,13 +89,13 @@ void Dimmer_Base::_end() {
 void Dimmer_Base::onData(uint8_t type, const uint8_t *buffer, size_t len) {
     _debug_printf_P(PSTR("Driver_DimmerModule::onData(): length %u\n"), len);
     while(len--) {
-        _dimmer->_wire.feed(*buffer++);
+        dimmer_plugin._wire.feed(*buffer++);
     }
 }
 
 void Dimmer_Base::onReceive(int length) {
     // _debug_printf_P(PSTR("Driver_DimmerModule::onReceive(%u)\n"), length);
-    _dimmer->_onReceive(length);
+    dimmer_plugin._onReceive(length);
 }
 
 void Dimmer_Base::_onReceive(int length) {
@@ -119,6 +120,11 @@ void Dimmer_Base::_onReceive(int length) {
 }
 
 #else
+
+void Dimmer_Base::fetchMetrics(EventScheduler::TimerPtr timer) {
+    dimmer_plugin._fetchMetrics();
+}
+
 
 void Dimmer_Base::_fetchMetrics() {
     float temp;
@@ -219,7 +225,7 @@ void Dimmer_Base::_updateMetrics(float temperature, uint16_t vcc, float frequenc
                 auto &value = events.addObject(3);
                 value.add(JJ(id), JF("dimmer_temp"));
                 value.add(JJ(state), true);
-                value.add(JJ(value), tempStr);
+                value.add(JJ(value), JsonNumber(tempStr));
             }
             if (_vcc != vcc) {
                 _vcc = vcc;
@@ -228,16 +234,16 @@ void Dimmer_Base::_updateMetrics(float temperature, uint16_t vcc, float frequenc
                 auto &value = events.addObject(3);
                 value.add(JJ(id), JF("dimmer_vcc"));
                 value.add(JJ(state), true);
-                value.add(JJ(value), vccStr);
+                value.add(JJ(value), JsonNumber(vccStr));
             }
             if (_frequency != frequency) {
                 _frequency = frequency;
-                auto freqStr = String(_frequency, 3);
+                auto freqStr = String(_frequency, 2);
                 client->publish(topic + F("frequency"), MQTTClient::getDefaultQos(), 1, freqStr);
                 auto &value = events.addObject(3);
                 value.add(JJ(id), JF("dimmer_frequency"));
                 value.add(JJ(state), true);
-                value.add(JJ(value), freqStr);
+                value.add(JJ(value), JsonNumber(freqStr));
             }
 
             if (events.size()) {
@@ -290,18 +296,18 @@ void Dimmer_Base::getValues(JsonArray &array) {
 
     obj = &array.addObject();
     obj->add(JJ(id), JF("dimmer_temp"));
-    obj->add(JJ(value), String(_temperature));
     obj->add(JJ(state), _temperature != 0);
+    obj->add(JJ(value), JsonNumber(_temperature, 2));
 
     obj = &array.addObject();
     obj->add(JJ(id), JF("dimmer_vcc"));
-    obj->add(JJ(value), String(_vcc / 1000.0, 3));
     obj->add(JJ(state), _vcc != 0);
+    obj->add(JJ(value), JsonNumber(_vcc / 1000.0, 3));
 
     obj = &array.addObject();
     obj->add(JJ(id), JF("dimmer_frequency"));
-    obj->add(JJ(value), String(_frequency, 2));
     obj->add(JJ(state), _frequency != 0);
+    obj->add(JJ(value), JsonNumber(_frequency, 2));
 }
 
 void Dimmer_Base::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState) {

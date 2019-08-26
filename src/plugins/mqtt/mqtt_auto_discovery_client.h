@@ -40,9 +40,7 @@ public:
 
     virtual ~MQTTAutoDiscoveryClient();
 
-    MQTTAutoDiscovery *createAutoDiscovery(MQTTAutoDiscovery::Format_t format = MQTTAutoDiscovery::FORMAT_JSON) override {
-        return nullptr;
-    }
+    virtual void createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector);
 
     void onConnect(MQTTClient *client);
     void onDisconnect(MQTTClient *client, AsyncMqttClientDisconnectReason reason);

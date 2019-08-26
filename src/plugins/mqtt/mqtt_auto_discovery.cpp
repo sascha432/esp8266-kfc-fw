@@ -118,8 +118,21 @@ void MQTTAutoDiscovery::addBrightnessScale(uint32_t brightness) {
     addParameter(FSPGM(mqtt_brightness_scale), String(brightness));
 }
 
+void MQTTAutoDiscovery::addColorTempStateTopic(const String &value) {
+    addParameter(FSPGM(mqtt_color_temp_state_topic), value);
+}
+
+void MQTTAutoDiscovery::addColorTempCommandTopic(const String &value) {
+    addParameter(FSPGM(mqtt_color_temp_command_topic), value);
+}
+
 void MQTTAutoDiscovery::addUnitOfMeasurement(const String &value) {
     addParameter(FSPGM(mqtt_unit_of_measurement), value);
+}
+
+void MQTTAutoDiscovery::addValueTemplate(const String &value) {
+    PrintString value_json(F("{{ value_json.%s }}"), value.c_str());
+    addParameter(FSPGM(mqtt_value_template), value_json);
 }
 
 void MQTTAutoDiscovery::finalize() {

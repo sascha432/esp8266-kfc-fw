@@ -29,7 +29,10 @@ public:
     void addBrightnessStateTopic(const String &value);
     void addBrightnessCommandTopic(const String &value);
     void addBrightnessScale(uint32_t brightness);
+    void addColorTempStateTopic(const String &value);
+    void addColorTempCommandTopic(const String &value);
     void addUnitOfMeasurement(const String &value);
+    void addValueTemplate(const String &value);
 
     void finalize();
     String getPayload();

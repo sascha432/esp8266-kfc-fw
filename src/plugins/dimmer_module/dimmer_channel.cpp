@@ -26,7 +26,7 @@ void DimmerChannel::setup(Driver_DimmerModule *dimmer, uint8_t channel) {
     _channel = channel;
 }
 
-MQTTAutoDiscovery *DimmerChannel::createAutoDiscovery(MQTTAutoDiscovery::Format_t format) {
+void DimmerChannel::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector) {
     if (_data.state.state.length() == 0) {
         _createTopics();
     }
@@ -40,7 +40,7 @@ MQTTAutoDiscovery *DimmerChannel::createAutoDiscovery(MQTTAutoDiscovery::Format_
     discovery->addBrightnessCommandTopic(_data.brightness.set);
     discovery->addBrightnessScale(IOT_DIMMER_MODULE_MAX_BRIGHTNESS);
     discovery->finalize();
-    return discovery;
+    vector.emplace_back(discovery);
 }
 
 void DimmerChannel::_createTopics() {
@@ -56,16 +56,6 @@ void DimmerChannel::onConnect(MQTTClient *client) {
     uint8_t _qos = MQTTClient::getDefaultQos();
 
     _createTopics();
-
-#if MQTT_AUTO_DISCOVERY
-    if (MQTTAutoDiscovery::isEnabled()) {
-        auto discovery = createAutoDiscovery(MQTTAutoDiscovery::FORMAT_JSON);
-        _debug_printf_P(PSTR("DimmerChannel[%u]::createAutoDiscovery(): topic %s: %s\n"), _channel, discovery->getTopic().c_str(), discovery->getPayload().c_str());
-
-        client->publish(discovery->getTopic(), _qos, true, discovery->getPayload());
-        delete discovery;
-    }
-#endif
 
     _debug_printf_P(PSTR("DimmerChannel[%u]::subscribe(%s)\n"), _channel, _data.state.set.c_str());
     _debug_printf_P(PSTR("DimmerChannel[%u]::subscribe(%s)\n"), _channel, _data.brightness.set.c_str());

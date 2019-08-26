@@ -25,8 +25,6 @@
 
 #include "../../trailing_edge_dimmer/src/dimmer_protocol.h"
 
-//Driver_4ChDimmer *Driver_4ChDimmer::_dimmer = nullptr;
-
 Driver_4ChDimmer::Driver_4ChDimmer() : MQTTComponent(LIGHT), Dimmer_Base() {
 }
 
@@ -61,7 +59,6 @@ void Driver_4ChDimmer::_end() {
     if (mqttClient) {
         mqttClient->unregisterComponent(this);
     }
-    _dimmer = nullptr;
     Dimmer_Base::_end();
 }
 
@@ -72,7 +69,7 @@ const String AtomicSunPlugin::getStatus() {
     return out;
 }
 
-MQTTAutoDiscovery *Driver_4ChDimmer::createAutoDiscovery(MQTTAutoDiscovery::Format_t format) {
+void Driver_4ChDimmer::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector) {
     if (_data.state.set.length() == 0) {
         _createTopics();
     }
@@ -88,7 +85,31 @@ MQTTAutoDiscovery *Driver_4ChDimmer::createAutoDiscovery(MQTTAutoDiscovery::Form
     discovery->addParameter(FSPGM(mqtt_color_temp_state_topic), _data.color.state);
     discovery->addParameter(FSPGM(mqtt_color_temp_command_topic), _data.color.set);
     discovery->finalize();
-    return discovery;
+    vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
+
+    String topic = MQTTClient::formatTopic(-1, F("/metrics/"));
+    MQTTComponentHelper component(MQTTComponent::SENSOR);
+
+    component.setNumber(IOT_DIMMER_MODULE_CHANNELS);
+    discovery = component.createAutoDiscovery(format);
+    discovery->addStateTopic(topic + F("temperature"));
+    discovery->addUnitOfMeasurement(F("°C"));
+    discovery->finalize();
+    vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
+
+    component.setNumber(IOT_DIMMER_MODULE_CHANNELS + 1);
+    discovery = component.createAutoDiscovery(format);
+    discovery->addStateTopic(topic + F("vcc"));
+    discovery->addUnitOfMeasurement(F("V"));
+    discovery->finalize();
+    vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
+
+    component.setNumber(IOT_DIMMER_MODULE_CHANNELS + 2);
+    discovery = component.createAutoDiscovery(format);
+    discovery->addStateTopic(topic + F("frequency"));
+    discovery->addUnitOfMeasurement(F("Hz"));
+    discovery->finalize();
+    vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
 }
 
 void Driver_4ChDimmer::_createTopics() {
@@ -109,38 +130,13 @@ void Driver_4ChDimmer::onConnect(MQTTClient *client) {
 
 #if MQTT_AUTO_DISCOVERY
     if (MQTTAutoDiscovery::isEnabled()) {
-        auto discovery = createAutoDiscovery(MQTTAutoDiscovery::FORMAT_JSON);
-        client->publish(discovery->getTopic(), _qos, true, discovery->getPayload());
-        delete discovery;
-
-        String topic = MQTTClient::formatTopic(-1, F("/metrics/"));
-        MQTTComponentHelper component(MQTTComponent::SENSOR);
-
-        component.setNumber(IOT_DIMMER_MODULE_CHANNELS);
-        discovery = component.createAutoDiscovery();
-        discovery->addStateTopic(topic + F("temperature"));
-        discovery->addUnitOfMeasurement(F("°C"));
-        discovery->finalize();
-        client->publish(discovery->getTopic(), MQTTClient::getDefaultQos(), true, discovery->getPayload());
-        delete discovery;
-
-        component.setNumber(IOT_DIMMER_MODULE_CHANNELS + 1);
-        discovery = component.createAutoDiscovery();
-        discovery->addStateTopic(topic + F("vcc"));
-        discovery->addUnitOfMeasurement(F("V"));
-        discovery->finalize();
-        client->publish(discovery->getTopic(), MQTTClient::getDefaultQos(), true, discovery->getPayload());
-        delete discovery;
-
-        component.setNumber(IOT_DIMMER_MODULE_CHANNELS + 2);
-        discovery = component.createAutoDiscovery();
-        discovery->addStateTopic(topic + F("frequency"));
-        discovery->addUnitOfMeasurement(F("Hz"));
-        discovery->finalize();
-        client->publish(discovery->getTopic(), MQTTClient::getDefaultQos(), true, discovery->getPayload());
-        delete discovery;
+        MQTTAutoDiscoveryVector vector;
+        createAutoDiscovery(MQTTAutoDiscovery::FORMAT_JSON, vector);
+        for(auto &&discovery: vector) {
+            _debug_printf_P(PSTR("Driver_4ChDimmer::onConnect(): topic=%s, payload=%s\n"), discovery->getTopic().c_str(), discovery->getPayload().c_str());
+            client->publish(discovery->getTopic(), _qos, true, discovery->getPayload());
+        }
     }
-
 #endif
 
     client->subscribe(this, _data.state.set, _qos);
@@ -215,7 +211,6 @@ void Driver_4ChDimmer::publishState(MQTTClient *client) {
     obj->add(JJ(id), JF("dimmer_channel1"));
     obj->add(JJ(value), _data.color.value);
     WsWebUISocket::broadcast(json);
-
 }
 
 void Driver_4ChDimmer::_printStatus(PrintHtmlEntitiesString &out) {
@@ -311,7 +306,7 @@ void Driver_4ChDimmer::_getChannels() {
     }
 }
 
-static AtomicSunPlugin plugin;
+AtomicSunPlugin dimmer_plugin;
 
 PGM_P AtomicSunPlugin::getName() const {
     return PSTR("atomicsun");

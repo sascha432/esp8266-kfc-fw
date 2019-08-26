@@ -26,11 +26,7 @@ public:
     static void onData(uint8_t type, const uint8_t *buffer, size_t len);
     static void onReceive(int length);
 #else
-    static void fetchMetrics(EventScheduler::TimerPtr timer) {
-        if (_dimmer) {
-            _dimmer->_fetchMetrics();
-        }
-    }
+    static void fetchMetrics(EventScheduler::TimerPtr timer);
 #endif
 
     virtual bool on(uint8_t channel = -1) = 0;
@@ -91,7 +87,4 @@ protected:
 public:
     virtual void getValues(JsonArray &array);
     virtual void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState);
-
-protected:
-    static Dimmer_Base *_dimmer;
 };

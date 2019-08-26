@@ -16,6 +16,7 @@ PROGMEM_STRING_DECL(mqtt_component_sensor);
 PROGMEM_STRING_DECL(mqtt_component_binary_sensor);
 
 PROGMEM_STRING_DECL(mqtt_unique_id);
+PROGMEM_STRING_DECL(mqtt_name);
 PROGMEM_STRING_DECL(mqtt_availability_topic);
 PROGMEM_STRING_DECL(mqtt_status_topic);
 PROGMEM_STRING_DECL(mqtt_payload_available);
@@ -30,11 +31,15 @@ PROGMEM_STRING_DECL(mqtt_brightness_scale);
 PROGMEM_STRING_DECL(mqtt_color_temp_state_topic);
 PROGMEM_STRING_DECL(mqtt_color_temp_command_topic);
 PROGMEM_STRING_DECL(mqtt_unit_of_measurement);
+PROGMEM_STRING_DECL(mqtt_value_template);
 
 class MQTTClient;
 
 class MQTTComponent {
 public:
+    typedef std::unique_ptr<MQTTAutoDiscovery> MQTTAutoDiscoveryPtr;
+    typedef std::vector<MQTTAutoDiscoveryPtr> MQTTAutoDiscoveryVector;
+
     typedef enum {
         SWITCH = 1,
         LIGHT,
@@ -42,19 +47,16 @@ public:
         BINARY_SENSOR,
     } ComponentTypeEnum_t;
 
-    MQTTComponent(ComponentTypeEnum_t type) : _type(type), _num(0xff) {
-    }
-    virtual ~MQTTComponent() {
-    }
+    MQTTComponent(ComponentTypeEnum_t type);
+    virtual ~MQTTComponent();
 
-    virtual MQTTAutoDiscovery *createAutoDiscovery(MQTTAutoDiscovery::Format_t format = MQTTAutoDiscovery::FORMAT_JSON) = 0;
+    virtual void createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector) = 0;
 
-    virtual void onConnect(MQTTClient *client) {
-    }
-    virtual void onDisconnect(MQTTClient *client, AsyncMqttClientDisconnectReason reason) {
-    }
-    virtual void onMessage(MQTTClient *client, char *topic, char *payload, size_t len) {
-    }
+    virtual void onConnect(MQTTClient *client);
+    virtual void onDisconnect(MQTTClient *client, AsyncMqttClientDisconnectReason reason);
+    virtual void onMessage(MQTTClient *client, char *topic, char *payload, size_t len);
+
+    PGM_P getComponentName();
 
     inline void setNumber(uint8_t num) {
         _num = num;
@@ -63,39 +65,17 @@ public:
         return _num;
     }
 
-    PGM_P getComponentName() {
-        switch(_type) {
-            case LIGHT:
-                return SPGM(mqtt_component_light);
-            case SENSOR:
-                return SPGM(mqtt_component_sensor);
-            case BINARY_SENSOR:
-                return SPGM(mqtt_component_binary_sensor);
-            case SWITCH:
-                break;
-
-        }
-        return SPGM(mqtt_component_switch);
-    }
-
 private:
     ComponentTypeEnum_t _type;
     uint8_t _num;
 };
 
-
 // for creating auto discovery without an actual component
 class MQTTComponentHelper : public MQTTComponent {
 public:
-    MQTTComponentHelper(ComponentTypeEnum_t type) : MQTTComponent(type) {
-
-    }
-
-    MQTTAutoDiscovery *createAutoDiscovery(MQTTAutoDiscovery::Format_t format = MQTTAutoDiscovery::FORMAT_JSON) override {
-        auto discovery = _debug_new MQTTAutoDiscovery();
-        discovery->create(this, format);
-        return discovery;
-    }
+    MQTTComponentHelper(ComponentTypeEnum_t type);
+    virtual void createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector) override;
+    MQTTAutoDiscovery *createAutoDiscovery(MQTTAutoDiscovery::Format_t format);
 };
 
 #endif

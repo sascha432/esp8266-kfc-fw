@@ -90,7 +90,7 @@ public:
 
     static const String getComponentName(uint8_t num = -1);
     static String formatTopic(uint8_t num, const __FlashStringHelper *format, ...);
-
+    // static String formatTopic(uint8_t num, const char *format, ...);
     void subscribe(MQTTComponent *component, const String &topic, uint8_t qos);
     void unsubscribe(MQTTComponent *component, const String &topic);
     void remove(MQTTComponent *component);
@@ -116,7 +116,7 @@ public:
     inline static MQTTClient *getClient() {
         return _mqttClient;
     }
-   
+
     inline static uint8_t getDefaultQos() {
         return config._H_GET(Config().mqtt_qos);
     }
@@ -152,7 +152,7 @@ private:
     void _clearQueue();
     // process queue
     void _queueTimerCallback(EventScheduler::TimerPtr timer);
-    
+
     MQTTQueueVector _queue;
     EventScheduler::TimerPtr _queueTimer;
 

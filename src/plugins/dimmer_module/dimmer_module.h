@@ -76,7 +76,7 @@ class Driver_DimmerModule: public Dimmer_Base
 public:
     Driver_DimmerModule();
 
-    void createAutoDiscovery(MQTTAutoDiscovery::Format_t format, PrintHtmlEntitiesString &payload);
+    void createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTComponent::MQTTAutoDiscoveryVector &vector);
     void onConnect(MQTTClient *client);
 
     virtual bool on(uint8_t channel = -1) override;
@@ -125,6 +125,6 @@ public:
 #endif
 };
 
-
+extern DimmerModulePlugin dimmer_plugin;
 
 #endif

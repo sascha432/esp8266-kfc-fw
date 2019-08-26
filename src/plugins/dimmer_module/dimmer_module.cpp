@@ -53,48 +53,51 @@ void Driver_DimmerModule::_end() {
             mqttClient->unregisterComponent(&_channels[i]);
         }
     }
-    _dimmer = nullptr;
     Dimmer_Base::_end();
 }
 
-void Driver_DimmerModule::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, PrintHtmlEntitiesString &payload) {
+void Driver_DimmerModule::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTComponent::MQTTAutoDiscoveryVector &vector) {
+
     for (uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
-        auto discovery = _channels[i].createAutoDiscovery(format);
-        payload.print(discovery->getPayload());
-        delete discovery;
+        _channels[i].createAutoDiscovery(format, vector);
     }
+
+    String topic = MQTTClient::formatTopic(-1, F("/metrics/"));
+    MQTTComponentHelper component(MQTTComponent::SENSOR);
+
+    component.setNumber(IOT_DIMMER_MODULE_CHANNELS);
+    auto discovery = component.createAutoDiscovery(format);
+    discovery->addStateTopic(topic + F("temperature"));
+    discovery->addUnitOfMeasurement(F("°C"));
+    discovery->finalize();
+    vector.emplace_back(MQTTComponent::MQTTAutoDiscoveryPtr(discovery));
+
+    component.setNumber(IOT_DIMMER_MODULE_CHANNELS + 1);
+    discovery = component.createAutoDiscovery(format);
+    discovery->addStateTopic(topic + F("vcc"));
+    discovery->addUnitOfMeasurement(F("V"));
+    discovery->finalize();
+    vector.emplace_back(MQTTComponent::MQTTAutoDiscoveryPtr(discovery));
+
+    component.setNumber(IOT_DIMMER_MODULE_CHANNELS + 2);
+    discovery = component.createAutoDiscovery(format);
+    discovery->addStateTopic(topic + F("frequency"));
+    discovery->addUnitOfMeasurement(F("Hz"));
+    discovery->finalize();
+    vector.emplace_back(MQTTComponent::MQTTAutoDiscoveryPtr(discovery));
 }
 
 void Driver_DimmerModule::onConnect(MQTTClient *client) {
 
 #if MQTT_AUTO_DISCOVERY
     if (MQTTAutoDiscovery::isEnabled()) {
-        String topic = MQTTClient::formatTopic(-1, F("/metrics/"));
-        MQTTComponentHelper component(MQTTComponent::SENSOR);
-
-        component.setNumber(IOT_DIMMER_MODULE_CHANNELS);
-        auto discovery = component.createAutoDiscovery();
-        discovery->addStateTopic(topic + F("temperature"));
-        discovery->addUnitOfMeasurement(F("°C"));
-        discovery->finalize();
-        client->publish(discovery->getTopic(), MQTTClient::getDefaultQos(), true, discovery->getPayload());
-        delete discovery;
-
-        component.setNumber(IOT_DIMMER_MODULE_CHANNELS + 1);
-        discovery = component.createAutoDiscovery();
-        discovery->addStateTopic(topic + F("vcc"));
-        discovery->addUnitOfMeasurement(F("V"));
-        discovery->finalize();
-        client->publish(discovery->getTopic(), MQTTClient::getDefaultQos(), true, discovery->getPayload());
-        delete discovery;
-
-        component.setNumber(IOT_DIMMER_MODULE_CHANNELS + 2);
-        discovery = component.createAutoDiscovery();
-        discovery->addStateTopic(topic + F("frequency"));
-        discovery->addUnitOfMeasurement(F("Hz"));
-        discovery->finalize();
-        client->publish(discovery->getTopic(), MQTTClient::getDefaultQos(), true, discovery->getPayload());
-        delete discovery;
+        auto qos = MQTTClient::getDefaultQos();
+        MQTTComponent::MQTTAutoDiscoveryVector vector;
+        createAutoDiscovery(MQTTAutoDiscovery::FORMAT_JSON, vector);
+        for(auto &&discovery: vector) {
+            _debug_printf_P(PSTR("Driver_DimmerModule::onConnect(): topic=%s, payload=%s\n"), discovery->getTopic().c_str(), discovery->getPayload().c_str());
+            client->publish(discovery->getTopic(), qos, true, discovery->getPayload());
+        }
     }
 #endif
 }
@@ -179,7 +182,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DIMW, "DIMW", "Write EEPROM");
 
 #endif
 
-static DimmerModulePlugin plugin;
+DimmerModulePlugin dimmer_plugin;
 
 PGM_P DimmerModulePlugin::getName() const {
     return PSTR("dimmer");

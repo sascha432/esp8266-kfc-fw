@@ -152,6 +152,17 @@ String MQTTClient::formatTopic(uint8_t num, const __FlashStringHelper *format, .
     return topic;
 }
 
+// String MQTTClient::formatTopic(uint8_t num, const char *format, ...) {
+//     PrintString topic = config._H_STR(Config().mqtt_topic);
+//     va_list arg;
+
+//     va_start(arg, format);
+//     topic.vprintf(format, arg);
+//     va_end(arg);
+//     topic.replace(F("${device_name}"), getComponentName(num));
+//     return topic;
+// }
+
 bool MQTTClient::isConnected() const {
     return _client->connected();
 }
@@ -254,7 +265,7 @@ void MQTTClient::onDisconnect(AsyncMqttClientDisconnectReason reason) {
 void MQTTClient::subscribe(MQTTComponent *component, const String &topic, uint8_t qos) {
     if (subscribeWithId(component, topic, qos) == 0) {
         _addQueue({QUEUE_SUBSCRIBE, component, topic, qos});
-    } 
+    }
 }
 
 int MQTTClient::subscribeWithId(MQTTComponent *component, const String &topic, uint8_t qos) {
@@ -553,7 +564,7 @@ void MQTTClient::queueTimerCallback(EventScheduler::TimerPtr timer) {
     if (!getClient()) {
         debug_println(F("MQTTClient::queueTimerCallback() without MQTT client"));
         panic(); // this is not supposed to happen, time to panic
-    } 
+    }
     else {
         getClient()->_queueTimerCallback(timer);
     }
@@ -590,7 +601,7 @@ public:
 #endif
 };
 
-static MQTTPlugin plugin; 
+static MQTTPlugin plugin;
 
 PGM_P MQTTPlugin::getName() const {
     return PSTR("mqtt");
@@ -784,16 +795,16 @@ bool MQTTPlugin::atModeHandler(Stream &serial, const String &command, int8_t arg
          if (mqtt_at_mode_auto_recovery(serial) && mqtt_at_mode_auto_recovery_client(serial)) {
              for(const auto &devicePtr: MQTTAutoDiscoveryClient::getInstance()->getDiscovery()) {
                  const auto &device = *devicePtr;
-                 serial.printf_P(PSTR("+MQTTLAD: id=%03u, name='%s' topic='%s' payload=%u model='%*.*s' sw_version='%*.*s' manufacturer='%*.*s'\n"), 
-                    device.id, 
-                    device.name.c_str(), 
-                    device.topic.c_str(), 
+                 serial.printf_P(PSTR("+MQTTLAD: id=%03u, name='%s' topic='%s' payload=%u model='%*.*s' sw_version='%*.*s' manufacturer='%*.*s'\n"),
+                    device.id,
+                    device.name.c_str(),
+                    device.topic.c_str(),
                     device.payload.length(),
-                    device.model.length(), device.model.length(), device.model.getData(), 
-                    device.swVersion.length(), device.swVersion.length(), device.swVersion.getData(), 
+                    device.model.length(), device.model.length(), device.model.getData(),
+                    device.swVersion.length(), device.swVersion.length(), device.swVersion.getData(),
                     device.manufacturer.length(), device.manufacturer.length(), device.manufacturer.getData()
                 );
-             }            
+             }
         }
         return true;
     }
@@ -832,7 +843,7 @@ bool MQTTPlugin::atModeHandler(Stream &serial, const String &command, int8_t arg
             if (!found) {
                 if (id) {
                     serial.printf_P(PSTR("+MQTTPAD: Could not find id %u\n"), id);
-                } 
+                }
                 else {
                     serial.printf_P(PSTR("+MQTTPAD: No devices found\n"));
                 }
@@ -843,7 +854,7 @@ bool MQTTPlugin::atModeHandler(Stream &serial, const String &command, int8_t arg
     else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(MQTTDAD))) {
         if (argc < 1) {
             at_mode_print_invalid_arguments(serial);
-        } 
+        }
         else if (mqtt_at_mode_auto_recovery(serial) && mqtt_at_mode_auto_recovery_client(serial)) {
             std::vector<uint16_t> ids;
             ids.reserve(argc);

@@ -33,6 +33,11 @@ public:
 
     typedef uint16_t length_t;
 
+    typedef struct {
+        char *ptr;
+        length_t length;
+    } _str_t;
+
     const static size_t buffer_size = 8;    // minimum size = sizeof(char *) + sizeof(length_t) + sizeof(char)
 
     JsonString(const JsonString &str);
@@ -87,21 +92,27 @@ protected:
     }
 
     inline const char *_getConstPtr() const {
-        return *(const char **)&_raw[sizeof(length_t)];
+        return _str.ptr;
     }
     inline char *_getPtr() {
-        return *(char **)&_raw[sizeof(length_t)];
+        return _str.ptr;
     }
     inline void _setPtr(const char *ptr) {
-        *(const char **)&_raw[sizeof(length_t)] = ptr;
+        _str.ptr = (char *)ptr;
     }
 
     inline length_t _getLength() const {
-        return *(length_t *)&_raw[0];
+        return _str.length;
+        //return *(length_t *)&_raw[offsetof(_str_t, length)];
     }
     inline void _setLength(length_t length) {
-        *(length_t *)&_raw[0] = length;
+        _str.length = length;
+        // using buffer_size 8, length might overlap with the type stored in the last byte
+        //*(length_t *)&_raw[offsetof(_str_t, length)] = length;
     }
 
-    char _raw[buffer_size];
+    union {
+        _str_t _str;
+        char _raw[buffer_size];
+    };
 };

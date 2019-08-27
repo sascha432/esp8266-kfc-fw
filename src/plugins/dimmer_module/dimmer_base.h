@@ -4,6 +4,8 @@
 
 #pragma once
 
+#if IOT_DIMMER_MODULE || IOT_ATOMIC_SUN_V2
+
 #include <Arduino_compat.h>
 #include <HardwareSerial.h>
 #include <PrintHtmlEntitiesString.h>
@@ -11,8 +13,14 @@
 #include "WebUIComponent.h"
 #if IOT_DIMMER_MODULE_INTERFACE_UART
 #include "SerialTwoWire.h"
-#else
-#include <Wire.h>
+#endif
+
+#define DIMMER_FIRMWARE_DEBUG 1
+
+#if DIMMER_FIRMWARE_DEBUG
+#include <push_pack.h>
+#include "../../trailing_edge_dimmer/src/dimmer_reg_mem.h"
+#include <pop_pack.h>
 #endif
 
 class DimmerChannel;
@@ -61,7 +69,7 @@ protected:
     uint8_t _endTransmission();
 #else
     inline uint8_t _endTransmission() {
-        return _wire->endTransmission();
+        return _wire.endTransmission();
     }
 #endif
 
@@ -84,7 +92,18 @@ protected:
     void _fetchMetrics();
 #endif
 
+#if DIMMER_FIRMWARE_DEBUG
+public:
+    void resetDimmerFirmware();
+    void readDimmerFirmware(Print &output, register_mem_cfg_t &config);
+    void setDimmerFirmwareZCDelay(uint8_t zcDelay);
+    void setDimmerFirmwareSetMinTime(uint16_t minTime);
+    void setDimmerFirmwareSetMaxTime(uint16_t maxTime);
+#endif
+
 public:
     virtual void getValues(JsonArray &array);
     virtual void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState);
 };
+
+#endif

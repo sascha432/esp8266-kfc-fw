@@ -35,8 +35,8 @@ public:
     void addValueTemplate(const String &value);
 
     void finalize();
-    String getPayload();
-    String getTopic();
+    PrintString &getPayload();
+    String &getTopic();
 
     static bool isEnabled();
 

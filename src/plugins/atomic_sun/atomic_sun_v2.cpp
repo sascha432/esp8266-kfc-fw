@@ -93,7 +93,7 @@ void Driver_4ChDimmer::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, M
     component.setNumber(IOT_DIMMER_MODULE_CHANNELS);
     discovery = component.createAutoDiscovery(format);
     discovery->addStateTopic(topic + F("temperature"));
-    discovery->addUnitOfMeasurement(F("°C"));
+    discovery->addUnitOfMeasurement(F("\u00b0C"));
     discovery->finalize();
     vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
 
@@ -345,7 +345,7 @@ void AtomicSunPlugin::createWebUI(WebUI &webUI) {
     row = &webUI.addRow();
     row->addBadgeSensor(F("dimmer_vcc"), F("Atomic Sun VCC"), F("V"));
     row->addBadgeSensor(F("dimmer_frequency"), F("Atomic Sun Frequency"), F("Hz"));
-    row->addBadgeSensor(F("dimmer_temp"), F("Atomic Sun Internal Temperature"), F("°C"));
+    row->addBadgeSensor(F("dimmer_temp"), F("Atomic Sun Internal Temperature"), F("\u00b0C"));
 }
 
 WebUIInterface *AtomicSunPlugin::getWebUIInterface() {

@@ -2,9 +2,9 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if IOT_SENSOR && IOT_SENSOR_HAVE_BME280
+#if IOT_SENSOR && IOT_SENSOR_HAVE_BME680
 
-#include "Sensor_BME280.h"
+#include "Sensor_BME680.h"
 
 #if DEBUG_IOT_SENSOR
 #include <debug_helper_enable.h>
@@ -12,12 +12,12 @@
 #include <debug_helper_disable.h>
 #endif
 
-Sensor_BME280::Sensor_BME280(const String &name, TwoWire &wire, uint8_t address) : MQTTSensor(), _name(name), _address(address) {
-     _bme280.begin(address, &wire);
+Sensor_BME680::Sensor_BME680(const String &name, uint8_t address) : MQTTSensor(), _name(name), _address(address) {
+     _bme680.begin(address);
      _topic = MQTTClient::formatTopic(-1, F("/%s/"), _getId().c_str());
 }
 
-void Sensor_BME280::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector) {
+void Sensor_BME680::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector) {
     auto discovery = _debug_new MQTTAutoDiscovery();
     discovery->create(this, format);
     discovery->addStateTopic(_topic);
@@ -43,8 +43,8 @@ void Sensor_BME280::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTT
     vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
 }
 
-void Sensor_BME280::getValues(JsonArray &array) {
-    _debug_printf_P(PSTR("Sensor_BME280::getValues()\n"));
+void Sensor_BME680::getValues(JsonArray &array) {
+    _debug_printf_P(PSTR("Sensor_BME680::getValues()\n"));
 
     auto sensor = _readSensor();
 
@@ -62,19 +62,19 @@ void Sensor_BME280::getValues(JsonArray &array) {
     obj->add(JJ(value), JsonNumber(sensor.pressure, 2));
 }
 
-void Sensor_BME280::createWebUI(WebUI &webUI, WebUIRow **row) {
-    _debug_printf_P(PSTR("Sensor_BME280::createWebUI()\n"));
+void Sensor_BME680::createWebUI(WebUI &webUI, WebUIRow **row) {
+    _debug_printf_P(PSTR("Sensor_BME680::createWebUI()\n"));
 
     (*row)->addSensor(_getId(F("temperature")), _name + F(" Temperature"), F("\u00b0C"));
     (*row)->addSensor(_getId(F("humidity")), _name + F(" Humidity"), F("%"));
     (*row)->addSensor(_getId(F("pressure")), _name + F(" Pressure"), F("hPa"));
 }
 
-void Sensor_BME280::getStatus(PrintHtmlEntitiesString &output) {
-    output.printf_P(PSTR("BME280 @ I2C address 0x%02x" HTML_S(br)), _address);
+void Sensor_BME680::getStatus(PrintHtmlEntitiesString &output) {
+    output.printf_P(PSTR("BME680 @ I2C address 0x%02x" HTML_S(br)), _address);
 }
 
-void Sensor_BME280::publishState(MQTTClient *client) {
+void Sensor_BME680::publishState(MQTTClient *client) {
     if (client) {
         auto sensor = _readSensor();
         PrintString str;
@@ -87,20 +87,21 @@ void Sensor_BME280::publishState(MQTTClient *client) {
     }
 }
 
-Sensor_BME280::SensorData_t Sensor_BME280::_readSensor() {
+Sensor_BME680::SensorData_t Sensor_BME680::_readSensor() {
     SensorData_t sensor;
 
-    sensor.temperature = _bme280.readTemperature();
-    sensor.humidity = _bme280.readHumidity();
-    sensor.pressure = _bme280.readPressure() / 100.0;
+    sensor.temperature = _bme680.readTemperature();
+    sensor.humidity = _bme680.readHumidity();
+    sensor.pressure = _bme680.readPressure() / 100.0;
+    sensor.gas = _bme680.readGas();
 
-    debug_printf_P(PSTR("Sensor_BME280::_readSensor(): address 0x%02x: %.2f °C, %.2f%%, %.2f hPa\n"), _address, sensor.temperature, sensor.humidity, sensor.pressure);
+    debug_printf_P(PSTR("Sensor_BME680::_readSensor(): address 0x%02x: %.2f °C, %.2f%%, %.2f hPa, gas %u\n"), _address, sensor.temperature, sensor.humidity, sensor.pressure, sensor.gas);
 
     return sensor;
 }
 
-String Sensor_BME280::_getId(const __FlashStringHelper *type) {
-    PrintString id(F("bme280_0x%02x"), _address);
+String Sensor_BME680::_getId(const __FlashStringHelper *type) {
+    PrintString id(F("bme680_0x%02x"), _address);
     if (type) {
         id.write('_');
         id.print(type);

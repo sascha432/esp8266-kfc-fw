@@ -46,7 +46,8 @@ void DimmerModuleForm::createConfigureForm(AsyncWebServerRequest *request, Form 
     MQTTComponent::MQTTAutoDiscoveryVector vector;
     createAutoDiscovery(MQTTAutoDiscovery::FORMAT_YAML, vector);
     for(auto &&discovery: vector) {
-        code.print(discovery->getPayload());
+        const auto &payload = discovery->getPayload();
+        code.write((const uint8_t *)payload.c_str(), payload.length());
     }
 
     reinterpret_cast<SettingsForm &>(form).getTokens().push_back(std::make_pair<String, String>(F("HASS_YAML"), code.c_str()));

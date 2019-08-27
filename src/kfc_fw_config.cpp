@@ -31,6 +31,7 @@ KFCFWConfiguration config;
 KFCFWConfiguration::KFCFWConfiguration() : Configuration(CONFIG_EEPROM_OFFSET, CONFIG_EEPROM_MAX_LENGTH) {
     _garbageCollectionCycleDelay = 5000;
     _wifiConnected = false;
+    _initTwoWire = false;
     _offlineSince = -1UL;
     _wifiUp = -1UL;
     _setupWiFiCallbacks();
@@ -867,6 +868,15 @@ bool KFCFWConfiguration::isWiFiUp() {
 
 unsigned long KFCFWConfiguration::getWiFiUp() {
     return config._wifiUp;
+}
+
+TwoWire &KFCFWConfiguration::initTwoWire() {
+    if (!_initTwoWire) {
+        _initTwoWire = true;
+        Wire.begin(KFC_TWOWIRE_SDA, KFC_TWOWIRE_SCL);
+        Wire.setClockStretchLimit(KFC_TWOWIRE_CLOCK_STRECH);
+    }
+    return Wire;
 }
 
 class KFCConfigurationPlugin : public PluginComponent {

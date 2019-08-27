@@ -2,7 +2,7 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if IOT_SENSOR
+#if IOT_SENSOR && IOT_SENSOR_HAVE_LM75A
 
 #include "Sensor_LM75A.h"
 
@@ -20,7 +20,7 @@ void Sensor_LM75A::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTA
     auto discovery = _debug_new MQTTAutoDiscovery();
     discovery->create(this, format);
     discovery->addStateTopic(_topic);
-    discovery->addUnitOfMeasurement(F("°C"));
+    discovery->addUnitOfMeasurement(F("\u00b0C"));
     discovery->finalize();
     vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
 }
@@ -38,7 +38,7 @@ void Sensor_LM75A::getValues(JsonArray &array) {
 void Sensor_LM75A::createWebUI(WebUI &webUI, WebUIRow **row) {
     _debug_printf_P(PSTR("Sensor_LM75A::createWebUI()\n"));
 
-    (*row)->addSensor(_getId(), _name, F("°C"));
+    (*row)->addSensor(_getId(), _name, F("\u00b0C"));
 }
 
 void Sensor_LM75A::publishState(MQTTClient *client) {
@@ -48,7 +48,7 @@ void Sensor_LM75A::publishState(MQTTClient *client) {
 }
 
 void Sensor_LM75A::getStatus(PrintHtmlEntitiesString &output) {
-    output.printf_P(PSTR("LM75A, I2C address 0x%02x" HTML_S(br)), _address);
+    output.printf_P(PSTR("LM75A @ I2C address 0x%02x" HTML_S(br)), _address);
 }
 
 float Sensor_LM75A::_readSensor() {

@@ -68,7 +68,7 @@ void Driver_DimmerModule::createAutoDiscovery(MQTTAutoDiscovery::Format_t format
     component.setNumber(IOT_DIMMER_MODULE_CHANNELS);
     auto discovery = component.createAutoDiscovery(format);
     discovery->addStateTopic(topic + F("temperature"));
-    discovery->addUnitOfMeasurement(F("°C"));
+    discovery->addUnitOfMeasurement(F("\u00b0C"));
     discovery->finalize();
     vector.emplace_back(MQTTComponent::MQTTAutoDiscoveryPtr(discovery));
 
@@ -172,16 +172,6 @@ uint8_t Driver_DimmerModule::getChannelCount() const {
     return IOT_DIMMER_MODULE_CHANNELS;
 }
 
-#if AT_MODE_SUPPORTED && !IOT_DIMMER_MODULE_INTERFACE_UART
-
-#include "at_mode.h"
-
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DIMG, "DIMG", "Get level");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DIMS, "DIMS", "<channel>,<level>[,<time>]", "Set level");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DIMW, "DIMW", "Write EEPROM");
-
-#endif
-
 DimmerModulePlugin dimmer_plugin;
 
 PGM_P DimmerModulePlugin::getName() const {
@@ -189,7 +179,9 @@ PGM_P DimmerModulePlugin::getName() const {
 }
 
 void DimmerModulePlugin::setup(PluginSetupMode_t mode) {
+#if DIMMER_FIRMWARE_DEBUG == 0
     _begin();
+#endif
 }
 
 void DimmerModulePlugin::reconfigure(PGM_P source) {
@@ -220,7 +212,7 @@ void DimmerModulePlugin::createWebUI(WebUI &webUI) {
     row = &webUI.addRow();
     row->addBadgeSensor(F("dimmer_vcc"), F("Dimmer VCC"), F("V"));
     row->addBadgeSensor(F("dimmer_frequency"), F("Dimmer Frequency"), F("Hz"));
-    row->addBadgeSensor(F("dimmer_temp"), F("Dimmer Internal Temperature"), F("°C"));
+    row->addBadgeSensor(F("dimmer_temp"), F("Dimmer Internal Temperature"), F("\u00b0C"));
 }
 
 
@@ -228,7 +220,17 @@ bool DimmerModulePlugin::hasStatus() const {
     return true;
 }
 
-#if AT_MODE_SUPPORTED && !IOT_DIMMER_MODULE_INTERFACE_UART
+#if AT_MODE_SUPPORTED //&& !IOT_DIMMER_MODULE_INTERFACE_UART
+
+#include "at_mode.h"
+
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DIMG, "DIMG", "Get level");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DIMS, "DIMS", "<channel>,<level>[,<time>]", "Set level");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DIMW, "DIMW", "Write EEPROM");
+#if DIMMER_FIRMWARE_DEBUG
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DIMB, "DIMB", "Begin dimmer plugin");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DIME, "DIME", "End dimmer plugin");
+#endif
 
 bool DimmerModulePlugin::hasAtMode() const {
     return true;
@@ -238,6 +240,10 @@ void DimmerModulePlugin::atModeHelpGenerator() {
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DIMG));
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DIMS));
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DIMW));
+#if DIMMER_FIRMWARE_DEBUG
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DIMB));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DIME));
+#endif
 }
 
 bool DimmerModulePlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) {
@@ -273,6 +279,14 @@ bool DimmerModulePlugin::atModeHandler(Stream &serial, const String &command, in
         }
         return true;
     }
+#if DIMMER_FIRMWARE_DEBUG
+    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(DIMB))) {
+        dimmer_plugin._begin();
+    }
+    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(DIME))) {
+        dimmer_plugin._end();
+    }
+#endif
     return false;
 }
 

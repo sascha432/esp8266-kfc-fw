@@ -14,7 +14,7 @@
 
 // TODO could have some more options and cleaner code
 
-#include <Wire.h>
+#include "kfc_fw_config.h"
 #include "i2c_scanner.h"
 #include "plugins.h"
 
@@ -90,11 +90,6 @@ static int __toint(const char *s, uint8_t base = 10) {
     }
 }
 
-void i2cscanner_setup() {
-    Wire.begin(D3, D5);
-    Wire.setClockStretchLimit(45000);
-}
-
 void i2cscanner_device_error(Stream &output) {
     output.println(F("+I2C: An error occured"));
 }
@@ -110,6 +105,10 @@ public:
 
     PluginPriorityEnum_t getSetupPriority() const {
         return MIN_PRIORITY;
+    }
+
+    void setup(PluginSetupMode_t mode) override {
+        config.initTwoWire();
     }
 
 #if AT_MODE_SUPPORTED

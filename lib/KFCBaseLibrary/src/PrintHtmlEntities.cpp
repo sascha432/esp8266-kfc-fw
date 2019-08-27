@@ -4,6 +4,9 @@
 
 #include "PrintHtmlEntities.h"
 
+// TODO proper UTF8 handling
+// utf8 is just passed except for &deg; &copy; &micro; and &acute;
+
 PrintHtmlEntities::PrintHtmlEntities() {
 }
 
@@ -47,15 +50,17 @@ size_t PrintHtmlEntities::translate(uint8_t data) {
             return __write('"');
         case '\5':
             return __write('=');
-        case 39:
-        default:
-            if (data >= 0xa0 && data <= 0xbf) {
-                uint8_t count = __write('&');
-                count += __write('#');
-                count += __write(nibble2hex((data & 0xf0) >> 4));
-                count += __write(nibble2hex(data & 0xf));
-                return count + __write(';');
-            }
+        // case 39:
+        //     break;
+        // default:
+        //     if (data >= 0xa0 && data <= 0xbf) {
+        //         uint8_t count = __write('&');
+        //         count += __write('#');
+        //         count += __write(nibble2hex((data & 0xf0) >> 4));
+        //         count += __write(nibble2hex(data & 0xf));
+        //         return count + __write(';');
+        //     }
+        //     break;
     }
     return __write(data);
 }
@@ -63,6 +68,18 @@ size_t PrintHtmlEntities::translate(uint8_t data) {
 size_t PrintHtmlEntities::translate(const uint8_t * buffer, size_t size) {
     size_t written = 0;
     while (size--) {
+        if (*buffer == 0xc2 && size) {
+            switch(*(buffer + 1)) {
+                case 0xb0:
+                case 0xa9:
+                case 0xb5:
+                case 0xb4:
+                    // utf8 encoded, we cannot just replace it
+                    size--;
+                    buffer++;
+                    break;
+            }
+        }
         written = translate(*buffer++);
     }
     return written;

@@ -145,11 +145,11 @@ void MQTTAutoDiscovery::finalize() {
     _debug_printf_P(PSTR("MQTT auto discovery payload '%s'\n"), _discovery.c_str());
 }
 
-String MQTTAutoDiscovery::getPayload() {
+PrintString &MQTTAutoDiscovery::getPayload() {
     return _discovery;
 }
 
-String MQTTAutoDiscovery::getTopic() {
+String &MQTTAutoDiscovery::getTopic() {
     return _topic;
 }
 

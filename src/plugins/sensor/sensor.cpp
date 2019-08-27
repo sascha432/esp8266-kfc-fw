@@ -10,6 +10,7 @@
 #include "WebUISocket.h"
 #include "Sensor_LM75A.h"
 #include "Sensor_BME280.h"
+#include "Sensor_BME680.h"
 
 #if DEBUG_IOT_SENSOR
 #include <debug_helper_enable.h>
@@ -38,13 +39,13 @@ PGM_P SensorPlugin::getName() const {
 void SensorPlugin::setup(PluginSetupMode_t mode) {
     _timer = Scheduler.addTimer(1e4, true, SensorPlugin::timerEvent);
 #if IOT_SENSOR_HAVE_LM75A
-    _sensors.push_back(new Sensor_LM75A(F("LM75A Temperature"), Wire, IOT_SENSOR_HAVE_LM75A));
+    _sensors.push_back(new Sensor_LM75A(F("LM75A Temperature"), config.initTwoWire(), IOT_SENSOR_HAVE_LM75A));
 #endif
 #if IOT_SENSOR_HAVE_BME280
-    _sensors.push_back(new Sensor_BME280(F("BME280"), Wire, IOT_SENSOR_HAVE_BME280));
+    _sensors.push_back(new Sensor_BME280(F("BME280"), config.initTwoWire(), IOT_SENSOR_HAVE_BME280));
 #endif
 #if IOT_SENSOR_HAVE_BME680
-    _sensors.push_back(new Sensor_BME680(F("BME680"), Wire, IOT_SENSOR_HAVE_BME680));
+    _sensors.push_back(new Sensor_BME680(F("BME680"), IOT_SENSOR_HAVE_BME680));
 #endif
 }
 

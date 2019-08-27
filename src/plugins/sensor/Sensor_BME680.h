@@ -4,7 +4,7 @@
 
 #pragma once
 
-#if IOT_SENSOR && IOT_SENSOR_HAVE_BME280
+#if IOT_SENSOR && IOT_SENSOR_HAVE_BME680
 
 #include <Arduino_compat.h>
 #include <Wire.h>
@@ -12,17 +12,18 @@
 #include "WebUIComponent.h"
 #include "plugins.h"
 #include "MQTTSensor.h"
-#include <Adafruit_BME280.h>
+#include <Adafruit_BME680.h>
 
-class Sensor_BME280 : public MQTTSensor {
+class Sensor_BME680 : public MQTTSensor {
 public:
     typedef struct {
         float temperature;  // °C
         float humidity;     // %
         float pressure;     // hPa
+        uint32_t gas;
     } SensorData_t;
 
-    Sensor_BME280(const String &name, TwoWire &wire, uint8_t address = 0x76);
+    Sensor_BME680(const String &name, uint8_t address = 0x77);
 
     virtual void createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector) override;
 
@@ -36,7 +37,7 @@ private:
     SensorData_t _readSensor();
 
     String _name;
-    Adafruit_BME280 _bme280;
+    Adafruit_BME680 _bme680;
     uint8_t _address;
     String _topic;
 };

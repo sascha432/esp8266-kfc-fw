@@ -9,6 +9,7 @@
 #endif
 
 #include <Arduino_compat.h>
+#include <Wire.h>
 #include <vector>
 #include <functional>
 #include <bitset>
@@ -273,11 +274,14 @@ public:
     static bool isWiFiUp();
     static unsigned long getWiFiUp();
 
+    TwoWire &initTwoWire();
+
 private:
     String _lastError;
     int16_t _garbageCollectionCycleDelay;
-    bool _dirty;
-    bool _wifiConnected;
+    uint8_t _dirty : 1;
+    uint8_t _wifiConnected : 1;
+    uint8_t _initTwoWire : 1;
     unsigned long _wifiUp;
     unsigned long _offlineSince;
 

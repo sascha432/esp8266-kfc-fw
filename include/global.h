@@ -60,6 +60,18 @@
 #define KFC_SAFE_MODE_SERIAL_PORT       KFC_SERIAL_PORT
 #endif
 
+#ifndef KFC_TWOWIRE_SDA
+#define KFC_TWOWIRE_SDA                 D3
+#endif
+
+#ifndef KFC_TWOWIRE_SCL
+#define KFC_TWOWIRE_SCL                 D5
+#endif
+
+#ifndef KFC_TWOWIRE_CLOCK_STRECH
+#define KFC_TWOWIRE_CLOCK_STRECH        45000
+#endif
+
 #ifndef DEBUG
 #define DEBUG                           1                // Enable debug mode
 #endif

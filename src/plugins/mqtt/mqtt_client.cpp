@@ -109,24 +109,26 @@ MQTTClient::~MQTTClient() {
 }
 
 void MQTTClient::registerComponent(MQTTComponent *component) {
-    _debug_printf_P(PSTR("MQTTClient::registerComponent(%s)\n"), component->getName().c_str());
+    _debug_printf_P(PSTR("MQTTClient::registerComponent(%p)\n"), component);
     unregisterComponent(component);
-    _components.push_back(component);
+    _components.emplace_back(MQTTComponentPtr(component));
     uint8_t num = 0;
-    for(auto component: _components) {
-        component->setNumber(num++);
+    for(auto &&component: _components) {
+        component->setNumber(num);
+        num += component->getAutoDiscoveryCount();
     }
     _debug_printf_P(PSTR("MQTTClient::registerComponent() count %d\n"), _components.size());
 }
 
 void MQTTClient::unregisterComponent(MQTTComponent *component) {
-    _debug_printf_P(PSTR("MQTTClient::unregisterComponent(%s)\n"), component->getName().c_str());
-    remove(component);
-    for(auto it = _components.begin(); it != _components.end(); ++it) {
-        if (*it == component) {
-            _components.erase(it);
-            delete component;
-            break;
+    _debug_printf_P(PSTR("MQTTClient::unregisterComponent(%p): components %u\n"), component, _components.size());
+    if (_components.size()) {
+        remove(component);
+        for(auto iterator = _components.begin(); iterator != _components.end(); ++iterator) {
+            if (iterator->get() == component) {
+                _components.erase(iterator);
+                break;
+            }
         }
     }
 }
@@ -240,7 +242,7 @@ void MQTTClient::onConnect(bool sessionPresent) {
     // reset reconnect timer if connection was successful
     setAutoReconnect(DEFAULT_RECONNECT_TIMEOUT);
 
-    for(auto component: _components) {
+    for(auto &&component: _components) {
         component->onConnect(this);
     }
 }
@@ -252,7 +254,7 @@ void MQTTClient::onDisconnect(AsyncMqttClientDisconnectReason reason) {
         str.printf_P(PSTR(", reconnecting in %d ms"), _autoReconnectTimeout);
     }
     Logger_notice(F("Disconnected from MQTT server %s, reason: %s%s"), connectionDetailsString().c_str(), _reasonToString(reason).c_str(), str.c_str());
-    for(auto component: _components) {
+    for(auto &&component: _components) {
         component->onDisconnect(this, reason);
     }
     _topics.clear();
@@ -264,34 +266,34 @@ void MQTTClient::onDisconnect(AsyncMqttClientDisconnectReason reason) {
 
 void MQTTClient::subscribe(MQTTComponent *component, const String &topic, uint8_t qos) {
     if (subscribeWithId(component, topic, qos) == 0) {
-        _addQueue({QUEUE_SUBSCRIBE, component, topic, qos});
+        _addQueue(MQTTQueue(QUEUE_SUBSCRIBE, component, topic, qos));
     }
 }
 
 int MQTTClient::subscribeWithId(MQTTComponent *component, const String &topic, uint8_t qos) {
-    _debug_printf_P(PSTR("MQTTClient::subscribe(%s, %s, qos %u)\n"), component ? component->getName().c_str() : PSTR("<nullptr>"), topic.c_str(), qos);
+    _debug_printf_P(PSTR("MQTTClient::subscribe(%p, %s, qos %u)\n"), component, topic.c_str(), qos);
     auto result = _client->subscribe(topic.c_str(), qos);
     if (result && component) {
-        _topics.push_back({topic, component});
+        _topics.emplace_back(MQTTTopic(topic, component));
     }
     return result;
 }
 
 void MQTTClient::unsubscribe(MQTTComponent *component, const String &topic) {
     if (unsubscribeWithId(component, topic) == 0) {
-        _addQueue({QUEUE_UNSUBSCRIBE, component, topic});
+        _addQueue(MQTTQueue(QUEUE_UNSUBSCRIBE, component, topic));
     }
 }
 
 int MQTTClient::unsubscribeWithId(MQTTComponent *component, const String &topic) {
     int result = -1;
-    _debug_printf_P(PSTR("MQTTClient::unsubscribe(%s, %s): topic in use %d\n"), component ? component->getName().c_str() : PSTR("<nullptr>"), topic.c_str(), _topicInUse(component, topic));
+    _debug_printf_P(PSTR("MQTTClient::unsubscribe(%p, %s): topic in use %d\n"), component, topic.c_str(), _topicInUse(component, topic));
     if (!_topicInUse(component, topic)) {
         result = _client->unsubscribe(topic.c_str());
     }
     if (result && component) {
-        _topics.erase(std::remove_if(_topics.begin(), _topics.end(), [component, topic](const MQTTTopic_t &mqttTopic) {
-            if (mqttTopic.component == component && mqttTopic.topic.equals(topic)) {
+        _topics.erase(std::remove_if(_topics.begin(), _topics.end(), [component, topic](const MQTTTopic &mqttTopic) {
+            if (mqttTopic.match(component, topic)) {
                 return true;
             }
             return false;
@@ -301,12 +303,12 @@ int MQTTClient::unsubscribeWithId(MQTTComponent *component, const String &topic)
 }
 
 void MQTTClient::remove(MQTTComponent *component) {
-    _debug_printf_P(PSTR("MQTTClient::remove(%s)\n"), component->getName().c_str());
-    _topics.erase(std::remove_if(_topics.begin(), _topics.end(), [this, component](const MQTTTopic_t &mqttTopic) {
-        if (mqttTopic.component == component) {
-            _debug_printf_P(PSTR("MQTTClient::remove(): topic %s in use %d\n"), mqttTopic.topic.c_str(), _topicInUse(component, mqttTopic.topic));
-            if (!_topicInUse(component, mqttTopic.topic)) {
-                unsubscribe(nullptr, mqttTopic.topic.c_str());
+    _debug_printf_P(PSTR("MQTTClient::remove(%p): topics %u\n"), component, _topics.size());
+    _topics.erase(std::remove_if(_topics.begin(), _topics.end(), [this, component](const MQTTTopic &mqttTopic) {
+        if (mqttTopic.getComponent() == component) {
+            _debug_printf_P(PSTR("MQTTClient::remove(): topic %s in use %d\n"), mqttTopic.getTopic().c_str(), _topicInUse(component, mqttTopic.getTopic()));
+            if (!_topicInUse(component, mqttTopic.getTopic())) {
+                unsubscribe(nullptr, mqttTopic.getTopic().c_str());
             }
             return true;
         }
@@ -316,7 +318,7 @@ void MQTTClient::remove(MQTTComponent *component) {
 
 bool MQTTClient::_topicInUse(MQTTComponent *component, const String &topic) {
     for(const auto &mqttTopic: _topics) {
-        if (mqttTopic.component != component && topic.equals(mqttTopic.topic)) {
+        if (mqttTopic.match(component, topic)) {
             return true;
         }
     }
@@ -364,9 +366,9 @@ void MQTTClient::onMessageRaw(char *topic, char *payload, AsyncMqttClientMessage
 
 void MQTTClient::onMessage(char *topic, char *payload, AsyncMqttClientMessageProperties properties, size_t len) {
     _debug_printf_P(PSTR("MQTTClient::onMessage(%s, %s, len %d, qos %u, dup %d, retain %d)\n"), topic, printable_string((const uint8_t *)payload, std::min(200, (int)len)).c_str(), len, properties.qos, properties.dup, properties.retain);
-    for(auto it = _topics.begin(); it != _topics.end(); ++it) {
-        if (_isTopicMatch(topic, it->topic.c_str())) {
-            it->component->onMessage(this, topic, payload, len);
+    for(auto iterator = _topics.begin(); iterator != _topics.end(); ++iterator) {
+        if (_isTopicMatch(topic, iterator->getTopic().c_str())) {
+            iterator->getComponent()->onMessage(this, topic, payload, len);
         }
     }
 }
@@ -518,10 +520,10 @@ void MQTTClient::handleWiFiEvents(uint8_t event, void *payload) {
     }
 }
 
-void MQTTClient::_addQueue(MQTTQueue_t queue) {
-    _debug_printf_P(PSTR("MQTTClient::_addQueue(type %u): topic=%s\n"), queue.type, queue.topic.c_str());
+void MQTTClient::_addQueue(MQTTQueue &&queue) {
+    _debug_printf_P(PSTR("MQTTClient::_addQueue(type %u): topic=%s\n"), queue.getType(), queue.getTopic().c_str());
 
-    _queue.push_back(queue);
+    _queue.emplace_back(queue);
     if (Scheduler.hasTimer(_queueTimer)) {
         _queueTimer->setCallCounter(0); // reset retry counter for each new queue entry
     } else {
@@ -532,20 +534,20 @@ void MQTTClient::_addQueue(MQTTQueue_t queue) {
 void MQTTClient::_queueTimerCallback(EventScheduler::TimerPtr timer) {
     _debug_printf_P(PSTR("MQTTClient::_queueTimerCallback(): attempt %u\n"), timer->getCallCounter());
 
-    _queue.erase(std::remove_if(_queue.begin(), _queue.end(), [this](const MQTTQueue_t &queue) {
-        switch(queue.type) {
+    _queue.erase(std::remove_if(_queue.begin(), _queue.end(), [this](const MQTTQueue &queue) {
+        switch(queue.getType()) {
             case QUEUE_SUBSCRIBE:
-                if (subscribeWithId(queue.component, queue.topic, queue.qos) != 0) {
+                if (subscribeWithId(queue.getComponent(), queue.getTopic(), queue.getQos()) != 0) {
                     return true;
                 }
                 break;
             case QUEUE_UNSUBSCRIBE:
-                if (unsubscribeWithId(queue.component, queue.topic) != 0) {
+                if (unsubscribeWithId(queue.getComponent(), queue.getTopic()) != 0) {
                     return true;
                 }
                 break;
             case QUEUE_PUBLISH:
-                if (publishWithId(queue.topic, queue.qos, queue.retain, queue.payload) != 0) {
+                if (publishWithId(queue.getTopic(), queue.getQos(), queue.getRetain(), queue.getPayload()) != 0) {
                     return true;
                 }
                 break;

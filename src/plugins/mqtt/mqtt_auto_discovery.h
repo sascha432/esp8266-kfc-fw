@@ -19,7 +19,7 @@ public:
         FORMAT_YAML = 1,
     } Format_t;
 
-    void create(MQTTComponent *component, Format_t format = FORMAT_JSON);
+    void create(MQTTComponent *component, uint8_t count, Format_t format);
     void addParameter(const String &name, const String &value);
 
     void addStateTopic(const String &value);

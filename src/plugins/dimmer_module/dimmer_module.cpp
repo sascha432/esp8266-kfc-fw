@@ -66,21 +66,19 @@ void Driver_DimmerModule::createAutoDiscovery(MQTTAutoDiscovery::Format_t format
     MQTTComponentHelper component(MQTTComponent::SENSOR);
 
     component.setNumber(IOT_DIMMER_MODULE_CHANNELS);
-    auto discovery = component.createAutoDiscovery(format);
+    auto discovery = component.createAutoDiscovery(0, format);
     discovery->addStateTopic(topic + F("temperature"));
     discovery->addUnitOfMeasurement(F("\u00b0C"));
     discovery->finalize();
     vector.emplace_back(MQTTComponent::MQTTAutoDiscoveryPtr(discovery));
 
-    component.setNumber(IOT_DIMMER_MODULE_CHANNELS + 1);
-    discovery = component.createAutoDiscovery(format);
+    discovery = component.createAutoDiscovery(1, format);
     discovery->addStateTopic(topic + F("vcc"));
     discovery->addUnitOfMeasurement(F("V"));
     discovery->finalize();
     vector.emplace_back(MQTTComponent::MQTTAutoDiscoveryPtr(discovery));
 
-    component.setNumber(IOT_DIMMER_MODULE_CHANNELS + 2);
-    discovery = component.createAutoDiscovery(format);
+    discovery = component.createAutoDiscovery(2, format);
     discovery->addStateTopic(topic + F("frequency"));
     discovery->addUnitOfMeasurement(F("Hz"));
     discovery->finalize();

@@ -52,6 +52,7 @@ public:
     Driver_4ChDimmer();
 
     virtual void createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector) override;
+    virtual uint8_t getAutoDiscoveryCount() const override;
     virtual void onConnect(MQTTClient *client) override;
     virtual void onMessage(MQTTClient *client, char *topic, char *payload, size_t len) override;
 

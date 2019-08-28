@@ -49,6 +49,9 @@ public:
 
     static void timerEvent(EventScheduler::TimerPtr timer);
 
+    static SensorVector &getSensors();
+    static size_t getSensorCount();
+
 private:
     void _timerEvent();
 

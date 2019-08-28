@@ -11,6 +11,7 @@
 #include "Sensor_LM75A.h"
 #include "Sensor_BME280.h"
 #include "Sensor_BME680.h"
+#include "Sensor_CCS811.h"
 
 #if DEBUG_IOT_SENSOR
 #include <debug_helper_enable.h>
@@ -47,7 +48,20 @@ void SensorPlugin::setup(PluginSetupMode_t mode) {
 #if IOT_SENSOR_HAVE_BME680
     _sensors.push_back(new Sensor_BME680(F("BME680"), IOT_SENSOR_HAVE_BME680));
 #endif
+#if IOT_SENSOR_HAVE_CCS811
+    _sensors.push_back(new Sensor_CCS811(F("CCS811"), IOT_SENSOR_HAVE_CCS811));
+#endif
+
 }
+
+SensorPlugin::SensorVector &SensorPlugin::getSensors() {
+    return plugin._sensors;
+}
+
+size_t SensorPlugin::getSensorCount() {
+    return plugin._sensors.size();
+}
+
 
 void SensorPlugin::timerEvent(EventScheduler::TimerPtr timer) {
     plugin._timerEvent();
@@ -61,7 +75,7 @@ void SensorPlugin::_timerEvent() {
         sensor->timerEvent(events);
     }
     if (events.size()) {
-        WsWebUISocket::broadcast(json);
+        WsWebUISocket::broadcast(WsWebUISocket::getSender(), json);
     }
 }
 

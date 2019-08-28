@@ -19,6 +19,8 @@
 #include "plugins.h"
 
 #include "Adafruit_BME280.h"
+#include "Adafruit_BME680.h"
+#include "Adafruit_CCS811.h"
 
 void check_if_exist_I2C(Print &output);
 
@@ -77,7 +79,9 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(SCAND, "SCAND", "Scan for devices");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CS, "I2CS", "<SDA,SCL[,speed=100kHz[,clock strech limit=usec]]>", "Setup I2C bus");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CT, "I2CT", "<address,byte[,byte][,...]>", "Send data to slave (hex encoded: ff or 0xff)");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CR, "I2CR", "<address,count>", "Request data from slave");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CBME280, "I2CBME280", "<address>", "Read temperature, humidity and pressure from BME280");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CCCS811, "I2CCCS811", "<address>[,<temperature=25>][,<humidity=55>]", "Read CCS811 sensor");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CBME680, "I2CBME680", "<address>", "Read BME680 sensor");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CBME280, "I2CBME280", "<address>", "Read BME280 sensor");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CLM75A, "I2CLM75A", "<address>", "Read temperature from LM75A");
 
 static int __toint(const char *s, uint8_t base = 10) {
@@ -134,6 +138,8 @@ void I2CScannerPlugin::atModeHelpGenerator() {
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CS));
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CT));
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CR));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CCCS811));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CBME680));
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CBME280));
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CLM75A));
 }
@@ -219,6 +225,54 @@ bool I2CScannerPlugin::atModeHandler(Stream &serial, const String &command, int8
         check_if_exist_I2C(serial);
         return true;
     }
+    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(I2CCCS811))) {
+        if (argc < 1) {
+            at_mode_print_invalid_arguments(serial);
+        }
+        else {
+            Adafruit_CCS811 ccs811; // +i2cccs811=0x5a,25.07,53
+            uint8_t humidity = 0;
+            double temperature = 0;
+            int address = __toint(argv[0]);
+            if (address == 0) {
+                address = CCS811_ADDRESS;
+            }
+            if (argc >= 2) {
+                temperature = atof(argv[1]);
+            }
+            if (temperature == 0) {
+                temperature = 25;
+            }
+            if (argc >= 3) {
+                humidity = atoi(argv[2]);
+            }
+            if (humidity == 0) {
+                humidity = 55;
+            }
+            ccs811.begin(address);
+            ccs811.setEnvironmentalData(humidity, temperature);
+            auto available = ccs811.available();
+            auto result = ccs811.readData();
+            auto error = ccs811.checkError();
+            serial.printf_P(PSTR("Reading CCS811 at 0x%02x: available()=%u, readData()=%u, checkError()=%u, eCO2 %u, TVOC %u, calculateTemperature %f\n"), address, available, result, error, ccs811.geteCO2(), ccs811.getTVOC(), ccs811.calculateTemperature());
+        }
+        return true;
+    }
+    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(I2CBME680))) {
+        if (argc != 1) {
+            at_mode_print_invalid_arguments(serial);
+        }
+        else {
+            Adafruit_BME680 bme680;
+            int address = __toint(argv[0]);
+            if (address == 0) {
+                address = 0x77;
+            }
+            bme680.begin(address);
+            serial.printf_P(PSTR("Reading BME680 at 0x%02x: %.2f °C, %.2f%%, %.2f hPa, gas %u\n"), address, bme680.readTemperature(), bme680.readHumidity(), bme680.readPressure() / 100.0, bme680.readGas());
+        }
+        return true;
+    }
     else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(I2CBME280))) {
         if (argc != 1) {
             at_mode_print_invalid_arguments(serial);
@@ -226,6 +280,9 @@ bool I2CScannerPlugin::atModeHandler(Stream &serial, const String &command, int8
         else {
             Adafruit_BME280 bme280;
             int address = __toint(argv[0]);
+            if (address == 0) {
+                address = 0x76;
+            }
             bme280.begin(address, &Wire);
             serial.printf_P(PSTR("Reading BME280 at 0x%02x: %.2f °C, %.2f%%, %.2f hPa\n"), address, bme280.readTemperature(), bme280.readHumidity(), bme280.readPressure() / 100.0);
         }
@@ -238,6 +295,9 @@ bool I2CScannerPlugin::atModeHandler(Stream &serial, const String &command, int8
         else {
             int address;
             address = __toint(argv[0]);
+            if (address == 0) {
+                address = 0x48;
+            }
             serial.printf_P(PSTR("Reading LM75A at 0x%02x: "), address);
             Wire.beginTransmission(address);
             Wire.write(0x00);

@@ -13,11 +13,7 @@
 #include <debug_helper_disable.h>
 #endif
 
-MQTTSensor::MQTTSensor() : MQTTComponent(SENSOR), _updateRate(60) {
-    auto mqttClient = MQTTClient::getClient();
-    if (mqttClient) {
-        mqttClient->registerComponent(this);
-    }
+MQTTSensor::MQTTSensor() : MQTTComponent(SENSOR), _updateRate(DEFAULT_UPDATE_RATE) {
     _nextUpdate = 0;
 }
 
@@ -54,6 +50,10 @@ void MQTTSensor::timerEvent(JsonArray &array) {
         publishState(MQTTClient::getClient());
         getValues(array);
     }
+}
+
+MQTTSensor::SensorEnumType_t MQTTSensor::getType() const {
+    return UNKNOWN;
 }
 
 #endif

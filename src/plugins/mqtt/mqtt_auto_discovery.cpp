@@ -21,8 +21,8 @@
 #include <debug_helper_disable.h>
 #endif
 
-void MQTTAutoDiscovery::create(MQTTComponent *component, MQTTAutoDiscovery::Format_t format) {
-    String name = MQTTClient::getComponentName(component->getNumber());
+void MQTTAutoDiscovery::create(MQTTComponent *component, uint8_t count, MQTTAutoDiscovery::Format_t format) {
+    String name = MQTTClient::getComponentName(component->getNumber() + count);
     String uniqueId;
 
     _format = format;

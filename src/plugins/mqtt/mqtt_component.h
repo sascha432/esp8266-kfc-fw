@@ -51,6 +51,7 @@ public:
     virtual ~MQTTComponent();
 
     virtual void createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector) = 0;
+    virtual uint8_t getAutoDiscoveryCount() const = 0;
 
     virtual void onConnect(MQTTClient *client);
     virtual void onDisconnect(MQTTClient *client, AsyncMqttClientDisconnectReason reason);
@@ -75,7 +76,9 @@ class MQTTComponentHelper : public MQTTComponent {
 public:
     MQTTComponentHelper(ComponentTypeEnum_t type);
     virtual void createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector) override;
-    MQTTAutoDiscovery *createAutoDiscovery(MQTTAutoDiscovery::Format_t format);
+    virtual uint8_t getAutoDiscoveryCount() const override;
+
+    MQTTAutoDiscovery *createAutoDiscovery(uint8_t count, MQTTAutoDiscovery::Format_t format);
 };
 
 #endif

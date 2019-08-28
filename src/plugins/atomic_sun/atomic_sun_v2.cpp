@@ -26,6 +26,9 @@
 #include "../../trailing_edge_dimmer/src/dimmer_protocol.h"
 
 Driver_4ChDimmer::Driver_4ChDimmer() : MQTTComponent(LIGHT), Dimmer_Base() {
+#if DEBUG_MQTT_CLIENT
+    debug_printf_P(PSTR("Driver_4ChDimmer(): component=%p\n"), this);
+#endif
 }
 
 void Driver_4ChDimmer::_begin() {
@@ -74,7 +77,7 @@ void Driver_4ChDimmer::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, M
         _createTopics();
     }
     auto discovery = _debug_new MQTTAutoDiscovery();
-    discovery->create(this, format);
+    discovery->create(this, 0, format);
     discovery->addStateTopic(_data.state.state);
     discovery->addCommandTopic(_data.state.set);
     discovery->addPayloadOn(FSPGM(1));
@@ -90,22 +93,20 @@ void Driver_4ChDimmer::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, M
     String topic = MQTTClient::formatTopic(-1, F("/metrics/"));
     MQTTComponentHelper component(MQTTComponent::SENSOR);
 
-    component.setNumber(IOT_DIMMER_MODULE_CHANNELS);
-    discovery = component.createAutoDiscovery(format);
+    component.setNumber(1);
+    discovery = component.createAutoDiscovery(0, format);
     discovery->addStateTopic(topic + F("temperature"));
     discovery->addUnitOfMeasurement(F("\u00b0C"));
     discovery->finalize();
     vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
 
-    component.setNumber(IOT_DIMMER_MODULE_CHANNELS + 1);
-    discovery = component.createAutoDiscovery(format);
+    discovery = component.createAutoDiscovery(1, format);
     discovery->addStateTopic(topic + F("vcc"));
     discovery->addUnitOfMeasurement(F("V"));
     discovery->finalize();
     vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
 
-    component.setNumber(IOT_DIMMER_MODULE_CHANNELS + 2);
-    discovery = component.createAutoDiscovery(format);
+    discovery = component.createAutoDiscovery(2, format);
     discovery->addStateTopic(topic + F("frequency"));
     discovery->addUnitOfMeasurement(F("Hz"));
     discovery->finalize();

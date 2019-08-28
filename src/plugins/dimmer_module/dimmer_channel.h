@@ -32,9 +32,10 @@ public:
 
     void setup(Driver_DimmerModule *dimmer, uint8_t channel);
 
-    void createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector) override;
-    void onConnect(MQTTClient *client) override;
-    void onMessage(MQTTClient *client, char *topic, char *payload, size_t len) override;
+    virtual void createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector) override;
+    virtual uint8_t getAutoDiscoveryCount() const override;
+    virtual void onConnect(MQTTClient *client) override;
+    virtual void onMessage(MQTTClient *client, char *topic, char *payload, size_t len) override;
 
     bool on();
     bool off();

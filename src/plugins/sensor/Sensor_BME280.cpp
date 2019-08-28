@@ -13,13 +13,17 @@
 #endif
 
 Sensor_BME280::Sensor_BME280(const String &name, TwoWire &wire, uint8_t address) : MQTTSensor(), _name(name), _address(address) {
+#if DEBUG_MQTT_CLIENT
+    debug_printf_P(PSTR("Sensor_BME280(): component=%p\n"), this);
+#endif
+    registerClient(this);
      _bme280.begin(address, &wire);
      _topic = MQTTClient::formatTopic(-1, F("/%s/"), _getId().c_str());
 }
 
 void Sensor_BME280::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector) {
     auto discovery = _debug_new MQTTAutoDiscovery();
-    discovery->create(this, format);
+    discovery->create(this, 0, format);
     discovery->addStateTopic(_topic);
     discovery->addUnitOfMeasurement(F("\u00b0C"));
     discovery->addValueTemplate(F("temperature"));
@@ -27,7 +31,7 @@ void Sensor_BME280::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTT
     vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
 
     discovery = _debug_new MQTTAutoDiscovery();
-    discovery->create(this, format);
+    discovery->create(this, 1, format);
     discovery->addStateTopic(_topic);
     discovery->addUnitOfMeasurement(F("%"));
     discovery->addValueTemplate(F("humidity"));
@@ -35,12 +39,16 @@ void Sensor_BME280::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTT
     vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
 
     discovery = _debug_new MQTTAutoDiscovery();
-    discovery->create(this, format);
+    discovery->create(this, 2, format);
     discovery->addStateTopic(_topic);
     discovery->addUnitOfMeasurement(F("hPa"));
     discovery->addValueTemplate(F("pressure"));
     discovery->finalize();
     vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
+}
+
+uint8_t Sensor_BME280::getAutoDiscoveryCount() const {
+    return 3;
 }
 
 void Sensor_BME280::getValues(JsonArray &array) {
@@ -65,6 +73,10 @@ void Sensor_BME280::getValues(JsonArray &array) {
 void Sensor_BME280::createWebUI(WebUI &webUI, WebUIRow **row) {
     _debug_printf_P(PSTR("Sensor_BME280::createWebUI()\n"));
 
+    if ((*row)->size() > 1) {
+        // *row = &webUI.addRow();
+    }
+
     (*row)->addSensor(_getId(F("temperature")), _name + F(" Temperature"), F("\u00b0C"));
     (*row)->addSensor(_getId(F("humidity")), _name + F(" Humidity"), F("%"));
     (*row)->addSensor(_getId(F("pressure")), _name + F(" Pressure"), F("hPa"));
@@ -72,6 +84,10 @@ void Sensor_BME280::createWebUI(WebUI &webUI, WebUIRow **row) {
 
 void Sensor_BME280::getStatus(PrintHtmlEntitiesString &output) {
     output.printf_P(PSTR("BME280 @ I2C address 0x%02x" HTML_S(br)), _address);
+}
+
+Sensor_BME280::SensorEnumType_t Sensor_BME280::getType() const {
+    return BME280;
 }
 
 void Sensor_BME280::publishState(MQTTClient *client) {

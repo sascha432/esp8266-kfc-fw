@@ -38,29 +38,71 @@
 
 class MQTTClient {
 public:
-    typedef struct {
-        String topic;
-        MQTTComponent *component;
-    } MQTTTopic_t;
-
     typedef enum : uint8_t {
         QUEUE_SUBSCRIBE = 0,
         QUEUE_UNSUBSCRIBE,
         QUEUE_PUBLISH,
     } MQTTQueueEnum_t;
 
-    typedef struct {
-        MQTTQueueEnum_t type;
-        MQTTComponent *component;
-        String topic;
-        uint8_t qos: 2;
-        uint8_t retain: 1;
-        String payload;
-    } MQTTQueue_t;
+    class MQTTTopic {
+    public:
+        MQTTTopic(const String &topic, MQTTComponent *component) : _topic(topic), _component(component) {
+        }
+        inline const String &getTopic() const {
+            return _topic;
+        }
+        inline MQTTComponent *getComponent() const {
+            return _component;
+        }
+        inline bool match(MQTTComponent *component, const String &topic) const {
+            return (component == _component) && (topic == _topic);
+        }
+    private:
+        String _topic;
+        MQTTComponent *_component;
+    };
 
-    typedef std::vector<MQTTComponent *> MQTTComponentVector;
-    typedef std::vector<MQTTTopic_t> MQTTTopicVector;
-    typedef std::vector<MQTTQueue_t> MQTTQueueVector; // this is not used for QoS at the moment
+    class MQTTQueue {
+    public:
+        MQTTQueue(MQTTQueueEnum_t type, MQTTComponent *component, const String &topic = String(), uint8_t qos = 0, uint8_t retain = 0, const String &payload = String()) :
+            _type(type),
+            _component(component),
+            _topic(topic),
+            _qos(qos),
+            _retain(retain),
+            _payload(payload) {
+        }
+        inline MQTTQueueEnum_t getType() const {
+            return _type;
+        }
+        inline MQTTComponent *getComponent() const {
+            return _component;
+        }
+        inline const String &getTopic() const {
+            return _topic;
+        }
+        inline uint8_t getQos() const {
+            return _qos;
+        }
+        inline uint8_t getRetain() const {
+            return _retain;
+        }
+        inline const String &getPayload() const {
+            return _payload;
+        }
+    private:
+        MQTTQueueEnum_t _type;
+        MQTTComponent *_component;
+        String _topic;
+        uint8_t _qos: 2;
+        uint8_t _retain: 1;
+        String _payload;
+    };
+
+    typedef std::unique_ptr<MQTTComponent> MQTTComponentPtr;
+    typedef std::vector<MQTTComponentPtr> MQTTComponentVector;
+    typedef std::vector<MQTTTopic> MQTTTopicVector;
+    typedef std::vector<MQTTQueue> MQTTQueueVector; // this is not used for QoS at the moment
 
     static const int DEFAULT_RECONNECT_TIMEOUT = 5000;
     static const int MAX_MESSAGE_SIZE = 1024;
@@ -147,7 +189,7 @@ private:
     // the payload can be quite large for auto discovery for example
     // messages might be delivered in a different sequence. use subscribe/unsubscribe/publishWithId for full control
     // to deliver messages in sequence, use QoS and callbacks (onPublish() etc... requires MQTT_USE_PACKET_CALLBACKS=1)
-    void _addQueue(MQTTQueue_t queue);
+    void _addQueue(MQTTQueue &&queue);
     // stop timer and clear queue
     void _clearQueue();
     // process queue

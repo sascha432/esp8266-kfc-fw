@@ -14,6 +14,8 @@
 #include "MQTTSensor.h"
 #include <Adafruit_BME280.h>
 
+class Sensor_CCS811;
+
 class Sensor_BME280 : public MQTTSensor {
 public:
     typedef struct {
@@ -25,13 +27,17 @@ public:
     Sensor_BME280(const String &name, TwoWire &wire, uint8_t address = 0x76);
 
     virtual void createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector) override;
+    virtual uint8_t getAutoDiscoveryCount() const override;
 
     virtual void publishState(MQTTClient *client) override;
     virtual void getValues(JsonArray &json) override;
     virtual void createWebUI(WebUI &webUI, WebUIRow **row) override;
     virtual void getStatus(PrintHtmlEntitiesString &output) override;
+    virtual SensorEnumType_t getType() const override;
 
 private:
+    friend Sensor_CCS811;
+
     String _getId(const __FlashStringHelper *type = nullptr);
     SensorData_t _readSensor();
 

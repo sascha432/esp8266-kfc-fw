@@ -52,6 +52,10 @@ MQTTAutoDiscoveryClient::~MQTTAutoDiscoveryClient() {
 void MQTTAutoDiscoveryClient::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector) {
 }
 
+uint8_t MQTTAutoDiscoveryClient::getAutoDiscoveryCount() const {
+    return 0;
+}
+
 void MQTTAutoDiscoveryClient::onConnect(MQTTClient *client) {
     _discovery.clear();
 

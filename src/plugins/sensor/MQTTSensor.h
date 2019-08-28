@@ -14,10 +14,29 @@
 
 class MQTTSensor : public MQTTComponent {
 public:
+    typedef enum {
+        UNKNOWN = 0,
+        LM75A,
+        BME280,
+        BME680,
+        CCS811
+    } SensorEnumType_t;
+
+    const uint8_t DEFAULT_UPDATE_RATE = 60;
+
     MQTTSensor();
     virtual ~MQTTSensor();
 
-    // virtual void createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector) override;
+    template <class T>
+    void registerClient(T client) {
+        auto mqttClient = MQTTClient::getClient();
+        if (mqttClient) {
+            mqttClient->registerComponent(client);
+        }
+    }
+
+    //virtual void createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector) override;
+    //virtual uint8_t getAutoDiscoveryCount() const override;
     virtual void onConnect(MQTTClient *client) override;
     virtual void onMessage(MQTTClient *client, char *topic, char *payload, size_t len) override;
 
@@ -26,6 +45,7 @@ public:
     virtual void createWebUI(WebUI &webUI, WebUIRow **row) = 0;
     //virtual void getStatus(PrintHtmlEntitiesString &output) override;
     virtual void getStatus(PrintHtmlEntitiesString &output) = 0;
+    virtual SensorEnumType_t getType() const;
 
     void timerEvent(JsonArray &array);
 

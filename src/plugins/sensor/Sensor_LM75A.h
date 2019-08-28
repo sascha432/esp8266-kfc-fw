@@ -13,18 +13,24 @@
 #include "plugins.h"
 #include "MQTTSensor.h"
 
+class Sensor_CCS811;
+
 class Sensor_LM75A : public MQTTSensor {
 public:
     Sensor_LM75A(const JsonString &name, TwoWire &wire, uint8_t address = 0x48);
 
     virtual void createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector) override;
+    virtual uint8_t getAutoDiscoveryCount() const override;
 
     virtual void publishState(MQTTClient *client) override;
     virtual void getValues(JsonArray &json) override;
     virtual void createWebUI(WebUI &webUI, WebUIRow **row) override;
     virtual void getStatus(PrintHtmlEntitiesString &output) override;
+    virtual SensorEnumType_t getType() const override;
 
 private:
+    friend Sensor_CCS811;
+
     String _getId();
     float _readSensor();
 

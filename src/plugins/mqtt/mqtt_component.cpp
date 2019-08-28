@@ -66,9 +66,13 @@ MQTTComponentHelper::MQTTComponentHelper(ComponentTypeEnum_t type) : MQTTCompone
 void MQTTComponentHelper::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector) {
 }
 
-MQTTAutoDiscovery *MQTTComponentHelper::createAutoDiscovery(MQTTAutoDiscovery::Format_t format) {
+uint8_t MQTTComponentHelper::getAutoDiscoveryCount() const {
+    return 0;
+}
+
+MQTTAutoDiscovery *MQTTComponentHelper::createAutoDiscovery(uint8_t count, MQTTAutoDiscovery::Format_t format) {
     auto discovery = _debug_new MQTTAutoDiscovery();
-    discovery->create(this, format);
+    discovery->create(this, count, format);
     return discovery;
 }
 

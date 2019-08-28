@@ -4,6 +4,9 @@
 
 #pragma once
 
+// Auto Discovery Client for MQTT
+// The client collects auto discovery information for the topic "mqtt_discovery_prefix"
+
 #if MQTT_SUPPORT
 
 #include <Arduino_compat.h>
@@ -41,10 +44,11 @@ public:
     virtual ~MQTTAutoDiscoveryClient();
 
     virtual void createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector);
+    virtual uint8_t getAutoDiscoveryCount() const override;
 
-    void onConnect(MQTTClient *client);
-    void onDisconnect(MQTTClient *client, AsyncMqttClientDisconnectReason reason);
-    void onMessage(MQTTClient *client, char *topic, char *payload, size_t len);
+    virtual void onConnect(MQTTClient *client) override;
+    virtual void onDisconnect(MQTTClient *client, AsyncMqttClientDisconnectReason reason) override;
+    virtual void onMessage(MQTTClient *client, char *topic, char *payload, size_t len) override;
 
     inline DiscoveryVector &getDiscovery() {
         return _discovery;

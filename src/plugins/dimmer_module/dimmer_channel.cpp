@@ -17,6 +17,9 @@
 #endif
 
 DimmerChannel::DimmerChannel() : MQTTComponent(LIGHT) {
+#if DEBUG_MQTT_CLIENT
+    debug_printf_P(PSTR("DimmerChannel(): component=%p\n"), this);
+#endif
     memset(&_data, 0, sizeof(_data));
     _storedBrightness = 0;
 }
@@ -31,7 +34,7 @@ void DimmerChannel::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTT
         _createTopics();
     }
     auto discovery = _debug_new MQTTAutoDiscovery();
-    discovery->create(this, format);
+    discovery->create(this, _channel, format);
     discovery->addStateTopic(_data.state.state);
     discovery->addCommandTopic(_data.state.set);
     discovery->addPayloadOn(FSPGM(1));

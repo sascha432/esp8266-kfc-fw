@@ -26,6 +26,7 @@ $.__debug_wrapper = {
 };
 
 $.getSessionId = function() {
+    console.log("debug $.getSessionId()");
     var sid = $.__debug_wrapper.getSessionId();
     if (sid == "" || sid == undefined)  {
         sid =  $.___debug_sid;
@@ -51,5 +52,5 @@ $.visible_password_options.always_visible  = true;
 $.visible_password_options.protected = false;
 
 // $.___debug_host = 'kfc10f41a.local';
-$.___debug_host = 'kfc4f22d0.local';
-$.___debug_sid = 'e33ed8c2130320bd786f2411160e7a3399e28aa897e175839e45138e';
+$.___debug_host = '192.168.0.56';
+$.___debug_sid = 'd7b264b26a72903f812990ba02b1d7999ad37b6893e6d98f33430d3f';

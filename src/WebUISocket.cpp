@@ -22,7 +22,6 @@
 #include <debug_helper_disable.h>
 #endif
 
-
 PROGMEM_STRING_DEF(webui_socket_uri, "/webui_ws");
 
 AsyncWebSocket *wsWebUI = nullptr;
@@ -39,99 +38,23 @@ void WsWebUISocket::setup() {
     _debug_printf_P(PSTR("Web socket for UI running on port %u\n"), config._H_GET(Config().http_port));
 }
 
-// void WsWebUISocket::send(AsyncWebSocketClient *client, const String &id, bool state, const String &value) {
-//     JsonUnnamedObject json;
-//     json.add(JJ(type), JJ(ue));
-//     auto &events = json.addArray(JJ(events), 1);
-//     auto &event = events.addObject(1);
-//     event.add(JJ(id), id.c_str());
-//     event.add(JJ(value), value.c_str());
-//     event.add(JJ(state), state);
-//     if (client) {
-//         send(client, json);
-//     } else {
-//         broadcast(json);
-//     }
-// }
-
-// void WsWebUISocket::send(AsyncWebSocketClient *client, const String &id, bool state) {
-//     JsonUnnamedObject json;
-//     json.add(JJ(type), JJ(ue));
-//     auto &events = json.addArray(JJ(events), 1);
-//     auto &event = events.addObject(1);
-//     event.add(JJ(id), id.c_str());
-//     event.add(JJ(state), state);
-//     if (client) {
-//         send(client, json);
-//     } else {
-//         broadcast(json);
-//     }
-// }
-
-// void WsWebUISocket::send(AsyncWebSocketClient *client, const String &id, const String &value) {
-//     JsonUnnamedObject json;
-//     json.add(JJ(type), JJ(ue));
-//     auto &events = json.addArray(JJ(events), 1);
-//     auto &event = events.addObject(1);
-//     event.add(JJ(id), id.c_str());
-//     event.add(JJ(value), value.c_str());
-//     if (client) {
-//         send(client, json);
-//     } else {
-//         broadcast(json);
-
-//     }
-// }
-
 void WsWebUISocket::send(AsyncWebSocketClient *client, JsonUnnamedObject &json) {
-    auto buffer = wsWebUI->makeBuffer(json.length());
+    auto server = client->server();
+    auto buffer = server->makeBuffer(json.length());
     assert(JsonBuffer(json).fillBuffer(buffer->get(), buffer->length()) == buffer->length());
     client->text(buffer);
 }
 
-
-// void WsWebUISocket::_broadcast(const String &message) {
-//     _debug_printf_P(PSTR("WsWebUISocket::broadcast(%s)\n"), message.c_str());
-
-//     if (WsClientManager::getWsClientCount(true)) {
-//         for(const auto &pair: WsClientManager::getWsClientManager()->getClients()) {
-//             if (pair.wsClient != _sender && pair.socket->server() == wsWebUI && pair.socket->status() == WS_CONNECTED && pair.wsClient->isAuthenticated()) {
-//                 pair.socket->text(message);
-//             }
-//         }
-//     }
-// }
-
-void WsWebUISocket::_broadcast(AsyncWebSocketMessageBuffer *buffer) {
-    _debug_printf_P(PSTR("WsWebUISocket::broadcast(%s)\n"), buffer->get());
-
-    if (WsClientManager::getWsClientCount(true)) {
-        buffer->lock();
-        for(const auto &pair: WsClientManager::getWsClientManager()->getClients()) {
-            if (pair.wsClient != _sender && pair.socket->server() == wsWebUI && pair.socket->status() == WS_CONNECTED && pair.wsClient->isAuthenticated()) {
-                pair.socket->text(buffer);
-            }
-        }
-        buffer->unlock();
-        wsWebUI->_cleanBuffers();
-    }
-}
-
-void WsWebUISocket::broadcast(JsonUnnamedObject &json) {
+void WsWebUISocket::broadcast(WsWebUISocket *sender, JsonUnnamedObject &json) {
     auto buffer = wsWebUI->makeBuffer(json.length());
     assert(JsonBuffer(json).fillBuffer(buffer->get(), buffer->length()) == buffer->length());
-    _broadcast(buffer);
+    WsClient::broadcast(wsWebUI, sender, buffer);
 }
 
 
 WsClient *WsWebUISocket::getInstance(AsyncWebSocketClient *socket) {
-
     _debug_println(F("WsWebUISocket::getInstance()"));
-    WsClient *wsClient = WsClientManager::getWsClientManager()->getWsClient(socket);
-    if (!wsClient) {
-        wsClient = _debug_new WsWebUISocket(socket);
-    }
-    return wsClient;
+    return _debug_new WsWebUISocket(socket);
 }
 
 
@@ -171,7 +94,7 @@ void WsWebUISocket::onText(uint8_t *data, size_t len) {
         if (strcasecmp_P(command.c_str(), PSTR("+get_values")) == 0) {
             sendValues(client);
         }
-        if (strcasecmp_P(command.c_str(), PSTR("+set_state")) == 0) {
+        else if (strcasecmp_P(command.c_str(), PSTR("+set_state")) == 0) {
             bool state = args[1].toInt() || (strcasecmp_P(args[1].c_str(), PSTR("true")) == 0);
             for(auto plugin: plugins) {
                 if (plugin->hasWebUI()) {

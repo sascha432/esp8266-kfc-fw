@@ -27,7 +27,7 @@
             "#if !MQTT_SUPPORT": "./Resources/html/mqtt.html",
             "#if !SYSLOG": "./Resources/html/syslog.html",
             "#if !NTP_CLIENT": [ "./Resources/html/ntp.html", "./Resources/html/timezone.html" ],
-            "#if !HTTP2SERIAL": [ "./Resources/html/serial_console.html", "./lib/KFCWebBuilder/Resources/js/selectize.min.js" ],
+            "#if !HTTP2SERIAL": [ "./Resources/html/serial_console.html", "./lib/KFCWebBuilder/Resources/js/selectize.min.js", "./Resources/js/http2serial.js" ],
             "#if !PING_MONITOR":  [ "./Resources/html/ping.html", "./Resources/html/ping_monitor.html" ],
             "#if !HUE_EMULATION": "./Resources/html/hue.html",
             "#if !REST_API_SUPPORT": "./Resources/html/rest_api.html",
@@ -49,6 +49,7 @@
                         "./Resources/js/sha512.js",
                         "./Resources/js/main.min.js",
                         "./Resources/js/ws_console.js",
+                        "./Resources/js/http2serial.js",
                         "./Resources/js/webui.js"
                     ]
                 },

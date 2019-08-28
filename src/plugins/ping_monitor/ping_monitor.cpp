@@ -24,6 +24,7 @@
 #endif
 
 PingMonitorTask *pingMonitorTask = nullptr;
+AsyncWebSocket *wsPing = nullptr;
 
 void ping_monitor_event_handler(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len) {
     WsPingClient::onWsEvent(server, client, (int)type, data, len, arg, WsPingClient::getInstance);
@@ -31,21 +32,11 @@ void ping_monitor_event_handler(AsyncWebSocket *server, AsyncWebSocketClient *cl
 
 void ping_monitor_install_web_server_hook() {
     if (get_web_server_object()) {
-        AsyncWebSocket *ws_ping = _debug_new AsyncWebSocket(F("/ping"));
-        ws_ping->onEvent(ping_monitor_event_handler);
-        web_server_add_handler(ws_ping);
+        wsPing = _debug_new AsyncWebSocket(F("/ping"));
+        wsPing->onEvent(ping_monitor_event_handler);
+        web_server_add_handler(wsPing);
         _debug_printf_P(PSTR("Web socket for ping running on port %u\n"), config._H_GET(Config().http_port));
     }
-}
-
-WsClient *WsPingClient::getInstance(AsyncWebSocketClient *socket) {
-
-    _debug_println(F("WsPingClient::getInstance()"));
-    WsClient *wsClient = WsClientManager::getWsClientManager()->getWsClient(socket);
-    if (!wsClient) {
-        wsClient = _debug_new WsPingClient(socket);
-    }
-    return wsClient;
 }
 
 bool ping_monitor_resolve_host(char *host, IPAddress &addr, PrintString &errorMessage) {
@@ -80,6 +71,17 @@ PROGMEM_STRING_DEF(ping_monitor_end_response, "Total answer from %s sent %d rece
 PROGMEM_STRING_DEF(ping_monitor_ethernet_detected, "Detected eth address %s");
 PROGMEM_STRING_DEF(ping_monitor_request_timeout, "Request timed out.");
 
+WsPingClient::WsPingClient(AsyncWebSocketClient *client) : WsClient(client),  _loopFunction(nullptr) {
+}
+
+WsPingClient::~WsPingClient() {
+    _cancelPing();
+}
+
+WsClient *WsPingClient::getInstance(AsyncWebSocketClient *socket) {
+    return _debug_new WsPingClient(socket);
+}
+
 void WsPingClient::onText(uint8_t *data, size_t len) {
 
     _debug_printf_P(PSTR("WsPingClient::onText(%p, %d)\n"), data, len);
@@ -103,14 +105,21 @@ void WsPingClient::onText(uint8_t *data, size_t len) {
                 int count = atoi(count_str);
                 int timeout = atoi(timeout_str);
 
-                _ping.cancel();
+                _cancelPing();
 
-                // TODO this is pretty nasty. maybe the web socket is blocking the dns resolver
                 // WiFi.hostByName() fails with -5 (INPROGRESS) if called inside onText()
-                // assuming that there cannot be any onDisconnect or onError event before the main loop, otherwise "this" won't be valid anymore
                 host = strdup(host);
                 if (host) {
-                    // call in the main loop
+                    // host is used to identify the lambda function
+                    _loopFunction = host;
+
+                    // we need to create a new instance that survives the lifetime of WsPingClient, since
+                    // the AsyncPing timer does not get cancelled when AsyncPing gets destroyed and probably
+                    // calling send_packet() with ping_pcb = nullptr causing a crash
+                    // _ping = new AsyncPing();
+                    // auto ping = _ping;
+
+                    // called in the main loop
                     LoopFunctions::add([this, client, host, count, timeout]() {
 
                         _debug_printf_P(PSTR("Ping host %s count %d timeout %d\n"), host, count, timeout);
@@ -119,51 +128,43 @@ void WsPingClient::onText(uint8_t *data, size_t len) {
                         if (ping_monitor_resolve_host(host, addr, message)) {
 
                             _ping.on(true, [client](const AsyncPingResponse &response) {
-                                auto mgr = WsClientManager::getWsClientManager();
-                                PrintString str;
+                                _debug_println(F("_ping.on(true)"));
                                 IPAddress addr(response.addr);
                                 if (response.answer) {
-                                    str.printf_P(SPGM(ping_monitor_response), response.size, addr.toString().c_str(), response.icmp_seq, response.ttl, response.time);
-                                    mgr->safeSend(client, str);
+                                    WsClient::safeSend(wsPing, client, PrintString(FSPGM(ping_monitor_response), response.size, addr.toString().c_str(), response.icmp_seq, response.ttl, response.time));
                                 } else {
-                                    mgr->safeSend(client, FSPGM(ping_monitor_request_timeout));
+                                    WsClient::safeSend(wsPing, client, FSPGM(ping_monitor_request_timeout));
                                 }
                                 return false;
                             });
 
                             _ping.on(false, [client](const AsyncPingResponse &response) {
-                                auto mgr = WsClientManager::getWsClientManager();
-                                PrintString str;
+                                _debug_println(F("_ping.on(false)"));
                                 IPAddress addr(response.addr);
-                                str.printf_P(SPGM(ping_monitor_end_response), addr.toString().c_str(), response.total_sent, response.total_recv, response.total_time);
-                                mgr->safeSend(client, str);
+                                WsClient::safeSend(wsPing, client, PrintString(FSPGM(ping_monitor_end_response), addr.toString().c_str(), response.total_sent, response.total_recv, response.total_time));
                                 if (response.mac) {
-                                    str.printf_P(SPGM(ping_monitor_ethernet_detected), mac2String(response.mac->addr).c_str());
-                                    mgr->safeSend(client, str);
+                                    WsClient::safeSend(wsPing, client, PrintString(FSPGM(ping_monitor_ethernet_detected), mac2String(response.mac->addr).c_str()));
                                 }
                                 return true;
                             });
 
                             ping_monitor_begin(&_ping, host, addr, count, timeout, message);
-                            WsClientManager::getWsClientManager()->safeSend(client, message);
+                            WsClient::safeSend(wsPing, client, message);
 
                         } else {
-                            WsClientManager::getWsClientManager()->safeSend(client, message);
+                            WsClient::safeSend(wsPing, client, message);
                         }
 
                         free(host);
 
-                        LoopFunctions::remove(reinterpret_cast<LoopFunctions::CallbackPtr_t>(host)); // host is used to identify the lambda function
+                        _loopFunction = nullptr;
+                        LoopFunctions::remove(reinterpret_cast<LoopFunctions::CallbackPtr_t>(host));
 
                     }, reinterpret_cast<LoopFunctions::CallbackPtr_t>(host));
                 }
             }
         }
     }
-}
-
-WsPingClient::~WsPingClient() {
-    _cancelPing();
 }
 
 AsyncPing &WsPingClient::getPing() {
@@ -179,7 +180,25 @@ void WsPingClient::onError(WsErrorType type, uint8_t *data, size_t len) {
 }
 
 void WsPingClient::_cancelPing() {
-    _debug_println(F("WsPingClient::_cancelPing()"));
+    _debug_printf_P(PSTR("WsPingClient::_cancelPing(): _loopFunction=%p\n"), _loopFunction);
+    if (_loopFunction) {
+        LoopFunctions::remove(reinterpret_cast<LoopFunctions::CallbackPtr_t>(_loopFunction));
+        free(_loopFunction);
+        _loopFunction = nullptr;
+    }
+#if DEBUG_PING_MONITOR
+    _ping.on(true, [](const AsyncPingResponse &response) {
+        _debug_println(F("_ping.on(true): callback removed"));
+        return false;
+    });
+    _ping.on(false, [](const AsyncPingResponse &response) {
+        _debug_println(F("_ping.on(false): callback removed"));
+        return false;
+    });
+#else
+    _ping.on(true, nullptr);
+    _ping.on(false, nullptr);
+#endif
     _ping.cancel();
 }
 

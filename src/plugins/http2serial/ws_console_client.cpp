@@ -16,18 +16,14 @@
 #endif
 
 WsClient *WsConsoleClient::getInstance(AsyncWebSocketClient *socket) {
-
-    WsClient *wsClient = WsClientManager::getWsClientManager()->getWsClient(socket);
-    if (!wsClient) {
-        wsClient = _debug_new WsConsoleClient(socket);
-    }
-    return wsClient;
+    return _debug_new WsConsoleClient(socket);
 }
 
 void WsConsoleClient::onAuthenticated(uint8_t *data, size_t len) {
     _debug_printf_P(PSTR("WsConsoleClient::onAuthenticated(%s, %d)\n"), printable_string(data, std::min((size_t)32, len)).c_str(), len);
 #if AT_MODE_SUPPORTED
     StreamString commands;
+    commands.print(F("+CMDS="));
     at_mode_print_command_string(commands, '\t');
     getClient()->text(commands);
 #endif
@@ -48,7 +44,8 @@ void WsConsoleClient::onError(WsConsoleClient::WsErrorType type, uint8_t *data, 
 void WsConsoleClient::onText(uint8_t *data, size_t len) {
     auto http2serial = Http2Serial::getInstance();
     if (http2serial) {
-        http2serial->broadcast(this, data, len); // send received text to all other clients
+        WsClient::broadcast(nullptr, this, reinterpret_cast<const char *>(data), len);
+        // http2serial->broadcast(this, data, len); // send received text to all other clients
         // http2serial->broadcast(data, len); // send received text to all clients = echo mode
         http2serial->getSerialHandler()->receivedFromRemote(nullptr, data, len); // send to serial
     }

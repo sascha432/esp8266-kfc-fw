@@ -29,14 +29,11 @@ AsyncWebSocket *wsSerialConsole = nullptr;
 
 Http2Serial::Http2Serial() {
     _locked = false;
-#ifdef HTTP2SERIAL_BAUD
-    if (KFC_SERIAL_RATE != HTTP2SERIAL_BAUD) {
-        _debug_printf_P(PSTR("Reconfiguring serial port to %d baud\n"), HTTP2SERIAL_BAUD);
-        Serial.flush();
-        Serial.begin(HTTP2SERIAL_BAUD);
-    }
+#if defined(HTTP2SERIAL_BAUD) && HTTP2SERIAL_BAUD != KFC_SERIAL_RATE
+    _debug_printf_P(PSTR("Reconfiguring serial port to %d baud\n"), HTTP2SERIAL_BAUD);
+    Serial.flush();
+    Serial.begin(HTTP2SERIAL_BAUD);
 #endif
-    //_serialWrapper = &SerialHandler::getInstance().getWrapper();
     _serialHandler = &SerialHandler::getInstance();
 #if AT_MODE_SUPPORTED && HTTP2SERIAL_DISABLE_AT_MODE
     disable_at_mode();
@@ -44,21 +41,15 @@ Http2Serial::Http2Serial() {
     resetOutputBufferTimer();
     _outputBufferEnabled = true;
 
-#if HTTP2SERIAL_SERIAL_HANDLER
-    LoopFunctions::add(Http2Serial::inputLoop);
-#endif
     LoopFunctions::add(Http2Serial::outputLoop);
     _serialHandler->addHandler(onData, SerialHandler::RECEIVE|SerialHandler::LOCAL_TX); // RECEIVE=data received by Serial, LOCAL_TX=data sent to Serial
 }
 
 
 Http2Serial::~Http2Serial() {
-#if HTTP2SERIAL_SERIAL_HANDLER
-    LoopFunctions::remove(Http2Serial::inputLoop);
-#endif
     LoopFunctions::remove(Http2Serial::outputLoop);
     _serialHandler->removeHandler(onData);
-#ifdef HTTP2SERIAL_BAUD
+#if defined(HTTP2SERIAL_BAUD) && HTTP2SERIAL_BAUD != KFC_SERIAL_RATE
     Serial.flush();
     Serial.begin(KFC_SERIAL_RATE);
 #endif
@@ -67,27 +58,14 @@ Http2Serial::~Http2Serial() {
 #endif
 }
 
-void Http2Serial::broadcast(WsConsoleClient *sender, const uint8_t *message, size_t len) {
-
-    if (WsClientManager::getWsClientCount(true)) {
-        for(const auto &pair: WsClientManager::getWsClientManager()->getClients()) {
-            // Serial.printf_P(PSTR("status %d, isSender %d, auth %d\n"), pair.socket->status(), pair.wsClient != sender, pair.wsClient->isAuthenticated());
-            if (pair.socket->server() == wsSerialConsole && pair.socket->status() == WS_CONNECTED && pair.wsClient != sender && pair.wsClient->isAuthenticated()) {
-                //TODO esp32 message are stuck in the queue
-                pair.socket->text(reinterpret_cast<const char *>(message), len);
-            }
-        }
-    }
-}
-
 /**
  * The output buffer has a small time delay to combine multiple characters from the console into a single web socket message
  */
 void Http2Serial::broadcastOutputBuffer() {
+    // os_printf("Http2Serial::broadcastOutputBuffer(%d)\n", _outputBuffer.length());
 
-    //os_printf("Http2Serial::broadcastOutputBuffer(%d)\n", _outputBuffer.length());
     if (_outputBuffer.length()) {
-        broadcast(_outputBuffer);
+        WsClient::broadcast(wsSerialConsole, nullptr, _outputBuffer.getConstChar(), _outputBuffer.length());
         _outputBuffer.clear();
     }
     resetOutputBufferTimer();
@@ -96,15 +74,14 @@ void Http2Serial::broadcastOutputBuffer() {
 void Http2Serial::writeOutputBuffer(const uint8_t *buffer, size_t len) {
 
     if (!_outputBufferEnabled) {
-        // Serial.println(F("_outputBufferEnabled=false"));
         return;
     }
 
-    const uint8_t *ptr = buffer;
+    auto ptr = buffer;
     for(;;) {
         int space = SERIAL_BUFFER_MAX_LEN - _outputBuffer.length();
         if (space > 0) {
-            if (space >= (int)len) {
+            if ((size_t)space >= len) {
                 space = len;
             }
             _outputBuffer.write(ptr, space);
@@ -150,6 +127,7 @@ void Http2Serial::outputLoop() {
 }
 
 void Http2Serial::onData(uint8_t type, const uint8_t *buffer, size_t len) {
+    os_printf("onData(%u, %*.*s)\n", type, len, len, buffer);
     // Serial.printf_P(PSTR("Http2Serial::onData(%d, %p, %d): instance %p, locked %d\n"), type, buffer, len, Http2Serial::_instance, Http2Serial::_instance ? Http2Serial::_instance->_locked : -1);
     if (Http2Serial::_instance && !Http2Serial::_instance->_locked) {
         Http2Serial::_instance->_locked = true;
@@ -163,6 +141,7 @@ Http2Serial *Http2Serial::getInstance() {
 }
 
 void Http2Serial::createInstance() {
+    destroyInstance();
     if (!_instance) {
         _instance = _debug_new Http2Serial();
     }
@@ -187,7 +166,7 @@ class Http2SerialPlugin : public PluginComponent {
 public:
     Http2SerialPlugin() {
         register_plugin(this);
-    }        
+    }
     PGM_P getName() const;
     PluginPriorityEnum_t getSetupPriority() const override;
     void setup(PluginSetupMode_t mode) override;

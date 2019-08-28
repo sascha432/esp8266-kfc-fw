@@ -23,10 +23,10 @@ public:
     virtual ~SerialWrapper() {
     }
 
-    void setSerial(Stream &serial) {
+    inline void setSerial(Stream &serial) {
         _serial = serial;
     }
-    Stream &getSerial() const {
+    inline Stream &getSerial() const {
         return _serial;
     }
 
@@ -39,13 +39,17 @@ public:
     virtual void flush() override;
 #endif
 
-    virtual int available() override {
+    virtual int available() override;
+    virtual int read() override;
+    virtual int peek() override;
+
+    inline int __available() {
         return _serial.available();
     }
-    virtual int read() override {
+    inline int __read() {
         return _serial.read();
     }
-    virtual int peek() override {
+    inline int __peek() {
         return _serial.peek();
     }
 
@@ -56,7 +60,7 @@ private:
 
 class SerialHandler {
 public:
-    typedef enum {
+    typedef enum : uint8_t {
         RECEIVE     = 0x01,
         TRANSMIT    = 0x02,
         REMOTE_RX   = 0x04,
@@ -65,14 +69,31 @@ public:
 
     typedef void (* SerialHandlerCallback_t)(uint8_t type, const uint8_t *buffer, size_t len);
 
-    typedef struct {
-        SerialHandlerCallback_t cb;
-        uint8_t flags;
-    } SerialHandler_t;
+    class Callback {
+    public:
+        Callback(SerialHandlerCallback_t callback, uint8_t flags) : _callback(callback), _flags(flags) {
+        }
+        inline bool operator ==(SerialHandlerCallback_t callback) const {
+            return _callback == callback;
+        }
+        inline SerialHandlerCallback_t getCallback() const {
+            return _callback;
+        }
+        inline uint8_t getFlags() const {
+            return _flags;
+        }
+        inline bool hasType(SerialDataType_t type) const {
+            return (_flags & type);
+        }
+        inline void invoke(uint8_t type, const uint8_t *buffer, size_t len) const {
+            return _callback(type, buffer, len);
+        }
+    private:
+        SerialHandlerCallback_t _callback;
+        uint8_t _flags;
+    };
 
-    typedef std::vector<SerialHandler_t> HandlersVector;
-
-    static SerialHandler &getInstance();
+    typedef std::vector<Callback> HandlersVector;
 
 private:
     SerialHandler(SerialWrapper &wrapper);
@@ -97,11 +118,14 @@ public:
     void writeToReceive(SerialDataType_t type, SerialHandlerCallback_t callback, const uint8_t *buffer, size_t len);
     void receivedFromRemote(SerialHandlerCallback_t callback, const uint8_t *buffer, size_t len);
 
-    Stream &getSerial() const {
+    inline Stream &getSerial() const {
         return _wrapper.getSerial();
     }
-    SerialWrapper &getWrapper() const {
+    inline SerialWrapper &getWrapper() const {
         return _wrapper;
+    }
+    inline static SerialHandler &getInstance() {
+        return *SerialHandler::_instance;
     }
 
 private:

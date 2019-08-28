@@ -79,7 +79,7 @@ typedef struct {
 void at_mode_setup();
 void at_mode_add_help(const ATModeCommandHelp_t *help);
 void serial_handle_event(String command);
-String at_mode_print_command_string(Stream &output, char separator, bool trailingSeparator = true);
+String at_mode_print_command_string(Stream &output, char separator);
 void at_mode_serial_input_handler(uint8_t type, const uint8_t *buffer, size_t len);
 void at_mode_print_invalid_arguments(Stream &output);
 void at_mode_print_ok(Stream &output);

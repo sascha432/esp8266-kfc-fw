@@ -14,29 +14,7 @@ StreamWrapper::StreamWrapper(Stream *output, Stream *input) {
     setInput(input);
 }
 
-#if HAVE_MYSERIAL_AND_DEBUGSERIAL
-
-extern Stream &MySerial;
-extern Stream &DebugSerial;
-
-StreamWrapper::StreamWrapper(Stream *output, Stream *input, bool setWrapperAsDefault) : StreamWrapper(output, input) {
-    if (setWrapperAsDefault) {
-        MySerial = *this;
-        DebugSerial = *this;
-    }
-}
-
-#endif
-
 StreamWrapper::~StreamWrapper() {
-#if HAVE_MYSERIAL_AND_DEBUGSERIAL
-    if (&MySerial == this) {
-        MySerial = Serial;
-    }
-    if (&DebugSerial == this) {
-        DebugSerial = Serial;
-    }
-#endif
     clear();
 }
 

@@ -28,230 +28,6 @@
 #include <debug_helper_disable.h>
 #endif
 
-WsClientManager *WsClientManager::wsClientManager = nullptr;
-
-String web_socket_getStatus() {
-    PrintString out;
-    return out;
-}
-
-WsClientManager *WsClientManager::getWsClientManager() {
-    if (!wsClientManager) {
-        wsClientManager = _debug_new WsClientManager();
-    }
-    return wsClientManager;
-}
-
-void WsClientManager::removeWsClient(WsClient *wsClient) {
-    wsClientManager->remove(wsClient);
-    if (wsClientManager->getClientCount() == 0) {
-        delete wsClientManager;
-        wsClientManager = nullptr;
-    }
-}
-
-int WsClientManager::getWsClientCount(bool isAuthenticated) {
-    if (!wsClientManager) {
-        return 0;
-    }
-    return wsClientManager->getClientCount(isAuthenticated);
-}
-
-WsClient *WsClientManager::getWsClient(AsyncWebSocketClient *socket) {
-    if (!wsClientManager) {
-        return nullptr;
-    }
-    return wsClientManager->getClient(socket);
-}
-
-
-
-WsClientManager::WsClientManager() {
-}
-
-WsClientManager::~WsClientManager() {
-    for(auto &client: _list) {
-        setClientAuthenticated(client.wsClient, false);
-        delete client.wsClient;
-    }
-    _list.clear();
-#if DEBUG_WEB_SOCKETS
-    if (_authenticated.size() != 0) {
-        debug_println(F("WsClientManager::~WsClientManager() manager still has authenticated clients attached"));
-        panic();
-    }
-#endif
-}
-
-#if DEBUG_WEB_SOCKETS
-void WsClientManager::_displayStats() {
-#if DEBUG_WEB_SOCKETS
-
-    debug_printf_P(PSTR("WsClientManager::_displayStats() Clients connected %d, authenticated %d\n"), getClientCount(false), getClientCount(true));
-#if HTTP2SERIAL
-    debug_printf_P(PSTR("WsClientManager::_displayStats() Http2Serial enabled, object %p\n"), Http2Serial::getInstance());
-#endif
-
-#endif
-}
-#endif
-
-
-void WsClientManager::add(WsClient *wsClient, AsyncWebSocketClient *socket) {
-    _list.push_back({ wsClient, socket });
-#if DEBUG_WEB_SOCKETS
-    _displayStats();
-#endif
-}
-
-void WsClientManager::remove(WsClient *wsClient) {
-    _list.erase(std::remove_if(_list.begin(), _list.end(), [&wsClient](const WsClientPair &pair) {
-        return (pair.wsClient == wsClient);
-    }));
-    if (wsClient->isAuthenticated()) {
-        setClientAuthenticated(wsClient, false);
-    }
-    delete wsClient;
-#if DEBUG_WEB_SOCKETS
-    _displayStats();
-#endif
-}
-
-void WsClientManager::remove(AsyncWebSocketClient *socket) {
-    _list.erase(std::remove_if(_list.begin(), _list.end(), [&socket, this](const WsClientPair &pair) {
-        if (pair.socket == socket) {
-            if (pair.wsClient->isAuthenticated()) {
-                this->setClientAuthenticated(pair.wsClient, false);
-            }
-            delete pair.wsClient;
-            return true;
-        } else {
-            return false;
-        }
-    }), _list.end());
-#if DEBUG_WEB_SOCKETS
-    _displayStats();
-#endif
-}
-
-WsClient *WsClientManager::getClient(AsyncWebSocketClient *socket) {
-    for(const auto &pair: _list) {
-        if (pair.socket == socket) {
-            return pair.wsClient;
-        }
-    }
-    return nullptr;
-}
-
-bool WsClientManager::safeSend(AsyncWebSocketClient *socket, const String &message) {
-    auto wsClient = getClient(socket);
-    if (wsClient) {
-        socket->text(message);
-    }
-    _debug_printf_P(PSTR("WsClientManager::safeSend(%p, %s): invalid socket\n"), socket, message.c_str());
-    return wsClient != nullptr;
-}
-
-int WsClientManager::getClientCount(bool isAuthenticated) {
-    if (isAuthenticated) {
-#if DEBUG
-        size_t count = 0;
-        for(const auto &pair: _list) {
-            if (pair.wsClient->isAuthenticated()) {
-                count++;
-            }
-        }
-        if (count != _authenticated.size()) {
-            debug_printf_P(PSTR("WsClientManager::getClientCount(%d): Authenticated count out of sync\n"), isAuthenticated);
-        }
-#endif
-        return _authenticated.size();
-    }
-    return _list.size();
-}
-
-WsClientManagerVector &WsClientManager::getClients() {
-    return _list;
-}
-
-
-void WsClientManager::setClientAuthenticated(WsClient *wsClient, bool isAuthenticated) {
-
-    // debug_printf_P(PSTR("WsClientManager::setClientAuthenticated(%p, %d)\n"), wsClient, isAuthenticated);
-
-    auto it = std::find_if(_authenticated.begin(), _authenticated.end(), [&wsClient](WsClient *client) {
-        return client == wsClient;
-    });
-    if (isAuthenticated) {
-        if (it == _authenticated.end()) {
-            _authenticated.push_back(wsClient);
-            if (_authenticated.size() == 1) {
-                wsClient->onStart();
-            }
-        }
-#if DEBUG_WEB_SOCKETS
-        else {
-            debug_println(F("WsClientManager::setClientAuthenticated() client already exists in authentication list"));
-        }
-#endif
-    } else {
-        if (it != _authenticated.end()) {
-            _authenticated.erase(it);
-        }
-        if (_authenticated.size() == 0) {
-            wsClient->onEnd();
-        }
-#if DEBUG_WEB_SOCKETS
-        else {
-            debug_println(F("client not found in authenticated list"));
-        }
-#endif
-    }
-// #if DEBUG
-//     _displayStats();
-// #endif
-}
-
-/**
- * Example of the callback function
- *
- * It tries to find a match for the socket and if the maanger returns a
- * nullptr, iot creates a new object.
- */
-// WsClient *WsClient::getInstance(AsyncWebSocketClient *socket) {
-
-//     WsClient *wsClient = WsClientManager::getWsClientManager()->getWsClient(socket);
-//     if (!wsClient) {
-//         wsClient = _debug_new WsClient(socket);
-//     }
-//     return wsClient;
-// }
-
-#if DEBUG_WEB_SOCKETS
-void WsClient::_displayData(WsClient *wsClient, AwsFrameInfo *info, uint8_t *data, size_t len) {
-
-    AsyncWebSocketClient *client = wsClient->getClient();
-    AsyncWebSocket *server = client->server();
-
-    debug_printf_P(PSTR(WS_PREFIX "WS_EVT_DATA %s[%u], wsClient %p\n"), WS_PREFIX_ARGS, info->opcode == WS_TEXT ? F("Text") : F("Binary"), (unsigned int)info->len, wsClient);
-    if (info->final && info->index == 0 && info->len == len) {
-        String msg;
-        if (info->opcode == WS_TEXT) {
-            for (size_t i = 0; i < info->len; i++) {
-                msg += (char)data[i];
-            }
-        } else {
-            char buff[4];
-            for (size_t i = 0; i < info->len; i++) {
-                snprintf(buff, sizeof(buff), PSTR("%02x "), (uint8_t)data[i]);
-                msg += buff;
-            }
-        }
-        debug_printf_P(PSTR(WS_PREFIX "%s-message[%u] %s\n"), WS_PREFIX_ARGS, (info->opcode == WS_TEXT) ? F("text") : F("binary"), (unsigned)info->len, msg.c_str());
-    }
-}
-#endif
-
  WsClient::WsClient(AsyncWebSocketClient * client) {
      _authenticated = false;
      _isEncryped = false;
@@ -292,28 +68,24 @@ void WsClient::_displayData(WsClient *wsClient, AwsFrameInfo *info, uint8_t *dat
 
 #endif
 
- void WsClient::setClient(AsyncWebSocketClient * client) {
-     _client = client;
- }
-
- AsyncWebSocketClient * WsClient::getClient() const {
-     return _client;
- }
-
  void WsClient::onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, int type, uint8_t *data, size_t len, void *arg, WsGetInstance getInstance) {
 
-    WsClient *wsClient = getInstance ? getInstance(client) : nullptr;
-    WsClientManager *manager;
+    WsClient *wsClient;
+     if (client->_tempObject == nullptr) {
+         // wsClient will be linked to AsyncWebSocketClient and deleted with WS_EVT_DISCONNECT when the socket gets destroyed
+         client->_tempObject = wsClient = getInstance(client);
+     }
+     else {
+         wsClient = reinterpret_cast<WsClient *>(client->_tempObject);
+     }
 
-    _debug_printf_P(PSTR("WsClient::onWsEvent(event %d, wsClient %p)\n"), onWsEvent, wsClient);
+    _debug_printf_P(PSTR("WsClient::onWsEvent(event %d, wsClient %p)\n"), type, wsClient);
     if (!wsClient) {
         debug_printf_P(PSTR("WsClient::onWsEvent(): getInstance() returned nullptr\n"));
         panic();
     }
 
     if (type == WS_EVT_CONNECT) {
-        manager = WsClientManager::getWsClientManager();
-        manager->add(wsClient, client);
         client->ping();
 
         Logger_notice(F(WS_PREFIX "%s: Client connected"), WS_PREFIX_ARGS, client->remoteIP().toString().c_str());
@@ -325,7 +97,12 @@ void WsClient::_displayData(WsClient *wsClient, AwsFrameInfo *info, uint8_t *dat
 
         Logger_notice(F(WS_PREFIX "%s: Client disconnected"), WS_PREFIX_ARGS, client->remoteIP().toString().c_str());
         wsClient->onDisconnect(data, len);
-        WsClientManager::removeWsClient(wsClient);
+
+        WsClient::invokeStartOrEndCallback(wsClient, false);
+
+        // WS_EVT_DISCONNECT is called in the destructor of AsyncWebSocketClient
+        delete wsClient;
+        client->_tempObject = nullptr;
 
     } else if (type == WS_EVT_ERROR) {
 
@@ -349,15 +126,15 @@ void WsClient::_displayData(WsClient *wsClient, AwsFrameInfo *info, uint8_t *dat
 
     } else if (type == WS_EVT_DATA) {
 
-        #if DEBUG_WEB_SOCKETS
-            wsClient->_displayData(wsClient, (AwsFrameInfo*)arg, data, len);
-        #endif
+        // #if DEBUG_WEB_SOCKETS
+        //     wsClient->_displayData(wsClient, (AwsFrameInfo*)arg, data, len);
+        // #endif
 
         if (wsClient->isAuthenticated()) {
 
-            wsClient->onData((AwsFrameType)reinterpret_cast<AwsFrameInfo *>(arg)->opcode, data, len);
+            wsClient->onData(static_cast<AwsFrameType>(reinterpret_cast<AwsFrameInfo *>(arg)->opcode), data, len);
 
-        } else if (len == 22 && strncmp_P((const char *)data, PSTR("+REQ_ENCRYPTION "), 16) == 0) {     // client requests an encrypted connection
+        } else if (len == 22 && strncmp_P(reinterpret_cast<const char *>(data), PSTR("+REQ_ENCRYPTION "), 16) == 0) {     // client requests an encrypted connection
 
 #if WEB_SOCKET_ENCRYPTION
             char cipher[7];
@@ -370,7 +147,7 @@ void WsClient::_displayData(WsClient *wsClient, AwsFrameInfo *info, uint8_t *dat
         } else if (len > 10 && strncmp_P((const char *)data, PSTR("+SID "), 5) == 0) {          // client sent authentication
 
             Buffer buffer = Buffer();
-            const char *dataPtr = (const char *)data;
+            auto dataPtr = reinterpret_cast<const char *>(data);
             dataPtr += 5;
             len -= 5;
             if (!buffer.reserve(len + 1)) {
@@ -390,21 +167,18 @@ void WsClient::_displayData(WsClient *wsClient, AwsFrameInfo *info, uint8_t *dat
                     // encrypt buf to get the SID
             }
 #endif
-            manager = WsClientManager::getWsClientManager();
             if (verify_session_id(ptr, config.getString(_H(Config().device_name)), config.getString(_H(Config().device_pass)))) {
 
                 wsClient->setAuthenticated(true);
-                manager->setClientAuthenticated(wsClient, true);
+                WsClient::invokeStartOrEndCallback(wsClient, true);
                 client->text(F("+AUTH_OK"));
                 wsClient->onAuthenticated(data, len);
-
-            } else {
-
+            }
+            else {
                 wsClient->setAuthenticated(false);
                 client->text(F("+AUTH_ERROR"));
                 wsClient->onError(ERROR_AUTHENTTICATION_FAILED, data, len);
                 client->close();
-
             }
         }
     }
@@ -495,6 +269,72 @@ void WsClient::onData(AwsFrameType type, uint8_t *data, size_t len) {
     }
   }*/
 
+void WsClient::invokeStartOrEndCallback(WsClient *wsClient, bool isStart) {
+    uint16_t authenticatedClients = 0;
+    auto client = wsClient->getClient();
+    for(auto socket: client->server()->getClients()) {
+        if (socket->status() == WS_CONNECTED && socket->_tempObject && reinterpret_cast<WsClient *>(socket->_tempObject)->isAuthenticated()) {
+            authenticatedClients++;
+        }
+    }
+    _debug_printf_P(PSTR("WsServer::invokeStartOrEndCallback(): client=%p, isStart=%u, authenticatedClients=%u\n"), wsClient, isStart, authenticatedClients);
+    if (isStart) {
+        if (authenticatedClients == 1) { // first client has been authenticated
+            _debug_println(F("WsServer::invokeStartOrEndCallback(): invoking onStart()"));
+            wsClient->onStart();
+        }
+    }
+    else {
+        if (authenticatedClients == 0) { // last client disconnected
+            _debug_println(F("WsServer::invokeStartOrEndCallback(): invoking onEnd()"));
+            wsClient->onEnd();
+        }
+    }
+}
+
+void WsClient::broadcast(AsyncWebSocket *server, WsClient *sender, AsyncWebSocketMessageBuffer *buffer) {
+    if (server == nullptr) {
+        server = sender->getClient()->server();
+    }
+    // _debug_printf_P(PSTR("WsClient::broadcast(): sender=%p, clients=%u, message=%s\n"), sender, server->_clients.length(), buffer->get());
+    buffer->lock();
+    for(auto socket: server->getClients()) {
+        if (socket->status() == WS_CONNECTED && socket->_tempObject && socket->_tempObject != sender && reinterpret_cast<WsClient *>(socket->_tempObject)->isAuthenticated()) {
+            socket->text(buffer);
+        }
+    }
+    buffer->unlock();
+    server->_cleanBuffers();
+}
+
+void WsClient::broadcast(AsyncWebSocket *server, WsClient *sender, const char *str, size_t length) {
+    if (server == nullptr) {
+        server = sender->getClient()->server();
+    }
+    auto buffer = server->makeBuffer(length);
+    memcpy(buffer->get(), str, length);
+    broadcast(server, sender, buffer);
+}
+
+void WsClient::broadcast(AsyncWebSocket *server, WsClient *sender, const __FlashStringHelper *str, size_t length) {
+    if (server == nullptr) {
+        server = sender->getClient()->server();
+    }
+    auto buffer = server->makeBuffer(length);
+    memcpy_P(buffer->get(), str, length);
+    broadcast(server, sender, buffer);
+}
+
+void WsClient::safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, const String &message) {
+    for(auto socket: server->getClients()) {
+        if (client == socket && socket->status() == WS_CONNECTED && socket->_tempObject && reinterpret_cast<WsClient *>(socket->_tempObject)->isAuthenticated()) {
+            _debug_printf_P(PSTR("WsClient::safeSend(): server=%p, client=%p, message=%s\n"), server, client, message.c_str());
+            client->text(message);
+            return;
+        }
+    }
+    _debug_printf_P(PSTR("WsClient::safeSend(): server=%p, client NOT found=%p, message=%s\n"), server, client, message.c_str());
+}
 
 #if WEB_SOCKET_ENCRYPTION
 

@@ -21,9 +21,6 @@ public:
 
     StreamWrapper();
     StreamWrapper(Stream *output, Stream *input = nullptr);
-#if HAVE_MYSERIAL_AND_DEBUGSERIAL
-    StreamWrapper(Stream *output, Stream *input, bool setWrapperAsDefault);
-#endif
     ~StreamWrapper();
 
     // set stream used as input

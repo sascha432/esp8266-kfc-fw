@@ -168,7 +168,7 @@ void at_mode_generate_help(Stream &output) {
     at_mode_help.clear();
 }
 
-String at_mode_print_command_string(Stream &output, char separator, bool trailingSeparator) {
+String at_mode_print_command_string(Stream &output, char separator) {
     String commands;
     StreamString nullStream;
 
@@ -178,16 +178,13 @@ String at_mode_print_command_string(Stream &output, char separator, bool trailin
         plugin->atModeHelpGenerator();
     }
 
+    uint16_t count = 0;
     for(const auto commandHelp: at_mode_help) {
         if (commandHelp->command) {
-            output.print(FPSTR(commandHelp->command));
-            if (commandHelp == at_mode_help.back()) {
-                if (trailingSeparator) {
-                    output.print(separator);
-                }
-            } else {
+            if (count++ != 0) {
                 output.print(separator);
             }
+            output.print(FPSTR(commandHelp->command));
         }
     }
 
@@ -350,7 +347,7 @@ void at_mode_serial_handle_event(String &commandString) {
             }
             else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(CMDS))) {
                 output.print(F("+CMDS="));
-                at_mode_print_command_string(output, ',', false);
+                at_mode_print_command_string(output, ',');
                 output.println();
             }
             else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(LOAD))) {

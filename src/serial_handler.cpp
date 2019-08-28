@@ -15,31 +15,24 @@
 #include <debug_helper_disable.h>
 #endif
 
-// Point to "Serial" until StreamWrapper has been intialized
-Stream &MySerial = Serial;
-Stream &DebugSerial = Serial;
-
 #if !SERIAL_HANDLER
 
-StreamWrapper MySerialWrapper(&KFC_SERIAL_PORT, &KFC_SERIAL_PORT, true);
+StreamWrapper MySerialWrapper(&KFC_SERIAL_PORT, &KFC_SERIAL_PORT);
+
+Stream &MySerial = KFC_SERIAL_PORT;
+Stream &DebugSerial = KFC_SERIAL_PORT;
 
 #else
 
 static SerialWrapper _MySerial(KFC_SERIAL_PORT);
-StreamWrapper MySerialWrapper(&_MySerial, &_MySerial, true);
-SerialHandler *SerialHandler::_instance = nullptr;
-
-
-SerialHandler &SerialHandler::getInstance() {
-    if (!_instance) {
-        _instance = new SerialHandler(_MySerial);
-        _instance->begin();
-    }
-    return *_instance;
-}
+StreamWrapper MySerialWrapper(&_MySerial, &_MySerial);
+SerialHandler *SerialHandler::_instance = new SerialHandler(_MySerial);
+Stream &MySerial = _MySerial;
+Stream &DebugSerial = _MySerial;
 
 
 SerialHandler::SerialHandler(SerialWrapper &wrapper) : _wrapper(wrapper) {
+    begin();
 }
 
 void SerialHandler::clear() {
@@ -59,18 +52,18 @@ void SerialHandler::end() {
 void SerialHandler::addHandler(SerialHandlerCallback_t callback, uint8_t flags) {
 
     _debug_printf_P(PSTR("SerialHandler::addHandler(%p, rx %d tx %d remoterx %d localtx %d buffered %d)\n"), callback, (flags & RECEIVE ? 1 : 0), (flags & TRANSMIT ? 1 : 0), (flags & REMOTE_RX ? 1 : 0), (flags & LOCAL_TX ? 1 : 0), 0);
-    _handlers.push_back({ callback, flags });
+    _handlers.emplace_back(Callback(callback, flags));
 }
 
 void SerialHandler::removeHandler(SerialHandlerCallback_t callback) {
-
     _debug_printf_P(PSTR("SerialHandler::removeHandler(%p)\n"), callback);
-    _handlers.erase(std::remove_if(_handlers.begin(), _handlers.end(), [&callback](SerialHandler_t &handlers) {
-        if (handlers.cb == callback) {
-            return true;
-        }
-        return false;
-    }), _handlers.end());
+    _handlers.erase(std::remove(_handlers.begin(), _handlers.end(), callback), _handlers.end());
+    // _handlers.erase(std::remove_if(_handlers.begin(), _handlers.end(), [&callback](const Callback &handlers) {
+    //     if (handlers.getCallback() == callback) {
+    //         return true;
+    //     }
+    //     return false;
+    // }), _handlers.end());
 }
 
 void SerialHandler::serialLoop() {
@@ -83,10 +76,10 @@ void SerialHandler::_serialLoop() {
         uint8_t buf[128];
         uint8_t *ptr = buf;
         uint8_t len;
-        for(len = 0; len < sizeof(buf) && _wrapper.available(); len++) {
-            *ptr++ = _wrapper.read();
+        for(len = 0; len < sizeof(buf) && _wrapper.__available(); len++) {
+            *ptr++ = _wrapper.__read();
         }
-        //Serial.printf_P(PSTR("SerialHandler::_serialLoop(): len=%d\n"), len);
+        // os_printf("SerialHandler::_serialLoop(): len=%d\n", len);
         writeToReceive(RECEIVE, buf, len);
     }
 }
@@ -106,8 +99,8 @@ void SerialHandler::writeToTransmit(SerialDataType_t type, SerialHandlerCallback
     // _debug_printf_P(PSTR("SerialHandler::writeToTransmit(%d, %p, len %d, locked %d)\n"), type, callback, len, locked);
     for(const auto &handler: _handlers) {
         // _debug_printf_P(PSTR("SerialHandler::writeToTransmit(): Handler %p flags %02x match %d\n"), handler.cb, handler.flags, ((handler.flags & type) && handler.cb != callback));
-        if ((handler.flags & type) && handler.cb != callback) {
-            handler.cb(type, buffer, len);
+        if (handler.hasType(type) && handler.getCallback() != callback) {
+            handler.invoke(type, buffer, len);
         }
     }
     locked = false;
@@ -128,11 +121,11 @@ void SerialHandler::writeToReceive(SerialDataType_t type, SerialHandlerCallback_
     locked = true;
     if (len) {
         // _debug_printf_P(PSTR("Raw data, len %d, type %s\n"), len, (type == REMOTE_RX ? "remoteRX" : "RX"));
-        for(auto it = _handlers.rbegin(); it != _handlers.rend(); ++it) {
-            const auto &handler = *it;
+        for(auto iterator = _handlers.rbegin(); iterator != _handlers.rend(); ++iterator) {
+            const auto &handler = *iterator;
             // _debug_printf_P(PSTR("SerialHandler::writeToReceive(): Handler %p flags %02x match %d\n"), handler.cb, handler.flags, ((handler.flags & type) && callback != handler.cb));
-            if ((handler.flags & type) && callback != handler.cb) {
-                handler.cb(type, (const uint8_t *)buffer, len);
+            if (handler.hasType(type) && handler.getCallback() != callback) {
+                handler.invoke(type, buffer, len);
             }
         }
     }
@@ -154,7 +147,7 @@ SerialWrapper::SerialWrapper(Stream &serial) : _serial(serial) {
 size_t SerialWrapper::write(uint8_t data) {
     size_t written = _serial.write(data);
     if (written) {
-        SerialHandler::getInstance().writeToTransmit(SerialHandler::LOCAL_TX, &data, written);
+        SerialHandler::getInstance().writeToTransmit(SerialHandler::LOCAL_TX, &data, sizeof(data));
     }
     return written;
 }
@@ -174,6 +167,18 @@ size_t SerialWrapper::write(const char *buffer) {
 void SerialWrapper::flush() {
     _serial.flush();
     // SerialHandler::_flush();
+}
+
+int SerialWrapper::available() {
+    return _serial.available();
+}
+
+int SerialWrapper::read() {
+    return _serial.read();
+}
+
+int SerialWrapper::peek() {
+    return _serial.peek();
 }
 
 #endif

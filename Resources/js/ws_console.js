@@ -76,6 +76,7 @@ WS_Console.prototype.is_authenticated = function() {
 }
 
 WS_Console.prototype.send = function(data) {
+    if (window.ws_console_is_debug) console.log("send", data);
     this.socket.send(data);
 }
 

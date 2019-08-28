@@ -21,14 +21,16 @@ public:
     virtual void onText(uint8_t *data, size_t len) override;
 
     static void send(AsyncWebSocketClient *client, JsonUnnamedObject &json);
-    static void broadcast(JsonUnnamedObject &json);
+    static void broadcast(WsWebUISocket *sender, JsonUnnamedObject &json);
     static void setup();
 
     static void createWebUIJSON(JsonUnnamedObject &json);
     static void sendValues(AsyncWebSocketClient *client);
 
-private:
-    static void _broadcast(AsyncWebSocketMessageBuffer *buffer);
+    inline static WsWebUISocket *getSender() {
+        return _sender;
+    }
 
+private:
     static WsWebUISocket *_sender;
 };

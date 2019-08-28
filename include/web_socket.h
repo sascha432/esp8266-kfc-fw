@@ -21,51 +21,6 @@ class WsClient;
 //typedef std::function<WsClient *(WsClient *wsSClient, WsAwsEventType type, AsyncWebSocket *server, AsyncWebSocketClient *client, uint8_t *data, size_t len, void *arg)> WsEventHandlerCallback;
 typedef std::function<WsClient *(AsyncWebSocketClient *client)> WsGetInstance;
 
-struct WsClientPair {
-    WsClient *wsClient;
-    AsyncWebSocketClient *socket;
-};
-
-typedef std::vector<WsClientPair> WsClientManagerVector;
-typedef std::vector<WsClient *> WsAuthClientsVector;
-
-class WsClientManager {
-public:
-    WsClientManager();
-    virtual ~WsClientManager();
-
-    void add(WsClient *wsClient, AsyncWebSocketClient *socket);
-    void remove(WsClient *wsClient);
-    void remove(AsyncWebSocketClient *wsClient);
-
-    // send message if socket is valid
-    bool safeSend(AsyncWebSocketClient *socket, const String &message);
-protected:
-    WsClient *getClient(AsyncWebSocketClient *socket);
-    int getClientCount(bool isAuthenticated = false);
-public:
-    WsClientManagerVector &getClients();
-
-    void setClientAuthenticated(WsClient *wsClient, bool isAuthenticated);
-
-    static WsClientManager *getWsClientManager();
-    static void removeWsClient(WsClient *wsClient);
-    static int getWsClientCount(bool isAuthenticated);
-    static WsClient *getWsClient(AsyncWebSocketClient *socket);
-
-
-private:
-#if DEBUG_WEB_SOCKETS
-    void _displayStats();
-#endif
-
-private:
-    static WsClientManager *wsClientManager;
-
-    WsClientManagerVector _list;
-    WsAuthClientsVector _authenticated;
-};
-
 class WsClient {
 public:
     enum WsErrorType {
@@ -85,8 +40,12 @@ public:
     void initEncryption(uint8_t *iv, uint8_t *salt);
 #endif
 
-    void setClient(AsyncWebSocketClient *client);
-    AsyncWebSocketClient *getClient() const;
+    inline void setClient(AsyncWebSocketClient *client) {
+        _client = client;
+    }
+    inline AsyncWebSocketClient *getClient() const {
+        return _client;
+    }
 
     static void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, int type, uint8_t *data, size_t len, void *arg = nullptr, WsGetInstance getInstance = nullptr);
 
@@ -125,13 +84,17 @@ public:
 
     void onData(AwsFrameType type, uint8_t *data, size_t len);
 
-
-    // static WsClient *getInstance(AsyncWebSocketClient *socket);
-
-#if DEBUG_WEB_SOCKETS
 public:
-    void _displayData(WsClient *wsClient, AwsFrameInfo *info, uint8_t *data, size_t len);
-#endif
+    // broadcast to all clients except sender, if not null
+    static void broadcast(AsyncWebSocket *server, WsClient *sender, AsyncWebSocketMessageBuffer *buffer);
+    static void broadcast(AsyncWebSocket *server, WsClient *sender, const char *str, size_t length);
+    static void broadcast(AsyncWebSocket *server, WsClient *sender, const __FlashStringHelper *str, size_t length);
+
+    // verify that the client is attached to the server
+    static void safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, const String &message);
+
+protected:
+    static void invokeStartOrEndCallback(WsClient *wsClient, bool isStart);
 
 private:
     bool _authenticated;

@@ -60,7 +60,7 @@ var webUIComponent = {
         // type = state, value 0 or 1
         // type = value
 
-        console.log("publish state", id, value, type, this.lockPublish);//, this.pendingRequests[id]);
+        if (window._webui_debug) console.log("publish state", id, value, type, this.lockPublish);//, this.pendingRequests[id]);
         if (this.lockPublish) {
             return;
         }
@@ -91,7 +91,7 @@ var webUIComponent = {
     },
 
     toggleGroup: function(groupId, value) {
-        console.log("toggleGroup", groupId, value);
+        if (window._webui_debug) console.log("toggleGroup", groupId, value);
 
         if (this.groups[groupId].switch.value == value) {
             return;
@@ -345,7 +345,7 @@ var webUIComponent = {
     },
 
     updateEvents: function(events) {
-        console.log("updateEvents", events);
+        if (window._webui_debug) console.log("updateEvents", events);
         this.lockPublish = true;
         var self = this;
         $(events).each(function() {
@@ -373,15 +373,9 @@ var webUIComponent = {
     requestUI: function() {
         var url = $.getHttpLocation('/webui_get')
         var SID = $.getSessionId();
-
-        if (window._webui_debug) {
-            var url = 'http://192.168.0.56/webui_get';
-            SID = 'd7b264b26a72903f812990ba02b1d7999ad37b6893e6d98f33430d3f'; // password 12345678
-        }
-
         var self = this;
         $.get(url + '?SID=' + SID, function(data) {
-            console.log(data);
+            if (window._webui_debug) console.log(data);
             self.updateUI(data.data);
             self.updateEvents(data.values);
         }, 'json');
@@ -390,7 +384,7 @@ var webUIComponent = {
     socketHandler: function(event) {
         if (event.data) {
             var json = JSON.parse(event.data);
-            console.log("socket_handler", event, json)
+            if (window._webui_debug) console.log("socket_handler", event, json)
             if (json.type === 'ue') {
                 this.updateEvents(json.events);
             }
@@ -403,21 +397,16 @@ var webUIComponent = {
     init: function() {
         var url = $.getWebSocketLocation('/webui_ws');
         var SID = $.getSessionId();
-
-        if (window._webui_debug) {
-            url = 'ws://192.168.0.56/webui_ws';
-            SID = 'd7b264b26a72903f812990ba02b1d7999ad37b6893e6d98f33430d3f';
-            // window.ws_console_is_debug = true;
-        }
-
         var self = this;
         this.socket = new WS_Console(url, SID, 1, function(event) {
             event.self = self;
             self.socketHandler(event);
         } );
 
-        $('body').append('<textarea id="console" style="width:270px;height:70px;font-size:10px;font-family:consolas;z-index:999;position:fixed;right:5px;bottom:5px"></textarea>');
-        this.socket.setConsoleId("console");
+        if (window._webui_debug) {
+            $('body').append('<textarea id="console" style="width:270px;height:70px;font-size:10px;font-family:consolas;z-index:999;position:fixed;right:5px;bottom:5px"></textarea>');
+            this.socket.setConsoleId("console");
+        }
 
         this.socket.connect();
     }

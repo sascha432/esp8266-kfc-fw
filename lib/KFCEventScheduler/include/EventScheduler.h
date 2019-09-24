@@ -17,19 +17,19 @@ extern EventScheduler Scheduler;
 
 class EventScheduler {
 public:
-    enum Priority_t {
-        PRIO_NONE = -1,
-        PRIO_LOW = 0,
-        PRIO_NORMAL,        // below HIGH, the timer callback is executed in the main loop and might be considerably delayed
-        PRIO_HIGH,          // HIGH runs the timer callback directly inside the timer interrupt/task without any delay
-    };
+    typedef enum {
+        PRIO_NONE =         -1,
+        PRIO_LOW =          0,
+        PRIO_NORMAL,                // below HIGH, the timer callback is executed in the main loop and might be considerably delayed
+        PRIO_HIGH,                  // HIGH runs the timer callback directly inside the timer interrupt/task without any delay
+    } Priority_t;
 
-    enum Repeat_t {
-        NO_CHANGE    = -2,
-        UNLIMTIED    = -1,
-        DONT         = 0,
-        ONCE
-    };
+    typedef enum {
+        NO_CHANGE =         -2,
+        UNLIMTIED =         -1,
+        DONT =              0,
+        ONCE =              1,
+    } Repeat_t;
 
     struct ActiveCallbackTimer {
         EventTimer *timer;
@@ -47,11 +47,14 @@ public:
         _runtimeLimit = 250;
     }
 
+    // repeat as int = number of repeats
     TimerPtr addTimer(int64_t delayMillis, int repeat, Callback callback, Callback removeCallback, Priority_t priority = PRIO_LOW);
 
-    TimerPtr addTimer(int64_t delayMillis, int repeat, Callback callback, Priority_t priority = PRIO_LOW) {
+    inline TimerPtr addTimer(int64_t delayMillis, int repeat, Callback callback, Priority_t priority = PRIO_LOW) {
         return addTimer(delayMillis, repeat, callback, nullptr, priority);
     }
+
+    // repeat as bool = unlimited or none
     TimerPtr addTimer(int64_t delayMillis, bool repeat, Callback callback, Priority_t priority = PRIO_LOW) {
         return addTimer(delayMillis, (int)(repeat ? EventScheduler::UNLIMTIED : EventScheduler::DONT), callback, priority);
     }

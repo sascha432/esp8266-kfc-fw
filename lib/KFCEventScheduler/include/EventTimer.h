@@ -12,6 +12,10 @@
 
 class EventTimer {
 public:
+    typedef enum {
+        DELAY_NO_CHANGE =   -1,
+    } ChangeOptionsDelayEnum_t;
+
     // static const int MIN_DELAY = 5;
     // static const int MAX_DELAY = 0x68D7A3;
 
@@ -24,8 +28,12 @@ public:
 
     void _installTimer();
 
-    bool active() const {
-        return _timer;
+    operator bool() const {
+        return !!_timer;
+    }
+
+    inline bool active() const {
+        return !!_timer;
     }
 
     inline int getRepeat() const {
@@ -43,16 +51,17 @@ public:
         _callCounter = callCounter;
     }
 
-    void setCallback(EventScheduler::Callback loopCallback) {
+    inline void setCallback(EventScheduler::Callback loopCallback) {
         _loopCallback = loopCallback;
     }
-    void setRemoveCallback(EventScheduler::Callback removeCallback) {
+    inline void setRemoveCallback(EventScheduler::Callback removeCallback) {
         _removeCallback = removeCallback;
     }
 
     void setPriority(EventScheduler::Priority_t priority = EventScheduler::PRIO_LOW);
     void changeOptions(int delay, int repeat = EventScheduler::NO_CHANGE, EventScheduler::Priority_t priority = EventScheduler::PRIO_NONE);
-    void changeOptions(int delay, bool repeat, EventScheduler::Priority_t priority = EventScheduler::PRIO_NONE) {
+
+    inline void changeOptions(int delay, bool repeat, EventScheduler::Priority_t priority = EventScheduler::PRIO_NONE) {
         changeOptions(delay, (int)(repeat ? EventScheduler::UNLIMTIED : EventScheduler::DONT), priority);
     }
 

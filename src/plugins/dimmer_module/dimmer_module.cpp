@@ -18,7 +18,7 @@
 
 #include "../../trailing_edge_dimmer/src/dimmer_protocol.h"
 
-Driver_DimmerModule::Driver_DimmerModule() : Dimmer_Base() {
+Driver_DimmerModule::Driver_DimmerModule() : MQTTComponent(SENSOR), Dimmer_Base() {
 }
 
 const String DimmerModulePlugin::getStatus() {
@@ -42,6 +42,7 @@ void Driver_DimmerModule::_begin() {
             _channels[i].setup(this, i);
             mqttClient->registerComponent(&_channels[i]);
         }
+        mqttClient->registerComponent(this);
     }
     _getChannels();
 }
@@ -49,7 +50,8 @@ void Driver_DimmerModule::_begin() {
 void Driver_DimmerModule::_end() {
     auto mqttClient = MQTTClient::getClient();
     if (mqttClient) {
-        for (uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
+        mqttClient->unregisterComponent(this);
+        for (uint8_t i = IOT_DIMMER_MODULE_CHANNELS - 1; i >= 0; i--) {
             mqttClient->unregisterComponent(&_channels[i]);
         }
     }
@@ -58,46 +60,47 @@ void Driver_DimmerModule::_end() {
 
 void Driver_DimmerModule::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTComponent::MQTTAutoDiscoveryVector &vector) {
 
-    for (uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
-        _channels[i].createAutoDiscovery(format, vector);
+    String topic = MQTTClient::formatTopic(-1, F("/metrics/"));
+
+    if (format == MQTTAutoDiscovery::FORMAT_YAML) {
+        for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
+            _channels[i].createAutoDiscovery(format, vector);
+        }
     }
 
-    String topic = MQTTClient::formatTopic(-1, F("/metrics/"));
-    MQTTComponentHelper component(MQTTComponent::SENSOR);
+    auto discovery = _debug_new MQTTAutoDiscovery();
 
-    component.setNumber(IOT_DIMMER_MODULE_CHANNELS);
-    auto discovery = component.createAutoDiscovery(0, format);
-    discovery->addStateTopic(topic + F("temperature"));
+    discovery->create(this, 0, MQTTAutoDiscovery::FORMAT_JSON);
+    discovery->addStateTopic(topic + F("int_temp"));
     discovery->addUnitOfMeasurement(F("\u00b0C"));
     discovery->finalize();
     vector.emplace_back(MQTTComponent::MQTTAutoDiscoveryPtr(discovery));
 
-    discovery = component.createAutoDiscovery(1, format);
+    discovery->create(this, 1, MQTTAutoDiscovery::FORMAT_JSON);
+    discovery->addStateTopic(topic + F("ntc_temp"));
+    discovery->addUnitOfMeasurement(F("\u00b0C"));
+    discovery->finalize();
+    vector.emplace_back(MQTTComponent::MQTTAutoDiscoveryPtr(discovery));
+
+    discovery->create(this, 2, MQTTAutoDiscovery::FORMAT_JSON);
     discovery->addStateTopic(topic + F("vcc"));
     discovery->addUnitOfMeasurement(F("V"));
     discovery->finalize();
     vector.emplace_back(MQTTComponent::MQTTAutoDiscoveryPtr(discovery));
 
-    discovery = component.createAutoDiscovery(2, format);
+    discovery->create(this, 3, MQTTAutoDiscovery::FORMAT_JSON);
     discovery->addStateTopic(topic + F("frequency"));
     discovery->addUnitOfMeasurement(F("Hz"));
     discovery->finalize();
     vector.emplace_back(MQTTComponent::MQTTAutoDiscoveryPtr(discovery));
 }
 
+uint8_t Driver_DimmerModule::getAutoDiscoveryCount() const {
+    return 4;
+}
+
 void Driver_DimmerModule::onConnect(MQTTClient *client) {
 
-#if MQTT_AUTO_DISCOVERY
-    if (MQTTAutoDiscovery::isEnabled()) {
-        auto qos = MQTTClient::getDefaultQos();
-        MQTTComponent::MQTTAutoDiscoveryVector vector;
-        createAutoDiscovery(MQTTAutoDiscovery::FORMAT_JSON, vector);
-        for(auto &&discovery: vector) {
-            _debug_printf_P(PSTR("Driver_DimmerModule::onConnect(): topic=%s, payload=%s\n"), discovery->getTopic().c_str(), discovery->getPayload().c_str());
-            client->publish(discovery->getTopic(), qos, true, discovery->getPayload());
-        }
-    }
-#endif
 }
 
 void Driver_DimmerModule::_printStatus(PrintHtmlEntitiesString &out) {
@@ -126,25 +129,28 @@ bool Driver_DimmerModule::off(uint8_t channel) {
 void Driver_DimmerModule::_getChannels() {
     _debug_printf_P(PSTR("Driver_DimmerModule::_getChannels()\n"));
 
-    _wire.beginTransmission(DIMMER_I2C_ADDRESS);
-    _wire.write(DIMMER_REGISTER_COMMAND);
-    _wire.write(DIMMER_COMMAND_READ_CHANNELS);
-    _wire.write(IOT_DIMMER_MODULE_CHANNELS << 4);
-    int16_t level;
-    const int len = IOT_DIMMER_MODULE_CHANNELS * sizeof(level);
-    if (_endTransmission() == 0 && _wire.requestFrom(DIMMER_I2C_ADDRESS, len) == len) {
-        for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
-            _wire.readBytes(reinterpret_cast<uint8_t *>(&level), sizeof(level));
-            _channels[i].setLevel(level);
-        }
+    if (_lockWire()) {
+        _wire.beginTransmission(DIMMER_I2C_ADDRESS);
+        _wire.write(DIMMER_REGISTER_COMMAND);
+        _wire.write(DIMMER_COMMAND_READ_CHANNELS);
+        _wire.write(IOT_DIMMER_MODULE_CHANNELS << 4);
+        int16_t level;
+        const int len = IOT_DIMMER_MODULE_CHANNELS * sizeof(level);
+        if (_endTransmission() == 0 && _wire.requestFrom(DIMMER_I2C_ADDRESS, len) == len) {
+            for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
+                _wire.readBytes(reinterpret_cast<uint8_t *>(&level), sizeof(level));
+                _channels[i].setLevel(level);
+            }
 #if DEBUG_IOT_DIMMER_MODULE
-        String str;
-        for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
-            str += String(_channels[i].getLevel());
-            str += ' ';
-        }
-        _debug_printf_P(PSTR("Driver_DimmerModule::_getChannels(): %s\n"), str.c_str());
+            String str;
+            for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
+                str += String(_channels[i].getLevel());
+                str += ' ';
+            }
+            _debug_printf_P(PSTR("Driver_DimmerModule::_getChannels(): %s\n"), str.c_str());
 #endif
+        }
+        _unlockWire();
     }
 }
 
@@ -177,9 +183,7 @@ PGM_P DimmerModulePlugin::getName() const {
 }
 
 void DimmerModulePlugin::setup(PluginSetupMode_t mode) {
-#if DIMMER_FIRMWARE_DEBUG == 0
     _begin();
-#endif
 }
 
 void DimmerModulePlugin::reconfigure(PGM_P source) {
@@ -210,7 +214,8 @@ void DimmerModulePlugin::createWebUI(WebUI &webUI) {
     row = &webUI.addRow();
     row->addBadgeSensor(F("dimmer_vcc"), F("Dimmer VCC"), F("V"));
     row->addBadgeSensor(F("dimmer_frequency"), F("Dimmer Frequency"), F("Hz"));
-    row->addBadgeSensor(F("dimmer_temp"), F("Dimmer Internal Temperature"), F("\u00b0C"));
+    row->addBadgeSensor(F("dimmer_int_temp"), F("Dimmer ATmega"), F("\u00b0C"));
+    row->addBadgeSensor(F("dimmer_ntc_temp"), F("Dimmer NTC"), F("\u00b0C"));
 }
 
 
@@ -226,8 +231,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DIMG, "DIMG", "Get level");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DIMS, "DIMS", "<channel>,<level>[,<time>]", "Set level");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DIMW, "DIMW", "Write EEPROM");
 #if DIMMER_FIRMWARE_DEBUG
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DIMB, "DIMB", "Begin dimmer plugin");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DIME, "DIME", "End dimmer plugin");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DIMFWSET, "DIMFWP", "Print parameters");
 #endif
 
 bool DimmerModulePlugin::hasAtMode() const {
@@ -239,8 +243,7 @@ void DimmerModulePlugin::atModeHelpGenerator() {
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DIMS));
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DIMW));
 #if DIMMER_FIRMWARE_DEBUG
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DIMB));
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DIME));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DIMFWP));
 #endif
 }
 
@@ -278,11 +281,10 @@ bool DimmerModulePlugin::atModeHandler(Stream &serial, const String &command, in
         return true;
     }
 #if DIMMER_FIRMWARE_DEBUG
-    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(DIMB))) {
-        dimmer_plugin._begin();
-    }
-    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(DIME))) {
-        dimmer_plugin._end();
+    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(DIMFWP))) {
+        register_mem_cfg_t config;
+        }
+        return true;
     }
 #endif
     return false;

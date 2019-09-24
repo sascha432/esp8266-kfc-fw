@@ -178,10 +178,7 @@ private:
             return 4;
         }
         uint8_t precision = std::numeric_limits<double>::digits10;
-        auto number = value;
-        if (number < 0) {
-            number = -number;
-        }
+        auto number = abs(value);
         while ((number = (number / 10)) > 1 && precision > 1) {
             precision--;
         }

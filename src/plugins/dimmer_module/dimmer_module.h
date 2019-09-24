@@ -73,13 +73,14 @@
 
 class DimmerModuleForm;
 
-class Driver_DimmerModule: public Dimmer_Base, public DimmerModuleForm
+class Driver_DimmerModule: public MQTTComponent, public Dimmer_Base, public DimmerModuleForm
 {
 public:
     Driver_DimmerModule();
 
-    virtual void createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTComponent::MQTTAutoDiscoveryVector &vector);
-    void onConnect(MQTTClient *client);
+    virtual void createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTComponent::MQTTAutoDiscoveryVector &vector) override;
+    virtual uint8_t getAutoDiscoveryCount() const override;
+    virtual void onConnect(MQTTClient *client) override;
 
     virtual bool on(uint8_t channel = -1) override;
     virtual bool off(uint8_t channel = -1) override;

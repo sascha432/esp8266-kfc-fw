@@ -85,20 +85,20 @@ void EventTimer::setPriority(EventScheduler::Priority_t priority) {
 }
 
 void EventTimer::changeOptions(int delay, int repeat, EventScheduler::Priority_t priority) {
-    int diff = 0;
-    if (repeat != -2) {
+    uint8_t diff = 0;
+    if (repeat != EventScheduler::NO_CHANGE) {
         if (_repeat != repeat) {
             _repeat = repeat;
             diff++;
         }
     }
-    if (priority != -1) {
+    if (priority != EventScheduler::PRIO_NONE) {
         if (_priority != priority) {
             _priority = priority;
             diff++;
         }
     }
-    if (delay != -1 && _delay != delay) {
+    if (delay != ChangeOptionsDelayEnum_t::DELAY_NO_CHANGE && _delay != delay) {
         _delay = delay;
         diff++;
     }

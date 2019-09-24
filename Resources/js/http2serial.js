@@ -8,6 +8,10 @@ var http2serialPlugin = {
     input: $("#command-input"),
     sendButton: $('#sendbutton'),
 
+    commands: [],
+    history: [],
+    historyPosition: 0,
+
     filterModal: $('#console-filter'),
     filterInput: $('#console-filter .filter-input'),
     filterDefault: { value: "DEBUG[0-9]{8} .*", enabled: false },
@@ -15,24 +19,25 @@ var http2serialPlugin = {
 
     autoReconnect: true,
     socket: null,
-    packetCount: 0,
 
     addCommands: function(commands) {
-        console.log(commands);
-        var list = this.input[0].selectize;
-        try {
-            list.clearOptions();
-            $(commands).each(function() {
-                console.log(this);
-                list.addOption({text: this, value: this});
-            });
-            list.refreshOptions();
-        } catch(e) {
-        }
+        if (window._http2serial_debug) console.log(commands);
+        this.commands = commands;
+
+        // var list = this.input[0].selectize;
+        // try {
+        //     list.clearOptions();
+        //     $(commands).each(function() {
+        //         console.log(this);
+        //         list.addOption({text: this, value: this});
+        //     });
+        //     list.refreshOptions();
+        // } catch(e) {
+        // }
     },
 
     write: function(message) {
-        console.log("write", message);
+        if (window._http2serial_debug) console.log("write", message);
         if (this.filter) {
             console.log("filtering", this.filter);
             var filterRegEx = new RegExp('^' + this.filter + '\n', 'gm');
@@ -45,14 +50,10 @@ var http2serialPlugin = {
     },
 
     dataHandler: function(event) {
-        console.log("dataHandler", event);
-        if (event.type == 'auth') {
-            this.packetCount = 0;
-        }
-        else if (event.type == 'data') {
-            console.log("data", this.packetCount, event.data);
-            if (this.packetCount++ == 0 && event.data.substring(0, 6) == "+CMDS=") {
-                this.addCommands(event.data.substring(6).split('\t'));
+        if (window._http2serial_debug) console.log("dataHandler", event);
+        if (event.type == 'data') {
+            if (event.data.substring(0, 25) == "+ATMODE_CMDS_HTTP2SERIAL=") {
+                this.addCommands(event.data.substring(25).split('\t'));
             } else {
                 this.write(event.data);
                 this.runFilter();
@@ -85,8 +86,12 @@ var http2serialPlugin = {
 
     sendCommand: function(command) {
         var command = this.input.val();
-        console.log("send " + command);
+        if (window._http2serial_debug) console.log("send " + command);
         if (command.trim() != "") {
+            if (this.history.length == 0 || this.history[this.history.length - 1] != command) {
+                this.history.push(command);
+            }
+            this.historyPosition = this.history.length;
             if (command.toLowerCase() == "/disconnect") {
                 this.autoReconnect = false;
                 this.socket.disconnect();
@@ -122,8 +127,6 @@ var http2serialPlugin = {
             return;
         }
         //send_action(true);
-        this.packetCount = 0;
-
         var url = $.getWebSocketLocation('/serial_console');
         var SID = $.getSessionId();
         var self = this;
@@ -133,10 +136,37 @@ var http2serialPlugin = {
 
     init: function() {
         var self = this;
-        this.input.on('keypress', function(event) {
-            if (event.keyCode == 13) {
+        this.input.on('keyup', function(event) {
+            if (window._http2serial_debug) console.log('keyup', event.key, event);
+            if (event.key === 'Enter') {
                 event.preventDefault();
                 self.sendCommand();
+            }
+            else if (event.key === 'ArrowUp') {
+                event.preventDefault();
+                if (self.historyPosition > 0) {
+                    if (self.history.length == self.historyPosition) {
+                        var value = self.input.val();
+                        if (value.trim() !== '') {
+                            self.history.push(value);
+                        }
+                    }
+                    self.historyPosition--;
+                }
+                try {
+                    self.input.val(self.history[self.historyPosition]);
+                } catch(e) {
+                }
+            }
+            else if (event.key === 'ArrowDown') {
+                event.preventDefault();
+                if (self.historyPosition < self.history.length - 1) {
+                    self.historyPosition++;
+                    self.input.val(self.history[self.historyPosition]);
+                }
+            }
+            else {
+                self.historyPosition = self.history.length;
             }
         });
         this.input.focus();

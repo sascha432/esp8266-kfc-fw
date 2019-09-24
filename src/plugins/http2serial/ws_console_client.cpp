@@ -23,7 +23,7 @@ void WsConsoleClient::onAuthenticated(uint8_t *data, size_t len) {
     _debug_printf_P(PSTR("WsConsoleClient::onAuthenticated(%s, %d)\n"), printable_string(data, std::min((size_t)32, len)).c_str(), len);
 #if AT_MODE_SUPPORTED
     StreamString commands;
-    commands.print(F("+CMDS="));
+    commands.print(F("+ATMODE_CMDS_HTTP2SERIAL="));
     at_mode_print_command_string(commands, '\t');
     getClient()->text(commands);
 #endif

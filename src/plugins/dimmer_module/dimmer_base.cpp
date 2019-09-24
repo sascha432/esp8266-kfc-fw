@@ -13,6 +13,7 @@
 #include "../atomic_sun/atomic_sun_v2.h"
 #endif
 #include "serial_handler.h"
+#include "EventTimer.h"
 
 #include "../../trailing_edge_dimmer/src/dimmer_protocol.h"
 
@@ -24,6 +25,7 @@
 
 #if IOT_DIMMER_MODULE_INTERFACE_UART
 Dimmer_Base::Dimmer_Base() : _serial(Serial), _wire(*new SerialTwoWire(Serial)) {
+    _wireLocked = false;
 #else
 Dimmer_Base::Dimmer_Base() : _wire(config.initTwoWire()) {
 #endif
@@ -37,19 +39,28 @@ void Dimmer_Base::_begin() {
     _wire.onReadSerial(SerialHandler::serialLoop);
     _wire.begin(DIMMER_I2C_ADDRESS + 1);
     _wire.onReceive(Dimmer_Base::onReceive);
-#else
-    // ESP I2C does not support slave mode. Use timer to poll metrics instead
-    _timer = Scheduler.addTimer(30e3, true, Dimmer_Base::fetchMetrics);
+
+    Scheduler.addTimer(2e3, false, [this](EventScheduler::TimerPtr timer) { // delay for 2 seconds
+        if (_lockWire()) {
+            _wire.beginTransmission(DIMMER_I2C_ADDRESS);
+            _wire.write(DIMMER_REGISTER_COMMAND);
+            _wire.write(DIMMER_COMMAND_FORCE_TEMP_CHECK);
+            _endTransmission();
+            _unlockWire();
+        }
+    });
+
 #endif
     auto dimmer = config._H_GET(Config().dimmer);
     _fadeTime = dimmer.fade_time;
     _onOffFadeTime = dimmer.on_fade_time;
-    _temperature = 0;
     _vcc = 0;
-    _frequency = 0;
+    _frequency = NAN;
+    _internalTemperature = NAN;
+    _ntcTemperature = NAN;
 #if IOT_DIMMER_MODULE_INTERFACE_UART
     #if AT_MODE_SUPPORTED
-        disable_at_mode(Serial);
+        // disable_at_mode(Serial);
         if (IOT_DIMMER_MODULE_BAUD_RATE != KFC_SERIAL_RATE) {
             Serial.flush();
             Serial.begin(IOT_DIMMER_MODULE_BAUD_RATE);
@@ -58,6 +69,9 @@ void Dimmer_Base::_begin() {
     #if SERIAL_HANDLER
         SerialHandler::getInstance().addHandler(onData, SerialHandler::RECEIVE);
     #endif
+#else
+    // ESP I2C does not support slave mode. Use timer to poll metrics instead
+    _timer = Scheduler.addTimer(2e3, true, Dimmer_Base::fetchMetrics);
 #endif
 }
 
@@ -77,7 +91,7 @@ void Dimmer_Base::_end() {
             Serial.begin(KFC_SERIAL_RATE);
         }
     #if AT_MODE_SUPPORTED
-        enable_at_mode(Serial);
+        // enable_at_mode(Serial);
     #endif
 #endif
 }
@@ -85,7 +99,7 @@ void Dimmer_Base::_end() {
 #if IOT_DIMMER_MODULE_INTERFACE_UART
 
 void Dimmer_Base::onData(uint8_t type, const uint8_t *buffer, size_t len) {
-    _debug_printf_P(PSTR("Driver_DimmerModule::onData(): length %u\n"), len);
+    // _debug_printf_P(PSTR("Driver_DimmerModule::onData(): length %u\n"), len);
     while(len--) {
         dimmer_plugin._wire.feed(*buffer++);
     }
@@ -96,19 +110,19 @@ void Dimmer_Base::onReceive(int length) {
     dimmer_plugin._onReceive(length);
 }
 
-void Dimmer_Base::_onReceive(int length) {
+void Dimmer_Base::_onReceive(size_t length) {
     auto type = _wire.read();
     _debug_printf_P(PSTR("Driver_DimmerModule::_onReceive(%u): type %02x\n"), length, type);
 
-    if (type == DIMMER_TEMPERATURE_REPORT && length >= 4) {
-        uint8_t temperature = _wire.read();
-        uint16_t vcc;
-        float frequency = 0;
-        _wire.readBytes(reinterpret_cast<uint8_t *>(&vcc), sizeof(vcc));
-        if (length >= 8) {
-            _wire.readBytes(reinterpret_cast<uint8_t *>(&frequency), sizeof(frequency));
-        }
-        _updateMetrics(temperature, vcc, frequency);
+    if (type == DIMMER_METRICS_REPORT && length >= sizeof(dimmer_metrics_t) + 1) {
+        dimmer_metrics_t metrics;
+        // _wire.readBytes(reinterpret_cast<uint8_t *>(&metrics), sizeof(metrics));
+        metrics.temp_check_value = _wire.read();
+        _wire.readBytes(reinterpret_cast<uint8_t *>(&metrics.vcc), sizeof(metrics.vcc));
+        _wire.readBytes(reinterpret_cast<uint8_t *>(&metrics.frequency), sizeof(metrics.frequency));
+        _wire.readBytes(reinterpret_cast<uint8_t *>(&metrics.ntc_temp), sizeof(metrics.ntc_temp));
+        _wire.readBytes(reinterpret_cast<uint8_t *>(&metrics.internal_temp), sizeof(metrics.internal_temp));
+        _updateMetrics(metrics.vcc, metrics.frequency, metrics.internal_temp, metrics.ntc_temp);
     }
     else if (type == DIMMER_TEMPERATURE_ALERT && length == 3) {
         uint8_t temperature = _wire.read();
@@ -120,40 +134,92 @@ void Dimmer_Base::_onReceive(int length) {
 #else
 
 void Dimmer_Base::fetchMetrics(EventScheduler::TimerPtr timer) {
+    if (timer->getDelay() != METRICS_DEFAULT_UPDATE_RATE) {
+        timer->changeOptions(METRICS_DEFAULT_UPDATE_RATE, true);
+    }
     // using dimmer_plugin avoids adding extra static variable to Dimmer_Base
     dimmer_plugin._fetchMetrics();
 }
 
 
 void Dimmer_Base::_fetchMetrics() {
-    float temp;
-    uint16_t vcc;
-    float frequency = 0;
+    float frequency = NAN;
+    float int_temp = NAN, ntc_temp = NAN;
+    uint16_t vcc = 0;
+    bool hasData = false;
 
-    _wire.beginTransmission(DIMMER_I2C_ADDRESS);
-    _wire.write(DIMMER_REGISTER_COMMAND);
-    _wire.write(DIMMER_COMMAND_READ_AC_FREQUENCY);
-    if (_endTransmission() == 0 && _wire.requestFrom(DIMMER_I2C_ADDRESS, sizeof(frequency)) == sizeof(frequency)) {
-        _wire.readBytes(reinterpret_cast<uint8_t *>(&frequency), sizeof(frequency));
+    if (_lockWire()) {
+        _wire.beginTransmission(DIMMER_I2C_ADDRESS);
+        _wire.write(DIMMER_REGISTER_COMMAND);
+        _wire.write(DIMMER_COMMAND_READ_AC_FREQUENCY);
+        if (_endTransmission() == 0 && _wire.requestFrom(DIMMER_I2C_ADDRESS, sizeof(frequency)) == sizeof(frequency)) {
+            _wire.readBytes(reinterpret_cast<uint8_t *>(&frequency), sizeof(frequency));
+            hasData = true;
+        }
+        _unlockWire();
     }
 
-    _wire.beginTransmission(DIMMER_I2C_ADDRESS);
-    _wire.write(DIMMER_REGISTER_COMMAND);
-    _wire.write(DIMMER_COMMAND_READ_VCC);
-    _wire.write(DIMMER_REGISTER_COMMAND);
-    _wire.write(DIMMER_COMMAND_READ_INT_TEMP);
-    const int len = sizeof(temp) + sizeof(vcc);
-    if (_endTransmission() == 0) {
-        delay(100);
+    if (_lockWire()) {
+        _wire.beginTransmission(DIMMER_I2C_ADDRESS);
+        _wire.write(DIMMER_REGISTER_COMMAND);
+        _wire.write(DIMMER_COMMAND_READ_VCC);
+        _wire.write(DIMMER_REGISTER_COMMAND);
+        _wire.write(DIMMER_COMMAND_READ_INT_TEMP);
+        const int len = sizeof(int_temp) + sizeof(vcc);
+        if (_endTransmission() == 0) {
+            _unlockWire();
 
-        if (_wire.requestFrom(DIMMER_I2C_ADDRESS, len) == len) {
-            _wire.readBytes(reinterpret_cast<uint8_t *>(&temp), sizeof(temp));
-            uint8_t temperature = temp;
-            debug_printf("%f %d\n", temp, temperature);
-            _wire.readBytes(reinterpret_cast<uint8_t *>(&vcc), sizeof(vcc));
+            delay(100);
 
-            _updateMetrics(temperature, vcc, frequency);
+            if (_lockWire()) {
+                _wire.beginTransmission(DIMMER_I2C_ADDRESS);
+                _wire.write(DIMMER_REGISTER_READ_LENGTH);
+                _wire.write(len);
+                _wire.write(DIMMER_REGISTER_TEMP);
+                if (_endTransmission() == 0) {
+                    if (_wire.requestFrom(DIMMER_I2C_ADDRESS, len) == len) {
+                        _wire.readBytes(reinterpret_cast<uint8_t *>(&int_temp), sizeof(int_temp));
+                        _wire.readBytes(reinterpret_cast<uint8_t *>(&vcc), sizeof(vcc));
+                        hasData = true;
+                    }
+                }
+                _unlockWire();
+            }
+
+            if (_lockWire()) {
+                _wire.beginTransmission(DIMMER_I2C_ADDRESS);
+                _wire.write(DIMMER_REGISTER_COMMAND);
+                _wire.write(DIMMER_COMMAND_READ_NTC);
+                if (_endTransmission() == 0) {
+                    _unlockWire();
+
+                    delay(20);
+
+                    if (_lockWire()) {
+                        const int len2 = sizeof(ntc_temp);
+                        _wire.beginTransmission(DIMMER_I2C_ADDRESS);
+                        _wire.write(DIMMER_REGISTER_READ_LENGTH);
+                        _wire.write(len2);
+                        _wire.write(DIMMER_REGISTER_TEMP);
+                        if (_endTransmission() == 0 && _wire.requestFrom(DIMMER_I2C_ADDRESS, len2) == len2) {
+                            _wire.readBytes(reinterpret_cast<uint8_t *>(&ntc_temp), sizeof(ntc_temp));
+                            hasData = true;
+                        }
+                        _unlockWire();
+                    }
+                }
+                else {
+                    _unlockWire();
+                }
+            }
         }
+        else {
+            _unlockWire();
+        }
+    }
+
+    if (hasData) {
+        _updateMetrics(vcc, frequency, int_temp, ntc_temp);
     }
 }
 
@@ -162,61 +228,61 @@ void Dimmer_Base::_fetchMetrics() {
 void Dimmer_Base::writeConfig() {
     auto dimmer = config._H_GET(Config().dimmer);
 
-    _wire.beginTransmission(DIMMER_I2C_ADDRESS);
-    _wire.write(DIMMER_REGISTER_OPTIONS);
-    if (_endTransmission() == 0 && _wire.requestFrom(DIMMER_I2C_ADDRESS, 1) == 1) {
-        uint8_t options = _wire.read();
-
-        if (dimmer.restore_level) {
-            options |= DIMMER_OPTIONS_RESTORE_LEVEL;
-        } else {
-            options &= ~DIMMER_OPTIONS_RESTORE_LEVEL;
-        }
-
+    if (_lockWire()) {
         _wire.beginTransmission(DIMMER_I2C_ADDRESS);
         _wire.write(DIMMER_REGISTER_OPTIONS);
-        _wire.write(options);
-        _wire.write(dimmer.max_temperature);
-        _wire.write(reinterpret_cast<const uint8_t *>(&dimmer.on_fade_time), sizeof(dimmer.on_fade_time));
-        _wire.write(dimmer.temp_check_int);
-        _wire.write(reinterpret_cast<const uint8_t *>(&dimmer.linear_correction), sizeof(dimmer.linear_correction));
-        if (_endTransmission() == 0) {
-            writeEEPROM();
+        if (_endTransmission() == 0 && _wire.requestFrom(DIMMER_I2C_ADDRESS, 1) == 1) {
+            uint8_t options = _wire.read();
+
+            if (dimmer.restore_level) {
+                options |= DIMMER_OPTIONS_RESTORE_LEVEL;
+            } else {
+                options &= ~DIMMER_OPTIONS_RESTORE_LEVEL;
+            }
+
+            _wire.beginTransmission(DIMMER_I2C_ADDRESS);
+            _wire.write(DIMMER_REGISTER_OPTIONS);
+            _wire.write(options);
+            _wire.write(dimmer.max_temperature);
+            _wire.write(reinterpret_cast<const uint8_t *>(&dimmer.on_fade_time), sizeof(dimmer.on_fade_time));
+            _wire.write(dimmer.metrics_int);
+            _wire.write(reinterpret_cast<const uint8_t *>(&dimmer.linear_correction), sizeof(dimmer.linear_correction));
+            if (_endTransmission() == 0) {
+                writeEEPROM(true);
+            }
         }
     }
-
+    _unlockWire();
 }
 
 void Dimmer_Base::_printStatus(PrintHtmlEntitiesString &out) {
-    if (_temperature) {
-        out.printf_P(PSTR("Temperature %.2f" HTML_DEG "C"), _temperature);
+    auto length = out.length();
+    if (!isnan(_internalTemperature)) {
+        out.printf_P(PSTR("Internal temperature %.2f" HTML_DEG "C"), _internalTemperature);
+    }
+    if (!isnan(_ntcTemperature)) {
+        if (length != out.length()) {
+            out.print(F(", "));
+        }
+        out.printf_P(PSTR("NTC %.2f" HTML_DEG "C"), _ntcTemperature);
     }
     if (_vcc) {
-        if (_temperature) {
-            out.print(F(", v"));
-        } else {
-            out.print('V');
+        if (length != out.length()) {
+            out.print(F(", "));
         }
-        out.printf_P(PSTR("oltage %.3fV"), _vcc / 1000.0);
+        out.printf_P(PSTR("VCC %.3fV"), _vcc / 1000.0);
     }
-    if (_frequency) {
-        if (_vcc || _temperature) {
+    if (!isnan(_frequency)) {
+        if (length != out.length()) {
             out.print(F(", "));
         }
         out.printf_P(PSTR("AC frequency %.2fHz"), _frequency);
     }
-
-#if DIMMER_FIRMWARE_DEBUG
-    out.print(F(HTML_S(br) HTML_S(pre)));
-    register_mem_cfg_t config;
-    readDimmerFirmware(out, config);
-    out.print(F(HTML_E(pre)));
-#endif
 }
 
-void Dimmer_Base::_updateMetrics(float temperature, uint16_t vcc, float frequency) {
-    _debug_printf_P(PSTR("Dimmer_Base::_updateMetrics(%u, %u, %.2f%)\n"), temperature, vcc, frequency);
-    if (_temperature != temperature || _vcc != vcc || _frequency != frequency) {
+void Dimmer_Base::_updateMetrics(uint16_t vcc, float frequency, float internalTemperature, float ntcTemperature) {
+    _debug_printf_P(PSTR("Dimmer_Base::_updateMetrics(%u, %.3f, %.2f, %.2f)\n"), vcc, frequency, internalTemperature, ntcTemperature);
+    if (_vcc != vcc || _frequency != frequency || _internalTemperature != internalTemperature || _ntcTemperature != ntcTemperature) {
         auto client = MQTTClient::getClient();
         if (client) {
             JsonUnnamedObject object(2);
@@ -224,12 +290,21 @@ void Dimmer_Base::_updateMetrics(float temperature, uint16_t vcc, float frequenc
             auto &events = object.addArray(JJ(events));
 
             String topic = MQTTClient::formatTopic(-1, F("/metrics/"));
-            if (_temperature != temperature) {
-                _temperature = temperature;
-                auto tempStr = String(_temperature, 2);
-                client->publish(topic + F("temperature"), MQTTClient::getDefaultQos(), 1, tempStr);
+            if (_internalTemperature != internalTemperature) {
+                _internalTemperature = internalTemperature;
+                auto tempStr = String(_internalTemperature, 2);
+                client->publish(topic + F("int_temp"), MQTTClient::getDefaultQos(), 1, tempStr);
                 auto &value = events.addObject(3);
-                value.add(JJ(id), F("dimmer_temp"));
+                value.add(JJ(id), F("dimmer_int_temp"));
+                value.add(JJ(state), true);
+                value.add(JJ(value), JsonNumber(tempStr));
+            }
+            if (_ntcTemperature != ntcTemperature) {
+                _ntcTemperature = ntcTemperature;
+                auto tempStr = String(_ntcTemperature, 2);
+                client->publish(topic + F("ntc_temp"), MQTTClient::getDefaultQos(), 1, tempStr);
+                auto &value = events.addObject(3);
+                value.add(JJ(id), F("dimmer_ntc_temp"));
                 value.add(JJ(state), true);
                 value.add(JJ(value), JsonNumber(tempStr));
             }
@@ -253,7 +328,7 @@ void Dimmer_Base::_updateMetrics(float temperature, uint16_t vcc, float frequenc
             }
 
             if (events.size()) {
-                WsWebUISocket::broadcast(object);
+                WsWebUISocket::broadcast(WsWebUISocket::getSender(), object);
             }
 
         }
@@ -263,21 +338,29 @@ void Dimmer_Base::_updateMetrics(float temperature, uint16_t vcc, float frequenc
 void Dimmer_Base::_fade(uint8_t channel, int16_t toLevel, float fadeTime) {
     _debug_printf_P(PSTR("Dimmer_Base::_fade(%u, %u, %f)\n"), channel, toLevel, fadeTime);
 
-    _wire.beginTransmission(DIMMER_I2C_ADDRESS);
-    _wire.write(DIMMER_REGISTER_CHANNEL);
-    _wire.write(channel);
-    _wire.write(reinterpret_cast<const uint8_t *>(&toLevel), sizeof(toLevel));
-    _wire.write(reinterpret_cast<const uint8_t *>(&fadeTime), sizeof(fadeTime));
-    _wire.write(DIMMER_COMMAND_FADE);
-    _endTransmission();
+    if (_lockWire()) {
+        _wire.beginTransmission(DIMMER_I2C_ADDRESS);
+        _wire.write(DIMMER_REGISTER_CHANNEL);
+        _wire.write(channel);
+        _wire.write(reinterpret_cast<const uint8_t *>(&toLevel), sizeof(toLevel));
+        _wire.write(reinterpret_cast<const uint8_t *>(&fadeTime), sizeof(fadeTime));
+        _wire.write(DIMMER_COMMAND_FADE);
+        _endTransmission();
+        _unlockWire();
+    }
 }
 
-void Dimmer_Base::writeEEPROM() {
+void Dimmer_Base::writeEEPROM(bool noLocking) {
     _debug_printf_P(PSTR("Dimmer_Base::writeEEPROM()\n"));
-    _wire.beginTransmission(DIMMER_I2C_ADDRESS);
-    _wire.write(DIMMER_REGISTER_COMMAND);
-    _wire.write(DIMMER_COMMAND_WRITE_EEPROM);
-    _endTransmission();
+    if (noLocking || _lockWire()) {
+        _wire.beginTransmission(DIMMER_I2C_ADDRESS);
+        _wire.write(DIMMER_REGISTER_COMMAND);
+        _wire.write(DIMMER_COMMAND_WRITE_EEPROM);
+        _endTransmission();
+        if (!noLocking) {
+            _unlockWire();
+        }
+    }
 }
 
 #if DEBUG_IOT_DIMMER_MODULE
@@ -301,9 +384,14 @@ void Dimmer_Base::getValues(JsonArray &array) {
     }
 
     obj = &array.addObject();
-    obj->add(JJ(id), F("dimmer_temp"));
-    obj->add(JJ(state), _temperature != 0);
-    obj->add(JJ(value), JsonNumber(_temperature, 2));
+    obj->add(JJ(id), F("dimmer_int_temp"));
+    obj->add(JJ(state), isnan(_internalTemperature));
+    obj->add(JJ(value), JsonNumber(_internalTemperature, 2));
+
+    obj = &array.addObject();
+    obj->add(JJ(id), F("dimmer_ntc_temp"));
+    obj->add(JJ(state), isnan(_ntcTemperature));
+    obj->add(JJ(value), JsonNumber(_ntcTemperature, 2));
 
     obj = &array.addObject();
     obj->add(JJ(id), F("dimmer_vcc"));
@@ -312,7 +400,7 @@ void Dimmer_Base::getValues(JsonArray &array) {
 
     obj = &array.addObject();
     obj->add(JJ(id), F("dimmer_frequency"));
-    obj->add(JJ(state), _frequency != 0);
+    obj->add(JJ(state), isnan(_frequency));
     obj->add(JJ(value), JsonNumber(_frequency, 2));
 }
 
@@ -344,83 +432,50 @@ void Dimmer_Base::setValue(const String &id, const String &value, bool hasValue,
 
 #if DIMMER_FIRMWARE_DEBUG
 
-void Dimmer_Base::resetDimmerFirmware() {
-
-    _wire.beginTransmission(DIMMER_I2C_ADDRESS);
-    _wire.write(DIMMER_REGISTER_COMMAND);
-    _wire.write(DIMMER_COMMAND_RESTORE_FS);
-    _endTransmission();
-}
-
 void Dimmer_Base::readDimmerFirmware(Print &output, register_mem_cfg_t &config) {
 
     uint16_t version;
     const uint8_t readLength = sizeof(config) + sizeof(version);
 
-    _wire.beginTransmission(DIMMER_I2C_ADDRESS);
-    _wire.write(DIMMER_REGISTER_READ_LENGTH);
-    _wire.write(readLength);
-    _wire.write(DIMMER_REGISTER_OPTIONS);
-    if (_endTransmission() == 0 && _wire.requestFrom((uint8_t)DIMMER_I2C_ADDRESS, readLength) == readLength) {
+    if (_lockWire()) {
+        _wire.beginTransmission(DIMMER_I2C_ADDRESS);
+        _wire.write(DIMMER_REGISTER_READ_LENGTH);
+        _wire.write(readLength);
+        _wire.write(DIMMER_REGISTER_OPTIONS);
+        if (_endTransmission() == 0 && _wire.requestFrom((uint8_t)DIMMER_I2C_ADDRESS, readLength) == readLength) {
 
-        _wire.readBytes(reinterpret_cast<uint8_t *>(&config), sizeof(config));
-        _wire.readBytes(reinterpret_cast<uint8_t *>(&version), sizeof(version));
+            _wire.readBytes(reinterpret_cast<uint8_t *>(&config), sizeof(config));
+            _wire.readBytes(reinterpret_cast<uint8_t *>(&version), sizeof(version));
+            _unlockWire();
 
-        auto vMaintenance = version & 0b11111;
-        auto vMinor = (version >> 5) & 0b11111;
-        auto vMajor = (version >> 10);
-        char versionStr[8];
-        snprintf_P(versionStr, sizeof(versionStr), PSTR("%u.%u.%u"), vMajor, vMinor, vMaintenance);
+            auto vMaintenance = version & 0b11111;
+            auto vMinor = (version >> 5) & 0b11111;
+            auto vMajor = (version >> 10);
+            char versionStr[8];
+            snprintf_P(versionStr, sizeof(versionStr), PSTR("%u.%u.%u"), vMajor, vMinor, vMaintenance);
 
-        output.printf_P(PSTR("+------------------------------------+---------+\n"));
-        output.printf_P(PSTR("| version                            | %-7.7s |\n"), versionStr);
-        output.printf_P(PSTR("| config.bits.restore_level          | %1d       |\n"), config.bits.restore_level);
-        output.printf_P(PSTR("| config.bits.report_temp            | %1d       |\n"), config.bits.report_temp);
-        output.printf_P(PSTR("| config.bits.temperature_alert      | %1d       |\n"), config.bits.temperature_alert);
-        output.printf_P(PSTR("| config.max_temp                    | %03d     |\n"), config.max_temp);
-        output.printf_P(PSTR("| config.fade_in_time                | %2.2f    |\n"), config.fade_in_time);
-        output.printf_P(PSTR("| config.temp_check_interval         | %03d     |\n"), config.temp_check_interval);
-        output.printf_P(PSTR("| config.linear_correction_factor    | %1.5f |\n"), config.linear_correction_factor);
-        output.printf_P(PSTR("| config.zero_crossing_delay_ticks   | %03d     |\n"), config.zero_crossing_delay_ticks);
-        output.printf_P(PSTR("| config.minimum_on_time_ticks       | %05d   |\n"), config.minimum_on_time_ticks);
-        output.printf_P(PSTR("| config.adjust_halfwave_time_ticks  | %05d   |\n"), config.adjust_halfwave_time_ticks);
-        output.printf_P(PSTR("+------------------------------------+---------+\n"));
+            output.printf_P(PSTR("+------------------------------------+---------+\n"));
+            output.printf_P(PSTR("| version                            | %-7.7s |\n"), versionStr);
+            output.printf_P(PSTR("| config.bits.restore_level          | %1d       |\n"), config.bits.restore_level);
+            output.printf_P(PSTR("| config.bits.report_metrics         | %1d       |\n"), config.bits.report_metrics);
+            output.printf_P(PSTR("| config.bits.temperature_alert      | %1d       |\n"), config.bits.temperature_alert);
+            output.printf_P(PSTR("| config.max_temp                    | %03d     |\n"), config.max_temp);
+            output.printf_P(PSTR("| config.fade_in_time                | %2.2f    |\n"), config.fade_in_time);
+            output.printf_P(PSTR("| config.temp_check_interval         | %03d     |\n"), config.temp_check_interval);
+            output.printf_P(PSTR("| config.linear_correction_factor    | %1.5f |\n"), config.linear_correction_factor);
+            output.printf_P(PSTR("| config.zero_crossing_delay_ticks   | %03d     |\n"), config.zero_crossing_delay_ticks);
+            output.printf_P(PSTR("| config.minimum_on_time_ticks       | %05d   |\n"), config.minimum_on_time_ticks);
+            output.printf_P(PSTR("| config.adjust_halfwave_time_ticks  | %05d   |\n"), config.adjust_halfwave_time_ticks);
+            output.printf_P(PSTR("| config.int_temp_offset             | %03d     |\n"), config.int_temp_offset);
+            output.printf_P(PSTR("| config.ntc_temp_offset             | %03d     |\n"), config.ntc_temp_offset);
+            output.printf_P(PSTR("| config.report_metrics_max_interval | %03d     |\n"), config.report_metrics_max_interval);
+            output.printf_P(PSTR("+------------------------------------+---------+\n"));
+        }
+        else {
+            _unlockWire();
+        }
     }
 }
-
-void Dimmer_Base::setDimmerFirmwareZCDelay(uint8_t zcDelay) {
-
-    _wire.beginTransmission(DIMMER_I2C_ADDRESS);
-    _wire.write(DIMMER_REGISTER_ZC_DELAY_TICKS);
-    _wire.write(zcDelay);
-    _endTransmission();
-}
-
-void Dimmer_Base::setDimmerFirmwareSetMinTime(uint16_t minTime) {
-
-    _wire.beginTransmission(DIMMER_I2C_ADDRESS);
-    _wire.write(DIMMER_REGISTER_MIN_ON_TIME_TICKS);
-    _wire.write(reinterpret_cast<const uint8_t *>(&minTime), sizeof(minTime));
-    _endTransmission();
-}
-
-void Dimmer_Base::setDimmerFirmwareSetMaxTime(uint16_t maxTime) {
-
-    _wire.beginTransmission(DIMMER_I2C_ADDRESS);
-    _wire.write(DIMMER_REGISTER_ADJ_HALFWAVE_TICKS);
-    _wire.write(reinterpret_cast<const uint8_t *>(&maxTime), sizeof(maxTime));
-    _endTransmission();
-}
-
-// void Dimmer_Base::writeDimmerFirmware(register_mem_cfg_t &config) {
-//
-//     _wire.beginTransmission(DIMMER_I2C_ADDRESS);
-//     _wire.write(DIMMER_REGISTER_OPTIONS);
-//     _wire.write(reinterpret_cast<const uint8_t *>(&config), sizeof(config));
-//     if (_endTransmission() == 0) {
-//         writeEEPROM();
-//     }
-// }
 
 #endif
 

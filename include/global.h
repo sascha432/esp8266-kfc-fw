@@ -317,7 +317,7 @@ extern class Stream &DebugSerial;
 #endif
 
 #ifndef SERIAL_HANDLER_INPUT_BUFFER_MAX
-#define SERIAL_HANDLER_INPUT_BUFFER_MAX 128
+#define SERIAL_HANDLER_INPUT_BUFFER_MAX 512
 #endif
 
 #ifndef RTC_SUPPORT

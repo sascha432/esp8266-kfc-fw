@@ -46,6 +46,10 @@ void DimmerChannel::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTT
     vector.emplace_back(discovery);
 }
 
+uint8_t DimmerChannel::getAutoDiscoveryCount() const {
+    return 1;
+}
+
 void DimmerChannel::_createTopics() {
 
     _data.state.set = MQTTClient::formatTopic(getNumber(), F("/set"));
@@ -67,10 +71,6 @@ void DimmerChannel::onConnect(MQTTClient *client) {
     client->subscribe(this, _data.brightness.set, _qos);
 
     publishState(client);
-
-    if (_channel == IOT_DIMMER_MODULE_CHANNELS - 1) {
-        _dimmer->onConnect(client);
-    }
 }
 
 void DimmerChannel::onMessage(MQTTClient *client, char *topic, char *payload, size_t len) {
@@ -157,7 +157,7 @@ void DimmerChannel::publishState(MQTTClient *client) {
     obj.add(JJ(id), id);
     obj.add(JJ(value), _data.brightness.value);
     obj.add(JJ(state), _data.state.value);
-    WsWebUISocket::broadcast(json);
+    WsWebUISocket::broadcast(WsWebUISocket::getSender(), json);
 }
 
 #endif

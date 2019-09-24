@@ -110,7 +110,7 @@ Sensor_BME280::SensorData_t Sensor_BME280::_readSensor() {
     sensor.humidity = _bme280.readHumidity();
     sensor.pressure = _bme280.readPressure() / 100.0;
 
-    debug_printf_P(PSTR("Sensor_BME280::_readSensor(): address 0x%02x: %.2f °C, %.2f%%, %.2f hPa\n"), _address, sensor.temperature, sensor.humidity, sensor.pressure);
+    _debug_printf_P(PSTR("Sensor_BME280::_readSensor(): address 0x%02x: %.2f °C, %.2f%%, %.2f hPa\n"), _address, sensor.temperature, sensor.humidity, sensor.pressure);
 
     return sensor;
 }

@@ -204,17 +204,13 @@ void web_server_update_handler(AsyncWebServerRequest *request) {
         if (!Update.hasError()) {
             Logger_security(F("Firmware upgrade successful"));
 
-            if (status->command == U_FLASH) {
-                BlinkLEDTimer::setBlink(BlinkLEDTimer::SLOW);
-                request->onDisconnect([]() {
-                    Logger_notice(F("Rebooting after upgrade"));
-                    Scheduler.addTimer(2000, false, [](EventScheduler::TimerPtr timer) {
-                        config.restartDevice();
-                    });
+            BlinkLEDTimer::setBlink(BlinkLEDTimer::SLOW);
+            request->onDisconnect([]() {
+                Logger_notice(F("Rebooting after upgrade"));
+                Scheduler.addTimer(2000, false, [](EventScheduler::TimerPtr timer) {
+                    config.restartDevice();
                 });
-            } else {
-                BlinkLEDTimer::setBlink(BlinkLEDTimer::OFF);
-            }
+            });
 
             String location;
             switch(status->command) {

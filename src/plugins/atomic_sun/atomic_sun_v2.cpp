@@ -93,24 +93,35 @@ void Driver_4ChDimmer::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, M
     String topic = MQTTClient::formatTopic(-1, F("/metrics/"));
     MQTTComponentHelper component(MQTTComponent::SENSOR);
 
-    component.setNumber(1);
+    component.setNumber(2);
     discovery = component.createAutoDiscovery(0, format);
-    discovery->addStateTopic(topic + F("temperature"));
+    discovery->addStateTopic(topic + F("int_temp"));
     discovery->addUnitOfMeasurement(F("\u00b0C"));
     discovery->finalize();
     vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
 
     discovery = component.createAutoDiscovery(1, format);
+    discovery->addStateTopic(topic + F("ntc_temp"));
+    discovery->addUnitOfMeasurement(F("\u00b0C"));
+    discovery->finalize();
+    vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
+
+    discovery = component.createAutoDiscovery(2, format);
     discovery->addStateTopic(topic + F("vcc"));
     discovery->addUnitOfMeasurement(F("V"));
     discovery->finalize();
     vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
 
-    discovery = component.createAutoDiscovery(2, format);
+    discovery = component.createAutoDiscovery(3, format);
     discovery->addStateTopic(topic + F("frequency"));
     discovery->addUnitOfMeasurement(F("Hz"));
     discovery->finalize();
     vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
+}
+
+
+uint8_t Driver_4ChDimmer::getAutoDiscoveryCount() const {
+    return 6;
 }
 
 void Driver_4ChDimmer::_createTopics() {
@@ -211,7 +222,7 @@ void Driver_4ChDimmer::publishState(MQTTClient *client) {
     obj = &events.addObject(2);
     obj->add(JJ(id), F("dimmer_channel1"));
     obj->add(JJ(value), _data.color.value);
-    WsWebUISocket::broadcast(json);
+    WsWebUISocket::broadcast(WsWebUISocket::getSender(), json);
 }
 
 void Driver_4ChDimmer::_printStatus(PrintHtmlEntitiesString &out) {
@@ -295,15 +306,18 @@ void Driver_4ChDimmer::_setChannels(float fadetime) {
 // get brightness values from dimmer
 void Driver_4ChDimmer::_getChannels() {
     _debug_printf_P(PSTR("Driver_4ChDimmer::_getChannels()\n"));
-    _wire.beginTransmission(DIMMER_I2C_ADDRESS);
-    _wire.write(DIMMER_REGISTER_COMMAND);
-    _wire.write(DIMMER_COMMAND_READ_CHANNELS);
-    _wire.write((uint8_t)(sizeof(_channels) / sizeof(_channels[0])) << 4);
-    if (_endTransmission() == 0) {
-        if (_wire.requestFrom(DIMMER_I2C_ADDRESS, sizeof(_channels)) == sizeof(_channels)) {
-            _wire.readBytes(reinterpret_cast<uint8_t *>(&_channels), sizeof(_channels));
-            _debug_printf_P(PSTR("Driver_4ChDimmer::_getChannels(): %u, %u, %u, %u\n"), _channels[0], _channels[1], _channels[2], _channels[3]);
+    if (_lockWire()) {
+        _wire.beginTransmission(DIMMER_I2C_ADDRESS);
+        _wire.write(DIMMER_REGISTER_COMMAND);
+        _wire.write(DIMMER_COMMAND_READ_CHANNELS);
+        _wire.write((uint8_t)(sizeof(_channels) / sizeof(_channels[0])) << 4);
+        if (_endTransmission() == 0) {
+            if (_wire.requestFrom(DIMMER_I2C_ADDRESS, sizeof(_channels)) == sizeof(_channels)) {
+                _wire.readBytes(reinterpret_cast<uint8_t *>(&_channels), sizeof(_channels));
+                _debug_printf_P(PSTR("Driver_4ChDimmer::_getChannels(): %u, %u, %u, %u\n"), _channels[0], _channels[1], _channels[2], _channels[3]);
+            }
         }
+        _unlockWire();
     }
 }
 
@@ -346,7 +360,8 @@ void AtomicSunPlugin::createWebUI(WebUI &webUI) {
     row = &webUI.addRow();
     row->addBadgeSensor(F("dimmer_vcc"), F("Atomic Sun VCC"), F("V"));
     row->addBadgeSensor(F("dimmer_frequency"), F("Atomic Sun Frequency"), F("Hz"));
-    row->addBadgeSensor(F("dimmer_temp"), F("Atomic Sun Internal Temperature"), F("\u00b0C"));
+    row->addBadgeSensor(F("dimmer_int_temp"), F("Atomic Sun ATmega"), F("\u00b0C"));
+    row->addBadgeSensor(F("dimmer_ntc_temp"), F("Atomic Sun NTC"), F("\u00b0C"));
 }
 
 WebUIInterface *AtomicSunPlugin::getWebUIInterface() {

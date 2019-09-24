@@ -148,7 +148,7 @@ struct DimmerModule {
     float on_fade_time;
     float linear_correction;
     uint8_t max_temperature;
-    uint8_t temp_check_int;
+    uint8_t metrics_int;
     uint8_t report_temp;
     uint8_t restore_level;
 };

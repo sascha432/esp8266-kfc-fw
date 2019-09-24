@@ -7,15 +7,20 @@
 #if IOT_DIMMER_MODULE || IOT_ATOMIC_SUN_V2
 
 #include <Arduino_compat.h>
-#include <HardwareSerial.h>
 #include <PrintHtmlEntitiesString.h>
 #include "EventScheduler.h"
 #include "WebUIComponent.h"
 #if IOT_DIMMER_MODULE_INTERFACE_UART
+#include <HardwareSerial.h>
 #include "SerialTwoWire.h"
+#else
+#include <Wire.h>
 #endif
 
-#define DIMMER_FIRMWARE_DEBUG 1
+#ifndef DIMMER_FIRMWARE_DEBUG
+// enable dimmer firmware debugging
+#define DIMMER_FIRMWARE_DEBUG       0
+#endif
 
 #if DIMMER_FIRMWARE_DEBUG
 #include <push_pack.h>
@@ -27,6 +32,8 @@ class DimmerChannel;
 
 class Dimmer_Base : public WebUIInterface {
 public:
+    static const uint32_t METRICS_DEFAULT_UPDATE_RATE = 60e3;
+
     Dimmer_Base();
     virtual ~Dimmer_Base();
 
@@ -45,7 +52,7 @@ public:
     virtual uint8_t getChannelCount() const = 0;
 
     void writeConfig();
-    void writeEEPROM();
+    void writeEEPROM(bool noLocking = false);
 
 protected:
     friend DimmerChannel;
@@ -54,7 +61,7 @@ protected:
     void _end();
 
     void _printStatus(PrintHtmlEntitiesString &out);
-    void _updateMetrics(float temperature, uint16_t vcc, float frequency);
+    void _updateMetrics(uint16_t vcc, float frequency, float internalTemperature, float ntcTemperature);
 
     void _fade(uint8_t channel, int16_t toLevel, float fadeTime);
 
@@ -64,6 +71,27 @@ protected:
     inline float getOnOffFadeTime() {
         return _onOffFadeTime;
     }
+
+    inline bool _lockWire() {
+#if IOT_DIMMER_MODULE_INTERFACE_UART
+        if (_wireLocked) {
+            _debug_println("Wire locked");
+            return false;
+        }
+        _wireLocked = true;
+#else
+        noInterrupts();
+#endif
+        return true;
+    }
+    inline void _unlockWire() {
+#if IOT_DIMMER_MODULE_INTERFACE_UART
+        _wireLocked = false;
+#else
+        interrupts();
+        delay(1);
+#endif
+    }
 protected:
 #if DEBUG_IOT_DIMMER_MODULE
     uint8_t _endTransmission();
@@ -72,10 +100,10 @@ protected:
         return _wire.endTransmission();
     }
 #endif
-
-    float _temperature;
     uint16_t _vcc;
     float _frequency;
+    float _internalTemperature;
+    float _ntcTemperature;
 
     float _fadeTime;
     float _onOffFadeTime;
@@ -83,8 +111,9 @@ protected:
 #if IOT_DIMMER_MODULE_INTERFACE_UART
     HardwareSerial &_serial;
     SerialTwoWire &_wire;
+    bool _wireLocked;
 
-    void _onReceive(int length);
+    void _onReceive(size_t length);
 #else
     TwoWire &_wire;
     EventScheduler::TimerPtr _timer;
@@ -94,11 +123,7 @@ protected:
 
 #if DIMMER_FIRMWARE_DEBUG
 public:
-    void resetDimmerFirmware();
     void readDimmerFirmware(Print &output, register_mem_cfg_t &config);
-    void setDimmerFirmwareZCDelay(uint8_t zcDelay);
-    void setDimmerFirmwareSetMinTime(uint16_t minTime);
-    void setDimmerFirmwareSetMaxTime(uint16_t maxTime);
 #endif
 
 public:

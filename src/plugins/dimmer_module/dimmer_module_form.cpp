@@ -37,7 +37,7 @@ void DimmerModuleForm::createConfigureForm(AsyncWebServerRequest *request, Form 
     form.add<uint8_t>(F("max_temperature"), &dimmer.max_temperature);
     form.addValidator(new FormRangeValidator(F("Invalid temperature"), 45, 150));
 
-    form.add<uint8_t>(F("temp_check_int"), &dimmer.temp_check_int);
+    form.add<uint8_t>(F("metrics_int"), &dimmer.metrics_int);
     form.addValidator(new FormRangeValidator(F("Invalid interval"), 10, 255));
 
     form.finalize();

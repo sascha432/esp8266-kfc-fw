@@ -24,6 +24,7 @@
 #include "web_server.h"
 #include "async_web_response.h"
 #include "serial_handler.h"
+#include "pin_monitor.h"
 #include "plugins.h"
 
 #if DEBUG_AT_MODE
@@ -107,6 +108,9 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(REM, "REM", "Ignore comment");
 
 #if DEBUG
 
+#if PIN_MONITOR
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PINM, "PINM", "[<1=start|0=stop>}", "List or monitor PINs");
+#endif
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(PLUGINS, "PLUGINS", "List plugins");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HEAP, "HEAP", "[interval in seconds|0=disable]", "Display free heap");
 #if defined(ESP8266)
@@ -139,6 +143,9 @@ void at_mode_help_commands() {
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(REM));
 
 #if DEBUG
+#if PIN_MONITOR
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(PINM));
+#endif
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(PLUGINS));
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(HEAP));
 #if defined(ESP8266)
@@ -373,8 +380,8 @@ void at_mode_serial_handle_event(String &commandString) {
                     }
                 }
             }
-            else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(REM))) {
-                // ignore comment
+            else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(REM)) || !strcasecmp_P(command, PSTR("I2CT")) || !strcasecmp_P(command, PSTR("I2CR"))) {
+                // ignore comment or SerialTwoWire communication
             }
             else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(DLY))) {
                 unsigned long ms = 1;
@@ -386,6 +393,31 @@ void at_mode_serial_handle_event(String &commandString) {
                 at_mode_print_ok(output);
             }
 #if DEBUG
+    #if PIN_MONITOR
+            else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(PINM))) {
+                if (!PinMonitor::getInstance()) {
+                    output.println(F("+PINM: Pin monitor not initialized"));
+                }
+                else if (argc == 1) {
+                    int state = atoi(args[0]);
+                    auto &timer = PinMonitor::getTimer();
+                    if (state && !timer) {
+                        output.println(F("+PINM: started"));
+                        Stream *serialPtr = &output;
+                        timer = Scheduler.addTimer(1000, true, [serialPtr](EventScheduler::TimerPtr timer) {
+                            PinMonitor::getInstance()->dumpPins(*serialPtr);
+                        });
+                    }
+                    else if (!state && timer) {
+                        Scheduler.removeTimer(timer);
+                        timer = nullptr;
+                        output.println(F("+PINM: stopped"));
+                    }
+                } else {
+                    PinMonitor::getInstance()->dumpPins(output);
+                }
+            }
+    #endif
             else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(PLUGINS))) {
                 dump_plugin_list(output);
             }
@@ -404,7 +436,7 @@ void at_mode_serial_handle_event(String &commandString) {
                     at_mode_print_invalid_arguments(output);
                 }
             }
-#if defined(ESP8266)
+    #if defined(ESP8266)
             else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(CPU))) {
                 if (argc == 1) {
                     uint8_t speed = atoi(args[0]);
@@ -413,7 +445,7 @@ void at_mode_serial_handle_event(String &commandString) {
                 }
                 output.printf_P(PSTR("+CPU: %d MHz\n"), ESP.getCpuFreqMHz());
             }
-#endif
+    #endif
             else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(DUMP))) {
                 config.dump(output);
             }

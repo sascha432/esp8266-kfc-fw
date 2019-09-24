@@ -77,8 +77,8 @@ void check_if_exist_I2C(Print &output) {
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(SCANI2C, "SCANI2C", "Scan for I2C bus and devices (might cause a crash)");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(SCAND, "SCAND", "Scan for devices");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CS, "I2CS", "<SDA,SCL[,speed=100kHz[,clock strech limit=usec]]>", "Setup I2C bus");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CT, "I2CT", "<address,byte[,byte][,...]>", "Send data to slave (hex encoded: ff or 0xff)");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CR, "I2CR", "<address,count>", "Request data from slave");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CST, "I2CST", "<address,byte[,byte][,...]>", "Send data to slave (hex encoded: ff or 0xff)");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CSR, "I2CSR", "<address,count>", "Request data from slave");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CCCS811, "I2CCCS811", "<address>[,<temperature=25>][,<humidity=55>]", "Read CCS811 sensor");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CBME680, "I2CBME680", "<address>", "Read BME680 sensor");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CBME280, "I2CBME280", "<address>", "Read BME280 sensor");
@@ -136,8 +136,8 @@ void I2CScannerPlugin::atModeHelpGenerator() {
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SCANI2C));
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SCAND));
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CS));
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CT));
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CR));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CST));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CSR));
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CCCS811));
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CBME680));
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CBME280));
@@ -165,14 +165,14 @@ bool I2CScannerPlugin::atModeHandler(Stream &serial, const String &command, int8
             serial.printf_P(PSTR("+I2CS: SDA=%d, SCL=%d, speed=%ukHz, setClockStretchLimit=%d\n"), sda, scl, speed, setClockStretchLimit);
         }
         return true;
-    } else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(I2CT))) {
+    } else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(I2CST))) {
         if (argc < 1) {
             at_mode_print_invalid_arguments(serial);
         }
         else {
             int tmp;
             Wire.beginTransmission(tmp = __toint(argv[0], 16));
-            serial.printf_P(PSTR("+I2CT: address=%02x"), tmp);
+            serial.printf_P(PSTR("+I2CST: address=%02x"), tmp);
             if (argc > 1) {
                 serial.print(',');
             }
@@ -185,7 +185,7 @@ bool I2CScannerPlugin::atModeHandler(Stream &serial, const String &command, int8
             serial.printf_P(PSTR(", result = %u (%02x)\n"), result, result);
         }
         return true;
-    } else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(I2CR))) {
+    } else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(I2CSR))) {
         if (argc != 2) {
             at_mode_print_invalid_arguments(serial);
         }
@@ -193,7 +193,7 @@ bool I2CScannerPlugin::atModeHandler(Stream &serial, const String &command, int8
             int address, count;
             address = __toint(argv[0], 16);
             count = __toint(argv[1], 16);
-            serial.printf_P(PSTR("+I2CR: address=%02x, count=%d, "), address, count);
+            serial.printf_P(PSTR("+I2CSR: address=%02x, count=%d, "), address, count);
             auto result = Wire.requestFrom(address, count);
             serial.printf_P(PSTR("result=%u, expected=%u, "), result, count);
             uint16_t word = 0;

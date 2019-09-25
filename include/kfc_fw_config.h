@@ -153,6 +153,19 @@ struct DimmerModule {
     uint8_t restore_level;
 };
 
+struct DimmerModuleButtons {
+    uint16_t shortpress_time;
+    uint16_t longpress_time;
+    uint16_t repeat_time;
+    uint16_t shortpress_no_repeat_time;
+    uint8_t min_brightness;
+    uint8_t shortpress_step;
+    uint8_t longpress_max_brightness;
+    uint8_t longpress_min_brightness;
+    float shortpress_fadetime;
+    float longpress_fadetime;
+};
+
 typedef struct  {
     int16_t channel: 15;                    //  0
     int16_t use_static_ip: 1;               // +2 byte
@@ -199,6 +212,7 @@ struct Config {
     struct NTP ntp;
     HomeAssistant homeassistant;
     DimmerModule dimmer;
+    DimmerModuleButtons dimmer_buttons;
     SoftAP soft_ap;
     struct Serial2Tcp serial2tcp;
     struct HueConfig hue;

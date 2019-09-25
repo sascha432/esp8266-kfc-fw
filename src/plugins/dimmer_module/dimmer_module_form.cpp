@@ -40,6 +40,40 @@ void DimmerModuleForm::createConfigureForm(AsyncWebServerRequest *request, Form 
     form.add<uint8_t>(F("metrics_int"), &dimmer.metrics_int);
     form.addValidator(new FormRangeValidator(F("Invalid interval"), 10, 255));
 
+#if IOT_DIMMER_MODULE_HAS_BUTTONS
+
+    auto dimmer_buttons = config._H_W_GET(Config().dimmer_buttons);
+
+    form.add<uint16_t>(F("shortpress_time"), &dimmer_buttons.shortpress_time);
+    form.addValidator(new FormRangeValidator(F("Invalid time"), 50, 1000));
+
+    form.add<uint16_t>(F("longpress_time"), &dimmer_buttons.longpress_time);
+    form.addValidator(new FormRangeValidator(F("Invalid time"), 250, 2000));
+
+    form.add<uint16_t>(F("repeat_time"), &dimmer_buttons.repeat_time);
+    form.addValidator(new FormRangeValidator(F("Invalid time"), 50, 500));
+
+    form.add<uint16_t>(F("shortpress_no_repeat_time"), &dimmer_buttons.shortpress_no_repeat_time);
+    form.addValidator(new FormRangeValidator(F("Invalid time"), 250, 2500));
+
+    form.add<uint8_t>(F("min_brightness"), &dimmer_buttons.min_brightness);
+    form.addValidator(new FormRangeValidator(F("Invalid brightness"), 0, 100));
+
+    form.add<uint8_t>(F("shortpress_step"), &dimmer_buttons.shortpress_step);
+    form.addValidator(new FormRangeValidator(F("Invalid level"), 1, 100));
+
+    form.add<uint8_t>(F("longpress_max_brightness"), &dimmer_buttons.longpress_max_brightness);
+    form.addValidator(new FormRangeValidator(F("Invalid brightness"), 0, 100));
+
+    form.add<uint8_t>(F("longpress_min_brightness"), &dimmer_buttons.longpress_min_brightness);
+    form.addValidator(new FormRangeValidator(F("Invalid brightness"), 0, 100));
+
+    form.add<float>(F("shortpress_fadetime"), &dimmer_buttons.shortpress_fadetime);
+
+    form.add<float>(F("longpress_fadetime"), &dimmer_buttons.longpress_fadetime);
+
+#endif
+
     form.finalize();
 
     PrintHtmlEntitiesString code;

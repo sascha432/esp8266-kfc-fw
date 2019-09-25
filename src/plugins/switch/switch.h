@@ -30,12 +30,12 @@
 
 // initial time to trigger hold event, 0 to disable
 #ifndef IOT_SWITCH_HOLD_DURATION
-#define IOT_SWITCH_HOLD_DURATION            2000
+#define IOT_SWITCH_HOLD_DURATION            800
 #endif
 
 // trigger hold down event every n milliseconds
 #ifndef IOT_SWITCH_HOLD_REPEAT
-#define IOT_SWITCH_HOLD_REPEAT              1000
+#define IOT_SWITCH_HOLD_REPEAT              100
 #endif
 
 class IOTSwitch : public MQTTComponent {

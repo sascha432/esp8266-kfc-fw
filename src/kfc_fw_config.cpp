@@ -410,6 +410,20 @@ void KFCFWConfiguration::restoreFactorySettings() {
     dimmer.restore_level = true;
     dimmer.report_temp = true;
     _H_SET(Config().dimmer, dimmer);
+#if IOT_DIMMER_MODULE_HAS_BUTTONS
+    DimmerModuleButtons dimmer_buttons;
+    dimmer_buttons.shortpress_time = 250;
+    dimmer_buttons.longpress_time = 600;
+    dimmer_buttons.repeat_time = 150;
+    dimmer_buttons.shortpress_no_repeat_time = 800;
+    dimmer_buttons.min_brightness = 15;
+    dimmer_buttons.shortpress_step = 5;
+    dimmer_buttons.longpress_max_brightness = 100;
+    dimmer_buttons.longpress_min_brightness = 33;
+    dimmer_buttons.shortpress_fadetime = 1.0;
+    dimmer_buttons.longpress_fadetime = 5.0;
+    _H_SET(Config().dimmer_buttons, dimmer_buttons);
+#endif
 #endif
 
 #if CUSTOM_CONFIG_PRESET

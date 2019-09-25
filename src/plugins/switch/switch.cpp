@@ -7,7 +7,7 @@
 #include "switch.h"
 #include "PluginComponent.h"
 #include "plugins.h"
-#include "LoopFunctions.h"
+#include <LoopFunctions.h>
 
 IOTSwitch *iotSwitch;
 static uint8_t pins[] = { IOT_SWITCH_PINS, 0 };
@@ -16,7 +16,7 @@ IOTSwitch::IOTSwitch() : MQTTComponent(SWITCH) {
     auto &monitor = *PinMonitor::createInstance();
     for(uint8_t i = 0; pins[i]; i++) {
         PinMonitor::Pin_t *pin;
-        pinMode(pins[i], INPUT);
+        //pinMode(pins[i], INPUT);
         if ((pin = monitor.addPin(pins[i], pinCallback, this))) {
             _buttons.emplace_back(ButtonContainer(pin->pin));
             auto &button = _buttons.back().getButton();
@@ -30,16 +30,16 @@ IOTSwitch::IOTSwitch() : MQTTComponent(SWITCH) {
 }
 
 IOTSwitch::~IOTSwitch() {
-    LoopFunctions::remove(IOTSwitch::loop);
     auto monitor = PinMonitor::getInstance();
     if (monitor) {
         for(const auto &button: _buttons) {
-            monitor->removePin(button.getPin());
+            monitor->removePin(button.getPin(), this);
         }
         if (monitor->size() == 0) {
             PinMonitor::deleteInstance();
         }
     }
+    LoopFunctions::remove(IOTSwitch::loop);
 }
 
 void IOTSwitch::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector) {

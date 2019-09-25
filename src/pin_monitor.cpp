@@ -37,9 +37,10 @@ PinMonitor *PinMonitor::createInstance() {
 
 void PinMonitor::deleteInstance() {
     if (_instance) {
-        for(auto pin: _instance->_pins) {
-            _instance->removePin(pin.pin);
-        }
+        // redundant, destructor detaches all interrupts
+        // for(auto pin: _instance->_pins) {
+        //     _instance->removePin(pin.pin, nullptr);
+        // }
         delete _instance;
         _instance = nullptr;
     }
@@ -57,7 +58,7 @@ void PinMonitor::callback(InterruptInfo info) {
 }
 
 PinMonitor::Pin_t *PinMonitor::addPin(uint8_t pin, Callback_t callback, void *arg) {
-    if (_findPin(pin) == _pins.end()) {
+    if (_findPin(pin, arg) == _pins.end()) {
         _debug_printf_P(PSTR("PinMonitor::addPin(): adding pin %d, callback %p, arg %p\n"), pin, callback, arg);
         Pin_t _pin;
         memset(&_pin, 0, sizeof(_pin));
@@ -74,8 +75,8 @@ PinMonitor::Pin_t *PinMonitor::addPin(uint8_t pin, Callback_t callback, void *ar
 
 }
 
-bool PinMonitor::removePin(uint8_t pin) {
-    auto _pin = _findPin(pin);
+bool PinMonitor::removePin(uint8_t pin, void *arg) {
+    auto _pin = _findPin(pin, arg);
     if (_pin == _pins.end()) {
         return false;
     }
@@ -95,9 +96,9 @@ void PinMonitor::dumpPins(Stream &output) {
     }
 }
 
-PinMonitor::PinsVectorIterator PinMonitor::_findPin(uint8_t pin) {
-    return std::find_if(_pins.begin(), _pins.end(), [pin](const Pin_t &_pin) {
-        return _pin.pin == pin;
+PinMonitor::PinsVectorIterator PinMonitor::_findPin(uint8_t pin, void *arg) {
+    return std::find_if(_pins.begin(), _pins.end(), [pin, arg](const Pin_t &_pin) {
+        return (_pin.pin == pin) && (!arg || _pin.arg == arg);
     });
 }
 

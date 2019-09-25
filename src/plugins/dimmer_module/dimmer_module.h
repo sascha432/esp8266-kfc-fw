@@ -24,6 +24,11 @@
 #include "dimmer_module_form.h"
 #include "dimmer_channel.h"
 #include "dimmer_base.h"
+#include "pin_monitor.h"
+#include <Button.h>
+#include <ButtonEventCallback.h>
+#include <PushButton.h>
+#include <Bounce2.h>
 
 #ifndef DEBUG_IOT_DIMMER_MODULE
 #define DEBUG_IOT_DIMMER_MODULE             0
@@ -71,6 +76,21 @@
 #include <Wire.h>
 #endif
 
+// enable or disable buttons
+#ifndef IOT_DIMMER_MODULE_HAS_BUTTONS
+#define IOT_DIMMER_MODULE_HAS_BUTTONS       0
+#endif
+
+#if IOT_DIMMER_MODULE_HAS_BUTTONS && !PIN_MONITOR
+#error PIN_MONITOR=1 required
+#endif
+
+// pins for dimmer buttons
+// each channel needs 2 buttons, up & down
+#ifndef IOT_DIMMER_MODULE_BUTTONS_PINS
+#define IOT_DIMMER_MODULE_BUTTONS_PINS      D6, D7
+#endif
+
 class DimmerModuleForm;
 
 class Driver_DimmerModule: public MQTTComponent, public Dimmer_Base, public DimmerModuleForm
@@ -98,6 +118,55 @@ private:
     void _getChannels();
 
     DimmerChannel _channels[IOT_DIMMER_MODULE_CHANNELS];
+
+// buttons
+#if IOT_DIMMER_MODULE_HAS_BUTTONS
+public:
+    static void pinCallback(void *arg);
+    static void loop();
+
+    static void onButtonPressed(Button& btn);
+    static void onButtonHeld(Button& btn, uint16_t duration, uint16_t repeatCount);
+    static void onButtonReleased(Button& btn, uint16_t duration);
+
+private:
+    void _pinCallback(PinMonitor::Pin_t &pin);
+    void _loop();
+
+    void _buttonShortPress(uint8_t channel, bool up);
+    void _buttonLongPress(uint8_t channel, bool up);
+    void _buttonRepeat(uint8_t channel, bool up, uint16_t repeatCount);
+
+    // get number of pressed buttons, channel and up or down button. returns false if no match
+    bool _findButton(Button &btn, uint8_t &pressed, uint8_t &channel, bool &buttonUp);
+
+private:
+    inline DimmerModuleButtons getButtonConfig() {
+        return config._H_GET(Config().dimmer_buttons);
+    }
+
+    class DimmerButton {
+    public:
+        DimmerButton(uint8_t pin) : _pin(pin), _button(pin, PRESSED_WHEN_LOW) {
+        }
+        inline uint8_t getPin() const {
+            return _pin;
+        }
+        inline PushButton &getButton() {
+            return _button;
+        }
+    private:
+        uint8_t _pin;
+        PushButton _button;
+    };
+
+    typedef std::vector<DimmerButton> DimmerButtonVector;
+
+    DimmerButtonVector _buttons;
+    EventScheduler::TimerPtr _turnOffTimer[IOT_DIMMER_MODULE_CHANNELS];
+    uint8_t _turnOffTimerRepeat[IOT_DIMMER_MODULE_CHANNELS];
+    int16_t _turnOffLevel[IOT_DIMMER_MODULE_CHANNELS];
+#endif
 };
 
 class DimmerModulePlugin : public Driver_DimmerModule {

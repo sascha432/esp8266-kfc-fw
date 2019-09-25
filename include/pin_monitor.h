@@ -44,7 +44,7 @@ public:
     typedef PinsVector::iterator PinsVectorIterator;
 
     Pin_t *addPin(uint8_t pin, Callback_t callback, void *arg);
-    bool removePin(uint8_t pin);
+    bool removePin(uint8_t pin, void *arg);
 
     void dumpPins(Stream &output);
 
@@ -55,7 +55,7 @@ public:
     }
 
 private:
-    PinsVectorIterator _findPin(uint8_t pin);
+    PinsVectorIterator _findPin(uint8_t pin, void *arg);
     PinsVector _pins;
 
     static PinMonitor *_instance;

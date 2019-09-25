@@ -65,6 +65,10 @@ public:
         changeOptions(delay, (int)(repeat ? EventScheduler::UNLIMTIED : EventScheduler::DONT), priority);
     }
 
+    inline void rearm(int delay, bool repeat) {
+        _updateInterval(delay, repeat);
+    }
+
     void detach();
     void invokeCallback();
 

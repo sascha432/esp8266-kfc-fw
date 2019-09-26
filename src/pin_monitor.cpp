@@ -57,9 +57,9 @@ void PinMonitor::callback(InterruptInfo info) {
     }
 }
 
-PinMonitor::Pin_t *PinMonitor::addPin(uint8_t pin, Callback_t callback, void *arg) {
+PinMonitor::Pin_t *PinMonitor::addPin(uint8_t pin, Callback_t callback, void *arg, uint8_t mode) {
     if (_findPin(pin, arg) == _pins.end()) {
-        _debug_printf_P(PSTR("PinMonitor::addPin(): adding pin %d, callback %p, arg %p\n"), pin, callback, arg);
+        _debug_printf_P(PSTR("PinMonitor::addPin(): adding pin %d, mode %d, callback %p, arg %p\n"), pin, mode, callback, arg);
         Pin_t _pin;
         memset(&_pin, 0, sizeof(_pin));
         _pin.pin = pin;
@@ -67,8 +67,8 @@ PinMonitor::Pin_t *PinMonitor::addPin(uint8_t pin, Callback_t callback, void *ar
         _pin.callback = callback;
         _pin.arg = arg;
         _pins.push_back(_pin);
-        pinMode(pin, INPUT);
         attachScheduledInterrupt(digitalPinToInterrupt(pin), PinMonitor::callback, CHANGE);
+        pinMode(pin, mode);
         return &_pins.back();
     }
     return nullptr;

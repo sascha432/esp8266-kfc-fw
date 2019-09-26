@@ -43,7 +43,7 @@ public:
     typedef std::vector<Pin_t> PinsVector;
     typedef PinsVector::iterator PinsVectorIterator;
 
-    Pin_t *addPin(uint8_t pin, Callback_t callback, void *arg);
+    Pin_t *addPin(uint8_t pin, Callback_t callback, void *arg, uint8_t pinMode = INPUT);
     bool removePin(uint8_t pin, void *arg);
 
     void dumpPins(Stream &output);

@@ -16,6 +16,7 @@
 #include "EventTimer.h"
 
 #include "../../trailing_edge_dimmer/src/dimmer_protocol.h"
+#include "../../trailing_edge_dimmer/src/dimmer_reg_mem.h"
 
 #if DEBUG_IOT_DIMMER_MODULE
 #include <debug_helper_enable.h>
@@ -429,54 +430,5 @@ void Dimmer_Base::setValue(const String &id, const String &value, bool hasValue,
         }
     }
 }
-
-#if DIMMER_FIRMWARE_DEBUG
-
-void Dimmer_Base::readDimmerFirmware(Print &output, register_mem_cfg_t &config) {
-
-    uint16_t version;
-    const uint8_t readLength = sizeof(config) + sizeof(version);
-
-    if (_lockWire()) {
-        _wire.beginTransmission(DIMMER_I2C_ADDRESS);
-        _wire.write(DIMMER_REGISTER_READ_LENGTH);
-        _wire.write(readLength);
-        _wire.write(DIMMER_REGISTER_OPTIONS);
-        if (_endTransmission() == 0 && _wire.requestFrom((uint8_t)DIMMER_I2C_ADDRESS, readLength) == readLength) {
-
-            _wire.readBytes(reinterpret_cast<uint8_t *>(&config), sizeof(config));
-            _wire.readBytes(reinterpret_cast<uint8_t *>(&version), sizeof(version));
-            _unlockWire();
-
-            auto vMaintenance = version & 0b11111;
-            auto vMinor = (version >> 5) & 0b11111;
-            auto vMajor = (version >> 10);
-            char versionStr[8];
-            snprintf_P(versionStr, sizeof(versionStr), PSTR("%u.%u.%u"), vMajor, vMinor, vMaintenance);
-
-            output.printf_P(PSTR("+------------------------------------+---------+\n"));
-            output.printf_P(PSTR("| version                            | %-7.7s |\n"), versionStr);
-            output.printf_P(PSTR("| config.bits.restore_level          | %1d       |\n"), config.bits.restore_level);
-            output.printf_P(PSTR("| config.bits.report_metrics         | %1d       |\n"), config.bits.report_metrics);
-            output.printf_P(PSTR("| config.bits.temperature_alert      | %1d       |\n"), config.bits.temperature_alert);
-            output.printf_P(PSTR("| config.max_temp                    | %03d     |\n"), config.max_temp);
-            output.printf_P(PSTR("| config.fade_in_time                | %2.2f    |\n"), config.fade_in_time);
-            output.printf_P(PSTR("| config.temp_check_interval         | %03d     |\n"), config.temp_check_interval);
-            output.printf_P(PSTR("| config.linear_correction_factor    | %1.5f |\n"), config.linear_correction_factor);
-            output.printf_P(PSTR("| config.zero_crossing_delay_ticks   | %03d     |\n"), config.zero_crossing_delay_ticks);
-            output.printf_P(PSTR("| config.minimum_on_time_ticks       | %05d   |\n"), config.minimum_on_time_ticks);
-            output.printf_P(PSTR("| config.adjust_halfwave_time_ticks  | %05d   |\n"), config.adjust_halfwave_time_ticks);
-            output.printf_P(PSTR("| config.int_temp_offset             | %03d     |\n"), config.int_temp_offset);
-            output.printf_P(PSTR("| config.ntc_temp_offset             | %03d     |\n"), config.ntc_temp_offset);
-            output.printf_P(PSTR("| config.report_metrics_max_interval | %03d     |\n"), config.report_metrics_max_interval);
-            output.printf_P(PSTR("+------------------------------------+---------+\n"));
-        }
-        else {
-            _unlockWire();
-        }
-    }
-}
-
-#endif
 
 #endif

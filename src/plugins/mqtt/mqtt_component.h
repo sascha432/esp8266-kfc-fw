@@ -57,6 +57,10 @@ public:
     virtual void onDisconnect(MQTTClient *client, AsyncMqttClientDisconnectReason reason);
     virtual void onMessage(MQTTClient *client, char *topic, char *payload, size_t len);
 
+#if MQTT_AUTO_DISCOVERY
+    void publishAutoDiscovery(MQTTClient *client);
+#endif
+
     PGM_P getComponentName();
 
     inline void setNumber(uint8_t num) {

@@ -91,6 +91,14 @@
 #define IOT_DIMMER_MODULE_BUTTONS_PINS      D6, D7
 #endif
 
+#ifndef IOT_DIMMER_MODULE_PINMODE
+#define IOT_DIMMER_MODULE_PINMODE           INPUT
+#endif
+
+#ifndef IOT_SWITCH_ACTIVE_STATE
+#define IOT_SWITCH_ACTIVE_STATE             PRESSED_WHEN_LOW
+#endif
+
 class DimmerModuleForm;
 
 class Driver_DimmerModule: public MQTTComponent, public Dimmer_Base, public DimmerModuleForm
@@ -147,7 +155,7 @@ private:
 
     class DimmerButton {
     public:
-        DimmerButton(uint8_t pin) : _pin(pin), _button(pin, PRESSED_WHEN_LOW) {
+        DimmerButton(uint8_t pin) : _pin(pin), _button(pin, IOT_SWITCH_ACTIVE_STATE) {
         }
         inline uint8_t getPin() const {
             return _pin;

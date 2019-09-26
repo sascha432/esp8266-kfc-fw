@@ -140,17 +140,6 @@ void Driver_4ChDimmer::onConnect(MQTTClient *client) {
 
     _createTopics();
 
-#if MQTT_AUTO_DISCOVERY
-    if (MQTTAutoDiscovery::isEnabled()) {
-        MQTTAutoDiscoveryVector vector;
-        createAutoDiscovery(MQTTAutoDiscovery::FORMAT_JSON, vector);
-        for(auto &&discovery: vector) {
-            _debug_printf_P(PSTR("Driver_4ChDimmer::onConnect(): topic=%s, payload=%s\n"), discovery->getTopic().c_str(), discovery->getPayload().c_str());
-            client->publish(discovery->getTopic(), _qos, true, discovery->getPayload());
-        }
-    }
-#endif
-
     client->subscribe(this, _data.state.set, _qos);
     client->subscribe(this, _data.brightness.set, _qos);
     client->subscribe(this, _data.color.set, _qos);

@@ -17,17 +17,6 @@
 #include <Wire.h>
 #endif
 
-#ifndef DIMMER_FIRMWARE_DEBUG
-// enable dimmer firmware debugging
-#define DIMMER_FIRMWARE_DEBUG       0
-#endif
-
-#if DIMMER_FIRMWARE_DEBUG
-#include <push_pack.h>
-#include "../../trailing_edge_dimmer/src/dimmer_reg_mem.h"
-#include <pop_pack.h>
-#endif
-
 class DimmerChannel;
 
 class Dimmer_Base : public WebUIInterface {
@@ -119,11 +108,6 @@ protected:
     EventScheduler::TimerPtr _timer;
 
     void _fetchMetrics();
-#endif
-
-#if DIMMER_FIRMWARE_DEBUG
-public:
-    void readDimmerFirmware(Print &output, register_mem_cfg_t &config);
 #endif
 
 public:

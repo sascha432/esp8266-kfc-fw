@@ -5,6 +5,7 @@
 #if MQTT_SUPPORT
 
 #include "mqtt_component.h"
+#include "mqtt_client.h"
 
 PROGMEM_STRING_DEF(mqtt_component_switch, "switch");
 PROGMEM_STRING_DEF(mqtt_component_light, "light");
@@ -43,6 +44,21 @@ void MQTTComponent::onDisconnect(MQTTClient *client, AsyncMqttClientDisconnectRe
 
 void MQTTComponent::onMessage(MQTTClient *client, char *topic, char *payload, size_t len) {
 }
+
+#if MQTT_AUTO_DISCOVERY
+void MQTTComponent::publishAutoDiscovery(MQTTClient *client) {
+
+    if (MQTTAutoDiscovery::isEnabled()) {
+        MQTTAutoDiscoveryVector vector;
+        createAutoDiscovery(MQTTAutoDiscovery::FORMAT_JSON, vector);
+        for(auto &&discovery: vector) {
+            _debug_printf_P(PSTR("MQTTComponent::publishAutoDiscovery(): topic=%s, payload=%s\n"), discovery->getTopic().c_str(), discovery->getPayload().c_str());
+            client->publish(discovery->getTopic(), client->getDefaultQos(), true, discovery->getPayload());
+        }
+    }
+
+}
+#endif
 
 PGM_P MQTTComponent::getComponentName() {
     switch(_type) {

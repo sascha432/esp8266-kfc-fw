@@ -16,8 +16,7 @@ IOTSwitch::IOTSwitch() : MQTTComponent(SWITCH) {
     auto &monitor = *PinMonitor::createInstance();
     for(uint8_t i = 0; pins[i]; i++) {
         PinMonitor::Pin_t *pin;
-        //pinMode(pins[i], INPUT);
-        if ((pin = monitor.addPin(pins[i], pinCallback, this))) {
+        if ((pin = monitor.addPin(pins[i], pinCallback, this, INPUT))) {
             _buttons.emplace_back(ButtonContainer(pin->pin));
             auto &button = _buttons.back().getButton();
             button.onPress(IOTSwitch::onButtonPressed);

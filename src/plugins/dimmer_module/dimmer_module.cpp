@@ -20,6 +20,7 @@
 #endif
 
 #include "../../trailing_edge_dimmer/src/dimmer_protocol.h"
+#include "../../trailing_edge_dimmer/src/dimmer_reg_mem.h"
 
 Driver_DimmerModule::Driver_DimmerModule() : MQTTComponent(SENSOR), Dimmer_Base() {
 }
@@ -56,7 +57,7 @@ void Driver_DimmerModule::_begin() {
     uint8_t pins[] = { IOT_DIMMER_MODULE_BUTTONS_PINS, 0 };
 
     for(uint8_t i = 0; pins[i]; i++) {
-        auto pin = monitor.addPin(pins[i], pinCallback, this);
+        auto pin = monitor.addPin(pins[i], pinCallback, this, IOT_DIMMER_MODULE_PINMODE);
         if (pin) {
             _buttons.emplace_back(DimmerButton(pins[i]));
             auto &button = _buttons.back().getButton();
@@ -146,7 +147,9 @@ uint8_t Driver_DimmerModule::getAutoDiscoveryCount() const {
 }
 
 void Driver_DimmerModule::onConnect(MQTTClient *client) {
+#if !IOT_DIMMER_MODULE_INTERFACE_UART
     _fetchMetrics();
+#endif
 }
 
 void Driver_DimmerModule::_printStatus(PrintHtmlEntitiesString &out) {

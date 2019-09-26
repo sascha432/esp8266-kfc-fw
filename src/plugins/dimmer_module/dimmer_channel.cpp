@@ -52,10 +52,16 @@ uint8_t DimmerChannel::getAutoDiscoveryCount() const {
 
 void DimmerChannel::_createTopics() {
 
-    _data.state.set = MQTTClient::formatTopic(getNumber(), F("/set"));
-    _data.state.state = MQTTClient::formatTopic(getNumber(), F("/state"));
-    _data.brightness.set = MQTTClient::formatTopic(getNumber(), F("/brightness/set"));
-    _data.brightness.state = MQTTClient::formatTopic(getNumber(), F("/brightness/state"));
+#if IOT_DIMMER_MODULE_CHANNELS > 1
+    auto num = getNumber();
+#else
+    uint8_t num = 0xff;
+#endif
+
+    _data.state.set = MQTTClient::formatTopic(num, F("/set"));
+    _data.state.state = MQTTClient::formatTopic(num, F("/state"));
+    _data.brightness.set = MQTTClient::formatTopic(num, F("/brightness/set"));
+    _data.brightness.state = MQTTClient::formatTopic(num, F("/brightness/state"));
 }
 
 void DimmerChannel::onConnect(MQTTClient *client) {

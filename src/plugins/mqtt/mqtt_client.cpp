@@ -244,6 +244,9 @@ void MQTTClient::onConnect(bool sessionPresent) {
 
     for(auto &&component: _components) {
         component->onConnect(this);
+#if MQTT_AUTO_DISCOVERY
+        component->publishAutoDiscovery(this);
+#endif
     }
 }
 

@@ -405,7 +405,7 @@ void KFCFWConfiguration::restoreFactorySettings() {
     dimmer.fade_time = 5;
     dimmer.on_fade_time = 7.5;
     dimmer.linear_correction = 1.0;
-    dimmer.max_temperature = 75;
+    dimmer.max_temperature = 85;
     dimmer.metrics_int = 30;
     dimmer.restore_level = true;
     dimmer.report_temp = true;
@@ -414,13 +414,13 @@ void KFCFWConfiguration::restoreFactorySettings() {
     DimmerModuleButtons dimmer_buttons;
     dimmer_buttons.shortpress_time = 250;
     dimmer_buttons.longpress_time = 600;
-    dimmer_buttons.repeat_time = 150;
+    dimmer_buttons.repeat_time = 80;
     dimmer_buttons.shortpress_no_repeat_time = 800;
     dimmer_buttons.min_brightness = 15;
-    dimmer_buttons.shortpress_step = 5;
+    dimmer_buttons.shortpress_step = 2;
     dimmer_buttons.longpress_max_brightness = 100;
     dimmer_buttons.longpress_min_brightness = 33;
-    dimmer_buttons.shortpress_fadetime = 1.0;
+    dimmer_buttons.shortpress_fadetime = 4.0;
     dimmer_buttons.longpress_fadetime = 5.0;
     _H_SET(Config().dimmer_buttons, dimmer_buttons);
 #endif

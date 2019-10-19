@@ -65,7 +65,7 @@ void Driver_DimmerModule::_begin() {
             // not used, debug only
             button.onPress(Driver_DimmerModule::onButtonPressed);
 #else
-            button.onPress(nullptr);
+            button.onPress(nullptr);    // the callback needs to be set to nullptr since it is not initialized in the button class
 #endif
             button.onHoldRepeat(config.longpress_time, config.repeat_time, Driver_DimmerModule::onButtonHeld);
             button.onRelease(Driver_DimmerModule::onButtonReleased);

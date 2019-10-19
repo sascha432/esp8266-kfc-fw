@@ -43,6 +43,7 @@ public:
     typedef std::vector<Pin_t> PinsVector;
     typedef PinsVector::iterator PinsVectorIterator;
 
+    // NOTE: INPUT_PULLUP does not seem to work
     Pin_t *addPin(uint8_t pin, Callback_t callback, void *arg, uint8_t pinMode = INPUT);
     bool removePin(uint8_t pin, void *arg);
 

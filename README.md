@@ -97,3 +97,7 @@ https://github.com/me-no-dev/ESPAsyncWebServer/blob/master/src/AsyncWebSocket.h
 ### AsyncPing (Ping Monitor plugin)
 
 https://github.com/akaJes/AsyncPing
+
+### EspSaveCrash (store crash dump in EEPROM)
+
+https://github.com/krzychb/EspSaveCrash.git

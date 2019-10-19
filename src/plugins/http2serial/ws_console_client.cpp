@@ -8,6 +8,7 @@
 #include <StreamString.h>
 #include "http2serial.h"
 #include "at_mode.h"
+#include "reset_detector.h"
 
 #if DEBUG_HTTP2SERIAL
 #include <debug_helper_enable.h>
@@ -27,6 +28,12 @@ void WsConsoleClient::onAuthenticated(uint8_t *data, size_t len) {
     at_mode_print_command_string(commands, '\t');
     getClient()->text(commands);
 #endif
+    if (resetDetector.hasCrashDetected()) {
+        PrintString message;
+        message.printf_P(PSTR("+REM System crash detected: %s\n"), resetDetector.getResetInfo().c_str());
+        getClient()->text(message);
+    }
+
 }
 
 #if DEBUG

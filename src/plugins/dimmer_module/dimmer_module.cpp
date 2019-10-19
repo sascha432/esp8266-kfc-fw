@@ -64,9 +64,15 @@ void Driver_DimmerModule::_begin() {
 #if DEBUG_IOT_DIMMER_MODULE
             // not used, debug only
             button.onPress(Driver_DimmerModule::onButtonPressed);
+#else
+            button.onPress(nullptr);
 #endif
             button.onHoldRepeat(config.longpress_time, config.repeat_time, Driver_DimmerModule::onButtonHeld);
             button.onRelease(Driver_DimmerModule::onButtonReleased);
+        }
+        else {
+            debug_printf_P(PSTR("Failed to add PIN %u\n"), pins[i]);
+            monitor.removePin(pins[i], this);
         }
     }
 #endif
@@ -326,8 +332,9 @@ void Driver_DimmerModule::_buttonShortPress(uint8_t channel, bool up) {
             _turnOffTimer[channel] = Scheduler.addTimer(config.shortpress_no_repeat_time, false, [this, channel](EventScheduler::TimerPtr timer) {
                 _debug_printf_P(PSTR("Driver_DimmerModule::_buttonShortPress(): turn off channel %u, timer expired, repeat %d\n"), channel, _turnOffTimerRepeat[channel]);
                 if (_turnOffTimerRepeat[channel] == 0) { // single button down press detected, turn off
-                    setChannel(channel, _turnOffLevel[channel]); // restore level when the button was pressed
-                    off(channel);
+                    if (off(channel)) {
+                        _channels[channel].setStoredBrightness(_turnOffLevel[channel]); // restore level to when the button was pressed
+                    }
                 }
             });
         }
@@ -390,7 +397,39 @@ PGM_P DimmerModulePlugin::getName() const {
     return PSTR("dimmer");
 }
 
+void DimmerModulePlugin::setupWebServer() {
+    auto server = get_web_server_object();
+    _debug_printf_P(PSTR("DimmerModulePlugin::setupWebServer(): %p\n"), server);
+    if (server) {
+        server->on(String(F("/dimmer_rstfw.html")).c_str(), DimmerModulePlugin::handleWebServer);
+    }
+}
+
+void DimmerModulePlugin::handleWebServer(AsyncWebServerRequest *request) {
+    if (web_server_is_authenticated(request)) {
+        resetDimmerFirmware();
+        HttpHeaders httpHeaders(false);
+        httpHeaders.addNoCache();
+        request->send_P(200, FSPGM(text_plain), SPGM(OK));
+    } else {
+        request->send(403);
+    }
+}
+
+void DimmerModulePlugin::resetDimmerFirmware() {
+    digitalWrite(D1, LOW);
+    pinMode(D1, OUTPUT);
+    digitalWrite(D1, LOW);
+    delay(10);
+    pinMode(D1, INPUT);
+}
+
+bool DimmerModulePlugin::hasReconfigureDependecy(PluginComponent *plugin) const {
+    return plugin->nameEquals(F("http"));
+}
+
 void DimmerModulePlugin::setup(PluginSetupMode_t mode) {
+    setupWebServer();
     _begin();
 }
 
@@ -399,6 +438,9 @@ void DimmerModulePlugin::reconfigure(PGM_P source) {
         writeConfig();
         _end();
         _begin();
+    }
+    else if (!strcmp_P_P(source, PSTR("http"))) {
+        setupWebServer();
     }
 }
 
@@ -440,6 +482,7 @@ bool DimmerModulePlugin::hasStatus() const {
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DIMG, "DIMG", "Get level");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DIMS, "DIMS", "<channel>,<level>[,<time>]", "Set level");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DIMW, "DIMW", "Write EEPROM");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DIMR, "DIMR", "Reset ATmega via GPIO5");
 
 bool DimmerModulePlugin::hasAtMode() const {
     return true;
@@ -449,6 +492,7 @@ void DimmerModulePlugin::atModeHelpGenerator() {
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DIMG));
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DIMS));
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DIMW));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DIMR));
 }
 
 bool DimmerModulePlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) {
@@ -461,6 +505,12 @@ bool DimmerModulePlugin::atModeHandler(Stream &serial, const String &command, in
         for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
             serial.printf_P(PSTR("+DIMG: %u: %d\n"), i, getChannel(i));
         }
+        return true;
+    }
+    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(DIMR))) {
+        serial.println(F("Pulling GPIO5 low for 10ms"));
+        dimmer_plugin.resetDimmerFirmware();
+        serial.println(F("GPIO5 set to input"));
         return true;
     }
     else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(DIMS))) {

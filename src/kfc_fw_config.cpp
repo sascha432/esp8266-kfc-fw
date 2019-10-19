@@ -28,6 +28,11 @@ PROGMEM_STRING_DEF(SPIFF_configuration_backup, "/configuration.backup");
 
 KFCFWConfiguration config;
 
+#if DEBUG_HAVE_SAVECRASH
+EspSaveCrash SaveCrash(DEBUG_SAVECRASH_OFS, DEBUG_SAVECRASH_SIZE);
+#endif
+
+
 KFCFWConfiguration::KFCFWConfiguration() : Configuration(CONFIG_EEPROM_OFFSET, CONFIG_EEPROM_MAX_LENGTH) {
     _garbageCollectionCycleDelay = 5000;
     _wifiConnected = false;
@@ -400,10 +405,15 @@ void KFCFWConfiguration::restoreFactorySettings() {
     _H_SET(Config().serial2tcp.idle_timeout, 300);
     _H_SET(Config().serial2tcp.keep_alive, 60);
 #endif
-#if DEBUG_IOT_DIMMER_MODULE || IOT_ATOMIC_SUN_V2
+#if IOT_DIMMER_MODULE || IOT_ATOMIC_SUN_V2
     DimmerModule dimmer;
-    dimmer.fade_time = 5;
+#if IOT_ATOMIC_SUN_V2
+    dimmer.fade_time = 5.0;
     dimmer.on_fade_time = 7.5;
+#else
+    dimmer.fade_time = 3.5;
+    dimmer.on_fade_time = 4.5;
+#endif
     dimmer.linear_correction = 1.0;
     dimmer.max_temperature = 85;
     dimmer.metrics_int = 30;
@@ -414,14 +424,14 @@ void KFCFWConfiguration::restoreFactorySettings() {
     DimmerModuleButtons dimmer_buttons;
     dimmer_buttons.shortpress_time = 250;
     dimmer_buttons.longpress_time = 600;
-    dimmer_buttons.repeat_time = 80;
-    dimmer_buttons.shortpress_no_repeat_time = 800;
-    dimmer_buttons.min_brightness = 15;
+    dimmer_buttons.repeat_time = 75;
+    dimmer_buttons.shortpress_no_repeat_time = 650;
+    dimmer_buttons.min_brightness = 25;
     dimmer_buttons.shortpress_step = 2;
     dimmer_buttons.longpress_max_brightness = 100;
-    dimmer_buttons.longpress_min_brightness = 33;
-    dimmer_buttons.shortpress_fadetime = 4.0;
-    dimmer_buttons.longpress_fadetime = 5.0;
+    dimmer_buttons.longpress_min_brightness = 45;
+    dimmer_buttons.shortpress_fadetime = 3.0;
+    dimmer_buttons.longpress_fadetime = 4.5;
     _H_SET(Config().dimmer_buttons, dimmer_buttons);
 #endif
 #endif

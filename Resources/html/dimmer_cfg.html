@@ -104,8 +104,11 @@
             <textarea id="hass_yaml" style="width:100%%;height:40px" class="form-control" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"># Home Assistant YAML Code
 
 %HASS_YAML%</textarea>
-        </div>
-        <!--%%FOOT-->
+		</div>
+		<div class="form-group">
+			<button type="button" class="btn btn-primary" id="reset_firmware">Reset Firmware...</button>
+		</div>
+	<!--%%FOOT-->
         <div class="row">
             <div class="col footer">&nbsp;</div>
         </div>
@@ -119,6 +122,20 @@
 	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/js.cookie.min.js"></script>
 	<script debug_loader="1" type="text/javascript" src="../js/main.min.js"></script>
 	<script debug_loader="1" type="text/javascript" src="../js/debug.js"></script>
-    <!--JAVASCRIPT%%-->
+	<!--JAVASCRIPT%%-->
+	<script>
+		$(function() {
+			$('#reset_firmware').on('click', function(event) {
+				event.preventDefault();
+				$.get('/dimmer_rstfw.html', function(data) {
+					if (data == 'OK') {
+						alert('Reset successful');
+					} else {
+						alert('Reset was not successful');
+					}
+				});
+			})
+		})
+	</script>
 </body>
 </html>

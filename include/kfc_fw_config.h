@@ -22,6 +22,9 @@
 #include "at_mode.h"
 #include "reset_detector.h"
 #include "dyn_bitset.h"
+#if DEBUG_HAVE_SAVECRASH
+#include "EspSaveCrash.h"
+#endif
 
 #ifdef dhcp_start // defined in framework-arduinoespressif8266@2.20402.4/tools/sdk/lwip2/include/arch/cc.h
 #undef dhcp_start
@@ -130,9 +133,9 @@ struct Serial2Tcp {
     char password[33];
     uint8_t rx_pin;
     uint8_t tx_pin;
-    uint8_t serial_port:3;
-    uint8_t auth_mode:1;
-    uint8_t auto_connect:1;
+    uint8_t serial_port: 3;
+    uint8_t auth_mode: 1;
+    uint8_t auto_connect: 1;
     uint8_t auto_reconnect;
     uint8_t keep_alive;
     uint16_t idle_timeout;
@@ -310,3 +313,7 @@ private:
 };
 
 extern KFCFWConfiguration config;
+
+#if DEBUG_HAVE_SAVECRASH
+extern EspSaveCrash SaveCrash;
+#endif

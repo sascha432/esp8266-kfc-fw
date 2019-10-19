@@ -48,18 +48,21 @@ void PinMonitor::deleteInstance() {
 
 void PinMonitor::callback(InterruptInfo info) {
     _debug_printf_P(PSTR("PinMonitor::callback(): pin=%u,value=%u,micros=%u\n"), info.pin, info.value, info.micro);
-    for(auto &pin: PinMonitor::getInstance()->_pins) {
-        if (pin.pin == info.pin) {
-            pin.value = info.value;
-            pin.micro = info.micro;
-            pin.callback(&pin);
+    auto monitor = PinMonitor::getInstance();
+    if (monitor) {
+        for(auto &pin: monitor->_pins) {
+            if (pin.pin == info.pin) {
+                pin.value = info.value;
+                pin.micro = info.micro;
+                pin.callback(&pin);
+            }
         }
     }
 }
 
 PinMonitor::Pin_t *PinMonitor::addPin(uint8_t pin, Callback_t callback, void *arg, uint8_t mode) {
     if (_findPin(pin, arg) == _pins.end()) {
-        _debug_printf_P(PSTR("PinMonitor::addPin(): adding pin %d, mode %d, callback %p, arg %p\n"), pin, mode, callback, arg);
+        _debug_printf_P(PSTR("PinMonitor::addPin(): adding pin %u, mode %u, callback %p, arg %p\n"), pin, mode, callback, arg);
         Pin_t _pin;
         memset(&_pin, 0, sizeof(_pin));
         _pin.pin = pin;
@@ -80,19 +83,18 @@ bool PinMonitor::removePin(uint8_t pin, void *arg) {
     if (_pin == _pins.end()) {
         return false;
     }
-    _debug_printf_P(PSTR("PinMonitor::removePin(): removing pin %d, callback %p, arg %p\n"), pin, _pin->callback, _pin->arg);
+    _debug_printf_P(PSTR("PinMonitor::removePin(): removing pin %u, callback %p, arg %p\n"), pin, _pin->callback, _pin->arg);
     detachInterrupt(digitalPinToInterrupt(pin));
     _pins.erase(_pin);
     return true;
 }
 
 void PinMonitor::dumpPins(Stream &output) {
+    output.printf_P(PSTR("+PINM count=%u\n"), _pins.size());
     if (_pins.size()) {
-        output.print(F("+PINM: "));
         for(auto &pin: _pins) {
-            output.printf_P(PSTR("pin=%u / %d / %u "), pin.pin, pin.value, pin.micro);
+            output.printf_P(PSTR("+PINM pin=%u value=%d micro=%u callback=%p arg=%p\n"), pin.pin, pin.value, pin.micro, pin.callback, pin.arg);
         }
-        output.println();
     }
 }
 

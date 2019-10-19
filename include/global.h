@@ -288,7 +288,11 @@ extern class Stream &DebugSerial;
 #endif
 
 #ifndef CONFIG_EEPROM_OFFSET
+#if DEBUG_HAVE_SAVECRASH
+#define CONFIG_EEPROM_OFFSET             (DEBUG_SAVECRASH_OFS + DEBUG_SAVECRASH_SIZE)
+#else
 #define CONFIG_EEPROM_OFFSET             0
+#endif
 #endif
 #ifndef CONFIG_EEPROM_MAX_LENGTH
 #define CONFIG_EEPROM_MAX_LENGTH        4096

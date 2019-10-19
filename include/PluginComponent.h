@@ -90,26 +90,26 @@ public:
 class MYPLUGINNAME : public PluginComponent {
 public:
     MYPLUGINNAME();
-    PGM_P getName() const;
-    PluginPriorityEnum_t getSetupPriority() const override;
-    uint8_t getRtcMemoryId() const override;
-    bool allowSafeMode() const override;
-    bool autoSetupAfterDeepSleep() const override;
-    void setup(PluginSetupMode_t mode) override;
-    void reconfigure(PGM_P source) override;
-    bool hasReconfigureDependecy(PluginComponent *plugin) const override;
-    bool hasStatus() const override;
-    const String getStatus() override;
-    bool canHandleForm(const String &formName) const override;
-    bool hasWebTemplate(const String &formName) const;
-    WebTemplate *getWebTemplate(const String &formName);
-    bool hasWebUI() const override;
-    void createWebUI(WebUI &webUI) override;
-    void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
-    void prepareDeepSleep(uint32_t sleepTimeMillis) override;
-    bool hasAtMode() const override;
-    void atModeHelpGenerator() override;
-    bool atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) override;
+    virtual PGM_P getName() const;
+    virtual PluginPriorityEnum_t getSetupPriority() const override;
+    virtual uint8_t getRtcMemoryId() const override;
+    virtual bool allowSafeMode() const override;
+    virtual bool autoSetupAfterDeepSleep() const override;
+    virtual void setup(PluginSetupMode_t mode) override;
+    virtual void reconfigure(PGM_P source) override;
+    virtual bool hasReconfigureDependecy(PluginComponent *plugin) const override;
+    virtual bool hasStatus() const override;
+    virtual const String getStatus() override;
+    virtual bool canHandleForm(const String &formName) const override;
+    virtual bool hasWebTemplate(const String &formName) const;
+    virtual WebTemplate *getWebTemplate(const String &formName);
+    virtual bool hasWebUI() const override;
+    virtual void createWebUI(WebUI &webUI) override;
+    virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
+    virtual void prepareDeepSleep(uint32_t sleepTimeMillis) override;
+    virtual bool hasAtMode() const override;
+    virtual void atModeHelpGenerator() override;
+    virtual bool atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) override;
 };
 
 static MYPLUGINNAME plugin;
@@ -119,11 +119,11 @@ MYPLUGINNAME::MYPLUGINNAME() {
 }
 
 PGM_P MYPLUGINNAME::getName() const {
-    return PSTR("");
+    return PSTR("MYPLUGINNAME");
 }
 
 MYPLUGINNAME::PluginPriorityEnum_t MYPLUGINNAME::getSetupPriority() const {
-    return (PluginPriorityEnum_t)0;
+    return PluginPriorityEnum_t::DEFAULT_PRIORITY;
 }
 
 uint8_t MYPLUGINNAME::getRtcMemoryId() const {

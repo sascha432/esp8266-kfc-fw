@@ -203,6 +203,12 @@ public:
     virtual void atModeHelpGenerator() override;
     virtual bool atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) override;
 #endif
+
+    void setupWebServer();
+    virtual bool hasReconfigureDependecy(PluginComponent *plugin) const override;
+
+    static void handleWebServer(AsyncWebServerRequest *request);
+    static void resetDimmerFirmware();
 };
 
 extern DimmerModulePlugin dimmer_plugin;

@@ -18,9 +18,11 @@
 bool PluginComponent::nameEquals(const __FlashStringHelper *name) const {
     return strcmp_P_P(getName(), reinterpret_cast<PGM_P>(name)) == 0;
 }
+
 bool PluginComponent::nameEquals(const char *name) const {
     return strcmp_P(name, getName()) == 0;
 }
+
 bool PluginComponent::nameEquals(const String &name) const {
     return strcmp_P(name.c_str(), getName()) == 0;
 }

@@ -52,6 +52,10 @@ public:
         _data.state.value = (level != 0);
     }
 
+    inline void setStoredBrightness(uint16_t storedBrightness) {
+        _storedBrightness = storedBrightness;
+    }
+
 private:
     void _createTopics();
 

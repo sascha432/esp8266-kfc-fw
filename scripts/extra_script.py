@@ -2,13 +2,13 @@ Import("env")
 import datetime
 
 def build_webui(source, target, env):
-    print "build_webui"
+    print("build_webui")
 
     env.Execute("php lib\\KFCWebBuilder\\bin\\include\\cli_tool.php .\KFCWebBuilder.json -b spiffs -e env:${PIOENV} --clean-exit-code")
 
 def before_clean(source, target, env):
 
-    print "Cleaning data\webui"
+    print("Cleaning data\webui")
     env.Execute("del ${PROJECTDATA_DIR}\\webui\\ -Recurse")
     env.Execute("php ${PROJECT_DIR}\\lib\\KFCWebBuilder\\bin\\include\\cli_tool.php ${PROJECT_DIR}\\KFCWebBuilder.json -b spiffs -e env:${PIOENV} --dirty")
 

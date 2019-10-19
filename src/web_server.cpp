@@ -171,7 +171,6 @@ void web_server_logout_handler(AsyncWebServerRequest *request) {
     HttpHeaders httpHeaders;
     httpHeaders.addNoCache(true);
     httpHeaders.add(HttpCookieHeader(FSPGM(SID)));
-    // httpHeaders.add((HttpCookieHeader(F("_SID")))->hasExpired());
     httpHeaders.add(HttpLocationHeader(FSPGM(slash)));
     httpHeaders.setWebServerResponseHeaders(response);
     request->send(response);
@@ -554,10 +553,16 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
                 HttpCookieHeader cookie = HttpCookieHeader(FSPGM(SID));
                 cookie.setValue(generate_session_id(config._H_STR(Config().device_name), config._H_STR(Config().device_pass), NULL));
                 cookie.setPath(FSPGM(slash));
+                httpHeaders.add(cookie);
+
                 if (request->arg(F("keep")) == FSPGM(1)) {
                     cookie.setExpires(time(nullptr) + 86400 * 30);
+                    httpHeaders.add(cookie);
+                } else {
+                    HttpCookieHeader cookie = HttpCookieHeader(FSPGM(SID));
+                    cookie.setExpires(HttpCookieHeader::COOKIE_EXPIRED);
+                    httpHeaders.add(cookie);
                 }
-                httpHeaders.add(cookie);
 
                 _debug_printf_P(PSTR("Login successful, cookie %s\n"), cookie.getValue().c_str());
                 _is_authenticated = true;

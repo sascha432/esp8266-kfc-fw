@@ -106,6 +106,11 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(ATMODE, "ATMODE", "<1|0>", "Enable/disable
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DLY, "DLY", "<milliseconds>", "Call delay(milliseconds)");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(REM, "REM", "Ignore comment");
 
+#if DEBUG_HAVE_SAVECRASH
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(SAVECRASHC, "SAVECRASHC", "Clear crash memory");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(SAVECRASHP, "SAVECRASHP", "rint saved crash details");
+#endif
+
 #if DEBUG
 
 #if PIN_MONITOR
@@ -392,6 +397,15 @@ void at_mode_serial_handle_event(String &commandString) {
                 delay(ms);
                 at_mode_print_ok(output);
             }
+#if DEBUG_HAVE_SAVECRASH
+            else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(SAVECRASHC))) {
+                SaveCrash.clear();
+                output.println(F("+SAVECRASH: cleared"));
+            }
+            else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(SAVECRASHP))) {
+                SaveCrash.print(output);
+            }
+#endif
 #if DEBUG
     #if PIN_MONITOR
             else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(PINM))) {

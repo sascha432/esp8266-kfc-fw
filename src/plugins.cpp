@@ -25,6 +25,10 @@ PluginsVector plugins;
 static PluginsVector *pluginsPtr = nullptr;
 
 void register_plugin(PluginComponent *plugin) {
+#if DEBUG_PLUGINS
+    Serial.begin(KFC_SERIAL_RATE);
+    Serial.printf_P(PSTR("register_plugin(%p)\n"), plugin);
+#endif
     if (plugins.size()) {
         _debug_printf(PSTR("Registering plugins completed already, skipping %s\n"), plugin->getName());
         return;

@@ -123,6 +123,7 @@ bool DimmerChannel::on() {
         }
         _data.state.value = true;
         _dimmer->_fade(_channel, _data.brightness.value, _dimmer->getOnOffFadeTime());
+        _dimmer->writeEEPROM();
 
         publishState();
         return true;
@@ -136,6 +137,7 @@ bool DimmerChannel::off() {
         _data.brightness.value = 0;
         _data.state.value = false;
         _dimmer->_fade(_channel, 0, _dimmer->getOnOffFadeTime());
+        _dimmer->writeEEPROM();
 
         publishState();
         return true;

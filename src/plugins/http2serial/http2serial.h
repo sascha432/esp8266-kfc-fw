@@ -42,6 +42,9 @@ public:
 
     SerialHandler *getSerialHandler() const;
 
+public:
+    static AsyncWebSocket *getConsoleServer();
+
 private:
     void _outputLoop();
 

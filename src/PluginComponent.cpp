@@ -127,6 +127,9 @@ bool PluginComponent::atModeHandler(Stream &serial, const String &command, int8_
     return false;
 }
 
+void PluginComponent::restart() {
+}
+
 
 PluginComponent *PluginComponent::getForm(const String &formName) {
     for(auto plugin: plugins) {

@@ -189,10 +189,10 @@ extern class Stream &MySerial;
 extern class Stream &DebugSerial;
 
 #ifndef SERIAL2TCP
-#define SERIAL2TCP                      0               // connect serial ports to tcp sockets
+#define SERIAL2TCP                      0               // connect to com port over TCP
 #endif
 #ifndef HTTP2SERIAL_DISABLE_AT_MODE
-#define HTTP2SERIAL_DISABLE_AT_MODE     0
+#define HTTP2SERIAL_DISABLE_AT_MODE     1
 #endif
 
 #ifndef NTP_CLIENT

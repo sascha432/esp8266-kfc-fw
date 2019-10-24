@@ -13,6 +13,11 @@ public:
     Buffer(size_t size = 0);
     virtual ~Buffer();
 
+    bool operator ==(const Buffer &buffer) const;
+    bool operator !=(const Buffer &buffer) const;
+
+    bool equals(const Buffer &buffer) const;
+
     void clear();
     uint8_t *dupClear();
 
@@ -32,6 +37,10 @@ public:
         return reinterpret_cast<const char *>(_buffer);
     }
     char *getNulByteString();
+
+    inline char charAt(size_t index) const {
+        return _buffer[index];
+    }
 
     void setBuffer(uint8_t *buffer, size_t size);
 
@@ -64,6 +73,7 @@ public:
         return write((uint8_t *)data, len);
     }
     size_t write(uint8_t *data, size_t len);
+    size_t write_P(PGM_P data, size_t len);
 
     void remove(unsigned int index, size_t count);
     void removeAndShrink(unsigned int index, size_t count);

@@ -11,6 +11,7 @@
 
 // call in setup, after initializing the output stream
 #define DEBUG_HELPER_INIT()                             DebugHelper::__state = DEBUG_HELPER_STATE_DEFAULT;
+#define DEBUG_HELPER_SILENT()                           DebugHelper::__state = DEBUG_HELPER_STATE_DISABLED;
 
 #define debug_helper_set_src()                          { DebugHelper::__file = DebugHelper::basename(__FILE__); DebugHelper::__line = __LINE__; __function = __FUNCTION__; }
 
@@ -133,6 +134,7 @@ T _debug_helper_print_result_P(const char *file, int line, const char *function,
 #else
 
 #define DEBUG_HELPER_INIT()         ;
+#define DEBUG_HELPER_SILENT()       ;
 
 #define debug_print(...)            ;
 #define debug_println(...)          ;

@@ -147,6 +147,11 @@ void at_mode_help_commands() {
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DLY));
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(REM));
 
+#if DEBUG_HAVE_SAVECRASH
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SAVECRASHC));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SAVECRASHP));
+#endif
+
 #if DEBUG
 #if PIN_MONITOR
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(PINM));
@@ -279,6 +284,81 @@ void at_mode_dump_fs_info(Stream &output) {
     );
 }
 
+/*
+
+
+bool read_response(Buffer &buffer, size_t size, int timeout = 500) {
+    unsigned long end = millis() + timeout;
+    debug_output.print(F("Resp: "));
+    while(millis() < end) {
+        while(MySerial.available()) {
+            auto ch = MySerial.read();
+            buffer.write(ch);
+            debug_output.printf_P(PSTR("%02x "), ch);
+            if (buffer.length() == size) {
+                debug_output.println();
+                return true;
+            }
+        }
+        delay(1);
+    }
+    debug_output.println(F("timeout"));
+    return false;
+}
+
+
+bool sync() {
+    Buffer buffer;
+    const char cmd[] = { Cmnd_STK_GET_SYNC, Sync_CRC_EOP };
+    const char rsp[] = { Resp_STK_INSYNC, Resp_STK_OK };
+
+    MySerial.write(cmd, sizeof(cmd));
+
+    for(uint8_t i = 0; i < 2; i++) {
+        MySerial.write(cmd, sizeof(cmd));
+
+
+        buffer.clear();
+        if (read_response(buffer, sizeof(rsp))) {
+            if (strncmp(buffer.getConstChar(), rsp, sizeof(rsp)) == 0) {
+                return true;
+            }
+        }
+
+        debug_output.printf_P(PSTR("Sync failed %u, response len %u\n"), i + 1, buffer.length());
+    }
+    return false;
+}
+
+bool verify_signature() {
+    Buffer buffer;
+    const char cmd[] = { Cmnd_STK_READ_SIGN, Sync_CRC_EOP };
+    const char rsp[] = { Resp_STK_INSYNC, Resp_STK_OK };
+
+    MySerial.write(cmd, sizeof(cmd));
+
+
+}
+
+void flash() {
+
+
+    // clean buffer
+    while (MySerial.available()) {
+        MySerial.read();
+    }
+
+    // sync with atmega
+    if (sync()) {
+
+    }
+
+
+    MySerial.println(debug_output);
+    debug_output = PrintString();
+}
+*/
+
 void at_mode_print_invalid_command(Stream &output) {
     output.println(F("ERROR - Invalid command. AT? for help"));
 }
@@ -339,6 +419,12 @@ void at_mode_serial_handle_event(String &commandString) {
 
             _debug_printf_P(PSTR("Command '%s' argc %d arguments '%s'\n"), command, argc, implode(F("','"), (const char **)args, argc).c_str());
 
+            // if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(FLASH))) {
+
+            //     flash();
+
+            // } else
+
             if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(DSLP))) {
                 uint32_t time = 0;
                 RFMode mode = RF_DEFAULT;
@@ -353,8 +439,6 @@ void at_mode_serial_handle_event(String &commandString) {
             }
             else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(RST))) {
                 output.println(F("Software reset..."));
-                yield();
-                delay(100);
                 config.restartDevice();
             }
             else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(CMDS))) {

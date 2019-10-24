@@ -28,8 +28,7 @@ long MillisTimer::get() const {
         return -1;
     }
     if (_data.overflow) {
-        unsigned long _millis = millis() + 0x7fffffff;
-        return _data.time - _millis;
+        return _data.time - (millis() + 0x7fffffff);
     } else {
         if (millis() > _data.time) {
             return 0;

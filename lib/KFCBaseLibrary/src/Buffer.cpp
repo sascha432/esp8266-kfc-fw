@@ -20,6 +20,21 @@ Buffer::~Buffer() {
     _free();
 }
 
+bool Buffer::equals(const Buffer &buffer) const {
+    if (buffer.length() != length()) {
+        return false;
+    }
+    return memcmp(getConstChar(), buffer.getConstChar(), length()) == 0;
+}
+
+bool Buffer::operator ==(const Buffer &buffer) const {
+    return equals(buffer);
+}
+
+bool Buffer::operator !=(const Buffer &buffer) const {
+    return !equals(buffer);
+}
+
 void Buffer::clear() {
     _free();
     _size = 0;
@@ -110,6 +125,18 @@ size_t Buffer::write(uint8_t *data, size_t len) {
     memmove(_buffer + _length, data, len);
     _length += len;
     return len;
+}
+
+size_t Buffer::write_P(PGM_P data, size_t len) {
+    size_t written = 0;
+    while(len--) {
+        auto byte = pgm_read_byte(data++);
+        if (write(byte) != 1) {
+            break;
+        }
+        written++;
+    }
+    return written;
 }
 
 void Buffer::remove(unsigned int index, size_t count) {

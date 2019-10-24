@@ -314,6 +314,9 @@ void KFCFWConfiguration::restoreFactorySettings() {
     flags.ledMode = MODE_SINGLE_LED;
     flags.hueEnabled = true;
     flags.useStaticIPDuringWakeUp = true;
+#if SERIAL2TCP
+    flags.serial2TCPMode = SERIAL2TCP_MODE_DISABLED;
+#endif
     _H_SET(Config().flags, flags);
 
 
@@ -393,17 +396,19 @@ void KFCFWConfiguration::restoreFactorySettings() {
     _H_SET(Config().ping.timeout, 5000);
 #endif
 #if SERIAL2TCP
-    _H_SET(Config().serial2tcp.port, 2323);
-    _H_SET(Config().serial2tcp.auth_mode, true);
-    _H_SET(Config().serial2tcp.auto_connect, false);
-    _H_SET(Config().serial2tcp.auto_reconnect, 15);
-    _H_SET(Config().serial2tcp.port, 2323);
-    _H_SET(Config().serial2tcp.serial_port, SERIAL2TCP_HARDWARE_SERIAL);
-    _H_SET(Config().serial2tcp.rx_pin, D7);
-    _H_SET(Config().serial2tcp.tx_pin, D8);
-    _H_SET(Config().serial2tcp.baud_rate, KFC_SERIAL_RATE);
-    _H_SET(Config().serial2tcp.idle_timeout, 300);
-    _H_SET(Config().serial2tcp.keep_alive, 60);
+    Serial2Tcp serial2tcp;
+    memset(&serial2tcp, 0, sizeof(serial2tcp));
+    serial2tcp.port = 2323;
+    serial2tcp.baud_rate = KFC_SERIAL_RATE;
+    serial2tcp.rx_pin = D7;
+    serial2tcp.tx_pin = D8;
+    serial2tcp.serial_port = SERIAL2TCP_HARDWARE_SERIAL;
+    serial2tcp.auth_mode = true;
+    // serial2tcp.auto_connect = false;
+    serial2tcp.auto_reconnect = 15;
+    serial2tcp.keep_alive = 60;
+    serial2tcp.idle_timeout = 300;
+    _H_SET(Config().serial2tcp, serial2tcp);
 #endif
 #if IOT_DIMMER_MODULE || IOT_ATOMIC_SUN_V2
     DimmerModule dimmer;
@@ -434,6 +439,21 @@ void KFCFWConfiguration::restoreFactorySettings() {
     dimmer_buttons.longpress_fadetime = 4.5;
     _H_SET(Config().dimmer_buttons, dimmer_buttons);
 #endif
+#endif
+
+#if IOT_BLINDS_CTRL
+    BlindsController blinds;
+    blinds.channels[0].pwmValue = 250;
+    blinds.channels[0].currentLimit = 70;
+    blinds.channels[0].currentLimitTime = 20;
+    blinds.channels[0].openTime = 2200;
+    blinds.channels[0].closeTime = 2800;
+    blinds.channels[1].pwmValue = 750;
+    blinds.channels[1].currentLimit = 130;
+    blinds.channels[1].currentLimitTime = 20;
+    blinds.channels[1].openTime = 7500;
+    blinds.channels[1].closeTime = 7500;
+    _H_SET(Config().blinds_controller, blinds);
 #endif
 
 #if CUSTOM_CONFIG_PRESET
@@ -657,6 +677,10 @@ void KFCFWConfiguration::restartDevice() {
 
     Logger_notice(F("Device is being restarted"));
     BlinkLEDTimer::setBlink(BlinkLEDTimer::FLICKER);
+
+    for(auto plugin: plugins) {
+        plugin->restart();
+    }
     ESP.restart();
 }
 

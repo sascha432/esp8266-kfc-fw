@@ -79,6 +79,9 @@ public:
     virtual void atModeHelpGenerator();
     virtual bool atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv);
 
+    // executed before a restart
+    virtual void restart();
+
     static PluginComponent *getForm(const String &formName);
     static PluginComponent *getTemplate(const String &formName);
     static PluginComponent *getByName(PGM_P name);

@@ -156,6 +156,18 @@ struct DimmerModule {
     uint8_t restore_level;
 };
 
+struct BlindsControllerChannel {
+    uint16_t pwmValue;
+    uint16_t currentLimit;
+    uint16_t currentLimitTime;
+    uint16_t openTime;
+    uint16_t closeTime;
+};
+
+struct BlindsController {
+    struct BlindsControllerChannel channels[2];
+};
+
 struct DimmerModuleButtons {
     uint16_t shortpress_time;
     uint16_t longpress_time;
@@ -216,6 +228,7 @@ struct Config {
     HomeAssistant homeassistant;
     DimmerModule dimmer;
     DimmerModuleButtons dimmer_buttons;
+    BlindsController blinds_controller;
     SoftAP soft_ap;
     struct Serial2Tcp serial2tcp;
     struct HueConfig hue;

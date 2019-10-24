@@ -158,6 +158,10 @@ SerialHandler *Http2Serial::getSerialHandler() const {
     return _serialHandler;
 }
 
+AsyncWebSocket *Http2Serial::getConsoleServer() {
+    return wsSerialConsole;
+}
+
 void http2serial_event_handler(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len) {
     WsClient::onWsEvent(server, client, type, data, len, arg, WsConsoleClient::getInstance);
 }
@@ -167,15 +171,17 @@ public:
     Http2SerialPlugin() {
         register_plugin(this);
     }
-    PGM_P getName() const;
-    PluginPriorityEnum_t getSetupPriority() const override;
-    void setup(PluginSetupMode_t mode) override;
-    void reconfigure(PGM_P source) override;
-    bool hasReconfigureDependecy(PluginComponent *plugin) const override;
+    virtual PGM_P getName() const;
+    virtual PluginPriorityEnum_t getSetupPriority() const override;
+    virtual void setup(PluginSetupMode_t mode) override;
+    virtual void reconfigure(PGM_P source) override;
+    virtual bool hasReconfigureDependecy(PluginComponent *plugin) const override;
+    virtual void restart() override;
+
 #if AT_MODE_SUPPORTED
-    bool hasAtMode() const override;
-    void atModeHelpGenerator() override;
-    bool atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) override;
+    virtual bool hasAtMode() const override;
+    virtual void atModeHelpGenerator() override;
+    virtual bool atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) override;
 #endif
 };
 
@@ -204,6 +210,26 @@ void Http2SerialPlugin::reconfigure(PGM_P source) {
 
 bool Http2SerialPlugin::hasReconfigureDependecy(PluginComponent *plugin) const {
     return plugin->nameEquals(F("http"));
+}
+
+void Http2SerialPlugin::restart() {
+    //TODO does not work
+    // for(auto socket: wsSerialConsole->getClients()) {
+    //     socket->close();
+    // }
+    // unsigned long end = millis() + 2000;
+    // while(millis() < end) {
+    //     uint8_t count = 0;
+    //     for(auto socket: wsSerialConsole->getClients()) {
+    //         if (socket->status() == WS_CONNECTED) {
+    //             count++;
+    //         }
+    //     }
+    //     if (count == 0) {
+    //         break;
+    //     }
+    //     delay(1);
+    // }
 }
 
 #if AT_MODE_SUPPORTED

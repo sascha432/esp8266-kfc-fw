@@ -13,6 +13,7 @@
 #include <map>
 #include <vector>
 #include <Buffer.h>
+#include <EEPROM.h>
 #include <DumpBinary.h>
 #include "ConfigurationParameter.h"
 #if !_WIN32

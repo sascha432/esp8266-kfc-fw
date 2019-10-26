@@ -296,7 +296,7 @@ void WsClient::broadcast(AsyncWebSocket *server, WsClient *sender, AsyncWebSocke
     if (server == nullptr) {
         server = sender->getClient()->server();
     }
-    // _debug_printf_P(PSTR("WsClient::broadcast(): sender=%p, clients=%u, message=%s\n"), sender, server->_clients.length(), buffer->get());
+    // _debug_printf_P(PSTR("WsClient::broadcast(): sender=%p, clients=%u, message=%s\n"), sender, server->getClients().length(), buffer->get());
     buffer->lock();
     for(auto socket: server->getClients()) {
         if (socket->status() == WS_CONNECTED && socket->_tempObject && socket->_tempObject != sender && reinterpret_cast<WsClient *>(socket->_tempObject)->isAuthenticated()) {

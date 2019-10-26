@@ -48,6 +48,7 @@ void WsWebUISocket::send(AsyncWebSocketClient *client, JsonUnnamedObject &json) 
 void WsWebUISocket::broadcast(WsWebUISocket *sender, JsonUnnamedObject &json) {
     auto buffer = wsWebUI->makeBuffer(json.length());
     assert(JsonBuffer(json).fillBuffer(buffer->get(), buffer->length()) == buffer->length());
+    _debug_printf_P(PSTR("WsWebUISocket::broadcast(): %s\n"), buffer->get());
     WsClient::broadcast(wsWebUI, sender, buffer);
 }
 

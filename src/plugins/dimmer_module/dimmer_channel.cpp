@@ -30,9 +30,8 @@ void DimmerChannel::setup(Driver_DimmerModule *dimmer, uint8_t channel) {
 }
 
 void DimmerChannel::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector) {
-    if (_data.state.state.length() == 0) {
-        _createTopics();
-    }
+    _createTopics();
+
     auto discovery = _debug_new MQTTAutoDiscovery();
     discovery->create(this, _channel, format);
     discovery->addStateTopic(_data.state.state);

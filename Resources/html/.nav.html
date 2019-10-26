@@ -38,6 +38,9 @@
                     <!--#if IOT_ATOMIC_SUN_V2 || IOT_DIMMER_MODULE-->
                     <a class="dropdown-item" href="dimmer_cfg.html">Dimmer</a>
                     <!--#endif-->
+                    <!--#if SERIAL2TCP-->
+                    <a class="dropdown-item" href="serial2tcp.html">Serial2TCP</a>
+                    <!--#endif-->
                     <!--#if HOME_ASSISTANT_INTEGRATION-->
                     <a class="dropdown-item" href="home_assistant.html">Home Assistant</a>
                     <!--#endif-->
@@ -49,14 +52,11 @@
                     Device
                 </a>
                 <div class="dropdown-menu" aria-labelledby="navbarDropdownDevice">
-                    <!--#if IOT_DIMMER_MODULE || IOT_ATOMIC_SUN_V2 || IOT_SENSOR -->
+                    <!--#if IOT_DIMMER_MODULE || IOT_ATOMIC_SUN_V2 || IOT_SENSOR || IOT_BLINDS_CTRL -->
                     <a class="dropdown-item" href="webui.html">Web UI</a>
                     <!--#endif-->
                     <!--#if HUE_EMULATION-->
                     <a class="dropdown-item" href="hue.html">HUE device emulation</a>
-                    <!--#endif-->
-                    <!--#if SERIAL2TCP-->
-                    <a class="dropdown-item" href="serial2tcp.html">Serial2TCP</a>
                     <!--#endif-->
                 </div>
             </li>

@@ -11,6 +11,7 @@
 #include "plugins.h"
 #include "blinds_ctrl.h"
 #include "BlindsControl.h"
+#include "BlindsChannel.h"
 
 #if DEBUG_IOT_BLINDS_CTRL
 #include <debug_helper_enable.h>
@@ -36,12 +37,19 @@ public:
 
     static void loopMethod();
 
-#if AT_MODE_SUPPORTED && IOT_BLINDS_CTRL_TESTMODE
+
+#if IOT_BLINDS_CTRL_RPM_PIN
+    static void rpmIntCallback(InterruptInfo info);
+#endif
+
+#if AT_MODE_SUPPORTED
     virtual bool hasAtMode() const override;
     virtual void atModeHelpGenerator() override;
     virtual bool atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) override;
 
+#if IOT_BLINDS_CTRL_TESTMODE
 private:
+    void _printTestInfo();
     void _testLoopMethod();
 
     MillisTimer _printCurrentTimeout;
@@ -50,13 +58,14 @@ private:
     uint16_t _peakCurrent;
     bool _isTestMode;
 #endif
+
+#endif
 };
 
 
 static BlindsControlPlugin plugin;
 
-
-BlindsControlPlugin::BlindsControlPlugin() : _isTestMode(false) {
+BlindsControlPlugin::BlindsControlPlugin() : BlindsControl(), _isTestMode(false) {
     register_plugin(this);
 }
 
@@ -66,19 +75,7 @@ PGM_P BlindsControlPlugin::getName() const {
 
 void BlindsControlPlugin::setup(PluginSetupMode_t mode) {
 
-    digitalWrite(IOT_BLINDS_CTRL_M1_PIN, LOW);
-    digitalWrite(IOT_BLINDS_CTRL_M2_PIN, LOW);
-    digitalWrite(IOT_BLINDS_CTRL_M3_PIN, LOW);
-    digitalWrite(IOT_BLINDS_CTRL_M4_PIN, LOW);
-
-    pinMode(IOT_BLINDS_CTRL_M1_PIN, OUTPUT);
-    pinMode(IOT_BLINDS_CTRL_M2_PIN, OUTPUT);
-    pinMode(IOT_BLINDS_CTRL_M3_PIN, OUTPUT);
-    pinMode(IOT_BLINDS_CTRL_M4_PIN, OUTPUT);
-    pinMode(IOT_BLINDS_CTRL_RSSEL_PIN, OUTPUT);
-
-    analogWriteFreq(IOT_BLINDS_CTRL_PWM_FREQ);
-
+    _setup();
     LoopFunctions::add(loopMethod);
 }
 
@@ -91,14 +88,16 @@ const String BlindsControlPlugin::getStatus() {
     str.printf_P(PSTR("PWM %.2fkHz" HTML_S(br)), IOT_BLINDS_CTRL_PWM_FREQ / 1000.0);
 
     _readConfig();
+
     for(uint8_t i = 0; i < 2; i++) {
+        auto &_channel = _channels[i].getChannel();
         str.printf_P(PSTR("Channel %u, state %s, open %ums, close %ums, current limit %umA/%ums" HTML_S(br)),
             (i + 1),
-            BlindsControl::_stateStr(_state[i]),
-            _channels[i].openTime,
-            _channels[i].closeTime,
-            (unsigned)ADC_TO_CURRENT(_channels[i].currentLimit),
-            _channels[i].currentLimitTime
+            BlindsChannel::_stateStr(_channels[i].getState()),
+            _channel.openTime,
+            _channel.closeTime,
+            (unsigned)ADC_TO_CURRENT(_channel.currentLimit),
+            _channel.currentLimitTime
         );
     }
     return str;
@@ -131,7 +130,19 @@ void BlindsControlPlugin::createWebUI(WebUI &webUI) {
     row->addSwitch(FSPGM(blinds_controller_channel2), F("Channel 2"));
 }
 
-#if AT_MODE_SUPPORTED && IOT_BLINDS_CTRL_TESTMODE
+#if IOT_BLINDS_CTRL_RPM_PIN
+
+void BlindsControl::rpmIntCallback(InterruptInfo info) {
+    _rpmIntCallback(info);
+}
+
+#endif
+
+#if IOT_BLINDS_CTRL_TESTMODE
+
+#if !AT_MODE_SUPPORTED
+#error Test mode requires AT_MODE_SUPPORTED=1
+#endif
 
 void BlindsControlPlugin::loopMethod() {
     if (plugin._isTestMode) {
@@ -142,10 +153,32 @@ void BlindsControlPlugin::loopMethod() {
     }
 }
 
+#else
+
+void BlindsControlPlugin::loopMethod() {
+    plugin._loopMethod();
+}
+
+#endif
+
+#if AT_MODE_SUPPORTED
 
 #include "at_mode.h"
 
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(BCME, "BCME", "<motor=0/1>,<direction=0/1>,<max-time/ms>,<level=0-1023>,<frequency/Hz>,<limit=0-1023>,<limit-time>", "Enable motor # for max-time milliseconds");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(BCMS, "BCMS", "<channel=0/1>,<0=closed/1=open>", "Set channel state");
+
+#if IOT_BLINDS_CTRL_TESTMODE
+
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(BCME, "BCME", "<channel=0/1>,<direction=0/1>,<max-time/ms>,<level=0-1023>,<frequency/Hz>,<limit=0-1023>,<limit-time>", "Enable motor # for max-time milliseconds");
+
+void BlindsControlPlugin::_printTestInfo() {
+
+#if IOT_BLINDS_CTRL_RPM_PIN
+    MySerial.printf_P(PSTR("%umA %u peak %u rpm %u position %u\n"), ADC_TO_CURRENT(_adcIntegral), _adcIntegral, _peakCurrent, _getRpm(), _rpmCounter);
+#else
+    MySerial.printf_P(PSTR("%umA %u peak %u\n"), ADC_TO_CURRENT(_adcIntegral), _adcIntegral, _peakCurrent);
+#endif
+}
 
 void BlindsControlPlugin::_testLoopMethod() {
     if (_motorTimeout.isActive()) {
@@ -155,6 +188,7 @@ void BlindsControlPlugin::_testLoopMethod() {
         if (_adcIntegral > _currentLimit && millis() % 2 == _currentLimitCounter % 2) {
             if (++_currentLimitCounter > _currentLimitMinCount) {
                 _isTestMode = false;
+                _printTestInfo();
                 _stop();
                 MySerial.println(F("+BCME: Current limit"));
                 return;
@@ -163,31 +197,60 @@ void BlindsControlPlugin::_testLoopMethod() {
         else if (_adcIntegral < _currentLimit * 0.8) {
             _currentLimitCounter = 0;
         }
+#if IOT_BLINDS_CTRL_RPM_PIN
+        if (_hasStalled()) {
+            _isTestMode = false;
+            _printTestInfo();
+            _stop();
+            MySerial.println(F("+BCME: Stalled"));
+            return;
+        }
+#endif
         if (_motorTimeout.reached()) {
             _isTestMode = false;
+            _printTestInfo();
             _stop();
             MySerial.println(F("+BCME: Timeout"));
         }
         else if (_printCurrentTimeout.reached(true)) {
-            MySerial.printf_P(PSTR("%umA %u peak %u\n"), ADC_TO_CURRENT(_adcIntegral), _adcIntegral, _peakCurrent);
+            _printTestInfo();
             _peakCurrent = 0;
         }
     }
 }
+
+#endif
 
 bool BlindsControlPlugin::hasAtMode() const {
     return true;
 }
 
 void BlindsControlPlugin::atModeHelpGenerator() {
+#if IOT_BLINDS_CTRL_TESTMODE
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(BCME));
+#endif
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(BCMS));
 }
 
 bool BlindsControlPlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) {
-    if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(BCME))) {
+
+    if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(BCMS))) {
+        if (argc == 2) {
+            uint8_t channel = atoi(argv[0]) % 2;
+            _channels[channel].setState(atoi(argv[1]) == 0 ? BlindsChannel::CLOSED : BlindsChannel::OPEN);
+            _saveState();
+            serial.printf_P(PSTR("+BCMS: channel %u state %s\n"), channel, BlindsChannel::_stateStr(_channels[channel].getState()));
+        }
+        else {
+            at_mode_print_invalid_arguments(serial);
+        }
+        return true;
+    }
+#if IOT_BLINDS_CTRL_TESTMODE
+    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(BCME))) {
         if (argc == 7) {
             uint8_t pins[] = { IOT_BLINDS_CTRL_M1_PIN, IOT_BLINDS_CTRL_M2_PIN, IOT_BLINDS_CTRL_M3_PIN, IOT_BLINDS_CTRL_M4_PIN };
-            uint8_t motor = atoi(argv[0]) % 2;
+            uint8_t channel = atoi(argv[0]) % 2;
             uint8_t direction = atoi(argv[1]) % 2;
             uint32_t time = atoi(argv[2]);
             uint16_t pwmLevel = atoi(argv[3]);
@@ -199,9 +262,9 @@ bool BlindsControlPlugin::atModeHandler(Stream &serial, const String &command, i
             for(uint i = 0; i < 4; i++) {
                 analogWrite(pins[i], LOW);
             }
-            analogWrite(pins[(motor << 1) | direction], pwmLevel);
+            analogWrite(pins[(channel << 1) | direction], pwmLevel);
             serial.printf_P(PSTR("+BCME: level %u current limit/%u %u frequency %.2fkHz\n"), pwmLevel, _currentLimit, _currentLimitMinCount, pwmFrequency / 1000.0);
-            serial.printf_P(PSTR("+BCME: motor %u direction %s time %u\n"), motor, direction == 0 ? PSTR("down") : PSTR("up"), time);
+            serial.printf_P(PSTR("+BCME: channel %u direction %s time %u\n"), channel, direction == 0 ? PSTR("down") : PSTR("up"), time);
 
             _peakCurrent = 0;
             _printCurrentTimeout.set(500);
@@ -214,13 +277,8 @@ bool BlindsControlPlugin::atModeHandler(Stream &serial, const String &command, i
         }
         return true;
     }
+#endif
     return false;
-}
-
-#else
-
-void BlindsControlPlugin::loopMethod() {
-    plugin._loopMethod();
 }
 
 #endif

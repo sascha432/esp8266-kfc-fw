@@ -118,10 +118,9 @@ public:
     void registerComponent(MQTTComponent *component);
     void unregisterComponent(MQTTComponent *component);
 
-    inline bool hasMultipleComponments() const {
-        return _components.size() > 1;
-    }
-    inline bool useNodeId() const {
+    bool hasMultipleComponments() const;
+
+    bool useNodeId() const {
         return _useNodeId;
     }
     // false <discovery_prefix>/<component>/<name>_<node_id>
@@ -175,6 +174,7 @@ public:
 #endif
 
 private:
+    void _setupClient();
     void autoReconnect(uint32_t timeout);
 
     const String _reasonToString(AsyncMqttClientDisconnectReason reason) const;

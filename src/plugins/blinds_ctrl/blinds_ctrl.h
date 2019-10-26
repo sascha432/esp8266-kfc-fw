@@ -2,6 +2,12 @@
  * Author: sascha_lammers@gmx.de
  */
 
+// controller
+// https://easyeda.com/sascha23095123423/iot_blinds_controller
+
+// optional position tracking/rpm sensing/improved stall detection
+// https://easyeda.com/sascha23095123423/rpm-sensing-for-iot-blinds-controller
+
 #if IOT_BLINDS_CTRL
 
 #pragma once
@@ -12,6 +18,21 @@
 #define DEBUG_IOT_BLINDS_CTRL       0
 #endif
 
+// save last state on SPIFFS
+#ifndef IOT_BLINDS_CTRL_SAVE_STATE
+#define IOT_BLINDS_CTRL_SAVE_STATE  1
+#endif
+
+// enable RPM sensing, 0 = disable
+#ifndef IOT_BLINDS_CTRL_RPM_PIN
+#define IOT_BLINDS_CTRL_RPM_PIN     0
+#endif
+
+// number of pulses per rotation
+#ifndef IOT_BLINDS_CTRL_RPM_PULSES
+#define IOT_BLINDS_CTRL_RPM_PULSES  3
+#endif
+
 // AT mode command for parameter tuning
 #ifndef IOT_BLINDS_CTRL_TESTMODE
 #define IOT_BLINDS_CTRL_TESTMODE    1
@@ -19,11 +40,11 @@
 
 // motor pins
 #ifndef IOT_BLINDS_CTRL_M1_PIN
-#define IOT_BLINDS_CTRL_M1_PIN      D1
+#define IOT_BLINDS_CTRL_M1_PIN      D2
 #endif
 
 #ifndef IOT_BLINDS_CTRL_M2_PIN
-#define IOT_BLINDS_CTRL_M2_PIN      D2
+#define IOT_BLINDS_CTRL_M2_PIN      D1
 #endif
 
 #ifndef IOT_BLINDS_CTRL_M3_PIN

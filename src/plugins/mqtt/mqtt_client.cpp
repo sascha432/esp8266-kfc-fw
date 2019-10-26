@@ -42,16 +42,55 @@ void MQTTClient::deleteInstance() {
 
 MQTTClient::MQTTClient() {
     _debug_printf_P(PSTR("MQTTClient::MQTTClient()\n"));
-    _client = _debug_new AsyncMqttClient();
+
+     _client = nullptr;
+     _queueTimer = nullptr;
     _timer = nullptr;
-    _queueTimer = nullptr;
     _messageBuffer = nullptr;
     _useNodeId = false;
+
+    _setupClient();
+    WiFiCallbacks::add(WiFiCallbacks::EventEnum_t::ANY, MQTTClient::handleWiFiEvents);
+
+    if (WiFi.isConnected()) {
+        connect();
+    }
+}
+
+MQTTClient::~MQTTClient() {
+    _debug_printf_P(PSTR("MQTTClient::~MQTTClient()\n"));
+    _clearQueue();
+    if (Scheduler.hasTimer(_timer)) {
+        Scheduler.removeTimer(_timer);
+    }
+    _autoReconnectTimeout = 0;
+    if (isConnected()) {
+        disconnect(true);
+    }
+    delete _client;
+    if (_messageBuffer) {
+        delete _messageBuffer;
+    }
+}
+
+void MQTTClient::_setupClient() {
+
+    _clearQueue();
+
+    _client = _debug_new AsyncMqttClient();
 
     _maxMessageSize = MAX_MESSAGE_SIZE;
     _autoReconnectTimeout = DEFAULT_RECONNECT_TIMEOUT;
 
-    _client->setServer(config._H_STR(Config().mqtt_host), config._H_GET(Config().mqtt_port));
+    auto host = config._H_STR(Config().mqtt_host);
+    auto port = config._H_GET(Config().mqtt_port);
+    IPAddress ip;
+    if (ip.fromString(host)) {
+        _client->setServer(ip, port);
+    }
+    else {
+        _client->setServer(host, port);
+    }
 #if ASYNC_TCP_SSL_ENABLED
     if (config.isSecureMQTT()) {
         _client->setSecure(true);
@@ -84,28 +123,6 @@ MQTTClient::MQTTClient() {
         this->onUnsubscribe(packetId);
     });
 #endif
-
-    WiFiCallbacks::add(WiFiCallbacks::EventEnum_t::ANY, MQTTClient::handleWiFiEvents);
-
-    if (WiFi.isConnected()) {
-        connect();
-    }
-}
-
-MQTTClient::~MQTTClient() {
-    _debug_printf_P(PSTR("MQTTClient::~MQTTClient()\n"));
-    _clearQueue();
-    if (Scheduler.hasTimer(_timer)) {
-        Scheduler.removeTimer(_timer);
-    }
-    _autoReconnectTimeout = 0;
-    if (isConnected()) {
-        disconnect(true);
-    }
-    delete _client;
-    if (_messageBuffer) {
-        delete _messageBuffer;
-    }
 }
 
 void MQTTClient::registerComponent(MQTTComponent *component) {
@@ -133,13 +150,26 @@ void MQTTClient::unregisterComponent(MQTTComponent *component) {
     }
 }
 
+bool MQTTClient::hasMultipleComponments() const {
+    uint8_t count = 0;
+    for(auto &&component: _components) {
+        count += component->getAutoDiscoveryCount();
+        if (count > 1) {
+            return true;
+        }
+    }
+    return false;
+}
+
 const String MQTTClient::getComponentName(uint8_t num) {
     String deviceName = config._H_STR(Config().device_name);
     auto mqttClient = getClient();
+
     if (num != 0xff && mqttClient && mqttClient->hasMultipleComponments()) {
         deviceName += mqttClient->useNodeId() ? '/' : '_';
         deviceName += String(num);
     }
+    _debug_printf_P(PSTR("MQTTClient::getComponentName(): number=%u,client=%p,multiple=%u,device=%s\n"), num, mqttClient, mqttClient->hasMultipleComponments(), deviceName.c_str());
     return deviceName;
 }
 
@@ -151,6 +181,7 @@ String MQTTClient::formatTopic(uint8_t num, const __FlashStringHelper *format, .
     topic.vprintf_P(reinterpret_cast<PGM_P>(format), arg);
     va_end(arg);
     topic.replace(F("${device_name}"), getComponentName(num));
+    _debug_printf_P(PSTR("MQTTClient::formatTopic(): number=%u,topic=%s\n"), num, topic.c_str());
     return topic;
 }
 
@@ -175,7 +206,7 @@ void MQTTClient::setAutoReconnect(uint32_t timeout) {
 }
 
 void MQTTClient::connect() {
-    _debug_printf_P(PSTR("MQTTClient::connect(): status %s\n"), connectionStatusString().c_str());
+    _debug_printf_P(PSTR("MQTTClient::connect(): status %s connected %u\n"), connectionStatusString().c_str(), _client->connected());
 
     // remove reconnect timer if running and force disconnect
     auto timeout = _autoReconnectTimeout;
@@ -203,7 +234,7 @@ void MQTTClient::connect() {
 }
 
 void MQTTClient::disconnect(bool forceDisconnect) {
-    _debug_printf_P(PSTR("MQTTClient::disconnect(%d): status %s\n"), forceDisconnect, connectionStatusString().c_str());
+    _debug_printf_P(PSTR("MQTTClient::disconnect(%d): status %s connected %u\n"), forceDisconnect, connectionStatusString().c_str(), _client->connected());
     if (!forceDisconnect) {
         // set offline
         publish(_lastWillTopic, getDefaultQos(), 1, FSPGM(0));
@@ -753,21 +784,26 @@ void MQTTPlugin::atModeHelpGenerator() {
 
 bool MQTTPlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) {
     if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(MQTT))) {
+        serial.print(F("+MQTT "));
         if (argc == AT_MODE_QUERY_COMMAND) {
             if (MQTTClient::getClient()) {
+                serial.print(F("status: "));
                 serial.println(MQTTClient::connectionStatusString());
             } else {
-                serial.print(F("MQTT "));
                 serial.println(FSPGM(disabled));
             }
         } else if (MQTTClient::getClient() && argc == 1) {
             auto &client = *MQTTClient::getClient();
-            if (strcmp_P(argv[0], PSTR("connect")) == 0) {
+            if (strcmp_P(argv[0], PSTR("connect")) == 0 || strcmp_P(argv[0], PSTR("1")) == 0) {
+                serial.print(F("connect: "));
+                serial.println(MQTTClient::connectionStatusString());
                 client.setAutoReconnect(MQTTClient::DEFAULT_RECONNECT_TIMEOUT);
                 client.connect();
-            } else if (strcmp_P(argv[0], PSTR("disconnect")) == 0) {
+            } else if (strcmp_P(argv[0], PSTR("disconnect")) == 0 || strcmp_P(argv[0], PSTR("0")) == 0) {
+                serial.println(F("disconnect"));
                 client.disconnect(false);
             } else if (strcmp_P(argv[0], PSTR("force-disconnect")) == 0) {
+                serial.println(F("force disconnect"));
                 client.setAutoReconnect(0);
                 client.disconnect(true);
             }

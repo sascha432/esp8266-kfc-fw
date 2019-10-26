@@ -73,9 +73,9 @@ const String AtomicSunPlugin::getStatus() {
 }
 
 void Driver_4ChDimmer::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector) {
-    if (_data.state.set.length() == 0) {
-        _createTopics();
-    }
+
+    _createTopics();
+
     auto discovery = _debug_new MQTTAutoDiscovery();
     discovery->create(this, 0, format);
     discovery->addStateTopic(_data.state.state);

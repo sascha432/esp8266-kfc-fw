@@ -6,6 +6,7 @@
 
 #include "WebUISocket.h"
 #include "BlindsControl.h"
+#include "progmem_data.h"
 
 #if DEBUG_IOT_BLINDS_CTRL
 #include <debug_helper_enable.h>
@@ -18,45 +19,59 @@ PROGMEM_STRING_DEF(blinds_controller_channel2, "blinds_channel2");
 PROGMEM_STRING_DEF(blinds_controller_channel1_sensor, "blinds_channel1_sensor");
 PROGMEM_STRING_DEF(blinds_controller_channel2_sensor, "blinds_channel2_sensor");
 
-BlindsControl::BlindsControl() : MQTTComponent(SWITCH), WebUIInterface()
+BlindsControl::BlindsControl() : MQTTComponent(SENSOR), WebUIInterface()
 {
     _activeChannel = 0;
-    _state[0] = UNKNOWN;
-    _state[1] = UNKNOWN;
+    _channels[0].setNumber(0);
+    _channels[1].setNumber(1);
+}
+
+void BlindsControl::_setup() {
+    _debug_println(F("BlindsControl::_setup()"));
     _readConfig();
+
+    digitalWrite(IOT_BLINDS_CTRL_M1_PIN, LOW);
+    digitalWrite(IOT_BLINDS_CTRL_M2_PIN, LOW);
+    digitalWrite(IOT_BLINDS_CTRL_M3_PIN, LOW);
+    digitalWrite(IOT_BLINDS_CTRL_M4_PIN, LOW);
+
+    pinMode(IOT_BLINDS_CTRL_M1_PIN, OUTPUT);
+    pinMode(IOT_BLINDS_CTRL_M2_PIN, OUTPUT);
+    pinMode(IOT_BLINDS_CTRL_M3_PIN, OUTPUT);
+    pinMode(IOT_BLINDS_CTRL_M4_PIN, OUTPUT);
+    pinMode(IOT_BLINDS_CTRL_RSSEL_PIN, OUTPUT);
+
+    analogWriteFreq(IOT_BLINDS_CTRL_PWM_FREQ);
+
+#if IOT_BLINDS_CTRL_RPM_PIN
+    attachScheduledInterrupt(digitalPinToInterrupt(IOT_BLINDS_CTRL_RPM_PIN), BlindsControl::rpmIntCallback, RISING);
+    pinMode(IOT_BLINDS_CTRL_RPM_PIN, INPUT);
+#endif
+
+    auto client = MQTTClient::getClient();
+    if (client) {
+        client->setUseNodeId(true);
+        client->registerComponent(&_channels[0]);
+        client->registerComponent(&_channels[1]);
+        client->registerComponent(this);
+    }
 }
 
 void BlindsControl::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTComponent::MQTTAutoDiscoveryVector &vector) {
 
-    // String topic = MQTTClient::formatTopic(-1, F("/metrics/"));
+    _topic = MQTTClient::formatTopic(-1, F("/metrics"));
 
-    // auto discovery = _debug_new MQTTAutoDiscovery();
-    // discovery->create(this, 0, format);
-    // discovery->addStateTopic(topic + F("int_temp"));
-    // discovery->addUnitOfMeasurement(F("\u00b0C"));
-    // discovery->finalize();
-    // vector.emplace_back(MQTTComponent::MQTTAutoDiscoveryPtr(discovery));
+    auto discovery = _debug_new MQTTAutoDiscovery();
+    discovery->create(this, 0, format);
+    discovery->addStateTopic(_topic + '1');
+    discovery->finalize();
+    vector.emplace_back(MQTTComponent::MQTTAutoDiscoveryPtr(discovery));
 
-    // discovery = _debug_new MQTTAutoDiscovery();
-    // discovery->create(this, 1, format);
-    // discovery->addStateTopic(topic + F("ntc_temp"));
-    // discovery->addUnitOfMeasurement(F("\u00b0C"));
-    // discovery->finalize();
-    // vector.emplace_back(MQTTComponent::MQTTAutoDiscoveryPtr(discovery));
-
-    // discovery = _debug_new MQTTAutoDiscovery();
-    // discovery->create(this, 2, format);
-    // discovery->addStateTopic(topic + F("vcc"));
-    // discovery->addUnitOfMeasurement(F("V"));
-    // discovery->finalize();
-    // vector.emplace_back(MQTTComponent::MQTTAutoDiscoveryPtr(discovery));
-
-    // discovery = _debug_new MQTTAutoDiscovery();
-    // discovery->create(this, 3, format);
-    // discovery->addStateTopic(topic + F("frequency"));
-    // discovery->addUnitOfMeasurement(F("Hz"));
-    // discovery->finalize();
-    // vector.emplace_back(MQTTComponent::MQTTAutoDiscoveryPtr(discovery));
+    discovery = _debug_new MQTTAutoDiscovery();
+    discovery->create(this, 1, format);
+    discovery->addStateTopic(_topic + '2');
+    discovery->finalize();
+    vector.emplace_back(MQTTComponent::MQTTAutoDiscoveryPtr(discovery));
 }
 
 uint8_t BlindsControl::getAutoDiscoveryCount() const {
@@ -71,33 +86,42 @@ void BlindsControl::getValues(JsonArray &array) {
     obj->add(JJ(value), _getStateStr(0));
     obj->add(JJ(state), true);
 
-    obj = &array.addObject(2);
+    obj = &array.addObject(3);
     obj->add(JJ(id), FSPGM(blinds_controller_channel1));
-    obj->add(JJ(state), _state[0] == OPEN ? true : false);
+    obj->add(JJ(value), _channels[0].isOpen() ? 1 : 0);
+    obj->add(JJ(state), true);
 
     obj = &array.addObject(3);
     obj->add(JJ(id), FSPGM(blinds_controller_channel2_sensor));
     obj->add(JJ(value), _getStateStr(1));
     obj->add(JJ(state), true);
 
-    obj = &array.addObject(2);
+    obj = &array.addObject(3);
     obj->add(JJ(id), FSPGM(blinds_controller_channel2));
-    obj->add(JJ(state), _state[1] == OPEN ? true : false);
+    obj->add(JJ(value), _channels[1].isOpen() ? 1 : 0);
+    obj->add(JJ(state), true);
+}
+
+void BlindsControl::onConnect(MQTTClient *client) {
+    _debug_printf_P(PSTR("BlindsControl::onConnect()\n"));
+    _readConfig();
+    _publishState(client);
 }
 
 void BlindsControl::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState) {
+    PGM_P name = PSTR("blinds_channel");
     _debug_printf_P(PSTR("BlindsControl::setValue(): %s value(%u) %s state(%u) %u\n"), id.c_str(), hasValue, value.c_str(), hasState, state);
     if (hasValue) {
         auto ptr = id.c_str();
-        if (strncmp_P(ptr, PSTR("blinds_channel"), 14) == 0) {
-            uint8_t channel = (ptr[14] - '1') % 2;
-            setChannel(channel, value.toInt() ? CLOSED : OPEN);
+        if (strncmp_P(ptr, name, constexpr_strlen_P(name)) == 0) {
+            uint8_t channel = (ptr[constexpr_strlen_P(name)] - '1') % 2;
+            setChannel(channel, value.toInt() ? BlindsChannel::CLOSED : BlindsChannel::OPEN);
         }
     }
 }
 
-void BlindsControl::setChannel(uint8_t channel, StateEnum_t state) {
-    _debug_printf_P(PSTR("BlindsControl::setChannel(%u, %s): busy=%u\n"), channel, _stateStr(state), _motorTimeout.isActive());
+void BlindsControl::setChannel(uint8_t channel, BlindsChannel::StateEnum_t state) {
+    _debug_printf_P(PSTR("BlindsControl::setChannel(%u, %s): busy=%u\n"), channel, BlindsChannel::_stateStr(state), _motorTimeout.isActive());
     if (_motorTimeout.isActive() && _activeChannel == channel) {
         _stop();
     }
@@ -105,9 +129,10 @@ void BlindsControl::setChannel(uint8_t channel, StateEnum_t state) {
         _stop();
         _readConfig();
         _activeChannel = channel;
-        _setMotorSpeed(channel, _channels[channel].pwmValue, state == OPEN);
-        _state[channel] = state == OPEN ? CLOSED : OPEN;
-        _motorTimeout.set(state == OPEN ? _channels[channel].openTime : _channels[channel].closeTime);
+        auto &_channel = _channels[channel].getChannel();
+        _setMotorSpeed(channel, _channel.pwmValue, state == BlindsChannel::OPEN);
+        _channels[channel].setState(state == BlindsChannel::OPEN ? BlindsChannel::CLOSED : BlindsChannel::OPEN);
+        _motorTimeout.set(state == BlindsChannel::CLOSED ? _channel.openTime : _channel.closeTime);
         _publishState();
         _clearAdc();
     }
@@ -116,18 +141,27 @@ void BlindsControl::setChannel(uint8_t channel, StateEnum_t state) {
 void BlindsControl::_loopMethod() {
     if (_motorTimeout.isActive()) {
         _updateAdc();
-        auto currentLimit = _channels[_activeChannel].currentLimit;
+        auto &_channel = _channels[_activeChannel].getChannel();
+        auto currentLimit = _channel.currentLimit;
         if (_adcIntegral > currentLimit && millis() % 2 == _currentLimitCounter % 2) { // assuming this loop runs at least once per millisecond. measured ~250-270µs, should be save...
-            if (++_currentLimitCounter > _channels[_activeChannel].currentLimitTime) {
+            if (++_currentLimitCounter > _channel.currentLimitTime) {
                 _debug_println(F("BlindsControl::_loopMethod(): Current limit"));
                 _stop();
                 _publishState();
                 return;
             }
         }
-        else if (_adcIntegral < currentLimit * 0.8) {   // reset current limit timer if it drops below 80%
+        else if (_adcIntegral < currentLimit * 0.8) {   // reset current limit counter if it drops below 80%
             _currentLimitCounter = 0;
         }
+
+#if IOT_BLINDS_CTRL_RPM_PIN
+        if (_hasStalled()) {
+            _debug_println(F("BlindsControl::_loopMethod(): Stalled"));
+            _stop();
+            return;
+        }
+#endif
 
         if (_motorTimeout.reached()) {
             _debug_println(F("BlindsControl::_loopMethod(): Timeout"));
@@ -137,24 +171,12 @@ void BlindsControl::_loopMethod() {
     }
 }
 
-PGM_P BlindsControl::_stateStr(StateEnum_t state) {
-    switch(state) {
-        case OPEN:
-            return PSTR("Open");
-        case CLOSED:
-            return PSTR("Closed");
-        default:
-            return PSTR("???");
-    }
-}
 
 const __FlashStringHelper *BlindsControl::_getStateStr(uint8_t channel) const {
-    _debug_printf_P(PSTR("BlindsControl::_getStateStr(%u): active=%u\n"), channel, _motorTimeout.isActive() && _activeChannel == channel);
-
     if (_motorTimeout.isActive() && _activeChannel == channel) {
-        return F("Bu<b>sy</b>");
+        return F("Busy");
     }
-    return FPSTR(_stateStr(_state[channel]));
+    return FPSTR(BlindsChannel::_stateStr(_channels[channel].getState()));
 }
 
 void BlindsControl::_clearAdc() {
@@ -167,6 +189,10 @@ void BlindsControl::_clearAdc() {
     _adcIntegral = 0;
     _currentLimitCounter = 0;
     _currentTimer.start();
+
+#if IOT_BLINDS_CTRL_RPM_PIN
+    _rpmReset();
+#endif
 }
 
 void BlindsControl::_updateAdc() {
@@ -181,27 +207,24 @@ void BlindsControl::_setMotorSpeed(uint8_t channel, uint16_t speed, bool directi
         pin1 = IOT_BLINDS_CTRL_M1_PIN;
         pin2 = IOT_BLINDS_CTRL_M2_PIN;
     }
-    else if (channel == 1) {
+    else {
         pin1 = IOT_BLINDS_CTRL_M3_PIN;
         pin2 = IOT_BLINDS_CTRL_M4_PIN;
     }
-    else {
-        return;
-    }
     _debug_printf_P(PSTR("BlindsControl::_setMotorSpeed(%u, %u, %u): pins %u, %u\n"), channel, speed, direction, pin1, pin2);
-
     if (direction) {
-        // analogWrite(pin1, speed);
-        // analogWrite(pin2, 0);
+        analogWrite(pin1, speed);
+        analogWrite(pin2, 0);
     }
     else {
-        // analogWrite(pin1, 0);
-        // analogWrite(pin2, speed);
+        analogWrite(pin1, 0);
+        analogWrite(pin2, speed);
     }
 }
 
 void BlindsControl::_stop() {
     _debug_println(F("BlindsControl::_stop()"));
+
     _motorTimeout.disable();
     analogWrite(IOT_BLINDS_CTRL_M1_PIN, 0);
     analogWrite(IOT_BLINDS_CTRL_M2_PIN, 0);
@@ -209,19 +232,85 @@ void BlindsControl::_stop() {
     analogWrite(IOT_BLINDS_CTRL_M4_PIN, 0);
 }
 
-void BlindsControl::_publishState() {
-    _debug_println(F("BlindsControl::_publishState()"));
+void BlindsControl::_publishState(MQTTClient *client) {
+    if (!client) {
+        client = MQTTClient::getClient();
+    }
+    _debug_printf_P(PSTR("BlindsControl::_publishState(): state %s/%s, client %p\n"), _getStateStr(0), _getStateStr(1), client);
+
+    if (client) {
+        uint8_t _qos = MQTTClient::getDefaultQos();
+        client->publish(_topic + '1', _qos, 1, _getStateStr(0));
+        client->publish(_topic + '2', _qos, 1, _getStateStr(1));
+        _channels[0]._publishState(client, _qos);
+        _channels[1]._publishState(client, _qos);
+    }
 
     JsonUnnamedObject object(2);
     object.add(JJ(type), JJ(ue));
     auto &events = object.addArray(JJ(events), 4);
     getValues(events);
-    WsWebUISocket::broadcast(WsWebUISocket::getSender(), object);
+    WsWebUISocket::broadcast(WsWebUISocket::getSender(), object);//TODO not actually sending anything in void WsClient::broadcast(AsyncWebSocket *server, WsClient *sender, AsyncWebSocketMessageBuffer *buffer)
+
+    _saveState();
+}
+
+void BlindsControl::_loadState() {
+#if IOT_BLINDS_CTRL_SAVE_STATE
+    BlindsChannel::StateEnum_t state[2] = { BlindsChannel::UNKNOWN, BlindsChannel::UNKNOWN };
+    auto file = SPIFFS.open(F("/blinds_ctrl.state"), "r");
+    if (file) {
+        file.read(reinterpret_cast<uint8_t *>(&state), sizeof(state));
+        _channels[0].setState(state[0]);
+        _channels[1].setState(state[1]);
+    }
+    _debug_printf_P(PSTR("BlindsControl::_loadState(): file=%u, state=%u,%u\n"), (bool)file, state[0], state[1]);
+#endif
+}
+
+void BlindsControl::_saveState() {
+#if IOT_BLINDS_CTRL_SAVE_STATE
+    BlindsChannel::StateEnum_t state[2] = { _channels[0].getState(), _channels[1].getState() };
+    auto file = SPIFFS.open(F("/blinds_ctrl.state"), "w");
+    if (file) {
+        file.write(reinterpret_cast<const uint8_t *>(&state), sizeof(state));
+    }
+    _debug_printf_P(PSTR("BlindsControl::_saveState(): file=%u, state=%u,%u\n"), (bool)file, state[0], state[1]);
+#endif
 }
 
 void BlindsControl::_readConfig() {
-    _channels[0] = config._H_GET(Config().blinds_controller).channels[0];
-    _channels[1] = config._H_GET(Config().blinds_controller).channels[1];
+    _channels[0].setChannel(config._H_GET(Config().blinds_controller).channels[0]);
+    _channels[1].setChannel(config._H_GET(Config().blinds_controller).channels[1]);
+    _loadState();
 }
+
+#if IOT_BLINDS_CTRL_RPM_PIN
+
+void BlindsControl::_rpmReset() {
+    _rpmTimer.start();
+    _rpmLastInterrupt.start();
+    _rpmCounter = 0;
+}
+
+void BlindsControl::_rpmIntCallback(const InterruptInfo &info) {
+    const uint8_t multiplier = IOT_BLINDS_CTRL_RPM_PULSES * 10;
+    auto time = _rpmTimer.getTime(info.micro);
+    _rpmLastInterrupt.start();
+    _rpmTimer.start(info.micro);
+    _rpmTimeIntegral = ((_rpmTimeIntegral * multiplier) + time) / (multiplier + 1);
+    _rpmCounter++;
+}
+
+uint16_t BlindsControl::_getRpm() {
+    return (uint16_t)((1000000UL * 60UL / IOT_BLINDS_CTRL_RPM_PULSES) / _rpmTimeIntegral);
+}
+
+bool BlindsControl::_hasStalled() {
+    // interval for 500 rpm = ~40ms with 3 pulses
+    return (_rpmLastInterrupt.getTime() > (1000000UL / 500UL/*rpm*/ * 60UL / IOT_BLINDS_CTRL_RPM_PULSES));
+}
+
+#endif
 
 #endif

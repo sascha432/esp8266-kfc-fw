@@ -1,0 +1,160 @@
+/**
+ * Author: sascha_lammers@gmx.de
+ */
+
+#if STK500V1
+
+#include <Arduino_compat.h>
+#include <IntelHexFormat.h>
+#include <Buffer.h>
+#include <PrintString.h>
+
+class STK500v1Programmer {
+public:
+    typedef enum {
+        Cmnd_STK_GET_SYNC =             0x30,
+        Cmnd_STK_SET_DEVICE =           0x42,
+        Cmnd_STK_ENTER_PROGMODE =       0x50,
+        Cmnd_STK_LEAVE_PROGMODE =       0x51,
+        Cmnd_STK_LOAD_ADDRESS =         0x55,
+        Cmnd_STK_PROG_PAGE =            0x64,
+        Cmnd_STK_READ_PAGE =            0x74,
+        Cmnd_STK_READ_SIGN =            0x75,
+    } CommandsEnum_t;
+
+    typedef enum {
+        Resp_STK_OK =                   0x10,
+        Resp_STK_INSYNC =               0x14,
+        Resp_STK_NOSYNC =               0x15,
+        Sync_CRC_EOP =                  0x20,
+    } ResponseEnum_t;
+
+    typedef struct {
+        uint8_t deviceCode;
+        uint8_t revision;
+        uint8_t progType;
+        uint8_t parMode;
+        uint8_t polling;
+        uint8_t selfTimed;
+        uint8_t lockBytes;
+        uint8_t fuseBytes;
+        uint8_t flashPollVal1;
+        uint8_t flashPollVal2;
+        uint8_t eepromPollVal1;
+        uint8_t eepromPollVal2;
+        uint8_t pageSizeHigh;
+        uint8_t pageSizeLow;
+        uint8_t eepromSizeHigh;
+        uint8_t eepromSizeLow;
+        uint8_t flashSize4;
+        uint8_t flashSize3;
+        uint8_t flashSize2;
+        uint8_t flashSize1;
+    } Options_t;
+
+    typedef enum {
+        LOG_DISABLED =      0,
+        LOG_LOGGER =        1,
+        LOG_SERIAL =        2,
+        LOG_SERIAL2HTTP =   3,
+    } LoggingEnum_t;
+
+    typedef std::function<void ()> Callback_t;
+    typedef std::function<void (uint16_t wordAddress, uint16_t length, Callback_t success)> PageCallback_t;
+
+    static const int PROGRESS_BAR_LENGTH = 100;
+
+public:
+    STK500v1Programmer(Stream &serial);
+    virtual ~STK500v1Programmer();
+
+    void setFile(const String &filename);
+
+    void begin(Callback_t cleanup);
+    void end();
+
+    void setSignature(char *signature);
+
+    static bool getSignature(const char *mcu, char *signature);
+    static void dumpLog(Stream &output);
+    static void loopFunction();
+
+    void setPageSize(uint16_t pageSize) {
+        _pageSize = pageSize;
+    }
+
+    void setTimeout(uint16_t timeout) {
+        _timeout = timeout;
+    }
+
+    void setLogging(int logging) {
+        _logging = (LoggingEnum_t)logging;
+    }
+
+private:
+    void _reset();
+    void _flash();
+    void _delay(uint16_t time, Callback_t callback);
+    void _sendCommand_P_repeat(PGM_P command, uint8_t length, uint8_t num, uint16_t delay);
+    void _sendCommand_P(PGM_P command, uint8_t length);
+    void _sendCommandSetOptions(const Options_t &options);
+    void _sendCommandLoadAddress(uint16_t address);
+    void _sendCommandProgPage(uint8_t *data, uint16_t length);
+    void _setResponse_P(PGM_P response, uint8_t length);
+    void _loopFunction();
+    void _readResponse(Callback_t success, Callback_t failure);
+    void _printBuffer(Print &str, const Buffer &buffer);
+    void _printResponse();
+    void _setTimeout(uint16_t timeout);
+    void _done(bool success);
+    void _clearReponse(uint16_t delay, Callback_t callback);
+    void _clearPageBuffer();
+    void _uploadCallback();
+    void _readFile(PageCallback_t callback, Callback_t success, Callback_t failure);
+    void _leaveProgrammingMode();
+    void _writePage(uint16_t wordAddress, uint16_t length, Callback_t success);
+    void _verifyPage(uint16_t wordAddress, uint16_t length, Callback_t success);
+
+private:
+    Stream &_serial;
+
+private:
+    uint8_t _retries;
+    unsigned long _readResponseTimeout;
+    Buffer _response;
+    Buffer _expectedResponse;
+    Callback_t _callbackSuccess;
+    Callback_t _callbackFailure;
+    unsigned long _delayTimeout;
+    Callback_t _callbackDelay;
+    Callback_t _callbackCleanup;
+    uint16_t _timeout;
+
+private:
+    char _signature[3];
+    IntelHexFormat _file;
+    uint16_t _pageSize;
+    uint8_t *_pageBuffer;
+    uint16_t _pageAddress;
+    uint16_t _pagePosition;
+
+private:
+    void _status(const String &message);
+    void _logPrintf_P(PGM_P format, ...);
+
+private:
+    LoggingEnum_t _logging;
+
+private:
+    void _startPosition(const String &message);
+    void _updatePosition();
+    void _endPosition(const String &message, bool error);
+
+private:
+    uint8_t _position;
+    uint8_t _positionOld;
+};
+
+extern STK500v1Programmer *stk500v1;
+
+#endif

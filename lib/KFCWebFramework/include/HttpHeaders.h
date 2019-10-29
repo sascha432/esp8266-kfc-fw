@@ -248,7 +248,7 @@ public:
             _expires = COOKIE_EXPIRED;
         } else {
             time_t t;
-            if ((t = time(nullptr)) != 0) {
+            if (IS_TIME_VALID(t = time(nullptr))) {
                 _expires = t + maxAge;
             }
         }

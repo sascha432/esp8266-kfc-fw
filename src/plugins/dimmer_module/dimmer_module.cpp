@@ -397,37 +397,6 @@ PGM_P DimmerModulePlugin::getName() const {
     return PSTR("dimmer");
 }
 
-void DimmerModulePlugin::setupWebServer() {
-    auto server = get_web_server_object();
-    _debug_printf_P(PSTR("DimmerModulePlugin::setupWebServer(): %p\n"), server);
-    if (server) {
-        server->on(String(F("/dimmer_rstfw.html")).c_str(), DimmerModulePlugin::handleWebServer);
-    }
-}
-
-void DimmerModulePlugin::handleWebServer(AsyncWebServerRequest *request) {
-    if (web_server_is_authenticated(request)) {
-        resetDimmerFirmware();
-        HttpHeaders httpHeaders(false);
-        httpHeaders.addNoCache();
-        request->send_P(200, FSPGM(text_plain), SPGM(OK));
-    } else {
-        request->send(403);
-    }
-}
-
-void DimmerModulePlugin::resetDimmerFirmware() {
-    digitalWrite(D1, LOW);
-    pinMode(D1, OUTPUT);
-    digitalWrite(D1, LOW);
-    delay(10);
-    pinMode(D1, INPUT);
-}
-
-bool DimmerModulePlugin::hasReconfigureDependecy(PluginComponent *plugin) const {
-    return plugin->nameEquals(F("http"));
-}
-
 void DimmerModulePlugin::setup(PluginSetupMode_t mode) {
     setupWebServer();
     _begin();
@@ -442,6 +411,10 @@ void DimmerModulePlugin::reconfigure(PGM_P source) {
     else if (!strcmp_P_P(source, PSTR("http"))) {
         setupWebServer();
     }
+}
+
+bool DimmerModulePlugin::hasReconfigureDependecy(PluginComponent *plugin) const {
+    return plugin->nameEquals(F("http"));
 }
 
 bool DimmerModulePlugin::hasWebUI() const {

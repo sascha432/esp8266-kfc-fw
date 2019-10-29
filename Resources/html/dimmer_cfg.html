@@ -54,7 +54,7 @@
 				<label for="metrics_int">Metrics report interval (seconds):</label>
 				<input type="text" class="form-control" name="metrics_int" id="metrics_int" value="%METRICS_INT%" placeholder="30">
             </div>
-            <!--#if IOT_DIMMER_MODULE_HAS_BUTTONS-->
+            <!--#if IOT_DIMMER_MODULE_HAS_BUTTONS && !IOT_ATOMIC_SUN_V2-->
 			<div class="form-group">
 				<label for="shortpress_time">Short press time (milliseconds):</label>
 				<input type="text" class="form-control" name="shortpress_time" id="shortpress_time" value="%SHORTPRESS_TIME%" placeholder="250">

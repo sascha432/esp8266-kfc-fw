@@ -42,7 +42,7 @@ void BlinkLEDTimer::detach() {
 
 void BlinkLEDTimer::setPattern(int8_t pin, int delay, dynamic_bitset &pattern) {
 
-    debug_printf_P(PSTR("blink_led pin %d, pattern %s, delay %d\n"), pin, pattern.toString().c_str(), delay);
+    // _debug_printf_P(PSTR("blink_led pin %d, pattern %s, delay %d\n"), pin, pattern.toString().c_str(), delay);
     ledTimer.set(delay, pin, pattern);
 }
 
@@ -53,9 +53,9 @@ void BlinkLEDTimer::setBlink(int8_t pin, uint16_t delay) {
     if (pin == DEFAULT_PIN) {
         auto ledPin = config._H_GET(Config().led_pin);
         pin = (flags.ledMode != MODE_NO_LED) ? ledPin : INVALID_PIN;
-        _debug_printf_P(PSTR("Using configured LED mode %d, PIN %d=%d, blink %d\n"), flags.ledMode, ledPin, pin, delay);
+        // _debug_printf_P(PSTR("Using configured LED mode %d, PIN %d=%d, blink %d\n"), flags.ledMode, ledPin, pin, delay);
     } else {
-        _debug_printf_P(PSTR("PIN %d, blink %d\n"), pin, delay);
+        // _debug_printf_P(PSTR("PIN %d, blink %d\n"), pin, delay);
     }
 
     ledTimer.detach();

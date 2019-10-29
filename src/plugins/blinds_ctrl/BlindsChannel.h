@@ -18,6 +18,7 @@ public:
         UNKNOWN = 0,
         OPEN = 1,
         CLOSED = 2,
+        STOPPED = 3,
     } StateEnum_t;
 
     typedef struct BlindsControllerChannel Channel_t;

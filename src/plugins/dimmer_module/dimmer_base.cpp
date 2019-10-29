@@ -6,7 +6,9 @@
 
 #include "dimmer_base.h"
 #include <KFCJson.h>
+#include <ESPAsyncWebServer.h>
 #include "WebUISocket.h"
+#include "progmem_data.h"
 #include "../mqtt/mqtt_client.h"
 #include "dimmer_module.h"
 #if IOT_ATOMIC_SUN_V2
@@ -430,5 +432,33 @@ void Dimmer_Base::setValue(const String &id, const String &value, bool hasValue,
         }
     }
 }
+
+void Dimmer_Base::setupWebServer() {
+    auto server = get_web_server_object();
+    _debug_printf_P(PSTR("Dimmer_Base::setupWebServer(): %p\n"), server);
+    if (server) {
+        server->on(String(F("/dimmer_rstfw.html")).c_str(), Dimmer_Base::handleWebServer);
+    }
+}
+
+void Dimmer_Base::handleWebServer(AsyncWebServerRequest *request) {
+    if (web_server_is_authenticated(request)) {
+        resetDimmerFirmware();
+        HttpHeaders httpHeaders(false);
+        httpHeaders.addNoCache();
+        request->send_P(200, FSPGM(text_plain), SPGM(OK));
+    } else {
+        request->send(403);
+    }
+}
+
+void Dimmer_Base::resetDimmerFirmware() {
+    digitalWrite(STK500V1_RESET_PIN, LOW);
+    pinMode(STK500V1_RESET_PIN, OUTPUT);
+    digitalWrite(STK500V1_RESET_PIN, LOW);
+    delay(10);
+    pinMode(STK500V1_RESET_PIN, INPUT);
+}
+
 
 #endif

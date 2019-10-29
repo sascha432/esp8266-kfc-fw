@@ -322,12 +322,20 @@ AtomicSunPlugin::PluginPriorityEnum_t AtomicSunPlugin::getSetupPriority() const 
 
 void AtomicSunPlugin::setup(PluginSetupMode_t mode) {
     _begin();
+    setupWebServer();
 }
 
 void AtomicSunPlugin::reconfigure(PGM_P source) {
     if (!source) {
         writeConfig();
     }
+    else if (!strcmp_P_P(source, PSTR("http"))) {
+        setupWebServer();
+    }
+}
+
+bool AtomicSunPlugin::hasReconfigureDependecy(PluginComponent *plugin) const {
+    return plugin->nameEquals(F("http"));
 }
 
 bool AtomicSunPlugin::hasWebUI() const {

@@ -8,8 +8,8 @@
 
 #include <Arduino_compat.h>
 #include <PrintHtmlEntitiesString.h>
-#include "EventScheduler.h"
-#include "WebUIComponent.h"
+#include <WebUIComponent.h>
+#include <EventScheduler.h>
 #if IOT_DIMMER_MODULE_INTERFACE_UART
 #include <HardwareSerial.h>
 #include "SerialTwoWire.h"
@@ -17,7 +17,12 @@
 #include <Wire.h>
 #endif
 
+#ifndef STK500V1_RESET_PIN
+#error STK500V1_RESET_PIN not defined
+#endif
+
 class DimmerChannel;
+class AsyncWebServerRequest;
 
 class Dimmer_Base : public WebUIInterface {
 public:
@@ -113,6 +118,11 @@ protected:
 public:
     virtual void getValues(JsonArray &array);
     virtual void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState);
+
+public:
+    static void setupWebServer();
+    static void handleWebServer(AsyncWebServerRequest *request);
+    static void resetDimmerFirmware();
 };
 
 #endif

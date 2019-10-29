@@ -28,6 +28,10 @@
 #define IOT_ATOMIC_SUN_MAX_BRIGHTNESS       8333
 #endif
 
+#ifndef STK500V1_RESET_PIN
+#error STK500V1_RESET_PIN not defined
+#endif
+
 typedef struct {
     struct {
         String set;
@@ -101,6 +105,7 @@ public:
 
     virtual void setup(PluginSetupMode_t mode) override;
     virtual void reconfigure(PGM_P source) override;
+    virtual bool hasReconfigureDependecy(PluginComponent *plugin) const;
 
     virtual bool hasWebUI() const override;
     virtual void createWebUI(WebUI &webUI) override;

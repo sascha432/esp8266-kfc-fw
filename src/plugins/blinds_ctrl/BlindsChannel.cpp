@@ -91,6 +91,8 @@ PGM_P BlindsChannel::_stateStr(StateEnum_t state) {
             return PSTR("Open");
         case CLOSED:
             return PSTR("Closed");
+        case STOPPED:
+            return PSTR("Stopped");
         default:
             return PSTR("???");
     }

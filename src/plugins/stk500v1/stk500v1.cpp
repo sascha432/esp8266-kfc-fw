@@ -5,6 +5,7 @@
 #if STK500V1
 
 #include <SoftwareSerial.h>
+#include <EventScheduler.h>
 #include "stk500v1.h"
 #include "at_mode.h"
 #include "plugins.h"
@@ -40,8 +41,9 @@ PGM_P STK500v1Plugin::getName() const {
     return PSTR("stk500v1");
 }
 
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(STK500V1F, "STK500V1F", "<filename>,[<port>[,<0=disable/1=logger/2=serial>]]", "Flash ATmega MCU");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF(STK500V1S, "STK500V1S", "<atmega328p/328pb>", "Set signature", "Display signature");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(STK500V1F, "STK500V1F", "<filename>,[<0=Serial/1=Serial1>[,<0=disable/1=logger/2=serial/3=serial2http/4=file>]]", "Flash ATmega micro controller");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF(STK500V1S, "STK500V1S", "<atmega328p/0x1e1234/...>", "Set signature (/stk500v1/atmega.csv)", "Display signature");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(STK500V1L, "STK500V1L", "Dump debug log file (/stk500v1/debug.log)");
 
 bool STK500v1Plugin::hasAtMode() const {
     return true;
@@ -50,26 +52,22 @@ bool STK500v1Plugin::hasAtMode() const {
 void STK500v1Plugin::atModeHelpGenerator() {
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(STK500V1F));
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(STK500V1S));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(STK500V1L));
 }
 
 bool STK500v1Plugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) {
+
     if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(STK500V1S))) {
-        if (argc != 1) {
-            if (*_signature) {
-                serial.printf_P(PSTR("+STK500V1S: Signature %02x %02x %02x\n"), _signature[0], _signature[1], _signature[2]);
-            }
-            else {
-                serial.println(F("+STK500V1S: Default signature"));
-            }
+        if (argc == 1 && !STK500v1Programmer::getSignature(argv[0], _signature)) {
+            serial.println(F("+STK500V1S: Name unknown"));
         }
-        else {
-            if (!STK500v1Programmer::getSignature(argv[0], _signature)) {
-                serial.println(F("+STK500V1S: Unknown name"));
-            }
-            else {
-                serial.println(F("+STK500V1S: Signature set"));
-            }
-        }
+        serial.printf_P(PSTR("+STK500V1S: Signature set: %02x %02x %02x\n"), _signature[0], _signature[1], _signature[2]);
+        return true;
+    }
+    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(STK500V1L))) {
+        serial.println(F("+STK500V1L: --- start ---"));
+        STK500v1Programmer::dumpLog(serial);
+        serial.println(F("+STK500V1L: --- end ---"));
         return true;
     }
     else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(STK500V1F))) {
@@ -91,11 +89,13 @@ bool STK500v1Plugin::atModeHandler(Stream &serial, const String &command, int8_t
                     portName = PSTR("SoftwareSerial");
                     break;
                 case 1:
+                    Serial1.setRxBufferSize(512);
                     serialPort = &Serial1;
                     portName = PSTR("Serial1");
                     break;
                 case 0:
                 default:
+                    Serial.setRxBufferSize(512);
                     serialPort = &Serial;
                     portName = PSTR("Serial");
                     break;
@@ -106,14 +106,19 @@ bool STK500v1Plugin::atModeHandler(Stream &serial, const String &command, int8_t
             stk500v1 = new STK500v1Programmer(*serialPort);
             stk500v1->setSignature(_signature);
             stk500v1->setFile(filename);
-            stk500v1->setLogging(argc >= 3 ? atoi(argv[2]) : STK500v1Programmer::LOG_DISABLED);
-            stk500v1->begin([serialPort]() {
-                if (serialPort != &Serial && serialPort != &Serial1) {
-                    delete reinterpret_cast<SoftwareSerial *>(serialPort);
-                }
-                delete stk500v1;
-                stk500v1 = nullptr;
+            stk500v1->setLogging(argc >= 3 ? atoi(argv[2]) : STK500v1Programmer::LOG_FILE);
+
+            // run in main loop
+            Scheduler.addTimer(1000, false, [this, serialPort](EventScheduler::TimerPtr timer) {
+                stk500v1->begin([serialPort]() {
+                    if (serialPort != &Serial && serialPort != &Serial1) {
+                        delete reinterpret_cast<SoftwareSerial *>(serialPort);
+                    }
+                    delete stk500v1;
+                    stk500v1 = nullptr;
+                });
             });
+
         }
         return true;
     }

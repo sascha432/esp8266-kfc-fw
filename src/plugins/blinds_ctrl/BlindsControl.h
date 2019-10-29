@@ -20,11 +20,17 @@ PROGMEM_STRING_DECL(blinds_controller_channel2_sensor);
 
 class BlindsControl : public MQTTComponent, public WebUIInterface {
 public:
-    typedef enum {
-        CHANNEL1 = 0,
+    typedef enum : uint8_t {
+        NONE =          0xff,
+        CHANNEL1 =      0,
         CHANNEL2,
         CHANNEL_SIZE,
     } ChannelEnum_t;
+
+    typedef struct {
+        BlindsChannel::StateEnum_t state;
+        uint8_t channel;
+    } ChannelAction_t;
 
 public:
     BlindsControl();
@@ -60,6 +66,7 @@ protected:
 protected:
     BlindsChannel _channels[ChannelEnum_t::CHANNEL_SIZE];
     uint8_t _activeChannel;
+    ChannelAction_t _action;
     String _topic;
 
     MillisTimer _motorTimeout;

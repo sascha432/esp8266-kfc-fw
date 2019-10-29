@@ -190,6 +190,7 @@ public:
 
     virtual void setup(PluginSetupMode_t mode) override;
     virtual void reconfigure(PGM_P source) override;
+    virtual bool hasReconfigureDependecy(PluginComponent *plugin) const override;
 
     virtual bool hasStatus() const override;
     virtual const String getStatus() override;
@@ -203,12 +204,6 @@ public:
     virtual void atModeHelpGenerator() override;
     virtual bool atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) override;
 #endif
-
-    void setupWebServer();
-    virtual bool hasReconfigureDependecy(PluginComponent *plugin) const override;
-
-    static void handleWebServer(AsyncWebServerRequest *request);
-    static void resetDimmerFirmware();
 };
 
 extern DimmerModulePlugin dimmer_plugin;

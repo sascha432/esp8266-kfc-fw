@@ -24,6 +24,7 @@ BlindsControl::BlindsControl() : MQTTComponent(SENSOR), WebUIInterface()
     _activeChannel = 0;
     _channels[0].setNumber(0);
     _channels[1].setNumber(1);
+    _action.channel = NONE;
 }
 
 void BlindsControl::_setup() {
@@ -122,24 +123,35 @@ void BlindsControl::setValue(const String &id, const String &value, bool hasValu
 
 void BlindsControl::setChannel(uint8_t channel, BlindsChannel::StateEnum_t state) {
     _debug_printf_P(PSTR("BlindsControl::setChannel(%u, %s): busy=%u\n"), channel, BlindsChannel::_stateStr(state), _motorTimeout.isActive());
-    if (_motorTimeout.isActive() && _activeChannel == channel) {
-        _stop();
-    }
-    else {
-        _stop();
-        _readConfig();
-        _activeChannel = channel;
-        auto &_channel = _channels[channel].getChannel();
-        _setMotorSpeed(channel, _channel.pwmValue, state == BlindsChannel::OPEN);
-        _channels[channel].setState(state == BlindsChannel::OPEN ? BlindsChannel::CLOSED : BlindsChannel::OPEN);
-        _motorTimeout.set(state == BlindsChannel::CLOSED ? _channel.openTime : _channel.closeTime);
-        _publishState();
-        _clearAdc();
-    }
+
+    // perform action in _loopMethod
+    _action.state = state;
+    _action.channel = channel;
 }
 
 void BlindsControl::_loopMethod() {
-    if (_motorTimeout.isActive()) {
+    if (_action.channel != NONE) {
+        auto channel = _action.channel;
+        auto state = _action.state;
+        _action.channel = NONE;
+
+        if (_motorTimeout.isActive() && _activeChannel == channel) { // abort if running
+            _stop();
+            _channels[channel].setState(BlindsChannel::STOPPED);
+            _publishState();
+        }
+        else {
+            _stop();
+            _activeChannel = channel;
+            auto &_channel = _channels[channel].getChannel();
+            _setMotorSpeed(channel, _channel.pwmValue, state == BlindsChannel::OPEN);
+            _channels[channel].setState(state == BlindsChannel::OPEN ? BlindsChannel::CLOSED : BlindsChannel::OPEN);
+            _motorTimeout.set(state == BlindsChannel::CLOSED ? _channel.openTime : _channel.closeTime);
+            _publishState();
+            _clearAdc();
+        }
+    }
+    else if (_motorTimeout.isActive()) {
         _updateAdc();
         auto &_channel = _channels[_activeChannel].getChannel();
         auto currentLimit = _channel.currentLimit;
@@ -250,7 +262,7 @@ void BlindsControl::_publishState(MQTTClient *client) {
     object.add(JJ(type), JJ(ue));
     auto &events = object.addArray(JJ(events), 4);
     getValues(events);
-    WsWebUISocket::broadcast(WsWebUISocket::getSender(), object);//TODO not actually sending anything in void WsClient::broadcast(AsyncWebSocket *server, WsClient *sender, AsyncWebSocketMessageBuffer *buffer)
+    WsWebUISocket::broadcast(WsWebUISocket::getSender(), object);
 
     _saveState();
 }

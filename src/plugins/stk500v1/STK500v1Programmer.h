@@ -9,9 +9,12 @@
 #include <Buffer.h>
 #include <PrintString.h>
 
+PROGMEM_STRING_DECL(stk500v1_log_file);
+PROGMEM_STRING_DECL(stk500v1_sig_file);
+
 class STK500v1Programmer {
 public:
-    typedef enum {
+    typedef enum : uint8_t {
         Cmnd_STK_GET_SYNC =             0x30,
         Cmnd_STK_SET_DEVICE =           0x42,
         Cmnd_STK_ENTER_PROGMODE =       0x50,
@@ -22,12 +25,17 @@ public:
         Cmnd_STK_READ_SIGN =            0x75,
     } CommandsEnum_t;
 
-    typedef enum {
+    typedef enum : uint8_t {
         Resp_STK_OK =                   0x10,
         Resp_STK_INSYNC =               0x14,
         Resp_STK_NOSYNC =               0x15,
         Sync_CRC_EOP =                  0x20,
     } ResponseEnum_t;
+
+    typedef enum : uint8_t {
+        TYPE_FLASH = 'F',
+        TYPE_EEPROM = 'E',
+    } ProgPageTypeEnum_t;
 
     typedef struct {
         uint8_t deviceCode;
@@ -57,10 +65,11 @@ public:
         LOG_LOGGER =        1,
         LOG_SERIAL =        2,
         LOG_SERIAL2HTTP =   3,
+        LOG_FILE =          4,
     } LoggingEnum_t;
 
     typedef std::function<void ()> Callback_t;
-    typedef std::function<void (uint16_t wordAddress, uint16_t length, Callback_t success)> PageCallback_t;
+    typedef std::function<void (uint16_t address, uint16_t length, Callback_t success, Callback_t failure)> PageCallback_t;
 
     static const int PROGRESS_BAR_LENGTH = 100;
 
@@ -73,9 +82,6 @@ public:
     void begin(Callback_t cleanup);
     void end();
 
-    void setSignature(char *signature);
-
-    static bool getSignature(const char *mcu, char *signature);
     static void dumpLog(Stream &output);
     static void loopFunction();
 
@@ -89,17 +95,30 @@ public:
 
     void setLogging(int logging) {
         _logging = (LoggingEnum_t)logging;
+        if (_logging == LOG_FILE) {
+            SPIFFS.open(FSPGM(stk500v1_log_file), "w").close(); // truncate
+        }
     }
+
+public:
+    void setSignature(char *signature);
+    static bool getSignature(const char *mcu, char *signature);
+
+private:
+    static void _parseSignature(const char *str, char *signature);
 
 private:
     void _reset();
     void _flash();
+    void _serialWrite(uint8_t data);
+    void _serialWrite(const uint8_t *data, uint8_t length);
     void _delay(uint16_t time, Callback_t callback);
     void _sendCommand_P_repeat(PGM_P command, uint8_t length, uint8_t num, uint16_t delay);
     void _sendCommand_P(PGM_P command, uint8_t length);
     void _sendCommandSetOptions(const Options_t &options);
     void _sendCommandLoadAddress(uint16_t address);
-    void _sendCommandProgPage(uint8_t *data, uint16_t length);
+    void _sendCommandProgPage(const uint8_t *data, uint16_t length);
+    void _sendCommandReadPage(const uint8_t *data, uint16_t length);
     void _setResponse_P(PGM_P response, uint8_t length);
     void _loopFunction();
     void _readResponse(Callback_t success, Callback_t failure);
@@ -112,8 +131,8 @@ private:
     void _uploadCallback();
     void _readFile(PageCallback_t callback, Callback_t success, Callback_t failure);
     void _leaveProgrammingMode();
-    void _writePage(uint16_t wordAddress, uint16_t length, Callback_t success);
-    void _verifyPage(uint16_t wordAddress, uint16_t length, Callback_t success);
+    void _writePage(uint16_t address, uint16_t length, Callback_t success, Callback_t failure);
+    void _verifyPage(uint16_t address, uint16_t length, Callback_t success, Callback_t failure);
 
 private:
     Stream &_serial;
@@ -137,6 +156,7 @@ private:
     uint8_t *_pageBuffer;
     uint16_t _pageAddress;
     uint16_t _pagePosition;
+    uint16_t _verified;
 
 private:
     void _status(const String &message);

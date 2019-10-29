@@ -27,6 +27,7 @@ public:
 
     virtual PGM_P getName() const;
     virtual void setup(PluginSetupMode_t mode) override;
+    virtual void reconfigure(PGM_P source) override;
 
     virtual bool hasStatus() const override;
     virtual const String getStatus() override;
@@ -79,6 +80,10 @@ void BlindsControlPlugin::setup(PluginSetupMode_t mode) {
     LoopFunctions::add(loopMethod);
 }
 
+void BlindsControlPlugin::reconfigure(PGM_P source) {
+    _readConfig();
+}
+
 bool BlindsControlPlugin::hasStatus() const {
     return true;
 }
@@ -86,8 +91,9 @@ bool BlindsControlPlugin::hasStatus() const {
 const String BlindsControlPlugin::getStatus() {
     PrintHtmlEntitiesString str;
     str.printf_P(PSTR("PWM %.2fkHz" HTML_S(br)), IOT_BLINDS_CTRL_PWM_FREQ / 1000.0);
-
-    _readConfig();
+#if IOT_BLINDS_CTRL_RPM_PIN
+    str.print(F("Position sensing and stall protection" HTML_S(br)));
+#endif
 
     for(uint8_t i = 0; i < 2; i++) {
         auto &_channel = _channels[i].getChannel();

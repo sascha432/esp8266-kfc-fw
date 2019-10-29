@@ -12,6 +12,7 @@
 #include "logger.h"
 #include "serial_handler.h"
 #include "STK500v1Programmer.h"
+#include "blink_led_timer.h"
 #if HTTP2SERIAL
 #include "plugins/http2serial/http2serial.h"
 #endif
@@ -24,9 +25,13 @@ const char Command_ENTER_PROG_MODE[] PROGMEM = { STK500v1Programmer::Cmnd_STK_EN
 const char Command_LEAVE_PROG_MODE[] PROGMEM = { STK500v1Programmer::Cmnd_STK_LEAVE_PROGMODE, STK500v1Programmer::Sync_CRC_EOP };
 const char Response_INSYNC[] PROGMEM = { STK500v1Programmer::Resp_STK_INSYNC, STK500v1Programmer::Resp_STK_OK };
 
-STK500v1Programmer::STK500v1Programmer(Stream &serial) : _serial(serial), _delayTimeout(0), _timeout(1000), _pageSize(128), _logging(LOG_DISABLED) {
+PROGMEM_STRING_DEF(stk500v1_log_file, "/stk500v1/debug.log");
+PROGMEM_STRING_DEF(stk500v1_sig_file, "/stk500v1/atmega.csv");
+
+STK500v1Programmer::STK500v1Programmer(Stream &serial) : _serial(serial), _delayTimeout(0), _timeout(400), _pageSize(128), _logging(LOG_DISABLED) {
     memcpy_P(_signature, PSTR("\x1e\x95\x0f"), 3);
     _pageBuffer = new uint8_t[_pageSize];
+    BlinkLEDTimer::setBlink(500);
 }
 
 STK500v1Programmer::~STK500v1Programmer() {
@@ -117,61 +122,55 @@ void STK500v1Programmer::_loopFunction() {
     }
 }
 
-void STK500v1Programmer::_writePage(uint16_t wordAddress, uint16_t length, Callback_t success) {
+void STK500v1Programmer::_writePage(uint16_t address, uint16_t length, Callback_t success, Callback_t failure) {
 
-    _sendCommandLoadAddress(wordAddress);
+    BlinkLEDTimer::setBlink(address % 2 == 0 ? BlinkLEDTimer::OFF : BlinkLEDTimer::SOLID);
+    _sendCommandLoadAddress(address);
 
     _updatePosition();
 
-    _readResponse([this, wordAddress, length, success]() {
+    uint8_t tmp[256]; // copy current page buffer
+    memcpy(tmp, _pageBuffer, length);
 
-        // _log.println(F("Write address loaded"));
-        // _printResponse();
+    _readResponse([this, address, length, success, failure, tmp]() {
 
-        _sendCommandProgPage(_pageBuffer, length);
+        _sendCommandProgPage(tmp, length);
 
-        _readResponse(
-            success,
-            [this, wordAddress, length]() {
+        _readResponse(success, [this, address, length, failure]() {
+            _logPrintf_P(PSTR("Write page %u length %u failed"), address, length);
+            failure();
+        });
 
-                _endPosition(F("WRITE ERROR"), true);
-
-                _logPrintf_P(PSTR("Failed to write page %04x length %u"), wordAddress, length);
-                _printResponse();
-
-                _done(false);
-            }
-        );
-
-    }, [this, wordAddress]() {
-
-        _endPosition(F("ADDRESS ERROR"), true);
-
-        _logPrintf_P(PSTR("Failed to load address %04x\n"), wordAddress);
-        _printResponse();
-
-        _done(false);
-    });
+    }, failure);
 
 }
 
-void STK500v1Programmer::_verifyPage(uint16_t wordAddress, uint16_t length, Callback_t success) {
+void STK500v1Programmer::_verifyPage(uint16_t address, uint16_t length, Callback_t success, Callback_t failure) {
 
-    success();
+    BlinkLEDTimer::setBlink(address % 2 == 0 ? BlinkLEDTimer::OFF : BlinkLEDTimer::SOLID);
+    _sendCommandLoadAddress(address);
+
+    _updatePosition();
+
+    uint8_t tmp[256]; // copy current page buffer
+    memcpy(tmp, _pageBuffer, length);
+
+    _readResponse([this, address, length, success, failure, tmp]() {
+
+        _sendCommandReadPage(tmp, length);
+
+        _readResponse([this, success, length]() {
+            _verified += length;
+            success();
+        }, [this, failure, address, length]() {
+            _logPrintf_P(PSTR("Verify page %u length %u failed"), address, length);
+            failure();
+        });
+
+    }, failure);
 }
 
 void STK500v1Programmer::_readFile(PageCallback_t callback, Callback_t success, Callback_t failure) {
-
-    if (_file.isEOF()) {
-        if (_pagePosition) {
-            callback((_pageAddress >> 1), _pagePosition, success); // data left in page buffer
-            _pagePosition = 0;
-        }
-        else {
-            success();
-        }
-        return;
-    }
 
     bool exit = false;
     do {
@@ -184,57 +183,74 @@ void STK500v1Programmer::_readFile(PageCallback_t callback, Callback_t success, 
         auto length = _file.readBytes(buffer, read, address);
         if (length == -1) {
             _endPosition(F("FILE READ ERROR"), true);
-
-            _logPrintf_P(PSTR("Read error occurred: %s\n"), _file.getErrorMessage());
+            _logPrintf_P(PSTR("Read error occurred: %s"), _file.getErrorMessage());
             failure();
             return;
         }
-        else if (length == 0) {
-            if (!_file.isEOF()) {
-                _endPosition(F("FILE READ ERROR"), true);
-
-                _logPrintf_P(PSTR("Read length is zero, address %04x %04x, read %u\n"), _pageAddress, address, read);
-                failure();
-                return;
-            }
-        }
 
         uint16_t pageAddress = (address / _pageSize);
-        if (_pageAddress != pageAddress) {  // new page
-            // write and clear page buffer
-            callback((_pageAddress >> 1), _pagePosition, [this, callback, success, failure]() {
-                _readFile(callback, success, failure);
-            });
+        if (_pageAddress != pageAddress || length == 0) {  // new page, page buffer is filled already
+            if (length == 0) {
+                // write last page
+                callback(_pageAddress, _pagePosition, success, failure);
+            }
+            else {
+                // write page buffer and continue reading
+                callback(_pageAddress, _pagePosition, [this, callback, success, failure]() {
+                    _readFile(callback, success, failure);
+                }, failure);
+            }
 
+            // clear page buffer
             _clearPageBuffer();
             _pageAddress = pageAddress;
             _pagePosition = 0;
 
-            // leave loop
+            // leave loop after storing data in buffer
             exit = true;
         }
         uint16_t pageOffset = address - (_pageAddress * _pageSize);
         memcpy(_pageBuffer + pageOffset, buffer, length);
         _pagePosition = pageOffset + length;
 
-        if (_file.isEOF()) {
+    } while (!exit);
+}
+
+void STK500v1Programmer::_serialWrite(uint8_t byte) {
+    uint8_t retries = 5;
+    while(retries--) {
+        if (_serial.write(byte) == 1) {
             break;
         }
+        delay(10);
+        _serial.clearWriteError();
+    }
+    _serial.flush(); // wait until byte has been sent
+}
 
-    } while (!exit);
+void STK500v1Programmer::_serialWrite(const uint8_t *data, uint8_t length) {
+    uint8_t count = length;
+    auto ptr = data;
+    while(count--) {
+        _serialWrite(*ptr++);
+    }
 }
 
 void STK500v1Programmer::_flash() {
 
     if (!_file.validate()) {
-        PGM_P error = PSTR("Validation of the input file failed: ");
-        _status(String(FPSTR(error)) + String(_file.getErrorMessage()) + String('\n'));
-        _logPrintf_P(PSTR("%s%s"), error, _file.getErrorMessage());
+        PrintString str(F("Validation of the input file failed: %s"), _file.getErrorMessage());
+        _logPrintf_P(PSTR("%s"), str.c_str());
+        str += '\n';
+        _status(str);
         end();
         return;
     }
-    _status(F("Input file validated\n"));
-    _logPrintf_P(PSTR("Input file validated"));
+
+    PrintString str(F("Input file validated. %u bytes to write..."), _file.getEndAddress());
+    _logPrintf_P(PSTR("%s"), str.c_str());
+    str += '\n';
+    _status(str);
 
     _delay(250, [this]() {
 
@@ -245,7 +261,7 @@ void STK500v1Programmer::_flash() {
 
         _retries = 12;
         _readResponse([this]() {
-            _status(F("Connected...\n"));
+            _status(F("Connected to bootloader...\n"));
 
             _logPrintf_P(PSTR("Sync complete"));
             _printResponse();
@@ -269,8 +285,8 @@ void STK500v1Programmer::_flash() {
                     _printResponse();
 
                     memset(&options, 0, sizeof(options));
-                    options.pageSizeHigh = (_pageSize >> 8) & 0xff;
-                    options.pageSizeLow = _pageSize & 0xff;
+                    options.pageSizeHigh = highByte(_pageSize);
+                    options.pageSizeLow = lowByte(_pageSize);
 
                     _sendCommandSetOptions(options);
 
@@ -291,25 +307,32 @@ void STK500v1Programmer::_flash() {
                             _printResponse();
 
                             _readFile(
-                                [this](uint16_t address, uint16_t length, Callback_t success) {
-                                    _writePage(address, length, success);
+                                [this](uint16_t address, uint16_t length, Callback_t success, Callback_t failure) {
+                                    _writePage(address, length, success, failure);
                                 },
                                 [this]() {
 
                                     _endPosition(F("Complete"), false);
-
                                     _logPrintf_P(PSTR("Programming completed"));
 
+                                    // reset file and page buffer
                                     _file.reset();
+                                    _pageAddress = 0;
+                                    _pagePosition = 0;
+                                    _verified = 0;
+                                    _clearPageBuffer();
+
                                     _startPosition(F("Reading"));
 
                                     _readFile(
-                                        [this](uint16_t address, uint16_t length, Callback_t success) {
-                                            _verifyPage(address, length, success);
+                                        [this](uint16_t address, uint16_t length, Callback_t success, Callback_t failure) {
+                                            _verifyPage(address, length, success, failure);
                                         },
                                         [this]() {
 
                                             _endPosition(F("Complete"), false);
+                                            PrintString str(F("%u bytes verified\n"), _verified);
+                                            _status(str);
 
                                             _logPrintf_P(PSTR("Verification completed"));
 
@@ -330,6 +353,8 @@ void STK500v1Programmer::_flash() {
 
                                         },
                                         [this]() {
+                                            _endPosition(F("READ ERROR"), true);
+
                                             _logPrintf_P(PSTR("Verifying failed"));
                                             _done(false);
                                         }
@@ -337,6 +362,8 @@ void STK500v1Programmer::_flash() {
 
                                 },
                                 [this]() {
+                                    _endPosition(F("WRITE ERROR"), true);
+
                                     _logPrintf_P(PSTR("Uploading failed"));
                                     _done(false);
                                 }
@@ -367,7 +394,7 @@ void STK500v1Programmer::_flash() {
                 _done(false);
             }
             else {
-                _logPrintf_P(PSTR("Sync failed, retries left %u\n"), _retries);
+                _logPrintf_P(PSTR("Sync failed, retries left %u"), _retries);
                 _printResponse();
 
                 _clearReponse(100, [this]() {
@@ -403,11 +430,11 @@ void STK500v1Programmer::_sendCommand_P_repeat(PGM_P command, uint8_t length, ui
 
 void STK500v1Programmer::_sendCommandSetOptions(const STK500v1Programmer::Options_t &options) {
     _setResponse_P(Response_INSYNC, sizeof(Response_INSYNC));
-    _logPrintf_P(PSTR("Sending set options, options length=%u\n"), sizeof(options));
+    _logPrintf_P(PSTR("Sending set options, options length=%u"), sizeof(options));
 
-    _serial.write(Cmnd_STK_SET_DEVICE);
-    _serial.write(reinterpret_cast<const uint8_t *>(&options), sizeof(options));
-    _serial.write(Sync_CRC_EOP);
+    _serialWrite(Cmnd_STK_SET_DEVICE);
+    _serialWrite(reinterpret_cast<const uint8_t *>(&options), sizeof(options));
+    _serialWrite(Sync_CRC_EOP);
     _response.clear();
     _setTimeout(_timeout);
 }
@@ -415,25 +442,45 @@ void STK500v1Programmer::_sendCommandSetOptions(const STK500v1Programmer::Option
 void STK500v1Programmer::_sendCommandLoadAddress(uint16_t address) {
     _setResponse_P(Response_INSYNC, sizeof(Response_INSYNC));
 
-    _serial.write(Cmnd_STK_LOAD_ADDRESS);
-    _serial.write(address & 0xff);
-    _serial.write((address >> 8) & 0xff);
-    _serial.write(Sync_CRC_EOP);
+    uint16_t wordAddress = ((address * _pageSize) >> 1);    // address is the page
+
+    _serialWrite(Cmnd_STK_LOAD_ADDRESS);
+    _serialWrite(lowByte(wordAddress));
+    _serialWrite(highByte(wordAddress));
+    _serialWrite(Sync_CRC_EOP);
     _response.clear();
     _setTimeout(_timeout);
 }
 
-void STK500v1Programmer::_sendCommandProgPage(uint8_t *data, uint16_t length) {
+void STK500v1Programmer::_sendCommandProgPage(const uint8_t *data, uint16_t length) {
     _setResponse_P(Response_INSYNC, sizeof(Response_INSYNC));
 
-    _serial.write(Cmnd_STK_PROG_PAGE);
-    _serial.write((length >> 8) & 0xff);
-    _serial.write(length & 0xff);
-    _serial.write(0x46);
-    _serial.write(data, length);
-    _serial.write(Sync_CRC_EOP);
+    _serialWrite(Cmnd_STK_PROG_PAGE);
+    _serialWrite(highByte(length));
+    _serialWrite(lowByte(length));
+    _serialWrite(TYPE_FLASH);
+    _serialWrite(data, length);
+    _serialWrite(Sync_CRC_EOP);
     _response.clear();
-    _setTimeout(_timeout);
+    _setTimeout(_timeout * 2);
+}
+
+void STK500v1Programmer::_sendCommandReadPage(const uint8_t *data, uint16_t length) {
+    _expectedResponse.clear();
+    _expectedResponse.write(Resp_STK_INSYNC);
+    // _expectedResponse.write((uint8_t)highByte(length));
+    // _expectedResponse.write((uint8_t)lowByte(length));
+    // _expectedResponse.write(TYPE_FLASH);
+    _expectedResponse.write(data, length);
+    _expectedResponse.write(Resp_STK_OK);
+
+    _serialWrite(Cmnd_STK_READ_PAGE);
+    _serialWrite(highByte(length));
+    _serialWrite(lowByte(length));
+    _serialWrite(TYPE_FLASH);
+    _serialWrite(Sync_CRC_EOP);
+    _response.clear();
+    _setTimeout(_timeout * 2);
 }
 
 void STK500v1Programmer::_sendCommand_P(PGM_P command, uint8_t length) {
@@ -441,7 +488,7 @@ void STK500v1Programmer::_sendCommand_P(PGM_P command, uint8_t length) {
         PrintString str(F("Sending (length=%u): "), length);
         while(length--) {
             auto byte = pgm_read_byte(command++);
-            _serial.write(byte);
+            _serialWrite(byte);
             str.printf_P(PSTR("%02x "), byte);
         }
         _logPrintf_P(PSTR("%s"), str.c_str());
@@ -455,6 +502,8 @@ void STK500v1Programmer::_done(bool success) {
     str.printf_P(PSTR("Programming %s\n"), success ? PSTR("successful") : PSTR("failed"));
     _status(str);
     _logPrintf_P(PSTR("%s"), str.c_str());
+
+    BlinkLEDTimer::setBlink(BlinkLEDTimer::SOLID);
 
     end();
 }
@@ -479,26 +528,56 @@ void STK500v1Programmer::setSignature(char *signature) {
     }
 }
 
-bool STK500v1Programmer::getSignature(const char *mcu, char *signature) {
-    if (!strncasecmp_P(mcu, PSTR("atmega"), 6)) {
-        mcu += 6;
+void STK500v1Programmer::dumpLog(Stream &output) {
+    auto file = SPIFFS.open(FSPGM(stk500v1_log_file), "r");
+    if (file) {
+        while(file.available()) {
+            output.print((char)file.read());
+        }
+        output.println();
     }
-    else if (!strncasecmp_P(mcu, PSTR("atm"), 3)) {
-        mcu += 3;
-    }
-    else if (!strncasecmp_P(mcu, PSTR("at"), 2)) {
-        mcu += 2;
-    }
+}
 
-    if (!strcasecmp_P(mcu, "328p")) {
-        memcpy_P(signature, PSTR("\x1e\x95\x0f"), 3);
-    }
-    else if (!strcasecmp_P(mcu, "328pb")) {
-        memcpy_P(signature, PSTR("\x1e\x95\x16"), 3);
+void STK500v1Programmer::_parseSignature(const char *str, char *signature) {
+    auto _long = strtoul(str, nullptr, 16);
+    signature[0] = (_long >> 16) & 0xff;
+    signature[1] = (_long >> 8) & 0xff;
+    signature[2] = _long & 0xff;
+}
+
+bool STK500v1Programmer::getSignature(const char *mcu, char *signature) {
+    if (!strncasecmp_P(mcu, PSTR("0x"), 2)) {
+        _parseSignature(mcu + 2, signature);
     }
     else {
-        *signature = 0;
-        return false;
+        if (!strncasecmp_P(mcu, PSTR("atmega"), 6)) {
+            mcu += 6;
+        }
+        else if (!strncasecmp_P(mcu, PSTR("atm"), 3)) {
+            mcu += 3;
+        }
+        else if (!strncasecmp_P(mcu, PSTR("at"), 2)) {
+            mcu += 2;
+        }
+
+        if (!strcasecmp_P(mcu, PSTR("328p"))) {
+            memcpy_P(signature, PSTR("\x1e\x95\x0f"), 3);
+        }
+        else {
+            auto file = SPIFFS.open(FSPGM(stk500v1_sig_file), "r");
+            if (file) {
+                while(file.available()) {
+                    auto nameStr = file.readStringUntil(',');
+                    auto signatureStr = file.readStringUntil('\n');
+                    if (nameStr.equalsIgnoreCase(mcu) && signatureStr.length()) {
+                        _parseSignature(signatureStr.c_str(), signature);
+                        return true;
+                    }
+                }
+            }
+            *signature = 0;
+            return false;
+        }
     }
     return true;
 }
@@ -516,8 +595,15 @@ void STK500v1Programmer::_setTimeout(uint16_t timeout) {
 void STK500v1Programmer::_printBuffer(Print &str, const Buffer &buffer) {
     auto ptr = buffer.getConstChar();
     auto count = buffer.length();
+    const size_t maxLength = 8;
+    if (count > maxLength) {
+        count = maxLength;
+    }
     while(count--) {
         str.printf_P(PSTR("%02x "), *ptr++ & 0xff);
+    }
+    if (buffer.length() > maxLength) {
+        str.print(F("..."));
     }
 }
 
@@ -527,10 +613,10 @@ void STK500v1Programmer::_printResponse() {
         if (_response.length()) {
             str.print(F(": "));
             _printBuffer(str, _response);
-            if (_response != _expectedResponse) {
-                str.print(F("expected "));
-                _printBuffer(str, _expectedResponse);
-            }
+        }
+        if (_response != _expectedResponse) {
+            str.print(F(" expected "));
+            _printBuffer(str, _expectedResponse);
         }
         _logPrintf_P(PSTR("%s"), str.c_str());
     }
@@ -576,6 +662,12 @@ void STK500v1Programmer::_logPrintf_P(PGM_P format, ...) {
             str += '\n';
             _status(str);
         }
+        else if (_logging == LOG_FILE) {
+            auto file = SPIFFS.open(FSPGM(stk500v1_log_file), "a");
+            if (file) {
+                file.println(str);
+            }
+        }
     }
 }
 
@@ -588,15 +680,13 @@ void STK500v1Programmer::_startPosition(const String &message) {
 
 void STK500v1Programmer::_updatePosition() {
     String str;
-    _position = _file.position() * PROGRESS_BAR_LENGTH / _file.size();
-    if (_positionOld< _position) {
+    _position = _file.getCurAddress() * (PROGRESS_BAR_LENGTH - 1) / _file.getEndAddress();
+    if (_positionOld < _position) {
         while(_positionOld++ < _position) {
             str += '#';
         }
         _status(str);
     }
-    // PrintString x(F("p %u %u\n"), (int)_file.position(), (int)_file.size());
-    // _status(x);
 }
 
 void STK500v1Programmer::_endPosition(const String &message, bool error) {

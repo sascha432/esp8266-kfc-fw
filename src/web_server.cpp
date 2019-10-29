@@ -556,8 +556,11 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
                 httpHeaders.add(cookie);
 
                 if (request->arg(F("keep")) == FSPGM(1)) {
-                    cookie.setExpires(time(nullptr) + 86400 * 30);
-                    httpHeaders.add(cookie);
+                    auto _time = time(nullptr);
+                    if (IS_TIME_VALID(_time)) {
+                        cookie.setExpires(_time + 86400 * 30);
+                        httpHeaders.add(cookie);
+                    }
                 } else {
                     HttpCookieHeader cookie = HttpCookieHeader(FSPGM(SID));
                     cookie.setExpires(HttpCookieHeader::COOKIE_EXPIRED);

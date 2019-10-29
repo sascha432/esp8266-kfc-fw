@@ -23,6 +23,9 @@
         ],
         "conditional_excludes": {
             "#if !IOT_DIMMER_MODULE && !IOT_ATOMIC_SUN_V2": "./Resources/html/dimmer_cfg.html",
+            "#if !IOT_DIMMER_MODULE": "./fw/1ch_dimmer.hex",
+            "#if !IOT_ATOMIC_SUN_V2": "./fw/atomic_sun.hex",
+            "#if !STK500V1": "./stk500v1/atmega.csv",
             "#if !FILE_MANAGER": "./Resources/html/file_manager.html",
             "#if !MQTT_SUPPORT": "./Resources/html/mqtt.html",
             "#if !SYSLOG": "./Resources/html/syslog.html",

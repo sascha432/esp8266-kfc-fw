@@ -7,6 +7,12 @@
 #include "mqtt_component.h"
 #include "mqtt_client.h"
 
+#if DEBUG_MQTT_CLIENT
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
+#endif
+
 PROGMEM_STRING_DEF(mqtt_component_switch, "switch");
 PROGMEM_STRING_DEF(mqtt_component_light, "light");
 PROGMEM_STRING_DEF(mqtt_component_sensor, "sensor");

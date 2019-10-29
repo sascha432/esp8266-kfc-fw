@@ -19,12 +19,12 @@ PROGMEM_STRING_DEF(blinds_controller_channel2, "blinds_channel2");
 PROGMEM_STRING_DEF(blinds_controller_channel1_sensor, "blinds_channel1_sensor");
 PROGMEM_STRING_DEF(blinds_controller_channel2_sensor, "blinds_channel2_sensor");
 
-BlindsControl::BlindsControl() : MQTTComponent(SENSOR), WebUIInterface()
+BlindsControl::BlindsControl() : MQTTComponent(SENSOR), WebUIInterface(), _activeChannel(0)
 {
-    _activeChannel = 0;
     _channels[0].setNumber(0);
+    _channels[0].setController(this);
     _channels[1].setNumber(1);
-    _action.channel = NONE;
+    _channels[1].setController(this);
 }
 
 void BlindsControl::_setup() {
@@ -122,25 +122,26 @@ void BlindsControl::setValue(const String &id, const String &value, bool hasValu
 }
 
 void BlindsControl::setChannel(uint8_t channel, BlindsChannel::StateEnum_t state) {
-    _debug_printf_P(PSTR("BlindsControl::setChannel(%u, %s): busy=%u\n"), channel, BlindsChannel::_stateStr(state), _motorTimeout.isActive());
+    _debug_printf_P(PSTR("BlindsControl::setChannel(%u, %u)\n"), channel, state);
 
     // perform action in _loopMethod
-    _action.state = state;
-    _action.channel = channel;
+    _action.set(state, channel);
 }
 
 void BlindsControl::_loopMethod() {
-    if (_action.channel != NONE) {
-        auto channel = _action.channel;
-        auto state = _action.state;
-        _action.channel = NONE;
-
-        if (_motorTimeout.isActive() && _activeChannel == channel) { // abort if running
-            _stop();
-            _channels[channel].setState(BlindsChannel::STOPPED);
-            _publishState();
+    if (_action.isSet()) {
+        auto channel = _action.getChannel();
+        if (_motorTimeout.isActive()) { // abort if running, otherwise the action is queued
+            if (_activeChannel == channel) {
+                _action.clear();
+                _stop();
+                _channels[channel].setState(BlindsChannel::STOPPED);
+                _publishState();
+            }
         }
         else {
+            auto state = _action.getState();
+            _action.clear();
             _stop();
             _activeChannel = channel;
             auto &_channel = _channels[channel].getChannel();
@@ -151,7 +152,7 @@ void BlindsControl::_loopMethod() {
             _clearAdc();
         }
     }
-    else if (_motorTimeout.isActive()) {
+    if (_motorTimeout.isActive()) {
         _updateAdc();
         auto &_channel = _channels[_activeChannel].getChannel();
         auto currentLimit = _channel.currentLimit;

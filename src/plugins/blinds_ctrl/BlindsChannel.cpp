@@ -15,9 +15,8 @@
 #include <debug_helper_disable.h>
 #endif
 
-BlindsChannel::BlindsChannel() : MQTTComponent(SWITCH) {
+BlindsChannel::BlindsChannel() : MQTTComponent(SWITCH), _state(UNKNOWN), _controller(nullptr) {
     memset(&_channel, 0, sizeof(_channel));
-    _state = UNKNOWN;
 }
 
 void BlindsChannel::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTComponent::MQTTAutoDiscoveryVector &vector) {
@@ -44,8 +43,8 @@ void BlindsChannel::onConnect(MQTTClient *client) {
 }
 
 void BlindsChannel::onMessage(MQTTClient *client, char *topic, char *payload, size_t len) {
-    int state = atoi(payload);
-    _debug_printf_P(PSTR("BlindsChannel::onMessage(): topic=%s, state=%u, payload=%*.*s, length=%u\n"), topic, state, len, len, payload, len);
+    auto state = atoi(payload); // payload is NUL terminated
+    _debug_printf_P(PSTR("BlindsChannel::onMessage(): topic=%s, state=%u, controller=%p\n"), topic, state, _controller);
     _controller->setChannel(_number, state == 0 ? OPEN : CLOSED);
 }
 

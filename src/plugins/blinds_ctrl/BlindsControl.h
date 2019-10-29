@@ -27,10 +27,36 @@ public:
         CHANNEL_SIZE,
     } ChannelEnum_t;
 
-    typedef struct {
-        BlindsChannel::StateEnum_t state;
-        uint8_t channel;
-    } ChannelAction_t;
+    class ChannelAction {
+    public:
+        ChannelAction() : _state(BlindsChannel::UNKNOWN), _channel(NONE) {
+        }
+
+        void set(BlindsChannel::StateEnum_t state, uint8_t channel) {
+            _state = state;
+            _channel = (ChannelEnum_t)channel;
+        }
+
+        bool isSet() const {
+            return _channel != NONE;
+        }
+
+        uint8_t getChannel() const {
+            return (uint8_t)_channel;
+        }
+
+        BlindsChannel::StateEnum_t getState() const {
+            return _state;
+        }
+
+        void clear() {
+            _channel = NONE;
+        }
+
+    private:
+        BlindsChannel::StateEnum_t _state;
+        ChannelEnum_t _channel;
+    };
 
 public:
     BlindsControl();
@@ -66,7 +92,7 @@ protected:
 protected:
     BlindsChannel _channels[ChannelEnum_t::CHANNEL_SIZE];
     uint8_t _activeChannel;
-    ChannelAction_t _action;
+    ChannelAction _action;
     String _topic;
 
     MillisTimer _motorTimeout;

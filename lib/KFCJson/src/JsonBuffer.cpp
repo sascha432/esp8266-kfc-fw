@@ -100,7 +100,7 @@ recursiveCall:
             }
             else {
                 // print array or object
-                auto iter = vector->begin() + stack.position(); 
+                auto iter = vector->begin() + stack.position();
                 if (stack.position() == 0) {
                     print.write(object->isObject() ? '{' : '[');
                     if (isBufferFull(print, false)) {

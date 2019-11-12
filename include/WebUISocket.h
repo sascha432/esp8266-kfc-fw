@@ -27,9 +27,8 @@ public:
     static void createWebUIJSON(JsonUnnamedObject &json);
     static void sendValues(AsyncWebSocketClient *client);
 
-    inline static WsWebUISocket *getSender() {
-        return _sender;
-    }
+    static WsWebUISocket *getSender();
+    static AsyncWebSocket *getWsWebUI();
 
 private:
     static WsWebUISocket *_sender;

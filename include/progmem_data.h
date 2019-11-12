@@ -9,6 +9,7 @@ PROGMEM_STRING_DECL(empty);
 PROGMEM_STRING_DECL(0);
 PROGMEM_STRING_DECL(1);
 PROGMEM_STRING_DECL(OK);
+PROGMEM_STRING_DECL(crash_counter_file);
 extern const char _shared_progmem_string__checked[] PROGMEM;
 extern const char _shared_progmem_string__selected[] PROGMEM;
 extern const char _shared_progmem_string__hidden[] PROGMEM;

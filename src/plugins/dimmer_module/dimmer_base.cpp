@@ -29,6 +29,7 @@
 #if IOT_DIMMER_MODULE_INTERFACE_UART
 Dimmer_Base::Dimmer_Base() : _serial(Serial), _wire(*new SerialTwoWire(Serial)) {
     _wireLocked = false;
+    _version = 0;
 #else
 Dimmer_Base::Dimmer_Base() : _wire(config.initTwoWire()) {
 #endif
@@ -61,6 +62,12 @@ void Dimmer_Base::_begin() {
     _frequency = NAN;
     _internalTemperature = NAN;
     _ntcTemperature = NAN;
+    // _powerUsage = NAN;
+    _metricsTopics[0] = MQTTClient::formatTopic(-1, F("/metrics/int_temp"));
+    _metricsTopics[1] = MQTTClient::formatTopic(-1, F("/metrics/ntc_temp"));
+    _metricsTopics[2] = MQTTClient::formatTopic(-1, F("/metrics/vcc"));
+    _metricsTopics[3] = MQTTClient::formatTopic(-1, F("/metrics/frequency"));
+    _metricsTopics[4] = MQTTClient::formatTopic(-1, F("/metrics/power"));
 #if IOT_DIMMER_MODULE_INTERFACE_UART
     #if AT_MODE_SUPPORTED
         // disable_at_mode(Serial);
@@ -76,6 +83,21 @@ void Dimmer_Base::_begin() {
     // ESP I2C does not support slave mode. Use timer to poll metrics instead
     _timer = Scheduler.addTimer(2e3, true, Dimmer_Base::fetchMetrics);
 #endif
+
+    if (_lockWire()) {
+        uint16_t version;
+        _wire.beginTransmission(DIMMER_I2C_ADDRESS);
+        _wire.write(DIMMER_REGISTER_READ_LENGTH);
+        _wire.write((uint8_t)sizeof(version));
+        _wire.write(DIMMER_REGISTER_VERSION);
+        if (_endTransmission() == 0) {
+            if (_wire.requestFrom(DIMMER_I2C_ADDRESS, sizeof(version)) == sizeof(version)) {
+                _wire.readBytes(reinterpret_cast<uint8_t *>(&version), sizeof(version));
+                _version = version;
+            }
+        }
+        _unlockWire();
+    }
 }
 
 void Dimmer_Base::_end() {
@@ -97,6 +119,9 @@ void Dimmer_Base::_end() {
         // enable_at_mode(Serial);
     #endif
 #endif
+    for(uint8_t i = 0; i < 5; i++) {
+        _metricsTopics[i] = String();
+    }
 }
 
 #if IOT_DIMMER_MODULE_INTERFACE_UART
@@ -281,6 +306,12 @@ void Dimmer_Base::_printStatus(PrintHtmlEntitiesString &out) {
         }
         out.printf_P(PSTR("AC frequency %.2fHz"), _frequency);
     }
+#if AT_MODE_SUPPORTED
+    if (_version) {
+        out.print(F(HTML_S(br)));
+        out.printf_P(PSTR("Firmware Version %u.%u.%u"), _version >> 10, (_version >> 5)  & 0b11111, _version & 0b11111);
+    }
+#endif
 }
 
 void Dimmer_Base::_updateMetrics(uint16_t vcc, float frequency, float internalTemperature, float ntcTemperature) {
@@ -288,15 +319,15 @@ void Dimmer_Base::_updateMetrics(uint16_t vcc, float frequency, float internalTe
     if (_vcc != vcc || _frequency != frequency || _internalTemperature != internalTemperature || _ntcTemperature != ntcTemperature) {
         auto client = MQTTClient::getClient();
         if (client) {
+            auto qos = MQTTClient::getDefaultQos();
             JsonUnnamedObject object(2);
             object.add(JJ(type), JJ(ue));
             auto &events = object.addArray(JJ(events));
 
-            String topic = MQTTClient::formatTopic(-1, F("/metrics/"));
             if (_internalTemperature != internalTemperature) {
                 _internalTemperature = internalTemperature;
                 auto tempStr = String(_internalTemperature, 2);
-                client->publish(topic + F("int_temp"), MQTTClient::getDefaultQos(), 1, tempStr);
+                client->publish(_metricsTopics[0], qos, 1, tempStr);
                 auto &value = events.addObject(3);
                 value.add(JJ(id), F("dimmer_int_temp"));
                 value.add(JJ(state), true);
@@ -305,7 +336,7 @@ void Dimmer_Base::_updateMetrics(uint16_t vcc, float frequency, float internalTe
             if (_ntcTemperature != ntcTemperature) {
                 _ntcTemperature = ntcTemperature;
                 auto tempStr = String(_ntcTemperature, 2);
-                client->publish(topic + F("ntc_temp"), MQTTClient::getDefaultQos(), 1, tempStr);
+                client->publish(_metricsTopics[1], qos, 1, tempStr);
                 auto &value = events.addObject(3);
                 value.add(JJ(id), F("dimmer_ntc_temp"));
                 value.add(JJ(state), true);
@@ -314,7 +345,7 @@ void Dimmer_Base::_updateMetrics(uint16_t vcc, float frequency, float internalTe
             if (_vcc != vcc) {
                 _vcc = vcc;
                 auto vccStr = String(_vcc / 1000.0, 3);
-                client->publish(topic + F("vcc"), MQTTClient::getDefaultQos(), 1, vccStr);
+                client->publish(_metricsTopics[2], qos, 1, vccStr);
                 auto &value = events.addObject(3);
                 value.add(JJ(id), F("dimmer_vcc"));
                 value.add(JJ(state), true);
@@ -323,12 +354,21 @@ void Dimmer_Base::_updateMetrics(uint16_t vcc, float frequency, float internalTe
             if (_frequency != frequency) {
                 _frequency = frequency;
                 auto freqStr = String(_frequency, 2);
-                client->publish(topic + F("frequency"), MQTTClient::getDefaultQos(), 1, freqStr);
+                client->publish(_metricsTopics[3], qos, 1, freqStr);
                 auto &value = events.addObject(3);
                 value.add(JJ(id), F("dimmer_frequency"));
                 value.add(JJ(state), true);
                 value.add(JJ(value), JsonNumber(freqStr));
             }
+            // if (_powerUsage != powerUsage) {
+            //     _powerUsage = powerUsage;
+            //     auto powerStr = String(_powerUsage, 1);
+            //     client->publish(_metricsTopics[4], qos, 1, powerStr);
+            //     auto &value = events.addObject(3);
+            //     value.add(JJ(id), F("dimmer_power"));
+            //     value.add(JJ(state), true);
+            //     value.add(JJ(value), JsonNumber(_powerUsage, 1));
+            // }
 
             if (events.size()) {
                 WsWebUISocket::broadcast(WsWebUISocket::getSender(), object);
@@ -379,29 +419,29 @@ void Dimmer_Base::getValues(JsonArray &array) {
     JsonUnnamedObject *obj;
 
     for (uint8_t i = 0; i < getChannelCount(); i++) {
-        obj = &array.addObject();
+        obj = &array.addObject(3);
         PrintString id(F("dimmer_channel%u"), i);
         obj->add(JJ(id), id);
         obj->add(JJ(value), getChannel(i));
         obj->add(JJ(state), getChannelState(i));
     }
 
-    obj = &array.addObject();
+    obj = &array.addObject(3);
     obj->add(JJ(id), F("dimmer_int_temp"));
     obj->add(JJ(state), isnan(_internalTemperature));
     obj->add(JJ(value), JsonNumber(_internalTemperature, 2));
 
-    obj = &array.addObject();
+    obj = &array.addObject(3);
     obj->add(JJ(id), F("dimmer_ntc_temp"));
     obj->add(JJ(state), isnan(_ntcTemperature));
     obj->add(JJ(value), JsonNumber(_ntcTemperature, 2));
 
-    obj = &array.addObject();
+    obj = &array.addObject(3);
     obj->add(JJ(id), F("dimmer_vcc"));
     obj->add(JJ(state), _vcc != 0);
     obj->add(JJ(value), JsonNumber(_vcc / 1000.0, 3));
 
-    obj = &array.addObject();
+    obj = &array.addObject(3);
     obj->add(JJ(id), F("dimmer_frequency"));
     obj->add(JJ(state), isnan(_frequency));
     obj->add(JJ(value), JsonNumber(_frequency, 2));

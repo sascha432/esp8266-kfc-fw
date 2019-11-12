@@ -12,9 +12,9 @@ var webUIComponent = {
         },
         column: {
             group: { columns: 12 },
-            switch: { min: 0, max: 1, columns: 2, zero_off: true, attributes: ['min', 'max', 'value', 'zero-off' ] },
+            switch: { min: 0, max: 1, columns: 2, zero_off: true, display_name: false, attributes: ['min', 'max', 'value', 'zero-off', 'display-name' ] },
             slider: { min: 0, max: 255, columns: 12, attributes: ['min', 'max', 'zero-off', 'value' ] },
-            color_slider: { min: 130, max: 500 },
+            color_slider: { min: 15300, max: 50000 },
             sensor: { columns: 3 },
             binary_sensor: { columns: 2 },
         }
@@ -201,7 +201,11 @@ var webUIComponent = {
             return element;
         }
         else if (options.type === "switch") {
-            var element = $('<div class="switch"><input type="range" id=' + options.id + '></div>');
+            if (options.display_name) {
+                var element = $('<div class="named-switch"><div class="row"><div class="col"><input type="range" id=' + options.id + '></div></div><div class="row"><div class="col switch-name">' + options.name + '</div></div></div>');
+            } else {
+                var element = $('<div class="switch"><input type="range" id=' + options.id + '></div>');
+            }
             var input = element.find("input");
             this.copyAttributes(input, options)
             var element = this.createColumn(options, element);
@@ -359,6 +363,7 @@ var webUIComponent = {
                     } else {
                         // console.log("update_event", "input", this);
                         element.val(this.value).change();
+                        self.updateSliderCSS(element);
                     }
                 }
                 if (this.state !== undefined) {

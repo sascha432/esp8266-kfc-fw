@@ -61,6 +61,7 @@ WEBUI_PROGMEM_STRING_DECL(value)
 WEBUI_PROGMEM_STRING_DECL(vcc)
 WEBUI_PROGMEM_STRING_DECL(wide)
 WEBUI_PROGMEM_STRING_DECL(zero_off)
+WEBUI_PROGMEM_STRING_DECL(display_name)
 
 class WebUIComponent : public JsonUnnamedObject {
 public:
@@ -122,7 +123,7 @@ public:
     WebUIComponent &addColumn(size_t reserve = 0);
     JsonArray &_getColumns();
     WebUIComponent &addGroup(const JsonString &name, bool hasSwitch);
-    WebUIComponent &addSwitch(const String &id, const JsonString &name, bool zeroOff = true);
+    WebUIComponent &addSwitch(const String &id, const JsonString &name, bool zeroOff = true, bool displayName = false);
     WebUIComponent &addSlider(const String &id, const JsonString &name, int min = 0, int max = 0, bool zeroOff = true);
     WebUIComponent &addColorSlider(const String &id, const JsonString &name);
     WebUIComponent &addSensor(const String &id, const JsonString &name, const JsonString &unit, WebUIComponent::SensorRenderEnum_t render = WebUIComponent::SensorRenderEnum_t::RENDER_DEFAULT);

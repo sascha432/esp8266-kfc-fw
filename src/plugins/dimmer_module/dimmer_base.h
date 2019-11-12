@@ -94,10 +94,13 @@ protected:
         return _wire.endTransmission();
     }
 #endif
+    uint16_t _version;
     uint16_t _vcc;
     float _frequency;
     float _internalTemperature;
     float _ntcTemperature;
+    // float _powerUsage;
+    String _metricsTopics[5];
 
     float _fadeTime;
     float _onOffFadeTime;

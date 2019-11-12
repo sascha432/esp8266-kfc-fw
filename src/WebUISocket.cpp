@@ -52,6 +52,13 @@ void WsWebUISocket::broadcast(WsWebUISocket *sender, JsonUnnamedObject &json) {
     WsClient::broadcast(wsWebUI, sender, buffer);
 }
 
+WsWebUISocket *WsWebUISocket::getSender() {
+    return _sender;
+}
+
+AsyncWebSocket *WsWebUISocket::getWsWebUI() {
+    return wsWebUI;
+}
 
 WsClient *WsWebUISocket::getInstance(AsyncWebSocketClient *socket) {
     _debug_println(F("WsWebUISocket::getInstance()"));

@@ -41,13 +41,24 @@ typedef struct {
     struct {
         String set;
         String state;
-        int16_t value;
+        int32_t value;
     } brightness;
     struct {
         String set;
         String state;
-        uint16_t value;
+        float value;
     } color;
+    struct {
+        String set;
+        String state;
+        String brightnessSet;
+        String brightnessState;
+    } channels[4];
+    struct {
+        String set;
+        String state;
+        bool value;
+    } lockChannels;
 } Driver_4ChDimmer_MQTTComponentData_t;
 
 class Driver_4ChDimmer : public MQTTComponent, public Dimmer_Base, public DimmerModuleForm
@@ -59,6 +70,9 @@ public:
     virtual uint8_t getAutoDiscoveryCount() const override;
     virtual void onConnect(MQTTClient *client) override;
     virtual void onMessage(MQTTClient *client, char *topic, char *payload, size_t len) override;
+
+    virtual void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState) override;
+    virtual void getValues(JsonArray &array) override;
 
     virtual bool on(uint8_t channel = -1) override;
     virtual bool off(uint8_t channel = -1) override;
@@ -81,6 +95,13 @@ private:
     void _setChannels(float fadetime);
     void _getChannels();
 
+    void _channelsToBrightness();
+    void _brightnessToChannels();
+    void _setLockChannels(bool value);
+    void _calcRatios();
+    float _calcPower(uint8_t channel);
+    float _calcTotalPower();
+
 private:
 #if DEBUG_4CH_DIMMER
     uint8_t endTransmission();
@@ -89,10 +110,24 @@ private:
 #endif
 
     Driver_4ChDimmer_MQTTComponentData_t _data;
-    int16_t _storedBrightness;
+    int16_t _storedChannels[4];
     int16_t _channels[4];
+    float _ratio[2];
     uint8_t _qos;
-    String _metricsTopic;
+    EventScheduler::TimerPtr _publishTimer;
+
+public:
+    // channels are displayed in this order in the web ui
+    // warm white
+    static const int8_t CHANNEL_WW1 = 1;
+    static const int8_t CHANNEL_WW2 = 3;
+    // cold white
+    static const int8_t CHANNEL_CW1 = 2;
+    static const int8_t CHANNEL_CW2 = 0;
+
+    static const uint16_t COLOR_MIN = 15300;
+    static const uint16_t COLOR_MAX = 50000;
+    static const uint16_t COLOR_RANGE = (COLOR_MAX - COLOR_MIN);
 };
 
 class AtomicSunPlugin : public Driver_4ChDimmer {

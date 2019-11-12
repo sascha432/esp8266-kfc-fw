@@ -47,6 +47,7 @@ WEBUI_PROGMEM_STRING_DEF(value)
 WEBUI_PROGMEM_STRING_DEF(vcc)
 WEBUI_PROGMEM_STRING_DEF(wide)
 WEBUI_PROGMEM_STRING_DEF(zero_off)
+WEBUI_PROGMEM_STRING_DEF(display_name)
 
 
 WebUIRow::WebUIRow() : JsonUnnamedObject(2) {
@@ -97,12 +98,13 @@ WebUIComponent &WebUIRow::addGroup(const JsonString &name, bool hasSwitch) {
     return column;
 }
 
-WebUIComponent &WebUIRow::addSwitch(const String &id, const JsonString &name, bool zeroOff) {
+WebUIComponent &WebUIRow::addSwitch(const String &id, const JsonString &name, bool zeroOff, bool displayName) {
     WebUIComponent &column = addColumn(4);
     column.add(JJ(type), JJ(switch));
     column.setId(id);
     column.setName(name);
     column.add(JJ(zero_off), zeroOff);
+    column.add(JJ(display_name), displayName);
     return column;
 }
 

@@ -26,6 +26,9 @@
 #include "serial_handler.h"
 #include "pin_monitor.h"
 #include "plugins.h"
+#if IOT_DIMMER_MODULE || IOT_ATOMIC_SUN_V2
+#include "plugins/dimmer_module/dimmer_base.h"
+#endif
 
 #if DEBUG_AT_MODE
 #include <debug_helper_enable.h>
@@ -38,6 +41,17 @@
 typedef std::vector<const ATModeCommandHelp_t *> ATModeHelpVector;
 
 static ATModeHelpVector at_mode_help;
+
+// class CatFile {
+// public:
+//     CatFile(const String &filename, Stream &output) : _output(output) {
+//         _file = SPIFFS.open(filename, "r");
+//     }
+// private:
+//     Stream &_output;
+//     File _file;
+//     EventScheduler _timer;
+// };
 
 void at_mode_add_help(const ATModeCommandHelp_t *help) {
     at_mode_help.push_back(help);
@@ -104,6 +118,8 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(STORE, "STORE", "Store current settings in
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(FACTORY, "FACTORY", "Restore factory settings (but do not store in EEPROM)");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(ATMODE, "ATMODE", "<1|0>", "Enable/disable AT Mode");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DLY, "DLY", "<milliseconds>", "Call delay(milliseconds)");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CAT, "CAT", "<filename>", "Display text file");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WIFI, "WIFI", "[<reconnect>]", "Display WiFi info");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(REM, "REM", "Ignore comment");
 
 #if DEBUG_HAVE_SAVECRASH
@@ -145,6 +161,8 @@ void at_mode_help_commands() {
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(FACTORY));
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(ATMODE));
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DLY));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CAT));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(WIFI));
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(REM));
 
 #if DEBUG_HAVE_SAVECRASH
@@ -469,8 +487,44 @@ void at_mode_serial_handle_event(String &commandString) {
                     }
                 }
             }
-            else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(REM)) || !strcasecmp_P(command, PSTR("I2CT")) || !strcasecmp_P(command, PSTR("I2CR"))) {
-                // ignore comment or SerialTwoWire communication
+            else if (!strcasecmp_P(command, PSTR("I2CT")) || !strcasecmp_P(command, PSTR("I2CR"))) {
+                // ignore SerialTwoWire communication
+            }
+#if 0
+            else if (!strcasecmp_P(command, PSTR("DIMTEST"))) {
+                static EventScheduler::TimerPtr timer = nullptr;
+                static int channel, value;
+                value = 500;
+                channel = argc == 1 ? atoi(args[0]) : 0;
+                MySerial.printf_P(PSTR("+i2ct=17,82,ff,00,00,00,00,00,00,10\n"));
+                Scheduler.removeTimer(timer);
+                timer = Scheduler.addTimer(4000, true, [&output](EventScheduler::TimerPtr timer) {
+                    value += 50;
+                    if (value > 8333) {
+                        value = 8333;
+                        timer->detach();
+                    }
+                    output.printf_P(PSTR("VALUE %u\n"), value);
+                    MySerial.printf_P(PSTR("+i2ct=17,82,%02x,%02x,%02x,00,00,00,00,10\n"), channel&0xff, lowByte(value)&0xff, highByte(value)&0xff);
+                });
+            }
+#endif
+            else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(WIFI))) {
+                if (argc == 1) {
+                    config.reconfigureWiFi();
+                }
+
+                auto flags = config._H_W_GET(Config().flags);
+                output.printf_P("+WIFI: DHCP %u, station mode %s, SSID %s, connected %u, IP %s\n",
+                    flags.softAPDHCPDEnabled,
+                    (flags.wifiMode & WIFI_STA) ? PSTR("on") : PSTR("off"),
+                    config._H_STR(Config().wifi_ssid),
+                    WiFi.isConnected(),
+                    WiFi.localIP().toString().c_str()
+                );
+            }
+            else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(REM))) {
+                // ignore comment
             }
             else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(DLY))) {
                 unsigned long ms = 1;
@@ -480,6 +534,36 @@ void at_mode_serial_handle_event(String &commandString) {
                 output.printf_P(PSTR("+DLY: %lu\n"), ms);
                 delay(ms);
                 at_mode_print_ok(output);
+            }
+            else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(CAT))) {
+                if (argc != 1) {
+                    at_mode_print_invalid_arguments(output);
+                }
+                else {
+                    File file = SPIFFS.open(args[0], "r");
+                    if (file) {
+                        Scheduler.addTimer(10, true, [&output, file](EventScheduler::TimerPtr timer) mutable {
+                            char buf[256];
+                            if (file.available()) {
+                                auto len = file.readBytes(buf, sizeof(buf) - 1);
+                                if (len) {
+                                    buf[len] = 0;
+                                    output.print(buf);
+                                    output.flush();
+                                }
+                            }
+                            else {
+                                output.println();
+                                output.printf_P(PSTR("+CAT: %s: %u\n"), file.name(), (unsigned)file.size());
+                                file.close();
+                                timer->detach();
+                            }
+                        });
+                    }
+                    else {
+                        output.printf_P(PSTR("+CAT: Failed to open: %s\n"), args[0]);
+                    }
+                }
             }
 #if DEBUG_HAVE_SAVECRASH
             else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(SAVECRASHC))) {

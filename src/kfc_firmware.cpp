@@ -15,6 +15,7 @@
 #include "at_mode.h"
 #include "serial_handler.h"
 #include "reset_detector.h"
+#include "progmem_data.h"
 #include "plugins.h"
 #if PRINTF_WRAPPER_ENABLED
 #include <printf_wrapper.h>
@@ -150,25 +151,8 @@ void setup() {
     // gdbstub_do_break();
     // disable_at_mode(Serial);
 
-    if (resetDetector.getResetCounter() >= 20) { // protection against EEPROM/Flash memory damage during boot loops
-#if DEBUG
-        Serial.println(F("Too many resets detected. Pausing boot for 30 seconds. Press 'x' to continue..."));
-        resetDetector.disarmTimer();
-        os_timer_delete(resetDetector.getTimer());
-        __while(30e3, []() {
-            if (Serial.read() == 'x') {
-                resetDetector.clearCounter();
-                return false;
-            }
-            return true;
-        }, 1000, []() {
-            Serial.print('.');
-            return true;
-        });
-        Serial.println();
-#else
-        delay(5000); // do not display anything if debug mode is disabled
-#endif
+    if (resetDetector.getResetCounter() >= 20) {
+        delay(5000);    // delay boot if too many resets are detected
         resetDetector.armTimer();
     }
     Serial.println(F("Booting KFC firmware..."));
@@ -297,6 +281,20 @@ void setup() {
 
 #if SPIFFS_SUPPORT
     SPIFFS.begin();
+    if (resetDetector.hasCrashDetected()) {
+        File file = SPIFFS.open(FSPGM(crash_counter_file), "r");
+        char counter = 0;
+        if (file) {
+            counter = file.read() + 1;
+            file.close();
+        }
+        file = SPIFFS.open(FSPGM(crash_counter_file), "w");
+        file.write(counter);
+        file.close();
+        if (counter >= 3) {  // boot in safe mode if there were 3 crashes within the first 5min.
+            resetDetector.setSafeMode(1);
+        }
+    }
 #endif
 
     config.read();
@@ -311,6 +309,13 @@ void setup() {
 
         prepare_plugins();
         setup_plugins(PluginComponent::PLUGIN_SETUP_SAFE_MODE);
+
+        // check if wifi is up once per minute
+        Scheduler.addTimer(60e3, true, [](EventScheduler::TimerPtr timer) {
+            if (!WiFi.isConnected()) {
+                config.reconfigureWiFi();
+            }
+        });
 
     } else {
 
@@ -352,6 +357,12 @@ void setup() {
 
         prepare_plugins();
         setup_plugins(resetDetector.hasWakeUpDetected() ? PluginComponent::PLUGIN_SETUP_AUTO_WAKE_UP : PluginComponent::PLUGIN_SETUP_DEFAULT);
+
+#if SPIFFS_SUPPORT
+        Scheduler.addTimer(300e3, false, [](EventScheduler::TimerPtr timer) { // remove file after 5min.
+            SPIFFS.remove(FSPGM(crash_counter_file));
+        });
+#endif
 
     }
 }

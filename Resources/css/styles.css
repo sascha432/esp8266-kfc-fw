@@ -112,6 +112,16 @@
     padding-top: 24px;
 	min-height: 66px;
 }
+.webuicomponent > .named-switch {
+    padding: 10px;
+    padding-top: 24px;
+	min-height: 127px;
+}
+.webuicomponent .switch-name {
+    text-align: center;
+    margin-top: 20px;
+}
+
 .webuicomponent > .slider {
     padding: 10px;
     padding-top: 24px;

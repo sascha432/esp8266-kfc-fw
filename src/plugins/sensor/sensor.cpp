@@ -12,6 +12,9 @@
 #include "Sensor_BME280.h"
 #include "Sensor_BME680.h"
 #include "Sensor_CCS811.h"
+#include "Sensor_HLW80xx.h"
+#include "Sensor_HLW8012.h"
+#include "Sensor_HLW8032.h"
 
 #if DEBUG_IOT_SENSOR
 #include <debug_helper_enable.h>
@@ -50,6 +53,12 @@ void SensorPlugin::setup(PluginSetupMode_t mode) {
 #endif
 #if IOT_SENSOR_HAVE_CCS811
     _sensors.push_back(new Sensor_CCS811(F("CCS811"), IOT_SENSOR_HAVE_CCS811));
+#endif
+#if IOT_SENSOR_HAVE_HLW8012
+    _sensors.push_back(new Sensor_HLW8012(F("HLW8012"), IOT_SENSOR_HLW8012_SEL, IOT_SENSOR_HLW8012_CF, IOT_SENSOR_HLW8012_CF1));
+#endif
+#if IOT_SENSOR_HAVE_HLW8032
+    _sensors.push_back(new Sensor_HLW8032(F("HLW8032"), IOT_SENSOR_HLW8032_RX, IOT_SENSOR_HLW8032_TX, IOT_SENSOR_HLW8032_PF));
 #endif
 
 }

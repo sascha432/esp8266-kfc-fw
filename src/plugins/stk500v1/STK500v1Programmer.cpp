@@ -27,6 +27,7 @@ const char Response_INSYNC[] PROGMEM = { STK500v1Programmer::Resp_STK_INSYNC, ST
 
 PROGMEM_STRING_DEF(stk500v1_log_file, "/stk500v1/debug.log");
 PROGMEM_STRING_DEF(stk500v1_sig_file, "/stk500v1/atmega.csv");
+PROGMEM_STRING_DEF(stk500v1_tmp_file, "/stk500v1/firmware_tmp.hex");
 
 STK500v1Programmer::STK500v1Programmer(Stream &serial) : _serial(serial), _delayTimeout(0), _timeout(400), _pageSize(128), _logging(LOG_DISABLED) {
     memcpy_P(_signature, PSTR("\x1e\x95\x0f"), 3);
@@ -522,10 +523,14 @@ void STK500v1Programmer::_clearPageBuffer() {
     memset(_pageBuffer, 0, _pageSize);
 }
 
-void STK500v1Programmer::setSignature(char *signature) {
+void STK500v1Programmer::setSignature(const char *signature) {
     if (*signature) {
         memcpy(_signature, signature, sizeof(_signature));
     }
+}
+
+void STK500v1Programmer::setSignature_P(PGM_P signature) {
+    memcpy_P(_signature, signature, sizeof(_signature));
 }
 
 void STK500v1Programmer::dumpLog(Stream &output) {

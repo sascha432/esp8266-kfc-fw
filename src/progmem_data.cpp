@@ -32,6 +32,7 @@ PROGMEM_STRING_DEF(server_key, "/server.key");
 PROGMEM_STRING_DEF(kfcfw, "kfcfw");
 PROGMEM_STRING_DEF(Failed_to_reserve_string_size, "Failed to reserve string size %d\n");
 PROGMEM_STRING_DEF(invalid_flash_ptr, "INVALID_FLASH_PTR");
+PROGMEM_STRING_DEF(crash_counter_file, "/crash_counter");
 
 // const char _shared_progmem_string_webui_mappings[] PROGMEM = "/webui/.mappings";
 

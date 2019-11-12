@@ -11,6 +11,7 @@
 
 PROGMEM_STRING_DECL(stk500v1_log_file);
 PROGMEM_STRING_DECL(stk500v1_sig_file);
+PROGMEM_STRING_DECL(stk500v1_tmp_file);
 
 class STK500v1Programmer {
 public:
@@ -101,7 +102,8 @@ public:
     }
 
 public:
-    void setSignature(char *signature);
+    void setSignature(const char *signature);
+    void setSignature_P(PGM_P signature);
     static bool getSignature(const char *mcu, char *signature);
 
 private:

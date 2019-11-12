@@ -27,7 +27,10 @@
 #include "kfc_fw_config.h"
 #include "plugins.h"
 #if HUE_EMULATION
-#include "./plugins/hue/hue.h"
+#include "plugins/hue/hue.h"
+#endif
+#if STK500V1
+#include "plugins/stk500v1/STK500v1Programmer.h"
 #endif
 
 #if DEBUG_WEB_SERVER
@@ -42,6 +45,8 @@ PROGMEM_STRING_DEF(disabled, "disabled");
 
 AsyncWebServer *server = nullptr;
 FailureCounterContainer loginFailures;
+
+#define U_ATMEGA 254
 
 struct UploadStatus_t {
     AsyncWebServerResponse *response;
@@ -200,6 +205,35 @@ void web_server_update_handler(AsyncWebServerRequest *request) {
     if (request->_tempObject) {
         UploadStatus_t *status = reinterpret_cast<UploadStatus_t *>(request->_tempObject);
         AsyncWebServerResponse *response = nullptr;
+#if STK500V1
+        if (status->command == U_ATMEGA) {
+            if (stk500v1) {
+                request->send_P(200, FSPGM(text_plain), PSTR("Upgrade already running"));
+            }
+            else {
+                Logger_security(F("Starting ATmega firmware upgrade..."));
+
+                stk500v1 = new STK500v1Programmer(Serial);
+                stk500v1->setSignature_P(PSTR("\x1e\x95\x0f"));
+                stk500v1->setFile(FSPGM(stk500v1_tmp_file));
+                stk500v1->setLogging(STK500v1Programmer::LOG_FILE);
+
+                Scheduler.addTimer(3500, false, [](EventScheduler::TimerPtr timer) {
+                    stk500v1->begin([]() {
+                        delete stk500v1;
+                        stk500v1 = nullptr;
+                    });
+                });
+
+                response = request->beginResponse(302);
+                HttpHeaders httpHeaders(false);
+                httpHeaders.add(HttpLocationHeader(F("/serial_console.html")));
+                httpHeaders.replace(HttpConnectionHeader(HttpConnectionHeader::HTTP_CONNECTION_CLOSE));
+                httpHeaders.setWebServerResponseHeaders(response);
+                request->send(response);
+            }
+        } else
+#endif
         if (!Update.hasError()) {
             Logger_security(F("Firmware upgrade successful"));
 
@@ -252,6 +286,9 @@ void web_server_update_handler(AsyncWebServerRequest *request) {
 }
 
 void web_server_update_upload_handler(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
+#if STK500V1
+    static File firmwareTempFile;
+#endif
     if (index == 0 && !request->_tempObject && web_server_is_authenticated(request)) {
         request->_tempObject = calloc(sizeof(UploadStatus_t), 1);
         Logger_notice(F("Firmware upload started"));
@@ -263,55 +300,86 @@ void web_server_update_upload_handler(AsyncWebServerRequest *request, String fil
         if (!index) {
             BlinkLEDTimer::setBlink(BlinkLEDTimer::FLICKER);
 
-#if defined(ESP8266)
-            Update.runAsync(true);
-#endif
             size_t size;
             uint8_t command;
 
-            uint8_t spiffs = 0;
+            uint8_t imageType = 0;
 
             if (constexpr_String_equals(request->arg(F("image_type")), PSTR("u_flash"))) { // firmware selected
-                spiffs = 0;
-            } else if (constexpr_String_equals(request->arg(F("image_type")), PSTR("u_spiffs"))) { // spiffs selected
-                spiffs = 1;
-            } else if (strstr_P(filename.c_str(), PSTR("spiffs"))) { // auto select
-                spiffs = 2;
+                imageType = 0;
             }
-
-            if (spiffs) {
-                size = 1048576;
-                command = U_SPIFFS;
-                // SPIFFS.end();
-                // SPIFFS.format();
-            } else {
-                size = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
-                command = U_FLASH;
+            else if (constexpr_String_equals(request->arg(F("image_type")), PSTR("u_spiffs"))) { // spiffs selected
+                imageType = 1;
             }
-            status->command = command;
-            _debug_printf_P(PSTR("Update Start: %s, spiffs %d, size %d, command %d\n"), filename.c_str(), spiffs, (int)size, command);
-
-            if (!Update.begin(size, command)) {
-                error = true;
+#if STK500V1
+            else if (constexpr_String_equals(request->arg(F("image_type")), PSTR("u_atmega"))) { // atmega selected
+                imageType = 3;
             }
-        }
-        if (!error && !Update.hasError()) {
-            if (Update.write(data, len) != len) {
-                error = true;
+            else if (strstr_P(filename.c_str(), PSTR(".hex"))) { // auto select
+                imageType = 3;
             }
-        }
-        if (final) {
-            if (Update.end(true)) {
-                _debug_printf_P(PSTR("Update Success: %uB\n"), index + len);
-            } else {
-                error = true;
-            }
-        }
-        if (error) {
-#if DEBUG
-            Update.printError(DEBUG_OUTPUT);
 #endif
-            status->error = true;
+            else if (strstr_P(filename.c_str(), PSTR("spiffs"))) { // auto select
+                imageType = 2;
+            }
+
+#if STK500V1
+            if (imageType == 3) {
+                status->command = U_ATMEGA;
+                firmwareTempFile = SPIFFS.open(FSPGM(stk500v1_tmp_file), "w");
+                _debug_printf_P(PSTR("ATmega fw temp file %u, filename %s\n"), (bool)firmwareTempFile, String(FSPGM(stk500v1_tmp_file)).c_str());
+            } else
+#endif
+            {
+                if (imageType) {
+                    size = 1048576;
+                    command = U_SPIFFS;
+                    // SPIFFS.end();
+                    // SPIFFS.format();
+                } else {
+                    size = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
+                    command = U_FLASH;
+                }
+                status->command = command;
+                _debug_printf_P(PSTR("Update Start: %s, image type %d, size %d, command %d\n"), filename.c_str(), imageType, (int)size, command);
+
+    #if defined(ESP8266)
+                Update.runAsync(true);
+    #endif
+
+                if (!Update.begin(size, command)) {
+                    error = true;
+                }
+            }
+        }
+#if STK500V1
+        if (status->command == U_ATMEGA) {
+            firmwareTempFile.write(data, len);
+            if (final) {
+                _debug_printf_P(PSTR("Upload Success: %uB\n"), firmwareTempFile.size());
+                firmwareTempFile.close();
+            }
+        } else
+#endif
+        {
+            if (!error && !Update.hasError()) {
+                if (Update.write(data, len) != len) {
+                    error = true;
+                }
+            }
+            if (final) {
+                if (Update.end(true)) {
+                    _debug_printf_P(PSTR("Update Success: %uB\n"), index + len);
+                } else {
+                    error = true;
+                }
+            }
+            if (error) {
+#if DEBUG
+                Update.printError(DEBUG_OUTPUT);
+#endif
+                status->error = true;
+            }
         }
     }
 }
@@ -561,10 +629,6 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
                         cookie.setExpires(_time + 86400 * 30);
                         httpHeaders.add(cookie);
                     }
-                } else {
-                    HttpCookieHeader cookie = HttpCookieHeader(FSPGM(SID));
-                    cookie.setExpires(HttpCookieHeader::COOKIE_EXPIRED);
-                    httpHeaders.add(cookie);
                 }
 
                 _debug_printf_P(PSTR("Login successful, cookie %s\n"), cookie.getValue().c_str());

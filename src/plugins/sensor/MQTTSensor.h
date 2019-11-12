@@ -19,7 +19,9 @@ public:
         LM75A,
         BME280,
         BME680,
-        CCS811
+        CCS811,
+        HLW8012,
+        HLW8032,
     } SensorEnumType_t;
 
     const uint8_t DEFAULT_UPDATE_RATE = 60;

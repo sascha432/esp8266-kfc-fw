@@ -12,7 +12,7 @@
 
 // Parse JSON and send objects to callback function
 
-JsonCallbackReader::JsonCallbackReader(Stream &stream, JsonReaderCallback callback, uint16_t maxBufferSize) : JsonBaseReader(stream) {
+JsonCallbackReader::JsonCallbackReader(Stream *stream, JsonReaderCallback callback, uint16_t maxBufferSize) : JsonBaseReader(stream) {
 	_callback = callback;
 	_maxBufferSize = maxBufferSize;
 }

@@ -25,7 +25,9 @@ typedef std::function<bool(const String &key, const String &value, size_t partia
 
 class JsonCallbackReader : public JsonBaseReader {
 public:
-	JsonCallbackReader(Stream &stream, JsonReaderCallback callback, uint16_t maxBufferSize = -1);
+    JsonCallbackReader(Stream &stream, JsonReaderCallback callback, uint16_t maxBufferSize = -1) : JsonCallbackReader(&stream, callback, maxBufferSize) {
+    }
+	JsonCallbackReader(Stream *stream, JsonReaderCallback callback, uint16_t maxBufferSize = -1);
 	virtual bool processElement() override;
 
 private:

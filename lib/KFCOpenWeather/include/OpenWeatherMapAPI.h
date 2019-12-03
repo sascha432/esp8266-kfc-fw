@@ -5,10 +5,11 @@
 #pragma once
 
 #include <Arduino_compat.h>
+#include <JsonBaseReader.h>
 #include <StreamString.h>
 #include <map>
 
-class OpenWeatherAPI {
+class OpenWeatherMapAPI {
 public:
     class WeatherInfo {
     public:
@@ -66,19 +67,45 @@ public:
         std::map<String, float> rain_mm;
     };
 
-    OpenWeatherAPI();
-    OpenWeatherAPI(const String &apiKey);
+    class WeatherForecast {
+    public:
+        WeatherForecast() {
+            clear();
+        }
+
+        void clear() {
+
+        }
+
+        bool hasData() const {
+            return false;
+        }
+
+    public:
+    };
+
+    OpenWeatherMapAPI();
+    OpenWeatherMapAPI(const String &apiKey);
 
     void clear();
 
     void setAPIKey(const String &key);
 
     void setQuery(const String &query);
-    String getApiUrl() const;
-    bool parseApiData(const String &data);
-    bool parseApiData(StreamString &stream);
+    String getApiUrl(const String &apiType) const;
+    String getWeatherApiUrl() const;
+    String getForecastApiUrl() const;
+
+    bool parseWeatherData(const String &data);
+    bool parseWeatherData(Stream &stream);
+    bool parseForecastData(const String &data);
+    bool parseForecastData(Stream &stream);
+
+    JsonBaseReader *getWeatherInfoParser();
+    JsonBaseReader *getWeatherForecastParser();
 
     WeatherInfo &getWeatherInfo();
+    WeatherForecast &getWeatherForecast();
 
     void dump(Print &output) const;
 
@@ -90,4 +117,5 @@ private:
     String _apiQuery;
     String _apiKey;
     WeatherInfo _info;
+    WeatherForecast _forecast;
 };

@@ -66,14 +66,18 @@ public:
         JSON_TYPE_OBJECT_END, 
 	} JsonType_t;
 
-	JsonBaseReader(Stream &stream) : _stream(stream) {
+    JsonBaseReader(Stream &stream) : JsonBaseReader(&stream) {
+    }
+
+	JsonBaseReader(Stream *stream) : _stream(stream) {
 		_quoteChar = '"';
 		clearLastError();
 	}
+
 	virtual ~JsonBaseReader() {
 	}
 
-	inline void setStream(Stream &stream) {
+	void setStream(Stream *stream) {
 		_stream = stream;
 	}
 
@@ -163,7 +167,7 @@ protected:
     bool _isValidNumber(const String &value, JsonType_t &_type);
 
 protected:
-	Stream &_stream;
+	Stream *_stream;
 	size_t _position;
     size_t _valuePosition;
     size_t _keyPosition;
@@ -172,7 +176,7 @@ protected:
 	uint8_t _quoted : 1;	// byte 2
 	uint8_t _key : 1;
 	uint8_t _escaped : 1;
-	char _quoteChar;		// byte 3
+    char _quoteChar;		// byte 3
 	JsonType_t _type;		// byte 4
 
     int16_t _arrayIndex;

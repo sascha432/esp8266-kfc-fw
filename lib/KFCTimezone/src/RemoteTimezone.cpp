@@ -3,7 +3,7 @@
 */
 
 #include <JsonCallbackReader.h>
-#include <BufferStream.h>
+#include <HeapStream.h>
 #include <PrintString.h>
 #include "Timezone.h"
 #include "RemoteTimezone.h"
@@ -81,12 +81,10 @@ void RemoteTimezone::get() {
 			int httpCode;
 			if ((httpCode = request->responseHTTPcode()) == 200) {
 				String response = request->responseText();
-				BufferStream stream;
-
-				stream.write(response.c_str());
+				HeapStream stream(response);
 				_responseHandler(url, stream);
-
-			} else {
+			}
+			else {
 				if (_callback) {
 					PrintString message;
 					message.printf_P(PSTR("HTTP error, code %d"), httpCode);

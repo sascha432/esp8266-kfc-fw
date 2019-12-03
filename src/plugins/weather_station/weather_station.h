@@ -12,7 +12,7 @@
 #include <Adafruit_ST7735.h>
 #include <vector>
 #include <EventScheduler.h>
-#include <OpenWeatherAPI.h>
+#include <OpenWeatherMapAPI.h>
 #include <asyncHTTPrequest.h>
 #include <StreamString.h>
 #include "plugins.h"
@@ -85,16 +85,15 @@ private:
         uint16_t h;
     } Dimensions_t;
 
-    typedef std::function<void (StreamString &stream)> HttpCallback_t;
     typedef std::function<void (bool status)> Callback_t;
 
-    void _httpRequest(const String &url, uint16_t timeout, HttpCallback_t callback, Callback_t finishedCallback);
+    void _httpRequest(const String &url, uint16_t timeout, JsonBaseReader *jsonReader, Callback_t finishedCallback);
     void _getWeatherInfo(Callback_t finishedCallback);
 
     void _serialHandler(const uint8_t *buffer, size_t len);
     void _loop();
 
-    void _fadeBacklight(uint16_t fromLevel, uint16_t toLevel, uint8_t step = 16);
+    void _fadeBacklight(uint16_t fromLevel, uint16_t toLevel, int8_t step = 16);
 
     void _drawTextAligned(Adafruit_GFX &gfx, int16_t x, int16_t y, const String &text, TextAlignEnum_t align = LEFT, TextVAlignEnum_t valign = TOP, Position_t *pos = nullptr);
     void _drawTextAligned(Adafruit_GFX &gfx, int16_t x, int16_t y, const char *text, TextAlignEnum_t align = LEFT, TextVAlignEnum_t valign = TOP, Position_t *pos = nullptr);
@@ -125,7 +124,7 @@ private:
     uint32_t _pollInterval;
     time_t _pollTimer;
     String _weatherError;
-    OpenWeatherAPI _weatherApi;
+    OpenWeatherMapAPI _weatherApi;
     asyncHTTPrequest *_httpClient;
 
 #if DEBUG_IOT_WEATHER_STATION

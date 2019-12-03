@@ -57,8 +57,8 @@ String JsonBaseReader::getLastErrorMessage() const {
 	error += '\n';
 	error += _jsonSource;
 	int count = 48;
-	while (count-- && _stream.available()) {
-		char ch = _stream.read();
+	while (count-- && _stream->available()) {
+		char ch = _stream->read();
 		if (count < 16 && (isspace(ch) || ispunct(ch))) {
 			break;
 		}
@@ -181,7 +181,11 @@ bool JsonBaseReader::_prepareElement() {
 }
 
 bool JsonBaseReader::parseStream() {
-	_debug_printf_P(PSTR("JSONparseStream available %d\n"), _stream.available());
+#if DEBUG_KFC_JSON
+	if (_stream) {
+		_debug_printf_P(PSTR("JSONparseStream available %d\n"), _stream->available());
+	}
+#endif
 
 	int ch;
 	while ((ch = readByte()) != -1) {
@@ -284,10 +288,16 @@ bool JsonBaseReader::parseStream() {
 }
 
 int JsonBaseReader::readByte() {
-	if (!_stream.available()) {
+#if DEBUG
+	if (!_stream) {
+		debug_println("JsonBaseReader::readByte(): _stream = nullptr");
 		return -1;
 	}
-	int ch = _stream.read();
+#endif
+	if (!_stream->available()) {
+		return -1;
+	}
+	int ch = _stream->read();
 	_position++;
 #if DEBUG_JSON_READER
 	_jsonSource += ch;

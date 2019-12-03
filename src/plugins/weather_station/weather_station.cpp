@@ -11,6 +11,9 @@
 #include <EventTimer.h>
 #include <Timezone.h>
 #include <MicrosTimer.h>
+#include <HeapStream.h>
+#include <ProgmemStream.h>
+
 #include <serial_handler.h>
 #include "kfc_fw_config.h"
 
@@ -213,7 +216,7 @@ void WeatherStationPlugin::setup(PluginSetupMode_t mode) {
     auto cfg = config._H_GET(Config().weather_station.config);
     _isMetric = cfg.is_metric;
     _timeFormat24h = cfg.time_format_24h;
-    _pollInterval = cfg.weather_poll_interval * 1000UL;
+    _pollInterval = cfg.weather_poll_interval * 60000UL;
     _backlightLevel = std::min(1024 * cfg.backlight_level / 100, 1023);
 
     _tft.initR(INITR_BLACKTAB);
@@ -255,37 +258,96 @@ void WeatherStationPlugin::serialHandler(uint8_t type, const uint8_t *buffer, si
     plugin._serialHandler(buffer, len);
 }
 
-
-void WeatherStationPlugin::_httpRequest(const String &url, uint16_t timeout, HttpCallback_t callback, Callback_t finishedCallback) {
+void WeatherStationPlugin::_httpRequest(const String &url, uint16_t timeout, JsonBaseReader *jsonReader, Callback_t finishedCallback) {
 
 	if (_httpClient != nullptr) {
-        debug_println(F("WeatherStationPlugin::_httpRequest() _httpClient not null"));
-        panic();
-		delete _httpClient;
+        debug_println(F("WeatherStationPlugin::_httpRequest() _httpClient not null, cannot create request"));
+        return;
 	}
 
 	_httpClient = new asyncHTTPrequest();
-	_httpClient->onReadyStateChange([url, this, callback, finishedCallback](void *, asyncHTTPrequest *request, int readyState) {
+
+    auto onData = [jsonReader](void *ptr, asyncHTTPrequest *request, size_t available) {
+
+        _debug_printf_P(PSTR("WeatherStationPlugin::_httpRequest(): onData() available=%u\n"), available);
+
+        uint8_t buffer[64];
+        size_t len;
+        HeapStream stream(buffer);
+        jsonReader->setStream(&stream);
+        while((len = request->responseRead(buffer, sizeof(buffer))) > 0) {
+            stream.setLength(len);
+            if (!jsonReader->parseStream()) {
+                _debug_printf_P(PSTR("WeatherStationPlugin::_httpRequest(): onRead(): parseStream() = false\n"));
+                request->abort();
+                request->onData(nullptr);
+                break;
+            }
+        }
+    };
+
+    _httpClient->onData(onData);
+
+	_httpClient->onReadyStateChange([this, url, finishedCallback, jsonReader, onData](void *, asyncHTTPrequest *request, int readyState) {
+        _debug_printf_P(PSTR("WeatherStationPlugin::_httpRequest(): onReadyStateChange() readyState=%u\n"), readyState);
 		if (readyState == 4) {
             bool status;
 			int httpCode;
+
+             request->onData(nullptr); // disable callback, if any data is left, onPoll() will call it again
 			if ((httpCode = request->responseHTTPcode()) == 200) {
-				StreamString stream;
-                auto text = request->responseText();
-                _debug_printf_P(PSTR("WeatherStationPlugin::_httpRequest(), url=%s, response=%s\n"), url.c_str(), text.c_str());
-                stream.print(text);
-				callback(stream);
+
+                // read rest of the data that was not processed by onData()
+                if (request->available()) {
+                    onData(nullptr, request, request->available());
+                }
+
+                _debug_printf_P(PSTR("WeatherStationPlugin::_httpRequest(), url=%s, response OK, available = %u\n"), url.c_str(), request->available());
                 status = true;
+
 			} else {
-                _debug_printf_P(PSTR("WeatherStationPlugin::_httpRequest(), url=%s, error code=%d\n"), url.c_str(), httpCode);
+
+                String message;
+                int code = 0;
+
+                // read response
+                uint8_t buffer[64];
+                HeapStream stream(buffer);
+
+                JsonCallbackReader reader(stream, [&message, &code](const String &keyStr, const String &valueStr, size_t partialLength, JsonBaseReader &json) {
+                    auto key = keyStr.c_str();
+                    if (!strcmp_P(key, PSTR("cod"))) {
+                        code = valueStr.toInt();
+                    }
+                    else if (!strcmp_P(key, PSTR("message"))) {
+                        message = valueStr;
+                    }
+                    return true;
+                });
+                reader.initParser();
+
+                size_t len;
+                while((len = request->responseRead(buffer, sizeof(buffer))) > 0) {
+                    stream.setLength(len);
+                    if (!reader.parseStream()) {
+                        break;
+                    }
+                }
+
+                // _debug_printf_P(PSTR("WeatherStationPlugin::_httpRequest(), http code=%d, code=%d, message=%s, url=%s\n"), httpCode, code, message.c_str(), url.c_str());
                 _weatherError = F("Failed to load data");
                 status = false;
+
+                Logger_error(F("Weather Station: HTTP request failed with HTTP code = %d, API code = %d, message = %s, url = %s"), httpCode, code, message.c_str(), url.c_str());
 			}
-            // delete object with a delay, seems to prevent a crash in asyncHTTPrequest
+
+            // delete object with a delay and inside the main loop, otherwise the program crashes in random places
             auto tmp = _httpClient;
             _httpClient = nullptr;
+            delete jsonReader;
+
             Scheduler.addTimer(100, false, [tmp, finishedCallback, status](EventScheduler::TimerPtr timer) {
-                _debug_printf_P(PSTR("WeatherStationPlugin::_httpRequest(), delete _httpClient\n"));
+                _debug_printf_P(PSTR("WeatherStationPlugin::_httpRequest(), delete _httpClient + finishedCallback\n"));
                 delete tmp;
                 finishedCallback(status);
             });
@@ -297,43 +359,45 @@ void WeatherStationPlugin::_httpRequest(const String &url, uint16_t timeout, Htt
 
 	if (!_httpClient->open("GET", url.c_str()) || !_httpClient->send()) {
         delete _httpClient;
+        delete jsonReader;
         _httpClient = nullptr;
 
         _debug_printf_P(PSTR("WeatherStationPlugin::_httpRequest() client error, url=%s\n"), url.c_str());
         _weatherError = F("Client error");
         finishedCallback(false);
+
+        Logger_error(F("Weather Station: HTTP request failed, %s, url = %s"), _weatherError.c_str(), url.c_str());
     }
 }
 
 
 void WeatherStationPlugin::_getWeatherInfo(Callback_t finishedCallback) {
 
-    auto responseCallback = [this, finishedCallback](StreamString &stream) {
-        _weatherApi.clear();
-        if (!_weatherApi.parseApiData(stream)) {
-            _weatherError = F("Invalid data");
-        }
 #if DEBUG_IOT_WEATHER_STATION
+    auto prev = finishedCallback;
+    finishedCallback = [this, prev](bool status) {
         _weatherApi.dump(DebugSerial);
-#endif
+        prev(status);
     };
 
-#if DEBUG_IOT_WEATHER_STATION
-    if (_weatherError.indexOf("avail") != -1) {
+    if (_weatherError.indexOf("avail") != -1) { // load dummy data
         _weatherError = F("Dummy data");
-        StreamString stream;
-        stream.print(F("{\"coord\":{\"lon\":-123.07,\"lat\":49.32},\"weather\":[{\"id\":500,\"main\":\"Rain\",\"description\":\"light rain\",\"icon\":\"10n\"},{\"id\":701,\"main\":\"Mist\",\"description\":\"mist\",\"icon\":\"50n\"}],\"base\":\"stations\",\"main\":{\"temp\":277.55,\"pressure\":1021,\"humidity\":100,\"temp_min\":275.37,\"temp_max\":279.26},\"visibility\":8047,\"wind\":{\"speed\":1.19,\"deg\":165},\"rain\":{\"1h\":0.93},\"clouds\":{\"all\":90},\"dt\":1575357173,\"sys\":{\"type\":1,\"id\":5232,\"country\":\"CA\",\"sunrise\":1575301656,\"sunset\":1575332168},\"timezone\":-28800,\"id\":6090785,\"name\":\"North Vancouver\",\"cod\":200}"));
-        responseCallback(stream);
+        PGM_P data = PSTR("{\"coord\":{\"lon\":-123.07,\"lat\":49.32},\"weather\":[{\"id\":500,\"main\":\"Rain\",\"description\":\"light rain\",\"icon\":\"10n\"},{\"id\":701,\"main\":\"Mist\",\"description\":\"mist\",\"icon\":\"50n\"}],\"base\":\"stations\",\"main\":{\"temp\":277.55,\"pressure\":1021,\"humidity\":100,\"temp_min\":275.37,\"temp_max\":279.26},\"visibility\":8047,\"wind\":{\"speed\":1.19,\"deg\":165},\"rain\":{\"1h\":0.93},\"clouds\":{\"all\":90},\"dt\":1575357173,\"sys\":{\"type\":1,\"id\":5232,\"country\":\"CA\",\"sunrise\":1575301656,\"sunset\":1575332168},\"timezone\":-28800,\"id\":6090785,\"name\":\"North Vancouver\",\"cod\":200}");
+        ProgmemStream stream(data, strlen(data));
+        _weatherApi.clear();
+        if (!_weatherApi.parseWeatherData(stream)) {
+            _weatherError = F("Invalid data");
+        }
         finishedCallback(true);
         return;
     }
+
 #endif
 
-    _httpRequest(_weatherApi.getApiUrl(), std::min(config._H_GET(Config().weather_station.config).api_timeout, (uint16_t)10), responseCallback, finishedCallback);
+    _httpRequest(_weatherApi.getWeatherApiUrl(), std::min(config._H_GET(Config().weather_station.config).api_timeout, (uint16_t)10), _weatherApi.getWeatherInfoParser(), finishedCallback);
 }
 
-
-void WeatherStationPlugin::_fadeBacklight(uint16_t fromLevel, uint16_t toLevel, uint8_t step) {
+void WeatherStationPlugin::_fadeBacklight(uint16_t fromLevel, uint16_t toLevel, int8_t step) {
     int8_t direction = fromLevel > toLevel ? -step : step;
     analogWrite(TFT_PIN_LED, fromLevel);
 
@@ -381,40 +445,46 @@ void WeatherStationPlugin::_serialHandler(const uint8_t *buffer, size_t len) {
     auto ptr = buffer;
     while(len--) {
         switch(*ptr++) {
-            case '+':
+            case '+': // next screen
                 _currentScreen++;
                 _currentScreen %= numScreens;
                 _draw();
                 break;
-            case '-':
+            case '-': // prev screen
                 _currentScreen += numScreens;
                 _currentScreen--;
                 _currentScreen %= numScreens;
                 _draw();
                 break;
-            case 't':
+            case 't': // switch 12/24h time format
                 _timeFormat24h = !_timeFormat24h;
                 _draw();
                 break;
-            case 'm':
+            case 'm': // switch metric/imperial
                 _isMetric = !_isMetric;
                 _draw();
                 break;
-            case '0':
+            case '0': // turn backlight off
                 _fadeBacklight(_backlightLevel, 0);
                 break;
-            case '1':
+            case '1': // turn backlight on
                 _fadeBacklight(0, _backlightLevel);
                 break;
-            case 'd':
+            case 'd': // redraw
                 _draw();
                 break;
-            case 'u':
+            case 'u': // update weather info
                 _getWeatherInfo([this](bool status) {
                     _draw();
                 });
                 break;
-            case 'g':
+            case 'p': // pause
+                LoopFunctions::remove(loop);
+                break;
+            case 'r': // resume
+                LoopFunctions::add(loop);
+                break;
+            case 'g': // gfx debug
                 _debugDisplayCanvasBorder = !_debugDisplayCanvasBorder;
                 _draw();
                 break;
@@ -584,7 +654,7 @@ void WeatherStationPlugin::_drawWeather() {
 
         // --- location
 
-        static const uint16_t palette[] PROGMEM = { COLORS_BACKGROUND, ST77XX_WHITE, ST77XX_RED, ST77XX_CYAN };
+        static const uint16_t palette[] PROGMEM = { COLORS_BACKGROUND, ST77XX_WHITE, ST77XX_YELLOW, ST77XX_BLUE };
         _drawBitmap(*_canvas, X_POSITION_WEATHER_ICON, Y_POSITION_WEATHER_ICON, getMiniMeteoconIconFromProgmem(info.weather[0].icon), palette);
 
         // create kind of shadow effect in case the text is drawn over the icon
@@ -607,11 +677,11 @@ void WeatherStationPlugin::_drawWeather() {
         String unit, temp;
         if (_isMetric) {
             unit = F(DEGREE_STR "C");
-            temp = String(OpenWeatherAPI::kelvinToC(info.val.temperature), 1) + unit;
+            temp = String(OpenWeatherMapAPI::kelvinToC(info.val.temperature), 1) + unit;
         }
         else {
             unit = F(DEGREE_STR "F");
-            temp = String(OpenWeatherAPI::kelvinToF(info.val.temperature), 1) + unit;
+            temp = String(OpenWeatherMapAPI::kelvinToF(info.val.temperature), 1) + unit;
         }
 
 #if HAVE_DEGREE_SYMBOL

@@ -30,7 +30,12 @@ PROGMEM_STRING_DEF(stk500v1_sig_file, "/stk500v1/atmega.csv");
 PROGMEM_STRING_DEF(stk500v1_tmp_file, "/stk500v1/firmware_tmp.hex");
 
 STK500v1Programmer::STK500v1Programmer(Stream &serial) : _serial(serial), _delayTimeout(0), _timeout(400), _pageSize(128), _logging(LOG_DISABLED) {
-    memcpy_P(_signature, PSTR("\x1e\x95\x0f"), 3);
+    _signature[0] = 0x1e;
+    _signature[1] = 0x95;
+    _signature[2] = 0x0f;
+    _fuseBytes[FUSE_LOW] = 0xff;
+    _fuseBytes[FUSE_HIGH] = 0xda;
+    _fuseBytes[FUSE_EXT] = 0xff;
     _pageBuffer = new uint8_t[_pageSize];
     BlinkLEDTimer::setBlink(500);
 }
@@ -237,7 +242,29 @@ void STK500v1Programmer::_serialWrite(const uint8_t *data, uint8_t length) {
     }
 }
 
+void STK500v1Programmer::_sendProgFuseExt(uint8_t fuseLow, uint8_t fuseHigh, uint8_t fuseExt) {
+    _setResponse_P(Response_INSYNC, sizeof(Response_INSYNC));
+    _logPrintf_P(PSTR("Sending prog fuse ext, f:l=%02x,h=%02x, e:%02x"), fuseLow, fuseHigh, fuseExt);
+
+    _serialWrite(Cmnd_STK_PROG_FUSE_EXT);
+    _serialWrite(fuseLow);
+    _serialWrite(fuseHigh);
+    _serialWrite(fuseExt);
+    _serialWrite(Sync_CRC_EOP);
+    _response.clear();
+    _setTimeout(_timeout);
+}
+
+
 void STK500v1Programmer::_flash() {
+
+    struct tm *tm;
+    auto now = time(nullptr);
+    char temp[64];
+
+    tm = timezone_localtime(&now);
+    timezone_strftime_P(temp, sizeof(temp), PSTR("%FT%TZ"), tm);
+    _logPrintf_P(PSTR("--- %s"), temp);
 
     if (!_file.validate()) {
         PrintString str(F("Validation of the input file failed: %s"), _file.getErrorMessage());
@@ -276,7 +303,6 @@ void STK500v1Programmer::_flash() {
                 _sendCommand_P(Command_READ_SIGNATURE, sizeof(Command_READ_SIGNATURE));
 
                 _readResponse([this]() {
-                    Options_t options;
 
                     PrintString str;
                     str.printf_P(PSTR("Device signature = 0x%02x%02x%02x\n"), _signature[0], _signature[1], _signature[2]);
@@ -285,99 +311,113 @@ void STK500v1Programmer::_flash() {
                     _logPrintf_P(PSTR("Signature verified"));
                     _printResponse();
 
-                    memset(&options, 0, sizeof(options));
-                    options.pageSizeHigh = highByte(_pageSize);
-                    options.pageSizeLow = lowByte(_pageSize);
-
-                    _sendCommandSetOptions(options);
+                    _sendProgFuseExt(_fuseBytes[FUSE_LOW], _fuseBytes[FUSE_HIGH], _fuseBytes[FUSE_EXT]);
 
                     _readResponse([this]() {
+                        Options_t options;
 
-                        _logPrintf_P(PSTR("Options set"));
+                        _logPrintf_P(PSTR("Fuse bits written"));
                         _printResponse();
 
-                        _setResponse_P(Response_INSYNC, sizeof(Response_INSYNC));
-                        _sendCommand_P(Command_ENTER_PROG_MODE, sizeof(Command_ENTER_PROG_MODE));
+                        memset(&options, 0, sizeof(options));
+                        options.pageSizeHigh = highByte(_pageSize);
+                        options.pageSizeLow = lowByte(_pageSize);
+
+                        _sendCommandSetOptions(options);
 
                         _readResponse([this]() {
 
-                            _file.reset();
-                            _startPosition(F("\nWriting"));
-
-                            _logPrintf_P(PSTR("Entered programming mode"));
+                            _logPrintf_P(PSTR("Options set"));
                             _printResponse();
 
-                            _readFile(
-                                [this](uint16_t address, uint16_t length, Callback_t success, Callback_t failure) {
-                                    _writePage(address, length, success, failure);
-                                },
-                                [this]() {
+                            _setResponse_P(Response_INSYNC, sizeof(Response_INSYNC));
+                            _sendCommand_P(Command_ENTER_PROG_MODE, sizeof(Command_ENTER_PROG_MODE));
 
-                                    _endPosition(F("Complete"), false);
-                                    _logPrintf_P(PSTR("Programming completed"));
+                            _readResponse([this]() {
 
-                                    // reset file and page buffer
-                                    _file.reset();
-                                    _pageAddress = 0;
-                                    _pagePosition = 0;
-                                    _verified = 0;
-                                    _clearPageBuffer();
+                                _file.reset();
+                                _startPosition(F("\nWriting"));
 
-                                    _startPosition(F("Reading"));
+                                _logPrintf_P(PSTR("Entered programming mode"));
+                                _printResponse();
 
-                                    _readFile(
-                                        [this](uint16_t address, uint16_t length, Callback_t success, Callback_t failure) {
-                                            _verifyPage(address, length, success, failure);
-                                        },
-                                        [this]() {
+                                _readFile(
+                                    [this](uint16_t address, uint16_t length, Callback_t success, Callback_t failure) {
+                                        _writePage(address, length, success, failure);
+                                    },
+                                    [this]() {
 
-                                            _endPosition(F("Complete"), false);
-                                            PrintString str(F("%u bytes verified\n"), _verified);
-                                            _status(str);
+                                        _endPosition(F("Complete"), false);
+                                        _logPrintf_P(PSTR("Programming completed"));
 
-                                            _logPrintf_P(PSTR("Verification completed"));
+                                        // reset file and page buffer
+                                        _file.reset();
+                                        _pageAddress = 0;
+                                        _pagePosition = 0;
+                                        _verified = 0;
+                                        _clearPageBuffer();
 
-                                            _setResponse_P(Response_INSYNC, sizeof(Response_INSYNC));
-                                            _sendCommand_P(Command_LEAVE_PROG_MODE, sizeof(Command_LEAVE_PROG_MODE));
+                                        _startPosition(F("Reading"));
 
-                                            _readResponse([this]() {
+                                        _readFile(
+                                            [this](uint16_t address, uint16_t length, Callback_t success, Callback_t failure) {
+                                                _verifyPage(address, length, success, failure);
+                                            },
+                                            [this]() {
 
-                                                _logPrintf_P(PSTR("Left programming mode"));
-                                                _done(true);
+                                                _endPosition(F("Complete"), false);
+                                                PrintString str(F("%u bytes verified\n"), _verified);
+                                                _status(str);
 
-                                            }, [this]() {
+                                                _logPrintf_P(PSTR("Verification completed"));
 
-                                                _logPrintf_P(PSTR("Failed to leave programming mode"));
-                                                _printResponse();
+                                                _setResponse_P(Response_INSYNC, sizeof(Response_INSYNC));
+                                                _sendCommand_P(Command_LEAVE_PROG_MODE, sizeof(Command_LEAVE_PROG_MODE));
+
+                                                _readResponse([this]() {
+
+                                                    _logPrintf_P(PSTR("Left programming mode"));
+                                                    _done(true);
+
+                                                }, [this]() {
+
+                                                    _logPrintf_P(PSTR("Failed to leave programming mode"));
+                                                    _printResponse();
+                                                    _done(false);
+                                                });
+
+                                            },
+                                            [this]() {
+                                                _endPosition(F("READ ERROR"), true);
+
+                                                _logPrintf_P(PSTR("Verifying failed"));
                                                 _done(false);
-                                            });
+                                            }
+                                        );
 
-                                        },
-                                        [this]() {
-                                            _endPosition(F("READ ERROR"), true);
+                                    },
+                                    [this]() {
+                                        _endPosition(F("WRITE ERROR"), true);
 
-                                            _logPrintf_P(PSTR("Verifying failed"));
-                                            _done(false);
-                                        }
-                                    );
+                                        _logPrintf_P(PSTR("Uploading failed"));
+                                        _done(false);
+                                    }
+                                );
 
-                                },
-                                [this]() {
-                                    _endPosition(F("WRITE ERROR"), true);
-
-                                    _logPrintf_P(PSTR("Uploading failed"));
-                                    _done(false);
-                                }
-                            );
+                            }, [this]() {
+                                _logPrintf_P(PSTR("Failed to enter programming mode"));
+                                _printResponse();
+                                _done(false);
+                            });
 
                         }, [this]() {
-                            _logPrintf_P(PSTR("Failed to enter programming mode"));
+                            _logPrintf_P(PSTR("Failed to set options"));
                             _printResponse();
                             _done(false);
                         });
 
                     }, [this]() {
-                        _logPrintf_P(PSTR("Failed to set options"));
+                        _logPrintf_P(PSTR("Failed to write fuse bits"));
                         _printResponse();
                         _done(false);
                     });
@@ -531,6 +571,12 @@ void STK500v1Programmer::setSignature(const char *signature) {
 
 void STK500v1Programmer::setSignature_P(PGM_P signature) {
     memcpy_P(_signature, signature, sizeof(_signature));
+}
+
+void STK500v1Programmer::setFuseBytes(uint8_t low, uint8_t high, uint8_t extended) {
+    _fuseBytes[FUSE_LOW] = low;
+    _fuseBytes[FUSE_HIGH] = high;
+    _fuseBytes[FUSE_EXT] = extended;
 }
 
 void STK500v1Programmer::dumpLog(Stream &output) {

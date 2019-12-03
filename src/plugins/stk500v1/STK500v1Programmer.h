@@ -21,7 +21,9 @@ public:
         Cmnd_STK_ENTER_PROGMODE =       0x50,
         Cmnd_STK_LEAVE_PROGMODE =       0x51,
         Cmnd_STK_LOAD_ADDRESS =         0x55,
+        Cmnd_STK_PROG_FUSE =            0x62,
         Cmnd_STK_PROG_PAGE =            0x64,
+        Cmnd_STK_PROG_FUSE_EXT =        0x65,
         Cmnd_STK_READ_PAGE =            0x74,
         Cmnd_STK_READ_SIGN =            0x75,
     } CommandsEnum_t;
@@ -37,6 +39,12 @@ public:
         TYPE_FLASH = 'F',
         TYPE_EEPROM = 'E',
     } ProgPageTypeEnum_t;
+
+    typedef enum {
+        FUSE_LOW,
+        FUSE_HIGH,
+        FUSE_EXT,
+    } FuseEnum_t;
 
     typedef struct {
         uint8_t deviceCode;
@@ -104,6 +112,7 @@ public:
 public:
     void setSignature(const char *signature);
     void setSignature_P(PGM_P signature);
+    void setFuseBytes(uint8_t low, uint8_t high, uint8_t extended);
     static bool getSignature(const char *mcu, char *signature);
 
 private:
@@ -121,6 +130,7 @@ private:
     void _sendCommandLoadAddress(uint16_t address);
     void _sendCommandProgPage(const uint8_t *data, uint16_t length);
     void _sendCommandReadPage(const uint8_t *data, uint16_t length);
+    void _sendProgFuseExt(uint8_t fuseLow, uint8_t fuseHigh, uint8_t fuseExt);
     void _setResponse_P(PGM_P response, uint8_t length);
     void _loopFunction();
     void _readResponse(Callback_t success, Callback_t failure);
@@ -153,6 +163,7 @@ private:
 
 private:
     char _signature[3];
+    char _fuseBytes[3];
     IntelHexFormat _file;
     uint16_t _pageSize;
     uint8_t *_pageBuffer;

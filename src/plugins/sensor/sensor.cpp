@@ -15,6 +15,7 @@
 #include "Sensor_HLW80xx.h"
 #include "Sensor_HLW8012.h"
 #include "Sensor_HLW8032.h"
+#include "Sensor_Battery.h"
 
 #if DEBUG_IOT_SENSOR
 #include <debug_helper_enable.h>
@@ -59,6 +60,9 @@ void SensorPlugin::setup(PluginSetupMode_t mode) {
 #endif
 #if IOT_SENSOR_HAVE_HLW8032
     _sensors.push_back(new Sensor_HLW8032(F("HLW8032"), IOT_SENSOR_HLW8032_RX, IOT_SENSOR_HLW8032_TX, IOT_SENSOR_HLW8032_PF));
+#endif
+#if IOT_SENSOR_HAVE_BATTERY
+    _sensors.push_back(new Sensor_Battery(F("Battery")));
 #endif
 
 }

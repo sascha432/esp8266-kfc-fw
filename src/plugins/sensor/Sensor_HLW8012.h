@@ -31,12 +31,12 @@
 
 // number of pulses required after switching
 #ifndef IOT_SENSOR_HLW8012_CF1_MIN_COUNT
-#define IOT_SENSOR_HLW8012_CF1_MIN_COUNT        1
+#define IOT_SENSOR_HLW8012_CF1_MIN_COUNT        1               // >= 1
 #endif
 
 // number of pulses before switching from voltage to current
 #ifndef IOT_SENSOR_HLW8012_CF1_TOGGLE_COUNT
-#define IOT_SENSOR_HLW8012_CF1_TOGGLE_COUNT     5
+#define IOT_SENSOR_HLW8012_CF1_TOGGLE_COUNT     5               // >= IOT_SENSOR_HLW8012_CF1_MIN_COUNT
 #endif
 
 

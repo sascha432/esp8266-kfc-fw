@@ -22,6 +22,7 @@ public:
         CCS811,
         HLW8012,
         HLW8032,
+        BATTERY,
     } SensorEnumType_t;
 
     const uint8_t DEFAULT_UPDATE_RATE = 60;

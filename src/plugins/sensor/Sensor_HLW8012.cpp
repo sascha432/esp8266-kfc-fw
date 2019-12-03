@@ -120,7 +120,8 @@ void Sensor_HLW8012::_callbackCF1(unsigned long micros) {
         }
     }
     if (_input[1].counter > IOT_SENSOR_HLW8012_CF1_TOGGLE_COUNT) {
-        _input[1].counter = 0;
+        memset(&_input[1], 0, sizeof(_input[1]));
+        _input[1].timeout = millis() + IOT_SENSOR_HLW8012_TIMEOUT;
         if (_output == CURRENT) {
             _output = VOLTAGE;
         } else {
@@ -142,9 +143,7 @@ void Sensor_HLW8012::_calcPulseWidth(SensorInput_t &input, unsigned long micros)
         input.counter++;
     }
     else {
-        input.pulseWidth = 0;
-        input.pulseWidthIntegral = 0;
-        input.counter = 0;
+        memset(&input, 0, sizeof(input));
     }
     input.lastPulse = micros;
     input.timeout = millis() + IOT_SENSOR_HLW8012_TIMEOUT;

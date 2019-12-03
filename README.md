@@ -61,6 +61,10 @@ Serial console redirection via TCP
 
 STK500v1 programmer
 
+### RF24 Master
+
+Secure communication (no encryption though) with NRF24L01+ modules. Support for multiple channels/6 devices per channel.
+
 ### NTP Client
 
 NTP Client with timezone support via REST API
@@ -76,6 +80,10 @@ Ping remote hosts over the webui and run background ping statistics
 ### I2C Scanner
 
 Scan all GPIO pins for I2C devices
+
+### Weather Station
+
+Weather Station for TFT displays with openweathermap.org API.
 
 ### File Manager
 
@@ -110,3 +118,7 @@ https://github.com/akaJes/AsyncPing
 ### EspSaveCrash (store crash dump in EEPROM)
 
 https://github.com/krzychb/EspSaveCrash.git
+
+### RF24 (RF24 Master)
+
+https://github.com/nRF24/RF24

@@ -172,10 +172,12 @@ void BlindsControlPlugin::loopMethod() {
 #include "at_mode.h"
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(BCMS, "BCMS", "<channel=0/1>,<0=closed/1=open>", "Set channel state");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF(BCMD, "BCMD", "<0=swap channels/1=channel0/2=channel2>,<0/1>", "Set swap channel/channel 0/1 direction", "Display settings");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF(BCMC, "BCMC", "<channel=0/1>,<level=0-1023>,<open-time/ms>,<close-time/ms>,<current-limit=0-1023>,<limit-time/ms>", "Configure channel", "Display settings");
 
 #if IOT_BLINDS_CTRL_TESTMODE
 
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(BCME, "BCME", "<channel=0/1>,<direction=0/1>,<max-time/ms>,<level=0-1023>,<frequency/Hz>,<limit=0-1023>,<limit-time>", "Enable motor # for max-time milliseconds");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(BCME, "BCME", "<channel=0/1>,<direction=0/1>,<max-time/ms>,<level=0-1023>,<limit=0-1023>,<limit-time>", "Enable motor # for max-time milliseconds");
 
 void BlindsControlPlugin::_printTestInfo() {
 
@@ -236,6 +238,8 @@ void BlindsControlPlugin::atModeHelpGenerator() {
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(BCME));
 #endif
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(BCMS));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(BCMD));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(BCMC));
 }
 
 bool BlindsControlPlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) {
@@ -252,25 +256,99 @@ bool BlindsControlPlugin::atModeHandler(Stream &serial, const String &command, i
         }
         return true;
     }
+    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(BCMC))) {
+        if (argc == 6 || argc == -1) {
+            auto &cfg = config._H_W_GET(Config().blinds_controller);
+            uint8_t channel = 0xff;
+            if (argc == 6) {
+                channel = atoi(argv[0]) % 2;
+                cfg.channels[channel].pwmValue = (uint16_t)atoi(argv[1]);
+                cfg.channels[channel].openTime = (uint16_t)atoi(argv[2]);
+                cfg.channels[channel].closeTime = (uint16_t)atoi(argv[3]);
+                cfg.channels[channel].currentLimit = (uint16_t)atoi(argv[4]);
+                cfg.channels[channel].currentLimitTime = (uint16_t)atoi(argv[5]);
+                _readConfig();
+            }
+            for(uint8_t i = 0; i < 2; i++) {
+                if (channel == i || channel == 0xff) {
+                    serial.printf_P(PSTR("+BCMC: channel=%u,level=%u,open=%ums,close=%ums,current limit=%u (%umA)/%ums\n"),
+                        i,
+                        cfg.channels[i].pwmValue,
+                        cfg.channels[i].openTime,
+                        cfg.channels[i].closeTime,
+                        cfg.channels[i].currentLimit,
+                        ADC_TO_CURRENT(cfg.channels[i].currentLimit),
+                        cfg.channels[i].currentLimitTime
+                    );
+                }
+            }
+        }
+        else {
+            at_mode_print_invalid_arguments(serial);
+        }
+        return true;
+    }
+    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(BCMD))) {
+        if (argc == 2 || argc == -1) {
+            auto &cfg = config._H_W_GET(Config().blinds_controller);
+            if (argc == 2) {
+                uint8_t item = atoi(argv[0]) % 3;
+                uint8_t value = atoi(argv[1]) % 2;
+                switch(item) {
+                    case 0:
+                        cfg.swap_channels = value;
+                        break;
+                    case 1:
+                        cfg.channel0_dir = value;
+                        break;
+                    case 2:
+                        cfg.channel1_dir = value;
+                        break;
+                }
+                _readConfig();
+            }
+            serial.printf_P(PSTR("+BCMD: swap channels=%u\n"), cfg.swap_channels);
+            serial.printf_P(PSTR("+BCMD: channel 0 direction=%u\n"), cfg.channel0_dir);
+            serial.printf_P(PSTR("+BCMD: channel 1 direction=%u\n"), cfg.channel1_dir);
+        }
+        else {
+            at_mode_print_invalid_arguments(serial);
+        }
+        return true;
+    }
 #if IOT_BLINDS_CTRL_TESTMODE
     else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(BCME))) {
-        if (argc == 7) {
+        if (argc == 6) {
             uint8_t pins[] = { IOT_BLINDS_CTRL_M1_PIN, IOT_BLINDS_CTRL_M2_PIN, IOT_BLINDS_CTRL_M3_PIN, IOT_BLINDS_CTRL_M4_PIN };
-            uint8_t channel = atoi(argv[0]) % 2;
+            uint8_t channel = atoi(argv[0]);
             uint8_t direction = atoi(argv[1]) % 2;
             uint32_t time = atoi(argv[2]);
             uint16_t pwmLevel = atoi(argv[3]);
-            uint32_t pwmFrequency = atoi(argv[4]);
-            _currentLimit = atoi(argv[5]);
-            _currentLimitMinCount = atoi(argv[6]);
 
-            analogWriteFreq(pwmFrequency);
+            auto cfg = config._H_GET(Config().blinds_controller);
+            if (cfg.swap_channels) {
+                channel++;
+            }
+            channel %= 2;
+            if (channel == 0 && cfg.channel0_dir) {
+                direction++;
+            }
+            if (channel == 1 && cfg.channel1_dir) {
+                direction++;
+            }
+            direction %= 2;
+
+            _currentLimit = atoi(argv[4]);
+            _currentLimitMinCount = atoi(argv[5]);
+            _activeChannel = channel;
+
+            analogWriteFreq(IOT_BLINDS_CTRL_PWM_FREQ);
             for(uint i = 0; i < 4; i++) {
                 analogWrite(pins[i], LOW);
             }
             analogWrite(pins[(channel << 1) | direction], pwmLevel);
-            serial.printf_P(PSTR("+BCME: level %u current limit/%u %u frequency %.2fkHz\n"), pwmLevel, _currentLimit, _currentLimitMinCount, pwmFrequency / 1000.0);
-            serial.printf_P(PSTR("+BCME: channel %u direction %s time %u\n"), channel, direction == 0 ? PSTR("down") : PSTR("up"), time);
+            serial.printf_P(PSTR("+BCME: level %u current limit/%u %u frequency %.2fkHz\n"), pwmLevel, _currentLimit, _currentLimitMinCount, IOT_BLINDS_CTRL_PWM_FREQ / 1000.0);
+            serial.printf_P(PSTR("+BCME: channel %u direction %u time %u\n"), channel, direction, time);
 
             _peakCurrent = 0;
             _printCurrentTimeout.set(500);

@@ -139,6 +139,13 @@ static void deep_sleep_forever() {
 // }
 
 
+void remove_crash_counter_file() {
+#if SPIFFS_SUPPORT
+    SPIFFS.begin();
+    SPIFFS.remove(FSPGM(crash_counter_file));
+#endif
+}
+
 void setup() {
 
     Serial.begin(KFC_SERIAL_RATE);
@@ -234,6 +241,7 @@ void setup() {
                     switch(Serial.read()) {
                         case 'c':
                             RTCMemoryManager::clear();
+                            remove_crash_counter_file();
                             KFC_SAFE_MODE_SERIAL_PORT.println(F("RTC memory cleared"));
                             break;
                         case 'h':
@@ -252,10 +260,12 @@ void setup() {
                         case 'r':
                             resetDetector.setSafeMode(false);
                             resetDetector.clearCounter();
+                            remove_crash_counter_file();
                             return false;
                         case 's':
                             resetDetector.setSafeMode(1);
                             resetDetector.clearCounter();
+                            remove_crash_counter_file();
                             return false;
                     }
                 }

@@ -123,7 +123,6 @@ void BlindsControl::setValue(const String &id, const String &value, bool hasValu
 
 void BlindsControl::setChannel(uint8_t channel, BlindsChannel::StateEnum_t state) {
     _debug_printf_P(PSTR("BlindsControl::setChannel(%u, %u)\n"), channel, state);
-
     // perform action in _loopMethod
     _action.set(state, channel);
 }
@@ -193,10 +192,17 @@ const __FlashStringHelper *BlindsControl::_getStateStr(uint8_t channel) const {
 }
 
 void BlindsControl::_clearAdc() {
-    _debug_printf_P(PSTR("BlindsControl::_clearAdc(): rssel=%u\n"), _activeChannel == 0 ? HIGH : LOW);
+    uint8_t channel = _activeChannel;
+    if (_swapChannels) {
+        channel++;
+        _debug_printf_P(PSTR("BlindsControl::_clearAdc(): channels swapped\n"));
+    }
+    channel %= 2;
+
+    _debug_printf_P(PSTR("BlindsControl::_clearAdc(): rssel=%u\n"), channel == 0 ? HIGH : LOW);
 
     // select shunt
-    digitalWrite(IOT_BLINDS_CTRL_RSSEL_PIN, _activeChannel == 0 ? HIGH : LOW);
+    digitalWrite(IOT_BLINDS_CTRL_RSSEL_PIN, channel == 0 ? HIGH : LOW);
     delay(IOT_BLINDS_CTRL_RSSEL_WAIT);
 
     _adcIntegral = 0;
@@ -216,6 +222,22 @@ void BlindsControl::_updateAdc() {
 
 void BlindsControl::_setMotorSpeed(uint8_t channel, uint16_t speed, bool direction) {
     uint8_t pin1, pin2;
+
+    if (_swapChannels) {
+        channel++;
+        _debug_printf_P(PSTR("BlindsControl::_setMotorSpeed(): channels swapped\n"));
+    }
+    channel %= 2;
+
+    if (channel == 0 && _channel0Dir) {
+        _debug_printf_P(PSTR("BlindsControl::_setMotorSpeed(): direction inverted\n"));
+        direction = !direction;
+    }
+    if (channel == 1 && _channel1Dir) {
+        _debug_printf_P(PSTR("BlindsControl::_setMotorSpeed(): direction inverted\n"));
+        direction = !direction;
+    }
+
     if (channel == 0) {
         pin1 = IOT_BLINDS_CTRL_M1_PIN;
         pin2 = IOT_BLINDS_CTRL_M2_PIN;
@@ -225,6 +247,7 @@ void BlindsControl::_setMotorSpeed(uint8_t channel, uint16_t speed, bool directi
         pin2 = IOT_BLINDS_CTRL_M4_PIN;
     }
     _debug_printf_P(PSTR("BlindsControl::_setMotorSpeed(%u, %u, %u): pins %u, %u\n"), channel, speed, direction, pin1, pin2);
+
     if (direction) {
         analogWrite(pin1, speed);
         analogWrite(pin2, 0);
@@ -293,8 +316,12 @@ void BlindsControl::_saveState() {
 }
 
 void BlindsControl::_readConfig() {
-    _channels[0].setChannel(config._H_GET(Config().blinds_controller).channels[0]);
-    _channels[1].setChannel(config._H_GET(Config().blinds_controller).channels[1]);
+    auto cfg = config._H_GET(Config().blinds_controller);
+    _channels[0].setChannel(cfg.channels[0]);
+    _channels[1].setChannel(cfg.channels[1]);
+    _swapChannels = cfg.swap_channels;
+    _channel0Dir = cfg.channel0_dir;
+    _channel1Dir = cfg.channel1_dir;
     _loadState();
 }
 

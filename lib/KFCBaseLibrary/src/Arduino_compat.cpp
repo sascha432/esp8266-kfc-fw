@@ -146,35 +146,6 @@ File Dir::openFile(const char *mode) {
 }
 
 
-StringStream::StringStream(String & string) : _string(string), Stream() {
-    _position = 0;
-}
-
-StringStream::~StringStream() {
-}
-
-int StringStream::available() {
-    return _string.length() - _position;
-}
-
-int StringStream::read() {
-    if (_position < _string.length()) {
-        return _string.at(_position++);
-    }
-    return -1;
-}
-
-int StringStream::peek() {
-    if (_position < _string.length()) {
-        return _string.at(_position);
-    }
-    return -1;
-}
-
-size_t StringStream::write(uint8_t data) {
-    return 0;
-}
-
 EspClass ESP;
 
 void EspClass::rtcMemDump() {

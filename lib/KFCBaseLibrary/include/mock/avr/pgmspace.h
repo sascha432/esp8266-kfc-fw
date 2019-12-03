@@ -18,6 +18,7 @@ Author: sascha_lammers@gmx.de
 #define pgm_read_dword(addr) 		            (*reinterpret_cast<const uint32_t*>(addr))
 #define pgm_read_ptr(addr)                      (*reinterpret_cast<const void* const *>(addr))
 #define memcmp_P memcmp
+#define strncmp_P strncmp
 #define strcpy_P strcpy
 #define strcat_P strcpy
 #define strncpy_P strncpy

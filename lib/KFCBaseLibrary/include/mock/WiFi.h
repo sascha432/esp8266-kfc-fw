@@ -124,19 +124,4 @@ private:
     bool _isConnected;
 };
 
-class StringStream : public Stream {
-public:
-    StringStream(String &string);
-    virtual ~StringStream();
-
-    virtual int available() override;
-    virtual int read() override;
-    virtual int peek() override;
-    virtual size_t write(uint8_t data);
-
-private:
-    uint16_t _position;
-    String &_string;
-};
-
 extern ESP8266WiFiClass WiFi;

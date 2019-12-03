@@ -73,7 +73,7 @@ String generate_session_id(const char *username, const char *password, char *sal
     return sid;
 }
 
-bool  verify_session_id(const char *session_id, const char *username, const char *password) {
+bool verify_session_id(const char *session_id, const char *username, const char *password) {
     char salt[8];
 
     if (strlen(session_id) != (SESSION_SALT_LENGTH + SESSION_HASH_LENGTH) * 2) {

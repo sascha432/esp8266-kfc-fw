@@ -443,17 +443,32 @@ void KFCFWConfiguration::restoreFactorySettings() {
 
 #if IOT_BLINDS_CTRL
     BlindsController blinds;
-    blinds.channels[0].pwmValue = 250;
-    blinds.channels[0].currentLimit = 70;
-    blinds.channels[0].currentLimitTime = 20;
-    blinds.channels[0].openTime = 2200;
-    blinds.channels[0].closeTime = 2800;
-    blinds.channels[1].pwmValue = 750;
-    blinds.channels[1].currentLimit = 130;
-    blinds.channels[1].currentLimitTime = 20;
+    blinds.swap_channels = 1;
+    blinds.channel0_dir = 0;
+    blinds.channel1_dir = 0;
+    blinds.channels[0].pwmValue = 600;
+    blinds.channels[0].currentLimit = 110;
+    blinds.channels[0].currentLimitTime = 50;
+    blinds.channels[0].openTime = 2000;
+    blinds.channels[0].closeTime = 3100;
+    blinds.channels[1].pwmValue = 900;
+    blinds.channels[1].currentLimit = 140;
+    blinds.channels[1].currentLimitTime = 50;
     blinds.channels[1].openTime = 7500;
     blinds.channels[1].closeTime = 7500;
     _H_SET(Config().blinds_controller, blinds);
+#endif
+
+#if IOT_WEATHER_STATION
+    _H_SET_STR(Config().weather_station.openweather_api_key, F("GET_YOUR_API_KEY_openweathermap.org"));
+    _H_SET_STR(Config().weather_station.openweather_api_query, F("New York,US"));
+    _H_SET(Config().weather_station.config, WeatherStationConfig_t({
+        false,  // use metric
+        false,  // use 24h time format
+        15,     // weather_poll_interval in minutes, 0 to disable auto update
+        30,     // api_timeout in seconds
+        100,    // backlight level in %
+    }));
 #endif
 
 #if CUSTOM_CONFIG_PRESET

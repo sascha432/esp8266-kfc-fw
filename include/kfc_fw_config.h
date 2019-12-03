@@ -166,6 +166,23 @@ struct BlindsControllerChannel {
 
 struct BlindsController {
     struct BlindsControllerChannel channels[2];
+    uint8_t swap_channels: 1;
+    uint8_t channel0_dir: 1;
+    uint8_t channel1_dir: 1;
+};
+
+typedef struct  {
+    uint8_t is_metric: 1;
+    uint8_t time_format_24h: 1;
+    uint16_t weather_poll_interval;
+    uint16_t api_timeout;
+    uint8_t backlight_level;
+} WeatherStationConfig_t;
+
+struct WeatherStation {
+    char openweather_api_key[65];
+    char openweather_api_query[65];
+    WeatherStationConfig_t config;
 };
 
 struct DimmerModuleButtons {
@@ -233,6 +250,7 @@ struct Config {
     struct Serial2Tcp serial2tcp;
     struct HueConfig hue;
     struct Ping ping;
+    WeatherStation weather_station;
 };
 
 #define _H_IP_FORM_OBJECT(name)                     config._H_GET_IP(name), [](const IPAddress &addr, FormField &) { config._H_SET_IP(name, addr); }

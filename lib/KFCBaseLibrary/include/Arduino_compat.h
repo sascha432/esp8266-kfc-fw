@@ -80,8 +80,9 @@ class __FlashStringHelper;
 #include <vector>
 #include <iostream>
 #include <Psapi.h>
+#include <CRTDBG.h>
 
-#define __attribute__(a)    
+#define __attribute__(a)
 
 #ifndef DEBUG_OUTPUT
 #define DEBUG_OUTPUT Serial

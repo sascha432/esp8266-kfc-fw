@@ -13,9 +13,13 @@ public:
     OpenWeatherForecastJsonReader(Stream *stream, OpenWeatherMapAPI::WeatherForecast &forecast);
     OpenWeatherForecastJsonReader(OpenWeatherMapAPI::WeatherForecast &forecast);
 
+    virtual bool beginObject(bool isArray);
+    virtual bool endObject();
     virtual bool processElement();
     virtual bool recoverableError(JsonErrorEnum_t errorType);
 
 private:
     OpenWeatherMapAPI::WeatherForecast &_forecast;
+    OpenWeatherMapAPI::Forecast_t _item;
+    String _itemKey;
 };

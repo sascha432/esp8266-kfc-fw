@@ -30,6 +30,8 @@ PROGMEM_STRING_DECL(mqtt_brightness_command_topic);
 PROGMEM_STRING_DECL(mqtt_brightness_scale);
 PROGMEM_STRING_DECL(mqtt_color_temp_state_topic);
 PROGMEM_STRING_DECL(mqtt_color_temp_command_topic);
+PROGMEM_STRING_DECL(mqtt_rgb_state_topic);
+PROGMEM_STRING_DECL(mqtt_rgb_command_topic);
 PROGMEM_STRING_DECL(mqtt_unit_of_measurement);
 PROGMEM_STRING_DECL(mqtt_value_template);
 

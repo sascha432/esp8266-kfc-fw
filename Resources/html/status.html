@@ -205,6 +205,18 @@
                     <td>%BLINDSCTRL_STATUS%</td>
                 </tr>
                 <!--#endif-->
+                <!--#if IOT_CLOCK-->
+                <tr>
+                    <td>Clock</td>
+                    <td>%CLOCK_STATUS%</td>
+                </tr>
+                <!--#endif-->
+                <!--#if IOT_WEATHER_STATION-->
+                <tr>
+                    <td>Weather Station</td>
+                    <td>%WEATHER_STATION_STATUS%</td>
+                </tr>
+                <!--#endif-->
             </tbody>
             <!--#if 0 && MDNS_SUPPORT-->
             <thead>

@@ -97,7 +97,7 @@ void Serial2TcpClient::_onDisconnect(AsyncClient *client, const __FlashStringHel
     auto time = getAutoReconnect();
     if (time) {
         Scheduler.removeTimer(_timer);
-        _timer = Scheduler.addTimer(time * 1000, false, [this](EventScheduler::TimerPtr timer) {
+        Scheduler.addTimer(&_timer, time * 1000, false, [this](EventScheduler::TimerPtr timer) {
             _timer = nullptr; // connect removes the timer but it already has triggered
             _connect();
         });

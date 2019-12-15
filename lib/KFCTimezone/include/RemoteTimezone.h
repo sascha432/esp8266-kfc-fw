@@ -7,6 +7,11 @@
 #include <Arduino_compat.h>
 #include <functional>
 
+#ifndef DEBUG_REMOTE_TIMEZONE
+#define DEBUG_REMOTE_TIMEZONE 					0
+#endif
+
+
 #if _WIN32 || _WIN64
 #define TIMEZONE_USE_HTTP_CLIENT				1
 #elif defined(ESP32)

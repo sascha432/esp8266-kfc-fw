@@ -21,6 +21,10 @@ class WsClient;
 //typedef std::function<WsClient *(WsClient *wsSClient, WsAwsEventType type, AsyncWebSocket *server, AsyncWebSocketClient *client, uint8_t *data, size_t len, void *arg)> WsEventHandlerCallback;
 typedef std::function<WsClient *(AsyncWebSocketClient *client)> WsGetInstance;
 
+typedef enum : uint16_t {
+    RGB565_RLE_COMPRESSED_BITMAP            = 0x0001,
+} WebSocketBinaryPacketUnqiueId_t;
+
 class WsClient {
 public:
     enum WsErrorType {
@@ -93,6 +97,19 @@ public:
     // verify that the client is attached to the server
     static void safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, const String &message);
 
+public:
+    typedef enum {
+        CONNECT,
+        AUTHENTICATED,
+        DISCONNECT,
+    } ClientCallbackTypeEnum_t;
+
+    typedef std::function<void(ClientCallbackTypeEnum_t type, WsClient *client)> ClientCallback_t;
+
+    typedef std::vector<ClientCallback_t> ClientCallbackVector_t;
+
+    static void addClientCallback(ClientCallback_t callback);
+
 protected:
     static void invokeStartOrEndCallback(WsClient *wsClient, bool isStart);
 
@@ -104,4 +121,5 @@ private:
     uint8_t *_salt;
 #endif
     AsyncWebSocketClient *_client;
+    static ClientCallbackVector_t _clientCallback;
 };

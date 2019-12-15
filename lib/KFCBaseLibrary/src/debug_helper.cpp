@@ -27,5 +27,4 @@ const char *DebugHelper::basename(const String &file) {
     return p ? p + 1   : file.c_str();
 }
 
-
 #endif

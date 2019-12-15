@@ -111,7 +111,7 @@ void at_mode_display_help(Stream &output) {
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_NNPP(AT, "Print OK", "Show help");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DSLP, "DSLP", "[<milliseconds>[,<mode>]]", "Enter deep sleep");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(RST, "RST", "Soft reset");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RST, "RST", "[<s>]", "Soft reset. 's' enables safe mode");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(CMDS, "CMDS", "Send a list of available AT commands");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(LOAD, "LOAD", "Discard changes and load settings from EEPROM");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(STORE, "STORE", "Store current settings in EEPROM");
@@ -240,7 +240,7 @@ static void create_heap_timer(int seconds) {
     if (Scheduler.hasTimer(heapTimer)) {
         heapTimer->changeOptions(seconds * 1000);
     } else {
-        heapTimer = Scheduler.addTimer(seconds * 1000, true, heap_timer_callback, EventScheduler::PRIO_LOW);
+        Scheduler.addTimer(&heapTimer, seconds * 1000, true, heap_timer_callback, EventScheduler::PRIO_LOW);
     }
 }
 
@@ -456,7 +456,13 @@ void at_mode_serial_handle_event(String &commandString) {
                 config.enterDeepSleep(time, mode, 1);
             }
             else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(RST))) {
-                output.println(F("Software reset..."));
+                if (argc == 1 && *args[0] == 's') {
+                    resetDetector.setSafeMode(1);
+                    output.println(F("Software reset, safe mode enabled..."));
+                }
+                else {
+                    output.println(F("Software reset..."));
+                }
                 config.restartDevice();
             }
             else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(CMDS))) {
@@ -498,7 +504,7 @@ void at_mode_serial_handle_event(String &commandString) {
                 channel = argc == 1 ? atoi(args[0]) : 0;
                 MySerial.printf_P(PSTR("+i2ct=17,82,ff,00,00,00,00,00,00,10\n"));
                 Scheduler.removeTimer(timer);
-                timer = Scheduler.addTimer(4000, true, [&output](EventScheduler::TimerPtr timer) {
+                Scheduler.addTimer(&timer, 4000, true, [&output](EventScheduler::TimerPtr timer) {
                     value += 50;
                     if (value > 8333) {
                         value = 8333;
@@ -586,7 +592,7 @@ void at_mode_serial_handle_event(String &commandString) {
                     if (state && !timer) {
                         output.println(F("+PINM: started"));
                         Stream *serialPtr = &output;
-                        timer = Scheduler.addTimer(1000, true, [serialPtr](EventScheduler::TimerPtr timer) {
+                        Scheduler.addTimer(&timer, 1000, true, [serialPtr](EventScheduler::TimerPtr timer) {
                             PinMonitor::getInstance()->dumpPins(*serialPtr);
                         });
                     }
@@ -699,7 +705,6 @@ void at_mode_serial_handle_event(String &commandString) {
                 }
             }
             else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(PANIC))) {
-                output.println(F("Calling panic()"));
                 delay(100);
                 panic();
             }

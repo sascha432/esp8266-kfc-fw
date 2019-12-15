@@ -4,6 +4,30 @@
 
 #include "Arduino_compat.h"
 
+#if _MSC_VER
+#include <winternl.h>
+#endif
+
+void ___debugbreak_and_panic(const char *filename, int line, const char *function) {
+#if DEBUG
+    DEBUG_OUTPUT.printf_P(PSTR("___debugbreak_and_panic() called in %s:%u - %s\n"), filename, line, function);
+#endif
+#if _MSC_VER
+    bool doPanic = false;
+    __try {
+        __debugbreak();
+    }
+    __except (GetExceptionCode() == EXCEPTION_BREAKPOINT ? EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH) {
+        doPanic = true;
+    }
+    if (doPanic) {
+        panic();
+    }
+#else
+    panic();
+#endif
+}
+
 #if _WIN32 || _WIN64
 
 #include <algorithm>
@@ -28,6 +52,33 @@ static bool millis_initialized = init_millis();
 static bool init_millis() {
     millis_start_time = millis();
     return true;
+}
+
+LPWStr::LPWStr() : _str(nullptr) {
+    lpw_str(String());
+}
+
+LPWStr::LPWStr(const String& str) : _str(nullptr) {
+    lpw_str(str);
+}
+
+LPWStr::~LPWStr() {
+    delete[] _str;
+}
+
+LPWSTR LPWStr::lpw_str(const String& str) {
+    if (_str) {
+        delete[] _str;
+    }
+    int slength = (int)str.length() + 1;
+    int len = MultiByteToWideChar(CP_ACP, 0, str.c_str(), slength, 0, 0);
+    _str = new wchar_t[len];
+    MultiByteToWideChar(CP_ACP, 0, str.c_str(), slength, _str, len);
+    return _str;
+}
+
+LPWSTR LPWStr::lpw_str() {
+    return _str;
 }
 
 class GPIOPin {
@@ -105,10 +156,17 @@ void detachInterrupt(uint8_t) {
 
 }
 
+static bool panic_message_box_active = false;
 
 void panic() {
     printf("panic() called\n");
-    abort();
+    if (!panic_message_box_active) {
+        panic_message_box_active = true;
+        if (MessageBox(NULL, L"panic() called. Continue execution?", L"Error", MB_OK | MB_ICONERROR | MB_APPLMODAL | MB_YESNO) != IDYES) {
+            ExitProcess(-1);
+        }
+        panic_message_box_active = false;
+    }
 }
 
 static bool winsock_initialized = false;

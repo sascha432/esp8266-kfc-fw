@@ -13,6 +13,7 @@ public:
     OpenWeatherInfoJsonReader(Stream *stream, OpenWeatherMapAPI::WeatherInfo &info);
     OpenWeatherInfoJsonReader(OpenWeatherMapAPI::WeatherInfo &info);
 
+    virtual bool beginObject(bool isArray);
     virtual bool processElement();
     virtual bool recoverableError(JsonErrorEnum_t errorType);
 

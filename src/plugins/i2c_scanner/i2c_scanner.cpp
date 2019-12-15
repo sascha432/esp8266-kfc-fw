@@ -76,7 +76,7 @@ void check_if_exist_I2C(Print &output) {
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(SCANI2C, "SCANI2C", "Scan for I2C bus and devices (might cause a crash)");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(SCAND, "SCAND", "Scan for devices");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CS, "I2CS", "<SDA,SCL[,speed=100kHz[,clock strech limit=usec]]>", "Setup I2C bus");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CS, "I2CS", "<SDA,SCL[,speed=100kHz[,clock strech limit=usec]]>", "Setup I2C bus. Use reset to restore defaults");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CST, "I2CST", "<address,byte[,byte][,...]>", "Send data to slave (hex encoded: ff or 0xff)");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CSR, "I2CSR", "<address,count>", "Request data from slave");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CCCS811, "I2CCCS811", "<address>[,<temperature=25>][,<humidity=55>]", "Read CCS811 sensor");
@@ -146,7 +146,11 @@ void I2CScannerPlugin::atModeHelpGenerator() {
 
 bool I2CScannerPlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) {
     if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(I2CS))) {
-        if (argc < 2) {
+        if (argc == 1 && constexpr_String_equalsIgnoreCase(argv[0], PSTR("reset"))) {
+            serial.print(F("+I2CS: "));
+            config.initTwoWire(true, &serial);
+        }
+        else if (argc < 2) {
             at_mode_print_invalid_arguments(serial);
         }
         else {

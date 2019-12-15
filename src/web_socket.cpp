@@ -28,6 +28,8 @@
 #include <debug_helper_disable.h>
 #endif
 
+ WsClient::ClientCallbackVector_t  WsClient::_clientCallback;
+
  WsClient::WsClient(AsyncWebSocketClient * client) {
      _authenticated = false;
      _isEncryped = false;
@@ -81,8 +83,7 @@
 
     _debug_printf_P(PSTR("WsClient::onWsEvent(event %d, wsClient %p)\n"), type, wsClient);
     if (!wsClient) {
-        debug_printf_P(PSTR("WsClient::onWsEvent(): getInstance() returned nullptr\n"));
-        panic();
+        __debugbreak_and_panic_printf_P(PSTR("WsClient::onWsEvent(): getInstance() returned nullptr\n"));
     }
 
     if (type == WS_EVT_CONNECT) {
@@ -93,12 +94,20 @@
 
         wsClient->onConnect(data, len);
 
+        for(const auto &callback: _clientCallback) {
+            callback(ClientCallbackTypeEnum_t::CONNECT, wsClient);
+        }
+
     } else if (type == WS_EVT_DISCONNECT) {
 
         Logger_notice(F(WS_PREFIX "%s: Client disconnected"), WS_PREFIX_ARGS, client->remoteIP().toString().c_str());
         wsClient->onDisconnect(data, len);
 
         WsClient::invokeStartOrEndCallback(wsClient, false);
+
+        for(const auto &callback: _clientCallback) {
+            callback(ClientCallbackTypeEnum_t::DISCONNECT, wsClient);
+        }
 
         // WS_EVT_DISCONNECT is called in the destructor of AsyncWebSocketClient
         delete wsClient;
@@ -173,6 +182,11 @@
                 WsClient::invokeStartOrEndCallback(wsClient, true);
                 client->text(F("+AUTH_OK"));
                 wsClient->onAuthenticated(data, len);
+
+                for(const auto &callback: _clientCallback) {
+                    callback(ClientCallbackTypeEnum_t::AUTHENTICATED, wsClient);
+                }
+
             }
             else {
                 wsClient->setAuthenticated(false);
@@ -268,6 +282,10 @@ void WsClient::onData(AwsFrameType type, uint8_t *data, size_t len) {
       }
     }
   }*/
+
+void WsClient::addClientCallback(ClientCallback_t callback) {
+    _clientCallback.push_back(callback);
+}
 
 void WsClient::invokeStartOrEndCallback(WsClient *wsClient, bool isStart) {
     uint16_t authenticatedClients = 0;

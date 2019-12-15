@@ -126,6 +126,14 @@ void MQTTAutoDiscovery::addColorTempCommandTopic(const String &value) {
     addParameter(FSPGM(mqtt_color_temp_command_topic), value);
 }
 
+void MQTTAutoDiscovery::addRGBStateTopic(const String &value) {
+    addParameter(FSPGM(mqtt_rgb_state_topic), value);
+}
+
+void MQTTAutoDiscovery::addRGBCommandTopic(const String &value) {
+    addParameter(FSPGM(mqtt_rgb_command_topic), value);
+}
+
 void MQTTAutoDiscovery::addUnitOfMeasurement(const String &value) {
     addParameter(FSPGM(mqtt_unit_of_measurement), value);
 }

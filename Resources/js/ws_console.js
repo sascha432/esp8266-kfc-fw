@@ -9,6 +9,7 @@
 // callback({type: 'close', socket: ws_console, event: e, connect_counter: int, was_authenticated: bool });
 // callback({type: 'error', socket: ws_console, event: e, connect_counter: int, was_authenticated: bool });
 // callback({type: 'data', socket: ws_console, data: "message received from socket"});
+// callback({type: 'binary', socket: ws_console, data: ArrayBuffer/blob});
 
 
 window.ws_console_is_debug = false;
@@ -99,6 +100,7 @@ WS_Console.prototype.connect = function(authenticated_callback) {
     this.authenticated = false;
     if (window.ws_console_is_debug) console.log("new WebSocket", this.url);
     this.socket = new WebSocket(this.url);
+    this.socket.binaryType = 'arraybuffer';
     if (window.ws_console_is_debug) console.log(this.url);
 
     var ws_console = this;

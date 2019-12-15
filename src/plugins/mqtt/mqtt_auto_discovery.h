@@ -31,6 +31,8 @@ public:
     void addBrightnessScale(uint32_t brightness);
     void addColorTempStateTopic(const String &value);
     void addColorTempCommandTopic(const String &value);
+    void addRGBStateTopic(const String &value);
+    void addRGBCommandTopic(const String &value);
     void addUnitOfMeasurement(const String &value);
     void addValueTemplate(const String &value);
 

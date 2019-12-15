@@ -14,23 +14,15 @@
 #include <Arduino_compat.h>
 #include <ESPAsyncWebServer.h>
 #include <HttpHeaders.h>
+#include <SpeedBooster.h>
+
+class WebServerSetCPUSpeedHelper : public SpeedBooster {
+public:
+    WebServerSetCPUSpeedHelper();
+};
 
 class FSMapping;
 class WebTemplate;
-
-// boost CPU speed
-class WebServerSetCPUSpeedHelper {
-public:
-    WebServerSetCPUSpeedHelper(const WebServerSetCPUSpeedHelper &helper) = delete;
-
-    WebServerSetCPUSpeedHelper();
-    ~WebServerSetCPUSpeedHelper();
-#if defined(ESP8266)
-private:
-    static uint8_t _counter;
-    bool _enabled;
-#endif
-};
 
 String network_scan_html(int8_t num_networks);
 bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWebServerRequest *request);

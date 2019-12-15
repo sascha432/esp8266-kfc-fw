@@ -7,7 +7,14 @@
 #include <Arduino_compat.h>
 #include <vector>
 
+
 #if DEBUG
+
+void ___debugbreak_and_panic(const char* filename, int line, const char* function);
+
+// invokes panic() on ESP8266/32, calls __debugbreak() with visual studio to intercept and debug the error
+#define __debugbreak_and_panic()                        ___debugbreak_and_panic(DebugHelper::basename(__FILE__), __LINE__, __FUNCTION__)
+#define __debugbreak_and_panic_printf_P(fmt, ...)       DEBUG_OUTPUT.printf_P(fmt, ## __VA_ARGS__); __debugbreak_and_panic();
 
 // call in setup, after initializing the output stream
 #define DEBUG_HELPER_INIT()                             DebugHelper::__state = DEBUG_HELPER_STATE_DEFAULT;
@@ -135,6 +142,9 @@ T _debug_helper_print_result_P(const char *file, int line, const char *function,
 
 #define DEBUG_HELPER_INIT()         ;
 #define DEBUG_HELPER_SILENT()       ;
+
+#define __debugbreak_and_panic()                        panic();
+#define __debugbreak_and_panic_printf_P(fmt, ...)       Serial.printf_P(fmt, __VA_ARGS__); panic();
 
 #define debug_print(...)            ;
 #define debug_println(...)          ;

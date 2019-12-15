@@ -387,7 +387,96 @@ var webUIComponent = {
     },
 
     socketHandler: function(event) {
-        if (event.data) {
+        if (event.data instanceof ArrayBuffer) {
+            var packetId = new Uint16Array(event.data, 0, 1);
+            if (packetId == 0x0001) {// RGB565_RLE_COMPRESSED_BITMAP
+
+                if ($('#screen_capture_canvas').length == 0) {
+                    var bottom = window._webui_debug ? '80' : '5';
+                    var tft_width = 128;
+                    var tft_height = 160;
+                    $('body').append('<canvas width="'+tft_width+'" height="'+tft_height+'" border="0" style="border:2px solid grey;z-index:999;position:fixed;right:5px;bottom:'+bottom+'px" id="screen_capture_canvas"></canvas>');
+                    var ctx = document.getElementById("screen_capture_canvas").getContext("2d");
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(0, 0, tft_width, tft_height);
+                }
+
+                var ctx = document.getElementById("screen_capture_canvas").getContext("2d");
+                var pos = packetId.byteLength;
+                var dim = new Uint16Array(event.data, pos, 5);
+                pos += dim.byteLength;
+                var x = dim[0];
+                var y = dim[1];
+                var width = dim[2];
+                var height = dim[3];
+                var paletteCount = dim[4];
+                var palette = [];
+                if (paletteCount) {
+                    palettergb565 = new Uint16Array(event.data, pos, paletteCount);
+                    pos += palettergb565.byteLength;
+                    for (var i = 0; i < palettergb565.length; i++) {
+                        var color = palettergb565[i];
+                        var b5 = (color & 0x1f);
+                        var g6 = (color >> 5) & 0x3f;
+                        var r5 = (color >> 11);
+                        var r8 = ( r5 * 527 + 23 ) >> 6;
+                        var g8 = ( g6 * 259 + 33 ) >> 6;
+                        var b8 = ( b5 * 527 + 23 ) >> 6;
+                        palette.push([r8, g8, b8]);
+                    }
+                }
+
+                // console.log("x",x,"y",y,"w",width,"h", height, "palette", paletteCount, "pos", pos);
+
+                var image = ctx.createImageData(width, height);
+                var writePos = 0;
+                if (paletteCount) {
+                    while(pos < event.data.byteLength) {
+                        var tmp = new Uint8Array(event.data, pos, 1)[0];
+                        pos++;
+                        var index = (tmp >> 4);
+                        var rle = tmp & 0xf;
+                        if (rle == 0xf) {
+                            rle = new Uint8Array(event.data, pos, 1)[0];
+                            pos++;
+                        }
+                        var color = palette[index]
+                        do {
+                            image.data[writePos++] = color[0];
+                            image.data[writePos++] = color[1];
+                            image.data[writePos++] = color[2];
+                            image.data[writePos++] = 0xff;
+                        } while(rle--);
+                    }
+                }
+                else {
+                    while(pos < event.data.byteLength) {
+                        var tmp = new Uint8Array(event.data, pos, 3);
+                        pos += tmp.byteLength;
+                        var rle = tmp[0];
+                        var color = (tmp[2] << 8) | tmp[1];
+                        var b5 = (color & 0x1f);
+                        var g6 = (color >> 5) & 0x3f;
+                        var r5 = (color >> 11); // & 0x1f;
+                        var r8 = ( r5 * 527 + 23 ) >> 6;
+                        var g8 = ( g6 * 259 + 33 ) >> 6;
+                        var b8 = ( b5 * 527 + 23 ) >> 6;
+                        // console.log("rle",rle,d"color",r8,g8,b8,"writePos",writePos,"color",color);
+                        do {
+                            image.data[writePos++] = r8;
+                            image.data[writePos++] = g8;
+                            image.data[writePos++] = b8;
+                            image.data[writePos++] = 0xff;
+                        } while(rle--);
+                    }
+                }
+                // console.log("pixel", writePos/4, "height", writePos/4/width, "left over x", (writePos/4)%width);
+                ctx.putImageData(image, x, y);
+
+            }
+
+        }
+        else if (event.data) {
             var json = JSON.parse(event.data);
             if (window._webui_debug) console.log("socket_handler", event, json)
             if (json.type === 'ue') {

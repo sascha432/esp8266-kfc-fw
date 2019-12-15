@@ -140,18 +140,12 @@ public:
         return readBytes((char *)buffer, length);
     }
 
-    size_t write(char data) {
-        return write((uint8_t)data);
-    }
-    size_t write(uint8_t data) {
-        return write(&data, sizeof(data));
-    }
-    virtual size_t write(const uint8_t *data, size_t len) {
-        size_t size = fwrite(data, 1, len, _fp);
+    size_t write(uint8_t data) override {
+        auto res = fwrite(&data, 1, 1, _fp);
         if (ferror(_fp)) {
             perror("write");
         }
-        return size;
+        return res;
     }
 
     virtual void close() {

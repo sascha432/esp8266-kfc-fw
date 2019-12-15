@@ -8,6 +8,12 @@
 #include "Timezone.h"
 #include "RemoteTimezone.h"
 
+#if DEBUG_REMOTE_TIMEZONE
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
+#endif
+
 #if TIMEZONE_USE_HTTP_CLIENT
 	#if defined(ESP8266)
 		#include <ESP8266HttpClient.h>
@@ -18,34 +24,42 @@
 	#include "asyncHTTPrequest.h"
 #endif
 
-RemoteTimezone::RemoteTimezone() {
-	_callback = nullptr;
-	_zoneEnd = 0;
+RemoteTimezone::RemoteTimezone() : _zoneEnd(0), _callback(nullptr)
+{
+	_debug_printf_P(PSTR("RemoteTimezone::RemoteTimezone()\n"));
 #if TIMEZONE_USE_HTTP_CLIENT == 0
 	_httpClient = nullptr;
 #endif
 }
 
-RemoteTimezone::~RemoteTimezone() {
+RemoteTimezone::~RemoteTimezone()
+{
+	_debug_printf_P(PSTR("RemoteTimezone::~RemoteTimezone()\n"));
 #if TIMEZONE_USE_HTTP_CLIENT == 0
-	delete _httpClient;
+	if (_httpClient) {
+		delete _httpClient;
+	}
 #endif
 }
 
-void RemoteTimezone::setUrl(const String url) {
+void RemoteTimezone::setUrl(const String url)
+{
 	_url = url;
 }
 
-void RemoteTimezone::setTimezone(const String zoneName) {
+void RemoteTimezone::setTimezone(const String zoneName)
+{
 	_zoneName = zoneName;
 }
 
-void RemoteTimezone::setStatusCallback(RemoteTimezoneStatusCallback_t callback) {
+void RemoteTimezone::setStatusCallback(RemoteTimezoneStatusCallback_t callback)
+{
 	_callback = callback;
 }
 
-void RemoteTimezone::get() {
-
+void RemoteTimezone::get()
+{
+	_debug_printf_P(PSTR("RemoteTimezone::get()\n"));
 	_zoneEnd = 0;
 
 	String url = _url;
@@ -55,6 +69,8 @@ void RemoteTimezone::get() {
 
 #if TIMEZONE_USE_HTTP_CLIENT
 	HTTPClient http;
+
+	_debug_printf_P(PSTR("RemoteTimezone::HTTPClient(): url=%s\n"), url.c_str());
 
 	http.begin(url);
 	int httpCode = http.GET();
@@ -70,6 +86,8 @@ void RemoteTimezone::get() {
 	}
 	http.end();
 #else
+
+	_debug_printf_P(PSTR("RemoteTimezone::asyncHTTPrequest(): url=%s\n"), url.c_str());
 
 	if (_httpClient != nullptr) {
 		delete _httpClient;
@@ -107,7 +125,9 @@ time_t RemoteTimezone::getZoneEnd() {
 	return _zoneEnd;
 }
 
-void RemoteTimezone::_responseHandler(const String url, Stream &stream) {
+void RemoteTimezone::_responseHandler(const String url, Stream &stream)
+{
+	_debug_printf_P(PSTR("RemoteTimezone::_responseHandler(): url=%s\n"), url.c_str());
 
 	struct {
 		bool status;
@@ -123,7 +143,7 @@ void RemoteTimezone::_responseHandler(const String url, Stream &stream) {
 	args.offset = 0;
 	args.zoneEnd = 0;
 
-	JsonCallbackReader json = JsonCallbackReader(stream, [&args](const String &key, const String &value, size_t partialLength, JsonBaseReader &json) -> bool {
+	JsonCallbackReader json = JsonCallbackReader(stream, [&args](const String &key, const String &value, size_t partialLength, JsonBaseReader &json) {
 		if (json.getLevel() == 1) {
 			if (key.equals(F("status")) && value.equalsIgnoreCase(F("OK"))) {
 				args.status = true;

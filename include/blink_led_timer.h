@@ -39,6 +39,9 @@ public:
     static void setBlink(uint16_t delay) {
         setBlink(DEFAULT_PIN, delay);
     }
+    static void setBlink(BlinkDelayEnum_t delay) {
+        setBlink((uint16_t)delay);
+    }
 
 private:
     int8_t _pin;

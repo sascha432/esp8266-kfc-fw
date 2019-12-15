@@ -33,6 +33,8 @@ PROGMEM_STRING_DEF(mqtt_brightness_command_topic, "brightness_command_topic");
 PROGMEM_STRING_DEF(mqtt_brightness_scale, "brightness_scale");
 PROGMEM_STRING_DEF(mqtt_color_temp_state_topic, "color_temp_state_topic");
 PROGMEM_STRING_DEF(mqtt_color_temp_command_topic, "color_temp_command_topic");
+PROGMEM_STRING_DEF(mqtt_rgb_state_topic, "rgb_state_topic");
+PROGMEM_STRING_DEF(mqtt_rgb_command_topic, "rgb_command_topic");
 PROGMEM_STRING_DEF(mqtt_unit_of_measurement, "unit_of_measurement");
 PROGMEM_STRING_DEF(mqtt_value_template, "value_template");
 

@@ -10,82 +10,138 @@ OpenWeatherForecastJsonReader::OpenWeatherForecastJsonReader(Stream * stream, Op
 OpenWeatherForecastJsonReader::OpenWeatherForecastJsonReader(OpenWeatherMapAPI::WeatherForecast & forecast) : OpenWeatherForecastJsonReader(nullptr, forecast) {
 }
 
-bool OpenWeatherForecastJsonReader::processElement() {
+bool OpenWeatherForecastJsonReader::beginObject(bool isArray)
+{
+    auto pathStr = getObjectPath(false);
+    auto path = pathStr.c_str();
+    //Serial.printf("begin path %s array=%u\n", path, isArray);
 
+    if (!strcmp_P(path, PSTR("list[]"))) {
+        _item = OpenWeatherMapAPI::Forecast_t();
+        _itemKey = String();
+    }
+    else if (!strcmp_P(path, PSTR("list[].weather[]"))) {
+        _item.weather.emplace_back(OpenWeatherMapAPI::Weather_t());
+    }
+
+    return true;
+}
+
+bool OpenWeatherForecastJsonReader::endObject()
+{
+    auto pathStr = getObjectPath(false);
+    auto path = pathStr.c_str();
+    //Serial.printf("end path %s\n", path);
+
+    if (!strcmp_P(path, PSTR("list[]"))) {
+        _forecast.forecast.emplace(_itemKey, std::move(_item));
+    }
+    //if (getLevel() == 1) {
+    //    _forecast.updateKeys();
+    //}
+    return true;
+}
+
+bool OpenWeatherForecastJsonReader::processElement() 
+{
     auto keyStr = getKey();
     auto key = keyStr.c_str();
-    auto pathStr = getPath();
+    auto pathStr = getPath(false);
     auto path = pathStr.c_str();
-    int16_t index = _stack.size() ? _stack.back().arrayIndex : -1;
 
-    Serial.printf("key %s value %s type %s path %s index %d\n", key, getValue().c_str(), jsonType2String(getType()).c_str(), getPath().c_str(), index);
+    //Serial.printf("key %s value %s type %s path %s index %d\n", key, getValue().c_str(), jsonType2String(getType()).c_str(), path, getObjectIndex());
 
-    //if (!strcmp_P(path, "name")) {
-    //    _info.location = getValue();
-    //}
-    //else if (!strcmp_P(path, "visibility")) {
-    //    _info.val.visibility = getValue().toInt();
-    //}
-    //else if (!strcmp_P(path, "timezone")) {
-    //    _info.val.timezone = getValue().toInt();
-    //}
-    //else if (!strncmp_P(path, "main.", 5)) {
-    //    if (!strcmp_P(key, "temp")) {
-    //        _info.val.temperature = getValue().toFloat();
-    //    }
-    //    else if (!strcmp_P(key, "temp_min")) {
-    //        _info.val.temperature_min = getValue().toFloat();
-    //    }
-    //    else if (!strcmp_P(key, "temp_max")) {
-    //        _info.val.temperature_max = getValue().toFloat();
-    //    }
-    //    else if (!strcmp_P(key, "pressure")) {
-    //        _info.val.pressure = getValue().toFloat();
-    //    }
-    //    else if (!strcmp_P(key, "humidity")) {
-    //        _info.val.humidity = getValue().toFloat();
-    //    }
-    //}
-    //else if (!strncmp_P(path, "rain.", 5)) {
-    //    _info.rain_mm[keyStr] = getValue().toFloat();
-    //}
-    //else if (!strncmp_P(path, "weather[", 8) && index >= 0) {
-    //    while((int16_t)_info.weather.size() <= index) {
-    //        _info.weather.emplace_back(OpenWeatherMapAPI::WeatherInfo::Weather_t());
-    //    }
-    //    auto &item = _info.weather.at(index);
-    //    if (!strcmp_P(key, "main")) {
-    //        item.main = getValue();
-    //    }
-    //    else if (!strcmp_P(key, "description")) {
-    //        item.descr = getValue();
-    //    }
-    //    else if (!strcmp_P(key, "icon")) {
-    //        item.icon = getValue();
-    //    }
-    //    else if (!strcmp_P(key, "id")) {
-    //        item.id = (uint16_t)getValue().toInt();
-    //    }
-    //}
-    //else if (!strncmp_P(path, "sys.", 4)) {
-    //    if (!strcmp_P(key, "country")) {
-    //        _info.country = getValue();
-    //    }
-    //    else if (!strcmp_P(key, "sunrise")) {
-    //        _info.val.sunrise = getValue().toInt();
-    //    }
-    //    else if (!strcmp_P(key, "sunset")) {
-    //        _info.val.sunset = getValue().toInt();
-    //    }
-    //}
-    //else if (!strncmp_P(path, "wind.", 5)) {
-    //    if (!strcmp_P(key, "speed")) {
-    //        _info.val.wind_speed = getValue().toFloat();
-    //    }
-    //    else if (!strcmp_P(key, "deg")) {
-    //        _info.val.wind_deg = (uint16_t)getValue().toInt();
-    //    }
-    //}
+    if (!strncmp_P(path, PSTR("city."), 5)) {
+        if (!strcmp_P(key, PSTR("name"))) {
+            _forecast.city = getValue();
+        }
+        else if (!strcmp_P(key, PSTR("country"))) {
+            _forecast.country = getValue();
+        }
+        else if (!strcmp_P(key, PSTR("timezone"))) {
+            _forecast.val.timezone = getValue().toInt();
+        }
+    }
+    else if (!strncmp_P(path, PSTR("list[]."), 7)) {
+        if (!strncmp_P(path + 7, PSTR("weather[]."), 10)) {
+            auto &item = _item.weather.back();
+            if (!strcmp_P(key, PSTR("main"))) {
+                item.main = getValue();
+            }
+            else if (!strcmp_P(key, PSTR("description"))) {
+                item.descr = getValue();
+            }
+            else if (!strcmp_P(key, PSTR("icon"))) {
+                item.icon = getValue();
+            }
+            else if (!strcmp_P(key, PSTR("id"))) {
+                item.id = (uint16_t)getIntValue();;
+            }
+        }
+        else if (!strncmp_P(path + 7, PSTR("main."), 5)) {
+            if (!strcmp_P(key, PSTR("temp"))) {
+                _item.val.temperature = getFloatValue();
+            }
+            else if (!strcmp_P(key, PSTR("temp_min"))) {
+                _item.val.temperature_min = getFloatValue();
+            }
+            else if (!strcmp_P(key, PSTR("temp_max"))) {
+                _item.val.temperature_max = getFloatValue();
+            }
+            else if (!strcmp_P(key, PSTR("pressure"))) {
+                _item.val.pressure = (uint16_t)getIntValue();
+            }
+            else if (!strcmp_P(key, PSTR("humidity"))) {
+                _item.val.humidity = (uint8_t)getIntValue();
+            }
+
+        } 
+        else if (!strcmp_P(key, PSTR("dt"))) {
+            _item.val.time = getIntValue();
+        }
+        else if (!strcmp_P(key, PSTR("dt_txt"))) {
+            _itemKey = getValue();
+        }
+    }
+
+
+    /*
+    list": [
+    {
+        "dt": 1575460800,
+            "main": {
+            "temp": 280.51,
+                "temp_min": 276.37,
+                "temp_max": 280.51,
+                "": 1010,
+                "sea_level": 1010,
+                "grnd_level": 913,
+                "": 99,
+                "temp_kf": 4.14
+        },
+            "weather": [
+            {
+                "id": 501,
+                    "main": "Rain",
+                    "description": "moderate rain",
+                    "icon": "10n"
+            }
+            ],
+                "clouds": {
+                "all": 100
+            },
+                "wind": {
+                    "speed": 2.19,
+                        "deg": 181
+                },
+                    "rain": {
+                        "3h": 5.31
+                    },
+                        "sys": {
+                            "pod": "n"
+                        },
+                            "dt_txt": "2019-12-04 12:00:00"
+    },*/
 
     return true;
 }

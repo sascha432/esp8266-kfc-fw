@@ -21,13 +21,13 @@ OSTimer::~OSTimer() {
 }
 
 void OSTimer::startTimer(uint32_t delay, bool repeat) {
-    if (delay < MIN_DELAY) {
-        _debug_printf_P(PSTR("ERROR: delay %u < %u is not supported\n"), delay, MIN_DELAY);
-        delay = MIN_DELAY;
+    if (delay < EventTimer::minDelay) {
+        _debug_printf_P(PSTR("ERROR: delay %u < %u is not supported\n"), delay, EventTimer::minDelay);
+        delay = EventTimer::minDelay;
     }
-    else if (delay > MAX_DELAY) {
-        _debug_printf_P(PSTR("ERROR: delay %u > %u is not supported\n"), delay, MAX_DELAY);
-        delay = MAX_DELAY;
+    else if (delay > EventTimer::maxDelay) {
+        _debug_printf_P(PSTR("ERROR: delay %u > %u is not supported\n"), delay, EventTimer::maxDelay);
+        delay = EventTimer::maxDelay;
     }
     if (_timer) {
         os_timer_disarm(_timer);

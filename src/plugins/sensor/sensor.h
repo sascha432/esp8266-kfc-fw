@@ -17,6 +17,35 @@
 #define DEBUG_IOT_SENSOR 0
 #endif
 
+#ifndef IOT_SENSOR_NAMES_LM75A
+#define IOT_SENSOR_NAMES_LM75A "LM75A Temperature"
+#endif
+
+#ifndef IOT_SENSOR_NAMES_BME280
+#define IOT_SENSOR_NAMES_BME280 "BME280"
+#endif
+
+#ifndef IOT_SENSOR_NAMES_BME680
+#define IOT_SENSOR_NAMES_BME680 "BME680"
+#endif
+
+#ifndef IOT_SENSOR_NAMES_CCS811
+#define IOT_SENSOR_NAMES_CCS811 "CCS811"
+#endif
+
+#ifndef IOT_SENSOR_NAMES_HLW8012
+#define IOT_SENSOR_NAMES_HLW8012 "HLW8012"
+#endif
+
+#ifndef IOT_SENSOR_NAMES_HLW8032
+#define IOT_SENSOR_NAMES_HLW8032 "HLW8032"
+#endif
+
+#ifndef IOT_SENSOR_NAMES_BATTERY
+#define IOT_SENSOR_NAMES_BATTERY "Battery"
+#endif
+
+
 class SensorPlugin : public PluginComponent, public WebUIInterface {
 public:
     typedef std::vector<MQTTSensor *> SensorVector;
@@ -51,6 +80,15 @@ public:
 
     static SensorVector &getSensors();
     static size_t getSensorCount();
+
+#if AT_MODE_SUPPORTED
+    virtual bool hasAtMode() const override {
+        return true;
+    }
+
+    virtual void atModeHelpGenerator() override;
+    virtual bool atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) override;
+#endif
 
 private:
     void _timerEvent();

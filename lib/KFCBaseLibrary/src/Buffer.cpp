@@ -4,6 +4,10 @@
 
 #include "Buffer.h"
 
+Buffer::Buffer(Buffer &&buffer) {
+    *this = std::move(buffer);
+}
+
 Buffer::Buffer(size_t size) {
     _buffer = nullptr;
     _size = size;
@@ -20,11 +24,28 @@ Buffer::~Buffer() {
     _free();
 }
 
+Buffer &Buffer::operator =(Buffer &&buffer) {
+    _length = buffer._length;
+    _size = buffer._size;
+    _buffer = buffer._buffer;
+    buffer._buffer = nullptr;
+    buffer._size = 0;
+    return *this;
+}
+
+Buffer &Buffer::operator =(const Buffer &buffer) {
+    if (reserve(buffer._size, true)) {
+        _length = buffer._length;
+        memcpy(_buffer, buffer._buffer, _length);
+    }
+    return *this;
+}
+
 bool Buffer::equals(const Buffer &buffer) const {
-    if (buffer.length() != length()) {
+    if (buffer._length != _length) {
         return false;
     }
-    return memcmp(getConstChar(), buffer.getConstChar(), length()) == 0;
+    return memcmp(getConstChar(), buffer.getConstChar(), _length) == 0;
 }
 
 bool Buffer::operator ==(const Buffer &buffer) const {
@@ -50,8 +71,10 @@ uint8_t *Buffer::dupClear() { // return unfreed buffer
 }
 
 void Buffer::_free() {
-    free(_buffer);
-    _buffer = nullptr;
+    if (_buffer) {
+        free(_buffer);
+        _buffer = nullptr;
+    }
 }
 
 char *Buffer::getNulByteString() {
@@ -81,7 +104,7 @@ bool Buffer::reserve(size_t size, bool shrink) {
         _free();
         return true;
     }
-    size += size % Buffer::MALLOC_PADDING;
+    size = (size + 0xf) & ~0xf; // 16 byte aligned
     if (!(_buffer = (uint8_t *)realloc(_buffer, size))) {
         _size = 0;
         _length = 0;

@@ -72,7 +72,7 @@ void SyslogTCP::__onAck(AsyncClient *client, size_t len, uint32_t time) {
         _queue.sentAck += len;
         if (_queue.sentAck == _queue.written && _queue.message.length() == 0) {
             _queueWritten(true);
-        } 
+        }
 #if DEBUG
         else if (_queue.sentAck > _queue.written) {
             _queueInvalidState();
@@ -108,8 +108,7 @@ void SyslogTCP::_onPoll(void *arg, AsyncClient *client) {
 
 void SyslogTCP::transmit(const String &message, Callback_t callback) {
     if (_queue.isSending) {
-        _debug_printf_P(PSTR("FATAL: Transmit called while sending\n"));
-        panic();
+        __debugbreak_and_panic_printf_P(PSTR("FATAL: Transmit called while sending\n"));
     }
     _queue.isSending = true;
     _queue.idleTimeout = 0;

@@ -19,8 +19,8 @@ OpenWeatherMapAPI::OpenWeatherMapAPI(const String &apiKey) : _apiKey(apiKey)
 
 void OpenWeatherMapAPI::clear()
 {
-    _info.clear();
-    _forecast.clear();
+    _info = WeatherInfo();
+    _forecast = WeatherForecast();
 }
 
 void OpenWeatherMapAPI::setAPIKey(const String &key)
@@ -87,7 +87,7 @@ JsonBaseReader *OpenWeatherMapAPI::getWeatherForecastParser()
 {
     auto parser = new OpenWeatherForecastJsonReader(_forecast);
     parser->initParser();
-    return nullptr;
+    return parser;
 }
 
 OpenWeatherMapAPI::WeatherInfo &OpenWeatherMapAPI::getWeatherInfo()
@@ -100,54 +100,111 @@ OpenWeatherMapAPI::WeatherForecast &OpenWeatherMapAPI::getWeatherForecast()
     return _forecast;
 }
 
+OpenWeatherMapAPI::WeatherInfo::WeatherInfo() {
+    memset(&val, 0, sizeof(val));
+}
+
+bool OpenWeatherMapAPI::WeatherInfo::hasData() const {
+    return location.length() && weather.size();
+}
+
+time_t OpenWeatherMapAPI::WeatherInfo::getSunRiseAsGMT() const {
+    return val.sunrise + val.timezone;
+}
+
+time_t OpenWeatherMapAPI::WeatherInfo::getSunSetAsGMT() const {
+    return val.sunset + val.timezone;
+}
+
+void OpenWeatherMapAPI::WeatherInfo::dump(Print &output) const
+{
+    output.printf_P(PSTR("--- Current Weather\n"));
+    output.printf_P(PSTR("-------------------\n"));
+    output.printf_P(PSTR("Location: %s\n"), location.c_str());
+    output.printf_P(PSTR("Country: %s\n"), country.c_str());
+    output.printf_P(PSTR("Timezone: %d\n"), val.timezone);
+    output.printf_P(PSTR("Temperature: %.1f C (min/max %.1f/%.1f)\n"), kelvinToC(val.temperature), kelvinToC(val.temperature_min), kelvinToC(val.temperature_max));
+    output.printf_P(PSTR("Temperature: %.1f F (min/max %.1f/%.1f)\n"), kelvinToF(val.temperature), kelvinToF(val.temperature_min), kelvinToF(val.temperature_max));
+    output.printf_P(PSTR("Humidity: %d %%\n"), val.humidity);
+    output.printf_P(PSTR("Pressure: %d hPa\n"), val.pressure);
+
+    char buf[32];
+    time_t time = getSunRiseAsGMT();
+    struct tm *tm = gmtime(&time);
+    strftime(buf, sizeof(buf), "%D %T", tm);
+    output.printf_P(PSTR("Sunrise: %s\n"), buf);
+
+    time = getSunSetAsGMT();
+    tm = gmtime(&time);
+    strftime(buf, sizeof(buf), "%D %T", tm);
+    output.printf_P(PSTR("Sunset: %s\n"), buf);
+
+    output.printf_P(PSTR("Wind speed: %.2f\n"), val.wind_speed);
+    output.printf_P(PSTR("Wind deg: %d\n"), val.wind_deg);
+    output.printf_P(PSTR("Visibility: %.1f km\n"), val.visibility / 1000.0f);
+    output.printf_P(PSTR("Visibility: %.1f mi\n"), kmToMiles(val.visibility / 1000.0f));
+
+    for (const auto &w : weather) {
+        output.printf_P(PSTR("Weather id/main/icon: %u - %s (%s)\n"), w.id, w.main.c_str(), w.icon.c_str());
+        output.printf_P(PSTR("Weather description: %s\n"), w.descr.c_str());
+    }
+
+    for (const auto &rain : rain_mm) {
+        output.printf_P(PSTR("Rain: %s - %.2f mm\n"), rain.first.c_str(), rain.second);
+    }
+}
+
+OpenWeatherMapAPI::WeatherForecast::WeatherForecast() {
+    memset(&val, 0, sizeof(val));
+}
+
+bool OpenWeatherMapAPI::WeatherForecast::hasData() const {
+    return forecast.size() && city.length();
+}
+
+//void OpenWeatherMapAPI::WeatherForecast::updateKeys()
+//{
+//    char buf[32];
+//    std::map<String, Forecast_t> tmp;
+//
+//    for(auto &forecast : forecast) {
+//        forecast.second.val.time += val.timezone;
+//        struct tm *tm = gmtime(&forecast.second.val.time);
+//        strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", tm);
+//        tmp.emplace(buf, std::move(forecast.second));
+//    }
+//    std::swap(forecast, tmp);
+//}
+
+void OpenWeatherMapAPI::WeatherForecast::dump(Print & output) const
+{
+    output.printf_P(PSTR("\n--- Weather Forecast\n"));
+    output.printf_P(PSTR("----------------------\n"));
+    output.printf_P(PSTR("City: %s\n"), city.c_str());
+    output.printf_P(PSTR("Country: %s\n"), country.c_str());
+    output.printf_P(PSTR("Timezone: %d\n"), val.timezone);
+
+    for (const auto &f : forecast) {
+        auto &info = f.second;
+        output.printf_P(PSTR("[%s] - Time: %d\n"), f.first.c_str(), info.val.time);
+        output.printf_P(PSTR("Temperature: %.1f C (min/max %.1f/%.1f)\n"), kelvinToC(info.val.temperature), kelvinToC(info.val.temperature_min), kelvinToC(info.val.temperature_max));
+        output.printf_P(PSTR("Temperature: %.1f F (min/max %.1f/%.1f)\n"), kelvinToF(info.val.temperature), kelvinToF(info.val.temperature_min), kelvinToF(info.val.temperature_max));
+        output.printf_P(PSTR("Humidity: %d %%\n"), info.val.humidity);
+        output.printf_P(PSTR("Pressure: %d hPa\n"), info.val.pressure);
+    }
+}
+
 void OpenWeatherMapAPI::dump(Print &output) const
 {
     if (_info.hasData()) {
-
-        output.printf_P(PSTR("--- Current Weather\n"));
-        output.printf_P(PSTR("-------------------\n"));
-        output.printf_P(PSTR("Location: %s\n"), _info.location.c_str());
-        output.printf_P(PSTR("Country: %s\n"), _info.country.c_str());
-        output.printf_P(PSTR("Temperature: %.1f C (min/max %.1f/%.1f)\n"), kelvinToC(_info.val.temperature), kelvinToC(_info.val.temperature_min), kelvinToC(_info.val.temperature_max));
-        output.printf_P(PSTR("Temperature: %.1f F (min/max %.1f/%.1f)\n"), kelvinToF(_info.val.temperature), kelvinToF(_info.val.temperature_min), kelvinToF(_info.val.temperature_max));
-        output.printf_P(PSTR("Humidity: %.1f %%\n"), _info.val.humidity);
-        output.printf_P(PSTR("Pressure: %.1f hPa\n"), _info.val.pressure);
-
-        char buf[32];
-        time_t time = _info.getSunRiseAsGMT();
-        struct tm *tm = gmtime(&time);
-        strftime(buf, sizeof(buf), "%D %T", tm);
-        output.printf_P(PSTR("Sunrise: %s\n"), buf);
-
-        time = _info.getSunSetAsGMT();
-        tm = gmtime(&time);
-        strftime(buf, sizeof(buf), "%D %T", tm);
-        output.printf_P(PSTR("Sunset: %s\n"), buf);
-
-        output.printf_P(PSTR("Wind speed: %.2f\n"), _info.val.wind_speed);
-        output.printf_P(PSTR("Wind deg: %d\n"), _info.val.wind_deg);
-        output.printf_P(PSTR("Visibility: %.1f km\n"), _info.val.visibility / 1000.0f);
-        output.printf_P(PSTR("Visibility: %.1f mi\n"), kmToMiles(_info.val.visibility / 1000.0f));
-
-        for (const auto &weather : _info.weather) {
-            output.printf_P(PSTR("Weather id/main/icon: %u - %s (%s)\n"), weather.id, weather.main.c_str(), weather.icon.c_str());
-            output.printf_P(PSTR("Weather description: %s\n"), weather.descr.c_str());
-        }
-
-        for (const auto &rain : _info.rain_mm) {
-            output.printf_P(PSTR("Rain: %s - %.2f mm\n"), rain.first.c_str(), rain.second);
-        }
-
+        _info.dump(output);
     }
     else {
         output.println(F("No weather data available"));
     }
 
     if (_forecast.hasData()) {
-
-        output.printf_P(PSTR("\n--- Weather Forecast\n"));
-        output.printf_P(PSTR("----------------------\n"));
-
+        _forecast.dump(output);
     }
     else {
         output.println(F("No weather forecast available"));
@@ -168,3 +225,4 @@ float OpenWeatherMapAPI::kmToMiles(float km)
 {
     return km / 1.60934f;
 }
+

@@ -329,7 +329,7 @@ void Driver_DimmerModule::_buttonShortPress(uint8_t channel, bool up) {
         if (!Scheduler.hasTimer(_turnOffTimer[channel])) {
             _turnOffLevel[channel] = getChannel(channel);
             _turnOffTimerRepeat[channel] = 0;
-            _turnOffTimer[channel] = Scheduler.addTimer(config.shortpress_no_repeat_time, false, [this, channel](EventScheduler::TimerPtr timer) {
+            Scheduler.addTimer(&_turnOffTimer[channel], config.shortpress_no_repeat_time, false, [this, channel](EventScheduler::TimerPtr timer) {
                 _debug_printf_P(PSTR("Driver_DimmerModule::_buttonShortPress(): turn off channel %u, timer expired, repeat %d\n"), channel, _turnOffTimerRepeat[channel]);
                 if (_turnOffTimerRepeat[channel] == 0) { // single button down press detected, turn off
                     if (off(channel)) {

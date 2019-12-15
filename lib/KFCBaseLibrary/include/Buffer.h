@@ -8,10 +8,12 @@
 
 class Buffer {
 public:
-    static const int MALLOC_PADDING = 16;
-
+    Buffer(Buffer &&buffer);
     Buffer(size_t size = 0);
     virtual ~Buffer();
+
+    Buffer &operator =(Buffer &&buffer);
+    Buffer &operator =(const Buffer &buffer);
 
     bool operator ==(const Buffer &buffer) const;
     bool operator !=(const Buffer &buffer) const;

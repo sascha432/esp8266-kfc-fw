@@ -249,7 +249,7 @@ void MQTTClient::autoReconnect(uint32_t timeout) {
             Scheduler.removeTimer(_timer);
             _timer = nullptr;
         }
-        _timer = Scheduler.addTimer(timeout, false, [this](EventScheduler::TimerPtr timer) {
+        Scheduler.addTimer(&_timer, timeout, false, [this](EventScheduler::TimerPtr timer) {
             _debug_printf_P(PSTR("MQTTClient::autoReconnectTimer() timer = isConnected() %d\n"), this->isConnected());
             if (!this->isConnected()) {
                 this->connect();
@@ -561,7 +561,7 @@ void MQTTClient::_addQueue(MQTTQueue &&queue) {
     if (Scheduler.hasTimer(_queueTimer)) {
         _queueTimer->setCallCounter(0); // reset retry counter for each new queue entry
     } else {
-        _queueTimer = Scheduler.addTimer(250, 20, MQTTClient::queueTimerCallback); // retry 20 times x 0.25s = 5s
+        Scheduler.addTimer(&_queueTimer, 250, 20, MQTTClient::queueTimerCallback); // retry 20 times x 0.25s = 5s
     }
 }
 
@@ -598,8 +598,8 @@ void MQTTClient::_queueTimerCallback(EventScheduler::TimerPtr timer) {
 void MQTTClient::queueTimerCallback(EventScheduler::TimerPtr timer) {
 #if DEBUG
     if (!getClient()) {
-        debug_println(F("MQTTClient::queueTimerCallback() without MQTT client"));
-        panic(); // this is not supposed to happen, time to panic
+        // this is not supposed to happen, time to panic
+        __debugbreak_and_panic_printf_P(PSTR("MQTTClient::queueTimerCallback() without MQTT client\n"));
     }
     else {
         getClient()->_queueTimerCallback(timer);
@@ -610,7 +610,9 @@ void MQTTClient::queueTimerCallback(EventScheduler::TimerPtr timer) {
 }
 
 void MQTTClient::_clearQueue() {
-    Scheduler.removeTimer(_queueTimer);
+    if (Scheduler.hasTimer(_queueTimer)) {
+        Scheduler.removeTimer(_queueTimer);
+    }
     _queueTimer = nullptr;
     _queue.clear();
 }
@@ -726,7 +728,7 @@ void MQTTPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
 
 #include "at_mode.h"
 
-PROGMEM_AT_MODE_HELP_COMMAND_DEF(MQTT, "MQTT", "<connect|disconnect|force-disconnect>", "Connect or disconnect from server", "Display MQTT status");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF(MQTT, "MQTT", "<connect|disconnect|force-disconnect|enable|disable>", "Connect or disconnect from server", "Display MQTT status");
 #if MQTT_AUTO_DISCOVERY_CLIENT
 
 #include "mqtt_auto_discovery_client.h"
@@ -804,6 +806,16 @@ bool MQTTPlugin::atModeHandler(Stream &serial, const String &command, int8_t arg
                 client.disconnect(false);
             } else if (strcmp_P(argv[0], PSTR("force-disconnect")) == 0) {
                 serial.println(F("force disconnect"));
+                client.setAutoReconnect(0);
+                client.disconnect(true);
+            } else if (strcmp_P(argv[0], PSTR("enable")) == 0) {
+                auto &flags = config._H_W_GET(Config().flags);
+                flags.mqttMode = MQTT_MODE_UNSECURE;
+                config.write();
+            } else if (strcmp_P(argv[0], PSTR("disable")) == 0) {
+                auto &flags = config._H_W_GET(Config().flags);
+                flags.mqttMode = MQTT_MODE_DISABLED;
+                config.write();
                 client.setAutoReconnect(0);
                 client.disconnect(true);
             }

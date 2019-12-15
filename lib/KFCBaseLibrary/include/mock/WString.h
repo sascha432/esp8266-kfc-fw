@@ -10,89 +10,110 @@
 #include <xstring>
 #include "Print.h"
 
+class String;
+
+class LPWStr {
+public:
+    LPWStr();
+    LPWStr(const String& str);
+    ~LPWStr();
+
+    LPWSTR lpw_str(const String &str);
+    LPWSTR lpw_str();
+
+private:
+    LPWSTR _str;
+};
+
 class String : public std::string {
 public:
     String() : std::string() {
     }
-    String(bool value) : std::string() {
+
+    String(bool value) : String() {
         char buf[16];
         snprintf(buf, sizeof(buf), "%d", value);
         assign(buf);
     }
-    String(int16_t value) : std::string() {
+    String(int16_t value) : String() {
         char buf[16];
         snprintf(buf, sizeof(buf), "%d", value);
         assign(buf);
     }
-    String(uint16_t value) : std::string() {
+    String(uint16_t value) : String() {
         char buf[16];
         snprintf(buf, sizeof(buf), "%d", value);
         assign(buf);
     }
-    //String(int32_t value) : std::string() {
+    //String(int32_t value) : String() {
     //    char buf[16];
     //    snprintf(buf, sizeof(buf), "%d", value);
     //    assign(buf);
     //}
-    //String(uint32_t value) : std::string() {
+    //String(uint32_t value) : String() {
     //    char buf[16];
     //    snprintf(buf, sizeof(buf), "%u", value);
     //    assign(buf);
     //}
-    String(int64_t value) : std::string() {
+    String(int64_t value) : String() {
         char buf[32];
         snprintf(buf, sizeof(buf), "%lld", value);
         assign(buf);
     }
-    String(uint64_t value) : std::string() {
+    String(uint64_t value) : String() {
         char buf[32];
         snprintf(buf, sizeof(buf), "%llu", value);
         assign(buf);
     }
-    //String(long value) : std::string() {
+    //String(long value) : String() {
     //    char buf[16];
     //    snprintf(buf, sizeof(buf), "%ld", value);
     //    assign(buf);
     //}
-    //String(unsigned long value) : std::string() {
+    //String(unsigned long value) : String() {
     //    char buf[16];
     //    snprintf(buf, sizeof(buf), "%lu", value);
     //    assign(buf);
     //}
-    String(float value) : std::string() {
+    String(float value, unsigned char decimals = 2) : String() {
         char buf[32];
-        snprintf(buf, sizeof(buf), "%f", value);
+        snprintf(buf, sizeof(buf), "%.*f", decimals, value);
         assign(buf);
     }
     String(const char ch) : String() {
         assign(1, ch);
     }
-    String(const char *str) : std::string(str) {
+    String(const char *str) : String() {
+        assign(str);
     }
-    explicit String(int value, unsigned char base = 10) {
+    String(const String& str) : String() {
+        assign(str);
+    }
+    String(const __FlashStringHelper* str) : String() {
+        assign(reinterpret_cast<const char*>(str));
+    }
+
+    explicit String(int value, unsigned char base = 10) : String() {
         char buf[65]; // max 64bit + NUL
         _itoa(value, buf, base);
         *this = buf;
     }
-    explicit String(unsigned int value, unsigned char base = 10) {
+    explicit String(unsigned int value, unsigned char base = 10) : String() {
         char buf[65]; // max 64bit + NUL
         _itoa(value, buf, base);
         *this = buf;
     }
-    explicit String(long value, unsigned char base = 10) {
+    explicit String(long value, unsigned char base = 10) : String() {
         char buf[65]; // max 64bit + NUL
         _ltoa(value, buf, base);
         *this = buf;
     }
-    explicit String(unsigned long value, unsigned char base = 10) {
+    explicit String(unsigned long value, unsigned char base = 10) : String() {
         char buf[65]; // max 64bit + NUL
         _ltoa(value, buf, base);
         *this = buf;
     }
 
-    String(const __FlashStringHelper *str) : std::string(reinterpret_cast<const char *>(str)) {
-
-    }
     int indexOf(const String &find, int index = 0) const {
         return find_first_of(find, index);
     }
@@ -137,9 +158,6 @@ public:
             assign(substr(0, index) + substr(index + count));
         }
     }
-    //virtual ~String() {
-    //    printf("~String(%s)\n", this->c_str());
-    //}
     char *begin() {
         return (char *)c_str();
     }
@@ -219,7 +237,16 @@ public:
         return at(idx);
     }
 
-    String & operator += (String str) {
+    String & operator =(const String &str) {
+        assign(str);
+        return *this;
+    }
+
+    String& operator + (const String& str) {
+        concat(str.c_str(), str.length());
+        return (*this);
+    }
+    String& operator += (const String& str) {
         concat(str.c_str(), str.length());
         return (*this);
     }
@@ -227,17 +254,38 @@ public:
         concat(str, strlen(str));
         return (*this);
     }
-    String & operator += (const char *str) {
+    String& operator + (const char* str) {
         concat(str, strlen(str));
         return (*this);
     }
-    String & operator += (const char ch){
+    String& operator += (const char* str) {
+        concat(str, strlen(str));
+        return (*this);
+    }
+    String& operator + (const char ch) {
         concat(ch);
         return (*this);
     }
-    String & operator += (const __FlashStringHelper *str) {
-        const char *ptr = reinterpret_cast<const char *>(str);
+    String& operator += (const char ch) {
+        concat(ch);
+        return (*this);
+    }
+    String& operator + (const __FlashStringHelper* str) {
+        const char* ptr = reinterpret_cast<const char*>(str);
         concat(ptr, strlen(ptr));
         return (*this);
+    }
+    String& operator += (const __FlashStringHelper* str) {
+        const char* ptr = reinterpret_cast<const char*>(str);
+        concat(ptr, strlen(ptr));
+        return (*this);
+    }
+
+    LPWStr LPWStr() {
+        return ::LPWStr(*this);
+    }
+
+    std::wstring w_str() {
+        return std::wstring(std::string::begin(), std::string::end());
     }
 };

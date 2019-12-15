@@ -37,6 +37,7 @@ KFCFWConfiguration::KFCFWConfiguration() : Configuration(CONFIG_EEPROM_OFFSET, C
     _garbageCollectionCycleDelay = 5000;
     _wifiConnected = false;
     _initTwoWire = false;
+    _safeMode = false;
     _offlineSince = -1UL;
     _wifiUp = -1UL;
     _setupWiFiCallbacks();
@@ -471,6 +472,39 @@ void KFCFWConfiguration::restoreFactorySettings() {
     }));
 #endif
 
+#if IOT_SENSOR
+#if IOT_SENSOR_HAVE_BATTERY || IOT_SENSOR_HAVE_BATTERY
+    {
+        auto cfg = _H_GET(Config().sensor);
+#endif
+#if IOT_SENSOR_HAVE_BATTERY
+#ifdef IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_CALIBRATION
+        cfg.battery.calibration = IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_CALIBRATION;
+#else
+        cfg.battery.calibration = 1.0;
+#endif
+#endif
+#if IOT_SENSOR_HAVE_BATTERY || IOT_SENSOR_HAVE_BATTERY
+        _H_SET(Config().sensor, cfg);
+    }
+#endif
+#endif
+
+#if IOT_CLOCK
+    {
+        auto cfg =_H_GET(Config().clock);
+        cfg.animation = -1;
+        cfg.blink_colon = 0;
+        cfg.time_format_24h = 1;
+        cfg.solid_color[0] = 0;
+        cfg.solid_color[1] = 0;
+        cfg.solid_color[2] = 80;
+        static const int8_t order[8] PROGMEM = { 0, 1, -1, 2, 3, -2, 4, 5 }; // <1st digit> <2nd digit> <1st colon> <3rd digit> <4th digit> <2nd colon> <5th digit> <6th digit>
+        memcpy_P(cfg.order, order, sizeof(cfg.order));
+        _H_SET(Config().clock, cfg);
+    }
+#endif
+
 #if CUSTOM_CONFIG_PRESET
     #include "retracted/custom_config.h"
 #endif
@@ -891,7 +925,7 @@ bool KFCFWConfiguration::connectWiFi() {
 
 void KFCFWConfiguration::printVersion(Print &output) {
     output.printf_P(PSTR("KFC Firmware %s\nFlash size %s\n"), KFCFWConfiguration::getFirmwareVersion().c_str(), formatBytes(ESP.getFlashChipSize()).c_str());
-    if (resetDetector.getSafeMode()) {
+    if (config._safeMode) {
         Logger_notice(FSPGM(safe_mode_enabled));
         output.println(FSPGM(safe_mode_enabled));
     }
@@ -933,11 +967,15 @@ unsigned long KFCFWConfiguration::getWiFiUp() {
     return config._wifiUp;
 }
 
-TwoWire &KFCFWConfiguration::initTwoWire() {
-    if (!_initTwoWire) {
+TwoWire &KFCFWConfiguration::initTwoWire(bool reset, Print *output) {
+    if (output) {
+        output->printf_P("I2C bus: SDA=%u, SCL=%u, clock stretch=%u, clock speed=%u\n", KFC_TWOWIRE_SDA, KFC_TWOWIRE_SCL, KFC_TWOWIRE_CLOCK_STRETCH, KFC_TWOWIRE_CLOCK_SPEED);
+    }
+    if (!_initTwoWire || reset) {
         _initTwoWire = true;
         Wire.begin(KFC_TWOWIRE_SDA, KFC_TWOWIRE_SCL);
-        Wire.setClockStretchLimit(KFC_TWOWIRE_CLOCK_STRECH);
+        Wire.setClockStretchLimit(KFC_TWOWIRE_CLOCK_STRETCH);
+        Wire.setClock(KFC_TWOWIRE_CLOCK_SPEED);
     }
     return Wire;
 }
@@ -975,9 +1013,11 @@ PGM_P KFCConfigurationPlugin::getName() const {
 }
 
 void KFCConfigurationPlugin::setup(PluginSetupMode_t mode) {
-    _debug_printf_P(PSTR("config_init(): safe mode %d, wake up %d\n"), resetDetector.getSafeMode(), resetDetector.hasWakeUpDetected());
+
+    _debug_printf_P(PSTR("config_init(): safe mode %d, wake up %d\n"), (mode == PLUGIN_SETUP_SAFE_MODE), resetDetector.hasWakeUpDetected());
 
     config.setup();
+    config._safeMode = (mode == PLUGIN_SETUP_SAFE_MODE);
 
     // during wake up, the WiFI is already configured at this point
     if (!resetDetector.hasWakeUpDetected()) {

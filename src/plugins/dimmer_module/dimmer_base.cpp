@@ -81,7 +81,7 @@ void Dimmer_Base::_begin() {
     #endif
 #else
     // ESP I2C does not support slave mode. Use timer to poll metrics instead
-    _timer = Scheduler.addTimer(2e3, true, Dimmer_Base::fetchMetrics);
+    Scheduler.addTimer(&_timer, 2e3, true, Dimmer_Base::fetchMetrics);
 #endif
 
     if (_lockWire()) {

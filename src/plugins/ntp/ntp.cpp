@@ -18,6 +18,7 @@
 #include <EventScheduler.h>
 #include <LoopFunctions.h>
 #include <WiFiCallbacks.h>
+#include <MicrosTimer.h>
 #include "kfc_fw_config.h"
 #include "../include/templates.h"
 #include "progmem_data.h"
@@ -43,6 +44,16 @@ typedef struct __attribute__packed__ {
 } NTPClientData_t;
 
 PROGMEM_STRING_DEF(strftime_date_time_zone, "%FT%T %Z");
+
+#if NTP_HAVE_CALLBACKS
+
+static std::vector<TimezoneUpdateCallback_t> _callbacks;
+
+void addTimezoneUpdateCallback(TimezoneUpdateCallback_t callback) {
+    _callbacks.push_back(callback);
+}
+
+#endif
 
 class TimezoneData;
 
@@ -73,6 +84,10 @@ public:
 
 private:
     static time_t _zoneEnd;
+    static unsigned long _lastNtpUpdate;
+    static unsigned long _ntpRefreshTime;
+
+    static void _callback(bool status, const String message, time_t zoneEnd);
 
     RemoteTimezone *_remoteTimezone;
     uint16_t _failureCount;
@@ -80,25 +95,34 @@ private:
 };
 
 time_t TimezoneData::_zoneEnd = 0;
+unsigned long TimezoneData::_lastNtpUpdate = 0;
+unsigned long TimezoneData::_ntpRefreshTime = 3600000;
 
-TimezoneData::TimezoneData() {
+TimezoneData::TimezoneData()
+{
+    _debug_printf_P(PSTR("TimezoneData::TimezoneData()\n"));
     _zoneEnd = 0;
+    _lastNtpUpdate = 0;
     _failureCount = 0;
     _remoteTimezone = nullptr;
     _updateTimer = nullptr;
 }
 
-TimezoneData::~TimezoneData() {
+TimezoneData::~TimezoneData()
+{
+    _debug_printf_P(PSTR("TimezoneData::~TimezoneData()\n"));
     removeUpdateTimer();
     deleteRemoteTimezone();
 }
 
-RemoteTimezone *TimezoneData::createRemoteTimezone() {
+RemoteTimezone *TimezoneData::createRemoteTimezone()
+{
     _debug_printf_P(PSTR("creating RemoteTimezone object %p\n"), _remoteTimezone);
     return (_remoteTimezone = _debug_new RemoteTimezone());
 }
 
-void TimezoneData::deleteRemoteTimezone() {
+void TimezoneData::deleteRemoteTimezone()
+{
     _debug_printf_P(PSTR("deleting RemoteTimezone object %p\n"), _remoteTimezone);
     if (_remoteTimezone) {
         delete _remoteTimezone;
@@ -106,41 +130,47 @@ void TimezoneData::deleteRemoteTimezone() {
     }
 }
 
-void TimezoneData::removeUpdateTimer() {
+void TimezoneData::removeUpdateTimer()
+{
     if (_updateTimer && Scheduler.hasTimer(_updateTimer)) {
         Scheduler.removeTimer(_updateTimer);
     }
     _updateTimer = nullptr;
 }
 
-bool TimezoneData::updateRequired() {
+bool TimezoneData::updateRequired()
+{
     return (!_remoteTimezone && (_zoneEnd == 0 || time(nullptr) >= _zoneEnd));
 }
 
-void TimezoneData::setZoneEnd(time_t zoneEnd) {
+void TimezoneData::setZoneEnd(time_t zoneEnd)
+{
     _zoneEnd = zoneEnd;
     _failureCount = 0;
 }
 
 // static
-void TimezoneData::_setZoneEnd(time_t zoneEnd) {
+void TimezoneData::_setZoneEnd(time_t zoneEnd)
+{
     _zoneEnd = zoneEnd;
     if (_zoneEnd) {
         LoopFunctions::add(TimezoneData::updateLoop);
     }
 }
 
-const time_t *TimezoneData::getZoneEndPtr() const {
+const time_t *TimezoneData::getZoneEndPtr() const
+{
     return &_zoneEnd;
 }
 
-const time_t TimezoneData::getZoneEnd() {
+const time_t TimezoneData::getZoneEnd()
+{
     return _zoneEnd;
 }
 
 
-void TimezoneData::retry(const String &message) {
-
+void TimezoneData::retry(const String &message)
+{
     removeUpdateTimer();
     deleteRemoteTimezone();
 
@@ -148,7 +178,7 @@ void TimezoneData::retry(const String &message) {
     // 10, 13, 23, 40, 63, 93, 130, 173, 223, 280, 343, 413, 490, 573, 663, 760, 863, 973, 1090, 1213, 1343, 1480, 1623, 1773, 1930, 2093, 2263, 2440, 2623, 2813, ...
     uint32_t next_check = 10 * (1 + (_failureCount * _failureCount / 3));
 
-    _updateTimer = Scheduler.addTimer((int64_t)next_check * (int64_t)1000, false, [](EventScheduler::TimerPtr timer) {
+    Scheduler.addTimer(&_updateTimer, (int64_t)next_check * (int64_t)1000, false, [](EventScheduler::TimerPtr timer) {
         if (WiFi.isConnected()) { // retry if WiFi is connected, otherwise wait for connected event
             wifiConnectedCallback(WiFiCallbacks::EventEnum_t::CONNECTED, nullptr);
         }
@@ -158,13 +188,15 @@ void TimezoneData::retry(const String &message) {
     Logger_notice(F("NTP: Update failed. Retrying (#%d) in %d second(s). %s"), _failureCount, next_check, message.c_str());
 }
 
-void TimezoneData::updateTimeCallback(EventScheduler::TimerPtr timer) {
+void TimezoneData::updateTimeCallback(EventScheduler::TimerPtr timer)
+{
     _debug_println(F("TimezoneData::updateTimeCallback()"));
     wifiConnectedCallback(WiFiCallbacks::MAX + 1, nullptr);
 }
 
-void TimezoneData::wifiConnectedCallback(uint8_t event, void *payload) {
-
+void TimezoneData::wifiConnectedCallback(uint8_t event, void *payload)
+{
+    _debug_printf_P(PSTR("TimezoneData::wifiConnectedCallback(): event=%u\n"), event);
     if (event == WiFiCallbacks::MAX + 1 || !timezoneData) {
         _debug_printf_P(PSTR("wifiConnectedCallback(%d): forced SNTP update\n"), event);
         TimezoneData::configTime();
@@ -183,47 +215,57 @@ void TimezoneData::wifiConnectedCallback(uint8_t event, void *payload) {
         auto rtz = timezoneData->createRemoteTimezone();
         rtz->setUrl(config._H_STR(Config().ntp.remote_tz_dst_ofs_url));
         rtz->setTimezone(config._H_STR(Config().ntp.timezone));
-        rtz->setStatusCallback([](bool status, const String message, time_t zoneEnd) {
-            _debug_printf_P(PSTR("remote timezone callback: status %d message %s zoneEnd %ld\n"), status, message.c_str(), (long)zoneEnd);
-            if (status) {
-                auto &timezone = get_default_timezone();
-                auto offset = timezone.getOffset();
-                // do not set sntp_set_timezone()
-                // sint8_t tzOfs = timezone.isValid() ? offset / 3600 : 0;
-                // sntp_set_timezone(tzOfs);
-                // sntp_set_daylight(0);
+        rtz->setStatusCallback(_callback);
 
-                timezoneData->setZoneEnd(zoneEnd);
-                LoopFunctions::add(TimezoneData::updateLoop);
-                auto tmp = timezoneData;
-                Scheduler.addTimer(1000, false, [tmp](EventScheduler::TimerPtr timer) { // delete outside the callback or deleting the async http client causes a crash in ~RemoteTimezone()
-                    delete tmp;
-                });
-                timezoneData = nullptr;
-
-                char buf[32];
-                timezone_strftime_P(buf, sizeof(buf), PSTR("%a, %d %b %Y %T %Z"), timezone_localtime(timezoneData->getZoneEndPtr()));
-                Logger_notice(F("NTP: %s offset %02d:%02u. Next check at %s"), timezone.getAbbreviation().c_str(), offset / 3600, offset % 60, buf);
-
-#if NTP_RESTORE_TIMEZONE_AFTER_WAKEUP
-                // store timezone in RTC memory that it is available after wake up
-                NTPClientData_t ntp;
-                ntp.offset = offset;
-                strncpy(ntp.abbreviation, timezone.getAbbreviation().c_str(), sizeof(ntp.abbreviation) - 1)[sizeof(ntp.abbreviation) - 1] = 0;
-                ntp.zoneEnd = _zoneEnd;
-                RTCMemoryManager::write(NTP_CLIENT_RTC_MEM_ID, &ntp, sizeof(ntp));
-#endif
-
-            } else {
-                timezoneData->retry(message);
-            }
-        });
         rtz->get();
     }
 }
 
+void TimezoneData::_callback(bool status, const String message, time_t zoneEnd)
+{
+    _debug_printf_P(PSTR("TimezoneData::_callback(): status=%d, message=%s, zoneEnd=%ld\n"), status, message.c_str(), (long)zoneEnd);
+    if (status) {
+        auto &timezone = get_default_timezone();
+        auto offset = timezone.getOffset();
+        // do not set sntp_set_timezone()
+        // sint8_t tzOfs = timezone.isValid() ? offset / 3600 : 0;
+        // sntp_set_timezone(tzOfs);
+        // sntp_set_daylight(0);
 
-const String TimezoneData::getStatus() {
+        timezoneData->setZoneEnd(zoneEnd);
+        LoopFunctions::add(TimezoneData::updateLoop);
+        auto tmp = timezoneData;
+        Scheduler.addTimer(1000, false, [tmp](EventScheduler::TimerPtr timer) { // delete outside the callback or deleting the async http client causes a crash in ~RemoteTimezone()
+            delete tmp;
+        });
+        timezoneData = nullptr;
+
+        char buf[32];
+        timezone_strftime_P(buf, sizeof(buf), PSTR("%a, %d %b %Y %T %Z"), timezone_localtime(timezoneData->getZoneEndPtr()));
+        Logger_notice(F("NTP: %s offset %02d:%02u. Next check at %s"), timezone.getAbbreviation().c_str(), offset / 3600, offset % 60, buf);
+
+#if NTP_RESTORE_TIMEZONE_AFTER_WAKEUP
+        // store timezone in RTC memory that it is available after wake up
+        NTPClientData_t ntp;
+        ntp.offset = offset;
+        strncpy(ntp.abbreviation, timezone.getAbbreviation().c_str(), sizeof(ntp.abbreviation) - 1)[sizeof(ntp.abbreviation) - 1] = 0;
+        ntp.zoneEnd = _zoneEnd;
+        RTCMemoryManager::write(NTP_CLIENT_RTC_MEM_ID, &ntp, sizeof(ntp));
+#endif
+
+#if NTP_HAVE_CALLBACKS
+        for(auto callback: _callbacks) {
+            callback();
+        }
+#endif
+
+    } else {
+        timezoneData->retry(message);
+    }
+}
+
+const String TimezoneData::getStatus()
+{
     if (config._H_GET(Config().flags).ntpClientEnabled) {
         PrintHtmlEntitiesString out;
         auto firstServer = true;
@@ -253,7 +295,11 @@ const String TimezoneData::getStatus() {
     }
 }
 
-void TimezoneData::updateLoop() {
+void TimezoneData::updateLoop()
+{
+    if (get_time_diff(_lastNtpUpdate, millis()) > _ntpRefreshTime) { // refresh NTP time once per hour, it gets out of sync quite quickly
+        configTime();
+    }
     if (_zoneEnd != 0 && time(nullptr) >= _zoneEnd) {
         _debug_printf_P(PSTR("TimezoneData::updateLoop() triggered\n"));
         LoopFunctions::remove(TimezoneData::updateLoop); // remove once triggered
@@ -264,8 +310,11 @@ void TimezoneData::updateLoop() {
     }
 }
 
-void TimezoneData::configTime() {
-    _debug_printf_P(PSTR("TimezoneData::configTime(): server1=%s,server2=%s,server3=%s\n"), config._H_STR(Config().ntp.servers[0]), config._H_STR(Config().ntp.servers[1]), config._H_STR(Config().ntp.servers[2]));
+void TimezoneData::configTime()
+{
+    _lastNtpUpdate = millis();
+    _ntpRefreshTime = 3600 * (950 + (rand() % 100));
+    _debug_printf_P(PSTR("TimezoneData::configTime(): server1=%s,server2=%s,server3=%s, refresh in %.0f seconds\n"), config._H_STR(Config().ntp.servers[0]), config._H_STR(Config().ntp.servers[1]), config._H_STR(Config().ntp.servers[2]), _ntpRefreshTime / 1000.0);
     // force SNTP to update the time
     ::configTime(0, 0, config._H_STR(Config().ntp.servers[0]), config._H_STR(Config().ntp.servers[1]), config._H_STR(Config().ntp.servers[2]));
 }
@@ -273,8 +322,8 @@ void TimezoneData::configTime() {
 /*
  * Enable SNTP and remote timezone check if configured
  */
-void timezone_setup() {
-
+void timezone_setup()
+{
     if (config._H_GET(Config().flags).ntpClientEnabled) {
 
         // force SNTP update on WiFi connect
@@ -387,25 +436,30 @@ public:
 };
 
 
-static NTPPlugin plugin; 
+static NTPPlugin plugin;
 
-PGM_P NTPPlugin::getName() const {
+PGM_P NTPPlugin::getName() const
+{
     return PSTR("ntp");
 }
 
-NTPPlugin::PluginPriorityEnum_t NTPPlugin::getSetupPriority() const {
+NTPPlugin::PluginPriorityEnum_t NTPPlugin::getSetupPriority() const
+{
     return PRIO_NTP;
 }
 
-uint8_t NTPPlugin::getRtcMemoryId() const {
+uint8_t NTPPlugin::getRtcMemoryId() const
+{
     return NTP_CLIENT_RTC_MEM_ID;
 }
 
-void NTPPlugin::setup(PluginSetupMode_t mode) {
+void NTPPlugin::setup(PluginSetupMode_t mode)
+{
     timezone_setup();
 }
 
-void NTPPlugin::reconfigure(PGM_P source) {
+void NTPPlugin::reconfigure(PGM_P source)
+{
     ntp_client_reconfigure_plugin(source);
 }
 
@@ -413,13 +467,15 @@ bool NTPPlugin::hasStatus() const {
     return true;
 }
 
-const String NTPPlugin::getStatus() {
+const String NTPPlugin::getStatus()
+{
     return TimezoneData::getStatus();
 }
 
 #if NTP_RESTORE_SYSTEM_TIME_AFTER_WAKEUP
 
-void NTPPlugin::prepareDeepSleep(uint32_t sleepTimeMillis) {
+void NTPPlugin::prepareDeepSleep(uint32_t sleepTimeMillis)
+{
     NTPClientData_t ntp;
     if (RTCMemoryManager::read(NTP_CLIENT_RTC_MEM_ID, &ntp, sizeof(ntp))) {
         ntp.currentTime = time(nullptr);
@@ -440,11 +496,13 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(SNTPFU, "SNTPFU", "Force SNTP to update ti
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(NOW, "NOW", "Display current time");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(TZ, "TZ", "<timezone>", "Set timezone", "Show timezone information");
 
-bool NTPPlugin::hasAtMode() const {
+bool NTPPlugin::hasAtMode() const
+{
     return true;
 }
 
-void NTPPlugin::atModeHelpGenerator() {
+void NTPPlugin::atModeHelpGenerator()
+{
 #if DEBUG
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SNTPFU));
 #endif
@@ -452,7 +510,8 @@ void NTPPlugin::atModeHelpGenerator() {
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(TZ));
 }
 
-bool NTPPlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) {
+bool NTPPlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv)
+{
 #if DEBUG
     if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SNTPFU))) {
         TimezoneData::configTime();

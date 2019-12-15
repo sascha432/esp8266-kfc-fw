@@ -264,8 +264,6 @@ void setup() {
                             return false;
                         case 's':
                             resetDetector.setSafeMode(1);
-                            resetDetector.clearCounter();
-                            remove_crash_counter_file();
                             return false;
                     }
                 }
@@ -307,6 +305,8 @@ void setup() {
     }
 #endif
 
+    Scheduler.begin();
+
     config.read();
     if (safe_mode) {
 
@@ -328,7 +328,6 @@ void setup() {
         });
 
     } else {
-
 
         #if AT_MODE_SUPPORTED
             at_mode_setup();

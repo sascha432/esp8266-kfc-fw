@@ -7,32 +7,25 @@
 #include <Arduino_compat.h>
 #include "EventScheduler.h"
 
-#define MIN_DELAY   5
-#define MAX_DELAY   0x68D7A3
-
 class EventTimer {
 public:
     typedef enum {
         DELAY_NO_CHANGE =   -1,
     } ChangeOptionsDelayEnum_t;
 
-    // static const int MIN_DELAY = 5;
-    // static const int MAX_DELAY = 0x68D7A3;
+    static const int32_t minDelay = 5;
+    static const int32_t maxDelay = 0x68D7A3;
 
-    EventTimer(EventScheduler::Callback loopCallback, EventScheduler::Callback removeCallback, int64_t delay, int repeat, EventScheduler::Priority_t priority);
-    EventTimer(EventScheduler::Callback loopCallback, int64_t delay, int repeat, EventScheduler::Priority_t priority) :
-        EventTimer(loopCallback, nullptr, delay, repeat, priority)
-    {
-    }
+    EventTimer(EventScheduler::TimerPtr *timerPtr, EventScheduler::Callback loopCallback, int64_t delay, int repeat, EventScheduler::Priority_t priority);
     ~EventTimer();
 
     void _installTimer();
 
-    operator bool() const {
+    inline operator bool() const __attribute__((always_inline)) {
         return !!_timer;
     }
 
-    inline bool active() const {
+    inline bool active() const __attribute__((always_inline)) {
         return !!_timer;
     }
 
@@ -53,9 +46,6 @@ public:
 
     inline void setCallback(EventScheduler::Callback loopCallback) {
         _loopCallback = loopCallback;
-    }
-    inline void setRemoveCallback(EventScheduler::Callback removeCallback) {
-        _removeCallback = removeCallback;
     }
 
     void setPriority(EventScheduler::Priority_t priority = EventScheduler::PRIO_LOW);
@@ -81,20 +71,11 @@ private:
 
     os_timer_t *_timer;
     EventScheduler::Callback _loopCallback;
-    EventScheduler::Callback _removeCallback;
+    EventScheduler::TimerPtr *_timerPtr;
     int64_t _delay;
     int64_t _remainingDelay;
     int32_t _repeat;
     int32_t _callCounter;
     EventScheduler::Priority_t _priority;
     bool _callbackScheduled;
-public:
-    String _getTimerSource();
-
-#if DEBUG
-    String __source;
-    int __line;
-    String __function;
-    unsigned long _start;
-#endif
 };

@@ -14,6 +14,8 @@ class PrintString : public String, public Print {
 public:
     PrintString() : String(), Print() {
     }
+    PrintString(const String &str) : String(str), Print() {
+    }
     PrintString(const char *format, ...) : PrintString() {
         va_list arg;
         va_start(arg, format);

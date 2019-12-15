@@ -31,54 +31,49 @@ public:
         ONCE =              1,
     } Repeat_t;
 
-    struct ActiveCallbackTimer {
-        EventTimer *timer;
-        bool removed;
-    };
-
     typedef EventTimer *TimerPtr;
     typedef std::function<void(TimerPtr timer)> Callback;
-    typedef std::vector<ActiveCallbackTimer> CallbackVector;
     typedef std::vector<TimerPtr> TimerVector;
     typedef std::vector<TimerPtr>::iterator TimerIterator;
 
-    EventScheduler() {
-        _loopFunctionInstalled = false;
-        _runtimeLimit = 250;
+    EventScheduler() : _runtimeLimit(250) {
     }
+
+    void begin();
+    void end();
 
     // repeat as int = number of repeats
-    TimerPtr addTimer(int64_t delayMillis, int repeat, Callback callback, Callback removeCallback, Priority_t priority = PRIO_LOW);
-
-    inline TimerPtr addTimer(int64_t delayMillis, int repeat, Callback callback, Priority_t priority = PRIO_LOW) {
-        return addTimer(delayMillis, repeat, callback, nullptr, priority);
-    }
+    void addTimer(TimerPtr *timerPtr, int64_t delayMillis, int repeat, Callback callback, Priority_t priority = PRIO_LOW);
 
     // repeat as bool = unlimited or none
-    TimerPtr addTimer(int64_t delayMillis, bool repeat, Callback callback, Priority_t priority = PRIO_LOW) {
-        return addTimer(delayMillis, (int)(repeat ? EventScheduler::UNLIMTIED : EventScheduler::DONT), callback, priority);
+    void addTimer(TimerPtr *timerPtr, int64_t delayMillis, bool repeat, Callback callback, Priority_t priority = PRIO_LOW) {
+        addTimer(timerPtr, delayMillis, (int)(repeat ? EventScheduler::UNLIMTIED : EventScheduler::DONT), callback, priority);
     }
-    TimerPtr addTimer(int64_t delayMillis, bool repeat, Callback callback, Callback removeCallback, Priority_t priority = PRIO_LOW) {
-        return addTimer (delayMillis, (int)(repeat ? EventScheduler::UNLIMTIED : EventScheduler::DONT), callback, removeCallback, priority);
+
+    void addTimer(int64_t delayMillis, int repeat, Callback callback, Priority_t priority = PRIO_LOW) {
+        addTimer(nullptr, delayMillis, repeat, callback, priority);
     }
+    void addTimer(int64_t delayMillis, bool repeat, Callback callback, Priority_t priority = PRIO_LOW) {
+        addTimer(nullptr, delayMillis, repeat, callback, priority);
+    }
+
     bool hasTimer(TimerPtr timer);
-    void removeTimer(TimerPtr timer, bool deleteObject = true);
+    void removeTimer(TimerPtr timer);
 
-    void loopFunc();
+    static void loop();
     void callTimer(TimerPtr timer);
-    void installLoopFunc();
-    void removeLoopFunc();
-
-    // this stops the scheduler and removes all timers, but does not invoke any callbacks and does not free memory
-    void terminate();
 
     static void _timerCallback(void *arg);
 
+private:
+#if DEBUG_EVENT_SCHEDULER
     void _list();
+#endif
+
+    void _removeTimer(TimerPtr timer);
+    void _loop();
 
 private:
-    CallbackVector _callbacks;
     TimerVector _timers;
-    bool _loopFunctionInstalled;
     int _runtimeLimit; // if a callback takes longer than this amount of time, the next callback will be delayed until the next loop function call
 };

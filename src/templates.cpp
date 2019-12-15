@@ -89,7 +89,7 @@ String WebTemplate::process(const String &key) {
         }
 #  endif
     } else if (key == F("SAFEMODE")) {
-        if (resetDetector.getSafeMode()) {
+        if (config.isSafeMode()) {
             _return(F(" - Running in SAFE MODE"));
         }
         _return(_sharedEmptyString);

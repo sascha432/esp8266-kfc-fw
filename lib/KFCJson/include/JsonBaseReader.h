@@ -54,16 +54,16 @@ public:
 
     typedef std::vector<JsonStack_t> JsonStackVector;
 
-    typedef enum : int8_t { 
-		JSON_TYPE_ANY = -1, 
-		JSON_TYPE_INVALID = 0, 
-		JSON_TYPE_STRING, 
-		JSON_TYPE_BOOLEAN, 
-		JSON_TYPE_INT, 
-        JSON_TYPE_FLOAT, 
+    typedef enum : int8_t {
+		JSON_TYPE_ANY = -1,
+		JSON_TYPE_INVALID = 0,
+		JSON_TYPE_STRING,
+		JSON_TYPE_BOOLEAN,
+		JSON_TYPE_INT,
+        JSON_TYPE_FLOAT,
         JSON_TYPE_NUMBER,                   // number in E notation, might need special parsing function see class JsonVar
-        JSON_TYPE_NULL, 
-        JSON_TYPE_OBJECT_END, 
+        JSON_TYPE_NULL,
+        JSON_TYPE_OBJECT_END,
 	} JsonType_t;
 
     JsonBaseReader(Stream &stream) : JsonBaseReader(&stream) {
@@ -112,11 +112,16 @@ public:
 	inline String getKey() const {
 		return _keyStr;
 	}
-	
+
 	// returns -1 if it isn't an array, otherwise the index
 	inline int16_t getIndex() const {
 		return _arrayIndex;
 	}
+
+    // get index of the parent object
+    int16_t getObjectIndex() {
+        return _stack.size() ? _stack.back().arrayIndex : -1;
+    }
 
 	// returns true if it is an array
 	inline bool isArrayElement() const {
@@ -128,19 +133,30 @@ public:
 		return _valueStr;
 	}
 
-	// return type of value
+    inline long getIntValue() const {
+        return _valueStr.toInt();
+    }
+
+    inline float getFloatValue() const {
+        return _valueStr.toFloat();
+    }
+
+    // return type of value
 	inline JsonType_t getType() const {
 		return _type;
 	}
 
 	// index is 1 based, 0 points to an unnamed array or object
-    String getPath(uint8_t index) const;
+    String getPath(int index) const;
 
     // get path and key position. key position is undefined if path.length() == 0
     String getPath(uint8_t index, size_t &keyPosition) const;
 
 	// get full path
-	String getPath() const;
+    String getPath(bool numericIndex = true) const;
+
+    // get path of the parent object
+    String getObjectPath(bool numericIndex = true) const;
 
 	// level is 1 based
 	inline int8_t getLevel() const {
@@ -163,7 +179,7 @@ public:
 protected:
     bool _addCharacter(char ch);
 	bool _prepareElement();
-	void _appendIndex(int16_t index, String &str) const;
+	void _appendIndex(int16_t index, String &str, bool numericIndex = false) const;
     bool _isValidNumber(const String &value, JsonType_t &_type);
 
 protected:

@@ -185,6 +185,22 @@ struct WeatherStation {
     WeatherStationConfig_t config;
 };
 
+struct Sensor {
+#if IOT_SENSOR_HAVE_BATTERY
+    struct {
+        float calibration;
+    } battery;
+#endif
+};
+
+struct Clock {
+    uint8_t blink_colon: 2;
+    int8_t animation: 5;
+    uint8_t time_format_24h: 1;
+    uint8_t solid_color[3];
+    int8_t order[8];
+};
+
 struct DimmerModuleButtons {
     uint16_t shortpress_time;
     uint16_t longpress_time;
@@ -251,6 +267,8 @@ struct Config {
     struct HueConfig hue;
     struct Ping ping;
     WeatherStation weather_station;
+    Sensor sensor;
+    Clock clock;
 };
 
 #define _H_IP_FORM_OBJECT(name)                     config._H_GET_IP(name), [](const IPAddress &addr, FormField &) { config._H_SET_IP(name, addr); }
@@ -303,6 +321,10 @@ public:
     static uint8_t getMaxWiFiChannels();
     static String getWiFiEncryptionType(uint8_t type);
 
+    bool isSafeMode() const {
+        return _safeMode;
+    }
+
 private:
     void _setupWiFiCallbacks();
 #if defined(ESP32)
@@ -322,14 +344,17 @@ public:
     static bool isWiFiUp();
     static unsigned long getWiFiUp();
 
-    TwoWire &initTwoWire();
+    TwoWire &initTwoWire(bool reset = false, Print *output = nullptr);
 
 private:
+    friend class KFCConfigurationPlugin;
+
     String _lastError;
     int16_t _garbageCollectionCycleDelay;
     uint8_t _dirty : 1;
     uint8_t _wifiConnected : 1;
     uint8_t _initTwoWire : 1;
+    uint8_t _safeMode : 1;
     unsigned long _wifiUp;
     unsigned long _offlineSince;
 

@@ -10,6 +10,7 @@
 #include <PrintHtmlEntitiesString.h>
 #include <EventScheduler.h>
 #include <StreamString.h>
+#include <SpeedBooster.h>
 #include "progmem_data.h"
 #include "web_server.h"
 #include "rest_api.h"
@@ -54,30 +55,14 @@ struct UploadStatus_t {
     uint8_t command;
 };
 
-#if defined(ESP8266)
-uint8_t WebServerSetCPUSpeedHelper::_counter = 0;
-#endif
 
-WebServerSetCPUSpeedHelper::WebServerSetCPUSpeedHelper() {
+WebServerSetCPUSpeedHelper::WebServerSetCPUSpeedHelper() : SpeedBooster(
 #if defined(ESP8266)
-    _enabled = config._H_GET(Config().flags).webServerPerformanceModeEnabled;
-    _debug_printf_P(PSTR("WebServerSetCPUSpeedHelper(): counter=%d, CPU=%d, boost=%d\n"), _counter, system_get_cpu_freq(), _enabled);
-    _counter++;
-    if (_counter == 1 && system_get_cpu_freq() != SYS_CPU_160MHZ && _enabled) {
-        system_update_cpu_freq(SYS_CPU_160MHZ);
-    }
+    config._H_GET(Config().flags).webServerPerformanceModeEnabled
 #endif
+) {
 }
 
-WebServerSetCPUSpeedHelper::~WebServerSetCPUSpeedHelper() {
-#if defined(ESP8266)
-    _counter--;
-    if (_counter == 0 && _enabled) {
-        system_update_cpu_freq(SYS_CPU_80MHZ);
-    }
-    _debug_printf_P(PSTR("~WebServerSetCPUSpeedHelper(): counter=%d, CPU=%d, boost=%d\n"), _counter, system_get_cpu_freq(), _enabled);
-#endif
-}
 
 AsyncWebServer *get_web_server_object() {
     return server;
@@ -96,6 +81,7 @@ AsyncWebServer *get_web_server_object() {
 //     _debug_printf_P("log %s %d\n", url().c_str(), response->_);
 // }
 // #endif
+
 
 bool web_server_is_public_path(const String &pathString) {
     auto path = pathString.c_str();

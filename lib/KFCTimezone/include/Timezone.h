@@ -10,7 +10,7 @@
 #define IS_TIME_VALID(time) (time > (30 * 86400))
 
 class Timezone {
-   public:
+public:
 	Timezone();
 
     void invalidate();
@@ -31,7 +31,7 @@ class Timezone {
 	void setDst(bool dst);
 	bool isDst();
 
-   private:
+private:
 	const int INVALID = -1;
 
     int32_t _timezoneOffset;

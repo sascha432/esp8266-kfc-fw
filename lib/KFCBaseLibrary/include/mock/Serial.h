@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <windows.h>
 #include "Stream.h"
 
 class Stdout : public Stream {
@@ -129,16 +130,12 @@ public:
         fflush(stdout);
     }
     virtual size_t write(uint8_t c) override {
-        ::printf("%c", c);
-        return 1;
+        return write(&c, 1);
     }
-    virtual size_t write(const uint8_t *data, size_t len) override {
-        auto ptr = (const char *)data;
-        auto pos = len;
-        while(pos--) {
-            ::printf("%c", *ptr++);
-        }
-        return len;
+    virtual size_t write(const uint8_t* buffer, size_t size) override {
+        ::printf("%*.*s", size, size, buffer);
+        _RPTN(_CRT_WARN, "%*.*s", size, size, buffer);
+        return size;
     }
 };
 

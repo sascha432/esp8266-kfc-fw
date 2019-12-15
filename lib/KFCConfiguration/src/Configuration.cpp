@@ -47,8 +47,7 @@ uint16_t getHandle(const char *name) {
     ConfigurationParameter::Handle_t crc = constexpr_crc16_calc((const uint8_t *)name, constexpr_strlen(name));
     for(const auto &map: handles) {
         if (map.first == crc && !map.second.equals(name)) {
-            debug_printf_P(PSTR("getHandle(%s): CRC not unique: %x, %s\n"), name, crc, map.second.c_str());
-            panic();
+            __debugbreak_and_panic_printf_P(PSTR("getHandle(%s): CRC not unique: %x, %s\n"), name, crc, map.second.c_str());
         }
     }
     handles[crc] = String(name);
@@ -250,7 +249,7 @@ uint16_t Configuration::getPosition(const ConfigurationParameter *parameter) con
             pos++;
         }
         _debug_printf_P(PSTR("Configuration::getPosition(): could not find %04x (%s)\n"), parameter->getConstParam().handle, getHandleName(parameter->getConstParam().handle));
-        panic();
+        __debugbreak_and_panic();
     }
     return 0xffff;
 }
@@ -503,7 +502,7 @@ ConfigurationParameter &Configuration::_getOrCreateParam(ConfigurationParameter:
     }
     else if (type != iterator->getType()) {
         _debug_printf_P(PSTR("Configuration::_readParams(): reading %04x (%s), cannot override type %d with %d\n"), iterator->getParam().handle, getHandleName(iterator->getParam().handle), iterator->getType(), type);
-        panic();
+        __debugbreak_and_panic();
         //iterator->freeData();
         //iterator->setSize(ConfigurationParameter::getDefaultSize(type));
         //auto &param = iterator->getParam();

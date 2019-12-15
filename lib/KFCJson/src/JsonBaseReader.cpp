@@ -312,8 +312,8 @@ size_t JsonBaseReader::position() const {
 	return _position;
 }
 
-String JsonBaseReader::getPath(uint8_t index) const {
-    if (index < _stack.size()) {
+String JsonBaseReader::getPath(int index) const {
+    if ((size_t)index < _stack.size()) {
         return _stack.at(index).key;
     }
     return String();
@@ -328,30 +328,35 @@ String JsonBaseReader::getPath(uint8_t index, size_t &keyPosition) const {
     return String();
 }
 
-String JsonBaseReader::getPath() const {
-	String _path;
-	for (const auto &state : _stack) {
-		if (state.key.length()) {
-			if (_path.length()) {
-				_path += '.';
-			}
-			_path += state.key;
-			if (state.arrayIndex != -1) {
-				_appendIndex(state.arrayIndex, _path);
-			}
-		} else if (state.arrayIndex != -1) {
-			_appendIndex(state.arrayIndex, _path);
-		}
-	}
-	if (_keyStr.length() && _path.length()) {
-		_path += '.';
-	}
-	_path += _keyStr;
-	if (_arrayIndex != -1) {
-		_appendIndex(_arrayIndex, _path);
-	}
+String JsonBaseReader::getPath(bool numericIndex) const {
+    String _path = getObjectPath(numericIndex);
+    if (_keyStr.length() && _path.length()) {
+        _path += '.';
+    }
+    _path += _keyStr;
+    if (_arrayIndex != -1) {
+        _appendIndex(_arrayIndex, _path, numericIndex);
+    }
 
-	return _path;
+    return _path;
+}
+
+String JsonBaseReader::getObjectPath(bool numericIndex) const {
+    String _path;
+    for (const auto &state : _stack) {
+        if (state.key.length()) {
+            if (_path.length()) {
+                _path += '.';
+            }
+            _path += state.key;
+            if (state.arrayIndex != -1) {
+                _appendIndex(state.arrayIndex, _path, numericIndex);
+            }
+        } else if (state.arrayIndex != -1) {
+            _appendIndex(state.arrayIndex, _path, numericIndex);
+        }
+    }
+    return _path;
 }
 
 bool JsonBaseReader::parse() {
@@ -359,8 +364,10 @@ bool JsonBaseReader::parse() {
 	return parseStream();
 }
 
-void JsonBaseReader::_appendIndex(int16_t index, String &str) const {
+void JsonBaseReader::_appendIndex(int16_t index, String &str, bool numericIndex) const {
 	str += '[';
-	str += String(index);
+    if (numericIndex) {
+        str += String(index);
+    }
 	str += ']';
 }

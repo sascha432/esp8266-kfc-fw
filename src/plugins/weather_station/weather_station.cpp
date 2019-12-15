@@ -5,17 +5,29 @@
 #if IOT_WEATHER_STATION
 
 #include "weather_station.h"
-#include "moon_phase.h"
 #include <PrintHtmlEntitiesString.h>
 #include <LoopFunctions.h>
 #include <EventTimer.h>
-#include <Timezone.h>
 #include <MicrosTimer.h>
 #include <HeapStream.h>
 #include <ProgmemStream.h>
-
 #include <serial_handler.h>
+#include <WebUISocket.h>
+#include <AsyncBitmapStreamResponse.h>
+#include <GFXCanvasRLEStream.h>
+#include "web_server.h"
+#include "progmem_data.h"
 #include "kfc_fw_config.h"
+
+// web accesss for screen capture
+//
+// display queue status
+// http://192.168.0.56/invoke_screen_capture?query
+//
+// create screen capture
+// http://192.168.0.56/invoke_screen_capture
+//
+//
 
 #if DEBUG_IOT_WEATHER_STATION
 #include <debug_helper_enable.h>
@@ -23,179 +35,15 @@
 #include <debug_helper_disable.h>
 #endif
 
-// DejaVu_Sans_Bold_20
-// DejaVu_Sans_Bold_12
-// DejaVu_Sans_Bold_11
-// DejaVu_Sans_10
-// Dialog_bold_10
-// DialogInput_plain_9
-#include "fonts.h"
-
-// const GFXfont moon_phases12pt7b
-// const GFXfont moon_phases14pt7b
-// const GFXfont moon_phases16pt7b
-// const GFXfont moon_phases18pt7b
-// const GFXfont moon_phases20pt7b
-// const GFXfont moon_phases24pt7b
-// const GFXfont moon_phases28pt7b
-// const GFXfont moon_phases32pt7b
-#include "moon.h"
-
-// https://github.com/ThingPulse/esp8266-weather-station-color/blob/master/weathericons.h
-#include "weather_icons.h"
-
-// sunrise 7x9px
-const unsigned char icon_sunrise [] PROGMEM = {
-    0b11111110,
-    0b11101110,
-    0b11000110,
-    0b10000010,
-    0b11101110,
-    0b11101110,
-    0b11101110,
-    0b11111110,
-    0b00000000,
-};
-// sunset 7x9px
-const unsigned char icon_sunset [] PROGMEM = {
-    0b11101110,
-    0b11101110,
-    0b11101110,
-    0b11101110,
-    0b10000010,
-    0b11000110,
-    0b11101110,
-    0b11111110,
-    0b00000000,
-};
-
-#if TFT_WIDTH == 128 && TFT_HEIGHT == 160
-
-#define HAVE_DEGREE_SYMBOL              0
-#define DEGREE_STR                      " "
-
-#define COLORS_BACKGROUND               ST77XX_BLACK
-#define COLORS_DEFAULT_TEXT             ST77XX_WHITE
-#define COLORS_DATE                     ST77XX_WHITE
-#define COLORS_TIME                     ST77XX_WHITE
-#define COLORS_TIMEZONE                 ST77XX_YELLOW
-#define COLORS_CITY                     ST77XX_CYAN
-#define COLORS_CURRENT_WEATHER          ST77XX_YELLOW
-#define COLORS_TEMPERATURE              ST77XX_WHITE
-#define COLORS_WEATHER_DESCR            ST77XX_YELLOW
-#define COLORS_SUN_AND_MOON             ST77XX_YELLOW
-#define COLORS_SUN_RISE_SET             ST77XX_WHITE
-#define COLORS_MOON_PHASE               ST77XX_WHITE
-
-#define FONTS_DEFAULT_SMALL             &DejaVu_Sans_10
-#define FONTS_DEFAULT_MEDIUM            &Dialog_bold_10
-#define FONTS_DEFAULT_BIG               &DejaVu_Sans_Bold_20
-#define FONTS_DATE                      &Dialog_bold_10
-#define FONTS_TIME                      &DejaVu_Sans_Bold_20
-#define FONTS_TIMEZONE                  &DejaVu_Sans_10
-#define FONTS_TEMPERATURE               &DejaVu_Sans_Bold_20
-#define FONTS_CITY                      &DialogInput_plain_9
-#define FONTS_WEATHER_DESCR             &DialogInput_plain_9
-#define FONTS_SUN_AND_MOON              &DejaVu_Sans_10
-#define FONTS_MOON_PHASE                &moon_phases14pt7b
-#define FONTS_MOON_PHASE_UPPERCASE      true
-
-// time
-
-#define X_POSITION_DATE                 TFT_WIDTH / 2
-#define Y_POSITION_DATE                 5
-#define H_POSITION_DATE                 CENTER
-
-#define X_POSITION_TIME                 TFT_WIDTH / 2
-#define Y_POSITION_TIME                 17
-#define H_POSITION_TIME                 CENTER
-
-#define X_POSITION_TIMEZONE             TFT_WIDTH / 2
-#define Y_POSITION_TIMEZONE             35
-#define H_POSITION_TIMEZONE             CENTER
-
-// weather
-
-#define X_POSITION_WEATHER_ICON         2
-#define Y_POSITION_WEATHER_ICON         0
-
-#define X_POSITION_CITY                 (TFT_WIDTH - 2)
-#define Y_POSITION_CITY                 3
-#define H_POSITION_CITY                 RIGHT
-
-#define X_POSITION_TEMPERATURE          X_POSITION_CITY
-#define Y_POSITION_TEMPERATURE          17
-#define H_POSITION_TEMPERATURE          RIGHT
-
-#define X_POSITION_WEATHER_DESCR        X_POSITION_CITY
-#define Y_POSITION_WEATHER_DESCR        35
-#define H_POSITION_WEATHER_DESCR        RIGHT
-
-// sun and moon
-
-#define X_POSITION_SUN_TITLE            2
-#define Y_POSITION_SUN_TITLE            0
-#define H_POSITION_SUN_TITLE            LEFT
-
-#define X_POSITION_MOON_PHASE_NAME      (TFT_WIDTH - X_POSITION_SUN_TITLE)
-#define Y_POSITION_MOON_PHASE_NAME      Y_POSITION_SUN_TITLE
-#define H_POSITION_MOON_PHASE_NAME      RIGHT
-
-#define X_POSITION_MOON_PHASE_DAYS      X_POSITION_MOON_PHASE_NAME
-#define Y_POSITION_MOON_PHASE_DAYS      12
-#define H_POSITION_MOON_PHASE_DAYS      H_POSITION_MOON_PHASE_NAME
-
-#define X_POSITION_SUN_RISE_ICON        4
-#define Y_POSITION_SUN_RISE_ICON        10
-
-#define X_POSITION_SUN_SET_ICON         X_POSITION_SUN_RISE_ICON
-#define Y_POSITION_SUN_SET_ICON         21
-
-#define X_POSITION_SUN_RISE             (TFT_WIDTH / 3 + 2)
-#define Y_POSITION_SUN_RISE             12
-#define H_POSITION_SUN_RISE             RIGHT
-
-#define X_POSITION_SUN_SET              X_POSITION_SUN_RISE
-#define Y_POSITION_SUN_SET              23
-#define H_POSITION_SUN_SET              H_POSITION_SUN_RISE
-
-#define X_POSITION_MOON_PHASE           (TFT_WIDTH / 2)
-#define Y_POSITION_MOON_PHASE           12
-#define H_POSITION_MOON_PHASE           LEFT
-
-
-#define Y_START_POSITION_TIME           0
-#define Y_END_POSITION_TIME             (45 + Y_START_POSITION_TIME)
-
-#define Y_START_POSITION_WEATHER        (Y_END_POSITION_TIME + 2)
-#define Y_END_POSITION_WEATHER          (70 + Y_START_POSITION_WEATHER)
-
-#define Y_START_POSITION_SUN_MOON       (Y_END_POSITION_WEATHER + 2)
-#define Y_END_POSITION_SUN_MOON         (TFT_HEIGHT - 1)
-
-// 128x70 = 17920 byte RAM
-#define CANVAS_MAX_WIDTH                TFT_WIDTH
-#define CANVAS_MAX_HEIGHT               70
-
-#else
-
-#error No theme available for TFT dimensions
-
-#endif
 
 static WeatherStationPlugin plugin;
 
 WeatherStationPlugin::WeatherStationPlugin() :
-    _tft(TFT_PIN_CS, TFT_PIN_DC, TFT_PIN_RST),
-    _currentScreen(0),
+    WSDraw(),
     _updateTimer(0),
-    _lastTime(0),
-    _timeFormat24h(true),
-    _isMetric(true),
     _backlightLevel(1023),
     _pollInterval(0),
     _pollTimer(0),
-    _weatherError(F("No data available")),
     _httpClient(nullptr)
 {
 #if DEBUG_IOT_WEATHER_STATION
@@ -209,6 +57,32 @@ WeatherStationPlugin::WeatherStationPlugin() :
 
 PGM_P WeatherStationPlugin::getName() const {
     return PSTR("weather_station");
+}
+
+void WeatherStationPlugin::_sendScreenCaptureBMP(AsyncWebServerRequest *request) {
+    // _debug_printf_P(PSTR("WeatherStationPlugin::_sendScreenCapture(): is_authenticated=%u\n"), web_server_is_authenticated(request));
+
+    if (web_server_is_authenticated(request)) {
+        //auto response = new AsyncClonedBitmapStreamResponse(plugin.getCanvas().clone());
+        debug_printf("AsyncBitmapStreamResponse\n");
+        auto response = new AsyncBitmapStreamResponse(plugin.getCanvas());
+        HttpHeaders httpHeaders;
+        httpHeaders.addNoCache();
+        httpHeaders.setWebServerResponseHeaders(response);
+        request->send(response);
+    }
+    else {
+        request->send(403);
+    }
+}
+
+void WeatherStationPlugin::_installWebhooks() {
+
+    auto server = get_web_server_object();
+    if (server) {
+        _debug_printf_P(PSTR("WeatherStationPlugin::_installWebhooks(): Installing web handler for screen capture\n"));
+        server->on("/images/screen_capture.bmp", _sendScreenCaptureBMP);
+    }
 }
 
 void WeatherStationPlugin::setup(PluginSetupMode_t mode) {
@@ -234,9 +108,27 @@ void WeatherStationPlugin::setup(PluginSetupMode_t mode) {
 
     LoopFunctions::add(loop);
     SerialHandler::getInstance().addHandler(serialHandler, SerialHandler::RECEIVE);
+
+    _installWebhooks();
+
+    WsClient::addClientCallback([this](WsClient::ClientCallbackTypeEnum_t type, WsClient *client) {
+        if (type == WsClient::ClientCallbackTypeEnum_t::AUTHENTICATED) {
+            // draw sends the screen capture to the web socket, do it for each new client
+            Scheduler.addTimer(100, false, [this](EventScheduler::TimerPtr timer) {
+                _draw();
+            });
+
+        }
+    });
 }
 
 void WeatherStationPlugin::reconfigure(PGM_P source) {
+
+    _installWebhooks();
+}
+
+bool WeatherStationPlugin::hasReconfigureDependecy(PluginComponent *plugin) const {
+    return plugin->nameEquals(F("http"));
 }
 
 bool WeatherStationPlugin::hasStatus() const {
@@ -334,11 +226,11 @@ void WeatherStationPlugin::_httpRequest(const String &url, uint16_t timeout, Jso
                     }
                 }
 
-                // _debug_printf_P(PSTR("WeatherStationPlugin::_httpRequest(), http code=%d, code=%d, message=%s, url=%s\n"), httpCode, code, message.c_str(), url.c_str());
+                _debug_printf_P(PSTR("WeatherStationPlugin::_httpRequest(), http code=%d, code=%d, message=%s, url=%s\n"), httpCode, code, message.c_str(), url.c_str());
                 _weatherError = F("Failed to load data");
                 status = false;
 
-                Logger_error(F("Weather Station: HTTP request failed with HTTP code = %d, API code = %d, message = %s, url = %s"), httpCode, code, message.c_str(), url.c_str());
+                // Logger_error(F("Weather Station: HTTP request failed with HTTP code = %d, API code = %d, message = %s, url = %s"), httpCode, code, message.c_str(), url.c_str());
 			}
 
             // delete object with a delay and inside the main loop, otherwise the program crashes in random places
@@ -397,6 +289,19 @@ void WeatherStationPlugin::_getWeatherInfo(Callback_t finishedCallback) {
     _httpRequest(_weatherApi.getWeatherApiUrl(), std::min(config._H_GET(Config().weather_station.config).api_timeout, (uint16_t)10), _weatherApi.getWeatherInfoParser(), finishedCallback);
 }
 
+void WeatherStationPlugin::_getWeatherForecast(Callback_t finishedCallback) {
+
+#if DEBUG_IOT_WEATHER_STATION
+    auto prev = finishedCallback;
+    finishedCallback = [this, prev](bool status) {
+        _weatherApi.dump(DebugSerial);
+        prev(status);
+    };
+#endif
+
+    _httpRequest(_weatherApi.getForecastApiUrl(), std::min(config._H_GET(Config().weather_station.config).api_timeout, (uint16_t)10), _weatherApi.getWeatherForecastParser(), finishedCallback);
+}
+
 void WeatherStationPlugin::_fadeBacklight(uint16_t fromLevel, uint16_t toLevel, int8_t step) {
     int8_t direction = fromLevel > toLevel ? -step : step;
     analogWrite(TFT_PIN_LED, fromLevel);
@@ -422,6 +327,10 @@ void WeatherStationPlugin::_loop() {
         _debug_println(F("WeatherStationPlugin::_loop(): poll interval"));
         //TODO
 
+        _getWeatherInfo([this](bool status) {
+            _draw();
+        });
+
     }
     else if (is_millis_diff_greater(_updateTimer, 60000)) { // update once per minute
         _draw();
@@ -432,10 +341,7 @@ void WeatherStationPlugin::_loop() {
             _draw();
         }
         else {
-            auto tmp = GFXcanvas16(CANVAS_MAX_WIDTH, Y_END_POSITION_TIME - Y_START_POSITION_TIME);
-            _canvas = &tmp;
-            _drawTime();
-            _canvas = nullptr;
+            _updateTime();
         }
     }
 }
@@ -478,6 +384,11 @@ void WeatherStationPlugin::_serialHandler(const uint8_t *buffer, size_t len) {
                     _draw();
                 });
                 break;
+            case 'f': // update weather info
+                _getWeatherForecast([this](bool status) {
+                    _draw();
+                });
+                break;
             case 'p': // pause
                 LoopFunctions::remove(loop);
                 break;
@@ -492,311 +403,59 @@ void WeatherStationPlugin::_serialHandler(const uint8_t *buffer, size_t len) {
     }
 }
 
-void WeatherStationPlugin::_drawTextAligned(Adafruit_GFX &gfx, int16_t x, int16_t y, const String &text, TextAlignEnum_t align, TextVAlignEnum_t valign, Position_t *pos) {
 
-    _drawTextAligned(gfx, x, y, text.c_str(), align, valign, pos);
-}
+// void WeatherStationPlugin::_drawRGBBitmap(int16_t x, int16_t y, uint16_t *pcolors, int16_t w, int16_t h) {
+// #if DEBUG_IOT_WEATHER_STATION
 
-void WeatherStationPlugin::_drawTextAligned(Adafruit_GFX &gfx, int16_t x, int16_t y, const char *text, TextAlignEnum_t align, TextVAlignEnum_t valign, Position_t *pos) {
-    int16_t x1, y1;
-    uint16_t w, h;
+//     static int16_t max_height = 0;
+//     max_height = std::max(max_height, h);
 
-    gfx.getTextBounds(text, 0, 0, &x1, &y1, &w, &h);
-    y -= y1;
+//     // _tft.drawRGBBitmap(x, y, pcolors, w, h);
+//     _broadcastRGBBitmap(x, y, pcolors, w, h);
 
-    switch(valign) {
-        case BOTTOM:
-            y -= h;
-            break;
-        case MIDDLE:
-            y -= h / 2;
-            break;
-        case TOP:
-        default:
-            break;
-    }
-    switch(align) {
-        case RIGHT:
-            x -= w;
-            break;
-        case CENTER:
-            x -= w / 2;
-            break;
-        case LEFT:
-        default:
-            break;
-    }
+//     if (_debugDisplayCanvasBorder) {
+//         _debug_printf_P(PSTR("WeatherStationPlugin::_drawRGBBitmap(): x=%d, y=%d, w=%u, h=%u (max. %u)\n"), x, y, w, h, max_height);
+//         uint16_t colors[] = { ST77XX_CYAN, ST77XX_RED, ST77XX_YELLOW, ST77XX_BLUE };
+//         _tft.drawRect(x, y, w, h, colors[y % 4]);
+//     }
 
-    // _debug_printf_P(PSTR("WeatherStationPlugin::_drawTextAligned(): x=%d %d, y=%d %d, w=%u, h=%u\n"), x, x1, y, y1, w, h);
+// #else
 
-    gfx.setCursor(x, y);
-    gfx.print(text);
+//     _tft.drawRGBBitmap(x, y, pcolors, w, h);
+//     _broadcastRGBBitmap(x, y, pcolors, w, h);
 
-    if (pos) {
-        pos->x = x;
-        pos->y = y + y1;
-        pos->w = w;
-        pos->h = h;
-    }
+// #endif
+// }
 
-}
+void WeatherStationPlugin::_broadcastCanvas(int16_t x, int16_t y, int16_t w, int16_t h) {
 
-void WeatherStationPlugin::_drawBitmap(Adafruit_GFX &gfx, int16_t x, int16_t y, PGM_P bmp, const uint16_t *palette, Dimensions_t *dim) {
+    auto webSocketUI = WsWebUISocket::getWsWebUI();
+    if (webSocketUI && !webSocketUI->getClients().isEmpty()) {
+        Buffer buffer;
 
-    uint16_t width = 0, height = 0;
+        WebSocketBinaryPacketUnqiueId_t packetIdentifier = RGB565_RLE_COMPRESSED_BITMAP;
+        buffer.write(reinterpret_cast<uint8_t *>(&packetIdentifier), sizeof(packetIdentifier));
 
-    auto dataPtr = bmp + 1;
-    if (pgm_read_byte(dataPtr++) == 2) { // only 2 bit depth supported
-        width = (pgm_read_byte(dataPtr++) >> 8);
-        width |= pgm_read_byte(dataPtr++);
-        height = (pgm_read_byte(dataPtr++) >> 8);
-        height |= pgm_read_byte(dataPtr++);
-
-        const uint8_t numColors = 4;
-        uint16_t _palette[numColors];
-        memcpy_P(_palette, palette, sizeof(_palette));
-
-        // _debug_printf_P(PSTR("_drawBitmap(): %u (%u) x %u x %u\n"), width, ((width + 7) & ~7), height, pgm_read_byte(bmp + 1));
-
-        width += x; // set to x end position
-        uint8_t ofs = (x & 3); // first bit relative to x1, indicator for reading a new byte
-        uint8_t byte = 0;
-        while(height--) {
-            for(uint16_t x1 = x; x1 < width; x1++) {
-                if ((x1 & 3) == ofs) {
-                    byte = pgm_read_byte(dataPtr++);
-                    byte = (byte >> 6) | (((byte >> 4) & 0x3) << 2) | (((byte >> 2) & 0x3) << 4) | (((byte) & 0x3) << 6);   // invert pixel order
-                }
-                else {
-                    byte >>= 2;
-                }
-                gfx.drawPixel(x1, y, _palette[(byte & 0x3) % numColors]);
-            }
-            y++;
+        GFXCanvasRLEStream stream(getCanvas(), x, y, w, h);
+        while(stream.available()) {
+            buffer.write(stream.read());
         }
-    }
 
-    if (dim) {
-        dim->w = width;
-        dim->h = height;
-    }
-}
+        auto wsBuffer = webSocketUI->makeBuffer(buffer.get(), buffer.length());
+        buffer.clear();
+        if (wsBuffer) {
 
-void WeatherStationPlugin::_drawRGBBitmap(int16_t x, int16_t y, uint16_t *pcolors, int16_t w, int16_t h) {
-#if DEBUG_IOT_WEATHER_STATION
-
-    static int16_t max_height = 0;
-    max_height = std::max(max_height, h);
-
-    _tft.drawRGBBitmap(x, y, pcolors, w, h);
-
-    if (_debugDisplayCanvasBorder) {
-        _debug_printf_P(PSTR("WeatherStationPlugin::_drawRGBBitmap(): x=%d, y=%d, w=%u, h=%u (max. %u)\n"), x, y, w, h, max_height);
-        uint16_t colors[] = { ST77XX_CYAN, ST77XX_RED, ST77XX_YELLOW, ST77XX_BLUE };
-        _tft.drawRect(x, y, w, h, colors[y % 4]);
-    }
-
-#else
-
-    _tft.drawRGBBitmap(x, y, pcolors, w, h);
-
-#endif
-}
-
-void WeatherStationPlugin::_drawTime() {
-    // _debug_printf_P(PSTR("WeatherStationPlugin::_drawTime()\n"));
-
-    char buf[32];
-    _lastTime = time(nullptr);
-    if (!_canvas->getBuffer()) { // could not allocate memory, retry later
-        return;
-    }
-
-    struct tm *tm = timezone_localtime(&_lastTime);
-
-    _canvas->fillScreen(COLORS_BACKGROUND);
-    _canvas->setFont(FONTS_DATE);
-    _canvas->setTextColor(COLORS_DATE);
-    timezone_strftime_P(buf, sizeof(buf), PSTR("%a %b %d %Y"), tm);
-    _drawTextAligned(*_canvas, X_POSITION_DATE, Y_POSITION_DATE, buf, H_POSITION_DATE);
-
-    _canvas->setFont(FONTS_TIME);
-    _canvas->setTextColor(COLORS_TIME);
-    if (_timeFormat24h) {
-        timezone_strftime_P(buf, sizeof(buf), PSTR("%H:%M:%S"), tm);
-    }
-    else {
-        timezone_strftime_P(buf, sizeof(buf), PSTR("%I:%M:%S"), tm);
-    }
-    _drawTextAligned(*_canvas, X_POSITION_TIME, Y_POSITION_TIME, buf, H_POSITION_TIME);
-
-    _canvas->setFont(FONTS_TIMEZONE);
-    _canvas->setTextColor(COLORS_TIMEZONE);
-    if (_timeFormat24h) {
-        timezone_strftime_P(buf, sizeof(buf), PSTR("%Z"), tm);
-    }
-    else {
-        timezone_strftime_P(buf, sizeof(buf), PSTR("%p - %Z"), tm);
-    }
-    _drawTextAligned(*_canvas, X_POSITION_TIMEZONE, Y_POSITION_TIMEZONE, buf, H_POSITION_TIMEZONE);
-
-    _drawRGBBitmap(0, Y_START_POSITION_TIME, _canvas->getBuffer(), TFT_WIDTH, Y_END_POSITION_TIME - Y_START_POSITION_TIME);
-}
-
-void WeatherStationPlugin::_drawWeather() {
-
-    _debug_printf_P(PSTR("WeatherStationPlugin::_drawWeather()\n"));
-
-    _canvas->fillScreen(COLORS_BACKGROUND);
-
-    auto &info = _weatherApi.getWeatherInfo();
-    if (info.hasData()) {
-
-        // --- location
-
-        static const uint16_t palette[] PROGMEM = { COLORS_BACKGROUND, ST77XX_WHITE, ST77XX_YELLOW, ST77XX_BLUE };
-        _drawBitmap(*_canvas, X_POSITION_WEATHER_ICON, Y_POSITION_WEATHER_ICON, getMiniMeteoconIconFromProgmem(info.weather[0].icon), palette);
-
-        // create kind of shadow effect in case the text is drawn over the icon
-        _canvas->setFont(FONTS_CITY);
-        _canvas->setTextColor(COLORS_BACKGROUND);
-        for(int8_t x = -2; x <= 2; x++) {
-            for(int8_t y = 0; y < 2; y++) {
-                if (!(y == 0 && x == 0)) {
-                    _drawTextAligned(*_canvas, X_POSITION_CITY + x, Y_POSITION_CITY + y, info.location, H_POSITION_CITY, TOP);
+            wsBuffer->lock();
+            for(auto socket: webSocketUI->getClients()) {
+                if (socket->status() == WS_CONNECTED && socket->_tempObject && reinterpret_cast<WsClient *>(socket->_tempObject)->isAuthenticated()) {
+                    socket->binary(wsBuffer);
                 }
             }
+            wsBuffer->unlock();
+            webSocketUI->_cleanBuffers();
         }
-        _canvas->setTextColor(COLORS_CITY);
-        _drawTextAligned(*_canvas, X_POSITION_CITY, Y_POSITION_CITY, info.location, H_POSITION_CITY);
-
-        // --- temperature
-
-        _canvas->setFont(FONTS_TEMPERATURE);
-        _canvas->setTextColor(COLORS_TEMPERATURE);
-        String unit, temp;
-        if (_isMetric) {
-            unit = F(DEGREE_STR "C");
-            temp = String(OpenWeatherMapAPI::kelvinToC(info.val.temperature), 1) + unit;
-        }
-        else {
-            unit = F(DEGREE_STR "F");
-            temp = String(OpenWeatherMapAPI::kelvinToF(info.val.temperature), 1) + unit;
-        }
-
-#if HAVE_DEGREE_SYMBOL
-        _drawTextAligned(*_canvas, X_POSITION_TEMPERATURE, Y_POSITION_TEMPERATURE, temp, H_POSITION_TEMPERATURE, TOP);
-#else
-        Position_t pos;
-        _drawTextAligned(*_canvas, X_POSITION_TEMPERATURE, Y_POSITION_TEMPERATURE, temp, H_POSITION_TEMPERATURE, TOP, &pos);
-
-        // draw ° before unit
-        {
-            int16_t x1, y1;
-            uint16_t w, h;
-            _canvas->getTextBounds(unit, 0, 0, &x1, &y1, &w, &h);
-            uint8_t r = h / 5;
-            r = std::max(std::min(5, (int)r), 1);
-            x1 = pos.x + pos.w - (w * 5 / 6);
-            y1 = Y_POSITION_TEMPERATURE + r;
-            do {
-                _canvas->drawCircle(x1, y1, r--, COLORS_TEMPERATURE);
-            } while(r > 1);
-        }
-#endif
-
-        // --- weather description
-
-        _canvas->setFont(FONTS_WEATHER_DESCR);
-        _canvas->setTextColor(COLORS_WEATHER_DESCR);
-
-        String tmp = info.weather[0].descr;
-        if (tmp.length() > 10) {
-            auto idx = tmp.indexOf(' '); // wrap after first word and align to the right
-            if (idx != -1) {
-                _drawTextAligned(*_canvas, X_POSITION_WEATHER_DESCR, Y_POSITION_WEATHER_DESCR, tmp.substring(0, idx), H_POSITION_WEATHER_DESCR, TOP, &pos);
-                _drawTextAligned(*_canvas, X_POSITION_WEATHER_DESCR, Y_POSITION_WEATHER_DESCR + pos.h + 2, tmp.substring(idx + 1), H_POSITION_WEATHER_DESCR, TOP);
-                tmp = String();
-            }
-        }
-        if (tmp.length()) {
-            _drawTextAligned(*_canvas, X_POSITION_WEATHER_DESCR, Y_POSITION_WEATHER_DESCR, tmp, H_POSITION_WEATHER_DESCR);
-        }
-
-    }
-    else {
-        _canvas->setFont(FONTS_DEFAULT_MEDIUM);
-        _canvas->setTextColor(COLORS_DEFAULT_TEXT);
-        _drawTextAligned(*_canvas, TFT_WIDTH / 2, (Y_END_POSITION_WEATHER - Y_START_POSITION_WEATHER) / 2, _weatherError, CENTER, MIDDLE);
     }
 
-    _drawRGBBitmap(0, Y_START_POSITION_WEATHER, _canvas->getBuffer(), TFT_WIDTH, Y_END_POSITION_WEATHER - Y_START_POSITION_WEATHER);
-}
-
-void WeatherStationPlugin::_drawSunAndMoon() {
-
-    _debug_printf_P(PSTR("WeatherStationPlugin::_drawSunAndMoon()\n"));
-
-    double moonDay;
-    uint8_t moonPhase;
-    char moonPhaseFont;
-    calcMoon(time(nullptr), moonDay, moonPhase, moonPhaseFont, FONTS_MOON_PHASE_UPPERCASE);
-
-    _canvas->fillScreen(COLORS_BACKGROUND);
-
-    _canvas->setFont(FONTS_SUN_AND_MOON);
-    _canvas->setTextColor(COLORS_SUN_AND_MOON);
-    _drawTextAligned(*_canvas, X_POSITION_SUN_TITLE, Y_POSITION_SUN_TITLE, F("Sun"), H_POSITION_SUN_TITLE);
-    _drawTextAligned(*_canvas, X_POSITION_MOON_PHASE_NAME, Y_POSITION_MOON_PHASE_NAME, moonPhaseName(moonPhase), H_POSITION_MOON_PHASE_NAME);
-    _drawTextAligned(*_canvas, X_POSITION_MOON_PHASE_DAYS, Y_POSITION_MOON_PHASE_DAYS, String((int)round(moonDay)) + 'd', H_POSITION_MOON_PHASE_NAME);
-
-    auto &info = _weatherApi.getWeatherInfo();
-    if (info.hasData()) {
-        _canvas->setTextColor(COLORS_SUN_RISE_SET);
-        _canvas->drawBitmap(X_POSITION_SUN_RISE_ICON, Y_POSITION_SUN_RISE_ICON, icon_sunrise, 7, 9, COLORS_BACKGROUND, COLORS_SUN_RISE_SET);
-        _canvas->drawBitmap(X_POSITION_SUN_SET_ICON, Y_POSITION_SUN_SET_ICON, icon_sunset, 7, 9, COLORS_BACKGROUND, COLORS_SUN_RISE_SET);
-
-        char buf[8];
-        PGM_P timeFormat = PSTR("%H:%M");
-        time_t time = info.getSunRiseAsGMT();
-        struct tm *tm = gmtime(&time);
-        strftime_P(buf, sizeof(buf), timeFormat, tm);
-        _drawTextAligned(*_canvas, X_POSITION_SUN_SET, Y_POSITION_SUN_RISE, buf, H_POSITION_SUN_RISE);
-        time = info.getSunSetAsGMT();
-        tm = gmtime(&time);
-        strftime_P(buf, sizeof(buf), timeFormat, tm);
-        _drawTextAligned(*_canvas, X_POSITION_SUN_SET, Y_POSITION_SUN_SET, buf, H_POSITION_SUN_SET);
-    }
-
-    _canvas->setFont(FONTS_MOON_PHASE);
-    _canvas->setTextColor(COLORS_MOON_PHASE);
-    _drawTextAligned(*_canvas, X_POSITION_MOON_PHASE, Y_POSITION_MOON_PHASE, String(moonPhaseFont), H_POSITION_MOON_PHASE);
-
-    _drawRGBBitmap(0, Y_START_POSITION_SUN_MOON, _canvas->getBuffer(), TFT_WIDTH, Y_END_POSITION_SUN_MOON - Y_START_POSITION_SUN_MOON);
-}
-
-void WeatherStationPlugin::_drawScreen0() {
-    _drawTime();
-    _drawWeather();
-    _drawSunAndMoon();
-}
-
-void WeatherStationPlugin::_draw() {
-
-    _debug_printf_P(PSTR("WeatherStationPlugin::_draw()\n"));
-
-    auto tmp = GFXcanvas16(CANVAS_MAX_WIDTH, CANVAS_MAX_HEIGHT);
-    if (!tmp.getBuffer()) { // could not allocate memory
-        return;
-    }
-    _canvas = &tmp;
-
-    switch(_currentScreen) {
-        case 0:
-            _drawScreen0();
-            break;
-    }
-    _canvas = nullptr;
 }
 
 #endif

@@ -390,7 +390,7 @@ void Driver_4ChDimmer::publishState(MQTTClient *client) {
     json.printTo(buffer);
 
     Scheduler.removeTimer(_publishTimer);
-    _publishTimer = Scheduler.addTimer(100, false, [this, buffer](EventScheduler::TimerPtr timer) {
+    Scheduler.addTimer(&_publishTimer, 100, false, [this, buffer](EventScheduler::TimerPtr timer) {
         WsClient::broadcast(WsWebUISocket::getWsWebUI(), WsWebUISocket::getSender(), buffer.c_str(), buffer.length());
         _publishTimer = nullptr;
     });

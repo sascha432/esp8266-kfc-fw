@@ -61,15 +61,19 @@
 #endif
 
 #ifndef KFC_TWOWIRE_SDA
-#define KFC_TWOWIRE_SDA                 D3
+#define KFC_TWOWIRE_SDA                 SDA
 #endif
 
 #ifndef KFC_TWOWIRE_SCL
-#define KFC_TWOWIRE_SCL                 D5
+#define KFC_TWOWIRE_SCL                 SCL
 #endif
 
-#ifndef KFC_TWOWIRE_CLOCK_STRECH
-#define KFC_TWOWIRE_CLOCK_STRECH        45000
+#ifndef KFC_TWOWIRE_CLOCK_STRETCH
+#define KFC_TWOWIRE_CLOCK_STRETCH       45000
+#endif
+
+#ifndef KFC_TWOWIRE_CLOCK_SPEED
+#define KFC_TWOWIRE_CLOCK_SPEED         100000
 #endif
 
 #ifndef DEBUG

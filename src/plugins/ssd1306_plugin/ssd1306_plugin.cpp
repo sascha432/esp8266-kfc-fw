@@ -217,7 +217,7 @@ void ssd1306_enable_status() {
     Scheduler.removeTimer(ssd1306_status_timer);
     ssd1306_clear_display();
     ssd1306_update_status();
-    ssd1306_status_timer = Scheduler.addTimer(1000, true, ssd1306_update_time);
+    Scheduler.addTimer(&ssd1306_status_timer, 1000, true, ssd1306_update_time);
 }
 
 void ssd1306_setup() {

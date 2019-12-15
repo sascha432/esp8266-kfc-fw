@@ -69,8 +69,7 @@ bool PluginComponent::hasStatus() const {
 }
 
 const String PluginComponent::getStatus() {
-    debug_printf_P(PSTR("PluginComponent::getStatus() pure virtual: %s\n"), getName());
-    panic();
+    __debugbreak_and_panic_printf_P(PSTR("PluginComponent::getStatus() pure virtual: %s\n"), getName());
     return _sharedEmptyString;
 }
 
@@ -80,8 +79,7 @@ bool PluginComponent::canHandleForm(const String &formName) const {
 }
 
 void PluginComponent::createConfigureForm(AsyncWebServerRequest *request, Form &form) {
-    debug_printf_P(PSTR("PluginComponent::createConfigureForm() pure virtual: %s\n"), getName());
-    panic();
+    __debugbreak_and_panic_printf_P(PSTR("PluginComponent::createConfigureForm() pure virtual: %s\n"), getName());
 }
 
 
@@ -90,8 +88,7 @@ bool PluginComponent::hasWebTemplate(const String &formName) const {
 }
 
 WebTemplate *PluginComponent::getWebTemplate(const String &formName) {
-    debug_printf_P(PSTR("PluginComponent::getWebTemplate() pure virtual: %s\n"), getName());
-    panic();
+    __debugbreak_and_panic_printf_P(PSTR("PluginComponent::getWebTemplate() pure virtual: %s\n"), getName());
     return nullptr;
 }
 
@@ -100,13 +97,11 @@ bool PluginComponent::hasWebUI() const {
 }
 
 void PluginComponent::createWebUI(WebUI &webUI) {
-    debug_printf_P(PSTR("PluginComponent::createWebUI() pure virtual: %s\n"), getName());
-    panic();
+    __debugbreak_and_panic_printf_P(PSTR("PluginComponent::createWebUI() pure virtual: %s\n"), getName());
 }
 
 WebUIInterface *PluginComponent::getWebUIInterface() {
-    debug_printf_P(PSTR("PluginComponent::getWebUIInterface() pure virtual: %s\n"), getName());
-    panic();
+    __debugbreak_and_panic_printf_P(PSTR("PluginComponent::getWebUIInterface() pure virtual: %s\n"), getName());
     return nullptr;
 }
 
@@ -122,8 +117,7 @@ void PluginComponent::atModeHelpGenerator() {
 }
 
 bool PluginComponent::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) {
-    debug_printf_P(PSTR("PluginComponent::atModeHandler() pure virtual: %s\n"), getName());
-    panic();
+    __debugbreak_and_panic_printf_P(PSTR("PluginComponent::atModeHandler() pure virtual: %s\n"), getName());
     return false;
 }
 

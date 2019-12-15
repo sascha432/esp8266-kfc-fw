@@ -1,3 +1,11 @@
+
+#ifdef _MSC_VER
+#pragma warning( push )
+#pragma warning( disable : 4309 )
+#pragma warning( disable : 4838 )
+#endif
+
+// Some code
 // https://github.com/ThingPulse/esp8266-weather-station-color/blob/master/weathericons.h
 
 const char ThingPulseLogo[] PROGMEM = {
@@ -3797,7 +3805,7 @@ const char* getMiniMeteoconIconFromProgmem(String iconText) {
 }
 
 
-
-
-
+#ifdef _MSC_VER
+#pragma warning( pop )
+#endif
 

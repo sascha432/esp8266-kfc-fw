@@ -166,11 +166,15 @@ static void set_var_value(const char *value, SensorVars_t &var) {
 }
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(SENSORC, "SENSORC", "<variable-name>,<value>", "Configure sensors", "Display configuration");
+#if IOT_SENSOR_HAVE_BATTERY
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(SENSORPBV, "SENSORPBV", "<repeat every n seconds>", "Print battery voltage");
+#endif
 
 void SensorPlugin::atModeHelpGenerator() {
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SENSORC));
+#if IOT_SENSOR_HAVE_BATTERY
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SENSORPBV));
+#endif
 }
 
 bool SensorPlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) {
@@ -198,6 +202,7 @@ bool SensorPlugin::atModeHandler(Stream &serial, const String &command, int8_t a
         }
         return true;
     }
+#if IOT_SENSOR_HAVE_BATTERY
     else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SENSORPBV))) {
         static EventScheduler::TimerPtr timer = nullptr;
         if (timer) {
@@ -229,6 +234,7 @@ bool SensorPlugin::atModeHandler(Stream &serial, const String &command, int8_t a
         }
         return true;
     }
+#endif
     return false;
 }
 

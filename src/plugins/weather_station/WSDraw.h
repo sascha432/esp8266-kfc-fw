@@ -14,6 +14,18 @@
 #include <OpenWeatherMapAPI.h>
 #include <SpeedBooster.h>
 #include <Timezone.h>
+#if _WIN32
+class EventTimer {
+public:
+};
+class EventScheduler {
+public:
+    typedef EventTimer *TimerPtr;
+};
+#else
+#include <EventScheduler.h>
+#include <EventTimer.h>
+#endif
 #include "moon_phase.h"
 
 #ifndef TFT_PIN_CS
@@ -155,11 +167,17 @@
 class WSDraw {
 public:
     WSDraw();
+    virtual ~WSDraw();
 
     void _drawTime();
     void _drawWeather();
+    void _drawWeather(GFXCanvasCompressed &canvas, uint8_t top);
     void _drawSunAndMoon();
     void _drawScreen0();
+
+    void _doScroll();
+    void _scrollTimer(EventScheduler::TimerPtr timer);
+    bool _isScrolling() const;
 
     void _updateTime();
     void _draw();
@@ -176,10 +194,10 @@ public:
     }
 
 protected:
-
     Adafruit_ST7735 _tft;
     GFXCanvasCompressedPalette  _canvas;
-    // GFXCanvasCompressed  _canvas;
+    GFXCanvasCompressedPalette *_scrollCanvas;
+    uint8_t _scrollPosition;
     OpenWeatherMapAPI _weatherApi;
     String _weatherError;
 

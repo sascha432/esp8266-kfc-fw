@@ -35,6 +35,7 @@
 #include <debug_helper_disable.h>
 #endif
 
+PROGMEM_STRING_DEF(weather_station_webui_id, "weather_station");
 
 static WeatherStationPlugin plugin;
 
@@ -111,15 +112,16 @@ void WeatherStationPlugin::setup(PluginSetupMode_t mode) {
 
     _installWebhooks();
 
+/*
     WsClient::addClientCallback([this](WsClient::ClientCallbackTypeEnum_t type, WsClient *client) {
         if (type == WsClient::ClientCallbackTypeEnum_t::AUTHENTICATED) {
             // draw sends the screen capture to the web socket, do it for each new client
             Scheduler.addTimer(100, false, [this](EventScheduler::TimerPtr timer) {
                 _draw();
             });
-
         }
     });
+    */
 }
 
 void WeatherStationPlugin::reconfigure(PGM_P source) {
@@ -138,7 +140,7 @@ bool WeatherStationPlugin::hasStatus() const {
 const String WeatherStationPlugin::getStatus() {
     _debug_printf_P(PSTR("WeatherStationPlugin::getStatus()\n"));
     PrintHtmlEntitiesString str;
-    str.printf_P(PSTR("WeatherStationPlugin"));
+    str.printf_P(PSTR("Weather Station Plugin"));
     return str;
 }
 
@@ -146,8 +148,39 @@ void WeatherStationPlugin::loop() {
     plugin._loop();
 }
 
+bool WeatherStationPlugin::hasWebUI() const {
+    return true;
+}
+
+WebUIInterface *WeatherStationPlugin::getWebUIInterface() {
+    return this;
+}
+
+void WeatherStationPlugin::createWebUI(WebUI &webUI) {
+    auto row = &webUI.addRow();
+    row->setExtraClass(JJ(title));
+    row->addGroup(F("Weather Station"), false);
+
+    row = &webUI.addRow();
+    row->addScreen(FSPGM(weather_station_webui_id), _canvas.width(), _canvas.height());
+}
+
+
 void WeatherStationPlugin::serialHandler(uint8_t type, const uint8_t *buffer, size_t len) {
     plugin._serialHandler(buffer, len);
+}
+
+void WeatherStationPlugin::getValues(JsonArray &array) {
+    _debug_printf_P(PSTR("WeatherStationPlugin::getValues()\n"));
+
+    // redraw screen in main loop
+    Scheduler.addTimer(1, false, [this](EventScheduler::TimerPtr timer) {
+        _draw();
+    });
+}
+
+void WeatherStationPlugin::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState) {
+    _debug_printf_P(PSTR("WeatherStationPlugin::setValue()\n"));
 }
 
 void WeatherStationPlugin::_httpRequest(const String &url, uint16_t timeout, JsonBaseReader *jsonReader, Callback_t finishedCallback) {
@@ -399,6 +432,14 @@ void WeatherStationPlugin::_serialHandler(const uint8_t *buffer, size_t len) {
                 _debugDisplayCanvasBorder = !_debugDisplayCanvasBorder;
                 _draw();
                 break;
+            case 's':
+                if (!_isScrolling()) {
+                    _doScroll();
+                    Scheduler.addTimer(20, true, [this](EventScheduler::TimerPtr timer) {
+                        _scrollTimer(timer);
+                    });
+                }
+                break;
         }
     }
 }
@@ -435,6 +476,10 @@ void WeatherStationPlugin::_broadcastCanvas(int16_t x, int16_t y, int16_t w, int
 
         WebSocketBinaryPacketUnqiueId_t packetIdentifier = RGB565_RLE_COMPRESSED_BITMAP;
         buffer.write(reinterpret_cast<uint8_t *>(&packetIdentifier), sizeof(packetIdentifier));
+
+        const uint8_t len = constexpr_strlen_P(SPGM(weather_station_webui_id));
+        buffer.write(len);
+        buffer.write_P(SPGM(weather_station_webui_id), len);
 
         GFXCanvasRLEStream stream(getCanvas(), x, y, w, h);
         while(stream.available()) {

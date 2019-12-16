@@ -58,6 +58,7 @@ const unsigned char icon_sunset [] PROGMEM = {
 WSDraw::WSDraw() :
     _tft(TFT_PIN_CS, TFT_PIN_DC, TFT_PIN_RST),
     _canvas(_tft.width(), _tft.height()),
+    _scrollCanvas(nullptr),
     _weatherError(F("No data available")),
     _currentScreen(0),
     _lastTime(0),
@@ -74,6 +75,13 @@ WSDraw::WSDraw() :
         _weatherError = F("Invalid data");
     }
 #endif
+}
+
+WSDraw::~WSDraw()
+{
+    if (_scrollCanvas) {
+        delete _scrollCanvas;
+    }
 }
 
 
@@ -133,12 +141,16 @@ void WSDraw::_drawTime()
     _canvas._drawTextAligned(X_POSITION_TIMEZONE, Y_POSITION_TIMEZONE, buf, H_POSITION_TIMEZONE);
 }
 
-
 void WSDraw::_drawWeather()
+{
+    _drawWeather(_canvas, Y_START_POSITION_WEATHER);
+}
+
+void WSDraw::_drawWeather(GFXCanvasCompressed& canvas, uint8_t top)
 {
     // _debug_printf_P(PSTR("WSDraw::_drawWeather()\n"));
 
-    _offsetY = Y_START_POSITION_WEATHER;
+    _offsetY = top;
 
     auto &info = _weatherApi.getWeatherInfo();
     if (info.hasData()) {
@@ -146,25 +158,25 @@ void WSDraw::_drawWeather()
         // --- location
 
         static const uint16_t palette[] PROGMEM = { COLORS_BACKGROUND, ST77XX_WHITE, ST77XX_YELLOW, ST77XX_BLUE };
-        _canvas._drawBitmap(X_POSITION_WEATHER_ICON, Y_POSITION_WEATHER_ICON, getMiniMeteoconIconFromProgmem(info.weather[0].icon), palette);
+        canvas._drawBitmap(X_POSITION_WEATHER_ICON, Y_POSITION_WEATHER_ICON, getMiniMeteoconIconFromProgmem(info.weather[0].icon), palette);
 
         // create kind of shadow effect in case the text is drawn over the icon
-        _canvas.setFont(FONTS_CITY);
-        _canvas.setTextColor(COLORS_BACKGROUND);
+        canvas.setFont(FONTS_CITY);
+        canvas.setTextColor(COLORS_BACKGROUND);
         for(int8_t x = -2; x <= 2; x++) {
             for(int8_t y = 0; y < 2; y++) {
                 if (!(y == 0 && x == 0)) {
-                    _canvas._drawTextAligned(X_POSITION_CITY + x, Y_POSITION_CITY + y, info.location, H_POSITION_CITY, AdafruitGFXExtension::TOP);
+                    canvas._drawTextAligned(X_POSITION_CITY + x, Y_POSITION_CITY + y, info.location, H_POSITION_CITY, AdafruitGFXExtension::TOP);
                 }
             }
         }
-        _canvas.setTextColor(COLORS_CITY);
-        _canvas._drawTextAligned(X_POSITION_CITY, Y_POSITION_CITY, info.location, H_POSITION_CITY);
+        canvas.setTextColor(COLORS_CITY);
+        canvas._drawTextAligned(X_POSITION_CITY, Y_POSITION_CITY, info.location, H_POSITION_CITY);
 
         // --- temperature
 
-        _canvas.setFont(FONTS_TEMPERATURE);
-        _canvas.setTextColor(COLORS_TEMPERATURE);
+        canvas.setFont(FONTS_TEMPERATURE);
+        canvas.setTextColor(COLORS_TEMPERATURE);
         String unit, temp;
         if (_isMetric) {
             unit = F(DEGREE_STR "C");
@@ -176,49 +188,49 @@ void WSDraw::_drawWeather()
         }
 
 #if HAVE_DEGREE_SYMBOL
-        _canvas._drawTextAligned(X_POSITION_TEMPERATURE, Y_POSITION_TEMPERATURE, temp, H_POSITION_TEMPERATURE, AdafruitGFXExtension::TOP);
+        canvas._drawTextAligned(X_POSITION_TEMPERATURE, Y_POSITION_TEMPERATURE, temp, H_POSITION_TEMPERATURE, AdafruitGFXExtension::TOP);
 #else
         AdafruitGFXExtension::Position_t pos;
-        _canvas._drawTextAligned(X_POSITION_TEMPERATURE, Y_POSITION_TEMPERATURE, temp, H_POSITION_TEMPERATURE, AdafruitGFXExtension::TOP, &pos);
+        canvas._drawTextAligned(X_POSITION_TEMPERATURE, Y_POSITION_TEMPERATURE, temp, H_POSITION_TEMPERATURE, AdafruitGFXExtension::TOP, &pos);
 
         // draw ° before unit
         {
             int16_t x1, y1;
             uint16_t w, h;
-            _canvas.getTextBounds(unit, 0, 0, &x1, &y1, &w, &h);
+            canvas.getTextBounds(unit, 0, 0, &x1, &y1, &w, &h);
             uint8_t r = h / 5;
             r = std::max(std::min(5, (int)r), 1);
             x1 = pos.x + pos.w - (w * 5 / 6) + _offsetX;
             y1 = Y_POSITION_TEMPERATURE + r;
             do {
-                _canvas.drawCircle(x1, y1, r--, COLORS_TEMPERATURE);
+                canvas.drawCircle(x1, y1, r--, COLORS_TEMPERATURE);
             } while(r > 1);
         }
 #endif
 
         // --- weather description
 
-        _canvas.setFont(FONTS_WEATHER_DESCR);
-        _canvas.setTextColor(COLORS_WEATHER_DESCR);
+        canvas.setFont(FONTS_WEATHER_DESCR);
+        canvas.setTextColor(COLORS_WEATHER_DESCR);
 
         String tmp = info.weather[0].descr;
         if (tmp.length() > 10) {
             auto idx = tmp.indexOf(' ', 7); // wrap after first word thats longer than 7 characters and align to the right
             if (idx != -1) {
-                _canvas._drawTextAligned(X_POSITION_WEATHER_DESCR, Y_POSITION_WEATHER_DESCR, tmp.substring(0, idx), H_POSITION_WEATHER_DESCR, AdafruitGFXExtension::TOP, &pos);
-                _canvas._drawTextAligned(X_POSITION_WEATHER_DESCR, Y_POSITION_WEATHER_DESCR + pos.h + 2, tmp.substring(idx + 1), H_POSITION_WEATHER_DESCR, AdafruitGFXExtension::TOP);
+                canvas._drawTextAligned(X_POSITION_WEATHER_DESCR, Y_POSITION_WEATHER_DESCR, tmp.substring(0, idx), H_POSITION_WEATHER_DESCR, AdafruitGFXExtension::TOP, &pos);
+                canvas._drawTextAligned(X_POSITION_WEATHER_DESCR, Y_POSITION_WEATHER_DESCR + pos.h + 2, tmp.substring(idx + 1), H_POSITION_WEATHER_DESCR, AdafruitGFXExtension::TOP);
                 tmp = String();
             }
         }
         if (tmp.length()) {
-            _canvas._drawTextAligned(X_POSITION_WEATHER_DESCR, Y_POSITION_WEATHER_DESCR, tmp, H_POSITION_WEATHER_DESCR);
+            canvas._drawTextAligned(X_POSITION_WEATHER_DESCR, Y_POSITION_WEATHER_DESCR, tmp, H_POSITION_WEATHER_DESCR);
         }
 
     }
     else {
-        _canvas.setFont(FONTS_DEFAULT_MEDIUM);
-        _canvas.setTextColor(COLORS_DEFAULT_TEXT);
-        _canvas._drawTextAligned(TFT_WIDTH / 2, (Y_END_POSITION_WEATHER - Y_START_POSITION_WEATHER) / 2, _weatherError, AdafruitGFXExtension::CENTER, AdafruitGFXExtension::MIDDLE);
+        canvas.setFont(FONTS_DEFAULT_MEDIUM);
+        canvas.setTextColor(COLORS_DEFAULT_TEXT);
+        canvas._drawTextAligned(TFT_WIDTH / 2, (Y_END_POSITION_WEATHER - Y_START_POSITION_WEATHER) / 2, _weatherError, AdafruitGFXExtension::CENTER, AdafruitGFXExtension::MIDDLE);
     }
 }
 
@@ -283,6 +295,52 @@ void WSDraw::_drawScreen0()
     debug_println(str);
 }
 
+void WSDraw::_doScroll()
+{
+    _debug_printf_P(PSTR("WSDraw::_doScroll()\n"));
+    SpeedBooster speedBooster;
+
+    if (_scrollCanvas) {
+        delete _scrollCanvas;
+    }
+    _scrollCanvas = new GFXCanvasCompressedPalette(TFT_WIDTH, Y_END_POSITION_WEATHER - Y_START_POSITION_WEATHER);
+    _scrollPosition = 0;
+    _drawWeather(*_scrollCanvas, 0);
+}
+
+void WSDraw::_scrollTimer(EventScheduler::TimerPtr timer)
+{
+    if (_scrollCanvas) {
+        // _debug_printf_P(PSTR("WSDraw::_scrollTimer(): _scrollPosition=%u\n"), _scrollPosition);
+        if (_scrollPosition < TFT_WIDTH) {
+            static const uint8_t numScroll = 8;
+            uint8_t height = _scrollCanvas->height();
+            for (uint8_t y = 0; y < height; y++) {
+                auto &canvasLine = _canvas.getLine(y + Y_START_POSITION_WEATHER);
+                memmove(canvasLine.getBuffer(), &canvasLine.getBuffer()[numScroll], (TFT_WIDTH - numScroll) * sizeof(uint16_t)); // move content to the left
+                canvasLine.setWriteFlag(true);
+                // copy new content
+                auto scrollCanvasLine = _scrollCanvas->getLine(y).getBuffer();
+                for (uint8_t x = 0; x < numScroll; x++) {
+                    canvasLine.setPixel(TFT_WIDTH - numScroll + x, scrollCanvasLine[_scrollPosition + x]);
+                }
+            }
+            _scrollPosition += numScroll;
+            _displayScreen(0, Y_START_POSITION_WEATHER, TFT_WIDTH, height);
+        }
+        else {
+            delete _scrollCanvas;
+            _scrollCanvas = nullptr;
+            timer->detach();
+        }
+    }
+}
+
+bool WSDraw::_isScrolling() const
+{
+    return _scrollCanvas != nullptr;
+}
+
 void WSDraw::_updateTime()
 {
     SpeedBooster speedBooster;
@@ -307,6 +365,11 @@ void WSDraw::_updateTime()
 }
 
 void WSDraw::_draw() {
+
+    if (_scrollCanvas) {
+        return;
+    }
+
     SpeedBooster speedBooster;
 
     _canvas.fillScreen(COLORS_BACKGROUND);
@@ -341,7 +404,7 @@ void WSDraw::_displayScreen(int16_t x, int16_t y, int16_t w, int16_t h)
     _tft.setAddrWindow(x, y, w, h);
     _canvas.drawInto(x, y, w, h, [this](uint16_t x, uint16_t y, uint16_t w, uint16_t* pcolors) {
         _tft.writePixels(pcolors, w);
-        });
+    });
     _tft.endWrite();
     _broadcastCanvas(x, y, w, h);
 }

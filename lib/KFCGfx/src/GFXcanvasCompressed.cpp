@@ -2,6 +2,8 @@
  * Author: sascha_lammers@gmx.de
  */
 
+#if HAVE_GFX_LIB
+
 #include "GFXCanvasCompressed.h"
 #include <algorithm>
 #if ESP8266
@@ -571,3 +573,9 @@ GFXCanvasRLEStream GFXCanvasCompressed::getRLEStream(uint16_t x, uint16_t y, uin
     return GFXCanvasRLEStream(*this, x, y, w, h);
 }
 
+Cache &GFXCanvasCompressed::getLine(int16_t y)
+{
+    return _decodeLine(y);
+}
+
+#endif

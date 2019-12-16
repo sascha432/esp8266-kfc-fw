@@ -2,6 +2,8 @@
  * Author: sascha_lammers@gmx.de
  */
 
+#if HAVE_GFX_LIB
+
 #include "GFXCanvasCompressedPalette.h"
 
 #if DEBUG_GFXCANVAS
@@ -174,3 +176,5 @@ String GFXCanvasCompressedPalette::getDetails() const
     str.write('\n');
     return str;
 }
+
+#endif

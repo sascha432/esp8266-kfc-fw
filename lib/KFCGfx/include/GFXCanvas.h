@@ -2,6 +2,8 @@
 * Author: sascha_lammers@gmx.de
 */
 
+#if HAVE_GFX_LIB
+
 #pragma once
 
 #include <Arduino_compat.h>
@@ -135,3 +137,5 @@ namespace GFXCanvas {
     uint16_t convertRGBtoRGB565(uint32_t rgb);
 
 };
+
+#endif

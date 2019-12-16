@@ -2,6 +2,8 @@
 * Author: sascha_lammers@gmx.de
 */
 
+#if HAVE_GFX_LIB
+
 #pragma once
 
 #include <Arduino_compat.h>
@@ -27,3 +29,5 @@ public:
 private:
     GFXCanvasCompressed *_canvasPtr;
 };
+
+#endif

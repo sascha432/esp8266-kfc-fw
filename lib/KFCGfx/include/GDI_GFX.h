@@ -2,9 +2,9 @@
 * Author: sascha_lammers@gmx.de
 */
 
-#pragma once
-
 #ifdef _WIN32
+
+#pragma once
 
 #include <Adafruit_GFX.h>
 #include <windows.h>

@@ -2,6 +2,8 @@
  * Author: sascha_lammers@gmx.de
  */
 
+#if HAVE_GFX_LIB
+
 #pragma once
 
 #include <Arduino_compat.h>
@@ -53,3 +55,5 @@ private:
     int32_t _position;
     uint16_t _lastColor;
 };
+
+#endif

@@ -12,6 +12,7 @@
 #include <EventScheduler.h>
 #include <asyncHTTPrequest.h>
 #include <StreamString.h>
+#include "WebUIComponent.h"
 #include "WSDraw.h"
 #include "plugins.h"
 
@@ -19,7 +20,7 @@
 #define DEBUG_IOT_WEATHER_STATION 0
 #endif
 
-class WeatherStationPlugin : public PluginComponent, public WSDraw {
+class WeatherStationPlugin : public PluginComponent, public WebUIInterface, public WSDraw {
 // PluginComponent
 public:
     WeatherStationPlugin();
@@ -36,8 +37,16 @@ public:
     virtual bool hasStatus() const override;
     virtual const String getStatus() override;
 
+    virtual bool hasWebUI() const override;
+    virtual void createWebUI(WebUI &webUI) override;
+    virtual WebUIInterface *getWebUIInterface() override;
+
     static void loop();
     static void serialHandler(uint8_t type, const uint8_t *buffer, size_t len);
+
+public:
+    virtual void getValues(JsonArray &array);
+    virtual void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState);
 
 private:
     static void _sendScreenCaptureBMP(AsyncWebServerRequest *request);

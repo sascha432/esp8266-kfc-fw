@@ -170,6 +170,11 @@
     margin-top: 0;
 	margin-bottom: 0;
 }
+.webuicomponent > .screen {
+    padding: 10px;
+    padding-top: 18px;
+	text-align: center;
+}
 .webuicomponent > .sensor {
     padding: 10px;
 	min-height: 160px;

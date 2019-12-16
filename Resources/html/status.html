@@ -96,129 +96,128 @@
                 </tr>
             </thead>
             <tbody>
-                <!--#if WEBSERVER_SUPPORT-->
+                <!--#if defined(WEBSERVER_SUPPORT) && WEBSERVER_SUPPORT-->
                 <tr>
                     <td>Web server</td>
                     <td>%HTTP_STATUS%</td>
                 </tr>
                 <!--#endif-->
-                <!--#if ASYNC_TCP_SSL_ENABLED-->
+                <!--#if defined(ASYNC_TCP_SSL_ENABLED) && ASYNC_TCP_SSL_ENABLED-->
                 <tr>
                     <td>SSL/TLS</td>
                     <td>%SSL_STATUS%</td>
                 </tr>
                 <!--#endif-->
-                <!--#if SYSLOG-->
+                <!--#if defined(SYSLOG) && SYSLOG-->
                 <tr>
                     <td>Syslog</td>
                     <td>%SYSLOG_STATUS%</td>
                 </tr>
                 <!--#endif-->
-                <!--#if MDNS_SUPPORT-->
+                <!--#if defined(MDNS_SUPPORT) && MDNS_SUPPORT-->
                 <tr>
                     <td>MDNS</td>
                     <td>%MDNS_STATUS%</td>
                 </tr>
                 <!--#endif-->
-                <!--#if NTP_CLIENT-->
+                <!--#if defined(NTP_CLIENT) && NTP_CLIENT-->
                 <tr>
                     <td>NTP Client</td>
                     <td>%NTP_STATUS%</td>
                 </tr>
                 <!--#endif-->
-                <!--#if MQTT_SUPPORT-->
+                <!--#if defined(MQTT_SUPPORT) && MQTT_SUPPORT-->
                 <tr>
                     <td>MQTT</td>
                     <td>%MQTT_STATUS%</td>
                 </tr>
                 <!--#endif-->
-
-                <!--#if HOME_ASSISTANT_INTEGRATION-->
+                <!--#if defined(HOME_ASSISTANT_INTEGRATION) && HOME_ASSISTANT_INTEGRATION-->
                 <tr>
                     <td>Home Assistant</td>
                     <td>%HASS_STATUS%</td>
                 </tr>
                 <!--#endif-->
-                <!--#if HUE_EMULATION-->
+                <!--#if defined(HUE_EMULATION) && HUE_EMULATION-->
                 <tr>
                     <td>HUE</td>
                     <td>%HUE_STATUS%</td>
                 </tr>
                 <!--#endif-->
-                <!--#if REST_API_SUPPORT-->
+                <!--#if defined(REST_API_SUPPORT) && REST_API_SUPPORT-->
                 <tr>
                     <td>REST API</td>
                     <td>%REST_STATUS%</td>
                 </tr>
                 <!--#endif-->
-                <!--#if PING_MONITOR-->
+                <!--#if defined(PING_MONITOR) && PING_MONITOR-->
                 <tr>
                     <td>Ping Monitor</td>
                     <td>%PINGMON_STATUS%</td>
                 </tr>
                 <!--#endif-->
-                <!--#if SERIAL2TCP-->
+                <!--#if defined(SERIAL2TCP) && SERIAL2TCP-->
                 <tr>
                     <td>Serial2TCP</td>
                     <td>%SERIAL2TCP_STATUS%</td>
                 </tr>
                 <!--#endif-->
-                <!--#if STK500V1-->
+                <!--#if defined(STK500V1) && STK500V1-->
                 <tr>
                     <td>STK500v1</td>
                     <td>Programmer enabled</td>
                 </tr>
                 <!--#endif-->
-                <!--#if IOT_RF24_MASTER-->
+                <!--#if defined(IOT_RF24_MASTER) && IOT_RF24_MASTER-->
                 <tr>
                     <td>RF24 Master</td>
                     <td>%RF24_STATUS%</td>
                 </tr>
                 <!--#endif-->
-                <!--#if IOT_SWITCH-->
+                <!--#if defined(IOT_SWITCH) && IOT_SWITCH-->
                 <tr>
                     <td>Switch</td>
                     <td>%SWITCH_STATUS%</td>
                 </tr>
                 <!--#endif-->
-                <!--#if IOT_SENSOR-->
+                <!--#if defined(IOT_SENSOR) && IOT_SENSOR-->
                 <tr>
                     <td>Sensor</td>
                     <td>%SENSOR_STATUS%</td>
                 </tr>
                 <!--#endif-->
-                <!--#if IOT_ATOMIC_SUN_V2-->
+                <!--#if defined(IOT_ATOMIC_SUN_V2) && IOT_ATOMIC_SUN_V2-->
                 <tr>
                     <td>Atomic Sun V2</td>
                     <td>%ATOMICSUN_STATUS%</td>
                 </tr>
                 <!--#endif-->
-                <!--#if IOT_DIMMER_MODULE-->
+                <!--#if defined(IOT_DIMMER_MODULE) && IOT_DIMMER_MODULE-->
                 <tr>
                     <td>Dimmer Module</td>
                     <td>%DIMMER_STATUS%</td>
                 </tr>
                 <!--#endif-->
-                <!--#if IOT_BLINDS_CTRL-->
+                <!--#if defined(IOT_BLINDS_CTRL) && IOT_BLINDS_CTRL-->
                 <tr>
                     <td>Blinds Controller</td>
                     <td>%BLINDSCTRL_STATUS%</td>
                 </tr>
                 <!--#endif-->
-                <!--#if IOT_CLOCK-->
+                <!--#if defined(IOT_CLOCK) && IOT_CLOCK-->
                 <tr>
                     <td>Clock</td>
                     <td>%CLOCK_STATUS%</td>
                 </tr>
                 <!--#endif-->
-                <!--#if IOT_WEATHER_STATION-->
+                <!--#if defined(IOT_WEATHER_STATION) && IOT_WEATHER_STATION-->
                 <tr>
                     <td>Weather Station</td>
                     <td>%WEATHER_STATION_STATUS%</td>
                 </tr>
                 <!--#endif-->
             </tbody>
-            <!--#if 0 && MDNS_SUPPORT-->
+            <!--#if 0 && defined(MDNS_SUPPORT) && MDNS_SUPPORT-->
             <thead>
                 <tr>
                     <th colspan="2">MDNS Auto discovery</th>

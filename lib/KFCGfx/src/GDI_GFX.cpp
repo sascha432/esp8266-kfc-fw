@@ -32,7 +32,7 @@ GDI_GFX::~GDI_GFX()
     DeleteObject(_hBitmap);
 }
 
-void GDI_GFX::drawPixel(int16_t x, int16_t y, uint16_t color) 
+void GDI_GFX::drawPixel(int16_t x, int16_t y, uint16_t color)
 {
     if ((uint16_t)x < (uint16_t)_width && (uint16_t)y < (uint16_t)_height) {
         auto ptr = &_buffer[(x + y * _width) * 3];

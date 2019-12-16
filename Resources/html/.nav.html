@@ -20,28 +20,28 @@
                     <a class="dropdown-item" href="wifi.html">WiFi</a>
                     <a class="dropdown-item" href="network.html">Network</a>
                     <a class="dropdown-item" href="remote.html">Remote Access</a>
-                    <!--#if PING_MONITOR-->
+                    <!--#if defined(PING_MONITOR) && PING_MONITOR-->
                     <a class="dropdown-item" href="ping_monitor.html">Ping Monitor</a>
                     <!--#endif-->
-                    <!--#if NTP_CLIENT-->
+                    <!--#if defined(NTP_CLIENT) && NTP_CLIENT-->
                     <a class="dropdown-item" href="ntp.html">NTP</a>
                     <!--#endif-->
-                    <!--#if MQTT_SUPPORT-->
+                    <!--#if defined(MQTT_SUPPORT) && MQTT_SUPPORT-->
                     <a class="dropdown-item" href="mqtt.html">MQTT</a>
                     <!--#endif-->
-                    <!--#if SYSLOG-->
+                    <!--#if defined(SYSLOG) && SYSLOG-->
                     <a class="dropdown-item" href="syslog.html">Syslog</a>
                     <!--#endif-->
-                    <!--#if REST_API_SUPPORT-->
+                    <!--#if defined(REST_API_SUPPORT) && REST_API_SUPPORT-->
                     <a class="dropdown-item" href="rest_api.html">REST API</a>
                     <!--#endif-->
-                    <!--#if IOT_ATOMIC_SUN_V2 || IOT_DIMMER_MODULE-->
+                    <!--#if (defined(IOT_ATOMIC_SUN_V2) && IOT_ATOMIC_SUN_V2) || (defined(IOT_DIMMER_MODULE) && IOT_DIMMER_MODULE)-->
                     <a class="dropdown-item" href="dimmer_cfg.html">Dimmer</a>
                     <!--#endif-->
-                    <!--#if SERIAL2TCP-->
+                    <!--#if defined(SERIAL2TCP) && SERIAL2TCP-->
                     <a class="dropdown-item" href="serial2tcp.html">Serial2TCP</a>
                     <!--#endif-->
-                    <!--#if HOME_ASSISTANT_INTEGRATION-->
+                    <!--#if defined(HOME_ASSISTANT_INTEGRATION) && HOME_ASSISTANT_INTEGRATION-->
                     <a class="dropdown-item" href="home_assistant.html">Home Assistant</a>
                     <!--#endif-->
                 </div>
@@ -52,10 +52,10 @@
                     Device
                 </a>
                 <div class="dropdown-menu" aria-labelledby="navbarDropdownDevice">
-                    <!--#if IOT_DIMMER_MODULE || IOT_ATOMIC_SUN_V2 || IOT_SENSOR || IOT_BLINDS_CTRL -->
+                    <!--#if (defined(IOT_DIMMER_MODULE) && IOT_DIMMER_MODULE) || (defined(IOT_ATOMIC_SUN_V2) && IOT_ATOMIC_SUN_V2) || (defined(IOT_SENSOR) && IOT_SENSOR) || (defined(IOT_BLINDS_CTRL) && IOT_BLINDS_CTRL) || (defined(IOT_WEATHER_STATION) && IOT_WEATHER_STATION) || (defined(IOT_CLOCK) && IOT_CLOCK)-->
                     <a class="dropdown-item" href="webui.html">Web UI</a>
                     <!--#endif-->
-                    <!--#if HUE_EMULATION-->
+                    <!--#if defined(HUE_EMULATION) && HUE_EMULATION-->
                     <a class="dropdown-item" href="hue.html">HUE device emulation</a>
                     <!--#endif-->
                 </div>
@@ -71,19 +71,19 @@
                     <a class="dropdown-item" href="update_fw.html">Update Firmware</a>
                 </div>
             </li>
-            <!--#if HTTP2SERIAL || FILE_MANAGER || PING_MONITOR-->
+            <!--#if (defined(HTTP2SERIAL) && HTTP2SERIAL) || (defined(FILE_MANAGER) && FILE_MANAGER) || (defined(PING_MONITOR) && PING_MONITOR)-->
             <li class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownDebug" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                     Utilities
                 </a>
                 <div class="dropdown-menu" aria-labelledby="navbarDropdownDebug">
-                    <!--#if HTTP2SERIAL-->
+                    <!--#if defined(HTTP2SERIAL) && HTTP2SERIAL-->
                     <a class="dropdown-item" href="serial_console.html">Serial Console</a>
                     <!--#endif-->
-                    <!--#if FILE_MANAGER-->
+                    <!--#if defined(FILE_MANAGER) && FILE_MANAGER-->
                     <a class="dropdown-item" href="file_manager.html">File Manager</a>
                     <!--#endif-->
-                    <!--#if PING_MONITOR-->
+                    <!--#if defined(PING_MONITOR) && PING_MONITOR-->
                     <a class="dropdown-item" href="ping.html">Ping Remote Host</a>
                     <!--#endif-->
                 </div>

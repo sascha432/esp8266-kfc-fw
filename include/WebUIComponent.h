@@ -37,6 +37,7 @@ WEBUI_PROGMEM_STRING_DECL(extra_classes)
 WEBUI_PROGMEM_STRING_DECL(data)
 WEBUI_PROGMEM_STRING_DECL(group)
 WEBUI_PROGMEM_STRING_DECL(has_switch)
+WEBUI_PROGMEM_STRING_DECL(height)
 WEBUI_PROGMEM_STRING_DECL(id)
 WEBUI_PROGMEM_STRING_DECL(left)
 WEBUI_PROGMEM_STRING_DECL(max)
@@ -47,6 +48,7 @@ WEBUI_PROGMEM_STRING_DECL(offset)
 WEBUI_PROGMEM_STRING_DECL(render_type)
 WEBUI_PROGMEM_STRING_DECL(right)
 WEBUI_PROGMEM_STRING_DECL(row)
+WEBUI_PROGMEM_STRING_DECL(screen)
 WEBUI_PROGMEM_STRING_DECL(sensor)
 WEBUI_PROGMEM_STRING_DECL(slider)
 WEBUI_PROGMEM_STRING_DECL(state)
@@ -60,6 +62,7 @@ WEBUI_PROGMEM_STRING_DECL(ui)
 WEBUI_PROGMEM_STRING_DECL(value)
 WEBUI_PROGMEM_STRING_DECL(vcc)
 WEBUI_PROGMEM_STRING_DECL(wide)
+WEBUI_PROGMEM_STRING_DECL(width)
 WEBUI_PROGMEM_STRING_DECL(zero_off)
 WEBUI_PROGMEM_STRING_DECL(display_name)
 
@@ -129,6 +132,8 @@ public:
     WebUIComponent &addSensor(const String &id, const JsonString &name, const JsonString &unit, WebUIComponent::SensorRenderEnum_t render = WebUIComponent::SensorRenderEnum_t::RENDER_DEFAULT);
     WebUIComponent &addBadgeSensor(const String &id, const JsonString &name, const JsonString &unit);
     WebUIComponent &addBinarySensor(const String &id, const JsonString &name, const JsonString &unit, WebUIComponent::SensorRenderEnum_t render = WebUIComponent::SensorRenderEnum_t::RENDER_DEFAULT);
+    WebUIComponent &addScreen(const String &id, uint16_t width, uint16_t height);
+
 };
 
 class WebUIInterface {

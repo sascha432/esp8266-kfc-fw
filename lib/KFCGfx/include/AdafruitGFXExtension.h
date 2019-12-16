@@ -2,6 +2,8 @@
 * Author: sascha_lammers@gmx.de
 */
 
+#if HAVE_GFX_LIB
+
 #pragma once
 
 #include <Arduino_compat.h>
@@ -41,3 +43,5 @@ public:
     // draw bitmaps with header, supports 2 bit/4 colors using the rgb565 colors passed in palette
     void _drawBitmap(int16_t x, int16_t y, PGM_P bmp, const uint16_t /*PROGMEM*/ *palette, Dimensions_t* dim = nullptr);
 };
+
+#endif

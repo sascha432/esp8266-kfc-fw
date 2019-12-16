@@ -16,6 +16,7 @@ var webUIComponent = {
             slider: { min: 0, max: 255, columns: 12, attributes: ['min', 'max', 'zero-off', 'value' ] },
             color_slider: { min: 15300, max: 50000 },
             sensor: { columns: 3 },
+            screen: { columns: 3, width: 128, height: 32, attributes: ['width', 'height' ] },
             binary_sensor: { columns: 2 },
         }
     },
@@ -213,11 +214,16 @@ var webUIComponent = {
             return element;
         }
         else if (options.type === "slider") {
-            var slider = $('<div class="' + ((options.color === "temperature") ? 'color-slider' : 'slider') + '"><input type="range" id=' + options.id + '></div>');
+            var slider = $('<div class="' + ((options.color === "temperature") ? 'color-slider' : 'slider') + '"><input type="range" id="' + options.id + '"></div>');
             var input = slider.find("input");
             this.copyAttributes(input, options)
             var element = this.createColumn(options, slider);
             this.addToGroup(options);
+            return element;
+        }
+        else if (options.type === "screen") {
+            var canvas = '<canvas width="' + options.width + '" height="' + options.height + '" border="0" style="border:2px solid grey" id="' + options.id + '"></canvas>';
+            var element = this.createColumn(options, $('<div class="screen"><div class="row"><div class="col">' + canvas + '</div></div></div>'));
             return element;
         }
         else if (options.type === "sensor" || options.type === "binary_sensor") {
@@ -391,18 +397,20 @@ var webUIComponent = {
             var packetId = new Uint16Array(event.data, 0, 1);
             if (packetId == 0x0001) {// RGB565_RLE_COMPRESSED_BITMAP
 
-                if ($('#screen_capture_canvas').length == 0) {
-                    var bottom = window._webui_debug ? '80' : '5';
-                    var tft_width = 128;
-                    var tft_height = 160;
-                    $('body').append('<canvas width="'+tft_width+'" height="'+tft_height+'" border="0" style="border:2px solid grey;z-index:999;position:fixed;right:5px;bottom:'+bottom+'px" id="screen_capture_canvas"></canvas>');
-                    var ctx = document.getElementById("screen_capture_canvas").getContext("2d");
-                    ctx.fillStyle = '#000000';
-                    ctx.fillRect(0, 0, tft_width, tft_height);
+                var pos = packetId.byteLength;
+                var len = new Uint8Array(event.data, pos++, 1)[0];
+                var canvasId = new Uint8Array(event.data, pos, len);
+                pos += canvasId.byteLength;
+                var canvasIdStr = new TextDecoder("utf-8").decode(canvasId);
+                var canvas = document.getElementById(canvasIdStr);
+                if (!canvas) {
+                    return;
+                }
+                var ctx = canvas.getContext("2d");
+                if (!ctx) {
+                    return;
                 }
 
-                var ctx = document.getElementById("screen_capture_canvas").getContext("2d");
-                var pos = packetId.byteLength;
                 var dim = new Uint16Array(event.data, pos, 5);
                 pos += dim.byteLength;
                 var x = dim[0];

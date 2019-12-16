@@ -2,6 +2,8 @@
 * Author: sascha_lammers@gmx.de
 */
 
+#if HAVE_GFX_LIB
+
 #include "AsyncBitmapStreamResponse.h"
 
 AsyncBitmapStreamResponse::AsyncBitmapStreamResponse(GFXCanvasCompressed& canvas) : AsyncAbstractResponse(nullptr), _stream(canvas) {
@@ -33,3 +35,5 @@ AsyncClonedBitmapStreamResponse::AsyncClonedBitmapStreamResponse(GFXCanvasCompre
 AsyncClonedBitmapStreamResponse::~AsyncClonedBitmapStreamResponse() {
     delete _canvasPtr;
 }
+
+#endif

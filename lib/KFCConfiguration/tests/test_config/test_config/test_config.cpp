@@ -3,7 +3,7 @@
 
 #include <Arduino_compat.h>
 #include <Buffer.h>
-#include <TableDumper.h>
+#include <IntelHexFormat.h>
 #include <algorithm>
 #include <map>
 #include "Configuration.h"
@@ -11,8 +11,6 @@
 #include "ConfigurationParameterReference.h"
 
 char tmp[] = { 0x00, 0x00 };
-
-EEPROMFile EEPROM;
 
 typedef struct {
     uint8_t flag1 : 1;
@@ -105,25 +103,149 @@ void test_tokenizer() {
 
 }
 
+void test_stringlistfind() {
+
+    auto res = stringlist_find_P_P("aa,bb,cc", "a");
+    res = stringlist_find_P_P("aa,bb,cc", "aa");
+    res = stringlist_find_P_P("aa,bb,cc", "bb");
+    res = stringlist_find_P_P("aa,bb,cc", "cc");
+
+    exit(-1);
+}
+
+
+uint16_t _pagePosition = 0, _pageSize = 128, _pageAddress = 0;
+uint8_t _pageBuffer[128];
+void _clearPageBuffer() {
+    memset(_pageBuffer, 0, sizeof(_pageBuffer));
+}
+
+FILE *fpout;
+int written = 0;
+
+void _writePage(uint16_t address, uint16_t length) {
+
+    written += length;
+
+    fprintf(fpout, "%04x: ", (address << 1) & 0xffff);
+    auto ptr = _pageBuffer;
+    auto count = length;
+    while(count--) {
+        fprintf(fpout, "%02x ", *ptr++ & 0xff);
+    }
+    fprintf(fpout, "\n");
+
+}
+
 int main() {
 
     ESP._enableMSVCMemdebug();
 
-    //test_tokenizer();
+    IntelHexFormat _file;
 
+    fpout = fopen("out.hex", "w");
+
+    if (_file.open("C:\\Users\\sascha\\Documents\\PlatformIO\\Projects\\kfc_fw\\data\\firmware.hex")) {
+
+        if (_file.validate()) {
+
+            int total = 0;
+
+            while (!_file.isEOF()) {
+                bool exit = false;
+                do {
+                    char buffer[1];
+                    uint16_t address;
+                    uint16_t read = sizeof(buffer);
+                    if (_pagePosition != _pageSize && read > _pageSize - _pagePosition) { // limit length to space left in page buffer
+                        read = _pageSize - _pagePosition;
+                    }
+                    auto length = _file.readBytes(buffer, read, address);
+                    if (length == -1) {
+                        // ERROR
+                        printf("length=-1\n");
+                    } else if (length == 0) {
+                        // ERROR
+                        printf("length=0, address %u, eof  %u\n", address, _file.isEOF());
+                    }
+                    total += length;
+
+                    uint16_t pageAddress = (address >> 7);
+                    if (_pageAddress != pageAddress || length == 0) {  // new page
+                        // write buffer and clear buffer
+                        _writePage((_pageAddress << 6), _pagePosition);
+
+                        _clearPageBuffer();
+                        _pageAddress = pageAddress;
+                        _pagePosition = 0;
+
+                        // leave loop
+                        exit = true;
+                    }
+                    printf("%u %u\n", total, written);
+
+                    uint16_t pageOffset = address - (_pageAddress << 7);
+                    memcpy(_pageBuffer + pageOffset, buffer, length);
+                    _pagePosition = pageOffset + length;
+
+                    if (_file.isEOF()) {
+                        break;
+                    }
+
+                } while (!exit);
+
+                // wait for response
+            }
+
+            if (_file.isEOF() && _pagePosition) {
+                _writePage((_pageAddress << 6), _pagePosition);
+                _pagePosition = 0;
+            }
+
+
+            //uint16_t address;
+            //char buf[128];
+            //int result = -1;
+
+            //while(!_file.isEOF() && ((result = _file.readBytes(buf, sizeof(buf), address)) > 0)) {
+            //    printf("%04x: ", address & 0xffff);
+            //    auto ptr = buf;
+            //    uint8_t count = result;
+            //    while(count--) {
+            //        printf("%02x ", *ptr++ & 0xff);
+            //    }
+            //    printf("\n");
+            //}
+
+            //if (result == -1) {
+            //    printf("Error: %s\n", _file.getErrorMessage().c_str());
+            //}
+        }
+        else {
+            printf("Verification failed\n");
+        }
+    }
+    else {
+        printf("Cannot open file\n");
+    }
+    return 0;
+
+    //test_tokenizer();
+    //test_stringlistfind();
+    //test_tabledumper();
 
 #if 0
     memcpy(EEPROM.getDataPtr(), tmp, sizeof(tmp));
     EEPROM.commit();
     Configuration config2(28, 4096);
     if (!config2.read()) {
-        printf("Failed to read configuration\n");
+        printf("Failed to read configuration/n");
     }
     config2.dump(Serial);
     return 0;
 #endif
 
-#if 1
+#if 0
     EEPROM.clear();
 #endif
     EEPROM.begin();
@@ -135,6 +257,7 @@ int main() {
     }
 
     config.dump(Serial);
+    config.write();
 
     auto ptr = config._H_STR(Configuration_t().string1);
     printf("%s\n", ptr);

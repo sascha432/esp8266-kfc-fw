@@ -2,6 +2,8 @@
  * Author: sascha_lammers@gmx.de
  */
 
+#if HAVE_GFX_LIB
+
 #include "GFXCanvasRLEStream.h"
 #include "GFXCanvasCompressed.h"
 
@@ -72,7 +74,7 @@ int GFXCanvasRLEStream::read()
                     }
                 }
                 else {
-                    _writeColor(rle, _lastColor);
+                    _writeColor((uint8_t)rle, _lastColor);
                     _lastColor = color;
                     rle = 0;
                     if (_position == imageSize) {
@@ -94,7 +96,7 @@ int GFXCanvasRLEStream::read()
                 color = _canvas.getColor(_cache.getBuffer()[x], false);
             }
 
-            _writeColor(rle, color);
+            _writeColor((uint8_t)rle, color);
             _position = DONE;
             return _sendBufferedByte();
         }
@@ -126,3 +128,5 @@ uint8_t GFXCanvasRLEStream::_sendBufferedByte()
     _buffer.remove(0, 1);
     return byte;
 }
+
+#endif

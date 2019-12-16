@@ -2,6 +2,8 @@
  * Author: sascha_lammers@gmx.de
  */
 
+#if HAVE_GFX_LIB
+
 #pragma once
 
 /*
@@ -71,6 +73,8 @@ public:
     GFXCanvasRLEStream getRLEStream();
     GFXCanvasRLEStream getRLEStream(uint16_t x, uint16_t y, uint16_t w, uint16_t h);
 
+    Cache &getLine(int16_t y);
+
 private:
     friend class GFXCanvasBitmapStream;
     friend class GFXCanvasRLEStream;
@@ -131,3 +135,5 @@ protected:
     Stats stats;
 #endif
 };
+
+#endif

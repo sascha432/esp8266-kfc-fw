@@ -88,10 +88,10 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>CONFIG_MAGIC_DWORD=0x72a82165;_CRT_SECURE_NO_WARNINGS;DEBUG=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>CONFIG_MAGIC_DWORD=0x72a82165;_CRT_SECURE_NO_WARNINGS;DEBUG=1;DEBUG_CONFIGURATION=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCJson\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCConfiguration\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCJson\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCConfiguration\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\include\mock;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -107,7 +107,7 @@
       <PreprocessorDefinitions>CONFIG_MAGIC_DWORD=0x72a82165;_CRT_SECURE_NO_WARNINGS;DEBUG=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCJson\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCConfiguration\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCJson\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCConfiguration\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\include\mock;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -122,10 +122,10 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>CONFIG_MAGIC_DWORD=0x72a82165;_CRT_SECURE_NO_WARNINGS;DEBUG=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>CONFIG_MAGIC_DWORD=0x72a82165;_CRT_SECURE_NO_WARNINGS;DEBUG=1;DEBUG_CONFIGURATION=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCJson\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCConfiguration\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCJson\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCConfiguration\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\include\mock;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -145,7 +145,7 @@
       <PreprocessorDefinitions>CONFIG_MAGIC_DWORD=0x72a82165;_CRT_SECURE_NO_WARNINGS;DEBUG=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCJson\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCConfiguration\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCJson\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCConfiguration\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\include\mock;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -161,7 +161,18 @@
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\crc16.cpp" />
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\debug_helper.cpp" />
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\DumpBinary.cpp" />
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\IntelHexFormat.cpp" />
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\misc.cpp" />
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\mock\EEPROM.cpp" />
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\mock\ESP8266HttpClient.cpp" />
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\mock\FS.cpp" />
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\mock\Print.cpp" />
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\mock\Serial.cpp" />
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\mock\SPI.cpp" />
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\mock\Stream.cpp" />
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\mock\WiFi.cpp" />
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\mock\WiFiUDP.cpp" />
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\mock\WString.cpp" />
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\TableDumper.cpp" />
     <ClCompile Include="..\..\..\src\Configuration.cpp" />
     <ClCompile Include="..\..\..\src\ConfigurationParameter.cpp" />

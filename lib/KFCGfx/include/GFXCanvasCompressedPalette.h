@@ -2,6 +2,8 @@
 * Author: sascha_lammers@gmx.de
 */
 
+#if HAVE_GFX_LIB
+
 #pragma once
 
 #include "GFXCanvasCompressed.h"
@@ -28,3 +30,5 @@ private:
     uint16_t _palette[15];
     uint8_t _paletteCount;
 };
+
+#endif

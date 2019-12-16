@@ -23,6 +23,7 @@ WEBUI_PROGMEM_STRING_DEF(extra_classes)
 WEBUI_PROGMEM_STRING_DEF(data)
 WEBUI_PROGMEM_STRING_DEF(group)
 WEBUI_PROGMEM_STRING_DEF(has_switch)
+WEBUI_PROGMEM_STRING_DEF(height)
 WEBUI_PROGMEM_STRING_DEF(id)
 WEBUI_PROGMEM_STRING_DEF(left)
 WEBUI_PROGMEM_STRING_DEF(max)
@@ -33,6 +34,7 @@ WEBUI_PROGMEM_STRING_DEF(offset)
 WEBUI_PROGMEM_STRING_DEF(render_type)
 WEBUI_PROGMEM_STRING_DEF(right)
 WEBUI_PROGMEM_STRING_DEF(row)
+WEBUI_PROGMEM_STRING_DEF(screen)
 WEBUI_PROGMEM_STRING_DEF(sensor)
 WEBUI_PROGMEM_STRING_DEF(slider)
 WEBUI_PROGMEM_STRING_DEF(state)
@@ -46,6 +48,7 @@ WEBUI_PROGMEM_STRING_DEF(ui)
 WEBUI_PROGMEM_STRING_DEF(value)
 WEBUI_PROGMEM_STRING_DEF(vcc)
 WEBUI_PROGMEM_STRING_DEF(wide)
+WEBUI_PROGMEM_STRING_DEF(width)
 WEBUI_PROGMEM_STRING_DEF(zero_off)
 WEBUI_PROGMEM_STRING_DEF(display_name)
 
@@ -157,6 +160,15 @@ WebUIComponent &WebUIRow::addBadgeSensor(const String &id, const JsonString &nam
 WebUIComponent &WebUIRow::addBinarySensor(const String &id, const JsonString &name, const JsonString &unit, WebUIComponent::SensorRenderEnum_t render) {
     WebUIComponent &column = addSensor(id, name, unit, render);
     column.replace(JJ(type), JJ(binary_sensor));
+    return column;
+}
+
+WebUIComponent &WebUIRow::addScreen(const String &id, uint16_t width, uint16_t height) {
+    WebUIComponent &column = addColumn(6);
+    column.add(JJ(type), JJ(screen));
+    column.setId(id);
+    column.add(JJ(width), width);
+    column.add(JJ(height), height);
     return column;
 }
 

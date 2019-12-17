@@ -698,6 +698,18 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
                 } else {
                     request->redirect(F("/index.html"));
                 }
+            } else if (constexpr_String_equals(path, PSTR("/factory.html"))) {
+                if (request->hasArg(F("yes"))) {
+                    config.restoreFactorySettings();
+                    config.write();
+                    RTCMemoryManager::clear();
+                    request->onDisconnect([]() {
+                        config.restartDevice();
+                    });
+                    mapping = Mappings::getInstance().find(F("/rebooting.html"));
+                } else {
+                    request->redirect(F("/index.html"));
+                }
             }
         }
 

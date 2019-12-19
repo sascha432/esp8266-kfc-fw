@@ -18,6 +18,7 @@ PROGMEM_STRING_DEF(blinds_controller_channel1, "blinds_channel1");
 PROGMEM_STRING_DEF(blinds_controller_channel2, "blinds_channel2");
 PROGMEM_STRING_DEF(blinds_controller_channel1_sensor, "blinds_channel1_sensor");
 PROGMEM_STRING_DEF(blinds_controller_channel2_sensor, "blinds_channel2_sensor");
+PROGMEM_STRING_DEF(iot_blinds_control_state_file, "/blinds_ctrl.state");
 
 BlindsControl::BlindsControl() : MQTTComponent(SENSOR), WebUIInterface(), _activeChannel(0)
 {
@@ -294,7 +295,7 @@ void BlindsControl::_publishState(MQTTClient *client) {
 void BlindsControl::_loadState() {
 #if IOT_BLINDS_CTRL_SAVE_STATE
     BlindsChannel::StateEnum_t state[2] = { BlindsChannel::UNKNOWN, BlindsChannel::UNKNOWN };
-    auto file = SPIFFS.open(F("/blinds_ctrl.state"), "r");
+    auto file = SPIFFS.open(FSPGM(iot_blinds_control_state_file), "r");
     if (file) {
         file.read(reinterpret_cast<uint8_t *>(&state), sizeof(state));
         _channels[0].setState(state[0]);
@@ -307,7 +308,7 @@ void BlindsControl::_loadState() {
 void BlindsControl::_saveState() {
 #if IOT_BLINDS_CTRL_SAVE_STATE
     BlindsChannel::StateEnum_t state[2] = { _channels[0].getState(), _channels[1].getState() };
-    auto file = SPIFFS.open(F("/blinds_ctrl.state"), "w");
+    auto file = SPIFFS.open(FSPGM(iot_blinds_control_state_file), "w");
     if (file) {
         file.write(reinterpret_cast<const uint8_t *>(&state), sizeof(state));
     }

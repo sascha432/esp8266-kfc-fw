@@ -6,6 +6,11 @@ def build_webui(source, target, env):
 
     env.Execute("php lib\\KFCWebBuilder\\bin\\include\\cli_tool.php .\KFCWebBuilder.json -b spiffs -e env:${PIOENV} --clean-exit-code")
 
+def rebuild_webui(source, target, env):
+    print("rebuild_webui")
+
+    env.Execute("php lib\\KFCWebBuilder\\bin\\include\\cli_tool.php .\KFCWebBuilder.json -f -b spiffs -e env:${PIOENV} --clean-exit-code")
+
 def before_clean(source, target, env):
 
     print("Cleaning data\webui")
@@ -26,3 +31,6 @@ env.AddPreAction("upload", pre_upload)
 #env.AddPostAction("$BUILD_DIR/${PROGNAME}.elf", record_size)
 
 env.AlwaysBuild(env.Alias("build_webui", None, build_webui))
+
+env.AlwaysBuild(env.Alias("rebuild_webui", None, rebuild_webui))
+

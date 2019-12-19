@@ -314,7 +314,7 @@ void WSDraw::_scrollTimer(EventScheduler::TimerPtr timer)
         // _debug_printf_P(PSTR("WSDraw::_scrollTimer(): _scrollPosition=%u\n"), _scrollPosition);
         if (_scrollPosition < TFT_WIDTH) {
             static const uint8_t numScroll = 8;
-            uint8_t height = _scrollCanvas->height();
+            uint8_t height = (uint8_t)_scrollCanvas->height();
             for (uint8_t y = 0; y < height; y++) {
                 auto &canvasLine = _canvas.getLine(y + Y_START_POSITION_WEATHER);
                 memmove(canvasLine.getBuffer(), &canvasLine.getBuffer()[numScroll], (TFT_WIDTH - numScroll) * sizeof(uint16_t)); // move content to the left

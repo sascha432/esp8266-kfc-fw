@@ -15,6 +15,7 @@ WEBUI_PROGMEM_STRING_DEF(align)
 WEBUI_PROGMEM_STRING_DEF(badge)
 WEBUI_PROGMEM_STRING_DEF(big)
 WEBUI_PROGMEM_STRING_DEF(binary_sensor)
+WEBUI_PROGMEM_STRING_DEF(buttons)
 WEBUI_PROGMEM_STRING_DEF(center)
 WEBUI_PROGMEM_STRING_DEF(color)
 WEBUI_PROGMEM_STRING_DEF(columns)
@@ -169,6 +170,15 @@ WebUIComponent &WebUIRow::addScreen(const String &id, uint16_t width, uint16_t h
     column.setId(id);
     column.add(JJ(width), width);
     column.add(JJ(height), height);
+    return column;
+}
+
+WebUIComponent &WebUIRow::addButtonGroup(const String &id, const JsonString &name, const JsonString &buttons) {
+    WebUIComponent &column = addColumn(6);
+    column.add(JJ(type), JJ(buttons));
+    column.setId(id);
+    column.setName(name);
+    column.add(JJ(buttons), buttons);
     return column;
 }
 

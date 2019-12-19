@@ -36,7 +36,89 @@ ClockPlugin::ClockPlugin() :
     _colors[2] = 80;
     memset(&_animationData, 0, sizeof(_animationData));
     setBlinkColon(SOLID);
+
+    _ui_colon = 0;
+    _ui_animation = 0;
+    _ui_color = 2;
+
     register_plugin(this);
+}
+
+
+void ClockPlugin::getValues(JsonArray &array) {
+    _debug_printf_P(PSTR("ClockPlugin::getValues()\n"));
+
+    auto obj = &array.addObject(3);
+    obj->add(JJ(id), F("btn_colon"));
+    obj->add(JJ(state), true);
+    obj->add(JJ(value), _ui_colon);
+
+    obj = &array.addObject(3);
+    obj->add(JJ(id), F("btn_animation"));
+    obj->add(JJ(state), true);
+    obj->add(JJ(value), _ui_animation);
+
+    obj = &array.addObject(3);
+    obj->add(JJ(id), F("btn_color"));
+    obj->add(JJ(state), true);
+    obj->add(JJ(value), _ui_color);
+}
+
+void ClockPlugin::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState) {
+    _debug_printf_P(PSTR("ClockPlugin::setValue(%s)\n"), id.c_str());
+    if (hasValue) {
+        auto val = (uint8_t)value.toInt();
+        if (id == F("btn_colon")) {
+            switch(_ui_colon = val) {
+                case 0:
+                    setBlinkColon(SOLID);
+                    break;
+                case 1:
+                    setBlinkColon(NORMAL);
+                    if (_updateRate > 1000) {
+                        _updateRate = 1000;
+                    }
+                    break;
+                case 2:
+                    setBlinkColon(FAST);
+                    if (_updateRate > 500) {
+                        _updateRate = 500;
+                    }
+                    break;
+            }
+        }
+        else if (id == F("btn_animation")) {
+            switch(_ui_animation = val) {
+                case 0:
+                    setAnimation(NONE);
+                    break;
+                case 1:
+                    setAnimation(RAINBOW);
+                    break;
+                case 2:
+                    setAnimation(FLASHING);
+                    _updateRate = 250;
+                    break;
+            }
+        }
+        else if (id == F("btn_color")) {
+            switch(_ui_color = val) {
+                case 0:
+                    _color = Color(255, 0, 0);
+                    break;
+                case 1:
+                    _color = Color(0, 255, 0);
+                    break;
+                case 2:
+                    _color = Color(0, 0, 255);
+                    break;
+            }
+            if (_ui_animation == 2) {
+                _animationData.flashing.color = _color;
+            }
+            _updateTimer = 0;
+        }
+    }
 }
 
 PGM_P ClockPlugin::getName() const
@@ -82,6 +164,17 @@ void ClockPlugin::reconfigure(PGM_P source)
 const String ClockPlugin::getStatus()
 {
     return F("Clock Plugin");
+}
+
+void ClockPlugin::createWebUI(WebUI &webUI) {
+    auto row = &webUI.addRow();
+    row->setExtraClass(JJ(title));
+    row->addGroup(F("Clock"), false);
+
+    row = &webUI.addRow();
+    row->addButtonGroup(F("btn_colon"), F("Colon"), F("Solid,Blink slowly,Blink fast"));
+    row->addButtonGroup(F("btn_animation"), F("Animation"), F("Solid,Rainbow,Flash"));
+    row->addButtonGroup(F("btn_color"), F("Color"), F("Red,Green,Blue"));
 }
 
 

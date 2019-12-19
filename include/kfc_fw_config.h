@@ -191,6 +191,13 @@ struct Sensor {
         float calibration;
     } battery;
 #endif
+#if (IOT_SENSOR_HAVE_HLW8012 || IOT_SENSOR_HAVE_HLW8032)
+    struct {
+        float calibrationU;
+        float calibrationI;
+        float calibrationP;
+    } hlw80xx;
+#endif
 };
 
 struct Clock {

@@ -23,6 +23,9 @@
 #include <debug_helper_disable.h>
 #endif
 
+static SensorPlugin plugin;
+
+
 void SensorPlugin::getValues(JsonArray &array) {
     _debug_printf_P(PSTR("SensorPlugin::getValues()\n"));
     for(auto sensor: _sensors) {
@@ -34,8 +37,6 @@ void SensorPlugin::setValue(const String &id, const String &value, bool hasValue
     _debug_printf_P(PSTR("SensorPlugin::setValue(%s)\n"), id.c_str());
 }
 
-
-static SensorPlugin plugin;
 
 PGM_P SensorPlugin::getName() const {
     return PSTR("sensor");
@@ -92,6 +93,12 @@ void SensorPlugin::_timerEvent() {
 }
 
 void SensorPlugin::reconfigure(PGM_P source) {
+}
+
+void SensorPlugin::restart() {
+    for(auto sensor: _sensors) {
+        sensor->restart();
+    }
 }
 
 bool SensorPlugin::hasWebUI() const {
@@ -179,10 +186,17 @@ void SensorPlugin::atModeHelpGenerator() {
 
 bool SensorPlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) {
     if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SENSORC))) {
+        #if IOT_SENSOR_HAVE_BATTERY || IOT_SENSOR_HAVE_HLW8012 || IOT_SENSOR_HAVE_HLW8032
         auto &_config = config._H_W_GET(Config().sensor);
+        #endif
         SensorVars_t sensor_variables[] = {
         #if IOT_SENSOR_HAVE_BATTERY
             { PSTR("battery.calibration"), FLOAT, &_config.battery.calibration },
+        #endif
+        #if IOT_SENSOR_HAVE_HLW8012 || IOT_SENSOR_HAVE_HLW8032
+            { PSTR("hlw80xx.calibrationU"), FLOAT, &_config.hlw80xx.calibrationU },
+            { PSTR("hlw80xx.calibrationI"), FLOAT, &_config.hlw80xx.calibrationI },
+            { PSTR("hlw80xx.calibrationP"), FLOAT, &_config.hlw80xx.calibrationP },
         #endif
             { nullptr, NONE, 0 }
         };

@@ -2,9 +2,9 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#pragma once
-
 #if IOT_SENSOR
+
+#pragma once
 
 #include <Arduino_compat.h>
 #include <vector>
@@ -45,7 +45,6 @@
 #define IOT_SENSOR_NAMES_BATTERY "Battery"
 #endif
 
-
 class SensorPlugin : public PluginComponent, public WebUIInterface {
 public:
     typedef std::vector<MQTTSensor *> SensorVector;
@@ -68,6 +67,7 @@ public:
 
     virtual void setup(PluginSetupMode_t mode) override;
     virtual void reconfigure(PGM_P source) override;
+    virtual void restart() override;
 
     virtual bool hasStatus() const override;
     virtual const String getStatus() override;

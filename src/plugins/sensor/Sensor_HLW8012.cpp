@@ -19,7 +19,7 @@
 static Sensor_HLW8012 *sensor = nullptr;
 static volatile unsigned long callbackTimeCF;
 static volatile unsigned long callbackTimeCF1;
-static volatile unsigned long energyCounter = 0;
+static volatile uint32_t energyCounter = 0;
 static volatile uint8_t callbackFlag = 0;
 
 void ICACHE_RAM_ATTR Sensor_HLW8012_callbackCF() {
@@ -35,15 +35,39 @@ void ICACHE_RAM_ATTR Sensor_HLW8012_callbackCF1() {
 
 void Sensor_HLW8012::loop() {
     if (sensor) {
-        if (callbackFlag & 0x01) {
-            callbackFlag &= ~0x01;
-            sensor->_callbackCF(callbackTimeCF);
-            sensor->_energyCounter = energyCounter;
+        sensor->_loop();
+    }
+}
+
+void Sensor_HLW8012::_loop() {
+    if (callbackFlag & 0x01) {
+        callbackFlag &= ~0x01;
+        noInterrupts();
+        auto tempCounter = energyCounter;
+        energyCounter = 0;
+        interrupts();
+        _callbackCF(callbackTimeCF);
+        _incrEnergyCounters(tempCounter);
+    }
+    if (callbackFlag & 0x02) {
+        callbackFlag &= ~0x02;
+        _callbackCF1(callbackTimeCF1);
+    }
+    if (millis() > _inputCF.timeout) {
+        _inputCF = SensorInput_t();
+        _power = 0;
+    }
+    if (millis() > _inputCF1.timeout) {
+        _inputCF1 = SensorInput_t();
+        if (_output == CURRENT) {
+            _current = 0;
         }
-        if (callbackFlag & 0x02) {
-            callbackFlag &= ~0x02;
-            sensor->_callbackCF1(callbackTimeCF1);
+        else if (_output == VOLTAGE) {
+            _voltage = NAN;
         }
+    }
+    if (millis() > _saveEnergyCounterTimeout) {
+        _saveEnergyCounter();
     }
 }
 
@@ -54,7 +78,6 @@ Sensor_HLW8012::Sensor_HLW8012(const String &name, uint8_t pinSel, uint8_t pinCF
 #endif
     registerClient(this);
     _output = CURRENT;
-    memset((void *)&_input, 0, sizeof(_input));
 
     digitalWrite(_pinSel, _output);
     pinMode(_pinSel, OUTPUT);
@@ -98,39 +121,56 @@ String Sensor_HLW8012::_getId(const __FlashStringHelper *type) {
 }
 
 void Sensor_HLW8012::_callbackCF(unsigned long micros) {
-    _calcPulseWidth(_input[0], micros);
-    if (_input[0].pulseWidth && _input[0].counter > IOT_SENSOR_HLW8012_CF1_MIN_COUNT) {
-        _power = IOT_SENSOR_HLW80xx_CALC_P(_input[0].pulseWidthIntegral);
+    _calcPulseWidth(_inputCF, micros, IOT_SENSOR_HLW8012_TIMEOUT_P);
+    if (_inputCF.pulseWidth && _inputCF.counter >= 3) {
+        _power = IOT_SENSOR_HLW80xx_CALC_P(_inputCF.pulseWidthIntegral);
     }
     else {
-        _power = NAN;
+        _power = 0;
     }
-    _energyCounter++;
+    // _debug_printf_P(PSTR("pulse width %f count %u power %f energy %u\n"), _inputCF.pulseWidthIntegral, _inputCF.counter, IOT_SENSOR_HLW80xx_CALC_P(_inputCF.pulseWidthIntegral), _energyCounter);
 }
 
 void Sensor_HLW8012::_callbackCF1(unsigned long micros) {
-    _calcPulseWidth(_input[1], micros);
-    if (_input[1].pulseWidth && _input[1].counter > IOT_SENSOR_HLW8012_CF1_MIN_COUNT) {
-        if (_output == CURRENT) {
-            _current = IOT_SENSOR_HLW80xx_CALC_I(_input[1].pulseWidthIntegral);
+    if (millis() < _inputCF1.delayStart) { // skip anything before to let sensor settle
+        return;
+    }
+    _calcPulseWidth(_inputCF1, micros, _output == VOLTAGE ? IOT_SENSOR_HLW8012_TIMEOUT_U : IOT_SENSOR_HLW8012_TIMEOUT_I);
+    if (_inputCF1.pulseWidth) {
+        // update values if enough pulses have been counted
+        if (_output == CURRENT && _inputCF1.counter >= 3) {
+            _current = IOT_SENSOR_HLW80xx_CALC_I(_inputCF1.pulseWidthIntegral);
         }
-        else if (_output == VOLTAGE) {
-            _voltage = IOT_SENSOR_HLW80xx_CALC_U(_input[1].pulseWidthIntegral);
+        else if (_output == VOLTAGE && _inputCF1.counter >= 10) {
+            _voltage = IOT_SENSOR_HLW80xx_CALC_U(_inputCF1.pulseWidthIntegral);
         }
     }
-    if (_input[1].counter > IOT_SENSOR_HLW8012_CF1_TOGGLE_COUNT) {
-        memset(&_input[1], 0, sizeof(_input[1]));
-        _input[1].timeout = millis() + IOT_SENSOR_HLW8012_TIMEOUT;
+    if (millis() > _inputCF1.toggleTimer) { // toggle coltage/current measurement
+
         if (_output == CURRENT) {
+            _debug_printf_P(PSTR("pulse width %f count %u current %f / %f energy %u\n"), _inputCF1.pulseWidthIntegral, _inputCF1.counter, IOT_SENSOR_HLW80xx_CALC_I(_inputCF1.pulseWidthIntegral), _current, (uint32_t)_energyCounter[0]);
+        }
+        else {
+            _debug_printf_P(PSTR("pulse width %f count %u voltage %f / %f energy %u\n"), _inputCF1.pulseWidthIntegral, _inputCF1.counter, IOT_SENSOR_HLW80xx_CALC_U(_inputCF1.pulseWidthIntegral), _voltage, (uint32_t)_energyCounter[0]);
+        }
+
+        _inputCF1 = SensorInput_t();
+        _inputCF1.delayStart = millis() + IOT_SENSOR_HLW8012_DELAY_START;
+        if (_output == CURRENT) {
+            _inputCF1.timeout = _inputCF1.delayStart + IOT_SENSOR_HLW8012_TIMEOUT_U;
+            _inputCF1.toggleTimer = _inputCF1.delayStart + IOT_SENSOR_HLW8012_MEASURE_LEN_U;
             _output = VOLTAGE;
         } else {
+            _inputCF1.timeout = _inputCF1.delayStart + IOT_SENSOR_HLW8012_TIMEOUT_I;
+            _inputCF1.toggleTimer = _inputCF1.delayStart + IOT_SENSOR_HLW8012_MEASURE_LEN_I;
             _output = CURRENT;
         }
-        digitalWrite(_pinSel, _output);
+        digitalWrite(_pinSel, _output ? HIGH : LOW);
     }
 }
 
-void Sensor_HLW8012::_calcPulseWidth(SensorInput_t &input, unsigned long micros) {
+void Sensor_HLW8012::_calcPulseWidth(SensorInput_t &input, unsigned long micros, uint16_t timeout)
+{
     if (input.lastPulse && millis() < input.timeout) {
         input.pulseWidth = get_time_diff(input.lastPulse, micros);
         if (input.pulseWidthIntegral) {
@@ -141,11 +181,13 @@ void Sensor_HLW8012::_calcPulseWidth(SensorInput_t &input, unsigned long micros)
         }
         input.counter++;
     }
-    else {
-        memset(&input, 0, sizeof(input));
+    else { // start or reset counters
+        input.pulseWidthIntegral = 0;
+        input.pulseWidth = 0;
+        input.counter = 0;
     }
     input.lastPulse = micros;
-    input.timeout = millis() + IOT_SENSOR_HLW8012_TIMEOUT;
+    input.timeout = millis() + timeout;
 
     // _debug_printf_P(PSTR("Sensor_HLW8012::_calcPulseWidth: width %u integral %f counter %u\n"), input.pulseWidth, input.pulseWidthIntegral, input.counter);
 }

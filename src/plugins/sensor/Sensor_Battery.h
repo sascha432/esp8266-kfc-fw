@@ -13,7 +13,6 @@
 #include "plugins.h"
 #include "MQTTSensor.h"
 
-
 // convert ADC value to voltage
 #ifndef IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1
 #define IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1           68.0

@@ -473,7 +473,7 @@ void KFCFWConfiguration::restoreFactorySettings() {
 #endif
 
 #if IOT_SENSOR
-#if IOT_SENSOR_HAVE_BATTERY || IOT_SENSOR_HAVE_BATTERY
+#if IOT_SENSOR_HAVE_BATTERY || IOT_SENSOR_HAVE_HLW8012 || IOT_SENSOR_HAVE_HLW8032
     {
         auto cfg = _H_GET(Config().sensor);
 #endif
@@ -484,7 +484,12 @@ void KFCFWConfiguration::restoreFactorySettings() {
         cfg.battery.calibration = 1.0;
 #endif
 #endif
-#if IOT_SENSOR_HAVE_BATTERY || IOT_SENSOR_HAVE_BATTERY
+#if IOT_SENSOR_HAVE_HLW8012 || IOT_SENSOR_HAVE_HLW8032
+    cfg.hlw80xx.calibrationU = 1.0;
+    cfg.hlw80xx.calibrationI = 1.0;
+    cfg.hlw80xx.calibrationP = 1.0;
+#endif
+#if IOT_SENSOR_HAVE_BATTERY || IOT_SENSOR_HAVE_HLW8012 || IOT_SENSOR_HAVE_HLW8032
         _H_SET(Config().sensor, cfg);
     }
 #endif

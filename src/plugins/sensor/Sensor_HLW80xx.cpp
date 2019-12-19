@@ -14,15 +14,21 @@
 #include <debug_helper_disable.h>
 #endif
 
+PROGMEM_STRING_DEF(iot_sensor_hlw80xx_state_file, "/hlw80xx.state");
+
 Sensor_HLW80xx::Sensor_HLW80xx(const String &name) : MQTTSensor(), _name(name) {
 #if DEBUG_MQTT_CLIENT
     debug_printf_P(PSTR("Sensor_HLW80xx(): component=%p\n"), this);
 #endif
     _topic = MQTTClient::formatTopic(-1, F("/%s/"), _getId().c_str());
-    _energyCounter = 0;
+    _loadEnergyCounter();
     _power = NAN;
     _voltage = NAN;
     _current = NAN;
+    _calibrationI = 1;
+    _calibrationV = 1.125;
+    // _calibrationP = _calibrationV * _calibrationV;
+    _calibrationP = 1.2;
     setUpdateRate(IOT_SENSOR_HLW80xx_UPDATE_RATE);
 }
 
@@ -39,12 +45,20 @@ void Sensor_HLW80xx::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQT
     discovery->create(this, 1, format);
     discovery->addStateTopic(_topic);
     discovery->addUnitOfMeasurement(F("kWh"));
-    discovery->addValueTemplate(F("energy"));
+    discovery->addValueTemplate(F("energy_total"));
     discovery->finalize();
     vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
 
     discovery = _debug_new MQTTAutoDiscovery();
     discovery->create(this, 2, format);
+    discovery->addStateTopic(_topic);
+    discovery->addUnitOfMeasurement(F("kWh"));
+    discovery->addValueTemplate(F("energy"));
+    discovery->finalize();
+    vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
+
+    discovery = _debug_new MQTTAutoDiscovery();
+    discovery->create(this, 3, format);
     discovery->addStateTopic(_topic);
     discovery->addUnitOfMeasurement(F("V"));
     discovery->addValueTemplate(F("voltage"));
@@ -52,7 +66,7 @@ void Sensor_HLW80xx::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQT
     vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
 
     discovery = _debug_new MQTTAutoDiscovery();
-    discovery->create(this, 3, format);
+    discovery->create(this, 4, format);
     discovery->addStateTopic(_topic);
     discovery->addUnitOfMeasurement(F("A"));
     discovery->addValueTemplate(F("current"));
@@ -60,7 +74,7 @@ void Sensor_HLW80xx::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQT
     vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
 
     discovery = _debug_new MQTTAutoDiscovery();
-    discovery->create(this, 4, format);
+    discovery->create(this, 5, format);
     discovery->addStateTopic(_topic);
     discovery->addUnitOfMeasurement(F(""));
     discovery->addValueTemplate(F("pf"));
@@ -69,7 +83,7 @@ void Sensor_HLW80xx::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQT
 }
 
 uint8_t Sensor_HLW80xx::getAutoDiscoveryCount() const {
-    return 5;
+    return 6;
 }
 
 void Sensor_HLW80xx::getValues(JsonArray &array) {
@@ -81,8 +95,14 @@ void Sensor_HLW80xx::getValues(JsonArray &array) {
     obj->add(JJ(value), _powerToNumber(_power));
 
     obj = &array.addObject(3);
+    obj->add(JJ(id), _getId(F("energy_total")));
+    auto energy = _getEnergy(0);
+    obj->add(JJ(state), !isnan(energy));
+    obj->add(JJ(value), _energyToNumber(energy));
+
+    obj = &array.addObject(3);
     obj->add(JJ(id), _getId(F("energy")));
-    auto energy = _getEnergy();
+    energy = _getEnergy(1);
     obj->add(JJ(state), !isnan(energy));
     obj->add(JJ(value), _energyToNumber(energy));
 
@@ -111,10 +131,15 @@ void Sensor_HLW80xx::createWebUI(WebUI &webUI, WebUIRow **row) {
     }
 
     (*row)->addSensor(_getId(F("power")), _name + F(" Power"), F("W"));
+    (*row)->addSensor(_getId(F("energy_total")), _name + F(" Energy Total"), F("kWh"));
     (*row)->addSensor(_getId(F("energy")), _name + F(" Energy"), F("kWh"));
     (*row)->addSensor(_getId(F("voltage")), _name + F(" Voltage"), F("V"));
     (*row)->addSensor(_getId(F("current")), _name + F(" Current"), F("A"));
     (*row)->addSensor(_getId(F("pf")), _name + F(" Power Factor"), F(""));
+}
+
+void Sensor_HLW80xx::restart() {
+    _saveEnergyCounter();
 }
 
 void Sensor_HLW80xx::publishState(MQTTClient *client) {
@@ -122,7 +147,8 @@ void Sensor_HLW80xx::publishState(MQTTClient *client) {
         PrintString str;
         JsonUnnamedObject json;
         json.add(F("power"), _powerToNumber(_power));
-        json.add(F("energy"), _energyToNumber(_getEnergy()));
+        json.add(F("energy_total"), _energyToNumber(_getEnergy(0)));
+        json.add(F("energy"), _energyToNumber(_getEnergy(1)));
         json.add(F("voltage"), JsonNumber(_voltage, 1));
         json.add(F("current"), _currentToNumber(_current));
         auto pf = _getPowerFactor();
@@ -130,6 +156,51 @@ void Sensor_HLW80xx::publishState(MQTTClient *client) {
         json.printTo(str);
         client->publish(_topic, _qos, 1, str);
     }
+}
+
+void Sensor_HLW80xx::resetEnergyCounter() {
+    memset(&_energyCounter, 0, sizeof(_energyCounter));
+    _saveEnergyCounter();
+}
+
+void Sensor_HLW80xx::_incrEnergyCounters(uint32_t count) {
+    for(uint8_t i = 0; i < IOT_SENSOR_HLW80xx_NUM_ENERGY_COUNTERS; i++) {
+        _energyCounter[i] += count;
+    }
+}
+
+void Sensor_HLW80xx::_saveEnergyCounter() {
+    _debug_printf_P(PSTR("Sensor_HLW80xx::_saveEnergyCounter()\n"));
+#if IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT
+    auto file = SPIFFS.open(FSPGM(iot_sensor_hlw80xx_state_file), "w");
+    if (file) {
+        file.write(reinterpret_cast<uint8_t *>(&_energyCounter), sizeof(_energyCounter));
+        file.close();
+    }
+    _saveEnergyCounterTimeout = millis() + IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT;
+#else
+    _saveEnergyCounterTimeout = ~0;
+#endif
+}
+
+void Sensor_HLW80xx::_loadEnergyCounter() {
+    _debug_printf_P(PSTR("Sensor_HLW80xx::_loadEnergyCounter()\n"));
+#if IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT
+    auto file = SPIFFS.open(FSPGM(iot_sensor_hlw80xx_state_file), "r");
+    if (file) {
+        if (file.read(reinterpret_cast<uint8_t *>(&_energyCounter), sizeof(_energyCounter)) != sizeof(_energyCounter)) {
+            resetEnergyCounter();
+        }
+        file.close();
+    }
+    else {
+        resetEnergyCounter();
+    }
+    _saveEnergyCounterTimeout = millis() + IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT;
+#else
+    resetEnergyCounter();
+    _saveEnergyCounterTimeout = ~0;
+#endif
 }
 
 JsonNumber Sensor_HLW80xx::_currentToNumber(float current) const {
@@ -163,8 +234,11 @@ float Sensor_HLW80xx::_getPowerFactor() const {
     return std::min(_power / (_voltage * _current), 1.0f);
 }
 
-float Sensor_HLW80xx::_getEnergy() const {
-    return IOT_SENSOR_HLW80xx_PULSE_TO_KWH(_energyCounter);
+float Sensor_HLW80xx::_getEnergy(uint8_t num) const {
+    if (num >= IOT_SENSOR_HLW80xx_NUM_ENERGY_COUNTERS) {
+        return NAN;
+    }
+    return IOT_SENSOR_HLW80xx_PULSE_TO_KWH(_energyCounter[num]);
 }
 
 #endif

@@ -50,6 +50,8 @@ public:
     virtual void getStatus(PrintHtmlEntitiesString &output) = 0;
     virtual SensorEnumType_t getType() const;
 
+    virtual void restart();
+
     void timerEvent(JsonArray &array);
 
     inline void setUpdateRate(uint8_t updateRate) {

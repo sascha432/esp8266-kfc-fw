@@ -17,6 +17,7 @@
 #if _WIN32
 class EventTimer {
 public:
+    void detach() {}
 };
 class EventScheduler {
 public:

@@ -8,6 +8,7 @@
 #include <vector>
 #include <EventScheduler.h>
 #include "SevenSegmentPixel.h"
+#include "WebUIComponent.h"
 #include "plugins.h"
 #include "kfc_fw_config.h"
 #include "./plugins/mqtt/mqtt_component.h"
@@ -46,7 +47,18 @@
 #include <Bounce2.h>
 #endif
 
-class ClockPlugin : public PluginComponent, public MQTTComponent {
+class ClockPlugin : public PluginComponent, public MQTTComponent, public WebUIInterface {
+
+// WebUIInterface
+public:
+    virtual void getValues(JsonArray &array) override;
+    virtual void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState) override;
+
+private:
+    uint8_t _ui_colon;
+    uint8_t _ui_animation;
+    uint8_t _ui_color;
+
 // PluginComponent
 public:
     typedef enum : int8_t {
@@ -100,6 +112,15 @@ public:
         return true;
     }
     virtual const String getStatus() override;
+
+    virtual bool hasWebUI() const override {
+        return true;
+    }
+    virtual WebUIInterface *getWebUIInterface() override {
+        return this;
+    }
+    virtual void createWebUI(WebUI &webUI) override;
+
 
 #if AT_MODE_SUPPORTED
     virtual bool hasAtMode() const override {

@@ -25,10 +25,15 @@
 #define IOT_SENSOR_HLW80xx_SHUNT                0.001
 #endif
 
-// update rate webui/MQTT
+// update rate webui and MQTT
 #ifndef IOT_SENSOR_HLW80xx_UPDATE_RATE
-#define IOT_SENSOR_HLW80xx_UPDATE_RATE          5
+#define IOT_SENSOR_HLW80xx_UPDATE_RATE          2
 #endif
+
+// // update rate MQTT
+// #ifndef IOT_SENSOR_HLW80xx_UPDATE_RATE_MQTT
+// #define IOT_SENSOR_HLW80xx_UPDATE_RATE_MQTT     30
+// #endif
 
 // internal voltage reference
 #ifndef IOT_SENSOR_HLW80xx_VREF
@@ -38,6 +43,16 @@
 // oscillator frequency in MHz
 #ifndef IOT_SENSOR_HLW80xx_F_OSC
 #define IOT_SENSOR_HLW80xx_F_OSC                3.579000
+#endif
+
+// interval to save energy counter to SPIFFS, 0 to disable
+#ifndef IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT
+#define IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT      (5 * 60 * 1000)
+#endif
+
+// number of energy counters, must be >= 2
+#ifndef IOT_SENSOR_HLW80xx_NUM_ENERGY_COUNTERS
+#define IOT_SENSOR_HLW80xx_NUM_ENERGY_COUNTERS  5
 #endif
 
 // https://datasheet.lcsc.com/szlcsc/1811151452_Hiliwei-Tech-HLW8012_C83804.pdf
@@ -61,10 +76,10 @@
 // Vref = 2.43V
 
 // pulse is the duty cycle in µs (50% PWM)
-#define IOT_SENSOR_HLW80xx_CALC_U(pulse)        ((128.000000 * IOT_SENSOR_HLW80xx_VREF * IOT_SENSOR_HLW80xx_V_RES_DIV) / (pulse * IOT_SENSOR_HLW80xx_F_OSC))
-#define IOT_SENSOR_HLW80xx_CALC_I(pulse)        ((32.000000 * IOT_SENSOR_HLW80xx_VREF) / (pulse * (3 * IOT_SENSOR_HLW80xx_F_OSC * IOT_SENSOR_HLW80xx_SHUNT)))
-#define IOT_SENSOR_HLW80xx_CALC_P(pulse)        ((4.000000 * IOT_SENSOR_HLW80xx_V_RES_DIV * IOT_SENSOR_HLW80xx_VREF * IOT_SENSOR_HLW80xx_VREF) / (3 * pulse * IOT_SENSOR_HLW80xx_SHUNT * IOT_SENSOR_HLW80xx_F_OSC))
-  // count is incremented at falling and raising edge
+#define IOT_SENSOR_HLW80xx_CALC_U(pulse)        ((128.000000 * IOT_SENSOR_HLW80xx_VREF * IOT_SENSOR_HLW80xx_V_RES_DIV * _calibrationV) / (pulse * IOT_SENSOR_HLW80xx_F_OSC))
+#define IOT_SENSOR_HLW80xx_CALC_I(pulse)        ((32.000000 * IOT_SENSOR_HLW80xx_VREF) / (pulse * (3 * IOT_SENSOR_HLW80xx_F_OSC * IOT_SENSOR_HLW80xx_SHUNT * _calibrationI)))
+#define IOT_SENSOR_HLW80xx_CALC_P(pulse)        ((4.000000 * IOT_SENSOR_HLW80xx_V_RES_DIV * IOT_SENSOR_HLW80xx_VREF * IOT_SENSOR_HLW80xx_VREF * _calibrationP) / (3 * pulse * IOT_SENSOR_HLW80xx_SHUNT * _calibrationI * IOT_SENSOR_HLW80xx_F_OSC))
+  // count is incremented on falling and raising edge
 #define IOT_SENSOR_HLW80xx_PULSE_TO_KWH(count)  (count * IOT_SENSOR_HLW80xx_CALC_P(1000000.0) / (1000.0 * 3600.0))
 
 class Sensor_HLW80xx : public MQTTSensor {
@@ -82,13 +97,30 @@ public:
         return String();
     }
 
+    virtual void restart() override;
+
+    void resetEnergyCounter();
+    uint64_t *getEnergyCounters() {
+        return _energyCounter;
+    }
+    uint64_t &getEnergyPrimaryCounter() {
+        return _energyCounter[0];
+    }
+    uint64_t &getEnergySecondaryCounter() {
+        return _energyCounter[1];
+    }
+
 protected:
+    void _saveEnergyCounter();
+    void _loadEnergyCounter();
+    void _incrEnergyCounters(uint32_t count);
+
     JsonNumber _currentToNumber(float current) const;
     JsonNumber _energyToNumber(float energy) const;
     JsonNumber _powerToNumber(float power) const;
 
     float _getPowerFactor() const;
-    float _getEnergy() const;
+    float _getEnergy(uint8_t num = 0) const;
 
     String _name;
     String _topic;
@@ -96,8 +128,14 @@ protected:
     float _voltage;
     float _current;
 
+    float _calibrationI;
+    float _calibrationV;
+    float _calibrationP;
+
+    unsigned long _saveEnergyCounterTimeout;
+
 public:
-    uint32_t _energyCounter;
+    uint64_t _energyCounter[IOT_SENSOR_HLW80xx_NUM_ENERGY_COUNTERS];
 };
 
 #endif

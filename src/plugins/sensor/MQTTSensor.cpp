@@ -56,4 +56,7 @@ MQTTSensor::SensorEnumType_t MQTTSensor::getType() const {
     return UNKNOWN;
 }
 
+void MQTTSensor::restart() {
+}
+
 #endif

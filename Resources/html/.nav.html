@@ -38,6 +38,9 @@
                     <!--#if (defined(IOT_ATOMIC_SUN_V2) && IOT_ATOMIC_SUN_V2) || (defined(IOT_DIMMER_MODULE) && IOT_DIMMER_MODULE)-->
                     <a class="dropdown-item" href="dimmer_cfg.html">Dimmer</a>
                     <!--#endif-->
+                    <!--#if defined(IOT_CLOCK) && IOT_CLOCK-->
+                    <a class="dropdown-item" href="clock.html">Clock</a>
+                    <!--#endif-->
                     <!--#if defined(SERIAL2TCP) && SERIAL2TCP-->
                     <a class="dropdown-item" href="serial2tcp.html">Serial2TCP</a>
                     <!--#endif-->

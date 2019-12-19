@@ -201,9 +201,9 @@ struct Sensor {
 };
 
 struct Clock {
-    uint8_t blink_colon: 2;
-    int8_t animation: 5;
-    uint8_t time_format_24h: 1;
+    uint8_t blink_colon;
+    int8_t animation;
+    bool time_format_24h;
     uint8_t solid_color[3];
     int8_t order[8];
 };

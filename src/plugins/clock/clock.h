@@ -61,6 +61,8 @@ private:
 
 // PluginComponent
 public:
+    typedef std::function<void()> UpdateCallback_t;
+
     typedef enum : int8_t {
         NONE = -1,
         BLINK_COLON = 0,
@@ -68,6 +70,7 @@ public:
         SOLID_COLON,
         RAINBOW,
         FLASHING,
+        FADE,
     } AnimationEnum_t;
 
     typedef enum : uint8_t {
@@ -78,18 +81,44 @@ public:
 
     class Color {
     public:
+        Color() {
+        }
         Color(uint8_t *values) : _red(values[0]), _green(values[1]), _blue(values[2]) {
         }
         Color(uint8_t red, uint8_t green, uint8_t blue) : _red(red), _green(green), _blue(blue) {
         }
+        Color (uint32_t value) {
+            *this = value;
+        }
+        uint32_t rnd() {
+            do {
+                *this = Color((rand() % 4) * (255 / 4), (rand() % 4) * (255 / 4), (rand() % 4) * (255 / 4));
+            } while(_red == 0 && _green == 0 && _blue == 0);
+            return get();
+        }
         inline uint32_t get() {
             return ((uint32_t)_red << 16) | ((uint32_t)_green <<  8) | _blue;
+        }
+        inline Color &operator =(uint32_t value) {
+            _red = value >> 16;
+            _green = value >> 8;
+            _blue = (uint8_t)value;
+            return *this;
         }
         inline operator int() {
             return get();
         }
         inline static uint32_t get(uint8_t red, uint8_t green, uint8_t blue) {
             return ((uint32_t)red << 16) | ((uint32_t)green <<  8) | blue;
+        }
+        inline uint8_t red() const {
+            return _red;
+        }
+        inline uint8_t green() const {
+            return _green;
+        }
+        inline uint8_t blue() const {
+            return _blue;
         }
     private:
         uint8_t _red;
@@ -121,6 +150,10 @@ public:
     }
     virtual void createWebUI(WebUI &webUI) override;
 
+    virtual bool canHandleForm(const String &formName) const override {
+        return strcmp_P(formName.c_str(), PSTR("clock")) == 0;
+    }
+    virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
 
 #if AT_MODE_SUPPORTED
     virtual bool hasAtMode() const override {
@@ -173,6 +206,24 @@ private:
     }
 
 private:
+    typedef struct {
+        union {
+            struct {
+                uint32_t fromColor;
+                uint32_t toColor;
+                uint16_t progress;
+                uint16_t speed;
+            } fade;
+            struct {
+                uint32_t color;
+            } flashing;
+            struct {
+                uint16_t movementSpeed;
+            } rainbow;
+        };
+        UpdateCallback_t callback;
+    } AnimationData_t;
+
 #if IOT_CLOCK_BUTTON_PIN
     PushButton _button;
     uint8_t _buttonCounter;
@@ -185,16 +236,6 @@ private:
     uint16_t _updateRate;
     uint8_t _isSyncing;
     bool _timeFormat24h;
-    typedef struct {
-        union {
-            struct {
-                uint32_t color;
-            } flashing;
-            struct {
-                uint16_t movementSpeed;
-            } rainbow;
-        };
-    } AnimationData_t;
     AnimationData_t _animationData;
 };
 

@@ -10,6 +10,7 @@
 #include <LoopFunctions.h>
 #include <WiFiCallbacks.h>
 #include <EventTimer.h>
+#include <KFCForms.h>
 #include "blink_led_timer.h"
 #include "progmem_data.h"
 #include "./plugins/mqtt/mqtt_client.h"
@@ -99,6 +100,11 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
                     setAnimation(FLASHING);
                     _updateRate = 250;
                     break;
+                case 3: {
+                        setAnimation(FADE);
+                        _animationData.fade.toColor = Color().rnd();
+                    }
+                    break;
             }
         }
         else if (id == F("btn_color")) {
@@ -111,6 +117,9 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
                     break;
                 case 2:
                     _color = Color(0, 0, 255);
+                    break;
+                case 3:
+                    _color.rnd();
                     break;
             }
             if (_ui_animation == 2) {
@@ -172,11 +181,41 @@ void ClockPlugin::createWebUI(WebUI &webUI) {
     row->addGroup(F("Clock"), false);
 
     row = &webUI.addRow();
-    row->addButtonGroup(F("btn_colon"), F("Colon"), F("Solid,Blink slowly,Blink fast"));
-    row->addButtonGroup(F("btn_animation"), F("Animation"), F("Solid,Rainbow,Flash"));
-    row->addButtonGroup(F("btn_color"), F("Color"), F("Red,Green,Blue"));
+    static const uint16_t height = 280;
+    row->addButtonGroup(F("btn_colon"), F("Colon"), F("Solid,Blink slowly,Blink fast"), height);
+    row->addButtonGroup(F("btn_animation"), F("Animation"), F("Solid,Rainbow,Flash,Fade"), height);
+    row->addButtonGroup(F("btn_color"), F("Color"), F("Red,Green,Blue,Random"), height);
 }
 
+void ClockPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form) {
+
+    auto clock = config._H_W_GET(Config().clock);
+
+    form.add<uint8_t>(F("blink_colon"), &clock.blink_colon);
+    form.addValidator(new FormRangeValidator(F("Invalid value"), 0, BlinkColonEnum_t::FAST));
+
+    form.add<bool>(F("time_format_24h"), &clock.time_format_24h);
+
+    form.add<int8_t>(F("animation"), &clock.animation);
+    form.addValidator(new FormRangeValidator(F("Invalid animation"), AnimationEnum_t::NONE, AnimationEnum_t::FADE));
+
+    String str = PrintString(F("#%02X%02X%02X"), clock.solid_color[0], clock.solid_color[1], clock.solid_color[2]);
+    form.add(F("solid_color"), str);
+    form.addValidator(new FormCallbackValidator([](const String &value, FormField &field) {
+        auto ptr = value.c_str();
+        if (*ptr == '#') {
+            ptr++;
+        }
+        auto color = strtol(ptr, nullptr, 16);
+        auto &colorArr = config._H_W_GET(Config().clock).solid_color;
+        colorArr[0] = color >> 16;
+        colorArr[1] = color >> 8;
+        colorArr[2] = (uint8_t)color;
+        return true;
+    }));
+
+    form.finalize();
+}
 
 #if AT_MODE_SUPPORTED
 
@@ -239,6 +278,7 @@ bool ClockPlugin::atModeHandler(Stream &serial, const String &command, int8_t ar
                     "+CLOCKA: %u - solid colon\n"
                     "+CLOCKA: %u - rainbow animation\n"
                     "+CLOCKA: %u - flashing\n"
+                    "+CLOCKA: %u - fade to color (+CLOCKA=%u,r,g,b)\n"
                     "+CLOCKA: 1000 = disable clock\n"
                     "+CLOCKA: 1001 = enable clock\n"
                     "+CLOCKA: 1002 = all pixels on\n"
@@ -247,10 +287,11 @@ bool ClockPlugin::atModeHandler(Stream &serial, const String &command, int8_t ar
                 FAST_BLINK_COLON,
                 SOLID_COLON,
                 RAINBOW,
-                FLASHING
+                FLASHING,
+                FADE, FADE
             );
         }
-        else if (argc == 1) {
+        else if (argc >= 1) {
             int value = atoi(argv[0]);
             if (value == 1000) {
                 enable(false);
@@ -263,6 +304,14 @@ bool ClockPlugin::atModeHandler(Stream &serial, const String &command, int8_t ar
                 _display->setColor(0xffffff);
             }
             else {
+                if (value == AnimationEnum_t::FADE) {
+                    if (argc >= 4) {
+                        _animationData.fade.toColor = Color(atoi(argv[1]), atoi(argv[2]), atoi(argv[3]));
+                    }
+                    else {
+                        _animationData.fade.toColor = ~_color & 0xffffff;
+                    }
+                }
                 setAnimation((AnimationEnum_t)value);
             }
         }
@@ -445,20 +494,19 @@ void ClockPlugin::setBlinkColon(BlinkColonEnum_t value)
 void ClockPlugin::setAnimation(AnimationEnum_t animation)
 {
     _debug_printf_P(PSTR("ClockPlugin::setAnimation(%d)\n"), animation);
+    _animationData.callback = nullptr;
+    _display->setCallback(nullptr);
     switch(animation) {
         case BLINK_COLON:
             setBlinkColon(NORMAL);
-            _display->setCallback(nullptr);
             _updateRate = 1000;
             break;
         case FAST_BLINK_COLON:
             setBlinkColon(FAST);
-            _display->setCallback(nullptr);
             _updateRate = 500;
             break;
         case SOLID_COLON:
             setBlinkColon(SOLID);
-            _display->setCallback(nullptr);
             _updateRate = 1000;
             break;
         case RAINBOW:
@@ -482,6 +530,28 @@ void ClockPlugin::setAnimation(AnimationEnum_t animation)
             });
             _updateRate = 1000 / 30;
             break;
+        case FADE:
+            _animationData.fade.speed = 10;
+            _animationData.fade.progress = 0;
+            _animationData.fade.fromColor = _color;
+            _animationData.callback = [this]() {
+                auto &fade = _animationData.fade;
+                if (fade.progress < 1000) {
+                    fade.progress = std::min(1000, fade.progress + fade.speed);
+                    Color fromColor = fade.fromColor;
+                    Color toColor = fade.toColor;
+                    float stepRed = (toColor.red() - fromColor.red()) / 1000.0;
+                    float stepGreen = (toColor.green() - fromColor.green()) / 1000.0;
+                    float stepBlue = (toColor.blue() - fromColor.blue()) / 1000.0;
+                    _color = Color(
+                        (uint8_t)(fromColor.red() + (stepRed * (float)fade.progress)),
+                        (uint8_t)(fromColor.green() + (stepGreen * (float)fade.progress)),
+                        (uint8_t)(fromColor.blue() + (stepBlue * (float)fade.progress))
+                    );
+                }
+            };
+            _updateRate = 1000 / 50;
+            break;
         case FLASHING:
             _animationData.flashing.color = _color;
             _display->setCallback([this](SevenSegmentPixel::pixel_address_t addr, SevenSegmentPixel::color_t color) {
@@ -491,7 +561,6 @@ void ClockPlugin::setAnimation(AnimationEnum_t animation)
             break;
         case NONE:
         default:
-            _display->setCallback(nullptr);
             _updateRate = _blinkColon == FAST ? 500 : 1000;
             break;
     }
@@ -604,6 +673,10 @@ void ClockPlugin::_loop()
 
     if (!_isSyncing && (forceUpdate || get_time_diff(_updateTimer, millis()) >= _updateRate)) {
         _updateTimer = millis();
+
+        if (_animationData.callback) {
+            _animationData.callback();
+        }
 
         uint32_t color = _color;
         struct tm *tm = timezone_localtime(&now);

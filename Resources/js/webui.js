@@ -12,13 +12,13 @@ var webUIComponent = {
         },
         column: {
             group: { columns: 12 },
-            switch: { min: 0, max: 1, columns: 2, zero_off: true, display_name: false, attributes: ['min', 'max', 'value', 'zero-off', 'display-name' ] },
-            slider: { min: 0, max: 255, columns: 12, attributes: ['min', 'max', 'zero-off', 'value' ] },
+            switch: { min: 0, max: 1, columns: 2, zero_off: true, display_name: false, attributes: [ 'min', 'max', 'value', 'zero-off', 'display-name' ] },
+            slider: { min: 0, max: 255, columns: 12, attributes: [ 'min', 'max', 'zero-off', 'value' ] },
             color_slider: { min: 15300, max: 50000 },
             sensor: { columns: 3 },
-            screen: { columns: 3, width: 128, height: 32, attributes: ['width', 'height' ] },
+            screen: { columns: 3, width: 128, height: 32, attributes: [ 'width', 'height' ] },
             binary_sensor: { columns: 2 },
-            buttons: { columns: 3, buttons: [], attributes: ['buttons'] },
+            buttons: { columns: 3, buttons: [], height: 0, attributes: [ 'height', 'buttons' ] },
         }
     },
 
@@ -238,6 +238,9 @@ var webUIComponent = {
                 name = '<h2>' + options.name + '</h2>';
             }
             var element = this.createColumn(options, $('<div class="button-group"><div class="row"><div class="col">' + name + '<div class="btn-group-vertical btn-group-lg" id="' + options.id + '">' + buttons + '</div></div></div></div>'));
+            if (options.height) {
+                $(element).find('.button-group').height(options.height + 'px');
+            }
             return element;
         }
         else if (options.type === "sensor" || options.type === "binary_sensor") {

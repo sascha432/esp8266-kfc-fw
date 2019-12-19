@@ -134,7 +134,7 @@ public:
     WebUIComponent &addBadgeSensor(const String &id, const JsonString &name, const JsonString &unit);
     WebUIComponent &addBinarySensor(const String &id, const JsonString &name, const JsonString &unit, WebUIComponent::SensorRenderEnum_t render = WebUIComponent::SensorRenderEnum_t::RENDER_DEFAULT);
     WebUIComponent &addScreen(const String &id, uint16_t width, uint16_t height);
-    WebUIComponent &addButtonGroup(const String &id, const JsonString &name, const JsonString &buttons);
+    WebUIComponent &addButtonGroup(const String &id, const JsonString &name, const JsonString &buttons, uint16_t height = 0);
 
 };
 

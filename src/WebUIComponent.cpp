@@ -173,12 +173,15 @@ WebUIComponent &WebUIRow::addScreen(const String &id, uint16_t width, uint16_t h
     return column;
 }
 
-WebUIComponent &WebUIRow::addButtonGroup(const String &id, const JsonString &name, const JsonString &buttons) {
+WebUIComponent &WebUIRow::addButtonGroup(const String &id, const JsonString &name, const JsonString &buttons, uint16_t height) {
     WebUIComponent &column = addColumn(6);
     column.add(JJ(type), JJ(buttons));
     column.setId(id);
     column.setName(name);
     column.add(JJ(buttons), buttons);
+    if (height) {
+        column.add(JJ(height), height);
+    }
     return column;
 }
 

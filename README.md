@@ -2,7 +2,7 @@
 
 Firmware for ESP8266/ESP32 and IoT devices
 
-The firmware offers a plugin interface to easily extend its functionality. The plugins can be configured via web interface and have access to the network, file system, logging, serial console, I2C bus, GPIO, EEPROM, RTC memory etc... via API functions. Support for deep sleep and WiFi quick connect (~250-300ms) after wake up.
+The firmware offers a plugin interface to easily extend its functionality. The plugins can be configured via web interface and have access to the network, file system, logging, serial console, I2C bus, GPIO, EEPROM, RTC memory, event/task scheduler etc... via API functions. Support for deep sleep and WiFi quick connect (~250-300ms) after wake up.
 
 ## Libraries
 
@@ -16,7 +16,7 @@ Platform independent timezone implementation with remote API support (Self hoste
 
 ### KFCWebBuilder
 
-Framework to build Web UIs with bootstrap and store them mostly compressed in a virtual file system
+Framework to build WebUIs with bootstrap and store them mostly compressed in a virtual file system
 
 ### KFCVirtualFileSystem
 
@@ -43,7 +43,7 @@ Library to handle configurations stored in the EEPROM, read on demand to save me
 
 ### AT Mode
 
-Configure and control the device with AT commands via serial interface or web UI
+Configure and control the device with AT commands via serial interface or WebUI
 
 ### MQTT Client
 
@@ -51,7 +51,7 @@ MQTT Client with API to easily add components that work with Home Assistant, as 
 
 ### Http2Serial
 
-Serial console access over the web UI using web sockets
+Serial console access over the WebUI using web sockets
 
 ### Serial2TCP
 
@@ -59,7 +59,7 @@ Serial console redirection via TCP
 
 ### STK500v1
 
-STK500v1 programmer
+STK500v1 programmer over WiFi/Serial
 
 ### RF24 Master
 
@@ -84,10 +84,34 @@ Scan all GPIO pins for I2C devices
 ### Weather Station
 
 Weather Station for TFT displays with openweathermap.org API.
+Remote view over WebUI.
+
+### Sensor
+
+Plugin for different sensors. Voltage/Battery charger, BME280, BME680, CCS811, HLW8012, LM75A.
+Support for native WebUI and MQTT.
+
+### Clock
+
+Plugin for my WS2811 Based 7 Segment Clock
+
+https://easyeda.com/sascha23095123423/iot_wifi_clock_controller
+
+### Dimmer
+
+Plugin to control my trailing edge WiFi dimmer
+
+https://github.com/sascha432/trailing_edge_dimmer
+
+### Blinds Controller
+
+Plugin for my 2 channel blinds controller
+
+https://easyeda.com/sascha23095123423/iot_blinds_controller
 
 ### File Manager
 
-Web UI to explore and modify SPIFFS and KFCVirtualFileSystem
+WebUI to explore and modify SPIFFS and KFCVirtualFileSystem
 
 ## Required third party libraries
 

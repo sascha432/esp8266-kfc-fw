@@ -29,6 +29,7 @@ WEBUI_PROGMEM_STRING_DECL(align)
 WEBUI_PROGMEM_STRING_DECL(badge)
 WEBUI_PROGMEM_STRING_DECL(big)
 WEBUI_PROGMEM_STRING_DECL(binary_sensor)
+WEBUI_PROGMEM_STRING_DECL(buttons)
 WEBUI_PROGMEM_STRING_DECL(center)
 WEBUI_PROGMEM_STRING_DECL(color)
 WEBUI_PROGMEM_STRING_DECL(columns)
@@ -133,6 +134,7 @@ public:
     WebUIComponent &addBadgeSensor(const String &id, const JsonString &name, const JsonString &unit);
     WebUIComponent &addBinarySensor(const String &id, const JsonString &name, const JsonString &unit, WebUIComponent::SensorRenderEnum_t render = WebUIComponent::SensorRenderEnum_t::RENDER_DEFAULT);
     WebUIComponent &addScreen(const String &id, uint16_t width, uint16_t height);
+    WebUIComponent &addButtonGroup(const String &id, const JsonString &name, const JsonString &buttons);
 
 };
 

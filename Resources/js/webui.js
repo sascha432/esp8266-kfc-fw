@@ -18,6 +18,7 @@ var webUIComponent = {
             sensor: { columns: 3 },
             screen: { columns: 3, width: 128, height: 32, attributes: ['width', 'height' ] },
             binary_sensor: { columns: 2 },
+            buttons: { columns: 3, buttons: [], attributes: ['buttons'] },
         }
     },
 
@@ -226,6 +227,19 @@ var webUIComponent = {
             var element = this.createColumn(options, $('<div class="screen"><div class="row"><div class="col">' + canvas + '</div></div></div>'));
             return element;
         }
+        else if (options.type === "buttons") {
+            options.buttons = options.buttons.split(',');
+            var buttons = '';
+            $(options.buttons).each(function(key, val) {
+                buttons += '<button class="btn btn-outline-primary" data-idx="' + key + '">' + val + '</button>';
+            });
+            var name = '';
+            if (options.name) {
+                name = '<h2>' + options.name + '</h2>';
+            }
+            var element = this.createColumn(options, $('<div class="button-group"><div class="row"><div class="col">' + name + '<div class="btn-group-vertical btn-group-lg" id="' + options.id + '">' + buttons + '</div></div></div></div>'));
+            return element;
+        }
         else if (options.type === "sensor" || options.type === "binary_sensor") {
             var element;
             if (options.value === undefined || options.state === false) {
@@ -296,6 +310,14 @@ var webUIComponent = {
         });
         this.container.append('<br><br>');
 
+        this.container.find('.button-group').find('button').on('click', function() {
+            var $this = $(this);
+            var _parent = $this.parent();
+            self.publishState(_parent.attr('id'), $this.attr('data-idx'), 'set');
+            _parent.find('button').removeClass('active');
+            $this.addClass('active');
+        });
+
         this.container.find('input[type="range"]').each(function() {
             var $this = $(this);
             var options = {
@@ -363,10 +385,27 @@ var webUIComponent = {
             if (element.length) {
                 if (this.value !== undefined) {
                     self.updateGroup(this.id, this.value);
-                    if (element[0].nodeName != 'INPUT') {
+                    if (element[0].nodeName == 'DIV' && element.attr('class') && element.attr('class').indexOf('btn-group') != -1) {
+                        var buttons = $(element).find('button');
+                        if (this.state) {
+                            buttons.removeClass('disabled');
+                        }
+                        else {
+                            buttons.addClass('disabled');
+                        }
+                        buttons.removeClass('active');
+                        var this2 = this;
+                        $(buttons).each(function(key, val) {
+                            if (key == this2.value) {
+                                $(val).addClass('active');
+                            }
+                        });
+                    }
+                    else if (element[0].nodeName != 'INPUT') {
                         // console.log("update_event", "innerHtml", this);
                         element.html(this.value);
-                    } else {
+                    }
+                    else {
                         // console.log("update_event", "input", this);
                         element.val(this.value).change();
                         self.updateSliderCSS(element);

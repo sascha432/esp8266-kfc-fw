@@ -388,46 +388,33 @@ void ntp_client_reconfigure_plugin(PGM_P source) {
     timezone_setup();
 }
 
-void ntp_client_create_settings_form(AsyncWebServerRequest *request, Form &form) {
-
-    form.add<bool>(F("ntp_enabled"), _H_STRUCT_FORMVALUE(Config().flags, bool, ntpClientEnabled));
-
-    form.add<sizeof Config().ntp.servers[0]>(F("ntp_server1"), config._H_W_STR(Config().ntp.servers[0]));
-    form.addValidator(new FormValidHostOrIpValidator(true));
-
-    form.add<sizeof Config().ntp.servers[1]>(F("ntp_server2"), config._H_W_STR(Config().ntp.servers[1]));
-    form.addValidator(new FormValidHostOrIpValidator(true));
-
-    form.add<sizeof Config().ntp.servers[2]>(F("ntp_server3"), config._H_W_STR(Config().ntp.servers[2]));
-    form.addValidator(new FormValidHostOrIpValidator(true));
-
-    form.add<sizeof Config().ntp.timezone>(F("ntp_timezone"), config._H_W_STR(Config().ntp.timezone));
-
-#if USE_REMOTE_TIMEZONE
-    form.add<sizeof Config().ntp.remote_tz_dst_ofs_url>(F("ntp_remote_tz_url"), config._H_W_STR(Config().ntp.remote_tz_dst_ofs_url));
-#endif
-
-    form.finalize();
-}
-
 class NTPPlugin : public PluginComponent {
 public:
     NTPPlugin() {
         register_plugin(this);
     }
-    PGM_P getName() const;
-    PluginPriorityEnum_t getSetupPriority() const override;
-    uint8_t getRtcMemoryId() const override;
+
+    virtual PGM_P getName() const;
+    virtual PluginPriorityEnum_t getSetupPriority() const override;
+    virtual uint8_t getRtcMemoryId() const override;
+
 #if NTP_RESTORE_TIMEZONE_AFTER_WAKEUP
-    bool autoSetupAfterDeepSleep() const override {
+    virtual bool autoSetupAfterDeepSleep() const override {
         return true;
     }
-    void prepareDeepSleep(uint32_t sleepTimeMillis) override;
+    virtual void prepareDeepSleep(uint32_t sleepTimeMillis) override;
 #endif
-    void setup(PluginSetupMode_t mode) override;
-    void reconfigure(PGM_P source) override;
-    bool hasStatus() const override;
-    const String getStatus() override;
+    virtual void setup(PluginSetupMode_t mode) override;
+    virtual void reconfigure(PGM_P source) override;
+
+    virtual bool hasStatus() const override;
+    virtual const String getStatus() override;
+
+    virtual bool canHandleForm(const String &formName) const override {
+        return strcmp_P(formName.c_str(), PSTR("ntp")) == 0;
+    }
+    virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
+
 #if AT_MODE_SUPPORTED
     bool hasAtMode() const override;
     void atModeHelpGenerator() override;
@@ -470,6 +457,28 @@ bool NTPPlugin::hasStatus() const {
 const String NTPPlugin::getStatus()
 {
     return TimezoneData::getStatus();
+}
+
+void NTPPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form) {
+
+    form.add<bool>(F("ntp_enabled"), _H_STRUCT_FORMVALUE(Config().flags, bool, ntpClientEnabled));
+
+    form.add<sizeof Config().ntp.servers[0]>(F("ntp_server1"), config._H_W_STR(Config().ntp.servers[0]));
+    form.addValidator(new FormValidHostOrIpValidator(true));
+
+    form.add<sizeof Config().ntp.servers[1]>(F("ntp_server2"), config._H_W_STR(Config().ntp.servers[1]));
+    form.addValidator(new FormValidHostOrIpValidator(true));
+
+    form.add<sizeof Config().ntp.servers[2]>(F("ntp_server3"), config._H_W_STR(Config().ntp.servers[2]));
+    form.addValidator(new FormValidHostOrIpValidator(true));
+
+    form.add<sizeof Config().ntp.timezone>(F("ntp_timezone"), config._H_W_STR(Config().ntp.timezone));
+
+#if USE_REMOTE_TIMEZONE
+    form.add<sizeof Config().ntp.remote_tz_dst_ofs_url>(F("ntp_remote_tz_url"), config._H_W_STR(Config().ntp.remote_tz_dst_ofs_url));
+#endif
+
+    form.finalize();
 }
 
 #if NTP_RESTORE_SYSTEM_TIME_AFTER_WAKEUP

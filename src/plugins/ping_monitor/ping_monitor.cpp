@@ -414,22 +414,24 @@ const String PingMonitorPlugin::getStatus() {
 }
 
 bool PingMonitorPlugin::canHandleForm(const String &formName) const {
-    return nameEquals(formName);
+    return strcmp_P(formName.c_str(), PSTR("ping_monitor")) == 0;
 }
 
 void PingMonitorPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form) {
 
+    const __FlashStringHelper *gateway = F("${gateway}");
+
     form.add<sizeof Config().ping.host1>(F("ping_host1"), config._H_W_STR(Config().ping.host1));
-    form.addValidator(new FormValidHostOrIpValidator(true));
+    form.addValidator((new FormValidHostOrIpValidator(true))->addAllowString(gateway));
 
     form.add<sizeof Config().ping.host2>(F("ping_host2"), config._H_W_STR(Config().ping.host2));
-    form.addValidator(new FormValidHostOrIpValidator(true));
+    form.addValidator((new FormValidHostOrIpValidator(true))->addAllowString(gateway));
 
     form.add<sizeof Config().ping.host3>(F("ping_host3"), config._H_W_STR(Config().ping.host3));
-    form.addValidator(new FormValidHostOrIpValidator(true));
+    form.addValidator((new FormValidHostOrIpValidator(true))->addAllowString(gateway));
 
     form.add<sizeof Config().ping.host4>(F("ping_host4"), config._H_W_STR(Config().ping.host4));
-    form.addValidator(new FormValidHostOrIpValidator(true));
+    form.addValidator((new FormValidHostOrIpValidator(true))->addAllowString(gateway));
 
     form.add<uint16_t>(F("ping_interval"), &config._H_W_GET(Config().ping.interval));
     form.addValidator(new FormRangeValidator(0, 65535));

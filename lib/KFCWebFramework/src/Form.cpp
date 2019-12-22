@@ -14,9 +14,7 @@
 #include <debug_helper_disable.h>
 #endif
 
-Form::Form() {
-    _data = nullptr;
-    _invalidMissing = true;
+Form::Form() : _data(nullptr), _invalidMissing(true) {
 }
 
 Form::Form(FormData * data) : Form() {
@@ -159,7 +157,7 @@ void Form::copyValidatedData() {
     }
 }
 
-const std::vector<FormError>& Form::getErrors() const {
+const Form::ErrorsVector &Form::getErrors() const {
     return _errors;
 }
 
@@ -170,24 +168,29 @@ void Form::finalize() const {
 }
 
 const char *Form::process(const String &name) const {
+    // TODO check html entities encoding
     for(auto field : _fields) {
         uint8_t len = (uint8_t)field->getName().length();
         if (field->getType() == FormField::INPUT_TEXT && name.equalsIgnoreCase(field->getName())) {
             _debug_printf_P(PSTR("Form::process(%s) INPUT_TEXT = %s\n"), name.c_str(), field->getValue().c_str());
             return field->getValue().c_str();
-        } else if (field->getType() == FormField::INPUT_CHECK && name.equalsIgnoreCase(field->getName())) {
+        }
+        else if (field->getType() == FormField::INPUT_CHECK && name.equalsIgnoreCase(field->getName())) {
             _debug_printf_P(PSTR("Form::process(%s) INPUT_CHECK = %d\n"), name.c_str(), field->getValue().toInt());
             return field->getValue().toInt() ? " checked" : "";
-        } else if (field->getType() == FormField::INPUT_SELECT && strncasecmp(field->getName().c_str(), name.c_str(), len) == 0) {
+        }
+        else if (field->getType() == FormField::INPUT_SELECT && strncasecmp(field->getName().c_str(), name.c_str(), len) == 0) {
             if (name.length() == len) {
                 _debug_printf_P(PSTR("Form::process(%s) INPUT_SELECT = %s\n"), name.c_str(), field->getValue().c_str());
                 return field->getValue().c_str();
-            } else if (name.charAt(len) == '_') {
+            }
+            else if (name.charAt(len) == '_') {
                 int value = name.substring(len + 1).toInt();
                 if (value == field->getValue().toInt()) {
                     _debug_printf_P(PSTR("Form::process(%s) INPUT_SELECT %d = %d\n"), name.c_str(), value, field->getValue().toInt());
                     return " selected";
-                } else {
+                }
+                else {
                     _debug_printf_P(PSTR("Form::process(%s) INPUT_SELECT %d != %d\n"), name.c_str(), value, field->getValue().toInt());
                     return "";
                 }
@@ -213,6 +216,29 @@ void Form::createJavascript(Print &out) {
         out.println(F("]);"));
         out.println(F("</script>"));
     }
+}
+
+void Form::setFormUI(const String& title, const String& submit)
+{
+    _formTitle = title;
+    _formSubmit = submit;
+}
+
+void Form::setFormUI(const String& title)
+{
+    _formTitle = title;
+}
+
+void Form::createHtml(Print& output)
+{
+    if (_formTitle.length()) {
+        output.printf_P(PSTR("<h1>%s</h1>"), _formTitle.c_str());
+    }
+    for (auto field : _fields) {
+        field->html(output);
+    }
+    PGM_P label = _formSubmit.length() ? _formSubmit.c_str() : PSTR("Save Changes");
+    output.printf_P(PSTR("<button type=\"submit\" class=\"btn btn-primary\">%s...</button>"), label );
 }
 
 void Form::dump(Print &out, const String &prefix) const {

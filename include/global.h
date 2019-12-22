@@ -76,6 +76,14 @@
 #define KFC_TWOWIRE_CLOCK_SPEED         100000
 #endif
 
+#ifndef SPEED_BOOSTER_ENABLED
+#if defined(ESP8266)
+#define SPEED_BOOSTER_ENABLED               1
+#else
+#define SPEED_BOOSTER_ENABLED               0
+#endif
+#endif
+
 #ifndef DEBUG
 #define DEBUG                           1                // Enable debug mode
 #endif
@@ -110,7 +118,6 @@
 #define FS_MAPPINGS_HASH_ALGO           "sha1"
 #define FS_MAPPINGS_HASH_LENGTH         20              // length of the binary hash
 #endif
-
 
 #ifndef LOGGER
 #define LOGGER                          1               // Logging to files on SPIFFS
@@ -164,7 +171,8 @@
 #endif
 
 #ifndef WEB_SOCKET_ENCRYPTION
-#define WEB_SOCKET_ENCRYPTION           WEBSERVER_SUPPORT   // AES 128, 192 and 256 encryption for web sockets
+//#define WEB_SOCKET_ENCRYPTION           WEBSERVER_SUPPORT   // AES 128, 192 and 256 encryption for web sockets
+#define WEB_SOCKET_ENCRYPTION 0 // not implemeneted
 #endif
 
 #ifndef HTTP2SERIAL
@@ -192,15 +200,16 @@
 extern class Stream &MySerial;
 extern class Stream &DebugSerial;
 
-#ifndef SERIAL2TCP
-#define SERIAL2TCP                      0               // connect to com port over TCP
-#endif
 #ifndef HTTP2SERIAL_DISABLE_AT_MODE
 #define HTTP2SERIAL_DISABLE_AT_MODE     1
 #endif
 
 #ifndef NTP_CLIENT
 #define NTP_CLIENT                      1               // NTP client support
+#endif
+
+#ifndef SNTP_STARTUP_DELAY
+#define SNTP_STARTUP_DELAY              0
 #endif
 
 #ifndef USE_REMOTE_TIMEZONE
@@ -216,6 +225,10 @@ extern class Stream &DebugSerial;
 #define MQTT_SUPPORT                    1               // Support for a MQTT broker
 #endif
 
+#ifndef MQTT_USE_PACKET_CALLBACKS
+#define MQTT_USE_PACKET_CALLBACKS       0
+#endif
+
 #ifndef MQTT_FILE_MANAGER
 #define MQTT_FILE_MANAGER               1               // SPIFFS list files/upload over MQTT
 #endif
@@ -228,16 +241,8 @@ extern class Stream &DebugSerial;
 #define MQTT_REMOTE_CONFIG              1               // enable remote configuration via MQTT
 #endif
 
-#ifndef HUE_EMULATION
-#define HUE_EMULATION                   0               // HUE emulation for ALEXA
-#endif
-
 #ifndef REST_API_SUPPORT
 #define REST_API_SUPPORT                1               // rest API support
-#endif
-
-#ifndef HOME_ASSISTANT_INTEGRATION
-#define HOME_ASSISTANT_INTEGRATION      0               // home assistant integration https://www.home-assistant.io/
 #endif
 
 #ifndef WEBSERVER_SUPPORT
@@ -263,10 +268,6 @@ extern class Stream &DebugSerial;
 #elif defined(ESP8266)
 #define WEBSERVER_TLS_SUPPORT           0               // TLS support for the web server
 #endif
-#endif
-
-#ifndef PING_MONITOR
-#define PING_MONITOR                    0               // Automated pings with statistics
 #endif
 
 #ifndef FILE_MANAGER
@@ -320,16 +321,8 @@ extern class Stream &DebugSerial;
 #endif
 #endif
 
-#ifndef IOT_SWITCH
-#define IOT_SWITCH                      0
-#endif
-
 #ifndef SERIAL_HANDLER_INPUT_BUFFER_MAX
 #define SERIAL_HANDLER_INPUT_BUFFER_MAX 512
-#endif
-
-#ifndef RTC_SUPPORT
-#define RTC_SUPPORT                     0               // support for RTC
 #endif
 
 #ifndef HAS_STRFTIME_P
@@ -338,4 +331,82 @@ extern class Stream &DebugSerial;
 
 #ifndef __ICACHE_FLASH_ATTR
 #define __ICACHE_FLASH_ATTR             ICACHE_FLASH_ATTR
+#endif
+
+// default "0" defines for plugins
+
+#ifndef IOT_SWITCH
+#define IOT_SWITCH 0
+#endif
+
+#ifndef RTC_SUPPORT
+#define RTC_SUPPORT 0
+#endif
+
+#ifndef IOT_BLINDS_CTRL
+#define IOT_BLINDS_CTRL 0
+#endif
+
+#ifndef PING_MONITOR
+#define PING_MONITOR 0
+#endif
+
+#ifndef ESP8266_AT_MODE_SUPPORT
+#define ESP8266_AT_MODE_SUPPORT 0
+#endif
+
+#ifndef HUE_EMULATION
+#define HUE_EMULATION 0
+#endif
+
+#ifndef REST_API_SUPPORT
+#define REST_API_SUPPORT 0
+#endif
+
+#ifndef HOME_ASSISTANT_INTEGRATION
+#define HOME_ASSISTANT_INTEGRATION 0
+#endif
+
+#ifndef I2CSCANNER_PLUGIN
+#define I2CSCANNER_PLUGIN 0
+#endif
+
+#ifndef IOT_CLOCK
+#define IOT_CLOCK 0
+#endif
+
+#ifndef IOT_RF24_MASTER
+#define IOT_RF24_MASTER 0
+#endif
+
+#ifndef IOT_WEATHER_STATION
+#define IOT_WEATHER_STATION 0
+#endif
+
+#ifndef SSD1306_PLUGIN
+#define SSD1306_PLUGIN 0
+#endif
+
+#ifndef IOT_ATOMIC_SUN_V2
+#define IOT_ATOMIC_SUN_V2 0
+#endif
+
+#ifndef IOT_DIMMER_MODULE
+#define IOT_DIMMER_MODULE 0
+#endif
+
+#ifndef PIN_MONITOR
+#define PIN_MONITOR 0
+#endif
+
+#ifndef IOT_SENSOR
+#define IOT_SENSOR 0
+#endif
+
+#ifndef SERIAL2TCP
+#define SERIAL2TCP 0
+#endif
+
+#ifndef STK500V1
+#define STK500V1 0
 #endif

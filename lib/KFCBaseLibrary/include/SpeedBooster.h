@@ -10,14 +10,6 @@
 
 #include <Arduino_compat.h>
 
-#ifndef SPEED_BOOSTER_ENABLED
-#if defined(ESP8266)
-#define SPEED_BOOSTER_ENABLED               1
-#else
-#define SPEED_BOOSTER_ENABLED               0
-#endif
-#endif
-
 // boost CPU speed
 class SpeedBooster {
 public:

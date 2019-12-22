@@ -80,6 +80,11 @@ public:
         snprintf(buf, sizeof(buf), "%.*f", decimals, value);
         assign(buf);
     }
+    String(double value, unsigned char decimals = 2) : String() {
+        char buf[32];
+        snprintf(buf, sizeof(buf), "%.*f", decimals, value);
+        assign(buf);
+    }
     String(const char ch) : String() {
         assign(1, ch);
     }

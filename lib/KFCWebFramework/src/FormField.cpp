@@ -5,10 +5,7 @@
 #include "FormField.h"
 #include "FormValidator.h"
 
-FormField::FormField(const String & name) {
-    _name = name;
-    _hasChanged = false;
-    _type = FormField::INPUT_NONE;
+FormField::FormField(const String & name) : _name(name), _type(FormField::INPUT_NONE), _formUI(nullptr), _hasChanged(false) {
     // _notSet = false;
     // _optional = false;
 }
@@ -30,6 +27,9 @@ FormField::~FormField() {
         delete validator;
     }
     _validators.clear();
+    if (_formUI) {
+        delete _formUI;
+    }
 }
 
 void FormField::setForm(Form * form) {
@@ -40,7 +40,7 @@ Form &FormField::getForm() const {
     return *_form;
 }
 
-const String & FormField::getName() const {
+const String &FormField::getName() const {
     return _name;
 }
 
@@ -48,7 +48,8 @@ const String & FormField::getName() const {
 * Returns the value of the initialized field or changes the user submitted
 **/
 
-const String & FormField::getValue() {
+const String &FormField::getValue() 
+{
     return _value;
 }
 
@@ -56,7 +57,8 @@ const String & FormField::getValue() {
 * Initialize the value of the field. Should only be used in the constructor.
 **/
 
-void FormField::initValue(const String & value) {
+void FormField::initValue(const String & value) 
+{
     _value = value;
     _hasChanged = false;
 }
@@ -65,7 +67,8 @@ void FormField::initValue(const String & value) {
 * This method is called when the user submits a form
 **/
 
-bool FormField::setValue(const String & value) {
+bool FormField::setValue(const String & value) 
+{
     if (value != _value) {
         _value = value;
         _hasChanged = true;
@@ -80,7 +83,7 @@ bool FormField::setValue(const String & value) {
 **/
 
 void FormField::copyValue() {
-    String storedValue = FormField::getValue();
+    FormField::getValue();
 }
 
 const bool FormField::equals(FormField * field) const {
@@ -103,11 +106,27 @@ const FormField::FieldType_t FormField::getType() const {
     return _type;
 }
 
+void FormField::setFormUI(FormUI *formUI)
+{
+    if (_formUI) {
+        delete _formUI;
+    }
+    _formUI = formUI;
+    _formUI->setParent(this);
+}
+
+void FormField::html(Print &output)
+{
+    if (_formUI) {
+        _formUI->html(output);
+    }
+}
+
 void FormField::addValidator(FormValidator * validator) {
     _validators.push_back(validator);
     _validators.back()->setField(this);
 }
 
-const std::vector<FormValidator*>& FormField::getValidators() const {
+const FormField::ValidatorsVector &FormField::getValidators() const {
     return _validators;
 }

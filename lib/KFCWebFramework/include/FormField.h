@@ -6,6 +6,7 @@
 
 #include <Arduino_compat.h>
 #include <vector>
+#include "FormUI.h"
 
 class Form;
 class FormValidator;
@@ -14,12 +15,12 @@ class FormField {
 public:
     typedef std::vector <FormValidator *> ValidatorsVector;
 
-    enum FieldType_t {
+    typedef enum {
         INPUT_NONE = 0,
         INPUT_CHECK,
         INPUT_SELECT,
         INPUT_TEXT,
-    };
+    } FieldType_t;
 
     FormField(const String &name);
     FormField(const String &name, const String &value);
@@ -70,6 +71,9 @@ public:
     void setType(FieldType_t type);
     const FieldType_t getType() const;
 
+    void setFormUI(FormUI *formUI);
+    void html(Print &output);
+
     void addValidator(FormValidator *validator);
     const ValidatorsVector &getValidators() const;
 
@@ -78,6 +82,7 @@ private:
     String _value;
     ValidatorsVector _validators;
     FieldType_t _type;
+    FormUI *_formUI;
     Form *_form;
     bool _hasChanged;
     // bool _optional;

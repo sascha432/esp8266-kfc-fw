@@ -166,9 +166,9 @@ struct BlindsControllerChannel {
 
 struct BlindsController {
     struct BlindsControllerChannel channels[2];
-    uint8_t swap_channels: 1;
-    uint8_t channel0_dir: 1;
-    uint8_t channel1_dir: 1;
+    bool swap_channels;
+    bool channel0_dir;
+    bool channel1_dir;
 };
 
 typedef struct  {
@@ -196,6 +196,7 @@ struct Sensor {
         float calibrationU;
         float calibrationI;
         float calibrationP;
+        uint64_t energyCounter;
     } hlw80xx;
 #endif
 };
@@ -279,7 +280,7 @@ struct Config {
 };
 
 #define _H_IP_FORM_OBJECT(name)                     config._H_GET_IP(name), [](const IPAddress &addr, FormField &) { config._H_SET_IP(name, addr); }
-#define _H_STRUCT_FORMVALUE(name, type, field)      config._H_GET(name).field, [](type value, FormField &) { auto &data = config._H_W_GET(name); data.field = value; }
+#define _H_STRUCT_FORMVALUE(name, type, field)      config._H_GET(name).field, [](type value, FormField &, bool) { auto &data = config._H_W_GET(name); data.field = value; return false; }
 
 // NOTE using the new handlers (USE_WIFI_SET_EVENT_HANDLER_CB=0) costs 896 byte RAM with 5 handlers
 #ifndef USE_WIFI_SET_EVENT_HANDLER_CB

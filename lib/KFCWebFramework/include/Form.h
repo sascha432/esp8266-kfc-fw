@@ -34,8 +34,14 @@ public:
     FormField *add(const String &name, const String &value, FormField::FieldType_t type = FormField::INPUT_TEXT);
 
     template <typename T>
-    FormField *add(const String &name, T value, std::function<void(T, FormField &)> setter = nullptr, FormField::FieldType_t type = FormField::INPUT_SELECT) {
-        return _add(new FormValue<T>(name, value, setter, type));
+
+    FormField* add(const String& name, T value, typename FormValue<T>::GetterSetterCallback_t callback = nullptr, FormField::FieldType_t type = FormField::INPUT_SELECT) {
+        return _add(new FormValue<T>(name, value, callback, type));
+    }
+
+    template <typename T>
+    FormField* add(const String& name, T *value, typename FormValue<T>::GetterSetterCallback_t callback, FormField::FieldType_t type = FormField::INPUT_SELECT) {
+        return _add(new FormValue<T>(name, value, callback, type));
     }
 
     template <typename T, size_t N>
@@ -44,7 +50,7 @@ public:
     }
 
     template <typename T>
-    FormField *add(const String &name, T *value, FormField::FieldType_t type = FormField::INPUT_SELECT) {
+    FormField* add(const String& name, T* value, FormField::FieldType_t type = FormField::INPUT_SELECT) {
         return _add(new FormValue<T>(name, value, type));
     }
 
@@ -79,6 +85,10 @@ public:
     const char *process(const String &name) const;
     void createJavascript(Print &out);
 
+    void setFormUI(const String& title, const String& submit);
+    void setFormUI(const String& title);
+    void createHtml(Print& out);
+
     void dump(Print &out, const String &prefix) const;
 
 private:
@@ -87,4 +97,6 @@ private:
     ErrorsVector _errors;
     bool _invalidMissing;
     bool _hasChanged;
+    String _formTitle;
+    String _formSubmit;
 };

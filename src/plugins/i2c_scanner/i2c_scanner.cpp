@@ -24,8 +24,8 @@
 
 void check_if_exist_I2C(Print &output);
 
-uint8_t portArray[] = { 16, 5, 4, 0, 2, 14, 12, 13 };
-const char *portMap[] = { "GPIO16", "GPIO5", "GPIO4", "GPIO0", "GPIO2", "GPIO14", "GPIO12", "GPIO13" };
+uint8_t portArray[] = { 16, 5, 4, 0, 2, 12, 13 };
+const char *portMap[] = { "GPIO16", "GPIO5", "GPIO4", "GPIO0", "GPIO2", "GPIO12", "GPIO13" };
 
 void scanPorts(Print &output) {
     output.println(F("\n\nI2C Scanner to scan for devices on each port pair D0 to D7"));

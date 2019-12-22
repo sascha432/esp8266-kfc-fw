@@ -17,6 +17,10 @@
 #define DEBUG_IOT_CLOCK                 0
 #endif
 
+#if SPEED_BOOSTER_ENABLED
+#warning The speed booster causes timing issues and should be deactivated
+#endif
+
 // number of digits
 #ifndef IOT_CLOCK_NUM_DIGITS
 #define IOT_CLOCK_NUM_DIGITS            4

@@ -26,9 +26,10 @@ Sensor_HLW80xx::Sensor_HLW80xx(const String &name) : MQTTSensor(), _name(name) {
     _voltage = NAN;
     _current = NAN;
     _calibrationI = 1;
-    _calibrationV = 1.125;
-    // _calibrationP = _calibrationV * _calibrationV;
-    _calibrationP = 1.2;
+    _calibrationP = 1;
+    _calibrationU = 1;
+    reconfigure();
+
     setUpdateRate(IOT_SENSOR_HLW80xx_UPDATE_RATE);
 }
 
@@ -126,9 +127,9 @@ void Sensor_HLW80xx::getValues(JsonArray &array) {
 void Sensor_HLW80xx::createWebUI(WebUI &webUI, WebUIRow **row) {
     _debug_printf_P(PSTR("Sensor_HLW8012::createWebUI()\n"));
 
-    if ((*row)->size() > 1) {
-        // *row = &webUI.addRow();
-    }
+    // if ((*row)->size() > 1) {
+    //     *row = &webUI.addRow();
+    // }
 
     (*row)->addSensor(_getId(F("power")), _name + F(" Power"), F("W"));
     (*row)->addSensor(_getId(F("energy_total")), _name + F(" Energy Total"), F("kWh"));
@@ -138,8 +139,37 @@ void Sensor_HLW80xx::createWebUI(WebUI &webUI, WebUIRow **row) {
     (*row)->addSensor(_getId(F("pf")), _name + F(" Power Factor"), F(""));
 }
 
+void Sensor_HLW80xx::reconfigure() {
+    auto sensor = config._H_GET(Config().sensor).hlw80xx;
+    if (sensor.calibrationI) {
+        _calibrationI = sensor.calibrationI;
+    }
+    if (sensor.calibrationU) {
+        _calibrationU = sensor.calibrationU;
+    }
+    if (sensor.calibrationP) {
+        _calibrationP = sensor.calibrationP;
+    }
+    _debug_printf_P(PSTR("Sensor_HLW80xx::Sensor_HLW80xx(): calibration U=%f, I=%f, P=%f\n"), _calibrationU, _calibrationI, _calibrationP);
+}
+
 void Sensor_HLW80xx::restart() {
     _saveEnergyCounter();
+
+    // get clean copy of config and update energy counter
+    config.read();
+    auto &sensor = config._H_W_GET(Config().sensor).hlw80xx;
+    sensor.energyCounter = _energyCounter[0];
+    config.write();
+}
+
+void Sensor_HLW80xx::createConfigureForm(AsyncWebServerRequest *request, Form &form) {
+
+    auto *sensor = &config._H_W_GET(Config().sensor); // must be a pointer
+
+    form.add<float>(F("hlw80xx_calibrationU"), &sensor->hlw80xx.calibrationU);
+    form.add<float>(F("hlw80xx_calibrationI"), &sensor->hlw80xx.calibrationI);
+    form.add<float>(F("hlw80xx_calibrationP"), &sensor->hlw80xx.calibrationP);
 }
 
 void Sensor_HLW80xx::publishState(MQTTClient *client) {
@@ -187,14 +217,9 @@ void Sensor_HLW80xx::_loadEnergyCounter() {
     _debug_printf_P(PSTR("Sensor_HLW80xx::_loadEnergyCounter()\n"));
 #if IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT
     auto file = SPIFFS.open(FSPGM(iot_sensor_hlw80xx_state_file), "r");
-    if (file) {
-        if (file.read(reinterpret_cast<uint8_t *>(&_energyCounter), sizeof(_energyCounter)) != sizeof(_energyCounter)) {
-            resetEnergyCounter();
-        }
-        file.close();
-    }
-    else {
+    if (!file || file.read(reinterpret_cast<uint8_t *>(&_energyCounter), sizeof(_energyCounter)) != sizeof(_energyCounter)) {
         resetEnergyCounter();
+        _energyCounter[0] = config._H_GET(Config().sensor).hlw80xx.energyCounter; // restore data from EEPROM in case SPIFFS was updated
     }
     _saveEnergyCounterTimeout = millis() + IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT;
 #else

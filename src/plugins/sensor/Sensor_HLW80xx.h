@@ -76,7 +76,7 @@
 // Vref = 2.43V
 
 // pulse is the duty cycle in µs (50% PWM)
-#define IOT_SENSOR_HLW80xx_CALC_U(pulse)        ((128.000000 * IOT_SENSOR_HLW80xx_VREF * IOT_SENSOR_HLW80xx_V_RES_DIV * _calibrationV) / (pulse * IOT_SENSOR_HLW80xx_F_OSC))
+#define IOT_SENSOR_HLW80xx_CALC_U(pulse)        ((128.000000 * IOT_SENSOR_HLW80xx_VREF * IOT_SENSOR_HLW80xx_V_RES_DIV * _calibrationU) / (pulse * IOT_SENSOR_HLW80xx_F_OSC))
 #define IOT_SENSOR_HLW80xx_CALC_I(pulse)        ((32.000000 * IOT_SENSOR_HLW80xx_VREF) / (pulse * (3 * IOT_SENSOR_HLW80xx_F_OSC * IOT_SENSOR_HLW80xx_SHUNT * _calibrationI)))
 #define IOT_SENSOR_HLW80xx_CALC_P(pulse)        ((4.000000 * IOT_SENSOR_HLW80xx_V_RES_DIV * IOT_SENSOR_HLW80xx_VREF * IOT_SENSOR_HLW80xx_VREF * _calibrationP) / (3 * pulse * IOT_SENSOR_HLW80xx_SHUNT * _calibrationI * IOT_SENSOR_HLW80xx_F_OSC))
   // count is incremented on falling and raising edge
@@ -97,6 +97,12 @@ public:
         return String();
     }
 
+    virtual bool hasForm() const {
+        return true;
+    }
+    virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form);
+
+    virtual void reconfigure() override;
     virtual void restart() override;
 
     void resetEnergyCounter();
@@ -129,7 +135,7 @@ protected:
     float _current;
 
     float _calibrationI;
-    float _calibrationV;
+    float _calibrationU;
     float _calibrationP;
 
     unsigned long _saveEnergyCounterTimeout;

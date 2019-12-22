@@ -18,6 +18,7 @@ Sensor_Battery::Sensor_Battery(const JsonString &name) : MQTTSensor(), _name(nam
     debug_printf_P(PSTR("Sensor_Battery(): component=%p\n"), this);
 #endif
     registerClient(this);
+    reconfigure();
 }
 
 void Sensor_Battery::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector) {
@@ -83,13 +84,26 @@ void Sensor_Battery::publishState(MQTTClient *client) {
 void Sensor_Battery::getStatus(PrintHtmlEntitiesString &output) {
     output.printf_P(PSTR("Supply Voltage Indicator"));
 #if IOT_SENSOR_BATTERY_CHARGE_DETECTION
-    output.printf_P(PSTR(HTML_S(br) "Charging: %s"), digitalRead(IOT_SENSOR_BATTERY_CHARGE_DETECTION) ? F("Yes") : F("No"));
+    output.printf_P(", charging: %s"), digitalRead(IOT_SENSOR_BATTERY_CHARGE_DETECTION) ? F("Yes") : F("No"));
 #endif
+    output.printf_P(", calibration %f" HTML_S(br)),  _calibration);
 }
 
 Sensor_Battery::SensorEnumType_t Sensor_Battery::getType() const {
     return BATTERY;
 }
+
+void Sensor_HLW80xx::createConfigureForm(AsyncWebServerRequest *request, Form &form) {
+
+    auto *sensor = &config._H_W_GET(Config().sensor); // must be a pointer
+    form.add<float>(F("battery_calibration"), &sensor->battery.calibration);
+}
+
+void Sensor_Battery::reconfigure() {
+    _calibration = config._H_GET(Config().sensor).battery.calibration;
+    _debug_printf_P(PSTR("Sensor_Battery::reconfigure(): calibration=%f\n"), _calibration);
+}
+
 
 float Sensor_Battery::readSensor(SensorDataEx_t *data) {
     for(auto sensor: SensorPlugin::getSensors()) {
@@ -113,7 +127,7 @@ float Sensor_Battery::_readSensor(SensorDataEx_t *data) {
         data->adcSum = value;
     }
     double adcVoltage = value / (i * 1024.0);
-    return (((IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R2 + IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1)) / IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1) * adcVoltage * config._H_GET(Config().sensor).battery.calibration;
+    return (((IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R2 + IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1)) / IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1) * adcVoltage * _calibration;
 }
 
 String Sensor_Battery::_getId(BatteryIdEnum_t type) {

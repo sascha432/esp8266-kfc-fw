@@ -488,6 +488,7 @@ void KFCFWConfiguration::restoreFactorySettings() {
     cfg.hlw80xx.calibrationU = 1.0;
     cfg.hlw80xx.calibrationI = 1.0;
     cfg.hlw80xx.calibrationP = 1.0;
+    cfg.hlw80xx.energyCounter = 0;
 #endif
 #if IOT_SENSOR_HAVE_BATTERY || IOT_SENSOR_HAVE_HLW8012 || IOT_SENSOR_HAVE_HLW8032
         _H_SET(Config().sensor, cfg);

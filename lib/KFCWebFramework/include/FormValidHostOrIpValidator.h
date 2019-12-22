@@ -8,10 +8,17 @@
 
 class FormValidHostOrIpValidator : public FormValidator {
 public:
+    typedef std::vector<String> StringVector;
+
     FormValidHostOrIpValidator(bool allowEmpty = false) : FormValidHostOrIpValidator(FSPGM(FormValidHostOrIpValidator_default_message), allowEmpty) {
     }
     FormValidHostOrIpValidator(const String &message, bool allowEmpty = false) : FormValidator(message) {
         _allowEmpty = allowEmpty;
+    }
+
+    FormValidHostOrIpValidator *addAllowString(const String &str) {
+        _allowStrings.push_back(str);
+        return this;
     }
 
     virtual bool validate() override {
@@ -23,6 +30,11 @@ public:
                     trimmed++;
                 }
                 if (!*trimmed) {
+                    return true;
+                }
+            }
+            for(const auto &str: _allowStrings) {
+                if (str.equals(ptr)) {
                     return true;
                 }
             }
@@ -42,4 +54,5 @@ public:
 
 private:
     bool _allowEmpty;
+    StringVector _allowStrings;
 };

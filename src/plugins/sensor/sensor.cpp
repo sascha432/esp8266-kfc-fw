@@ -67,6 +67,13 @@ void SensorPlugin::setup(PluginSetupMode_t mode) {
 #endif
 }
 
+void SensorPlugin::reconfigure(PGM_P source)
+{
+    for(auto sensor: _sensors) {
+        sensor->reconfigure();
+    }
+}
+
 SensorPlugin::SensorVector &SensorPlugin::getSensors() {
     return plugin._sensors;
 }
@@ -92,9 +99,6 @@ void SensorPlugin::_timerEvent() {
     }
 }
 
-void SensorPlugin::reconfigure(PGM_P source) {
-}
-
 void SensorPlugin::restart() {
     for(auto sensor: _sensors) {
         sensor->restart();
@@ -108,6 +112,30 @@ bool SensorPlugin::hasWebUI() const {
 WebUIInterface *SensorPlugin::getWebUIInterface() {
     return this;
 }
+
+bool SensorPlugin::canHandleForm(const String &formName) const
+{
+    uint8_t count = 0;
+    for(auto sensor: _sensors) {
+        if (sensor->hasForm()) {
+            count++;
+            break;
+        }
+    }
+    if (!count) {
+        return false;
+    }
+    return strcmp_P(formName.c_str(), PSTR("sensor")) == 0;
+}
+
+void SensorPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
+{
+    for(auto sensor: _sensors) {
+        sensor->createConfigureForm(request, form);
+    }
+    form.finalize();
+}
+
 
 void SensorPlugin::createWebUI(WebUI &webUI) {
     auto row = &webUI.addRow();
@@ -131,9 +159,11 @@ bool SensorPlugin::hasStatus() const {
 const String SensorPlugin::getStatus() {
     _debug_printf_P(PSTR("SensorPlugin::getStatus(): sensor count %d\n"), _sensors.size());
     PrintHtmlEntitiesString str;
-    str.print(F("Sensors:" HTML_S(br)));
     for(auto sensor: _sensors) {
         sensor->getStatus(str);
+        if (!str.endsWith(HTML_TAG_E)) {
+            str.print(F(HTML_S(br)));
+        }
     }
     return str;
 }
@@ -145,6 +175,7 @@ const String SensorPlugin::getStatus() {
 typedef enum {
     NONE = 0,
     FLOAT,
+    UINT64,
 } SensorVarsTypeEnum_t;
 
 typedef struct {
@@ -153,10 +184,22 @@ typedef struct {
     void *ptr;
 } SensorVars_t;
 
+static String uint64ToString(uint64_t input) {
+    String result;
+    do {
+        char c = (input % 10) + '0';
+        input /= 10;
+        result = c + result;
+    } while (input);
+    return result;
+}
+
 static String get_var_value(SensorVars_t &var) {
     switch(var.type) {
         case FLOAT:
             return String(*(float *)var.ptr, 6);
+        case UINT64:
+            return uint64ToString(*(uint64_t *)var.ptr);
         default:
             return String();
     }
@@ -167,37 +210,48 @@ static void set_var_value(const char *value, SensorVars_t &var) {
         case FLOAT:
             *(float *)var.ptr = atof(value);
             break;
+        case UINT64:
+            *(uint64_t *)var.ptr = atoll(value);
+            break;
         default:
             break;
     }
 }
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(SENSORC, "SENSORC", "<variable-name>,<value>", "Configure sensors", "Display configuration");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(SENSORR, "SENSORR", "Reconfigure sensor plugin");
 #if IOT_SENSOR_HAVE_BATTERY
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(SENSORPBV, "SENSORPBV", "<repeat every n seconds>", "Print battery voltage");
 #endif
 
 void SensorPlugin::atModeHelpGenerator() {
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SENSORC));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SENSORR));
 #if IOT_SENSOR_HAVE_BATTERY
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SENSORPBV));
 #endif
 }
 
 bool SensorPlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) {
-    if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SENSORC))) {
-        #if IOT_SENSOR_HAVE_BATTERY || IOT_SENSOR_HAVE_HLW8012 || IOT_SENSOR_HAVE_HLW8032
+    if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SENSORR))) {
+        serial.println(F("+SENSORR: Reconfiguring plugin..."));
+        reconfigure(nullptr);
+        return true;
+    }
+    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SENSORC))) {
+#if IOT_SENSOR_HAVE_BATTERY || IOT_SENSOR_HAVE_HLW8012 || IOT_SENSOR_HAVE_HLW8032
         auto &_config = config._H_W_GET(Config().sensor);
-        #endif
+#endif
         SensorVars_t sensor_variables[] = {
-        #if IOT_SENSOR_HAVE_BATTERY
+#if IOT_SENSOR_HAVE_BATTERY
             { PSTR("battery.calibration"), FLOAT, &_config.battery.calibration },
-        #endif
-        #if IOT_SENSOR_HAVE_HLW8012 || IOT_SENSOR_HAVE_HLW8032
+#endif
+#if IOT_SENSOR_HAVE_HLW8012 || IOT_SENSOR_HAVE_HLW8032
             { PSTR("hlw80xx.calibrationU"), FLOAT, &_config.hlw80xx.calibrationU },
             { PSTR("hlw80xx.calibrationI"), FLOAT, &_config.hlw80xx.calibrationI },
             { PSTR("hlw80xx.calibrationP"), FLOAT, &_config.hlw80xx.calibrationP },
-        #endif
+            { PSTR("hlw80xx.energyCounter"), UINT64, &_config.hlw80xx.energyCounter },
+#endif
             { nullptr, NONE, 0 }
         };
 

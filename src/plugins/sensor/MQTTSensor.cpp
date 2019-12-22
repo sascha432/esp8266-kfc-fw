@@ -56,6 +56,16 @@ MQTTSensor::SensorEnumType_t MQTTSensor::getType() const {
     return UNKNOWN;
 }
 
+bool MQTTSensor::hasForm() const {
+    return false;
+}
+
+void MQTTSensor::createConfigureForm(AsyncWebServerRequest *request, Form &form) {
+}
+
+void MQTTSensor::reconfigure() {
+}
+
 void MQTTSensor::restart() {
 }
 

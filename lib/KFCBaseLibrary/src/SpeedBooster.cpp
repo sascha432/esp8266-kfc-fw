@@ -6,7 +6,7 @@
 
 #include <debug_helper_disable.h>
 
-#if defined(ESP8266)
+#if SPEED_BOOSTER_ENABLED
 
 uint8_t SpeedBooster::_counter = 0;
 

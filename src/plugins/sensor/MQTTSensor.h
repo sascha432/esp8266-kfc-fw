@@ -10,6 +10,7 @@
 #include <PrintHtmlEntitiesString.h>
 #include <vector>
 #include <KFCJson.h>
+#include <KFCForms.h>
 #include "../mqtt/mqtt_client.h"
 
 class MQTTSensor : public MQTTComponent {
@@ -50,6 +51,10 @@ public:
     virtual void getStatus(PrintHtmlEntitiesString &output) = 0;
     virtual SensorEnumType_t getType() const;
 
+    virtual bool hasForm() const;
+    virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form);
+
+    virtual void reconfigure();
     virtual void restart();
 
     void timerEvent(JsonArray &array);

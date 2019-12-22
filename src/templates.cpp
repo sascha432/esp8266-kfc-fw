@@ -107,6 +107,13 @@ String WebTemplate::process(const String &key) {
         return FSPGM(_hidden);
     } else if (key == F("CONFIG_DIRTY_CLASS")) {
         _return(config.isConfigDirty() ? _sharedEmptyString : FSPGM(_hidden));
+    } else if (key == F("FORM_HTML")) {
+        if (_form) {
+            PrintString response;
+            _form->createHtml(response);
+            return response;
+        }
+        return _sharedEmptyString;
     } else if (key == F("FORM_VALIDATOR")) {
         if (_form) {
             PrintString response;

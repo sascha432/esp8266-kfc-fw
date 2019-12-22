@@ -50,6 +50,13 @@ public:
     virtual void getStatus(PrintHtmlEntitiesString &output) override;
     virtual SensorEnumType_t getType() const override;
 
+    virtual bool hasForm() const {
+        return true;
+    }
+    virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form);
+
+    virtual void reconfigure() override;
+
     static float readSensor(SensorDataEx_t *data = nullptr);
 
 private:
@@ -60,6 +67,7 @@ private:
 
     JsonString _name;
     String _topic;
+    float _calibration;
 };
 
 #endif

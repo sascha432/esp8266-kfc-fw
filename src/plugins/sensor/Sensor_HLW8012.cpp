@@ -16,6 +16,13 @@
 #endif
 
 // work around for scheduled interrupts crashing with higher frequencies
+typedef enum {
+    CBF_CF =                0x01,
+    CBF_CF1 =               0x02,
+    CBF_CF_SKIPPED =        0x04,
+    CBF_CF1_SKIPPED =       0x08,
+} CallbackFlagsEnum_t;
+
 static Sensor_HLW8012 *sensor = nullptr;
 static volatile unsigned long callbackTimeCF;
 static volatile unsigned long callbackTimeCF1;
@@ -24,13 +31,19 @@ static volatile uint8_t callbackFlag = 0;
 
 void ICACHE_RAM_ATTR Sensor_HLW8012_callbackCF() {
     callbackTimeCF = micros();
-    callbackFlag |= 0x01;
+    if (callbackFlag & CBF_CF) {
+        callbackFlag |= CBF_CF_SKIPPED;
+    }
+    callbackFlag |= CBF_CF;
     energyCounter++;
 }
 
 void ICACHE_RAM_ATTR Sensor_HLW8012_callbackCF1() {
     callbackTimeCF1 = micros();
-    callbackFlag |= 0x02;
+    if (callbackFlag & CBF_CF1) {
+        callbackFlag |= CBF_CF1_SKIPPED;
+    }
+    callbackFlag |= CBF_CF1;
 }
 
 void Sensor_HLW8012::loop() {
@@ -39,24 +52,52 @@ void Sensor_HLW8012::loop() {
     }
 }
 
-void Sensor_HLW8012::_loop() {
-    if (callbackFlag & 0x01) {
-        callbackFlag &= ~0x01;
-        noInterrupts();
+void Sensor_HLW8012::_loop()
+{
+    noInterrupts();
+    if (callbackFlag & CBF_CF_SKIPPED) {
+        callbackFlag &= ~(CBF_CF_SKIPPED|CBF_CF);
+        if (_inputCF.lastPulse) {
+            _inputCF.lastPulse = callbackTimeCF;
+        }
+        interrupts();
+    }
+    else if (callbackFlag & CBF_CF) {
+        callbackFlag &= ~CBF_CF;
         auto tempCounter = energyCounter;
         energyCounter = 0;
+        auto tmp = callbackTimeCF;
         interrupts();
-        _callbackCF(callbackTimeCF);
+        _callbackCF(tmp);
         _incrEnergyCounters(tempCounter);
     }
-    if (callbackFlag & 0x02) {
-        callbackFlag &= ~0x02;
-        _callbackCF1(callbackTimeCF1);
+    else {
+        interrupts();
     }
+
+    noInterrupts();
+    if (callbackFlag & CBF_CF1_SKIPPED) {
+        callbackFlag &= ~(CBF_CF1_SKIPPED|CBF_CF1);
+        if (_inputCF1.lastPulse) {
+            _inputCF1.lastPulse = callbackTimeCF1;
+        }
+        interrupts();
+    }
+    else if (callbackFlag & CBF_CF1) {
+        callbackFlag &= ~CBF_CF1;
+        auto tmp = callbackTimeCF1;
+        interrupts();
+        _callbackCF1(tmp);
+    }
+    else {
+        interrupts();
+    }
+
     if (millis() > _inputCF.timeout) {
         _inputCF = SensorInput_t();
         _power = 0;
     }
+
     if (millis() > _inputCF1.timeout) {
         _inputCF1 = SensorInput_t();
         if (_output == CURRENT) {
@@ -104,7 +145,8 @@ Sensor_HLW8012::~Sensor_HLW8012() {
 
 
 void Sensor_HLW8012::getStatus(PrintHtmlEntitiesString &output) {
-    output.printf_P(PSTR("Power Monitor HLW8012" HTML_S(br)));
+    output.printf_P(PSTR("Power Monitor HLW8012, "));
+    output.printf_P(PSTR("calibration U=%f, I=%f, P=%f"), _calibrationU, _calibrationI, _calibrationP);
 }
 
 Sensor_HLW8012::SensorEnumType_t Sensor_HLW8012::getType() const {

@@ -119,6 +119,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(FACTORY, "FACTORY", "Restore factory setti
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(ATMODE, "ATMODE", "<1|0>", "Enable/disable AT Mode");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DLY, "DLY", "<milliseconds>", "Call delay(milliseconds)");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CAT, "CAT", "<filename>", "Display text file");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DEL, "DEL", "<filename>", "Delete file");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WIFI, "WIFI", "[<reconnect>]", "Display WiFi info");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(REM, "REM", "Ignore comment");
 
@@ -162,6 +163,7 @@ void at_mode_help_commands() {
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(ATMODE));
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DLY));
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CAT));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DEL));
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(WIFI));
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(REM));
 
@@ -540,6 +542,16 @@ void at_mode_serial_handle_event(String &commandString) {
                 output.printf_P(PSTR("+DLY: %lu\n"), ms);
                 delay(ms);
                 at_mode_print_ok(output);
+            }
+            else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(DEL))) {
+                if (argc != 1) {
+                    at_mode_print_invalid_arguments(output);
+                }
+                else {
+                    String filename = args[0];
+                    auto result = SPIFFS.remove(filename);
+                    output.printf_P(PSTR("+DEL: %s: %s\n"), filename.c_str(), result ? PSTR("success") : PSTR("failure"));
+                }
             }
             else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(CAT))) {
                 if (argc != 1) {

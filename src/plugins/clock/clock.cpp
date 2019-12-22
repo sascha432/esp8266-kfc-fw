@@ -189,17 +189,17 @@ void ClockPlugin::createWebUI(WebUI &webUI) {
 
 void ClockPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form) {
 
-    auto clock = config._H_W_GET(Config().clock);
+    auto *clock = &config._H_W_GET(Config().clock); // must be a pointer
 
-    form.add<uint8_t>(F("blink_colon"), &clock.blink_colon);
-    form.addValidator(new FormRangeValidator(F("Invalid value"), 0, BlinkColonEnum_t::FAST));
+    form.add<uint8_t>(F("blink_colon"), &clock->blink_colon);
+    form.addValidator(new FormRangeValidator(F("Invalid value"), BlinkColonEnum_t::SOLID, BlinkColonEnum_t::FAST));
 
-    form.add<bool>(F("time_format_24h"), &clock.time_format_24h);
+    form.add<bool>(F("time_format_24h"), &clock->time_format_24h);
 
-    form.add<int8_t>(F("animation"), &clock.animation);
+    form.add<int8_t>(F("animation"), &clock->animation);
     form.addValidator(new FormRangeValidator(F("Invalid animation"), AnimationEnum_t::NONE, AnimationEnum_t::FADE));
 
-    String str = PrintString(F("#%02X%02X%02X"), clock.solid_color[0], clock.solid_color[1], clock.solid_color[2]);
+    String str = PrintString(F("#%02X%02X%02X"), clock->solid_color[0], clock->solid_color[1], clock->solid_color[2]);
     form.add(F("solid_color"), str);
     form.addValidator(new FormCallbackValidator([](const String &value, FormField &field) {
         auto ptr = value.c_str();

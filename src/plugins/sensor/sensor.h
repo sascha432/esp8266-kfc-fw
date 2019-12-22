@@ -56,7 +56,7 @@ public:
 
 // PluginComponent
 public:
-    SensorPlugin() {
+    SensorPlugin() : _timer(nullptr) {
         register_plugin(this);
     }
 
@@ -75,6 +75,9 @@ public:
     virtual bool hasWebUI() const override;
     virtual void createWebUI(WebUI &webUI) override;
     virtual WebUIInterface *getWebUIInterface() override;
+
+    virtual bool canHandleForm(const String &formName) const override;
+    virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
 
     static void timerEvent(EventScheduler::TimerPtr timer);
 

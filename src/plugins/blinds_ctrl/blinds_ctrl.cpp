@@ -7,6 +7,7 @@
 #include <Arduino_compat.h>
 #include <LoopFunctions.h>
 #include <MicrosTimer.h>
+#include <KFCForms.h>
 #include <PrintHtmlEntitiesString.h>
 #include "plugins.h"
 #include "blinds_ctrl.h"
@@ -36,8 +37,12 @@ public:
     virtual void createWebUI(WebUI &webUI) override;
     virtual WebUIInterface *getWebUIInterface() override;
 
-    static void loopMethod();
+    virtual bool canHandleForm(const String &formName) const override {
+        return strcmp_P(formName.c_str(), PSTR("blinds")) == 0;
+    }
+    virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
 
+    static void loopMethod();
 
 #if IOT_BLINDS_CTRL_RPM_PIN
     static void rpmIntCallback(InterruptInfo info);
@@ -115,6 +120,56 @@ bool BlindsControlPlugin::hasWebUI() const {
 
 WebUIInterface *BlindsControlPlugin::getWebUIInterface() {
     return this;
+}
+
+void BlindsControlPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form) {
+
+    auto *blinds = &config._H_W_GET(Config().blinds_controller); // must be a pointer
+    auto forward = F("Forward");
+    auto reverse = F("Reverse");
+    auto mA = F("mA");
+    auto ms = F("ms");
+    auto motorSpeed = F("0-1023");
+    FormUI::ItemsList currentLimitItems;
+
+    currentLimitItems.push_back(std::make_pair(F("5"), F("Extra Fast (5ms)")));
+    currentLimitItems.push_back(std::make_pair(F("20"), F("Fast (20ms)")));
+    currentLimitItems.push_back(std::make_pair(F("50"), F("Medium (50ms)")));
+    currentLimitItems.push_back(std::make_pair(F("150"), F("Slow (150ms)")));
+    currentLimitItems.push_back(std::make_pair(F("250"), F("Extra Slow (250ms)")));
+
+    form.setFormUI(F("Blinds Controller"));
+
+    form.add<bool>(F("channel0_dir"), &blinds->channel0_dir)->setFormUI((new FormUI(FormUI::SELECT, F("Channel 0 Direction")))->setBoolItems(forward, reverse));
+    form.add<bool>(F("channel1_dir"), &blinds->channel1_dir)->setFormUI((new FormUI(FormUI::SELECT, F("Channel 1 Direction")))->setBoolItems(forward, reverse));
+    form.add<bool>(F("swap_channels"), &blinds->swap_channels)->setFormUI((new FormUI(FormUI::SELECT, F("Swap Channels")))->setBoolItems(F("Yes"), F("No")));
+
+    for (uint8_t i = 0; i < 2; i++) {
+        form.add<uint16_t>(PrintString(F("channel%u_close_time"), i), &blinds->channels[i].closeTime)
+            ->setFormUI((new FormUI(FormUI::TEXT, PrintString(F("Channel %u Open Time Limit"), i)))->setSuffix(ms));
+        form.add<uint16_t>(PrintString(F("channel%u_open_time"), i), &blinds->channels[i].openTime)
+            ->setFormUI((new FormUI(FormUI::TEXT, PrintString(F("Channel % Close Time Limit"), i)))->setSuffix(ms));
+        form.add<uint16_t>(PrintString(F("channel%u_current_limit"), i), &blinds->channels[i].currentLimit, [](uint16_t &value, FormField &field, bool isSetter){
+                if (isSetter) {
+                    value = CURRENT_TO_ADC(value);
+                }
+                else {
+                    value = ADC_TO_CURRENT(value);
+                }
+                return true;
+            })
+            ->setFormUI((new FormUI(FormUI::TEXT, PrintString(F("Channel %u Current Limit"), i)))->setSuffix(mA));
+        form.addValidator(new FormRangeValidator(ADC_TO_CURRENT(0), ADC_TO_CURRENT(1023)));
+
+        form.add<uint16_t>(PrintString(F("channel%u_current_limit_time"), i), &blinds->channels[i].currentLimitTime)
+            ->setFormUI((new FormUI(FormUI::SELECT, PrintString(F("Channel %u Current Limit Trigger Time"), i)))->addItems(currentLimitItems));
+        form.add<uint16_t>(PrintString(F("channel%u_pwm_value"), i), &blinds->channels[i].pwmValue)
+            ->setFormUI((new FormUI(FormUI::TEXT, PrintString(F("Channel %u Motor PWM"), i)))->setSuffix(motorSpeed));
+        form.addValidator(new FormRangeValidator(0, 1023));
+
+    }
+
+    form.finalize();
 }
 
 void BlindsControlPlugin::createWebUI(WebUI &webUI) {

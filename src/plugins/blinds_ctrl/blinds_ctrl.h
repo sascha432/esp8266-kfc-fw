@@ -91,11 +91,11 @@
 
 // ADC=(1024*I*RS)/V
 // ADC=(1024*(mA/1000)*(IOT_BLINDS_CTRL_SHUNT/1000))/(IOT_BLINDS_CTRL_ADCV/1000)
-#define CURRENT_TO_ADC(value)       (uint32_t)((128UL * IOT_BLINDS_CTRL_SHUNT * value) / (125UL * IOT_BLINDS_CTRL_ADCV))
+#define CURRENT_TO_ADC(value)       (uint32_t)round((128UL * IOT_BLINDS_CTRL_SHUNT * value) / (double)(125UL * IOT_BLINDS_CTRL_ADCV))
 
 // I=(ADC/1024)*V/RS
 // mA=((value/1024)*(IOT_BLINDS_CTRL_ADCV/1000)/(IOT_BLINDS_CTRL_SHUNT/1000))*1000
-#define ADC_TO_CURRENT(value)       (uint32_t)((IOT_BLINDS_CTRL_ADCV * value * 1000UL) / (IOT_BLINDS_CTRL_SHUNT * 1024UL))
+#define ADC_TO_CURRENT(value)       (uint32_t)round((IOT_BLINDS_CTRL_ADCV * value * 1000UL) / (double)(IOT_BLINDS_CTRL_SHUNT * 1024UL))
 
 
 #endif

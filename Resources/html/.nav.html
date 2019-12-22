@@ -41,6 +41,12 @@
                     <!--#if defined(IOT_CLOCK) && IOT_CLOCK-->
                     <a class="dropdown-item" href="clock.html">Clock</a>
                     <!--#endif-->
+                    <!--#if defined(IOT_BLINDS_CTRL) && IOT_BLINDS_CTRL-->
+                    <a class="dropdown-item" href="blinds.html">Blinds Controller</a>
+                    <!--#endif-->
+                    <!--#if defined(IOT_SENSOR) && IOT_SENSOR-->
+                    <a class="dropdown-item" href="sensor.html">Sensors</a>
+                    <!--#endif-->
                     <!--#if defined(SERIAL2TCP) && SERIAL2TCP-->
                     <a class="dropdown-item" href="serial2tcp.html">Serial2TCP</a>
                     <!--#endif-->
@@ -71,8 +77,8 @@
                 <div class="dropdown-menu" aria-labelledby="navbarDropdownAdmin">
                     <a class="dropdown-item" href="password.html">Change Password</a>
                     <a class="dropdown-item" href="reboot.html">Reboot Device</a>
-                    <a class="dropdown-item" href="update_fw.html">Update Firmware</a>
                     <a class="dropdown-item" href="factory.html">Restore Factory Settings</a>
+                    <a class="dropdown-item" href="update_fw.html">Update Firmware</a>
                 </div>
             </li>
             <!--#if (defined(HTTP2SERIAL) && HTTP2SERIAL) || (defined(FILE_MANAGER) && FILE_MANAGER) || (defined(PING_MONITOR) && PING_MONITOR)-->

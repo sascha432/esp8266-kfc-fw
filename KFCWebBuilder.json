@@ -31,6 +31,8 @@
             "#if !HTTP2SERIAL": [ "./Resources/html/serial_console.html", "./lib/KFCWebBuilder/Resources/js/selectize.min.js", "./Resources/js/http2serial.js" ],
             "#if !PING_MONITOR":  [ "./Resources/html/ping.html", "./Resources/html/ping_monitor.html" ],
             "#if !HUE_EMULATION": "./Resources/html/hue.html",
+            "#if !IOT_CLOCK": "./Resources/html/clock.html",
+            "#if !IOT_SENSOR": "./Resources/html/sensor.html",
             "#if !REST_API_SUPPORT": "./Resources/html/rest_api.html",
             "#if !HOME_ASSISTANT_INTEGRATION": "./Resources/html/home_assistant.html",
             "#if !WEB_SOCKET_ENCRYPTION": [ "./Resources/js/aes.js", "./Resources/js/sha512.js" ],

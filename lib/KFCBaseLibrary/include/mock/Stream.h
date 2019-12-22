@@ -17,7 +17,7 @@ public:
         _fp = nullptr;
         _size = 0;
     }
-    Stream(FILE *fp) : _fp(fp) {
+    Stream(FILE *fp) : Stream() {
         if (fp) {
             seek(0, SeekEnd);
             _size = position();
@@ -146,6 +146,9 @@ public:
             perror("write");
         }
         return res;
+    }
+    virtual size_t write(const uint8_t* buffer, size_t size) {
+        return Print::write(buffer, size);
     }
 
     virtual void close() {

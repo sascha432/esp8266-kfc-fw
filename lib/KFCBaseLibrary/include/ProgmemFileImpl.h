@@ -69,6 +69,24 @@ public:
         return false;
     }
 
+#else
+
+    virtual bool truncate(uint32_t size) override {
+        return false;
+    }
+
+    virtual const char* fullName() const override {
+        return name();
+    }
+
+    virtual bool isFile() const override {
+        return true;
+    }
+
+    virtual bool isDirectory() const override {
+        return false;
+    }
+
 #endif
 
 

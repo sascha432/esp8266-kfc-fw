@@ -4,12 +4,20 @@
 
 #pragma once
 
+#include <FSImpl.h>
+
+using namespace fs;
+
 class File : public Stream {
 public:
-    File() : Stream() {
+    File(FileImplPtr p = FileImplPtr(), FS* baseFS = nullptr) : _p(p), _baseFS(baseFS) {
     }
-    File(FILE *fp) : Stream(fp) {
+    File(FILE *fp, FileImplPtr p = FileImplPtr(), FS* baseFS = nullptr) : _p(p), _baseFS(baseFS), Stream(fp) {
     }
+
+private:
+    FileImplPtr _p;
+    FS* _baseFS;
 };
 
 class Dir {

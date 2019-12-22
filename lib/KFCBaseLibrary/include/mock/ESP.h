@@ -80,7 +80,8 @@ private:
             free(_rtcMemory);
         }
         _rtcMemory = (uint8_t *)calloc(rtcMemorySize, 1);
-        FILE *fp = fopen("rtcmemory.bin", "rb");
+        
+        FILE* fp = fopen("rtcmemory.bin", "rb");
         if (fp) {
             fread(_rtcMemory, 1, rtcMemorySize, fp);
             fclose(fp);

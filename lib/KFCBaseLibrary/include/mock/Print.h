@@ -2,6 +2,8 @@
 * Author: sascha_lammers@gmx.de
 */
 
+#if _WIN32
+
 #pragma once
 
 #include <stdlib.h>
@@ -85,3 +87,5 @@ public:
     virtual void flush() { /* Empty implementation for backward compatibility */
     }
 };
+
+#endif

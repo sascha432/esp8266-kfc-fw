@@ -15,6 +15,9 @@ public:
     }
     ~EEPROMFile() {
         close();
+        if (_eeprom) {
+            free(_eeprom);
+        }
     }
 
     void clear() {

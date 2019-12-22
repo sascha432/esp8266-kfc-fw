@@ -113,29 +113,35 @@ WebUIInterface *SensorPlugin::getWebUIInterface() {
     return this;
 }
 
-bool SensorPlugin::canHandleForm(const String &formName) const
+bool SensorPlugin::_hasConfigureForm() const
 {
-    uint8_t count = 0;
     for(auto sensor: _sensors) {
         if (sensor->hasForm()) {
-            count++;
-            break;
+            return true;
         }
     }
-    if (!count) {
-        return false;
-    }
-    return strcmp_P(formName.c_str(), PSTR("sensor")) == 0;
+    return false;
+}
+
+PGM_P SensorPlugin::getConfigureForm() const override {
+{
+    return _hasConfigureForm() ? PSTR("sensor") : nullptr;
 }
 
 void SensorPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
 {
+    form.setFormUI(F("Sensor Configuration"));
     for(auto sensor: _sensors) {
         sensor->createConfigureForm(request, form);
     }
     form.finalize();
 }
 
+void SensorPlugin::createMenu() {
+    if (_hasConfigureForm()) {
+        bootstrapMenu.addSubMenu(F("Sensors"), F("sensor.html"), navMenu.config);
+    }
+}
 
 void SensorPlugin::createWebUI(WebUI &webUI) {
     auto row = &webUI.addRow();

@@ -33,7 +33,13 @@ public:
         MIN_PRIORITY = 127
     } PluginPriorityEnum_t;
 
-    const static int ATModeQueryCommand = -1;
+    typedef enum : uint8_t {
+        NONE = 0,
+        AUTO,
+        CUSTOM,
+    } MenuTypeEnum_t;
+
+    static const int ATModeQueryCommand = -1;
 
     virtual PGM_P getName() const = 0;
     bool nameEquals(const __FlashStringHelper *name) const;
@@ -59,9 +65,17 @@ public:
     virtual bool hasStatus() const;
     virtual const String getStatus();
 
-    // executed to get the configure form
+    // name of the form
+    virtual PGM_P getConfigureForm() const;
+    // returns if the form can be handled. only needed for custom forms. the default is using getConfigureForm()
     virtual bool canHandleForm(const String &formName) const;
+    // executed to get the configure form
     virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form);
+
+    // get type of menu entry
+    virtual MenuTypeEnum_t getMenuType() const;
+    // create custom menu entries
+    virtual void createMenu();
 
     // executed to get the template for the web ui
     virtual bool hasWebTemplate(const String &formName) const;

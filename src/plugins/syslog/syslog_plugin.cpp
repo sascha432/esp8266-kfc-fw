@@ -118,14 +118,21 @@ public:
     }
     PGM_P getName() const;
     PluginPriorityEnum_t getSetupPriority() const override;
+
     bool autoSetupAfterDeepSleep() const override;
     void setup(PluginSetupMode_t mode) override;
     void reconfigure(PGM_P source) override;
+
     bool hasStatus() const override;
     const String getStatus() override;
-    bool canHandleForm(const String &formName) const override;
+
+    virtual PGM_P getConfigureForm() const override {
+        return getName();
+    }
     void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
+
     void prepareDeepSleep(uint32_t sleepTimeMillis) override;
+
 #if AT_MODE_SUPPORTED
     bool hasAtMode() const override;
     void atModeHelpGenerator() override;
@@ -133,7 +140,7 @@ public:
 #endif
 };
 
-static SyslogPlugin plugin; 
+static SyslogPlugin plugin;
 
 PGM_P SyslogPlugin::getName() const {
     return PSTR("syslog");
@@ -183,10 +190,6 @@ const String SyslogPlugin::getStatus() {
 #else
     return FSPGM(Not_supported);
 #endif
-}
-
-bool SyslogPlugin::canHandleForm(const String &formName) const {
-    return nameEquals(formName);
 }
 
 void SyslogPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form) {

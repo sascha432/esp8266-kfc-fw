@@ -736,16 +736,21 @@ public:
     WebServerPlugin() {
         register_plugin(this);
     }
-    PGM_P getName() const;
-    PluginPriorityEnum_t getSetupPriority() const override;
-    bool allowSafeMode() const override;
-    void setup(PluginSetupMode_t mode) override;
-    void reconfigure(PGM_P source) override;
-    bool hasReconfigureDependecy(PluginComponent *plugin) const override;
-    bool hasStatus() const override;
-    const String getStatus() override;
-    bool canHandleForm(const String &formName) const override;
-    void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
+    virtual PGM_P getName() const;
+    virtual PluginPriorityEnum_t getSetupPriority() const override;
+    virtual bool allowSafeMode() const override;
+
+    virtual void setup(PluginSetupMode_t mode) override;
+    virtual void reconfigure(PGM_P source) override;
+    virtual bool hasReconfigureDependecy(PluginComponent *plugin) const override;
+
+    virtual bool hasStatus() const override;
+    virtual const String getStatus() override;
+
+    virtual PGM_P getConfigureForm() const override {
+        return PSTR("remote");
+    }
+    virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
 };
 
 static WebServerPlugin plugin;
@@ -799,10 +804,6 @@ const String WebServerPlugin::getStatus() {
         out += FSPGM(disabled);
     }
     return out;
-}
-
-bool WebServerPlugin::canHandleForm(const String &formName) const {
-    return strcmp_P(formName.c_str(), PSTR("remote")) == 0;
 }
 
 void WebServerPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form) {

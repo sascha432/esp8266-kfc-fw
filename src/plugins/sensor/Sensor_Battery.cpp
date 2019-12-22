@@ -96,7 +96,7 @@ Sensor_Battery::SensorEnumType_t Sensor_Battery::getType() const {
 void Sensor_HLW80xx::createConfigureForm(AsyncWebServerRequest *request, Form &form) {
 
     auto *sensor = &config._H_W_GET(Config().sensor); // must be a pointer
-    form.add<float>(F("battery_calibration"), &sensor->battery.calibration);
+    form.add<float>(F("battery_calibration"), &sensor->battery.calibration)->setFormUI(new FormUI(FormUI::TEXT, F("Supply Voltage/Battery Calibration")));
 }
 
 void Sensor_Battery::reconfigure() {

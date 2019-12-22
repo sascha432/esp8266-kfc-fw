@@ -49,7 +49,7 @@ void file_manager_install_web_server_hook() {
 }
 
 void file_manager_reconfigure(PGM_P source) {
-    
+
 }
 
 FileManager::FileManager() {
@@ -439,16 +439,23 @@ class FileManagerPlugin : public PluginComponent {
 public:
     FileManagerPlugin() {
         register_plugin(this);
-    }    
+    }
 
     PGM_P getName() const;
     PluginPriorityEnum_t getSetupPriority() const override;
     void setup(PluginSetupMode_t mode) override;
     void reconfigure(PGM_P source) override;
     bool hasReconfigureDependecy(PluginComponent *plugin) const override;
+
+    virtual MenuTypeEnum_t getMenuType() const override {
+        return CUSTOM;
+    }
+    virtual void createMenu() override {
+        bootstrapMenu.addSubMenu(F("File Manager"), F("file_manager.html"), navMenu.util);
+    }
 };
 
-static FileManagerPlugin plugin; 
+static FileManagerPlugin plugin;
 
 PGM_P FileManagerPlugin::getName() const {
     return PSTR("filemgr");

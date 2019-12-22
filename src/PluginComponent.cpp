@@ -74,12 +74,27 @@ const String PluginComponent::getStatus() {
 }
 
 
+PGM_P PluginComponent::getConfigureForm() const {
+    return nullptr;
+}
+
 bool PluginComponent::canHandleForm(const String &formName) const {
-    return false;
+    if (!getConfigureForm()) {
+        return false;
+    }
+    return strcmp_P(formName.c_str(), getConfigureForm()) == 0;
 }
 
 void PluginComponent::createConfigureForm(AsyncWebServerRequest *request, Form &form) {
     __debugbreak_and_panic_printf_P(PSTR("PluginComponent::createConfigureForm() pure virtual: %s\n"), getName());
+}
+
+PluginComponent::MenuTypeEnum_t PluginComponent::getMenuType() const {
+    return AUTO;
+}
+
+void PluginComponent::createMenu() {
+    __debugbreak_and_panic_printf_P(PSTR("PluginComponent::createMenu() pure virtual: %s\n"), getName());
 }
 
 

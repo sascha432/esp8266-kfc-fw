@@ -11,8 +11,8 @@
 
 class DimmerModuleForm : public PluginComponent {
 public:
-    virtual bool canHandleForm(const String &formName) const override {
-        return strcmp_P(formName.c_str(), PSTR("dimmer_cfg")) == 0;
+    virtual PGM_P getConfigureForm() const override {
+        return PSTR("dimmer_cfg");
     }
     virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
     virtual void createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTComponent::MQTTAutoDiscoveryVector &vector) = 0;

@@ -6,105 +6,14 @@
     </button>
     <div class="collapse navbar-collapse" id="navbarSupportedContent">
         <ul class="navbar-nav mr-auto">
-            <li class="nav-item">
-                <a class="nav-link" href="index.html">Home</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="status.html">Status</a>
-            </li>
-            <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownConfig" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                    Configuration
-                </a>
-                <div class="dropdown-menu" aria-labelledby="navbarDropdownConfig">
-                    <a class="dropdown-item" href="wifi.html">WiFi</a>
-                    <a class="dropdown-item" href="network.html">Network</a>
-                    <a class="dropdown-item" href="remote.html">Remote Access</a>
-                    <!--#if defined(PING_MONITOR) && PING_MONITOR-->
-                    <a class="dropdown-item" href="ping_monitor.html">Ping Monitor</a>
-                    <!--#endif-->
-                    <!--#if defined(NTP_CLIENT) && NTP_CLIENT-->
-                    <a class="dropdown-item" href="ntp.html">NTP</a>
-                    <!--#endif-->
-                    <!--#if defined(MQTT_SUPPORT) && MQTT_SUPPORT-->
-                    <a class="dropdown-item" href="mqtt.html">MQTT</a>
-                    <!--#endif-->
-                    <!--#if defined(SYSLOG) && SYSLOG-->
-                    <a class="dropdown-item" href="syslog.html">Syslog</a>
-                    <!--#endif-->
-                    <!--#if defined(REST_API_SUPPORT) && REST_API_SUPPORT-->
-                    <a class="dropdown-item" href="rest_api.html">REST API</a>
-                    <!--#endif-->
-                    <!--#if (defined(IOT_ATOMIC_SUN_V2) && IOT_ATOMIC_SUN_V2) || (defined(IOT_DIMMER_MODULE) && IOT_DIMMER_MODULE)-->
-                    <a class="dropdown-item" href="dimmer_cfg.html">Dimmer</a>
-                    <!--#endif-->
-                    <!--#if defined(IOT_CLOCK) && IOT_CLOCK-->
-                    <a class="dropdown-item" href="clock.html">Clock</a>
-                    <!--#endif-->
-                    <!--#if defined(IOT_BLINDS_CTRL) && IOT_BLINDS_CTRL-->
-                    <a class="dropdown-item" href="blinds.html">Blinds Controller</a>
-                    <!--#endif-->
-                    <!--#if defined(IOT_SENSOR) && IOT_SENSOR-->
-                    <a class="dropdown-item" href="sensor.html">Sensors</a>
-                    <!--#endif-->
-                    <!--#if defined(SERIAL2TCP) && SERIAL2TCP-->
-                    <a class="dropdown-item" href="serial2tcp.html">Serial2TCP</a>
-                    <!--#endif-->
-                    <!--#if defined(HOME_ASSISTANT_INTEGRATION) && HOME_ASSISTANT_INTEGRATION-->
-                    <a class="dropdown-item" href="home_assistant.html">Home Assistant</a>
-                    <!--#endif-->
-                </div>
-            </li>
-            <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownDevice" role="button" data-toggle="dropdown"
-                    aria-haspopup="true" aria-expanded="false">
-                    Device
-                </a>
-                <div class="dropdown-menu" aria-labelledby="navbarDropdownDevice">
-                    <!--#if (defined(IOT_DIMMER_MODULE) && IOT_DIMMER_MODULE) || (defined(IOT_ATOMIC_SUN_V2) && IOT_ATOMIC_SUN_V2) || (defined(IOT_SENSOR) && IOT_SENSOR) || (defined(IOT_BLINDS_CTRL) && IOT_BLINDS_CTRL) || (defined(IOT_WEATHER_STATION) && IOT_WEATHER_STATION) || (defined(IOT_CLOCK) && IOT_CLOCK)-->
-                    <a class="dropdown-item" href="webui.html">Web UI</a>
-                    <!--#endif-->
-                    <!--#if defined(HUE_EMULATION) && HUE_EMULATION-->
-                    <a class="dropdown-item" href="hue.html">HUE device emulation</a>
-                    <!--#endif-->
-                </div>
-            </li>
-            <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownAdmin" role="button" data-toggle="dropdown"
-                    aria-haspopup="true" aria-expanded="false">
-                    Admin
-                </a>
-                <div class="dropdown-menu" aria-labelledby="navbarDropdownAdmin">
-                    <a class="dropdown-item" href="password.html">Change Password</a>
-                    <a class="dropdown-item" href="reboot.html">Reboot Device</a>
-                    <a class="dropdown-item" href="factory.html">Restore Factory Settings</a>
-                    <a class="dropdown-item" href="update_fw.html">Update Firmware</a>
-                </div>
-            </li>
-            <!--#if (defined(HTTP2SERIAL) && HTTP2SERIAL) || (defined(FILE_MANAGER) && FILE_MANAGER) || (defined(PING_MONITOR) && PING_MONITOR)-->
-            <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownDebug" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                    Utilities
-                </a>
-                <div class="dropdown-menu" aria-labelledby="navbarDropdownDebug">
-                    <!--#if defined(HTTP2SERIAL) && HTTP2SERIAL-->
-                    <a class="dropdown-item" href="serial_console.html">Serial Console</a>
-                    <!--#endif-->
-                    <!--#if defined(FILE_MANAGER) && FILE_MANAGER-->
-                    <a class="dropdown-item" href="file_manager.html">File Manager</a>
-                    <!--#endif-->
-                    <!--#if defined(PING_MONITOR) && PING_MONITOR-->
-                    <a class="dropdown-item" href="ping.html">Ping Remote Host</a>
-                    <!--#endif-->
-                </div>
-            </li>
-            <!--#endif-->
+            %MENU_HTML_MAIN%
             <li class="nav-text%CONFIG_DIRTY_CLASS%">
-                    <span class="alert alert-danger" role="alert">
-                        <a href="reboot.html"><button class="btn btn-danger reload-button"><span class="oi oi-reload"></span></button></a>
-                        <small>The Configuration has been changed, reboot the device to apply all settings</small></span>
-                </li>
-                    </ul>
+                <span class="alert alert-danger" role="alert">
+                    <a href="reboot.html"><button class="btn btn-danger reload-button"><span
+                                class="oi oi-reload"></span></button></a>
+                    <small>The Configuration has been changed, reboot the device to apply all settings</small></span>
+            </li>
+        </ul>
         <span class="navbar-text">
             <a class="nav-link disabled" href="/logout">Logout <span class="oi oi-account-logout" title="Logout"
                     aria-hidden="true"></span></a>

@@ -410,8 +410,8 @@ public:
     virtual bool hasStatus() const override;
     virtual const String getStatus() override;
 
-    virtual bool canHandleForm(const String &formName) const override {
-        return strcmp_P(formName.c_str(), PSTR("ntp")) == 0;
+    virtual PGM_P getConfigureForm() const override {
+        return getName();
     }
     virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
 

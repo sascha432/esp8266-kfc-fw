@@ -20,6 +20,8 @@
 #endif
 
 PluginsVector plugins;
+BootstrapMenu bootstrapMenu;
+NavMenu_t navMenu;
 
 // we need to store the plugins somewhere until the vector is initialized otherwise it will discard already registered plugins
 static PluginsVector *pluginsPtr = nullptr;
@@ -111,9 +113,36 @@ void prepare_plugins() {
 
 }
 
+static void create_menu()
+{
+    navMenu.home = bootstrapMenu.addMenu(F("Home"));
+    bootstrapMenu.getItem(navMenu.home).setURI(F("index.html"));
+
+    navMenu.status = bootstrapMenu.addMenu(F("Status"));
+    bootstrapMenu.getItem(navMenu.status).setURI(F("status.html"));
+
+    navMenu.config = bootstrapMenu.addMenu(F("Configuration"));
+    bootstrapMenu.addSubMenu(F("WiFi"), F("wifi.html"), navMenu.config);
+    bootstrapMenu.addSubMenu(F("Network"), F("network.html"), navMenu.config);
+    bootstrapMenu.addSubMenu(F("Remote Access"), F("remote.html"), navMenu.config);
+
+    navMenu.device = bootstrapMenu.addMenu(F("Device"));
+
+    navMenu.admin = bootstrapMenu.addMenu(F("Admin"));
+    bootstrapMenu.addSubMenu(F("Change Password"), F("password.html"), navMenu.admin);
+    bootstrapMenu.addSubMenu(F("Reboot Device"), F("reboot.html"), navMenu.admin);
+    bootstrapMenu.addSubMenu(F("Restore Factory Settings"), F("factory.html"), navMenu.admin);
+    bootstrapMenu.addSubMenu(F("Update Firmware"), F("update_fw.html"), navMenu.admin);
+
+    navMenu.util = bootstrapMenu.addMenu(F("Utilities"));
+}
+
 void setup_plugins(PluginComponent::PluginSetupMode_t mode) {
 
     _debug_printf_P(PSTR("setup_plugins(%d) counter %d\n"), mode, plugins.size());
+
+    bool enableWebUIMenu = false;
+    create_menu();
 
     for(auto plugin : plugins) {
         bool runSetup =
@@ -123,8 +152,29 @@ void setup_plugins(PluginComponent::PluginSetupMode_t mode) {
             (mode == PluginComponent::PLUGIN_SETUP_DELAYED_AUTO_WAKE_UP && !plugin->autoSetupAfterDeepSleep());
         _debug_printf_P(PSTR("setup_plugins(%d) %s priority %d run setup %d\n"), mode, plugin->getName(), plugin->getSetupPriority(), runSetup);
         if (runSetup) {
+            if (plugin->hasWebUI()) {
+                enableWebUIMenu = true;
+            }
+            switch(plugin->getMenuType()) {
+                case PluginComponent::MenuTypeEnum_t::CUSTOM:
+                    plugin->createMenu();
+                    break;
+                case PluginComponent::MenuTypeEnum_t::AUTO:
+                    if (plugin->getConfigureForm()) {
+                        String uri = FPSTR(plugin->getConfigureForm());
+                        uri += F(".html");
+                    }
+                    break;
+                case PluginComponent::MenuTypeEnum_t::NONE:
+                default:
+                    break;
+            }
             plugin->setup(mode);
         }
+    }
+
+    if (enableWebUIMenu) {
+        bootstrapMenu.addSubMenu(F("Web UI"), F("webui.html"), navMenu.device);
     }
 
 #ifndef DISABLE_EVENT_SCHEDULER

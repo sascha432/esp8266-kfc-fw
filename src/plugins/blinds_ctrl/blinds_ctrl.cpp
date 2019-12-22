@@ -37,8 +37,8 @@ public:
     virtual void createWebUI(WebUI &webUI) override;
     virtual WebUIInterface *getWebUIInterface() override;
 
-    virtual bool canHandleForm(const String &formName) const override {
-        return strcmp_P(formName.c_str(), PSTR("blinds")) == 0;
+    virtual PGM_P getConfigureForm() const override {
+        return PSTR("blinds");
     }
     virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
 
@@ -126,7 +126,7 @@ void BlindsControlPlugin::createConfigureForm(AsyncWebServerRequest *request, Fo
 
     auto *blinds = &config._H_W_GET(Config().blinds_controller); // must be a pointer
     auto forward = F("Forward");
-    auto reverse = F("Reverse");
+    auto reverse = F("Reverse (Open/close time is reversed as well)");
     auto mA = F("mA");
     auto ms = F("ms");
     auto motorSpeed = F("0-1023");
@@ -140,8 +140,8 @@ void BlindsControlPlugin::createConfigureForm(AsyncWebServerRequest *request, Fo
 
     form.setFormUI(F("Blinds Controller"));
 
-    form.add<bool>(F("channel0_dir"), &blinds->channel0_dir)->setFormUI((new FormUI(FormUI::SELECT, F("Channel 0 Direction")))->setBoolItems(forward, reverse));
-    form.add<bool>(F("channel1_dir"), &blinds->channel1_dir)->setFormUI((new FormUI(FormUI::SELECT, F("Channel 1 Direction")))->setBoolItems(forward, reverse));
+    form.add<bool>(F("channel0_dir"), &blinds->channel0_dir)->setFormUI((new FormUI(FormUI::SELECT, F("Channel 0 Direction")))->setBoolItems(reverse, forward));
+    form.add<bool>(F("channel1_dir"), &blinds->channel1_dir)->setFormUI((new FormUI(FormUI::SELECT, F("Channel 1 Direction")))->setBoolItems(reverse, forward));
     form.add<bool>(F("swap_channels"), &blinds->swap_channels)->setFormUI((new FormUI(FormUI::SELECT, F("Swap Channels")))->setBoolItems(F("Yes"), F("No")));
 
     for (uint8_t i = 0; i < 2; i++) {

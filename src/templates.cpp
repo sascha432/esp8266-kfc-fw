@@ -107,6 +107,17 @@ String WebTemplate::process(const String &key) {
         return FSPGM(_hidden);
     } else if (key == F("CONFIG_DIRTY_CLASS")) {
         _return(config.isConfigDirty() ? _sharedEmptyString : FSPGM(_hidden));
+    } else if (key.equals(F("MENU_HTML_MAIN"))) {
+        PrintString response;
+        bootstrapMenu.html(response);
+        return response;
+    } else if (key.startsWith(F("MENU_HTML_SUBMENU_"))) {
+        PrintString response;
+        auto id = bootstrapMenu.getMenu(key.substring(18));
+        if (id != BootstrapMenu::INVALID_ID) {
+            bootstrapMenu.htmlSubMenu(response, id, 0);
+        }
+        return response;
     } else if (key == F("FORM_HTML")) {
         if (_form) {
             PrintString response;

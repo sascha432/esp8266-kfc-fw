@@ -366,10 +366,23 @@ public:
     void setup(PluginSetupMode_t mode) override;
     void reconfigure(PGM_P source) override;
     bool hasReconfigureDependecy(PluginComponent *plugin) const override;
+
     bool hasStatus() const override;
     const String getStatus() override;
-    bool canHandleForm(const String &formName) const override;
+
+    virtual MenuTypeEnum_t getMenuType() const override {
+        return CUSTOM;
+    }
+    virtual void createMenu() override {
+        bootstrapMenu.addSubMenu(F("Ping Monitor"), F("ping_monitor.html"), navMenu.config);
+        bootstrapMenu.addSubMenu(F("Ping Remote Host"), F("ping.html"), navMenu.util);
+    }
+
+    virtual PGM_P getConfigureForm() const override {
+        return PSTR("ping_monitor");
+    }
     void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
+
 #if AT_MODE_SUPPORTED
     bool hasAtMode() const override;
     void atModeHelpGenerator() override;
@@ -411,10 +424,6 @@ const String PingMonitorPlugin::getStatus() {
     } else {
         return FSPGM(Disabled);
     }
-}
-
-bool PingMonitorPlugin::canHandleForm(const String &formName) const {
-    return strcmp_P(formName.c_str(), PSTR("ping_monitor")) == 0;
 }
 
 void PingMonitorPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form) {

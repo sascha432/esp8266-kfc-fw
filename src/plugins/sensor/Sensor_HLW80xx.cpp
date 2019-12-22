@@ -167,9 +167,9 @@ void Sensor_HLW80xx::createConfigureForm(AsyncWebServerRequest *request, Form &f
 
     auto *sensor = &config._H_W_GET(Config().sensor); // must be a pointer
 
-    form.add<float>(F("hlw80xx_calibrationU"), &sensor->hlw80xx.calibrationU);
-    form.add<float>(F("hlw80xx_calibrationI"), &sensor->hlw80xx.calibrationI);
-    form.add<float>(F("hlw80xx_calibrationP"), &sensor->hlw80xx.calibrationP);
+    form.add<float>(F("hlw80xx_calibrationU"), &sensor->hlw80xx.calibrationU)->setFormUI(new FormUI(FormUI::TEXT, F("HLW8012 Voltage Calibration")));
+    form.add<float>(F("hlw80xx_calibrationI"), &sensor->hlw80xx.calibrationI)->setFormUI(new FormUI(FormUI::TEXT, F("HLW8012 Current Calibration")));
+    form.add<float>(F("hlw80xx_calibrationP"), &sensor->hlw80xx.calibrationP)->setFormUI(new FormUI(FormUI::TEXT, F("HLW8012 Power Calibration")));
 }
 
 void Sensor_HLW80xx::publishState(MQTTClient *client) {

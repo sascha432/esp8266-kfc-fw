@@ -628,10 +628,15 @@ public:
     bool autoSetupAfterDeepSleep() const override;
     void setup(PluginSetupMode_t mode) override;
     void reconfigure(PGM_P source) override;
+
     bool hasStatus() const override;
     const String getStatus() override;
-    bool canHandleForm(const String &formName) const override;
+
+    virtual PGM_P getConfigureForm() const override {
+        return getName();
+    }
     void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
+
 #if AT_MODE_SUPPORTED
     bool hasAtMode() const override;
     void atModeHelpGenerator() override;
@@ -670,10 +675,6 @@ bool MQTTPlugin::hasStatus() const {
 
 const String MQTTPlugin::getStatus() {
     return MQTTClient::getStatus();
-}
-
-bool MQTTPlugin::canHandleForm(const String &formName) const {
-    return nameEquals(formName);
 }
 
 void MQTTPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form) {

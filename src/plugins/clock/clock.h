@@ -154,8 +154,8 @@ public:
     }
     virtual void createWebUI(WebUI &webUI) override;
 
-    virtual bool canHandleForm(const String &formName) const override {
-        return strcmp_P(formName.c_str(), PSTR("clock")) == 0;
+    virtual PGM_P getConfigureForm() const override {
+        return getName();
     }
     virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
 

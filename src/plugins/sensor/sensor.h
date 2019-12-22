@@ -76,8 +76,13 @@ public:
     virtual void createWebUI(WebUI &webUI) override;
     virtual WebUIInterface *getWebUIInterface() override;
 
-    virtual bool canHandleForm(const String &formName) const override;
+    virtual PGM_P getConfigureForm() const override;
     virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
+
+    virtual MenuTypeEnum_t getMenuType() const override {
+        return CUSTOM;
+    }
+    virtual void createMenu() override;
 
     static void timerEvent(EventScheduler::TimerPtr timer);
 
@@ -94,6 +99,7 @@ public:
 #endif
 
 private:
+    bool _hasConfigureForm() const;
     void _timerEvent();
 
     SensorVector _sensors;

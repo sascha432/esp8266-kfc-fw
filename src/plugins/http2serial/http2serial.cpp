@@ -178,6 +178,13 @@ public:
     virtual bool hasReconfigureDependecy(PluginComponent *plugin) const override;
     virtual void restart() override;
 
+    virtual MenuTypeEnum_t getMenuType() const override {
+        return CUSTOM;
+    }
+    virtual void createMenu() override {
+        bootstrapMenu.addSubMenu(F("Serial Console"), F("serial_console.html"), navMenu.util);
+    }
+
 #if AT_MODE_SUPPORTED
     virtual bool hasAtMode() const override;
     virtual void atModeHelpGenerator() override;

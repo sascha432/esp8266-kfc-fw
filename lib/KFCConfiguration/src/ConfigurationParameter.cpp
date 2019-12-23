@@ -6,6 +6,7 @@
 #include "Configuration.h"
 #include <Buffer.h>
 #include <DumpBinary.h>
+#include <JsonTools.h>
 
 #if DEBUG_CONFIGURATION
 #include <debug_helper_enable.h>
@@ -257,6 +258,59 @@ void ConfigurationParameter::dump(Print &output) {
         default:
              output.println(F("Invalid type"));
              break;
+        }
+    }
+}
+
+void ConfigurationParameter::exportAsJson(Print& output)
+{
+    if (!hasData()) {
+        output.println(F("null"));
+    }
+    else {
+        switch (_param.type) {
+        case STRING:
+            output.print('"');
+            JsonTools::printToEscaped(output, (const char*)getDataPtr(), _info.size, false);
+            output.print('"');
+            break;
+        case BINARY: {
+            auto ptr = getDataPtr();
+            auto size = _info.size;
+            output.print('"');
+            while (size--) {
+                output.printf_P(PSTR("%02x"), *ptr & 0xff);
+                ptr++;
+            }
+            output.print('"');
+        } break;
+        case BYTE: {
+            auto value = *(uint8_t *)getDataPtr();
+            output.printf_P(PSTR("%u"), value);
+        } break;
+        case WORD: {
+            auto value = *(uint16_t *)getDataPtr();
+            output.printf_P(PSTR("%u"), value);
+        } break;
+        case DWORD: {
+            auto value = *(uint32_t *)getDataPtr();
+            output.printf_P(PSTR("%u"), value);
+        } break;
+        case QWORD: {
+            auto value = *(uint64_t *)getDataPtr();
+#if defined(ESP32)
+            output.printf_P(PSTR("%llu"), value);
+#else
+            output.printf_P(PSTR("%lu"), value);
+#endif
+        } break;
+        case FLOAT: {
+            auto value = *(float *)getDataPtr();
+            output.printf_P(PSTR("%f"), value);
+        } break;
+        default:
+            output.println(F("null"));
+            break;
         }
     }
 }

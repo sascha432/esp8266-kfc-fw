@@ -4,6 +4,7 @@
 
 #include "Configuration.h"
 #include <Buffer.h>
+#include <JsonTools.h>
 #include "misc.h"
 
 #include "DumpBinary.h"
@@ -364,6 +365,42 @@ bool Configuration::isDirty() const {
         }
     }
     return false;
+}
+
+void Configuration::exportAsJson(Print& output, const String &version)
+{
+    output.printf_P(PSTR("{\n\t\"magic\": \"%#08x\",\n\t\"version\": \"%s\",\n"), CONFIG_MAGIC_DWORD, version.c_str());
+    output.print(F("\t\"config\": {\n"));
+
+    uint16_t offset = _dataOffset;
+    for (auto& parameter : _params) {
+        auto& param = parameter.getParam();
+
+        if (offset != _dataOffset) {
+            output.print(F(",\n"));
+        }
+
+        output.printf_P(PSTR("\t\t\"%#04x\": {\n"), param.handle);
+#if DEBUG_GETHANDLE
+        output.print(F("\t\t\t\"name\": \""));
+        auto name = getHandleName(param.handle);
+        JsonTools::printToEscaped(output, name, strlen(name), false);
+        output.print(F("\",\n"));
+#endif
+
+        auto length = parameter.read(this, offset);
+        output.printf_P(PSTR("\t\t\t\"type\": \"%#x\",\n"), parameter.getType());
+        output.printf_P(PSTR("\t\t\t\"type_name\": \"%s\",\n"), parameter.getTypeString(parameter.getType()).c_str());
+        output.printf_P(PSTR("\t\t\t\"length\": \"%d\",\n"), length);
+        output.print(F("\t\t\t\"data\": "));
+        parameter.exportAsJson(output);
+        output.print(F("\n"));
+        offset += param.length;
+
+        output.print(F("\t\t}"));
+    }
+
+    output.print(F("\n\t}\n}\n"));
 }
 
 void Configuration::endEEPROM() {

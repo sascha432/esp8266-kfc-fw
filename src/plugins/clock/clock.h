@@ -154,6 +154,13 @@ public:
     }
     virtual void createWebUI(WebUI &webUI) override;
 
+    virtual MenuTypeEnum_t getMenuType() const override {
+        return CUSTOM;
+    }
+    virtual void createMenu() override {
+        bootstrapMenu.addSubMenu(F("Clock"), F("ping_monitor.html"), navMenu.config);
+    }
+
     virtual PGM_P getConfigureForm() const override {
         return getName();
     }

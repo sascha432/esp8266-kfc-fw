@@ -150,6 +150,7 @@ public:
     uint16_t read(Configuration *conf, uint16_t offset);
 
     void dump(Print &output);
+    void exportAsJson(Print& output);
 
     inline Handle_t getHandle() const {
         return _param.handle;

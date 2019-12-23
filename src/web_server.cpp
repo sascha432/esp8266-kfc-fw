@@ -168,7 +168,6 @@ void web_server_logout_handler(AsyncWebServerRequest *request) {
 }
 
 void web_server_is_alive_handler(AsyncWebServerRequest *request) {
-    WebServerSetCPUSpeedHelper setCPUSpeed;
     AsyncWebServerResponse *response = request->beginResponse(200, FSPGM(text_plain), String(request->arg(F("p")).toInt()));
     HttpHeaders httpHeaders;
     httpHeaders.addNoCache();
@@ -185,6 +184,33 @@ void web_server_get_webui_json(AsyncWebServerRequest *request) {
     httpHeaders.addNoCache();
     httpHeaders.setWebServerResponseHeaders(response);
     request->send(response);
+}
+
+void web_server_export_settings(AsyncWebServerRequest *request) {
+    WebServerSetCPUSpeedHelper setCPUSpeed;
+    if (web_server_is_authenticated(request)) {
+
+        HttpHeaders httpHeaders(false);
+        httpHeaders.addNoCache();
+
+        auto hostname = config._H_STR(Config().device_name);
+
+        char timeStr[32];
+        auto now = time(nullptr);
+        struct tm *tm = timezone_localtime(&now);
+        timezone_strftime_P(timeStr, sizeof(timeStr), PSTR("%Y%m%d_%H%M%S"), tm);
+        PrintString filename(F("kfcfw_config_%s_%s.json"), hostname, timeStr);
+        httpHeaders.add(HttpDispositionHeader(filename));
+
+        PrintString content;
+        config.exportAsJson(content, config.getFirmwareVersion());
+        AsyncWebServerResponse *response = new AsyncBasicResponse(200, F("application/json"), content);
+        httpHeaders.setWebServerResponseHeaders(response);
+
+        request->send(response);
+    } else {
+        request->send(403);
+    }
 }
 
 void web_server_update_handler(AsyncWebServerRequest *request) {
@@ -443,6 +469,7 @@ void init_web_server() {
     server->on(F("/logout"), web_server_logout_handler);
     server->on(F("/is_alive"), web_server_is_alive_handler);
     server->on(F("/webui_get"), web_server_get_webui_json);
+    server->on(F("/export_settings"), web_server_export_settings);
     server->on(F("/update"), HTTP_POST, web_server_update_handler, web_server_update_upload_handler);
 
     server->begin();
@@ -747,6 +774,9 @@ public:
     virtual bool hasStatus() const override;
     virtual const String getStatus() override;
 
+    virtual MenuTypeEnum_t getMenuType() const override {
+        return NONE;
+    }
     virtual PGM_P getConfigureForm() const override {
         return PSTR("remote");
     }

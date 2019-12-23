@@ -7,6 +7,10 @@
 #include <Arduino_compat.h>
 #include <vector>
 
+#ifndef DEBUG_BOOTSTRAP_MENU
+#define DEBUG_BOOTSTRAP_MENU                    0
+#endif
+
 class BootstrapMenu {
 public:
     typedef struct {
@@ -21,7 +25,9 @@ public:
         MenuItem() : _label(nullptr), _URI(nullptr), _parentMenuId(INVALID_ID) {
             memset(&_flags, 0, sizeof(_flags));
         }
-        ~MenuItem() {
+
+        // needs to be called to free memory
+        void _destroy() {
             clearLabel();
             clearURI();
         }
@@ -116,6 +122,7 @@ public:
 
 public:
     BootstrapMenu();
+    ~BootstrapMenu();
 
     menu_item_id_t addMenu(const __FlashStringHelper* label);
     menu_item_id_t addMenu(const String &label);
@@ -125,12 +132,12 @@ public:
     menu_item_id_t addSubMenu(const String &label, const String &uri, menu_item_id_t parentMenuId);
 
     // get menu by label
-    menu_item_id_t getMenu(const String& label, menu_item_id_t menuId = 0) const;
+    menu_item_id_t getMenu(const String& label, menu_item_id_t menuId = INVALID_ID) const;
     // get number of menu items
     menu_item_id_t getItemCount(menu_item_id_t menuId) const;
 
     // create menu item
-    void html(Print& output, menu_item_id_t menuId) const;
+    void html(Print& output, menu_item_id_t menuId, bool dropDown) const;
     // create main menu
     void html(Print& output) const;
 
@@ -141,7 +148,7 @@ public:
     MenuItem& getItem(menu_item_id_t menuId);
 
 private:
-    menu_item_id_t _add(const MenuItem &item);
+    menu_item_id_t _add(MenuItem &item);
 
 private:
     ItemsVector _items;

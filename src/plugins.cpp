@@ -118,6 +118,15 @@ static void create_menu()
     navMenu.home = bootstrapMenu.addMenu(F("Home"));
     bootstrapMenu.getItem(navMenu.home).setURI(F("index.html"));
 
+    // since "home" has an URI, this menu is hidden
+    bootstrapMenu.addSubMenu(F("Home"), F("index.html"), navMenu.home);
+    bootstrapMenu.addSubMenu(F("Status"), F("status.html"), navMenu.home);
+    bootstrapMenu.addSubMenu(F("Manage WiFi"), F("wifi.html"), navMenu.home);
+    bootstrapMenu.addSubMenu(F("Configure Network"), F("network.html"), navMenu.home);
+    bootstrapMenu.addSubMenu(F("Change Password"), F("password.html"), navMenu.home);
+    bootstrapMenu.addSubMenu(F("Reboot Device"), F("reboot.html"), navMenu.home);
+    bootstrapMenu.addSubMenu(F("About"), F("about.html"), navMenu.home);
+
     navMenu.status = bootstrapMenu.addMenu(F("Status"));
     bootstrapMenu.getItem(navMenu.status).setURI(F("status.html"));
 
@@ -132,6 +141,7 @@ static void create_menu()
     bootstrapMenu.addSubMenu(F("Change Password"), F("password.html"), navMenu.admin);
     bootstrapMenu.addSubMenu(F("Reboot Device"), F("reboot.html"), navMenu.admin);
     bootstrapMenu.addSubMenu(F("Restore Factory Settings"), F("factory.html"), navMenu.admin);
+    bootstrapMenu.addSubMenu(F("Export Settings"), F("export_settings"), navMenu.admin);
     bootstrapMenu.addSubMenu(F("Update Firmware"), F("update_fw.html"), navMenu.admin);
 
     navMenu.util = bootstrapMenu.addMenu(F("Utilities"));
@@ -163,6 +173,15 @@ void setup_plugins(PluginComponent::PluginSetupMode_t mode) {
                     if (plugin->getConfigureForm()) {
                         String uri = FPSTR(plugin->getConfigureForm());
                         uri += F(".html");
+                        String name = FPSTR(plugin->getName());
+                        if (name.length() > 4) {
+                            name.toLowerCase();
+                            name[0] = toupper(name[0]);
+                        }
+                        else {
+                            name.toUpperCase();
+                        }
+                        bootstrapMenu.addSubMenu(name, uri, navMenu.config);
                     }
                     break;
                 case PluginComponent::MenuTypeEnum_t::NONE:

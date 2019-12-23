@@ -210,6 +210,8 @@ public:
     void release();
     bool isDirty() const;
 
+    void exportAsJson(Print& output, const String &version);
+
     inline void beginEEPROM() {
         if (!_eepromInitialized) {
             _eepromInitialized = true;

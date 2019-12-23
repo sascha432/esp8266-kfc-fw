@@ -86,6 +86,11 @@ private:
     String _header;
 };
 
+class HttpDispositionHeader : public HttpSimpleHeader {
+public:
+    HttpDispositionHeader(const String& filename);
+};
+
 class HttpPragmaHeader : public HttpSimpleHeader {
 public:
     HttpPragmaHeader(const String &value);
@@ -350,7 +355,7 @@ public:
 #endif
 
 #if DEBUG
-    void dump();
+    void dump(Print &output);
 #endif
 
 private:

@@ -4,8 +4,21 @@
 
 #include "BootstrapMenu.h"
 
+#if DEBUG_BOOTSTRAP_MENU
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
+#endif
+
 BootstrapMenu::BootstrapMenu()
 {
+}
+
+BootstrapMenu::~BootstrapMenu()
+{
+	for (auto& item : _items) {
+		item._destroy();
+	}
 }
 
 BootstrapMenu::menu_item_id_t BootstrapMenu::addMenu(const __FlashStringHelper* label)
@@ -63,10 +76,12 @@ BootstrapMenu::menu_item_id_t BootstrapMenu::getMenu(const String &label, menu_i
 	menu_item_id_t num = 0;
 	for (const auto &item: _items) {
 		if (item.getParentMenuId() == menuId && item.getLabel().equalsIgnoreCase(label)) {
+			_debug_printf_P(PSTR("BootstrapMenu::getMenu(%s, %d) = %d\n"), label.c_str(), menuId, num);
 			return num;
 		}
 		num++;
 	}
+	_debug_printf_P(PSTR("BootstrapMenu::getMenu(%s, %d) = %d\n"), label.c_str(), menuId, INVALID_ID);
 	return INVALID_ID;
 }
 
@@ -78,35 +93,44 @@ BootstrapMenu::menu_item_id_t BootstrapMenu::getItemCount(menu_item_id_t menuId)
 			count++;
 		}
 	}
+	_debug_printf_P(PSTR("BootstrapMenu::getItemCount(menuId=%d): count=%d\n"), menuId, count);
 	return count;
 }
 
-void BootstrapMenu::html(Print &output, menu_item_id_t menuId) const
+void BootstrapMenu::html(Print &output, menu_item_id_t menuId, bool dropDown) const
 {
+	_debug_printf_P(PSTR("BootstrapMenu::html(menuId=%d, dropDown=%d)\n"), menuId, dropDown);
+
 	auto& topMenu = _items.at(menuId);
-	if (topMenu.hashURI()) {
-		output.printf_P(PSTR("<li class=\"nav-item dropdown\"><a class=\"dropdown-item\" href=\"%s\">%s</a></li>"), topMenu.getURI().c_str(), topMenu.getLabel().c_str());
+	auto subItems = getItemCount(menuId);
+
+	if (dropDown) {
+		output.printf_P(PSTR("<a class=\"dropdown-item\" href=\"%s\">%s</a>\n"), topMenu.getURI().c_str(), topMenu.getLabel().c_str());
 	}
-	else if (getItemCount(menuId)) { // drop down empty?
-		output.printf_P(("<li class=\"nav-item dropdown\"><a class=\"nav-link dropdown-toggle\" href=\"#\" id=\"navbarDropdown%u\" role=\"button\" data-toggle=\"dropdown\" aria-haspopup=\"true\" aria-expanded=\"false\">%s</a>"), menuId, topMenu.getLabel().c_str());
-		output.print(F("<div class=\"dropdown-menu\" aria-labelledby=\"navbarDropdownConfig\">"));
+	else if (topMenu.hashURI()) { // menu bar only
+		output.printf_P(PSTR("<li class=\"nav-item\"><a class=\"nav-link\" href=\"%s\">%s</a></li>\n"), topMenu.getURI().c_str(), topMenu.getLabel().c_str());
+	}
+	else if (subItems) { // drop down empty?
+		output.printf_P(("<li class=\"nav-item dropdown\">\n<a class=\"nav-link dropdown-toggle\" href=\"#\" id=\"navbarDropdown%u\" role=\"button\" data-toggle=\"dropdown\" aria-haspopup=\"true\" aria-expanded=\"false\">%s</a>"), menuId, topMenu.getLabel().c_str());
+		output.print(F("<div class=\"dropdown-menu\" aria-labelledby=\"navbarDropdownConfig\">\n"));
 		menu_item_id_t num = 0;
 		for (const auto &item: _items) {
 			if (item.getParentMenuId() == menuId) {
-				html(output, num);
+				html(output, num, true);
 			}
 			num++;
 		}
-		output.print(F("</div></li>"));
+		output.print(F("</div></li>\n"));
 	}
 }
 
 void BootstrapMenu::html(Print& output) const
 {
+	_debug_printf_P(PSTR("BootstrapMenu::html()\n"));
 	menu_item_id_t num = 0;
 	for (const auto& item: _items) {
-		if (!item.getParentMenuId()) {
-			html(output, num);
+		if (item.getParentMenuId() == INVALID_ID) {
+			html(output, num, false);
 		}
 		num++;
 	}
@@ -126,6 +150,7 @@ void BootstrapMenu::htmlSubMenu(Print& output, menu_item_id_t menuId, uint8_t ac
 		}
 		num++;
 	}
+	_debug_printf_P(PSTR("BootstrapMenu::htmlSubMenu(menuId=%d, active=%d): items=%d\n"), menuId, active, pos);
 }
 
 BootstrapMenu::MenuItem& BootstrapMenu::getItem(menu_item_id_t menuId)
@@ -133,8 +158,8 @@ BootstrapMenu::MenuItem& BootstrapMenu::getItem(menu_item_id_t menuId)
 	return _items.at(menuId);
 }
 
-BootstrapMenu::menu_item_id_t BootstrapMenu::_add(const MenuItem &item)
+BootstrapMenu::menu_item_id_t BootstrapMenu::_add(MenuItem &item)
 {
-	_items.push_back(item);
+	_items.emplace_back(std::move(item));
 	return (menu_item_id_t)_items.size() - 1;
 }

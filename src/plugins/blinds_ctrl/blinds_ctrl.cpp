@@ -37,6 +37,13 @@ public:
     virtual void createWebUI(WebUI &webUI) override;
     virtual WebUIInterface *getWebUIInterface() override;
 
+    virtual MenuTypeEnum_t getMenuType() const override {
+        return CUSTOM;
+    }
+    virtual void createMenu() override {
+        bootstrapMenu.addSubMenu(F("Blinds Controller"), F("blinds.html"), navMenu.config);
+    }
+
     virtual PGM_P getConfigureForm() const override {
         return PSTR("blinds");
     }

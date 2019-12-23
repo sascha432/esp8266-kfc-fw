@@ -79,6 +79,13 @@ bool HttpHeader::equals(const HttpHeaderPtr &header) const {
 HttpPragmaHeader::HttpPragmaHeader(const String &value) : HttpSimpleHeader(FSPGM(Pragma), value) {
 }
 
+HttpDispositionHeader::HttpDispositionHeader(const String& filename) : HttpSimpleHeader(F("Content-Disposition"))
+{
+    String str = F("attachment; filename=\"");
+    str += filename;
+    str += '"';
+    setHeader(str);    
+}
 
 HttpLocationHeader::HttpLocationHeader(const String &location) : HttpSimpleHeader(FSPGM(Location), location) {
 }
@@ -292,10 +299,10 @@ void  HttpHeaders::setWebServerResponseHeaders(AsyncWebServerResponse *response)
 
 #if DEBUG
 
-void  HttpHeaders::dump() {
-    debug_printf_P(PSTR("--- %d\n"), _headers.size());
+void  HttpHeaders::dump(Print &output) {
+    output.printf_P(PSTR("--- %d\n"), _headers.size());
     for (const auto &header : _headers) {
-        debug_println(header->getHeader());
+        output.println(header->getHeader());
     }
 }
 

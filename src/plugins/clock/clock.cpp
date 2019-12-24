@@ -11,6 +11,7 @@
 #include <WiFiCallbacks.h>
 #include <EventTimer.h>
 #include <KFCForms.h>
+#include <WebUISocket.h>
 #include "blink_led_timer.h"
 #include "progmem_data.h"
 #include "./plugins/mqtt/mqtt_client.h"
@@ -31,7 +32,6 @@ ClockPlugin::ClockPlugin() :
 #endif
     _color(0, 0, 80), _updateTimer(0), _time(0), _updateRate(1000), _isSyncing(1), _timeFormat24h(true)
 {
-    _brightness = 255;
     _colors[0] = 0;
     _colors[1] = 0;
     _colors[2] = 80;
@@ -63,6 +63,11 @@ void ClockPlugin::getValues(JsonArray &array) {
     obj->add(JJ(id), F("btn_color"));
     obj->add(JJ(state), true);
     obj->add(JJ(value), _ui_color);
+
+    obj = &array.addObject(3);
+    obj->add(JJ(id), F("brightness"));
+    obj->add(JJ(state), true);
+    obj->add(JJ(value), _brightness);
 }
 
 void ClockPlugin::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState) {
@@ -127,6 +132,11 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
             }
             _updateTimer = 0;
         }
+        else if (id == F("brightness")) {
+            _brightness = value.toInt();
+            _display->setBrightness(_brightness);
+        }
+        publishState(nullptr);
     }
 }
 
@@ -175,10 +185,14 @@ const String ClockPlugin::getStatus()
     return F("Clock Plugin");
 }
 
-void ClockPlugin::createWebUI(WebUI &webUI) {
+void ClockPlugin::createWebUI(WebUI &webUI)
+{
     auto row = &webUI.addRow();
     row->setExtraClass(JJ(title));
     row->addGroup(F("Clock"), false);
+
+    row = &webUI.addRow();
+    row->addSlider(F("brightness"), F("brightness"), 0, SevenSegmentPixel::MAX_BRIGHTNESS, true);
 
     row = &webUI.addRow();
     static const uint16_t height = 280;
@@ -191,16 +205,32 @@ void ClockPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form
 
     auto *clock = &config._H_W_GET(Config().clock); // must be a pointer
 
-    form.add<uint8_t>(F("blink_colon"), &clock->blink_colon);
+    form.setFormUI(F("Clock Configuration"));
+
+    form.add<bool>(F("time_format_24h"), &clock->time_format_24h)
+        ->setFormUI((new FormUI(FormUI::SELECT, F("Time Format")))->setBoolItems(F("24h"), F("12h")));
+
+    form.add<uint8_t>(F("blink_colon"), &clock->blink_colon)->setFormUI(
+        (new FormUI(FormUI::SELECT, F("Blink Colon")))
+            ->addItems(String(BlinkColonEnum_t::SOLID), F("Solid"))
+            ->addItems(String(BlinkColonEnum_t::NORMAL), F("Normal"))
+            ->addItems(String(BlinkColonEnum_t::FAST), F("Fast"))
+    );
     form.addValidator(new FormRangeValidator(F("Invalid value"), BlinkColonEnum_t::SOLID, BlinkColonEnum_t::FAST));
 
-    form.add<bool>(F("time_format_24h"), &clock->time_format_24h);
-
-    form.add<int8_t>(F("animation"), &clock->animation);
+    form.add<int8_t>(F("animation"), &clock->animation)->setFormUI(
+        (new FormUI(FormUI::SELECT, F("Animation")))
+            ->addItems(String(AnimationEnum_t::NONE), F("Solid"))
+            ->addItems(String(AnimationEnum_t::RAINBOW), F("Rainbow"))
+    );
     form.addValidator(new FormRangeValidator(F("Invalid animation"), AnimationEnum_t::NONE, AnimationEnum_t::FADE));
 
+    form.add<uint8_t>(F("brightness"), &clock->brightness)
+        ->setFormUI((new FormUI(FormUI::TEXT, F("Brightness")))->setSuffix(F("0-255")));
+
     String str = PrintString(F("#%02X%02X%02X"), clock->solid_color[0], clock->solid_color[1], clock->solid_color[2]);
-    form.add(F("solid_color"), str);
+    form.add(F("solid_color"), str)
+        ->setFormUI(new FormUI(FormUI::TEXT, F("Solid Color")));
     form.addValidator(new FormCallbackValidator([](const String &value, FormField &field) {
         auto ptr = value.c_str();
         if (*ptr == '#') {
@@ -227,7 +257,6 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKC, "CLOCKC", "<r>,<g>,<b>", "Set colo
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKTS, "CLOCKTS", "<num>,<segment>", "Set segment for digit <num>");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(CLOCKA, "CLOCKA", "<num>", "Set animation", "Display available animations");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(CLOCKD, "CLOCKD", "Dump pixel addresses");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(CLOCKF, "CLOCKF", "Toggle 12/24h time format");
 
 void ClockPlugin::atModeHelpGenerator()
 {
@@ -358,11 +387,6 @@ bool ClockPlugin::atModeHandler(Stream &serial, const String &command, int8_t ar
         _display->dump(serial);
         return true;
     }
-    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(CLOCKF))) {
-        _timeFormat24h = !_timeFormat24h;
-        serial.printf_P(PSTR("+CLOCKF: time format 24h=%u\n"), _timeFormat24h);
-        return true;
-    }
     return false;
 }
 
@@ -381,7 +405,7 @@ void ClockPlugin::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAu
     discovery->addPayloadOff(FSPGM(0));
     discovery->addBrightnessStateTopic(topic + F("brightness/state"));
     discovery->addBrightnessCommandTopic(topic + F("brightness/set"));
-    discovery->addBrightnessScale(255);
+    discovery->addBrightnessScale(SevenSegmentPixel::MAX_BRIGHTNESS);
     discovery->addRGBStateTopic(topic + F("color/state"));
     discovery->addRGBCommandTopic(topic + F("color/set"));
     discovery->finalize();
@@ -408,7 +432,7 @@ void ClockPlugin::onMessage(MQTTClient *client, char *topic, char *payload, size
 
     if (strstr(topic, "brightness/set")) {
         _brightness = atoi(payload);
-        _setColor();
+        _display->setBrightness(_brightness);
     }
     else if (strstr(topic, "color/set")) {
         char *r, *g, *b;
@@ -439,7 +463,7 @@ void ClockPlugin::onMessage(MQTTClient *client, char *topic, char *payload, size
 
 void ClockPlugin::_setColor()
 {
-    _color = Color(_colors[0] * _brightness / 255, _colors[1] * _brightness / 255, _colors[2] * _brightness / 255);
+    _color = Color(_colors[0], _colors[1], _colors[2]);
     _updateTimer = millis();
 }
 
@@ -455,6 +479,15 @@ void ClockPlugin::publishState(MQTTClient *client)
     client->publish(topic + F("brightness/state"), _qos, 1, String(_brightness));
     PrintString str(F("%u,%u,%u"), _colors[0], _colors[1], _colors[2]);
     client->publish(topic + F("color/state"), _qos, 1, str);
+
+    JsonUnnamedObject json(2);
+    json.add(JJ(type), JJ(ue));
+    auto &events = json.addArray(JJ(events), 1);
+    auto &obj = events.addObject(3);
+    obj.add(JJ(id), F("brightness"));
+    obj.add(JJ(value), _brightness);
+    obj.add(JJ(state), true);
+    WsWebUISocket::broadcast(WsWebUISocket::getSender(), json);
 }
 
 
@@ -574,6 +607,7 @@ Clock ClockPlugin::updateConfig()
     _blinkColon = (BlinkColonEnum_t)cfg.blink_colon;
     _color = Color(cfg.solid_color);
     _timeFormat24h = cfg.time_format_24h;
+    _brightness = cfg.brightness << 8;
     setAnimation((AnimationEnum_t)cfg.animation);
 
     return cfg;

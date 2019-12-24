@@ -207,6 +207,8 @@ struct Clock {
     bool time_format_24h;
     uint8_t solid_color[3];
     int8_t order[8];
+    uint8_t brightness;
+    uint8_t segmentOrder;
 };
 
 struct DimmerModuleButtons {

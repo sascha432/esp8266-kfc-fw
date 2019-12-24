@@ -505,6 +505,8 @@ void KFCFWConfiguration::restoreFactorySettings() {
         cfg.solid_color[0] = 0;
         cfg.solid_color[1] = 0;
         cfg.solid_color[2] = 80;
+        cfg.brightness = 255;
+        cfg.segmentOrder = 0;
         static const int8_t order[8] PROGMEM = { 0, 1, -1, 2, 3, -2, 4, 5 }; // <1st digit> <2nd digit> <1st colon> <3rd digit> <4th digit> <2nd colon> <5th digit> <6th digit>
         memcpy_P(cfg.order, order, sizeof(cfg.order));
         _H_SET(Config().clock, cfg);

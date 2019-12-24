@@ -123,7 +123,7 @@ bool SensorPlugin::_hasConfigureForm() const
     return false;
 }
 
-PGM_P SensorPlugin::getConfigureForm() const override {
+PGM_P SensorPlugin::getConfigureForm() const
 {
     return _hasConfigureForm() ? PSTR("sensor") : nullptr;
 }
@@ -258,7 +258,7 @@ bool SensorPlugin::atModeHandler(Stream &serial, const String &command, int8_t a
             { PSTR("hlw80xx.calibrationP"), FLOAT, &_config.hlw80xx.calibrationP },
             { PSTR("hlw80xx.energyCounter"), UINT64, &_config.hlw80xx.energyCounter },
 #endif
-            { nullptr, NONE, 0 }
+            { nullptr, SensorVarsTypeEnum_t::NONE, 0 }
         };
 
         if (argc != 2) {

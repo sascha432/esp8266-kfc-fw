@@ -16,6 +16,8 @@
 
 #endif
 
+#include <EventTimer.h>
+
 #define SevenSegmentPixel_PIXEL_ADDRESS(digit, pixel, segment)   ((digit * _numPixels * SegmentEnum_t::NUM) + (segment * _numPixels) + pixel)
 #define SevenSegmentPixel_SEGMENT_TO_BIT(segment)                (1 << segment)
 #define SevenSegmentPixel_COLOR(color, segment, bitset)          ((bitset & SevenSegmentPixel_SEGMENT_TO_BIT(segment)) ? color : 0)
@@ -44,6 +46,8 @@ public:
         UPPER = 2,
         BOTH = LOWER|UPPER,
     } ColonEnum_t;
+
+    static const uint16_t MAX_BRIGHTNESS = 0xffff;
 
     SevenSegmentPixel(uint8_t numDigits, uint8_t numPixels, uint8_t numColons);
     ~SevenSegmentPixel();
@@ -113,6 +117,8 @@ public:
 #endif
     }
 
+    void setBrightness(uint16_t brightness);
+
     char getSegmentChar(int segment) {
         return 'a' + (segment % SegmentEnum_t::NUM);
     }
@@ -133,6 +139,7 @@ public:
 
 private:
     color_t _getColor(pixel_address_t addr, color_t color);
+    color_t _adjustBrightness(color_t color) const;
 
 private:
 #if IOT_CLOCK_NEOPIXEL
@@ -148,6 +155,9 @@ private:
     pixel_address_t *_dotPixelAddress;
     pixel_address_t *_pixelOrder;
     AnimationCallback_t _callback;
+    uint16_t _brightness;
+    uint16_t _targetBrightness;
+    EventScheduler::TimerPtr _brightnessTimer;
 };
 
 #endif

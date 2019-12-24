@@ -9,7 +9,7 @@
 
 static const char _digits2SegmentsTable[]  = { 0x3f, 0x06, 0x5b, 0x4f, 0x66, 0x6d, 0x7d, 0x07, 0x7f, 0x6f, 0x77, 0x7c, 0x39, 0x5e, 0x79, 0x71 };  // 0-F
 
-SevenSegmentPixel::SevenSegmentPixel(uint8_t numDigits, uint8_t numPixels, uint8_t numColons) : _pixelOrder(nullptr), _callback(nullptr)
+SevenSegmentPixel::SevenSegmentPixel(uint8_t numDigits, uint8_t numPixels, uint8_t numColons) : _pixelOrder(nullptr), _callback(nullptr), _brightness(MAX_BRIGHTNESS), _brightnessTimer(nullptr)
 {
     _numDigits = numDigits;
     _numPixels = numPixels;
@@ -28,6 +28,7 @@ SevenSegmentPixel::SevenSegmentPixel(uint8_t numDigits, uint8_t numPixels, uint8
 
 SevenSegmentPixel::~SevenSegmentPixel()
 {
+    Scheduler.removeTimer(_brightnessTimer);
 #if IOT_CLOCK_NEOPIXEL
     delete _pixels;
 #else
@@ -199,15 +200,48 @@ void SevenSegmentPixel::print(const char *text, color_t color)
     }
 }
 
+void SevenSegmentPixel::setBrightness(uint16_t brightness)
+{
+    _targetBrightness = brightness;
+    if (!Scheduler.hasTimer(_brightnessTimer)) {
+        // fade to new brightness, 0-100% = 3000ms
+        Scheduler.addTimer(&_brightnessTimer, MAX_BRIGHTNESS / 3000, true, [this](EventScheduler::TimerPtr timer) {
+            if (_brightness < _targetBrightness) {
+                _brightness++;
+            }
+            else if (_brightness > _targetBrightness) {
+                _brightness--;
+            }
+            else {
+                timer->detach();
+            }
+
+        }, EventScheduler::PRIO_HIGH);
+    }
+}
+
+
 SevenSegmentPixel::color_t SevenSegmentPixel::_getColor(pixel_address_t addr, color_t color)
 {
-    if (color && _callback) {
-        if (_pixelOrder) {
-            return _callback(_pixelOrder[addr], color);
-        }
-        return _callback(addr, color);
+    if (!color) {
+        return 0;
     }
-    return color;
+    if (_callback) {
+        if (_pixelOrder) {
+            return _adjustBrightness(_callback(_pixelOrder[addr], color));
+        }
+        return _adjustBrightness(_callback(addr, color));
+    }
+    return _adjustBrightness(color);
+}
+
+SevenSegmentPixel::color_t SevenSegmentPixel::_adjustBrightness(color_t color) const
+{
+    return (
+        ((color & 0xff) * _brightness / MAX_BRIGHTNESS) |
+        ((((color >> 8) & 0xff) * _brightness / MAX_BRIGHTNESS) << 8) |
+        ((((color >> 16) & 0xff) * _brightness / MAX_BRIGHTNESS) << 16)
+    );
 }
 
 void SevenSegmentPixel::dump(Print &output)

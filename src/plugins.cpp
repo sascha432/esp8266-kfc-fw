@@ -162,6 +162,8 @@ void setup_plugins(PluginComponent::PluginSetupMode_t mode) {
             (mode == PluginComponent::PLUGIN_SETUP_DELAYED_AUTO_WAKE_UP && !plugin->autoSetupAfterDeepSleep());
         _debug_printf_P(PSTR("setup_plugins(%d) %s priority %d run setup %d\n"), mode, plugin->getName(), plugin->getSetupPriority(), runSetup);
         if (runSetup) {
+            plugin->setup(mode);
+
             if (plugin->hasWebUI()) {
                 enableWebUIMenu = true;
             }
@@ -188,7 +190,6 @@ void setup_plugins(PluginComponent::PluginSetupMode_t mode) {
                 default:
                     break;
             }
-            plugin->setup(mode);
         }
     }
 

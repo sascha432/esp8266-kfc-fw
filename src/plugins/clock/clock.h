@@ -158,7 +158,7 @@ public:
         return CUSTOM;
     }
     virtual void createMenu() override {
-        bootstrapMenu.addSubMenu(F("Clock"), F("ping_monitor.html"), navMenu.config);
+        bootstrapMenu.addSubMenu(F("Clock"), F("clock.html"), navMenu.config);
     }
 
     virtual PGM_P getConfigureForm() const override {
@@ -190,8 +190,8 @@ private:
 
 private:
     uint8_t _qos;
-    uint8_t _brightness;
     uint8_t _colors[3];
+    uint16_t _brightness;
 
 //
 public:

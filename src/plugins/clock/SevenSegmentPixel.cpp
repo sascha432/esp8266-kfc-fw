@@ -200,20 +200,36 @@ void SevenSegmentPixel::print(const char *text, color_t color)
     }
 }
 
-void SevenSegmentPixel::setBrightness(uint16_t brightness)
+void SevenSegmentPixel::setBrightness(uint16_t brightness, float fadeTime, Callback_t callback)
 {
     _targetBrightness = brightness;
     if (!Scheduler.hasTimer(_brightnessTimer)) {
-        // fade to new brightness, 0-100% = 3000ms
-        Scheduler.addTimer(&_brightnessTimer, MAX_BRIGHTNESS / 3000, true, [this](EventScheduler::TimerPtr timer) {
-            if (_brightness < _targetBrightness) {
-                _brightness++;
+        uint16_t steps = (uint16_t)(MAX_BRIGHTNESS / (fadeTime * (1000 / 25.0)));      // 0-100%, 3 seconds fade time
+        if (!steps) {
+            steps = 1;
+        }
+        _debug_printf_P(PSTR("SevenSegmentPixel::setBrightness(): to %u steps %u fade time %f\n"), _brightness, steps, fadeTime);
+        Scheduler.addTimer(&_brightnessTimer, 25, true, [this, steps, callback](EventScheduler::TimerPtr timer) {
+            int32_t tmp = _brightness;
+            if (tmp < _targetBrightness) {
+                tmp += steps;
+                if (tmp > _targetBrightness) {
+                    tmp = _targetBrightness;
+                }
+                _brightness = tmp;
             }
-            else if (_brightness > _targetBrightness) {
-                _brightness--;
+            else if (tmp > _targetBrightness) {
+                tmp -= steps;
+                if (tmp < _targetBrightness) {
+                    tmp = _targetBrightness;
+                }
+                _brightness = tmp;
             }
             else {
                 timer->detach();
+                if (callback) {
+                    callback(_brightness);
+                }
             }
 
         }, EventScheduler::PRIO_HIGH);

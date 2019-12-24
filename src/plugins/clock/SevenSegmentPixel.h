@@ -48,6 +48,7 @@ public:
     } ColonEnum_t;
 
     static const uint16_t MAX_BRIGHTNESS = 0xffff;
+    typedef std::function<void(uint16_t brightness)> Callback_t;
 
     SevenSegmentPixel(uint8_t numDigits, uint8_t numPixels, uint8_t numColons);
     ~SevenSegmentPixel();
@@ -117,7 +118,7 @@ public:
 #endif
     }
 
-    void setBrightness(uint16_t brightness);
+    void setBrightness(uint16_t brightness, float fadeTime, Callback_t callback = nullptr);
 
     char getSegmentChar(int segment) {
         return 'a' + (segment % SegmentEnum_t::NUM);

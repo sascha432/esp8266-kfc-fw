@@ -134,7 +134,7 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
         }
         else if (id == F("brightness")) {
             _brightness = value.toInt();
-            _display->setBrightness(_brightness);
+            setBrightness(_brightness);
         }
         publishState(nullptr);
     }
@@ -432,7 +432,7 @@ void ClockPlugin::onMessage(MQTTClient *client, char *topic, char *payload, size
 
     if (strstr(topic, "brightness/set")) {
         _brightness = atoi(payload);
-        _display->setBrightness(_brightness);
+        setBrightness(_brightness);
     }
     else if (strstr(topic, "color/set")) {
         char *r, *g, *b;
@@ -768,6 +768,15 @@ void ClockPlugin::_setSevenSegmentDisplay(Clock &cfg)
             addr = _display->setSegments(cfg.order[i], addr);
         }
     }
+}
+
+void ClockPlugin::setBrightness(uint16_t brightness)
+{
+    auto oldUpdateRate = _updateRate;
+    _updateRate = 25;
+    _display->setBrightness(_brightness, 2.5, [this, oldUpdateRate](uint16_t) {
+        _updateRate = oldUpdateRate;
+    });
 }
 
 #endif

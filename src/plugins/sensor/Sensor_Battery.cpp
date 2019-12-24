@@ -72,7 +72,8 @@ void Sensor_Battery::createWebUI(WebUI &webUI, WebUIRow **row) {
 #endif
 }
 
-void Sensor_Battery::publishState(MQTTClient *client) {
+void Sensor_Battery::publishState(MQTTClient *client)
+{
     if (client) {
         client->publish(_getTopic(LEVEL), _qos, 1, String(_readSensor(), 2));
 #if IOT_SENSOR_BATTERY_CHARGE_DETECTION
@@ -81,36 +82,34 @@ void Sensor_Battery::publishState(MQTTClient *client) {
     }
 }
 
-void Sensor_Battery::getStatus(PrintHtmlEntitiesString &output) {
+void Sensor_Battery::getStatus(PrintHtmlEntitiesString &output)
+{
     output.printf_P(PSTR("Supply Voltage Indicator"));
 #if IOT_SENSOR_BATTERY_CHARGE_DETECTION
     output.printf_P(", charging: %s"), digitalRead(IOT_SENSOR_BATTERY_CHARGE_DETECTION) ? F("Yes") : F("No"));
 #endif
-    output.printf_P(", calibration %f" HTML_S(br)),  _calibration);
+    output.printf_P(PSTR(", calibration %f" HTML_S(br)),  _calibration);
 }
 
-Sensor_Battery::SensorEnumType_t Sensor_Battery::getType() const {
-    return BATTERY;
-}
-
-void Sensor_HLW80xx::createConfigureForm(AsyncWebServerRequest *request, Form &form) {
-
+void Sensor_Battery::createConfigureForm(AsyncWebServerRequest *request, Form &form)
+{
     auto *sensor = &config._H_W_GET(Config().sensor); // must be a pointer
     form.add<float>(F("battery_calibration"), &sensor->battery.calibration)->setFormUI(new FormUI(FormUI::TEXT, F("Supply Voltage/Battery Calibration")));
 }
 
-void Sensor_Battery::reconfigure() {
+void Sensor_Battery::reconfigure()
+{
     _calibration = config._H_GET(Config().sensor).battery.calibration;
     _debug_printf_P(PSTR("Sensor_Battery::reconfigure(): calibration=%f\n"), _calibration);
 }
 
 
-float Sensor_Battery::readSensor(SensorDataEx_t *data) {
+float Sensor_Battery::readSensor(SensorDataEx_t *data)
+{
     for(auto sensor: SensorPlugin::getSensors()) {
         if (sensor->getType() == BATTERY) {
             return reinterpret_cast<Sensor_Battery *>(sensor)->_readSensor(data);
         }
-
     }
     return -1;
 }

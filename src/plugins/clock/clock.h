@@ -215,6 +215,7 @@ private:
     void _off() {
         _display->clear();
     }
+    void setBrightness(uint16_t brightness);
 
 private:
     typedef struct {

@@ -24,16 +24,9 @@
         </div>
     </nav>
     <!--NAV%%-->
-    <div class="container" class="text-center">
-        <h1>Restore factory settings</h1>
-        <form method="POST" action="factory.html">
-            <div class="form-group">
-                Are you sure you want to restore the factory defaults?
-            </div>
-            <div class="form-group">
-                <button type="submit" class="btn btn-primary btn-lg" id="yes" name="yes" style="width:200px;">Yes</button>
-                <button type="submit" class="btn btn-default btn-lg" id="no" name="no" style="width:200px;margin-left:30px;">No</button>
-            </div>
+    <div class="container">
+        <form method="POST" action="sensor.html">
+            %FORM_HTML%
         </form>
         <!--%%FOOT-->
         <div class="row">
@@ -50,6 +43,8 @@
 	<script debug_loader="1" type="text/javascript" src="../js/main.min.js"></script>
 	<script debug_loader="1" type="text/javascript" src="../js/debug.js"></script>
     <!--JAVASCRIPT%%-->
+
+    %FORM_VALIDATOR%
 
 </body>
 

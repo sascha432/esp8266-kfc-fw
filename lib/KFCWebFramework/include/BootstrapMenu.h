@@ -20,10 +20,13 @@ public:
 
     typedef uint8_t menu_item_id_t;
 
-    class MenuItem {
+    class Item {
     public:
-        MenuItem() : _label(nullptr), _URI(nullptr), _parentMenuId(INVALID_ID) {
+        Item() : _id(INVALID_ID), _label(nullptr), _URI(nullptr), _parentMenuId(INVALID_ID) {
             memset(&_flags, 0, sizeof(_flags));
+        }
+        Item(BootstrapMenu &menu) : Item()  {
+            _id = menu._getUnqiueId();
         }
 
         // needs to be called to free memory
@@ -105,18 +108,24 @@ public:
             _parentMenuId = menuId;
         }
 
-        uint16_t getParentMenuId() const {
+        menu_item_id_t getParentMenuId() const {
             return _parentMenuId;
         }
 
+        menu_item_id_t getId() const {
+            return _id;
+        }
+
     private:
+        menu_item_id_t _id;
         void *_label;
         void *_URI;
         MenuItemFlags_t _flags;
         menu_item_id_t _parentMenuId;
     };
 
-    typedef std::vector<MenuItem> ItemsVector;
+    typedef std::vector<Item> ItemsVector;
+    typedef std::vector<Item>::iterator ItemsVectorIterator;
 
     static const menu_item_id_t INVALID_ID = ~0;
 
@@ -124,32 +133,37 @@ public:
     BootstrapMenu();
     ~BootstrapMenu();
 
-    menu_item_id_t addMenu(const __FlashStringHelper* label);
-    menu_item_id_t addMenu(const String &label);
-    menu_item_id_t addSubMenu(const __FlashStringHelper *label, const __FlashStringHelper *uri, menu_item_id_t parentMenuId);
-    menu_item_id_t addSubMenu(const String& label, const __FlashStringHelper *uri, menu_item_id_t parentMenuId);
-    menu_item_id_t addSubMenu(const __FlashStringHelper *label, const String &uri, menu_item_id_t parentMenuId);
-    menu_item_id_t addSubMenu(const String &label, const String &uri, menu_item_id_t parentMenuId);
+    menu_item_id_t addMenu(const __FlashStringHelper* label, menu_item_id_t afterId = 0);
+    menu_item_id_t addMenu(const String &label, menu_item_id_t afterId = 0);
+    menu_item_id_t addSubMenu(const __FlashStringHelper *label, const __FlashStringHelper *uri, menu_item_id_t parentMenuId, menu_item_id_t afterId = 0);
+    menu_item_id_t addSubMenu(const String& label, const __FlashStringHelper *uri, menu_item_id_t parentMenuId, menu_item_id_t afterId = 0);
+    menu_item_id_t addSubMenu(const __FlashStringHelper *label, const String &uri, menu_item_id_t parentMenuId, menu_item_id_t afterId = 0);
+    menu_item_id_t addSubMenu(const String &label, const String &uri, menu_item_id_t parentMenuId, menu_item_id_t afterId = 0);
 
-    // get menu by label
-    menu_item_id_t getMenu(const String& label, menu_item_id_t menuId = INVALID_ID) const;
+    menu_item_id_t findMenuByLabel(const String& label, menu_item_id_t menuId = INVALID_ID) const;
+    menu_item_id_t findMenuByURI(const String& uri, menu_item_id_t menuId = INVALID_ID) const;
     // get number of menu items
     menu_item_id_t getItemCount(menu_item_id_t menuId) const;
 
     // create menu item
-    void html(Print& output, menu_item_id_t menuId, bool dropDown) const;
+    void html(Print& output, menu_item_id_t menuId, bool dropDown);
     // create main menu
-    void html(Print& output) const;
+    void html(Print& output);
 
     // create sub menu
-    void htmlSubMenu(Print& output, menu_item_id_t menuId, uint8_t active) const;
+    void htmlSubMenu(Print& output, menu_item_id_t menuId, uint8_t active);
 
     // get menu item by id
-    MenuItem& getItem(menu_item_id_t menuId);
+    ItemsVectorIterator getItem(menu_item_id_t menuId);
 
 private:
-    menu_item_id_t _add(MenuItem &item);
+    friend Item;
+
+    menu_item_id_t _add(Item &item, menu_item_id_t afterId);
+    menu_item_id_t _getUnqiueId();
+
 
 private:
     ItemsVector _items;
+    menu_item_id_t _unqiueId;
 };

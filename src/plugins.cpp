@@ -116,7 +116,7 @@ void prepare_plugins() {
 static void create_menu()
 {
     navMenu.home = bootstrapMenu.addMenu(F("Home"));
-    bootstrapMenu.getItem(navMenu.home).setURI(F("index.html"));
+    bootstrapMenu.getItem(navMenu.home)->setURI(F("index.html"));
 
     // since "home" has an URI, this menu is hidden
     bootstrapMenu.addSubMenu(F("Home"), F("index.html"), navMenu.home);
@@ -128,7 +128,7 @@ static void create_menu()
     bootstrapMenu.addSubMenu(F("About"), F("about.html"), navMenu.home);
 
     navMenu.status = bootstrapMenu.addMenu(F("Status"));
-    bootstrapMenu.getItem(navMenu.status).setURI(F("status.html"));
+    bootstrapMenu.getItem(navMenu.status)->setURI(F("status.html"));
 
     navMenu.config = bootstrapMenu.addMenu(F("Configuration"));
     bootstrapMenu.addSubMenu(F("WiFi"), F("wifi.html"), navMenu.config);
@@ -140,7 +140,7 @@ static void create_menu()
     navMenu.admin = bootstrapMenu.addMenu(F("Admin"));
     bootstrapMenu.addSubMenu(F("Change Password"), F("password.html"), navMenu.admin);
     bootstrapMenu.addSubMenu(F("Reboot Device"), F("reboot.html"), navMenu.admin);
-    bootstrapMenu.addSubMenu(F("Restore Factory Settings"), F("factory.html"), navMenu.admin);
+    bootstrapMenu.addSubMenu(F("Restore Factory Defaults"), F("factory.html"), navMenu.admin);
     bootstrapMenu.addSubMenu(F("Export Settings"), F("export_settings"), navMenu.admin);
     bootstrapMenu.addSubMenu(F("Update Firmware"), F("update_fw.html"), navMenu.admin);
 
@@ -195,7 +195,10 @@ void setup_plugins(PluginComponent::PluginSetupMode_t mode) {
     }
 
     if (enableWebUIMenu) {
-        bootstrapMenu.addSubMenu(F("Web UI"), F("webui.html"), navMenu.device);
+        auto webUi = F("Web UI");
+        auto url = F("webui.html");
+        bootstrapMenu.addSubMenu(webUi, url, navMenu.device);
+        bootstrapMenu.addSubMenu(webUi, url, navMenu.home, bootstrapMenu.findMenuByURI(F("status.html"), navMenu.home));
     }
 
 #ifndef DISABLE_EVENT_SCHEDULER

@@ -113,7 +113,7 @@ String WebTemplate::process(const String &key) {
         return response;
     } else if (key.startsWith(F("MENU_HTML_SUBMENU_"))) {
         PrintString response;
-        auto id = bootstrapMenu.getMenu(key.substring(18));
+        auto id = bootstrapMenu.findMenuByLabel(key.substring(18));
         if (id != BootstrapMenu::INVALID_ID) {
             bootstrapMenu.htmlSubMenu(response, id, 0);
         }

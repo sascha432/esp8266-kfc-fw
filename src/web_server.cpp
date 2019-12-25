@@ -186,21 +186,38 @@ void web_server_get_webui_json(AsyncWebServerRequest *request) {
     request->send(response);
 }
 
-void web_server_speed_test(AsyncWebServerRequest *request) {
+void web_server_speed_test(AsyncWebServerRequest *request, bool zip) {
     WebServerSetCPUSpeedHelper setCPUSpeed;
+#if !defined(SPEED_TEST_NO_AUTH) || SPEED_TEST_NO_AUTH == 0
     if (web_server_is_authenticated(request)) {
+#endif
         HttpHeaders httpHeaders(false);
         httpHeaders.addNoCache();
 
-        auto size = std::max(1024, (int)request->arg(F("size")).toInt());
-        AsyncWebServerResponse *response = new AsyncSpeedTestResponse(F("application/zip"), size);
-        httpHeaders.add(HttpDispositionHeader(F("speedtest.zip")));
+        AsyncWebServerResponse *response;
+        auto size = std::max(1024 * 64, (int)request->arg(F("size")).toInt());
+        if (zip) {
+            response = new AsyncSpeedTestResponse(F("application/zip"), size);
+            httpHeaders.add(HttpDispositionHeader(F("speedtest.zip")));
+        } else {
+            response = new AsyncSpeedTestResponse(F("image/bmp"), size);
+        }
         httpHeaders.setWebServerResponseHeaders(response);
 
         request->send(response);
+#if !defined(SPEED_TEST_NO_AUTH) || SPEED_TEST_NO_AUTH == 0
     } else {
         request->send(403);
     }
+#endif
+}
+
+void web_server_speed_test_zip(AsyncWebServerRequest *request) {
+    web_server_speed_test(request, true);
+}
+
+void web_server_speed_test_image(AsyncWebServerRequest *request) {
+    web_server_speed_test(request, false);
 }
 
 void web_server_export_settings(AsyncWebServerRequest *request) {
@@ -487,7 +504,8 @@ void init_web_server() {
     server->on(F("/is_alive"), web_server_is_alive_handler);
     server->on(F("/webui_get"), web_server_get_webui_json);
     server->on(F("/export_settings"), web_server_export_settings);
-    server->on(F("/speedtest.zip"), web_server_speed_test);
+    server->on(F("/speedtest.zip"), web_server_speed_test_zip);
+    server->on(F("/speedtest.bmp"), web_server_speed_test_image);
     server->on(F("/update"), HTTP_POST, web_server_update_handler, web_server_update_upload_handler);
 
     server->begin();

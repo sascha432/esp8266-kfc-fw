@@ -19,6 +19,7 @@
 #include "web_server.h"
 #include "../include/templates.h"
 #include "fs_mapping.h"
+#include "bitmap_header.h"
 
 class AsyncJsonResponse : public AsyncAbstractResponse {
 public:
@@ -63,16 +64,14 @@ private:
 
 class AsyncSpeedTestResponse : public AsyncAbstractResponse {
 public:
-    AsyncSpeedTestResponse(const String &contentType, uint32_t size);
-    virtual ~AsyncSpeedTestResponse();
+    AsyncSpeedTestResponse(const String &contentType, uint32_t size); // size is pow(floor(sqrt(size / 2), 2) + 54
 
     virtual bool _sourceValid() const override;
     virtual size_t _fillBuffer(uint8_t *buf, size_t maxLen) override;
 
 private:
-    char *_data;
-    uint16_t _length;
     int32_t _size;
+    BitmapFileHeader_t _header;
     WebServerSetCPUSpeedHelper _setCPUSpeed;
 };
 

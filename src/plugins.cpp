@@ -145,6 +145,7 @@ static void create_menu()
     bootstrapMenu.addSubMenu(F("Update Firmware"), F("update_fw.html"), navMenu.admin);
 
     navMenu.util = bootstrapMenu.addMenu(F("Utilities"));
+    bootstrapMenu.addSubMenu(F("Speed Test"), F("speed_test.html"), navMenu.util);
 }
 
 void setup_plugins(PluginComponent::PluginSetupMode_t mode) {

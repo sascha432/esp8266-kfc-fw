@@ -598,29 +598,26 @@ AsyncTemplateResponse::~AsyncTemplateResponse() {
     delete _webTemplate;
 }
 
-AsyncSpeedTestResponse::AsyncSpeedTestResponse(const String &contentType, uint32_t size) : AsyncAbstractResponse(nullptr), _size(size)
+AsyncSpeedTestResponse::AsyncSpeedTestResponse(const String &contentType, uint32_t size) : AsyncAbstractResponse(nullptr)
 {
-    _length = 1536;
-    do {
-        _data = (char *)malloc(_length);
-        _length /= 2;
-    }
-    while(!_data); // if we cannot allocate even 1 byte its likely to crash anyway
+    uint16_t width = sqrt(size / 2);
+    _size = width * width * 2 + sizeof(_header);
+    memset(&_header, 0, sizeof(_header));
+    _header.h.bfh.bfType = 'B' | ('M' << 8);
+    _header.h.bfh.bfSize = _size;
+    _header.h.bfh.bfReserved2 = sizeof(_header.h);
 
-    for(uint16_t i = 0; i < _length; i++) {
-        _data[i] = rand();
-    }
+    _header.h.bih.biSize = sizeof(_header.h.bih);
+    _header.h.bih.biPlanes = 1;
+    _header.h.bih.biBitCount = 16;
+    _header.h.bih.biWidth = width;
+    _header.h.bih.biHeight = width;
 
     _code = 200;
     _contentLength = _size;
     _sendContentLength = true;
     _chunked = false;
     _contentType = contentType;
-}
-
-AsyncSpeedTestResponse::~AsyncSpeedTestResponse()
-{
-    free(_data);
 }
 
 bool AsyncSpeedTestResponse::_sourceValid() const
@@ -634,9 +631,13 @@ size_t AsyncSpeedTestResponse::_fillBuffer(uint8_t *buf, size_t maxLen)
     if (available > maxLen) {
         available = maxLen;
     }
-    if (available > _length) {
-        available = _length;
+    if (_header.h.bih.biWidth) {
+        memcpy(buf, &_header, sizeof(_header)); // maxLen is > 54 byte for the first call for sure
+        _header.h.bih.biWidth = 0;
+        _size -= sizeof(_header);
+        return sizeof(_header);
     }
-    memcpy(buf, _data, available);
+    memset(buf, 0xff, available);
+    _size -= available;
     return available;
 }

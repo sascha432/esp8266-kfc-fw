@@ -168,7 +168,7 @@ void web_server_logout_handler(AsyncWebServerRequest *request) {
 }
 
 void web_server_is_alive_handler(AsyncWebServerRequest *request) {
-    AsyncWebServerResponse *response = request->beginResponse(200, FSPGM(text_plain), String(request->arg(F("p")).toInt()));
+    AsyncWebServerResponse *response = request->beginResponse(200, FSPGM(mime_text_plain), String(request->arg(F("p")).toInt()));
     HttpHeaders httpHeaders;
     httpHeaders.addNoCache();
     httpHeaders.setWebServerResponseHeaders(response);
@@ -197,10 +197,10 @@ void web_server_speed_test(AsyncWebServerRequest *request, bool zip) {
         AsyncWebServerResponse *response;
         auto size = std::max(1024 * 64, (int)request->arg(F("size")).toInt());
         if (zip) {
-            response = new AsyncSpeedTestResponse(F("application/zip"), size);
+            response = new AsyncSpeedTestResponse(FSPGM(mime_application_zip), size);
             httpHeaders.add(HttpDispositionHeader(F("speedtest.zip")));
         } else {
-            response = new AsyncSpeedTestResponse(F("image/bmp"), size);
+            response = new AsyncSpeedTestResponse(FSPGM(mime_image_bmp), size);
         }
         httpHeaders.setWebServerResponseHeaders(response);
 
@@ -238,7 +238,7 @@ void web_server_export_settings(AsyncWebServerRequest *request) {
 
         PrintString content;
         config.exportAsJson(content, config.getFirmwareVersion());
-        AsyncWebServerResponse *response = new AsyncBasicResponse(200, F("application/json"), content);
+        AsyncWebServerResponse *response = new AsyncBasicResponse(200, FSPGM(mime_application_json), content);
         httpHeaders.setWebServerResponseHeaders(response);
 
         request->send(response);
@@ -512,49 +512,49 @@ void init_web_server() {
     _debug_printf_P(PSTR("HTTP running on port %u\n"), config._H_GET(Config().http_port));
 }
 
+
 PGM_P web_server_get_content_type(const String &path) {
 
     const char *cPath = path.c_str();
     auto pathLen = path.length();
 
     if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".html")) || !constexpr_strcmp_end_P(cPath, pathLen, PSTR(".htm"))) {
-        return PSTR("text/html");
+        return SPGM(mime_text_html);
     } else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".css"))) {
-        return PSTR("text/css");
-    } else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".css"))) {
-        return PSTR("text/css");
-    } else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".json")))
-        return PSTR("application/json");
-    else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".js")))
-        return PSTR("application/javascript");
-    else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".png")))
-        return PSTR("image/png");
-    else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".gif")))
-        return PSTR("image/gif");
-    else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".jpg")))
-        return PSTR("image/jpeg");
-    else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".ico")))
+        return SPGM(mime_text_css);
+    } else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".json"))) {
+        return SPGM(mime_application_json);
+    } else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".js"))) {
+        return SPGM(mime_application_javascript);
+    } else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".png"))) {
+        return SPGM(mime_image_png);
+    } else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".gif"))) {
+        return SPGM(mime_image_gif);
+    } else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".jpg"))) {
+        return SPGM(mime_image_jpeg);
+    } else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".ico"))) {
         return PSTR("image/x-icon");
-    else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".svg")))
+    } else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".svg"))) {
         return PSTR("image/svg+xml");
-    else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".eot")))
+    } else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".eot"))) {
         return PSTR("font/eot");
-    else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".woff")))
+    } else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".woff"))) {
         return PSTR("font/woff");
-    else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".woff2")))
+    } else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".woff2"))) {
         return PSTR("font/woff2");
-    else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".ttf")))
+    } else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".ttf"))) {
         return PSTR("font/ttf");
-    else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".xml")))
-        return PSTR("text/xml");
-    else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".pdf")))
+    } else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".xml"))) {
+        return SPGM(mime_text_xml);
+    } else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".pdf"))) {
         return PSTR("application/pdf");
-    else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".zip")))
-        return PSTR("application/zip");
-    else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".gz")))
-        return PSTR("application/x-gzip");
-    else
-        return PSTR("text/plain");
+    } else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".zip"))) {
+        return SPGM(mime_application_zip);
+    } else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".gz"))) {
+        return SPGM(mime_application_x_gzip);
+    } else {
+        return SPGM(mime_text_plain);
+    }
 }
 
 bool web_server_send_file(String path, HttpHeaders &httpHeaders, bool client_accepts_gzip, FSMapping *mapping, AsyncWebServerRequest *request, WebTemplate *webTemplate) {
@@ -647,7 +647,7 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
     }
     if (mapping->isGzipped() && !client_accepts_gzip) {
         _debug_printf_P(PSTR("Client does not accept gzip encoding: %s\n"), path.c_str());
-        request->send_P(503, FSPGM(text_plain), PSTR("503: Client does not support gzip Content Encoding"));
+        request->send_P(503, FSPGM(mime_text_plain), PSTR("503: Client does not support gzip Content Encoding"));
         return true;
     }
 

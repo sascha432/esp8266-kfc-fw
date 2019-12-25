@@ -6,6 +6,19 @@
 #include <PrintHtmlEntities.h>
 #include "progmem_data.h"
 
+PROGMEM_STRING_DEF(mime_text_html, "text/html");
+PROGMEM_STRING_DEF(mime_text_xml, "text/xml");
+PROGMEM_STRING_DEF(mime_text_plain, "text/plain");
+PROGMEM_STRING_DEF(mime_text_css, "text/css");
+PROGMEM_STRING_DEF(mime_application_javascript, "application/javascript");
+PROGMEM_STRING_DEF(mime_application_json, "application/json");
+PROGMEM_STRING_DEF(mime_application_zip, "application/zip");
+PROGMEM_STRING_DEF(mime_application_x_gzip, "application/x-gzip");
+PROGMEM_STRING_DEF(mime_image_jpeg, "image/jpeg");
+PROGMEM_STRING_DEF(mime_image_png, "image/png");
+PROGMEM_STRING_DEF(mime_image_gif, "image/gif");
+PROGMEM_STRING_DEF(mime_image_bmp, "image/bmp");
+
 PROGMEM_STRING_DEF(default_password_warning, "WARNING! Default password has not been changed");
 PROGMEM_STRING_DEF(empty, "");
 PROGMEM_STRING_DEF(0, "0");

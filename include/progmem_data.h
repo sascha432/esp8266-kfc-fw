@@ -4,6 +4,19 @@
 
 #pragma once
 
+PROGMEM_STRING_DECL(mime_text_html);
+PROGMEM_STRING_DECL(mime_text_xml);
+PROGMEM_STRING_DECL(mime_text_plain);
+PROGMEM_STRING_DECL(mime_text_css);
+PROGMEM_STRING_DECL(mime_application_javascript);
+PROGMEM_STRING_DECL(mime_application_json);
+PROGMEM_STRING_DECL(mime_application_zip);
+PROGMEM_STRING_DECL(mime_application_x_gzip);
+PROGMEM_STRING_DECL(mime_image_jpeg);
+PROGMEM_STRING_DECL(mime_image_png);
+PROGMEM_STRING_DECL(mime_image_gif);
+PROGMEM_STRING_DECL(mime_image_bmp);
+
 PROGMEM_STRING_DECL(default_password_warning);
 PROGMEM_STRING_DECL(empty);
 PROGMEM_STRING_DECL(0);
@@ -19,9 +32,6 @@ extern const char _shared_progmem_string_disabled[] PROGMEM;
 extern const char _shared_progmem_string_Enabled[] PROGMEM;
 extern const char _shared_progmem_string_Disabled[] PROGMEM;
 extern const char _shared_progmem_string_auto_discovery_html[] PROGMEM;
-extern const char _shared_progmem_string_application_json[] PROGMEM;
-extern const char _shared_progmem_string_text_plain[] PROGMEM;
-extern const char _shared_progmem_string_text_html[] PROGMEM;
 extern const char _shared_progmem_string_slash[] PROGMEM;
 extern const char _shared_progmem_string_dot[] PROGMEM;
 extern const char _shared_progmem_string_comma[] PROGMEM;

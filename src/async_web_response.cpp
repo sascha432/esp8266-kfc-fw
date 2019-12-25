@@ -16,7 +16,7 @@
 
 AsyncJsonResponse::AsyncJsonResponse() : _jsonBuffer(_json) {
     _code = 200;
-    _contentType = F("application/json");
+    _contentType = FSPGM(mime_application_json);
     _sendContentLength = true;
     _chunked = false;
 }
@@ -60,7 +60,7 @@ AsyncDirResponse::AsyncDirResponse(const AsyncDirWrapper &dir) : AsyncAbstractRe
     _code = 200;
     _contentLength = 0;
     _sendContentLength = false;
-    _contentType = FSPGM(application_json);
+    _contentType = FSPGM(mime_application_json);
     _chunked = true;
     _dir = dir;
     _state = 0;
@@ -219,7 +219,7 @@ AsyncNetworkScanResponse::AsyncNetworkScanResponse(bool hidden) : AsyncAbstractR
     _code = 200;
     _contentLength = 0;
     _sendContentLength = false;
-    _contentType = FSPGM(application_json);
+    _contentType = FSPGM(mime_application_json);
     _chunked = true;
     _position = 0;
     _done = false;

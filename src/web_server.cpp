@@ -186,6 +186,23 @@ void web_server_get_webui_json(AsyncWebServerRequest *request) {
     request->send(response);
 }
 
+void web_server_speed_test(AsyncWebServerRequest *request) {
+    WebServerSetCPUSpeedHelper setCPUSpeed;
+    if (web_server_is_authenticated(request)) {
+        HttpHeaders httpHeaders(false);
+        httpHeaders.addNoCache();
+
+        auto size = std::max(1024, (int)request->arg(F("size")).toInt());
+        AsyncWebServerResponse *response = new AsyncSpeedTestResponse(F("application/zip"), size);
+        httpHeaders.add(HttpDispositionHeader(F("speedtest.zip")));
+        httpHeaders.setWebServerResponseHeaders(response);
+
+        request->send(response);
+    } else {
+        request->send(403);
+    }
+}
+
 void web_server_export_settings(AsyncWebServerRequest *request) {
     WebServerSetCPUSpeedHelper setCPUSpeed;
     if (web_server_is_authenticated(request)) {
@@ -470,6 +487,7 @@ void init_web_server() {
     server->on(F("/is_alive"), web_server_is_alive_handler);
     server->on(F("/webui_get"), web_server_get_webui_json);
     server->on(F("/export_settings"), web_server_export_settings);
+    server->on(F("/speedtest.zip"), web_server_speed_test);
     server->on(F("/update"), HTTP_POST, web_server_update_handler, web_server_update_upload_handler);
 
     server->begin();

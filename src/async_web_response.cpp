@@ -24,6 +24,7 @@ AsyncJsonResponse::AsyncJsonResponse() : _jsonBuffer(_json) {
 bool AsyncJsonResponse::_sourceValid() const {
     return true;
 }
+
 size_t AsyncJsonResponse::_fillBuffer(uint8_t *data, size_t len) {
     return _jsonBuffer.fillBuffer(data, len);
 }
@@ -595,4 +596,47 @@ AsyncTemplateResponse::AsyncTemplateResponse(const String &contentType, FSMappin
 
 AsyncTemplateResponse::~AsyncTemplateResponse() {
     delete _webTemplate;
+}
+
+AsyncSpeedTestResponse::AsyncSpeedTestResponse(const String &contentType, uint32_t size) : AsyncAbstractResponse(nullptr), _size(size)
+{
+    _length = 1536;
+    do {
+        _data = (char *)malloc(_length);
+        _length /= 2;
+    }
+    while(!_data); // if we cannot allocate even 1 byte its likely to crash anyway
+
+    for(uint16_t i = 0; i < _length; i++) {
+        _data[i] = rand();
+    }
+
+    _code = 200;
+    _contentLength = _size;
+    _sendContentLength = true;
+    _chunked = false;
+    _contentType = contentType;
+}
+
+AsyncSpeedTestResponse::~AsyncSpeedTestResponse()
+{
+    free(_data);
+}
+
+bool AsyncSpeedTestResponse::_sourceValid() const
+{
+    return true;
+}
+
+size_t AsyncSpeedTestResponse::_fillBuffer(uint8_t *buf, size_t maxLen)
+{
+    size_t available = _size;
+    if (available > maxLen) {
+        available = maxLen;
+    }
+    if (available > _length) {
+        available = _length;
+    }
+    memcpy(buf, _data, available);
+    return available;
 }

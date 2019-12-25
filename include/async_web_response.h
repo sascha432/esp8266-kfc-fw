@@ -24,7 +24,7 @@ class AsyncJsonResponse : public AsyncAbstractResponse {
 public:
     AsyncJsonResponse();
 
-    bool _sourceValid() const;
+    virtual bool _sourceValid() const override;
     virtual size_t _fillBuffer(uint8_t *data, size_t len) override;
 
     JsonUnnamedObject &getJsonObject();
@@ -39,7 +39,7 @@ class AsyncProgmemFileResponse : public AsyncAbstractResponse {
 public:
     AsyncProgmemFileResponse(const String &contentType, FSMapping *mapping, AwsTemplateProcessor templateCallback = nullptr);
 
-    bool _sourceValid() const;
+    virtual bool _sourceValid() const override;
     virtual size_t _fillBuffer(uint8_t *data, size_t len) override;
 
 private:
@@ -61,15 +61,28 @@ private:
     WebServerSetCPUSpeedHelper _setCPUSpeed;
 };
 
+class AsyncSpeedTestResponse : public AsyncAbstractResponse {
+public:
+    AsyncSpeedTestResponse(const String &contentType, uint32_t size);
+    virtual ~AsyncSpeedTestResponse();
+
+    virtual bool _sourceValid() const override;
+    virtual size_t _fillBuffer(uint8_t *buf, size_t maxLen) override;
+
+private:
+    char *_data;
+    uint16_t _length;
+    int32_t _size;
+    WebServerSetCPUSpeedHelper _setCPUSpeed;
+};
+
 class AsyncBufferResponse : public AsyncAbstractResponse {
 public:
     AsyncBufferResponse(const String &contentType, Buffer *buffer, AwsTemplateProcessor templateCallback = nullptr);
     virtual ~AsyncBufferResponse();
 
-    bool _sourceValid() const;
-
+    virtual bool _sourceValid() const override;
     virtual size_t _fillBuffer(uint8_t *buf, size_t maxLen) override;
-
 
 private:
     Buffer *_content;
@@ -78,6 +91,7 @@ private:
 };
 
 class AsyncDirWrapper {
+public:
     typedef std::vector<String> AsyncDirWrapperVector;
 
     typedef enum {

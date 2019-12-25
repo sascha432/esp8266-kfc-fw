@@ -135,6 +135,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PINM, "PINM", "[<1=start|0=stop>}", "List 
 #endif
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(PLUGINS, "PLUGINS", "List plugins");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HEAP, "HEAP", "[interval in seconds|0=disable]", "Display free heap");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RSSI, "RSSI", "[interval in seconds|0=disable]", "Display WiFi RSSI");
 #if defined(ESP8266)
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(CPU, "CPU", "<80|160>", "Set CPU speed", "Display CPU speed");
 #endif
@@ -178,6 +179,7 @@ void at_mode_help_commands() {
 #endif
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(PLUGINS));
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(HEAP));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(RSSI));
 #if defined(ESP8266)
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CPU));
 #endif
@@ -232,13 +234,24 @@ String at_mode_print_command_string(Stream &output, char separator) {
 
 #if DEBUG
 
+
+
 static EventScheduler::TimerPtr heapTimer = nullptr;
+static bool isHeap = true;
+static int32_t rssiMin, rssiMax;
 
 static void heap_timer_callback(EventScheduler::TimerPtr timer) {
-    MySerial.printf_P(PSTR("+HEAP: Free %u CPU %d MHz\n"), ESP.getFreeHeap(), ESP.getCpuFreqMHz());
+    if (isHeap) {
+        MySerial.printf_P(PSTR("+HEAP: Free %u CPU %d MHz\n"), ESP.getFreeHeap(), ESP.getCpuFreqMHz());
+    } else {
+        auto rssi = WiFi.RSSI();
+        rssiMin = std::max(rssiMin, rssi);
+        rssiMax = std::min(rssiMax, rssi);
+        MySerial.printf_P(PSTR("+RSSI: %d dBm (min/max %d/%d)\n"), rssi, rssiMin, rssiMax);
+    }
 }
 
-static void create_heap_timer(int seconds) {
+static void create_heap_timer(float seconds) {
     if (Scheduler.hasTimer(heapTimer)) {
         heapTimer->changeOptions(seconds * 1000);
     } else {
@@ -246,7 +259,7 @@ static void create_heap_timer(int seconds) {
     }
 }
 
-void at_mode_create_heap_timer(int seconds) {
+void at_mode_create_heap_timer(float seconds) {
     if (seconds) {
         create_heap_timer(seconds);
     } else {
@@ -621,15 +634,19 @@ void at_mode_serial_handle_event(String &commandString) {
             else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(PLUGINS))) {
                 dump_plugin_list(output);
             }
-            else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(HEAP))) {
+            else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(RSSI)) || !strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(HEAP))) {
                 if (argc == 1) {
-                    uint16_t interval = atoi(args[0]);
+                    float interval = atof(args[0]);
+                    isHeap = !strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(HEAP));
+                    auto cmd = isHeap ? PSTR("HEAP") : PSTR("RSSI");
+                    rssiMin = -10000;
+                    rssiMax = 0;
                     if (interval == 0) {
                         Scheduler.removeTimer(heapTimer);
                         heapTimer = nullptr;
-                        output.println(F("+HEAP: Interval disabled"));
+                        output.printf_P(PSTR("+%s: Interval disabled"), cmd);
                     } else {
-                        output.printf("+HEAP: Interval set to %d seconds\n", interval);
+                        output.printf_P(PSTR("+%s: Interval set to %d seconds\n"), cmd);
                         create_heap_timer(interval);
                     }
                 } else {

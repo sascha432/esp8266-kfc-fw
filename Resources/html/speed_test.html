@@ -27,7 +27,7 @@
     <div class="container">
         <div class="main">
             <div class="header">
-                <h1>Speed Test (2Mbyte)</h1>
+                <h1>WiFi Speed Test</h1>
             </div>
             <div class="dl-size">
                 <button id="size2" class="btn btn-lg btn-primary active">2 MByte</button>
@@ -107,7 +107,6 @@
                 $('#results').fadeOut('fast', function () {
                     $('#results').html(results);
                     $('#download-progress').hide();
-                    $('.main button').removeAttr('disabled');
                     $('#starttest').removeClass('btn-warning').addClass('btn-success');
                     $('#results').fadeIn('fast', function () {
                         $('#starttest').text('Thank You!');

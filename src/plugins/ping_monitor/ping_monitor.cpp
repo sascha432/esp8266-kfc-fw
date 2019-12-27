@@ -367,8 +367,8 @@ public:
     void reconfigure(PGM_P source) override;
     bool hasReconfigureDependecy(PluginComponent *plugin) const override;
 
-    bool hasStatus() const override;
-    const String getStatus() override;
+    virtual bool hasStatus() const override;
+    virtual void getStatus(Print &output) override;
 
     virtual MenuTypeEnum_t getMenuType() const override {
         return CUSTOM;
@@ -416,13 +416,11 @@ bool PingMonitorPlugin::hasStatus() const {
     return true;
 }
 
-const String PingMonitorPlugin::getStatus() {
+void PingMonitorPlugin::getStatus(Print &output) {
     if (pingMonitorTask) {
-        PrintHtmlEntitiesString out;
-        pingMonitorTask->printStats(out);
-        return out;
+        pingMonitorTask->printStats(output);
     } else {
-        return FSPGM(Disabled);
+        output.print(FSPGM(Disabled));
     }
 }
 

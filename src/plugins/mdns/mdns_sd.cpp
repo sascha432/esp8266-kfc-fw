@@ -73,8 +73,10 @@ public:
     PGM_P getName() const;
     PluginPriorityEnum_t getSetupPriority() const override;
     void setup(PluginSetupMode_t mode) override;
-    bool hasStatus() const override;
-    const String getStatus() override;
+
+    virtual bool hasStatus() const override;
+    virtual void getStatus(Print &output) override;
+
 #if AT_MODE_SUPPORTED
     bool hasAtMode() const override;
     void atModeHelpGenerator() override;
@@ -125,10 +127,9 @@ bool MDNSPlugin::hasStatus() const {
     return true;
 }
 
-const String MDNSPlugin::getStatus() {
-    PrintString message;
-    message.printf_P(PSTR("Hostname '%s'"), config._H_STR(Config().device_name));
-    return message;
+void MDNSPlugin::getStatus(Print &output)
+{
+    output.printf_P(PSTR("Hostname '%s'"), config._H_STR(Config().device_name));
 }
 
 #if AT_MODE_SUPPORTED

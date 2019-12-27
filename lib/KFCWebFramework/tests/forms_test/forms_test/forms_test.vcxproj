@@ -23,32 +23,32 @@
     <ProjectGuid>{DE7715EA-3411-4AD5-AE56-0D58618C8355}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>webframetest</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -87,7 +87,7 @@
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32;DEBUG_KFC_FORMS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>..\..\..\..\KFCBaseLibrary\include;..\..\..\..\KFCWebFramework\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\include\mock;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCWebFramework\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -121,7 +121,7 @@
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32;DEBUG_KFC_FORMS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>..\..\..\..\KFCBaseLibrary\include;..\..\..\..\KFCWebFramework\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\include\mock;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCWebFramework\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -178,7 +178,19 @@
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\BufferStream.cpp" />
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\DumpBinary.cpp" />
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\misc.cpp" />
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\mock\EEPROM.cpp" />
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\mock\ESP8266HttpClient.cpp" />
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\mock\FS.cpp" />
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\mock\Print.cpp" />
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\mock\Serial.cpp" />
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\mock\SPI.cpp" />
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\mock\Stream.cpp" />
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\mock\StreamString.cpp" />
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\mock\WiFi.cpp" />
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\mock\WiFiUDP.cpp" />
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\mock\WString.cpp" />
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\PrintString.cpp" />
+    <ClCompile Include="..\..\..\src\BootstrapMenu.cpp" />
     <ClCompile Include="..\..\..\src\Form.cpp" />
     <ClCompile Include="..\..\..\src\FormCallbackValidator.cpp" />
     <ClCompile Include="..\..\..\src\FormData.cpp" />
@@ -186,6 +198,7 @@
     <ClCompile Include="..\..\..\src\FormField.cpp" />
     <ClCompile Include="..\..\..\src\FormRangeValidator.cpp" />
     <ClCompile Include="..\..\..\src\FormBase.cpp" />
+    <ClCompile Include="..\..\..\src\FormUI.cpp" />
     <ClCompile Include="..\..\..\src\FormValidator.cpp" />
     <ClCompile Include="forms_test.cpp" />
   </ItemGroup>

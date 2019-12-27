@@ -124,39 +124,44 @@ void WeatherStationPlugin::setup(PluginSetupMode_t mode) {
     */
 }
 
-void WeatherStationPlugin::reconfigure(PGM_P source) {
-
+void WeatherStationPlugin::reconfigure(PGM_P source)
+{
     _installWebhooks();
 }
 
-bool WeatherStationPlugin::hasReconfigureDependecy(PluginComponent *plugin) const {
+bool WeatherStationPlugin::hasReconfigureDependecy(PluginComponent *plugin) const
+{
     return plugin->nameEquals(F("http"));
 }
 
-bool WeatherStationPlugin::hasStatus() const {
+bool WeatherStationPlugin::hasStatus() const
+{
     return true;
 }
 
-const String WeatherStationPlugin::getStatus() {
+void WeatherStationPlugin::getStatus(Print &output)
+{
     _debug_printf_P(PSTR("WeatherStationPlugin::getStatus()\n"));
-    PrintHtmlEntitiesString str;
-    str.printf_P(PSTR("Weather Station Plugin"));
-    return str;
+    output.printf_P(PSTR("Weather Station Plugin"));
 }
 
-void WeatherStationPlugin::loop() {
+void WeatherStationPlugin::loop()
+{
     plugin._loop();
 }
 
-bool WeatherStationPlugin::hasWebUI() const {
+bool WeatherStationPlugin::hasWebUI() const
+{
     return true;
 }
 
-WebUIInterface *WeatherStationPlugin::getWebUIInterface() {
+WebUIInterface *WeatherStationPlugin::getWebUIInterface()
+{
     return this;
 }
 
-void WeatherStationPlugin::createWebUI(WebUI &webUI) {
+void WeatherStationPlugin::createWebUI(WebUI &webUI)
+{
     auto row = &webUI.addRow();
     row->setExtraClass(JJ(title));
     row->addGroup(F("Weather Station"), false);

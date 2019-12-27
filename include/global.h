@@ -253,6 +253,7 @@ extern class Stream &DebugSerial;
 #define SECURITY_LOGIN_ATTEMPTS         5               // maxmimum failed logins within timeframe
 #define SECURITY_LOGIN_TIMEFRAME        300
 #if SPIFFS_SUPPORT                                      // store failed logins on SPIFFS
+#define SECURITY_LOGIN_REWRITE_INTERVAL 3600            // rewrite file every hour to remove old records
 #define SECURITY_LOGIN_STORE_TIMEFRAME  86400           // keep failed attempts stored on SPIFFS
 #define SECURITY_LOGIN_FILE             "/login_failures"
 #endif
@@ -402,6 +403,7 @@ extern class Stream &DebugSerial;
 #ifndef IOT_SENSOR
 #define IOT_SENSOR 0
 #endif
+#define IOT_SENSOR_HAS(name)    defined(IOT_SENSOR_##name) && (IOT_SENSOR_##name)
 
 #ifndef SERIAL2TCP
 #define SERIAL2TCP 0

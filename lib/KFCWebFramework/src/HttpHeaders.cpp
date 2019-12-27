@@ -71,10 +71,9 @@ const String HttpHeader::getHeader() {
     // return getName() + F(": ") + getValue();
 }
 
-bool HttpHeader::equals(const HttpHeaderPtr &header) const {
-    return _name.equalsIgnoreCase(header->getName());
+bool HttpHeader::equals(const HttpHeader &header) const {
+    return _name.equalsIgnoreCase(header.getName());
 }
-
 
 HttpPragmaHeader::HttpPragmaHeader(const String &value) : HttpSimpleHeader(FSPGM(Pragma), value) {
 }
@@ -84,7 +83,7 @@ HttpDispositionHeader::HttpDispositionHeader(const String& filename) : HttpSimpl
     String str = F("attachment; filename=\"");
     str += filename;
     str += '"';
-    setHeader(str);    
+    setHeader(str);
 }
 
 HttpLocationHeader::HttpLocationHeader(const String &location) : HttpSimpleHeader(FSPGM(Location), location) {
@@ -250,7 +249,7 @@ void  HttpHeaders::init() {
 }
 
 void  HttpHeaders::add(const String &name, const String &value) {
-    add(HttpSimpleHeader(name, value));
+    add(new HttpSimpleHeader(name, value));
 }
 
 HttpHeadersVector  &HttpHeaders::getHeaders() {
@@ -265,30 +264,31 @@ HttpHeadersIterator  HttpHeaders::end() {
     return _headers.end();
 }
 
-void  HttpHeaders::addNoCache(bool noStore) {
-    replace(HttpPragmaHeader(FSPGM(no_cache)));
-    replace(HttpCacheControlHeader().
-        setPrivate().
-        setNoCache(true).
-        setNoStore(noStore).
-        setMustRevalidate(noStore)
-    );
+void  HttpHeaders::addNoCache(bool noStore)
+{
+    replace(new HttpPragmaHeader(FSPGM(no_cache)));
+    auto hdr = new HttpCacheControlHeader();
+    hdr->setPrivate().setNoCache(true).setNoStore(noStore).setMustRevalidate(noStore);
+    replace(hdr);
     remove(FSPGM(Expires));
     remove(FSPGM(Last_Modified));
 }
 
-void  HttpHeaders::addDefaultHeaders() {
+void  HttpHeaders::addDefaultHeaders()
+{
     add(F("Access-Control-Allow-Origin"), F("*"));
-    add(HttpLinkHeader(F("<https://fonts.gstatic.com>; rel=preconnect; crossorigin")));
+    add(new HttpLinkHeader(F("<https://fonts.gstatic.com>; rel=preconnect; crossorigin")));
     add(F("X-Frame-Options"), F("SAMEORIGIN"));
-    add(HttpDateHeader(FSPGM(Expires), 86400 * 30));
+    add(new HttpDateHeader(FSPGM(Expires), 86400 * 30));
 }
 
 #if HAVE_HTTPHEADERS_ASYNCWEBSERVER
 
-void  HttpHeaders::setWebServerResponseHeaders(AsyncWebServerResponse *response) {
+void HttpHeaders::setWebServerResponseHeaders(AsyncWebServerResponse *response)
+{
     if (_headers.size()) {
         for (const auto &header : _headers) {
+//            debug_printf_P(PSTR("HttpHeaders::setWebServerResponseHeaders(): %s=%s\n"), header->getName().c_str(), header->getValue().c_str());
             response->addHeader(header->getName(), header->getValue());
         }
         clear(0);
@@ -308,14 +308,14 @@ void  HttpHeaders::dump(Print &output) {
 
 #endif
 
-HttpHeadersCmpFunction  HttpHeaders::compareName(const String &name) {
-    return [&](const HttpHeaderPtr &_header) {
+HttpHeadersCmpFunction HttpHeaders::compareName(const String &name) {
+    return [&name](const HttpHeaderPtr &_header) {
         return _header->getName().equalsIgnoreCase(name);
     };
 }
 
-HttpHeadersCmpFunction  HttpHeaders::compareHeaderPtr(const HttpHeaderPtr &headerPtr) {
-    return [&](const HttpHeaderPtr &_header) {
-        return headerPtr->equals(_header);
+HttpHeadersCmpFunction  HttpHeaders::compareHeader(const HttpHeader &header) {
+    return [&header](const HttpHeaderPtr &_header) {
+        return _header->equals(header);
     };
 }

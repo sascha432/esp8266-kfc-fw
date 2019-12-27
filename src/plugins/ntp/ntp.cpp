@@ -75,7 +75,7 @@ public:
 
     static void wifiConnectedCallback(uint8_t event, void *payload);
     static void updateTimeCallback(EventScheduler::TimerPtr timer);
-    static const String getStatus();
+    static void getStatus(Print &output);
     static void _setZoneEnd(time_t zoneEnd);
     static const time_t getZoneEnd();
     static void configTime();
@@ -264,7 +264,7 @@ void TimezoneData::_callback(bool status, const String message, time_t zoneEnd)
     }
 }
 
-const String TimezoneData::getStatus()
+void TimezoneData::getStatus(Print &out)
 {
     if (config._H_GET(Config().flags).ntpClientEnabled) {
         PrintHtmlEntitiesString out;
@@ -289,9 +289,9 @@ const String TimezoneData::getStatus()
                 out.print(server);
             }
         }
-        return out;
-    } else {
-        return FSPGM(Disabled);
+    }
+    else {
+        out.print(FSPGM(Disabled));
     }
 }
 
@@ -408,7 +408,7 @@ public:
     virtual void reconfigure(PGM_P source) override;
 
     virtual bool hasStatus() const override;
-    virtual const String getStatus() override;
+    virtual void getStatus(Print &output) override;
 
     virtual PGM_P getConfigureForm() const override {
         return getName();
@@ -454,9 +454,9 @@ bool NTPPlugin::hasStatus() const {
     return true;
 }
 
-const String NTPPlugin::getStatus()
+void NTPPlugin::getStatus(Print &output)
 {
-    return TimezoneData::getStatus();
+    TimezoneData::getStatus(output);
 }
 
 void NTPPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form) {

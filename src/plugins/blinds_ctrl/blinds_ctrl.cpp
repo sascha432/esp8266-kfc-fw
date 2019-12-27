@@ -31,7 +31,7 @@ public:
     virtual void reconfigure(PGM_P source) override;
 
     virtual bool hasStatus() const override;
-    virtual const String getStatus() override;
+    virtual void getStatus(Print &output) override;
 
     virtual bool hasWebUI() const override;
     virtual void createWebUI(WebUI &webUI) override;
@@ -100,16 +100,15 @@ bool BlindsControlPlugin::hasStatus() const {
     return true;
 }
 
-const String BlindsControlPlugin::getStatus() {
-    PrintHtmlEntitiesString str;
-    str.printf_P(PSTR("PWM %.2fkHz" HTML_S(br)), IOT_BLINDS_CTRL_PWM_FREQ / 1000.0);
+void BlindsControlPlugin::getStatus(Print &output) {
+    output.printf_P(PSTR("PWM %.2fkHz" HTML_S(br)), IOT_BLINDS_CTRL_PWM_FREQ / 1000.0);
 #if IOT_BLINDS_CTRL_RPM_PIN
-    str.print(F("Position sensing and stall protection" HTML_S(br)));
+    output.print(F("Position sensing and stall protection" HTML_S(br)));
 #endif
 
     for(uint8_t i = 0; i < 2; i++) {
         auto &_channel = _channels[i].getChannel();
-        str.printf_P(PSTR("Channel %u, state %s, open %ums, close %ums, current limit %umA/%ums" HTML_S(br)),
+        output.printf_P(PSTR("Channel %u, state %s, open %ums, close %ums, current limit %umA/%ums" HTML_S(br)),
             (i + 1),
             BlindsChannel::_stateStr(_channels[i].getState()),
             _channel.openTime,
@@ -118,7 +117,6 @@ const String BlindsControlPlugin::getStatus() {
             _channel.currentLimitTime
         );
     }
-    return str;
 }
 
 bool BlindsControlPlugin::hasWebUI() const {

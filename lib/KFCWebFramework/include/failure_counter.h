@@ -12,6 +12,8 @@
 
 #include <push_pack.h>
 
+PROGMEM_STRING_DECL(login_failure_file);
+
 typedef struct __attribute__packed__ FailureCounterFileRecordStruct  {
     uint32_t addr;
     uint16_t counter;
@@ -35,15 +37,15 @@ public:
     bool operator !() const;
     operator bool() const;
 
-    const time_t getTimeframe() const;
-    const bool isBlocked(const IPAddress &addr) const;
-    const bool isMatch(const IPAddress &addr) const;
+    time_t getTimeframe() const;
+    bool isBlocked(const IPAddress &addr) const;
+    bool isMatch(const IPAddress &addr) const;
     String getFirstFailure() const;
-    const uint32_t getCounter() const;
+    uint32_t getCounter() const;
     const IPAddress &getIPAddress() const;
 
     void addFailure();
-    void copyToRecord(FailureCounterFileRecord_t &record) const;
+    void write(File &file) const;
 
 private:
     IPAddress _addr;
@@ -54,7 +56,7 @@ private:
 
 class FailureCounterContainer {
 public:
-    FailureCounterContainer() {
+    FailureCounterContainer() : _lastRewrite(0) {
     }
     void clear() {
         _failures.clear();
@@ -66,7 +68,13 @@ public:
     void rewriteSPIFFSFile();
 
 private:
+    friend FailureCounter;
+
+    void _removeOldRecords();
+
+private:
     std::vector<FailureCounter> _failures;
+    time_t _lastRewrite;
 };
 
 #include <pop_pack.h>

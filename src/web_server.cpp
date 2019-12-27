@@ -64,7 +64,8 @@ WebServerSetCPUSpeedHelper::WebServerSetCPUSpeedHelper() : SpeedBooster(
 }
 
 
-AsyncWebServer *get_web_server_object() {
+AsyncWebServer *get_web_server_object()
+{
     return server;
 }
 
@@ -83,7 +84,8 @@ AsyncWebServer *get_web_server_object() {
 // #endif
 
 
-bool web_server_is_public_path(const String &pathString) {
+bool web_server_is_public_path(const String &pathString)
+{
     auto path = pathString.c_str();
     if (strstr_P(path, PSTR(".."))) {
         return false;
@@ -98,7 +100,8 @@ bool web_server_is_public_path(const String &pathString) {
     return false;
 }
 
-bool web_server_is_authenticated(AsyncWebServerRequest *request) {
+bool web_server_is_authenticated(AsyncWebServerRequest *request)
+{
     String SID;
     if ((request->hasArg(FSPGM(SID)) && (SID = request->arg(FSPGM(SID)))) || HttpCookieHeader::parseCookie(request, FSPGM(SID), SID)) {
 
@@ -114,7 +117,8 @@ bool web_server_is_authenticated(AsyncWebServerRequest *request) {
     return false;
 }
 
-bool web_server_client_accepts_gzip(AsyncWebServerRequest *request) {
+bool web_server_client_accepts_gzip(AsyncWebServerRequest *request)
+{
     auto header = request->getHeader(String(FSPGM(Accept_Encoding)));
     if (!header) {
         return false;
@@ -123,14 +127,16 @@ bool web_server_client_accepts_gzip(AsyncWebServerRequest *request) {
     return (strstr_P(acceptEncoding, PSTR("gzip")) || strstr_P(acceptEncoding, PSTR("deflate")));
 }
 
-void web_server_add_handler(AsyncWebHandler* handler) {
+void web_server_add_handler(AsyncWebHandler* handler)
+{
     server->addHandler(handler);
 }
 
 // server->on()
 #define on(a, ...)    on(String(a).c_str(), __VA_ARGS__)
 
-void web_server_not_found_handler(AsyncWebServerRequest *request) {
+void web_server_not_found_handler(AsyncWebServerRequest *request)
+{
 
 #if HUE_EMULATION
     if (HueEmulation::onNotFound(request)) {
@@ -145,7 +151,8 @@ void web_server_not_found_handler(AsyncWebServerRequest *request) {
 }
 
 
-void web_server_scan_wifi_handler(AsyncWebServerRequest *request) {
+void web_server_scan_wifi_handler(AsyncWebServerRequest *request)
+{
     if (web_server_is_authenticated(request)) {
         HttpHeaders httpHeaders(false);
         httpHeaders.addNoCache();
@@ -157,17 +164,19 @@ void web_server_scan_wifi_handler(AsyncWebServerRequest *request) {
     }
 }
 
-void web_server_logout_handler(AsyncWebServerRequest *request) {
+void web_server_logout_handler(AsyncWebServerRequest *request)
+ {
     AsyncWebServerResponse *response = request->beginResponse(302);
     HttpHeaders httpHeaders;
     httpHeaders.addNoCache(true);
-    httpHeaders.add(HttpCookieHeader(FSPGM(SID)));
-    httpHeaders.add(HttpLocationHeader(FSPGM(slash)));
+    httpHeaders.add(new HttpCookieHeader(FSPGM(SID)));
+    httpHeaders.add(new HttpLocationHeader(FSPGM(slash)));
     httpHeaders.setWebServerResponseHeaders(response);
     request->send(response);
 }
 
-void web_server_is_alive_handler(AsyncWebServerRequest *request) {
+void web_server_is_alive_handler(AsyncWebServerRequest *request)
+{
     AsyncWebServerResponse *response = request->beginResponse(200, FSPGM(mime_text_plain), String(request->arg(F("p")).toInt()));
     HttpHeaders httpHeaders;
     httpHeaders.addNoCache();
@@ -175,7 +184,8 @@ void web_server_is_alive_handler(AsyncWebServerRequest *request) {
     request->send(response);
 }
 
-void web_server_get_webui_json(AsyncWebServerRequest *request) {
+void web_server_get_webui_json(AsyncWebServerRequest *request)
+{
     WebServerSetCPUSpeedHelper setCPUSpeed;
     AsyncJsonResponse *response = new AsyncJsonResponse();
     WsWebUISocket::createWebUIJSON(response->getJsonObject());
@@ -186,7 +196,8 @@ void web_server_get_webui_json(AsyncWebServerRequest *request) {
     request->send(response);
 }
 
-void web_server_speed_test(AsyncWebServerRequest *request, bool zip) {
+void web_server_speed_test(AsyncWebServerRequest *request, bool zip)
+{
     WebServerSetCPUSpeedHelper setCPUSpeed;
 #if !defined(SPEED_TEST_NO_AUTH) || SPEED_TEST_NO_AUTH == 0
     if (web_server_is_authenticated(request)) {
@@ -198,7 +209,7 @@ void web_server_speed_test(AsyncWebServerRequest *request, bool zip) {
         auto size = std::max(1024 * 64, (int)request->arg(F("size")).toInt());
         if (zip) {
             response = new AsyncSpeedTestResponse(FSPGM(mime_application_zip), size);
-            httpHeaders.add(HttpDispositionHeader(F("speedtest.zip")));
+            httpHeaders.add(new HttpDispositionHeader(F("speedtest.zip")));
         } else {
             response = new AsyncSpeedTestResponse(FSPGM(mime_image_bmp), size);
         }
@@ -212,15 +223,18 @@ void web_server_speed_test(AsyncWebServerRequest *request, bool zip) {
 #endif
 }
 
-void web_server_speed_test_zip(AsyncWebServerRequest *request) {
+void web_server_speed_test_zip(AsyncWebServerRequest *request)
+{
     web_server_speed_test(request, true);
 }
 
-void web_server_speed_test_image(AsyncWebServerRequest *request) {
+void web_server_speed_test_image(AsyncWebServerRequest *request)
+{
     web_server_speed_test(request, false);
 }
 
-void web_server_export_settings(AsyncWebServerRequest *request) {
+void web_server_export_settings(AsyncWebServerRequest *request)
+{
     WebServerSetCPUSpeedHelper setCPUSpeed;
     if (web_server_is_authenticated(request)) {
 
@@ -234,7 +248,7 @@ void web_server_export_settings(AsyncWebServerRequest *request) {
         struct tm *tm = timezone_localtime(&now);
         timezone_strftime_P(timeStr, sizeof(timeStr), PSTR("%Y%m%d_%H%M%S"), tm);
         PrintString filename(F("kfcfw_config_%s_%s.json"), hostname, timeStr);
-        httpHeaders.add(HttpDispositionHeader(filename));
+        httpHeaders.add(new HttpDispositionHeader(filename));
 
         PrintString content;
         config.exportAsJson(content, config.getFirmwareVersion());
@@ -247,7 +261,8 @@ void web_server_export_settings(AsyncWebServerRequest *request) {
     }
 }
 
-void web_server_update_handler(AsyncWebServerRequest *request) {
+void web_server_update_handler(AsyncWebServerRequest *request)
+{
     if (request->_tempObject) {
         UploadStatus_t *status = reinterpret_cast<UploadStatus_t *>(request->_tempObject);
         AsyncWebServerResponse *response = nullptr;
@@ -273,8 +288,8 @@ void web_server_update_handler(AsyncWebServerRequest *request) {
 
                 response = request->beginResponse(302);
                 HttpHeaders httpHeaders(false);
-                httpHeaders.add(HttpLocationHeader(F("/serial_console.html")));
-                httpHeaders.replace(HttpConnectionHeader(HttpConnectionHeader::HTTP_CONNECTION_CLOSE));
+                httpHeaders.add(new HttpLocationHeader(F("/serial_console.html")));
+                httpHeaders.replace(new HttpConnectionHeader(HttpConnectionHeader::HTTP_CONNECTION_CLOSE));
                 httpHeaders.setWebServerResponseHeaders(response);
                 request->send(response);
             }
@@ -302,8 +317,8 @@ void web_server_update_handler(AsyncWebServerRequest *request) {
             }
             response = request->beginResponse(302);
             HttpHeaders httpHeaders(false);
-            httpHeaders.add(HttpLocationHeader(location));
-            httpHeaders.replace(HttpConnectionHeader(HttpConnectionHeader::HTTP_CONNECTION_CLOSE));
+            httpHeaders.add(new HttpLocationHeader(location));
+            httpHeaders.replace(new HttpConnectionHeader(HttpConnectionHeader::HTTP_CONNECTION_CLOSE));
             httpHeaders.setWebServerResponseHeaders(response);
             request->send(response);
 
@@ -331,7 +346,8 @@ void web_server_update_handler(AsyncWebServerRequest *request) {
     }
 }
 
-void web_server_update_upload_handler(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
+void web_server_update_upload_handler(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final)
+{
 #if STK500V1
     static File firmwareTempFile;
 #endif
@@ -430,8 +446,8 @@ void web_server_update_upload_handler(AsyncWebServerRequest *request, String fil
     }
 }
 
-void init_web_server() {
-
+void init_web_server()
+{
     if (config._H_GET(Config().flags).webServerMode == HTTP_MODE_DISABLED) {
         return;
     }
@@ -513,8 +529,8 @@ void init_web_server() {
 }
 
 
-PGM_P web_server_get_content_type(const String &path) {
-
+PGM_P web_server_get_content_type(const String &path)
+{
     const char *cPath = path.c_str();
     auto pathLen = path.length();
 
@@ -557,7 +573,8 @@ PGM_P web_server_get_content_type(const String &path) {
     }
 }
 
-bool web_server_send_file(String path, HttpHeaders &httpHeaders, bool client_accepts_gzip, FSMapping *mapping, AsyncWebServerRequest *request, WebTemplate *webTemplate) {
+bool web_server_send_file(String path, HttpHeaders &httpHeaders, bool client_accepts_gzip, FSMapping *mapping, AsyncWebServerRequest *request, WebTemplate *webTemplate)
+{
     WebServerSetCPUSpeedHelper setCPUSpeed;
     AsyncWebServerResponse *response = nullptr;
 
@@ -609,12 +626,12 @@ bool web_server_send_file(String path, HttpHeaders &httpHeaders, bool client_acc
          httpHeaders.addNoCache(request->method() == HTTP_POST);
     } else {
         response = new AsyncProgmemFileResponse(FPSTR(web_server_get_content_type(path)), mapping);
-        httpHeaders.replace(HttpDateHeader(FSPGM(Expires), 86400 * 30));
-        httpHeaders.replace(HttpDateHeader(FSPGM(Last_Modified), mapping->getModificatonTime()));
+        httpHeaders.replace(new HttpDateHeader(FSPGM(Expires), 86400 * 30));
+        httpHeaders.replace(new HttpDateHeader(FSPGM(Last_Modified), mapping->getModificatonTime()));
         if (web_server_is_public_path(path)) {
-            HttpCacheControlHeader header = HttpCacheControlHeader();
-            header.setPublic();
-            header.setMaxAge(HttpCacheControlHeader::MAX_AGE_AUTO);
+            HttpCacheControlHeader *header = new HttpCacheControlHeader();
+            header->setPublic();
+            header->setMaxAge(HttpCacheControlHeader::MAX_AGE_AUTO);
             httpHeaders.replace(header);
         }
     }
@@ -627,7 +644,8 @@ bool web_server_send_file(String path, HttpHeaders &httpHeaders, bool client_acc
 }
 
 
-bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWebServerRequest *request) {
+bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWebServerRequest *request)
+{
     _debug_printf_P(PSTR("web_server_handle_file_read: %s\n"), path.c_str());
     WebServerSetCPUSpeedHelper setCPUSpeed;
 
@@ -658,7 +676,9 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
     if (!web_server_is_public_path(path) && !_is_authenticated) {
         String loginError = F("Your session has expired.");
 
-        Logger_security(F("Authentication failed for %s"), IPAddress(request->client()->getRemoteAddress()).toString().c_str());
+        if (request->hasArg(FSPGM(SID))) { // just report failures if the cookie is invalid
+            Logger_security(F("Authentication failed for %s"), IPAddress(request->client()->getRemoteAddress()).toString().c_str());
+        }
 
         httpHeaders.addNoCache(true);
 
@@ -667,20 +687,22 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
             IPAddress remote_addr = request->client()->remoteIP();
 
             if (loginFailures.isAddressBlocked(remote_addr) == false && request->arg(F("username")) == config._H_STR(Config().device_name) && request->arg(F("password")) == config._H_STR(Config().device_pass)) {
-                HttpCookieHeader cookie = HttpCookieHeader(FSPGM(SID));
-                cookie.setValue(generate_session_id(config._H_STR(Config().device_name), config._H_STR(Config().device_pass), NULL));
-                cookie.setPath(FSPGM(slash));
+                auto cookie = new HttpCookieHeader(FSPGM(SID));
+                cookie->setValue(generate_session_id(config._H_STR(Config().device_name), config._H_STR(Config().device_pass), NULL));
+                cookie->setPath(FSPGM(slash));
                 httpHeaders.add(cookie);
 
                 if (request->arg(F("keep")) == FSPGM(1)) {
                     auto _time = time(nullptr);
                     if (IS_TIME_VALID(_time)) {
-                        cookie.setExpires(_time + 86400 * 30);
-                        httpHeaders.add(cookie);
+                        auto keepCookie = new HttpCookieHeader(FSPGM(SID));
+                        *keepCookie = *cookie;
+                        keepCookie->setExpires(_time + 86400 * 30);
+                        httpHeaders.add(keepCookie);
                     }
                 }
 
-                _debug_printf_P(PSTR("Login successful, cookie %s\n"), cookie.getValue().c_str());
+                _debug_printf_P(PSTR("Login successful, cookie %s\n"), cookie->getValue().c_str());
                 _is_authenticated = true;
                 Logger_security(F("Login successful from %s"), remote_addr.toString().c_str());
             } else {
@@ -688,7 +710,6 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
                 const FailureCounter &failure = loginFailures.addFailure(remote_addr);
                 Logger_security(F("Login from %s failed %d times since %s"), remote_addr.toString().c_str(), failure.getCounter(), failure.getFirstFailure().c_str());
                 return web_server_send_file(FSPGM(login_html), httpHeaders, client_accepts_gzip, nullptr, request, new LoginTemplate(loginError));
-
             }
         } else {
             if (constexpr_endsWith(path, PSTR(".html"))) {
@@ -720,6 +741,7 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
                 }
             }
         }
+        _debug_printf_P(PSTR("web_server_handle_file_read: webTemplate=%p\n"), webTemplate);
         if (!webTemplate) {
             if (constexpr_String_equals(path, PSTR("/wifi.html"))) {
                 Form *form = new WifiSettingsForm(request);
@@ -799,16 +821,26 @@ public:
     WebServerPlugin() {
         register_plugin(this);
     }
-    virtual PGM_P getName() const;
-    virtual PluginPriorityEnum_t getSetupPriority() const override;
-    virtual bool allowSafeMode() const override;
+    virtual PGM_P getName() const {
+        return PSTR("http");;
+    }
+    virtual PluginPriorityEnum_t getSetupPriority() const override {
+        return PRIO_HTTP;
+    }
+    virtual bool allowSafeMode() const override {
+        return true;
+    }
 
     virtual void setup(PluginSetupMode_t mode) override;
     virtual void reconfigure(PGM_P source) override;
-    virtual bool hasReconfigureDependecy(PluginComponent *plugin) const override;
+    virtual bool hasReconfigureDependecy(PluginComponent *plugin) const override {
+        return false;
+    }
 
-    virtual bool hasStatus() const override;
-    virtual const String getStatus() override;
+    virtual bool hasStatus() const override {
+        return true;
+    }
+    virtual void getStatus(Print &output) override;
 
     virtual MenuTypeEnum_t getMenuType() const override {
         return NONE;
@@ -821,23 +853,13 @@ public:
 
 static WebServerPlugin plugin;
 
-PGM_P WebServerPlugin::getName() const {
-    return PSTR("http");
-}
-
-WebServerPlugin::PluginPriorityEnum_t WebServerPlugin::getSetupPriority() const {
-    return PRIO_HTTP;
-}
-
-bool WebServerPlugin::allowSafeMode() const {
-    return true;
-}
-
-void WebServerPlugin::setup(PluginSetupMode_t mode) {
+void WebServerPlugin::setup(PluginSetupMode_t mode)
+{
     init_web_server();
 }
 
-void WebServerPlugin::reconfigure(PGM_P source) {
+void WebServerPlugin::reconfigure(PGM_P source)
+{
     if (server) {
         delete server;
         server = nullptr;
@@ -845,35 +867,28 @@ void WebServerPlugin::reconfigure(PGM_P source) {
     init_web_server();
 }
 
-bool WebServerPlugin::hasReconfigureDependecy(PluginComponent *plugin) const {
-    return false;
-}
-
-bool WebServerPlugin::hasStatus() const {
-    return true;
-}
-
-const String WebServerPlugin::getStatus() {
+void WebServerPlugin::getStatus(Print &output)
+{
     auto flags = config._H_GET(Config().flags);
-    PrintString out = F("Web server ");
+    output.print(F("Web server "));
     if (flags.webServerMode != HTTP_MODE_DISABLED) {
-        out.printf_P(PSTR("running on port %u"), config._H_GET(Config().http_port));
+        output.printf_P(PSTR("running on port %u"), config._H_GET(Config().http_port));
         #if WEBSERVER_TLS_SUPPORT
-            out.print(F(", TLS "));
+            output.print(F(", TLS "));
             if (flags.webServerMode == HTTP_MODE_SECURE) {
-                out += FSPGM(enabled);
+                output.print(FSPGM(enabled));
             } else {
-                out += FSPGM(disabled);
+                output.print(FSPGM(disabled)));
             }
         #endif
-    } else {
-        out += FSPGM(disabled);
     }
-    return out;
+    else {
+        output.print(FSPGM(disabled));
+    }
 }
 
-void WebServerPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form) {
-
+void WebServerPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
+{
     form.add<uint8_t>(F("http_enabled"), _H_STRUCT_FORMVALUE(Config().flags, uint8_t, webServerMode));
     form.addValidator(new FormRangeValidator(0, HTTP_MODE_SECURE));
 #  if WEBSERVER_TLS_SUPPORT

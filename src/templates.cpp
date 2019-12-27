@@ -141,7 +141,9 @@ String WebTemplate::process(const String &key) {
         uint8_t cmp_length = key.length() - 7;
         for(auto plugin: plugins) {
             if (plugin->hasStatus() && strncasecmp_P(key.c_str(), plugin->getName(), cmp_length) == 0) {
-                return plugin->getStatus();
+                PrintHtmlEntitiesString str;
+                plugin->getStatus(str);
+                return str;
             }
         }
         _return(FSPGM(Not_supported));

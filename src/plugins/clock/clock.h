@@ -144,7 +144,7 @@ public:
     virtual bool hasStatus() const override {
         return true;
     }
-    virtual const String getStatus() override;
+    virtual void getStatus(Print &output) override;
 
     virtual bool hasWebUI() const override {
         return true;

@@ -35,7 +35,7 @@ public:
     virtual bool hasReconfigureDependecy(PluginComponent *plugin) const override;
 
     virtual bool hasStatus() const override;
-    virtual const String getStatus() override;
+    virtual void getStatus(Print &output) override;
 
     virtual bool hasWebUI() const override;
     virtual void createWebUI(WebUI &webUI) override;

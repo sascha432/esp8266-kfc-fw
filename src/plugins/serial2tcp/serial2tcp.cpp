@@ -34,7 +34,7 @@ public:
     virtual void setup(PluginSetupMode_t mode) override;
     virtual void reconfigure(PGM_P source) override;
     virtual bool hasStatus() const override;
-    virtual const String getStatus() override;
+    virtual void getStatus(Print &output) override;
     virtual bool canHandleForm(const String &formName) const override;
     virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
     virtual bool hasAtMode() const override;
@@ -71,9 +71,8 @@ bool Serial2TcpPlugin::hasStatus() const {
     return true;
 }
 
-const String Serial2TcpPlugin::getStatus() {
+void Serial2TcpPlugin::getStatus(Print &output) {
 
-    PrintHtmlEntitiesString out;
     auto cfg = config._H_GET(Config().serial2tcp);
     auto flags = config._H_GET(Config().flags);
     if (flags.serial2TCPMode == SERIAL2TCP_MODE_DISABLED) {
@@ -81,12 +80,12 @@ const String Serial2TcpPlugin::getStatus() {
     }
     else {
         if (Serial2TcpBase::isServer(flags)) {
-            out.print(F("Server Mode: "));
-            out.printf_P(PSTR("Listening on port %u"), cfg.port);
+            output.print(F("Server Mode: "));
+            output.printf_P(PSTR("Listening on port %u"), cfg.port);
         }
         else {
-            out.print(F("Client Mode: "));
-            out.printf_P(PSTR("Connecting to %s:%u, Auto connect " HTML_S(strong) "%s" HTML_E(strong) ", Auto reconnect " HTML_S(strong) "%s" HTML_E(strong)),
+            output.print(F("Client Mode: "));
+            output.printf_P(PSTR("Connecting to %s:%u, Auto connect " HTML_S(strong) "%s" HTML_E(strong) ", Auto reconnect " HTML_S(strong) "%s" HTML_E(strong)),
                 cfg.host,
                 cfg.port,
                 cfg.auto_connect ? SPGM(enabled) : SPGM(disabled),
@@ -94,14 +93,13 @@ const String Serial2TcpPlugin::getStatus() {
             );
         }
         if (Serial2TcpBase::isTLS(flags)) {
-            out.print(F(", TLS enabled"));
+            output.print(F(", TLS enabled"));
         }
         auto instance = Serial2TcpBase::getInstance();
         if (instance) {
-            instance->getStatus(out);
+            instance->getStatus(output);
         }
     }
-    return out;
 }
 
 bool Serial2TcpPlugin::canHandleForm(const String &formName) const {

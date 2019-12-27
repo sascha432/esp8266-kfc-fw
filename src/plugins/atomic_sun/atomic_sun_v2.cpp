@@ -59,11 +59,9 @@ void Driver_4ChDimmer::_end() {
     Dimmer_Base::_end();
 }
 
-const String AtomicSunPlugin::getStatus() {
-    PrintHtmlEntitiesString out;
-    out = F("4 Channel MOSFET Dimmer enabled on Serial Port");
-    _printStatus(out);
-    return out;
+void AtomicSunPlugin::getStatus(Print &output) {
+    output = F("4 Channel MOSFET Dimmer enabled on Serial Port");
+    _printStatus(output);
 }
 
 void Driver_4ChDimmer::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector) {

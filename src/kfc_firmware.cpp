@@ -7,6 +7,7 @@
 #include <vector>
 #include <functional>
 #include <LoopFunctions.h>
+#include <EventTimer.h>
 #include <WiFiCallbacks.h>
 #include <OSTimer.h>
 #include <PrintString.h>
@@ -139,9 +140,11 @@ static void deep_sleep_forever() {
 // }
 
 
-void remove_crash_counter_file() {
+static void remove_crash_counter(EventScheduler::TimerPtr timer) {
 #if SPIFFS_SUPPORT
-    SPIFFS.begin();
+    if (!timer) {
+        SPIFFS.begin();
+    }
     SPIFFS.remove(FSPGM(crash_counter_file));
 #endif
 }
@@ -236,12 +239,12 @@ void setup() {
 
             if (
 #if DEBUG
-            __while(20e3, []() {
+            __while(10000, []() {
                 if (Serial.available()) {
                     switch(Serial.read()) {
                         case 'c':
                             RTCMemoryManager::clear();
-                            remove_crash_counter_file();
+                            remove_crash_counter(nullptr);
                             KFC_SAFE_MODE_SERIAL_PORT.println(F("RTC memory cleared"));
                             break;
                         case 'h':
@@ -260,7 +263,7 @@ void setup() {
                         case 'r':
                             resetDetector.setSafeMode(false);
                             resetDetector.clearCounter();
-                            remove_crash_counter_file();
+                            remove_crash_counter(nullptr);
                             return false;
                         case 's':
                             resetDetector.setSafeMode(1);
@@ -299,7 +302,7 @@ void setup() {
         file = SPIFFS.open(FSPGM(crash_counter_file), "w");
         file.write(counter);
         file.close();
-        if (counter >= 3) {  // boot in safe mode if there were 3 crashes within the first 5min.
+        if (counter >= 3) {  // boot in safe mode if there were 3 crashes within the first minute
             resetDetector.setSafeMode(1);
         }
     }
@@ -320,8 +323,9 @@ void setup() {
         prepare_plugins();
         setup_plugins(PluginComponent::PLUGIN_SETUP_SAFE_MODE);
 
-        // check if wifi is up once per minute
-        Scheduler.addTimer(60e3, true, [](EventScheduler::TimerPtr timer) {
+        // check if wifi is up after 10 seconds and change to timer to once per minute
+        Scheduler.addTimer(10000, true, [](EventScheduler::TimerPtr timer) {
+            timer->changeOptions(60000);
             if (!WiFi.isConnected()) {
                 config.reconfigureWiFi();
             }
@@ -368,9 +372,7 @@ void setup() {
         setup_plugins(resetDetector.hasWakeUpDetected() ? PluginComponent::PLUGIN_SETUP_AUTO_WAKE_UP : PluginComponent::PLUGIN_SETUP_DEFAULT);
 
 #if SPIFFS_SUPPORT
-        Scheduler.addTimer(300e3, false, [](EventScheduler::TimerPtr timer) { // remove file after 5min.
-            SPIFFS.remove(FSPGM(crash_counter_file));
-        });
+        Scheduler.addTimer(60000, false, remove_crash_counter); // remove file after 1min.
 #endif
 
     }

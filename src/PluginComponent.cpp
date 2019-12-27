@@ -68,9 +68,8 @@ bool PluginComponent::hasStatus() const {
     return false;
 }
 
-const String PluginComponent::getStatus() {
+void PluginComponent::getStatus(Print &output) {
     __debugbreak_and_panic_printf_P(PSTR("PluginComponent::getStatus() pure virtual: %s\n"), getName());
-    return _sharedEmptyString;
 }
 
 
@@ -141,6 +140,7 @@ void PluginComponent::restart() {
 
 
 PluginComponent *PluginComponent::getForm(const String &formName) {
+    _debug_printf_P(PSTR("PluginComponent::getForm(%s)\n"), formName.c_str());
     for(auto plugin: plugins) {
         if (plugin->canHandleForm(formName)) {
             _debug_printf_P(PSTR("PluginComponent::getForm(%s) = %s\n"), formName.c_str(), plugin->getName());

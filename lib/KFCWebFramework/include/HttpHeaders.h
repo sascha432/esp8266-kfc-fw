@@ -7,6 +7,7 @@
 #include <Arduino_compat.h>
 #include <time.h>
 #include <functional>
+#include <memory>
 #include <vector>
 
 PROGMEM_STRING_DECL(Pragma);
@@ -42,7 +43,7 @@ class AsyncWebServerRequest;
 class HttpHeader;
 class Httpheaders;
 
-typedef std::shared_ptr<HttpHeader>                             HttpHeaderPtr;
+typedef std::unique_ptr<HttpHeader>                             HttpHeaderPtr;
 typedef std::vector<HttpHeaderPtr>                              HttpHeadersVector;
 typedef std::vector<HttpHeaderPtr>::iterator                    HttpHeadersIterator;
 typedef std::function<bool(const HttpHeaderPtr &_header)>       HttpHeadersCmpFunction;
@@ -60,7 +61,7 @@ public:
     }
     virtual const String getHeader();
 
-    virtual bool equals(const HttpHeaderPtr &header) const;
+    virtual bool equals(const HttpHeader &header) const;
 
 protected:
     String _name;
@@ -274,8 +275,9 @@ public:
         return *this;
     }
 
-    virtual bool equals(const HttpHeaderPtr &header) const override {
-        return equals(static_cast<HttpCookieHeader&>(*header));
+    virtual bool equals(const HttpHeader &header) const override
+    {
+        return equals(static_cast<const HttpCookieHeader&>(header));
     }
 
     bool equals(const HttpCookieHeader &header) const {
@@ -318,30 +320,22 @@ public:
     void init();
     void clear(uint8_t reserveItems = 0);
 
-    template<typename T, typename std::enable_if<std::is_base_of<HttpHeader, T>::value>::type* = nullptr>
-    void add(T header) {
-        _headers.push_back(std::make_shared<T>(header));
+    void add(HttpHeader *header) {
+        _headers.push_back(std::unique_ptr<HttpHeader>(header));
     }
 
-    template<typename T, typename std::enable_if<std::is_base_of<HttpHeader, T>::value>::type* = nullptr>
-    void replace(T header) {
-        const HttpHeaderPtr &headerPtr = std::make_shared<T>(header);
-        remove(headerPtr);
-        _headers.push_back(headerPtr);
-    }
+    void add(const String& name, const String& value);
 
-    template<typename T, typename std::enable_if<std::is_base_of<HttpHeader, T>::value>::type* = nullptr>
-    void remove(const T &header) {
-        _headers.erase(std::remove_if(_headers.begin(), _headers.end(), compareHeaderPtr(std::make_shared<T>(header))), _headers.end());
+    void replace(HttpHeader *header) {
+        remove(*header);
+        _headers.push_back(std::unique_ptr<HttpHeader>(header));
     }
-
-    void add(const String &name, const String &value);
 
     void remove(const String &name) {
         _headers.erase(std::remove_if(_headers.begin(), _headers.end(), compareName(name)), _headers.end());
     }
-    void remove(const HttpHeaderPtr &header) {
-        _headers.erase(std::remove_if(_headers.begin(), _headers.end(), compareHeaderPtr(header)), _headers.end());
+    void remove(const HttpHeader& header) {
+        _headers.erase(std::remove_if(_headers.begin(), _headers.end(), compareHeader(header)), _headers.end());
     }
 
     HttpHeadersVector &getHeaders();
@@ -360,7 +354,7 @@ public:
 
 private:
     HttpHeadersCmpFunction compareName(const String &name);
-    HttpHeadersCmpFunction compareHeaderPtr(const HttpHeaderPtr &headerPtr);
+    HttpHeadersCmpFunction compareHeader(const HttpHeader &headerPtr);
 
     static HttpHeaders _instance;
 

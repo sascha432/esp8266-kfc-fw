@@ -147,7 +147,7 @@ public:
     virtual WebUIInterface *getWebUIInterface() override;
 
     virtual bool hasStatus() const override;
-    virtual const String getStatus() override;
+    virtual void getStatus(Print &output) override;
 };
 
 extern AtomicSunPlugin dimmer_plugin;

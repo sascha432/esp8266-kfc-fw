@@ -123,8 +123,8 @@ public:
     void setup(PluginSetupMode_t mode) override;
     void reconfigure(PGM_P source) override;
 
-    bool hasStatus() const override;
-    const String getStatus() override;
+    virtual bool hasStatus() const override;
+    virtual void getStatus(Print &output) override;
 
     virtual PGM_P getConfigureForm() const override {
         return getName();
@@ -142,58 +142,63 @@ public:
 
 static SyslogPlugin plugin;
 
-PGM_P SyslogPlugin::getName() const {
+PGM_P SyslogPlugin::getName() const
+{
     return PSTR("syslog");
 }
 
-SyslogPlugin::PluginPriorityEnum_t SyslogPlugin::getSetupPriority() const {
+SyslogPlugin::PluginPriorityEnum_t SyslogPlugin::getSetupPriority() const
+{
     return (PluginPriorityEnum_t)PRIO_SYSLOG;
 }
 
-bool SyslogPlugin::autoSetupAfterDeepSleep() const {
+bool SyslogPlugin::autoSetupAfterDeepSleep() const
+{
     return true;
 }
 
-void SyslogPlugin::setup(PluginSetupMode_t mode) {
+void SyslogPlugin::setup(PluginSetupMode_t mode)
+{
     syslog_setup();
 }
 
-void SyslogPlugin::reconfigure(PGM_P source) {
+void SyslogPlugin::reconfigure(PGM_P source)
+{
     syslog_setup();
 }
 
-bool SyslogPlugin::hasStatus() const {
+bool SyslogPlugin::hasStatus() const
+{
     return true;
 }
 
-const String SyslogPlugin::getStatus() {
+void SyslogPlugin::getStatus(Print &output)
+{
 #if SYSLOG
-    PrintHtmlEntitiesString out;
     switch(config._H_GET(Config().flags).syslogProtocol) {
         case SYSLOG_PROTOCOL_UDP:
-            out.printf_P(PSTR("UDP @ %s:%u"), config._H_STR(Config().syslog_host), config._H_GET(Config().syslog_port));
+            output.printf_P(PSTR("UDP @ %s:%u"), config._H_STR(Config().syslog_host), config._H_GET(Config().syslog_port));
             break;
         case SYSLOG_PROTOCOL_TCP:
-            out.printf_P(PSTR("TCP @ %s:%u"), config._H_STR(Config().syslog_host), config._H_GET(Config().syslog_port));
+            output.printf_P(PSTR("TCP @ %s:%u"), config._H_STR(Config().syslog_host), config._H_GET(Config().syslog_port));
             break;
         case SYSLOG_PROTOCOL_TCP_TLS:
-            out.printf_P(PSTR("TCP TLS @ %s:%u"), config._H_STR(Config().syslog_host), config._H_GET(Config().syslog_port));
+            output.printf_P(PSTR("TCP TLS @ %s:%u"), config._H_STR(Config().syslog_host), config._H_GET(Config().syslog_port));
             break;
         default:
-            out += FSPGM(Disabled);
+            output.print(FSPGM(Disabled));
             break;
     }
 #if DEBUG_USE_SYSLOG
-    out.print(F(HTML_S(br) "Debugging enabled, target " DEBUG_USE_SYSLOG_TARGET));
+    output.print(F(HTML_S(br) "Debugging enabled, target " DEBUG_USE_SYSLOG_TARGET));
 #endif
-    return out;
 #else
-    return FSPGM(Not_supported);
+    output.print(FSPGM(Not_supported));
 #endif
 }
 
-void SyslogPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form) {
-
+void SyslogPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
+{
     form.add<uint8_t>(F("syslog_enabled"), _H_STRUCT_FORMVALUE(Config().flags, uint8_t, syslogProtocol));
     form.addValidator(new FormRangeValidator(SYSLOG_PROTOCOL_NONE, SYSLOG_PROTOCOL_FILE));
 
@@ -213,7 +218,8 @@ void SyslogPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &for
     form.finalize();
 }
 
-void SyslogPlugin::prepareDeepSleep(uint32_t sleepTimeMillis) {
+void SyslogPlugin::prepareDeepSleep(uint32_t sleepTimeMillis)
+{
     uint16_t defaultWaitTime = 250;
     if (sleepTimeMillis > 60e3) {  // longer than 1min, increase wait time
         defaultWaitTime *= 4;
@@ -245,21 +251,25 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(SQC, "SQC", "Clear syslog queue");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(SQI, "SQI", "Display syslog queue info");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(SQD, "SQD", "Display syslog queue");
 
-void print_syslog_disabled(Stream &output) {
+void print_syslog_disabled(Stream &output)
+{
     output.println(F("+SQx: Syslog is disabled"));
 }
 
-bool SyslogPlugin::hasAtMode() const {
+bool SyslogPlugin::hasAtMode() const
+{
     return true;
 }
 
-void SyslogPlugin::atModeHelpGenerator() {
+void SyslogPlugin::atModeHelpGenerator()
+{
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SQC));
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SQI));
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SQD));
 }
 
-bool SyslogPlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) {
+bool SyslogPlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv)
+{
     if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SQC))) {
         if (syslog) {
             syslog->getQueue()->clear();

@@ -41,7 +41,7 @@ public:
 
     static bool onNotFound(AsyncWebServerRequest *request);
     static void onRequestBody(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total);
-    static const String getStatus();
+    virtual void getStatus(Print &output) override;
     static HueDeviceVector createDeviceList();
 
 private:

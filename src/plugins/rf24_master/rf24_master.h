@@ -26,7 +26,7 @@ public:
     virtual void reconfigure(PGM_P source) override;
 
     virtual bool hasStatus() const override;
-    virtual const String getStatus() override;
+    virtual void getStatus(Print &output) override;
 
 #if AT_MODE_SUPPORTED
     virtual bool hasAtMode() const override;

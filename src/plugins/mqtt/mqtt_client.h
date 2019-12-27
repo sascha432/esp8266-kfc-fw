@@ -151,7 +151,7 @@ public:
 
     static const String connectionDetailsString();
     static const String connectionStatusString();
-    static const String getStatus();
+    static void getStatus(Print &output);
     static void handleWiFiEvents(uint8_t event, void *payload);
 
     inline static MQTTClient *getClient() {

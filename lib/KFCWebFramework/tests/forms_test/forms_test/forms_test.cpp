@@ -2,7 +2,9 @@
 #include <Arduino_compat.h>
 #include <array>
 #include <assert.h>
+#include <PrintString.h>
 #include "KFCForms.h"
+#include "BootstrapMenu.h"
 
 typedef enum WiFiMode 
 {
@@ -25,7 +27,6 @@ typedef uint32_t ConfigFlags_t;
 #define FLAGS_MQTT_ENABLED          0x00000040
 #define FLAGS_SECURE_MQTT           0x00008000
 
-
 class TestForm : public Form {
 public:
     TestForm(FormData *data) : Form(data) {
@@ -33,8 +34,11 @@ public:
 
     void createForm() {
 
-        add<WiFiMode_t>(F("mode"), wifi_mode, [this](WiFiMode_t value, FormField *) {
+        add<float>(F("a_float"), &a_float);
+
+        add<WiFiMode_t>(F("mode"), wifi_mode, [this](WiFiMode_t value, FormField &, bool) {
             wifi_mode = value;
+            return false;
         });
         addValidator(new FormRangeValidator(F("Invalid mode"), WIFI_OFF, WIFI_AP_STA));
 
@@ -47,14 +51,20 @@ public:
         addValidator(new FormRangeValidator(1, 13));
 
         // select input with enumeration validator
-        add<uint8_t>(F("encryption"), &encryption);
+        add<uint8_t>(F("encryption"), &encryption, [](uint8_t &value, FormField &field, bool isSetter) {
+            //value *= 2;
+            return false;
+        });
         std::array<uint8_t, 5> my_array2{ENC_TYPE_NONE, ENC_TYPE_TKIP, ENC_TYPE_WEP, ENC_TYPE_CCMP, ENC_TYPE_AUTO};
         addValidator(new FormEnumValidator<uint8_t, 5>(F("Invalid encryption"), my_array2));
 
         // check box input with callback to assign/modify/validate the new data
-        add<bool>(F("ap_hidden"), is_hidden_ssid, [this](bool value, FormField *) {
+        add<bool>(F("ap_hidden"), is_hidden_ssid, [this](bool value, FormField &, bool) {
             is_hidden_ssid = value ? 123 : 0;
-        }, FormField::INPUT_CHECK);
+            return false;
+        }, FormField::INPUT_CHECK)->setFormUI(
+            (new FormUI(FormUI::TypeEnum_t::SELECT, F("SSID")))->setBoolItems(F("Show SSID"), F("Hide SSID"))
+        );
 
         // select input
         // bits in the array are addressed "0" to "sizeof(array) - 1" inside the form
@@ -71,11 +81,25 @@ public:
         addValidator(new FormValidHostOrIpValidator());
 
         add(new FormObject<IPAddress&>(F("dns1"), dns1, FormField::INPUT_TEXT));
-        add(new FormObject<IPAddress>(F("dns2"), dns2, [this](const IPAddress &addr, FormField *) {
+        add(new FormObject<IPAddress>(F("dns2"), dns2, [this](const IPAddress &addr, FormField &) {
             dns2 = addr;
         }));
 
+        add<uint16_t>(F("mqtt_port"), &mqtt_port);
+        addValidator(new FormTCallbackValidator<uint16_t>([](uint16_t value, FormField &field) {
+            if (value == 0) {
+                value = 1883;
+                field.setValue(String(value));
+            }
+            return true;
+        }));
+        addValidator(new FormRangeValidator(F("Invalid port"), 1, 65535));
+
         finalize();
+
+        PrintString str;
+        setFormUI(F("Form Title"), F("Save Changes"));
+        createHtml(str);
     }
 
     uint32_t flags;
@@ -87,12 +111,56 @@ public:
     char mqtt_host[128];
     IPAddress dns1;
     IPAddress dns2;
+    uint16_t mqtt_port;
+    float a_float;
 };
 
 
 int main()
 {
     FormData data;
+
+    ESP._enableMSVCMemdebug();
+
+    BootstrapMenu bootstrapMenu;
+
+    auto id = bootstrapMenu.addMenu(F("Device"));
+    bootstrapMenu.addSubMenu(String("test"), String("test.html"), id);
+
+    id = bootstrapMenu.addMenu(F("Home"));
+    bootstrapMenu.getItem(id)->setURI(F("index.html"));
+
+    bootstrapMenu.addSubMenu(F("Home"), F("index.html"), id);
+    bootstrapMenu.addSubMenu(F("Status"), F("status.html"), id);
+    bootstrapMenu.addSubMenu(F("Manage WiFi"), F("wifi.html"), id);
+    bootstrapMenu.addSubMenu(F("Configure Network"), F("network.html"), id);
+    bootstrapMenu.addSubMenu(F("Change Password"), F("password.html"), id);
+    bootstrapMenu.addSubMenu(F("Reboot Device"), F("reboot.html"), id);
+    bootstrapMenu.addSubMenu(F("About"), F("about.html"), id);
+
+    bootstrapMenu.addSubMenu(F("WebUI"), F("webui.html"), id, bootstrapMenu.getMenu(F("Home"), id));
+
+    id = bootstrapMenu.addMenu(F("Status"));
+    bootstrapMenu.getItem(id)->setURI(F("status.html"));
+
+    id = bootstrapMenu.addMenu(F("Configuration"));
+    bootstrapMenu.addSubMenu(F("WiFi"), F("wifi.html"), id);
+    bootstrapMenu.addSubMenu(F("Network"), F("network.html"), id);
+    bootstrapMenu.addSubMenu(F("Remote Access"), F("remote.html"), id);
+
+    id = bootstrapMenu.addMenu(F("Admin"));
+    bootstrapMenu.addSubMenu(F("Change Password"), F("password.html"), id);
+    bootstrapMenu.addSubMenu(F("Reboot Device"), F("reboot.html"), id);
+    bootstrapMenu.addSubMenu(F("Restore Factory Settings"), F("factory.html"), id);
+    bootstrapMenu.addSubMenu(F("Update Firmware"), F("update_fw.html"), id);
+
+
+    bootstrapMenu.html(Serial);
+
+    bootstrapMenu.htmlSubMenu(Serial, bootstrapMenu.getMenu(F("home")), 0);
+
+
+    return 0;
 
     // user submitted data
     data.clear();
@@ -106,6 +174,8 @@ int main()
     data.set("mqtt_host", "google.de");
     data.set("dns1", "8.8.8.8");
     data.set("dns2", "8.8.4.4");
+    data.set("mqtt_port", "");
+    data.set("a_float", "1.234");
 
     // creating form object with submitted data
     TestForm f1(&data);
@@ -120,6 +190,8 @@ int main()
     strcpy(f1.mqtt_host, "google.com");
     f1.dns1 = IPAddress(4, 4, 4, 1);
     f1.dns2 = IPAddress(4, 3, 2, 1);
+    f1.mqtt_port = 0;
+    f1.a_float = 1.234f;
 
     // create form with assigned values
     f1.createForm(); 
@@ -144,17 +216,23 @@ int main()
     assert(String(f1.process("DNS1")) == "4.4.4.1");
     assert(String(f1.process("DNS2")) == "4.3.2.1");
 
+    assert(String(f1.process("MQTT_PORT")) == "0");
+
+    assert(String(f1.process("A_FLOAT")) == "1.234");
+
     // submit user data to form without errors using the validate method
 
     assert(f1.validate());
     assert(f1.isValid());
     assert(f1.flags == (FLAGS_SYSLOG_TCP|FLAGS_MQTT_ENABLED));
     assert(f1.soft_ap_channel == 5);
-    assert(strcmp(f1.wifi_ssid, "MYSSID") == 0);
+    assert(strcmp(f1.wifi_ssid, "MYSSID") == 0); 
     assert(f1.encryption == 8);
     assert(f1.is_hidden_ssid == 123);
     assert(f1.dns1.toString() == "8.8.8.8");
     assert(f1.dns2.toString() == "8.8.4.4");
+    assert(f1.mqtt_port == 1883);
+    assert(f1.a_float == 1.234f);
 
     // submit invalid data
 

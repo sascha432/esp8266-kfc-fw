@@ -17,15 +17,15 @@ def before_clean(source, target, env):
     env.Execute("del ${PROJECTDATA_DIR}\\webui\\ -Recurse")
     env.Execute("php ${PROJECT_DIR}\\lib\\KFCWebBuilder\\bin\\include\\cli_tool.php ${PROJECT_DIR}\\KFCWebBuilder.json -b spiffs -e env:${PIOENV} --dirty")
 
-def pre_upload(source, target, env):
-    build_webui(source, target, env)
+# def pre_upload(source, target, env):
+#     build_webui(source, target, env)
 
 # def post_upload(source, target, env):
     # record_size(source, target, env)
 
 #env.Execute("php \"${PROJECT_DIR}\\scripts\\build_number.php\"");
 
-env.AddPreAction("upload", pre_upload)
+# env.AddPreAction("upload", pre_upload)
 # env.AddPostAction("upload", post_upload)
 
 #env.AddPostAction("$BUILD_DIR/${PROGNAME}.elf", record_size)

@@ -180,9 +180,9 @@ void ClockPlugin::reconfigure(PGM_P source)
     _setSevenSegmentDisplay(cfg);
 }
 
-const String ClockPlugin::getStatus()
+void ClockPlugin::getStatus(Print &output)
 {
-    return F("Clock Plugin");
+    output = F("Clock Plugin");
 }
 
 void ClockPlugin::createWebUI(WebUI &webUI)

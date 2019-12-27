@@ -100,19 +100,19 @@ void HueEmulation::onRequestBody(AsyncWebServerRequest *request, uint8_t *data, 
     }
 }
 
-const String HueEmulation::getStatus() {
-
+void HueEmulation::getStatus(Print &output)
+{
     if (hueEmulation) {
-        PrintHtmlEntitiesString output;
         output.printf_P(PSTR("Enabled @ Port %d %s" HTML_S(br)), config._H_GET(Config().hue.tcp_port), hueEmulation->_standalone ? PSTR("as standalone server") : PSTR("shared web server"));
         auto devices = HueEmulation::createDeviceList();
         for(const auto &name: devices) {
             auto deviceId = hueEmulation->_fauxmo->getDeviceId(name.c_str());
             output.printf_P(PSTR("%s #%d" HTML_S(br)), name.c_str(), deviceId);
         }
-        return output;
     }
-    return FSPGM(Disabled);
+    else {
+        output = FSPGM(Disabled);
+    }
 }
 
 void HueEmulation::_initHue() {

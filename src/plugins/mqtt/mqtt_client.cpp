@@ -475,7 +475,8 @@ const String MQTTClient::_reasonToString(AsyncMqttClientDisconnectReason reason)
     return F("Unknown");
 }
 
-const String MQTTClient::connectionDetailsString() {
+const String MQTTClient::connectionDetailsString()
+{
     String message;
     auto username = config._H_STR(Config().mqtt_username);
     if (*username) {
@@ -495,7 +496,8 @@ const String MQTTClient::connectionDetailsString() {
     return message;
 }
 
-const String MQTTClient::connectionStatusString() {
+const String MQTTClient::connectionStatusString()
+{
     String message = connectionDetailsString();
     if (getClient() && getClient()->isConnected()) {
         message += F(", connected, ");
@@ -515,8 +517,8 @@ const String MQTTClient::connectionStatusString() {
     return message;
 }
 
-const String MQTTClient::getStatus() {
-
+void MQTTClient::getStatus(Print &out)
+{
     if (getClient()) {
         PrintHtmlEntitiesString out;
         out.print(connectionStatusString());
@@ -530,13 +532,14 @@ const String MQTTClient::getStatus() {
         //     out.print(F(HTML_S(br)));
         // }
         // out.printf_P(PSTR(HTML_S(br) "Published/Acknowledged: %d/%d " HTML_S(br) "Received: %d " HTML_S(br)), mqtt_session->getPublished(), mqtt_session->getPublishedAck(), mqtt_session->getReceived());
-
-        return out;
     }
-    return FSPGM(Disabled);
+    else {
+        out.print(FSPGM(Disabled));
+    }
 }
 
-void MQTTClient::handleWiFiEvents(uint8_t event, void *payload) {
+void MQTTClient::handleWiFiEvents(uint8_t event, void *payload)
+{
     auto client = getClient();
     _debug_printf_P(PSTR("MQTTClient::handleWiFiEvents(%d, %p): client %p connected %d\n"), event, payload, client, client ? client->isConnected() : false);
     if (client) {
@@ -629,8 +632,8 @@ public:
     void setup(PluginSetupMode_t mode) override;
     void reconfigure(PGM_P source) override;
 
-    bool hasStatus() const override;
-    const String getStatus() override;
+    virtual bool hasStatus() const override;
+    virtual void getStatus(Print &output) override;
 
     virtual PGM_P getConfigureForm() const override {
         return getName();
@@ -673,8 +676,9 @@ bool MQTTPlugin::hasStatus() const {
     return true;
 }
 
-const String MQTTPlugin::getStatus() {
-    return MQTTClient::getStatus();
+void MQTTPlugin::getStatus(Print &output)
+{
+    MQTTClient::getStatus(output);
 }
 
 void MQTTPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form) {

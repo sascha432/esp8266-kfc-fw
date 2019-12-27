@@ -520,7 +520,6 @@ const String MQTTClient::connectionStatusString()
 void MQTTClient::getStatus(Print &out)
 {
     if (getClient()) {
-        PrintHtmlEntitiesString out;
         out.print(connectionStatusString());
         out.print(F(HTML_S(br)));
         // auto &lwt = mqtt_session->getWill();
@@ -624,7 +623,7 @@ void MQTTClient::_clearQueue() {
 class MQTTPlugin : public PluginComponent {
 public:
     MQTTPlugin() {
-        register_plugin(this);
+        REGISTER_PLUGIN(this, "MQTTPlugin");
     }
     PGM_P getName() const;
     PluginPriorityEnum_t getSetupPriority() const override;

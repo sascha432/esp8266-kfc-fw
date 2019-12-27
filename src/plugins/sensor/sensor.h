@@ -57,7 +57,7 @@ public:
 // PluginComponent
 public:
     SensorPlugin() : _timer(nullptr) {
-        register_plugin(this);
+        REGISTER_PLUGIN(this, "SensorPlugin");
     }
 
     virtual PGM_P getName() const;

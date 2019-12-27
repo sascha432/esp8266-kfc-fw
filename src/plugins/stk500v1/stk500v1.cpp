@@ -34,7 +34,7 @@ private:
 static STK500v1Plugin plugin;
 
 STK500v1Plugin::STK500v1Plugin() {
-    register_plugin(this);
+    REGISTER_PLUGIN(this, "STK500v1Plugin");
 }
 
 PGM_P STK500v1Plugin::getName() const {

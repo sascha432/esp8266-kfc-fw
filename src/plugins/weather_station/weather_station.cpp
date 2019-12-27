@@ -53,7 +53,7 @@ WeatherStationPlugin::WeatherStationPlugin() :
     pinMode(TFT_PIN_LED, OUTPUT);
     digitalWrite(TFT_PIN_LED, LOW);
 
-    register_plugin(this);
+    REGISTER_PLUGIN(this, "WeatherStationPlugin");
 }
 
 PGM_P WeatherStationPlugin::getName() const {

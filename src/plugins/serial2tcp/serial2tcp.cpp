@@ -45,7 +45,7 @@ public:
 static Serial2TcpPlugin plugin;
 
 Serial2TcpPlugin::Serial2TcpPlugin() {
-    register_plugin(this);
+    REGISTER_PLUGIN(this, "Serial2TcpPlugin");
 }
 
 PGM_P Serial2TcpPlugin::getName() const {

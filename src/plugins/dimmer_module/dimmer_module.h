@@ -180,7 +180,7 @@ private:
 class DimmerModulePlugin : public Driver_DimmerModule {
 public:
     DimmerModulePlugin() : Driver_DimmerModule() {
-        register_plugin(this);
+        REGISTER_PLUGIN(this, "DimmerModulePlugin");
     }
 
     virtual PGM_P getName() const override;

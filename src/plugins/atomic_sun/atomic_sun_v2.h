@@ -133,7 +133,7 @@ public:
 class AtomicSunPlugin : public Driver_4ChDimmer {
 public:
     AtomicSunPlugin() {
-        register_plugin(this);
+        REGISTER_PLUGIN(this, "AtomicSunPlugin");
     }
     virtual PGM_P getName() const;
     virtual PluginPriorityEnum_t getSetupPriority() const override;

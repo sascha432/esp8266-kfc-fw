@@ -103,7 +103,7 @@ void i2cscanner_device_error(Stream &output) {
 class I2CScannerPlugin : public PluginComponent {
 public:
     I2CScannerPlugin() {
-        register_plugin(this);
+        REGISTER_PLUGIN(this, "I2CScannerPlugin");
     }
     PGM_P getName() const;
 

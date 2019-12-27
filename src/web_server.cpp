@@ -48,6 +48,9 @@ AsyncWebServer *server = nullptr;
 FailureCounterContainer loginFailures;
 
 #define U_ATMEGA 254
+#ifndef U_SPIFFS
+#define U_SPIFFS U_FS
+#endif
 
 struct UploadStatus_t {
     AsyncWebServerResponse *response;
@@ -819,7 +822,7 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
 class WebServerPlugin : public PluginComponent {
 public:
     WebServerPlugin() {
-        register_plugin(this);
+        REGISTER_PLUGIN(this, "WebServerPlugin");
     }
     virtual PGM_P getName() const {
         return PSTR("http");;

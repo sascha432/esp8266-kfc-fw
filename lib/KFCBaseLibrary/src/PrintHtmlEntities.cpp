@@ -80,7 +80,8 @@ size_t PrintHtmlEntities::translate(const uint8_t * buffer, size_t size) {
                     break;
             }
         }
-        written = translate(*buffer++);
+        translate(*buffer++);
+        written++;
     }
     return written;
 }

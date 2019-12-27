@@ -26,6 +26,10 @@ ResetDetector::ResetDetector() {
 }
 
 void ResetDetector::_init() {
+#if DEBUG_RESET_DETECTOR
+    Serial.begin(KFC_SERIAL_RATE);
+    Serial.println(F("ResetDetector::_init()"));
+#endif
     _debug_println(F("ResetDetector::_init()"));
 
      _timer = nullptr;
@@ -269,41 +273,34 @@ void ResetDetector::_writeData() {
 class ResetDetectorPlugin : public PluginComponent {
 public:
     ResetDetectorPlugin() {
-        register_plugin(this);
-    }    
-    PGM_P getName() const;
-    PluginPriorityEnum_t getSetupPriority() const override;
-    uint8_t getRtcMemoryId() const override;
+        REGISTER_PLUGIN(this, "ResetDetectorPlugin");
+    }
+    virtual PGM_P getName() const {
+        return PSTR("rd");
+    }
+    virtual PluginPriorityEnum_t getSetupPriority() const override {
+        return PRIO_RESET_DETECTOR;
+    }
+    virtual uint8_t getRtcMemoryId() const override {
+        return RESET_DETECTOR_RTC_MEM_ID;
+    }
+
 #if AT_MODE_SUPPORTED
-    bool hasAtMode() const override;
+    virtual bool hasAtMode() const override {
+        return true;
+    }
     void atModeHelpGenerator() override;
     bool atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) override;
 #endif
 };
 
-static ResetDetectorPlugin plugin; 
-
-PGM_P ResetDetectorPlugin::getName() const {
-    return PSTR("rd");
-}
-
-ResetDetectorPlugin::PluginPriorityEnum_t ResetDetectorPlugin::getSetupPriority() const {
-    return PRIO_RESET_DETECTOR;
-}
-
-uint8_t ResetDetectorPlugin::getRtcMemoryId() const {
-    return RESET_DETECTOR_RTC_MEM_ID;
-}
+static ResetDetectorPlugin plugin;
 
 #if AT_MODE_SUPPORTED
 
 #include "at_mode.h"
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPP(RD, "RD", "Reset detector clear counter", "Display information");
-
-bool ResetDetectorPlugin::hasAtMode() const {
-    return true;
-}
 
 void ResetDetectorPlugin::atModeHelpGenerator() {
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(RD));

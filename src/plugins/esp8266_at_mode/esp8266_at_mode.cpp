@@ -54,8 +54,8 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(GMR, "GMR", "Print firmware version");
 class ESP8266ATModePlugin : public PluginComponent {
 public:
     ESP8266ATModePlugin() {
-        register_plugin(this);
-    }    
+        REGISTER_PLUGIN(this, "ESP8266ATModePlugin");
+    }
 
     PGM_P getName() const;
 

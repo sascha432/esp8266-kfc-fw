@@ -267,7 +267,6 @@ void TimezoneData::_callback(bool status, const String message, time_t zoneEnd)
 void TimezoneData::getStatus(Print &out)
 {
     if (config._H_GET(Config().flags).ntpClientEnabled) {
-        PrintHtmlEntitiesString out;
         auto firstServer = true;
         auto &timezone = get_default_timezone();
         out.print(F("Timezone "));
@@ -391,7 +390,7 @@ void ntp_client_reconfigure_plugin(PGM_P source) {
 class NTPPlugin : public PluginComponent {
 public:
     NTPPlugin() {
-        register_plugin(this);
+        REGISTER_PLUGIN(this, "NTPPlugin");
     }
 
     virtual PGM_P getName() const;

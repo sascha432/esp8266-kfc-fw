@@ -169,7 +169,7 @@ void http2serial_event_handler(AsyncWebSocket *server, AsyncWebSocketClient *cli
 class Http2SerialPlugin : public PluginComponent {
 public:
     Http2SerialPlugin() {
-        register_plugin(this);
+        REGISTER_PLUGIN(this, "Http2SerialPlugin");
     }
     virtual PGM_P getName() const;
     virtual PluginPriorityEnum_t getSetupPriority() const override;

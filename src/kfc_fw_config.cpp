@@ -991,7 +991,7 @@ TwoWire &KFCFWConfiguration::initTwoWire(bool reset, Print *output) {
 class KFCConfigurationPlugin : public PluginComponent {
 public:
     KFCConfigurationPlugin() {
-        register_plugin(this);
+        REGISTER_PLUGIN(this, "KFCConfigurationPlugin");
     }
 
     PGM_P getName() const;

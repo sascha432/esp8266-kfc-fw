@@ -209,7 +209,9 @@ extern class Stream &DebugSerial;
 #endif
 
 #ifndef SNTP_STARTUP_DELAY
+#ifndef ARDUINO_ESP8266_RELEASE_2_6_3
 #define SNTP_STARTUP_DELAY              0
+#endif
 #endif
 
 #ifndef USE_REMOTE_TIMEZONE

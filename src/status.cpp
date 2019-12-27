@@ -10,7 +10,6 @@
 #include "kfc_fw_config.h"
 
 void WiFi_get_address(Print &out) {
-
     uint8_t mode = WiFi.getMode();
     if (mode & WIFI_STA) {
         if (mode & WIFI_AP) {

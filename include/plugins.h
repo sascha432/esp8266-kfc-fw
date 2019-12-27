@@ -44,7 +44,13 @@ extern NavMenu_t navMenu;
 void dump_plugin_list(Print &output);
 
 // register plug in
+#if DEBUG_PLUGINS
+#define REGISTER_PLUGIN(plugin, name)           register_plugin(plugin, name)
+void register_plugin(PluginComponent *plugin, const char *name);
+#else
+#define REGISTER_PLUGIN(plugin, name)             register_plugin(plugin)
 void register_plugin(PluginComponent *plugin);
+#endif
 
 // prepare plug-ins, must be called once before setup_plugins
 void prepare_plugins();

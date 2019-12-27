@@ -47,7 +47,7 @@ public:
         if (!reserve(alen)) {
             invalidate();
         } else {
-#if defined(ARDUINO_ESP8266_RELEASE_2_5_2)
+#if defined(ARDUINO_ESP8266_RELEASE_2_5_2) || defined(ARDUINO_ESP8266_RELEASE_2_6_3)
             setLen(alen);
 #else
             len = alen;

@@ -359,7 +359,7 @@ void ping_monitor_setup() {
 class PingMonitorPlugin : public PluginComponent {
 public:
     PingMonitorPlugin() {
-        register_plugin(this);
+        REGISTER_PLUGIN(this, "PingMonitorPlugin");
     }
     PGM_P getName() const;
     PluginPriorityEnum_t getSetupPriority() const override;

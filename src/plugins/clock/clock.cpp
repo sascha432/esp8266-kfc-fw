@@ -42,7 +42,7 @@ ClockPlugin::ClockPlugin() :
     _ui_animation = 0;
     _ui_color = 2;
 
-    register_plugin(this);
+    REGISTER_PLUGIN(this, "ClockPlugin");
 }
 
 

@@ -26,10 +26,14 @@ NavMenu_t navMenu;
 // we need to store the plugins somewhere until the vector is initialized otherwise it will discard already registered plugins
 static PluginsVector *pluginsPtr = nullptr;
 
-void register_plugin(PluginComponent *plugin) {
 #if DEBUG_PLUGINS
+void register_plugin(PluginComponent *plugin, const char *name)
+{
     Serial.begin(KFC_SERIAL_RATE);
-    Serial.printf_P(PSTR("register_plugin(%p)\n"), plugin);
+    Serial.printf_P(PSTR("register_plugin(%p): name=%s\n"), plugin, name);
+#else
+void register_plugin(PluginComponent *plugin)
+{
 #endif
     if (plugins.size()) {
         _debug_printf(PSTR("Registering plugins completed already, skipping %s\n"), plugin->getName());

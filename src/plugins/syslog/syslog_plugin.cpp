@@ -114,7 +114,7 @@ void syslog_process_queue() {
 class SyslogPlugin : public PluginComponent {
 public:
     SyslogPlugin() {
-        register_plugin(this);
+        REGISTER_PLUGIN(this, "SyslogPlugin");
     }
     PGM_P getName() const;
     PluginPriorityEnum_t getSetupPriority() const override;

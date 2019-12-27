@@ -30,7 +30,8 @@ PROGMEM_STRING_DEF(upload_file, "upload_file");
 PROGMEM_STRING_DEF(ERROR_, "ERROR:");
 
 
-void file_manager_upload_handler(AsyncWebServerRequest *request) {
+void file_manager_upload_handler(AsyncWebServerRequest *request)
+{
     if (request->_tempObject) {
         FileManager fm(request, web_server_is_authenticated(request), FSPGM(upload));
         fm.handleRequest();
@@ -39,7 +40,8 @@ void file_manager_upload_handler(AsyncWebServerRequest *request) {
     }
 }
 
-void file_manager_install_web_server_hook() {
+void file_manager_install_web_server_hook()
+{
     if (get_web_server_object()) {
         String uploadDir = FSPGM(file_manager_base_uri);
         uploadDir += FSPGM(upload);
@@ -48,25 +50,31 @@ void file_manager_install_web_server_hook() {
     }
 }
 
-void file_manager_reconfigure(PGM_P source) {
-
+void file_manager_reconfigure(PGM_P source)
+{
+    if (!strcmp_P_P(source, PSTR("http"))) {
+        file_manager_install_web_server_hook();
+    }
 }
 
-FileManager::FileManager() {
+FileManager::FileManager()
+{
     _request = nullptr;
     _response = nullptr;
     _isAuthenticated = false;
     _errors = 0;
 }
 
-FileManager::FileManager(AsyncWebServerRequest *request, bool isAuthenticated, const String &uri) : FileManager()  {
+FileManager::FileManager(AsyncWebServerRequest *request, bool isAuthenticated, const String &uri) : FileManager()
+{
     _uri = uri;
     _request = request;
     _isAuthenticated = isAuthenticated;
     _errors = _isAuthenticated ? 0 : 1;
 }
 
-void FileManager::_sendResponse(uint16_t httpStatusCode) {
+void FileManager::_sendResponse(uint16_t httpStatusCode)
+{
     _debug_printf_P(PSTR("_sendResponse(%d)\n"), httpStatusCode);
     if (httpStatusCode == 0) {
         httpStatusCode = _isValidData() ? 500 : 200;
@@ -80,12 +88,14 @@ void FileManager::_sendResponse(uint16_t httpStatusCode) {
     _request->send(_response);
 }
 
-bool FileManager::_isValidData() {
+bool FileManager::_isValidData()
+{
     _debug_printf_P(PSTR("isValidData() = %d (%d)\n"), _errors == 0, _errors);
     return _errors == 0;
 }
 
-bool FileManager::_requireAuthentication() {
+bool FileManager::_requireAuthentication()
+{
     if (!_isAuthenticated) {
         _errors++;
     }
@@ -93,7 +103,8 @@ bool FileManager::_requireAuthentication() {
     return _isAuthenticated;
 }
 
-String FileManager::_requireDir(const String &name, bool mustExist) {
+String FileManager::_requireDir(const String &name, bool mustExist)
+{
     if (!_request->hasArg(name.c_str())) {
         _errors++;
         _debug_printf_P(PSTR("%s is not set\n"), name.c_str());
@@ -107,7 +118,8 @@ String FileManager::_requireDir(const String &name, bool mustExist) {
     return path;
 }
 
-AsyncDirWrapper FileManager::_requireDir(const String &name) {
+AsyncDirWrapper FileManager::_requireDir(const String &name)
+{
     String path = _requireDir(name, true);
     if (!path.length()) {
         return AsyncDirWrapper();
@@ -120,7 +132,8 @@ AsyncDirWrapper FileManager::_requireDir(const String &name) {
     return dir;
 }
 
-String FileManager::_requireFile(const String &name, bool mustExists) {
+String FileManager::_requireFile(const String &name, bool mustExists)
+{
     if (!_request->hasArg(name.c_str())) {
         _errors++;
         _debug_printf_P(PSTR("%s is not set\n"), name.c_str());
@@ -139,7 +152,8 @@ String FileManager::_requireFile(const String &name, bool mustExists) {
     return path;
 }
 
-File FileManager::_requireFile(const String &name) {
+File FileManager::_requireFile(const String &name)
+{
     String path = _requireFile(name, true);
     if (!path.length()) {
         return File();
@@ -147,7 +161,8 @@ File FileManager::_requireFile(const String &name) {
     return SPIFFSWrapper::open(path, "r");
 }
 
-String FileManager::_requireArgument(const String &name) {
+String FileManager::_requireArgument(const String &name)
+{
     if (!_request->hasArg(name.c_str())) {
         _errors++;
         _debug_printf_P(PSTR("%s is not set\n"), name.c_str());
@@ -160,38 +175,40 @@ String FileManager::_requireArgument(const String &name) {
     return value;
 }
 
-String FileManager::_getArgument(const String &name) {
+String FileManager::_getArgument(const String &name)
+{
     return _request->arg(name);
 }
 
-void FileManager::handleRequest() {
-
+void FileManager::handleRequest()
+{
     _headers.addNoCache(true);
 
     _debug_printf_P(PSTR("is authenticated %d request uri %s\n"), _isAuthenticated, _uri.c_str());
 
     if (!_isAuthenticated) {
         _sendResponse(403);
-    } else if (_uri == F("list")) {
+    } else if (!constexpr_String_equals(_uri, PSTR("list"))) {
         _sendResponse(list());
-    } else if (_uri == F("mkdir")) {
+    } else if (!constexpr_String_equals(_uri, PSTR("mkdir"))) {
         _sendResponse(mkdir());
-    } else if (_uri == FSPGM(upload)) {
+    } else if (!constexpr_String_equals(_uri, SPGM(upload))) {
         _sendResponse(upload());
-    } else if (_uri == F("remove")) {
+    } else if (!constexpr_String_equals(_uri, PSTR("remove"))) {
         _sendResponse(remove());
-    } else if (_uri == F("rename")) {
+    } else if (!constexpr_String_equals(_uri, PSTR("rename"))) {
         _sendResponse(rename());
-    } else if (_uri == F("view")) {
+    } else if (!constexpr_String_equals(_uri, PSTR("view"))) {
         _sendResponse(view(false));
-    } else if (_uri == F("download")) {
+    } else if (!constexpr_String_equals(_uri, PSTR("download"))) {
         _sendResponse(view(true));
     } else {
         _sendResponse(404);
    }
 }
 
-uint16_t FileManager::list() {
+uint16_t FileManager::list()
+{
     _debug_printf_P(PSTR("FileManager::list()\n"));
 
     String vfsRoot = _getArgument(F("vfs_root"));
@@ -207,8 +224,8 @@ uint16_t FileManager::list() {
     return 500;
 }
 
-uint16_t FileManager::mkdir() {
-
+uint16_t FileManager::mkdir()
+{
     AsyncDirWrapper dir = _requireDir(FSPGM(dir));
     String newDir = _requireArgument(F("new_dir"));
     uint16_t httpCode = 200;
@@ -236,12 +253,12 @@ uint16_t FileManager::mkdir() {
     }
 
     Logger_notice(F("Create directory %s - %s"), success ? SPGM(success) : SPGM(failure));
-    _response = _request->beginResponse(httpCode, FSPGM(text_plain), message);
+    _response = _request->beginResponse(httpCode, FSPGM(mime_text_plain), message);
     return httpCode;
 }
 
-uint16_t FileManager::upload() {
-
+uint16_t FileManager::upload()
+{
     uint16_t httpCode = 500;
     PrintString message;
     bool success = false;
@@ -311,17 +328,16 @@ uint16_t FileManager::upload() {
 
         message = PrintString();
         httpCode = 302;
-        _headers.replace(HttpLocationHeader(url));
-        _headers.replace(HttpConnectionHeader(HttpConnectionHeader::HTTP_CONNECTION_CLOSE));
+        _headers.replace(new HttpLocationHeader(url));
+        _headers.replace(new HttpConnectionHeader(HttpConnectionHeader::HTTP_CONNECTION_CLOSE));
     }
     _debug_println(message);
-    _response = _request->beginResponse(httpCode, FSPGM(text_plain), message);
+    _response = _request->beginResponse(httpCode, FSPGM(mime_text_plain), message);
     return true;
-
 }
 
-uint16_t FileManager::view(bool isDownload) {
-
+uint16_t FileManager::view(bool isDownload)
+{
     uint16_t httpCode = 200;
     File file = _requireFile(FSPGM(filename));
     String requestFilename = _request->arg(FSPGM(filename));
@@ -330,7 +346,7 @@ uint16_t FileManager::view(bool isDownload) {
         message = FSPGM(ERROR_);
         message += F("Cannot open ");
         message += requestFilename;
-        _response = _request->beginResponse(httpCode, FSPGM(text_plain), message);
+        _response = _request->beginResponse(httpCode, FSPGM(mime_text_plain), message);
         _debug_println(message);
     } else {
         String filename = file.name();
@@ -340,8 +356,8 @@ uint16_t FileManager::view(bool isDownload) {
     return httpCode;
 }
 
-uint16_t FileManager::remove() {
-
+uint16_t FileManager::remove()
+{
     uint16_t httpCode = 200;
     String message;
     bool success = false;
@@ -367,11 +383,12 @@ uint16_t FileManager::remove() {
         Logger_notice(F("Removing %s (request %s) - "), file.name(), requestFilename.c_str(), success ? SPGM(success) : SPGM(failure));
     }
     _debug_println(message);
-    _response = _request->beginResponse(httpCode, FSPGM(text_plain), message);
+    _response = _request->beginResponse(httpCode, FSPGM(mime_text_plain), message);
     return httpCode;
 }
 
-uint16_t FileManager::rename() {
+uint16_t FileManager::rename()
+{
     uint16_t httpCode = 200;
     PrintString message;
     bool success = false;
@@ -400,7 +417,7 @@ uint16_t FileManager::rename() {
             if (SPIFFSWrapper::exists(renameTo)) {
                 message = FSPGM(ERROR_);
                 message.printf_P(PSTR("File %s already exists"), renameTo.c_str());
-                _response = _request->beginResponse(httpCode, FSPGM(text_plain), message);
+                _response = _request->beginResponse(httpCode, FSPGM(mime_text_plain), message);
             } else {
                 if (!SPIFFSWrapper::rename(renameFrom, renameTo)) {
                     message = FSPGM(ERROR_);
@@ -414,11 +431,12 @@ uint16_t FileManager::rename() {
         }
     }
     _debug_println(message);
-    _response = _request->beginResponse(httpCode, FSPGM(text_plain), message);
+    _response = _request->beginResponse(httpCode, FSPGM(mime_text_plain), message);
     return httpCode;
 }
 
-bool FileManagerWebHandler::canHandle(AsyncWebServerRequest *request) {
+bool FileManagerWebHandler::canHandle(AsyncWebServerRequest *request)
+{
     if (strncmp_P(request->url().c_str(), _uri, strlen_P(_uri))) {
         return false;
     }
@@ -426,9 +444,8 @@ bool FileManagerWebHandler::canHandle(AsyncWebServerRequest *request) {
     return true;
 }
 
-
-void FileManagerWebHandler::handleRequest(AsyncWebServerRequest *request) {
-
+void FileManagerWebHandler::handleRequest(AsyncWebServerRequest *request)
+{
     auto uri = request->url().substring(strlen_P(_uri));
     _debug_printf_P(PSTR("file manager %s (%s)\n"), uri.c_str(), request->url().c_str())
     FileManager fm(request, web_server_is_authenticated(request), uri);
@@ -438,11 +455,16 @@ void FileManagerWebHandler::handleRequest(AsyncWebServerRequest *request) {
 class FileManagerPlugin : public PluginComponent {
 public:
     FileManagerPlugin() {
-        register_plugin(this);
+        REGISTER_PLUGIN(this, "FileManagerPlugin");
     }
 
-    PGM_P getName() const;
-    PluginPriorityEnum_t getSetupPriority() const override;
+    virtual PGM_P getName() const {
+        return PSTR("filemgr");
+    }
+    PluginPriorityEnum_t getSetupPriority() const override {
+        return MAX_PRIORITY;
+    }
+
     void setup(PluginSetupMode_t mode) override;
     void reconfigure(PGM_P source) override;
     bool hasReconfigureDependecy(PluginComponent *plugin) const override;
@@ -451,29 +473,24 @@ public:
         return CUSTOM;
     }
     virtual void createMenu() override {
-        bootstrapMenu.addSubMenu(F("File Manager"), F("file_manager.html"), navMenu.util);
+        bootstrapMenu.addSubMenu(F("File Manager"), F("file_manager/"), navMenu.util);
     }
 };
 
 static FileManagerPlugin plugin;
 
-PGM_P FileManagerPlugin::getName() const {
-    return PSTR("filemgr");
-}
-
-FileManagerPlugin::PluginPriorityEnum_t FileManagerPlugin::getSetupPriority() const {
-    return PLUGIN_MAX_PRIORITY;
-}
-
-FileManagerPlugin::setup(PluginSetupMode_t mode) {
+void FileManagerPlugin::setup(PluginSetupMode_t mode)
+{
     file_manager_install_web_server_hook();
 }
 
-void FileManagerPlugin::reconfigure(PGM_P source) {
+void FileManagerPlugin::reconfigure(PGM_P source)
+{
     file_manager_install_web_server_hook();
 }
 
-bool FileManagerPlugin::hasReconfigureDependecy(PluginComponent *plugin) const {
+bool FileManagerPlugin::hasReconfigureDependecy(PluginComponent *plugin) const
+{
     return plugin->nameEquals(F("http"));
 }
 

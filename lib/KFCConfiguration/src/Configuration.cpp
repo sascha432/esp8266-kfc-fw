@@ -389,9 +389,9 @@ void Configuration::exportAsJson(Print& output, const String &version)
 #endif
 
         auto length = parameter.read(this, offset);
-        output.printf_P(PSTR("\t\t\t\"type\": \"%#x\",\n"), parameter.getType());
+        output.printf_P(PSTR("\t\t\t\"type\": %d,\n"), parameter.getType());
         output.printf_P(PSTR("\t\t\t\"type_name\": \"%s\",\n"), parameter.getTypeString(parameter.getType()).c_str());
-        output.printf_P(PSTR("\t\t\t\"length\": \"%d\",\n"), length);
+        output.printf_P(PSTR("\t\t\t\"length\": %d,\n"), length);
         output.print(F("\t\t\t\"data\": "));
         parameter.exportAsJson(output);
         output.print(F("\n"));

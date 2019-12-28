@@ -12,6 +12,7 @@
 #include <StreamString.h>
 #include <SpeedBooster.h>
 #include "progmem_data.h"
+#include "build.h"
 #include "web_server.h"
 #include "rest_api.h"
 #include "async_web_response.h"
@@ -250,7 +251,7 @@ void web_server_export_settings(AsyncWebServerRequest *request)
         auto now = time(nullptr);
         struct tm *tm = timezone_localtime(&now);
         timezone_strftime_P(timeStr, sizeof(timeStr), PSTR("%Y%m%d_%H%M%S"), tm);
-        PrintString filename(F("kfcfw_config_%s_%s.json"), hostname, timeStr);
+        PrintString filename(F("kfcfw_config_%s_b" __BUILD_NUMBER "_%s.json"), hostname, timeStr);
         httpHeaders.add(new HttpDispositionHeader(filename));
 
         PrintString content;

@@ -291,7 +291,7 @@ void WiFi_SoftAP_SSID(Print &out) {
 #else
 #error Platform not supported
 #endif
-        out.write(config.ssid, config.ssid_len);
+        out.printf_P(PSTR("%*.*s"), config.ssid_len, config.ssid_len, config.ssid);
         if (config.ssid_hidden) {
             out.print(F(" (" HTML_S(i) "HIDDEN" HTML_E(i) ")"));
         }

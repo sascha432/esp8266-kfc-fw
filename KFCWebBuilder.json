@@ -24,7 +24,7 @@
         "conditional_excludes": {
             "#if !IOT_DIMMER_MODULE && !IOT_ATOMIC_SUN_V2": "./Resources/html/dimmer_cfg.html",
             "#if !STK500V1": "./stk500v1/atmega.csv",
-            "#if !FILE_MANAGER": "./Resources/html/file_manager.html",
+            "#if !FILE_MANAGER": [ "./Resources/html/file_manager.html", "./Resources/js/file_manager.js" ],
             "#if !MQTT_SUPPORT": "./Resources/html/mqtt.html",
             "#if !SYSLOG": "./Resources/html/syslog.html",
             "#if !NTP_CLIENT": [ "./Resources/html/ntp.html", "./Resources/html/timezone.html" ],
@@ -51,6 +51,7 @@
                         "./Resources/js/aes.js",
                         "./Resources/js/sha512.js",
                         "./Resources/js/main.min.js",
+                        "./Resources/js/file_manager.js",
                         "./Resources/js/ws_console.js",
                         "./Resources/js/http2serial.js",
                         "./Resources/js/webui.js"

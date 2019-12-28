@@ -64,8 +64,8 @@
                     <tbody id="dirs_prototype" class="hidden">
                         <tr scope="row">
                             <td><a href="#${FULLNAME}" class="dir"><span class="oi oi-folder" title="View contents" aria-hidden="true"></span></a>
-                                <a href="#" data-target="#rename_dialog" data-toggle="modal" data-filename="${FULLNAME}" data-name="${FILENAME}" data-type="dir"><span class="oi oi-wrench" title="Edit directory name" aria-hidden="true"></span></a>
-                                <a href="#" data-target="#remove_dialog" data-toggle="modal" data-filename="${FULLNAME}" data-name="${FILENAME}" data-type="dir"><span class="oi oi-trash" title="Delete directory" aria-hidden="true"></span></a></td>
+                                <a href="#" xdata-target="#rename_dialog" data-toggle="modal" data-filename="${FULLNAME}/." data-name="${FILENAME}" data-type="dir"><span class="oi oi-wrench" title="Edit directory name" aria-hidden="true"></span></a>
+                                <a href="#" data-target="#remove_dialog" data-toggle="modal" data-filename="${FULLNAME}/." data-name="${FILENAME}" data-type="dir"><span class="oi oi-trash" title="Delete directory" aria-hidden="true"></span></a></td>
                             <td><a href="${LINK}" class="${CLASS}">${FILENAME}/</a></td>
                             <td>${MODIFIED}</td>
                             <td class="text-right">&lt;DIR&gt;</td>
@@ -221,7 +221,8 @@
 	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/popper.min.js"></script>
 	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/bootstrap.min.js"></script>
 	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/js.cookie.min.js"></script>
-	<script debug_loader="1" type="text/javascript" src="../js/main.min.js"></script>
+    <script debug_loader="1" type="text/javascript" src="../js/main.min.js"></script>
+    <script debug_loader="1" type="text/javascript" src="../js/file_manager.js"></script>
 	<script debug_loader="1" type="text/javascript" src="../js/debug.js"></script>
     <!--JAVASCRIPT%%-->
 

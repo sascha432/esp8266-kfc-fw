@@ -158,7 +158,7 @@ void setup() {
     resetDetector._init();
 #endif
 
-    // gdb_do_break();
+    // gdbstub_do_break();
     // disable_at_mode(Serial);
 
     if (resetDetector.getResetCounter() >= 20) {

@@ -5,6 +5,7 @@
 #include "async_web_response.h"
 #include "progmem_data.h"
 #include <ProgmemStream.h>
+#include <PrintHtmlEntitiesString.h>
 #include "fs_mapping.h"
 #include "web_server.h"
 
@@ -14,31 +15,37 @@
 #include <debug_helper_disable.h>
 #endif
 
-AsyncJsonResponse::AsyncJsonResponse() : _jsonBuffer(_json) {
+AsyncJsonResponse::AsyncJsonResponse() : _jsonBuffer(_json)
+{
     _code = 200;
     _contentType = FSPGM(mime_application_json);
     _sendContentLength = true;
     _chunked = false;
 }
 
-bool AsyncJsonResponse::_sourceValid() const {
+bool AsyncJsonResponse::_sourceValid() const
+{
     return true;
 }
 
-size_t AsyncJsonResponse::_fillBuffer(uint8_t *data, size_t len) {
+size_t AsyncJsonResponse::_fillBuffer(uint8_t *data, size_t len)
+{
     return _jsonBuffer.fillBuffer(data, len);
 }
 
-JsonUnnamedObject &AsyncJsonResponse::getJsonObject() {
+JsonUnnamedObject &AsyncJsonResponse::getJsonObject()
+{
     return _json;
 }
 
-void AsyncJsonResponse::updateLength() {
+void AsyncJsonResponse::updateLength()
+{
     _contentLength = _json.length();
 }
 
 
-AsyncProgmemFileResponse::AsyncProgmemFileResponse(const String &contentType, FSMapping *mapping, AwsTemplateProcessor templateCallback) : AsyncAbstractResponse(templateCallback) {
+AsyncProgmemFileResponse::AsyncProgmemFileResponse(const String &contentType, FSMapping *mapping, AwsTemplateProcessor templateCallback) : AsyncAbstractResponse(templateCallback)
+{
     _code = 200;
     _content = mapping->open("r");
     _contentLength = _content.size();
@@ -47,15 +54,18 @@ AsyncProgmemFileResponse::AsyncProgmemFileResponse(const String &contentType, FS
     _chunked = false;
 }
 
-bool AsyncProgmemFileResponse::_sourceValid() const {
+bool AsyncProgmemFileResponse::_sourceValid() const
+{
     return (bool)_content;
 }
 
-size_t AsyncProgmemFileResponse::_fillBuffer(uint8_t *data, size_t len) {
+size_t AsyncProgmemFileResponse::_fillBuffer(uint8_t *data, size_t len)
+{
     return _content.read(data, len);
 }
 
-AsyncDirResponse::AsyncDirResponse(const AsyncDirWrapper &dir) : AsyncAbstractResponse() {
+AsyncDirResponse::AsyncDirResponse(const AsyncDirWrapper &dir) : AsyncAbstractResponse()
+{
     _debug_printf_P(PSTR("AsyncDirResponse::AsyncDirResponse(%s)\n"), _dir.getDirName().c_str());
     _code = 200;
     _contentLength = 0;
@@ -73,11 +83,13 @@ AsyncDirResponse::AsyncDirResponse(const AsyncDirWrapper &dir) : AsyncAbstractRe
     }
 }
 
-bool AsyncDirResponse::_sourceValid() const {
+bool AsyncDirResponse::_sourceValid() const
+{
     return true;
 }
 
-size_t AsyncDirResponse::_fillBuffer(uint8_t *data, size_t len) {
+size_t AsyncDirResponse::_fillBuffer(uint8_t *data, size_t len)
+{
     _debug_printf_P(PSTR("AsyncDirResponse::_fillBuffer(%p, %d)\n"), data, len);
     char *ptr = reinterpret_cast<char *>(data);
     char *sptr = ptr;
@@ -89,9 +101,9 @@ size_t AsyncDirResponse::_fillBuffer(uint8_t *data, size_t len) {
 
         _dirName = _dir.getDirName();
         _dirNameLen = _dirName.length();
-        if (_dirNameLen > 1 && _dirName.charAt(_dirNameLen - 1) == '/') {
-            _dirNameLen--;
-        }
+        // if (_dirNameLen > 1 && _dirName.charAt(_dirNameLen - 1) == '/') {
+        //     _dirNameLen--;
+        // }
 
         if ((result = snprintf_P(ptr, space, PSTR("{\"total\":\"%s\",\"total_b\":%d,\"used\":\"%s\",\"used_b\":%d,\"usage\":\"%.2f%%\",\"dir\":\"%s\",\"files\":["),
                 formatBytes(info.totalBytes).c_str(), info.totalBytes,
@@ -215,7 +227,8 @@ size_t AsyncDirResponse::_fillBuffer(uint8_t *data, size_t len) {
 
 bool AsyncNetworkScanResponse::_locked = false;
 
-AsyncNetworkScanResponse::AsyncNetworkScanResponse(bool hidden) : AsyncAbstractResponse() {
+AsyncNetworkScanResponse::AsyncNetworkScanResponse(bool hidden) : AsyncAbstractResponse()
+{
     _code = 200;
     _contentLength = 0;
     _sendContentLength = false;
@@ -226,18 +239,21 @@ AsyncNetworkScanResponse::AsyncNetworkScanResponse(bool hidden) : AsyncAbstractR
     _hidden = hidden;
 }
 
-AsyncNetworkScanResponse::~AsyncNetworkScanResponse() {
+AsyncNetworkScanResponse::~AsyncNetworkScanResponse()
+{
     if (_done) {
         WiFi.scanDelete();
         setLocked(false);
     }
 }
 
-bool AsyncNetworkScanResponse::_sourceValid() const {
+bool AsyncNetworkScanResponse::_sourceValid() const
+{
     return true;
 }
 
-uint16_t AsyncNetworkScanResponse::_strcpy_P_safe(char *&dst, PGM_P str, int16_t &space) {
+uint16_t AsyncNetworkScanResponse::_strcpy_P_safe(char *&dst, PGM_P str, int16_t &space)
+{
     if (space <= 1) {
         return 0;
     }
@@ -248,7 +264,8 @@ uint16_t AsyncNetworkScanResponse::_strcpy_P_safe(char *&dst, PGM_P str, int16_t
     return copied;
 }
 
-size_t AsyncNetworkScanResponse::_fillBuffer(uint8_t *data, size_t len) {
+size_t AsyncNetworkScanResponse::_fillBuffer(uint8_t *data, size_t len)
+{
     if (_position == (uint8_t)-1) {
         _debug_println(F("AsyncNetworkScanResponse pos == -1, EOF"));
         return 0;
@@ -343,15 +360,18 @@ size_t AsyncNetworkScanResponse::_fillBuffer(uint8_t *data, size_t len) {
     }
 }
 
-bool AsyncNetworkScanResponse::isLocked() {
+bool AsyncNetworkScanResponse::isLocked()
+{
     return _locked;
 }
 
-void AsyncNetworkScanResponse::setLocked(bool locked) {
+void AsyncNetworkScanResponse::setLocked(bool locked)
+{
     _locked = locked;
 }
 
-AsyncBufferResponse::AsyncBufferResponse(const String & contentType, Buffer * buffer, AwsTemplateProcessor templateCallback) : AsyncAbstractResponse(templateCallback) {
+AsyncBufferResponse::AsyncBufferResponse(const String & contentType, Buffer * buffer, AwsTemplateProcessor templateCallback) : AsyncAbstractResponse(templateCallback)
+{
     _code = 200;
     _position = 0;
     _content = buffer;
@@ -360,15 +380,18 @@ AsyncBufferResponse::AsyncBufferResponse(const String & contentType, Buffer * bu
     _chunked = false;
 }
 
-AsyncBufferResponse::~AsyncBufferResponse() {
+AsyncBufferResponse::~AsyncBufferResponse()
+{
     delete _content;
 }
 
-bool AsyncBufferResponse::_sourceValid() const {
+bool AsyncBufferResponse::_sourceValid() const
+{
     return (bool)_content->length();
 }
 
-size_t AsyncBufferResponse::_fillBuffer(uint8_t * buf, size_t maxLen) {
+size_t AsyncBufferResponse::_fillBuffer(uint8_t * buf, size_t maxLen)
+{
     size_t send = _content->length() - _position;
     if (send > maxLen) {
         send = maxLen;
@@ -379,13 +402,16 @@ size_t AsyncBufferResponse::_fillBuffer(uint8_t * buf, size_t maxLen) {
     return send;
 }
 
-AsyncDirWrapper::AsyncDirWrapper() {
+
+AsyncDirWrapper::AsyncDirWrapper()
+{
     _isValid = false;
     _dir = Dir();
     _curMapping = &Mappings::getInstance().getInvalid();
 }
 
-AsyncDirWrapper::AsyncDirWrapper(const String & dirName) : AsyncDirWrapper() {
+AsyncDirWrapper::AsyncDirWrapper(const String & dirName) : AsyncDirWrapper()
+{
     _debug_printf_P(PSTR("AsyncDirWrapper::AsyncDirWrapper(%s)\n"), dirName.c_str());
     _dirName = dirName;
     append_slash(_dirName);
@@ -402,21 +428,25 @@ AsyncDirWrapper::AsyncDirWrapper(const String & dirName) : AsyncDirWrapper() {
     }
 }
 
-AsyncDirWrapper::~AsyncDirWrapper() {
+AsyncDirWrapper::~AsyncDirWrapper()
+{
     if (_curMapping && _curMapping->isValid()) { // must be allocated memory
         delete _curMapping;
     }
 }
 
-void AsyncDirWrapper::setVirtualRoot(const String & path) {
+void AsyncDirWrapper::setVirtualRoot(const String & path)
+{
     _virtualRoot = path;
 }
 
-String & AsyncDirWrapper::getDirName() {
+String & AsyncDirWrapper::getDirName()
+{
     return _dirName;
 }
 
-bool AsyncDirWrapper::isValid() const {
+bool AsyncDirWrapper::isValid() const
+{
     return _isValid;
 }
 
@@ -435,7 +465,8 @@ false /www/images/icons/.
 false /www/images/icons/file7
 
 */
-bool AsyncDirWrapper::_fileInside(const String & path) {
+bool AsyncDirWrapper::_fileInside(const String & path)
+{
     _debug_printf_P(PSTR("AsyncDirWrapper::_fileInside(%s)\n"), path.c_str());
     if (!path.startsWith(_dirName)) { // not a match
         return false;
@@ -470,15 +501,18 @@ bool AsyncDirWrapper::_fileInside(const String & path) {
     return true;
 }
 
-bool AsyncDirWrapper::isDir() const {
+bool AsyncDirWrapper::isDir() const
+{
     return _type == DIR;
 }
 
-bool AsyncDirWrapper::isFile() const {
+bool AsyncDirWrapper::isFile() const
+{
     return _type == FILE;
 }
 
-bool AsyncDirWrapper::next() {
+bool AsyncDirWrapper::next()
+{
     _debug_printf_P(PSTR("AsyncDirWrapper::next()\n"));
     _type = INVALID;
     if (!isValid()) {
@@ -546,29 +580,34 @@ bool AsyncDirWrapper::next() {
     return result;
 }
 
-File AsyncDirWrapper::openFile(const char * mode) {
+File AsyncDirWrapper::openFile(const char * mode)
+{
     if (_curMapping->isValid()) {
         return _curMapping->open(mode);
     }
     return SPIFFSWrapper::open(_dir, mode);
 }
 
-String AsyncDirWrapper::fileName() {
+String AsyncDirWrapper::fileName()
+{
     return _fileName;
 }
 
-String AsyncDirWrapper::mappedFile() {
+String AsyncDirWrapper::mappedFile()
+{
     if (_curMapping->isValid()) {
         return _curMapping->getMappedPath();
     }
     return _dir.fileName();
 }
 
-bool AsyncDirWrapper::isMapped() const {
+bool AsyncDirWrapper::isMapped() const
+{
     return _curMapping->isValid();
 }
 
-void AsyncDirWrapper::getModificatonTime(char * modified, size_t size, PGM_P format) {
+void AsyncDirWrapper::getModificatonTime(char * modified, size_t size, PGM_P format)
+{
     if (!_curMapping->isValid()) {
         modified[0] = '0';
         modified[1] = 0;
@@ -585,8 +624,12 @@ size_t AsyncDirWrapper::fileSize() {
     return _dir.fileSize();
 }
 
-AsyncTemplateResponse::AsyncTemplateResponse(const String &contentType, FSMapping *mapping, WebTemplate *webTemplate) : AsyncProgmemFileResponse(contentType, mapping, [this](const String &var) -> String {
-    return this->process(var);
+
+AsyncTemplateResponse::AsyncTemplateResponse(const String &contentType, FSMapping *mapping, WebTemplate *webTemplate) : AsyncProgmemFileResponse(contentType, mapping, [this](const String &var) -> String
+{
+    PrintHtmlEntitiesString output;
+    this->process(var, output);
+    return output;
 }) {
     _webTemplate = webTemplate;
     _contentLength = 0;
@@ -594,7 +637,8 @@ AsyncTemplateResponse::AsyncTemplateResponse(const String &contentType, FSMappin
     _chunked = true;
 }
 
-AsyncTemplateResponse::~AsyncTemplateResponse() {
+AsyncTemplateResponse::~AsyncTemplateResponse()
+{
     delete _webTemplate;
 }
 

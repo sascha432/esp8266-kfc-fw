@@ -15,6 +15,6 @@ public:
     PrintHtmlEntitiesString();
 
     virtual size_t write(uint8_t data) override;
+    virtual size_t writeRaw(uint8_t data) override;
     virtual size_t write(const uint8_t *buffer, size_t size) override;
-    virtual size_t _write(uint8_t data) override;
 };

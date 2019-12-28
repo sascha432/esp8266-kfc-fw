@@ -52,9 +52,7 @@ void file_manager_install_web_server_hook()
 
 void file_manager_reconfigure(PGM_P source)
 {
-    if (!strcmp_P_P(source, PSTR("http"))) {
-        file_manager_install_web_server_hook();
-    }
+    file_manager_install_web_server_hook();
 }
 
 FileManager::FileManager()
@@ -188,21 +186,29 @@ void FileManager::handleRequest()
 
     if (!_isAuthenticated) {
         _sendResponse(403);
-    } else if (!constexpr_String_equals(_uri, PSTR("list"))) {
+    }
+    else if (constexpr_String_equals(_uri, PSTR("list"))) {
         _sendResponse(list());
-    } else if (!constexpr_String_equals(_uri, PSTR("mkdir"))) {
+    }
+    else if (constexpr_String_equals(_uri, PSTR("mkdir"))) {
         _sendResponse(mkdir());
-    } else if (!constexpr_String_equals(_uri, SPGM(upload))) {
+    }
+    else if (constexpr_String_equals(_uri, SPGM(upload))) {
         _sendResponse(upload());
-    } else if (!constexpr_String_equals(_uri, PSTR("remove"))) {
+    }
+    else if (constexpr_String_equals(_uri, PSTR("remove"))) {
         _sendResponse(remove());
-    } else if (!constexpr_String_equals(_uri, PSTR("rename"))) {
+    }
+    else if (constexpr_String_equals(_uri, PSTR("rename"))) {
         _sendResponse(rename());
-    } else if (!constexpr_String_equals(_uri, PSTR("view"))) {
+    }
+    else if (constexpr_String_equals(_uri, PSTR("view"))) {
         _sendResponse(view(false));
-    } else if (!constexpr_String_equals(_uri, PSTR("download"))) {
+    }
+    else if (constexpr_String_equals(_uri, PSTR("download"))) {
         _sendResponse(view(true));
-    } else {
+    }
+    else {
         _sendResponse(404);
    }
 }
@@ -237,6 +243,7 @@ uint16_t FileManager::mkdir()
     if (newDir.charAt(0) != '/') {
         newDir = dir.getDirName() + newDir;
     }
+    normalizeFilename(newDir);
 
     if (SPIFFSWrapper::exists(newDir)) {
         message = FSPGM(ERROR_);
@@ -252,7 +259,7 @@ uint16_t FileManager::mkdir()
         }
     }
 
-    Logger_notice(F("Create directory %s - %s"), success ? SPGM(success) : SPGM(failure));
+    Logger_notice(F("Create directory %s - %s"), newDir.c_str(), success ? SPGM(success) : SPGM(failure));
     _response = _request->beginResponse(httpCode, FSPGM(mime_text_plain), message);
     return httpCode;
 }
@@ -279,6 +286,7 @@ uint16_t FileManager::upload()
         if (filename.charAt(0) != '/') {
             filename = append_slash_copy(uploadDir.getDirName()) + filename;
         }
+        normalizeFilename(filename);
 
         if (SPIFFSWrapper::exists(filename)) {
             httpCode = 409;
@@ -314,8 +322,7 @@ uint16_t FileManager::upload()
     }
 
     if (!ajax_request) {
-        _response = _request->beginResponse(302);
-        String url = F("/file_manager.html?_message=%s");
+        String url = F("/file_manager.html?_message=");
         url += url_encode(message);
         if (success) {
             url += F("&_type=success&_title=Information");
@@ -326,7 +333,7 @@ uint16_t FileManager::upload()
         url += '#';
         url += uploadDir.getDirName();
 
-        message = PrintString();
+        message = String();
         httpCode = 302;
         _headers.replace(new HttpLocationHeader(url));
         _headers.replace(new HttpConnectionHeader(HttpConnectionHeader::HTTP_CONNECTION_CLOSE));
@@ -380,7 +387,7 @@ uint16_t FileManager::remove()
             message = FSPGM(OK);
             success = true;
         }
-        Logger_notice(F("Removing %s (request %s) - "), file.name(), requestFilename.c_str(), success ? SPGM(success) : SPGM(failure));
+        Logger_notice(F("Removing %s (request %s) - %s"), filename.c_str(), requestFilename.c_str(), success ? SPGM(success) : SPGM(failure));
     }
     _debug_println(message);
     _response = _request->beginResponse(httpCode, FSPGM(mime_text_plain), message);
@@ -410,6 +417,8 @@ uint16_t FileManager::rename()
         if (renameTo.charAt(0) != '/') {
             renameTo = append_slash_copy(dir.getDirName()) + renameTo;
         }
+        normalizeFilename(renameTo);
+
         if (renameTo.length() >= info.maxPathLength) {
             message = FSPGM(ERROR_);
             message.printf_P(PSTR("Filename %s exceeds %d characters"), renameTo.c_str(), info.maxPathLength - 1);
@@ -435,9 +444,17 @@ uint16_t FileManager::rename()
     return httpCode;
 }
 
+void FileManager::normalizeFilename(String &filename)
+{
+    auto doubleSlash = String(F("//"));
+    while(filename.indexOf(doubleSlash) != -1) {
+        filename.replace(doubleSlash, F("/"));
+    }
+}
+
 bool FileManagerWebHandler::canHandle(AsyncWebServerRequest *request)
 {
-    if (strncmp_P(request->url().c_str(), _uri, strlen_P(_uri))) {
+    if (strncmp_P(request->url().c_str(), (PGM_P)_uri, strlen_P((PGM_P)_uri))) {
         return false;
     }
     request->addInterestingHeader(F("ANY"));
@@ -446,7 +463,7 @@ bool FileManagerWebHandler::canHandle(AsyncWebServerRequest *request)
 
 void FileManagerWebHandler::handleRequest(AsyncWebServerRequest *request)
 {
-    auto uri = request->url().substring(strlen_P(_uri));
+    auto uri = request->url().substring(strlen_P((PGM_P)_uri));
     _debug_printf_P(PSTR("file manager %s (%s)\n"), uri.c_str(), request->url().c_str())
     FileManager fm(request, web_server_is_authenticated(request), uri);
     fm.handleRequest();
@@ -473,7 +490,7 @@ public:
         return CUSTOM;
     }
     virtual void createMenu() override {
-        bootstrapMenu.addSubMenu(F("File Manager"), F("file_manager/"), navMenu.util);
+        bootstrapMenu.addSubMenu(F("File Manager"), F("file_manager.html"), navMenu.util);
     }
 };
 

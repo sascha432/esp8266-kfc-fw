@@ -7,7 +7,7 @@
 #pragma once
 
 #ifndef DEBUG_FILE_MANAGER
-#define DEBUG_FILE_MANAGER 0
+#define DEBUG_FILE_MANAGER0         0
 #endif
 
 #include <Arduino_compat.h>
@@ -45,6 +45,8 @@ public:
     String _requireArgument(const String &name);
     String _getArgument(const String &name);
 
+    void normalizeFilename(String &filename);
+
 private:
     bool _isAuthenticated;
     uint8_t _errors;
@@ -59,14 +61,14 @@ private:
 class FileManagerWebHandler : public AsyncWebHandler {
 public:
     FileManagerWebHandler(const __FlashStringHelper *uri) : AsyncWebHandler() {
-        _uri = reinterpret_cast<PGM_P>(uri);
+        _uri = uri;
     }
 
     virtual bool canHandle(AsyncWebServerRequest *request) override;
     virtual void handleRequest(AsyncWebServerRequest *request) override;
 
 private:
-    PGM_P _uri;
+    const __FlashStringHelper *_uri;
 };
 
 #endif

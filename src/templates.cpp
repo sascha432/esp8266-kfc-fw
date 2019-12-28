@@ -55,129 +55,132 @@ Form * WebTemplate::getForm() {
     return _form;
 }
 
-String WebTemplate::process(const String &key) {
+void WebTemplate::process(const String &key, PrintHtmlEntities &output)
+{
     if (key.equals(F("HOSTNAME"))) {
-        PrintHtmlEntitiesString out(config._H_STR(Config().device_name));
-        _return(out);
-    } else if (key == F("HARDWARE")) {
-        PrintHtmlEntitiesString out;
+        output.print(config._H_STR(Config().device_name));
+    }
+    else if (key == F("HARDWARE")) {
 #if defined(ESP8266)
-        out.printf_P(PSTR("ESP8266 %s Flash, %d Mhz, Free RAM %s"), formatBytes(ESP.getFlashChipRealSize()).c_str(), system_get_cpu_freq(), formatBytes(ESP.getFreeHeap()).c_str());
+        output.printf_P(PSTR("ESP8266 %s Flash, %d Mhz, Free RAM %s"), formatBytes(ESP.getFlashChipRealSize()).c_str(), system_get_cpu_freq(), formatBytes(ESP.getFreeHeap()).c_str());
 #elif defined(ESP32)
-        out.printf_P(PSTR("ESP32 %s Flash, %d Mhz, Free RAM %s"), formatBytes(ESP.getFlashChipSize()).c_str(), ESP.getCpuFreqMHz(), formatBytes(ESP.getFreeHeap()).c_str());
+        output.printf_P(PSTR("ESP32 %s Flash, %d Mhz, Free RAM %s"), formatBytes(ESP.getFlashChipSize()).c_str(), ESP.getCpuFreqMHz(), formatBytes(ESP.getFreeHeap()).c_str());
 #else
 #error Platform not supported
 #endif
-        _return(out);
-    } else if (key == F("SOFTWARE")) {
-        PrintHtmlEntitiesString out = F("KFC FW ");
-        out += config.getFirmwareVersion();
+    }
+    else if (key == F("SOFTWARE")) {
+        output.print(F("KFC FW "));
+        output.print(config.getFirmwareVersion());
         if (config._H_GET(Config().flags).isDefaultPassword) {
-            out.printf_P(PSTR(HTML_S(br) HTML_S(strong) "%s" HTML_E(strong)), SPGM(default_password_warning));
+            output.printf_P(PSTR(HTML_S(br) HTML_S(strong) "%s" HTML_E(strong)), SPGM(default_password_warning));
         }
-        _return(out);
 #  if NTP_CLIENT || RTC_SUPPORT
-    } else if (key == F("TIME")) {
+    }
+    else if (key == F("TIME")) {
+
         time_t now = time(nullptr);
         if (!IS_TIME_VALID(now)) {
-            _return(F("No time available"));
+            output.print(F("No time available"));
         } else {
             char buf[32];
             timezone_strftime_P(buf, sizeof(buf), PSTR("%a, %d %b %Y %H:%M:%S %Z"), timezone_localtime(&now));
-            PrintHtmlEntitiesString out(buf);
-            _return(out);
+            output.print(buf);
         }
 #  endif
-    } else if (key == F("SAFEMODE")) {
+    }
+    else if (key == F("SAFEMODE")) {
         if (config.isSafeMode()) {
-            _return(F(" - Running in SAFE MODE"));
+            output.print(F(" - Running in SAFE MODE"));
         }
-        _return(_sharedEmptyString);
-    } else if (key == F("UPTIME")) {
-        _return(formatTime((long)(millis() / 1000)));
-    } else if (key == F("WIFI_UPTIME")) {
-        _return(config._H_GET(Config().flags).wifiMode & WIFI_STA ? (!KFCFWConfiguration::isWiFiUp() ? F("Offline") : formatTime((millis() - KFCFWConfiguration::getWiFiUp()) / 1000)) : F("Client mode disabled"));
-    } else if (key == F("IP_ADDRESS")) {
-        PrintHtmlEntitiesString out;
-        WiFi_get_address(out);
-        _return(out);
-    } else if (key == F("FIRMWARE_UPGRADE_FAILURE")) {
-        return _sharedEmptyString;
-    } else if (key == F("FIRMWARE_UPGRADE_FAILURE_CLASS")) {
-        return FSPGM(_hidden);
-    } else if (key == F("CONFIG_DIRTY_CLASS")) {
-        _return(config.isConfigDirty() ? _sharedEmptyString : FSPGM(_hidden));
-    } else if (key.equals(F("MENU_HTML_MAIN"))) {
-        PrintString response;
-        bootstrapMenu.html(response);
-        return response;
-    } else if (key.startsWith(F("MENU_HTML_SUBMENU_"))) {
-        PrintString response;
+    }
+    else if (key == F("UPTIME")) {
+        output.print(formatTime((long)(millis() / 1000)));
+    }
+    else if (key == F("WIFI_UPTIME")) {
+        output.print(config._H_GET(Config().flags).wifiMode & WIFI_STA ? (!KFCFWConfiguration::isWiFiUp() ? F("Offline") : formatTime((millis() - KFCFWConfiguration::getWiFiUp()) / 1000)) : F("Client mode disabled"));
+    }
+    else if (key == F("IP_ADDRESS")) {
+        WiFi_get_address(output);
+    }
+    else if (key == F("FIRMWARE_UPGRADE_FAILURE")) {
+    }
+    else if (key == F("FIRMWARE_UPGRADE_FAILURE_CLASS")) {
+        output.print(FSPGM(_hidden));
+    }
+    else if (key == F("CONFIG_DIRTY_CLASS")) {
+        if (!config.isConfigDirty()) {
+            output.print(FSPGM(_hidden));
+        }
+    }
+    else if (key.equals(F("MENU_HTML_MAIN"))) {
+        output.setRawOutput(true);
+        bootstrapMenu.html(output);
+    }
+    else if (key.startsWith(F("MENU_HTML_SUBMENU_"))) {
+        output.setRawOutput(true);
         auto id = bootstrapMenu.findMenuByLabel(key.substring(18));
         if (id != BootstrapMenu::INVALID_ID) {
-            bootstrapMenu.htmlSubMenu(response, id, 0);
+            bootstrapMenu.htmlSubMenu(output, id, 0);
         }
-        return response;
-    } else if (key == F("FORM_HTML")) {
+    }
+    else if (key == F("FORM_HTML")) {
         if (_form) {
-            PrintString response;
-            _form->createHtml(response);
-            return response;
+            output.setRawOutput(true);
+            _form->createHtml(output);
         }
-        return _sharedEmptyString;
-    } else if (key == F("FORM_VALIDATOR")) {
+    }
+    else if (key == F("FORM_VALIDATOR")) {
         if (_form) {
-            PrintString response;
-            _form->createJavascript(response);
-            return response;
+            output.setRawOutput(true);
+            _form->createJavascript(output);
         }
-        return _sharedEmptyString;
-    } else if (_form) {
+    }
+    else if (_form) {
         const char *str = _form->process(key);
         if (str) {
-            _return(str);
+            output.print(str);
         }
-    } else if (key.endsWith(F("_STATUS"))) {
+    }
+    else if (key.endsWith(F("_STATUS"))) {
         uint8_t cmp_length = key.length() - 7;
         for(auto plugin: plugins) {
             if (plugin->hasStatus() && strncasecmp_P(key.c_str(), plugin->getName(), cmp_length) == 0) {
-                PrintHtmlEntitiesString str;
-                plugin->getStatus(str);
-                return str;
+                plugin->getStatus(output);
+                return;
             }
         }
-        _return(FSPGM(Not_supported));
+        output.print(FSPGM(Not_supported));
     }
-
-    PrintHtmlEntitiesString out;
-    out.print(F("KEY NOT FOUND: %"));
-    out.print(key);
-    out.print('%');
-#if DEBUG
-    if (out.length() > 15) {
-        debug_printf_P(PSTR("Template macro %s not defined\n"), out.c_str() + 15);
+    else {
+        output.print(F("KEY NOT FOUND: %"));
+        output.print(key);
+        output.print('%');
     }
-#endif
-    _return(out);
 }
 
 UpgradeTemplate::UpgradeTemplate() {
 }
 
-UpgradeTemplate::UpgradeTemplate(const String &errorMessage) {
+UpgradeTemplate::UpgradeTemplate(const String &errorMessage)
+{
     _errorMessage = errorMessage;
 }
 
-String UpgradeTemplate::process(const String &key) {
+void UpgradeTemplate::process(const String &key, PrintHtmlEntities &output)
+{
     if (key == F("FIRMWARE_UPGRADE_FAILURE_CLASS")) {
-        _return(_sharedEmptyString);
-    } else if (key == F("FIRMWARE_UPGRADE_FAILURE")) {
-        _return(_errorMessage);
     }
-    _return(WebTemplate::process(key));
+    else if (key == F("FIRMWARE_UPGRADE_FAILURE")) {
+        output.print(_errorMessage);
+    }
+    else {
+        WebTemplate::process(key, output);
+    }
 }
 
-void UpgradeTemplate::setErrorMessage(const String &errorMessage) {
+void UpgradeTemplate::setErrorMessage(const String &errorMessage)
+{
     _errorMessage = errorMessage;
 }
 
@@ -188,148 +191,174 @@ LoginTemplate::LoginTemplate(const String &errorMessage) {
     _errorMessage = errorMessage;
 }
 
-String LoginTemplate::process(const String &key) {
+void LoginTemplate::process(const String &key, PrintHtmlEntities &output)
+{
     if (key == F("LOGIN_ERROR_MESSAGE")) {
-        _return(_errorMessage);
-    } else if (key == F("LOGIN_ERROR_CLASS")) {
-        _return((_errorMessage.length() != 0) ? _sharedEmptyString : FSPGM(_hidden));
+        output.print(_errorMessage);
     }
-    _return(WebTemplate::process(key));
+    else if (key == F("LOGIN_ERROR_CLASS")) {
+        if (_errorMessage.length() == 0) {
+            output.print(FSPGM(_hidden));
+        }
+    }
+    else {
+        WebTemplate::process(key, output);
+    }
 }
 
-void LoginTemplate::setErrorMessage(const String &errorMessage) {
+void LoginTemplate::setErrorMessage(const String &errorMessage)
+{
     _errorMessage = errorMessage;
 }
 
-String ConfigTemplate::process(const String &key) {
+void ConfigTemplate::process(const String &key, PrintHtmlEntities &output)
+{
     if (_form) {
         const char *str = getForm()->process(key);
         if (str) {
-            _return(str);
+            output.print(str);
+            return;
         }
         SettingsForm *form = static_cast<SettingsForm *>(getForm());
         auto &tokens = form->getTokens();
         if (tokens.size()) {
             for(const auto &token: tokens) {
                 if (token.first.equals(key)) {
-                    _return(token.second);
+                    output.print(token.second);
+                    return;
                 }
             }
         }
     }
     if (key == F("NETWORK_MODE")) {
-        String out;
         if (config._H_GET(Config().flags).wifiMode & WIFI_AP) {
-            out = F("#station_mode");
+            output.print(F("#station_mode"));
         }
         if (config._H_GET(Config().flags).wifiMode & WIFI_STA) {
-            if (out.length()) {
-                out += FSPGM(comma_);
-            }
-            out += F("#ap_mode");
+            output.print(F("#ap_mode"));
         }
-        _return(out);
-    } else if (key.startsWith(F("MAX_CHANNELS"))) {
-        _return(String(config.getMaxWiFiChannels()));
-    } else if (key.startsWith(F("MODE_"))) {
-        _return((config._H_GET(Config().flags).wifiMode == key.substring(5).toInt()) ? FSPGM(_selected) : _sharedEmptyString);
-    } else if (key.startsWith(F("LED_TYPE_"))) {
+    }
+    else if (key.startsWith(F("MAX_CHANNELS"))) {
+        output.print(config.getMaxWiFiChannels());
+    }
+    else if (key.startsWith(F("MODE_"))) {
+        if (config._H_GET(Config().flags).wifiMode == key.substring(5).toInt()) {
+            output.print(FSPGM(_selected));
+        }
+    }
+    else if (key.startsWith(F("LED_TYPE_"))) {
         uint8_t type = key.substring(9).toInt();
-        _return(config._H_GET(Config().flags).ledMode == type ? FSPGM(_selected) : _sharedEmptyString);
-    } else if (key == F("LED_PIN")) {
-        _return(String(config._H_GET(Config().led_pin)));
-    } else if (key == F("SSL_CERT")) {
+        if (config._H_GET(Config().flags).ledMode == type) {
+            output.print(FSPGM(_selected));
+        }
+    }
+    else if (key == F("LED_PIN")) {
+        output.print(config._H_GET(Config().led_pin));
+    }
+    else if (key == F("SSL_CERT")) {
 #if SPIFFS_SUPPORT
         File file = SPIFFS.open(FSPGM(server_crt), "r");
         if (file) {
-            _return(file.readString());
+            output.print(file.readString());
         }
 #endif
-        _return(_sharedEmptyString);
-    } else if (key == F("SSL_KEY")) {
+    }
+    else if (key == F("SSL_KEY")) {
 #if SPIFFS_SUPPORT
         File file = SPIFFS.open(FSPGM(server_key), "r");
         if (file) {
-            _return(file.readString());
+            output.print(file.readString());
         }
 #endif
-        _return(_sharedEmptyString);
     }
-    _return(WebTemplate::process(key));
+    else {
+        WebTemplate::process(key, output);
+    }
 }
 
-String StatusTemplate::process(const String &key) {
+void StatusTemplate::process(const String &key, PrintHtmlEntities &output)
+{
     if (key == F("GATEWAY")) {
-        _return(WiFi.gatewayIP().toString());
-    } else if (key == F("DNS")) {
-        PrintHtmlEntitiesString out;
-        out.print(WiFi.dnsIP());
-        if (WiFi.dnsIP(1)) {
-            out.print(FSPGM(comma_));
-            out.print(WiFi.dnsIP(1));
-        }
-        _return(out);
-    } else if (key == F("SSL_STATUS")) {
-        #if ASYNC_TCP_SSL_ENABLED
-            PrintHtmlEntitiesString out;
-            #if WEBSERVER_TLS_SUPPORT
-                out.printf_P(PSTR("TLS enabled, HTTPS %s"), _Config.getOptions().isHttpServerTLS() ? F("enabled") : FSPGM(Disabled));
-            #else
-                out.printf_P(PSTR("TLS enabled, HTTPS not supported"));
-            #endif
-                _return(out);
-        #else
-            _return(FSPGM(Not_supported));
-        #endif
-    } else if (key == F("WIFI_MODE")) {
-        int n;
-        switch (n = WiFi.getMode()) {
-            case WIFI_STA:
-                _return(F("Station mode"));
-            case WIFI_AP:
-                _return(F("Access Point"));
-            case WIFI_AP_STA:
-                _return(F("Access Point and Station Mode"));
-            case WIFI_OFF:
-                _return(F("Off"));
-            default:
-                PrintHtmlEntitiesString out;
-                out.printf_P(PSTR("Invalid mode %d"), n);
-                _return(out);
-        }
-    } else if (key == F("WIFI_SSID")) {
-        PrintHtmlEntitiesString out;
-        if (WiFi.getMode() == WIFI_AP_STA) {
-            out.print(F("Station connected to " HTML_S(strong)));
-            WiFi_Station_SSID(out);
-            out.print(F(HTML_E(strong) HTML_S(br) "Access Point " HTML_S(strong)));
-            WiFi_SoftAP_SSID(out);
-            out.print(F(HTML_E(strong)));
-        } else if (WiFi.getMode() & WIFI_STA) {
-            WiFi_Station_SSID(out);
-        } else if (WiFi.getMode() & WIFI_AP) {
-            WiFi_SoftAP_SSID(out);
-        }
-        _return(out);
-    } else if (key == F("WIFI_STATUS")) {
-        PrintHtmlEntitiesString out;
-        WiFi_get_status(out);
-        _return(out);
+        WiFi.gatewayIP().printTo(output);
     }
-    _return(WebTemplate::process(key));
+    else if (key == F("DNS")) {
+        WiFi.dnsIP().printTo(output);
+        if (WiFi.dnsIP(1)) {
+            output.print(FSPGM(comma_));
+            WiFi.dnsIP(1).printTo(output);
+        }
+    }
+    else if (key == F("SSL_STATUS")) {
+        #if ASYNC_TCP_SSL_ENABLED
+            #if WEBSERVER_TLS_SUPPORT
+                output.printf_P(PSTR("TLS enabled, HTTPS %s"), _Config.getOptions().isHttpServerTLS() ? F("enabled") : FSPGM(Disabled));
+            #else
+                output.printf_P(PSTR("TLS enabled, HTTPS not supported"));
+            #endif
+        #else
+            output.print(FSPGM(Not_supported));
+        #endif
+    }
+    else if (key == F("WIFI_MODE")) {
+        switch (WiFi.getMode()) {
+            case WIFI_STA:
+                output.print(F("Station mode"));
+                break;
+            case WIFI_AP:
+                output.print(F("Access Point"));
+                break;
+            case WIFI_AP_STA:
+                output.print(F("Access Point and Station Mode"));
+                break;
+            case WIFI_OFF:
+                output.print(F("Off"));
+                break;
+            default:
+                output.printf_P(PSTR("Invalid mode %d"), WiFi.getMode());
+                break;
+        }
+    }
+    else if (key == F("WIFI_SSID")) {
+        if (WiFi.getMode() == WIFI_AP_STA) {
+            output.print(F("Station connected to " HTML_S(strong)));
+            WiFi_Station_SSID(output);
+            output.print(F(HTML_E(strong) HTML_S(br) "Access Point " HTML_S(strong)));
+            WiFi_SoftAP_SSID(output);
+            output.print(F(HTML_E(strong)));
+        }
+        else if (WiFi.getMode() & WIFI_STA) {
+            WiFi_Station_SSID(output);
+        }
+        else if (WiFi.getMode() & WIFI_AP) {
+            WiFi_SoftAP_SSID(output);
+        }
+    }
+    else if (key == F("WIFI_STATUS")) {
+        WiFi_get_status(output);
+    }
+    else {
+        WebTemplate::process(key, output);
+    }
 }
 
-PasswordTemplate::PasswordTemplate(const String &errorMessage) {
+PasswordTemplate::PasswordTemplate(const String &errorMessage)
+{
     _errorMessage = errorMessage;
 }
 
-String PasswordTemplate::process(const String &key) {
+void PasswordTemplate::process(const String &key, PrintHtmlEntities &output)
+{
     if (key == F("PASSWORD_ERROR_MESSAGE")) {
-        _return(PrintHtmlEntitiesString(_errorMessage));
-    } else if (key == F("PASSWORD_ERROR_CLASS")) {
-        _return((_errorMessage.length() != 0) ? _sharedEmptyString : FSPGM(_hidden));
+        output.print(_errorMessage);
     }
-    _return(WebTemplate::process(key));
+    else if (key == F("PASSWORD_ERROR_CLASS")) {
+        if (_errorMessage.length() == 0) {
+            output.print(FSPGM(_hidden));
+        }
+    }
+    else {
+        WebTemplate::process(key, output);
+    }
 }
 
 WifiSettingsForm::WifiSettingsForm(AsyncWebServerRequest *request) : SettingsForm(request) {
@@ -440,6 +469,5 @@ void File2String::fromString(const String & value) {
     SPIFFS.open(_filename, "w").write((const uint8_t *)value.c_str(), value.length());
 }
 
-String EmptyTemplate::process(const String & key) {
-    return String();
+void EmptyTemplate::process(const String & key, PrintHtmlEntities &output) {
 }

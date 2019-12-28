@@ -68,7 +68,7 @@ void MDNS_query_service(const char *service, const char *proto, Stream *output) 
 class MDNSPlugin : public PluginComponent {
 public:
     MDNSPlugin() {
-        register_plugin(this);
+        REGISTER_PLUGIN(this, "MDNSPlugin");
     }
     PGM_P getName() const;
     PluginPriorityEnum_t getSetupPriority() const override;

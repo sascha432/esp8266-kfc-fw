@@ -16,6 +16,7 @@
 #include <functional>
 #include <KFCTimezone.h>
 #include <Buffer.h>
+#include <PrintHtmlEntities.h>
 #include "web_server.h"
 #include "../include/templates.h"
 #include "fs_mapping.h"
@@ -53,8 +54,8 @@ public:
     AsyncTemplateResponse(const String &contentType, FSMapping *mapping, WebTemplate *webTemplate);
     virtual ~AsyncTemplateResponse();
 
-    String process(const String &key) {
-        return _webTemplate->process(key);
+    void process(const String &key, PrintHtmlEntities &output) {
+        _webTemplate->process(key, output);
     }
 
 private:

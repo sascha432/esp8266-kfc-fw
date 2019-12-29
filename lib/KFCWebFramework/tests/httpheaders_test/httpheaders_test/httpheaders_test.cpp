@@ -2,11 +2,22 @@
 //
 
 #include <PrintString.h>
+#include <PrintHtmlEntitiesString.h>
 #include "HttpHeaders.h"
+
+void test(PrintHtmlEntities& o) {
+    o.print("<br>");
+}
 
 int main()
 {
     ESP._enableMSVCMemdebug();
+
+    PrintHtmlEntitiesString str;
+    test(str);
+    str.setRawOutput(true);
+    test(str);
+
 
     HttpHeaders httpHeaders(false);
     httpHeaders.addNoCache(true);

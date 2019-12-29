@@ -52,10 +52,9 @@ FailureCounterContainer loginFailures;
 
 #if defined(ARDUINO_ESP8266_RELEASE_2_6_3)
 #error OTA(SPIFFS) update does not work with this version
-#endif
-
 #ifndef U_SPIFFS
 #define U_SPIFFS U_FS
+#endif
 #endif
 
 struct UploadStatus_t {

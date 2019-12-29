@@ -4,9 +4,10 @@
 
 #if STK500V1
 
-#include <SoftwareSerial.h>
-#include <EventScheduler.h>
 #include "stk500v1.h"
+// SoftwareSerial removed, does not compile, type error
+//#include <SoftwareSerial.h>
+#include <EventScheduler.h>
 #include "at_mode.h"
 #include "plugins.h"
 #include "STK500v1Programmer.h"
@@ -83,11 +84,11 @@ bool STK500v1Plugin::atModeHandler(Stream &serial, const String &command, int8_t
             String filename = argv[0];
             int port = argc >= 2 ? atoi(argv[1]) : 0;
             switch(port) {
-                case 2:
-                    serialPort = new SoftwareSerial(D5, D6);
-                    reinterpret_cast<SoftwareSerial *>(serialPort)->begin(57600);
-                    portName = PSTR("SoftwareSerial");
-                    break;
+                // case 2:
+                //     serialPort = new SoftwareSerial(D5, D6);
+                //     reinterpret_cast<SoftwareSerial *>(serialPort)->begin(57600);
+                //     portName = PSTR("SoftwareSerial");
+                //     break;
                 case 1:
                     Serial1.setRxBufferSize(512);
                     serialPort = &Serial1;
@@ -111,9 +112,9 @@ bool STK500v1Plugin::atModeHandler(Stream &serial, const String &command, int8_t
             // run in main loop
             Scheduler.addTimer(1000, false, [this, serialPort](EventScheduler::TimerPtr timer) {
                 stk500v1->begin([serialPort]() {
-                    if (serialPort != &Serial && serialPort != &Serial1) {
-                        delete reinterpret_cast<SoftwareSerial *>(serialPort);
-                    }
+                    // if (serialPort != &Serial && serialPort != &Serial1) {
+                    //     delete reinterpret_cast<SoftwareSerial *>(serialPort);
+                    // }
                     delete stk500v1;
                     stk500v1 = nullptr;
                 });

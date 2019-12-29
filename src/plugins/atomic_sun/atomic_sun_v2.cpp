@@ -60,7 +60,7 @@ void Driver_4ChDimmer::_end() {
 }
 
 void AtomicSunPlugin::getStatus(Print &output) {
-    output = F("4 Channel MOSFET Dimmer enabled on Serial Port");
+    output.print(F("4 Channel MOSFET Dimmer enabled on Serial Port"));
     _printStatus(output);
 }
 
@@ -394,7 +394,7 @@ void Driver_4ChDimmer::publishState(MQTTClient *client) {
     });
 }
 
-void Driver_4ChDimmer::_printStatus(PrintHtmlEntitiesString &out) {
+void Driver_4ChDimmer::_printStatus(Print &out) {
     out.print(F(", Fading enabled" HTML_S(br) "Power "));
     if (_data.state.value) {
         out.print(F("on"));

@@ -173,7 +173,9 @@ void SensorPlugin::getStatus(Print &output)
             str.print(F(HTML_S(br)));
         }
     }
+    static_cast<PrintHtmlEntitiesString &>(output).setRawOutput(true);
     output.print(str);
+    static_cast<PrintHtmlEntitiesString &>(output).setRawOutput(false);
 }
 
 #if AT_MODE_SUPPORTED

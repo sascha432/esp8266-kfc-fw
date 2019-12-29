@@ -170,6 +170,9 @@
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\mock\WiFi.cpp" />
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\mock\WiFiUDP.cpp" />
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\mock\WString.cpp" />
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\PrintBuffer.cpp" />
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\PrintHtmlEntities.cpp" />
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\PrintHtmlEntitiesString.cpp" />
     <ClCompile Include="..\..\..\src\HttpHeaders.cpp" />
     <ClCompile Include="httpheaders_test.cpp" />
   </ItemGroup>

@@ -10,7 +10,7 @@
 
 #include <Arduino_compat.h>
 #include <ESPAsyncWebServer.h>
-#include <PrintHtmlEntities.h>
+#include <PrintHtmlEntitiesString.h>
 #include <pgmspace.h>
 #include <map>
 #include <KFCForms.h>
@@ -28,7 +28,7 @@ public:
     void setForm(Form *form);
     Form *getForm();
 
-    virtual void process(const String &key, PrintHtmlEntities &output);
+    virtual void process(const String &key, PrintHtmlEntitiesString &output);
 
 protected:
     Form *_form;
@@ -36,7 +36,7 @@ protected:
 
 class EmptyTemplate : public WebTemplate {
 public:
-    virtual void process(const String &key, PrintHtmlEntities &output) override;
+    virtual void process(const String &key, PrintHtmlEntitiesString &output) override;
 };
 
 class ConfigTemplate : public WebTemplate {
@@ -46,7 +46,7 @@ public:
     ConfigTemplate(Form *form) : WebTemplate() {
         setForm(form);
     }
-    virtual void process(const String &key, PrintHtmlEntities &output) override;
+    virtual void process(const String &key, PrintHtmlEntitiesString &output) override;
 };
 
 class UpgradeTemplate : public WebTemplate {
@@ -54,7 +54,7 @@ public:
     UpgradeTemplate();
     UpgradeTemplate(const String &errorMessage);
 
-    virtual void process(const String &key, PrintHtmlEntities &output) override;
+    virtual void process(const String &key, PrintHtmlEntitiesString &output) override;
     virtual void setErrorMessage(const String &errorMessage);
 
 protected:
@@ -63,7 +63,7 @@ protected:
 
 class StatusTemplate : public WebTemplate {
 public:
-    virtual void process(const String &key, PrintHtmlEntities &output) override;
+    virtual void process(const String &key, PrintHtmlEntitiesString &output) override;
 };
 
 class LoginTemplate : public WebTemplate {
@@ -71,7 +71,7 @@ public:
     LoginTemplate();
     LoginTemplate(const String &errorMessage);
 
-    virtual void process(const String &key, PrintHtmlEntities &output) override;
+    virtual void process(const String &key, PrintHtmlEntitiesString &output) override;
     virtual void setErrorMessage(const String &errorMessage);
 
 protected:
@@ -82,7 +82,7 @@ class PasswordTemplate : public LoginTemplate {
 public:
     PasswordTemplate(const String &errorMessage);
 
-    virtual void process(const String &key, PrintHtmlEntities &output) override;
+    virtual void process(const String &key, PrintHtmlEntitiesString &output) override;
 };
 
 class File2String {

@@ -7,7 +7,6 @@
 #include "GFXCanvasBitmapStream.h"
 #include "GFXCanvasCompressed.h"
 
-
 GFXCanvasBitmapStream::GFXCanvasBitmapStream(GFXCanvasCompressed& canvas) : GFXCanvasBitmapStream(canvas, 0, 0, canvas.width(), _canvas.height()) {
 }
 

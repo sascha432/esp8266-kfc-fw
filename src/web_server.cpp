@@ -49,6 +49,11 @@ AsyncWebServer *server = nullptr;
 FailureCounterContainer loginFailures;
 
 #define U_ATMEGA 254
+
+#if defined(ARDUINO_ESP8266_RELEASE_2_6_3)
+#error OTA(SPIFFS) update does not work with this version
+#endif
+
 #ifndef U_SPIFFS
 #define U_SPIFFS U_FS
 #endif
@@ -273,7 +278,7 @@ void web_server_update_handler(AsyncWebServerRequest *request)
 #if STK500V1
         if (status->command == U_ATMEGA) {
             if (stk500v1) {
-                request->send_P(200, FSPGM(text_plain), PSTR("Upgrade already running"));
+                request->send_P(200, FSPGM(mime_text_plain), PSTR("Upgrade already running"));
             }
             else {
                 Logger_security(F("Starting ATmega firmware upgrade..."));

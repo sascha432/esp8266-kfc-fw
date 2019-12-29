@@ -156,7 +156,7 @@ void Driver_DimmerModule::onConnect(MQTTClient *client) {
 #endif
 }
 
-void Driver_DimmerModule::_printStatus(PrintHtmlEntitiesString &out) {
+void Driver_DimmerModule::_printStatus(Print &out) {
     out.print(F(", Fading enabled" HTML_S(br)));
     for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
         out.printf_P(PSTR("Channel %u: "), i);

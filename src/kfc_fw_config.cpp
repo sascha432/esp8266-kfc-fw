@@ -612,6 +612,7 @@ void KFCFWConfiguration::read() {
     _debug_println(F("KFCFWConfiguration::read()"));
 
     if (!Configuration::read()) {
+        Logger_error(F("Failed to read configuration, restoring factory settings"));
         config.restoreFactorySettings();
         Configuration::write();
     } else {

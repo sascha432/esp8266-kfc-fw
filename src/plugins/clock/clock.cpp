@@ -182,7 +182,7 @@ void ClockPlugin::reconfigure(PGM_P source)
 
 void ClockPlugin::getStatus(Print &output)
 {
-    output = F("Clock Plugin");
+    output.print(F("Clock Plugin"));
 }
 
 void ClockPlugin::createWebUI(WebUI &webUI)

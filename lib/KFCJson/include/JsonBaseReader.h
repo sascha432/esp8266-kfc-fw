@@ -33,7 +33,7 @@ public:
         uint16_t count;
     } JsonStack_t;
 
-    typedef enum {
+    typedef enum : uint8_t {
         JSON_ERROR_NONE = 0,
         JSON_ERROR_OBJECT_VALUE_WITHOUT_KEY,
         JSON_ERROR_ARRAY_WITH_KEY,

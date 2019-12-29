@@ -283,7 +283,9 @@ void Dimmer_Base::writeConfig() {
     _unlockWire();
 }
 
-void Dimmer_Base::_printStatus(PrintHtmlEntitiesString &out) {
+void Dimmer_Base::_printStatus(Print &output)
+{
+    PrintHtmlEntitiesString out;
     auto length = out.length();
     if (!isnan(_internalTemperature)) {
         out.printf_P(PSTR("Internal temperature %.2f" HTML_DEG "C"), _internalTemperature);
@@ -312,6 +314,7 @@ void Dimmer_Base::_printStatus(PrintHtmlEntitiesString &out) {
         out.printf_P(PSTR("Firmware Version %u.%u.%u"), _version >> 10, (_version >> 5)  & 0b11111, _version & 0b11111);
     }
 #endif
+    output.print(out);
 }
 
 void Dimmer_Base::_updateMetrics(uint16_t vcc, float frequency, float internalTemperature, float ntcTemperature) {
@@ -486,7 +489,7 @@ void Dimmer_Base::handleWebServer(AsyncWebServerRequest *request) {
         resetDimmerFirmware();
         HttpHeaders httpHeaders(false);
         httpHeaders.addNoCache();
-        request->send_P(200, FSPGM(text_plain), SPGM(OK));
+        request->send_P(200, FSPGM(mime_text_plain), SPGM(OK));
     } else {
         request->send(403);
     }

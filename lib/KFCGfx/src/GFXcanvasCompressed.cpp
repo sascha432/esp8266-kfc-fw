@@ -12,7 +12,7 @@ extern "C" {
 }
 #endif
 
-#include "Adafruit_ST7735.h"
+//#include "Adafruit_ST7735.h"
 
 #if DEBUG_GFXCANVASCOMPRESSED_STATS
 #include <debug_helper_enable.h>

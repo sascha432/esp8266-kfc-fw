@@ -55,7 +55,7 @@ Form * WebTemplate::getForm() {
     return _form;
 }
 
-void WebTemplate::process(const String &key, PrintHtmlEntities &output)
+void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 {
     if (key.equals(F("HOSTNAME"))) {
         output.print(config._H_STR(Config().device_name));
@@ -167,7 +167,7 @@ UpgradeTemplate::UpgradeTemplate(const String &errorMessage)
     _errorMessage = errorMessage;
 }
 
-void UpgradeTemplate::process(const String &key, PrintHtmlEntities &output)
+void UpgradeTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 {
     if (key == F("FIRMWARE_UPGRADE_FAILURE_CLASS")) {
     }
@@ -191,7 +191,7 @@ LoginTemplate::LoginTemplate(const String &errorMessage) {
     _errorMessage = errorMessage;
 }
 
-void LoginTemplate::process(const String &key, PrintHtmlEntities &output)
+void LoginTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 {
     if (key == F("LOGIN_ERROR_MESSAGE")) {
         output.print(_errorMessage);
@@ -211,7 +211,7 @@ void LoginTemplate::setErrorMessage(const String &errorMessage)
     _errorMessage = errorMessage;
 }
 
-void ConfigTemplate::process(const String &key, PrintHtmlEntities &output)
+void ConfigTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 {
     if (_form) {
         const char *str = getForm()->process(key);
@@ -276,7 +276,7 @@ void ConfigTemplate::process(const String &key, PrintHtmlEntities &output)
     }
 }
 
-void StatusTemplate::process(const String &key, PrintHtmlEntities &output)
+void StatusTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 {
     if (key == F("GATEWAY")) {
         WiFi.gatewayIP().printTo(output);
@@ -346,7 +346,7 @@ PasswordTemplate::PasswordTemplate(const String &errorMessage)
     _errorMessage = errorMessage;
 }
 
-void PasswordTemplate::process(const String &key, PrintHtmlEntities &output)
+void PasswordTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 {
     if (key == F("PASSWORD_ERROR_MESSAGE")) {
         output.print(_errorMessage);
@@ -457,17 +457,21 @@ SettingsForm::SettingsForm(AsyncWebServerRequest * request) : Form(&_data) {
     });
 }
 
-File2String::File2String(const String & filename) {
+
+File2String::File2String(const String & filename)
+{
     _filename = filename;
 }
 
-String File2String::toString() {
+String File2String::toString()
+{
     return SPIFFS.open(_filename, "r").readString();
 }
 
-void File2String::fromString(const String & value) {
+void File2String::fromString(const String &value)
+{
     SPIFFS.open(_filename, "w").write((const uint8_t *)value.c_str(), value.length());
 }
 
-void EmptyTemplate::process(const String & key, PrintHtmlEntities &output) {
+void EmptyTemplate::process(const String & key, PrintHtmlEntitiesString &output) {
 }

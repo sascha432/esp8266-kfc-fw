@@ -166,13 +166,14 @@ bool SensorPlugin::hasStatus() const
 void SensorPlugin::getStatus(Print &output)
 {
     _debug_printf_P(PSTR("SensorPlugin::getStatus(): sensor count %d\n"), _sensors.size());
+    PrintHtmlEntitiesString str;
     for(auto sensor: _sensors) {
         sensor->getStatus(str);
-        if (!output.endsWith(HTML_TAG_E)) {
-            output.print(F(HTML_S(br)));
+        if (!str.endsWith(HTML_TAG_E)) {
+            str.print(F(HTML_S(br)));
         }
     }
-    return output;
+    output.print(str);
 }
 
 #if AT_MODE_SUPPORTED

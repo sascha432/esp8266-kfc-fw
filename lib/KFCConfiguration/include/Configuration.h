@@ -5,7 +5,7 @@
 #pragma once
 
 #ifndef DEBUG_CONFIGURATION
-#define DEBUG_CONFIGURATION 0
+#define DEBUG_CONFIGURATION                 0
 #endif
 
 #include <Arduino_compat.h>
@@ -211,6 +211,7 @@ public:
     bool isDirty() const;
 
     void exportAsJson(Print& output, const String &version);
+    bool importJson(Stream& stream, uint16_t *handles = nullptr);
 
     inline void beginEEPROM() {
         if (!_eepromInitialized) {

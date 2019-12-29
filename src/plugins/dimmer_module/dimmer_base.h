@@ -54,7 +54,7 @@ protected:
     void _begin();
     void _end();
 
-    void _printStatus(PrintHtmlEntitiesString &out);
+    void _printStatus(Print &out);
     void _updateMetrics(uint16_t vcc, float frequency, float internalTemperature, float ntcTemperature);
 
     void _fade(uint8_t channel, int16_t toLevel, float fadeTime);

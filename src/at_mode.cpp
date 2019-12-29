@@ -114,6 +114,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DSLP, "DSLP", "[<milliseconds>[,<mode>]]",
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RST, "RST", "[<s>]", "Soft reset. 's' enables safe mode");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(CMDS, "CMDS", "Send a list of available AT commands");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(LOAD, "LOAD", "Discard changes and load settings from EEPROM");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(IMPORT, "IMPORT", "<filename>[,<handle>[,<handle>,...]]", "Import settings from JSON file");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(STORE, "STORE", "Store current settings in EEPROM");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(FACTORY, "FACTORY", "Restore factory settings (but do not store in EEPROM)");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(ATMODE, "ATMODE", "<1|0>", "Enable/disable AT Mode");
@@ -159,6 +160,7 @@ void at_mode_help_commands() {
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(RST));
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CMDS));
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(LOAD));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(IMPORT));
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(STORE));
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(FACTORY));
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(ATMODE));
@@ -492,6 +494,38 @@ void at_mode_serial_handle_event(String &commandString) {
             else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(STORE))) {
                 config.write();
                 at_mode_print_ok(output);
+            }
+            else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(IMPORT))) {
+                if (argc >= 1) {
+                    bool res = false;
+                    auto file = SPIFFS.open(args[0], "r");
+                    if (file) {
+                        output.printf_P(PSTR("+IMPORT: %s"), args[0]);
+                        Configuration::Handle_t *handlesPtr = nullptr;
+                        Configuration::Handle_t handles[AT_MODE_MAX_ARGUMENTS + 1];
+                        if (argc >= 2) {;
+                            output.print(F(": "));
+                            handlesPtr = &handles[0];
+                            for(uint8_t i = 1; i < argc; i++) {
+                                handles[i - 1] = (uint16_t)strtoul(args[i], nullptr, 0);
+                                handles[i] = 0;
+                                output.printf_P(PSTR("0x%04x "), handles[i - 1]);
+                            }
+                        }
+                        output.println();
+                        res = config.importJson(file, handlesPtr);
+                    }
+                    if (res) {
+                        at_mode_print_ok(output);
+                        config.write();
+                        config.setConfigDirty(true);
+                    } else {
+                        output.printf_P(PSTR("+IMPORT: Failed to import: %s\n"), args[0]);
+                    }
+                }
+                else {
+                    at_mode_print_invalid_arguments(output);
+                }
             }
             else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(FACTORY))) {
                 config.restoreFactorySettings();

@@ -18,6 +18,7 @@ public:
         _size = 0;
     }
     Stream(FILE *fp) : Stream() {
+        _fp = fp;
         if (fp) {
             seek(0, SeekEnd);
             _size = position();

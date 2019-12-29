@@ -3,6 +3,7 @@
 */
 
 #include "Configuration.h"
+#include "JsonConfigReader.h"
 #include <Buffer.h>
 #include <JsonTools.h>
 #include "misc.h"
@@ -13,7 +14,15 @@
 extern "C" {
     #include "spi_flash.h"
 }
+
+#if defined(ARDUINO_ESP8266_RELEASE_2_6_3)
+extern "C" uint32_t _EEPROM_start;
+#else
 extern "C" uint32_t _SPIFFS_end;
+#define _EEPROM_start _SPIFFS_end
+#warning check if eeprom start is correct
+#endif
+
 
 #ifdef NO_GLOBAL_EEPROM
 // allows to use a different sector in flash memory
@@ -23,7 +32,7 @@ extern "C" uint32_t _SPIFFS_end;
 // #define EEPROM_ADDR 0x40202000           // 4MB
 // #define EEPROM_ADDR 0x40203000           // 4MB
 #endif
-EEPROMClass EEPROM((((uint32_t)&_SPIFFS_end - EEPROM_ADDR) / SPI_FLASH_SEC_SIZE));
+EEPROMClass EEPROM((((uint32_t)&_EEPROM_start - EEPROM_ADDR) / SPI_FLASH_SEC_SIZE));
 #else
 #define EEPROM_ADDR 0x40200000           // sector of the configuration for direct access
 #endif
@@ -327,6 +336,14 @@ void Configuration::dumpEEPROM(Print & output, bool asByteArray, uint16_t offset
         dumper.dump(EEPROM.getDataPtr() + offset, length);
 #else
         dumper.dump(EEPROM.getConstDataPtr() + offset, length);
+#if 1
+        output.printf_P(PSTR("Dumping flash (spi_read) %d:%d\n"), offset, length);
+        endEEPROM();
+        uint8_t *buffer = (uint8_t *)malloc((length + 4) & ~3);
+        getEEPROM(buffer, offset, length, (length + 4) & ~3);
+        dumper.dump(buffer, length);
+        free(buffer);
+#endif
 #endif
     }
     EEPROM.end();
@@ -403,6 +420,13 @@ void Configuration::exportAsJson(Print& output, const String &version)
     output.print(F("\n\t}\n}\n"));
 }
 
+bool Configuration::importJson(Stream& stream, uint16_t *handles)
+{
+    JsonConfigReader reader(&stream, *this, handles);
+    reader.initParser();
+    return reader.parseStream();
+}
+
 void Configuration::endEEPROM() {
     if (_eepromInitialized) {
         _debug_printf_P(PSTR("Configuration::endEEPROM()\n"));
@@ -432,7 +456,7 @@ void Configuration::getEEPROM(uint8_t *dst, uint16_t offset, uint16_t length, ui
     }
     _debug_printf_P(PSTR("Configuration::getEEPROM(%p, %d, %d, %d)\n"), dst, offset, length, size);
 
-    auto eeprom_start_address = ((uint32_t)&_SPIFFS_end - EEPROM_ADDR) + offset;
+    auto eeprom_start_address = ((uint32_t)&_EEPROM_start - EEPROM_ADDR) + offset;
 
     uint8_t alignment = eeprom_start_address % 0x4;
     if (alignment) {
@@ -476,7 +500,7 @@ void Configuration::getEEPROM(uint8_t *dst, uint16_t offset, uint16_t length, ui
     if (result != SPI_FLASH_RESULT_OK) {
         memset(dst, 0, length);
     }
-    // _debug_printf_P(PSTR("Configuration::getEEPROM(): spi_flash_read(%08x, %d) = %d\n"), eeprom_start_address, readSize, result);
+    _debug_printf_P(PSTR("Configuration::getEEPROM(): spi_flash_read(%08x, %d) = %d, offset %u\n"), eeprom_start_address, readSize, result, offset);
 
 #elif defined(ESP32)
 
@@ -553,7 +577,7 @@ bool Configuration::_readParams() {
     uint16_t offset = _offset;
 
     union {
-        uint8_t headerBuffer[(sizeof(Header_t) + 8) & 7]; // add extra space for getEEPROM in case the read offset is not aligned
+        uint8_t headerBuffer[(sizeof(Header_t) + 8) & ~0x07]; // add extra space for getEEPROM in case the read offset is not aligned
         Header_t header;
     } hdr;
     memset(&hdr, 0, sizeof(hdr));
@@ -562,6 +586,11 @@ bool Configuration::_readParams() {
 #if defined(ESP8266) || defined(ESP32)
     // read header directly from flash since we do not know the size of the configuration
     getEEPROM(hdr.headerBuffer, (uint16_t)offset, (uint16_t)sizeof(hdr.header), (uint16_t)sizeof(hdr.headerBuffer));
+#if DEBUG_CONFIGURATION
+    _debug_println(F("Header:"));
+    DumpBinary dump(DEBUG_OUTPUT);
+    dump.dump((const uint8_t *)&hdr, sizeof(hdr.header));
+#endif
 #else
     _eepromSize = _offset + sizeof(hdr.header);
     beginEEPROM();

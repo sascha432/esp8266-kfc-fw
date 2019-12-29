@@ -54,7 +54,7 @@ public:
     AsyncTemplateResponse(const String &contentType, FSMapping *mapping, WebTemplate *webTemplate);
     virtual ~AsyncTemplateResponse();
 
-    void process(const String &key, PrintHtmlEntities &output) {
+    void process(const String &key, PrintHtmlEntitiesString &output) {
         _webTemplate->process(key, output);
     }
 

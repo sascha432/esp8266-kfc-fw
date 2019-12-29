@@ -2,9 +2,9 @@
 * Author: sascha_lammers@gmx.de
 */
 
-#if HAVE_GFX_LIB
-
 #pragma once
+
+#if HAVE_GFX_LIB
 
 #include <Arduino_compat.h>
 #include <assert.h>

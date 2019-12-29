@@ -120,7 +120,7 @@ public:
 protected:
     void _begin();
     void _end();
-    void _printStatus(PrintHtmlEntitiesString &out);
+    void _printStatus(Print &out);
 
 private:
     void _getChannels();

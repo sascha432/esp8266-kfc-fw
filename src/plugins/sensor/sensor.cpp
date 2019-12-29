@@ -16,6 +16,7 @@
 #include "Sensor_HLW8012.h"
 #include "Sensor_HLW8032.h"
 #include "Sensor_Battery.h"
+#include "Sensor_DS3231.h"
 
 #if DEBUG_IOT_SENSOR
 #include <debug_helper_enable.h>
@@ -64,6 +65,9 @@ void SensorPlugin::setup(PluginSetupMode_t mode) {
 #endif
 #if IOT_SENSOR_HAVE_BATTERY
     _sensors.push_back(new Sensor_Battery(F(IOT_SENSOR_NAMES_BATTERY)));
+#endif
+#if IOT_SENSOR_HAVE_DS3231
+    _sensors.push_back(new Sensor_DS3231(F(IOT_SENSOR_NAMES_DS3231)));
 #endif
 }
 

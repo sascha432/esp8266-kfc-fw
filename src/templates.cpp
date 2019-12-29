@@ -78,7 +78,9 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     }
 #if RTC_SUPPORT
     else if (key == F("RTC_STATUS")) {
+        output.setRawOutput(true); // disable html entities translation
         config.printRTCStatus(output, false);
+        output.setRawOutput(false);
     }
 #endif
 #if NTP_CLIENT || RTC_SUPPORT

@@ -552,7 +552,7 @@ const String KFCFWConfiguration::getFirmwareVersion() {
 }
 
 const String KFCFWConfiguration::getShortFirmwareVersion() {
-    return F(FIRMWARE_VERSION_STR " Build " __BUILD_NUMBER);
+    return F(FIRMWARE_VERSION_STR " Build " __BUILD_NUMBER "_" ARDUINO_ESP8266_RELEASE);
 }
 
 void KFCFWConfiguration::storeQuickConnect(const uint8_t *bssid, int8_t channel) {

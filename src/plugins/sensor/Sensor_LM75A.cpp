@@ -12,30 +12,32 @@
 #include <debug_helper_disable.h>
 #endif
 
-Sensor_LM75A::Sensor_LM75A(const JsonString &name, TwoWire &wire, uint8_t address) : MQTTSensor(), _name(name), _wire(wire), _address(address) {
+Sensor_LM75A::Sensor_LM75A(const JsonString &name, TwoWire &wire, uint8_t address) : MQTTSensor(), _name(name), _wire(wire), _address(address)
+{
 #if DEBUG_MQTT_CLIENT
     debug_printf_P(PSTR("Sensor_LM75A(): component=%p\n"), this);
 #endif
     registerClient(this);
-    _topic = MQTTClient::formatTopic(-1, F("/%s/"), _getId().c_str());
 }
 
-void Sensor_LM75A::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector) {
+void Sensor_LM75A::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector)
+{
     auto discovery = _debug_new MQTTAutoDiscovery();
     discovery->create(this, 0, format);
-    discovery->addStateTopic(_topic);
+    discovery->addStateTopic(MQTTClient::formatTopic(-1, F("/%s/"), _getId().c_str()));
     discovery->addUnitOfMeasurement(F("\u00b0C"));
     discovery->finalize();
     vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
 }
 
-uint8_t Sensor_LM75A::getAutoDiscoveryCount() const {
+uint8_t Sensor_LM75A::getAutoDiscoveryCount() const
+{
     return 1;
 }
 
-void Sensor_LM75A::getValues(JsonArray &array) {
+void Sensor_LM75A::getValues(JsonArray &array)
+{
     _debug_printf_P(PSTR("Sensor_LM75A::getValues()\n"));
-
     auto &obj = array.addObject(3);
     auto temp = _readSensor();
     obj.add(JJ(id), _getId());
@@ -43,32 +45,34 @@ void Sensor_LM75A::getValues(JsonArray &array) {
     obj.add(JJ(value), JsonNumber(temp, 2));
 }
 
-void Sensor_LM75A::createWebUI(WebUI &webUI, WebUIRow **row) {
+void Sensor_LM75A::createWebUI(WebUI &webUI, WebUIRow **row)
+{
     _debug_printf_P(PSTR("Sensor_LM75A::createWebUI()\n"));
-
-    if ((*row)->size() > 3) {
-        // *row = &webUI.addRow();
-    }
-
+    // if ((*row)->size() > 3) {
+    //     *row = &webUI.addRow();
+    // }
     (*row)->addSensor(_getId(), _name, F("\u00b0C"));
 }
 
-void Sensor_LM75A::publishState(MQTTClient *client) {
+void Sensor_LM75A::publishState(MQTTClient *client)
+{
     if (client) {
-        client->publish(_topic, _qos, 1, String(_readSensor(), 2));
+        client->publish(MQTTClient::formatTopic(-1, F("/%s/"), _getId().c_str()), _qos, 1, String(_readSensor(), 2));
     }
 }
 
-void Sensor_LM75A::getStatus(PrintHtmlEntitiesString &output) {
+void Sensor_LM75A::getStatus(PrintHtmlEntitiesString &output)
+{
     output.printf_P(PSTR("LM75A @ I2C address 0x%02x" HTML_S(br)), _address);
 }
 
-Sensor_LM75A::SensorEnumType_t Sensor_LM75A::getType() const {
+Sensor_LM75A::SensorEnumType_t Sensor_LM75A::getType() const
+{
     return LM75A;
 }
 
-float Sensor_LM75A::_readSensor() {
-
+float Sensor_LM75A::_readSensor()
+{
     _wire.beginTransmission(_address);
     _wire.write(0x00);
     if (_wire.endTransmission() == 0 && _wire.requestFrom(_address, (uint8_t)2) == 2) {
@@ -80,9 +84,9 @@ float Sensor_LM75A::_readSensor() {
     return NAN;
 }
 
-String Sensor_LM75A::_getId() {
-    PrintString id(F("lm75a_0x%02x"), _address);
-    return id;
+String Sensor_LM75A::_getId()
+{
+    return PrintString(F("lm75a_0x%02x"), _address);
 }
 
 #endif

@@ -17,6 +17,7 @@
 #include "Sensor_HLW8032.h"
 #include "Sensor_Battery.h"
 #include "Sensor_DS3231.h"
+#include "Sensor_INA219.h"
 
 #if DEBUG_IOT_SENSOR
 #include <debug_helper_enable.h>
@@ -26,24 +27,27 @@
 
 static SensorPlugin plugin;
 
-
-void SensorPlugin::getValues(JsonArray &array) {
+void SensorPlugin::getValues(JsonArray &array)
+{
     _debug_printf_P(PSTR("SensorPlugin::getValues()\n"));
     for(auto sensor: _sensors) {
         sensor->getValues(array);
     }
 }
 
-void SensorPlugin::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState) {
+void SensorPlugin::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
+{
     _debug_printf_P(PSTR("SensorPlugin::setValue(%s)\n"), id.c_str());
 }
 
 
-PGM_P SensorPlugin::getName() const {
+PGM_P SensorPlugin::getName() const
+{
     return PSTR("sensor");
 }
 
-void SensorPlugin::setup(PluginSetupMode_t mode) {
+void SensorPlugin::setup(PluginSetupMode_t mode)
+{
     Scheduler.addTimer(&_timer, 1e4, true, SensorPlugin::timerEvent);
 #if IOT_SENSOR_HAVE_LM75A
     _sensors.push_back(new Sensor_LM75A(F(IOT_SENSOR_NAMES_LM75A), config.initTwoWire(), IOT_SENSOR_HAVE_LM75A));
@@ -68,6 +72,9 @@ void SensorPlugin::setup(PluginSetupMode_t mode) {
 #endif
 #if IOT_SENSOR_HAVE_DS3231
     _sensors.push_back(new Sensor_DS3231(F(IOT_SENSOR_NAMES_DS3231)));
+#endif
+#if IOT_SENSOR_HAVE_INA219
+    _sensors.push_back(new Sensor_INA219(F(IOT_SENSOR_NAMES_INA219), config.initTwoWire(), IOT_SENSOR_HAVE_INA219));
 #endif
 }
 
@@ -237,12 +244,18 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(SENSORR, "SENSORR", "Reconfigure sensor pl
 #if IOT_SENSOR_HAVE_BATTERY
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(SENSORPBV, "SENSORPBV", "<repeat every n seconds>", "Print battery voltage");
 #endif
+#if IOT_SENSOR_HAVE_INA219
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(SENSORINA219, "SENSORINA219", "<repeat every n seconds>", "Print battery voltage");
+#endif
 
 void SensorPlugin::atModeHelpGenerator() {
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SENSORC));
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SENSORR));
 #if IOT_SENSOR_HAVE_BATTERY
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SENSORPBV));
+#endif
+#if IOT_SENSOR_HAVE_INA219
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SENSORINA219));
 #endif
 }
 
@@ -284,6 +297,49 @@ bool SensorPlugin::atModeHandler(Stream &serial, const String &command, int8_t a
         }
         return true;
     }
+#if IOT_SENSOR_HAVE_INA219
+    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SENSORINA219))) {
+        static EventScheduler::TimerPtr timer = nullptr;
+        if (timer) {
+            Scheduler.removeTimer(timer);
+            timer = nullptr;
+        }
+        Sensor_INA219 *ina219 = nullptr;
+        for(auto sensor: _sensors) {
+            if (sensor->getType() == MQTTSensor::SensorEnumType_t::INA219) {
+                ina219 = reinterpret_cast<Sensor_INA219 *>(sensor);
+                break;
+            }
+        }
+        if (ina219) {
+            auto printSensor = [&serial, ina219](EventScheduler::TimerPtr timer) mutable {
+                auto sensor = ina219->getSensor();
+                serial.printf_P(PSTR("+SENSORINA219: raw: U=%d, Vshunt=%d, I=%d, current: P=%d: %.3fV, %.1fmA, %.1fmW, average: %.3fV, %.1fmA, %.1fmW\n"),
+                    sensor.getBusVoltage_raw(),
+                    sensor.getShuntVoltage_raw(),
+                    sensor.getCurrent_raw(),
+                    sensor.getPower_raw(),
+                    sensor.getBusVoltage_V(),
+                    sensor.getCurrent_mA(),
+                    sensor.getPower_mW(),
+                    ina219->getVoltage(),
+                    ina219->getCurrent(),
+                    ina219->getPower()
+                );
+            };
+            printSensor(nullptr);
+            if (argc >= 1) {
+                int repeat = atoi(argv[0]);
+                if (repeat) {
+                    Scheduler.addTimer(&timer, repeat * 1000, true, printSensor);
+                }
+            }
+        }
+        else {
+            serial.println(F("+SENSORINA219: No sensor found"));
+        }
+    }
+#endif
 #if IOT_SENSOR_HAVE_BATTERY
     else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SENSORPBV))) {
         static EventScheduler::TimerPtr timer = nullptr;

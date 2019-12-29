@@ -49,6 +49,10 @@
 #define IOT_SENSOR_NAMES_DS3231     "DS3231 Temperature"
 #endif
 
+#ifndef IOT_SENSOR_NAMES_INA219
+#define IOT_SENSOR_NAMES_INA219     "INA219 Voltage"
+#endif
+
 class SensorPlugin : public PluginComponent, public WebUIInterface {
 public:
     typedef std::vector<MQTTSensor *> SensorVector;

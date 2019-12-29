@@ -25,6 +25,7 @@ public:
         HLW8032,
         BATTERY,
         DS3231,
+        INA219,
     } SensorEnumType_t;
 
     const uint8_t DEFAULT_UPDATE_RATE = 60;

@@ -16,7 +16,8 @@
 #include <debug_helper_disable.h>
 #endif
 
-Sensor_CCS811::Sensor_CCS811(const String &name, uint8_t address) : MQTTSensor(), _name(name), _address(address) {
+Sensor_CCS811::Sensor_CCS811(const String &name, uint8_t address) : MQTTSensor(), _name(name), _address(address)
+{
 #if DEBUG_MQTT_CLIENT
     debug_printf_P(PSTR("Sensor_CCS811(): component=%p\n"), this);
 #endif
@@ -29,7 +30,8 @@ Sensor_CCS811::Sensor_CCS811(const String &name, uint8_t address) : MQTTSensor()
     _sensor.available = false;
 }
 
-void Sensor_CCS811::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector) {
+void Sensor_CCS811::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector)
+{
     auto discovery = _debug_new MQTTAutoDiscovery();
     discovery->create(this, 0, format);
     discovery->addStateTopic(_topic);
@@ -47,11 +49,13 @@ void Sensor_CCS811::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTT
     vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
 }
 
-uint8_t Sensor_CCS811::getAutoDiscoveryCount() const {
+uint8_t Sensor_CCS811::getAutoDiscoveryCount() const
+{
     return 2;
 }
 
-void Sensor_CCS811::getValues(JsonArray &array) {
+void Sensor_CCS811::getValues(JsonArray &array)
+{
     _debug_printf_P(PSTR("Sensor_CCS811::getValues()\n"));
 
     auto &sensor = _readSensor();
@@ -65,7 +69,8 @@ void Sensor_CCS811::getValues(JsonArray &array) {
     obj->add(JJ(value), sensor.TVOC);
 }
 
-void Sensor_CCS811::createWebUI(WebUI &webUI, WebUIRow **row) {
+void Sensor_CCS811::createWebUI(WebUI &webUI, WebUIRow **row)
+{
     _debug_printf_P(PSTR("Sensor_CCS811::createWebUI()\n"));
 
     if ((*row)->size() > 2) {
@@ -76,15 +81,18 @@ void Sensor_CCS811::createWebUI(WebUI &webUI, WebUIRow **row) {
     (*row)->addSensor(_getId(F("tvoc")), _name + F(" TVOC"), F("ppb"));
 }
 
-void Sensor_CCS811::getStatus(PrintHtmlEntitiesString &output) {
+void Sensor_CCS811::getStatus(PrintHtmlEntitiesString &output)
+{
     output.printf_P(PSTR("CCS811 @ I2C address 0x%02x" HTML_S(br)), _address);
 }
 
-Sensor_CCS811::SensorEnumType_t Sensor_CCS811::getType() const {
+Sensor_CCS811::SensorEnumType_t Sensor_CCS811::getType() const
+{
     return CCS811;
 }
 
-void Sensor_CCS811::publishState(MQTTClient *client) {
+void Sensor_CCS811::publishState(MQTTClient *client)
+{
     if (client) {
         auto &sensor = _readSensor();
         if (sensor.available) {
@@ -98,8 +106,8 @@ void Sensor_CCS811::publishState(MQTTClient *client) {
     }
 }
 
-Sensor_CCS811::SensorData_t &Sensor_CCS811::_readSensor() {
-
+Sensor_CCS811::SensorData_t &Sensor_CCS811::_readSensor()
+{
 // use BME280, BME680 or LM75A for temperature and humidity compensation
 #if IOT_SENSOR_HAVE_LM75A || IOT_SENSOR_HAVE_BME280 || IOT_SENSOR_HAVE_BME680
     auto &sensors = SensorPlugin::getSensors();
@@ -156,7 +164,8 @@ Sensor_CCS811::SensorData_t &Sensor_CCS811::_readSensor() {
     return _sensor;
 }
 
-String Sensor_CCS811::_getId(const __FlashStringHelper *type) {
+String Sensor_CCS811::_getId(const __FlashStringHelper *type)
+{
     PrintString id(F("ccs811_0x%02x"), _address);
     if (type) {
         id.write('_');

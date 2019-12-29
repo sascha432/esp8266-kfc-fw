@@ -18,9 +18,30 @@
 #include "i2c_scanner.h"
 #include "plugins.h"
 
+#if IOT_SENSOR_HAVE_INA219
+#include "Adafruit_INA219.h"
+#ifndef _LIB_ADAFRUIT_INA219_
+#define _LIB_ADAFRUIT_INA219_
+#endif
+#endif
+#if IOT_SENSOR_HAVE_BME280
 #include "Adafruit_BME280.h"
+#ifndef __BME280_H__
+#define __BME280_H__
+#endif
+#endif
+#if IOT_SENSOR_HAVE_BME680
 #include "Adafruit_BME680.h"
+#ifndef __BME680_H__
+#define __BME680_H__
+#endif
+#endif
+#if IOT_SENSOR_HAVE_CCS811
 #include "Adafruit_CCS811.h"
+#ifndef __CCS811_H__
+#define __CCS811_H__
+#endif
+#endif
 
 void check_if_exist_I2C(Print &output);
 
@@ -79,9 +100,18 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(SCAND, "SCAND", "Scan for devices");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CS, "I2CS", "<SDA,SCL[,speed=100kHz[,clock strech limit=usec]]>", "Setup I2C bus. Use reset to restore defaults");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CST, "I2CST", "<address,byte[,byte][,...]>", "Send data to slave (hex encoded: ff or 0xff)");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CSR, "I2CSR", "<address,count>", "Request data from slave");
+#ifdef _LIB_ADAFRUIT_INA219_
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CINA219, "I2CINA219", "<address>", "Read INA219 sensor");
+#endif
+#ifdef __CCS811_H__
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CCCS811, "I2CCCS811", "<address>[,<temperature=25>][,<humidity=55>]", "Read CCS811 sensor");
+#endif
+#ifdef __BME680_H__
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CBME680, "I2CBME680", "<address>", "Read BME680 sensor");
+#endif
+#ifdef __BME280_H__
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CBME280, "I2CBME280", "<address>", "Read BME280 sensor");
+#endif
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CLM75A, "I2CLM75A", "<address>", "Read temperature from LM75A");
 
 static int __toint(const char *s, uint8_t base = 10) {
@@ -138,9 +168,18 @@ void I2CScannerPlugin::atModeHelpGenerator() {
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CS));
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CST));
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CSR));
+#ifdef _LIB_ADAFRUIT_INA219_
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CINA219));
+#endif
+#ifdef __CCS811_H__
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CCCS811));
+#endif
+#ifdef __BME680_H__
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CBME680));
+#endif
+#ifdef __BME280_H__
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CBME280));
+#endif
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CLM75A));
 }
 
@@ -229,6 +268,24 @@ bool I2CScannerPlugin::atModeHandler(Stream &serial, const String &command, int8
         check_if_exist_I2C(serial);
         return true;
     }
+#ifdef _LIB_ADAFRUIT_INA219_
+    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(I2CINA219))) {
+        if (argc < 1) {
+            at_mode_print_invalid_arguments(serial);
+        }
+        else {
+            int address = __toint(argv[0]);
+            if (address == 0) {
+                address = INA219_ADDRESS;
+            }
+            Adafruit_INA219 ina219(address);
+            ina219.begin();
+            serial.printf_P(PSTR("+I2CINA219: raw: Vbus %d, Vshunt %d, I %d, P %d\n"), ina219.getBusVoltage_raw(), ina219.getShuntVoltage_raw(), ina219.getCurrent_raw(), ina219.getPower_raw());
+        }
+        return true;
+    }
+#endif
+#ifdef __CCS811_H__
     else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(I2CCCS811))) {
         if (argc < 1) {
             at_mode_print_invalid_arguments(serial);
@@ -262,6 +319,8 @@ bool I2CScannerPlugin::atModeHandler(Stream &serial, const String &command, int8
         }
         return true;
     }
+#endif
+#ifdef __BME680_H__
     else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(I2CBME680))) {
         if (argc != 1) {
             at_mode_print_invalid_arguments(serial);
@@ -277,6 +336,8 @@ bool I2CScannerPlugin::atModeHandler(Stream &serial, const String &command, int8
         }
         return true;
     }
+#endif
+#ifdef __BME280_H__
     else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(I2CBME280))) {
         if (argc != 1) {
             at_mode_print_invalid_arguments(serial);
@@ -292,6 +353,7 @@ bool I2CScannerPlugin::atModeHandler(Stream &serial, const String &command, int8
         }
         return true;
     }
+#endif
     else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(I2CLM75A))) {
         if (argc != 1) {
             at_mode_print_invalid_arguments(serial);

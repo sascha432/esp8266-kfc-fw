@@ -29,7 +29,8 @@ static volatile unsigned long callbackTimeCF1;
 static volatile uint32_t energyCounter = 0;
 static volatile uint8_t callbackFlag = 0;
 
-void ICACHE_RAM_ATTR Sensor_HLW8012_callbackCF() {
+void ICACHE_RAM_ATTR Sensor_HLW8012_callbackCF()
+{
     callbackTimeCF = micros();
     if (callbackFlag & CBF_CF) {
         callbackFlag |= CBF_CF_SKIPPED;
@@ -38,7 +39,8 @@ void ICACHE_RAM_ATTR Sensor_HLW8012_callbackCF() {
     energyCounter++;
 }
 
-void ICACHE_RAM_ATTR Sensor_HLW8012_callbackCF1() {
+void ICACHE_RAM_ATTR Sensor_HLW8012_callbackCF1()
+{
     callbackTimeCF1 = micros();
     if (callbackFlag & CBF_CF1) {
         callbackFlag |= CBF_CF1_SKIPPED;
@@ -46,7 +48,8 @@ void ICACHE_RAM_ATTR Sensor_HLW8012_callbackCF1() {
     callbackFlag |= CBF_CF1;
 }
 
-void Sensor_HLW8012::loop() {
+void Sensor_HLW8012::loop()
+{
     if (sensor) {
         sensor->_loop();
     }
@@ -113,7 +116,8 @@ void Sensor_HLW8012::_loop()
 }
 
 
-Sensor_HLW8012::Sensor_HLW8012(const String &name, uint8_t pinSel, uint8_t pinCF, uint8_t pinCF1) : Sensor_HLW80xx(name), _pinSel(pinSel), _pinCF(pinCF), _pinCF1(pinCF1) {
+Sensor_HLW8012::Sensor_HLW8012(const String &name, uint8_t pinSel, uint8_t pinCF, uint8_t pinCF1) : Sensor_HLW80xx(name), _pinSel(pinSel), _pinCF(pinCF), _pinCF1(pinCF1)
+{
 #if DEBUG_MQTT_CLIENT
     debug_printf_P(PSTR("Sensor_HLW8012(): component=%p\n"), this);
 #endif
@@ -135,8 +139,8 @@ Sensor_HLW8012::Sensor_HLW8012(const String &name, uint8_t pinSel, uint8_t pinCF
     attachInterrupt(digitalPinToInterrupt(_pinCF1), Sensor_HLW8012_callbackCF1, CHANGE);
 }
 
-Sensor_HLW8012::~Sensor_HLW8012() {
-
+Sensor_HLW8012::~Sensor_HLW8012()
+{
     LoopFunctions::remove(Sensor_HLW8012::loop);
     sensor = nullptr;
     detachInterrupt(digitalPinToInterrupt(_pinCF));
@@ -144,16 +148,19 @@ Sensor_HLW8012::~Sensor_HLW8012() {
 }
 
 
-void Sensor_HLW8012::getStatus(PrintHtmlEntitiesString &output) {
+void Sensor_HLW8012::getStatus(PrintHtmlEntitiesString &output)
+{
     output.printf_P(PSTR("Power Monitor HLW8012, "));
     output.printf_P(PSTR("calibration U=%f, I=%f, P=%f"), _calibrationU, _calibrationI, _calibrationP);
 }
 
-Sensor_HLW8012::SensorEnumType_t Sensor_HLW8012::getType() const {
+Sensor_HLW8012::SensorEnumType_t Sensor_HLW8012::getType() const
+{
     return HLW8012;
 }
 
-String Sensor_HLW8012::_getId(const __FlashStringHelper *type) {
+String Sensor_HLW8012::_getId(const __FlashStringHelper *type)
+{
     PrintString id(F("hlw8012_0x%04x"), (_pinSel << 10) | (_pinCF << 5) | (_pinCF1));
     if (type) {
         id.write('_');
@@ -162,7 +169,8 @@ String Sensor_HLW8012::_getId(const __FlashStringHelper *type) {
     return id;
 }
 
-void Sensor_HLW8012::_callbackCF(unsigned long micros) {
+void Sensor_HLW8012::_callbackCF(unsigned long micros)
+{
     _calcPulseWidth(_inputCF, micros, IOT_SENSOR_HLW8012_TIMEOUT_P);
     if (_inputCF.pulseWidth && _inputCF.counter >= 3) {
         _power = IOT_SENSOR_HLW80xx_CALC_P(_inputCF.pulseWidthIntegral);
@@ -173,7 +181,8 @@ void Sensor_HLW8012::_callbackCF(unsigned long micros) {
     // _debug_printf_P(PSTR("pulse width %f count %u power %f energy %u\n"), _inputCF.pulseWidthIntegral, _inputCF.counter, IOT_SENSOR_HLW80xx_CALC_P(_inputCF.pulseWidthIntegral), _energyCounter);
 }
 
-void Sensor_HLW8012::_callbackCF1(unsigned long micros) {
+void Sensor_HLW8012::_callbackCF1(unsigned long micros)
+{
     if (millis() < _inputCF1.delayStart) { // skip anything before to let sensor settle
         return;
     }

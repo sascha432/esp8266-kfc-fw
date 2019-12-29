@@ -16,7 +16,8 @@
 
 PROGMEM_STRING_DEF(iot_sensor_hlw80xx_state_file, "/hlw80xx.state");
 
-Sensor_HLW80xx::Sensor_HLW80xx(const String &name) : MQTTSensor(), _name(name) {
+Sensor_HLW80xx::Sensor_HLW80xx(const String &name) : MQTTSensor(), _name(name)
+{
 #if DEBUG_MQTT_CLIENT
     debug_printf_P(PSTR("Sensor_HLW80xx(): component=%p\n"), this);
 #endif
@@ -33,7 +34,8 @@ Sensor_HLW80xx::Sensor_HLW80xx(const String &name) : MQTTSensor(), _name(name) {
     setUpdateRate(IOT_SENSOR_HLW80xx_UPDATE_RATE);
 }
 
-void Sensor_HLW80xx::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector) {
+void Sensor_HLW80xx::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector)
+{
     auto discovery = _debug_new MQTTAutoDiscovery();
     discovery->create(this, 0, format);
     discovery->addStateTopic(_topic);
@@ -83,11 +85,13 @@ void Sensor_HLW80xx::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQT
     vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
 }
 
-uint8_t Sensor_HLW80xx::getAutoDiscoveryCount() const {
+uint8_t Sensor_HLW80xx::getAutoDiscoveryCount() const
+{
     return 6;
 }
 
-void Sensor_HLW80xx::getValues(JsonArray &array) {
+void Sensor_HLW80xx::getValues(JsonArray &array)
+{
     _debug_printf_P(PSTR("Sensor_HLW8012::getValues()\n"));
 
     auto obj = &array.addObject(3);
@@ -124,7 +128,8 @@ void Sensor_HLW80xx::getValues(JsonArray &array) {
     obj->add(JJ(value), String(pf, 2));
 }
 
-void Sensor_HLW80xx::createWebUI(WebUI &webUI, WebUIRow **row) {
+void Sensor_HLW80xx::createWebUI(WebUI &webUI, WebUIRow **row)
+{
     _debug_printf_P(PSTR("Sensor_HLW8012::createWebUI()\n"));
 
     // if ((*row)->size() > 1) {
@@ -139,7 +144,8 @@ void Sensor_HLW80xx::createWebUI(WebUI &webUI, WebUIRow **row) {
     (*row)->addSensor(_getId(F("pf")), _name + F(" Power Factor"), F(""));
 }
 
-void Sensor_HLW80xx::reconfigure() {
+void Sensor_HLW80xx::reconfigure()
+{
     auto sensor = config._H_GET(Config().sensor).hlw80xx;
     if (sensor.calibrationI) {
         _calibrationI = sensor.calibrationI;
@@ -153,7 +159,8 @@ void Sensor_HLW80xx::reconfigure() {
     _debug_printf_P(PSTR("Sensor_HLW80xx::Sensor_HLW80xx(): calibration U=%f, I=%f, P=%f\n"), _calibrationU, _calibrationI, _calibrationP);
 }
 
-void Sensor_HLW80xx::restart() {
+void Sensor_HLW80xx::restart()
+{
     _saveEnergyCounter();
 
     // get clean copy of config and update energy counter
@@ -163,8 +170,8 @@ void Sensor_HLW80xx::restart() {
     config.write();
 }
 
-void Sensor_HLW80xx::createConfigureForm(AsyncWebServerRequest *request, Form &form) {
-
+void Sensor_HLW80xx::createConfigureForm(AsyncWebServerRequest *request, Form &form)
+{
     auto *sensor = &config._H_W_GET(Config().sensor); // must be a pointer
 
     form.add<float>(F("hlw80xx_calibrationU"), &sensor->hlw80xx.calibrationU)->setFormUI(new FormUI(FormUI::TEXT, F("HLW8012 Voltage Calibration")));
@@ -172,7 +179,8 @@ void Sensor_HLW80xx::createConfigureForm(AsyncWebServerRequest *request, Form &f
     form.add<float>(F("hlw80xx_calibrationP"), &sensor->hlw80xx.calibrationP)->setFormUI(new FormUI(FormUI::TEXT, F("HLW8012 Power Calibration")));
 }
 
-void Sensor_HLW80xx::publishState(MQTTClient *client) {
+void Sensor_HLW80xx::publishState(MQTTClient *client)
+{
     if (client) {
         PrintString str;
         JsonUnnamedObject json;
@@ -188,18 +196,21 @@ void Sensor_HLW80xx::publishState(MQTTClient *client) {
     }
 }
 
-void Sensor_HLW80xx::resetEnergyCounter() {
+void Sensor_HLW80xx::resetEnergyCounter()
+{
     memset(&_energyCounter, 0, sizeof(_energyCounter));
     _saveEnergyCounter();
 }
 
-void Sensor_HLW80xx::_incrEnergyCounters(uint32_t count) {
+void Sensor_HLW80xx::_incrEnergyCounters(uint32_t count)
+{
     for(uint8_t i = 0; i < IOT_SENSOR_HLW80xx_NUM_ENERGY_COUNTERS; i++) {
         _energyCounter[i] += count;
     }
 }
 
-void Sensor_HLW80xx::_saveEnergyCounter() {
+void Sensor_HLW80xx::_saveEnergyCounter()
+{
     _debug_printf_P(PSTR("Sensor_HLW80xx::_saveEnergyCounter()\n"));
 #if IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT
     auto file = SPIFFS.open(FSPGM(iot_sensor_hlw80xx_state_file), "w");
@@ -213,7 +224,8 @@ void Sensor_HLW80xx::_saveEnergyCounter() {
 #endif
 }
 
-void Sensor_HLW80xx::_loadEnergyCounter() {
+void Sensor_HLW80xx::_loadEnergyCounter()
+{
     _debug_printf_P(PSTR("Sensor_HLW80xx::_loadEnergyCounter()\n"));
 #if IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT
     auto file = SPIFFS.open(FSPGM(iot_sensor_hlw80xx_state_file), "r");
@@ -228,14 +240,16 @@ void Sensor_HLW80xx::_loadEnergyCounter() {
 #endif
 }
 
-JsonNumber Sensor_HLW80xx::_currentToNumber(float current) const {
+JsonNumber Sensor_HLW80xx::_currentToNumber(float current) const
+{
     if (current < 0.2) {
         return JsonNumber(current, 3);
     }
     return JsonNumber(current, 2);
 }
 
-JsonNumber Sensor_HLW80xx::_energyToNumber(float energy) const {
+JsonNumber Sensor_HLW80xx::_energyToNumber(float energy) const
+{
     auto tmp = energy;
     uint8_t digits = 0;
     while(tmp >= 1 && digits < 3) {
@@ -245,21 +259,24 @@ JsonNumber Sensor_HLW80xx::_energyToNumber(float energy) const {
     return JsonNumber(energy, 3 - digits);
 }
 
-JsonNumber Sensor_HLW80xx::_powerToNumber(float power) const {
+JsonNumber Sensor_HLW80xx::_powerToNumber(float power) const
+{
     if (power < 10) {
         return JsonNumber(power, 2);
     }
     return JsonNumber(power, 1);
 }
 
-float Sensor_HLW80xx::_getPowerFactor() const {
+float Sensor_HLW80xx::_getPowerFactor() const
+{
     if (isnan(_power) || isnan(_voltage) || isnan(_current)) {
         return NAN;
     }
     return std::min(_power / (_voltage * _current), 1.0f);
 }
 
-float Sensor_HLW80xx::_getEnergy(uint8_t num) const {
+float Sensor_HLW80xx::_getEnergy(uint8_t num) const
+{
     if (num >= IOT_SENSOR_HLW80xx_NUM_ENERGY_COUNTERS) {
         return NAN;
     }

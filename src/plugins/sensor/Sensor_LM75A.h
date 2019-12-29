@@ -37,7 +37,6 @@ private:
     JsonString _name;
     TwoWire &_wire;
     uint8_t _address;
-    String _topic;
 };
 
 #endif

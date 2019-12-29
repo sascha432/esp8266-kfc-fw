@@ -88,7 +88,7 @@ Remote view over WebUI.
 
 ### Sensor
 
-Plugin for different sensors. Voltage/Battery charger, BME280, BME680, CCS811, HLW8012, LM75A.
+Plugin for different sensors. Voltage/Battery charger, BME280, BME680, CCS811, HLW8012, LM75A, DS3231, INA219.
 Support for native WebUI and MQTT.
 
 ### Clock

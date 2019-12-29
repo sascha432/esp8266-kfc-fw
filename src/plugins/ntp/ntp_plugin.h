@@ -32,9 +32,10 @@ void ntp_client_prepare_deep_sleep(uint32_t time);
 
 #if NTP_HAVE_CALLBACKS
 
-typedef std::function<void()> TimezoneUpdateCallback_t;
+typedef std::function<void(bool timezone)> TimeUpdatedCallback_t;
 
-void addTimezoneUpdateCallback(TimezoneUpdateCallback_t callback);
+// gets called if the system time is updated (timezone=false) or timezone is set (timezone=true)
+void addTimeUpdatedCallback(TimeUpdatedCallback_t callback);
 
 #endif
 

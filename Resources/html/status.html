@@ -126,6 +126,12 @@
                     <td>%NTP_STATUS%</td>
                 </tr>
                 <!--#endif-->
+                <!--#if RTC_SUPPORT-->
+                <tr>
+                    <td>RTC Status</td>
+                    <td>%RTC_STATUS%</td>
+                </tr>
+                <!--#endif-->
                 <!--#if defined(MQTT_SUPPORT) && MQTT_SUPPORT-->
                 <tr>
                     <td>MQTT</td>

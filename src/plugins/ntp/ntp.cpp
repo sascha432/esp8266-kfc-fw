@@ -25,6 +25,13 @@
 #include "logger.h"
 #include "plugins.h"
 
+#if RTC_SUPPORT
+#include <sntp-lwip2.h>
+extern "C" {
+    void settimeofday_cb (void (*cb)(void));
+}
+#endif
+
 #if DEBUG_NTP_CLIENT
 #include <debug_helper_enable.h>
 #else
@@ -47,9 +54,10 @@ PROGMEM_STRING_DEF(strftime_date_time_zone, "%FT%T %Z");
 
 #if NTP_HAVE_CALLBACKS
 
-static std::vector<TimezoneUpdateCallback_t> _callbacks;
+static std::vector<TimeUpdatedCallback_t> _callbacks;
 
-void addTimezoneUpdateCallback(TimezoneUpdateCallback_t callback) {
+void addTimeUpdatedCallback(TimeUpdatedCallback_t callback)
+{
     _callbacks.push_back(callback);
 }
 
@@ -255,7 +263,7 @@ void TimezoneData::_callback(bool status, const String message, time_t zoneEnd)
 
 #if NTP_HAVE_CALLBACKS
         for(auto callback: _callbacks) {
-            callback();
+            callback(true);
         }
 #endif
 
@@ -309,10 +317,28 @@ void TimezoneData::updateLoop()
     }
 }
 
+static void update_time_callback(void)
+{
+    _debug_printf_P(PSTR("update_time_callback(): new time=%u\n"), (uint32_t)time(nullptr));
+#if RTC_SUPPORT
+    config.setRTC(time(nullptr));
+#endif
+#if NTP_HAVE_CALLBACKS
+        for(auto callback: _callbacks) {
+            callback(false);
+        }
+#endif
+}
+
 void TimezoneData::configTime()
 {
     _lastNtpUpdate = millis();
     _ntpRefreshTime = 3600 * (950 + (rand() % 100));
+
+#if RTC_SUPPORT || NTP_HAVE_CALLBACKS
+    settimeofday_cb(update_time_callback);
+#endif
+
     _debug_printf_P(PSTR("TimezoneData::configTime(): server1=%s,server2=%s,server3=%s, refresh in %.0f seconds\n"), config._H_STR(Config().ntp.servers[0]), config._H_STR(Config().ntp.servers[1]), config._H_STR(Config().ntp.servers[2]), _ntpRefreshTime / 1000.0);
     // force SNTP to update the time
     ::configTime(0, 0, config._H_STR(Config().ntp.servers[0]), config._H_STR(Config().ntp.servers[1]), config._H_STR(Config().ntp.servers[2]));

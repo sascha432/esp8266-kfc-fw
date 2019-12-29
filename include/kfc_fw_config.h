@@ -355,6 +355,9 @@ public:
     static unsigned long getWiFiUp();
 
     TwoWire &initTwoWire(bool reset = false, Print *output = nullptr);
+    bool setRTC(uint32_t unixtime);
+    uint32_t getRTC();
+    void printRTCStatus(Print &output, bool plain = true);
 
 private:
     friend class KFCConfigurationPlugin;

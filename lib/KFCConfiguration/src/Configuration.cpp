@@ -17,10 +17,11 @@ extern "C" {
 
 #if defined(ARDUINO_ESP8266_RELEASE_2_6_3)
 extern "C" uint32_t _EEPROM_start;
-#else
+#elif defined(ARDUINO_ESP8266_RELEASE_2_5_2)
 extern "C" uint32_t _SPIFFS_end;
 #define _EEPROM_start _SPIFFS_end
-#warning check if eeprom start is correct
+#else
+#error Check if eeprom start is correct
 #endif
 
 

@@ -75,8 +75,13 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         if (config._H_GET(Config().flags).isDefaultPassword) {
             output.printf_P(PSTR(HTML_S(br) HTML_S(strong) "%s" HTML_E(strong)), SPGM(default_password_warning));
         }
-#  if NTP_CLIENT || RTC_SUPPORT
     }
+#if RTC_SUPPORT
+    else if (key == F("RTC_STATUS")) {
+        config.printRTCStatus(output, false);
+    }
+#endif
+#if NTP_CLIENT || RTC_SUPPORT
     else if (key == F("TIME")) {
 
         time_t now = time(nullptr);
@@ -87,8 +92,8 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
             timezone_strftime_P(buf, sizeof(buf), PSTR("%a, %d %b %Y %H:%M:%S %Z"), timezone_localtime(&now));
             output.print(buf);
         }
-#  endif
     }
+#endif
     else if (key == F("SAFEMODE")) {
         if (config.isSafeMode()) {
             output.print(F(" - Running in SAFE MODE"));

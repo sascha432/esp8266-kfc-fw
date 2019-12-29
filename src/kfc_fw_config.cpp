@@ -17,6 +17,15 @@
 #include "./plugins/ntp/ntp_plugin.h"
 #endif
 
+#if RTC_SUPPORT
+#include <RTClib.h>
+#if RTC_DEVICE_DS3231
+RTC_DS3231 rtc;
+#else
+#error RTC device not set
+#endif
+#endif
+
 #if DEBUG_KFC_CONFIG
 #include <debug_helper_enable.h>
 #else
@@ -989,6 +998,61 @@ TwoWire &KFCFWConfiguration::initTwoWire(bool reset, Print *output) {
     return Wire;
 }
 
+bool KFCFWConfiguration::setRTC(uint32_t unixtime)
+{
+    debug_printf_P(PSTR("KFCFWConfiguration::setRTC(): time=%u\n"), unixtime);
+#if RTC_SUPPORT
+    initTwoWire();
+    if (rtc.begin()) {
+        rtc.adjust(DateTime(unixtime));
+    }
+#endif
+    return false;
+}
+
+uint32_t KFCFWConfiguration::getRTC()
+{
+#if RTC_SUPPORT
+    initTwoWire();
+    if (rtc.begin()) {
+        auto unixtime = rtc.now().unixtime();
+        debug_printf_P(PSTR("KFCFWConfiguration::getRTC(): time=%u\n"), unixtime);
+        return unixtime;
+    }
+#endif
+    debug_printf_P(PSTR("KFCFWConfiguration::getRTC(): time=error\n"));
+    return 0;
+}
+
+void KFCFWConfiguration::printRTCStatus(Print &output, bool plain) {
+#if RTC_SUPPORT
+    initTwoWire();
+    if (rtc.begin()) {
+        auto now = rtc.now();
+        if (plain) {
+            output.print(F("timestamp="));
+            output.print(now.timestamp());
+#if RTC_DEVICE_DS3231
+            output.printf_P(PSTR(" temperature=%.3f lost_power=%u"), rtc.getTemperature(), rtc.lostPower());
+#endif
+        }
+        else {
+            output.print(F("Time "));
+            output.print(now.timestamp());
+#if RTC_DEVICE_DS3231
+            output.printf_P(PSTR(", temperature: %.2f°C, lost power: %s"), rtc.getTemperature(), rtc.lostPower() ? PSTR("yes") : PSTR("no"));
+#endif
+        }
+    }
+    else {
+        output.print(F("Failed to initialize RTC"));
+    }
+#else
+    output.print(F("RTC not supported"));
+#endif
+}
+
+
 class KFCConfigurationPlugin : public PluginComponent {
 public:
     KFCConfigurationPlugin() {
@@ -1027,6 +1091,14 @@ void KFCConfigurationPlugin::setup(PluginSetupMode_t mode) {
 
     config.setup();
     config._safeMode = (mode == PLUGIN_SETUP_SAFE_MODE);
+
+#if RTC_SUPPORT
+    auto rtc = config.getRTC();
+    if (rtc != 0) {
+        struct timeval tv = { (time_t)rtc, 0 };
+        settimeofday(&tv, nullptr);
+    }
+#endif
 
     // during wake up, the WiFI is already configured at this point
     if (!resetDetector.hasWakeUpDetected()) {

@@ -123,6 +123,9 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CAT, "CAT", "<filename>", "Display text fi
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DEL, "DEL", "<filename>", "Delete file");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WIFI, "WIFI", "[<reconnect>]", "Display WiFi info");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(REM, "REM", "Ignore comment");
+#if RTC_SUPPORT
+PROGMEM_AT_MODE_HELP_COMMAND_DEF(RTC, "RTC", "[<set>]", "Set RTC time", "Display RTC time");
+#endif
 
 #if DEBUG_HAVE_SAVECRASH
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(SAVECRASHC, "SAVECRASHC", "Clear crash memory");
@@ -169,6 +172,9 @@ void at_mode_help_commands() {
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DEL));
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(WIFI));
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(REM));
+#if RTC_SUPPORT
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(RTC));
+#endif
 
 #if DEBUG_HAVE_SAVECRASH
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SAVECRASHC));
@@ -577,6 +583,17 @@ void at_mode_serial_handle_event(String &commandString) {
                     WiFi.isConnected(),
                     WiFi.localIP().toString().c_str()
                 );
+            }
+            else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(RTC))) {
+                if (argc != 1) {
+                    output.printf_P(PSTR("+RTC: time=%u, rtc=%u\n"), (uint32_t)time(nullptr), config.getRTC());
+                    output.print(F("+RTC: "));
+                    config.printRTCStatus(output);
+                    output.println();
+                }
+                else {
+                    output.printf_P(PSTR("+RTC: set=%u, rtc=%u\n"), config.setRTC(time(nullptr)), config.getRTC());
+                }
             }
             else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(REM))) {
                 // ignore comment

@@ -27,6 +27,8 @@ void DimmerModuleForm::createConfigureForm(AsyncWebServerRequest *request, Form 
     _debug_printf_P(PSTR("DimmerModuleForm::createConfigureForm()\n"));
     auto *dimmer = &config._H_W_GET(Config().dimmer);
 
+    // changed to static html since the form creator requires 2x5.1kb RAM when its being loaded over the web server + 2x1.3kb for the home assistant yaml code
+
     // form.setFormUI(F("Dimmer Configuration"));
     // auto seconds = String(F("seconds"));
 

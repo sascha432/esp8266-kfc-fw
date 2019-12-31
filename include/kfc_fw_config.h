@@ -222,6 +222,9 @@ struct DimmerModuleButtons {
     uint8_t longpress_min_brightness;
     float shortpress_fadetime;
     float longpress_fadetime;
+#if IOT_DIMMER_MODULE_CHANNELS
+    uint8_t pins[IOT_DIMMER_MODULE_CHANNELS];
+#endif
 };
 
 typedef struct  {

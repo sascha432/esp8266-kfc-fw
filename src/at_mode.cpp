@@ -140,6 +140,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PINM, "PINM", "[<1=start|0=stop>}", "List 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(PLUGINS, "PLUGINS", "List plugins");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HEAP, "HEAP", "[interval in seconds|0=disable]", "Display free heap");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RSSI, "RSSI", "[interval in seconds|0=disable]", "Display WiFi RSSI");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(GPIO, "GPIO", "[interval in seconds|0=disable]", "Display GPIO states");
 #if defined(ESP8266)
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(CPU, "CPU", "<80|160>", "Set CPU speed", "Display CPU speed");
 #endif
@@ -188,6 +189,7 @@ void at_mode_help_commands() {
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(PLUGINS));
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(HEAP));
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(RSSI));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(GPIO));
 #if defined(ESP8266)
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CPU));
 #endif
@@ -242,14 +244,36 @@ String at_mode_print_command_string(Stream &output, char separator) {
 
 #if DEBUG
 
+typedef enum {
+    HEAP = 1,
+    RSSI = 2,
+    GPIO = 3,
+} DisplayTypeEnum_t;
+
 static EventScheduler::TimerPtr heapTimer = nullptr;
-static bool isHeap = true;
+static DisplayTypeEnum_t displayType = HEAP;
 static int32_t rssiMin, rssiMax;
 
 static void heap_timer_callback(EventScheduler::TimerPtr timer) {
-    if (isHeap) {
+    if (displayType == HEAP) {
         MySerial.printf_P(PSTR("+HEAP: Free %u CPU %d MHz\n"), ESP.getFreeHeap(), ESP.getCpuFreqMHz());
-    } else {
+    }
+    else if (displayType == GPIO) {
+        MySerial.printf_P(PSTR("+GPIO: "));
+#if defined(ESP8266)
+        for(uint8_t i = 0; i <= 16; i++) {
+            if (i != 1 && i != 3 && !isFlashInterfacePin(i)) { // do not display RX/TX or flash SPI
+                pinMode(i, INPUT);
+                MySerial.printf_P(PSTR("%u=%u "), i, digitalRead(i));
+            }
+        }
+        pinMode(A0, INPUT);
+        MySerial.printf_P(PSTR(" A0=%u\n"), analogRead(A0));
+#else
+#error not implemented
+#endif
+    }
+    else {
         auto rssi = WiFi.RSSI();
         rssiMin = std::max(rssiMin, rssi);
         rssiMax = std::min(rssiMax, rssi);
@@ -257,7 +281,9 @@ static void heap_timer_callback(EventScheduler::TimerPtr timer) {
     }
 }
 
-static void create_heap_timer(float seconds) {
+static void create_heap_timer(float seconds, DisplayTypeEnum_t type = HEAP)
+{
+    displayType = type;
     if (Scheduler.hasTimer(heapTimer)) {
         heapTimer->changeOptions(seconds * 1000);
     } else {
@@ -267,7 +293,7 @@ static void create_heap_timer(float seconds) {
 
 void at_mode_create_heap_timer(float seconds) {
     if (seconds) {
-        create_heap_timer(seconds);
+        create_heap_timer(seconds, HEAP);
     } else {
         if (Scheduler.hasTimer(heapTimer)) {
             Scheduler.removeTimer(heapTimer);
@@ -687,11 +713,23 @@ void at_mode_serial_handle_event(String &commandString) {
             else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(PLUGINS))) {
                 dump_plugin_list(output);
             }
-            else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(RSSI)) || !strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(HEAP))) {
+            else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(RSSI)) || !strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(HEAP)) || !strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(GPIO))) {
                 if (argc == 1) {
                     float interval = atof(args[0]);
-                    isHeap = !strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(HEAP));
-                    auto cmd = isHeap ? PSTR("HEAP") : PSTR("RSSI");
+                    DisplayTypeEnum_t type;
+                    PGM_P cmd;
+                    if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(RSSI))) {
+                        type = RSSI;
+                        cmd = PSTR("RSSI");
+                    }
+                    else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(GPIO))) {
+                        type = GPIO;
+                        cmd = PSTR("GPIO");
+                    }
+                    else {
+                        type = HEAP;
+                        cmd = PSTR("HEAP");
+                    }
                     rssiMin = -10000;
                     rssiMax = 0;
                     if (interval == 0) {
@@ -700,7 +738,7 @@ void at_mode_serial_handle_event(String &commandString) {
                         output.printf_P(PSTR("+%s: Interval disabled"), cmd);
                     } else {
                         output.printf_P(PSTR("+%s: Interval set to %d seconds\n"), cmd);
-                        create_heap_timer(interval);
+                        create_heap_timer(interval, type);
                     }
                 } else {
                     at_mode_print_invalid_arguments(output);

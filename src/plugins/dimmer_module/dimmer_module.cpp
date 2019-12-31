@@ -57,25 +57,28 @@ void Driver_DimmerModule::_begin()
 
     PinMonitor &monitor = *PinMonitor::createInstance();
     auto config = getButtonConfig();
-    uint8_t pins[] = { IOT_DIMMER_MODULE_BUTTONS_PINS, 0 };
 
-    for(uint8_t i = 0; pins[i]; i++) {
-        auto pin = monitor.addPin(pins[i], pinCallback, this, IOT_DIMMER_MODULE_PINMODE);
-        if (pin) {
-            _buttons.emplace_back(DimmerButton(pins[i]));
-            auto &button = _buttons.back().getButton();
+    for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS * 2; i++) {
+        auto pinNum = config.pins[i];
+        _debug_printf_P(PSTR("Channel %u button %u PIN %u\n"), i / 2, i % 2, pinNum);
+        if (pinNum) {
+            auto pin = monitor.addPin(pinNum, pinCallback, this, IOT_DIMMER_MODULE_PINMODE);
+            if (pin) {
+                _buttons.emplace_back(DimmerButton(pinNum));
+                auto &button = _buttons.back().getButton();
 #if DEBUG_IOT_DIMMER_MODULE
-            // not used, debug only
-            button.onPress(Driver_DimmerModule::onButtonPressed);
+                // not used, debug only
+                button.onPress(Driver_DimmerModule::onButtonPressed);
 #else
-            button.onPress(nullptr);    // the callback needs to be set to nullptr since it is not initialized in the button class
+                button.onPress(nullptr);    // the callback needs to be set to nullptr since it is not initialized in the button class
 #endif
-            button.onHoldRepeat(config.longpress_time, config.repeat_time, Driver_DimmerModule::onButtonHeld);
-            button.onRelease(Driver_DimmerModule::onButtonReleased);
-        }
-        else {
-            debug_printf_P(PSTR("Failed to add PIN %u\n"), pins[i]);
-            monitor.removePin(pins[i], this);
+                button.onHoldRepeat(config.longpress_time, config.repeat_time, Driver_DimmerModule::onButtonHeld);
+                button.onRelease(Driver_DimmerModule::onButtonReleased);
+            }
+            else {
+                _debug_printf_P(PSTR("Failed to add PIN %u\n"), pinNum);
+                monitor.removePin(pinNum, this);
+            }
         }
     }
 #endif

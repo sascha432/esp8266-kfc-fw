@@ -447,6 +447,14 @@ void KFCFWConfiguration::restoreFactorySettings() {
     dimmer_buttons.longpress_min_brightness = 45;
     dimmer_buttons.shortpress_fadetime = 3.0;
     dimmer_buttons.longpress_fadetime = 4.5;
+    memset(&dimmer_buttons.pins, 0, sizeof(dimmer_buttons.pins));
+#if IOT_SENSOR_HAVE_HLW8012
+    dimmer_buttons.pins[0] = D2;
+    dimmer_buttons.pins[1] = D7;
+#else
+    dimmer_buttons.pins[0] = D6;
+    dimmer_buttons.pins[1] = D7;
+#endif
     _H_SET(Config().dimmer_buttons, dimmer_buttons);
 #endif
 #endif

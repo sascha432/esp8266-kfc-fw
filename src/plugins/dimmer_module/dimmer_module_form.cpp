@@ -78,6 +78,10 @@ void DimmerModuleForm::createConfigureForm(AsyncWebServerRequest *request, Form 
 
     form.add<float>(F("longpress_fadetime"), &dimmer_buttons->longpress_fadetime); //->setFormUI((new FormUI(FormUI::TEXT, F("Long press fade time")))->setPlaceholder(String(5.0, 1))->setSuffix(seconds));
 
+    form.add<uint8_t>(F("pin0"), &dimmer_buttons->pins[0]); //->setFormUI((new FormUI(FormUI::TEXT, F("Button up pin #"))));
+
+    form.add<uint8_t>(F("pin1"), &dimmer_buttons->pins[1]); //->setFormUI((new FormUI(FormUI::TEXT, F("Button down pin #"))));
+
 #endif
 
     form.finalize();

@@ -619,7 +619,8 @@ bool web_server_send_file(String path, HttpHeaders &httpHeaders, bool client_acc
             auto plugin = PluginComponent::getTemplate(filename);
             if (plugin) {
                 webTemplate = plugin->getWebTemplate(filename);
-            } else if (nullptr != (plugin = PluginComponent::getForm(filename))) {
+            }
+            else if (nullptr != (plugin = PluginComponent::getForm(filename))) {
                 Form *form = _debug_new SettingsForm(nullptr);
                 plugin->createConfigureForm(nullptr, *form);
                 webTemplate = _debug_new ConfigTemplate(form);
@@ -628,13 +629,17 @@ bool web_server_send_file(String path, HttpHeaders &httpHeaders, bool client_acc
         if (webTemplate == nullptr) {
             if (String_equals(path, PSTR("/network.html"))) {
                 webTemplate = _debug_new ConfigTemplate(_debug_new NetworkSettingsForm(nullptr));
-            } else if (String_equals(path, PSTR("/wifi.html"))) {
+            }
+            else if (String_equals(path, PSTR("/wifi.html"))) {
                 webTemplate = _debug_new ConfigTemplate(_debug_new WifiSettingsForm(nullptr));
-            } else if (String_equals(path, PSTR("/index.html"))) {
+            }
+            else if (String_equals(path, PSTR("/index.html"))) {
                 webTemplate = _debug_new StatusTemplate();
-            } else if (String_equals(path, PSTR("/status.html"))) {
+            }
+            else if (String_equals(path, PSTR("/status.html"))) {
                 webTemplate = _debug_new StatusTemplate();
-            } else if (String_endsWith(path, PSTR(".html"))) {
+            }
+            else if (String_endsWith(path, PSTR(".html"))) {
                 webTemplate = _debug_new WebTemplate();
             }
         }
@@ -668,7 +673,7 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
     _debug_printf_P(PSTR("web_server_handle_file_read: %s\n"), path.c_str());
     WebServerSetCPUSpeedHelper setCPUSpeed;
 
-    if (String_endsWith(path, SPGM(slash))) {
+    if (String_endsWith(path, '/')) {
         path += F("index.html");
     }
 
@@ -756,7 +761,7 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
                     config.write();
                     plugin->invokeReconfigure(nullptr);
                 } else {
-                    config.clear();
+                    config.discard();
                 }
             }
         }
@@ -770,7 +775,7 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
                     config.setConfigDirty(true);
                     PluginComponent::getByName(PSTR("cfg"))->invokeReconfigure(PSTR("wifi"));
                 } else {
-                    config.clear();
+                    config.discard();
                 }
             } else if (String_equals(path, PSTR("/network.html"))) {
                 Form *form = new NetworkSettingsForm(request);
@@ -780,7 +785,7 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
                     config.setConfigDirty(true);
                     PluginComponent::getByName(PSTR("cfg"))->invokeReconfigure(PSTR("network"));
                 } else {
-                    config.clear();
+                    config.discard();
                 }
             } else if (String_equals(path, PSTR("/password.html"))) {
                 Form *form = new PasswordSettingsForm(request);
@@ -791,7 +796,7 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
                     config.write();
                     PluginComponent::getByName(PSTR("cfg"))->invokeReconfigure(PSTR("password"));
                 } else {
-                    config.clear();
+                    config.discard();
                 }
             } else if (String_equals(path, PSTR("/reboot.html"))) {
                 if (request->hasArg(F("yes"))) {

@@ -34,7 +34,6 @@ public:
     FormField *add(const String &name, const String &value, FormField::FieldType_t type = FormField::INPUT_TEXT);
 
     template <typename T>
-
     FormField* add(const String& name, T value, typename FormValue<T>::GetterSetterCallback_t callback = nullptr, FormField::FieldType_t type = FormField::INPUT_SELECT) {
         return _add(new FormValue<T>(name, value, callback, type));
     }
@@ -70,14 +69,14 @@ public:
 
     FormField *getField(const String &name) const;
     FormField &getField(int index) const;
-    const size_t hasFields() const;
+    size_t hasFields() const;
 
     void clearErrors();
     bool validate();
     bool validateOnly();
-    const bool isValid() const;
-    const bool hasChanged() const;
-    const bool hasError(FormField *field) const;
+    bool isValid() const;
+    bool hasChanged() const;
+    bool hasError(FormField *field) const;
     void copyValidatedData();
     const ErrorsVector &getErrors() const;
     void finalize() const;
@@ -90,6 +89,10 @@ public:
     void createHtml(Print& out);
 
     void dump(Print &out, const String &prefix) const;
+
+    FormData *getFormData() const {
+        return _data;
+    }
 
 private:
     FormData *_data;

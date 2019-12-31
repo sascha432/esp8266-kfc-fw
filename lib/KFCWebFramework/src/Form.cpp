@@ -14,18 +14,22 @@
 #include <debug_helper_disable.h>
 #endif
 
-Form::Form() : _data(nullptr), _invalidMissing(true) {
+Form::Form() : _data(nullptr), _invalidMissing(true)
+{
 }
 
-Form::Form(FormData * data) : Form() {
+Form::Form(FormData * data) : Form()
+{
     _data = data;
 }
 
-Form::~Form() {
+Form::~Form()
+{
     clearForm();
 }
 
-void Form::clearForm() {
+void Form::clearForm()
+{
     for (auto field : _fields) {
         delete field;
     }
@@ -33,40 +37,48 @@ void Form::clearForm() {
     _errors.clear();
 }
 
-void Form::setFormData(FormData * data) {
+void Form::setFormData(FormData * data)
+{
     _data = data;
 }
 
-void Form::setInvalidMissing(bool invalidMissing) {
+void Form::setInvalidMissing(bool invalidMissing)
+{
     _invalidMissing = invalidMissing;
 }
 
-int Form::add(FormField * field) {
+int Form::add(FormField * field)
+{
     field->setForm(this);
     _fields.push_back(field);
     return _fields.size() - 1;
 }
 
-FormField * Form::_add(FormField * field) {
+FormField *Form::_add(FormField * field)
+{
     add(field);
     return field;
 }
 
-FormField * Form::add(const String & name, const String & value, FormField::FieldType_t type) {
+FormField *Form::add(const String & name, const String & value, FormField::FieldType_t type)
+{
     return _add(new FormField(name, value, type));
 }
 
-FormValidator * Form::addValidator(int index, FormValidator * validator) {
+FormValidator *Form::addValidator(int index, FormValidator * validator)
+{
     _fields.at(index)->addValidator(validator);
     return validator;
 }
 
-FormValidator * Form::addValidator(FormValidator * validator) {
+FormValidator *Form::addValidator(FormValidator * validator)
+{
     _fields.back()->addValidator(validator);
     return validator;
 }
 
-FormValidator * Form::addValidator(const String & name, FormValidator * validator) {
+FormValidator *Form::addValidator(const String & name, FormValidator * validator)
+{
     auto field = getField(name);
     if (field) {
         field->addValidator(validator);
@@ -87,19 +99,23 @@ FormField * Form::getField(const String & name) const {
     return nullptr;
 }
 
-FormField & Form::getField(int index) const {
+FormField &Form::getField(int index) const
+{
     return *_fields.at(index);
 }
 
-const size_t Form::hasFields() const {
+size_t Form::hasFields() const
+{
     return _fields.size();
 }
 
-void Form::clearErrors() {
+void Form::clearErrors()
+{
     _errors.clear();
 }
 
-bool Form::validate() {
+bool Form::validate()
+{
     validateOnly();
     if (_hasChanged) {
         copyValidatedData();
@@ -107,7 +123,8 @@ bool Form::validate() {
     return isValid();
 }
 
-bool Form::validateOnly() {
+bool Form::validateOnly()
+{
     _hasChanged = false;
     _errors.clear();
     for (auto field : _fields) {
@@ -132,15 +149,18 @@ bool Form::validateOnly() {
     return isValid();
 }
 
-const bool Form::isValid() const {
+bool Form::isValid() const
+{
     return _errors.empty();
 }
 
-const bool Form::hasChanged() const {
+bool Form::hasChanged() const
+{
     return _hasChanged;
 }
 
-const bool Form::hasError(FormField * field) const {
+bool Form::hasError(FormField * field) const
+{
     for (const auto &error : _errors) {
         if (error.is(field)) {
             return true;
@@ -149,7 +169,8 @@ const bool Form::hasError(FormField * field) const {
     return false;
 }
 
-void Form::copyValidatedData() {
+void Form::copyValidatedData()
+{
     if (isValid()) {
         for (auto field : _fields) {
             field->copyValue();
@@ -157,17 +178,20 @@ void Form::copyValidatedData() {
     }
 }
 
-const Form::ErrorsVector &Form::getErrors() const {
+const Form::ErrorsVector &Form::getErrors() const
+{
     return _errors;
 }
 
-void Form::finalize() const {
+void Form::finalize() const
+{
 #if DEBUG_KFC_FORMS
     dump(DEBUG_OUTPUT, "Form Dump: ");
 #endif
 }
 
-const char *Form::process(const String &name) const {
+const char *Form::process(const String &name) const
+{
     // TODO check html entities encoding
     for(auto field : _fields) {
         uint8_t len = (uint8_t)field->getName().length();
@@ -201,20 +225,19 @@ const char *Form::process(const String &name) const {
     return nullptr;
 }
 
-void Form::createJavascript(Print &out) {
+void Form::createJavascript(Print &out)
+{
     if (!isValid()) {
         _debug_printf_P(PSTR("Form::createJavascript(): errors=%d\n"), _errors.size());
-        out.println(F("<script>"));
-        out.print(F("$.formValidator.addErrors(["));
+        out.print(F("<script>\n$.formValidator.addErrors(["));
         uint8_t idx = 0;
         for(const auto &error : _errors) {
             if (idx++) {
-                out.print(F(","));
+                out.print(',');
             }
-            out.printf_P(PSTR("{'target':'#%s','error':'%s'}"), error.getName().c_str(), error.getMessage().c_str());
+            out.printf_P(PSTR("{'target':'#%s','error':'%s'}"), error.getName().c_str(), error.getMessage().c_str()); //TODO escape quotes etc
         }
-        out.println(F("]);"));
-        out.println(F("</script>"));
+        out.println(F("]);\n</script>"));
     }
 }
 

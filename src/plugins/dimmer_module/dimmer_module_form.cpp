@@ -39,10 +39,10 @@ void DimmerModuleForm::createConfigureForm(AsyncWebServerRequest *request, Form 
     form.add<uint8_t>(F("restore_level"), &dimmer->restore_level); //->setFormUI((new FormUI(FormUI::SELECT, F("On power failure")))->setBoolItems(F("Restore last brightness level"), F("Do not turn on")));
 
     form.add<uint8_t>(F("max_temperature"), &dimmer->max_temperature); //->setFormUI((new FormUI(FormUI::TEXT, F("Max. temperature")))->setPlaceholder(String(75))->setSuffix(F("&deg;C")));
-    form.addValidator(new FormRangeValidator(F("Invalid temperature"), 45, 110));
+    form.addValidator(new FormRangeValidator(F("Temperature out of range: %min%-%max%"), 45, 110));
 
     form.add<uint8_t>(F("metrics_int"), &dimmer->metrics_int); //->setFormUI((new FormUI(FormUI::TEXT, F("Metrics report interval")))->setPlaceholder(String(30))->setSuffix(seconds));
-    form.addValidator(new FormRangeValidator(F("Invalid interval"), 10, 255));
+    form.addValidator(new FormRangeValidator(F("Invalid interval: %min%-%max%"), 10, 255));
 
 #if IOT_DIMMER_MODULE_HAS_BUTTONS
 

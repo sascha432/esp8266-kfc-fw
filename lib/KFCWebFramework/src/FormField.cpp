@@ -5,16 +5,19 @@
 #include "FormField.h"
 #include "FormValidator.h"
 
-FormField::FormField(const String & name) : _name(name), _type(FormField::INPUT_NONE), _formUI(nullptr), _hasChanged(false) {
+FormField::FormField(const String & name) : _name(name), _type(FormField::INPUT_NONE), _formUI(nullptr), _hasChanged(false)
+{
     // _notSet = false;
     // _optional = false;
 }
 
-FormField::FormField(const String & name, const String & value) : FormField(name) {
+FormField::FormField(const String & name, const String & value) : FormField(name)
+{
     initValue(value);
 }
 
-FormField::FormField(const String & name, const String & value, FieldType_t type) : FormField(name, value) {
+FormField::FormField(const String & name, const String & value, FieldType_t type) : FormField(name, value)
+{
     _type = type;
 }
 
@@ -22,8 +25,9 @@ FormField::FormField(const String & name, const String & value, FieldType_t type
 //     _optional = optional;
 // }
 
-FormField::~FormField() {
-    for (auto validator : _validators) {
+FormField::~FormField()
+{
+    for (auto validator: _validators) {
         delete validator;
     }
     _validators.clear();
@@ -32,15 +36,18 @@ FormField::~FormField() {
     }
 }
 
-void FormField::setForm(Form * form) {
+void FormField::setForm(Form * form)
+{
     _form = form;
 }
 
-Form &FormField::getForm() const {
+Form &FormField::getForm() const
+{
     return *_form;
 }
 
-const String &FormField::getName() const {
+const String &FormField::getName() const
+{
     return _name;
 }
 
@@ -48,7 +55,7 @@ const String &FormField::getName() const {
 * Returns the value of the initialized field or changes the user submitted
 **/
 
-const String &FormField::getValue() 
+const String &FormField::getValue()
 {
     return _value;
 }
@@ -57,7 +64,7 @@ const String &FormField::getValue()
 * Initialize the value of the field. Should only be used in the constructor.
 **/
 
-void FormField::initValue(const String & value) 
+void FormField::initValue(const String & value)
 {
     _value = value;
     _hasChanged = false;
@@ -67,7 +74,7 @@ void FormField::initValue(const String & value)
 * This method is called when the user submits a form
 **/
 
-bool FormField::setValue(const String & value) 
+bool FormField::setValue(const String & value)
 {
     if (value != _value) {
         _value = value;
@@ -82,19 +89,23 @@ bool FormField::setValue(const String & value)
 * in the value field as a string and can be retried using getValue()
 **/
 
-void FormField::copyValue() {
+void FormField::copyValue()
+{
     FormField::getValue();
 }
 
-const bool FormField::equals(FormField * field) const {
+bool FormField::equals(FormField * field) const
+{
     return _value.equals(field->getValue());
 }
 
-const bool FormField::hasChanged() const {
+bool FormField::hasChanged() const
+{
     return _hasChanged;
 }
 
-void FormField::setChanged(bool hasChanged) {
+void FormField::setChanged(bool hasChanged)
+{
     _hasChanged = hasChanged;
 }
 
@@ -102,7 +113,8 @@ void FormField::setType(FieldType_t type) {
     _type = type;
 }
 
-const FormField::FieldType_t FormField::getType() const {
+FormField::FieldType_t FormField::getType() const
+{
     return _type;
 }
 
@@ -122,11 +134,13 @@ void FormField::html(Print &output)
     }
 }
 
-void FormField::addValidator(FormValidator * validator) {
+void FormField::addValidator(FormValidator * validator)
+{
     _validators.push_back(validator);
     _validators.back()->setField(this);
 }
 
-const FormField::ValidatorsVector &FormField::getValidators() const {
+const FormField::ValidatorsVector &FormField::getValidators() const
+{
     return _validators;
 }

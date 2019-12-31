@@ -63,13 +63,13 @@ public:
     **/
     virtual void copyValue();
 
-    const bool equals(FormField *field) const;
+    bool equals(FormField *field) const;
 
-    const bool hasChanged() const;
+    bool hasChanged() const;
     void setChanged(bool hasChanged);
 
     void setType(FieldType_t type);
-    const FieldType_t getType() const;
+    FieldType_t getType() const;
 
     void setFormUI(FormUI *formUI);
     void html(Print &output);

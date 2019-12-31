@@ -103,6 +103,16 @@ void Configuration::clear() {
     _readAccess = 0;
 }
 
+void Configuration::discard()
+{
+    _debug_printf_P(PSTR("Configuration::discard()\n"));
+    for (auto &parameter : _params) {
+        parameter.freeData();
+    }
+    endEEPROM();
+    _readAccess = 0;
+}
+
 // read map only, data is read on demand
 bool Configuration::read() {
     clear();
@@ -200,8 +210,7 @@ bool Configuration::write() {
 
     if (buffer.length() > _size) {
         _debug_printf_P(PSTR("Configuration::write(): Size exceeded: %u > %u\n"), buffer.length(), _size);
-        endEEPROM();
-        clear();    // discard all data
+        discard();    // discard all data
         return false;
     }
 

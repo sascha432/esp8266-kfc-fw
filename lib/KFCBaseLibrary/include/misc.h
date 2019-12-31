@@ -148,11 +148,19 @@ int strcasecmp_P_P(PGM_P str1, PGM_P str2);
 int strcmp_end_P(const char *str1, size_t len1, PGM_P str2, size_t len2);
 
 // compare functions that do not create a String object of "str2"
-bool String_equals(const String &str1, PGM_P str2);
-bool String_equalsIgnoreCase(const String &str1, PGM_P str2);
 bool String_startsWith(const String &str1, PGM_P str2);
 bool String_endsWith(const String &str1, PGM_P str2);
 bool String_endsWith(const String &str1, char ch);
+
+// bool String_equals(const String &str1, PGM_P str2);
+// bool String_equalsIgnoreCase(const String &str1, PGM_P str2);
+
+inline bool String_equals(const String &str1, PGM_P str2) {
+    return !strcmp_P(str1.c_str(), str2);
+}
+inline bool String_equalsIgnoreCase(const String &str1, PGM_P str2) {
+    return !strcasecmp_P(str1.c_str(), str2);
+}
 
 inline bool String_equals(const String &str1, const __FlashStringHelper *str2) {
     return String_equals(str1, reinterpret_cast<PGM_P>(str2));

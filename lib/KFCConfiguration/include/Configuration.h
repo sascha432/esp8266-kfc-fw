@@ -88,10 +88,15 @@ public:
     Configuration(uint16_t offset, uint16_t size);
     ~Configuration();
 
+    // free memory and clear config. object is invalid after this call
     void clear();
+
+    // free memory and discard changes. use release() to free memory and keep changes
+    void discard();
 
     // read map only, data is read on demand
     bool read();
+
     // write data to EEPROM
     bool write();
 

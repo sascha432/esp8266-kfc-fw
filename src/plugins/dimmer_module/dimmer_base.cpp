@@ -474,11 +474,8 @@ void Dimmer_Base::setValue(const String &id, const String &value, bool hasValue,
 {
     _debug_printf_P(PSTR("Dimmer_Base::setValue %s\n"), id.c_str());
 
-    auto ptr = id.c_str();
-    if (strncmp_P(ptr, PSTR("dimmer_channel"), 14) == 0) {
-        ptr += 14;
-        uint8_t channel = *ptr - '0';
-
+    if (String_startsWith(id, PSTR("dimmer_channel"))) {
+        uint8_t channel = id[14] - '0';
         _debug_printf_P(PSTR("Dimmer_Base::setValue channel %d hasValue %d value %d hasState %d state %d\n"), channel, hasValue, value.toInt(), hasState, state);
 
         if (channel < getChannelCount()) {

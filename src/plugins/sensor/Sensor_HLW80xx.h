@@ -128,8 +128,9 @@ protected:
     float _getPowerFactor() const;
     float _getEnergy(uint8_t num = 0) const;
 
+    String _getTopic();
+
     String _name;
-    String _topic;
     float _power;
     float _voltage;
     float _current;

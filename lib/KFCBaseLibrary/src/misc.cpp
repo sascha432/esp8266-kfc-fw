@@ -343,6 +343,8 @@ int strcasecmp_P_P(PGM_P str1, PGM_P str2) {
     return 0;
 }
 
+#if 0
+
 bool String_equals(const String &str1, PGM_P str2) {
     const size_t strlen2 = strlen_P(str2);
     return (str1.length() == strlen2) && !strcmp_P(str1.c_str(), str2);
@@ -352,6 +354,8 @@ bool String_equalsIgnoreCase(const String &str1, PGM_P str2) {
     const size_t strlen2 = strlen_P(str2);
     return (str1.length() == strlen2) && !strcasecmp_P(str1.c_str(), str2);
 }
+
+#endif
 
 bool String_startsWith(const String &str1, PGM_P str2) {
     const size_t strlen2 = strlen_P(str2);

@@ -184,8 +184,8 @@ void I2CScannerPlugin::atModeHelpGenerator() {
 }
 
 bool I2CScannerPlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) {
-    if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(I2CS))) {
-        if (argc == 1 && constexpr_String_equalsIgnoreCase(argv[0], PSTR("reset"))) {
+    if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(I2CS))) {
+        if (argc == 1 && String_equalsIgnoreCase(argv[0], PSTR("reset"))) {
             serial.print(F("+I2CS: "));
             config.initTwoWire(true, &serial);
         }
@@ -208,7 +208,7 @@ bool I2CScannerPlugin::atModeHandler(Stream &serial, const String &command, int8
             serial.printf_P(PSTR("+I2CS: SDA=%d, SCL=%d, speed=%ukHz, setClockStretchLimit=%d\n"), sda, scl, speed, setClockStretchLimit);
         }
         return true;
-    } else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(I2CST))) {
+    } else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(I2CST))) {
         if (argc < 1) {
             at_mode_print_invalid_arguments(serial);
         }
@@ -228,7 +228,7 @@ bool I2CScannerPlugin::atModeHandler(Stream &serial, const String &command, int8
             serial.printf_P(PSTR(", result = %u (%02x)\n"), result, result);
         }
         return true;
-    } else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(I2CSR))) {
+    } else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(I2CSR))) {
         if (argc != 2) {
             at_mode_print_invalid_arguments(serial);
         }
@@ -259,17 +259,17 @@ bool I2CScannerPlugin::atModeHandler(Stream &serial, const String &command, int8
         }
         return true;
     }
-    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SCANI2C))) {
+    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SCANI2C))) {
         scanPorts(serial);
         return true;
     }
-    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SCAND))) {
+    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SCAND))) {
         serial.println(F("Scanning I2C bus for devices..."));
         check_if_exist_I2C(serial);
         return true;
     }
 #ifdef _LIB_ADAFRUIT_INA219_
-    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(I2CINA219))) {
+    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(I2CINA219))) {
         if (argc < 1) {
             at_mode_print_invalid_arguments(serial);
         }
@@ -286,7 +286,7 @@ bool I2CScannerPlugin::atModeHandler(Stream &serial, const String &command, int8
     }
 #endif
 #ifdef __CCS811_H__
-    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(I2CCCS811))) {
+    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(I2CCCS811))) {
         if (argc < 1) {
             at_mode_print_invalid_arguments(serial);
         }
@@ -321,7 +321,7 @@ bool I2CScannerPlugin::atModeHandler(Stream &serial, const String &command, int8
     }
 #endif
 #ifdef __BME680_H__
-    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(I2CBME680))) {
+    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(I2CBME680))) {
         if (argc != 1) {
             at_mode_print_invalid_arguments(serial);
         }
@@ -338,7 +338,7 @@ bool I2CScannerPlugin::atModeHandler(Stream &serial, const String &command, int8
     }
 #endif
 #ifdef __BME280_H__
-    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(I2CBME280))) {
+    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(I2CBME280))) {
         if (argc != 1) {
             at_mode_print_invalid_arguments(serial);
         }
@@ -354,7 +354,7 @@ bool I2CScannerPlugin::atModeHandler(Stream &serial, const String &command, int8
         return true;
     }
 #endif
-    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(I2CLM75A))) {
+    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(I2CLM75A))) {
         if (argc != 1) {
             at_mode_print_invalid_arguments(serial);
         }

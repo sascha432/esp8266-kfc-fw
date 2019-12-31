@@ -291,13 +291,13 @@ bool ssd1306_at_mode_command_handler(Stream &serial, const String &command, int8
         at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SSDRF));
         at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SSDDF));
     }
-    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SSDCLR))) {
+    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SSDCLR))) {
         ssd1306_disable_status();
         ssd1306_clear_display();
         at_mode_print_ok(serial);
         return true;
     }
-    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SSDDF))) {
+    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SSDDF))) {
         if (argc != 1) {
             at_mode_print_invalid_arguments(serial);
         } else {
@@ -322,7 +322,7 @@ bool ssd1306_at_mode_command_handler(Stream &serial, const String &command, int8
         }
         return true;
     }
-    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SSDRF))) {
+    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SSDRF))) {
         if (argc != 1) {
             at_mode_print_invalid_arguments(serial);
         } else {
@@ -345,7 +345,7 @@ bool ssd1306_at_mode_command_handler(Stream &serial, const String &command, int8
         }
         return true;
     }
-    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SSDXY))) {
+    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SSDXY))) {
         if (argc != 2) {
             at_mode_print_invalid_arguments(serial);
         } else {
@@ -356,7 +356,7 @@ bool ssd1306_at_mode_command_handler(Stream &serial, const String &command, int8
             serial.printf_P(PSTR("+SSDXY: x=%d,y=%d\n"), x, y);
         }
     }
-    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SSDW))) {
+    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SSDW))) {
         ssd1306_disable_status();
         int8_t line = 0;
         while(line < argc) {
@@ -366,7 +366,7 @@ bool ssd1306_at_mode_command_handler(Stream &serial, const String &command, int8
         at_mode_print_ok(serial);
         return true;
     }
-    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SSDST))) {
+    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SSDST))) {
         ssd1306_enable_status();
         at_mode_print_ok(serial);
         return true;

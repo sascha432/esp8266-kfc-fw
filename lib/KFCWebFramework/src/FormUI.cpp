@@ -36,13 +36,32 @@ FormUI *FormUI::addItems(const String& value, const String& label)
     return this;
 }
 
-FormUI *FormUI::addItems(const ItemsList &items) {
+FormUI *FormUI::addItems(const ItemsList &items)
+{
     _items = items;
     return this;
 }
 
-FormUI *FormUI::setSuffix(const String &suffix) {
+FormUI *FormUI::setSuffix(const String &suffix)
+{
     _suffix = suffix;
+    return this;
+}
+
+FormUI *FormUI::setPlaceholder(const String &placeholder)
+{
+    addAttribute(F("placeholder"), placeholder);
+    return this;
+}
+
+FormUI *FormUI::addAttribute(const String &name, const String &value)
+{
+    _attributes += ' ';
+    _attributes += name;
+    _attributes += '=';
+    _attributes += '"';
+    _attributes += value; // TODO encode
+    _attributes += '"';
     return this;
 }
 
@@ -51,7 +70,7 @@ void FormUI::html(Print& output)
     // TODO check html entities encoding
     auto name = _parent->getName().c_str();
 
-    output.printf_P(PSTR("<div class = \"form-group\"><label for=\"%s\">%s</label>"), name, _label.c_str());
+    output.printf_P(PSTR("<div class=\"form-group\"><label for=\"%s\">%s</label>"), name, _label.c_str());
 
     if (_suffix.length()) {
         output.print(F("<div class=\"input-group\">"));
@@ -59,7 +78,7 @@ void FormUI::html(Print& output)
 
     switch (_type) {
     case SELECT:
-        output.printf_P(PSTR("<select class=\"form-control\" name=\"%s\" id=\"%s\">"), name, name);
+        output.printf_P(PSTR("<select class=\"form-control\" name=\"%s\" id=\"%s\"%s>"), name, name, _attributes.c_str());
         for (auto& item : _items) {
             PGM_P selected = _compareValue(item.first) ? PSTR(" selected") : PSTR("");
             output.printf_P(PSTR("<option value=\"%s\"%s>%s</option>"), item.first.c_str(), selected, item.second.c_str());
@@ -67,13 +86,13 @@ void FormUI::html(Print& output)
         output.print(F("</select>"));
         break;
     case TEXT:
-        output.printf_P(PSTR("<input type=\"text\" class=\"form-control\" name=\"%s\" id=\"%s\" value=\"%s\">"), name, name, _parent->getValue().c_str());
+        output.printf_P(PSTR("<input type=\"text\" class=\"form-control\" name=\"%s\" id=\"%s\" value=\"%s\"%s>"), name, name, _parent->getValue().c_str(), _attributes.c_str());
         break;
     case PASSWORD:
-        output.printf_P(PSTR("<input type=\"password\" class=\"form-control\" name=\"%s\" id=\"%s\" spellcheck=\"off\">"), name, name);
+        output.printf_P(PSTR("<input type=\"password\" class=\"form-control\" name=\"%s\" id=\"%s\" spellcheck=\"off\"%s>"), name, name, _attributes.c_str());
         break;
     case NEW_PASSWORD:
-        output.printf_P(PSTR("<input type=\"password\" class=\"form-control\" name=\"%s\" id=\"%s\" autocomplete=\"new-password\" data-always-visible=\"false\" data-protected=\"true\">"), name, name);
+        output.printf_P(PSTR("<input type=\"password\" class=\"form-control\" name=\"%s\" id=\"%s\" autocomplete=\"new-password\" data-always-visible=\"false\" data-protected=\"true\"%s>"), name, name, _attributes.c_str());
         break;
     }
 
@@ -82,7 +101,6 @@ void FormUI::html(Print& output)
     }
 
     output.print(F("</div>"));
-
 }
 
 void FormUI::setParent(FormField *field)

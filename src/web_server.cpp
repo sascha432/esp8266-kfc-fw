@@ -375,14 +375,14 @@ void web_server_update_upload_handler(AsyncWebServerRequest *request, String fil
 
             uint8_t imageType = 0;
 
-            if (constexpr_String_equals(request->arg(F("image_type")), PSTR("u_flash"))) { // firmware selected
+            if (String_equals(request->arg(F("image_type")), PSTR("u_flash"))) { // firmware selected
                 imageType = 0;
             }
-            else if (constexpr_String_equals(request->arg(F("image_type")), PSTR("u_spiffs"))) { // spiffs selected
+            else if (String_equals(request->arg(F("image_type")), PSTR("u_spiffs"))) { // spiffs selected
                 imageType = 1;
             }
 #if STK500V1
-            else if (constexpr_String_equals(request->arg(F("image_type")), PSTR("u_atmega"))) { // atmega selected
+            else if (String_equals(request->arg(F("image_type")), PSTR("u_atmega"))) { // atmega selected
                 imageType = 3;
             }
             else if (strstr_P(filename.c_str(), PSTR(".hex"))) { // auto select
@@ -539,44 +539,58 @@ void init_web_server()
 
 PGM_P web_server_get_content_type(const String &path)
 {
-    const char *cPath = path.c_str();
-    auto pathLen = path.length();
-
-    if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".html")) || !constexpr_strcmp_end_P(cPath, pathLen, PSTR(".htm"))) {
+    if (String_endsWith(path, PSTR(".html")) || String_endsWith(path, PSTR(".htm"))) {
         return SPGM(mime_text_html);
-    } else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".css"))) {
+    }
+    else if (String_endsWith(path, PSTR(".css"))) {
         return SPGM(mime_text_css);
-    } else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".json"))) {
+    }
+    else if (String_endsWith(path, PSTR(".json"))) {
         return SPGM(mime_application_json);
-    } else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".js"))) {
+    }
+    else if (String_endsWith(path, PSTR(".js"))) {
         return SPGM(mime_application_javascript);
-    } else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".png"))) {
+    }
+    else if (String_endsWith(path, PSTR(".png"))) {
         return SPGM(mime_image_png);
-    } else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".gif"))) {
+    }
+    else if (String_endsWith(path, PSTR(".gif"))) {
         return SPGM(mime_image_gif);
-    } else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".jpg"))) {
+    }
+    else if (String_endsWith(path, PSTR(".jpg"))) {
         return SPGM(mime_image_jpeg);
-    } else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".ico"))) {
+    }
+    else if (String_endsWith(path, PSTR(".ico"))) {
         return PSTR("image/x-icon");
-    } else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".svg"))) {
+    }
+    else if (String_endsWith(path, PSTR(".svg"))) {
         return PSTR("image/svg+xml");
-    } else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".eot"))) {
+    }
+    else if (String_endsWith(path, PSTR(".eot"))) {
         return PSTR("font/eot");
-    } else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".woff"))) {
+    }
+    else if (String_endsWith(path, PSTR(".woff"))) {
         return PSTR("font/woff");
-    } else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".woff2"))) {
+    }
+    else if (String_endsWith(path, PSTR(".woff2"))) {
         return PSTR("font/woff2");
-    } else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".ttf"))) {
+    }
+    else if (String_endsWith(path, PSTR(".ttf"))) {
         return PSTR("font/ttf");
-    } else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".xml"))) {
+    }
+    else if (String_endsWith(path, PSTR(".xml"))) {
         return SPGM(mime_text_xml);
-    } else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".pdf"))) {
+    }
+    else if (String_endsWith(path, PSTR(".pdf"))) {
         return PSTR("application/pdf");
-    } else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".zip"))) {
+    }
+    else if (String_endsWith(path, PSTR(".zip"))) {
         return SPGM(mime_application_zip);
-    } else if (!constexpr_strcmp_end_P(cPath, pathLen, PSTR(".gz"))) {
+    }
+    else if (String_endsWith(path, PSTR(".gz"))) {
         return SPGM(mime_application_x_gzip);
-    } else {
+    }
+    else {
         return SPGM(mime_text_plain);
     }
 }
@@ -600,7 +614,7 @@ bool web_server_send_file(String path, HttpHeaders &httpHeaders, bool client_acc
     // _debug_printf_P(PSTR("Mapping %s, %s, %d, content type %s\n"), mapping->getPath(), mapping->getMappedPath(), mapping->getFileSize(), web_server_get_content_type(path));
 
     if (webTemplate == nullptr) {
-        if (path.charAt(0) == '/' && constexpr_endsWith(path, PSTR(".html"))) {
+        if (path.charAt(0) == '/' && String_endsWith(path, PSTR(".html"))) {
             String filename = path.substring(1, path.length() - 5);
             auto plugin = PluginComponent::getTemplate(filename);
             if (plugin) {
@@ -612,15 +626,15 @@ bool web_server_send_file(String path, HttpHeaders &httpHeaders, bool client_acc
             }
         }
         if (webTemplate == nullptr) {
-            if (constexpr_String_equals(path, PSTR("/network.html"))) {
+            if (String_equals(path, PSTR("/network.html"))) {
                 webTemplate = _debug_new ConfigTemplate(_debug_new NetworkSettingsForm(nullptr));
-            } else if (constexpr_String_equals(path, PSTR("/wifi.html"))) {
+            } else if (String_equals(path, PSTR("/wifi.html"))) {
                 webTemplate = _debug_new ConfigTemplate(_debug_new WifiSettingsForm(nullptr));
-            } else if (constexpr_String_equals(path, PSTR("/index.html"))) {
+            } else if (String_equals(path, PSTR("/index.html"))) {
                 webTemplate = _debug_new StatusTemplate();
-            } else if (constexpr_String_equals(path, PSTR("/status.html"))) {
+            } else if (String_equals(path, PSTR("/status.html"))) {
                 webTemplate = _debug_new StatusTemplate();
-            } else if (constexpr_endsWith(path, PSTR(".html"))) {
+            } else if (String_endsWith(path, PSTR(".html"))) {
                 webTemplate = _debug_new WebTemplate();
             }
         }
@@ -654,11 +668,11 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
     _debug_printf_P(PSTR("web_server_handle_file_read: %s\n"), path.c_str());
     WebServerSetCPUSpeedHelper setCPUSpeed;
 
-    if (constexpr_endsWith(path, SPGM(slash))) {
+    if (String_endsWith(path, SPGM(slash))) {
         path += F("index.html");
     }
 
-    if (constexpr_startsWith(path, PSTR("/settings/"))) { // deny access
+    if (String_startsWith(path, PSTR("/settings/"))) { // deny access
         request->send(404);
         return false;
     }
@@ -717,7 +731,7 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
                 return web_server_send_file(FSPGM(login_html), httpHeaders, client_accepts_gzip, nullptr, request, new LoginTemplate(loginError));
             }
         } else {
-            if (constexpr_endsWith(path, PSTR(".html"))) {
+            if (String_endsWith(path, PSTR(".html"))) {
                 return web_server_send_file(FSPGM(login_html), httpHeaders, client_accepts_gzip, nullptr, request, new LoginTemplate(loginError));
             } else {
                 request->send(403);
@@ -732,7 +746,7 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
 
         httpHeaders.addNoCache(true);
 
-        if (path.charAt(0) == '/' && constexpr_endsWith(path, PSTR(".html"))) {
+        if (path.charAt(0) == '/' && String_endsWith(path, PSTR(".html"))) {
             auto plugin = PluginComponent::getForm(path.substring(1, path.length() - 5));
             if (plugin) {
                 Form *form = new SettingsForm(request);
@@ -748,7 +762,7 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
         }
         _debug_printf_P(PSTR("web_server_handle_file_read: webTemplate=%p\n"), webTemplate);
         if (!webTemplate) {
-            if (constexpr_String_equals(path, PSTR("/wifi.html"))) {
+            if (String_equals(path, PSTR("/wifi.html"))) {
                 Form *form = new WifiSettingsForm(request);
                 webTemplate = new ConfigTemplate(form);
                 if (form->validate()) {
@@ -758,7 +772,7 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
                 } else {
                     config.clear();
                 }
-            } else if (constexpr_String_equals(path, PSTR("/network.html"))) {
+            } else if (String_equals(path, PSTR("/network.html"))) {
                 Form *form = new NetworkSettingsForm(request);
                 webTemplate = new ConfigTemplate(form);
                 if (form->validate()) {
@@ -768,7 +782,7 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
                 } else {
                     config.clear();
                 }
-            } else if (constexpr_String_equals(path, PSTR("/password.html"))) {
+            } else if (String_equals(path, PSTR("/password.html"))) {
                 Form *form = new PasswordSettingsForm(request);
                 webTemplate = new ConfigTemplate(form);
                 if (form->validate()) {
@@ -779,7 +793,7 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
                 } else {
                     config.clear();
                 }
-            } else if (constexpr_String_equals(path, PSTR("/reboot.html"))) {
+            } else if (String_equals(path, PSTR("/reboot.html"))) {
                 if (request->hasArg(F("yes"))) {
                     request->onDisconnect([]() {
                         config.restartDevice();
@@ -788,7 +802,7 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
                 } else {
                     request->redirect(F("/index.html"));
                 }
-            } else if (constexpr_String_equals(path, PSTR("/factory.html"))) {
+            } else if (String_equals(path, PSTR("/factory.html"))) {
                 if (request->hasArg(F("yes"))) {
                     config.restoreFactorySettings();
                     config.write();
@@ -806,7 +820,7 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
 /*        Config &config = _Config.get();
 
 
-        } else if (constexpr_String_equals(path, PSTR("/pins.html"))) {
+        } else if (String_equals(path, PSTR("/pins.html"))) {
             if (request->hasArg(F("led_type"))) {
                 BlinkLEDTimer::setBlink(BlinkLEDTimer::OFF);
                 _Config.getOptions().setLedMode((LedMode_t)request->arg(F("led_type")).toInt());

@@ -144,7 +144,7 @@ T _debug_helper_print_result_P(const char *file, int line, const char *function,
 #define DEBUG_HELPER_SILENT()       ;
 
 #define __debugbreak_and_panic()                        panic();
-#define __debugbreak_and_panic_printf_P(fmt, ...)       Serial.printf_P(fmt, __VA_ARGS__); panic();
+#define __debugbreak_and_panic_printf_P(fmt, ...)       Serial.printf_P(fmt, ## __VA_ARGS__); panic();
 
 #define debug_print(...)            ;
 #define debug_println(...)          ;

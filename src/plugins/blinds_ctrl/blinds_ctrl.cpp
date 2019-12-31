@@ -305,7 +305,7 @@ void BlindsControlPlugin::atModeHelpGenerator() {
 
 bool BlindsControlPlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) {
 
-    if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(BCMS))) {
+    if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(BCMS))) {
         if (argc == 2) {
             uint8_t channel = atoi(argv[0]) % 2;
             _channels[channel].setState(atoi(argv[1]) == 0 ? BlindsChannel::CLOSED : BlindsChannel::OPEN);
@@ -317,7 +317,7 @@ bool BlindsControlPlugin::atModeHandler(Stream &serial, const String &command, i
         }
         return true;
     }
-    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(BCMC))) {
+    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(BCMC))) {
         if (argc == 6 || argc == -1) {
             auto &cfg = config._H_W_GET(Config().blinds_controller);
             uint8_t channel = 0xff;
@@ -349,7 +349,7 @@ bool BlindsControlPlugin::atModeHandler(Stream &serial, const String &command, i
         }
         return true;
     }
-    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(BCMD))) {
+    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(BCMD))) {
         if (argc == 2 || argc == -1) {
             auto &cfg = config._H_W_GET(Config().blinds_controller);
             if (argc == 2) {
@@ -378,7 +378,7 @@ bool BlindsControlPlugin::atModeHandler(Stream &serial, const String &command, i
         return true;
     }
 #if IOT_BLINDS_CTRL_TESTMODE
-    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(BCME))) {
+    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(BCME))) {
         if (argc == 6) {
             uint8_t pins[] = { IOT_BLINDS_CTRL_M1_PIN, IOT_BLINDS_CTRL_M2_PIN, IOT_BLINDS_CTRL_M3_PIN, IOT_BLINDS_CTRL_M4_PIN };
             uint8_t channel = atoi(argv[0]);

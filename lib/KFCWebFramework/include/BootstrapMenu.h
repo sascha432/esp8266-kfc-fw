@@ -11,22 +11,30 @@
 #define DEBUG_BOOTSTRAP_MENU                    0
 #endif
 
+#include "push_pack.h"
+
 class BootstrapMenu {
 public:
-    typedef struct {
+    typedef uint8_t menu_item_id_t;
+
+    typedef struct __attribute__packed__ {
+        menu_item_id_t id;
+        menu_item_id_t parentMenuId;
         uint8_t label_progmem : 1;
         uint8_t URI_progmem : 1;
     } MenuItemFlags_t;
 
-    typedef uint8_t menu_item_id_t;
-
     class Item {
     public:
-        Item() : _id(INVALID_ID), _label(nullptr), _URI(nullptr), _parentMenuId(INVALID_ID) {
+        Item() : _label(nullptr), _URI(nullptr)
+        {
             memset(&_flags, 0, sizeof(_flags));
+            _flags.id = INVALID_ID;
+            _flags.parentMenuId = INVALID_ID;
         }
-        Item(BootstrapMenu &menu) : Item()  {
-            _id = menu._getUnqiueId();
+        Item(BootstrapMenu &menu) : Item()
+        {
+            _flags.id = menu._getUnqiueId();
         }
 
         // needs to be called to free memory
@@ -105,23 +113,21 @@ public:
         }
 
         void setParentMenuId(menu_item_id_t menuId) {
-            _parentMenuId = menuId;
+            _flags.parentMenuId = menuId;
         }
 
         menu_item_id_t getParentMenuId() const {
-            return _parentMenuId;
+            return _flags.parentMenuId;
         }
 
         menu_item_id_t getId() const {
-            return _id;
+            return _flags.id;
         }
 
     private:
-        menu_item_id_t _id;
         void *_label;
         void *_URI;
         MenuItemFlags_t _flags;
-        menu_item_id_t _parentMenuId;
     };
 
     typedef std::vector<Item> ItemsVector;
@@ -156,6 +162,11 @@ public:
     // get menu item by id
     ItemsVectorIterator getItem(menu_item_id_t menuId);
 
+// public:
+//     void createCache();
+// private:
+//     String _cacheFilename;
+
 private:
     friend Item;
 
@@ -167,3 +178,5 @@ private:
     ItemsVector _items;
     menu_item_id_t _unqiueId;
 };
+
+#include "pop_pack.h"

@@ -151,7 +151,7 @@ void Sensor_INA219::_loop()
         double num = (IN219_UPDATE_RATE * 1000 / 2) / (double)diff;
         auto current = _ina219.getCurrent_mA();
         _Uint = ((_Uint * num) + (_ina219.getBusVoltage_V())) / (num + 1);
-        _Iint = ((_Iint * num) + (current)) / (num + 1);
+        _Iint = ((_Iint * num) + current) / (num + 1);
         _Pint = ((_Pint * num) + (_ina219.getPower_mW())) / (num + 1);
         if (current > _Ipeak) {
             _Ipeak = current;

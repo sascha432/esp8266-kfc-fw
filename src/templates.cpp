@@ -57,10 +57,10 @@ Form * WebTemplate::getForm() {
 
 void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 {
-    if (key.equals(F("HOSTNAME"))) {
+    if (String_equals(key, PSTR("HOSTNAME"))) {
         output.print(config._H_STR(Config().device_name));
     }
-    else if (key == F("HARDWARE")) {
+    else if (String_equals(key, PSTR("HARDWARE"))) {
 #if defined(ESP8266)
         output.printf_P(PSTR("ESP8266 %s Flash, %d Mhz, Free RAM %s"), formatBytes(ESP.getFlashChipRealSize()).c_str(), system_get_cpu_freq(), formatBytes(ESP.getFreeHeap()).c_str());
 #elif defined(ESP32)
@@ -69,7 +69,7 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 #error Platform not supported
 #endif
     }
-    else if (key == F("SOFTWARE")) {
+    else if (String_equals(key, PSTR("SOFTWARE"))) {
         output.print(F("KFC FW "));
         output.print(config.getFirmwareVersion());
         if (config._H_GET(Config().flags).isDefaultPassword) {
@@ -77,14 +77,14 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         }
     }
 #if RTC_SUPPORT
-    else if (key == F("RTC_STATUS")) {
+    else if (String_equals(key, PSTR("RTC_STATUS"))) {
         output.setRawOutput(true); // disable html entities translation
         config.printRTCStatus(output, false);
         output.setRawOutput(false);
     }
 #endif
 #if NTP_CLIENT || RTC_SUPPORT
-    else if (key == F("TIME")) {
+    else if (String_equals(key, PSTR("TIME"))) {
 
         time_t now = time(nullptr);
         if (!IS_TIME_VALID(now)) {
@@ -96,48 +96,55 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         }
     }
 #endif
-    else if (key == F("SAFEMODE")) {
+    else if (String_equals(key, PSTR("SAFEMODE"))) {
         if (config.isSafeMode()) {
             output.print(F(" - Running in SAFE MODE"));
         }
     }
-    else if (key == F("UPTIME")) {
+    else if (String_equals(key, PSTR("UPTIME"))) {
         output.print(formatTime((long)(millis() / 1000)));
     }
-    else if (key == F("WIFI_UPTIME")) {
+    else if (String_equals(key, PSTR("WIFI_UPTIME"))) {
         output.print(config._H_GET(Config().flags).wifiMode & WIFI_STA ? (!KFCFWConfiguration::isWiFiUp() ? F("Offline") : formatTime((millis() - KFCFWConfiguration::getWiFiUp()) / 1000)) : F("Client mode disabled"));
     }
-    else if (key == F("IP_ADDRESS")) {
+    else if (String_equals(key, PSTR("IP_ADDRESS"))) {
         WiFi_get_address(output);
     }
-    else if (key == F("FIRMWARE_UPGRADE_FAILURE")) {
+    else if (String_equals(key, PSTR("FIRMWARE_UPGRADE_FAILURE"))) {
     }
-    else if (key == F("FIRMWARE_UPGRADE_FAILURE_CLASS")) {
+    else if (String_equals(key, PSTR("FIRMWARE_UPGRADE_FAILURE_CLASS"))) {
         output.print(FSPGM(_hidden));
     }
-    else if (key == F("CONFIG_DIRTY_CLASS")) {
+    else if (String_equals(key, PSTR("CONFIG_DIRTY_CLASS"))) {
         if (!config.isConfigDirty()) {
             output.print(FSPGM(_hidden));
         }
     }
-    else if (key.equals(F("MENU_HTML_MAIN"))) {
+    else if (String_equals(key, PSTR("MENU_HTML_MAIN"))) {
         output.setRawOutput(true);
         bootstrapMenu.html(output);
     }
-    else if (key.startsWith(F("MENU_HTML_SUBMENU_"))) {
+    else if (String_startsWith(key, PSTR("MENU_HTML_MAIN_"))) {
+        output.setRawOutput(true);
+        auto id = bootstrapMenu.findMenuByLabel(key.substring(15));
+        if (id != BootstrapMenu::INVALID_ID) {
+            bootstrapMenu.html(output, id, false);
+        }
+    }
+    else if (String_startsWith(key, PSTR("MENU_HTML_SUBMENU_"))) {
         output.setRawOutput(true);
         auto id = bootstrapMenu.findMenuByLabel(key.substring(18));
         if (id != BootstrapMenu::INVALID_ID) {
             bootstrapMenu.htmlSubMenu(output, id, 0);
         }
     }
-    else if (key == F("FORM_HTML")) {
+    else if (String_equals(key, PSTR("FORM_HTML"))) {
         if (_form) {
             output.setRawOutput(true);
             _form->createHtml(output);
         }
     }
-    else if (key == F("FORM_VALIDATOR")) {
+    else if (String_equals(key, PSTR("FORM_VALIDATOR"))) {
         if (_form) {
             output.setRawOutput(true);
             _form->createJavascript(output);
@@ -149,7 +156,7 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
             output.print(str);
         }
     }
-    else if (key.endsWith(F("_STATUS"))) {
+    else if (String_endsWith(key, PSTR("_STATUS"))) {
         uint8_t cmp_length = key.length() - 7;
         for(auto plugin: plugins) {
             if (plugin->hasStatus() && strncasecmp_P(key.c_str(), plugin->getName(), cmp_length) == 0) {
@@ -176,9 +183,9 @@ UpgradeTemplate::UpgradeTemplate(const String &errorMessage)
 
 void UpgradeTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 {
-    if (key == F("FIRMWARE_UPGRADE_FAILURE_CLASS")) {
+    if (String_equals(key, F("FIRMWARE_UPGRADE_FAILURE_CLASS"))) {
     }
-    else if (key == F("FIRMWARE_UPGRADE_FAILURE")) {
+    else if (String_equals(key, F("FIRMWARE_UPGRADE_FAILURE"))) {
         output.print(_errorMessage);
     }
     else {
@@ -200,10 +207,10 @@ LoginTemplate::LoginTemplate(const String &errorMessage) {
 
 void LoginTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 {
-    if (key == F("LOGIN_ERROR_MESSAGE")) {
+    if (String_equals(key, F("LOGIN_ERROR_MESSAGE"))) {
         output.print(_errorMessage);
     }
-    else if (key == F("LOGIN_ERROR_CLASS")) {
+    else if (String_equals(key, F("LOGIN_ERROR_CLASS"))) {
         if (_errorMessage.length() == 0) {
             output.print(FSPGM(_hidden));
         }
@@ -237,7 +244,7 @@ void ConfigTemplate::process(const String &key, PrintHtmlEntitiesString &output)
             }
         }
     }
-    if (key == F("NETWORK_MODE")) {
+    if (String_equals(key, F("NETWORK_MODE"))) {
         if (config._H_GET(Config().flags).wifiMode & WIFI_AP) {
             output.print(F("#station_mode"));
         }
@@ -245,24 +252,24 @@ void ConfigTemplate::process(const String &key, PrintHtmlEntitiesString &output)
             output.print(F("#ap_mode"));
         }
     }
-    else if (key.startsWith(F("MAX_CHANNELS"))) {
+    else if (String_startsWith(key, F("MAX_CHANNELS"))) {
         output.print(config.getMaxWiFiChannels());
     }
-    else if (key.startsWith(F("MODE_"))) {
+    else if (String_startsWith(key, F("MODE_"))) {
         if (config._H_GET(Config().flags).wifiMode == key.substring(5).toInt()) {
             output.print(FSPGM(_selected));
         }
     }
-    else if (key.startsWith(F("LED_TYPE_"))) {
+    else if (String_startsWith(key, F("LED_TYPE_"))) {
         uint8_t type = key.substring(9).toInt();
         if (config._H_GET(Config().flags).ledMode == type) {
             output.print(FSPGM(_selected));
         }
     }
-    else if (key == F("LED_PIN")) {
+    else if (String_equals(key, F("LED_PIN"))) {
         output.print(config._H_GET(Config().led_pin));
     }
-    else if (key == F("SSL_CERT")) {
+    else if (String_equals(key, F("SSL_CERT"))) {
 #if SPIFFS_SUPPORT
         File file = SPIFFS.open(FSPGM(server_crt), "r");
         if (file) {
@@ -270,7 +277,7 @@ void ConfigTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         }
 #endif
     }
-    else if (key == F("SSL_KEY")) {
+    else if (String_equals(key, F("SSL_KEY"))) {
 #if SPIFFS_SUPPORT
         File file = SPIFFS.open(FSPGM(server_key), "r");
         if (file) {
@@ -285,17 +292,17 @@ void ConfigTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 
 void StatusTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 {
-    if (key == F("GATEWAY")) {
+    if (String_equals(key, F("GATEWAY"))) {
         WiFi.gatewayIP().printTo(output);
     }
-    else if (key == F("DNS")) {
+    else if (String_equals(key, F("DNS"))) {
         WiFi.dnsIP().printTo(output);
         if (WiFi.dnsIP(1)) {
             output.print(FSPGM(comma_));
             WiFi.dnsIP(1).printTo(output);
         }
     }
-    else if (key == F("SSL_STATUS")) {
+    else if (String_equals(key, F("SSL_STATUS"))) {
         #if ASYNC_TCP_SSL_ENABLED
             #if WEBSERVER_TLS_SUPPORT
                 output.printf_P(PSTR("TLS enabled, HTTPS %s"), _Config.getOptions().isHttpServerTLS() ? F("enabled") : FSPGM(Disabled));
@@ -306,7 +313,7 @@ void StatusTemplate::process(const String &key, PrintHtmlEntitiesString &output)
             output.print(FSPGM(Not_supported));
         #endif
     }
-    else if (key == F("WIFI_MODE")) {
+    else if (String_equals(key, F("WIFI_MODE"))) {
         switch (WiFi.getMode()) {
             case WIFI_STA:
                 output.print(F("Station mode"));
@@ -325,7 +332,7 @@ void StatusTemplate::process(const String &key, PrintHtmlEntitiesString &output)
                 break;
         }
     }
-    else if (key == F("WIFI_SSID")) {
+    else if (String_equals(key, F("WIFI_SSID"))) {
         if (WiFi.getMode() == WIFI_AP_STA) {
             output.print(F("Station connected to " HTML_S(strong)));
             WiFi_Station_SSID(output);
@@ -340,7 +347,7 @@ void StatusTemplate::process(const String &key, PrintHtmlEntitiesString &output)
             WiFi_SoftAP_SSID(output);
         }
     }
-    else if (key == F("WIFI_STATUS")) {
+    else if (String_equals(key, F("WIFI_STATUS"))) {
         WiFi_get_status(output);
     }
     else {
@@ -355,10 +362,10 @@ PasswordTemplate::PasswordTemplate(const String &errorMessage)
 
 void PasswordTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 {
-    if (key == F("PASSWORD_ERROR_MESSAGE")) {
+    if (String_equals(key, F("PASSWORD_ERROR_MESSAGE"))) {
         output.print(_errorMessage);
     }
-    else if (key == F("PASSWORD_ERROR_CLASS")) {
+    else if (String_equals(key, F("PASSWORD_ERROR_CLASS"))) {
         if (_errorMessage.length() == 0) {
             output.print(FSPGM(_hidden));
         }

@@ -22,10 +22,12 @@
 #include "../../trailing_edge_dimmer/src/dimmer_protocol.h"
 #include "../../trailing_edge_dimmer/src/dimmer_reg_mem.h"
 
-Driver_DimmerModule::Driver_DimmerModule() : MQTTComponent(SENSOR), Dimmer_Base() {
+Driver_DimmerModule::Driver_DimmerModule() : MQTTComponent(SENSOR), Dimmer_Base()
+{
 }
 
-void DimmerModulePlugin::getStatus(Print &out) {
+void DimmerModulePlugin::getStatus(Print &out)
+{
     out.printf_P(PSTR("%u Channel MOSFET Dimmer enabled on "), IOT_DIMMER_MODULE_CHANNELS);
 #if IOT_DIMMER_MODULE_INTERFACE_UART
     out.print(F("Serial Port"));
@@ -35,8 +37,11 @@ void DimmerModulePlugin::getStatus(Print &out) {
     _printStatus(out);
 }
 
-void Driver_DimmerModule::_begin() {
+void Driver_DimmerModule::_begin()
+{
+    _debug_println(F("Driver_DimmerModule::_begin()"));
     Dimmer_Base::_begin();
+
     auto mqttClient = MQTTClient::getClient();
     if (mqttClient) {
         mqttClient->setUseNodeId(true);
@@ -78,13 +83,17 @@ void Driver_DimmerModule::_begin() {
     _getChannels();
 }
 
-void Driver_DimmerModule::_end() {
+void Driver_DimmerModule::_end()
+{
+    _debug_println(F("Driver_DimmerModule::_end()"));
 
 #if IOT_DIMMER_MODULE_HAS_BUTTONS
+    _debug_println(F("Driver_DimmerModule::_end(): removing timers"));
     for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
         Scheduler.removeTimer(_turnOffTimer[i]);
     }
 
+    _debug_println(F("Driver_DimmerModule::_end(): removing pin monitor"));
     PinMonitor *monitor = PinMonitor::getInstance();
     if (monitor) {
         for(auto &button: _buttons) {
@@ -97,20 +106,20 @@ void Driver_DimmerModule::_end() {
     LoopFunctions::remove(Driver_DimmerModule::loop);
 #endif
 
+    _debug_println(F("Driver_DimmerModule::_end(): removing mqtt client"));
     auto mqttClient = MQTTClient::getClient();
     if (mqttClient) {
         mqttClient->unregisterComponent(this);
-        for (uint8_t i = IOT_DIMMER_MODULE_CHANNELS - 1; i >= 0; i--) {
+        for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
             mqttClient->unregisterComponent(&_channels[i]);
         }
     }
+
     Dimmer_Base::_end();
 }
 
-void Driver_DimmerModule::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTComponent::MQTTAutoDiscoveryVector &vector) {
-
-    String topic = MQTTClient::formatTopic(-1, F("/metrics/"));
-
+void Driver_DimmerModule::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTComponent::MQTTAutoDiscoveryVector &vector)
+{
     if (format == MQTTAutoDiscovery::FORMAT_YAML) {
         for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
             _channels[i].createAutoDiscovery(format, vector);
@@ -119,44 +128,47 @@ void Driver_DimmerModule::createAutoDiscovery(MQTTAutoDiscovery::Format_t format
 
     auto discovery = _debug_new MQTTAutoDiscovery();
     discovery->create(this, 0, format);
-    discovery->addStateTopic(topic + F("int_temp"));
+    discovery->addStateTopic(_getMetricsTopics(0));
     discovery->addUnitOfMeasurement(F("\u00b0C"));
     discovery->finalize();
     vector.emplace_back(MQTTComponent::MQTTAutoDiscoveryPtr(discovery));
 
     discovery = _debug_new MQTTAutoDiscovery();
     discovery->create(this, 1, format);
-    discovery->addStateTopic(topic + F("ntc_temp"));
+    discovery->addStateTopic(_getMetricsTopics(1));
     discovery->addUnitOfMeasurement(F("\u00b0C"));
     discovery->finalize();
     vector.emplace_back(MQTTComponent::MQTTAutoDiscoveryPtr(discovery));
 
     discovery = _debug_new MQTTAutoDiscovery();
     discovery->create(this, 2, format);
-    discovery->addStateTopic(topic + F("vcc"));
+    discovery->addStateTopic(_getMetricsTopics(2));
     discovery->addUnitOfMeasurement(F("V"));
     discovery->finalize();
     vector.emplace_back(MQTTComponent::MQTTAutoDiscoveryPtr(discovery));
 
     discovery = _debug_new MQTTAutoDiscovery();
     discovery->create(this, 3, format);
-    discovery->addStateTopic(topic + F("frequency"));
+    discovery->addStateTopic(_getMetricsTopics(3));
     discovery->addUnitOfMeasurement(F("Hz"));
     discovery->finalize();
     vector.emplace_back(MQTTComponent::MQTTAutoDiscoveryPtr(discovery));
 }
 
-uint8_t Driver_DimmerModule::getAutoDiscoveryCount() const {
+uint8_t Driver_DimmerModule::getAutoDiscoveryCount() const
+{
     return 4;
 }
 
-void Driver_DimmerModule::onConnect(MQTTClient *client) {
+void Driver_DimmerModule::onConnect(MQTTClient *client)
+{
 #if !IOT_DIMMER_MODULE_INTERFACE_UART
     _fetchMetrics();
 #endif
 }
 
-void Driver_DimmerModule::_printStatus(Print &out) {
+void Driver_DimmerModule::_printStatus(Print &out)
+{
     out.print(F(", Fading enabled" HTML_S(br)));
     for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
         out.printf_P(PSTR("Channel %u: "), i);
@@ -170,16 +182,19 @@ void Driver_DimmerModule::_printStatus(Print &out) {
 }
 
 
-bool Driver_DimmerModule::on(uint8_t channel) {
+bool Driver_DimmerModule::on(uint8_t channel)
+{
     return _channels[channel].on();
 }
 
-bool Driver_DimmerModule::off(uint8_t channel) {
+bool Driver_DimmerModule::off(uint8_t channel)
+{
     return _channels[channel].off();
 }
 
 // get brightness values from dimmer
-void Driver_DimmerModule::_getChannels() {
+void Driver_DimmerModule::_getChannels()
+{
     _debug_printf_P(PSTR("Driver_DimmerModule::_getChannels()\n"));
 
     if (_lockWire()) {
@@ -207,15 +222,18 @@ void Driver_DimmerModule::_getChannels() {
     }
 }
 
-int16_t Driver_DimmerModule::getChannel(uint8_t channel) const {
+int16_t Driver_DimmerModule::getChannel(uint8_t channel) const
+{
     return _channels[channel].getLevel();
 }
 
-bool Driver_DimmerModule::getChannelState(uint8_t channel) const {
+bool Driver_DimmerModule::getChannelState(uint8_t channel) const
+{
     return _channels[channel].getOnState();
 }
 
-void Driver_DimmerModule::setChannel(uint8_t channel, int16_t level, float time) {
+void Driver_DimmerModule::setChannel(uint8_t channel, int16_t level, float time)
+{
     if (time == -1) {
         time = _fadeTime;
     }
@@ -225,27 +243,32 @@ void Driver_DimmerModule::setChannel(uint8_t channel, int16_t level, float time)
     _channels[channel].publishState();
 }
 
-uint8_t Driver_DimmerModule::getChannelCount() const {
+uint8_t Driver_DimmerModule::getChannelCount() const
+{
     return IOT_DIMMER_MODULE_CHANNELS;
 }
 
 // buttons
 #if IOT_DIMMER_MODULE_HAS_BUTTONS
 
-void Driver_DimmerModule::pinCallback(void *arg) {
+void Driver_DimmerModule::pinCallback(void *arg)
+{
     auto pin = reinterpret_cast<PinMonitor::Pin_t *>(arg);
     reinterpret_cast<Driver_DimmerModule *>(pin->arg)->_pinCallback(*pin);
 }
 
-void Driver_DimmerModule::loop() {
+void Driver_DimmerModule::loop()
+{
     dimmer_plugin._loop();
 }
 
-void Driver_DimmerModule::onButtonPressed(Button& btn) {
+void Driver_DimmerModule::onButtonPressed(Button& btn)
+{
     _debug_printf_P(PSTR("onButtonPressed %p\n"), &btn);
 }
 
-void Driver_DimmerModule::onButtonHeld(Button& btn, uint16_t duration, uint16_t repeatCount) {
+void Driver_DimmerModule::onButtonHeld(Button& btn, uint16_t duration, uint16_t repeatCount)
+{
     _debug_printf_P(PSTR("onButtonHeld %p duration %u repeat %u\n"), &btn, duration, repeatCount);
 
     uint8_t pressed, channel;
@@ -255,7 +278,8 @@ void Driver_DimmerModule::onButtonHeld(Button& btn, uint16_t duration, uint16_t 
     }
 }
 
-void Driver_DimmerModule::onButtonReleased(Button& btn, uint16_t duration) {
+void Driver_DimmerModule::onButtonReleased(Button& btn, uint16_t duration)
+{
     _debug_printf_P(PSTR("onButtonReleased %p duration %u\n"), &btn, duration);
 
     uint8_t pressed, channel;
@@ -278,7 +302,8 @@ void Driver_DimmerModule::onButtonReleased(Button& btn, uint16_t duration) {
     }
 }
 
-bool Driver_DimmerModule::_findButton(Button &btn, uint8_t &pressed, uint8_t &channel, bool &buttonUp) {
+bool Driver_DimmerModule::_findButton(Button &btn, uint8_t &pressed, uint8_t &channel, bool &buttonUp)
+{
     uint8_t num = 0;
 
     channel = 0xff;
@@ -299,7 +324,8 @@ bool Driver_DimmerModule::_findButton(Button &btn, uint8_t &pressed, uint8_t &ch
 }
 
 
-void Driver_DimmerModule::_pinCallback(PinMonitor::Pin_t &pin) {
+void Driver_DimmerModule::_pinCallback(PinMonitor::Pin_t &pin)
+{
     // add main loop function to handle timings and debouncing
     LoopFunctions::add(Driver_DimmerModule::loop);
     // find button and update
@@ -310,14 +336,16 @@ void Driver_DimmerModule::_pinCallback(PinMonitor::Pin_t &pin) {
     }
 }
 
-void Driver_DimmerModule::_loop() {
+void Driver_DimmerModule::_loop()
+{
     // update all buttons
     for(auto &button: _buttons) {
         button.getButton().update();
     }
 }
 
-void Driver_DimmerModule::_buttonShortPress(uint8_t channel, bool up) {
+void Driver_DimmerModule::_buttonShortPress(uint8_t channel, bool up)
+{
     _debug_printf_P(PSTR("Driver_DimmerModule::_buttonShortPress(%d, %s): repeat %u\n"), channel, up ? F("up") : F("down"), _turnOffTimerRepeat[channel]);
     if (getChannelState(channel)) {
         auto config = dimmer_plugin.getButtonConfig();
@@ -357,7 +385,8 @@ void Driver_DimmerModule::_buttonShortPress(uint8_t channel, bool up) {
     }
 }
 
-void Driver_DimmerModule::_buttonLongPress(uint8_t channel, bool up) {
+void Driver_DimmerModule::_buttonLongPress(uint8_t channel, bool up)
+{
     _debug_printf_P(PSTR("Driver_DimmerModule::_buttonLongPress(%d, %s)\n"), channel, up ? F("up") : F("down"));
     //if (getChannelState(channel))
     {
@@ -373,7 +402,8 @@ void Driver_DimmerModule::_buttonLongPress(uint8_t channel, bool up) {
     }
 }
 
-void Driver_DimmerModule::_buttonRepeat(uint8_t channel, bool up, uint16_t repeatCount) {
+void Driver_DimmerModule::_buttonRepeat(uint8_t channel, bool up, uint16_t repeatCount)
+{
     auto level = getChannel(channel);
     auto config = dimmer_plugin.getButtonConfig();
     int16_t change = IOT_DIMMER_MODULE_MAX_BRIGHTNESS * config.shortpress_step / 100;
@@ -391,16 +421,19 @@ void Driver_DimmerModule::_buttonRepeat(uint8_t channel, bool up, uint16_t repea
 
 DimmerModulePlugin dimmer_plugin;
 
-PGM_P DimmerModulePlugin::getName() const {
+PGM_P DimmerModulePlugin::getName() const
+{
     return PSTR("dimmer");
 }
 
-void DimmerModulePlugin::setup(PluginSetupMode_t mode) {
+void DimmerModulePlugin::setup(PluginSetupMode_t mode)
+{
     setupWebServer();
     _begin();
 }
 
-void DimmerModulePlugin::reconfigure(PGM_P source) {
+void DimmerModulePlugin::reconfigure(PGM_P source)
+{
     if (source == nullptr) {
         writeConfig();
         _end();
@@ -411,20 +444,23 @@ void DimmerModulePlugin::reconfigure(PGM_P source) {
     }
 }
 
-bool DimmerModulePlugin::hasReconfigureDependecy(PluginComponent *plugin) const {
+bool DimmerModulePlugin::hasReconfigureDependecy(PluginComponent *plugin) const
+{
     return plugin->nameEquals(F("http"));
 }
 
-bool DimmerModulePlugin::hasWebUI() const {
+bool DimmerModulePlugin::hasWebUI() const
+{
     return true;
 }
 
-WebUIInterface *DimmerModulePlugin::getWebUIInterface() {
+WebUIInterface *DimmerModulePlugin::getWebUIInterface()
+{
     return this;
 }
 
-void DimmerModulePlugin::createWebUI(WebUI &webUI) {
-
+void DimmerModulePlugin::createWebUI(WebUI &webUI)
+{
     auto row = &webUI.addRow();
     row->setExtraClass(JJ(title));
     row->addGroup(F("Dimmer"), true);
@@ -442,7 +478,8 @@ void DimmerModulePlugin::createWebUI(WebUI &webUI) {
 }
 
 
-bool DimmerModulePlugin::hasStatus() const {
+bool DimmerModulePlugin::hasStatus() const
+{
     return true;
 }
 
@@ -455,36 +492,39 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DIMS, "DIMS", "<channel>,<level>[,<time>]"
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DIMW, "DIMW", "Write EEPROM");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DIMR, "DIMR", "Reset ATmega via GPIO5");
 
-bool DimmerModulePlugin::hasAtMode() const {
+bool DimmerModulePlugin::hasAtMode() const
+{
     return true;
 }
 
-void DimmerModulePlugin::atModeHelpGenerator() {
+void DimmerModulePlugin::atModeHelpGenerator()
+{
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DIMG));
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DIMS));
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DIMW));
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DIMR));
 }
 
-bool DimmerModulePlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) {
-    if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(DIMW))) {
+bool DimmerModulePlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv)
+{
+    if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(DIMW))) {
         writeEEPROM();
         at_mode_print_ok(serial);
         return true;
     }
-    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(DIMG))) {
+    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(DIMG))) {
         for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
             serial.printf_P(PSTR("+DIMG: %u: %d\n"), i, getChannel(i));
         }
         return true;
     }
-    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(DIMR))) {
+    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(DIMR))) {
         serial.println(F("Pulling GPIO5 low for 10ms"));
         dimmer_plugin.resetDimmerFirmware();
         serial.println(F("GPIO5 set to input"));
         return true;
     }
-    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(DIMS))) {
+    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(DIMS))) {
         if (argc < 2) {
             at_mode_print_invalid_arguments(serial);
         }

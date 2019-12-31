@@ -582,20 +582,24 @@ void Driver_4ChDimmer::_getChannels() {
 
 AtomicSunPlugin dimmer_plugin;
 
-PGM_P AtomicSunPlugin::getName() const {
+PGM_P AtomicSunPlugin::getName() const
+{
     return PSTR("atomicsun");
 }
 
-AtomicSunPlugin::PluginPriorityEnum_t AtomicSunPlugin::getSetupPriority() const {
+AtomicSunPlugin::PluginPriorityEnum_t AtomicSunPlugin::getSetupPriority() const
+{
     return (AtomicSunPlugin::PluginPriorityEnum_t)100;
 }
 
-void AtomicSunPlugin::setup(PluginSetupMode_t mode) {
+void AtomicSunPlugin::setup(PluginSetupMode_t mode)
+{
     _begin();
     setupWebServer();
 }
 
-void AtomicSunPlugin::reconfigure(PGM_P source) {
+void AtomicSunPlugin::reconfigure(PGM_P source)
+{
     if (!source) {
         writeConfig();
     }
@@ -604,16 +608,18 @@ void AtomicSunPlugin::reconfigure(PGM_P source) {
     }
 }
 
-bool AtomicSunPlugin::hasReconfigureDependecy(PluginComponent *plugin) const {
+bool AtomicSunPlugin::hasReconfigureDependecy(PluginComponent *plugin) const
+{
     return plugin->nameEquals(F("http"));
 }
 
-bool AtomicSunPlugin::hasWebUI() const {
+bool AtomicSunPlugin::hasWebUI() const
+{
     return true;
 }
 
-void AtomicSunPlugin::createWebUI(WebUI &webUI) {
-
+void AtomicSunPlugin::createWebUI(WebUI &webUI)
+{
     auto row = &webUI.addRow();
     row->setExtraClass(F("title"));
     row->addGroup(F("Atomic Sun"), false);
@@ -641,11 +647,13 @@ void AtomicSunPlugin::createWebUI(WebUI &webUI) {
     }
 }
 
-WebUIInterface *AtomicSunPlugin::getWebUIInterface() {
+WebUIInterface *AtomicSunPlugin::getWebUIInterface()
+{
     return this;
 }
 
-bool AtomicSunPlugin::hasStatus() const {
+bool AtomicSunPlugin::hasStatus() const
+{
     return true;
 }
 

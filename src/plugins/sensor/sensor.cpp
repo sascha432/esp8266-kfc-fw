@@ -260,12 +260,12 @@ void SensorPlugin::atModeHelpGenerator() {
 }
 
 bool SensorPlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) {
-    if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SENSORR))) {
+    if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SENSORR))) {
         serial.println(F("+SENSORR: Reconfiguring plugin..."));
         reconfigure(nullptr);
         return true;
     }
-    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SENSORC))) {
+    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SENSORC))) {
 #if IOT_SENSOR_HAVE_BATTERY || IOT_SENSOR_HAVE_HLW8012 || IOT_SENSOR_HAVE_HLW8032
         auto &_config = config._H_W_GET(Config().sensor);
 #endif
@@ -298,7 +298,7 @@ bool SensorPlugin::atModeHandler(Stream &serial, const String &command, int8_t a
         return true;
     }
 #if IOT_SENSOR_HAVE_INA219
-    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SENSORINA219))) {
+    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SENSORINA219))) {
         static EventScheduler::TimerPtr timer = nullptr;
         if (timer) {
             Scheduler.removeTimer(timer);
@@ -341,7 +341,7 @@ bool SensorPlugin::atModeHandler(Stream &serial, const String &command, int8_t a
     }
 #endif
 #if IOT_SENSOR_HAVE_BATTERY
-    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SENSORPBV))) {
+    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SENSORPBV))) {
         static EventScheduler::TimerPtr timer = nullptr;
         if (timer) {
             Scheduler.removeTimer(timer);

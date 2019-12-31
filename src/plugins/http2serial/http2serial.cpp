@@ -254,7 +254,7 @@ void Http2SerialPlugin::atModeHelpGenerator() {
 }
 
 bool Http2SerialPlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) {
-    if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(H2SBD))) {
+    if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(H2SBD))) {
         if (argc == 1) {
             uint32_t rate = atoi(argv[0]);
             if (rate) {

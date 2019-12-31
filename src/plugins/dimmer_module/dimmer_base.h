@@ -87,6 +87,8 @@ protected:
 #endif
     }
 protected:
+    String _getMetricsTopics(uint8_t num) const;
+
 #if DEBUG_IOT_DIMMER_MODULE
     uint8_t _endTransmission();
 #else
@@ -100,7 +102,6 @@ protected:
     float _internalTemperature;
     float _ntcTemperature;
     // float _powerUsage;
-    String _metricsTopics[5];
 
     float _fadeTime;
     float _onOffFadeTime;

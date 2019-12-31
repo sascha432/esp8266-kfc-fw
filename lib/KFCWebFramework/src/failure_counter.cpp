@@ -112,8 +112,10 @@ bool FailureCounterContainer::isAddressBlocked(const IPAddress &addr)
 {
     _removeOldRecords();
     for(auto &failure: _failures) {
+#if DEBUG
         time_t timeframe = failure.getTimeframe();
         debug_printf_P(PSTR("is blocked ip %s record %s # %d, timeframe %lu\n"), addr.toString().c_str(), failure.getIPAddress().toString().c_str(), failure.getCounter(), timeframe);
+#endif
         if (failure.isBlocked(addr)) {
             return true;
         }

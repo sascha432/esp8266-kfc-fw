@@ -469,7 +469,7 @@ void PingMonitorPlugin::atModeHelpGenerator() {
 bool PingMonitorPlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) {
     static AsyncPing *_ping = nullptr;
 
-    if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(PING))) {
+    if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(PING))) {
 
         if (argc < 1) {
             at_mode_print_invalid_arguments(serial);

@@ -204,6 +204,7 @@ void setup_plugins(PluginComponent::PluginSetupMode_t mode) {
         bootstrapMenu.addSubMenu(webUi, url, navMenu.device);
         bootstrapMenu.addSubMenu(webUi, url, navMenu.home, bootstrapMenu.findMenuByURI(F("status.html"), navMenu.home));
     }
+    // bootstrapMenu.createCache();
 
 #ifndef DISABLE_EVENT_SCHEDULER
     if (mode == PluginComponent::PLUGIN_SETUP_AUTO_WAKE_UP) {

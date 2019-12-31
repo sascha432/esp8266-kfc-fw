@@ -59,6 +59,11 @@ protected:
     virtual void reconfigure(PGM_P source);
 public:
     virtual bool hasReconfigureDependecy(PluginComponent *plugin) const;
+
+    // calls reconfigure for all dependencies
+    void invokeReconfigureNow(PGM_P source);
+
+    // adds a timer to call invokeReconfigureNow() in the main loop() to avoid issues from being called inside interrupts
     void invokeReconfigure(PGM_P source);
 
     // executed to get status information

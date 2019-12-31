@@ -317,6 +317,8 @@ void TimezoneData::updateLoop()
     }
 }
 
+#if RTC_SUPPORT || NTP_HAVE_CALLBACKS
+
 static void update_time_callback(void)
 {
     _debug_printf_P(PSTR("update_time_callback(): new time=%u\n"), (uint32_t)time(nullptr));
@@ -329,6 +331,8 @@ static void update_time_callback(void)
         }
 #endif
 }
+
+#endif
 
 void TimezoneData::configTime()
 {
@@ -547,7 +551,7 @@ void NTPPlugin::atModeHelpGenerator()
 bool NTPPlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv)
 {
 #if DEBUG
-    if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SNTPFU))) {
+    if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SNTPFU))) {
         TimezoneData::configTime();
         serial.println(F("+SNTPFU: Waiting up to 5 seconds for a valid time..."));
         ulong end = millis() + 5000;
@@ -556,8 +560,9 @@ bool NTPPlugin::atModeHandler(Stream &serial, const String &command, int8_t argc
         }
         goto commandNow;
     }
+    else
 #endif
-    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(NOW))) {
+    if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(NOW))) {
 commandNow:
         time_t now = time(nullptr);
         char timestamp[64];
@@ -581,7 +586,7 @@ commandNow:
         }
         return true;
     }
-    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(TZ))) {
+    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(TZ))) {
         auto &timezone = get_default_timezone();
         if (argc == AT_MODE_QUERY_COMMAND) { // TZ?
             if (timezone.isValid()) {

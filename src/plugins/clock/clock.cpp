@@ -270,7 +270,7 @@ void ClockPlugin::atModeHelpGenerator()
 
 bool ClockPlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv)
 {
-    if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(CLOCKTS))) {
+    if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(CLOCKTS))) {
         if (argc == 2) {
             enable(false);
             uint8_t digit = atoi(argv[0]);
@@ -284,7 +284,7 @@ bool ClockPlugin::atModeHandler(Stream &serial, const String &command, int8_t ar
         }
         return true;
     }
-    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(CLOCKP))) {
+    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(CLOCKP))) {
         if (argc < 1) {
             serial.printf_P(PSTR("+CLOCKP: clear\n"));
             _display->clear();
@@ -299,7 +299,7 @@ bool ClockPlugin::atModeHandler(Stream &serial, const String &command, int8_t ar
         }
         return true;
     }
-    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(CLOCKA))) {
+    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(CLOCKA))) {
         if (argc == -1) {
             serial.printf_P(PSTR(
                     "+CLOCKA: %u - blink colon twice per second\n"
@@ -349,7 +349,7 @@ bool ClockPlugin::atModeHandler(Stream &serial, const String &command, int8_t ar
         }
         return true;
     }
-    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(CLOCKC))) {
+    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(CLOCKC))) {
         if (argc == 3) {
             _color = Color(atoi(argv[0]), atoi(argv[1]), atoi(argv[2]));
             serial.printf_P(PSTR("+CLOCKC: color=#%06x\n"), _color.get());
@@ -359,7 +359,7 @@ bool ClockPlugin::atModeHandler(Stream &serial, const String &command, int8_t ar
         }
         return true;
     }
-    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(CLOCKPX))) {
+    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(CLOCKPX))) {
         if (argc == 4) {
             enable(false);
 
@@ -383,7 +383,7 @@ bool ClockPlugin::atModeHandler(Stream &serial, const String &command, int8_t ar
         }
         return true;
     }
-    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(CLOCKD))) {
+    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(CLOCKD))) {
         _display->dump(serial);
         return true;
     }

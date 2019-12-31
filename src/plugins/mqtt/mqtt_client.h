@@ -99,7 +99,7 @@ public:
         String _payload;
     };
 
-    typedef std::unique_ptr<MQTTComponent> MQTTComponentPtr;
+    typedef MQTTComponent* MQTTComponentPtr;
     typedef std::vector<MQTTComponentPtr> MQTTComponentVector;
     typedef std::vector<MQTTTopic> MQTTTopicVector;
     typedef std::vector<MQTTQueue> MQTTQueueVector; // this is not used for QoS at the moment
@@ -115,8 +115,8 @@ public:
     bool isConnected() const;
     void setAutoReconnect(uint32_t timeout);
 
-    void registerComponent(MQTTComponent *component);
-    void unregisterComponent(MQTTComponent *component);
+    void registerComponent(MQTTComponentPtr component);
+    void unregisterComponent(MQTTComponentPtr component);
 
     bool hasMultipleComponments() const;
 
@@ -132,9 +132,9 @@ public:
     static const String getComponentName(uint8_t num = -1);
     static String formatTopic(uint8_t num, const __FlashStringHelper *format, ...);
     // static String formatTopic(uint8_t num, const char *format, ...);
-    void subscribe(MQTTComponent *component, const String &topic, uint8_t qos);
-    void unsubscribe(MQTTComponent *component, const String &topic);
-    void remove(MQTTComponent *component);
+    void subscribe(MQTTComponentPtr component, const String &topic, uint8_t qos);
+    void unsubscribe(MQTTComponentPtr component, const String &topic);
+    void remove(MQTTComponentPtr component);
     void publish(const String &topic, uint8_t qos, bool retain, const String &payload);
 
     // return values
@@ -142,8 +142,8 @@ public:
     // -1: success, but nothing was sent (in particular for unsubscribe if another component is still subscribed to the same topic)
     // for qos 1 and 2: >= 1 packet id, confirmation will be received by callbacks once delivered
     // for qos 0: 1 = successfully delivered to tcp stack
-    int subscribeWithId(MQTTComponent *component, const String &topic, uint8_t qos);
-    int unsubscribeWithId(MQTTComponent *component, const String &topic);
+    int subscribeWithId(MQTTComponentPtr component, const String &topic, uint8_t qos);
+    int unsubscribeWithId(MQTTComponentPtr component, const String &topic);
     int publishWithId(const String &topic, uint8_t qos, bool retain, const String &payload);
 
     static void setupInstance();
@@ -182,7 +182,7 @@ private:
     // match wild cards
     bool _isTopicMatch(const char *topic, const char *match) const;
     // check if the topic is in use by another component
-    bool _topicInUse(MQTTComponent *component, const String &topic);
+    bool _topicInUse(MQTTComponentPtr component, const String &topic);
 
 private:
     // if subscribe/unsubscribe/publish fails cause of the tcp client's buffer being full, retry later

@@ -242,8 +242,6 @@ String at_mode_print_command_string(Stream &output, char separator) {
 
 #if DEBUG
 
-
-
 static EventScheduler::TimerPtr heapTimer = nullptr;
 static bool isHeap = true;
 static int32_t rssiMin, rssiMax;
@@ -305,8 +303,10 @@ void disable_at_mode(Stream &output) {
     auto &flags = config._H_W_GET(Config().flags);
     if (flags.atModeEnabled) {
         output.println(F("Disabling AT MODE."));
+#if DEBUG
         Scheduler.removeTimer(heapTimer);
         heapTimer = nullptr;
+#endif
         flags.atModeEnabled = false;
     }
 }
@@ -584,6 +584,7 @@ void at_mode_serial_handle_event(String &commandString) {
                     WiFi.localIP().toString().c_str()
                 );
             }
+#if RTC_SUPPORT
             else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(RTC))) {
                 if (argc != 1) {
                     output.printf_P(PSTR("+RTC: time=%u, rtc=%u\n"), (uint32_t)time(nullptr), config.getRTC());
@@ -595,6 +596,7 @@ void at_mode_serial_handle_event(String &commandString) {
                     output.printf_P(PSTR("+RTC: set=%u, rtc=%u\n"), config.setRTC(time(nullptr)), config.getRTC());
                 }
             }
+#endif
             else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(REM))) {
                 // ignore comment
             }

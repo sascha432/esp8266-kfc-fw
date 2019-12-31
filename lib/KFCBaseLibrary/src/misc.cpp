@@ -343,21 +343,31 @@ int strcasecmp_P_P(PGM_P str1, PGM_P str2) {
     return 0;
 }
 
-bool String_equals(const String &str1, PGM_P str2, size_t strlen2) {
-    if (str1.length() != strlen2) {
-        return false;
-    }
-    return !strcmp_P(str1.c_str(), str2);
+bool String_equals(const String &str1, PGM_P str2) {
+    const size_t strlen2 = strlen_P(str2);
+    return (str1.length() == strlen2) && !strcmp_P(str1.c_str(), str2);
 }
 
-bool String_equalsIgnoreCase(const String &str1, PGM_P str2, size_t strlen2) {
-    if (str1.length() != strlen2) {
-        return false;
-    }
-    return !strcasecmp_P(str1.c_str(), str2);
+bool String_equalsIgnoreCase(const String &str1, PGM_P str2) {
+    const size_t strlen2 = strlen_P(str2);
+    return (str1.length() == strlen2) && !strcasecmp_P(str1.c_str(), str2);
 }
 
-int  strcmp_end_P(const char *str1, size_t len1, PGM_P str2, size_t len2) {
+bool String_startsWith(const String &str1, PGM_P str2) {
+    const size_t strlen2 = strlen_P(str2);
+    return (str1.length() >= strlen2) && !strncmp_P(str1.c_str(), str2, strlen2);
+}
+
+bool String_endsWith(const String &str1, PGM_P str2) {
+    const size_t strlen2 = strlen_P(str2);
+    return (str1.length() >= strlen2) && !strcmp_P(str1.c_str() + str1.length() - strlen2, str2);
+}
+
+bool String_endsWith(const String &str1, char ch) {
+    return (str1.length() != 0) && (str1.charAt(str1.length() - 1) == ch);
+}
+
+int strcmp_end_P(const char *str1, size_t len1, PGM_P str2, size_t len2) {
     if (len2 > len1) {
         return false;
     } else if (len2 == len1) {

@@ -3,6 +3,8 @@
 */
 
 #include "BootstrapMenu.h"
+#include <PrintHtmlEntitiesString.h>
+#include <sha1.h>
 
 #if DEBUG_BOOTSTRAP_MENU
 #include <debug_helper_enable.h>
@@ -131,6 +133,26 @@ void BootstrapMenu::html(Print &output, menu_item_id_t menuId, bool dropDown)
 		output.print(F("</div></li>"));
 	}
 }
+
+// void BootstrapMenu::createCache()
+// {
+// 	PrintString output;
+// 	SHA1 sha1;
+// 	uint8_t hash[sha1.hashSize()];
+// 	html(output);
+// 	sha1.update(output.c_str(), output.length());
+// 	sha1.finalize(hash, sizeof(hash));
+
+// 	_cacheFilename = PrintString(F("/c/menu%02x%02x%02x%02x%02x%02x"), hash[0], hash[1], hash[2], hash[3], hash[4], hash[5]);
+
+// 	if (!SPIFFS.exists(_cacheFilename)) {
+// 		File file = SPIFFS.open(_cacheFilename, "w");
+// 		if (file) {
+// 			file.write(output.c_str(), output.length());
+// 			file.close();
+// 		}
+// 	}
+// }
 
 void BootstrapMenu::html(Print& output)
 {

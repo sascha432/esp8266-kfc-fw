@@ -270,7 +270,7 @@ void SyslogPlugin::atModeHelpGenerator()
 
 bool SyslogPlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv)
 {
-    if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SQC))) {
+    if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SQC))) {
         if (syslog) {
             syslog->getQueue()->clear();
             serial.println(F("+SQC: Queue cleared"));
@@ -279,7 +279,7 @@ bool SyslogPlugin::atModeHandler(Stream &serial, const String &command, int8_t a
             print_syslog_disabled(serial);
         }
         return true;
-    } else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SQI))) {
+    } else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SQI))) {
         if (syslog) {
             serial.printf_P(PSTR("+SQI: %d\n"), syslog->getQueue()->size());
         }
@@ -287,7 +287,7 @@ bool SyslogPlugin::atModeHandler(Stream &serial, const String &command, int8_t a
             print_syslog_disabled(serial);
         }
         return true;
-    } else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SQD))) {
+    } else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SQD))) {
         if (syslog) {
             auto queue = syslog->getQueue();
             size_t index = 0;

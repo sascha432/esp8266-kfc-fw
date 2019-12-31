@@ -149,7 +149,7 @@ void MDNSPlugin::atModeHelpGenerator() {
 }
 
 bool MDNSPlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) {
-    if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(MDNS))) {
+    if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(MDNS))) {
         if (argc != 2) {
             serial.println(F("ERROR - Invalid arguments"));
         }
@@ -159,7 +159,7 @@ bool MDNSPlugin::atModeHandler(Stream &serial, const String &command, int8_t arg
         }
         return true;
     }
-    // else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(MDNSBSD))) {
+    // else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(MDNSBSD))) {
     //     serial.println(F("Not supported"));
     //     return true;
     // }

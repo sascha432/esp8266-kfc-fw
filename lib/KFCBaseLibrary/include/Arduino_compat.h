@@ -59,8 +59,15 @@ class __FlashStringHelper;
 #define FSPGM(name)                             FPSTR(SPGM(name))
 #define PSPGM(name)                             (PGM_P)(SPGM(name))
 
-#define constexpr_strlen                        strlen
-#define constexpr_strlen_P                      strlen_P
+// #define constexpr_strlen                        strlen
+// #define constexpr_strlen_P                      strlen_P
+
+int constexpr constexpr_strlen(const char* str) {
+    return *str ? 1 + constexpr_strlen(str + 1) : 0;
+}
+
+#define constexpr_strlen_P constexpr_strlen
+
 
 #include "debug_helper.h"
 #include "misc.h"

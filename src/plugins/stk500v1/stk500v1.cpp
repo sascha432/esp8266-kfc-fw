@@ -58,20 +58,20 @@ void STK500v1Plugin::atModeHelpGenerator() {
 
 bool STK500v1Plugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) {
 
-    if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(STK500V1S))) {
+    if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(STK500V1S))) {
         if (argc == 1 && !STK500v1Programmer::getSignature(argv[0], _signature)) {
             serial.println(F("+STK500V1S: Name unknown"));
         }
         serial.printf_P(PSTR("+STK500V1S: Signature set: %02x %02x %02x\n"), _signature[0], _signature[1], _signature[2]);
         return true;
     }
-    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(STK500V1L))) {
+    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(STK500V1L))) {
         serial.println(F("+STK500V1L: --- start ---"));
         STK500v1Programmer::dumpLog(serial);
         serial.println(F("+STK500V1L: --- end ---"));
         return true;
     }
-    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(STK500V1F))) {
+    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(STK500V1F))) {
         if (argc < 1) {
             at_mode_print_invalid_arguments(serial);
         }

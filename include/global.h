@@ -243,10 +243,6 @@ extern class Stream &DebugSerial;
 #define MQTT_REMOTE_CONFIG              1               // enable remote configuration via MQTT
 #endif
 
-#ifndef REST_API_SUPPORT
-#define REST_API_SUPPORT                1               // rest API support
-#endif
-
 #ifndef WEBSERVER_SUPPORT
 #define WEBSERVER_SUPPORT               1               // enable embded web server
 #endif
@@ -344,6 +340,10 @@ extern class Stream &DebugSerial;
 
 #ifndef RTC_SUPPORT
 #define RTC_SUPPORT 0
+#endif
+
+#ifndef RTC_DEVICE_DS3231
+#define RTC_DEVICE_DS3231 0
 #endif
 
 #ifndef IOT_BLINDS_CTRL

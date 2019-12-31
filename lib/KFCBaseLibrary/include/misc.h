@@ -34,43 +34,43 @@ extern const String _sharedEmptyString;
 
 #define STATIC_STRING_BUFFER_SIZE 33
 
-#if !_WIN32
+// #if !_WIN32
 
-// adds nconcat(c_str, max_len), for example to append a byte array to the string that isnt null terminated
-class StringEx : public String {
-public:
-    StringEx() : String() {
-    }
-    StringEx(const String &str) : String(str) {
-    }
-    StringEx(const char *cstr, size_t alen) : String() {
-        if (!reserve(alen)) {
-            invalidate();
-        } else {
-#if defined(ARDUINO_ESP8266_RELEASE_2_5_2) || defined(ARDUINO_ESP8266_RELEASE_2_6_3)
-            setLen(alen);
-#else
-            len = alen;
-#endif
-#if ESP32
-            strncpy(buffer, cstr, alen)[alen] = 0;
-#else
-            strncpy(begin(), cstr, alen)[alen] = 0;
-#endif
-        }
-    }
+// // adds nconcat(c_str, max_len), for example to append a byte array to the string that isnt null terminated
+// class StringEx : public String {
+// public:
+//     StringEx() : String() {
+//     }
+//     StringEx(const String &str) : String(str) {
+//     }
+//     StringEx(const char *cstr, size_t alen) : String() {
+//         if (!reserve(alen)) {
+//             invalidate();
+//         } else {
+// #if defined(ARDUINO_ESP8266_RELEASE_2_5_2) || defined(ARDUINO_ESP8266_RELEASE_2_6_3)
+//             setLen(alen);
+// #else
+//             len = alen;
+// #endif
+// #if ESP32
+//             strncpy(buffer, cstr, alen)[alen] = 0;
+// #else
+//             strncpy(begin(), cstr, alen)[alen] = 0;
+// #endif
+//         }
+//     }
 
-    // void nconcat(const char *cstr, size_t alen) {
-    //     if (!reserve(length() + alen)) {
-    //         invalidate();
-    //     } else {
-    //         setLen(length() + alen);
-    //         strncpy(begin() + length(), cstr, alen)[alen] = 0;
-    //     }
-    // }
-};
+//     // void nconcat(const char *cstr, size_t alen) {
+//     //     if (!reserve(length() + alen)) {
+//     //         invalidate();
+//     //     } else {
+//     //         setLen(length() + alen);
+//     //         strncpy(begin() + length(), cstr, alen)[alen] = 0;
+//     //     }
+//     // }
+// };
 
-#endif
+// #endif
 
 // pretty format for bytes and unix time
 String formatBytes(size_t bytes);
@@ -145,22 +145,27 @@ int strcmp_P_P(PGM_P str1, PGM_P str2);
 // compare two PROGMEM strings case insensitive
 int strcasecmp_P_P(PGM_P str1, PGM_P str2);
 
-#define constexpr_String_equals(str1, str2)                 String_equals(str1, str2, constexpr_strlen_P(str2))
-
-#define constexpr_String_equalsIgnoreCase(str1, str2)       String_equalsIgnoreCase(str1, str2, constexpr_strlen_P(str2))
-
-bool String_equals(const String &str1, PGM_P str2, size_t strlen2);
-
-bool String_equalsIgnoreCase(const String &str1, PGM_P str2, size_t strlen2);
-
-#define constexpr_startsWith(str1, str2)                    !strncmp_P(str1.c_str(), str2, constexpr_strlen_P(str2))
-
-// for String objects
-#define constexpr_endsWith(str1, str2)                      !strcmp_end_P(str1.c_str(), str1.length(), str2, constexpr_strlen_P(str2))
-
-#define constexpr_strcmp_end_P(str1, len1, str2)            strcmp_end_P(str1, len1, str2, constexpr_strlen_P(str2))
-
 int strcmp_end_P(const char *str1, size_t len1, PGM_P str2, size_t len2);
+
+// compare functions that do not create a String object of "str2"
+bool String_equals(const String &str1, PGM_P str2);
+bool String_equalsIgnoreCase(const String &str1, PGM_P str2);
+bool String_startsWith(const String &str1, PGM_P str2);
+bool String_endsWith(const String &str1, PGM_P str2);
+bool String_endsWith(const String &str1, char ch);
+
+inline bool String_equals(const String &str1, const __FlashStringHelper *str2) {
+    return String_equals(str1, reinterpret_cast<PGM_P>(str2));
+}
+inline bool String_equalsIgnoreCase(const String &str1, const __FlashStringHelper *str2) {
+    return String_equalsIgnoreCase(str1, reinterpret_cast<PGM_P>(str2));
+}
+inline bool String_startsWith(const String &str1, const __FlashStringHelper *str2) {
+    return String_startsWith(str1, reinterpret_cast<PGM_P>(str2));
+}
+inline bool String_endsWith(const String &str1, const __FlashStringHelper *str2) {
+    return String_endsWith(str1, reinterpret_cast<PGM_P>(str2));
+}
 
 bool __while(uint32_t time_in_ms, std::function<bool()> loop, uint16_t interval_in_ms, std::function<bool()> intervalLoop);
 // call intervalLoop every interval_in_ms for time_in_ms

@@ -6,6 +6,7 @@
 #include "PluginComponent.h"
 #include "plugins.h"
 #include <ESPAsyncWebServer.h>
+#include <EventScheduler.h>
 #include <Form.h>
 #include <misc.h>
 
@@ -62,6 +63,13 @@ bool PluginComponent::hasReconfigureDependecy(PluginComponent *plugin) const {
 }
 
 void PluginComponent::invokeReconfigure(PGM_P source)
+{
+    Scheduler.addTimer(1, false, [this, source](EventScheduler::TimerPtr timer) {
+        this->invokeReconfigureNow(source);
+    });
+}
+
+void PluginComponent::invokeReconfigureNow(PGM_P source)
 {
     reconfigure(source);
     for(auto plugin: plugins) {

@@ -22,20 +22,23 @@ EventScheduler::TimerPtr PinMonitor::_timer = nullptr;
 PinMonitor::PinMonitor() {
 }
 
-PinMonitor::~PinMonitor() {
+PinMonitor::~PinMonitor()
+{
     for(auto &pin: _pins) {
         detachInterrupt(digitalPinToInterrupt(pin.pin));
     }
 }
 
-PinMonitor *PinMonitor::createInstance() {
+PinMonitor *PinMonitor::createInstance()
+{
     if (!_instance) {
         _instance = new PinMonitor();
     }
     return _instance;
 }
 
-void PinMonitor::deleteInstance() {
+void PinMonitor::deleteInstance()
+{
     if (_instance) {
         // redundant, destructor detaches all interrupts
         // for(auto pin: _instance->_pins) {
@@ -46,7 +49,8 @@ void PinMonitor::deleteInstance() {
     }
 }
 
-void PinMonitor::callback(InterruptInfo info) {
+void PinMonitor::callback(InterruptInfo info)
+{
     _debug_printf_P(PSTR("PinMonitor::callback(): pin=%u,value=%u,micros=%u\n"), info.pin, info.value, info.micro);
     auto monitor = PinMonitor::getInstance();
     if (monitor) {
@@ -60,7 +64,8 @@ void PinMonitor::callback(InterruptInfo info) {
     }
 }
 
-PinMonitor::Pin_t *PinMonitor::addPin(uint8_t pin, Callback_t callback, void *arg, uint8_t mode) {
+PinMonitor::Pin_t *PinMonitor::addPin(uint8_t pin, Callback_t callback, void *arg, uint8_t mode)
+{
     if (_findPin(pin, arg) == _pins.end()) {
         _debug_printf_P(PSTR("PinMonitor::addPin(): adding pin %u, mode %u, callback %p, arg %p\n"), pin, mode, callback, arg);
         Pin_t _pin;
@@ -78,7 +83,8 @@ PinMonitor::Pin_t *PinMonitor::addPin(uint8_t pin, Callback_t callback, void *ar
 
 }
 
-bool PinMonitor::removePin(uint8_t pin, void *arg) {
+bool PinMonitor::removePin(uint8_t pin, void *arg)
+{
     auto _pin = _findPin(pin, arg);
     if (_pin == _pins.end()) {
         return false;
@@ -89,7 +95,8 @@ bool PinMonitor::removePin(uint8_t pin, void *arg) {
     return true;
 }
 
-void PinMonitor::dumpPins(Stream &output) {
+void PinMonitor::dumpPins(Stream &output)
+{
     output.printf_P(PSTR("+PINM count=%u\n"), _pins.size());
     if (_pins.size()) {
         for(auto &pin: _pins) {
@@ -98,7 +105,8 @@ void PinMonitor::dumpPins(Stream &output) {
     }
 }
 
-PinMonitor::PinsVectorIterator PinMonitor::_findPin(uint8_t pin, void *arg) {
+PinMonitor::PinsVectorIterator PinMonitor::_findPin(uint8_t pin, void *arg)
+{
     return std::find_if(_pins.begin(), _pins.end(), [pin, arg](const Pin_t &_pin) {
         return (_pin.pin == pin) && (!arg || _pin.arg == arg);
     });

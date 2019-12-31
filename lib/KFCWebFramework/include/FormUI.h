@@ -30,6 +30,8 @@ public:
 	FormUI *addItems(const String& value, const String& label);
 	FormUI *addItems(const ItemsList &items);
 	FormUI *setSuffix(const String &suffix);
+	FormUI *setPlaceholder(const String &placeholder);
+	FormUI *addAttribute(const String &name, const String &value);
 
 	void html(Print& output);
 
@@ -43,5 +45,6 @@ private:
 	TypeEnum_t _type;
 	String _label;
 	String _suffix;
+	String _attributes;
 	ItemsList _items;
 };

@@ -92,7 +92,7 @@ void ESP8266ATModePlugin::atModeHelpGenerator() {
 }
 
 bool ESP8266ATModePlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) {
-    if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(CWMODE))) {
+    if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(CWMODE))) {
         if (argc == AT_MODE_QUERY_COMMAND) {
             serial.printf_P(PSTR("+CWMODE:%d\n"), config._H_GET(Config().flags).wifiMode);
         }
@@ -111,7 +111,7 @@ bool ESP8266ATModePlugin::atModeHandler(Stream &serial, const String &command, i
         }
         return true;
     }
-    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(CWSAP))) {
+    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(CWSAP))) {
         if (esp8266_at_commands_require_mode(serial, WIFI_AP)) {
         }
         else if (argc == AT_MODE_QUERY_COMMAND) {
@@ -139,7 +139,7 @@ bool ESP8266ATModePlugin::atModeHandler(Stream &serial, const String &command, i
         return true;
     }
 #if defined(ESP8266)
-    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(CWAPDHCP))) {
+    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(CWAPDHCP))) {
         if (esp8266_at_commands_require_mode(serial, WIFI_STA)) {
         }
         else if (argc == AT_MODE_QUERY_COMMAND) {
@@ -205,7 +205,7 @@ bool ESP8266ATModePlugin::atModeHandler(Stream &serial, const String &command, i
         return true;
     }
 #endif
-    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(CWLAP))) {
+    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(CWLAP))) {
         uint8_t count = 15;
         while(AsyncNetworkScanResponse::isLocked() && count--) {
             delay(100);
@@ -223,7 +223,7 @@ bool ESP8266ATModePlugin::atModeHandler(Stream &serial, const String &command, i
         }
         return true;
     }
-    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(CWJAP))) {
+    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(CWJAP))) {
         if (esp8266_at_commands_require_mode(serial, WIFI_STA)) {
         }
         else if (argc == AT_MODE_QUERY_COMMAND) {
@@ -241,7 +241,7 @@ bool ESP8266ATModePlugin::atModeHandler(Stream &serial, const String &command, i
         }
         return true;
     }
-    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(CWQAP))) {
+    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(CWQAP))) {
         if (esp8266_at_commands_require_mode(serial, WIFI_STA)) {
         }
         else if (WiFi.isConnected()) {
@@ -254,7 +254,7 @@ bool ESP8266ATModePlugin::atModeHandler(Stream &serial, const String &command, i
         }
         return true;
     }
-    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(CIPSTATUS))) {
+    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(CIPSTATUS))) {
         switch (WiFi.status()) {
             case WL_CONNECTED:
                 serial.println(F("+CIPSTATUS: Connected"));
@@ -286,7 +286,7 @@ bool ESP8266ATModePlugin::atModeHandler(Stream &serial, const String &command, i
         }
         return true;
     }
-    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(CIFSR))) {
+    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(CIFSR))) {
         if (esp8266_at_commands_require_mode(serial, WIFI_STA)) {
         }
         else if (WiFi.isConnected()) {
@@ -298,7 +298,7 @@ bool ESP8266ATModePlugin::atModeHandler(Stream &serial, const String &command, i
         }
         return true;
     }
-    else if (constexpr_String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(GMR))) {
+    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(GMR))) {
         config.printVersion(serial);
         return true;
     }

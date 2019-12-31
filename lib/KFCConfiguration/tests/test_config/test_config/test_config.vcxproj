@@ -23,32 +23,32 @@
     <ProjectGuid>{D22B37FC-C179-4622-924B-6F1CAEF329D3}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>testconfig</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -174,9 +174,22 @@
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\mock\WiFiUDP.cpp" />
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\mock\WString.cpp" />
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\TableDumper.cpp" />
+    <ClCompile Include="..\..\..\..\KFCJson\src\JsonArray.cpp" />
+    <ClCompile Include="..\..\..\..\KFCJson\src\JsonBaseReader.cpp" />
+    <ClCompile Include="..\..\..\..\KFCJson\src\JsonBuffer.cpp" />
+    <ClCompile Include="..\..\..\..\KFCJson\src\JsonCallbackReader.cpp" />
+    <ClCompile Include="..\..\..\..\KFCJson\src\JsonConverter.cpp" />
+    <ClCompile Include="..\..\..\..\KFCJson\src\JsonMapReader.cpp" />
+    <ClCompile Include="..\..\..\..\KFCJson\src\JsonNumber.cpp" />
+    <ClCompile Include="..\..\..\..\KFCJson\src\JsonObject.cpp" />
+    <ClCompile Include="..\..\..\..\KFCJson\src\JsonString.cpp" />
+    <ClCompile Include="..\..\..\..\KFCJson\src\JsonTools.cpp" />
+    <ClCompile Include="..\..\..\..\KFCJson\src\JsonValue.cpp" />
+    <ClCompile Include="..\..\..\..\KFCJson\src\JsonVar.cpp" />
     <ClCompile Include="..\..\..\src\Configuration.cpp" />
     <ClCompile Include="..\..\..\src\ConfigurationParameter.cpp" />
     <ClCompile Include="..\..\..\src\ConfigurationParameterReference.cpp" />
+    <ClCompile Include="..\..\..\src\JsonConfigReader.cpp" />
     <ClCompile Include="test_config.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -188,6 +201,7 @@
     <ClInclude Include="..\..\..\include\Configuration.h" />
     <ClInclude Include="..\..\..\include\ConfigurationParameter.h" />
     <ClInclude Include="..\..\..\include\ConfigurationParameterReference.h" />
+    <ClInclude Include="..\..\..\include\JsonConfigReader.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

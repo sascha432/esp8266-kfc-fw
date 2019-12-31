@@ -116,11 +116,123 @@ public:
 };
 
 
+
+struct DimmerModule {
+    float fade_time;
+    float on_fade_time;
+    float linear_correction;
+    uint8_t max_temperature;
+    uint8_t metrics_int;
+    uint8_t report_temp;
+    uint8_t restore_level;
+};
+
+struct DimmerModuleButtons {
+    uint16_t shortpress_time;
+    uint16_t longpress_time;
+    uint16_t repeat_time;
+    uint16_t shortpress_no_repeat_time;
+    uint8_t min_brightness;
+    uint8_t shortpress_step;
+    uint8_t longpress_max_brightness;
+    uint8_t longpress_min_brightness;
+    float shortpress_fadetime;
+    float longpress_fadetime;
+};
+
+struct DimmerModule dimmer_cfg;
+struct DimmerModuleButtons dimmer_buttons_cfg;
+
+class SettingsForm : public Form {
+public:
+    typedef std::vector<std::pair<String, String>> TokenVector;
+
+    SettingsForm() : Form(new FormData()) 
+    {
+        auto *dimmer = &dimmer_cfg;
+
+        // form.setFormUI(F("Dimmer Configuration"));
+        // auto seconds = String(F("seconds"));
+
+        add<float>(F("fade_time"), &dimmer->fade_time); //->setFormUI((new FormUI(FormUI::TEXT, F("Fade in/out time")))->setPlaceholder(String(5.0, 1))->setSuffix(seconds));
+
+        add<float>(F("on_fade_time"), &dimmer->on_fade_time); //->setFormUI((new FormUI(FormUI::TEXT, F("Turn on/off fade time")))->setPlaceholder(String(7.5, 1))->setSuffix(seconds));
+
+        add<float>(F("linear_correction"), &dimmer->linear_correction); //->setFormUI((new FormUI(FormUI::TEXT, F("Linear correction factor")))->setPlaceholder(String(1.0, 1)));
+
+        add<uint8_t>(F("restore_level"), &dimmer->restore_level); //->setFormUI((new FormUI(FormUI::SELECT, F("On power failure")))->setBoolItems(F("Restore last brightness level"), F("Do not turn on")));
+
+        add<uint8_t>(F("max_temperature"), &dimmer->max_temperature); //->setFormUI((new FormUI(FormUI::TEXT, F("Max. temperature")))->setPlaceholder(String(75))->setSuffix(F("&deg;C")));
+        addValidator(new FormRangeValidator(F("Temperature out of range: %min%-%max%"), 45, 110));
+
+        add<uint8_t>(F("metrics_int"), &dimmer->metrics_int); //->setFormUI((new FormUI(FormUI::TEXT, F("Metrics report interval")))->setPlaceholder(String(30))->setSuffix(seconds));
+        addValidator(new FormRangeValidator(F("Invalid interval: %min%-%max%"), 10, 255));
+
+#if 1
+
+        auto *dimmer_buttons = &dimmer_buttons_cfg;
+        //auto milliseconds = String(F("milliseconds"));
+        //auto percent = String(F("&#37;"));
+
+        add<uint16_t>(F("shortpress_time"), &dimmer_buttons->shortpress_time); //->setFormUI((new FormUI(FormUI::TEXT, F("Short press time")))->setPlaceholder(String(250))->setSuffix(milliseconds));
+        addValidator(new FormRangeValidator(F("Invalid time"), 50, 1000));
+
+        add<uint16_t>(F("longpress_time"), &dimmer_buttons->longpress_time); //->setFormUI((new FormUI(FormUI::TEXT, F("Long press time")))->setPlaceholder(String(600))->setSuffix(milliseconds));
+        addValidator(new FormRangeValidator(F("Invalid time"), 250, 2000));
+
+        add<uint16_t>(F("repeat_time"), &dimmer_buttons->repeat_time); //->setFormUI((new FormUI(FormUI::TEXT, F("Hold/repeat time")))->setPlaceholder(String(150))->setSuffix(milliseconds));
+        addValidator(new FormRangeValidator(F("Invalid time"), 50, 500));
+
+        add<uint8_t>(F("shortpress_step"), &dimmer_buttons->shortpress_step); //->setFormUI((new FormUI(FormUI::TEXT, F("Brightness steps")))->setPlaceholder(String(5))->setSuffix(percent));
+        addValidator(new FormRangeValidator(F("Invalid level"), 1, 100));
+
+        add<uint16_t>(F("shortpress_no_repeat_time"), &dimmer_buttons->shortpress_no_repeat_time); //->setFormUI((new FormUI(FormUI::TEXT, F("Short press down = off/no repeat time")))->setPlaceholder(String(800))->setSuffix(milliseconds));
+        addValidator(new FormRangeValidator(F("Invalid time"), 250, 2500));
+
+        add<uint8_t>(F("min_brightness"), &dimmer_buttons->min_brightness); //->setFormUI((new FormUI(FormUI::TEXT, F("Min. brightness")))->setPlaceholder(String(15))->setSuffix(percent));
+        addValidator(new FormRangeValidator(F("Invalid brightness"), 0, 100));
+
+        add<uint8_t>(F("longpress_max_brightness"), &dimmer_buttons->longpress_max_brightness); //->setFormUI((new FormUI(FormUI::TEXT, F("Long press up/max. brightness")))->setPlaceholder(String(100))->setSuffix(percent));
+        addValidator(new FormRangeValidator(F("Invalid brightness"), 0, 100));
+
+        add<uint8_t>(F("longpress_min_brightness"), &dimmer_buttons->longpress_min_brightness); //->setFormUI((new FormUI(FormUI::TEXT, F("Long press down/min. brightness")))->setPlaceholder(String(33))->setSuffix(percent));
+        addValidator(new FormRangeValidator(F("Invalid brightness"), 0, 100));
+
+        add<float>(F("shortpress_fadetime"), &dimmer_buttons->shortpress_fadetime); //->setFormUI((new FormUI(FormUI::TEXT, F("Short press fade time")))->setPlaceholder(String(1.0, 1))->setSuffix(seconds));
+
+        add<float>(F("longpress_fadetime"), &dimmer_buttons->longpress_fadetime); //->setFormUI((new FormUI(FormUI::TEXT, F("Long press fade time")))->setPlaceholder(String(5.0, 1))->setSuffix(seconds));
+
+#endif
+
+        finalize();
+    }
+
+    ~SettingsForm() {
+        delete getFormData();
+    }
+};
+
 int main()
 {
-    FormData data;
-
     ESP._enableMSVCMemdebug();
+
+#if 1
+
+    SettingsForm form;
+    auto data = form.getFormData();
+
+    data->set("max_temperature", "156");
+
+    if (form.validate()) {
+
+    }
+    else {
+        form.dump(Serial, "");
+    }
+
+#endif
+
+#if 0
 
     BootstrapMenu bootstrapMenu;
 
@@ -138,7 +250,7 @@ int main()
     bootstrapMenu.addSubMenu(F("Reboot Device"), F("reboot.html"), id);
     bootstrapMenu.addSubMenu(F("About"), F("about.html"), id);
 
-    bootstrapMenu.addSubMenu(F("WebUI"), F("webui.html"), id, bootstrapMenu.getMenu(F("Home"), id));
+    bootstrapMenu.addSubMenu(F("WebUI"), F("webui.html"), id, bootstrapMenu.findMenuByLabel(F("Home"), id));
 
     id = bootstrapMenu.addMenu(F("Status"));
     bootstrapMenu.getItem(id)->setURI(F("status.html"));
@@ -157,10 +269,13 @@ int main()
 
     bootstrapMenu.html(Serial);
 
-    bootstrapMenu.htmlSubMenu(Serial, bootstrapMenu.getMenu(F("home")), 0);
+    bootstrapMenu.htmlSubMenu(Serial, bootstrapMenu.findMenuByLabel(F("home")), 0);
 
+#endif
 
-    return 0;
+#if 0
+    FormData data;
+
 
     // user submitted data
     data.clear();
@@ -253,4 +368,8 @@ int main()
 
     f1.clearErrors();
     assert(f1.getErrors().size() == 0);
+
+#endif
+
+    return 0;
 }

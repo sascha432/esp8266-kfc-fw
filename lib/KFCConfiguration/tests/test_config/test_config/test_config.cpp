@@ -3,6 +3,7 @@
 
 #include <Arduino_compat.h>
 #include <Buffer.h>
+#include <FS.h>
 #include <IntelHexFormat.h>
 #include <algorithm>
 #include <map>
@@ -141,6 +142,7 @@ int main() {
 
     ESP._enableMSVCMemdebug();
 
+#if 0
     IntelHexFormat _file;
 
     fpout = fopen("out.hex", "w");
@@ -233,6 +235,7 @@ int main() {
     //test_tokenizer();
     //test_stringlistfind();
     //test_tabledumper();
+#endif
 
 #if 0
     memcpy(EEPROM.getDataPtr(), tmp, sizeof(tmp));
@@ -250,11 +253,21 @@ int main() {
 #endif
     EEPROM.begin();
 
-    Configuration config(0, 256);
-
+    Configuration config(512, 2048);
     if (!config.read()) {
         printf("Failed to read configuration\n");
     }
+    config.dump(Serial);
+
+    auto file = SPIFFS.open(F("C:/Users/sascha/Documents/PlatformIO/Projects/kfc_fw/fwbins/blindsctrl/kfcfw_config_KFCD6ECD8_b2789_20191222_154625.json"), "r");
+    if (file) {
+        config.importJson(file);
+        file.close();
+
+        config.dump(Serial);
+        config.write();
+    }
+    return 0;
 
     config.dump(Serial);
     config.write();
@@ -306,6 +319,8 @@ int main() {
     }
 
     config.dump(Serial);
+
+    config.exportAsJson(Serial, "KFCFW 1.x");
 
     config.release();
 

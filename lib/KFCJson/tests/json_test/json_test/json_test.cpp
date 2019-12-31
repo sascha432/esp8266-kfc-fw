@@ -4,6 +4,7 @@
 #include <iostream>
 #include <assert.h>
 #include <PrintString.h>
+#include <PrintHtmlEntitiesString.h>
 #include "JsonCallbackReader.h"
 #include "BufferStream.h"
 #include "JsonConverter.h"
@@ -76,6 +77,7 @@ void print_escaped(String output) {
     output.replace("\n", "\\n");
     printf("\n\n\nSTRING = \"%s\";\n\n\n", output.c_str());
 }
+
 
 void tests() {
     String test = "{\"status\":\"OK\",\"message\":\"\",\"countryCode\":\"CA\",\"zoneName\":\"America/Vancouver\",\"abbreviation\":\"PST\",\"gmOffset\":-28800,\"dst\":\"0\",\"zoneStart\":1552212000,\"zoneEnd\":1583661599,\"nextAbbreviation\":\"PDT\",\"timestamp\":1542119691,\"formatted\":\"2018-11-13 14:34:51\"}";
@@ -196,11 +198,89 @@ void test(const JsonString &str) {
     v.emplace_back(std::move(str));
 }
 
+int malloc_size(int size) {
+    if (size % 16) {
+        size += 16;
+    }
+    return size & ~15;
+}
+
+// returns number of digits without trailing zeros after determining max. precision
+int count_decimals(double value, uint8_t max_precision = 6, uint8_t max_decimals = 8) {
+    auto precision = max_precision;
+    auto number = abs(value);
+    if (number < 1) {
+        while ((number = (number * 10)) < 1 && precision < max_decimals) { // increase precision for decimals
+            precision++;
+        }
+    }
+    else {
+        while ((number = (number / 10)) > 1 && precision > 1) { // reduce precision for decimals
+            precision--;
+        }
+    }
+    char format[8];
+    snprintf_P(format, sizeof(format), PSTR("%%.%uf"), precision + 1);
+    char buf[32];
+    auto len = snprintf_P(buf, sizeof(buf), format, value);
+    if (len > 1) {
+        buf[--len] = 0;
+    }
+    char *ptr;
+    if (len < sizeof(buf) && (ptr = strchr(buf, '.'))) {
+        ptr++;
+        char *endPtr = ptr + strlen(ptr);
+        while(--endPtr > ptr && *endPtr == '0') { // remove trailing zeros
+            *endPtr = 0;
+            precision--;
+        }
+    }
+    else {
+        precision = max_decimals; // buffer to small
+    }
+    printf("%.*f ", precision, value);
+    return precision;
+}
+
 int main()
 {
     ESP._enableMSVCMemdebug();
 
+    printf("%u\n", count_decimals(1.123f));
+    printf("%u\n", count_decimals(100.0f));
+    printf("%u\n", count_decimals(100.78f));
+    printf("%u\n", count_decimals(100.123456f));
+    printf("%u\n", count_decimals(10.123456f));
+    printf("%u\n", count_decimals(1.123456f));
+    printf("%u\n", count_decimals(0.123456f));
+    printf("%u\n", count_decimals(0.0123456f));
+    printf("%u\n", count_decimals(0.0000000123456f, 6, 15));
+    return 0;
+
     {
+
+        JsonString str(F("\u00b0C test test test test"));
+
+        PrintHtmlEntitiesString str3;
+
+        str.printTo(str3);
+
+        printf("%u\n", sizeof(JsonString::_str_t));
+
+        printf("%s\n", str3.c_str());
+
+        return 0;
+           
+        //
+        //printf("JsonString %u = buffer_size, malloc %u\n", sizeof(JsonString), malloc_size(sizeof(JsonString)));
+        //printf("JsonNamedVariant<JsonString> sizeof %u, malloc %u\n", sizeof(JsonNamedVariant<JsonString>), malloc_size(sizeof(JsonNamedVariant<JsonString>)));
+        //printf("JsonUnnamedVariant<JsonString> sizeof %u, malloc %u\n", sizeof(JsonUnnamedVariant<JsonString>), malloc_size(sizeof(JsonUnnamedVariant<JsonString>)));
+        //printf("JsonNamedVariant<String> sizeof %u, malloc %u\n", sizeof(JsonNamedVariant<String>), malloc_size(sizeof(JsonNamedVariant<String>)));
+        //printf("JsonUnnamedVariant<const __FlashStringHelper *> sizeof %u, malloc %u\n", sizeof(JsonUnnamedVariant<const __FlashStringHelper *>), malloc_size(sizeof(JsonUnnamedVariant<const __FlashStringHelper *>)));
+        //printf("JsonNamedVariant<const __FlashStringHelper *> sizeof %u, malloc %u\n", sizeof(JsonNamedVariant<const __FlashStringHelper *>), malloc_size(sizeof(JsonNamedVariant<const __FlashStringHelper *>)));
+
+        //return 0;
+
         
 //        BufferStream stream;
 //        const char *str = "{\"type\":\"ui\",\"data\":[{\"type\":\"row\",\"extra_classes\":\"title\",\"columns\":[{\"type\":\"group\",\"name\":\"Dimmer\",\"has_switch\":true}]},{\"type\":\"row\",\"columns\":[{\"type\":\"slider\",\"id\":\"dimmer_channel0\",\"name\":\"Dimmer Ch. 1\",\"value\":\"1684\",\"state\":1,\"min\":0,\"max\":16666,\"zero_off\":true}]},{\"type\":\"row\",\"columns\":[{\"type\":\"slider\",\"id\":\"dimmer_channel1\",\"name\":\"Dimmer Ch. 2\",\"value\":\"0\",\"state\":0,\"min\":0,\"max\":16666,\"zero_off\":true},{\"type\":\"sensor\",\"id\":\"dimmer_vcc\",\"name\":\"Dimmer VCC\",\"value\":\"4.793\",\"state\":1,\"columns\":1,\"unit\":\"V\",\"render_type\":\"badge\"},{\"type\":\"sensor\",\"id\":\"dimmer_frequency\",\"name\":\"Dimmer Frequency\",\"value\":\"59.64\",\"state\":1,\"columns\":1,\"unit\":\"Hz\",\"render_type\":\"badge\"},{\"type\":\"sensor\",\"id\":\"dimmer_temp\",\"name\":\"Dimmer Internal Temperature\",\"value\":\"76.00\",\"state\":1,\"columns\":1,\"unit\":\"°C\",\"render_type\":\"badge\"}]},{\"type\":\"row\",\"extra_classes\":\"title\",\"columns\":[{\"type\":\"group\",\"name\":\"Atomic Sun\",\"has_switch\":true}]},{\"type\":\"row\",\"columns\":[{\"type\":\"slider\",\"id\":\"brightness\",\"name\":\"brightness\",\"columns\":6,\"min\":0,\"max\":16666,\"zero_off\":true},{\"type\":\"slider\",\"id\":\"color\",\"name\":\"color\",\"columns\":6,\"color\":\"temperature\"}]},{\"type\":\"row\",\"align\":\"right\",\"columns\":[{\"type\":\"sensor\",\"id\":\"int_temp\",\"name\":\"Internal Temperatur\",\"value\":\"47.28\",\"offset\":3,\"unit\":\"°C\"},{\"type\":\"sensor\",\"id\":\"vcc\",\"name\":\"VCC\",\"value\":\"3.286\",\"unit\":\"V\"},{\"type\":\"sensor\",\"id\":\"frequency\",\"name\":\"Frequency\",\"value\":\"59.869\",\"unit\":\"Hz\"}]},{\"type\":\"row\",\"extra_classes\":\"title\",\"columns\":[{\"type\":\"group\",\"name\":\"Sensors\",\"has_switch\":false}]},{\"type\":\"row\",\"columns\":[{\"type\":\"sensor\",\"id\":\"temperature\",\"name\":\"Temperature\",\"value\":\"25.78\",\"unit\":\"°C\"},{\"type\":\"sensor\",\"id\":\"humidity\",\"name\":\"Humidity\",\"value\":\"47.23\",\"unit\":\"%\"},{\"type\":\"sensor\",\"id\":\"pressure\",\"name\":\"Pressure\",\"value\":\"1023.42\",\"unit\":\"hPa\"}]}]}";
@@ -216,7 +296,6 @@ int main()
 //
 //            JsonUnnamedObject *root = reinterpret_cast<JsonUnnamedObject *>(reader.getRoot());
 //            JsonArray *_rows = reinterpret_cast<JsonArray *>(root->find("data"));
-//
 //
 //
 //            //reader.getRoot()->printTo(Serial);
@@ -262,6 +341,7 @@ int main()
         auto number = JsonNumber("123.12345678901234567890");
         number.validate();
         json1.add("number", number);
+        json1.add("number2", JsonNumber(1, 5));
         auto &arr1 = json1.addArray("arr");
         print_end_mem_usage();
 
@@ -273,7 +353,7 @@ int main()
         unnamedArr2.add(1);
         unnamedArr2.addObject().add("key", 2);
         unnamedArr2.add(3);
-        arr1.addArray().addArray().addArray().addArray().addArray().addArray();
+        arr1.addArray().addArray().addArray().addArray().addArray().addArray(1).add("string");
 
         auto find = json1.find("arr");
 
@@ -288,11 +368,13 @@ int main()
         //json1.add("float", 1.0);
         //auto &arr1 = json1.addArray("arr");
 
-        //print_end_mem_usage();
+        print_end_mem_usage();
         //_mem_usage_stack = 0;
 
-        json1.printTo(Serial);
-        printf("\n");
+        //json1.printTo(Serial);
+        //printf("\n");
+
+        printf("%u\n", json1.length());
 
         int len3 = 0;
 
@@ -308,7 +390,7 @@ int main()
             printf("\n");
         }
 
-        print_end_mem_usage();
+        //print_end_mem_usage();
 
         delete &json1;
     }

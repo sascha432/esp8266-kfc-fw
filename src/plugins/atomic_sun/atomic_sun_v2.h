@@ -90,6 +90,10 @@ public:
 
    void publishState(MQTTClient *client = nullptr);
 
+    virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override {
+        Dimmer_Base::readConfig();
+        DimmerModuleForm::createConfigureForm(request, form);
+    }
 protected:
     void _begin();
     void _end();

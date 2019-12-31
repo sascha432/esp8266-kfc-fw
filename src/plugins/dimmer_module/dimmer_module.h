@@ -117,6 +117,11 @@ public:
     virtual void setChannel(uint8_t channel, int16_t level, float time = -1) override;
     virtual uint8_t getChannelCount() const override;
 
+    virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override {
+        Dimmer_Base::readConfig();
+        DimmerModuleForm::createConfigureForm(request, form);
+    }
+
 protected:
     void _begin();
     void _end();

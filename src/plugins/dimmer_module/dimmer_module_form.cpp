@@ -38,7 +38,7 @@ void DimmerModuleForm::createConfigureForm(AsyncWebServerRequest *request, Form 
 
     form.add<float>(F("linear_correction"), &dimmer->linear_correction); //->setFormUI((new FormUI(FormUI::TEXT, F("Linear correction factor")))->setPlaceholder(String(1.0, 1)));
 
-    form.add<uint8_t>(F("restore_level"), &dimmer->restore_level); //->setFormUI((new FormUI(FormUI::SELECT, F("On power failure")))->setBoolItems(F("Restore last brightness level"), F("Do not turn on")));
+    form.add<uint8_t>(F("restore_level"), &dimmer->restore_level); //->setFormUI((new FormUI(FormUI::SELECT, F("After power failure")))->setBoolItems(F("Restore last brightness level"), F("Do not turn on")));
 
     form.add<uint8_t>(F("max_temperature"), &dimmer->max_temperature); //->setFormUI((new FormUI(FormUI::TEXT, F("Max. temperature")))->setPlaceholder(String(75))->setSuffix(F("&deg;C")));
     form.addValidator(new FormRangeValidator(F("Temperature out of range: %min%-%max%"), 45, 110));

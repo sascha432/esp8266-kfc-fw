@@ -28,6 +28,13 @@
 #define IOT_ATOMIC_SUN_MAX_BRIGHTNESS       8333
 #endif
 
+#if !defined(IOT_SENSOR_HAVE_HLW8012 ) || IOT_SENSOR_HAVE_HLW8012 == 0
+// calculate power if sensor is not available
+#define IOT_ATOMIC_SUN_CALC_POWER           1
+#else
+#define IOT_ATOMIC_SUN_CALC_POWER           0
+#endif
+
 #ifndef STK500V1_RESET_PIN
 #error STK500V1_RESET_PIN not defined
 #endif
@@ -99,8 +106,11 @@ private:
     void _brightnessToChannels();
     void _setLockChannels(bool value);
     void _calcRatios();
+
+#if IOT_ATOMIC_SUN_CALC_POWER
     float _calcPower(uint8_t channel);
     float _calcTotalPower();
+#endif
 
 private:
 #if DEBUG_4CH_DIMMER

@@ -24,13 +24,15 @@
 
 #include "../../trailing_edge_dimmer/src/dimmer_protocol.h"
 
-Driver_4ChDimmer::Driver_4ChDimmer() : MQTTComponent(LIGHT), Dimmer_Base(), _publishTimer(nullptr) {
+Driver_4ChDimmer::Driver_4ChDimmer() : MQTTComponent(LIGHT), Dimmer_Base(), _publishTimer(nullptr)
+{
 #if DEBUG_MQTT_CLIENT
     debug_printf_P(PSTR("Driver_4ChDimmer(): component=%p\n"), this);
 #endif
 }
 
-void Driver_4ChDimmer::_begin() {
+void Driver_4ChDimmer::_begin()
+{
     Dimmer_Base::_begin();
     memset(&_channels, 0, sizeof(_channels));
     memset(&_storedChannels, 0, sizeof(_storedChannels));
@@ -47,7 +49,8 @@ void Driver_4ChDimmer::_begin() {
     _channelsToBrightness();
 }
 
-void Driver_4ChDimmer::_end() {
+void Driver_4ChDimmer::_end()
+{
     if (_publishTimer) {
         Scheduler.removeTimer(_publishTimer);
         _publishTimer = nullptr;
@@ -59,13 +62,14 @@ void Driver_4ChDimmer::_end() {
     Dimmer_Base::_end();
 }
 
-void AtomicSunPlugin::getStatus(Print &output) {
+void AtomicSunPlugin::getStatus(Print &output)
+{
     output.print(F("4 Channel MOSFET Dimmer enabled on Serial Port"));
     _printStatus(output);
 }
 
-void Driver_4ChDimmer::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector) {
-
+void Driver_4ChDimmer::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector)
+{
     _createTopics();
 
     uint8_t num = 0;
@@ -112,45 +116,54 @@ void Driver_4ChDimmer::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, M
     num = 0;
     component.setNumber(0);
     discovery = component.createAutoDiscovery(num, format);
-    discovery->addStateTopic(_metricsTopics[num]);
+    discovery->addStateTopic(_getMetricsTopics(0));
     discovery->addUnitOfMeasurement(F("\u00b0C"));
     discovery->finalize();
     vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
     num++;
 
     discovery = component.createAutoDiscovery(num, format);
-    discovery->addStateTopic(_metricsTopics[num]);
+    discovery->addStateTopic(_getMetricsTopics(1));
     discovery->addUnitOfMeasurement(F("\u00b0C"));
     discovery->finalize();
     vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
     num++;
 
     discovery = component.createAutoDiscovery(num, format);
-    discovery->addStateTopic(_metricsTopics[num]);
+    discovery->addStateTopic(_getMetricsTopics(2));
     discovery->addUnitOfMeasurement(F("V"));
     discovery->finalize();
     vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
     num++;
 
     discovery = component.createAutoDiscovery(num, format);
-    discovery->addStateTopic(_metricsTopics[num]);
+    discovery->addStateTopic(_getMetricsTopics(3));
     discovery->addUnitOfMeasurement(F("Hz"));
     discovery->finalize();
     vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
     num++;
 
+#if IOT_ATOMIC_SUN_CALC_POWER
     discovery = component.createAutoDiscovery(num, format);
-    discovery->addStateTopic(_metricsTopics[num]);
+    discovery->addStateTopic(_getMetricsTopics(4));
     discovery->addUnitOfMeasurement(F("W"));
     discovery->finalize();
     vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
+
+#endif
 }
 
-uint8_t Driver_4ChDimmer::getAutoDiscoveryCount() const {
+uint8_t Driver_4ChDimmer::getAutoDiscoveryCount() const
+{
+#if IOT_ATOMIC_SUN_CALC_POWER
     return 11;
+#else
+    return 10;
+#endif
 }
 
-void Driver_4ChDimmer::_createTopics() {
+void Driver_4ChDimmer::_createTopics()
+{
     if (_data.state.set.length() == 0) {
 
         uint8_t num = 0;
@@ -174,8 +187,8 @@ void Driver_4ChDimmer::_createTopics() {
     }
 }
 
-void Driver_4ChDimmer::onConnect(MQTTClient *client) {
-
+void Driver_4ChDimmer::onConnect(MQTTClient *client)
+{
     _qos = MQTTClient::getDefaultQos();
 
     _createTopics();
@@ -191,8 +204,8 @@ void Driver_4ChDimmer::onConnect(MQTTClient *client) {
     publishState(client);
 }
 
-void Driver_4ChDimmer::onMessage(MQTTClient *client, char *topic, char *payload, size_t len) {
-
+void Driver_4ChDimmer::onMessage(MQTTClient *client, char *topic, char *payload, size_t len)
+{
     int value = atoi(payload);
     _debug_printf_P(PSTR("Driver_4ChDimmer::onMessage(): topic %s, value %d\n"), topic, value);
 
@@ -263,8 +276,8 @@ void Driver_4ChDimmer::onMessage(MQTTClient *client, char *topic, char *payload,
     }
 }
 
-void Driver_4ChDimmer::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState) {
-
+void Driver_4ChDimmer::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
+{
     _debug_printf_P(PSTR("Driver_4ChDimmer::setValue %s, value %s, hasValue %u, state %u, hasState %u\n"), id.c_str(), value.c_str(), hasValue, state, hasState);
 
     auto ptr = id.c_str();
@@ -314,7 +327,8 @@ void Driver_4ChDimmer::setValue(const String &id, const String &value, bool hasV
     }
 }
 
-void Driver_4ChDimmer::getValues(JsonArray &array) {
+void Driver_4ChDimmer::getValues(JsonArray &array)
+{
     _debug_printf_P(PSTR("Driver_4ChDimmer::getValues()\n"));
     Dimmer_Base::getValues(array);
 
@@ -330,16 +344,21 @@ void Driver_4ChDimmer::getValues(JsonArray &array) {
     obj->add(JJ(id), F("dimmer_lock"));
     obj->add(JJ(value), (int)_data.lockChannels.value);
 
+#if IOT_ATOMIC_SUN_CALC_POWER
     obj = &array.addObject(2);
     obj->add(JJ(id), F("dimmer_power"));
     obj->add(JJ(value), JsonNumber(_calcTotalPower(), 1));
+#endif
 }
 
 
-void Driver_4ChDimmer::publishState(MQTTClient *client) {
+void Driver_4ChDimmer::publishState(MQTTClient *client)
+{
     _debug_printf_P(PSTR("Driver_4ChDimmer::publishState()\n"));
 
+#if IOT_ATOMIC_SUN_CALC_POWER
     auto power = _calcTotalPower();
+#endif
 
     if (!client) {
         client = MQTTClient::getClient();
@@ -352,7 +371,9 @@ void Driver_4ChDimmer::publishState(MQTTClient *client) {
             client->publish(_data.channels[i].state, _qos, 1, String(_channels[i]));
         }
         client->publish(_data.lockChannels.state, _qos, 1, String(_data.lockChannels.value));
-        client->publish(_metricsTopics[4], _qos, 1, String(power, 1));
+#if IOT_ATOMIC_SUN_CALC_POWER
+        client->publish(_getMetricsTopics(4), _qos, 1, String(power, 1));
+#endif
     }
 
     JsonUnnamedObject json(2);
@@ -380,9 +401,11 @@ void Driver_4ChDimmer::publishState(MQTTClient *client) {
         // obj->add(JJ(state), _channels[i] > 0);
     }
 
+#if IOT_ATOMIC_SUN_CALC_POWER
     obj = &events.addObject(2);
     obj->add(JJ(id), F("dimmer_power"));
     obj->add(JJ(value), JsonNumber(power, 1));
+#endif
 
     StreamString buffer;
     json.printTo(buffer);
@@ -394,7 +417,8 @@ void Driver_4ChDimmer::publishState(MQTTClient *client) {
     });
 }
 
-void Driver_4ChDimmer::_printStatus(Print &out) {
+void Driver_4ChDimmer::_printStatus(Print &out)
+{
     out.print(F(", Fading enabled" HTML_S(br) "Power "));
     if (_data.state.value) {
         out.print(F("on"));
@@ -406,7 +430,8 @@ void Driver_4ChDimmer::_printStatus(Print &out) {
     Dimmer_Base::_printStatus(out);
 }
 
-bool Driver_4ChDimmer::on(uint8_t channel) {
+bool Driver_4ChDimmer::on(uint8_t channel)
+{
     if (!_data.state.value) {
         memcpy(_channels, _storedChannels, sizeof(_channels));
         _channelsToBrightness();
@@ -417,7 +442,8 @@ bool Driver_4ChDimmer::on(uint8_t channel) {
     return false;
 }
 
-bool Driver_4ChDimmer::off(uint8_t channel) {
+bool Driver_4ChDimmer::off(uint8_t channel)
+{
     if (_data.state.value) {
         memcpy(_storedChannels, _channels, sizeof(_storedChannels));
         _data.state.value = false;
@@ -430,7 +456,8 @@ bool Driver_4ChDimmer::off(uint8_t channel) {
 }
 
 // convert channels to brightness and color
-void Driver_4ChDimmer::_channelsToBrightness() {
+void Driver_4ChDimmer::_channelsToBrightness()
+{
     // calculate color and brightness values from dimmer channels
     int32_t sum = _channels[0] + _channels[1] + _channels[2] + _channels[3];
     if (sum) {
@@ -456,7 +483,8 @@ void Driver_4ChDimmer::_channelsToBrightness() {
 }
 
 // convert brightness and color to channels
-void Driver_4ChDimmer::_brightnessToChannels() {
+void Driver_4ChDimmer::_brightnessToChannels()
+{
     double color = (_data.color.value - COLOR_MIN) / COLOR_RANGE;
     uint16_t ww = _data.brightness.value * color;
     uint16_t cw = _data.brightness.value * (1.0 - color);
@@ -477,7 +505,8 @@ void Driver_4ChDimmer::_brightnessToChannels() {
     );
 }
 
-void Driver_4ChDimmer::_setLockChannels(bool value) {
+void Driver_4ChDimmer::_setLockChannels(bool value)
+{
     _data.lockChannels.value = value;
     if (value) {
         _ratio[0] = 2;
@@ -485,14 +514,17 @@ void Driver_4ChDimmer::_setLockChannels(bool value) {
     }
 }
 
-void Driver_4ChDimmer::_calcRatios() {
+void Driver_4ChDimmer::_calcRatios()
+{
     _ratio[0] = _channels[CHANNEL_WW2] ? ((_channels[CHANNEL_WW1] + _channels[CHANNEL_WW2]) / (float)_channels[CHANNEL_WW2]) : (_channels[CHANNEL_WW1] ? INFINITY : 2);
     _ratio[1] = _channels[CHANNEL_CW2] ? ((_channels[CHANNEL_CW1] + _channels[CHANNEL_CW2]) / (float)_channels[CHANNEL_CW2]) : (_channels[CHANNEL_CW1] ? INFINITY : 2);
     _debug_printf_P(PSTR("Driver_4ChDimmer::_calcRatios(): %f,%f\n"), _ratio[0], _ratio[1]);
 }
 
-float Driver_4ChDimmer::_calcPower(uint8_t channel) {
-    // this calculation is based on measurements
+#if IOT_ATOMIC_SUN_CALC_POWER
+float Driver_4ChDimmer::_calcPower(uint8_t channel)
+{
+    // this calculation is based on measurements of the bulbs being used
     static float adjust[4] PROGMEM = { 0.9945, 0.9671, .9863, 0.9041 };
     auto value = _channels[channel];
     if (value > 5400) {
@@ -509,19 +541,24 @@ float Driver_4ChDimmer::_calcPower(uint8_t channel) {
     }
 }
 
-float Driver_4ChDimmer::_calcTotalPower() {
+float Driver_4ChDimmer::_calcTotalPower()
+{
     return _calcPower(0) + _calcPower(1) + _calcPower(2) + _calcPower(3) + 0.6;
 }
+#endif
 
-int16_t Driver_4ChDimmer::getChannel(uint8_t channel) const {
+int16_t Driver_4ChDimmer::getChannel(uint8_t channel) const
+{
     return _channels[channel];
 }
 
-bool Driver_4ChDimmer::getChannelState(uint8_t channel) const {
+bool Driver_4ChDimmer::getChannelState(uint8_t channel) const
+{
     return _channels[channel] > 0;
 }
 
-void Driver_4ChDimmer::setChannel(uint8_t channel, int16_t level, float time) {
+void Driver_4ChDimmer::setChannel(uint8_t channel, int16_t level, float time)
+{
     _debug_printf_P(PSTR("Driver_4ChDimmer::setChannel(%u, %u, %f): locked=%u\n"), channel, level, time, _data.lockChannels.value);
     _channels[channel] = level;
     if (_data.lockChannels.value) {
@@ -546,11 +583,13 @@ void Driver_4ChDimmer::setChannel(uint8_t channel, int16_t level, float time) {
     _setChannels(time);
 }
 
-uint8_t Driver_4ChDimmer::getChannelCount() const {
+uint8_t Driver_4ChDimmer::getChannelCount() const
+{
     return 4;
 }
 
-void Driver_4ChDimmer::_setChannels(float fadetime) {
+void Driver_4ChDimmer::_setChannels(float fadetime)
+{
     if (fadetime == -1) {
         fadetime = getFadeTime();
     }
@@ -563,7 +602,8 @@ void Driver_4ChDimmer::_setChannels(float fadetime) {
 }
 
 // get brightness values from dimmer
-void Driver_4ChDimmer::_getChannels() {
+void Driver_4ChDimmer::_getChannels()
+{
     _debug_printf_P(PSTR("Driver_4ChDimmer::_getChannels()\n"));
     if (_lockWire()) {
         _wire.beginTransmission(DIMMER_I2C_ADDRESS);
@@ -635,7 +675,9 @@ void AtomicSunPlugin::createWebUI(WebUI &webUI)
     row->addBadgeSensor(F("dimmer_frequency"), F("Frequency"), F("Hz"));
     row->addBadgeSensor(F("dimmer_int_temp"), F("ATmega"), F("\u00b0C"));
     row->addBadgeSensor(F("dimmer_ntc_temp"), F("NTC"), F("\u00b0C"));
+#if IOT_ATOMIC_SUN_CALC_POWER
     row->addBadgeSensor(F("dimmer_power"), F("Power"), F("W"));
+#endif
     row->addSwitch(F("dimmer_lock"), F("Lock Channels"), false, true);
 
     row->addGroup(F("Channels"), false);

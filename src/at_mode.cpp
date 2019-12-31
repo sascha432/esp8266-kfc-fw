@@ -262,7 +262,7 @@ static void heap_timer_callback(EventScheduler::TimerPtr timer) {
         MySerial.printf_P(PSTR("+GPIO: "));
 #if defined(ESP8266)
         for(uint8_t i = 0; i <= 16; i++) {
-            if (i != 1 && i != 3 && !isFlashInterfacePin(i)) { // do not display RX/TX or flash SPI
+            if (i != 1 && i != 3 && !isFlashInterfacePin(i)) { // do not display RX/TX and flash SPI
                 pinMode(i, INPUT);
                 MySerial.printf_P(PSTR("%u=%u "), i, digitalRead(i));
             }

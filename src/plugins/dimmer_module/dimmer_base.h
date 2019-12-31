@@ -86,6 +86,7 @@ protected:
         delay(1);
 #endif
     }
+
 protected:
     String _getMetricsTopics(uint8_t num) const;
 

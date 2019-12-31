@@ -156,6 +156,22 @@ struct DimmerModule {
     uint8_t restore_level;
 };
 
+struct DimmerModuleButtons {
+    uint16_t shortpress_time;
+    uint16_t longpress_time;
+    uint16_t repeat_time;
+    uint16_t shortpress_no_repeat_time;
+    uint8_t min_brightness;
+    uint8_t shortpress_step;
+    uint8_t longpress_max_brightness;
+    uint8_t longpress_min_brightness;
+    float shortpress_fadetime;
+    float longpress_fadetime;
+#if IOT_DIMMER_MODULE_CHANNELS
+    uint8_t pins[IOT_DIMMER_MODULE_CHANNELS * 2];
+#endif
+};
+
 struct BlindsControllerChannel {
     uint16_t pwmValue;
     uint16_t currentLimit;
@@ -209,22 +225,6 @@ struct Clock {
     int8_t order[8];
     uint8_t brightness;
     uint8_t segmentOrder;
-};
-
-struct DimmerModuleButtons {
-    uint16_t shortpress_time;
-    uint16_t longpress_time;
-    uint16_t repeat_time;
-    uint16_t shortpress_no_repeat_time;
-    uint8_t min_brightness;
-    uint8_t shortpress_step;
-    uint8_t longpress_max_brightness;
-    uint8_t longpress_min_brightness;
-    float shortpress_fadetime;
-    float longpress_fadetime;
-#if IOT_DIMMER_MODULE_CHANNELS
-    uint8_t pins[IOT_DIMMER_MODULE_CHANNELS * 2];
-#endif
 };
 
 typedef struct  {

@@ -424,6 +424,8 @@ String Dimmer_Base::_getMetricsTopics(uint8_t num) const
             return topic + F("vcc");
         case 3:
             return topic + F("frequency");
+        case 4:
+            return topic + F("power");
     }
     return topic;
 }

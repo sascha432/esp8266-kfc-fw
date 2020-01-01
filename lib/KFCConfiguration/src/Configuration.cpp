@@ -39,9 +39,9 @@ EEPROMClass EEPROM((((uint32_t)&_EEPROM_start - EEPROM_ADDR) / SPI_FLASH_SEC_SIZ
 #endif
 #endif
 
-#if defined(ESP32)
-PROGMEM_STRING_DEF(EEPROM_partition_name, "eeprom");
-#endif
+// #if defined(ESP32)
+// PROGMEM_STRING_DEF(EEPROM_partition_name, "eeprom");
+// #endif
 
 
 #if DEBUG_CONFIGURATION
@@ -80,9 +80,9 @@ const char *getHandleName(ConfigurationParameter::Handle_t crc) {
 #endif
 
 Configuration::Configuration(uint16_t offset, uint16_t size) {
-#if defined(ESP32)
-    _partition = nullptr;
-#endif
+// #if defined(ESP32)
+//     _partition = nullptr;
+// #endif
     _offset = offset;
     _size = size;
     _eepromInitialized = false;
@@ -514,6 +514,13 @@ void Configuration::getEEPROM(uint8_t *dst, uint16_t offset, uint16_t length, ui
 
 #elif defined(ESP32)
 
+    beginEEPROM();
+    memcpy(dst, EEPROM.getDataPtr() + offset, length);
+
+#elif defined(ESP32) && false
+
+    // the EEPROM class is not using partitions anymore but NVS blobs
+
     if (_eepromInitialized) {
         if (!EEPROM.readBytes(offset, dst, length)) {
             memset(dst, 0, length);
@@ -593,7 +600,8 @@ bool Configuration::_readParams() {
     memset(&hdr, 0, sizeof(hdr));
 
     endEEPROM();
-#if defined(ESP8266) || defined(ESP32)
+#if defined(ESP8266)
+//|| defined(ESP32)
     // read header directly from flash since we do not know the size of the configuration
     getEEPROM(hdr.headerBuffer, (uint16_t)offset, (uint16_t)sizeof(hdr.header), (uint16_t)sizeof(hdr.headerBuffer));
 #if DEBUG_CONFIGURATION

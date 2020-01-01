@@ -907,14 +907,14 @@ void WebServerPlugin::getStatus(Print &output)
     output.print(F("Web server "));
     if (flags.webServerMode != HTTP_MODE_DISABLED) {
         output.printf_P(PSTR("running on port %u"), config._H_GET(Config().http_port));
-        #if WEBSERVER_TLS_SUPPORT
-            output.print(F(", TLS "));
-            if (flags.webServerMode == HTTP_MODE_SECURE) {
-                output.print(FSPGM(enabled));
-            } else {
-                output.print(FSPGM(disabled)));
-            }
-        #endif
+#if WEBSERVER_TLS_SUPPORT
+        output.print(F(", TLS "));
+        if (flags.webServerMode == HTTP_MODE_SECURE) {
+            output.print(FSPGM(enabled));
+        } else {
+            output.print(FSPGM(disabled));
+        }
+#endif
     }
     else {
         output.print(FSPGM(disabled));
@@ -925,22 +925,22 @@ void WebServerPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &
 {
     form.add<uint8_t>(F("http_enabled"), _H_STRUCT_FORMVALUE(Config().flags, uint8_t, webServerMode));
     form.addValidator(new FormRangeValidator(0, HTTP_MODE_SECURE));
-#  if WEBSERVER_TLS_SUPPORT
+#if WEBSERVER_TLS_SUPPORT
     form.addValidator(new FormMatchValidator(F("There is not enough free RAM for TLS support"), [](FormField &field) {
         return (field.getValue().toInt() != HTTP_MODE_SECURE) || (ESP.getFreeHeap() > 24000);
     }));
-#  endif
+#endif
 
     form.add<bool>(F("http_perf"), _H_STRUCT_FORMVALUE(Config().flags, bool, webServerPerformanceModeEnabled));
     form.add<uint16_t>(F("http_port"), &config._H_W_GET(Config().http_port));
     form.addValidator(new FormTCallbackValidator<uint16_t>([](uint16_t port, FormField &field) {
-#  if WEBSERVER_TLS_SUPPORT
+#if WEBSERVER_TLS_SUPPORT
         if (field.getForm().getField(F("http_enabled"))->getValue().toInt() == HTTP_MODE_SECURE) {
             if (port == 0) {
                 port = 443;
             }
         } else
-#  endif
+#endif
         {
             if (port == 0) {
                 port = 80;
@@ -951,12 +951,12 @@ void WebServerPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &
     }));
     form.addValidator(new FormRangeValidator(F("Invalid port"), 1, 65535));
 
-#  if SPIFFS_SUPPORT && WEBSERVER_TLS_SUPPORT
+#if SPIFFS_SUPPORT && WEBSERVER_TLS_SUPPORT
 
     form.add(new FormObject<File2String>(F("ssl_certificate"), File2String(FSPGM(server_crt)), nullptr));
     form.add(new FormObject<File2String>(F("ssl_key"), File2String(FSPGM(server_key)), nullptr));
 
-#  endif
+#endif
 
     form.finalize();
 }

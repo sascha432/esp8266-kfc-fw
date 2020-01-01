@@ -35,6 +35,11 @@ public:
         return Buffer::write(str.c_str(), str.length());
     }
 
+#if ESP32
+    virtual void flush() {
+    }
+#endif
+
 private:
     size_t _position;
 };

@@ -27,9 +27,9 @@ extern EEPROMClass EEPROM;
 #endif
 #endif
 
-#if defined(ESP32)
-#include <esp_partition.h>
-#endif
+// #if defined(ESP32)
+// #include <esp_partition.h>
+// #endif
 
 #if DEBUG_CONFIGURATION
 #include <debug_helper_enable.h>
@@ -270,9 +270,9 @@ private:
     bool _eepromInitialized;
     uint16_t _eepromSize;
 
-#if defined(ESP32)
-    const esp_partition_t *_partition;
-#endif
+// #if defined(ESP32)
+//     const esp_partition_t *_partition;
+// #endif
 
 protected:
     unsigned long _readAccess;

@@ -376,19 +376,30 @@ bool ssd1306_at_mode_command_handler(Stream &serial, const String &command, int8
 
 #endif
 
-PROGMEM_PLUGIN_CONFIG_DEF(
-/* pluginName               */ ssd1306,
-/* setupPriority            */ 1,
-/* allowSafeMode            */ false,
-/* autoSetupWakeUp          */ true,
-/* rtcMemoryId              */ 0,
-/* setupPlugin              */ ssd1306_setup,
-/* statusTemplate           */ nullptr,
-/* configureForm            */ nullptr,
-/* reconfigurePlugin        */ nullptr,
-/* reconfigure Dependencies */ nullptr,
-/* prepareDeepSleep         */ nullptr,
-/* atModeCommandHandler     */ ssd1306_at_mode_command_handler
-);
+class SSD1306Plugin : public PluginComponent {
+public:
+    SSD1306Plugin() {
+        REGISTER_PLUGIN(this, "SSD1306Plugin");
+    }
+
+    virtual PGM_P getName() const {
+        return PSTR("ssd1306");
+    }
+
+    virtual void setup(PluginSetupMode_t mode) override {
+        ssd1306_setup();
+    }
+
+    virtual bool hasAtMode() const override {
+        return true;
+    }
+
+    virtual bool atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) override {
+        return ssd1306_at_mode_command_handler(serial, command, argc, argv);
+    }
+
+};
+
+SSD1306Plugin plugin;
 
 #endif

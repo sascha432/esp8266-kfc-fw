@@ -291,6 +291,13 @@ extern class Stream &DebugSerial;
     #endif
 #endif
 
+#if DEBUG_HAVE_SAVECRASH
+#if defined(ESP32)
+#undef DEBUG_HAVE_SAVECRASH
+#define DEBUG_HAVE_SAVECRASH 0
+#endif
+#endif
+
 #ifndef CONFIG_EEPROM_OFFSET
 #if DEBUG_HAVE_SAVECRASH
 #define CONFIG_EEPROM_OFFSET             (DEBUG_SAVECRASH_OFS + DEBUG_SAVECRASH_SIZE)

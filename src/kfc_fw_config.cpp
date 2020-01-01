@@ -568,8 +568,13 @@ const String KFCFWConfiguration::getFirmwareVersion() {
     return getShortFirmwareVersion() + F(" " __DATE__ __DEBUG_CFS_APPEND);
 }
 
-const String KFCFWConfiguration::getShortFirmwareVersion() {
+const String KFCFWConfiguration::getShortFirmwareVersion()
+{
+#if ESP8266
     return F(FIRMWARE_VERSION_STR " Build " __BUILD_NUMBER "_" ARDUINO_ESP8266_RELEASE);
+#else
+    return F(FIRMWARE_VERSION_STR " Build " __BUILD_NUMBER);
+#endif
 }
 
 void KFCFWConfiguration::storeQuickConnect(const uint8_t *bssid, int8_t channel) {
@@ -1001,7 +1006,9 @@ TwoWire &KFCFWConfiguration::initTwoWire(bool reset, Print *output) {
     if (!_initTwoWire || reset) {
         _initTwoWire = true;
         Wire.begin(KFC_TWOWIRE_SDA, KFC_TWOWIRE_SCL);
+#if ESP8266
         Wire.setClockStretchLimit(KFC_TWOWIRE_CLOCK_STRETCH);
+#endif
         Wire.setClock(KFC_TWOWIRE_CLOCK_SPEED);
     }
     return Wire;

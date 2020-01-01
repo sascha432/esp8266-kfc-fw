@@ -127,7 +127,9 @@ void Http2Serial::outputLoop() {
 }
 
 void Http2Serial::onData(uint8_t type, const uint8_t *buffer, size_t len) {
+#if 0
     os_printf("onData(%u, %*.*s)\n", type, len, len, buffer);
+#endif
     // Serial.printf_P(PSTR("Http2Serial::onData(%d, %p, %d): instance %p, locked %d\n"), type, buffer, len, Http2Serial::_instance, Http2Serial::_instance ? Http2Serial::_instance->_locked : -1);
     if (Http2Serial::_instance && !Http2Serial::_instance->_locked) {
         Http2Serial::_instance->_locked = true;

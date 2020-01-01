@@ -13,6 +13,8 @@
 
 #include "push_pack.h"
 
+// 11 byte RAM usage per menu entry when using PROGMEM strings
+
 class BootstrapMenu {
 public:
     typedef uint8_t menu_item_id_t;
@@ -45,26 +47,30 @@ public:
 
         void clearLabel() {
             if (_flags.label_progmem == 0 && _label) {
-                delete reinterpret_cast<String *>(_label);
+                free(_label);
             }
             _label = nullptr;
         }
         void clearURI() {
             if (_flags.URI_progmem == 0 && _URI) {
-                delete reinterpret_cast<String *>(_URI);
+                free(_URI);
             }
             _URI = nullptr;
         }
 
-        void setLabel(const String &label) {
+        void setLabel(const char *label) {
             clearLabel();
-            _label = reinterpret_cast<void *>(new String(label));
+            _label = strdup(label);
             _flags.label_progmem = 0;
+        }
+
+        inline void setLabel(const String &label) {
+            setLabel(label.c_str());
         }
 
         void setLabel(const __FlashStringHelper *label) {
             clearLabel();
-            _label = (void *)label;
+            _label = (char *)label;
             _flags.label_progmem = 1;
         }
 
@@ -74,14 +80,18 @@ public:
 
         void setURI(const __FlashStringHelper *uri) {
             clearURI();
-            _URI = (void *)uri;
+            _URI = (char *)uri;
             _flags.URI_progmem = 1;
         }
 
-        void setURI(const String &uri) {
+        void setURI(const char *uri) {
             clearURI();
-            _URI = reinterpret_cast<void *>(new String(uri));
+            _URI = strdup(uri);
             _flags.URI_progmem = 0;
+        }
+
+        inline void setURI(const String &uri) {
+            setURI(uri.c_str());
         }
 
         bool hashURI() const {
@@ -91,10 +101,10 @@ public:
         String getLabel() const {
             if (_label) {
                 if (_flags.label_progmem) {
-                    return String(reinterpret_cast<const __FlashStringHelper*>(_label));
+                    return String(FPSTR(_label));
                 }
                 else {
-                    return *reinterpret_cast<String *>(_label);
+                    return String(_label);
                 }
             }
             return String();
@@ -103,10 +113,10 @@ public:
         String getURI() const {
             if (_URI) {
                 if (_flags.URI_progmem) {
-                    return String(reinterpret_cast<const __FlashStringHelper *>(_URI));
+                    return String(FPSTR(_URI));
                 }
                 else {
-                    return *reinterpret_cast<String *>(_URI);
+                    return String(_URI);
                 }
             }
             return String();
@@ -125,8 +135,8 @@ public:
         }
 
     private:
-        void *_label;
-        void *_URI;
+        char *_label;
+        char *_URI;
         MenuItemFlags_t _flags;
     };
 

@@ -94,6 +94,12 @@ protected:
 protected:
     String _getMetricsTopics(uint8_t num) const;
 
+    static const uint16_t DIMMER_DISABLED = ~0;
+
+    bool _isEnabled() const {
+        return _version != DIMMER_DISABLED;
+    }
+
 #if DEBUG_IOT_DIMMER_MODULE
     uint8_t _endTransmission();
 #else

@@ -28,13 +28,19 @@ Driver_DimmerModule::Driver_DimmerModule() : MQTTComponent(SENSOR), Dimmer_Base(
 
 void DimmerModulePlugin::getStatus(Print &out)
 {
-    out.printf_P(PSTR("%u Channel MOSFET Dimmer enabled on "), IOT_DIMMER_MODULE_CHANNELS);
+    out.printf_P(PSTR("%u Channel MOSFET Dimmer "), IOT_DIMMER_MODULE_CHANNELS);
+    if (_isEnabled()) {
+        out.print(F("enabled on "));
 #if IOT_DIMMER_MODULE_INTERFACE_UART
-    out.print(F("Serial Port"));
+        out.print(F("Serial Port"));
 #else
-    out.print(F("I2C"));
+        out.print(F("I2C"));
 #endif
-    _printStatus(out);
+        _printStatus(out);
+    }
+    else {
+        out.print(F("disabled"));
+    }
 }
 
 void Driver_DimmerModule::_begin()

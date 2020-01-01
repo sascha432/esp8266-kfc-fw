@@ -337,6 +337,9 @@ public:
     bool isSafeMode() const {
         return _safeMode;
     }
+    void setSafeMode(bool mode) {
+        _safeMode = mode;
+    }
 
 private:
     void _setupWiFiCallbacks();

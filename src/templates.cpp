@@ -37,21 +37,25 @@ PROGMEM_STRING_DEF(_selected, " selected");
 PROGMEM_STRING_DEF(_checked, " checked");
 PROGMEM_STRING_DEF(Not_supported, "Not supported");
 
-WebTemplate::WebTemplate() {
+WebTemplate::WebTemplate()
+{
     _form = nullptr;
 }
 
-WebTemplate::~WebTemplate() {
+WebTemplate::~WebTemplate()
+{
     if (_form) {
         delete _form;
     }
 }
 
-void WebTemplate::setForm(Form * form) {
+void WebTemplate::setForm(Form * form)
+{
     _form = form;
 }
 
-Form * WebTemplate::getForm() {
+Form * WebTemplate::getForm()
+{
     return _form;
 }
 
@@ -85,8 +89,7 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 #endif
 #if NTP_CLIENT || RTC_SUPPORT
     else if (String_equals(key, PSTR("TIME"))) {
-
-        time_t now = time(nullptr);
+        auto now = time(nullptr);
         if (!IS_TIME_VALID(now)) {
             output.print(F("No time available"));
         } else {
@@ -151,7 +154,7 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         }
     }
     else if (_form) {
-        const char *str = _form->process(key);
+        auto str = _form->process(key);
         if (str) {
             output.print(str);
         }
@@ -201,7 +204,8 @@ void UpgradeTemplate::setErrorMessage(const String &errorMessage)
 LoginTemplate::LoginTemplate() {
 }
 
-LoginTemplate::LoginTemplate(const String &errorMessage) {
+LoginTemplate::LoginTemplate(const String &errorMessage)
+{
     _errorMessage = errorMessage;
 }
 
@@ -244,6 +248,7 @@ void ConfigTemplate::process(const String &key, PrintHtmlEntitiesString &output)
             }
         }
     }
+
     if (String_equals(key, F("NETWORK_MODE"))) {
         if (config._H_GET(Config().flags).wifiMode & WIFI_AP) {
             output.print(F("#station_mode"));
@@ -375,8 +380,8 @@ void PasswordTemplate::process(const String &key, PrintHtmlEntitiesString &outpu
     }
 }
 
-WifiSettingsForm::WifiSettingsForm(AsyncWebServerRequest *request) : SettingsForm(request) {
-
+WifiSettingsForm::WifiSettingsForm(AsyncWebServerRequest *request) : SettingsForm(request)
+{
     add<uint8_t>(F("mode"), _H_STRUCT_FORMVALUE(Config().flags, uint8_t, wifiMode));
     addValidator(new FormRangeValidator(F("Invalid mode"), WIFI_OFF, WIFI_AP_STA));
 
@@ -410,8 +415,8 @@ WifiSettingsForm::WifiSettingsForm(AsyncWebServerRequest *request) : SettingsFor
     finalize();
 }
 
-NetworkSettingsForm::NetworkSettingsForm(AsyncWebServerRequest *request) : SettingsForm(request) {
-
+NetworkSettingsForm::NetworkSettingsForm(AsyncWebServerRequest *request) : SettingsForm(request)
+{
     add<sizeof Config().device_name>(F("hostname"), config.getWriteableString(_H(Config().device_name), sizeof Config().device_name));
 
     add<bool>(F("dhcp_client"), _H_STRUCT_FORMVALUE(Config().flags, bool, stationModeDHCPEnabled));
@@ -432,8 +437,8 @@ NetworkSettingsForm::NetworkSettingsForm(AsyncWebServerRequest *request) : Setti
     finalize();
 }
 
-PasswordSettingsForm::PasswordSettingsForm(AsyncWebServerRequest *request) : SettingsForm(request) {
-
+PasswordSettingsForm::PasswordSettingsForm(AsyncWebServerRequest *request) : SettingsForm(request)
+{
     add(new FormField(F("password"), config._H_STR(Config().device_pass)));
     addValidator(new FormMatchValidator(F("The entered password is not correct"), [](FormField &field) {
         return field.getValue().equals(config._H_STR(Config().device_pass));
@@ -484,7 +489,8 @@ String File2String::toString()
 
 void File2String::fromString(const String &value)
 {
-    SPIFFS.open(_filename, "w").write((const uint8_t *)value.c_str(), value.length());
+    SPIFFS.open(_filename, "w").print(value);
+    //write((const uint8_t *)value.c_str(), value.length());
 }
 
 void EmptyTemplate::process(const String & key, PrintHtmlEntitiesString &output) {

@@ -949,7 +949,8 @@ bool KFCFWConfiguration::connectWiFi() {
 
 }
 
-void KFCFWConfiguration::printVersion(Print &output) {
+void KFCFWConfiguration::printVersion(Print &output)
+{
     output.printf_P(PSTR("KFC Firmware %s\nFlash size %s\n"), KFCFWConfiguration::getFirmwareVersion().c_str(), formatBytes(ESP.getFlashChipSize()).c_str());
     if (config._safeMode) {
         Logger_notice(FSPGM(safe_mode_enabled));
@@ -957,8 +958,8 @@ void KFCFWConfiguration::printVersion(Print &output) {
     }
 }
 
-void KFCFWConfiguration::printInfo(Print &output) {
-
+void KFCFWConfiguration::printInfo(Print &output)
+{
     printVersion(output);
 
     auto flags = config._H_GET(Config().flags);
@@ -1067,21 +1068,21 @@ public:
         REGISTER_PLUGIN(this, "KFCConfigurationPlugin");
     }
 
-    PGM_P getName() const;
+    virtual PGM_P getName() const {
+        return PSTR("cfg");
+    }
 
-    PluginPriorityEnum_t getSetupPriority() const {
+    virtual PluginPriorityEnum_t getSetupPriority() const override {
         return PluginComponent::PRIO_CONFIG;
     }
 
-    virtual uint8_t getRtcMemoryId() const {
+    virtual uint8_t getRtcMemoryId() const override {
         return CONFIG_RTC_MEM_ID;
-
     }
 
-    bool autoSetupAfterDeepSleep() const {
+    virtual bool autoSetupAfterDeepSleep() const override {
         return true;
     }
-
 
     void setup(PluginSetupMode_t mode) override;
     void reconfigure(PGM_P source) override;
@@ -1089,16 +1090,12 @@ public:
 
 static KFCConfigurationPlugin plugin;
 
-PGM_P KFCConfigurationPlugin::getName() const {
-    return PSTR("cfg");
-}
-
 void KFCConfigurationPlugin::setup(PluginSetupMode_t mode) {
 
     _debug_printf_P(PSTR("config_init(): safe mode %d, wake up %d\n"), (mode == PLUGIN_SETUP_SAFE_MODE), resetDetector.hasWakeUpDetected());
 
     config.setup();
-    config._safeMode = (mode == PLUGIN_SETUP_SAFE_MODE);
+    //config._safeMode = config._safeMode || resetDetector.getSafeMode() || (mode == PLUGIN_SETUP_SAFE_MODE);
 
 #if RTC_SUPPORT
     auto rtc = config.getRTC();

@@ -27,14 +27,11 @@
 #endif
 
 #if IOT_DIMMER_MODULE_INTERFACE_UART
-Dimmer_Base::Dimmer_Base() : _serial(Serial), _wire(*new SerialTwoWire(Serial))
-{
-    _wireLocked = false;
-    _version = 0;
+Dimmer_Base::Dimmer_Base() : _serial(Serial), _wire(*new SerialTwoWire(Serial)), _wireLocked(false) {
 #else
-Dimmer_Base::Dimmer_Base() : _wire(config.initTwoWire())
-{
+Dimmer_Base::Dimmer_Base() : _wire(config.initTwoWire()) {
 #endif
+    _version = DIMMER_DISABLED;
 }
 
 Dimmer_Base::~Dimmer_Base()
@@ -46,6 +43,7 @@ Dimmer_Base::~Dimmer_Base()
 
 void Dimmer_Base::_begin()
 {
+    _version = 0;
     _debug_println(F("Dimmer_Base::_begin()"));
 #if IOT_DIMMER_MODULE_INTERFACE_UART
     _wire.onReadSerial(SerialHandler::serialLoop);
@@ -106,6 +104,8 @@ void Dimmer_Base::_begin()
 void Dimmer_Base::_end()
 {
     _debug_println(F("Dimmer_Base::_end()"));
+
+    _version = DIMMER_DISABLED;
 
 #if IOT_DIMMER_MODULE_INTERFACE_UART
     _wire.onReceive(nullptr);

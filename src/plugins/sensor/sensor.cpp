@@ -179,24 +179,24 @@ void SensorPlugin::createWebUI(WebUI &webUI)
 }
 
 
-bool SensorPlugin::hasStatus() const
-{
-    return _sensors.size() != 0;
-}
-
 void SensorPlugin::getStatus(Print &output)
 {
     _debug_printf_P(PSTR("SensorPlugin::getStatus(): sensor count %d\n"), _sensors.size());
-    PrintHtmlEntitiesString str;
-    for(auto sensor: _sensors) {
-        sensor->getStatus(str);
-        if (!str.endsWith(HTML_TAG_E)) {
-            str.print(F(HTML_S(br)));
-        }
+    if (_sensors.empty()) {
+        output.print(F("All sensors disabled"));
     }
-    static_cast<PrintHtmlEntitiesString &>(output).setRawOutput(true);
-    output.print(str);
-    static_cast<PrintHtmlEntitiesString &>(output).setRawOutput(false);
+    else {
+        PrintHtmlEntitiesString str;
+        for(auto sensor: _sensors) {
+            sensor->getStatus(str);
+            if (!str.endsWith(HTML_TAG_E)) {
+                str.print(F(HTML_S(br)));
+            }
+        }
+        static_cast<PrintHtmlEntitiesString &>(output).setRawOutput(true);
+        output.print(str);
+        static_cast<PrintHtmlEntitiesString &>(output).setRawOutput(false);
+    }
 }
 
 #if AT_MODE_SUPPORTED

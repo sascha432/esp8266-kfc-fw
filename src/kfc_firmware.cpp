@@ -172,6 +172,7 @@ void setup() {
         resetDetector.clearCounter();
     }
     Serial.printf_P(PSTR("SAFE MODE %d, reset counter %d, wake up %d\n"), resetDetector.getSafeMode(), resetDetector.getResetCounter(), resetDetector.hasWakeUpDetected());
+    config.setSafeMode(resetDetector.getSafeMode());
 
     if (resetDetector.hasResetDetected()) {
 
@@ -239,7 +240,7 @@ void setup() {
 
             if (
 #if DEBUG
-            __while(10000, []() {
+            __while(10000, [&safe_mode]() {
                 if (Serial.available()) {
                     switch(Serial.read()) {
                         case 'c':
@@ -264,9 +265,13 @@ void setup() {
                             resetDetector.setSafeMode(false);
                             resetDetector.clearCounter();
                             remove_crash_counter(nullptr);
+                            safe_mode = false;
+                            config.setSafeMode(false);
                             return false;
                         case 's':
                             resetDetector.setSafeMode(1);
+                            config.setSafeMode(true);
+                            safe_mode = true;
                             return false;
                     }
                 }

@@ -6,6 +6,10 @@
 
 #if IOT_SENSOR
 
+#ifndef DEBUG_IOT_SENSOR
+#define DEBUG_IOT_SENSOR            0
+#endif
+
 #include <Arduino_compat.h>
 #include <PrintHtmlEntitiesString.h>
 #include <vector>

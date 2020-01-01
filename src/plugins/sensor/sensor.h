@@ -13,10 +13,6 @@
 #include "plugins.h"
 #include "MQTTSensor.h"
 
-#ifndef DEBUG_IOT_SENSOR
-#define DEBUG_IOT_SENSOR            0
-#endif
-
 #ifndef IOT_SENSOR_NAMES_LM75A
 #define IOT_SENSOR_NAMES_LM75A      "LM75A Temperature"
 #endif

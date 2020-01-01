@@ -430,7 +430,7 @@ void KFCFWConfiguration::restoreFactorySettings() {
     dimmer.on_fade_time = 4.5;
 #endif
     dimmer.linear_correction = 1.0;
-    dimmer.max_temperature = 85;
+    dimmer.max_temperature = 75;
     dimmer.metrics_int = 30;
     dimmer.restore_level = true;
     dimmer.report_temp = true;

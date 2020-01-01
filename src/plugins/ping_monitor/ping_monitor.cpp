@@ -26,11 +26,13 @@
 PingMonitorTask *pingMonitorTask = nullptr;
 AsyncWebSocket *wsPing = nullptr;
 
-void ping_monitor_event_handler(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len) {
+void ping_monitor_event_handler(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len)
+{
     WsPingClient::onWsEvent(server, client, (int)type, data, len, arg, WsPingClient::getInstance);
 }
 
-void ping_monitor_install_web_server_hook() {
+void ping_monitor_install_web_server_hook()
+{
     if (get_web_server_object()) {
         wsPing = _debug_new AsyncWebSocket(F("/ping"));
         wsPing->onEvent(ping_monitor_event_handler);
@@ -39,8 +41,8 @@ void ping_monitor_install_web_server_hook() {
     }
 }
 
-bool ping_monitor_resolve_host(char *host, IPAddress &addr, PrintString &errorMessage) {
-
+bool ping_monitor_resolve_host(char *host, IPAddress &addr, PrintString &errorMessage)
+{
     if (!*host || !strcmp_P(host, SPGM(0))) {
         errorMessage.printf_P(PSTR("ping cancelled"));
         return false;
@@ -54,7 +56,8 @@ bool ping_monitor_resolve_host(char *host, IPAddress &addr, PrintString &errorMe
     return false;
 }
 
-void ping_monitor_begin(AsyncPing *ping, char *host, IPAddress &addr, int count, int timeout, PrintString &message) {
+void ping_monitor_begin(AsyncPing *ping, char *host, IPAddress &addr, int count, int timeout, PrintString &message)
+{
     if (count < 1) {
         count = 4;
     }
@@ -71,19 +74,22 @@ PROGMEM_STRING_DEF(ping_monitor_end_response, "Total answer from %s sent %d rece
 PROGMEM_STRING_DEF(ping_monitor_ethernet_detected, "Detected eth address %s");
 PROGMEM_STRING_DEF(ping_monitor_request_timeout, "Request timed out.");
 
-WsPingClient::WsPingClient(AsyncWebSocketClient *client) : WsClient(client),  _loopFunction(nullptr) {
+WsPingClient::WsPingClient(AsyncWebSocketClient *client) : WsClient(client), _loopFunction(nullptr)
+{
 }
 
-WsPingClient::~WsPingClient() {
+WsPingClient::~WsPingClient()
+{
     _cancelPing();
 }
 
-WsClient *WsPingClient::getInstance(AsyncWebSocketClient *socket) {
+WsClient *WsPingClient::getInstance(AsyncWebSocketClient *socket)
+{
     return _debug_new WsPingClient(socket);
 }
 
-void WsPingClient::onText(uint8_t *data, size_t len) {
-
+void WsPingClient::onText(uint8_t *data, size_t len)
+{
     _debug_printf_P(PSTR("WsPingClient::onText(%p, %d)\n"), data, len);
     auto client = getClient();
     if (isAuthenticated()) {
@@ -167,19 +173,23 @@ void WsPingClient::onText(uint8_t *data, size_t len) {
     }
 }
 
-AsyncPing &WsPingClient::getPing() {
+AsyncPing &WsPingClient::getPing()
+{
     return _ping;
 }
 
-void WsPingClient::onDisconnect(uint8_t *data, size_t len) {
+void WsPingClient::onDisconnect(uint8_t *data, size_t len)
+{
     _cancelPing();
 }
 
-void WsPingClient::onError(WsErrorType type, uint8_t *data, size_t len) {
+void WsPingClient::onError(WsErrorType type, uint8_t *data, size_t len)
+{
     _cancelPing();
 }
 
-void WsPingClient::_cancelPing() {
+void WsPingClient::_cancelPing()
+{
     _debug_printf_P(PSTR("WsPingClient::_cancelPing(): _loopFunction=%p\n"), _loopFunction);
     if (_loopFunction) {
         LoopFunctions::remove(reinterpret_cast<LoopFunctions::CallbackPtr_t>(_loopFunction));
@@ -202,7 +212,8 @@ void WsPingClient::_cancelPing() {
     _ping.cancel();
 }
 
-const char *ping_monitor_get_host(uint8_t num) {
+const char *ping_monitor_get_host(uint8_t num)
+{
     const ConfigurationParameter::Handle_t handles[] = { _H(Config().ping.host1), _H(Config().ping.host2), _H(Config().ping.host3) };
     if (num >= sizeof(handles) / sizeof(handles[0])) {
         return _sharedEmptyString.c_str();
@@ -210,61 +221,73 @@ const char *ping_monitor_get_host(uint8_t num) {
     return config.getString(handles[num]);
 }
 
-String ping_monitor_get_translated_host(String host) {
+String ping_monitor_get_translated_host(String host)
+{
     host.replace(F("${gateway}"), WiFi.isConnected() ? WiFi.gatewayIP().toString() : _sharedEmptyString);
     return host;
 }
 
-void ping_monitor_loop_function() {
+void ping_monitor_loop_function()
+{
     if (pingMonitorTask && pingMonitorTask->isNext()) {
         pingMonitorTask->begin();
     }
 }
 
-bool ping_monitor_response_handler(const AsyncPingResponse &response) {
+bool ping_monitor_response_handler(const AsyncPingResponse &response)
+{
     _debug_println(F("ping_monitor_response_handler"));
     pingMonitorTask->addAnswer(response.answer);
     return false;
 }
 
-bool ping_monitor_end_handler(const AsyncPingResponse &response) {
+bool ping_monitor_end_handler(const AsyncPingResponse &response)
+{
     _debug_println(F("ping_monitor_end_handler"));
     pingMonitorTask->next();
     return true;
 }
 
-PingMonitorTask::PingMonitorTask() {
+PingMonitorTask::PingMonitorTask()
+{
     _ping = nullptr;
 }
 
-PingMonitorTask::~PingMonitorTask() {
+PingMonitorTask::~PingMonitorTask()
+{
     _cancelPing();
 }
 
-void PingMonitorTask::setInterval(uint16_t interval) {
+void PingMonitorTask::setInterval(uint16_t interval)
+{
     _interval = interval;
 }
 
-void PingMonitorTask::setCount(uint8_t count) {
+void PingMonitorTask::setCount(uint8_t count)
+{
     _count = count;
 }
 
-void PingMonitorTask::setTimeout(uint16_t timeout) {
+void PingMonitorTask::setTimeout(uint16_t timeout)
+{
     _timeout = timeout;
 }
 
-void PingMonitorTask::clearHosts() {
+void PingMonitorTask::clearHosts()
+{
     _pingHosts.clear();
 }
 
-void PingMonitorTask::addHost(const char *host) {
+void PingMonitorTask::addHost(const char *host)
+{
     if (*host) {
         _debug_printf_P(PSTR("PingMonitorTask::addHost(%s)\n"), host);
         _pingHosts.push_back({ host, 0, 0 });
     }
 }
 
-void PingMonitorTask::addAnswer(bool answer) {
+void PingMonitorTask::addAnswer(bool answer)
+{
     _debug_printf_P(PSTR("PingMonitorTask::addAnswer(%d): server=%d\n"), answer, _currentServer);
     auto &host = _pingHosts.at(_currentServer);
     if (answer) {
@@ -274,14 +297,16 @@ void PingMonitorTask::addAnswer(bool answer) {
     }
 }
 
-void PingMonitorTask::next() {
+void PingMonitorTask::next()
+{
     _currentServer++;
     _currentServer = _currentServer % _pingHosts.size();
     _nextHost = millis() + (_interval * 1000UL);
     _debug_printf_P(PSTR("PingMonitorTask::next(): server=%d, time=%lu\n"), _currentServer, _nextHost);
 }
 
-void PingMonitorTask::begin() {
+void PingMonitorTask::begin()
+{
     _nextHost = 0;
     String host = ping_monitor_get_translated_host(_pingHosts[_currentServer].host);
     _debug_printf_P(PSTR("PingMonitorTask::begin(): %s\n"), host.c_str());
@@ -291,15 +316,16 @@ void PingMonitorTask::begin() {
     }
 }
 
-void PingMonitorTask::printStats(Print &out) {
-
+void PingMonitorTask::printStats(Print &out)
+{
     out.printf_P(PSTR("Active, %d second interval" HTML_S(br)), _interval);
     for(auto &host: _pingHosts) {
         out.printf_P(PSTR("%s: %u received, %u lost, %.2f%%" HTML_S(br)), host.host.c_str(), host.success, host.failure, (host.success * 100.0 / (float)(host.success + host.failure)));
     }
 }
 
-void PingMonitorTask::start() {
+void PingMonitorTask::start()
+{
     _cancelPing();
     _currentServer = 0;
     _nextHost = 0;
@@ -315,13 +341,15 @@ void PingMonitorTask::start() {
     }
 }
 
-void PingMonitorTask::stop() {
+void PingMonitorTask::stop()
+{
     _debug_printf_P(PSTR("PingMonitorTask::stop()\n"));
     _cancelPing();
     clearHosts();
 }
 
-void PingMonitorTask::_cancelPing() {
+void PingMonitorTask::_cancelPing()
+{
     if (_ping) {
         _debug_printf_P(PSTR("PingMonitorTask::_cancelPing()\n"));
         LoopFunctions::remove(ping_monitor_loop_function);
@@ -331,7 +359,8 @@ void PingMonitorTask::_cancelPing() {
     }
 }
 
-void ping_monitor_setup() {
+void ping_monitor_setup()
+{
     ping_monitor_install_web_server_hook();
 
     if (pingMonitorTask) {
@@ -361,13 +390,22 @@ public:
     PingMonitorPlugin() {
         REGISTER_PLUGIN(this, "PingMonitorPlugin");
     }
-    PGM_P getName() const;
-    PluginPriorityEnum_t getSetupPriority() const override;
-    void setup(PluginSetupMode_t mode) override;
-    void reconfigure(PGM_P source) override;
-    bool hasReconfigureDependecy(PluginComponent *plugin) const override;
+    PGM_P getName() const {
+        return PSTR("pingmon");
+    }
 
-    virtual bool hasStatus() const override;
+    virtual PluginPriorityEnum_t getSetupPriority() const override {
+        return (PluginPriorityEnum_t)100;
+    }
+    virtual void setup(PluginSetupMode_t mode) override;
+    virtual void reconfigure(PGM_P source) override;
+    virtual bool hasReconfigureDependecy(PluginComponent *plugin) const override {
+        return plugin->nameEquals(F("http"));
+    }
+
+    virtual bool hasStatus() const override {
+        return true;
+    }
     virtual void getStatus(Print &output) override;
 
     virtual MenuTypeEnum_t getMenuType() const override {
@@ -381,42 +419,31 @@ public:
     virtual PGM_P getConfigureForm() const override {
         return PSTR("ping_monitor");
     }
-    void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
+    virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
 
 #if AT_MODE_SUPPORTED
-    bool hasAtMode() const override;
-    void atModeHelpGenerator() override;
-    bool atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) override;
+    virtual bool hasAtMode() const override {
+        return true;
+    }
+    virtual void atModeHelpGenerator() override;
+    virtual bool atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) override;
 #endif
 };
 
 static PingMonitorPlugin plugin;
 
-PGM_P PingMonitorPlugin::getName() const {
-    return PSTR("pingmon");
-}
-
-PingMonitorPlugin::PluginPriorityEnum_t PingMonitorPlugin::getSetupPriority() const {
-    return (PluginPriorityEnum_t)100;
-}
-
-void PingMonitorPlugin::setup(PluginSetupMode_t mode) {
+void PingMonitorPlugin::setup(PluginSetupMode_t mode)
+{
     ping_monitor_setup();
 }
 
-void PingMonitorPlugin::reconfigure(PGM_P source) {
+void PingMonitorPlugin::reconfigure(PGM_P source)
+{
     ping_monitor_setup();
 }
 
-bool PingMonitorPlugin::hasReconfigureDependecy(PluginComponent *plugin) const {
-    return plugin->nameEquals(F("http"));
-}
-
-bool PingMonitorPlugin::hasStatus() const {
-    return true;
-}
-
-void PingMonitorPlugin::getStatus(Print &output) {
+void PingMonitorPlugin::getStatus(Print &output)
+{
     if (pingMonitorTask) {
         pingMonitorTask->printStats(output);
     } else {
@@ -424,9 +451,9 @@ void PingMonitorPlugin::getStatus(Print &output) {
     }
 }
 
-void PingMonitorPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form) {
-
-    const __FlashStringHelper *gateway = F("${gateway}");
+void PingMonitorPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
+{
+    auto gateway = F("${gateway}");
 
     form.add<sizeof Config().ping.host1>(F("ping_host1"), config._H_W_STR(Config().ping.host1));
     form.addValidator((new FormValidHostOrIpValidator(true))->addAllowString(gateway));
@@ -458,15 +485,13 @@ void PingMonitorPlugin::createConfigureForm(AsyncWebServerRequest *request, Form
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PING, "PING", "<target[,count=4[,timeout=5000]]>", "Ping host or IP address");
 
-bool PingMonitorPlugin::hasAtMode() const {
-    return true;
-}
-
-void PingMonitorPlugin::atModeHelpGenerator() {
+void PingMonitorPlugin::atModeHelpGenerator()
+{
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(PING));
 }
 
-bool PingMonitorPlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) {
+bool PingMonitorPlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv)
+{
     static AsyncPing *_ping = nullptr;
 
     if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(PING))) {

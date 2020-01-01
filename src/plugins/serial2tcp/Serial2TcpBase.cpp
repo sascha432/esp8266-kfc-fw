@@ -157,7 +157,7 @@ void Serial2TcpBase::_processData(Serial2TcpConnection *conn, const char *data, 
     if (_resetAtmega) {
         _resetAtmega = false;
         Scheduler.addTimer(100, false, [](EventScheduler::TimerPtr timer) {
-            DimmerModulePlugin::resetDimmerFirmware();
+            DimmerModulePlugin::resetDimmerMCU();
         });
     }
 #endif
@@ -242,9 +242,9 @@ void Serial2TcpBase::_processData(Serial2TcpConnection *conn, const char *data, 
                             dataLen--;
                             data++;
                             if (dataLen && *data & 0x02) {
-                                // DimmerModulePlugin::resetDimmerFirmware();
+                                // DimmerModulePlugin::resetDimmerMCU();
                                 Scheduler.addTimer(100, false, [](EventScheduler::TimerPtr timer) {
-                                    DimmerModulePlugin::resetDimmerFirmware();
+                                    DimmerModulePlugin::resetDimmerMCU();
                                 });
                             }
                         }

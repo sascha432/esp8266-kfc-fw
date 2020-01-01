@@ -29,6 +29,7 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
 bool web_server_send_file(String path, HttpHeaders &httpHeaders, bool client_accepts_gzip, FSMapping *mapping, AsyncWebServerRequest *request, WebTemplate *webTemplate = nullptr);
 bool web_server_is_authenticated(AsyncWebServerRequest *request);
 void web_server_add_handler(AsyncWebHandler* handler);
+void web_server_add_handler(const String &uri, ArRequestHandlerFunction onRequest);
 AsyncWebServer *get_web_server_object();
 
 #endif

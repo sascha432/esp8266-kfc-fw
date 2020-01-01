@@ -523,7 +523,7 @@ bool DimmerModulePlugin::atModeHandler(Stream &serial, const String &command, in
     }
     else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(DIMR))) {
         serial.println(F("Pulling GPIO5 low for 10ms"));
-        dimmer_plugin.resetDimmerFirmware();
+        dimmer_plugin.resetDimmerMCU();
         serial.println(F("GPIO5 set to input"));
         return true;
     }

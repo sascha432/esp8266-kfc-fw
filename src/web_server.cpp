@@ -137,11 +137,21 @@ bool web_server_client_accepts_gzip(AsyncWebServerRequest *request)
 
 void web_server_add_handler(AsyncWebHandler* handler)
 {
-    server->addHandler(handler);
+    if (server) {
+        server->addHandler(handler);
+    }
 }
 
-// server->on()
-#define on(a, ...)    on(String(a).c_str(), __VA_ARGS__)
+void web_server_add_handler(const String &uri, ArRequestHandlerFunction onRequest)
+{
+    if (server) {
+        AsyncCallbackWebHandler *handler = new AsyncCallbackWebHandler();
+        handler->setUri(uri);
+        handler->onRequest(onRequest);
+        server->addHandler(handler);
+    }
+}
+
 
 void web_server_not_found_handler(AsyncWebServerRequest *request)
 {
@@ -467,7 +477,7 @@ void init_web_server()
 
 #if REST_API_SUPPORT
     // // download /.mappings
-    // server->on(F("/rest/KFC/webui_details"), [](AsyncWebServerRequest *request) {
+    // web_server_add_handler(F("/rest/KFC/webui_details"), [](AsyncWebServerRequest *request) {
     //     if (web_server_is_authenticated(request)) {
     //         rest_api_kfc_webui_details(request);
     //     } else {
@@ -493,7 +503,7 @@ void init_web_server()
     server->onNotFound(web_server_not_found_handler);
 
 // #if MDNS_SUPPORT
-//     server->on(F("/poll_mdns/"), [&httpHeaders](AsyncWebServerRequest *request) {
+//     web_server_add_handler(F("/poll_mdns/"), [&httpHeaders](AsyncWebServerRequest *request) {
 
 //         web_server_set_cpu_speed_for_request(request);
 
@@ -523,14 +533,14 @@ void init_web_server()
 //     });
 // #endif
 
-    server->on(F("/scan_wifi/"), web_server_scan_wifi_handler);
-    server->on(F("/logout"), web_server_logout_handler);
-    server->on(F("/is_alive"), web_server_is_alive_handler);
-    server->on(F("/webui_get"), web_server_get_webui_json);
-    server->on(F("/export_settings"), web_server_export_settings);
-    server->on(F("/speedtest.zip"), web_server_speed_test_zip);
-    server->on(F("/speedtest.bmp"), web_server_speed_test_image);
-    server->on(F("/update"), HTTP_POST, web_server_update_handler, web_server_update_upload_handler);
+    web_server_add_handler(F("/scan_wifi/"), web_server_scan_wifi_handler);
+    web_server_add_handler(F("/logout"), web_server_logout_handler);
+    web_server_add_handler(F("/is_alive"), web_server_is_alive_handler);
+    web_server_add_handler(F("/webui_get"), web_server_get_webui_json);
+    web_server_add_handler(F("/export_settings"), web_server_export_settings);
+    web_server_add_handler(F("/speedtest.zip"), web_server_speed_test_zip);
+    web_server_add_handler(F("/speedtest.bmp"), web_server_speed_test_image);
+    server->on(String(F("/update")).c_str(), HTTP_POST, web_server_update_handler, web_server_update_upload_handler);
 
     server->begin();
     _debug_printf_P(PSTR("HTTP running on port %u\n"), config._H_GET(Config().http_port));

@@ -533,17 +533,14 @@ void Dimmer_Base::setValue(const String &id, const String &value, bool hasValue,
 
 void Dimmer_Base::setupWebServer()
 {
-    auto server = get_web_server_object();
-    _debug_printf_P(PSTR("Dimmer_Base::setupWebServer(): %p\n"), server);
-    if (server) {
-        server->on(String(F("/dimmer_rstfw.html")).c_str(), Dimmer_Base::handleWebServer);
-    }
+    _debug_printf_P(PSTR("Dimmer_Base::setupWebServer(): %p\n"), get_web_server_object());
+    web_server_add_handler(F("/dimmer_rstfw.html"), Dimmer_Base::handleWebServer);
 }
 
 void Dimmer_Base::handleWebServer(AsyncWebServerRequest *request)
 {
     if (web_server_is_authenticated(request)) {
-        resetDimmerFirmware();
+        resetDimmerMCU();
         HttpHeaders httpHeaders(false);
         httpHeaders.addNoCache();
         request->send_P(200, FSPGM(mime_text_plain), SPGM(OK));
@@ -552,7 +549,7 @@ void Dimmer_Base::handleWebServer(AsyncWebServerRequest *request)
     }
 }
 
-void Dimmer_Base::resetDimmerFirmware()
+void Dimmer_Base::resetDimmerMCU()
 {
     digitalWrite(STK500V1_RESET_PIN, LOW);
     pinMode(STK500V1_RESET_PIN, OUTPUT);

@@ -77,13 +77,10 @@ void WeatherStationPlugin::_sendScreenCaptureBMP(AsyncWebServerRequest *request)
     }
 }
 
-void WeatherStationPlugin::_installWebhooks() {
-
-    auto server = get_web_server_object();
-    if (server) {
-        _debug_printf_P(PSTR("WeatherStationPlugin::_installWebhooks(): Installing web handler for screen capture\n"));
-        server->on("/images/screen_capture.bmp", _sendScreenCaptureBMP);
-    }
+void WeatherStationPlugin::_installWebhooks()
+{
+    _debug_printf_P(PSTR("WeatherStationPlugin::_installWebhooks(): Installing web handler for screen capture, server=%p\n"), get_web_server_object());
+    web_server_add_handler(F("/images/screen_capture.bmp"), _sendScreenCaptureBMP);
 }
 
 void WeatherStationPlugin::setup(PluginSetupMode_t mode) {

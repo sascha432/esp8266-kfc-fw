@@ -131,7 +131,7 @@ public:
 public:
     static void setupWebServer();
     static void handleWebServer(AsyncWebServerRequest *request);
-    static void resetDimmerFirmware();
+    static void resetDimmerMCU();
 };
 
 #endif

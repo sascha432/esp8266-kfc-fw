@@ -48,7 +48,7 @@ PGM_P SensorPlugin::getName() const
 
 void SensorPlugin::setup(PluginSetupMode_t mode)
 {
-    Scheduler.addTimer(&_timer, 1e4, true, SensorPlugin::timerEvent);
+    Scheduler.addTimer(&_timer, 1000, true, SensorPlugin::timerEvent);
 #if IOT_SENSOR_HAVE_LM75A
     _sensors.push_back(new Sensor_LM75A(F(IOT_SENSOR_NAMES_LM75A), config.initTwoWire(), IOT_SENSOR_HAVE_LM75A));
 #endif
@@ -85,20 +85,25 @@ void SensorPlugin::reconfigure(PGM_P source)
     }
 }
 
-SensorPlugin::SensorVector &SensorPlugin::getSensors() {
+SensorPlugin::SensorVector &SensorPlugin::getSensors()
+{
     return plugin._sensors;
 }
 
-size_t SensorPlugin::getSensorCount() {
+size_t SensorPlugin::getSensorCount()
+{
     return plugin._sensors.size();
 }
 
 
-void SensorPlugin::timerEvent(EventScheduler::TimerPtr timer) {
+void SensorPlugin::timerEvent(EventScheduler::TimerPtr timer)
+{
     plugin._timerEvent();
 }
 
-void SensorPlugin::_timerEvent() {
+// low priority timer executed in main loop()
+void SensorPlugin::_timerEvent()
+{
     JsonUnnamedObject json(2);
     json.add(JJ(type), JJ(ue));
     auto &events = json.addArray(JJ(events));
@@ -110,17 +115,20 @@ void SensorPlugin::_timerEvent() {
     }
 }
 
-void SensorPlugin::restart() {
+void SensorPlugin::restart()
+{
     for(auto sensor: _sensors) {
         sensor->restart();
     }
 }
 
-bool SensorPlugin::hasWebUI() const {
+bool SensorPlugin::hasWebUI() const
+{
     return true;
 }
 
-WebUIInterface *SensorPlugin::getWebUIInterface() {
+WebUIInterface *SensorPlugin::getWebUIInterface()
+{
     return this;
 }
 
@@ -148,13 +156,15 @@ void SensorPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &for
     form.finalize();
 }
 
-void SensorPlugin::createMenu() {
+void SensorPlugin::createMenu()
+{
     if (_hasConfigureForm()) {
         bootstrapMenu.addSubMenu(F("Sensors"), F("sensor.html"), navMenu.config);
     }
 }
 
-void SensorPlugin::createWebUI(WebUI &webUI) {
+void SensorPlugin::createWebUI(WebUI &webUI)
+{
     auto row = &webUI.addRow();
     row->setExtraClass(JJ(title));
     row->addGroup(F("Sensors"), false);

@@ -15,7 +15,10 @@
 #include <debug_helper_disable.h>
 #endif
 
-// work around for scheduled interrupts crashing with higher frequencies
+// ------------------------------------------------------------------------
+// Low level interrupt handling
+// ------------------------------------------------------------------------
+
 typedef enum {
     CBF_CF =                0x01,
     CBF_CF1 =               0x02,
@@ -115,6 +118,9 @@ void Sensor_HLW8012::_loop()
     }
 }
 
+// ------------------------------------------------------------------------
+// Sensor class
+// ------------------------------------------------------------------------
 
 Sensor_HLW8012::Sensor_HLW8012(const String &name, uint8_t pinSel, uint8_t pinCF, uint8_t pinCF1) : Sensor_HLW80xx(name), _pinSel(pinSel), _pinCF(pinCF), _pinCF1(pinCF1)
 {

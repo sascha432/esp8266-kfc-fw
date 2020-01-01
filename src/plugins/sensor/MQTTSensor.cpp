@@ -13,18 +13,21 @@
 #include <debug_helper_disable.h>
 #endif
 
-MQTTSensor::MQTTSensor() : MQTTComponent(SENSOR), _updateRate(DEFAULT_UPDATE_RATE) {
+MQTTSensor::MQTTSensor() : MQTTComponent(SENSOR), _updateRate(DEFAULT_UPDATE_RATE)
+{
     _nextUpdate = 0;
 }
 
-MQTTSensor::~MQTTSensor() {
+MQTTSensor::~MQTTSensor()
+{
     auto mqttClient = MQTTClient::getClient();
     if (mqttClient) {
         mqttClient->unregisterComponent(this);
     }
 }
 
-void MQTTSensor::onConnect(MQTTClient *client) {
+void MQTTSensor::onConnect(MQTTClient *client)
+{
     _qos = MQTTClient::getDefaultQos();
 #if MQTT_AUTO_DISCOVERY
     if (MQTTAutoDiscovery::isEnabled()) {
@@ -39,34 +42,15 @@ void MQTTSensor::onConnect(MQTTClient *client) {
     publishState(client);
 }
 
-void MQTTSensor::onMessage(MQTTClient *client, char *topic, char *payload, size_t len) {
-}
-
-void MQTTSensor::timerEvent(JsonArray &array) {
-    unsigned long currentTime = time(nullptr);
+void MQTTSensor::timerEvent(JsonArray &array)
+{
+    auto currentTime = time(nullptr);
     if (currentTime > _nextUpdate) {
         _nextUpdate = currentTime + _updateRate;
 
         publishState(MQTTClient::getClient());
         getValues(array);
     }
-}
-
-MQTTSensor::SensorEnumType_t MQTTSensor::getType() const {
-    return UNKNOWN;
-}
-
-bool MQTTSensor::hasForm() const {
-    return false;
-}
-
-void MQTTSensor::createConfigureForm(AsyncWebServerRequest *request, Form &form) {
-}
-
-void MQTTSensor::reconfigure() {
-}
-
-void MQTTSensor::restart() {
 }
 
 #endif

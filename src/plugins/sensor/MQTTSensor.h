@@ -44,25 +44,34 @@ public:
     //virtual void createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector) override;
     //virtual uint8_t getAutoDiscoveryCount() const override;
     virtual void onConnect(MQTTClient *client) override;
-    virtual void onMessage(MQTTClient *client, char *topic, char *payload, size_t len) override;
+    virtual void onMessage(MQTTClient *client, char *topic, char *payload, size_t len) override {
+    }
 
     virtual void publishState(MQTTClient *client) = 0;
     virtual void getValues(JsonArray &json) = 0;
     virtual void createWebUI(WebUI &webUI, WebUIRow **row) = 0;
-    //virtual void getStatus(PrintHtmlEntitiesString &output) override;
     virtual void getStatus(PrintHtmlEntitiesString &output) = 0;
-    virtual SensorEnumType_t getType() const;
 
-    virtual bool hasForm() const;
-    virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form);
+    virtual SensorEnumType_t getType() const {
+        return UNKNOWN;
+    }
 
-    virtual void reconfigure();
-    virtual void restart();
+    virtual bool hasForm() const {
+        return false;
+    }
+    virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) {
+    }
+
+    virtual void reconfigure() {
+    }
+    virtual void restart() {
+    }
 
     void timerEvent(JsonArray &array);
 
     inline void setUpdateRate(uint8_t updateRate) {
         _updateRate = updateRate;
+        _nextUpdate = 0;
     }
 
 protected:
@@ -70,7 +79,7 @@ protected:
 
 private:
     uint8_t _updateRate;
-    unsigned long _nextUpdate;
+    time_t _nextUpdate;
 };
 
 #endif

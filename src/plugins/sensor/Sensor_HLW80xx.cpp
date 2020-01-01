@@ -31,13 +31,15 @@ Sensor_HLW80xx::Sensor_HLW80xx(const String &name) : MQTTSensor(), _name(name)
     reconfigure();
 
     setUpdateRate(IOT_SENSOR_HLW80xx_UPDATE_RATE);
+    _nextMQTTUpdate = 0;
 }
 
 void Sensor_HLW80xx::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector)
 {
+    String topic = _getTopic();
     auto discovery = _debug_new MQTTAutoDiscovery();
     discovery->create(this, 0, format);
-    discovery->addStateTopic(_getTopic());
+    discovery->addStateTopic(topic);
     discovery->addUnitOfMeasurement(F("W"));
     discovery->addValueTemplate(F("power"));
     discovery->finalize();
@@ -45,7 +47,7 @@ void Sensor_HLW80xx::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQT
 
     discovery = _debug_new MQTTAutoDiscovery();
     discovery->create(this, 1, format);
-    discovery->addStateTopic(_getTopic());
+    discovery->addStateTopic(topic);
     discovery->addUnitOfMeasurement(F("kWh"));
     discovery->addValueTemplate(F("energy_total"));
     discovery->finalize();
@@ -53,7 +55,7 @@ void Sensor_HLW80xx::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQT
 
     discovery = _debug_new MQTTAutoDiscovery();
     discovery->create(this, 2, format);
-    discovery->addStateTopic(_getTopic());
+    discovery->addStateTopic(topic);
     discovery->addUnitOfMeasurement(F("kWh"));
     discovery->addValueTemplate(F("energy"));
     discovery->finalize();
@@ -61,7 +63,7 @@ void Sensor_HLW80xx::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQT
 
     discovery = _debug_new MQTTAutoDiscovery();
     discovery->create(this, 3, format);
-    discovery->addStateTopic(_getTopic());
+    discovery->addStateTopic(topic);
     discovery->addUnitOfMeasurement(F("V"));
     discovery->addValueTemplate(F("voltage"));
     discovery->finalize();
@@ -69,7 +71,7 @@ void Sensor_HLW80xx::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQT
 
     discovery = _debug_new MQTTAutoDiscovery();
     discovery->create(this, 4, format);
-    discovery->addStateTopic(_getTopic());
+    discovery->addStateTopic(topic);
     discovery->addUnitOfMeasurement(F("A"));
     discovery->addValueTemplate(F("current"));
     discovery->finalize();
@@ -77,7 +79,7 @@ void Sensor_HLW80xx::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQT
 
     discovery = _debug_new MQTTAutoDiscovery();
     discovery->create(this, 5, format);
-    discovery->addStateTopic(_getTopic());
+    discovery->addStateTopic(topic);
     discovery->addUnitOfMeasurement(F(""));
     discovery->addValueTemplate(F("pf"));
     discovery->finalize();
@@ -181,6 +183,14 @@ void Sensor_HLW80xx::createConfigureForm(AsyncWebServerRequest *request, Form &f
 
 void Sensor_HLW80xx::publishState(MQTTClient *client)
 {
+    auto currentTime = time(nullptr);
+    if (currentTime > _nextMQTTUpdate) {
+        _nextMQTTUpdate = currentTime + IOT_SENSOR_HLW80xx_UPDATE_RATE_MQTT;
+    }
+    else {
+        return; // we skip this round
+    }
+
     if (client) {
         PrintString str;
         JsonUnnamedObject json;

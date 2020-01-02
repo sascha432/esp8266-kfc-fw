@@ -32,13 +32,13 @@
                 <select class="form-control setting-requires-restart" name="http_enabled" id="http_enabled">
                     <option value="0" %HTTP_ENABLED_0%>Disabled</option>
                     <option value="1" %HTTP_ENABLED_1%>Enabled</option>
-                    <!--#if WEBSERVER_TLS_SUPPORT-->
+                    <!--#if defined(WEBSERVER_TLS_SUPPORT) && WEBSERVER_TLS_SUPPORT-->
                     <option value="2" %HTTP_ENABLED_2%>Enabled with TLS</option>
                     <!--#endif-->
                 </select>
             </div>
             <span id="http_settings">
-                <!--#if defined(ESP8266)-->
+                <!--#if defined(ESP8266) && defined(SPEED_BOOSTER_ENABLED) && SPEED_BOOSTER_ENABLED-->
                 <div class="form-group">
                     <label for="http_perf">Performance:</label>
                     <select class="form-control" name="http_perf" id="http_perf">
@@ -52,7 +52,7 @@
                     <input type="text" class="form-control setting-requires-restart" name="http_port" id="http_port" value="%HTTP_PORT%" placeholder="80">
                 </div>
             </span>
-            <!--#if WEBSERVER_TLS_SUPPORT-->
+            <!--#if defined(WEBSERVER_TLS_SUPPORT) && WEBSERVER_TLS_SUPPORT-->
             <span id="ssl_settings">
                 <div class="form-group">
                     <label for="ssl_certificate">SSL Certificate:</label>

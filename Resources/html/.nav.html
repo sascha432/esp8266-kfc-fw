@@ -1,10 +1,9 @@
 <nav class="navbar navbar-expand-lg navbar-light bg-light">
     <a class="navbar-brand" href="index.html">KFC FW</a>
-    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
-        aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-        <span class="navbar-toggler-icon"></span>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarMain" aria-controls="navbarMain" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="oi oi-menu" aria-hidden="true"></span>
     </button>
-    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+    <div class="collapse navbar-collapse" id="navbarMain">
         <ul class="navbar-nav mr-auto">
             <li class="nav-item"><a class="nav-link" href="index.html">Home</a></li>
             <li class="nav-item"><a class="nav-link" href="status.html">Status</a></li>
@@ -14,14 +13,13 @@
             %MENU_HTML_MAIN_UTILITIES%
             <li class="nav-text%CONFIG_DIRTY_CLASS%">
                 <span class="alert alert-danger" role="alert">
-                    <a href="reboot.html"><button class="btn btn-danger reload-button"><span
-                                class="oi oi-reload"></span></button></a>
-                    <small>The Configuration has been changed, reboot the device to apply all settings</small></span>
+                    <a href="reboot.html"><button class="btn btn-danger reload-button"><span class="oi oi-reload"></span></button></a>
+                    <small>The Configuration has been changed, reboot the device to apply all settings</small>
+                </span>
             </li>
         </ul>
         <span class="navbar-text">
-            <a class="nav-link disabled" href="/logout">Logout <span class="oi oi-account-logout" title="Logout"
-                    aria-hidden="true"></span></a>
+            <a class="nav-link disabled" href="/logout">Logout <span class="oi oi-account-logout" title="Logout" aria-hidden="true"></span></a>
         </span>
     </div>
 </nav>

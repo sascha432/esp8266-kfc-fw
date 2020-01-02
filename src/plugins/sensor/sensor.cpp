@@ -203,54 +203,6 @@ void SensorPlugin::getStatus(Print &output)
 
 #include "at_mode.h"
 
-typedef enum {
-    NONE = 0,
-    FLOAT,
-    UINT64,
-} SensorVarsTypeEnum_t;
-
-typedef struct {
-    PGM_P name;
-    SensorVarsTypeEnum_t type;
-    void *ptr;
-} SensorVars_t;
-
-static String uint64ToString(uint64_t input) {
-    String result;
-    do {
-        char c = (input % 10) + '0';
-        input /= 10;
-        result = c + result;
-    } while (input);
-    return result;
-}
-
-static String get_var_value(SensorVars_t &var) {
-    switch(var.type) {
-        case FLOAT:
-            return String(*(float *)var.ptr, 6);
-        case UINT64:
-            return uint64ToString(*(uint64_t *)var.ptr);
-        default:
-            return String();
-    }
-}
-
-static void set_var_value(const char *value, SensorVars_t &var) {
-    switch(var.type) {
-        case FLOAT:
-            *(float *)var.ptr = atof(value);
-            break;
-        case UINT64:
-            *(uint64_t *)var.ptr = atoll(value);
-            break;
-        default:
-            break;
-    }
-}
-
-PROGMEM_AT_MODE_HELP_COMMAND_DEF(SENSORC, "SENSORC", "<variable-name>,<value>", "Configure sensors", "Display configuration");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(SENSORR, "SENSORR", "Reconfigure sensor plugin");
 #if IOT_SENSOR_HAVE_BATTERY
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(SENSORPBV, "SENSORPBV", "<repeat every n seconds>", "Print battery voltage");
 #endif
@@ -259,8 +211,6 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(SENSORINA219, "SENSORINA219", "<repeat eve
 #endif
 
 void SensorPlugin::atModeHelpGenerator() {
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SENSORC));
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SENSORR));
 #if IOT_SENSOR_HAVE_BATTERY
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SENSORPBV));
 #endif
@@ -270,45 +220,8 @@ void SensorPlugin::atModeHelpGenerator() {
 }
 
 bool SensorPlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) {
-    if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SENSORR))) {
-        serial.println(F("+SENSORR: Reconfiguring plugin..."));
-        reconfigure(nullptr);
-        return true;
-    }
-    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SENSORC))) {
-#if IOT_SENSOR_HAVE_BATTERY || IOT_SENSOR_HAVE_HLW8012 || IOT_SENSOR_HAVE_HLW8032
-        auto &_config = config._H_W_GET(Config().sensor);
-#endif
-        SensorVars_t sensor_variables[] = {
-#if IOT_SENSOR_HAVE_BATTERY
-            { PSTR("battery.calibration"), FLOAT, &_config.battery.calibration },
-#endif
-#if IOT_SENSOR_HAVE_HLW8012 || IOT_SENSOR_HAVE_HLW8032
-            { PSTR("hlw80xx.calibrationU"), FLOAT, &_config.hlw80xx.calibrationU },
-            { PSTR("hlw80xx.calibrationI"), FLOAT, &_config.hlw80xx.calibrationI },
-            { PSTR("hlw80xx.calibrationP"), FLOAT, &_config.hlw80xx.calibrationP },
-            { PSTR("hlw80xx.energyCounter"), UINT64, &_config.hlw80xx.energyCounter },
-#endif
-            { nullptr, SensorVarsTypeEnum_t::NONE, 0 }
-        };
-
-        if (argc != 2) {
-            for(uint8_t i = 0; sensor_variables[i].name; i++) {
-                serial.printf_P("+SENSORC: %s=%s\n", sensor_variables[i].name, get_var_value(sensor_variables[i]).c_str());
-            }
-        }
-        else {
-            for(uint8_t i = 0; sensor_variables[i].name; i++) {
-                if (!strcmp_P(argv[0], sensor_variables[i].name)) {
-                    set_var_value(argv[1], sensor_variables[i]);
-                    serial.printf_P("+SENSORC: set %s=%s\n", sensor_variables[i].name, get_var_value(sensor_variables[i]).c_str());
-                }
-            }
-        }
-        return true;
-    }
 #if IOT_SENSOR_HAVE_INA219
-    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SENSORINA219))) {
+    if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SENSORINA219))) {
         static EventScheduler::TimerPtr timer = nullptr;
         if (timer) {
             Scheduler.removeTimer(timer);
@@ -348,10 +261,11 @@ bool SensorPlugin::atModeHandler(Stream &serial, const String &command, int8_t a
         else {
             serial.println(F("+SENSORINA219: No sensor found"));
         }
+        return true;
     }
 #endif
 #if IOT_SENSOR_HAVE_BATTERY
-    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SENSORPBV))) {
+    if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SENSORPBV))) {
         static EventScheduler::TimerPtr timer = nullptr;
         if (timer) {
             Scheduler.removeTimer(timer);

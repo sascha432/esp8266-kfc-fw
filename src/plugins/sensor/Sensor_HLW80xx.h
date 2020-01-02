@@ -79,8 +79,9 @@
 #define IOT_SENSOR_HLW80xx_CALC_U(pulse)                ((128.000000 * IOT_SENSOR_HLW80xx_VREF * IOT_SENSOR_HLW80xx_V_RES_DIV * _calibrationU) / (pulse * IOT_SENSOR_HLW80xx_F_OSC))
 #define IOT_SENSOR_HLW80xx_CALC_I(pulse)                ((32.000000 * IOT_SENSOR_HLW80xx_VREF) / (pulse * (3 * IOT_SENSOR_HLW80xx_F_OSC * IOT_SENSOR_HLW80xx_SHUNT * _calibrationI)))
 #define IOT_SENSOR_HLW80xx_CALC_P(pulse)                ((4.000000 * IOT_SENSOR_HLW80xx_V_RES_DIV * IOT_SENSOR_HLW80xx_VREF * IOT_SENSOR_HLW80xx_VREF * _calibrationP) / (3 * pulse * IOT_SENSOR_HLW80xx_SHUNT * _calibrationI * IOT_SENSOR_HLW80xx_F_OSC))
-  // count is incremented on falling and raising edge
+// count is incremented on falling and raising edge
 #define IOT_SENSOR_HLW80xx_PULSE_TO_KWH(count)          (count * IOT_SENSOR_HLW80xx_CALC_P(1000000.0) / (1000.0 * 3600.0))
+#define IOT_SENSOR_HLW80xx_KWH_TO_PULSE(kwh)            (((1000.0 * 3600.0) * kwh) / IOT_SENSOR_HLW80xx_CALC_P(1000000.0))
 
 
 class Sensor_HLW80xx : public MQTTSensor {

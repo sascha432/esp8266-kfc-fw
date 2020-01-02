@@ -263,7 +263,7 @@ extern class Stream &DebugSerial;
 
 #if WEBSERVER_SUPPORT && !defined(WEBSERVER_TLS_SUPPORT)
 #if defined(ESP32)
-#define WEBSERVER_TLS_SUPPORT           1               // TLS support for the web server
+#define WEBSERVER_TLS_SUPPORT           0               // TLS support for the web server
 #elif defined(ESP8266)
 #define WEBSERVER_TLS_SUPPORT           0               // TLS support for the web server
 #endif

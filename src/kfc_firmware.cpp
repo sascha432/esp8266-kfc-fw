@@ -203,6 +203,7 @@ void setup() {
     }
 
     bool safe_mode = false;
+    bool incr_crash_counter = false;
     if (resetDetector.getSafeMode()) {
 
         safe_mode = true;
@@ -211,6 +212,7 @@ void setup() {
         delay(2000);
         resetDetector.clearCounter();
         resetDetector.setSafeMode(false);
+        config.setSafeMode(true);
 
     } else {
 
@@ -235,7 +237,6 @@ void setup() {
 #endif
 
             BlinkLEDTimer::setBlink(LED_BUILTIN, BlinkLEDTimer::SOS);
-            resetDetector.clearCounter();
             resetDetector.setSafeMode(1);
 
             if (
@@ -270,7 +271,7 @@ void setup() {
                             return false;
                         case 's':
                             resetDetector.setSafeMode(1);
-                            config.setSafeMode(true);
+                            resetDetector.clearCounter();
                             safe_mode = true;
                             return false;
                     }
@@ -289,6 +290,7 @@ void setup() {
             ) {
                 // timeout occured, disable safe mode
                 resetDetector.setSafeMode(false);
+                incr_crash_counter = true;
             }
             KFC_SAFE_MODE_SERIAL_PORT.println();
         }
@@ -297,7 +299,7 @@ void setup() {
 
 #if SPIFFS_SUPPORT
     SPIFFS.begin();
-    if (resetDetector.hasCrashDetected()) {
+    if (resetDetector.hasCrashDetected() || incr_crash_counter) {
         File file = SPIFFS.open(FSPGM(crash_counter_file), fs::FileOpenMode::read);
         char counter = 0;
         if (file) {
@@ -318,6 +320,7 @@ void setup() {
     config.read();
     if (safe_mode) {
 
+        config.setSafeMode(true);
         MySerialWrapper.replace(&KFC_SAFE_MODE_SERIAL_PORT, true);
         DebugSerial = MySerialWrapper;
 
@@ -377,7 +380,7 @@ void setup() {
         setup_plugins(resetDetector.hasWakeUpDetected() ? PluginComponent::PLUGIN_SETUP_AUTO_WAKE_UP : PluginComponent::PLUGIN_SETUP_DEFAULT);
 
 #if SPIFFS_SUPPORT
-        Scheduler.addTimer(60000, false, remove_crash_counter); // remove file after 1min.
+        Scheduler.addTimer(120000, false, remove_crash_counter); // remove file after 2min.
 #endif
 
     }

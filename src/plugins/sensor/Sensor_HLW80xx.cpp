@@ -175,10 +175,29 @@ void Sensor_HLW80xx::restart()
 void Sensor_HLW80xx::createConfigureForm(AsyncWebServerRequest *request, Form &form)
 {
     auto *sensor = &config._H_W_GET(Config().sensor); // must be a pointer
+    auto kWh = String(F("kWh"));
 
     form.add<float>(F("hlw80xx_calibrationU"), &sensor->hlw80xx.calibrationU)->setFormUI(new FormUI(FormUI::TEXT, F("HLW8012 Voltage Calibration")));
     form.add<float>(F("hlw80xx_calibrationI"), &sensor->hlw80xx.calibrationI)->setFormUI(new FormUI(FormUI::TEXT, F("HLW8012 Current Calibration")));
     form.add<float>(F("hlw80xx_calibrationP"), &sensor->hlw80xx.calibrationP)->setFormUI(new FormUI(FormUI::TEXT, F("HLW8012 Power Calibration")));
+
+    form.add(F("energyCounterPrimary"), String())
+        ->setFormUI((new FormUI(FormUI::TEXT, F("HLW8012 Total Energy")))->setSuffix(kWh)->setPlaceholder(String(IOT_SENSOR_HLW80xx_PULSE_TO_KWH(getEnergyPrimaryCounter()), 3)));
+    form.addValidator(new FormCallbackValidator([sensor, this](String value, FormField &field) {
+        if (value.length()) {
+            sensor->hlw80xx.energyCounter = IOT_SENSOR_HLW80xx_KWH_TO_PULSE(value.toFloat());
+            getEnergyPrimaryCounter() = sensor->hlw80xx.energyCounter;
+        }
+        return true;
+    }));
+    form.add(F("energyCounterSecondary"), String())
+        ->setFormUI((new FormUI(FormUI::TEXT, F("HLW8012 Energy")))->setSuffix(kWh)->setPlaceholder(String(IOT_SENSOR_HLW80xx_PULSE_TO_KWH(getEnergySecondaryCounter()), 3)));
+    form.addValidator(new FormCallbackValidator([this](String value, FormField &field) {
+        if (value.length()) {
+            getEnergySecondaryCounter() = IOT_SENSOR_HLW80xx_KWH_TO_PULSE(value.toFloat());;
+        }
+        return true;
+    }));
 }
 
 void Sensor_HLW80xx::publishState(MQTTClient *client)

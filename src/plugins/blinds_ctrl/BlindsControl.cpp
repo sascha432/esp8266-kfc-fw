@@ -292,10 +292,11 @@ void BlindsControl::_publishState(MQTTClient *client) {
     _saveState();
 }
 
-void BlindsControl::_loadState() {
+void BlindsControl::_loadState()
+{
 #if IOT_BLINDS_CTRL_SAVE_STATE
     BlindsChannel::StateEnum_t state[2] = { BlindsChannel::UNKNOWN, BlindsChannel::UNKNOWN };
-    auto file = SPIFFS.open(FSPGM(iot_blinds_control_state_file), "r");
+    auto file = SPIFFS.open(FSPGM(iot_blinds_control_state_file), fs::FileOpenMode::read);
     if (file) {
         file.read(reinterpret_cast<uint8_t *>(&state), sizeof(state));
         _channels[0].setState(state[0]);
@@ -308,7 +309,7 @@ void BlindsControl::_loadState() {
 void BlindsControl::_saveState() {
 #if IOT_BLINDS_CTRL_SAVE_STATE
     BlindsChannel::StateEnum_t state[2] = { _channels[0].getState(), _channels[1].getState() };
-    auto file = SPIFFS.open(FSPGM(iot_blinds_control_state_file), "w");
+    auto file = SPIFFS.open(FSPGM(iot_blinds_control_state_file), fs::FileOpenMode::write);
     if (file) {
         file.write(reinterpret_cast<const uint8_t *>(&state), sizeof(state));
     }

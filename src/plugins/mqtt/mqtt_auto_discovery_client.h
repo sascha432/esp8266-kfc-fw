@@ -2,18 +2,20 @@
  * Author: sascha_lammers@gmx.de
  */
 
+#if MQTT_SUPPORT
+
 #pragma once
 
 // Auto Discovery Client for MQTT
 // The client collects auto discovery information for the topic "mqtt_discovery_prefix"
-
-#if MQTT_SUPPORT
 
 #include <Arduino_compat.h>
 #include <LString.h>
 #include <vector>
 #include <memory>
 #include "mqtt_component.h"
+
+#if MQTT_AUTO_DISCOVERY_CLIENT
 
 class MQTTAutoDiscoveryClient : public MQTTComponent {
 public:
@@ -61,5 +63,7 @@ private:
     static uint16_t _uniqueId;
     static MQTTAutoDiscoveryClient *_instance;
 };
+
+#endif
 
 #endif

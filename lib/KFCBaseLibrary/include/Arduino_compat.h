@@ -142,6 +142,15 @@ void throwException(PGM_P message);
 
 #endif
 
+namespace fs {
+    class FileOpenMode {
+    public:
+        static const char *read;
+        static const char *write;
+        static const char *append;
+    };
+};
+
 #ifndef _STRINGIFY
 #define _STRINGIFY(s)                   __STRINGIFY(s)
 #endif

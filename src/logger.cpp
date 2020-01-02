@@ -265,7 +265,7 @@ const String Logger::getLogFilename(LogLevel logLevel) {
 bool Logger::openLog(LogLevel logLevel) {
 
     auto fileName = this->getLogFilename(logLevel);
-    return (bool)SPIFFS.open(fileName, SPIFFS.exists(fileName) ? "a" : "w");
+    return (bool)SPIFFS.open(fileName, SPIFFS.exists(fileName) ? fs::FileOpenMode::append : fs::FileOpenMode::write);
 }
 
 void Logger::closeLog() {

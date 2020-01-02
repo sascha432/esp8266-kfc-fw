@@ -580,7 +580,7 @@ void STK500v1Programmer::setFuseBytes(uint8_t low, uint8_t high, uint8_t extende
 }
 
 void STK500v1Programmer::dumpLog(Stream &output) {
-    auto file = SPIFFS.open(FSPGM(stk500v1_log_file), "r");
+    auto file = SPIFFS.open(FSPGM(stk500v1_log_file), fs::FileOpenMode::read);
     if (file) {
         while(file.available()) {
             output.print((char)file.read());
@@ -615,7 +615,7 @@ bool STK500v1Programmer::getSignature(const char *mcu, char *signature) {
             memcpy_P(signature, PSTR("\x1e\x95\x0f"), 3);
         }
         else {
-            auto file = SPIFFS.open(FSPGM(stk500v1_sig_file), "r");
+            auto file = SPIFFS.open(FSPGM(stk500v1_sig_file), fs::FileOpenMode::read);
             if (file) {
                 while(file.available()) {
                     auto nameStr = file.readStringUntil(',');
@@ -714,7 +714,7 @@ void STK500v1Programmer::_logPrintf_P(PGM_P format, ...) {
             _status(str);
         }
         else if (_logging == LOG_FILE) {
-            auto file = SPIFFS.open(FSPGM(stk500v1_log_file), "a");
+            auto file = SPIFFS.open(FSPGM(stk500v1_log_file), fs::FileOpenMode::append);
             if (file) {
                 file.println(str);
             }

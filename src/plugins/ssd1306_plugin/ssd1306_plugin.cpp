@@ -51,7 +51,7 @@ public:
     static bool readFromFile(const String &filename, GFXfontContainer::Ptr &target) {
         _debug_printf_P(PSTR("GFXfontContainer::readFromFile(%s)\n"), filename.c_str());
 
-        File file = SPIFFS.open(filename, "r");
+        File file = SPIFFS.open(filename, fs::FileOpenMode::read);
         if (file && file.size()) {
             return readFromStream(file, target);
         }
@@ -326,7 +326,7 @@ bool ssd1306_at_mode_command_handler(Stream &serial, const String &command, int8
         if (argc != 1) {
             at_mode_print_invalid_arguments(serial);
         } else {
-            auto file = SPIFFS.open(argv[0], "r");
+            auto file = SPIFFS.open(argv[0], fs::FileOpenMode::read);
             if  (file) {
                 ssd1306_disable_status();
                 serial.printf_P("+SSDRF: Reading %d bytes from %s...\n", file.size(), argv[0]);

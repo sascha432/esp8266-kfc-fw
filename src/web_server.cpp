@@ -406,7 +406,7 @@ void web_server_update_upload_handler(AsyncWebServerRequest *request, String fil
 #if STK500V1
             if (imageType == 3) {
                 status->command = U_ATMEGA;
-                firmwareTempFile = SPIFFS.open(FSPGM(stk500v1_tmp_file), "w");
+                firmwareTempFile = SPIFFS.open(FSPGM(stk500v1_tmp_file), fs::FileOpenMode::write);
                 _debug_printf_P(PSTR("ATmega fw temp file %u, filename %s\n"), (bool)firmwareTempFile, String(FSPGM(stk500v1_tmp_file)).c_str());
             } else
 #endif
@@ -782,7 +782,6 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
                 webTemplate = new ConfigTemplate(form);
                 if (form->validate()) {
                     config.write();
-                    config.setConfigDirty(true);
                     PluginComponent::getByName(PSTR("cfg"))->invokeReconfigure(PSTR("wifi"));
                 } else {
                     config.discard();
@@ -792,7 +791,6 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
                 webTemplate = new ConfigTemplate(form);
                 if (form->validate()) {
                     config.write();
-                    config.setConfigDirty(true);
                     PluginComponent::getByName(PSTR("cfg"))->invokeReconfigure(PSTR("network"));
                 } else {
                     config.discard();
@@ -925,13 +923,17 @@ void WebServerPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &
 {
     form.add<uint8_t>(F("http_enabled"), _H_STRUCT_FORMVALUE(Config().flags, uint8_t, webServerMode));
     form.addValidator(new FormRangeValidator(0, HTTP_MODE_SECURE));
+
 #if WEBSERVER_TLS_SUPPORT
     form.addValidator(new FormMatchValidator(F("There is not enough free RAM for TLS support"), [](FormField &field) {
         return (field.getValue().toInt() != HTTP_MODE_SECURE) || (ESP.getFreeHeap() > 24000);
     }));
 #endif
 
+#if defined(ESP8266)
     form.add<bool>(F("http_perf"), _H_STRUCT_FORMVALUE(Config().flags, bool, webServerPerformanceModeEnabled));
+#endif
+
     form.add<uint16_t>(F("http_port"), &config._H_W_GET(Config().http_port));
     form.addValidator(new FormTCallbackValidator<uint16_t>([](uint16_t port, FormField &field) {
 #if WEBSERVER_TLS_SUPPORT
@@ -945,8 +947,8 @@ void WebServerPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &
             if (port == 0) {
                 port = 80;
             }
-            field.setValue(String(port));
         }
+        field.setValue(String(port));
         return true;
     }));
     form.addValidator(new FormRangeValidator(F("Invalid port"), 1, 65535));

@@ -47,7 +47,7 @@ void AsyncJsonResponse::updateLength()
 AsyncProgmemFileResponse::AsyncProgmemFileResponse(const String &contentType, FSMapping *mapping, AwsTemplateProcessor templateCallback) : AsyncAbstractResponse(templateCallback)
 {
     _code = 200;
-    _content = mapping->open("r");
+    _content = mapping->open(fs::FileOpenMode::read);
     _contentLength = _content.size();
     _contentType = contentType;
     _sendContentLength = true;
@@ -403,36 +403,33 @@ size_t AsyncBufferResponse::_fillBuffer(uint8_t * buf, size_t maxLen)
 }
 
 
-AsyncDirWrapper::AsyncDirWrapper()
+AsyncDirWrapper::AsyncDirWrapper() : _isValid(false), _dir(), _curMapping(nullptr)
 {
-    _isValid = false;
-    _dir = Dir();
-    _curMapping = &Mappings::getInstance().getInvalid();
 }
 
-AsyncDirWrapper::AsyncDirWrapper(const String & dirName) : AsyncDirWrapper()
+AsyncDirWrapper::AsyncDirWrapper(const String &dirName) : AsyncDirWrapper()
 {
     _debug_printf_P(PSTR("AsyncDirWrapper::AsyncDirWrapper(%s)\n"), dirName.c_str());
     _dirName = dirName;
     append_slash(_dirName);
-    _dir = SPIFFSWrapper::openDir(_sharedEmptyString);
+    _dir = SPIFFSWrapper::openDir(FSPGM(slash));
     _isValid = _dir.next();
     _firstNext = true;
     _dirs.push_back(_dirName);
 
     if (_isValid) { // filter files that do not match _dirName
-        _begin = Mappings::getInstance().getBeginIterator();
-        _end = Mappings::getInstance().getEndIterator();
+        auto &mappings = Mappings::getInstance().getMappings();
+        _begin = mappings.begin();
+        _end = mappings.end();
         _iterator = _begin;
-        _curMapping = nullptr;
     }
 }
 
 AsyncDirWrapper::~AsyncDirWrapper()
 {
-    if (_curMapping && _curMapping->isValid()) { // must be allocated memory
-        delete _curMapping;
-    }
+    // if (_curMapping) {
+    //     delete _curMapping;
+    // }
 }
 
 void AsyncDirWrapper::setVirtualRoot(const String & path)
@@ -490,7 +487,7 @@ bool AsyncDirWrapper::_fileInside(const String & path)
 
         name = path.substring(pos);
         fullpath = path;
-        if (name == FSPGM(dot)) {
+        if (String_equals(name, FSPGM(dot))) {
             return false;
         }
         _type = FILE;
@@ -523,15 +520,16 @@ bool AsyncDirWrapper::next()
     if (_iterator != _end) { // go through virtual files first
         result = true;
         do {
-            if (_curMapping) {
-                delete _curMapping;
-            }
+            // if (_curMapping) {
+            //     delete _curMapping;
+            // }
+            _curMapping = nullptr;
             if (_iterator == _end) { // continue with files from Dir()
                 result = false;
-                _curMapping = &Mappings::getInstance().getInvalid();
                 break;
             }
-            _curMapping = new FSMapping(_iterator->getPath(), _iterator->getMappedPath(), _iterator->getModificatonTime(), _iterator->getFileSize()); //TODO memory leak, FSMapping needs a clone method or unique_ptr has to be removed
+            _curMapping = &(*_iterator);
+            //_curMapping = new FSMapping(_iterator->getPath(), _iterator->getMappedPath(), _iterator->getModificatonTime(), _iterator->getFileSize()); //TODO memory leak, FSMapping needs a clone method or unique_ptr has to be removed
             _fileName = _virtualRoot + _curMapping->getPath();
             // if (!_fileName.startsWith(_dirName)) {
             //     debug_printf("filtered-virtual %s: %s (%d) => %s\n", _dirName.c_str(), _fileName.c_str(), isMapped(), mappedFile().c_str());
@@ -540,10 +538,11 @@ bool AsyncDirWrapper::next()
         } while (!_fileInside(_fileName)); // filer files if real file does not match _dirName
     }
     if (!result) {
-        if (_curMapping && _curMapping->isValid()) { // must be allocated memory
-            delete _curMapping;
-            _curMapping = &Mappings::getInstance().getInvalid();
-        }
+        // if (_curMapping && _curMapping->isValid()) { // must be allocated memory
+        //     // delete _curMapping;
+        //     _curMapping = &Mappings::getInstance().getInvalid();
+        // }
+        _curMapping = nullptr;
         bool skip;
         do {
             if (_firstNext) {
@@ -582,7 +581,7 @@ bool AsyncDirWrapper::next()
 
 File AsyncDirWrapper::openFile(const char * mode)
 {
-    if (_curMapping->isValid()) {
+    if (_curMapping) {
         return _curMapping->open(mode);
     }
     return SPIFFSWrapper::open(_dir, mode);
@@ -595,7 +594,7 @@ String AsyncDirWrapper::fileName()
 
 String AsyncDirWrapper::mappedFile()
 {
-    if (_curMapping->isValid()) {
+    if (_curMapping) {
         return _curMapping->getMappedPath();
     }
     return _dir.fileName();
@@ -603,12 +602,12 @@ String AsyncDirWrapper::mappedFile()
 
 bool AsyncDirWrapper::isMapped() const
 {
-    return _curMapping->isValid();
+    return _curMapping != nullptr;
 }
 
 void AsyncDirWrapper::getModificatonTime(char * modified, size_t size, PGM_P format)
 {
-    if (!_curMapping->isValid()) {
+    if (!_curMapping) {
         modified[0] = '0';
         modified[1] = 0;
         return;
@@ -617,8 +616,9 @@ void AsyncDirWrapper::getModificatonTime(char * modified, size_t size, PGM_P for
     timezone_strftime_P(modified, size, format, tm);
 }
 
-size_t AsyncDirWrapper::fileSize() {
-    if (_curMapping->isValid()) {
+size_t AsyncDirWrapper::fileSize()
+{
+    if (_curMapping) {
         return _curMapping->getFileSize();
     }
     return _dir.fileSize();

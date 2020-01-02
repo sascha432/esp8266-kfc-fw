@@ -4,6 +4,10 @@
 
 #include "Arduino_compat.h"
 
+const char *fs::FileOpenMode::read = "r";
+const char *fs::FileOpenMode::write = "w";
+const char *fs::FileOpenMode::append = "a";
+
 #if _MSC_VER
 #include <winternl.h>
 #endif
@@ -190,7 +194,7 @@ void Dir::__test() {
     while (dir.next()) {
         if (dir.isFile()) {
             printf("is_file: Dir::fileName() %s Dir::fileSize() %d\n", dir.fileName().c_str(), dir.fileSize());
-            File file = dir.openFile("r");
+            File file = dir.openFile(fs::FileOpenMode::read);
             printf("File::size %d\n", file.size());
             file.close();
         } else if (dir.isDirectory()) {

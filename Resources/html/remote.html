@@ -38,6 +38,7 @@
                 </select>
             </div>
             <span id="http_settings">
+                <!--#if defined(ESP8266)-->
                 <div class="form-group">
                     <label for="http_perf">Performance:</label>
                     <select class="form-control" name="http_perf" id="http_perf">
@@ -45,7 +46,8 @@
                         <option value="1" %HTTP_PERF_1%>160Mhz (Recommended for TLS)</option>
                     </select>
                 </div>
-                    <div class="form-group">
+                <!--#endif-->
+                <div class="form-group">
                     <label for="http_port">HTTP Port:</label>
                     <input type="text" class="form-control setting-requires-restart" name="http_port" id="http_port" value="%HTTP_PORT%" placeholder="80">
                 </div>

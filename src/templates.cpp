@@ -250,10 +250,15 @@ void ConfigTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     }
 
     if (String_equals(key, F("NETWORK_MODE"))) {
+        bool m = false;
         if (config._H_GET(Config().flags).wifiMode & WIFI_AP) {
             output.print(F("#station_mode"));
+            m = true;
         }
         if (config._H_GET(Config().flags).wifiMode & WIFI_STA) {
+            if (m) {
+                output.print(',');
+            }
             output.print(F("#ap_mode"));
         }
     }
@@ -276,7 +281,7 @@ void ConfigTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     }
     else if (String_equals(key, F("SSL_CERT"))) {
 #if SPIFFS_SUPPORT
-        File file = SPIFFS.open(FSPGM(server_crt), "r");
+        File file = SPIFFS.open(FSPGM(server_crt), fs::FileOpenMode::read);
         if (file) {
             output.print(file.readString());
         }
@@ -284,7 +289,7 @@ void ConfigTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     }
     else if (String_equals(key, F("SSL_KEY"))) {
 #if SPIFFS_SUPPORT
-        File file = SPIFFS.open(FSPGM(server_key), "r");
+        File file = SPIFFS.open(FSPGM(server_key), fs::FileOpenMode::read);
         if (file) {
             output.print(file.readString());
         }
@@ -484,12 +489,12 @@ File2String::File2String(const String & filename)
 
 String File2String::toString()
 {
-    return SPIFFS.open(_filename, "r").readString();
+    return SPIFFS.open(_filename, fs::FileOpenMode::read).readString();
 }
 
 void File2String::fromString(const String &value)
 {
-    SPIFFS.open(_filename, "w").print(value);
+    SPIFFS.open(_filename, fs::FileOpenMode::write).print(value);
     //write((const uint8_t *)value.c_str(), value.length());
 }
 

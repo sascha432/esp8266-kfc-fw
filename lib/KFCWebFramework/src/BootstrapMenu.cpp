@@ -146,7 +146,7 @@ void BootstrapMenu::html(Print &output, menu_item_id_t menuId, bool dropDown)
 // 	_cacheFilename = PrintString(F("/c/menu%02x%02x%02x%02x%02x%02x"), hash[0], hash[1], hash[2], hash[3], hash[4], hash[5]);
 
 // 	if (!SPIFFS.exists(_cacheFilename)) {
-// 		File file = SPIFFS.open(_cacheFilename, "w");
+// 		File file = SPIFFS.open(_cacheFilename, fs::FileOpenMode::write);
 // 		if (file) {
 // 			file.write(output.c_str(), output.length());
 // 			file.close();

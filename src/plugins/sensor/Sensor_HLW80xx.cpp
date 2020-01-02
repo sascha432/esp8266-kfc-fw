@@ -223,7 +223,7 @@ void Sensor_HLW80xx::_saveEnergyCounter()
 {
     _debug_printf_P(PSTR("Sensor_HLW80xx::_saveEnergyCounter()\n"));
 #if IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT
-    auto file = SPIFFS.open(FSPGM(iot_sensor_hlw80xx_state_file), "w");
+    auto file = SPIFFS.open(FSPGM(iot_sensor_hlw80xx_state_file), fs::FileOpenMode::write);
     if (file) {
         file.write(reinterpret_cast<uint8_t *>(&_energyCounter), sizeof(_energyCounter));
         file.close();
@@ -238,7 +238,7 @@ void Sensor_HLW80xx::_loadEnergyCounter()
 {
     _debug_printf_P(PSTR("Sensor_HLW80xx::_loadEnergyCounter()\n"));
 #if IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT
-    auto file = SPIFFS.open(FSPGM(iot_sensor_hlw80xx_state_file), "r");
+    auto file = SPIFFS.open(FSPGM(iot_sensor_hlw80xx_state_file), fs::FileOpenMode::read);
     if (!file || file.read(reinterpret_cast<uint8_t *>(&_energyCounter), sizeof(_energyCounter)) != sizeof(_energyCounter)) {
         resetEnergyCounter();
         _energyCounter[0] = config._H_GET(Config().sensor).hlw80xx.energyCounter; // restore data from EEPROM in case SPIFFS was updated

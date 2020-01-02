@@ -16,6 +16,8 @@
 #include <debug_helper_disable.h>
 #endif
 
+#if MQTT_AUTO_DISCOVERY_CLIENT
+
 uint16_t MQTTAutoDiscoveryClient::_uniqueId = 1;
 MQTTAutoDiscoveryClient *MQTTAutoDiscoveryClient::_instance = nullptr;
 
@@ -149,5 +151,7 @@ void MQTTAutoDiscoveryClient::onMessage(MQTTClient *client, char *topic, char *p
     _uniqueId++; // increase counter for each new device
     _discovery.push_back(std::move(discoveryPtr));
 }
+
+#endif
 
 #endif

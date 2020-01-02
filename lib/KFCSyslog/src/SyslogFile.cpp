@@ -44,7 +44,7 @@ void SyslogFile::transmit(const String &message, Callback_t callback) {
         if (_maxSize && (message.length() + logFile.size() + 1) >= _maxSize) {
             logFile.close();
             _rotateLogfile(_filename, _maxRotate);
-            logFile = SPIFFS.open(_filename, "a"); // if the rotation fails, just append to the existing file
+            logFile = SPIFFS.open(_filename, fs::FileOpenMode::append); // if the rotation fails, just append to the existing file
         }
 		if (logFile) {
             auto written = logFile.write((const uint8_t *)message.c_str(), message.length());

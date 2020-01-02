@@ -19,7 +19,7 @@
 // Enabled/disable with +MMQTAD=1/0
 #ifndef MQTT_AUTO_DISCOVERY_CLIENT
 #if MQTT_AUTO_DISCOVERY && AT_MODE_SUPPORTED
-#define MQTT_AUTO_DISCOVERY_CLIENT          1
+#define MQTT_AUTO_DISCOVERY_CLIENT          0
 #endif
 #endif
 

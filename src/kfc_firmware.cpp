@@ -298,13 +298,13 @@ void setup() {
 #if SPIFFS_SUPPORT
     SPIFFS.begin();
     if (resetDetector.hasCrashDetected()) {
-        File file = SPIFFS.open(FSPGM(crash_counter_file), "r");
+        File file = SPIFFS.open(FSPGM(crash_counter_file), fs::FileOpenMode::read);
         char counter = 0;
         if (file) {
             counter = file.read() + 1;
             file.close();
         }
-        file = SPIFFS.open(FSPGM(crash_counter_file), "w");
+        file = SPIFFS.open(FSPGM(crash_counter_file), fs::FileOpenMode::write);
         file.write(counter);
         file.close();
         if (counter >= 3) {  // boot in safe mode if there were 3 crashes within the first minute

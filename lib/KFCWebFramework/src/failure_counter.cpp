@@ -80,7 +80,7 @@ void FailureCounter::addFailure()
         loginFailures.rewriteSPIFFSFile();
     }
     else {
-        File file = SPIFFS.open(FSPGM(login_failure_file), "a");
+        File file = SPIFFS.open(FSPGM(login_failure_file), fs::FileOpenMode::append);
         if (file) {
             write(file);
             file.close();
@@ -138,7 +138,7 @@ void FailureCounterContainer::readFromSPIFFS()
 {
     _failures.clear();
 #ifdef SECURITY_LOGIN_FILE
-    File file = SPIFFS.open(FSPGM(login_failure_file), "r");
+    File file = SPIFFS.open(FSPGM(login_failure_file), fs::FileOpenMode::read);
     if (file) {
 #if DEBUG
         int count = 0;
@@ -172,7 +172,7 @@ void FailureCounterContainer::readFromSPIFFS()
  **/
 void FailureCounterContainer::rewriteSPIFFSFile()
 {
-    File file = SPIFFS.open(FSPGM(login_failure_file), "w");
+    File file = SPIFFS.open(FSPGM(login_failure_file), fs::FileOpenMode::write);
     if (file) {
 #if DEBUG
         int count = _failures.size();

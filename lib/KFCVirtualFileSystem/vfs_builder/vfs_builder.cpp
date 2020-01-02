@@ -33,6 +33,7 @@ uint16_t crc16(uint8_t const *data, size_t length) {
 #include <push_pack.h>
 
 #define FS_MAPPINGS_HASH_LENGTH 20
+
 typedef unsigned char item_counter_t;
 
 typedef struct __attribute__packed {
@@ -126,7 +127,6 @@ MappingsList read_mappings(const char *path) {
             printf("NOTE: long filename %s (%zd)\n", entry.virtual_path, len);
         }
         if (len >= VFS_MAX_PATH) {
-
             printf("Filenames are limited to %d charachters\n", VFS_MAX_PATH);
             exit(1);
         }
@@ -156,9 +156,11 @@ bool copy_file(const char *dst, const char *src, uint32_t file_size) {
 
 }
 
-bool copy_file(FILE *fp, const char *src, size_t file_size) {
-
-    char buf[0xffff];
+bool copy_file(FILE *fp, const char *src, size_t file_size) 
+{
+    static const size_t buf_size = 0xffff;
+    std::unique_ptr<char []> _buf(new char[buf_size]);
+    auto buf = _buf.get();
     size_t read, copied = 0;
 
     FILE *fp_src;
@@ -169,7 +171,7 @@ bool copy_file(FILE *fp, const char *src, size_t file_size) {
     }
 
     while(!feof(fp_src)) {
-        read = fread(buf, 1, sizeof(buf), fp_src);
+        read = fread(buf, 1, buf_size, fp_src);
         if (ferror(fp_src)) {
             printf("read error %zd bytes, copied %zd\n", read, copied);
         }
@@ -437,7 +439,7 @@ int main(int argc, char **argv) {
         exit(255);
     }
 
-#if _DEBUG && _MSC_VER // msvs memory debug
+#if _DEBUG && _MSC_VER // msvc memory debug
 	// Get current flag
 	int tmpFlag = _CrtSetDbgFlag( _CRTDBG_REPORT_FLAG );
 

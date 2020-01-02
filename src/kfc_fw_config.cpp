@@ -315,8 +315,14 @@ void KFCFWConfiguration::restoreFactorySettings() {
     flags.softAPDHCPDEnabled = true;
     flags.stationModeDHCPEnabled = true;
     flags.ntpClientEnabled = true;
+#if defined(ESP32) && WEBSERVER_TLS_SUPPORT
+    flags.webServerMode = HTTP_MODE_SECURE;
+#else
     flags.webServerMode = HTTP_MODE_UNSECURE;
+#endif
+#if defined(ESP8266)
     flags.webServerPerformanceModeEnabled = true;
+#endif
     flags.mqttMode = MQTT_MODE_SECURE;
 #if MQTT_AUTO_DISCOVERY
     flags.mqttAutoDiscoveryEnabled = true;

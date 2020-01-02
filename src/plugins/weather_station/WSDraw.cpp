@@ -417,7 +417,7 @@ void WSDraw::_broadcastCanvas(int16_t x, int16_t y, int16_t w, int16_t h)
     //    bitmap.read();
     //    count++;
     //}
-    // auto file = SPIFFS.open("test.bmp", "w");
+    // auto file = SPIFFS.open("test.bmp", fs::FileOpenMode::write);
     // auto stream = getCanvas().getBitmap(x, y, w, h);
     // while (stream.available()) {
     //     file.write(stream.read());

@@ -79,7 +79,9 @@ struct ConfigFlags {
     ConfigFlags_t softAPDHCPDEnabled:1;
     ConfigFlags_t stationModeDHCPEnabled:1;
     ConfigFlags_t webServerMode:2;
+#if defined(ESP8266)
     ConfigFlags_t webServerPerformanceModeEnabled:1;
+#endif
     ConfigFlags_t ntpClientEnabled:1;
     ConfigFlags_t syslogProtocol:3;
     ConfigFlags_t mqttMode:2;

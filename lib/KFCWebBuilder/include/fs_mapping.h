@@ -10,12 +10,9 @@
 
 class __FSMapping {
 public:
-    __FSMapping() {
-        _path = nullptr;
+    __FSMapping() : _path(nullptr) {
     }
-    __FSMapping(const char *path) {
-        _gzipped = false;
-        _path = path;
+    __FSMapping(const char *path) : _path(path), _gzipped(false) {
     }
     virtual ~__FSMapping() {
     }
@@ -29,7 +26,7 @@ public:
     operator void*() const {
         return _path == nullptr ? nullptr : (void *)*this;
     }
-    const bool isValid() const {
+    bool isValid() const {
         return _path != nullptr;
     }
 
@@ -39,11 +36,11 @@ public:
     void setPath(const char *path) {
         _path = path;
     }
-    const bool isPath(const char *path) const {
+    bool isPath(const char *path) const {
         return strcmp(_path, path) == 0;
     }
 
-    const bool isGzipped() const {
+    bool isGzipped() const {
         return _gzipped;
     }
     void setGzipped(bool gzipped) {
@@ -57,15 +54,38 @@ private:
 
 class FSMapping : public __FSMapping {
 public:
-    FSMapping() : __FSMapping() {
+    FSMapping() : __FSMapping(), _hash(nullptr) {
     }
     FSMapping(const char *path, const char *mappedPath, time_t modificationTime, uint32_t fileSize) : __FSMapping(path) {
         _mappedPath = mappedPath;
         _modificationTime = modificationTime;
         _fileSize = fileSize;
     }
+    virtual ~FSMapping() {
+        if (_hash) {
+            free(_hash);
+        }
+    }
 
-    const time_t getModificatonTime() const {
+    FSMapping(FSMapping &&mapping) {
+        *this = std::move(mapping);
+    }
+
+    FSMapping &operator=(const FSMapping &mapping) {
+        memcpy(this, &mapping, sizeof(*this));
+        if (mapping._hash) {
+            _hash = (uint8_t *)malloc(getHashSize());
+            memcpy(_hash, mapping._hash, getHashSize());
+        }
+        return *this;
+    }
+    FSMapping &operator=(FSMapping &&mapping) {
+        memcpy(this, &mapping, sizeof(*this));
+        mapping._hash = nullptr;
+        return *this;
+    }
+
+    time_t getModificatonTime() const {
         return _modificationTime;
     }
     const time_t *getModificatonTimePtr() const {
@@ -85,26 +105,29 @@ public:
         _mappedPath = mappedPath;
     }
 
-    const bool isMapped(const char *mapped) const {
+    bool isMapped(const char *mapped) const {
         return strcmp(_mappedPath, mapped) == 0;
     }
 
     uint32_t getFileSize() const;
 
-    std::unique_ptr<uint8_t []> &getHashPtr();
-    const char *getHash() const;
-    const String getHashString() const;
+    uint8_t *getHash() const {
+        return _hash;
+    }
+    String getHashString() const;
 
     bool setHashFromHexStr(const char *hash);
     bool setHash(uint8_t *hash);
 
-    const uint8_t getHashSize() const;
+    constexpr static uint8_t getHashSize() {
+        return FS_MAPPINGS_HASH_LENGTH;
+    }
 
     const File open(const char *mode) const;
 
 private:
     const char *_mappedPath;
-    std::unique_ptr<uint8_t []> _hash;
+    uint8_t *_hash;
     uint32_t _fileSize;
     time_t _modificationTime;
 };
@@ -113,7 +136,7 @@ private:
 class Mappings;
 
 typedef std::vector<FSMapping> FileMappingsList;
-typedef std::vector<FSMapping>::iterator FileMappingsListIterator;
+typedef std::vector<FSMapping>::const_iterator FileMappingsListIterator;
 
 class Mappings {
     enum Flags {
@@ -126,33 +149,23 @@ public:
 
     static Mappings &getInstance();
 
-    bool empty() {
+    inline bool empty() const {
         return _mappings.empty();
     }
-    const FSMapping &get(const __FlashStringHelper *path) const {
-        char buf[strlen_P((PGM_P)path) + 1];
-        strcpy_P(buf, reinterpret_cast<PGM_P>(path));
-        return get(buf);
-    }
-    const FSMapping &get(const String &path) const {
+    inline FileMappingsListIterator get(const String &path) const {
         return get(path.c_str());
     }
-    const FSMapping &get(const char *path) const;
+    FileMappingsListIterator get(const char *path) const;
 
-    FSMapping *find(const String &path) const {
+    inline FSMapping *find(const String &path) const {
         return find(path.c_str());
     }
     FSMapping *find(const char *path) const;
 
-    const FSMapping &getByMappedPath(const String &mappedPath) const {
+    inline FileMappingsListIterator getByMappedPath(const String &mappedPath) const {
         return getByMappedPath(mappedPath.c_str());
     }
-    const  FSMapping &getByMappedPath(const char *mappedPath) const;
-
-    const FSMapping &getInvalid() const {
-        return Mappings::_invalidMapping;
-    }
-
+    FileMappingsListIterator getByMappedPath(const char *mappedPath) const;
 
     bool rename(const char* pathFrom, const char* pathTo);
     bool remove(const char *path);
@@ -164,14 +177,7 @@ public:
     void _storeMappings(bool sort = false);
     void _freeMappings();
 
-    void dump(Print &stream);
-
-    FileMappingsListIterator getBeginIterator() {
-        return _mappings.begin();
-    }
-    FileMappingsListIterator getEndIterator() {
-        return _mappings.end();
-    }
+    void dump(Print &output);
 
     FileMappingsList &getMappings() {
         return _mappings;

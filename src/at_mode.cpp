@@ -45,7 +45,7 @@ static ATModeHelpVector at_mode_help;
 // class CatFile {
 // public:
 //     CatFile(const String &filename, Stream &output) : _output(output) {
-//         _file = SPIFFS.open(filename, "r");
+//         _file = SPIFFS.open(filename, fs::FileOpenMode::read);
 //     }
 // private:
 //     Stream &_output;
@@ -549,7 +549,7 @@ void at_mode_serial_handle_event(String &commandString) {
             else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(IMPORT))) {
                 if (argc >= 1) {
                     bool res = false;
-                    auto file = SPIFFS.open(args[0], "r");
+                    auto file = SPIFFS.open(args[0], fs::FileOpenMode::read);
                     if (file) {
                         output.printf_P(PSTR("+IMPORT: %s"), args[0]);
                         Configuration::Handle_t *handlesPtr = nullptr;
@@ -669,7 +669,7 @@ void at_mode_serial_handle_event(String &commandString) {
                     at_mode_print_invalid_arguments(output);
                 }
                 else {
-                    File file = SPIFFS.open(args[0], "r");
+                    File file = SPIFFS.open(args[0], fs::FileOpenMode::read);
                     if (file) {
                         Scheduler.addTimer(10, true, [&output, file](EventScheduler::TimerPtr timer) mutable {
                             char buf[256];
@@ -752,7 +752,7 @@ void at_mode_serial_handle_event(String &commandString) {
                     displayTimer._rssiMax = 0;
                     if (interval == 0) {
                         displayTimer.removeTimer();
-                        output.printf_P(PSTR("+%s: Interval disabled"), cmd);
+                        output.printf_P(PSTR("+%s: Interval disabled\n"), cmd);
                     } else {
                         output.printf_P(PSTR("+%s: Interval set to %.3f seconds\n"), cmd, interval);
                         create_heap_timer(interval, displayTimer._type);

@@ -785,7 +785,7 @@ bool mqtt_at_mode_is_connected(Stream &serial) {
     return true;
 }
 
-bool mqtt_at_mode_auto_recovery(Stream &serial) {
+bool mqtt_at_mode_auto_discovery(Stream &serial) {
     if (!MQTTAutoDiscovery::isEnabled()) {
         serial.println(F("+MQTT: Auto discovery disabled"));
         return false;
@@ -793,13 +793,15 @@ bool mqtt_at_mode_auto_recovery(Stream &serial) {
     return true;
 }
 
-bool mqtt_at_mode_auto_recovery_client(Stream &serial) {
+#if MQTT_AUTO_DISCOVERY_CLIENT
+bool mqtt_at_mode_auto_discovery_client(Stream &serial) {
     if (!MQTTAutoDiscoveryClient::getInstance()) {
         serial.println(F("+MQTT: Auto discovery client not running"));
         return false;
     }
     return true;
 }
+#endif
 
 bool MQTTPlugin::hasAtMode() const {
     return true;
@@ -858,7 +860,7 @@ bool MQTTPlugin::atModeHandler(Stream &serial, const String &command, int8_t arg
         if (argc != 1) {
             at_mode_print_invalid_arguments(serial);
         }
-        else if (mqtt_at_mode_is_connected(serial) && mqtt_at_mode_auto_recovery(serial)) {
+        else if (mqtt_at_mode_is_connected(serial) && mqtt_at_mode_auto_discovery(serial)) {
             auto state = atoi(argv[0]);
             if (state == 0 && MQTTAutoDiscoveryClient::getInstance()) {
                 MQTTAutoDiscoveryClient::deleteInstance();
@@ -876,7 +878,7 @@ bool MQTTPlugin::atModeHandler(Stream &serial, const String &command, int8_t arg
         return true;
     }
     else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(MQTTLAD))) {
-         if (mqtt_at_mode_auto_recovery(serial) && mqtt_at_mode_auto_recovery_client(serial)) {
+         if (mqtt_at_mode_auto_discovery(serial) && mqtt_at_mode_auto_discovery_client(serial)) {
              for(const auto &devicePtr: MQTTAutoDiscoveryClient::getInstance()->getDiscovery()) {
                  const auto &device = *devicePtr;
                  serial.printf_P(PSTR("+MQTTLAD: id=%03u, name='%s' topic='%s' payload=%u model='%*.*s' sw_version='%*.*s' manufacturer='%*.*s'\n"),
@@ -893,7 +895,7 @@ bool MQTTPlugin::atModeHandler(Stream &serial, const String &command, int8_t arg
         return true;
     }
     else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(MQTTPAD))) {
-        if (mqtt_at_mode_auto_recovery(serial) && mqtt_at_mode_auto_recovery_client(serial)) {
+        if (mqtt_at_mode_auto_discovery(serial) && mqtt_at_mode_auto_discovery_client(serial)) {
             uint16_t id = (argc >= 1) ? (uint16_t)atoi(argv[0]) : 0;
             auto formatRaw = (argc >= 2) && !strcasecmp_P(argv[1], PSTR("raw"));
             bool found = false;
@@ -939,7 +941,7 @@ bool MQTTPlugin::atModeHandler(Stream &serial, const String &command, int8_t arg
         if (argc < 1) {
             at_mode_print_invalid_arguments(serial);
         }
-        else if (mqtt_at_mode_auto_recovery(serial) && mqtt_at_mode_auto_recovery_client(serial)) {
+        else if (mqtt_at_mode_auto_discovery(serial) && mqtt_at_mode_auto_discovery_client(serial)) {
             std::vector<uint16_t> ids;
             ids.reserve(argc);
             for(int8_t i = 0; i < argc; i++) {

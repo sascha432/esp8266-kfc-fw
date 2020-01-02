@@ -156,7 +156,7 @@ File FileManager::_requireFile(const String &name)
     if (!path.length()) {
         return File();
     }
-    return SPIFFSWrapper::open(path, "r");
+    return SPIFFSWrapper::open(path, fs::FileOpenMode::read);
 }
 
 String FileManager::_requireArgument(const String &name)
@@ -249,7 +249,7 @@ uint16_t FileManager::mkdir()
         message = FSPGM(ERROR_);
         message += F("Directory already exists");
     } else {
-        File file = SPIFFSWrapper::open(newDir, "w");
+        File file = SPIFFSWrapper::open(newDir, fs::FileOpenMode::write);
         if (file) {
             file.close();
             success = true;
@@ -316,7 +316,7 @@ uint16_t FileManager::upload()
     _debug_printf_P(PSTR("File upload status %d, message %s, ajax %d\n"), httpCode, message.c_str(), ajax_request);
 
     if (success) {
-        Logger_notice(F("File upload successful. Filename %s, size %d"), filename.c_str(), SPIFFSWrapper::open(filename, "r").size());
+        Logger_notice(F("File upload successful. Filename %s, size %d"), filename.c_str(), SPIFFSWrapper::open(filename, fs::FileOpenMode::read).size());
     } else {
         Logger_warning(F("File upload failed: %s"), message.c_str());
     }

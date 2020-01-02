@@ -148,7 +148,7 @@ File tmpfile(const String &dir, const String &prefix) {
         tmp += ch;
     } while (SPIFFS.exists(tmp));
 
-    return SPIFFS.open(tmp, "w");
+    return SPIFFS.open(tmp, fs::FileOpenMode::write);
 }
 
 String WiFi_disconnect_reason(WiFiDisconnectReason reason) {

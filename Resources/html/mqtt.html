@@ -28,7 +28,7 @@
         <form method="POST" action="mqtt.html">
             <h1>MQTT Client Configuration</h1>
             <div class="form-group">
-                <label for="mqtt_enabled">MQTT Client</label>
+                <label for="mqtt_enabled">MQTT Client:</label>
                 <select class="form-control" name="mqtt_enabled" id="mqtt_enabled">
                     <option value="0" %MQTT_ENABLED_0%>Disabled</option>
                     <option value="1" %MQTT_ENABLED_1%>Enabled</option>
@@ -48,11 +48,11 @@
                 </div>
                 <div class="form-group">
                     <label for="mqtt_username">Username:</label>
-                    <input type="text" class="form-control" name="mqtt_username" id="mqtt_username" value="%MQTT_USERNAME%">
+                    <input type="text" class="form-control" name="mqtt_username" id="mqtt_username" value="%MQTT_USERNAME%" placeholder="Anonymous">
                 </div>
                 <div class="form-group">
                     <label for="mqtt_password">Password:</label>
-                    <input type="text" class="form-control" name="mqtt_password" id="mqtt_password" value="%MQTT_PASSWORD%">
+                    <input type="text" class="form-control visible-password" name="mqtt_password" id="mqtt_password" value="%MQTT_PASSWORD%">
                 </div>
                 <div class="form-group">
                     <label for="mqtt_topic">Topic:</label>

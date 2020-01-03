@@ -7,11 +7,13 @@
 
 Timezone default_timezone;
 
-Timezone &get_default_timezone() {
+Timezone &get_default_timezone()
+{
     return default_timezone;
 }
 
-tm *timezone_localtime(const time_t *timer) {
+tm *timezone_localtime(const time_t *timer)
+{
     struct tm *_tm;
     time_t now;
     if (!timer) {
@@ -29,16 +31,20 @@ tm *timezone_localtime(const time_t *timer) {
     return _tm;
 }
 
-size_t strftime_P(char *buf, size_t size, PGM_P format, const struct tm *tm) {
-    String fmt = FPSTR(format);
-    return strftime(buf, size, fmt.c_str(), tm);
+size_t strftime_P(char *buf, size_t size, PGM_P format, const struct tm *tm)
+{
+    char fmt[strlen_P(format) + 1];
+    strcpy_P(fmt, format);
+    return strftime(buf, size, fmt, tm);
 }
 
-size_t timezone_strftime_P(char *buf, size_t size, PGM_P format, const struct tm *tm) {
+size_t timezone_strftime_P(char *buf, size_t size, PGM_P format, const struct tm *tm)
+{
     return timezone_strftime(buf, size, format, tm);
 }
 
-size_t timezone_strftime(char *buf, size_t size, PGM_P format, const struct tm *tm) {
+size_t timezone_strftime(char *buf, size_t size, PGM_P format, const struct tm *tm)
+{
 	String _z = F("%z");
     String fmt = FPSTR(format);
     if (default_timezone.isValid()) {
@@ -60,57 +66,70 @@ size_t timezone_strftime(char *buf, size_t size, PGM_P format, const struct tm *
 }
 
 
-Timezone::Timezone() {
+Timezone::Timezone()
+{
 	invalidate();
 }
 
-void Timezone::invalidate() {
+void Timezone::invalidate()
+{
     _timezoneOffset = Timezone::INVALID;
     _dst = false;
     _abbreviation = String();
     _zoneName = String();
 }
 
-void Timezone::setTimezone(time_t now, const char *zoneName) {
+void Timezone::setTimezone(time_t now, const char *zoneName)
+{
 	_zoneName = zoneName;
 }
 
-void Timezone::setTimezone(time_t now, const String zoneName) {
+void Timezone::setTimezone(time_t now, const String zoneName)
+{
     _zoneName = zoneName;
 }
 
-const String &Timezone::getTimezone() {
+const String &Timezone::getTimezone() const
+{
     return _zoneName;
 }
 
-void Timezone::setAbbreviation(const char *abbreviation) {
+void Timezone::setAbbreviation(const char *abbreviation)
+{
 	_abbreviation = abbreviation;
 }
 
-void Timezone::setAbbreviation(const String abbreviation) {
+void Timezone::setAbbreviation(const String abbreviation)
+{
     _abbreviation = abbreviation;
 }
 
-const String &Timezone::getAbbreviation() {
+const String &Timezone::getAbbreviation() const
+{
     return _abbreviation;
 }
 
-int32_t Timezone::getOffset() {
+int32_t Timezone::getOffset() const
+{
 	return _timezoneOffset;
 }
 
-bool Timezone::isValid() {
+bool Timezone::isValid() const
+{
 	return _timezoneOffset != Timezone::INVALID;
 }
 
-void Timezone::setOffset(int32_t offset) {
+void Timezone::setOffset(int32_t offset)
+{
 	_timezoneOffset = offset;
 }
 
-void Timezone::setDst(bool dst) {
+void Timezone::setDst(bool dst)
+{
 	_dst = dst;
 }
 
-bool Timezone::isDst() {
+bool Timezone::isDst() const
+{
 	return _dst;
 }

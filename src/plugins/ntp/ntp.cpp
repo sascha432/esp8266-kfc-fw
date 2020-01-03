@@ -25,12 +25,10 @@
 #include "logger.h"
 #include "plugins.h"
 
-#if RTC_SUPPORT
 #include <sntp-lwip2.h>
 extern "C" {
     void settimeofday_cb (void (*cb)(void));
 }
-#endif
 
 #if DEBUG_NTP_CLIENT
 #include <debug_helper_enable.h>
@@ -89,11 +87,13 @@ public:
     static void configTime();
 
     static void updateLoop();
+    static void updateNtpCallback();
 
 private:
     static time_t _zoneEnd;
     static unsigned long _lastNtpUpdate;
     static unsigned long _ntpRefreshTime;
+    static uint32_t _lastNtpCallback;
 
     static void _callback(bool status, const String message, time_t zoneEnd);
 
@@ -105,6 +105,7 @@ private:
 time_t TimezoneData::_zoneEnd = 0;
 unsigned long TimezoneData::_lastNtpUpdate = 0;
 unsigned long TimezoneData::_ntpRefreshTime = 3600000;
+uint32_t TimezoneData::_lastNtpCallback = 0;
 
 TimezoneData::TimezoneData()
 {
@@ -250,7 +251,7 @@ void TimezoneData::_callback(bool status, const String message, time_t zoneEnd)
 
         char buf[32];
         timezone_strftime_P(buf, sizeof(buf), PSTR("%a, %d %b %Y %T %Z"), timezone_localtime(timezoneData->getZoneEndPtr()));
-        Logger_notice(F("NTP: %s offset %02d:%02u. Next check at %s"), timezone.getAbbreviation().c_str(), offset / 3600, offset % 60, buf);
+        Logger_notice(F("NTP: %s offset %02d:%02u. Next check on %s"), timezone.getAbbreviation().c_str(), offset / 3600, offset % 60, buf);
 
 #if NTP_RESTORE_TIMEZONE_AFTER_WAKEUP
         // store timezone in RTC memory that it is available after wake up
@@ -280,6 +281,12 @@ void TimezoneData::getStatus(Print &out)
         out.print(F("Timezone "));
         if (timezone.isValid()) {
             out.printf_P(PSTR("%s, %02d:%02u %s"), timezone.getTimezone().c_str(), timezone.getOffset() / 3600, timezone.getOffset() % 60, timezone.getAbbreviation().c_str());
+            if (_zoneEnd) {
+                auto tm = timezone_localtime(&_zoneEnd);
+                char buf[32];
+                timezone_strftime_P(buf, sizeof(buf), SPGM(strftime_date_time_zone), tm);
+                out.printf_P(PSTR(", next check on %s"), buf);
+            }
         } else {
             out.printf_P(PSTR("%s, status invalid"), config._H_STR(Config().ntp.timezone));
         }
@@ -295,6 +302,11 @@ void TimezoneData::getStatus(Print &out)
                 }
                 out.print(server);
             }
+        }
+        if (_lastNtpCallback) {
+            float seconds = get_time_diff(_lastNtpCallback, millis()) / 1000.0;
+            unsigned int nextSeconds = get_time_diff(_lastNtpUpdate, millis() + _ntpRefreshTime) / 1000;
+            out.printf_P(PSTR(HTML_S(br) "Last update %.2f seconds ago, next update in %u seconds"), seconds, nextSeconds);
         }
     }
     else {
@@ -317,31 +329,40 @@ void TimezoneData::updateLoop()
     }
 }
 
-#if RTC_SUPPORT || NTP_HAVE_CALLBACKS
-
-static void update_time_callback(void)
+void TimezoneData::updateNtpCallback()
 {
-    _debug_printf_P(PSTR("update_time_callback(): new time=%u\n"), (uint32_t)time(nullptr));
-#if RTC_SUPPORT
-    config.setRTC(time(nullptr));
-#endif
+    auto now = time(nullptr);
+    _debug_printf_P(PSTR("update_time_callback(): new time=%u\n"), (uint32_t)now);
+
+    if (get_time_diff(_lastNtpCallback, millis()) > 1000) { // don't invoke callbacks twice within one second
+        char buf[32];
+        auto tm = timezone_localtime(&now);
+        timezone_strftime_P(buf, sizeof(buf), SPGM(strftime_date_time_zone), tm);
+        Logger_notice(F("NTP: new time: %s"), buf);
+
 #if NTP_HAVE_CALLBACKS
         for(auto callback: _callbacks) {
             callback(false);
         }
 #endif
-}
+    }
+    _lastNtpCallback = millis();
 
+#if RTC_SUPPORT
+    config.setRTC(time(nullptr));
 #endif
+}
 
 void TimezoneData::configTime()
 {
     _lastNtpUpdate = millis();
-    _ntpRefreshTime = 3600 * (950 + (rand() % 100));
+    uint32_t refresh = config._H_GET(Config().ntp.ntpRefresh) * 60;
+    if (refresh < 3600) {
+        refresh = 3600;
+    }
+    _ntpRefreshTime = refresh * (950 + (rand() % 100)); // +-5%
 
-#if RTC_SUPPORT || NTP_HAVE_CALLBACKS
-    settimeofday_cb(update_time_callback);
-#endif
+    settimeofday_cb(updateNtpCallback);
 
     _debug_printf_P(PSTR("TimezoneData::configTime(): server1=%s,server2=%s,server3=%s, refresh in %.0f seconds\n"), config._H_STR(Config().ntp.servers[0]), config._H_STR(Config().ntp.servers[1]), config._H_STR(Config().ntp.servers[2]), _ntpRefreshTime / 1000.0);
     // force SNTP to update the time
@@ -413,7 +434,8 @@ void timezone_setup()
     }
 }
 
-void ntp_client_reconfigure_plugin(PGM_P source) {
+void ntp_client_reconfigure_plugin(PGM_P source)
+{
     timezone_setup();
 }
 
@@ -502,6 +524,9 @@ void NTPPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form) 
     form.addValidator(new FormValidHostOrIpValidator(true));
 
     form.add<sizeof Config().ntp.timezone>(F("ntp_timezone"), config._H_W_STR(Config().ntp.timezone));
+
+    form.add<uint16_t>(F("ntp_refresh"), &config._H_W_GET(Config().ntp.ntpRefresh));
+    form.addValidator(new FormRangeValidator(F("Invalid refresh interval: %min%-%max% minutes"), 60, 43200));
 
 #if USE_REMOTE_TIMEZONE
     form.add<sizeof Config().ntp.remote_tz_dst_ofs_url>(F("ntp_remote_tz_url"), config._H_W_STR(Config().ntp.remote_tz_dst_ofs_url));

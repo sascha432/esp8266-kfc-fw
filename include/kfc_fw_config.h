@@ -115,6 +115,7 @@ struct NTP {
 #if USE_REMOTE_TIMEZONE
     char remote_tz_dst_ofs_url[255];
 #endif
+    uint16_t ntpRefresh;
 };
 
 struct Ping {

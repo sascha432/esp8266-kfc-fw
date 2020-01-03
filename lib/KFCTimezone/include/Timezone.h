@@ -14,25 +14,25 @@ public:
 	Timezone();
 
     void invalidate();
-	bool isValid();
+	bool isValid() const;
 
 	void setTimezone(time_t now, const char *zoneName);
     void setTimezone(time_t now, const String zoneName);
-	const String &getTimezone();
+	const String &getTimezone() const;
 
 	void setAbbreviation(const char *abbreviation);
     void setAbbreviation(const String abbreviation);
-	const String &getAbbreviation();
+	const String &getAbbreviation() const;
 
-	int32_t getOffset();
+	int32_t getOffset() const;
 	void setOffset(int32_t offset);
 
 	// daylight savings time
 	void setDst(bool dst);
-	bool isDst();
+	bool isDst() const;
 
 private:
-	const int INVALID = -1;
+	const int32_t INVALID = -1;
 
     int32_t _timezoneOffset;
     bool _dst;

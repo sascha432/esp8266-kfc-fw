@@ -170,4 +170,9 @@ inline void panic() {
     }
 }
 
+// emulation of callback
+extern "C" {
+    void settimeofday_cb (void (*cb)(void));
+}
+
 #endif

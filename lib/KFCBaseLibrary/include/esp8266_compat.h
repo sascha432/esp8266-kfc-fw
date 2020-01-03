@@ -21,4 +21,9 @@ typedef os_timer_func_t *           os_timer_func_t_ptr;
 
 #define os_timer_delete(timer)      delete timer;
 
+// native callback
+extern "C" {
+    void settimeofday_cb (void (*cb)(void));
+}
+
 #endif

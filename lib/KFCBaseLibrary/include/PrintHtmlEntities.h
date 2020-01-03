@@ -17,7 +17,6 @@
 #define HTML_E HTML_CLOSE_TAG
 #define HTML_OPEN_TAG(tag) HTML_TAG_S #tag HTML_TAG_E
 #define HTML_CLOSE_TAG(tag) HTML_TAG_S "/" #tag HTML_TAG_E
-#define HTML_NEW_2COL_ROW HTML_E(td) HTML_E(tr) HTML_S(tr) HTML_S(td) HTML_SPACE HTML_E(td) HTML_S(td)
 
 class PrintHtmlEntities {
 public:

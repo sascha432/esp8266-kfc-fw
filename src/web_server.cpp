@@ -41,10 +41,6 @@
 #include <debug_helper_disable.h>
 #endif
 
-PROGMEM_STRING_DEF(status, "status");
-PROGMEM_STRING_DEF(enabled, "enabled");
-PROGMEM_STRING_DEF(disabled, "disabled");
-
 AsyncWebServer *server = nullptr;
 FailureCounterContainer loginFailures;
 
@@ -808,6 +804,9 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
                 }
             } else if (String_equals(path, PSTR("/reboot.html"))) {
                 if (request->hasArg(F("yes"))) {
+                    if (request->arg(F("safe_mode")).toInt()) {
+                        resetDetector.setSafeMode(1);
+                    }
                     request->onDisconnect([]() {
                         config.restartDevice();
                     });

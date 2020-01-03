@@ -64,10 +64,20 @@ void Driver_4ChDimmer::_end()
 
 void AtomicSunPlugin::getStatus(Print &output)
 {
-    output.print(F("4 Channel MOSFET Dimmer enabled on Serial Port"));
-    _printStatus(output);
+    output.print(F("4 Channel MOSFET Dimmer "));
+    if (_isEnabled()) {
+        output.print(F("enabled on "));
+#if IOT_DIMMER_MODULE_INTERFACE_UART
+        output.print(F("Serial Port"));
+#else
+        output.print(F("I2C"));
+#endif
+        _printStatus(output);
+    }
+    else {
+        output.print(F("disabled"));
+    }
 }
-
 void Driver_4ChDimmer::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector)
 {
     _createTopics();

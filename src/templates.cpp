@@ -21,25 +21,8 @@
 #include <debug_helper_disable.h>
 #endif
 
-
-#if DEBUG_TEMPLATES
-static const String &display_result(const String &key, const String &str) {
-    debug_printf_P(PSTR("Macro '%s' = '%s'\n"), key.c_str(), str.c_str());
-    return str;
-}
-#define _return(str)                        return display_result(key, str);
-#else
-#define _return(str)                        return str
-#endif
-
-PROGMEM_STRING_DEF(_hidden, " hidden");
-PROGMEM_STRING_DEF(_selected, " selected");
-PROGMEM_STRING_DEF(_checked, " checked");
-PROGMEM_STRING_DEF(Not_supported, "Not supported");
-
-WebTemplate::WebTemplate()
+WebTemplate::WebTemplate() : _form(nullptr)
 {
-    _form = nullptr;
 }
 
 WebTemplate::~WebTemplate()
@@ -49,12 +32,12 @@ WebTemplate::~WebTemplate()
     }
 }
 
-void WebTemplate::setForm(Form * form)
+void WebTemplate::setForm(Form *form)
 {
     _form = form;
 }
 
-Form * WebTemplate::getForm()
+Form *WebTemplate::getForm()
 {
     return _form;
 }
@@ -413,7 +396,6 @@ WifiSettingsForm::WifiSettingsForm(AsyncWebServerRequest *request) : SettingsFor
 #else
 #error Platform not supported
 #endif
-
 
     add<bool>(F("ap_hidden"), _H_STRUCT_FORMVALUE(Config().flags, bool, hiddenSSID), FormField::INPUT_CHECK);
 

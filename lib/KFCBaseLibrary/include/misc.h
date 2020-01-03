@@ -147,10 +147,14 @@ int strcasecmp_P_P(PGM_P str1, PGM_P str2);
 
 int strcmp_end_P(const char *str1, size_t len1, PGM_P str2, size_t len2);
 
+inline bool String_startsWith(const String &str1, char ch) {
+    return str1.charAt(0) == ch;
+}
+bool String_endsWith(const String &str1, char ch);
+
 // compare functions that do not create a String object of "str2"
 bool String_startsWith(const String &str1, PGM_P str2);
 bool String_endsWith(const String &str1, PGM_P str2);
-bool String_endsWith(const String &str1, char ch);
 
 // bool String_equals(const String &str1, PGM_P str2);
 // bool String_equalsIgnoreCase(const String &str1, PGM_P str2);

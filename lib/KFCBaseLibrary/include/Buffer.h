@@ -38,7 +38,7 @@ public:
     inline const char *getConstChar() const {
         return reinterpret_cast<const char *>(_buffer);
     }
-    char *getNulByteString();
+    char *getNulByteString(); // return NUL terminated string
 
     inline char charAt(size_t index) const {
         return _buffer[index];

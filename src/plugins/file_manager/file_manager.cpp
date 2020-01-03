@@ -25,6 +25,7 @@
 PROGMEM_STRING_DEF(success, "success");
 PROGMEM_STRING_DEF(failure, "failure");
 PROGMEM_STRING_DEF(file_manager_base_uri, "/file_manager/");
+PROGMEM_STRING_DEF(file_manager_html_uri, "file_manager.html");
 PROGMEM_STRING_DEF(upload, "upload");
 PROGMEM_STRING_DEF(upload_file, "upload_file");
 PROGMEM_STRING_DEF(ERROR_, "ERROR:");
@@ -322,7 +323,7 @@ uint16_t FileManager::upload()
     }
 
     if (!ajax_request) {
-        String url = F("/file_manager.html?_message=");
+        String url = PrintString(F("/%s?_message="), SPGM(file_manager_html_uri));
         url += url_encode(message);
         if (success) {
             url += F("&_type=success&_title=Information");
@@ -349,8 +350,7 @@ uint16_t FileManager::view(bool isDownload)
     File file = _requireFile(FSPGM(filename));
     String requestFilename = _request->arg(FSPGM(filename));
     if (!file) {
-        String message;
-        message = FSPGM(ERROR_);
+        String message = FSPGM(ERROR_);
         message += F("Cannot open ");
         message += requestFilename;
         _response = _request->beginResponse(httpCode, FSPGM(mime_text_plain), message);
@@ -397,7 +397,7 @@ uint16_t FileManager::remove()
 uint16_t FileManager::rename()
 {
     uint16_t httpCode = 200;
-    PrintString message;
+    String message;
     bool success = false;
     File file = _requireFile(FSPGM(filename));
     String requestFilename = _request->arg(FSPGM(filename));
@@ -420,17 +420,14 @@ uint16_t FileManager::rename()
         normalizeFilename(renameTo);
 
         if (renameTo.length() >= info.maxPathLength) {
-            message = FSPGM(ERROR_);
-            message.printf_P(PSTR("Filename %s exceeds %d characters"), renameTo.c_str(), info.maxPathLength - 1);
+            message = PrintString(F("%sFilename %s exceeds %d characters"), SPGM(ERROR_), renameTo.c_str(), info.maxPathLength - 1);
         } else {
             if (SPIFFSWrapper::exists(renameTo)) {
-                message = FSPGM(ERROR_);
-                message.printf_P(PSTR("File %s already exists"), renameTo.c_str());
+                message = PrintString(F("%sFile %s already exists"), SPGM(ERROR_), renameTo.c_str());
                 _response = _request->beginResponse(httpCode, FSPGM(mime_text_plain), message);
             } else {
                 if (!SPIFFSWrapper::rename(renameFrom, renameTo)) {
-                    message = FSPGM(ERROR_);
-                    message.printf_P(PSTR("Cannot rename %s to %s"), renameFrom.c_str(), renameTo.c_str());
+                    message = PrintString(F("%sCannot rename %s to %s"), SPGM(ERROR_), renameFrom.c_str(), renameTo.c_str());
                 } else {
                     message = FSPGM(OK);
                     success = true;
@@ -448,22 +445,22 @@ void FileManager::normalizeFilename(String &filename)
 {
     auto doubleSlash = String(F("//"));
     while(filename.indexOf(doubleSlash) != -1) {
-        filename.replace(doubleSlash, F("/"));
+        filename.replace(doubleSlash, FSPGM(slash));
     }
 }
 
 bool FileManagerWebHandler::canHandle(AsyncWebServerRequest *request)
 {
-    if (strncmp_P(request->url().c_str(), (PGM_P)_uri, strlen_P((PGM_P)_uri))) {
-        return false;
+    if (String_startsWith(request->url(), _uri)) {
+        request->addInterestingHeader(F("ANY"));
+        return true;
     }
-    request->addInterestingHeader(F("ANY"));
-    return true;
+    return false;
 }
 
 void FileManagerWebHandler::handleRequest(AsyncWebServerRequest *request)
 {
-    auto uri = request->url().substring(strlen_P((PGM_P)_uri));
+    auto uri = request->url().substring(strlen_P(reinterpret_cast<PGM_P>(_uri)));
     _debug_printf_P(PSTR("file manager %s (%s)\n"), uri.c_str(), request->url().c_str())
     FileManager fm(request, web_server_is_authenticated(request), uri);
     fm.handleRequest();
@@ -478,37 +475,28 @@ public:
     virtual PGM_P getName() const {
         return PSTR("filemgr");
     }
-    PluginPriorityEnum_t getSetupPriority() const override {
+    virtual PluginPriorityEnum_t getSetupPriority() const override {
         return MAX_PRIORITY;
     }
 
-    void setup(PluginSetupMode_t mode) override;
-    void reconfigure(PGM_P source) override;
-    bool hasReconfigureDependecy(PluginComponent *plugin) const override;
+    virtual void setup(PluginSetupMode_t mode) override {
+        file_manager_install_web_server_hook();
+    }
+    virtual void reconfigure(PGM_P source) override {
+        file_manager_install_web_server_hook();
+    }
+    virtual bool hasReconfigureDependecy(PluginComponent *plugin) const override {
+        return plugin->nameEquals(F("http"));
+    }
 
     virtual MenuTypeEnum_t getMenuType() const override {
         return CUSTOM;
     }
     virtual void createMenu() override {
-        bootstrapMenu.addSubMenu(F("File Manager"), F("file_manager.html"), navMenu.util);
+        bootstrapMenu.addSubMenu(F("File Manager"), FSPGM(file_manager_html_uri), navMenu.util);
     }
 };
 
 static FileManagerPlugin plugin;
-
-void FileManagerPlugin::setup(PluginSetupMode_t mode)
-{
-    file_manager_install_web_server_hook();
-}
-
-void FileManagerPlugin::reconfigure(PGM_P source)
-{
-    file_manager_install_web_server_hook();
-}
-
-bool FileManagerPlugin::hasReconfigureDependecy(PluginComponent *plugin) const
-{
-    return plugin->nameEquals(F("http"));
-}
 
 #endif

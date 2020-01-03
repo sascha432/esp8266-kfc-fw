@@ -5,6 +5,11 @@
 #if PIN_MONITOR
 
 // low level pin monitoring via interrupts
+// NOTE: attachScheduledInterrupt() is being used to trigger the callbacks and will cause the ESP8266 to crash if interrupts are fired too quickly.
+// The callback is not called inside an interrupt and does not have to be in IRAM.
+//
+// Use attachInterrupt for interrupts >10Hz instead of this class
+
 
 #pragma once
 

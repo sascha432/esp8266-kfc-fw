@@ -24,7 +24,7 @@ MicrosTimer::timer_t MicrosTimer::getTime(timer_t time) {
     }
     else { // timer_t overflow
         time += ~_start + 1;
-        if (time >= (~0UL >> 1)) {    // most likely micros() skipped overflows and is out of sync
+        if (time >= (~0UL >> 1)) {    // most likely micros() skipped an overflow and is out of sync
             _valid = false;
             return 0;
         }

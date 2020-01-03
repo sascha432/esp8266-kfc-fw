@@ -19,16 +19,21 @@ PROGMEM_STRING_DEF(mime_image_png, "image/png");
 PROGMEM_STRING_DEF(mime_image_gif, "image/gif");
 PROGMEM_STRING_DEF(mime_image_bmp, "image/bmp");
 
+PROGMEM_STRING_DEF(_hidden, " hidden");
+PROGMEM_STRING_DEF(_selected, " selected");
+PROGMEM_STRING_DEF(_checked, " checked");
+PROGMEM_STRING_DEF(status, "status");
+PROGMEM_STRING_DEF(Not_supported, "Not supported");
 PROGMEM_STRING_DEF(default_password_warning, "WARNING! Default password has not been changed");
 PROGMEM_STRING_DEF(empty, "");
 PROGMEM_STRING_DEF(0, "0");
 PROGMEM_STRING_DEF(1, "1");
 PROGMEM_STRING_DEF(OK, "OK");
+PROGMEM_STRING_DEF(enabled, "enabled");
+PROGMEM_STRING_DEF(disabled, "disabled");
 PROGMEM_STRING_DEF(Enabled, "Enabled");
 PROGMEM_STRING_DEF(Disabled, "Disabled");
 PROGMEM_STRING_DEF(application_json, "application/json");
-PROGMEM_STRING_DEF(text_plain, "text/plain");
-PROGMEM_STRING_DEF(text_html, "text/html");
 PROGMEM_STRING_DEF(auto_discovery_html, HTML_S(tr) HTML_S(td) "%s" HTML_E(td) HTML_S(td) "%s" HTML_E(td) HTML_E(tr));
 PROGMEM_STRING_DEF(slash, "/");
 PROGMEM_STRING_DEF(dot, ".");
@@ -46,41 +51,3 @@ PROGMEM_STRING_DEF(kfcfw, "kfcfw");
 PROGMEM_STRING_DEF(Failed_to_reserve_string_size, "Failed to reserve string size %d\n");
 PROGMEM_STRING_DEF(invalid_flash_ptr, "INVALID_FLASH_PTR");
 PROGMEM_STRING_DEF(crash_counter_file, "/crash_counter");
-
-// const char _shared_progmem_string_webui_mappings[] PROGMEM = "/webui/.mappings";
-
-String spgm_concat(PGM_P str1, PGM_P str2) {
-    size_t len = strlen_P(str1) + strlen_P(str2) + 1;
-    String tmp;
-
-    if (!tmp.reserve(len)) {
-        debug_printf_P(SPGM(Failed_to_reserve_string_size), len);
-    }
-    tmp = str1;
-    tmp += str2;
-    return tmp;
-}
-
-String spgm_concat(PGM_P str1, int i) {
-    size_t len = strlen_P(str1) + 7;
-    String tmp;
-
-    if (!tmp.reserve(len)) {
-        debug_printf_P(SPGM(Failed_to_reserve_string_size), len);
-    }
-    tmp = str1;
-    tmp += String(i);
-    return tmp;
-}
-
-String spgm_concat(PGM_P str1, char c) {
-    size_t len = strlen_P(str1) + 2;
-    String tmp;
-
-    if (!tmp.reserve(len)) {
-        debug_printf_P(SPGM(Failed_to_reserve_string_size), len);
-    }
-    tmp = str1;
-    tmp += c;
-    return tmp;
-}

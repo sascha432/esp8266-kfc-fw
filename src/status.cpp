@@ -9,7 +9,8 @@
 #include "progmem_data.h"
 #include "kfc_fw_config.h"
 
-void WiFi_get_address(Print &out) {
+void WiFi_get_address(Print &out)
+{
     uint8_t mode = WiFi.getMode();
     if (mode & WIFI_STA) {
         if (mode & WIFI_AP) {
@@ -50,7 +51,8 @@ String WiFi_get_tx_power() {
 }
 #endif
 
-void WiFi_get_status(Print &out) {
+void WiFi_get_status(Print &out)
+{
     uint8_t mode = WiFi.getMode();
     if (mode & WIFI_STA) {
 
@@ -143,7 +145,7 @@ void WiFi_get_status(Print &out) {
     }
 
     if (mode & WIFI_AP_STA) {
-        out.print(F(HTML_NEW_2COL_ROW));
+        out.print(F(HTML_S(br) HTML_S(br)));
     }
 
 #if defined(ESP8266)
@@ -179,7 +181,7 @@ void WiFi_get_status(Print &out) {
             }
         }
 
-        out.print(F(HTML_NEW_2COL_ROW HTML_S(strong) "Connected stations:" HTML_E(strong) HTML_S(br)));
+        out.print(F(HTML_S(br) HTML_S(br) HTML_S(strong) "Connected stations:" HTML_E(strong) HTML_S(br)));
 
         station_info *info;
         info = wifi_softap_get_station_info();
@@ -236,7 +238,7 @@ void WiFi_get_status(Print &out) {
             out.print(F("DHCP server not running"));
         }
 
-        out.print(F(HTML_NEW_2COL_ROW HTML_S(strong) "Connected stations:" HTML_E(strong) HTML_S(br)));
+        out.print(F(HTML_S(br) HTML_S(br) HTML_S(strong) "Connected stations:" HTML_E(strong) HTML_S(br)));
 
         if (clients.num == 0) {
             out.print(F("No clients connected"));
@@ -272,7 +274,8 @@ void WiFi_get_status(Print &out) {
 }
 
 
-void WiFi_Station_SSID(Print &out) {
+void WiFi_Station_SSID(Print &out)
+{
     if (WiFi.isConnected()) {
         out.print(WiFi.SSID());
     } else {
@@ -280,7 +283,8 @@ void WiFi_Station_SSID(Print &out) {
     }
 }
 
-void WiFi_SoftAP_SSID(Print &out) {
+void WiFi_SoftAP_SSID(Print &out)
+{
 #if defined(ESP32)
     wifi_config_t _config;
     wifi_ap_config_t &config = _config.ap;

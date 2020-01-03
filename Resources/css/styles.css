@@ -17,6 +17,15 @@
     padding-right: 10px;
 }
 
+.status-table .row:nth-of-type(odd) div {
+    background-color: rgba(0,0,0,.05);
+}
+.status-table div.col, .status-table div.col-lg-auto {
+    padding: .75rem;
+    vertical-align: top;
+    border-top: 1px solid #dee2e6;
+}
+
 .ping-console textarea {
     width: 100%;
     height: 100%;

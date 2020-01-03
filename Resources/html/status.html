@@ -25,217 +25,358 @@
     </nav>
     <!--NAV%%-->
     <div class="container">
-        <h1>Status%SAFEMODE%</h1>
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th colspan="2">System overview</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>Hardware</td>
-                    <td>%HARDWARE%</td>
-                </tr>
-                <tr>
-                    <td>Software</td>
-                    <td>%SOFTWARE%</td>
-                </tr>
-                <!--#if NTP_CLIENT || RTC_SUPPORT-->
-                <tr>
-                    <td>System time</td>
-                    <td>%TIME%</td>
-                </tr>
-                <!--#endif-->
-                <tr>
-                    <td>System up time</td>
-                    <td>%UPTIME%</td>
-                </tr>
-                <tr>
-                    <td>WiFi up time</td>
-                    <td>%WIFI_UPTIME%</td>
-                </tr>
-            </tbody>
-            <thead>
-                <tr>
-                    <th colspan="2">Network overview</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>IP Address / Gateway</td>
-                    <td>%IP_ADDRESS% / %GATEWAY%</td>
-                </tr>
-                <tr>
-                    <td>DNS</td>
-                    <td>%DNS%</td>
-                </tr>
-            </tbody>
-            <thead>
-                <tr>
-                    <th colspan="2">WiFi overview</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>SSID</td>
-                    <td>%WIFI_SSID%</td>
-                </tr>
-                <tr>
-                    <td>Mode</td>
-                    <td>%WIFI_MODE%</td>
-                </tr>
-                <tr>
-                    <td>Status</td>
-                    <td>%WIFI_STATUS%</td>
-                </tr>
-            </tbody>
-            <thead>
-                <tr>
-                    <th colspan="2">Services</th>
-                </tr>
-            </thead>
-            <tbody>
-                <!--#if defined(WEBSERVER_SUPPORT) && WEBSERVER_SUPPORT-->
-                <tr>
-                    <td>Web server</td>
-                    <td>%HTTP_STATUS%</td>
-                </tr>
-                <!--#endif-->
-                <!--#if defined(ASYNC_TCP_SSL_ENABLED) && ASYNC_TCP_SSL_ENABLED-->
-                <tr>
-                    <td>SSL/TLS</td>
-                    <td>%SSL_STATUS%</td>
-                </tr>
-                <!--#endif-->
-                <!--#if defined(SYSLOG) && SYSLOG-->
-                <tr>
-                    <td>Syslog</td>
-                    <td>%SYSLOG_STATUS%</td>
-                </tr>
-                <!--#endif-->
-                <!--#if defined(MDNS_SUPPORT) && MDNS_SUPPORT-->
-                <tr>
-                    <td>MDNS</td>
-                    <td>%MDNS_STATUS%</td>
-                </tr>
-                <!--#endif-->
-                <!--#if defined(NTP_CLIENT) && NTP_CLIENT-->
-                <tr>
-                    <td>NTP Client</td>
-                    <td>%NTP_STATUS%</td>
-                </tr>
-                <!--#endif-->
-                <!--#if defined(RTC_SUPPORT) && RTC_SUPPORT-->
-                <tr>
-                    <td>RTC Status</td>
-                    <td>%RTC_STATUS%</td>
-                </tr>
-                <!--#endif-->
-                <!--#if defined(MQTT_SUPPORT) && MQTT_SUPPORT-->
-                <tr>
-                    <td>MQTT</td>
-                    <td>%MQTT_STATUS%</td>
-                </tr>
-                <!--#endif-->
-                <!--#if defined(HOME_ASSISTANT_INTEGRATION) && HOME_ASSISTANT_INTEGRATION-->
-                <tr>
-                    <td>Home Assistant</td>
-                    <td>%HASS_STATUS%</td>
-                </tr>
-                <!--#endif-->
-                <!--#if defined(HUE_EMULATION) && HUE_EMULATION-->
-                <tr>
-                    <td>HUE</td>
-                    <td>%HUE_STATUS%</td>
-                </tr>
-                <!--#endif-->
-                <!--#if defined(REST_API_SUPPORT) && REST_API_SUPPORT-->
-                <tr>
-                    <td>REST API</td>
-                    <td>%REST_STATUS%</td>
-                </tr>
-                <!--#endif-->
-                <!--#if defined(PING_MONITOR) && PING_MONITOR-->
-                <tr>
-                    <td>Ping Monitor</td>
-                    <td>%PINGMON_STATUS%</td>
-                </tr>
-                <!--#endif-->
-                <!--#if defined(SERIAL2TCP) && SERIAL2TCP-->
-                <tr>
-                    <td>Serial2TCP</td>
-                    <td>%SERIAL2TCP_STATUS%</td>
-                </tr>
-                <!--#endif-->
-                <!--#if defined(STK500V1) && STK500V1-->
-                <tr>
-                    <td>STK500v1</td>
-                    <td>Programmer enabled</td>
-                </tr>
-                <!--#endif-->
-                <!--#if defined(IOT_RF24_MASTER) && IOT_RF24_MASTER-->
-                <tr>
-                    <td>RF24 Master</td>
-                    <td>%RF24_STATUS%</td>
-                </tr>
-                <!--#endif-->
-                <!--#if defined(IOT_SWITCH) && IOT_SWITCH-->
-                <tr>
-                    <td>Switch</td>
-                    <td>%SWITCH_STATUS%</td>
-                </tr>
-                <!--#endif-->
-                <!--#if defined(IOT_SENSOR) && IOT_SENSOR-->
-                <tr>
-                    <td>Sensor</td>
-                    <td>%SENSOR_STATUS%</td>
-                </tr>
-                <!--#endif-->
-                <!--#if defined(IOT_ATOMIC_SUN_V2) && IOT_ATOMIC_SUN_V2-->
-                <tr>
-                    <td>Atomic Sun V2</td>
-                    <td>%ATOMICSUN_STATUS%</td>
-                </tr>
-                <!--#endif-->
-                <!--#if defined(IOT_DIMMER_MODULE) && IOT_DIMMER_MODULE-->
-                <tr>
-                    <td>Dimmer Module</td>
-                    <td>%DIMMER_STATUS%</td>
-                </tr>
-                <!--#endif-->
-                <!--#if defined(IOT_BLINDS_CTRL) && IOT_BLINDS_CTRL-->
-                <tr>
-                    <td>Blinds Controller</td>
-                    <td>%BLINDSCTRL_STATUS%</td>
-                </tr>
-                <!--#endif-->
-                <!--#if defined(IOT_CLOCK) && IOT_CLOCK-->
-                <tr>
-                    <td>Clock</td>
-                    <td>%CLOCK_STATUS%</td>
-                </tr>
-                <!--#endif-->
-                <!--#if defined(IOT_WEATHER_STATION) && IOT_WEATHER_STATION-->
-                <tr>
-                    <td>Weather Station</td>
-                    <td>%WEATHER_STATION_STATUS%</td>
-                </tr>
-                <!--#endif-->
-            </tbody>
-            <!--#if 0 && defined(MDNS_SUPPORT) && MDNS_SUPPORT-->
-            <thead>
-                <tr>
-                    <th colspan="2">MDNS Auto discovery</th>
-                </tr>
-            </thead>
-            <tbody id="pollm_dns">
-                <tr>
-                    <td colspan="2"><img src="images/spinner.gif" width="16" height="16"></td>
-                <tr>
-            </tbody>
+        <div class="status-table">
+            <h1>Status%SAFEMODE%</h1>
+            <div class="row">
+                <div class="col">
+                    <h4>System overview</h4>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-lg-3 col-lg-auto">
+                    Hardware
+                </div>
+                <div class="col">
+                    %HARDWARE%
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-lg-3 col-lg-auto">
+                    Software
+                </div>
+                <div class="col">
+                    %SOFTWARE%
+                </div>
+            </div>
+
+            <!--#if NTP_CLIENT || RTC_SUPPORT-->
+            <div class="row">
+                <div class="col-lg-3 col-lg-auto">
+                    System time
+                </div>
+                <div class="col">
+                    %TIME%
+                </div>
+            </div>
             <!--#endif-->
-        </table>
+
+            <div class="row">
+                <div class="col-lg-3 col-lg-auto">
+                    System up time
+                </div>
+                <div class="col">
+                    %UPTIME%
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-lg-3 col-lg-auto">
+                    WiFi up time
+                </div>
+                <div class="col">
+                    %WIFI_UPTIME%
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col">
+                    <h4>Network overview</h4>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-lg-3 col-lg-auto">
+                    IP Address / Gateway
+                </div>
+                <div class="col">
+                    %IP_ADDRESS% / %GATEWAY%
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-lg-3 col-lg-auto">
+                    DNS
+                </div>
+                <div class="col">
+                    %DNS%
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col">
+                    <h4>WiFi overview</h4>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-lg-3 col-lg-auto">
+                    SSID
+                </div>
+                <div class="col">
+                    %WIFI_SSID%
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-lg-3 col-lg-auto">
+                    Mode
+                </div>
+                <div class="col">
+                    %WIFI_MODE%
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-lg-3 col-lg-auto">
+                    Status
+                </div>
+                <div class="col">
+                    %WIFI_STATUS%
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col">
+                    <h4>Services</h4>
+                </div>
+            </div>
+            <!--#if defined(WEBSERVER_SUPPORT) && WEBSERVER_SUPPORT-->
+            <div class="row">
+                <div class="col-lg-3 col-lg-auto">
+                    Web server
+                </div>
+                <div class="col">
+                    %HTTP_STATUS%
+                </div>
+            </div>
+            <!--#endif-->
+
+            <!--#if defined(ASYNC_TCP_SSL_ENABLED) && ASYNC_TCP_SSL_ENABLED-->
+            <div class="row">
+                <div class="col-lg-3 col-lg-auto">
+                    SSL/TLS
+                </div>
+                <div class="col">
+                    %SSL_STATUS%
+                </div>
+            </div>
+            <!--#endif-->
+
+            <!--#if defined(SYSLOG) && SYSLOG-->
+            <div class="row">
+                <div class="col-lg-3 col-lg-auto">
+                    Syslog
+                </div>
+                <div class="col">
+                    %SYSLOG_STATUS%
+                </div>
+            </div>
+            <!--#endif-->
+
+            <!--#if defined(MDNS_SUPPORT) && MDNS_SUPPORT-->
+            <div class="row">
+                <div class="col-lg-3 col-lg-auto">
+                    MDNS
+                </div>
+                <div class="col">
+                    %MDNS_STATUS%
+                </div>
+            </div>
+            <!--#endif-->
+
+            <!--#if defined(NTP_CLIENT) && NTP_CLIENT-->
+            <div class="row">
+                <div class="col-lg-3 col-lg-auto">
+                    NTP Client
+                </div>
+                <div class="col">
+                    %NTP_STATUS%
+                </div>
+            </div>
+            <!--#endif-->
+
+            <!--#if defined(RTC_SUPPORT) && RTC_SUPPORT-->
+            <div class="row">
+                <div class="col-lg-3 col-lg-auto">
+                    RTC Status
+                </div>
+                <div class="col">
+                    %RTC_STATUS%
+                </div>
+            </div>
+            <!--#endif-->
+
+            <!--#if defined(MQTT_SUPPORT) && MQTT_SUPPORT-->
+            <div class="row">
+                <div class="col-lg-3 col-lg-auto">
+                    MQTT
+                </div>
+                <div class="col">
+                    %MQTT_STATUS%
+                </div>
+            </div>
+            <!--#endif-->
+
+            <!--#if defined(HOME_ASSISTANT_INTEGRATION) && HOME_ASSISTANT_INTEGRATION-->
+            <div class="row">
+                <div class="col-lg-3 col-lg-auto">
+                    Home Assistant
+                </div>
+                <div class="col">
+                    %HASS_STATUS%
+                </div>
+            </div>
+            <!--#endif-->
+
+            <!--#if defined(HUE_EMULATION) && HUE_EMULATION-->
+            <div class="row">
+                <div class="col-lg-3 col-lg-auto">
+                    Hue
+                </div>
+                <div class="col">
+                    %HUE_STATUS%
+                </div>
+            </div>
+            <!--#endif-->
+
+            <!--#if defined(REST_API_SUPPORT) && REST_API_SUPPORT-->
+            <div class="row">
+                <div class="col-lg-3 col-lg-auto">
+                    REST API
+                </div>
+                <div class="col">
+                    %REST_STATUS%
+                </div>
+            </div>
+            <!--#endif-->
+
+            <!--#if defined(PING_MONITOR) && PING_MONITOR-->
+            <div class="row">
+                <div class="col-lg-3 col-lg-auto">
+                    Ping Monitor
+                </div>
+                <div class="col">
+                    %PINGMON_STATUS%
+                </div>
+            </div>
+            <!--#endif-->
+
+            <!--#if defined(SERIAL2TCP) && SERIAL2TCP-->
+            <div class="row">
+                <div class="col-lg-3 col-lg-auto">
+                    Serial2TCP
+                </div>
+                <div class="col">
+                    %SERIAL2TCP_STATUS%
+                </div>
+            </div>
+            <!--#endif-->
+
+            <!--#if defined(STK500V1) && STK500V1-->
+            <div class="row">
+                <div class="col-lg-3 col-lg-auto">
+                    STK500v1
+                </div>
+                <div class="col">
+                    Programmer enabled
+                </div>
+            </div>
+            <!--#endif-->
+
+            <!--#if defined(IOT_RF24_MASTER) && IOT_RF24_MASTER-->
+            <div class="row">
+                <div class="col-lg-3 col-lg-auto">
+                    RF24 Master
+                </div>
+                <div class="col">
+                    %RF24_STATUS%
+                </div>
+            </div>
+            <!--#endif-->
+
+            <!--#if defined(IOT_SWITCH) && IOT_SWITCH-->
+            <div class="row">
+                <div class="col-lg-3 col-lg-auto">
+                    Switch
+                </div>
+                <div class="col">
+                    %SWITCH_STATUS%
+                </div>
+            </div>
+            <!--#endif-->
+
+            <!--#if defined(IOT_SENSOR) && IOT_SENSOR-->
+            <div class="row">
+                <div class="col-lg-3 col-lg-auto">
+                    Sensor
+                </div>
+                <div class="col">
+                    %SENSOR_STATUS%
+                </div>
+            </div>
+            <!--#endif-->
+
+            <!--#if defined(IOT_ATOMIC_SUN_V2) && IOT_ATOMIC_SUN_V2-->
+            <div class="row">
+                <div class="col-lg-3 col-lg-auto">
+                    Atomic Sun V2
+                </div>
+                <div class="col">
+                    %ATOMICSUN_STATUS%
+                </div>
+            </div>
+            <!--#endif-->
+
+            <!--#if defined(IOT_DIMMER_MODULE) && IOT_DIMMER_MODULE-->
+            <div class="row">
+                <div class="col-lg-3 col-lg-auto">
+                    Dimmer Module
+                </div>
+                <div class="col">
+                    %DIMMER_STATUS%
+                </div>
+            </div>
+            <!--#endif-->
+
+            <!--#if defined(IOT_BLINDS_CTRL) && IOT_BLINDS_CTRL-->
+            <div class="row">
+                <div class="col-lg-3 col-lg-auto">
+                    Blinds Controller
+                </div>
+                <div class="col">
+                    %BLINDSCTRL_STATUS%
+                </div>
+            </div>
+            <!--#endif-->
+
+            <!--#if defined(IOT_CLOCK) && IOT_CLOCK-->
+            <div class="row">
+                <div class="col-lg-3 col-lg-auto">
+                    Clock
+                </div>
+                <div class="col">
+                    %CLOCK_STATUS%
+                </div>
+            </div>
+            <!--#endif-->
+
+            <!--#if defined(IOT_WEATHER_STATION) && IOT_WEATHER_STATION-->
+            <div class="row">
+                <div class="col-lg-3 col-lg-auto">
+                    Weather Station
+                </div>
+                <div class="col">
+                    %WEATHER_STATION_STATUS%
+                </div>
+            </div>
+            <!--#endif-->
+
+            <!--#if 0 && defined(MDNS_SUPPORT) && MDNS_SUPPORT-->
+            <div class="row">
+                <div class="col-lg-3 col-lg-auto">
+                    MDNS Auto discovery
+                </div>
+                <div class="col" id="pollm_dns">
+                    <td colspan="2"><img src="images/spinner.gif" width="16" height="16"></td>
+                </div>
+            </div>
+            <!--#endif-->
+        </div>
+
         <!--%%FOOT-->
         <div class="row">
             <div class="col footer">&nbsp;</div>

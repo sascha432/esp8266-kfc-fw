@@ -62,7 +62,9 @@ public:
     BlindsControl();
 
     virtual void createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTComponent::MQTTAutoDiscoveryVector &vector) override;
-    virtual uint8_t getAutoDiscoveryCount() const override;
+    virtual uint8_t getAutoDiscoveryCount() const override {
+        return 2;
+    }
     virtual void onConnect(MQTTClient *client) override;
 
     virtual void getValues(JsonArray &array);
@@ -90,13 +92,14 @@ protected:
     void _readConfig();
 
 protected:
+    String _getTopic() const;
+
     BlindsChannel _channels[ChannelEnum_t::CHANNEL_SIZE];
     uint8_t _swapChannels: 1;
     uint8_t _channel0Dir: 1;
     uint8_t _channel1Dir: 1;
     uint8_t _activeChannel;
     ChannelAction _action;
-    String _topic;
 
     MillisTimer _motorTimeout;
 

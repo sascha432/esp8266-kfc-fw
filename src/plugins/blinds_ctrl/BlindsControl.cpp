@@ -59,28 +59,25 @@ void BlindsControl::_setup() {
     }
 }
 
-void BlindsControl::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTComponent::MQTTAutoDiscoveryVector &vector) {
-
-    _topic = MQTTClient::formatTopic(-1, F("/metrics"));
+void BlindsControl::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTComponent::MQTTAutoDiscoveryVector &vector)
+{
+    String topic = _getTopic();
 
     auto discovery = _debug_new MQTTAutoDiscovery();
     discovery->create(this, 0, format);
-    discovery->addStateTopic(_topic + '1');
+    discovery->addStateTopic(topic + '1');
     discovery->finalize();
     vector.emplace_back(MQTTComponent::MQTTAutoDiscoveryPtr(discovery));
 
     discovery = _debug_new MQTTAutoDiscovery();
     discovery->create(this, 1, format);
-    discovery->addStateTopic(_topic + '2');
+    discovery->addStateTopic(topic + '2');
     discovery->finalize();
     vector.emplace_back(MQTTComponent::MQTTAutoDiscoveryPtr(discovery));
 }
 
-uint8_t BlindsControl::getAutoDiscoveryCount() const {
-    return 2;
-}
-
-void BlindsControl::getValues(JsonArray &array) {
+void BlindsControl::getValues(JsonArray &array)
+{
     JsonUnnamedObject *obj;
 
     obj = &array.addObject(3);
@@ -104,31 +101,34 @@ void BlindsControl::getValues(JsonArray &array) {
     obj->add(JJ(state), true);
 }
 
-void BlindsControl::onConnect(MQTTClient *client) {
+void BlindsControl::onConnect(MQTTClient *client)
+{
     _debug_printf_P(PSTR("BlindsControl::onConnect()\n"));
     _readConfig();
     _publishState(client);
 }
 
-void BlindsControl::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState) {
-    PGM_P name = PSTR("blinds_channel");
+void BlindsControl::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
+{
+    auto name = PSTR("blinds_channel");
     _debug_printf_P(PSTR("BlindsControl::setValue(): %s value(%u) %s state(%u) %u\n"), id.c_str(), hasValue, value.c_str(), hasState, state);
     if (hasValue) {
-        auto ptr = id.c_str();
-        if (strncmp_P(ptr, name, constexpr_strlen_P(name)) == 0) {
-            uint8_t channel = (ptr[constexpr_strlen_P(name)] - '1') % 2;
+        if (String_startsWith(id, name)) {
+            uint8_t channel = (id.charAt(strlen_P(name)) - '1') % 2;
             setChannel(channel, value.toInt() ? BlindsChannel::CLOSED : BlindsChannel::OPEN);
         }
     }
 }
 
-void BlindsControl::setChannel(uint8_t channel, BlindsChannel::StateEnum_t state) {
+void BlindsControl::setChannel(uint8_t channel, BlindsChannel::StateEnum_t state)
+{
     _debug_printf_P(PSTR("BlindsControl::setChannel(%u, %u)\n"), channel, state);
     // perform action in _loopMethod
     _action.set(state, channel);
 }
 
-void BlindsControl::_loopMethod() {
+void BlindsControl::_loopMethod()
+{
     if (_action.isSet()) {
         auto channel = _action.getChannel();
         if (_motorTimeout.isActive()) { // abort if running, otherwise the action is queued
@@ -185,14 +185,16 @@ void BlindsControl::_loopMethod() {
 }
 
 
-const __FlashStringHelper *BlindsControl::_getStateStr(uint8_t channel) const {
+const __FlashStringHelper *BlindsControl::_getStateStr(uint8_t channel) const
+{
     if (_motorTimeout.isActive() && _activeChannel == channel) {
         return F("Busy");
     }
     return FPSTR(BlindsChannel::_stateStr(_channels[channel].getState()));
 }
 
-void BlindsControl::_clearAdc() {
+void BlindsControl::_clearAdc()
+{
     uint8_t channel = _activeChannel;
     if (_swapChannels) {
         channel++;
@@ -215,13 +217,15 @@ void BlindsControl::_clearAdc() {
 #endif
 }
 
-void BlindsControl::_updateAdc() {
+void BlindsControl::_updateAdc()
+{
     uint16_t count = (_currentTimer.getTime() / IOT_BLINDS_CTRL_INT_TDIV);
     _currentTimer.start();
     _adcIntegral = ((_adcIntegral * count) + analogRead(A0)) / (count + 1);
 }
 
-void BlindsControl::_setMotorSpeed(uint8_t channel, uint16_t speed, bool direction) {
+void BlindsControl::_setMotorSpeed(uint8_t channel, uint16_t speed, bool direction)
+{
     uint8_t pin1, pin2;
 
     if (_swapChannels) {
@@ -259,7 +263,8 @@ void BlindsControl::_setMotorSpeed(uint8_t channel, uint16_t speed, bool directi
     }
 }
 
-void BlindsControl::_stop() {
+void BlindsControl::_stop()
+{
     _debug_println(F("BlindsControl::_stop()"));
 
     _motorTimeout.disable();
@@ -269,7 +274,12 @@ void BlindsControl::_stop() {
     analogWrite(IOT_BLINDS_CTRL_M4_PIN, 0);
 }
 
-void BlindsControl::_publishState(MQTTClient *client) {
+String BlindsControl::_getTopic() const {
+    return MQTTClient::formatTopic(-1, F("/metrics/"));
+}
+
+void BlindsControl::_publishState(MQTTClient *client)
+{
     if (!client) {
         client = MQTTClient::getClient();
     }
@@ -277,8 +287,9 @@ void BlindsControl::_publishState(MQTTClient *client) {
 
     if (client) {
         uint8_t _qos = MQTTClient::getDefaultQos();
-        client->publish(_topic + '1', _qos, 1, _getStateStr(0));
-        client->publish(_topic + '2', _qos, 1, _getStateStr(1));
+        String topic = _getTopic();
+        client->publish(topic + '1', _qos, 1, _getStateStr(0));
+        client->publish(topic + '2', _qos, 1, _getStateStr(1));
         _channels[0]._publishState(client, _qos);
         _channels[1]._publishState(client, _qos);
     }
@@ -306,7 +317,8 @@ void BlindsControl::_loadState()
 #endif
 }
 
-void BlindsControl::_saveState() {
+void BlindsControl::_saveState()
+{
 #if IOT_BLINDS_CTRL_SAVE_STATE
     BlindsChannel::StateEnum_t state[2] = { _channels[0].getState(), _channels[1].getState() };
     auto file = SPIFFS.open(FSPGM(iot_blinds_control_state_file), fs::FileOpenMode::write);
@@ -317,7 +329,8 @@ void BlindsControl::_saveState() {
 #endif
 }
 
-void BlindsControl::_readConfig() {
+void BlindsControl::_readConfig()
+{
     auto cfg = config._H_GET(Config().blinds_controller);
     _channels[0].setChannel(cfg.channels[0]);
     _channels[1].setChannel(cfg.channels[1]);
@@ -329,13 +342,15 @@ void BlindsControl::_readConfig() {
 
 #if IOT_BLINDS_CTRL_RPM_PIN
 
-void BlindsControl::_rpmReset() {
+void BlindsControl::_rpmReset()
+{
     _rpmTimer.start();
     _rpmLastInterrupt.start();
     _rpmCounter = 0;
 }
 
-void BlindsControl::_rpmIntCallback(const InterruptInfo &info) {
+void BlindsControl::_rpmIntCallback(const InterruptInfo &info)
+{
     const uint8_t multiplier = IOT_BLINDS_CTRL_RPM_PULSES * 10;
     auto time = _rpmTimer.getTime(info.micro);
     _rpmLastInterrupt.start();
@@ -344,11 +359,13 @@ void BlindsControl::_rpmIntCallback(const InterruptInfo &info) {
     _rpmCounter++;
 }
 
-uint16_t BlindsControl::_getRpm() {
+uint16_t BlindsControl::_getRpm()
+{
     return (uint16_t)((1000000UL * 60UL / IOT_BLINDS_CTRL_RPM_PULSES) / _rpmTimeIntegral);
 }
 
-bool BlindsControl::_hasStalled() {
+bool BlindsControl::_hasStalled()
+{
     // interval for 500 rpm = ~40ms with 3 pulses
     return (_rpmLastInterrupt.getTime() > (1000000UL / 500UL/*rpm*/ * 60UL / IOT_BLINDS_CTRL_RPM_PULSES));
 }

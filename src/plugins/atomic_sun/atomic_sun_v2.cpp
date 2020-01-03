@@ -632,16 +632,6 @@ void Driver_4ChDimmer::_getChannels()
 
 AtomicSunPlugin dimmer_plugin;
 
-PGM_P AtomicSunPlugin::getName() const
-{
-    return PSTR("atomicsun");
-}
-
-AtomicSunPlugin::PluginPriorityEnum_t AtomicSunPlugin::getSetupPriority() const
-{
-    return (AtomicSunPlugin::PluginPriorityEnum_t)100;
-}
-
 void AtomicSunPlugin::setup(PluginSetupMode_t mode)
 {
     _begin();
@@ -661,11 +651,6 @@ void AtomicSunPlugin::reconfigure(PGM_P source)
 bool AtomicSunPlugin::hasReconfigureDependecy(PluginComponent *plugin) const
 {
     return plugin->nameEquals(F("http"));
-}
-
-bool AtomicSunPlugin::hasWebUI() const
-{
-    return true;
 }
 
 void AtomicSunPlugin::createWebUI(WebUI &webUI)
@@ -697,16 +682,6 @@ void AtomicSunPlugin::createWebUI(WebUI &webUI)
         row = &webUI.addRow();
         row->addSlider(PrintString(F("dimmer_channel%u"), order[j]), PrintString(F("Channel %u"), j + 1), 0, IOT_ATOMIC_SUN_MAX_BRIGHTNESS);
     }
-}
-
-WebUIInterface *AtomicSunPlugin::getWebUIInterface()
-{
-    return this;
-}
-
-bool AtomicSunPlugin::hasStatus() const
-{
-    return true;
 }
 
 #endif

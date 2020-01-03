@@ -149,19 +149,37 @@ public:
     AtomicSunPlugin() {
         REGISTER_PLUGIN(this, "AtomicSunPlugin");
     }
-    virtual PGM_P getName() const;
-    virtual PluginPriorityEnum_t getSetupPriority() const override;
+    virtual PGM_P getName() const {
+        return PSTR("atomicsun");
+    }
+    virtual PluginPriorityEnum_t getSetupPriority() const override {
+        return (AtomicSunPlugin::PluginPriorityEnum_t)100;
+    }
 
     virtual void setup(PluginSetupMode_t mode) override;
     virtual void reconfigure(PGM_P source) override;
     virtual bool hasReconfigureDependecy(PluginComponent *plugin) const;
 
-    virtual bool hasWebUI() const override;
+    virtual bool hasWebUI() const override {
+        return true;
+    }
     virtual void createWebUI(WebUI &webUI) override;
-    virtual WebUIInterface *getWebUIInterface() override;
+    virtual WebUIInterface *getWebUIInterface() override {
+        return this;
+    }
 
-    virtual bool hasStatus() const override;
+    virtual bool hasStatus() const override {
+        return true;
+    }
     virtual void getStatus(Print &output) override;
+
+    virtual MenuTypeEnum_t getMenuType() const override {
+        return CUSTOM;
+    }
+    virtual void createMenu() override {
+        bootstrapMenu.addSubMenu(F("Atomic Sun v2"), F("dimmer_cfg.html"), navMenu.config);
+    }
+
 };
 
 extern AtomicSunPlugin dimmer_plugin;

@@ -81,7 +81,6 @@ public:
     void retry(const String &message);
 
     static void wifiConnectedCallback(uint8_t event, void *payload);
-    static void updateTimeCallback(EventScheduler::TimerPtr timer);
     static void getStatus(Print &output);
     static void _setZoneEnd(time_t zoneEnd);
     static const time_t getZoneEnd();
@@ -198,21 +197,9 @@ void TimezoneData::retry(const String &message)
     Logger_notice(F("NTP: Update failed. Retrying (#%d) in %d second(s). %s"), _failureCount, next_check, message.c_str());
 }
 
-void TimezoneData::updateTimeCallback(EventScheduler::TimerPtr timer)
-{
-    _debug_println(F("TimezoneData::updateTimeCallback()"));
-    wifiConnectedCallback(WiFiCallbacks::MAX + 1, nullptr);
-}
-
 void TimezoneData::wifiConnectedCallback(uint8_t event, void *payload)
 {
     _debug_printf_P(PSTR("TimezoneData::wifiConnectedCallback(): event=%u\n"), event);
-    if (event == WiFiCallbacks::MAX + 1 || !timezoneData) {
-        _debug_printf_P(PSTR("wifiConnectedCallback(%d): forced SNTP update\n"), event);
-        TimezoneData::configTime();
-        return;
-    }
-
     if (!IS_TIME_VALID(time(nullptr))) {
         _debug_printf_P(PSTR("wifiConnectedCallback(%d): time not valid, updating SNTP\n"), event);
         TimezoneData::configTime();
@@ -306,7 +293,7 @@ void TimezoneData::getStatus(Print &out)
         }
         if (_lastNtpCallback) {
             float seconds = get_time_diff(_lastNtpCallback, millis()) / 1000.0;
-            unsigned int nextSeconds = get_time_diff(_lastNtpUpdate, millis() + _ntpRefreshTime) / 1000;
+            unsigned int nextSeconds = (_ntpRefreshTime - get_time_diff(_lastNtpUpdate, millis())) / 1000;
             out.printf_P(PSTR(HTML_S(br) "Last update %.2f seconds ago, next update in %u seconds"), seconds, nextSeconds);
         }
     }
@@ -333,8 +320,12 @@ void TimezoneData::updateLoop()
 
 void TimezoneData::updateNtpCallback()
 {
-    auto now = time(nullptr);
+    time_t now;
+
+#if DEBUG_NTP_CLIENT || NTP_LOG_TIME_UPDATE
+    now = time(nullptr);
     _debug_printf_P(PSTR("TimezoneData::updateNtpCallback(): new time=%u\n"), (uint32_t)now);
+#endif
 
     if (get_time_diff(_lastNtpCallback, millis()) < 1000) {
         _debug_printf_P(PSTR("TimezoneData::updateNtpCallback(): called twice within 1000ms (%u), ignored multiple calls\n"), get_time_diff(_lastNtpCallback, millis()));
@@ -372,8 +363,8 @@ void TimezoneData::configTime()
     _lastNtpUpdate = millis();
 
     auto refresh = config._H_GET(Config().ntp.ntpRefresh);
-    if (refresh < 5) {
-        refresh = 5;
+    if (refresh < 60) {
+        refresh = 60;
     }
     _ntpRefreshTime = (refresh * 60) * (950 + (rand() % 100)); // +-5%
 
@@ -393,8 +384,6 @@ void timezone_setup()
 
         // force SNTP update on WiFi connect
         WiFiCallbacks::add(WiFiCallbacks::EventEnum_t::CONNECTED, TimezoneData::wifiConnectedCallback);
-        // force SNTP update once per hour
-        Scheduler.addTimer((3600 + rand() % 300) * 1000UL, false, TimezoneData::updateTimeCallback);
 
 #if NTP_RESTORE_TIMEZONE_AFTER_WAKEUP
         if (resetDetector.hasWakeUpDetected()) { // restore timezone from RTC memory
@@ -450,7 +439,7 @@ void timezone_setup()
     }
 }
 
-void ntp_client_reconfigure_plugin(PGM_P source)
+inline void ntp_client_reconfigure_plugin(PGM_P source)
 {
     timezone_setup();
 }
@@ -461,9 +450,15 @@ public:
         REGISTER_PLUGIN(this, "NTPPlugin");
     }
 
-    virtual PGM_P getName() const;
-    virtual PluginPriorityEnum_t getSetupPriority() const override;
-    virtual uint8_t getRtcMemoryId() const override;
+    virtual PGM_P getName() const {
+        return PSTR("ntp");
+    }
+    virtual PluginPriorityEnum_t getSetupPriority() const override {
+        return PRIO_NTP;
+    }
+    virtual uint8_t getRtcMemoryId() const override {
+        return NTP_CLIENT_RTC_MEM_ID;
+    }
 
 #if NTP_RESTORE_TIMEZONE_AFTER_WAKEUP
     virtual bool autoSetupAfterDeepSleep() const override {
@@ -474,7 +469,9 @@ public:
     virtual void setup(PluginSetupMode_t mode) override;
     virtual void reconfigure(PGM_P source) override;
 
-    virtual bool hasStatus() const override;
+    virtual bool hasStatus() const override {
+        return true;
+    }
     virtual void getStatus(Print &output) override;
 
     virtual PGM_P getConfigureForm() const override {
@@ -483,29 +480,16 @@ public:
     virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
 
 #if AT_MODE_SUPPORTED
-    bool hasAtMode() const override;
-    void atModeHelpGenerator() override;
-    bool atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) override;
+    virtual bool hasAtMode() const override {
+        return true;
+    }
+    virtual void atModeHelpGenerator() override;
+    virtual bool atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) override;
 #endif
 };
 
 
 static NTPPlugin plugin;
-
-PGM_P NTPPlugin::getName() const
-{
-    return PSTR("ntp");
-}
-
-NTPPlugin::PluginPriorityEnum_t NTPPlugin::getSetupPriority() const
-{
-    return PRIO_NTP;
-}
-
-uint8_t NTPPlugin::getRtcMemoryId() const
-{
-    return NTP_CLIENT_RTC_MEM_ID;
-}
 
 void NTPPlugin::setup(PluginSetupMode_t mode)
 {
@@ -515,10 +499,6 @@ void NTPPlugin::setup(PluginSetupMode_t mode)
 void NTPPlugin::reconfigure(PGM_P source)
 {
     ntp_client_reconfigure_plugin(source);
-}
-
-bool NTPPlugin::hasStatus() const {
-    return true;
 }
 
 void NTPPlugin::getStatus(Print &output)
@@ -542,7 +522,7 @@ void NTPPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form) 
     form.add<sizeof Config().ntp.timezone>(F("ntp_timezone"), config._H_W_STR(Config().ntp.timezone));
 
     form.add<uint16_t>(F("ntp_refresh"), &config._H_W_GET(Config().ntp.ntpRefresh));
-    form.addValidator(new FormRangeValidator(F("Invalid refresh interval: %min%-%max% minutes"), 5, 43200));
+    form.addValidator(new FormRangeValidator(F("Invalid refresh interval: %min%-%max% minutes"), 60, 43200));
 
 #if USE_REMOTE_TIMEZONE
     form.add<sizeof Config().ntp.remote_tz_dst_ofs_url>(F("ntp_remote_tz_url"), config._H_W_STR(Config().ntp.remote_tz_dst_ofs_url));
@@ -574,11 +554,6 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(SNTPFU, "SNTPFU", "Force SNTP to update ti
 #endif
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(NOW, "NOW", "Display current time");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(TZ, "TZ", "<timezone>", "Set timezone", "Show timezone information");
-
-bool NTPPlugin::hasAtMode() const
-{
-    return true;
-}
 
 void NTPPlugin::atModeHelpGenerator()
 {

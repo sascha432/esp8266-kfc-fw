@@ -373,7 +373,7 @@ void KFCFWConfiguration::restoreFactorySettings() {
     _H_SET_STR(Config().ntp.servers[0], F("pool.ntp.org"));
     _H_SET_STR(Config().ntp.servers[1], F("time.nist.gov"));
     _H_SET_STR(Config().ntp.servers[2], F("time.windows.com"));
-    _H_SET(Config().ntp.ntpRefresh, 60);
+    _H_SET(Config().ntp.ntpRefresh, 12 * 60); // refresh twice a day
 #if USE_REMOTE_TIMEZONE
     // https://timezonedb.com/register
     _H_SET_STR(Config().ntp.remote_tz_dst_ofs_url, F("http://api.timezonedb.com/v2.1/get-time-zone?key=_YOUR_API_KEY_&by=zone&format=json&zone=${timezone}"));
@@ -1109,7 +1109,6 @@ void KFCConfigurationPlugin::setup(PluginSetupMode_t mode) {
     _debug_printf_P(PSTR("config_init(): safe mode %d, wake up %d\n"), (mode == PLUGIN_SETUP_SAFE_MODE), resetDetector.hasWakeUpDetected());
 
     config.setup();
-    //config._safeMode = config._safeMode || resetDetector.getSafeMode() || (mode == PLUGIN_SETUP_SAFE_MODE);
 
 #if RTC_SUPPORT
     auto rtc = config.getRTC();

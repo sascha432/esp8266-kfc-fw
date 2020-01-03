@@ -39,6 +39,11 @@
 #define IOT_SENSOR_INA219_READ_INTERVAL     75
 #endif
 
+#ifndef IOT_SENSOR_INA219_PEAK_HOLD_TIME
+// time in seconds until the peak current is reset
+#define IOT_SENSOR_INA219_PEAK_HOLD_TIME    60
+#endif
+
 class Sensor_INA219 : public MQTTSensor {
 public:
     static const uint8_t IN219_UPDATE_RATE = 10;

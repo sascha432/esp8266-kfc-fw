@@ -44,7 +44,6 @@ private:
     String _name;
     Adafruit_BME280 _bme280;
     uint8_t _address;
-    String _topic;
 };
 
 #endif

@@ -13,7 +13,8 @@
 #include <debug_helper_disable.h>
 #endif
 
-Sensor_Battery::Sensor_Battery(const JsonString &name) : MQTTSensor(), _name(name) {
+Sensor_Battery::Sensor_Battery(const JsonString &name) : MQTTSensor(), _name(name)
+{
 #if DEBUG_MQTT_CLIENT
     debug_printf_P(PSTR("Sensor_Battery(): component=%p\n"), this);
 #endif
@@ -21,7 +22,8 @@ Sensor_Battery::Sensor_Battery(const JsonString &name) : MQTTSensor(), _name(nam
     reconfigure();
 }
 
-void Sensor_Battery::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector) {
+void Sensor_Battery::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector)
+{
     auto discovery = _debug_new MQTTAutoDiscovery();
     discovery->create(this, 0, format);
     discovery->addStateTopic(_getTopic(LEVEL));
@@ -46,7 +48,8 @@ uint8_t Sensor_Battery::getAutoDiscoveryCount() const {
 #endif
 }
 
-void Sensor_Battery::getValues(JsonArray &array) {
+void Sensor_Battery::getValues(JsonArray &array)
+{
     _debug_printf_P(PSTR("Sensor_Battery::getValues()\n"));
 
     auto obj = &array.addObject(3);
@@ -62,7 +65,8 @@ void Sensor_Battery::getValues(JsonArray &array) {
 #endif
 }
 
-void Sensor_Battery::createWebUI(WebUI &webUI, WebUIRow **row) {
+void Sensor_Battery::createWebUI(WebUI &webUI, WebUIRow **row)
+{
     _debug_printf_P(PSTR("Sensor_Battery::createWebUI()\n"));
 
     (*row)->addSensor(_getId(LEVEL), _name, F("V"));
@@ -114,7 +118,8 @@ float Sensor_Battery::readSensor(SensorDataEx_t *data)
     return -1;
 }
 
-float Sensor_Battery::_readSensor(SensorDataEx_t *data) {
+float Sensor_Battery::_readSensor(SensorDataEx_t *data)
+{
     double value = 0;
     uint8_t i = 0;
     for(i = 0; i < 3; i++) {
@@ -129,7 +134,8 @@ float Sensor_Battery::_readSensor(SensorDataEx_t *data) {
     return (((IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R2 + IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1)) / IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1) * adcVoltage * _calibration;
 }
 
-String Sensor_Battery::_getId(BatteryIdEnum_t type) {
+String Sensor_Battery::_getId(BatteryIdEnum_t type)
+{
 #if IOT_SENSOR_BATTERY_CHARGE_DETECTION
     switch(type) {
         case LEVEL:
@@ -143,7 +149,8 @@ String Sensor_Battery::_getId(BatteryIdEnum_t type) {
 #endif
 }
 
-String Sensor_Battery::_getTopic(BatteryIdEnum_t type) {
+String Sensor_Battery::_getTopic(BatteryIdEnum_t type)
+{
     return MQTTClient::formatTopic(-1, F("/%s/"), _getId(type).c_str());
 }
 

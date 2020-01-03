@@ -23,7 +23,6 @@ Sensor_CCS811::Sensor_CCS811(const String &name, uint8_t address) : MQTTSensor()
 #endif
     registerClient(this);
     _ccs811.begin(address);
-    _topic = MQTTClient::formatTopic(-1, F("/%s/"), _getId().c_str());
     setUpdateRate(10); // faster update rate until valid data is available
     _sensor.eCO2 = 0;
     _sensor.TVOC = 0;
@@ -32,9 +31,11 @@ Sensor_CCS811::Sensor_CCS811(const String &name, uint8_t address) : MQTTSensor()
 
 void Sensor_CCS811::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector)
 {
+    String topic = MQTTClient::formatTopic(-1, F("/%s/"), _getId().c_str());
+
     auto discovery = _debug_new MQTTAutoDiscovery();
     discovery->create(this, 0, format);
-    discovery->addStateTopic(_topic);
+    discovery->addStateTopic(topic);
     discovery->addUnitOfMeasurement(F("ppm"));
     discovery->addValueTemplate(F("eCO2"));
     discovery->finalize();
@@ -42,7 +43,7 @@ void Sensor_CCS811::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTT
 
     discovery = _debug_new MQTTAutoDiscovery();
     discovery->create(this, 1, format);
-    discovery->addStateTopic(_topic);
+    discovery->addStateTopic(topic);
     discovery->addUnitOfMeasurement(F("ppb"));
     discovery->addValueTemplate(F("TVOC"));
     discovery->finalize();
@@ -101,7 +102,8 @@ void Sensor_CCS811::publishState(MQTTClient *client)
             json.add(F("eCO2"), sensor.eCO2);
             json.add(F("TVOC"), sensor.TVOC);
             json.printTo(str);
-            client->publish(_topic, _qos, 1, str);
+
+            client->publish(MQTTClient::formatTopic(-1, F("/%s/"), _getId().c_str()), _qos, 1, str);
         }
     }
 }

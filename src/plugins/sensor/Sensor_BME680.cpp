@@ -12,19 +12,22 @@
 #include <debug_helper_disable.h>
 #endif
 
-Sensor_BME680::Sensor_BME680(const String &name, uint8_t address) : MQTTSensor(), _name(name), _address(address) {
+Sensor_BME680::Sensor_BME680(const String &name, uint8_t address) : MQTTSensor(), _name(name), _address(address)
+{
 #if DEBUG_MQTT_CLIENT
     debug_printf_P(PSTR("Sensor_BME680(): component=%p\n"), this);
 #endif
     registerClient(this);
      _bme680.begin(address);
-     _topic = MQTTClient::formatTopic(-1, F("/%s/"), _getId().c_str());
 }
 
-void Sensor_BME680::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector) {
+void Sensor_BME680::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector)
+{
+    String topic = MQTTClient::formatTopic(-1, F("/%s/"), _getId().c_str());
+
     auto discovery = _debug_new MQTTAutoDiscovery();
     discovery->create(this, 0, format);
-    discovery->addStateTopic(_topic);
+    discovery->addStateTopic(topic);
     discovery->addUnitOfMeasurement(F("\u00b0C"));
     discovery->addValueTemplate(F("temperature"));
     discovery->finalize();
@@ -32,7 +35,7 @@ void Sensor_BME680::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTT
 
     discovery = _debug_new MQTTAutoDiscovery();
     discovery->create(this, 1, format);
-    discovery->addStateTopic(_topic);
+    discovery->addStateTopic(topic);
     discovery->addUnitOfMeasurement(F("%"));
     discovery->addValueTemplate(F("humidity"));
     discovery->finalize();
@@ -40,7 +43,7 @@ void Sensor_BME680::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTT
 
     discovery = _debug_new MQTTAutoDiscovery();
     discovery->create(this, 2, format);
-    discovery->addStateTopic(_topic);
+    discovery->addStateTopic(topic);
     discovery->addUnitOfMeasurement(F("hPa"));
     discovery->addValueTemplate(F("pressure"));
     discovery->finalize();
@@ -48,7 +51,7 @@ void Sensor_BME680::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTT
 
     discovery = _debug_new MQTTAutoDiscovery();
     discovery->create(this, 3, format);
-    discovery->addStateTopic(_topic);
+    discovery->addStateTopic(topic);
     discovery->addUnitOfMeasurement(emptyString);
     discovery->addValueTemplate(F("gas"));
     discovery->finalize();
@@ -111,7 +114,8 @@ void Sensor_BME680::publishState(MQTTClient *client) {
         json.add(F("pressure"), JsonNumber(sensor.pressure, 2));
         json.add(F("gas"), JsonNumber(sensor.gas, 2));
         json.printTo(str);
-        client->publish(_topic, _qos, 1, str);
+
+        client->publish(MQTTClient::formatTopic(-1, F("/%s/"), _getId().c_str()), _qos, 1, str);
     }
 }
 

@@ -159,9 +159,8 @@ void Sensor_INA219::_loop()
         }
     }
 
-    // reset peak current after 120 seconds
-    diff = get_time_diff(_holdPeakTimer, millis());
-    if (diff > 120 * 1000) {
+    // reset peak current after IOT_SENSOR_INA219_PEAK_HOLD_TIME seconds
+    if (get_time_diff(_holdPeakTimer, millis()) > IOT_SENSOR_INA219_PEAK_HOLD_TIME * 1000) {
         _holdPeakTimer = millis();
         _Ipeak = 0;
     }

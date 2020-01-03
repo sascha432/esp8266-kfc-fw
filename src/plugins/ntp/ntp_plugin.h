@@ -7,7 +7,7 @@
 #include <Arduino_compat.h>
 
 #ifndef DEBUG_NTP_CLIENT
-#define DEBUG_NTP_CLIENT                        0
+#define DEBUG_NTP_CLIENT                        1
 #endif
 
 // TODO this fails if the wake up was caused by an external event and not the timer
@@ -24,6 +24,10 @@
 #define NTP_HAVE_CALLBACKS                      0
 #endif
 
+#ifndef NTP_LOG_TIME_UPDATE
+#define NTP_LOG_TIME_UPDATE                     1
+#endif
+
 #define NTP_CLIENT_RTC_MEM_ID                   3
 
 #if NTP_RESTORE_SYSTEM_TIME_AFTER_WAKEUP
@@ -32,9 +36,11 @@ void ntp_client_prepare_deep_sleep(uint32_t time);
 
 #if NTP_HAVE_CALLBACKS
 
-typedef std::function<void(bool timezone)> TimeUpdatedCallback_t;
+#define NTP_IS_TIMEZONE_UPDATE(now)             (now == 0)
 
-// gets called if the system time is updated (timezone=false) or timezone is set (timezone=true)
+typedef std::function<void(time_t now)> TimeUpdatedCallback_t;
+
+// gets called if the system time is updated (now = time(nullptr)) or timezone is set (NTP_IS_TIMEZONE_UPDATE(now) == true)
 void addTimeUpdatedCallback(TimeUpdatedCallback_t callback);
 
 #endif

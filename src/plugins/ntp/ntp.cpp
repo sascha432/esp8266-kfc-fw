@@ -56,6 +56,7 @@ static std::vector<TimeUpdatedCallback_t> _callbacks;
 
 void addTimeUpdatedCallback(TimeUpdatedCallback_t callback)
 {
+    _debug_printf_P(PSTR("addTimeUpdatedCallback(): func=%p\n"), callback);
     _callbacks.push_back(callback);
 }
 
@@ -264,7 +265,7 @@ void TimezoneData::_callback(bool status, const String message, time_t zoneEnd)
 
 #if NTP_HAVE_CALLBACKS
         for(auto callback: _callbacks) {
-            callback(true);
+            callback(0);
         }
 #endif
 
@@ -316,7 +317,8 @@ void TimezoneData::getStatus(Print &out)
 
 void TimezoneData::updateLoop()
 {
-    if (get_time_diff(_lastNtpUpdate, millis()) > _ntpRefreshTime) { // refresh NTP time once per hour, it gets out of sync quite quickly
+    if (get_time_diff(_lastNtpUpdate, millis()) > _ntpRefreshTime) { // refresh NTP time manually
+        _debug_println(F("TimezoneData::updateLoop(): refreshing NTP time manually"));
         configTime();
     }
     if (_zoneEnd != 0 && time(nullptr) >= _zoneEnd) {
@@ -332,35 +334,48 @@ void TimezoneData::updateLoop()
 void TimezoneData::updateNtpCallback()
 {
     auto now = time(nullptr);
-    _debug_printf_P(PSTR("update_time_callback(): new time=%u\n"), (uint32_t)now);
+    _debug_printf_P(PSTR("TimezoneData::updateNtpCallback(): new time=%u\n"), (uint32_t)now);
 
-    if (get_time_diff(_lastNtpCallback, millis()) > 1000) { // don't invoke callbacks twice within one second
-        char buf[32];
-        auto tm = timezone_localtime(&now);
-        timezone_strftime_P(buf, sizeof(buf), SPGM(strftime_date_time_zone), tm);
-        Logger_notice(F("NTP: new time: %s"), buf);
-
-#if NTP_HAVE_CALLBACKS
-        for(auto callback: _callbacks) {
-            callback(false);
-        }
-#endif
+    if (get_time_diff(_lastNtpCallback, millis()) < 1000) {
+        _debug_printf_P(PSTR("TimezoneData::updateNtpCallback(): called twice within 1000ms (%u), ignored multiple calls\n"), get_time_diff(_lastNtpCallback, millis()));
+        return;
     }
-    _lastNtpCallback = millis();
 
+#if NTP_LOG_TIME_UPDATE
+    char buf[32];
+    auto tm = timezone_localtime(&now);
+    timezone_strftime_P(buf, sizeof(buf), SPGM(strftime_date_time_zone), tm);
+    Logger_notice(F("NTP: new time: %s"), buf);
+#endif
+
+    _lastNtpCallback = millis();
+    _lastNtpUpdate = _lastNtpCallback;
+
+    now = time(nullptr); // update time again
 #if RTC_SUPPORT
-    config.setRTC(time(nullptr));
+    // update RTC
+    config.setRTC(now);
+#endif
+#if NTP_HAVE_CALLBACKS
+    for(auto callback: _callbacks) {
+        callback(now);
+    }
 #endif
 }
 
 void TimezoneData::configTime()
 {
-    _lastNtpUpdate = millis();
-    uint32_t refresh = config._H_GET(Config().ntp.ntpRefresh) * 60;
-    if (refresh < 3600) {
-        refresh = 3600;
+    if (get_time_diff(_lastNtpUpdate, millis()) < 1000) {
+        _debug_printf_P(PSTR("TimezoneData::configTime(): skipped multiple calls within 1000ms\n"));
+        return;
     }
-    _ntpRefreshTime = refresh * (950 + (rand() % 100)); // +-5%
+    _lastNtpUpdate = millis();
+
+    auto refresh = config._H_GET(Config().ntp.ntpRefresh);
+    if (refresh < 5) {
+        refresh = 5;
+    }
+    _ntpRefreshTime = (refresh * 60) * (950 + (rand() % 100)); // +-5%
 
     settimeofday_cb(updateNtpCallback);
 
@@ -391,7 +406,8 @@ void timezone_setup()
                 timezone.setAbbreviation(ntp.abbreviation);
                 TimezoneData::_setZoneEnd(ntp.zoneEnd);
 
-#if NTP_RESTORE_SYSTEM_TIME_AFTER_WAKEUP
+// restore time if no RTC is present
+#if NTP_RESTORE_SYSTEM_TIME_AFTER_WAKEUP && !RTC_SUPPORT
                 time_t msec = ntp.sleepTime + millis();             // add sleep time + time since wake up
                 time_t seconds = msec / 1000UL;
                 msec -= seconds;                                    // remove full seconds
@@ -526,7 +542,7 @@ void NTPPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form) 
     form.add<sizeof Config().ntp.timezone>(F("ntp_timezone"), config._H_W_STR(Config().ntp.timezone));
 
     form.add<uint16_t>(F("ntp_refresh"), &config._H_W_GET(Config().ntp.ntpRefresh));
-    form.addValidator(new FormRangeValidator(F("Invalid refresh interval: %min%-%max% minutes"), 60, 43200));
+    form.addValidator(new FormRangeValidator(F("Invalid refresh interval: %min%-%max% minutes"), 5, 43200));
 
 #if USE_REMOTE_TIMEZONE
     form.add<sizeof Config().ntp.remote_tz_dst_ofs_url>(F("ntp_remote_tz_url"), config._H_W_STR(Config().ntp.remote_tz_dst_ofs_url));

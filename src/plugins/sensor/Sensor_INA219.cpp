@@ -5,7 +5,9 @@
 #if IOT_SENSOR && IOT_SENSOR_HAVE_INA219
 
 #include "Sensor_INA219.h"
+#include "sensor.h"
 #include <LoopFunctions.h>
+#include <EventTimer.h>
 #include <MicrosTimer.h>
 
 #if DEBUG_IOT_SENSOR
@@ -165,5 +167,58 @@ void Sensor_INA219::_loop()
         _Ipeak = 0;
     }
 }
+
+#if AT_MODE_SUPPORTED
+
+#include "at_mode.h"
+
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(SENSORINA219, "SENSORINA219", "<interval in ms>", "Print INA219 sensor data");
+
+void Sensor_INA219::atModeHelpGenerator()
+{
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SENSORINA219), SensorPlugin::getInstance().getName());
+}
+
+bool Sensor_INA219::atModeHandler(Stream &serial, const String &command, AtModeArgs &args)
+{
+    if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SENSORINA219))) {
+
+        static EventScheduler::TimerPtr timer = nullptr;
+        Scheduler.removeTimer(&timer);
+
+        Stream *stream = &serial;
+        auto timerPrintFunc = [this, stream](EventScheduler::TimerPtr) {
+            return SensorPlugin::for_each<Sensor_INA219>(this, [stream](Sensor_INA219 &sensor) {
+                auto &ina219 = sensor.getSensor();
+                stream->printf_P(PSTR("+SENSORINA219: raw: U=%d, Vshunt=%d, I=%d, current: P=%d: %.3fV, %.1fmA, %.1fmW, average: %.3fV, %.1fmA, %.1fmW\n"),
+                    ina219.getBusVoltage_raw(),
+                    ina219.getShuntVoltage_raw(),
+                    ina219.getCurrent_raw(),
+                    ina219.getPower_raw(),
+                    ina219.getBusVoltage_V(),
+                    ina219.getCurrent_mA(),
+                    ina219.getPower_mW(),
+                    sensor.getVoltage(),
+                    sensor.getCurrent(),
+                    sensor.getPower()
+                );
+            });
+        };
+
+        if (!timerPrintFunc(nullptr)) {
+            serial.printf_P(PSTR("+%s: No sensor found\n"), PROGMEM_AT_MODE_HELP_COMMAND(SENSORINA219));
+        }
+        else {
+            auto repeat = args.toMillis(AtModeArgs::FIRST, 500);
+            if (repeat) {
+                Scheduler.addTimer(&timer, repeat, true, timerPrintFunc);
+            }
+        }
+        return true;
+    }
+    return false;
+}
+
+#endif
 
 #endif

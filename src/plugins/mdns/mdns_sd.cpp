@@ -80,7 +80,7 @@ public:
 #if AT_MODE_SUPPORTED
     bool hasAtMode() const override;
     void atModeHelpGenerator() override;
-    bool atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) override;
+    bool atModeHandler(Stream &serial, const String &command, AtModeArgs &args) override;
 #endif
 };
 
@@ -143,18 +143,17 @@ bool MDNSPlugin::hasAtMode() const {
     return true;
 }
 
-void MDNSPlugin::atModeHelpGenerator() {
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(MDNS));
-    // at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(MDNSBSD));
+void MDNSPlugin::atModeHelpGenerator()
+{
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(MDNS), getName());
+    // at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(MDNSBSD), getName());
 }
 
-bool MDNSPlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) {
+bool MDNSPlugin::atModeHandler(Stream &serial, const String &command, AtModeArgs &args)
+{
     if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(MDNS))) {
-        if (argc != 2) {
-            serial.println(F("ERROR - Invalid arguments"));
-        }
-        else {
-            MDNS_query_service(argv[0], argv[1], &serial);
+        if (args.requireArgs(2, 2)) {
+            MDNS_query_service(args.get(0), args.get(1), &serial);
             serial.println(F("Querying..."));
         }
         return true;

@@ -5,11 +5,6 @@
 #if NTP_CLIENT
 
 #include "ntp_plugin.h"
-#if defined(ESP8266)
-#include <sntp.h>
-#elif defined(ESP32)
-#include "lwip/apps/sntp.h"
-#endif
 #include <time.h>
 #include <sys/time.h>
 #include <KFCTimezone.h>
@@ -25,10 +20,12 @@
 #include "logger.h"
 #include "plugins.h"
 
+#if defined(ESP8266)
+#include <sntp.h>
 #include <sntp-lwip2.h>
-extern "C" {
-    void settimeofday_cb (void (*cb)(void));
-}
+#elif defined(ESP32)
+#include <lwip/apps/sntp.h>
+#endif
 
 #if DEBUG_NTP_CLIENT
 #include <debug_helper_enable.h>
@@ -320,12 +317,7 @@ void TimezoneData::updateLoop()
 
 void TimezoneData::updateNtpCallback()
 {
-    time_t now;
-
-#if DEBUG_NTP_CLIENT || NTP_LOG_TIME_UPDATE
-    now = time(nullptr);
-    _debug_printf_P(PSTR("TimezoneData::updateNtpCallback(): new time=%u\n"), (uint32_t)now);
-#endif
+    _debug_printf_P(PSTR("TimezoneData::updateNtpCallback(): new time=%u\n"), (uint32_t)time(nullptr));
 
     if (get_time_diff(_lastNtpCallback, millis()) < 1000) {
         _debug_printf_P(PSTR("TimezoneData::updateNtpCallback(): called twice within 1000ms (%u), ignored multiple calls\n"), get_time_diff(_lastNtpCallback, millis()));
@@ -334,6 +326,7 @@ void TimezoneData::updateNtpCallback()
 
 #if NTP_LOG_TIME_UPDATE
     char buf[32];
+    auto now = time(nullptr);
     auto tm = timezone_localtime(&now);
     timezone_strftime_P(buf, sizeof(buf), SPGM(strftime_date_time_zone), tm);
     Logger_notice(F("NTP: new time: %s"), buf);
@@ -342,10 +335,9 @@ void TimezoneData::updateNtpCallback()
     _lastNtpCallback = millis();
     _lastNtpUpdate = _lastNtpCallback;
 
-    now = time(nullptr); // update time again
 #if RTC_SUPPORT
     // update RTC
-    config.setRTC(now);
+    config.setRTC(time(nullptr));
 #endif
 #if NTP_HAVE_CALLBACKS
     for(auto callback: _callbacks) {
@@ -484,7 +476,7 @@ public:
         return true;
     }
     virtual void atModeHelpGenerator() override;
-    virtual bool atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) override;
+    virtual bool atModeHandler(Stream &serial, const String &command, AtModeArgs &args) override;
 #endif
 };
 
@@ -558,13 +550,13 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF(TZ, "TZ", "<timezone>", "Set timezone", "Show t
 void NTPPlugin::atModeHelpGenerator()
 {
 #if DEBUG
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SNTPFU));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SNTPFU), getName());
 #endif
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(NOW));
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(TZ));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(NOW), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(TZ), getName());
 }
 
-bool NTPPlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv)
+bool NTPPlugin::atModeHandler(Stream &serial, const String &command, AtModeArgs &args)
 {
 #if DEBUG
     if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SNTPFU))) {
@@ -604,7 +596,7 @@ commandNow:
     }
     else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(TZ))) {
         auto &timezone = get_default_timezone();
-        if (argc == AT_MODE_QUERY_COMMAND) { // TZ?
+        if (args.isQueryMode()) { // TZ?
             if (timezone.isValid()) {
                 char buf[32];
                 time_t zoneEnd = TimezoneData::getZoneEnd();
@@ -619,9 +611,9 @@ commandNow:
                 serial.println(F("No valid timezone set"));
             }
         }
-        else if (argc == 1) {
+        else if (args.requireArgs(1, 1)) {
             if (config._H_GET(Config().flags).ntpClientEnabled) {
-                config._H_SET_STR(Config().ntp.timezone, argv[0]);
+                config._H_SET_STR(Config().ntp.timezone, args.get(0));
                 serial.printf_P(PSTR("Timezone set to %s\n"), config._H_STR(_Config.ntp.timezone));
                 timezone_setup();
             }

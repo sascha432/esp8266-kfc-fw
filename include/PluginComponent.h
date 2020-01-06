@@ -11,6 +11,7 @@
 class AsyncWebServerRequest;
 class WebTemplate;
 class Form;
+class AtModeArgs;
 
 class PluginComponent {
 public:
@@ -93,10 +94,14 @@ public:
     // executed before entering deep sleep
     virtual void prepareDeepSleep(uint32_t sleepTimeMillis);
 
+#if AT_MODE_SUPPORTED
     // at mode command handler
     virtual bool hasAtMode() const;
     virtual void atModeHelpGenerator();
+    virtual bool atModeHandler(Stream &serial, const String &command, AtModeArgs &args);
+    // deprecated method
     virtual bool atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv);
+#endif
 
     // executed before a restart
     virtual void restart();

@@ -16,6 +16,10 @@
 #include "debug_helper_disable.h"
 #endif
 
+#if AT_MODE_SUPPORTED
+#include "at_mode.h"
+#endif
+
 bool PluginComponent::nameEquals(const __FlashStringHelper *name) const
 {
     return strcmp_P_P(getName(), reinterpret_cast<PGM_P>(name)) == 0;
@@ -147,6 +151,7 @@ WebUIInterface *PluginComponent::getWebUIInterface() {
 void PluginComponent::prepareDeepSleep(uint32_t sleepTimeMillis) {
 }
 
+#if AT_MODE_SUPPORTED
 
 bool PluginComponent::hasAtMode() const
 {
@@ -156,11 +161,24 @@ bool PluginComponent::hasAtMode() const
 void PluginComponent::atModeHelpGenerator() {
 }
 
+bool PluginComponent::atModeHandler(Stream &serial, const String &command, AtModeArgs &args)
+{
+    _debug_println(F("PluginComponent::atModeHandler(): deprecated"))
+    // if not implemented, call deprecated handler
+    if (args.isQueryMode()) {
+        return atModeHandler(serial, command, -1, nullptr);
+    }
+    auto result = atModeHandler(serial, command, args.argc(), args.args());
+    return result;
+}
+
 bool PluginComponent::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv)
 {
     __debugbreak_and_panic_printf_P(PSTR("PluginComponent::atModeHandler() pure virtual: %s\n"), getName());
     return false;
 }
+
+#endif
 
 void PluginComponent::restart() {
 }

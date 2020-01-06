@@ -59,6 +59,11 @@ public:
 
     virtual void reconfigure() override;
 
+#if AT_MODE_SUPPORTED
+    virtual void atModeHelpGenerator() override;
+    virtual bool atModeHandler(Stream &serial, const String &command, AtModeArgs &args) override;
+#endif
+
     static float readSensor(SensorDataEx_t *data = nullptr);
 
 private:

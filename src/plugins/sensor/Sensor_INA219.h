@@ -67,6 +67,11 @@ public:
     virtual void getStatus(PrintHtmlEntitiesString &output) override;
     virtual SensorEnumType_t getType() const override;
 
+#if AT_MODE_SUPPORTED
+    virtual void atModeHelpGenerator() override;
+    virtual bool atModeHandler(Stream &serial, const String &command, AtModeArgs &args) override;
+#endif
+
 public:
     Adafruit_INA219 &getSensor() {
         return _ina219;

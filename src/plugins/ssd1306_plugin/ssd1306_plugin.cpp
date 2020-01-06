@@ -284,12 +284,12 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(SSDDF, "SSDDF", "<url>", "Download font");
 bool ssd1306_at_mode_command_handler(Stream &serial, const String &command, int8_t argc, char **argv) {
 
     if (command.length() == 0) {
-        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SSDCLR));
-        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SSDST));
-        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SSDXY));
-        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SSDW));
-        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SSDRF));
-        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SSDDF));
+        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SSDCLR), getName());
+        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SSDST), getName());
+        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SSDXY), getName());
+        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SSDW), getName());
+        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SSDRF), getName());
+        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SSDDF), getName());
     }
     else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SSDCLR))) {
         ssd1306_disable_status();

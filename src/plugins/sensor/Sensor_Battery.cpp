@@ -110,12 +110,9 @@ void Sensor_Battery::reconfigure()
 
 float Sensor_Battery::readSensor(SensorDataEx_t *data)
 {
-    for(auto sensor: SensorPlugin::getSensors()) {
-        if (sensor->getType() == BATTERY) {
-            return reinterpret_cast<Sensor_Battery *>(sensor)->_readSensor(data);
-        }
-    }
-    return -1;
+    return SensorPlugin::for_each<Sensor_Battery, float>(nullptr, NAN, [data](Sensor_Battery &sensor) {
+        return sensor._readSensor(data);
+    });
 }
 
 float Sensor_Battery::_readSensor(SensorDataEx_t *data)
@@ -153,5 +150,50 @@ String Sensor_Battery::_getTopic(BatteryIdEnum_t type)
 {
     return MQTTClient::formatTopic(-1, F("/%s/"), _getId(type).c_str());
 }
+
+#if AT_MODE_SUPPORTED
+
+#include "at_mode.h"
+
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(SENSORPBV, "SENSORPBV", "<interval in ms>", "Print battery voltage");
+
+void Sensor_Battery::atModeHelpGenerator()
+{
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SENSORPBV), SensorPlugin::getInstance().getName());
+}
+
+bool Sensor_Battery::atModeHandler(Stream &serial, const String &command, AtModeArgs &args)
+{
+    if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SENSORPBV))) {
+        static EventScheduler::TimerPtr timer = nullptr;
+        Scheduler.removeTimer(&timer);
+
+        double averageSum = 0;
+        int averageCount = 0;
+        auto printVoltage = [&serial, averageSum, averageCount](EventScheduler::TimerPtr timer) mutable {
+            Sensor_Battery::SensorDataEx_t data;
+            auto value = Sensor_Battery::readSensor(&data);
+            averageSum += value;
+            averageCount++;
+            serial.printf_P(PSTR("+SENSORPBV: %.4fV - avg %.4f (calibration %.6f, #%d, adc sum %d, adc avg %.6f)\n"),
+                value,
+                averageSum / (double)averageCount,
+                config._H_GET(Config().sensor).battery.calibration,
+                data.adcReadCount,
+                data.adcSum,
+                data.adcSum / (double)data.adcReadCount
+            );
+        };
+        printVoltage(nullptr);
+        auto repeat = args.toMillis(AtModeArgs::FIRST, 500);
+        if (repeat) {
+            Scheduler.addTimer(&timer, repeat, true, printVoltage);
+        }
+        return true;
+    }
+    return false;
+}
+
+#endif
 
 #endif

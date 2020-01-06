@@ -95,6 +95,10 @@ size_t SensorPlugin::getSensorCount()
     return plugin._sensors.size();
 }
 
+SensorPlugin &SensorPlugin::getInstance()
+{
+    return plugin;
+}
 
 void SensorPlugin::timerEvent(EventScheduler::TimerPtr timer)
 {
@@ -203,104 +207,23 @@ void SensorPlugin::getStatus(Print &output)
 
 #include "at_mode.h"
 
-#if IOT_SENSOR_HAVE_BATTERY
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(SENSORPBV, "SENSORPBV", "<repeat every n seconds>", "Print battery voltage");
-#endif
-#if IOT_SENSOR_HAVE_INA219
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(SENSORINA219, "SENSORINA219", "<repeat every n seconds>", "Print battery voltage");
-#endif
-
-void SensorPlugin::atModeHelpGenerator() {
-#if IOT_SENSOR_HAVE_BATTERY
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SENSORPBV));
-#endif
-#if IOT_SENSOR_HAVE_INA219
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SENSORINA219));
-#endif
+void SensorPlugin::atModeHelpGenerator()
+{
+    for(auto sensor: _sensors) {
+        sensor->atModeHelpGenerator();
+    }
 }
 
-bool SensorPlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) {
-#if IOT_SENSOR_HAVE_INA219
-    if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SENSORINA219))) {
-        static EventScheduler::TimerPtr timer = nullptr;
-        if (timer) {
-            Scheduler.removeTimer(timer);
-            timer = nullptr;
+bool SensorPlugin::atModeHandler(Stream &serial, const String &command, AtModeArgs &args)
+{
+    for(auto sensor: _sensors) {
+        if (sensor->atModeHandler(serial, command, args)) {
+            return true;
         }
-        Sensor_INA219 *ina219 = nullptr;
-        for(auto sensor: _sensors) {
-            if (sensor->getType() == MQTTSensor::SensorEnumType_t::INA219) {
-                ina219 = reinterpret_cast<Sensor_INA219 *>(sensor);
-                break;
-            }
-        }
-        if (ina219) {
-            auto printSensor = [&serial, ina219](EventScheduler::TimerPtr timer) mutable {
-                auto sensor = ina219->getSensor();
-                serial.printf_P(PSTR("+SENSORINA219: raw: U=%d, Vshunt=%d, I=%d, current: P=%d: %.3fV, %.1fmA, %.1fmW, average: %.3fV, %.1fmA, %.1fmW\n"),
-                    sensor.getBusVoltage_raw(),
-                    sensor.getShuntVoltage_raw(),
-                    sensor.getCurrent_raw(),
-                    sensor.getPower_raw(),
-                    sensor.getBusVoltage_V(),
-                    sensor.getCurrent_mA(),
-                    sensor.getPower_mW(),
-                    ina219->getVoltage(),
-                    ina219->getCurrent(),
-                    ina219->getPower()
-                );
-            };
-            printSensor(nullptr);
-            if (argc >= 1) {
-                int repeat = atoi(argv[0]);
-                if (repeat) {
-                    Scheduler.addTimer(&timer, repeat * 1000, true, printSensor);
-                }
-            }
-        }
-        else {
-            serial.println(F("+SENSORINA219: No sensor found"));
-        }
-        return true;
     }
-#endif
-#if IOT_SENSOR_HAVE_BATTERY
-    if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SENSORPBV))) {
-        static EventScheduler::TimerPtr timer = nullptr;
-        if (timer) {
-            Scheduler.removeTimer(timer);
-            timer = nullptr;
-        }
-        double averageSum = 0;
-        int averageCount = 0;
-        auto printVoltage = [&serial, averageSum, averageCount](EventScheduler::TimerPtr timer) mutable {
-            Sensor_Battery::SensorDataEx_t data;
-            auto value = Sensor_Battery::readSensor(&data);
-            averageSum += value;
-            averageCount++;
-            serial.printf_P(PSTR("+SENSORPBV: %.4fV - avg %.4f (calibration %.6f, #%d, adc sum %d, adc avg %.6f)\n"),
-                value,
-                averageSum / (double)averageCount,
-                config._H_GET(Config().sensor).battery.calibration,
-                data.adcReadCount,
-                data.adcSum,
-                data.adcSum / (double)data.adcReadCount
-            );
-        };
-        printVoltage(nullptr);
-        if (argc >= 1) {
-            int repeat = atoi(argv[0]);
-            if (repeat) {
-                Scheduler.addTimer(&timer, repeat * 1000, true, printVoltage);
-            }
-        }
-        return true;
-    }
-#endif
     return false;
 }
 
 #endif
-
 
 #endif

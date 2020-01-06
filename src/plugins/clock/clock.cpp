@@ -260,12 +260,12 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(CLOCKD, "CLOCKD", "Dump pixel addresses");
 
 void ClockPlugin::atModeHelpGenerator()
 {
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CLOCKPX));
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CLOCKP));
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CLOCKC));
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CLOCKTS));
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CLOCKA));
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CLOCKD));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CLOCKPX), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CLOCKP), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CLOCKC), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CLOCKTS), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CLOCKA), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CLOCKD), getName());
 }
 
 bool ClockPlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv)

@@ -57,8 +57,16 @@ public:
         addTimer(nullptr, delayMillis, repeat, callback, priority);
     }
 
+    // check if the pointer is a timer that exists.
+    // Note: Pointers are not unqiue and can be assigned to a different timer after the the memory has been released
+    // To avoid this use void addTimer(TimerPtr *timerPtr,  ....) and if the timer gets removed, timerPtr will be set to null
     bool hasTimer(TimerPtr timer);
-    void removeTimer(TimerPtr timer);
+
+    // remove timer and return true if it has been removed
+    bool removeTimer(TimerPtr timer);
+
+    // remove timer and set to null, even if the timer did not exist
+    bool removeTimer(TimerPtr *timer);
 
     static void loop();
     void callTimer(TimerPtr timer);

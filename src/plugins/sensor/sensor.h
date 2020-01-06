@@ -7,6 +7,7 @@
 #pragma once
 
 #include <Arduino_compat.h>
+#include <functional>
 #include <vector>
 #include <EventScheduler.h>
 #include "WebUIComponent.h"
@@ -95,13 +96,14 @@ public:
     static SensorVector &getSensors();
     static size_t getSensorCount();
 
+    static SensorPlugin &getInstance();
+
 #if AT_MODE_SUPPORTED
     virtual bool hasAtMode() const override {
         return true;
     }
-
     virtual void atModeHelpGenerator() override;
-    virtual bool atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) override;
+    virtual bool atModeHandler(Stream &serial, const String &command, AtModeArgs &args) override;
 #endif
 
 private:
@@ -110,6 +112,41 @@ private:
 
     SensorVector _sensors;
     EventScheduler::TimerPtr _timer;
+
+public:
+    template <class T>
+    static uint8_t for_each(T *self, std::function<void(T &sensor)> callback) {
+        uint8_t count = 0;
+        for(auto sensor: SensorPlugin::getSensors()) {
+            if (self->getType() == sensor->getType()) {
+                callback(*reinterpret_cast<T *>(sensor));
+                count++;
+            }
+        }
+        return count;
+    }
+
+    template <class T, class R>
+    static R for_each(T *self, R defaultValue, std::function<R(T &sensor)> callback) {
+        for(auto sensor: SensorPlugin::getSensors()) {
+            if (self->getType() == sensor->getType()) {
+                return callback(*reinterpret_cast<T *>(sensor));
+            }
+        }
+        return defaultValue;
+    }
+
+    template <class T>
+    static uint8_t for_each(T *self, std::function<bool(MQTTSensor &sensor, T &self)> compareCallback, std::function<void(T &sensor)> callback) {
+        uint8_t count = 0;
+        for(auto sensor: SensorPlugin::getSensors()) {
+            if (compareCallback(*sensor, *self)) {
+                callback(*reinterpret_cast<T *>(sensor));
+                count++;
+            }
+        }
+        return count;
+    }
 };
 
 #endif

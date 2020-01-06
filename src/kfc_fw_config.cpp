@@ -8,6 +8,7 @@
 #include <LoopFunctions.h>
 #include <WiFiCallbacks.h>
 #include <EventScheduler.h>
+#include <EventTimer.h>
 #include <session.h>
 #include <misc.h>
 #include "blink_led_timer.h"
@@ -42,7 +43,8 @@ EspSaveCrash SaveCrash(DEBUG_SAVECRASH_OFS, DEBUG_SAVECRASH_SIZE);
 #endif
 
 
-KFCFWConfiguration::KFCFWConfiguration() : Configuration(CONFIG_EEPROM_OFFSET, CONFIG_EEPROM_MAX_LENGTH) {
+KFCFWConfiguration::KFCFWConfiguration() : Configuration(CONFIG_EEPROM_OFFSET, CONFIG_EEPROM_MAX_LENGTH)
+{
     _garbageCollectionCycleDelay = 5000;
     _wifiConnected = false;
     _initTwoWire = false;
@@ -52,11 +54,13 @@ KFCFWConfiguration::KFCFWConfiguration() : Configuration(CONFIG_EEPROM_OFFSET, C
     _setupWiFiCallbacks();
 }
 
-KFCFWConfiguration::~KFCFWConfiguration() {
+KFCFWConfiguration::~KFCFWConfiguration()
+{
     LoopFunctions::remove(KFCFWConfiguration::loop);
 }
 
-void KFCFWConfiguration::_onWiFiConnectCb(const WiFiEventStationModeConnected &event) {
+void KFCFWConfiguration::_onWiFiConnectCb(const WiFiEventStationModeConnected &event)
+{
     _debug_printf_P(PSTR("KFCFWConfiguration::_onWiFiConnectCb(%s, %d, %s)\n"), event.ssid.c_str(), (int)event.channel, mac2String(event.bssid).c_str());
     if (!_wifiConnected) {
 
@@ -82,7 +86,8 @@ void KFCFWConfiguration::_onWiFiConnectCb(const WiFiEventStationModeConnected &e
     }
 }
 
-void KFCFWConfiguration::_onWiFiDisconnectCb(const WiFiEventStationModeDisconnected &event) {
+void KFCFWConfiguration::_onWiFiDisconnectCb(const WiFiEventStationModeDisconnected &event)
+{
     _debug_printf_P(PSTR("KFCFWConfiguration::_onWiFiDisconnectCb(%d = %s)\n"), (int)event.reason, WiFi_disconnect_reason(event.reason).c_str());
     if (_wifiConnected) {
         BlinkLEDTimer::setBlink(BlinkLEDTimer::FAST);
@@ -96,17 +101,32 @@ void KFCFWConfiguration::_onWiFiDisconnectCb(const WiFiEventStationModeDisconnec
     }
 #if defined(ESP32)
     else {
-        //TODO esp32
         //_onWiFiDisconnectCb 202 = AUTH_FAIL
-        BlinkLEDTimer::setBlink(BlinkLEDTimer::FAST);
-        _debug_println(F("force WiFi reconnect"));
-        WiFi.begin(); // force reconnect
+        if (event.reason == 202) {
+            _debug_println(F("force WiFi.begin()"));
+            WiFi.begin();
+        }
+    }
+
+    // work around for ESP32 losing the connection and not reconnecting automatically
+    static EventScheduler::TimerPtr _reconnectTimer = nullptr;
+    if (!_reconnectTimer) {
+        Scheduler.addTimer(&_reconnectTimer, 60000, true, [this](EventScheduler::TimerPtr timer) {
+            if (_wifiConnected) {
+                timer->detach();
+            }
+            else {
+                BlinkLEDTimer::setBlink(BlinkLEDTimer::FAST);
+                _debug_println(F("force WiFi reconnect"));
+                reconfigureWiFi(); // reconfigure wifi, WiFi.begin() does not seem to work
+            }
+        });
     }
 #endif
 }
 
-void KFCFWConfiguration::_onWiFiGotIPCb(const WiFiEventStationModeGotIP &event) {
-
+void KFCFWConfiguration::_onWiFiGotIPCb(const WiFiEventStationModeGotIP &event)
+{
     auto ip = event.ip.toString();
     auto mask = event.mask.toString();
     auto gw = event.gw.toString();
@@ -123,7 +143,8 @@ void KFCFWConfiguration::_onWiFiGotIPCb(const WiFiEventStationModeGotIP &event) 
     WiFiCallbacks::callEvent(WiFiCallbacks::CONNECTED, (void *)&event);
 }
 
-void KFCFWConfiguration::_onWiFiOnDHCPTimeoutCb() {
+void KFCFWConfiguration::_onWiFiOnDHCPTimeoutCb()
+{
     _debug_printf_P(PSTR("KFCFWConfiguration::_onWiFiOnDHCPTimeoutCb()\n"));
 #if defined(ESP32)
     Logger_error(F("Lost DHCP IP"));
@@ -133,19 +154,22 @@ void KFCFWConfiguration::_onWiFiOnDHCPTimeoutCb() {
     BlinkLEDTimer::setBlink(BlinkLEDTimer::FLICKER);
 }
 
-void KFCFWConfiguration::_softAPModeStationConnectedCb(const WiFiEventSoftAPModeStationConnected &event) {
+void KFCFWConfiguration::_softAPModeStationConnectedCb(const WiFiEventSoftAPModeStationConnected &event)
+{
     _debug_printf_P(PSTR("KFCFWConfiguration::_softAPModeStationConnectedCb()\n"));
     Logger_notice(F("Station connected [%s]"), mac2String(event.mac).c_str());
 }
 
-void KFCFWConfiguration::_softAPModeStationDisconnectedCb(const WiFiEventSoftAPModeStationDisconnected &event) {
+void KFCFWConfiguration::_softAPModeStationDisconnectedCb(const WiFiEventSoftAPModeStationDisconnected &event)
+{
     _debug_printf_P(PSTR("KFCFWConfiguration::_softAPModeStationDisconnectedCb()\n"));
     Logger_notice(F("Station disconnected [%s]"), mac2String(event.mac).c_str());
 }
 
 #if defined(ESP32)
 
-void KFCFWConfiguration::_onWiFiEvent(WiFiEvent_t event, WiFiEventInfo_t info) {
+void KFCFWConfiguration::_onWiFiEvent(WiFiEvent_t event, WiFiEventInfo_t info)
+{
     switch(event) {
         case WiFiEvent_t::SYSTEM_EVENT_STA_CONNECTED: {
                 WiFiEventStationModeConnected dst;
@@ -244,33 +268,40 @@ void KFCFWConfiguration::_onWiFiEvent(System_Event_t *orgEvent) {
 
 #else
 
-static void __onWiFiConnectCb(const WiFiEventStationModeConnected &event) {
+static void __onWiFiConnectCb(const WiFiEventStationModeConnected &event)
+{
     config._onWiFiConnectCb(event);
 }
 
-static void __onWiFiGotIPCb(const WiFiEventStationModeGotIP &event) {
+static void __onWiFiGotIPCb(const WiFiEventStationModeGotIP &event)
+{
     config._onWiFiGotIPCb(event);
 }
 
-static void __onWiFiDisconnectCb(const WiFiEventStationModeDisconnected& event) {
+static void __onWiFiDisconnectCb(const WiFiEventStationModeDisconnected& event)
+{
     config._onWiFiDisconnectCb(event);
 }
 
-static void __onWiFiOnDHCPTimeoutCb() {
+static void __onWiFiOnDHCPTimeoutCb()
+{
     config._onWiFiOnDHCPTimeoutCb();
 }
 
-static void __softAPModeStationConnectedCb(const WiFiEventSoftAPModeStationConnected &event) {
+static void __softAPModeStationConnectedCb(const WiFiEventSoftAPModeStationConnected &event)
+{
     config._softAPModeStationConnectedCb(event);
 }
 
-static void __softAPModeStationDisconnectedCb(const WiFiEventSoftAPModeStationDisconnected &event) {
+static void __softAPModeStationDisconnectedCb(const WiFiEventSoftAPModeStationDisconnected &event)
+{
     config._softAPModeStationDisconnectedCb(event);
 }
 
 #endif
 
-void KFCFWConfiguration::_setupWiFiCallbacks() {
+void KFCFWConfiguration::_setupWiFiCallbacks()
+{
     _debug_println(F("KFCFWConfiguration::_setupWiFiCallbacks()"));
 
 #if defined(ESP32)
@@ -299,7 +330,8 @@ void KFCFWConfiguration::_setupWiFiCallbacks() {
 #endif
 }
 
-void KFCFWConfiguration::restoreFactorySettings() {
+void KFCFWConfiguration::restoreFactorySettings()
+{
     _debug_println(F("KFCFWConfiguration::restoreFactorySettings()"));
     PrintString str;
 
@@ -511,7 +543,7 @@ void KFCFWConfiguration::restoreFactorySettings() {
 #if IOT_SENSOR_HAVE_HLW8012 || IOT_SENSOR_HAVE_HLW8032
     cfg.hlw80xx.calibrationU = 1.0;
     cfg.hlw80xx.calibrationI = 1.0;
-    cfg.hlw80xx.calibrationP = 1.0;
+    cfg.hlw80xx.calibrationP = 0;
     cfg.hlw80xx.energyCounter = 0;
 #endif
 #if IOT_SENSOR_HAVE_BATTERY || IOT_SENSOR_HAVE_HLW8012 || IOT_SENSOR_HAVE_HLW8032
@@ -543,30 +575,36 @@ void KFCFWConfiguration::restoreFactorySettings() {
 
 }
 
-void KFCFWConfiguration::setLastError(const String &error) {
+void KFCFWConfiguration::setLastError(const String &error)
+{
     _lastError = error;
 }
 
-const char *KFCFWConfiguration::getLastError() const {
+const char *KFCFWConfiguration::getLastError() const
+{
     return _lastError.c_str();
 }
 
-void KFCFWConfiguration::garbageCollector() {
+void KFCFWConfiguration::garbageCollector()
+{
     if (_readAccess && millis() > _readAccess + _garbageCollectionCycleDelay) {
         // _debug_println(F("KFCFWConfiguration::garbageCollector(): releasing memory"));
         release();
     }
 }
 
-void KFCFWConfiguration::setConfigDirty(bool dirty) {
+void KFCFWConfiguration::setConfigDirty(bool dirty)
+{
     _dirty = dirty;
 }
 
-bool KFCFWConfiguration::isConfigDirty() const {
+bool KFCFWConfiguration::isConfigDirty() const
+{
     return _dirty;
 }
 
-const String KFCFWConfiguration::getFirmwareVersion() {
+const String KFCFWConfiguration::getFirmwareVersion()
+{
 #if DEBUG
 #define __DEBUG_CFS_APPEND " DEBUG"
 #else
@@ -584,7 +622,8 @@ const String KFCFWConfiguration::getShortFirmwareVersion()
 #endif
 }
 
-void KFCFWConfiguration::storeQuickConnect(const uint8_t *bssid, int8_t channel) {
+void KFCFWConfiguration::storeQuickConnect(const uint8_t *bssid, int8_t channel)
+{
     _debug_printf_P(PSTR("KFCFWConfiguration::storeQuickConnect(%s, %d)\n"), mac2String(bssid).c_str(), channel);
 
     WiFiQuickConnect_t quickConnect;
@@ -594,7 +633,8 @@ void KFCFWConfiguration::storeQuickConnect(const uint8_t *bssid, int8_t channel)
     RTCMemoryManager::write(CONFIG_RTC_MEM_ID, &quickConnect, sizeof(quickConnect));
 }
 
-void KFCFWConfiguration::storeStationConfig(uint32_t ip, uint32_t netmask, uint32_t gateway) {
+void KFCFWConfiguration::storeStationConfig(uint32_t ip, uint32_t netmask, uint32_t gateway)
+{
     _debug_printf_P(PSTR("KFCFWConfiguration::storeStationConfig(%s, %s, %s): dhcp client started = %d\n"),
         IPAddress(ip).toString().c_str(),
         IPAddress(netmask).toString().c_str(),
@@ -618,8 +658,8 @@ void KFCFWConfiguration::storeStationConfig(uint32_t ip, uint32_t netmask, uint3
     }
 }
 
-void KFCFWConfiguration::setup() {
-
+void KFCFWConfiguration::setup()
+{
     String version = KFCFWConfiguration::getFirmwareVersion();
     if (!resetDetector.hasWakeUpDetected()) {
         Logger_notice(F("Starting KFCFW %s"), version.c_str());
@@ -637,7 +677,8 @@ void KFCFWConfiguration::setup() {
     LoopFunctions::add(KFCFWConfiguration::loop);
 }
 
-void KFCFWConfiguration::read() {
+void KFCFWConfiguration::read()
+{
     _debug_println(F("KFCFWConfiguration::read()"));
 
     if (!Configuration::read()) {
@@ -657,7 +698,8 @@ void KFCFWConfiguration::read() {
     }
 }
 
-void KFCFWConfiguration::write() {
+void KFCFWConfiguration::write()
+{
     _debug_println(F("KFCFWConfiguration::write()"));
 
     auto &flags = config._H_W_GET(Config().flags);
@@ -731,7 +773,8 @@ void KFCFWConfiguration::wakeUpFromDeepSleep() {
 
 }
 
-void KFCFWConfiguration::enterDeepSleep(uint32_t time_in_ms, RFMode mode, uint16_t delayAfterPrepare) {
+void KFCFWConfiguration::enterDeepSleep(uint32_t time_in_ms, RFMode mode, uint16_t delayAfterPrepare)
+{
     _debug_printf_P(PSTR("KFCFWConfiguration::enterDeepSleep(%d, %d, %d)\n"), time_in_ms, mode, delayAfterPrepare);
 
     _debug_printf_P(PSTR("Prepearing device for deep sleep...\n"));
@@ -759,7 +802,8 @@ void KFCFWConfiguration::enterDeepSleep(uint32_t time_in_ms, RFMode mode, uint16
 #endif
 }
 
-void KFCFWConfiguration::restartDevice() {
+void KFCFWConfiguration::restartDevice()
+{
     _debug_println(F("KFCFWConfiguration::restartDevice()"));
 
     Logger_notice(F("Device is being restarted"));
@@ -771,13 +815,14 @@ void KFCFWConfiguration::restartDevice() {
     ESP.restart();
 }
 
-void KFCFWConfiguration::loop() {
-
+void KFCFWConfiguration::loop()
+{
     rng.loop();
     config.garbageCollector();
 }
 
-uint8_t KFCFWConfiguration::getMaxWiFiChannels() {
+uint8_t KFCFWConfiguration::getMaxWiFiChannels()
+{
     wifi_country_t country;
     if (!wifi_get_country(&country)) {
         country.nchan = 255;
@@ -785,7 +830,8 @@ uint8_t KFCFWConfiguration::getMaxWiFiChannels() {
     return country.nchan;
 }
 
-String KFCFWConfiguration::getWiFiEncryptionType(uint8_t type) {
+String KFCFWConfiguration::getWiFiEncryptionType(uint8_t type)
+{
 #if defined(ESP32)
     switch(type) {
         case WIFI_AUTH_OPEN:
@@ -818,7 +864,8 @@ String KFCFWConfiguration::getWiFiEncryptionType(uint8_t type) {
     return F("N/A");
 }
 
-bool KFCFWConfiguration::reconfigureWiFi() {
+bool KFCFWConfiguration::reconfigureWiFi()
+{
     _debug_println(F("KFCFWConfiguration::reconfigureWiFi()"));
 
     WiFi.persistent(false); // disable during disconnects since it saves the configuration
@@ -831,7 +878,8 @@ bool KFCFWConfiguration::reconfigureWiFi() {
     return connectWiFi();
 }
 
-bool KFCFWConfiguration::connectWiFi() {
+bool KFCFWConfiguration::connectWiFi()
+{
     _debug_println(F("KFCFWConfiguration::connectWiFi()"));
     setLastError(String());
 
@@ -958,7 +1006,6 @@ bool KFCFWConfiguration::connectWiFi() {
 #endif
 
     return (station_mode_success && ap_mode_success);
-
 }
 
 void KFCFWConfiguration::printVersion(Print &output)
@@ -998,15 +1045,18 @@ void KFCFWConfiguration::printInfo(Print &output)
 #endif
 }
 
-bool KFCFWConfiguration::isWiFiUp() {
+bool KFCFWConfiguration::isWiFiUp()
+{
     return config._wifiUp != -1UL;
 }
 
-unsigned long KFCFWConfiguration::getWiFiUp() {
+unsigned long KFCFWConfiguration::getWiFiUp()
+{
     return config._wifiUp;
 }
 
-TwoWire &KFCFWConfiguration::initTwoWire(bool reset, Print *output) {
+TwoWire &KFCFWConfiguration::initTwoWire(bool reset, Print *output)
+{
     if (output) {
         output->printf_P("I2C bus: SDA=%u, SCL=%u, clock stretch=%u, clock speed=%u\n", KFC_TWOWIRE_SDA, KFC_TWOWIRE_SCL, KFC_TWOWIRE_CLOCK_STRETCH, KFC_TWOWIRE_CLOCK_SPEED);
     }
@@ -1047,7 +1097,8 @@ uint32_t KFCFWConfiguration::getRTC()
     return 0;
 }
 
-void KFCFWConfiguration::printRTCStatus(Print &output, bool plain) {
+void KFCFWConfiguration::printRTCStatus(Print &output, bool plain)
+{
 #if RTC_SUPPORT
     initTwoWire();
     if (rtc.begin()) {
@@ -1104,8 +1155,8 @@ public:
 
 static KFCConfigurationPlugin plugin;
 
-void KFCConfigurationPlugin::setup(PluginSetupMode_t mode) {
-
+void KFCConfigurationPlugin::setup(PluginSetupMode_t mode)
+{
     _debug_printf_P(PSTR("config_init(): safe mode %d, wake up %d\n"), (mode == PLUGIN_SETUP_SAFE_MODE), resetDetector.hasWakeUpDetected());
 
     config.setup();
@@ -1131,6 +1182,7 @@ void KFCConfigurationPlugin::setup(PluginSetupMode_t mode) {
     }
 }
 
-void KFCConfigurationPlugin::reconfigure(PGM_P source) {
+void KFCConfigurationPlugin::reconfigure(PGM_P source)
+{
     config.reconfigureWiFi();
 }

@@ -508,10 +508,10 @@ bool DimmerModulePlugin::hasAtMode() const
 
 void DimmerModulePlugin::atModeHelpGenerator()
 {
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DIMG));
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DIMS));
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DIMW));
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DIMR));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DIMG), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DIMS), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DIMW), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DIMR), getName());
 }
 
 bool DimmerModulePlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv)

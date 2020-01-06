@@ -23,7 +23,9 @@
 #define PLUGIN_DEFAULT_PRIORITY     64
 #define PLUGIN_MIN_PRIORITY         127         // lowest
 
+#ifndef AT_MODE_QUERY_COMMAND
 #define AT_MODE_QUERY_COMMAND       -1
+#endif
 
 typedef std::vector<PluginComponent *> PluginsVector;
 

@@ -7,12 +7,14 @@
 #include <Arduino_compat.h>
 #include <algorithm>
 #include <array>
+#include <vector>
 #include <functional>
 #include <type_traits>
 #include <utility>
 #include <array_of.h>
 #include <MillisTimer.h>
 #include <crc16.h>
+#include <float.h>
 
 #if defined(ESP8266) || defined(ESP32) || _WIN32
 #ifndef PROGMEM_DWORD_ALIGNED
@@ -29,6 +31,7 @@ PROGMEM_READ_ALIGNED_CHUNK(var)
 #endif
 
 class String;
+typedef std::vector<String> StringVector;
 
 extern const String _sharedEmptyString;
 
@@ -75,6 +78,20 @@ extern const String _sharedEmptyString;
 // pretty format for bytes and unix time
 String formatBytes(size_t bytes);
 String formatTime(unsigned long seconds, bool days_if_not_zero = false);
+
+template<class T>
+String implode(const __FlashStringHelper *glue, std::vector<T> *pieces) {
+    String tmp;
+    if (pieces && !pieces->empty()) {
+        auto iterator = pieces->begin();
+        tmp += *iterator;
+        while(++iterator != pieces->end()) {
+            tmp += glue;
+            tmp += *iterator;
+        }
+    }
+    return tmp;
+}
 
 String implode(const __FlashStringHelper *glue, const char **pieces, int count);
 String implode(const __FlashStringHelper *glue, String *pieces, int count);
@@ -132,9 +149,12 @@ char nibble2hex(uint8_t nibble, char hex_char = NIBBLE2HEX_LC);
 // bzero variant using sizeof(dst)
 #define BNZERO_S(dst)                           memset(&dst, 0, sizeof(dst));
 
+#define STRINGLIST_SEPARATOR                    ','
+#define STRLS                                   ","
+
 // find a string in a list of strings separated by a single characters
 // -1 = not found, otherwise the number of the matching string
-int16_t stringlist_find_P_P(PGM_P list, PGM_P find, char separator = ',');
+int16_t stringlist_find_P_P(PGM_P list, PGM_P find, char separator = STRINGLIST_SEPARATOR);
 
 // multiple separators
 int16_t stringlist_find_P_P(PGM_P list, PGM_P find, const char *separator);
@@ -185,6 +205,31 @@ bool __while(uint32_t time_in_ms, uint16_t interval_in_ms, std::function<bool()>
 // call loop every millisecond for time_in_ms
 bool __while(uint32_t time_in_ms, std::function<bool()> loop);
 
+// interface
+class TokenizerArgs {
+public:
+    virtual void add(char *arg) = 0;
+    virtual bool hasSpace() const = 0;
+};
+
+class TokenizerArgsCharPtrPtr : public TokenizerArgs {
+public:
+    TokenizerArgsCharPtrPtr(char **args, uint8_t maxArgs) : _args(args), _maxArgs(maxArgs), _count(0) {
+    }
+
+    virtual void add(char *arg) {
+        _args[_count++] = arg;
+    }
+    virtual bool hasSpace() const {
+        return (_count < _maxArgs);
+    }
+
+private:
+    char **_args;
+    uint8_t _maxArgs;
+    uint8_t _count;
+};
+
 // parse arguments into tokens
 // return value == maxArgs might indicate that arguments have been truncated
 // str='command=t1,t2,t3,"t3-1,t3-2", "t4-1""t4-2" , "t5-1\"t5-2\t5-3\\t5-4"'
@@ -194,7 +239,7 @@ bool __while(uint32_t time_in_ms, std::function<bool()> loop);
 // 3='t3-1,t3-2'
 // 4='t4-1"t4-2'
 // 5='t5-1"t5-2\t5-3\t5-4'
-uint8_t tokenizer(char *str, char **args, uint8_t maxArgs, bool hasCommand = true);
+uint16_t tokenizer(char *str, TokenizerArgs &args, bool hasCommand = true);
 
 #define repeat_first_iteration \
     (__repeat_iteration == 0)

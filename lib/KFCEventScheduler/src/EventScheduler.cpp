@@ -81,28 +81,48 @@ bool ICACHE_RAM_ATTR EventScheduler::hasTimer(TimerPtr timer) {
     // return it != _timers.end();
 }
 
-void EventScheduler::removeTimer(TimerPtr timer) {
-  _debug_printf_P(PSTR("EventScheduler::removeTimer(%p)\n"), timer);
-    if (!timer) {
-        return;
+bool EventScheduler::removeTimer(TimerPtr *timer)
+{
+    _debug_printf_P(PSTR("EventScheduler::removeTimer(); timer pointer=%p, timer=%p\n"), timer, timer ? *timer : nullptr);
+    if (*timer) {
+        removeTimer(*timer);
+        *timer = nullptr;
     }
-    if (!hasTimer(timer)) {
+}
+
+bool EventScheduler::removeTimer(TimerPtr timer)
+{
+    if (!timer) {
+        _debug_printf_P(PSTR("EventScheduler::_removeTimer(): timer=null\n"));
+        return false;
+    }
+    auto result = hasTimer(timer);
+    _debug_printf_P(PSTR("EventScheduler::_removeTimer(): timer=%p, linked timer ptr=%p, result=%d\n"), timer, (timer ? timer->_timerPtr : nullptr), result);
+    if (!result) {
 #if DEBUG_EVENT_SCHEDULER
         __debugbreak_and_panic_printf_P(PSTR("EventScheduler::removeTimer(): timer %p is not active or has been deleted already\n"), timer);
 #endif
-        return;
+        return false;
     }
 
     _removeTimer(timer);
+    return true;
 }
 
-void ICACHE_RAM_ATTR EventScheduler::_removeTimer(TimerPtr timer) {
-    _debug_printf_P(PSTR("EventScheduler::_removeTimer(%p)\n"), timer);
+void ICACHE_RAM_ATTR EventScheduler::_removeTimer(TimerPtr timer)
+{
+    _debug_printf_P(PSTR("EventScheduler::_removeTimer(): timer=%p, linked timer ptr=%p\n"), timer, (timer ? timer->_timerPtr : nullptr));
 
     timer->detach();
 
     if (timer->_timerPtr) {
+        if (*timer->_timerPtr != timer) {
+            _debug_printf_P(PSTR("EventScheduler::_removeTimer(): timer pointer mismatch %p<>%p\n"), timer, *timer->_timerPtr);
+        }
         *timer->_timerPtr = nullptr;
+    }
+    else {
+        _debug_printf_P(PSTR("EventScheduler::_removeTimer(): timer pointer for %p=null\n"), timer);
     }
 
     // remove from list of timers

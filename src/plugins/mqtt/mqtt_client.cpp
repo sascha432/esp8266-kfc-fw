@@ -652,13 +652,17 @@ public:
     MQTTPlugin() {
         REGISTER_PLUGIN(this, "MQTTPlugin");
     }
-    PGM_P getName() const;
-    PluginPriorityEnum_t getSetupPriority() const override;
-    bool autoSetupAfterDeepSleep() const override;
-    void setup(PluginSetupMode_t mode) override;
-    void reconfigure(PGM_P source) override;
+    virtual PGM_P getName() const {
+        return PSTR("mqtt");
+    }
+    virtual PluginPriorityEnum_t getSetupPriority() const override;
+    virtual bool autoSetupAfterDeepSleep() const override;
+    virtual void setup(PluginSetupMode_t mode) override;
+    virtual void reconfigure(PGM_P source) override;
 
-    virtual bool hasStatus() const override;
+    virtual bool hasStatus() const override {
+        return true;
+    }
     virtual void getStatus(Print &output) override;
 
     virtual PGM_P getConfigureForm() const override {
@@ -667,17 +671,15 @@ public:
     void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
 
 #if AT_MODE_SUPPORTED
-    bool hasAtMode() const override;
-    void atModeHelpGenerator() override;
-    bool atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) override;
+    virtual bool hasAtMode() const override {
+        return true;
+    }
+    virtual void atModeHelpGenerator() override;
+    virtual bool atModeHandler(Stream &serial, const String &command, AtModeArgs &args) override;
 #endif
 };
 
 static MQTTPlugin plugin;
-
-PGM_P MQTTPlugin::getName() const {
-    return PSTR("mqtt");
-}
 
 MQTTPlugin::PluginPriorityEnum_t MQTTPlugin::getSetupPriority() const {
     return (PluginPriorityEnum_t)20;
@@ -696,10 +698,6 @@ void MQTTPlugin::reconfigure(PGM_P source) {
     if (config._H_GET(Config().flags).mqttMode != MQTT_MODE_DISABLED) {
         MQTTClient::setupInstance();
     }
-}
-
-bool MQTTPlugin::hasStatus() const {
-    return true;
 }
 
 void MQTTPlugin::getStatus(Print &output)
@@ -803,49 +801,49 @@ bool mqtt_at_mode_auto_discovery_client(Stream &serial) {
 }
 #endif
 
-bool MQTTPlugin::hasAtMode() const {
-    return true;
-}
-
 void MQTTPlugin::atModeHelpGenerator() {
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(MQTT));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(MQTT), getName());
 #if MQTT_AUTO_DISCOVERY_CLIENT
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(MQTTAD));
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(MQTTLAD));
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(MQTTPAD));
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(MQTTDAD));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(MQTTAD), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(MQTTLAD), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(MQTTPAD), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(MQTTDAD), getName());
 #endif
 }
 
-bool MQTTPlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) {
+bool MQTTPlugin::atModeHandler(Stream &serial, const String &command, AtModeArgs &args) {
     if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(MQTT))) {
         serial.print(F("+MQTT "));
-        if (argc == AT_MODE_QUERY_COMMAND) {
+        if (args.isQueryMode()) {
             if (MQTTClient::getClient()) {
                 serial.print(F("status: "));
                 serial.println(MQTTClient::connectionStatusString());
             } else {
                 serial.println(FSPGM(disabled));
             }
-        } else if (MQTTClient::getClient() && argc == 1) {
+        } else if (MQTTClient::getClient() && args.requireArgs(1, 1)) {
             auto &client = *MQTTClient::getClient();
-            if (strcmp_P(argv[0], PSTR("connect")) == 0 || strcmp_P(argv[0], PSTR("1")) == 0) {
+            if (args.isAnyMatchIgnoreCase(0, F("connect,1"))) {
                 serial.print(F("connect: "));
                 serial.println(MQTTClient::connectionStatusString());
                 client.setAutoReconnect(MQTTClient::DEFAULT_RECONNECT_TIMEOUT);
                 client.connect();
-            } else if (strcmp_P(argv[0], PSTR("disconnect")) == 0 || strcmp_P(argv[0], PSTR("0")) == 0) {
+            }
+            else if (args.isAnyMatchIgnoreCase(0, F("disconnect,0"))) {
                 serial.println(F("disconnect"));
                 client.disconnect(false);
-            } else if (strcmp_P(argv[0], PSTR("force-disconnect")) == 0) {
+            }
+            else if (args.equalsIgnoreCase(0, F("force-disconnect"))) {
                 serial.println(F("force disconnect"));
                 client.setAutoReconnect(0);
                 client.disconnect(true);
-            } else if (strcmp_P(argv[0], PSTR("enable")) == 0) {
+            }
+            else if (args.isTrue(0)) {
                 auto &flags = config._H_W_GET(Config().flags);
                 flags.mqttMode = MQTT_MODE_UNSECURE;
                 config.write();
-            } else if (strcmp_P(argv[0], PSTR("disable")) == 0) {
+            }
+            else if (args.isFalse(0)) {
                 auto &flags = config._H_W_GET(Config().flags);
                 flags.mqttMode = MQTT_MODE_DISABLED;
                 config.write();
@@ -857,11 +855,8 @@ bool MQTTPlugin::atModeHandler(Stream &serial, const String &command, int8_t arg
     }
 #if MQTT_AUTO_DISCOVERY_CLIENT
     else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(MQTTAD))) {
-        if (argc != 1) {
-            at_mode_print_invalid_arguments(serial);
-        }
-        else if (mqtt_at_mode_is_connected(serial) && mqtt_at_mode_auto_discovery(serial)) {
-            auto state = atoi(argv[0]);
+        if (args.requireArgs(1, 1) && mqtt_at_mode_is_connected(serial) && mqtt_at_mode_auto_discovery(serial)) {
+            int state = args.toInt(0);
             if (state == 0 && MQTTAutoDiscoveryClient::getInstance()) {
                 MQTTAutoDiscoveryClient::deleteInstance();
                 at_mode_print_ok(serial);
@@ -896,8 +891,8 @@ bool MQTTPlugin::atModeHandler(Stream &serial, const String &command, int8_t arg
     }
     else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(MQTTPAD))) {
         if (mqtt_at_mode_auto_discovery(serial) && mqtt_at_mode_auto_discovery_client(serial)) {
-            uint16_t id = (argc >= 1) ? (uint16_t)atoi(argv[0]) : 0;
-            auto formatRaw = (argc >= 2) && !strcasecmp_P(argv[1], PSTR("raw"));
+            uint16_t id = args.toInt(0);
+            auto formatRaw = args.equalsIgnoreCase(1, F("raw"));
             bool found = false;
 
             for(const auto &devicePtr: MQTTAutoDiscoveryClient::getInstance()->getDiscovery()) {
@@ -938,14 +933,11 @@ bool MQTTPlugin::atModeHandler(Stream &serial, const String &command, int8_t arg
         return true;
     }
     else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(MQTTDAD))) {
-        if (argc < 1) {
-            at_mode_print_invalid_arguments(serial);
-        }
-        else if (mqtt_at_mode_auto_discovery(serial) && mqtt_at_mode_auto_discovery_client(serial)) {
+        if (args.requireArgs(1) && mqtt_at_mode_auto_discovery(serial) && mqtt_at_mode_auto_discovery_client(serial)) {
             std::vector<uint16_t> ids;
-            ids.reserve(argc);
-            for(int8_t i = 0; i < argc; i++) {
-                ids.push_back(atoi(argv[i]));
+            ids.reserve(args.size());
+            for(auto arg: args.getArgs()) {
+                ids.push_back(atoi(*arg));
             }
             for(const auto &devicePtr: MQTTAutoDiscoveryClient::getInstance()->getDiscovery()) {
                 auto iterator = std::find(ids.begin(), ids.end(), devicePtr->id);

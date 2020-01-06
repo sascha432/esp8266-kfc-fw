@@ -290,21 +290,23 @@ void BlindsControlPlugin::_testLoopMethod() {
 
 #endif
 
-bool BlindsControlPlugin::hasAtMode() const {
+bool BlindsControlPlugin::hasAtMode() const
+{
     return true;
 }
 
-void BlindsControlPlugin::atModeHelpGenerator() {
+void BlindsControlPlugin::atModeHelpGenerator()
+{
 #if IOT_BLINDS_CTRL_TESTMODE
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(BCME));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(BCME), getName());
 #endif
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(BCMS));
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(BCMD));
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(BCMC));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(BCMS), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(BCMD), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(BCMC), getName());
 }
 
-bool BlindsControlPlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) {
-
+bool BlindsControlPlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv)
+{
     if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(BCMS))) {
         if (argc == 2) {
             uint8_t channel = atoi(argv[0]) % 2;

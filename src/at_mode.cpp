@@ -36,9 +36,7 @@
 #include <debug_helper_disable.h>
 #endif
 
-#define AT_MODE_MAX_ARGUMENTS 16
-
-typedef std::vector<const ATModeCommandHelp_t *> ATModeHelpVector;
+typedef std::vector<ATModeCommandHelp> ATModeHelpVector;
 
 static ATModeHelpVector at_mode_help;
 
@@ -53,11 +51,13 @@ static ATModeHelpVector at_mode_help;
 //     EventScheduler _timer;
 // };
 
-void at_mode_add_help(const ATModeCommandHelp_t *help) {
-    at_mode_help.push_back(help);
+void at_mode_add_help(const ATModeCommandHelp_t *help, PGM_P pluginName)
+{
+    at_mode_help.emplace_back(std::move(ATModeCommandHelp(help, pluginName)));
 }
 
-void at_mode_display_help_indent(Stream &output, PGM_P text) {
+void at_mode_display_help_indent(Stream &output, PGM_P text)
+{
     PGM_P indent = PSTR("    ");
     uint8_t ch;
     ch = pgm_read_byte(text++);
@@ -73,27 +73,85 @@ void at_mode_display_help_indent(Stream &output, PGM_P text) {
     output.println();
 }
 
-void at_mode_display_help(Stream &output) {
-    _debug_printf_P(PSTR("at_mode_display_help(): size=%d\n"), at_mode_help.size());
+// append progmem strings to output and replace any whitespace with a single space
+static void _appendHelpString(String &output, PGM_P str)
+{
+    char lastChar = 0;
+    if (output.length()) {
+        lastChar = output.charAt(output.length() - 1);
+    }
+
+    if (str) {
+        char ch;
+        while(0 != (ch = pgm_read_byte(str++))) {
+            if (isspace(ch)) {
+                if (!isspace(lastChar)) {
+                    lastChar = ch;
+                    output += ' ';
+                }
+            }
+            else {
+                lastChar = tolower(ch);
+                output += lastChar;
+            }
+        }
+        if (!isspace(lastChar)) {
+            output += ' ';
+        }
+    }
+}
+
+void at_mode_display_help(Stream &output, StringVector *findText = nullptr)
+{
+#if DEBUG_AT_MODE
+    _debug_printf_P(PSTR("at_mode_display_help(): size=%d, find=%s\n"), at_mode_help.size(), findText ? (findText->empty() ? PSTR("count=0") : implode(FSPGM(comma), findText).c_str()) : PSTR("nullptr"));
+#endif
+    if (findText && findText->empty()) {
+        findText = nullptr;
+    }
 
     for(const auto commandHelp: at_mode_help) {
 
-        if (commandHelp->helpQueryMode) {
-            if (commandHelp->command) {
-                output.printf_P(PSTR(" AT+%s?\n"), commandHelp->command);
+        if (findText) {
+            bool result = false;
+            String tmp; // create single line text blob
+            if (commandHelp.pluginName) {
+                tmp += F("plugin "); // allows to search for "plugin sensor"
+                _appendHelpString(tmp, commandHelp.pluginName);
+            }
+            _appendHelpString(tmp, commandHelp.command);
+            _appendHelpString(tmp, commandHelp.arguments);
+            _appendHelpString(tmp, commandHelp.help);
+            _appendHelpString(tmp, commandHelp.helpQueryMode);
+
+            _debug_printf_P(PSTR("at_mode_display_help(): find in %u: '%s'\n"), tmp.length(), tmp.c_str());
+            for(auto str: *findText) {
+                if (tmp.indexOf(str) != -1) {
+                    result = true;
+                    break;
+                }
+            }
+            if (!result) {
+                continue;
+            }
+        }
+
+        if (commandHelp.helpQueryMode) {
+            if (commandHelp.command) {
+                output.printf_P(PSTR(" AT+%s?\n"), commandHelp.command);
             } else {
                 output.print(F(" AT?\n"));
             }
-            at_mode_display_help_indent(output, commandHelp->helpQueryMode);
+            at_mode_display_help_indent(output, commandHelp.helpQueryMode);
         }
 
-        if (commandHelp->command) {
-            output.printf_P(PSTR(" AT+%s"), commandHelp->command);
+        if (commandHelp.command) {
+            output.printf_P(PSTR(" AT+%s"), commandHelp.command);
         } else {
             output.print(F(" AT"));
         }
-        if (commandHelp->arguments) {
-            PGM_P arguments = commandHelp->arguments;
+        if (commandHelp.arguments) {
+            PGM_P arguments = commandHelp.arguments;
             auto ch = pgm_read_byte(arguments);
             if (ch == '[') {
                 output.print('[');
@@ -105,11 +163,12 @@ void at_mode_display_help(Stream &output) {
             output.print(FPSTR(arguments));
         }
         output.println();
-        at_mode_display_help_indent(output, commandHelp->help);
+        at_mode_display_help_indent(output, commandHelp.help);
     }
 }
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_NNPP(AT, "Print OK", "Show help");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HLP, "HLP", "[single][,word][,or entire phrase]", "Search help");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DSLP, "DSLP", "[<milliseconds>[,<mode>]]", "Enter deep sleep");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RST, "RST", "[<s>]", "Soft reset. 's' enables safe mode");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(CMDS, "CMDS", "Send a list of available AT commands");
@@ -157,67 +216,72 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(PANIC, "PANIC", "Cause an exception by cal
 
 #endif
 
-void at_mode_help_commands() {
-
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(AT));
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DSLP));
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(RST));
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CMDS));
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(LOAD));
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(IMPORT));
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(STORE));
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(FACTORY));
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(ATMODE));
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DLY));
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CAT));
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DEL));
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(WIFI));
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(REM));
+void at_mode_help_commands()
+{
+    auto name = PSTR("at_mode");
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(AT), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(HLP), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DSLP), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(RST), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CMDS), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(LOAD), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(IMPORT), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(STORE), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(FACTORY), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(ATMODE), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DLY), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CAT), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DEL), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(WIFI), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(REM), name);
 #if RTC_SUPPORT
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(RTC));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(RTC), name);
 #endif
 
 #if DEBUG_HAVE_SAVECRASH
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SAVECRASHC));
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SAVECRASHP));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SAVECRASHC), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SAVECRASHP), name);
 #endif
 
 #if DEBUG
 #if PIN_MONITOR
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(PINM));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(PINM), name);
 #endif
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(PLUGINS));
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(HEAP));
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(RSSI));
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(GPIO));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(PLUGINS), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(HEAP), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(RSSI), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(GPIO), name);
 #if defined(ESP8266)
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CPU));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CPU), name);
 #endif
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DUMP));
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DUMPFS));
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DUMPEE));
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(WRTC));
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DUMPRTC));
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(RTCCLR));
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(RTCQCC));
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(WIMO));
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(LOG));
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(PANIC));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DUMP), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DUMPFS), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DUMPEE), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(WRTC), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DUMPRTC), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(RTCCLR), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(RTCQCC), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(WIMO), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(LOG), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(PANIC), name);
 #endif
 
 }
 
-void at_mode_generate_help(Stream &output) {
+void at_mode_generate_help(Stream &output, StringVector *findText = nullptr)
+{
+    _debug_printf_P(PSTR("at_mode_generate_help(): find=%s\n"), implode(FSPGM(comma), findText).c_str());
     // call handler to gather help for all commands
     at_mode_help_commands();
-    for(auto plugin : plugins) {
+    for(auto plugin: plugins) {
         plugin->atModeHelpGenerator();
     }
-    at_mode_display_help(output);
+    at_mode_display_help(output, findText);
     at_mode_help.clear();
 }
 
-String at_mode_print_command_string(Stream &output, char separator) {
+String at_mode_print_command_string(Stream &output, char separator)
+{
     String commands;
     StreamString nullStream;
 
@@ -229,11 +293,11 @@ String at_mode_print_command_string(Stream &output, char separator) {
 
     uint16_t count = 0;
     for(const auto commandHelp: at_mode_help) {
-        if (commandHelp->command) {
+        if (commandHelp.command) {
             if (count++ != 0) {
                 output.print(separator);
             }
-            output.print(FPSTR(commandHelp->command));
+            output.print(FPSTR(commandHelp.command));
         }
     }
 
@@ -445,20 +509,50 @@ void flash() {
 }
 */
 
-void at_mode_print_invalid_command(Stream &output) {
+void at_mode_print_invalid_command(Stream &output)
+{
     output.println(F("ERROR - Invalid command. AT? for help"));
 }
 
-void at_mode_print_invalid_arguments(Stream &output) {
-    output.println(F("ERROR - Invalid arguments. AT? for help"));
+void at_mode_print_invalid_arguments(Stream &output, uint16_t num, uint16_t min, uint16_t max)
+{
+    static const uint16_t UNSET = ~0;
+    output.print(F("ERROR - "));
+    if (min != UNSET) {
+        if (min == max || max == UNSET) {
+            output.printf_P(PSTR("Expected %u argument(s), got %u. AT? for help\n"), min, num);
+        }
+        else {
+            output.printf_P(PSTR("Expected %u to %u argument(s), got %u. AT? for help\n"), min, max, num);
+        }
+    }
+    else {
+        output.println(F("Invalid arguments. AT? for help"));
+    }
 }
 
-void at_mode_print_ok(Stream &output) {
+void at_mode_print_ok(Stream &output)
+{
     output.println(FSPGM(OK));
 }
 
-void at_mode_serial_handle_event(String &commandString) {
+void at_mode_print_prefix(Stream &output, const __FlashStringHelper *command)
+{
+    output.print('+');
+    output.print(command);
+    output.print(F(": "));
+}
+
+void at_mode_print_prefix(Stream &output, const char *command)
+{
+    output.printf_P(PSTR("+%s: "), command);
+}
+
+void at_mode_serial_handle_event(String &commandString)
+{
     auto &output = MySerial;
+    AtModeArgs args(output);
+
     commandString.trim();
     bool isQueryMode = commandString.length() && (commandString.charAt(commandString.length() - 1) == '?');
 
@@ -487,44 +581,39 @@ void at_mode_serial_handle_event(String &commandString) {
             std::unique_ptr<char []> __command(new char[commandString.length() + 1]);
             auto command = strcpy(__command.get(), commandString.c_str());
 #endif
-            int8_t argc;
-            char *args[AT_MODE_MAX_ARGUMENTS];
-            memset(args, 0, sizeof(args));
-
-            // AT was remove already, string always starts with +
             command++;
 
             char *ptr = strchr(command, '?');
             if (isQueryMode && ptr) { // query mode has no arguments
                 *ptr = 0;
-                argc = AT_MODE_QUERY_COMMAND;
+                args.setQueryMode(true);
             } else {
                 _debug_printf_P(PSTR("tokenizer('%s')\n"), command);
-                argc = (int8_t)tokenizer(command, args, AT_MODE_MAX_ARGUMENTS, true);
+                args.setQueryMode(false);
+                tokenizer(command, args, true);
             }
 
-            _debug_printf_P(PSTR("Command '%s' argc %d arguments '%s'\n"), command, argc, implode(F("','"), (const char **)args, argc).c_str());
-
-            // if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(FLASH))) {
-
-            //     flash();
-
-            // } else
+            _debug_printf_P(PSTR("Command '%s' argc %d arguments '%s'\n"), command, args.size(), implode(F("','"), &args.getArgs()).c_str());
 
             if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(DSLP))) {
-                uint32_t time = 0;
-                RFMode mode = RF_DEFAULT;
-                if (argc == 1) {
-                    time = atoi(args[0]);
-                }
-                if (argc == 2) {
-                    mode = (RFMode)atoi(args[1]);
-                }
+                uint32_t time = args.toMillis(0);
+                RFMode mode = (RFMode)args.toInt(1, RF_DEFAULT);
                 output.println(F("Entering deep sleep..."));
                 config.enterDeepSleep(time, mode, 1);
             }
+            else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(HLP))) {
+                String plugin;
+                StringVector findItems;
+                for(auto strPtr: args.getArgs()) {
+                    String str = strPtr;
+                    str.trim();
+                    str.toLowerCase();
+                    findItems.emplace_back(std::move(str));
+                }
+                at_mode_generate_help(output, &findItems);
+            }
             else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(RST))) {
-                if (argc == 1 && *args[0] == 's') {
+                if (args.equals(0, 's')) {
                     resetDetector.setSafeMode(1);
                     output.println(F("Software reset, safe mode enabled..."));
                 }
@@ -547,20 +636,24 @@ void at_mode_serial_handle_event(String &commandString) {
                 at_mode_print_ok(output);
             }
             else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(IMPORT))) {
-                if (argc >= 1) {
-                    bool res = false;
-                    auto file = SPIFFS.open(args[0], fs::FileOpenMode::read);
+                if (args.requireArgs(1)) {
+                    auto res = false;
+                    auto filename = args.get(0);
+                    auto file = SPIFFS.open(filename, fs::FileOpenMode::read);
                     if (file) {
-                        output.printf_P(PSTR("+IMPORT: %s"), args[0]);
+                        output.printf_P(PSTR("+%s: %s"), PROGMEM_AT_MODE_HELP_COMMAND(IMPORT), filename);
                         Configuration::Handle_t *handlesPtr = nullptr;
                         Configuration::Handle_t handles[AT_MODE_MAX_ARGUMENTS + 1];
-                        if (argc >= 2) {;
+                        auto iterator = args.begin();
+                        if (++iterator != args.end()) {
                             output.print(F(": "));
                             handlesPtr = &handles[0];
-                            for(uint8_t i = 1; i < argc; i++) {
-                                handles[i - 1] = (uint16_t)strtoul(args[i], nullptr, 0);
-                                handles[i] = 0;
-                                output.printf_P(PSTR("0x%04x "), handles[i - 1]);
+                            auto count = 0;
+                            while(iterator != args.end() && count < AT_MODE_MAX_ARGUMENTS) {
+                                handles[count++] = (uint16_t)strtoul(*iterator, nullptr, 0); // auto detect base
+                                handles[count] = 0;
+                                output.printf_P(PSTR("0x%04x "), handles[count - 1]);
+                                ++iterator;
                             }
                         }
                         output.println();
@@ -571,11 +664,8 @@ void at_mode_serial_handle_event(String &commandString) {
                         config.write();
                         config.setConfigDirty(true);
                     } else {
-                        output.printf_P(PSTR("+IMPORT: Failed to import: %s\n"), args[0]);
+                        output.printf_P(PSTR("+IMPORT: Failed to import: %s\n"), filename);
                     }
-                }
-                else {
-                    at_mode_print_invalid_arguments(output);
                 }
             }
             else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(FACTORY))) {
@@ -583,10 +673,8 @@ void at_mode_serial_handle_event(String &commandString) {
                 at_mode_print_ok(output);
             }
             else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(ATMODE))) {
-                if (argc != 1) {
-                    at_mode_print_invalid_arguments(output);
-                } else {
-                    if (atoi(args[0])) {
+                if (args.requireArgs(1, 1)) {
+                    if (args.isTrue(0)) {
                         enable_at_mode(output);
                     } else {
                         disable_at_mode(output);
@@ -616,7 +704,7 @@ void at_mode_serial_handle_event(String &commandString) {
             }
 #endif
             else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(WIFI))) {
-                if (argc == 1) {
+                if (!args.empty()) {
                     config.reconfigureWiFi();
                 }
 
@@ -631,7 +719,7 @@ void at_mode_serial_handle_event(String &commandString) {
             }
 #if RTC_SUPPORT
             else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(RTC))) {
-                if (argc != 1) {
+                if (!args.empty()) {
                     output.printf_P(PSTR("+RTC: time=%u, rtc=%u\n"), (uint32_t)time(nullptr), config.getRTC());
                     output.print(F("+RTC: "));
                     config.printRTCStatus(output);
@@ -646,30 +734,22 @@ void at_mode_serial_handle_event(String &commandString) {
                 // ignore comment
             }
             else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(DLY))) {
-                unsigned long ms = 1;
-                if (argc > 0) {
-                    ms = atol(args[0]);
-                }
-                output.printf_P(PSTR("+DLY: %lu\n"), ms);
-                delay(ms);
+                auto delayTime = args.toMillis(0, 1, 5000, 1);
+                output.printf_P(PSTR("+DLY: %lu\n"), delayTime);
+                delay(delayTime);
                 at_mode_print_ok(output);
             }
             else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(DEL))) {
-                if (argc != 1) {
-                    at_mode_print_invalid_arguments(output);
-                }
-                else {
-                    String filename = args[0];
+                if (args.requireArgs(1, 1)) {
+                    auto filename = args.get(0);
                     auto result = SPIFFS.remove(filename);
-                    output.printf_P(PSTR("+DEL: %s: %s\n"), filename.c_str(), result ? PSTR("success") : PSTR("failure"));
+                    output.printf_P(PSTR("+DEL: %s: %s\n"), filename, result ? PSTR("success") : PSTR("failure"));
                 }
             }
             else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(CAT))) {
-                if (argc != 1) {
-                    at_mode_print_invalid_arguments(output);
-                }
-                else {
-                    File file = SPIFFS.open(args[0], fs::FileOpenMode::read);
+                if (args.requireArgs(1, 1)) {
+                    auto filename = args.get(0);
+                    File file = SPIFFS.open(filename, fs::FileOpenMode::read);
                     if (file) {
                         Scheduler.addTimer(10, true, [&output, file](EventScheduler::TimerPtr timer) mutable {
                             char buf[256];
@@ -690,7 +770,7 @@ void at_mode_serial_handle_event(String &commandString) {
                         });
                     }
                     else {
-                        output.printf_P(PSTR("+CAT: Failed to open: %s\n"), args[0]);
+                        output.printf_P(PSTR("+CAT: Failed to open: %s\n"), filename);
                     }
                 }
             }
@@ -709,19 +789,18 @@ void at_mode_serial_handle_event(String &commandString) {
                 if (!PinMonitor::getInstance()) {
                     output.println(F("+PINM: Pin monitor not initialized"));
                 }
-                else if (argc == 1) {
-                    int state = atoi(args[0]);
-                    auto &timer = PinMonitor::getTimer();
-                    if (state && !timer) {
+                else if (args.size() == 1) {
+                    static EventScheduler::TimerPtr timer = nullptr;
+                    // auto &timer = PinMonitor::getTimer();
+                    if (args.isTrue(0) && !timer) {
                         output.println(F("+PINM: started"));
                         Stream *serialPtr = &output;
                         Scheduler.addTimer(&timer, 1000, true, [serialPtr](EventScheduler::TimerPtr timer) {
                             PinMonitor::getInstance()->dumpPins(*serialPtr);
                         });
                     }
-                    else if (!state && timer) {
-                        Scheduler.removeTimer(timer);
-                        timer = nullptr;
+                    else if (args.isFalse(0) && timer) {
+                        Scheduler.removeTimer(&timer);
                         output.println(F("+PINM: stopped"));
                     }
                 } else {
@@ -733,8 +812,8 @@ void at_mode_serial_handle_event(String &commandString) {
                 dump_plugin_list(output);
             }
             else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(RSSI)) || !strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(HEAP)) || !strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(GPIO))) {
-                if (argc == 1) {
-                    float interval = atof(args[0]);
+                if (args.requireArgs(1, 1)) {
+                    auto interval = args.toMillis(0, 500);
                     PGM_P cmd;
                     if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(RSSI))) {
                         displayTimer._type = DisplayTimer::RSSI;
@@ -754,18 +833,17 @@ void at_mode_serial_handle_event(String &commandString) {
                         displayTimer.removeTimer();
                         output.printf_P(PSTR("+%s: Interval disabled\n"), cmd);
                     } else {
-                        output.printf_P(PSTR("+%s: Interval set to %.3f seconds\n"), cmd, interval);
-                        create_heap_timer(interval, displayTimer._type);
+                        float fInterval = interval / 1000.0;
+                        output.printf_P(PSTR("+%s: Interval set to %.3f seconds\n"), cmd, fInterval);
+                        create_heap_timer(fInterval, displayTimer._type);
                     }
-                } else {
-                    at_mode_print_invalid_arguments(output);
                 }
             }
     #if defined(ESP8266)
             else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(CPU))) {
-                if (argc == 1) {
-                    uint8_t speed = atoi(args[0]);
-                    bool result = system_update_cpu_freq(speed);
+                if (args.size() == 1) {
+                    auto speed = (uint8_t)args.toInt(0, ESP.getCpuFreqMHz());
+                    auto result = system_update_cpu_freq(speed);
                     output.printf_P(PSTR("+CPU: Set %d MHz = %d\n"), speed, result);
                 }
                 output.printf_P(PSTR("+CPU: %d MHz\n"), ESP.getCpuFreqMHz());
@@ -778,25 +856,16 @@ void at_mode_serial_handle_event(String &commandString) {
                 at_mode_dump_fs_info(output);
             }
             else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(DUMPEE))) {
-                uint16_t offset = 0;
-                uint16_t length = 0;
-                if (argc > 0) {
-                    offset = atoi(args[0]);
-                    if (argc > 1) {
-                        length = atoi(args[1]);
-                    }
-                }
+                uint16_t offset = args.toInt(0);
+                uint16_t length = args.toInt(1, 1);
                 config.dumpEEPROM(output, false, offset, length);
             }
             else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(WRTC))) {
-                if (argc < 2) {
-                    at_mode_print_invalid_arguments(output);
-                }
-                else {
-                    uint8_t rtcMemId = (uint8_t)atoi(args[0]);
-                    uint32_t data = (uint32_t)atoi(args[1]);
+                if (args.requireArgs(2, 2)) {
+                    uint8_t rtcMemId = (uint8_t)args.toInt(0);
+                    uint32_t data = (uint32_t)strtoul(args.get(1), nullptr, 0); // auto detect base
                     RTCMemoryManager::write(rtcMemId, &data, sizeof(data));
-                    output.printf_P(PSTR("+WRTC: id=%u, data=%u\n"), rtcMemId, data);
+                    output.printf_P(PSTR("+WRTC: id=%u, data=%u (%x)\n"), rtcMemId, data, data);
                 }
             }
             else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(DUMPRTC))) {
@@ -807,8 +876,8 @@ void at_mode_serial_handle_event(String &commandString) {
                 output.println(F("+RTCCLR: Memory cleared"));
             }
             else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(RTCQCC))) {
-                if (argc == 1) {
-                    int num = atoi(args[0]);
+                if (args.requireArgs(1, 1)) {
+                    int num = args.toInt(0);
                     if (num == 0) {
                         uint8_t bssid[6];
                         memset(bssid, 0, sizeof(bssid));
@@ -820,25 +889,19 @@ void at_mode_serial_handle_event(String &commandString) {
                     } else {
                         at_mode_print_invalid_arguments(output);
                     }
-                } else {
-                    at_mode_print_invalid_arguments(output);
                 }
             }
             else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(WIMO))) {
-                if (argc == 1) {
+                if (args.requireArgs(1, 1)) {
                     output.println(F("+WIFO: settings WiFi mode and restarting device..."));
-                    config._H_W_GET(Config().flags).wifiMode = atoi(args[0]);
+                    config._H_W_GET(Config().flags).wifiMode = args.toInt(0);
                     config.write();
                     config.restartDevice();
-                } else {
-                    at_mode_print_invalid_arguments(output);
                 }
             }
             else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(LOG))) {
-                if (argc < 1) {
-                    at_mode_print_invalid_arguments(output);
-                } else {
-                    Logger_error(F("+LOG: %s"), implode(FSPGM(comma), (const char **)args, argc).c_str());
+                if (args.requireArgs(1)) {
+                    Logger_error(F("+LOG: %s"), implode(FSPGM(comma), &args.getArgs()).c_str());
                 }
             }
             else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(PANIC))) {
@@ -855,7 +918,7 @@ void at_mode_serial_handle_event(String &commandString) {
                 bool commandWasHandled = false;
                 for(auto plugin : plugins) { // send command to plugins
                     if (plugin->hasAtMode()) {
-                        if (true == (commandWasHandled = plugin->atModeHandler(output, command, argc, args))) {
+                        if (true == (commandWasHandled = plugin->atModeHandler(output, command, args))) {
                             break;
                         }
                     }
@@ -869,7 +932,8 @@ void at_mode_serial_handle_event(String &commandString) {
 }
 
 
-void at_mode_serial_input_handler(uint8_t type, const uint8_t *buffer, size_t len) {
+void at_mode_serial_input_handler(uint8_t type, const uint8_t *buffer, size_t len)
+{
     static String line_buffer;
 
     Stream *echoStream = (type == SerialHandler::RECEIVE) ? &SerialHandler::getInstance().getSerial() : nullptr;

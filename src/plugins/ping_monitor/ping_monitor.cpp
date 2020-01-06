@@ -41,7 +41,7 @@ void ping_monitor_install_web_server_hook()
     }
 }
 
-bool ping_monitor_resolve_host(char *host, IPAddress &addr, PrintString &errorMessage)
+bool ping_monitor_resolve_host(const char *host, IPAddress &addr, PrintString &errorMessage)
 {
     if (!*host || !strcmp_P(host, SPGM(0))) {
         errorMessage.printf_P(PSTR("ping cancelled"));
@@ -56,7 +56,7 @@ bool ping_monitor_resolve_host(char *host, IPAddress &addr, PrintString &errorMe
     return false;
 }
 
-void ping_monitor_begin(AsyncPing *ping, char *host, IPAddress &addr, int count, int timeout, PrintString &message)
+void ping_monitor_begin(AsyncPing *ping, const char *host, IPAddress &addr, int count, int timeout, PrintString &message)
 {
     if (count < 1) {
         count = 4;
@@ -154,7 +154,7 @@ void WsPingClient::onText(uint8_t *data, size_t len)
                                 return true;
                             });
 
-                            ping_monitor_begin(&_ping, host, addr, count, timeout, message);
+                            ping_monitor_begin(&_ping, (const char *)host, addr, count, timeout, message);
                             WsClient::safeSend(wsPing, client, message);
 
                         } else {
@@ -426,7 +426,7 @@ public:
         return true;
     }
     virtual void atModeHelpGenerator() override;
-    virtual bool atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) override;
+    virtual bool atModeHandler(Stream &serial, const String &command, AtModeArgs &args) override;
 #endif
 };
 
@@ -487,19 +487,17 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PING, "PING", "<target[,count=4[,timeout=5
 
 void PingMonitorPlugin::atModeHelpGenerator()
 {
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(PING));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(PING), getName());
 }
 
-bool PingMonitorPlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv)
+bool PingMonitorPlugin::atModeHandler(Stream &serial, const String &command, AtModeArgs &args)
 {
     static AsyncPing *_ping = nullptr;
 
     if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(PING))) {
 
-        if (argc < 1) {
-            at_mode_print_invalid_arguments(serial);
-        } else {
-            char *host = argv[0];
+        if (args.requireArgs(1, 3)) {
+            auto host = args.get(0);
             IPAddress addr;
             PrintString message;
             if (_ping) {
@@ -507,14 +505,8 @@ bool PingMonitorPlugin::atModeHandler(Stream &serial, const String &command, int
                 _ping->cancel();
             }
             if (ping_monitor_resolve_host(host, addr, message)) {
-                int count = 0;
-                int timeout = 0;
-                if (argc >= 2) {
-                    count = atoi(argv[1]);
-                    if (argc >= 3) {
-                        timeout = atoi(argv[2]);
-                    }
-                }
+                int count = args.toInt(1);
+                int timeout = args.toInt(2);
                 if (!_ping) {
                     _ping = new AsyncPing();
                     _ping->on(true, [&serial](const AsyncPingResponse &response) {

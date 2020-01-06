@@ -145,7 +145,11 @@ static void remove_crash_counter(EventScheduler::TimerPtr timer) {
     if (!timer) {
         SPIFFS.begin();
     }
-    SPIFFS.remove(FSPGM(crash_counter_file));
+    char filename[strlen_P(SPGM(crash_counter_file)) + 1];
+    strcpy_P(filename, SPGM(crash_counter_file));
+    if (SPIFFS.exists(filename)) {
+        SPIFFS.remove(filename);
+    }
 #endif
 }
 

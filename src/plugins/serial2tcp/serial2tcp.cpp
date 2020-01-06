@@ -125,9 +125,9 @@ bool Serial2TcpPlugin::hasAtMode() const {
 }
 
 void Serial2TcpPlugin::atModeHelpGenerator() {
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(S2TCPF));
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(S2TCPD));
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(S2TCP));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(S2TCPF), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(S2TCPD), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(S2TCP), getName());
 }
 
 bool Serial2TcpPlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) {

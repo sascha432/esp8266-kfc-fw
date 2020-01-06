@@ -302,11 +302,13 @@ static ResetDetectorPlugin plugin;
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPP(RD, "RD", "Reset detector clear counter", "Display information");
 
-void ResetDetectorPlugin::atModeHelpGenerator() {
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(RD));
+void ResetDetectorPlugin::atModeHelpGenerator()
+{
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(RD), getName());
 }
 
-bool ResetDetectorPlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) {
+bool ResetDetectorPlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv)
+{
     if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(RD))) {
         if (argc == ATModeQueryCommand) {
             serial.printf_P(PSTR("safe mode: %d\nreset counter: %d\ninitial reset counter: %d\ncrash: %d\nreboot: %d\nreset: %d\nreset reason: %s\n"),

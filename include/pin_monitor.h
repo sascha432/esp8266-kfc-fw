@@ -65,13 +65,6 @@ private:
     PinsVector _pins;
 
     static PinMonitor *_instance;
-#if DEBUG
-    static EventScheduler::TimerPtr _timer;
-public:
-    inline static EventScheduler::TimerPtr &getTimer() {
-        return _timer;
-    }
-#endif
 };
 
 #endif

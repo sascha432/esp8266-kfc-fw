@@ -116,7 +116,9 @@ public:
     SyslogPlugin() {
         REGISTER_PLUGIN(this, "SyslogPlugin");
     }
-    PGM_P getName() const;
+    virtual PGM_P getName() const {
+        return PSTR("syslog");
+    }
     PluginPriorityEnum_t getSetupPriority() const override;
 
     bool autoSetupAfterDeepSleep() const override;
@@ -136,16 +138,11 @@ public:
 #if AT_MODE_SUPPORTED
     bool hasAtMode() const override;
     void atModeHelpGenerator() override;
-    bool atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) override;
+    bool atModeHandler(Stream &serial, const String &command, AtModeArgs &args) override;
 #endif
 };
 
 static SyslogPlugin plugin;
-
-PGM_P SyslogPlugin::getName() const
-{
-    return PSTR("syslog");
-}
 
 SyslogPlugin::PluginPriorityEnum_t SyslogPlugin::getSetupPriority() const
 {
@@ -263,12 +260,12 @@ bool SyslogPlugin::hasAtMode() const
 
 void SyslogPlugin::atModeHelpGenerator()
 {
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SQC));
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SQI));
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SQD));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SQC), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SQI), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SQD), getName());
 }
 
-bool SyslogPlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv)
+bool SyslogPlugin::atModeHandler(Stream &serial, const String &command, AtModeArgs &args)
 {
     if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SQC))) {
         if (syslog) {

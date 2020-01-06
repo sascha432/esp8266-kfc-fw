@@ -15,9 +15,6 @@
 #endif
 
 PinMonitor *PinMonitor::_instance = nullptr;
-#if DEBUG
-EventScheduler::TimerPtr PinMonitor::_timer = nullptr;
-#endif
 
 PinMonitor::PinMonitor() {
 }

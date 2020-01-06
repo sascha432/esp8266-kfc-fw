@@ -42,6 +42,7 @@ String formatTime(unsigned long seconds, bool days_if_not_zero) {
     return out;
 }
 
+
 String implode(const __FlashStringHelper *glue, const char **pieces, int count) {
     String tmp;
     if (count > 0) {
@@ -445,8 +446,9 @@ const char *inet_ntoa_s(char *dst, size_t size, uint32_t ip) {
     return dst;
 }
 
-uint8_t tokenizer(char *ptr, char **args, uint8_t maxArgs, bool hasCommand) {
-    uint8_t argc = 0;
+uint16_t tokenizer(char *ptr, TokenizerArgs &args, bool hasCommand)
+{
+    uint16_t argc = 0;
     if (hasCommand) {
         while(*ptr && *ptr != '=' && *ptr != ' ') {     // find end of command
             ptr++;
@@ -456,7 +458,7 @@ uint8_t tokenizer(char *ptr, char **args, uint8_t maxArgs, bool hasCommand) {
         bool quoted = false;
         *ptr++ = 0;
         while(*ptr) {
-            if (argc >= maxArgs) {
+            if (!args.hasSpace()) {
                 break;
             }
             // trim white space for quoted arguments only
@@ -470,7 +472,8 @@ uint8_t tokenizer(char *ptr, char **args, uint8_t maxArgs, bool hasCommand) {
                 ptr = wptr + 1;
             }
 
-            args[argc++] = ptr;
+            args.add(ptr);
+            argc++;
             if (quoted) {
                 while (*ptr) {  // find end of argument
                     // handle escaped characters

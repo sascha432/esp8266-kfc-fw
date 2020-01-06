@@ -78,17 +78,17 @@ PGM_P ESP8266ATModePlugin::getName() const {
 }
 
 void ESP8266ATModePlugin::atModeHelpGenerator() {
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CWMODE));
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CWLAP));
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CWJAP));
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CWQAP));
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CIPSTATUS));
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CIFSR));
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CWSAP));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CWMODE), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CWLAP), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CWJAP), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CWQAP), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CIPSTATUS), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CIFSR), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CWSAP), getName());
 #if defined(ESP8266)
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CWAPDHCP));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CWAPDHCP), getName());
 #endif
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(GMR));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(GMR), getName());
 }
 
 bool ESP8266ATModePlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) {

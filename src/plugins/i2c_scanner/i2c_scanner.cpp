@@ -135,7 +135,9 @@ public:
     I2CScannerPlugin() {
         REGISTER_PLUGIN(this, "I2CScannerPlugin");
     }
-    PGM_P getName() const;
+    virtual PGM_P getName() const {
+        return PSTR("i2c_scan");
+    }
 
     PluginPriorityEnum_t getSetupPriority() const {
         return MIN_PRIORITY;
@@ -150,77 +152,65 @@ public:
         return true;
     }
     void atModeHelpGenerator() override;
-    bool atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) override;
+    bool atModeHandler(Stream &serial, const String &command, AtModeArgs &args) override;
 #endif
 };
 
 static I2CScannerPlugin plugin;
 
-PGM_P I2CScannerPlugin::getName() const {
-    return PSTR("i2c_scan");
-}
-
 #if AT_MODE_SUPPORTED
 
 void I2CScannerPlugin::atModeHelpGenerator() {
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SCANI2C));
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SCAND));
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CS));
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CST));
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CSR));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SCANI2C), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SCAND), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CS), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CST), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CSR), getName());
 #ifdef _LIB_ADAFRUIT_INA219_
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CINA219));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CINA219), getName());
 #endif
 #ifdef __CCS811_H__
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CCCS811));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CCCS811), getName());
 #endif
 #ifdef __BME680_H__
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CBME680));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CBME680), getName());
 #endif
 #ifdef __BME280_H__
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CBME280));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CBME280), getName());
 #endif
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CLM75A));
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CLM75A), getName());
 }
 
-bool I2CScannerPlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) {
+bool I2CScannerPlugin::atModeHandler(Stream &serial, const String &command, AtModeArgs &args) {
     if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(I2CS))) {
-        if (argc == 1 && String_equalsIgnoreCase(argv[0], PSTR("reset"))) {
-            serial.print(F("+I2CS: "));
-            config.initTwoWire(true, &serial);
-        }
-        else if (argc < 2) {
-            at_mode_print_invalid_arguments(serial);
-        }
-        else {
-            int sda, scl, speed = 100, setClockStretchLimit = 0;
-            Wire.begin(sda = __toint(argv[0]), scl = __toint(argv[1]));
-            if (argc >= 3) {
-                speed = __toint(argv[2]);
-                if (argc >= 4) {
-                    setClockStretchLimit = __toint(argv[3]);
+        if (args.requireArgs(1, 3)) {
+            if (args.equalsIgnoreCase(0, F("reset"))) {
+                serial.print(F("+I2CS: "));
+                config.initTwoWire(true, &serial);
+            }
+            else if (args.requireArgs(2, 3)) {
+                int sda = args.toNumber(0, KFC_TWOWIRE_SDA);
+                int scl = args.toNumber(1, KFC_TWOWIRE_SCL);
+                uint32_t speed = args.toNumber(2, 100) * 1000UL;
+                uint32_t setClockStretchLimit = args.toInt(3)
+                Wire.setClock(speed);
+                if (setClockStretchLimit) {
+                    Wire.setClockStretchLimit(setClockStretchLimit);
                 }
+                serial.printf_P(PSTR("+I2CS: SDA=%d, SCL=%d, speed=%ukHz, setClockStretchLimit=%u\n"), sda, scl, speed / 1000U, setClockStretchLimit);
             }
-            Wire.setClock(speed * 1e3L);
-            if (setClockStretchLimit) {
-                Wire.setClockStretchLimit(setClockStretchLimit);
-            }
-            serial.printf_P(PSTR("+I2CS: SDA=%d, SCL=%d, speed=%ukHz, setClockStretchLimit=%d\n"), sda, scl, speed, setClockStretchLimit);
         }
         return true;
     } else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(I2CST))) {
-        if (argc < 1) {
-            at_mode_print_invalid_arguments(serial);
-        }
-        else {
-            int tmp;
-            Wire.beginTransmission(tmp = __toint(argv[0], 16));
-            serial.printf_P(PSTR("+I2CST: address=%02x"), tmp);
-            if (argc > 1) {
+        if (args.requireArgs(1)) {
+            int address = args.toNumber(0);
+            Wire.beginTransmission(address);
+            serial.printf_P(PSTR("+I2CST: address=%02x"), address);
+            if (args.size() > 1) {
                 serial.print(',');
             }
-            for(uint8_t i = 1; i < argc; i++) {
-                tmp = __toint(argv[i], 16);
+            for(uint8_t i = 1; i < args.size(); i++) {
+                int tmp = args.toNumber(i);
                 Wire.write((uint8_t)tmp);
                 serial.printf_P(PSTR(" %02x"), tmp);
             }
@@ -229,13 +219,9 @@ bool I2CScannerPlugin::atModeHandler(Stream &serial, const String &command, int8
         }
         return true;
     } else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(I2CSR))) {
-        if (argc != 2) {
-            at_mode_print_invalid_arguments(serial);
-        }
-        else {
-            int address, count;
-            address = __toint(argv[0], 16);
-            count = __toint(argv[1], 16);
+        if (args.requireArgs(2, 2)) {
+            int address = args.toNumber(0);
+            int count = args.toNumber(1);
             serial.printf_P(PSTR("+I2CSR: address=%02x, count=%d, "), address, count);
             auto result = Wire.requestFrom(address, count);
             serial.printf_P(PSTR("result=%u, expected=%u, "), result, count);
@@ -270,14 +256,8 @@ bool I2CScannerPlugin::atModeHandler(Stream &serial, const String &command, int8
     }
 #ifdef _LIB_ADAFRUIT_INA219_
     else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(I2CINA219))) {
-        if (argc < 1) {
-            at_mode_print_invalid_arguments(serial);
-        }
-        else {
-            int address = __toint(argv[0]);
-            if (address == 0) {
-                address = INA219_ADDRESS;
-            }
+        if (args.requireArgs(1, 1)) {
+            int address = args.toNumber(0, INA219_ADDRESS);
             Adafruit_INA219 ina219(address);
             ina219.begin();
             serial.printf_P(PSTR("+I2CINA219: raw: Vbus %d, Vshunt %d, I %d, P %d\n"), ina219.getBusVoltage_raw(), ina219.getShuntVoltage_raw(), ina219.getCurrent_raw(), ina219.getPower_raw());
@@ -287,29 +267,11 @@ bool I2CScannerPlugin::atModeHandler(Stream &serial, const String &command, int8
 #endif
 #ifdef __CCS811_H__
     else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(I2CCCS811))) {
-        if (argc < 1) {
-            at_mode_print_invalid_arguments(serial);
-        }
-        else {
+        if (args.requireArgs(1, 3)) {
             Adafruit_CCS811 ccs811; // +i2cccs811=0x5a,25.07,53
-            uint8_t humidity = 0;
-            double temperature = 0;
-            int address = __toint(argv[0]);
-            if (address == 0) {
-                address = CCS811_ADDRESS;
-            }
-            if (argc >= 2) {
-                temperature = atof(argv[1]);
-            }
-            if (temperature == 0) {
-                temperature = 25;
-            }
-            if (argc >= 3) {
-                humidity = atoi(argv[2]);
-            }
-            if (humidity == 0) {
-                humidity = 55;
-            }
+            int address = args.toNumber(0, CCS811_ADDRESS);
+            double temperature = args.toDouble(1, 25.0);
+            uint8_t humidity = (uint8_t)args.toIntMinMax(2, 10, 99, 55);
             ccs811.begin(address);
             ccs811.setEnvironmentalData(humidity, temperature);
             auto available = ccs811.available();
@@ -322,15 +284,9 @@ bool I2CScannerPlugin::atModeHandler(Stream &serial, const String &command, int8
 #endif
 #ifdef __BME680_H__
     else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(I2CBME680))) {
-        if (argc != 1) {
-            at_mode_print_invalid_arguments(serial);
-        }
-        else {
+        if (args.requireArgs(1, 1)) {
             Adafruit_BME680 bme680;
-            int address = __toint(argv[0]);
-            if (address == 0) {
-                address = 0x77;
-            }
+            int address = args.toNumber(0, 0x77);
             bme680.begin(address);
             serial.printf_P(PSTR("Reading BME680 at 0x%02x: %.2f °C, %.2f%%, %.2f hPa, gas %u\n"), address, bme680.readTemperature(), bme680.readHumidity(), bme680.readPressure() / 100.0, bme680.readGas());
         }
@@ -339,15 +295,9 @@ bool I2CScannerPlugin::atModeHandler(Stream &serial, const String &command, int8
 #endif
 #ifdef __BME280_H__
     else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(I2CBME280))) {
-        if (argc != 1) {
-            at_mode_print_invalid_arguments(serial);
-        }
-        else {
+        if (args.requireArgs(1, 1)) {
             Adafruit_BME280 bme280;
-            int address = __toint(argv[0]);
-            if (address == 0) {
-                address = 0x76;
-            }
+            int address = args.toNumber(0, 0x76);
             bme280.begin(address, &Wire);
             serial.printf_P(PSTR("Reading BME280 at 0x%02x: %.2f °C, %.2f%%, %.2f hPa\n"), address, bme280.readTemperature(), bme280.readHumidity(), bme280.readPressure() / 100.0);
         }
@@ -355,15 +305,8 @@ bool I2CScannerPlugin::atModeHandler(Stream &serial, const String &command, int8
     }
 #endif
     else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(I2CLM75A))) {
-        if (argc != 1) {
-            at_mode_print_invalid_arguments(serial);
-        }
-        else {
-            int address;
-            address = __toint(argv[0]);
-            if (address == 0) {
-                address = 0x48;
-            }
+        if (args.requireArgs(1, 1)) {
+            int address = args.toNumber(0, 0x48);
             serial.printf_P(PSTR("Reading LM75A at 0x%02x: "), address);
             Wire.beginTransmission(address);
             Wire.write(0x00);

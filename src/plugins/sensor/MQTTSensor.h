@@ -71,6 +71,14 @@ public:
     virtual void restart() {
     }
 
+#if AT_MODE_SUPPORTED
+    virtual void atModeHelpGenerator() {
+    }
+    virtual bool atModeHandler(Stream &serial, const String &command, AtModeArgs &args) {
+        return false;
+    }
+#endif
+
     void timerEvent(JsonArray &array);
 
     inline void setUpdateRate(uint8_t updateRate) {

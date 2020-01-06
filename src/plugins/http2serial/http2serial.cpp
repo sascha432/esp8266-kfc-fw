@@ -173,7 +173,9 @@ public:
     Http2SerialPlugin() {
         REGISTER_PLUGIN(this, "Http2SerialPlugin");
     }
-    virtual PGM_P getName() const;
+    virtual PGM_P getName() const {
+        return PSTR("http2ser");
+    }
     virtual PluginPriorityEnum_t getSetupPriority() const override;
     virtual void setup(PluginSetupMode_t mode) override;
     virtual void reconfigure(PGM_P source) override;
@@ -188,17 +190,15 @@ public:
     }
 
 #if AT_MODE_SUPPORTED
-    virtual bool hasAtMode() const override;
+    virtual bool hasAtMode() const override {
+        return true;
+    }
     virtual void atModeHelpGenerator() override;
-    virtual bool atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) override;
+    virtual bool atModeHandler(Stream &serial, const String &command, AtModeArgs &args) override;
 #endif
 };
 
 static Http2SerialPlugin plugin;
-
-PGM_P Http2SerialPlugin::getName() const {
-    return PSTR("http2ser");
-}
 
 Http2SerialPlugin::PluginPriorityEnum_t Http2SerialPlugin::getSetupPriority() const {
     return (PluginPriorityEnum_t)10;
@@ -247,18 +247,16 @@ void Http2SerialPlugin::restart() {
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(H2SBD, "H2SBD", "<baud>", "Set serial port rate");
 
-bool Http2SerialPlugin::hasAtMode() const {
-    return true;
+void Http2SerialPlugin::atModeHelpGenerator()
+{
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(H2SBD), getName());
 }
 
-void Http2SerialPlugin::atModeHelpGenerator() {
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(H2SBD));
-}
-
-bool Http2SerialPlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) {
+bool Http2SerialPlugin::atModeHandler(Stream &serial, const String &command, AtModeArgs &args)
+{
     if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(H2SBD))) {
-        if (argc == 1) {
-            uint32_t rate = atoi(argv[0]);
+        if (args.requireArgs(1, 1)) {
+            uint32_t rate = args.toIntMinMax(0, 300, 2500000, KFC_SERIAL_RATE);
             if (rate) {
                 Serial.flush();
                 Serial.begin(rate);

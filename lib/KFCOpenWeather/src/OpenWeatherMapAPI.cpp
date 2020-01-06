@@ -186,7 +186,7 @@ void OpenWeatherMapAPI::WeatherForecast::dump(Print & output) const
 
     for (const auto &f : forecast) {
         auto &info = f.second;
-        output.printf_P(PSTR("[%s] - Time: %d\n"), f.first.c_str(), info.val.time);
+        output.printf_P(PSTR("[%s] - Time: %d\n"), f.first.c_str(), (int)info.val.time);
         output.printf_P(PSTR("Temperature: %.1f C (min/max %.1f/%.1f)\n"), kelvinToC(info.val.temperature), kelvinToC(info.val.temperature_min), kelvinToC(info.val.temperature_max));
         output.printf_P(PSTR("Temperature: %.1f F (min/max %.1f/%.1f)\n"), kelvinToF(info.val.temperature), kelvinToF(info.val.temperature_min), kelvinToF(info.val.temperature_max));
         output.printf_P(PSTR("Humidity: %d %%\n"), info.val.humidity);

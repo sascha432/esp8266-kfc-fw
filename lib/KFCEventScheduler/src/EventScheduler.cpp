@@ -84,10 +84,12 @@ bool ICACHE_RAM_ATTR EventScheduler::hasTimer(TimerPtr timer) {
 bool EventScheduler::removeTimer(TimerPtr *timer)
 {
     _debug_printf_P(PSTR("EventScheduler::removeTimer(); timer pointer=%p, timer=%p\n"), timer, timer ? *timer : nullptr);
+    auto result = false;
     if (*timer) {
-        removeTimer(*timer);
+        result = removeTimer(*timer);
         *timer = nullptr;
     }
+    return result;
 }
 
 bool EventScheduler::removeTimer(TimerPtr timer)

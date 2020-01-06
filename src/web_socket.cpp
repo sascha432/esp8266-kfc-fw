@@ -117,15 +117,13 @@
 
         _debug_printf_P(PSTR("WsClient::onWsEvent(): WS_EVT_ERROR wsClient %p\n"), wsClient);
 
-        unsigned int error = *reinterpret_cast<uint16_t *>(arg);
-
         PrintString str;
         DumpBinary dumper(str);
         dumper.dump(data, len);
 
         str.replace(F("\n"), F(" "));
 
-        Logger_notice(F(WS_PREFIX "Error(%u): data='%s', length=%d"), WS_PREFIX_ARGS, error, str.c_str(), len);
+        Logger_notice(F(WS_PREFIX "Error(%u): data='%s', length=%d"), WS_PREFIX_ARGS, *reinterpret_cast<uint16_t *>(arg), str.c_str(), len);
         wsClient->onError(WsClient::ERROR_FROM_SERVER, data, len);
 
     } else if (type == WS_EVT_PONG) {

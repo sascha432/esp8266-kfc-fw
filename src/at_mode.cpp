@@ -188,7 +188,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF(RTC, "RTC", "[<set>]", "Set RTC time", "Display
 
 #if DEBUG_HAVE_SAVECRASH
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(SAVECRASHC, "SAVECRASHC", "Clear crash memory");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(SAVECRASHP, "SAVECRASHP", "rint saved crash details");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(SAVECRASHP, "SAVECRASHP", "Print saved crash details");
 #endif
 
 #if DEBUG
@@ -734,7 +734,7 @@ void at_mode_serial_handle_event(String &commandString)
                 // ignore comment
             }
             else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(DLY))) {
-                auto delayTime = args.toMillis(0, 1, 5000, 1);
+                auto delayTime = args.toMillis(0, 1, 3000, 1);
                 output.printf_P(PSTR("+DLY: %lu\n"), delayTime);
                 delay(delayTime);
                 at_mode_print_ok(output);

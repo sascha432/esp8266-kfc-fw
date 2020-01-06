@@ -290,7 +290,7 @@ public:
         return true;
     }
     void atModeHelpGenerator() override;
-    bool atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) override;
+    bool atModeHandler(Stream &serial, const String &command, AtModeArgs &args) override;
 #endif
 };
 
@@ -307,10 +307,10 @@ void ResetDetectorPlugin::atModeHelpGenerator()
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(RD), getName());
 }
 
-bool ResetDetectorPlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv)
+bool ResetDetectorPlugin::atModeHandler(Stream &serial, const String &command, AtModeArgs &args)
 {
     if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(RD))) {
-        if (argc == ATModeQueryCommand) {
+        if (args.isQueryMode()) {
             serial.printf_P(PSTR("safe mode: %d\nreset counter: %d\ninitial reset counter: %d\ncrash: %d\nreboot: %d\nreset: %d\nreset reason: %s\n"),
                 resetDetector.getSafeMode(),
                 resetDetector.getResetCounter(),
@@ -320,7 +320,6 @@ bool ResetDetectorPlugin::atModeHandler(Stream &serial, const String &command, i
                 resetDetector.hasResetDetected(),
                 resetDetector.getResetReason().c_str()
             );
-
         } else {
             resetDetector.clearCounter();
         }

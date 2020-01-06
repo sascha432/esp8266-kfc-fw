@@ -268,13 +268,13 @@ void ClockPlugin::atModeHelpGenerator()
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CLOCKD), getName());
 }
 
-bool ClockPlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv)
+bool ClockPlugin::atModeHandler(Stream &serial, const String &command, AtModeArgs &args)
 {
     if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(CLOCKTS))) {
-        if (argc == 2) {
+        if (args.size() == 2) {
             enable(false);
-            uint8_t digit = atoi(argv[0]);
-            uint8_t segment = atoi(argv[1]);
+            uint8_t digit = args.toInt(0);
+            uint8_t segment = args.toInt(1);
             serial.printf_P(PSTR("+CLOCKTS: digit=%u, segment=%c, color=#%06x\n"), digit, _display->getSegmentChar(segment), _color.get());
             _display->setSegment(digit, segment, _color);
             _display->show();
@@ -285,7 +285,7 @@ bool ClockPlugin::atModeHandler(Stream &serial, const String &command, int8_t ar
         return true;
     }
     else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(CLOCKP))) {
-        if (argc < 1) {
+        if (args.size() < 1) {
             serial.printf_P(PSTR("+CLOCKP: clear\n"));
             _display->clear();
             _display->show();
@@ -293,14 +293,15 @@ bool ClockPlugin::atModeHandler(Stream &serial, const String &command, int8_t ar
         }
         else {
             enable(false);
-            serial.printf_P(PSTR("+CLOCKP: '%s'\n"), argv[0]);
-            _display->print(argv[0], _color);
+            auto text = args.get(0);
+            serial.printf_P(PSTR("+CLOCKP: '%s'\n"), text);
+            _display->print(text, _color);
             _display->show();
         }
         return true;
     }
     else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(CLOCKA))) {
-        if (argc == -1) {
+        if (args.isQueryMode()) {
             serial.printf_P(PSTR(
                     "+CLOCKA: %u - blink colon twice per second\n"
                     "+CLOCKA: %u - blink colon once per second\n"
@@ -320,8 +321,8 @@ bool ClockPlugin::atModeHandler(Stream &serial, const String &command, int8_t ar
                 FADE, FADE
             );
         }
-        else if (argc >= 1) {
-            int value = atoi(argv[0]);
+        else if (args.size() >= 1) {
+            int value = args.toInt(0);
             if (value == 1000) {
                 enable(false);
             }
@@ -334,8 +335,8 @@ bool ClockPlugin::atModeHandler(Stream &serial, const String &command, int8_t ar
             }
             else {
                 if (value == AnimationEnum_t::FADE) {
-                    if (argc >= 4) {
-                        _animationData.fade.toColor = Color(atoi(argv[1]), atoi(argv[2]), atoi(argv[3]));
+                    if (args.size() >= 4) {
+                        _animationData.fade.toColor = Color(args.toInt(1), args.toInt(2), args.toInt(3));
                     }
                     else {
                         _animationData.fade.toColor = ~_color & 0xffffff;
@@ -350,21 +351,18 @@ bool ClockPlugin::atModeHandler(Stream &serial, const String &command, int8_t ar
         return true;
     }
     else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(CLOCKC))) {
-        if (argc == 3) {
-            _color = Color(atoi(argv[0]), atoi(argv[1]), atoi(argv[2]));
+        if (args.requireArgs(3, 3)) {
+            _color = Color(args.toInt(0), args.toInt(1), args.toInt(2));
             serial.printf_P(PSTR("+CLOCKC: color=#%06x\n"), _color.get());
-        }
-        else  {
-            at_mode_print_invalid_arguments(serial);
         }
         return true;
     }
     else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(CLOCKPX))) {
-        if (argc == 4) {
+        if (args.requireArgs(4, 4)) {
             enable(false);
 
-            int num = atoi(argv[0]);
-            Color color(atoi(argv[1]), atoi(argv[2]), atoi(argv[3]));
+            int num = args.toInt(0);
+            Color color(args.toInt(1), args.toInt(2), args.toInt(3));
             if (num < 0) {
 #if IOT_CLOCK_NEOPIXEL
                 serial.printf_P(PSTR("+CLOCKPX: pixel=0-%u, color=#%06x\n"), _display->getTotalPixelCount(), color.get());
@@ -377,9 +375,6 @@ bool ClockPlugin::atModeHandler(Stream &serial, const String &command, int8_t ar
                 serial.printf_P(PSTR("+CLOCKPX: pixel=%u, color=#%06x\n"), num, color.get());
                 _display->setColor(num, color);
             }
-        }
-        else {
-            at_mode_print_invalid_arguments(serial);
         }
         return true;
     }

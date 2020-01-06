@@ -46,7 +46,9 @@ void Dimmer_Base::_begin()
     _version = 0;
     _debug_println(F("Dimmer_Base::_begin()"));
 #if IOT_DIMMER_MODULE_INTERFACE_UART
-    _wire.onReadSerial(SerialHandler::serialLoop);
+    #if SERIAL_HANDLER
+        _wire.onReadSerial(SerialHandler::serialLoop);
+    #endif
     _wire.begin(DIMMER_I2C_ADDRESS + 1);
     _wire.onReceive(Dimmer_Base::onReceive);
 
@@ -157,11 +159,13 @@ void Dimmer_Base::_onReceive(size_t length)
         _wire.readBytes(reinterpret_cast<uint8_t *>(&metrics.internal_temp), sizeof(metrics.internal_temp));
         _updateMetrics(metrics.vcc, metrics.frequency, metrics.internal_temp, metrics.ntc_temp);
     }
+#if LOGGER
     else if (type == DIMMER_TEMPERATURE_ALERT && length == 3) {
         uint8_t temperature = _wire.read();
         uint8_t max_temperature = _wire.read();
         Logger_error(F("Dimmer temperature alarm triggered: %u > %u"), temperature, max_temperature);
     }
+#endif
 }
 
 #else

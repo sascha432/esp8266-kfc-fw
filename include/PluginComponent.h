@@ -40,8 +40,6 @@ public:
         CUSTOM,
     } MenuTypeEnum_t;
 
-    static const int ATModeQueryCommand = -1;
-
     virtual PGM_P getName() const = 0;
     bool nameEquals(const __FlashStringHelper *name) const;
     bool nameEquals(const char *name) const;
@@ -99,8 +97,6 @@ public:
     virtual bool hasAtMode() const;
     virtual void atModeHelpGenerator();
     virtual bool atModeHandler(Stream &serial, const String &command, AtModeArgs &args);
-    // deprecated method
-    virtual bool atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv);
 #endif
 
     // executed before a restart

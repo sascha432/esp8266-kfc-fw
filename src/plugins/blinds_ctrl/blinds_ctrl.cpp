@@ -13,6 +13,7 @@
 #include "blinds_ctrl.h"
 #include "BlindsControl.h"
 #include "BlindsChannel.h"
+#include "progmem_data.h"
 
 #if DEBUG_IOT_BLINDS_CTRL
 #include <debug_helper_enable.h>
@@ -58,7 +59,7 @@ public:
 #if AT_MODE_SUPPORTED
     virtual bool hasAtMode() const override;
     virtual void atModeHelpGenerator() override;
-    virtual bool atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) override;
+    virtual bool atModeHandler(Stream &serial, const String &command, AtModeArgs &args) override;
 
 #if IOT_BLINDS_CTRL_TESTMODE
 private:
@@ -148,7 +149,7 @@ void BlindsControlPlugin::createConfigureForm(AsyncWebServerRequest *request, Fo
 
     form.add<bool>(F("channel0_dir"), &blinds->channel0_dir)->setFormUI((new FormUI(FormUI::SELECT, F("Channel 0 Direction")))->setBoolItems(reverse, forward));
     form.add<bool>(F("channel1_dir"), &blinds->channel1_dir)->setFormUI((new FormUI(FormUI::SELECT, F("Channel 1 Direction")))->setBoolItems(reverse, forward));
-    form.add<bool>(F("swap_channels"), &blinds->swap_channels)->setFormUI((new FormUI(FormUI::SELECT, F("Swap Channels")))->setBoolItems(F("Yes"), F("No")));
+    form.add<bool>(F("swap_channels"), &blinds->swap_channels)->setFormUI((new FormUI(FormUI::SELECT, F("Swap Channels")))->setBoolItems(FSPGM(Yes), FSPGM(No)));
 
     for (uint8_t i = 0; i < 2; i++) {
         form.add<uint16_t>(PrintString(F("channel%u_close_time"), i), &blinds->channels[i].closeTime)
@@ -305,31 +306,28 @@ void BlindsControlPlugin::atModeHelpGenerator()
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(BCMC), getName());
 }
 
-bool BlindsControlPlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv)
+bool BlindsControlPlugin::atModeHandler(Stream &serial, const String &command, AtModeArgs &args)
 {
     if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(BCMS))) {
-        if (argc == 2) {
-            uint8_t channel = atoi(argv[0]) % 2;
-            _channels[channel].setState(atoi(argv[1]) == 0 ? BlindsChannel::CLOSED : BlindsChannel::OPEN);
+        if (args.requireArgs(2, 2)) {
+            uint8_t channel = args.toInt(0) % 2;
+            _channels[channel].setState(args.isFalse(1) ? BlindsChannel::CLOSED : BlindsChannel::OPEN);
             _saveState();
             serial.printf_P(PSTR("+BCMS: channel %u state %s\n"), channel, BlindsChannel::_stateStr(_channels[channel].getState()));
-        }
-        else {
-            at_mode_print_invalid_arguments(serial);
         }
         return true;
     }
     else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(BCMC))) {
-        if (argc == 6 || argc == -1) {
+        if (args.isQueryMode() || args.requireArgs(6, 6)) {
             auto &cfg = config._H_W_GET(Config().blinds_controller);
             uint8_t channel = 0xff;
-            if (argc == 6) {
-                channel = atoi(argv[0]) % 2;
-                cfg.channels[channel].pwmValue = (uint16_t)atoi(argv[1]);
-                cfg.channels[channel].openTime = (uint16_t)atoi(argv[2]);
-                cfg.channels[channel].closeTime = (uint16_t)atoi(argv[3]);
-                cfg.channels[channel].currentLimit = (uint16_t)atoi(argv[4]);
-                cfg.channels[channel].currentLimitTime = (uint16_t)atoi(argv[5]);
+            if (args.size() == 6) {
+                channel = args.toInt(0) % 2;
+                cfg.channels[channel].pwmValue = (uint16_t)args.toInt(1);
+                cfg.channels[channel].openTime = (uint16_t)args.toInt(2);
+                cfg.channels[channel].closeTime = (uint16_t)args.toInt(3);
+                cfg.channels[channel].currentLimit = (uint16_t)args.toInt(4);
+                cfg.channels[channel].currentLimitTime = (uint16_t)args.toInt(5);
                 _readConfig();
             }
             for(uint8_t i = 0; i < 2; i++) {
@@ -346,17 +344,14 @@ bool BlindsControlPlugin::atModeHandler(Stream &serial, const String &command, i
                 }
             }
         }
-        else {
-            at_mode_print_invalid_arguments(serial);
-        }
         return true;
     }
     else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(BCMD))) {
-        if (argc == 2 || argc == -1) {
+        if (args.isQueryMode() || args.requireArgs(2, 2)) {
             auto &cfg = config._H_W_GET(Config().blinds_controller);
-            if (argc == 2) {
-                uint8_t item = atoi(argv[0]) % 3;
-                uint8_t value = atoi(argv[1]) % 2;
+            if (args.size() == 2) {
+                uint8_t item = args.toInt(0) % 3;
+                uint8_t value = args.toInt(1) % 2;
                 switch(item) {
                     case 0:
                         cfg.swap_channels = value;
@@ -374,19 +369,16 @@ bool BlindsControlPlugin::atModeHandler(Stream &serial, const String &command, i
             serial.printf_P(PSTR("+BCMD: channel 0 direction=%u\n"), cfg.channel0_dir);
             serial.printf_P(PSTR("+BCMD: channel 1 direction=%u\n"), cfg.channel1_dir);
         }
-        else {
-            at_mode_print_invalid_arguments(serial);
-        }
         return true;
     }
 #if IOT_BLINDS_CTRL_TESTMODE
     else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(BCME))) {
-        if (argc == 6) {
+        if (args.requireArgs(6, 6)) {
             uint8_t pins[] = { IOT_BLINDS_CTRL_M1_PIN, IOT_BLINDS_CTRL_M2_PIN, IOT_BLINDS_CTRL_M3_PIN, IOT_BLINDS_CTRL_M4_PIN };
-            uint8_t channel = atoi(argv[0]);
-            uint8_t direction = atoi(argv[1]) % 2;
-            uint32_t time = atoi(argv[2]);
-            uint16_t pwmLevel = atoi(argv[3]);
+            uint8_t channel = args.toInt(0);
+            uint8_t direction = args.toInt(1) % 2;
+            uint32_t time = args.toInt(2);
+            uint16_t pwmLevel = args.toInt(3);
 
             auto cfg = config._H_GET(Config().blinds_controller);
             if (cfg.swap_channels) {
@@ -401,8 +393,8 @@ bool BlindsControlPlugin::atModeHandler(Stream &serial, const String &command, i
             }
             direction %= 2;
 
-            _currentLimit = atoi(argv[4]);
-            _currentLimitMinCount = atoi(argv[5]);
+            _currentLimit = args.toInt(4);
+            _currentLimitMinCount = args.toInt(5);
             _activeChannel = channel;
 
             analogWriteFreq(IOT_BLINDS_CTRL_PWM_FREQ);
@@ -418,9 +410,6 @@ bool BlindsControlPlugin::atModeHandler(Stream &serial, const String &command, i
             _motorTimeout.set(time);
             _isTestMode = true;
             _clearAdc();
-        }
-        else {
-            at_mode_print_invalid_arguments(serial);
         }
         return true;
     }

@@ -171,9 +171,9 @@ public:
     AtModeArgs(AtModeArgs &&) = delete;
 
     AtModeArgs(Stream &output);
-    ~AtModeArgs() {
-        _freeArgs();
-    }
+    // ~AtModeArgs() {
+    //     _freeArgs();
+    // }
     void clear();
     void setQueryMode(bool mode);
 
@@ -393,34 +393,34 @@ private:
     ArgumentVector _args;
     bool _queryMode;
 
-public:
-    // --------------------------------------------------------------------
-    // deprecated methods
-    // --------------------------------------------------------------------
+// public:
+//     // --------------------------------------------------------------------
+//     // deprecated methods
+//     // --------------------------------------------------------------------
 
-    char **args() {
-        if (!_argsArray) {
-            _createArgs();
-        }
-        return _argsArray;
-    }
+//     char **args() {
+//         if (!_argsArray) {
+//             _createArgs();
+//         }
+//         return _argsArray;
+//     }
 
-    int8_t argc() const {
-        if (isQueryMode()) {
-            return -1;
-        }
-        return _args.size();
-    }
+//     int8_t argc() const {
+//         if (isQueryMode()) {
+//             return -1;
+//         }
+//         return _args.size();
+//     }
 
-    ArgumentPtr argv(uint16_t num) const {
-        return get(num);
-    }
+//     ArgumentPtr argv(uint16_t num) const {
+//         return get(num);
+//     }
 
-private:
-    void _createArgs();
-    void _freeArgs();
+// private:
+//     void _createArgs();
+//     void _freeArgs();
 
-    char **_argsArray;
+//     char **_argsArray;
 };
 
 #endif

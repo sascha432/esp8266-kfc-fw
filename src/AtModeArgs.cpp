@@ -13,52 +13,52 @@
 #include <debug_helper_disable.h>
 #endif
 
-AtModeArgs::AtModeArgs(Stream &output) : _output(output), _argsArray(nullptr)
+AtModeArgs::AtModeArgs(Stream &output) : _output(output) //, _argsArray(nullptr)
 {
     clear();
 }
 
-void AtModeArgs::_createArgs()
-{
-    uint16_t numItems = _args.size() + 1;
-#if AT_MODE_MAX_ARGUMENTS
-    if (AT_MODE_MAX_ARGUMENTS > numItems) {
-        numItems = AT_MODE_MAX_ARGUMENTS;
-    }
-#endif
-    uint8_t argc = 0;
-    _argsArray = (char **)calloc(numItems, sizeof(char *));
-    if (_argsArray) {
-        for(auto arg: _args) {
-#if 0
-            _argsArray[argc++] = strdup((const char *)arg);
-#else
-            _argsArray[argc++] = (char *)arg;
-#endif
-        }
-    }
-}
+// void AtModeArgs::_createArgs()
+// {
+//     uint16_t numItems = _args.size() + 1;
+// #if AT_MODE_MAX_ARGUMENTS
+//     if (AT_MODE_MAX_ARGUMENTS > numItems) {
+//         numItems = AT_MODE_MAX_ARGUMENTS;
+//     }
+// #endif
+//     uint8_t argc = 0;
+//     _argsArray = (char **)calloc(numItems, sizeof(char *));
+//     if (_argsArray) {
+//         for(auto arg: _args) {
+// #if 0
+//             _argsArray[argc++] = strdup((const char *)arg);
+// #else
+//             _argsArray[argc++] = (char *)arg;
+// #endif
+//         }
+//     }
+// }
 
-void AtModeArgs::_freeArgs()
-{
-    if (_argsArray) {
-#if 0
-        auto ptr = _argsArray;
-        while(*ptr) {
-            free((void *)(*ptr));
-            ptr++;
-        }
-#endif
-        free(_argsArray);
-        _argsArray = nullptr;
-    }
-}
+// void AtModeArgs::_freeArgs()
+// {
+//     if (_argsArray) {
+// #if 0
+//         auto ptr = _argsArray;
+//         while(*ptr) {
+//             free((void *)(*ptr));
+//             ptr++;
+//         }
+// #endif
+//         free(_argsArray);
+//         _argsArray = nullptr;
+//     }
+// }
 
 void AtModeArgs::clear()
 {
     _queryMode = false;
     _args.clear();
-    _freeArgs();
+    // _freeArgs();
 }
 
 void AtModeArgs::setQueryMode(bool mode)

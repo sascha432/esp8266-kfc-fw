@@ -514,7 +514,7 @@ void DimmerModulePlugin::atModeHelpGenerator()
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DIMR), getName());
 }
 
-bool DimmerModulePlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv)
+bool DimmerModulePlugin::atModeHandler(Stream &serial, const String &command, AtModeArgs &args)
 {
     if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(DIMW))) {
         writeEEPROM();
@@ -534,17 +534,11 @@ bool DimmerModulePlugin::atModeHandler(Stream &serial, const String &command, in
         return true;
     }
     else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(DIMS))) {
-        if (argc < 2) {
-            at_mode_print_invalid_arguments(serial);
-        }
-        else {
-            float time = -1;
-            int channel = atoi(argv[0]);
+        if (args.requireArgs(2, 2)) {
+            int channel = args.toInt(0);
             if (channel >= 0 && channel < IOT_DIMMER_MODULE_CHANNELS) {
-                int level = std::min(IOT_DIMMER_MODULE_MAX_BRIGHTNESS, std::max(0, atoi(argv[1])));
-                if (argc >= 3) {
-                    time = atof(argv[2]);
-                }
+                int level = args.toIntMinMax(1, 0, IOT_DIMMER_MODULE_MAX_BRIGHTNESS);
+                float time = args.toFloat(2, -1);
                 serial.printf_P(PSTR("+DIMS: Set %u: %d (time %.2f)\n"), channel, level, time);
                 setChannel(channel, level, time);
             }

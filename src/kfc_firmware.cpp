@@ -82,6 +82,7 @@ void check_flash_size() {
 #endif
 }
 
+#if DEBUG
 static void deep_sleep_forever() {
     for(;;) {
 #if defined(ESP8266)
@@ -89,56 +90,10 @@ static void deep_sleep_forever() {
 #else
         ESP.deepSleep(UINT32_MAX);
 #endif
-
-
         delay(1);
     }
 }
-
-// #include "ESPAsyncWebServer.h"
-
-// String callback_func(const String &str) {
-//     if (str == "REPLACE_ME") {
-//         return "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-//     }
-//     return String();
-// }
-
-// class TestAsyncAbstractResponse : public AsyncAbstractResponse {
-// public:
-//     TestAsyncAbstractResponse(AwsTemplateProcessor callback) : AsyncAbstractResponse(callback) {
-//         _template = "01234567890test_%REPLACE_ME%_test01234567890";
-//         _code = 200;
-//     }
-//     virtual size_t _fillBuffer(uint8_t *buf, size_t maxLen) {
-//         maxLen = std::min(_template.length(), maxLen);
-//         memcpy(buf, _template.c_str(), maxLen);
-//         _template.remove(0, maxLen);
-//         return maxLen;
-//     }
-// private:
-//     String _template;
-// };
-
-// void test_abstract_response() {
-//     TestAsyncAbstractResponse *resp = new TestAsyncAbstractResponse(callback_func);
-//     char *out = (char *)malloc(1024);
-//     char *ptr = out;
-//     uint8_t buf[64];
-//     size_t len;
-
-//     Serial.println();
-//     while((len = resp->_fillBufferAndProcessTemplates(buf, sizeof(buf)))) {
-//         Serial.printf("[%u]|%*.*s|\n", len, len, len, buf);
-//         memcpy(ptr, buf, len);
-//         ptr += len;
-//     }
-//     *ptr = 0;
-//     Serial.println("---");
-//     Serial.printf("[%u]|%s|\n", strlen(out), out);
-//     free(out);
-// }
-
+#endif
 
 static void remove_crash_counter(EventScheduler::TimerPtr timer) {
 #if SPIFFS_SUPPORT
@@ -286,7 +241,7 @@ void setup() {
                 return true;
             })
 #else
-            __while(20e3, nullptr, 1000, []() {
+            __while(5000, nullptr, 1000, []() {
                 KFC_SAFE_MODE_SERIAL_PORT.print('.');
                 return true;
             })

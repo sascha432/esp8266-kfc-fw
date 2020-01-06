@@ -10,7 +10,6 @@
 //
 // Use attachInterrupt for interrupts >10Hz instead of this class
 
-
 #pragma once
 
 #ifndef DEBUG_PIN_MONITOR
@@ -18,9 +17,10 @@
 #endif
 
 #include <Arduino_compat.h>
-#include <FunctionalInterrupt.h>
 #include <vector>
 #include "EventScheduler.h"
+
+struct InterruptInfo;
 
 class PinMonitor {
 public:

@@ -4,6 +4,11 @@ Firmware for ESP8266/ESP32 and IoT devices
 
 The firmware offers a plugin interface to easily extend its functionality. The plugins can be configured via web interface and have access to the network, file system, logging, serial console, I2C bus, GPIO, EEPROM, RTC memory, event/task scheduler etc... via API functions. Support for deep sleep and WiFi quick connect (~250-300ms) after wake up.
 
+## Required flash size
+
+1M with most features activated, no OTA updates
+2M with OTA
+
 ## Libraries
 
 ### KFCSyslog

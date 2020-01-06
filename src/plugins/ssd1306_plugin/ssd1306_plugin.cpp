@@ -262,6 +262,30 @@ void ssd1306_setup() {
     WiFiCallbacks::add(WiFiCallbacks::CONNECTED|WiFiCallbacks::DISCONNECTED, ssd1306_wifi_event);
 }
 
+class SSD1306Plugin : public PluginComponent {
+public:
+    SSD1306Plugin() {
+        REGISTER_PLUGIN(this, "SSD1306Plugin");
+    }
+
+    virtual PGM_P getName() const {
+        return PSTR("ssd1306");
+    }
+
+    virtual void setup(PluginSetupMode_t mode) override {
+        ssd1306_setup();
+    }
+
+    virtual bool hasAtMode() const override {
+        return true;
+    }
+    virtual void atModeHelpGenerator() override;
+    virtual bool atModeHandler(Stream &serial, const String &command, AtModeArgs &args) override;
+
+};
+
+static SSD1306Plugin plugin;
+
 #if AT_MODE_SUPPORTED
 
 #if defined(ESP8266)
@@ -281,32 +305,33 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(SSDW, "SSDW", "<line1[,line2,...]>", "Disp
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(SSDRF, "SSDRF", "<filename>", "Read font from SPIFFS");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(SSDDF, "SSDDF", "<url>", "Download font");
 
-bool ssd1306_at_mode_command_handler(Stream &serial, const String &command, int8_t argc, char **argv) {
+void SSD1306Plugin::atModeHelpGenerator()
+{
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SSDCLR), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SSDST), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SSDXY), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SSDW), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SSDRF), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SSDDF), getName());
+}
 
-    if (command.length() == 0) {
-        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SSDCLR), getName());
-        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SSDST), getName());
-        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SSDXY), getName());
-        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SSDW), getName());
-        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SSDRF), getName());
-        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SSDDF), getName());
-    }
-    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SSDCLR))) {
+bool SSD1306Plugin::atModeHandler(Stream &serial, const String &command, AtModeArgs &args)
+{
+    if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SSDCLR))) {
         ssd1306_disable_status();
         ssd1306_clear_display();
         at_mode_print_ok(serial);
         return true;
     }
     else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SSDDF))) {
-        if (argc != 1) {
-            at_mode_print_invalid_arguments(serial);
-        } else {
+        if (args.requireArgs(1, 1)) {
             HTTPClient http;
-            http.begin(argv[0]);
+            auto url = args.get(0);
+            http.begin(url);
             int httpCode = http.GET();
             if (httpCode == 200) {
                 Stream &stream = http.getStream();
-                serial.printf_P("+SSDDF: Downloading %d bytes from %s...\n", http.getSize(), argv[0]);
+                serial.printf_P("+SSDDF: Downloading %d bytes from %s...\n", http.getSize(), url);
                 if (GFXfontContainer::readFromStream(stream, currentFont)) {
                     at_mode_print_ok(serial);
                 } else {
@@ -323,13 +348,12 @@ bool ssd1306_at_mode_command_handler(Stream &serial, const String &command, int8
         return true;
     }
     else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SSDRF))) {
-        if (argc != 1) {
-            at_mode_print_invalid_arguments(serial);
-        } else {
-            auto file = SPIFFS.open(argv[0], fs::FileOpenMode::read);
-            if  (file) {
+        if (args.requireArgs(1, 1)) {
+            auto filename = args.get(0);
+            auto file = SPIFFS.open(filename, fs::FileOpenMode::read);
+            if (file) {
                 ssd1306_disable_status();
-                serial.printf_P("+SSDRF: Reading %d bytes from %s...\n", file.size(), argv[0]);
+                serial.printf_P("+SSDRF: Reading %d bytes from %s...\n", file.size(), filename);
                 if (GFXfontContainer::readFromStream(file, currentFont)) {
                     at_mode_print_ok(serial);
                 } else {
@@ -340,27 +364,25 @@ bool ssd1306_at_mode_command_handler(Stream &serial, const String &command, int8
                     Display.setFont(currentFont->getFontPtr());
                 }
             } else {
-                serial.printf_P(PSTR("+SSDRF: Cannot open %s\n"), argv[0]);
+                serial.printf_P(PSTR("+SSDRF: Cannot open %s\n"), filename);
             }
         }
         return true;
     }
     else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SSDXY))) {
-        if (argc != 2) {
-            at_mode_print_invalid_arguments(serial);
-        } else {
+        if (args.requireArgs(2, 2)) {
             ssd1306_disable_status();
-            uint16_t x = (uint16_t)atoi(argv[0]);
-            uint16_t y = (uint16_t)atoi(argv[1]);
+            uint16_t x = (uint16_t)args.toInt(0);
+            uint16_t y = (uint16_t)args.toInt(1);
             Display.setCursor(x, y);
             serial.printf_P(PSTR("+SSDXY: x=%d,y=%d\n"), x, y);
         }
+        return true;
     }
     else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SSDW))) {
         ssd1306_disable_status();
-        int8_t line = 0;
-        while(line < argc) {
-            Display.println(argv[line++]);
+        for(auto line: args.getArgs()) {
+            Display.println(line);
         }
         Display.display();
         at_mode_print_ok(serial);
@@ -375,31 +397,5 @@ bool ssd1306_at_mode_command_handler(Stream &serial, const String &command, int8
 }
 
 #endif
-
-class SSD1306Plugin : public PluginComponent {
-public:
-    SSD1306Plugin() {
-        REGISTER_PLUGIN(this, "SSD1306Plugin");
-    }
-
-    virtual PGM_P getName() const {
-        return PSTR("ssd1306");
-    }
-
-    virtual void setup(PluginSetupMode_t mode) override {
-        ssd1306_setup();
-    }
-
-    virtual bool hasAtMode() const override {
-        return true;
-    }
-
-    virtual bool atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) override {
-        return ssd1306_at_mode_command_handler(serial, command, argc, argv);
-    }
-
-};
-
-SSD1306Plugin plugin;
 
 #endif

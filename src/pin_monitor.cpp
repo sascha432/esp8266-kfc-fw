@@ -7,6 +7,7 @@
 #include "pin_monitor.h"
 #include <EventScheduler.h>
 #include "plugins.h"
+#include <FunctionalInterrupt.h>
 
 #if DEBUG_PIN_MONITOR
 #include <debug_helper_enable.h>

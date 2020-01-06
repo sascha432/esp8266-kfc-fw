@@ -114,16 +114,6 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CBME280, "I2CBME280", "<address>", "Read
 #endif
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CLM75A, "I2CLM75A", "<address>", "Read temperature from LM75A");
 
-static int __toint(const char *s, uint8_t base = 10) {
-    if (*s == 'x') {
-        return strtoul(s + 1, 0, 16);
-    } else if (*s == '0' && *(s + 1) == 'x') {
-        return strtoul(s + 2, 0, 16);
-    } else {
-        return strtoul(s, 0, base);
-    }
-}
-
 void i2cscanner_device_error(Stream &output) {
     output.println(F("+I2C: An error occured"));
 }
@@ -181,7 +171,8 @@ void I2CScannerPlugin::atModeHelpGenerator() {
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CLM75A), getName());
 }
 
-bool I2CScannerPlugin::atModeHandler(Stream &serial, const String &command, AtModeArgs &args) {
+bool I2CScannerPlugin::atModeHandler(Stream &serial, const String &command, AtModeArgs &args)
+{
     if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(I2CS))) {
         if (args.requireArgs(1, 3)) {
             if (args.equalsIgnoreCase(0, F("reset"))) {
@@ -192,7 +183,7 @@ bool I2CScannerPlugin::atModeHandler(Stream &serial, const String &command, AtMo
                 int sda = args.toNumber(0, KFC_TWOWIRE_SDA);
                 int scl = args.toNumber(1, KFC_TWOWIRE_SCL);
                 uint32_t speed = args.toNumber(2, 100) * 1000UL;
-                uint32_t setClockStretchLimit = args.toInt(3)
+                uint32_t setClockStretchLimit = args.toInt(3);
                 Wire.setClock(speed);
                 if (setClockStretchLimit) {
                     Wire.setClockStretchLimit(setClockStretchLimit);
@@ -201,7 +192,8 @@ bool I2CScannerPlugin::atModeHandler(Stream &serial, const String &command, AtMo
             }
         }
         return true;
-    } else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(I2CST))) {
+    }
+    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(I2CST))) {
         if (args.requireArgs(1)) {
             int address = args.toNumber(0);
             Wire.beginTransmission(address);
@@ -218,7 +210,8 @@ bool I2CScannerPlugin::atModeHandler(Stream &serial, const String &command, AtMo
             serial.printf_P(PSTR(", result = %u (%02x)\n"), result, result);
         }
         return true;
-    } else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(I2CSR))) {
+    }
+    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(I2CSR))) {
         if (args.requireArgs(2, 2)) {
             int address = args.toNumber(0);
             int count = args.toNumber(1);

@@ -51,10 +51,15 @@ void syslog_setup_debug_logger() {
 
 SyslogStream *syslog = nullptr;
 
-void syslog_setup_logger() {
-
+void syslog_setup_logger()
+{
     if (syslog) {
         _logger.setSyslog(nullptr);
+#if DEBUG_USE_SYSLOG
+        if (syslog->getQueue() == debugSyslog->getQueue()) { // remove shared object
+            syslog->setQueue(nullptr);
+        }
+#endif
         delete syslog;
         syslog = nullptr;
 #if DEBUG_USE_SYSLOG == 0
@@ -64,14 +69,18 @@ void syslog_setup_logger() {
 
     if (config._H_GET(Config().flags).syslogProtocol != SYSLOG_PROTOCOL_NONE) {
 
-        SyslogParameter parameter;
-        parameter.setHostname(config.getString(_H(Config().device_name)));
-        parameter.setAppName(FSPGM(kfcfw));
+        // SyslogParameter parameter;
+        // parameter.setHostname(config._H_STR(Config().device_name));
+        // parameter.setAppName(FSPGM(kfcfw));
+        // parameter.setFacility(SYSLOG_FACILITY_KERN);
+        // parameter.setSeverity(SYSLOG_NOTICE);
+
+        SyslogFilter *filter = _debug_new SyslogFilter(config._H_STR(Config().device_name), FSPGM(kfcfw));
+        auto &parameter = filter->getParameter();
         parameter.setFacility(SYSLOG_FACILITY_KERN);
         parameter.setSeverity(SYSLOG_NOTICE);
 
-        SyslogFilter *filter = _debug_new SyslogFilter(parameter);
-        filter->addFilter(F("*.*"), SyslogFactory::create(filter->getParameter(), (SyslogProtocol)config._H_GET(Config().flags).syslogProtocol, config._H_STR(Config().syslog_host), config._H_GET(Config().syslog_port)));
+        filter->addFilter(F("*.*"), SyslogFactory::create(parameter, (SyslogProtocol)config._H_GET(Config().flags).syslogProtocol, config._H_STR(Config().syslog_host), config._H_GET(Config().syslog_port)));
 
 #if DEBUG_USE_SYSLOG
         SyslogQueue *queue = debugSyslog ? debugSyslog->getQueue() : _debug_new SyslogMemoryQueue(SYSLOG_PLUGIN_QUEUE_SIZE);
@@ -85,15 +94,17 @@ void syslog_setup_logger() {
     }
 }
 
-void syslog_setup() {
+void syslog_setup()
+{
 #if DEBUG_USE_SYSLOG
     syslog_setup_debug_logger();
 #endif
     syslog_setup_logger();
 }
 
-void syslog_process_queue() {
-    static MillisTimer timer(1000UL);
+void syslog_process_queue()
+{
+    static MillisTimer timer(1000);
     if (timer.reached()) {
 #if DEBUG_USE_SYSLOG
         if (debugSyslog) {
@@ -232,7 +243,7 @@ void SyslogPlugin::prepareDeepSleep(uint32_t sleepTimeMillis)
     }
 #endif
     if (syslog) {
-        ulong timeout = millis() + defaultWaitTime;
+        auto timeout = millis() + defaultWaitTime;
         while(syslog->hasQueuedMessages() && millis() < timeout) {
             syslog->deliverQueue();
             delay(1);
@@ -248,9 +259,13 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(SQC, "SQC", "Clear syslog queue");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(SQI, "SQI", "Display syslog queue info");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(SQD, "SQD", "Display syslog queue");
 
-void print_syslog_disabled(Stream &output)
+static bool isEnabled(Stream &output, const String &command)
 {
-    output.println(F("+SQx: Syslog is disabled"));
+    if (syslog) {
+        return true;
+    }
+    output.printf_P(PSTR("+%s: Syslog is disabled\n"), command.c_str());
+    return false;
 }
 
 bool SyslogPlugin::hasAtMode() const
@@ -268,24 +283,18 @@ void SyslogPlugin::atModeHelpGenerator()
 bool SyslogPlugin::atModeHandler(Stream &serial, const String &command, AtModeArgs &args)
 {
     if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SQC))) {
-        if (syslog) {
+        if (isEnabled(serial, command)) {
             syslog->getQueue()->clear();
             serial.println(F("+SQC: Queue cleared"));
         }
-        else {
-            print_syslog_disabled(serial);
-        }
         return true;
     } else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SQI))) {
-        if (syslog) {
+        if (isEnabled(serial, command)) {
             serial.printf_P(PSTR("+SQI: %d\n"), syslog->getQueue()->size());
-        }
-        else {
-            print_syslog_disabled(serial);
         }
         return true;
     } else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SQD))) {
-        if (syslog) {
+        if (isEnabled(serial, command)) {
             auto queue = syslog->getQueue();
             size_t index = 0;
             serial.printf_P(PSTR("+SQD: messages in queue %d\n"), queue->size());
@@ -295,9 +304,6 @@ bool SyslogPlugin::atModeHandler(Stream &serial, const String &command, AtModeAr
                     serial.printf_P(PSTR("+SQD: id %d (failures %d): %s\n"), item->getId(), item->getFailureCount(), item->getMessage().c_str());
                 }
             }
-        }
-        else {
-            print_syslog_disabled(serial);
         }
         return true;
     }

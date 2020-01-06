@@ -4,9 +4,13 @@
 
 #if IOT_SENSOR && (IOT_SENSOR_HAVE_HLW8012 || IOT_SENSOR_HAVE_HLW8032)
 
+#include <EventTimer.h>
+#include <Timezone.h>
 #include "Sensor_HLW80xx.h"
 #include "sensor.h"
 #include "MicrosTimer.h"
+#include "Sensor_HLW8012.h"
+#include "Sensor_HLW8032.h"
 
 #if DEBUG_IOT_SENSOR
 #include <debug_helper_enable.h>
@@ -28,6 +32,7 @@ Sensor_HLW80xx::Sensor_HLW80xx(const String &name) : MQTTSensor(), _name(name)
     _calibrationI = 1;
     _calibrationP = 1;
     _calibrationU = 1;
+    _extraDigits = 0;
     reconfigure();
 
     setUpdateRate(IOT_SENSOR_HLW80xx_UPDATE_RATE);
@@ -115,7 +120,7 @@ void Sensor_HLW80xx::getValues(JsonArray &array)
     obj = &array.addObject(3);
     obj->add(JJ(id), _getId(F("voltage")));
     obj->add(JJ(state), !isnan(_voltage));
-    obj->add(JJ(value), JsonNumber(_voltage, 1));
+    obj->add(JJ(value), JsonNumber(_voltage, 1 + _extraDigits));
 
     obj = &array.addObject(3);
     obj->add(JJ(id), _getId(F("current")));
@@ -148,15 +153,19 @@ void Sensor_HLW80xx::createWebUI(WebUI &webUI, WebUIRow **row)
 void Sensor_HLW80xx::reconfigure()
 {
     auto sensor = config._H_GET(Config().sensor).hlw80xx;
-    if (sensor.calibrationI) {
-        _calibrationI = sensor.calibrationI;
-    }
     if (sensor.calibrationU) {
         _calibrationU = sensor.calibrationU;
+    }
+    if (sensor.calibrationI) {
+        _calibrationI = sensor.calibrationI;
     }
     if (sensor.calibrationP) {
         _calibrationP = sensor.calibrationP;
     }
+    else {
+        _calibrationP = _calibrationU * _calibrationU * _calibrationI;
+    }
+    _extraDigits = sensor.extraDigits;
     _debug_printf_P(PSTR("Sensor_HLW80xx::Sensor_HLW80xx(): calibration U=%f, I=%f, P=%f\n"), _calibrationU, _calibrationI, _calibrationP);
 }
 
@@ -179,7 +188,9 @@ void Sensor_HLW80xx::createConfigureForm(AsyncWebServerRequest *request, Form &f
 
     form.add<float>(F("hlw80xx_calibrationU"), &sensor->hlw80xx.calibrationU)->setFormUI(new FormUI(FormUI::TEXT, F("HLW8012 Voltage Calibration")));
     form.add<float>(F("hlw80xx_calibrationI"), &sensor->hlw80xx.calibrationI)->setFormUI(new FormUI(FormUI::TEXT, F("HLW8012 Current Calibration")));
-    form.add<float>(F("hlw80xx_calibrationP"), &sensor->hlw80xx.calibrationP)->setFormUI(new FormUI(FormUI::TEXT, F("HLW8012 Power Calibration")));
+    form.add<float>(F("hlw80xx_calibrationP"), &sensor->hlw80xx.calibrationP)->setFormUI((new FormUI(FormUI::TEXT, F("HLW8012 Power Calibration")))->setPlaceholder(F("Automatically")));
+    form.add<uint8_t>(F("hlw80xx_extra_digits"), &sensor->hlw80xx.extraDigits)->setFormUI(new FormUI(FormUI::TEXT, F("HLW8012 Extra Digits/Precision")));
+    form.addValidator(new FormRangeValidator(F("Enter 0 to 4 for extra digits"), 0, 4));
 
     form.add(F("energyCounterPrimary"), String())
         ->setFormUI((new FormUI(FormUI::TEXT, F("HLW8012 Total Energy")))->setSuffix(kWh)->setPlaceholder(String(IOT_SENSOR_HLW80xx_PULSE_TO_KWH(getEnergyPrimaryCounter()), 3)));
@@ -272,9 +283,9 @@ void Sensor_HLW80xx::_loadEnergyCounter()
 JsonNumber Sensor_HLW80xx::_currentToNumber(float current) const
 {
     if (current < 0.2) {
-        return JsonNumber(current, 3);
+        return JsonNumber(current, 3 + _extraDigits);
     }
-    return JsonNumber(current, 2);
+    return JsonNumber(current, 2 + _extraDigits);
 }
 
 JsonNumber Sensor_HLW80xx::_energyToNumber(float energy) const
@@ -285,15 +296,16 @@ JsonNumber Sensor_HLW80xx::_energyToNumber(float energy) const
         digits++;
         tmp *= 0.1;
     }
-    return JsonNumber(energy, 3 - digits);
+    return JsonNumber(energy, 3 - digits + _extraDigits);
 }
 
 JsonNumber Sensor_HLW80xx::_powerToNumber(float power) const
 {
+    uint8_t digits = 1;
     if (power < 10) {
-        return JsonNumber(power, 2);
+        digits++;
     }
-    return JsonNumber(power, 1);
+    return JsonNumber(power, digits + _extraDigits);
 }
 
 float Sensor_HLW80xx::_getPowerFactor() const
@@ -316,5 +328,218 @@ String Sensor_HLW80xx::_getTopic()
 {
     return MQTTClient::formatTopic(-1, F("/%s/"), _getId().c_str());
 }
+
+void Sensor_HLW80xx::dump(Print &output)
+{
+    output.printf_P(PSTR("U=%03.4f, I=%01.4f, P=%03.4f, E=%06.4f (count=%.0f), pf=%.2f, cal-U/I/P %.6f/%.6f/%.6f - raw "),
+        _voltage,
+        _current,
+        _power,
+        _getEnergy(0),
+        (double)_energyCounter[0],
+        _getPowerFactor(),
+        _calibrationU,
+        _calibrationI,
+        _calibrationP
+    );
+    output.printf_P(PSTR("U=%03.4f, I=%01.4f, P=%03.4f, E=%06.4f\n"),
+        _voltage / _calibrationU,
+        _current / _calibrationI,
+        _power / _calibrationP,
+        _getEnergy(0) / _calibrationP
+    );
+}
+
+void Sensor_HLW80xx::dumpCSV(File &file, bool newLine)
+{
+    char buf[32];
+    auto now = time(nullptr);
+    auto tm = timezone_localtime(&now);
+    timezone_strftime_P(buf, sizeof(buf), PSTR("%F %T"), tm);
+
+    file.print(_getId());
+    file.print(',');
+    file.print(buf);
+    file.printf_P(PSTR(".%03.3u"), millis() % 1000);
+    file.print(',');
+    file.print(_voltage, 4);
+    file.print(',');
+    file.print(_current, 4);
+    file.print(',');
+    file.print(_power, 4);
+    file.print(',');
+    file.print(_getEnergy(0), 4);
+    if (newLine) {
+        file.println();
+    }
+}
+
+#if AT_MODE_SUPPORTED
+
+#include "at_mode.h"
+
+#undef PROGMEM_AT_MODE_HELP_COMMAND_PREFIX
+#define PROGMEM_AT_MODE_HELP_COMMAND_PREFIX         "SP_"
+
+
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HLWXD, "HLWXD", "<count/0-4>", "Display extra digits");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HLWMODE, "HLWMODE", "<u=0/i=1>", "Set voltage or current mode");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HLWDUMP, "HLWDUMP", "<0=off/1...=seconds>", "Dump data");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HLWCSV, "HLWCSV", "<filename>[,<interval=500ms>,<duration=30seconds>]", "Write data to file");
+#if IOT_SENSOR_HLW8012_RAW_DATA_DUMP
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HLWRAW, "HLWRAW", "<filename>[,<duration=30seconds>]", "Dump raw data to file");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HLWSCF, "HLWSCF", "<interval in ms/0=disable>", "Simulate CF callback");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HLWSCF1, "HLWSCF1", "<interval in ms/0=disable>", "Simulate CF1 callback");
+#endif
+
+void Sensor_HLW80xx::atModeHelpGenerator()
+{
+    auto name = SensorPlugin::getInstance().getName();
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(HLWXD), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(HLWMODE), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(HLWDUMP), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(HLWCSV), name);
+#if IOT_SENSOR_HLW8012_RAW_DATA_DUMP
+    // at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(HLWSCF), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(HLWSCF1), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(HLWRAW), name);
+#endif
+}
+
+bool Sensor_HLW80xx::atModeHandler(Stream &serial, const String &command, AtModeArgs &args)
+{
+    static EventScheduler::TimerPtr dumpTimer = nullptr;
+
+    if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(HLWXD))) {
+        if (args.requireArgs(1)) {
+            uint8_t digits = args.toIntMinMax(AtModeArgs::FIRST, 0, 4);
+            auto count = SensorPlugin::for_each<Sensor_HLW80xx>(this, Sensor_HLW80xx::_compareFunc, [digits](Sensor_HLW80xx &sensor) {
+                sensor.setExtraDigits(digits);
+            });
+            at_mode_print_prefix(serial, command);
+            serial.printf_P(PSTR("Set extra digits to %d for %u sensors\n"), digits, count);
+        }
+        return true;
+    }
+    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(HLWMODE))) {
+        if (args.requireArgs(1)) {
+            auto type = F("Cycle Voltage/Current");
+            Sensor_HLW8012::CF1OutputTypeEnum_t mode = Sensor_HLW8012::CF1OutputTypeEnum_t::CYCLE;
+
+            at_mode_print_prefix(serial, command);
+            serial.print(F("Setting CF1 output mode to "));
+            if (args.isAnyMatchIgnoreCase(AtModeArgs::FIRST, F("0,u,v,voltage"))) {
+                type = F("Voltage");
+                mode = Sensor_HLW8012::CF1OutputTypeEnum_t::VOLTAGE;
+            }
+            else if (args.isAnyMatchIgnoreCase(AtModeArgs::FIRST, F("1,i,current"))) {
+                type = F("Current");
+                mode = Sensor_HLW8012::CF1OutputTypeEnum_t::CURRENT;
+            }
+
+            auto count = SensorPlugin::for_each<Sensor_HLW8012>(nullptr, Sensor_HLW80xx::_compareFuncHLW8012, [mode](Sensor_HLW8012 &sensor) {
+                sensor._setOutputMode(mode);
+            });
+            serial.printf_P(PSTR("%s for %u sensors\n"), type, count);
+        }
+        return true;
+    }
+    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(HLWDUMP))) {
+        Scheduler.removeTimer(&dumpTimer);
+
+        auto interval = args.toMillis(AtModeArgs::FIRST, 500);
+        if (interval) {
+            auto stream = &serial;
+            Scheduler.addTimer(&dumpTimer, interval, true, [this, stream](EventScheduler::TimerPtr) {
+                SensorPlugin::for_each<Sensor_HLW80xx>(this, Sensor_HLW80xx::_compareFunc, [stream](Sensor_HLW80xx &sensor) {
+                    sensor.dump(*stream);
+                });
+            });
+        }
+        return true;
+    }
+    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(HLWCSV))) {
+        static File csvFile;
+        if (args.requireArgs(1, 3)) {
+            String filename = args.toString(AtModeArgs::FIRST);
+            auto interval = args.toMillis(AtModeArgs::SECOND, 500);
+            auto duration = args.toMillis(AtModeArgs::THIRD, 30 * 1000, ~0, 30 * 1000);
+
+            at_mode_print_prefix(serial, command);
+            serial.printf_P(PSTR("%s: every %u ms, duration %.3f seconds\n"), filename.c_str(), interval, duration / 1000.0);
+
+            Scheduler.removeTimer(&dumpTimer);
+            auto endTime = millis() + duration;
+            csvFile = SPIFFS.open(filename, fs::FileOpenMode::write);
+            if (csvFile) {
+                Scheduler.addTimer(&dumpTimer, interval, true, [this, endTime, &serial, filename](EventScheduler::TimerPtr timer) {
+                    if (!csvFile) {
+                        timer->detach();
+                        at_mode_print_prefix(serial, PROGMEM_AT_MODE_HELP_COMMAND(HLWCSV));
+                        serial.printf_P(PSTR("File not open, write error=%d\n"), csvFile.getWriteError());
+                    }
+                    else {
+                        SensorPlugin::for_each<Sensor_HLW80xx>(this, Sensor_HLW80xx::_compareFunc, [](Sensor_HLW80xx &sensor) {
+                            sensor.dumpCSV(csvFile);
+                        });
+                        if (millis() > endTime) {
+                            timer->detach();
+                            at_mode_print_prefix(serial, PROGMEM_AT_MODE_HELP_COMMAND(HLWCSV));
+                            serial.printf_P(PSTR("Data dump done: %s\n"), filename.c_str());
+                            csvFile.close();
+                        }
+                    }
+                });
+            }
+            else {
+                at_mode_print_prefix(serial, command);
+                serial.printf_P(PSTR("Failed to create %s\n"), filename.c_str());
+            }
+        }
+        return true;
+    }
+#if IOT_SENSOR_HLW8012_RAW_DATA_DUMP
+    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(HLWSCF1))) {
+        if (args.requireArgs(1, 1)) {
+            auto interval = args.toMillis(AtModeArgs::FIRST, 1, 1000, 150);
+            auto sensor = Sensor_HLW8012::_getFirstSensor();
+            if (sensor) {
+                at_mode_print_prefix(serial, command);
+                serial.printf_P(PSTR("Simulating callback every %u milliseconds\n"), interval);
+                sensor->_simulateCallbackCF1(interval);
+            }
+            else {
+                at_mode_print_prefix(serial, command);
+                serial.println(F("Cannot find any HLW8012 sensor"));
+            }
+        }
+        return true;
+    }
+    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(HLWRAW))) {
+        if (args.requireArgs(1, 2)) {
+            String filename = args.toString(AtModeArgs::FIRST);
+            auto duration = args.toMillis(AtModeArgs::SECOND, 1000, ~0, 30 * 1000);
+
+            auto sensor = Sensor_HLW8012::_getFirstSensor();
+            if (sensor) {
+                at_mode_print_prefix(serial, command);
+                serial.printf_P(PSTR("Writing data to %s for %.3f seconds\n"), filename.c_str(), duration / 1000.0);
+                if (!sensor->_startRawDataDump(filename, millis() + duration)) {
+                    at_mode_print_prefix(serial, command);
+                    serial.println(F("Raw dump failed to start"));
+                }
+            }
+            else {
+                at_mode_print_prefix(serial, command);
+                serial.println(F("Cannot find any HLW8012 sensor"));
+            }
+        }
+        return true;
+    }
+#endif
+    return false;
+}
+
+#endif
 
 #endif

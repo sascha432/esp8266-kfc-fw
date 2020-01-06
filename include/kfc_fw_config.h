@@ -5,7 +5,7 @@
 #pragma once
 
 #ifndef DEBUG_KFC_CONFIG
-#define DEBUG_KFC_CONFIG 0
+#define DEBUG_KFC_CONFIG        1
 #endif
 
 #include <Arduino_compat.h>
@@ -216,6 +216,7 @@ struct Sensor {
         float calibrationI;
         float calibrationP;
         uint64_t energyCounter;
+        uint8_t extraDigits;
     } hlw80xx;
 #endif
 };

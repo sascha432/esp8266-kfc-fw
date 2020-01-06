@@ -15,6 +15,16 @@
 #include "plugins.h"
 #include "MQTTSensor.h"
 
+#ifndef IOT_SENSOR_HLW8012_RAW_DATA_DUMP
+// store interrupt timings on SPIFFS
+#define IOT_SENSOR_HLW8012_RAW_DATA_DUMP                0
+#endif
+
+#ifndef IOT_SENSOR_HLW8012_SENSOR_STATS
+// additional statistics on sensor inputs
+#define IOT_SENSOR_HLW8012_SENSOR_STATS                 0
+#endif
+
 // voltage divider for V2P
 #ifndef IOT_SENSOR_HLW80xx_V_RES_DIV
 #define IOT_SENSOR_HLW80xx_V_RES_DIV                    ((4 * 470) / 1.0)               // 4x470K : 1K
@@ -23,6 +33,11 @@
 // current shunt resistance
 #ifndef IOT_SENSOR_HLW80xx_SHUNT
 #define IOT_SENSOR_HLW80xx_SHUNT                        0.001
+#endif
+
+// multiplier for current/power timeouts
+#ifndef IOT_SENSOR_HLW80xx_TIMEOUT_MUL
+#define IOT_SENSOR_HLW80xx_TIMEOUT_MUL                  (3.0 / (IOT_SENSOR_HLW80xx_SHUNT * 1000.0))
 #endif
 
 // update rate WebUI
@@ -83,6 +98,8 @@
 #define IOT_SENSOR_HLW80xx_PULSE_TO_KWH(count)          (count * IOT_SENSOR_HLW80xx_CALC_P(1000000.0) / (1000.0 * 3600.0))
 #define IOT_SENSOR_HLW80xx_KWH_TO_PULSE(kwh)            (((1000.0 * 3600.0) * kwh) / IOT_SENSOR_HLW80xx_CALC_P(1000000.0))
 
+class Sensor_HLW8012;
+class Sensor_HLW8032;
 
 class Sensor_HLW80xx : public MQTTSensor {
 public:
@@ -107,6 +124,11 @@ public:
     virtual void reconfigure() override;
     virtual void restart() override;
 
+#if AT_MODE_SUPPORTED
+    virtual void atModeHelpGenerator() override;
+    virtual bool atModeHandler(Stream &serial, const String &command, AtModeArgs &args) override;
+#endif
+
     void resetEnergyCounter();
     uint64_t *getEnergyCounters() {
         return _energyCounter;
@@ -117,6 +139,9 @@ public:
     uint64_t &getEnergySecondaryCounter() {
         return _energyCounter[1];
     }
+
+    virtual void dump(Print &output);
+    virtual void dumpCSV(File &file, bool newLine = true);
 
 protected:
     void _saveEnergyCounter();
@@ -132,6 +157,16 @@ protected:
 
     String _getTopic();
 
+    static bool _compareFuncHLW8012(MQTTSensor &sensor, Sensor_HLW8012 &) {
+        return sensor.getType() == MQTTSensor::HLW8012;
+    }
+    static bool _compareFuncHLW8032(MQTTSensor &sensor, Sensor_HLW8032 &) {
+        return sensor.getType() == MQTTSensor::HLW8032;
+    }
+    static bool _compareFunc(MQTTSensor &sensor, Sensor_HLW80xx &) {
+        return (sensor.getType() == MQTTSensor::HLW8012 || sensor.getType() == MQTTSensor::HLW8032);
+    }
+
     String _name;
     float _power;
     float _voltage;
@@ -140,11 +175,16 @@ protected:
     float _calibrationI;
     float _calibrationU;
     float _calibrationP;
+    uint8_t _extraDigits;
 
     unsigned long _saveEnergyCounterTimeout;
     time_t _nextMQTTUpdate;
 
 public:
+    void setExtraDigits(int8_t digits) {
+        _extraDigits = std::max((int8_t)0, std::min((int8_t)6, digits));
+        config._H_W_GET(Config().sensor).hlw80xx.extraDigits = _extraDigits;
+    }
     uint64_t _energyCounter[IOT_SENSOR_HLW80xx_NUM_ENERGY_COUNTERS];
 };
 

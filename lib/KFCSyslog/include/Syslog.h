@@ -28,31 +28,64 @@
 #endif
 #define SYSLOG_FILE_TIMESTAMP_FORMAT            "%FT%TZ"
 
-enum SyslogProtocol : uint8_t {
+class Syslog;
+
+typedef enum : uint8_t {
     SYSLOG_PROTOCOL_NONE = 0,
     SYSLOG_PROTOCOL_UDP,
     SYSLOG_PROTOCOL_TCP,
     SYSLOG_PROTOCOL_TCP_TLS,
     SYSLOG_PROTOCOL_FILE,
+} SyslogProtocol;
+
+class SyslogFilterItem {
+public:
+    SyslogFilterItem(SyslogFacility facility, SyslogSeverity severity) {
+        _facility = facility;
+        _severity = severity;
+    }
+    SyslogFilterItem(const String &facility, const String &severity);
+
+    bool isMatch(SyslogFacility facility, SyslogSeverity severity) const {
+        return ((_facility == SYSLOG_FACILITY_ANY || _facility == facility) && (_severity == SYSLOG_SEVERITY_ANY ||_severity == severity));
+    }
+
+private:
+    SyslogFacility _facility;
+    SyslogSeverity _severity;
 };
 
-typedef std::vector<std::pair<SyslogFacility, SyslogSeverity>> SyslogFilterItemVector;
+typedef std::vector<SyslogFilterItem> SyslogFilterItemVector;
 
-class Syslog;
+class SyslogFileFilterItem {
+public:
+    SyslogFileFilterItem() : _syslog(nullptr) {
+    }
+    SyslogFileFilterItem(const String &filter, Syslog *_syslog);
 
-struct SyslogFileFilterItem {
-    SyslogFilterItemVector filter;
-    Syslog *syslog;
+    bool isStop() const;
+    bool isMatch(SyslogFacility facility, SyslogSeverity severity);
+
+    Syslog *getSyslog() const {
+        return _syslog;
+    }
+
+public:
+    static void _parseFilter(const String &filter, SyslogFilterItemVector &filters);
+
+private:
+    SyslogFilterItemVector _filter;
+    Syslog *_syslog;
 };
 
 // facility/severity name/value pairs
-struct SyslogFilterItem {
+typedef struct {
     PGM_P name;
     uint8_t value;
-};
+} SyslogFilterItemPair;
 
-extern const SyslogFilterItem syslogFilterFacilityItems[] PROGMEM;
-extern const SyslogFilterItem syslogFilterSeverityItems[] PROGMEM;
+extern const SyslogFilterItemPair syslogFilterFacilityItems[] PROGMEM;
+extern const SyslogFilterItemPair syslogFilterSeverityItems[] PROGMEM;
 
 class Syslog {
 public:

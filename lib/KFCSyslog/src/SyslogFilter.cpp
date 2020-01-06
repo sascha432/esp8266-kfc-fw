@@ -16,62 +16,44 @@
 #include <debug_helper_disable.h>
 #endif
 
-SyslogFilter::SyslogFilter(const SyslogParameter &parameter) {
+SyslogFilter::SyslogFilter(const SyslogParameter &parameter)
+{
     _parameter = parameter;
 }
 
-void SyslogFilter::addFilter(const String &filter, const String &destination) {
-    _filters.push_back({_parseFilter(filter), createSyslogFromString(destination)});
+SyslogFilter::SyslogFilter(const String &hostname, const String &appName) : _parameter(hostname, appName)
+{
 }
 
-void SyslogFilter::addFilter(const String &filter, Syslog* syslog) {
-    _filters.push_back({_parseFilter(filter), syslog});
+void SyslogFilter::addFilter(const String &filter, const String &destination)
+{
+    _filters.push_back(SyslogFileFilterItem(filter, createSyslogFromString(destination)));
 }
 
-SyslogParameter& SyslogFilter::getParameter() {
+void SyslogFilter::addFilter(const String &filter, Syslog* syslog)
+{
+    _filters.push_back(SyslogFileFilterItem(filter, syslog));
+}
+
+SyslogParameter& SyslogFilter::getParameter()
+{
     return _parameter;
 }
 
-void SyslogFilter::applyFilters(SyslogFilterCallback callback) {
-    for (auto filter = _filters.begin(); filter != _filters.end(); ++filter) {
-        if (_matchFilterExpression(filter->filter, _parameter.getFacility(), _parameter.getSeverity())) {
-            if (!filter->syslog) {  // "stop"
+void SyslogFilter::applyFilters(SyslogFilterCallback callback)
+{
+    for(auto filter: _filters) {
+        if (filter.isMatch(_parameter.getFacility(), _parameter.getSeverity())) {
+            if (filter.isStop()) {
                 break;
             }
-            callback(*filter);
+            callback(filter);
         }
     }
 }
 
-SyslogFilterItemVector SyslogFilter::_parseFilter(const String &filter) {
-    SyslogFilterItemVector filters;
-    int startPos = 0;
-    do {
-        String severity, facility;
-        int endPos = filter.indexOf(',', startPos);
-        facility = endPos == -1 ? filter.substring(startPos) : filter.substring(startPos, endPos);
-        int splitPos = facility.indexOf('.');
-        if (splitPos != -1) {
-            severity = facility.substring(splitPos + 1);
-            facility.remove(splitPos);
-        }
-        filters.push_back(std::make_pair(Syslog::facilityToInt(facility), Syslog::severityToInt(severity)));
-        startPos = endPos + 1;
-    } while (startPos);
-
-    return filters;
-}
-
-bool SyslogFilter::_matchFilterExpression(const SyslogFilterItemVector& filter, SyslogFacility facility, SyslogSeverity severity) {
-    for (auto &item : filter) {
-        if ((item.first == SYSLOG_FACILITY_ANY || item.first == facility) && (item.second == SYSLOG_SEVERITY_ANY || item.second == severity)) {
-            return true;
-        }
-    }
-    return false;
-}
-
-Syslog* SyslogFilter::createSyslogFromString(const String &str) {
+Syslog* SyslogFilter::createSyslogFromString(const String &str)
+{
     char* tok[4];
     uint8_t tok_count = 0;
     Syslog* syslog = nullptr;

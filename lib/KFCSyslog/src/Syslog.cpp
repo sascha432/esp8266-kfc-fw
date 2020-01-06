@@ -6,6 +6,7 @@
 #include <KFCTimezone.h>
 #include "SyslogParameter.h"
 #include "Syslog.h"
+#include "SyslogFilter.h"
 
 #if DEBUG_SYSLOG
 #include <debug_helper_enable.h>
@@ -42,7 +43,7 @@ PROGMEM_STRING_DEF(notice, "notice");
 PROGMEM_STRING_DEF(info, "info");
 PROGMEM_STRING_DEF(debug, "debug");
 
-const SyslogFilterItem syslogFilterFacilityItems[] PROGMEM = {
+const SyslogFilterItemPair syslogFilterFacilityItems[] PROGMEM = {
     { SPGM(kern), SYSLOG_FACILITY_KERN },
     { SPGM(user), SYSLOG_FACILITY_USER },
     { SPGM(mail), SYSLOG_FACILITY_MAIL },
@@ -61,7 +62,7 @@ const SyslogFilterItem syslogFilterFacilityItems[] PROGMEM = {
     { nullptr, 0xff },
 };
 
-const SyslogFilterItem syslogFilterSeverityItems[] PROGMEM = {
+const SyslogFilterItemPair syslogFilterSeverityItems[] PROGMEM = {
     { SPGM(emerg), SYSLOG_EMERG },
 	{ SPGM(emergency), SYSLOG_EMERG },
 	{ SPGM(alert), SYSLOG_ALERT },
@@ -77,16 +78,61 @@ const SyslogFilterItem syslogFilterSeverityItems[] PROGMEM = {
 	{ nullptr, 0xff },
 };
 
-Syslog::Syslog(SyslogParameter &parameter) : _parameter(parameter) {
+SyslogFilterItem::SyslogFilterItem(const String &facility, const String &severity) : SyslogFilterItem(Syslog::facilityToInt(facility), Syslog::severityToInt(severity)) {
+}
+
+
+SyslogFileFilterItem::SyslogFileFilterItem(const String &filter, Syslog *syslog) : _syslog(syslog)
+{
+	_parseFilter(filter, _filter);
+}
+
+bool SyslogFileFilterItem::isStop() const
+{
+	return _syslog == SYSLOG_FILTER_STOP;
+}
+
+bool SyslogFileFilterItem::isMatch(SyslogFacility _facility, SyslogSeverity _severity)
+{
+	for (auto &item : _filter) {
+		if (item.isMatch(_facility, _severity)) {
+			return true;
+		}
+	}
+	return false;
+}
+
+void SyslogFileFilterItem::_parseFilter(const String &filter, SyslogFilterItemVector &filters)
+{
+    int startPos = 0;
+    do {
+        String severity, facility;
+        int endPos = filter.indexOf(',', startPos);
+        facility = endPos == -1 ? filter.substring(startPos) : filter.substring(startPos, endPos);
+        int splitPos = facility.indexOf('.');
+        if (splitPos != -1) {
+            severity = facility.substring(splitPos + 1);
+            facility.remove(splitPos);
+        }
+        filters.push_back(SyslogFilterItem(facility, severity));
+        startPos = endPos + 1;
+    } while (startPos);
+}
+
+
+Syslog::Syslog(SyslogParameter &parameter) : _parameter(parameter)
+{
 	_debug_printf_P(PSTR("Syslog::Syslog(%s,%s,%s)\n"), parameter.getHostname().c_str(), parameter.getAppName().c_str(), parameter.getProcessId().c_str());
 }
 
-void Syslog::transmit(const String &message, Callback_t callback) {
+void Syslog::transmit(const String &message, Callback_t callback)
+{
 	_debug_printf_P(PSTR("Syslog::transmit(%s)\n"), message.c_str());
 	callback(true);
 }
 
-void Syslog::_addTimestamp(String& buffer, PGM_P format) {
+void Syslog::_addTimestamp(String& buffer, PGM_P format)
+{
 	auto now = time(nullptr);
 	auto tm = timezone_localtime(&now);
 	if (tm && IS_TIME_VALID(now)) {

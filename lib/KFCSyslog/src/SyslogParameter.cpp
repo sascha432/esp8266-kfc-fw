@@ -12,7 +12,8 @@
 #include <debug_helper_disable.h>
 #endif
 
-SyslogParameter::SyslogParameter() {
+SyslogParameter::SyslogParameter()
+{
     _facility = SYSLOG_FACILITY_KERN;
     _severity = SYSLOG_ERR;
 }

@@ -4,7 +4,7 @@
 
 #pragma once
 
-enum SyslogSeverity {
+typedef enum : uint8_t {
     SYSLOG_EMERG = 0,
     SYSLOG_ALERT,
     SYSLOG_CRIT,
@@ -14,11 +14,9 @@ enum SyslogSeverity {
     SYSLOG_INFO,
     SYSLOG_DEBUG,
     SYSLOG_SEVERITY_ANY = 0xff,
-};
+} SyslogSeverity;
 
-typedef uint8_t SyslogFacility;
-
-enum {
+typedef enum : uint8_t {
     SYSLOG_FACILITY_KERN = 0,
     SYSLOG_FACILITY_USER,
     SYSLOG_FACILITY_MAIL,
@@ -35,10 +33,10 @@ enum {
     SYSLOG_FACILITY_LOCAL6,
     SYSLOG_FACILITY_LOCAL7,
     SYSLOG_FACILITY_ANY = 0xff,
-};
+} SyslogFacility;
 
 class SyslogParameter {
-   public:
+public:
     SyslogParameter();
     SyslogParameter(const String &hostname, const String &appName);
     SyslogParameter(const String &hostname, const String &appName, const String &processId);
@@ -58,7 +56,7 @@ class SyslogParameter {
     void setProcessId(const String &processId);
     const String &getProcessId();
 
-   private:
+private:
     SyslogFacility _facility;
     SyslogSeverity _severity;
     String _hostname;

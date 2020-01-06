@@ -32,7 +32,7 @@
 
 class SyslogStream : public Stream {
 public:
-	SyslogStream(const SyslogParameter &parameter, SyslogProtocol protocol, const String &host, uint16_t port = SYSLOG_DEFAULT_PORT, uint16_t queueSize = 1024);
+	SyslogStream(SyslogParameter &parameter, SyslogProtocol protocol, const String &host, uint16_t port = SYSLOG_DEFAULT_PORT, uint16_t queueSize = 1024);
     SyslogStream(SyslogFilter *filter, SyslogQueue *queue);
     virtual ~SyslogStream();
 
@@ -53,20 +53,23 @@ public:
 
     void transmitCallback(SyslogQueue::SyslogQueueItemPtr &item, bool success);
 
-    const String getLevel();
+    String getLevel() const;
 
     SyslogQueue *getQueue() {
         return _queue;
     }
+    void setQueue(SyslogQueue *queue) {
+        _queue = queue;
+    }
     SyslogFilter *getFilter() {
         return _filter;
     }
-    SyslogParameter *getParameter() {
+    SyslogParameter &getParameter() {
         return _parameter;
     }
 
 private:
-    SyslogParameter *_parameter;
+    SyslogParameter &_parameter;
     SyslogFilter *_filter;
     SyslogQueue *_queue;
     String _message;

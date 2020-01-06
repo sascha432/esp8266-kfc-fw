@@ -16,14 +16,15 @@
 #include <debug_helper_disable.h>
 #endif
 
-SyslogStream::SyslogStream(const SyslogParameter &parameter, SyslogProtocol protocol, const String &host, uint16_t port, uint16_t queueSize) {
+SyslogStream::SyslogStream(SyslogParameter &parameter, SyslogProtocol protocol, const String &host, uint16_t port, uint16_t queueSize) : _parameter(parameter)
+{
 	_filter = _debug_new SyslogFilter(parameter);
-	_parameter = &_filter->getParameter();
 	_queue = _debug_new SyslogMemoryQueue(queueSize);
-	_filter->addFilter(F("*.*"), SyslogFactory::create(*_parameter, protocol, host, port));
+	_filter->addFilter(F("*.*"), SyslogFactory::create(_parameter, protocol, host, port));
 }
 
-SyslogStream::SyslogStream(SyslogFilter* filter, SyslogQueue* queue) : _parameter(&filter->getParameter()), _filter(filter), _queue(queue) {
+SyslogStream::SyslogStream(SyslogFilter* filter, SyslogQueue* queue) : _parameter(filter->getParameter()), _filter(filter), _queue(queue)
+{
 }
 
 SyslogStream::~SyslogStream() {
@@ -35,20 +36,24 @@ SyslogStream::~SyslogStream() {
     }
 }
 
-void SyslogStream::setFacility(SyslogFacility facility) {
-    _parameter->setFacility(facility);
+void SyslogStream::setFacility(SyslogFacility facility)
+{
+    _parameter.setFacility(facility);
 }
 
-void SyslogStream::setSeverity(SyslogSeverity severity) {
-    _parameter->setSeverity(severity);
+void SyslogStream::setSeverity(SyslogSeverity severity)
+{
+    _parameter.setSeverity(severity);
 }
 
-size_t SyslogStream::write(uint8_t data) {
+size_t SyslogStream::write(uint8_t data)
+{
     _message += (char)data;
     return 1;
 }
 
-size_t SyslogStream::write(const uint8_t *buffer, size_t len) {
+size_t SyslogStream::write(const uint8_t *buffer, size_t len)
+{
     auto ptr = buffer;
     while (len--) {
         char ch = *ptr++;
@@ -61,14 +66,15 @@ size_t SyslogStream::write(const uint8_t *buffer, size_t len) {
     return ptr - buffer;
 }
 
-void SyslogStream::flush() {
+void SyslogStream::flush()
+{
     if (_message.length()) {
         _filter->applyFilters([this](SyslogFileFilterItem& filter) {
             String preparedMessage;
-            filter.syslog->addHeader(preparedMessage);
+            filter.getSyslog()->addHeader(preparedMessage);
             if (preparedMessage.length()) {
                 preparedMessage += _message;
-                _queue->add(preparedMessage, filter.syslog);
+                _queue->add(preparedMessage, filter.getSyslog());
             }
         });
         _message = String();
@@ -76,23 +82,29 @@ void SyslogStream::flush() {
     }
 }
 
-bool SyslogStream::hasQueuedMessages() {
+bool SyslogStream::hasQueuedMessages()
+{
     return !!_queue->size();
 }
 
-int SyslogStream::available() {
+int SyslogStream::available()
+{
     return false;
 }
 
-int SyslogStream::read() {
+int SyslogStream::read()
+{
     return -1;
 }
 
-int SyslogStream::peek() {
+int SyslogStream::peek()
+
+{
     return -1;
 }
 
-void SyslogStream::deliverQueue(Syslog *syslog) {
+void SyslogStream::deliverQueue(Syslog *syslog)
+{
     size_t pos = 0;
     while(pos < _queue->size()) {
         _debug_printf_P(PSTR("SyslogStream::deliverQueue(): %u/%u\n"), pos + 1, _queue->size());
@@ -124,7 +136,8 @@ void SyslogStream::deliverQueue(Syslog *syslog) {
 	_queue->cleanUp();
 }
 
-void SyslogStream::transmitCallback(SyslogQueue::SyslogQueueItemPtr &item, bool success) {
+void SyslogStream::transmitCallback(SyslogQueue::SyslogQueueItemPtr &item, bool success)
+{
     _debug_printf_P(PSTR("SyslogStream::transmitCallback(): success=%d,message='%s',locked=%d\n"), success, item->getMessage().c_str(), item->isLocked());
     if (success) {
         _queue->remove(item, true);
@@ -135,20 +148,20 @@ void SyslogStream::transmitCallback(SyslogQueue::SyslogQueueItemPtr &item, bool 
     }
 }
 
-const String SyslogStream::getLevel() {
+String SyslogStream::getLevel() const
+{
 	String result;
-	uint8_t i;
 
-	auto facility = _parameter->getFacility();
-    for (i = 0; syslogFilterFacilityItems[i].value != 0xff; i++) {
+	auto facility = _parameter.getFacility();
+    for (uint8_t i = 0; syslogFilterFacilityItems[i].value != 0xff; i++) {
         if (syslogFilterFacilityItems[i].value == facility) {
             result += syslogFilterFacilityItems[i].name;
             break;
         }
     }
 	result += '.';
-	auto severity = _parameter->getSeverity();
-	for(i = 0; syslogFilterSeverityItems[i].value != 0xff; i++) {
+	auto severity = _parameter.getSeverity();
+	for(uint8_t i = 0; syslogFilterSeverityItems[i].value != 0xff; i++) {
 		if (syslogFilterSeverityItems[i].value == severity) {
 			result += syslogFilterSeverityItems[i].name;
 			break;

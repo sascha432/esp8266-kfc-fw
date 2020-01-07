@@ -108,6 +108,8 @@
 #define FS_MAPPINGS_COUNTER_TYPE         uint8_t
 #endif
 
+#define FS_MAPPINGS_FILE_FMT            "%s%02x"        // format for UID to filename conversion
+
 #ifndef FS_MAPPINGS_FLAGS_GZIPPED                       // flags bitset of .mappings
 #define FS_MAPPINGS_FLAGS_GZIPPED       0x01
 #endif

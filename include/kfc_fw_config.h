@@ -334,7 +334,7 @@ public:
     void printInfo(Print &output);
 
     static void loop();
-    void garbageCollector();
+    void gc();
     static uint8_t getMaxWiFiChannels();
     static String getWiFiEncryptionType(uint8_t type);
 

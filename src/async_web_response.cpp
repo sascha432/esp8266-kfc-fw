@@ -47,7 +47,7 @@ void AsyncJsonResponse::updateLength()
 AsyncProgmemFileResponse::AsyncProgmemFileResponse(const String &contentType, const FSMappingEntry *mapping, AwsTemplateProcessor templateCallback) : AsyncAbstractResponse(templateCallback)
 {
     _code = 200;
-    _content = Mappings::getInstance().openFile(mapping, fs::FileOpenMode::read);
+    _content = Mappings::open(mapping, fs::FileOpenMode::read);
     _contentLength = _content.size();
     _contentType = contentType;
     _sendContentLength = true;
@@ -64,9 +64,8 @@ size_t AsyncProgmemFileResponse::_fillBuffer(uint8_t *data, size_t len)
     return _content.read(data, len);
 }
 
-AsyncDirResponse::AsyncDirResponse(const AsyncDirWrapper &dir) : AsyncAbstractResponse()
+AsyncDirResponse::AsyncDirResponse(const Dir &dir, const String &dirName) : AsyncAbstractResponse()
 {
-    _debug_printf_P(PSTR("AsyncDirResponse::AsyncDirResponse(%s)\n"), _dir.getDirName().c_str());
     _code = 200;
     _contentLength = 0;
     _sendContentLength = false;
@@ -74,12 +73,16 @@ AsyncDirResponse::AsyncDirResponse(const AsyncDirWrapper &dir) : AsyncAbstractRe
     _chunked = true;
     _dir = dir;
     _state = 0;
-    if (!_dir.isValid()) {
+    _dirName = dirName;
+    append_slash(_dirName);
+    _debug_printf_P(PSTR("AsyncDirResponse::AsyncDirResponse(%s)\n"), _dirName.c_str());
+
+    if (!_dir.rewind()) {
         _code = 404;
         _sendContentLength = true;
         _chunked = false;
         _state = 2;
-        _debug_printf_P(PSTR("listing %s isValid()==true, next state 2, sending 404\n"), _dir.getDirName().c_str());
+        _debug_printf_P(PSTR("listing %s isValid()==true, next state 2, sending 404\n"), _dirName.c_str());
     }
 }
 
@@ -99,10 +102,8 @@ size_t AsyncDirResponse::_fillBuffer(uint8_t *data, size_t len)
         FSInfo info;
         SPIFFS_info(info);
 
-        _dirName = _dir.getDirName();
-        _dirNameLen = _dirName.length();
-        // if (_dirNameLen > 1 && _dirName.charAt(_dirNameLen - 1) == '/') {
-        //     _dirNameLen--;
+        // if (String_endsWith(_dirName, '/')) {
+        //     _dirName.remove(_dirName.length() - 1, 1);
         // }
 
         if ((result = snprintf_P(ptr, space, PSTR("{\"total\":\"%s\",\"total_b\":%d,\"used\":\"%s\",\"used_b\":%d,\"usage\":\"%.2f%%\",\"dir\":\"%s\",\"files\":["),
@@ -120,23 +121,24 @@ size_t AsyncDirResponse::_fillBuffer(uint8_t *data, size_t len)
         sptr = ptr;
 
         _state = 1;
-        _next = _dir.isValid() && _dir.next();
+        _next = _dir.next();
         _debug_printf_P(PSTR("init list %s next=%d\n"), _dirName.c_str(), _next);
     }
     if (_state == 1) {
         String tmp_dir = sys_get_temp_dir();
-        char modified[64];
+        char modified[32];
 
         _debug_printf_P(PSTR("load list %s, tmp_dir %s\n"), _dirName.c_str(), tmp_dir.c_str());
 
         String path;
         while (_next) {
             path = _dir.fileName();
+            auto mapping = Mappings::getEntry(path);
             modified[0] = '0';
             modified[1] = 0;
 
 #if SPIFFS_TMP_FILES_TTL || SPIFFS_CLEANUP_TMP_DURING_BOOT
-            if (!_dir.isMapped() && path.length() > tmp_dir.length() && path.startsWith(tmp_dir)) { // check if the name matches the location of temporary files, exclude mapped files
+            if (!mapping && path.length() > tmp_dir.length() && path.startsWith(tmp_dir)) { // check if the name matches the location of temporary files, exclude mapped files
 #  if SPIFFS_TMP_FILES_TTL
 
                 ulong ttl = strtoul(path.substring(tmp_dir.length()).c_str(), NULL, HEX);
@@ -154,25 +156,27 @@ size_t AsyncDirResponse::_fillBuffer(uint8_t *data, size_t len)
                     strncpy_P(modified, PSTR("\"TTL until next reboot\""), sizeof(modified));
 #  endif
                 }
-            } else if (_dir.isMapped()) {
-
-                _dir.getModificatonTime(modified, sizeof(modified), PSTR("\"%Y-%m-%d %H:%M\""));
+            }
+            else if (mapping) {
+                auto time = mapping->modificationTime;
+                auto tm = timezone_localtime(&time);
+                timezone_strftime_P(modified, sizeof(modified), PSTR("\"%Y-%m-%d %H:%M\""), tm);
             }
 #endif
 
             // _debug_printf_P(PSTR("%s: %d %d\n"), path.c_str(), _dir.isDir(), _dir.isFile());
 
-            String name = path.substring(_dirNameLen);
+            String name = path.substring(_dirName.length());
             String location = url_encode(path).c_str();
 
-            if (_dir.isDir()) {
+            if (_dir.isDirectory()) {
                 remove_trailing_slash(name);
                 remove_trailing_slash(location);
 
                 if ((result = snprintf_P(ptr, space, PSTR("{\"f\":\"%s\",\"n\":\"%s\",\"m\":%d,\"t\":%s,\"d\":1},"),
                     location.c_str(),
                     name.c_str(),
-                    path.startsWith(tmp_dir) ? TYPE_TMP_DIR : (_dir.isMapped() ? TYPE_MAPPED_DIR : TYPE_REGULAR_DIR),
+                    path.startsWith(tmp_dir) ? TYPE_TMP_DIR : (mapping ? TYPE_MAPPED_DIR : TYPE_REGULAR_DIR),
                     modified)) >= space)
                 {
                     break;
@@ -187,7 +191,7 @@ size_t AsyncDirResponse::_fillBuffer(uint8_t *data, size_t len)
                     name.c_str(),
                     formatBytes(_dir.fileSize()).c_str(),
                     _dir.fileSize(),
-                    _dir.isMapped() ? TYPE_MAPPED_FILE : TYPE_REGULAR_FILE,
+                    mapping ? TYPE_MAPPED_FILE : TYPE_REGULAR_FILE,
                     modified)
                 ) >= space) {
                     break;
@@ -400,221 +404,6 @@ size_t AsyncBufferResponse::_fillBuffer(uint8_t * buf, size_t maxLen)
     // debug_printf("%u %u %d\n", _position, send, maxLen);
     _position += send;
     return send;
-}
-
-
-AsyncDirWrapper::AsyncDirWrapper() : _isValid(false), _dir(), _curMapping(nullptr)
-{
-}
-
-AsyncDirWrapper::AsyncDirWrapper(const String &dirName) : AsyncDirWrapper()
-{
-    _debug_printf_P(PSTR("AsyncDirWrapper::AsyncDirWrapper(%s)\n"), dirName.c_str());
-    _dirName = dirName;
-    append_slash(_dirName);
-    _dir = SPIFFSWrapper::openDir(FSPGM(slash));
-    _isValid = _dir.next();
-    _firstNext = true;
-    _dirs.push_back(_dirName);
-
-    if (_isValid) { // filter files that do not match _dirName
-        auto &map = Mappings::getInstance();
-        _iterator = map.begin();
-        _end = map.end();
-    }
-}
-
-// AsyncDirWrapper::~AsyncDirWrapper()
-// {
-// }
-
-void AsyncDirWrapper::setVirtualRoot(const String & path)
-{
-    _virtualRoot = path;
-}
-
-String & AsyncDirWrapper::getDirName()
-{
-    return _dirName;
-}
-
-bool AsyncDirWrapper::isValid() const
-{
-    return _isValid;
-}
-
-/*
-
-check if files belong to _dirName or if the next subdirectory belongs to _dirname
-
-dir /www/
-false /file1
-false /file2
-true  /www/.
-true  /www/file3
-true  /www/js/file6
-true  /www/images/file5
-false /www/images/icons/.
-false /www/images/icons/file7
-
-*/
-bool AsyncDirWrapper::_fileInside(const String & path)
-{
-    _debug_printf_P(PSTR("AsyncDirWrapper::_fileInside(%s)\n"), path.c_str());
-    if (!path.startsWith(_dirName)) { // not a match
-        return false;
-    }
-    String name, fullpath;
-    int pos = _dirName.length(); // points to the first character of the file or subdirectory
-    int pos2 = path.indexOf('/', pos + 1);
-    if (pos2 != -1) { // sub directory pos - pos2
-
-        name = path.substring(pos, pos2 - pos);
-        fullpath = path.substring(0, pos2);
-        if (std::find(_dirs.begin(), _dirs.end(), fullpath) != _dirs.end()) { // do we have it already?
-            return false;
-        }
-        _dirs.push_back(fullpath);
-        _type = DIR;
-        _fileName = fullpath;
-
-    }
-    else if (pos2 == -1) { // filename or "."
-
-        name = path.substring(pos);
-        fullpath = path;
-        if (String_equals(name, FSPGM(dot))) {
-            return false;
-        }
-        _type = FILE;
-        _fileName = fullpath;
-    }
-
-    _debug_printf(PSTR("%s: '%s' '%s' (%d, %d) %d\n"), path.c_str(), name.c_str(), fullpath.c_str(), pos, pos2, _type);
-    return true;
-}
-
-bool AsyncDirWrapper::isDir() const
-{
-    return _type == DIR;
-}
-
-bool AsyncDirWrapper::isFile() const
-{
-    return _type == FILE;
-}
-
-bool AsyncDirWrapper::next()
-{
-    _debug_printf_P(PSTR("AsyncDirWrapper::next()\n"));
-    _type = INVALID;
-    if (!isValid()) {
-        return false;
-    }
-    // debug_println("next()");
-    auto &map = Mappings::getInstance();
-    if (_end != map.end()) { // mappings were released or have been modified and all iterators have become invalid
-        return false;
-    }
-    bool result = false;
-    if (_curMapping != _end) { // go through virtual files first
-        result = true;
-        do {
-            _curMapping = nullptr;
-            if (_iterator == _end) { // continue with files from Dir()
-                result = false;
-                break;
-            }
-            _curMapping = _iterator;
-            //_curMapping = new FSMapping(_iterator->getPath(), _iterator->getMappedPath(), _iterator->getModificatonTime(), _iterator->getFileSize()); //TODO memory leak, FSMapping needs a clone method or unique_ptr has to be removed
-            _fileName = _virtualRoot + map.getPath(_curMapping);
-            // if (!_fileName.startsWith(_dirName)) {
-            //     debug_printf("filtered-virtual %s: %s (%d) => %s\n", _dirName.c_str(), _fileName.c_str(), isMapped(), mappedFile().c_str());
-            // }
-            ++_iterator;
-        } while (!_fileInside(_fileName)); // filer files if real file does not match _dirName
-    }
-    if (!result) {
-        _curMapping = nullptr;
-        bool skip;
-        do {
-            if (_firstNext) {
-                _firstNext = false;
-                result = true;
-            }
-            else {
-                result = _dir.next();
-                if (!result) {
-                    break;
-                }
-            }
-            skip = !_fileInside(_dir.fileName());
-            if (!skip) {
-                for (auto it = map.begin(); it != _end; ++it) {
-                    if (_dir.fileName().equals(map.getMappedPath(it))) {
-                        skip = true; // remove real files that are mapped to virtual files
-                    }
-                }
-            }
-            // if (result && skip) {
-            //     debug_printf("filtered-mapped %s: %s (%d)\n", _dirName.c_str(), mappedFile().c_str(), isMapped());
-            // }
-        } while (skip);
-    }
-#if DEBUG_ASYNC_WEB_RESPONSE
-    if (!result) {
-        for (const auto &dir : _dirs) {
-            _debug_printf_P(PSTR("dirs: %s\n"), dir.c_str());
-        }
-    }
-#endif
-    _debug_printf(PSTR("next() = %s %d\n"), _fileName.c_str(), result);
-    return result;
-}
-
-File AsyncDirWrapper::openFile(const char *mode)
-{
-    if (_curMapping) {
-        return Mappings::getInstance().openFile(_curMapping, mode);
-    }
-    return SPIFFSWrapper::open(_dir, mode);
-}
-
-String AsyncDirWrapper::fileName()
-{
-    return _fileName;
-}
-
-String AsyncDirWrapper::mappedFile()
-{
-    if (_curMapping) {
-        return Mappings::getInstance().getMappedPath(_curMapping);
-    }
-    return _dir.fileName();
-}
-
-bool AsyncDirWrapper::isMapped() const
-{
-    return _curMapping != nullptr;
-}
-
-void AsyncDirWrapper::getModificatonTime(char * modified, size_t size, PGM_P format)
-{
-    if (!_curMapping) {
-        modified[0] = '0';
-        modified[1] = 0;
-        return;
-    }
-    auto tm = timezone_localtime(&_curMapping->modificationTime);
-    timezone_strftime_P(modified, size, format, tm);
-}
-
-size_t AsyncDirWrapper::fileSize()
-{
-    if (_curMapping) {
-        return _curMapping->fileSize;
-    }
-    return _dir.fileSize();
 }
 
 

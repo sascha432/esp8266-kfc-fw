@@ -2,6 +2,8 @@
 Author: sascha_lammers@gmx.de
 */
 
+#ifdef _WIN32
+
 #pragma once
 
 #define PSTR(str)                               str
@@ -43,3 +45,5 @@ class __FlashStringHelper;
 #define strcasecmp_P _stricmp
 #define strncasecmp _strnicmp
 #define strcmp_P strcmp
+
+#endif

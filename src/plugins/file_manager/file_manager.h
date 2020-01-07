@@ -40,8 +40,8 @@ public:
     bool _requireAuthentication();
     String _requireFile(const String &name, bool mustExist);
     File _requireFile(const String &name);
-    String _requireDir(const String &name, bool mustExist);
-    AsyncDirWrapper _requireDir(const String &name);
+    String _requireDir(const String &name);
+    Dir _getDir(const String &path);
     String _requireArgument(const String &name);
     String _getArgument(const String &name);
 

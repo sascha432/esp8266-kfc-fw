@@ -180,6 +180,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(ATMODE, "ATMODE", "<1|0>", "Enable/disable
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DLY, "DLY", "<milliseconds>", "Call delay(milliseconds)");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CAT, "CAT", "<filename>", "Display text file");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DEL, "DEL", "<filename>", "Delete file");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LS, "LS", "[<directory>]", "List files and directory");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WIFI, "WIFI", "[<reconnect>]", "Display WiFi info");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(REM, "REM", "Ignore comment");
 #if RTC_SUPPORT
@@ -193,6 +194,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(SAVECRASHP, "SAVECRASHP", "Print saved cra
 
 #if DEBUG
 
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(FSM, "FSM", "Display FS mapping");
 #if PIN_MONITOR
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PINM, "PINM", "[<1=start|0=stop>}", "List or monitor PINs");
 #endif
@@ -232,6 +234,7 @@ void at_mode_help_commands()
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DLY), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CAT), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DEL), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(LS), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(WIFI), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(REM), name);
 #if RTC_SUPPORT
@@ -244,6 +247,7 @@ void at_mode_help_commands()
 #endif
 
 #if DEBUG
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(FSM), name);
 #if PIN_MONITOR
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(PINM), name);
 #endif
@@ -746,6 +750,19 @@ void at_mode_serial_handle_event(String &commandString)
                     output.printf_P(PSTR("+DEL: %s: %s\n"), filename, result ? PSTR("success") : PSTR("failure"));
                 }
             }
+            else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(LS))) {
+                Dir dir = SPIFFSWrapper::openDir(args.get(0));
+                while(dir.next()) {
+                    output.print(F("+LS: "));
+                    if (dir.isFile()) {
+                        output.printf_P(PSTR("%8.8s "), formatBytes(dir.fileSize()).c_str());
+                    }
+                    else {
+                        output.print(F("[...]    "));
+                    }
+                    output.println(dir.fileName());
+                }
+            }
             else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(CAT))) {
                 if (args.requireArgs(1, 1)) {
                     auto filename = args.get(0);
@@ -784,6 +801,9 @@ void at_mode_serial_handle_event(String &commandString)
             }
 #endif
 #if DEBUG
+            else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(FSM))) {
+                Mappings::getInstance().dump(output);
+            }
     #if PIN_MONITOR
             else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(PINM))) {
                 if (!PinMonitor::getInstance()) {
@@ -791,7 +811,6 @@ void at_mode_serial_handle_event(String &commandString)
                 }
                 else if (args.size() == 1) {
                     static EventScheduler::TimerPtr timer = nullptr;
-                    // auto &timer = PinMonitor::getTimer();
                     if (args.isTrue(0) && !timer) {
                         output.println(F("+PINM: started"));
                         Stream *serialPtr = &output;

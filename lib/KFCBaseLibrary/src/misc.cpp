@@ -17,7 +17,7 @@ PROGMEM_STRING_DEF(SPIFFS_tmp_dir, "c:/temp/");
 #endif
 
 String formatBytes(size_t bytes) {
-    char buf[8];
+    char buf[16];
     if (bytes < 1024) {
         snprintf_P(buf, sizeof(buf), PSTR("%dB"), bytes);
         return buf;

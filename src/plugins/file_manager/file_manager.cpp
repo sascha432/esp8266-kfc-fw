@@ -102,7 +102,7 @@ bool FileManager::_requireAuthentication()
     return _isAuthenticated;
 }
 
-String FileManager::_requireDir(const String &name, bool mustExist)
+String FileManager::_requireDir(const String &name)
 {
     if (!_request->hasArg(name.c_str())) {
         _errors++;
@@ -117,14 +117,13 @@ String FileManager::_requireDir(const String &name, bool mustExist)
     return path;
 }
 
-AsyncDirWrapper FileManager::_requireDir(const String &name)
+Dir FileManager::_getDir(const String &path)
 {
-    String path = _requireDir(name, true);
     if (!path.length()) {
-        return AsyncDirWrapper();
+        return Dir();
     }
-    AsyncDirWrapper dir = AsyncDirWrapper(path);
-    if (!dir.isValid()) {
+    Dir dir = SPIFFSWrapper::openDir(path);
+    if (!dir.next()) {
         _errors++;
         _debug_printf_P(PSTR("Directory %s does not exist or empty\n"), path.c_str());
     }
@@ -217,15 +216,9 @@ void FileManager::handleRequest()
 uint16_t FileManager::list()
 {
     _debug_printf_P(PSTR("FileManager::list()\n"));
-
-    String vfsRoot = _getArgument(F("vfs_root"));
-    AsyncDirWrapper dir = _requireDir(FSPGM(dir));
-    if (vfsRoot.length()) {
-        append_slash(vfsRoot);
-    }
-    dir.setVirtualRoot(vfsRoot);
+    auto dirName = _requireDir(FSPGM(dir));
     if (_isValidData()) {
-        _response = _debug_new AsyncDirResponse(dir);
+        _response = _debug_new AsyncDirResponse(_getDir(dirName), dirName);
         return 200;
     }
     return 500;
@@ -233,16 +226,16 @@ uint16_t FileManager::list()
 
 uint16_t FileManager::mkdir()
 {
-    AsyncDirWrapper dir = _requireDir(FSPGM(dir));
-    String newDir = _requireArgument(F("new_dir"));
+    auto dir = _getDir(_requireDir(FSPGM(dir)));
+    auto newDir = _requireArgument(F("new_dir"));
     uint16_t httpCode = 200;
     String message;
-    bool success = false;
+    auto success = false;
 
     append_slash(newDir);
     newDir += '.';
     if (newDir.charAt(0) != '/') {
-        newDir = dir.getDirName() + newDir;
+        newDir = dir.fileName() + newDir;
     }
     normalizeFilename(newDir);
 
@@ -269,9 +262,9 @@ uint16_t FileManager::upload()
 {
     uint16_t httpCode = 500;
     PrintString message;
-    bool success = false;
-    AsyncDirWrapper uploadDir = _requireDir(F("upload_current_dir"));
-    String filename = _request->arg(F("upload_filename"));
+    auto success = false;
+    auto uploadDir = _getDir(_requireDir(F("upload_current_dir")));
+    auto filename = _request->arg(F("upload_filename"));
     if (!_request->_tempObject) {
         _debug_printf_P(PSTR("_tempObject is null\n"));
         return httpCode;
@@ -285,7 +278,7 @@ uint16_t FileManager::upload()
             filename = p->value();
         }
         if (filename.charAt(0) != '/') {
-            filename = append_slash_copy(uploadDir.getDirName()) + filename;
+            filename = append_slash_copy(uploadDir.fileName()) + filename;
         }
         normalizeFilename(filename);
 
@@ -332,7 +325,7 @@ uint16_t FileManager::upload()
             url += String(httpCode);
         }
         url += '#';
-        url += uploadDir.getDirName();
+        url += uploadDir.fileName();
 
         message = String();
         httpCode = 302;
@@ -398,11 +391,11 @@ uint16_t FileManager::rename()
 {
     uint16_t httpCode = 200;
     String message;
-    bool success = false;
-    File file = _requireFile(FSPGM(filename));
-    String requestFilename = _request->arg(FSPGM(filename));
-    AsyncDirWrapper dir = _requireDir(FSPGM(dir));
-    String renameTo = _requireArgument(F("to"));
+    auto success = false;
+    auto file = _requireFile(FSPGM(filename));
+    auto requestFilename = _request->arg(FSPGM(filename));
+    auto dir = _getDir(_requireDir(FSPGM(dir)));
+    auto renameTo = _requireArgument(F("to"));
 
     if (!file) {
         message = FSPGM(ERROR_);
@@ -415,7 +408,7 @@ uint16_t FileManager::rename()
         file.close();
 
         if (renameTo.charAt(0) != '/') {
-            renameTo = append_slash_copy(dir.getDirName()) + renameTo;
+            renameTo = append_slash_copy(dir.fileName()) + renameTo;
         }
         normalizeFilename(renameTo);
 

@@ -13,6 +13,7 @@
 #include <misc.h>
 #include "blink_led_timer.h"
 #include "progmem_data.h"
+#include "fs_mapping.h"
 #include "build.h"
 #if NTP_CLIENT
 #include "./plugins/ntp/ntp_plugin.h"
@@ -585,10 +586,10 @@ const char *KFCFWConfiguration::getLastError() const
     return _lastError.c_str();
 }
 
-void KFCFWConfiguration::garbageCollector()
+void KFCFWConfiguration::gc()
 {
     if (_readAccess && millis() > _readAccess + _garbageCollectionCycleDelay) {
-        // _debug_println(F("KFCFWConfiguration::garbageCollector(): releasing memory"));
+        // _debug_println(F("KFCFWConfiguration::gc(): releasing memory"));
         release();
     }
 }
@@ -818,7 +819,8 @@ void KFCFWConfiguration::restartDevice()
 void KFCFWConfiguration::loop()
 {
     rng.loop();
-    config.garbageCollector();
+    config.gc();
+    Mappings::gc();
 }
 
 uint8_t KFCFWConfiguration::getMaxWiFiChannels()

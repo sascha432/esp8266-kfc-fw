@@ -608,8 +608,7 @@ bool web_server_send_file(String path, HttpHeaders &httpHeaders, bool client_acc
 
     _debug_printf_P(PSTR("web_server_send_file(%s)\n"), path.c_str());
     if (!mapping) {
-        auto &map = Mappings::getInstance();
-        mapping = map.getEntry(map.findEntry(path));
+        mapping = Mappings::getEntry(path);
         if (!mapping) {
             _debug_printf_P(PSTR("Not found: %s\n"), path.c_str());
             if (webTemplate) {
@@ -690,8 +689,7 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
         return false;
     }
 
-    auto &map = Mappings::getInstance();
-    auto mapping = map.getEntry(map.findEntry(path));
+    auto mapping = Mappings::getEntry(path);
     if (!mapping) {
         _debug_printf_P(PSTR("Not found: %s\n"), path.c_str());
         return false;
@@ -813,8 +811,7 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
                     request->onDisconnect([]() {
                         config.restartDevice();
                     });
-                    mapping = map.getEntry(map.findEntry(F("/rebooting.html")));
-                    // mapping = Mappings::getInstance().find(F("/rebooting.html"));
+                    mapping = Mappings::getEntry(F("/rebooting.html"));
                 } else {
                     request->redirect(F("/index.html"));
                 }
@@ -826,8 +823,7 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
                     request->onDisconnect([]() {
                         config.restartDevice();
                     });
-                    mapping = map.getEntry(map.findEntry(F("/rebooting.html")));
-                    // mapping = Mappings::getInstance().find(F("/rebooting.html"));
+                    mapping = Mappings::getEntry(F("/rebooting.html"));
                 } else {
                     request->redirect(F("/index.html"));
                 }

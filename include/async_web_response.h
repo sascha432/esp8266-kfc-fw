@@ -90,52 +90,6 @@ private:
     WebServerSetCPUSpeedHelper _setCPUSpeed;
 };
 
-class AsyncDirWrapper {
-public:
-    typedef std::vector<String> AsyncDirWrapperVector;
-
-    typedef enum {
-        INVALID = 0,
-        DIR,
-        FILE
-    } TypeEnum_t;
-
-public:
-    AsyncDirWrapper();
-    AsyncDirWrapper(const String &dirName);
-    // virtual ~AsyncDirWrapper();
-
-    void setVirtualRoot(const String &path);
-
-    String &getDirName();;
-
-    bool isValid() const;
-    bool _fileInside(const String &path);
-    bool isDir() const;
-    bool isFile() const;
-    bool next();
-
-    File openFile(const char *mode);
-    String fileName();
-    String mappedFile();
-    bool isMapped() const;
-    void getModificatonTime(char *modified, size_t size, PGM_P format);
-    size_t fileSize();
-
-private:
-    bool _isValid;
-    bool _firstNext;
-    TypeEnum_t _type;
-    Dir _dir;
-    String _dirName;
-    String _fileName;
-    String _virtualRoot;
-    const FSMappingEntry *_curMapping;
-    const FSMappingEntry *_iterator;
-    const FSMappingEntry *_end;
-    AsyncDirWrapperVector _dirs;
-};
-
 class AsyncDirResponse : public AsyncAbstractResponse {
 public:
     static const uint8_t TYPE_TMP_DIR =         2;
@@ -144,7 +98,7 @@ public:
     static const uint8_t TYPE_MAPPED_FILE =     1;
     static const uint8_t TYPE_REGULAR_FILE =    0;
 
-    AsyncDirResponse(const AsyncDirWrapper &dir);
+    AsyncDirResponse(const Dir &dir, const String &dirName);
 
     bool _sourceValid() const;
 
@@ -153,9 +107,8 @@ public:
 private:
     uint8_t _state;
     bool _next;
-    AsyncDirWrapper _dir;
+    Dir _dir;
     String _dirName;
-    size_t _dirNameLen;
     WebServerSetCPUSpeedHelper _setCPUSpeed;
 };
 

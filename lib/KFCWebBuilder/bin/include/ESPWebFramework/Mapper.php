@@ -47,10 +47,10 @@ class Mapper implements PluginInterface
      * @var array
      */
     private $flags;
-    /**
-     * @var callable
-     */
-    private $hashFunction;
+    // /**
+    //  * @var callable
+    //  */
+    // private $hashFunction;
 
     /**
      * @param WebBuilder $webBuilder
@@ -77,28 +77,28 @@ class Mapper implements PluginInterface
         $this->mappingsFile = $spiffs->getMappingsFile();
         $this->verbose = $webBuilder->isVerbose();
 
-        if (($hashAlgorithm = $webBuilder->getConfigReader()->getPlatformIOParser()->getDefinition('FS_MAPPINGS_HASH_ALGO')) === null) {
-            throw new \RuntimeException('Constant FS_MAPPINGS_HASH_ALGO is not defined');
-        }
-        $this->hashFunction = $hashAlgorithm.'_file';
-        $funcName = $this->hashFunction.'()';
-        if (!function_exists($this->hashFunction)) {
-            $funcName = "hash_file('$hashAlgorithm', ...)";
-            $this->hashFunction = function($filename, $raw_output) use($hashAlgorithm) {
-                return hash_file($hashAlgorithm, $filename, $raw_output);
-            };
-            if (in_array($hashAlgorithm, hash_algos(), true)) {
-                throw new \RuntimeException(sprintf('FS_MAPPINGS_HASH_ALGO %s is not supported', $hashAlgorithm));
+        // if (($hashAlgorithm = $webBuilder->getConfigReader()->getPlatformIOParser()->getDefinition('FS_MAPPINGS_HASH_ALGO')) === null) {
+        //     throw new \RuntimeException('Constant FS_MAPPINGS_HASH_ALGO is not defined');
+        // }
+        // $this->hashFunction = $hashAlgorithm.'_file';
+        // $funcName = $this->hashFunction.'()';
+        // if (!function_exists($this->hashFunction)) {
+        //     $funcName = "hash_file('$hashAlgorithm', ...)";
+        //     $this->hashFunction = function($filename, $raw_output) use($hashAlgorithm) {
+        //         return hash_file($hashAlgorithm, $filename, $raw_output);
+        //     };
+        //     if (in_array($hashAlgorithm, hash_algos(), true)) {
+        //         throw new \RuntimeException(sprintf('FS_MAPPINGS_HASH_ALGO %s is not supported', $hashAlgorithm));
 
-            }
-        }
-        if (($hashLength = (int)$webBuilder->getConfigReader()->getPlatformIOParser()->getDefinition('FS_MAPPINGS_HASH_LENGTH')) === null) {
-            throw new \RuntimeException('Constant FS_MAPPINGS_HASH_LENGTH is not defined');
-        }
+        //     }
+        // }
+        // if (($hashLength = (int)$webBuilder->getConfigReader()->getPlatformIOParser()->getDefinition('FS_MAPPINGS_HASH_LENGTH')) === null) {
+        //     throw new \RuntimeException('Constant FS_MAPPINGS_HASH_LENGTH is not defined');
+        // }
 
-        if (($len = strlen(call_user_func($this->hashFunction, __FILE__, true))) !== $hashLength) {
-            throw new \RuntimeException(sprintf('FS_MAPPINGS_HASH_LENGTH %d does not match the output of %s = %d', $hashLength, $funcName, $len));
-        }
+        // if (($len = strlen(call_user_func($this->hashFunction, __FILE__, true))) !== $hashLength) {
+        //     throw new \RuntimeException(sprintf('FS_MAPPINGS_HASH_LENGTH %d does not match the output of %s = %d', $hashLength, $funcName, $len));
+        // }
 
         $this->flags = array();
         if (($gzippedFlag = $webBuilder->getConfigReader()->getPlatformIOParser()->getDefinition('FS_MAPPINGS_FLAGS_GZIPPED')) === null) {
@@ -148,21 +148,24 @@ class Mapper implements PluginInterface
 
         $filenameMappings = '';
         $headers = pack($this->counterTypeSize === 1 ? 'C' : 'S', count($this->mappedFiles));
+        $packFormat = $this->counterTypeSize === 1 ? 'SCCLL' : 'SSCLL';
         $totalSize = 0;
 
         foreach($this->mappedFiles as $file) {
 
             $ofs1 = strlen($filenameMappings);
             $filenameMappings .= $file['mapped_file']."\0";
-            $ofs2 = strlen($filenameMappings);
-            $filenameMappings .= $file['spiffs_file']."\0";
+            // $ofs2 = strlen($filenameMappings);
+            // $filenameMappings .= $file['spiffs_file']."\0";
             $totalSize += $file['file_size'];
 
             if ($this->verbose) {
-                echo $file['mapped_file'].' => '.$file['spiffs_file'].(($file['flags'] & $this->flags[self::FLAGS_GZIPPED]) ? ', gzipped' : '').', size '.$file['original_file_size'].'/'.$file['file_size'].', '.sprintf('%.2f%%', $file['file_size'] / $file['original_file_size'] * 100)."\n";
+                echo $file['mapped_file'].' => '.$file['spiffs_file'].(($file['flags'] & $this->flags[self::FLAGS_GZIPPED]) ? ', gzipped' : '').', size '.$file['original_file_size'].'/'.$file['file_size'].', '.sprintf('%.2f%%', $file['file_size'] / $file['original_file_size'] * 100).' mtime '.$file['mtime']."\n";
             }
 
-            $headers .= pack('SScLL', $ofs1, $ofs2, $file['flags'], $file['mtime'], $file['file_size']).$file['hash'];
+            $headers .= pack($packFormat, $ofs1, $file['uid'], $file['flags'], $file['mtime'], $file['file_size']);
+
+            //$headers .= pack('SScLL', $ofs1, $ofs2, $file['flags'], $file['mtime'], $file['file_size']).$file['hash'];
 
         }
         $totalSize += strlen($headers) + strlen($filenameMappings);
@@ -217,7 +220,8 @@ class Mapper implements PluginInterface
             'file_size' => filesize($outFile),
             'flags' => $flags,
             'mtime' => $mtime,
-            'hash' => call_user_func($this->hashFunction, $outFile, true),
+            'uid' => $num,
+            // 'hash' => call_user_func($this->hashFunction, $outFile, true),
         );
 
         $file->setTmpOut($outFile);

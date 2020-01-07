@@ -5,7 +5,7 @@
 #pragma once
 
 #ifndef DEBUG_KFC_CONFIG
-#define DEBUG_KFC_CONFIG        1
+#define DEBUG_KFC_CONFIG        0
 #endif
 
 #include <Arduino_compat.h>

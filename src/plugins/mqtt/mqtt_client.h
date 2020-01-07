@@ -38,7 +38,7 @@
 
 class MQTTClient {
 public:
-    typedef enum : uint8_t {
+    typedef enum {
         QUEUE_SUBSCRIBE = 0,
         QUEUE_UNSUBSCRIBE,
         QUEUE_PUBLISH,

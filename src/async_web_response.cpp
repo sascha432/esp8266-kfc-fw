@@ -44,10 +44,10 @@ void AsyncJsonResponse::updateLength()
 }
 
 
-AsyncProgmemFileResponse::AsyncProgmemFileResponse(const String &contentType, FSMapping *mapping, AwsTemplateProcessor templateCallback) : AsyncAbstractResponse(templateCallback)
+AsyncProgmemFileResponse::AsyncProgmemFileResponse(const String &contentType, const FSMappingEntry *mapping, AwsTemplateProcessor templateCallback) : AsyncAbstractResponse(templateCallback)
 {
     _code = 200;
-    _content = mapping->open(fs::FileOpenMode::read);
+    _content = Mappings::getInstance().openFile(mapping, fs::FileOpenMode::read);
     _contentLength = _content.size();
     _contentType = contentType;
     _sendContentLength = true;
@@ -418,19 +418,15 @@ AsyncDirWrapper::AsyncDirWrapper(const String &dirName) : AsyncDirWrapper()
     _dirs.push_back(_dirName);
 
     if (_isValid) { // filter files that do not match _dirName
-        auto &mappings = Mappings::getInstance().getMappings();
-        _begin = mappings.begin();
-        _end = mappings.end();
-        _iterator = _begin;
+        auto &map = Mappings::getInstance();
+        _iterator = map.begin();
+        _end = map.end();
     }
 }
 
-AsyncDirWrapper::~AsyncDirWrapper()
-{
-    // if (_curMapping) {
-    //     delete _curMapping;
-    // }
-}
+// AsyncDirWrapper::~AsyncDirWrapper()
+// {
+// }
 
 void AsyncDirWrapper::setVirtualRoot(const String & path)
 {
@@ -516,21 +512,22 @@ bool AsyncDirWrapper::next()
         return false;
     }
     // debug_println("next()");
+    auto &map = Mappings::getInstance();
+    if (_end != map.end()) { // mappings were released or have been modified and all iterators have become invalid
+        return false;
+    }
     bool result = false;
-    if (_iterator != _end) { // go through virtual files first
+    if (_curMapping != _end) { // go through virtual files first
         result = true;
         do {
-            // if (_curMapping) {
-            //     delete _curMapping;
-            // }
             _curMapping = nullptr;
             if (_iterator == _end) { // continue with files from Dir()
                 result = false;
                 break;
             }
-            _curMapping = &(*_iterator);
+            _curMapping = _iterator;
             //_curMapping = new FSMapping(_iterator->getPath(), _iterator->getMappedPath(), _iterator->getModificatonTime(), _iterator->getFileSize()); //TODO memory leak, FSMapping needs a clone method or unique_ptr has to be removed
-            _fileName = _virtualRoot + _curMapping->getPath();
+            _fileName = _virtualRoot + map.getPath(_curMapping);
             // if (!_fileName.startsWith(_dirName)) {
             //     debug_printf("filtered-virtual %s: %s (%d) => %s\n", _dirName.c_str(), _fileName.c_str(), isMapped(), mappedFile().c_str());
             // }
@@ -538,10 +535,6 @@ bool AsyncDirWrapper::next()
         } while (!_fileInside(_fileName)); // filer files if real file does not match _dirName
     }
     if (!result) {
-        // if (_curMapping && _curMapping->isValid()) { // must be allocated memory
-        //     // delete _curMapping;
-        //     _curMapping = &Mappings::getInstance().getInvalid();
-        // }
         _curMapping = nullptr;
         bool skip;
         do {
@@ -557,8 +550,8 @@ bool AsyncDirWrapper::next()
             }
             skip = !_fileInside(_dir.fileName());
             if (!skip) {
-                for (auto it = _begin; it != _end; ++it) {
-                    if (_dir.fileName().equals(it->getMappedPath())) {
+                for (auto it = map.begin(); it != _end; ++it) {
+                    if (_dir.fileName().equals(map.getMappedPath(it))) {
                         skip = true; // remove real files that are mapped to virtual files
                     }
                 }
@@ -579,10 +572,10 @@ bool AsyncDirWrapper::next()
     return result;
 }
 
-File AsyncDirWrapper::openFile(const char * mode)
+File AsyncDirWrapper::openFile(const char *mode)
 {
     if (_curMapping) {
-        return _curMapping->open(mode);
+        return Mappings::getInstance().openFile(_curMapping, mode);
     }
     return SPIFFSWrapper::open(_dir, mode);
 }
@@ -595,7 +588,7 @@ String AsyncDirWrapper::fileName()
 String AsyncDirWrapper::mappedFile()
 {
     if (_curMapping) {
-        return _curMapping->getMappedPath();
+        return Mappings::getInstance().getMappedPath(_curMapping);
     }
     return _dir.fileName();
 }
@@ -612,21 +605,20 @@ void AsyncDirWrapper::getModificatonTime(char * modified, size_t size, PGM_P for
         modified[1] = 0;
         return;
     }
-    struct tm *tm = timezone_localtime(_curMapping->getModificatonTimePtr());
+    auto tm = timezone_localtime(&_curMapping->modificationTime);
     timezone_strftime_P(modified, size, format, tm);
 }
 
 size_t AsyncDirWrapper::fileSize()
 {
     if (_curMapping) {
-        return _curMapping->getFileSize();
+        return _curMapping->fileSize;
     }
     return _dir.fileSize();
 }
 
 
-AsyncTemplateResponse::AsyncTemplateResponse(const String &contentType, FSMapping *mapping, WebTemplate *webTemplate) : AsyncProgmemFileResponse(contentType, mapping, [this](const String &var) -> String
-{
+AsyncTemplateResponse::AsyncTemplateResponse(const String &contentType, const FSMappingEntry *mapping, WebTemplate *webTemplate) : AsyncProgmemFileResponse(contentType, mapping, [this](const String &var) -> String{
     PrintHtmlEntitiesString output;
     this->process(var, output);
     return output;

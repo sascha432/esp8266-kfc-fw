@@ -29,7 +29,7 @@
 
 class Sensor_Battery : public MQTTSensor {
 public:
-    typedef enum : uint8_t {
+    typedef enum {
         LEVEL,
         STATE
     } BatteryIdEnum_t;

@@ -45,6 +45,9 @@ public:
     }
 
     void setBuffer(uint8_t *buffer, size_t size);
+    void setLength(size_t length) {
+        _length = length;
+    }
 
     size_t size() const;
     size_t length() const;

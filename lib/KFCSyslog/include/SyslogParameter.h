@@ -4,7 +4,7 @@
 
 #pragma once
 
-typedef enum : uint8_t {
+typedef enum {
     SYSLOG_EMERG = 0,
     SYSLOG_ALERT,
     SYSLOG_CRIT,
@@ -16,7 +16,7 @@ typedef enum : uint8_t {
     SYSLOG_SEVERITY_ANY = 0xff,
 } SyslogSeverity;
 
-typedef enum : uint8_t {
+typedef enum {
     SYSLOG_FACILITY_KERN = 0,
     SYSLOG_FACILITY_USER,
     SYSLOG_FACILITY_MAIL,

@@ -5,193 +5,115 @@
 #pragma once
 
 #include <Arduino_compat.h>
+#include <EventScheduler.h>
+#include <Buffer.h>
 #include <memory>
 #include <map>
 
-class __FSMapping {
-public:
-    __FSMapping() : _path(nullptr) {
-    }
-    __FSMapping(const char *path) : _path(path), _gzipped(false) {
-    }
-    virtual ~__FSMapping() {
-    }
+#ifndef DEBUG_FS_MAPPING
+#define DEBUG_FS_MAPPING            1
+#endif
 
-    operator bool() const {
-        return _path != nullptr;
-    }
-    bool operator !() const {
-        return _path == nullptr;
-    }
-    operator void*() const {
-        return _path == nullptr ? nullptr : (void *)*this;
-    }
-    bool isValid() const {
-        return _path != nullptr;
-    }
+#ifndef FS_MAPPING_READ_ONLY
+#define FS_MAPPING_READ_ONLY        1
+#endif
 
-    const char *getPath() const {
-        return _path;
-    }
-    void setPath(const char *path) {
-        _path = path;
-    }
-    bool isPath(const char *path) const {
-        return strcmp(_path, path) == 0;
-    }
+#include <push_pack.h>
 
-    bool isGzipped() const {
-        return _gzipped;
-    }
-    void setGzipped(bool gzipped) {
-        _gzipped = gzipped;
-    }
+typedef struct __attribute__packed__ mapping_t {
+    uint16_t path_offset;
+    uint16_t mapped_path_offset;
+    uint8_t flags;
+    uint32_t mtime;
+    uint32_t file_size;
+    uint8_t hash[FS_MAPPINGS_HASH_LENGTH];
+} mapping_t;
 
-private:
-    const char *_path;
-    bool _gzipped;
-};
+typedef struct __attribute__packed__ {
+    uint16_t pathOffset;
+    uint16_t mappedPathOffset;
+    uint32_t fileSize: 31;
+    uint32_t gzipped: 1;
+    time_t modificationTime;
+} FSMappingEntry;
 
-class FSMapping : public __FSMapping {
-public:
-    FSMapping() : __FSMapping(), _hash(nullptr) {
-    }
-    FSMapping(const char *path, const char *mappedPath, time_t modificationTime, uint32_t fileSize) : __FSMapping(path) {
-        _mappedPath = mappedPath;
-        _modificationTime = modificationTime;
-        _fileSize = fileSize;
-    }
-    virtual ~FSMapping() {
-        if (_hash) {
-            free(_hash);
-        }
-    }
+typedef struct __attribute__packed__ {
+    uint8_t hash[FS_MAPPINGS_HASH_LENGTH];
+} FSMappingHash;
 
-    FSMapping(FSMapping &&mapping) {
-        *this = std::move(mapping);
-    }
-
-    FSMapping &operator=(const FSMapping &mapping) {
-        memcpy(this, &mapping, sizeof(*this));
-        if (mapping._hash) {
-            _hash = (uint8_t *)malloc(getHashSize());
-            memcpy(_hash, mapping._hash, getHashSize());
-        }
-        return *this;
-    }
-    FSMapping &operator=(FSMapping &&mapping) {
-        memcpy(this, &mapping, sizeof(*this));
-        mapping._hash = nullptr;
-        return *this;
-    }
-
-    time_t getModificatonTime() const {
-        return _modificationTime;
-    }
-    const time_t *getModificatonTimePtr() const {
-        return &_modificationTime;
-    }
-
-    void setModificationTime(time_t modificationTime) {
-        _modificationTime = modificationTime;
-    }
-
-    // SPIFFS filename
-    const char *getMappedPath() const {
-        return _mappedPath;
-    }
-
-    void setMappedPath(const char *mappedPath) {
-        _mappedPath = mappedPath;
-    }
-
-    bool isMapped(const char *mapped) const {
-        return strcmp(_mappedPath, mapped) == 0;
-    }
-
-    uint32_t getFileSize() const;
-
-    uint8_t *getHash() const {
-        return _hash;
-    }
-    String getHashString() const;
-
-    bool setHashFromHexStr(const char *hash);
-    bool setHash(uint8_t *hash);
-
-    constexpr static uint8_t getHashSize() {
-        return FS_MAPPINGS_HASH_LENGTH;
-    }
-
-    const File open(const char *mode) const;
-
-private:
-    const char *_mappedPath;
-    uint8_t *_hash;
-    uint32_t _fileSize;
-    time_t _modificationTime;
-};
-
-
-class Mappings;
-
-typedef std::vector<FSMapping> FileMappingsList;
-typedef std::vector<FSMapping>::const_iterator FileMappingsListIterator;
+#include <pop_pack.h>
 
 class Mappings {
-    enum Flags {
-        FLAGS_GZIPPED = FS_MAPPINGS_FLAGS_GZIPPED,
-    };
-
 public:
     Mappings();
     ~Mappings();
 
     static Mappings &getInstance();
 
-    inline bool empty() const {
-        return _mappings.empty();
+    int findEntry(const String &path) const {
+        return findEntry(path.c_str());
     }
-    inline FileMappingsListIterator get(const String &path) const {
-        return get(path.c_str());
+    int findEntry(const char *path) const;
+
+    int findMappedEntry(const String &mappedPath) const {
+        return findMappedEntry(mappedPath.c_str());
     }
-    FileMappingsListIterator get(const char *path) const;
+    int findMappedEntry(const char *mappedPath) const;
 
-    inline FSMapping *find(const String &path) const {
-        return find(path.c_str());
-    }
-    FSMapping *find(const char *path) const;
+    const FSMappingEntry *getEntry(int num) const;
+    const char *getMappedPath(int num) const;
+    const char *getPath(int num) const;
 
-    inline FileMappingsListIterator getByMappedPath(const String &mappedPath) const {
-        return getByMappedPath(mappedPath.c_str());
-    }
-    FileMappingsListIterator getByMappedPath(const char *mappedPath) const;
+    const File openFile(int num, const char *mode) const;
+    const File openFile(const FSMappingEntry *mapping, const char *mode) const;
 
-    bool rename(const char* pathFrom, const char* pathTo);
-    bool remove(const char *path);
+#if !FS_MAPPING_READ_ONLY
+    bool rename(int num, const char* pathTo);
+    bool remove(int num);
 
-
-// private:
     bool loadHashes();
-    void _loadMappings(bool extended = false);
     void _storeMappings(bool sort = false);
+#endif
+
+    bool empty() const {
+        return !_count;
+    }
+    size_t size() const {
+        return _count;
+    }
+    const FSMappingEntry *begin() const {
+        return &_entries[0];
+    }
+    const FSMappingEntry *end() const {
+        return &_entries[_count];
+    }
+
+    void _loadMappings(bool extended = false);
     void _freeMappings();
 
     void dump(Print &output);
 
-    FileMappingsList &getMappings() {
-        return _mappings;
+    bool validEntry(int num) const {
+        return !((unsigned)num >= (unsigned)_count);
     }
 
-    void test();
+    const char *getPath(const FSMappingEntry *entry) const {
+        return _data.getConstChar() + entry->pathOffset;
+    }
+    const char *getMappedPath(const FSMappingEntry *entry) const {
+        return _data.getConstChar() + entry->mappedPathOffset;
+    }
 
-public:
-    static FSMapping _invalidMapping;
 private:
-    static Mappings _instance;
+    uint8_t _count;
+    Buffer _data;
+    FSMappingEntry *_entries;
+#if !FS_MAPPING_READ_ONLY
+    FSMappingHash *_hashes;
+#endif
+    EventScheduler::TimerPtr _releaseTimer;
 
-    FileMappingsList _mappings;
-    uint8_t *_data;
+    static Mappings _instance;
 };
 
 

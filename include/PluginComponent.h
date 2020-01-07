@@ -22,7 +22,7 @@ public:
         PLUGIN_SETUP_DELAYED_AUTO_WAKE_UP,          // called after a delay to initialize services that have been skipped during wake up
     } PluginSetupMode_t;
 
-    typedef enum : int8_t {
+    typedef enum {
         PRIO_RESET_DETECTOR = -127,
         PRIO_CONFIG = -126,
         PRIO_MDNS = -90,
@@ -34,7 +34,7 @@ public:
         MIN_PRIORITY = 127
     } PluginPriorityEnum_t;
 
-    typedef enum : uint8_t {
+    typedef enum {
         NONE = 0,
         AUTO,
         CUSTOM,

@@ -601,14 +601,16 @@ PGM_P web_server_get_content_type(const String &path)
     }
 }
 
-bool web_server_send_file(String path, HttpHeaders &httpHeaders, bool client_accepts_gzip, FSMapping *mapping, AsyncWebServerRequest *request, WebTemplate *webTemplate)
+bool web_server_send_file(String path, HttpHeaders &httpHeaders, bool client_accepts_gzip, const FSMappingEntry *mapping, AsyncWebServerRequest *request, WebTemplate *webTemplate)
 {
     WebServerSetCPUSpeedHelper setCPUSpeed;
     AsyncWebServerResponse *response = nullptr;
 
     _debug_printf_P(PSTR("web_server_send_file(%s)\n"), path.c_str());
     if (!mapping) {
-        if (!(mapping = Mappings::getInstance().find(path))) {
+        auto &map = Mappings::getInstance();
+        mapping = map.getEntry(map.findEntry(path));
+        if (!mapping) {
             _debug_printf_P(PSTR("Not found: %s\n"), path.c_str());
             if (webTemplate) {
                 delete webTemplate;
@@ -657,7 +659,7 @@ bool web_server_send_file(String path, HttpHeaders &httpHeaders, bool client_acc
     } else {
         response = new AsyncProgmemFileResponse(FPSTR(web_server_get_content_type(path)), mapping);
         httpHeaders.replace(new HttpDateHeader(FSPGM(Expires), 86400 * 30));
-        httpHeaders.replace(new HttpDateHeader(FSPGM(Last_Modified), mapping->getModificatonTime()));
+        httpHeaders.replace(new HttpDateHeader(FSPGM(Last_Modified), mapping->modificationTime));
         if (web_server_is_public_path(path)) {
             HttpCacheControlHeader *header = new HttpCacheControlHeader();
             header->setPublic();
@@ -665,7 +667,7 @@ bool web_server_send_file(String path, HttpHeaders &httpHeaders, bool client_acc
             httpHeaders.replace(header);
         }
     }
-    if (mapping->isGzipped()) {
+    if (mapping->gzipped) {
         httpHeaders.add(FSPGM(Content_Encoding), F("gzip"));
     }
     httpHeaders.setWebServerResponseHeaders(response);
@@ -688,12 +690,13 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
         return false;
     }
 
-    FSMapping *mapping = Mappings::getInstance().find(path);
+    auto &map = Mappings::getInstance();
+    auto mapping = map.getEntry(map.findEntry(path));
     if (!mapping) {
         _debug_printf_P(PSTR("Not found: %s\n"), path.c_str());
         return false;
     }
-    if (mapping->isGzipped() && !client_accepts_gzip) {
+    if (mapping->gzipped && !client_accepts_gzip) {
         _debug_printf_P(PSTR("Client does not accept gzip encoding: %s\n"), path.c_str());
         request->send_P(503, FSPGM(mime_text_plain), PSTR("503: Client does not support gzip Content Encoding"));
         return true;
@@ -810,7 +813,8 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
                     request->onDisconnect([]() {
                         config.restartDevice();
                     });
-                    mapping = Mappings::getInstance().find(F("/rebooting.html"));
+                    mapping = map.getEntry(map.findEntry(F("/rebooting.html")));
+                    // mapping = Mappings::getInstance().find(F("/rebooting.html"));
                 } else {
                     request->redirect(F("/index.html"));
                 }
@@ -822,7 +826,8 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
                     request->onDisconnect([]() {
                         config.restartDevice();
                     });
-                    mapping = Mappings::getInstance().find(F("/rebooting.html"));
+                    mapping = map.getEntry(map.findEntry(F("/rebooting.html")));
+                    // mapping = Mappings::getInstance().find(F("/rebooting.html"));
                 } else {
                     request->redirect(F("/index.html"));
                 }

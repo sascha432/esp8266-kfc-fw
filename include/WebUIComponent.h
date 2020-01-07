@@ -69,7 +69,7 @@ WEBUI_PROGMEM_STRING_DECL(display_name)
 
 class WebUIComponent : public JsonUnnamedObject {
 public:
-    typedef enum : uint8_t {
+    typedef enum {
         WIDE,               // 4x1
         BADGE,              // 2x2
         SMALL = BADGE,

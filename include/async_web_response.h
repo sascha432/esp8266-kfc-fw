@@ -39,7 +39,7 @@ private:
 
 class AsyncProgmemFileResponse : public AsyncAbstractResponse {
 public:
-    AsyncProgmemFileResponse(const String &contentType, FSMapping *mapping, AwsTemplateProcessor templateCallback = nullptr);
+    AsyncProgmemFileResponse(const String &contentType, const FSMappingEntry *mapping, AwsTemplateProcessor templateCallback = nullptr);
 
     virtual bool _sourceValid() const override;
     virtual size_t _fillBuffer(uint8_t *data, size_t len) override;
@@ -51,7 +51,7 @@ private:
 
 class AsyncTemplateResponse : public AsyncProgmemFileResponse {
 public:
-    AsyncTemplateResponse(const String &contentType, FSMapping *mapping, WebTemplate *webTemplate);
+    AsyncTemplateResponse(const String &contentType, const FSMappingEntry *mapping, WebTemplate *webTemplate);
     virtual ~AsyncTemplateResponse();
 
     void process(const String &key, PrintHtmlEntitiesString &output) {
@@ -103,7 +103,7 @@ public:
 public:
     AsyncDirWrapper();
     AsyncDirWrapper(const String &dirName);
-    virtual ~AsyncDirWrapper();
+    // virtual ~AsyncDirWrapper();
 
     void setVirtualRoot(const String &path);
 
@@ -130,10 +130,9 @@ private:
     String _dirName;
     String _fileName;
     String _virtualRoot;
-    const FSMapping *_curMapping;
-    FileMappingsListIterator _iterator;
-    FileMappingsListIterator _begin;
-    FileMappingsListIterator _end;
+    const FSMappingEntry *_curMapping;
+    const FSMappingEntry *_iterator;
+    const FSMappingEntry *_end;
     AsyncDirWrapperVector _dirs;
 };
 

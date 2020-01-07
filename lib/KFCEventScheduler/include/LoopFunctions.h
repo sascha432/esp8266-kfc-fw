@@ -5,7 +5,7 @@
 #pragma once
 
 #ifndef DEBUG_LOOP_FUNCTIONS
-#define DEBUG_LOOP_FUNCTIONS 0
+#define DEBUG_LOOP_FUNCTIONS            0
 #endif
 
 #include <Arduino_compat.h>
@@ -27,7 +27,7 @@ public:
 
     static void add(Callback_t callback, CallbackPtr_t callbackPtr);  // for lambda functions, use any unique pointer as callbackPtr
     static void add(CallbackPtr_t callbackPtr) {
-      add(nullptr, callbackPtr);
+        add(nullptr, callbackPtr);
     }
     static void remove(CallbackPtr_t callbackPtr);
 

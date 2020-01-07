@@ -150,7 +150,7 @@ public:
     typedef std::vector<ArgumentPtr> ArgumentVector;
     typedef ArgumentVector::iterator ArgumentVectorIterator;
 
-    typedef enum : uint16_t {
+    typedef enum {
         ARG_ONE = 0,
         FIRST = 0,
         SECOND = 1,

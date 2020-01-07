@@ -14,7 +14,7 @@ class BlindsControl;
 
 class BlindsChannel : public MQTTComponent {
 public:
-    typedef enum : uint8_t {
+    typedef enum {
         UNKNOWN = 0,
         OPEN = 1,
         CLOSED = 2,

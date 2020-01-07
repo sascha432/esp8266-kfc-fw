@@ -60,7 +60,7 @@ private:
 
 class SerialHandler {
 public:
-    typedef enum : uint8_t {
+    typedef enum {
         RECEIVE     = 0x01,
         TRANSMIT    = 0x02,
         REMOTE_RX   = 0x04,

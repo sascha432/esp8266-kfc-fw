@@ -20,7 +20,7 @@ PROGMEM_STRING_DECL(blinds_controller_channel2_sensor);
 
 class BlindsControl : public MQTTComponent, public WebUIInterface {
 public:
-    typedef enum : uint8_t {
+    typedef enum {
         NONE =          0xff,
         CHANNEL1 =      0,
         CHANNEL2,

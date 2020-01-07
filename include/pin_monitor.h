@@ -26,16 +26,37 @@ class PinMonitor {
 public:
     typedef void (* Callback_t)(void *arg);
 
-    typedef struct {
-        uint8_t pin;
-        uint8_t value;
-        uint32_t micro;
-        Callback_t callback;
-        void *arg;
-    } Pin_t;
+    class Pin {
+    public:
+        Pin(uint8_t pin, uint8_t value, Callback_t callback, void *arg) : _micro(0), _callback(callback), _arg(arg), _pin(pin), _value(value) {
+        }
+
+        uint8_t getPin() const {
+            return _pin;
+        }
+        void *getArg() const {
+            return _arg;
+        }
+
+        void invoke(uint8_t value, uint32_t micro) {
+            _value = value;
+            _micro = micro;
+            _callback(this);
+        }
+
+    private:
+        friend PinMonitor;
+
+        uint32_t _micro;
+        Callback_t _callback;
+        void *_arg;
+        uint8_t _pin;
+        uint8_t _value;
+    };
 
 private:
     PinMonitor();
+
 public:
     ~PinMonitor();
 
@@ -45,11 +66,11 @@ public:
         return _instance;
     }
 
-    typedef std::vector<Pin_t> PinsVector;
+    typedef std::vector<Pin> PinsVector;
     typedef PinsVector::iterator PinsVectorIterator;
 
     // NOTE: INPUT_PULLUP does not seem to work
-    Pin_t *addPin(uint8_t pin, Callback_t callback, void *arg, uint8_t pinMode = INPUT);
+    Pin *addPin(uint8_t pin, Callback_t callback, void *arg, uint8_t pinMode = INPUT);
     bool removePin(uint8_t pin, void *arg);
 
     void dumpPins(Stream &output);

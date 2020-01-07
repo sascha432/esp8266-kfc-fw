@@ -12,7 +12,8 @@ Author: sascha_lammers@gmx.de
 
 static WiFiCallbacks::CallbackVector _callbacks;
 
-uint8_t WiFiCallbacks::add(uint8_t events, WiFiCallbacks::Callback_t callback, WiFiCallbacks::CallbackPtr_t callbackPtr) {
+uint8_t WiFiCallbacks::add(uint8_t events, WiFiCallbacks::Callback_t callback, WiFiCallbacks::CallbackPtr_t callbackPtr)
+{
     _debug_printf_P(PSTR("WiFiCallbacks::add(%u, %p)\n"), events, callbackPtr);
 
     events &= EventEnum_t::ANY;
@@ -29,20 +30,25 @@ uint8_t WiFiCallbacks::add(uint8_t events, WiFiCallbacks::Callback_t callback, W
     return events;
 }
 
-uint8_t WiFiCallbacks::remove(uint8_t events, WiFiCallbacks::CallbackPtr_t callbackPtr) {
+int8_t WiFiCallbacks::remove(uint8_t events, WiFiCallbacks::CallbackPtr_t callbackPtr)
+{
     _debug_printf_P(PSTR("WiFiCallbacks::remove(%u, %p)\n"), events, callbackPtr);
-    _callbacks.erase(std::remove_if(_callbacks.begin(), _callbacks.end(), [&](WiFiCallbacks::CallbackEntry_t &entry) {
-        if (entry.callbackPtr == callbackPtr) {
-            _debug_printf_P(PSTR("WiFiCallbacks::remove(): callbackPtr %p changed events from %u to %u\n"), callbackPtr, entry.events, entry.events & ~events);
-            entry.events &= ~events;
-            return entry.events == 0;
+    for (auto iterator = _callbacks.begin(); iterator != _callbacks.end(); ++iterator) {
+        if (callbackPtr == iterator->callbackPtr) {
+            _debug_printf_P(PSTR("WiFiCallbacks::remove(): callbackPtr %p changed events from %u to %u\n"), callbackPtr, iterator->events, iterator->events & ~events);
+            iterator->events &= ~events;
+            if (iterator->events == 0) {
+                _callbacks.erase(iterator);
+                return 0;
+            }
+            return iterator->events;
         }
-        return false;
-    }), _callbacks.end());
-    return events;
+    }
+    return -1;
 }
 
-void WiFiCallbacks::callEvent(WiFiCallbacks::EventEnum_t event, void *payload) {
+void WiFiCallbacks::callEvent(WiFiCallbacks::EventEnum_t event, void *payload)
+{
     _debug_printf_P(PSTR("WiFiCallbacks::callEvent(%u, %p)\n"), event, payload);
     for (const auto &entry : _callbacks) {
         if (entry.events & event) {
@@ -57,6 +63,7 @@ void WiFiCallbacks::callEvent(WiFiCallbacks::EventEnum_t event, void *payload) {
     }
 }
 
-WiFiCallbacks::CallbackVector &WiFiCallbacks::getVector() {
+WiFiCallbacks::CallbackVector &WiFiCallbacks::getVector()
+{
     return _callbacks;
 }

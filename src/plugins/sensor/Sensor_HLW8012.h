@@ -56,7 +56,7 @@
 
 class Sensor_HLW8012 : public Sensor_HLW80xx {
 public:
-    typedef enum : uint8_t {
+    typedef enum {
         CURRENT =           1,
         VOLTAGE =           0,
         CYCLE =             0xff

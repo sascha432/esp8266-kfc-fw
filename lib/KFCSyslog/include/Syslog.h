@@ -30,7 +30,7 @@
 
 class Syslog;
 
-typedef enum : uint8_t {
+typedef enum {
     SYSLOG_PROTOCOL_NONE = 0,
     SYSLOG_PROTOCOL_UDP,
     SYSLOG_PROTOCOL_TCP,

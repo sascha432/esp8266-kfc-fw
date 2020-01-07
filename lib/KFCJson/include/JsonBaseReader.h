@@ -33,7 +33,7 @@ public:
         uint16_t count;
     } JsonStack_t;
 
-    typedef enum : uint8_t {
+    typedef enum {
         JSON_ERROR_NONE = 0,
         JSON_ERROR_OBJECT_VALUE_WITHOUT_KEY,
         JSON_ERROR_ARRAY_WITH_KEY,
@@ -44,7 +44,7 @@ public:
         JSON_ERROR_OUT_OF_BOUNDS,                   // array or object terminator without array or object
         JSON_ERROR_USER_ABORT,
         JSON_ERROR_INVALID_END,                     // array closed with } or object closed with ]
-    } JsonErrorEnum_t ;
+    } JsonErrorEnum_t;
 
     typedef struct {
         String message;
@@ -54,7 +54,7 @@ public:
 
     typedef std::vector<JsonStack_t> JsonStackVector;
 
-    typedef enum : int8_t {
+    typedef enum {
 		JSON_TYPE_ANY = -1,
 		JSON_TYPE_INVALID = 0,
 		JSON_TYPE_STRING,

@@ -3,6 +3,7 @@
  */
 
 #include <Arduino_compat.h>
+#include <EventTimer.h>
 
 #if defined(ESP32)
 #include <WiFi.h>
@@ -18,186 +19,31 @@
 #include <ProgmemStream.h>
 #include "fs_mapping.h"
 
+#if DEBUG_FS_MAPPING
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
+#endif
+
 PROGMEM_STRING_DEF(fs_mapping_file, "/webui/.mappings");
 
 Mappings Mappings::_instance;
 
-uint32_t FSMapping::getFileSize() const
-{
-    return _fileSize;
-}
-
-String FSMapping::getHashString() const
-{
-    String hashStr;
-    if (_hash) {
-        char buf[3];
-        auto ptr = _hash;
-        auto count = getHashSize();
-        while(count--) {
-            snprintf_P(buf, sizeof(buf), PSTR("%02x"), *ptr++ & 0xff);
-            hashStr += buf;
-        }
-    }
-    return hashStr;
-}
-
-bool FSMapping::setHashFromHexStr(const char *hash)
-{
-    if (strlen(hash) == getHashSize() * 2) {
-        if (_hash) {
-            free(_hash);
-        }
-        auto count = getHashSize();
-        if (nullptr == (_hash = (uint8_t *)malloc(getHashSize()))) {
-            return false;
-        }
-        auto dst = _hash;
-        auto src = hash;
-        char buf[3];
-        buf[2] = 0;
-        while(count--) {
-            buf[0] = *src++;
-            buf[1] = *src++;
-            *dst++ = (uint8_t)strtoul(buf, nullptr, 16);
-        }
-        return true;
-    }
-    return false;
-}
-
-bool FSMapping::setHash(uint8_t *hash)
-{
-    if (!hash) {
-        if (_hash) {
-            free(_hash);
-            _hash = nullptr;
-        }
-        return true;
-    }
-    if (!_hash && nullptr == (_hash = (uint8_t *)malloc(getHashSize()))) {
-        return false;
-    }
-    memcpy(_hash, hash, getHashSize());
-    return true;
-}
-
-bool Mappings::rename(const char* pathFrom, const char* pathTo)
-{
-    // spiffs_t fs;
-    // // SPIFFS_LOCK(&fs);
-    if (loadHashes()) {
-        for(auto iterator = _mappings.begin(); iterator != _mappings.end(); ++iterator) {
-            if (strcmp(pathFrom, iterator->getPath()) == 0) {
-                char *mappedPath = strdup(iterator->getMappedPath());
-                if (mappedPath) {
-                    File file = SPIFFS.open(mappedPath, fs::FileOpenMode::read);
-                    _mappings.emplace_back(FSMapping(pathTo, mappedPath, time(nullptr), file.size()));
-                    file.close();
-                    _mappings.back().setHash(iterator->getHash());
-                    _mappings.erase(iterator);
-                    debug_printf_P(PSTR("Renamed %s to %s (%s, %s)"), iterator->getPath(), _mappings.back().getPath(), _mappings.back().getMappedPath(), _mappings.back().getHashString().c_str());
-                    _storeMappings(true);
-                    free(mappedPath);
-                }
-                // SPIFFS_UNLOCK(&fs);
-                return true;
-            }
-        }
-    } else {
-        debug_println(F("Failed to load hashes"));
-    }
-    // SPIFFS_UNLOCK(&fs);
-    return false;
-}
-
-const File FSMapping::open(char const *mode) const
-{
-    return SPIFFS.open(getMappedPath(), mode);
-}
-
-bool Mappings::remove(const char *path)
-{
-    bool result = false;
-    // spiffs_t fs;
-    // SPIFFS_LOCK(&fs);
-    if (loadHashes()) {
-        for(auto iterator = _mappings.begin(); iterator != _mappings.end(); ++iterator) {
-            if (!strcmp(path, iterator->getPath())) {
-                SPIFFS.remove(iterator->getMappedPath());
-                _mappings.erase(iterator);
-                break;
-            }
-        }
-        _storeMappings();
-    } else {
-        debug_println(F("Failed to load hashes"));
-    }
-    // SPIFFS_UNLOCK(&fs);
-    return result;
-}
-
-FSMapping *Mappings::find(const char *path) const
-{
-    auto iterator = get(path);
-    if (iterator != _mappings.end()) {
-        return (FSMapping *)&(*iterator);
-    }
-    return nullptr;
-}
-
-#if FS_MAPPING_SORTED
-
-FileMappingsListIterator Mappings::get(const char *path) const
-{
-    // debug_printf_P(PSTR("get(%s)\n"), path);
-    auto result = std::lower_bound(_mappings.begin(), _mappings.end(), path, [](const FSMapping &mapping, const char *path) {
-        return strcmp(path, mapping.getPath()) > 0;
-    });
-    if (result != _mappings.end() && strcmp(path, result->getPath()) == 0) {
-        return result;
-    }
-    return _mappings.end();
-}
-
-#else
-
-FileMappingsListIterator Mappings::get(const char *path) const {
-    // debug_printf_P(PSTR("get(%s)\n"), path);
-    for(auto iterator = _mappings.begin(); iterator != _mappings.end(); ++iterator) {
-        if (iterator->isPath(mappedPath)) {
-            return iterator;
-        }
-    }
-    return _mappings.end();
-}
-
-#endif
-
-FileMappingsListIterator Mappings::getByMappedPath(const char *mappedPath) const
-{
-    // debug_printf_P(PSTR("getByMappedPath(%s)\n"), mappedPath);
-    for(auto iterator = _mappings.begin(); iterator != _mappings.end(); ++iterator) {
-        if (iterator->isMapped(mappedPath)) {
-            return iterator;
-        }
-    }
-    return _mappings.end();
-}
-
-
 Mappings &Mappings::getInstance()
 {
-    if (Mappings::_instance.empty()) {
-        Mappings::_instance._loadMappings();
+    // _debug_printf_P(PSTR("Mappings::getInstance(): size=%u\n"), _instance._count);
+    if (_instance.empty()) {
+        _instance._loadMappings();
     }
-    return Mappings::_instance;
+    return _instance;
 }
 
 
-Mappings::Mappings()
+Mappings::Mappings() : _entries(nullptr), _releaseTimer(nullptr)
 {
-    _data = nullptr;
+#if !FS_MAPPING_READ_ONLY
+    _hashes = nullptr;
+#endif
 }
 
 Mappings::~Mappings()
@@ -205,39 +51,149 @@ Mappings::~Mappings()
     _freeMappings();
 }
 
+int Mappings::findEntry(const char *path) const
+{
+    for(FS_MAPPINGS_COUNTER_TYPE i = 0; i < _count; i++) {
+        if (!strcmp(path, getPath(&_entries[i]))) {
+            return i;
+        }
+    }
+    return -1;
+}
 
-#include <push_pack.h>
+int Mappings::findMappedEntry(const char *mappedPath) const
+{
+    for(FS_MAPPINGS_COUNTER_TYPE i = 0; i < _count; i++) {
+        if (!strcmp(mappedPath, getMappedPath(&_entries[i]))) {
+            return i;
+        }
+    }
+    return -1;
+}
 
-typedef struct __attribute__packed__ mapping_t {
-    uint16_t path_offset;
-    uint16_t mapped_path_offset;
-    uint8_t flags;
-    uint32_t mtime;
-    uint32_t file_size;
-    uint8_t hash[FS_MAPPINGS_HASH_LENGTH];
-} mapping_t;
+const FSMappingEntry *Mappings::getEntry(int num) const
+{
+    if (validEntry(num)) {
+        return &_entries[num];
+    }
+    return nullptr;
+}
 
-#include <pop_pack.h>
+const char *Mappings::getMappedPath(int num) const
+{
+    if (validEntry(num)) {
+        return getMappedPath(&_entries[num]);
+    }
+    return nullptr;
+}
+
+const char *Mappings::getPath(int num) const
+{
+    if (validEntry(num)) {
+        return getPath(&_entries[num]);
+    }
+    return nullptr;
+}
+
+const File Mappings::openFile(int num, char const *mode) const
+{
+    if (validEntry(num)) {
+        return openFile(&_entries[num], mode);
+    }
+    return File();
+}
+
+const File Mappings::openFile(const FSMappingEntry *mapping, const char *mode) const
+{
+    if (mapping) {
+        return SPIFFS.open(getMappedPath(mapping), mode);
+    }
+    return File();
+}
+
+#if !FS_MAPPING_READ_ONLY
+
+bool Mappings::rename(int num, const char* pathTo)
+{
+    if (validEntry(num)) {
+        // spiffs_t fs;
+        // // SPIFFS_LOCK(&fs);
+        if (loadHashes()) {
+            FSMappingEntry &renameEntry = _entries[num];
+
+            // update record
+            renameEntry.modificationTime = time(nullptr);
+            renameEntry.pathOffset = _data.length();
+            _data.write(pathTo, strlen(pathTo)); // append new path to end of data block
+
+            _storeMappings(true);   // sort after rename
+            // SPIFFS_UNLOCK(&fs);
+            return true;
+
+        } else {
+            _debug_println(F("Failed to load hashes"));
+        }
+        // SPIFFS_UNLOCK(&fs);
+    }
+    return false;
+}
+
+bool Mappings::remove(int num)
+{
+    bool result = false;
+    if (validEntry(num)) {
+        // spiffs_t fs;
+        // SPIFFS_LOCK(&fs);
+        if (loadHashes()) {
+            FSMappingEntry &deleteEntry = _entries[num];
+            result = SPIFFS.remove(getMappedPath(&deleteEntry));
+
+            _count--;
+            memmove(&_entries[num], &_entries[num + 1], (_count - num) * sizeof(*_entries));
+            memmove(&_hashes[num], &_hashes[num + 1], (_count - num) * sizeof(*_hashes));
+
+            _storeMappings(false); // we do not need to sort after removing a file
+        } else {
+            _debug_println(F("Failed to load hashes"));
+        }
+        // SPIFFS_UNLOCK(&fs);
+    }
+    return result;
+}
 
 bool Mappings::loadHashes()
 {
+    if (!_count) {
+        return false;
+    }
     File file = SPIFFS.open(FSPGM(fs_mapping_file), fs::FileOpenMode::read);
     if (file) {
         FS_MAPPINGS_COUNTER_TYPE items;
         if (file.read((uint8_t *)&items, sizeof(items)) == sizeof(items)) {
-            mapping_t header;
-            FS_MAPPINGS_COUNTER_TYPE pos = 0;
-            while(pos < items) {
-                if (file.read((uint8_t *)&header, sizeof(header)) != sizeof(header) || !_mappings.at(pos).setHash(header.hash)) {
-                    return false;
+            if (_count != items) { // check if we got a match otherwise not all records have been loaded
+                if (_hashes) {
+                    free(_hashes);
                 }
-                pos++;
+                _hashes = (FSMappingHash *)malloc(items * sizeof(FSMappingHash));
+                if (_hashes) {
+                    mapping_t header;
+                    FS_MAPPINGS_COUNTER_TYPE pos = 0;
+                    while(pos < items) {
+                        if (file.read((uint8_t *)&header, sizeof(header)) != sizeof(header)) {
+                            return false;
+                        }
+                        memcpy(_hashes[pos++].hash, header.hash, sizeof(_hashes->hash));
+                    }
+                    return true;
+                }
             }
-            return true;
         }
     }
     return false;
 }
+
+#endif
+
 
 void Mappings::_loadMappings(bool extended)
 {
@@ -252,41 +208,82 @@ void Mappings::_loadMappings(bool extended)
             // debug_printf_P(PSTR("index size %d\n"), index_size);
             uint16_t data_size  = file.size() - index_size - sizeof(items);
             // debug_printf_P(PSTR("data_size %d\n"), data_size);
-            _data = (uint8_t *)malloc(data_size);   // all strings are stored in single block of memory and the offset is passed to FSMapping
-            if (_data) {
+            if (_data.reserve(data_size)) {
                 if (file.seek(index_size + sizeof(items), SeekSet)) {
-                    if (file.read(_data, data_size) == data_size) {
+                    if (file.read(_data.get(), data_size) == data_size) {
+                        _data.setLength(data_size);
                         if (file.seek(sizeof(items), SeekSet)) {
-                            FS_MAPPINGS_COUNTER_TYPE count = items;
-                            _mappings.reserve(items);
-                            while(count--) {
-                                mapping_t header;
-                                if (file.read((uint8_t *)&header, sizeof(header)) == sizeof(header)) {
-                                    _mappings.emplace_back(FSMapping((const char *)&_data[header.path_offset], (const char *)&_data[header.mapped_path_offset], header.mtime, header.file_size));
-                                    FSMapping &mapping = _mappings.back();
-                                    mapping.setGzipped(!!(header.flags & FLAGS_GZIPPED));
-                                    if (extended) {
-                                        mapping.setHash(header.hash);
-                                    }
-                                    // debug_printf_P(PSTR("header, offsets %d %d, flags %d, path %s, mapped path %s mtime %lu, file size %lu\n"), (int)header.path_offset, (int)header.mapped_path_offset, (int)header.flags, mapping.getPath(), mapping.getMappedPath(), (ulong)header.mtime, (ulong)header.file_size);
-                                } else {
-                                    debug_printf_P(PSTR("Cannot read index %d/%d"), count, items);
+                            _entries = (FSMappingEntry *)malloc(sizeof(FSMappingEntry) * items);
+                            if (_entries) {
+#if !FS_MAPPING_READ_ONLY
+                                if (extended) {
+                                    _hashes = (FSMappingHash *)malloc(sizeof(FSMappingHash) * items);
                                 }
+                                if (!extended || _hashes) {
+#endif
+                                    // auto count = items;
+                                    _debug_printf_P(PSTR("Mappings::_loadMappings(): count=%u, data=%u, entries=%u, hashes=%u\n"),
+                                        items,
+                                        data_size,
+                                        sizeof(FSMappingEntry) * items,
+                                        extended ? (sizeof(FSMappingHash) * items) : 0
+                                    );
+                                    for(_count = 0; _count < items; _count++) {
+                                        mapping_t header;
+                                        if (file.read((uint8_t *)&header, sizeof(header)) == sizeof(header)) {
+
+                                            _entries[_count].pathOffset = header.path_offset;
+                                            _entries[_count].mappedPathOffset = header.mapped_path_offset;
+                                            _entries[_count].fileSize = header.file_size;
+                                            _entries[_count].gzipped = header.flags & FS_MAPPINGS_FLAGS_GZIPPED;
+
+#if !FS_MAPPING_READ_ONLY
+
+                                            if (extended) {
+                                                memcpy(_hashes[_count].hash, header.hash, sizeof(_hashes->hash));
+                                            }
+#endif
+                                        } else {
+                                            _debug_printf_P(PSTR("Cannot read index %d/%d"), _count, items);
+                                        }
+                                    }
+#if !FS_MAPPING_READ_ONLY
+
+                                }
+                                else {
+                                    _debug_printf_P(PSTR("Cannot allocate hashes %d\n"), items);
+                                }
+#endif
+                            }
+                            else {
+                                _debug_printf_P(PSTR("Cannot allocate entries %d\n"), items);
                             }
                         }
-                    } else {
-                        debug_printf_P(PSTR("Cannot read mapping data %d\n"), data_size);
                     }
-                } else {
-                    debug_printf_P(PSTR("Seek failed offset %d\n"), index_size);
+                    else {
+                        _debug_printf_P(PSTR("Cannot read mapping data %d\n"), data_size);
+                    }
                 }
-            } else {
-                debug_printf_P(PSTR("Cannot allocate mapping buffer %d\n"), data_size);
+                else {
+                    _debug_printf_P(PSTR("Seek failed offset %d\n"), index_size);
+                }
             }
-        } else {
-            debug_println(F("Cannot read mapping item count"));
+            else {
+                _debug_printf_P(PSTR("Cannot allocate mapping buffer %d\n"), data_size);
+            }
+        }
+        else {
+            _debug_println(F("Cannot read mapping item count"));
         }
     }
+
+    _debug_printf_P(PSTR("Mappings::_loadMappings(): mappings loaded=%u\n"), _count);
+
+    Scheduler.removeTimer(&_releaseTimer);
+    Scheduler.addTimer(&_releaseTimer, 5000, false, [this](EventScheduler::TimerPtr) {
+        _debug_printf_P(PSTR("FSMapping auto release\n"));
+        _freeMappings();
+    });
 
 // #if DEBUG
 //     dump(&DEBUG_OUTPUT);
@@ -295,94 +292,111 @@ void Mappings::_loadMappings(bool extended)
 
 void Mappings::dump(Print &output)
 {
-    output.printf_P(PSTR("Total mappings %d\n"), _mappings.size());
-
-    for(const auto &mapping : _mappings) {
-        output.printf_P(PSTR("Path %s, mapped %s, mtime %u\n"), mapping.getPath(), mapping.getMappedPath(), (uint32_t)mapping.getModificatonTime());
+    output.printf_P(PSTR("Total mappings %d\n"), _count);
+    for(uint8_t i = 0; i < _count; i++) {
+        auto &entry = _entries[i];
+        output.printf_P(PSTR("Path %s, mapped %s, mtime %u, size %u\n"), getPath(&entry), getMappedPath(&entry), (uint32_t)entry.modificationTime, (uint32_t)entry.fileSize);
     }
 }
 
+#if !FS_MAPPING_READ_ONLY
+
 void Mappings::_storeMappings(bool sort)
 {
-    // _loadMappings(true);
+     _loadMappings(true);
     File file = SPIFFS.open(FSPGM(fs_mapping_file), fs::FileOpenMode::write);
     if (file) {
 
-        FS_MAPPINGS_COUNTER_TYPE items = _mappings.size();
         mapping_t header;
-        uint16_t pathOffset;
+        uint16_t pathOffset = 0;
         uint16_t mappedOffset;
 
 #if FS_MAPPING_SORTED
-        if (sort) {
-            std::sort(_mappings.begin(), _mappings.end(), [](const FSMapping &a, const FSMapping &b) {
-                return strcmp(a.getPath(), b.getPath()) > 0;
-            });
-        }
+// TODO not supported atm
+        // if (sort) {
+        //     std::sort(_mappings.begin(), _mappings.end(), [](const FSMapping &a, const FSMapping &b) {
+        //         return strcmp(a.getPath(), b.getPath()) > 0;
+        //     });
+        // }
 #endif
 
-        pathOffset = 0;
-
         // item count
-        file.write((uint8_t *)&items, sizeof(items));
+        file.write((uint8_t *)&_count, sizeof(_count));
 
         // headers
-        for(const auto &mapping : _mappings) {
-            mappedOffset = pathOffset + strlen(mapping.getPath()) + 1;
+        for(FS_MAPPINGS_COUNTER_TYPE num = 0; num < _count; num++) {
+            auto &entry = _entries[num];
+            mappedOffset = pathOffset + strlen(getPath(&entry)) + 1;
             header.path_offset = pathOffset;
             header.mapped_path_offset = mappedOffset;
-            header.flags = mapping.isGzipped() ? FLAGS_GZIPPED : 0;
-            header.mtime = mapping.getModificatonTime();
-            header.file_size = mapping.getFileSize();
-            memcpy(header.hash, mapping.getHash(), mapping.getHashSize());
+            header.flags = entry.gzipped ? FS_MAPPINGS_FLAGS_GZIPPED : 0;
+            header.mtime = entry.modificationTime;
+            header.file_size = entry.fileSize;
+            memcpy(header.hash, _hashes[num].hash, FS_MAPPINGS_HASH_LENGTH);
             file.write((uint8_t *)&header, sizeof(header));
-            pathOffset = mappedOffset + strlen(mapping.getMappedPath()) + 1;
+            pathOffset = mappedOffset + strlen(getMappedPath(&entry)) + 1;
         }
 
         // files
-        for(const auto &mapping : _mappings) {
-            file.write((uint8_t *)mapping.getPath(), strlen(mapping.getPath()) + 1);
-            file.write((uint8_t *)mapping.getMappedPath(), strlen(mapping.getMappedPath()) + 1);
+        for(FS_MAPPINGS_COUNTER_TYPE num = 0; num < _count; num++) {
+            auto entry = &_entries[num];
+            auto path = getPath(entry);
+            auto mappedPath = getMappedPath(entry);
+            file.write((uint8_t *)path, strlen(path) + 1);
+            file.write((uint8_t *)mappedPath, strlen(mappedPath) + 1);
         }
 
         file.close();
 
-        _freeMappings();
     }
-
+    _freeMappings();
 }
+
+#endif
 
 void Mappings::_freeMappings()
 {
-    _mappings.clear();
-    if (_data) {
-        free(_data);
-        _data = nullptr;
+    _debug_printf_P(PSTR("Mappings::_freeMappings(): count=%u\n"), _count);
+    Scheduler.removeTimer(&_releaseTimer);
+    _data.clear();
+    if (_entries) {
+        free(_entries);
+        _entries = nullptr;
     }
+#if !FS_MAPPING_READ_ONLY
+    if (_hashes) {
+        free(_hashes);
+        _hashes = nullptr;
+    }
+#endif
+    _count = 0;
 }
 
 const File SPIFFSWrapper::open(Dir dir, const char *mode)
 {
-    FSMapping *mapping;
-    if ((mapping = Mappings::getInstance().find(dir.fileName())) != nullptr) {
-        return mapping->open(mode);
+    auto &map = Mappings::getInstance();
+    auto num = map.findEntry(dir.fileName());
+    if (map.validEntry(num)) {
+        return map.openFile(num, mode);
     }
     return dir.openFile(mode);
 }
 
 const File SPIFFSWrapper::open(const char *path, const char *mode)
 {
-    FSMapping *mapping;
-    if ((mapping = Mappings::getInstance().find(path)) != nullptr) {
-        return mapping->open(mode);
+    auto &map = Mappings::getInstance();
+    auto num = map.findEntry(path);
+    if (map.validEntry(num)) {
+        return map.openFile(num, mode);
     }
     return SPIFFS.open(path, mode);
 }
 
 bool SPIFFSWrapper::exists(const char *path)
 {
-    Mappings &mappings = Mappings::getInstance();
-    if (mappings.find(path)) {
+    auto &map = Mappings::getInstance();
+    auto num = map.findEntry(path);
+    if (map.validEntry(num)) {
         return true;
     }
     return SPIFFS.exists(path);
@@ -390,19 +404,25 @@ bool SPIFFSWrapper::exists(const char *path)
 
 bool SPIFFSWrapper::rename(const char* pathFrom, const char* pathTo)
 {
-    Mappings &mappings = Mappings::getInstance();
-    if (mappings.find(pathFrom)) {
-        return mappings.rename(pathFrom, pathTo);
+#if !FS_MAPPING_READ_ONLY
+    auto &map = Mappings::getInstance();
+    auto num = map.findEntry(pathFrom);
+    if (num != -1) {
+        return map.rename(num, pathTo);
     }
+#endif
     return SPIFFS.rename(pathFrom, pathTo);
 }
 
 bool SPIFFSWrapper::remove(const char *path)
 {
-    Mappings &mappings = Mappings::getInstance();
-    if (mappings.find(path) != nullptr) {
-        return mappings.remove(path);
+#if !FS_MAPPING_READ_ONLY
+    auto &map = Mappings::getInstance();
+    auto num = map.findEntry(path);
+    if (num != -1) {
+        return map.remove(num);
     }
+#endif
     return SPIFFS.remove(path);
 }
 

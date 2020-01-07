@@ -14,7 +14,7 @@ class MQTTComponent;
 
 class MQTTAutoDiscovery {
 public:
-    typedef enum : uint8_t {
+    typedef enum {
         FORMAT_JSON = 0,
         FORMAT_YAML = 1,
     } Format_t;

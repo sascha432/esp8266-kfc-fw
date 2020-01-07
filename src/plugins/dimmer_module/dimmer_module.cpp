@@ -262,8 +262,8 @@ uint8_t Driver_DimmerModule::getChannelCount() const
 
 void Driver_DimmerModule::pinCallback(void *arg)
 {
-    auto pin = reinterpret_cast<PinMonitor::Pin_t *>(arg);
-    reinterpret_cast<Driver_DimmerModule *>(pin->arg)->_pinCallback(*pin);
+    auto pin = reinterpret_cast<PinMonitor::Pin *>(arg);
+    reinterpret_cast<Driver_DimmerModule *>(pin->getArg())->_pinCallback(*pin);
 }
 
 void Driver_DimmerModule::loop()
@@ -333,13 +333,13 @@ bool Driver_DimmerModule::_findButton(Button &btn, uint8_t &pressed, uint8_t &ch
 }
 
 
-void Driver_DimmerModule::_pinCallback(PinMonitor::Pin_t &pin)
+void Driver_DimmerModule::_pinCallback(PinMonitor::Pin &pin)
 {
     // add main loop function to handle timings and debouncing
     LoopFunctions::add(Driver_DimmerModule::loop);
     // find button and update
     for(auto &button: _buttons) {
-        if (button.getPin() == pin.pin) {
+        if (button.getPin() == pin.getPin()) {
             button.getButton().update();
         }
     }

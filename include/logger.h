@@ -2,14 +2,14 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#pragma once
-
 #if LOGGER
+
+#pragma once
 
 #include <Arduino_compat.h>
 
 #ifndef DEBUG_LOGGER
-#define DEBUG_LOGGER 1
+#define DEBUG_LOGGER        1
 #endif
 
 #define Logger_error        _logger.error

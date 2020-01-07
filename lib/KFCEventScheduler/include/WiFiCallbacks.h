@@ -38,7 +38,8 @@ public:
     static uint8_t add(uint8_t events, CallbackPtr_t callbackPtr) {
         return add(events, nullptr, callbackPtr);
     }
-    static uint8_t remove(uint8_t events, CallbackPtr_t callbackPtr);
+    // returns -1 if not found, 0 if the callback has been removed or EventEnum_t of callbacks left for this pointer
+    static int8_t remove(uint8_t events, CallbackPtr_t callbackPtr);
 
     static void callEvent(EventEnum_t event, void *payload);
     static CallbackVector &getVector();

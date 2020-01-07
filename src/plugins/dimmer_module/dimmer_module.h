@@ -143,7 +143,7 @@ public:
     static void onButtonReleased(Button& btn, uint16_t duration);
 
 private:
-    void _pinCallback(PinMonitor::Pin_t &pin);
+    void _pinCallback(PinMonitor::Pin &pin);
     void _loop();
 
     void _buttonShortPress(uint8_t channel, bool up);

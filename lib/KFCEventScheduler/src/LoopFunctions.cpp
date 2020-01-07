@@ -12,39 +12,32 @@
 
 static LoopFunctions::FunctionsVector _functions;
 
-void LoopFunctions::add(LoopFunctions::Callback_t callback, CallbackPtr_t callbackPtr) {
-
+void LoopFunctions::add(LoopFunctions::Callback_t callback, CallbackPtr_t callbackPtr)
+{
     _debug_printf_P(PSTR("LoopFunctions::add(%p)\n"), callbackPtr);
-
-    auto result = std::find_if(_functions.begin(), _functions.end(), [&](const FunctionEntry_t &entry) {
-        return (entry.callbackPtr == callbackPtr);
-    });
-    if (result == _functions.end()) {
-        _functions.push_back({callback, callbackPtr, false});
-    } else {
-        _debug_printf_P(PSTR("LoopFunctions::add(): callbackPtr already exists, deleted state %d\n"), result->deleteCallback);
-        if (result->deleteCallback) {
-            result->deleteCallback = 0;
+    for(auto &entry: _functions) {
+        if (entry.callbackPtr == callbackPtr) {
+            _debug_printf_P(PSTR("LoopFunctions::add(): callbackPtr=%p already exists, deleted state %d\n"), callbackPtr, entry.deleteCallback);
+            entry.deleteCallback = false; // restore if deleted
+            return;
         }
     }
+    _functions.push_back({callback, callbackPtr, false});
 }
 
-void LoopFunctions::remove(CallbackPtr_t callbackPtr) {
-
+void LoopFunctions::remove(CallbackPtr_t callbackPtr)
+{
     _debug_printf_P(PSTR("LoopFunctions::remove(%p)\n"), callbackPtr);
-
-    auto result = std::find_if(_functions.begin(), _functions.end(), [&](const FunctionEntry_t &entry) {
-        return (entry.callbackPtr == callbackPtr);
-    });
-    if (result != _functions.end()) {
-        if (!result->deleteCallback) {
-            result->deleteCallback = 1;
+    for(auto &entry: _functions) {
+        if (entry.callbackPtr == callbackPtr) {
+            entry.deleteCallback = true;
+            return;
         }
-    } else {
-        _debug_printf_P(PSTR("LoopFunctions::_remove(): Cannot find callbackPtr\n"));
     }
+    _debug_printf_P(PSTR("LoopFunctions::_remove(): Cannot find callbackPtr=%p\n"), callbackPtr);
 }
 
-LoopFunctions::FunctionsVector &LoopFunctions::getVector() {
+LoopFunctions::FunctionsVector &LoopFunctions::getVector()
+{
     return _functions;
 }

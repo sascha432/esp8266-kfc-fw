@@ -34,6 +34,10 @@ public:
 
     typedef std::vector<CallbackEntry_t> CallbackVector;
 
+    static void clear() {
+        getVector().clear();
+    }
+
     static uint8_t add(uint8_t events, Callback_t callback, CallbackPtr_t callbackPtr);
     static uint8_t add(uint8_t events, CallbackPtr_t callbackPtr) {
         return add(events, nullptr, callbackPtr);

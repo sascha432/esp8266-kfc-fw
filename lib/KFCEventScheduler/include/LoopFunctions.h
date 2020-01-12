@@ -25,6 +25,10 @@ public:
 
     typedef std::vector<FunctionEntry_t> FunctionsVector;
 
+    static void clear() {
+        getVector().clear();
+    }
+
     static void add(Callback_t callback, CallbackPtr_t callbackPtr);  // for lambda functions, use any unique pointer as callbackPtr
     static void add(CallbackPtr_t callbackPtr) {
         add(nullptr, callbackPtr);

@@ -15,6 +15,7 @@
 #include "serial_handler.h"
 #include "web_server.h"
 #include "web_socket.h"
+#include "progmem_data.h"
 #include "plugins.h"
 
 #if DEBUG_HTTP2SERIAL
@@ -27,7 +28,8 @@
 Http2Serial *Http2Serial::_instance = nullptr;
 AsyncWebSocket *wsSerialConsole = nullptr;
 
-Http2Serial::Http2Serial() {
+Http2Serial::Http2Serial() : _outputBufferMaxSize(SERIAL_BUFFER_MAX_LEN), _outputBufferDelay(SERIAL_BUFFER_FLUSH_DELAY)
+{
     _locked = false;
 #if defined(HTTP2SERIAL_BAUD) && HTTP2SERIAL_BAUD != KFC_SERIAL_RATE
     _debug_printf_P(PSTR("Reconfiguring serial port to %d baud\n"), HTTP2SERIAL_BAUD);
@@ -46,7 +48,8 @@ Http2Serial::Http2Serial() {
 }
 
 
-Http2Serial::~Http2Serial() {
+Http2Serial::~Http2Serial()
+{
     LoopFunctions::remove(Http2Serial::outputLoop);
     _serialHandler->removeHandler(onData);
 #if defined(HTTP2SERIAL_BAUD) && HTTP2SERIAL_BAUD != KFC_SERIAL_RATE
@@ -61,7 +64,8 @@ Http2Serial::~Http2Serial() {
 /**
  * The output buffer has a small time delay to combine multiple characters from the console into a single web socket message
  */
-void Http2Serial::broadcastOutputBuffer() {
+void Http2Serial::broadcastOutputBuffer()
+{
     // os_printf("Http2Serial::broadcastOutputBuffer(%d)\n", _outputBuffer.length());
 
     if (_outputBuffer.length()) {
@@ -71,15 +75,18 @@ void Http2Serial::broadcastOutputBuffer() {
     resetOutputBufferTimer();
 }
 
-void Http2Serial::writeOutputBuffer(const uint8_t *buffer, size_t len) {
-
+void Http2Serial::writeOutputBuffer(const uint8_t *buffer, size_t len)
+{
     if (!_outputBufferEnabled) {
         return;
+    }
+    if (_outputBuffer.length() == 0) {
+        resetOutputBufferTimer(); // reset timer if it is empty
     }
 
     auto ptr = buffer;
     for(;;) {
-        int space = SERIAL_BUFFER_MAX_LEN - _outputBuffer.length();
+        int space = _outputBufferMaxSize - _outputBuffer.length();
         if (space > 0) {
             if ((size_t)space >= len) {
                 space = len;
@@ -99,20 +106,24 @@ void Http2Serial::writeOutputBuffer(const uint8_t *buffer, size_t len) {
     }
 }
 
-bool Http2Serial::isTimeToSend() {
+bool Http2Serial::isTimeToSend()
+{
     return (_outputBuffer.length() != 0) && (millis() > _outputBufferFlushDelay);
 }
 
-void Http2Serial::resetOutputBufferTimer() {
-    _outputBufferFlushDelay = millis() + SERIAL_BUFFER_FLUSH_DELAY;
+void Http2Serial::resetOutputBufferTimer()
+{
+    _outputBufferFlushDelay = millis() + _outputBufferDelay;
 }
 
-void Http2Serial::clearOutputBuffer() {
+void Http2Serial::clearOutputBuffer()
+{
     _outputBuffer.clear();
     resetOutputBufferTimer();
 }
 
-void Http2Serial::_outputLoop() {
+void Http2Serial::_outputLoop()
+{
     if (isTimeToSend()) {
         broadcastOutputBuffer();
     }
@@ -122,11 +133,13 @@ void Http2Serial::_outputLoop() {
     }
 }
 
-void Http2Serial::outputLoop() {
+void Http2Serial::outputLoop()
+{
     Http2Serial::_instance->_outputLoop();
 }
 
-void Http2Serial::onData(uint8_t type, const uint8_t *buffer, size_t len) {
+void Http2Serial::onData(uint8_t type, const uint8_t *buffer, size_t len)
+{
 #if 0
     os_printf("onData(%u, %*.*s)\n", type, len, len, buffer);
 #endif
@@ -138,33 +151,39 @@ void Http2Serial::onData(uint8_t type, const uint8_t *buffer, size_t len) {
     }
 }
 
-Http2Serial *Http2Serial::getInstance() {
+Http2Serial *Http2Serial::getInstance()
+{
     return _instance;
 }
 
-void Http2Serial::createInstance() {
+void Http2Serial::createInstance()
+{
     destroyInstance();
     if (!_instance) {
         _instance = _debug_new Http2Serial();
     }
 }
 
-void Http2Serial::destroyInstance() {
+void Http2Serial::destroyInstance()
+{
     if (_instance) {
         delete _instance;
         _instance = nullptr;
     }
 }
 
-SerialHandler *Http2Serial::getSerialHandler() const {
+SerialHandler *Http2Serial::getSerialHandler() const
+{
     return _serialHandler;
 }
 
-AsyncWebSocket *Http2Serial::getConsoleServer() {
+AsyncWebSocket *Http2Serial::getConsoleServer()
+{
     return wsSerialConsole;
 }
 
-void http2serial_event_handler(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len) {
+void http2serial_event_handler(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len)
+{
     WsClient::onWsEvent(server, client, type, data, len, arg, WsConsoleClient::getInstance);
 }
 
@@ -176,7 +195,9 @@ public:
     virtual PGM_P getName() const {
         return PSTR("http2ser");
     }
-    virtual PluginPriorityEnum_t getSetupPriority() const override;
+    virtual PluginPriorityEnum_t getSetupPriority() const override {
+        return (PluginPriorityEnum_t)10;
+    }
     virtual void setup(PluginSetupMode_t mode) override;
     virtual void reconfigure(PGM_P source) override;
     virtual bool hasReconfigureDependecy(PluginComponent *plugin) const override;
@@ -200,11 +221,8 @@ public:
 
 static Http2SerialPlugin plugin;
 
-Http2SerialPlugin::PluginPriorityEnum_t Http2SerialPlugin::getSetupPriority() const {
-    return (PluginPriorityEnum_t)10;
-}
-
-void Http2SerialPlugin::setup(PluginSetupMode_t mode) {
+void Http2SerialPlugin::setup(PluginSetupMode_t mode)
+{
     if (get_web_server_object()) {
         wsSerialConsole = _debug_new AsyncWebSocket(F("/serial_console"));
         wsSerialConsole->onEvent(http2serial_event_handler);
@@ -213,32 +231,22 @@ void Http2SerialPlugin::setup(PluginSetupMode_t mode) {
     }
 }
 
-void Http2SerialPlugin::reconfigure(PGM_P source) {
+void Http2SerialPlugin::reconfigure(PGM_P source)
+{
     setup(PLUGIN_SETUP_DEFAULT);
 }
 
-bool Http2SerialPlugin::hasReconfigureDependecy(PluginComponent *plugin) const {
+bool Http2SerialPlugin::hasReconfigureDependecy(PluginComponent *plugin) const
+{
     return plugin->nameEquals(F("http"));
 }
 
-void Http2SerialPlugin::restart() {
-    //TODO does not work
-    // for(auto socket: wsSerialConsole->getClients()) {
-    //     socket->close();
-    // }
-    // unsigned long end = millis() + 2000;
-    // while(millis() < end) {
-    //     uint8_t count = 0;
-    //     for(auto socket: wsSerialConsole->getClients()) {
-    //         if (socket->status() == WS_CONNECTED) {
-    //             count++;
-    //         }
-    //     }
-    //     if (count == 0) {
-    //         break;
-    //     }
-    //     delay(1);
-    // }
+void Http2SerialPlugin::restart()
+{
+    for(auto socket: wsSerialConsole->getClients()) {
+        socket->text(FSPGM(Device_is_rebooting));
+        socket->close(503, String(FSPGM(Device_is_rebooting)).c_str());
+    }
 }
 
 #if AT_MODE_SUPPORTED
@@ -246,10 +254,14 @@ void Http2SerialPlugin::restart() {
 #include "at_mode.h"
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(H2SBD, "H2SBD", "<baud>", "Set serial port rate");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(H2SBUFSZ, "H2SBUFSZ", "<size=512>", "Set output buffer size");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(H2SBUFDLY, "H2SBUFDLY", "<delay=60>", "Set output buffer delay");
 
 void Http2SerialPlugin::atModeHelpGenerator()
 {
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(H2SBD), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(H2SBUFSZ), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(H2SBUFDLY), getName());
 }
 
 bool Http2SerialPlugin::atModeHandler(Stream &serial, const String &command, AtModeArgs &args)
@@ -262,8 +274,32 @@ bool Http2SerialPlugin::atModeHandler(Stream &serial, const String &command, AtM
                 Serial.begin(rate);
                 serial.printf_P(PSTR("Set serial rate to %d\n"), (unsigned)rate);
             }
-            return true;
         }
+        return true;
+    }
+    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(H2SBUFSZ))) {
+        if (args.requireArgs(1, 1)) {
+            auto http2Serial = Http2Serial::getInstance();
+            if (http2Serial) {
+                uint32_t size = args.toIntMinMax(0, 128, 2048, SERIAL_BUFFER_MAX_LEN);
+                http2Serial->setOutputBufferMaxSize(size);
+                at_mode_print_prefix(serial, command);
+                serial.printf_P(PSTR("Set size to %u ms\n"), size);
+            }
+        }
+        return true;
+    }
+    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(H2SBUFDLY))) {
+        if (args.requireArgs(1, 1)) {
+            auto http2Serial = Http2Serial::getInstance();
+            if (http2Serial) {
+                uint32_t delay = args.toIntMinMax(0, 10, 500, SERIAL_BUFFER_FLUSH_DELAY);
+                http2Serial->setOutputBufferDelay(delay);
+                at_mode_print_prefix(serial, command);
+                serial.printf_P(PSTR("Set delay to %u ms\n"), delay);
+            }
+        }
+        return true;
     }
     return false;
 }

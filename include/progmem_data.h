@@ -17,6 +17,7 @@ PROGMEM_STRING_DECL(mime_image_png);
 PROGMEM_STRING_DECL(mime_image_gif);
 PROGMEM_STRING_DECL(mime_image_bmp);
 
+PROGMEM_STRING_DECL(Device_is_rebooting);
 PROGMEM_STRING_DECL(Not_supported);
 PROGMEM_STRING_DECL(default_password_warning);
 PROGMEM_STRING_DECL(empty);

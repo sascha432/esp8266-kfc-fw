@@ -14,6 +14,8 @@
 #include "blink_led_timer.h"
 #include "progmem_data.h"
 #include "fs_mapping.h"
+#include "WebUISocket.h"
+#include "web_server.h"
 #include "build.h"
 #if NTP_CLIENT
 #include "./plugins/ntp/ntp_plugin.h"
@@ -803,6 +805,14 @@ void KFCFWConfiguration::enterDeepSleep(uint32_t time_in_ms, RFMode mode, uint16
 #endif
 }
 
+static unsigned long restart_device_timeout;
+
+static void restart_device() {
+    if (millis() > restart_device_timeout) {
+        ESP.restart();
+    }
+}
+
 void KFCFWConfiguration::restartDevice()
 {
     _debug_println(F("KFCFWConfiguration::restartDevice()"));
@@ -810,10 +820,25 @@ void KFCFWConfiguration::restartDevice()
     Logger_notice(F("Device is being restarted"));
     BlinkLEDTimer::setBlink(BlinkLEDTimer::FLICKER);
 
-    for(auto plugin: plugins) {
+    auto webUiSocket = WsWebUISocket::getWsWebUI();
+    if (webUiSocket) {
+        WsWebUISocket::getWsWebUI()->closeAll(503, String(FSPGM(Device_is_rebooting)).c_str());
+    }
+
+    // execute in reverse order
+    for(auto iterator = plugins.rbegin(); iterator != plugins.rend(); ++iterator) {
+        auto plugin = *iterator;
         plugin->restart();
     }
-    ESP.restart();
+
+    resetDetector.clearCounter();
+
+    WiFiCallbacks::clear();
+    LoopFunctions::clear();
+
+    // give system time to finish all tasks
+    restart_device_timeout = millis() + 750;
+    LoopFunctions::add(restart_device);
 }
 
 void KFCFWConfiguration::loop()

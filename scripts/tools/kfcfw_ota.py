@@ -10,6 +10,7 @@ import kfcfw_session
 import requests
 import re
 import json
+import hashlib
 
 def verbose(msg, new_line=True):
     global args
@@ -22,6 +23,13 @@ def verbose(msg, new_line=True):
 def error(msg, code = 1):
     verbose(msg)
     sys.exit(code)
+
+def get_login_error(content):
+    m = re.search("id=\"login_error_message\">([^<]+)</div", content, flags=re.IGNORECASE|re.DOTALL)
+    try:
+        return m.group(1).strip()
+    except:
+        return None
 
 def get_div(title, content):
     m = re.search(">\s*" + title + "\s*<\/div>\s*<div[^>]*>([^<]+)<", content, flags=re.IGNORECASE|re.DOTALL)
@@ -36,7 +44,6 @@ def get_h3(content):
         return m.group(1).strip()
     except:
         return None
-
 
 def is_alive(url, target):
     verbose("Checking if device is alive "  + target)
@@ -64,12 +71,17 @@ def get_status(url, target, sid):
     resp = requests.get(url + "status.html", data={"SID": sid}, timeout=30)
     if resp.status_code==200:
         content = resp.content.decode()
+        login_error = get_login_error(content)
+        if login_error!=None:
+            error("Log failed: " + login_error)
         software = get_div("Software", content)
         hardware = get_div("Hardware", content)
         if software!=None:
             verbose("Software: " + software)
         if software!=None:
             verbose("Hardware: " + hardware)
+        if software==None and hardware==None:
+            error("Could not get status from device, use --no-status to skip")
     elif resp.status_code==403:
         error("Access denied", 2)
     elif resp.status_code==404:
@@ -152,12 +164,13 @@ parser.add_argument("hostname", help="web server hostname")
 parser.add_argument("-u", "--user", help="Username", required=True)
 parser.add_argument("-p", "--pw", help="password", required=True)
 parser.add_argument("-I", "--image", help="firmware image", type=argparse.FileType("rb"))
-parser.add_argument("-O", "--output", help="export settings file")
+parser.add_argument("-O", "--output", help="export settings output file")
 parser.add_argument("-P", "--port", help="web server port", type=int, default=80)
 parser.add_argument("-s", "--secure", help="use https to upload", action="store_true", default=False)
 parser.add_argument("-q", "--quiet", help="do not show any output", action="store_true", default=False)
 parser.add_argument("-n", "--no-status", help="do not query status", action="store_true", default=False)
 parser.add_argument("-W", "--no-wait", help="wait after upload until device has been rebooted", action="store_true", default=False)
+parser.add_argument("--sha1", help="use sha1 authentication", action="store_true", default=False)
 args = parser.parse_args()
 
 url = "http"
@@ -165,7 +178,11 @@ if args.secure:
     url += "s"
 url = url + "://" + args.hostname + "/"
 
-sid = kfcfw_session.Session().generate(args.user, args.pw)
+if args.sha1:
+    session = kfcfw_session.Session(hashlib.sha1())
+else:
+    session = kfcfw_session.Session()
+sid = session.generate(args.user, args.pw)
 target = args.user + ":***@" + args.hostname
 
 if args.action in("flash", "spiffs", "atmega"):

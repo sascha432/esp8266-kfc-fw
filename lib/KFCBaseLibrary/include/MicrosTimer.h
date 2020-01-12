@@ -7,6 +7,15 @@
 #include <Arduino.h>
 
 uint32_t get_time_diff(uint32_t start, uint32_t end);
+
+inline uint32_t __inline_get_time_diff(uint32_t start, uint32_t end) {
+    if (end >= start) {
+        return end - start;
+    }
+    // handle overflow
+    return end + ~start + 1;
+};
+
 #define is_time_diff_greater(start, end, time)          (get_time_diff(start, end) > time)
 #define is_millis_diff_greater(start, time)             (get_time_diff(start, millis()) > time)
 

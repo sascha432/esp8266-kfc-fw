@@ -5,11 +5,7 @@
 #include "MicrosTimer.h"
 
 uint32_t get_time_diff(uint32_t start, uint32_t end) {
-    if (end >= start) {
-        return end - start;
-    }
-    // handle overflow
-    return end + ~start + 1;
+    return __inline_get_time_diff(start, end);
 }
 
 MicrosTimer::MicrosTimer() : _valid(false) {

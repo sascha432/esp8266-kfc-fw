@@ -254,6 +254,12 @@ public:
     // returns defaultValue if the time is lower than minTime or if the argument does not exist
     uint32_t toMillis(uint16_t num, uint32_t minTime = 0, uint32_t maxTime = ~0, uint32_t defaultValue = 0) const;
 
+    int toChar(uint16_t num) const;
+
+    int toLowerChar(uint16_t num) const {
+        return tolower(toChar(num));
+    }
+
     inline String toString(uint16_t num) const {
         return get(num);
     }

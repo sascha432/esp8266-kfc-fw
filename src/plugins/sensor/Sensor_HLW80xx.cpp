@@ -11,6 +11,7 @@
 #include "MicrosTimer.h"
 #include "Sensor_HLW8012.h"
 #include "Sensor_HLW8032.h"
+#include "plugins/http2serial/http2serial.h"
 
 #if DEBUG_IOT_SENSOR
 #include <debug_helper_enable.h>
@@ -37,6 +38,9 @@ Sensor_HLW80xx::Sensor_HLW80xx(const String &name) : MQTTSensor(), _name(name)
 
     setUpdateRate(IOT_SENSOR_HLW80xx_UPDATE_RATE);
     _nextMQTTUpdate = 0;
+
+    _webSocketClient = nullptr;
+    _webSocketPlotData = VOLTAGE;
 }
 
 void Sensor_HLW80xx::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector)
@@ -310,8 +314,8 @@ JsonNumber Sensor_HLW80xx::_powerToNumber(float power) const
 
 float Sensor_HLW80xx::_getPowerFactor() const
 {
-    if (isnan(_power) || isnan(_voltage) || isnan(_current)) {
-        return NAN;
+    if (isnan(_power) || isnan(_voltage) || isnan(_current) || _current == 0) {
+        return 0;
     }
     return std::min(_power / (_voltage * _current), 1.0f);
 }
@@ -331,18 +335,16 @@ String Sensor_HLW80xx::_getTopic()
 
 void Sensor_HLW80xx::dump(Print &output)
 {
-    output.printf_P(PSTR("U=%03.4f, I=%01.4f, P=%03.4f, E=%06.4f (count=%.0f), pf=%.2f, cal-U/I/P %.6f/%.6f/%.6f - raw "),
+    output.printf_P(PSTR("U=% 9.4f I=% 8.4f P=% 9.4f U*I=% 9.4f E=% 9.4f (count=%012.0f), pf=%03.2f - "),
         _voltage,
         _current,
         _power,
+        _voltage * _current,
         _getEnergy(0),
         (double)_energyCounter[0],
-        _getPowerFactor(),
-        _calibrationU,
-        _calibrationI,
-        _calibrationP
+        _getPowerFactor()
     );
-    output.printf_P(PSTR("U=%03.4f, I=%01.4f, P=%03.4f, E=%06.4f\n"),
+    output.printf_P(PSTR("raw U=% 9.4f I=% 8.4f P=% 9.4f, E=% 9.4f\n"),
         _voltage / _calibrationU,
         _current / _calibrationI,
         _power / _calibrationP,
@@ -374,6 +376,23 @@ void Sensor_HLW80xx::dumpCSV(File &file, bool newLine)
     }
 }
 
+AsyncWebSocketClient *Sensor_HLW80xx::_getWebSocketClient() const
+{
+    // if we have a pointer, we need to verify it still exists
+    if (_webSocketClient) {
+        auto wsSerialConsole = Http2Serial::getConsoleServer();
+        if (wsSerialConsole) {
+            for(auto client: wsSerialConsole->getClients()) {
+                if (_webSocketClient == client && client->status() && client->_tempObject && reinterpret_cast<WsClient *>(client->_tempObject)->isAuthenticated()) {
+                     return _webSocketClient;
+                }
+            }
+        }
+    }
+    return nullptr;
+}
+
+
 #if AT_MODE_SUPPORTED
 
 #include "at_mode.h"
@@ -381,29 +400,18 @@ void Sensor_HLW80xx::dumpCSV(File &file, bool newLine)
 #undef PROGMEM_AT_MODE_HELP_COMMAND_PREFIX
 #define PROGMEM_AT_MODE_HELP_COMMAND_PREFIX         "SP_"
 
-
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HLWXD, "HLWXD", "<count/0-4>", "Display extra digits");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HLWMODE, "HLWMODE", "<u=0/i=1>", "Set voltage or current mode");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HLWDUMP, "HLWDUMP", "<0=off/1...=seconds>", "Dump data");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HLWDUMP, "HLWDUMP", "<0=off/1...=seconds/2=cycle>", "Dump data");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HLWCSV, "HLWCSV", "<filename>[,<interval=500ms>,<duration=30seconds>]", "Write data to file");
-#if IOT_SENSOR_HLW8012_RAW_DATA_DUMP
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HLWRAW, "HLWRAW", "<filename>[,<duration=30seconds>]", "Dump raw data to file");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HLWSCF, "HLWSCF", "<interval in ms/0=disable>", "Simulate CF callback");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HLWSCF1, "HLWSCF1", "<interval in ms/0=disable>", "Simulate CF1 callback");
-#endif
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HLWPLOT, "HLWPLOT", "<ClientID>,<U/I/P/0=disable>[,<1/true=convert units>]", "Request data for plotting graphs");
 
 void Sensor_HLW80xx::atModeHelpGenerator()
 {
     auto name = SensorPlugin::getInstance().getName();
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(HLWXD), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(HLWMODE), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(HLWDUMP), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(HLWCSV), name);
-#if IOT_SENSOR_HLW8012_RAW_DATA_DUMP
-    // at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(HLWSCF), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(HLWSCF1), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(HLWRAW), name);
-#endif
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(HLWPLOT), name);
 }
 
 bool Sensor_HLW80xx::atModeHandler(Stream &serial, const String &command, AtModeArgs &args)
@@ -421,26 +429,47 @@ bool Sensor_HLW80xx::atModeHandler(Stream &serial, const String &command, AtMode
         }
         return true;
     }
-    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(HLWMODE))) {
-        if (args.requireArgs(1)) {
-            auto type = F("Cycle Voltage/Current");
-            Sensor_HLW8012::CF1OutputTypeEnum_t mode = Sensor_HLW8012::CF1OutputTypeEnum_t::CYCLE;
+    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(HLWPLOT))) {
+        if (args.requireArgs(2, 3)) {
+
+            void *clientId = reinterpret_cast<void *>(args.toNumber(0));
+            auto ch = args.toLowerChar(1);
+            if (ch == 'u') {
+                _webSocketPlotData = WebSocketDataTypeEnum_t::VOLTAGE;
+            }
+            else if (ch == 'i') {
+                _webSocketPlotData = WebSocketDataTypeEnum_t::CURRENT;
+            }
+            else if (ch == 'p') {
+                _webSocketPlotData = WebSocketDataTypeEnum_t::POWER;
+            }
+            else {
+                at_mode_print_prefix(serial, command);
+                serial.printf_P(PSTR("Disabling plot data\n"));
+                return true;
+            }
+            if (args.isTrue(2)) {
+                _webSocketPlotData = (WebSocketDataTypeEnum_t)(_webSocketPlotData | WebSocketDataTypeEnum_t::CONVERT_UNIT);
+            }
+
+            _webSocketClient = nullptr;
+            auto wsSerialConsole = Http2Serial::getConsoleServer();
+            if (wsSerialConsole) {
+                for(auto client: wsSerialConsole->getClients()) {
+                    if (reinterpret_cast<void *>(client) == clientId && client->status() && client->_tempObject && reinterpret_cast<WsClient *>(client->_tempObject)->isAuthenticated()) {
+                        _webSocketClient = client;
+                        break;
+                    }
+                }
+            }
 
             at_mode_print_prefix(serial, command);
-            serial.print(F("Setting CF1 output mode to "));
-            if (args.isAnyMatchIgnoreCase(AtModeArgs::FIRST, F("0,u,v,voltage"))) {
-                type = F("Voltage");
-                mode = Sensor_HLW8012::CF1OutputTypeEnum_t::VOLTAGE;
+            if (!_webSocketClient) {
+                serial.printf_P(PSTR("Cannot find ClientID %p\n"), clientId);
             }
-            else if (args.isAnyMatchIgnoreCase(AtModeArgs::FIRST, F("1,i,current"))) {
-                type = F("Current");
-                mode = Sensor_HLW8012::CF1OutputTypeEnum_t::CURRENT;
+            else {
+                serial.printf_P(PSTR("Enabling plot data for ClientID %p\n"), clientId);
             }
-
-            auto count = SensorPlugin::for_each<Sensor_HLW8012>(nullptr, Sensor_HLW80xx::_compareFuncHLW8012, [mode](Sensor_HLW8012 &sensor) {
-                sensor._setOutputMode(mode);
-            });
-            serial.printf_P(PSTR("%s for %u sensors\n"), type, count);
         }
         return true;
     }
@@ -498,45 +527,6 @@ bool Sensor_HLW80xx::atModeHandler(Stream &serial, const String &command, AtMode
         }
         return true;
     }
-#if IOT_SENSOR_HLW8012_RAW_DATA_DUMP
-    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(HLWSCF1))) {
-        if (args.requireArgs(1, 1)) {
-            auto interval = args.toMillis(AtModeArgs::FIRST, 1, 1000, 150);
-            auto sensor = Sensor_HLW8012::_getFirstSensor();
-            if (sensor) {
-                at_mode_print_prefix(serial, command);
-                serial.printf_P(PSTR("Simulating callback every %u milliseconds\n"), interval);
-                sensor->_simulateCallbackCF1(interval);
-            }
-            else {
-                at_mode_print_prefix(serial, command);
-                serial.println(F("Cannot find any HLW8012 sensor"));
-            }
-        }
-        return true;
-    }
-    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(HLWRAW))) {
-        if (args.requireArgs(1, 2)) {
-            String filename = args.toString(AtModeArgs::FIRST);
-            auto duration = args.toMillis(AtModeArgs::SECOND, 1000, ~0, 30 * 1000);
-
-            auto sensor = Sensor_HLW8012::_getFirstSensor();
-            if (sensor) {
-                at_mode_print_prefix(serial, command);
-                serial.printf_P(PSTR("Writing data to %s for %.3f seconds\n"), filename.c_str(), duration / 1000.0);
-                if (!sensor->_startRawDataDump(filename, millis() + duration)) {
-                    at_mode_print_prefix(serial, command);
-                    serial.println(F("Raw dump failed to start"));
-                }
-            }
-            else {
-                at_mode_print_prefix(serial, command);
-                serial.println(F("Cannot find any HLW8012 sensor"));
-            }
-        }
-        return true;
-    }
-#endif
     return false;
 }
 

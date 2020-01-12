@@ -14,15 +14,11 @@
 #include "WebUIComponent.h"
 #include "plugins.h"
 #include "MQTTSensor.h"
+#include "plugins/http2serial/http2serial.h"
 
-#ifndef IOT_SENSOR_HLW8012_RAW_DATA_DUMP
-// store interrupt timings on SPIFFS
-#define IOT_SENSOR_HLW8012_RAW_DATA_DUMP                0
-#endif
-
-#ifndef IOT_SENSOR_HLW8012_SENSOR_STATS
-// additional statistics on sensor inputs
-#define IOT_SENSOR_HLW8012_SENSOR_STATS                 0
+// store CF and CF1 timings in RAM, number of values to keep (required RAM=250*8byte=~2KB), 0=disable
+#ifndef IOT_SENSOR_HLW8012_BUFFER_DEBUG
+#define IOT_SENSOR_HLW8012_BUFFER_DEBUG                 0 //250
 #endif
 
 // voltage divider for V2P
@@ -35,10 +31,14 @@
 #define IOT_SENSOR_HLW80xx_SHUNT                        0.001
 #endif
 
-// multiplier for current/power timeouts
-#ifndef IOT_SENSOR_HLW80xx_TIMEOUT_MUL
-#define IOT_SENSOR_HLW80xx_TIMEOUT_MUL                  (3.0 / (IOT_SENSOR_HLW80xx_SHUNT * 1000.0))
+// 40µV input voltage offset
+#ifndef IOT_SENSOR_HLW80xx_SHUNT_NOISE_U
+#define IOT_SENSOR_HLW80xx_SHUNT_NOISE_U                0.00004
 #endif
+
+// ~180ms pulse length. my tested sensors go down to 210-230ms before heavy noise kicks in
+#define IOT_SENSOR_HLW80xx_SHUNT_NOISE_PULSE            (uint32_t)((32.0 * IOT_SENSOR_HLW80xx_VREF) / (3 * IOT_SENSOR_HLW80xx_F_OSC * IOT_SENSOR_HLW80xx_SHUNT_NOISE_U))
+#define IOT_SENSOR_HLW80xx_MAX_NOISE                    40000
 
 // update rate WebUI
 #ifndef IOT_SENSOR_HLW80xx_UPDATE_RATE
@@ -90,10 +90,17 @@
 // fosc = 3.579Mhz
 // Vref = 2.43V
 
-// pulse is the duty cycle in µs (50% PWM)
-#define IOT_SENSOR_HLW80xx_CALC_U(pulse)                ((128.000000 * IOT_SENSOR_HLW80xx_VREF * IOT_SENSOR_HLW80xx_V_RES_DIV * _calibrationU) / (pulse * IOT_SENSOR_HLW80xx_F_OSC))
-#define IOT_SENSOR_HLW80xx_CALC_I(pulse)                ((32.000000 * IOT_SENSOR_HLW80xx_VREF) / (pulse * (3 * IOT_SENSOR_HLW80xx_F_OSC * IOT_SENSOR_HLW80xx_SHUNT * _calibrationI)))
-#define IOT_SENSOR_HLW80xx_CALC_P(pulse)                ((4.000000 * IOT_SENSOR_HLW80xx_V_RES_DIV * IOT_SENSOR_HLW80xx_VREF * IOT_SENSOR_HLW80xx_VREF * _calibrationP) / (3 * pulse * IOT_SENSOR_HLW80xx_SHUNT * _calibrationI * IOT_SENSOR_HLW80xx_F_OSC))
+
+//I=((32.000000 * 2.43) / (pulse * (3 * 3.579000 * 0.001 * cp)))
+//15=((32.000000 * 2.43) / (x * (3 * 3.579000 * 0.001 * 1)))
+//I=8640000/(1193*I*iCp)
+
+// pulse on rising edge
+#define IOT_SENSOR_HLW80xx_CALC_U(pulse)                ((128.0 * IOT_SENSOR_HLW80xx_VREF * IOT_SENSOR_HLW80xx_V_RES_DIV * _calibrationU) / (pulse * IOT_SENSOR_HLW80xx_F_OSC))
+// pulse on change, is the duty cycle in µs (50% PWM)
+#define IOT_SENSOR_HLW80xx_CALC_I(pulse)                ((32.0 * IOT_SENSOR_HLW80xx_VREF) / (pulse * (3 * IOT_SENSOR_HLW80xx_F_OSC * IOT_SENSOR_HLW80xx_SHUNT * _calibrationI)))
+#define IOT_SENSOR_HLW80xx_CALC_PULSE_I(current)        (32.0 * IOT_SENSOR_HLW80xx_VREF) / (3.0 * current * IOT_SENSOR_HLW80xx_F_OSC * IOT_SENSOR_HLW80xx_SHUNT * _calibrationI)
+#define IOT_SENSOR_HLW80xx_CALC_P(pulse)                ((4.0 * IOT_SENSOR_HLW80xx_V_RES_DIV * IOT_SENSOR_HLW80xx_VREF * IOT_SENSOR_HLW80xx_VREF * _calibrationP) / (3 * pulse * IOT_SENSOR_HLW80xx_SHUNT * _calibrationI * IOT_SENSOR_HLW80xx_F_OSC))
 // count is incremented on falling and raising edge
 #define IOT_SENSOR_HLW80xx_PULSE_TO_KWH(count)          (count * IOT_SENSOR_HLW80xx_CALC_P(1000000.0) / (1000.0 * 3600.0))
 #define IOT_SENSOR_HLW80xx_KWH_TO_PULSE(kwh)            (((1000.0 * 3600.0) * kwh) / IOT_SENSOR_HLW80xx_CALC_P(1000000.0))
@@ -143,6 +150,7 @@ public:
     virtual void dump(Print &output);
     virtual void dumpCSV(File &file, bool newLine = true);
 
+
 protected:
     void _saveEnergyCounter();
     void _loadEnergyCounter();
@@ -186,6 +194,23 @@ public:
         config._H_W_GET(Config().sensor).hlw80xx.extraDigits = _extraDigits;
     }
     uint64_t _energyCounter[IOT_SENSOR_HLW80xx_NUM_ENERGY_COUNTERS];
+
+protected:
+    typedef enum {
+        VOLTAGE = 0,
+        CURRENT = 1,
+        POWER = 2,
+        CONVERT_UNIT = 0x8000,
+    } WebSocketDataTypeEnum_t;
+
+    AsyncWebSocketClient *_getWebSocketClient() const;
+    WebSocketDataTypeEnum_t _getWebSocketPlotData() const {
+        return _webSocketPlotData;
+    }
+
+private:
+    AsyncWebSocketClient *_webSocketClient;
+    WebSocketDataTypeEnum_t _webSocketPlotData;
 };
 
 #endif

@@ -28,127 +28,31 @@ typedef enum {
 } CallbackFlagsEnum_t;
 
 static Sensor_HLW8012 *sensor = nullptr;
-static volatile unsigned long callbackTimeCF;
-static volatile unsigned long callbackTimeCF1;
 static volatile uint32_t energyCounter = 0;
-static volatile uint8_t callbackFlag = 0;
-static volatile uint32_t skippedCFCounter = 0;
-static volatile uint32_t skippedCF1Counter = 0;
+static Sensor_HLW8012::InterruptBuffer _interruptBufferCF;
+static Sensor_HLW8012::InterruptBuffer _interruptBufferCF1;
+
+#if IOT_SENSOR_HLW8012_BUFFER_DEBUG
+static Sensor_HLW8012::TimeBuffer _timeCFbuffer;
+static Sensor_HLW8012::TimeBuffer _timeCF1buffer;
+#endif
 
 void ICACHE_RAM_ATTR Sensor_HLW8012_callbackCF()
 {
-    callbackTimeCF = micros();
-    if (callbackFlag & CBF_CF) {
-        callbackFlag |= CBF_CF_SKIPPED;
-        skippedCFCounter++;
-    }
-    callbackFlag |= CBF_CF;
+    auto tmp = micros();
+    _interruptBufferCF.push_back(tmp);
+#if IOT_SENSOR_HLW8012_BUFFER_DEBUG
+    _timeCFbuffer.push_back_no_block(tmp);
+#endif
     energyCounter++;
 }
 
 void ICACHE_RAM_ATTR Sensor_HLW8012_callbackCF1()
 {
-    callbackTimeCF1 = micros();
-    if (callbackFlag & CBF_CF1) {
-        callbackFlag |= CBF_CF1_SKIPPED;
-        skippedCF1Counter++;
-    }
-    callbackFlag |= CBF_CF1;
-}
-
-void Sensor_HLW8012::loop()
-{
-    if (sensor) {
-        sensor->_loop();
-    }
-}
-
-void Sensor_HLW8012::dump(Print &output)
-{
-    output.printf_P(PSTR("CF/CF1 skipped=%u/%u CF/CF1 pulse=%u (%.0f) (%c) / %u (%.0f) - "),
-        skippedCFCounter, skippedCF1Counter,
-        _inputCF.pulseWidth, (float)_inputCF.pulseWidthIntegral,
-        _output == VOLTAGE ? 'U' : 'I', _inputCF1.pulseWidth, (float)_inputCF1.pulseWidthIntegral
-    );
-    Sensor_HLW80xx::dump(output);
-#if IOT_SENSOR_HLW8012_SENSOR_STATS
-    _stats[0].dump(output);
-    output.println();
-    _stats[1].dump(output);
-    output.println();
-    _stats[2].dump(output);
-    output.println();
-
-    _stats[0].clear();
-    _stats[1].clear();
-    _stats[2].clear();
-#endif
-}
-
-void Sensor_HLW8012::_loop()
-{
-    noInterrupts();
-    if (callbackFlag & CBF_CF_SKIPPED) {
-        callbackFlag &= ~(CBF_CF_SKIPPED|CBF_CF);
-        if (_inputCF.lastPulse) {
-            _inputCF.lastPulse = callbackTimeCF;
-        }
-        interrupts();
-    }
-    else if (callbackFlag & CBF_CF) {
-        callbackFlag &= ~CBF_CF;
-        auto tempCounter = energyCounter;
-        energyCounter = 0;
-        auto tmp = callbackTimeCF;
-        interrupts();
-        _callbackCF(tmp);
-        _incrEnergyCounters(tempCounter);
-    }
-    else {
-        interrupts();
-    }
-
-    noInterrupts();
-    if (callbackFlag & CBF_CF1_SKIPPED) {
-        callbackFlag &= ~(CBF_CF1_SKIPPED|CBF_CF1);
-        if (_inputCF1.lastPulse) {
-            _inputCF1.lastPulse = callbackTimeCF1;
-        }
-        interrupts();
-    }
-    else if (callbackFlag & CBF_CF1) {
-        callbackFlag &= ~CBF_CF1;
-        auto tmp = callbackTimeCF1;
-        interrupts();
-        _callbackCF1(tmp);
-    }
-    else {
-        interrupts();
-    }
-
-    if (millis() > _inputCF.timeout) {
-        _inputCF = SensorInput();
-        _power = 0;
-    }
-
-    if (millis() > _inputCF1.timeout) {
-        _inputCF1 = SensorInput();
-        if (_output == CURRENT) {
-            _current = 0;
-        }
-        else if (_output == VOLTAGE) {
-            _voltage = NAN;
-        }
-    }
-    if (millis() > _saveEnergyCounterTimeout) {
-        _saveEnergyCounter();
-    }
-#if IOT_SENSOR_HLW8012_RAW_DATA_DUMP
-    if (_rawDumpEndTime) {
-        if (millis() > _rawDumpEndTime) {
-            _endRawDataDump();
-        }
-    }
+    auto tmp = micros();
+    _interruptBufferCF1.push_back(tmp);
+#if IOT_SENSOR_HLW8012_BUFFER_DEBUG
+    _timeCF1buffer.push_back_no_block(tmp);
 #endif
 }
 
@@ -156,18 +60,39 @@ void Sensor_HLW8012::_loop()
 // Sensor class
 // ------------------------------------------------------------------------
 
-Sensor_HLW8012::Sensor_HLW8012(const String &name, uint8_t pinSel, uint8_t pinCF, uint8_t pinCF1) : Sensor_HLW80xx(name), _pinSel(pinSel), _pinCF(pinCF), _pinCF1(pinCF1)
+Sensor_HLW8012::Sensor_HLW8012(const String &name, uint8_t pinSel, uint8_t pinCF, uint8_t pinCF1) :
+    Sensor_HLW80xx(name),
+    _pinSel(pinSel),
+    _pinCF(pinCF),
+    _pinCF1(pinCF1),
+    _inputCF(_power),
+    _inputCFI(_current),
+    _inputCFU(_voltage)
 {
 #if DEBUG_MQTT_CLIENT
     debug_printf_P(PSTR("Sensor_HLW8012(): component=%p\n"), this);
 #endif
-#if IOT_SENSOR_HLW8012_RAW_DATA_DUMP
-    _rawDumpEndTime = 0;
-#endif
     registerClient(this);
-    _output = CURRENT;
 
-    digitalWrite(_pinSel, _output);
+    _inputCF.setCallback([this](double pulseWidth) {
+        return (float)IOT_SENSOR_HLW80xx_CALC_P(pulseWidth);
+    });
+    _inputCFU.setCallback([this](double pulseWidth) {
+        return (float)IOT_SENSOR_HLW80xx_CALC_U(pulseWidth);
+    });
+    _inputCFI.setCallback([this](double pulseWidth) {
+        return (float)IOT_SENSOR_HLW80xx_CALC_I(pulseWidth);
+    });
+    // auto &settings = _inputCFU.getSettings();
+    // settings.avgValCount = 5;
+    // settings = _inputCF.getSettings();
+    // settings.avgValCount = 3;
+
+    _noiseLevel = 0;
+
+    _inputCF1 = &_inputCFI;
+    digitalWrite(_pinSel, IOT_SENSOR_HLW8012_SEL_CURRENT);
+
     pinMode(_pinSel, OUTPUT);
     pinMode(_pinCF, INPUT);
     pinMode(_pinCF1, INPUT);
@@ -176,10 +101,8 @@ Sensor_HLW8012::Sensor_HLW8012(const String &name, uint8_t pinSel, uint8_t pinCF
         __debugbreak_and_panic_printf_P(PSTR("Only one instance of Sensor_HLW8012 supported\n"));
     }
 
-#if IOT_SENSOR_HLW8012_SENSOR_STATS
-    _stats[0].type = 'U';
-    _stats[1].type = 'I';
-    _stats[2].type = 'P';
+#if IOT_SENSOR_HLW8012_BUFFER_DEBUG
+    _autoDumpCount = -1;
 #endif
 
     sensor = this;
@@ -194,6 +117,268 @@ Sensor_HLW8012::~Sensor_HLW8012()
     sensor = nullptr;
     detachInterrupt(digitalPinToInterrupt(_pinCF));
     detachInterrupt(digitalPinToInterrupt(_pinCF1));
+}
+
+
+void Sensor_HLW8012::loop()
+{
+    if (sensor) {
+        sensor->_loop();
+    }
+}
+
+void Sensor_HLW8012::_loop()
+{
+    // power and energy
+    if (_processInterruptBuffer(_interruptBufferCF, _inputCF)) {
+        // debug_printf("_inputCF: i=%f i2=%f c=%u avg=%u d=%u\n",_inputCF.pulseWidthIntegral,_inputCF.pulseWidthIntegral2,_inputCF.counter,_inputCF.average,_inputCF.delayStart);
+        if (_inputCF.pulseWidthIntegral && _noiseLevel < IOT_SENSOR_HLW80xx_MAX_NOISE) {
+            _inputCF.setTarget(_inputCF.pulseWidthIntegral);
+        }
+        // add energy counter
+        noInterrupts();
+        auto tempCounter = energyCounter;
+        energyCounter = 0;
+        interrupts();
+        _incrEnergyCounters(tempCounter);
+
+        _inputCF.toggleTimer = millis() + (60 * 1000); // set timeout for next pulse
+    }
+    else if (_inputCF.toggleTimer && millis() > _inputCF.toggleTimer) {
+        // no pulse = something went wrong
+        _inputCF.clear();
+        _inputCF.setTarget(0);
+    }
+    if (millis() > _saveEnergyCounterTimeout) {
+        _saveEnergyCounter();
+    }
+
+    // voltage and current
+    if (_inputCF1->delayStart) {
+        if (millis() > _inputCF1->delayStart) {
+            _inputCF1->delayStart = 0;
+            _inputCF1->counter = 1;
+            noInterrupts();
+            _interruptBufferCF1.clear();
+            interrupts();
+        }
+    }
+    else if (_processInterruptBuffer(_interruptBufferCF1, *_inputCF1)) {
+        if (_inputCF1->pulseWidthIntegral) {
+            if (_inputCF1 == &_inputCFI) {
+                if (_noiseLevel < IOT_SENSOR_HLW80xx_MAX_NOISE) {
+                    _inputCF1->setTarget(_inputCF1->pulseWidthIntegral);
+                }
+            }
+            else {
+                _inputCF1->setTarget(_inputCF1->pulseWidthIntegral);
+            }
+        }
+    }
+    // toggle between voltage/current
+    if (millis() > _inputCF1->toggleTimer) {
+        _debug_printf_P(PSTR("toggleTimer=%c counter=%u\n"), _getOutputMode(_inputCF1), _inputCF1->counter);
+        if (_inputCF1->counter == 0) {
+            _inputCF1->setTarget(NAN);
+        }
+        _toggleOutputMode();
+    }
+
+#if IOT_SENSOR_HLW8012_BUFFER_DEBUG
+    if (_autoDumpCount != -1) {
+        if ((int)_timeCF1buffer.getCount() >= _autoDumpCount) {
+            MySerial.printf_P(PSTR("+SP_HLWBUF: Auto dump count=%u\n"), _autoDumpCount);
+            _autoDumpCount = -1;
+            _dumpBufferInfo(MySerial, _timeCF1buffer, F("CF1"));
+            _dumpBuffer(MySerial, _inputCF1, -1);
+        }
+    }
+#endif
+}
+
+static void dumpVector(std::vector<float> &data, Print &output, std::function<String(float item)> formatFunc) {
+    int n = 0;
+    for(auto item: data) {
+        if (n++ != 0) {
+            output.print(',');
+        }
+        output.print(formatFunc(item));
+    }
+    data.clear();
+}
+
+bool Sensor_HLW8012::_processInterruptBuffer(InterruptBuffer &buffer, SensorInput &input)
+{
+    auto settings = input.getSettings();
+
+    if (buffer.size() >= 2) {
+
+        // tested up to 5KHz
+        // jitter +-0.03Hz @ 500Hz
+
+        std::vector<float> data1;
+        std::vector<float> data2;
+        std::vector<float> data3;
+        std::vector<float> data4;
+
+#define USE_POPFRONT 0
+
+#if USE_POPFRONT
+        noInterrupts();
+        auto iterator = buffer.begin();
+        auto lastValue = *iterator;
+        while(++iterator != (buffer.end() - 1)) {
+            auto value = buffer.pop_front();
+            interrupts();
+#else
+        auto iterator = buffer.begin();
+        auto lastValue = *iterator;
+        while(++iterator != buffer.end()) {
+            auto value = *iterator;
+#endif
+            auto diff = __inline_get_time_diff(lastValue, value);
+            lastValue = value;
+
+            if (&input == &_inputCFI) {
+                // calculate noise level of the HLW8012, according to the data sheet the CSE7759 has it builtin and sends a 2Hz signal
+                uint32_t noiseMin = ~0;
+                uint32_t noiseMax = 0;
+                uint32_t noiseSum = 0;
+                _noiseBuffer.push_back(diff);
+                if (_noiseBuffer.size() >= _noiseBuffer.capacity())  {
+                    for(auto noiseDiff: _noiseBuffer) {
+                        noiseMin = min(noiseMin, noiseDiff);
+                        noiseMax = max(noiseMax, noiseDiff);
+                        noiseSum += noiseDiff;
+                    }
+                    float noiseMean = noiseSum / _noiseBuffer.size();
+                    uint32_t noiseLevel = ((noiseMean - noiseMin) + (noiseMax - noiseMean)) * 50000.0 / noiseMean; // in %%
+
+                    // filter quick changes in current which looks like noise
+                    uint32_t multiplier = 500 * 2000 / diff;
+                    _noiseLevel = ((_noiseLevel * multiplier) + noiseLevel) / (multiplier + 1.0);
+
+                    // if (_noiseLevel > 2000 && noiseMean > IOT_SENSOR_HLW80xx_SHUNT_NOISE_PULSE) {
+                    //     // could still be on, display some arbitrary low values
+                    //     _current = 0.01;
+                    // }
+                    //else
+                    if (_noiseLevel >= IOT_SENSOR_HLW80xx_MAX_NOISE) { // set current and power to zero, values will be updated but not shown
+                        _power = 0;
+                        _current = 0;
+                    }
+                }
+            }
+
+            data1.push_back(value);
+            data2.push_back(diff);
+
+            if (input.counter == 0 || settings.avgValCount == 0) {
+                input.average = diff;
+            }
+            else {
+                // get an average of the last N values to filter spikes
+                uint32_t multiplier = std::min((uint32_t)settings.avgValCount, input.counter);
+                input.average = ((input.average * multiplier) + diff) / (multiplier + 1);
+            }
+            input.counter++;
+
+            // use average for the integration
+            diff = input.average;
+            if (input.pulseWidthIntegral) {
+                uint32_t multiplier = 500 * settings.intTime / input.lastIntegration;
+                input.pulseWidthIntegral = ((input.pulseWidthIntegral * multiplier) + diff) / (multiplier + 1.0);
+                input.lastIntegration = diff;
+            }
+            else {
+                input.pulseWidthIntegral = diff;
+                input.lastIntegration = diff;
+            }
+
+            data3.push_back(input.average);
+            data4.push_back(input.pulseWidthIntegral);
+
+#if USE_POPFRONT
+            noInterrupts();
+        }
+        interrupts();
+#else
+    }
+#endif
+
+#if !USE_POPFRONT
+        // copy last value and items that have not been processed, mostly 1 item...
+        noInterrupts(); // takes ~20-30µs
+        buffer = std::move(buffer.slice(--iterator, buffer.end()));
+        interrupts();
+#endif
+
+        auto client = _getWebSocketClient();
+        if (client) {
+            String unit = F("µs");
+            bool match = false;
+            bool convertUnit = _getWebSocketPlotData() & WebSocketDataTypeEnum_t::CONVERT_UNIT;
+            auto plotType = _getWebSocketPlotData() & ~WebSocketDataTypeEnum_t::CONVERT_UNIT;
+            switch(plotType) {
+                case WebSocketDataTypeEnum_t::CURRENT:
+                    match = (&input == &_inputCFI);
+                    if (convertUnit) {
+                        unit = F("A");
+                    }
+                    break;
+                case WebSocketDataTypeEnum_t::POWER:
+                    match = (&input == &_inputCF);
+                    if (convertUnit) {
+                        unit = F("W");
+                    }
+                    break;
+                case WebSocketDataTypeEnum_t::VOLTAGE:
+                    match = (&input == &_inputCFU);
+                    if (convertUnit) {
+                        unit = F("V");
+                    }
+                    break;
+            }
+            if (match) {
+
+                std::function<String(float item)> formatFuncInt = [](float item) {
+                    return String((uint32_t)item);
+                };
+                std::function<String(float item)> formatFuncX = formatFuncInt;
+                std::function<String(float item)> formatFuncY = formatFuncInt;
+
+                if (convertUnit) {
+                    formatFuncY = [input](float pulse) {
+                        return String(input.convertPulse(pulse), 4);
+                    };
+                }
+
+                auto noNaN = [](float v) {
+                    if (std::isnormal(v)) {
+                        return v;
+                    }
+                    return 0.0f;
+                };
+
+                PrintString str;
+                str.printf_P(PSTR("+PLOT={\"n\":\"%c\",\"t\":%u,\"u\":\"%s\",\"l\":[%f,%f,%f,%f,%f,%f],\"d\":{"), _getOutputMode(&input), time(nullptr), unit.c_str(), noNaN(_voltage), noNaN(_current), noNaN(_power), noNaN(_getEnergy(0)), noNaN(_getPowerFactor()), _noiseLevel);
+                str.print(F("\"x\":["));
+                dumpVector(data1, str, formatFuncX);
+                str.print(F("],\"y1\":["));
+                dumpVector(data2, str, formatFuncY);
+                str.print(F("],\"y2\":["));
+                dumpVector(data3, str, formatFuncY);
+                str.print(F("],\"y3\":["));
+                dumpVector(data4, str, formatFuncY);
+                str.println(F("]}}"));
+
+                client->text(str);
+            }
+
+        }
+        return true;
+    }
+    return false;
 }
 
 
@@ -218,181 +403,270 @@ String Sensor_HLW8012::_getId(const __FlashStringHelper *type)
     return id;
 }
 
-void Sensor_HLW8012::_callbackCF(unsigned long micros)
-{
-    _calcPulseWidth(_inputCF, micros, IOT_SENSOR_HLW8012_TIMEOUT_P);
-#if IOT_SENSOR_HLW8012_SENSOR_STATS
-    _stats[2].updateTime();
-    _stats[2].add(_inputCF.pulseWidth, _inputCF.pulseWidthIntegral, _inputCF.counter);
-#endif
-    if (_inputCF.pulseWidth && _inputCF.counter >= 2) {
-        _power = IOT_SENSOR_HLW80xx_CALC_P(_inputCF.pulseWidthIntegral);
-    }
-    else {
-        _power = 0;
-    }
-#if IOT_SENSOR_HLW8012_RAW_DATA_DUMP
-    if (_rawDumpEndTime) {
-        _rawDumpFile.printf("cf,%u,%u,%u,%u,%.2f\n", skippedCFCounter, (uint32_t)micros, (uint32_t)_inputCF.lastPulse, (uint32_t)_inputCF.pulseWidth, _inputCF.pulseWidthIntegral);
-    }
-#endif
-    // _debug_printf_P(PSTR("pulse width %f count %u power %f energy %u\n"), _inputCF.pulseWidthIntegral, _inputCF.counter, IOT_SENSOR_HLW80xx_CALC_P(_inputCF.pulseWidthIntegral), _energyCounter);
-}
-
-void Sensor_HLW8012::_callbackCF1(unsigned long micros)
-{
-    if (millis() < _inputCF1.delayStart) { // skip anything before to let sensor settle
-        return;
-    }
-
-    _calcPulseWidth(_inputCF1, micros, _output == VOLTAGE ? IOT_SENSOR_HLW8012_TIMEOUT_U : IOT_SENSOR_HLW8012_TIMEOUT_I);
-#if IOT_SENSOR_HLW8012_SENSOR_STATS
-    _stats[_output].updateTime();
-    _stats[_output].add(_inputCF1.pulseWidth, _inputCF1.pulseWidthIntegral, _inputCF1.counter);
-#endif
-
-    if (_inputCF1.pulseWidth) {
-        // update values if enough pulses have been counted
-        if (_output == CURRENT && _inputCF1.counter >= 3) {
-            _current = IOT_SENSOR_HLW80xx_CALC_I(_inputCF1.pulseWidthIntegral);
-        }
-        else if (_output == VOLTAGE && _inputCF1.counter >= 10) {
-            _voltage = IOT_SENSOR_HLW80xx_CALC_U(_inputCF1.pulseWidthIntegral);
-        }
-    }
-#if IOT_SENSOR_HLW8012_RAW_DATA_DUMP
-    if (_rawDumpEndTime) {
-        _rawDumpFile.printf("cf1,%c,%u,%u,%u,%u,%.2f\n", _output == VOLTAGE ? 'u' : 'i', skippedCF1Counter, (uint32_t)micros, (uint32_t)_inputCF1.lastPulse, (uint32_t)_inputCF1.pulseWidth, _inputCF1.pulseWidthIntegral);
-    }
-#endif
-    if (millis() > _inputCF1.toggleTimer) { // toggle voltage/current measurement
-
-        if (_output == CURRENT) {
-            _debug_printf_P(PSTR("pulse width %f count %u current %f / %f energy %u\n"), _inputCF1.pulseWidthIntegral, _inputCF1.counter, IOT_SENSOR_HLW80xx_CALC_I(_inputCF1.pulseWidthIntegral), _current, (uint32_t)_energyCounter[0]);
-        }
-        else {
-            _debug_printf_P(PSTR("pulse width %f count %u voltage %f / %f energy %u\n"), _inputCF1.pulseWidthIntegral, _inputCF1.counter, IOT_SENSOR_HLW80xx_CALC_U(_inputCF1.pulseWidthIntegral), _voltage, (uint32_t)_energyCounter[0]);
-        }
-
-        _toggleOutputMode();
-    }
-}
-
-void Sensor_HLW8012::_setOutputMode(CF1OutputTypeEnum_t outputMode)
+void Sensor_HLW8012::_setOutputMode(OutputTypeEnum_t outputMode, int delay)
 {
     _debug_printf_P(PSTR("Sensor_HLW8012::_setOutputMode(): mode=%u\n"), outputMode);
     if (outputMode == VOLTAGE) {
-        _output = CURRENT;
+        _inputCF1 = &_inputCFI;
     }
     else if (outputMode == CURRENT) {
-        _output = VOLTAGE;
+        _inputCF1 = &_inputCFU;
     }
-    _toggleOutputMode();
+    _toggleOutputMode(delay);
     if (outputMode != CYCLE) { // lock selected mode
-        _inputCF1.toggleTimer = ~0;
+        _inputCF1->toggleTimer = ~0;
     }
 }
 
-void Sensor_HLW8012::_toggleOutputMode()
+void Sensor_HLW8012::_toggleOutputMode(int delay)
 {
-    _inputCF1 = SensorInput();
-    _inputCF1.delayStart = millis() + IOT_SENSOR_HLW8012_DELAY_START;
-    if (_output == CURRENT) {
-        _inputCF1.timeout = _inputCF1.delayStart + IOT_SENSOR_HLW8012_TIMEOUT_U;
-        _inputCF1.toggleTimer = _inputCF1.delayStart + IOT_SENSOR_HLW8012_MEASURE_LEN_U;
-        _output = VOLTAGE;
+    if (_inputCF1 == &_inputCFI) {
+        _inputCF1 = &_inputCFU;
+        _inputCFU.delayStart = millis() + (delay == -1 ? IOT_SENSOR_HLW8012_DELAY_START_U : delay);
+        _inputCFU.toggleTimer = _inputCFU.delayStart + IOT_SENSOR_HLW8012_MEASURE_LEN_U;
+        digitalWrite(_pinSel, IOT_SENSOR_HLW8012_SEL_VOLTAGE);
     } else {
-        _inputCF1.timeout = _inputCF1.delayStart + IOT_SENSOR_HLW8012_TIMEOUT_I;
-        _inputCF1.toggleTimer = _inputCF1.delayStart + IOT_SENSOR_HLW8012_MEASURE_LEN_I;
-        _output = CURRENT;
+        _inputCF1 = &_inputCFI;
+        _inputCFI.delayStart = millis() + (delay == -1 ? IOT_SENSOR_HLW8012_DELAY_START_I : delay);
+        _inputCFI.toggleTimer = _inputCFI.delayStart + IOT_SENSOR_HLW8012_MEASURE_LEN_I;
+        digitalWrite(_pinSel, IOT_SENSOR_HLW8012_SEL_CURRENT);
     }
-    digitalWrite(_pinSel, _output ? HIGH : LOW);
-#if IOT_SENSOR_HLW8012_SENSOR_STATS
-    _stats[_output].clear();
+
+#if IOT_SENSOR_HLW8012_BUFFER_DEBUG
+    noInterrupts();
+    _timeCF1buffer.clear();
+    interrupts();
 #endif
 }
 
-void Sensor_HLW8012::_calcPulseWidth(SensorInput &input, unsigned long micros, uint16_t timeout)
+#if IOT_SENSOR_HLW8012_BUFFER_DEBUG
+
+
+#define IOT_SENSOR_HLW8012_INTEGRAL_UPDATE_RATE 1.0
+
+void Sensor_HLW8012::_dumpBufferInfo(Stream &output, Sensor_HLW8012::TimeBuffer &buffer, const String &name)
 {
-    if (input.lastPulse && millis() < input.timeout) {
-        input.pulseWidth = get_time_diff(input.lastPulse, micros);
-        if (input.lastIntegration) {
-            // integrate with 1Hz
-            auto time = get_time_diff(input.lastIntegration, micros); // we keep the time separate from last pulse in case we skipped pulses
-            auto mul = (500000.0 / time);
-            input.pulseWidthIntegral = ((input.pulseWidthIntegral * mul) + input.pulseWidth) / (mul + 1.0);
-        } else {
-            input.pulseWidthIntegral = input.pulseWidth;
+    float start = get_time_diff(buffer.front(), micros()) / 1000000.0;
+    uint32_t dur = 0;
+    float avg = NAN;
+    if (buffer.size() > 1) {
+        auto lockStart = micros();
+        buffer.lock();
+        auto lastValue = buffer.front();
+        auto iterator = buffer.begin();
+        uint32_t sum = 0;
+        while(++iterator != buffer.end()) {
+            sum += *iterator - lastValue;
+            lastValue = *iterator;
         }
-        input.lastIntegration = micros;
-        input.counter++;
+        avg = sum / buffer.size() / 1000.0;
+        buffer.unlock();
+        dur = micros() - lockStart;
     }
-    else { // start or reset counters
-        input.pulseWidthIntegral = 0;
-        input.pulseWidth = 0;
-        input.counter = 0;
-        input.lastIntegration = 0;
-    }
-    input.lastPulse = micros;
-    input.timeout = millis() + timeout;
-
-    // _debug_printf_P(PSTR("Sensor_HLW8012::_calcPulseWidth: width %u integral %f counter %u\n"), input.pulseWidth, input.pulseWidthIntegral, input.counter);
+    output.printf_P(PSTR("Buffer %s: count=%u time=%.4fsec avg=%.2fms %.2fHz (%uµs)\n"), name.c_str(), buffer.getCount(), start, avg, 500.0 / avg, dur);
 }
 
-#if IOT_SENSOR_HLW8012_RAW_DATA_DUMP
-
-Sensor_HLW8012 *Sensor_HLW8012::_getFirstSensor()
+void Sensor_HLW8012::_autoDumpBuffer(Stream &output, int count)
 {
-    for(auto sensor: SensorPlugin::getSensors()) {
-        if (sensor->getType() == HLW8012) {
-            return reinterpret_cast<Sensor_HLW8012 *>(sensor);
+    noInterrupts();
+    _timeCF1buffer.clear();
+    interrupts();
+    _autoDumpCount = count;
+}
+
+void Sensor_HLW8012::_dumpBuffer(Stream &output, SensorInput *input, int limit)
+{
+    if (!input) {
+        _dumpBufferInfo(output, _timeCFbuffer, F("CF"));
+        _dumpBufferInfo(output, _timeCF1buffer, F("CF1"));
+        return;
+    }
+
+    TimeBuffer &list = (input == &_inputCF) ? _timeCFbuffer : _timeCF1buffer;
+
+    if (list.getCount()) {
+        output.printf("BUFFER %u: ", list.getCount());
+        auto iterator = list.begin();
+        list.lock();
+        auto s1 = micros();
+        auto lastValue = list.front();
+        iterator = list.begin();
+        float integral = 0;
+        uint32_t sum = 0;
+        uint16_t count = 0;
+        uint32_t lastDiff = 0;
+        while(++iterator != list.end()) {
+            auto diff = get_time_diff(lastValue, *iterator);
+            lastValue = *iterator;
+            sum += diff;
+            count++;
+            if (integral == 0) {
+                integral = diff;
+                lastDiff = diff;
+            }
+            else {
+                auto mul = (500000.0 / lastDiff) * IOT_SENSOR_HLW8012_INTEGRAL_UPDATE_RATE;
+                integral = ((integral * mul) + diff) / (mul + 1.0);
+                lastDiff = diff;
+            }
         }
+        auto s2 = micros();
+
+        if (limit != 0) {
+            iterator = list.begin();
+            if (limit != -1) {
+                int skip = list.size() - limit;
+                if (skip > 0) {
+                    iterator += skip;
+                }
+            }
+            lastValue = *iterator;
+            auto first = list.front();
+            while(++iterator != list.end()) {
+                auto diff = get_time_diff(lastValue, *iterator);
+                lastValue = *iterator;
+                output.printf("%u(%.2fs) ", diff, (lastValue - first) / 1000000.0);
+            }
+            output.println();
+        }
+
+        float fCount = count;
+        output.printf_P(PSTR("processing time=%luµs count=%u integral=%f avg=%f %c=%.4f %.4f %f list=%u/%u\n"),
+            s2 - s1, count, integral, sum / fCount,
+            _getOutputMode(input),
+            input->convertPulse(integral),
+            input->convertPulse(sum / fCount),
+            input->getTarget(), list.getCount(), list.size()
+        );
+        noInterrupts();
+        list.clear();
+        interrupts();
     }
-    return nullptr;
 }
 
-void Sensor_HLW8012::_simulateCallbackCF1(uint32_t interval)
-{
-    static EventScheduler::TimerPtr timer = nullptr;
-    _debug_printf_P(PSTR("Sensor_HLW8012::_simulateCallbackCF1(): interval=%u, old timer=%p\n"), interval, timer);
+#endif
 
-    Scheduler.removeTimer(&timer);
-    if (interval) {
-        Scheduler.addTimer(&timer, interval, true, [](EventScheduler::TimerPtr) {
-            Sensor_HLW8012_callbackCF1();
-        }, EventScheduler::PRIO_HIGH);
-    }
+void Sensor_HLW8012::dump(Print &output)
+{
+    output.printf_P(PSTR("Pi=% 8.3fms avg=% 8.3fms cnt=% 4u %ci=% 9.4fms avg=% 9.4f cnt=% 4u "),
+        _inputCF.pulseWidthIntegral / 1000.0,
+        _inputCF.average / 1000.0,
+        _inputCF.counter,
+        _getOutputMode(_inputCF1),
+        _inputCF1->pulseWidthIntegral / 1000.0,
+        _inputCF1->average / 1000.0,
+        _inputCF1->counter
+    );
+    Sensor_HLW80xx::dump(output);
 }
 
-bool Sensor_HLW8012::_startRawDataDump(const String &filename, uint32_t endTime)
+#if AT_MODE_SUPPORTED
+
+#include "at_mode.h"
+
+#undef PROGMEM_AT_MODE_HELP_COMMAND_PREFIX
+#define PROGMEM_AT_MODE_HELP_COMMAND_PREFIX         "SP_"
+
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HLWMODE, "HLWMODE", "<u=0/i=1>[,<delay in ms>,<count=auto dump buffer/0=off>]", "Set voltage or current mode");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF(HLWCFG, "HLWCFG", "<params,params,...>", "Configure sensor", "Display configuration");
+#if IOT_SENSOR_HLW8012_BUFFER_DEBUG
+PROGMEM_AT_MODE_HELP_COMMAND_DEF(HLWBUF, "HLWBUF", "<U/I/P>", "Dump buffer for voltage, current or power", "Display buffer status");
+#endif
+
+void Sensor_HLW8012::atModeHelpGenerator()
 {
-    // end current dump if any is running
-    _endRawDataDump();
+    Sensor_HLW80xx::atModeHelpGenerator();
 
-    _debug_printf_P(PSTR("Sensor_HLW8012::_startRawDataDump(): filename=%s, endTime=%u\n"), filename.c_str(), endTime);
+    auto name = SensorPlugin::getInstance().getName();
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(HLWMODE), name);
+#if IOT_SENSOR_HLW8012_BUFFER_DEBUG
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(HLWBUF), name);
+#endif
+}
 
-    _rawDumpFile = SPIFFS.open(filename, fs::FileOpenMode::write);
-    if (_rawDumpFile) {
-        _rawDumpEndTime = endTime;
-        _debug_printf_P(PSTR("Sensor_HLW8012::_startRawDataDump(): started, file=%u\n"), (bool)_rawDumpFile);
-        return true;
-    }
-    else {
-        _rawDumpEndTime = 0;
-        _debug_printf_P(PSTR("Sensor_HLW8012::_startRawDataDump(): failed to create %s\n"), filename.c_str());
+bool Sensor_HLW8012::atModeHandler(Stream &serial, const String &command, AtModeArgs &args)
+{
+    if (!Sensor_HLW80xx::atModeHandler(serial, command, args)) {
+        if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(HLWMODE))) {
+            if (args.requireArgs(1)) {
+                auto type = F("Cycle Voltage/Current");
+                Sensor_HLW8012::OutputTypeEnum_t mode = Sensor_HLW8012::OutputTypeEnum_t::CYCLE;
+
+                at_mode_print_prefix(serial, command);
+                serial.print(F("Setting CF1 output mode to "));
+                char ch = args.toLowerChar(0);
+                if (ch == 'u') {
+                    type = F("Voltage");
+                    mode = Sensor_HLW8012::OutputTypeEnum_t::VOLTAGE;
+                }
+                else if (ch == 'i') {
+                    type = F("Current");
+                    mode = Sensor_HLW8012::OutputTypeEnum_t::CURRENT;
+                }
+                auto delay = (int)args.toInt(1, -1);
+                auto autoDump = args.toInt(2);
+
+                serial.printf_P(PSTR("%s for first sensor, delay %dms, auto dump=%u\n"), type, delay, autoDump);
+                _setOutputMode(mode, delay);
+#if IOT_SENSOR_HLW8012_BUFFER_DEBUG
+                if (autoDump) {
+                    _autoDumpBuffer(serial, autoDump);
+                }
+#endif
+            }
+            return true;
+        }
+        if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(HLWCFG))) {
+            if (args.isQueryMode()) {
+                auto print = [](Stream &serial, SensorInput &input, bool newLine) {
+                    auto settings = input.getSettings();
+                    serial.printf_P(PSTR("%u,%u"), settings.intTime, settings.avgValCount);
+                    if (newLine) {
+                        serial.println();
+                    }
+                    else {
+                        serial.print(',');
+                        serial.print(' ');
+                    }
+                };
+
+                serial.printf_P(PSTR("+%s="), command.c_str());
+                print(serial, _inputCF, false);
+                print(serial, _inputCFU, false);
+                print(serial, _inputCFI, true);
+            }
+            else if (args.requireArgs(6, 6)) {
+                uint16_t n = 0;
+                _inputCF.getSettings() = { args.toInt(n++), args.toInt(n++), };
+                _inputCFU.getSettings() = { args.toInt(n++), args.toInt(n++), };
+                _inputCFI.getSettings() = { args.toInt(n++), args.toInt(n++), };
+            }
+            return true;
+        }
+#if IOT_SENSOR_HLW8012_BUFFER_DEBUG
+        if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(HLWBUF))) {
+            if (args.isQueryMode() || args.size() == 0) {
+                _dumpBuffer(serial, nullptr);
+            }
+            else {
+                auto type = args.toLowerChar(0);
+                auto limit = args.toInt(1);
+                if (type == 'u') {
+                    _dumpBuffer(serial, &_inputCFU, limit);
+                }
+                else  if (type == 'i') {
+                    _dumpBuffer(serial, &_inputCFI, limit);
+                }
+                else  if (type == 'p') {
+                    _dumpBuffer(serial, &_inputCF, limit);
+                }
+            }
+            return true;
+        }
+#endif
     }
     return false;
 }
-
-void Sensor_HLW8012::_endRawDataDump()
-{
-    if (_rawDumpFile) {
-        _debug_printf_P(PSTR("Sensor_HLW8012::_endRawDataDump(): raw data dump ended: size=%u\n"), (unsigned)_rawDumpFile.size());
-        _rawDumpFile.close();
-    }
-    _rawDumpEndTime = 0;
-}
-
 #endif
 
 #endif

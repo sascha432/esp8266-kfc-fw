@@ -44,6 +44,12 @@ public:
 
 public:
     static AsyncWebSocket *getConsoleServer();
+    void setOutputBufferMaxSize(uint16_t size) {
+        _outputBufferMaxSize = size;
+    }
+    void setOutputBufferDelay(uint16_t delay) {
+        _outputBufferDelay = delay;
+    }
 
 private:
     void _outputLoop();
@@ -55,6 +61,9 @@ private:
     unsigned long _outputBufferFlushDelay;
     Buffer _outputBuffer;
     SerialHandler *_serialHandler;
+
+    uint16_t _outputBufferMaxSize;
+    uint16_t _outputBufferDelay;
 };
 
 #endif

@@ -80,6 +80,15 @@ AtModeArgs::ArgumentPtr AtModeArgs::get(uint16_t num) const
     return _args.at(num);
 }
 
+int AtModeArgs::toChar(uint16_t num) const
+{
+    if (!exists(num)) {
+        return -1;
+    }
+    auto str = _args.at(num);
+    return *str;
+}
+
 long AtModeArgs::toInt(uint16_t num, long defaultValue) const
 {
     ArgumentPtr arg;

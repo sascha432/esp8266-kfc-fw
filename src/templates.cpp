@@ -172,6 +172,7 @@ void UpgradeTemplate::process(const String &key, PrintHtmlEntitiesString &output
     if (String_equals(key, F("FIRMWARE_UPGRADE_FAILURE_CLASS"))) {
     }
     else if (String_equals(key, F("FIRMWARE_UPGRADE_FAILURE"))) {
+        output.setRawOutput(true);
         output.print(_errorMessage);
     }
     else {

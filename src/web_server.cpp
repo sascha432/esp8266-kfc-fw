@@ -351,7 +351,8 @@ void web_server_update_handler(AsyncWebServerRequest *request)
             HttpHeaders httpHeaders(false);
             httpHeaders.addNoCache();
             if (!web_server_send_file(F("/update_fw.html"), httpHeaders, web_server_client_accepts_gzip(request), nullptr, request, new UpgradeTemplate(message))) {
-                request->send(404);
+                message += F("<br><a href=\"/\">Home</a>");
+                request->send(200, FSPGM(mime_text_plain), message);
             }
         }
 
@@ -865,6 +866,7 @@ public:
 
     virtual void setup(PluginSetupMode_t mode) override;
     virtual void reconfigure(PGM_P source) override;
+    virtual void restart() override;
     virtual bool hasReconfigureDependecy(PluginComponent *plugin) const override {
         return false;
     }
@@ -897,6 +899,14 @@ void WebServerPlugin::reconfigure(PGM_P source)
         server = nullptr;
     }
     init_web_server();
+}
+
+void WebServerPlugin::restart()
+{
+    if (server) {
+        delete server;
+        server = nullptr;
+    }
 }
 
 void WebServerPlugin::getStatus(Print &output)

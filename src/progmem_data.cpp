@@ -23,6 +23,7 @@ PROGMEM_STRING_DEF(_hidden, " hidden");
 PROGMEM_STRING_DEF(_selected, " selected");
 PROGMEM_STRING_DEF(_checked, " checked");
 PROGMEM_STRING_DEF(status, "status");
+PROGMEM_STRING_DEF(Device_is_rebooting, "Device is rebooting...\n");
 PROGMEM_STRING_DEF(Not_supported, "Not supported");
 PROGMEM_STRING_DEF(default_password_warning, "WARNING! Default password has not been changed");
 PROGMEM_STRING_DEF(empty, "");

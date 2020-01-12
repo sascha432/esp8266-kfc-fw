@@ -7,7 +7,7 @@ import hashlib
 
 class Session:
 
-    def __init__(self, hash = hashlib.sha1(), rounds = 1024):
+    def __init__(self, hash = hashlib.sha256(), rounds = 1024):
         self.rounds = rounds
         self.hash = hash
 
@@ -37,10 +37,3 @@ class Session:
         return (self.generate(username, password, salt) == session_id)
 
 
-def test():
-    session = Session()
-    # session = Session(hashlib.sha256(), 128) # ESP32
-
-    sid = session.generate('username', '12345678')
-    print("SID " + sid)
-    print("Valid " + str(session.verify('username', '12345678', sid)))

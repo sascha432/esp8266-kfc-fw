@@ -20,14 +20,14 @@ extern RNGClass rng;
 #ifndef SESSION_CONFIGURATION_SET
 #define SESSION_CONFIGURATION_SET   1
 
-#if defined(ESP32)
+#if defined(ESP32) || defined(ESP8266)
 
 #include <SHA256.h>
-#define SESSION_ROUNDS              128
+#define SESSION_ROUNDS              1024
 #define SESSION_HASH_LENGTH         32
 #define SESSION_HASH_CLASSNAME      SHA256
 
-#elif defined(ESP8266)
+#elif false //defined(ESP8266)
 
 #include "SHA1.h"
 #define SESSION_ROUNDS              1024

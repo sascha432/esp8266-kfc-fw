@@ -86,5 +86,6 @@ bool verify_session_id(const char *session_id, const char *username, const char 
     // bin2hex_append(tmp, salt, 8);
     // debug_printf("SID %s, generated SID %s, salt %s, user %s, pass %s\n", session_id, generate_session_id(username, password, salt).c_str(), tmp.c_str(), username, password);
     // #endif
+    // debug_printf_P("SID %s %s\n", generate_session_id(username, password, salt).c_str(), session_id);
     return generate_session_id(username, password, salt).equals(session_id);
 }

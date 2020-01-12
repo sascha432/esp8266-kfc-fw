@@ -196,30 +196,31 @@ void Sensor_HLW8012::_loop()
 #endif
 }
 
-static void dumpVector(std::vector<float> &data, Print &output, std::function<String(float item)> formatFunc) {
-    int n = 0;
-    for(auto item: data) {
-        if (n++ != 0) {
-            output.print(',');
-        }
-        output.print(formatFunc(item));
-    }
-    data.clear();
-}
-
 bool Sensor_HLW8012::_processInterruptBuffer(InterruptBuffer &buffer, SensorInput &input)
 {
     auto settings = input.getSettings();
 
     if (buffer.size() >= 2) {
 
+        auto client = _getWebSocketClient();
+        bool convertUnits = _getWebSocketPlotData() & WebSocketDataTypeEnum_t::CONVERT_UNIT;
+        uint16_t dataType = 0;
+        if (client) {
+            if ((_getWebSocketPlotData() & WebSocketDataTypeEnum_t::CURRENT) && (&input == &_inputCFI)) {
+                dataType = 'I';
+            }
+            else if ((_getWebSocketPlotData() & WebSocketDataTypeEnum_t::POWER) && (&input == &_inputCF)) {
+                dataType = 'P';
+            }
+            else if ((_getWebSocketPlotData() & WebSocketDataTypeEnum_t::VOLTAGE) && (&input == &_inputCFU)) {
+                dataType = 'U';
+            }
+        }
+
         // tested up to 5KHz
         // jitter +-0.03Hz @ 500Hz
 
-        std::vector<float> data1;
-        std::vector<float> data2;
-        std::vector<float> data3;
-        std::vector<float> data4;
+        std::vector<float> data;
 
 #define USE_POPFRONT 0
 
@@ -270,9 +271,6 @@ bool Sensor_HLW8012::_processInterruptBuffer(InterruptBuffer &buffer, SensorInpu
                 }
             }
 
-            data1.push_back(value);
-            data2.push_back(diff);
-
             if (input.counter == 0 || settings.avgValCount == 0) {
                 input.average = diff;
             }
@@ -284,19 +282,30 @@ bool Sensor_HLW8012::_processInterruptBuffer(InterruptBuffer &buffer, SensorInpu
             input.counter++;
 
             // use average for the integration
-            diff = input.average;
+            auto diff2 = input.average;
             if (input.pulseWidthIntegral) {
                 uint32_t multiplier = 500 * settings.intTime / input.lastIntegration;
-                input.pulseWidthIntegral = ((input.pulseWidthIntegral * multiplier) + diff) / (multiplier + 1.0);
-                input.lastIntegration = diff;
+                input.pulseWidthIntegral = ((input.pulseWidthIntegral * multiplier) + diff2) / (multiplier + 1.0);
+                input.lastIntegration = diff2;
             }
             else {
-                input.pulseWidthIntegral = diff;
-                input.lastIntegration = diff;
+                input.pulseWidthIntegral = diff2;
+                input.lastIntegration = diff2;
             }
 
-            data3.push_back(input.average);
-            data4.push_back(input.pulseWidthIntegral);
+            if (dataType) {
+                data.push_back(value);
+                if (convertUnits) {
+                    data.push_back(input.convertPulse(diff));
+                    data.push_back(input.convertPulse(input.average));
+                    data.push_back(input.convertPulse(input.pulseWidthIntegral));
+                }
+                else {
+                    data.push_back(diff);
+                    data.push_back(input.average);
+                    data.push_back(input.pulseWidthIntegral);
+                }
+            }
 
 #if USE_POPFRONT
             noInterrupts();
@@ -313,68 +322,41 @@ bool Sensor_HLW8012::_processInterruptBuffer(InterruptBuffer &buffer, SensorInpu
         interrupts();
 #endif
 
-        auto client = _getWebSocketClient();
-        if (client) {
-            String unit = F("µs");
-            bool match = false;
-            bool convertUnit = _getWebSocketPlotData() & WebSocketDataTypeEnum_t::CONVERT_UNIT;
-            auto plotType = _getWebSocketPlotData() & ~WebSocketDataTypeEnum_t::CONVERT_UNIT;
-            switch(plotType) {
-                case WebSocketDataTypeEnum_t::CURRENT:
-                    match = (&input == &_inputCFI);
-                    if (convertUnit) {
-                        unit = F("A");
-                    }
-                    break;
-                case WebSocketDataTypeEnum_t::POWER:
-                    match = (&input == &_inputCF);
-                    if (convertUnit) {
-                        unit = F("W");
-                    }
-                    break;
-                case WebSocketDataTypeEnum_t::VOLTAGE:
-                    match = (&input == &_inputCFU);
-                    if (convertUnit) {
-                        unit = F("V");
-                    }
-                    break;
-            }
-            if (match) {
 
-                std::function<String(float item)> formatFuncInt = [](float item) {
-                    return String((uint32_t)item);
+        if (dataType) {
+
+            typedef struct {
+                uint16_t packetId;
+                uint16_t outputMode;
+                uint16_t dataType;
+                float voltage;
+                float current;
+                float power;
+                float energy;
+                float pf;
+                float noise;
+            } header_t;
+
+            auto wsBuffer = Http2Serial::getConsoleServer()->makeBuffer(data.size() * sizeof(*data.data()) + sizeof(header_t));
+            auto buffer = wsBuffer->get();
+            if (buffer) {
+                header_t *header = reinterpret_cast<header_t *>(buffer);
+                *header = {
+                    0x0100,
+                    _getOutputMode(&input),
+                    dataType,
+                    _voltage,
+                    _current,
+                    _power,
+                    _getEnergy(0),
+                    _getPowerFactor(),
+                    _noiseLevel
                 };
-                std::function<String(float item)> formatFuncX = formatFuncInt;
-                std::function<String(float item)> formatFuncY = formatFuncInt;
+                buffer += sizeof(header_t);
+                memcpy(buffer, data.data(), data.size() * sizeof(*data.data()));
 
-                if (convertUnit) {
-                    formatFuncY = [input](float pulse) {
-                        return String(input.convertPulse(pulse), 4);
-                    };
-                }
-
-                auto noNaN = [](float v) {
-                    if (std::isnormal(v)) {
-                        return v;
-                    }
-                    return 0.0f;
-                };
-
-                PrintString str;
-                str.printf_P(PSTR("+PLOT={\"n\":\"%c\",\"t\":%u,\"u\":\"%s\",\"l\":[%f,%f,%f,%f,%f,%f],\"d\":{"), _getOutputMode(&input), time(nullptr), unit.c_str(), noNaN(_voltage), noNaN(_current), noNaN(_power), noNaN(_getEnergy(0)), noNaN(_getPowerFactor()), _noiseLevel);
-                str.print(F("\"x\":["));
-                dumpVector(data1, str, formatFuncX);
-                str.print(F("],\"y1\":["));
-                dumpVector(data2, str, formatFuncY);
-                str.print(F("],\"y2\":["));
-                dumpVector(data3, str, formatFuncY);
-                str.print(F("],\"y3\":["));
-                dumpVector(data4, str, formatFuncY);
-                str.println(F("]}}"));
-
-                client->text(str);
+                client->binary(wsBuffer);
             }
-
         }
         return true;
     }

@@ -24,6 +24,7 @@ import websocket
 import _thread as thread
 import json
 import time
+import struct
 
 import kfcfw_session
 
@@ -57,9 +58,17 @@ class WSConsole:
 
     def on_message(self, data):
         if isinstance(data, bytes):
-            print("on_message: bytes " + str(len(data)))
-        elif isinstance(data, bytearray):
-            print("on_message: bytearray " + str(len(data)))
+            try:
+                (packetId, ) = struct.unpack_from('H', data)
+                if packetId==0x0100:
+                    fmt = 'HHHffffff'
+                    header = struct.unpack_from(fmt, data)
+                    ofs = struct.calcsize(fmt)
+                    m = memoryview(data[ofs:])
+                    data = m.cast('f').tolist()
+                    self.controller.plot.data_handler(header, data)
+            except Exception as e:
+                print("Invalid binary packet " + str(e))
         else:
             lines = data.split("\n")
             for message in lines:
@@ -79,16 +88,6 @@ class WSConsole:
                         if message[0:11] == "+CLIENT_ID=":
                             self.client_id = message[11:]
                             print("ClientID: " + self.client_id)
-                        elif message[0:7] == "+PLOTM=":
-                            self.controller.plot.add_marker(message[7:])
-                        elif message[0:6] == "+PLOT=":
-                            try:
-                                data = json.loads(message[6:])
-                            except:
-                                print("Failed to load JSON")
-                                print(message[6:])
-                            else:
-                                self.controller.data_handler(data)
 
     def on_error(self, error):
         tk.messagebox.showerror(title='Error', message='Connection failed: ' + str(error))
@@ -148,7 +147,6 @@ class Plot:
     def __init__(self, controller):
         self.controller = controller
         self.values = []
-        self.markers = []
         self.start_time = 0
         self.update_plot = False
         self.label = { 'x': 'time in seconds', 'y': '' }
@@ -165,10 +163,24 @@ class Plot:
 
     def init_plot(self, type):
         self.stats = [ '', '', '', '' ]
-        self.levels = []
-        self.markers = []
+        self.voltage = 0
+        self.current = 0
+        self.power = 0
+        self.pf = 0
+        self.energy = 0
+        self.noiseLevel = 0
         self.values = [[], [], [], [], [], [], [], ]
         self.start_time = 0
+        self.plot_type = self.controller.gui_settings['plot_type']
+        self.data_retention = self.controller.get_data_retention()
+        self.label['y'] = "µs"
+        if self.controller.gui_settings['convert_units'].get()==1:
+            if self.plot_type=='I':
+                self.label['y'] = "A"
+            elif self.plot_type=='U':
+                self.label['y'] = "V"
+            elif self.plot_type=='P':
+                self.label['y'] = "W"
 
         self.fig.clear()
         if self.controller.gui_settings['noise'].get()==1:
@@ -187,12 +199,8 @@ class Plot:
             self.ax1.set_xlabel(self.label['x'])
             self.ax1.set_ylabel(self.label['y'])
 
-            try:
-                levels = self.levels
-                fmt = '{0:.2f}V {1:.3f}A {2:.2f}W pf {3:.2f} {4:.3f}kWh noise {5:.3f}'
-                self.fig.suptitle(fmt.format(levels[0], levels[1], levels[2], levels[4], levels[3], levels[5] / 1000.0), fontsize=16)
-            except:
-                dummy = 0
+            fmt = '{0:.2f}V {1:.3f}A {2:.2f}W pf {3:.2f} {4:.3f}kWh noise {5:.3f}'
+            self.fig.suptitle(fmt.format(self.voltage, self.current, self.power, self.pf, self.energy, self.noiseLevel / 1000.0), fontsize=16)
 
             try:
                 stats = []
@@ -209,18 +217,8 @@ class Plot:
             except:
                 dummy = 0
 
-            # noise = ''
-            # try:
-            #     _min = min(self.values[1][-5:])
-            #     _max = max(self.values[1][-5:])
-            #     _mean = mean(self.values[1][-5:])
-            #     noise = ((_mean - _min) + (_max - _mean)) * 50 / _mean
-            #     noise = format(noise, '.2f')
-            # except:
-            #     dummy = 0
-
             if self.controller.get_data_state(0):
-                self.ax1.plot(self.values[0], self.values[1], 'g', label='diff ' + self.stats[0], linewidth=0.1)
+                self.ax1.plot(self.values[0], self.values[1], 'g', label='sensor' + self.stats[0], linewidth=0.1)
             if self.controller.get_data_state(1):
                 self.ax1.plot(self.values[0], self.values[2], 'b', label='avg' + self.stats[1])
             if self.controller.get_data_state(2):
@@ -230,10 +228,6 @@ class Plot:
             if len(self.values[0])>1:
                 y_range_limit = self.get_max_value() * self.controller.get_y_range() / 100.0
                 self.ax1.plot(self.values[0][0], y_range_limit)
-
-            for marker in self.markers:
-                if marker!=0:
-                    self.ax1.axvline(self.get_time(marker), color='k')
 
             self.ax1.legend(loc = 'upper left')
 
@@ -246,68 +240,51 @@ class Plot:
     def get_time(self, value):
         return (value - self.start_time) / 1000000.0
 
-    def add_marker(self, data):
-        value = int(data)
-        self.markers.append(value)
-
-    def update_plot_data(self, data):
-
-        if self.start_time==0:
-            self.data_retention = self.controller.get_data_retention()
-
-        self.levels = data['l']
-
-        # remove old data
+    def clean_old_data(self):
         if len(self.values[0])>10:
-            self.label['y'] = data['u']
             min_time = self.values[0][-1] - self.data_retention
-            n = 0
-            for value in self.markers:
-                if self.get_time(value)<min_time:
-                    self.markers[n] = 0
-                n = n + 1
             for i in range(len(self.values[0]) - 1, 1, -1):
                 if self.values[0][i]<min_time:
                     for n in range(0, len(self.values) - 1):
                         del self.values[n][0:i]
                     break
 
-        # prefill
-        if self.start_time==0:
-            self.start_time = data['d']['x'][0]
-            for i in range(0, (self.data_retention * 10) - 1, 1):
-                value = (i - (self.data_retention * 10)) / 10.0
-                self.values[0].append(value)
-                self.values[1].append(data['d']['y1'][0])
-                self.values[2].append(data['d']['y2'][0])
-                self.values[3].append(data['d']['y3'][0])
-                self.values[4].append(0)
-                self.values[5].append(0)
+    def data_handler(self, header, data):
 
-        # copy data
-        for value in data['d']['x']:
-            self.values[0].append(self.get_time(value))
-            type = self.controller.gui_settings['plot_type']
-            if type=='I':
-                self.values[4].append(data['l'][1])
-            elif type=='U':
-                self.values[4].append(data['l'][0])
-            elif type=='P':
-                self.values[4].append(data['l'][2])
-            self.values[5].append(data['l'][5] / 1000.0)
+        if chr(header[2])==self.plot_type:
+            (packet_id, output_mode, data_type, self.voltage, self.current, self.power, self.pf, self.energy, self.noiseLevel) = header
+            if self.plot_type=='I':
+                display_value = self.current
+            elif self.plot_type=='U':
+                display_value = self.voltage
+            elif self.plot_type=='P':
+                display_value = self.power
 
-        for value in data['d']['y1']:
-            self.values[1].append(value)
-        for value in data['d']['y2']:
-            self.values[2].append(value)
-        n = 0
-        for value in data['d']['y3']:
-            if value==0:
-                value = data['d']['y2'][n]
-            n = n + 1
-            self.values[3].append(value)
+            self.clean_old_data()
 
-        self.update_plot = True
+            # prefill
+            if self.start_time==0:
+                self.start_time = data[0]
+                for i in range(0, (self.data_retention * 10) - 1, 1):
+                    value = (i - (self.data_retention * 10)) / 10.0
+                    self.values[0].append(value)
+                    self.values[1].append(data[1])
+                    self.values[2].append(data[2])
+                    self.values[3].append(data[3])
+                    self.values[4].append(display_value)
+                    self.values[5].append(self.noiseLevel / 1000.0)
+
+            # copy data
+            for pos in range(0, len(data), 4):
+                self.values[0].append(self.get_time(data[pos]))
+                self.values[4].append(display_value)
+                self.values[5].append(self.noiseLevel / 1000.0)
+
+                self.values[1].append(data[pos + 1])
+                self.values[2].append(data[pos + 2])
+                self.values[3].append(data[pos + 3])
+
+            self.update_plot = True
 
 
 class MainApp(tk.Tk):
@@ -412,13 +389,6 @@ class MainApp(tk.Tk):
         self.plot.init_plot(type)
         if type != '':
             self.update_plot = True
-
-    def data_handler(self, data):
-        if data['n'] == self.gui_settings['plot_type']:
-            try:
-                self.plot.update_plot_data(data)
-            except Exception as e:
-                print('Update plot data error: ' + str(e))
 
     def show_frame(self, cont):
         frame = self.frames[cont]
@@ -585,10 +555,10 @@ class PageLiveStats(tk.Frame):
         ttk.Entry(self, width=5, textvariable=controller.gui_settings['retention']).pack(in_=top, side=tkinter.LEFT)
         ttk.Label(self, text="seconds").pack(in_=top, side=tkinter.LEFT, padx=2)
 
-        ttk.Button(self, text="Data#1", width=7, command=lambda: controller.toggle_data_state(0)).pack(in_=top, side=tkinter.LEFT)
-        ttk.Button(self, text="Data#2", width=7, command=lambda: controller.toggle_data_state(1)).pack(in_=top, side=tkinter.LEFT)
-        ttk.Button(self, text="Data#3", width=7, command=lambda: controller.toggle_data_state(2)).pack(in_=top, side=tkinter.LEFT)
-        ttk.Button(self, text="Data#4", width=7, command=lambda: controller.toggle_data_state(3)).pack(in_=top, side=tkinter.LEFT)
+        ttk.Button(self, text="Sensor", width=7, command=lambda: controller.toggle_data_state(0)).pack(in_=top, side=tkinter.LEFT)
+        ttk.Button(self, text="Avg", width=7, command=lambda: controller.toggle_data_state(1)).pack(in_=top, side=tkinter.LEFT)
+        ttk.Button(self, text="Integral", width=7, command=lambda: controller.toggle_data_state(2)).pack(in_=top, side=tkinter.LEFT)
+        ttk.Button(self, text="Display", width=7, command=lambda: controller.toggle_data_state(3)).pack(in_=top, side=tkinter.LEFT)
 
 
         canvas = FigureCanvasTkAgg(controller.plot.fig, self)

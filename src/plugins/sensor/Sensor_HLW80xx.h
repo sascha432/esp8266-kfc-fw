@@ -197,9 +197,9 @@ public:
 
 protected:
     typedef enum {
-        VOLTAGE = 0,
-        CURRENT = 1,
-        POWER = 2,
+        VOLTAGE = 0x0001,
+        CURRENT = 0x0002,
+        POWER = 0x0004,
         CONVERT_UNIT = 0x8000,
     } WebSocketDataTypeEnum_t;
 

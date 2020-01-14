@@ -65,7 +65,7 @@ class WSConsole:
                     header = struct.unpack_from(fmt, data)
                     ofs = struct.calcsize(fmt)
                     m = memoryview(data[ofs:])
-                    data = m.cast('f').tolist()
+                    data = m.cast('f')
                     self.controller.plot.data_handler(header, data)
             except Exception as e:
                 print("Invalid binary packet " + str(e))
@@ -150,16 +150,28 @@ class Plot:
         self.start_time = 0
         self.update_plot = False
         self.label = { 'x': 'time in seconds', 'y': '' }
+        self.title = ''
 
         self.fig = Figure(figsize=(12, 8), dpi=100)
         self.ax1 = self.fig.add_subplot(111)
         self.ax2 = False
 
-    def init_animation(self):
-        self.ani = animation.FuncAnimation(self.fig, self.plot_values, interval=self.controller.get_update_rate())
+    def plot_values_ani(self, i):
+        # if the values get updated during plotting there might be an exception
+        # instead of locking or double buffering just skip that refresh
+        try:
+            self.plot_values()
+        except Exception as e:
+            print("Plot exception" + str(e))
 
-    def get_max_value(self):
-        return max([max(self.values[1][1:]), max(self.values[2][1:]), max(self.values[3][1:]), max(self.values[4][1:])])
+    def init_animation(self):
+        self.ani = animation.FuncAnimation(self.fig, self.plot_values_ani, interval=self.controller.get_update_rate())
+
+    # def get_min_value(self):
+    #     return min([min(self.values[1]), min(self.values[2]), min(self.values[3]), min(self.values[4])])
+
+    # def get_max_value(self):
+    #     return max([max(self.values[1]), max(self.values[2]), max(self.values[3]), max(self.values[4])])
 
     def init_plot(self, type):
         self.stats = [ '', '', '', '' ]
@@ -171,6 +183,7 @@ class Plot:
         self.noiseLevel = 0
         self.values = [[], [], [], [], [], [], [], ]
         self.start_time = 0
+        self.max_time = 0
         self.plot_type = self.controller.gui_settings['plot_type']
         self.data_retention = self.controller.get_data_retention()
         self.label['y'] = "µs"
@@ -189,18 +202,21 @@ class Plot:
             self.ax1 = self.fig.subplots(1, 1)
             self.ax2 = False
 
-        self.controller.update_plot_title()
-
-    def plot_values(self, i):
-        if self.update_plot or i == -1:
+    def plot_values(self):
+        if self.update_plot:
             self.update_plot = False
             self.ax1.clear()
 
+            self.ax1.set_title('HLW8012 - ' + self.title)
             self.ax1.set_xlabel(self.label['x'])
             self.ax1.set_ylabel(self.label['y'])
+            self.ax1.set_xlim(left=self.max_time - self.data_retention, right=self.max_time)
 
-            fmt = '{0:.2f}V {1:.3f}A {2:.2f}W pf {3:.2f} {4:.3f}kWh noise {5:.3f}'
-            self.fig.suptitle(fmt.format(self.voltage, self.current, self.power, self.pf, self.energy, self.noiseLevel / 1000.0), fontsize=16)
+            fmt = '{0:.2f}V {1:.3f}A {2:.2f}W pf {3:.2f} {4:.3f}kWh noise {5:.3f} data {6:d} ({7:.2f}/s)'
+            self.fig.suptitle(fmt.format(self.voltage, self.current, self.power, self.pf, self.energy, self.noiseLevel / 1000.0, len(self.values[0]), (len(self.values[0]) / (self.max_time - self.values[0][0]))), fontsize=16)
+
+            if len(self.values[0])==0:
+                return
 
             try:
                 stats = []
@@ -214,34 +230,40 @@ class Plot:
                     tmp = ' min/max ' + format(min(self.values[i]), fmt) + '/' + format(max(self.values[i]), fmt) + ' ' + u"\u2300" + ' ' + format(mean(self.values[i]), fmt)
                     stats.append(tmp)
                 self.stats = stats
-            except:
-                dummy = 0
+            except Exception as e:
+                # print("Error getting legend data " + str(e))
+                pass
 
+            y_max = 0
             if self.controller.get_data_state(0):
                 self.ax1.plot(self.values[0], self.values[1], 'g', label='sensor' + self.stats[0], linewidth=0.1)
+                y_max = max(y_max, max(self.values[1]))
             if self.controller.get_data_state(1):
                 self.ax1.plot(self.values[0], self.values[2], 'b', label='avg' + self.stats[1])
+                y_max = max(y_max, max(self.values[2]))
             if self.controller.get_data_state(2):
                 self.ax1.plot(self.values[0], self.values[3], 'r', label='integral' + self.stats[2])
+                y_max = max(y_max, max(self.values[3]))
             if self.controller.get_data_state(3):
                 self.ax1.plot(self.values[0], self.values[4], 'c', label='display' + self.stats[3])
-            if len(self.values[0])>1:
-                y_range_limit = self.get_max_value() * self.controller.get_y_range() / 100.0
-                self.ax1.plot(self.values[0][0], y_range_limit)
+                y_max = max(y_max, max(self.values[4]))
 
-            self.ax1.legend(loc = 'upper left')
+            y_min = y_max * 0.98 * self.controller.get_y_range() / 100.0
+            y_max = y_max * 1.02
+            self.ax1.set_ylim(top=y_max, bottom=y_min)
+            self.ax1.legend(loc = 'lower left')
 
-            if self.ax2!=False and len(self.values[0])>1:
+            if self.ax2!=False:
                 self.ax2.clear()
+                self.ax2.set_xlim(left=self.max_time - self.data_retention, right=self.max_time)
                 self.ax2.hlines(y=40, xmin=self.values[0][0], xmax=self.values[0][-1], linestyle='dashed')
                 self.ax2.plot(self.values[0], self.values[5], 'r', label='noise')
-
 
     def get_time(self, value):
         return (value - self.start_time) / 1000000.0
 
     def clean_old_data(self):
-        if len(self.values[0])>10:
+        if len(self.values[0])>0:
             min_time = self.values[0][-1] - self.data_retention
             for i in range(len(self.values[0]) - 1, 1, -1):
                 if self.values[0][i]<min_time:
@@ -252,7 +274,7 @@ class Plot:
     def data_handler(self, header, data):
 
         if chr(header[2])==self.plot_type:
-            (packet_id, output_mode, data_type, self.voltage, self.current, self.power, self.pf, self.energy, self.noiseLevel) = header
+            (packet_id, output_mode, data_type, self.voltage, self.current, self.power, self.energy, self.pf, self.noiseLevel) = header
             if self.plot_type=='I':
                 display_value = self.current
             elif self.plot_type=='U':
@@ -262,28 +284,19 @@ class Plot:
 
             self.clean_old_data()
 
-            # prefill
             if self.start_time==0:
                 self.start_time = data[0]
-                for i in range(0, (self.data_retention * 10) - 1, 1):
-                    value = (i - (self.data_retention * 10)) / 10.0
-                    self.values[0].append(value)
-                    self.values[1].append(data[1])
-                    self.values[2].append(data[2])
-                    self.values[3].append(data[3])
-                    self.values[4].append(display_value)
-                    self.values[5].append(self.noiseLevel / 1000.0)
 
             # copy data
             for pos in range(0, len(data), 4):
                 self.values[0].append(self.get_time(data[pos]))
-                self.values[4].append(display_value)
-                self.values[5].append(self.noiseLevel / 1000.0)
-
                 self.values[1].append(data[pos + 1])
                 self.values[2].append(data[pos + 2])
                 self.values[3].append(data[pos + 3])
+                self.values[4].append(display_value)
+                self.values[5].append(self.noiseLevel / 1000.0)
 
+            self.max_time = self.values[0][-1]
             self.update_plot = True
 
 
@@ -303,7 +316,7 @@ class MainApp(tk.Tk):
         self.wsc = WSConsole(self)
         self.set_plot_type('')
 
-        tk.Tk.wm_title(self, "HLW8012 live view")
+        tk.Tk.wm_title(self, "HLW8012 Live View")
 
         container = tk.Frame(self)
         container.pack(side="top", fill="both", expand = True)
@@ -319,12 +332,27 @@ class MainApp(tk.Tk):
         self.show_frame(StartPage)
 
     def set_connection_status(self, state, error = ''):
-        self.update_plot_title()
         if state==False:
             self.connection_name = 'Disconnected'
             if error!='':
                 self.connection_name = self.connection_name + ': ' + error
         self.connect_label.config(text='Start Page - ' + self.connection_name)
+        self.set_plot_title()
+
+    def set_plot_title(self):
+        if not self.wsc.connected:
+            title = 'Not connected'
+        else:
+            type = self.gui_settings['plot_type']
+            if type=='I':
+                title='Current'
+            elif type=='P':
+                title='Power'
+            elif type=='U':
+                title='Voltage'
+            else:
+                title='Paused'
+        self.plot.title = title
 
     def set_connection(self, name):
         self.connection_name = name
@@ -351,21 +379,6 @@ class MainApp(tk.Tk):
             self.gui_settings['retention'].set('5')
         return retention
 
-    def update_plot_title(self):
-        if not self.wsc.connected:
-            title = 'Not connected'
-        else:
-            type = self.gui_settings['plot_type']
-            if type=='I':
-                title='Current'
-            elif type=='P':
-                title='Power'
-            elif type=='U':
-                title='Voltage'
-            else:
-                title='Paused'
-        self.plot.ax1.set_title('HLW8012 - ' + title)
-
     def set_plot_type(self, type):
         self.gui_settings['plot_type'] = type;
 
@@ -387,6 +400,7 @@ class MainApp(tk.Tk):
             self.wsc.send_cmd('SP_HLWPLOT', self.wsc.client_id, '0')
 
         self.plot.init_plot(type)
+        self.set_plot_title()
         if type != '':
             self.update_plot = True
 

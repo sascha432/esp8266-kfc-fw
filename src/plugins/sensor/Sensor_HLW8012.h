@@ -29,7 +29,7 @@
 
 // delay after switching to voltage mode before the sensor can be read
 #ifndef IOT_SENSOR_HLW8012_DELAY_START_U
-#define IOT_SENSOR_HLW8012_DELAY_START_U            500
+#define IOT_SENSOR_HLW8012_DELAY_START_U            750
 #endif
 
 // measure voltage duration
@@ -44,7 +44,7 @@
 
 // measure current duration
 #ifndef IOT_SENSOR_HLW8012_MEASURE_LEN_I
-#define IOT_SENSOR_HLW8012_MEASURE_LEN_I            15000
+#define IOT_SENSOR_HLW8012_MEASURE_LEN_I            12000
 #endif
 
 class Sensor_HLW8012 : public Sensor_HLW80xx {
@@ -153,8 +153,10 @@ private:
     uint8_t _pinSel;
     uint8_t _pinCF;
     uint8_t _pinCF1;
+#if IOT_SENSOR_HLW80xx_NOISE_SUPPRESSION
     NoiseBuffer _noiseBuffer;
     float _noiseLevel;
+#endif
     SensorInput _inputCF;
     SensorInput *_inputCF1;
     SensorInput _inputCFI;
@@ -176,28 +178,6 @@ private:
 #if AT_MODE_SUPPORTED
     virtual void atModeHelpGenerator() override;
     virtual bool atModeHandler(Stream &serial, const String &command, AtModeArgs &args) override;
-#endif
-
-#if IOT_SENSOR_HLW8012_BUFFER_DEBUG
-public:
-    typedef FixedCircularBuffer<uint32_t, IOT_SENSOR_HLW8012_BUFFER_DEBUG> TimeBuffer;
-
-    void _dumpBuffer(Stream &output, SensorInput *input, int limit = -1);
-    void _autoDumpBuffer(Stream &output, int count);
-    void _dumpBufferInfo(Stream &output, Sensor_HLW8012::TimeBuffer &buffer, const String &name);
-    int _autoDumpCount;
-#endif
-
-    // static Sensor_HLW8012 *_getFirstSensor(Stream *output = nullptr);
-
-#if IOT_SENSOR_HLW8012_RAW_DATA_DUMP
-    bool _startRawDataDump(const String &filename, uint32_t endTime);
-    void _simulateCallbackCF1(uint32_t interval);
-    void _endRawDataDump();
-
-private:
-    File _rawDumpFile;
-    uint32_t _rawDumpEndTime;
 #endif
 };
 

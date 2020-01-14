@@ -16,9 +16,36 @@
 #include "MQTTSensor.h"
 #include "plugins/http2serial/http2serial.h"
 
-// store CF and CF1 timings in RAM, number of values to keep (required RAM=250*8byte=~2KB), 0=disable
-#ifndef IOT_SENSOR_HLW8012_BUFFER_DEBUG
-#define IOT_SENSOR_HLW8012_BUFFER_DEBUG                 0 //250
+// Simple calibration with 2 multimeters:
+//
+// - Set all 3 calibration values to 1.0, extra digits to 2
+// - Attach a 60W incandescent bulb to the dimmer
+// - One multimeter measures the voltage at the input, the other one the current that goes into the dimmer
+// - Turn the dimmer off and measure the voltage. Divide the voltage the dimmer displays by the mesured voltage and enter the value
+//   as voltage calibration. i.e. 117.2V / 106.11V = 1.10452. After saving it should display the correct voltage
+// - Set brightness to 100%, wait until the bulb has warmed up and the current is stable, then read both multimeters. 117.2V * 0.492A = 57.6624W
+// - Divide the current the dimmer displays by the measured current and enter the value as current calibration. 0.465A / 0.492A = 0.9451
+// - After saving the dimmer should display the correct current
+// - Finally divide the calculated power by the power the dimmer displays and save the value as power calibration. 57.6624W / 53.4W = 1.07982
+//
+// While turned off the current should be ~0.009A with a PF of 0.54. 0.0093A * 117.2V * 0.54 = ~0.589W
+// This requires a shunt >=0.005R, otherwise the current will be higher and the PF incorrect
+//
+// Min/max current that can be measured with different shunts
+// shunt    min.    max.
+// 0.001	0.040	43.0
+// 0.002	0.020	21.5
+// 0.003	0.013	14.3
+// 0.005	0.008	8.6
+// 0.008	0.005	5.4
+// 0.01	    0.004	4.3
+// 0.02	    0.002	2.15
+// 0.05	    0.001	0.86
+
+
+// enables output for the HLW8012 live graph
+#ifndef IOT_SENSOR_HLW80xx_DATA_PLOT
+#define IOT_SENSOR_HLW80xx_DATA_PLOT                    1
 #endif
 
 // voltage divider for V2P
@@ -31,6 +58,14 @@
 #define IOT_SENSOR_HLW80xx_SHUNT                        0.001
 #endif
 
+// this option can be used to add a noise detection algorithm. it is only required if
+// no load is connected to the shunt. this scenario should be prevented by adding a minimum
+// load after the shunt. for example the HLW8012 power supply or/and a 470K-2M load resistor
+// depending on the shunt value
+#ifndef IOT_SENSOR_HLW80xx_NOISE_SUPPRESSION
+#define IOT_SENSOR_HLW80xx_NOISE_SUPPRESSION            0
+#endif
+
 // 40µV input voltage offset
 #ifndef IOT_SENSOR_HLW80xx_SHUNT_NOISE_U
 #define IOT_SENSOR_HLW80xx_SHUNT_NOISE_U                0.00004
@@ -39,6 +74,15 @@
 // ~180ms pulse length. my tested sensors go down to 210-230ms before heavy noise kicks in
 #define IOT_SENSOR_HLW80xx_SHUNT_NOISE_PULSE            (uint32_t)((32.0 * IOT_SENSOR_HLW80xx_VREF) / (3 * IOT_SENSOR_HLW80xx_F_OSC * IOT_SENSOR_HLW80xx_SHUNT_NOISE_U))
 #define IOT_SENSOR_HLW80xx_MAX_NOISE                    40000
+
+#if IOT_SENSOR_HLW80xx_NOISE_SUPPRESSION
+#define IOT_SENSOR_HLW80xx_NO_NOISE(level)              (level < IOT_SENSOR_HLW80xx_MAX_NOISE)
+#else
+#define IOT_SENSOR_HLW80xx_NO_NOISE(level)              true
+#endif
+
+#define IOT_SENSOR_HLW80xx_MIN_CURRENT                  (IOT_SENSOR_HLW80xx_SHUNT_NOISE_U / IOT_SENSOR_HLW80xx_SHUNT)
+#define IOT_SENSOR_HLW80xx_MAX_CURRENT                  (0.043 / IOT_SENSOR_HLW80xx_SHUNT)
 
 // update rate WebUI
 #ifndef IOT_SENSOR_HLW80xx_UPDATE_RATE
@@ -91,16 +135,12 @@
 // Vref = 2.43V
 
 
-//I=((32.000000 * 2.43) / (pulse * (3 * 3.579000 * 0.001 * cp)))
-//15=((32.000000 * 2.43) / (x * (3 * 3.579000 * 0.001 * 1)))
-//I=8640000/(1193*I*iCp)
+// pulse is the duty cycle in µs (50% PWM)
+#define IOT_SENSOR_HLW80xx_CALC_U(pulse)                (((128.0 * IOT_SENSOR_HLW80xx_VREF * IOT_SENSOR_HLW80xx_V_RES_DIV) * _calibrationU) / (pulse * IOT_SENSOR_HLW80xx_F_OSC))
+#define IOT_SENSOR_HLW80xx_CALC_I(pulse)                ((32.0 * IOT_SENSOR_HLW80xx_VREF) / (pulse * ((3.0 * IOT_SENSOR_HLW80xx_F_OSC * IOT_SENSOR_HLW80xx_SHUNT) * _calibrationI)))
+#define IOT_SENSOR_HLW80xx_CALC_PULSE_I(current)        (32.0 * IOT_SENSOR_HLW80xx_VREF) / ((3.0 * current * IOT_SENSOR_HLW80xx_F_OSC * IOT_SENSOR_HLW80xx_SHUNT) * _calibrationI)
+#define IOT_SENSOR_HLW80xx_CALC_P(pulse)                (((4.0 * IOT_SENSOR_HLW80xx_V_RES_DIV * IOT_SENSOR_HLW80xx_VREF * IOT_SENSOR_HLW80xx_VREF) * _calibrationP) / (pulse * _calibrationI * (3.0 * IOT_SENSOR_HLW80xx_SHUNT * IOT_SENSOR_HLW80xx_F_OSC)))
 
-// pulse on rising edge
-#define IOT_SENSOR_HLW80xx_CALC_U(pulse)                ((128.0 * IOT_SENSOR_HLW80xx_VREF * IOT_SENSOR_HLW80xx_V_RES_DIV * _calibrationU) / (pulse * IOT_SENSOR_HLW80xx_F_OSC))
-// pulse on change, is the duty cycle in µs (50% PWM)
-#define IOT_SENSOR_HLW80xx_CALC_I(pulse)                ((32.0 * IOT_SENSOR_HLW80xx_VREF) / (pulse * (3 * IOT_SENSOR_HLW80xx_F_OSC * IOT_SENSOR_HLW80xx_SHUNT * _calibrationI)))
-#define IOT_SENSOR_HLW80xx_CALC_PULSE_I(current)        (32.0 * IOT_SENSOR_HLW80xx_VREF) / (3.0 * current * IOT_SENSOR_HLW80xx_F_OSC * IOT_SENSOR_HLW80xx_SHUNT * _calibrationI)
-#define IOT_SENSOR_HLW80xx_CALC_P(pulse)                ((4.0 * IOT_SENSOR_HLW80xx_V_RES_DIV * IOT_SENSOR_HLW80xx_VREF * IOT_SENSOR_HLW80xx_VREF * _calibrationP) / (3 * pulse * IOT_SENSOR_HLW80xx_SHUNT * _calibrationI * IOT_SENSOR_HLW80xx_F_OSC))
 // count is incremented on falling and raising edge
 #define IOT_SENSOR_HLW80xx_PULSE_TO_KWH(count)          (count * IOT_SENSOR_HLW80xx_CALC_P(1000000.0) / (1000.0 * 3600.0))
 #define IOT_SENSOR_HLW80xx_KWH_TO_PULSE(kwh)            (((1000.0 * 3600.0) * kwh) / IOT_SENSOR_HLW80xx_CALC_P(1000000.0))
@@ -148,8 +188,6 @@ public:
     }
 
     virtual void dump(Print &output);
-    virtual void dumpCSV(File &file, bool newLine = true);
-
 
 protected:
     void _saveEnergyCounter();
@@ -195,6 +233,7 @@ public:
     }
     uint64_t _energyCounter[IOT_SENSOR_HLW80xx_NUM_ENERGY_COUNTERS];
 
+#if IOT_SENSOR_HLW80xx_DATA_PLOT
 protected:
     typedef enum {
         VOLTAGE = 0x0001,
@@ -207,10 +246,13 @@ protected:
     WebSocketDataTypeEnum_t _getWebSocketPlotData() const {
         return _webSocketPlotData;
     }
+    std::vector<float> _plotData;
+    uint32_t _plotDataTime;
 
 private:
     AsyncWebSocketClient *_webSocketClient;
     WebSocketDataTypeEnum_t _webSocketPlotData;
+#endif
 };
 
 #endif

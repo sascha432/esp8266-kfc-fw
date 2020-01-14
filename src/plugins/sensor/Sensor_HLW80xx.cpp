@@ -39,8 +39,11 @@ Sensor_HLW80xx::Sensor_HLW80xx(const String &name) : MQTTSensor(), _name(name)
     setUpdateRate(IOT_SENSOR_HLW80xx_UPDATE_RATE);
     _nextMQTTUpdate = 0;
 
+#if IOT_SENSOR_HLW80xx_DATA_PLOT
     _webSocketClient = nullptr;
     _webSocketPlotData = VOLTAGE;
+    _plotDataTime = 0;
+#endif
 }
 
 void Sensor_HLW80xx::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector)
@@ -167,7 +170,7 @@ void Sensor_HLW80xx::reconfigure()
         _calibrationP = sensor.calibrationP;
     }
     else {
-        _calibrationP = _calibrationU * _calibrationU * _calibrationI;
+        _calibrationP = _calibrationU * _calibrationI;
     }
     _extraDigits = sensor.extraDigits;
     _debug_printf_P(PSTR("Sensor_HLW80xx::Sensor_HLW80xx(): calibration U=%f, I=%f, P=%f\n"), _calibrationU, _calibrationI, _calibrationP);
@@ -335,7 +338,7 @@ String Sensor_HLW80xx::_getTopic()
 
 void Sensor_HLW80xx::dump(Print &output)
 {
-    output.printf_P(PSTR("U=% 9.4f I=% 8.4f P=% 9.4f U*I=% 9.4f E=% 9.4f (count=%012.0f), pf=%03.2f - "),
+    output.printf_P(PSTR("U=% 9.4f I=% 8.4f P=% 9.4f U*I=% 9.4f E=% 9.4f (count=%012.0f), pf=%03.2f\n"),
         _voltage,
         _current,
         _power,
@@ -344,37 +347,9 @@ void Sensor_HLW80xx::dump(Print &output)
         (double)_energyCounter[0],
         _getPowerFactor()
     );
-    output.printf_P(PSTR("raw U=% 9.4f I=% 8.4f P=% 9.4f, E=% 9.4f\n"),
-        _voltage / _calibrationU,
-        _current / _calibrationI,
-        _power / _calibrationP,
-        _getEnergy(0) / _calibrationP
-    );
 }
 
-void Sensor_HLW80xx::dumpCSV(File &file, bool newLine)
-{
-    char buf[32];
-    auto now = time(nullptr);
-    auto tm = timezone_localtime(&now);
-    timezone_strftime_P(buf, sizeof(buf), PSTR("%F %T"), tm);
-
-    file.print(_getId());
-    file.print(',');
-    file.print(buf);
-    file.printf_P(PSTR(".%03.3u"), millis() % 1000);
-    file.print(',');
-    file.print(_voltage, 4);
-    file.print(',');
-    file.print(_current, 4);
-    file.print(',');
-    file.print(_power, 4);
-    file.print(',');
-    file.print(_getEnergy(0), 4);
-    if (newLine) {
-        file.println();
-    }
-}
+#if IOT_SENSOR_HLW80xx_DATA_PLOT
 
 AsyncWebSocketClient *Sensor_HLW80xx::_getWebSocketClient() const
 {
@@ -392,6 +367,7 @@ AsyncWebSocketClient *Sensor_HLW80xx::_getWebSocketClient() const
     return nullptr;
 }
 
+#endif
 
 #if AT_MODE_SUPPORTED
 
@@ -401,16 +377,14 @@ AsyncWebSocketClient *Sensor_HLW80xx::_getWebSocketClient() const
 #define PROGMEM_AT_MODE_HELP_COMMAND_PREFIX         "SP_"
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HLWXD, "HLWXD", "<count/0-4>", "Display extra digits");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HLWDUMP, "HLWDUMP", "<0=off/1...=seconds/2=cycle>", "Dump data");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HLWCSV, "HLWCSV", "<filename>[,<interval=500ms>,<duration=30seconds>]", "Write data to file");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HLWPLOT, "HLWPLOT", "<ClientID>,<U/I/P/0=disable>[,<1/true=convert units>]", "Request data for plotting graphs");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HLWDUMP, "HLWDUMP", "<0=off/1...=seconds/2=cycle>", "Dump sensor data");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HLWPLOT, "HLWPLOT", "<ClientID>,<U/I/P/0=disable>[,<1/true=convert units>]", "Request data for plotting live graph");
 
 void Sensor_HLW80xx::atModeHelpGenerator()
 {
     auto name = SensorPlugin::getInstance().getName();
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(HLWXD), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(HLWDUMP), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(HLWCSV), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(HLWPLOT), name);
 }
 
@@ -429,9 +403,9 @@ bool Sensor_HLW80xx::atModeHandler(Stream &serial, const String &command, AtMode
         }
         return true;
     }
+#if IOT_SENSOR_HLW80xx_DATA_PLOT
     else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(HLWPLOT))) {
         if (args.requireArgs(2, 3)) {
-
             void *clientId = reinterpret_cast<void *>(args.toNumber(0));
             auto ch = args.toLowerChar(1);
             if (ch == 'u') {
@@ -451,6 +425,8 @@ bool Sensor_HLW80xx::atModeHandler(Stream &serial, const String &command, AtMode
             if (args.isTrue(2)) {
                 _webSocketPlotData = (WebSocketDataTypeEnum_t)(_webSocketPlotData | WebSocketDataTypeEnum_t::CONVERT_UNIT);
             }
+            _plotDataTime = 0;
+            _plotData.clear();
 
             _webSocketClient = nullptr;
             auto wsSerialConsole = Http2Serial::getConsoleServer();
@@ -473,6 +449,7 @@ bool Sensor_HLW80xx::atModeHandler(Stream &serial, const String &command, AtMode
         }
         return true;
     }
+#endif
     else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(HLWDUMP))) {
         Scheduler.removeTimer(&dumpTimer);
 
@@ -484,46 +461,6 @@ bool Sensor_HLW80xx::atModeHandler(Stream &serial, const String &command, AtMode
                     sensor.dump(*stream);
                 });
             });
-        }
-        return true;
-    }
-    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(HLWCSV))) {
-        static File csvFile;
-        if (args.requireArgs(1, 3)) {
-            String filename = args.toString(AtModeArgs::FIRST);
-            auto interval = args.toMillis(AtModeArgs::SECOND, 500);
-            auto duration = args.toMillis(AtModeArgs::THIRD, 30 * 1000, ~0, 30 * 1000);
-
-            at_mode_print_prefix(serial, command);
-            serial.printf_P(PSTR("%s: every %u ms, duration %.3f seconds\n"), filename.c_str(), interval, duration / 1000.0);
-
-            Scheduler.removeTimer(&dumpTimer);
-            auto endTime = millis() + duration;
-            csvFile = SPIFFS.open(filename, fs::FileOpenMode::write);
-            if (csvFile) {
-                Scheduler.addTimer(&dumpTimer, interval, true, [this, endTime, &serial, filename](EventScheduler::TimerPtr timer) {
-                    if (!csvFile) {
-                        timer->detach();
-                        at_mode_print_prefix(serial, PROGMEM_AT_MODE_HELP_COMMAND(HLWCSV));
-                        serial.printf_P(PSTR("File not open, write error=%d\n"), csvFile.getWriteError());
-                    }
-                    else {
-                        SensorPlugin::for_each<Sensor_HLW80xx>(this, Sensor_HLW80xx::_compareFunc, [](Sensor_HLW80xx &sensor) {
-                            sensor.dumpCSV(csvFile);
-                        });
-                        if (millis() > endTime) {
-                            timer->detach();
-                            at_mode_print_prefix(serial, PROGMEM_AT_MODE_HELP_COMMAND(HLWCSV));
-                            serial.printf_P(PSTR("Data dump done: %s\n"), filename.c_str());
-                            csvFile.close();
-                        }
-                    }
-                });
-            }
-            else {
-                at_mode_print_prefix(serial, command);
-                serial.printf_P(PSTR("Failed to create %s\n"), filename.c_str());
-            }
         }
         return true;
     }

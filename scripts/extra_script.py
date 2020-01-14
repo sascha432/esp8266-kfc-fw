@@ -30,7 +30,6 @@ def before_clean(source, target, env):
 
 #env.AddPostAction("$BUILD_DIR/${PROGNAME}.elf", record_size)
 
-env.AlwaysBuild(env.Alias("build_webui", None, build_webui))
+env.AlwaysBuild(env.Alias("webui", None, build_webui))
 
 env.AlwaysBuild(env.Alias("rebuild_webui", None, rebuild_webui))
-

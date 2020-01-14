@@ -268,7 +268,13 @@ class ConfigReader {
         }
         $this->processTempDir = $tmpDir;
 
+        $pioEnv = $this->getPlatformIOParser()->getEnvironment();
+        if (false !== ($tmp = strchr($pioEnv, ':'))) {
+            $pioEnv = substr($tmp, 1);
+        }
+
         $vars = array(
+            '${pio.env}' => $pioEnv,
             '${path.main_config}' => dirname($this->configFile),
             '${path.sys_temp_dir}' => $this->sysTempDir,
             '${path.shared_temp_dir}' => $this->sharedTempDir,

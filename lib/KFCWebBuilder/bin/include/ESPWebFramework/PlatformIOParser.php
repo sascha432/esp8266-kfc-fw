@@ -64,6 +64,14 @@ class PlatformIOParser {
     }
 
     /**
+     * @return string|null
+     */
+    public function getEnvironment(): string
+    {
+        return $this->environment;
+    }
+
+    /**
      * @return array
      */
     public function getEnvironments(): array
@@ -158,11 +166,21 @@ class PlatformIOParser {
             foreach($out[0] as $num => $var) {
                 $env = $out[1][$num];
                 $keyword = $out[2][$num];
+                $value = null;
 
                 if (!isset($this->envConfig[$env][$keyword])) {
+                    if ($env == "sysenv") {
+                        $value = getenv($keyword);
+                    }
+                }
+                else {
+                    $value = $this->envConfig[$env][$keyword];
+                }
+
+                if ($value === null) {
                     throw new \RuntimeException("Variable '$var' does not exist");
                 }
-                $line = str_replace($var, $this->envConfig[$env][$keyword], $line);
+                $line = str_replace($var, $value, $line);
             }
         }
         return $line;

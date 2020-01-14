@@ -48,6 +48,8 @@ bool JsonConfigReader::endObject()
                         _type = ConfigurationParameter::_INVALID;
                     }
                 }
+                debug_printf_P(PSTR("JsonConfigReader::endObject(): handle %04x type %u valid %u\n"), _handle, _type, _type != ConfigurationParameter::_INVALID);
+                bool imported = true;
                 switch (_type) {
                 case ConfigurationParameter::BYTE: {
                         uint8_t byte = (uint8_t)stringToLl(_data);
@@ -98,7 +100,11 @@ bool JsonConfigReader::endObject()
                     break;
                 case ConfigurationParameter::_INVALID:
                 default:
+                    imported = false;
                     break;
+                }
+                if (imported) {
+                    _imported.push_back(_handle);
                 }
             }
             //Serial.printf("handle %04x done\n", _handle);

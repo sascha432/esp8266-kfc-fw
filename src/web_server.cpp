@@ -247,6 +247,47 @@ void web_server_speed_test_image(AsyncWebServerRequest *request)
     web_server_speed_test(request, false);
 }
 
+#include <JsonConfigReader.h>
+
+void web_server_import_settings(AsyncWebServerRequest *request)
+{
+    WebServerSetCPUSpeedHelper setCPUSpeed;
+    if (web_server_is_authenticated(request)) {
+        HttpHeaders httpHeaders(false);
+        httpHeaders.addNoCache();
+
+        PGM_P message;
+        int count = -1;
+
+        auto configArg = F("config");
+        if (request->method() == HTTP_POST && request->hasArg(configArg)) {
+            StreamString data;
+            data.print(request->arg(configArg));
+            config.discard();
+
+            JsonConfigReader reader(&data, config, nullptr);
+            reader.initParser();
+            bool result = reader.parseStream();
+            if (result) {
+                config.write();
+
+                count = reader.getImportedHandles().size();
+                message = PSTR("Success");
+            }
+            else {
+                message = PSTR("Failed to parse JSON data");
+            }
+        }
+        else {
+            message = PSTR("No POST request");
+        }
+        request->send(200, FSPGM(mime_text_plain), PrintString(F("{\"count\":%d,\"message\":\"%s\"}"), count, message));
+    }
+    else {
+        request->send(403);
+    }
+}
+
 void web_server_export_settings(AsyncWebServerRequest *request)
 {
     WebServerSetCPUSpeedHelper setCPUSpeed;
@@ -270,7 +311,8 @@ void web_server_export_settings(AsyncWebServerRequest *request)
         httpHeaders.setWebServerResponseHeaders(response);
 
         request->send(response);
-    } else {
+    }
+    else {
         request->send(403);
     }
 }
@@ -535,6 +577,7 @@ void init_web_server()
     web_server_add_handler(F("/is_alive"), web_server_is_alive_handler);
     web_server_add_handler(F("/webui_get"), web_server_get_webui_json);
     web_server_add_handler(F("/export_settings"), web_server_export_settings);
+    web_server_add_handler(F("/import_settings"), web_server_import_settings);
     web_server_add_handler(F("/speedtest.zip"), web_server_speed_test_zip);
     web_server_add_handler(F("/speedtest.bmp"), web_server_speed_test_image);
     server->on(String(F("/update")).c_str(), HTTP_POST, web_server_update_handler, web_server_update_upload_handler);

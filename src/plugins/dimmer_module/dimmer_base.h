@@ -21,6 +21,11 @@
 #error STK500V1_RESET_PIN not defined
 #endif
 
+#if IOT_SENSOR && (IOT_SENSOR_HAVE_HLW8012 || IOT_SENSOR_HAVE_HLW8032)
+#include "./plugins/sensor/sensor.h"
+#include "./plugins/sensor/Sensor_HLW80xx.h"
+#endif
+
 class DimmerChannel;
 class AsyncWebServerRequest;
 
@@ -62,6 +67,10 @@ protected:
     void _updateMetrics(uint16_t vcc, float frequency, float internalTemperature, float ntcTemperature);
 
     void _fade(uint8_t channel, int16_t toLevel, float fadeTime);
+#if IOT_SENSOR_HLW80xx_ADJUST_CURRENT
+    void _setDimmingLevels();
+#endif
+
 
     inline float getFadeTime() {
         return _fadeTime;

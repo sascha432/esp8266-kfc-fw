@@ -61,7 +61,7 @@ class WSConsole:
             try:
                 (packetId, ) = struct.unpack_from('H', data)
                 if packetId==0x0100:
-                    fmt = 'HHHffffff'
+                    fmt = 'HHHfffffff'
                     header = struct.unpack_from(fmt, data)
                     ofs = struct.calcsize(fmt)
                     m = memoryview(data[ofs:])
@@ -79,13 +79,20 @@ class WSConsole:
                             self.auth = True
                             self.send_cmd('H2SBUFDLY', '500')
                             self.send_cmd('H2SBUFSZ', '256')
+                            self.controller.plot.sensor_config = None
                         elif message == "+AUTH_ERROR":
                             self.on_error('Authentication failed')
                         elif message == "+REQ_AUTH":
                             print("Sending authentication " + self.sid)
                             self.ws.send("+SID " + self.sid)
                     else:
-                        if message[0:11] == "+CLIENT_ID=":
+                        if message[0:12] == "+SP_HLWPLOT:":
+                            try:
+                                self.controller.plot.sensor_config = json.loads(message[13:])
+                                print("Sensor config: " + str(self.controller.plot.sensor_config))
+                            except Exception as e:
+                                print("Sensor config error: " + str(e))
+                        elif message[0:11] == "+CLIENT_ID=":
                             self.client_id = message[11:]
                             print("ClientID: " + self.client_id)
 
@@ -151,6 +158,7 @@ class Plot:
         self.update_plot = False
         self.label = { 'x': 'time in seconds', 'y': '' }
         self.title = ''
+        self.sensor_config = None
 
         self.fig = Figure(figsize=(12, 8), dpi=100)
         self.ax1 = self.fig.add_subplot(111)
@@ -162,16 +170,10 @@ class Plot:
         try:
             self.plot_values()
         except Exception as e:
-            print("Plot exception" + str(e))
+            print("Plot exception " + str(e))
 
     def init_animation(self):
         self.ani = animation.FuncAnimation(self.fig, self.plot_values_ani, interval=self.controller.get_update_rate())
-
-    # def get_min_value(self):
-    #     return min([min(self.values[1]), min(self.values[2]), min(self.values[3]), min(self.values[4])])
-
-    # def get_max_value(self):
-    #     return max([max(self.values[1]), max(self.values[2]), max(self.values[3]), max(self.values[4])])
 
     def init_plot(self, type):
         self.stats = [ '', '', '', '' ]
@@ -181,13 +183,15 @@ class Plot:
         self.pf = 0
         self.energy = 0
         self.noiseLevel = 0
-        self.values = [[], [], [], [], [], [], [], ]
+        self.dimLevel = 0
+        self.values = [[], [], [], [], [], [] ]
         self.start_time = 0
         self.max_time = 0
         self.plot_type = self.controller.gui_settings['plot_type']
         self.data_retention = self.controller.get_data_retention()
+        self.convert_units = self.controller.gui_settings['convert_units'].get()
         self.label['y'] = "µs"
-        if self.controller.gui_settings['convert_units'].get()==1:
+        if self.convert_units==1:
             if self.plot_type=='I':
                 self.label['y'] = "A"
             elif self.plot_type=='U':
@@ -207,13 +211,25 @@ class Plot:
             self.update_plot = False
             self.ax1.clear()
 
-            self.ax1.set_title('HLW8012 - ' + self.title)
-            self.ax1.set_xlabel(self.label['x'])
-            self.ax1.set_ylabel(self.label['y'])
-            self.ax1.set_xlim(left=self.max_time - self.data_retention, right=self.max_time)
+            label_x = ''
+            if self.sensor_config!=None:
+                fmt = " - Imin. {0:}A Imax {1:}A Rshunt {2:} - Calibration U/I/P {3:} {4:} {5:}"
+                label_x = fmt.format(self.sensor_config["Imin"], self.sensor_config["Imax"], self.sensor_config["Rs"], *self.sensor_config["UIPc"])
 
-            fmt = '{0:.2f}V {1:.3f}A {2:.2f}W pf {3:.2f} {4:.3f}kWh noise {5:.3f} data {6:d} ({7:.2f}/s)'
-            self.fig.suptitle(fmt.format(self.voltage, self.current, self.power, self.pf, self.energy, self.noiseLevel / 1000.0, len(self.values[0]), (len(self.values[0]) / (self.max_time - self.values[0][0]))), fontsize=16)
+            self.ax1.set_title('HLW8012 - ' + self.title)
+            self.ax1.set_xlabel(self.label['x'] + label_x)
+            self.ax1.set_ylabel(self.label['y'])
+            x_left = self.max_time - self.data_retention
+            x_right = self.max_time
+            self.ax1.set_xlim(left=x_left, right=x_right)
+
+            fmt = "{0:.2f}V {1:.4f}A {2:.2f}W pf {3:.2f} {4:.3f}kWh"
+            if self.noiseLevel!=0:
+                fmt = fmt + " noise {5:.3f}"
+            fmt = fmt + " data {6:d} ({7:.2f}/s)"
+            if self.dimLevel!=-1:
+                fmt = fmt + " level {8:.1f}%"
+            self.fig.suptitle(fmt.format(self.voltage, self.current, self.power, self.pf, self.energy, self.noiseLevel / 1000.0, len(self.values[0]), (len(self.values[0]) / (self.max_time - self.values[0][0])), self.dimLevel * 100.0), fontsize=16)
 
             if len(self.values[0])==0:
                 return
@@ -231,7 +247,6 @@ class Plot:
                     stats.append(tmp)
                 self.stats = stats
             except Exception as e:
-                # print("Error getting legend data " + str(e))
                 pass
 
             y_max = 0
@@ -248,6 +263,18 @@ class Plot:
                 self.ax1.plot(self.values[0], self.values[4], 'c', label='display' + self.stats[3])
                 y_max = max(y_max, max(self.values[4]))
 
+            i_min = 0
+            if self.sensor_config!=None and self.plot_type=='I':
+                if self.convert_units==1:
+                    i_min = self.sensor_config["Imin"]
+                    self.ax1.hlines(y=self.sensor_config["Imax"], xmin=x_left, xmax=x_right, linestyle='dashed')
+                else:
+                    i_min = self.sensor_config["Ipmax"]
+                    self.ax1.hlines(y=self.sensor_config["Ipmin"], xmin=x_left, xmax=x_right, linestyle='dashed')
+
+                y_max = max(y_max, i_min)
+                self.ax1.hlines(y=i_min, xmin=x_left, xmax=x_right, linestyle='dashed')
+
             y_min = y_max * 0.98 * self.controller.get_y_range() / 100.0
             y_max = y_max * 1.02
             self.ax1.set_ylim(top=y_max, bottom=y_min)
@@ -255,8 +282,8 @@ class Plot:
 
             if self.ax2!=False:
                 self.ax2.clear()
-                self.ax2.set_xlim(left=self.max_time - self.data_retention, right=self.max_time)
-                self.ax2.hlines(y=40, xmin=self.values[0][0], xmax=self.values[0][-1], linestyle='dashed')
+                self.ax2.set_xlim(left=x_left, right=x_right)
+                self.ax2.hlines(y=40, xmin=x_left, xmax=x_right, linestyle='dashed')
                 self.ax2.plot(self.values[0], self.values[5], 'r', label='noise')
 
     def get_time(self, value):
@@ -274,7 +301,7 @@ class Plot:
     def data_handler(self, header, data):
 
         if chr(header[2])==self.plot_type:
-            (packet_id, output_mode, data_type, self.voltage, self.current, self.power, self.energy, self.pf, self.noiseLevel) = header
+            (packet_id, output_mode, data_type, self.voltage, self.current, self.power, self.energy, self.pf, self.noiseLevel, self.dimLevel) = header
             if self.plot_type=='I':
                 display_value = self.current
             elif self.plot_type=='U':
@@ -397,6 +424,7 @@ class MainApp(tk.Tk):
             self.wsc.send_cmd('SP_HLWMODE', 'p');
             self.wsc.send_cmd('SP_HLWPLOT', self.wsc.client_id, 'p', convert_units);
         else:
+            self.wsc.send_cmd('SP_HLWMODE', 'c');
             self.wsc.send_cmd('SP_HLWPLOT', self.wsc.client_id, '0')
 
         self.plot.init_plot(type)
@@ -496,9 +524,6 @@ class StartPage(tk.Frame):
                 else:
                     if password!='':
                         sid = session.generate(username, password)
-                        print(username)
-                        print(password)
-                        print(sid)
                         if safe==1:
                             self.config['connections'][cur - 1]['sid'] = sid
                             self.write_config()
@@ -532,7 +557,7 @@ class StartPage(tk.Frame):
     def write_config(self):
         try:
             with open(self.config_filename, 'wt') as file:
-                file.write(json.dumps(self.config))
+                file.write(json.dumps(self.config, indent=2))
         except:
             print('Failed to write: ' + self.config_filename)
 

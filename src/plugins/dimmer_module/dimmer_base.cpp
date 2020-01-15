@@ -436,7 +436,28 @@ void Dimmer_Base::_fade(uint8_t channel, int16_t toLevel, float fadeTime)
         _endTransmission();
         _unlockWire();
     }
+#if IOT_SENSOR_HLW80xx_ADJUST_CURRENT
+    _setDimmingLevels();
+#endif
 }
+
+#if IOT_SENSOR_HLW80xx_ADJUST_CURRENT
+
+void Dimmer_Base::_setDimmingLevels() {
+    // this only works if all channels have about the same load
+    float level = 0;
+    for(uint8_t i = 0; i < getChannelCount(); i++) {
+        level += getChannel(i);
+    }
+    level = level / (float)(IOT_DIMMER_MODULE_MAX_BRIGHTNESS * getChannelCount());
+    for(auto sensor: SensorPlugin::getSensors()) {
+        if (sensor->getType() == MQTTSensor::HLW8012 || sensor->getType() == MQTTSensor::HLW8032) {
+            reinterpret_cast<Sensor_HLW80xx *>(sensor)->setDimmingLevel(level);
+        }
+    }
+}
+
+#endif
 
 void Dimmer_Base::writeEEPROM(bool noLocking)
 {

@@ -29,7 +29,7 @@
 
 // delay after switching to voltage mode before the sensor can be read
 #ifndef IOT_SENSOR_HLW8012_DELAY_START_U
-#define IOT_SENSOR_HLW8012_DELAY_START_U            750
+#define IOT_SENSOR_HLW8012_DELAY_START_U            1000
 #endif
 
 // measure voltage duration

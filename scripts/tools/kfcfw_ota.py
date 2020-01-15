@@ -203,7 +203,7 @@ def import_settings(url, target, sid, file, params):
 parser = argparse.ArgumentParser(description="OTA for KFC Firmware", formatter_class=argparse.RawDescriptionHelpFormatter, epilog="exit codes:\n  0 - success\n  1 - general error\n  2 - device did not respond\n  3 - update failed\n  4 - device did not respond after update")
 parser.add_argument("action", help="action to execute", choices=["flash", "spiffs", "atmega", "status", "alive", "export", "import"])
 parser.add_argument("hostname", help="web server hostname")
-parser.add_argument("-u", "--user", help="Username", required=True)
+parser.add_argument("-u", "--user", help="username", required=True)
 parser.add_argument("-p", "--pw", help="password", required=True)
 parser.add_argument("-I", "--image", help="firmware image", type=argparse.FileType("rb"))
 parser.add_argument("-O", "--output", help="export settings output file")

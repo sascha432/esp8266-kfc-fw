@@ -26,6 +26,9 @@ Sensor_HLW80xx::Sensor_HLW80xx(const String &name) : MQTTSensor(), _name(name)
 #if DEBUG_MQTT_CLIENT
     debug_printf_P(PSTR("Sensor_HLW80xx(): component=%p\n"), this);
 #endif
+#if IOT_SENSOR_HLW80xx_ADJUST_CURRENT
+    _dimmingLevel = -1;
+#endif
     _loadEnergyCounter();
     _power = NAN;
     _voltage = NAN;
@@ -169,9 +172,6 @@ void Sensor_HLW80xx::reconfigure()
     if (sensor.calibrationP) {
         _calibrationP = sensor.calibrationP;
     }
-    else {
-        _calibrationP = _calibrationU * _calibrationI;
-    }
     _extraDigits = sensor.extraDigits;
     _debug_printf_P(PSTR("Sensor_HLW80xx::Sensor_HLW80xx(): calibration U=%f, I=%f, P=%f\n"), _calibrationU, _calibrationI, _calibrationP);
 }
@@ -195,7 +195,7 @@ void Sensor_HLW80xx::createConfigureForm(AsyncWebServerRequest *request, Form &f
 
     form.add<float>(F("hlw80xx_calibrationU"), &sensor->hlw80xx.calibrationU)->setFormUI(new FormUI(FormUI::TEXT, F("HLW8012 Voltage Calibration")));
     form.add<float>(F("hlw80xx_calibrationI"), &sensor->hlw80xx.calibrationI)->setFormUI(new FormUI(FormUI::TEXT, F("HLW8012 Current Calibration")));
-    form.add<float>(F("hlw80xx_calibrationP"), &sensor->hlw80xx.calibrationP)->setFormUI((new FormUI(FormUI::TEXT, F("HLW8012 Power Calibration")))->setPlaceholder(F("Automatically")));
+    form.add<float>(F("hlw80xx_calibrationP"), &sensor->hlw80xx.calibrationP)->setFormUI(new FormUI(FormUI::TEXT, F("HLW8012 Power Calibration")));
     form.add<uint8_t>(F("hlw80xx_extra_digits"), &sensor->hlw80xx.extraDigits)->setFormUI(new FormUI(FormUI::TEXT, F("HLW8012 Extra Digits/Precision")));
     form.addValidator(new FormRangeValidator(F("Enter 0 to 4 for extra digits"), 0, 4));
 
@@ -289,10 +289,11 @@ void Sensor_HLW80xx::_loadEnergyCounter()
 
 JsonNumber Sensor_HLW80xx::_currentToNumber(float current) const
 {
-    if (current < 0.2) {
-        return JsonNumber(current, 3 + _extraDigits);
+    uint8_t digits = 2;
+    if (current < 1) {
+        digits = 3;
     }
-    return JsonNumber(current, 2 + _extraDigits);
+    return JsonNumber(current, digits + _extraDigits);
 }
 
 JsonNumber Sensor_HLW80xx::_energyToNumber(float energy) const
@@ -310,7 +311,7 @@ JsonNumber Sensor_HLW80xx::_powerToNumber(float power) const
 {
     uint8_t digits = 1;
     if (power < 10) {
-        digits++;
+        digits = 2;
     }
     return JsonNumber(power, digits + _extraDigits);
 }
@@ -388,10 +389,10 @@ void Sensor_HLW80xx::atModeHelpGenerator()
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(HLWPLOT), name);
 }
 
+EventScheduler::TimerPtr dumpTimer = nullptr;
+
 bool Sensor_HLW80xx::atModeHandler(Stream &serial, const String &command, AtModeArgs &args)
 {
-    static EventScheduler::TimerPtr dumpTimer = nullptr;
-
     if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(HLWXD))) {
         if (args.requireArgs(1)) {
             uint8_t digits = args.toIntMinMax(AtModeArgs::FIRST, 0, 4);
@@ -444,7 +445,10 @@ bool Sensor_HLW80xx::atModeHandler(Stream &serial, const String &command, AtMode
                 serial.printf_P(PSTR("Cannot find ClientID %p\n"), clientId);
             }
             else {
-                serial.printf_P(PSTR("Enabling plot data for ClientID %p\n"), clientId);
+                serial.printf_P(PSTR("{\"Imin\":%f,\"Imax\":%f,\"Ipmin\":%u,\"Ipmax\":%u,\"Rs\":%f,\"UIPc\":[%f,%f,%f]}\n"),
+                    IOT_SENSOR_HLW80xx_MIN_CURRENT, IOT_SENSOR_HLW80xx_MAX_CURRENT,
+                    IOT_SENSOR_HLW80xx_CURRENT_MIN_PULSE, IOT_SENSOR_HLW80xx_CURRENT_MAX_PULSE,
+                    IOT_SENSOR_HLW80xx_SHUNT, _calibrationU, _calibrationI, _calibrationP);
             }
         }
         return true;
@@ -453,12 +457,12 @@ bool Sensor_HLW80xx::atModeHandler(Stream &serial, const String &command, AtMode
     else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(HLWDUMP))) {
         Scheduler.removeTimer(&dumpTimer);
 
-        auto interval = args.toMillis(AtModeArgs::FIRST, 500);
+        auto interval = args.toMillis(0, 500);
         if (interval) {
-            auto stream = &serial;
-            Scheduler.addTimer(&dumpTimer, interval, true, [this, stream](EventScheduler::TimerPtr) {
-                SensorPlugin::for_each<Sensor_HLW80xx>(this, Sensor_HLW80xx::_compareFunc, [stream](Sensor_HLW80xx &sensor) {
-                    sensor.dump(*stream);
+            // auto stream = &serial;
+            Scheduler.addTimer(&dumpTimer, interval, true, [this, &serial](EventScheduler::TimerPtr) {
+                SensorPlugin::for_each<Sensor_HLW80xx>(this, Sensor_HLW80xx::_compareFunc, [&serial](Sensor_HLW80xx &sensor) {
+                    sensor.dump(serial);
                 });
             });
         }

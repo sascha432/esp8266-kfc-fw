@@ -18,15 +18,17 @@
 
 // Simple calibration with 2 multimeters:
 //
-// - Set all 3 calibration values to 1.0, extra digits to 2
-// - Attach a 60W incandescent bulb to the dimmer
 // - One multimeter measures the voltage at the input, the other one the current that goes into the dimmer
-// - Turn the dimmer off and measure the voltage. Divide the voltage the dimmer displays by the mesured voltage and enter the value
-//   as voltage calibration. i.e. 117.2V / 106.11V = 1.10452. After saving it should display the correct voltage
-// - Set brightness to 100%, wait until the bulb has warmed up and the current is stable, then read both multimeters. 117.2V * 0.492A = 57.6624W
-// - Divide the current the dimmer displays by the measured current and enter the value as current calibration. 0.465A / 0.492A = 0.9451
-// - After saving the dimmer should display the correct current
-// - Finally divide the calculated power by the power the dimmer displays and save the value as power calibration. 57.6624W / 53.4W = 1.07982
+// - Attach a 60W incandescent bulb to the dimmer
+// - Turn the brightness to 0% and type +SP_HLWCAL=U,5 into the console and watch the voltage on the multimeter
+//   for a few seconds. Both readings should be pretty stable, if not repeat the step
+// - Enter the voltage from the console and the multimeter readings with +SP_HLWCAL=U,106.353607,119.27
+// - Turn brightness to 100% and let the bulb warm up until the current readings are stable
+// - Type +SP_HLWCAL=I,10 and watch the current on the multimeter
+// - Enter the current from the console and the multimeter with +SP_HLWCAL=I,0.451026,0.493
+// - Type +SP_HLWCAL=P,5 into the console and read both current and voltage from the multimeters
+// - Enter the power from the console, the voltage and current readings from the multimeters with +SP_HLWCAL=P,49.521816,119.0,0.493
+// - Check if the dimmer shows the correct readings and store the calibration with +STORE
 //
 // While turned off the current should be ~0.009A with a PF of 0.54. 0.0093A * 117.2V * 0.54 = ~0.589W
 // This requires a shunt >=0.005R, otherwise the current will be higher and the PF incorrect
@@ -58,6 +60,17 @@
 #define IOT_SENSOR_HLW80xx_SHUNT                        0.001
 #endif
 
+// compensate current when the load is dimmed or switched off
+#ifndef IOT_SENSOR_HLW80xx_ADJUST_CURRENT
+#define IOT_SENSOR_HLW80xx_ADJUST_CURRENT               0
+#endif
+
+#if IOT_SENSOR_HLW80xx_ADJUST_CURRENT
+#define IOT_SENSOR_HLW80xx_ADJ_I_CALC(level, current)   (level < 0 ? current : (level == 0 ? 0.009f : (level >= 1 ? current : (current * (1.0 / (1.013292 + (0.7352072 - 1.013292) / (1 + pow(level / 0.04869815, 1.033051))))))))
+#else
+#define IOT_SENSOR_HLW80xx_ADJ_I_CALC(level, current)   current
+#endif
+
 // this option can be used to add a noise detection algorithm. it is only required if
 // no load is connected to the shunt. this scenario should be prevented by adding a minimum
 // load after the shunt. for example the HLW8012 power supply or/and a 470K-2M load resistor
@@ -66,14 +79,20 @@
 #define IOT_SENSOR_HLW80xx_NOISE_SUPPRESSION            0
 #endif
 
-// 40µV input voltage offset
-#ifndef IOT_SENSOR_HLW80xx_SHUNT_NOISE_U
-#define IOT_SENSOR_HLW80xx_SHUNT_NOISE_U                0.00004
+// 40µV input offset voltage
+#ifndef IOT_SENSOR_HLW80xx_INPUT_OFS_U
+#define IOT_SENSOR_HLW80xx_INPUT_OFS_U                  0.00004
 #endif
 
-// ~180ms pulse length. my tested sensors go down to 210-230ms before heavy noise kicks in
-#define IOT_SENSOR_HLW80xx_SHUNT_NOISE_PULSE            (uint32_t)((32.0 * IOT_SENSOR_HLW80xx_VREF) / (3 * IOT_SENSOR_HLW80xx_F_OSC * IOT_SENSOR_HLW80xx_SHUNT_NOISE_U))
+// +-43.5mV differential input voltage (max. ratings +-2.0V)
+#ifndef IOT_SENSOR_HLW80xx_DIFF_INPUT_U
+#define IOT_SENSOR_HLW80xx_DIFF_INPUT_U                 0.0435
+#endif
+
+// maximum noise level, 1000 = 1.0
+#ifndef IOT_SENSOR_HLW80xx_MAX_NOISE
 #define IOT_SENSOR_HLW80xx_MAX_NOISE                    40000
+#endif
 
 #if IOT_SENSOR_HLW80xx_NOISE_SUPPRESSION
 #define IOT_SENSOR_HLW80xx_NO_NOISE(level)              (level < IOT_SENSOR_HLW80xx_MAX_NOISE)
@@ -81,8 +100,13 @@
 #define IOT_SENSOR_HLW80xx_NO_NOISE(level)              true
 #endif
 
-#define IOT_SENSOR_HLW80xx_MIN_CURRENT                  (IOT_SENSOR_HLW80xx_SHUNT_NOISE_U / IOT_SENSOR_HLW80xx_SHUNT)
-#define IOT_SENSOR_HLW80xx_MAX_CURRENT                  (0.043 / IOT_SENSOR_HLW80xx_SHUNT)
+#define IOT_SENSOR_HLW80xx_MIN_CURRENT                  (IOT_SENSOR_HLW80xx_INPUT_OFS_U / IOT_SENSOR_HLW80xx_SHUNT)
+#define IOT_SENSOR_HLW80xx_MAX_CURRENT                  (IOT_SENSOR_HLW80xx_DIFF_INPUT_U / IOT_SENSOR_HLW80xx_SHUNT)
+
+#define IOT_SENSOR_HLW80xx_CURRENT_MIN_PULSE            (uint32_t)((32.0 * IOT_SENSOR_HLW80xx_VREF) / (3.0 * IOT_SENSOR_HLW80xx_F_OSC * IOT_SENSOR_HLW80xx_MAX_CURRENT * IOT_SENSOR_HLW80xx_SHUNT))
+#define IOT_SENSOR_HLW80xx_CURRENT_MAX_PULSE            (uint32_t)((32.0 * IOT_SENSOR_HLW80xx_VREF) / (3.0 * IOT_SENSOR_HLW80xx_F_OSC * IOT_SENSOR_HLW80xx_MIN_CURRENT * IOT_SENSOR_HLW80xx_SHUNT))
+
+
 
 // update rate WebUI
 #ifndef IOT_SENSOR_HLW80xx_UPDATE_RATE
@@ -137,9 +161,8 @@
 
 // pulse is the duty cycle in µs (50% PWM)
 #define IOT_SENSOR_HLW80xx_CALC_U(pulse)                (((128.0 * IOT_SENSOR_HLW80xx_VREF * IOT_SENSOR_HLW80xx_V_RES_DIV) * _calibrationU) / (pulse * IOT_SENSOR_HLW80xx_F_OSC))
-#define IOT_SENSOR_HLW80xx_CALC_I(pulse)                ((32.0 * IOT_SENSOR_HLW80xx_VREF) / (pulse * ((3.0 * IOT_SENSOR_HLW80xx_F_OSC * IOT_SENSOR_HLW80xx_SHUNT) * _calibrationI)))
-#define IOT_SENSOR_HLW80xx_CALC_PULSE_I(current)        (32.0 * IOT_SENSOR_HLW80xx_VREF) / ((3.0 * current * IOT_SENSOR_HLW80xx_F_OSC * IOT_SENSOR_HLW80xx_SHUNT) * _calibrationI)
-#define IOT_SENSOR_HLW80xx_CALC_P(pulse)                (((4.0 * IOT_SENSOR_HLW80xx_V_RES_DIV * IOT_SENSOR_HLW80xx_VREF * IOT_SENSOR_HLW80xx_VREF) * _calibrationP) / (pulse * _calibrationI * (3.0 * IOT_SENSOR_HLW80xx_SHUNT * IOT_SENSOR_HLW80xx_F_OSC)))
+#define IOT_SENSOR_HLW80xx_CALC_I(pulse)                (((32.0 * IOT_SENSOR_HLW80xx_VREF) * _calibrationI) / (pulse * (3.0 * IOT_SENSOR_HLW80xx_F_OSC * IOT_SENSOR_HLW80xx_SHUNT)))
+#define IOT_SENSOR_HLW80xx_CALC_P(pulse)                (((4.0 * IOT_SENSOR_HLW80xx_V_RES_DIV * IOT_SENSOR_HLW80xx_VREF * IOT_SENSOR_HLW80xx_VREF) * _calibrationP) / (pulse * (3.0 * IOT_SENSOR_HLW80xx_SHUNT * IOT_SENSOR_HLW80xx_F_OSC)))
 
 // count is incremented on falling and raising edge
 #define IOT_SENSOR_HLW80xx_PULSE_TO_KWH(count)          (count * IOT_SENSOR_HLW80xx_CALC_P(1000000.0) / (1000.0 * 3600.0))
@@ -232,6 +255,18 @@ public:
         config._H_W_GET(Config().sensor).hlw80xx.extraDigits = _extraDigits;
     }
     uint64_t _energyCounter[IOT_SENSOR_HLW80xx_NUM_ENERGY_COUNTERS];
+
+#if IOT_SENSOR_HLW80xx_ADJUST_CURRENT
+protected:
+    float _dimmingLevel;
+
+public:
+    // can be used to compensate the current when the load is dimmed
+    // -1 to disable
+    void setDimmingLevel(float dimmingLevel) {
+        _dimmingLevel = dimmingLevel;
+    }
+#endif
 
 #if IOT_SENSOR_HLW80xx_DATA_PLOT
 protected:

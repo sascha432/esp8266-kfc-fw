@@ -5,6 +5,7 @@
 #if IOT_SENSOR && IOT_SENSOR_HAVE_HLW8012
 
 #include <LoopFunctions.h>
+#include <EventTimer.h>
 #include "Sensor_HLW8012.h"
 #include "sensor.h"
 #include "MQTTSensor.h"
@@ -20,13 +21,6 @@
 // Low level interrupt handling
 // ------------------------------------------------------------------------
 
-typedef enum {
-    CBF_CF =                0x01,
-    CBF_CF1 =               0x02,
-    CBF_CF_SKIPPED =        0x04,
-    CBF_CF1_SKIPPED =       0x08,
-} CallbackFlagsEnum_t;
-
 static Sensor_HLW8012 *sensor = nullptr;
 static volatile uint32_t energyCounter = 0;
 static Sensor_HLW8012::InterruptBuffer _interruptBufferCF;
@@ -34,15 +28,13 @@ static Sensor_HLW8012::InterruptBuffer _interruptBufferCF1;
 
 void ICACHE_RAM_ATTR Sensor_HLW8012_callbackCF()
 {
-    auto tmp = micros();
-    _interruptBufferCF.push_back(tmp);
+    _interruptBufferCF.push_back(micros());
     energyCounter++;
 }
 
 void ICACHE_RAM_ATTR Sensor_HLW8012_callbackCF1()
 {
-    auto tmp = micros();
-    _interruptBufferCF1.push_back(tmp);
+    _interruptBufferCF1.push_back(micros());
 }
 
 // ------------------------------------------------------------------------
@@ -63,6 +55,10 @@ Sensor_HLW8012::Sensor_HLW8012(const String &name, uint8_t pinSel, uint8_t pinCF
 #endif
     registerClient(this);
 
+    if (sensor) {
+        __debugbreak_and_panic_printf_P(PSTR("Only one instance of Sensor_HLW8012 supported\n"));
+    }
+
     _inputCF.setCallback([this](double pulseWidth) {
         return (float)IOT_SENSOR_HLW80xx_CALC_P(pulseWidth);
     });
@@ -70,7 +66,7 @@ Sensor_HLW8012::Sensor_HLW8012(const String &name, uint8_t pinSel, uint8_t pinCF
         return (float)IOT_SENSOR_HLW80xx_CALC_U(pulseWidth);
     });
     _inputCFI.setCallback([this](double pulseWidth) {
-        return (float)IOT_SENSOR_HLW80xx_CALC_I(pulseWidth);
+        return (float)IOT_SENSOR_HLW80xx_ADJ_I_CALC(_dimmingLevel, IOT_SENSOR_HLW80xx_CALC_I(pulseWidth));
     });
     // auto &settings = _inputCFU.getSettings();
     // settings.avgValCount = 5;
@@ -81,16 +77,12 @@ Sensor_HLW8012::Sensor_HLW8012(const String &name, uint8_t pinSel, uint8_t pinCF
     _noiseLevel = 0;
 #endif
 
-    _inputCF1 = &_inputCFI;
-    digitalWrite(_pinSel, IOT_SENSOR_HLW8012_SEL_CURRENT);
-
     pinMode(_pinSel, OUTPUT);
     pinMode(_pinCF, INPUT);
     pinMode(_pinCF1, INPUT);
 
-    if (sensor) {
-        __debugbreak_and_panic_printf_P(PSTR("Only one instance of Sensor_HLW8012 supported\n"));
-    }
+    _inputCF1 = &_inputCFI;
+    _toggleOutputMode();
 
     sensor = this;
     LoopFunctions::add(Sensor_HLW8012::loop);
@@ -200,21 +192,10 @@ bool Sensor_HLW8012::_processInterruptBuffer(InterruptBuffer &buffer, SensorInpu
         // tested up to 5KHz
         // jitter +-0.03Hz @ 500Hz
 
-#define USE_POPFRONT 0
-
-#if USE_POPFRONT
-        noInterrupts();
-        auto iterator = buffer.begin();
-        auto lastValue = *iterator;
-        while(++iterator != (buffer.end() - 1)) {
-            auto value = buffer.pop_front();
-            interrupts();
-#else
         auto iterator = buffer.begin();
         auto lastValue = *iterator;
         while(++iterator != buffer.end()) {
             auto value = *iterator;
-#endif
             auto diff = __inline_get_time_diff(lastValue, value);
             lastValue = value;
 
@@ -284,20 +265,13 @@ bool Sensor_HLW8012::_processInterruptBuffer(InterruptBuffer &buffer, SensorInpu
             }
 #endif
 
-#if USE_POPFRONT
-            noInterrupts();
-        }
-        interrupts();
-#else
     }
-#endif
 
-#if !USE_POPFRONT
-        // copy last value and items that have not been processed, mostly 1 item...
-        noInterrupts(); // takes ~20-30µs
-        buffer = std::move(buffer.slice(--iterator, buffer.end()));
-        interrupts();
-#endif
+    // copy last value and items that have not been processed, mostly 1 item...
+    --iterator;
+    noInterrupts(); // takes ~20-30µs
+    buffer = std::move(buffer.slice(iterator, buffer.end()));
+    interrupts();
 
 #if IOT_SENSOR_HLW80xx_DATA_PLOT
         // send every 100ms or 400 data points to keep the packets small
@@ -317,6 +291,7 @@ bool Sensor_HLW8012::_processInterruptBuffer(InterruptBuffer &buffer, SensorInpu
                     float energy;
                     float pf;
                     float noise;
+                    float level;
                 } header_t;
 
                 auto wsBuffer = Http2Serial::getConsoleServer()->makeBuffer(_plotData.size() * sizeof(*_plotData.data()) + sizeof(header_t));
@@ -333,9 +308,14 @@ bool Sensor_HLW8012::_processInterruptBuffer(InterruptBuffer &buffer, SensorInpu
                         _getEnergy(0),
                         _getPowerFactor(),
 #if IOT_SENSOR_HLW80xx_NOISE_SUPPRESSION
-                        _noiseLevel
+                        _noiseLevel,
 #else
-                        0.0f
+                        0.0f,
+#endif
+#if IOT_SENSOR_HLW80xx_ADJUST_CURRENT
+                        _dimmingLevel
+#else
+                        -1.0f
 #endif
                     };
                     buffer += sizeof(header_t);
@@ -426,6 +406,7 @@ void Sensor_HLW8012::dump(Print &output)
 #undef PROGMEM_AT_MODE_HELP_COMMAND_PREFIX
 #define PROGMEM_AT_MODE_HELP_COMMAND_PREFIX         "SP_"
 
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HLWCAL, "HLWCAL", "<u=voltage/i=current/p=power>[,<repeat>]|[,<displayed value>,<real value>]", "Enter calibration mode or set values");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HLWMODE, "HLWMODE", "<u=voltage/i=current/c=cycle>[,<delay in ms>", "Set voltage or current mode");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(HLWCFG, "HLWCFG", "<params,params,...>", "Configure sensor inputs", "Display configuration");
 
@@ -434,7 +415,9 @@ void Sensor_HLW8012::atModeHelpGenerator()
     Sensor_HLW80xx::atModeHelpGenerator();
 
     auto name = SensorPlugin::getInstance().getName();
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(HLWCAL), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(HLWMODE), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(HLWCFG), name);
 }
 
 static void print_sensor_input_settings(Stream &serial, Sensor_HLW8012::SensorInput &input, bool newLine)
@@ -452,10 +435,114 @@ static void print_sensor_input_settings(Stream &serial, Sensor_HLW8012::SensorIn
 
 bool Sensor_HLW8012::atModeHandler(Stream &serial, const String &command, AtModeArgs &args)
 {
+    extern EventScheduler::TimerPtr dumpTimer;
+
     if (Sensor_HLW80xx::atModeHandler(serial, command, args)) {
         return true;
     }
     else {
+        if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(HLWCAL))) {
+            if (args.requireArgs(1, 4)) {
+                char ch = args.toLowerChar(0);
+                if (args.size() >= 3) {
+                    Scheduler.removeTimer(&dumpTimer);
+                    float value = (args.toFloat(2) * args.toFloat(3, 1.0f)) / args.toFloat(1);
+                    auto &sensor = config._H_W_GET(Config().sensor).hlw80xx;
+                    at_mode_print_prefix(serial, command);
+                    if (ch == 'u') {
+                        _calibrationU = value;
+                        sensor.calibrationU = _calibrationU;
+                        serial.printf_P(PSTR("Voltage calibration set: %f\n"), value);
+                    }
+                    else if (ch == 'i') {
+                        _calibrationI = value;
+                        sensor.calibrationI = _calibrationI;
+                        serial.printf_P(PSTR("Current calibration set: %f\n"), value);
+                    }
+                    else if (ch == 'p') {
+                        _calibrationP = value;
+                        sensor.calibrationP = _calibrationP;
+                        serial.printf_P(PSTR("Power calibration set: %f\n"), value);
+                    }
+                    else {
+                        serial.println(F("Invalid setting"));
+                    }
+                }
+                else {
+                    Scheduler.removeTimer(&dumpTimer);
+                    struct {
+                        float sum;
+                        int count;
+                        int max;
+                    } data = { 0.0f, 0, args.toInt(1, 10) };
+
+                    at_mode_print_prefix(serial, command);
+                    if (ch == 'u') {
+                        serial.println(F("Calibrating voltage"));
+                        _calibrationU = 1;
+                        _voltage = 0;
+                        _setOutputMode(Sensor_HLW8012::OutputTypeEnum_t::VOLTAGE, 2000);
+                        Scheduler.addTimer(&dumpTimer, 500, true, [this, &serial, data](EventScheduler::TimerPtr timer) mutable {
+                            if (_voltage) {
+                                if (data.max-- == 0) {
+                                    timer->detach();
+                                    _calibrationU = config._H_GET(Config().sensor).hlw80xx.calibrationU;
+                                }
+                                data.sum += _voltage;
+                                data.count++;
+                                serial.printf_P(PSTR("+HLWCAL: % 10.6fV avg % 10.6fV\n"), _voltage, data.sum / data.count);
+                            }
+                        });
+                    }
+                    else if (ch == 'i') {
+                        serial.println(F("Calibrating current"));
+                        _calibrationI = 1;
+                        float dimmingLevel = 0;
+#if IOT_SENSOR_HLW80xx_ADJUST_CURRENT
+                        dimmingLevel = _dimmingLevel;
+                        _dimmingLevel = -1;
+#endif
+                        _current = 0;
+                        _setOutputMode(Sensor_HLW8012::OutputTypeEnum_t::CURRENT, 2000);
+                        Scheduler.addTimer(&dumpTimer, 500, true, [this, &serial, data, dimmingLevel](EventScheduler::TimerPtr timer) mutable {
+                            if (_current) {
+                                if (data.max-- == 0) {
+                                    timer->detach();
+                                    _calibrationI = config._H_GET(Config().sensor).hlw80xx.calibrationI;
+#if IOT_SENSOR_HLW80xx_ADJUST_CURRENT
+                                    _dimmingLevel = dimmingLevel;
+#endif
+                                }
+                                data.sum += _current;
+                                data.count++;
+                                serial.printf_P(PSTR("+HLWCAL: % 10.6fA avg % 10.6fA\n"), _current, data.sum / data.count);
+                            }
+                        });
+                    }
+                    else if (ch == 'p') {
+                        serial.println(F("Calibrating power"));
+                        _calibrationP = 1;
+                        _power = 0;
+                        _setOutputMode(Sensor_HLW8012::OutputTypeEnum_t::CYCLE, 2000);
+                        Scheduler.addTimer(&dumpTimer, 500, true, [this, &serial, data](EventScheduler::TimerPtr timer) mutable {
+                            if (_power) {
+                                if (data.max-- == 0) {
+                                    timer->detach();
+                                    _calibrationP = config._H_GET(Config().sensor).hlw80xx.calibrationP;
+                                }
+                                data.sum += _power;
+                                data.count++;
+                                serial.printf_P(PSTR("+HLWCAL: % 10.6fW avg % 10.6fW\n"), _power, data.sum / data.count);
+                            }
+                        });
+                    }
+                    else {
+                        serial.println(F("Invalid setting"));
+                    }
+                }
+            }
+            return true;
+        }
         if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(HLWMODE))) {
             if (args.requireArgs(1, 2)) {
                 auto type = F("Cycle Voltage/Current");

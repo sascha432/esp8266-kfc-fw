@@ -228,6 +228,13 @@ void Driver_DimmerModule::_getChannels()
 #endif
         }
         _unlockWire();
+
+#if IOT_SENSOR_HLW80xx_ADJUST_CURRENT
+    // sensors are initialized after the dimmer plugin
+    Scheduler.addTimer(100, false, [this](EventScheduler::TimerPtr) {
+        _setDimmingLevels();
+    });
+#endif
     }
 }
 

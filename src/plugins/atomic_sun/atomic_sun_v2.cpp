@@ -627,6 +627,12 @@ void Driver_4ChDimmer::_getChannels()
             }
         }
         _unlockWire();
+
+#if IOT_SENSOR_HLW80xx_ADJUST_CURRENT
+    Scheduler.addTimer(100, false, [this](EventScheduler::TimerPtr) {
+        _setDimmingLevels();
+    });
+#endif
     }
 }
 

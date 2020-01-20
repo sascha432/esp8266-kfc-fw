@@ -36,4 +36,5 @@ public:
     static void remove(CallbackPtr_t callbackPtr);
 
     static FunctionsVector &getVector();
+    static size_t size();
 };

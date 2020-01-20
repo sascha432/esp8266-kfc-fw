@@ -9,7 +9,7 @@
 
 static const char _digits2SegmentsTable[]  = { 0x3f, 0x06, 0x5b, 0x4f, 0x66, 0x6d, 0x7d, 0x07, 0x7f, 0x6f, 0x77, 0x7c, 0x39, 0x5e, 0x79, 0x71 };  // 0-F
 
-SevenSegmentPixel::SevenSegmentPixel(uint8_t numDigits, uint8_t numPixels, uint8_t numColons) : _pixelOrder(nullptr), _callback(nullptr), _brightness(MAX_BRIGHTNESS), _brightnessTimer(nullptr)
+SevenSegmentPixel::SevenSegmentPixel(uint8_t numDigits, uint8_t numPixels, uint8_t numColons) : _pixelOrder(nullptr), _callback(nullptr), _brightness(MAX_BRIGHTNESS)
 {
     _numDigits = numDigits;
     _numPixels = numPixels;
@@ -28,7 +28,7 @@ SevenSegmentPixel::SevenSegmentPixel(uint8_t numDigits, uint8_t numPixels, uint8
 
 SevenSegmentPixel::~SevenSegmentPixel()
 {
-    Scheduler.removeTimer(_brightnessTimer);
+    _brightnessTimer.remove();
 #if IOT_CLOCK_NEOPIXEL
     delete _pixels;
 #else
@@ -203,13 +203,13 @@ void SevenSegmentPixel::print(const char *text, color_t color)
 void SevenSegmentPixel::setBrightness(uint16_t brightness, float fadeTime, Callback_t callback)
 {
     _targetBrightness = brightness;
-    if (!Scheduler.hasTimer(_brightnessTimer)) {
+    if (!_brightnessTimer.active()) {
         uint16_t steps = (uint16_t)(MAX_BRIGHTNESS / (fadeTime * (1000 / 25.0)));      // 0-100%, 3 seconds fade time
         if (!steps) {
             steps = 1;
         }
         _debug_printf_P(PSTR("SevenSegmentPixel::setBrightness(): to %u steps %u fade time %f\n"), _brightness, steps, fadeTime);
-        Scheduler.addTimer(&_brightnessTimer, 25, true, [this, steps, callback](EventScheduler::TimerPtr timer) {
+        _brightnessTimer.add(25, true, [this, steps, callback](EventScheduler::TimerPtr timer) {
             int32_t tmp = _brightness;
             if (tmp < _targetBrightness) {
                 tmp += steps;

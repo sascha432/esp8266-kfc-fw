@@ -127,7 +127,7 @@
 
 #if LOGGER
 #ifndef LOGGER_MAX_FILESIZE
-#define LOGGER_MAX_FILESIZE             32768           // Max. size of the log file. if it exceeds the size, a copy is created and the
+#define LOGGER_MAX_FILESIZE             0xffff          // Max. size of the log file. if it exceeds the size, a copy is created and the
                                                         // logfile truncated. The copy gets overwritten every time the file gets rotated.
                                                         // 0 disables rotation
 #endif

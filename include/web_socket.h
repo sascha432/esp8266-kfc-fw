@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <vector>
 #include <ESPAsyncWebServer.h>
+#include "progmem_data.h"
 
 #define WS_PREFIX "ws[%s][%u] "
 #define WS_PREFIX_ARGS server->url(), client->id()
@@ -122,4 +123,34 @@ private:
 #endif
     AsyncWebSocketClient *_client;
     static ClientCallbackVector_t _clientCallback;
+
+// private:
+public:
+    friend class WsClientAsyncWebSocket;
+
+    typedef std::vector<AsyncWebSocket *> AsyncWebSocketVector;
+
+    static AsyncWebSocketVector _webSockets;
+};
+
+
+class WsClientAsyncWebSocket : public AsyncWebSocket {
+public:
+    WsClientAsyncWebSocket(const String &url) : AsyncWebSocket(url) {
+        // debug_printf("WsClientAsyncWebSocket(): new=%p\n", this);
+        WsClient::_webSockets.push_back(this);
+    }
+    ~WsClientAsyncWebSocket() {
+        // debug_printf("~WsClientAsyncWebSocket(): delete=%p, clients=%u, connected=%u\n", this, getClients().length(), count());
+        disableSocket();
+    }
+
+    void restart() {
+        closeAll(503, String(FSPGM(Device_is_rebooting)).c_str());
+        disableSocket();
+    }
+
+    void disableSocket() {
+        WsClient::_webSockets.erase(std::remove(WsClient::_webSockets.begin(), WsClient::_webSockets.end(), this), WsClient::_webSockets.end());
+    }
 };

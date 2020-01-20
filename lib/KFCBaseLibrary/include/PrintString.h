@@ -12,6 +12,8 @@
 
 class PrintString : public String, public Print {
 public:
+    using Print::print;
+
     PrintString() : String(), Print() {
     }
     PrintString(const String &str) : String(str), Print() {
@@ -34,6 +36,12 @@ public:
     PrintString(const __FlashStringHelper *format, va_list arg) : PrintString() {
         vprintf_P(reinterpret_cast<PGM_P>(format), arg);
     }
+
+    PrintString(double n, int digits, bool trimTrailingZeros) : PrintString() {
+        print(n, digits, trimTrailingZeros);
+    }
+
+    size_t print(double n, int digits, bool trimTrailingZeros);
 
     size_t vprintf(const char *format, va_list arg) {
         char temp[64];

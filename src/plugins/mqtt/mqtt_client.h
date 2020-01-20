@@ -196,20 +196,20 @@ private:
     void _queueTimerCallback(EventScheduler::TimerPtr timer);
 
     MQTTQueueVector _queue;
-    EventScheduler::TimerPtr _queueTimer;
+    EventScheduler::Timer _queueTimer;
 
 public:
     static void queueTimerCallback(EventScheduler::TimerPtr timer);
 
 private:
     AsyncMqttClient *_client;
-    EventScheduler::TimerPtr _timer;
+    EventScheduler::Timer _timer;
     uint32_t _autoReconnectTimeout;
     uint16_t _maxMessageSize;
     uint8_t _useNodeId: 1;
     MQTTComponentVector _components;
     MQTTTopicVector _topics;
-    Buffer *_messageBuffer;
+    Buffer _buffer;
     String _lastWillTopic;
 
     static MQTTClient *_mqttClient;

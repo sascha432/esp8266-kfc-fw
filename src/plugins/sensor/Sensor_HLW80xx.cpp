@@ -389,23 +389,20 @@ void Sensor_HLW80xx::atModeHelpGenerator()
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(HLWPLOT), name);
 }
 
-EventScheduler::TimerPtr dumpTimer = nullptr;
-
 bool Sensor_HLW80xx::atModeHandler(Stream &serial, const String &command, AtModeArgs &args)
 {
-    if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(HLWXD))) {
+    if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(HLWXD))) {
         if (args.requireArgs(1)) {
             uint8_t digits = args.toIntMinMax(AtModeArgs::FIRST, 0, 4);
             auto count = SensorPlugin::for_each<Sensor_HLW80xx>(this, Sensor_HLW80xx::_compareFunc, [digits](Sensor_HLW80xx &sensor) {
                 sensor.setExtraDigits(digits);
             });
-            at_mode_print_prefix(serial, command);
-            serial.printf_P(PSTR("Set extra digits to %d for %u sensors\n"), digits, count);
+            args.printf_P(PSTR("Set extra digits to %d for %u sensors"), digits, count);
         }
         return true;
     }
 #if IOT_SENSOR_HLW80xx_DATA_PLOT
-    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(HLWPLOT))) {
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(HLWPLOT))) {
         if (args.requireArgs(2, 3)) {
             void *clientId = reinterpret_cast<void *>(args.toNumber(0));
             auto ch = args.toLowerChar(1);
@@ -419,8 +416,7 @@ bool Sensor_HLW80xx::atModeHandler(Stream &serial, const String &command, AtMode
                 _webSocketPlotData = WebSocketDataTypeEnum_t::POWER;
             }
             else {
-                at_mode_print_prefix(serial, command);
-                serial.printf_P(PSTR("Disabling plot data\n"));
+                args.print(F("Disabling plot data"));
                 return true;
             }
             if (args.isTrue(2)) {
@@ -440,12 +436,11 @@ bool Sensor_HLW80xx::atModeHandler(Stream &serial, const String &command, AtMode
                 }
             }
 
-            at_mode_print_prefix(serial, command);
             if (!_webSocketClient) {
-                serial.printf_P(PSTR("Cannot find ClientID %p\n"), clientId);
+                args.printf_P(PSTR("Cannot find ClientID %p"), clientId);
             }
             else {
-                serial.printf_P(PSTR("{\"Imin\":%f,\"Imax\":%f,\"Ipmin\":%u,\"Ipmax\":%u,\"Rs\":%f,\"UIPc\":[%f,%f,%f]}\n"),
+                args.printf_P(PSTR("{\"Imin\":%f,\"Imax\":%f,\"Ipmin\":%u,\"Ipmax\":%u,\"Rs\":%f,\"UIPc\":[%f,%f,%f]}"),
                     IOT_SENSOR_HLW80xx_MIN_CURRENT, IOT_SENSOR_HLW80xx_MAX_CURRENT,
                     IOT_SENSOR_HLW80xx_CURRENT_MIN_PULSE, IOT_SENSOR_HLW80xx_CURRENT_MAX_PULSE,
                     IOT_SENSOR_HLW80xx_SHUNT, _calibrationU, _calibrationI, _calibrationP);
@@ -454,13 +449,13 @@ bool Sensor_HLW80xx::atModeHandler(Stream &serial, const String &command, AtMode
         return true;
     }
 #endif
-    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(HLWDUMP))) {
-        Scheduler.removeTimer(&dumpTimer);
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(HLWDUMP))) {
+        _dumpTimer.remove();
 
         auto interval = args.toMillis(0, 500);
         if (interval) {
             // auto stream = &serial;
-            Scheduler.addTimer(&dumpTimer, interval, true, [this, &serial](EventScheduler::TimerPtr) {
+            _dumpTimer.add(interval, true, [this, &serial](EventScheduler::TimerPtr) {
                 SensorPlugin::for_each<Sensor_HLW80xx>(this, Sensor_HLW80xx::_compareFunc, [&serial](Sensor_HLW80xx &sensor) {
                     sensor.dump(serial);
                 });

@@ -36,6 +36,55 @@ public:
     typedef std::vector<TimerPtr> TimerVector;
     typedef std::vector<TimerPtr>::iterator TimerIterator;
 
+public:
+    class Timer {
+    public:
+        typedef std::function<void(Timer &timer)> Callback_t;
+
+        Timer() : _timer(nullptr) {
+        }
+        ~Timer() {
+            remove();
+        }
+
+        void add(int64_t delayMillis, int repeat, Callback callback, Priority_t priority = PRIO_LOW) {
+            remove();
+            Scheduler.addTimer(&_timer, delayMillis, repeat, callback, priority);
+        }
+
+        void add(int64_t delayMillis, bool repeat, Callback callback, Priority_t priority = PRIO_LOW) {
+            remove();
+            Scheduler.addTimer(&_timer, delayMillis, repeat, callback, priority);
+        }
+
+        void add(int64_t delayMillis, int repeat, Callback_t callback, Priority_t priority = PRIO_LOW) {
+            remove();
+            Scheduler.addTimer(&_timer, delayMillis, repeat, [this, callback](EventScheduler::TimerPtr) {
+                callback(*this);
+            }, priority);
+        }
+
+        void add(int64_t delayMillis, bool repeat, Callback_t callback, Priority_t priority = PRIO_LOW) {
+            add(delayMillis, (int)(repeat ? EventScheduler::UNLIMTIED : EventScheduler::DONT), callback, priority);
+        }
+
+        bool active() const {
+            return Scheduler.hasTimer(_timer);
+        }
+
+        bool remove() {
+            return Scheduler.removeTimer(&_timer);
+        }
+
+        EventScheduler::TimerPtr operator->() const {
+            return _timer;
+        }
+
+    private:
+        EventScheduler::TimerPtr _timer;
+    };
+
+public:
     EventScheduler() : _runtimeLimit(250) {
     }
 
@@ -60,7 +109,7 @@ public:
     // check if the pointer is a timer that exists.
     // Note: Pointers are not unqiue and can be assigned to a different timer after the the memory has been released
     // To avoid this use void addTimer(TimerPtr *timerPtr,  ....) and if the timer gets removed, timerPtr will be set to null
-    bool hasTimer(TimerPtr timer);
+    bool hasTimer(TimerPtr timer) const;
 
     // remove timer and return true if it has been removed
     bool removeTimer(TimerPtr timer);
@@ -72,6 +121,10 @@ public:
     void callTimer(TimerPtr timer);
 
     static void _timerCallback(void *arg);
+
+    size_t size() const {
+        return _timers.size();
+    }
 
 private:
 #if DEBUG_EVENT_SCHEDULER

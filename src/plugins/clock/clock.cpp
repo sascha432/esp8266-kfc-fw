@@ -270,7 +270,7 @@ void ClockPlugin::atModeHelpGenerator()
 
 bool ClockPlugin::atModeHandler(Stream &serial, const String &command, AtModeArgs &args)
 {
-    if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(CLOCKTS))) {
+    if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKTS))) {
         if (args.size() == 2) {
             enable(false);
             uint8_t digit = args.toInt(0);
@@ -284,9 +284,9 @@ bool ClockPlugin::atModeHandler(Stream &serial, const String &command, AtModeArg
         }
         return true;
     }
-    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(CLOCKP))) {
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKP))) {
         if (args.size() < 1) {
-            serial.printf_P(PSTR("+CLOCKP: clear\n"));
+            args.print(F("clear"));
             _display->clear();
             _display->show();
             enable(true);
@@ -294,13 +294,13 @@ bool ClockPlugin::atModeHandler(Stream &serial, const String &command, AtModeArg
         else {
             enable(false);
             auto text = args.get(0);
-            serial.printf_P(PSTR("+CLOCKP: '%s'\n"), text);
+            args.printf_P(PSTR("'%s'"), text);
             _display->print(text, _color);
             _display->show();
         }
         return true;
     }
-    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(CLOCKA))) {
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKA))) {
         if (args.isQueryMode()) {
             serial.printf_P(PSTR(
                     "+CLOCKA: %u - blink colon twice per second\n"
@@ -350,14 +350,14 @@ bool ClockPlugin::atModeHandler(Stream &serial, const String &command, AtModeArg
         }
         return true;
     }
-    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(CLOCKC))) {
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKC))) {
         if (args.requireArgs(3, 3)) {
             _color = Color(args.toInt(0), args.toInt(1), args.toInt(2));
-            serial.printf_P(PSTR("+CLOCKC: color=#%06x\n"), _color.get());
+            args.printf_P(PSTR("color=#%06x"), _color.get());
         }
         return true;
     }
-    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(CLOCKPX))) {
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKPX))) {
         if (args.requireArgs(4, 4)) {
             enable(false);
 
@@ -365,20 +365,20 @@ bool ClockPlugin::atModeHandler(Stream &serial, const String &command, AtModeArg
             Color color(args.toInt(1), args.toInt(2), args.toInt(3));
             if (num < 0) {
 #if IOT_CLOCK_NEOPIXEL
-                serial.printf_P(PSTR("+CLOCKPX: pixel=0-%u, color=#%06x\n"), _display->getTotalPixelCount(), color.get());
+                args.printf_P(PSTR("pixel=0-%u, color=#%06x"), _display->getTotalPixelCount(), color.get());
 #else
-                serial.printf_P(PSTR("+CLOCKPX: pixel=0-%u, color=#%06x\n"), FastLED.size(), color.get());
+                args.printf_P(PSTR("pixel=0-%u, color=#%06x"), FastLED.size(), color.get());
 #endif
                 _display->setColor(color);
             }
             else {
-                serial.printf_P(PSTR("+CLOCKPX: pixel=%u, color=#%06x\n"), num, color.get());
+                args.printf_P(PSTR("pixel=%u, color=#%06x"), num, color.get());
                 _display->setColor(num, color);
             }
         }
         return true;
     }
-    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(CLOCKD))) {
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKD))) {
         _display->dump(serial);
         return true;
     }

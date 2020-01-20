@@ -535,11 +535,6 @@ void at_mode_print_invalid_arguments(Stream &output, uint16_t num, uint16_t min,
     }
 }
 
-void at_mode_print_ok(Stream &output)
-{
-    output.println(FSPGM(OK));
-}
-
 void at_mode_print_prefix(Stream &output, const __FlashStringHelper *command)
 {
     output.print('+');
@@ -572,7 +567,7 @@ void at_mode_serial_handle_event(String &commandString)
     }
 
     if (commandString.length() == 0) { // AT
-        at_mode_print_ok(output);
+        args.ok();
     }
     else {
         if (commandString.length() == 1 && commandString.charAt(0) == '?') { // AT?
@@ -599,13 +594,15 @@ void at_mode_serial_handle_event(String &commandString)
 
             _debug_printf_P(PSTR("Command '%s' argc %d arguments '%s'\n"), command, args.size(), implode(F("','"), &args.getArgs()).c_str());
 
-            if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(DSLP))) {
+            args.setCommand(command);
+
+            if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DSLP))) {
                 uint32_t time = args.toMillis(0);
                 RFMode mode = (RFMode)args.toInt(1, RF_DEFAULT);
-                output.println(F("Entering deep sleep..."));
+                args.print(F("Entering deep sleep..."));
                 config.enterDeepSleep(time, mode, 1);
             }
-            else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(HLP))) {
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(HLP))) {
                 String plugin;
                 StringVector findItems;
                 for(auto strPtr: args.getArgs()) {
@@ -616,36 +613,36 @@ void at_mode_serial_handle_event(String &commandString)
                 }
                 at_mode_generate_help(output, &findItems);
             }
-            else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(RST))) {
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RST))) {
                 if (args.equals(0, 's')) {
                     resetDetector.setSafeMode(1);
-                    output.println(F("Software reset, safe mode enabled..."));
+                    args.print(F("Software reset, safe mode enabled..."));
                 }
                 else {
-                    output.println(F("Software reset..."));
+                    args.print(F("Software reset..."));
                 }
                 config.restartDevice();
             }
-            else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(CMDS))) {
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CMDS))) {
                 output.print(F("+CMDS="));
                 at_mode_print_command_string(output, ',');
                 output.println();
             }
-            else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(LOAD))) {
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(LOAD))) {
                 config.read();
-                at_mode_print_ok(output);
+                args.ok();
             }
-            else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(STORE))) {
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(STORE))) {
                 config.write();
-                at_mode_print_ok(output);
+                args.ok();
             }
-            else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(IMPORT))) {
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(IMPORT))) {
                 if (args.requireArgs(1)) {
                     auto res = false;
                     auto filename = args.get(0);
                     auto file = SPIFFS.open(filename, fs::FileOpenMode::read);
                     if (file) {
-                        output.printf_P(PSTR("+%s: %s"), PROGMEM_AT_MODE_HELP_COMMAND(IMPORT), filename);
+                        args.print(filename);
                         Configuration::Handle_t *handlesPtr = nullptr;
                         Configuration::Handle_t handles[AT_MODE_MAX_ARGUMENTS + 1];
                         auto iterator = args.begin();
@@ -664,19 +661,19 @@ void at_mode_serial_handle_event(String &commandString)
                         res = config.importJson(file, handlesPtr);
                     }
                     if (res) {
-                        at_mode_print_ok(output);
+                        args.ok();
                         config.write();
                         config.setConfigDirty(true);
                     } else {
-                        output.printf_P(PSTR("+IMPORT: Failed to import: %s\n"), filename);
+                        args.printf_P(PSTR("Failed to import: %s"), filename);
                     }
                 }
             }
-            else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(FACTORY))) {
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(FACTORY))) {
                 config.restoreFactorySettings();
-                at_mode_print_ok(output);
+                args.ok();
             }
-            else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(ATMODE))) {
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(ATMODE))) {
                 if (args.requireArgs(1, 1)) {
                     if (args.isTrue(0)) {
                         enable_at_mode(output);
@@ -685,11 +682,11 @@ void at_mode_serial_handle_event(String &commandString)
                     }
                 }
             }
-            else if (!strcasecmp_P(command, PSTR("I2CT")) || !strcasecmp_P(command, PSTR("I2CR"))) {
+            else if (args.isCommand(PSTR("I2CT")) || args.isCommand(PSTR("I2CR"))) {
                 // ignore SerialTwoWire communication
             }
 #if 0
-            else if (!strcasecmp_P(command, PSTR("DIMTEST"))) {
+            else if (args.isCommand(PSTR("DIMTEST"))) {
                 static EventScheduler::TimerPtr timer = nullptr;
                 static int channel, value;
                 value = 500;
@@ -707,13 +704,13 @@ void at_mode_serial_handle_event(String &commandString)
                 });
             }
 #endif
-            else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(WIFI))) {
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(WIFI))) {
                 if (!args.empty()) {
                     config.reconfigureWiFi();
                 }
 
                 auto flags = config._H_W_GET(Config().flags);
-                output.printf_P("+WIFI: DHCP %u, station mode %s, SSID %s, connected %u, IP %s\n",
+                args.printf_P("DHCP %u, station mode %s, SSID %s, connected %u, IP %s",
                     flags.softAPDHCPDEnabled,
                     (flags.wifiMode & WIFI_STA) ? PSTR("on") : PSTR("off"),
                     config._H_STR(Config().wifi_ssid),
@@ -722,35 +719,35 @@ void at_mode_serial_handle_event(String &commandString)
                 );
             }
 #if RTC_SUPPORT
-            else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(RTC))) {
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RTC))) {
                 if (!args.empty()) {
-                    output.printf_P(PSTR("+RTC: time=%u, rtc=%u\n"), (uint32_t)time(nullptr), config.getRTC());
+                    args.printf_P(PSTR("Time=%u, rtc=%u"), (uint32_t)time(nullptr), config.getRTC());
                     output.print(F("+RTC: "));
                     config.printRTCStatus(output);
                     output.println();
                 }
                 else {
-                    output.printf_P(PSTR("+RTC: set=%u, rtc=%u\n"), config.setRTC(time(nullptr)), config.getRTC());
+                    args.printf_P(PSTR("Set=%u, rtc=%u"), config.setRTC(time(nullptr)), config.getRTC());
                 }
             }
 #endif
-            else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(REM))) {
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(REM))) {
                 // ignore comment
             }
-            else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(DLY))) {
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DLY))) {
                 auto delayTime = args.toMillis(0, 1, 3000, 1);
-                output.printf_P(PSTR("+DLY: %lu\n"), delayTime);
+                args.printf_P(PSTR("%lu"), delayTime);
                 delay(delayTime);
-                at_mode_print_ok(output);
+                args.ok();
             }
-            else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(DEL))) {
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DEL))) {
                 if (args.requireArgs(1, 1)) {
                     auto filename = args.get(0);
                     auto result = SPIFFS.remove(filename);
                     output.printf_P(PSTR("+DEL: %s: %s\n"), filename, result ? PSTR("success") : PSTR("failure"));
                 }
             }
-            else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(LS))) {
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(LS))) {
                 Dir dir = SPIFFSWrapper::openDir(args.get(0));
                 while(dir.next()) {
                     output.print(F("+LS: "));
@@ -763,7 +760,7 @@ void at_mode_serial_handle_event(String &commandString)
                     output.println(dir.fileName());
                 }
             }
-            else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(CAT))) {
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CAT))) {
                 if (args.requireArgs(1, 1)) {
                     auto filename = args.get(0);
                     File file = SPIFFS.open(filename, fs::FileOpenMode::read);
@@ -780,156 +777,151 @@ void at_mode_serial_handle_event(String &commandString)
                             }
                             else {
                                 output.println();
-                                output.printf_P(PSTR("+CAT: %s: %u\n"), file.name(), (unsigned)file.size());
+                                output.printf_P(PSTR("+%s: %s: %u"), PROGMEM_AT_MODE_HELP_COMMAND(CAT), file.name(), (unsigned)file.size());
                                 file.close();
                                 timer->detach();
                             }
                         });
                     }
                     else {
-                        output.printf_P(PSTR("+CAT: Failed to open: %s\n"), filename);
+                        args.printf_P(PSTR("Failed to open: %s"), filename);
                     }
                 }
             }
 #if DEBUG_HAVE_SAVECRASH
-            else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(SAVECRASHC))) {
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(SAVECRASHC))) {
                 SaveCrash.clear();
-                output.println(F("+SAVECRASH: cleared"));
+                args.print(F("Cleared"));
             }
-            else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(SAVECRASHP))) {
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(SAVECRASHP))) {
                 SaveCrash.print(output);
             }
 #endif
 #if DEBUG
-            else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(FSM))) {
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(FSM))) {
                 Mappings::getInstance().dump(output);
             }
     #if PIN_MONITOR
-            else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(PINM))) {
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(PINM))) {
                 if (!PinMonitor::getInstance()) {
-                    output.println(F("+PINM: Pin monitor not initialized"));
+                    args.print(F("Pin monitor not initialized"));
                 }
                 else if (args.size() == 1) {
-                    static EventScheduler::TimerPtr timer = nullptr;
-                    if (args.isTrue(0) && !timer) {
-                        output.println(F("+PINM: started"));
-                        Stream *serialPtr = &output;
-                        Scheduler.addTimer(&timer, 1000, true, [serialPtr](EventScheduler::TimerPtr timer) {
-                            PinMonitor::getInstance()->dumpPins(*serialPtr);
+                    static EventScheduler::Timer timer;
+                    if (args.isTrue(0) && !timer.active()) {
+                        args.print(F("Started"));
+                        timer.add(1000, true, [&output](EventScheduler::TimerPtr timer) {
+                            PinMonitor::getInstance()->dumpPins(output);
                         });
                     }
-                    else if (args.isFalse(0) && timer) {
-                        Scheduler.removeTimer(&timer);
-                        output.println(F("+PINM: stopped"));
+                    else if (args.isFalse(0) && timer.active()) {
+                        timer.remove();
+                        args.print(F("Stopped"));
                     }
                 } else {
                     PinMonitor::getInstance()->dumpPins(output);
                 }
             }
     #endif
-            else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(PLUGINS))) {
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(PLUGINS))) {
                 dump_plugin_list(output);
             }
-            else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(RSSI)) || !strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(HEAP)) || !strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(GPIO))) {
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RSSI)) || args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(HEAP)) || args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(GPIO))) {
                 if (args.requireArgs(1, 1)) {
                     auto interval = args.toMillis(0, 500);
-                    PGM_P cmd;
-                    if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(RSSI))) {
+                    if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RSSI))) {
                         displayTimer._type = DisplayTimer::RSSI;
-                        cmd = PSTR("RSSI");
                     }
-                    else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(GPIO))) {
+                    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(GPIO))) {
                         displayTimer._type = DisplayTimer::GPIO;
-                        cmd = PSTR("GPIO");
                     }
                     else {
                         displayTimer._type = DisplayTimer::HEAP;
-                        cmd = PSTR("HEAP");
                     }
                     displayTimer._rssiMin = -10000;
                     displayTimer._rssiMax = 0;
                     if (interval == 0) {
                         displayTimer.removeTimer();
-                        output.printf_P(PSTR("+%s: Interval disabled\n"), cmd);
+                        args.print(F("Interval disabled"));
                     } else {
                         float fInterval = interval / 1000.0;
-                        output.printf_P(PSTR("+%s: Interval set to %.3f seconds\n"), cmd, fInterval);
+                        args.printf_P(PSTR("Interval set to %.3f seconds"), fInterval);
                         create_heap_timer(fInterval, displayTimer._type);
                     }
                 }
             }
     #if defined(ESP8266)
-            else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(CPU))) {
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CPU))) {
                 if (args.size() == 1) {
                     auto speed = (uint8_t)args.toInt(0, ESP.getCpuFreqMHz());
                     auto result = system_update_cpu_freq(speed);
-                    output.printf_P(PSTR("+CPU: Set %d MHz = %d\n"), speed, result);
+                    args.printf_P(PSTR("Set %d MHz = %d"), speed, result);
                 }
-                output.printf_P(PSTR("+CPU: %d MHz\n"), ESP.getCpuFreqMHz());
+                args.printf_P(PSTR("%d MHz"), ESP.getCpuFreqMHz());
             }
     #endif
-            else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(DUMP))) {
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMP))) {
                 config.dump(output);
             }
-            else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(DUMPFS))) {
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPFS))) {
                 at_mode_dump_fs_info(output);
             }
-            else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(DUMPEE))) {
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPEE))) {
                 uint16_t offset = args.toInt(0);
                 uint16_t length = args.toInt(1, 1);
                 config.dumpEEPROM(output, false, offset, length);
             }
-            else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(WRTC))) {
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(WRTC))) {
                 if (args.requireArgs(2, 2)) {
                     uint8_t rtcMemId = (uint8_t)args.toInt(0);
                     uint32_t data = (uint32_t)strtoul(args.get(1), nullptr, 0); // auto detect base
                     RTCMemoryManager::write(rtcMemId, &data, sizeof(data));
-                    output.printf_P(PSTR("+WRTC: id=%u, data=%u (%x)\n"), rtcMemId, data, data);
+                    args.printf_P(PSTR("id=%u, data=%u (%x)"), rtcMemId, data, data);
                 }
             }
-            else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(DUMPRTC))) {
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPRTC))) {
                 RTCMemoryManager::dump(MySerial);
             }
-            else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(RTCCLR))) {
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RTCCLR))) {
                 RTCMemoryManager::clear();
-                output.println(F("+RTCCLR: Memory cleared"));
+                args.print(F("Memory cleared"));
             }
-            else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(RTCQCC))) {
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RTCQCC))) {
                 if (args.requireArgs(1, 1)) {
                     int num = args.toInt(0);
                     if (num == 0) {
                         uint8_t bssid[6];
                         memset(bssid, 0, sizeof(bssid));
                         config.storeQuickConnect(bssid, -1);
-                        output.println(F("+RTCQCC: BSSID and channel removed"));
+                        args.print(F("BSSID and channel removed"));
                     } else if (num == 1) {
                         config.storeStationConfig(0, 0, 0);
-                        output.println(F("+RTCQCC: Static IP info removed"));
+                        args.print(F("Static IP info removed"));
                     } else {
                         at_mode_print_invalid_arguments(output);
                     }
                 }
             }
-            else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(WIMO))) {
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(WIMO))) {
                 if (args.requireArgs(1, 1)) {
-                    output.println(F("+WIFO: settings WiFi mode and restarting device..."));
+                    args.print(F("Setting WiFi mode and restarting device..."));
                     config._H_W_GET(Config().flags).wifiMode = args.toInt(0);
                     config.write();
                     config.restartDevice();
                 }
             }
-            else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(LOG))) {
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(LOG))) {
                 if (args.requireArgs(1)) {
                     Logger_error(F("+LOG: %s"), implode(FSPGM(comma), &args.getArgs()).c_str());
                 }
             }
-            else if (!strcasecmp_P(command, PROGMEM_AT_MODE_HELP_COMMAND(PANIC))) {
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(PANIC))) {
                 delay(100);
                 panic();
             }
 #endif
 #if DEBUG_COLLECT_STRING_ENABLE
-            else if (!strcasecmp_P(command, PSTR("JSONSTRDUMP"))) {
+            else if (args.isCommand(PSTR("JSONSTRDUMP"))) {
                 __debug_json_string_dump(output);
             }
 #endif
@@ -937,7 +929,7 @@ void at_mode_serial_handle_event(String &commandString)
                 bool commandWasHandled = false;
                 for(auto plugin : plugins) { // send command to plugins
                     if (plugin->hasAtMode()) {
-                        if (true == (commandWasHandled = plugin->atModeHandler(output, command, args))) {
+                        if (true == (commandWasHandled = plugin->atModeHandler(output, args.getCommand(), args))) {
                             break;
                         }
                     }

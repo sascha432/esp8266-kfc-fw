@@ -308,16 +308,16 @@ void BlindsControlPlugin::atModeHelpGenerator()
 
 bool BlindsControlPlugin::atModeHandler(Stream &serial, const String &command, AtModeArgs &args)
 {
-    if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(BCMS))) {
+    if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(BCMS))) {
         if (args.requireArgs(2, 2)) {
             uint8_t channel = args.toInt(0) % 2;
             _channels[channel].setState(args.isFalse(1) ? BlindsChannel::CLOSED : BlindsChannel::OPEN);
             _saveState();
-            serial.printf_P(PSTR("+BCMS: channel %u state %s\n"), channel, BlindsChannel::_stateStr(_channels[channel].getState()));
+            args.printf_P(PSTR("channel %u state %s"), channel, BlindsChannel::_stateStr(_channels[channel].getState()));
         }
         return true;
     }
-    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(BCMC))) {
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(BCMC))) {
         if (args.isQueryMode() || args.requireArgs(6, 6)) {
             auto &cfg = config._H_W_GET(Config().blinds_controller);
             uint8_t channel = 0xff;
@@ -332,7 +332,7 @@ bool BlindsControlPlugin::atModeHandler(Stream &serial, const String &command, A
             }
             for(uint8_t i = 0; i < 2; i++) {
                 if (channel == i || channel == 0xff) {
-                    serial.printf_P(PSTR("+BCMC: channel=%u,level=%u,open=%ums,close=%ums,current limit=%u (%umA)/%ums\n"),
+                    args.printf_P(PSTR("channel=%u,level=%u,open=%ums,close=%ums,current limit=%u (%umA)/%ums"),
                         i,
                         cfg.channels[i].pwmValue,
                         cfg.channels[i].openTime,
@@ -346,7 +346,7 @@ bool BlindsControlPlugin::atModeHandler(Stream &serial, const String &command, A
         }
         return true;
     }
-    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(BCMD))) {
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(BCMD))) {
         if (args.isQueryMode() || args.requireArgs(2, 2)) {
             auto &cfg = config._H_W_GET(Config().blinds_controller);
             if (args.size() == 2) {
@@ -365,14 +365,14 @@ bool BlindsControlPlugin::atModeHandler(Stream &serial, const String &command, A
                 }
                 _readConfig();
             }
-            serial.printf_P(PSTR("+BCMD: swap channels=%u\n"), cfg.swap_channels);
-            serial.printf_P(PSTR("+BCMD: channel 0 direction=%u\n"), cfg.channel0_dir);
-            serial.printf_P(PSTR("+BCMD: channel 1 direction=%u\n"), cfg.channel1_dir);
+            args.printf_P(PSTR("swap channels=%u"), cfg.swap_channels);
+            args.printf_P(PSTR("channel 0 direction=%u"), cfg.channel0_dir);
+            args.printf_P(PSTR("channel 1 direction=%u"), cfg.channel1_dir);
         }
         return true;
     }
 #if IOT_BLINDS_CTRL_TESTMODE
-    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(BCME))) {
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(BCME))) {
         if (args.requireArgs(6, 6)) {
             uint8_t pins[] = { IOT_BLINDS_CTRL_M1_PIN, IOT_BLINDS_CTRL_M2_PIN, IOT_BLINDS_CTRL_M3_PIN, IOT_BLINDS_CTRL_M4_PIN };
             uint8_t channel = args.toInt(0);
@@ -402,8 +402,8 @@ bool BlindsControlPlugin::atModeHandler(Stream &serial, const String &command, A
                 analogWrite(pins[i], LOW);
             }
             analogWrite(pins[(channel << 1) | direction], pwmLevel);
-            serial.printf_P(PSTR("+BCME: level %u current limit/%u %u frequency %.2fkHz\n"), pwmLevel, _currentLimit, _currentLimitMinCount, IOT_BLINDS_CTRL_PWM_FREQ / 1000.0);
-            serial.printf_P(PSTR("+BCME: channel %u direction %u time %u\n"), channel, direction, time);
+            args.printf_P(PSTR("level %u current limit/%u %u frequency %.2fkHz"), pwmLevel, _currentLimit, _currentLimitMinCount, IOT_BLINDS_CTRL_PWM_FREQ / 1000.0);
+            args.printf_P(PSTR("channel %u direction %u time %u"), channel, direction, time);
 
             _peakCurrent = 0;
             _printCurrentTimeout.set(500);

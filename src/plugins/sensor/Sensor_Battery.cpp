@@ -164,9 +164,8 @@ void Sensor_Battery::atModeHelpGenerator()
 
 bool Sensor_Battery::atModeHandler(Stream &serial, const String &command, AtModeArgs &args)
 {
-    if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SENSORPBV))) {
-        static EventScheduler::TimerPtr timer = nullptr;
-        Scheduler.removeTimer(&timer);
+    if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(SENSORPBV))) {
+        _timer.remove();
 
         double averageSum = 0;
         int averageCount = 0;
@@ -175,7 +174,8 @@ bool Sensor_Battery::atModeHandler(Stream &serial, const String &command, AtMode
             auto value = Sensor_Battery::readSensor(&data);
             averageSum += value;
             averageCount++;
-            serial.printf_P(PSTR("+SENSORPBV: %.4fV - avg %.4f (calibration %.6f, #%d, adc sum %d, adc avg %.6f)\n"),
+            serial.printf_P(PSTR("+%s: %.4fV - avg %.4f (calibration %.6f, #%d, adc sum %d, adc avg %.6f)\n"),
+                PROGMEM_AT_MODE_HELP_COMMAND(SENSORPBV),
                 value,
                 averageSum / (double)averageCount,
                 config._H_GET(Config().sensor).battery.calibration,
@@ -187,7 +187,7 @@ bool Sensor_Battery::atModeHandler(Stream &serial, const String &command, AtMode
         printVoltage(nullptr);
         auto repeat = args.toMillis(AtModeArgs::FIRST, 500);
         if (repeat) {
-            Scheduler.addTimer(&timer, repeat, true, printVoltage);
+            _timer.add(repeat, true, printVoltage);
         }
         return true;
     }

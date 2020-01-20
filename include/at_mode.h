@@ -19,6 +19,7 @@
 #else
 
 #include <Arduino_compat.h>
+#include <PrintString.h>
 #include <algorithm>
 #include <memory>
 #include <vector>
@@ -125,7 +126,6 @@ void serial_handle_event(String command);
 String at_mode_print_command_string(Stream &output, char separator);
 void at_mode_serial_input_handler(uint8_t type, const uint8_t *buffer, size_t len);
 void at_mode_print_invalid_arguments(Stream &output, uint16_t num = 0, uint16_t min = ~0, uint16_t max = ~0);
-void at_mode_print_ok(Stream &output);
 void at_mode_print_prefix(Stream &output, const __FlashStringHelper *command);
 void at_mode_print_prefix(Stream &output, const char *command);
 inline void at_mode_print_prefix(Stream &output, const String &command) {
@@ -366,6 +366,23 @@ public:
         return true;
     }
 
+public:
+    void setCommand(const char *command) {
+        _command = command;
+    }
+    String &getCommand() {
+        return _command;
+    }
+
+    bool isCommand(PGM_P command) const {
+        return !strcasecmp_P(_command.c_str(), command);
+    }
+
+    void printf_P(PGM_P format, ...);
+    void print(const char *str);
+    void print(const __FlashStringHelper *str);
+    void ok();
+
 private:
     template <class T>
     bool _isValidInt(const char *str, T &result) const {
@@ -396,6 +413,7 @@ private:
 
 private:
     Stream &_output;
+    String _command;
     ArgumentVector _args;
     bool _queryMode;
 

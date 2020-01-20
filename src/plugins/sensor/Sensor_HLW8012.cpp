@@ -173,9 +173,10 @@ bool Sensor_HLW8012::_processInterruptBuffer(InterruptBuffer &buffer, SensorInpu
 
 #if IOT_SENSOR_HLW80xx_DATA_PLOT
         auto client = _getWebSocketClient();
-        bool convertUnits = _getWebSocketPlotData() & WebSocketDataTypeEnum_t::CONVERT_UNIT;
+        bool convertUnits = false;
         uint16_t dataType = 0;
         if (client) {
+            convertUnits = _getWebSocketPlotData() & WebSocketDataTypeEnum_t::CONVERT_UNIT;
             if ((_getWebSocketPlotData() & WebSocketDataTypeEnum_t::CURRENT) && (&input == &_inputCFI)) {
                 dataType = 'I';
             }
@@ -186,7 +187,6 @@ bool Sensor_HLW8012::_processInterruptBuffer(InterruptBuffer &buffer, SensorInpu
                 dataType = 'U';
             }
         }
-        bool canSend = client && client->canSend();
 #endif
 
         // tested up to 5KHz
@@ -250,7 +250,7 @@ bool Sensor_HLW8012::_processInterruptBuffer(InterruptBuffer &buffer, SensorInpu
             }
 
 #if IOT_SENSOR_HLW80xx_DATA_PLOT
-            if (dataType && canSend) {
+            if (dataType) {
                 _plotData.push_back(value);
                 if (convertUnits) {
                     _plotData.push_back(input.convertPulse(diff));
@@ -267,10 +267,11 @@ bool Sensor_HLW8012::_processInterruptBuffer(InterruptBuffer &buffer, SensorInpu
 
     }
 
-    // copy last value and items that have not been processed, mostly 1 item...
+    // copy last value and items that have not been processed
     --iterator;
-    noInterrupts(); // takes ~20-30µs
-    buffer = std::move(buffer.slice(iterator, buffer.end()));
+    noInterrupts();
+    // buffer = std::move(buffer.slice(iterator, buffer.end()));           // takes ~20-30µs
+    buffer.shrink(iterator, buffer.end());                              // <1µs
     interrupts();
 
 #if IOT_SENSOR_HLW80xx_DATA_PLOT
@@ -280,7 +281,7 @@ bool Sensor_HLW8012::_processInterruptBuffer(InterruptBuffer &buffer, SensorInpu
         if (dataType && ((millis() > _plotDataTime) || _plotData.size() > 400)) {
             _plotDataTime = millis() + 100;
 
-            if (canSend) {        // drop any data if the queue is full
+            if (client->canSend()) { // drop data if the queue is full
                 typedef struct {
                     uint16_t packetId;
                     uint16_t outputMode;
@@ -307,16 +308,16 @@ bool Sensor_HLW8012::_processInterruptBuffer(InterruptBuffer &buffer, SensorInpu
                         _power,
                         _getEnergy(0),
                         _getPowerFactor(),
-#if IOT_SENSOR_HLW80xx_NOISE_SUPPRESSION
+    #if IOT_SENSOR_HLW80xx_NOISE_SUPPRESSION
                         _noiseLevel,
-#else
+    #else
                         0.0f,
-#endif
-#if IOT_SENSOR_HLW80xx_ADJUST_CURRENT
+    #endif
+    #if IOT_SENSOR_HLW80xx_ADJUST_CURRENT
                         _dimmingLevel
-#else
+    #else
                         -1.0f
-#endif
+    #endif
                     };
                     buffer += sizeof(header_t);
                     memcpy(buffer, _plotData.data(), _plotData.size() * sizeof(*_plotData.data()));
@@ -324,7 +325,6 @@ bool Sensor_HLW8012::_processInterruptBuffer(InterruptBuffer &buffer, SensorInpu
                     client->binary(wsBuffer);
                 }
             }
-            // debug_printf("ram=%u data=%u queue=%u cansend=%u\n", ESP.getFreeHeap(), _plotData.size(), client->_messageQueue.length(), canSend);
             _plotData.clear();
         }
 #endif
@@ -336,8 +336,10 @@ bool Sensor_HLW8012::_processInterruptBuffer(InterruptBuffer &buffer, SensorInpu
 
 void Sensor_HLW8012::getStatus(PrintHtmlEntitiesString &output)
 {
-    output.printf_P(PSTR("Power Monitor HLW8012, "));
-    output.printf_P(PSTR("calibration U=%f, I=%f, P=%f"), _calibrationU, _calibrationI, _calibrationP);
+    output.printf_P(PSTR("Power Monitor HLW8012" HTML_S(br)));
+    output.printf_P(PSTR("Calibration U=%f, I=%f, P=%f, Rs="), _calibrationU, _calibrationI, _calibrationP);
+    output.print(IOT_SENSOR_HLW80xx_SHUNT, 5, true);
+    output.print('R');
 }
 
 Sensor_HLW8012::SensorEnumType_t Sensor_HLW8012::getType() const
@@ -435,54 +437,52 @@ static void print_sensor_input_settings(Stream &serial, Sensor_HLW8012::SensorIn
 
 bool Sensor_HLW8012::atModeHandler(Stream &serial, const String &command, AtModeArgs &args)
 {
-    extern EventScheduler::TimerPtr dumpTimer;
-
     if (Sensor_HLW80xx::atModeHandler(serial, command, args)) {
         return true;
     }
     else {
-        if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(HLWCAL))) {
+        if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(HLWCAL))) {
             if (args.requireArgs(1, 4)) {
                 char ch = args.toLowerChar(0);
                 if (args.size() >= 3) {
-                    Scheduler.removeTimer(&dumpTimer);
+                    _dumpTimer.remove();
+
                     float value = (args.toFloat(2) * args.toFloat(3, 1.0f)) / args.toFloat(1);
                     auto &sensor = config._H_W_GET(Config().sensor).hlw80xx;
-                    at_mode_print_prefix(serial, command);
                     if (ch == 'u') {
                         _calibrationU = value;
                         sensor.calibrationU = _calibrationU;
-                        serial.printf_P(PSTR("Voltage calibration set: %f\n"), value);
+                        args.printf_P(PSTR("Voltage calibration set: %f"), value);
                     }
                     else if (ch == 'i') {
                         _calibrationI = value;
                         sensor.calibrationI = _calibrationI;
-                        serial.printf_P(PSTR("Current calibration set: %f\n"), value);
+                        args.printf_P(PSTR("Current calibration set: %f"), value);
                     }
                     else if (ch == 'p') {
                         _calibrationP = value;
                         sensor.calibrationP = _calibrationP;
-                        serial.printf_P(PSTR("Power calibration set: %f\n"), value);
+                        args.printf_P(PSTR("Power calibration set: %f"), value);
                     }
                     else {
-                        serial.println(F("Invalid setting"));
+                        args.print(F("Invalid setting"));
                     }
                 }
                 else {
-                    Scheduler.removeTimer(&dumpTimer);
+                    _dumpTimer.remove();
+
                     struct {
                         float sum;
                         int count;
                         int max;
                     } data = { 0.0f, 0, args.toInt(1, 10) };
 
-                    at_mode_print_prefix(serial, command);
                     if (ch == 'u') {
-                        serial.println(F("Calibrating voltage"));
+                        args.print(F("Calibrating voltage"));
                         _calibrationU = 1;
                         _voltage = 0;
                         _setOutputMode(Sensor_HLW8012::OutputTypeEnum_t::VOLTAGE, 2000);
-                        Scheduler.addTimer(&dumpTimer, 500, true, [this, &serial, data](EventScheduler::TimerPtr timer) mutable {
+                        _dumpTimer.add(500, true, [this, &serial, data](EventScheduler::TimerPtr timer) mutable {
                             if (_voltage) {
                                 if (data.max-- == 0) {
                                     timer->detach();
@@ -490,12 +490,12 @@ bool Sensor_HLW8012::atModeHandler(Stream &serial, const String &command, AtMode
                                 }
                                 data.sum += _voltage;
                                 data.count++;
-                                serial.printf_P(PSTR("+HLWCAL: % 10.6fV avg % 10.6fV\n"), _voltage, data.sum / data.count);
+                                serial.printf_P(PSTR("+%s: % 10.6fV avg % 10.6fV\n"), PROGMEM_AT_MODE_HELP_COMMAND(HLWCAL), _voltage, data.sum / data.count);
                             }
                         });
                     }
                     else if (ch == 'i') {
-                        serial.println(F("Calibrating current"));
+                        args.print(F("Calibrating current"));
                         _calibrationI = 1;
                         float dimmingLevel = 0;
 #if IOT_SENSOR_HLW80xx_ADJUST_CURRENT
@@ -504,7 +504,7 @@ bool Sensor_HLW8012::atModeHandler(Stream &serial, const String &command, AtMode
 #endif
                         _current = 0;
                         _setOutputMode(Sensor_HLW8012::OutputTypeEnum_t::CURRENT, 2000);
-                        Scheduler.addTimer(&dumpTimer, 500, true, [this, &serial, data, dimmingLevel](EventScheduler::TimerPtr timer) mutable {
+                        _dumpTimer.add(500, true, [this, &serial, data, dimmingLevel](EventScheduler::TimerPtr timer) mutable {
                             if (_current) {
                                 if (data.max-- == 0) {
                                     timer->detach();
@@ -515,16 +515,16 @@ bool Sensor_HLW8012::atModeHandler(Stream &serial, const String &command, AtMode
                                 }
                                 data.sum += _current;
                                 data.count++;
-                                serial.printf_P(PSTR("+HLWCAL: % 10.6fA avg % 10.6fA\n"), _current, data.sum / data.count);
+                                serial.printf_P(PSTR("+%s: % 10.6fA avg % 10.6fA\n"), PROGMEM_AT_MODE_HELP_COMMAND(HLWCAL), _current, data.sum / data.count);
                             }
                         });
                     }
                     else if (ch == 'p') {
-                        serial.println(F("Calibrating power"));
+                        args.print(F("Calibrating power"));
                         _calibrationP = 1;
                         _power = 0;
                         _setOutputMode(Sensor_HLW8012::OutputTypeEnum_t::CYCLE, 2000);
-                        Scheduler.addTimer(&dumpTimer, 500, true, [this, &serial, data](EventScheduler::TimerPtr timer) mutable {
+                        _dumpTimer.add(500, true, [this, &serial, data](EventScheduler::TimerPtr timer) mutable {
                             if (_power) {
                                 if (data.max-- == 0) {
                                     timer->detach();
@@ -532,24 +532,22 @@ bool Sensor_HLW8012::atModeHandler(Stream &serial, const String &command, AtMode
                                 }
                                 data.sum += _power;
                                 data.count++;
-                                serial.printf_P(PSTR("+HLWCAL: % 10.6fW avg % 10.6fW\n"), _power, data.sum / data.count);
+                                serial.printf_P(PSTR("+%s: % 10.6fW avg % 10.6fW\n"), PROGMEM_AT_MODE_HELP_COMMAND(HLWCAL), _power, data.sum / data.count);
                             }
                         });
                     }
                     else {
-                        serial.println(F("Invalid setting"));
+                        args.print(F("Invalid setting"));
                     }
                 }
             }
             return true;
         }
-        if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(HLWMODE))) {
+        if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(HLWMODE))) {
             if (args.requireArgs(1, 2)) {
                 auto type = F("Cycle Voltage/Current");
                 Sensor_HLW8012::OutputTypeEnum_t mode = Sensor_HLW8012::OutputTypeEnum_t::CYCLE;
 
-                at_mode_print_prefix(serial, command);
-                serial.print(F("Setting CF1 output mode to "));
                 char ch = args.toLowerChar(0);
                 if (ch == 'u') {
                     type = F("Voltage");
@@ -561,12 +559,12 @@ bool Sensor_HLW8012::atModeHandler(Stream &serial, const String &command, AtMode
                 }
                 auto delay = (int)args.toInt(1, -1);
 
-                serial.printf_P(PSTR("%s, delay %dms\n"), type, delay);
+                args.printf_P(PSTR("Setting CF1 output mode to %s, delay %dms"), type, delay);
                 _setOutputMode(mode, delay);
             }
             return true;
         }
-        else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(HLWCFG))) {
+        else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(HLWCFG))) {
             if (args.isQueryMode()) {
                 serial.printf_P(PSTR("+%s="), command.c_str());
                 print_sensor_input_settings(serial, _inputCF, false);

@@ -32,6 +32,7 @@ public:
 
     virtual void setup(PluginSetupMode_t mode) override;
     virtual void reconfigure(PGM_P source) override;
+    virtual void restart() override;
     virtual bool hasReconfigureDependecy(PluginComponent *plugin) const override;
 
     virtual bool hasStatus() const override;
@@ -73,6 +74,7 @@ private:
     uint32_t _pollInterval;
     time_t _pollTimer;
     asyncHTTPrequest *_httpClient;
+    EventScheduler::Timer _fadeTimer;
 
 #if DEBUG_IOT_WEATHER_STATION
 public:

@@ -48,7 +48,7 @@ PGM_P SensorPlugin::getName() const
 
 void SensorPlugin::setup(PluginSetupMode_t mode)
 {
-    Scheduler.addTimer(&_timer, 1000, true, SensorPlugin::timerEvent);
+    _timer.add(1000, true, SensorPlugin::timerEvent);
 #if IOT_SENSOR_HAVE_LM75A
     _sensors.push_back(new Sensor_LM75A(F(IOT_SENSOR_NAMES_LM75A), config.initTwoWire(), IOT_SENSOR_HAVE_LM75A));
 #endif
@@ -121,8 +121,11 @@ void SensorPlugin::_timerEvent()
 
 void SensorPlugin::restart()
 {
+    _timer.remove();
     for(auto sensor: _sensors) {
+        _debug_printf_P(PSTR("SensorPlugin::restart(): type=%u\n"), sensor->getType());
         sensor->restart();
+        delete sensor;
     }
 }
 

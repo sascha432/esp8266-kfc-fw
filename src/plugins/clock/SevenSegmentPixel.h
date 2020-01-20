@@ -158,7 +158,7 @@ private:
     AnimationCallback_t _callback;
     uint16_t _brightness;
     uint16_t _targetBrightness;
-    EventScheduler::TimerPtr _brightnessTimer;
+    EventScheduler::Timer _brightnessTimer;
 };
 
 #endif

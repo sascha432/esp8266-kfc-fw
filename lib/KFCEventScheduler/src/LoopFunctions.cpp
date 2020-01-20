@@ -41,3 +41,14 @@ LoopFunctions::FunctionsVector &LoopFunctions::getVector()
 {
     return _functions;
 }
+
+size_t LoopFunctions::size()
+{
+    size_t count = 0;
+    for(auto &entry: _functions) {
+        if (!entry.deleteCallback) {
+            count++;
+        }
+    }
+    return count;
+}

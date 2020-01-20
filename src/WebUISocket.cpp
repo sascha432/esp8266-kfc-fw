@@ -25,18 +25,23 @@
 
 PROGMEM_STRING_DEF(webui_socket_uri, "/webui_ws");
 
-AsyncWebSocket *wsWebUI = nullptr;
+WsClientAsyncWebSocket *wsWebUI = nullptr;
 WsWebUISocket *WsWebUISocket::_sender = nullptr;
 
-void webui_socket_event_handler(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len) {
+void webui_socket_event_handler(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len)
+{
     WsWebUISocket::onWsEvent(server, client, (int)type, data, len, arg, WsWebUISocket::getInstance);
 }
 
-void WsWebUISocket::setup() {
-    wsWebUI = _debug_new AsyncWebSocket(FSPGM(webui_socket_uri));
-    wsWebUI->onEvent(webui_socket_event_handler);
-    web_server_add_handler(wsWebUI);
-    _debug_printf_P(PSTR("Web socket for UI running on port %u\n"), config._H_GET(Config().http_port));
+void WsWebUISocket::setup()
+{
+    auto server = get_web_server_object();
+    if (server) {
+        wsWebUI = _debug_new WsClientAsyncWebSocket(FSPGM(webui_socket_uri));
+        wsWebUI->onEvent(webui_socket_event_handler);
+        server->addHandler(wsWebUI);
+        _debug_printf_P(PSTR("Web socket for UI running on port %u\n"), config._H_GET(Config().http_port));
+    }
 }
 
 void WsWebUISocket::send(AsyncWebSocketClient *client, JsonUnnamedObject &json) {
@@ -57,7 +62,7 @@ WsWebUISocket *WsWebUISocket::getSender() {
     return _sender;
 }
 
-AsyncWebSocket *WsWebUISocket::getWsWebUI() {
+WsClientAsyncWebSocket *WsWebUISocket::getWsWebUI() {
     return wsWebUI;
 }
 

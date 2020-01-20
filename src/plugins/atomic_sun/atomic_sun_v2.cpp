@@ -24,7 +24,7 @@
 
 #include "../../trailing_edge_dimmer/src/dimmer_protocol.h"
 
-Driver_4ChDimmer::Driver_4ChDimmer() : MQTTComponent(LIGHT), Dimmer_Base(), _publishTimer(nullptr)
+Driver_4ChDimmer::Driver_4ChDimmer() : MQTTComponent(LIGHT), Dimmer_Base()
 {
 #if DEBUG_MQTT_CLIENT
     debug_printf_P(PSTR("Driver_4ChDimmer(): component=%p\n"), this);
@@ -51,10 +51,7 @@ void Driver_4ChDimmer::_begin()
 
 void Driver_4ChDimmer::_end()
 {
-    if (_publishTimer) {
-        Scheduler.removeTimer(_publishTimer);
-        _publishTimer = nullptr;
-    }
+    _publishTimer.remove();
     auto mqttClient = MQTTClient::getClient();
     if (mqttClient) {
         mqttClient->unregisterComponent(this);
@@ -420,10 +417,8 @@ void Driver_4ChDimmer::publishState(MQTTClient *client)
     StreamString buffer;
     json.printTo(buffer);
 
-    Scheduler.removeTimer(_publishTimer);
-    Scheduler.addTimer(&_publishTimer, 100, false, [this, buffer](EventScheduler::TimerPtr timer) {
+    _publishTimer.add(100, false, [this, buffer](EventScheduler::TimerPtr timer) {
         WsClient::broadcast(WsWebUISocket::getWsWebUI(), WsWebUISocket::getSender(), buffer.c_str(), buffer.length());
-        _publishTimer = nullptr;
     });
 }
 
@@ -652,6 +647,11 @@ void AtomicSunPlugin::reconfigure(PGM_P source)
     else if (!strcmp_P_P(source, PSTR("http"))) {
         setupWebServer();
     }
+}
+
+void AtomicSunPlugin::restart()
+{
+    _end();
 }
 
 bool AtomicSunPlugin::hasReconfigureDependecy(PluginComponent *plugin) const

@@ -75,6 +75,7 @@ private:
     JsonString _name;
     String _topic;
     float _calibration;
+    EventScheduler::Timer _timer;
 };
 
 #endif

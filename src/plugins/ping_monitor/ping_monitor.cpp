@@ -24,7 +24,7 @@
 #endif
 
 PingMonitorTask *pingMonitorTask = nullptr;
-AsyncWebSocket *wsPing = nullptr;
+WsClientAsyncWebSocket *wsPing = nullptr;
 
 void ping_monitor_event_handler(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len)
 {
@@ -33,10 +33,11 @@ void ping_monitor_event_handler(AsyncWebSocket *server, AsyncWebSocketClient *cl
 
 void ping_monitor_install_web_server_hook()
 {
-    if (get_web_server_object()) {
-        wsPing = _debug_new AsyncWebSocket(F("/ping"));
+    auto server = get_web_server_object();
+    if (server) {
+        wsPing = _debug_new WsClientAsyncWebSocket(F("/ping"));
         wsPing->onEvent(ping_monitor_event_handler);
-        web_server_add_handler(wsPing);
+        server->addHandler(wsPing);
         _debug_printf_P(PSTR("Web socket for ping running on port %u\n"), config._H_GET(Config().http_port));
     }
 }
@@ -399,6 +400,7 @@ public:
     }
     virtual void setup(PluginSetupMode_t mode) override;
     virtual void reconfigure(PGM_P source) override;
+    virtual void restart() override;
     virtual bool hasReconfigureDependecy(PluginComponent *plugin) const override {
         return plugin->nameEquals(F("http"));
     }
@@ -440,6 +442,16 @@ void PingMonitorPlugin::setup(PluginSetupMode_t mode)
 void PingMonitorPlugin::reconfigure(PGM_P source)
 {
     ping_monitor_setup();
+}
+
+void PingMonitorPlugin::restart()
+{
+    if (pingMonitorTask) {
+        delete pingMonitorTask;
+        pingMonitorTask = nullptr;
+    }
+
+    wsPing->restart();
 }
 
 void PingMonitorPlugin::getStatus(Print &output)
@@ -494,7 +506,7 @@ bool PingMonitorPlugin::atModeHandler(Stream &serial, const String &command, AtM
 {
     static AsyncPing *_ping = nullptr;
 
-    if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(PING))) {
+    if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(PING))) {
 
         if (args.requireArgs(1, 3)) {
             auto host = args.get(0);

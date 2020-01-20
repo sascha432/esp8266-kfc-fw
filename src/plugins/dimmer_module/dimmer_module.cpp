@@ -59,7 +59,7 @@ void Driver_DimmerModule::_begin()
     }
 
 #if IOT_DIMMER_MODULE_HAS_BUTTONS
-    memset(&_turnOffTimer, 0, sizeof(_turnOffTimer));
+    //memset(&_turnOffTimer, 0, sizeof(_turnOffTimer));
 
     PinMonitor &monitor = *PinMonitor::createInstance();
     auto config = getButtonConfig();
@@ -99,7 +99,8 @@ void Driver_DimmerModule::_end()
 #if IOT_DIMMER_MODULE_HAS_BUTTONS
     _debug_println(F("Driver_DimmerModule::_end(): removing timers"));
     for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
-        Scheduler.removeTimer(_turnOffTimer[i]);
+        _turnOffTimer[i].remove();
+        // Scheduler.removeTimer(_turnOffTimer[i]);
     }
 
     _debug_println(F("Driver_DimmerModule::_end(): removing pin monitor"));
@@ -368,10 +369,15 @@ void Driver_DimmerModule::_buttonShortPress(uint8_t channel, bool up)
 
         // single short press, start timer
         // _turnOffTimerRepeat[channel] will be 0 for a single button down press
-        if (!Scheduler.hasTimer(_turnOffTimer[channel])) {
+
+        if (_turnOffTimer[channel].active()) {
+            _turnOffTimerRepeat[channel]++;
+            _turnOffTimer[channel]->rearm(config.shortpress_no_repeat_time, false);     // rearm timer after last keypress
+        }
+        else {
             _turnOffLevel[channel] = getChannel(channel);
             _turnOffTimerRepeat[channel] = 0;
-            Scheduler.addTimer(&_turnOffTimer[channel], config.shortpress_no_repeat_time, false, [this, channel](EventScheduler::TimerPtr timer) {
+            _turnOffTimer[channel].add(config.shortpress_no_repeat_time, false, [this, channel](EventScheduler::TimerPtr timer) {
                 _debug_printf_P(PSTR("Driver_DimmerModule::_buttonShortPress(): turn off channel %u, timer expired, repeat %d\n"), channel, _turnOffTimerRepeat[channel]);
                 if (_turnOffTimerRepeat[channel] == 0) { // single button down press detected, turn off
                     if (off(channel)) {
@@ -379,11 +385,6 @@ void Driver_DimmerModule::_buttonShortPress(uint8_t channel, bool up)
                     }
                 }
             });
-        }
-        else {
-            _turnOffTimerRepeat[channel]++;
-            _turnOffTimer[channel]->rearm(config.shortpress_no_repeat_time, false);     // rearm timer after last keypress
-
         }
         if (up) {
             _buttonRepeat(channel, true, 0);        // short press up = fire repeat event
@@ -465,6 +466,11 @@ bool DimmerModulePlugin::hasReconfigureDependecy(PluginComponent *plugin) const
     return plugin->nameEquals(F("http"));
 }
 
+void DimmerModulePlugin::restart()
+{
+    _end();
+}
+
 bool DimmerModulePlugin::hasWebUI() const
 {
     return true;
@@ -523,34 +529,34 @@ void DimmerModulePlugin::atModeHelpGenerator()
 
 bool DimmerModulePlugin::atModeHandler(Stream &serial, const String &command, AtModeArgs &args)
 {
-    if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(DIMW))) {
+    if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DIMW))) {
         writeEEPROM();
-        at_mode_print_ok(serial);
+        args.ok();
         return true;
     }
-    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(DIMG))) {
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DIMG))) {
         for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
-            serial.printf_P(PSTR("+DIMG: %u: %d\n"), i, getChannel(i));
+            args.printf_P(PSTR("%u: %d"), i, getChannel(i));
         }
         return true;
     }
-    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(DIMR))) {
-        serial.println(F("Pulling GPIO5 low for 10ms"));
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DIMR))) {
+        args.print(F("Pulling GPIO5 low for 10ms"));
         dimmer_plugin.resetDimmerMCU();
-        serial.println(F("GPIO5 set to input"));
+        args.print(F("GPIO5 set to input"));
         return true;
     }
-    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(DIMS))) {
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DIMS))) {
         if (args.requireArgs(2, 2)) {
             int channel = args.toInt(0);
             if (channel >= 0 && channel < IOT_DIMMER_MODULE_CHANNELS) {
                 int level = args.toIntMinMax(1, 0, IOT_DIMMER_MODULE_MAX_BRIGHTNESS);
                 float time = args.toFloat(2, -1);
-                serial.printf_P(PSTR("+DIMS: Set %u: %d (time %.2f)\n"), channel, level, time);
+                args.printf_P(PSTR("Set %u: %d (time %.2f)"), channel, level, time);
                 setChannel(channel, level, time);
             }
             else {
-                serial.println(F("+DIMS: Invalid channel"));
+                args.print(F("Invalid channel"));
             }
         }
         return true;

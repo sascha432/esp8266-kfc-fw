@@ -51,7 +51,7 @@ void syslog_setup_debug_logger() {
 
 SyslogStream *syslog = nullptr;
 
-void syslog_setup_logger()
+static void syslog_end()
 {
     if (syslog) {
         _logger.setSyslog(nullptr);
@@ -66,6 +66,21 @@ void syslog_setup_logger()
         LoopFunctions::remove(syslog_process_queue);
 #endif
     }
+}
+
+static void syslog_deliver(uint16_t timeout) {
+    if (syslog) {
+        auto endTime = millis() + timeout;
+        while(syslog->hasQueuedMessages() && millis() < endTime) {
+            syslog->deliverQueue();
+            delay(1);
+        }
+    }
+}
+
+void syslog_setup_logger()
+{
+    syslog_end();
 
     if (config._H_GET(Config().flags).syslogProtocol != SYSLOG_PROTOCOL_NONE) {
 
@@ -135,6 +150,7 @@ public:
     bool autoSetupAfterDeepSleep() const override;
     void setup(PluginSetupMode_t mode) override;
     void reconfigure(PGM_P source) override;
+    void restart() override;
 
     virtual bool hasStatus() const override;
     virtual void getStatus(Print &output) override;
@@ -173,6 +189,12 @@ void SyslogPlugin::setup(PluginSetupMode_t mode)
 void SyslogPlugin::reconfigure(PGM_P source)
 {
     syslog_setup();
+}
+
+void SyslogPlugin::restart()
+{
+    syslog_deliver(250);
+    syslog_end();
 }
 
 bool SyslogPlugin::hasStatus() const
@@ -242,13 +264,7 @@ void SyslogPlugin::prepareDeepSleep(uint32_t sleepTimeMillis)
         }
     }
 #endif
-    if (syslog) {
-        auto timeout = millis() + defaultWaitTime;
-        while(syslog->hasQueuedMessages() && millis() < timeout) {
-            syslog->deliverQueue();
-            delay(1);
-        }
-    }
+    syslog_deliver(defaultWaitTime);
 }
 
 #if AT_MODE_SUPPORTED
@@ -259,12 +275,12 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(SQC, "SQC", "Clear syslog queue");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(SQI, "SQI", "Display syslog queue info");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(SQD, "SQD", "Display syslog queue");
 
-static bool isEnabled(Stream &output, const String &command)
+static bool isEnabled(AtModeArgs &args)
 {
     if (syslog) {
         return true;
     }
-    output.printf_P(PSTR("+%s: Syslog is disabled\n"), command.c_str());
+    args.print(F("Syslog is disabled"));
     return false;
 }
 
@@ -282,26 +298,28 @@ void SyslogPlugin::atModeHelpGenerator()
 
 bool SyslogPlugin::atModeHandler(Stream &serial, const String &command, AtModeArgs &args)
 {
-    if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SQC))) {
-        if (isEnabled(serial, command)) {
+    if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(SQC))) {
+        if (isEnabled(args)) {
             syslog->getQueue()->clear();
-            serial.println(F("+SQC: Queue cleared"));
+            args.print(F("Queue cleared"));
         }
         return true;
-    } else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SQI))) {
-        if (isEnabled(serial, command)) {
-            serial.printf_P(PSTR("+SQI: %d\n"), syslog->getQueue()->size());
+    }
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(SQI))) {
+        if (isEnabled(args)) {
+            args.printf_P(PSTR("%d"), syslog->getQueue()->size());
         }
         return true;
-    } else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SQD))) {
-        if (isEnabled(serial, command)) {
+    }
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(SQD))) {
+        if (isEnabled(args)) {
             auto queue = syslog->getQueue();
             size_t index = 0;
-            serial.printf_P(PSTR("+SQD: messages in queue %d\n"), queue->size());
+            args.printf_P(PSTR("Messages in queue %d"), queue->size());
             while(index < queue->size()) {
                 auto &item = queue->at(index++);
                 if (item) {
-                    serial.printf_P(PSTR("+SQD: id %d (failures %d): %s\n"), item->getId(), item->getFailureCount(), item->getMessage().c_str());
+                    args.printf_P(PSTR("Id %d (failures %d): %s"), item->getId(), item->getFailureCount(), item->getMessage().c_str());
                 }
             }
         }

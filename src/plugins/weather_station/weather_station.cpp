@@ -21,11 +21,8 @@
 
 // web accesss for screen capture
 //
-// display queue status
-// http://192.168.0.56/invoke_screen_capture?query
-//
-// create screen capture
-// http://192.168.0.56/invoke_screen_capture
+// screen capture
+// http://192.168.0.56/images/screen_capture.bmp
 //
 //
 
@@ -60,7 +57,8 @@ PGM_P WeatherStationPlugin::getName() const {
     return PSTR("weather_station");
 }
 
-void WeatherStationPlugin::_sendScreenCaptureBMP(AsyncWebServerRequest *request) {
+void WeatherStationPlugin::_sendScreenCaptureBMP(AsyncWebServerRequest *request)
+{
     // _debug_printf_P(PSTR("WeatherStationPlugin::_sendScreenCapture(): is_authenticated=%u\n"), web_server_is_authenticated(request));
 
     if (web_server_is_authenticated(request)) {
@@ -126,6 +124,17 @@ void WeatherStationPlugin::reconfigure(PGM_P source)
     _installWebhooks();
 }
 
+void WeatherStationPlugin::restart()
+{
+    _fadeTimer.remove();
+    analogWrite(TFT_PIN_LED, 0);
+    LoopFunctions::remove(loop);
+    SerialHandler::getInstance().removeHandler(serialHandler);
+    if (_httpClient) {
+        _httpClient->abort();
+    }
+}
+
 bool WeatherStationPlugin::hasReconfigureDependecy(PluginComponent *plugin) const
 {
     return plugin->nameEquals(F("http"));
@@ -168,7 +177,8 @@ void WeatherStationPlugin::createWebUI(WebUI &webUI)
 }
 
 
-void WeatherStationPlugin::serialHandler(uint8_t type, const uint8_t *buffer, size_t len) {
+void WeatherStationPlugin::serialHandler(uint8_t type, const uint8_t *buffer, size_t len)
+{
     plugin._serialHandler(buffer, len);
 }
 
@@ -181,12 +191,13 @@ void WeatherStationPlugin::getValues(JsonArray &array) {
     });
 }
 
-void WeatherStationPlugin::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState) {
+void WeatherStationPlugin::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
+{
     _debug_printf_P(PSTR("WeatherStationPlugin::setValue()\n"));
 }
 
-void WeatherStationPlugin::_httpRequest(const String &url, uint16_t timeout, JsonBaseReader *jsonReader, Callback_t finishedCallback) {
-
+void WeatherStationPlugin::_httpRequest(const String &url, uint16_t timeout, JsonBaseReader *jsonReader, Callback_t finishedCallback)
+{
 	if (_httpClient != nullptr) {
         debug_println(F("WeatherStationPlugin::_httpRequest() _httpClient not null, cannot create request"));
         return;
@@ -298,8 +309,8 @@ void WeatherStationPlugin::_httpRequest(const String &url, uint16_t timeout, Jso
 }
 
 
-void WeatherStationPlugin::_getWeatherInfo(Callback_t finishedCallback) {
-
+void WeatherStationPlugin::_getWeatherInfo(Callback_t finishedCallback)
+{
 #if DEBUG_IOT_WEATHER_STATION
     auto prev = finishedCallback;
     finishedCallback = [this, prev](bool status) {
@@ -324,8 +335,8 @@ void WeatherStationPlugin::_getWeatherInfo(Callback_t finishedCallback) {
     _httpRequest(_weatherApi.getWeatherApiUrl(), std::min(config._H_GET(Config().weather_station.config).api_timeout, (uint16_t)10), _weatherApi.getWeatherInfoParser(), finishedCallback);
 }
 
-void WeatherStationPlugin::_getWeatherForecast(Callback_t finishedCallback) {
-
+void WeatherStationPlugin::_getWeatherForecast(Callback_t finishedCallback)
+{
 #if DEBUG_IOT_WEATHER_STATION
     auto prev = finishedCallback;
     finishedCallback = [this, prev](bool status) {
@@ -337,12 +348,13 @@ void WeatherStationPlugin::_getWeatherForecast(Callback_t finishedCallback) {
     _httpRequest(_weatherApi.getForecastApiUrl(), std::min(config._H_GET(Config().weather_station.config).api_timeout, (uint16_t)10), _weatherApi.getWeatherForecastParser(), finishedCallback);
 }
 
-void WeatherStationPlugin::_fadeBacklight(uint16_t fromLevel, uint16_t toLevel, int8_t step) {
+void WeatherStationPlugin::_fadeBacklight(uint16_t fromLevel, uint16_t toLevel, int8_t step)
+{
     int8_t direction = fromLevel > toLevel ? -step : step;
     analogWrite(TFT_PIN_LED, fromLevel);
 
     if (fromLevel != toLevel) {
-        Scheduler.addTimer(10, true, [fromLevel, toLevel, direction, step](EventScheduler::TimerPtr timer) mutable {
+        _fadeTimer.add(10, true, [fromLevel, toLevel, direction, step](EventScheduler::TimerPtr timer) mutable {
             if (abs(toLevel - fromLevel) > step) {
                 fromLevel += direction;
             } else {
@@ -354,7 +366,8 @@ void WeatherStationPlugin::_fadeBacklight(uint16_t fromLevel, uint16_t toLevel, 
     }
 }
 
-void WeatherStationPlugin::_loop() {
+void WeatherStationPlugin::_loop()
+{
     time_t _time = time(nullptr);
 
     if (_pollInterval && is_millis_diff_greater(_pollTimer, _pollInterval)) {
@@ -381,7 +394,8 @@ void WeatherStationPlugin::_loop() {
     }
 }
 
-void WeatherStationPlugin::_serialHandler(const uint8_t *buffer, size_t len) {
+void WeatherStationPlugin::_serialHandler(const uint8_t *buffer, size_t len)
+{
     const uint8_t numScreens = 1;
     auto ptr = buffer;
     while(len--) {
@@ -470,8 +484,8 @@ void WeatherStationPlugin::_serialHandler(const uint8_t *buffer, size_t len) {
 // #endif
 // }
 
-void WeatherStationPlugin::_broadcastCanvas(int16_t x, int16_t y, int16_t w, int16_t h) {
-
+void WeatherStationPlugin::_broadcastCanvas(int16_t x, int16_t y, int16_t w, int16_t h)
+{
     auto webSocketUI = WsWebUISocket::getWsWebUI();
     if (webSocketUI && !webSocketUI->getClients().isEmpty()) {
         Buffer buffer;

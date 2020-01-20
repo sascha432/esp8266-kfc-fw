@@ -29,6 +29,7 @@
 #endif
 
  WsClient::ClientCallbackVector_t  WsClient::_clientCallback;
+ WsClient::AsyncWebSocketVector WsClient::_webSockets;
 
  WsClient::WsClient(AsyncWebSocketClient * client) {
      _authenticated = false;
@@ -72,6 +73,12 @@
 
  void WsClient::onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, int type, uint8_t *data, size_t len, void *arg, WsGetInstance getInstance) {
 
+    auto result = std::find(WsClient::_webSockets.begin(), WsClient::_webSockets.end(), server);
+    if (result == WsClient::_webSockets.end()) {
+        debug_printf("WsClient::onWsEvent(): websocket %p has been removed, event type %u\n", server, type);
+        return;
+    }
+
     WsClient *wsClient;
      if (client->_tempObject == nullptr) {
          // wsClient will be linked to AsyncWebSocketClient and deleted with WS_EVT_DISCONNECT when the socket gets destroyed
@@ -100,7 +107,7 @@
 
     } else if (type == WS_EVT_DISCONNECT) {
 
-        Logger_notice(F(WS_PREFIX "%s: Client disconnected"), WS_PREFIX_ARGS, client->remoteIP().toString().c_str());
+        Logger_notice(F(WS_PREFIX "Client disconnected"), WS_PREFIX_ARGS);
         wsClient->onDisconnect(data, len);
 
         WsClient::invokeStartOrEndCallback(wsClient, false);

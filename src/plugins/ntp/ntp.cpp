@@ -71,7 +71,6 @@ public:
     RemoteTimezone *createRemoteTimezone();
     void deleteRemoteTimezone();
 
-    void removeUpdateTimer();
     bool updateRequired();
     void setZoneEnd(time_t zoneEnd);
     const time_t *getZoneEndPtr() const;
@@ -96,7 +95,7 @@ private:
 
     RemoteTimezone *_remoteTimezone;
     uint16_t _failureCount;
-    EventScheduler::TimerPtr _updateTimer;
+    EventScheduler::Timer _updateTimer;
 };
 
 time_t TimezoneData::_zoneEnd = 0;
@@ -111,13 +110,12 @@ TimezoneData::TimezoneData()
     _lastNtpUpdate = 0;
     _failureCount = 0;
     _remoteTimezone = nullptr;
-    _updateTimer = nullptr;
 }
 
 TimezoneData::~TimezoneData()
 {
     _debug_printf_P(PSTR("TimezoneData::~TimezoneData()\n"));
-    removeUpdateTimer();
+    _updateTimer.remove();
     deleteRemoteTimezone();
 }
 
@@ -134,14 +132,6 @@ void TimezoneData::deleteRemoteTimezone()
         delete _remoteTimezone;
         _remoteTimezone = nullptr;
     }
-}
-
-void TimezoneData::removeUpdateTimer()
-{
-    if (_updateTimer && Scheduler.hasTimer(_updateTimer)) {
-        Scheduler.removeTimer(_updateTimer);
-    }
-    _updateTimer = nullptr;
 }
 
 bool TimezoneData::updateRequired()
@@ -177,14 +167,14 @@ const time_t TimezoneData::getZoneEnd()
 
 void TimezoneData::retry(const String &message)
 {
-    removeUpdateTimer();
+    _updateTimer.remove();
     deleteRemoteTimezone();
 
     // echo '<?php for($i = 0; $i < 30; $i++) { echo floor(10 * (1 + ($i * $i / 3)).", "; } echo "\n";' |php
     // 10, 13, 23, 40, 63, 93, 130, 173, 223, 280, 343, 413, 490, 573, 663, 760, 863, 973, 1090, 1213, 1343, 1480, 1623, 1773, 1930, 2093, 2263, 2440, 2623, 2813, ...
     uint32_t next_check = 10 * (1 + (_failureCount * _failureCount / 3));
 
-    Scheduler.addTimer(&_updateTimer, (int64_t)next_check * (int64_t)1000, false, [](EventScheduler::TimerPtr timer) {
+    _updateTimer.add((int64_t)next_check * (int64_t)1000, false, [](EventScheduler::TimerPtr timer) {
         if (WiFi.isConnected()) { // retry if WiFi is connected, otherwise wait for connected event
             wifiConnectedCallback(WiFiCallbacks::EventEnum_t::CONNECTED, nullptr);
         }
@@ -460,6 +450,7 @@ public:
 #endif
     virtual void setup(PluginSetupMode_t mode) override;
     virtual void reconfigure(PGM_P source) override;
+    virtual void restart() override;
 
     virtual bool hasStatus() const override {
         return true;
@@ -491,6 +482,18 @@ void NTPPlugin::setup(PluginSetupMode_t mode)
 void NTPPlugin::reconfigure(PGM_P source)
 {
     ntp_client_reconfigure_plugin(source);
+}
+
+void NTPPlugin::restart()
+{
+    settimeofday_cb(nullptr);
+    WiFiCallbacks::remove(WiFiCallbacks::EventEnum_t::ANY, TimezoneData::wifiConnectedCallback);
+    LoopFunctions::remove(TimezoneData::updateLoop);
+
+    if (timezoneData) {
+        delete timezoneData;
+        timezoneData = nullptr;
+    }
 }
 
 void NTPPlugin::getStatus(Print &output)
@@ -559,9 +562,9 @@ void NTPPlugin::atModeHelpGenerator()
 bool NTPPlugin::atModeHandler(Stream &serial, const String &command, AtModeArgs &args)
 {
 #if DEBUG
-    if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SNTPFU))) {
+    if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(SNTPFU))) {
         TimezoneData::configTime();
-        serial.println(F("+SNTPFU: Waiting up to 5 seconds for a valid time..."));
+        args.print(F("Waiting up to 5 seconds for a valid time..."));
         ulong end = millis() + 5000;
         while(millis() < end && !IS_TIME_VALID(time(nullptr))) {
             delay(10);
@@ -570,31 +573,25 @@ bool NTPPlugin::atModeHandler(Stream &serial, const String &command, AtModeArgs 
     }
     else
 #endif
-    if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(NOW))) {
+    if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(NOW))) {
 commandNow:
         time_t now = time(nullptr);
         char timestamp[64];
         if (!IS_TIME_VALID(now)) {
-            serial.printf_P(PSTR("+NOW: Time is currently not set (%lu). NTP is "), now);
-            if (config._H_GET(Config().flags).ntpClientEnabled) {
-                serial.println(FSPGM(enabled));
-            }
-            else {
-                serial.println(FSPGM(disabled));
-            }
+            args.printf_P(PSTR("Time is currently not set (%lu). NTP is %s"), now, (config._H_GET(Config().flags).ntpClientEnabled ? FSPGM(enabled) : FSPGM(disabled)));
 #if DEBUG && defined(ESP32)
-            serial.printf_P(PSTR("+NOW: sntp_enabled() = %d\n"), sntp_enabled());
+            args.printf_P(PSTR("sntp_enabled() = %d"), sntp_enabled());
 #endif
         }
         else {
             strftime_P(timestamp, sizeof(timestamp), SPGM(strftime_date_time_zone), gmtime(&now));
-            serial.printf_P(PSTR("+NOW %s\n"), timestamp);
+            args.print(timestamp);
             timezone_strftime_P(timestamp, sizeof(timestamp), SPGM(strftime_date_time_zone), timezone_localtime(&now));
-            serial.printf_P(PSTR("+NOW %s\n"), timestamp);
+            args.print(timestamp);
         }
         return true;
     }
-    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(TZ))) {
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(TZ))) {
         auto &timezone = get_default_timezone();
         if (args.isQueryMode()) { // TZ?
             if (timezone.isValid()) {
@@ -606,20 +603,19 @@ commandNow:
                 else {
                     timezone_strftime_P(buf, sizeof(buf), SPGM(strftime_date_time_zone), timezone_localtime(&zoneEnd));
                 }
-                serial.printf_P(PSTR("Timezone %s abbreviation %s offset %02d:%02u next update %s\n"), timezone.getTimezone().c_str(), timezone.getAbbreviation().c_str(), timezone.getOffset() / 3600, timezone.getOffset() % 60, buf);
+                args.printf_P(PSTR("Timezone %s abbreviation %s offset %02d:%02u next update %s"), timezone.getTimezone().c_str(), timezone.getAbbreviation().c_str(), timezone.getOffset() / 3600, timezone.getOffset() % 60, buf);
             } else {
-                serial.println(F("No valid timezone set"));
+                args.print(F("No valid timezone set"));
             }
         }
         else if (args.requireArgs(1, 1)) {
             if (config._H_GET(Config().flags).ntpClientEnabled) {
                 config._H_SET_STR(Config().ntp.timezone, args.get(0));
-                serial.printf_P(PSTR("Timezone set to %s\n"), config._H_STR(_Config.ntp.timezone));
+                args.printf_P(PSTR("Timezone set to %s"), config._H_STR(_Config.ntp.timezone));
                 timezone_setup();
             }
             else {
-                serial.print(F("NTP "));
-                serial.println(FSPGM(disabled));
+                args.printf_P(PSTR("NTP %s"), FSPGM(disabled));
             }
         }
         return true;

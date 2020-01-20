@@ -809,9 +809,14 @@ static unsigned long restart_device_timeout;
 
 static void restart_device() {
     if (millis() > restart_device_timeout) {
+        _debug_printf("restart(): restart_device\n");
         ESP.restart();
     }
 }
+
+#if PIN_MONITOR
+#include "pin_monitor.h"
+#endif
 
 void KFCFWConfiguration::restartDevice()
 {
@@ -820,24 +825,38 @@ void KFCFWConfiguration::restartDevice()
     Logger_notice(F("Device is being restarted"));
     BlinkLEDTimer::setBlink(BlinkLEDTimer::FLICKER);
 
+    _debug_printf_P(PSTR("restart(): Scheduled tasks %u, WiFi callbacks %u, Loop Functions %u\n"), Scheduler.size(), WiFiCallbacks::getVector().size(), LoopFunctions::size());
+
+    resetDetector.clearCounter();
+
     auto webUiSocket = WsWebUISocket::getWsWebUI();
     if (webUiSocket) {
-        WsWebUISocket::getWsWebUI()->closeAll(503, String(FSPGM(Device_is_rebooting)).c_str());
+        webUiSocket->restart();
     }
 
     // execute in reverse order
     for(auto iterator = plugins.rbegin(); iterator != plugins.rend(); ++iterator) {
         auto plugin = *iterator;
+        _debug_printf("restart(): plugin %s\n", plugin->getName());
         plugin->restart();
     }
 
-    resetDetector.clearCounter();
+    _debug_printf_P(PSTR("restart(): After plugins: Scheduled tasks %u, WiFi callbacks %u, Loop Functions %u\n"), Scheduler.size(), WiFiCallbacks::getVector().size(), LoopFunctions::size());
 
     WiFiCallbacks::clear();
     LoopFunctions::clear();
+    Scheduler.end();
+
+#if PIN_MONITOR
+    auto pinMonitor = PinMonitor::getInstance();
+    if (pinMonitor) {
+        debug_printf_P(PSTR("Pin monitor has %u pins attached\n"), pinMonitor->size());
+        PinMonitor::deleteInstance();
+    }
+#endif
 
     // give system time to finish all tasks
-    restart_device_timeout = millis() + 750;
+    restart_device_timeout = millis() + 250;
     LoopFunctions::add(restart_device);
 }
 

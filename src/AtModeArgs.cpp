@@ -6,6 +6,7 @@
 
 #include <Arduino_compat.h>
 #include "at_mode.h"
+#include "progmem_data.h"
 
 #if DEBUG_AT_MODE
 #include <debug_helper_enable.h>
@@ -173,6 +174,29 @@ uint32_t AtModeArgs::toMillis(uint16_t num, uint32_t minTime, uint32_t maxTime, 
     }
     _debug_printf_P(PSTR("toMillis(): arg=%s converted to %u\n"), arg, result);
     return result;
+}
+
+void AtModeArgs::printf_P(PGM_P format, ...) {
+    va_list arg;
+    va_start(arg, format);
+    PrintString str(reinterpret_cast<const __FlashStringHelper *>(format), arg);
+    va_end(arg);
+    print(str.c_str());
+}
+
+void AtModeArgs::print(const char *str) {
+    _output.printf_P(PSTR("+%s: "), _command.c_str());
+    _output.println(str);
+}
+
+void AtModeArgs::print(const __FlashStringHelper *str) {
+    _output.printf_P(PSTR("+%s: "), _command.c_str());
+    _output.println(str);
+}
+
+
+void AtModeArgs::ok() {
+    _output.println(FSPGM(OK));
 }
 
 #endif

@@ -173,7 +173,7 @@ void I2CScannerPlugin::atModeHelpGenerator() {
 
 bool I2CScannerPlugin::atModeHandler(Stream &serial, const String &command, AtModeArgs &args)
 {
-    if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(I2CS))) {
+    if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(I2CS))) {
         if (args.requireArgs(1, 3)) {
             if (args.equalsIgnoreCase(0, F("reset"))) {
                 serial.print(F("+I2CS: "));
@@ -193,7 +193,7 @@ bool I2CScannerPlugin::atModeHandler(Stream &serial, const String &command, AtMo
         }
         return true;
     }
-    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(I2CST))) {
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(I2CST))) {
         if (args.requireArgs(1)) {
             int address = args.toNumber(0);
             Wire.beginTransmission(address);
@@ -211,7 +211,7 @@ bool I2CScannerPlugin::atModeHandler(Stream &serial, const String &command, AtMo
         }
         return true;
     }
-    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(I2CSR))) {
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(I2CSR))) {
         if (args.requireArgs(2, 2)) {
             int address = args.toNumber(0);
             int count = args.toNumber(1);
@@ -238,17 +238,17 @@ bool I2CScannerPlugin::atModeHandler(Stream &serial, const String &command, AtMo
         }
         return true;
     }
-    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SCANI2C))) {
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(SCANI2C))) {
         scanPorts(serial);
         return true;
     }
-    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SCAND))) {
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(SCAND))) {
         serial.println(F("Scanning I2C bus for devices..."));
         check_if_exist_I2C(serial);
         return true;
     }
 #ifdef _LIB_ADAFRUIT_INA219_
-    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(I2CINA219))) {
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(I2CINA219))) {
         if (args.requireArgs(1, 1)) {
             int address = args.toNumber(0, INA219_ADDRESS);
             Adafruit_INA219 ina219(address);
@@ -259,7 +259,7 @@ bool I2CScannerPlugin::atModeHandler(Stream &serial, const String &command, AtMo
     }
 #endif
 #ifdef __CCS811_H__
-    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(I2CCCS811))) {
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(I2CCCS811))) {
         if (args.requireArgs(1, 3)) {
             Adafruit_CCS811 ccs811; // +i2cccs811=0x5a,25.07,53
             int address = args.toNumber(0, CCS811_ADDRESS);
@@ -276,7 +276,7 @@ bool I2CScannerPlugin::atModeHandler(Stream &serial, const String &command, AtMo
     }
 #endif
 #ifdef __BME680_H__
-    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(I2CBME680))) {
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(I2CBME680))) {
         if (args.requireArgs(1, 1)) {
             Adafruit_BME680 bme680;
             int address = args.toNumber(0, 0x77);
@@ -287,7 +287,7 @@ bool I2CScannerPlugin::atModeHandler(Stream &serial, const String &command, AtMo
     }
 #endif
 #ifdef __BME280_H__
-    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(I2CBME280))) {
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(I2CBME280))) {
         if (args.requireArgs(1, 1)) {
             Adafruit_BME280 bme280;
             int address = args.toNumber(0, 0x76);
@@ -297,7 +297,7 @@ bool I2CScannerPlugin::atModeHandler(Stream &serial, const String &command, AtMo
         return true;
     }
 #endif
-    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(I2CLM75A))) {
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(I2CLM75A))) {
         if (args.requireArgs(1, 1)) {
             int address = args.toNumber(0, 0x48);
             serial.printf_P(PSTR("Reading LM75A at 0x%02x: "), address);

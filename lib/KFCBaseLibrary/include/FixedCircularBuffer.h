@@ -16,7 +16,7 @@ public:
         iterator(const FixedCircularBuffer<T, SIZE>& buffer, const T* iterator) : _buffer(buffer), _iterator(iterator) {
         }
 
-        iterator& operator=(const iterator &iter) {
+        iterator& operator=(const iterator& iter) {
             _iterator = iter._iterator;
             return *this;
         }
@@ -50,7 +50,7 @@ public:
         }
 
         T& operator*() {
-            return *(T *)& _buffer._values[offset()];
+            return *(T*)&_buffer._values[offset()];
         }
 
         bool operator==(const iterator& iter) {
@@ -66,7 +66,7 @@ public:
         }
 
         bool isValid() const {
-           return _iterator >= _buffer._beginPtr() + _buffer._read_position && _iterator < _buffer._beginPtr() + _buffer._count;
+            return _iterator >= _buffer._beginPtr() + _buffer._read_position && _iterator < _buffer._beginPtr() + _buffer._count;
         }
 
     private:
@@ -76,7 +76,7 @@ public:
         const T* _iterator;
     };
 
-    FixedCircularBuffer() : _count(0), _position(0), _read_position(0), _locked(false) {
+    FixedCircularBuffer() : _count(0), _write_position(0), _read_position(0), _locked(false) {
     }
 
     FixedCircularBuffer(FixedCircularBuffer&& buffer) {
@@ -85,20 +85,35 @@ public:
 
     FixedCircularBuffer& operator=(FixedCircularBuffer&& buffer) {
         _count = buffer._count;
-        _position = buffer._position;
+        _write_position = buffer._write_position;
         _read_position = buffer._read_position;
-        memcpy(_values, buffer._values, SIZE * sizeof(*_values));
+        _locked = buffer._locked;
+        memcpy(_values, buffer._values, size() * sizeof(*_values));
         buffer.clear();
-        _locked = false;
         return *this;
     }
 
     FixedCircularBuffer slice(const iterator& first, const iterator& last) {
+        //assert(distance(first, last) <= SIZE);
         FixedCircularBuffer tmp;
         for (auto iterator = first; iterator != last; ++iterator) {
-            tmp.push_back(*iterator);
+            tmp._values[tmp._count++] = *iterator;
         }
+        tmp._write_position = tmp._count % SIZE;
         return tmp;
+    }
+
+    void shrink(const iterator& first, const iterator& last) {
+        _read_position = first.offset();
+        _write_position = last.offset();
+        _count = distance(first, last) + _read_position;
+    }
+
+    template<class T2, size_t SIZE2>
+    void copy(FixedCircularBuffer<T2, SIZE2>& target, const iterator& first, const iterator& last) {
+        for (auto iterator = first; iterator != last; ++iterator) {
+            target.push_back(*iterator);
+        }
     }
 
     static int distance(const iterator& iter1, const iterator& iter2) {
@@ -106,8 +121,8 @@ public:
     }
 
     inline __attribute__((always_inline)) void push_back(T value) {
-        _values[_position++] = value;
-        _position %= SIZE;
+        _values[_write_position++] = value;
+        _write_position %= SIZE;
         _count++;
         if (_count - _read_position > SIZE) {
             _read_position++;
@@ -153,7 +168,7 @@ public:
 
     void clear() {
         _count = 0;
-        _position = 0;
+        _write_position = 0;
         _read_position = 0;
         _locked = false;
     }
@@ -207,7 +222,7 @@ private:
 
 public:
     size_t _count;
-    size_t _position;
+    size_t _write_position;
     size_t _read_position;
     bool _locked;
     T _values[SIZE];

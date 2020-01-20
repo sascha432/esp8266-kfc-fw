@@ -66,7 +66,7 @@ void EventScheduler::addTimer(TimerPtr *timerPtr, int64_t delay, int repeat, Cal
 #endif
 }
 
-bool ICACHE_RAM_ATTR EventScheduler::hasTimer(TimerPtr timer) {
+bool ICACHE_RAM_ATTR EventScheduler::hasTimer(TimerPtr timer) const {
     if (timer) {
         for(auto _timer: _timers) {
             if (_timer == timer) {

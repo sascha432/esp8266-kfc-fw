@@ -33,16 +33,15 @@
 // While turned off the current should be ~0.009A with a PF of 0.54. 0.0093A * 117.2V * 0.54 = ~0.589W
 // This requires a shunt >=0.005R, otherwise the current will be higher and the PF incorrect
 //
-// Min/max current that can be measured with different shunts
-// shunt    min.    max.
-// 0.001	0.040	43.0
-// 0.002	0.020	21.5
-// 0.003	0.013	14.3
-// 0.005	0.008	8.6
-// 0.008	0.005	5.4
-// 0.01	    0.004	4.3
-// 0.02	    0.002	2.15
-// 0.05	    0.001	0.86
+// 	        measurement range
+// shunt      mA        A     absolute max. rating (A)
+// 0.001    40.0    43.00     2000
+// 0.002    20.0    21.50     1000
+// 0.003    13.3    14.33     667
+// 0.005     8.0     8.60     400
+// 0.008     5.0     5.38     250
+// 0.01      4.0     4.30     200
+// 0.05      0.8     0.86      40
 
 
 // enables output for the HLW8012 live graph
@@ -57,7 +56,7 @@
 
 // current shunt resistance
 #ifndef IOT_SENSOR_HLW80xx_SHUNT
-#define IOT_SENSOR_HLW80xx_SHUNT                        0.001
+#define IOT_SENSOR_HLW80xx_SHUNT                        0.003
 #endif
 
 // compensate current when the load is dimmed or switched off
@@ -66,7 +65,13 @@
 #endif
 
 #if IOT_SENSOR_HLW80xx_ADJUST_CURRENT
-#define IOT_SENSOR_HLW80xx_ADJ_I_CALC(level, current)   (level < 0 ? current : (level == 0 ? 0.009f : (level >= 1 ? current : (current * (1.0 / (1.013292 + (0.7352072 - 1.013292) / (1 + pow(level / 0.04869815, 1.033051))))))))
+#define IOT_SENSOR_HLW80xx_ADJ_I_CALC(level, current)   ( \
+    level < 0 ? current : ( \
+        level == 0 ? \
+            ((IOT_SENSOR_HLW80xx_MIN_CURRENT > 0.009) ? 0.009f : current) : \
+            (level >= 1 ? current : (current * (1.0 / (1.013292 + (0.7352072 - 1.013292) / (1 + pow(level / 0.04869815, 1.033051)))))) \
+        ) \
+    )
 #else
 #define IOT_SENSOR_HLW80xx_ADJ_I_CALC(level, current)   current
 #endif
@@ -250,6 +255,8 @@ protected:
     time_t _nextMQTTUpdate;
 
 public:
+    EventScheduler::Timer _dumpTimer;
+
     void setExtraDigits(int8_t digits) {
         _extraDigits = std::max((int8_t)0, std::min((int8_t)6, digits));
         config._H_W_GET(Config().sensor).hlw80xx.extraDigits = _extraDigits;

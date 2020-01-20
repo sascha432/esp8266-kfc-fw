@@ -128,7 +128,7 @@ private:
     int16_t _channels[4];
     float _ratio[2];
     uint8_t _qos;
-    EventScheduler::TimerPtr _publishTimer;
+    EventScheduler::Timer _publishTimer;
 
 public:
     // channels are displayed in this order in the web ui
@@ -158,6 +158,7 @@ public:
 
     virtual void setup(PluginSetupMode_t mode) override;
     virtual void reconfigure(PGM_P source) override;
+    virtual void restart() override;
     virtual bool hasReconfigureDependecy(PluginComponent *plugin) const;
 
     virtual bool hasWebUI() const override {

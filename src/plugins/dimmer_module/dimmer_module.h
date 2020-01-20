@@ -176,7 +176,7 @@ private:
     typedef std::vector<DimmerButton> DimmerButtonVector;
 
     DimmerButtonVector _buttons;
-    EventScheduler::TimerPtr _turnOffTimer[IOT_DIMMER_MODULE_CHANNELS];
+    EventScheduler::Timer _turnOffTimer[IOT_DIMMER_MODULE_CHANNELS];
     uint8_t _turnOffTimerRepeat[IOT_DIMMER_MODULE_CHANNELS];
     int16_t _turnOffLevel[IOT_DIMMER_MODULE_CHANNELS];
 #endif
@@ -196,6 +196,7 @@ public:
     virtual void setup(PluginSetupMode_t mode) override;
     virtual void reconfigure(PGM_P source) override;
     virtual bool hasReconfigureDependecy(PluginComponent *plugin) const override;
+    virtual void restart() override;
 
     virtual bool hasStatus() const override;
     virtual void getStatus(Print &output) override;

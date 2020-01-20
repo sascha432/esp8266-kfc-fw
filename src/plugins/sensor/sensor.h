@@ -61,7 +61,7 @@ public:
 
 // PluginComponent
 public:
-    SensorPlugin() : _timer(nullptr) {
+    SensorPlugin() {
         REGISTER_PLUGIN(this, "SensorPlugin");
     }
 
@@ -111,7 +111,7 @@ private:
     void _timerEvent();
 
     SensorVector _sensors;
-    EventScheduler::TimerPtr _timer;
+    EventScheduler::Timer _timer;
 
 public:
     template <class T>

@@ -73,6 +73,9 @@ public:
     PGM_P getName() const;
     PluginPriorityEnum_t getSetupPriority() const override;
     void setup(PluginSetupMode_t mode) override;
+    void restart() override {
+        WiFiCallbacks::remove(WiFiCallbacks::EventEnum_t::ANY, MDNS_wifi_callback);
+    }
 
     virtual bool hasStatus() const override;
     virtual void getStatus(Print &output) override;
@@ -151,10 +154,10 @@ void MDNSPlugin::atModeHelpGenerator()
 
 bool MDNSPlugin::atModeHandler(Stream &serial, const String &command, AtModeArgs &args)
 {
-    if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(MDNS))) {
+    if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(MDNS))) {
         if (args.requireArgs(2, 2)) {
             MDNS_query_service(args.get(0), args.get(1), &serial);
-            serial.println(F("Querying..."));
+            args.print(F("Querying..."));
         }
         return true;
     }

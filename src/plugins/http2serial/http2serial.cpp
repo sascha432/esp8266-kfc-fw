@@ -26,7 +26,7 @@
 
 
 Http2Serial *Http2Serial::_instance = nullptr;
-AsyncWebSocket *wsSerialConsole = nullptr;
+WsClientAsyncWebSocket *wsSerialConsole = nullptr;
 
 Http2Serial::Http2Serial() : _outputBufferMaxSize(SERIAL_BUFFER_MAX_LEN), _outputBufferDelay(SERIAL_BUFFER_FLUSH_DELAY)
 {
@@ -223,10 +223,11 @@ static Http2SerialPlugin plugin;
 
 void Http2SerialPlugin::setup(PluginSetupMode_t mode)
 {
-    if (get_web_server_object()) {
-        wsSerialConsole = _debug_new AsyncWebSocket(F("/serial_console"));
+    auto server = get_web_server_object();
+    if (server) {
+        wsSerialConsole = _debug_new WsClientAsyncWebSocket(F("/serial_console"));
         wsSerialConsole->onEvent(http2serial_event_handler);
-        web_server_add_handler(wsSerialConsole);
+        server->addHandler(wsSerialConsole);
         _debug_printf_P(PSTR("Web socket for http2serial running on port %u\n"), config.get<uint16_t>(_H(Config().http_port)));
     }
 }
@@ -243,10 +244,8 @@ bool Http2SerialPlugin::hasReconfigureDependecy(PluginComponent *plugin) const
 
 void Http2SerialPlugin::restart()
 {
-    for(auto socket: wsSerialConsole->getClients()) {
-        socket->text(FSPGM(Device_is_rebooting));
-        socket->close(503, String(FSPGM(Device_is_rebooting)).c_str());
-    }
+    wsSerialConsole->restart();
+    Http2Serial::destroyInstance();
 }
 
 #if AT_MODE_SUPPORTED
@@ -266,7 +265,7 @@ void Http2SerialPlugin::atModeHelpGenerator()
 
 bool Http2SerialPlugin::atModeHandler(Stream &serial, const String &command, AtModeArgs &args)
 {
-    if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(H2SBD))) {
+    if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(H2SBD))) {
         if (args.requireArgs(1, 1)) {
             uint32_t rate = args.toIntMinMax(0, 300, 2500000, KFC_SERIAL_RATE);
             if (rate) {
@@ -277,26 +276,24 @@ bool Http2SerialPlugin::atModeHandler(Stream &serial, const String &command, AtM
         }
         return true;
     }
-    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(H2SBUFSZ))) {
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(H2SBUFSZ))) {
         if (args.requireArgs(1, 1)) {
             auto http2Serial = Http2Serial::getInstance();
             if (http2Serial) {
                 uint32_t size = args.toIntMinMax(0, 128, 2048, SERIAL_BUFFER_MAX_LEN);
                 http2Serial->setOutputBufferMaxSize(size);
-                at_mode_print_prefix(serial, command);
-                serial.printf_P(PSTR("Set size to %u ms\n"), size);
+                args.printf_P(PSTR("Set size to %u ms"), size);
             }
         }
         return true;
     }
-    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(H2SBUFDLY))) {
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(H2SBUFDLY))) {
         if (args.requireArgs(1, 1)) {
             auto http2Serial = Http2Serial::getInstance();
             if (http2Serial) {
                 uint32_t delay = args.toIntMinMax(0, 10, 500, SERIAL_BUFFER_FLUSH_DELAY);
                 http2Serial->setOutputBufferDelay(delay);
-                at_mode_print_prefix(serial, command);
-                serial.printf_P(PSTR("Set delay to %u ms\n"), delay);
+                args.printf_P(PSTR("Set delay to %u ms"), delay);
             }
         }
         return true;

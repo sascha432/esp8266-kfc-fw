@@ -28,7 +28,7 @@ public:
     static void sendValues(AsyncWebSocketClient *client);
 
     static WsWebUISocket *getSender();
-    static AsyncWebSocket *getWsWebUI();
+    static WsClientAsyncWebSocket *getWsWebUI();
 
 private:
     static WsWebUISocket *_sender;

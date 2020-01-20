@@ -2,7 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-
 #if LOGGER
 
 #include "logger.h"
@@ -20,112 +19,128 @@
 
 Logger _logger;
 
-Logger::Logger() {
+Logger::Logger()
+{
     _logLevel = LOGLEVEL_DEBUG;
 #if SYSLOG
     _syslog = nullptr;
 #endif
 }
 
-void Logger::error(const __FlashStringHelper *message, ...) {
+void Logger::error(const __FlashStringHelper *message, ...)
+{
     va_list arg;
     va_start(arg, message);
     this->writeLog(LOGLEVEL_ERROR, message, arg);
     va_end(arg);
 }
 
-void Logger::error(const String &message, ...) {
+void Logger::error(const String &message, ...)
+{
     va_list arg;
     va_start(arg, message);
     this->writeLog(LOGLEVEL_ERROR, message, arg);
     va_end(arg);
 }
 
-void Logger::security(const __FlashStringHelper *message, ...) {
+void Logger::security(const __FlashStringHelper *message, ...)
+{
     va_list arg;
     va_start(arg, message);
     this->writeLog(LOGLEVEL_SECURITY, message, arg);
     va_end(arg);
 }
 
-void Logger::security(const String &message, ...) {
+void Logger::security(const String &message, ...)
+{
     va_list arg;
     va_start(arg, message);
     this->writeLog(LOGLEVEL_SECURITY, message, arg);
     va_end(arg);
 }
 
-void Logger::warning(const __FlashStringHelper *message, ...) {
+void Logger::warning(const __FlashStringHelper *message, ...)
+{
     va_list arg;
     va_start(arg, message);
     this->writeLog(LOGLEVEL_WARNING, message, arg);
     va_end(arg);
 }
 
-void Logger::warning(const String &message, ...) {
+void Logger::warning(const String &message, ...)
+{
     va_list arg;
     va_start(arg, message);
     this->writeLog(LOGLEVEL_WARNING, message, arg);
     va_end(arg);
 }
 
-void Logger::notice(const __FlashStringHelper *message, ...) {
+void Logger::notice(const __FlashStringHelper *message, ...)
+{
     va_list arg;
     va_start(arg, message);
     this->writeLog(LOGLEVEL_NOTICE, message, arg);
     va_end(arg);
 }
 
-void Logger::notice(const String &message, ...) {
+void Logger::notice(const String &message, ...)
+{
     va_list arg;
     va_start(arg, message);
     this->writeLog(LOGLEVEL_NOTICE, message, arg);
     va_end(arg);
 }
 
-void Logger::access(const __FlashStringHelper *message, ...) {
+void Logger::access(const __FlashStringHelper *message, ...)
+{
     va_list arg;
     va_start(arg, message);
     this->writeLog(LOGLEVEL_ACCESS, message, arg);
     va_end(arg);
 }
 
-void Logger::access(const String &message, ...) {
+void Logger::access(const String &message, ...)
+{
     va_list arg;
     va_start(arg, message);
     this->writeLog(LOGLEVEL_ACCESS, message, arg);
     va_end(arg);
 }
 
-void Logger::debug(const __FlashStringHelper *message, ...) {
+void Logger::debug(const __FlashStringHelper *message, ...)
+{
     va_list arg;
     va_start(arg, message);
     this->writeLog(LOGLEVEL_DEBUG, message, arg);
     va_end(arg);
 }
 
-void Logger::debug(const String &message, ...) {
+void Logger::debug(const String &message, ...)
+{
     va_list arg;
     va_start(arg, message);
     this->writeLog(LOGLEVEL_DEBUG, message, arg);
     va_end(arg);
 }
 
-void Logger::log(LogLevel level, const String &message, ...) {
+void Logger::log(LogLevel level, const String &message, ...)
+{
     va_list arg;
     va_start(arg, message);
     this->writeLog(level, message, arg);
     va_end(arg);
 }
 
-void Logger::log(LogLevel level, const char *message, ...) {
+void Logger::log(LogLevel level, const char *message, ...)
+{
     va_list arg;
     va_start(arg, message);
     this->writeLog(level, message, arg);
     va_end(arg);
 }
 
-const String Logger::getLogLevelAsString(LogLevel logLevel) {
+const String Logger::getLogLevelAsString(LogLevel logLevel)
+{
     switch(logLevel) {
         case LOGLEVEL_ERROR:
             return F("ERROR");
@@ -143,18 +158,22 @@ const String Logger::getLogLevelAsString(LogLevel logLevel) {
     return _sharedEmptyString;
 }
 
-void Logger::setLogLevel(LogLevel logLevel) {
+void Logger::setLogLevel(LogLevel logLevel)
+{
     _logLevel = logLevel;
 }
 
 #if SYSLOG
-void Logger::setSyslog(SyslogStream * syslog) {
+void Logger::setSyslog(SyslogStream * syslog)
+{
     _syslog = syslog;
 }
 #endif
 
-void Logger::writeLog(LogLevel logLevel, const char *message, va_list arg) {
+void Logger::writeLog(LogLevel logLevel, const char *message, va_list arg)
+{
 
+// Serial.printf("|%s|\n",message);
     if (logLevel > _logLevel) {
         return;
     }
@@ -250,8 +269,8 @@ void Logger::writeLog(LogLevel logLevel, const char *message, va_list arg) {
     }
 }
 
-const String Logger::getLogFilename(LogLevel logLevel) {
-
+const String Logger::getLogFilename(LogLevel logLevel)
+{
     switch(logLevel) {
         case LOGLEVEL_DEBUG:
             return F("/debug");
@@ -262,13 +281,15 @@ const String Logger::getLogFilename(LogLevel logLevel) {
     }
 }
 
-bool Logger::openLog(LogLevel logLevel) {
-
+bool Logger::openLog(LogLevel logLevel)
+{
     auto fileName = this->getLogFilename(logLevel);
-    return (bool)SPIFFS.open(fileName, SPIFFS.exists(fileName) ? fs::FileOpenMode::append : fs::FileOpenMode::write);
+    _file = SPIFFS.open(fileName, SPIFFS.exists(fileName) ? fs::FileOpenMode::append : fs::FileOpenMode::write);
+    return (bool)_file;
 }
 
-void Logger::closeLog() {
+void Logger::closeLog()
+{
 #if LOGGER_MAX_FILESIZE
     if (_file.size() >= LOGGER_MAX_FILESIZE) {
         String filename = _file.name();

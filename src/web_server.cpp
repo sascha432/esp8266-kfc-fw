@@ -966,6 +966,12 @@ void WebServerPlugin::getStatus(Print &output)
             output.print(FSPGM(disabled));
         }
 #endif
+        size_t sockets = WsClient::_webSockets.size();
+        size_t clients = 0;
+        for(auto socket: WsClient::_webSockets) {
+            clients += socket->count();
+        }
+        output.printf_P(PSTR(HTML_S(br) "%u WebSocket(s), %u client(s) connected"), sockets, clients);
     }
     else {
         output.print(FSPGM(disabled));

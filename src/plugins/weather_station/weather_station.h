@@ -13,7 +13,6 @@
 #include <asyncHTTPrequest.h>
 #include <StreamString.h>
 #include "WebUIComponent.h"
-#include "Mpr121Touchpad.h"
 #include "WSDraw.h"
 #include "plugins.h"
 
@@ -39,6 +38,10 @@
 
 #if IOT_WEATHER_STATION_WS2812_NUM
 #include <Adafruit_NeoPixel.h>
+#endif
+
+#if IOT_WEATHER_STATION_HAS_TOUCHPAD
+#include "Mpr121Touchpad.h"
 #endif
 
 class WeatherStationPlugin : public PluginComponent, public WebUIInterface, public WSDraw {

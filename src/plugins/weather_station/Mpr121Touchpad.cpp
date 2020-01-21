@@ -2,6 +2,8 @@
  * Author: sascha_lammers@gmx.de
  */
 
+#if IOT_WEATHER_STATION_HAS_TOUCHPAD
+
 #include "Mpr121Touchpad.h"
 
 volatile bool mpr121_irq_callback_flag;
@@ -137,3 +139,5 @@ void Mpr121Touchpad::_get()
         }
     }
 }
+
+#endif

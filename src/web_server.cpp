@@ -34,6 +34,9 @@
 #if STK500V1
 #include "plugins/stk500v1/STK500v1Programmer.h"
 #endif
+#if IOT_REMOTE_CONTROL
+#include "./plugins/remote/remote.h"
+#endif
 
 #if DEBUG_WEB_SERVER
 #include <debug_helper_enable.h>
@@ -411,6 +414,9 @@ void web_server_update_upload_handler(AsyncWebServerRequest *request, String fil
     if (index == 0 && !request->_tempObject && web_server_is_authenticated(request)) {
         request->_tempObject = calloc(sizeof(UploadStatus_t), 1);
         Logger_notice(F("Firmware upload started"));
+#if IOT_REMOTE_CONTROL
+        RemoteControlPlugin::disableAutoSleep();
+#endif
     }
     UploadStatus_t *status = reinterpret_cast<UploadStatus_t *>(request->_tempObject);
     if (status && !status->error) {

@@ -4,6 +4,8 @@
 
 #pragma once
 
+#if IOT_WEATHER_STATION_HAS_TOUCHPAD
+
 #include <Adafruit_MPR121.h>
 
 class Mpr121Touchpad {
@@ -29,3 +31,4 @@ private:
     uint8_t _x, _y;
 };
 
+#endif

@@ -30,13 +30,13 @@ public:
 #include "moon_phase.h"
 
 #ifndef TFT_PIN_CS
-#define TFT_PIN_CS              D4
+#define TFT_PIN_CS              0xff        // D4
 #endif
 #ifndef TFT_PIN_DC
-#define TFT_PIN_DC              D3
+#define TFT_PIN_DC              D1          // D3
 #endif
 #ifndef TFT_PIN_RST
-#define TFT_PIN_RST             D0
+#define TFT_PIN_RST             D4          // D0
 #endif
 #ifndef TFT_PIN_LED
 #define TFT_PIN_LED             D8
@@ -48,12 +48,6 @@ public:
 #ifndef TFT_HEIGHT
 #define TFT_HEIGHT              160
 #endif
-
-#define SCREEN_CAPTURE_FILENAME         "/screencap.bmp"
-#define SCREEN_CAPTURE_FILENAME_TMP     "/screencap.bmpT"
-#define SCREEN_CAPTURE_FILENAME_JS      "/screencap.js"
-#define SCREEN_CAPTURE_FILENAME_JS_TMP  "/screencap.jsT"
-
 
 #if TFT_WIDTH == 128 && TFT_HEIGHT == 160
 

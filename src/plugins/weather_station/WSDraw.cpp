@@ -289,10 +289,12 @@ void WSDraw::_drawScreen0()
 
     _displayScreen(0, 0, TFT_WIDTH, TFT_HEIGHT);
 
+#if 0
     PrintString str(F("redraw %.2fms - "), timer.getTime() / 1000.0);
     str += _canvas.getDetails();
     str.replace(F("\n"), F(" "));
     debug_println(str);
+#endif
 }
 
 void WSDraw::_doScroll()
@@ -358,10 +360,12 @@ void WSDraw::_updateTime()
 
     _displayScreen(0, Y_START_POSITION_TIME, TFT_WIDTH, Y_END_POSITION_TIME - Y_START_POSITION_TIME);
 
+#if 0
     PrintString str(F("redraw %.2fms - "), timer.getTime() / 1000.0);
     str += _canvas.getDetails();
     str.replace(F("\n"), F(" "));
     debug_println(str);
+#endif
 }
 
 void WSDraw::_draw() {

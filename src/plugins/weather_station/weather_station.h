@@ -13,11 +13,32 @@
 #include <asyncHTTPrequest.h>
 #include <StreamString.h>
 #include "WebUIComponent.h"
+#include "Mpr121Touchpad.h"
 #include "WSDraw.h"
 #include "plugins.h"
 
 #ifndef DEBUG_IOT_WEATHER_STATION
-#define DEBUG_IOT_WEATHER_STATION 0
+#define DEBUG_IOT_WEATHER_STATION               0
+#endif
+
+#ifndef IOT_WEATHER_STATION_HAS_TOUCHPAD
+#define IOT_WEATHER_STATION_HAS_TOUCHPAD        1
+#endif
+
+#ifndef IOT_WEATHER_STATION_MPR121_PIN
+#define IOT_WEATHER_STATION_MPR121_PIN          D6
+#endif
+
+#ifndef IOT_WEATHER_STATION_WS2812_NUM
+#define IOT_WEATHER_STATION_WS2812_NUM          0
+#endif
+
+#ifndef IOT_WEATHER_STATION_WS2812_PIN
+#define IOT_WEATHER_STATION_WS2812_PIN          D0
+#endif
+
+#if IOT_WEATHER_STATION_WS2812_NUM
+#include <Adafruit_NeoPixel.h>
 #endif
 
 class WeatherStationPlugin : public PluginComponent, public WebUIInterface, public WSDraw {
@@ -49,6 +70,15 @@ public:
     virtual void getValues(JsonArray &array);
     virtual void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState);
 
+public:
+#if AT_MODE_SUPPORTED
+    virtual bool hasAtMode() const override {
+        return true;
+    }
+    virtual void atModeHelpGenerator() override;
+    virtual bool atModeHandler(Stream &serial, const String &command, AtModeArgs &args) override;
+#endif
+
 private:
     static void _sendScreenCaptureBMP(AsyncWebServerRequest *request);
     void _installWebhooks();
@@ -75,6 +105,16 @@ private:
     time_t _pollTimer;
     asyncHTTPrequest *_httpClient;
     EventScheduler::Timer _fadeTimer;
+
+#if IOT_WEATHER_STATION_HAS_TOUCHPAD
+    Mpr121Touchpad _touchpad;
+    bool _touchpadDebug;
+#endif
+
+#if IOT_WEATHER_STATION_WS2812_NUM
+    Adafruit_NeoPixel _pixel;
+    EventScheduler::Timer _pixelTimer;
+#endif
 
 #if DEBUG_IOT_WEATHER_STATION
 public:

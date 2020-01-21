@@ -52,6 +52,8 @@ public:
 
     // executed during boot
     virtual void setup(PluginSetupMode_t mode);
+    // executed before a restart
+    virtual void restart();
 
     // executed after the configuration has been changed
 protected:
@@ -98,9 +100,6 @@ public:
     virtual void atModeHelpGenerator();
     virtual bool atModeHandler(Stream &serial, const String &command, AtModeArgs &args);
 #endif
-
-    // executed before a restart
-    virtual void restart();
 
     static PluginComponent *getForm(const String &formName);
     static PluginComponent *getTemplate(const String &formName);

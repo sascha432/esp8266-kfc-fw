@@ -5,6 +5,7 @@
 #if IOT_SENSOR && IOT_SENSOR_HAVE_BATTERY
 
 #include "Sensor_Battery.h"
+#include "progmem_data.h"
 #include "sensor.h"
 
 #if DEBUG_IOT_SENSOR
@@ -61,7 +62,7 @@ void Sensor_Battery::getValues(JsonArray &array)
     obj = &array.addObject(3);
     obj->add(JJ(id), _getId(STATE));
     obj->add(JJ(state), true);
-    obj->add(JJ(value), digitalRead(IOT_SENSOR_BATTERY_CHARGE_DETECTION));
+    obj->add(JJ(value), _isCharging() ? FSPGM(Yes) : FSPGM(No));
 #endif
 }
 
@@ -72,7 +73,6 @@ void Sensor_Battery::createWebUI(WebUI &webUI, WebUIRow **row)
     (*row)->addSensor(_getId(LEVEL), _name, F("V"));
 #if IOT_SENSOR_BATTERY_CHARGE_DETECTION
     (*row)->addSensor(_getId(STATE), F("Charging"), F(""));
-//TODO
 #endif
 }
 
@@ -81,7 +81,7 @@ void Sensor_Battery::publishState(MQTTClient *client)
     if (client) {
         client->publish(_getTopic(LEVEL), _qos, 1, String(_readSensor(), 2));
 #if IOT_SENSOR_BATTERY_CHARGE_DETECTION
-        client->publish(_getTopic(STATE), _qos, 1, String(_readSensor(), 2));
+        client->publish(_getTopic(STATE), _qos, 1, _isCharging() ? FSPGM(Yes) : FSPGM(No));
 #endif
     }
 }
@@ -90,7 +90,7 @@ void Sensor_Battery::getStatus(PrintHtmlEntitiesString &output)
 {
     output.printf_P(PSTR("Supply Voltage Indicator"));
 #if IOT_SENSOR_BATTERY_CHARGE_DETECTION
-    output.printf_P(", charging: %s"), digitalRead(IOT_SENSOR_BATTERY_CHARGE_DETECTION) ? F("Yes") : F("No"));
+    output.printf_P(PSTR(", charging: %s"), _isCharging() ? SPGM(Yes) : SPGM(No));
 #endif
     output.printf_P(PSTR(", calibration %f" HTML_S(br)),  _calibration);
 }
@@ -119,9 +119,9 @@ float Sensor_Battery::_readSensor(SensorDataEx_t *data)
 {
     double value = 0;
     uint8_t i = 0;
-    for(i = 0; i < 3; i++) {
+    for(i = 0; i < 5; i++) {
         value += analogRead(A0);
-        delay(1);
+        delay(2);
     }
     if (data) {
         data->adcReadCount = i;
@@ -131,14 +131,23 @@ float Sensor_Battery::_readSensor(SensorDataEx_t *data)
     return (((IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R2 + IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1)) / IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1) * adcVoltage * _calibration;
 }
 
+bool Sensor_Battery::_isCharging() const
+{
+#if IOT_SENSOR_BATTERY_CHARGE_DETECTION == -1
+    return Sensor_Battery_charging_detection();
+#else
+    return digitalRead(IOT_SENSOR_BATTERY_CHARGE_DETECTION);
+#endif
+}
+
 String Sensor_Battery::_getId(BatteryIdEnum_t type)
 {
 #if IOT_SENSOR_BATTERY_CHARGE_DETECTION
     switch(type) {
-        case LEVEL:
-        case default:
+        case BatteryIdEnum_t::LEVEL:
+        default:
             return F("battery_level");
-        case STATE:
+        case BatteryIdEnum_t::STATE:
             return F("battery_state");
     }
 #else

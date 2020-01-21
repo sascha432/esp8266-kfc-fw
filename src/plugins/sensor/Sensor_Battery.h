@@ -26,6 +26,10 @@
 #define IOT_SENSOR_BATTERY_CHARGE_DETECTION             5
 #endif
 
+// external function for charge detection
+#if IOT_SENSOR_BATTERY_CHARGE_DETECTION == -1
+extern bool Sensor_Battery_charging_detection();
+#endif
 
 class Sensor_Battery : public MQTTSensor {
 public:
@@ -71,6 +75,7 @@ private:
     String _getTopic(BatteryIdEnum_t type = LEVEL);
 
     float _readSensor(SensorDataEx_t *data = nullptr);
+    bool _isCharging() const;
 
     JsonString _name;
     String _topic;

@@ -114,6 +114,12 @@ Plugin for my 2 channel blinds controller
 
 https://easyeda.com/sascha23095123423/iot_blinds_controller
 
+### Remote Control
+
+Plugin for my 4 button remote control (<15µA idle)
+
+https://easyeda.com/sascha23095123423/iot_4ch_remote
+
 ### File Manager
 
 WebUI to explore and modify SPIFFS and KFCVirtualFileSystem

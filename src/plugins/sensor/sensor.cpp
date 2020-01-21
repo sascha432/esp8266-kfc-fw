@@ -196,9 +196,6 @@ void SensorPlugin::getStatus(Print &output)
         PrintHtmlEntitiesString str;
         for(auto sensor: _sensors) {
             sensor->getStatus(str);
-            if (!str.endsWith(HTML_TAG_E)) {
-                str.print(F(HTML_S(br)));
-            }
         }
         static_cast<PrintHtmlEntitiesString &>(output).setRawOutput(true);
         output.print(str);

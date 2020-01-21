@@ -339,7 +339,7 @@ void Sensor_HLW8012::getStatus(PrintHtmlEntitiesString &output)
     output.printf_P(PSTR("Power Monitor HLW8012" HTML_S(br)));
     output.printf_P(PSTR("Calibration U=%f, I=%f, P=%f, Rs="), _calibrationU, _calibrationI, _calibrationP);
     output.print(IOT_SENSOR_HLW80xx_SHUNT, 5, true);
-    output.print('R');
+    output.print(F("R" HTML_S(br)));
 }
 
 Sensor_HLW8012::SensorEnumType_t Sensor_HLW8012::getType() const

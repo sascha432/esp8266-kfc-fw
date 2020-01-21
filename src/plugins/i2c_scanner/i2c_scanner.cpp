@@ -174,12 +174,12 @@ void I2CScannerPlugin::atModeHelpGenerator() {
 bool I2CScannerPlugin::atModeHandler(Stream &serial, const String &command, AtModeArgs &args)
 {
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(I2CS))) {
-        if (args.requireArgs(1, 3)) {
+        if (args.requireArgs(1, 4)) {
             if (args.equalsIgnoreCase(0, F("reset"))) {
                 serial.print(F("+I2CS: "));
                 config.initTwoWire(true, &serial);
             }
-            else if (args.requireArgs(2, 3)) {
+            else if (args.requireArgs(2, 4)) {
                 int sda = args.toNumber(0, KFC_TWOWIRE_SDA);
                 int scl = args.toNumber(1, KFC_TWOWIRE_SCL);
                 uint32_t speed = args.toNumber(2, 100) * 1000UL;

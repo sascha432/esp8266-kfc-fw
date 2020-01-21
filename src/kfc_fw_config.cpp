@@ -825,6 +825,11 @@ void KFCFWConfiguration::restartDevice()
     Logger_notice(F("Device is being restarted"));
     BlinkLEDTimer::setBlink(BlinkLEDTimer::FLICKER);
 
+    if (_safeMode) {
+        resetDetector.clearCounter();
+        ESP.restart();
+    }
+
     _debug_printf_P(PSTR("restart(): Scheduled tasks %u, WiFi callbacks %u, Loop Functions %u\n"), Scheduler.size(), WiFiCallbacks::getVector().size(), LoopFunctions::size());
 
     resetDetector.clearCounter();

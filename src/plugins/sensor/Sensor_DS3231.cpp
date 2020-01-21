@@ -65,7 +65,7 @@ void Sensor_DS3231::publishState(MQTTClient *client)
 
 void Sensor_DS3231::getStatus(PrintHtmlEntitiesString &output)
 {
-    output.printf_P(PSTR("DS3231 @ I2C" HTML_S(br)));
+    output.printf_P(PSTR("DS3231 @ I2C address 0x68" HTML_S(br)));
 }
 
 Sensor_DS3231::SensorEnumType_t Sensor_DS3231::getType() const

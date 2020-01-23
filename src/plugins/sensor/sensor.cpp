@@ -214,10 +214,10 @@ void SensorPlugin::atModeHelpGenerator()
     }
 }
 
-bool SensorPlugin::atModeHandler(Stream &serial, const String &command, AtModeArgs &args)
+bool SensorPlugin::atModeHandler(AtModeArgs &args)
 {
     for(auto sensor: _sensors) {
-        if (sensor->atModeHandler(serial, command, args)) {
+        if (sensor->atModeHandler(args)) {
             return true;
         }
     }

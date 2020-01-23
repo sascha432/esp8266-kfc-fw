@@ -467,7 +467,7 @@ public:
         return true;
     }
     virtual void atModeHelpGenerator() override;
-    virtual bool atModeHandler(Stream &serial, const String &command, AtModeArgs &args) override;
+    virtual bool atModeHandler(AtModeArgs &args) override;
 #endif
 };
 
@@ -559,7 +559,7 @@ void NTPPlugin::atModeHelpGenerator()
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(TZ), getName());
 }
 
-bool NTPPlugin::atModeHandler(Stream &serial, const String &command, AtModeArgs &args)
+bool NTPPlugin::atModeHandler(AtModeArgs &args)
 {
 #if DEBUG
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(SNTPFU))) {

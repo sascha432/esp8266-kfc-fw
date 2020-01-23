@@ -456,14 +456,14 @@ void DimmerModulePlugin::reconfigure(PGM_P source)
         _end();
         _begin();
     }
-    else if (!strcmp_P_P(source, PSTR("http"))) {
+    else if (!strcmp_P_P(source, SPGM(http))) {
         setupWebServer();
     }
 }
 
 bool DimmerModulePlugin::hasReconfigureDependecy(PluginComponent *plugin) const
 {
-    return plugin->nameEquals(F("http"));
+    return plugin->nameEquals(FSPGM(http));
 }
 
 void DimmerModulePlugin::restart()
@@ -527,7 +527,7 @@ void DimmerModulePlugin::atModeHelpGenerator()
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DIMR), getName());
 }
 
-bool DimmerModulePlugin::atModeHandler(Stream &serial, const String &command, AtModeArgs &args)
+bool DimmerModulePlugin::atModeHandler(AtModeArgs &args)
 {
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DIMW))) {
         writeEEPROM();

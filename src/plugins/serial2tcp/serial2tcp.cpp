@@ -39,7 +39,7 @@ public:
     virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
     virtual bool hasAtMode() const override;
     virtual void atModeHelpGenerator() override;
-    virtual bool atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) override;
+    virtual bool atModeHandler(int8_t argc, char **argv) override;
 };
 
 static Serial2TcpPlugin plugin;
@@ -130,7 +130,7 @@ void Serial2TcpPlugin::atModeHelpGenerator() {
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(S2TCP), getName());
 }
 
-bool Serial2TcpPlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) {
+bool Serial2TcpPlugin::atModeHandler(int8_t argc, char **argv) {
 
     if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(S2TCPD))) {
         if (argc == 1) {

@@ -14,7 +14,7 @@
 #include <debug_helper_disable.h>
 #endif
 
-Sensor_Battery::Sensor_Battery(const JsonString &name) : MQTTSensor(), _name(name)
+Sensor_Battery::Sensor_Battery(const JsonString &name) : MQTTSensor(), _name(name), _adc(A0, 20, 1)
 {
 #if DEBUG_MQTT_CLIENT
     debug_printf_P(PSTR("Sensor_Battery(): component=%p\n"), this);
@@ -56,7 +56,7 @@ void Sensor_Battery::getValues(JsonArray &array)
     auto obj = &array.addObject(3);
     obj->add(JJ(id), _getId(LEVEL));
     obj->add(JJ(state), true);
-    obj->add(JJ(value), JsonNumber(_readSensor(), 2));
+    obj->add(JJ(value), String(_readSensor(), _config.precision));
 
 #if IOT_SENSOR_BATTERY_CHARGE_DETECTION
     obj = &array.addObject(3);
@@ -79,7 +79,7 @@ void Sensor_Battery::createWebUI(WebUI &webUI, WebUIRow **row)
 void Sensor_Battery::publishState(MQTTClient *client)
 {
     if (client) {
-        client->publish(_getTopic(LEVEL), _qos, 1, String(_readSensor(), 2));
+        client->publish(_getTopic(LEVEL), _qos, 1, String(_readSensor(), _config.precision));
 #if IOT_SENSOR_BATTERY_CHARGE_DETECTION
         client->publish(_getTopic(STATE), _qos, 1, _isCharging() ? FSPGM(Yes) : FSPGM(No));
 #endif
@@ -92,43 +92,35 @@ void Sensor_Battery::getStatus(PrintHtmlEntitiesString &output)
 #if IOT_SENSOR_BATTERY_CHARGE_DETECTION
     output.printf_P(PSTR(", charging: %s"), _isCharging() ? SPGM(Yes) : SPGM(No));
 #endif
-    output.printf_P(PSTR(", calibration %f" HTML_S(br)),  _calibration);
+    output.printf_P(PSTR(", calibration %f" HTML_S(br)),  _config.calibration);
 }
 
 void Sensor_Battery::createConfigureForm(AsyncWebServerRequest *request, Form &form)
 {
     auto *sensor = &config._H_W_GET(Config().sensor); // must be a pointer
-    form.add<float>(F("battery_calibration"), &sensor->battery.calibration)->setFormUI(new FormUI(FormUI::TEXT, F("Supply Voltage/Battery Calibration")));
+    form.add<float>(F("battery_calibration"), &sensor->battery.calibration)->setFormUI(new FormUI(FormUI::TEXT, F("Supply Voltage Calibration")));
+    form.add<uint8_t>(F("battery_precision"), &sensor->battery.precision)->setFormUI(new FormUI(FormUI::TEXT, F("Supply Voltage Precision")));
 }
 
 void Sensor_Battery::reconfigure()
 {
-    _calibration = config._H_GET(Config().sensor).battery.calibration;
-    _debug_printf_P(PSTR("Sensor_Battery::reconfigure(): calibration=%f\n"), _calibration);
+    _config = config._H_GET(Config().sensor).battery;
+    _debug_printf_P(PSTR("Sensor_Battery::reconfigure(): calibration=%f, precision=%u\n"), _config.calibration, _config.precision);
 }
 
 
-float Sensor_Battery::readSensor(SensorDataEx_t *data)
+float Sensor_Battery::readSensor()
 {
-    return SensorPlugin::for_each<Sensor_Battery, float>(nullptr, NAN, [data](Sensor_Battery &sensor) {
-        return sensor._readSensor(data);
+    return SensorPlugin::for_each<Sensor_Battery, float>(nullptr, NAN, [](Sensor_Battery &sensor) {
+        return sensor._readSensor();
     });
 }
 
-float Sensor_Battery::_readSensor(SensorDataEx_t *data)
+float Sensor_Battery::_readSensor()
 {
-    double value = 0;
-    uint8_t i = 0;
-    for(i = 0; i < 5; i++) {
-        value += analogRead(A0);
-        delay(2);
-    }
-    if (data) {
-        data->adcReadCount = i;
-        data->adcSum = value;
-    }
-    double adcVoltage = value / (i * 1024.0);
-    return (((IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R2 + IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1)) / IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1) * adcVoltage * _calibration;
+    double adcVoltage = _adc.read() / 1024.0;
+    _debug_printf_P(PSTR("Sensor_Battery::_readSensor(): raw = %f\n"), (((IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R2 + IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1)) / IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1) * adcVoltage)
+    return (((IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R2 + IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1)) / IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1) * adcVoltage * _config.calibration;
 }
 
 bool Sensor_Battery::_isCharging() const
@@ -171,26 +163,17 @@ void Sensor_Battery::atModeHelpGenerator()
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SENSORPBV), SensorPlugin::getInstance().getName());
 }
 
-bool Sensor_Battery::atModeHandler(Stream &serial, const String &command, AtModeArgs &args)
+bool Sensor_Battery::atModeHandler(AtModeArgs &args)
 {
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(SENSORPBV))) {
         _timer.remove();
 
-        double averageSum = 0;
-        int averageCount = 0;
-        auto printVoltage = [&serial, averageSum, averageCount](EventScheduler::TimerPtr timer) mutable {
-            Sensor_Battery::SensorDataEx_t data;
-            auto value = Sensor_Battery::readSensor(&data);
-            averageSum += value;
-            averageCount++;
-            serial.printf_P(PSTR("+%s: %.4fV - avg %.4f (calibration %.6f, #%d, adc sum %d, adc avg %.6f)\n"),
-                PROGMEM_AT_MODE_HELP_COMMAND(SENSORPBV),
+        auto serial = &args.getStream();
+        auto printVoltage = [serial](EventScheduler::TimerPtr timer) {
+            auto value = Sensor_Battery::readSensor();
+            serial->printf_P(PSTR("+SENSORPBV: %.4fV (calibration %.6f)\n"),
                 value,
-                averageSum / (double)averageCount,
-                config._H_GET(Config().sensor).battery.calibration,
-                data.adcReadCount,
-                data.adcSum,
-                data.adcSum / (double)data.adcReadCount
+                config._H_GET(Config().sensor).battery.calibration
             );
         };
         printVoltage(nullptr);

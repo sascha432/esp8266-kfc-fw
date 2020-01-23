@@ -152,11 +152,12 @@ static void create_menu()
     bootstrapMenu.addSubMenu(F("Speed Test"), F("speed_test.html"), navMenu.util);
 }
 
+static bool enableWebUIMenu = false;
+
 void setup_plugins(PluginComponent::PluginSetupMode_t mode) {
 
     _debug_printf_P(PSTR("setup_plugins(%d) counter %d\n"), mode, plugins.size());
 
-    bool enableWebUIMenu = false;
     create_menu();
 
     for(auto plugin : plugins) {
@@ -208,180 +209,9 @@ void setup_plugins(PluginComponent::PluginSetupMode_t mode) {
 
 #ifndef DISABLE_EVENT_SCHEDULER
     if (mode == PluginComponent::PLUGIN_SETUP_AUTO_WAKE_UP) {
-        Scheduler.addTimer(30000, false, [](EventScheduler::TimerPtr timer) {
+        Scheduler.addTimer(PLUGIN_DEEP_SLEEP_DELAYED_START_TIME, false, [](EventScheduler::TimerPtr timer) {
             setup_plugins(PluginComponent::PLUGIN_SETUP_DELAYED_AUTO_WAKE_UP);
         });
     }
 #endif
 }
-
-// PluginConfiguration *get_plugin_by_form(const String &name) {
-//     // custom filenames hack
-// #if IOT_ATOMIC_SUN_V2
-//     if (name.equals(F("dimmer_cfg"))) {
-//         return get_plugin_by_name(PSTR("atomicsun"));
-//     }
-// #endif
-// #if IOT_DIMMER_MODULE
-//     if (name.equals(F("dimmer_cfg"))) {
-//         return get_plugin_by_name(PSTR("dimmer"));
-//     }
-//     else if (name.equals(F("dimmer"))) {
-//         return nullptr;
-//     }
-// #endif
-//     return get_plugin_by_name(name);
-// }
-
-// PluginConfiguration *get_plugin_by_name(const String &name) {
-//     for(auto &plugin: plugins) {
-//         if (plugin.pluginNameEquals(name)) {
-//             _debug_printf_P(PSTR("get_plugin_by_name(%s) = %p\n"), name.c_str(), &plugin);
-//             return &plugin;
-//         }
-//     }
-//     _debug_printf_P(PSTR("get_plugin_by_name(%s) = nullptr\n"), name.c_str());
-//     return nullptr;
-// }
-
-// PluginConfiguration *get_plugin_by_rtc_memory_id(uint8_t id) {
-//     if (id <= 0 || id > PLUGIN_RTC_MEM_MAX_ID) {
-//         _debug_printf_P(PSTR("get_plugin_by_rtc_memory_id(%d): invalid id\n"), id);
-//         return nullptr;
-//     }
-//     for(auto &plugin: plugins) {
-//         if (plugin.getRtcMemoryId() == id) {
-//             return &plugin;
-//         }
-//     }
-//     return nullptr;
-// }
-
-// PluginConfiguration::PluginConfiguration() {
-//     config = nullptr;
-// }
-
-// PluginConfiguration::PluginConfiguration(PGM_PLUGIN_CONFIG_P configPtr) {
-//     config = configPtr;
-// }
-
-// bool PluginConfiguration::pluginNameEquals(const String & string) const {
-//     return strcmp_P(string.c_str(), config->pluginName) == 0;
-// }
-
-// bool PluginConfiguration::pluginNameEquals(const __FlashStringHelper * string) const {
-//     return strcmp_P_P(config->pluginName, reinterpret_cast<PGM_P>(string)) == 0;
-// }
-
-// String PluginConfiguration::getPluginName() const {
-//     return FPSTR(config->pluginName);
-// }
-
-// PGM_P PluginConfiguration::getPluginNamePSTR() const {
-//     return config->pluginName;
-// }
-
-// int8_t PluginConfiguration::getSetupPriority() const {
-//     return (int8_t)pgm_read_byte(&config->setupPriority);
-// }
-
-// bool PluginConfiguration::isAllowSafeMode() const {
-//     return pgm_read_byte(&config->allowSafeMode);
-// }
-
-// bool PluginConfiguration::isAutoSetupAfterDeepSleep() const {
-//     return pgm_read_byte(&config->autoSetupAfterDeepSleep);
-// }
-
-// uint8_t PluginConfiguration::getRtcMemoryId() const {
-//     return pgm_read_byte(&config->rtcMemoryId);
-// }
-
-// SetupPluginCallback PluginConfiguration::getSetupPlugin() const {
-//     return config->setupPlugin;
-// }
-
-// void PluginConfiguration::callSetupPlugin() {
-//     // auto callback = getSetupPlugin();
-//     if (config->setupPlugin) {
-//         config->setupPlugin();
-//     }
-// }
-
-// StatusTemplateCallback PluginConfiguration::getStatusTemplate() const {
-//     return config->statusTemplate;
-// }
-
-// ConfigureFormCallback PluginConfiguration::getConfigureForm() const {
-//     return config->configureForm;
-// }
-
-// ReconfigurePluginCallback PluginConfiguration::getReconfigurePlugin() const {
-//     return config->reconfigurePlugin;
-// }
-
-// void PluginConfiguration::callReconfigurePlugin(PGM_P source) {
-//     // auto callback = getReconfigurePlugin();
-//     if (config->reconfigurePlugin) {
-//         config->reconfigurePlugin(source);
-//         for(auto &plugin: plugins) {
-//             if (plugin.getConfigureForm() && plugin.isDependency(getPluginNamePSTR())) {
-//                 plugin.callReconfigurePlugin(getPluginNamePSTR());
-//             }
-//         }
-//     }
-// }
-
-// void PluginConfiguration::callReconfigureSystem(PGM_P name) {
-//     for(auto &plugin: plugins) {
-//         if (plugin.getConfigureForm() && plugin.isDependency(name)) {
-//             plugin.callReconfigurePlugin(name);
-//         }
-//     }
-// }
-
-// String PluginConfiguration::getReconfigurePluginDependecies() const {
-//     if (!config->configureForm || !config->reconfigurePluginDependencies) {
-//         return _sharedEmptyString;
-//     }
-//     return FPSTR(config->reconfigurePluginDependencies);
-// }
-
-// PGM_P PluginConfiguration::getReconfigurePluginDependeciesPSTR() const {
-//     return config->reconfigurePluginDependencies;
-// }
-
-// bool PluginConfiguration::isDependency(PGM_P pluginName) const {
-//     if (!config->reconfigurePluginDependencies) {
-//         return false;
-//     }
-//     return stringlist_find_P_P(config->reconfigurePluginDependencies, pluginName) != -1;
-// }
-
-// PrepareDeepSleepCallback PluginConfiguration::getPrepareDeepSleep() const {
-//     return config->prepareDeepSleep;
-// }
-
-// void PluginConfiguration::callPrepareDeepSleep(uint32_t time, RFMode mode) {
-//     //auto callback = getPrepareDeepSleep();
-//     if (config->prepareDeepSleep) {
-//         config->prepareDeepSleep(time, mode);
-//     }
-// }
-
-// #if AT_MODE_SUPPORTED
-
-// AtModeCommandHandlerCallback PluginConfiguration::getAtModeCommandHandler() const {
-//     return config->atModeCommandHandler;
-//     //return reinterpret_cast<AtModeCommandHandlerCallback>(pgm_read_ptr(&config->atModeCommandHandler));
-// }
-
-// bool PluginConfiguration::callAtModeCommandHandler(Stream & serial, const String & command, int8_t argc, char ** argv) {
-//     // auto callback = getAtModeCommandHandler();
-//     if (config->atModeCommandHandler) {
-//         return config->atModeCommandHandler(serial, command, argc, argv);
-//     }
-//     return false;
-// }
-
-// #endif

@@ -165,7 +165,7 @@ public:
 #if AT_MODE_SUPPORTED
     bool hasAtMode() const override;
     void atModeHelpGenerator() override;
-    bool atModeHandler(Stream &serial, const String &command, AtModeArgs &args) override;
+    bool atModeHandler(AtModeArgs &args) override;
 #endif
 };
 
@@ -296,7 +296,7 @@ void SyslogPlugin::atModeHelpGenerator()
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SQD), getName());
 }
 
-bool SyslogPlugin::atModeHandler(Stream &serial, const String &command, AtModeArgs &args)
+bool SyslogPlugin::atModeHandler(AtModeArgs &args)
 {
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(SQC))) {
         if (isEnabled(args)) {

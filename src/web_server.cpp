@@ -904,7 +904,7 @@ public:
         REGISTER_PLUGIN(this, "WebServerPlugin");
     }
     virtual PGM_P getName() const {
-        return PSTR("http");;
+        return SPGM(http);
     }
     virtual PluginPriorityEnum_t getSetupPriority() const override {
         return PRIO_HTTP;
@@ -939,6 +939,9 @@ static WebServerPlugin plugin;
 void WebServerPlugin::setup(PluginSetupMode_t mode)
 {
     init_web_server();
+    if (mode == PLUGIN_SETUP_DELAYED_AUTO_WAKE_UP) {
+        invokeReconfigureNow(getName());
+    }
 }
 
 void WebServerPlugin::reconfigure(PGM_P source)

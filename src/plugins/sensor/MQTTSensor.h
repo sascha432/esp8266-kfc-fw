@@ -74,7 +74,7 @@ public:
 #if AT_MODE_SUPPORTED
     virtual void atModeHelpGenerator() {
     }
-    virtual bool atModeHandler(Stream &serial, const String &command, AtModeArgs &args) {
+    virtual bool atModeHandler(AtModeArgs &args) {
         return false;
     }
 #endif

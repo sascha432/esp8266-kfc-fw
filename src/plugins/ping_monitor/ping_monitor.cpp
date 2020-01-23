@@ -402,7 +402,7 @@ public:
     virtual void reconfigure(PGM_P source) override;
     virtual void restart() override;
     virtual bool hasReconfigureDependecy(PluginComponent *plugin) const override {
-        return plugin->nameEquals(F("http"));
+        return plugin->nameEquals(FSPGM(http));
     }
 
     virtual bool hasStatus() const override {
@@ -428,7 +428,7 @@ public:
         return true;
     }
     virtual void atModeHelpGenerator() override;
-    virtual bool atModeHandler(Stream &serial, const String &command, AtModeArgs &args) override;
+    virtual bool atModeHandler(AtModeArgs &args) override;
 #endif
 };
 
@@ -502,7 +502,7 @@ void PingMonitorPlugin::atModeHelpGenerator()
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(PING), getName());
 }
 
-bool PingMonitorPlugin::atModeHandler(Stream &serial, const String &command, AtModeArgs &args)
+bool PingMonitorPlugin::atModeHandler(AtModeArgs &args)
 {
     static AsyncPing *_ping = nullptr;
 
@@ -516,6 +516,7 @@ bool PingMonitorPlugin::atModeHandler(Stream &serial, const String &command, AtM
                 _debug_println(F("ping_monitor: previous ping cancelled"));
                 _ping->cancel();
             }
+            auto &serial = args.getStream();
             if (ping_monitor_resolve_host(host, addr, message)) {
                 int count = args.toInt(1);
                 int timeout = args.toInt(2);

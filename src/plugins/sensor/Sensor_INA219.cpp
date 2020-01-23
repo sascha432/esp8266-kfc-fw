@@ -179,18 +179,18 @@ void Sensor_INA219::atModeHelpGenerator()
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SENSORINA219), SensorPlugin::getInstance().getName());
 }
 
-bool Sensor_INA219::atModeHandler(Stream &serial, const String &command, AtModeArgs &args)
+bool Sensor_INA219::atModeHandler(AtModeArgs &args)
 {
-    if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SENSORINA219))) {
+    if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(SENSORINA219))) {
 
         static EventScheduler::TimerPtr timer = nullptr;
         Scheduler.removeTimer(&timer);
 
-        Stream *stream = &serial;
-        auto timerPrintFunc = [this, stream](EventScheduler::TimerPtr) {
-            return SensorPlugin::for_each<Sensor_INA219>(this, [stream](Sensor_INA219 &sensor) {
+        auto &serial = args.getStream();
+        auto timerPrintFunc = [this, &serial](EventScheduler::TimerPtr) {
+            return SensorPlugin::for_each<Sensor_INA219>(this, [&serial](Sensor_INA219 &sensor) {
                 auto &ina219 = sensor.getSensor();
-                stream->printf_P(PSTR("+SENSORINA219: raw: U=%d, Vshunt=%d, I=%d, current: P=%d: %.3fV, %.1fmA, %.1fmW, average: %.3fV, %.1fmA, %.1fmW\n"),
+                serial.printf_P(PSTR("+SENSORINA219: raw: U=%d, Vshunt=%d, I=%d, current: P=%d: %.3fV, %.1fmA, %.1fmW, average: %.3fV, %.1fmA, %.1fmW\n"),
                     ina219.getBusVoltage_raw(),
                     ina219.getShuntVoltage_raw(),
                     ina219.getCurrent_raw(),

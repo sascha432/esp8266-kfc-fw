@@ -44,36 +44,41 @@ void WsWebUISocket::setup()
     }
 }
 
-void WsWebUISocket::send(AsyncWebSocketClient *client, JsonUnnamedObject &json) {
+void WsWebUISocket::send(AsyncWebSocketClient *client, JsonUnnamedObject &json)
+{
     auto server = client->server();
     auto buffer = server->makeBuffer(json.length());
     assert(JsonBuffer(json).fillBuffer(buffer->get(), buffer->length()) == buffer->length());
     client->text(buffer);
 }
 
-void WsWebUISocket::broadcast(WsWebUISocket *sender, JsonUnnamedObject &json) {
+void WsWebUISocket::broadcast(WsWebUISocket *sender, JsonUnnamedObject &json)
+{
     auto buffer = wsWebUI->makeBuffer(json.length());
     assert(JsonBuffer(json).fillBuffer(buffer->get(), buffer->length()) == buffer->length());
     _debug_printf_P(PSTR("WsWebUISocket::broadcast(): %s\n"), buffer->get());
     WsClient::broadcast(wsWebUI, sender, buffer);
 }
 
-WsWebUISocket *WsWebUISocket::getSender() {
+WsWebUISocket *WsWebUISocket::getSender()
+{
     return _sender;
 }
 
-WsClientAsyncWebSocket *WsWebUISocket::getWsWebUI() {
+WsClientAsyncWebSocket *WsWebUISocket::getWsWebUI()
+{
     return wsWebUI;
 }
 
-WsClient *WsWebUISocket::getInstance(AsyncWebSocketClient *socket) {
+WsClient *WsWebUISocket::getInstance(AsyncWebSocketClient *socket)
+{
     _debug_println(F("WsWebUISocket::getInstance()"));
     return _debug_new WsWebUISocket(socket);
 }
 
 
-void WsWebUISocket::onText(uint8_t *data, size_t len) {
-
+void WsWebUISocket::onText(uint8_t *data, size_t len)
+{
     _debug_printf_P(PSTR("WsWebUISocket::onText(%p, %d)\n"), data, len);
     if (isAuthenticated()) {
         auto client = getClient();
@@ -134,8 +139,8 @@ void WsWebUISocket::onText(uint8_t *data, size_t len) {
     }
 }
 
-void WsWebUISocket::sendValues(AsyncWebSocketClient *client) {
-
+void WsWebUISocket::sendValues(AsyncWebSocketClient *client)
+{
     JsonUnnamedObject json(1);
 
     json.add(JJ(type), JJ(ue));
@@ -153,8 +158,8 @@ void WsWebUISocket::sendValues(AsyncWebSocketClient *client) {
     send(client, json);
 }
 
-void WsWebUISocket::createWebUIJSON(JsonUnnamedObject &json) {
-
+void WsWebUISocket::createWebUIJSON(JsonUnnamedObject &json)
+{
     WebUI webUI(json);
 
     // auto row = &webUI.addRow();

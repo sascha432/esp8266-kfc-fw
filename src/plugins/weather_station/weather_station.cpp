@@ -171,7 +171,7 @@ void WeatherStationPlugin::restart()
 
 bool WeatherStationPlugin::hasReconfigureDependecy(PluginComponent *plugin) const
 {
-    return plugin->nameEquals(F("http"));
+    return plugin->nameEquals(FSPGM(http));
 }
 
 bool WeatherStationPlugin::hasStatus() const
@@ -248,7 +248,7 @@ void WeatherStationPlugin::atModeHelpGenerator()
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(WSBL), name);
 }
 
-bool WeatherStationPlugin::atModeHandler(Stream &serial, const String &command, AtModeArgs &args)
+bool WeatherStationPlugin::atModeHandler(AtModeArgs &args)
 {
 #if IOT_WEATHER_STATION_HAS_TOUCHPAD
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(WSSET))) {

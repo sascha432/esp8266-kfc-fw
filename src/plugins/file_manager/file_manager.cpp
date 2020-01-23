@@ -479,7 +479,7 @@ public:
         file_manager_install_web_server_hook();
     }
     virtual bool hasReconfigureDependecy(PluginComponent *plugin) const override {
-        return plugin->nameEquals(F("http"));
+        return plugin->nameEquals(FSPGM(http));
     }
 
     virtual MenuTypeEnum_t getMenuType() const override {

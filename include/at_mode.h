@@ -171,11 +171,12 @@ public:
     AtModeArgs(AtModeArgs &&) = delete;
 
     AtModeArgs(Stream &output);
-    // ~AtModeArgs() {
-    //     _freeArgs();
-    // }
     void clear();
     void setQueryMode(bool mode);
+
+    Stream &getStream() {
+        return _output;
+    }
 
     bool isQueryMode() const {
         return _queryMode;
@@ -416,35 +417,6 @@ private:
     String _command;
     ArgumentVector _args;
     bool _queryMode;
-
-// public:
-//     // --------------------------------------------------------------------
-//     // deprecated methods
-//     // --------------------------------------------------------------------
-
-//     char **args() {
-//         if (!_argsArray) {
-//             _createArgs();
-//         }
-//         return _argsArray;
-//     }
-
-//     int8_t argc() const {
-//         if (isQueryMode()) {
-//             return -1;
-//         }
-//         return _args.size();
-//     }
-
-//     ArgumentPtr argv(uint16_t num) const {
-//         return get(num);
-//     }
-
-// private:
-//     void _createArgs();
-//     void _freeArgs();
-
-//     char **_argsArray;
 };
 
 #endif

@@ -389,7 +389,7 @@ void Sensor_HLW80xx::atModeHelpGenerator()
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(HLWPLOT), name);
 }
 
-bool Sensor_HLW80xx::atModeHandler(Stream &serial, const String &command, AtModeArgs &args)
+bool Sensor_HLW80xx::atModeHandler(AtModeArgs &args)
 {
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(HLWXD))) {
         if (args.requireArgs(1)) {

@@ -435,7 +435,7 @@ static void print_sensor_input_settings(Stream &serial, Sensor_HLW8012::SensorIn
     }
 };
 
-bool Sensor_HLW8012::atModeHandler(Stream &serial, const String &command, AtModeArgs &args)
+bool Sensor_HLW8012::atModeHandler(AtModeArgs &args)
 {
     if (Sensor_HLW80xx::atModeHandler(serial, command, args)) {
         return true;

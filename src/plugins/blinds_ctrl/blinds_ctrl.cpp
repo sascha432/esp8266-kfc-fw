@@ -59,7 +59,7 @@ public:
 #if AT_MODE_SUPPORTED
     virtual bool hasAtMode() const override;
     virtual void atModeHelpGenerator() override;
-    virtual bool atModeHandler(Stream &serial, const String &command, AtModeArgs &args) override;
+    virtual bool atModeHandler(AtModeArgs &args) override;
 
 #if IOT_BLINDS_CTRL_TESTMODE
 private:
@@ -306,7 +306,7 @@ void BlindsControlPlugin::atModeHelpGenerator()
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(BCMC), getName());
 }
 
-bool BlindsControlPlugin::atModeHandler(Stream &serial, const String &command, AtModeArgs &args)
+bool BlindsControlPlugin::atModeHandler(AtModeArgs &args)
 {
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(BCMS))) {
         if (args.requireArgs(2, 2)) {

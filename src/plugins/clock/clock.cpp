@@ -268,13 +268,14 @@ void ClockPlugin::atModeHelpGenerator()
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CLOCKD), getName());
 }
 
-bool ClockPlugin::atModeHandler(Stream &serial, const String &command, AtModeArgs &args)
+bool ClockPlugin::atModeHandler(AtModeArgs &args)
 {
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKTS))) {
         if (args.size() == 2) {
             enable(false);
             uint8_t digit = args.toInt(0);
             uint8_t segment = args.toInt(1);
+            auto &serial = args.getStream();
             serial.printf_P(PSTR("+CLOCKTS: digit=%u, segment=%c, color=#%06x\n"), digit, _display->getSegmentChar(segment), _color.get());
             _display->setSegment(digit, segment, _color);
             _display->show();
@@ -302,6 +303,7 @@ bool ClockPlugin::atModeHandler(Stream &serial, const String &command, AtModeArg
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKA))) {
         if (args.isQueryMode()) {
+            auto &serial = args.getStream();
             serial.printf_P(PSTR(
                     "+CLOCKA: %u - blink colon twice per second\n"
                     "+CLOCKA: %u - blink colon once per second\n"
@@ -379,7 +381,7 @@ bool ClockPlugin::atModeHandler(Stream &serial, const String &command, AtModeArg
         return true;
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKD))) {
-        _display->dump(serial);
+        _display->dump(args.getStream());
         return true;
     }
     return false;

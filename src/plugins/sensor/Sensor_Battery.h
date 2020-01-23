@@ -9,6 +9,7 @@
 #include <Arduino_compat.h>
 #include <Wire.h>
 #include <vector>
+#include <ReadADC.h>
 #include "WebUIComponent.h"
 #include "plugins.h"
 #include "MQTTSensor.h"
@@ -38,11 +39,6 @@ public:
         STATE
     } BatteryIdEnum_t;
 
-    typedef struct {
-        uint8_t adcReadCount;
-        uint32_t adcSum;
-    } SensorDataEx_t;
-
     Sensor_Battery(const JsonString &name);
 
     virtual void createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector) override;
@@ -65,22 +61,23 @@ public:
 
 #if AT_MODE_SUPPORTED
     virtual void atModeHelpGenerator() override;
-    virtual bool atModeHandler(Stream &serial, const String &command, AtModeArgs &args) override;
+    virtual bool atModeHandler(AtModeArgs &args) override;
 #endif
 
-    static float readSensor(SensorDataEx_t *data = nullptr);
+    static float readSensor();
 
 private:
     String _getId(BatteryIdEnum_t type = LEVEL);
     String _getTopic(BatteryIdEnum_t type = LEVEL);
 
-    float _readSensor(SensorDataEx_t *data = nullptr);
+    float _readSensor();
     bool _isCharging() const;
 
     JsonString _name;
     String _topic;
-    float _calibration;
+    Config_Sensor::battery_t _config;
     EventScheduler::Timer _timer;
+    ReadADC _adc;
 };
 
 #endif

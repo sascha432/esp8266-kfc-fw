@@ -83,21 +83,23 @@ void check_flash_size() {
 }
 
 #if DEBUG
-static void deep_sleep_forever() {
+static void deep_sleep_forever()
+{
     for(;;) {
 #if defined(ESP8266)
-        ESP.deepSleep(ESP.deepSleepMax() / 2, WAKE_RF_DISABLED); // NOTE using ESP.deepSleepMax() reports "too long"
+        ESP.deepSleep(0, WAKE_RF_DISABLED);
 #else
-        ESP.deepSleep(UINT32_MAX);
+        ESP.deepSleep(0);
 #endif
         delay(1);
     }
 }
 #endif
 
-static void remove_crash_counter(EventScheduler::TimerPtr timer) {
+void remove_crash_counter(EventScheduler::TimerPtr timer)
+{
 #if SPIFFS_SUPPORT
-    if (!timer) {
+    if (reinterpret_cast<void *>(timer) == nullptr) {
         SPIFFS.begin();
     }
     char filename[strlen_P(SPGM(crash_counter_file)) + 1];

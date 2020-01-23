@@ -68,7 +68,7 @@ public:
     }
 
     void atModeHelpGenerator() override;
-    bool atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) override;
+    bool atModeHandler(int8_t argc, char **argv) override;
 };
 
 static ESP8266ATModePlugin plugin;
@@ -91,7 +91,7 @@ void ESP8266ATModePlugin::atModeHelpGenerator() {
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(GMR), getName());
 }
 
-bool ESP8266ATModePlugin::atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) {
+bool ESP8266ATModePlugin::atModeHandler(int8_t argc, char **argv) {
     if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(CWMODE))) {
         if (argc == AT_MODE_QUERY_COMMAND) {
             serial.printf_P(PSTR("+CWMODE:%d\n"), config._H_GET(Config().flags).wifiMode);

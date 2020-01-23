@@ -182,6 +182,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CAT, "CAT", "<filename>", "Display text fi
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DEL, "DEL", "<filename>", "Delete file");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LS, "LS", "[<directory>]", "List files and directory");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WIFI, "WIFI", "[<reconnect>]", "Display WiFi info");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RADC, "RADC", "<number=3>,<delay=5ms>", "Turn WiFi off and read ADC");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(REM, "REM", "Ignore comment");
 #if RTC_SUPPORT
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(RTC, "RTC", "[<set>]", "Set RTC time", "Display RTC time");
@@ -236,6 +237,7 @@ void at_mode_help_commands()
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DEL), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(LS), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(WIFI), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(RADC), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(REM), name);
 #if RTC_SUPPORT
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(RTC), name);
@@ -597,10 +599,15 @@ void at_mode_serial_handle_event(String &commandString)
             args.setCommand(command);
 
             if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DSLP))) {
-                uint32_t time = args.toMillis(0);
-                RFMode mode = (RFMode)args.toInt(1, RF_DEFAULT);
-                args.print(F("Entering deep sleep..."));
-                config.enterDeepSleep(time, mode, 1);
+                if (args.isQueryMode()) {
+                    args.printf_P(PSTR("Max. deep sleep %.3f seconds"), ESP.deepSleepMax() / 1000000.0);
+                }
+                else {
+                    uint32_t time = args.toMillis(0);
+                    RFMode mode = (RFMode)args.toInt(1, RF_DEFAULT);
+                    args.print(F("Entering deep sleep..."));
+                    config.enterDeepSleep(time, mode, 1);
+                }
             }
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(HLP))) {
                 String plugin;
@@ -682,6 +689,29 @@ void at_mode_serial_handle_event(String &commandString)
                     }
                 }
             }
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RADC))) {
+                int numReads = args.toInt(0, 3);
+                int readDelay = args.toInt(1, 5);
+                WiFi.mode(WIFI_OFF);
+                system_soft_wdt_stop();
+                ets_intr_lock( );
+                noInterrupts();
+                uint32_t total = 0;
+                for(int i = 0; i < numReads; i++) {
+                    total += system_adc_read();
+                    delay(readDelay);
+                }
+                interrupts();
+                ets_intr_unlock();
+                system_soft_wdt_restart();
+                config.reconfigureWiFi();
+                args.printf_P(PSTR("Total=%u,num=%u,avg=%.2f"), total, numReads, total / (float)numReads);
+
+                Scheduler.addTimer(10000, false, [=](EventScheduler::TimerPtr) {
+                    Logger_notice(F("ADC total=%u,num=%u,avg=%.2f"), total, numReads, total / (float)numReads);
+                });
+
+            }
             else if (args.isCommand(PSTR("I2CT")) || args.isCommand(PSTR("I2CR"))) {
                 // ignore SerialTwoWire communication
             }
@@ -744,7 +774,7 @@ void at_mode_serial_handle_event(String &commandString)
                 if (args.requireArgs(1, 1)) {
                     auto filename = args.get(0);
                     auto result = SPIFFS.remove(filename);
-                    output.printf_P(PSTR("+DEL: %s: %s\n"), filename, result ? PSTR("success") : PSTR("failure"));
+                    args.printf_P(PSTR("%s: %s"), filename, result ? PSTR("success") : PSTR("failure"));
                 }
             }
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(LS))) {
@@ -776,8 +806,7 @@ void at_mode_serial_handle_event(String &commandString)
                                 }
                             }
                             else {
-                                output.println();
-                                output.printf_P(PSTR("+%s: %s: %u"), PROGMEM_AT_MODE_HELP_COMMAND(CAT), file.name(), (unsigned)file.size());
+                                output.printf_P(PSTR("\n+%s: %s: %u\n"), PROGMEM_AT_MODE_HELP_COMMAND(CAT), file.name(), (unsigned)file.size());
                                 file.close();
                                 timer->detach();
                             }
@@ -929,7 +958,7 @@ void at_mode_serial_handle_event(String &commandString)
                 bool commandWasHandled = false;
                 for(auto plugin : plugins) { // send command to plugins
                     if (plugin->hasAtMode()) {
-                        if (true == (commandWasHandled = plugin->atModeHandler(output, args.getCommand(), args))) {
+                        if (true == (commandWasHandled = plugin->atModeHandler(args))) {
                             break;
                         }
                     }

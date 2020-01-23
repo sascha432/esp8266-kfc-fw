@@ -144,11 +144,6 @@ struct Serial2Tcp {
     uint16_t idle_timeout;
 };
 
-struct HomeAssistant {
-    char api_endpoint[128];
-    char token[250];
-};
-
 struct DimmerModule {
     float fade_time;
     float on_fade_time;
@@ -190,6 +185,66 @@ struct BlindsController {
     bool channel1_dir;
 };
 
+#include "push_pack.h"
+
+class Config_HomeAssistant {
+public:
+    Config_HomeAssistant() {
+    }
+
+    static const char *getApiEndpoint();
+    static const char *getApiToken();
+
+    char api_endpoint[128];
+    char token[250];
+};
+
+class Config_RemoteControl {
+public:
+    typedef struct ____attribute__packed__ {
+        uint8_t autoSleepTime;
+        uint16_t deepSleepTime;       // ESP8266 ~14500 seconds, 0 = indefinitely
+        uint16_t shortPressTime;
+        uint16_t longpressTime;
+        uint16_t repeatTime;
+    } config_t;
+    config_t config;
+
+    Config_RemoteControl() : config({2, 0, 300, 750, 250}) {
+    }
+};
+
+class Config_Sensor {
+public:
+#if IOT_SENSOR_HAVE_BATTERY
+    typedef struct ____attribute__packed__ {
+        float calibration;
+        uint8_t precision;
+    } battery_t;
+    battery_t battery;
+#endif
+#if (IOT_SENSOR_HAVE_HLW8012 || IOT_SENSOR_HAVE_HLW8032)
+    typedef struct ____attribute__packed__ {
+        float calibrationU;
+        float calibrationI;
+        float calibrationP;
+        uint64_t energyCounter;
+        uint8_t extraDigits;
+    } hlw80xx_t;
+    hlw80xx_t hlw80xx;
+#endif
+    Config_Sensor() {
+#if IOT_SENSOR_HAVE_BATTERY
+        battery = battery_t({ 1.0f, 2 });
+#endif
+#if (IOT_SENSOR_HAVE_HLW8012 || IOT_SENSOR_HAVE_HLW8032)
+        hlw80xx = hlw80xx_t({ 1.0f, 1.0f, 1.0f, 0, 0 });
+#endif
+    }
+};
+
+#include "pop_pack.h"
+
 typedef struct  {
     uint8_t is_metric: 1;
     uint8_t time_format_24h: 1;
@@ -202,23 +257,6 @@ struct WeatherStation {
     char openweather_api_key[65];
     char openweather_api_query[65];
     WeatherStationConfig_t config;
-};
-
-struct Sensor {
-#if IOT_SENSOR_HAVE_BATTERY
-    struct {
-        float calibration;
-    } battery;
-#endif
-#if (IOT_SENSOR_HAVE_HLW8012 || IOT_SENSOR_HAVE_HLW8032)
-    struct {
-        float calibrationU;
-        float calibrationI;
-        float calibrationP;
-        uint64_t energyCounter;
-        uint8_t extraDigits;
-    } hlw80xx;
-#endif
 };
 
 struct Clock {
@@ -275,7 +313,7 @@ struct Config {
     uint16_t syslog_port;
 
     struct NTP ntp;
-    HomeAssistant homeassistant;
+    Config_HomeAssistant homeassistant;
     DimmerModule dimmer;
     DimmerModuleButtons dimmer_buttons;
     BlindsController blinds_controller;
@@ -284,8 +322,9 @@ struct Config {
     struct HueConfig hue;
     struct Ping ping;
     WeatherStation weather_station;
-    Sensor sensor;
+    Config_Sensor sensor;
     Clock clock;
+    Config_RemoteControl remote_control;
 };
 
 #define _H_IP_FORM_OBJECT(name)                     config._H_GET_IP(name), [](const IPAddress &addr, FormField &) { config._H_SET_IP(name, addr); }

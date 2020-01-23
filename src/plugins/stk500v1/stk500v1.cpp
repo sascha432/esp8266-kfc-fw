@@ -32,7 +32,7 @@ public:
         return true;
     }
     virtual void atModeHelpGenerator() override;
-    virtual bool atModeHandler(Stream &serial, const String &command, AtModeArgs &args) override;
+    virtual bool atModeHandler(AtModeArgs &args) override;
 
 private:
     char _signature[3];
@@ -51,7 +51,7 @@ void STK500v1Plugin::atModeHelpGenerator()
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(STK500V1L), getName());
 }
 
-bool STK500v1Plugin::atModeHandler(Stream &serial, const String &command, AtModeArgs &args) {
+bool STK500v1Plugin::atModeHandler(AtModeArgs &args) {
 
     if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(STK500V1S))) {
         if (args.size() >= 1 && !STK500v1Programmer::getSignature(args.get(0), _signature)) {

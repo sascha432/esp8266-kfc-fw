@@ -652,7 +652,7 @@ public:
         return true;
     }
     virtual void atModeHelpGenerator() override;
-    virtual bool atModeHandler(Stream &serial, const String &command, AtModeArgs &args) override;
+    virtual bool atModeHandler(AtModeArgs &args) override;
 #endif
 };
 
@@ -802,9 +802,10 @@ void MQTTPlugin::atModeHelpGenerator()
 #endif
 }
 
-bool MQTTPlugin::atModeHandler(Stream &serial, const String &command, AtModeArgs &args)
+bool MQTTPlugin::atModeHandler(AtModeArgs &args)
 {
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(MQTT))) {
+        auto &serial = args.getStream();
         serial.print(F("+MQTT "));
         if (args.isQueryMode()) {
             if (MQTTClient::getClient()) {
@@ -889,6 +890,7 @@ bool MQTTPlugin::atModeHandler(Stream &serial, const String &command, AtModeArgs
 
             for(const auto &devicePtr: MQTTAutoDiscoveryClient::getInstance()->getDiscovery()) {
                 if (devicePtr->id == id || id == 0) {
+                    auto &serial = args.getStream();
                     const auto &device = *devicePtr;
                     found = true;
                     args.printf_P(PSTR("%s (%u):"), device.name.c_str(), device.id);
@@ -943,6 +945,7 @@ bool MQTTPlugin::atModeHandler(Stream &serial, const String &command, AtModeArgs
                 }
             }
             if (ids.size()) {
+                auto &serial = args.getStream();
                 serial.printf_P(PSTR("+MQTTDAD: Could not find: "));
                 for(auto id: ids) {
                     serial.print(id);

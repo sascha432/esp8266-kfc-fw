@@ -644,7 +644,7 @@ void AtomicSunPlugin::reconfigure(PGM_P source)
     if (!source) {
         writeConfig();
     }
-    else if (!strcmp_P_P(source, PSTR("http"))) {
+    else if (!strcmp_P_P(source, SPGM(http))) {
         setupWebServer();
     }
 }
@@ -656,7 +656,7 @@ void AtomicSunPlugin::restart()
 
 bool AtomicSunPlugin::hasReconfigureDependecy(PluginComponent *plugin) const
 {
-    return plugin->nameEquals(F("http"));
+    return plugin->nameEquals(FSPGM(http));
 }
 
 void AtomicSunPlugin::createWebUI(WebUI &webUI)

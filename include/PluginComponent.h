@@ -98,7 +98,7 @@ public:
     // at mode command handler
     virtual bool hasAtMode() const;
     virtual void atModeHelpGenerator();
-    virtual bool atModeHandler(Stream &serial, const String &command, AtModeArgs &args);
+    virtual bool atModeHandler(AtModeArgs &args);
 #endif
 
     static PluginComponent *getForm(const String &formName);

@@ -104,7 +104,7 @@ https://easyeda.com/sascha23095123423/iot_wifi_clock_controller
 
 ### Dimmer
 
-Plugin to control my trailing edge WiFi dimmer
+Plugin to control my trailing edge WiFi dimmer with energy monitor
 
 https://github.com/sascha432/trailing_edge_dimmer
 
@@ -116,9 +116,13 @@ https://easyeda.com/sascha23095123423/iot_blinds_controller
 
 ### Remote Control
 
-Plugin for my 4 button remote control (<15µA idle)
+Plugin for my 4 button ultra low power WiFi remote control
 
 https://easyeda.com/sascha23095123423/iot_4ch_remote
+
+### Home Assistant
+
+Home Assistant RESTful API
 
 ### File Manager
 
@@ -157,3 +161,20 @@ https://github.com/krzychb/EspSaveCrash.git
 ### RF24 (RF24 Master)
 
 https://github.com/nRF24/RF24
+
+### FastLED (Clock plugin)
+
+https://github.com/FastLED/FastLED
+
+### Adafruit Libraries (Various plugins)
+
+https://github.com/adafruit/Adafruit_Sensor
+https://github.com/adafruit/Adafruit_BME280_Library
+https://github.com/adafruit/Adafruit_CCS811.git
+https://github.com/adafruit/Adafruit_INA219
+https://github.com/adafruit/Adafruit-GFX-Library
+https://github.com/adafruit/Adafruit-ST7735-Library
+https://github.com/adafruit/Adafruit_SSD1306
+https://github.com/adafruit/RTClib
+https://github.com/adafruit/Adafruit_MPR121
+https://github.com/adafruit/Adafruit_NeoPixel

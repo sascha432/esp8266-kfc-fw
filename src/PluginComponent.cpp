@@ -161,7 +161,7 @@ bool PluginComponent::hasAtMode() const
 void PluginComponent::atModeHelpGenerator() {
 }
 
-bool PluginComponent::atModeHandler(Stream &serial, const String &command, AtModeArgs &args)
+bool PluginComponent::atModeHandler(AtModeArgs &args)
 {
     __debugbreak_and_panic_printf_P(PSTR("PluginComponent::atModeHandler() pure virtual: %s\n"), getName());
     return false;

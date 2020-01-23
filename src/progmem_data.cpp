@@ -43,6 +43,7 @@ PROGMEM_STRING_DEF(auto_discovery_html, HTML_S(tr) HTML_S(td) "%s" HTML_E(td) HT
 PROGMEM_STRING_DEF(slash, "/");
 PROGMEM_STRING_DEF(dot, ".");
 PROGMEM_STRING_DEF(comma, ",");
+PROGMEM_STRING_DEF(http, "http");
 PROGMEM_STRING_DEF(slash_dot, "/.");
 PROGMEM_STRING_DEF(filename, "filename");
 PROGMEM_STRING_DEF(dir, "dir");

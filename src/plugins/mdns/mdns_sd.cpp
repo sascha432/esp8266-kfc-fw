@@ -22,7 +22,6 @@
 PROGMEM_STRING_DEF(kfcmdns, "kfcmdns");
 PROGMEM_STRING_DEF(tcp, "tcp");
 PROGMEM_STRING_DEF(udp, "udp");
-PROGMEM_STRING_DEF(http, "http");
 PROGMEM_STRING_DEF(https, "https");
 PROGMEM_STRING_DEF(wss, "wss");
 PROGMEM_STRING_DEF(ws, "ws");
@@ -83,7 +82,7 @@ public:
 #if AT_MODE_SUPPORTED
     bool hasAtMode() const override;
     void atModeHelpGenerator() override;
-    bool atModeHandler(Stream &serial, const String &command, AtModeArgs &args) override;
+    bool atModeHandler(AtModeArgs &args) override;
 #endif
 };
 
@@ -152,11 +151,11 @@ void MDNSPlugin::atModeHelpGenerator()
     // at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(MDNSBSD), getName());
 }
 
-bool MDNSPlugin::atModeHandler(Stream &serial, const String &command, AtModeArgs &args)
+bool MDNSPlugin::atModeHandler(AtModeArgs &args)
 {
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(MDNS))) {
         if (args.requireArgs(2, 2)) {
-            MDNS_query_service(args.get(0), args.get(1), &serial);
+            MDNS_query_service(args.get(0), args.get(1), &args.getStream());
             args.print(F("Querying..."));
         }
         return true;

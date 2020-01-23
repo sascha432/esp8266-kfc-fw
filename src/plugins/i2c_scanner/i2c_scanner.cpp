@@ -142,7 +142,7 @@ public:
         return true;
     }
     void atModeHelpGenerator() override;
-    bool atModeHandler(Stream &serial, const String &command, AtModeArgs &args) override;
+    bool atModeHandler(AtModeArgs &args) override;
 #endif
 };
 
@@ -171,7 +171,7 @@ void I2CScannerPlugin::atModeHelpGenerator() {
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CLM75A), getName());
 }
 
-bool I2CScannerPlugin::atModeHandler(Stream &serial, const String &command, AtModeArgs &args)
+bool I2CScannerPlugin::atModeHandler(AtModeArgs &args)
 {
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(I2CS))) {
         if (args.requireArgs(1, 4)) {

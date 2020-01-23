@@ -280,7 +280,7 @@ public:
         return true;
     }
     virtual void atModeHelpGenerator() override;
-    virtual bool atModeHandler(Stream &serial, const String &command, AtModeArgs &args) override;
+    virtual bool atModeHandler(AtModeArgs &args) override;
 
 };
 
@@ -315,7 +315,7 @@ void SSD1306Plugin::atModeHelpGenerator()
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SSDDF), getName());
 }
 
-bool SSD1306Plugin::atModeHandler(Stream &serial, const String &command, AtModeArgs &args)
+bool SSD1306Plugin::atModeHandler(AtModeArgs &args)
 {
     if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SSDCLR))) {
         ssd1306_disable_status();

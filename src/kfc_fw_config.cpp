@@ -45,6 +45,16 @@ KFCFWConfiguration config;
 EspSaveCrash SaveCrash(DEBUG_SAVECRASH_OFS, DEBUG_SAVECRASH_SIZE);
 #endif
 
+const char *Config_HomeAssistant::getApiEndpoint()
+{
+    return config._H_STR(Config().homeassistant.api_endpoint);
+}
+
+const char *Config_HomeAssistant::getApiToken()
+{
+    return config._H_STR(Config().homeassistant.token);
+}
+
 
 KFCFWConfiguration::KFCFWConfiguration() : Configuration(CONFIG_EEPROM_OFFSET, CONFIG_EEPROM_MAX_LENGTH)
 {
@@ -531,33 +541,13 @@ void KFCFWConfiguration::restoreFactorySettings()
     }));
 #endif
 
-#if IOT_SENSOR
-#if IOT_SENSOR_HAVE_BATTERY || IOT_SENSOR_HAVE_HLW8012 || IOT_SENSOR_HAVE_HLW8032
-    {
-        auto cfg = _H_GET(Config().sensor);
-#endif
-#if IOT_SENSOR_HAVE_BATTERY
-#ifdef IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_CALIBRATION
-        cfg.battery.calibration = IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_CALIBRATION;
-#else
-        cfg.battery.calibration = 1.0;
-#endif
-#endif
-#if IOT_SENSOR_HAVE_HLW8012 || IOT_SENSOR_HAVE_HLW8032
-    cfg.hlw80xx.calibrationU = 1;
-    cfg.hlw80xx.calibrationI = 1;
-    cfg.hlw80xx.calibrationP = 1;
-    cfg.hlw80xx.energyCounter = 0;
-#endif
-#if IOT_SENSOR_HAVE_BATTERY || IOT_SENSOR_HAVE_HLW8012 || IOT_SENSOR_HAVE_HLW8032
-        _H_SET(Config().sensor, cfg);
-    }
-#endif
+#if IOT_SENSOR && (IOT_SENSOR_HAVE_BATTERY || IOT_SENSOR_HAVE_HLW8012 || IOT_SENSOR_HAVE_HLW8032)
+    _H_SET(Config().sensor, Config_Sensor());
 #endif
 
 #if IOT_CLOCK
     {
-        auto cfg =_H_GET(Config().clock);
+        auto cfg = _H_GET(Config().clock);
         cfg.animation = -1;
         cfg.blink_colon = 0;
         cfg.time_format_24h = 1;
@@ -570,6 +560,10 @@ void KFCFWConfiguration::restoreFactorySettings()
         memcpy_P(cfg.order, order, sizeof(cfg.order));
         _H_SET(Config().clock, cfg);
     }
+#endif
+
+#if IOT_REMOTE_CONTROL
+    _H_SET(Config().remote_control, Config_RemoteControl());
 #endif
 
 #if CUSTOM_CONFIG_PRESET
@@ -713,7 +707,8 @@ void KFCFWConfiguration::write()
     }
 }
 
-void KFCFWConfiguration::wakeUpFromDeepSleep() {
+void KFCFWConfiguration::wakeUpFromDeepSleep()
+{
     _debug_println(F("KFCFWConfiguration::wakeUpFromDeepSleep()"));
 
 #if defined(ESP32)
@@ -776,6 +771,15 @@ void KFCFWConfiguration::wakeUpFromDeepSleep() {
 
 }
 
+extern void remove_crash_counter(EventScheduler::TimerPtr timer);
+
+static void clear_crash_counter()
+{
+    resetDetector.clearCounter();
+    remove_crash_counter((EventScheduler::TimerPtr)1);
+}
+
+
 void KFCFWConfiguration::enterDeepSleep(uint32_t time_in_ms, RFMode mode, uint16_t delayAfterPrepare)
 {
     _debug_printf_P(PSTR("KFCFWConfiguration::enterDeepSleep(%d, %d, %d)\n"), time_in_ms, mode, delayAfterPrepare);
@@ -783,6 +787,8 @@ void KFCFWConfiguration::enterDeepSleep(uint32_t time_in_ms, RFMode mode, uint16
     _debug_printf_P(PSTR("Prepearing device for deep sleep...\n"));
     // WiFiCallbacks::getVector().clear(); // disable WiFi callbacks to speed up shutdown
     // Scheduler.terminate(); // halt scheduler
+
+    clear_crash_counter();
 
     delay(1);
 
@@ -800,14 +806,17 @@ void KFCFWConfiguration::enterDeepSleep(uint32_t time_in_ms, RFMode mode, uint16
 #endif
 #if defined(ESP8266)
     ESP.deepSleep(time_in_ms * 1000ULL, mode);
+    ESP.deepSleep(0, mode); // if the first attempt fails try with 0
 #else
     ESP.deepSleep(time_in_ms * 1000UL);
+    ESP.deepSleep(0);
 #endif
 }
 
-static unsigned long restart_device_timeout;
+static uint32_t restart_device_timeout;
 
-static void restart_device() {
+static void restart_device()
+{
     if (millis() > restart_device_timeout) {
         _debug_printf("restart(): restart_device\n");
         ESP.restart();
@@ -825,14 +834,13 @@ void KFCFWConfiguration::restartDevice()
     Logger_notice(F("Device is being restarted"));
     BlinkLEDTimer::setBlink(BlinkLEDTimer::FLICKER);
 
+    clear_crash_counter();
     if (_safeMode) {
         resetDetector.clearCounter();
         ESP.restart();
     }
 
     _debug_printf_P(PSTR("restart(): Scheduled tasks %u, WiFi callbacks %u, Loop Functions %u\n"), Scheduler.size(), WiFiCallbacks::getVector().size(), LoopFunctions::size());
-
-    resetDetector.clearCounter();
 
     auto webUiSocket = WsWebUISocket::getWsWebUI();
     if (webUiSocket) {

@@ -215,7 +215,7 @@ public:
         return true;
     }
     virtual void atModeHelpGenerator() override;
-    virtual bool atModeHandler(Stream &serial, const String &command, AtModeArgs &args) override;
+    virtual bool atModeHandler(AtModeArgs &args) override;
 #endif
 };
 
@@ -239,7 +239,7 @@ void Http2SerialPlugin::reconfigure(PGM_P source)
 
 bool Http2SerialPlugin::hasReconfigureDependecy(PluginComponent *plugin) const
 {
-    return plugin->nameEquals(F("http"));
+    return plugin->nameEquals(FSPGM(http));
 }
 
 void Http2SerialPlugin::restart()
@@ -263,7 +263,7 @@ void Http2SerialPlugin::atModeHelpGenerator()
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(H2SBUFDLY), getName());
 }
 
-bool Http2SerialPlugin::atModeHandler(Stream &serial, const String &command, AtModeArgs &args)
+bool Http2SerialPlugin::atModeHandler(AtModeArgs &args)
 {
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(H2SBD))) {
         if (args.requireArgs(1, 1)) {
@@ -271,7 +271,7 @@ bool Http2SerialPlugin::atModeHandler(Stream &serial, const String &command, AtM
             if (rate) {
                 Serial.flush();
                 Serial.begin(rate);
-                serial.printf_P(PSTR("Set serial rate to %d\n"), (unsigned)rate);
+                args.printf_P(PSTR("Set serial rate to %d"), (unsigned)rate);
             }
         }
         return true;

@@ -208,7 +208,7 @@ public:
 #if AT_MODE_SUPPORTED //&& !IOT_DIMMER_MODULE_INTERFACE_UART
     virtual bool hasAtMode() const override;
     virtual void atModeHelpGenerator() override;
-    virtual bool atModeHandler(Stream &serial, const String &command, AtModeArgs &args) override;
+    virtual bool atModeHandler(AtModeArgs &args) override;
 #endif
 };
 

@@ -31,7 +31,7 @@ public:
 #if AT_MODE_SUPPORTED
     virtual bool hasAtMode() const override;
     virtual void atModeHelpGenerator() override;
-    virtual bool atModeHandler(Stream &serial, const String &command, int8_t argc, char **argv) override;
+    virtual bool atModeHandler(int8_t argc, char **argv) override;
 #endif
 
 public:

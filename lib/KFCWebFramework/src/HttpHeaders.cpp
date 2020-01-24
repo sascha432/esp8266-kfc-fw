@@ -264,7 +264,7 @@ HttpHeadersIterator  HttpHeaders::end() {
     return _headers.end();
 }
 
-void  HttpHeaders::addNoCache(bool noStore)
+void HttpHeaders::addNoCache(bool noStore)
 {
     replace(new HttpPragmaHeader(FSPGM(no_cache)));
     auto hdr = new HttpCacheControlHeader();
@@ -274,7 +274,7 @@ void  HttpHeaders::addNoCache(bool noStore)
     remove(FSPGM(Last_Modified));
 }
 
-void  HttpHeaders::addDefaultHeaders()
+void HttpHeaders::addDefaultHeaders()
 {
     add(F("Access-Control-Allow-Origin"), F("*"));
     add(new HttpLinkHeader(F("<https://fonts.gstatic.com>; rel=preconnect; crossorigin")));
@@ -282,17 +282,25 @@ void  HttpHeaders::addDefaultHeaders()
     add(new HttpDateHeader(FSPGM(Expires), 86400 * 30));
 }
 
+void HttpHeaders::setHeadersCallback(SetCallback_t callback, bool doClear)
+{
+    if (_headers.size()) {
+        for (const auto &header : _headers) {
+            callback(header->getName(), header->getValue());
+        }
+        if (doClear) {
+            clear(0);
+        }
+    }
+}
+
 #if HAVE_HTTPHEADERS_ASYNCWEBSERVER
 
 void HttpHeaders::setWebServerResponseHeaders(AsyncWebServerResponse *response)
 {
-    if (_headers.size()) {
-        for (const auto &header : _headers) {
-//            debug_printf_P(PSTR("HttpHeaders::setWebServerResponseHeaders(): %s=%s\n"), header->getName().c_str(), header->getValue().c_str());
-            response->addHeader(header->getName(), header->getValue());
-        }
-        clear(0);
-    }
+    setHeadersCallback([response](const String &name, const String &header) {
+        response->addHeader(name, header);
+    }, true);
 }
 
 #endif

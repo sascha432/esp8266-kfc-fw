@@ -306,10 +306,47 @@ private:
     time_t _expires;
 };
 
+class HttpAuthorization : public HttpSimpleHeader {
+public:
+    typedef enum {
+        BEARER = 0,
+    } AuthorizationTypeEnum_t;
 
+    HttpAuthorization() : HttpSimpleHeader(F("Authorization")) {
+    }
+    HttpAuthorization(AuthorizationTypeEnum_t type, const String &auth) : HttpAuthorization() {
+        _setType(type, auth);
+    }
+
+private:
+    void _setType(AuthorizationTypeEnum_t type, const String &auth) {
+        String header;
+        switch(type) {
+            case BEARER:
+                header = F("Bearer ");
+                break;
+        }
+        header += auth;
+        setHeader(header);
+    }
+
+private:
+    AuthorizationTypeEnum_t _type;
+};
+
+class HttpContentType : public HttpSimpleHeader {
+public:
+    HttpContentType() : HttpSimpleHeader(F("Content-Type")) {
+    }
+    HttpContentType(const String &type) : HttpContentType() {
+        setHeader(type);
+    }
+};
 
 class HttpHeaders {
 public:
+    typedef std::function<void(const String &name, const String &header)> SetCallback_t;
+
     HttpHeaders();
     HttpHeaders(bool addDefault);
     virtual ~HttpHeaders();
@@ -344,6 +381,7 @@ public:
 
     void addNoCache(bool noStore = false);
     void addDefaultHeaders();
+    void setHeadersCallback(SetCallback_t callback, bool doClear);
 #if HAVE_HTTPHEADERS_ASYNCWEBSERVER
     void setWebServerResponseHeaders(AsyncWebServerResponse *response);
 #endif

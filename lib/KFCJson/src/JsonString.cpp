@@ -39,7 +39,7 @@ JsonString::JsonString(const char * str) {
 
 JsonString::JsonString(const __FlashStringHelper * str) {
     // while checking string length we can copy already from slow flash
-    PGM_P lptr = reinterpret_cast<PGM_P>(str);
+    PGM_P lptr = RFPSTR(str);
     auto dptr = _raw;
     uint32_t length = 0;
     while ((*dptr++ = (char)pgm_read_byte(lptr++)) != 0) {
@@ -62,7 +62,7 @@ JsonString::JsonString(const __FlashStringHelper * str) {
 JsonString::JsonString(const __FlashStringHelper * str, bool forceFlash) {
     _setType(FLASH);
     _setPtr(reinterpret_cast<const char *>(str));
-    _setLength((length_t)strlen_P(reinterpret_cast<PGM_P>(str)));
+    _setLength((length_t)strlen_P(RFPSTR(str)));
 }
 
 JsonString::~JsonString() {
@@ -139,9 +139,9 @@ bool JsonString::equals(const JsonString & str) const {
 
 bool JsonString::equals(const __FlashStringHelper *str) const {
     if (isProgMem()) {
-        return strcmp_P_P(getPtr(), reinterpret_cast<PGM_P>(str)) == 0;
+        return strcmp_P_P(getPtr(), RFPSTR(str)) == 0;
     }
-    return strcmp_P(getPtr(), reinterpret_cast<PGM_P>(str)) == 0;
+    return strcmp_P(getPtr(), RFPSTR(str)) == 0;
 }
 
 void JsonString::clear() {

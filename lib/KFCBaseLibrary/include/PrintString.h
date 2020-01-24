@@ -30,11 +30,11 @@ public:
     PrintString(const __FlashStringHelper *format, ...) : PrintString() {
         va_list arg;
         va_start(arg, format);
-        vprintf_P(reinterpret_cast<PGM_P>(format), arg);
+        vprintf_P(RFPSTR(format), arg);
         va_end(arg);
     }
     PrintString(const __FlashStringHelper *format, va_list arg) : PrintString() {
-        vprintf_P(reinterpret_cast<PGM_P>(format), arg);
+        vprintf_P(RFPSTR(format), arg);
     }
 
     PrintString(double n, int digits, bool trimTrailingZeros) : PrintString() {

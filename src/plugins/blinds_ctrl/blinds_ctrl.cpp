@@ -50,12 +50,6 @@ public:
     }
     virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
 
-    static void loopMethod();
-
-#if IOT_BLINDS_CTRL_RPM_PIN
-    static void rpmIntCallback(InterruptInfo info);
-#endif
-
 #if AT_MODE_SUPPORTED
     virtual bool hasAtMode() const override;
     virtual void atModeHelpGenerator() override;
@@ -73,6 +67,13 @@ private:
     bool _isTestMode;
 #endif
 
+#endif
+
+public:
+    static void loopMethod();
+
+#if IOT_BLINDS_CTRL_RPM_PIN
+    static void rpmIntCallback(InterruptInfo info);
 #endif
 };
 

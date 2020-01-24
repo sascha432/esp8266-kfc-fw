@@ -453,7 +453,7 @@ bool FileManagerWebHandler::canHandle(AsyncWebServerRequest *request)
 
 void FileManagerWebHandler::handleRequest(AsyncWebServerRequest *request)
 {
-    auto uri = request->url().substring(strlen_P(reinterpret_cast<PGM_P>(_uri)));
+    auto uri = request->url().substring(strlen_P(RFPSTR(_uri)));
     _debug_printf_P(PSTR("file manager %s (%s)\n"), uri.c_str(), request->url().c_str())
     FileManager fm(request, web_server_is_authenticated(request), uri);
     fm.handleRequest();

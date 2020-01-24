@@ -210,7 +210,18 @@ public:
     } config_t;
     config_t config;
 
-    Config_RemoteControl() : config({2, 0, 300, 750, 250}) {
+    Config_RemoteControl() : config({5, 0, 300, 750, 250}) {
+    }
+
+    void validate() {
+        if (!config.autoSleepTime) {
+            config.autoSleepTime = 5;
+        }
+        if (!config.shortPressTime) {
+            config.shortPressTime = 300;
+            config.shortPressTime = 750;
+            config.repeatTime = 250;
+        }
     }
 };
 
@@ -264,9 +275,9 @@ struct Clock {
     int8_t animation;
     bool time_format_24h;
     uint8_t solid_color[3];
-    int8_t order[8];
     uint8_t brightness;
-    uint8_t segmentOrder;
+    // int8_t order[8];
+    // uint8_t segmentOrder;
 };
 
 typedef struct  {

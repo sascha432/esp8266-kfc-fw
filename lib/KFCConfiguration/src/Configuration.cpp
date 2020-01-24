@@ -313,7 +313,7 @@ void Configuration::setString(Handle_t handle, const String &string) {
 void Configuration::setString(Handle_t handle, const __FlashStringHelper *string) {
     uint16_t offset;
     auto &param = _getOrCreateParam(ConfigurationParameter::STRING, handle, offset);
-    param.setData(string, (uint16_t)strlen_P(reinterpret_cast<PGM_P>(string)), true);
+    param.setData(string, (uint16_t)strlen_P(RFPSTR(string)), true);
 }
 
 void Configuration::setBinary(Handle_t handle, const void *data, uint16_t length) {

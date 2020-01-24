@@ -396,7 +396,7 @@ void Serial2TcpBase::_onData(AsyncClient *client, void *data, size_t len) {
 }
 
 void Serial2TcpBase::_onDisconnect(AsyncClient *client, const __FlashStringHelper *reason) {
-    _debug_printf_P(PSTR("Serial2TcpBase::_onDisconnect(): reason: %s\n"), reinterpret_cast<PGM_P>(reason));
+    _debug_printf_P(PSTR("Serial2TcpBase::_onDisconnect(): reason: %s\n"), RFPSTR(reason));
 }
 
 #endif

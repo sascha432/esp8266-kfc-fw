@@ -203,7 +203,7 @@ void RemoteControlPlugin::deepSleepHandler(AsyncWebServerRequest *request)
 void RemoteControlPlugin::_loop()
 {
     for(uint8_t n = 0; n < IOT_REMOTE_CONTROL_BUTTON_COUNT; n++) {
-        _buttons[n]->update();
+        // _buttons[n]->update();
     }
     if (_autoSleepTimeout != (uint32_t)~0) {
         if (_isUsbPowered()) {
@@ -248,6 +248,7 @@ bool RemoteControlPlugin::_isUsbPowered() const
 void RemoteControlPlugin::_readConfig()
 {
     _config = config._H_GET(Config().remote_control);
+    _config.validate();
 }
 
 void RemoteControlPlugin::_installWebhooks()

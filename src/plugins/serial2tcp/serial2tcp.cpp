@@ -132,7 +132,7 @@ void Serial2TcpPlugin::atModeHelpGenerator() {
 
 bool Serial2TcpPlugin::atModeHandler(int8_t argc, char **argv) {
 
-    if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(S2TCPD))) {
+    if (IsCommand(PROGMEM_AT_MODE_HELP_COMMAND(S2TCPD))) {
         if (argc == 1) {
             Serial2TcpBase::_debugOutput = atoi(argv[0]);
             serial.printf_P(PSTR("+S2TCPD: debug output %s\n"), Serial2TcpBase::_debugOutput ? PSTR("enabled") : PSTR("disabled"));
@@ -143,13 +143,13 @@ bool Serial2TcpPlugin::atModeHandler(int8_t argc, char **argv) {
         }
     }
 #if IOT_DIMMER_MODULE
-    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(S2TCPF))) {
+    else if (IsCommand(PROGMEM_AT_MODE_HELP_COMMAND(S2TCPF))) {
         Serial2TcpBase::_resetAtmega = true;
         serial.println(F("+S2TCPF: reset enabled"));
         return true;
     }
 #endif
-    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(S2TCP))) {
+    else if (IsCommand(PROGMEM_AT_MODE_HELP_COMMAND(S2TCP))) {
         if (argc == 1) {
             auto enable = atoi(argv[0]);
             if (enable) {

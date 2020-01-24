@@ -53,23 +53,23 @@ void STK500v1Plugin::atModeHelpGenerator()
 
 bool STK500v1Plugin::atModeHandler(AtModeArgs &args) {
 
-    if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(STK500V1S))) {
+    if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(STK500V1S))) {
         if (args.size() >= 1 && !STK500v1Programmer::getSignature(args.get(0), _signature)) {
-            serial.println(F("+STK500V1S: Name unknown"));
+            args.print(F("Name unknown"));
         }
-        serial.printf_P(PSTR("+STK500V1S: Signature set: %02x %02x %02x\n"), _signature[0], _signature[1], _signature[2]);
+        args.printf_P(PSTR("Signature set: %02x %02x %02x"), _signature[0], _signature[1], _signature[2]);
         return true;
     }
-    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(STK500V1L))) {
-        serial.println(F("+STK500V1L: --- start ---"));
-        STK500v1Programmer::dumpLog(serial);
-        serial.println(F("+STK500V1L: --- end ---"));
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(STK500V1L))) {
+        args.print(F("+STK500V1L: --- start ---"));
+        STK500v1Programmer::dumpLog(args.getStream());
+        args.print(F("+STK500V1L: --- end ---"));
         return true;
     }
-    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(STK500V1F))) {
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(STK500V1F))) {
         if (args.requireArgs(1, 3)) {
             if (stk500v1) {
-                serial.println(F("+STK500V1F: In progress"));
+                args.print(F("In progress"));
             }
             else {
                 PGM_P portName;
@@ -94,7 +94,7 @@ bool STK500v1Plugin::atModeHandler(AtModeArgs &args) {
                         break;
                 }
 
-                serial.printf_P(PSTR("+STK500V1F: Flashing %s on %s\n"), filename.c_str(), portName);
+                args.printf_P(PSTR("Flashing %s on %s\n"), filename.c_str(), portName);
 
                 stk500v1 = new STK500v1Programmer(*serialPort);
                 stk500v1->setSignature(_signature);

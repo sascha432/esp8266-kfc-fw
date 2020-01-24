@@ -90,11 +90,12 @@ void MQTTClient::_setupClient()
         _client->setServer(host, port);
     }
 #if ASYNC_TCP_SSL_ENABLED
-    if (config.isSecureMQTT()) {
+    auto flags = config._H_GET(Config().flags);
+    if (flags.mqttMode == MQTT_MODE_SECURE) {
         _client->setSecure(true);
-        const uint8_t *fingerPrint;
-        if (*(fingerPrint = config.mqttFingerPrint())) {
-            _client->addServerFingerprint(fingerPrint); // addServerFingerprint supports multiple fingerprints
+        auto fingerPrint = config._H_STR(Config().mqtt_fingerprint);
+        if (*fingerPrint) {
+            _client->addServerFingerprint(reinterpret_cast<const uint8_t *>(fingerPrint)); // addServerFingerprint supports multiple fingerprints
         }
     }
 #endif
@@ -176,7 +177,7 @@ String MQTTClient::formatTopic(uint8_t num, const __FlashStringHelper *format, .
     va_list arg;
 
     va_start(arg, format);
-    topic.vprintf_P(reinterpret_cast<PGM_P>(format), arg);
+    topic.vprintf_P(RFPSTR(format), arg);
     va_end(arg);
     topic.replace(F("${device_name}"), getComponentName(num));
     _debug_printf_P(PSTR("MQTTClient::formatTopic(): number=%u,topic=%s\n"), num, topic.c_str());
@@ -501,7 +502,8 @@ const String MQTTClient::connectionDetailsString()
     message += ':';
     message += String(config._H_GET(Config().mqtt_port));
 #if ASYNC_TCP_SSL_ENABLED
-    if (_Config.getOptions().isSecureMQTT()) {
+    auto flags = config._H_GET(Config().flags);
+    if (flags.mqttMode == MQTT_MODE_SECURE) {
         message += F(", Secure MQTT");
     }
 #endif
@@ -703,9 +705,9 @@ void MQTTPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
     form.add<uint16_t>(F("mqtt_port"), &config._H_W_GET(Config().mqtt_port));
     form.addValidator(new FormTCallbackValidator<uint16_t>([](uint16_t value, FormField &field) {
 #if ASYNC_TCP_SSL_ENABLED
-        if (port == 0 && static_cast<FormBitValue<ConfigFlags_t, 3> *>(field.getForm().getField(F("mqtt_enabled")))->getValue() == MQTT_MODE_SECURE) {
-            port = 8883;
-            field->setValue(String(port));
+        if (value == 0 && static_cast<FormBitValue<ConfigFlags_t, 3> *>(field.getForm().getField(F("mqtt_enabled")))->getValue() == MQTT_MODE_SECURE) {
+            value = 8883;
+            field.setValue(String(value));
         } else
 #endif
         if (value == 0) {

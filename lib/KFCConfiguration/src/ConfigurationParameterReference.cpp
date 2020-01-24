@@ -78,7 +78,7 @@ void ConfigurationParameterString::set(const char * string) {
 void ConfigurationParameterString::set(const __FlashStringHelper * string) {
     auto &parameter = ConfigurationParameterReference::get();
     parameter.setDirty(true);
-    strncpy_P((char *)parameter.getDataPtr(), reinterpret_cast<PGM_P>(string), parameter.getSize());
+    strncpy_P((char *)parameter.getDataPtr(), RFPSTR(string), parameter.getSize());
 }
 
 uint16_t ConfigurationParameterString::getSize() const {

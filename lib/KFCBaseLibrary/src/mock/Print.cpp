@@ -253,7 +253,7 @@ size_t Print::printFloat(double number, uint8_t digits) {
 }
 
 size_t Print::print(const __FlashStringHelper *ifsh) {
-    PGM_P p = reinterpret_cast<PGM_P>(ifsh);
+    PGM_P p = RFPSTR(ifsh);
 
     size_t n = 0;
     while (1) {

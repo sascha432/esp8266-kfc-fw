@@ -21,6 +21,10 @@
 #warning The speed booster causes timing issues and should be deactivated
 #endif
 
+#if !NTP_CLIENT || !NTP_HAVE_CALLBACKS
+#error NTP_CLIENT=1 and NTP_HAVE_CALLBACKS=1 required
+#endif
+
 // number of digits
 #ifndef IOT_CLOCK_NUM_DIGITS
 #define IOT_CLOCK_NUM_DIGITS            4
@@ -38,6 +42,20 @@
 // pixels per segment
 #ifndef IOT_CLOCK_NUM_PIXELS
 #define IOT_CLOCK_NUM_PIXELS            2
+#endif
+
+#ifndef IOT_CLOCK_NUM_PX_PER_COLON
+#define IOT_CLOCK_NUM_PX_PER_COLON      1
+#endif
+
+// order of the segments (a-g)
+#ifndef IOT_CLOCK_SEGMENT_ORDER
+#define IOT_CLOCK_SEGMENT_ORDER         { 0, 1, 3, 4, 5, 6, 2 }
+#endif
+
+// digit order, 30=colon #1,31=#2, etc...
+#ifndef IOT_CLOCK_DIGIT_ORDER
+#define IOT_CLOCK_DIGIT_ORDER           { 0, 1, 30, 2, 3, 31, 4, 5 }
 #endif
 
 #ifndef IOT_CLOCK_BUTTON_PIN
@@ -193,7 +211,6 @@ private:
     uint8_t _colors[3];
     uint16_t _brightness;
 
-//
 public:
 #if IOT_CLOCK_BUTTON_PIN
     static void onButtonHeld(Button& btn, uint16_t duration, uint16_t repeatCount);
@@ -202,9 +219,11 @@ public:
 #endif
     static void loop();
     static void wifiCallback(uint8_t event, void *payload);
+    static void ntpCallback(time_t now);
 
+public:
     void enable(bool enable);
-    void setSyncing();
+    void setSyncing(bool sync = true);
     void setBlinkColon(BlinkColonEnum_t value);
     void setAnimation(AnimationEnum_t animation);
     Clock updateConfig();

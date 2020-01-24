@@ -167,12 +167,18 @@ public:
 
 public:
     AtModeArgs() = delete;
-    AtModeArgs(const AtModeArgs &) = delete;
+    // AtModeArgs(const AtModeArgs &) = delete;
     AtModeArgs(AtModeArgs &&) = delete;
 
     AtModeArgs(Stream &output);
     void clear();
     void setQueryMode(bool mode);
+
+    AtModeArgs(const AtModeArgs &args) : _output(args._output) {
+        _command = args._command;
+        _args = args._args;
+        _queryMode = args._queryMode;
+    }
 
     Stream &getStream() {
         return _output;
@@ -270,7 +276,7 @@ public:
         if (nullptr == (arg = get(num))) {
             return false;
         }
-        return strcasecmp_P(arg, reinterpret_cast<PGM_P>(str)) == 0;
+        return strcasecmp_P(arg, RFPSTR(str)) == 0;
     }
 
     bool equalsIgnoreCase(uint16_t num, const String &str) const {
@@ -286,7 +292,7 @@ public:
         if (nullptr == (arg = get(num))) {
             return false;
         }
-        return strcmp_P(arg, reinterpret_cast<PGM_P>(str)) == 0;
+        return strcmp_P(arg, RFPSTR(str)) == 0;
     }
 
     bool equals(uint16_t num, const String &str) const {
@@ -409,7 +415,7 @@ private:
     bool _isAnyMatchIgnoreCase(String str, const __FlashStringHelper *strings, char sep = STRINGLIST_SEPARATOR) const {
         str.trim();
         str.toLowerCase();
-        return (stringlist_find_P_P(reinterpret_cast<PGM_P>(strings), str.c_str(), sep) != -1);
+        return (stringlist_find_P_P(RFPSTR(strings), str.c_str(), sep) != -1);
     }
 
 private:

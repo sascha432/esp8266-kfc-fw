@@ -91,7 +91,7 @@ void Serial2TcpClient::_onData(AsyncClient *client, void *data, size_t len) {
 // }
 
 void Serial2TcpClient::_onDisconnect(AsyncClient *client, const __FlashStringHelper *reason) {
-    _debug_printf_P(PSTR("Serial2TcpClient::_onDisconnect(): reason: %s\n"), reinterpret_cast<PGM_P>(reason));
+    _debug_printf_P(PSTR("Serial2TcpClient::_onDisconnect(): reason: %s\n"), RFPSTR(reason));
     end();
 
     auto time = getAutoReconnect();

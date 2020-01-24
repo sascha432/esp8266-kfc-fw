@@ -15,6 +15,7 @@
 #include "blink_led_timer.h"
 #include "progmem_data.h"
 #include "./plugins/mqtt/mqtt_client.h"
+#include "./plugins/ntp/ntp_plugin.h"
 
 #if DEBUG_IOT_CLOCK
 #include <debug_helper_enable.h>
@@ -46,7 +47,8 @@ ClockPlugin::ClockPlugin() :
 }
 
 
-void ClockPlugin::getValues(JsonArray &array) {
+void ClockPlugin::getValues(JsonArray &array)
+{
     _debug_printf_P(PSTR("ClockPlugin::getValues()\n"));
 
     auto obj = &array.addObject(3);
@@ -70,7 +72,8 @@ void ClockPlugin::getValues(JsonArray &array) {
     obj->add(JJ(value), _brightness);
 }
 
-void ClockPlugin::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState) {
+void ClockPlugin::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
+{
     _debug_printf_P(PSTR("ClockPlugin::setValue(%s)\n"), id.c_str());
     if (hasValue) {
         auto val = (uint8_t)value.toInt();
@@ -162,6 +165,7 @@ void ClockPlugin::setup(PluginSetupMode_t mode)
     LoopFunctions::add(loop);
     WiFiCallbacks::add(WiFiCallbacks::CONNECTED, wifiCallback);
 
+    addTimeUpdatedCallback(ntpCallback);
     if (!IS_TIME_VALID(time(nullptr))) {
         setSyncing();
     }
@@ -201,8 +205,8 @@ void ClockPlugin::createWebUI(WebUI &webUI)
     row->addButtonGroup(F("btn_color"), F("Color"), F("Red,Green,Blue,Random"), height);
 }
 
-void ClockPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form) {
-
+void ClockPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
+{
     auto *clock = &config._H_W_GET(Config().clock); // must be a pointer
 
     form.setFormUI(F("Clock Configuration"));
@@ -390,7 +394,8 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
 #endif
 
 
-void ClockPlugin::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector) {
+void ClockPlugin::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector)
+{
     _debug_printf_P(PSTR("ClockPlugin::createAutoDiscovery(): format=%u\n"), format);
     String topic = MQTTClient::formatTopic(0, F("/"));
 
@@ -499,9 +504,17 @@ void ClockPlugin::wifiCallback(uint8_t event, void *payload)
     BlinkLEDTimer::setBlink(BlinkLEDTimer::BlinkDelayEnum_t::OFF);
 }
 
+void ClockPlugin::ntpCallback(time_t now)
+{
+    if (NTP_IS_TIMEZONE_UPDATE(now)) {
+        plugin.setSyncing(false);
+    }
+}
+
 void ClockPlugin::enable(bool enable)
 {
     _debug_printf_P(PSTR("ClockPlugin::enable(%u)\n"), enable);
+    _isSyncing = 0;
     _off();
     if (enable) {
         LoopFunctions::add(loop);
@@ -511,8 +524,9 @@ void ClockPlugin::enable(bool enable)
     }
 }
 
-void ClockPlugin::setSyncing() {
-    _isSyncing = 1;
+void ClockPlugin::setSyncing(bool sync) {
+    _isSyncing = sync;
+    _time = 0;
     _off();
 }
 
@@ -543,7 +557,7 @@ void ClockPlugin::setAnimation(AnimationEnum_t animation)
             _animationData.rainbow.movementSpeed = 30;
             _display->setCallback([this](SevenSegmentPixel::pixel_address_t addr, SevenSegmentPixel::color_t color) {
                 float factor1, factor2;
-                uint16_t ind = addr * 4.285714285714286;
+                uint16_t ind = addr * 4.285714285714286 * IOT_CLOCK_NUM_PIXELS;
                 ind += (millis() / _animationData.rainbow.movementSpeed);
                 uint8_t idx = ((ind % 120) / 40);
                 factor1 = 1.0 - ((float)(ind % 120 - (idx * 40)) / 40);
@@ -683,21 +697,14 @@ void ClockPlugin::_loop()
             _updateTimer = millis();
 
             // show syncing animation until the time is valid
-            if (IS_TIME_VALID(now)) {
-                _isSyncing = 0;
-                forceUpdate = true;
-                _off();
+            _isSyncing++;
+            if (_isSyncing > IOT_CLOCK_NUM_PIXELS * (SevenSegmentPixel::SegmentEnum_t::NUM - 1)) {
+                _isSyncing = 1;
             }
-            else {
-                _isSyncing++;
-                if (_isSyncing > IOT_CLOCK_NUM_PIXELS * (SevenSegmentPixel::SegmentEnum_t::NUM - 1)) {
-                    _isSyncing = 1;
-                }
-                for(uint8_t i = 0; i < _display->numDigits(); i++) {
-                    _display->rotate(i, _isSyncing - 1, _color);
-                }
-                _display->show();
+            for(uint8_t i = 0; i < _display->numDigits(); i++) {
+                _display->rotate(i, _isSyncing - 1, _color);
             }
+            _display->show();
         }
     }
 
@@ -752,17 +759,29 @@ Serial.printf("%04u %u\n",time,timecnt);
     }
 }
 
+static const char pgm_digit_order[] PROGMEM = IOT_CLOCK_DIGIT_ORDER;
+static const char pgm_segment_order[] PROGMEM = IOT_CLOCK_SEGMENT_ORDER;
+
 void ClockPlugin::_setSevenSegmentDisplay(Clock &cfg)
 {
     SevenSegmentPixel::pixel_address_t addr = 0;
-    for(uint8_t i = 0; i < IOT_CLOCK_NUM_DIGITS + IOT_CLOCK_NUM_COLONS; i++) {
-        if (cfg.order[i] < 0) {
-            _debug_printf_P(PSTR("ClockPlugin::_setSevenSegmentDisplay(): address=%u, colon=%u\n"), addr, abs(cfg.order[i]) - 1);
-            addr = _display->setColons(abs(cfg.order[i]) - 1, addr + 1, addr);
+    auto ptr = pgm_digit_order;
+    auto endPtr = ptr + sizeof(pgm_digit_order);
+
+    while(ptr < endPtr) {
+        int n = pgm_read_byte(ptr++);
+        if (n >= 30) {
+            n -= 30;
+            _debug_printf_P(PSTR("ClockPlugin::_setSevenSegmentDisplay(): address=%u, colon=%u\n"), addr, n);
+#if IOT_CLOCK_NUM_PX_PER_COLON == 1
+            addr = _display->setColons(n, addr + 1, addr);
+#else
+            addr = _display->setColons(n, addr, addr + IOT_CLOCK_NUM_PX_PER_COLON) * IOT_CLOCK_NUM_PX_PER_COLON;
+#endif
         }
         else {
-            _debug_printf_P(PSTR("ClockPlugin::_setSevenSegmentDisplay(): address=%u, digit=%u\n"), addr, cfg.order[i]);
-            addr = _display->setSegments(cfg.order[i], addr);
+            _debug_printf_P(PSTR("ClockPlugin::_setSevenSegmentDisplay(): address=%u, digit=%u\n"), addr, n);
+            addr = _display->setSegments(n, addr, pgm_segment_order);
         }
     }
 }

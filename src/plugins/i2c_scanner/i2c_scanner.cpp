@@ -176,6 +176,7 @@ bool I2CScannerPlugin::atModeHandler(AtModeArgs &args)
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(I2CS))) {
         if (args.requireArgs(1, 4)) {
             if (args.equalsIgnoreCase(0, F("reset"))) {
+                auto &serial = args.getStream();
                 serial.print(F("+I2CS: "));
                 config.initTwoWire(true, &serial);
             }
@@ -188,13 +189,14 @@ bool I2CScannerPlugin::atModeHandler(AtModeArgs &args)
                 if (setClockStretchLimit) {
                     Wire.setClockStretchLimit(setClockStretchLimit);
                 }
-                serial.printf_P(PSTR("+I2CS: SDA=%d, SCL=%d, speed=%ukHz, setClockStretchLimit=%u\n"), sda, scl, speed / 1000U, setClockStretchLimit);
+                args.printf_P(PSTR("SDA=%d, SCL=%d, speed=%ukHz, setClockStretchLimit=%u"), sda, scl, speed / 1000U, setClockStretchLimit);
             }
         }
         return true;
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(I2CST))) {
         if (args.requireArgs(1)) {
+            auto &serial = args.getStream();
             int address = args.toNumber(0);
             Wire.beginTransmission(address);
             serial.printf_P(PSTR("+I2CST: address=%02x"), address);
@@ -213,6 +215,7 @@ bool I2CScannerPlugin::atModeHandler(AtModeArgs &args)
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(I2CSR))) {
         if (args.requireArgs(2, 2)) {
+            auto &serial = args.getStream();
             int address = args.toNumber(0);
             int count = args.toNumber(1);
             serial.printf_P(PSTR("+I2CSR: address=%02x, count=%d, "), address, count);
@@ -239,12 +242,12 @@ bool I2CScannerPlugin::atModeHandler(AtModeArgs &args)
         return true;
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(SCANI2C))) {
-        scanPorts(serial);
+        scanPorts(args.getStream());
         return true;
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(SCAND))) {
-        serial.println(F("Scanning I2C bus for devices..."));
-        check_if_exist_I2C(serial);
+        args.print(F("Scanning I2C bus for devices..."));
+        check_if_exist_I2C(args.getStream());
         return true;
     }
 #ifdef _LIB_ADAFRUIT_INA219_
@@ -253,7 +256,7 @@ bool I2CScannerPlugin::atModeHandler(AtModeArgs &args)
             int address = args.toNumber(0, INA219_ADDRESS);
             Adafruit_INA219 ina219(address);
             ina219.begin();
-            serial.printf_P(PSTR("+I2CINA219: raw: Vbus %d, Vshunt %d, I %d, P %d\n"), ina219.getBusVoltage_raw(), ina219.getShuntVoltage_raw(), ina219.getCurrent_raw(), ina219.getPower_raw());
+            args.printf_P(PSTR("raw: Vbus %d, Vshunt %d, I %d, P %d"), ina219.getBusVoltage_raw(), ina219.getShuntVoltage_raw(), ina219.getCurrent_raw(), ina219.getPower_raw());
         }
         return true;
     }
@@ -300,6 +303,7 @@ bool I2CScannerPlugin::atModeHandler(AtModeArgs &args)
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(I2CLM75A))) {
         if (args.requireArgs(1, 1)) {
             int address = args.toNumber(0, 0x48);
+            auto &serial = args.getStream();
             serial.printf_P(PSTR("Reading LM75A at 0x%02x: "), address);
             Wire.beginTransmission(address);
             Wire.write(0x00);

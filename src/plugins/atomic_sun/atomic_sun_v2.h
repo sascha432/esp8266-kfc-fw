@@ -28,7 +28,7 @@
 #define IOT_ATOMIC_SUN_MAX_BRIGHTNESS       8333
 #endif
 
-#if !defined(IOT_SENSOR_HAVE_HLW8012 ) || IOT_SENSOR_HAVE_HLW8012 == 0
+#if !defined(IOT_SENSOR_HAVE_HLW8012) || IOT_SENSOR_HAVE_HLW8012 == 0
 // calculate power if sensor is not available
 #define IOT_ATOMIC_SUN_CALC_POWER           1
 #else

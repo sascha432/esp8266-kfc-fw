@@ -136,13 +136,13 @@ void ConfigurationParameter::setData(const uint8_t * data, uint16_t size, bool a
 
 void ConfigurationParameter::setData(const __FlashStringHelper * data, uint16_t size, bool addNulByte) {
     if (hasData()) {
-        if (compareData_P(reinterpret_cast<PGM_P>(data), size)) {
+        if (compareData_P(RFPSTR(data), size)) {
             return;
         }
         freeData();
     }
     auto ptr = allocate(size + (addNulByte ? 1 : 0));
-    memcpy_P(ptr, reinterpret_cast<PGM_P>(data), size);
+    memcpy_P(ptr, RFPSTR(data), size);
     if (addNulByte) {
         ptr[size] = 0;
     }

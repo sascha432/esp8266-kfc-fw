@@ -160,7 +160,7 @@ bool MDNSPlugin::atModeHandler(AtModeArgs &args)
         }
         return true;
     }
-    // else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(MDNSBSD))) {
+    // else if (IsCommand(PROGMEM_AT_MODE_HELP_COMMAND(MDNSBSD))) {
     //     serial.println(F("Not supported"));
     //     return true;
     // }

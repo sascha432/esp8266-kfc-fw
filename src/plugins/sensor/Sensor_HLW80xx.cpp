@@ -454,7 +454,7 @@ bool Sensor_HLW80xx::atModeHandler(AtModeArgs &args)
 
         auto interval = args.toMillis(0, 500);
         if (interval) {
-            // auto stream = &serial;
+            auto &serial = args.getStream();
             _dumpTimer.add(interval, true, [this, &serial](EventScheduler::TimerPtr) {
                 SensorPlugin::for_each<Sensor_HLW80xx>(this, Sensor_HLW80xx::_compareFunc, [&serial](Sensor_HLW80xx &sensor) {
                     sensor.dump(serial);

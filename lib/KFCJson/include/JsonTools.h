@@ -49,7 +49,7 @@ public:
         return lengthEscaped(value.c_str(), value.length());
     }
     inline static size_t lengthEscaped(const __FlashStringHelper *value) {
-        return lengthEscaped(reinterpret_cast<PGM_P>(value), strlen_P(reinterpret_cast<PGM_P>(value)), true);
+        return lengthEscaped(RFPSTR(value), strlen_P(RFPSTR(value)), true);
     }
     static size_t lengthEscaped(const char* value, size_t length, bool isProgMem = false);
     static size_t lengthEscaped(const JsonString &value);
@@ -58,7 +58,7 @@ public:
         return printToEscaped(output, value.c_str(), value.length());
     }
     inline static size_t printToEscaped(Print &output, const __FlashStringHelper *value) {
-        return printToEscaped(output, reinterpret_cast<PGM_P>(value), strlen_P(reinterpret_cast<PGM_P>(value)), true);
+        return printToEscaped(output, RFPSTR(value), strlen_P(RFPSTR(value)), true);
     }
     static size_t printToEscaped(Print &output, const char* value, size_t length, bool isProgMem = false);
     static size_t printToEscaped(Print &output, const JsonString &value);

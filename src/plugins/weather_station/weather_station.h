@@ -62,16 +62,22 @@ public:
     virtual bool hasStatus() const override;
     virtual void getStatus(Print &output) override;
 
-    virtual bool hasWebUI() const override;
-    virtual void createWebUI(WebUI &webUI) override;
-    virtual WebUIInterface *getWebUIInterface() override;
-
-    static void loop();
-    static void serialHandler(uint8_t type, const uint8_t *buffer, size_t len);
-
+// WebUIInterface
 public:
+    virtual bool hasWebUI() const override {
+        return true;
+    }
+    virtual WebUIInterface *getWebUIInterface() override {
+        return this;
+    }
+    virtual void createWebUI(WebUI &webUI) override;
+
     virtual void getValues(JsonArray &array);
     virtual void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState);
+
+public:
+    static void loop();
+    static void serialHandler(uint8_t type, const uint8_t *buffer, size_t len);
 
 public:
 #if AT_MODE_SUPPORTED

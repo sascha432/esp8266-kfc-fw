@@ -69,17 +69,19 @@ void SevenSegmentPixel::setColor(pixel_address_t num, color_t color) {
     show();
 }
 
-SevenSegmentPixel::pixel_address_t SevenSegmentPixel::setSegments(uint8_t digit, pixel_address_t offset)
+SevenSegmentPixel::pixel_address_t SevenSegmentPixel::setSegments(uint8_t digit, pixel_address_t offset, PGM_P order)
 {
+
     if (digit < _numDigits) {
         for(uint8_t i = 0; i < _numPixels; i++) {
-            _pixelAddress[SevenSegmentPixel_PIXEL_ADDRESS(digit, i, SegmentEnum_t::A)] = offset + i + (_numPixels * 0);
-            _pixelAddress[SevenSegmentPixel_PIXEL_ADDRESS(digit, i, SegmentEnum_t::B)] = offset + i + (_numPixels * 1);
-            _pixelAddress[SevenSegmentPixel_PIXEL_ADDRESS(digit, i, SegmentEnum_t::C)] = offset + i + (_numPixels * 3);
-            _pixelAddress[SevenSegmentPixel_PIXEL_ADDRESS(digit, i, SegmentEnum_t::D)] = offset + i + (_numPixels * 4);
-            _pixelAddress[SevenSegmentPixel_PIXEL_ADDRESS(digit, i, SegmentEnum_t::E)] = offset + i + (_numPixels * 5);
-            _pixelAddress[SevenSegmentPixel_PIXEL_ADDRESS(digit, i, SegmentEnum_t::F)] = offset + i + (_numPixels * 6);
-            _pixelAddress[SevenSegmentPixel_PIXEL_ADDRESS(digit, i, SegmentEnum_t::G)] = offset + i + (_numPixels * 2);
+            auto ptr = order;
+            _pixelAddress[SevenSegmentPixel_PIXEL_ADDRESS(digit, i, SegmentEnum_t::A)] = offset + i + (_numPixels * pgm_read_byte(ptr++));
+            _pixelAddress[SevenSegmentPixel_PIXEL_ADDRESS(digit, i, SegmentEnum_t::B)] = offset + i + (_numPixels * pgm_read_byte(ptr++));
+            _pixelAddress[SevenSegmentPixel_PIXEL_ADDRESS(digit, i, SegmentEnum_t::C)] = offset + i + (_numPixels * pgm_read_byte(ptr++));
+            _pixelAddress[SevenSegmentPixel_PIXEL_ADDRESS(digit, i, SegmentEnum_t::D)] = offset + i + (_numPixels * pgm_read_byte(ptr++));
+            _pixelAddress[SevenSegmentPixel_PIXEL_ADDRESS(digit, i, SegmentEnum_t::E)] = offset + i + (_numPixels * pgm_read_byte(ptr++));
+            _pixelAddress[SevenSegmentPixel_PIXEL_ADDRESS(digit, i, SegmentEnum_t::F)] = offset + i + (_numPixels * pgm_read_byte(ptr++));
+            _pixelAddress[SevenSegmentPixel_PIXEL_ADDRESS(digit, i, SegmentEnum_t::G)] = offset + i + (_numPixels * pgm_read_byte(ptr));
         }
     }
     return offset + (SegmentEnum_t::NUM * _numPixels);
@@ -120,19 +122,25 @@ void SevenSegmentPixel::setColon(uint8_t num, ColonEnum_t type, color_t color)
     num *= 2;
     if (type & ColonEnum_t::LOWER) {
         addr = _dotPixelAddress[num];
+        for(uint8_t i = 0; i < IOT_CLOCK_NUM_PX_PER_COLON; i++) {
 #if IOT_CLOCK_NEOPIXEL
-        _pixels->setPixelColor(addr, _getColor(addr, color));
+            _pixels->setPixelColor(addr, _getColor(addr, color));
 #else
-        _pixels[addr] = _getColor(addr, color);
+            _pixels[addr] = _getColor(addr, color);
 #endif
+            addr++;
+        }
     }
     if (type & ColonEnum_t::UPPER) {
         addr = _dotPixelAddress[num + 1];
+        for(uint8_t i = 0; i < IOT_CLOCK_NUM_PX_PER_COLON; i++) {
 #if IOT_CLOCK_NEOPIXEL
-        _pixels->setPixelColor(addr, _getColor(addr, color));
+            _pixels->setPixelColor(addr, _getColor(addr, color));
 #else
-        _pixels[addr] = _getColor(addr, color);
+            _pixels[addr] = _getColor(addr, color);
 #endif
+            addr++;
+        }
     }
 }
 

@@ -152,7 +152,7 @@ TableDumperColumn::Length_t TableDumperColumn::getLength() const {
         if (!_data.f_str) {
             return (Length_t)TableDumper::getInstance()->getStrNullValue().length();
         }
-        return (Length_t)strlen_P(reinterpret_cast<PGM_P>(_data.f_str));
+        return (Length_t)strlen_P(RFPSTR(_data.f_str));
     case STR_BOOL:
         return (Length_t)TableDumper::getInstance()->getStrBoolValue(_data._bool).length();
     case BOOL:

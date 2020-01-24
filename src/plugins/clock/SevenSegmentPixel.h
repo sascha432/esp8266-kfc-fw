@@ -22,7 +22,7 @@
 #define SevenSegmentPixel_SEGMENT_TO_BIT(segment)                (1 << segment)
 #define SevenSegmentPixel_COLOR(color, segment, bitset)          ((bitset & SevenSegmentPixel_SEGMENT_TO_BIT(segment)) ? color : 0)
 
-#define SevenSegmentPixel_NUM_PIXELS(digits, numPixel, colons)   ((digits * numPixel * SevenSegmentPixel::SegmentEnum_t::NUM) + (colons * 2))
+#define SevenSegmentPixel_NUM_PIXELS(digits, numPixel, colons)   ((digits * numPixel * SevenSegmentPixel::SegmentEnum_t::NUM) + (colons * IOT_CLOCK_NUM_PX_PER_COLON * 2))
 
 class SevenSegmentPixel {
 public:
@@ -53,7 +53,7 @@ public:
     SevenSegmentPixel(uint8_t numDigits, uint8_t numPixels, uint8_t numColons);
     ~SevenSegmentPixel();
 
-    pixel_address_t setSegments(uint8_t digit, pixel_address_t offset);
+    pixel_address_t setSegments(uint8_t digit, pixel_address_t offset, PGM_P order);
     pixel_address_t setColons(uint8_t num, pixel_address_t lowerAddress, pixel_address_t upperAddress);
 
     inline void show() __attribute__((always_inline)) {

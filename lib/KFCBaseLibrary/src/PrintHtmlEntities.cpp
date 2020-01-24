@@ -91,7 +91,7 @@ size_t PrintHtmlEntities::translate(const uint8_t * buffer, size_t size) {
 }
 
 size_t PrintHtmlEntities::_writeString(const __FlashStringHelper * str) {
-    PGM_P ptr = reinterpret_cast<PGM_P>(str);
+    PGM_P ptr = RFPSTR(str);
     size_t written = 0;
     uint8_t ch;
     while ((ch = pgm_read_byte(ptr++))) {

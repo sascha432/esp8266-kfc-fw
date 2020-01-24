@@ -190,16 +190,6 @@ void WeatherStationPlugin::loop()
     plugin._loop();
 }
 
-bool WeatherStationPlugin::hasWebUI() const
-{
-    return true;
-}
-
-WebUIInterface *WeatherStationPlugin::getWebUIInterface()
-{
-    return this;
-}
-
 void WeatherStationPlugin::createWebUI(WebUI &webUI)
 {
     auto row = &webUI.addRow();

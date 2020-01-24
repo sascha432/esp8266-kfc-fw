@@ -430,18 +430,18 @@ static void print_sensor_input_settings(Stream &serial, Sensor_HLW8012::SensorIn
         serial.println();
     }
     else {
-        serial.print(',');
-        serial.print(' ');
+        serial.print(F(", "));
     }
 };
 
 bool Sensor_HLW8012::atModeHandler(AtModeArgs &args)
 {
-    if (Sensor_HLW80xx::atModeHandler(serial, command, args)) {
+    if (Sensor_HLW80xx::atModeHandler(args)) {
         return true;
     }
     else {
         if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(HLWCAL))) {
+            auto &serial = args.getStream();
             if (args.requireArgs(1, 4)) {
                 char ch = args.toLowerChar(0);
                 if (args.size() >= 3) {
@@ -566,7 +566,8 @@ bool Sensor_HLW8012::atModeHandler(AtModeArgs &args)
         }
         else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(HLWCFG))) {
             if (args.isQueryMode()) {
-                serial.printf_P(PSTR("+%s="), command.c_str());
+                auto &serial = args.getStream();
+                serial.printf_P(PSTR("+%s="), args.getCommand().c_str());
                 print_sensor_input_settings(serial, _inputCF, false);
                 print_sensor_input_settings(serial, _inputCFU, false);
                 print_sensor_input_settings(serial, _inputCFI, true);

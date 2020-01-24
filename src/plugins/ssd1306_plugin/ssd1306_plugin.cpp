@@ -317,13 +317,13 @@ void SSD1306Plugin::atModeHelpGenerator()
 
 bool SSD1306Plugin::atModeHandler(AtModeArgs &args)
 {
-    if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SSDCLR))) {
+    if (IsCommand(PROGMEM_AT_MODE_HELP_COMMAND(SSDCLR))) {
         ssd1306_disable_status();
         ssd1306_clear_display();
         at_mode_print_ok(serial);
         return true;
     }
-    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SSDDF))) {
+    else if (IsCommand(PROGMEM_AT_MODE_HELP_COMMAND(SSDDF))) {
         if (args.requireArgs(1, 1)) {
             HTTPClient http;
             auto url = args.get(0);
@@ -347,7 +347,7 @@ bool SSD1306Plugin::atModeHandler(AtModeArgs &args)
         }
         return true;
     }
-    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SSDRF))) {
+    else if (IsCommand(PROGMEM_AT_MODE_HELP_COMMAND(SSDRF))) {
         if (args.requireArgs(1, 1)) {
             auto filename = args.get(0);
             auto file = SPIFFS.open(filename, fs::FileOpenMode::read);
@@ -369,7 +369,7 @@ bool SSD1306Plugin::atModeHandler(AtModeArgs &args)
         }
         return true;
     }
-    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SSDXY))) {
+    else if (IsCommand(PROGMEM_AT_MODE_HELP_COMMAND(SSDXY))) {
         if (args.requireArgs(2, 2)) {
             ssd1306_disable_status();
             uint16_t x = (uint16_t)args.toInt(0);
@@ -379,7 +379,7 @@ bool SSD1306Plugin::atModeHandler(AtModeArgs &args)
         }
         return true;
     }
-    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SSDW))) {
+    else if (IsCommand(PROGMEM_AT_MODE_HELP_COMMAND(SSDW))) {
         ssd1306_disable_status();
         for(auto line: args.getArgs()) {
             Display.println(line);
@@ -388,7 +388,7 @@ bool SSD1306Plugin::atModeHandler(AtModeArgs &args)
         at_mode_print_ok(serial);
         return true;
     }
-    else if (String_equalsIgnoreCase(command, PROGMEM_AT_MODE_HELP_COMMAND(SSDST))) {
+    else if (IsCommand(PROGMEM_AT_MODE_HELP_COMMAND(SSDST))) {
         ssd1306_enable_status();
         at_mode_print_ok(serial);
         return true;

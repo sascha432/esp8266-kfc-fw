@@ -44,6 +44,10 @@ It also offers a RTC memory mananger to store data identified by an unqiue id
 
 Library to handle configurations stored in the EEPROM, read on demand to save memory, manage changes in structure automatically
 
+### KFCRestApi
+
+Library to handle RESTful APIs using asyncHTTPrequest/KFCJson
+
 ## Plugins
 
 ### AT Mode

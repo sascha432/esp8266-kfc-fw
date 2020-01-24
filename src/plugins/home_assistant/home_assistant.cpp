@@ -4,12 +4,6 @@
 
 #if HOME_ASSISTANT_INTEGRATION
 
-#include <asyncHTTPrequest.h>
-#include <JsonCallbackReader.h>
-#include <EventScheduler.h>
-#include <WiFiCallbacks.h>
-#include <BufferStream.h>
-#include <HeapStream.h>
 #include <KFCForms.h>
 #include "kfc_fw_config.h"
 #include "home_assistant.h"
@@ -37,114 +31,70 @@ void HassPlugin::getStatus(Print &output)
     }
 }
 
+#if AT_MODE_SUPPORTED
 
-void HassPlugin::_onData(void *ptr, asyncHTTPrequest *request, size_t available)
+#include "at_mode.h"
+
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(HASSRS, "HASSRS", "Home assistant read states");
+
+void HassPlugin::atModeHelpGenerator()
 {
-    auto &httpRequest = *reinterpret_cast<HttpRequest *>(ptr);
-    uint8_t buffer[64];
-    size_t len;
-    HeapStream stream(buffer);
-    httpRequest.setStream(&stream);
-    while((len = request->responseRead(buffer, sizeof(buffer))) > 0) {
-        stream.setLength(len);
-        if (!httpRequest.parseStream()) {
-            request->abort();
-            request->onData(nullptr);
-            break;
-        }
-    }
+    auto name = getName();
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(HASSRS), name);
 }
 
-void HassPlugin::_onReadyStateChange(void *ptr, asyncHTTPrequest *request, int readyState)
+bool HassPlugin::atModeHandler(AtModeArgs &args)
 {
-    auto httpRequestPtr = reinterpret_cast<HttpRequest *>(ptr);
-    auto &httpRequest = *httpRequestPtr;
-
-    if (readyState == 4) {
-        int httpCode;
-
-        request->onData(nullptr); // disable callback, if any data is left, onPoll() will call it again
-        if ((httpCode = request->responseHTTPcode()) == 200) {
-            // read rest of the data that was not processed by onData()
-            if (request->available()) {
-                _onData(ptr, request, request->available());
+    if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(HASSRS))) {
+        args.print(F("requesting states"));
+        _createRestApiCall(F("states"), [args](int16_t code, KFCRestAPI::HttpRequest &request) mutable {
+            if (code == 200) {
+                args.print(F("Hass states retrieved"));
             }
-            httpRequest.finish(200);
-
-        } else {
-
-            String message;
-            int code = 0;
-
-            // read response
-            uint8_t buffer[64];
-            HeapStream stream(buffer);
-            httpRequest.setStream(&stream);
-            httpRequest.parseStream();
-
-            size_t len;
-            while((len = request->responseRead(buffer, sizeof(buffer))) > 0) {
-                stream.setLength(len);
-                if (!httpRequest.parseStream()) {
-                    break;
-                }
+            else {
+                args.printf_P(PSTR("HTTP error code %d, message %s"), code, request.getMessage().c_str());
             }
-
-            _debug_printf_P(PSTR("HassPlugin::_onReadyStateChange(), http code=%d, code=%d, message=%s\n"), httpCode, code, message.c_str());
-            httpRequest.finish(httpCode);
-        }
-
-        // delete object with a delay and inside the main loop, otherwise the program crashes in random places
-        Scheduler.addTimer(100, false, [httpRequestPtr](EventScheduler::TimerPtr timer) {
-            HassPlugin::_removeHttpRequest(httpRequestPtr);
         });
+        return true;
     }
+    return false;
 }
 
-void HassPlugin::_removeHttpRequest(HttpRequest *httpRequestPtr)
+#endif
+
+void HassPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form) {
+
+}
+
+void HassPlugin::createWebUI(WebUI &webUI)
 {
-    plugin._requests.erase(std::find(plugin._requests.begin(), plugin._requests.end(), httpRequestPtr));
-    delete httpRequestPtr;
+    auto row = &webUI.addRow();
+    row->setExtraClass(JJ(title));
+    row->addGroup(F("Home Assistant"), false);
+
+    // row = &webUI.addRow();
 }
 
-void HassPlugin::_createRestApiCall(HttpRequest::Callback callback)
+void HassPlugin::getValues(JsonArray &array)
 {
-    auto httpRequestPtr = new HttpRequest(callback);
-    _requests.emplace_back(httpRequestPtr);
-    auto &request = httpRequestPtr->getRequest();
 
-    request.onData(_onData, httpRequestPtr);
-    request.onReadyStateChange(_onReadyStateChange, httpRequestPtr);
-    request.setTimeout(15);
 }
 
-// 	_httpClient->setTimeout(timeout);
+void HassPlugin::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
+{
 
-//     _debug_printf_P(PSTR("WeatherStationPlugin::_httpRequest() HTTP request=%s\n"), url.c_str());
+}
 
-// 	if (!_httpClient->open("GET", url.c_str()) || !_httpClient->send()) {
-//         delete _httpClient;
-//         delete jsonReader;
-//         _httpClient = nullptr;
+void HassPlugin::getRestUrl(String &url) const
+{
+    url = Config_HomeAssistant::getApiEndpoint();
+}
 
-//         _debug_printf_P(PSTR("WeatherStationPlugin::_httpRequest() client error, url=%s\n"), url.c_str());
-//         _weatherError = F("Client error");
-//         finishedCallback(false);
+void HassPlugin::getBearerToken(String &token) const
+{
+    token = Config_HomeAssistant::getApiToken();
+}
 
-//         Logger_error(F("Weather Station: HTTP request failed, %s, url = %s"), _weatherError.c_str(), url.c_str());
-//     }
-// }
-
-
-
-// void home_assistant_wifi_connected(uint8_t event, void *) {
-//     // _debug_printf_P(PSTR("Retrieving states from home assistant\n"));
-//     // home_assistant_read_states();
-// }
-
-// void home_assistant_setup() {
-//     WiFiCallbacks::add(WiFiCallbacks::EventEnum_t::CONNECTED, home_assistant_wifi_connected);
-// }
 
 // void home_assistant_rest_call(const String &endPoint, const String &body, JsonReaderCallback jsonCallback, HomeAssistantErrorCallback errorCallback, int timeout) {
 
@@ -235,21 +185,6 @@ void HassPlugin::_createRestApiCall(HttpRequest::Callback callback)
 
 //     form.finalize();
 
-// }
-// PROGMEM_PLUGIN_CONFIG_DEF(
-// /* pluginName               */ hass,
-// /* setupPriority            */ 75,
-// /* allowSafeMode            */ false,
-// /* autoSetupWakeUp          */ false,
-// /* rtcMemoryId              */ 0,
-// /* setupPlugin              */ home_assistant_setup,
-// /* statusTemplate           */ home_assistant_get_status,
-// /* configureForm            */ home_assistant_create_settings_form,
-// /* reconfigurePlugin        */ nullptr,
-// /* reconfigure Dependencies */ nullptr,
-// /* prepareDeepSleep         */ nullptr,
-// /* atModeCommandHandler     */ nullptr
-// );
 
 /**
 curl -X GET -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJiMmNlNjkwZDBhMTY0ZDI2YWY4MWUxYzJiNjgzMjM3NCIsImlhdCI6MTU0ODY0MzczMywiZXhwIjoxODY0MDAzNzMzfQ.h1287xhv5nY5Fvu2GMSzIMnP51IsyFtKg9RFCS8qMBQ"     -H "Content-Type: application/json"     https://smart-home.d0g3.space:8123/api/error/all -v

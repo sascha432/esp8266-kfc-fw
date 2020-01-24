@@ -7,52 +7,16 @@
 #pragma once
 
 #include <Arduino_compat.h>
-#include <JsonCallbackReader.h>
-#include "RestApiJsonReader.h"
+#include "KFCRestApi.h"
+#include "progmem_data.h"
 #include "plugins.h"
 
 #ifndef DEBUG_HOME_ASSISTANT
 #define DEBUG_HOME_ASSISTANT                            1
 #endif
 
-class asyncHTTPrequest;
-
-class HassPlugin : public PluginComponent {
-public:
-    class HttpRequest {
-    public:
-        typedef std::function<void(uint16_t status, HttpRequest *request)> Callback;
-
-        HttpRequest(Callback callback) : _callback(callback) {
-            _json.initParser();
-            _request = new asyncHTTPrequest();
-        }
-        ~HttpRequest() {
-            delete _request;
-        }
-
-        void setStream(Stream *stream) {
-            _json.setStream(stream);
-        }
-
-        bool parseStream() {
-            return _json.parseStream();
-        }
-
-        asyncHTTPrequest &getRequest() {
-            return *_request;
-        }
-
-        void finish(uint16_t status) {
-            _callback(status, this);
-        }
-
-    private:
-        asyncHTTPrequest *_request;
-        RestApiJsonReader _json;
-        Callback _callback;
-    };
-
+class HassPlugin : public PluginComponent, public WebUIInterface, public KFCRestAPI {
+// PluginComponent
 public:
     HassPlugin() {
         REGISTER_PLUGIN(this, "HassPlugin");
@@ -67,18 +31,37 @@ public:
     }
     virtual void getStatus(Print &output) override;
 
+    virtual PGM_P getConfigureForm() const override {
+        return getName();
+    }
+    virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
+
+#if AT_MODE_SUPPORTED
+    // at mode command handler
+    virtual bool hasAtMode() const override {
+        return true;
+    }
+    virtual void atModeHelpGenerator() override;
+    virtual bool atModeHandler(AtModeArgs &args) override;
+#endif
+
+// WebUIInterface
 public:
-    typedef std::vector<HttpRequest *> HttpRequestVector;
+    virtual bool hasWebUI() const override {
+        return true;
+    }
+    virtual void createWebUI(WebUI &webUI) override;
+    virtual WebUIInterface *getWebUIInterface() override {
+        return this;
+    }
 
-    static void _onData(void *ptr, asyncHTTPrequest *request, size_t available);
-    static void _onReadyStateChange(void *, asyncHTTPrequest *request, int readyState);
-    static void _removeHttpRequest(HttpRequest *httpRequestPtr);
+    virtual void getValues(JsonArray &array);
+    virtual void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState);
 
-private:
-    void _createRestApiCall(HttpRequest::Callback callback);
-
-private:
-    HttpRequestVector _requests;
+// KFCRestApi
+public:
+    virtual void getRestUrl(String &url) const;
+    virtual void getBearerToken(String &token) const;
 };
 
 #endif

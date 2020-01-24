@@ -36,7 +36,7 @@ void ntp_client_prepare_deep_sleep(uint32_t time);
 
 #if NTP_HAVE_CALLBACKS
 
-#define NTP_IS_TIMEZONE_UPDATE(now)             (now == 0)
+#define NTP_IS_TIMEZONE_UPDATE(now)             (now == -1)
 
 typedef std::function<void(time_t now)> TimeUpdatedCallback_t;
 

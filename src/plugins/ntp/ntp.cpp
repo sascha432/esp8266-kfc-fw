@@ -239,7 +239,7 @@ void TimezoneData::_callback(bool status, const String message, time_t zoneEnd)
 
 #if NTP_HAVE_CALLBACKS
         for(auto callback: _callbacks) {
-            callback(0);
+            callback(-1);
         }
 #endif
 
@@ -331,7 +331,7 @@ void TimezoneData::updateNtpCallback()
 #endif
 #if NTP_HAVE_CALLBACKS
     for(auto callback: _callbacks) {
-        callback(now);
+        callback(time(nullptr));
     }
 #endif
 }

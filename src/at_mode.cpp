@@ -793,7 +793,7 @@ void at_mode_serial_handle_event(String &commandString)
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CAT))) {
                 if (args.requireArgs(1, 1)) {
                     auto filename = args.get(0);
-                    File file = SPIFFS.open(filename, fs::FileOpenMode::read);
+                    auto file = SPIFFSWrapper::open(filename, fs::FileOpenMode::read);
                     if (file) {
                         Scheduler.addTimer(10, true, [&output, file](EventScheduler::TimerPtr timer) mutable {
                             char buf[256];

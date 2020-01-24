@@ -19,6 +19,9 @@
 #include <ProgmemStream.h>
 #include "progmem_data.h"
 #include "fs_mapping.h"
+#if LOGGER
+#include "logger.h"
+#endif
 
 #undef DEBUG_FS_MAPPING
 #define DEBUG_FS_MAPPING 0
@@ -264,6 +267,12 @@ FSMappingDirImpl::FSMappingDirImpl(FS &fs, const String &dirName) : _fs(fs), _di
 {
     append_slash(_dirName);
     _debug_printf_P(PSTR("FSMappingDirImpl::FSMappingDirImpl(): dirName=%s\n"), _dirName.c_str());
+#if LOGGER
+    if (_dirName.equals(FSPGM(slash))) {
+        _logger.getLogs(_logs);
+        _logsIterator = _logs.begin();
+    }
+#endif
     rewind();
 }
 
@@ -359,6 +368,18 @@ bool FSMappingDirImpl::next()
             }
         }
     } while (!isValid);
+
+#if LOGGER
+    if (!isValid) {
+        _isValid = INVALID;
+        while(_logsIterator != _logs.end()) {
+            result = true;
+            _fileName = _dirName + *_logsIterator;
+            _isValid = FILE;
+            ++_logsIterator;
+        }
+    }
+#endif
 
     _debug_printf(PSTR("next() = %s %d %c\n"), _fileName.c_str(), result, isFile() ? 'F' : 'D');
     return result;

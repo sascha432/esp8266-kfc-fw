@@ -19,6 +19,12 @@
 #define Logger_access       _logger.access
 #define Logger_debug        _logger.debug
 
+PROGMEM_STRING_DECL(log_file_messages);
+PROGMEM_STRING_DECL(log_file_access);
+#if DEBUG
+PROGMEM_STRING_DECL(log_file_debug);
+#endif
+
 class Logger;
 class SyslogStream;
 
@@ -59,6 +65,14 @@ public:
     void setSyslog(SyslogStream *syslog);
 #endif
 
+    File openLog(const __FlashStringHelper *filename);
+    File openMessagesLog();
+    File openAccessLog();
+#if DEBUG
+    File openDebugLog();
+#endif
+    void getLogs(StringVector &logs);
+
 protected:
     void writeLog(LogLevel logLevel, const char *message, va_list arg);
     inline void writeLog(LogLevel logLevel, const String &message, va_list arg) {
@@ -69,12 +83,15 @@ protected:
     }
 
 private:
-    const String getLogFilename(LogLevel logLevel);
-    bool openLog(LogLevel logLevel);
-    void closeLog();
+    const String _getLogFilename(LogLevel logLevel);
+    bool _openLog(LogLevel logLevel, bool write = true);
+    void _closeLog();
 
 private:
     File _file;
+    size_t _messagesLogSize;
+    size_t _accessLogSize;
+    size_t _debugLogSize;
     LogLevel _logLevel;
 #if SYSLOG
     SyslogStream *_syslog;

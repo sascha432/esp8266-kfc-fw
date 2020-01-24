@@ -95,7 +95,7 @@ public:
         return findEntry(path, strcmp);
     }
     const FSMappingEntry *findEntry(const __FlashStringHelper *path) const {
-        return findEntry(reinterpret_cast<PGM_P>(path), __strcmp_P);
+        return findEntry(RFPSTR(path), __strcmp_P);
     }
 
     const char *getPath(const FSMappingEntry *entry) const {
@@ -254,4 +254,8 @@ private:
     const FSMappingEntry *_iterator;
     const FSMappingEntry *_end;
     StringVector _dirs;
+#if LOGGER
+    StringVector _logs;
+    StringVector::iterator _logsIterator;
+#endif
 };

@@ -157,3 +157,8 @@ namespace fs {
 #ifndef __STRINGIFY
 #define __STRINGIFY(s)                  #s
 #endif
+
+// reinterpret_cast FPSTR
+#ifndef RFPSTR
+#define RFPSTR(str)                      reinterpret_cast<PGM_P>(str)
+#endif

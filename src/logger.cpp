@@ -17,14 +17,35 @@
 #include <debug_helper_disable.h>
 #endif
 
+PROGMEM_STRING_DEF(log_file_messages, "log://messages");
+PROGMEM_STRING_DEF(log_file_access, "log://access");
+#if DEBUG
+PROGMEM_STRING_DEF(log_file_debug, "log://debug");
+#endif
+
 Logger _logger;
 
 Logger::Logger()
 {
-    _logLevel = LOGLEVEL_DEBUG;
+    _logLevel = LOGLEVEL_ACCESS;
 #if SYSLOG
     _syslog = nullptr;
 #endif
+    _messagesLogSize = 0;
+    _accessLogSize = 0;
+    _debugLogSize = 0;
+    if (_openLog(LOGLEVEL_ERROR, false)) {
+        _messagesLogSize = _file.size();
+        _closeLog();
+    }
+    if (_openLog(LOGLEVEL_ACCESS, false)) {
+        _accessLogSize = _file.size();
+        _closeLog();
+    }
+    if (_openLog(LOGLEVEL_DEBUG, false)) {
+        _debugLogSize = _file.size();
+        _closeLog();
+    }
 }
 
 void Logger::error(const __FlashStringHelper *message, ...)
@@ -170,11 +191,65 @@ void Logger::setSyslog(SyslogStream * syslog)
 }
 #endif
 
+File Logger::openLog(const __FlashStringHelper *filename)
+{
+    String logFile;
+    if (!strcmp_P_P(RFPSTR(filename), SPGM(log_file_messages))) {
+        logFile = _getLogFilename(LOGLEVEL_ERROR);
+    }
+    else if (!strcmp_P_P(RFPSTR(filename), SPGM(log_file_messages))) {
+        logFile = _getLogFilename(LOGLEVEL_ERROR);
+    }
+    else if (!strcmp_P_P(RFPSTR(filename), SPGM(log_file_messages))) {
+        logFile = _getLogFilename(LOGLEVEL_ERROR);
+    }
+    else {
+        return File();
+    }
+}
+
+File Logger::openMessagesLog()
+{
+    _openLog(LOGLEVEL_ERROR, false);
+    return _file;
+}
+
+File Logger::openDebugLog()
+{
+    _openLog(LOGLEVEL_DEBUG, false);
+    return _file;
+}
+
+#if DEBUG
+
+File Logger::openAccessLog()
+{
+    _openLog(LOGLEVEL_ACCESS, false);
+    return _file;
+}
+
+#endif
+
+void Logger::getLogs(StringVector &logs)
+{
+    logs.clear();
+    if (LOGLEVEL_ERROR >= _logLevel) {
+        logs.emplace_back(std::move(String(FSPGM(log_file_messages))));
+    }
+    if (LOGLEVEL_ACCESS >= _logLevel) {
+        logs.emplace_back(std::move(String(FSPGM(log_file_access))));
+    }
+#if DEBUG
+    if (LOGLEVEL_DEBUG >= _logLevel) {
+        logs.emplace_back(std::move(String(FSPGM(log_file_debug))));
+    }
+#endif
+}
+
 void Logger::writeLog(LogLevel logLevel, const char *message, va_list arg)
 {
-
 // Serial.printf("|%s|\n",message);
-    if (logLevel > _logLevel) {
+    if (logLevel >= _logLevel) {
         return;
     }
 
@@ -182,7 +257,7 @@ void Logger::writeLog(LogLevel logLevel, const char *message, va_list arg)
     char temp[128];
     char* buffer = temp;
     const String logLevelStr = getLogLevelAsString(logLevel);
-    bool isOpen = this->openLog(logLevel);
+    bool isOpen = _openLog(logLevel);
     struct tm *tm;
 
     tm = timezone_localtime(&now);
@@ -190,7 +265,7 @@ void Logger::writeLog(LogLevel logLevel, const char *message, va_list arg)
     if (isOpen) {
         _file.write((const uint8_t *)temp, strlen(temp));
     } else {
-        _debug_printf_P(PSTR("Cannot append to log file %s\n"), getLogFilename(logLevel).c_str());
+        _debug_printf_P(PSTR("Cannot append to log file %s\n"), _getLogFilename(logLevel).c_str());
     }
 
     size_t len;
@@ -227,7 +302,7 @@ void Logger::writeLog(LogLevel logLevel, const char *message, va_list arg)
         _file.write('\n');
     }
 
-    this->closeLog();
+    _closeLog();
 
 #if SYSLOG
     if (_syslog) {
@@ -269,7 +344,7 @@ void Logger::writeLog(LogLevel logLevel, const char *message, va_list arg)
     }
 }
 
-const String Logger::getLogFilename(LogLevel logLevel)
+const String Logger::_getLogFilename(LogLevel logLevel)
 {
     switch(logLevel) {
         case LOGLEVEL_DEBUG:
@@ -281,25 +356,37 @@ const String Logger::getLogFilename(LogLevel logLevel)
     }
 }
 
-bool Logger::openLog(LogLevel logLevel)
+bool Logger::_openLog(LogLevel logLevel, bool write)
 {
-    auto fileName = this->getLogFilename(logLevel);
-    _file = SPIFFS.open(fileName, SPIFFS.exists(fileName) ? fs::FileOpenMode::append : fs::FileOpenMode::write);
+    if (_file) {
+        _closeLog();
+    }
+#if DEBUG_LOGGER
+    DEBUG_OUTPUT.printf_P(PSTR("Logger::openLog(): open(): logLevel=%u\n"), logLevel);
+#endif
+    auto fileName = _getLogFilename(logLevel);
+    _file = SPIFFS.open(fileName, write ? (SPIFFS.exists(fileName) ? fs::FileOpenMode::append : fs::FileOpenMode::write) : fs::FileOpenMode::read);
     return (bool)_file;
 }
 
-void Logger::closeLog()
+void Logger::_closeLog()
 {
 #if LOGGER_MAX_FILESIZE
     if (_file.size() >= LOGGER_MAX_FILESIZE) {
         String filename = _file.name();
+        String backFilename = filename;
+        backFilename += F(".bak");
+#if DEBUG_LOGGER
+        DEBUG_OUTPUT.printf_P(PSTR("Logger::closeLog(): renaming %s to %s\n"), filename.c_str(), backFilename.c_str());
+#endif
         _file.close();
-        String backFilename = filename + F(".bak");
-        _debug_printf_P(PSTR("renaming %s to %s\n"), filename.c_str(), backFilename.c_str());
         SPIFFS.remove(backFilename);
         SPIFFS.rename(filename, backFilename);
         return;
     }
+#endif
+#if DEBUG_LOGGER
+        DEBUG_OUTPUT.printf_P(PSTR("Logger::closeLog(): close(): filename=%s\n"), _file.name());
 #endif
     _file.close();
 }

@@ -341,7 +341,10 @@ void setup() {
         setup_plugins(resetDetector.hasWakeUpDetected() ? PluginComponent::PLUGIN_SETUP_AUTO_WAKE_UP : PluginComponent::PLUGIN_SETUP_DEFAULT);
 
 #if SPIFFS_SUPPORT
-        Scheduler.addTimer(120 * 1000UL, false, remove_crash_counter); // remove file after 2min.
+        Scheduler.addTimer(180 * 1000UL, false, [](EventScheduler::TimerPtr timer) {
+            remove_crash_counter(timer);
+            resetDetector.clearCounter();
+        }); // remove file and reset counters after 3min.
 #endif
 
     }

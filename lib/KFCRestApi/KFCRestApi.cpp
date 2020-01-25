@@ -5,7 +5,6 @@
 #if HAVE_KFC_RESTAPI
 
 #include <EventScheduler.h>
-#include <asyncHTTPrequest.h>
 #include <PrintString.h>
 #include "KFCRestApi.h"
 #include "progmem_data.h"

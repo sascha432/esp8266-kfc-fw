@@ -14,10 +14,18 @@
 #include "RestApiJsonReader.h"
 
 #ifndef DEBUG_KFC_REST_API
-#define DEBUG_KFC_REST_API                              1
+#define DEBUG_KFC_REST_API                                  1
 #endif
 
-class asyncHTTPrequest;
+#if _WIN32 || _WIN64
+#define KFC_REST_APITIMEZONE_USE_HTTP_CLIENT			    1
+#elif defined(ESP32)
+#define KFC_REST_API_USE_HTTP_CLIENT				        1
+#else
+#define KFC_REST_API_USE_HTTP_CLIENT				        0
+#include <asyncHTTPrequest.h>
+#endif
+
 
 class KFCRestAPI {
 public:

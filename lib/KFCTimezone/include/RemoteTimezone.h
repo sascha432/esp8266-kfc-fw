@@ -6,6 +6,7 @@
 
 #include <Arduino_compat.h>
 #include <functional>
+#include <KFCRestApi.h> // TODO change request to restapi class
 
 #ifndef DEBUG_REMOTE_TIMEZONE
 #define DEBUG_REMOTE_TIMEZONE 					0

@@ -212,9 +212,158 @@ public:
     }
 };
 
+#include <FixedCircularBuffer.h>
+
+typedef FixedCircularBuffer<int, 5> CBuf;
+typedef FixedCircularBuffer<short, 3> CBuf2;
+CBuf* aaaa = new CBuf();
+CBuf &b=*aaaa;
+
+template<class T, size_t S>
+void dis_b(FixedCircularBuffer<T,S> &b) {
+    //auto iterator = b.begin();
+    //while (iterator != b.end()) {
+    //    Serial.printf("%u ", *iterator);
+    //    ++iterator;
+    //}
+    //Serial.println();
+    
+    //Serial.printf("%u: %d %d %d - ", 
+    //    b.getCount(), CBuf::distance(b.begin(), b.end() - 1),
+    //    b.front(), b.back()
+    //);
+
+    auto iterator = b.begin();
+    Serial.print("> ");
+    while (iterator != b.end()) {
+        Serial.printf("%u ", *iterator);
+        ++iterator;
+    }
+    Serial.println();
+    Serial.print("<");
+    iterator = b.end();
+    if (iterator != b.begin()) {
+        do {
+            --iterator;
+            Serial.printf("%u ", *iterator);
+        } while (iterator != b.begin());
+    }
+    Serial.println();
+
+}
+
+int n = 1;
+
+void add(CBuf& b) {
+    Serial.printf("add %u: ", n);
+    b.push_back(n++);
+    Serial.printf("distance %d\n", b.distance(b.begin(), b.end()));
+}
+
+#include <PrintString.h>
+
 int main()
 {
     ESP._enableMSVCMemdebug();
+
+ /*   PrintString s;
+    double start = 0.00015;
+    double tmp = start;
+    s = String(); s.print(tmp, 3, true); Serial.println(s); tmp *= 10;
+    s = String(); s.print(tmp, 3, true); Serial.println(s); tmp *= 10;
+    s = String(); s.print(tmp, 3, true); Serial.println(s); tmp *= 10;
+    s = String(); s.print(tmp, 3, true); Serial.println(s); tmp *= 10;
+    s = String(); s.print(tmp, 3, true); Serial.println(s); tmp *= 10;
+    s = String(); s.print(tmp, 3, true); Serial.println(s); tmp *= 10;
+    s = String(); s.print(tmp, 3, true); Serial.println(s); tmp *= 10;
+    tmp += 0.123456789;
+    s = String(); s.print(tmp, 3, true); Serial.println(s); tmp *= 10;
+    s = String(); s.print(tmp, 4, true); Serial.println(s); tmp *= 10;
+
+    s = String(); s.print(tmp, 200, true); Serial.println(s); tmp *= 10;
+
+    tmp = 5.5;
+    s = String(); s.print(tmp, 0, true); Serial.println(s);
+    s = String(); s.print(tmp, 1, true); Serial.println(s);
+    s = String(); s.print(tmp, 2, true); Serial.println(s);
+
+    tmp = 5.0;
+    s = String(); s.print(tmp, 0, true); Serial.println(s);
+    s = String(); s.print(tmp, 1, true); Serial.println(s);
+    s = String(); s.print(tmp, 2, true); Serial.println(s);
+
+
+    return 0;*/
+
+    auto it = b.begin();
+
+    //add(b);
+    //add(b);
+    //b.pop_front();
+    //add(b);
+    //add(b);
+    //b.pop_front();
+    //add(b);
+    //add(b);
+    //b.pop_front();
+    //add(b);
+    //add(b);
+    //b.pop_front();
+    //add(b);
+    //add(b);
+    //b.pop_front();
+
+    //auto val = b.pop_front();
+    //Serial.printf("front=%u end=%u\n", val, b.begin() == b.end());
+    //val = b.pop_front();
+    //Serial.printf("front=%u end=%u\n", val, b.begin() == b.end());
+
+    for (int i = 0; i < 13; i++) {
+        dis_b(b);
+        add(b);
+        Serial.printf("size %u\n", b.size());
+    }
+
+    CBuf2 test2;
+    b.copy(test2, b.begin(), b.end());
+
+    CBuf aa = b.slice(b.begin(), b.end());
+    dis_b(aa);
+    aa.shrink(aa.end() - 2, aa.end());
+    aa.push_back(99);
+    //aa.shrink(aa.end() - 2, aa.end() - 1);
+    //aa.shrink(aa.begin(), aa.end());
+    dis_b(aa);
+    //dis_b(aa);
+    return 0;
+
+    Serial.println("b");
+    dis_b(b);
+    Serial.println("test2");
+    dis_b(test2);
+    return 0;
+
+    while (b.begin() != b.end()) {
+        Serial.printf("%u\n", b.pop_front());        
+        Serial.printf("size %u\n", b.size());
+    }
+
+    //b.pop_front();
+//    b.pop_front();
+    if (b.size() >= 2) {
+
+
+        CBuf a = b.slice(b.begin() + 1, b.end());
+        b = std::move(b.slice(b.end() - 1, b.end()));
+
+        dis_b(a);
+        dis_b(b);
+
+    }
+
+    delete aaaa;
+
+    return 0;
 
 #if 1
 

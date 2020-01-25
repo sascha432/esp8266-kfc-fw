@@ -65,7 +65,7 @@ public:
     void setSyslog(SyslogStream *syslog);
 #endif
 
-    File openLog(const __FlashStringHelper *filename);
+    File openLog(const char *filename);
     File openMessagesLog();
     File openAccessLog();
 #if DEBUG

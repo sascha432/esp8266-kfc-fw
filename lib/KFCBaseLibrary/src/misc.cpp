@@ -446,9 +446,10 @@ const char *inet_ntoa_s(char *dst, size_t size, uint32_t ip) {
     return dst;
 }
 
-uint16_t tokenizer(char *ptr, TokenizerArgs &args, bool hasCommand)
+uint16_t tokenizer(char *ptr, TokenizerArgs &args, bool hasCommand, char **nextCommand)
 {
     uint16_t argc = 0;
+    *nextCommand = nullptr;
     if (hasCommand) {
         while(*ptr && *ptr != '=' && *ptr != ' ') {     // find end of command
             ptr++;
@@ -485,6 +486,11 @@ uint16_t tokenizer(char *ptr, TokenizerArgs &args, bool hasCommand)
                         }
                         *(ptr - 1) = 0; // end quote, find next token
                         while (*ptr && *ptr != ',') {
+                            if (*ptr == ';') {
+                                *ptr = 0;
+                                *nextCommand = ptr + 1;
+                                break;
+                            }
                             ptr++;
                         }
                         break;
@@ -507,6 +513,11 @@ uint16_t tokenizer(char *ptr, TokenizerArgs &args, bool hasCommand)
             }
             else {
                 while (*ptr && *ptr != ',') {
+                    if (*ptr == ';') {
+                        *ptr = 0;
+                        *nextCommand = ptr + 1;
+                        break;
+                    }
                     ptr++;
                 }
                 if (!*ptr) {

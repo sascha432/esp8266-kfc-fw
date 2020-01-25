@@ -228,6 +228,15 @@ const File SPIFFSWrapper::open(Dir dir, const char *mode)
 
 const File SPIFFSWrapper::open(const char *path, const char *mode)
 {
+#if LOGGER
+    auto ptr = path;
+    if (*ptr == '/') {
+        ptr++;
+    }
+    if (!strncmp_P(ptr, PSTR("log:"), 4)) {
+        return _logger.openLog(ptr);
+    }
+#endif
     auto &map = Mappings::getInstance();
     auto entry = map.findEntry(path);
     if (entry) {
@@ -370,9 +379,9 @@ bool FSMappingDirImpl::next()
     } while (!isValid);
 
 #if LOGGER
-    if (!isValid) {
+    if (!result) {
         _isValid = INVALID;
-        while(_logsIterator != _logs.end()) {
+        if(_logsIterator != _logs.end()) {
             result = true;
             _fileName = _dirName + *_logsIterator;
             _isValid = FILE;

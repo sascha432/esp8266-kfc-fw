@@ -79,8 +79,9 @@ extern const String _sharedEmptyString;
 String formatBytes(size_t bytes);
 String formatTime(unsigned long seconds, bool days_if_not_zero = false);
 
-template<class T>
-String implode(const __FlashStringHelper *glue, std::vector<T> *pieces) {
+// G/T be any of char, const __FlashStringHelper *, const char *, String
+template<class G, class T>
+String implode(G glue, std::vector<T> *pieces) {
     String tmp;
     if (pieces && !pieces->empty()) {
         auto iterator = pieces->begin();
@@ -232,14 +233,15 @@ private:
 
 // parse arguments into tokens
 // return value == maxArgs might indicate that arguments have been truncated
-// str='command=t1,t2,t3,"t3-1,t3-2", "t4-1""t4-2" , "t5-1\"t5-2\t5-3\\t5-4"'
+// str='command=t1,t2,t3,"t3-1,t3-2", "t4-1""t4-2" , "t5-1\"t5-2\t5-3\\t5-4"[;next_command=...]'
 // 0='t1'
 // 1='t2'
 // 2='t3'
 // 3='t3-1,t3-2'
 // 4='t4-1"t4-2'
 // 5='t5-1"t5-2\t5-3\t5-4'
-uint16_t tokenizer(char *str, TokenizerArgs &args, bool hasCommand = true);
+// 6="t6","t7";7="t8","t9"              multiple commands in one line
+uint16_t tokenizer(char *str, TokenizerArgs &args, bool hasCommand, char **nextCommand);
 
 #define repeat_first_iteration \
     (__repeat_iteration == 0)

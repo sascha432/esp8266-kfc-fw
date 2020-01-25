@@ -35,9 +35,6 @@ class __FlashStringHelper;
 #define FSPGM(name)                             reinterpret_cast<const __FlashStringHelper *>(SPGM(name))
 #define PSPGM(name)                             (PGM_P)(SPGM(name))
 
-#define constexpr_strlen                        strlen
-#define constexpr_strlen_P                      strlen_P
-
 #include "debug_helper.h"
 #include "misc.h"
 
@@ -58,16 +55,6 @@ class __FlashStringHelper;
 #define SPGM(name)                              _shared_progmem_string_##name
 #define FSPGM(name)                             FPSTR(SPGM(name))
 #define PSPGM(name)                             (PGM_P)(SPGM(name))
-
-// #define constexpr_strlen                        strlen
-// #define constexpr_strlen_P                      strlen_P
-
-int constexpr constexpr_strlen(const char* str) {
-    return *str ? 1 + constexpr_strlen(str + 1) : 0;
-}
-
-#define constexpr_strlen_P constexpr_strlen
-
 
 #include "debug_helper.h"
 #include "misc.h"
@@ -150,6 +137,15 @@ namespace fs {
         static const char *append;
     };
 };
+
+// support nullptr as zero length
+size_t constexpr constexpr_strlen(const char* str) {
+    return (str == nullptr) ? 0 : (*str ? 1 + constexpr_strlen(str + 1) : 0);
+}
+
+size_t constexpr constexpr_strlen_P(const char* str) {
+    return constexpr_strlen(str);
+}
 
 #ifndef _STRINGIFY
 #define _STRINGIFY(s)                   __STRINGIFY(s)

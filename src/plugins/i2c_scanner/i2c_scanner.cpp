@@ -45,23 +45,32 @@
 
 void check_if_exist_I2C(Print &output);
 
-uint8_t portArray[] = { 16, 5, 4, 0, 2, 12, 13 };
-const char *portMap[] = { "GPIO16", "GPIO5", "GPIO4", "GPIO0", "GPIO2", "GPIO12", "GPIO13" };
+static const char portArray_defaults[] PROGMEM = { 0, 4, 5, 12, 13, 14, 15, 16 };
+char portArray[sizeof(portArray_defaults) + 1 > 17 ? sizeof(portArray_defaults) + 1 : 17];
 
-void scanPorts(Print &output) {
+void scanPorts(Print &output, bool print)
+{
     output.println(F("\n\nI2C Scanner to scan for devices on each port pair D0 to D7"));
-    for (uint8_t i = 0; i < sizeof(portArray); i++) {
-        for (uint8_t j = 0; j < sizeof(portArray); j++) {
+    for (uint8_t i = 0; portArray[i] != 0xff; i++) {
+        for (uint8_t j = 0; portArray[j] != 0xff; j++) {
             if (i != j) {
-                output.printf_P(PSTR("Scanning (SDA : SCL) - %s : %s - "), portMap[i], portMap[j]);
-                Wire.begin(portArray[i], portArray[j]);
-                check_if_exist_I2C(output);
+                PrintString name(F("GPIO%s"), portArray[i]);
+                auto cStrName = name.c_str();
+                if (print) {
+                    output.printf_P(PSTR("Scan order (SDA : SCL) - %s : %s\n"), cStrName, cStrName);
+                }
+                else {
+                    output.printf_P(PSTR("Scanning (SDA : SCL) - %s : %s - "), cStrName, cStrName);
+                    Wire.begin(portArray[i], portArray[j]);
+                    check_if_exist_I2C(output);
+                }
             }
         }
     }
 }
 
-void check_if_exist_I2C(Print &output) {
+void check_if_exist_I2C(Print &output)
+{
     uint8_t error, address;
     int nDevices;
 
@@ -95,26 +104,31 @@ void check_if_exist_I2C(Print &output) {
 
 #include "at_mode.h"
 
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(SCANI2C, "SCANI2C", "Scan for I2C bus and devices (might cause a crash)");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(SCAND, "SCAND", "Scan for devices");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CS, "I2CS", "<SDA,SCL[,speed=100kHz[,clock strech limit=usec]]>", "Setup I2C bus. Use reset to restore defaults");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CST, "I2CST", "<address,byte[,byte][,...]>", "Send data to slave (hex encoded: ff or 0xff)");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CSR, "I2CSR", "<address,count>", "Request data from slave");
+#undef PROGMEM_AT_MODE_HELP_COMMAND_PREFIX
+#define PROGMEM_AT_MODE_HELP_COMMAND_PREFIX "I2CS"
+
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(I2CSCAN, "CAN", "Scan for I2C bus and devices (might cause a crash)");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF(I2CSCANP, "CANP", "[<pin>,<pin>,[<pin>[,...]]]", "Set pins to scan", "Display pins to scan");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(I2CSCAND, "CAND", "Scan for devices");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CSS, "S", "<SDA,SCL[,speed=100kHz[,clock strech limit=usec]]>", "Setup I2C bus. Use reset to restore defaults");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CST, "T", "<address,byte[,byte][,...]>", "Send data to slave (hex encoded: ff or 0xff)");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CSR, "R", "<address,count>", "Request data from slave");
 #ifdef _LIB_ADAFRUIT_INA219_
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CINA219, "I2CINA219", "<address>", "Read INA219 sensor");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CSINA219, "INA219", "<address>", "Read INA219 sensor");
 #endif
 #ifdef __CCS811_H__
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CCCS811, "I2CCCS811", "<address>[,<temperature=25>][,<humidity=55>]", "Read CCS811 sensor");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CSCCS811, "CCS811", "<address>[,<temperature=25>][,<humidity=55>]", "Read CCS811 sensor");
 #endif
 #ifdef __BME680_H__
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CBME680, "I2CBME680", "<address>", "Read BME680 sensor");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CSBME680, "BME680", "<address>", "Read BME680 sensor");
 #endif
 #ifdef __BME280_H__
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CBME280, "I2CBME280", "<address>", "Read BME280 sensor");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CSBME280, "BME280", "<address>", "Read BME280 sensor");
 #endif
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CLM75A, "I2CLM75A", "<address>", "Read temperature from LM75A");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CSLM75A, "LM75A", "<address>", "Read temperature from LM75A");
 
-void i2cscanner_device_error(Stream &output) {
+void i2cscanner_device_error(Stream &output)
+{
     output.println(F("+I2C: An error occured"));
 }
 
@@ -124,6 +138,8 @@ class I2CScannerPlugin : public PluginComponent {
 public:
     I2CScannerPlugin() {
         REGISTER_PLUGIN(this, "I2CScannerPlugin");
+        _copyPortArray();
+
     }
     virtual PGM_P getName() const {
         return PSTR("i2c_scan");
@@ -144,36 +160,47 @@ public:
     void atModeHelpGenerator() override;
     bool atModeHandler(AtModeArgs &args) override;
 #endif
+
+private:
+    void _clearPortArray() {
+        memset(portArray, 0xff, sizeof(portArray));
+    }
+    void _copyPortArray() {
+        _clearPortArray();
+        memcpy_P(portArray, portArray_defaults, sizeof(portArray));
+    }
 };
 
 static I2CScannerPlugin plugin;
 
 #if AT_MODE_SUPPORTED
 
-void I2CScannerPlugin::atModeHelpGenerator() {
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SCANI2C), getName());
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SCAND), getName());
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CS), getName());
+void I2CScannerPlugin::atModeHelpGenerator()
+{
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CSCAN), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CSCANP), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CSCAND), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CSS), getName());
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CST), getName());
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CSR), getName());
 #ifdef _LIB_ADAFRUIT_INA219_
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CINA219), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CSINA219), getName());
 #endif
 #ifdef __CCS811_H__
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CCCS811), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CSCCS811), getName());
 #endif
 #ifdef __BME680_H__
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CBME680), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CSBME680), getName());
 #endif
 #ifdef __BME280_H__
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CBME280), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CSBME280), getName());
 #endif
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CLM75A), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CSLM75A), getName());
 }
 
 bool I2CScannerPlugin::atModeHandler(AtModeArgs &args)
 {
-    if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(I2CS))) {
+    if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(I2CSS))) {
         if (args.requireArgs(1, 4)) {
             if (args.equalsIgnoreCase(0, F("reset"))) {
                 auto &serial = args.getStream();
@@ -241,17 +268,34 @@ bool I2CScannerPlugin::atModeHandler(AtModeArgs &args)
         }
         return true;
     }
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(SCANI2C))) {
-        scanPorts(args.getStream());
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(I2CSCAN))) {
+        scanPorts(args.getStream(), false);
         return true;
     }
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(SCAND))) {
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(I2CSCANP))) {
+        if (args.isQueryMode()) {
+            scanPorts(args.getStream(), true);
+        }
+        else if (args.size() == 0) {
+            _copyPortArray();
+            scanPorts(args.getStream(), true);
+        }
+        else if (args.requireArgs(2, sizeof(portArray) - 1)) {
+            _clearPortArray();
+            for(uint8_t i = 0; i < args.size(); i++) {
+                portArray[i] = args.toInt(i);
+            }
+            scanPorts(args.getStream(), true);
+        }
+        return true;
+    }
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(I2CSCAND))) {
         args.print(F("Scanning I2C bus for devices..."));
         check_if_exist_I2C(args.getStream());
         return true;
     }
 #ifdef _LIB_ADAFRUIT_INA219_
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(I2CINA219))) {
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(I2CSINA219))) {
         if (args.requireArgs(1, 1)) {
             int address = args.toNumber(0, INA219_ADDRESS);
             Adafruit_INA219 ina219(address);
@@ -262,7 +306,7 @@ bool I2CScannerPlugin::atModeHandler(AtModeArgs &args)
     }
 #endif
 #ifdef __CCS811_H__
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(I2CCCS811))) {
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(I2CSCCS811))) {
         if (args.requireArgs(1, 3)) {
             Adafruit_CCS811 ccs811; // +i2cccs811=0x5a,25.07,53
             int address = args.toNumber(0, CCS811_ADDRESS);
@@ -279,7 +323,7 @@ bool I2CScannerPlugin::atModeHandler(AtModeArgs &args)
     }
 #endif
 #ifdef __BME680_H__
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(I2CBME680))) {
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(I2CSBME680))) {
         if (args.requireArgs(1, 1)) {
             Adafruit_BME680 bme680;
             int address = args.toNumber(0, 0x77);
@@ -290,7 +334,7 @@ bool I2CScannerPlugin::atModeHandler(AtModeArgs &args)
     }
 #endif
 #ifdef __BME280_H__
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(I2CBME280))) {
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(I2CSBME280))) {
         if (args.requireArgs(1, 1)) {
             Adafruit_BME280 bme280;
             int address = args.toNumber(0, 0x76);
@@ -300,7 +344,7 @@ bool I2CScannerPlugin::atModeHandler(AtModeArgs &args)
         return true;
     }
 #endif
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(I2CLM75A))) {
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(I2CSLM75A))) {
         if (args.requireArgs(1, 1)) {
             int address = args.toNumber(0, 0x48);
             auto &serial = args.getStream();

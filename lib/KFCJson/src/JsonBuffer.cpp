@@ -66,9 +66,10 @@ size_t JsonPrint::write(const uint8_t * buffer, size_t size) {
 
 
 void JsonBuffer::reset() {
+    debug_printf_P(PSTR("JsonBuffer::reset()\n"));
     _writePosition = 0;
     _stack.clear();
-    _stack.reserve(8); // reserve space for 8 nested levels = 16 byte
+    _stack.reserve(8); // reserve space for 8 nested levels = 16 byte = min. allocation size for ESP8266
     _stack.push_back(Stack(_object));
 }
 

@@ -25,7 +25,8 @@ def before_clean(source, target, env):
 
 #env.Execute("php \"${PROJECT_DIR}\\scripts\\build_number.php\"");
 
-# env.AddPreAction("upload", pre_upload)
+env.AddPreAction("uploadfs", build_webui)
+# env.AddPreAction("uploadfs", pre_upload)
 # env.AddPostAction("upload", post_upload)
 
 #env.AddPostAction("$BUILD_DIR/${PROGNAME}.elf", record_size)

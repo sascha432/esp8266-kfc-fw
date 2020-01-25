@@ -7,6 +7,7 @@
 #include <Arduino_compat.h>
 #include "at_mode.h"
 #include "progmem_data.h"
+#include "kfc_fw_config.h"
 
 #if DEBUG_AT_MODE
 #include <debug_helper_enable.h>
@@ -193,7 +194,6 @@ void AtModeArgs::print(const __FlashStringHelper *str) {
     _output.printf_P(PSTR("+%s: "), _command.c_str());
     _output.println(str);
 }
-
 
 void AtModeArgs::ok() {
     if (config.isSafeMode()) {

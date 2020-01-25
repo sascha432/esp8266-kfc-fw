@@ -58,6 +58,11 @@
 #define IOT_CLOCK_DIGIT_ORDER           { 0, 1, 30, 2, 3, 31, 4, 5 }
 #endif
 
+// pixel order of pixels that belong to digits, 0 to use pixel addresses of the 7 segment class
+#ifndef IOT_CLOCK_PIXEL_ORDER
+#define IOT_CLOCK_PIXEL_ORDER           { 0 }
+#endif
+
 #ifndef IOT_CLOCK_BUTTON_PIN
 #define IOT_CLOCK_BUTTON_PIN            14
 #endif
@@ -97,8 +102,8 @@ public:
 
     typedef enum : uint8_t {
         SOLID = 0,
-        NORMAL = 1,
-        FAST = 2,       // twice per second
+        NORMAL,
+        FAST,                   // twice per second
     } BlinkColonEnum_t;
 
     class Color {
@@ -109,8 +114,14 @@ public:
         }
         Color(uint8_t red, uint8_t green, uint8_t blue) : _red(red), _green(green), _blue(blue) {
         }
-        Color (uint32_t value) {
-            *this = value;
+        Color (uint32_t value, bool bgr = false) {
+            if (bgr) {
+                _blue = value >> 16;
+                _green = value >> 8;
+                _red = value;
+            } else {
+                *this = value;
+            }
         }
         uint32_t rnd() {
             do {
@@ -124,7 +135,7 @@ public:
         inline Color &operator =(uint32_t value) {
             _red = value >> 16;
             _green = value >> 8;
-            _blue = (uint8_t)value;
+            _blue = value;
             return *this;
         }
         inline operator int() {
@@ -223,7 +234,7 @@ public:
 
 public:
     void enable(bool enable);
-    void setSyncing(bool sync = true);
+    void setSyncing(bool sync);
     void setBlinkColon(BlinkColonEnum_t value);
     void setAnimation(AnimationEnum_t animation);
     Clock updateConfig();
@@ -260,6 +271,7 @@ private:
     uint8_t _buttonCounter;
 #endif
     SevenSegmentPixel *_display;
+    char *_pixelOrder;
     Color _color;
     BlinkColonEnum_t _blinkColon;
     uint32_t _updateTimer;

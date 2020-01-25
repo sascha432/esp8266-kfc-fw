@@ -4,6 +4,9 @@
 
 #if IOT_CLOCK
 
+
+#define IOT_CLOCK_PIXEL_ORDER {28,29,30,31,24,25,26,27,11,10,9,8,20,21,22,23,16,17,18,19,15,14,13,12,11,10,9,8,7,6,5,4}
+
 #include "clock.h"
 #include <Timezone.h>
 #include <MicrosTimer.h>
@@ -25,6 +28,8 @@
 
 static ClockPlugin plugin;
 
+static const char pixel_order[] PROGMEM = IOT_CLOCK_PIXEL_ORDER;
+
 ClockPlugin::ClockPlugin() :
     MQTTComponent(LIGHT),
 #if IOT_CLOCK_BUTTON_PIN
@@ -33,9 +38,30 @@ ClockPlugin::ClockPlugin() :
 #endif
     _color(0, 0, 80), _updateTimer(0), _time(0), _updateRate(1000), _isSyncing(1), _timeFormat24h(true)
 {
+    if (!pgm_read_byte(pixel_order)) {
+        _pixelOrder = nullptr;
+    }
+    else {
+#if DEBUG
+        if (sizeof(pixel_order) * IOT_CLOCK_NUM_DIGITS < SevenSegmentPixel_DIGITS_NUM_PIXELS) {
+            __debugbreak_and_panic_printf_P(PSTR("ClockPlugin::ClockPlugin(): sizeof(pixel_order)*IOT_CLOCK_NUM_DIGITS=%u < SevenSegmentPixel_DIGITS_NUM_PIXELS=%u\n"), sizeof(pixel_order) * IOT_CLOCK_NUM_DIGITS, SevenSegmentPixel_DIGITS_NUM_PIXELS );
+        }
+#endif
+        _pixelOrder = (char *)malloc(sizeof(pixel_order) * IOT_CLOCK_NUM_DIGITS);
+        auto ptr = _pixelOrder;
+        for(int i = 0; i < IOT_CLOCK_NUM_DIGITS; i++) {
+            memcpy_P(ptr, pixel_order, sizeof(pixel_order));
+            auto endPtr = ptr + sizeof(pixel_order);
+            auto ofs = i * sizeof(pixel_order);
+            while(ptr < endPtr) {
+                *ptr++ += ofs;
+            }
+        }
+    }
+
     _colors[0] = 0;
     _colors[1] = 0;
-    _colors[2] = 80;
+    _colors[2] = 0x7f;
     memset(&_animationData, 0, sizeof(_animationData));
     setBlinkColon(SOLID);
 
@@ -165,10 +191,10 @@ void ClockPlugin::setup(PluginSetupMode_t mode)
     LoopFunctions::add(loop);
     WiFiCallbacks::add(WiFiCallbacks::CONNECTED, wifiCallback);
 
-    addTimeUpdatedCallback(ntpCallback);
     if (!IS_TIME_VALID(time(nullptr))) {
-        setSyncing();
+        setSyncing(true);
     }
+    addTimeUpdatedCallback(ntpCallback);
 
     auto mqttClient = MQTTClient::getClient();
     if (mqttClient) {
@@ -255,12 +281,15 @@ void ClockPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form
 
 #include "at_mode.h"
 
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKPX, "CLOCKPX", "<led>,<r>,<g>,<b>", "Set level of a single pixel");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKP, "CLOCKP", "<00[:.]00[:.]00>", "Display strings");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKC, "CLOCKC", "<r>,<g>,<b>", "Set color");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKTS, "CLOCKTS", "<num>,<segment>", "Set segment for digit <num>");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF(CLOCKA, "CLOCKA", "<num>", "Set animation", "Display available animations");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(CLOCKD, "CLOCKD", "Dump pixel addresses");
+#undef PROGMEM_AT_MODE_HELP_COMMAND_PREFIX
+#define PROGMEM_AT_MODE_HELP_COMMAND_PREFIX "CLOCK"
+
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKPX, "PX", "<led>,<r>,<g>,<b>", "Set level of a single pixel");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKP, "P", "<00[:.]00[:.]00>", "Display strings");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKC, "C", "<r>,<g>,<b>", "Set color");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKTS, "TS", "<num>,<segment>", "Set segment for digit <num>");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF(CLOCKA, "A", "<num>", "Set animation", "Display available animations");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(CLOCKD, "D", "Dump pixel addresses");
 
 void ClockPlugin::atModeHelpGenerator()
 {
@@ -357,10 +386,19 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
         return true;
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKC))) {
-        if (args.requireArgs(3, 3)) {
-            _color = Color(args.toInt(0), args.toInt(1), args.toInt(2));
-            args.printf_P(PSTR("color=#%06x"), _color.get());
+        if (args.size() == 1) {
+            _color = Color(args.toNumber(0, 0xff0000), true);
         }
+        else if (args.requireArgs(3, 3)) {
+            _color = Color(args.toNumber(0, 0), args.toNumber(1, 0), args.toNumber(2, 0x80));
+        }
+        args.printf_P(PSTR("color=#%06x"), _color.get());
+        for(int i = 0; i  < SevenSegmentPixel_TOTAL_NUM_PIXELS; i++) {
+            if (_display->getPixelColor(i)) {
+                _display->setPixelColor(i, _color);
+            }
+        }
+
         return true;
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKPX))) {
@@ -396,7 +434,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
 
 void ClockPlugin::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector)
 {
-    _debug_printf_P(PSTR("ClockPlugin::createAutoDiscovery(): format=%u\n"), format);
+    _debug_printf_P(PSTR("ClockPlugin::createAutoDiscovery(): format {}=%u\n"), format);
     String topic = MQTTClient::formatTopic(0, F("/"));
 
     auto discovery = _debug_new MQTTAutoDiscovery();
@@ -514,8 +552,7 @@ void ClockPlugin::ntpCallback(time_t now)
 void ClockPlugin::enable(bool enable)
 {
     _debug_printf_P(PSTR("ClockPlugin::enable(%u)\n"), enable);
-    _isSyncing = 0;
-    _off();
+    setSyncing(false);
     if (enable) {
         LoopFunctions::add(loop);
     }
@@ -524,14 +561,17 @@ void ClockPlugin::enable(bool enable)
     }
 }
 
-void ClockPlugin::setSyncing(bool sync) {
-    _isSyncing = sync;
+void ClockPlugin::setSyncing(bool sync)
+{
+    _debug_printf_P(PSTR("ClockPlugin::setSyncing(%u)\n"), sync);
+    _isSyncing = sync ? 1 : 0;
     _time = 0;
     _off();
 }
 
 void ClockPlugin::setBlinkColon(BlinkColonEnum_t value)
 {
+    _debug_printf_P(PSTR("ClockPlugin::setBlinkColon(%u)\n"), value);
     _blinkColon = value;
 }
 
@@ -685,31 +725,34 @@ void ClockPlugin::_loop()
 #if IOT_CLOCK_BUTTON_PIN
     _button.update();
 #endif
-    auto now = time(nullptr);
-    bool forceUpdate = false;
-    if (_time != now) {
-        _time = now;
-        forceUpdate = true;
-    }
-
     if (_isSyncing) {
         if (get_time_diff(_updateTimer, millis()) >= 100) {
             _updateTimer = millis();
 
             // show syncing animation until the time is valid
-            _isSyncing++;
-            if (_isSyncing > IOT_CLOCK_NUM_PIXELS * (SevenSegmentPixel::SegmentEnum_t::NUM - 1)) {
-                _isSyncing = 1;
+            if (_pixelOrder) {
+                if (++_isSyncing > sizeof(pixel_order)) {
+                    _isSyncing = 1;
+                }
+                for(uint8_t i = 0; i < _display->numDigits(); i++) {
+                    _display->rotate(i, _isSyncing - 1, _color, _pixelOrder, sizeof(pixel_order));
+                }
             }
-            for(uint8_t i = 0; i < _display->numDigits(); i++) {
-                _display->rotate(i, _isSyncing - 1, _color);
+            else {
+                if (++_isSyncing > SevenSegmentPixel_DIGITS_NUM_PIXELS) {
+                    _isSyncing = 1;
+                }
+                for(uint8_t i = 0; i < _display->numDigits(); i++) {
+                    _display->rotate(i, _isSyncing - 1, _color, nullptr, 0);
+                }
             }
             _display->show();
         }
+        return;
     }
 
-
-    if (!_isSyncing && (forceUpdate || get_time_diff(_updateTimer, millis()) >= _updateRate)) {
+    auto now = time(nullptr);
+    if ((_time != now) || get_time_diff(_updateTimer, millis()) >= _updateRate) {
         _updateTimer = millis();
 
         if (_animationData.callback) {

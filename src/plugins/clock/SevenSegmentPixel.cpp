@@ -16,7 +16,7 @@ SevenSegmentPixel::SevenSegmentPixel(uint8_t numDigits, uint8_t numPixels, uint8
     _numColons = numColons;
     pixel_address_t num = SevenSegmentPixel_NUM_PIXELS(numDigits, numPixels, _numColons);
     _pixelAddress = reinterpret_cast<pixel_address_t *>(malloc(numDigits * numPixels * SegmentEnum_t::NUM * sizeof(pixel_address_t)));
-    _dotPixelAddress = reinterpret_cast<pixel_address_t *>(malloc(_numColons * 2 * sizeof(pixel_address_t)));
+    _dotPixelAddress = reinterpret_cast<pixel_address_t *>(malloc(_numColons * IOT_CLOCK_NUM_PX_PER_COLON * sizeof(pixel_address_t)));
 #if IOT_CLOCK_NEOPIXEL
     _pixels = new Adafruit_NeoPixel(num, IOT_CLOCK_NEOPIXEL_PIN, NEO_GRB|NEO_KHZ800);
     _pixels->begin();
@@ -144,10 +144,10 @@ void SevenSegmentPixel::setColon(uint8_t num, ColonEnum_t type, color_t color)
     }
 }
 
-void SevenSegmentPixel::rotate(uint8_t digit, uint8_t position, color_t color)
+void SevenSegmentPixel::rotate(uint8_t digit, uint8_t position, color_t color, char *order, size_t orderSize)
 {
     clearDigit(digit);
-    auto addr = _pixelAddress[SevenSegmentPixel_PIXEL_ADDRESS(digit, position % 2, position / 2)];
+    auto addr = order ? order[digit * orderSize + position] : _pixelAddress[SevenSegmentPixel_PIXEL_ADDRESS(digit, position % IOT_CLOCK_NUM_PIXELS, position / IOT_CLOCK_NUM_PIXELS)];
 #if IOT_CLOCK_NEOPIXEL
     _pixels->setPixelColor(addr, _getColor(addr, color));
 #else

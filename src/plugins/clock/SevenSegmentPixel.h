@@ -7,22 +7,20 @@
 #pragma once
 
 #if IOT_CLOCK_NEOPIXEL
-
 #include <Adafruit_NeoPixel.h>
-
 #else
-
 #include <FastLED.h>
-
 #endif
-
 #include <EventTimer.h>
 
 #define SevenSegmentPixel_PIXEL_ADDRESS(digit, pixel, segment)   ((digit * _numPixels * SegmentEnum_t::NUM) + (segment * _numPixels) + pixel)
 #define SevenSegmentPixel_SEGMENT_TO_BIT(segment)                (1 << segment)
 #define SevenSegmentPixel_COLOR(color, segment, bitset)          ((bitset & SevenSegmentPixel_SEGMENT_TO_BIT(segment)) ? color : 0)
 
-#define SevenSegmentPixel_NUM_PIXELS(digits, numPixel, colons)   ((digits * numPixel * SevenSegmentPixel::SegmentEnum_t::NUM) + (colons * IOT_CLOCK_NUM_PX_PER_COLON * 2))
+#define SevenSegmentPixel_NUM_PIXELS(digits, numPixel, colons)   ((digits * numPixel * SevenSegmentPixel::SegmentEnum_t::NUM) + (colons * IOT_CLOCK_NUM_PX_PER_COLON * sizeof(SevenSegmentPixel::pixel_address_t)))
+
+#define SevenSegmentPixel_DIGITS_NUM_PIXELS                      (int)SevenSegmentPixel_NUM_PIXELS(IOT_CLOCK_NUM_PIXELS, IOT_CLOCK_NUM_DIGITS, 0)
+#define SevenSegmentPixel_TOTAL_NUM_PIXELS                       (int)SevenSegmentPixel_NUM_PIXELS(IOT_CLOCK_NUM_PIXELS, IOT_CLOCK_NUM_DIGITS, IOT_CLOCK_NUM_PX_PER_COLON)
 
 class SevenSegmentPixel {
 public:
@@ -80,11 +78,19 @@ public:
         setColon(num, BOTH, 0);
     }
 
-    void rotate(uint8_t digit, uint8_t position, color_t color);
+    void rotate(uint8_t digit, uint8_t position, color_t color, char *order, size_t orderSize);
     void setSegment(uint8_t digit, SegmentEnum_t segment, color_t color) {
         setSegment(digit, (int)segment, color);
     }
     void setSegment(uint8_t digit, int segment, color_t color);
+
+    uint32_t getPixelColor(uint16_t n) const {
+        return _getPixels().getPixelColor(n);
+    }
+
+    void setPixelColor(uint16_t n, uint32_t c) {
+        return _getPixels().setPixelColor(n, c);
+    }
 
     /**
      * Format: 12:34.56
@@ -144,6 +150,10 @@ private:
 
 private:
 #if IOT_CLOCK_NEOPIXEL
+    Adafruit_NeoPixel &_getPixels() const {
+        return *_pixels;
+    }
+
     Adafruit_NeoPixel *_pixels;
 #else
     CRGB *_pixels;

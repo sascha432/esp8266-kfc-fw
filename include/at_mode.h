@@ -41,12 +41,24 @@ typedef struct {
     PGM_P arguments;
     PGM_P help;
     PGM_P helpQueryMode;
+    PGM_P commandPrefix;
 } ATModeCommandHelp_t;
+
+#define ATModeCommandHelp_CreateCommand(var, data) \
+    char var[constexpr_strlen_P(data.command) + constexpr_strlen_P(data.commandPrefix) + 1]; \
+    *var = 0; \
+    if (data.commandPrefix) { \
+        strcat_P(var, data.commandPrefix); \
+    } \
+    if (data.command) { \
+        strcat_P(var, data.command); \
+    }
 
 class ATModeCommandHelp {
 public:
     ATModeCommandHelp(const ATModeCommandHelp_t *data, PGM_P newPluginName) {
         command = data->command;
+        commandPrefix = data->commandPrefix;
         arguments = data->arguments;
         help = data->help;
         helpQueryMode = data->helpQueryMode;
@@ -54,17 +66,23 @@ public:
     }
 
     PGM_P command;
+    PGM_P commandPrefix;
     PGM_P arguments;
     PGM_P help;
     PGM_P helpQueryMode;
     PGM_P pluginName;
 };
 
-#define PROGMEM_AT_MODE_HELP_COMMAND(name)          _at_mode_progmem_command_help_command_##name
+#define PROGMEM_AT_MODE_HELP_COMMAND(name)          &_at_mode_progmem_command_help_t_##name
 #define PROGMEM_AT_MODE_HELP_COMMAND_T(name)        &_at_mode_progmem_command_help_t_##name
 
 #undef PROGMEM_AT_MODE_HELP_COMMAND_PREFIX
+// can be nullptr or "" for none
 #define PROGMEM_AT_MODE_HELP_COMMAND_PREFIX         ""
+
+constexpr const char *at_mode_has_help_command_prefix(const char *str) {
+    return *str != 0 ? str : nullptr;
+}
 
 #define PROGMEM_AT_MODE_HELP_COMMAND_DEF(name, command, arguments, help, qhelp) \
     static const char _at_mode_progmem_command_help_command_##name[] PROGMEM = { PROGMEM_AT_MODE_HELP_COMMAND_PREFIX command }; \
@@ -75,7 +93,8 @@ public:
         _at_mode_progmem_command_help_command_##name, \
         _at_mode_progmem_command_help_arguments_##name, \
         _at_mode_progmem_command_help_help_##name, \
-        _at_mode_progmem_command_help_help_query_mode_##name \
+        _at_mode_progmem_command_help_help_query_mode_##name, \
+        at_mode_has_help_command_prefix(PROGMEM_AT_MODE_HELP_COMMAND_PREFIX) \
     };
 
 #define PROGMEM_AT_MODE_HELP_COMMAND_DEF_NNPP(name, help, qhelp) \
@@ -85,39 +104,43 @@ public:
         nullptr, \
         nullptr, \
         _at_mode_progmem_command_help_help_##name, \
-        _at_mode_progmem_command_help_help_query_mode_##name \
+        _at_mode_progmem_command_help_help_query_mode_##name, \
+        at_mode_has_help_command_prefix(PROGMEM_AT_MODE_HELP_COMMAND_PREFIX) \
     };
 
 #define PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(name, command, arguments, help) \
-    static const char _at_mode_progmem_command_help_command_##name[] PROGMEM = { PROGMEM_AT_MODE_HELP_COMMAND_PREFIX command }; \
+    static const char _at_mode_progmem_command_help_command_##name[] PROGMEM = { command }; \
     static const char _at_mode_progmem_command_help_arguments_##name[] PROGMEM = { arguments }; \
     static const char _at_mode_progmem_command_help_help_##name[] PROGMEM = { help }; \
     static const ATModeCommandHelp_t _at_mode_progmem_command_help_t_##name PROGMEM = { \
         _at_mode_progmem_command_help_command_##name, \
         _at_mode_progmem_command_help_arguments_##name, \
         _at_mode_progmem_command_help_help_##name, \
-        nullptr \
+        nullptr, \
+        at_mode_has_help_command_prefix(PROGMEM_AT_MODE_HELP_COMMAND_PREFIX) \
     };
 
 #define PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(name, command, help) \
-    static const char _at_mode_progmem_command_help_command_##name[] PROGMEM = { PROGMEM_AT_MODE_HELP_COMMAND_PREFIX command }; \
+    static const char _at_mode_progmem_command_help_command_##name[] PROGMEM = { command }; \
     static const char _at_mode_progmem_command_help_help_##name[] PROGMEM = { help }; \
     static const ATModeCommandHelp_t _at_mode_progmem_command_help_t_##name PROGMEM = { \
         _at_mode_progmem_command_help_command_##name, \
         nullptr, \
         _at_mode_progmem_command_help_help_##name, \
-        nullptr \
+        nullptr, \
+        at_mode_has_help_command_prefix(PROGMEM_AT_MODE_HELP_COMMAND_PREFIX) \
     };
 
 #define PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPP(name, command, help, qhelp) \
-    static const char _at_mode_progmem_command_help_command_##name[] PROGMEM = { PROGMEM_AT_MODE_HELP_COMMAND_PREFIX command }; \
+    static const char _at_mode_progmem_command_help_command_##name[] PROGMEM = { command }; \
     static const char _at_mode_progmem_command_help_help_##name[] PROGMEM = { help }; \
     static const char _at_mode_progmem_command_help_help_query_mode_##name[] PROGMEM = { qhelp }; \
     static const ATModeCommandHelp_t _at_mode_progmem_command_help_t_##name PROGMEM = { \
         _at_mode_progmem_command_help_command_##name, \
         nullptr, \
         _at_mode_progmem_command_help_help_##name, \
-        _at_mode_progmem_command_help_help_query_mode_##name \
+        _at_mode_progmem_command_help_help_query_mode_##name, \
+        at_mode_has_help_command_prefix(PROGMEM_AT_MODE_HELP_COMMAND_PREFIX) \
     };
 
 void at_mode_setup();
@@ -381,8 +404,21 @@ public:
         return _command;
     }
 
-    bool isCommand(PGM_P command) const {
-        return !strcasecmp_P(_command.c_str(), command);
+    bool isCommand(const ATModeCommandHelp_t *help) const {
+        auto ptr = _command.c_str();
+        if (help->commandPrefix) {
+            const auto len = strlen_P(help->commandPrefix);
+            if (strncasecmp_P(ptr, help->commandPrefix, len)) {
+                return false;
+            }
+            ptr += len;
+
+        }
+        return !strcasecmp_P(ptr, help->command);
+    }
+
+    bool isCommand(const __FlashStringHelper *command) const {
+        return !strcasecmp_P(_command.c_str(), RFPSTR(command));
     }
 
     void printf_P(PGM_P format, ...);

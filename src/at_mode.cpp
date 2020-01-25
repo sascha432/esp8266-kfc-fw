@@ -76,12 +76,12 @@ void at_mode_display_help_indent(Stream &output, PGM_P text)
 // append progmem strings to output and replace any whitespace with a single space
 static void _appendHelpString(String &output, PGM_P str)
 {
-    char lastChar = 0;
-    if (output.length()) {
-        lastChar = output.charAt(output.length() - 1);
-    }
+    if (str && *str) {
+        char lastChar = 0;
+        if (output.length()) {
+            lastChar = output.charAt(output.length() - 1);
+        }
 
-    if (str) {
         char ch;
         while(0 != (ch = pgm_read_byte(str++))) {
             if (isspace(ch)) {
@@ -119,6 +119,9 @@ void at_mode_display_help(Stream &output, StringVector *findText = nullptr)
                 tmp += F("plugin "); // allows to search for "plugin sensor"
                 _appendHelpString(tmp, commandHelp.pluginName);
             }
+            if (commandHelp.commandPrefix && commandHelp.command) {
+                tmp += FPSTR(commandHelp.commandPrefix);
+            }
             _appendHelpString(tmp, commandHelp.command);
             _appendHelpString(tmp, commandHelp.arguments);
             _appendHelpString(tmp, commandHelp.help);
@@ -137,18 +140,22 @@ void at_mode_display_help(Stream &output, StringVector *findText = nullptr)
         }
 
         if (commandHelp.helpQueryMode) {
+            output.print(F(" AT"));
             if (commandHelp.command) {
-                output.printf_P(PSTR(" AT+%s?\n"), commandHelp.command);
-            } else {
-                output.print(F(" AT?\n"));
+                output.print('+');
+                output.print(FPSTR(commandHelp.command));
             }
+            output.println(F("?"));
             at_mode_display_help_indent(output, commandHelp.helpQueryMode);
         }
 
+        output.print(F(" AT"));
         if (commandHelp.command) {
-            output.printf_P(PSTR(" AT+%s"), commandHelp.command);
-        } else {
-            output.print(F(" AT"));
+            output.print('+');
+            if (commandHelp.commandPrefix) {
+                output.print(FPSTR(commandHelp.commandPrefix));
+            }
+            output.print(FPSTR(commandHelp.command));
         }
         if (commandHelp.arguments) {
             PGM_P arguments = commandHelp.arguments;
@@ -214,7 +221,8 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DUMPRTC, "DUMPRTC", "Dump RTC memory");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(RTCCLR, "RTCCLR", "Clear RTC memory");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RTCQCC, "RTCQCC", "<0=channel/bssid|1=static ip config.>", "Clear quick connect RTC memory");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WIMO, "WIMO", "<0=off|1=STA|2=AP|3=STA+AP>", "Set WiFi mode, store configuration and reboot");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LOG, "LOG", "<message", "Send an error to the logger component");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LOG, "LOG", "<message>", "Send an error to the logger component");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LOGE, "LOGE", "<debug=enable/disable>", "Enable/disable writing to file log://debug");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(PANIC, "PANIC", "Cause an exception by calling panic()");
 
 #endif
@@ -269,6 +277,7 @@ void at_mode_help_commands()
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(RTCQCC), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(WIMO), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(LOG), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(LOGE), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(PANIC), name);
 #endif
 
@@ -284,6 +293,9 @@ void at_mode_generate_help(Stream &output, StringVector *findText = nullptr)
     }
     at_mode_display_help(output, findText);
     at_mode_help.clear();
+    if (config.isSafeMode()) {
+        output.printf_P(PSTR("\nSAFE MODE ENABLED\n\n"));
+    }
 }
 
 String at_mode_print_command_string(Stream &output, char separator)
@@ -302,6 +314,9 @@ String at_mode_print_command_string(Stream &output, char separator)
         if (commandHelp.command) {
             if (count++ != 0) {
                 output.print(separator);
+            }
+            if (commandHelp.commandPrefix) {
+                output.print(FPSTR(commandHelp.commandPrefix));
             }
             output.print(FPSTR(commandHelp.command));
         }
@@ -517,7 +532,11 @@ void flash() {
 
 void at_mode_print_invalid_command(Stream &output)
 {
-    output.println(F("ERROR - Invalid command. AT? for help"));
+    output.print(F("ERROR - Invalid command. "));
+    if (config.isSafeMode()) {
+        output.print(F(""));
+    }
+    output.println(F("AT? for help"));
 }
 
 void at_mode_print_invalid_arguments(Stream &output, uint16_t num, uint16_t min, uint16_t max)
@@ -552,6 +571,7 @@ void at_mode_print_prefix(Stream &output, const char *command)
 void at_mode_serial_handle_event(String &commandString)
 {
     auto &output = MySerial;
+    char *nextCommand = nullptr;
     AtModeArgs args(output);
 
     commandString.trim();
@@ -591,10 +611,9 @@ void at_mode_serial_handle_event(String &commandString)
             } else {
                 _debug_printf_P(PSTR("tokenizer('%s')\n"), command);
                 args.setQueryMode(false);
-                tokenizer(command, args, true);
+                tokenizer(command, args, true, &nextCommand);
             }
-
-            _debug_printf_P(PSTR("Command '%s' argc %d arguments '%s'\n"), command, args.size(), implode(F("','"), &args.getArgs()).c_str());
+            _debug_printf_P(PSTR("cmd=%s,argc=%d,args='%s',next_cmd='%s'\n"), command, args.size(), implode(F("','"), &args.getArgs()).c_str(), nextCommand ? nextCommand : SPGM(0));
 
             args.setCommand(command);
 
@@ -712,7 +731,7 @@ void at_mode_serial_handle_event(String &commandString)
                 });
 
             }
-            else if (args.isCommand(PSTR("I2CT")) || args.isCommand(PSTR("I2CR"))) {
+            else if (args.isCommand(F("I2CT")) || args.isCommand(F("I2CR"))) {
                 // ignore SerialTwoWire communication
             }
 #if 0
@@ -944,6 +963,13 @@ void at_mode_serial_handle_event(String &commandString)
                     Logger_error(F("+LOG: %s"), implode(FSPGM(comma), &args.getArgs()).c_str());
                 }
             }
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(LOGE))) {
+                if (args.requireArgs(1)) {
+                    bool enable = args.isTrue(0);
+                    _logger.setLogLevel(enable ? LOGLEVEL_DEBUG : LOGLEVEL_ACCESS);
+                    args.printf_P(PSTR("debug=%u"), enable);
+                }
+            }
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(PANIC))) {
                 delay(100);
                 panic();
@@ -967,6 +993,13 @@ void at_mode_serial_handle_event(String &commandString)
                     at_mode_print_invalid_command(output);
                 }
             }
+        }
+    }
+    if (nextCommand) {
+        auto cmd = String(nextCommand);
+        cmd.trim();
+        if (cmd.length()) {
+            at_mode_serial_handle_event(cmd);
         }
     }
 }

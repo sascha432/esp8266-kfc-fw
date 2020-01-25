@@ -196,7 +196,12 @@ void AtModeArgs::print(const __FlashStringHelper *str) {
 
 
 void AtModeArgs::ok() {
-    _output.println(FSPGM(OK));
+    if (config.isSafeMode()) {
+        _output.println(F("OK - SAFE MODE"));
+    }
+    else {
+        _output.println(FSPGM(OK));
+    }
 }
 
 #endif

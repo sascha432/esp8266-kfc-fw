@@ -13,6 +13,7 @@
 
 #if DEBUG_LOGGER
 #include <debug_helper_enable.h>
+#include <misc.h>
 #else
 #include <debug_helper_disable.h>
 #endif
@@ -191,21 +192,21 @@ void Logger::setSyslog(SyslogStream * syslog)
 }
 #endif
 
-File Logger::openLog(const __FlashStringHelper *filename)
+File Logger::openLog(const char *filename)
 {
     String logFile;
-    if (!strcmp_P_P(RFPSTR(filename), SPGM(log_file_messages))) {
-        logFile = _getLogFilename(LOGLEVEL_ERROR);
+    if (!strcmp_P(filename, SPGM(log_file_messages))) {
+        return openMessagesLog();
     }
-    else if (!strcmp_P_P(RFPSTR(filename), SPGM(log_file_messages))) {
-        logFile = _getLogFilename(LOGLEVEL_ERROR);
+#if DEBUG
+    else if (!strcmp_P(filename, SPGM(log_file_debug))) {
+        return openDebugLog();
     }
-    else if (!strcmp_P_P(RFPSTR(filename), SPGM(log_file_messages))) {
-        logFile = _getLogFilename(LOGLEVEL_ERROR);
+#endif
+    else if (!strcmp_P(filename, SPGM(log_file_access))) {
+        return openAccessLog();
     }
-    else {
-        return File();
-    }
+    return File();
 }
 
 File Logger::openMessagesLog()
@@ -244,6 +245,7 @@ void Logger::getLogs(StringVector &logs)
         logs.emplace_back(std::move(String(FSPGM(log_file_debug))));
     }
 #endif
+    debug_printf_P(PSTR("Logger::getLogs(): %s\n"), implode(',', &logs).c_str());
 }
 
 void Logger::writeLog(LogLevel logLevel, const char *message, va_list arg)

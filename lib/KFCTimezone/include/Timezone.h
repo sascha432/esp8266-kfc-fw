@@ -31,6 +31,9 @@ public:
 	void setDst(bool dst);
 	bool isDst() const;
 
+	void load();
+	void save();
+
 private:
 	const int32_t INVALID = -1;
 

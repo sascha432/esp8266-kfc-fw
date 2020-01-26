@@ -99,7 +99,7 @@ T _debug_helper_print_result_P(const char *file, int line, const char *function,
 }
 
 #if DEBUG_INCLUDE_SOURCE_INFO
-    #define __debug_prefix(out)                 out.printf(_debugPrefix.c_str(), millis(), DebugHelper::basename(__FILE__), __LINE__, ESP.getFreeHeap(), __FUNCTION__);
+    #define __debug_prefix(out)                 out.printf(_debugPrefix.c_str(), millis(), DebugHelper::basename(__FILE__), __LINE__, ESP.getFreeHeap(), __PRETTY_FUNCTION__ );
 #else
     #define __debug_prefix(out)                 out.print(_debugPrefix);
 #endif
@@ -110,15 +110,15 @@ T _debug_helper_print_result_P(const char *file, int line, const char *function,
 #define debug_printf(fmt, ...)                  if (DebugHelper::__state == DEBUG_HELPER_STATE_ACTIVE) { debug_prefix(); DEBUG_OUTPUT.printf(fmt, ## __VA_ARGS__); }
 #define debug_printf_P(fmt, ...)                if (DebugHelper::__state == DEBUG_HELPER_STATE_ACTIVE) { debug_prefix(); DEBUG_OUTPUT.printf_P(fmt, ## __VA_ARGS__); }
 
-#define debug_print_result_P(result, fmt)       _debug_helper_print_result_P(DebugHelper::basename(__FILE__), __LINE__, __FUNCTION__, result, fmt)
-#define debug_call_P(function, fmt, ...)        _debug_helper_print_result_P(DebugHelper::basename(__FILE__), __LINE__, __FUNCTION__, function(__VA_ARGS__), fmt, __VA_ARGS__)
+#define debug_print_result_P(result, fmt)       _debug_helper_print_result_P(DebugHelper::basename(__FILE__), __LINE__, __PRETTY_FUNCTION__ , result, fmt)
+#define debug_call_P(function, fmt, ...)        _debug_helper_print_result_P(DebugHelper::basename(__FILE__), __LINE__, __PRETTY_FUNCTION__ , function(__VA_ARGS__), fmt, __VA_ARGS__)
 
 #define IF_DEBUG(...)                           __VA_ARGS__
 #define debug_call(name, ...)                   DEBUG_OUTPUT.printf("%s:%d %s\n", DebugHelper::basename(__FILE__), __LINE__, _______STR(name)); name ## __VA_ARGS__
 
 #if DEBUG_INCLUDE_SOURCE_INFO
 #define DEBUG_SOURCE_ARGS                       const char *_debug_filename, int _debug_lineno, const char *_debug_function,
-#define DEBUG_SOURCE_ADD_ARGS                   DebugHelper::basename(__FILE__), __LINE__, __FUNCTION__,
+#define DEBUG_SOURCE_ADD_ARGS                   DebugHelper::basename(__FILE__), __LINE__, __PRETTY_FUNCTION__ ,
 #define DEBUG_SOURCE_PASS_ARGS                  _debug_filename, _debug_lineno, _debug_function,
 #define DEBUG_SOURCE_APPEND_ARGS                , _debug_filename, _debug_lineno, _debug_function
 #define DEBUG_SOURCE_FORMAT                     " (%s:%u@%s)"

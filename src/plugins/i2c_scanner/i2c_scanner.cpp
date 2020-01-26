@@ -317,7 +317,7 @@ bool I2CScannerPlugin::atModeHandler(AtModeArgs &args)
             auto available = ccs811.available();
             auto result = ccs811.readData();
             auto error = ccs811.checkError();
-            serial.printf_P(PSTR("Reading CCS811 at 0x%02x: available()=%u, readData()=%u, checkError()=%u, eCO2 %u, TVOC %u, calculateTemperature %f\n"), address, available, result, error, ccs811.geteCO2(), ccs811.getTVOC(), ccs811.calculateTemperature());
+            sargserial.printf_P(PSTR("Reading CCS811 at 0x%02x: available()=%u, readData()=%u, checkError()=%u, eCO2 %u, TVOC %u, calculateTemperature %f"), address, available, result, error, ccs811.geteCO2(), ccs811.getTVOC(), ccs811.calculateTemperature());
         }
         return true;
     }
@@ -328,7 +328,7 @@ bool I2CScannerPlugin::atModeHandler(AtModeArgs &args)
             Adafruit_BME680 bme680;
             int address = args.toNumber(0, 0x77);
             bme680.begin(address);
-            serial.printf_P(PSTR("Reading BME680 at 0x%02x: %.2f °C, %.2f%%, %.2f hPa, gas %u\n"), address, bme680.readTemperature(), bme680.readHumidity(), bme680.readPressure() / 100.0, bme680.readGas());
+            args.printf_P(PSTR("Reading BME680 at 0x%02x: %.2f °C, %.2f%%, %.2f hPa, gas %u"), address, bme680.readTemperature(), bme680.readHumidity(), bme680.readPressure() / 100.0, bme680.readGas());
         }
         return true;
     }
@@ -339,7 +339,7 @@ bool I2CScannerPlugin::atModeHandler(AtModeArgs &args)
             Adafruit_BME280 bme280;
             int address = args.toNumber(0, 0x76);
             bme280.begin(address, &Wire);
-            serial.printf_P(PSTR("Reading BME280 at 0x%02x: %.2f °C, %.2f%%, %.2f hPa\n"), address, bme280.readTemperature(), bme280.readHumidity(), bme280.readPressure() / 100.0);
+            args.printf_P(PSTR("Reading BME280 at 0x%02x: %.2f °C, %.2f%%, %.2f hPa"), address, bme280.readTemperature(), bme280.readHumidity(), bme280.readPressure() / 100.0);
         }
         return true;
     }

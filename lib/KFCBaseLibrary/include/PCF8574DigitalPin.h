@@ -27,16 +27,16 @@ public:
     }
 
     virtual void digitalWrite(uint8_t value) {
-        _debug_printf("PCF8574DigitalPin::digitalWrite(): pin=%u,value=%u\n", _pin, value);
+        _debug_printf_P(PSTR("pin=%u,value=%u\n)", _pin, value);
         _pcf8574.digitalWrite(_pin, value);
-        _debug_printf("PCF8574DigitalPin::digitalWrite(): done\n");
+        _debug_println(F("done");
     }
 
     virtual bool digitalRead() {
 #if PCF8574_DIGITAL_PIN_DEBUG
-        _debug_printf("PCF8574DigitalPin::digitalRead(): pin=%u\n", _pin);
+        _debug_printf_P(PSTR("pin=%u\n"), _pin);
         auto result = _pcf8574.digitalRead(_pin);
-        _debug_printf("PCF8574DigitalPin::digitalRead(): result=%u\n", result);
+        _debug_printf_P(PSTR("result=%u\n"), result);
         return result;
 #else
         return _pcf8574.digitalRead(_pin);
@@ -44,9 +44,9 @@ public:
     }
 
     virtual void pinMode(uint8_t mode) {
-        _debug_printf("PCF8574DigitalPin::pinMode(): pin=%u,mode=%u\n", _pin, mode);
+        _debug_printf_P(PSTR("=%u,mode=%u\n"), _pin, mode);
         _pcf8574.pinMode(_pin, mode);
-        _debug_printf("PCF8574DigitalPin::pinMode(): done\n");
+        _debug_println(F("done");
     }
 
     virtual uint8_t getPinClass() const {

@@ -4,6 +4,7 @@
 
 #include <Arduino_compat.h>
 #include "Timezone.h"
+#include "kfc_fw_config.h"
 
 Timezone default_timezone;
 
@@ -69,6 +70,7 @@ size_t timezone_strftime(char *buf, size_t size, PGM_P format, const struct tm *
 Timezone::Timezone()
 {
 	invalidate();
+    load();
 }
 
 void Timezone::invalidate()
@@ -132,4 +134,28 @@ void Timezone::setDst(bool dst)
 bool Timezone::isDst() const
 {
 	return _dst;
+}
+
+void Timezone::load()
+{
+    auto cfg = config._H_GET(Config().ntp.tz);
+    _abbreviation = cfg.abbreviation;
+    _timezoneOffset = cfg.offset;
+    _dst = cfg.dst;
+    debug_printf_P(PSTR("abbreviation=%s, offset=%d, dst=%u\n"), cfg.abbreviation, cfg.offset, cfg.dst);
+}
+
+void Timezone::save()
+{
+    auto cfg = config._H_GET(Config().ntp.tz);
+    if (cfg.offset != _timezoneOffset || !_abbreviation.equals(cfg.abbreviation) || cfg.dst != _dst) {
+        Config_NTP::Timezone_t tz;
+        tz.offset = cfg.offset;
+        tz.dst = cfg.dst;
+        strncpy(tz.abbreviation, _abbreviation.c_str(), sizeof(tz.abbreviation) - 1);
+        config.discard();
+        config._H_SET(Config().ntp.tz, tz);
+        config.write();
+        debug_printf_P(PSTR("abbreviation=%s, offset=%d, dst=%u\n"), cfg.abbreviation, cfg.offset, cfg.dst);
+    }
 }

@@ -42,5 +42,5 @@ if args.verbose:
 
 if output!="":
     args.buildfile.seek(0)
-    args.buildfile.write(output)
+    args.buildfile.write(output.replace("\n\n\n", "\n\n"))
 

@@ -13,7 +13,7 @@
 EventTimer::EventTimer(EventScheduler::TimerPtr *timerPtr, EventScheduler::Callback loopCallback, int64_t delay, int repeat, EventScheduler::Priority_t priority) {
 
     if (delay < 0) {
-        __debugbreak_and_panic_printf_P(PSTR("EventTimer::EventTimer(): delay < 0\n"));
+        __debugbreak_and_panic_printf_P(PSTR("delay < 0\n"));
     }
 
     _loopCallback = loopCallback;
@@ -32,16 +32,16 @@ EventTimer::EventTimer(EventScheduler::TimerPtr *timerPtr, EventScheduler::Callb
 }
 
 EventTimer::~EventTimer() {
-    _debug_printf_P(PSTR("EventTimer::~EventTimer() os_timer %p\n"), _timer);
+    _debug_printf_P(PSTR("os_timer=%p\n"), _timer);
     detach();
     if (Scheduler.hasTimer(this))  {
-        _debug_printf_P(PSTR("EventTimer::~EventTimer() Calling ::removeTimer(%p) to remove destroyed object from scheduler\n"), this);
+        _debug_printf_P(PSTR("calling ::removeTimer(%p) to remove destroyed object from scheduler\n"), this);
         Scheduler.removeTimer(this);
     }
 }
 
 void EventTimer::_installTimer() {
-    _debug_printf_P(PSTR("EventTimer::_installTimer(): Installing os_timer %p, delay %.3f, repeat %d\n"), _timer, _delay / 1000.0, _repeat);
+    _debug_printf_P(PSTR("installing os_timer %p, delay %.3f, repeat %d\n"), _timer, _delay / 1000.0, _repeat);
 
     if (_delay > maxDelay) {
         _remainingDelay = _delay - maxDelay;
@@ -104,7 +104,7 @@ bool ICACHE_RAM_ATTR EventTimer::_maxRepeat() const {
 
 void ICACHE_RAM_ATTR EventTimer::detach() {
     if (_timer) {
-        _debug_printf_P(PSTR("EventTimer::detach(): %p\n"), _timer);
+        _debug_printf_P(PSTR("os_timer=%p\n"), _timer);
         os_timer_disarm(_timer);
         os_timer_delete(_timer);
         _timer = nullptr;

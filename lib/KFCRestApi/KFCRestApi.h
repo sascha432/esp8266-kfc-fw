@@ -22,7 +22,8 @@
 #endif
 
 #if KFC_REST_API_USE_HTTP_CLIENT
-#include "../.pio/libdeps/clockv2/asyncHTTPrequest_ID1836/src/asyncHTTPrequest.h"
+#include "../.pio/libdeps/weather/asyncHTTPrequest_ID1836/src/asyncHTTPrequest.h"
+// #include <asyncHTTPrequest.h>
 #endif
 
 class KFCRestAPI {

@@ -29,7 +29,7 @@ static SensorPlugin plugin;
 
 void SensorPlugin::getValues(JsonArray &array)
 {
-    _debug_printf_P(PSTR("SensorPlugin::getValues()\n"));
+    _debug_println(F(""));
     for(auto sensor: _sensors) {
         sensor->getValues(array);
     }
@@ -37,7 +37,7 @@ void SensorPlugin::getValues(JsonArray &array)
 
 void SensorPlugin::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
 {
-    _debug_printf_P(PSTR("SensorPlugin::setValue(%s)\n"), id.c_str());
+    _debug_printf_P(PSTR("setValue(%s)\n"), id.c_str());
 }
 
 
@@ -123,7 +123,7 @@ void SensorPlugin::restart()
 {
     _timer.remove();
     for(auto sensor: _sensors) {
-        _debug_printf_P(PSTR("SensorPlugin::restart(): type=%u\n"), sensor->getType());
+        _debug_printf_P(PSTR("type=%u\n"), sensor->getType());
         sensor->restart();
         delete sensor;
     }
@@ -188,7 +188,7 @@ void SensorPlugin::createWebUI(WebUI &webUI)
 
 void SensorPlugin::getStatus(Print &output)
 {
-    _debug_printf_P(PSTR("SensorPlugin::getStatus(): sensor count %d\n"), _sensors.size());
+    _debug_printf_P(PSTR("sensor count %d\n"), _sensors.size());
     if (_sensors.empty()) {
         output.print(F("All sensors disabled"));
     }

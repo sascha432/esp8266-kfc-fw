@@ -55,10 +55,10 @@ void dump_plugin_list(Print &output) {
     PGM_P noStr = PSTR("no");
     #define BOOL_STR(value) (value ? yesStr : noStr)
 
-    //                    123456789   12345   123456789   123456789012   1234567890    123456   123456  12345
-    PGM_P header = PSTR("+-----------+------+-----------+--------------+------------+--------+--------+-------+\n");
-    PGM_P titles = PSTR("| Name      | Prio | Safe Mode | Auto Wake-Up | RTC Mem Id | Status | ATMode | WebUI |\n");
-    PGM_P format = PSTR("| %-9.9s | % 4d | %-9.9s | %-12.12s | % 10u | %-6.6s | %-6.6s | %-5.5s |\n");
+    //                    123456789   12345   123456789   123456789012   1234567890    123456   123456  12345  123456789012
+    PGM_P header = PSTR("+-----------+------+-----------+--------------+------------+--------+--------+-------+------------+\n");
+    PGM_P titles = PSTR("| Name      | Prio | Safe Mode | Auto Wake-Up | RTC Mem Id | Status | ATMode | WebUI | Setup Time +\n");
+    PGM_P format = PSTR("| %-9.9s | % 4d | %-9.9s | %-12.12s | % 10u | %-6.6s | %-6.6s | %-5.5s | %10u |\n");
 
     output.print(FPSTR(header));
     output.printf_P(titles);
@@ -72,7 +72,8 @@ void dump_plugin_list(Print &output) {
             plugin->getRtcMemoryId(),
             BOOL_STR(plugin->hasStatus()),
             BOOL_STR(plugin->hasAtMode()),
-            BOOL_STR(plugin->hasWebUI())
+            BOOL_STR(plugin->hasWebUI()),
+            plugin->getSetupTime()
         );
     }
     output.print(FPSTR(header));
@@ -168,6 +169,7 @@ void setup_plugins(PluginComponent::PluginSetupMode_t mode) {
             (mode == PluginComponent::PLUGIN_SETUP_DELAYED_AUTO_WAKE_UP && !plugin->autoSetupAfterDeepSleep());
         _debug_printf_P(PSTR("setup_plugins(%d) %s priority %d run setup %d\n"), mode, plugin->getName(), plugin->getSetupPriority(), runSetup);
         if (runSetup) {
+            plugin->setSetupTime();
             plugin->setup(mode);
 
             if (plugin->hasWebUI()) {

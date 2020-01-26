@@ -104,7 +104,7 @@ static void _appendHelpString(String &output, PGM_P str)
 void at_mode_display_help(Stream &output, StringVector *findText = nullptr)
 {
 #if DEBUG_AT_MODE
-    _debug_printf_P(PSTR("at_mode_display_help(): size=%d, find=%s\n"), at_mode_help.size(), findText ? (findText->empty() ? PSTR("count=0") : implode(FSPGM(comma), findText).c_str()) : PSTR("nullptr"));
+    _debug_printf_P(PSTR("size=%d, find=%s\n"), at_mode_help.size(), findText ? (findText->empty() ? PSTR("count=0") : implode(FSPGM(comma), findText).c_str()) : PSTR("nullptr"));
 #endif
     if (findText && findText->empty()) {
         findText = nullptr;
@@ -127,7 +127,7 @@ void at_mode_display_help(Stream &output, StringVector *findText = nullptr)
             _appendHelpString(tmp, commandHelp.help);
             _appendHelpString(tmp, commandHelp.helpQueryMode);
 
-            _debug_printf_P(PSTR("at_mode_display_help(): find in %u: '%s'\n"), tmp.length(), tmp.c_str());
+            _debug_printf_P(PSTR("find in %u: '%s'\n"), tmp.length(), tmp.c_str());
             for(auto str: *findText) {
                 if (tmp.indexOf(str) != -1) {
                     result = true;
@@ -207,6 +207,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(FSM, "FSM", "Display FS mapping");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PINM, "PINM", "[<1=start|0=stop>}", "List or monitor PINs");
 #endif
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(PLUGINS, "PLUGINS", "List plugins");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PLGI, "PLGI", "<name>", "Init plugin");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HEAP, "HEAP", "[interval in seconds|0=disable]", "Display free heap");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RSSI, "RSSI", "[interval in seconds|0=disable]", "Display WiFi RSSI");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(GPIO, "GPIO", "[interval in seconds|0=disable]", "Display GPIO states");
@@ -262,6 +263,7 @@ void at_mode_help_commands()
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(PINM), name);
 #endif
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(PLUGINS), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(PLGI), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(HEAP), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(RSSI), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(GPIO), name);
@@ -285,7 +287,7 @@ void at_mode_help_commands()
 
 void at_mode_generate_help(Stream &output, StringVector *findText = nullptr)
 {
-    _debug_printf_P(PSTR("at_mode_generate_help(): find=%s\n"), implode(FSPGM(comma), findText).c_str());
+    _debug_printf_P(PSTR("find=%s\n"), implode(FSPGM(comma), findText).c_str());
     // call handler to gather help for all commands
     at_mode_help_commands();
     for(auto plugin: plugins) {
@@ -413,10 +415,26 @@ void at_mode_wifi_callback(uint8_t event, void *payload)
     }
 }
 
+PROGMEM_STRING_DEF(atmode_file_autorun, "/autorun_atmode.cmd");
+void at_mode_serial_handle_event(String &commandString);
+
 void at_mode_setup()
 {
     SerialHandler::getInstance().addHandler(at_mode_serial_input_handler, SerialHandler::RECEIVE|SerialHandler::REMOTE_RX);
     WiFiCallbacks::add(WiFiCallbacks::EventEnum_t::CONNECTED|WiFiCallbacks::EventEnum_t::DISCONNECTED, at_mode_wifi_callback);
+
+    File file = SPIFFS.open(FSPGM(atmode_file_autorun), FileOpenMode::read);
+    if (file) {
+        String cmd;
+        while(file.available()) {
+            cmd = file.readStringUntil('\n');
+            cmd.trim();
+            if (cmd.length()) {
+                debug_printf_P(PSTR("cmd=%s\n"), cmd.c_str());
+                at_mode_serial_handle_event(cmd);
+            }
+        }
+    }
 }
 
 void enable_at_mode(Stream &output)
@@ -873,6 +891,26 @@ void at_mode_serial_handle_event(String &commandString)
     #endif
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(PLUGINS))) {
                 dump_plugin_list(output);
+            }
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(PLGI))) {
+                if (args.requireArgs(1, 1)) {
+                    auto name = args.toString(0);
+                    PluginComponent *plugin = nullptr;
+                    for(const auto plugin2 : plugins) {
+                        if (name.equalsIgnoreCase(FPSTR(plugin2->getName()))) {
+                            plugin = plugin2;
+                            break;
+                        }
+                    }
+                    if (plugin) {
+                        args.printf_P(PSTR("Calling %s.setup()"), name.c_str());
+                        plugin->setup(PluginComponent::PLUGIN_SETUP_DEFAULT);
+                    }
+                    else {
+                        args.printf_P(PSTR("Cannot find plugin '%s'"), name.c_str());
+                    }
+
+                }
             }
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RSSI)) || args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(HEAP)) || args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(GPIO))) {
                 if (args.requireArgs(1, 1)) {

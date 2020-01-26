@@ -40,6 +40,9 @@ public:
         CUSTOM,
     } MenuTypeEnum_t;
 
+    PluginComponent() : _setupTime(0) {
+    }
+
     virtual PGM_P getName() const = 0;
     bool nameEquals(const __FlashStringHelper *name) const;
     bool nameEquals(const char *name) const;
@@ -105,4 +108,14 @@ public:
     static PluginComponent *getTemplate(const String &formName);
     static PluginComponent *getByName(PGM_P name);
     static PluginComponent *getByMemoryId(uint8_t memoryId);
+
+    uint32_t getSetupTime() const {
+        return _setupTime;
+    }
+    void setSetupTime() {
+        _setupTime = millis();
+    }
+
+private:
+    uint32_t _setupTime;
 };

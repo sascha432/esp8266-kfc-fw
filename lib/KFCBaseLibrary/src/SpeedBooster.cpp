@@ -14,7 +14,7 @@ SpeedBooster::SpeedBooster(bool autoEnable) : _autoEnable(autoEnable)
 {
 #if 0
     auto before = system_get_cpu_freq();
-    _debug_printf_P(PSTR("SpeedBooster(): counter=%d, CPU=%d->%d, boost=%d\n"), _counter, before, system_get_cpu_freq(), _enabled);
+    _debug_printf_P(PSTR("counter=%d, CPU=%d->%d, boost=%d\n"), _counter, before, system_get_cpu_freq(), _enabled);
 #endif
     _enabled = autoEnable;
     _counter++;
@@ -32,7 +32,7 @@ SpeedBooster::~SpeedBooster()
     if (_counter == 0 && _enabled) {
         system_update_cpu_freq(SYS_CPU_80MHZ);
     }
-    _debug_printf_P(PSTR("~SpeedBooster(): counter=%d, CPU=%d->%d, boost=%d\n"), _counter, before, system_get_cpu_freq(), _enabled);
+    _debug_printf_P(PSTR("counter=%d, CPU=%d->%d, boost=%d\n"), _counter, before, system_get_cpu_freq(), _enabled);
 }
 
 bool SpeedBooster::isEnabled()

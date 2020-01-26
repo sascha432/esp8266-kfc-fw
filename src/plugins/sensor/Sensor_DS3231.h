@@ -45,7 +45,6 @@ private:
 
     JsonString _name;
     TwoWire *_wire;
-    bool _availabe;
 };
 
 #endif

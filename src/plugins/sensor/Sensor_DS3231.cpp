@@ -22,7 +22,7 @@ PROGMEM_STRING_DEF(ds3231_id_temp, "ds3231_temp");
 PROGMEM_STRING_DEF(ds3231_id_time, "ds3231_time");
 PROGMEM_STRING_DEF(ds3231_id_lost_power, "ds3231_lost_power");
 
-Sensor_DS3231::Sensor_DS3231(const JsonString &name) : MQTTSensor(), _name(name), _wire(&config.initTwoWire()), _availabe(rtc.begin())
+Sensor_DS3231::Sensor_DS3231(const JsonString &name) : MQTTSensor(), _name(name), _wire(&config.initTwoWire())
 {
 #if DEBUG_MQTT_CLIENT
     debug_printf_P(PSTR("Sensor_DS3231(): component=%p\n"), this);
@@ -102,7 +102,8 @@ Sensor_DS3231::SensorEnumType_t Sensor_DS3231::getType() const
 
 float Sensor_DS3231::_readSensorTemp()
 {
-    if (!_availabe) {
+    _debug_printf_P(PSTR("Sensor_DS3231::_readSensorTemp()\n"));
+    if (!rtc.begin()) {
         return NAN;
     }
     return rtc.getTemperature();
@@ -110,7 +111,8 @@ float Sensor_DS3231::_readSensorTemp()
 
 time_t Sensor_DS3231::_readSensorTime()
 {
-    if (!_availabe) {
+    _debug_printf_P(PSTR("Sensor_DS3231::_readSensorTime()\n"));
+    if (!rtc.begin()) {
         return 0;
     }
     return rtc.now().unixtime();
@@ -118,7 +120,8 @@ time_t Sensor_DS3231::_readSensorTime()
 
 int8_t Sensor_DS3231::_readSensorLostPower()
 {
-    if (!_availabe) {
+    _debug_printf_P(PSTR("Sensor_DS3231::_readSensorLostPower()\n"));
+    if (!rtc.begin()) {
         return -1;
     }
     return rtc.lostPower();
@@ -128,7 +131,7 @@ String Sensor_DS3231::_getTimeStr()
 {
     char buf[64];
     auto now = _readSensorTime();
-    if (now == 0) {
+    if (now) {
         auto tm = gmtime(&now);
         strftime_P(buf, sizeof(buf), PSTR("%Y-%m-%d\n%H:%M:%s"), tm);
         strcat_P(buf, PSTR("\nLost Power: "));

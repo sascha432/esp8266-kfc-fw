@@ -23,7 +23,8 @@
 #include "reset_detector.h"
 #include "dyn_bitset.h"
 #if DEBUG_HAVE_SAVECRASH
-#include "EspSaveCrash.h"
+#include "../.pio/libdeps/weather/EspSaveCrash/src/EspSaveCrash.h"
+// #include <EspSaveCrash.h>
 #endif
 
 #ifdef dhcp_start // defined in framework-arduinoespressif8266@2.20402.4/tools/sdk/lwip2/include/arch/cc.h
@@ -180,13 +181,13 @@ struct BlindsController {
 
 class Config_NTP {
 public:
-    typedef struct {
+    typedef struct ____attribute__packed__ {
         int32_t offset;
         char abbreviation[4];
+        bool dst;
     } Timezone_t;
 
-
-    Config_NTP() : tz({0, {0}}) {
+    Config_NTP() : tz({0, {0}, false}) {
     }
 
     static const char *getTimezone();

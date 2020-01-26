@@ -53,7 +53,7 @@ static std::vector<TimeUpdatedCallback_t> _callbacks;
 
 void addTimeUpdatedCallback(TimeUpdatedCallback_t callback)
 {
-    _debug_printf_P(PSTR("addTimeUpdatedCallback(): func=%p\n"), callback);
+    _debug_printf_P(PSTR("func=%p\n"), &callback);
     _callbacks.push_back(callback);
 }
 
@@ -108,7 +108,7 @@ uint32_t TimezoneData::_lastNtpCallback = 0;
 
 TimezoneData::TimezoneData()
 {
-    _debug_printf_P(PSTR("TimezoneData::TimezoneData()\n"));
+    _debug_println(_sharedEmptyString);
     _zoneEnd = 0;
     _lastNtpUpdate = 0;
     _failureCount = 0;
@@ -117,7 +117,7 @@ TimezoneData::TimezoneData()
 
 TimezoneData::~TimezoneData()
 {
-    _debug_printf_P(PSTR("TimezoneData::~TimezoneData()\n"));
+    _debug_println(_sharedEmptyString);
     _updateTimer.remove();
     deleteRemoteTimezone();
 }
@@ -189,7 +189,7 @@ void TimezoneData::retry(const String &message)
 
 void TimezoneData::wifiConnectedCallback(uint8_t event, void *payload)
 {
-    _debug_printf_P(PSTR("TimezoneData::wifiConnectedCallback(): event=%u\n"), event);
+    _debug_printf_P(PSTR("event=%u\n"), event);
     if (!IS_TIME_VALID(time(nullptr))) {
         _debug_printf_P(PSTR("wifiConnectedCallback(%d): time not valid, updating SNTP\n"), event);
         TimezoneData::configTime();
@@ -210,7 +210,7 @@ void TimezoneData::wifiConnectedCallback(uint8_t event, void *payload)
 
 void TimezoneData::_callback(bool status, const String message, time_t zoneEnd)
 {
-    _debug_printf_P(PSTR("TimezoneData::_callback(): status=%d, message=%s, zoneEnd=%ld\n"), status, message.c_str(), (long)zoneEnd);
+    _debug_printf_P(PSTR("status=%d, message=%s, zoneEnd=%ld\n"), status, message.c_str(), (long)zoneEnd);
     if (status) {
         auto &timezone = get_default_timezone();
         auto offset = timezone.getOffset();
@@ -268,7 +268,7 @@ void TimezoneData::getStatus(Print &out)
         } else {
             out.printf_P(PSTR("%s, status invalid"), config._H_STR(Config().ntp.timezone));
         }
-        const ConfigurationParameter::Handle_t handles[] = { _H(Config().ntp.servers[0]), _H(Config().ntp.servers[1]), _H(Config().ntp.servers[2]) };
+        static const ConfigurationParameter::Handle_t handles[] = { _H(Config().ntp.servers[0]), _H(Config().ntp.servers[1]), _H(Config().ntp.servers[2]) };
         for (int i = 0; i < 2; i++) {
             auto server = config.getString(handles[i]);
             if (*server) {
@@ -295,11 +295,11 @@ void TimezoneData::getStatus(Print &out)
 void TimezoneData::updateLoop()
 {
     if (get_time_diff(_lastNtpUpdate, millis()) > _ntpRefreshTime) { // refresh NTP time manually
-        _debug_println(F("TimezoneData::updateLoop(): refreshing NTP time manually"));
+        _debug_println(F("refreshing NTP time manually"));
         configTime();
     }
     if (_zoneEnd != 0 && time(nullptr) >= _zoneEnd) {
-        _debug_printf_P(PSTR("TimezoneData::updateLoop() triggered\n"));
+        _debug_printf_P(PSTR("triggered\n"));
         LoopFunctions::remove(TimezoneData::updateLoop); // remove once triggered
         timezoneData = _debug_new TimezoneData();
         if (WiFi.isConnected()) { // simulate event if WiFi is already connected
@@ -310,10 +310,10 @@ void TimezoneData::updateLoop()
 
 void TimezoneData::updateNtpCallback()
 {
-    _debug_printf_P(PSTR("TimezoneData::updateNtpCallback(): new time=%u\n"), (uint32_t)time(nullptr));
+    _debug_printf_P(PSTR("new time=%u\n"), (uint32_t)time(nullptr));
 
     if (get_time_diff(_lastNtpCallback, millis()) < 1000) {
-        _debug_printf_P(PSTR("TimezoneData::updateNtpCallback(): called twice within 1000ms (%u), ignored multiple calls\n"), get_time_diff(_lastNtpCallback, millis()));
+        _debug_printf_P(PSTR("called twice within 1000ms (%u), ignored multiple calls\n"), get_time_diff(_lastNtpCallback, millis()));
         return;
     }
 
@@ -342,7 +342,7 @@ void TimezoneData::updateNtpCallback()
 void TimezoneData::configTime()
 {
     if (get_time_diff(_lastNtpUpdate, millis()) < 1000) {
-        _debug_printf_P(PSTR("TimezoneData::configTime(): skipped multiple calls within 1000ms\n"));
+        _debug_printf_P(PSTR("skipped multiple calls within 1000ms\n"));
         return;
     }
     _lastNtpUpdate = millis();
@@ -355,7 +355,7 @@ void TimezoneData::configTime()
 
     settimeofday_cb(updateNtpCallback);
 
-    _debug_printf_P(PSTR("TimezoneData::configTime(): server1=%s,server2=%s,server3=%s, refresh in %.0f seconds\n"), config._H_STR(Config().ntp.servers[0]), config._H_STR(Config().ntp.servers[1]), config._H_STR(Config().ntp.servers[2]), _ntpRefreshTime / 1000.0);
+    _debug_printf_P(PSTR("server1=%s,server2=%s,server3=%s, refresh in %.0f seconds\n"), config._H_STR(Config().ntp.servers[0]), config._H_STR(Config().ntp.servers[1]), config._H_STR(Config().ntp.servers[2]), _ntpRefreshTime / 1000.0);
     // force SNTP to update the time
     ::configTime(0, 0, config._H_STR(Config().ntp.servers[0]), config._H_STR(Config().ntp.servers[1]), config._H_STR(Config().ntp.servers[2]));
 }
@@ -387,11 +387,11 @@ void timezone_setup()
                 msec -= seconds;                                    // remove full seconds
                 struct timeval tv = { (time_t)(ntp.currentTime + seconds), (suseconds_t)(msec * 1000L) };
                 settimeofday(&tv, nullptr);
-                _debug_printf_P(PSTR("timezone_setup(): stored time %lu, sleep time %u, millis() %lu, new time sec %lu usec %lu\n"), ntp.currentTime, ntp.sleepTime, millis(), tv.tv_sec, tv.tv_usec);
+                _debug_printf_P(PSTR("stored time %lu, sleep time %u, millis() %lu, new time sec %lu usec %lu\n"), ntp.currentTime, ntp.sleepTime, millis(), tv.tv_sec, tv.tv_usec);
 #endif
                 TimezoneData::configTime();     // request real time from ntp
 
-                _debug_printf_P(PSTR("timezone_setup(): restored timezone after wake up. abbreviation=%s, offset=%d, zoneEnd=%lu\n"), ntp.abbreviation, ntp.offset, ntp.zoneEnd);
+                _debug_printf_P(PSTR("restored timezone after wake up. abbreviation=%s, offset=%d, zoneEnd=%lu\n"), ntp.abbreviation, ntp.offset, ntp.zoneEnd);
                 return;
             }
         }

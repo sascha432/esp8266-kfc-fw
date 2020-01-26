@@ -26,7 +26,7 @@
 
 RemoteTimezone::RemoteTimezone() : _zoneEnd(0), _callback(nullptr)
 {
-	_debug_printf_P(PSTR("RemoteTimezone::RemoteTimezone()\n"));
+	_debug_println(_sharedEmptyString);
 #if TIMEZONE_USE_HTTP_CLIENT == 0
 	_httpClient = nullptr;
 #endif
@@ -34,7 +34,7 @@ RemoteTimezone::RemoteTimezone() : _zoneEnd(0), _callback(nullptr)
 
 RemoteTimezone::~RemoteTimezone()
 {
-	_debug_printf_P(PSTR("RemoteTimezone::~RemoteTimezone()\n"));
+	_debug_println(_sharedEmptyString);
 #if TIMEZONE_USE_HTTP_CLIENT == 0
 	if (_httpClient) {
 		delete _httpClient;
@@ -59,7 +59,7 @@ void RemoteTimezone::setStatusCallback(RemoteTimezoneStatusCallback_t callback)
 
 void RemoteTimezone::get()
 {
-	_debug_printf_P(PSTR("RemoteTimezone::get()\n"));
+	_debug_println(_sharedEmptyString);
 	_zoneEnd = 0;
 
 	String url = _url;
@@ -70,7 +70,7 @@ void RemoteTimezone::get()
 #if TIMEZONE_USE_HTTP_CLIENT
 	HTTPClient http;
 
-	_debug_printf_P(PSTR("RemoteTimezone::HTTPClient(): url=%s\n"), url.c_str());
+	_debug_printf_P(PSTR("url=%s\n"), url.c_str());
 
 	http.begin(url);
 	int httpCode = http.GET();
@@ -87,7 +87,7 @@ void RemoteTimezone::get()
 	http.end();
 #else
 
-	_debug_printf_P(PSTR("RemoteTimezone::asyncHTTPrequest(): url=%s\n"), url.c_str());
+	_debug_printf_P(PSTR("url=%s\n"), url.c_str());
 
 	if (_httpClient != nullptr) {
 		delete _httpClient;
@@ -127,7 +127,7 @@ time_t RemoteTimezone::getZoneEnd() {
 
 void RemoteTimezone::_responseHandler(const String url, Stream &stream)
 {
-	_debug_printf_P(PSTR("RemoteTimezone::_responseHandler(): url=%s\n"), url.c_str());
+	_debug_printf_P(PSTR("url=%s\n"), url.c_str());
 
 	struct {
 		bool status;
@@ -178,6 +178,7 @@ void RemoteTimezone::_responseHandler(const String url, Stream &stream)
 			tz.setTimezone(0, args.zoneName);
 			tz.setDst(args.dst);
 			tz.setOffset(args.offset);
+			tz.save();
 		}
 	} else {
 		args.status = false;

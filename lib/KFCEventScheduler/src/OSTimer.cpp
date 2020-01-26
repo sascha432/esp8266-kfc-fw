@@ -20,13 +20,14 @@ OSTimer::~OSTimer() {
     detach();
 }
 
-void OSTimer::startTimer(uint32_t delay, bool repeat) {
+void OSTimer::startTimer(uint32_t delay, bool repeat)
+{
     if (delay < EventTimer::minDelay) {
-        _debug_printf_P(PSTR("ERROR: delay %u < %u is not supported\n"), delay, EventTimer::minDelay);
+        __debugbreak_and_panic_printf_P(PSTR("delay %u < %u is not supported\n"), delay, EventTimer::minDelay);
         delay = EventTimer::minDelay;
     }
     else if (delay > EventTimer::maxDelay) {
-        _debug_printf_P(PSTR("ERROR: delay %u > %u is not supported\n"), delay, EventTimer::maxDelay);
+        __debugbreak_and_panic_printf_P(PSTR("delay %u > %u is not supported\n"), delay, EventTimer::maxDelay);
         delay = EventTimer::maxDelay;
     }
     if (_timer) {
@@ -38,7 +39,8 @@ void OSTimer::startTimer(uint32_t delay, bool repeat) {
     os_timer_arm(_timer, delay, repeat);
 }
 
-void OSTimer::detach() {
+void OSTimer::detach()
+{
     if (_timer) {
         os_timer_disarm(_timer);
         os_timer_delete(_timer);
@@ -46,12 +48,14 @@ void OSTimer::detach() {
     }
 }
 
-void OSTimer::_callback(void *arg) {
+void OSTimer::_callback(void *arg)
+{
     OSTimer *timer = reinterpret_cast<OSTimer *>(arg);
     timer->run();
 }
 
-void OSTimer::_callbackOnce(void *arg) {
+void OSTimer::_callbackOnce(void *arg)
+{
     OSTimer *timer = reinterpret_cast<OSTimer *>(arg);
     timer->run();
     timer->detach();

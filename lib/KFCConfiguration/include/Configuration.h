@@ -182,7 +182,7 @@ public:
         if (!dataPtr || length != sizeof(T)) {
 #if DEBUG_CONFIGURATION
             if (dataPtr && length != sizeof(T)) {
-                _debug_printf("Configuration::get<%s>() size does not match, handle %04x (%s)\n", ConfigurationParameter::getTypeString(param->getType()).c_str(), handle, getHandleName(handle));
+                _debug_printf_P(PSTR("size does not match, handle %04x (%s)\n"), ConfigurationParameter::getTypeString(param->getType()).c_str(), handle, getHandleName(handle));
             }
 #endif
             T empty;
@@ -221,7 +221,7 @@ public:
     inline void beginEEPROM() {
         if (!_eepromInitialized) {
             _eepromInitialized = true;
-            _debug_printf("Configuration::beginEEPROM() = %d\n", _eepromSize);
+            _debug_printf_P(PSTR("size=%d\n"), _eepromSize);
             EEPROM.begin(_eepromSize);
         }
     }

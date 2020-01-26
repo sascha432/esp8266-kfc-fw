@@ -39,6 +39,6 @@ size_t ProgmemFileImpl::size() const {
 }
 
 const char * ProgmemFileImpl::name() const {
-    debug_printf("name() = %s\n", _name.get());
+    debug_printf("name=%s\n", _name.get());
     return (const char *)_name.get();
 }

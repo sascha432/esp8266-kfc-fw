@@ -90,12 +90,14 @@ Configuration::Configuration(uint16_t offset, uint16_t size) {
     _eepromSize = 4096;
 }
 
-Configuration::~Configuration() {
+Configuration::~Configuration()
+{
     clear();
 }
 
-void Configuration::clear() {
-    _debug_printf_P(PSTR("Configuration::clear()\n"));
+void Configuration::clear()
+{
+    _debug_println(_sharedEmptyString);
     for (auto &parameter : _params) {
         parameter.freeData();
     }
@@ -105,7 +107,7 @@ void Configuration::clear() {
 
 void Configuration::discard()
 {
-    _debug_printf_P(PSTR("Configuration::discard()\n"));
+    _debug_println(_sharedEmptyString);
     for (auto &parameter : _params) {
         parameter.freeData();
     }
@@ -114,20 +116,22 @@ void Configuration::discard()
 }
 
 // read map only, data is read on demand
-bool Configuration::read() {
+bool Configuration::read()
+{
     clear();
-    _debug_printf_P(PSTR("Configuration::read()\n"));
+    _debug_println(_sharedEmptyString);
     auto result = _readParams();
     if (!result) {
-        _debug_printf_P(PSTR("Configuration::_readParams() = false\n"));
+        _debug_printf_P(PSTR("params=false\n"));
         clear();
     }
     return result;
 }
 
 // write data to EEPROM
-bool Configuration::write() {
-    _debug_printf_P(PSTR("Configuration::write()\n"));
+bool Configuration::write()
+{
+    _debug_println(_sharedEmptyString);
 
     Buffer buffer;
     uint16_t dataOffset;
@@ -161,7 +165,7 @@ bool Configuration::write() {
                 if (i != j) {
                     auto &parameter2 = _params.at(j);
                     if (parameter2.isAligned() && parameter2.needsAlloc()) {
-                        _debug_printf_P(PSTR("Configuration::write(): Swap %d and %d\n"), i, j);
+                        _debug_printf_P(PSTR("swap %d and %d\n"), i, j);
                         auto &eepromPtr = _eepromPtr.at(i);
                         auto &eepromPtr2 = _eepromPtr.at(j);
                         const uint8_t *etmp = eepromPtr;
@@ -191,13 +195,13 @@ bool Configuration::write() {
     }
 
     dataOffset = _offset + (uint16_t)(buffer.length() + sizeof(Header_t)); // new offset
-    _debug_printf_P(PSTR("Configuration::write(): Data offset verification %d = %d\n"), dataOffset, (uint16_t)(_offset + (sizeof(ConfigurationParameter::Param_t) * _params.size()) + sizeof(Header_t)));
+    _debug_printf_P(PSTR("Data offset verification %d = %d\n"), dataOffset, (uint16_t)(_offset + (sizeof(ConfigurationParameter::Param_t) * _params.size()) + sizeof(Header_t)));
 
     // write data
     uint16_t index = 0;
     for (auto &parameter : _params) {
 #if DEBUG_CONFIGURATION
-        _debug_printf_P(PSTR("Configuration::write(): %04x (%s), data offset %d, size %d, dirty %d, eeprom offset %p\n"),
+        _debug_printf_P(PSTR("%04x (%s), data offset %d, size %d, dirty %d, eeprom offset %p\n"),
             parameter.getParam().handle, getHandleName(parameter.getParam().handle), (int)(buffer.length() + _offset + sizeof(Header_t)), parameter.getParam().length, parameter.isDirty(), _eepromPtr[index]);
 #endif
         if (parameter.isDirty()) {
@@ -209,7 +213,7 @@ bool Configuration::write() {
     }
 
     if (buffer.length() > _size) {
-        _debug_printf_P(PSTR("Configuration::write(): Size exceeded: %u > %u\n"), buffer.length(), _size);
+        _debug_printf_P(PSTR("size exceeded: %u > %u\n"), buffer.length(), _size);
         discard();    // discard all data
         return false;
     }
@@ -234,7 +238,7 @@ bool Configuration::write() {
     memset(headerPtr, 0, sizeof(Header_t));
     headerPtr->magic = CONFIG_MAGIC_DWORD;
     headerPtr->crc = crc16_calc(sptr, len);
-    _debug_printf_P(PSTR("Configuration::write(): CRC %04x, length %d\n"), headerPtr->crc, len);
+    _debug_printf_P(PSTR("CRC %04x, length %d\n"), headerPtr->crc, len);
     headerPtr->length = len;
     headerPtr->params = _params.size();
 
@@ -268,8 +272,7 @@ uint16_t Configuration::getPosition(const ConfigurationParameter *parameter) con
             }
             pos++;
         }
-        _debug_printf_P(PSTR("Configuration::getPosition(): could not find %04x (%s)\n"), parameter->getConstParam().handle, getHandleName(parameter->getConstParam().handle));
-        __debugbreak_and_panic();
+        __debugbreak_and_panic_printf_P(PSTR("could not find %04x (%s)\n"), parameter->getConstParam().handle, getHandleName(parameter->getConstParam().handle));
     }
     return 0xffff;
 }
@@ -377,7 +380,7 @@ void Configuration::dump(Print &output) {
 }
 
 void Configuration::release() {
-    _debug_printf_P(PSTR("void Configuration::release(): Last read %d, dirty %d\n"), (int)(_readAccess == 0 ? -1 : millis() - _readAccess), isDirty());
+    _debug_printf_P(PSTR("last read %d, dirty %d\n"), (int)(_readAccess == 0 ? -1 : millis() - _readAccess), isDirty());
     for (auto &parameter : _params) {
         parameter.release();
     }
@@ -439,7 +442,7 @@ bool Configuration::importJson(Stream& stream, uint16_t *handles)
 
 void Configuration::endEEPROM() {
     if (_eepromInitialized) {
-        _debug_printf_P(PSTR("Configuration::endEEPROM()\n"));
+        _debug_println(_sharedEmptyString);
         EEPROM.end();
         _eepromInitialized = false;
     }
@@ -447,12 +450,12 @@ void Configuration::endEEPROM() {
 
 void Configuration::commitEEPROM() {
     if (_eepromInitialized) {
-        _debug_printf_P(PSTR("Configuration::commitEEPROM()\n"));
+        _debug_println(_sharedEmptyString);
         EEPROM.commit();
         _eepromInitialized = false;
     }
     else {
-        _debug_printf_P(PSTR("Configuration::commitEEPROM(): EEPROM is not initialized\n"));
+        _debug_println(F("EEPROM is not initialized"));
     }
 }
 
@@ -464,7 +467,7 @@ void Configuration::getEEPROM(uint8_t *dst, uint16_t offset, uint16_t length, ui
         memcpy(dst, EEPROM.getConstDataPtr() + offset, length); // data is already in RAM
         return;
     }
-    _debug_printf_P(PSTR("Configuration::getEEPROM(%p, %d, %d, %d)\n"), dst, offset, length, size);
+    _debug_printf_P(PSTR("dst=%p, ofs=%d, len=%d, size=%d\n"), dst, offset, length, size);
 
     auto eeprom_start_address = ((uint32_t)&_EEPROM_start - EEPROM_ADDR) + offset;
 
@@ -477,10 +480,10 @@ void Configuration::getEEPROM(uint8_t *dst, uint16_t offset, uint16_t length, ui
         readSize = (readSize + 0x4) & ~0x3; // align read length
     }
 
-    // _debug_printf_P(PSTR("Configuration::getEEPROM(offset %d, length %d): alignment %d\n"), offset, length, alignment);
+    // _debug_printf_P(PSTR("ofs=%d, len=%d, align=%d\n"), offset, length, alignment);
 
 
-    // _debug_printf_P(PSTR("Configuration::getEEPROM(): flash: %08X:%08X (%d) aligned: %08X:%08X (%d)\n"),
+    // _debug_printf_P(PSTR("flash: %08X:%08X (%d) aligned: %08X:%08X (%d)\n"),
     //     eeprom_start_address + alignment, eeprom_start_address + length + alignment, length,
     //     eeprom_start_address, eeprom_start_address + readSize, readSize
     // );
@@ -490,7 +493,7 @@ void Configuration::getEEPROM(uint8_t *dst, uint16_t offset, uint16_t length, ui
         uint8_t buf[64];
         uint8_t *ptr = buf;
         if (readSize > 64) {
-            _debug_printf_P(PSTR("Configuration::getEEPROM(): allocating read buffer %d (%d, %d)\n"), readSize, length, size); // large read operation should have an aligned address already to avoid this
+            _debug_printf_P(PSTR("allocating read buffer readSize=%d, len=%d, size=%d\n"), readSize, length, size); // large read operation should have an aligned address already to avoid this
             ptr = (uint8_t *)malloc(readSize);
         }
         noInterrupts();
@@ -530,7 +533,7 @@ void Configuration::getEEPROM(uint8_t *dst, uint16_t offset, uint16_t length, ui
         if (!_partition) {
             _partition = esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_ANY, SPGM(EEPROM_partition_name));
         }
-        _debug_printf_P(PSTR("Configuration::getEEPROM(offset %d, length %d): using esp_partition_read(%p)\n"), offset, length, _partition);
+        _debug_printf_P(PSTR("ofs= %d, len=%d: using esp_partition_read(%p)\n"), offset, length, _partition);
         if (esp_partition_read(_partition, offset, (void *)dst, length) != ESP_OK) {
             memset(dst, 0, length);
         }
@@ -562,7 +565,7 @@ Configuration::ParameterVectorIterator Configuration::_findParam(ConfigurationPa
             offset += it->getParam().length;
         }
     }
-    //_debug_printf_P(PSTR("Configuration::_findParam(%d, %04x (%s)) = not found\n"), (int)type, handle, getHandleName(handle));
+    //_debug_printf_P(PSTR("_findParam(%d, %04x (%s)) = not found\n"), (int)type, handle, getHandleName(handle));
     return _params.end();
 }
 
@@ -579,7 +582,7 @@ ConfigurationParameter &Configuration::_getOrCreateParam(ConfigurationParameter:
         return _params.back();
     }
     else if (type != iterator->getType()) {
-        _debug_printf_P(PSTR("Configuration::_readParams(): reading %04x (%s), cannot override type %d with %d\n"), iterator->getParam().handle, getHandleName(iterator->getParam().handle), iterator->getType(), type);
+        _debug_printf_P(PSTR("reading %04x (%s), cannot override type %d with %d\n"), iterator->getParam().handle, getHandleName(iterator->getParam().handle), iterator->getType(), type);
         __debugbreak_and_panic();
         //iterator->freeData();
         //iterator->setSize(ConfigurationParameter::getDefaultSize(type));
@@ -621,17 +624,17 @@ bool Configuration::_readParams() {
 
         if (hdr.header.magic != CONFIG_MAGIC_DWORD) {
 #if DEBUG_CONFIGURATION
-            _debug_printf_P(PSTR("Configuration::_readParams(): Invalid magic %08x\n"), hdr.header.magic);
+            _debug_printf_P(PSTR("invalid magic %08x\n"), hdr.header.magic);
             dumpEEPROM(Serial, false, _offset, 160);
 #endif
             break;
         }
         else if (hdr.header.crc == -1) {
-            _debug_printf_P(PSTR("Configuration::_readParams(): Invalid CRC %04x\n"), hdr.header.crc);
+            _debug_printf_P(PSTR("invalid CRC %04x\n"), hdr.header.crc);
             break;
         }
         else if (hdr.header.length <= 0 || hdr.header.length + sizeof(hdr.header) > _size) {
-            _debug_printf_P(PSTR("Configuration::_readParams(): Invalid length %d\n"), hdr.header.length);
+            _debug_printf_P(PSTR("invalid length %d\n"), hdr.header.length);
             break;
         }
 
@@ -645,7 +648,7 @@ bool Configuration::_readParams() {
         uint16_t crc = crc16_calc(EEPROM.getConstDataPtr() + _offset + sizeof(hdr.header), hdr.header.length);
 #endif
         if (hdr.header.crc != crc) {
-            _debug_printf_P(PSTR("Configuration::_readParams(): CRC mismatch %04x != %04x\n"), crc, hdr.header.crc);
+            _debug_printf_P(PSTR("CRC mismatch %04x != %04x\n"), crc, hdr.header.crc);
             break;
         }
 
@@ -659,7 +662,7 @@ bool Configuration::_readParams() {
             param.type = ConfigurationParameter::_INVALID;
             EEPROM.get(offset, param);
             if (param.type == ConfigurationParameter::_INVALID) {
-                _debug_printf_P(PSTR("Configuration::_readParams(): Invalid type\n"));
+                _debug_printf_P(PSTR("invalid type\n"));
                 break;
             }
             offset += sizeof(param);
@@ -668,7 +671,7 @@ bool Configuration::_readParams() {
             _params.push_back(parameter);
 #if CONFIGURATION_PARAMETER_USE_DATA_PTR_AS_STORAGE
             if (parameter.isAligned() && !parameter.needsAlloc()) {
-                _debug_printf_P(PSTR("Configuration::_readParams(): reading %04x (%s), size %d\n"), parameter.getParam().handle, getHandleName(parameter.getParam().handle), parameter.getParam().length);
+                _debug_printf_P(PSTR("reading %04x (%s), size %d\n"), parameter.getParam().handle, getHandleName(parameter.getParam().handle), parameter.getParam().length);
                 _params.back().read(this, dataOffset);
             }
 #endif
@@ -679,7 +682,7 @@ bool Configuration::_readParams() {
                 return true;
             }
         }
-        _debug_printf_P(PSTR("Configuration::_readParams(): failure before reading all parameters %d/%d\n"), _params.size(), hdr.header.params);
+        _debug_printf_P(PSTR("failure before reading all parameters %d/%d\n"), _params.size(), hdr.header.params);
         break;
 
     }

@@ -115,7 +115,7 @@ void Sensor_INA219::createWebUI(WebUI &webUI, WebUIRow **row)
 
 void Sensor_INA219::publishState(MQTTClient *client)
 {
-    if (client) {
+    if (client && client->isConnected()) {
         client->publish(MQTTClient::formatTopic(-1, F("/%s/"), _getId(VOLTAGE).c_str()), _qos, 1, String(_Uint, 2));
         client->publish(MQTTClient::formatTopic(-1, F("/%s/"), _getId(CURRENT).c_str()), _qos, 1, String(_Iint, 0));
         client->publish(MQTTClient::formatTopic(-1, F("/%s/"), _getId(POWER).c_str()), _qos, 1, String(_Pint, 0));

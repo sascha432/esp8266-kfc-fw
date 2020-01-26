@@ -9,6 +9,7 @@
 #include <Arduino_compat.h>
 #include <Wire.h>
 #include <vector>
+#include <Wire.h>
 #include "WebUIComponent.h"
 #include "plugins.h"
 #include "MQTTSensor.h"
@@ -37,10 +38,14 @@ public:
     virtual SensorEnumType_t getType() const override;
 
 private:
-    const __FlashStringHelper *_getId();
-    float _readSensor();
+    float _readSensorTemp();
+    time_t _readSensorTime();
+    int8_t _readSensorLostPower();
+    String _getTimeStr();
 
     JsonString _name;
+    TwoWire *_wire;
+    bool _availabe;
 };
 
 #endif

@@ -148,7 +148,7 @@ void DimmerChannel::publishState(MQTTClient *client) {
     if (!client) {
         client = MQTTClient::getClient();
     }
-    if (client) {
+    if (client && client->isConnected()) {
         _debug_printf_P(PSTR("DimmerChannel[%u]::publishState(): brightness %d, state %u, client %p\n"), _channel, _data.brightness.value, _data.state.value, client);
         uint8_t _qos = MQTTClient::getDefaultQos();
 

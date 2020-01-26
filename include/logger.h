@@ -9,7 +9,7 @@
 #include <Arduino_compat.h>
 
 #ifndef DEBUG_LOGGER
-#define DEBUG_LOGGER        1
+#define DEBUG_LOGGER        0
 #endif
 
 #define Logger_error        _logger.error

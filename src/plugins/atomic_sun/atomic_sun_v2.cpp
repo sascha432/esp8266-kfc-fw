@@ -370,7 +370,7 @@ void Driver_4ChDimmer::publishState(MQTTClient *client)
     if (!client) {
         client = MQTTClient::getClient();
     }
-    if (client) {
+    if (client && client->isConnected()) {
         client->publish(_data.state.state, _qos, 1, String(_data.state.value));
         client->publish(_data.brightness.state, _qos, 1, String(_data.brightness.value));
         client->publish(_data.color.state, _qos, 1, String(_data.color.value / 100.0, 2));

@@ -110,7 +110,7 @@ void check_if_exist_I2C(Print &output)
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(I2CSCAN, "CAN", "Scan for I2C bus and devices (might cause a crash)");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(I2CSCANP, "CANP", "[<pin>,<pin>,[<pin>[,...]]]", "Set pins to scan", "Display pins to scan");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(I2CSCAND, "CAND", "Scan for devices");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CSS, "S", "<SDA,SCL[,speed=100kHz[,clock strech limit=usec]]>", "Setup I2C bus. Use reset to restore defaults");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CSS, "S", "<SDA,SCL[,speed=100kHz[,clock strech limit=usec]]>/<reset>", "Setup I2C bus. Use reset to restore defaults");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CST, "T", "<address,byte[,byte][,...]>", "Send data to slave (hex encoded: ff or 0xff)");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CSR, "R", "<address,count>", "Request data from slave");
 #ifdef _LIB_ADAFRUIT_INA219_
@@ -202,7 +202,7 @@ bool I2CScannerPlugin::atModeHandler(AtModeArgs &args)
 {
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(I2CSS))) {
         if (args.requireArgs(1, 4)) {
-            if (args.equalsIgnoreCase(0, F("reset"))) {
+            if (args.isAnyMatchIgnoreCase(0, F("reset,rst,r,true,1"))) {
                 auto &serial = args.getStream();
                 serial.print(F("+I2CS: "));
                 config.initTwoWire(true, &serial);

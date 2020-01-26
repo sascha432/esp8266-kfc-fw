@@ -228,7 +228,7 @@ void Sensor_HLW80xx::publishState(MQTTClient *client)
         return; // we skip this round
     }
 
-    if (client) {
+    if (client && client->isConnected()) {
         PrintString str;
         JsonUnnamedObject json;
         json.add(F("power"), _powerToNumber(_power));

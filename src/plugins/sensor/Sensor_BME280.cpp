@@ -98,7 +98,7 @@ Sensor_BME280::SensorEnumType_t Sensor_BME280::getType() const
 
 void Sensor_BME280::publishState(MQTTClient *client)
 {
-    if (client) {
+    if (client && client->isConnected()) {
         auto sensor = _readSensor();
         PrintString str;
         JsonUnnamedObject json;

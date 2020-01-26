@@ -6,7 +6,6 @@
 
 #include <Arduino_compat.h>
 #include <JsonBaseReader.h>
-#include "OpenWeatherMapAPI.h"
 
 class RestApiJsonReader : public JsonBaseReader {
 public:

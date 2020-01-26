@@ -234,14 +234,14 @@ File Logger::openAccessLog()
 void Logger::getLogs(StringVector &logs)
 {
     logs.clear();
-    if (LOGLEVEL_ERROR >= _logLevel) {
+    if (LOGLEVEL_ERROR <= _logLevel) {
         logs.emplace_back(std::move(String(FSPGM(log_file_messages))));
     }
-    if (LOGLEVEL_ACCESS >= _logLevel) {
+    if (LOGLEVEL_ACCESS <= _logLevel) {
         logs.emplace_back(std::move(String(FSPGM(log_file_access))));
     }
 #if DEBUG
-    if (LOGLEVEL_DEBUG >= _logLevel) {
+    if (LOGLEVEL_DEBUG <= _logLevel) {
         logs.emplace_back(std::move(String(FSPGM(log_file_debug))));
     }
 #endif
@@ -251,7 +251,7 @@ void Logger::getLogs(StringVector &logs)
 void Logger::writeLog(LogLevel logLevel, const char *message, va_list arg)
 {
 // Serial.printf("|%s|\n",message);
-    if (logLevel >= _logLevel) {
+    if (logLevel > _logLevel) {
         return;
     }
 

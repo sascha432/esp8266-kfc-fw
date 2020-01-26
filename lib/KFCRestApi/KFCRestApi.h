@@ -17,15 +17,13 @@
 #define DEBUG_KFC_REST_API                                  1
 #endif
 
-#if _WIN32 || _WIN64
-#define KFC_REST_APITIMEZONE_USE_HTTP_CLIENT			    1
-#elif defined(ESP32)
+#ifndef KFC_REST_API_USE_HTTP_CLIENT
 #define KFC_REST_API_USE_HTTP_CLIENT				        1
-#else
-#define KFC_REST_API_USE_HTTP_CLIENT				        0
-#include <asyncHTTPrequest.h>
 #endif
 
+#if KFC_REST_API_USE_HTTP_CLIENT
+#include "../.pio/libdeps/clockv2/asyncHTTPrequest_ID1836/src/asyncHTTPrequest.h"
+#endif
 
 class KFCRestAPI {
 public:

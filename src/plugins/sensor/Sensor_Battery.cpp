@@ -78,7 +78,7 @@ void Sensor_Battery::createWebUI(WebUI &webUI, WebUIRow **row)
 
 void Sensor_Battery::publishState(MQTTClient *client)
 {
-    if (client) {
+    if (client && client->isConnected()) {
         client->publish(_getTopic(LEVEL), _qos, 1, String(_readSensor(), _config.precision));
 #if IOT_SENSOR_BATTERY_CHARGE_DETECTION
         client->publish(_getTopic(STATE), _qos, 1, _isCharging() ? FSPGM(Yes) : FSPGM(No));

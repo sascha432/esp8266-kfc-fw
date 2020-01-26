@@ -175,7 +175,7 @@ bool Sensor_HLW8012::_processInterruptBuffer(InterruptBuffer &buffer, SensorInpu
         auto client = _getWebSocketClient();
         bool convertUnits = false;
         uint16_t dataType = 0;
-        if (client) {
+        if (client && client->isConnected()) {
             convertUnits = _getWebSocketPlotData() & WebSocketDataTypeEnum_t::CONVERT_UNIT;
             if ((_getWebSocketPlotData() & WebSocketDataTypeEnum_t::CURRENT) && (&input == &_inputCFI)) {
                 dataType = 'I';

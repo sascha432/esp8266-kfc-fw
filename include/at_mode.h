@@ -424,6 +424,7 @@ public:
     void printf_P(PGM_P format, ...);
     void print(const char *str);
     void print(const __FlashStringHelper *str);
+    void print();
     void ok();
 
 private:

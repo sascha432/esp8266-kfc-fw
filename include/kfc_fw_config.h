@@ -109,15 +109,6 @@ struct HueConfig {
     char devices[255]; // \n is separator
 };
 
-struct NTP {
-    char timezone[33];
-    char servers[3][65];
-#if USE_REMOTE_TIMEZONE
-    char remote_tz_dst_ofs_url[255];
-#endif
-    uint16_t ntpRefresh;
-};
-
 struct Ping {
     char host1[65];
     char host2[65];
@@ -186,6 +177,32 @@ struct BlindsController {
 };
 
 #include "push_pack.h"
+
+class Config_NTP {
+public:
+    typedef struct {
+        int32_t offset;
+        char abbreviation[4];
+    } Timezone_t;
+
+
+    Config_NTP() : tz({0, {0}}) {
+    }
+
+    static const char *getTimezone();
+    static const char *getServers(uint8_t num);
+    static const char *getUrl();
+    static Timezone_t getTZ();
+
+    char timezone[33];
+    char servers[3][65];
+#if USE_REMOTE_TIMEZONE
+    char remote_tz_dst_ofs_url[255];
+#endif
+    uint16_t ntpRefresh;
+    Timezone_t tz;
+};
+
 
 class Config_HomeAssistant {
 public:
@@ -323,7 +340,7 @@ struct Config {
     char syslog_host[65];
     uint16_t syslog_port;
 
-    struct NTP ntp;
+    Config_NTP ntp;
     Config_HomeAssistant homeassistant;
     DimmerModule dimmer;
     DimmerModuleButtons dimmer_buttons;
@@ -417,6 +434,7 @@ public:
     TwoWire &initTwoWire(bool reset = false, Print *output = nullptr);
     bool setRTC(uint32_t unixtime);
     uint32_t getRTC();
+    bool rtcLostPower() ;
     void printRTCStatus(Print &output, bool plain = true);
 
 private:

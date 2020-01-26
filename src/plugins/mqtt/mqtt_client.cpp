@@ -167,7 +167,7 @@ const String MQTTClient::getComponentName(uint8_t num)
         deviceName += mqttClient->useNodeId() ? '/' : '_';
         deviceName += String(num);
     }
-    _debug_printf_P(PSTR("MQTTClient::getComponentName(): number=%u,client=%p,multiple=%u,device=%s\n"), num, mqttClient, mqttClient->hasMultipleComponments(), deviceName.c_str());
+    // _debug_printf_P(PSTR("MQTTClient::getComponentName(): number=%u,client=%p,multiple=%u,device=%s\n"), num, mqttClient, mqttClient->hasMultipleComponments(), deviceName.c_str());
     return deviceName;
 }
 
@@ -180,7 +180,7 @@ String MQTTClient::formatTopic(uint8_t num, const __FlashStringHelper *format, .
     topic.vprintf_P(RFPSTR(format), arg);
     va_end(arg);
     topic.replace(F("${device_name}"), getComponentName(num));
-    _debug_printf_P(PSTR("MQTTClient::formatTopic(): number=%u,topic=%s\n"), num, topic.c_str());
+    // _debug_printf_P(PSTR("MQTTClient::formatTopic(): number=%u,topic=%s\n"), num, topic.c_str());
     return topic;
 }
 
@@ -572,8 +572,7 @@ void MQTTClient::handleWiFiEvents(uint8_t event, void *payload)
 
 void MQTTClient::_addQueue(MQTTQueue &&queue)
 {
-    _debug_printf_P(PSTR("MQTTClient::_addQueue(type %u): topic=%s\n"), queue.getType(), queue.getTopic().c_str());
-
+    // _debug_printf_P(PSTR("MQTTClient::_addQueue(type %u): topic=%s\n"), queue.getType(), queue.getTopic().c_str());
     _queue.emplace_back(queue);
 
     if (_queueTimer.active()) {
@@ -585,7 +584,7 @@ void MQTTClient::_addQueue(MQTTQueue &&queue)
 
 void MQTTClient::_queueTimerCallback(EventScheduler::TimerPtr timer)
 {
-    _debug_printf_P(PSTR("MQTTClient::_queueTimerCallback(): attempt %u\n"), timer->getCallCounter());
+    // _debug_printf_P(PSTR("MQTTClient::_queueTimerCallback(): attempt %u\n"), timer->getCallCounter());
 
     _queue.erase(std::remove_if(_queue.begin(), _queue.end(), [this](const MQTTQueue &queue) {
         switch(queue.getType()) {
@@ -744,7 +743,7 @@ void MQTTPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
 
 #include "at_mode.h"
 
-PROGMEM_AT_MODE_HELP_COMMAND_DEF(MQTT, "MQTT", "<connect|disconnect|force-disconnect|enable|disable>", "Connect or disconnect from server", "Display MQTT status");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF(MQTT, "MQTT", "<connect|disconnect|force-disconnect|secure|unsecure|disable>", "Connect or disconnect from server", "Display MQTT status");
 #if MQTT_AUTO_DISCOVERY_CLIENT
 
 #include "mqtt_auto_discovery_client.h"
@@ -808,9 +807,9 @@ bool MQTTPlugin::atModeHandler(AtModeArgs &args)
 {
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(MQTT))) {
         auto &serial = args.getStream();
-        serial.print(F("+MQTT "));
         if (args.isQueryMode()) {
             if (MQTTClient::getClient()) {
+                args.print();
                 serial.print(F("status: "));
                 serial.println(MQTTClient::connectionStatusString());
             } else {
@@ -818,32 +817,44 @@ bool MQTTPlugin::atModeHandler(AtModeArgs &args)
             }
         } else if (MQTTClient::getClient() && args.requireArgs(1, 1)) {
             auto &client = *MQTTClient::getClient();
-            if (args.isAnyMatchIgnoreCase(0, F("connect,1"))) {
+            args.print();
+            if (args.isAnyMatchIgnoreCase(0, F("connect,con"))) {
                 serial.print(F("connect: "));
                 serial.println(MQTTClient::connectionStatusString());
                 client.setAutoReconnect(MQTTClient::DEFAULT_RECONNECT_TIMEOUT);
                 client.connect();
             }
-            else if (args.isAnyMatchIgnoreCase(0, F("disconnect,0"))) {
+            else if (args.isAnyMatchIgnoreCase(0, F("disconnect,dis"))) {
                 serial.println(F("disconnect"));
                 client.disconnect(false);
             }
-            else if (args.equalsIgnoreCase(0, F("force-disconnect"))) {
+            else if (args.equalsIgnoreCase(0, F("force-disconnect,fdis"))) {
                 serial.println(F("force disconnect"));
                 client.setAutoReconnect(0);
                 client.disconnect(true);
             }
             else if (args.isTrue(0)) {
+                config.discard();
                 auto &flags = config._H_W_GET(Config().flags);
                 flags.mqttMode = MQTT_MODE_UNSECURE;
                 config.write();
+                args.printf_P(PSTR("MQTT unsecure %s"), FSPGM(enabled));
+            }
+            else if (args.isAnyMatchIgnoreCase(0, F("secure"))) {
+                config.discard();
+                auto &flags = config._H_W_GET(Config().flags);
+                flags.mqttMode = MQTT_MODE_SECURE;
+                config.write();
+                args.printf_P(PSTR("MQTT secure %s"), FSPGM(enabled));
             }
             else if (args.isFalse(0)) {
+                config.discard();
                 auto &flags = config._H_W_GET(Config().flags);
                 flags.mqttMode = MQTT_MODE_DISABLED;
                 config.write();
                 client.setAutoReconnect(0);
                 client.disconnect(true);
+                args.printf_P(PSTR("MQTT %s"), FSPGM(disabled));
             }
         }
         return true;

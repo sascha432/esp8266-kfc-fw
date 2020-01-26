@@ -371,7 +371,7 @@ void Dimmer_Base::_updateMetrics(uint16_t vcc, float frequency, float internalTe
     _debug_printf_P(PSTR("Dimmer_Base::_updateMetrics(%u, %.3f, %.2f, %.2f)\n"), vcc, frequency, internalTemperature, ntcTemperature);
     if (_vcc != vcc || _frequency != frequency || _internalTemperature != internalTemperature || _ntcTemperature != ntcTemperature) {
         auto client = MQTTClient::getClient();
-        if (client) {
+        if (client && client->isConnected()) {
             auto qos = MQTTClient::getDefaultQos();
             JsonUnnamedObject object(2);
             object.add(JJ(type), JJ(ue));

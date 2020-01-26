@@ -56,7 +56,7 @@ void Sensor_LM75A::createWebUI(WebUI &webUI, WebUIRow **row)
 
 void Sensor_LM75A::publishState(MQTTClient *client)
 {
-    if (client) {
+    if (client && client->isConnected()) {
         client->publish(MQTTClient::formatTopic(-1, F("/%s/"), _getId().c_str()), _qos, 1, String(_readSensor(), 2));
     }
 }

@@ -4,7 +4,9 @@
 
 #if IOT_SENSOR && IOT_SENSOR_HAVE_DS3231
 
+#include <Timezone.h>
 #include "Sensor_DS3231.h"
+#include "progmem_data.h"
 
 #if DEBUG_IOT_SENSOR
 #include <debug_helper_enable.h>
@@ -16,7 +18,11 @@
 extern RTC_DS3231 rtc;
 #endif
 
-Sensor_DS3231::Sensor_DS3231(const JsonString &name) : MQTTSensor(), _name(name)
+PROGMEM_STRING_DEF(ds3231_id_temp, "ds3231_temp");
+PROGMEM_STRING_DEF(ds3231_id_time, "ds3231_time");
+PROGMEM_STRING_DEF(ds3231_id_lost_power, "ds3231_lost_power");
+
+Sensor_DS3231::Sensor_DS3231(const JsonString &name) : MQTTSensor(), _name(name), _wire(&config.initTwoWire()), _availabe(rtc.begin())
 {
 #if DEBUG_MQTT_CLIENT
     debug_printf_P(PSTR("Sensor_DS3231(): component=%p\n"), this);
@@ -28,38 +34,59 @@ void Sensor_DS3231::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTT
 {
     auto discovery = _debug_new MQTTAutoDiscovery();
     discovery->create(this, 0, format);
-    discovery->addStateTopic(MQTTClient::formatTopic(-1, F("/%s/"), _getId()));
+    discovery->addStateTopic(MQTTClient::formatTopic(-1, F("/%s/"), FSPGM(ds3231_id_temp)));
     discovery->addUnitOfMeasurement(F("\u00b0C"));
+    discovery->finalize();
+    vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
+
+    discovery = _debug_new MQTTAutoDiscovery();
+    discovery->create(this, 0, format);
+    discovery->addStateTopic(MQTTClient::formatTopic(-1, F("/%s/"), FSPGM(ds3231_id_time)));
+    discovery->finalize();
+    vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
+
+    discovery = _debug_new MQTTAutoDiscovery();
+    discovery->create(this, 0, format);
+    discovery->addStateTopic(MQTTClient::formatTopic(-1, F("/%s/"), FSPGM(ds3231_id_lost_power)));
     discovery->finalize();
     vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
 }
 
 uint8_t Sensor_DS3231::getAutoDiscoveryCount() const
 {
-    return 1;
+    return 3;
 }
 
 void Sensor_DS3231::getValues(JsonArray &array)
 {
     _debug_printf_P(PSTR("Sensor_DS3231::getValues()\n"));
 
-    auto &obj = array.addObject(3);
-    auto temp = _readSensor();
-    obj.add(JJ(id), _getId());
-    obj.add(JJ(state), !isnan(temp));
-    obj.add(JJ(value), JsonNumber(temp, 2));
+    auto obj = &array.addObject(3);
+    auto temp = _readSensorTemp();
+    obj->add(JJ(id), FSPGM(ds3231_id_temp));
+    obj->add(JJ(state), !isnan(temp));
+    obj->add(JJ(value), JsonNumber(temp, 2));
+
+    obj = &array.addObject(3);
+    String timeStr = _getTimeStr();
+    obj->add(JJ(id), FSPGM(ds3231_id_time));
+    obj->add(JJ(state), timeStr.indexOf('\n') != -1);
+    obj->add(JJ(value), timeStr);
 }
 
 void Sensor_DS3231::createWebUI(WebUI &webUI, WebUIRow **row)
 {
     _debug_printf_P(PSTR("Sensor_DS3231::createWebUI()\n"));
-    (*row)->addSensor(_getId(), _name, F("\u00b0C"));
+    (*row)->addSensor(FSPGM(ds3231_id_temp), _name, F("\u00b0C"));
+    (*row)->addSensor(FSPGM(ds3231_id_time), F("Time"), F(""));
 }
 
 void Sensor_DS3231::publishState(MQTTClient *client)
 {
-    if (client) {
-        client->publish(MQTTClient::formatTopic(-1, F("/%s/"), _getId()), _qos, 1, String(_readSensor(), 2));
+    if (client && client->isConnected()) {
+        client->publish(MQTTClient::formatTopic(-1, F("/%s/"), FSPGM(ds3231_id_temp)), _qos, 1, String(_readSensorTemp(), 2));
+        client->publish(MQTTClient::formatTopic(-1, F("/%s/"), FSPGM(ds3231_id_time)), _qos, 1, String((uint32_t)_readSensorTime()));
+        client->publish(MQTTClient::formatTopic(-1, F("/%s/"), FSPGM(ds3231_id_lost_power)), _qos, 1, String(_readSensorLostPower()));
     }
 }
 
@@ -73,17 +100,44 @@ Sensor_DS3231::SensorEnumType_t Sensor_DS3231::getType() const
     return DS3231;
 }
 
-float Sensor_DS3231::_readSensor()
+float Sensor_DS3231::_readSensorTemp()
 {
-    if (!rtc.begin()) {
+    if (!_availabe) {
         return NAN;
     }
     return rtc.getTemperature();
 }
 
-const __FlashStringHelper *Sensor_DS3231::_getId()
+time_t Sensor_DS3231::_readSensorTime()
 {
-    return F("ds3231");
+    if (!_availabe) {
+        return 0;
+    }
+    return rtc.now().unixtime();
+}
+
+int8_t Sensor_DS3231::_readSensorLostPower()
+{
+    if (!_availabe) {
+        return -1;
+    }
+    return rtc.lostPower();
+}
+
+String Sensor_DS3231::_getTimeStr()
+{
+    char buf[64];
+    auto now = _readSensorTime();
+    if (now == 0) {
+        auto tm = gmtime(&now);
+        strftime_P(buf, sizeof(buf), PSTR("%Y-%m-%d\n%H:%M:%s"), tm);
+        strcat_P(buf, PSTR("\nLost Power: "));
+        strcat_P(buf, _readSensorLostPower() ? SPGM(Yes) : SPGM(No));
+    }
+    else {
+        strcpy_P(buf, PSTR("N/A"));
+    }
+    return buf;
 }
 
 #endif

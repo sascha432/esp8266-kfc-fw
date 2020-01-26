@@ -434,7 +434,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
 
 void ClockPlugin::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector)
 {
-    _debug_printf_P(PSTR("ClockPlugin::createAutoDiscovery(): format {}=%u\n"), format);
+    _debug_printf_P(PSTR("ClockPlugin::createAutoDiscovery(): format=%u\n"), format);
     String topic = MQTTClient::formatTopic(0, F("/"));
 
     auto discovery = _debug_new MQTTAutoDiscovery();
@@ -513,12 +513,14 @@ void ClockPlugin::publishState(MQTTClient *client)
     if (!client) {
         client = MQTTClient::getClient();
     }
-    String topic = MQTTClient::formatTopic(0, F("/"));
+    if (client && client->isConnected()) {
+        String topic = MQTTClient::formatTopic(0, F("/"));
 
-    client->publish(topic + F("state"), _qos, 1, String(_color ? 1 : 0));
-    client->publish(topic + F("brightness/state"), _qos, 1, String(_brightness));
-    PrintString str(F("%u,%u,%u"), _colors[0], _colors[1], _colors[2]);
-    client->publish(topic + F("color/state"), _qos, 1, str);
+        client->publish(topic + F("state"), _qos, 1, String(_color ? 1 : 0));
+        client->publish(topic + F("brightness/state"), _qos, 1, String(_brightness));
+        PrintString str(F("%u,%u,%u"), _colors[0], _colors[1], _colors[2]);
+        client->publish(topic + F("color/state"), _qos, 1, str);
+    }
 
     JsonUnnamedObject json(2);
     json.add(JJ(type), JJ(ue));

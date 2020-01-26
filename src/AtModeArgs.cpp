@@ -177,7 +177,8 @@ uint32_t AtModeArgs::toMillis(uint16_t num, uint32_t minTime, uint32_t maxTime, 
     return result;
 }
 
-void AtModeArgs::printf_P(PGM_P format, ...) {
+void AtModeArgs::printf_P(PGM_P format, ...)
+{
     va_list arg;
     va_start(arg, format);
     PrintString str(reinterpret_cast<const __FlashStringHelper *>(format), arg);
@@ -185,17 +186,25 @@ void AtModeArgs::printf_P(PGM_P format, ...) {
     print(str.c_str());
 }
 
-void AtModeArgs::print(const char *str) {
-    _output.printf_P(PSTR("+%s: "), _command.c_str());
+void AtModeArgs::print(const char *str)
+{
+    print();
     _output.println(str);
 }
 
-void AtModeArgs::print(const __FlashStringHelper *str) {
-    _output.printf_P(PSTR("+%s: "), _command.c_str());
+void AtModeArgs::print(const __FlashStringHelper *str)
+{
+    print();
     _output.println(str);
 }
 
-void AtModeArgs::ok() {
+void AtModeArgs::print()
+{
+    _output.printf_P(PSTR("+%s: "), _command.c_str());
+}
+
+void AtModeArgs::ok()
+{
     if (config.isSafeMode()) {
         _output.println(F("OK - SAFE MODE"));
     }

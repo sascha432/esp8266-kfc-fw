@@ -79,9 +79,12 @@ public:
     static void wifiConnectedCallback(uint8_t event, void *payload);
     static void getStatus(Print &output);
     static void _setZoneEnd(time_t zoneEnd);
+
+public:
     static const time_t getZoneEnd();
     static void configTime();
 
+public:
     static void updateLoop();
     static void updateNtpCallback();
 
@@ -426,7 +429,8 @@ inline void ntp_client_reconfigure_plugin(PGM_P source)
     timezone_setup();
 }
 
-class NTPPlugin : public PluginComponent {
+class NTPPlugin : public PluginComponent, public KFCRestAPI {
+// PluginComponent
 public:
     NTPPlugin() {
         REGISTER_PLUGIN(this, "NTPPlugin");
@@ -469,6 +473,14 @@ public:
     virtual void atModeHelpGenerator() override;
     virtual bool atModeHandler(AtModeArgs &args) override;
 #endif
+
+// KFCRestAPI
+public:
+    virtual void getRestUrl(String &url) const {
+        url = FPSTR(config._H_STR(Config().ntp.remote_tz_dst_ofs_url));
+    }
+    virtual void getBearerToken(String &token) const {
+    }
 };
 
 
@@ -499,6 +511,7 @@ void NTPPlugin::restart()
 void NTPPlugin::getStatus(Print &output)
 {
     TimezoneData::getStatus(output);
+    output.printf_P(PSTR(", %u request(s) pending"), _requests.size());
 }
 
 void NTPPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form) {

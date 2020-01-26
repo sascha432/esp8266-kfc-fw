@@ -770,7 +770,7 @@ void at_mode_serial_handle_event(String &commandString)
 #if RTC_SUPPORT
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RTC))) {
                 if (!args.empty()) {
-                    args.printf_P(PSTR("Time=%u, rtc=%u"), (uint32_t)time(nullptr), config.getRTC());
+                    args.printf_P(PSTR("Time=%u, rtc=%u, lostPower=%u"), (uint32_t)time(nullptr), config.getRTC(), config.rtcLostPower());
                     output.print(F("+RTC: "));
                     config.printRTCStatus(output);
                     output.println();

@@ -45,6 +45,8 @@ KFCFWConfiguration config;
 EspSaveCrash SaveCrash(DEBUG_SAVECRASH_OFS, DEBUG_SAVECRASH_SIZE);
 #endif
 
+// Config_HomeAssistant
+
 const char *Config_HomeAssistant::getApiEndpoint()
 {
     return config._H_STR(Config().homeassistant.api_endpoint);
@@ -55,6 +57,31 @@ const char *Config_HomeAssistant::getApiToken()
     return config._H_STR(Config().homeassistant.token);
 }
 
+// Config_NTP
+
+const char *Config_NTP::getTimezone()
+{
+    return config._H_STR(Config().ntp.timezone);
+}
+
+const char *Config_NTP::getServers(uint8_t num)
+{
+    static const uint16_t _handles[] = { CONFIG_GET_HANDLE(Config().ntp.servers[0]), CONFIG_GET_HANDLE(Config().ntp.servers[1]), CONFIG_GET_HANDLE(Config().ntp.servers[2]) };
+    return config._H_STR(_handles[num]);
+}
+
+const char *Config_NTP::getUrl()
+{
+    return config._H_STR(Config().ntp.remote_tz_dst_ofs_url);
+}
+
+Config_NTP::Timezone_t Config_NTP::getTZ()
+{
+    return config._H_GET(Config().ntp.tz);
+}
+
+
+// KFCFWConfiguration
 
 KFCFWConfiguration::KFCFWConfiguration() : Configuration(CONFIG_EEPROM_OFFSET, CONFIG_EEPROM_MAX_LENGTH)
 {
@@ -1142,6 +1169,15 @@ bool KFCFWConfiguration::setRTC(uint32_t unixtime)
     return false;
 }
 
+bool KFCFWConfiguration::rtcLostPower() {
+#if RTC_SUPPORT
+    if (rtc.begin()) {
+        return rtc.lostPower();
+    }
+#endif
+    return true;
+}
+
 uint32_t KFCFWConfiguration::getRTC()
 {
 #if RTC_SUPPORT
@@ -1149,6 +1185,10 @@ uint32_t KFCFWConfiguration::getRTC()
     if (rtc.begin()) {
         auto unixtime = rtc.now().unixtime();
         debug_printf_P(PSTR("KFCFWConfiguration::getRTC(): time=%u\n"), unixtime);
+        if (rtc.lostPower()) {
+            debug_printf_P(PSTR("KFCFWConfiguration::getRTC(): time=0, lostPower=true\n"));
+            return 0;
+        }
         return unixtime;
     }
 #endif
@@ -1170,10 +1210,10 @@ void KFCFWConfiguration::printRTCStatus(Print &output, bool plain)
 #endif
         }
         else {
-            output.print(F("Time "));
+            output.print(F("Timestamp: "));
             output.print(now.timestamp());
 #if RTC_DEVICE_DS3231
-            output.printf_P(PSTR(", temperature: %.2f&deg;C, lost power: %s"), rtc.getTemperature(), rtc.lostPower() ? PSTR("yes") : PSTR("no"));
+            output.printf_P(PSTR(", temperature: %.2f&deg;C, lost power: %s"), rtc.getTemperature(), rtc.lostPower() ? SPGM(yes) : SPGM(no));
 #endif
         }
     }

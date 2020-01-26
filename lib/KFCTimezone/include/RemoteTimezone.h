@@ -12,16 +12,15 @@
 #define DEBUG_REMOTE_TIMEZONE 					0
 #endif
 
-
 #if _WIN32 || _WIN64
-#define TIMEZONE_USE_HTTP_CLIENT				1
+#define TIMEZONE_USE_HTTP_CLIENT				KFC
 #elif defined(ESP32)
 #define TIMEZONE_USE_HTTP_CLIENT				1
-#else
+#else0
 #define TIMEZONE_USE_HTTP_CLIENT				0
 #endif
 
-typedef std::function<void(bool status, const String message, time_t zoneEnd)> RemoteTimezoneStatusCallback_t;
+typedef std::function<void(bool status, const String &message, time_t zoneEnd)> RemoteTimezoneStatusCallback_t;
 
 class RemoteTimezone {
 public:

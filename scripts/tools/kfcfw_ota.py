@@ -2,7 +2,8 @@
 # Author: sascha_lammers@gmx.de
 #
 
-# requires: pip install requests-toolbelt
+# requires:
+# pip install requests-toolbelt progressbar2
 
 import sys
 import os
@@ -10,6 +11,7 @@ import time
 import argparse
 import kfcfw_session
 import kfcfw_configuration
+import progressbar
 from requests_toolbelt import MultipartEncoder, MultipartEncoderMonitor
 import requests
 import re
@@ -93,23 +95,6 @@ def get_status(url, target, sid):
     else:
         error("Invalid response code " + str(resp.status_code), 2)
 
-class ProgressBar:
-    def __init__(self, step = 4, char = "=="):
-        self.value = 0
-        self.step = step;
-        self.char = char
-        verbose("Progress" + (" " * 5), False)
-
-    def callback(self, monitor):
-        if args.quiet==False:
-            num = int(100 / self.step)
-            progress = int(monitor.bytes_read * num / os.fstat(args.image.fileno()).st_size)
-            if progress!=self.value:
-                self.value = progress
-                print("\b\b\b\b" + self.char + "% 3d%%" % (progress * self.step), end="", flush=True)
-                if self.value>=num:
-                    print()
-
 def flash(url, type, target, sid):
 
     if type=="upload":
@@ -123,21 +108,19 @@ def flash(url, type, target, sid):
     if args.no_status==False:
         get_status(url, target, sid)
 
-    # image = args.image
-    # if args.image_path!=None:
-    #     if type=="flash":
-    #         image_name = "firmware.bin"
-    #     elif type=="spiffs":
-    #         image_name = "spiffs.bin"
-    #     image = open(args.image_path + "/" + image_name, "rb")
+    filesize = os.fstat(args.image.fileno()).st_size
+    verbose("Uploading " + str(filesize) + " Bytes: " + args.image.name)
 
-    verbose("Uploading " + str(os.fstat(args.image.fileno()).st_size) + " Bytes: " + args.image.name)
-
+    bar = progressbar.ProgressBar(max_value=filesize)
+    bar.start();
     encoder = MultipartEncoder(fields={ "image_type": image_type, "SID": sid, "firmware_image": ("filename", args.image, "application/octet-stream") })
-    monitor = MultipartEncoderMonitor(encoder, ProgressBar().callback)
+
+    monitor = MultipartEncoderMonitor(encoder, lambda monitor: bar.update(min(monitor.bytes_read, filesize)))
 
     # resp = requests.post(url + "update", files={ "firmware_image": args.image }, data={ "image_type": image_type, "SID": sid }, timeout=30, allow_redirects=False)
     resp = requests.post(url + "update", data=monitor, timeout=30, allow_redirects=False, headers={ "Content-Type": monitor.content_type })
+    bar.finish();
+
     if resp.status_code==302:
         verbose("Update successful")
     else:
@@ -152,28 +135,39 @@ def flash(url, type, target, sid):
             verbose("Update failed with: " + error)
             sys.exit(3)
 
-    dot = ".\b.\b.\b.\b.\b.\b."
     if args.no_wait==False:
+        max_wait = 60
+        step = 0
         verbose("Waiting for device to reboot", False)
         if args.quiet==False:
-            for i in range(0, 4):
-                time.sleep(1)
-                verbose(dot, False)
+            bar = progressbar.ProgressBar(max_value=progressbar.UnknownLength)
+            for i in range(0, 40):
+                bar.update(step)
+                step = step + 1
+                time.sleep(0.1)
         else:
             time.sleep(4)
 
-        max_wait = 60
         while True:
-            verbose(dot, False)
+            if args.quiet==False:
+                for i in range(10):
+                    bar.update(step)
+                    step = step + 1
+                    time.sleep(0.1)
+            else:
+                time.sleep(1)
             if is_alive(url, target):
                 if args.no_status==False:
                     get_status(url, target, sid)
                 break
-            time.sleep(1)
             max_wait = max_wait - 1
             if max_wait==0:
-                error("\nDevice did not response after update", 4)
-        verbose("\nDevice has been rebooted")
+                if args.quiet==False:
+                    bar.finish();
+                error("Device did not response after update", 4)
+        if args.quiet==False:
+            bar.finish();
+        verbose("Device has been rebooted")
 
 def export_settings(url, target, sid, output):
 

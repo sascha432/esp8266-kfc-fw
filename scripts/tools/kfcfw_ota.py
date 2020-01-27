@@ -2,12 +2,15 @@
 # Author: sascha_lammers@gmx.de
 #
 
+# requires: pip install requests-toolbelt
+
 import sys
 import os
 import time
 import argparse
 import kfcfw_session
 import kfcfw_configuration
+from requests_toolbelt import MultipartEncoder, MultipartEncoderMonitor
 import requests
 import re
 import json
@@ -19,7 +22,7 @@ def verbose(msg, new_line=True):
         if new_line:
             print(msg)
         else:
-            print(msg, end="")
+            print(msg, end="", flush=True)
 
 def error(msg, code = 1):
     verbose(msg)
@@ -90,6 +93,23 @@ def get_status(url, target, sid):
     else:
         error("Invalid response code " + str(resp.status_code), 2)
 
+class ProgressBar:
+    def __init__(self, step = 4, char = "=="):
+        self.value = 0
+        self.step = step;
+        self.char = char
+        verbose("Progress" + (" " * 5), False)
+
+    def callback(self, monitor):
+        if args.quiet==False:
+            num = int(100 / self.step)
+            progress = int(monitor.bytes_read * num / os.fstat(args.image.fileno()).st_size)
+            if progress!=self.value:
+                self.value = progress
+                print("\b\b\b\b" + self.char + "% 3d%%" % (progress * self.step), end="", flush=True)
+                if self.value>=num:
+                    print()
+
 def flash(url, type, target, sid):
 
     if type=="upload":
@@ -103,7 +123,7 @@ def flash(url, type, target, sid):
     if args.no_status==False:
         get_status(url, target, sid)
 
-    image = args.image
+    # image = args.image
     # if args.image_path!=None:
     #     if type=="flash":
     #         image_name = "firmware.bin"
@@ -111,9 +131,13 @@ def flash(url, type, target, sid):
     #         image_name = "spiffs.bin"
     #     image = open(args.image_path + "/" + image_name, "rb")
 
-    verbose("Uploading " + str(os.fstat(image.fileno()).st_size) + " Bytes: " + image.name)
+    verbose("Uploading " + str(os.fstat(args.image.fileno()).st_size) + " Bytes: " + args.image.name)
 
-    resp = requests.post(url + "update", files={"firmware_image": image}, data={"image_type": image_type, "SID": sid}, timeout=30, allow_redirects=False)
+    encoder = MultipartEncoder(fields={ "image_type": image_type, "SID": sid, "firmware_image": ("filename", args.image, "application/octet-stream") })
+    monitor = MultipartEncoderMonitor(encoder, ProgressBar().callback)
+
+    # resp = requests.post(url + "update", files={ "firmware_image": args.image }, data={ "image_type": image_type, "SID": sid }, timeout=30, allow_redirects=False)
+    resp = requests.post(url + "update", data=monitor, timeout=30, allow_redirects=False, headers={ "Content-Type": monitor.content_type })
     if resp.status_code==302:
         verbose("Update successful")
     else:
@@ -128,19 +152,19 @@ def flash(url, type, target, sid):
             verbose("Update failed with: " + error)
             sys.exit(3)
 
+    dot = ".\b.\b.\b.\b.\b.\b."
     if args.no_wait==False:
         verbose("Waiting for device to reboot", False)
         if args.quiet==False:
-            for i in range(0, 2):
-                time.sleep(3)
-                print(".", end="", flush=True)
+            for i in range(0, 4):
+                time.sleep(1)
+                verbose(dot, False)
         else:
             time.sleep(4)
 
         max_wait = 60
         while True:
-            if args.quiet==False:
-                print(".", end="", flush=True)
+            verbose(dot, False)
             if is_alive(url, target):
                 if args.no_status==False:
                     get_status(url, target, sid)
@@ -148,8 +172,8 @@ def flash(url, type, target, sid):
             time.sleep(1)
             max_wait = max_wait - 1
             if max_wait==0:
-                error("Device did not response after update", 4)
-        verbose("Device has been rebooted")
+                error("\nDevice did not response after update", 4)
+        verbose("\nDevice has been rebooted")
 
 def export_settings(url, target, sid, output):
 
@@ -218,7 +242,7 @@ parser = argparse.ArgumentParser(description="OTA for KFC Firmware", formatter_c
 parser.add_argument("action", help="action to execute", choices=["flash", "upload", "spiffs", "uploadfs", "atmega", "status", "alive", "export", "import"])
 parser.add_argument("hostname", help="web server hostname")
 parser.add_argument("-u", "--user", help="username", required=True)
-parser.add_argument("-p", "--pw", help="password", required=True)
+parser.add_argument("-p", "--pw", "--pass", help="password", required=True)
 parser.add_argument("-I", "--image", help="firmware image", type=argparse.FileType("rb"))
 # parser.add_argument("--image-path", help="path to firmware/spiffs image")
 parser.add_argument("-O", "--output", help="export settings output file")

@@ -12,7 +12,11 @@ def build_webui(source, target, env):
 
 def upload_fs(source, target, env):
     build_webui(source, target, env)
-    env._update({"UPLOAD_FLAGS": [str(target[0]), env["UPLOAD_PORT"], "--image=" + str(source[0])]})
+    values = [str(target[0]), env["UPLOAD_PORT"], "--image=" + str(source[0])]
+    for value in env["UPLOAD_FLAGS"]:
+        if value[0:6]=="--user" or value[0:6]=="--pass":
+            values.append(value);
+    env._update({"UPLOAD_FLAGS": values})
 
 def rebuild_webui(source, target, env):
     print("rebuild_webui")

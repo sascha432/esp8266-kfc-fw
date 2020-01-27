@@ -186,7 +186,8 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(FACTORY, "FACTORY", "Restore factory setti
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(ATMODE, "ATMODE", "<1|0>", "Enable/disable AT Mode");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DLY, "DLY", "<milliseconds>", "Call delay(milliseconds)");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CAT, "CAT", "<filename>", "Display text file");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DEL, "DEL", "<filename>", "Delete file");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RM, "RM", "<filename>", "Delete file");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RN, "RN", "<filename>,<new filename>", "Rename file");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LS, "LS", "[<directory>]", "List files and directory");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WIFI, "WIFI", "[<reconnect>]", "Display WiFi info");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RADC, "RADC", "<number=3>,<delay=5ms>", "Turn WiFi off and read ADC");
@@ -243,7 +244,8 @@ void at_mode_help_commands()
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(ATMODE), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DLY), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CAT), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DEL), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(RM), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(RN), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(LS), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(WIFI), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(RADC), name);
@@ -807,11 +809,19 @@ void at_mode_serial_handle_event(String &commandString)
                 delay(delayTime);
                 args.ok();
             }
-            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DEL))) {
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RM))) {
                 if (args.requireArgs(1, 1)) {
                     auto filename = args.get(0);
                     auto result = SPIFFS.remove(filename);
                     args.printf_P(PSTR("%s: %s"), filename, result ? PSTR("success") : PSTR("failure"));
+                }
+            }
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RN))) {
+                if (args.requireArgs(2, 2)) {
+                    auto filename = args.get(0);
+                    auto newFilename = args.get(0);
+                    auto result = SPIFFS.rename(filename, newFilename);
+                    args.printf_P(PSTR("%s => %s: %s"), filename, newFilename, result ? PSTR("success") : PSTR("failure"));
                 }
             }
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(LS))) {

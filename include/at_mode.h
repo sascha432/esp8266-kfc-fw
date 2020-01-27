@@ -399,6 +399,7 @@ public:
 public:
     void setCommand(const char *command) {
         _command = command;
+        _command.toUpperCase();
     }
     String &getCommand() {
         return _command;

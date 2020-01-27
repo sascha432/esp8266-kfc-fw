@@ -92,15 +92,28 @@ def get_status(url, target, sid):
 
 def flash(url, type, target, sid):
 
+    if type=="upload":
+        type = "flash"
+    elif type=="uploadfs":
+        type = "spiffs"
+
     image_type = "u_" + type
 
     is_alive(url, target)
     if args.no_status==False:
         get_status(url, target, sid)
 
-    verbose("Uploading " + str(os.fstat(args.image.fileno()).st_size) + " Bytes: " + args.image.name)
+    image = args.image
+    # if args.image_path!=None:
+    #     if type=="flash":
+    #         image_name = "firmware.bin"
+    #     elif type=="spiffs":
+    #         image_name = "spiffs.bin"
+    #     image = open(args.image_path + "/" + image_name, "rb")
 
-    resp = requests.post(url + "update", files={"firmware_image": args.image}, data={"image_type": image_type, "SID": sid}, timeout=30, allow_redirects=False)
+    verbose("Uploading " + str(os.fstat(image.fileno()).st_size) + " Bytes: " + image.name)
+
+    resp = requests.post(url + "update", files={"firmware_image": image}, data={"image_type": image_type, "SID": sid}, timeout=30, allow_redirects=False)
     if resp.status_code==302:
         verbose("Update successful")
     else:
@@ -136,6 +149,7 @@ def flash(url, type, target, sid):
             max_wait = max_wait - 1
             if max_wait==0:
                 error("Device did not response after update", 4)
+        verbose("Device has been rebooted")
 
 def export_settings(url, target, sid, output):
 
@@ -201,11 +215,12 @@ def import_settings(url, target, sid, file, params):
 # main
 
 parser = argparse.ArgumentParser(description="OTA for KFC Firmware", formatter_class=argparse.RawDescriptionHelpFormatter, epilog="exit codes:\n  0 - success\n  1 - general error\n  2 - device did not respond\n  3 - update failed\n  4 - device did not respond after update")
-parser.add_argument("action", help="action to execute", choices=["flash", "spiffs", "atmega", "status", "alive", "export", "import"])
+parser.add_argument("action", help="action to execute", choices=["flash", "upload", "spiffs", "uploadfs", "atmega", "status", "alive", "export", "import"])
 parser.add_argument("hostname", help="web server hostname")
 parser.add_argument("-u", "--user", help="username", required=True)
 parser.add_argument("-p", "--pw", help="password", required=True)
 parser.add_argument("-I", "--image", help="firmware image", type=argparse.FileType("rb"))
+# parser.add_argument("--image-path", help="path to firmware/spiffs image")
 parser.add_argument("-O", "--output", help="export settings output file")
 parser.add_argument("--params", help="parameters to import", nargs='*', default=[])
 parser.add_argument("-P", "--port", help="web server port", type=int, default=80)
@@ -228,7 +243,7 @@ else:
 sid = session.generate(args.user, args.pw)
 target = args.user + ":***@" + args.hostname
 
-if args.action in("flash", "spiffs", "atmega"):
+if args.action in("flash", "upload", "spiffs", "uploadfs", "atmega"):
     flash(url, args.action, target, sid)
 elif args.action=="status":
     get_status(url, target, sid)

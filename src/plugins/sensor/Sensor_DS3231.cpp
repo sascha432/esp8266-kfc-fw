@@ -60,6 +60,7 @@ uint8_t Sensor_DS3231::getAutoDiscoveryCount() const
 void Sensor_DS3231::getValues(JsonArray &array)
 {
     _debug_printf_P(PSTR("Sensor_DS3231::getValues()\n"));
+return;
 
     auto obj = &array.addObject(3);
     auto temp = _readSensorTemp();
@@ -120,6 +121,7 @@ time_t Sensor_DS3231::_readSensorTime()
 
 int8_t Sensor_DS3231::_readSensorLostPower()
 {
+    return 0;
     _debug_printf_P(PSTR("Sensor_DS3231::_readSensorLostPower()\n"));
     if (!rtc.begin()) {
         return -1;
@@ -129,18 +131,20 @@ int8_t Sensor_DS3231::_readSensorLostPower()
 
 String Sensor_DS3231::_getTimeStr()
 {
-    char buf[64];
+    String str;
     auto now = _readSensorTime();
     if (now) {
         auto tm = gmtime(&now);
+        char buf[32];
         strftime_P(buf, sizeof(buf), PSTR("%Y-%m-%d\n%H:%M:%s"), tm);
-        strcat_P(buf, PSTR("\nLost Power: "));
-        strcat_P(buf, _readSensorLostPower() ? SPGM(Yes) : SPGM(No));
+        str = buf;
+        str += F("\nLost Power: ");
+        str += _readSensorLostPower() ? FSPGM(Yes) : FSPGM(No);
     }
     else {
-        strcpy_P(buf, PSTR("N/A"));
+        str = F("N/A");
     }
-    return buf;
+    return str;
 }
 
 #endif

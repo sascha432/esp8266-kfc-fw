@@ -42,6 +42,12 @@
 #define __CCS811_H__
 #endif
 #endif
+#if RTC_SUPPORT
+#include "RTClib.h"
+#endif
+#if IOT_WEATHER_STATION_HAS_TOUCHPAD
+#include "Adafruit_MPR121.h"
+#endif
 
 void check_if_exist_I2C(Print &output);
 
@@ -125,6 +131,12 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CSBME680, "BME680", "<address>", "Read B
 #ifdef __BME280_H__
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CSBME280, "BME280", "<address>", "Read BME280 sensor");
 #endif
+#if RTC_SUPPORT
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(I2CSRTC, "RTC", "Read RTC @ 0x68");
+#endif
+#if IOT_WEATHER_STATION_HAS_TOUCHPAD
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CSMPR121, "MPR121", "<address>", "Read MPR121");
+#endif
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CSLM75A, "LM75A", "<address>", "Read temperature from LM75A");
 
 void i2cscanner_device_error(Stream &output)
@@ -194,6 +206,12 @@ void I2CScannerPlugin::atModeHelpGenerator()
 #endif
 #ifdef __BME280_H__
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CSBME280), getName());
+#endif
+#if RTC_SUPPORT
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CSRTC), getName());
+#endif
+#if IOT_WEATHER_STATION_HAS_TOUCHPAD
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CSMPR121), getName());
 #endif
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CSLM75A), getName());
 }
@@ -324,7 +342,7 @@ bool I2CScannerPlugin::atModeHandler(AtModeArgs &args)
 #endif
 #ifdef __BME680_H__
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(I2CSBME680))) {
-        if (args.requireArgs(1, 1)) {
+        if (args.requireArgs(0, 1)) {
             Adafruit_BME680 bme680;
             int address = args.toNumber(0, 0x77);
             bme680.begin(address);
@@ -335,7 +353,7 @@ bool I2CScannerPlugin::atModeHandler(AtModeArgs &args)
 #endif
 #ifdef __BME280_H__
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(I2CSBME280))) {
-        if (args.requireArgs(1, 1)) {
+        if (args.requireArgs(0, 1)) {
             Adafruit_BME280 bme280;
             int address = args.toNumber(0, 0x76);
             bme280.begin(address, &Wire);
@@ -344,8 +362,49 @@ bool I2CScannerPlugin::atModeHandler(AtModeArgs &args)
         return true;
     }
 #endif
+#if RTC_SUPPORT
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(I2CSRTC))) {
+#if RTC_DEVICE_DS3231
+        RTC_DS3231 rtc;
+        auto &serial = args.getStream();
+        serial.printf_P(PSTR("Reading DS3231 at 0x%02x: "), 0x68);
+        if (rtc.begin()) {
+            char *buffer = "YYYY-MM-DD hh:mm:ss";
+            serial.printf_P(PSTR("temperature=%.2f, lost_power=%u, now=%s\n"), rtc.getTemperature(), rtc.lostPower(), rtc.now().toString(buffer));
+        }
+        else {
+            serial.println(F("read error"));
+        }
+#else
+    #error not supported
+#endif
+        return true;
+    }
+#endif
+#if IOT_WEATHER_STATION_HAS_TOUCHPAD
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(I2CSMPR121))) {
+        if (args.requireArgs(0, 1)) {
+            int address = args.toNumber(0, MPR121_I2CADDR_DEFAULT);
+            Adafruit_MPR121 mpr121;
+            auto &serial = args.getStream();
+            serial.printf_P(PSTR("Reading MPR121 at 0x%02x: "), address);
+            if (mpr121.begin(address)) {
+                String str;
+                auto touched = mpr121.touched();
+                for(int i = 0; i < 12; i++) {
+                    str += (touched & _BV(i)) ? '1' : '0';
+                }
+                serial.println(str);
+            }
+            else {
+                serial.println(F("failed to initialize sensor"));
+            }
+        }
+        return true;
+    }
+#endif
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(I2CSLM75A))) {
-        if (args.requireArgs(1, 1)) {
+        if (args.requireArgs(0, 1)) {
             int address = args.toNumber(0, 0x48);
             auto &serial = args.getStream();
             serial.printf_P(PSTR("Reading LM75A at 0x%02x: "), address);

@@ -165,6 +165,20 @@ void Sensor_HLW8012::_loop()
     }
 }
 
+float calculateSD(float data[])
+{
+    float sum = 0.0, mean, standardDeviation = 0.0;
+    int i;
+    for(i = 0; i < 10; ++i)
+    {
+        sum += data[i];
+    }
+    mean = sum/10;
+    for(i = 0; i < 10; ++i)
+        standardDeviation += pow(data[i] - mean, 2);
+    return sqrt(standardDeviation / 10);
+}
+
 bool Sensor_HLW8012::_processInterruptBuffer(InterruptBuffer &buffer, SensorInput &input)
 {
     auto settings = input.getSettings();
@@ -207,17 +221,25 @@ bool Sensor_HLW8012::_processInterruptBuffer(InterruptBuffer &buffer, SensorInpu
                 uint32_t noiseSum = 0;
                 _noiseBuffer.push_back(diff);
                 if (_noiseBuffer.size() >= _noiseBuffer.capacity())  {
+                    float standardDeviation = 0.0;
                     for(auto noiseDiff: _noiseBuffer) {
                         noiseMin = min(noiseMin, noiseDiff);
                         noiseMax = max(noiseMax, noiseDiff);
                         noiseSum += noiseDiff;
                     }
                     float noiseMean = noiseSum / _noiseBuffer.size();
+                    for(auto noiseDiff: _noiseBuffer) {
+                        standardDeviation += pow(noiseMean, 2);
+                    }
+                    standardDeviation = sqrt(standardDeviation / _noiseBuffer.size());
                     uint32_t noiseLevel = ((noiseMean - noiseMin) + (noiseMax - noiseMean)) * 50000.0 / noiseMean; // in %%
 
                     // filter quick changes in current which looks like noise
                     uint32_t multiplier = 500 * 2000 / diff;
                     _noiseLevel = ((_noiseLevel * multiplier) + noiseLevel) / (multiplier + 1.0);
+
+                    //TODO check standardDeviation
+                    debug_printf_P(PSTR("sd %f lvl %f\n"), standardDeviation, _noiseLevel / 10);
 
                     if (!IOT_SENSOR_HLW80xx_NOISE_SUPPRESSION(_noiseLevel)) { // set current and power to zero, values will be updated but not shown
                         _power = 0;

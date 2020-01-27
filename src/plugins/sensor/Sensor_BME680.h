@@ -44,7 +44,6 @@ private:
     SensorData_t _readSensor();
 
     String _name;
-    Adafruit_BME680 _bme680;
     uint8_t _address;
 };
 

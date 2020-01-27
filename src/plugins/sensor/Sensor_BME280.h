@@ -35,6 +35,10 @@ public:
     virtual void getStatus(PrintHtmlEntitiesString &output) override;
     virtual SensorEnumType_t getType() const override;
 
+    inline SensorData_t readSensor() {
+        return _readSensor();
+    }
+
 private:
     friend Sensor_CCS811;
 

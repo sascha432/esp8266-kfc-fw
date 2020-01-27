@@ -16,23 +16,22 @@
 #include <debug_helper_disable.h>
 #endif
 
-Sensor_INA219::Sensor_INA219(const JsonString &name, TwoWire &wire, uint8_t address) : MQTTSensor(), _name(name), _wire(wire), _address(address), _ina219(address)
+Sensor_INA219::Sensor_INA219(const JsonString &name, TwoWire &wire, uint8_t address) : MQTTSensor(), _name(name), _address(address), _ina219(address)
 {
 #if DEBUG_MQTT_CLIENT
     debug_printf_P(PSTR("Sensor_INA219(): component=%p\n"), this);
 #endif
     registerClient(this);
+    config.initTwoWire();
 
     _debug_printf_P(PSTR("Sensor_INA219::Sensor_INA219(): address=%x, voltage range=%x, gain=%x, shunt ADC resolution=%x\n"), _address, IOT_SENSOR_INA219_BUS_URANGE, IOT_SENSOR_INA219_GAIN, IOT_SENSOR_INA219_SHUNT_ADC_RES);
-    _ina219.begin(&_wire);
-    _ina219.setCalibration(IOT_SENSOR_INA219_BUS_URANGE, IOT_SENSOR_INA219_GAIN, IOT_SENSOR_INA219_SHUNT_ADC_RES, IOT_SENSOR_INA219_R_SHUNT);
-    setUpdateRate(IN219_UPDATE_RATE);
     _Uint = NAN;
     _Iint = NAN;
     _Pint = NAN;
     _Ipeak = NAN;
     _holdPeakTimer = 0;
     _updateTimer = 0;
+    setUpdateRate(IN219_UPDATE_RATE);
     LoopFunctions::add([this]() {
         this->_loop();
     }, reinterpret_cast<LoopFunctions::CallbackPtr_t>(this));
@@ -141,6 +140,13 @@ String Sensor_INA219::_getId(SensorTypeEnum_t type)
 void Sensor_INA219::_loop()
 {
     uint32_t diff = get_time_diff(_updateTimer, millis());
+    Adafruit_INA219 _ina219;
+
+    if (diff >= min(1000, IOT_SENSOR_INA219_READ_INTERVAL)) {
+        _ina219.begin(&Wire);
+        _ina219.setCalibration(IOT_SENSOR_INA219_BUS_URANGE, IOT_SENSOR_INA219_GAIN, IOT_SENSOR_INA219_SHUNT_ADC_RES, IOT_SENSOR_INA219_R_SHUNT);
+    }
+
     if (diff > 1000) { // reset
         _updateTimer = millis();
         _Uint = _ina219.getBusVoltage_V();

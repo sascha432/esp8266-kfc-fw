@@ -18,6 +18,7 @@ Sensor_LM75A::Sensor_LM75A(const JsonString &name, TwoWire &wire, uint8_t addres
     debug_printf_P(PSTR("Sensor_LM75A(): component=%p\n"), this);
 #endif
     registerClient(this);
+    config.initTwoWire();
 }
 
 void Sensor_LM75A::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector)

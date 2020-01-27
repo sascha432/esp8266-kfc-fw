@@ -8,16 +8,6 @@
 #include <PrintHtmlEntitiesString.h>
 #include <KFCJson.h>
 #include "WebUISocket.h"
-#include "Sensor_LM75A.h"
-#include "Sensor_BME280.h"
-#include "Sensor_BME680.h"
-#include "Sensor_CCS811.h"
-#include "Sensor_HLW80xx.h"
-#include "Sensor_HLW8012.h"
-#include "Sensor_HLW8032.h"
-#include "Sensor_Battery.h"
-#include "Sensor_DS3231.h"
-#include "Sensor_INA219.h"
 
 #if DEBUG_IOT_SENSOR
 #include <debug_helper_enable.h>

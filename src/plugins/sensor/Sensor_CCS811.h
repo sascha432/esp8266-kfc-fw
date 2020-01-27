@@ -40,7 +40,6 @@ private:
     SensorData_t &_readSensor();
 
     String _name;
-    Adafruit_CCS811 _ccs811;
     SensorData_t _sensor;
     uint8_t _address;
 };

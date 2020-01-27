@@ -4,6 +4,8 @@
 
 #if IOT_WEATHER_STATION_HAS_TOUCHPAD
 
+#include <Arduino_compat.h>
+#include <MicrosTimer.h>
 #include "Mpr121Touchpad.h"
 
 volatile bool mpr121_irq_callback_flag;
@@ -13,7 +15,7 @@ void ICACHE_RAM_ATTR mpr121_irq_callback()
     mpr121_irq_callback_flag = true;
 }
 
-Mpr121Touchpad::Mpr121Touchpad()  : _irqPin(0)
+Mpr121Touchpad::Mpr121Touchpad() : _irqPin(0), _touchedTime(0), _releasedTime(0)
 {
 }
 
@@ -27,6 +29,7 @@ bool Mpr121Touchpad::begin(uint8_t address, uint8_t irqPin, TwoWire *wire)
     if (_irqPin) {
         return false;
     }
+    _address = address;
     if (!_mpr121.begin(address, wire)) {
         return false;
     }
@@ -39,6 +42,7 @@ bool Mpr121Touchpad::begin(uint8_t address, uint8_t irqPin, TwoWire *wire)
 
     _x = 0;
     _y = 0;
+    _eventTime = 0;
     _get();
     return true;
 }
@@ -63,11 +67,45 @@ void Mpr121Touchpad::get(uint8_t &x, uint8_t &y)
     y = _y;
 }
 
+void Mpr121Touchpad::processEvents()
+{
+    if (isEventPending()) {
+        auto x = _x;
+        auto y = _y;
+        _get();
+        auto diff = get_time_diff(_eventTime, millis());
+        _eventTime = millis();
+        if (x == 0 && y == 0) {
+            _touchedTime = _eventTime;
+            _releasedTime = 0;
+            _moveXInt = 0;
+            _moveYInt = 0;
+            debug_printf_P(PSTR("touch event=%u,%u t=%u\n"), _x, _y, _eventTime);
+        }
+        if (_x == 0 && _y == 0) {
+            uint32_t duration = _eventTime - _touchedTime;
+            _touchedTime = 0;
+            _releasedTime = _eventTime;
+            debug_printf_P(PSTR("release event=%u,%u int=%f,%f d=%u t=%u\n"), x, y, _moveXInt, _moveYInt, duration, _eventTime);
+        }
+        if (!_releasedTime)
+        {
+            auto moveX = _x && x ? _x - x : 0;
+            auto moveY = _y && y ? _y - y : 0;
+            double mul = 100 / (double)(diff + 1);
+            debug_printf_P(PSTR("move=%d,%d int=%f,%f, mul=%f diff=%u t=%u\n"), moveX, moveY, _moveXInt, _moveYInt, mul, diff, _eventTime);
+            _moveXInt = ((_moveXInt * mul) + moveX) / (mul + 1.0);
+            _moveYInt = ((_moveYInt * mul) + moveY) / (mul + 1.0);
+        }
+    }
+}
+
 void Mpr121Touchpad::_get()
 {
     if (mpr121_irq_callback_flag) {
         mpr121_irq_callback_flag = false;
 
+        // _mpr121.begin(_address);
         auto touched = _mpr121.touched();
 
         if ((touched & (_BV(11)|_BV(10))) == (_BV(11)|_BV(10))) {

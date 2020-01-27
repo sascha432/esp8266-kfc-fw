@@ -96,9 +96,7 @@ private:
     String _getId(SensorTypeEnum_t type);
 
     JsonString _name;
-    TwoWire &_wire;
     uint8_t _address;
-    Adafruit_INA219 _ina219;
 
     uint32_t _updateTimer;
     uint32_t _holdPeakTimer;

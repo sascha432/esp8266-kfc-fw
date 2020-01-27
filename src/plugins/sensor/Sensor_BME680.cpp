@@ -18,7 +18,7 @@ Sensor_BME680::Sensor_BME680(const String &name, uint8_t address) : MQTTSensor()
     debug_printf_P(PSTR("Sensor_BME680(): component=%p\n"), this);
 #endif
     registerClient(this);
-     _bme680.begin(address);
+    config.initTwoWire();
 }
 
 void Sensor_BME680::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector)
@@ -85,22 +85,24 @@ void Sensor_BME680::getValues(JsonArray &array) {
     obj->add(JJ(value), JsonNumber(sensor.gas, 2));
 }
 
-void Sensor_BME680::createWebUI(WebUI &webUI, WebUIRow **row) {
+void Sensor_BME680::createWebUI(WebUI &webUI, WebUIRow **row)
+{
     _debug_printf_P(PSTR("Sensor_BME680::createWebUI()\n"));
 
     *row = &webUI.addRow();
-
     (*row)->addSensor(_getId(F("temperature")), _name + F(" Temperature"), F("\u00b0C"));
     (*row)->addSensor(_getId(F("humidity")), _name + F(" Humidity"), F("%"));
     (*row)->addSensor(_getId(F("pressure")), _name + F(" Pressure"), F("hPa"));
     (*row)->addSensor(_getId(F("gas")), _name + F(" Gas"), emptyString);
 }
 
-void Sensor_BME680::getStatus(PrintHtmlEntitiesString &output) {
+void Sensor_BME680::getStatus(PrintHtmlEntitiesString &output)
+{
     output.printf_P(PSTR("BME680 @ I2C address 0x%02x" HTML_S(br)), _address);
 }
 
-Sensor_BME680::SensorEnumType_t Sensor_BME680::getType() const {
+Sensor_BME680::SensorEnumType_t Sensor_BME680::getType() const
+{
     return BME680;
 }
 
@@ -120,8 +122,10 @@ void Sensor_BME680::publishState(MQTTClient *client)
     }
 }
 
-Sensor_BME680::SensorData_t Sensor_BME680::_readSensor() {
+Sensor_BME680::SensorData_t Sensor_BME680::_readSensor()
+{
     SensorData_t sensor;
+    _bme680.begin(address);
 
     sensor.temperature = _bme680.readTemperature();
     sensor.humidity = _bme680.readHumidity();
@@ -133,7 +137,8 @@ Sensor_BME680::SensorData_t Sensor_BME680::_readSensor() {
     return sensor;
 }
 
-String Sensor_BME680::_getId(const __FlashStringHelper *type) {
+String Sensor_BME680::_getId(const __FlashStringHelper *type)
+{
     PrintString id(F("bme680_0x%02x"), _address);
     if (type) {
         id.write('_');

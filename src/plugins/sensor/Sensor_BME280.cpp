@@ -18,7 +18,7 @@ Sensor_BME280::Sensor_BME280(const String &name, TwoWire &wire, uint8_t address)
     debug_printf_P(PSTR("Sensor_BME280(): component=%p\n"), this);
 #endif
     registerClient(this);
-     _bme280.begin(address, &wire);
+    config.initTwoWire();
 }
 
 void Sensor_BME280::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector)
@@ -114,9 +114,11 @@ void Sensor_BME280::publishState(MQTTClient *client)
 Sensor_BME280::SensorData_t Sensor_BME280::_readSensor()
 {
     SensorData_t sensor;
-    sensor.temperature = _bme280.readTemperature();
-    sensor.humidity = _bme280.readHumidity();
-    sensor.pressure = _bme280.readPressure() / 100.0;
+    Adafruit_BME280 bme280;
+    bme280.begin(_address, &Wire);
+    sensor.temperature = bme280.readTemperature();
+    sensor.humidity = bme280.readHumidity();
+    sensor.pressure = bme280.readPressure() / 100.0;
     _debug_printf_P(PSTR("Sensor_BME280::_readSensor(): address 0x%02x: %.2f °C, %.2f%%, %.2f hPa\n"), _address, sensor.temperature, sensor.humidity, sensor.pressure);
     return sensor;
 }

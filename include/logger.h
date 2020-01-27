@@ -9,15 +9,19 @@
 #include <Arduino_compat.h>
 
 #ifndef DEBUG_LOGGER
-#define DEBUG_LOGGER        0
+#define DEBUG_LOGGER                    0
 #endif
 
-#define Logger_error        _logger.error
-#define Logger_security     _logger.security
-#define Logger_warning      _logger.warning
-#define Logger_notice       _logger.notice
-#define Logger_access       _logger.access
-#define Logger_debug        _logger.debug
+#ifndef LOGGER_SERIAL_OUTPUT
+#define LOGGER_SERIAL_OUTPUT            1
+#endif
+
+#define Logger_error                    _logger.error
+#define Logger_security                 _logger.security
+#define Logger_warning                  _logger.warning
+#define Logger_notice                   _logger.notice
+#define Logger_access                   _logger.access
+#define Logger_debug                    _logger.debug
 
 PROGMEM_STRING_DECL(log_file_messages);
 PROGMEM_STRING_DECL(log_file_access);

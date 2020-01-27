@@ -282,17 +282,11 @@ void Logger::writeLog(LogLevel logLevel, const char *message, va_list arg)
         }
     }
 
-    #if DEBUG_LOGGER || DEBUG
-    if (logLevel == LOGLEVEL_DEBUG
-        #if DEBUG_LOGGER
-            || true
-        #endif
-    ) {
-        char temp2[32];
-        timezone_strftime_P(temp2, sizeof(temp2), PSTR("%FT%TZ"), tm);
-        _debug_printf_P(PSTR("LOGGER %s [%s] %s\n"), temp2, logLevelStr.c_str(), buffer);
-    }
-    #endif
+#if LOGGER_SERIAL_OUTPUT
+    char temp2[32];
+    timezone_strftime_P(temp2, sizeof(temp2), PSTR("%FT%TZ"), tm);
+    MySerial.printf_P(PSTR("+LOGGER: %s [%s] %s\n"), temp2, logLevelStr.c_str(), buffer);
+#endif
 
     if (isOpen) {
         _file.write(' ');

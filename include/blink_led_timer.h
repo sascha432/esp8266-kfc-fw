@@ -32,7 +32,7 @@ public:
 
     virtual void run() override;
     void set(uint32_t delay, int8_t pin, dynamic_bitset &pattern);
-    void detach();
+    virtual void detach() override;
 
     static void setPattern(int8_t pin, int delay, dynamic_bitset &pattern);
     static void setBlink(int8_t pin, uint16_t delay); // predefined values BlinkDelayEnum_t
@@ -43,10 +43,10 @@ public:
         setBlink((uint16_t)delay);
     }
 
-private:
+protected:
     int8_t _pin;
     uint16_t _counter;
     dynamic_bitset _pattern;
 };
 
-extern BlinkLEDTimer ledTimer;
+extern BlinkLEDTimer *ledTimer;

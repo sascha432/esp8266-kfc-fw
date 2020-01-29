@@ -60,7 +60,6 @@ uint8_t Sensor_DS3231::getAutoDiscoveryCount() const
 void Sensor_DS3231::getValues(JsonArray &array)
 {
     _debug_printf_P(PSTR("Sensor_DS3231::getValues()\n"));
-return;
 
     auto obj = &array.addObject(3);
     auto temp = _readSensorTemp();
@@ -68,6 +67,9 @@ return;
     obj->add(JJ(state), !isnan(temp));
     obj->add(JJ(value), JsonNumber(temp, 2));
 
+debug_println(_getTimeStr());
+return;
+//\n crashes json length escpae?
     obj = &array.addObject(3);
     String timeStr = _getTimeStr();
     obj->add(JJ(id), FSPGM(ds3231_id_time));
@@ -136,7 +138,7 @@ String Sensor_DS3231::_getTimeStr()
     if (now) {
         auto tm = gmtime(&now);
         char buf[32];
-        strftime_P(buf, sizeof(buf), PSTR("%Y-%m-%d\n%H:%M:%s"), tm);
+        strftime_P(buf, sizeof(buf), PSTR("%Y-%m-%d\n%H:%M:%S"), tm);
         str = buf;
         str += F("\nLost Power: ");
         str += _readSensorLostPower() ? FSPGM(Yes) : FSPGM(No);

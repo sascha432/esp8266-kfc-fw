@@ -21,10 +21,7 @@
 #define KFC_REST_API_USE_HTTP_CLIENT				        1
 #endif
 
-#if KFC_REST_API_USE_HTTP_CLIENT
-#include "../.pio/libdeps/ws_95/asyncHTTPrequest_ID1836/src/asyncHTTPrequest.h"
-// #include <asyncHTTPrequest.h>
-#endif
+class asyncHTTPrequest;
 
 class KFCRestAPI {
 public:

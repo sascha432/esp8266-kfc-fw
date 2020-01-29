@@ -104,6 +104,8 @@ private:
     double _Iint;
     double _Ipeak;
     double _Pint;
+
+    Adafruit_INA219 _ina219;
 };
 
 #endif

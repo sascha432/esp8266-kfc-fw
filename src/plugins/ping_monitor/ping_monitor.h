@@ -52,7 +52,7 @@ public:
     void setTimeout(uint16_t timeout);
 
     void clearHosts();
-    void addHost(const char *host);
+    void addHost(String host);
 
     void start();
     void stop();

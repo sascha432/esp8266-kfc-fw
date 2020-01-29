@@ -213,15 +213,6 @@ void WsPingClient::_cancelPing()
     _ping.cancel();
 }
 
-const char *ping_monitor_get_host(uint8_t num)
-{
-    const ConfigurationParameter::Handle_t handles[] = { _H(Config().ping.host1), _H(Config().ping.host2), _H(Config().ping.host3) };
-    if (num >= sizeof(handles) / sizeof(handles[0])) {
-        return _sharedEmptyString.c_str();
-    }
-    return config.getString(handles[num]);
-}
-
 String ping_monitor_get_translated_host(String host)
 {
     host.replace(F("${gateway}"), WiFi.isConnected() ? WiFi.gatewayIP().toString() : _sharedEmptyString);
@@ -279,10 +270,11 @@ void PingMonitorTask::clearHosts()
     _pingHosts.clear();
 }
 
-void PingMonitorTask::addHost(const char *host)
+void PingMonitorTask::addHost(String host)
 {
-    if (*host) {
-        _debug_printf_P(PSTR("PingMonitorTask::addHost(%s)\n"), host);
+    host.trim();
+    if (host.length()) {
+        _debug_printf_P(PSTR("PingMonitorTask::addHost(%s)\n"), host.c_str());
         _pingHosts.push_back({ host, 0, 0 });
     }
 }
@@ -369,17 +361,17 @@ void ping_monitor_setup()
         pingMonitorTask = nullptr;
     }
 
-    if (config._H_GET(Config().ping.interval) && config._H_GET(Config().ping.count)) {
+    if (config._H_GET(Config().ping.config.interval) && config._H_GET(Config().ping.config.count)) {
 
         _debug_printf_P(PSTR("ping_monitor_setup(): Setting up PingMonitorTask\n"));
 
         pingMonitorTask = new PingMonitorTask();
-        pingMonitorTask->setInterval(config._H_GET(Config().ping.interval));
-        pingMonitorTask->setCount(config._H_GET(Config().ping.count));
-        pingMonitorTask->setTimeout(config._H_GET(Config().ping.timeout));
+        pingMonitorTask->setInterval(config._H_GET(Config().ping.config.interval));
+        pingMonitorTask->setCount(config._H_GET(Config().ping.config.count));
+        pingMonitorTask->setTimeout(config._H_GET(Config().ping.config.timeout));
 
         for(uint8_t i = 0; i < 4; i++) {
-            pingMonitorTask->addHost(ping_monitor_get_host(i));
+            pingMonitorTask->addHost(Config_Ping::getHost(i));
         }
 
         pingMonitorTask->start();
@@ -479,13 +471,13 @@ void PingMonitorPlugin::createConfigureForm(AsyncWebServerRequest *request, Form
     form.add<sizeof Config().ping.host4>(F("ping_host4"), config._H_W_STR(Config().ping.host4));
     form.addValidator((new FormValidHostOrIpValidator(true))->addAllowString(gateway));
 
-    form.add<uint16_t>(F("ping_interval"), &config._H_W_GET(Config().ping.interval));
+    form.add<uint16_t>(F("ping_interval"), &config._H_W_GET(Config().ping.config.interval));
     form.addValidator(new FormRangeValidator(0, 65535));
 
-    form.add<uint8_t>(F("ping_count"), &config._H_W_GET(Config().ping.count));
+    form.add<uint8_t>(F("ping_count"), &config._H_W_GET(Config().ping.config.count));
     form.addValidator(new FormRangeValidator(0, 255));
 
-    form.add<uint16_t>(F("ping_timeout"), &config._H_W_GET(Config().ping.timeout));
+    form.add<uint16_t>(F("ping_timeout"), &config._H_W_GET(Config().ping.config.timeout));
     form.addValidator(new FormRangeValidator(0, 65535));
 
     form.finalize();

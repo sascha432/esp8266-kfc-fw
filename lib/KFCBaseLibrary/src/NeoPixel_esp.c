@@ -36,15 +36,17 @@ void ICACHE_RAM_ATTR NeoPixel_espShow(uint8_t pin, uint8_t *pixels, uint32_t num
 #ifdef ESP8266
 // compensation for if (pin == ...)
 // high 400-410ns low 800-810ns period 1300ns 769kHz
-#define COMP_CYCLES 3
+#define COMP_CYCLES     3
+#else
+#define COMP_CYCLES     0
 #endif
 
-#define CYCLES_800_T0H (F_CPU / 2500000) // 0.4us
-#define CYCLES_800_T1H (F_CPU / 1250000) // 0.8us
-#define CYCLES_800 (F_CPU / 800000) // 1.25us per bit
-#define CYCLES_400_T0H (F_CPU / 2000000) // 0.5uS
-#define CYCLES_400_T1H (F_CPU / 833333) // 1.2us
-#define CYCLES_400 (F_CPU / 400000) // 2.5us per bit
+#define CYCLES_800_T0H  (F_CPU / 2500000) // 0.4us
+#define CYCLES_800_T1H  (F_CPU / 1250000) // 0.8us
+#define CYCLES_800      (F_CPU / 800000) // 1.25us per bit
+#define CYCLES_400_T0H  (F_CPU / 2000000) // 0.5uS
+#define CYCLES_400_T1H  (F_CPU / 833333) // 1.2us
+#define CYCLES_400      (F_CPU / 400000) // 2.5us per bit
 
     uint8_t *p, *end, pix, mask;
     uint32_t t, time0, time1, period, c, startTime, pinMask;

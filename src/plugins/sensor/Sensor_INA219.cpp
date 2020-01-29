@@ -22,7 +22,8 @@ Sensor_INA219::Sensor_INA219(const JsonString &name, TwoWire &wire, uint8_t addr
     debug_printf_P(PSTR("Sensor_INA219(): component=%p\n"), this);
 #endif
     registerClient(this);
-    config.initTwoWire();
+    _ina219.begin(&config.initTwoWire());
+    _ina219.setCalibration(IOT_SENSOR_INA219_BUS_URANGE, IOT_SENSOR_INA219_GAIN, IOT_SENSOR_INA219_SHUNT_ADC_RES, IOT_SENSOR_INA219_R_SHUNT);
 
     _debug_printf_P(PSTR("Sensor_INA219::Sensor_INA219(): address=%x, voltage range=%x, gain=%x, shunt ADC resolution=%x\n"), _address, IOT_SENSOR_INA219_BUS_URANGE, IOT_SENSOR_INA219_GAIN, IOT_SENSOR_INA219_SHUNT_ADC_RES);
     _Uint = NAN;
@@ -140,12 +141,6 @@ String Sensor_INA219::_getId(SensorTypeEnum_t type)
 void Sensor_INA219::_loop()
 {
     uint32_t diff = get_time_diff(_updateTimer, millis());
-    Adafruit_INA219 _ina219;
-
-    if (diff >= min(1000, IOT_SENSOR_INA219_READ_INTERVAL)) {
-        _ina219.begin(&Wire);
-        _ina219.setCalibration(IOT_SENSOR_INA219_BUS_URANGE, IOT_SENSOR_INA219_GAIN, IOT_SENSOR_INA219_SHUNT_ADC_RES, IOT_SENSOR_INA219_R_SHUNT);
-    }
 
     if (diff > 1000) { // reset
         _updateTimer = millis();

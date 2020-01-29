@@ -18,6 +18,8 @@
 #include "web_server.h"
 #include "progmem_data.h"
 #include "./plugins/sensor/sensor.h"
+#include "./plugins/sensor/Sensor_BME280.h"
+#include "./plugins/sensor/EnvComp.h"
 #include "kfc_fw_config.h"
 
 // web accesss for screen capture
@@ -132,6 +134,27 @@ void WeatherStationPlugin::setup(PluginSetupMode_t mode)
             timer->detach();
         }
     });
+#endif
+
+#if IOT_WEATHER_STATION_TEMP_COMP
+    auto compensationCallback = [this](Sensor_BME280::SensorData_t &sensor) {
+        float realTemp;
+#if IOT_WEATHER_STATION_TEMP_COMP == 1
+        realTemp = sensor.temperature + IOT_WEATHER_STATION_TEMP_COMP_OFS;
+#elif IOT_WEATHER_STATION_TEMP_COMP == 2
+        realTemp = config.getRTCTemperature()  + IOT_WEATHER_STATION_TEMP_COMP_OFS;
+#else
+#error TODO
+#endif
+
+        sensor.humidity = EnvComp::getCompensatedRH(sensor.temperature, sensor.humidity, realTemp);
+        sensor.temperature = realTemp;
+    };
+    for(auto sensor: SensorPlugin::getSensors()) {
+        if (sensor->getType() == MQTTSensor::BME280) {
+            reinterpret_cast<Sensor_BME280 *>(sensor)->setCompensationCallback(compensationCallback);
+        }
+    }
 #endif
 
     LoopFunctions::add(loop);
@@ -330,7 +353,7 @@ void WeatherStationPlugin::_drawEnvironmentalSensor(GFXCanvasCompressed& canvas,
 
     canvas.setFont(FONTS_WEATHER_DESCR);
     canvas.setTextColor(COLORS_WEATHER_DESCR);
-    PrintString str(F("Temperature %.2f°C\nHumidty %.2f%%\nPressure  %.2fhPa"), values.temperature, values.humidity, values.pressure);
+    PrintString str(F("\n\nTemperature %.2f°C\nHumidty %.2f%%\nPressure  %.2fhPa"), values.temperature, values.humidity, values.pressure);
     canvas._drawTextAligned(0, _offsetY, str, AdafruitGFXExtension::LEFT);
 }
 
@@ -636,6 +659,7 @@ void WeatherStationPlugin::_loop()
 
 void WeatherStationPlugin::_broadcastCanvas(int16_t x, int16_t y, int16_t w, int16_t h)
 {
+    return;
     auto webSocketUI = WsWebUISocket::getWsWebUI();
     if (webSocketUI && !webSocketUI->getClients().isEmpty()) {
         Buffer buffer;
@@ -643,7 +667,7 @@ void WeatherStationPlugin::_broadcastCanvas(int16_t x, int16_t y, int16_t w, int
         WebSocketBinaryPacketUnqiueId_t packetIdentifier = RGB565_RLE_COMPRESSED_BITMAP;
         buffer.write(reinterpret_cast<uint8_t *>(&packetIdentifier), sizeof(packetIdentifier));
 
-        const uint8_t len = constexpr_strlen_P(SPGM(weather_station_webui_id));
+        const uint8_t len = strlen_P(SPGM(weather_station_webui_id));
         buffer.write(len);
         buffer.write_P(SPGM(weather_station_webui_id), len);
 

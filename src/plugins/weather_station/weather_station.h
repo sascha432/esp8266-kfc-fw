@@ -25,6 +25,26 @@
 #define IOT_WEATHER_STATION_HAS_TOUCHPAD        1
 #endif
 
+#ifndef IOT_WEATHER_STATION_TEMP_COMP
+// 0 disable
+// 1 fixed, relative
+// 2 RTC, relative
+// 3 LM75A, relative
+// 4 LM75A, absolute
+#define IOT_WEATHER_STATION_TEMP_COMP           1
+#endif
+
+// temperature offset if relative
+#ifndef IOT_WEATHER_STATION_TEMP_COMP_OFS
+#define IOT_WEATHER_STATION_TEMP_COMP_OFS       -3.0
+#endif
+
+// address if LM75 is used
+#ifndef IOT_WEATHER_STATION_TEMP_COMP_LM75A
+#define IOT_WEATHER_STATION_TEMP_COMP_LM75A     0x48
+#endif
+
+
 // IRC pin
 #ifndef IOT_WEATHER_STATION_MPR121_PIN
 #define IOT_WEATHER_STATION_MPR121_PIN          12
@@ -59,7 +79,7 @@ public:
 
     virtual PGM_P getName() const;
     virtual PluginPriorityEnum_t getSetupPriority() const override {
-        return MAX_PRIORITY;
+        return (PluginPriorityEnum_t)120;
     }
 
     virtual void setup(PluginSetupMode_t mode) override;

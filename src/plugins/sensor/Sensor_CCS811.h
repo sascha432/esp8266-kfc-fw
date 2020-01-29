@@ -42,6 +42,7 @@ private:
     String _name;
     SensorData_t _sensor;
     uint8_t _address;
+    Adafruit_CCS811 _ccs811;
 };
 
 #endif

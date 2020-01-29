@@ -15,6 +15,10 @@
 #include <debug_helper_disable.h>
 #endif
 
+#if KFC_REST_API_USE_HTTP_CLIENT
+#include "asyncHTTPrequest.h"
+#endif
+
 KFCRestAPI::HttpRequest::HttpRequest(KFCRestAPI &api, Callback_t callback) : _callback(callback), _message(F("None")), _api(api)
 {
     _json.initParser();

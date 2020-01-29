@@ -110,16 +110,6 @@ struct HueConfig {
     char devices[255]; // \n is separator
 };
 
-struct Ping {
-    char host1[65];
-    char host2[65];
-    char host3[65];
-    char host4[65];
-    uint8_t count;
-    uint16_t interval;
-    uint16_t timeout;
-};
-
 struct Serial2Tcp {
     uint16_t port;
     uint32_t baud_rate;
@@ -179,6 +169,29 @@ struct BlindsController {
 
 #include "push_pack.h"
 
+class Config_Ping
+{
+public:
+    typedef struct {
+        uint8_t count;
+        uint16_t interval;
+        uint16_t timeout;
+    } config_t;
+    config_t config;
+
+    Config_Ping() {
+        config = {5, 60, 5000};
+    }
+
+    static const char *getHost(uint8_t num);
+    static void defaults();
+
+    char host1[65];
+    char host2[65];
+    char host3[65];
+    char host4[65];
+};
+
 class Config_NTP {
 public:
     typedef struct ____attribute__packed__ {
@@ -194,6 +207,7 @@ public:
     static const char *getServers(uint8_t num);
     static const char *getUrl();
     static Timezone_t getTZ();
+    static void defaults();
 
     char timezone[33];
     char servers[3][65];
@@ -249,6 +263,7 @@ public:
     typedef struct ____attribute__packed__ {
         float calibration;
         uint8_t precision;
+        float offset;
     } battery_t;
     battery_t battery;
 #endif
@@ -264,7 +279,7 @@ public:
 #endif
     Config_Sensor() {
 #if IOT_SENSOR_HAVE_BATTERY
-        battery = battery_t({ 1.0f, 2 });
+        battery = battery_t({ 1.0f, 2, 0.0f });
 #endif
 #if (IOT_SENSOR_HAVE_HLW8012 || IOT_SENSOR_HAVE_HLW8032)
         hlw80xx = hlw80xx_t({ 1.0f, 1.0f, 1.0f, 0, 0 });
@@ -272,21 +287,32 @@ public:
     }
 };
 
-#include "pop_pack.h"
+class Config_WeatherStation
+{
+public:
+    typedef struct ____attribute__packed__ {
+        uint8_t is_metric: 1;
+        uint8_t time_format_24h: 1;
+        uint16_t weather_poll_interval;
+        uint16_t api_timeout;
+        uint8_t backlight_level;
+        float temp_offset;
+    } WeatherStationConfig_t;
 
-typedef struct  {
-    uint8_t is_metric: 1;
-    uint8_t time_format_24h: 1;
-    uint16_t weather_poll_interval;
-    uint16_t api_timeout;
-    uint8_t backlight_level;
-} WeatherStationConfig_t;
+    Config_WeatherStation() {
+        config = {false, false, 15, 30, 100, 0.0};
+    }
 
-struct WeatherStation {
+    static void defaults();
+    // static const char *getApiKey();
+    // static const char *getApiKey();
+
     char openweather_api_key[65];
     char openweather_api_query[65];
     WeatherStationConfig_t config;
 };
+
+#include "pop_pack.h"
 
 struct Clock {
     uint8_t blink_colon;
@@ -309,7 +335,7 @@ typedef struct  {
     uint32_t gateway;
 } WiFiQuickConnect_t;
 
-struct Config {
+typedef struct {
     uint32_t version;
     ConfigFlags flags;
     char device_name[17];
@@ -349,12 +375,12 @@ struct Config {
     SoftAP soft_ap;
     struct Serial2Tcp serial2tcp;
     struct HueConfig hue;
-    struct Ping ping;
-    WeatherStation weather_station;
+    Config_Ping ping;
+    Config_WeatherStation weather_station;
     Config_Sensor sensor;
     Clock clock;
     Config_RemoteControl remote_control;
-};
+} Config;
 
 #define _H_IP_FORM_OBJECT(name)                     config._H_GET_IP(name), [](const IPAddress &addr, FormField &) { config._H_SET_IP(name, addr); }
 #define _H_STRUCT_FORMVALUE(name, type, field)      config._H_GET(name).field, [](type value, FormField &, bool) { auto &data = config._H_W_GET(name); data.field = value; return false; }
@@ -435,6 +461,7 @@ public:
     TwoWire &initTwoWire(bool reset = false, Print *output = nullptr);
     bool setRTC(uint32_t unixtime);
     uint32_t getRTC();
+    float getRTCTemperature();
     bool rtcLostPower() ;
     void printRTCStatus(Print &output, bool plain = true);
 

@@ -310,7 +310,7 @@ void TimezoneData::updateLoop()
 
 void TimezoneData::updateNtpCallback()
 {
-    _debug_printf_P(PSTR("new time=%u\n"), (uint32_t)time(nullptr));
+    debug_printf_P(PSTR("new time=%u, tz=%d\n"), (uint32_t)time(nullptr), sntp_get_timezone());
 
     if (get_time_diff(_lastNtpCallback, millis()) < 1000) {
         _debug_printf_P(PSTR("called twice within 1000ms (%u), ignored multiple calls\n"), get_time_diff(_lastNtpCallback, millis()));
@@ -597,8 +597,9 @@ commandNow:
 #endif
         }
         else {
+            auto &timezone = get_default_timezone();
             strftime_P(timestamp, sizeof(timestamp), SPGM(strftime_date_time_zone), gmtime(&now));
-            args.print(timestamp);
+            args.printf_P(PSTR("%s, unixtime=%u, valid=%u, dst=%u, SNTP tz=%d"), timestamp, now, timezone.isValid(), timezone.isDst(), sntp_get_timezone());
             timezone_strftime_P(timestamp, sizeof(timestamp), SPGM(strftime_date_time_zone), timezone_localtime(&now));
             args.print(timestamp);
         }

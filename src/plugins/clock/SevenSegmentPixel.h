@@ -13,6 +13,10 @@
 #endif
 #include <EventTimer.h>
 
+#ifndef IOT_CLOCK_NEOPIXEL_PIN
+#define IOT_CLOCK_NEOPIXEL_PIN                                   12
+#endif
+
 #define SevenSegmentPixel_PIXEL_ADDRESS(digit, pixel, segment)   ((digit * _numPixels * SegmentEnum_t::NUM) + (segment * _numPixels) + pixel)
 #define SevenSegmentPixel_SEGMENT_TO_BIT(segment)                (1 << segment)
 #define SevenSegmentPixel_COLOR(color, segment, bitset)          ((bitset & SevenSegmentPixel_SEGMENT_TO_BIT(segment)) ? color : 0)

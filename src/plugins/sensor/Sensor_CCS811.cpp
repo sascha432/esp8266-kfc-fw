@@ -23,6 +23,7 @@ Sensor_CCS811::Sensor_CCS811(const String &name, uint8_t address) : MQTTSensor()
 #endif
     registerClient(this);
     config.initTwoWire();
+    _ccs811.beg
     setUpdateRate(10); // faster update rate until valid data is available
     _sensor.eCO2 = 0;
     _sensor.TVOC = 0;
@@ -110,8 +111,6 @@ void Sensor_CCS811::publishState(MQTTClient *client)
 
 Sensor_CCS811::SensorData_t &Sensor_CCS811::_readSensor()
 {
-    Adafruit_CCS811 _ccs811;
-
 // use temperature and humidity for compensation
 #if IOT_SENSOR_HAVE_LM75A || IOT_SENSOR_HAVE_BME280 || IOT_SENSOR_HAVE_BME680
     auto &sensors = SensorPlugin::getSensors();

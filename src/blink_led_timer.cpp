@@ -109,7 +109,7 @@ void BlinkLEDTimer::setPattern(int8_t pin, int delay, dynamic_bitset &pattern)
     ledTimer->set(delay, pin, pattern);
 }
 
-void BlinkLEDTimer::setBlink(int8_t pin, uint16_t delay)
+void BlinkLEDTimer::setBlink(int8_t pin, uint16_t delay, int32_t color)
 {
     auto flags = config._H_GET(Config().flags);
 
@@ -143,12 +143,12 @@ void BlinkLEDTimer::setBlink(int8_t pin, uint16_t delay)
             timer->off();
         }
         else if (delay == BlinkLEDTimer::SOLID) {
-            timer->solid(0x004000);  // green
+            timer->solid(color == -1 ? 0x004000 : color);  // green
         }
         else {
             dynamic_bitset pattern;
             if (delay == BlinkLEDTimer::SOS) {
-                timer->setColor(0x400000);  // red
+                timer->setColor(color == -1 ? 0x400000 : color);  // red
                 pattern.setMaxSize(24);
                 pattern.setValue(0xcc1c71d5);
                 delay = 200;
@@ -156,7 +156,7 @@ void BlinkLEDTimer::setBlink(int8_t pin, uint16_t delay)
                 pattern.setMaxSize(2);
                 pattern = 0b10;
                 delay = _max(50, _min(delay, 5000));
-                timer->setColor((delay < 100) ? 0x404000 : 0x000040);  // yellow / blue
+                timer->setColor(color == -1 ? ((delay < 100) ? 0x404000 : 0x000040) : color);  // yellow / blue
             }
             timer->set(delay, pin, pattern);
         }

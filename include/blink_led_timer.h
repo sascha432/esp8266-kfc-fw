@@ -35,7 +35,7 @@ public:
     virtual void detach() override;
 
     static void setPattern(int8_t pin, int delay, dynamic_bitset &pattern);
-    static void setBlink(int8_t pin, uint16_t delay); // predefined values BlinkDelayEnum_t
+    static void setBlink(int8_t pin, uint16_t delay, int32_t color = -1); // predefined values BlinkDelayEnum_t
     static void setBlink(uint16_t delay) {
         setBlink(DEFAULT_PIN, delay);
     }

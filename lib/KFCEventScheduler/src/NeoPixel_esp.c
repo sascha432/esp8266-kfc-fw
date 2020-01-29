@@ -12,15 +12,7 @@
 
 #pragma GCC optimize ("O2")
 
-void NeoPixel_setColor(uint8_t *pixels, uint32_t color)
-{
-    //GRB
-    *pixels++ = color >> 8;
-    *pixels = color >> 16;
-    *pixels++ = color;
-}
-
-void NeoPixel_fillColor(uint8_t *pixels, uint16_t numBytes, uint32_t color)
+void ICACHE_RAM_ATTR NeoPixel_fillColor(uint8_t *pixels, uint16_t numBytes, uint32_t color)
 {
     uint8_t *ptr = pixels;
     for(uint8_t i = 0; i < numBytes; i += 3) {
@@ -40,6 +32,12 @@ static inline uint32_t _getCycleCount(void)
 }
 
 void ICACHE_RAM_ATTR NeoPixel_espShow(uint8_t pin, uint8_t *pixels, uint32_t numBytes, boolean is800KHz) {
+
+#ifdef ESP8266
+// compensation for if (pin == ...)
+// high 400-410ns low 800-810ns period 1300ns 769kHz
+#define COMP_CYCLES 3
+#endif
 
 #define CYCLES_800_T0H (F_CPU / 2500000) // 0.4us
 #define CYCLES_800_T1H (F_CPU / 1250000) // 0.8us
@@ -61,73 +59,53 @@ void ICACHE_RAM_ATTR NeoPixel_espShow(uint8_t pin, uint8_t *pixels, uint32_t num
 #ifdef NEO_KHZ400
     if (is800KHz) {
 #endif
-        time0 = CYCLES_800_T0H;
-        time1 = CYCLES_800_T1H;
+        time0 = CYCLES_800_T0H - COMP_CYCLES;
+        time1 = CYCLES_800_T1H - COMP_CYCLES;
         period = CYCLES_800;
 #ifdef NEO_KHZ400
     } else { // 400 KHz bitstream
-        time0 = CYCLES_400_T0H;
-        time1 = CYCLES_400_T1H;
+        time0 = CYCLES_400_T0H - COMP_CYCLES;
+        time1 = CYCLES_400_T1H - COMP_CYCLES;
         period = CYCLES_400;
     }
 #endif
 
 #ifdef ESP8266
+    uint32_t gpio_clear = 0;
+    uint32_t gpio_set = 0;
     if (pin == 16) {
-        // GPIO16 requires some pre-calculations to be fast enough
-        uint32_t gpio_clear = (READ_PERI_REG(RTC_GPIO_OUT) & (uint32)0xfffffffe);
-        uint32_t gpio_set = gpio_clear |= 1;
-
-        for (t = time0;; t = time0) {
-            if (pix & mask)
-                t = time1; // Bit high duration
-            while (((c = _getCycleCount()) - startTime) < period)
-                ; // Wait for bit start
-            WRITE_PERI_REG(RTC_GPIO_OUT, gpio_set);
-            startTime = c; // Save start time
-            while (((c = _getCycleCount()) - startTime) < t)
-                ; // Wait high duration
-            WRITE_PERI_REG(RTC_GPIO_OUT, gpio_clear);
-            if (!(mask >>= 1)) { // Next bit/byte
-                if (p >= end)
-                    break;
-                pix = *p++;
-                mask = 0x80;
-            }
-        }
+        // reading and writing RTC_GPIO_OUT is too slow inside the loop
+        gpio_clear = (READ_PERI_REG(RTC_GPIO_OUT) & (uint32)0xfffffffe);
+        gpio_set = gpio_clear | 1;
     }
-    else {
+#endif
 
-        for (t = time0;; t = time0) {
-            if (pix & mask)
-                t = time1; // Bit high duration
-            while (((c = _getCycleCount()) - startTime) < period)
-                ; // Wait for bit start
-            GPIO_REG_WRITE(GPIO_OUT_W1TS_ADDRESS, pinMask);       // Set high
-            startTime = c; // Save start time
-            while (((c = _getCycleCount()) - startTime) < t)
-                ; // Wait high duration
-            GPIO_REG_WRITE(GPIO_OUT_W1TC_ADDRESS, pinMask); // Set low
-            if (!(mask >>= 1)) { // Next bit/byte
-                if (p >= end)
-                    break;
-                pix = *p++;
-                mask = 0x80;
-            }
-        }
-    }
-
-#else
     for (t = time0;; t = time0) {
         if (pix & mask)
             t = time1; // Bit high duration
         while (((c = _getCycleCount()) - startTime) < period)
             ; // Wait for bit start
-        gpio_set_level(pin, HIGH);
+#ifdef ESP8266
+        if (pin == 16) {
+            WRITE_PERI_REG(RTC_GPIO_OUT, gpio_set);
+        } else {
+            GPIO_REG_WRITE(GPIO_OUT_W1TS_ADDRESS, pinMask); // Set high
+        }
+#else
+            gpio_set_level(pin, HIGH);
+#endif
         startTime = c; // Save start time
         while (((c = _getCycleCount()) - startTime) < t)
             ; // Wait high duration
-        gpio_set_level(pin, LOW);
+#ifdef ESP8266
+        if (pin == 16) {
+            WRITE_PERI_REG(RTC_GPIO_OUT, gpio_clear);
+        } else {
+            GPIO_REG_WRITE(GPIO_OUT_W1TC_ADDRESS, pinMask); // Set low
+        }
+#else
+            gpio_set_level(pin, LOW);
+#endif
         if (!(mask >>= 1)) { // Next bit/byte
             if (p >= end)
                 break;
@@ -135,11 +113,8 @@ void ICACHE_RAM_ATTR NeoPixel_espShow(uint8_t pin, uint8_t *pixels, uint32_t num
             mask = 0x80;
         }
     }
-#endif
-
     while ((_getCycleCount() - startTime) < period)
         ; // Wait for last bit
-
 }
 
 void ICACHE_RAM_ATTR espShow(uint8_t pin, uint8_t *pixels, uint32_t numBytes, boolean is800KHz) {

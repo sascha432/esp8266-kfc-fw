@@ -12,13 +12,13 @@
 #include <debug_helper_disable.h>
 #endif
 
-Sensor_BME280::Sensor_BME280(const String &name, TwoWire &wire, uint8_t address) : MQTTSensor(), _name(name), _address(address)
+Sensor_BME280::Sensor_BME280(const String &name, TwoWire &wire, uint8_t address) : MQTTSensor(), _name(name), _address(address), _callback(nullptr)
 {
 #if DEBUG_MQTT_CLIENT
-    debug_printf_P(PSTR("Sensor_BME280(): component=%p\n"), this);
+    debug_printf_P(PSTR("component=%p\n"), this);
 #endif
     registerClient(this);
-    config.initTwoWire();
+    _bme280.begin(_address, &config.initTwoWire());
 }
 
 void Sensor_BME280::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector)
@@ -57,7 +57,7 @@ uint8_t Sensor_BME280::getAutoDiscoveryCount() const
 
 void Sensor_BME280::getValues(JsonArray &array)
 {
-    _debug_printf_P(PSTR("Sensor_BME280::getValues()\n"));
+    _debug_println(_sharedEmptyString);
 
     auto sensor = _readSensor();
 
@@ -114,12 +114,17 @@ void Sensor_BME280::publishState(MQTTClient *client)
 Sensor_BME280::SensorData_t Sensor_BME280::_readSensor()
 {
     SensorData_t sensor;
-    Adafruit_BME280 bme280;
-    bme280.begin(_address, &Wire);
-    sensor.temperature = bme280.readTemperature();
-    sensor.humidity = bme280.readHumidity();
-    sensor.pressure = bme280.readPressure() / 100.0;
-    _debug_printf_P(PSTR("Sensor_BME280::_readSensor(): address 0x%02x: %.2f °C, %.2f%%, %.2f hPa\n"), _address, sensor.temperature, sensor.humidity, sensor.pressure);
+    sensor.temperature = _bme280.readTemperature();
+    sensor.humidity = _bme280.readHumidity();
+    sensor.pressure = _bme280.readPressure() / 100.0;
+
+    _debug_printf_P(PSTR("address 0x%02x: %.2f °C, %.2f%%, %.2f hPa\n"), _address, sensor.temperature, sensor.humidity, sensor.pressure);
+
+    if (_callback != nullptr) {
+        _callback(sensor);
+        _debug_printf_P(PSTR("compensated %.2f °C, %.2f%%\n"), sensor.temperature, sensor.humidity);
+    }
+
     return sensor;
 }
 

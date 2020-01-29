@@ -24,6 +24,8 @@ public:
         float pressure;     // hPa
     } SensorData_t;
 
+    typedef std::function<void(SensorData_t &data)> CompensationCallback_t;
+
     Sensor_BME280(const String &name, TwoWire &wire, uint8_t address = 0x76);
 
     virtual void createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector) override;
@@ -39,6 +41,11 @@ public:
         return _readSensor();
     }
 
+    // temperature or offset to compensate temperature and humidity readings
+    void setCompensationCallback(CompensationCallback_t callback) {
+        _callback = callback;
+    }
+
 private:
     friend Sensor_CCS811;
 
@@ -47,6 +54,8 @@ private:
 
     String _name;
     uint8_t _address;
+    Adafruit_BME280 _bme280;
+    CompensationCallback_t _callback;
 };
 
 #endif

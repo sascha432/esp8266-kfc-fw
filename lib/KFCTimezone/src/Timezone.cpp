@@ -76,7 +76,6 @@ size_t timezone_strftime(char *buf, size_t size, PGM_P format, const struct tm *
 Timezone::Timezone()
 {
 	invalidate();
-    load();
 }
 
 void Timezone::invalidate()
@@ -147,6 +146,7 @@ void Timezone::load()
 #ifndef _WIN32
     auto cfg = config._H_GET(Config().ntp.tz);
     _abbreviation = cfg.abbreviation;
+    _zoneName = _abbreviation;
     _timezoneOffset = cfg.offset;
     _dst = cfg.dst;
     debug_printf_P(PSTR("abbreviation=%s, offset=%d, dst=%u\n"), cfg.abbreviation, cfg.offset, cfg.dst);
@@ -159,13 +159,13 @@ void Timezone::save()
     auto cfg = config._H_GET(Config().ntp.tz);
     if (cfg.offset != _timezoneOffset || !_abbreviation.equals(cfg.abbreviation) || cfg.dst != _dst) {
         Config_NTP::Timezone_t tz;
-        tz.offset = cfg.offset;
-        tz.dst = cfg.dst;
-        strncpy(tz.abbreviation, _abbreviation.c_str(), sizeof(tz.abbreviation) - 1);
+        tz.offset = _timezoneOffset;
+        tz.dst = _dst;
+        strncpy(tz.abbreviation, _abbreviation.c_str(), sizeof(tz.abbreviation) - 1)[sizeof(tz.abbreviation) - 1] = 0;
         config.discard();
         config._H_SET(Config().ntp.tz, tz);
         config.write();
-        debug_printf_P(PSTR("abbreviation=%s, offset=%d, dst=%u\n"), cfg.abbreviation, cfg.offset, cfg.dst);
+        debug_printf_P(PSTR("abbreviation=%s, offset=%d, dst=%u\n"), _abbreviation.c_str(), _timezoneOffset, _dst);
     }
 #endif
 }

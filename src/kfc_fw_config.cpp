@@ -11,6 +11,7 @@
 #include <EventTimer.h>
 #include <session.h>
 #include <misc.h>
+#include <Timezone.h>
 #include "blink_led_timer.h"
 #include "progmem_data.h"
 #include "fs_mapping.h"
@@ -19,6 +20,13 @@
 #include "build.h"
 #if NTP_CLIENT
 #include "./plugins/ntp/ntp_plugin.h"
+#endif
+
+#if defined(ESP8266)
+#include <sntp.h>
+#include <sntp-lwip2.h>
+#elif defined(ESP32)
+#include <lwip/apps/sntp.h>
 #endif
 
 #if RTC_SUPPORT
@@ -66,8 +74,11 @@ const char *Config_NTP::getTimezone()
 
 const char *Config_NTP::getServers(uint8_t num)
 {
-    static const uint16_t _handles[] = { CONFIG_GET_HANDLE(Config().ntp.servers[0]), CONFIG_GET_HANDLE(Config().ntp.servers[1]), CONFIG_GET_HANDLE(Config().ntp.servers[2]) };
-    return config._H_STR(_handles[num]);
+    static const uint16_t handles[] PROGMEM = { CONFIG_GET_HANDLE(Config().ntp.servers[0]), CONFIG_GET_HANDLE(Config().ntp.servers[1]), CONFIG_GET_HANDLE(Config().ntp.servers[2]) };
+    if (num >= sizeof(handles)) {
+        return nullptr;
+    }
+    return config._H_STR(pgm_read_word(handles[num]));
 }
 
 const char *Config_NTP::getUrl()
@@ -80,6 +91,50 @@ Config_NTP::Timezone_t Config_NTP::getTZ()
     return config._H_GET(Config().ntp.tz);
 }
 
+void Config_NTP::defaults()
+{
+    ::config._H_SET_STR(Config().ntp.timezone, F("UTC"));
+    ::config._H_SET_STR(Config().ntp.servers[0], F("pool.ntp.org"));
+    ::config._H_SET_STR(Config().ntp.servers[1], F("time.nist.gov"));
+    ::config._H_SET_STR(Config().ntp.servers[2], F("time.windows.com"));
+    ::config._H_SET(Config().ntp.ntpRefresh, 12 * 60); // refresh twice a day
+#if USE_REMOTE_TIMEZONE
+    // https://timezonedb.com/register
+    ::config._H_SET_STR(Config().ntp.remote_tz_dst_ofs_url, F("http://api.timezonedb.com/v2.1/get-time-zone?key=_YOUR_API_KEY_&by=zone&format=json&zone=${timezone}"));
+#endif
+}
+
+
+// Config_WeatherStation
+
+void Config_WeatherStation::defaults()
+{
+    Config_WeatherStation ws;
+    ::config._H_SET_STR(Config().weather_station.openweather_api_key, F("GET_YOUR_API_KEY_openweathermap.org"));
+    ::config._H_SET_STR(Config().weather_station.openweather_api_query, F("New York,US"));
+    ::config._H_SET(Config().weather_station.config, ws.config);
+}
+
+// Config_Ping
+
+const char *Config_Ping::getHost(uint8_t num)
+{
+    static const uint16_t handles[] PROGMEM = { CONFIG_GET_HANDLE(Config().ping.host1), CONFIG_GET_HANDLE(Config().ping.host2), CONFIG_GET_HANDLE(Config().ping.host3), CONFIG_GET_HANDLE(Config().ping.host4) };
+    if (num >= sizeof(handles)) {
+        return nullptr;
+    }
+    return ::config._H_STR(pgm_read_word(handles[num]));
+
+}
+
+void Config_Ping::defaults()
+{
+    Config_Ping ping;
+    ::config._H_SET_STR(Config().ping.host1, F("${gateway}"));
+    ::config._H_SET_STR(Config().ping.host2, F("8.8.8.8"));
+    ::config._H_SET_STR(Config().ping.host3, F("www.google.com"));
+    ::config._H_SET(Config().ping.config, ping.config);
+}
 
 // KFCFWConfiguration
 
@@ -441,15 +496,7 @@ void KFCFWConfiguration::restoreFactorySettings()
     _H_SET(Config().http_port, 80);
 #endif
 #if NTP_CLIENT
-    _H_SET_STR(Config().ntp.timezone, F("UTC"));
-    _H_SET_STR(Config().ntp.servers[0], F("pool.ntp.org"));
-    _H_SET_STR(Config().ntp.servers[1], F("time.nist.gov"));
-    _H_SET_STR(Config().ntp.servers[2], F("time.windows.com"));
-    _H_SET(Config().ntp.ntpRefresh, 12 * 60); // refresh twice a day
-#if USE_REMOTE_TIMEZONE
-    // https://timezonedb.com/register
-    _H_SET_STR(Config().ntp.remote_tz_dst_ofs_url, F("http://api.timezonedb.com/v2.1/get-time-zone?key=_YOUR_API_KEY_&by=zone&format=json&zone=${timezone}"));
-#endif
+    Config_NTP::defaults();
 #endif
     _H_SET(Config().led_pin, __LED_BUILTIN);
 #if MQTT_SUPPORT
@@ -477,12 +524,7 @@ void KFCFWConfiguration::restoreFactorySettings()
     _H_SET_STR(Config().hue.devices, F("lamp 1\nlamp 2"));
 #endif
 #if PING_MONITOR
-    _H_SET_STR(Config().ping.host1, F("${gateway}"));
-    _H_SET_STR(Config().ping.host2, F("8.8.8.8"));
-    _H_SET_STR(Config().ping.host3, F("www.google.com"));
-    _H_SET(Config().ping.count, 4);
-    _H_SET(Config().ping.interval, 60);
-    _H_SET(Config().ping.timeout, 5000);
+    Config_Ping::defaults();
 #endif
 #if SERIAL2TCP
     Serial2Tcp serial2tcp;
@@ -557,15 +599,7 @@ void KFCFWConfiguration::restoreFactorySettings()
 #endif
 
 #if IOT_WEATHER_STATION
-    _H_SET_STR(Config().weather_station.openweather_api_key, F("GET_YOUR_API_KEY_openweathermap.org"));
-    _H_SET_STR(Config().weather_station.openweather_api_query, F("New York,US"));
-    _H_SET(Config().weather_station.config, WeatherStationConfig_t({
-        false,  // use metric
-        false,  // use 24h time format
-        15,     // weather_poll_interval in minutes, 0 to disable auto update
-        30,     // api_timeout in seconds
-        100,    // backlight level in %
-    }));
+    Config_WeatherStation::defaults();
 #endif
 
 #if IOT_SENSOR && (IOT_SENSOR_HAVE_BATTERY || IOT_SENSOR_HAVE_HLW8012 || IOT_SENSOR_HAVE_HLW8032)
@@ -1195,6 +1229,17 @@ uint32_t KFCFWConfiguration::getRTC()
     return 0;
 }
 
+float KFCFWConfiguration::getRTCTemperature()
+{
+#if RTC_SUPPORT
+    initTwoWire();
+    if (rtc.begin()) {
+        return rtc.getTemperature();
+    }
+#endif
+    return NAN;
+}
+
 void KFCFWConfiguration::printRTCStatus(Print &output, bool plain)
 {
 #if RTC_SUPPORT
@@ -1259,7 +1304,11 @@ void KFCConfigurationPlugin::setup(PluginSetupMode_t mode)
 
     config.setup();
 
+    auto &timezone = get_default_timezone();
+    timezone.load();
 #if RTC_SUPPORT
+    // remove timezone before using settimeofday
+    sntp_set_timezone_in_seconds(0);
     auto rtc = config.getRTC();
     if (rtc != 0) {
         struct timeval tv = { (time_t)rtc, 0 };

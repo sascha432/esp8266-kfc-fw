@@ -99,6 +99,7 @@ void Sensor_Battery::createConfigureForm(AsyncWebServerRequest *request, Form &f
 {
     auto *sensor = &config._H_W_GET(Config().sensor); // must be a pointer
     form.add<float>(F("battery_calibration"), &sensor->battery.calibration)->setFormUI(new FormUI(FormUI::TEXT, F("Supply Voltage Calibration")));
+    form.add<float>(F("battery_offset"), &sensor->battery.calibration)->setFormUI(new FormUI(FormUI::TEXT, F("Supply Voltage Offset")));
     form.add<uint8_t>(F("battery_precision"), &sensor->battery.precision)->setFormUI(new FormUI(FormUI::TEXT, F("Supply Voltage Precision")));
 }
 
@@ -120,7 +121,7 @@ float Sensor_Battery::_readSensor()
 {
     double adcVoltage = _adc.read() / 1024.0;
     _debug_printf_P(PSTR("Sensor_Battery::_readSensor(): raw = %f\n"), (((IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R2 + IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1)) / IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1) * adcVoltage)
-    return (((IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R2 + IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1)) / IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1) * adcVoltage * _config.calibration;
+    return ((((IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R2 + IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1)) / IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1) * adcVoltage * _config.calibration) + _config.offset;
 }
 
 bool Sensor_Battery::_isCharging() const
@@ -171,9 +172,10 @@ bool Sensor_Battery::atModeHandler(AtModeArgs &args)
         auto serial = &args.getStream();
         auto printVoltage = [serial](EventScheduler::TimerPtr timer) {
             auto value = Sensor_Battery::readSensor();
-            serial->printf_P(PSTR("+SENSORPBV: %.4fV (calibration %.6f)\n"),
+            serial->printf_P(PSTR("+SENSORPBV: %.4fV (calibration %f, offset=%f)\n"),
                 value,
-                config._H_GET(Config().sensor).battery.calibration
+                config._H_GET(Config().sensor).battery.calibration,
+                config._H_GET(Config().sensor).battery.offset
             );
         };
         printVoltage(nullptr);

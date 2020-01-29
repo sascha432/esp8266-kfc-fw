@@ -111,7 +111,7 @@ def flash(url, type, target, sid):
     filesize = os.fstat(args.image.fileno()).st_size
     verbose("Uploading " + str(filesize) + " Bytes: " + args.image.name)
 
-    bar = progressbar.ProgressBar(max_value=filesize)
+    bar = progressbar.ProgressBar(max_value=filesize, redirect_stdout=True)
     bar.start();
     encoder = MultipartEncoder(fields={ "image_type": image_type, "SID": sid, "firmware_image": ("filename", args.image, "application/octet-stream") })
 
@@ -140,7 +140,7 @@ def flash(url, type, target, sid):
         step = 0
         verbose("Waiting for device to reboot", False)
         if args.quiet==False:
-            bar = progressbar.ProgressBar(max_value=progressbar.UnknownLength)
+            bar = progressbar.ProgressBar(max_value=progressbar.UnknownLength, redirect_stdout=True)
             for i in range(0, 40):
                 bar.update(step)
                 step = step + 1

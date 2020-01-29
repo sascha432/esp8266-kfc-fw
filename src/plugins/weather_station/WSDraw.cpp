@@ -79,9 +79,7 @@ WSDraw::WSDraw() :
 
 WSDraw::~WSDraw()
 {
-    if (_scrollCanvas) {
-        delete _scrollCanvas;
-    }
+    ScrollCanvas::destroy(this);
 }
 
 
@@ -149,7 +147,6 @@ void WSDraw::_drawWeather()
 void WSDraw::_drawWeather(GFXCanvasCompressed& canvas, uint8_t top)
 {
     // _debug_printf_P(PSTR("WSDraw::_drawWeather()\n"));
-
     _offsetY = top;
 
     auto &info = _weatherApi.getWeatherInfo();
@@ -234,6 +231,7 @@ void WSDraw::_drawWeather(GFXCanvasCompressed& canvas, uint8_t top)
     }
 }
 
+
 void WSDraw::_drawSunAndMoon()
 {
     // _debug_printf_P(PSTR("WSDraw::_drawSunAndMoon()\n"));
@@ -300,29 +298,24 @@ void WSDraw::_drawScreen0()
 void WSDraw::_doScroll()
 {
     _debug_printf_P(PSTR("WSDraw::_doScroll()\n"));
-    SpeedBooster speedBooster;
-
-    if (_scrollCanvas) {
-        delete _scrollCanvas;
-    }
-    _scrollCanvas = new GFXCanvasCompressedPalette(TFT_WIDTH, Y_END_POSITION_WEATHER - Y_START_POSITION_WEATHER);
+    ScrollCanvas::create(this, TFT_WIDTH, Y_END_POSITION_WEATHER - Y_START_POSITION_WEATHER);
     _scrollPosition = 0;
-    _drawWeather(*_scrollCanvas, 0);
 }
 
-void WSDraw::_scrollTimer(EventScheduler::TimerPtr timer)
+void WSDraw::_scrollTimer(WSDraw &draw)
 {
     if (_scrollCanvas) {
         // _debug_printf_P(PSTR("WSDraw::_scrollTimer(): _scrollPosition=%u\n"), _scrollPosition);
         if (_scrollPosition < TFT_WIDTH) {
+            SpeedBooster speedBooster;
             static const uint8_t numScroll = 8;
-            uint8_t height = (uint8_t)_scrollCanvas->height();
+            uint8_t height = (uint8_t)_scrollCanvas->getCanvas().height();
             for (uint8_t y = 0; y < height; y++) {
                 auto &canvasLine = _canvas.getLine(y + Y_START_POSITION_WEATHER);
                 memmove(canvasLine.getBuffer(), &canvasLine.getBuffer()[numScroll], (TFT_WIDTH - numScroll) * sizeof(uint16_t)); // move content to the left
                 canvasLine.setWriteFlag(true);
                 // copy new content
-                auto scrollCanvasLine = _scrollCanvas->getLine(y).getBuffer();
+                auto scrollCanvasLine = _scrollCanvas->getCanvas().getLine(y).getBuffer();
                 for (uint8_t x = 0; x < numScroll; x++) {
                     canvasLine.setPixel(TFT_WIDTH - numScroll + x, scrollCanvasLine[_scrollPosition + x]);
                 }
@@ -331,9 +324,7 @@ void WSDraw::_scrollTimer(EventScheduler::TimerPtr timer)
             _displayScreen(0, Y_START_POSITION_WEATHER, TFT_WIDTH, height);
         }
         else {
-            delete _scrollCanvas;
-            _scrollCanvas = nullptr;
-            timer->detach();
+            ScrollCanvas::destroy(&draw);
         }
     }
 }
@@ -368,12 +359,29 @@ void WSDraw::_updateTime()
 #endif
 }
 
-void WSDraw::_draw() {
+void WSDraw::_drawText(const String &text, const GFXfont *font, uint16_t color, bool clear)
+{
+    SpeedBooster speedBooster;
+    ScrollCanvas::destroy(this);
+    _canvas.fillScreen(COLORS_BACKGROUND);
+    _canvas.setTextColor(color);
+    _canvas.setFont(font);
+    GFXCanvasCompressed::Position_t pos;
+    if (clear) {
+        _canvas._drawTextAligned(TFT_WIDTH / 2, TFT_HEIGHT / 2, text, GFXCanvasCompressed::CENTER, GFXCanvasCompressed::MIDDLE, &pos);
+        _displayScreen(0, 0, TFT_WIDTH, TFT_HEIGHT);
+    }
+    else {
+        _canvas._drawTextAligned(TFT_WIDTH / 2, TFT_HEIGHT / 2, text, GFXCanvasCompressed::CENTER, GFXCanvasCompressed::MIDDLE, &pos);
+        _displayScreen(0, pos.y, TFT_WIDTH, pos.h);
+    }
+}
 
-    if (_scrollCanvas) {
+void WSDraw::_draw()
+{
+    if (_isScrolling()) {
         return;
     }
-
     SpeedBooster speedBooster;
 
     _canvas.fillScreen(COLORS_BACKGROUND);
@@ -396,8 +404,24 @@ void WSDraw::_draw() {
     _offsetX = 0;
     _offsetY = 0;
     switch(_currentScreen) {
-        case 0:
+        case MAIN:
             _drawScreen0();
+            break;
+        case TEXT_CLEAR:
+            _drawText(_text, _textFont, COLORS_DEFAULT_TEXT, true);
+            _currentScreen = TEXT;
+#ifndef _WIN32
+            Scheduler.addTimer(150, true, [this](EventScheduler::TimerPtr timer) {
+                if (_currentScreen != TEXT) {
+                    timer->detach();
+                }
+                else {
+                    _drawText(_text, _textFont, COLORS_DEFAULT_TEXT);
+                }
+            });
+#endif
+            break;
+        default:
             break;
     }
 }
@@ -415,12 +439,12 @@ void WSDraw::_displayScreen(int16_t x, int16_t y, int16_t w, int16_t h)
 
 void WSDraw::_broadcastCanvas(int16_t x, int16_t y, int16_t w, int16_t h)
 {
-    //auto bitmap = getCanvas().getRLEStream(x, y, w, h);
-    //int count = 0;
-    //while (bitmap.available()) {
+    // auto bitmap = getCanvas().getRLEStream(x, y, w, h);
+    // int count = 0;
+    // while (bitmap.available()) {
     //    bitmap.read();
     //    count++;
-    //}
+    // }
     // auto file = SPIFFS.open("test.bmp", fs::FileOpenMode::write);
     // auto stream = getCanvas().getBitmap(x, y, w, h);
     // while (stream.available()) {

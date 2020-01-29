@@ -225,6 +225,11 @@ bool I2CScannerPlugin::atModeHandler(AtModeArgs &args)
                 serial.print(F("+I2CS: "));
                 config.initTwoWire(true, &serial);
             }
+            else if (args.isFalse(0)) {
+                pinMode(KFC_TWOWIRE_SDA, INPUT);
+                pinMode(KFC_TWOWIRE_SCL, KFC_TWOWIRE_SCL);
+                args.printf_P(PSTR("set pin %/%u to input"), KFC_TWOWIRE_SDA, KFC_TWOWIRE_SCL);
+            }
             else if (args.requireArgs(2, 4)) {
                 int sda = args.toNumber(0, KFC_TWOWIRE_SDA);
                 int scl = args.toNumber(1, KFC_TWOWIRE_SCL);
@@ -369,7 +374,9 @@ bool I2CScannerPlugin::atModeHandler(AtModeArgs &args)
         auto &serial = args.getStream();
         serial.printf_P(PSTR("Reading DS3231 at 0x%02x: "), 0x68);
         if (rtc.begin()) {
-            char *buffer = "YYYY-MM-DD hh:mm:ss";
+            auto format = PSTR("YYYY-MM-DD hh:mm:ss");
+            char buffer[constexpr_strlen_P(format) + 1];
+            strcpy_P(buffer, format);
             serial.printf_P(PSTR("temperature=%.2f, lost_power=%u, now=%s\n"), rtc.getTemperature(), rtc.lostPower(), rtc.now().toString(buffer));
         }
         else {

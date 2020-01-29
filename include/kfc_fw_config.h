@@ -23,7 +23,7 @@
 #include "reset_detector.h"
 #include "dyn_bitset.h"
 #if DEBUG_HAVE_SAVECRASH
-#include "../.pio/libdeps/weather/EspSaveCrash/src/EspSaveCrash.h"
+#include "../.pio/libdeps/ws_95/EspSaveCrash/src/EspSaveCrash.h"
 // #include <EspSaveCrash.h>
 #endif
 
@@ -325,7 +325,7 @@ struct Config {
     uint16_t http_port;
     char cert_passphrase[33];
 
-    uint8_t led_pin;
+    int8_t led_pin;
 
     char mqtt_host[65];
     char mqtt_username[33];

@@ -9,6 +9,7 @@
 #endif
 
 #include <Arduino_compat.h>
+#include <Schedule.h>
 #include <functional>
 #include <vector>
 
@@ -32,6 +33,9 @@ public:
     static void add(Callback_t callback, CallbackPtr_t callbackPtr);  // for lambda functions, use any unique pointer as callbackPtr
     static void add(CallbackPtr_t callbackPtr) {
         add(nullptr, callbackPtr);
+    }
+    static bool callOnce(Callback_t callback) {
+        return schedule_function(callback);
     }
     static void remove(CallbackPtr_t callbackPtr);
 

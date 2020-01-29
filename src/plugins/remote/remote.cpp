@@ -24,6 +24,9 @@ RemoteControlPlugin::RemoteControlPlugin() : MQTTComponent(SWITCH), _autoSleepTi
 {
     REGISTER_PLUGIN(this, "RemoteControlPlugin");
     _config.config.autoSleepTime = 15;
+    for(uint8_t n = 0; n < IOT_REMOTE_CONTROL_BUTTON_COUNT; n++) {
+        pinMode(_buttonPins[n], WAKEUP_PULLDOWN);
+    }
 }
 
 void RemoteControlPlugin::setup(PluginSetupMode_t mode)

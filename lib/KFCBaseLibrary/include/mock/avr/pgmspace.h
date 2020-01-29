@@ -27,12 +27,6 @@ Author: sascha_lammers@gmx.de
 #define strncat_P strcpy
 #define memcpy_P memcpy
 
-int constexpr constexpr_strlen(const char* str) {
-    return *str ? 1 + constexpr_strlen(str + 1) : 0;
-}
-
-#define constexpr_strlen_P constexpr_strlen
-
 #ifndef PGM_P
 typedef const char *PGM_P;
 #endif

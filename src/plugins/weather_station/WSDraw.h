@@ -22,6 +22,14 @@ public:
 class EventScheduler {
 public:
     typedef EventTimer *TimerPtr;
+    class Timer {
+    public:
+        Timer() {
+
+        }
+        void remove() {
+        }
+    };
 };
 #else
 #include <EventScheduler.h>
@@ -30,16 +38,16 @@ public:
 #include "moon_phase.h"
 
 #ifndef TFT_PIN_CS
-#define TFT_PIN_CS              0xff        // D4
+#define TFT_PIN_CS              -1
 #endif
 #ifndef TFT_PIN_DC
-#define TFT_PIN_DC              D1          // D3
+#define TFT_PIN_DC              5
 #endif
 #ifndef TFT_PIN_RST
-#define TFT_PIN_RST             D4          // D0
+#define TFT_PIN_RST             4
 #endif
 #ifndef TFT_PIN_LED
-#define TFT_PIN_LED             D8
+#define TFT_PIN_LED             16
 #endif
 
 #ifndef TFT_WIDTH
@@ -79,6 +87,13 @@ public:
 #define FONTS_SUN_AND_MOON              &DejaVu_Sans_10
 #define FONTS_MOON_PHASE                &moon_phases14pt7b
 #define FONTS_MOON_PHASE_UPPERCASE      true
+
+extern const GFXfont DejaVu_Sans_Bold_20 PROGMEM;
+extern const GFXfont DejaVu_Sans_Bold_12 PROGMEM;
+extern const GFXfont DejaVu_Sans_Bold_11 PROGMEM;
+extern const GFXfont DejaVu_Sans_10 PROGMEM;
+extern const GFXfont Dialog_bold_10 PROGMEM;
+extern const GFXfont DialogInput_plain_9 PROGMEM;
 
 // time
 
@@ -171,10 +186,11 @@ public:
     void _drawScreen0();
 
     void _doScroll();
-    void _scrollTimer(EventScheduler::TimerPtr timer);
+    void _scrollTimer(WSDraw &draw);
     bool _isScrolling() const;
 
     void _updateTime();
+    void _drawText(const String &text, const GFXfont *font, uint16_t color, bool clear = false);
     void _draw();
 
     void _displayScreen(int16_t x, int16_t y, int16_t w, int16_t h);
@@ -188,15 +204,61 @@ public:
         return _canvas;
     }
 
+public:
+    class ScrollCanvas {
+    public:
+        ScrollCanvas(WSDraw &draw, uint16_t width, uint16_t height) : _draw(draw), _canvas(width, height)  {
+            _draw._scrollCanvas = this;
+        }
+        ~ScrollCanvas() {
+            _timer.remove();
+            _draw._scrollCanvas = nullptr;
+        }
+
+        GFXCanvasCompressedPalette &getCanvas() {
+            return _canvas;
+        }
+
+        static void create(WSDraw *draw, uint16_t width, uint16_t height) {
+            destroy(draw);
+            draw->_scrollCanvas = new ScrollCanvas(*draw, width, height);
+        }
+
+        static void destroy(WSDraw *draw) {
+            if (draw->_scrollCanvas) {
+                delete draw->_scrollCanvas;
+            }
+        }
+
+    private:
+        WSDraw &_draw;
+        GFXCanvasCompressedPalette _canvas;
+        EventScheduler::Timer _timer;
+    };
+
 protected:
+    typedef enum {
+        MAIN = 0,
+        NUM_SCREENS,
+        TEXT_CLEAR,
+        TEXT,
+    } ScreenEnum_t;
+
+    void setText(const String &text, const GFXfont *textFont) {
+        _text = text;
+        _textFont = textFont;
+    }
+
     Adafruit_ST7735 _tft;
     GFXCanvasCompressedPalette  _canvas;
-    GFXCanvasCompressedPalette *_scrollCanvas;
+    ScrollCanvas *_scrollCanvas;
     uint8_t _scrollPosition;
     OpenWeatherMapAPI _weatherApi;
     String _weatherError;
 
     uint8_t _currentScreen;
+    String _text;
+    const GFXfont *_textFont;
 
     time_t _lastTime;
     uint8_t _timeFormat24h: 1;

@@ -46,6 +46,7 @@
 
 AsyncWebServer *server = nullptr;
 FailureCounterContainer loginFailures;
+static UpdateFirmwareCallback_t updateFirmwareCallback = nullptr;
 
 #define U_ATMEGA 254
 
@@ -60,8 +61,8 @@ struct UploadStatus_t {
     AsyncWebServerResponse *response;
     bool error;
     uint8_t command;
+    size_t size;
 };
-
 
 WebServerSetCPUSpeedHelper::WebServerSetCPUSpeedHelper() : SpeedBooster(
 #if defined(ESP8266)
@@ -419,6 +420,9 @@ void web_server_update_upload_handler(AsyncWebServerRequest *request, String fil
 #endif
     }
     UploadStatus_t *status = reinterpret_cast<UploadStatus_t *>(request->_tempObject);
+    if (updateFirmwareCallback) {
+        updateFirmwareCallback(index + len, request->contentLength());
+    }
     if (status && !status->error) {
         PrintString out;
         bool error = false;
@@ -724,6 +728,10 @@ bool web_server_send_file(String path, HttpHeaders &httpHeaders, bool client_acc
     return true;
 }
 
+void web_server_set_update_firmware_callback(UpdateFirmwareCallback_t callback)
+{
+    updateFirmwareCallback = callback;
+}
 
 bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWebServerRequest *request)
 {

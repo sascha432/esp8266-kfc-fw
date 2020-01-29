@@ -103,7 +103,7 @@ Support for native WebUI and MQTT.
 
 ### Clock
 
-Plugin for my WS2811 Based 7 Segment Clock
+Plugin for my WS2812 Based 7 Segment Clock
 
 https://easyeda.com/sascha23095123423/iot_wifi_clock_controller
 

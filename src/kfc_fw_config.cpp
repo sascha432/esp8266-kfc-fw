@@ -451,7 +451,7 @@ void KFCFWConfiguration::restoreFactorySettings()
     _H_SET_STR(Config().ntp.remote_tz_dst_ofs_url, F("http://api.timezonedb.com/v2.1/get-time-zone?key=_YOUR_API_KEY_&by=zone&format=json&zone=${timezone}"));
 #endif
 #endif
-    _H_SET(Config().led_pin, LED_BUILTIN);
+    _H_SET(Config().led_pin, __LED_BUILTIN);
 #if MQTT_SUPPORT
     _H_SET_STR(Config().mqtt_topic, F("home/${device_name}"));
 //     auto &mqttOptions = _H_W_GET(Config().mqtt_options);
@@ -678,7 +678,7 @@ void KFCFWConfiguration::storeStationConfig(uint32_t ip, uint32_t netmask, uint3
         quickConnect.use_static_ip = flags.useStaticIPDuringWakeUp || !flags.stationModeDHCPEnabled;
         RTCMemoryManager::write(CONFIG_RTC_MEM_ID, &quickConnect, sizeof(quickConnect));
     } else {
-        debug_println(F("KFCFWConfiguration::storeStationConfig(): reading RTC memory failed"));
+        _debug_println(F("KFCFWConfiguration::storeStationConfig(): reading RTC memory failed"));
     }
 }
 
@@ -712,10 +712,7 @@ void KFCFWConfiguration::read()
     } else {
         auto version = config._H_GET(Config().version);
         if (FIRMWARE_VERSION > version) {
-            PrintString message;
-            message.printf_P(PSTR("Upgrading EEPROM settings from %d.%d.%d to " FIRMWARE_VERSION_STR), (version >> 16), (version >> 8) & 0xff, (version & 0xff));
-            Logger_warning(message);
-            _debug_println(message);
+            Logger_warning(F("Upgrading EEPROM settings from %d.%d.%d to " FIRMWARE_VERSION_STR), (version >> 16), (version >> 8) & 0xff, (version & 0xff));
             config._H_SET(Config().version, FIRMWARE_VERSION);
             Configuration::write();
         }
@@ -730,7 +727,6 @@ void KFCFWConfiguration::write()
     flags.isFactorySettings = false;
     if (!Configuration::write()) {
         Logger_error(F("Failure to write settings to EEPROM"));
-        _debug_println(F("Failure to write settings to EEPROM"));
     }
 }
 
@@ -846,6 +842,7 @@ static void restart_device()
 {
     if (millis() > restart_device_timeout) {
         _debug_printf("restart(): restart_device\n");
+        BlinkLEDTimer::setBlink(BlinkLEDTimer::OFF);
         ESP.restart();
     }
 }
@@ -1144,9 +1141,10 @@ unsigned long KFCFWConfiguration::getWiFiUp()
 TwoWire &KFCFWConfiguration::initTwoWire(bool reset, Print *output)
 {
     if (output) {
-        output->printf_P("I2C bus: SDA=%u, SCL=%u, clock stretch=%u, clock speed=%u\n", KFC_TWOWIRE_SDA, KFC_TWOWIRE_SCL, KFC_TWOWIRE_CLOCK_STRETCH, KFC_TWOWIRE_CLOCK_SPEED);
+        output->printf_P("I2C: SDA=%u, SCL=%u, clock stretch=%u, clock speed=%u, reset=%u\n", KFC_TWOWIRE_SDA, KFC_TWOWIRE_SCL, KFC_TWOWIRE_CLOCK_STRETCH, KFC_TWOWIRE_CLOCK_SPEED, reset);
     }
     if (!_initTwoWire || reset) {
+        debug_printf_P("SDA=%u,SCL=%u,stretch=%u,speed=%u,rst=%u\n", KFC_TWOWIRE_SDA, KFC_TWOWIRE_SCL, KFC_TWOWIRE_CLOCK_STRETCH, KFC_TWOWIRE_CLOCK_SPEED, reset);
         _initTwoWire = true;
         Wire.begin(KFC_TWOWIRE_SDA, KFC_TWOWIRE_SCL);
 #if ESP8266
@@ -1171,6 +1169,7 @@ bool KFCFWConfiguration::setRTC(uint32_t unixtime)
 
 bool KFCFWConfiguration::rtcLostPower() {
 #if RTC_SUPPORT
+    initTwoWire();
     if (rtc.begin()) {
         return rtc.lostPower();
     }

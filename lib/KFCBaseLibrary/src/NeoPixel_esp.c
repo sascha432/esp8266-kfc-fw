@@ -1,7 +1,7 @@
 // This is a mash-up of the Due show() code + insights from Michael Miller's
 // ESP8266 work for the NeoPixelBus library: github.com/Makuna/NeoPixelBus
 // Needs to be a separate .c file to enforce ICACHE_RAM_ATTR execution.
-// GPIO16 support
+// GPIO16 support https://github.com/sascha432/esp8266-kfc-fw/blob/master/lib/KFCBaseLibrary/src/NeoPixel_esp.c
 
 #if (defined(ESP8266) || defined(ESP32)) && HAVE_NEOPIXEL
 

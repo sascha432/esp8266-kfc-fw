@@ -13,45 +13,91 @@ void AdafruitGFXExtension::_drawTextAligned(int16_t x, int16_t y, const String& 
 
 void AdafruitGFXExtension::_drawTextAligned(int16_t x, int16_t y, const char* text, TextAlignEnum_t align, TextVAlignEnum_t valign, Position_t* pos)
 {
-    int16_t x1, y1;
-    uint16_t w, h;
+    int16_t x1, y1, sy;
+    uint16_t w, h, lineH;
+    auto sx = x;
 
-    getTextBounds(text, 0, 0, &x1, &y1, &w, &h);
-    y -= y1;
-
-    switch (valign) {
-    case BOTTOM:
-        y -= h;
-        break;
-    case MIDDLE:
-        y -= h / 2;
-        break;
-    case TOP:
-    default:
-        break;
+    int lines = 0;
+    auto ptr = text;
+    while (*ptr) {
+        if (*ptr++ == '\n') {
+            lines++;
+        }
     }
-    switch (align) {
-    case RIGHT:
-        x -= w;
-        break;
-    case CENTER:
-        x -= w / 2;
-        break;
-    case LEFT:
-    default:
-        break;
+    lineH = (int16_t)textsize_y * (uint8_t)pgm_read_byte(&gfxFont->yAdvance);
+    if (lines) {
+        if (valign == BOTTOM) {
+            y += lines * lineH;
+        }
+        else {
+            y -= ((lines * lineH) / 2);
+        }
     }
+    y -= lineH;
 
-    setCursor(x, y);
-    print(text);
+    int16_t maxX = 0, maxY = 0;
+    int16_t minX = 0x7fff, minY = 0x7fff;
+
+    auto buf = strdup(text);
+    auto bufPtr = buf;
+    char *endPos;
+    do {
+        auto line = bufPtr;
+        endPos = strchr(bufPtr, '\n');
+        if (endPos) {
+            *endPos++ = 0;
+            bufPtr = endPos;
+        }
+
+        getTextBounds(line, 0, 0, &x1, &y1, &w, &h);
+        sy = y;
+        y += lineH;
+
+        switch (valign) {
+        case BOTTOM:
+            y -= h;
+            break;
+        case MIDDLE:
+            y -= h / 2;
+            break;
+        case TOP:
+        default:
+            break;
+        }
+        switch (align) {
+        case RIGHT:
+            x -= w;
+            break;
+        case CENTER:
+            x -= w / 2;
+            break;
+        case LEFT:
+        default:
+            break;
+        }
+        maxX = std::max(maxX, (int16_t)(x + w));
+        maxY = std::max(maxY, (int16_t)(y + h));
+        minX = std::min(minX, x);
+        minY = std::min(minY, y);
+        y -= y1;
+
+        setCursor(x, y);
+        print(line);
+
+        x = sx;
+        y = sy + lineH;
+
+    } while(endPos);
+
 
     if (pos) {
-        pos->x = x;
-        pos->y = y + y1;
-        pos->w = w;
-        pos->h = h;
+        pos->x = minX;
+        pos->y = minY;
+        pos->w = maxX - minX;
+        pos->h = maxY - minY;
     }
 
+    free(buf);
 }
 
 void AdafruitGFXExtension::_drawBitmap(int16_t x, int16_t y, PGM_P bmp, const uint16_t *palette, Dimensions_t* dim)

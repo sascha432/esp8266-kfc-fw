@@ -195,6 +195,7 @@ const GFXglyph DejaVu_Sans_Bold_20Glyphs[] PROGMEM = {
 	  {  1907,   3,  20,   8,    3,  -15 }, // '|'
 	  {  1915,  10,  18,  15,    2,  -15 } // '}'
 };
+extern const GFXfont DejaVu_Sans_Bold_20 PROGMEM;
 const GFXfont DejaVu_Sans_Bold_20 PROGMEM = {
 (uint8_t  *)DejaVu_Sans_Bold_20Bitmaps,(GFXglyph *)DejaVu_Sans_Bold_20Glyphs,0x20, 0x7E, 24};
 
@@ -995,6 +996,7 @@ const GFXglyph Dialog_bold_10Glyphs[] PROGMEM = {
 	  {   526,   2,  10,   5,    1,   -8 }, // '|'
 	  {   529,   6,   9,   8,    2,   -8 } // '}'
 };
+extern const GFXfont Dialog_bold_10 PROGMEM;
 const GFXfont Dialog_bold_10 PROGMEM = {
 (uint8_t  *)Dialog_bold_10Bitmaps,(GFXglyph *)Dialog_bold_10Glyphs,0x20, 0x7E, 13};
 
@@ -1196,5 +1198,6 @@ const GFXglyph DialogInput_plain_9Glyphs[] PROGMEM = {
 	  {   390,   2,   9,   6,    2,   -8 }, // '|'
 	  {   393,   4,   8,   6,    1,   -8 } // '}'
 };
+extern const GFXfont DialogInput_plain_9 PROGMEM;
 const GFXfont DialogInput_plain_9 PROGMEM = {
 (uint8_t  *)DialogInput_plain_9Bitmaps,(GFXglyph *)DialogInput_plain_9Glyphs,0x20, 0x7E, 12};

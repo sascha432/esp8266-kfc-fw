@@ -14,6 +14,7 @@
 #include <StreamString.h>
 #include "WebUIComponent.h"
 #include "WSDraw.h"
+#include "NeoPixel_esp.h"
 #include "plugins.h"
 
 #ifndef DEBUG_IOT_WEATHER_STATION
@@ -24,20 +25,27 @@
 #define IOT_WEATHER_STATION_HAS_TOUCHPAD        1
 #endif
 
+// IRC pin
 #ifndef IOT_WEATHER_STATION_MPR121_PIN
-#define IOT_WEATHER_STATION_MPR121_PIN          D6
+#define IOT_WEATHER_STATION_MPR121_PIN          12
 #endif
 
+// number of pixels
 #ifndef IOT_WEATHER_STATION_WS2812_NUM
+#ifndef __LED_BUILTIN_WS2812_NUM_LEDS
 #define IOT_WEATHER_STATION_WS2812_NUM          0
+#else
+#define IOT_WEATHER_STATION_WS2812_NUM          __LED_BUILTIN_WS2812_NUM_LEDS
+#endif
 #endif
 
+// WS2812 data pin
 #ifndef IOT_WEATHER_STATION_WS2812_PIN
-#define IOT_WEATHER_STATION_WS2812_PIN          D0
+#ifndef __LED_BUILTIN_WS2812_PIN
+#define IOT_WEATHER_STATION_WS2812_PIN          0
+#else
+#define IOT_WEATHER_STATION_WS2812_PIN          __LED_BUILTIN_WS2812_PIN
 #endif
-
-#if IOT_WEATHER_STATION_WS2812_NUM
-#include <Adafruit_NeoPixel.h>
 #endif
 
 #if IOT_WEATHER_STATION_HAS_TOUCHPAD
@@ -51,7 +59,7 @@ public:
 
     virtual PGM_P getName() const;
     virtual PluginPriorityEnum_t getSetupPriority() const override {
-        return MIN_PRIORITY;
+        return MAX_PRIORITY;
     }
 
     virtual void setup(PluginSetupMode_t mode) override;
@@ -77,7 +85,7 @@ public:
 
 public:
     static void loop();
-    static void serialHandler(uint8_t type, const uint8_t *buffer, size_t len);
+    // static void serialHandler(uint8_t type, const uint8_t *buffer, size_t len);
 
 public:
 #if AT_MODE_SUPPORTED
@@ -89,17 +97,21 @@ public:
 #endif
 
 private:
+    void _init();
+    static WeatherStationPlugin &_getInstance();
     static void _sendScreenCaptureBMP(AsyncWebServerRequest *request);
     void _installWebhooks();
 
 private:
     typedef std::function<void (bool status)> Callback_t;
 
+    void _drawEnvironmentalSensor(GFXCanvasCompressed& canvas, uint8_t top);
+
     void _httpRequest(const String &url, uint16_t timeout, JsonBaseReader *jsonReader, Callback_t finishedCallback);
     void _getWeatherInfo(Callback_t finishedCallback);
     void _getWeatherForecast(Callback_t finishedCallback);
 
-    void _serialHandler(const uint8_t *buffer, size_t len);
+    // void _serialHandler(const uint8_t *buffer, size_t len);
     void _loop();
 
     void _fadeBacklight(uint16_t fromLevel, uint16_t toLevel, int8_t step = 16);
@@ -121,8 +133,8 @@ private:
 #endif
 
 #if IOT_WEATHER_STATION_WS2812_NUM
-    Adafruit_NeoPixel _pixel;
     EventScheduler::Timer _pixelTimer;
+    uint8_t _pixels[IOT_WEATHER_STATION_WS2812_NUM * 3];
 #endif
 
 #if DEBUG_IOT_WEATHER_STATION

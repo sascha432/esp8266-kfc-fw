@@ -118,6 +118,7 @@ void setup() {
 #if DEBUG_RESET_DETECTOR
     resetDetector._init();
 #endif
+    BlinkLEDTimer::setBlink(BlinkLEDTimer::OFF);
 
     // gdbstub_do_break();
     // disable_at_mode(Serial);
@@ -140,9 +141,9 @@ void setup() {
         // if (resetDetector.getResetCounter() >= 10) {
         //     KFC_SAFE_MODE_SERIAL_PORT.println(F("Entering deep sleep until next reset in 5 seconds..."));
         //     for(uint8_t i = 0; i < (RESET_DETECTOR_TIMEOUT + 200) / (10 + 25); i++) {
-        //         BlinkLEDTimer::setBlink(LED_BUILTIN, BlinkLEDTimer::SOLID);
+        //         BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::SOLID);
         //         delay(10);
-        //         BlinkLEDTimer::setBlink(LED_BUILTIN, BlinkLEDTimer::OFF);
+        //         BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::OFF);
         //         delay(25);
         //     }
         //     deep_sleep_forever();
@@ -151,9 +152,9 @@ void setup() {
         if (resetDetector.getResetCounter() >= 4) {
             KFC_SAFE_MODE_SERIAL_PORT.println(F("4x reset detected. Restoring factory defaults in a 5 seconds..."));
             for(uint8_t i = 0; i < (RESET_DETECTOR_TIMEOUT + 500) / (100 + 250); i++) {
-                BlinkLEDTimer::setBlink(LED_BUILTIN, BlinkLEDTimer::SOLID);
+                BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::SOLID);
                 delay(100);
-                BlinkLEDTimer::setBlink(LED_BUILTIN, BlinkLEDTimer::OFF);
+                BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::OFF);
                 delay(250);
             }
             config.restoreFactorySettings();
@@ -197,7 +198,7 @@ void setup() {
             ));
 #endif
 
-            BlinkLEDTimer::setBlink(LED_BUILTIN, BlinkLEDTimer::SOS);
+            BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::SOS);
             resetDetector.setSafeMode(1);
 
             if (
@@ -292,10 +293,11 @@ void setup() {
         prepare_plugins();
         setup_plugins(PluginComponent::PLUGIN_SETUP_SAFE_MODE);
 
-        // check if wifi is up after 10 seconds and change to timer to once per minute
-        Scheduler.addTimer(10000, true, [](EventScheduler::TimerPtr timer) {
+        // check if wifi is up
+        Scheduler.addTimer(1000, true, [](EventScheduler::TimerPtr timer) {
             timer->changeOptions(60000);
             if (!WiFi.isConnected()) {
+                debug_println(F("restarting WiFi"));
                 config.reconfigureWiFi();
             }
         });
@@ -307,10 +309,7 @@ void setup() {
         #endif
 
         if (resetDetector.hasCrashDetected()) {
-            PrintString message;
-            message.printf_P(PSTR("System crash detected: %s\n"), resetDetector.getResetInfo().c_str());
-            Logger_error(message);
-            debug_println(message);
+            Logger_error(F("System crash detected: %s\n"), resetDetector.getResetInfo().c_str());
         }
 
 #if DEBUG
@@ -338,6 +337,7 @@ void setup() {
 #endif
 
         prepare_plugins();
+
         setup_plugins(resetDetector.hasWakeUpDetected() ? PluginComponent::PLUGIN_SETUP_AUTO_WAKE_UP : PluginComponent::PLUGIN_SETUP_DEFAULT);
 
 #if SPIFFS_SUPPORT

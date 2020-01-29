@@ -4,7 +4,9 @@
 
 #include <Arduino_compat.h>
 #include "Timezone.h"
+#ifndef _WIN32
 #include "kfc_fw_config.h"
+#endif
 
 Timezone default_timezone;
 
@@ -34,8 +36,12 @@ tm *timezone_localtime(const time_t *timer)
 
 size_t strftime_P(char *buf, size_t size, PGM_P format, const struct tm *tm)
 {
+#ifdef _WIN32
+    auto fmt = format;
+#else
     char fmt[strlen_P(format) + 1];
     strcpy_P(fmt, format);
+#endif
     return strftime(buf, size, fmt, tm);
 }
 
@@ -138,15 +144,18 @@ bool Timezone::isDst() const
 
 void Timezone::load()
 {
+#ifndef _WIN32
     auto cfg = config._H_GET(Config().ntp.tz);
     _abbreviation = cfg.abbreviation;
     _timezoneOffset = cfg.offset;
     _dst = cfg.dst;
     debug_printf_P(PSTR("abbreviation=%s, offset=%d, dst=%u\n"), cfg.abbreviation, cfg.offset, cfg.dst);
+#endif
 }
 
 void Timezone::save()
 {
+#ifndef _WIN32
     auto cfg = config._H_GET(Config().ntp.tz);
     if (cfg.offset != _timezoneOffset || !_abbreviation.equals(cfg.abbreviation) || cfg.dst != _dst) {
         Config_NTP::Timezone_t tz;
@@ -158,4 +167,5 @@ void Timezone::save()
         config.write();
         debug_printf_P(PSTR("abbreviation=%s, offset=%d, dst=%u\n"), cfg.abbreviation, cfg.offset, cfg.dst);
     }
+#endif
 }

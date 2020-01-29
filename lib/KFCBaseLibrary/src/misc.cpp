@@ -452,6 +452,11 @@ uint16_t tokenizer(char *ptr, TokenizerArgs &args, bool hasCommand, char **nextC
     *nextCommand = nullptr;
     if (hasCommand) {
         while(*ptr && *ptr != '=' && *ptr != ' ') {     // find end of command
+            if (*ptr == ';') {
+                *ptr = 0;
+                *nextCommand = ptr + 1;
+                break;
+            }
             ptr++;
         }
     }

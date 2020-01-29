@@ -28,7 +28,7 @@ public:
     }
 
     void startTimer(uint32_t delay, bool repeat);
-    void detach();
+    virtual void detach();
 
     static void _callback(void *arg);
     static void _callbackOnce(void *arg);

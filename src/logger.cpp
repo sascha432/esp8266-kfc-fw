@@ -10,6 +10,7 @@
 #include <KFCSyslog.h>
 #endif
 #include "timezone.h"
+#include "kfc_fw_config.h"
 
 #if DEBUG_LOGGER
 #include <debug_helper_enable.h>
@@ -283,9 +284,15 @@ void Logger::writeLog(LogLevel logLevel, const char *message, va_list arg)
     }
 
 #if LOGGER_SERIAL_OUTPUT
-    char temp2[32];
-    timezone_strftime_P(temp2, sizeof(temp2), PSTR("%FT%TZ"), tm);
-    MySerial.printf_P(PSTR("+LOGGER: %s [%s] %s\n"), temp2, logLevelStr.c_str(), buffer);
+    if (config._H_GET(Config().flags).atModeEnabled) {
+        char temp2[32];
+        timezone_strftime_P(temp2, sizeof(temp2), PSTR("%FT%TZ"), tm);
+#if DEBUG
+        debug_printf_P(PSTR("%s [%s] %s\n"), temp2, logLevelStr.c_str(), buffer);
+#else
+        MySerial.printf_P(PSTR("+LOGGER: %s [%s] %s\n"), temp2, logLevelStr.c_str(), buffer);
+#endif
+    }
 #endif
 
     if (isOpen) {

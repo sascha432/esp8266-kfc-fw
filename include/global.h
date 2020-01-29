@@ -17,13 +17,6 @@
 #define ASYNC_TCP_SSL_ENABLED           0
 #endif
 
-#ifdef __LED_BUILTIN
-#ifdef LED_BUILTIN
-#undef LED_BUILTIN
-#endif
-#define LED_BUILTIN                     __LED_BUILTIN
-#endif
-
 #ifndef SPIFFS_SUPPORT
 #define SPIFFS_SUPPORT                  1               // SPIFFS support
 #endif

@@ -24,7 +24,9 @@
 #include "web_server.h"
 #include "async_web_response.h"
 #include "serial_handler.h"
+#include "blink_led_timer.h"
 #include "pin_monitor.h"
+#include "NeoPixel_esp.h"
 #include "plugins.h"
 #if IOT_DIMMER_MODULE || IOT_ATOMIC_SUN_V2
 #include "plugins/dimmer_module/dimmer_base.h"
@@ -190,8 +192,8 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RM, "RM", "<filename>", "Delete file");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RN, "RN", "<filename>,<new filename>", "Rename file");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LS, "LS", "[<directory>]", "List files and directory");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WIFI, "WIFI", "[<reconnect>]", "Display WiFi info");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RADC, "RADC", "<number=3>,<delay=5ms>", "Turn WiFi off and read ADC");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(REM, "REM", "Ignore comment");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LED, "LED", "<slow,fast,flicker,off,solid,sos>,[,color=0xff0000][,pin]", "Set LED mode");
 #if RTC_SUPPORT
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(RTC, "RTC", "[<set>]", "Set RTC time", "Display RTC time");
 #endif
@@ -212,6 +214,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PLGI, "PLGI", "<name>", "Init plugin");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HEAP, "HEAP", "[interval in seconds|0=disable]", "Display free heap");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RSSI, "RSSI", "[interval in seconds|0=disable]", "Display WiFi RSSI");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(GPIO, "GPIO", "[interval in seconds|0=disable]", "Display GPIO states");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PWM, "PWM", "<pin>,<level=0-1023/off>[,<frequency=1000Hz>]", "PWM output on PIN");
 #if defined(ESP8266)
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(CPU, "CPU", "<80|160>", "Set CPU speed", "Display CPU speed");
 #endif
@@ -248,7 +251,7 @@ void at_mode_help_commands()
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(RN), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(LS), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(WIFI), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(RADC), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(LED), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(REM), name);
 #if RTC_SUPPORT
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(RTC), name);
@@ -269,6 +272,7 @@ void at_mode_help_commands()
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(HEAP), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(RSSI), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(GPIO), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(PWM), name);
 #if defined(ESP8266)
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CPU), name);
 #endif
@@ -474,82 +478,6 @@ void at_mode_dump_fs_info(Stream &output)
         info.blockSize, info.maxOpenFiles, info.maxPathLength, info.pageSize, info.totalBytes, info.usedBytes, info.usedBytes * 100.0 / info.totalBytes
     );
 }
-
-/*
-
-
-bool read_response(Buffer &buffer, size_t size, int timeout = 500) {
-    unsigned long end = millis() + timeout;
-    debug_output.print(F("Resp: "));
-    while(millis() < end) {
-        while(MySerial.available()) {
-            auto ch = MySerial.read();
-            buffer.write(ch);
-            debug_output.printf_P(PSTR("%02x "), ch);
-            if (buffer.length() == size) {
-                debug_output.println();
-                return true;
-            }
-        }
-        delay(1);
-    }
-    debug_output.println(F("timeout"));
-    return false;
-}
-
-
-bool sync() {
-    Buffer buffer;
-    const char cmd[] = { Cmnd_STK_GET_SYNC, Sync_CRC_EOP };
-    const char rsp[] = { Resp_STK_INSYNC, Resp_STK_OK };
-
-    MySerial.write(cmd, sizeof(cmd));
-
-    for(uint8_t i = 0; i < 2; i++) {
-        MySerial.write(cmd, sizeof(cmd));
-
-
-        buffer.clear();
-        if (read_response(buffer, sizeof(rsp))) {
-            if (strncmp(buffer.getConstChar(), rsp, sizeof(rsp)) == 0) {
-                return true;
-            }
-        }
-
-        debug_output.printf_P(PSTR("Sync failed %u, response len %u\n"), i + 1, buffer.length());
-    }
-    return false;
-}
-
-bool verify_signature() {
-    Buffer buffer;
-    const char cmd[] = { Cmnd_STK_READ_SIGN, Sync_CRC_EOP };
-    const char rsp[] = { Resp_STK_INSYNC, Resp_STK_OK };
-
-    MySerial.write(cmd, sizeof(cmd));
-
-
-}
-
-void flash() {
-
-
-    // clean buffer
-    while (MySerial.available()) {
-        MySerial.read();
-    }
-
-    // sync with atmega
-    if (sync()) {
-
-    }
-
-
-    MySerial.println(debug_output);
-    debug_output = PrintString();
-}
-*/
-
 void at_mode_print_invalid_command(Stream &output)
 {
     output.print(F("ERROR - Invalid command. "));
@@ -728,28 +656,33 @@ void at_mode_serial_handle_event(String &commandString)
                     }
                 }
             }
-            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RADC))) {
-                int numReads = args.toInt(0, 3);
-                int readDelay = args.toInt(1, 5);
-                WiFi.mode(WIFI_OFF);
-                system_soft_wdt_stop();
-                ets_intr_lock( );
-                noInterrupts();
-                uint32_t total = 0;
-                for(int i = 0; i < numReads; i++) {
-                    total += system_adc_read();
-                    delay(readDelay);
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(LED))) {
+                if (args.requireArgs(1, 3)) {
+                    String mode = args.toString(0);
+                    int32_t color = args.toNumber(1, -1);
+                    int8_t pin = (int8_t)args.toInt(2, __LED_BUILTIN);
+                    mode.toUpperCase();
+                    if (args.equalsIgnoreCase(0, F("slow"))) {
+                        BlinkLEDTimer::setBlink(pin, BlinkLEDTimer::SLOW, color);
+                    }
+                    else if (args.equalsIgnoreCase(0, F("fast"))) {
+                        BlinkLEDTimer::setBlink(pin, BlinkLEDTimer::FAST, color);
+                    }
+                    else if (args.equalsIgnoreCase(0, F("flicker"))) {
+                        BlinkLEDTimer::setBlink(pin, BlinkLEDTimer::FLICKER, color);
+                    }
+                    else if (args.equalsIgnoreCase(0, F("solid"))) {
+                        BlinkLEDTimer::setBlink(pin, BlinkLEDTimer::SOLID, color);
+                    }
+                    else if (args.equalsIgnoreCase(0, F("sos"))) {
+                        BlinkLEDTimer::setBlink(pin, BlinkLEDTimer::SOS, color);
+                    }
+                    else {
+                        mode = F("OFF");
+                        BlinkLEDTimer::setBlink(pin, BlinkLEDTimer::OFF);
+                    }
+                    args.printf_P(PSTR("LED pin=%d, mode=%s, color=0x%06x"), pin, mode.c_str(), color);
                 }
-                interrupts();
-                ets_intr_unlock();
-                system_soft_wdt_restart();
-                config.reconfigureWiFi();
-                args.printf_P(PSTR("Total=%u,num=%u,avg=%.2f"), total, numReads, total / (float)numReads);
-
-                Scheduler.addTimer(10000, false, [=](EventScheduler::TimerPtr) {
-                    Logger_notice(F("ADC total=%u,num=%u,avg=%.2f"), total, numReads, total / (float)numReads);
-                });
-
             }
             else if (args.isCommand(F("I2CT")) || args.isCommand(F("I2CR"))) {
                 // ignore SerialTwoWire communication
@@ -943,6 +876,24 @@ void at_mode_serial_handle_event(String &commandString)
                         float fInterval = interval / 1000.0;
                         args.printf_P(PSTR("Interval set to %.3f seconds"), fInterval);
                         create_heap_timer(fInterval, displayTimer._type);
+                    }
+                }
+            }
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(PWM))) {
+                if (args.requireArgs(2, 3)) {
+                    auto pin = (uint8_t)args.toInt(0);
+                    if (args.equalsIgnoreCase(1, F("off"))) {
+                        pinMode(pin, INPUT);
+                        args.printf_P(PSTR("set pin=%u to INPUT"), pin);
+                    }
+                    else {
+                        auto level = (uint16_t)args.toInt(1, 0);
+                        auto freq = (uint16_t)args.toInt(2, 1000);
+                        pinMode(pin, OUTPUT);
+                        analogWriteFreq(freq);
+                        analogWrite(pin, level * 1.02); // this might be different, just tested with a single ESP12F
+                        double dc = (1000000 / (double)freq) * (level / 1024.0);
+                        args.printf_P(PSTR("set pin=%u to OUTPUT, level=%u (%.2fµs), f=%uHz"), pin, level, dc, freq);
                     }
                 }
             }

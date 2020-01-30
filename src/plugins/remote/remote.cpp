@@ -191,7 +191,7 @@ void RemoteControlPlugin::deepSleepHandler(AsyncWebServerRequest *request)
         httpHeaders.setWebServerResponseHeaders(response);
         request->send(response);
 
-        BlinkLEDTimer::setBlink(BlinkLEDTimer::FLICKER);
+        BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::FLICKER);
         disableAutoSleep();
 
         Scheduler.addTimer(2000, false, [](EventScheduler::TimerPtr) {

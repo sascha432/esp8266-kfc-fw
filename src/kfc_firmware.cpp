@@ -118,7 +118,7 @@ void setup() {
 #if DEBUG_RESET_DETECTOR
     resetDetector._init();
 #endif
-    BlinkLEDTimer::setBlink(BlinkLEDTimer::OFF);
+    BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::OFF);
 
     // gdbstub_do_break();
     // disable_at_mode(Serial);

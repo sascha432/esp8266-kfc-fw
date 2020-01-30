@@ -96,6 +96,10 @@ String implode(G glue, std::vector<T> *pieces) {
 
 String implode(const __FlashStringHelper *glue, const char **pieces, int count);
 String implode(const __FlashStringHelper *glue, String *pieces, int count);
+
+void explode(char* str, const char *separator, std::vector<char*> &vector, const char *trim = nullptr);
+
+
 String url_encode(const String &str);
 String printable_string(const uint8_t *buffer, size_t length);
 
@@ -209,16 +213,19 @@ bool __while(uint32_t time_in_ms, std::function<bool()> loop);
 // interface
 class TokenizerArgs {
 public:
+    TokenizerArgs() {
+    }
+
     virtual void add(char *arg) = 0;
     virtual bool hasSpace() const = 0;
 };
 
 class TokenizerArgsCharPtrPtr : public TokenizerArgs {
 public:
-    TokenizerArgsCharPtrPtr(char **args, uint8_t maxArgs) : _args(args), _maxArgs(maxArgs), _count(0) {
+    TokenizerArgsCharPtrPtr(char** args, uint8_t maxArgs) : _args(args), _maxArgs(maxArgs), _count(0) {
     }
 
-    virtual void add(char *arg) {
+    virtual void add(char* arg) {
         _args[_count++] = arg;
     }
     virtual bool hasSpace() const {
@@ -226,9 +233,30 @@ public:
     }
 
 private:
-    char **_args;
+    char** _args;
     uint8_t _maxArgs;
     uint8_t _count;
+};
+
+template <class T>
+class TokenizerArgsVector : public TokenizerArgs {
+public:
+    TokenizerArgsVector(std::vector<T>& vector) : _vector(vector) {
+    }
+    
+    virtual void add(char* arg) {
+        _vector.push_back(arg);
+    }
+    virtual bool hasSpace() const {
+        return true;
+    }
+
+    std::vector<T> &get() {
+        return _vector;
+    }
+
+private:
+    std::vector<T> &_vector;
 };
 
 // parse arguments into tokens
@@ -241,7 +269,11 @@ private:
 // 4='t4-1"t4-2'
 // 5='t5-1"t5-2\t5-3\t5-4'
 // 6="t6","t7";7="t8","t9"              multiple commands in one line
-uint16_t tokenizer(char *str, TokenizerArgs &args, bool hasCommand, char **nextCommand);
+
+
+typedef std::function<bool(char ch, int type)> TokenizerSeparatorCallback;
+
+uint16_t tokenizer(char *str, TokenizerArgs &args, bool hasCommand, char **nextCommand, TokenizerSeparatorCallback = nullptr);
 
 #define repeat_first_iteration \
     (__repeat_iteration == 0)

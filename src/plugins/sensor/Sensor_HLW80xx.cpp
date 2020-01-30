@@ -58,7 +58,7 @@ void Sensor_HLW80xx::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQT
     discovery->addUnitOfMeasurement(F("W"));
     discovery->addValueTemplate(F("power"));
     discovery->finalize();
-    vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
+    vector.emplace_back(discovery);
 
     discovery = _debug_new MQTTAutoDiscovery();
     discovery->create(this, 1, format);
@@ -66,7 +66,7 @@ void Sensor_HLW80xx::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQT
     discovery->addUnitOfMeasurement(F("kWh"));
     discovery->addValueTemplate(F("energy_total"));
     discovery->finalize();
-    vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
+    vector.emplace_back(discovery);
 
     discovery = _debug_new MQTTAutoDiscovery();
     discovery->create(this, 2, format);
@@ -74,7 +74,7 @@ void Sensor_HLW80xx::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQT
     discovery->addUnitOfMeasurement(F("kWh"));
     discovery->addValueTemplate(F("energy"));
     discovery->finalize();
-    vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
+    vector.emplace_back(discovery);
 
     discovery = _debug_new MQTTAutoDiscovery();
     discovery->create(this, 3, format);
@@ -82,7 +82,7 @@ void Sensor_HLW80xx::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQT
     discovery->addUnitOfMeasurement(F("V"));
     discovery->addValueTemplate(F("voltage"));
     discovery->finalize();
-    vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
+    vector.emplace_back(discovery);
 
     discovery = _debug_new MQTTAutoDiscovery();
     discovery->create(this, 4, format);
@@ -90,7 +90,7 @@ void Sensor_HLW80xx::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQT
     discovery->addUnitOfMeasurement(F("A"));
     discovery->addValueTemplate(F("current"));
     discovery->finalize();
-    vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
+    vector.emplace_back(discovery);
 
     discovery = _debug_new MQTTAutoDiscovery();
     discovery->create(this, 5, format);
@@ -98,7 +98,7 @@ void Sensor_HLW80xx::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQT
     discovery->addUnitOfMeasurement(F(""));
     discovery->addValueTemplate(F("pf"));
     discovery->finalize();
-    vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
+    vector.emplace_back(discovery);
 }
 
 uint8_t Sensor_HLW80xx::getAutoDiscoveryCount() const

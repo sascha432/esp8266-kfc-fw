@@ -84,7 +84,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32;DEBUG_KFC_FORMS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32;DEBUG_KFC_FORMS=1;DEBUG=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\include\mock;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCWebFramework\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -118,7 +118,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32;DEBUG_KFC_FORMS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32;DEBUG_KFC_FORMS=1;DEBUG=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\include\mock;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCWebFramework\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -176,7 +176,9 @@
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\Arduino_compat.cpp" />
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\Buffer.cpp" />
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\BufferStream.cpp" />
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\debug_helper.cpp" />
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\DumpBinary.cpp" />
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\EnumBitset.cpp" />
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\misc.cpp" />
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\mock\EEPROM.cpp" />
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\mock\ESP8266HttpClient.cpp" />

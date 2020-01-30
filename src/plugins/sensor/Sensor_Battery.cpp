@@ -30,14 +30,15 @@ void Sensor_Battery::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQT
     discovery->addStateTopic(_getTopic(LEVEL));
     discovery->addUnitOfMeasurement(F("V"));
     discovery->finalize();
-    vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
+    vector.emplace_back(discovery);
+
 
 #if IOT_SENSOR_BATTERY_CHARGE_DETECTION
     discovery = _debug_new MQTTAutoDiscovery();
     discovery->create(this, 0, format);
     discovery->addStateTopic(_getTopic(STATE));
     discovery->finalize();
-    vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
+    vector.emplace_back(discovery);
 #endif
 }
 

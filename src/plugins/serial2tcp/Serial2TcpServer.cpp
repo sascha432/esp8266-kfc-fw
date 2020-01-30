@@ -156,7 +156,7 @@ void Serial2TcpServer::_handleNewClient(AsyncClient *client) {
 Serial2TcpConnection &Serial2TcpServer::_addClient(AsyncClient *client) {
 
     _debug_printf_P(PSTR("Serial2TcpServer::_addClient(%p) IP address %s\n"), client, client->remoteIP().toString().c_str());
-    _connections.emplace_back(Serial2TcpConnectionPtr(new Serial2TcpConnection(client, false)));
+    _connections.emplace_back(new Serial2TcpConnection(client, false));
     if (_connections.size() == 1) {
         _onStart();
     }

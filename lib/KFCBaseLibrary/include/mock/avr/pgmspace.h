@@ -26,6 +26,7 @@ Author: sascha_lammers@gmx.de
 #define strncpy_P strncpy
 #define strncat_P strcpy
 #define memcpy_P memcpy
+#define strchr_P strchr
 
 #ifndef PGM_P
 typedef const char *PGM_P;

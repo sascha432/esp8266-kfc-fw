@@ -112,21 +112,19 @@ void BlinkLEDTimer::setPattern(int8_t pin, int delay, dynamic_bitset &pattern)
 void BlinkLEDTimer::setBlink(int8_t pin, uint16_t delay, int32_t color)
 {
     auto flags = config._H_GET(Config().flags);
+    if (!flags.ledMode) {
+        return;
+    }
 
 #if __LED_BUILTIN == -3
-    if (pin == -3 || config._H_GET(Config().led_pin) == -3) {
+    if (pin == -3) {
         _debug_printf_P(PSTR("WS2812 pin=%u, num=%u, delay=%u\n"), __LED_BUILTIN_WS2812_PIN, __LED_BUILTIN_WS2812_NUM_LEDS, delay);
-    }
-    else
+    } else
 #endif
-    if (pin == DEFAULT_PIN) {
-        auto ledPin = config._H_GET(Config().led_pin);
-        pin = (flags.ledMode != MODE_NO_LED) ? ledPin : INVALID_PIN;
-        _debug_printf_P(PSTR("using configured LED mode %d, PIN %d=%d, blink %d\n"), flags.ledMode, ledPin, pin, delay);
-    }
-    else {
+    {
         _debug_printf_P(PSTR("PIN %d, blink %d\n"), pin, delay);
     }
+
 
     if (ledTimer) {
         delete ledTimer;
@@ -135,20 +133,17 @@ void BlinkLEDTimer::setBlink(int8_t pin, uint16_t delay, int32_t color)
 
 #if __LED_BUILTIN == -3
     if (pin == -3) {
-        if (resetDetector.getSafeMode()) {
-            return;
-        }
         auto timer = new WS2812LEDTimer();
         if (delay == BlinkLEDTimer::OFF) {
             timer->off();
         }
         else if (delay == BlinkLEDTimer::SOLID) {
-            timer->solid(color == -1 ? 0x004000 : color);  // green
+            timer->solid(color == -1 ? 0x001500 : color);  // green
         }
         else {
             dynamic_bitset pattern;
             if (delay == BlinkLEDTimer::SOS) {
-                timer->setColor(color == -1 ? 0x400000 : color);  // red
+                timer->setColor(color == -1 ? 0x300000 : color);  // red
                 pattern.setMaxSize(24);
                 pattern.setValue(0xcc1c71d5);
                 delay = 200;
@@ -156,7 +151,7 @@ void BlinkLEDTimer::setBlink(int8_t pin, uint16_t delay, int32_t color)
                 pattern.setMaxSize(2);
                 pattern = 0b10;
                 delay = _max(50, _min(delay, 5000));
-                timer->setColor(color == -1 ? ((delay < 100) ? 0x404000 : 0x000040) : color);  // yellow / blue
+                timer->setColor(color == -1 ? ((delay < 100) ? 0x050500 : 0x000010) : color);  // yellow / blue
             }
             timer->set(delay, pin, pattern);
         }

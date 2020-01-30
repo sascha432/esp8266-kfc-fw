@@ -39,6 +39,13 @@ public:
     }
     static void remove(CallbackPtr_t callbackPtr);
 
+    inline static void add(Callback_t callback, void *callbackPtr) {
+        add(callback, reinterpret_cast<CallbackPtr_t>(callbackPtr));
+    }
+    inline static void remove(void *callbackPtr) {
+        remove(reinterpret_cast<CallbackPtr_t>(callbackPtr));
+    }
+
     static FunctionsVector &getVector();
     static size_t size();
 };

@@ -446,92 +446,154 @@ const char *inet_ntoa_s(char *dst, size_t size, uint32_t ip) {
     return dst;
 }
 
-uint16_t tokenizer(char *ptr, TokenizerArgs &args, bool hasCommand, char **nextCommand)
+static bool tokenizerCmpFunc(char ch, int type) {
+    if (type == 1) { // command separator
+        if (ch == '=' || ch == ' ') {
+            return true;
+        }
+    }
+    else if (type == 2 && ch == ';') { // new command / new line separator
+        return true;
+    }
+    else if (type == 3 && ch == '"') { // quotes
+        return true;
+    }
+    else if (type == 4 && ch == '\\') { // escape character
+        return true;
+    }
+    else if (type == 5 && ch == ',') { // token separator
+        return true;
+    }
+    else if (type == 6 && isspace(ch)) { // leading whitespace outside quotes
+        return true;
+    }
+    //else if (type == 7 && isspace(ch)) { // token leading whitespace
+    //    return true;
+    //}
+    //else if (type == 8 && isspace(ch)) { // token trailing whitespace
+    //    return true;
+    //}
+    return false;
+}
+
+static void tokenizer_trim_trailing(char *str, char *endPtr, TokenizerSeparatorCallback cmp)
 {
+    if (str) {
+        while (endPtr-- >= str && cmp(*endPtr, 8)) {
+            *endPtr = 0;
+        }
+    }
+}
+
+uint16_t tokenizer(char *str, TokenizerArgs &args, bool hasCommand, char **nextCommand, TokenizerSeparatorCallback cmp)
+{
+    if (!cmp) {
+        cmp = tokenizerCmpFunc;
+    }
+    char* lastStr = nullptr;
     uint16_t argc = 0;
     *nextCommand = nullptr;
     if (hasCommand) {
-        while(*ptr && *ptr != '=' && *ptr != ' ') {     // find end of command
-            if (*ptr == ';') {
-                *ptr = 0;
-                *nextCommand = ptr + 1;
+        while(*str && !cmp(*str, 1)) {     // find end of command
+            if (cmp(*str, 2)) {
+                *str = 0;
+                *nextCommand = str + 1;
                 break;
             }
-            ptr++;
+            str++;
         }
     }
-    if (*ptr) {  // tokenize arguments into args
+    if (*str) {  // tokenize arguments into args
         bool quoted = false;
-        *ptr++ = 0;
-        while(*ptr) {
+        if (hasCommand) {
+            *str++ = 0;
+        }
+        while(*str) {
             if (!args.hasSpace()) {
                 break;
             }
             // trim white space for quoted arguments only
             quoted = false;
-            char *wptr = ptr;
-            while (isspace(*wptr)) {
+            char *wptr = str;
+            while (cmp(*wptr, 6)) {
                 wptr++;
             }
-            if (*wptr == '"') {
+            if (cmp(*wptr, 3)) {
                 quoted = true;
-                ptr = wptr + 1;
+                str = wptr + 1;
             }
 
-            args.add(ptr);
+            // trim leading characters
+            while (*str && cmp(*str, 7)) {
+                str++;
+            }
+            lastStr = str;
+            args.add(str);
             argc++;
             if (quoted) {
-                while (*ptr) {  // find end of argument
+                while (*str) {  // find end of argument
                     // handle escaped characters
-                    if (*ptr == '"') {
-                        ptr++;
-                        if (*ptr == '"') { // double quote, keep one
-                            strcpy(ptr, ptr + 1);
+                    if (cmp(*str, 3)) {
+                        str++;
+                        if (cmp(*str, 3)) { // double quote, keep one
+                            strcpy(str, str + 1);
                             continue;
                         }
-                        *(ptr - 1) = 0; // end quote, find next token
-                        while (*ptr && *ptr != ',') {
-                            if (*ptr == ';') {
-                                *ptr = 0;
-                                *nextCommand = ptr + 1;
+                        *(str - 1) = 0; // end quote, find next token
+                        while (*str && !cmp(*str, 5)) {
+                            if (cmp(*str, 2)) {
+                                *str = 0;
+                                tokenizer_trim_trailing(lastStr, str, cmp);
+                                *nextCommand = str + 1;
                                 break;
                             }
-                            ptr++;
+                            str++;
                         }
                         break;
                     }
-                    else if (*ptr == '\\') {
-                        ptr++;
-                        if (*ptr == '\\') { // double backslash
-                            strcpy(ptr, ptr + 1);
+                    else if (cmp(*str, 4)) {
+                        str++;
+                        if (cmp(*str, 4)) { // double backslash
+                            strcpy(str, str + 1);
                         }
-                        else if (*ptr == '"') { // escaped quote
-                            strcpy(ptr - 1, ptr);
+                        else if (cmp(*str, 3)) { // escaped quote
+                            strcpy(str - 1, str);
                         }
                         continue; // single backslash
                     }
-                    ptr++;
+                    str++;
                 }
-                if (!*ptr) {
+                if (!*str) {
                     break;
                 }
             }
             else {
-                while (*ptr && *ptr != ',') {
-                    if (*ptr == ';') {
-                        *ptr = 0;
-                        *nextCommand = ptr + 1;
+                while (*str && !cmp(*str, 5)) {
+                    if (cmp(*str, 2)) {
+                        *str = 0;
+                        tokenizer_trim_trailing(lastStr, str, cmp);
+                        *nextCommand = str + 1;
                         break;
                     }
-                    ptr++;
+                    str++;
                 }
-                if (!*ptr) {
+                if (!*str) {
                     break;
                 }
-                *ptr = 0;
+                *str = 0;
+                tokenizer_trim_trailing(lastStr, str, cmp);
             }
-            ptr++;
+            str++;
         }
     }
     return argc;
+}
+
+void explode(char *str, const char *separator, std::vector<char*>& vector, const char *trim)
+{
+    char *nextCommand;
+    TokenizerArgsVector<char *> args(vector);
+    tokenizer(str, args, false, &nextCommand, [separator, trim](char ch, int type) {
+        return ((type == 5 && strchr(separator, ch)) || ((trim && (type == 7 || type == 8)) && strchr(trim, ch)));
+    });
 }

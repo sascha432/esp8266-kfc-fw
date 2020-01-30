@@ -31,7 +31,7 @@ void BlindsChannel::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTT
     discovery->addPayloadOn(FSPGM(1));
     discovery->addPayloadOff(FSPGM(0));
     discovery->finalize();
-    vector.emplace_back(MQTTComponent::MQTTAutoDiscoveryPtr(discovery));
+    vector.emplace_back(discovery);
 }
 
 uint8_t BlindsChannel::getAutoDiscoveryCount() const {

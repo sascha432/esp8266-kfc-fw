@@ -254,15 +254,6 @@ void ConfigTemplate::process(const String &key, PrintHtmlEntitiesString &output)
             output.print(FSPGM(_selected));
         }
     }
-    else if (String_startsWith(key, F("LED_TYPE_"))) {
-        uint8_t type = key.substring(9).toInt();
-        if (config._H_GET(Config().flags).ledMode == type) {
-            output.print(FSPGM(_selected));
-        }
-    }
-    else if (String_equals(key, F("LED_PIN"))) {
-        output.print(config._H_GET(Config().led_pin));
-    }
     else if (String_equals(key, F("SSL_CERT"))) {
 #if SPIFFS_SUPPORT
         File file = SPIFFS.open(FSPGM(server_crt), fs::FileOpenMode::read);

@@ -37,19 +37,19 @@ void Sensor_DS3231::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTT
     discovery->addStateTopic(MQTTClient::formatTopic(-1, F("/%s/"), FSPGM(ds3231_id_temp)));
     discovery->addUnitOfMeasurement(F("\u00b0C"));
     discovery->finalize();
-    vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
+    vector.emplace_back(discovery);
 
     discovery = _debug_new MQTTAutoDiscovery();
     discovery->create(this, 0, format);
     discovery->addStateTopic(MQTTClient::formatTopic(-1, F("/%s/"), FSPGM(ds3231_id_time)));
     discovery->finalize();
-    vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
+    vector.emplace_back(discovery);
 
     discovery = _debug_new MQTTAutoDiscovery();
     discovery->create(this, 0, format);
     discovery->addStateTopic(MQTTClient::formatTopic(-1, F("/%s/"), FSPGM(ds3231_id_lost_power)));
     discovery->finalize();
-    vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
+    vector.emplace_back(discovery);
 }
 
 uint8_t Sensor_DS3231::getAutoDiscoveryCount() const
@@ -69,7 +69,7 @@ void Sensor_DS3231::getValues(JsonArray &array)
 
 debug_println(_getTimeStr());
 return;
-//\n crashes json length escpae?
+//\n crashes json length escape? TODO
     obj = &array.addObject(3);
     String timeStr = _getTimeStr();
     obj->add(JJ(id), FSPGM(ds3231_id_time));

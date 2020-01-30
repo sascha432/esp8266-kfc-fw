@@ -31,7 +31,7 @@ static inline uint32_t _getCycleCount(void)
     return ccount;
 }
 
-void ICACHE_RAM_ATTR NeoPixel_espShow(uint8_t pin, uint8_t *pixels, uint32_t numBytes, boolean is800KHz) {
+void ICACHE_RAM_ATTR espShow(uint8_t pin, uint8_t *pixels, uint32_t numBytes, boolean is800KHz) {
 
 #ifdef ESP8266
 // compensation for if (pin == ...)
@@ -119,9 +119,11 @@ void ICACHE_RAM_ATTR NeoPixel_espShow(uint8_t pin, uint8_t *pixels, uint32_t num
         ; // Wait for last bit
 }
 
-extern void ICACHE_RAM_ATTR espShow(uint8_t pin, uint8_t *pixels, uint32_t numBytes, boolean is800KHz)
+extern void ICACHE_RAM_ATTR NeoPixel_espShow(uint8_t pin, uint8_t *pixels, uint32_t numBytes, boolean is800KHz)
 {
-    NeoPixel_espShow(pin, pixels, numBytes, is800KHz);
+    noInterrupts();
+    espShow(pin, pixels, numBytes, is800KHz);
+    interrupts();
 }
 
 #endif

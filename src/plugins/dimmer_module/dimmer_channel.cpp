@@ -42,7 +42,7 @@ void DimmerChannel::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTT
     discovery->addBrightnessCommandTopic(_data.brightness.set);
     discovery->addBrightnessScale(IOT_DIMMER_MODULE_MAX_BRIGHTNESS);
     discovery->finalize();
-    vector.emplace_back(MQTTComponent::MQTTAutoDiscoveryPtr(discovery));
+    vector.emplace_back(discovery);
 }
 
 uint8_t DimmerChannel::getAutoDiscoveryCount() const {

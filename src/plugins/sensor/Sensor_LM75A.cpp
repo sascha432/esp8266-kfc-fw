@@ -28,7 +28,7 @@ void Sensor_LM75A::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTA
     discovery->addStateTopic(MQTTClient::formatTopic(-1, F("/%s/"), _getId().c_str()));
     discovery->addUnitOfMeasurement(F("\u00b0C"));
     discovery->finalize();
-    vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
+    vector.emplace_back(discovery);
 }
 
 uint8_t Sensor_LM75A::getAutoDiscoveryCount() const

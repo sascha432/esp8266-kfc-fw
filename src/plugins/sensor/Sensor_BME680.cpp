@@ -31,7 +31,7 @@ void Sensor_BME680::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTT
     discovery->addUnitOfMeasurement(F("\u00b0C"));
     discovery->addValueTemplate(F("temperature"));
     discovery->finalize();
-    vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
+    vector.emplace_back(discovery);
 
     discovery = _debug_new MQTTAutoDiscovery();
     discovery->create(this, 1, format);
@@ -39,7 +39,7 @@ void Sensor_BME680::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTT
     discovery->addUnitOfMeasurement(F("%"));
     discovery->addValueTemplate(F("humidity"));
     discovery->finalize();
-    vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
+    vector.emplace_back(discovery);
 
     discovery = _debug_new MQTTAutoDiscovery();
     discovery->create(this, 2, format);
@@ -47,7 +47,7 @@ void Sensor_BME680::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTT
     discovery->addUnitOfMeasurement(F("hPa"));
     discovery->addValueTemplate(F("pressure"));
     discovery->finalize();
-    vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
+    vector.emplace_back(discovery);
 
     discovery = _debug_new MQTTAutoDiscovery();
     discovery->create(this, 3, format);
@@ -55,7 +55,7 @@ void Sensor_BME680::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTT
     discovery->addUnitOfMeasurement(emptyString);
     discovery->addValueTemplate(F("gas"));
     discovery->finalize();
-    vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
+    vector.emplace_back(discovery);
 }
 
 uint8_t Sensor_BME680::getAutoDiscoveryCount() const {

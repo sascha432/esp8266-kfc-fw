@@ -148,11 +148,9 @@ size_t constexpr constexpr_strlen_P(const char* str) {
 }
 
 #ifndef _STRINGIFY
-#define _STRINGIFY(s)                   __STRINGIFY(s)
+#define _STRINGIFY(...)                  ___STRINGIFY(__VA_ARGS__)
 #endif
-#ifndef __STRINGIFY
-#define __STRINGIFY(s)                  #s
-#endif
+#define ___STRINGIFY(...)                #__VA_ARGS__
 
 // reinterpret_cast FPSTR
 #ifndef RFPSTR

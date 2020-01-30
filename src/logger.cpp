@@ -236,14 +236,14 @@ void Logger::getLogs(StringVector &logs)
 {
     logs.clear();
     if (LOGLEVEL_ERROR <= _logLevel) {
-        logs.emplace_back(std::move(String(FSPGM(log_file_messages))));
+        logs.emplace_back(FSPGM(log_file_messages));
     }
     if (LOGLEVEL_ACCESS <= _logLevel) {
-        logs.emplace_back(std::move(String(FSPGM(log_file_access))));
+        logs.emplace_back(FSPGM(log_file_access));
     }
 #if DEBUG
     if (LOGLEVEL_DEBUG <= _logLevel) {
-        logs.emplace_back(std::move(String(FSPGM(log_file_debug))));
+        logs.emplace_back(FSPGM(log_file_debug));
     }
 #endif
     debug_printf_P(PSTR("Logger::getLogs(): %s\n"), implode(',', &logs).c_str());

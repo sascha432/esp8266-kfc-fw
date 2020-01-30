@@ -40,7 +40,7 @@ void Sensor_CCS811::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTT
     discovery->addUnitOfMeasurement(F("ppm"));
     discovery->addValueTemplate(F("eCO2"));
     discovery->finalize();
-    vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
+    vector.emplace_back(discovery);
 
     discovery = _debug_new MQTTAutoDiscovery();
     discovery->create(this, 1, format);
@@ -48,7 +48,7 @@ void Sensor_CCS811::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTT
     discovery->addUnitOfMeasurement(F("ppb"));
     discovery->addValueTemplate(F("TVOC"));
     discovery->finalize();
-    vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
+    vector.emplace_back(discovery);
 }
 
 uint8_t Sensor_CCS811::getAutoDiscoveryCount() const

@@ -93,7 +93,7 @@ void Driver_4ChDimmer::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, M
     discovery->addParameter(FSPGM(mqtt_color_temp_state_topic), _data.color.state);
     discovery->addParameter(FSPGM(mqtt_color_temp_command_topic), _data.color.set);
     discovery->finalize();
-    vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
+    vector.emplace_back(discovery);
 
     discovery = _debug_new MQTTAutoDiscovery();
     discovery->create(this, num++, format);
@@ -102,7 +102,7 @@ void Driver_4ChDimmer::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, M
     discovery->addPayloadOn(FSPGM(1));
     discovery->addPayloadOff(FSPGM(0));
     discovery->finalize();
-    vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
+    vector.emplace_back(discovery);
 
     for(uint8_t i = 0; i < 4; i++) {
         discovery = _debug_new MQTTAutoDiscovery();
@@ -115,7 +115,7 @@ void Driver_4ChDimmer::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, M
         discovery->addPayloadOn(FSPGM(1));
         discovery->addPayloadOff(FSPGM(0));
         discovery->finalize();
-        vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
+        vector.emplace_back(discovery);
     }
 
     MQTTComponentHelper component(MQTTComponent::SENSOR);
@@ -126,28 +126,28 @@ void Driver_4ChDimmer::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, M
     discovery->addStateTopic(_getMetricsTopics(0));
     discovery->addUnitOfMeasurement(F("\u00b0C"));
     discovery->finalize();
-    vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
+    vector.emplace_back(discovery);
     num++;
 
     discovery = component.createAutoDiscovery(num, format);
     discovery->addStateTopic(_getMetricsTopics(1));
     discovery->addUnitOfMeasurement(F("\u00b0C"));
     discovery->finalize();
-    vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
+    vector.emplace_back(discovery);
     num++;
 
     discovery = component.createAutoDiscovery(num, format);
     discovery->addStateTopic(_getMetricsTopics(2));
     discovery->addUnitOfMeasurement(F("V"));
     discovery->finalize();
-    vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
+    vector.emplace_back(discovery);
     num++;
 
     discovery = component.createAutoDiscovery(num, format);
     discovery->addStateTopic(_getMetricsTopics(3));
     discovery->addUnitOfMeasurement(F("Hz"));
     discovery->finalize();
-    vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
+    vector.emplace_back(discovery);
     num++;
 
 #if IOT_ATOMIC_SUN_CALC_POWER
@@ -155,7 +155,7 @@ void Driver_4ChDimmer::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, M
     discovery->addStateTopic(_getMetricsTopics(4));
     discovery->addUnitOfMeasurement(F("W"));
     discovery->finalize();
-    vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
+    vector.emplace_back(discovery);
 
 #endif
 }

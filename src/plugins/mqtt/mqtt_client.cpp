@@ -310,7 +310,7 @@ int MQTTClient::subscribeWithId(MQTTComponentPtr component, const String &topic,
     _debug_printf_P(PSTR("MQTTClient::subscribe(%p, %s, qos %u)\n"), component, topic.c_str(), qos);
     auto result = _client->subscribe(topic.c_str(), qos);
     if (result && component) {
-        _topics.emplace_back(MQTTTopic(topic, component));
+        _topics.emplace_back(topic, component);
     }
     return result;
 }

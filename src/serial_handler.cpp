@@ -52,7 +52,7 @@ void SerialHandler::end() {
 void SerialHandler::addHandler(SerialHandlerCallback_t callback, uint8_t flags) {
 
     _debug_printf_P(PSTR("SerialHandler::addHandler(%p, rx %d tx %d remoterx %d localtx %d buffered %d)\n"), callback, (flags & RECEIVE ? 1 : 0), (flags & TRANSMIT ? 1 : 0), (flags & REMOTE_RX ? 1 : 0), (flags & LOCAL_TX ? 1 : 0), 0);
-    _handlers.emplace_back(Callback(callback, flags));
+    _handlers.emplace_back(callback, flags);
 }
 
 void SerialHandler::removeHandler(SerialHandlerCallback_t callback) {

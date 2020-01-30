@@ -358,7 +358,7 @@ void web_server_update_handler(AsyncWebServerRequest *request)
         if (!Update.hasError()) {
             Logger_security(F("Firmware upgrade successful"));
 
-            BlinkLEDTimer::setBlink(BlinkLEDTimer::SLOW);
+            BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::SLOW);
             request->onDisconnect([]() {
                 Logger_notice(F("Rebooting after upgrade"));
                 Scheduler.addTimer(2000, false, [](EventScheduler::TimerPtr timer) {
@@ -385,7 +385,7 @@ void web_server_update_handler(AsyncWebServerRequest *request)
         } else {
             // SPIFFS.begin();
 
-            BlinkLEDTimer::setBlink(BlinkLEDTimer::SOS);
+            BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::SOS);
             StreamString errorStr;
             Update.printError(errorStr);
             Logger_error(F("Firmware upgrade failed: %s"), errorStr.c_str());
@@ -427,7 +427,7 @@ void web_server_update_upload_handler(AsyncWebServerRequest *request, String fil
         PrintString out;
         bool error = false;
         if (!index) {
-            BlinkLEDTimer::setBlink(BlinkLEDTimer::FLICKER);
+            BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::FLICKER);
 
             size_t size;
             uint8_t command;
@@ -893,12 +893,12 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
 
         } else if (String_equals(path, PSTR("/pins.html"))) {
             if (request->hasArg(F("led_type"))) {
-                BlinkLEDTimer::setBlink(BlinkLEDTimer::OFF);
+                BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::OFF);
                 _Config.getOptions().setLedMode((LedMode_t)request->arg(F("led_type")).toInt());
                 //FormBitValue {FLAGS2_LED_NONE, FLAGS2_LED_SINGLE, FLAGS2_LED_TWO, FLAGS2_LED_RGB}
                 config.led_pin = request->arg(F("led_pin")).toInt();
                 config_write(false);
-                BlinkLEDTimer::setBlink(BlinkLEDTimer::SOLID);
+                BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::SOLID);
             }
         */
     }

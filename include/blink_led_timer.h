@@ -26,7 +26,6 @@ public:
     } BlinkDelayEnum_t;
 
     static const int8_t INVALID_PIN = -1;
-    static const int8_t DEFAULT_PIN = -2;
 
     BlinkLEDTimer();
 
@@ -36,11 +35,8 @@ public:
 
     static void setPattern(int8_t pin, int delay, dynamic_bitset &pattern);
     static void setBlink(int8_t pin, uint16_t delay, int32_t color = -1); // predefined values BlinkDelayEnum_t
-    static void setBlink(uint16_t delay) {
-        setBlink(DEFAULT_PIN, delay);
-    }
-    static void setBlink(BlinkDelayEnum_t delay) {
-        setBlink((uint16_t)delay);
+    inline static void setBlink(int8_t pin, BlinkDelayEnum_t delay, int32_t color = -1) {
+        setBlink(pin, (uint16_t)delay, color);
     }
 
 protected:

@@ -449,7 +449,7 @@ void ClockPlugin::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAu
     discovery->addRGBStateTopic(topic + F("color/state"));
     discovery->addRGBCommandTopic(topic + F("color/set"));
     discovery->finalize();
-    vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
+    vector.emplace_back(discovery);
 
     _qos = MQTTClient::getDefaultQos();
 }
@@ -541,7 +541,7 @@ void ClockPlugin::loop()
 void ClockPlugin::wifiCallback(uint8_t event, void *payload)
 {
     // turn LED off after wifi has been connected
-    BlinkLEDTimer::setBlink(BlinkLEDTimer::BlinkDelayEnum_t::OFF);
+    BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::BlinkDelayEnum_t::OFF);
 }
 
 void ClockPlugin::ntpCallback(time_t now)

@@ -105,6 +105,7 @@ T _debug_helper_print_result_P(const char *file, int line, const char *function,
 #endif
 #define debug_prefix()                          __debug_prefix(DEBUG_OUTPUT)
 
+#define debug_println_notempty(msg)             if (DebugHelper::__state == DEBUG_HELPER_STATE_ACTIVE && msg.length()) { debug_prefix();  DEBUG_OUTPUT.println(msg); }
 #define debug_print(msg)                        if (DebugHelper::__state == DEBUG_HELPER_STATE_ACTIVE) { DEBUG_OUTPUT.print(msg); }
 #define debug_println(msg)                      if (DebugHelper::__state == DEBUG_HELPER_STATE_ACTIVE) { debug_prefix(); DEBUG_OUTPUT.println(msg); }
 #define debug_printf(fmt, ...)                  if (DebugHelper::__state == DEBUG_HELPER_STATE_ACTIVE) { debug_prefix(); DEBUG_OUTPUT.printf(fmt, ## __VA_ARGS__); }
@@ -146,6 +147,7 @@ T _debug_helper_print_result_P(const char *file, int line, const char *function,
 #define __debugbreak_and_panic()                        panic();
 #define __debugbreak_and_panic_printf_P(fmt, ...)       Serial.printf_P(fmt, ## __VA_ARGS__); panic();
 
+#define debug_println_notempty(msg) ;
 #define debug_print(...)            ;
 #define debug_println(...)          ;
 #define debug_printf(...)           ;

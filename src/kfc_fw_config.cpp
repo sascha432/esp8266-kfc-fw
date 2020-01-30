@@ -115,6 +115,27 @@ void Config_WeatherStation::defaults()
     ::config._H_SET(Config().weather_station.config, ws.config);
 }
 
+const char *Config_WeatherStation::getApiKey()
+{
+    return ::config._H_STR(Config().weather_station.openweather_api_key);
+}
+
+const char *Config_WeatherStation::getQueryString()
+{
+    return ::config._H_STR(Config().weather_station.openweather_api_query);
+}
+
+Config_WeatherStation::WeatherStationConfig_t &Config_WeatherStation::getWriteableConfig()
+{
+    return ::config._H_W_GET(Config().weather_station.config);
+}
+
+Config_WeatherStation::WeatherStationConfig_t Config_WeatherStation::getConfig()
+{
+    return ::config._H_GET(Config().weather_station.config);
+}
+
+
 // Config_Ping
 
 const char *Config_Ping::getHost(uint8_t num)
@@ -185,7 +206,7 @@ void KFCFWConfiguration::_onWiFiDisconnectCb(const WiFiEventStationModeDisconnec
 {
     _debug_printf_P(PSTR("KFCFWConfiguration::_onWiFiDisconnectCb(%d = %s)\n"), (int)event.reason, WiFi_disconnect_reason(event.reason).c_str());
     if (_wifiConnected) {
-        BlinkLEDTimer::setBlink(BlinkLEDTimer::FAST);
+        BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::FAST);
         _debug_printf_P(PSTR("WiFi disconnected after %.3f seconds, millis = %lu\n"), ((_wifiUp == -1UL) ? -1.0 : ((millis() - _wifiUp) / 1000.0)), millis());
 
         Logger_notice(F("WiFi disconnected, SSID %s, reason %s"), event.ssid.c_str(), WiFi_disconnect_reason(event.reason).c_str());
@@ -211,7 +232,7 @@ void KFCFWConfiguration::_onWiFiDisconnectCb(const WiFiEventStationModeDisconnec
                 timer->detach();
             }
             else {
-                BlinkLEDTimer::setBlink(BlinkLEDTimer::FAST);
+                BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::FAST);
                 _debug_println(F("force WiFi reconnect"));
                 reconfigureWiFi(); // reconfigure wifi, WiFi.begin() does not seem to work
             }
@@ -231,7 +252,7 @@ void KFCFWConfiguration::_onWiFiGotIPCb(const WiFiEventStationModeGotIP &event)
 
     Logger_notice(F("%s: IP/Net %s/%s GW %s DNS: %s, %s"), config._H_GET(Config().flags).stationModeDHCPEnabled ? PSTR("DHCP") : PSTR("Static configuration"), ip.c_str(), mask.c_str(), gw.c_str(), dns1.c_str(), dns2.c_str());
 
-    BlinkLEDTimer::setBlink(BlinkLEDTimer::SOLID);
+    BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::SOLID);
     _wifiUp = millis();
     config.storeStationConfig(event.ip, event.mask, event.gw);
 
@@ -246,7 +267,7 @@ void KFCFWConfiguration::_onWiFiOnDHCPTimeoutCb()
 #else
     Logger_error(F("DHCP timeout"));
 #endif
-    BlinkLEDTimer::setBlink(BlinkLEDTimer::FLICKER);
+    BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::FLICKER);
 }
 
 void KFCFWConfiguration::_softAPModeStationConnectedCb(const WiFiEventSoftAPModeStationConnected &event)
@@ -454,7 +475,7 @@ void KFCFWConfiguration::restoreFactorySettings()
 #if MQTT_AUTO_DISCOVERY
     flags.mqttAutoDiscoveryEnabled = true;
 #endif
-    flags.ledMode = MODE_SINGLE_LED;
+    flags.ledMode = true;
     flags.hueEnabled = true;
     flags.useStaticIPDuringWakeUp = true;
 #if SERIAL2TCP
@@ -498,7 +519,6 @@ void KFCFWConfiguration::restoreFactorySettings()
 #if NTP_CLIENT
     Config_NTP::defaults();
 #endif
-    _H_SET(Config().led_pin, __LED_BUILTIN);
 #if MQTT_SUPPORT
     _H_SET_STR(Config().mqtt_topic, F("home/${device_name}"));
 //     auto &mqttOptions = _H_W_GET(Config().mqtt_options);
@@ -721,7 +741,7 @@ void KFCFWConfiguration::setup()
     String version = KFCFWConfiguration::getFirmwareVersion();
     if (!resetDetector.hasWakeUpDetected()) {
         Logger_notice(F("Starting KFCFW %s"), version.c_str());
-        BlinkLEDTimer::setBlink(BlinkLEDTimer::FLICKER);
+        BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::FLICKER);
     }
 
     // ~5ms
@@ -861,6 +881,11 @@ void KFCFWConfiguration::enterDeepSleep(uint32_t time_in_ms, RFMode mode, uint16
     // save current time to restore when waking up
     ntp_client_prepare_deep_sleep(time_in_ms);
 #endif
+
+#if __LED_BUILTIN == -3
+    BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::OFF);
+#endif
+
 #if defined(ESP8266)
     ESP.deepSleep(time_in_ms * 1000ULL, mode);
     ESP.deepSleep(0, mode); // if the first attempt fails try with 0
@@ -876,7 +901,10 @@ static void restart_device()
 {
     if (millis() > restart_device_timeout) {
         _debug_printf("restart(): restart_device\n");
-        BlinkLEDTimer::setBlink(BlinkLEDTimer::OFF);
+
+#if __LED_BUILTIN == -3
+        BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::OFF);
+#endif
         ESP.restart();
     }
 }
@@ -890,11 +918,14 @@ void KFCFWConfiguration::restartDevice()
     _debug_println(F("KFCFWConfiguration::restartDevice()"));
 
     Logger_notice(F("Device is being restarted"));
-    BlinkLEDTimer::setBlink(BlinkLEDTimer::FLICKER);
+    BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::FLICKER);
 
     clear_crash_counter();
     if (_safeMode) {
         resetDetector.clearCounter();
+#if __LED_BUILTIN == -3
+        BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::OFF);
+#endif
         ESP.restart();
     }
 
@@ -1111,7 +1142,7 @@ bool KFCFWConfiguration::connectWiFi()
     }
 
     if (!station_mode_success || !ap_mode_success) {
-        BlinkLEDTimer::setBlink(BlinkLEDTimer::FAST);
+        BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::FAST);
     }
 
     auto hostname = config._H_STR(Config().device_name);

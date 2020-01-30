@@ -17,7 +17,7 @@ IOTSwitch::IOTSwitch() : MQTTComponent(SWITCH) {
     for(uint8_t i = 0; pins[i]; i++) {
         PinMonitor::Pin_t *pin;
         if ((pin = monitor.addPin(pins[i], pinCallback, this, INPUT))) {
-            _buttons.emplace_back(ButtonContainer(pin->pin));
+            _buttons.emplace_back(pin->pin);
             auto &button = _buttons.back().getButton();
             button.onPress(IOTSwitch::onButtonPressed);
 #if IOT_SWITCH_HOLD_DURATION
@@ -50,7 +50,7 @@ void IOTSwitch::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAuto
     discovery->create(this, 0, MQTTAutoDiscovery::FORMAT_JSON);
     discovery->addStateTopic(topic);
     discovery->finalize();
-    vector.emplace_back(MQTTComponent::MQTTAutoDiscoveryPtr(discovery));
+    vector.emplace_back(discovery);
 }
 
 uint8_t IOTSwitch::getAutoDiscoveryCount() const {

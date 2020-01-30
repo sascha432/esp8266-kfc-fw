@@ -55,7 +55,7 @@ static ATModeHelpVector at_mode_help;
 
 void at_mode_add_help(const ATModeCommandHelp_t *help, PGM_P pluginName)
 {
-    at_mode_help.emplace_back(std::move(ATModeCommandHelp(help, pluginName)));
+    at_mode_help.emplace_back(help, pluginName);
 }
 
 void at_mode_display_help_indent(Stream &output, PGM_P text)
@@ -583,7 +583,7 @@ void at_mode_serial_handle_event(String &commandString)
                     String str = strPtr;
                     str.trim();
                     str.toLowerCase();
-                    findItems.emplace_back(std::move(str));
+                    findItems.push_back(str);
                 }
                 at_mode_generate_help(output, &findItems);
             }

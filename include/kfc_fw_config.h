@@ -33,13 +33,6 @@
 
 #define HASH_SIZE               64
 
-enum LedMode_t : uint8_t {
-    MODE_NO_LED = 0,
-    MODE_SINGLE_LED,
-    MODE_TWO_LEDS,
-    MODE_RGB_LED,
-};
-
 enum HttpMode_t : uint8_t {
     HTTP_MODE_DISABLED = 0,
     HTTP_MODE_UNSECURE,
@@ -73,7 +66,7 @@ typedef uint32_t ConfigFlags_t;
 struct ConfigFlags {
     ConfigFlags_t isFactorySettings:1;
     ConfigFlags_t isDefaultPassword:1; //TODO disable password after 5min if it has not been changed
-    ConfigFlags_t ledMode:2;
+    ConfigFlags_t ledMode:1;
     ConfigFlags_t wifiMode:2;
     ConfigFlags_t atModeEnabled:1;
     ConfigFlags_t hiddenSSID:1;
@@ -291,21 +284,41 @@ class Config_WeatherStation
 {
 public:
     typedef struct ____attribute__packed__ {
-        uint8_t is_metric: 1;
-        uint8_t time_format_24h: 1;
+        uint8_t is_metric;
+        uint8_t time_format_24h;
         uint16_t weather_poll_interval;
         uint16_t api_timeout;
         uint8_t backlight_level;
+        uint8_t touch_threshold;
+        uint8_t released_threshold;
         float temp_offset;
+
+        void reset() {
+            *this = {false, false, 15, 30, 100, 5, 8, 0.0};
+        }
+
+        void validate() {
+            if (weather_poll_interval == 0 || api_timeout == 0 || touch_threshold == 0 || released_threshold == 0) {
+                reset();
+            }
+            if (backlight_level < 10) {
+                backlight_level = 10;
+            }
+        }
+        uint32_t getPollIntervalMillis() {
+            return weather_poll_interval * 60000UL;
+        }
     } WeatherStationConfig_t;
 
     Config_WeatherStation() {
-        config = {false, false, 15, 30, 100, 0.0};
+        config.reset();
     }
 
     static void defaults();
-    // static const char *getApiKey();
-    // static const char *getApiKey();
+    static const char *getApiKey();
+    static const char *getQueryString();
+    static WeatherStationConfig_t &getWriteableConfig();
+    static WeatherStationConfig_t getConfig();
 
     char openweather_api_key[65];
     char openweather_api_query[65];
@@ -350,8 +363,6 @@ typedef struct {
 
     uint16_t http_port;
     char cert_passphrase[33];
-
-    int8_t led_pin;
 
     char mqtt_host[65];
     char mqtt_username[33];

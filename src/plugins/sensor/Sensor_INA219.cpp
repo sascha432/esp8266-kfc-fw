@@ -50,21 +50,21 @@ void Sensor_INA219::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTT
     discovery->addStateTopic(MQTTClient::formatTopic(-1, F("/%s/"), _getId(VOLTAGE).c_str()));
     discovery->addUnitOfMeasurement(F("V"));
     discovery->finalize();
-    vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
+    vector.emplace_back(discovery);
 
     discovery = _debug_new MQTTAutoDiscovery();
     discovery->create(this, 1, format);
     discovery->addStateTopic(MQTTClient::formatTopic(-1, F("/%s/"), _getId(CURRENT).c_str()));
     discovery->addUnitOfMeasurement(F("mA"));
     discovery->finalize();
-    vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
+    vector.emplace_back(discovery);
 
     discovery = _debug_new MQTTAutoDiscovery();
     discovery->create(this, 2, format);
     discovery->addStateTopic(MQTTClient::formatTopic(-1, F("/%s/"), _getId(POWER).c_str()));
     discovery->addUnitOfMeasurement(F("mW"));
     discovery->finalize();
-    vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
+    vector.emplace_back(discovery);
 
 
     discovery = _debug_new MQTTAutoDiscovery();
@@ -72,7 +72,7 @@ void Sensor_INA219::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTT
     discovery->addStateTopic(MQTTClient::formatTopic(-1, F("/%s/"), _getId(PEAK_CURRENT).c_str()));
     discovery->addUnitOfMeasurement(F("mA"));
     discovery->finalize();
-    vector.emplace_back(MQTTAutoDiscoveryPtr(discovery));
+    vector.emplace_back(discovery);
 }
 
 uint8_t Sensor_INA219::getAutoDiscoveryCount() const

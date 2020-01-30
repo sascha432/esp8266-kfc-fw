@@ -140,7 +140,7 @@ void KFCRestAPI::_createRestApiCall(const __FlashStringHelper *endPointUri, Http
     _debug_printf_P(PSTR("KFCRestAPI::_createRestApiCall(): endpoint=%s\n"), endPointUri);
     auto httpRequestPtr = new HttpRequest(*this, callback);
     auto &httpRequest = *httpRequestPtr;
-    _requests.emplace_back(httpRequestPtr);
+    _requests.push_back(httpRequestPtr);
     auto &request = httpRequest.getRequest();
 
     request.onData(_onData, httpRequestPtr);

@@ -67,13 +67,13 @@ void BlindsControl::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTT
     discovery->create(this, 0, format);
     discovery->addStateTopic(topic + '1');
     discovery->finalize();
-    vector.emplace_back(MQTTComponent::MQTTAutoDiscoveryPtr(discovery));
+    vector.emplace_back(discovery);
 
     discovery = _debug_new MQTTAutoDiscovery();
     discovery->create(this, 1, format);
     discovery->addStateTopic(topic + '2');
     discovery->finalize();
-    vector.emplace_back(MQTTComponent::MQTTAutoDiscoveryPtr(discovery));
+    vector.emplace_back(discovery);
 }
 
 void BlindsControl::getValues(JsonArray &array)

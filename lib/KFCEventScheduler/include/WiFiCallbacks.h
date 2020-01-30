@@ -39,11 +39,17 @@ public:
     }
 
     static uint8_t add(uint8_t events, Callback_t callback, CallbackPtr_t callbackPtr);
+    static uint8_t add(uint8_t events, Callback_t callback, void *callbackPtr) {
+        return add(events, callback, reinterpret_cast<CallbackPtr_t>(callbackPtr));
+    }
     static uint8_t add(uint8_t events, CallbackPtr_t callbackPtr) {
         return add(events, nullptr, callbackPtr);
     }
     // returns -1 if not found, 0 if the callback has been removed or EventEnum_t of callbacks left for this pointer
     static int8_t remove(uint8_t events, CallbackPtr_t callbackPtr);
+    static int8_t remove(uint8_t events, void *callbackPtr) {
+        return remove(events, reinterpret_cast<CallbackPtr_t>(callbackPtr));
+    }
 
     static void callEvent(EventEnum_t event, void *payload);
     static CallbackVector &getVector();

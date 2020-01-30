@@ -2,9 +2,12 @@
 #include <Arduino_compat.h>
 #include <array>
 #include <assert.h>
+#include <misc.h>
 #include <PrintString.h>
 #include "KFCForms.h"
 #include "BootstrapMenu.h"
+#include "EnumBase.h"
+#include "EnumBitset.h"
 
 typedef enum WiFiMode 
 {
@@ -262,9 +265,113 @@ void add(CBuf& b) {
 
 #include <PrintString.h>
 
+//class EnumTest3 : public BitsetEnum<>
+
+typedef_enum_bitset(TestEnumClass, uint8_t,
+    A = 1,
+    B = 2,
+    C = 4,
+    D,
+    E,
+    F,
+);
+
+define_enum_bitset(TestEnumClass);
+
+typedef_enum(TestEnumClass2, int32_t,
+    AA = 6,
+    BB = 7,
+    CC = 8,
+    DD,
+    EE,
+    FF,
+    );
+
+
+define_enum(TestEnumClass2);
+
+typedef_enum_bitset(Mpr121TouchpadEventType, uint8_t,
+    TOUCH = 0x0001,
+    RELEASED = 0x0002,
+    MOVE = 0x0004,
+    TAP = 0x0008,
+    PRESS = 0x0010,
+    HOLD = 0x0020,
+    SWIPE = 0x0040,
+    DRAG = 0x0080
+);
+
+define_enum_bitset(Mpr121TouchpadEventType);
+
 int main()
 {
     ESP._enableMSVCMemdebug();
+
+    Mpr121TouchpadEventType type;
+
+    type = Mpr121TouchpadEventType::BIT::TOUCH;
+    type.dump(Serial);
+
+
+    Serial.println(type.toString());
+
+
+
+
+    return 0;
+
+    typedef TestEnumClass ECT;
+    typedef TestEnumClass2 E2;
+    ECT ec;
+    ec.dump(Serial);
+
+    E2 e2(E2::ENUM::AA);
+
+    e2 = E2::ENUM::AA;
+    e2.dump(Serial);
+
+    auto z = ECT::BIT::A;
+
+
+    ec.dump(Serial);
+    ec += z;
+    ec.dump(Serial);
+    ec += ECT::BIT::A;
+
+    ec = ECT::ANY;
+    ec.dump(Serial);
+
+    ec += ECT::BIT::A;
+    ec -= ec;
+    ec += ECT::BIT::B;
+    ec = ECT::NONE;
+    ec += ECT::BIT::B;
+    ec += ECT::BIT::A;
+
+    ec = ECT::BIT::A | ECT::BIT::B | ECT::BIT::C;
+
+    ec.dump(Serial);
+
+    ec = ECT::BIT::A;
+    if (ec == ECT::BIT::A) {
+        Serial.println("&A only");
+    }
+    if (ec & ECT::BIT::A) {
+        Serial.println("&A");
+    }
+    if (ec & ECT::BIT::B) {
+        Serial.println("&B");
+    }
+    if (ec & ECT::BIT::C) {
+        Serial.println("&C");
+    }
+
+
+    //Serial.println(ECT::toString(ECT::ENUM::A));
+    Serial.println(ec.toString());
+
+
+    return 0;
 
  /*   PrintString s;
     double start = 0.00015;

@@ -21,7 +21,7 @@ bool OpenWeatherForecastJsonReader::beginObject(bool isArray)
         _itemKey = String();
     }
     else if (!strcmp_P(path, PSTR("list[].weather[]"))) {
-        _item.weather.emplace_back(OpenWeatherMapAPI::Weather_t());
+        _item.weather.emplace_back();
     }
 
     return true;
@@ -42,7 +42,7 @@ bool OpenWeatherForecastJsonReader::endObject()
     return true;
 }
 
-bool OpenWeatherForecastJsonReader::processElement() 
+bool OpenWeatherForecastJsonReader::processElement()
 {
     auto keyStr = getKey();
     auto key = keyStr.c_str();
@@ -95,7 +95,7 @@ bool OpenWeatherForecastJsonReader::processElement()
                 _item.val.humidity = (uint8_t)getIntValue();
             }
 
-        } 
+        }
         else if (!strcmp_P(key, PSTR("dt"))) {
             _item.val.time = getIntValue();
         }

@@ -31,9 +31,26 @@ public:
         }
     };
 };
+class Config_WeatherStation {
+public:
+    typedef struct ____attribute__packed__ {
+        uint8_t is_metric: 1;
+        uint8_t time_format_24h: 1;
+        uint16_t weather_poll_interval;
+        uint16_t api_timeout;
+        uint8_t backlight_level;
+        uint8_t touch_threshold;
+        uint8_t released_threshold;
+        float temp_offset;
+    } WeatherStationConfig_t;
+    Config_WeatherStation() {
+        config = {1,1,0,30,255,5,8,0};
+    }
+};
 #else
 #include <EventScheduler.h>
 #include <EventTimer.h>
+#include "kfc_fw_config.h"
 #endif
 #include "moon_phase.h"
 
@@ -261,8 +278,7 @@ protected:
     const GFXfont *_textFont;
 
     time_t _lastTime;
-    uint8_t _timeFormat24h: 1;
-    uint8_t _isMetric: 1;
+    Config_WeatherStation::WeatherStationConfig_t _config;
 
     uint8_t _offsetX;
     uint8_t _offsetY;

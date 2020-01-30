@@ -90,6 +90,19 @@ public:
     virtual bool hasStatus() const override;
     virtual void getStatus(Print &output) override;
 
+    virtual MenuTypeEnum_t getMenuType() const override {
+        return CUSTOM;
+    }
+    virtual void createMenu() override {
+        bootstrapMenu.addSubMenu(F("Weather Station"), F("weather.html"), navMenu.config);
+    }
+
+    virtual PGM_P getConfigureForm() const override {
+        return getName();
+    }
+    virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
+
+
 // WebUIInterface
 public:
     virtual bool hasWebUI() const override {
@@ -117,6 +130,7 @@ public:
 #endif
 
 private:
+    void _readConfig();
     void _init();
     static WeatherStationPlugin &_getInstance();
     static void _sendScreenCaptureBMP(AsyncWebServerRequest *request);
@@ -142,8 +156,7 @@ private:
     uint16_t _backlightLevel;
 
 private:
-    uint32_t _pollInterval;
-    time_t _pollTimer;
+    uint32_t _pollTimer;
     asyncHTTPrequest *_httpClient;
     EventScheduler::Timer _fadeTimer;
 

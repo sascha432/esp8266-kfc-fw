@@ -13,7 +13,7 @@ OpenWeatherInfoJsonReader::OpenWeatherInfoJsonReader(OpenWeatherMapAPI::WeatherI
 bool OpenWeatherInfoJsonReader::beginObject(bool isArray)
 {
     if (!strcmp_P(getObjectPath(false).c_str(), PSTR("weather[]"))) {
-        _info.weather.emplace_back(OpenWeatherMapAPI::Weather_t());
+        _info.weather.emplace_back();
     }
     //auto pathStr = getObjectPath(false);
     //auto path = pathStr.c_str();

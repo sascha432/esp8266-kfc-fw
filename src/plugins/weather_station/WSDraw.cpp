@@ -61,9 +61,7 @@ WSDraw::WSDraw() :
     _scrollCanvas(nullptr),
     _weatherError(F("No data available")),
     _currentScreen(0),
-    _lastTime(0),
-    _timeFormat24h(true),
-    _isMetric(true)
+    _lastTime(0)
 {
 #if _MSC_VER
     const char * data = PSTR("{\"coord\":{\"lon\":-123.07,\"lat\":49.32},\"weather\":[{\"id\":500,\"main\":\"Rain\",\"description\":\"light rain\",\"icon\":\"10n\"},{\"id\":701,\"main\":\"Mist\",\"description\":\"mist\",\"icon\":\"50n\"}],\"base\":\"stations\",\"main\":{\"temp\":277.55,\"pressure\":1021,\"humidity\":100,\"temp_min\":275.37,\"temp_max\":279.26},\"visibility\":8047,\"wind\":{\"speed\":1.19,\"deg\":165},\"rain\":{\"1h\":0.93},\"clouds\":{\"all\":90},\"dt\":1575357173,\"sys\":{\"type\":1,\"id\":5232,\"country\":\"CA\",\"sunrise\":1575301656,\"sunset\":1575332168},\"timezone\":-28800,\"id\":6090785,\"name\":\"North Vancouver\",\"cod\":200}");
@@ -120,7 +118,7 @@ void WSDraw::_drawTime()
 
     _canvas.setFont(FONTS_TIME);
     _canvas.setTextColor(COLORS_TIME);
-    if (_timeFormat24h) {
+    if (_config.time_format_24h) {
         timezone_strftime_P(buf, sizeof(buf), PSTR("%H:%M:%S"), tm);
     }
     else {
@@ -130,7 +128,7 @@ void WSDraw::_drawTime()
 
     _canvas.setFont(FONTS_TIMEZONE);
     _canvas.setTextColor(COLORS_TIMEZONE);
-    if (_timeFormat24h) {
+    if (_config.time_format_24h) {
         timezone_strftime_P(buf, sizeof(buf), PSTR("%Z"), tm);
     }
     else {
@@ -175,7 +173,7 @@ void WSDraw::_drawWeather(GFXCanvasCompressed& canvas, uint8_t top)
         canvas.setFont(FONTS_TEMPERATURE);
         canvas.setTextColor(COLORS_TEMPERATURE);
         String unit, temp;
-        if (_isMetric) {
+        if (_config.is_metric) {
             unit = F(DEGREE_STR "C");
             temp = String(OpenWeatherMapAPI::kelvinToC(info.val.temperature), 1) + unit;
         }

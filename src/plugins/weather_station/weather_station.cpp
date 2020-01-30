@@ -7,6 +7,7 @@
 #include "weather_station.h"
 #include <PrintHtmlEntitiesString.h>
 #include <LoopFunctions.h>
+#include <WiFiCallbacks.h>
 #include <EventTimer.h>
 #include <MicrosTimer.h>
 #include <HeapStream.h>
@@ -43,7 +44,6 @@ WeatherStationPlugin::WeatherStationPlugin() :
     WSDraw(),
     _updateTimer(0),
     _backlightLevel(1023),
-    _pollInterval(0),
     _pollTimer(0),
     _httpClient(nullptr)
 {
@@ -86,18 +86,20 @@ void WeatherStationPlugin::_installWebhooks()
     web_server_add_handler(F("/images/screen_capture.bmp"), _sendScreenCaptureBMP);
 }
 
+void WeatherStationPlugin::_readConfig()
+{
+    _config = Config_WeatherStation::getConfig();
+    _backlightLevel = std::min(1024 * _config.backlight_level / 100, 1023);
+}
+
+
 void WeatherStationPlugin::setup(PluginSetupMode_t mode)
 {
-    auto cfg = config._H_GET(Config().weather_station.config);
-    _isMetric = cfg.is_metric;
-    _timeFormat24h = cfg.time_format_24h;
-    _pollInterval = cfg.weather_poll_interval * 60000UL;
-    _backlightLevel = std::min(1024 * cfg.backlight_level / 100, 1023);
-
+    _readConfig();
     _init();
 
-    _weatherApi.setAPIKey(config._H_STR(Config().weather_station.openweather_api_key));
-    _weatherApi.setQuery(config._H_STR(Config().weather_station.openweather_api_query));
+    _weatherApi.setAPIKey(Config_WeatherStation::getApiKey());
+    _weatherApi.setQuery(Config_WeatherStation::getQueryString());
     _getWeatherInfo([this](bool status) {
         _draw();
     });
@@ -120,20 +122,9 @@ void WeatherStationPlugin::setup(PluginSetupMode_t mode)
     if (!_touchpad.begin(MPR121_I2CADDR_DEFAULT, IOT_WEATHER_STATION_MPR121_PIN, &config.initTwoWire())) {
         Logger_error(F("Failed to initialize touch sensor"));
     }
-#endif
-
-#if IOT_WEATHER_STATION_WS2812_NUM
-    uint8_t color = 128;
-    // NeoPixel_fillColor(_pixels, sizeof(_pixels), color);
-    // NeoPixel_espShow(IOT_WEATHER_STATION_WS2812_PIN, _pixels, sizeof(_pixels), true);
-    _pixelTimer.add(25, true, [this, color](EventScheduler::TimerPtr timer) mutable {
-        color--;
-        // NeoPixel_fillColor(_pixels, sizeof(_pixels), color);
-        // NeoPixel_espShow(IOT_WEATHER_STATION_WS2812_PIN, _pixels, sizeof(_pixels), true);
-        if (color == 0) {
-            timer->detach();
-        }
-    });
+    else {
+        _touchpad.getMPR121().setThresholds(_config.touch_threshold, _config.released_threshold);
+    }
 #endif
 
 #if IOT_WEATHER_STATION_TEMP_COMP
@@ -158,6 +149,28 @@ void WeatherStationPlugin::setup(PluginSetupMode_t mode)
 #endif
 
     LoopFunctions::add(loop);
+
+#if IOT_WEATHER_STATION_WS2812_NUM
+    WiFiCallbacks::add(WiFiCallbacks::CONNECTED, [this](uint8_t event, void *payload) {
+        uint32_t color = 0x001500;
+        int16_t dir = 0x100;
+        NeoPixel_fillColor(_pixels, sizeof(_pixels), color);
+        NeoPixel_espShow(IOT_WEATHER_STATION_WS2812_PIN, _pixels, sizeof(_pixels), true);
+        _pixelTimer.add(50, true, [this, color, dir](EventScheduler::TimerPtr timer) mutable {
+            color += dir;
+            if (color >= 0x003000) {
+                dir = -dir;
+                color = 0x003000;
+            }
+            else if (color == 0) {
+                timer->detach();
+            }
+            NeoPixel_fillColor(_pixels, sizeof(_pixels), color);
+            NeoPixel_espShow(IOT_WEATHER_STATION_WS2812_PIN, _pixels, sizeof(_pixels), true);
+        });
+    }, this);
+#endif
+
     // SerialHandler::getInstance().addHandler(serialHandler, SerialHandler::RECEIVE);
 
     _installWebhooks();
@@ -176,7 +189,13 @@ void WeatherStationPlugin::setup(PluginSetupMode_t mode)
 
 void WeatherStationPlugin::reconfigure(PGM_P source)
 {
+    auto oldLevel = _backlightLevel;
+    _readConfig();
     _installWebhooks();
+#if IOT_WEATHER_STATION_HAS_TOUCHPAD
+    _touchpad.getMPR121().setThresholds(_config.touch_threshold, _config.released_threshold);
+#endif
+    _fadeBacklight(oldLevel, _backlightLevel);
 }
 
 void WeatherStationPlugin::restart()
@@ -210,6 +229,60 @@ void WeatherStationPlugin::getStatus(Print &output)
 {
     _debug_printf_P(PSTR("WeatherStationPlugin::getStatus()\n"));
     output.printf_P(PSTR("Weather Station Plugin"));
+}
+
+void WeatherStationPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
+{
+    auto &config = Config_WeatherStation::getWriteableConfig();
+
+    form.setFormUI(F("Weather Station Configuration"));
+
+    form.add<uint8_t>(F("time_format_24h"), &config.time_format_24h)->setFormUI((new FormUI(FormUI::SELECT, F("Time Format")))->setBoolItems(F("24h"), F("12h")));
+    form.add<uint8_t>(F("is_metric"), &config.is_metric)->setFormUI((new FormUI(FormUI::SELECT, F("Units")))->setBoolItems(F("Metric"), F("Imperial")));
+
+    form.add<uint16_t>(F("weather_poll_interval"), &config.weather_poll_interval)->setFormUI((new FormUI(FormUI::TEXT, F("Weather Poll Interval")))->setSuffix(F("minutes")));
+    form.add<uint16_t>(F("api_timeout"), &config.api_timeout)->setFormUI((new FormUI(FormUI::TEXT, F("API Timeout")))->setSuffix(F("seconds")));
+
+    form.add<uint8_t>(F("backlight_level"), &config.backlight_level)->setFormUI((new FormUI(FormUI::TEXT, F("Backlight Level")))->setSuffix(F("&#37;")));
+    form.add<uint8_t>(F("touch_threshold"), &config.touch_threshold)->setFormUI(new FormUI(FormUI::TEXT, F("Touch Threshold")));
+    form.add<uint8_t>(F("released_threshold"), &config.released_threshold)->setFormUI(new FormUI(FormUI::TEXT, F("Release Threshold")));
+
+    // form.add<uint8_t>(F("blink_colon"), &clock->blink_colon)->setFormUI(
+    //     (new FormUI(FormUI::SELECT, F("Blink Colon")))
+    //         ->addItems(String(BlinkColonEnum_t::SOLID), F("Solid"))
+    //         ->addItems(String(BlinkColonEnum_t::NORMAL), F("Normal"))
+    //         ->addItems(String(BlinkColonEnum_t::FAST), F("Fast"))
+    // );
+    // form.addValidator(new FormRangeValidator(F("Invalid value"), BlinkColonEnum_t::SOLID, BlinkColonEnum_t::FAST));
+
+    // form.add<int8_t>(F("animation"), &clock->animation)->setFormUI(
+    //     (new FormUI(FormUI::SELECT, F("Animation")))
+    //         ->addItems(String(AnimationEnum_t::NONE), F("Solid"))
+    //         ->addItems(String(AnimationEnum_t::RAINBOW), F("Rainbow"))
+    // );
+    // form.addValidator(new FormRangeValidator(F("Invalid animation"), AnimationEnum_t::NONE, AnimationEnum_t::FADE));
+
+    // form.add<uint8_t>(F("brightness"), &clock->brightness)
+    //     ->setFormUI((new FormUI(FormUI::TEXT, F("Brightness")))->setSuffix(F("0-255")));
+
+    // String str = PrintString(F("#%02X%02X%02X"), clock->solid_color[0], clock->solid_color[1], clock->solid_color[2]);
+    // form.add(F("solid_color"), str)
+    //     ->setFormUI(new FormUI(FormUI::TEXT, F("Solid Color")));
+    // form.addValidator(new FormCallbackValidator([](const String &value, FormField &field) {
+    //     auto ptr = value.c_str();
+    //     if (*ptr == '#') {
+    //         ptr++;
+    //     }
+    //     auto color = strtol(ptr, nullptr, 16);
+    //     auto &colorArr = config._H_W_GET(Config().clock).solid_color;
+    //     colorArr[0] = color >> 16;
+    //     colorArr[1] = color >> 8;
+    //     colorArr[2] = (uint8_t)color;
+    //     return true;
+    // }));
+
+    form.finalize();
+
 }
 
 void WeatherStationPlugin::loop()
@@ -288,12 +361,12 @@ bool WeatherStationPlugin::atModeHandler(AtModeArgs &args)
                 args.printf_P(PSTR("touchpad debug=%u"), state);
             }
             else if (args.equalsIgnoreCase(1, F("timeformat24h"))) {
-                _timeFormat24h = state;
+                _config.time_format_24h = state;
                 _draw();
                 args.printf_P(PSTR("time format 24h=%u"), state);
             }
             else if (args.equalsIgnoreCase(1, F("metrics"))) {
-                _isMetric = state;
+                _config.is_metric = state;
                 _draw();
                 args.printf_P(PSTR("metrics=%u"), state);
             }
@@ -532,24 +605,18 @@ void WeatherStationPlugin::_loop()
     time_t _time = time(nullptr);
 
 #if IOT_WEATHER_STATION_HAS_TOUCHPAD
-    uint8_t x = 0, y = 0;
-    auto pending = _touchpad.isEventPending();
-    if (pending) {
-        _touchpad.processEvents(); // must be called before get
-        // _touchpad.get(x, y);
-        // debug_printf_P(PSTR("touchpad: x=%u y=%u\n"), x, y);
-    }
-
     if (_touchpadDebug) {
         SpeedBooster speedBooster;
+
+        const auto &coords = _touchpad.get();
         uint16_t col1 = ST77XX_RED;
         uint16_t col2 = ST77XX_WHITE;
         _canvas.fillScreen(COLORS_BACKGROUND);
         for(int yy = 1; yy <= 7; yy++) {
-            _canvas.drawLine(10, yy * 10, 9 * 13, yy * 10, yy == y ? col1 : col2);
+            _canvas.drawLine(10, yy * 10, 9 * 13, yy * 10, yy == coords.y ? col1 : col2);
         }
         for(int xx = 1; xx <= 13; xx++) {
-            _canvas.drawLine(xx * 9, 10, xx * 9, 70, xx == x ? col1 : col2);
+            _canvas.drawLine(xx * 9, 10, xx * 9, 70, xx == coords.x ? col1 : col2);
         }
 
         _displayScreen(0, 0, TFT_WIDTH, 80);
@@ -557,7 +624,7 @@ void WeatherStationPlugin::_loop()
     }
 #endif
 
-    if (_pollInterval && is_millis_diff_greater(_pollTimer, _pollInterval)) {
+    if (_config.weather_poll_interval && is_millis_diff_greater(_pollTimer, _config.getPollIntervalMillis())) {
         _pollTimer = millis();
         _debug_println(F("WeatherStationPlugin::_loop(): poll interval"));
         //TODO

@@ -5,25 +5,11 @@
 #include "FormField.h"
 #include "FormValidator.h"
 
-FormField::FormField(const String & name) : _name(name), _type(FormField::INPUT_NONE), _formUI(nullptr), _hasChanged(false)
+FormField::FormField(const String &name, const String &value, FieldType_t type) : _name(name), _value(value), _type(type), _formUI(nullptr), _hasChanged(false)
 {
     // _notSet = false;
     // _optional = false;
 }
-
-FormField::FormField(const String & name, const String & value) : FormField(name)
-{
-    initValue(value);
-}
-
-FormField::FormField(const String & name, const String & value, FieldType_t type) : FormField(name, value)
-{
-    _type = type;
-}
-
-// FormField(const String &name, const String &value, bool optional) : FormField(name, value) {
-//     _optional = optional;
-// }
 
 FormField::~FormField()
 {

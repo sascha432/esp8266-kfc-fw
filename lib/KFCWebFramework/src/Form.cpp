@@ -47,25 +47,35 @@ void Form::setInvalidMissing(bool invalidMissing)
     _invalidMissing = invalidMissing;
 }
 
-int Form::add(FormField * field)
+int Form::add(FormField *field)
 {
     field->setForm(this);
     _fields.push_back(field);
     return _fields.size() - 1;
 }
 
-FormField *Form::_add(FormField * field)
+FormField *Form::_add(FormField *field)
 {
     add(field);
     return field;
 }
 
-FormField *Form::add(const String & name, const String & value, FormField::FieldType_t type)
+FormField *Form::add(const String &name, const String &value, FormField::FieldType_t type)
 {
     return _add(new FormField(name, value, type));
 }
 
-FormValidator *Form::addValidator(int index, FormValidator * validator)
+FormField *Form::add(const String &name, const String &value, FormStringObject::SetterCallback_t setter, FormField::FieldType_t type)
+{
+    return _add(new FormStringObject(name, value, setter, type));
+}
+
+FormField *Form::add(const String &name, String *value, FormField::FieldType_t type)
+{
+    return _add(new FormStringObject(name, value, type));
+}
+
+FormValidator *Form::addValidator(int index, FormValidator *validator)
 {
     _fields.at(index)->addValidator(validator);
     return validator;
@@ -77,7 +87,7 @@ FormValidator *Form::addValidator(FormValidator * validator)
     return validator;
 }
 
-FormValidator *Form::addValidator(const String & name, FormValidator * validator)
+FormValidator *Form::addValidator(const String &name, FormValidator * validator)
 {
     auto field = getField(name);
     if (field) {
@@ -90,7 +100,7 @@ FormValidator *Form::addValidator(const String & name, FormValidator * validator
     return nullptr;
 }
 
-FormField * Form::getField(const String & name) const {
+FormField *Form::getField(const String &name) const {
     for (auto field : _fields) {
         if (field->getName().equals(name)) {
             return field;
@@ -159,7 +169,7 @@ bool Form::hasChanged() const
     return _hasChanged;
 }
 
-bool Form::hasError(FormField * field) const
+bool Form::hasError(FormField *field) const
 {
     for (const auto &error : _errors) {
         if (error.is(field)) {
@@ -262,6 +272,22 @@ void Form::createHtml(Print& output)
     }
     PGM_P label = _formSubmit.length() ? _formSubmit.c_str() : PSTR("Save Changes");
     output.printf_P(PSTR("<button type=\"submit\" class=\"btn btn-primary\">%s...</button>"), label );
+}
+
+void Form::createHtmlPart(Print& output, uint16_t num)
+{
+    if (num == 0) {
+        if (_formTitle.length()) {
+            output.printf_P(PSTR("<h1>%s</h1>"), _formTitle.c_str());
+        }
+    }
+    else if (num >= 1 && num <= _fields.size()) {
+        _fields.at(num - 1)->html(output);
+    }
+    else if (num == _fields.size() + 1) {
+        PGM_P label = _formSubmit.length() ? _formSubmit.c_str() : PSTR("Save Changes");
+        output.printf_P(PSTR("<button type=\"submit\" class=\"btn btn-primary\">%s...</button>"), label);
+    }
 }
 
 void Form::dump(Print &out, const String &prefix) const {

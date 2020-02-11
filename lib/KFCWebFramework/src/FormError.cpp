@@ -21,7 +21,7 @@ FormError::FormError(FormField * field, const String & message) {
 
 const String & FormError::getName() const {
     if (!_field) {
-        return _sharedEmptyString;
+        return emptyString;
     }
     return _field->getName();
 }

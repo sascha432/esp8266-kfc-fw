@@ -83,7 +83,7 @@ public:
         return _header;
     }
 
-private:
+protected:
     String _header;
 };
 
@@ -109,13 +109,13 @@ public:
 
 class HttpConnectionHeader : public HttpSimpleHeader {
 public:
-    enum {
-        HTTP_CONNECTION_CLOSE = 1,
-        HTTP_CONNECTION_KEEP_ALIVE = 0,
-    };
+    typedef enum {
+        CLOSE = 1,
+        KEEP_ALIVE = 0,
+    } ConnectionEnum_t;
 
 public:
-    HttpConnectionHeader(uint8_t type = HTTP_CONNECTION_CLOSE);
+    HttpConnectionHeader(ConnectionEnum_t type = CLOSE);
 };
 
 class HttpDateHeader : public HttpSimpleHeader {
@@ -126,31 +126,39 @@ public:
 
 class HttpContentLengthHeader : public HttpHeader {
 public:
-    HttpContentLengthHeader(size_t size) : HttpHeader(FSPGM(Content_Length)) {
-        _size = size;
+    HttpContentLengthHeader(size_t size) : HttpHeader(FSPGM(Content_Length)), _size(size) {
     }
 
     virtual const String getValue() const override {
         return String(_size);
     }
+
 private:
     size_t _size;
 };
 
 class HttpCacheControlHeader : public HttpHeader {
 public:
-    enum {
-        CACHE_CONTROL_NONE = 0,
-        CACHE_CONTROL_PRIVATE,
-        CACHE_CONTROL_PUBLIC,
-    };
+    typedef enum {
+        NONE = 0,
+        PRIVATE,
+        PUBLIC,
+    } CacheControlEnum_t;
 
-    enum {
-        MAX_AGE_AUTO = 0xffffffff,
-        MAX_AGE_NOT_SET = 0,
-    };
+    typedef enum {
+        AUTO = 0xffffffff,
+        NOT_SET = 0,
+    } MaxAgeEnum_t;
 
-    HttpCacheControlHeader();
+    HttpCacheControlHeader(CacheControlEnum_t cacheControl = NONE, bool mustRevalidate = false, bool noCache = false, bool noStore = false) :
+        HttpHeader(FSPGM(Cache_Control)),
+        _noCache(noCache),
+        _noStore(noStore),
+        _mustRevalidate(mustRevalidate),
+        _cacheControl(cacheControl)
+    {
+        setMaxAge(AUTO);
+    }
 
     HttpCacheControlHeader &setNoCache(bool noCache) {
         _noCache = noCache;
@@ -165,28 +173,29 @@ public:
         return *this;
     }
     HttpCacheControlHeader &setPrivate() {
-        _publicOrPrivate = CACHE_CONTROL_PRIVATE;
+        _cacheControl = PRIVATE;
         return *this;
     }
     HttpCacheControlHeader &setPublic() {
-        _publicOrPrivate = CACHE_CONTROL_PUBLIC;
+        _cacheControl = PUBLIC;
         _noCache = false;
         return *this;
     }
     HttpCacheControlHeader &setMaxAge(uint32_t maxAge) {
         _maxAge = maxAge;
-        if (_maxAge != MAX_AGE_NOT_SET && _maxAge != MAX_AGE_AUTO) {
+        if (_maxAge != NOT_SET && _maxAge != AUTO) {
             setNoCache(false);
         }
         return *this;
     }
 
     virtual const String getValue() const override;
+
 private:
     uint8_t _noCache: 1;
     uint8_t _noStore: 1;
     uint8_t _mustRevalidate: 1;
-    uint8_t _publicOrPrivate: 2;
+    uint8_t _cacheControl: 2;
     uint32_t _maxAge;
 };
 
@@ -203,18 +212,8 @@ public:
     };
 #endif
 
-    HttpCookieHeader(const String &name);
-    HttpCookieHeader(const String &name, const String &value) : HttpCookieHeader(name) {
-        _value = value;
-    }
-    HttpCookieHeader(const String &name, const String &value, const String &path) : HttpCookieHeader(name) {
-        _value = value;
-        _path = path;
-    }
-    HttpCookieHeader(const String &name, const String &value, const String &path, time_t expires) : HttpCookieHeader(name) {
-        _value = value;
-        _path = path;
-        _expires = expires;
+    HttpCookieHeader(const String &name, const String &value = String(), const String &path = String(), time_t expires = 0) : HttpHeader(FSPGM(Set_Cookie)), _cookieName(name), _value(value), _path(path) {
+        setExpires(expires);
     }
 
     HttpCookieHeader &setName(const String &name) {
@@ -262,7 +261,7 @@ public:
     }
 #endif
 
-    HttpCookieHeader &hasExpired() {
+    HttpCookieHeader &setHasExpired() {
         _expires = COOKIE_EXPIRED;
 #if HTTP_COOKIE_MAX_AGE_SUPPORT
         _maxAge = MAX_AGE_NOT_SET;
@@ -297,49 +296,44 @@ private:
     String _cookieName;
     String _value;
     String _path;
+    time_t _expires;
     // String _domain;
     //bool _secure;
     //bool _httpOnly;
 #if HTTP_COOKIE_MAX_AGE_SUPPORT
     int32_t _maxAge;
 #endif
-    time_t _expires;
 };
 
 class HttpAuthorization : public HttpSimpleHeader {
 public:
     typedef enum {
-        BEARER = 0,
+        BASIC = 0,
+        BEARER = 1,
     } AuthorizationTypeEnum_t;
 
-    HttpAuthorization() : HttpSimpleHeader(F("Authorization")) {
+    HttpAuthorization(const String &auth = String()) : HttpSimpleHeader(F("Authorization"), auth) {
     }
-    HttpAuthorization(AuthorizationTypeEnum_t type, const String &auth) : HttpAuthorization() {
-        _setType(type, auth);
-    }
-
-private:
-    void _setType(AuthorizationTypeEnum_t type, const String &auth) {
-        String header;
+    HttpAuthorization(AuthorizationTypeEnum_t type, const String &auth) : HttpAuthorization(auth) {
         switch(type) {
+            case BASIC:
+                setHeader(F("Basic "));
+                break;
             case BEARER:
-                header = F("Bearer ");
+                setHeader(F("Bearer "));
                 break;
         }
-        header += auth;
-        setHeader(header);
+        _header += auth;
     }
-
-private:
-    AuthorizationTypeEnum_t _type;
 };
 
 class HttpContentType : public HttpSimpleHeader {
 public:
-    HttpContentType() : HttpSimpleHeader(F("Content-Type")) {
+    HttpContentType(const String &type = String()) : HttpSimpleHeader(F("Content-Type"), type) {
     }
-    HttpContentType(const String &type) : HttpContentType() {
-        setHeader(type);
+    HttpContentType(const String &type, const String &charset) : HttpSimpleHeader(F("Content-Type"), type) {
+        _header += F("; charset=");
+        _header += charset;
     }
 };
 
@@ -358,14 +352,14 @@ public:
     void clear(uint8_t reserveItems = 0);
 
     void add(HttpHeader *header) {
-        _headers.push_back(std::unique_ptr<HttpHeader>(header));
+        _headers.emplace_back(header);
     }
 
     void add(const String& name, const String& value);
 
     void replace(HttpHeader *header) {
         remove(*header);
-        _headers.push_back(std::unique_ptr<HttpHeader>(header));
+        _headers.emplace_back(header);
     }
 
     void remove(const String &name) {

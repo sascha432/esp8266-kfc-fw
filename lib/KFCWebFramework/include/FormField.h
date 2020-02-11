@@ -22,9 +22,7 @@ public:
         INPUT_TEXT,
     } FieldType_t;
 
-    FormField(const String &name);
-    FormField(const String &name, const String &value);
-    FormField(const String &name, const String &value, FieldType_t type);
+    FormField(const String &name, const String &value = String(), FieldType_t type = FormField::INPUT_NONE);
     // FormField(const String &name, const String &value, bool optional) : FormField(name, value) {
     //     _optional = optional;
     // }

@@ -5,12 +5,12 @@
 #pragma once
 
 #include <Arduino_compat.h>
+#include "FormField.h"
 
 template <size_t size>
 class FormString : public FormField {
 public:
-    FormString(const String &name, char *value, FormField::FieldType_t type = FormField::INPUT_TEXT) : FormField(name, value, type) {
-        _value = value;
+    FormString(const String &name, char *value, FormField::FieldType_t type = FormField::INPUT_TEXT) : FormField(name, value, type), _value(value) {
     }
 
     virtual void copyValue() {
@@ -20,4 +20,3 @@ public:
 private:
     char *_value;
 };
-

@@ -12,6 +12,7 @@
 #include "FormObject.h"
 #include "FormBitValue.h"
 #include "FormString.h"
+#include "FormStringObject.h"
 
 class FormError;
 class FormData;
@@ -33,22 +34,29 @@ public:
     FormField *_add(FormField *field);
     FormField *add(const String &name, const String &value, FormField::FieldType_t type = FormField::INPUT_TEXT);
 
-    template <typename T>
+    FormField *add(const String &name, const String &value, FormStringObject::SetterCallback_t setter = nullptr, FormField::FieldType_t type = FormField::INPUT_TEXT);
+    FormField *add(const String &name, String *value, FormField::FieldType_t type = FormField::INPUT_TEXT);
+
+    FormField *add(const String &name, const IPAddress &value, typename FormObject<IPAddress>::SetterCallback_t setter = nullptr, FormField::FieldType_t type = FormField::INPUT_TEXT) {
+        return new FormObject<IPAddress>(name, value, setter, type);
+    }
+
+    template <class T>
     FormField* add(const String& name, T value, typename FormValue<T>::GetterSetterCallback_t callback = nullptr, FormField::FieldType_t type = FormField::INPUT_SELECT) {
         return _add(new FormValue<T>(name, value, callback, type));
     }
 
-    template <typename T>
+    template <class T>
     FormField* add(const String& name, T *value, typename FormValue<T>::GetterSetterCallback_t callback, FormField::FieldType_t type = FormField::INPUT_SELECT) {
         return _add(new FormValue<T>(name, value, callback, type));
     }
 
-    template <typename T, size_t N>
+    template <class T, size_t N>
     FormField *add(const String &name, T *value, std::array<T, N> bitmask, FormField::FieldType_t type = FormField::INPUT_SELECT) {
         return _add(new FormBitValue<T, N>(name, value, bitmask, type));
     }
 
-    template <typename T>
+    template <class T>
     FormField* add(const String& name, T* value, FormField::FieldType_t type = FormField::INPUT_SELECT) {
         return _add(new FormValue<T>(name, value, type));
     }
@@ -58,10 +66,10 @@ public:
         return _add(new FormString<size>(name, value, type));
     }
 
-    template <class C, bool O>
-    FormField *add(const String &name, C *object, FormField::FieldType_t type = FormField::INPUT_TEXT) {
-        return _add(new FormObject<C>(name, object, type));
-    }
+    // template <class C, bool isObject>
+    // FormField *add(const String &name, C *object, FormField::FieldType_t type = FormField::INPUT_TEXT) {
+    //     return _add(new FormObject<C>(name, object, type));
+    // }
 
     FormValidator *addValidator(int index, FormValidator *validator);
     FormValidator *addValidator(FormValidator *validator);
@@ -87,6 +95,7 @@ public:
     void setFormUI(const String& title, const String& submit);
     void setFormUI(const String& title);
     void createHtml(Print& out);
+    void createHtmlPart(Print& out, uint16_t num);
 
     void dump(Print &out, const String &prefix) const;
 

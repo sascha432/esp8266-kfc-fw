@@ -65,7 +65,87 @@ const char *Config_HomeAssistant::getApiToken()
     return config._H_STR(Config().homeassistant.token);
 }
 
+void Config_HomeAssistant::getActions(ActionVector &actions)
+{
+    uint16_t length;
+    auto data = config.getBinary(_H(Config().homeassistant.actions), length);
+    if (data) {
+        auto endPtr = data + length;
+        while(data + sizeof(ActionHeader_t) <= endPtr) {
+            auto header = reinterpret_cast<const ActionHeader_t *>(data);
+            data += sizeof(ActionHeader_t);
+            auto valuesLen = header->valuesLen * sizeof(int32_t);
+            if (data + header->entityLen + valuesLen > endPtr) {
+                break;
+            }
+            String str = PrintString(data, header->entityLen);
+            data += header->entityLen;
+            Action::ValuesVector values(header->valuesLen);
+            memcpy(values.data(), data, valuesLen);
+            data += valuesLen;
+            actions.emplace_back(header->id, header->action, values, str);
+        }
+    }
+}
+
+void Config_HomeAssistant::setActions(ActionVector &actions)
+{
+    Buffer buffer;
+    for(auto &action: actions) {
+        ActionHeader_t header;
+        header.entityLen = action.getEntityId().length();
+        if (header.entityLen) {
+            header.id = action.getId();
+            header.action = action.getAction();
+            header.valuesLen = action.getNumValues();
+            buffer.write(&header);
+            buffer.write(action.getEntityId());
+            buffer.write(action.getValues());
+        }
+    }
+    config.setBinary(_H(Config().homeassistant.actions), buffer.get(), buffer.length());
+}
+
+Config_HomeAssistant::Action Config_HomeAssistant::getAction(uint16_t id)
+{
+    ActionVector actions;
+    getActions(actions);
+    for(auto &action: actions) {
+        if (id == action.getId()) {
+            return action;
+        }
+    }
+    return Action();
+}
+
+const __FlashStringHelper *Config_HomeAssistant::getActionStr(ActionEnum_t action)
+{
+    switch(action) {
+        case TURN_ON:
+            return F("Turn On");
+        case TURN_OFF:
+            return F("Turn Off");
+        case SET_BRIGHTNESS:
+            return F("Set Brightness");
+        case CHANGE_BRIGHTNESS:
+            return F("Change Brightness");
+        case NONE:
+        default:
+            return F("None");
+    }
+}
+
 // Config_NTP
+
+Config_NTP::Config_NTP() : tz()
+{
+    tz.ntpRefresh = 12 * 60;
+
+    auto flags = ::config._H_GET(Config().flags);
+    flags.ntpClientEnabled = true;
+    ::config._H_SET(Config().flags, flags);
+}
+
 
 const char *Config_NTP::getTimezone()
 {
@@ -93,11 +173,11 @@ Config_NTP::Timezone_t Config_NTP::getTZ()
 
 void Config_NTP::defaults()
 {
+    ::config._H_SET(Config().ntp.tz, Config_NTP().tz);
     ::config._H_SET_STR(Config().ntp.timezone, F("UTC"));
     ::config._H_SET_STR(Config().ntp.servers[0], F("pool.ntp.org"));
     ::config._H_SET_STR(Config().ntp.servers[1], F("time.nist.gov"));
     ::config._H_SET_STR(Config().ntp.servers[2], F("time.windows.com"));
-    ::config._H_SET(Config().ntp.ntpRefresh, 12 * 60); // refresh twice a day
 #if USE_REMOTE_TIMEZONE
     // https://timezonedb.com/register
     ::config._H_SET_STR(Config().ntp.remote_tz_dst_ofs_url, F("http://api.timezonedb.com/v2.1/get-time-zone?key=_YOUR_API_KEY_&by=zone&format=json&zone=${timezone}"));
@@ -135,6 +215,124 @@ Config_WeatherStation::WeatherStationConfig_t Config_WeatherStation::getConfig()
     return ::config._H_GET(Config().weather_station.config);
 }
 
+// Config_Network
+
+Config_Network::Config_Network()
+{
+    uint8_t mac[6];
+    WiFi.macAddress(mac);
+    config.dns1 = IPAddress(8, 8, 8, 8);
+    config.dns2 = IPAddress(8, 8, 4, 4);
+    config.local_ip = IPAddress(192, 168, 4, mac[5] <= 1 || mac[5] >= 253 ? (mac[4] <= 1 || mac[4] >= 253 ? (mac[3] <= 1 || mac[3] >= 253 ? mac[3] : rand() % 98 + 1) : mac[4]) : mac[5]);
+    config.gateway = IPAddress(192, 168, 4, 1);
+
+    auto flags = ::config._H_GET(Config().flags);
+    flags.stationModeDHCPEnabled = true;
+    flags.wifiMode = WIFI_AP;
+    ::config._H_SET(Config().flags, flags);
+}
+
+const char *Config_Network::getSSID()
+{
+    return ::config._H_STR(Config().network.wifi_ssid);
+}
+
+const char *Config_Network::getPassword()
+{
+    return ::config._H_STR(Config().network.wifi_pass);
+}
+
+
+// Config_SoftAP
+
+Config_SoftAP::Config_SoftAP()
+{
+    config.address = IPAddress(192, 168, 4, 1);
+    config.subnet = IPAddress(255, 255, 255, 0);
+    config.gateway = IPAddress(192, 168, 4, 1);
+    config.dhcp_start = IPAddress(192, 168, 4, 2);
+    config.dhcp_end = IPAddress(192, 168, 4, 100);
+    config.encryption = WIFI_DEFAULT_ENCRYPTION;
+    config.channel = 7;
+
+    auto flags = ::config._H_GET(Config().flags);
+    flags.softAPDHCPDEnabled = true;
+    ::config._H_SET(Config().flags, flags);
+}
+
+const char *Config_SoftAP::getAPSSID()
+{
+    return ::config._H_STR(Config().soft_ap.wifi_ssid);
+}
+
+const char *Config_SoftAP::getPassword()
+{
+    return ::config._H_STR(Config().soft_ap.wifi_pass);
+}
+
+// Config_MQTT
+
+Config_MQTT::Config_MQTT()
+{
+    config.port = (::config._H_GET(Config().flags).mqttMode == MQTT_MODE_SECURE) ? 8883 : 1883;
+    config.keepalive = 10;
+    config.qos = 2;
+}
+
+void Config_MQTT::defaults(MQTTMode_t mode)
+{
+    auto flags = ::config._H_GET(Config().flags);
+    flags.mqttMode = mode;
+    flags.mqttAutoDiscoveryEnabled = true;
+    ::config._H_SET(Config().flags, flags);
+
+    ::config._H_SET(Config().mqtt.config, Config_MQTT().config);
+    ::config._H_SET_STR(Config().mqtt.username, emptyString);
+    ::config._H_SET_STR(Config().mqtt.password, emptyString);
+    ::config._H_SET_STR(Config().mqtt.topic, F("home/${device_name}"));
+    ::config._H_SET_STR(Config().mqtt.discovery_prefix, F("homeassistant"));
+}
+
+Config_MQTT::config_t Config_MQTT::getConfig()
+{
+    return ::config._H_GET(Config().mqtt.config);
+}
+
+MQTTMode_t Config_MQTT::getMode()
+{
+    return static_cast<MQTTMode_t>(::config._H_GET(Config().flags).mqttMode);
+}
+
+const char *Config_MQTT::getHost()
+{
+    return ::config._H_STR(Config().mqtt.host);
+}
+
+const char *Config_MQTT::getUsername()
+{
+    return ::config._H_STR(Config().mqtt.username);
+}
+
+const char *Config_MQTT::Config_MQTT::getPassword()
+{
+    return ::config._H_STR(Config().mqtt.password);
+}
+
+const char *Config_MQTT::getTopic()
+{
+    return ::config._H_STR(Config().mqtt.topic);
+}
+
+const char *Config_MQTT::getDiscoveryPrefix()
+{
+    return ::config._H_STR(Config().mqtt.discovery_prefix);
+}
+
+const uint8_t *Config_MQTT::getFingerprint()
+{
+    return reinterpret_cast<const uint8_t *>(::config._H_STR(Config().mqtt.fingerprint));
+}
+
 
 // Config_Ping
 
@@ -150,11 +348,28 @@ const char *Config_Ping::getHost(uint8_t num)
 
 void Config_Ping::defaults()
 {
-    Config_Ping ping;
+    ::config._H_SET(Config().ping.config, Config_Ping().config);
     ::config._H_SET_STR(Config().ping.host1, F("${gateway}"));
     ::config._H_SET_STR(Config().ping.host2, F("8.8.8.8"));
     ::config._H_SET_STR(Config().ping.host3, F("www.google.com"));
-    ::config._H_SET(Config().ping.config, ping.config);
+}
+
+// Config_Button
+
+void Config_Button::getButtons(ButtonVector &buttons)
+{
+    uint16_t length;
+    auto ptr = config.getBinary(_H(Config().buttons), length);
+    if (ptr) {
+        auto items = length / sizeof(Button_t);
+        buttons.resize(items);
+        memcpy(buttons.data(), ptr, items * sizeof(Button_t));
+    }
+}
+
+void Config_Button::setButtons(ButtonVector &buttons)
+{
+    config.setBinary(_H(Config().buttons), buttons.data(), buttons.size() * sizeof(Button_t));
 }
 
 // KFCFWConfiguration
@@ -454,15 +669,10 @@ void KFCFWConfiguration::restoreFactorySettings()
     clear();
     _H_SET(Config().version, FIRMWARE_VERSION);
 
-    ConfigFlags flags;
-    memset(&flags, 0, sizeof(flags));
-    flags.wifiMode = WIFI_AP;
+    ConfigFlags flags = ConfigFlags();
     flags.isFactorySettings = true;
     flags.isDefaultPassword = true;
     flags.atModeEnabled = true;
-    flags.softAPDHCPDEnabled = true;
-    flags.stationModeDHCPEnabled = true;
-    flags.ntpClientEnabled = true;
 #if defined(ESP32) && WEBSERVER_TLS_SUPPORT
     flags.webServerMode = HTTP_MODE_SECURE;
 #else
@@ -470,10 +680,6 @@ void KFCFWConfiguration::restoreFactorySettings()
 #endif
 #if defined(ESP8266)
     flags.webServerPerformanceModeEnabled = true;
-#endif
-    flags.mqttMode = MQTT_MODE_SECURE;
-#if MQTT_AUTO_DISCOVERY
-    flags.mqttAutoDiscoveryEnabled = true;
 #endif
     flags.ledMode = true;
     flags.hueEnabled = true;
@@ -488,28 +694,17 @@ void KFCFWConfiguration::restoreFactorySettings()
     WiFi.macAddress(mac);
     str.printf_P(PSTR("KFC%02X%02X%02X"), mac[3], mac[4], mac[5]);
     _H_SET_STR(Config().device_name, str);
-    const char *defaultPassword = PSTR("12345678");
+    auto defaultPassword = F("12345678");
     _H_SET_STR(Config().device_pass, defaultPassword);
+
+    _H_SET_STR(Config().network.wifi_ssid, str);
+    _H_SET_STR(Config().network.wifi_pass, defaultPassword);
+    _H_SET(Config().network.config, Config_Network().config);
 
     _H_SET_STR(Config().soft_ap.wifi_ssid, str);
     _H_SET_STR(Config().soft_ap.wifi_pass, defaultPassword);
-    _H_SET_STR(Config().wifi_ssid, str);
+    _H_SET(Config().soft_ap.config, Config_SoftAP().config);
 
-    _H_SET_IP(Config().dns1, IPAddress(8, 8, 8, 8));
-    _H_SET_IP(Config().dns2, IPAddress(8, 8, 4, 4));
-    _H_SET_IP(Config().local_ip, IPAddress(192, 168, 4, mac[5] <= 1 || mac[5] >= 253 ? (mac[4] <= 1 || mac[4] >= 253 ? (mac[3] <= 1 || mac[3] >= 253 ? mac[3] : rand() % 98 + 1) : mac[4]) : mac[5]));
-    _H_SET_IP(Config().gateway, IPAddress(192, 168, 4, 1));
-    _H_SET_IP(Config().soft_ap.address, IPAddress(192, 168, 4, 1));
-    _H_SET_IP(Config().soft_ap.subnet, IPAddress(255, 255, 255, 0));
-    _H_SET_IP(Config().soft_ap.gateway, IPAddress(192, 168, 4, 1));
-    _H_SET_IP(Config().soft_ap.dhcp_start, IPAddress(192, 168, 4, 2));
-    _H_SET_IP(Config().soft_ap.dhcp_end, IPAddress(192, 168, 4, 100));
-#if defined(ESP32)
-    _H_SET(Config().soft_ap.encryption, WIFI_AUTH_WPA2_PSK);
-#elif defined(ESP8266)
-    _H_SET(Config().soft_ap.encryption, ENC_TYPE_CCMP);
-#endif
-    _H_SET(Config().soft_ap.channel, 7);
 
 #if WEBSERVER_TLS_SUPPORT
     _H_SET(Config().http_port, flags.webServerMode == HTTP_MODE_SECURE ? 443 : 80);
@@ -520,18 +715,7 @@ void KFCFWConfiguration::restoreFactorySettings()
     Config_NTP::defaults();
 #endif
 #if MQTT_SUPPORT
-    _H_SET_STR(Config().mqtt_topic, F("home/${device_name}"));
-//     auto &mqttOptions = _H_W_GET(Config().mqtt_options);
-//     BNZERO_S(&mqttOptions);
-// #  if ASYNC_TCP_SSL_ENABLED
-//     mqttOptions.port = flags.mqttMode == MQTT_MODE_SECURE ? 8883 : 1883;
-// #  else
-//     mqttOptions.port = 1883;
-//     mqttOptions.keepalive = 15;
-// #  endif
-    #if MQTT_AUTO_DISCOVERY
-        _H_SET_STR(Config().mqtt_discovery_prefix, F("homeassistant"));
-    #endif
+    Config_MQTT::defaults();
 #endif
 #if SYSLOG
     _H_SET(Config().syslog_port, 514);
@@ -704,7 +888,7 @@ void KFCFWConfiguration::storeQuickConnect(const uint8_t *bssid, int8_t channel)
 {
     _debug_printf_P(PSTR("KFCFWConfiguration::storeQuickConnect(%s, %d)\n"), mac2String(bssid).c_str(), channel);
 
-    WiFiQuickConnect_t quickConnect;
+    Config_QuickConnect::WiFiQuickConnect_t quickConnect;
     RTCMemoryManager::read(CONFIG_RTC_MEM_ID, &quickConnect, sizeof(quickConnect));
     quickConnect.channel = channel;
     memcpy(quickConnect.bssid, bssid, WL_MAC_ADDR_LENGTH);
@@ -721,7 +905,7 @@ void KFCFWConfiguration::storeStationConfig(uint32_t ip, uint32_t netmask, uint3
     );
 
 
-    WiFiQuickConnect_t quickConnect;
+    Config_QuickConnect::WiFiQuickConnect_t quickConnect;
     if (RTCMemoryManager::read(CONFIG_RTC_MEM_ID, &quickConnect, sizeof(quickConnect))) {
         quickConnect.local_ip = ip;
         quickConnect.subnet = netmask;
@@ -777,8 +961,12 @@ void KFCFWConfiguration::write()
 {
     _debug_println(F("KFCFWConfiguration::write()"));
 
-    auto &flags = config._H_W_GET(Config().flags);
-    flags.isFactorySettings = false;
+    auto flags = config._H_GET(Config().flags);
+    if (flags.isFactorySettings) {
+        flags.isFactorySettings = false;
+        config._H_SET(Config().flags, flags);
+    }
+
     if (!Configuration::write()) {
         Logger_error(F("Failure to write settings to EEPROM"));
     }
@@ -799,7 +987,7 @@ void KFCFWConfiguration::wakeUpFromDeepSleep()
 #endif
         int32_t channel;
         uint8_t *bssidPtr;
-        WiFiQuickConnect_t quickConnect;
+        Config_QuickConnect::WiFiQuickConnect_t quickConnect;
 
         if (RTCMemoryManager::read(CONFIG_RTC_MEM_ID, &quickConnect, sizeof(quickConnect))) {
             channel = quickConnect.channel;
@@ -848,12 +1036,12 @@ void KFCFWConfiguration::wakeUpFromDeepSleep()
 
 }
 
-extern void remove_crash_counter(EventScheduler::TimerPtr timer);
+extern void remove_crash_counter(bool initSPIFFS);
 
 static void clear_crash_counter()
 {
     resetDetector.clearCounter();
-    remove_crash_counter((EventScheduler::TimerPtr)1);
+    remove_crash_counter(false);
 }
 
 
@@ -1040,11 +1228,13 @@ bool KFCFWConfiguration::connectWiFi()
         WiFi.setAutoConnect(false); // WiFi callbacks have to be installed first during boot
         WiFi.setAutoReconnect(true);
 
+        auto network = config._H_GET(Config().network.config);
+
         bool result;
         if (flags.stationModeDHCPEnabled) {
             result = WiFi.config((uint32_t)0, (uint32_t)0, (uint32_t)0, (uint32_t)0, (uint32_t)0);
         } else {
-            result = WiFi.config(config._H_GET_IP(Config().local_ip), config._H_GET_IP(Config().gateway), config._H_GET_IP(Config().subnet), config._H_GET_IP(Config().dns1), config._H_GET_IP(Config().dns2));
+            result = WiFi.config(network.local_ip, network.gateway, network.subnet, network.dns1, network.dns2);
         }
         if (!result) {
             PrintString message;
@@ -1073,7 +1263,9 @@ bool KFCFWConfiguration::connectWiFi()
 
         // config._H_GET(Config().soft_ap.encryption not used
 
-        if (!WiFi.softAPConfig(config._H_GET_IP(Config().soft_ap.address), config._H_GET_IP(Config().soft_ap.gateway), config._H_GET_IP(Config().soft_ap.subnet))) {
+        auto softAp = config._H_GET(Config().soft_ap.config);
+
+        if (!WiFi.softAPConfig(softAp.address, softAp.gateway, softAp.subnet)) {
             String message = F("Cannot configure AP mode");
             setLastError(message);
             Logger_error(message);
@@ -1087,8 +1279,8 @@ bool KFCFWConfiguration::connectWiFi()
 
             dhcps_lease_t lease;
             lease.enable = flags.softAPDHCPDEnabled;
-            lease.start_ip.addr = config._H_GET_IP(Config().soft_ap.dhcp_start);
-            lease.end_ip.addr = config._H_GET_IP(Config().soft_ap.dhcp_end);
+            lease.start_ip.addr = softAp.dhcp_start;
+            lease.end_ip.addr = softAp.dhcp_end;
 
             if (tcpip_adapter_dhcps_option(TCPIP_ADAPTER_OP_SET, TCPIP_ADAPTER_REQUESTED_IP_ADDRESS, &lease, sizeof(lease)) != ESP_OK) {
                 String message = F("Failed to configure DHCP server");
@@ -1107,8 +1299,8 @@ bool KFCFWConfiguration::connectWiFi()
             struct dhcps_lease dhcp_lease;
             wifi_softap_dhcps_stop();
             dhcp_lease.enable = flags.softAPDHCPDEnabled;
-            dhcp_lease.start_ip.addr = config._H_GET_IP(Config().soft_ap.dhcp_start);
-            dhcp_lease.end_ip.addr = config._H_GET_IP(Config().soft_ap.dhcp_end);
+            dhcp_lease.start_ip.addr = softAp.dhcp_start;
+            dhcp_lease.end_ip.addr = softAp.dhcp_end;
             if (!wifi_softap_set_dhcps_lease(&dhcp_lease)) {
                 String message = F("Failed to configure DHCP server");
                 setLastError(message);
@@ -1125,7 +1317,7 @@ bool KFCFWConfiguration::connectWiFi()
 
 #endif
 
-            if (!WiFi.softAP(config._H_STR(Config().soft_ap.wifi_ssid), config._H_STR(Config().soft_ap.wifi_pass), config._H_GET(Config().soft_ap.channel), flags.hiddenSSID)) {
+            if (!WiFi.softAP(config._H_STR(Config().soft_ap.wifi_ssid), config._H_STR(Config().soft_ap.wifi_pass), softAp.channel, flags.hiddenSSID)) {
                 String message = F("Cannot start AP mode");
                 setLastError(message);
                 Logger_error(message);
@@ -1304,7 +1496,7 @@ void KFCFWConfiguration::printRTCStatus(Print &output, bool plain)
 class KFCConfigurationPlugin : public PluginComponent {
 public:
     KFCConfigurationPlugin() {
-        REGISTER_PLUGIN(this, "KFCConfigurationPlugin");
+        REGISTER_PLUGIN(this);
     }
 
     virtual PGM_P getName() const {

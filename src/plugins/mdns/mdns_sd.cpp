@@ -67,7 +67,7 @@ void MDNS_query_service(const char *service, const char *proto, Stream *output) 
 class MDNSPlugin : public PluginComponent {
 public:
     MDNSPlugin() {
-        REGISTER_PLUGIN(this, "MDNSPlugin");
+        REGISTER_PLUGIN(this);
     }
     PGM_P getName() const;
     PluginPriorityEnum_t getSetupPriority() const override;
@@ -76,11 +76,15 @@ public:
         WiFiCallbacks::remove(WiFiCallbacks::EventEnum_t::ANY, MDNS_wifi_callback);
     }
 
-    virtual bool hasStatus() const override;
+    virtual bool hasStatus() const override {
+        return true;
+    }
     virtual void getStatus(Print &output) override;
 
 #if AT_MODE_SUPPORTED
-    bool hasAtMode() const override;
+    bool hasAtMode() const override {
+        return true;
+    }
     void atModeHelpGenerator() override;
     bool atModeHandler(AtModeArgs &args) override;
 #endif
@@ -88,11 +92,13 @@ public:
 
 static MDNSPlugin plugin;
 
-PGM_P MDNSPlugin::getName() const {
+PGM_P MDNSPlugin::getName() const
+{
     return PSTR("mdns");
 }
 
-MDNSPlugin::PluginPriorityEnum_t MDNSPlugin::getSetupPriority() const {
+MDNSPlugin::PluginPriorityEnum_t MDNSPlugin::getSetupPriority() const
+{
     return PRIO_MDNS;
 }
 
@@ -125,9 +131,8 @@ void MDNSPlugin::setup(PluginSetupMode_t mode) {
 #endif
 }
 
-bool MDNSPlugin::hasStatus() const {
-    return true;
-}
+#include "constexpr_tools.h"
+
 
 void MDNSPlugin::getStatus(Print &output)
 {
@@ -140,10 +145,6 @@ void MDNSPlugin::getStatus(Print &output)
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(MDNS, "MDNS", "<service>,<proto>", "Query MDNS");
 // PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(MDNSBSD, "MDNSBSD", "Broadcast service discovery on selected interfaces");
-
-bool MDNSPlugin::hasAtMode() const {
-    return true;
-}
 
 void MDNSPlugin::atModeHelpGenerator()
 {

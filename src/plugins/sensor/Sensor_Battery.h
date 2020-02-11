@@ -48,8 +48,8 @@ public:
     virtual void getValues(JsonArray &json) override;
     virtual void createWebUI(WebUI &webUI, WebUIRow **row) override;
     virtual void getStatus(PrintHtmlEntitiesString &output) override;
-    virtual SensorEnumType_t getType() const override {
-        return BATTERY;
+    virtual MQTTSensorSensorType getType() const override {
+        return MQTTSensorSensorType::BATTERY;
     }
 
     virtual bool hasForm() const {

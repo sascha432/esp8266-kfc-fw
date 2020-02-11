@@ -65,9 +65,9 @@ size_t timezone_strftime(char *buf, size_t size, PGM_P format, const struct tm *
         fmt.replace(_z, default_timezone.getAbbreviation());
         return strftime(buf, size, fmt.c_str(), tm);
     } else {
-		fmt.replace(_z, _sharedEmptyString);
+		fmt.replace(_z, emptyString);
         _z.toUpperCase();
-        fmt.replace(_z, _sharedEmptyString);
+        fmt.replace(_z, emptyString);
         return strftime(buf, size, fmt.c_str(), tm);
     }
 }

@@ -128,9 +128,9 @@ void Sensor_INA219::getStatus(PrintHtmlEntitiesString &output)
     output.printf_P(PSTR("INA219 @ I2C address 0x%02x" HTML_S(br)), _address);
 }
 
-Sensor_INA219::SensorEnumType_t Sensor_INA219::getType() const
+MQTTSensorSensorType Sensor_INA219::getType() const
 {
-    return INA219;
+    return MQTTSensorSensorType::INA219;
 }
 
 String Sensor_INA219::_getId(SensorTypeEnum_t type)

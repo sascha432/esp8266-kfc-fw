@@ -171,7 +171,7 @@ void BootstrapMenu::htmlSubMenu(Print& output, menu_item_id_t menuId, uint8_t ac
 		if (item.getParentMenuId() == menuId) {
 			output.printf_P(PSTR("<a href=\"%s\" class=\"list-group-item list-group-item-action align-items-start%s\"><h5 class=\"mb-1\">%s</h5></a>"),
 				item.getURI().c_str(),
-				active == pos ? PSTR(" active") : _sharedEmptyString.c_str(),
+				active == pos ? PSTR(" active") : emptyString.c_str(),
 				item.getLabel().c_str()
 			);
 			pos++;

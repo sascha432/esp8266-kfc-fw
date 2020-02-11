@@ -23,7 +23,7 @@
 class STK500v1Plugin : public PluginComponent {
 public:
     STK500v1Plugin() {
-        REGISTER_PLUGIN(this, "STK500v1Plugin");
+        REGISTER_PLUGIN(this);
     }
     virtual PGM_P getName() const {
         return PSTR("stk500v1");

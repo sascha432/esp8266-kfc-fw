@@ -67,9 +67,9 @@ void Sensor_LM75A::getStatus(PrintHtmlEntitiesString &output)
     output.printf_P(PSTR("LM75A @ I2C address 0x%02x" HTML_S(br)), _address);
 }
 
-Sensor_LM75A::SensorEnumType_t Sensor_LM75A::getType() const
+MQTTSensorSensorType Sensor_LM75A::getType() const
 {
-    return LM75A;
+    return MQTTSensorSensorType::LM75A;
 }
 
 float Sensor_LM75A::_readSensor()

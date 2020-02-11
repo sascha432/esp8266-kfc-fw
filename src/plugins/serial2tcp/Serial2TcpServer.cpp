@@ -28,7 +28,7 @@ void Serial2TcpServer::getStatus(PrintHtmlEntitiesString &output) {
     if (hasAuthentication()) {
         output.println(F(", Authentication enabled"));
     }
-    output.printf_P(PSTR(HTML_S(br) "%u client%s connected"), _connections.size(), _connections.size() == 1 ? _sharedEmptyString.c_str() : PSTR("s"));
+    output.printf_P(PSTR(HTML_S(br) "%u client%s connected"), _connections.size(), _connections.size() == 1 ? emptyString.c_str() : PSTR("s"));
 }
 
 void Serial2TcpServer::begin() {

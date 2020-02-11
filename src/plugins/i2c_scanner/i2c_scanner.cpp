@@ -149,7 +149,7 @@ void i2cscanner_device_error(Stream &output)
 class I2CScannerPlugin : public PluginComponent {
 public:
     I2CScannerPlugin() {
-        REGISTER_PLUGIN(this, "I2CScannerPlugin");
+        REGISTER_PLUGIN(this);
         _copyPortArray();
 
     }

@@ -22,6 +22,8 @@
 #include <debug_helper_disable.h>
 #endif
 
+DEFINE_ENUM(MQTTQueueType);
+
 PROGMEM_STRING_DEF(Anonymous, "Anonymous");
 
 MQTTClient *MQTTClient::_mqttClient = nullptr;
@@ -29,7 +31,7 @@ MQTTClient *MQTTClient::_mqttClient = nullptr;
 void MQTTClient::setupInstance()
 {
     deleteInstance();
-    if (config._H_GET(Config().flags).mqttMode != MQTT_MODE_DISABLED) {
+    if (Config_MQTT::getMode() != MQTT_MODE_DISABLED) {
         _mqttClient = _debug_new MQTTClient();
     }
 }
@@ -80,8 +82,8 @@ void MQTTClient::_setupClient()
     _maxMessageSize = MAX_MESSAGE_SIZE;
     _autoReconnectTimeout = DEFAULT_RECONNECT_TIMEOUT;
 
-    auto host = config._H_STR(Config().mqtt_host);
-    auto port = config._H_GET(Config().mqtt_port);
+    auto host = Config_MQTT::getHost();
+    auto port = Config_MQTT::getConfig().port;
     IPAddress ip;
     if (ip.fromString(host)) {
         _client->setServer(ip, port);
@@ -90,17 +92,16 @@ void MQTTClient::_setupClient()
         _client->setServer(host, port);
     }
 #if ASYNC_TCP_SSL_ENABLED
-    auto flags = config._H_GET(Config().flags);
-    if (flags.mqttMode == MQTT_MODE_SECURE) {
+    if (Config_MQTT::getMode() == MQTT_MODE_SECURE) {
         _client->setSecure(true);
-        auto fingerPrint = config._H_STR(Config().mqtt_fingerprint);
+        auto fingerPrint = Config_MQTT::getFingerprint();
         if (*fingerPrint) {
-            _client->addServerFingerprint(reinterpret_cast<const uint8_t *>(fingerPrint)); // addServerFingerprint supports multiple fingerprints
+            _client->addServerFingerprint(fingerPrint); // addServerFingerprint supports multiple fingerprints
         }
     }
 #endif
-    _client->setCredentials(config._H_STR(Config().mqtt_username), config._H_STR(Config().mqtt_password));
-    _client->setKeepAlive(config._H_GET(Config().mqtt_keepalive));
+    _client->setCredentials(Config_MQTT::getUsername(), Config_MQTT::getPassword());
+    _client->setKeepAlive(Config_MQTT::getConfig().keepalive);
 
     _client->onConnect([this](bool sessionPresent) {
         this->onConnect(sessionPresent);
@@ -173,7 +174,7 @@ const String MQTTClient::getComponentName(uint8_t num)
 
 String MQTTClient::formatTopic(uint8_t num, const __FlashStringHelper *format, ...)
 {
-    PrintString topic = config._H_STR(Config().mqtt_topic);
+    PrintString topic = Config_MQTT::getTopic();
     va_list arg;
 
     va_start(arg, format);
@@ -301,7 +302,7 @@ void MQTTClient::onDisconnect(AsyncMqttClientDisconnectReason reason)
 void MQTTClient::subscribe(MQTTComponentPtr component, const String &topic, uint8_t qos)
 {
     if (subscribeWithId(component, topic, qos) == 0) {
-        _addQueue(MQTTQueue(QUEUE_SUBSCRIBE, component, topic, qos));
+        _addQueue(MQTTQueueType::SUBSCRIBE, component, topic, qos, 0, String());
     }
 }
 
@@ -318,7 +319,7 @@ int MQTTClient::subscribeWithId(MQTTComponentPtr component, const String &topic,
 void MQTTClient::unsubscribe(MQTTComponentPtr component, const String &topic)
 {
     if (unsubscribeWithId(component, topic) == 0) {
-        _addQueue(MQTTQueue(QUEUE_UNSUBSCRIBE, component, topic));
+        _addQueue(MQTTQueueType::UNSUBSCRIBE, component, topic, 0, 0, String());
     }
 }
 
@@ -368,7 +369,7 @@ bool MQTTClient::_topicInUse(MQTTComponentPtr component, const String &topic)
 void MQTTClient::publish(const String &topic, uint8_t qos, bool retain, const String &payload)
 {
     if (publishWithId(topic, qos, retain, payload) == 0) {
-        _addQueue({QUEUE_PUBLISH, nullptr, topic, qos, retain, payload});
+        _addQueue(MQTTQueueType::PUBLISH, nullptr, topic, qos, retain, payload);
     }
 }
 
@@ -491,19 +492,18 @@ const String MQTTClient::_reasonToString(AsyncMqttClientDisconnectReason reason)
 const String MQTTClient::connectionDetailsString()
 {
     String message;
-    auto username = config._H_STR(Config().mqtt_username);
+    auto username = Config_MQTT::getUsername();
     if (*username) {
         message = username;
     } else {
         message = FSPGM(Anonymous);
     }
     message += '@';
-    message += config._H_STR(Config().mqtt_host);
+    message += Config_MQTT::getHost();
     message += ':';
-    message += String(config._H_GET(Config().mqtt_port));
+    message += String(Config_MQTT::getConfig().port);
 #if ASYNC_TCP_SSL_ENABLED
-    auto flags = config._H_GET(Config().flags);
-    if (flags.mqttMode == MQTT_MODE_SECURE) {
+    if (Config_MQTT::getMode() == MQTT_MODE_SECURE) {
         message += F(", Secure MQTT");
     }
 #endif
@@ -524,7 +524,7 @@ const String MQTTClient::connectionStatusString()
 #if MQTT_AUTO_DISCOVERY
     if (config._H_GET(Config().flags).mqttAutoDiscoveryEnabled) {
         message += F(", discovery prefix '");
-        message += config._H_STR(Config().mqtt_discovery_prefix);
+        message += Config_MQTT::getDiscoveryPrefix();
         message += '\'';
     }
 #endif
@@ -570,16 +570,13 @@ void MQTTClient::handleWiFiEvents(uint8_t event, void *payload)
     }
 }
 
-void MQTTClient::_addQueue(MQTTQueue &&queue)
+void MQTTClient::_addQueue(MQTTQueueEnum_t type, MQTTComponent *component, const String &topic, uint8_t qos, uint8_t retain, const String &payload)
 {
-    // _debug_printf_P(PSTR("MQTTClient::_addQueue(type %u): topic=%s\n"), queue.getType(), queue.getTopic().c_str());
-    _queue.emplace_back(queue);
+    _debug_printf_P(PSTR("MQTTClient::_addQueue(): type=%s, topic=%s\n"), type.toString().c_str(), topic.c_str());
 
-    if (_queueTimer.active()) {
-        _queueTimer->setCallCounter(0); // reset retry counter for each new queue entry
-    } else {
-        _queueTimer.add(250, 20, MQTTClient::queueTimerCallback); // retry 20 times x 0.25s = 5s
-    }
+    _queue.emplace_back(type, component, topic, qos, retain, payload);
+
+    _queueTimer.add(250, 20, MQTTClient::queueTimerCallback); // retry 20 times x 0.25s = 5s
 }
 
 void MQTTClient::_queueTimerCallback(EventScheduler::TimerPtr timer)
@@ -588,17 +585,17 @@ void MQTTClient::_queueTimerCallback(EventScheduler::TimerPtr timer)
 
     _queue.erase(std::remove_if(_queue.begin(), _queue.end(), [this](const MQTTQueue &queue) {
         switch(queue.getType()) {
-            case QUEUE_SUBSCRIBE:
+            case MQTTQueueType::SUBSCRIBE:
                 if (subscribeWithId(queue.getComponent(), queue.getTopic(), queue.getQos()) != 0) {
                     return true;
                 }
                 break;
-            case QUEUE_UNSUBSCRIBE:
+            case MQTTQueueType::UNSUBSCRIBE:
                 if (unsubscribeWithId(queue.getComponent(), queue.getTopic()) != 0) {
                     return true;
                 }
                 break;
-            case QUEUE_PUBLISH:
+            case MQTTQueueType::PUBLISH:
                 if (publishWithId(queue.getTopic(), queue.getQos(), queue.getRetain(), queue.getPayload()) != 0) {
                     return true;
                 }
@@ -627,7 +624,7 @@ void MQTTClient::_clearQueue()
 class MQTTPlugin : public PluginComponent {
 public:
     MQTTPlugin() {
-        REGISTER_PLUGIN(this, "MQTTPlugin");
+        REGISTER_PLUGIN(this);
     }
     virtual PGM_P getName() const {
         return PSTR("mqtt");
@@ -695,13 +692,13 @@ void MQTTPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
 
     //TODO save form doesnt work
 
-    form.add<uint8_t>(F("mqtt_enabled"), _H_STRUCT_FORMVALUE(Config().flags, uint8_t, mqttMode));
+    form.add<uint8_t>(F("mqtt_enabled"), _H_FLAGS_VALUE(Config().flags, mqttMode));
     form.addValidator(new FormRangeValidator(MQTT_MODE_DISABLED, MQTT_MODE_SECURE));
 
-    form.add<sizeof Config().mqtt_host>(F("mqtt_host"), config._H_W_STR(Config().mqtt_host));
+    form.add(F("mqtt_host"), _H_STR_VALUE(Config().mqtt.host));
     form.addValidator(new FormValidHostOrIpValidator());
 
-    form.add<uint16_t>(F("mqtt_port"), &config._H_W_GET(Config().mqtt_port));
+    form.add<uint16_t>(F("mqtt_port"), _H_STRUCT_VALUE(Config().mqtt.config, port));
     form.addValidator(new FormTCallbackValidator<uint16_t>([](uint16_t value, FormField &field) {
 #if ASYNC_TCP_SSL_ENABLED
         if (value == 0 && static_cast<FormBitValue<ConfigFlags_t, 3> *>(field.getForm().getField(F("mqtt_enabled")))->getValue() == MQTT_MODE_SECURE) {
@@ -717,23 +714,23 @@ void MQTTPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
     }));
     form.addValidator(new FormRangeValidator(F("Invalid port"), 1, 65535));
 
-    form.add<sizeof Config().mqtt_username>(F("mqtt_username"), config._H_W_STR(Config().mqtt_username));
-    form.addValidator(new FormLengthValidator(0, sizeof(Config().mqtt_username) - 1));
+    form.add(F("mqtt_username"), _H_STR_VALUE(Config().mqtt.username));
+    form.addValidator(new FormLengthValidator(0, sizeof(Config().mqtt.username) - 1));
 
-    form.add<sizeof Config().mqtt_password>(F("mqtt_password"), config._H_W_STR(Config().mqtt_password));
+    form.add(F("mqtt_password"), _H_STR_VALUE(Config().mqtt.password));
     // form.addValidator(new FormLengthValidator(8, sizeof(Config().mqtt_password) - 1));
 
-    form.add<sizeof Config().mqtt_topic>(F("mqtt_topic"), config._H_W_STR(Config().mqtt_topic));
-    form.addValidator(new FormLengthValidator(3, sizeof(Config().mqtt_topic) - 1));
+    form.add(F("mqtt_topic"), _H_STR_VALUE(Config().mqtt.topic));
+    form.addValidator(new FormLengthValidator(3, sizeof(Config().mqtt.topic) - 1));
 
-    form.add<uint8_t>(F("mqtt_qos"), &config._H_W_GET(Config().mqtt_qos));
+    form.add<uint8_t>(F("mqtt_qos"), _H_STRUCT_VALUE(Config().mqtt.config, qos));
     form.addValidator(new FormRangeValidator(F("Invalid value for QoS"), 0, 2));
 
 #if MQTT_AUTO_DISCOVERY
-    form.add<bool>(F("mqtt_auto_discovery"), _H_STRUCT_FORMVALUE(Config().flags, bool, mqttAutoDiscoveryEnabled));
+    form.add<bool>(F("mqtt_auto_discovery"), _H_FLAGS_BOOL_VALUE(Config().flags, mqttAutoDiscoveryEnabled));
 
-    form.add<sizeof Config().mqtt_discovery_prefix>(F("mqtt_discovery_prefix"), config._H_W_STR(Config().mqtt_discovery_prefix));
-    form.addValidator(new FormLengthValidator(0, sizeof(Config().mqtt_discovery_prefix) - 1));
+    form.add(F("mqtt_discovery_prefix"), _H_STR_VALUE(Config().mqtt.discovery_prefix));
+    form.addValidator(new FormLengthValidator(0, sizeof(Config().mqtt.discovery_prefix) - 1));
 #endif
 
     form.finalize();
@@ -835,22 +832,25 @@ bool MQTTPlugin::atModeHandler(AtModeArgs &args)
             }
             else if (args.isTrue(0)) {
                 config.discard();
-                auto &flags = config._H_W_GET(Config().flags);
+                auto flags = config._H_GET(Config().flags);
                 flags.mqttMode = MQTT_MODE_UNSECURE;
+                config._H_SET(Config().flags, flags);
                 config.write();
                 args.printf_P(PSTR("MQTT unsecure %s"), FSPGM(enabled));
             }
             else if (args.isAnyMatchIgnoreCase(0, F("secure"))) {
                 config.discard();
-                auto &flags = config._H_W_GET(Config().flags);
+                auto flags = config._H_GET(Config().flags);
                 flags.mqttMode = MQTT_MODE_SECURE;
+                config._H_SET(Config().flags, flags);
                 config.write();
                 args.printf_P(PSTR("MQTT secure %s"), FSPGM(enabled));
             }
             else if (args.isFalse(0)) {
                 config.discard();
-                auto &flags = config._H_W_GET(Config().flags);
+                auto flags = config._H_GET(Config().flags);
                 flags.mqttMode = MQTT_MODE_DISABLED;
+                config._H_SET(Config().flags, flags);
                 config.write();
                 client.setAutoReconnect(0);
                 client.disconnect(true);
@@ -950,7 +950,7 @@ bool MQTTPlugin::atModeHandler(AtModeArgs &args)
                 auto iterator = std::find(ids.begin(), ids.end(), devicePtr->id);
                 if (iterator != ids.end()) {
                     args.printf_P(PSTR("Sending empty payload to %s"), devicePtr->topic.c_str());
-                    MQTTClient::getClient()->publish(devicePtr->topic, 2, true, _sharedEmptyString);
+                    MQTTClient::getClient()->publish(devicePtr->topic, 2, true, emptyString);
                     ids.erase(iterator);
                     if (!ids.size()) {
                         break;

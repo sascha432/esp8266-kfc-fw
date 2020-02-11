@@ -23,13 +23,26 @@
 #include "reset_detector.h"
 #include "dyn_bitset.h"
 #if DEBUG_HAVE_SAVECRASH
-#include "../.pio/libdeps/ws_95/EspSaveCrash/src/EspSaveCrash.h"
+#include "../.pio/libdeps/remote/EspSaveCrash/src/EspSaveCrash.h"
 // #include <EspSaveCrash.h>
 #endif
 
 #ifdef dhcp_start // defined in framework-arduinoespressif8266@2.20402.4/tools/sdk/lwip2/include/arch/cc.h
 #undef dhcp_start
 #endif
+
+#if defined(ESP32)
+#define WIFI_DEFAULT_ENCRYPTION             WIFI_AUTH_WPA2_PSK
+#define WIFI_ENCRYPTION_ARRAY               array_of<uint8_t>(WIFI_AUTH_OPEN, WIFI_AUTH_WEP, WIFI_AUTH_WPA_PSK, WIFI_AUTH_WPA2_PSK, WIFI_AUTH_WPA_WPA2_PSK, WIFI_AUTH_WPA2_ENTERPRISE)
+#define WIFI_ENCRYPTION_ARRAY_SIZE          6
+#elif defined(ESP8266)
+#define WIFI_DEFAULT_ENCRYPTION             ENC_TYPE_CCMP
+#define WIFI_ENCRYPTION_ARRAY               array_of<uint8_t>(ENC_TYPE_NONE, ENC_TYPE_TKIP, ENC_TYPE_WEP, ENC_TYPE_CCMP, ENC_TYPE_AUTO)
+#define WIFI_ENCRYPTION_ARRAY_SIZE          5
+#else
+#error Platform not supported
+#endif
+
 
 #define HASH_SIZE               64
 
@@ -84,18 +97,6 @@ struct ConfigFlags {
     ConfigFlags_t serial2TCPMode:3;
     ConfigFlags_t hueEnabled:1;
     ConfigFlags_t useStaticIPDuringWakeUp:1;
-};
-
-struct SoftAP {
-    IPAddress address;
-    IPAddress subnet;
-    IPAddress gateway;
-    IPAddress dhcp_start;
-    IPAddress dhcp_end;
-    uint8_t channel;
-    uint8_t encryption;
-    char wifi_ssid[33];
-    char wifi_pass[33];
 };
 
 struct HueConfig {
@@ -162,18 +163,162 @@ struct BlindsController {
 
 #include "push_pack.h"
 
-class Config_Ping
+// NOTE: any member of an packed structure (__attribute__packed__ ) cannot be passed to forms as reference, otherwise it might cause an unaligned exception
+// marking integers as bitset prevents using it as reference, i.e. uint8_t value: 8;
+// use _H_STRUCT_VALUE() or suitable macro
+
+class Config_Network
 {
 public:
     typedef struct {
-        uint8_t count;
+        uint32_t dns1;
+        uint32_t dns2;
+        uint32_t local_ip;
+        uint32_t subnet;
+        uint32_t gateway;
+    } config_t;
+    config_t config;
+
+    Config_Network();
+
+    static const char *getSSID();
+    static const char *getPassword();
+
+    char wifi_ssid[33];
+    char wifi_pass[33];
+};
+
+class Config_SoftAP
+{
+public:
+    typedef struct {
+        uint32_t address;
+        uint32_t subnet;
+        uint32_t gateway;
+        uint32_t dhcp_start;
+        uint32_t dhcp_end;
+        uint16_t channel: 8;
+        uint16_t encryption: 8;
+    } config_t;
+    config_t config;
+
+    Config_SoftAP();
+
+    IPAddress getAddress() const {
+        return IPAddress(config.address);
+    }
+
+    IPAddress getSubnet() const {
+        return IPAddress(config.subnet);
+    }
+
+    IPAddress getGateway() const {
+        return IPAddress(config.gateway);
+    }
+
+    IPAddress getDHCPStart() const {
+        return IPAddress(config.dhcp_start);
+    }
+
+    IPAddress getDHCPEnd() const {
+        return IPAddress(config.dhcp_end);
+    }
+
+    uint8_t getChannel() const {
+        return config.channel;
+    }
+
+    uint8_t getEncryption() const {
+        return config.encryption;
+    }
+
+    static const char *getAPSSID();
+    static const char *getPassword();
+
+    char wifi_ssid[33];
+    char wifi_pass[33];
+};
+
+
+class Config_HTTP
+{
+public:
+    typedef struct{
+        uint16_t port;
+    } config_t;
+    config_t config;
+
+    Config_HTTP() : config({80}) {
+        //TODO
+    }
+};
+
+class Config_Syslog
+{
+public:
+    typedef struct{
+        uint16_t port;
+    } config_t;
+    config_t config;
+
+    Config_Syslog() : config({514}) {
+        //TODO
+    }
+};
+
+class Config_MQTT
+{
+public:
+    typedef struct {
+        uint32_t port: 16;
+        uint32_t keepalive: 16;
+        uint32_t qos: 8;
+    } config_t;
+    config_t config;
+
+    Config_MQTT();
+
+    uint16_t getPort() const {
+        return config.port;
+    }
+    uint16_t getKeepAlive() const {
+        return config.keepalive;
+    }
+    uint8_t getQos() const {
+        return config.qos;
+    }
+
+    static void defaults(MQTTMode_t mode = MQTT_MODE_UNSECURE);
+
+    static Config_MQTT::config_t getConfig();
+    static MQTTMode_t getMode();
+    static const char *getHost();
+    static const char *getUsername();
+    static const char *getPassword();
+    static const char *getTopic();
+    static const char *getDiscoveryPrefix();
+    static const uint8_t *getFingerprint();
+
+    char host[65];
+    char username[33];
+    char password[33];
+    char topic[128];
+    char fingerprint[20];
+    char discovery_prefix[32];
+};
+
+class Config_Ping
+{
+public:
+    typedef struct __attribute__packed__ {
+        uint8_t count: 8;
         uint16_t interval;
         uint16_t timeout;
     } config_t;
     config_t config;
 
     Config_Ping() {
-        config = {5, 60, 5000};
+        config = { 5, 60, 5000 };
     }
 
     static const char *getHost(uint8_t num);
@@ -187,19 +332,20 @@ public:
 
 class Config_NTP {
 public:
-    typedef struct ____attribute__packed__ {
-        int32_t offset;
+    typedef struct __attribute__packed__ {
+        int32_t offset: 32;
         char abbreviation[4];
         bool dst;
+        uint16_t ntpRefresh;
     } Timezone_t;
 
-    Config_NTP() : tz({0, {0}, false}) {
-    }
+    Config_NTP();
 
     static const char *getTimezone();
     static const char *getServers(uint8_t num);
     static const char *getUrl();
     static Timezone_t getTZ();
+
     static void defaults();
 
     char timezone[33];
@@ -207,45 +353,137 @@ public:
 #if USE_REMOTE_TIMEZONE
     char remote_tz_dst_ofs_url[255];
 #endif
-    uint16_t ntpRefresh;
     Timezone_t tz;
 };
 
 
 class Config_HomeAssistant {
 public:
+    typedef enum : uint8_t {
+        NONE = 0,
+        TURN_ON,
+        TURN_OFF,
+        SET_BRIGHTNESS,
+        CHANGE_BRIGHTNESS,  // values: min brightness(0), max brightness(255), turn on/off if brightness=0(1)/change brightness only(0)
+    } ActionEnum_t;
+    typedef struct __attribute__packed__ {
+        uint16_t id: 16;
+        ActionEnum_t action;
+        uint8_t valuesLen;
+        uint8_t entityLen;
+    } ActionHeader_t;
+
+    class Action {
+    public:
+        typedef std::vector<int32_t> ValuesVector;
+
+        Action() = default;
+        Action(uint16_t id, ActionEnum_t action, const ValuesVector &values, const String &entityId) : _id(id), _action(action), _values(values), _entityId(entityId) {
+        }
+        ActionEnum_t getAction() const {
+            return _action;
+        }
+        const __FlashStringHelper *getActionFStr() const {
+            return Config_HomeAssistant::getActionStr(_action);
+        }
+        void setAction(ActionEnum_t action) {
+            _action = action;
+        }
+        uint16_t getId() const {
+            return _id;
+        }
+        void setId(uint16_t id) {
+            _id = id;
+        }
+        int32_t getValue(uint8_t num) const {
+            if (num < _values.size()) {
+                return _values.at(num);
+            }
+            return 0;
+        }
+        void setValues(const ValuesVector &values) {
+            _values = values;
+        }
+        ValuesVector &getValues() {
+            return _values;
+        }
+        const String getValuesStr() const {
+            String str;
+            int n = 0;
+            for(auto value: _values) {
+                if (n++ > 0) {
+                    str += ',';
+                }
+                str += String(value);
+            }
+            return str;
+        }
+        uint8_t getNumValues() const {
+            return _values.size();
+        }
+        const String &getEntityId() const {
+            return _entityId;
+        }
+        void setEntityId(const String &entityId) {
+            _entityId = entityId;
+        }
+    private:
+        uint16_t _id;
+        ActionEnum_t _action;
+        ValuesVector _values;
+        String _entityId;
+    };
+
+    typedef std::vector<Action> ActionVector;
+
     Config_HomeAssistant() {
     }
 
     static const char *getApiEndpoint();
     static const char *getApiToken();
+    static void getActions(ActionVector &actions);
+    static void setActions(ActionVector &actions);
+    static Action getAction(uint16_t id);
+    static const __FlashStringHelper *getActionStr(ActionEnum_t action);
 
     char api_endpoint[128];
     char token[250];
+    uint8_t *actions;
 };
 
 class Config_RemoteControl {
 public:
-    typedef struct ____attribute__packed__ {
-        uint8_t autoSleepTime;
-        uint16_t deepSleepTime;       // ESP8266 ~14500 seconds, 0 = indefinitely
+    typedef struct __attribute__packed__ {
+        uint16_t shortpress;
+        uint16_t longpress;
+        uint16_t repeat;
+    } Action_t;
+    typedef struct __attribute__packed__ {
+        uint8_t autoSleepTime: 8;
+        uint16_t deepSleepTime: 16;       // ESP8266 ~14500 seconds, 0 = indefinitely
         uint16_t shortPressTime;
         uint16_t longpressTime;
         uint16_t repeatTime;
+        Action_t actions[4];
     } config_t;
     config_t config;
 
-    Config_RemoteControl() : config({5, 0, 300, 750, 250}) {
+    Config_RemoteControl() : config() {
+        config.autoSleepTime = 5;
+        config.shortPressTime = 300;
+        config.longpressTime = 750;
+        config.repeatTime = 250;
     }
 
     void validate() {
+        if (!config.shortPressTime) {
+            config = config_t();
+            config.shortPressTime = 300;
+            config.longpressTime = 750;
+            config.repeatTime = 250;
+        }
         if (!config.autoSleepTime) {
             config.autoSleepTime = 5;
-        }
-        if (!config.shortPressTime) {
-            config.shortPressTime = 300;
-            config.shortPressTime = 750;
-            config.repeatTime = 250;
         }
     }
 };
@@ -253,20 +491,20 @@ public:
 class Config_Sensor {
 public:
 #if IOT_SENSOR_HAVE_BATTERY
-    typedef struct ____attribute__packed__ {
+    typedef struct __attribute__packed__ {
         float calibration;
-        uint8_t precision;
+        uint8_t precision: 8;
         float offset;
     } battery_t;
     battery_t battery;
 #endif
 #if (IOT_SENSOR_HAVE_HLW8012 || IOT_SENSOR_HAVE_HLW8032)
-    typedef struct ____attribute__packed__ {
+    typedef struct __attribute__packed__ {
         float calibrationU;
         float calibrationI;
         float calibrationP;
         uint64_t energyCounter;
-        uint8_t extraDigits;
+        uint8_t extraDigits: 8;
     } hlw80xx_t;
     hlw80xx_t hlw80xx;
 #endif
@@ -283,9 +521,9 @@ public:
 class Config_WeatherStation
 {
 public:
-    typedef struct ____attribute__packed__ {
-        uint8_t is_metric;
-        uint8_t time_format_24h;
+    typedef struct __attribute__packed__ {
+        uint8_t is_metric: 1;
+        uint8_t time_format_24h: 1;
         uint16_t weather_poll_interval;
         uint16_t api_timeout;
         uint8_t backlight_level;
@@ -325,6 +563,29 @@ public:
     WeatherStationConfig_t config;
 };
 
+class Config_Button {
+public:
+    typedef struct __attribute__packed__ {
+        uint16_t time;
+        uint16_t actionId;
+    } ButtonAction_t;
+
+    typedef struct __attribute__packed__ {
+        ButtonAction_t shortpress;
+        ButtonAction_t longpress;
+        ButtonAction_t repeat;
+        ButtonAction_t singleClick;
+        ButtonAction_t doubleClick;
+        uint8_t pin: 8;
+        uint8_t pinMode: 8;
+    } Button_t;
+
+    typedef std::vector<Button_t> ButtonVector;
+
+    static void getButtons(ButtonVector &buttons);
+    static void setButtons(ButtonVector &buttons);
+};
+
 #include "pop_pack.h"
 
 struct Clock {
@@ -337,64 +598,94 @@ struct Clock {
     // uint8_t segmentOrder;
 };
 
-typedef struct  {
-    int16_t channel: 15;                    //  0
-    int16_t use_static_ip: 1;               // +2 byte
-    uint8_t bssid[WL_MAC_ADDR_LENGTH];      // +6 byte
-    uint32_t local_ip;
-    uint32_t dns1;
-    uint32_t dns2;
-    uint32_t subnet;
-    uint32_t gateway;
-} WiFiQuickConnect_t;
+namespace Config_QuickConnect
+{
+    typedef struct  {
+        int16_t channel: 15;                    //  0
+        int16_t use_static_ip: 1;               // +2 byte
+        uint8_t bssid[WL_MAC_ADDR_LENGTH];      // +6 byte
+        uint32_t local_ip;
+        uint32_t dns1;
+        uint32_t dns2;
+        uint32_t subnet;
+        uint32_t gateway;
+    } WiFiQuickConnect_t;
+};
 
 typedef struct {
     uint32_t version;
     ConfigFlags flags;
     char device_name[17];
     char device_pass[33];
-    char wifi_ssid[33];
-    char wifi_pass[33];
-    IPAddress dns1;
-    IPAddress dns2;
-    IPAddress local_ip;
-    IPAddress subnet;
-    IPAddress gateway;
+
+    Config_Network network;
+    Config_SoftAP soft_ap;
+
+    Config_HTTP http;
+    Config_Syslog syslog;
+    Config_MQTT mqtt;
+    Config_NTP ntp;
 
     uint16_t http_port;
     char cert_passphrase[33];
 
-    char mqtt_host[65];
-    char mqtt_username[33];
-    char mqtt_password[33];
-    char mqtt_topic[128];
-    char mqtt_fingerprint[20];
-    char mqtt_discovery_prefix[32];
-
-    uint16_t mqtt_port;
-    uint16_t mqtt_keepalive;
-    uint8_t mqtt_qos;
-
     char syslog_host[65];
     uint16_t syslog_port;
 
-    Config_NTP ntp;
-    Config_HomeAssistant homeassistant;
     DimmerModule dimmer;
     DimmerModuleButtons dimmer_buttons;
     BlindsController blinds_controller;
-    SoftAP soft_ap;
     struct Serial2Tcp serial2tcp;
     struct HueConfig hue;
+    Clock clock;
+
+    Config_HomeAssistant homeassistant;
     Config_Ping ping;
     Config_WeatherStation weather_station;
     Config_Sensor sensor;
-    Clock clock;
     Config_RemoteControl remote_control;
+    Config_Button buttons;
 } Config;
 
-#define _H_IP_FORM_OBJECT(name)                     config._H_GET_IP(name), [](const IPAddress &addr, FormField &) { config._H_SET_IP(name, addr); }
-#define _H_STRUCT_FORMVALUE(name, type, field)      config._H_GET(name).field, [](type value, FormField &, bool) { auto &data = config._H_W_GET(name); data.field = value; return false; }
+#define _H_IP_VALUE(name, ...) \
+    IPAddress(config._H_GET_IP(name)), [__VA_ARGS__](const IPAddress &addr, FormField &, bool) { \
+        config._H_SET_IP(name, addr); \
+        return false; \
+    }
+
+#define _H_STR_VALUE(name, ...) \
+    String(config._H_STR(name)), [__VA_ARGS__](const String &str, FormField &, bool) { \
+        config._H_SET_STR(name, str); \
+        return false; \
+    }
+
+#define _H_STRUCT_IP_VALUE(name, field, ...) \
+    IPAddress(config._H_GET(name).field), [__VA_ARGS__](const IPAddress &value, FormField &, bool) { \
+        auto &data = config._H_W_GET(name); \
+        data.field = value; \
+        return false; \
+    }
+
+#define _H_STRUCT_VALUE(name, field, ...) \
+    config._H_GET(name).field, [__VA_ARGS__](const decltype(name.field) &value, FormField &, bool) { \
+        auto &data = config._H_W_GET(name); \
+        data.field = value; \
+        return false; \
+    }
+
+#define _H_FLAGS_BOOL_VALUE(name, field, ...) \
+    config._H_GET(name).field, [__VA_ARGS__](bool &value, FormField &, bool) { \
+        auto &data = config._H_W_GET(name); \
+        data.field = value; \
+        return false; \
+    }
+
+#define _H_FLAGS_VALUE(name, field, ...) \
+    config._H_GET(name).field, [__VA_ARGS__](uint8_t &value, FormField &, bool) { \
+        auto &data = config._H_W_GET(name); \
+        data.field = value; \
+        return false; \
+    }
 
 // NOTE using the new handlers (USE_WIFI_SET_EVENT_HANDLER_CB=0) costs 896 byte RAM with 5 handlers
 #ifndef USE_WIFI_SET_EVENT_HANDLER_CB
@@ -411,8 +702,8 @@ public:
     KFCFWConfiguration();
     ~KFCFWConfiguration();
 
-    void setLastError(const String &error) override;
-    const char *getLastError() const override;
+    void setLastError(const String &error);
+    const char *getLastError() const;
 
     void restoreFactorySettings();
     static const String getFirmwareVersion();

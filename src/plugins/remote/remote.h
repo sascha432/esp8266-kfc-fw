@@ -33,7 +33,7 @@
 
 // button pins
 #ifndef IOT_REMOTE_CONTROL_BUTTON_PINS
-#define IOT_REMOTE_CONTROL_BUTTON_PINS                          { 14, 4, 12, 13 }
+#define IOT_REMOTE_CONTROL_BUTTON_PINS                          { 14, 4, 12, 13 }   // D5, D2, D6, D7
 #endif
 
 // set high while running
@@ -46,7 +46,7 @@
 #define IOT_REMOTE_CONTROL_LED_PIN                              2
 #endif
 
-class RemoteControlPlugin : public PluginComponent, public MQTTComponent {
+class RemoteControlPlugin : public PluginComponent {
 public:
     class ButtonEvent {
     public:
@@ -56,7 +56,7 @@ public:
             RELEASE = 3,
         } EventTypeEnum_t;
 
-        ButtonEvent(uint8_t button, EventTypeEnum_t type, uint16_t duration = 0, uint16_t repeat = 0) : _button(button), _type(type), _duration(duration), _repeat(repeat) {
+        ButtonEvent(uint8_t button, EventTypeEnum_t type, uint16_t duration = 0, uint16_t repeat = 0) : _button(button), _type(type), _duration(duration), _repeat(repeat), _locked(0) {
             _timestamp = millis();
         }
 
@@ -80,7 +80,23 @@ public:
             return _timestamp;
         }
 
-        void printTo(Print &output) {
+        void lock() {
+            _locked = 1;
+        }
+
+        void remove() {
+            _locked = 2;
+        }
+
+        bool isLocked() const {
+            return _locked != 0;
+        }
+
+        bool isRemoved() const {
+            return _locked == 2;
+        }
+
+        void printTo(Print &output) const {
             output.printf_P(PSTR("%u="), _button);
             switch(_type) {
                 case PRESS:
@@ -94,6 +110,18 @@ public:
                     break;
             }
             output.printf_P(PSTR(",ts=%u"), _timestamp);
+            if (_locked == 1) {
+                output.printf_P(PSTR(",locked"));
+            }
+            else if (_locked == 2) {
+                output.printf_P(PSTR(",removed"));
+            }
+        }
+
+        String toString() const {
+            PrintString str;
+            printTo(str);
+            return str;
         }
 
     private:
@@ -102,6 +130,7 @@ public:
         uint16_t _duration;
         uint16_t _repeat;
         uint32_t _timestamp;
+        uint8_t _locked;
     };
 
     typedef std::list<ButtonEvent> ButtonEventList;
@@ -116,7 +145,6 @@ public:
     virtual PluginPriorityEnum_t getSetupPriority() const override {
         return MAX_PRIORITY;
     }
-
     virtual bool autoSetupAfterDeepSleep() const override {
         return true;
     }
@@ -139,6 +167,11 @@ public:
     }
     virtual void createMenu() override;
 
+    virtual PGM_P getConfigureForm() const override {
+        return getName();
+    }
+    virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
+
 #if AT_MODE_SUPPORTED
     virtual bool hasAtMode() const override {
         return true;
@@ -146,16 +179,6 @@ public:
     virtual void atModeHelpGenerator() override;
     virtual bool atModeHandler(AtModeArgs &args) override;
 #endif
-
-public:
-    virtual void createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector);
-    virtual uint8_t getAutoDiscoveryCount() const {
-        return 0;//IOT_REMOTE_CONTROL_BUTTON_COUNT;
-    }
-
-    virtual void onConnect(MQTTClient *client) override;
-    // virtual void onDisconnect(MQTTClient *client, AsyncMqttClientDisconnectReason reason);
-    // virtual void onMessage(MQTTClient *client, char *topic, char *payload, size_t len);
 
 public:
     static void onButtonPressed(Button& btn);
@@ -183,6 +206,7 @@ private:
     uint32_t _autoSleepTimeout;
     PushButton *_buttons[IOT_REMOTE_CONTROL_BUTTON_COUNT];
     ButtonEventList _events;
+    bool _eventsLocked;
     Config_RemoteControl _config;
 
     const uint8_t _buttonPins[IOT_REMOTE_CONTROL_BUTTON_COUNT] = IOT_REMOTE_CONTROL_BUTTON_PINS;

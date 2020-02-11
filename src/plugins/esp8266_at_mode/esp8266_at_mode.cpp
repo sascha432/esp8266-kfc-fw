@@ -54,7 +54,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(GMR, "GMR", "Print firmware version");
 class ESP8266ATModePlugin : public PluginComponent {
 public:
     ESP8266ATModePlugin() {
-        REGISTER_PLUGIN(this, "ESP8266ATModePlugin");
+        REGISTER_PLUGIN(this);
     }
 
     PGM_P getName() const;
@@ -118,8 +118,8 @@ bool ESP8266ATModePlugin::atModeHandler(int8_t argc, char **argv) {
             serial.printf_P(PSTR("+CWSAP:\"%s\",\"%s\",%d,%d\n"),
                 config._H_STR(Config().soft_ap.wifi_ssid),
                 config._H_STR(Config().soft_ap.wifi_pass),
-                (int)config._H_GET(Config().soft_ap.channel),
-                (int)config._H_GET(Config().soft_ap.encryption)
+                (int)config._H_GET(Config().soft_ap.config).channel,
+                (int)config._H_GET(Config().soft_ap.config).encryption
             );
         }
         else if (argc < 2) {
@@ -129,9 +129,9 @@ bool ESP8266ATModePlugin::atModeHandler(int8_t argc, char **argv) {
             config._H_SET_STR(Config().soft_ap.wifi_ssid, argv[0]);
             config._H_SET_STR(Config().soft_ap.wifi_pass, argv[1]);
             if (argc >= 3) {
-                config._H_SET(Config().soft_ap.channel, atoi(argv[2]));
+                config._H_SET(Config().soft_ap.config, atoi(argv[2])).channel;
                 if (argc >= 4) {
-                    config._H_SET(Config().soft_ap.encryption, atoi(argv[3]));
+                    config._H_SET(Config().soft_ap.config, atoi(argv[3])).encryption;
                 }
             }
             esp8266_at_commands_reconfigure_wifi(serial);
@@ -172,7 +172,7 @@ bool ESP8266ATModePlugin::atModeHandler(int8_t argc, char **argv) {
                         IPAddress addr;
                         if (addr.fromString(argv[1])) {
                             dhcp_lease.start_ip.addr = (uint32_t)addr;
-                            config._H_SET(Config().soft_ap.dhcp_start, addr);
+                            config._H_SET(Config().soft_ap.config, addr).dhcp_start;
                         } else {
                             error = true;
                             serial.println(F("ERROR - Invalid start address"));
@@ -180,7 +180,7 @@ bool ESP8266ATModePlugin::atModeHandler(int8_t argc, char **argv) {
                         if (argc >= 3) {
                             if (addr.fromString(argv[2])) {
                                 dhcp_lease.end_ip.addr = (uint32_t)addr;
-                                config._H_SET(Config().soft_ap.dhcp_end, addr);
+                                config._H_SET(Config().soft_ap.config, addr).dhcp_end;
                             } else {
                                 error = true;
                                 serial.println(F("ERROR - Invalid end address"));

@@ -78,7 +78,7 @@ void at_mode_display_help_indent(Stream &output, PGM_P text)
 // append progmem strings to output and replace any whitespace with a single space
 static void _appendHelpString(String &output, PGM_P str)
 {
-    if (str && *str) {
+    if (str && pgm_read_byte(str)) {
         char lastChar = 0;
         if (output.length()) {
             lastChar = output.charAt(output.length() - 1);
@@ -111,18 +111,20 @@ void at_mode_display_help(Stream &output, StringVector *findText = nullptr)
     if (findText && findText->empty()) {
         findText = nullptr;
     }
-
     for(const auto commandHelp: at_mode_help) {
 
         if (findText) {
             bool result = false;
             String tmp; // create single line text blob
+
             if (commandHelp.pluginName) {
                 tmp += F("plugin "); // allows to search for "plugin sensor"
                 _appendHelpString(tmp, commandHelp.pluginName);
             }
             if (commandHelp.commandPrefix && commandHelp.command) {
-                tmp += FPSTR(commandHelp.commandPrefix);
+                String str(FPSTR(commandHelp.commandPrefix));
+                str.toLowerCase();
+                tmp += str;
             }
             _appendHelpString(tmp, commandHelp.command);
             _appendHelpString(tmp, commandHelp.arguments);
@@ -145,6 +147,9 @@ void at_mode_display_help(Stream &output, StringVector *findText = nullptr)
             output.print(F(" AT"));
             if (commandHelp.command) {
                 output.print('+');
+                if (commandHelp.commandPrefix) {
+                    output.print(FPSTR(commandHelp.commandPrefix));
+                }
                 output.print(FPSTR(commandHelp.command));
             }
             output.println(F("?"));
@@ -172,6 +177,7 @@ void at_mode_display_help(Stream &output, StringVector *findText = nullptr)
             output.print(FPSTR(arguments));
         }
         output.println();
+
         at_mode_display_help_indent(output, commandHelp.help);
     }
 }
@@ -218,7 +224,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PWM, "PWM", "<pin>,<level=0-1023/off>[,<fr
 #if defined(ESP8266)
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(CPU, "CPU", "<80|160>", "Set CPU speed", "Display CPU speed");
 #endif
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DUMP, "DUMP", "Display settings");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMP, "DUMP", "[<dirty|config.name>]", "Display settings");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DUMPFS, "DUMPFS", "Display file system information");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPEE, "DUMPEE", "[<offset>[,<length>]", "Dump EEPROM");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WRTC, "WRTC", "<id,data>", "Write uint32 to RTC memory");
@@ -345,18 +351,15 @@ public:
         GPIO = 3,
     } DisplayTypeEnum_t;
 
-    DisplayTimer() : _timer(nullptr), _type(HEAP) {
+    DisplayTimer() : _type(HEAP) {
     }
 
     void removeTimer() {
-        if (Scheduler.hasTimer(_timer)) {
-            Scheduler.removeTimer(_timer);
-        }
-        _timer = nullptr;
+        _timer.remove();
     }
 
 public:
-    EventScheduler::TimerPtr _timer = nullptr;
+    EventScheduler::Timer _timer;
     DisplayTypeEnum_t _type = HEAP;
     int32_t _rssiMin, _rssiMax;
 };
@@ -373,11 +376,11 @@ static void heap_timer_callback(EventScheduler::TimerPtr timer)
 #if defined(ESP8266)
         for(uint8_t i = 0; i <= 16; i++) {
             if (i != 1 && i != 3 && !isFlashInterfacePin(i)) { // do not display RX/TX and flash SPI
-                pinMode(i, INPUT);
+                // pinMode(i, INPUT);
                 MySerial.printf_P(PSTR("%u=%u "), i, digitalRead(i));
             }
         }
-        pinMode(A0, INPUT);
+        // pinMode(A0, INPUT);
         MySerial.printf_P(PSTR(" A0=%u\n"), analogRead(A0));
 #else
 #warning not implemented
@@ -394,10 +397,10 @@ static void heap_timer_callback(EventScheduler::TimerPtr timer)
 static void create_heap_timer(float seconds, DisplayTimer::DisplayTypeEnum_t type = DisplayTimer::HEAP)
 {
     displayTimer._type = type;
-    if (Scheduler.hasTimer(displayTimer._timer)) {
-        displayTimer._timer->changeOptions(seconds * 1000);
+    if (displayTimer._timer.active()) {
+        displayTimer._timer->rearm(seconds * 1000);
     } else {
-        Scheduler.addTimer(&displayTimer._timer, seconds * 1000, true, heap_timer_callback, EventScheduler::PRIO_LOW);
+        displayTimer._timer.add(seconds * 1000, true, heap_timer_callback, EventScheduler::PRIO_LOW);
     }
 }
 
@@ -424,43 +427,122 @@ void at_mode_wifi_callback(uint8_t event, void *payload)
 PROGMEM_STRING_DEF(atmode_file_autorun, "/autorun_atmode.cmd");
 void at_mode_serial_handle_event(String &commandString);
 
+static void at_mode_autorun()
+{
+    LoopFunctions::callOnce([]() {
+        File file = SPIFFS.open(FSPGM(atmode_file_autorun), FileOpenMode::read);
+        _debug_printf_P(PSTR("autorun=%s size=%u\n"), FSPGM(atmode_file_autorun), file.size());
+        if (file) {
+            class CmdAt {
+            public:
+                CmdAt(uint32_t time, const String &command) : _time(time), _command(command) {
+                }
+                uint32_t _time;
+                String _command;
+            };
+            typedef std::vector<CmdAt> CmdAtVector;
+            CmdAtVector *commands = new CmdAtVector();
+
+            String cmd;
+            uint32_t atTime = 0, startTime = millis() + 50;
+            while(file.available()) {
+                cmd = file.readStringUntil('\n');
+                cmd.replace(F("\r"), emptyString);
+                cmd.replace(F("\n"), emptyString);
+                cmd.trim();
+                if (cmd.length()) {
+                    auto ptr = cmd.c_str();
+                    if (*ptr++ == '@') {
+                        if (*ptr == '+') {
+                            ptr++;
+                        }
+                        else {
+                            atTime = startTime;
+                        }
+                        atTime += atoi(ptr);
+                    }
+                    else {
+                        if (atTime) {
+                            commands->emplace_back(atTime, cmd);
+                        }
+                        else {
+                            at_mode_serial_handle_event(cmd);
+                        }
+                    }
+                }
+            }
+
+            if (commands->size()) {
+
+                Scheduler.addTimer(50, true, [commands](EventScheduler::TimerPtr timer) {
+                    uint32_t minCmdTime = UINT32_MAX;
+                    for(auto &cmd: *commands) {
+                        if (cmd._command.length()) {
+                            if (millis() >= cmd._time) {
+                                // debug_printf_P(PSTR("scheduled=%u cmd=%s\n"), cmd._time, cmd._command.c_str());
+                                at_mode_serial_handle_event(cmd._command);
+                                cmd._command = String();
+                            }
+                            else {
+                                minCmdTime = std::min(cmd._time, minCmdTime);
+                            }
+                        }
+                    }
+                    commands->erase(std::remove_if(commands->begin(), commands->end(), [](const CmdAt &cmd) {
+                        return cmd._command.length() == 0;
+                    }));
+                    if (!commands->size()) {
+                        timer->detach();
+                    }
+                    else {
+                        minCmdTime = std::max(minCmdTime, (uint32_t)millis() + 50) - millis();
+                        timer->rearm(minCmdTime, true);
+                    }
+
+                }, EventScheduler::PRIO_NORMAL, [commands](EventTimer *ptr) {
+                    debug_printf_P(PSTR("deleter for scheduled at commands called %p, commands %p\n"), ptr, commands);
+                    delete commands;
+                    delete ptr;
+                });
+
+            }
+            else {
+                delete commands;
+            }
+        }
+    });
+}
+
 void at_mode_setup()
 {
     SerialHandler::getInstance().addHandler(at_mode_serial_input_handler, SerialHandler::RECEIVE|SerialHandler::REMOTE_RX);
     WiFiCallbacks::add(WiFiCallbacks::EventEnum_t::CONNECTED|WiFiCallbacks::EventEnum_t::DISCONNECTED, at_mode_wifi_callback);
 
-    File file = SPIFFS.open(FSPGM(atmode_file_autorun), FileOpenMode::read);
-    if (file) {
-        String cmd;
-        while(file.available()) {
-            cmd = file.readStringUntil('\n');
-            cmd.trim();
-            if (cmd.length()) {
-                debug_printf_P(PSTR("cmd=%s\n"), cmd.c_str());
-                at_mode_serial_handle_event(cmd);
-            }
-        }
+    if (!config.isSafeMode()) {
+        at_mode_autorun();
     }
 }
 
 void enable_at_mode(Stream &output)
 {
-    auto &flags = config._H_W_GET(Config().flags);
+    auto flags = config._H_GET(Config().flags);
     if (!flags.atModeEnabled) {
         output.println(F("Enabling AT MODE."));
         flags.atModeEnabled = true;
+        config._H_SET(Config().flags, flags);
     }
 }
 
 void disable_at_mode(Stream &output)
 {
-    auto &flags = config._H_W_GET(Config().flags);
+    auto flags = config._H_GET(Config().flags);
     if (flags.atModeEnabled) {
         output.println(F("Disabling AT MODE."));
 #if DEBUG
         displayTimer.removeTimer();
 #endif
         flags.atModeEnabled = false;
+        config._H_SET(Config().flags, flags);
     }
 }
 
@@ -478,6 +560,7 @@ void at_mode_dump_fs_info(Stream &output)
         info.blockSize, info.maxOpenFiles, info.maxPathLength, info.pageSize, info.totalBytes, info.usedBytes, info.usedBytes * 100.0 / info.totalBytes
     );
 }
+
 void at_mode_print_invalid_command(Stream &output)
 {
     output.print(F("ERROR - Invalid command. "));
@@ -711,7 +794,7 @@ void at_mode_serial_handle_event(String &commandString)
                     config.reconfigureWiFi();
                 }
 
-                auto flags = config._H_W_GET(Config().flags);
+                auto flags = config._H_GET(Config().flags);
                 args.printf_P("DHCP %u, station mode %s, SSID %s, connected %u, IP %s",
                     flags.softAPDHCPDEnabled,
                     (flags.wifiMode & WIFI_STA) ? PSTR("on") : PSTR("off"),
@@ -775,7 +858,7 @@ void at_mode_serial_handle_event(String &commandString)
                     auto filename = args.get(0);
                     auto file = SPIFFSWrapper::open(filename, fs::FileOpenMode::read);
                     if (file) {
-                        Scheduler.addTimer(10, true, [&output, file](EventScheduler::TimerPtr timer) mutable {
+                        Scheduler.addTimer(10, true, [&output, &args, file](EventScheduler::TimerPtr timer) mutable {
                             char buf[256];
                             if (file.available()) {
                                 auto len = file.readBytes(buf, sizeof(buf) - 1);
@@ -786,7 +869,7 @@ void at_mode_serial_handle_event(String &commandString)
                                 }
                             }
                             else {
-                                output.printf_P(PSTR("\n+%s: %s: %u\n"), PROGMEM_AT_MODE_HELP_COMMAND(CAT), file.name(), (unsigned)file.size());
+                                args.printf_P(PSTR("%s: %u"), file.name(), (unsigned)file.size());
                                 file.close();
                                 timer->detach();
                             }
@@ -908,7 +991,15 @@ void at_mode_serial_handle_event(String &commandString)
             }
     #endif
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMP))) {
-                config.dump(output);
+                if (args.equals(0, F("dirty"))) {
+                    config.dump(output, true);
+                }
+                else if (args.size() == 1) {
+                    config.dump(output, false, args.toString(0));
+                }
+                else {
+                    config.dump(output);
+                }
             }
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPFS))) {
                 at_mode_dump_fs_info(output);
@@ -952,7 +1043,9 @@ void at_mode_serial_handle_event(String &commandString)
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(WIMO))) {
                 if (args.requireArgs(1, 1)) {
                     args.print(F("Setting WiFi mode and restarting device..."));
-                    config._H_W_GET(Config().flags).wifiMode = args.toInt(0);
+                    auto flags = config._H_GET(Config().flags);
+                    flags.wifiMode = args.toInt(0);
+                    config._H_SET(Config().flags, flags);
                     config.write();
                     config.restartDevice();
                 }

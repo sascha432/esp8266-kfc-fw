@@ -25,6 +25,8 @@ public:
     typedef enum {
         PRIO_RESET_DETECTOR = -127,
         PRIO_CONFIG = -126,
+        PRIO_BUTTONS = -100,
+        PRIO_HASS = -101,
         PRIO_MDNS = -90,
         PRIO_SYSLOG = -80,
         PRIO_NTP = -70,
@@ -42,6 +44,8 @@ public:
 
     PluginComponent() : _setupTime(0) {
     }
+
+    static PluginComponent *findPlugin(const __FlashStringHelper *name);
 
     virtual PGM_P getName() const = 0;
     bool nameEquals(const __FlashStringHelper *name) const;

@@ -103,7 +103,7 @@ private:
     uint8_t _initialResetCounter;
     uint8_t _safeMode;
     uint8_t _resetReason;
-    os_timer_t *_timer;
+    ETSTimer _timer;
 };
 
 extern ResetDetector resetDetector;

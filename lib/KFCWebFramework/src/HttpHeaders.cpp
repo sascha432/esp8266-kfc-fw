@@ -112,19 +112,11 @@ HttpDateHeader::HttpDateHeader(const String &name, time_t expires) : HttpSimpleH
     HttpSimpleHeader::setHeader(HttpHeaders::getRFC7231Date(&expires));
 }
 
-HttpCacheControlHeader::HttpCacheControlHeader() : HttpHeader(FSPGM(Cache_Control)) {
-    _noCache = false;
-    _noStore = false;
-    _mustRevalidate = false;
-    _publicOrPrivate = CACHE_CONTROL_NONE;
-    _maxAge = MAX_AGE_AUTO; // MAX_AGE_NOT_SET
-}
-
 const String HttpCacheControlHeader::getValue() const {
     String tmp;
     uint32_t maxAge = _maxAge;
 
-    if (maxAge == MAX_AGE_AUTO && !_noCache) {
+    if (maxAge == AUTO && !_noCache) {
         maxAge = 31536000;
     }
 
@@ -143,19 +135,19 @@ const String HttpCacheControlHeader::getValue() const {
         }
         tmp += F("must-revalidate");
     }
-    if (_publicOrPrivate == CACHE_CONTROL_PRIVATE) {
+    if (_cacheControl == PRIVATE) {
         if (tmp.length()) {
             tmp += FSPGM(comma_);
         }
         tmp += FSPGM(private);
     }
-    if (_publicOrPrivate == CACHE_CONTROL_PUBLIC) {
+    if (_cacheControl == PUBLIC) {
         if (tmp.length()) {
             tmp += FSPGM(comma_);
         }
         tmp += FSPGM(public);
     }
-    if (maxAge != MAX_AGE_AUTO && maxAge != MAX_AGE_NOT_SET) {
+    if (maxAge != AUTO && maxAge != NOT_SET) {
         if (tmp.length()) {
             tmp += FSPGM(comma_);
         }
@@ -167,15 +159,7 @@ const String HttpCacheControlHeader::getValue() const {
     return tmp;
 }
 
-HttpCookieHeader::HttpCookieHeader(const String &name) : HttpHeader(FSPGM(Set_Cookie)) {
-    _cookieName = name;
-    _expires = COOKIE_SESSION;
-#if HTTP_COOKIE_MAX_AGE_SUPPORT
-    _maxAge = MAX_AGE_NOT_SET;
-#endif
-}
-
-const String  HttpCookieHeader::getValue() const {
+const String HttpCookieHeader::getValue() const {
     PrintString header;
     header.print(_cookieName);
     header += '=';
@@ -235,41 +219,45 @@ bool HttpCookieHeader::parseCookie(const String &cookies, const String &name, St
     return false;
 }
 
-HttpConnectionHeader::HttpConnectionHeader(uint8_t type) : HttpSimpleHeader(FSPGM(Connection), type == HTTP_CONNECTION_CLOSE ? FSPGM(close) : FSPGM(keep_alive)) {
+HttpConnectionHeader::HttpConnectionHeader(ConnectionEnum_t type) : HttpSimpleHeader(FSPGM(Connection), type == CLOSE ? FSPGM(close) : FSPGM(keep_alive)) {
 }
 
-void  HttpHeaders::clear(uint8_t reserveItems) {
+void  HttpHeaders::clear(uint8_t reserveItems)
+{
     _headers.clear();
     _headers.reserve(reserveItems);
 }
 
-void  HttpHeaders::init() {
+void  HttpHeaders::init()
+{
     clear(5);
     addDefaultHeaders();
 }
 
-void  HttpHeaders::add(const String &name, const String &value) {
+void  HttpHeaders::add(const String &name, const String &value)
+{
     add(new HttpSimpleHeader(name, value));
 }
 
-HttpHeadersVector  &HttpHeaders::getHeaders() {
+HttpHeadersVector  &HttpHeaders::getHeaders()
+{
     return _headers;
 }
 
-HttpHeadersIterator  HttpHeaders::begin() {
+HttpHeadersIterator  HttpHeaders::begin()
+{
     return _headers.begin();
 }
 
-HttpHeadersIterator  HttpHeaders::end() {
+HttpHeadersIterator  HttpHeaders::end()
+{
     return _headers.end();
 }
 
 void HttpHeaders::addNoCache(bool noStore)
 {
     replace(new HttpPragmaHeader(FSPGM(no_cache)));
-    auto hdr = new HttpCacheControlHeader();
-    hdr->setPrivate().setNoCache(true).setNoStore(noStore).setMustRevalidate(noStore);
-    replace(hdr);
+    replace(new HttpCacheControlHeader(HttpCacheControlHeader::PRIVATE, noStore, true, noStore));
     remove(FSPGM(Expires));
     remove(FSPGM(Last_Modified));
 }

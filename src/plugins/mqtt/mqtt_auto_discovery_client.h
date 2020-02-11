@@ -7,7 +7,7 @@
 #pragma once
 
 // Auto Discovery Client for MQTT
-// The client collects auto discovery information for the topic "mqtt_discovery_prefix"
+// The client collects auto discovery information for the topic "mqtt.discovery_prefix"
 
 #include <Arduino_compat.h>
 #include <LString.h>

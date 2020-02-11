@@ -15,6 +15,8 @@
 #include <debug_helper_disable.h>
 #endif
 
+DEFINE_ENUM(MQTTSensorSensorType);
+
 static SensorPlugin plugin;
 
 void SensorPlugin::getValues(JsonArray &array)

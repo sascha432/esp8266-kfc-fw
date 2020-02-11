@@ -57,7 +57,7 @@ uint8_t Sensor_BME280::getAutoDiscoveryCount() const
 
 void Sensor_BME280::getValues(JsonArray &array)
 {
-    _debug_println(_sharedEmptyString);
+    _debug_println(emptyString);
 
     auto sensor = _readSensor();
 
@@ -91,9 +91,9 @@ void Sensor_BME280::getStatus(PrintHtmlEntitiesString &output)
     output.printf_P(PSTR("BME280 @ I2C address 0x%02x" HTML_S(br)), _address);
 }
 
-Sensor_BME280::SensorEnumType_t Sensor_BME280::getType() const
+MQTTSensorSensorType Sensor_BME280::getType() const
 {
-    return BME280;
+    return MQTTSensorSensorType::BME280;
 }
 
 void Sensor_BME280::publishState(MQTTClient *client)

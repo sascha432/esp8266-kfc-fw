@@ -140,7 +140,7 @@ void syslog_process_queue()
 class SyslogPlugin : public PluginComponent {
 public:
     SyslogPlugin() {
-        REGISTER_PLUGIN(this, "SyslogPlugin");
+        REGISTER_PLUGIN(this);
     }
     virtual PGM_P getName() const {
         return PSTR("syslog");
@@ -229,7 +229,7 @@ void SyslogPlugin::getStatus(Print &output)
 
 void SyslogPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
 {
-    form.add<uint8_t>(F("syslog_enabled"), _H_STRUCT_FORMVALUE(Config().flags, uint8_t, syslogProtocol));
+    form.add<uint8_t>(F("syslog_enabled"), _H_FLAGS_VALUE(Config().flags, syslogProtocol));
     form.addValidator(new FormRangeValidator(SYSLOG_PROTOCOL_NONE, SYSLOG_PROTOCOL_FILE));
 
     form.add<sizeof Config().syslog_host>(F("syslog_host"), config._H_W_STR(Config().syslog_host));

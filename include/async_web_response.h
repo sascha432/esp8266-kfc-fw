@@ -37,9 +37,33 @@ private:
     JsonBuffer _jsonBuffer;
 };
 
-class AsyncProgmemFileResponse : public AsyncAbstractResponse {
+class AsyncAbstractTemplateResponse: public AsyncWebServerResponse {
 public:
-    AsyncProgmemFileResponse(const String &contentType, const FSMappingEntry *mapping, AwsTemplateProcessor templateCallback = nullptr);
+    typedef std::function<void(const String &key, PrintHtmlEntitiesString &content)> TemplateProcessor;
+
+private:
+    String _head;
+    std::vector<uint8_t> _cache;
+    size_t _readDataFromCacheOrContent(uint8_t* data, const size_t len);
+    size_t _fillBufferAndProcessTemplates(uint8_t* buf, size_t maxLen);
+
+protected:
+    TemplateProcessor _callback;
+
+public:
+    AsyncAbstractTemplateResponse(TemplateProcessor callback = nullptr);
+    void _respond(AsyncWebServerRequest *request);
+    size_t _ack(AsyncWebServerRequest *request, size_t len, uint32_t time);
+    virtual bool _sourceValid() const override {
+        return false;
+    }
+
+    virtual size_t _fillBuffer(uint8_t *buf, size_t maxLen) = 0;
+};
+
+class AsyncProgmemFileResponse : public AsyncAbstractTemplateResponse {
+public:
+    AsyncProgmemFileResponse(const String &contentType, const FSMappingEntry *mapping, AsyncAbstractTemplateResponse::TemplateProcessor templateCallback = nullptr);
 
     virtual bool _sourceValid() const override;
     virtual size_t _fillBuffer(uint8_t *data, size_t len) override;

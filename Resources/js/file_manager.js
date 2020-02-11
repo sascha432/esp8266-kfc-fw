@@ -56,6 +56,7 @@
                     currentDirectory = "/";
                 }
             }
+            console.log(currentDirectory);
 
             $('#files').hide();
             $('#spinner').show();
@@ -69,6 +70,7 @@
                 $('#total_size').attr('title', data.total_b);
                 $('#used_space').html(data.used + " (" + data.usage + ")");
                 $('#used_space').attr('title', data.used_b);
+                console.log(currentDirectory);
                 currentDirectory = data.dir;
                 var parts = split_dir(data.dir);
                 var dir = '';
@@ -95,6 +97,7 @@
                     }
                     html += replace_vars(dirs_prototype, 0, encodeURI(dir), "", "..", "N/A");
                 }
+                console.log(currentDirectory);
 
                 data.files.sort(function(a, b) {
                     if (a.f < b.f) {

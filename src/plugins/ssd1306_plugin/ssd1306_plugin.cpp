@@ -265,7 +265,7 @@ void ssd1306_setup() {
 class SSD1306Plugin : public PluginComponent {
 public:
     SSD1306Plugin() {
-        REGISTER_PLUGIN(this, "SSD1306Plugin");
+        REGISTER_PLUGIN(this);
     }
 
     virtual PGM_P getName() const {

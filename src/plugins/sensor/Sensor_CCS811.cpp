@@ -88,9 +88,9 @@ void Sensor_CCS811::getStatus(PrintHtmlEntitiesString &output)
     output.printf_P(PSTR("CCS811 @ I2C address 0x%02x" HTML_S(br)), _address);
 }
 
-Sensor_CCS811::SensorEnumType_t Sensor_CCS811::getType() const
+MQTTSensorSensorType Sensor_CCS811::getType() const
 {
-    return CCS811;
+    return MQTTSensorSensorType::CCS811;
 }
 
 void Sensor_CCS811::publishState(MQTTClient *client)

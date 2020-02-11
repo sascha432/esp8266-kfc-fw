@@ -82,10 +82,10 @@ AtModeArgs::ArgumentPtr AtModeArgs::get(uint16_t num) const
     return _args.at(num);
 }
 
-int AtModeArgs::toChar(uint16_t num) const
+int AtModeArgs::toChar(uint16_t num, int defaultValue) const
 {
     if (!exists(num)) {
-        return -1;
+        return defaultValue;
     }
     auto str = _args.at(num);
     return *str;

@@ -108,7 +108,7 @@ uint32_t TimezoneData::_lastNtpCallback = 0;
 
 TimezoneData::TimezoneData()
 {
-    _debug_println(_sharedEmptyString);
+    _debug_println(emptyString);
     _zoneEnd = 0;
     _lastNtpUpdate = 0;
     _failureCount = 0;
@@ -117,7 +117,7 @@ TimezoneData::TimezoneData()
 
 TimezoneData::~TimezoneData()
 {
-    _debug_println(_sharedEmptyString);
+    _debug_println(emptyString);
     _updateTimer.remove();
     deleteRemoteTimezone();
 }
@@ -347,7 +347,7 @@ void TimezoneData::configTime()
     }
     _lastNtpUpdate = millis();
 
-    auto refresh = config._H_GET(Config().ntp.ntpRefresh);
+    auto refresh = config._H_GET(Config().ntp.tz).ntpRefresh;
     if (refresh < 60) {
         refresh = 60;
     }
@@ -411,7 +411,7 @@ void timezone_setup()
 
     } else {
 
-		auto str = _sharedEmptyString.c_str();
+		auto str = emptyString.c_str();
 		configTime(0, 0, str, str, str);
         // sntp_set_timezone(0);
 
@@ -433,7 +433,7 @@ class NTPPlugin : public PluginComponent, public KFCRestAPI {
 // PluginComponent
 public:
     NTPPlugin() {
-        REGISTER_PLUGIN(this, "NTPPlugin");
+        REGISTER_PLUGIN(this);
     }
 
     virtual PGM_P getName() const {
@@ -516,24 +516,24 @@ void NTPPlugin::getStatus(Print &output)
 
 void NTPPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form) {
 
-    form.add<bool>(F("ntp_enabled"), _H_STRUCT_FORMVALUE(Config().flags, bool, ntpClientEnabled));
+    form.add<bool>(F("ntp_enabled"), _H_FLAGS_BOOL_VALUE(Config().flags, ntpClientEnabled));
 
-    form.add<sizeof Config().ntp.servers[0]>(F("ntp_server1"), config._H_W_STR(Config().ntp.servers[0]));
+    form.add(F("ntp_server1"), _H_STR_VALUE(Config().ntp.servers[0]));
     form.addValidator(new FormValidHostOrIpValidator(true));
 
-    form.add<sizeof Config().ntp.servers[1]>(F("ntp_server2"), config._H_W_STR(Config().ntp.servers[1]));
+    form.add(F("ntp_server2"), _H_STR_VALUE(Config().ntp.servers[1]));
     form.addValidator(new FormValidHostOrIpValidator(true));
 
-    form.add<sizeof Config().ntp.servers[2]>(F("ntp_server3"), config._H_W_STR(Config().ntp.servers[2]));
+    form.add(F("ntp_server3"), _H_STR_VALUE(Config().ntp.servers[2]));
     form.addValidator(new FormValidHostOrIpValidator(true));
 
-    form.add<sizeof Config().ntp.timezone>(F("ntp_timezone"), config._H_W_STR(Config().ntp.timezone));
+    form.add(F("ntp_timezone"), _H_STR_VALUE(Config().ntp.timezone));
 
-    form.add<uint16_t>(F("ntp_refresh"), &config._H_W_GET(Config().ntp.ntpRefresh));
+    form.add<uint16_t>(F("ntp_refresh"), _H_STRUCT_VALUE(Config().ntp.tz, ntpRefresh));
     form.addValidator(new FormRangeValidator(F("Invalid refresh interval: %min%-%max% minutes"), 60, 43200));
 
 #if USE_REMOTE_TIMEZONE
-    form.add<sizeof Config().ntp.remote_tz_dst_ofs_url>(F("ntp_remote_tz_url"), config._H_W_STR(Config().ntp.remote_tz_dst_ofs_url));
+    form.add(F("ntp_remote_tz_url"), _H_STR_VALUE(Config().ntp.remote_tz_dst_ofs_url));
 #endif
 
     form.finalize();

@@ -7,7 +7,7 @@
 #define FIRMWARE_IDENT                  0x72a82165
 #define FIRMWARE_VERSION_MAJOR          0
 #define FIRMWARE_VERSION_MINOR          0
-#define FIRMWARE_VERSION_REVISION       1
+#define FIRMWARE_VERSION_REVISION       2
 #define FIRMWARE_VERSION                ((FIRMWARE_VERSION_MAJOR<<16)|(FIRMWARE_VERSION_MINOR<<8)|FIRMWARE_VERSION_REVISION)
 #define ________STR(str)                      #str
 #define _______STR(str)                 ________STR(str)

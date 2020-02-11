@@ -99,20 +99,19 @@
                 <div class="form-group">
                     <label for="encryption">Encryption</label>
                     <select class="form-control" name="encryption" id="encryption">
-                        <!--#if defined(ESP8266)-->
-                        <option value="7" %ENCRYPTION_7%>Open</option>
-                        <option value="5" %ENCRYPTION_5%>WEP</option>
-                        <option value="2" %ENCRYPTION_2%>WPA TKIP</option>
-                        <option value="4" %ENCRYPTION_4%>WPA CCMP</option>
-                        <option value="8" %ENCRYPTION_8%>Auto</option>
-                        <!--#endif-->
-                        <!--#if defined(ESP32)-->
+                        <!--#if defined(ESP32) && ESP32-->
                         <option value="0" %ENCRYPTION_0%>Open</option>
                         <option value="1" %ENCRYPTION_1%>WEP</option>
                         <option value="2" %ENCRYPTION_2%>WPA/PSK</option>
                         <option value="3" %ENCRYPTION_3%>WPA2/PSK</option>
                         <option value="4" %ENCRYPTION_4%>WPA/WPA2/PSK</option>
                         <option value="5" %ENCRYPTION_5%>WPA2 Enterprise</option>
+                        <!--#else-->
+                        <option value="7" %ENCRYPTION_7%>Open</option>
+                        <option value="5" %ENCRYPTION_5%>WEP</option>
+                        <option value="2" %ENCRYPTION_2%>WPA TKIP</option>
+                        <option value="4" %ENCRYPTION_4%>WPA CCMP</option>
+                        <option value="8" %ENCRYPTION_8%>Auto</option>
                         <!--#endif-->
                     </select>
                 </div>

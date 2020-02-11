@@ -26,7 +26,7 @@
 
 RemoteTimezone::RemoteTimezone() : _zoneEnd(0), _callback(nullptr)
 {
-	_debug_println(_sharedEmptyString);
+	_debug_println(emptyString);
 #if TIMEZONE_USE_HTTP_CLIENT == 0
 	_httpClient = nullptr;
 #endif
@@ -34,7 +34,7 @@ RemoteTimezone::RemoteTimezone() : _zoneEnd(0), _callback(nullptr)
 
 RemoteTimezone::~RemoteTimezone()
 {
-	_debug_println(_sharedEmptyString);
+	_debug_println(emptyString);
 #if TIMEZONE_USE_HTTP_CLIENT == 0
 	if (_httpClient) {
 		delete _httpClient;
@@ -59,7 +59,7 @@ void RemoteTimezone::setStatusCallback(RemoteTimezoneStatusCallback_t callback)
 
 void RemoteTimezone::get()
 {
-	_debug_println(_sharedEmptyString);
+	_debug_println(emptyString);
 	_zoneEnd = 0;
 
 	String url = _url;

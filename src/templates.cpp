@@ -130,6 +130,12 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
             _form->createHtml(output);
         }
     }
+    else if (String_startsWith(key, PSTR("FORM_HTML_"))) {
+        if (_form) {
+            output.setRawOutput(true);
+            _form->createHtmlPart(output, atoi(key.c_str() + 10));
+        }
+    }
     else if (String_equals(key, PSTR("FORM_VALIDATOR"))) {
         if (_form) {
             output.setRawOutput(true);
@@ -362,56 +368,50 @@ void PasswordTemplate::process(const String &key, PrintHtmlEntitiesString &outpu
 
 WifiSettingsForm::WifiSettingsForm(AsyncWebServerRequest *request) : SettingsForm(request)
 {
-    add<uint8_t>(F("mode"), _H_STRUCT_FORMVALUE(Config().flags, uint8_t, wifiMode));
+    add<uint8_t>(F("mode"), _H_FLAGS_VALUE(Config().flags, wifiMode));
     addValidator(new FormRangeValidator(F("Invalid mode"), WIFI_OFF, WIFI_AP_STA));
 
-    add<sizeof Config().wifi_ssid>(F("wifi_ssid"), config._H_W_STR(Config().wifi_ssid));
-    addValidator(new FormLengthValidator(1, sizeof(Config().wifi_ssid) - 1));
+    add(F("wifi_ssid"), _H_STR_VALUE(Config().wifi_ssid));
+    addValidator(new FormLengthValidator(1, sizeof(Config().network.wifi_ssid) - 1));
 
-    add<sizeof Config().wifi_pass>(F("wifi_password"), config._H_W_STR(Config().wifi_pass));
-    addValidator(new FormLengthValidator(8, sizeof(Config().wifi_pass) - 1));
+    add(F("wifi_password"), _H_STR_VALUE(Config().wifi_pass));
+    addValidator(new FormLengthValidator(8, sizeof(Config().network.wifi_pass) - 1));
 
-    add<sizeof Config().soft_ap.wifi_ssid>(F("ap_wifi_ssid"), config._H_W_STR(Config().soft_ap.wifi_ssid));
+    add(F("ap_wifi_ssid"), _H_STR_VALUE(Config().soft_ap.wifi_ssid));
     addValidator(new FormLengthValidator(1, sizeof(Config().soft_ap.wifi_ssid) - 1));
 
-    add<sizeof Config().soft_ap.wifi_pass>(F("ap_wifi_password"), config._H_W_STR(Config().soft_ap.wifi_pass));
+    add(F("ap_wifi_password"), _H_STR_VALUE(Config().soft_ap.wifi_pass));
     addValidator(new FormLengthValidator(8, sizeof(Config().soft_ap.wifi_pass) - 1));
 
-    add<uint8_t>(F("channel"), &config._H_W_GET(Config().soft_ap.channel));
+    add<uint8_t>(F("channel"), _H_STRUCT_VALUE(Config().soft_ap.config, channel));
     addValidator(new FormRangeValidator(1, config.getMaxWiFiChannels()));
 
-    add<uint8_t>(F("encryption"), &config._H_W_GET(Config().soft_ap.encryption));
-#if defined(ESP32)
-    addValidator(new FormEnumValidator<uint8_t, 6>(F("Invalid encryption"), array_of<uint8_t>(WIFI_AUTH_OPEN, WIFI_AUTH_WEP, WIFI_AUTH_WPA_PSK, WIFI_AUTH_WPA2_PSK, WIFI_AUTH_WPA_WPA2_PSK, WIFI_AUTH_WPA2_ENTERPRISE)));
-#elif defined(ESP8266)
-    addValidator(new FormEnumValidator<uint8_t, 5>(F("Invalid encryption"), array_of<uint8_t>(ENC_TYPE_NONE, ENC_TYPE_TKIP, ENC_TYPE_WEP, ENC_TYPE_CCMP, ENC_TYPE_AUTO)));
-#else
-#error Platform not supported
-#endif
+    add<uint8_t>(F("encryption"), _H_STRUCT_VALUE(Config().soft_ap.config, encryption));
+    addValidator(new FormEnumValidator<uint8_t, WIFI_ENCRYPTION_ARRAY_SIZE>(F("Invalid encryption"), WIFI_ENCRYPTION_ARRAY));
 
-    add<bool>(F("ap_hidden"), _H_STRUCT_FORMVALUE(Config().flags, bool, hiddenSSID), FormField::INPUT_CHECK);
+    add<bool>(F("ap_hidden"), _H_FLAGS_BOOL_VALUE(Config().flags, hiddenSSID), FormField::INPUT_CHECK);
 
     finalize();
 }
 
 NetworkSettingsForm::NetworkSettingsForm(AsyncWebServerRequest *request) : SettingsForm(request)
 {
-    add<sizeof Config().device_name>(F("hostname"), config.getWriteableString(_H(Config().device_name), sizeof Config().device_name));
+    add(F("hostname"), _H_STR_VALUE(Config().device_name));
 
-    add<bool>(F("dhcp_client"), _H_STRUCT_FORMVALUE(Config().flags, bool, stationModeDHCPEnabled));
+    add<bool>(F("dhcp_client"), _H_FLAGS_BOOL_VALUE(Config().flags, stationModeDHCPEnabled));
 
-    add(new FormObject<IPAddress>(F("ip_address"), _H_IP_FORM_OBJECT(Config().local_ip)));
-    add(new FormObject<IPAddress>(F("subnet"), _H_IP_FORM_OBJECT(Config().subnet)));
-    add(new FormObject<IPAddress>(F("gateway"), _H_IP_FORM_OBJECT(Config().gateway)));
-    add(new FormObject<IPAddress>(F("dns1"), _H_IP_FORM_OBJECT(Config().dns1)));
-    add(new FormObject<IPAddress>(F("dns2"), _H_IP_FORM_OBJECT(Config().dns2)));
+    add(F("ip_address"), _H_STRUCT_IP_VALUE(Config().network.config, local_ip));
+    add(F("subnet"), _H_STRUCT_IP_VALUE(Config().network.config, subnet));
+    add(F("gateway"), _H_STRUCT_IP_VALUE(Config().network.config, gateway));
+    add(F("dns1"), _H_STRUCT_IP_VALUE(Config().network.config, dns1));
+    add(F("dns2"), _H_STRUCT_IP_VALUE(Config().network.config, dns2));
 
-    add<bool>(F("softap_dhcpd"), _H_STRUCT_FORMVALUE(Config().flags, bool, softAPDHCPDEnabled));
+    add<bool>(F("softap_dhcpd"), _H_FLAGS_BOOL_VALUE(Config().flags, softAPDHCPDEnabled));
 
-    add(new FormObject<IPAddress>(F("dhcp_start"), _H_IP_FORM_OBJECT(Config().soft_ap.dhcp_start)));
-    add(new FormObject<IPAddress>(F("dhcp_end"), _H_IP_FORM_OBJECT(Config().soft_ap.dhcp_end)));
-    add(new FormObject<IPAddress>(F("ap_ip_address"), _H_IP_FORM_OBJECT(Config().soft_ap.address)));
-    add(new FormObject<IPAddress>(F("ap_subnet"), _H_IP_FORM_OBJECT(Config().soft_ap.subnet)));
+    add(F("dhcp_start"), _H_STRUCT_IP_VALUE(Config().soft_ap.config, dhcp_start));
+    add(F("dhcp_end"), _H_STRUCT_IP_VALUE(Config().soft_ap.config, dhcp_end));
+    add(F("ap_ip_address"), _H_STRUCT_IP_VALUE(Config().soft_ap.config, address));
+    add(F("ap_subnet"), _H_STRUCT_IP_VALUE(Config().soft_ap.config, subnet));
 
     finalize();
 }
@@ -423,14 +423,14 @@ PasswordSettingsForm::PasswordSettingsForm(AsyncWebServerRequest *request) : Set
         return field.getValue().equals(config._H_STR(Config().device_pass));
     }));
 
-    add<sizeof Config().device_pass>(F("password2"), config._H_W_STR(Config().device_pass))
-        ->setValue(_sharedEmptyString);
+    add(F("password2"), _H_STR_VALUE(Config().device_pass))
+        ->setValue(emptyString);
 
     addValidator(new FormRangeValidator(F("The password has to be at least %min% characters long"), 6, 0));
     addValidator(new FormRangeValidator(6, sizeof(Config().device_pass) - 1))
         ->setValidateIfValid(false);
 
-    add(F("password3"), _sharedEmptyString);
+    add(F("password3"), emptyString, FormField::INPUT_TEXT);
     addValidator(new FormMatchValidator(F("The password confirmation does not match"), [](FormField &field) {
             return field.equals(field.getForm().getField(F("password2")));
         }))
@@ -439,7 +439,8 @@ PasswordSettingsForm::PasswordSettingsForm(AsyncWebServerRequest *request) : Set
     finalize();
 }
 
-SettingsForm::SettingsForm(AsyncWebServerRequest * request) : Form(&_data) {
+SettingsForm::SettingsForm(AsyncWebServerRequest *request) : Form(&_data)
+{
     _data.setCallbacks(
         [request](const String &name) {
             if (!request) {
@@ -456,7 +457,7 @@ SettingsForm::SettingsForm(AsyncWebServerRequest * request) : Form(&_data) {
 }
 
 
-File2String::File2String(const String & filename)
+File2String::File2String(const String &filename)
 {
     _filename = filename;
 }
@@ -472,5 +473,5 @@ void File2String::fromString(const String &value)
     //write((const uint8_t *)value.c_str(), value.length());
 }
 
-void EmptyTemplate::process(const String & key, PrintHtmlEntitiesString &output) {
+void EmptyTemplate::process(const String &key, PrintHtmlEntitiesString &output) {
 }

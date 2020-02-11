@@ -44,16 +44,6 @@ typedef struct {
     PGM_P commandPrefix;
 } ATModeCommandHelp_t;
 
-#define ATModeCommandHelp_CreateCommand(var, data) \
-    char var[constexpr_strlen_P(data.command) + constexpr_strlen_P(data.commandPrefix) + 1]; \
-    *var = 0; \
-    if (data.commandPrefix) { \
-        strcat_P(var, data.commandPrefix); \
-    } \
-    if (data.command) { \
-        strcat_P(var, data.command); \
-    }
-
 class ATModeCommandHelp {
 public:
     ATModeCommandHelp(const ATModeCommandHelp_t *data, PGM_P newPluginName) {
@@ -77,70 +67,70 @@ public:
 #define PROGMEM_AT_MODE_HELP_COMMAND_T(name)        &_at_mode_progmem_command_help_t_##name
 
 #undef PROGMEM_AT_MODE_HELP_COMMAND_PREFIX
-// can be nullptr or "" for none
 #define PROGMEM_AT_MODE_HELP_COMMAND_PREFIX         ""
 
-constexpr const char *at_mode_has_help_command_prefix(const char *str) {
-    return *str != 0 ? str : nullptr;
-}
-
 #define PROGMEM_AT_MODE_HELP_COMMAND_DEF(name, command, arguments, help, qhelp) \
-    static const char _at_mode_progmem_command_help_command_##name[] PROGMEM = { PROGMEM_AT_MODE_HELP_COMMAND_PREFIX command }; \
+    static const char _at_mode_progmem_command_help_command_##name[] PROGMEM = { command }; \
     static const char _at_mode_progmem_command_help_arguments_##name[] PROGMEM = { arguments }; \
     static const char _at_mode_progmem_command_help_help_##name[] PROGMEM = { help }; \
     static const char _at_mode_progmem_command_help_help_query_mode_##name[] PROGMEM = { qhelp }; \
+    static const char _at_mode_progmem_command_help_prefix_##name[] PROGMEM = { PROGMEM_AT_MODE_HELP_COMMAND_PREFIX }; \
     static const ATModeCommandHelp_t _at_mode_progmem_command_help_t_##name PROGMEM = { \
         _at_mode_progmem_command_help_command_##name, \
         _at_mode_progmem_command_help_arguments_##name, \
         _at_mode_progmem_command_help_help_##name, \
         _at_mode_progmem_command_help_help_query_mode_##name, \
-        at_mode_has_help_command_prefix(PROGMEM_AT_MODE_HELP_COMMAND_PREFIX) \
+        (_at_mode_progmem_command_help_prefix_##name) \
     };
 
 #define PROGMEM_AT_MODE_HELP_COMMAND_DEF_NNPP(name, help, qhelp) \
     static const char _at_mode_progmem_command_help_help_##name[] PROGMEM = { help }; \
     static const char _at_mode_progmem_command_help_help_query_mode_##name[] PROGMEM = { qhelp }; \
+    static const char _at_mode_progmem_command_help_prefix_##name[] PROGMEM = { PROGMEM_AT_MODE_HELP_COMMAND_PREFIX }; \
     static const ATModeCommandHelp_t _at_mode_progmem_command_help_t_##name PROGMEM = { \
         nullptr, \
         nullptr, \
         _at_mode_progmem_command_help_help_##name, \
         _at_mode_progmem_command_help_help_query_mode_##name, \
-        at_mode_has_help_command_prefix(PROGMEM_AT_MODE_HELP_COMMAND_PREFIX) \
+        (_at_mode_progmem_command_help_prefix_##name) \
     };
 
 #define PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(name, command, arguments, help) \
     static const char _at_mode_progmem_command_help_command_##name[] PROGMEM = { command }; \
     static const char _at_mode_progmem_command_help_arguments_##name[] PROGMEM = { arguments }; \
     static const char _at_mode_progmem_command_help_help_##name[] PROGMEM = { help }; \
+    static const char _at_mode_progmem_command_help_prefix_##name[] PROGMEM = { PROGMEM_AT_MODE_HELP_COMMAND_PREFIX }; \
     static const ATModeCommandHelp_t _at_mode_progmem_command_help_t_##name PROGMEM = { \
         _at_mode_progmem_command_help_command_##name, \
         _at_mode_progmem_command_help_arguments_##name, \
         _at_mode_progmem_command_help_help_##name, \
         nullptr, \
-        at_mode_has_help_command_prefix(PROGMEM_AT_MODE_HELP_COMMAND_PREFIX) \
+        (_at_mode_progmem_command_help_prefix_##name) \
     };
 
 #define PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(name, command, help) \
     static const char _at_mode_progmem_command_help_command_##name[] PROGMEM = { command }; \
     static const char _at_mode_progmem_command_help_help_##name[] PROGMEM = { help }; \
+    static const char _at_mode_progmem_command_help_prefix_##name[] PROGMEM = { PROGMEM_AT_MODE_HELP_COMMAND_PREFIX }; \
     static const ATModeCommandHelp_t _at_mode_progmem_command_help_t_##name PROGMEM = { \
         _at_mode_progmem_command_help_command_##name, \
         nullptr, \
         _at_mode_progmem_command_help_help_##name, \
         nullptr, \
-        at_mode_has_help_command_prefix(PROGMEM_AT_MODE_HELP_COMMAND_PREFIX) \
+        (_at_mode_progmem_command_help_prefix_##name) \
     };
 
 #define PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPP(name, command, help, qhelp) \
     static const char _at_mode_progmem_command_help_command_##name[] PROGMEM = { command }; \
     static const char _at_mode_progmem_command_help_help_##name[] PROGMEM = { help }; \
     static const char _at_mode_progmem_command_help_help_query_mode_##name[] PROGMEM = { qhelp }; \
+    static const char _at_mode_progmem_command_help_prefix_##name[] PROGMEM = { PROGMEM_AT_MODE_HELP_COMMAND_PREFIX }; \
     static const ATModeCommandHelp_t _at_mode_progmem_command_help_t_##name PROGMEM = { \
         _at_mode_progmem_command_help_command_##name, \
         nullptr, \
         _at_mode_progmem_command_help_help_##name, \
         _at_mode_progmem_command_help_help_query_mode_##name, \
-        at_mode_has_help_command_prefix(PROGMEM_AT_MODE_HELP_COMMAND_PREFIX) \
+        (_at_mode_progmem_command_help_prefix_##name) \
     };
 
 void at_mode_setup();
@@ -284,14 +274,18 @@ public:
     // returns defaultValue if the time is lower than minTime or if the argument does not exist
     uint32_t toMillis(uint16_t num, uint32_t minTime = 0, uint32_t maxTime = ~0, uint32_t defaultValue = 0) const;
 
-    int toChar(uint16_t num) const;
+    int toChar(uint16_t num, int defaultValue = -1) const;
 
-    int toLowerChar(uint16_t num) const {
-        return tolower(toChar(num));
+    int toLowerChar(uint16_t num, int defaultValue = -1) const {
+        return tolower(toChar(num, defaultValue));
     }
 
     inline String toString(uint16_t num) const {
-        return get(num);
+        auto str = get(num);
+        if (!str) {
+            return String();
+        }
+        return str;
     }
 
     bool equalsIgnoreCase(uint16_t num, const __FlashStringHelper *str) const {

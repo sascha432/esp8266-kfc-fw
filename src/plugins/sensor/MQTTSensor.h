@@ -16,22 +16,23 @@
 #include <KFCJson.h>
 #include <KFCForms.h>
 #include "../mqtt/mqtt_client.h"
+#include "EnumBitset.h"
+
+DECLARE_ENUM(MQTTSensorSensorType, uint8_t,
+    UNKNOWN = 0,
+    LM75A,
+    BME280,
+    BME680,
+    CCS811,
+    HLW8012,
+    HLW8032,
+    BATTERY,
+    DS3231,
+    INA219
+);
 
 class MQTTSensor : public MQTTComponent {
 public:
-    typedef enum {
-        UNKNOWN = 0,
-        LM75A,
-        BME280,
-        BME680,
-        CCS811,
-        HLW8012,
-        HLW8032,
-        BATTERY,
-        DS3231,
-        INA219,
-    } SensorEnumType_t;
-
     const uint8_t DEFAULT_UPDATE_RATE = 60;
 
     MQTTSensor();
@@ -56,8 +57,8 @@ public:
     virtual void createWebUI(WebUI &webUI, WebUIRow **row) = 0;
     virtual void getStatus(PrintHtmlEntitiesString &output) = 0;
 
-    virtual SensorEnumType_t getType() const {
-        return UNKNOWN;
+    virtual MQTTSensorSensorType getType() const {
+        return MQTTSensorSensorType::UNKNOWN;
     }
 
     virtual bool hasForm() const {

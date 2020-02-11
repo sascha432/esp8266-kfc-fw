@@ -34,7 +34,7 @@ public:
     virtual void getValues(JsonArray &json) override;
     virtual void createWebUI(WebUI &webUI, WebUIRow **row) override;
     virtual void getStatus(PrintHtmlEntitiesString &output) override;
-    virtual SensorEnumType_t Sensor_LM75A::getType() const override;
+    virtual MQTTSensorSensorType Sensor_LM75A::getType() const override;
 }
 
 private:

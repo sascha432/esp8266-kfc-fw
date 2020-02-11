@@ -61,7 +61,7 @@ uint8_t MQTTAutoDiscoveryClient::getAutoDiscoveryCount() const {
 void MQTTAutoDiscoveryClient::onConnect(MQTTClient *client) {
     _discovery.clear();
 
-    String topic = config._H_STR(Config().mqtt_discovery_prefix);
+    String topic = Config_MQTT::getDiscoveryPrefix();
     topic += '/';
     topic += '#';
     client->subscribe(this, topic, 0);

@@ -9,7 +9,6 @@
 #include <LoopFunctions.h>
 #include <EventTimer.h>
 #include <WiFiCallbacks.h>
-#include <OSTimer.h>
 #include <PrintString.h>
 #include "kfc_fw_config.h"
 #include "blink_led_timer.h"
@@ -82,24 +81,10 @@ void check_flash_size() {
 #endif
 }
 
-#if DEBUG
-static void deep_sleep_forever()
-{
-    for(;;) {
-#if defined(ESP8266)
-        ESP.deepSleep(0, WAKE_RF_DISABLED);
-#else
-        ESP.deepSleep(0);
-#endif
-        delay(1);
-    }
-}
-#endif
-
-void remove_crash_counter(EventScheduler::TimerPtr timer)
+void remove_crash_counter(bool initSPIFFS)
 {
 #if SPIFFS_SUPPORT
-    if (reinterpret_cast<void *>(timer) == nullptr) {
+    if (initSPIFFS) {
         SPIFFS.begin();
     }
     char filename[strlen_P(SPGM(crash_counter_file)) + 1];
@@ -107,6 +92,13 @@ void remove_crash_counter(EventScheduler::TimerPtr timer)
     if (SPIFFS.exists(filename)) {
         SPIFFS.remove(filename);
     }
+#endif
+}
+
+static void remove_crash_counter(EventScheduler::TimerPtr timer)
+{
+#if SPIFFS_SUPPORT
+    remove_crash_counter(false);
 #endif
 }
 
@@ -137,18 +129,6 @@ void setup() {
     config.setSafeMode(resetDetector.getSafeMode());
 
     if (resetDetector.hasResetDetected()) {
-
-        // if (resetDetector.getResetCounter() >= 10) {
-        //     KFC_SAFE_MODE_SERIAL_PORT.println(F("Entering deep sleep until next reset in 5 seconds..."));
-        //     for(uint8_t i = 0; i < (RESET_DETECTOR_TIMEOUT + 200) / (10 + 25); i++) {
-        //         BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::SOLID);
-        //         delay(10);
-        //         BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::OFF);
-        //         delay(25);
-        //     }
-        //     deep_sleep_forever();
-        // }
-
         if (resetDetector.getResetCounter() >= 4) {
             KFC_SAFE_MODE_SERIAL_PORT.println(F("4x reset detected. Restoring factory defaults in a 5 seconds..."));
             for(uint8_t i = 0; i < (RESET_DETECTOR_TIMEOUT + 500) / (100 + 250); i++) {
@@ -161,7 +141,6 @@ void setup() {
             config.write();
             resetDetector.setSafeMode(false);
         }
-
     }
 
     bool safe_mode = false;
@@ -188,7 +167,6 @@ void setup() {
 #if DEBUG
             KFC_SAFE_MODE_SERIAL_PORT.println(F("\nAvailable keys:\n"));
             KFC_SAFE_MODE_SERIAL_PORT.println(F(
-                "    h: Halt device and go to deep sleep\n"
                 "    l: Enter wait loop\n"
                 "    s: reboot in safe mode\n"
                 "    r: reboot in normal mode\n"
@@ -211,8 +189,6 @@ void setup() {
                             remove_crash_counter(nullptr);
                             KFC_SAFE_MODE_SERIAL_PORT.println(F("RTC memory cleared"));
                             break;
-                        case 'h':
-                            deep_sleep_forever();
                         case 'l':
                             __while(-1UL, []() {
                                 return (Serial.read() != 'x');
@@ -295,7 +271,7 @@ void setup() {
 
         // check if wifi is up
         Scheduler.addTimer(1000, true, [](EventScheduler::TimerPtr timer) {
-            timer->changeOptions(60000);
+            timer->rearm(60000);
             if (!WiFi.isConnected()) {
                 debug_println(F("restarting WiFi"));
                 config.reconfigureWiFi();

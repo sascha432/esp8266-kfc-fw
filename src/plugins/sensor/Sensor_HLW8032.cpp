@@ -55,8 +55,8 @@ void Sensor_HLW8032::getStatus(PrintHtmlEntitiesString &output) {
     output.printf_P(PSTR("Power Monitor HLW8032" HTML_S(br)));
 }
 
-Sensor_HLW8032::SensorEnumType_t Sensor_HLW8032::getType() const {
-    return HLW8032;
+MQTTSensorSensorType Sensor_HLW8032::getType() const {
+    return MQTTSensorSensorType::HLW8032;
 }
 
 String Sensor_HLW8032::_getId(const __FlashStringHelper *type) {

@@ -67,9 +67,6 @@ void Sensor_DS3231::getValues(JsonArray &array)
     obj->add(JJ(state), !isnan(temp));
     obj->add(JJ(value), JsonNumber(temp, 2));
 
-debug_println(_getTimeStr());
-return;
-//\n crashes json length escape? TODO
     obj = &array.addObject(3);
     String timeStr = _getTimeStr();
     obj->add(JJ(id), FSPGM(ds3231_id_time));
@@ -98,9 +95,9 @@ void Sensor_DS3231::getStatus(PrintHtmlEntitiesString &output)
     output.printf_P(PSTR("DS3231 @ I2C address 0x68" HTML_S(br)));
 }
 
-Sensor_DS3231::SensorEnumType_t Sensor_DS3231::getType() const
+MQTTSensorSensorType Sensor_DS3231::getType() const
 {
-    return DS3231;
+    return MQTTSensorSensorType::DS3231;
 }
 
 float Sensor_DS3231::_readSensorTemp()

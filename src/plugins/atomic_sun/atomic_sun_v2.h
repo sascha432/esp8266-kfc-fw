@@ -147,7 +147,7 @@ public:
 class AtomicSunPlugin : public Driver_4ChDimmer {
 public:
     AtomicSunPlugin() {
-        REGISTER_PLUGIN(this, "AtomicSunPlugin");
+        REGISTER_PLUGIN(this);
     }
     virtual PGM_P getName() const {
         return PSTR("atomicsun");

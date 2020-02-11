@@ -18,7 +18,7 @@ extern Stream &MySerial;
 extern Stream &DebugSerial;
 
 
-ResetDetector::ResetDetector() {
+ResetDetector::ResetDetector() : _timer() {
 #if !DEBUG_RESET_DETECTOR
     // for debugging call _init() in setup() after Serial.begin() and DEBUG_HELPER_INIT()
     _init();
@@ -32,7 +32,6 @@ void ResetDetector::_init() {
 #endif
     _debug_println(F("ResetDetector::_init()"));
 
-     _timer = nullptr;
     ResetDetectorData_t data;
     auto isValid = false;
 
@@ -86,28 +85,27 @@ void ResetDetector::_init() {
     armTimer();
 }
 
-os_timer_t *ResetDetector::getTimer() {
-    return _timer;
+ETSTimer *ResetDetector::getTimer()
+{
+    return &_timer;
 }
 
-void ResetDetector::armTimer() {
-    if (_timer) {
-        disarmTimer();
-    }
-    os_timer_create(_timer, reinterpret_cast<os_timer_func_t_ptr>(_timerCallback), reinterpret_cast<void *>(this));
-    os_timer_arm(_timer, RESET_DETECTOR_TIMEOUT, 0);
+void ResetDetector::armTimer()
+{
+    ets_timer_disarm(&_timer);
+    ets_timer_setfn(&_timer, reinterpret_cast<ETSTimerFunc *>(_timerCallback), reinterpret_cast<void *>(this));
+    ets_timer_arm_new(&_timer, RESET_DETECTOR_TIMEOUT, false, true);
 }
 
-void ResetDetector::disarmTimer() {
-    if (_timer) {
-        os_timer_disarm(_timer);
-        os_timer_delete(_timer);
-        _timer = nullptr;
-    }
+void ResetDetector::disarmTimer()
+{
+    ets_timer_disarm(&_timer);
+    ets_timer_done(&_timer);
 }
 
 
-void ResetDetector::_timerCallback(void *arg) {
+void ResetDetector::_timerCallback(void *arg)
+{
     auto &rd = *reinterpret_cast<ResetDetector *>(arg);
     rd.clearCounter();
     rd.disarmTimer();
@@ -273,7 +271,7 @@ void ResetDetector::_writeData() {
 class ResetDetectorPlugin : public PluginComponent {
 public:
     ResetDetectorPlugin() {
-        REGISTER_PLUGIN(this, "ResetDetectorPlugin");
+        REGISTER_PLUGIN(this);
     }
     virtual PGM_P getName() const {
         return PSTR("rd");

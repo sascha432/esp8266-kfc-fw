@@ -43,7 +43,7 @@ public:
         _color = color;
     }
 
-    virtual void run() override {
+    virtual ICACHE_RAM_ATTR void run() override {
         auto state = _pattern.test(_counter++ % _pattern.size());
         if (!state) {
             off();
@@ -71,7 +71,7 @@ BlinkLEDTimer::BlinkLEDTimer() : OSTimer()
     _pin = INVALID_PIN;
 }
 
-void BlinkLEDTimer::run()
+void ICACHE_RAM_ATTR BlinkLEDTimer::run()
 {
     digitalWrite(_pin, BUILTIN_LED_STATE(_pattern.test(_counter++ % _pattern.size())));
 }

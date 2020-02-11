@@ -349,7 +349,7 @@ void web_server_update_handler(AsyncWebServerRequest *request)
                 response = request->beginResponse(302);
                 HttpHeaders httpHeaders(false);
                 httpHeaders.add(new HttpLocationHeader(F("/serial_console.html")));
-                httpHeaders.replace(new HttpConnectionHeader(HttpConnectionHeader::HTTP_CONNECTION_CLOSE));
+                httpHeaders.replace(new HttpConnectionHeader(HttpConnectionHeader::CLOSE));
                 httpHeaders.setWebServerResponseHeaders(response);
                 request->send(response);
             }
@@ -378,7 +378,7 @@ void web_server_update_handler(AsyncWebServerRequest *request)
             response = request->beginResponse(302);
             HttpHeaders httpHeaders(false);
             httpHeaders.add(new HttpLocationHeader(location));
-            httpHeaders.replace(new HttpConnectionHeader(HttpConnectionHeader::HTTP_CONNECTION_CLOSE));
+            httpHeaders.replace(new HttpConnectionHeader(HttpConnectionHeader::CLOSE));
             httpHeaders.setWebServerResponseHeaders(response);
             request->send(response);
 
@@ -567,7 +567,7 @@ void init_web_server()
 //             if (result.length()) {
 //                 response = request->beginResponse(200, FSPGM(text_html), result);
 //             } else if (isRunning) {
-//                 response = request->beginResponse(204, FSPGM(text_html), _sharedEmptyString); // an emtpy response lets the client know to poll again
+//                 response = request->beginResponse(204, FSPGM(text_html), emptyString); // an emtpy response lets the client know to poll again
 //             } else {
 //                 response = request->beginResponse(503);
 //             }
@@ -714,10 +714,7 @@ bool web_server_send_file(String path, HttpHeaders &httpHeaders, bool client_acc
         httpHeaders.replace(new HttpDateHeader(FSPGM(Expires), 86400 * 30));
         httpHeaders.replace(new HttpDateHeader(FSPGM(Last_Modified), mapping->modificationTime));
         if (web_server_is_public_path(path)) {
-            HttpCacheControlHeader *header = new HttpCacheControlHeader();
-            header->setPublic();
-            header->setMaxAge(HttpCacheControlHeader::MAX_AGE_AUTO);
-            httpHeaders.replace(header);
+            httpHeaders.replace(new HttpCacheControlHeader(HttpCacheControlHeader::PUBLIC));
         }
     }
     if (mapping->gzipped) {
@@ -854,8 +851,9 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
                 Form *form = new PasswordSettingsForm(request);
                 webTemplate = new ConfigTemplate(form);
                 if (form->validate()) {
-                    auto &flags = config._H_W_GET(Config().flags);
+                    auto flags = config._H_GET(Config().flags);
                     flags.isDefaultPassword = false;
+                    config._H_SET(Config().flags, flags);
                     config.write();
                     PluginComponent::getByName(PSTR("cfg"))->invokeReconfigure(PSTR("password"));
                 } else {
@@ -909,7 +907,7 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
 class WebServerPlugin : public PluginComponent {
 public:
     WebServerPlugin() {
-        REGISTER_PLUGIN(this, "WebServerPlugin");
+        REGISTER_PLUGIN(this);
     }
     virtual PGM_P getName() const {
         return SPGM(http);
@@ -997,7 +995,7 @@ void WebServerPlugin::getStatus(Print &output)
 
 void WebServerPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
 {
-    form.add<uint8_t>(F("http_enabled"), _H_STRUCT_FORMVALUE(Config().flags, uint8_t, webServerMode));
+    form.add<uint8_t>(F("http_enabled"), _H_FLAGS_VALUE(Config().flags, webServerMode));
     form.addValidator(new FormRangeValidator(0, HTTP_MODE_SECURE));
 
 #if WEBSERVER_TLS_SUPPORT
@@ -1007,7 +1005,7 @@ void WebServerPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &
 #endif
 
 #if defined(ESP8266)
-    form.add<bool>(F("http_perf"), _H_STRUCT_FORMVALUE(Config().flags, bool, webServerPerformanceModeEnabled));
+    form.add<bool>(F("http_perf"), _H_FLAGS_BOOL_VALUE(Config().flags, webServerPerformanceModeEnabled));
 #endif
 
     form.add<uint16_t>(F("http_port"), &config._H_W_GET(Config().http_port));

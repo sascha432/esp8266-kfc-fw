@@ -278,7 +278,9 @@ uint16_t FileManager::upload()
             filename = p->value();
         }
         if (filename.charAt(0) != '/') {
-            filename = append_slash_copy(uploadDir.fileName()) + filename;
+            String dir = uploadDir.fileName();
+            append_slash(dir);
+            filename = dir + filename;
         }
         normalizeFilename(filename);
 
@@ -330,7 +332,7 @@ uint16_t FileManager::upload()
         message = String();
         httpCode = 302;
         _headers.replace(new HttpLocationHeader(url));
-        _headers.replace(new HttpConnectionHeader(HttpConnectionHeader::HTTP_CONNECTION_CLOSE));
+        _headers.replace(new HttpConnectionHeader(HttpConnectionHeader::CLOSE));
     }
     _debug_println(message);
     _response = _request->beginResponse(httpCode, FSPGM(mime_text_plain), message);
@@ -408,7 +410,9 @@ uint16_t FileManager::rename()
         file.close();
 
         if (renameTo.charAt(0) != '/') {
-            renameTo = append_slash_copy(dir.fileName()) + renameTo;
+            String dir2 = dir.fileName();
+            append_slash(dir2);
+            renameTo = dir2 + renameTo;
         }
         normalizeFilename(renameTo);
 
@@ -462,7 +466,7 @@ void FileManagerWebHandler::handleRequest(AsyncWebServerRequest *request)
 class FileManagerPlugin : public PluginComponent {
 public:
     FileManagerPlugin() {
-        REGISTER_PLUGIN(this, "FileManagerPlugin");
+        REGISTER_PLUGIN(this);
     }
 
     virtual PGM_P getName() const {

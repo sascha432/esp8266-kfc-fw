@@ -72,7 +72,7 @@ public:
 // PluginComponent
 public:
     SensorPlugin() {
-        REGISTER_PLUGIN(this, "SensorPlugin");
+        REGISTER_PLUGIN(this);
     }
 
     virtual PGM_P getName() const;

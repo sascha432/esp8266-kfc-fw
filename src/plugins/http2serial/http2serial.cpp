@@ -190,7 +190,7 @@ void http2serial_event_handler(AsyncWebSocket *server, AsyncWebSocketClient *cli
 class Http2SerialPlugin : public PluginComponent {
 public:
     Http2SerialPlugin() {
-        REGISTER_PLUGIN(this, "Http2SerialPlugin");
+        REGISTER_PLUGIN(this);
     }
     virtual PGM_P getName() const {
         return PSTR("http2ser");

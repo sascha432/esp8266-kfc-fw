@@ -26,7 +26,7 @@ void MQTTAutoDiscovery::create(MQTTComponent *component, uint8_t count, MQTTAuto
     String uniqueId;
 
     _format = format;
-    _topic = config._H_STR(Config().mqtt_discovery_prefix);
+    _topic = Config_MQTT::getDiscoveryPrefix();
     _topic += '/';
     _topic += FPSTR(component->getComponentName());
     _topic += '/';

@@ -101,9 +101,9 @@ void Sensor_BME680::getStatus(PrintHtmlEntitiesString &output)
     output.printf_P(PSTR("BME680 @ I2C address 0x%02x" HTML_S(br)), _address);
 }
 
-Sensor_BME680::SensorEnumType_t Sensor_BME680::getType() const
+MQTTSensorSensorType Sensor_BME680::getType() const
 {
-    return BME680;
+    return MQTTSensorSensorType::BME680;
 }
 
 void Sensor_BME680::publishState(MQTTClient *client)

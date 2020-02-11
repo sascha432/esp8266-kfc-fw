@@ -82,7 +82,7 @@ static BlindsControlPlugin plugin;
 
 BlindsControlPlugin::BlindsControlPlugin() : BlindsControl(), _isTestMode(false)
 {
-    REGISTER_PLUGIN(this, "BlindsControlPlugin");
+    REGISTER_PLUGIN(this);
 }
 
 PGM_P BlindsControlPlugin::getName() const {

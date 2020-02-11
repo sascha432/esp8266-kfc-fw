@@ -213,7 +213,7 @@ void hue_reconfigure(PGM_P source) {
 
 void hue_create_settings_form(AsyncWebServerRequest *request, Form &form) {
 
-    form.add<bool>(F("hue_enabled"), _H_STRUCT_FORMVALUE(Config().flags, bool, hueEnabled));
+    form.add<bool>(F("hue_enabled"), _H_FLAGS_BOOL_VALUE(Config().flags,  hueEnabled));
 
     form.add<uint16_t>(F("tcp_port"), config._H_W_GET(Config().hue.tcp_port));
     form.addValidator(new FormRangeValidator(F("Invalid port"), 1, 65535));

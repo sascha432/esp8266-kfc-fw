@@ -69,7 +69,7 @@ ClockPlugin::ClockPlugin() :
     _ui_animation = 0;
     _ui_color = 2;
 
-    REGISTER_PLUGIN(this, "ClockPlugin");
+    REGISTER_PLUGIN(this);
 }
 
 

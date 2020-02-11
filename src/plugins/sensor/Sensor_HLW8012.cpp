@@ -364,9 +364,9 @@ void Sensor_HLW8012::getStatus(PrintHtmlEntitiesString &output)
     output.print(F("R" HTML_S(br)));
 }
 
-Sensor_HLW8012::SensorEnumType_t Sensor_HLW8012::getType() const
+MQTTSensorSensorType Sensor_HLW8012::getType() const
 {
-    return HLW8012;
+    return MQTTSensorSensorType::HLW8012;
 }
 
 String Sensor_HLW8012::_getId(const __FlashStringHelper *type)

@@ -98,10 +98,9 @@ void Sensor_Battery::getStatus(PrintHtmlEntitiesString &output)
 
 void Sensor_Battery::createConfigureForm(AsyncWebServerRequest *request, Form &form)
 {
-    auto *sensor = &config._H_W_GET(Config().sensor); // must be a pointer
-    form.add<float>(F("battery_calibration"), &sensor->battery.calibration)->setFormUI(new FormUI(FormUI::TEXT, F("Supply Voltage Calibration")));
-    form.add<float>(F("battery_offset"), &sensor->battery.calibration)->setFormUI(new FormUI(FormUI::TEXT, F("Supply Voltage Offset")));
-    form.add<uint8_t>(F("battery_precision"), &sensor->battery.precision)->setFormUI(new FormUI(FormUI::TEXT, F("Supply Voltage Precision")));
+    form.add<float>(F("battery_calibration"), _H_STRUCT_VALUE(Config().sensor, battery.calibration))->setFormUI(new FormUI(FormUI::TEXT, F("Supply Voltage Calibration")));
+    form.add<float>(F("battery_offset"), _H_STRUCT_VALUE(Config().sensor, battery.offset))->setFormUI(new FormUI(FormUI::TEXT, F("Supply Voltage Offset")));
+    form.add<uint8_t>(F("battery_precision"), _H_STRUCT_VALUE(Config().sensor, battery.precision))->setFormUI(new FormUI(FormUI::TEXT, F("Supply Voltage Precision")));
 }
 
 void Sensor_Battery::reconfigure()

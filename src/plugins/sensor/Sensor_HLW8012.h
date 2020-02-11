@@ -126,7 +126,7 @@ public:
     virtual ~Sensor_HLW8012();
 
     void getStatus(PrintHtmlEntitiesString &output) override;
-    virtual SensorEnumType_t getType() const override;
+    virtual MQTTSensorSensorType getType() const override;
     virtual String _getId(const __FlashStringHelper *type = nullptr);
 
     static void loop();

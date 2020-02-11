@@ -116,7 +116,7 @@ public:
 static SwitchPlugin plugin;
 
 SwitchPlugin::SwitchPlugin() {
-    REGISTER_PLUGIN(this, "SwitchPlugin");
+    REGISTER_PLUGIN(this);
 }
 
 PGM_P SwitchPlugin::getName() const {

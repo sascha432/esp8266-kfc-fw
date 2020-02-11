@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<!--%%HEAD-->
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" debug_loader="1">
+    <link rel="stylesheet" href="../../lib/KFCWebBuilder/Resources/css/bootstrap.min.css" debug_loader="1">
+    <link rel="stylesheet" href="../css/styles.css" debug_loader="1">
+    <link rel="stylesheet" href="../../lib/KFCWebBuilder/Resources/css/open-iconic-bootstrap.css" debug_loader="1">
+    <title>KFC FW</title>
+</head>
+<!--HEAD%%-->
+
+<body>
+    <!--%%NAV-->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <a class="navbar-brand" href="index.html">KFC FW</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        </div>
+    </nav>
+    <!--NAV%%-->
+    <div class="container">
+        <h1>Home Assistant Configuration</h1>
+        <form method="POST" action="hass.html">
+            <table border="1">
+                <thead>
+                    <tr><td>Id</td><td>Action</td><td>Entity</td><td>&nbsp;</td></tr>
+                </thead>
+                <tbody id="hass_settings">
+                </tbody>
+            </table>
+            <!-- <div class="form-group">
+                <label for="id">Id:</label>
+                <input type="text" class="form-control" name="id" id="id">
+            </div>
+            <div class="form-group">
+                <label for="action">Action:</label>
+                <select class="form-control" name="action" id="action">
+                    <option value="0">None</option>
+                    <option value="1">Turn On</option>
+                    <option value="2">Turn Off</option>
+                    <option value="3">Change Brightness</option>
+                </select>
+            </div> -->
+            <div class="row">
+                <div class="col add-item"><button>Add</button></div>
+            </div>
+        </form>
+        <!--%%FOOT-->
+        <div class="row">
+            <div class="col footer">&nbsp;</div>
+        </div>
+        <!--FOOT%%-->
+    </div>
+    <!--%%JAVASCRIPT-->
+	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/jquery-3.3.1.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/popper.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/popper.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/bootstrap.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/js.cookie.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../js/main.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../js/debug.js"></script>
+    <!--JAVASCRIPT%%-->
+
+    <style>
+        td {
+            padding: 5px;
+        }
+        .add-item {
+            padding: 5px;
+        }
+    </style>
+
+    <script>
+        var items = '%HASS_ITEMS%';
+        while(items.indexOf('&quot;') != -1) {
+            items = items.replace('&quot;', '"');
+        }
+        if (items.indexOf('%') == 0) {
+            var items = '[{"id":1,"action":1,"values":[],"entity_id":"light.floor_lamp_top"},{"id":2,"action":4,"values":[25,255,10,1],"entity_id":"light.floor_lamp_top"},{"id":3,"action":4,"values":[-25,255,10,1],"entity_id":"light.floor_lamp_top"},{"id":4,"action":2,"values":[],"entity_id":"light.floor_lamp_top"}]';
+        }
+        items = JSON.parse(items);
+
+        function add_item(id, action, entity) {
+            actionStr = 'None';
+            switch(action) {
+                case 1:
+                    actionStr = 'Turn On';
+                    break;
+                case 2:
+                    actionStr = 'Turn Off';
+                    break;
+                case 3:
+                    actionStr = 'Set Brightness';
+                    break;
+                case 4:
+                    actionStr = 'Change Brightness';
+                    break;
+            }
+            return '<tr><td>' + id + '</td><td>' + actionStr + '</td><td>' + entity + '</td><td><button class="edit-item" data-id="' + id + '">Edit</button> <button class="remove-item" data-id="' + id + '">Remove</button></td></tr>';
+        }
+
+        function add_buttons(html) {
+            html.find('.edit-item').on('click', function(event) {
+                console.log('edit '+$(this).data('id'));
+                event.preventDefault();
+            });
+            html.find('.remove-item').on('click', function(event) {
+                console.log('remove '+$(this).data('id'));
+                event.preventDefault();
+            });
+            return html;
+        }
+
+        var str = '';
+        $(items).each(function(index, val) {
+            str = str + add_item(val['id'], val['action'], val['entity_id']);
+        });
+        $('#hass_settings').html(add_buttons($(str)));
+        $('form .add-item').on('click', function(event) {
+            console.log('add');
+            event.preventDefault();
+        });
+
+    </script>
+
+    %FORM_VALIDATOR%
+
+</body>
+</html>

@@ -6,7 +6,7 @@
 #include "PluginComponent.h"
 #include "plugins.h"
 #include <ESPAsyncWebServer.h>
-#include <EventScheduler.h>
+#include <LoopFunctions.h>
 #include <Form.h>
 #include <misc.h>
 
@@ -19,6 +19,16 @@
 #if AT_MODE_SUPPORTED
 #include "at_mode.h"
 #endif
+
+PluginComponent *PluginComponent::findPlugin(const __FlashStringHelper *name)
+{
+    for(auto plugin: plugins) {
+        if (plugin->nameEquals(name)) {
+            return plugin;
+        }
+    }
+    return nullptr;
+}
 
 bool PluginComponent::nameEquals(const __FlashStringHelper *name) const
 {
@@ -68,7 +78,7 @@ bool PluginComponent::hasReconfigureDependecy(PluginComponent *plugin) const {
 
 void PluginComponent::invokeReconfigure(PGM_P source)
 {
-    Scheduler.addTimer(1, false, [this, source](EventScheduler::TimerPtr timer) {
+    LoopFunctions::callOnce([this, source]() {
         this->invokeReconfigureNow(source);
     });
 }

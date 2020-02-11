@@ -47,10 +47,10 @@ void dump_plugin_list(Print &output);
 
 // register plug in
 #if DEBUG_PLUGINS
-#define REGISTER_PLUGIN(plugin, name)           register_plugin(plugin, name)
+#define REGISTER_PLUGIN(plugin)                         register_plugin(plugin, __CLASS__)
 void register_plugin(PluginComponent *plugin, const char *name);
 #else
-#define REGISTER_PLUGIN(plugin, name)             register_plugin(plugin)
+#define REGISTER_PLUGIN(plugin)                         register_plugin(plugin)
 void register_plugin(PluginComponent *plugin);
 #endif
 

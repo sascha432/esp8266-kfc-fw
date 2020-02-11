@@ -178,7 +178,7 @@ const String Logger::getLogLevelAsString(LogLevel logLevel)
         case LOGLEVEL_DEBUG:
             return F("DEBUG");
     }
-    return _sharedEmptyString;
+    return emptyString;
 }
 
 void Logger::setLogLevel(LogLevel logLevel)

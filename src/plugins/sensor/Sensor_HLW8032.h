@@ -79,7 +79,7 @@ public:
     virtual ~Sensor_HLW8032();
 
     void getStatus(PrintHtmlEntitiesString &output) override;
-    virtual SensorEnumType_t getType() const override;
+    virtual MQTTSensorSensorType getType() const override;
 
     static void loop();
 

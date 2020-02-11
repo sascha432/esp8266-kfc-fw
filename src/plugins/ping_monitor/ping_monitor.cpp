@@ -215,7 +215,7 @@ void WsPingClient::_cancelPing()
 
 String ping_monitor_get_translated_host(String host)
 {
-    host.replace(F("${gateway}"), WiFi.isConnected() ? WiFi.gatewayIP().toString() : _sharedEmptyString);
+    host.replace(F("${gateway}"), WiFi.isConnected() ? WiFi.gatewayIP().toString() : emptyString);
     return host;
 }
 
@@ -381,7 +381,7 @@ void ping_monitor_setup()
 class PingMonitorPlugin : public PluginComponent {
 public:
     PingMonitorPlugin() {
-        REGISTER_PLUGIN(this, "PingMonitorPlugin");
+        REGISTER_PLUGIN(this);
     }
     PGM_P getName() const {
         return PSTR("pingmon");

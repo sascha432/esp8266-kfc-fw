@@ -38,10 +38,6 @@ PinMonitor *PinMonitor::createInstance()
 void PinMonitor::deleteInstance()
 {
     if (_instance) {
-        // redundant, destructor detaches all interrupts
-        // for(auto pin: _instance->_pins) {
-        //     _instance->removePin(pin.pin, nullptr);
-        // }
         delete _instance;
         _instance = nullptr;
     }

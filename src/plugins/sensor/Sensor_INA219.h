@@ -65,7 +65,7 @@ public:
     virtual void getValues(JsonArray &json) override;
     virtual void createWebUI(WebUI &webUI, WebUIRow **row) override;
     virtual void getStatus(PrintHtmlEntitiesString &output) override;
-    virtual SensorEnumType_t getType() const override;
+    virtual MQTTSensorSensorType getType() const override;
 
 #if AT_MODE_SUPPORTED
     virtual void atModeHelpGenerator() override;

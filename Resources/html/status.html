@@ -211,6 +211,17 @@
             </div>
             <!--#endif-->
 
+            <!--#if defined(PIN_DEBUGGER) && PIN_DEBUGGER-->
+            <div class="row">
+                <div class="col-lg-3 col-lg-auto">
+                    Pin Debugger
+                </div>
+                <div class="col">
+                    %PINDBG_STATUS%
+                </div>
+            </div>
+            <!--#endif-->
+
             <!--#if defined(HOME_ASSISTANT_INTEGRATION) && HOME_ASSISTANT_INTEGRATION-->
             <div class="row">
                 <div class="col-lg-3 col-lg-auto">

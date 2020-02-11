@@ -33,16 +33,19 @@
 #include <Buffer.h>
 #include <EventScheduler.h>
 #include <vector>
+#include "EnumBase.h"
 #include "kfc_fw_config.h"
 #include "mqtt_component.h"
 
+DECLARE_ENUM(MQTTQueueType, uint8_t,
+    SUBSCRIBE = 0,
+    UNSUBSCRIBE,
+    PUBLISH,
+);
+
 class MQTTClient {
 public:
-    typedef enum {
-        QUEUE_SUBSCRIBE = 0,
-        QUEUE_UNSUBSCRIBE,
-        QUEUE_PUBLISH,
-    } MQTTQueueEnum_t;
+    typedef MQTTQueueType MQTTQueueEnum_t;
 
     class MQTTTopic {
     public:
@@ -64,7 +67,7 @@ public:
 
     class MQTTQueue {
     public:
-        MQTTQueue(MQTTQueueEnum_t type, MQTTComponent *component, const String &topic = String(), uint8_t qos = 0, uint8_t retain = 0, const String &payload = String()) :
+        MQTTQueue(MQTTQueueType type, MQTTComponent *component, const String &topic, uint8_t qos, uint8_t retain, const String &payload) :
             _type(type),
             _component(component),
             _topic(topic),
@@ -72,7 +75,7 @@ public:
             _retain(retain),
             _payload(payload) {
         }
-        inline MQTTQueueEnum_t getType() const {
+        inline MQTTQueueType getType() const {
             return _type;
         }
         inline MQTTComponent *getComponent() const {
@@ -91,7 +94,7 @@ public:
             return _payload;
         }
     private:
-        MQTTQueueEnum_t _type;
+        MQTTQueueType _type;
         MQTTComponent *_component;
         String _topic;
         uint8_t _qos: 2;
@@ -159,7 +162,7 @@ public:
     }
 
     inline static uint8_t getDefaultQos() {
-        return config._H_GET(Config().mqtt_qos);
+        return config._H_GET(Config().mqtt.config).qos;
     }
 
     void onConnect(bool sessionPresent);
@@ -189,7 +192,7 @@ private:
     // the payload can be quite large for auto discovery for example
     // messages might be delivered in a different sequence. use subscribe/unsubscribe/publishWithId for full control
     // to deliver messages in sequence, use QoS and callbacks (onPublish() etc... requires MQTT_USE_PACKET_CALLBACKS=1)
-    void _addQueue(MQTTQueue &&queue);
+    void _addQueue(MQTTQueueEnum_t type, MQTTComponent *component, const String &topic, uint8_t qos, uint8_t retain, const String &payload);
     // stop timer and clear queue
     void _clearQueue();
     // process queue

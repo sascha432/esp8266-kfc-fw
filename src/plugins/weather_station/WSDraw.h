@@ -15,38 +15,38 @@
 #include <SpeedBooster.h>
 #include <Timezone.h>
 #if _WIN32
-class EventTimer {
-public:
-    void detach() {}
-};
-class EventScheduler {
-public:
-    typedef EventTimer *TimerPtr;
-    class Timer {
-    public:
-        Timer() {
+// class EventTimer {
+// public:
+//     void detach() {}
+// };
+// class EventScheduler {
+// public:
+//     typedef EventTimer *TimerPtr;
+//     class Timer {
+//     public:
+//         Timer() {
 
-        }
-        void remove() {
-        }
-    };
-};
-class Config_WeatherStation {
-public:
-    typedef struct ____attribute__packed__ {
-        uint8_t is_metric: 1;
-        uint8_t time_format_24h: 1;
-        uint16_t weather_poll_interval;
-        uint16_t api_timeout;
-        uint8_t backlight_level;
-        uint8_t touch_threshold;
-        uint8_t released_threshold;
-        float temp_offset;
-    } WeatherStationConfig_t;
-    Config_WeatherStation() {
-        config = {1,1,0,30,255,5,8,0};
-    }
-};
+//         }
+//         void remove() {
+//         }
+//     };
+// };
+// class Config_WeatherStation {
+// public:
+//     typedef struct __attribute__packed__ {
+//         uint8_t is_metric: 1;
+//         uint8_t time_format_24h: 1;
+//         uint16_t weather_poll_interval;
+//         uint16_t api_timeout;
+//         uint8_t backlight_level;
+//         uint8_t touch_threshold;
+//         uint8_t released_threshold;
+//         float temp_offset;
+//     } WeatherStationConfig_t;
+//     Config_WeatherStation() {
+//         config = {1,1,0,30,255,5,8,0};
+//     }
+// };
 #else
 #include <EventScheduler.h>
 #include <EventTimer.h>

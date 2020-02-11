@@ -9,11 +9,15 @@
 #include <Arduino_compat.h>
 #include <Adafruit_MPR121.h>
 #include <PrintString.h>
+#include <EventScheduler.h>
+#include <FixedCircularBuffer.h>
+#include "plugins/http2serial/http2serial.h"
 #include "EnumBitset.h"
 
 class Mpr121Touchpad;
+class WeatherStationPlugin;
 
-typedef_enum_bitset(Mpr121TouchpadEventType, uint8_t,
+DECLARE_ENUM_BITSET(Mpr121TouchpadEventType, uint8_t,
     TOUCH       = 0x0001,
     RELEASED    = 0x0002,
     MOVE        = 0x0004,
@@ -24,7 +28,7 @@ typedef_enum_bitset(Mpr121TouchpadEventType, uint8_t,
     DRAG        = 0x0080
 );
 
-typedef_enum_bitset(Mpr121TouchpadGesturesType, uint8_t,
+DECLARE_ENUM_BITSET(Mpr121TouchpadGesturesType, uint8_t,
     UP =        0x01,
     DOWN =      0x02,
     LEFT =      0x04,
@@ -37,14 +41,30 @@ typedef_enum_bitset(Mpr121TouchpadGesturesType, uint8_t,
 
 class Mpr121Touchpad {
 public:
+    typedef int8_t Position;
+
     const uint16_t MULTIPLE_MIN_TIME = 10;
     const uint16_t MULTIPLE_MAX_TIME = 1000;
     const uint16_t REPEAT_TIME = 250;
     const uint16_t PRESS_TIME = 750;
 
+    static const Position _MinX = 1;
+    static const Position _MinY = 1;
+    static const Position _MaxX = 14;
+    static const Position _MaxY = 8;
+    static const Position _PredictionZone = 1;
+    static const bool _InvertX = true;
+    static const bool _InvertY = true;
+
+    typedef struct  {
+        uint16_t touched;
+        uint32_t time;
+    } TouchpadEvent_t;
+
+    typedef FixedCircularBuffer<TouchpadEvent_t, 64> ReadBuffer;
+
     typedef Mpr121TouchpadEventType EventType;
     typedef Mpr121TouchpadGesturesType GesturesType;
-    typedef int8_t Position;
 
     class Coordinates {
     public:
@@ -53,6 +73,8 @@ public:
 
         Coordinates() {
             clear();
+        }
+        Coordinates(Position x, Position y) : x(x), y(y) {
         }
         Coordinates(const Coordinates &coords) : x(coords.x), y(coords.y) {
         }
@@ -77,6 +99,48 @@ public:
         }
     };
 
+    class Movement {
+    public:
+        Movement(uint32_t eventId, const Coordinates &coords, uint32_t time, EventType type) : _eventId(eventId), _coords(coords), _time(time), _type(type) {
+        }
+
+        Coordinates &getCoords() {
+            return _coords;
+        }
+
+        Position getX() const {
+            return _coords.x;
+        }
+
+        Position getY() const {
+            return _coords.y;
+        }
+
+        uint32_t getTime() const {
+            return _time;
+        }
+
+        EventType getType() const {
+            return _type;
+        }
+
+        void setType(EventType type) {
+            _type = type;
+        }
+
+        uint32_t getEventId() const {
+            return _eventId;
+        }
+
+    private:
+        uint32 _eventId;
+        Coordinates _coords;
+        uint32_t _time;
+        EventType _type;
+    };
+
+    typedef std::vector<Movement> MovementVector;
+
     class Event {
     public:
         Event(Mpr121Touchpad &pad);
@@ -97,30 +161,46 @@ public:
         Coordinates getEnd() const;
         Coordinates getSwipeDistance() const;
         void setBubble(bool bubble);
+        void addMovement();
+
+        void broadcastData(const Movement &movement);
 
     private:
+        friend WeatherStationPlugin;
+
         void touched();
         void released();
         void move(const Coordinates &prev);
         void gestures();
         void timer();
-        void read();
-        bool within(uint32_t time, uint16_t min, uint16_t max) const {
-            auto diff = get_time_diff(time, millis());
+        void read(ReadBuffer::iterator &iterator);
+
+        bool within(uint32_t time, uint16_t min, uint16_t max, uint32_t now) const {
+            auto diff = get_time_diff(time, now);
             return diff >= min && diff <= max;
         }
 
         String __toString() {
             PrintString str;
             if (_type) {
-                str.printf_P(PSTR("t=%s dxy=%d,%d:%d,%d sxy=%d:%d start=%d:%d-%d:%d cnt=%u g=%s"),
-                    _type.toString().c_str(),
-                    _sumN.x, _sumP.x, _sumN.y, _sumP.y,
-                    (_sumP + _sumN).x, (_sumP + _sumN).y,
-                    _start.x, _start.y,
-                    _position.x, _position.y,
-                    _counter, getGestures().toString().c_str()
-                );
+                // PrintString movementsStr;
+                // movementsStr.printf_P(PSTR("%u:"), _movements.size());
+                // for(auto &movement: _movements) {
+                //     movementsStr.printf_P(PSTR("(%d,%d)"), movement.getCoords().x, movement.getCoords().y);
+                // }
+
+                //str.printf_P(PSTR("x:y=% 5d % 5d - % 5d % 5d"), _position.x, _position.y, _predict.x, _predict.y);
+
+                // str.printf_P(PSTR("t=%s sumN=%d:%d sumP=%d:%d sum=%d:%d start-end=%d:%d-%d:%d swipe=%d:%d cnt=%u g=%s"),
+                //     _type.toString().c_str(),
+                //     _sumN.x, _sumP.x, _sumN.y, _sumP.y,
+                //     (_sumP + _sumN).x, (_sumP + _sumN).y,
+                //     _start.x, _start.y,
+                //     _position.x, _position.y,
+                //     getSwipeDistance().x, getSwipeDistance().y,
+                //     getTapCount(), getGestures().toString().c_str()
+                //     // movementsStr.c_str()
+                // );
                 // str.printf_P(PSTR("tap=%u press=%u counter=%u swipe left/right=%u/%u swipe up/down=%u/%u"),
                 //     isTap(),
                 //     isPress(),
@@ -140,11 +220,13 @@ public:
         Mpr121Touchpad &_pad;
 
         EventType _type;
+        uint32_t _eventId;
         Coordinates _position;
+        Coordinates _predict;
         Coordinates _start;
         Coordinates _sumP;
         Coordinates _sumN;
-        Coordinates _swipeDirection;
+        Coordinates _swipe;
         uint32_t _touchedTime;
         uint32_t _releasedTime;
         uint32_t _heldTime;
@@ -153,6 +235,8 @@ public:
         uint8_t _counter;
         bool _press;
         bool _bubble;
+        MovementVector _movements;
+        TouchpadEvent_t _curEvent;
     };
 
     typedef std::function<void(const Event &event)> Callback_t;
@@ -194,14 +278,19 @@ private:
     void _loop();
     void _get();
     void _fireEvent();
+    void _timerCallback(EventScheduler::TimerPtr timer);
 
 private:
+    friend WeatherStationPlugin;
+    friend void mpr121_timer(EventScheduler::TimerPtr timer);
+
     Adafruit_MPR121 _mpr121;
     uint8_t _address;
     uint8_t _irqPin;
 
     CallbackEventVector _callbacks;
     Event _event;
+    EventScheduler::Timer _timer;
 };
 
 #endif

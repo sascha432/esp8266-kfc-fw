@@ -50,8 +50,7 @@ WeatherStationPlugin::WeatherStationPlugin() :
 #if DEBUG_IOT_WEATHER_STATION
     _debugDisplayCanvasBorder = false;
 #endif
-
-    REGISTER_PLUGIN(this, "WeatherStationPlugin");
+    REGISTER_PLUGIN(this);
 #if IOT_WEATHER_STATION_HAS_TOUCHPAD
     _touchpadDebug = false;
 #endif
@@ -59,7 +58,7 @@ WeatherStationPlugin::WeatherStationPlugin() :
 
 PGM_P WeatherStationPlugin::getName() const
 {
-    return PSTR("weather_station");
+    return PSTR("weather");
 }
 
 void WeatherStationPlugin::_sendScreenCaptureBMP(AsyncWebServerRequest *request)
@@ -142,10 +141,11 @@ void WeatherStationPlugin::setup(PluginSetupMode_t mode)
         sensor.temperature = realTemp;
     };
     for(auto sensor: SensorPlugin::getSensors()) {
-        if (sensor->getType() == MQTTSensor::BME280) {
+        if (sensor->getType() == MQTTSensorSensorType::ENUM::BME280) {
             reinterpret_cast<Sensor_BME280 *>(sensor)->setCompensationCallback(compensationCallback);
         }
     }
+
 #endif
 
     LoopFunctions::add(loop);
@@ -417,7 +417,7 @@ void WeatherStationPlugin::_drawEnvironmentalSensor(GFXCanvasCompressed& canvas,
 
     Sensor_BME280::SensorData_t values = { NAN, NAN, NAN };
     for(auto sensor: SensorPlugin::getSensors()) {
-        if (sensor->getType() == MQTTSensor::BME280) {
+        if (sensor->getType() == MQTTSensorSensorType::ENUM::BME280) {
             auto &bme280 = *(reinterpret_cast<Sensor_BME280 *>(sensor));
             values = bme280.readSensor();
             break;
@@ -609,17 +609,18 @@ void WeatherStationPlugin::_loop()
         SpeedBooster speedBooster;
 
         const auto &coords = _touchpad.get();
-        uint16_t col1 = ST77XX_RED;
-        uint16_t col2 = ST77XX_WHITE;
+        uint16_t colorTouched = ST77XX_RED;
+        uint16_t colorPredict = ST77XX_YELLOW;
+        uint16_t colorGrid = ST77XX_WHITE;
         _canvas.fillScreen(COLORS_BACKGROUND);
-        for(int yy = 1; yy <= 7; yy++) {
-            _canvas.drawLine(10, yy * 10, 9 * 13, yy * 10, yy == coords.y ? col1 : col2);
+        for(int yy = 1; yy <= 8; yy++) {
+            _canvas.drawLine(10, yy * 10, 8 * 14, yy * 10, yy == coords.y ? colorTouched : (yy == _touchpad._event._predict.y ? colorPredict : colorGrid));
         }
         for(int xx = 1; xx <= 13; xx++) {
-            _canvas.drawLine(xx * 9, 10, xx * 9, 70, xx == coords.x ? col1 : col2);
+            _canvas.drawLine(xx * 8, 10, xx * 8, 8 * 10, xx == coords.x ? colorTouched : (xx == _touchpad._event._predict.x ? colorPredict : colorGrid));
         }
 
-        _displayScreen(0, 0, TFT_WIDTH, 80);
+        _displayScreen(0, 0, TFT_WIDTH, 85);
         return;
     }
 #endif

@@ -9,17 +9,30 @@
 #include "Mpr121Touchpad.h"
 #include "LoopFunctions.h"
 
+#include <map>
+
 volatile bool mpr121_irq_callback_flag;
+Mpr121Touchpad *touchpad = nullptr;
+
+static Mpr121Touchpad::ReadBuffer buffer;
 
 void ICACHE_RAM_ATTR mpr121_irq_callback()
 {
     mpr121_irq_callback_flag = true;
 }
 
-define_enum_bitset(Mpr121TouchpadEventType);
-define_enum_bitset(Mpr121TouchpadGesturesType);
+void ICACHE_RAM_ATTR mpr121_timer(EventScheduler::TimerPtr timer)
+{
+    if (mpr121_irq_callback_flag) {
+        mpr121_irq_callback_flag = false;
+        buffer.push_back(Mpr121Touchpad::TouchpadEvent_t({touchpad->_mpr121.touched(), millis()}));
+    }
+}
 
-Mpr121Touchpad::Event::Event(Mpr121Touchpad &pad) : _pad(pad)
+DEFINE_ENUM_BITSET(Mpr121TouchpadEventType);
+DEFINE_ENUM_BITSET(Mpr121TouchpadGesturesType);
+
+Mpr121Touchpad::Event::Event(Mpr121Touchpad &pad) : _pad(pad), _curEvent()
 {
     _touchedTime = 0;
     _releasedTime = 0;
@@ -40,33 +53,33 @@ uint32_t Mpr121Touchpad::Event::getDuration() const
 
 bool Mpr121Touchpad::Event::isSwipeAny() const
 {
-    return _swipeDirection == true;
+    return _swipe == true;
 }
 
 bool Mpr121Touchpad::Event::isSwipeUp() const
 {
-    return _swipeDirection.y > 0;
+    return _swipe.y > 0;
 }
 
 bool Mpr121Touchpad::Event::isSwipeDown() const
 {
-    return _swipeDirection.y < 0;
+    return _swipe.y < 0;
 }
 
 bool Mpr121Touchpad::Event::isSwipeLeft() const
 {
-    return _swipeDirection.x < 0;
+    return _swipe.x < 0;
 }
 
 bool Mpr121Touchpad::Event::isSwipeRight() const
 {
-    return _swipeDirection.y > 0;
+    return _swipe.y > 0;
 }
 
 Mpr121Touchpad::GesturesType Mpr121Touchpad::Event::getGestures() const
 {
     GesturesType value;
-    if (_swipeDirection == false) {
+    if (_swipe == false) {
         if (isTap()) {
             value += GesturesType::BIT::TAP;
         }
@@ -82,16 +95,16 @@ Mpr121Touchpad::GesturesType Mpr121Touchpad::Event::getGestures() const
         }
     }
     else {
-        if (_swipeDirection.y > 0) {
+        if (_swipe.y > 0) {
             value += GesturesType::BIT::UP;
         }
-        if (_swipeDirection.y < 0) {
+        if (_swipe.y < 0) {
             value += GesturesType::BIT::DOWN;
         }
-        if (_swipeDirection.x < 0) {
+        if (_swipe.x < 0) {
             value += GesturesType::BIT::LEFT;
         }
-        if (_swipeDirection.y > 0) {
+        if (_swipe.x > 0) {
             value += GesturesType::BIT::RIGHT;
 
         }
@@ -111,12 +124,12 @@ Mpr121Touchpad::Coordinates Mpr121Touchpad::Event::getEnd() const
 
 Mpr121Touchpad::Coordinates Mpr121Touchpad::Event::getSwipeDistance() const
 {
-    return _sumP + _sumN;
+    return _swipe;
 }
 
 bool Mpr121Touchpad::Event::isTap() const
 {
-    return _swipeDirection == false && _press == false;
+    return _swipe == false && _press == false;
 }
 
 bool Mpr121Touchpad::Event::isDoubleTap() const
@@ -126,7 +139,7 @@ bool Mpr121Touchpad::Event::isDoubleTap() const
 
 bool Mpr121Touchpad::Event::isPress() const
 {
-    return _swipeDirection == false && _press == true;
+    return _swipe == false && _press == true;
 }
 
 bool Mpr121Touchpad::Event::isDoublePress() const
@@ -143,45 +156,92 @@ void Mpr121Touchpad::Event::setBubble(bool bubble)
     _bubble = bubble;
 }
 
+void Mpr121Touchpad::Event::addMovement()
+{
+    if (_movements.size() < 100) {
+        if (_type) {
+            _movements.emplace_back(0, _position, _curEvent.time, _type);
+            broadcastData(_movements.back());
+        }
+    }
+}
+
+void Mpr121Touchpad::Event::broadcastData(const Movement &movement)
+{
+    auto wsSerialConsole = Http2Serial::getConsoleServer();
+    if (wsSerialConsole && !wsSerialConsole->getClients().isEmpty()) {
+        typedef struct {
+            uint16_t packetId;
+            int16_t x;
+            int16_t y;
+            int16_t px;
+            int16_t py;
+            uint32_t time;
+            uint8_t type;
+        } Packet_t;
+        Packet_t data = {0x200, movement.getX(), movement.getY(), _predict.x, _predict.y, movement.getTime(), movement.getType().getValue()};
+
+        for(auto client: wsSerialConsole->getClients()) {
+            if (client->status() && client->_tempObject && reinterpret_cast<WsClient *>(client->_tempObject)->isAuthenticated()) {
+                if (client->canSend()) {
+                    client->binary(reinterpret_cast<uint8_t *>(&data), sizeof(data));
+                }
+            }
+        }
+    }
+}
 
 void Mpr121Touchpad::Event::touched()
 {
     if (_lastTap) {
-        if (!within(_lastTap, 50, 1000)) {
+        if (!within(_lastTap, 50, 1000, _curEvent.time)) {
             _lastTap = 0;
             _counter = 0;
         }
     }
     if (_lastPress) {
-        if (!within(_lastPress, 50, 1000)) {
+        if (!within(_lastPress, 50, 1000, _curEvent.time)) {
             _lastPress = 0;
             _counter = 0;
         }
     }
     _type = EventType::BIT::TOUCH;
-    _touchedTime = millis();
+    if (get_time_diff(_releasedTime, _curEvent.time) > 500) {
+        _debug_println(F("removing predicted position"));
+        _predict = Coordinates(-1, -1);
+    }
+
+    _touchedTime = _curEvent.time;
+    _heldTime = _touchedTime;
     _releasedTime = 0;
-    _heldTime = millis();
     _sumN.clear();
     _sumP.clear();
-    _swipeDirection.clear();
+    _swipe.clear();
     _bubble = true;
     _press = false;
     _start = _position;
+    _movements.clear();
+    addMovement();
     _pad._fireEvent();
 }
 
 void Mpr121Touchpad::Event::released()
 {
     _type = EventType::BIT::RELEASED;
-    _releasedTime = millis();
+    _releasedTime = _curEvent.time;
     gestures();
+    addMovement();
     _pad._fireEvent();
     _touchedTime = 0;
+    _movements.clear();
 }
 
 void Mpr121Touchpad::Event::gestures()
 {
+    // for(auto &movement: _movements) {
+    //     auto coords = movement.getCoords();
+    // }
+
     auto duration = getDuration();
     Position moveX = _sumP.x + _sumN.x;
     Position moveY = _sumP.y + _sumN.y;
@@ -196,14 +256,14 @@ void Mpr121Touchpad::Event::gestures()
                 if (_lastTap) {
                     _counter++;
                 }
-                _lastTap = millis();
+                _lastTap = _curEvent.time;
                 _lastPress = 0;
             } else {
                 _type += EventType::BIT::PRESS;
                 if (_lastPress) {
                     _counter++;
                 }
-                _lastPress = millis();
+                _lastPress = _curEvent.time;
                 _lastTap = 0;
             }
         }
@@ -212,18 +272,18 @@ void Mpr121Touchpad::Event::gestures()
         }
     }
     else {
-        if (moveX * 2 > _sumP.x || moveX * 2 < -_sumN.x) {
-            _swipeDirection.x = moveX > 0 ? 1 : -1;
+        if (moveX * 3 > _sumP.x || moveX * 3 < -_sumN.x) {
+            _swipe.x = moveX;
         }
-        if (moveY * 2 > _sumP.x || moveY * 2 < -_sumN.y) {
-            _swipeDirection.y = moveY < 0 ? 1 : -1;
+        if (moveY * 3 > _sumP.x || moveY * 3 < -_sumN.y) {
+            _swipe.y = -moveY;
         }
     }
 
     // debug_println_notempty(__toString());
 
     if (_type & EventType::BIT::RELEASED) {
-        if (_swipeDirection.x  || _swipeDirection.y) {
+        if (_swipe.x  || _swipe.y) {
             _type += EventType::BIT::SWIPE;
             _lastTap = 0;
             _lastPress = 0;
@@ -231,18 +291,19 @@ void Mpr121Touchpad::Event::gestures()
         }
     }
     else if (duration > 1000 && _type & EventType::BIT::MOVE) {
-        if (_swipeDirection.x  || _swipeDirection.y) {
+        if (_swipe.x  || _swipe.y) {
             _type += EventType::BIT::DRAG;
         }
     }
+    addMovement();
 }
 
 void Mpr121Touchpad::Event::timer()
 {
-    if (_touchedTime != 0 && get_time_diff(_heldTime, millis()) > 250) {
+    if (_touchedTime != 0 && get_time_diff(_heldTime, _curEvent.time) > 250) {
         gestures();
         _pad._fireEvent();
-        _heldTime = millis();
+        _heldTime = _curEvent.time;
     }
 }
 
@@ -272,80 +333,147 @@ void Mpr121Touchpad::Event::move(const Coordinates &prev)
     gestures();
 }
 
-void Mpr121Touchpad::Event::read()
+void Mpr121Touchpad::Event::read(ReadBuffer::iterator &iterator)
 {
-    if (mpr121_irq_callback_flag) {
-        mpr121_irq_callback_flag = false;
+    if (iterator != buffer.end()) {
+        _curEvent = *iterator;
 
-        // _mpr121.begin(_address);
-        auto touched = _pad._mpr121.touched();
+        auto touched = _curEvent.touched;
+        auto touchedX = touched & ~(1 << 8);             // 0-7 for x 0=right, 7=left
+        auto touchedY = (touched >> 8) & ~(1 << 4);      // 8-11 for y 11=top, 8 bottom
 
-        if ((touched & (_BV(11)|_BV(10))) == (_BV(11)|_BV(10))) {
-            _position.y = 2;
+        // Serial.printf("t %016.16s - %08.8s %04.4s\n", String(touched, 2).c_str(), String(touchedX, 2).c_str(), String(touchedY, 2).c_str());
+
+        #define _BV1(a, b)          ((touched & (_BV(a)|_BV(b))) == (_BV(a)))                   // a == true && b == false
+        #define _BV2(a, b)          ((touched & (_BV(a)|_BV(b))) == (_BV(a)|_BV(b)))            // a == true && b == true
+
+        static int ___min[10]={20,20,20,20,20,20,20};
+        static int ___max[10]={0,0,0,0,0,0,0,0};
+
+        // get coordinates
+        Position y = -1;
+        touched = touchedY << 1;
+        for (uint8_t i = 0; i < 4; i++) {
+            // Serial.printf("_BV1=%u=%u %u=%u i=%u y=%u\n", i + 1, 1, i, 0, i, (i * 2));
+            // Serial.printf("_BV2=%u=%u %u=%u i=%u y=%u\n", i + 1, 1, i, 1, i, 1 + (i * 2));
+            if (_BV1(i + 1, i)) {
+                y = (_MinY - 0) + (i * 2);
+            }
+            if (_BV2(i + 1, i)) {
+                y = (_MinY - 1) + (i * 2);
+            }
         }
-        else if (touched & _BV(11)) {
-            _position.y = 1;
+        if (y>0) {
+        ___min[0] = std::min(___min[0], (int)y);
+        ___max[0] = std::max(___max[0], (int)y);
         }
-        else if ((touched & (_BV(10)|_BV(9))) == (_BV(10)|_BV(9))) {
-            _position.y = 4;
+        if (_BV1(3, 4)) {
+            // debug_printf("y %u %u\n", y, _MaxY);
+            y = _MaxY + 1;
         }
-        else if (touched & _BV(10)) {
-            _position.y = 3;
+        if (y>0) {
+        ___min[1] = std::min(___min[1], (int)y);
+        ___max[1] = std::max(___max[1], (int)y);
         }
-        else if ((touched & (_BV(9)|_BV(8))) == (_BV(9)|_BV(8))) {
-            _position.y = 6;
+
+        Position x = -1;
+        touched = touchedX << 1;
+        for (uint8_t i = 0; i < 8; i++) {
+            // Serial.printf("_BV1=%u=%u %u=%u i=%u x=%u\n", i + 1, 1, i, 0, i, 1 + (i * 2));
+            // Serial.printf("_BV2=%u=%u %u=%u i=%u x=%u\n", i + 1, 1, i, 1, i, 2 + (i * 2));
+            if (_BV1(i + 1, i)) {
+                x = (_MinX - 1) + (i * 2);
+            }
+            if (_BV2(i + 1, i)) {
+                x = (_MinX - 2) + (i * 2);
+            }
         }
-        else if (touched & (_BV(9))) {
-            _position.y = 5;
+        if (x>0) {
+        ___min[2] = std::min(___min[2], (int)x);
+        ___max[2] = std::max(___max[2], (int)x);
         }
-        else if (touched & (_BV(8))) {
-            _position.y = 7;
+        if (_BV1(7, 8)) {
+            // debug_printf("x %u %u\n", x, _MaxX);
+            x = _MaxX;
         }
-        else {
+        if (x>0) {
+        ___min[3] = std::min(___min[3], (int)x);
+        ___max[3] = std::max(___max[3], (int)x);
+        }
+
+#if 1
+        static int8_t *_coords = nullptr;
+        // std::map<String, int> __map;
+
+        // __map[PrintString("% 8.8s", touchedX)] = x;
+        // __map[PrintString("% 4.4s", touchedY)] = y;
+
+        if (!_coords) {
+            _coords = (int8_t *)calloc(_MaxX+4, _MaxY+4);
+        }
+// +plgi=weather
+        if (x > 0 && y >0) {
+            _coords[x + _MaxX * y]++;
+            static time_t xtime = 0;
+            if(millis() > xtime) {
+                MySerial.println("--------------------------------");
+                for(int j = 0; j < _MaxY + 3;j++) {
+                    MySerial.printf("% 2d: ", j);
+                    for(int i = 0; i < _MaxX + 3; i++) {
+                        MySerial.printf("% 3d ", (int)_coords[j * _MaxX + i]);
+                    }
+                    MySerial.println();
+                }
+                MySerial.println("--------------------------------");
+                for(int i = 0; i <4;i++) {
+                    MySerial.printf("min/max %u: %d %d\n", i, ___min[i], ___max[i]);
+                }
+                // for(auto &m: __map) {
+                //     str.printf("%s = %u\n", m.first.c_str(), m.second);
+                // }
+
+                xtime = millis() + 2000;
+            }
+        }
+#endif
+        // invert x/y
+        if (x >= _MinX && _InvertX) {
+            x = _MaxX + _MinX - x;
+        }
+        if (y >= _MinY && _InvertY) {
+            y = _MaxY + _MinY - y;
+        }
+
+        if (y < _MinY) {
+            if (_position.y) {
+                if (_position.y >= _MaxY - _PredictionZone) {
+                    _predict.y = _MaxY;
+                }
+                else if (_position.y <= _MinY + _PredictionZone) {
+                    _predict.y = _MinY;
+                }
+            }
             _position.y = 0;
         }
+        else {
+            _position.y = y;
+            _predict.y = y;
+        }
 
-        if ((touched & (_BV(7)|_BV(6))) == (_BV(7)|_BV(6))) {
-            _position.x = 2;
-        }
-        else if (touched & _BV(7)) {
-            _position.x = 1;
-        }
-        else if ((touched & (_BV(6)|_BV(5))) == (_BV(6)|_BV(5))) {
-            _position.x = 4;
-        }
-        else if (touched & _BV(6)) {
-            _position.x = 3;
-        }
-        else if ((touched & (_BV(5)|_BV(4))) == (_BV(5)|_BV(4))) {
-            _position.x = 6;
-        }
-        else if (touched & _BV(5)) {
-            _position.x = 5;
-        }
-        else if ((touched & (_BV(4)|_BV(3))) == (_BV(4)|_BV(3))) {
-            _position.x = 8;
-        }
-        else if (touched & _BV(4)) {
-            _position.x = 7;
-        }
-        else if ((touched & (_BV(3)|_BV(2))) == (_BV(3)|_BV(2))) {
-            _position.x = 10;
-        }
-        else if (touched & _BV(3)) {
-            _position.x = 9;
-        }
-        else if ((touched & (_BV(2)|_BV(1))) == (_BV(2)|_BV(1))) {
-            _position.x = 12;
-        }
-        else if (touched & _BV(2)) {
-            _position.x = 11;
-        }
-        else if (touched & _BV(1)) {
-            _position.x = 13;
+        if (x < _MinX) {
+            if (_position.x) {
+                if (_position.x >= _MaxX - _PredictionZone) {
+                    _predict.x = _MaxX;
+                }
+                else if (_position.x <= _MinX + _PredictionZone) {
+                    _predict.x = _MinX;
+                }
+            }
+            _position.x = 0;
         }
         else {
-            _position.x = 0;
+            _position.x = x;
+            _predict.x = x;
         }
     }
 }
@@ -369,12 +497,19 @@ bool Mpr121Touchpad::begin(uint8_t address, uint8_t irqPin, TwoWire *wire)
         return false;
     }
 
+    touchpad = this;
+
     _irqPin = irqPin;
     mpr121_irq_callback_flag = false;
     _event._type = EventType::NONE;
     pinMode(_irqPin, INPUT);
     attachInterrupt(digitalPinToInterrupt(_irqPin), mpr121_irq_callback, CHANGE);
+
     _mpr121.setThresholds(4, 4);
+
+    // hardware timer to read the data from the sensor into "buffer"
+    // min. time is 5ms
+    _timer.add(5, true, mpr121_timer, EventScheduler::PRIO_HIGH);
 
     LoopFunctions::add([this]() {
         _loop();
@@ -390,11 +525,13 @@ void Mpr121Touchpad::end()
         detachInterrupt(digitalPinToInterrupt(_irqPin));
         _irqPin = 0;
     }
+    _timer.remove();
+    touchpad = nullptr;
 }
 
 bool Mpr121Touchpad::isEventPending() const
 {
-    return mpr121_irq_callback_flag;
+    return buffer.begin() != buffer.end();
 }
 
 void Mpr121Touchpad::get(Coordinates &coords)
@@ -415,7 +552,7 @@ void Mpr121Touchpad::addCallback(EventType events, uint32_t id, Callback_t callb
 
 void Mpr121Touchpad::removeCallback(EventType events, uint32_t id)
 {
-    _callbacks.erase(std::find_if(_callbacks.begin(), _callbacks.end(), [id, events](CallbackEvent &callback) {
+    _callbacks.erase(std::remove_if(_callbacks.begin(), _callbacks.end(), [id, events](CallbackEvent &callback) {
         if (callback.id == id) {
             callback.events -= events;
             if (!callback.events) {
@@ -428,18 +565,35 @@ void Mpr121Touchpad::removeCallback(EventType events, uint32_t id)
 
 void Mpr121Touchpad::processEvents()
 {
-    if (isEventPending()) {
-        auto previous = _event._position;
-        _event.read();
-        if (previous == false && _event._position == true) {
-            _event.touched();
-        }
-        else if (_event._position == false && previous == true) {
-            _event.released();
-        }
-        else if (!_event._releasedTime) {
-            _event.move(previous);
-        }
+    ReadBuffer::iterator iterator = buffer.begin();
+    int n = 0;
+    if (iterator != buffer.end()) {
+        // auto start = millis();
+        // static int event_counter=0;
+        // uint32_t lagg  = 0;
+        do {
+            auto previous = _event._position;
+            // lagg = std::max(lagg, (uint32_t)millis() - (*iterator).time);
+
+            _event.read(iterator);
+            if (previous == false && _event._position == true) {
+                _event.touched();
+            }
+            else if (_event._position == false && previous == true) {
+                _event.released();
+            }
+            else if (!_event._releasedTime) {
+                _event.move(previous);
+            }
+            n++;
+        } while(++iterator != buffer.end());
+
+        // event_counter += n;
+        // _debug_printf_P(PSTR("read %u (%u) events, dur %lu, size %u, max. lag %d\n"), n, event_counter, millis() - start, buffer.size(), lagg);
+
+        noInterrupts();
+        buffer.shrink(iterator, buffer.end()); // <1µs
+        interrupts();
     }
 }
 
@@ -459,6 +613,7 @@ void Mpr121Touchpad::_fireEvent()
                 callback.callback(_event);
             }
         }
+        _event.addMovement();
         _event._type = EventType::NONE;
     }
 }

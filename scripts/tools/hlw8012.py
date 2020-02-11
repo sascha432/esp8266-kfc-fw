@@ -14,7 +14,7 @@ from matplotlib.figure import Figure
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 from matplotlib import style
-
+import numpy as np
 from threading import Lock, Thread
 
 from statistics import mean
@@ -66,6 +66,17 @@ class WSConsole:
                     m = memoryview(data[ofs:])
                     data = m.cast('f')
                     self.controller.plot.data_handler(header, data)
+                elif packetId==0x0200:
+                    (packetId, x, y, px, py, time, event_type) = struct.unpack_from('HHHHHLc', data)
+                    data = {
+                        "x": x,
+                        "y": y,
+                        "px": px,
+                        "py": py,
+                        "time": time,
+                        "raw_type": event_type
+                    }
+                    self.controller.touchpad.data_handler(data)
             except Exception as e:
                 print("Invalid binary packet " + str(e))
         else:
@@ -155,6 +166,208 @@ class WSConsole:
         self.set_disconnected()
         self.controller.set_connection_status(False)
 
+class TouchpadEventType:
+
+    def __init__(self, value):
+        self.value = value
+        self.TOUCH       = 0x0001
+        self.RELEASED    = 0x0002
+        self.MOVE        = 0x0004
+        self.TAP         = 0x0008
+        self.PRESS       = 0x0010
+        self.HOLD        = 0x0020
+        self.SWIPE       = 0x0040
+        self.DRAG        = 0x0080
+
+    def __repr__(self):
+        types = []
+        if self.isTouch():
+            types.append("TOUCH")
+        if self.isReleased():
+            types.append("RELEASED")
+        if self.isMove():
+            types.append("MOVE")
+        if self.isTap():
+            types.append("TAP")
+        if self.isPress():
+            types.append("PRESS")
+        if self.isHold():
+            types.append("HOLD")
+        if self.isSwipe():
+            types.append("SWIPE")
+        if self.isDrag():
+            types.append("DRAG")
+        return "|".join(types)
+
+    def getValue(self):
+        return self.value
+
+    def isTouch(self):
+        return self.value & self.TOUCH != 0
+    def isReleased(self):
+        return self.value & self.RELEASED != 0
+    def isMove(self):
+        return self.value & self.MOVE != 0
+    def isTap(self):
+        return self.value & self.TAP != 0
+    def isPress(self):
+        return self.value & self.PRESS != 0
+    def isHold(self):
+        return self.value & self.HOLD != 0
+    def isSwipe(self):
+        return self.value & self.SWIPE != 0
+    def isDrag(self):
+        return self.value & self.DRAG != 0
+
+class Touchpad:
+
+    def __init__(self, controller):
+        self.controller = controller
+        self.ani = None
+        self.fig = Figure(figsize=(12, 8), dpi=100)
+        self.ax = []
+        if False:
+            self.ax.append(self.fig.subplots(1, 1))
+        else:
+            for col in self.fig.subplots(2, 2):
+                for row in col:
+                    self.ax.append(row)
+        self.fig.suptitle("Touchpad Movements")
+        self.data = []
+        self.init_axis()
+        self.update_plot = False
+
+    def init_axis(self):
+        n = 0
+        titles = ["Start/Stop", "Gestures", "Move", "All"]
+        for ax in self.ax:
+            ax.clear();
+            ax.set_title(titles[n])
+            self.cols = 14
+            cols = self.cols
+            self.rows = 8
+            rows = self.rows
+            sx = 1
+            sy = 1
+            min_y = 0
+            min_x = 0
+            max_y = rows + sy
+            if len(self.ax)==1:
+                max_x = cols + sx # + 4
+            else:
+                max_x = cols + sx
+            ax.hlines(y=sy, xmin=min_x, xmax=max_x, linestyle='dashed')
+            ax.hlines(y=rows, xmin=min_x, xmax=max_x, linestyle='dashed')
+            ax.vlines(x=sx, ymin=min_y, ymax=max_y, linestyle='dashed')
+            ax.vlines(x=cols, ymin=min_y, ymax=max_y, linestyle='dashed')
+            ax.grid(True);
+            ax.set_xticks(np.arange(1, cols, 1))
+            # ax.set_xticks(minor_ticks, minor=True)
+            ax.set_yticks(np.arange(1, rows, 1))
+            # ax.set_yticks(minor_ticks, minor=True)
+            ax.set_ylim(top=min_y, bottom=max_y)
+            ax.set_xlim(left=min_x, right=max_x)
+
+            n = n + 1
+
+    def data_handler(self, data):
+        data["type"] = TouchpadEventType(int.from_bytes(data["raw_type"], byteorder="big"))
+        print(data);
+        if data["type"].isTouch():
+            self.data = []
+            self.init_axis()
+
+        self.data.append(data)
+        self.update_plot = True
+
+    def add_coords(self, ax, data, label = False, color=None, scale = 1, alpha = 0.3):
+        x = data["x"]
+        y = data["y"]
+        if x==0 and data["px"]>0:
+            x = data["px"]
+            alpha *= 0.5
+            scale += 15
+        if y==0 and data["py"]>0:
+            y = data["py"]
+            alpha *= 0.5
+            scale += 15
+
+        ax.scatter(x, y, c=color, s=scale * 150, label='tab:'+color, alpha=alpha, edgecolors='none')
+
+    def fill(self, data):
+        # list2 = []
+        # if data["x"]==0 or data["y"]==0:
+        #     if data["px"]>0 and data["x"]==0:
+        #         data["x"] = data["px"]
+        #     if data["py"]>0 and data["y"]==0:
+        #         data["y"] = data["py"]
+        #     if data["x"]==0 or data["y"]==0:
+        #         list2 = []
+        #         time = data["time"]
+        #         for data2 in list2:
+        #             if (data["x"]==0 and data2["x"]!=0) or (data["y"]==0 and data2["y"]!=0):
+        #                 list2.append([data2["x"] * 1.0, data2["y"] * 1.0, abs(data2["time"] - time)])
+        #         sorted(list2, key=lambda item: item[2])
+        #         for data2 in list2:
+        #             if data["x"]==0 and data2["x"]!=0:
+        #                 data["x"] = data2["x"]
+        #             if data["y"]==0 and data2["y"]!=0:
+        #                 data["y"] = data2["y"]
+        return data
+
+    def plot_values(self, i):
+        if not self.ani.running:
+            self.ani.event_source.stop()
+        elif self.update_plot and len(self.data)>0:
+            start = self.data[0]["time"]
+            end = self.data[-1]["time"]
+            diff = end - start
+            timings = []
+            last_time = start
+            for data in self.data:
+                timings.append([data["time"], data["time"] - last_time])
+                last_time = data["time"]
+                n = 0
+                if len(self.ax)==1:
+                    n = 100
+                time = (data["time"] - start) / (diff + 1.0)
+                time_color = (min(1.0, .2 + time * 0.5), .0, .0)
+                # print(str(diff)+" "+str(len(self.data))+" "+str(len(self.ax)))
+                data = self.fill(data)
+                # print(str(data["x"]) + " " + str(data["y"]) + " " + str(data["type"]) + " " + str(data["time"] - start))
+                for ax in self.ax:
+                    if n==0 or n>=100:
+                        if data["type"].isTouch():
+                            self.add_coords(ax, data, label="touch", color="green", scale=12)
+                        if data["type"].isReleased():
+                            self.add_coords(ax, data, label="release", color="red", scale=12, alpha=0.8)
+                    elif n==1 or n>=100:
+                        if data["type"].isTap():
+                            self.add_coords(ax, data, label="tap", color="red", scale=20, alpha=0.8)
+                        if data["type"].isPress():
+                            self.add_coords(ax, data, label="press", color="green", scale=20, alpha=0.8)
+                        if data["type"].isSwipe():
+                            self.add_coords(ax, data, label="swipe", color="yellow", scale=10, alpha=0.8)
+                    elif n==2 or n>=100:
+                        if data["type"].isDrag():
+                            self.add_coords(ax, data, label="drag", color="red", scale=7)
+                        if data["type"].isHold():
+                            self.add_coords(ax, data, label="hold", color="green", scale=12)
+                    elif n==3 or n>=100:
+                            self.add_coords(ax, data, label="any", color="green", scale=2, alpha=0.8)
+
+                    n = n + 1
+
+            self.update_plot = False
+
+    def set_animation(self, state = False):
+        if self.ani==None:
+            self.ani = animation.FuncAnimation(self.fig, self.plot_values, interval=200)
+        self.ani.running = state
+        if state:
+            self.update_plot = True
+            self.ani.event_source.start()
+
 class Plot:
 
     def __init__(self, controller):
@@ -163,6 +376,7 @@ class Plot:
         self.update_plot = False
         self.label = { 'x': 'time in seconds', 'y': '' }
         self.title = ''
+        self.ani = None
         self.sensor_config = None
         self.incoming_data = { "start": 0.0, "end": 0.0, "data": 0 }
 
@@ -170,8 +384,13 @@ class Plot:
         self.ax1 = self.fig.add_subplot(111)
         self.ax2 = False
 
-    def init_animation(self):
-        self.ani = animation.FuncAnimation(self.fig, self.plot_values, interval=self.controller.get_update_rate())
+    def set_animation(self, state):
+        if self.ani==None:
+            self.ani = animation.FuncAnimation(self.fig, self.plot_values, interval=self.controller.get_update_rate())
+        self.running = state
+        if state:
+            self.update_plot = True
+            self.ani.event_source.start()
 
     def init_plot(self, type):
         self.stats = [ '', '', '', '' ]
@@ -226,7 +445,9 @@ class Plot:
             self.ax2 = False
 
     def plot_values(self, i):
-        if self.update_plot:
+        if not self.ani.running:
+            self.ani.event_source.stop()
+        elif self.update_plot:
             if not self.lock.acquire(False):
                 print("plot_values() could not aquire lock")
                 return
@@ -428,10 +649,11 @@ class MainApp(tk.Tk):
 
         self.connection_name = 'NOT CONNECTED'
         self.plot = Plot(self)
+        self.touchpad = Touchpad(self)
         self.wsc = WSConsole(self)
         self.set_plot_type('')
 
-        tk.Tk.wm_title(self, "HLW8012 Live View")
+        tk.Tk.wm_title(self, "KFCFirmware Debug Tool")
 
         container = tk.Frame(self)
         container.pack(side="top", fill="both", expand = True)
@@ -439,8 +661,9 @@ class MainApp(tk.Tk):
         container.grid_columnconfigure(0, weight=1)
 
         self.frames = {}
+        self.active = False
 
-        for F in (StartPage, PageLiveStats):
+        for F in (StartPage, PageEnergyMonitor, PageTouchpad):
             frame = F(container, self)
             self.frames[F] = frame
             frame.grid(row=0, column=0, sticky="nsew")
@@ -518,7 +741,11 @@ class MainApp(tk.Tk):
             self.update_plot = True
 
     def show_frame(self, cont):
+        if self.active:
+            self.frames[self.active].set_active(False)
         frame = self.frames[cont]
+        self.active = cont;
+        frame.set_active(True)
         frame.tkraise()
 
 class StartPage(tk.Frame):
@@ -538,8 +765,15 @@ class StartPage(tk.Frame):
         label.pack(pady=10,padx=10)
         self.controller.connect_label = label
 
-        button = ttk.Button(self, text="HLW8012 Live Stats", command=lambda: controller.show_frame(PageLiveStats))
-        button.pack()
+        menu = tk.Frame(self)
+        menu.pack(side=tkinter.TOP)
+
+        pad = 8
+        button = ttk.Button(self, text="HLW8012 Energy Monitor", command=lambda: controller.show_frame(PageEnergyMonitor))
+        button.pack(in_=menu, side=tkinter.LEFT, padx=pad)
+
+        button = ttk.Button(self, text="MPR121 Touchpad", command=lambda: controller.show_frame(PageTouchpad))
+        button.pack(in_=menu, side=tkinter.LEFT, padx=pad)
 
         top = tk.Frame(self)
         top.pack(side=tkinter.TOP, pady=20)
@@ -646,12 +880,17 @@ class StartPage(tk.Frame):
         except:
             print('Failed to write: ' + self.config_filename)
 
+    def set_active(self, state):
+        print("StartPage active " + str(state))
+        # self.controller.touchpad.set_animation(False)
+        # self.controller.plot.set_animation(False)
 
-class PageLiveStats(tk.Frame):
+class PageEnergyMonitor(tk.Frame):
 
     def __init__(self, parent, controller):
 
         tk.Frame.__init__(self, parent)
+        self.controller = controller
 
         top = tk.Frame(self)
         top.pack(side=tkinter.TOP)
@@ -697,15 +936,47 @@ class PageLiveStats(tk.Frame):
         ttk.Button(self, text="Integral", width=7, command=lambda: controller.toggle_data_state(2)).grid(in_=data, row=3, column=1)
         ttk.Button(self, text="Display", width=7, command=lambda: controller.toggle_data_state(3)).grid(in_=data, row=3, column=2)
 
-
         canvas = FigureCanvasTkAgg(controller.plot.fig, self)
         canvas.draw()
         canvas.get_tk_widget().pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True, pady=5, padx=5)
-        controller.plot.init_animation()
+        self.controller.plot.set_animation(False)
 
         toolbar = NavigationToolbar2Tk(canvas, self)
         toolbar.update()
         canvas.get_tk_widget().pack(side=tkinter.TOP, fill=tkinter.BOTH, expand=1)
+
+    def set_active(self, state):
+        print("PageEnergyMonitor active " + str(state))
+        self.controller.plot.set_animation(state)
+
+
+class PageTouchpad(tk.Frame):
+
+    def __init__(self, parent, controller):
+
+        tk.Frame.__init__(self, parent)
+        self.controller = controller
+
+        top = tk.Frame(self)
+        top.pack(side=tkinter.TOP)
+
+        label = tk.Label(self, text="MPR121 Touch Pad", font=LARGE_FONT)
+        label.pack(pady=10, padx=10, in_=top)
+
+        ttk.Button(self, text="Home", width=7, command=lambda: controller.show_frame(StartPage)).pack(in_=top, side=tkinter.LEFT, padx=10)
+
+        canvas = FigureCanvasTkAgg(controller.touchpad.fig, self)
+        canvas.draw()
+        canvas.get_tk_widget().pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True, pady=5, padx=5)
+        self.controller.touchpad.set_animation(False)
+
+        toolbar = NavigationToolbar2Tk(canvas, self)
+        toolbar.update()
+        canvas.get_tk_widget().pack(side=tkinter.TOP, fill=tkinter.BOTH, expand=1)
+
+    def set_active(self, state):
+        print("PageTouchpad active " + str(state))
+        self.controller.touchpad.set_animation(state)
 
 
 app = MainApp()

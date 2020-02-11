@@ -25,7 +25,8 @@ void JsonBaseReader::initParser() {
 	_valueStr = String();
 }
 
-void JsonBaseReader::error(const String &message, JsonErrorEnum_t type) {
+void JsonBaseReader::error(const String &message, JsonErrorEnum_t type) 
+{
 	_debug_printf_P(PSTR("JSON error: %s at %d\n"), message.c_str(), position());
 	_lastError.message = message;
 	_lastError.position = position();
@@ -35,17 +36,20 @@ void JsonBaseReader::error(const String &message, JsonErrorEnum_t type) {
 	//#endif
 }
 
-void JsonBaseReader::clearLastError() {
+void JsonBaseReader::clearLastError() 
+{
 	_lastError.position = (size_t)(~0);
 	_lastError.message = String();
     _lastError.type = JSON_ERROR_NONE;
 }
 
-JsonBaseReader::JsonError_t JsonBaseReader::getLastError() const {
+JsonBaseReader::JsonError_t JsonBaseReader::getLastError() const 
+{
 	return _lastError;
 }
 
-String JsonBaseReader::getLastErrorMessage() const {
+String JsonBaseReader::getLastErrorMessage() const 
+{
 	if (_lastError.position == (size_t)(~0)) {
 		return String();
 	}
@@ -74,19 +78,23 @@ String JsonBaseReader::getLastErrorMessage() const {
 	return error;
 }
 
-bool JsonBaseReader::beginObject(bool isArray) {
+bool JsonBaseReader::beginObject(bool isArray) 
+{
     return true;
 }
 
-bool JsonBaseReader::endObject() {
+bool JsonBaseReader::endObject() 
+{
     return true;
 }
 
-bool JsonBaseReader::recoverableError(JsonErrorEnum_t errorType) {
+bool JsonBaseReader::recoverableError(JsonErrorEnum_t errorType) 
+{
     return true;
 }
 
-String JsonBaseReader::jsonType2String(JsonType_t type) {
+String JsonBaseReader::jsonType2String(JsonType_t type) 
+{
 	switch (type) {
 	case JSON_TYPE_BOOLEAN:
 		return F("boolean");
@@ -104,7 +112,8 @@ String JsonBaseReader::jsonType2String(JsonType_t type) {
 	return F("INVALID TYPE");
 }
 
-bool JsonBaseReader::_isValidNumber(const String &value, JsonType_t &_type) {
+bool JsonBaseReader::_isValidNumber(const String &value, JsonType_t &_type) 
+{
     auto type = JsonVar::getNumberType(value.c_str());
     if (type & JsonVar::NumberType_t::EXPONENT) {
         _type = JSON_TYPE_NUMBER;
@@ -123,7 +132,8 @@ bool JsonBaseReader::_isValidNumber(const String &value, JsonType_t &_type) {
     return true;
 }
 
-bool JsonBaseReader::_addCharacter(char ch) {
+bool JsonBaseReader::_addCharacter(char ch) 
+{
     if (!_quoted && isspace(ch)) {
         return true;
     }
@@ -134,7 +144,8 @@ bool JsonBaseReader::_addCharacter(char ch) {
     return true;
 }
 
-bool JsonBaseReader::_prepareElement() {
+bool JsonBaseReader::_prepareElement() 
+{
     bool result = true;
     if (_type != JSON_TYPE_OBJECT_END) {
         if (_keyStr.length() == 0 && _valueStr.length() == 0) {
@@ -180,7 +191,8 @@ bool JsonBaseReader::_prepareElement() {
 	return result;
 }
 
-bool JsonBaseReader::parseStream() {
+bool JsonBaseReader::parseStream() 
+{
 #if DEBUG_KFC_JSON
 	if (_stream) {
 		_debug_printf_P(PSTR("JSONparseStream available %d\n"), _stream->available());
@@ -287,7 +299,8 @@ bool JsonBaseReader::parseStream() {
 	return true;
 }
 
-int JsonBaseReader::readByte() {
+int JsonBaseReader::readByte() 
+{
 #if DEBUG
 	if (!_stream) {
 		debug_println("JsonBaseReader::readByte(): _stream = nullptr");
@@ -308,18 +321,21 @@ int JsonBaseReader::readByte() {
 	return ch;
 }
 
-size_t JsonBaseReader::position() const {
+size_t JsonBaseReader::position() const 
+{
 	return _position;
 }
 
-String JsonBaseReader::getPath(int index) const {
+String JsonBaseReader::getPath(int index) const 
+{
     if ((size_t)index < _stack.size()) {
         return _stack.at(index).key;
     }
     return String();
 }
 
-String JsonBaseReader::getPath(uint8_t index, size_t &keyPosition) const {
+String JsonBaseReader::getPath(uint8_t index, size_t &keyPosition) const 
+{
     if (index < _stack.size()) {
         auto &state = _stack.at(index);
         keyPosition = state.keyPosition;
@@ -328,8 +344,9 @@ String JsonBaseReader::getPath(uint8_t index, size_t &keyPosition) const {
     return String();
 }
 
-String JsonBaseReader::getPath(bool numericIndex) const {
-    String _path = getObjectPath(numericIndex);
+String JsonBaseReader::getPath(bool numericIndex, int fromIndex) const 
+{
+    String _path = getObjectPath(numericIndex, fromIndex);
     if (_keyStr.length() && _path.length()) {
         _path += '.';
     }
@@ -337,13 +354,17 @@ String JsonBaseReader::getPath(bool numericIndex) const {
     if (_arrayIndex != -1) {
         _appendIndex(_arrayIndex, _path, numericIndex);
     }
-
     return _path;
 }
 
-String JsonBaseReader::getObjectPath(bool numericIndex) const {
+String JsonBaseReader::getObjectPath(bool numericIndex, int fromIndex) const 
+{
     String _path;
+	int n = 0;
     for (const auto &state : _stack) {
+		if (fromIndex > n++) {
+			continue;
+		}
         if (state.key.length()) {
             if (_path.length()) {
                 _path += '.';
@@ -359,12 +380,14 @@ String JsonBaseReader::getObjectPath(bool numericIndex) const {
     return _path;
 }
 
-bool JsonBaseReader::parse() {
+bool JsonBaseReader::parse() 
+{
 	initParser();
 	return parseStream();
 }
 
-void JsonBaseReader::_appendIndex(int16_t index, String &str, bool numericIndex) const {
+void JsonBaseReader::_appendIndex(int16_t index, String &str, bool numericIndex) const 
+{
 	str += '[';
     if (numericIndex) {
         str += String(index);

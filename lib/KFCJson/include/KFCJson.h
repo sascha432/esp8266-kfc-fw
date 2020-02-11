@@ -7,6 +7,7 @@
 #include "JsonBaseReader.h"
 #include "JsonCallbackReader.h"
 #include "JsonMapReader.h"
+#include "JsonVariableReader.h"
 
 #include "JsonValue.h"
 #include "JsonArray.h"

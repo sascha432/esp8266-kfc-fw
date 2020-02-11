@@ -34,38 +34,29 @@ size_t JsonTools::lengthEscaped(const JsonString & value) {
 
 static const char *charatersToEscape = "\b\f\t\r\n\\\"";
 
-size_t JsonTools::lengthEscaped(const char * value, size_t length, bool isProgMem) {
+size_t JsonTools::lengthEscaped(const char *value, size_t length, bool isProgMem) {
     if (!length) {
         return 0;
     }
-    size_t _length = 0;
-    const char *sptr = value;
+    auto ptr = value;
 #if !defined(ESP32)
     if (isProgMem) {
         char ch;
-        while ((ch = (char)pgm_read_byte(sptr++)) != 0) {
+        while ((ch = (char)pgm_read_byte(ptr++)) != 0) {
             if (strchr(charatersToEscape, ch)) {
-                _length += 2;
-            }
-            else {
-                _length++;
+                length++;
             }
         }
     } else
 #endif
     {
-        const char *ptr = strpbrk(sptr, charatersToEscape);
-        if (ptr) {
-            do {
-                _length += ptr - sptr + 2;
-                ptr = strpbrk(sptr, charatersToEscape);
-            } while(ptr);
-            _length +=  value - sptr + length;
-        } else {
-            _length += length;
+        ptr = strpbrk(ptr, charatersToEscape);
+        while (ptr) {
+            length++;
+            ptr = strpbrk(ptr + 1, charatersToEscape);
         }
     }
-    return _length;
+    return length;
 }
 
 size_t JsonTools::printToEscaped(Print & output, const JsonString & value) {
@@ -120,6 +111,7 @@ size_t JsonTools::printToEscaped(Print &output, const char *value, size_t length
                 if (written != len) {
                     return _length;
                 }
+                sptr = ptr;
                 // escape single character
                 switch (printEscaped(output, *sptr++)) {
                 case 0:

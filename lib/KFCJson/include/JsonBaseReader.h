@@ -69,8 +69,7 @@ public:
     JsonBaseReader(Stream &stream) : JsonBaseReader(&stream) {
     }
 
-	JsonBaseReader(Stream *stream) : _stream(stream) {
-		_quoteChar = '"';
+	JsonBaseReader(Stream *stream) : _stream(stream), _quoteChar('"'), _lastError() {
 		clearLastError();
 	}
 
@@ -133,7 +132,11 @@ public:
 		return _valueStr;
 	}
 
-    inline long getIntValue() const {
+	inline const String &getValueRef() {
+		return _valueStr;
+	}
+
+	inline long getIntValue() const {
         return _valueStr.toInt();
     }
 
@@ -153,10 +156,10 @@ public:
     String getPath(uint8_t index, size_t &keyPosition) const;
 
 	// get full path
-    String getPath(bool numericIndex = true) const;
+    String getPath(bool numericIndex = true, int fromIndex = 0) const;
 
     // get path of the parent object
-    String getObjectPath(bool numericIndex = true) const;
+    String getObjectPath(bool numericIndex = true, int fromIndex = 0) const;
 
 	// level is 1 based
 	inline int8_t getLevel() const {

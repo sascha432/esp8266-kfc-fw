@@ -9,6 +9,7 @@
 class DumpBinary {
 public:
     DumpBinary(Print &output);
+    DumpBinary(const String &title, Print &output);
 
     // bytes per line
     void setPerLine(uint8_t perLine);

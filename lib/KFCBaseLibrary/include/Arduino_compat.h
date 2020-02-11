@@ -69,7 +69,8 @@ class __FlashStringHelper;
 #include <crtdbg.h>
 #include <string.h>
 #include <time.h>
-#include <winsock.h>
+#include <winsock2.h>
+#include <WS2tcpip.h>
 #include <strsafe.h>
 #include <vector>
 #include <iostream>
@@ -123,6 +124,15 @@ void throwException(PGM_P message);
 #include "debug_helper_enable.h"
 #include "misc.h"
 
+extern "C" uint32_t _EEPROM_start;
+
+inline void noInterrupts() {
+}
+inline void interrupts() {
+}
+
+extern const String emptyString;
+
 #else
 
 #error Platform not supported
@@ -138,13 +148,29 @@ namespace fs {
     };
 };
 
+#include "constexpr_tools.h"
+
+#define __CLASS_FROM__(name)             StringConstExpr::StringArray<DebugHelperConstExpr::get_class_name_len(name)>(DebugHelperConstExpr::get_class_name_start(name)).array
+
+#ifndef __CLASS__
+#ifdef _MSC_VER
+#define __CLASS__                       __CLASS_FROM__(__FUNCSIG__)
+#else
+// __PRETTY_FUNCTION__ is not constexpr, we need to parse it during runtime
+// extern String __class_from_String(const char *str);
+#define __CLASS__                       __PRETTY_FUNCTION__ //__class_from_String(__PRETTY_FUNCTION__).c_str()
+#endif
+#endif
+
 // support nullptr as zero length
-size_t constexpr constexpr_strlen(const char* str) {
-    return (str == nullptr) ? 0 : (*str ? 1 + constexpr_strlen(str + 1) : 0);
+size_t constexpr constexpr_strlen(const char *str)
+{
+    return StringConstExpr::strlen(str);
 }
 
-size_t constexpr constexpr_strlen_P(const char* str) {
-    return constexpr_strlen(str);
+size_t constexpr constexpr_strlen_P(const char *str)
+{
+    return StringConstExpr::strlen(str);
 }
 
 #ifndef _STRINGIFY
@@ -156,3 +182,7 @@ size_t constexpr constexpr_strlen_P(const char* str) {
 #ifndef RFPSTR
 #define RFPSTR(str)                      reinterpret_cast<PGM_P>(str)
 #endif
+
+// equivalent to __FlashStringHelper/const char *
+// __FlashBufferHelper/const uint8_t *
+class __FlashBufferHelper;

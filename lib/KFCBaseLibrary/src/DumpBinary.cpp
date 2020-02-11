@@ -4,20 +4,30 @@
 
 #include "DumpBinary.h"
 
-DumpBinary::DumpBinary(Print &output) : _output(output) {
+DumpBinary::DumpBinary(Print &output) : _output(output) 
+{
     _perLine = 16;
     _groupBytes = 2;
 }
 
-void DumpBinary::setPerLine(uint8_t perLine) {
+DumpBinary::DumpBinary(const String &title, Print &output) : DumpBinary(output)
+{
+    output.print(title);
+    output.println(':');
+}
+
+void DumpBinary::setPerLine(uint8_t perLine) 
+{
     _perLine = perLine;
 }
 
-void DumpBinary::setGroupBytes(uint8_t groupBytes) {
+void DumpBinary::setGroupBytes(uint8_t groupBytes) 
+{
     _groupBytes = groupBytes;
 }
 
-void DumpBinary::dump(const uint8_t *data, size_t length) {
+void DumpBinary::dump(const uint8_t *data, size_t length) 
+{
     uint16_t pos = 0;
     while (pos < length) {
         _output.printf_P(PSTR("[%04X] "), pos);

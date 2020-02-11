@@ -6,8 +6,6 @@
 #include <PrintString.h>
 #include "misc.h"
 
-const String _sharedEmptyString;
-
 PROGMEM_STRING_DECL(slash);
 PROGMEM_STRING_DECL(SPIFFS_tmp_dir);
 
@@ -16,7 +14,8 @@ PROGMEM_STRING_DEF(slash, "/");
 PROGMEM_STRING_DEF(SPIFFS_tmp_dir, "c:/temp/");
 #endif
 
-String formatBytes(size_t bytes) {
+String formatBytes(size_t bytes)
+{
     char buf[16];
     if (bytes < 1024) {
         snprintf_P(buf, sizeof(buf), PSTR("%dB"), bytes);
@@ -32,7 +31,8 @@ String formatBytes(size_t bytes) {
     return buf;
 }
 
-String formatTime(unsigned long seconds, bool days_if_not_zero) {
+String formatTime(unsigned long seconds, bool days_if_not_zero)
+{
     PrintString out;
     unsigned int days = (unsigned int)(seconds / 86400);
     if (!days_if_not_zero || days) {
@@ -43,7 +43,8 @@ String formatTime(unsigned long seconds, bool days_if_not_zero) {
 }
 
 
-String implode(const __FlashStringHelper *glue, const char **pieces, int count) {
+String implode(const __FlashStringHelper *glue, const char **pieces, int count)
+{
     String tmp;
     if (count > 0) {
         tmp += *pieces++;
@@ -55,7 +56,8 @@ String implode(const __FlashStringHelper *glue, const char **pieces, int count) 
     return tmp;
 }
 
-String implode(const __FlashStringHelper *glue, String *pieces, int count) {
+String implode(const __FlashStringHelper *glue, String *pieces, int count)
+{
     String tmp;
     if (count > 0) {
         tmp += *pieces++;
@@ -67,7 +69,8 @@ String implode(const __FlashStringHelper *glue, String *pieces, int count) {
     return tmp;
 }
 
-String url_encode(const String &str) {
+String url_encode(const String &str)
+{
     PrintString out_str;
     const char *ptr = str.c_str();
     while(*ptr) {
@@ -81,7 +84,8 @@ String url_encode(const String &str) {
     return out_str;
 }
 
-String printable_string(const uint8_t *buffer, size_t length) {
+String printable_string(const uint8_t *buffer, size_t length)
+{
     PrintString out_str;
     const char *ptr = (const char *)buffer;
     while(length--) {
@@ -95,16 +99,6 @@ String printable_string(const uint8_t *buffer, size_t length) {
     return out_str;
 }
 
-String append_slash_copy(const String &dir) {
-    if (dir.length() == 0 || (dir.length() != 0 && dir.charAt(dir.length() - 1) != '/')) {
-        return dir;
-    } else {
-        String tmp = dir;
-        tmp += '/';
-        return tmp;
-    }
-}
-
 void append_slash(String &dir) {
     if (dir.length() == 0 || (dir.length() != 0 && dir.charAt(dir.length() - 1) != '/')) {
         dir += '/';
@@ -112,7 +106,8 @@ void append_slash(String &dir) {
 }
 
 void remove_trailing_slash(String &dir) {
-    if (dir.length() && dir.charAt(dir.length() - 1) == '/') {
+    if (dir.length() && dir.charAt(dir.length() - 1) == '/')
+    {
         dir.remove(dir.length() - 1);
     }
 }
@@ -122,8 +117,10 @@ String sys_get_temp_dir() {
 }
 
 #if SPIFFS_TMP_FILES_TTL
-File tmpfile(const String &dir, const String &prefix, long ttl) {
-    String tmp = append_slash_copy(dir);
+File tmpfile(const String &dir, const String &prefix, long ttl)
+{
+    String tmp = dir;
+    append_slash(tmp);
     tmp += String((millis() / 1000UL) + ttl, HEX);
     if (isxdigit(prefix.charAt(0))) {
         tmp += F("_"); // add separator if next character is a hex digit
@@ -131,7 +128,8 @@ File tmpfile(const String &dir, const String &prefix, long ttl) {
     tmp += prefix;
 #else
 File tmpfile(const String &dir, const String &prefix) {
-    String tmp = append_slash_copy(dir);
+    String tmp = dir;
+    append_slash(tmp);
     tmp += prefix;
 #endif
     do {
@@ -152,7 +150,8 @@ File tmpfile(const String &dir, const String &prefix) {
     return SPIFFS.open(tmp, fs::FileOpenMode::write);
 }
 
-String WiFi_disconnect_reason(WiFiDisconnectReason reason) {
+String WiFi_disconnect_reason(WiFiDisconnectReason reason)
+{
 #if defined(ESP32)
     switch(reason) {
         case WIFI_REASON_UNSPECIFIED:
@@ -284,12 +283,14 @@ String WiFi_disconnect_reason(WiFiDisconnectReason reason) {
 #endif
 }
 
-int16_t stringlist_find_P_P(PGM_P list, PGM_P find, char separator) {
+int16_t stringlist_find_P_P(PGM_P list, PGM_P find, char separator)
+{
     const char separator_str[2] = { separator, 0 };
     return stringlist_find_P_P(list, find, separator_str);
 }
 
-int16_t stringlist_find_P_P(PGM_P list, PGM_P find, const char *separator/*, int &position*/) {
+int16_t stringlist_find_P_P(PGM_P list, PGM_P find, const char *separator/*, int &position*/)
+{
     PGM_P ptr1 = list;
     PGM_P ptr2 = find;
     uint8_t ch;
@@ -322,7 +323,8 @@ int16_t stringlist_find_P_P(PGM_P list, PGM_P find, const char *separator/*, int
     return -1;
 }
 
-int strcmp_P_P(PGM_P str1, PGM_P str2) {
+int strcmp_P_P(PGM_P str1, PGM_P str2)
+{
     uint8_t ch;
     do {
         ch = pgm_read_byte(str1++);
@@ -333,7 +335,8 @@ int strcmp_P_P(PGM_P str1, PGM_P str2) {
     return 0;
 }
 
-int strcasecmp_P_P(PGM_P str1, PGM_P str2) {
+int strcasecmp_P_P(PGM_P str1, PGM_P str2)
+{
     uint8_t ch;
     do {
         ch = pgm_read_byte(str1++);
@@ -344,35 +347,122 @@ int strcasecmp_P_P(PGM_P str1, PGM_P str2) {
     return 0;
 }
 
+size_t String_rtrim(String &str)
+{
+    size_t len = str.length();
+    while (len && isspace(str.charAt(len - 1))) {
+        len--;
+    }
+    str.remove(len, -1);
+    return len;
+}
+
+size_t String_ltrim(String &str)
+{
+    size_t remove = 0;
+    while (isspace(str.charAt(remove))) {
+        remove++;
+    }
+    str.remove(0, remove);
+    return str.length();
+}
+
+size_t String_trim(String &str)
+{
+    str.trim();
+    return str.length();
+}
+
+size_t String_rtrim(String &str, const char *chars)
+{
+    size_t len = str.length();
+    while (len && strchr(chars, str.charAt(len - 1))) {
+        len--;
+    }
+    str.remove(len, -1);
+    return len;
+}
+
+size_t String_ltrim(String &str, const char *chars)
+{
+    size_t remove = 0;
+    while (strchr(chars, str.charAt(remove))) {
+        remove++;
+    }
+    str.remove(0, remove);
+    return str.length();
+}
+
+size_t String_trim(String &str, const char *chars)
+{
+    String_rtrim(str, chars);
+    return String_ltrim(str, chars);
+}
+
+size_t String_rtrim_P(String &str, const char *chars)
+{
+    auto buf = new char[strlen_P(chars) + 1];
+    strcpy_P(buf, chars);
+    auto len = String_rtrim(str, buf);
+    delete buf;
+    return len;
+}
+
+size_t String_ltrim_P(String &str, const char *chars)
+{
+    auto buf = new char[strlen_P(chars) + 1];
+    strcpy_P(buf, chars);
+    auto len = String_ltrim(str, buf);
+    delete buf;
+    return len;
+}
+
+size_t String_trim_P(String &str, const char *chars)
+{
+    auto buf = new char[strlen_P(chars) + 1];
+    strcpy_P(buf, chars);
+    auto len = String_trim(str, buf);
+    delete buf;
+    return len;
+}
+
+
 #if 0
 
-bool String_equals(const String &str1, PGM_P str2) {
+bool String_equals(const String &str1, PGM_P str2)
+{
     const size_t strlen2 = strlen_P(str2);
     return (str1.length() == strlen2) && !strcmp_P(str1.c_str(), str2);
 }
 
-bool String_equalsIgnoreCase(const String &str1, PGM_P str2) {
+bool String_equalsIgnoreCase(const String &str1, PGM_P str2)
+{
     const size_t strlen2 = strlen_P(str2);
     return (str1.length() == strlen2) && !strcasecmp_P(str1.c_str(), str2);
 }
 
 #endif
 
-bool String_startsWith(const String &str1, PGM_P str2) {
+bool String_startsWith(const String &str1, PGM_P str2)
+{
     const size_t strlen2 = strlen_P(str2);
     return (str1.length() >= strlen2) && !strncmp_P(str1.c_str(), str2, strlen2);
 }
 
-bool String_endsWith(const String &str1, PGM_P str2) {
+bool String_endsWith(const String &str1, PGM_P str2)
+{
     const size_t strlen2 = strlen_P(str2);
-    return (str1.length() >= strlen2) && !strcmp_P(str1.c_str() + str1.length() - strlen2, str2);
+    auto len = str1.length();
+    return (len >= strlen2) && !strcmp_P(str1.c_str() + len - strlen2, str2);
 }
 
 bool String_endsWith(const String &str1, char ch) {
-    return (str1.length() != 0) && (str1.charAt(str1.length() - 1) == ch);
+    auto len = str1.length();
+    return (len != 0) && (str1.charAt(len - 1) == ch);
 }
 
-int strcmp_end_P(const char *str1, size_t len1, PGM_P str2, size_t len2) {
+int strcmp_end_P(const char *str1, size_t len1, PGM_P str2, size_t len2)
+{
     if (len2 > len1) {
         return false;
     } else if (len2 == len1) {
@@ -381,7 +471,8 @@ int strcmp_end_P(const char *str1, size_t len1, PGM_P str2, size_t len2) {
     return strcmp_P(str1 + len1 - len2, str2);
 }
 
-bool __while(uint32_t time_in_ms, std::function<bool()> loop, uint16_t interval_in_ms, std::function<bool()> intervalLoop) {
+bool __while(uint32_t time_in_ms, std::function<bool()> loop, uint16_t interval_in_ms, std::function<bool()> intervalLoop)
+{
     unsigned long end = millis() + time_in_ms;
     //debug_printf_P(PSTR("__while(%d, %p, %d, %p)\n"), time_in_ms, &loop, interval_in_ms, &intervalLoop);
     while(millis() < end) {
@@ -397,19 +488,41 @@ bool __while(uint32_t time_in_ms, std::function<bool()> loop, uint16_t interval_
     return true;
 }
 
-bool __while(uint32_t time_in_ms, uint16_t interval_in_ms, std::function<bool()> intervalLoop) {
+bool __while(uint32_t time_in_ms, uint16_t interval_in_ms, std::function<bool()> intervalLoop)
+{
     return __while(time_in_ms, nullptr, interval_in_ms, intervalLoop);
 }
 
-bool __while(uint32_t time_in_ms, std::function<bool()> loop) {
+bool __while(uint32_t time_in_ms, std::function<bool()> loop)
+{
     return __while(time_in_ms, loop, 0, nullptr);
 }
 
-char nibble2hex(uint8_t nibble, char hex_char) {
+#if ESP8266
+
+const char *strchr_P(const char *str, int c)
+{
+    if (str) {
+        char ch;
+        while(0 != (ch = pgm_read_byte(str))) {
+            if (ch == c) {
+                return str;
+            }
+            str++;
+        }
+    }
+    return nullptr;
+}
+
+#endif
+
+char nibble2hex(uint8_t nibble, char hex_char)
+{
     return nibble > 9 ? nibble + hex_char : nibble + '0';
 }
 
-const char *mac2char_s(char *dst, size_t size, const uint8_t *mac, char separator) {
+const char *mac2char_s(char *dst, size_t size, const uint8_t *mac, char separator)
+{
     constexpr uint8_t len = 6;
     if (!mac) {
         strncpy_P(dst, PSTR("null"), size);
@@ -430,23 +543,27 @@ const char *mac2char_s(char *dst, size_t size, const uint8_t *mac, char separato
     return dst;
 }
 
-String mac2String(const uint8_t *mac, char separator) {
+String mac2String(const uint8_t *mac, char separator)
+{
     char buf[MAC2STRING_LEN];
     return mac2char_s(buf, sizeof(buf), mac, separator);
 }
 
-String inet_ntoString(uint32_t ip) {
+String inet_ntoString(uint32_t ip)
+{
     char buf[INET_NTOA_LEN];
     return inet_ntoa_s(buf, sizeof(buf), ip);
 }
 
-const char *inet_ntoa_s(char *dst, size_t size, uint32_t ip) {
+const char *inet_ntoa_s(char *dst, size_t size, uint32_t ip)
+{
     uint8_t *bip = (uint8_t *)&ip;
     snprintf_P(dst, size, PSTR("%u.%u.%u.%u"), (unsigned)bip[0], (unsigned)bip[1], (unsigned)bip[2], (unsigned)bip[3]);
     return dst;
 }
 
-static bool tokenizerCmpFunc(char ch, int type) {
+static bool tokenizerCmpFunc(char ch, int type)
+{
     if (type == 1) { // command separator
         if (ch == '=' || ch == ' ') {
             return true;

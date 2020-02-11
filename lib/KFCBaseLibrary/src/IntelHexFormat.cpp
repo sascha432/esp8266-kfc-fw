@@ -13,7 +13,7 @@ const char _error_6[] PROGMEM = { "Invalid characters" };
 const char _error_7[] PROGMEM = { "EOF before end" };
 PGM_P _errors[] PROGMEM = { _error_0, _error_1, _error_3, _error_4, _error_5, _error_6, _error_7  };
 
-IntelHexFormat::IntelHexFormat() {
+IntelHexFormat::IntelHexFormat() : _eof(false), _error(), _endAddress() {
 }
 
 bool IntelHexFormat::open(const String &filename)

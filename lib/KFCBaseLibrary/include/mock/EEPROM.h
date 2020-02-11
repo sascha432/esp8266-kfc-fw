@@ -8,10 +8,7 @@
 
 class EEPROMFile : public Stream {
 public:
-    EEPROMFile(uint16_t size = 4096) {
-        _position = 0;
-        _size = size;
-        _eeprom = nullptr;
+    EEPROMFile(uint16_t size = 4096) : fp(nullptr), _eeprom(nullptr), _position(0), _size(size) {
     }
     ~EEPROMFile() {
         close();
@@ -112,11 +109,13 @@ public:
         if (err) {
             return false;
         }
-        if (fwrite(_eeprom, _size, 1, fp) != 1) {
-            perror("write");
-            return false;
+        if (fp) {
+            if (fwrite(_eeprom, _size, 1, fp) != 1) {
+                perror("write");
+                return false;
+            }
+            fclose(fp);
         }
-        fclose(fp);
         return true;
     }
 

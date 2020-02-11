@@ -90,13 +90,14 @@ public:
     }
 
     bool fromString(const String &addr) {
-        _addr = inet_addr(addr.c_str());
+        inet_pton(AF_INET, addr.c_str(), &_addr);
         return _addr != 0;
     }
     String toString() const {
-        in_addr a;
-        a.S_un.S_addr = _addr;
-        return inet_ntoa(a);
+        //in_addr a;
+        //a.S_un.S_addr = _addr;
+        char buffer[64];
+        return inet_ntop(AF_INET, &_addr, buffer, sizeof(buffer));
     }
 
     uint8_t *raw_address() const {
@@ -119,6 +120,11 @@ public:
     void setIsConnected(bool connected) {
         _isConnected = connected;
     }
+
+    int hostByName(const char* aHostname, IPAddress& aResult) {
+        return hostByName(aHostname, aResult, 10000);
+    }
+    int hostByName(const char* aHostname, IPAddress& aResult, uint32_t timeout_ms);
 
 private:
     bool _isConnected;

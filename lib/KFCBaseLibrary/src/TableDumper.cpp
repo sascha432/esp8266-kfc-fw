@@ -218,7 +218,7 @@ String TableDumperColumn::_getString() const {
             return str;
         }
     }
-    return _sharedEmptyString;
+    return emptyString;
 }
 
 TableDumperColumn::Length_t TableDumperColumn::_valueLength(long value) const {
@@ -251,7 +251,7 @@ TableDumper::~TableDumper() {
 }
 
 TableDumper &TableDumper::addColumn(Length_t width, Align_t align) {
-    return addColumn(TableDumperColumn(_sharedEmptyString), width, align);
+    return addColumn(TableDumperColumn(emptyString), width, align);
 }
 
 TableDumper & TableDumper::_addColumn(const TableDumperColumn &title, Length_t width, Align_t align) {

@@ -43,6 +43,10 @@ void ___debugbreak_and_panic(const char *filename, int line, const char *functio
 EEPROMClass EEPROM;
 _SPIFFS SPIFFS;
 
+uint32_t _EEPROM_start;
+
+const String emptyString;
+
 void throwException(PGM_P message) {
     printf("EXCEPTION: %s\n", (const char *)message);
     exit(-1);
@@ -56,33 +60,6 @@ static bool millis_initialized = init_millis();
 static bool init_millis() {
     millis_start_time = millis();
     return true;
-}
-
-LPWStr::LPWStr() : _str(nullptr) {
-    lpw_str(String());
-}
-
-LPWStr::LPWStr(const String& str) : _str(nullptr) {
-    lpw_str(str);
-}
-
-LPWStr::~LPWStr() {
-    delete[] _str;
-}
-
-LPWSTR LPWStr::lpw_str(const String& str) {
-    if (_str) {
-        delete[] _str;
-    }
-    int slength = (int)str.length() + 1;
-    int len = MultiByteToWideChar(CP_ACP, 0, str.c_str(), slength, 0, 0);
-    _str = new wchar_t[len];
-    MultiByteToWideChar(CP_ACP, 0, str.c_str(), slength, _str, len);
-    return _str;
-}
-
-LPWSTR LPWStr::lpw_str() {
-    return _str;
 }
 
 class GPIOPin {
@@ -314,3 +291,27 @@ uint16_t __builtin_bswap16(uint16_t word) {
 
 #endif
 
+#ifndef _MSC_VER
+
+String __class_from_String(const char* str) {
+    String name;
+    size_t space = 0;
+    while (str && *str) {
+        if (*str == ':' || *str == '<') {
+            break;
+        }
+        else {
+            if (*str == ' ') {
+                space = name.length();
+            }
+            name += *str;
+        }
+        str++;
+    }
+    if (space) {
+        name.remove(0, space + 1);
+    }
+    return name;
+}
+
+#endif

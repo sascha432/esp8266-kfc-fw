@@ -114,7 +114,7 @@ public:
                 break;
             }
             if (buf.length() > 1024) {
-                printf("readStringUntil(%d) failed, reached 1024byte length\n", terminator);
+                printf("readStringUntil(%d) failed, reached 1024 byte length\n", terminator);
                 return String();
             }
             buf += (char)ch;

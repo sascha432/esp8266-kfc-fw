@@ -69,7 +69,7 @@ public:
   static void setDataMode() {}
   static void setClockDivider() {}
   static void attachInterrupt() {}
- static void detachInterrupt() {}
+ //static void detachInterrupt() {}
 
 private:
   static uint8_t initialized;

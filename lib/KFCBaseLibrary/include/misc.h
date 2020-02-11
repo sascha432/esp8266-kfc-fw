@@ -33,10 +33,6 @@ PROGMEM_READ_ALIGNED_CHUNK(var)
 class String;
 typedef std::vector<String> StringVector;
 
-extern const String _sharedEmptyString;
-
-#define STATIC_STRING_BUFFER_SIZE 33
-
 // #if !_WIN32
 
 // // adds nconcat(c_str, max_len), for example to append a byte array to the string that isnt null terminated
@@ -103,7 +99,6 @@ void explode(char* str, const char *separator, std::vector<char*> &vector, const
 String url_encode(const String &str);
 String printable_string(const uint8_t *buffer, size_t length);
 
-String append_slash_copy(const String &dir);
 void append_slash(String &dir);
 void remove_trailing_slash(String &dir);
 
@@ -172,6 +167,18 @@ int strcasecmp_P_P(PGM_P str1, PGM_P str2);
 
 int strcmp_end_P(const char *str1, size_t len1, PGM_P str2, size_t len2);
 
+size_t String_rtrim(String &str);
+size_t String_ltrim(String &str);
+size_t String_trim(String &str);
+
+size_t String_rtrim(String &str, const char *chars);
+size_t String_ltrim(String &str, const char *chars);
+size_t String_trim(String &str, const char *chars);
+
+size_t String_rtrim_P(String &str, const char *chars);
+size_t String_ltrim_P(String &str, const char *chars);
+size_t String_trim_P(String &str, const char *chars);
+
 inline bool String_startsWith(const String &str1, char ch) {
     return str1.charAt(0) == ch;
 }
@@ -210,6 +217,12 @@ bool __while(uint32_t time_in_ms, uint16_t interval_in_ms, std::function<bool()>
 // call loop every millisecond for time_in_ms
 bool __while(uint32_t time_in_ms, std::function<bool()> loop);
 
+#if ESP8266
+
+const char *strchr_P(const char *str, int c);
+
+#endif
+
 // interface
 class TokenizerArgs {
 public:
@@ -243,7 +256,7 @@ class TokenizerArgsVector : public TokenizerArgs {
 public:
     TokenizerArgsVector(std::vector<T>& vector) : _vector(vector) {
     }
-    
+
     virtual void add(char* arg) {
         _vector.push_back(arg);
     }
@@ -279,7 +292,7 @@ uint16_t tokenizer(char *str, TokenizerArgs &args, bool hasCommand, char **nextC
     (__repeat_iteration == 0)
 #define repeat_last_iteration \
     (__repeat_iteration == (__repeat_count - 1))
-#define repeat(count, ...) { \
+#define repeat_func(count, ...) { \
         const auto  __repeat_count = count; \
         for(auto __repeat_iteration = 0; __repeat_iteration < __repeat_count; ++__repeat_iteration) { \
             __VA_ARGS__; \

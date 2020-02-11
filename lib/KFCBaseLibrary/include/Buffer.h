@@ -22,6 +22,9 @@ public:
 
     void clear();
     uint8_t *dupClear();
+    void move(uint8_t** ptr) {
+        *ptr = dupClear();
+    }
 
     inline uint8_t *get() const {
         return _buffer;
@@ -37,6 +40,10 @@ public:
     }
     inline const char *getConstChar() const {
         return reinterpret_cast<const char *>(_buffer);
+    }
+
+    inline const char* c_str() {
+        return getNulByteString();
     }
     char *getNulByteString(); // return NUL terminated string
 
@@ -76,6 +83,18 @@ public:
     }
     size_t write(uint8_t *data, size_t len);
     size_t write_P(PGM_P data, size_t len);
+
+    size_t write(const String &str) {
+        return write(str.c_str(), str.length());
+    }
+    template<class T>
+    size_t write(T *data) {
+        return write(reinterpret_cast<const uint8_t *>(data), sizeof(T));
+    }
+    template<class T>
+    size_t write(std::vector<T> vector) {
+        return write(reinterpret_cast<const uint8_t *>(vector.data()), vector.size() * sizeof(T));
+    }
 
     void remove(unsigned int index, size_t count);
     void removeAndShrink(unsigned int index, size_t count);

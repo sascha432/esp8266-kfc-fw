@@ -19,19 +19,16 @@ WiFiUDP::~WiFiUDP() {
 }
 
 int WiFiUDP::beginPacket(const char *host, uint16_t port) {
-    struct hostent *dns;
-    if (!(dns = gethostbyname(host))) {
+    IPAddress address;
+    if (!WiFi.hostByName(host, address)) {
         return 0;
     }
-    if (dns->h_addrtype != AF_INET) {
-        return 0;
-    }
-    _dst.sin_addr.S_un.S_addr = *(u_long *)dns->h_addr_list[0];
+    _dst.sin_addr.S_un.S_addr = (uint32_t)address;
     return _beginPacket(port);
 }
 
 int WiFiUDP::beginPacket(IPAddress ip, uint16_t port) {
-    _dst.sin_addr.S_un.S_addr = inet_addr(ip.toString().c_str());
+    _dst.sin_addr.S_un.S_addr = (uint32_t)ip;
     return 1;
 }
 

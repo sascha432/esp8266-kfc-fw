@@ -7,23 +7,22 @@
 #if defined(ESP8266)
 
 #include <os_type.h>
+#include <user_interface.h>
 
-#define SPIFFS_info(info)           SPIFFS.info(info)
-#define SPIFFS_openDir(dirname)     SPIFFS.openDir(dirname)
+#define SPIFFS_info(info)                           SPIFFS.info(info)
+#define SPIFFS_openDir(dirname)                     SPIFFS.openDir(dirname)
 
-#define WiFi_isHidden(num)          WiFi.isHidden(num)
+#define WiFi_isHidden(num)                          WiFi.isHidden(num)
 
-typedef os_timer_func_t *           os_timer_func_t_ptr;
-
-#define os_timer_create(timer, cb, arg) \
-    timer = new os_timer_t(); \
-    os_timer_setfn(timer, cb, arg);
-
-#define os_timer_delete(timer)      delete timer;
-
-// native callback
 extern "C" {
+
+    void ets_timer_setfn (ETSTimer *ptimer, ETSTimerFunc *pfunction, void *parg);
+    // void ets_timer_arm_new(ETSTimer *ptimer, int time_ms, int repeat_flag, int isMillis);
+    void ets_timer_disarm (ETSTimer *ptimer);
+    void ets_timer_done (ETSTimer *ptimer);
+
     void settimeofday_cb (void (*cb)(void));
+
 }
 
 #endif

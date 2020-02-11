@@ -16,7 +16,7 @@ class IntelHexFormat {
 public:
     class Record {
     public:
-        Record() {
+        Record() : _address(0) {
         }
 
         void clear() {
@@ -106,6 +106,7 @@ private:
     int _readHexByte();
     bool _readRecord(bool store);
 
+private:
     File _file;
     bool _eof;
     ErrorEnum_t _error;

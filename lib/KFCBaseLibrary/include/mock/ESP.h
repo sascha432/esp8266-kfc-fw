@@ -71,6 +71,8 @@ public:
         // Set flag to the new value.
         _CrtSetDbgFlag(tmpFlag);
     }
+#else
+    void _enableMSVCMemdebug() {}
 #endif
 
 

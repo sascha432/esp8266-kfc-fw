@@ -4,18 +4,20 @@
 
 #if _WIN32
 
+#include <PrintString.h>
+#include <misc.h>
 #include "BufferStream.h"
 #include "ESP8266HttpClient.h"
 
 HTTPClient::HTTPClient() {
     init_winsock();
-    _body = _debug_new BufferStream();
     _httpCode = 0;
+    _timeout = 30;
+    _lastError = 0;
 }
 
 HTTPClient::~HTTPClient() {
     _close();
-    delete _body;
 }
 
 void HTTPClient::begin(String url) {
@@ -41,117 +43,265 @@ void HTTPClient::begin(String url) {
 }
 
 void HTTPClient::end() {
-    _body->clear();
-    _url = String();
-    _host = String();
-    _path = String();
+    *this = HTTPClient();    
 }
 
-int HTTPClient::GET() {
-    sockaddr_in addr;
-    char buffer[1024];
+int HTTPClient::POST(const String& payload)
+{
+    _method = "POST";
+    _payload = payload;
+    return _request();
+}
+
+int HTTPClient::GET()
+{
+    _method = "GET";
+    _payload = String();
+    return _request();
+}
+
+int HTTPClient::_readSocket(char* buffer, size_t size)
+{
+    int len;
+    do {
+        len = recv(_socket, buffer, size, 0);
+        if (len == WSAEWOULDBLOCK && millis() > _endTime) {
+            _error = "Timeout";
+            return -1;
+        }
+    } while (len == WSAEWOULDBLOCK);
+    
+    if (len < 0) {
+        return _getLastError();
+    }
+    return len;
+}
+
+int HTTPClient::_getLastError()
+{
+    int err = WSAGetLastError();
+    char msgbuf[256] = { 0 };
+    FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, err, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), msgbuf, sizeof(msgbuf), NULL);
+    if (!*msgbuf) {
+        sprintf(msgbuf, "%d", err);
+    }
+    _error = msgbuf;
+    return -1;
+}
+
+int HTTPClient::_waitFor(Callback_t callback)
+{
+    while (millis() < _endTime) {
+        int result = callback();
+        if (result != 0) {
+            return result;
+        }
+        delay(1);
+    }
+    _error = "Timeout";
+    return -1;
+}
+
+int HTTPClient::_request() 
+{
     int iResult;
 
     _httpCode = 0;
-    _body->clear();
+    _body.clear();
+    _endTime = (_timeout * 1000) + millis();
 
-    memset(&addr, 0, sizeof(addr));
+    IPAddress address;
+    if (!WiFi.hostByName(_host.c_str(), address)) {
+        _error = "Could not resolve host";
+        return -1;
+    }
+
+    sockaddr_in addr{};
     addr.sin_family = AF_INET;
     addr.sin_port = htons(_port);
-    struct hostent *dns;
-    if (!(dns = gethostbyname(_host.c_str()))) {
-        return 0;
-    }
-    if (dns->h_addrtype != AF_INET) {
-        return 0;
-    }
-    addr.sin_addr.S_un.S_addr = *(u_long *)dns->h_addr_list[0];
+    addr.sin_addr.S_un.S_addr = (uint32_t)address;
 
     _socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (_socket == INVALID_SOCKET) {
-        return 0;
+        _error = "Failed to create socket";
+        return -1;
+    }
+
+    u_long iMode = 0; // BLOCKING
+    iResult = ioctlsocket(_socket, FIONBIO, &iMode);
+    if (iResult == SOCKET_ERROR) {
+        _close();
+        return _getLastError();
     }
 
     iResult = connect(_socket, (SOCKADDR *)&addr, sizeof(addr));
     if (iResult == SOCKET_ERROR) {
         _close();
-        return WSAGetLastError();
+        _error = "Failed to connect to host";
+        return -1;
     }
 
+    if (!_path.length()) {
+        _path += '/';
+    }
+
+    addHeader("Content-Length", String(_payload.length()));
+
+    String newline = "\r\n";
+
+    _requestHeaders = _method;
+    _requestHeaders.printf(" %s HTTP/1.1", _path.c_str());
+    _requestHeaders += newline;
     if (_port != 80) {
-        snprintf(buffer, sizeof(buffer), "GET %s HTTP/1.1\r\nHost: %s:%u\r\nConnection: close\r\n\r\n", _path.c_str(), _host.c_str(), _port);
+        _requestHeaders.printf("Host: %s:%u", _host.c_str(), _port);
     } else {
-        snprintf(buffer, sizeof(buffer), "GET %s HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n\r\n", _path.c_str(), _host.c_str());
+        _requestHeaders.printf("Host: %s", _host.c_str());
     }
-    iResult = send(_socket, buffer, strlen(buffer), 0);
+    _requestHeaders += newline;
+    for (auto& header : _headersList) {
+        _requestHeaders.printf("%s: %s", header.name.c_str(), header.value.c_str());
+        _requestHeaders += newline;
+    }
+    _requestHeaders += "Connection: close";
+    _requestHeaders += newline;
+    _requestHeaders += newline;
+
+    iResult = send(_socket, _requestHeaders.c_str(), _requestHeaders.length(), 0);
     if (iResult == SOCKET_ERROR) {
         _close();
-        return WSAGetLastError();
+        return _getLastError();
     }
 
-    iResult = shutdown(_socket, 1);
-    if (iResult == SOCKET_ERROR) {
-        _close();
-        return WSAGetLastError();
+    if (_payload.length()) {
+        iResult = send(_socket, _payload.c_str(), _payload.length(), 0);
+        if (iResult == SOCKET_ERROR) {
+            _close();
+            return _getLastError();
+        }
     }
 
     bool isHeader = true;
-    String header;
+    DWORD received = 0;
+    DWORD flags = 0;
+    WSABUF wsaBuf;
+    char buffer[1024];
+    wsaBuf.len = sizeof(buffer) - 1;
+    wsaBuf.buf = buffer;
+    _headers = String();
 
     do {
-        iResult = recv(_socket, buffer, sizeof(buffer) - 1, 0);
-        if (iResult > 0) {
-            buffer[iResult] = 0;
+        if (millis() > _endTime) {
+            _close();
+            _error = "Timeout";
+            return -1;
+        }
+        iResult = WSARecv(_socket, &wsaBuf, 1, &received, &flags, NULL, NULL);
+        if (iResult == SOCKET_ERROR) {
+            _close();
+            return _getLastError();
+        }
+        if (received > 0) {
+            buffer[received] = 0;
             if (isHeader) {
-                int size = 2;
-                char *ptr = strstr(buffer, "\n\n"); // TODO this fails if \n\n was truncated during the last read (recv)
-                if (!ptr) {
-                    size = 4;
-                    ptr = strstr(buffer, "\r\n\r\n");
+                _headers += buffer;
+                const char* bodyPtr = nullptr;
+                auto endHeader = _requestHeaders.indexOf("\n\n");
+                if (endHeader == -1) {
+                    endHeader = _headers.indexOf("\r\n\r\n");
+                    if (endHeader != -1) {
+                        bodyPtr = _headers.c_str() + endHeader + 4;
+                    }
                 }
-                if (!ptr) {
-                    header += buffer;
-                } else {
+                else {
+                    bodyPtr = _headers.c_str() + endHeader + 2;
+                }
+                if (bodyPtr) {
                     isHeader = false;
-                    *ptr = 0;
-                    header += buffer;
-                    _body->write((const uint8_t *)ptr + size, iResult - (ptr - buffer + size));
+                    if (bodyPtr != _headers.c_str() + _headers.length()) {
+                        _body.write((const uint8_t *)bodyPtr, bodyPtr - _headers.c_str());
+                    }
+                    _headers.replace(String('\r'), emptyString);
+                    _headers.remove(_headers.indexOf("\n\n"), _headers.length());
                 }
             } else {
-                _body->write((const uint8_t *)buffer, iResult);
+                _body.write((const uint8_t *)buffer, received);
             }
-        } else if (iResult < 0) {
-            _close();
-            return WSAGetLastError();
         }
-    } while( iResult > 0 );
+    } while (received != 0);
+
     _close();
 
-    if (!header.startsWith("HTTP/1")) {
-        _httpCode = 500;
+    if (isHeader) {
+        _headers.replace(String('\r'), emptyString);
+    }
+
+    if (!_headers.startsWith("HTTP/")) {
+        _httpCode = -1; // invalid response
         return _httpCode;
     }
 
-    int pos = header.indexOf(' ');
-        if (pos == -1) {
+    int pos = _headers.indexOf(' ');
+    if (pos == -1) {
         _httpCode = 500;
         return _httpCode;
     }
-    _httpCode = header.substring(pos + 1).toInt();
+    _httpCode = _headers.substring(pos + 1).toInt();
 
     return _httpCode;
 }
 
 size_t HTTPClient::getSize() {
-    return _body->length();
+    return _body.length();
 }
 
 Stream &HTTPClient::getStream() {
-    return *_body;
+    return _body;
+}
+
+void HTTPClient::addHeader(const String& name, const String& value, bool first, bool replace)
+{
+    auto header = HttpHeader(name, value);
+    if (replace) {
+        _headersList.erase(std::remove(_headersList.begin(), _headersList.end(), header), _headersList.end());
+    }
+    if (first) {
+        _headersList.insert(_headersList.begin(), std::move(header));
+    }
+    else {
+        _headersList.push_back(std::move(header));
+    }
+}
+
+void HTTPClient::setAuthorization(const char* auth)
+{
+    if (auth) {
+        String _auth = auth;
+        _auth.replace(String('\n'), emptyString);
+        addHeader("Authorization", _auth);
+    }
+}
+
+void HTTPClient::dump(Print &output, int maxLen)
+{
+    output.printf("URL: %s\n", _url.c_str());
+    if (_error.length()) {
+        output.printf("Error: %s\n", _error.c_str());
+    }
+    if (_payload.length()) {
+        output.println(F("Payload:"));
+        output.println(_payload);
+    }
+    output.printf("Request headers:\n%s", _requestHeaders.c_str());
+    output.printf("Http code %d\n", _httpCode);
+    output.printf("Headers:\n%s\n", _headers.c_str());
+    output.printf("Body (%u):\n%.*s\n", _body.length(), maxLen, _body.c_str());
 }
 
 void HTTPClient::_close()
 {
+    if (_lastError == 0) {
+        _lastError = WSAGetLastError();
+    }
     if (_socket != INVALID_SOCKET) {
         closesocket(_socket);
         _socket = INVALID_SOCKET;

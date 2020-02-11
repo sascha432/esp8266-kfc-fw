@@ -8,17 +8,22 @@
 #pragma once
 
 #include <Arduino_compat.h>
-#include <JsonCallbackReader.h>
+#include <KFCJson.h>
 #include <HttpHeaders.h>
 #include <HeapStream.h>
-#include "RestApiJsonReader.h"
 
 #ifndef DEBUG_KFC_REST_API
-#define DEBUG_KFC_REST_API                                  1
+#define DEBUG_KFC_REST_API                                  0
 #endif
 
 #ifndef KFC_REST_API_USE_HTTP_CLIENT
 #define KFC_REST_API_USE_HTTP_CLIENT				        1
+#endif
+
+#if DEBUG_KFC_REST_API
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
 #endif
 
 class asyncHTTPrequest;
@@ -29,26 +34,27 @@ public:
     public:
         typedef std::function<void(int16_t status, HttpRequest &request)> Callback_t;
 
-        HttpRequest(KFCRestAPI &api, Callback_t callback);
+        HttpRequest(KFCRestAPI &api, JsonBaseReader *json, Callback_t callback);
         ~HttpRequest();
 
         void setStream(Stream *stream) {
-            _json.setStream(stream);
+            _json->setStream(stream);
         }
 
         bool parseStream() {
-            return _json.parseStream();
+            return _json->parseStream();
         }
 
         asyncHTTPrequest &getRequest() {
             return *_request;
         }
 
-        String &getMessage();
+        const String &getMessage() const;
+        int16_t getCode() const;
         void setMessage(const String &message);
         void finish(int16_t code);
 
-        void setUri(const __FlashStringHelper *uri);
+        void setUri(const String &uri);
 
         String &getUrlString() {
             return _url;
@@ -66,11 +72,20 @@ public:
             return _api;
         }
 
+        JsonBaseReader *getJsonReader() {
+            return _json;
+        }
+
+        JsonVariableReader::ElementGroup::Vector *getElementsGroup() {
+            return reinterpret_cast<JsonVariableReader::Reader *>(_json)->getElementGroups();
+        }
+
     private:
         asyncHTTPrequest *_request;
-        RestApiJsonReader _json;
+        JsonBaseReader *_json;
         Callback_t _callback;
         String _message;
+        int16_t _code;
         String _url;
         String _body;
         KFCRestAPI &_api;
@@ -91,11 +106,14 @@ public:
     static void _removeHttpRequest(HttpRequest *httpRequestPtr);
 
 protected:
-    void _createRestApiCall(const __FlashStringHelper *endPointUri, HttpRequest::Callback_t callback);
+    void _createRestApiCall(const String &endPointUri, const String &body, JsonBaseReader *json, HttpRequest::Callback_t callback);
 
 protected:
     HttpRequestVector _requests;
     HttpHeaders _headers;
 };
 
+#include <debug_helper_disable.h>
+
 #endif
+

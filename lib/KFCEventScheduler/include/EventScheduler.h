@@ -17,6 +17,49 @@ extern EventScheduler Scheduler;
 
 class EventScheduler {
 public:
+    class RepeatType {
+    public:
+        static const int UNLIMITED = -1;
+        static const int YES = 1;
+        static const int NO = 0;
+
+        // true for UNLIMITED or false for no repeat
+        RepeatType(bool repeat = false) : _counter(0), _maxRepeat(repeat ? UNLIMITED : NO) {
+        }
+        // number of repeats, YES for calling it once, UNLIMITED or 0
+        RepeatType(int repeat) : _counter(0), _maxRepeat(repeat) {
+        }
+
+    protected:
+        friend EventScheduler;
+        friend EventTimer;
+
+        inline bool hasRepeat() const {
+            return (_maxRepeat == UNLIMITED) || (_counter <= _maxRepeat);
+        }
+
+        int _counter;
+        int _maxRepeat;
+    };
+
+    class RepeatUpdateType : public RepeatType {
+    public:
+        using RepeatType::RepeatType;
+
+        static const int NO_CHANGE = -2;
+
+        // keep repeat
+        RepeatUpdateType() : RepeatType(NO_CHANGE) {
+        }
+
+    private:
+        friend EventTimer;
+
+        inline bool isUpdateRequired() {
+            return _maxRepeat != NO_CHANGE;
+        }
+    };
+
     typedef enum {
         PRIO_NONE =         -1,
         PRIO_LOW =          0,
@@ -24,64 +67,40 @@ public:
         PRIO_HIGH,                  // HIGH runs the timer callback directly inside the timer interrupt/task without any delay
     } Priority_t;
 
-    typedef enum {
-        NO_CHANGE =         -2,
-        UNLIMTIED =         -1,
-        DONT =              0,
-        ONCE =              1,
-    } Repeat_t;
-
-    typedef EventTimer *TimerPtr;
+    typedef std::shared_ptr<EventTimer> TimerPtr;
     typedef std::function<void(TimerPtr timer)> Callback;
+    typedef std::function<void(EventTimer *)> DeleterCallback;
     typedef std::vector<TimerPtr> TimerVector;
     typedef std::vector<TimerPtr>::iterator TimerIterator;
 
 public:
     class Timer {
     public:
-        typedef std::function<void(Timer &timer)> Callback_t;
+        Timer();
+        ~Timer();
 
-        Timer() : _timer(nullptr) {
-        }
-        ~Timer() {
-            remove();
-        }
+        Timer(const Timer &timer) = delete;
+        Timer(Timer &&timer);
 
-        void add(int64_t delayMillis, int repeat, Callback callback, Priority_t priority = PRIO_LOW) {
-            remove();
-            Scheduler.addTimer(&_timer, delayMillis, repeat, callback, priority);
-        }
-
-        void add(int64_t delayMillis, bool repeat, Callback callback, Priority_t priority = PRIO_LOW) {
-            remove();
-            Scheduler.addTimer(&_timer, delayMillis, repeat, callback, priority);
+        Timer &operator=(Timer &&timer)
+        {
+            //debug_printf_P(PSTR("_timer=%p.swap(%p)\n"), _timer.get(), timer._timer.get());
+            _timer = timer._timer;
+            timer._timer = nullptr;
+            return *this;
         }
 
-        void add(int64_t delayMillis, int repeat, Callback_t callback, Priority_t priority = PRIO_LOW) {
-            remove();
-            Scheduler.addTimer(&_timer, delayMillis, repeat, [this, callback](EventScheduler::TimerPtr) {
-                callback(*this);
-            }, priority);
+        void add(int64_t delayMillis, RepeatType repeat, Callback callback, Priority_t priority = PRIO_LOW, DeleterCallback deleter = nullptr);
+        bool remove();
+
+        inline bool active() const {
+            return _timer != nullptr;
         }
 
-        void add(int64_t delayMillis, bool repeat, Callback_t callback, Priority_t priority = PRIO_LOW) {
-            add(delayMillis, (int)(repeat ? EventScheduler::UNLIMTIED : EventScheduler::DONT), callback, priority);
-        }
-
-        bool active() const {
-            return Scheduler.hasTimer(_timer);
-        }
-
-        bool remove() {
-            return Scheduler.removeTimer(&_timer);
-        }
-
-        EventScheduler::TimerPtr operator->() const {
-            return _timer;
-        }
+        EventTimer *operator->() const;
 
     private:
-        EventScheduler::TimerPtr _timer;
+        EventTimer *_timer;
     };
 
 public:
@@ -91,47 +110,30 @@ public:
     void begin();
     void end();
 
-    // repeat as int = number of repeats
-    void addTimer(TimerPtr *timerPtr, int64_t delayMillis, int repeat, Callback callback, Priority_t priority = PRIO_LOW);
+    EventTimer *addTimer(int64_t delayMillis, RepeatType repeat, Callback callback, Priority_t priority = PRIO_LOW, DeleterCallback deleter = nullptr);
 
-    // repeat as bool = unlimited or none
-    void addTimer(TimerPtr *timerPtr, int64_t delayMillis, bool repeat, Callback callback, Priority_t priority = PRIO_LOW) {
-        addTimer(timerPtr, delayMillis, (int)(repeat ? EventScheduler::UNLIMTIED : EventScheduler::DONT), callback, priority);
-    }
-
-    void addTimer(int64_t delayMillis, int repeat, Callback callback, Priority_t priority = PRIO_LOW) {
-        addTimer(nullptr, delayMillis, repeat, callback, priority);
-    }
-    void addTimer(int64_t delayMillis, bool repeat, Callback callback, Priority_t priority = PRIO_LOW) {
-        addTimer(nullptr, delayMillis, repeat, callback, priority);
-    }
-
-    // check if the pointer is a timer that exists.
-    // Note: Pointers are not unqiue and can be assigned to a different timer after the the memory has been released
-    // To avoid this use void addTimer(TimerPtr *timerPtr,  ....) and if the timer gets removed, timerPtr will be set to null
-    bool hasTimer(TimerPtr timer) const;
+    // checks if "timer" exists and is running
+    bool hasTimer(EventTimer *timer) const;
 
     // remove timer and return true if it has been removed
-    bool removeTimer(TimerPtr timer);
+    bool removeTimer(EventTimer *timer);
 
-    // remove timer and set to null, even if the timer did not exist
-    bool removeTimer(TimerPtr *timer);
-
-    static void loop();
-    void callTimer(TimerPtr timer);
-
-    static void _timerCallback(void *arg);
-
+    // returns number of scheduled timers
     size_t size() const {
         return _timers.size();
     }
+
+public:
+    static void loop();
+    static void _timerCallback(void *arg);
 
 private:
 #if DEBUG_EVENT_SCHEDULER
     void _list();
 #endif
+    friend EventTimer;
 
-    void _removeTimer(TimerPtr timer);
+    void _removeTimer(EventTimer *timer);
     void _loop();
 
 private:

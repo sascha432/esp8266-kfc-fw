@@ -22,7 +22,7 @@ void LoopFunctions::add(LoopFunctions::Callback_t callback, CallbackPtr_t callba
             return;
         }
     }
-    _functions.push_back({callback, callbackPtr, false});
+    _functions.push_back(FunctionEntry_t({callback, callbackPtr, false}));
 }
 
 void LoopFunctions::remove(CallbackPtr_t callbackPtr)

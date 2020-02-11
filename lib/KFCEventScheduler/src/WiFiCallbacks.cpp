@@ -26,7 +26,7 @@ uint8_t WiFiCallbacks::add(uint8_t events, WiFiCallbacks::Callback_t callback, W
         }
     }
     _debug_printf_P(PSTR("callbackPtr=%p new entry, events %d\n"), callbackPtr,  events);
-    _callbacks.push_back({events, callback, callbackPtr});
+    _callbacks.push_back(CallbackEntry_t({events, callback, callbackPtr}));
     return events;
 }
 

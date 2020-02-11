@@ -13,69 +13,57 @@ public:
         DELAY_NO_CHANGE =   -1,
     } ChangeOptionsDelayEnum_t;
 
-    static const int32_t minDelay = 5;
-    static const int32_t maxDelay = 0x68D7A3;
+    static const int32_t MIN_DELAY = 5;
+    static const int32_t MAX_DELAY = 0x68D7A3; // 6870947ms / 6870.947 seconds
 
-    EventTimer(EventScheduler::TimerPtr *timerPtr, EventScheduler::Callback loopCallback, int64_t delay, int repeat, EventScheduler::Priority_t priority);
+    EventTimer(EventScheduler::Callback loopCallback, int64_t delay, EventScheduler::RepeatType repeat, EventScheduler::Priority_t priority);
     ~EventTimer();
 
-    void _installTimer();
+    operator bool() const {
+        __debugbreak_and_panic_printf_P(PSTR("operator bool was used to check if a timer is active, use active()"));
+        return false;
+    }
 
-    inline operator bool() const __attribute__((always_inline)) {
-        return !!_timer;
+    inline void initTimer() __attribute__((always_inline)) {
+        _rearmEtsTimer();
     }
 
     inline bool active() const __attribute__((always_inline)) {
-        return !!_timer;
+        return _etsTimer.timer_func != nullptr;
     }
 
-    inline int getRepeat() const {
-        return _repeat;
-    }
-
-    inline int64_t getDelay() const {
+    inline int64_t getDelay() const __attribute__((always_inline))  {
         return _delay;
     }
 
-    inline int getCallCounter() const {
-        return _callCounter;
-    }
-    inline void setCallCounter(int callCounter) {
-        _callCounter = callCounter;
-    }
+    // inline EventScheduler::RepeatType getRepeat() const {
+    //     return _repeat;
+    // }
 
-    inline void setCallback(EventScheduler::Callback loopCallback) {
-        _loopCallback = loopCallback;
-    }
-
+    void setCallback(EventScheduler::Callback loopCallback);
     void setPriority(EventScheduler::Priority_t priority = EventScheduler::PRIO_LOW);
-    void changeOptions(int delay, int repeat = EventScheduler::NO_CHANGE, EventScheduler::Priority_t priority = EventScheduler::PRIO_NONE);
 
-    inline void changeOptions(int delay, bool repeat, EventScheduler::Priority_t priority = EventScheduler::PRIO_NONE) {
-        changeOptions(delay, (int)(repeat ? EventScheduler::UNLIMTIED : EventScheduler::DONT), priority);
-    }
+    // cancels timer and updates options
+    void rearm(int64_t delay, EventScheduler::RepeatUpdateType repeat = EventScheduler::RepeatUpdateType());
 
-    inline void rearm(int delay, bool repeat) {
-        _updateInterval(delay, repeat);
-    }
-
+    // stops the timer
     void detach();
-    void invokeCallback();
 
 private:
-    friend class EventScheduler;
+    friend EventScheduler;
+    friend EventScheduler::Timer;
 
-    void _setScheduleCallback(bool enable);
-    void _updateInterval(int delay, bool repeat);
-    bool _maxRepeat() const;
+    // void _setScheduleCallback(bool enable);
+    void _rearmEtsTimer();
+    void _invokeCallback();
+    void _remove();
 
-    os_timer_t *_timer;
+    ETSTimer _etsTimer;
     EventScheduler::Callback _loopCallback;
-    EventScheduler::TimerPtr *_timerPtr;
     int64_t _delay;
     int64_t _remainingDelay;
-    int32_t _repeat;
-    int32_t _callCounter;
     EventScheduler::Priority_t _priority;
+    EventScheduler::RepeatType _repeat;
     bool _callbackScheduled;
+    bool _disarmed;
 };

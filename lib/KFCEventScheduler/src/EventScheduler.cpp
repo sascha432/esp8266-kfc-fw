@@ -17,19 +17,73 @@
 EventScheduler Scheduler;
 #endif
 
-void EventScheduler::begin() {
+void EventScheduler::begin()
+{
     LoopFunctions::add(loop);
 }
 
-void EventScheduler::end() {
+void EventScheduler::end()
+{
     LoopFunctions::remove(loop);
     noInterrupts();
-    TimerVector list;
-    list.swap(_timers);
-    for(auto timer: list) {
-        delete timer;
+    TimerVector timers;
+    timers.swap(_timers);
+    for(const auto &timer: timers) {
+        timer->detach();
     }
     interrupts();
+    // _timers.clear();
+}
+
+// EventScheduler::Timer
+
+EventScheduler::Timer::Timer() : _timer(nullptr)
+{
+}
+
+EventScheduler::Timer::~Timer()
+{
+    remove();
+}
+
+EventScheduler::Timer::Timer(Timer &&timer)
+{
+    *this = std::move(timer);
+}
+
+void EventScheduler::Timer::add(int64_t delayMillis, RepeatType repeat, Callback callback, Priority_t priority, DeleterCallback deleter)
+{
+    if (_timer) {
+        remove();
+    }
+    _timer = Scheduler.addTimer(delayMillis, repeat, callback, priority, [this, deleter](EventTimer *timer) {
+        if (deleter) {
+            deleter(timer);
+        }
+        else {
+            delete timer;
+        }
+        _timer = nullptr;
+    });
+}
+
+bool EventScheduler::Timer::remove()
+{
+    _debug_printf_P(PSTR("_timer %p hasTimer=%u\n"), _timer, Scheduler.hasTimer(_timer));
+    if (_timer) {
+        _timer->_remove();
+        _timer = nullptr;
+        return true;
+    }
+    return false;
+}
+
+EventTimer *EventScheduler::Timer::operator->() const
+{
+    if (!_timer || !Scheduler.hasTimer(_timer)) {
+        __debugbreak_and_panic_printf_P(PSTR("_timer=%p hasTimer=%u\n"), _timer, Scheduler.hasTimer(_timer));
+    }
+    return _timer;
 }
 
 /**
@@ -42,125 +96,80 @@ void EventScheduler::end() {
  *
  */
 
-// EventScheduler::TimerPtr EventScheduler::_addTimer(int64_t delay, int repeat, Callback callback, Priority_t priority) {
-//     TimerPtr timer;
-//     _timers.push_back(timer = _debug_new EventTimer(callback, delay, repeat, priority));
-// #if DEBUG
-//     timer->__source = _debug_filename;
-//     timer->__line = _debug_lineno;
-//     timer->__function = _debug_function;
-// #endif
-//     _debug_printf_P(PSTR("add timer %p (%s), delay %.3f, repeat %d, priority %d\n"), timer, timer->_getTimerSource().c_str(), delay / 1000.0, repeat, priority);
-//     installLoopFunc();
-//     Scheduler._list();
-//     return _timers.back();
-// }
-
-void EventScheduler::addTimer(TimerPtr *timerPtr, int64_t delay, int repeat, Callback callback, Priority_t priority) {
+EventTimer *EventScheduler::addTimer(int64_t delay, RepeatType repeat, Callback callback, Priority_t priority, DeleterCallback deleter)
+{
+    _debug_printf_P(PSTR("delay=%.0f repeat=%d prio=%u callback=%u deleter=%u\n"), delay / 1.0, repeat._maxRepeat, priority, callback ? 1 : 0, deleter ? 1 : 0);
+    auto timer = _debug_new EventTimer(callback, delay, repeat, priority);
+    _timers.push_back(deleter ? TimerPtr(timer, deleter) : TimerPtr(timer));
 #if DEBUG_EVENT_SCHEDULER
-    _timers.push_back(_debug_new EventTimer(timerPtr, callback, delay, repeat, priority));
-    _debug_printf_P(PSTR("timer=%p, delay=%.3f, repeat=%d, priority=%d\n"), _timers.back(), delay / 1000.0, repeat, priority);
     Scheduler._list();
-#else
-    _timers.push_back(_debug_new EventTimer(timerPtr, callback, delay, repeat, priority));
 #endif
+    timer->initTimer();
+    return timer;
 }
 
-bool ICACHE_RAM_ATTR EventScheduler::hasTimer(TimerPtr timer) const {
+bool ICACHE_RAM_ATTR EventScheduler::hasTimer(EventTimer *timer) const
+{
     if (timer) {
-        for(auto _timer: _timers) {
-            if (_timer == timer) {
+        for(const auto &_timer: _timers) {
+            if (_timer.get() == timer) {
                 return true;
             }
         }
     }
     return false;
-    // auto it = std::find_if(_timers.begin(), _timers.end(), [timer](const TimerPtr _timer) {
-    //     return _timer == timer;
-    // });
-    // return it != _timers.end();
 }
 
-bool EventScheduler::removeTimer(TimerPtr *timer)
+bool EventScheduler::removeTimer(EventTimer *timer)
 {
-    _debug_printf_P(PSTR("timerPtr=%p, timer=%p\n"), timer, timer ? *timer : nullptr);
-    auto result = false;
-    if (*timer) {
-        result = removeTimer(*timer);
-        *timer = nullptr;
-    }
-    return result;
-}
-
-bool EventScheduler::removeTimer(TimerPtr timer)
-{
-    if (!timer) {
-        _debug_printf_P(PSTR("timer=null\n"));
+    _debug_printf_P(PSTR("timer=%p result=%d\n"), timer, hasTimer(timer));
+    if (!hasTimer(timer)) {
         return false;
     }
-    auto result = hasTimer(timer);
-    _debug_printf_P(PSTR("timer=%p, linked_timer_ptr=%p, result=%d\n"), timer, (timer ? timer->_timerPtr : nullptr), result);
-    if (!result) {
-#if DEBUG_EVENT_SCHEDULER
-        __debugbreak_and_panic_printf_P(PSTR("EventScheduler::removeTimer(): timer %p is not active or has been deleted already\n"), timer);
-#endif
-        return false;
-    }
-
     _removeTimer(timer);
     return true;
 }
 
-void ICACHE_RAM_ATTR EventScheduler::_removeTimer(TimerPtr timer)
+void ICACHE_RAM_ATTR EventScheduler::_removeTimer(EventTimer *timer)
 {
-    _debug_printf_P(PSTR("timer=%p, linked_timer_ptr=%p\n"), timer, (timer ? timer->_timerPtr : nullptr));
+    _debug_printf_P(PSTR("timer=%p, _etsTimer.timer_func=%p\n"), timer, timer ? timer->_etsTimer.timer_func : nullptr);
 
     timer->detach();
 
-    if (timer->_timerPtr) {
-        if (*timer->_timerPtr != timer) {
-            _debug_printf_P(PSTR("timer pointer mismatch %p<>%p\n"), timer, *timer->_timerPtr);
+#if 0
+    auto iterator = std::find(_timers.begin(), _timers.end(), timer);
+    TimerPtr ptr;
+    if (iterator != _timers.end()) {
+        ptr = *iterator;
+    }
+    _timers.erase(iterator, _timers.end());
+#else
+    for(auto iterator = _timers.begin(); iterator != _timers.end(); ++iterator) {
+        if (iterator->get() == timer) {
+            _timers.erase(iterator);
+            break;
         }
-        *timer->_timerPtr = nullptr;
     }
-    else {
-        _debug_printf_P(PSTR("timer pointer for %p=null\n"), timer);
-    }
-
-    // remove from list of timers
-    _timers.erase(std::remove_if(_timers.begin(), _timers.end(), [timer](const TimerPtr _timer) {
-        return _timer == timer;
-    }), _timers.end());
-
-    _debug_printf_P(PSTR("deleting timer %p\n"), timer);
-    delete timer;
+    // _timers.erase(std::remove_if(_timers.begin(), _timers.end(), timer));
+#endif
 
 #if DEBUG_EVENT_SCHEDULER
     Scheduler._list();
 #endif
 }
 
-void ICACHE_RAM_ATTR EventScheduler::_timerCallback(void *arg) {
-    TimerPtr timer = reinterpret_cast<TimerPtr>(arg);
-    if (timer->_remainingDelay > EventTimer::maxDelay) {
-        timer->_remainingDelay -= EventTimer::maxDelay;
-        _debug_printf_P(PSTR("callback=%p: timer=%p is greater max delay %d, remaining delay %.3f\n"), arg, timer, EventTimer::maxDelay, timer->_remainingDelay / 1000.0);
-    }
-    else if (timer->_remainingDelay) {
-        _debug_printf_P(PSTR("callback=%p: timer=%p is below max delay %d, ajusting next callback to %.3f ms\n"), arg, timer, EventTimer::maxDelay, timer->_remainingDelay / 1000.0);
-        timer->_updateInterval(timer->_remainingDelay, false);
-        timer->_remainingDelay = 0;
+void ICACHE_RAM_ATTR EventScheduler::_timerCallback(void *arg)
+{
+    auto timer = reinterpret_cast<EventTimer *>(arg);
+    if (timer->_remainingDelay) {
+        timer->_rearmEtsTimer();
+        return;
     }
     else {
          // immediately reschedule if the delay exceeds the max. interval
-        if (timer->_delay > EventTimer::maxDelay && !timer->_maxRepeat()) {
-            _debug_printf_P(PSTR("callback=%p: timer %p is in 'repeat mode'. Rescheduling, next remaining time update in %d ms\n"), arg, timer, EventTimer::maxDelay)
-            timer->_remainingDelay = timer->_delay - EventTimer::maxDelay;
-            timer->_updateInterval(EventTimer::maxDelay, true);
-        }
         if (timer->_priority == EventScheduler::PRIO_HIGH) {
             // call high priortiy timer directly
-            Scheduler.callTimer(timer);
+            timer->_invokeCallback();
         }
         else {
             timer->_callbackScheduled = true;
@@ -168,40 +177,25 @@ void ICACHE_RAM_ATTR EventScheduler::_timerCallback(void *arg) {
     }
 }
 
-void ICACHE_RAM_ATTR EventScheduler::callTimer(TimerPtr timer) {
-    _debug_printf_P(PSTR("timer=%p: priority %d\n"), timer, timer->_priority);
-    timer->_loopCallback(timer);
-    if (hasTimer(timer)) {
-        timer->_callCounter++;
-        if (timer->_maxRepeat()) {
-            _debug_printf_P(PSTR("timer=%p: removing EventTimer, max repeat reached\n"), timer);
-            _removeTimer(timer);
-        }
-        else if (!timer->active()) {
-            _debug_printf_P(PSTR("timer=%p: removing EventTimer, not active\n"), timer);
-            _removeTimer(timer);
-        }
-    }
-}
-
-
-void EventScheduler::loop() {
+void EventScheduler::loop()
+{
     Scheduler._loop();
 }
 
-void EventScheduler::_loop() {
+void EventScheduler::_loop()
+{
     if (!_timers.empty()) {
         int runtime = 0;
         auto start = millis();
 
         // do not use iterators here, the vector might be modified in the timer callback
         for(size_t i = 0; i < _timers.size(); i++) {
-            auto timer = _timers[i];
+            auto timer = _timers[i].get();
             if (timer->_callbackScheduled) {
                 timer->_callbackScheduled = false;
-                callTimer(timer);
+                timer->_invokeCallback();
                 if ((runtime = millis() - start) > _runtimeLimit) {
-                    _debug_printf_P(PSTR("timer=%p, runtime limit %d/%d reached, exiting loop\n"), timer, runtime, _runtimeLimit);
+                    _debug_printf_P(PSTR("timer=%p runtime limit %d/%d reached, exiting loop\n"), timer, runtime, _runtimeLimit);
                     break;
                 }
             }
@@ -209,7 +203,7 @@ void EventScheduler::_loop() {
 
 #if DEBUG_EVENT_SCHEDULER
         int left = 0;
-        for(auto timer: _timers) {
+        for(const auto &timer: _timers) {
             if (timer->_callbackScheduled) {
                 left++;
             }
@@ -230,8 +224,8 @@ void EventScheduler::_list()
         _debug_printf_P(PSTR("no timers left\n"));
     } else {
         int scheduled = 0;
-        for(auto timer: _timers) {
-            _debug_printf_P(PSTR("%p: delay %.3f repeat %d/%d, scheduled %d\n"), timer, timer->_delay / 1000.0, timer->_callCounter, timer->_repeat, timer->_callbackScheduled);
+        for(const auto &timer: _timers) {
+            _debug_printf_P(PSTR("%p: delay %.3f repeat %d/%d, scheduled %d\n"), timer.get(), timer->_delay / 1000.0, timer->_callCounter, timer->_repeat, timer->_callbackScheduled);
             if (timer->_callbackScheduled) {
                 scheduled++;
             }

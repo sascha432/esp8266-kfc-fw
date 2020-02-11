@@ -3,6 +3,7 @@
 */
 
 #include "EventTimer.h"
+#include "EventScheduler.h"
 
 #if DEBUG_EVENT_SCHEDULER
 #include <debug_helper_enable.h>
@@ -10,109 +11,116 @@
 #include <debug_helper_disable.h>
 #endif
 
-EventTimer::EventTimer(EventScheduler::TimerPtr *timerPtr, EventScheduler::Callback loopCallback, int64_t delay, int repeat, EventScheduler::Priority_t priority) {
-
-    if (delay < 0) {
-        __debugbreak_and_panic_printf_P(PSTR("delay < 0\n"));
+EventTimer::EventTimer(EventScheduler::Callback loopCallback, int64_t delay, EventScheduler::RepeatType repeat, EventScheduler::Priority_t priority) : _etsTimer()
+{
+    if (delay < MIN_DELAY) {
+        __debugbreak_and_panic_printf_P(PSTR("delay < %u\n"), MIN_DELAY);
     }
-
     _loopCallback = loopCallback;
     _callbackScheduled = false;
     _delay = delay;
+    _remainingDelay = 0;
     _repeat = repeat;
-    _callCounter = 0;
     _priority = priority;
-    _timerPtr = timerPtr;
-    if (_timerPtr) {
-        *_timerPtr = this;
-    }
-
-    os_timer_create(_timer, reinterpret_cast<os_timer_func_t_ptr>(EventScheduler::_timerCallback), reinterpret_cast<void *>(this));
-    _installTimer();
+    _disarmed = true;
 }
 
-EventTimer::~EventTimer() {
-    _debug_printf_P(PSTR("os_timer=%p\n"), _timer);
-    detach();
-    if (Scheduler.hasTimer(this))  {
-        _debug_printf_P(PSTR("calling ::removeTimer(%p) to remove destroyed object from scheduler\n"), this);
-        Scheduler.removeTimer(this);
+EventTimer::~EventTimer()
+{
+    auto hasTimer = Scheduler.hasTimer(this);
+    if (hasTimer || _etsTimer.timer_func || !_disarmed)  {
+        __debugbreak_and_panic_printf_P(PSTR("timer=%p _etsTimer.timer_func=%p hasTimer=%u disarmed=%d object deleted while active\n"), this, _etsTimer.timer_func, hasTimer, _disarmed);
     }
+    // detach();
+    ets_timer_done(&_etsTimer);
 }
 
-void EventTimer::_installTimer() {
-    _debug_printf_P(PSTR("installing os_timer %p, delay %.3f, repeat %d\n"), _timer, _delay / 1000.0, _repeat);
+void ICACHE_RAM_ATTR EventTimer::setCallback(EventScheduler::Callback loopCallback)
+{
+    _loopCallback = loopCallback;
+}
 
-    if (_delay > maxDelay) {
-        _remainingDelay = _delay - maxDelay;
-    } else {
+void ICACHE_RAM_ATTR EventTimer::setPriority(EventScheduler::Priority_t priority)
+{
+    _priority = priority;
+}
+
+void ICACHE_RAM_ATTR EventTimer::rearm(int64_t delay, EventScheduler::RepeatUpdateType repeat)
+{
+    _debug_printf_P(PSTR("rearm=%.0f repeat=%d\n"), delay / 1.0, repeat._maxRepeat);
+    _delay = delay;
+    _remainingDelay = 0;
+    if (repeat.isUpdateRequired()) {
+        _repeat = repeat;
+    }
+    _rearmEtsTimer();
+}
+
+void ICACHE_RAM_ATTR EventTimer::_rearmEtsTimer()
+{
+    if (_etsTimer.timer_func) {
+        ets_timer_disarm(&_etsTimer);
+        _etsTimer.timer_func = nullptr;
+        _disarmed = true;
+    }
+    if (_remainingDelay == 0 && _delay > MAX_DELAY) { // init, rearm
+        _remainingDelay = _delay;
+    }
+
+    int32_t delay;
+    bool repeat = false;
+    if (_remainingDelay > MAX_DELAY) { // delay too long, chop up
+        _debug_printf_P(PSTR("timer=%p delay %.0f remaining %.0f delay %ums\n"), this, _delay / 1.0, _remainingDelay / 1.0, MAX_DELAY);
+        _remainingDelay -= MAX_DELAY;
+        delay = MAX_DELAY;
+    }
+    else if (_remainingDelay) { // wait for remainig delay
+        delay = std::max(MIN_DELAY, (int32_t)_remainingDelay);
         _remainingDelay = 0;
+        _debug_printf_P(PSTR("timer=%p delay %.0fs remaining 0s delay %ums\n"), this, _delay / 1.0, delay);
     }
-
-    os_timer_arm(_timer, std::max(minDelay, (int32_t)(_remainingDelay ? maxDelay : _delay)), (_remainingDelay || _repeat) ? 1 : 0);
+    else { // default delay
+        delay = std::max(MIN_DELAY, (int32_t)_delay);
+        repeat = _repeat.hasRepeat();
+    }
+    _debug_printf_P(PSTR("rearm _etsTimer.timer_arg=%p\n"), _etsTimer.timer_arg);
+    _callbackScheduled = false;
+    ets_timer_setfn(&_etsTimer, reinterpret_cast<ETSTimerFunc *>(EventScheduler::_timerCallback), reinterpret_cast<void *>(this));
+    _disarmed = false;
+    ets_timer_arm_new(&_etsTimer, delay, repeat, true);
 }
 
-void EventTimer::setPriority(EventScheduler::Priority_t priority) {
-    _priority = priority;
+void ICACHE_RAM_ATTR EventTimer::detach()
+{
+    _debug_printf_P(PSTR("timer=%p _etsTimer.timer_func=%p\n"), this, _etsTimer.timer_func);
+    if (_etsTimer.timer_func) {
+        ets_timer_disarm(&_etsTimer);
+        _disarmed = true;
+        _etsTimer.timer_func = nullptr;
+    }
 }
 
-void EventTimer::changeOptions(int delay, int repeat, EventScheduler::Priority_t priority) {
-    uint8_t diff = 0;
-    if (repeat != EventScheduler::NO_CHANGE) {
-        if (_repeat != repeat) {
-            _repeat = repeat;
-            diff++;
+static void ICACHE_RAM_ATTR _no_deleter(void *) {
+}
+
+void ICACHE_RAM_ATTR EventTimer::_invokeCallback()
+{
+    EventScheduler::TimerPtr timerPtr(this, _no_deleter);
+    _debug_printf_P(PSTR("timer=%p: priority %d\n"), this, _priority);
+    _loopCallback(timerPtr);
+    _repeat._counter++;
+    if (_repeat.hasRepeat() && _etsTimer.timer_func != nullptr) {
+        if (_delay > EventTimer::MAX_DELAY) { // if max delay is exceeded we need to reschedule
+            _rearmEtsTimer();
         }
-    }
-    if (priority != EventScheduler::PRIO_NONE) {
-        if (_priority != priority) {
-            _priority = priority;
-            diff++;
-        }
-    }
-    if (delay != ChangeOptionsDelayEnum_t::DELAY_NO_CHANGE && _delay != delay) {
-        _delay = delay;
-        diff++;
-    }
-    if (_timer) {
-        if (diff == 0) { // options didn't change, use attached timer
-            return;
-        }
-        os_timer_disarm(_timer);
     } else {
-        os_timer_disarm(_timer);
-        os_timer_delete(_timer);
-        os_timer_create(_timer, reinterpret_cast<os_timer_func_t_ptr>(EventScheduler::_timerCallback), reinterpret_cast<void *>(this));
-    }
-    _installTimer();
-}
-
-void ICACHE_RAM_ATTR EventTimer::_updateInterval(int delay, bool repeat) {
-    os_timer_disarm(_timer);
-    os_timer_arm(_timer, std::max(minDelay, delay), repeat ? 1 : 0);
-}
-
-bool ICACHE_RAM_ATTR EventTimer::_maxRepeat() const {
-    if (_repeat == 0) {
-        return true;
-    }
-    if (_repeat == EventScheduler::UNLIMTIED) {
-        return false;
-    }
-    return _callCounter >= _repeat;
-}
-
-void ICACHE_RAM_ATTR EventTimer::detach() {
-    if (_timer) {
-        _debug_printf_P(PSTR("os_timer=%p\n"), _timer);
-        os_timer_disarm(_timer);
-        os_timer_delete(_timer);
-        _timer = nullptr;
+        _debug_printf_P(PSTR("timer=%p _etsTimer.timer_func=%p removing EventTimer, repeat %d/%d\n"), this, _etsTimer.timer_func, _repeat._counter, _repeat._maxRepeat);
+        Scheduler._removeTimer(this);
     }
 }
 
-void EventTimer::invokeCallback() {
-    if (Scheduler.hasTimer(this)) { // make sure the timer is still running
-        _loopCallback(this);
-    }
+void ICACHE_RAM_ATTR EventTimer::_remove()
+{
+    _debug_printf_P(PSTR("timer=%p: removing EventTimer, repeat %d/%d\n"), this, _repeat._counter, _repeat._maxRepeat);
+    Scheduler._removeTimer(this);
 }

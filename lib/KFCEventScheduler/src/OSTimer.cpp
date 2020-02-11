@@ -3,6 +3,7 @@
   Author: sascha_lammers@gmx.de
 */
 
+#include <Arduino_compat.h>
 #include "EventTimer.h"
 #include "OSTimer.h"
 
@@ -12,51 +13,44 @@
 #include <debug_helper_disable.h>
 #endif
 
-OSTimer::OSTimer() {
-    _timer = nullptr;
+OSTimer::OSTimer() : _etsTimer()
+{
 }
 
-OSTimer::~OSTimer() {
+OSTimer::~OSTimer()
+{
+    debug_printf_P(PSTR("_etsTimer.timer_arg=%p\n"), _etsTimer.timer_arg);
     detach();
+}
+
+static void ICACHE_RAM_ATTR _callback(void *arg)
+{
+    reinterpret_cast<OSTimer *>(arg)->run();
 }
 
 void OSTimer::startTimer(uint32_t delay, bool repeat)
 {
-    if (delay < EventTimer::minDelay) {
-        __debugbreak_and_panic_printf_P(PSTR("delay %u < %u is not supported\n"), delay, EventTimer::minDelay);
-        delay = EventTimer::minDelay;
+    debug_printf_P(PSTR("delay=%u repeat=%u\n"), delay, repeat);
+    if (delay < EventTimer::MIN_DELAY) {
+        __debugbreak_and_panic_printf_P(PSTR("delay %u < %u is not supported\n"), delay, EventTimer::MIN_DELAY);
+        delay = EventTimer::MIN_DELAY;
     }
-    else if (delay > EventTimer::maxDelay) {
-        __debugbreak_and_panic_printf_P(PSTR("delay %u > %u is not supported\n"), delay, EventTimer::maxDelay);
-        delay = EventTimer::maxDelay;
+    else if (delay > EventTimer::MAX_DELAY) {
+        __debugbreak_and_panic_printf_P(PSTR("delay %u > %u is not supported\n"), delay, EventTimer::MAX_DELAY);
+        delay = EventTimer::MAX_DELAY;
     }
-    if (_timer) {
-        os_timer_disarm(_timer);
-    }
-    else {
-        os_timer_create(_timer, reinterpret_cast<os_timer_func_t_ptr>(repeat ? _callback : _callbackOnce), reinterpret_cast<void *>(this));
-    }
-    os_timer_arm(_timer, delay, repeat);
+    ets_timer_disarm(&_etsTimer);
+    ets_timer_setfn(&_etsTimer, reinterpret_cast<ETSTimerFunc *>(_callback), reinterpret_cast<void *>(this));
+    ets_timer_arm_new(&_etsTimer, delay, repeat, true);
 }
 
 void OSTimer::detach()
 {
-    if (_timer) {
-        os_timer_disarm(_timer);
-        os_timer_delete(_timer);
-        _timer = nullptr;
+    debug_printf_P(PSTR("_etsTimer.timer_arg=%p\n"), _etsTimer.timer_arg);
+    if (_etsTimer.timer_arg == this) {
+        ets_timer_disarm(&_etsTimer);
+        ets_timer_done(&_etsTimer);
+        _etsTimer.timer_arg = nullptr;
     }
 }
 
-void OSTimer::_callback(void *arg)
-{
-    OSTimer *timer = reinterpret_cast<OSTimer *>(arg);
-    timer->run();
-}
-
-void OSTimer::_callbackOnce(void *arg)
-{
-    OSTimer *timer = reinterpret_cast<OSTimer *>(arg);
-    timer->run();
-    timer->detach();
-}

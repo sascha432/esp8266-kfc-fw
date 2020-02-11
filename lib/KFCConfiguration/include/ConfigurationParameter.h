@@ -16,18 +16,13 @@
 #include <debug_helper_disable.h>
 #endif
 
-// memory alignment for _info.data
-#ifndef CONFIGURATION_PARAMETER_MEM_ADDR_ALIGNMENT
-#define CONFIGURATION_PARAMETER_MEM_ADDR_ALIGNMENT          4
-#endif
-
-// use _info.data to store the settings. saves RAM but adds extra code
-#ifndef CONFIGURATION_PARAMETER_USE_DATA_PTR_AS_STORAGE
-#define CONFIGURATION_PARAMETER_USE_DATA_PTR_AS_STORAGE     1
-#endif
-
 class Buffer;
 class Configuration;
+
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 26812)
+#endif
 
 class ConfigurationParameter {
 public:
@@ -47,82 +42,37 @@ public:
     } TypeEnum_t;
 
     typedef struct __attribute__packed__ {
-        Handle_t handle;            // 16
-        uint16_t type : 4;          // 4
-        uint16_t length : 12;       // 16
+        Handle_t handle;
+        uint16_t type : 4;
+        uint16_t length : 12;
+        TypeEnum_t getType() const {
+            return static_cast<TypeEnum_t>(type);
+        }
+        bool isString() const {
+            return type == STRING;
+        }
+        uint16_t getSize() const {
+            return type == STRING ? length + 1 : length;
+        };
     } Param_t;
 
     typedef struct __attribute__packed__ {
-        uint8_t *data;              // 32           data or pointer to data
-        uint16_t size : 12;         // 44           max. size of data
-        uint16_t dirty : 1;         // 45           data has been changed and needs to be stored in EEPROM, implies copied=0
-        uint16_t copied : 1;        // 46           data was copied from EEPROM, implies dirty=0
-        uint16_t alloc : 1;         // 47           data is an allocated pointer
+        uint8_t *data;              //            pointer to data
+        uint16_t size : 12;         //            max. size of data
+        uint16_t dirty : 1;         //            data has been changed
+        uint16_t ___reserved : 3;
     } Info_t;
 
     ConfigurationParameter(const Param_t &param);
+    ConfigurationParameter(const ConfigurationParameter &) = delete;
 
-    // allocate memory and discard existing data
-    uint8_t *allocate(uint16_t size);
-
-    // free allocated memory
-    void freeData();
-
-#if CONFIGURATION_PARAMETER_USE_DATA_PTR_AS_STORAGE
-    inline uint8_t *getDataPtr() const {
-        return _info.alloc ? _info.data : (uint8_t *)&_info.data;
+    bool operator==(const ConfigurationParameter::Handle_t handle) const {
+        return _param.handle == handle;
     }
 
-    // return if the data pointer can be used as storage
-#if CONFIGURATION_PARAMETER_MEM_ADDR_ALIGNMENT
-    inline bool isAligned() const {
-        return (((uint32_t)&_info.data) & (CONFIGURATION_PARAMETER_MEM_ADDR_ALIGNMENT - 1)) == 0;
-    }
-#else
-    constexpr bool isAligned() {
-        return true;
-}
-#endif
-
-    // returns if the parameter fits into the _info data structure
-    bool needsAlloc() const;
-
-#else
-    inline uint8_t *getDataPtr() const {
-        return _info.data;
-    }
-#endif
-
-    // object has data
-    inline bool hasData() const {
-        return _info.dirty || _info.copied;
-    }
-
-    // object has unsaved data
-    inline bool isDirty() const {
-        return _info.dirty;
-    }
-
-    // set dirty flag. also sets copied
-    void setDirty(bool dirty);
-
-    // returns if the specified size fits into the memory
-    bool isWriteable(uint16_t size) const;
-
-    // compare if the stored data is the same
-    bool compareData(const uint8_t *data, uint16_t size) const;
-    bool compareData_P(PGM_P data, uint16_t size) const;
-
-    // release memory if not dirty
-    void release();
-
-    // update data to a pointer on the heap
-    void setDataPtr(uint8_t *data, uint16_t size);
-
-    uint16_t getSize() const;
-    void setSize(uint16_t size);
-
-    TypeEnum_t getType() const;
+    uint8_t* _allocate(Configuration *conf);
+    void _release(Configuration *conf);
+    void _free();
 
     template <typename T>
     static TypeEnum_t constexpr getType() {
@@ -140,55 +90,98 @@ public:
     void setType(TypeEnum_t type);
     static uint8_t getDefaultSize(TypeEnum_t type);
 
-    void setData(const uint8_t *data, uint16_t size, bool addNulByte = false);
-    void setData(const __FlashStringHelper *data, uint16_t size, bool addNulByte = false);
+    void setData(Configuration *conf, const uint8_t *data, uint16_t size);
+    void setData(Configuration *conf, const __FlashStringHelper *data, uint16_t size);
     void updateStringLength();
 
     const char *getString(Configuration *conf, uint16_t offset);
-    uint8_t *getBinary(Configuration *conf, uint16_t &length, uint16_t offset);
+    const uint8_t *getBinary(Configuration *conf, uint16_t &length, uint16_t offset);
 
     uint16_t read(Configuration *conf, uint16_t offset);
 
     void dump(Print &output);
     void exportAsJson(Print& output);
 
-    inline Handle_t getHandle() const {
+    String toString() const;
+
+    Handle_t getHandle() const {
         return _param.handle;
     }
 
-    inline uint16_t getLength() const {
+    uint16_t getLength() const {
         return _param.length;
     }
 
-    inline Param_t &getParam() {
-        return _param;
+    uint16_t getSize() const {
+        return _info.size;
     }
 
-    inline const Param_t &getConstParam() const {
-        return _param;
+    bool hasData() const {
+        return _info.data;
     }
 
-    static const String getTypeString(TypeEnum_t type);
+    bool isDirty() const {
+        return _info.dirty;
+    }
+
+    static const __FlashStringHelper *getTypeString(TypeEnum_t type);
 
 private:
-    bool _readData(Configuration *conf, uint16_t offset, bool addNulByte = false);
+    friend Configuration;
+
+    bool _readData(Configuration *conf, uint16_t offset);
+    void _makeWriteable(Configuration *conf, uint16_t size);
+
+    bool _compareData(const uint8_t *data, uint16_t size) const;
+    bool _compareData(const __FlashStringHelper *data, uint16_t size) const;
 
 protected:
     Info_t _info;
     Param_t _param;
 };
 
-template <typename T>
-class ConfigurationParameterT: public ConfigurationParameter {
+template<class T>
+class ConfigurationParameterT : public ConfigurationParameter
+{
 public:
     using ConfigurationParameter::ConfigurationParameter;
 
-    ConfigurationParameterT<T>(const ConfigurationParameterT<T> &) = delete;
+    operator bool() const {
+        return _info.data != nullptr;
+    }
 
-    inline T &get() {
-        return *reinterpret_cast<T *>(getDataPtr());
+    T &get() {
+        return *reinterpret_cast<T *>(_info.data);
+    }
+    void set(const T &value) {
+        *reinterpret_cast<T *>(_info.data) = value;
     }
 };
 
+template<>
+class ConfigurationParameterT <char *> : public ConfigurationParameter
+{
+public:
+    using ConfigurationParameter::ConfigurationParameter;
+
+    operator bool() const {
+        return _info.data != nullptr;
+    }
+
+    void set(const char *value) {
+        strncpy(reinterpret_cast<char *>(_info.data), value, _param.length)[_param.length] = 0;
+    }
+    void set(const __FlashStringHelper *value) {
+        strncpy_P(reinterpret_cast<char *>(_info.data), reinterpret_cast<PGM_P>(value), _param.length)[_param.length] = 0;
+    }
+    void set(const String &value) {
+        strncpy(reinterpret_cast<char *>(_info.data), value.c_str(), _param.length)[_param.length] = 0;
+    }
+};
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+
 #include <pop_pack.h>
-#include <debug_helper_enable.h>
+#include <debug_helper_disable.h>

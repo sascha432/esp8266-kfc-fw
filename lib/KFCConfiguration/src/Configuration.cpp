@@ -7,42 +7,7 @@
 #include <Buffer.h>
 #include <JsonTools.h>
 #include "misc.h"
-
 #include "DumpBinary.h"
-
-#if defined(ESP8266)
-extern "C" {
-    #include "spi_flash.h"
-}
-
-#if defined(ARDUINO_ESP8266_RELEASE_2_6_3)
-extern "C" uint32_t _EEPROM_start;
-#elif defined(ARDUINO_ESP8266_RELEASE_2_5_2)
-extern "C" uint32_t _SPIFFS_end;
-#define _EEPROM_start _SPIFFS_end
-#else
-#error Check if eeprom start is correct
-#endif
-
-
-#ifdef NO_GLOBAL_EEPROM
-// allows to use a different sector in flash memory
-#ifndef EEPROM_ADDR
-// #define EEPROM_ADDR 0x40200000           // default
-#define EEPROM_ADDR 0x40201000           // 1MB/4MB flash size
-// #define EEPROM_ADDR 0x40202000           // 4MB
-// #define EEPROM_ADDR 0x40203000           // 4MB
-#endif
-EEPROMClass EEPROM((((uint32_t)&_EEPROM_start - EEPROM_ADDR) / SPI_FLASH_SEC_SIZE));
-#else
-#define EEPROM_ADDR 0x40200000           // sector of the configuration for direct access
-#endif
-#endif
-
-// #if defined(ESP32)
-// PROGMEM_STRING_DEF(EEPROM_partition_name, "eeprom");
-// #endif
-
 
 #if DEBUG_CONFIGURATION
 #include <debug_helper_enable.h>
@@ -51,27 +16,91 @@ EEPROMClass EEPROM((((uint32_t)&_EEPROM_start - EEPROM_ADDR) / SPI_FLASH_SEC_SIZ
 #endif
 
 #if DEBUG_GETHANDLE
-// if debugging is enable, getHandle() verifies that all hashes are unique
-static std::map<const ConfigurationParameter::Handle_t, String> handles;
 
-uint16_t getHandle(const char *name) {
-    ConfigurationParameter::Handle_t crc = constexpr_crc16_calc((const uint8_t *)name, constexpr_strlen(name));
-    for(const auto &map: handles) {
-        if (map.first == crc && !map.second.equals(name)) {
-            __debugbreak_and_panic_printf_P(PSTR("getHandle(%s): CRC not unique: %x, %s\n"), name, crc, map.second.c_str());
-        }
+class DebugHandle_t
+{
+public:
+    DebugHandle_t() = default;
+
+    DebugHandle_t(const String& name, const ConfigurationParameter::Handle_t handle) : _handle(handle), _name(name) {
     }
-    handles[crc] = String(name);
+
+    bool operator==(const ConfigurationParameter::Handle_t handle) const {
+        return _handle == handle;
+    }
+    bool operator!=(const ConfigurationParameter::Handle_t handle) const {
+        return !(*this == handle);
+    }
+
+    bool operator==(const char* name) const {
+        return _name.equals(name);
+    }
+    bool operator!=(const char* name) const {
+        return !(*this == name);
+    }
+
+    const char* getName() const {
+        return _name.c_str();
+    }
+
+private:
+    friend void readHandles();
+    friend void writeHandles();
+
+    ConfigurationParameter::Handle_t _handle;
+    String _name;
+};
+
+static std::vector<DebugHandle_t> handles;
+
+
+void readHandles()
+{
+    File file = SPIFFS.open(F("config_debug"), fs::FileOpenMode::read);
+    if (file) {
+        while (file.available()) {
+            auto line = file.readStringUntil('\n');
+            if (String_rtrim(line)) {
+                getHandle(line.c_str());
+            }
+
+        }
+        file.close();
+    }
+}
+
+
+void writeHandles()
+{
+    File file = SPIFFS.open(F("config_debug"), fs::FileOpenMode::write);
+    if (file) {
+        for (auto &handle : handles) {
+            file.println(handle._name);
+        }
+        file.close();
+    }
+}
+
+uint16_t getHandle(const char *name)
+{
+    ConfigurationParameter::Handle_t crc = constexpr_crc16_calc((const uint8_t *)name, constexpr_strlen(name));
+    auto iterator = std::find(handles.begin(), handles.end(), crc);
+    if (iterator == handles.end()) {
+        handles.emplace_back(name, crc);
+    }
+    else if (*iterator != name) {
+        __debugbreak_and_panic_printf_P(PSTR("getHandle(%s): CRC not unique: %x, %s\n"), name, crc, iterator->getName());
+    }
     return crc;
 }
 
-const char *getHandleName(ConfigurationParameter::Handle_t crc) {
-    for(const auto &map: handles) {
-        if (map.first == crc) {
-            return map.second.c_str();
-        }
+const char *getHandleName(ConfigurationParameter::Handle_t crc)
+{
+    auto iterator = std::find(handles.begin(), handles.end(), crc);
+    if (iterator == handles.end()) {
+        return "<Unknown>";
     }
-    return "<Unknown>";
+    return iterator->getName();
 }
 #else
 const char *getHandleName(ConfigurationParameter::Handle_t crc) {
@@ -79,15 +108,13 @@ const char *getHandleName(ConfigurationParameter::Handle_t crc) {
 }
 #endif
 
-Configuration::Configuration(uint16_t offset, uint16_t size) {
-// #if defined(ESP32)
-//     _partition = nullptr;
-// #endif
-    _offset = offset;
-    _size = size;
-    _eepromInitialized = false;
-    _readAccess = 0;
-    _eepromSize = 4096;
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 26812)
+#endif
+
+Configuration::Configuration(uint16_t offset, uint16_t size) : _offset(offset), _dataOffset(0), _size(size), _eeprom(false, 4096), _readAccess(0)
+{
 }
 
 Configuration::~Configuration()
@@ -97,298 +124,267 @@ Configuration::~Configuration()
 
 void Configuration::clear()
 {
-    _debug_println(_sharedEmptyString);
-    for (auto &parameter : _params) {
-        parameter.freeData();
-    }
+    _debug_printf_P(PSTR("params=%u\n"), _params.size());
+    discard();
     _params.clear();
-    _readAccess = 0;
 }
 
 void Configuration::discard()
 {
-    _debug_println(_sharedEmptyString);
+    _debug_printf_P(PSTR("params=%u\n"), _params.size());
     for (auto &parameter : _params) {
-        parameter.freeData();
+        if (parameter.isDirty()) {
+            free(parameter._info.data);
+            parameter._info = ConfigurationParameter::Info_t();
+        }
+        else {
+            parameter._release(this);
+        }
     }
-    endEEPROM();
+    _eeprom.end();
+    _storage.clear();
     _readAccess = 0;
 }
 
-// read map only, data is read on demand
+
+void Configuration::release()
+{
+    _dumpPool(_storage);
+    _debug_printf_P(PSTR("params=%u last read=%d dirty=%d\n"), _params.size(), (int)(_readAccess == 0 ? -1 : millis() - _readAccess), isDirty());
+    for (auto &parameter : _params) {
+        if (!parameter.isDirty()) {
+            parameter._release(this);
+        }
+    }
+    _eeprom.end();
+    _shrinkStorage();
+    _readAccess = 0;
+}
+
 bool Configuration::read()
 {
     clear();
-    _debug_println(_sharedEmptyString);
+#if DEBUG_GETHANDLE
+    readHandles();
+#endif
     auto result = _readParams();
     if (!result) {
-        _debug_printf_P(PSTR("params=false\n"));
+        _debug_printf_P(PSTR("readParams()=false\n"));
         clear();
     }
     return result;
 }
 
-// write data to EEPROM
 bool Configuration::write()
 {
-    _debug_println(_sharedEmptyString);
+    _debug_printf_P(PSTR("params=%u\n"), _params.size());
 
     Buffer buffer;
     uint16_t dataOffset;
 
-    beginEEPROM();
+    _storage.clear();
 
-    // store EEPROM location for unmodified parameters
-    std::vector<const uint8_t *> _eepromPtr;
-    _eepromPtr.reserve(_params.size());
+    _eeprom.begin();
+
     dataOffset = _dataOffset;
     for (auto &parameter : _params) {
         if (parameter.isDirty()) {
-            _eepromPtr.push_back(nullptr);
-        } else {
-#if defined(ESP32)
-            _eepromPtr.push_back(EEPROM.getDataPtr() + dataOffset);
-#else
-            _eepromPtr.push_back(EEPROM.getConstDataPtr() + dataOffset);
-#endif
-        }
-        dataOffset += parameter.getParam().length;
-    }
-
-#if CONFIGURATION_PARAMETER_USE_DATA_PTR_AS_STORAGE && CONFIGURATION_PARAMETER_MEM_ADDR_ALIGNMENT
-    // change order that data which fits into the data pointer is aligned
-    for(uint16_t i = 0; i < _params.size(); i++) {
-        auto &parameter = _params.at(i);
-        if (!parameter.isAligned() && !parameter.needsAlloc()) { // find suitable position
-            uint16_t j;
-            for(j = 0; j < _params.size(); j++) {
-                if (i != j) {
-                    auto &parameter2 = _params.at(j);
-                    if (parameter2.isAligned() && parameter2.needsAlloc()) {
-                        _debug_printf_P(PSTR("swap %d and %d\n"), i, j);
-                        auto &eepromPtr = _eepromPtr.at(i);
-                        auto &eepromPtr2 = _eepromPtr.at(j);
-                        const uint8_t *etmp = eepromPtr;
-                        eepromPtr = eepromPtr2;
-                        eepromPtr2 = etmp;
-                        ConfigurationParameter tmp = parameter;
-                        parameter = parameter2;
-                        parameter2 = tmp;
-                        break;
-                    }
-                }
-            }
-            if (j == _params.size()) {  // nothing available anymore
-                break;
+            if (parameter._param.isString()) {
+                parameter.updateStringLength();
             }
         }
+        else {
+            // store EEPROM location for unmodified parameters
+            parameter._info.data = (uint8_t *)_eeprom.getConstDataPtr() + dataOffset;
+        }
+
+        // write parameter headers
+        _debug_printf_P(PSTR("write_header: %s ofs=%d\n"), parameter.toString().c_str(), (int)(buffer.length() + _offset + sizeof(Header_t)));
+        buffer.write((const uint8_t *)&parameter._param, sizeof(parameter._param));
+        dataOffset += parameter._param.length;
+    }
+
+    _dataOffset = _offset + (uint16_t)(buffer.length() + sizeof(Header_t));
+#if DEBUG_CONFIGURATION
+    auto calcOfs = _offset + (sizeof(ConfigurationParameter::Param_t) * _params.size()) + sizeof(Header_t);
+    if (_dataOffset != calcOfs) {
+        __debugbreak_and_panic_printf_P(PSTR("real_ofs=%u ofs=%u\n"), _dataOffset, calcOfs);
+
     }
 #endif
-
-    // write parameter headers
-    for (auto &parameter : _params) {
-        auto &param = parameter.getParam();
-        if (parameter.isDirty() && param.type == ConfigurationParameter::STRING) {
-            parameter.updateStringLength();
-        }
-        buffer.write((const uint8_t *)&param, sizeof(param));
-    }
-
-    dataOffset = _offset + (uint16_t)(buffer.length() + sizeof(Header_t)); // new offset
-    _debug_printf_P(PSTR("Data offset verification %d = %d\n"), dataOffset, (uint16_t)(_offset + (sizeof(ConfigurationParameter::Param_t) * _params.size()) + sizeof(Header_t)));
 
     // write data
-    uint16_t index = 0;
     for (auto &parameter : _params) {
-#if DEBUG_CONFIGURATION
-        _debug_printf_P(PSTR("%04x (%s), data offset %d, size %d, dirty %d, eeprom offset %p\n"),
-            parameter.getParam().handle, getHandleName(parameter.getParam().handle), (int)(buffer.length() + _offset + sizeof(Header_t)), parameter.getParam().length, parameter.isDirty(), _eepromPtr[index]);
-#endif
+        _debug_printf_P(PSTR("write_data: %s ofs=%d %s\n"), parameter.toString().c_str(), (int)(buffer.length() + _offset + sizeof(Header_t)), __debugDumper(parameter, parameter._info.data, parameter._param.length).c_str());
+        buffer.write(parameter._info.data, parameter._param.length);
         if (parameter.isDirty()) {
-            buffer.write(parameter.getDataPtr(), parameter.getParam().length); // store new data
-        } else {
-            buffer.write(_eepromPtr[index], parameter.getParam().length); // copy data
+            parameter._free();
         }
-        index++;
+        else {
+            parameter._info = ConfigurationParameter::Info_t();
+        }
     }
 
     if (buffer.length() > _size) {
-        _debug_printf_P(PSTR("size exceeded: %u > %u\n"), buffer.length(), _size);
-        discard();    // discard all data
-        return false;
+        __debugbreak_and_panic_printf_P(PSTR("size exceeded: %u > %u\n"), buffer.length(), _size);
     }
 
     auto len = (uint16_t)buffer.length();
     auto eepromSize = _offset + len + sizeof(Header_t);
-    if (eepromSize > _eepromSize) {
-        _eepromSize = eepromSize; // increase max. size
-        endEEPROM();
-        beginEEPROM();
-    } else {
-        _eepromSize = eepromSize; // reduce/keep max. size
-    }
+    _eeprom.begin(eepromSize); // update size
 
-    auto dptr = EEPROM.getDataPtr() + _offset;
-    auto sptr = buffer.get();
+    auto dptr = _eeprom.getDataPtr() + _offset;
+    auto &header = *reinterpret_cast<Header_t *>(dptr);
+    header = Header_t({ CONFIG_MAGIC_DWORD, crc16_calc(buffer.get(), len), len, _params.size() });
+    memcpy(dptr + sizeof(header), buffer.get(), len);
 
-    // write header
-    auto headerPtr = (Header_t *)dptr;
-    dptr += sizeof(Header_t);
+    _debug_printf_P(PSTR("CRC %04x, length %d\n"), header.crc, len);
 
-    memset(headerPtr, 0, sizeof(Header_t));
-    headerPtr->magic = CONFIG_MAGIC_DWORD;
-    headerPtr->crc = crc16_calc(sptr, len);
-    _debug_printf_P(PSTR("CRC %04x, length %d\n"), headerPtr->crc, len);
-    headerPtr->length = len;
-    headerPtr->params = _params.size();
+    _eeprom.commit();
 
-    // copy data
-    memcpy(dptr, sptr, len);
+#if DEBUG_GETHANDLE
+    writeHandles();
+#endif
 
-    commitEEPROM();
-    _dataOffset = dataOffset;
+    int count = 0;
+    auto it = std::find_if(_params.begin(), _params.end(), [&count](const ConfigurationParameter &param) {
+        count++;
+        return param.getLength() == 777;
+    });
+    Serial.printf("count=%u match=%u\n", count, it != _params.end());
 
-    // dumpEEPROM(Serial, false, _offset, 160);
+    Serial.printf("dist=%d\n", std::distance(_params.begin(), _params.end()));
 
-    for (auto &parameter : _params) {
-        if (parameter.isDirty()) {
-            parameter.setDirty(false);
-        }
-    }
+
+    // _eeprom.dump(Serial, false, _offset, 160);
 
     return true;
 }
 
-ConfigurationParameter & Configuration::getParameterByPosition(uint16_t position) {
-    return _params.at(position);
+void Configuration::makeWriteable(ConfigurationParameter &param, uint16_t size)
+{
+    param._makeWriteable(this, size ? size : param._info.size);
 }
 
-uint16_t Configuration::getPosition(const ConfigurationParameter *parameter) const {
-    if (parameter) {
-        uint16_t pos = 0;
-        for (auto &param : _params) {
-            if (param.getConstParam().handle == parameter->getConstParam().handle) {
-                return pos;
-            }
-            pos++;
-        }
-        __debugbreak_and_panic_printf_P(PSTR("could not find %04x (%s)\n"), parameter->getConstParam().handle, getHandleName(parameter->getConstParam().handle));
-    }
-    return 0xffff;
-}
-
-const char *Configuration::getString(Handle_t handle) {
+const char *Configuration::getString(Handle_t handle, ConfigurationParameter **paramPtr)
+{
     uint16_t offset;
     auto param = _findParam(ConfigurationParameter::STRING, handle, offset);
     if (param == _params.end()) {
-        return _sharedEmptyString.c_str();
+        if (paramPtr) {
+            *paramPtr = nullptr;
+        }
+        return emptyString.c_str();
     }
+    if (paramPtr) {
+        *paramPtr = &(*param);
+    }
+#if DEBUG_CONFIGURATION
+    auto ptr = param->getString(this, offset);
+    if (param->_info.size && param->_info.size < param->_param.length + 1) {
+        __debugbreak_and_panic_printf_P(PSTR("%s size mismatch\n"), param->toString().c_str());
+    }
+    return ptr;
+#else
     return param->getString(this, offset);
+#endif
 }
 
-char * Configuration::getWriteableString(Handle_t handle, uint16_t maxLength) {
+char *Configuration::getWriteableString(Handle_t handle, uint16_t maxLength)
+{
     auto &param = getWritableParameter<char *>(handle, maxLength);
-    param.setDirty(true);
-    return reinterpret_cast<char *>(param.getDataPtr());
+    return reinterpret_cast<char *>(param._info.data);
 }
 
-const void *Configuration::getBinary(Handle_t handle, uint16_t &length) {
+const uint8_t *Configuration::getBinary(Handle_t handle, uint16_t &length, ConfigurationParameter **paramPtr)
+{
     uint16_t offset;
     auto param = _findParam(ConfigurationParameter::BINARY, handle, offset);
     if (param == _params.end()) {
+        if (paramPtr) {
+            *paramPtr = nullptr;
+        }
         return nullptr;
     }
+    if (paramPtr) {
+        *paramPtr = &(*param);
+    }
+#if DEBUG_CONFIGURATION
+    auto ptr = param->getBinary(this, length, offset);;
+    if (param->_info.size != param->_param.length) {
+        __debugbreak_and_panic_printf_P(PSTR("%s size mismatch\n"), param->toString().c_str());
+    }
+    return ptr;
+#else
     return param->getBinary(this, length, offset);
+#endif
 }
 
-void Configuration::setString(Handle_t handle, const char *string) {
+void Configuration::setString(Handle_t handle, const char *string)
+{
     uint16_t offset;
     auto &param = _getOrCreateParam(ConfigurationParameter::STRING, handle, offset);
-    param.setData((const uint8_t *)string, (uint16_t)strlen(string), true);
+    param.setData(this, (const uint8_t *)string, (uint16_t)strlen(string));
 }
 
-void Configuration::setString(Handle_t handle, const String &string) {
+void Configuration::setString(Handle_t handle, const String &string)
+{
     uint16_t offset;
     auto &param = _getOrCreateParam(ConfigurationParameter::STRING, handle, offset);
-    param.setData((const uint8_t *)string.c_str(), (uint16_t)string.length(), true);
+    param.setData(this, (const uint8_t *)string.c_str(), (uint16_t)string.length());
 }
 
-void Configuration::setString(Handle_t handle, const __FlashStringHelper *string) {
+void Configuration::setString(Handle_t handle, const __FlashStringHelper *string)
+{
     uint16_t offset;
     auto &param = _getOrCreateParam(ConfigurationParameter::STRING, handle, offset);
-    param.setData(string, (uint16_t)strlen_P(RFPSTR(string)), true);
+    param.setData(this, string, (uint16_t)strlen_P(RFPSTR(string)));
 }
 
-void Configuration::setBinary(Handle_t handle, const void *data, uint16_t length) {
+void Configuration::setBinary(Handle_t handle, const void *data, uint16_t length)
+{
     uint16_t offset;
     auto &param = _getOrCreateParam(ConfigurationParameter::BINARY, handle, offset);
-    param.setData((const uint8_t *)data, length);
+    param.setData(this, (const uint8_t *)data, length);
 }
 
-void Configuration::dumpEEPROM(Print & output, bool asByteArray, uint16_t offset, uint16_t length) {
-    if (length == 0) {
-        length = _eepromSize;
-    }
-    endEEPROM();
-    EEPROM.begin(offset + length);
-    output.printf_P(PSTR("Dumping EEPROM %d:%d\n"), offset, length);
-    if (asByteArray) {
-        uint16_t pos = offset;
-        while (pos < _eepromSize) {
-            output.printf_P(PSTR("0x%02x, "), EEPROM.read(pos));
-            if (++pos % (76 / 6) == 0) {
-                output.println();
-            }
-            delay(1);
-        }
-        output.println();
-        output.printf_P(PSTR("%d,\n"), _eepromSize);
-    } else {
-        DumpBinary dumper(output);
-#if defined(ESP32)
-        dumper.dump(EEPROM.getDataPtr() + offset, length);
-#else
-        dumper.dump(EEPROM.getConstDataPtr() + offset, length);
-#if 1
-        output.printf_P(PSTR("Dumping flash (spi_read) %d:%d\n"), offset, length);
-        endEEPROM();
-        uint8_t *buffer = (uint8_t *)malloc((length + 4) & ~3);
-        getEEPROM(buffer, offset, length, (length + 4) & ~3);
-        dumper.dump(buffer, length);
-        free(buffer);
-#endif
-#endif
-    }
-    EEPROM.end();
-}
-
-void Configuration::dump(Print &output) {
-
-    output.println(F("Configuration:"));
-    output.printf_P(PSTR("Data offset %d, base offset %d, eeprom size %d, parameters %d, length %d\n"), _dataOffset, _offset, _eepromSize, _params.size(), _eepromSize - _offset);
-    output.printf_P(PSTR("Min. memory usage %d, Size of header %d, Param_t %d, ConfigurationParameter %d, Configuration %d\n"), sizeof(Configuration) + _params.size() * sizeof(ConfigurationParameter), sizeof(Configuration::Header_t), sizeof(ConfigurationParameter::Param_t), sizeof(ConfigurationParameter), sizeof(Configuration));
+void Configuration::dump(Print &output, bool dirty, const String &name)
+{
+    output.printf_P(PSTR("Configuration:\nofs=%d base_ofs=%d eeprom_size=%d params=%d len=%d\n"), _dataOffset, _offset, _eeprom.getSize(), _params.size(), _eeprom.getSize() - _offset);
+    output.printf_P(PSTR("min_mem_usage=%d header_size=%d Param_t::size=%d, ConfigurationParameter::size=%d, Configuration::size=%d\n"), sizeof(Configuration) + _params.size() * sizeof(ConfigurationParameter), sizeof(Configuration::Header_t), sizeof(ConfigurationParameter::Param_t), sizeof(ConfigurationParameter), sizeof(Configuration));
 
     uint16_t offset = _dataOffset;
     for (auto &parameter : _params) {
-        auto &param = parameter.getParam();
-        output.printf_P(PSTR("%04x (%s): "), param.handle, getHandleName(param.handle));
+        DebugHelper::activate(false);
+        auto display = true;
+        auto &param = parameter._param;
+        if (name.length()) {
+            if (!name.equals(getHandleName(param.handle))) {
+                display = false;
+            }
+        }
+        else if (dirty) {
+            if (!parameter._info.dirty) {
+                display = false;
+            }
+        }
         auto length = parameter.read(this, offset);
-        output.printf_P(PSTR("type %s, data offset %d, size %d, value: "), parameter.getTypeString(parameter.getType()).c_str(), offset, /*calculateOffset(param.handle),*/ length);
-        parameter.dump(output);
+        DebugHelper::activate(true);
+        if (display) {
+#if DEBUG_GETHANDLE
+            output.printf_P(PSTR("%s[%04x]: "), getHandleName(param.handle), param.handle);
+#else
+            output.printf_P(PSTR("%04x: "), param.handle);
+#endif
+            output.printf_P(PSTR("type=%s ofs=%d size=%d dirty=%u value: "), parameter.getTypeString(parameter._param.getType()), offset, /*calculateOffset(param.handle),*/ length, parameter._info.dirty);
+            parameter.dump(output);
+        }
         offset += param.length;
     }
 }
 
-void Configuration::release() {
-    _debug_printf_P(PSTR("last read %d, dirty %d\n"), (int)(_readAccess == 0 ? -1 : millis() - _readAccess), isDirty());
-    for (auto &parameter : _params) {
-        parameter.release();
-    }
-    endEEPROM();
-    _readAccess = 0;
-}
-
-bool Configuration::isDirty() const {
+bool Configuration::isDirty() const
+{
     for(const auto &param: _params) {
         if (param.isDirty()) {
             return true;
@@ -397,14 +393,114 @@ bool Configuration::isDirty() const {
     return false;
 }
 
-void Configuration::exportAsJson(Print& output, const String &version)
+void Configuration::_writeAllocate(ConfigurationParameter &param, uint16_t size)
+{
+    param._param.length = size;
+    param._info.size = param._param.getSize();
+    param._info.data = reinterpret_cast<uint8_t*>(calloc(param._info.size, 1));
+    _debug_printf_P(PSTR("calloc %s\n"), param.toString().c_str());
+}
+
+uint8_t *Configuration::_allocate(uint16_t size, PoolVector *poolVector)
+{
+    if (!poolVector) {
+        poolVector = &_storage;
+    }
+    Pool *poolPtr = nullptr;
+    if (size > 96) {
+        poolVector->emplace_back(size);
+        poolPtr = &poolVector->back();
+        poolPtr->init();
+    }
+    else
+    {
+        for (auto& pool : *poolVector) {
+            if (pool.space(size)) {
+                poolPtr = &pool;
+            }
+        }
+        if (!poolPtr) {
+            auto poolSize = poolVector->size();
+            uint16_t size = poolSize ? 96 : 32;
+            poolVector->emplace_back(size);
+            poolPtr = &poolVector->back();
+            poolPtr->init();
+        }
+    }
+    return poolPtr->allocate(size);
+}
+
+void Configuration::_release(const void *ptr)
+{
+    if (ptr) {
+        auto pool = _getPool(ptr);
+        if (pool) {
+            pool->release(ptr);
+        }
+    }
+}
+
+Configuration::Pool *Configuration::_getPool(const void *ptr)
+{
+    if (ptr) {
+        for (auto &pool: _storage) {
+            if (pool.hasPtr(ptr)) {
+                return &pool;
+            }
+        }
+    }
+    return nullptr;
+}
+
+void Configuration::_shrinkStorage()
+{
+    PoolVector newPool;
+    for (auto &param: _params) {
+        if (param._info.data && param._info.dirty == 0) {
+            param._info.data = reinterpret_cast<uint8_t *>(memcpy(_allocate(param.getSize(), &newPool), param._info.data, param.getLength()));
+        }
+    }
+    _storage = std::move(newPool);
+    _dumpPool(_storage);
+}
+
+
+#if DEBUG_CONFIGURATION
+
+void Configuration::_dumpPool(PoolVector &poolVector)
+{
+    size_t total = 0;
+    int n = 0;
+    for (auto &pool : poolVector) {
+        if (pool.getPtr()) {
+            total += pool.size();
+            debug_printf_P(PSTR("[%u] size %u space %u count %u\n"), n++, pool.size(), pool.available(), pool.count());
+        }
+        else {
+            debug_printf_P(PSTR("[%u] size %u space 0 nullptr\n"), n++, pool.size());
+        }
+    }
+    n = 0;
+    size_t total_dirty = 0;
+    for (auto& param : _params) {
+        if (param._info.dirty) {
+            n++;
+            total_dirty += param._info.size;
+        }
+    }
+    debug_printf_P(PSTR("pool size=%u count=%u dirty_size=%u dirty=%u\n"), total, poolVector.size(), total_dirty, n);
+}
+
+#endif
+
+void Configuration::exportAsJson(Print &output, const String &version)
 {
     output.printf_P(PSTR("{\n\t\"magic\": \"%#08x\",\n\t\"version\": \"%s\",\n"), CONFIG_MAGIC_DWORD, version.c_str());
     output.print(F("\t\"config\": {\n"));
 
     uint16_t offset = _dataOffset;
-    for (auto& parameter : _params) {
-        auto& param = parameter.getParam();
+    for (auto &parameter : _params) {
+        auto &param = parameter._param;
 
         if (offset != _dataOffset) {
             output.print(F(",\n"));
@@ -419,8 +515,8 @@ void Configuration::exportAsJson(Print& output, const String &version)
 #endif
 
         auto length = parameter.read(this, offset);
-        output.printf_P(PSTR("\t\t\t\"type\": %d,\n"), parameter.getType());
-        output.printf_P(PSTR("\t\t\t\"type_name\": \"%s\",\n"), parameter.getTypeString(parameter.getType()).c_str());
+        output.printf_P(PSTR("\t\t\t\"type\": %d,\n"), parameter._param.getType());
+        output.printf_P(PSTR("\t\t\t\"type_name\": \"%s\",\n"), parameter.getTypeString(parameter._param.getType()));
         output.printf_P(PSTR("\t\t\t\"length\": %d,\n"), length);
         output.print(F("\t\t\t\"data\": "));
         parameter.exportAsJson(output);
@@ -433,199 +529,84 @@ void Configuration::exportAsJson(Print& output, const String &version)
     output.print(F("\n\t}\n}\n"));
 }
 
-bool Configuration::importJson(Stream& stream, uint16_t *handles)
+bool Configuration::importJson(Stream &stream, uint16_t *handles)
 {
     JsonConfigReader reader(&stream, *this, handles);
     reader.initParser();
     return reader.parseStream();
 }
 
-void Configuration::endEEPROM() {
-    if (_eepromInitialized) {
-        _debug_println(_sharedEmptyString);
-        EEPROM.end();
-        _eepromInitialized = false;
-    }
-}
-
-void Configuration::commitEEPROM() {
-    if (_eepromInitialized) {
-        _debug_println(_sharedEmptyString);
-        EEPROM.commit();
-        _eepromInitialized = false;
-    }
-    else {
-        _debug_println(F("EEPROM is not initialized"));
-    }
-}
-
-void Configuration::getEEPROM(uint8_t *dst, uint16_t offset, uint16_t length, uint16_t size) {
-
-#if defined(ESP8266)
-    // if the EEPROM is not intialized, copy data from flash directly
-    if (_eepromInitialized) {
-        memcpy(dst, EEPROM.getConstDataPtr() + offset, length); // data is already in RAM
-        return;
-    }
-    _debug_printf_P(PSTR("dst=%p, ofs=%d, len=%d, size=%d\n"), dst, offset, length, size);
-
-    auto eeprom_start_address = ((uint32_t)&_EEPROM_start - EEPROM_ADDR) + offset;
-
-    uint8_t alignment = eeprom_start_address % 0x4;
-    if (alignment) {
-        eeprom_start_address -= alignment; // align start
-    }
-    uint16_t readSize = length + alignment; // add offset to length
-    if (readSize & 0x3) {
-        readSize = (readSize + 0x4) & ~0x3; // align read length
-    }
-
-    // _debug_printf_P(PSTR("ofs=%d, len=%d, align=%d\n"), offset, length, alignment);
-
-
-    // _debug_printf_P(PSTR("flash: %08X:%08X (%d) aligned: %08X:%08X (%d)\n"),
-    //     eeprom_start_address + alignment, eeprom_start_address + length + alignment, length,
-    //     eeprom_start_address, eeprom_start_address + readSize, readSize
-    // );
-
-    SpiFlashOpResult result;
-    if (readSize > size) { // does not fit into the buffer
-        uint8_t buf[64];
-        uint8_t *ptr = buf;
-        if (readSize > 64) {
-            _debug_printf_P(PSTR("allocating read buffer readSize=%d, len=%d, size=%d\n"), readSize, length, size); // large read operation should have an aligned address already to avoid this
-            ptr = (uint8_t *)malloc(readSize);
-        }
-        noInterrupts();
-        result = spi_flash_read(eeprom_start_address, reinterpret_cast<uint32_t *>(ptr), readSize);
-        interrupts();
-        if (result == SPI_FLASH_RESULT_OK) {
-            memcpy(dst, ptr + alignment, length); // add alignment offset
-        }
-        if (buf != ptr) {
-            ::free(ptr);
-        }
-    } else {
-        noInterrupts();
-        result = spi_flash_read(eeprom_start_address, reinterpret_cast<uint32_t*>(dst), readSize);
-        interrupts();
-    }
-    if (result != SPI_FLASH_RESULT_OK) {
-        memset(dst, 0, length);
-    }
-    _debug_printf_P(PSTR("Configuration::getEEPROM(): spi_flash_read(%08x, %d) = %d, offset %u\n"), eeprom_start_address, readSize, result, offset);
-
-#elif defined(ESP32)
-
-    beginEEPROM();
-    memcpy(dst, EEPROM.getDataPtr() + offset, length);
-
-#elif defined(ESP32) && false
-
-    // the EEPROM class is not using partitions anymore but NVS blobs
-
-    if (_eepromInitialized) {
-        if (!EEPROM.readBytes(offset, dst, length)) {
-            memset(dst, 0, length);
-        }
-    }
-    else {
-        if (!_partition) {
-            _partition = esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_ANY, SPGM(EEPROM_partition_name));
-        }
-        _debug_printf_P(PSTR("ofs= %d, len=%d: using esp_partition_read(%p)\n"), offset, length, _partition);
-        if (esp_partition_read(_partition, offset, (void *)dst, length) != ESP_OK) {
-            memset(dst, 0, length);
-        }
-    }
-
-#else
-
-    beginEEPROM();
-    memcpy(dst, EEPROM.getConstDataPtr() + offset, length);
-
-#endif
-}
-
-Configuration::ParameterVectorIterator Configuration::_findParam(ConfigurationParameter::TypeEnum_t type, Handle_t handle, uint16_t &offset) {
+Configuration::ParameterList::iterator Configuration::_findParam(ConfigurationParameter::TypeEnum_t type, Handle_t handle, uint16_t &offset)
+{
     offset = _dataOffset;
     if (type == ConfigurationParameter::_ANY) {
         for (auto it = _params.begin(); it != _params.end(); ++it) {
-            if (it->getHandle() == handle) {
+            if (*it == handle) {
                 return it;
             }
-            offset += it->getParam().length;
+            offset += it->_param.length;
         }
     }
     else {
         for (auto it = _params.begin(); it != _params.end(); ++it) {
-            if (it->getHandle() == handle && it->getParam().type == type) {
+            if (*it == handle && it->_param.type == type) {
                 return it;
             }
-            offset += it->getParam().length;
+            offset += it->_param.length;
         }
     }
-    //_debug_printf_P(PSTR("_findParam(%d, %04x (%s)) = not found\n"), (int)type, handle, getHandleName(handle));
+    _debug_printf_P(PSTR("handle=%s[%04x] type=%s = NOT FOUND\n"), getHandleName(handle), handle, ConfigurationParameter::getTypeString(type));
     return _params.end();
 }
 
-ConfigurationParameter &Configuration::_getOrCreateParam(ConfigurationParameter::TypeEnum_t type, Handle_t handle, uint16_t &offset) {
+ConfigurationParameter &Configuration::_getOrCreateParam(ConfigurationParameter::TypeEnum_t type, Handle_t handle, uint16_t &offset)
+{
     auto iterator = _findParam(ConfigurationParameter::_ANY, handle, offset);
     if (iterator == _params.end()) {
-        ConfigurationParameter::Param_t param;
-        param.handle = handle;
-        param.type = type;
-        param.length = 0;
-        ConfigurationParameter parameter(param);
-        parameter.setSize(ConfigurationParameter::getDefaultSize(type));
-        _params.push_back(parameter);
-        return _params.back();
+        _params.emplace_back(ConfigurationParameter::Param_t({ handle, type, 0 }));
+        auto &newParam = _params.back();
+        newParam._info.size = ConfigurationParameter::getDefaultSize(type);
+        return newParam;
     }
-    else if (type != iterator->getType()) {
-        _debug_printf_P(PSTR("reading %04x (%s), cannot override type %d with %d\n"), iterator->getParam().handle, getHandleName(iterator->getParam().handle), iterator->getType(), type);
-        __debugbreak_and_panic();
-        //iterator->freeData();
-        //iterator->setSize(ConfigurationParameter::getDefaultSize(type));
-        //auto &param = iterator->getParam();
-        //param.type = type;
-        //param.length = 0;
+    else if (type != iterator->_param.getType()) {
+        __debugbreak_and_panic_printf_P(PSTR("%s new_type=%s type different\n"), iterator->toString().c_str(), getHandleName(iterator->_param.handle), ConfigurationParameter::getTypeString(type));
     }
     return *iterator;
 }
 
-bool Configuration::_readParams() {
+bool Configuration::_readParams()
+{
     uint16_t offset = _offset;
 
     union {
-        uint8_t headerBuffer[(sizeof(Header_t) + 8) & ~0x07]; // add extra space for getEEPROM in case the read offset is not aligned
+        uint8_t headerBuffer[(sizeof(Header_t) + 7) & ~7]; // add 4 byte if the size of the header is dword aligned or 8 byte if not
         Header_t header;
     } hdr;
-    memset(&hdr, 0, sizeof(hdr));
 
-    endEEPROM();
+    _eeprom.end();
+
 #if defined(ESP8266)
 //|| defined(ESP32)
     // read header directly from flash since we do not know the size of the configuration
-    getEEPROM(hdr.headerBuffer, (uint16_t)offset, (uint16_t)sizeof(hdr.header), (uint16_t)sizeof(hdr.headerBuffer));
-#if DEBUG_CONFIGURATION
-    _debug_println(F("Header:"));
-    DumpBinary dump(DEBUG_OUTPUT);
-    dump.dump((const uint8_t *)&hdr, sizeof(hdr.header));
-#endif
+    _eeprom.read(hdr.headerBuffer, (uint16_t)offset, (uint16_t)sizeof(hdr.header), (uint16_t)sizeof(hdr.headerBuffer));
 #else
-    _eepromSize = _offset + sizeof(hdr.header);
-    beginEEPROM();
-    EEPROM.get(offset, hdr.header);
-    endEEPROM();
+    _eeprom.begin(_offset + sizeof(hdr.header));
+    _eeprom.get(offset, hdr.header);
+    _eeprom.end();
 #endif
     offset += sizeof(hdr.header);
+
+#if DEBUG_CONFIGURATION
+    DumpBinary dump(F("Header:"), DEBUG_OUTPUT);
+    dump.dump((const uint8_t *)&hdr, sizeof(hdr.header));
+#endif
 
     for (;;) {
 
         if (hdr.header.magic != CONFIG_MAGIC_DWORD) {
-#if DEBUG_CONFIGURATION
             _debug_printf_P(PSTR("invalid magic %08x\n"), hdr.header.magic);
-            dumpEEPROM(Serial, false, _offset, 160);
+#if DEBUG_CONFIGURATION
+            _eeprom.dump(Serial, false, _offset, 160);
 #endif
             break;
         }
@@ -633,26 +614,20 @@ bool Configuration::_readParams() {
             _debug_printf_P(PSTR("invalid CRC %04x\n"), hdr.header.crc);
             break;
         }
-        else if (hdr.header.length <= 0 || hdr.header.length + sizeof(hdr.header) > _size) {
+        else if (hdr.header.length == 0 || hdr.header.length > _size - sizeof(hdr.header)) {
             _debug_printf_P(PSTR("invalid length %d\n"), hdr.header.length);
             break;
         }
 
         // now we know the required size, initialize EEPROM
-        _eepromSize = _offset + sizeof(hdr.header) + hdr.header.length;
-        beginEEPROM();
+        _eeprom.begin(_offset + sizeof(hdr.header) + hdr.header.length);
 
-#if defined(ESP32)
-        uint16_t crc = crc16_calc(EEPROM.getDataPtr() + _offset + sizeof(hdr.header), hdr.header.length);
-#else
-        uint16_t crc = crc16_calc(EEPROM.getConstDataPtr() + _offset + sizeof(hdr.header), hdr.header.length);
-#endif
+        uint16_t crc = crc16_calc(_eeprom.getConstDataPtr() + _offset + sizeof(hdr.header), hdr.header.length);
         if (hdr.header.crc != crc) {
             _debug_printf_P(PSTR("CRC mismatch %04x != %04x\n"), crc, hdr.header.crc);
             break;
         }
 
-        _params.reserve(hdr.header.params);
         _dataOffset = sizeof(ConfigurationParameter::Param_t) * hdr.header.params + offset;
         auto dataOffset = _dataOffset;
 
@@ -660,25 +635,18 @@ bool Configuration::_readParams() {
 
             ConfigurationParameter::Param_t param;
             param.type = ConfigurationParameter::_INVALID;
-            EEPROM.get(offset, param);
+            _eeprom.get(offset, param);
             if (param.type == ConfigurationParameter::_INVALID) {
                 _debug_printf_P(PSTR("invalid type\n"));
                 break;
             }
             offset += sizeof(param);
 
-            ConfigurationParameter parameter(param);
-            _params.push_back(parameter);
-#if CONFIGURATION_PARAMETER_USE_DATA_PTR_AS_STORAGE
-            if (parameter.isAligned() && !parameter.needsAlloc()) {
-                _debug_printf_P(PSTR("reading %04x (%s), size %d\n"), parameter.getParam().handle, getHandleName(parameter.getParam().handle), parameter.getParam().length);
-                _params.back().read(this, dataOffset);
-            }
-#endif
+            _params.emplace_back(param);
             dataOffset += param.length;
 
             if (_params.size() == hdr.header.params) {
-                endEEPROM();
+                _eeprom.end();
                 return true;
             }
         }
@@ -688,19 +656,59 @@ bool Configuration::_readParams() {
     }
 
     clear();
-    endEEPROM();
+    _eeprom.end();
     return false;
 }
 
 #if DEBUG_CONFIGURATION
-uint16_t Configuration::calculateOffset(Handle_t handle) {
+
+uint16_t Configuration::calculateOffset(Handle_t handle) const
+{
     uint16_t offset = _dataOffset;
     for (auto &parameter: _params) {
         if (parameter.getHandle() == handle) {
             return offset;
         }
-        offset += parameter.getParam().length;
+        offset += parameter._param.length;
     }
     return 0;
 }
+
+String Configuration::__debugDumper(ConfigurationParameter &param, const uint8_t *data, size_t len, bool progmem)
+{
+    PrintString str = F("data");
+    if (param._param.isString()) {
+        str.printf_P(PSTR("[%u]='"), len);
+        if (progmem) {
+            auto ptr = data;
+            while (len--) {
+                str += (char)pgm_read_byte(ptr++);
+            }
+        }
+        else {
+            auto ptr = data;
+            while (len--) {
+                str += (char)*ptr++;
+            }
+        }
+        str += '\'';
+    }
+    else {
+        str += '=';
+        DumpBinary dump(str);
+        dump.setPerLine((uint8_t)len);
+        if (progmem) {
+            auto pPtr = malloc(len);
+            memcpy_P(pPtr, data, len);
+            dump.dump((uint8_t *)pPtr, len);
+            free(pPtr);
+        }
+        else {
+            dump.dump(data, len);
+        }
+        str.rtrim();
+    }
+    return str;
+}
+
 #endif

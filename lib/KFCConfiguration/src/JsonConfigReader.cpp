@@ -48,7 +48,7 @@ bool JsonConfigReader::endObject()
                         _type = ConfigurationParameter::_INVALID;
                     }
                 }
-                debug_printf_P(PSTR("JsonConfigReader::endObject(): handle %04x type %u valid %u\n"), _handle, _type, _type != ConfigurationParameter::_INVALID);
+                _debug_printf_P(PSTR("JsonConfigReader::endObject(): handle %04x type %u valid %u\n"), _handle, _type, _type != ConfigurationParameter::_INVALID);
                 bool imported = true;
                 switch (_type) {
                 case ConfigurationParameter::BYTE: {
@@ -91,7 +91,7 @@ bool JsonConfigReader::endObject()
                                 byte = (uint8_t)strtol(buf, nullptr, 16);
                                 buffer.write(byte);
                             }
-                            _config.setBinary(_handle, buffer.get(), buffer.length());
+                            _config.setBinary(_handle, buffer.get(), (uint16_t)buffer.length());
                         }
                     }
                     break;

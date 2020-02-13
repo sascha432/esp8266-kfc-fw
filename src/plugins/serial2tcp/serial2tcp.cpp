@@ -150,18 +150,20 @@ bool Serial2TcpPlugin::atModeHandler(int8_t argc, char **argv) {
     }
 #endif
     else if (IsCommand(PROGMEM_AT_MODE_HELP_COMMAND(S2TCP))) {
+        auto flags = config._H_GET(Config().flags);
         if (argc == 1) {
             auto enable = atoi(argv[0]);
             if (enable) {
                 if (enable == 2) {
                     serial.println(F("+S2TCP: Serial2TCP client with auto connect enabled"));
-                    config._H_W_GET(Config().flags).serial2TCPMode = SERIAL2TCP_MODE_UNSECURE_SERVER;
-                    config._H_W_GET(Config().serial2tcp).auto_connect = true;
+                    flags.serial2TCPMode = SERIAL2TCP_MODE_UNSECURE_SERVER;
+                    flags.serial2tcp.auto_connect = true;
                 }
                 else {
                     serial.println(F("+S2TCP: Serial2TCP server enabled"));
-                    config._H_W_GET(Config().flags).serial2TCPMode = SERIAL2TCP_MODE_UNSECURE_SERVER;
+                    flags.serial2TCPMode = SERIAL2TCP_MODE_UNSECURE_SERVER;
                 }
+                config._H_SET(Config().flags, flags);
 
                 auto instance = Serial2TcpBase::createInstance();
                 if (instance) {
@@ -169,7 +171,8 @@ bool Serial2TcpPlugin::atModeHandler(int8_t argc, char **argv) {
                 }
             }
             else {
-                config._H_W_GET(Config().flags).serial2TCPMode = SERIAL2TCP_MODE_DISABLED;
+                flags.serial2TCPMode = SERIAL2TCP_MODE_DISABLED;
+                config._H_SET(Config().flags, flags);
 
                 Serial2TcpBase::destroyInstance();
                 serial.println(F("+S2TCP: Serial2TCP disabled"));

@@ -798,10 +798,36 @@ void at_mode_serial_handle_event(String &commandString)
                 args.printf_P("DHCP %u, station mode %s, SSID %s, connected %u, IP %s",
                     flags.softAPDHCPDEnabled,
                     (flags.wifiMode & WIFI_STA) ? PSTR("on") : PSTR("off"),
-                    config._H_STR(Config().wifi_ssid),
+                    config._H_STR(MainConfig().network.WiFiConfig._ssid),
                     WiFi.isConnected(),
                     WiFi.localIP().toString().c_str()
                 );
+
+#if 0
+                PrintString str;
+                auto network = config._H_GET(Config().network.config);
+                auto softAp = config._H_GET(Config().soft_ap.config);
+
+                str += "local_ip=";
+                IPAddress(network.local_ip).printTo(str);
+                str += " subnet=";
+                IPAddress(network.subnet).printTo(str);
+                str += " gateway=";
+                IPAddress(network.gateway).printTo(str);
+                str += " dns1=";
+                IPAddress(network.dns1).printTo(str);
+                str += " dns2=";
+                IPAddress(network.dns2).printTo(str);
+                args.print(str.c_str());
+
+                str = "address=";
+                IPAddress(softAp.address).printTo(str);
+                str += " subnet=";
+                IPAddress(softAp.subnet).printTo(str);
+                str += " gateway=";
+                IPAddress(softAp.gateway).printTo(str);
+                args.print(str.c_str());
+#endif
             }
 #if RTC_SUPPORT
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RTC))) {

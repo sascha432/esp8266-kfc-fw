@@ -22,6 +22,8 @@ public:
     typedef std::vector<FormField *> FieldsVector;
     typedef std::vector<FormError> ErrorsVector;
 
+    using PrintInterface = FormField::PrintInterface;
+
     Form();
     Form(FormData *data);
     virtual ~Form();
@@ -32,42 +34,42 @@ public:
 
     int add(FormField *field);
     FormField *_add(FormField *field);
-    FormField *add(const String &name, const String &value, FormField::FieldType_t type = FormField::INPUT_TEXT);
+    FormField *add(const String &name, const String &value, FormField::InputFieldType type = FormField::InputFieldType::TEXT);
 
-    FormField *add(const String &name, const String &value, FormStringObject::SetterCallback_t setter = nullptr, FormField::FieldType_t type = FormField::INPUT_TEXT);
-    FormField *add(const String &name, String *value, FormField::FieldType_t type = FormField::INPUT_TEXT);
+    FormField *add(const String &name, const String &value, FormStringObject::SetterCallback_t setter = nullptr, FormField::InputFieldType type = FormField::InputFieldType::TEXT);
+    FormField *add(const String &name, String *value, FormField::InputFieldType type = FormField::InputFieldType::TEXT);
 
-    FormField *add(const String &name, const IPAddress &value, typename FormObject<IPAddress>::SetterCallback_t setter = nullptr, FormField::FieldType_t type = FormField::INPUT_TEXT) {
-        return new FormObject<IPAddress>(name, value, setter, type);
+    FormField *add(const String &name, const IPAddress &value, typename FormObject<IPAddress>::SetterCallback_t setter = nullptr, FormField::InputFieldType type = FormField::InputFieldType::TEXT) {
+        return _add(new FormObject<IPAddress>(name, value, setter, type));
     }
 
     template <class T>
-    FormField* add(const String& name, T value, typename FormValue<T>::GetterSetterCallback_t callback = nullptr, FormField::FieldType_t type = FormField::INPUT_SELECT) {
+    FormField *add(const String &name, T value, typename FormValue<T>::GetterSetterCallback_t callback = nullptr, FormField::InputFieldType type = FormField::InputFieldType::SELECT) {
         return _add(new FormValue<T>(name, value, callback, type));
     }
 
     template <class T>
-    FormField* add(const String& name, T *value, typename FormValue<T>::GetterSetterCallback_t callback, FormField::FieldType_t type = FormField::INPUT_SELECT) {
+    FormField *add(const String &name, T *value, typename FormValue<T>::GetterSetterCallback_t callback, FormField::InputFieldType type = FormField::InputFieldType::SELECT) {
         return _add(new FormValue<T>(name, value, callback, type));
     }
 
     template <class T, size_t N>
-    FormField *add(const String &name, T *value, std::array<T, N> bitmask, FormField::FieldType_t type = FormField::INPUT_SELECT) {
+    FormField *add(const String &name, T *value, std::array<T, N> bitmask, FormField::InputFieldType type = FormField::InputFieldType::SELECT) {
         return _add(new FormBitValue<T, N>(name, value, bitmask, type));
     }
 
     template <class T>
-    FormField* add(const String& name, T* value, FormField::FieldType_t type = FormField::INPUT_SELECT) {
+    FormField *add(const String &name, T *value, FormField::InputFieldType type = FormField::InputFieldType::SELECT) {
         return _add(new FormValue<T>(name, value, type));
     }
 
     template <size_t size>
-    FormField *add(const String &name, char *value, FormField::FieldType_t type = FormField::INPUT_TEXT) {
+    FormField *add(const String &name, char *value, FormField::InputFieldType type = FormField::InputFieldType::TEXT) {
         return _add(new FormString<size>(name, value, type));
     }
 
     // template <class C, bool isObject>
-    // FormField *add(const String &name, C *object, FormField::FieldType_t type = FormField::INPUT_TEXT) {
+    // FormField *add(const String &name, C *object, FormField::InputFieldType type = FormField::InputFieldType::TEXT) {
     //     return _add(new FormObject<C>(name, object, type));
     // }
 
@@ -90,12 +92,12 @@ public:
     void finalize() const;
 
     const char *process(const String &name) const;
-    void createJavascript(Print &out);
+    void createJavascript(PrintInterface &out);
 
-    void setFormUI(const String& title, const String& submit);
-    void setFormUI(const String& title);
-    void createHtml(Print& out);
-    void createHtmlPart(Print& out, uint16_t num);
+    void setFormUI(const String &title, const String &submit);
+    void setFormUI(const String &title);
+    void createHtml(PrintInterface &out);
+    void createHtmlPart(PrintInterface &out, uint16_t num);
 
     void dump(Print &out, const String &prefix) const;
 

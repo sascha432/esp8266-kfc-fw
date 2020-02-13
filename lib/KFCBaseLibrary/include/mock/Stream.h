@@ -11,6 +11,27 @@
 
 enum SeekMode { SeekSet = SEEK_SET, SeekCur = SEEK_CUR, SeekEnd = SEEK_END };
 
+/*
+
+Print
+        virtual size_t write(uint8_t) = 0;
+        virtual size_t write(const uint8_t *buffer, size_t size);
+        virtual void flush() {}
+
+Stream
+        virtual int available() = 0;
+        virtual int read() = 0;
+        virtual int peek() = 0;
+        virtual size_t readBytes(char *buffer, size_t length); // read chars from stream into buffer
+        virtual size_t readBytes(uint8_t *buffer, size_t length) {
+            return readBytes((char *) buffer, length);
+        }
+        virtual String readString();
+
+
+
+*/
+
 class Stream : public Print {
 public:
     Stream() : Print() {
@@ -39,6 +60,7 @@ public:
         seek(0, SeekEnd);
         _size = position();
         seek(0);
+        clearerr(_fp);
     }
 
     virtual size_t position() const {
@@ -46,6 +68,7 @@ public:
     }
 
     virtual bool seek(long pos, int mode) {
+        clearerr(_fp);
         int res = fseek(_fp, pos, mode);
         if (res != 0) {
             perror("seek");
@@ -87,6 +110,7 @@ public:
         long pos = ftell(_fp);
         int res = read();
         fseek(_fp, pos, SEEK_SET);
+        clearerr(_fp);
         return res;
     }
 
@@ -103,21 +127,13 @@ public:
     }
 
     String readStringUntil(char terminator) {
-        int ch;
         String buf;
-        while (true) {
-            if (!available() || (ch = read()) == -1) {
-                printf("readStringUntil(%d) failed\n", terminator);
-                break;
-            }
+        int ch;
+        while ((ch = read()) != -1) {
+            buf += (char)ch;
             if (ch == terminator) {
                 break;
             }
-            if (buf.length() > 1024) {
-                printf("readStringUntil(%d) failed, reached 1024 byte length\n", terminator);
-                return String();
-            }
-            buf += (char)ch;
         }
         return buf;
     }

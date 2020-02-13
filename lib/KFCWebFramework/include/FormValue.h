@@ -14,15 +14,15 @@ public:
     // isSetter indicates to translate the variable to user format. return false if the getter callback is not supported
     typedef std::function<bool(T &, FormField&, bool isSetter)> GetterSetterCallback_t;
 
-    FormValue(const String& name, T value, GetterSetterCallback_t callback = nullptr, FormField::FieldType_t type = FormField::INPUT_SELECT) : FormField(name), _value(nullptr), _callback(callback) {
+    FormValue(const String& name, T value, GetterSetterCallback_t callback = nullptr, FormField::InputFieldType type = FormField::InputFieldType::SELECT) : FormField(name), _value(nullptr), _callback(callback) {
         setType(type);
         _initValue(value);
     }
-    FormValue(const String& name, T *value, GetterSetterCallback_t callback = nullptr, FormField::FieldType_t type = FormField::INPUT_SELECT) : FormField(name), _value(value), _callback(callback) {
+    FormValue(const String& name, T *value, GetterSetterCallback_t callback = nullptr, FormField::InputFieldType type = FormField::InputFieldType::SELECT) : FormField(name), _value(value), _callback(callback) {
         setType(type);
         _initValue(value);
     }
-    FormValue(const String &name, T *value, FormField::FieldType_t type = FormField::INPUT_SELECT) : FormField(name), _value(value), _callback(nullptr) {
+    FormValue(const String &name, T *value, FormField::InputFieldType type = FormField::InputFieldType::SELECT) : FormField(name), _value(value), _callback(nullptr) {
         setType(type);
         _initValue(value);
     }

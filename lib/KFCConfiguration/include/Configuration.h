@@ -39,6 +39,26 @@ extern EEPROMClass EEPROM;
 #include <debug_helper_disable.h>
 #endif
 
+// do not run garbage collector if pool count <= GARBAGE_COLLECTOR_MIN_POOL
+#ifndef GARBAGE_COLLECTOR_MIN_POOL
+#if DEBUG_CONFIGURATION
+#define GARBAGE_COLLECTOR_MIN_POOL                                  0
+#else
+#define GARBAGE_COLLECTOR_MIN_POOL                                  2
+#endif
+#endif
+
+// create custom pool if a parameter exceeds this length
+#ifndef CONFIG_POOL_MAX_SIZE
+#define CONFIG_POOL_MAX_SIZE                                        96
+#endif
+
+// 16, 32, 48, 64, 80, 96 byte...
+#ifndef CONFIG_POOL_SIZE
+#define CONFIG_POOL_SIZE                                            std::min((size_t)CONFIG_POOL_MAX_SIZE, (size_t)(POOL_COUNT * 16))
+#endif
+
+
 // compare direct reads vs. EEPROM class
 #ifndef DEBUG_CONFIGURATION_VERIFY_DIRECT_EEPROM_READ
 #define DEBUG_CONFIGURATION_VERIFY_DIRECT_EEPROM_READ               DEBUG_CONFIGURATION
@@ -118,10 +138,12 @@ namespace ConfigurationHelper {
         void *getPtr() const;
 
     private:
-        uint8_t *_ptr;
-        uint16_t _length;
-        uint16_t _size;
-        uint8_t _count;
+        struct __attribute__packed__ {
+            uint8_t *_ptr;
+            uint32_t _length: 12;
+            uint32_t _size: 12;
+            uint32_t _count: 8;
+        };
     };
 
     // direct access to EEPROM if supported
@@ -294,10 +316,10 @@ public:
 
     void makeWriteable(ConfigurationParameter &param, uint16_t size = 0);
 
-    const char *getString(Handle_t handle, ConfigurationParameter **paramPtr = nullptr);
+    const char *getString(Handle_t handle);
     char *getWriteableString(Handle_t handle, uint16_t maxLength);
 
-    const uint8_t *getBinary(Handle_t handle, uint16_t &length, ConfigurationParameter **paramPtr = nullptr);
+    const uint8_t *getBinary(Handle_t handle, uint16_t &length);
 
     void setString(Handle_t handle, const char *string);
     void setString(Handle_t handle, const String &string);
@@ -345,12 +367,20 @@ public:
     }
 
     template <typename T>
-    const T set(Handle_t handle, const T data) {
+    const T &set(Handle_t handle, const T &data) {
         uint16_t offset;
         auto &param = _getOrCreateParam(ConfigurationParameter::getType<T>(), handle, offset);
         param.setData(this, (const uint8_t *)&data, sizeof(T));
         return data;
     }
+
+ /*   template <typename T>
+    T &getObject(Handle_t handle) {
+        uint16_t offset;
+        auto &param = _getOrCreateParam(ConfigurationParameter::getType<T>(), handle, offset);
+        uint16_t length;
+        return *reinterpret_cast<T *>(param->getBinary(this, length, offset))
+    }*/
 
     void dump(Print &output, bool dirty = false, const String &name = String());
     bool isDirty() const;
@@ -380,6 +410,7 @@ private:
     uint8_t *_allocate(uint16_t size, PoolVector *pool = nullptr);
     void _release(const void *ptr);
     Pool *_getPool(const void *ptr);
+    Pool *_findPool(uint16_t length, PoolVector *poolVector) const;
     void _shrinkStorage();
 
 private:

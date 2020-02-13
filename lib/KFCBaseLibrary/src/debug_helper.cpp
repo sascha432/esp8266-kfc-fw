@@ -31,6 +31,14 @@ const char ___debugPrefix[] PROGMEM = "DBG: ";
 
 const char *DebugHelper::pretty_function(const char* name)
 {
+#if _WIN32
+    {
+        auto ptr = strstr(name, "__thiscall ");
+        if (ptr) {
+            name = ptr + 11;
+        }
+    }
+#endif
     PGM_P start = name;
     PGM_P ptr = strchr_P(name, ':');
     if (!ptr) {

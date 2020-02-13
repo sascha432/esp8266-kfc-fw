@@ -93,7 +93,12 @@ class _SPIFFS {
 public:
     File open(const String filename, const char *mode) {
         FILE *fp;
-        fopen_s(&fp, filename.c_str(), mode);
+        String modeStr = mode;
+        if (modeStr.indexOf('b') == -1 && modeStr.indexOf('t') == -1) {
+            modeStr += 'b';
+        }
+        fp = fopen(filename.c_str(), modeStr.c_str());
+        //fopen_s(&fp, filename.c_str(), modeStr.c_str());
         return File(fp);
     }
 

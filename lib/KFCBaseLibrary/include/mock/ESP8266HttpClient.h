@@ -5,7 +5,6 @@
 #pragma once
 
 #include <Arduino_compat.h>
-#include "JsonMapReader.h"
 
 class HTTPClient {
 public:

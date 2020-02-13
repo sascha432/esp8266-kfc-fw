@@ -5,6 +5,9 @@
 
 class StreamString: public Stream, public String {
 public:
+    using String::String;
+    using String::operator=;
+
     size_t write(const uint8_t *buffer, size_t size) override;
     size_t write(uint8_t data) override;
 

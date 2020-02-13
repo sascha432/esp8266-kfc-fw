@@ -121,7 +121,7 @@ void prepare_plugins() {
 static void create_menu()
 {
     navMenu.home = bootstrapMenu.addMenu(F("Home"));
-    bootstrapMenu.getItem(navMenu.home)->setURI(F("index.html"));
+    bootstrapMenu.getItem(navMenu.home)->setUri(F("index.html"));
 
     // since "home" has an URI, this menu is hidden
     bootstrapMenu.addSubMenu(F("Home"), F("index.html"), navMenu.home);
@@ -133,7 +133,7 @@ static void create_menu()
     bootstrapMenu.addSubMenu(F("About"), F("about.html"), navMenu.home);
 
     navMenu.status = bootstrapMenu.addMenu(F("Status"));
-    bootstrapMenu.getItem(navMenu.status)->setURI(F("status.html"));
+    bootstrapMenu.getItem(navMenu.status)->setUri(F("status.html"));
 
     navMenu.config = bootstrapMenu.addMenu(F("Configuration"));
     bootstrapMenu.addSubMenu(F("WiFi"), F("wifi.html"), navMenu.config);
@@ -205,7 +205,7 @@ void setup_plugins(PluginComponent::PluginSetupMode_t mode) {
         auto webUi = F("Web UI");
         auto url = F("webui.html");
         bootstrapMenu.addSubMenu(webUi, url, navMenu.device);
-        bootstrapMenu.addSubMenu(webUi, url, navMenu.home, bootstrapMenu.findMenuByURI(F("status.html"), navMenu.home));
+        bootstrapMenu.addSubMenu(webUi, url, navMenu.home, bootstrapMenu.getId(bootstrapMenu.findMenuByURI(F("status.html"), navMenu.home)));
     }
     // bootstrapMenu.createCache();
 

@@ -18,7 +18,7 @@ Form::Form() : _data(nullptr), _invalidMissing(true)
 {
 }
 
-Form::Form(FormData * data) : Form()
+Form::Form(FormData *data) : Form()
 {
     _data = data;
 }
@@ -37,7 +37,7 @@ void Form::clearForm()
     _errors.clear();
 }
 
-void Form::setFormData(FormData * data)
+void Form::setFormData(FormData *data)
 {
     _data = data;
 }
@@ -60,17 +60,17 @@ FormField *Form::_add(FormField *field)
     return field;
 }
 
-FormField *Form::add(const String &name, const String &value, FormField::FieldType_t type)
+FormField *Form::add(const String &name, const String &value, FormField::InputFieldType type)
 {
     return _add(new FormField(name, value, type));
 }
 
-FormField *Form::add(const String &name, const String &value, FormStringObject::SetterCallback_t setter, FormField::FieldType_t type)
+FormField *Form::add(const String &name, const String &value, FormStringObject::SetterCallback_t setter, FormField::InputFieldType type)
 {
     return _add(new FormStringObject(name, value, setter, type));
 }
 
-FormField *Form::add(const String &name, String *value, FormField::FieldType_t type)
+FormField *Form::add(const String &name, String *value, FormField::InputFieldType type)
 {
     return _add(new FormStringObject(name, value, type));
 }
@@ -81,13 +81,13 @@ FormValidator *Form::addValidator(int index, FormValidator *validator)
     return validator;
 }
 
-FormValidator *Form::addValidator(FormValidator * validator)
+FormValidator *Form::addValidator(FormValidator *validator)
 {
     _fields.back()->addValidator(validator);
     return validator;
 }
 
-FormValidator *Form::addValidator(const String &name, FormValidator * validator)
+FormValidator *Form::addValidator(const String &name, FormValidator *validator)
 {
     auto field = getField(name);
     if (field) {
@@ -203,17 +203,17 @@ void Form::finalize() const
 const char *Form::process(const String &name) const
 {
     // TODO check html entities encoding
-    for(auto field : _fields) {
+    for (auto field : _fields) {
         uint8_t len = (uint8_t)field->getName().length();
-        if (field->getType() == FormField::INPUT_TEXT && name.equalsIgnoreCase(field->getName())) {
+        if (field->getType() == FormField::InputFieldType::TEXT && name.equalsIgnoreCase(field->getName())) {
             _debug_printf_P(PSTR("Form::process(%s) INPUT_TEXT = %s\n"), name.c_str(), field->getValue().c_str());
             return field->getValue().c_str();
         }
-        else if (field->getType() == FormField::INPUT_CHECK && name.equalsIgnoreCase(field->getName())) {
+        else if (field->getType() == FormField::InputFieldType::CHECK && name.equalsIgnoreCase(field->getName())) {
             _debug_printf_P(PSTR("Form::process(%s) INPUT_CHECK = %d\n"), name.c_str(), field->getValue().toInt());
             return field->getValue().toInt() ? " checked" : "";
         }
-        else if (field->getType() == FormField::INPUT_SELECT && strncasecmp(field->getName().c_str(), name.c_str(), len) == 0) {
+        else if (field->getType() == FormField::InputFieldType::SELECT && strncasecmp(field->getName().c_str(), name.c_str(), len) == 0) {
             if (name.length() == len) {
                 _debug_printf_P(PSTR("Form::process(%s) INPUT_SELECT = %s\n"), name.c_str(), field->getValue().c_str());
                 return field->getValue().c_str();
@@ -235,34 +235,31 @@ const char *Form::process(const String &name) const
     return nullptr;
 }
 
-void Form::createJavascript(Print &out)
+void Form::createJavascript(PrintInterface &out)
 {
     if (!isValid()) {
         _debug_printf_P(PSTR("Form::createJavascript(): errors=%d\n"), _errors.size());
-        out.print(F("<script>\n$.formValidator.addErrors(["));
+        out.printf_P(PSTR("<script>\n$.formValidator.addErrors(["));
         uint8_t idx = 0;
-        for(const auto &error : _errors) {
-            if (idx++) {
-                out.print(',');
-            }
-            out.printf_P(PSTR("{'target':'#%s','error':'%s'}"), error.getName().c_str(), error.getMessage().c_str()); //TODO escape quotes etc
+        for (const auto &error : _errors) {
+            out.printf_P(PSTR("%s{'target':'#%s','error':'%s'}"), idx++ ? PSTR(",") : emptyString.c_str(), error.getName().c_str(), error.getMessage().c_str()); //TODO escape quotes etc
         }
-        out.println(F("]);\n</script>"));
+        out.printf_P(PSTR("]);\n</script>"));
     }
 }
 
-void Form::setFormUI(const String& title, const String& submit)
+void Form::setFormUI(const String &title, const String &submit)
 {
     _formTitle = title;
     _formSubmit = submit;
 }
 
-void Form::setFormUI(const String& title)
+void Form::setFormUI(const String &title)
 {
     _formTitle = title;
 }
 
-void Form::createHtml(Print& output)
+void Form::createHtml(PrintInterface &output)
 {
     if (_formTitle.length()) {
         output.printf_P(PSTR("<h1>%s</h1>"), _formTitle.c_str());
@@ -271,10 +268,10 @@ void Form::createHtml(Print& output)
         field->html(output);
     }
     PGM_P label = _formSubmit.length() ? _formSubmit.c_str() : PSTR("Save Changes");
-    output.printf_P(PSTR("<button type=\"submit\" class=\"btn btn-primary\">%s...</button>"), label );
+    output.printf_P(PSTR("<button type=\"submit\" class=\"btn btn-primary\">%s...</button>"), label);
 }
 
-void Form::createHtmlPart(Print& output, uint16_t num)
+void Form::createHtmlPart(PrintInterface &output, uint16_t num)
 {
     if (num == 0) {
         if (_formTitle.length()) {
@@ -297,8 +294,9 @@ void Form::dump(Print &out, const String &prefix) const {
     if (_errors.empty()) {
         out.print(prefix);
         out.println(F("None"));
-    } else {
-        for(const auto &error : _errors) {
+    }
+    else {
+        for (const auto &error : _errors) {
             out.print(prefix);
             out.print(error.getName());
             out.print(F(": "));
@@ -308,12 +306,13 @@ void Form::dump(Print &out, const String &prefix) const {
     out.print(prefix);
     if (_hasChanged) {
         out.println(F("Form data was modified"));
-    } else {
+    }
+    else {
         out.println(F("Form data was not modified"));
     }
     out.print(prefix);
     out.println(F("Form data:"));
-    for(auto field : _fields) {
+    for (auto field : _fields) {
         out.print(prefix);
         out.print(field->getName());
         if (field->hasChanged()) {

@@ -10,6 +10,7 @@
 #include <PrintHtmlEntitiesString.h>
 #include <EventScheduler.h>
 #include <StreamString.h>
+#include <BufferStream.h>
 #include <SpeedBooster.h>
 #include "progmem_data.h"
 #include "build.h"
@@ -655,10 +656,10 @@ PGM_P web_server_get_content_type(const String &path)
     }
 }
 
-bool web_server_send_file(String path, HttpHeaders &httpHeaders, bool client_accepts_gzip, const FSMappingEntry *mapping, AsyncWebServerRequest *request, WebTemplate *webTemplate)
+bool web_server_send_file(String path, HttpHeaders& httpHeaders, bool client_accepts_gzip, const FSMappingEntry* mapping, AsyncWebServerRequest* request, WebTemplate* webTemplate)
 {
     WebServerSetCPUSpeedHelper setCPUSpeed;
-    AsyncWebServerResponse *response = nullptr;
+    AsyncWebServerResponse* response = nullptr;
 
     _debug_printf_P(PSTR("web_server_send_file(%s)\n"), path.c_str());
     if (!mapping) {
@@ -680,9 +681,8 @@ bool web_server_send_file(String path, HttpHeaders &httpHeaders, bool client_acc
             auto plugin = PluginComponent::getTemplate(filename);
             if (plugin) {
                 webTemplate = plugin->getWebTemplate(filename);
-            }
-            else if (nullptr != (plugin = PluginComponent::getForm(filename))) {
-                Form *form = _debug_new SettingsForm(nullptr);
+            } else if (nullptr != (plugin = PluginComponent::getForm(filename))) {
+                Form* form = _debug_new SettingsForm(nullptr);
                 plugin->createConfigureForm(nullptr, *form);
                 webTemplate = _debug_new ConfigTemplate(form);
             }
@@ -690,25 +690,25 @@ bool web_server_send_file(String path, HttpHeaders &httpHeaders, bool client_acc
         if (webTemplate == nullptr) {
             if (String_equals(path, PSTR("/network.html"))) {
                 webTemplate = _debug_new ConfigTemplate(_debug_new NetworkSettingsForm(nullptr));
-            }
-            else if (String_equals(path, PSTR("/wifi.html"))) {
+            } else if (String_equals(path, PSTR("/wifi.html"))) {
                 webTemplate = _debug_new ConfigTemplate(_debug_new WifiSettingsForm(nullptr));
-            }
-            else if (String_equals(path, PSTR("/index.html"))) {
+            } else if (String_equals(path, PSTR("/index.html"))) {
                 webTemplate = _debug_new StatusTemplate();
-            }
-            else if (String_equals(path, PSTR("/status.html"))) {
+            } else if (String_equals(path, PSTR("/status.html"))) {
                 webTemplate = _debug_new StatusTemplate();
-            }
-            else if (String_endsWith(path, PSTR(".html"))) {
+            } else if (String_endsWith(path, PSTR(".html"))) {
                 webTemplate = _debug_new WebTemplate();
             }
         }
     }
 
+
+
     if (webTemplate != nullptr) {
-         response = _debug_new AsyncTemplateResponse(FPSTR(web_server_get_content_type(path)), mapping, webTemplate);
-         httpHeaders.addNoCache(request->method() == HTTP_POST);
+        response = _debug_new AsyncTemplateResponse(FPSTR(web_server_get_content_type(path)), mapping, webTemplate, [webTemplate](const String& name, DataProviderInterface &provider) {
+            return TemplateDataProvider::callback(name, provider, webTemplate);
+        });
+        httpHeaders.addNoCache(request->method() == HTTP_POST);
     } else {
         response = new AsyncProgmemFileResponse(FPSTR(web_server_get_content_type(path)), mapping);
         httpHeaders.replace(new HttpDateHeader(FSPGM(Expires), 86400 * 30));

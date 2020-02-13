@@ -215,61 +215,6 @@ Config_WeatherStation::WeatherStationConfig_t Config_WeatherStation::getConfig()
     return ::config._H_GET(Config().weather_station.config);
 }
 
-// Config_Network
-
-Config_Network::Config_Network()
-{
-    uint8_t mac[6];
-    WiFi.macAddress(mac);
-    config.dns1 = IPAddress(8, 8, 8, 8);
-    config.dns2 = IPAddress(8, 8, 4, 4);
-    config.local_ip = IPAddress(192, 168, 4, mac[5] <= 1 || mac[5] >= 253 ? (mac[4] <= 1 || mac[4] >= 253 ? (mac[3] <= 1 || mac[3] >= 253 ? mac[3] : rand() % 98 + 1) : mac[4]) : mac[5]);
-    config.gateway = IPAddress(192, 168, 4, 1);
-
-    auto flags = ::config._H_GET(Config().flags);
-    flags.stationModeDHCPEnabled = true;
-    flags.wifiMode = WIFI_AP;
-    ::config._H_SET(Config().flags, flags);
-}
-
-const char *Config_Network::getSSID()
-{
-    return ::config._H_STR(Config().network.wifi_ssid);
-}
-
-const char *Config_Network::getPassword()
-{
-    return ::config._H_STR(Config().network.wifi_pass);
-}
-
-
-// Config_SoftAP
-
-Config_SoftAP::Config_SoftAP()
-{
-    config.address = IPAddress(192, 168, 4, 1);
-    config.subnet = IPAddress(255, 255, 255, 0);
-    config.gateway = IPAddress(192, 168, 4, 1);
-    config.dhcp_start = IPAddress(192, 168, 4, 2);
-    config.dhcp_end = IPAddress(192, 168, 4, 100);
-    config.encryption = WIFI_DEFAULT_ENCRYPTION;
-    config.channel = 7;
-
-    auto flags = ::config._H_GET(Config().flags);
-    flags.softAPDHCPDEnabled = true;
-    ::config._H_SET(Config().flags, flags);
-}
-
-const char *Config_SoftAP::getAPSSID()
-{
-    return ::config._H_STR(Config().soft_ap.wifi_ssid);
-}
-
-const char *Config_SoftAP::getPassword()
-{
-    return ::config._H_STR(Config().soft_ap.wifi_pass);
-}
-
 // Config_MQTT
 
 Config_MQTT::Config_MQTT()
@@ -661,6 +606,10 @@ void KFCFWConfiguration::_setupWiFiCallbacks()
 #endif
 }
 
+using KFCConfigurationClasses::MainConfig;
+using KFCConfigurationClasses::Network;
+using KFCConfigurationClasses::System;
+
 void KFCFWConfiguration::restoreFactorySettings()
 {
     _debug_println(F("KFCFWConfiguration::restoreFactorySettings()"));
@@ -682,29 +631,25 @@ void KFCFWConfiguration::restoreFactorySettings()
     flags.webServerPerformanceModeEnabled = true;
 #endif
     flags.ledMode = true;
-    flags.hueEnabled = true;
     flags.useStaticIPDuringWakeUp = true;
 #if SERIAL2TCP
     flags.serial2TCPMode = SERIAL2TCP_MODE_DISABLED;
 #endif
     _H_SET(Config().flags, flags);
 
-
+    auto defaultPassword = F("12345678");
     uint8_t mac[6];
     WiFi.macAddress(mac);
-    str.printf_P(PSTR("KFC%02X%02X%02X"), mac[3], mac[4], mac[5]);
-    _H_SET_STR(Config().device_name, str);
-    auto defaultPassword = F("12345678");
+    auto deviceName = PrintString(F("KFC%02X%02X%02X"), mac[3], mac[4], mac[5]);
+    _H_SET_STR(Config().device_name, deviceName);
     _H_SET_STR(Config().device_pass, defaultPassword);
 
-    _H_SET_STR(Config().network.wifi_ssid, str);
-    _H_SET_STR(Config().network.wifi_pass, defaultPassword);
-    _H_SET(Config().network.config, Config_Network().config);
-
-    _H_SET_STR(Config().soft_ap.wifi_ssid, str);
-    _H_SET_STR(Config().soft_ap.wifi_pass, defaultPassword);
-    _H_SET(Config().soft_ap.config, Config_SoftAP().config);
-
+    Network::WiFiConfig::setSSID(deviceName);
+    Network::WiFiConfig::setPassword(defaultPassword);
+    Network::WiFiConfig::setSoftApSSID(deviceName);
+    Network::WiFiConfig::setSoftApPassword(defaultPassword);
+    Network::Settings::defaults();
+    Network::SoftAP::defaults();
 
 #if WEBSERVER_TLS_SUPPORT
     _H_SET(Config().http_port, flags.webServerMode == HTTP_MODE_SECURE ? 443 : 80);
@@ -831,11 +776,13 @@ void KFCFWConfiguration::restoreFactorySettings()
     _H_SET(Config().remote_control, Config_RemoteControl());
 #endif
 
+    customSettings();
+
+}
+
 #if CUSTOM_CONFIG_PRESET
     #include "retracted/custom_config.h"
 #endif
-
-}
 
 void KFCFWConfiguration::setLastError(const String &error)
 {
@@ -912,7 +859,7 @@ void KFCFWConfiguration::storeStationConfig(uint32_t ip, uint32_t netmask, uint3
         quickConnect.gateway = gateway;
         quickConnect.dns1 = (uint32_t)WiFi.dnsIP();
         quickConnect.dns2 = (uint32_t)WiFi.dnsIP(1);
-        auto &flags = config._H_GET(Config().flags);
+        auto flags = config._H_GET(Config().flags);
         quickConnect.use_static_ip = flags.useStaticIPDuringWakeUp || !flags.stationModeDHCPEnabled;
         RTCMemoryManager::write(CONFIG_RTC_MEM_ID, &quickConnect, sizeof(quickConnect));
     } else {
@@ -1228,13 +1175,13 @@ bool KFCFWConfiguration::connectWiFi()
         WiFi.setAutoConnect(false); // WiFi callbacks have to be installed first during boot
         WiFi.setAutoReconnect(true);
 
-        auto network = config._H_GET(Config().network.config);
+        auto network = config._H_GET(MainConfig().network.settings);
 
         bool result;
         if (flags.stationModeDHCPEnabled) {
             result = WiFi.config((uint32_t)0, (uint32_t)0, (uint32_t)0, (uint32_t)0, (uint32_t)0);
         } else {
-            result = WiFi.config(network.local_ip, network.gateway, network.subnet, network.dns1, network.dns2);
+            result = WiFi.config(network.localIp(), network.gateway(), network.subnet(), network.dns1(), network.dns2());
         }
         if (!result) {
             PrintString message;
@@ -1242,12 +1189,12 @@ bool KFCFWConfiguration::connectWiFi()
             setLastError(message);
             Logger_error(message);
         } else {
-            if (WiFi.begin(config._H_STR(Config().wifi_ssid), config._H_STR(Config().wifi_pass)) == WL_CONNECT_FAILED) {
+            if (WiFi.begin(config._H_STR(MainConfig().network.WiFiConfig._ssid), config._H_STR(MainConfig().network.WiFiConfig._password)) == WL_CONNECT_FAILED) {
                 String message = F("Failed to start Station Mode");
                 setLastError(message);
                 Logger_error(message);
             } else {
-                _debug_printf_P(PSTR("Station Mode SSID %s\n"), config._H_STR(Config().wifi_ssid));
+                _debug_printf_P(PSTR("Station Mode SSID %s\n"), config._H_STR(MainConfig().network.WiFiConfig._ssid));
                 station_mode_success = true;
             }
         }
@@ -1263,9 +1210,9 @@ bool KFCFWConfiguration::connectWiFi()
 
         // config._H_GET(Config().soft_ap.encryption not used
 
-        auto softAp = config._H_GET(Config().soft_ap.config);
+        auto softAp = config._H_GET(MainConfig().network.softAp);
 
-        if (!WiFi.softAPConfig(softAp.address, softAp.gateway, softAp.subnet)) {
+        if (!WiFi.softAPConfig(softAp.address(), softAp.gateway(), softAp.subnet())) {
             String message = F("Cannot configure AP mode");
             setLastError(message);
             Logger_error(message);
@@ -1299,8 +1246,8 @@ bool KFCFWConfiguration::connectWiFi()
             struct dhcps_lease dhcp_lease;
             wifi_softap_dhcps_stop();
             dhcp_lease.enable = flags.softAPDHCPDEnabled;
-            dhcp_lease.start_ip.addr = softAp.dhcp_start;
-            dhcp_lease.end_ip.addr = softAp.dhcp_end;
+            dhcp_lease.start_ip.addr = softAp._dhcpStart;
+            dhcp_lease.end_ip.addr = softAp._dhcpEnd;
             if (!wifi_softap_set_dhcps_lease(&dhcp_lease)) {
                 String message = F("Failed to configure DHCP server");
                 setLastError(message);
@@ -1317,7 +1264,7 @@ bool KFCFWConfiguration::connectWiFi()
 
 #endif
 
-            if (!WiFi.softAP(config._H_STR(Config().soft_ap.wifi_ssid), config._H_STR(Config().soft_ap.wifi_pass), softAp.channel, flags.hiddenSSID)) {
+            if (!WiFi.softAP(Network::WiFiConfig::getSoftApSSID(), Network::WiFiConfig::getSoftApPassword(), softAp.channel(), flags.hiddenSSID)) {
                 String message = F("Cannot start AP mode");
                 setLastError(message);
                 Logger_error(message);
@@ -1363,10 +1310,10 @@ void KFCFWConfiguration::printInfo(Print &output)
 
     auto flags = config._H_GET(Config().flags);
     if (flags.wifiMode & WIFI_AP) {
-        output.printf_P(PSTR("AP Mode SSID %s\n"), config._H_STR(Config().soft_ap.wifi_ssid));
+        output.printf_P(PSTR("AP Mode SSID %s\n"), Network::WiFiConfig::getSoftApSSID());
     }
     if (flags.wifiMode & WIFI_STA) {
-        output.printf_P(PSTR("Station Mode SSID %s\n"), config._H_STR(Config().wifi_ssid));
+        output.printf_P(PSTR("Station Mode SSID %s\n"), Network::WiFiConfig::getSSID());
     }
     if (flags.isFactorySettings) {
         output.println(F("Running on factory settings"));

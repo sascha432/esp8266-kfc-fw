@@ -6,11 +6,14 @@
 
 #include <Arduino_compat.h>
 #include <vector>
+#include <PrintArgs.h>
 
 class FormField;
 
 class FormUI {
 public:
+	using PrintInterface = PrintArgs::PrintInterface;
+
 	typedef enum {
 		SELECT,
 		TEXT,
@@ -27,18 +30,18 @@ public:
 	FormUI *setLabel(const String &label, bool raw = true); // raw=false automatically adds ":" if the label doesn't have a trailing colon and isn't empty
 
 	FormUI *setBoolItems(const String &yes, const String &no);
-	FormUI *addItems(const String& value, const String& label);
+	FormUI *addItems(const String &value, const String &label);
 	FormUI *addItems(const ItemsList &items);
 	FormUI *setSuffix(const String &suffix);
 	FormUI *setPlaceholder(const String &placeholder);
 	FormUI *addAttribute(const String &name, const String &value);
 
-	void html(Print& output);
+	void html(PrintInterface &output);
 
-	void setParent(FormField* field);
+	void setParent(FormField *field);
 
 private:
-	bool _compareValue(const String& value) const;
+	bool _compareValue(const String &value) const;
 
 private:
 	FormField *_parent;

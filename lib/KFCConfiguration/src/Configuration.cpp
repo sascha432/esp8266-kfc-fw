@@ -150,7 +150,7 @@ void Configuration::discard()
 void Configuration::release()
 {
     _dumpPool(_storage);
-    _debug_printf_P(PSTR("params=%u last read=%d dirty=%d\n"), _params.size(), (int)(_readAccess == 0 ? -1 : millis() - _readAccess), isDirty());
+    _debug_printf_P(PSTR("params=%u last_read=%d dirty=%d\n"), _params.size(), (int)(_readAccess == 0 ? -1 : millis() - _readAccess), isDirty());
     for (auto &parameter : _params) {
         if (!parameter.isDirty()) {
             parameter._release(this);
@@ -246,16 +246,6 @@ bool Configuration::write()
     writeHandles();
 #endif
 
-    int count = 0;
-    auto it = std::find_if(_params.begin(), _params.end(), [&count](const ConfigurationParameter &param) {
-        count++;
-        return param.getLength() == 777;
-    });
-    Serial.printf("count=%u match=%u\n", count, it != _params.end());
-
-    Serial.printf("dist=%d\n", std::distance(_params.begin(), _params.end()));
-
-
     // _eeprom.dump(Serial, false, _offset, 160);
 
     return true;
@@ -266,28 +256,14 @@ void Configuration::makeWriteable(ConfigurationParameter &param, uint16_t size)
     param._makeWriteable(this, size ? size : param._info.size);
 }
 
-const char *Configuration::getString(Handle_t handle, ConfigurationParameter **paramPtr)
+const char *Configuration::getString(Handle_t handle)
 {
     uint16_t offset;
     auto param = _findParam(ConfigurationParameter::STRING, handle, offset);
     if (param == _params.end()) {
-        if (paramPtr) {
-            *paramPtr = nullptr;
-        }
         return emptyString.c_str();
     }
-    if (paramPtr) {
-        *paramPtr = &(*param);
-    }
-#if DEBUG_CONFIGURATION
-    auto ptr = param->getString(this, offset);
-    if (param->_info.size && param->_info.size < param->_param.length + 1) {
-        __debugbreak_and_panic_printf_P(PSTR("%s size mismatch\n"), param->toString().c_str());
-    }
-    return ptr;
-#else
     return param->getString(this, offset);
-#endif
 }
 
 char *Configuration::getWriteableString(Handle_t handle, uint16_t maxLength)
@@ -296,28 +272,14 @@ char *Configuration::getWriteableString(Handle_t handle, uint16_t maxLength)
     return reinterpret_cast<char *>(param._info.data);
 }
 
-const uint8_t *Configuration::getBinary(Handle_t handle, uint16_t &length, ConfigurationParameter **paramPtr)
+const uint8_t *Configuration::getBinary(Handle_t handle, uint16_t &length)
 {
     uint16_t offset;
     auto param = _findParam(ConfigurationParameter::BINARY, handle, offset);
     if (param == _params.end()) {
-        if (paramPtr) {
-            *paramPtr = nullptr;
-        }
         return nullptr;
     }
-    if (paramPtr) {
-        *paramPtr = &(*param);
-    }
-#if DEBUG_CONFIGURATION
-    auto ptr = param->getBinary(this, length, offset);;
-    if (param->_info.size != param->_param.length) {
-        __debugbreak_and_panic_printf_P(PSTR("%s size mismatch\n"), param->toString().c_str());
-    }
-    return ptr;
-#else
     return param->getBinary(this, length, offset);
-#endif
 }
 
 void Configuration::setString(Handle_t handle, const char *string)
@@ -407,25 +369,21 @@ uint8_t *Configuration::_allocate(uint16_t size, PoolVector *poolVector)
         poolVector = &_storage;
     }
     Pool *poolPtr = nullptr;
-    if (size > 96) {
-        poolVector->emplace_back(size);
-        poolPtr = &poolVector->back();
-        poolPtr->init();
-    }
-    else
-    {
-        for (auto& pool : *poolVector) {
-            if (pool.space(size)) {
-                poolPtr = &pool;
-            }
-        }
+    if (size < CONFIG_POOL_MAX_SIZE) {
+        poolPtr = _findPool(size, poolVector);
         if (!poolPtr) {
-            auto poolSize = poolVector->size();
-            uint16_t size = poolSize ? 96 : 32;
+            auto POOL_COUNT = poolVector->size() + 1;
+            uint16_t size = (uint16_t)CONFIG_POOL_SIZE;
             poolVector->emplace_back(size);
             poolPtr = &poolVector->back();
             poolPtr->init();
         }
+        poolPtr = _findPool(size, poolVector);
+    }
+    if (!poolPtr) {
+        poolVector->emplace_back(size);
+        poolPtr = &poolVector->back();
+        poolPtr->init();
     }
     return poolPtr->allocate(size);
 }
@@ -452,6 +410,16 @@ Configuration::Pool *Configuration::_getPool(const void *ptr)
     return nullptr;
 }
 
+Configuration::Pool *Configuration::_findPool(uint16_t length, PoolVector *poolVector) const
+{
+    for (auto &pool : *poolVector) {
+        if (pool.space(length)) {
+            return &pool;
+        }
+    }
+    return nullptr;
+}
+
 void Configuration::_shrinkStorage()
 {
     PoolVector newPool;
@@ -469,26 +437,26 @@ void Configuration::_shrinkStorage()
 
 void Configuration::_dumpPool(PoolVector &poolVector)
 {
+    PrintString str;
     size_t total = 0;
-    int n = 0;
-    for (auto &pool : poolVector) {
+    for (const auto &pool : poolVector) {
         if (pool.getPtr()) {
             total += pool.size();
-            debug_printf_P(PSTR("[%u] size %u space %u count %u\n"), n++, pool.size(), pool.available(), pool.count());
+            str.printf_P(PSTR("[%u:%u:#%u] "), pool.size(), pool.available(), pool.count());
         }
         else {
-            debug_printf_P(PSTR("[%u] size %u space 0 nullptr\n"), n++, pool.size());
+            str.printf_P(PSTR("[%u:null] "), pool.size());
         }
     }
-    n = 0;
+    size_t count_dirty = 0;
     size_t total_dirty = 0;
-    for (auto& param : _params) {
+    for (const auto& param : _params) {
         if (param._info.dirty) {
-            n++;
+            count_dirty++;
             total_dirty += param._info.size;
         }
     }
-    debug_printf_P(PSTR("pool size=%u count=%u dirty_size=%u dirty=%u\n"), total, poolVector.size(), total_dirty, n);
+    debug_printf_P(PSTR("%ssize=%u[#%u] dirty=%u[#%u]\n"), str.c_str(), total, poolVector.size(), total_dirty, count_dirty);
 }
 
 #endif
@@ -542,6 +510,7 @@ Configuration::ParameterList::iterator Configuration::_findParam(ConfigurationPa
     if (type == ConfigurationParameter::_ANY) {
         for (auto it = _params.begin(); it != _params.end(); ++it) {
             if (*it == handle) {
+                //_debug_printf_P(PSTR("%s FOUND\n"), it->toString().c_str());
                 return it;
             }
             offset += it->_param.length;
@@ -550,6 +519,7 @@ Configuration::ParameterList::iterator Configuration::_findParam(ConfigurationPa
     else {
         for (auto it = _params.begin(); it != _params.end(); ++it) {
             if (*it == handle && it->_param.type == type) {
+                //_debug_printf_P(PSTR("%s FOUND\n"), it->toString().c_str());
                 return it;
             }
             offset += it->_param.length;
@@ -563,10 +533,9 @@ ConfigurationParameter &Configuration::_getOrCreateParam(ConfigurationParameter:
 {
     auto iterator = _findParam(ConfigurationParameter::_ANY, handle, offset);
     if (iterator == _params.end()) {
-        _params.emplace_back(ConfigurationParameter::Param_t({ handle, type, 0 }));
-        auto &newParam = _params.back();
-        newParam._info.size = ConfigurationParameter::getDefaultSize(type);
-        return newParam;
+        _params.emplace_back(handle, type);
+        _debug_printf_P(PSTR("new param %s\n"), _params.back().toString().c_str());
+        return _params.back();
     }
     else if (type != iterator->_param.getType()) {
         __debugbreak_and_panic_printf_P(PSTR("%s new_type=%s type different\n"), iterator->toString().c_str(), getHandleName(iterator->_param.handle), ConfigurationParameter::getTypeString(type));

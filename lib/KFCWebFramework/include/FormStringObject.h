@@ -11,9 +11,9 @@ class FormStringObject : public FormField {
 public:
     typedef std::function<bool(const String &, FormField &, bool)> SetterCallback_t;
 
-    FormStringObject(const String &name, const String &str, SetterCallback_t setter = nullptr, FormField::FieldType_t type = FormField::INPUT_TEXT) : FormField(name, str, type), _setter(setter), _str(nullptr) {
+    FormStringObject(const String &name, const String &str, SetterCallback_t setter = nullptr, FormField::InputFieldType type = FormField::InputFieldType::TEXT) : FormField(name, str, type), _setter(setter), _str(nullptr) {
     }
-    FormStringObject(const String &name, String *str, FormField::FieldType_t type = FormField::INPUT_TEXT) : FormField(name, *str, type), _setter(nullptr), _str(str) {
+    FormStringObject(const String &name, String *str, FormField::InputFieldType type = FormField::InputFieldType::TEXT) : FormField(name, *str, type), _setter(nullptr), _str(str) {
     }
 
     virtual void copyValue() {

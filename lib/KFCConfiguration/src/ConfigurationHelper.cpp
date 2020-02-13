@@ -9,7 +9,10 @@
 #define ARDUINO_ESP8266_RELEASE_2_6_3 1
 #endif
 
-#if DEBUG_CONFIGURATION
+#define DEBUG_POOL_ENABLE              0
+#define DEBUG_EEPROM_ENABLE            0
+
+#if DEBUG_CONFIGURATION && DEBUG_POOL_ENABLE
 #include <debug_helper_enable.h>
 #else
 #include <debug_helper_disable.h>
@@ -138,6 +141,11 @@ void *ConfigurationHelper::Pool::getPtr() const
 }
 
 
+#if DEBUG_CONFIGURATION && DEBUG_EEPROM_ENABLE
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
+#endif
 
 void ConfigurationHelper::EEPROMAccess::begin(uint16_t size)
 {
@@ -236,19 +244,18 @@ void ConfigurationHelper::EEPROMAccess::read(uint8_t *dst, uint16_t offset, uint
     if (result != SPI_FLASH_RESULT_OK) {
         memset(dst, 0, length);
     }
-    _debug_printf_P(PSTR("Configuration::getEEPROM(): spi_flash_read(%08x, %d) = %d, offset %u\n"), eeprom_start_address, readSize, result, offset);
-
+    _debug_printf_P(PSTR("spi_flash_read(%08x, %d) = %d, offset %u\n"), eeprom_start_address, readSize, result, offset);
 
 #if DEBUG_CONFIGURATION_VERIFY_DIRECT_EEPROM_READ
     auto hasBeenInitialized = _isInitialized;
     begin();
     auto cmpResult = memcmp(dst, getConstDataPtr() + offset, length);
     if (cmpResult) {
-        __debugbreak_and_panic_printf_P(PSTR("memcpy() failed=%d\n"), cmpResult);
+        __debugbreak_and_panic_printf_P(PSTR("res=%d dst=%p ofs=%d size=%u len=%d align=%u read_size=%u memcpy() failed=%d\n"), result, dst, offset, size, length, alignment, readSize, cmpResult);
     }
-    for (uint16_t i = length; i < readSize; i++) {
+    for (uint16_t i = length; i < size; i++) {
         if (dst[i] != 0) {
-            __debugbreak_and_panic_printf_P(PSTR("not NUL at %d/%d\n"), i, readSize);
+            __debugbreak_and_panic_printf_P(PSTR("res=%d dst=%p ofs=%d size=%u len=%d align=%u read_size=%u not zero @dst[%u]\n"), result, dst, offset, size, length, alignment, readSize, i);
         }
     }
 

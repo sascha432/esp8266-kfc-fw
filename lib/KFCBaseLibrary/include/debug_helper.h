@@ -9,6 +9,10 @@
 #include <vector>
 #include "constexpr_tools.h"
 
+#if _WIN32 && !defined(DEBUG_INCLUDE_SOURCE_INFO)
+#define DEBUG_INCLUDE_SOURCE_INFO 1
+#endif
+
 #if 1
 #define __BASENAME_FILE__                               StringConstExpr::basename(__FILE__)
 #endif

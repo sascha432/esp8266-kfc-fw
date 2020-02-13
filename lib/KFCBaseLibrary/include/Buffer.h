@@ -6,25 +6,40 @@
 
 #include <Arduino_compat.h>
 
+class Buffer;
+
+class MoveStringHelper : public String {
+public:
+    MoveStringHelper();
+    void move(Buffer &stream);
+};
+
 class Buffer {
 public:
-    Buffer(Buffer &&buffer);
-    Buffer(size_t size = 0);
+    Buffer(Buffer &&buffer) noexcept;
+    Buffer(size_t size);
+    Buffer();
     virtual ~Buffer();
 
-    Buffer &operator =(Buffer &&buffer);
+    Buffer(const __FlashStringHelper *str);
+    Buffer(const String &str);
+    Buffer(String &&str);
+
+    Buffer &operator =(Buffer &&buffer) noexcept;
     Buffer &operator =(const Buffer &buffer);
 
-    bool operator ==(const Buffer &buffer) const;
-    bool operator !=(const Buffer &buffer) const;
+    inline bool operator ==(const Buffer &buffer) const {
+        return equals(buffer);
+    }
+    inline bool operator !=(const Buffer &buffer) const {
+        return !equals(buffer);
+    }
 
     bool equals(const Buffer &buffer) const;
 
     void clear();
-    uint8_t *dupClear();
-    void move(uint8_t** ptr) {
-        *ptr = dupClear();
-    }
+    // move buffer pointer. needs to be freed with free() if not null
+    void move(uint8_t** ptr);
 
     inline uint8_t *get() const {
         return _buffer;
@@ -42,6 +57,7 @@ public:
         return reinterpret_cast<const char *>(_buffer);
     }
 
+    String toString() const;
     inline const char* c_str() {
         return getNulByteString();
     }
@@ -56,37 +72,34 @@ public:
     size_t size() const;
     size_t length() const;
 
-    bool reserve(size_t size, bool shrink = false);
-    bool available(size_t len);
+    uint8_t *begin() const {
+        return _buffer;
+    }
+    uint8_t *end() const {
+        return _buffer + _length;
+    }
 
-    String toString() const;
-    operator String() const;
+    bool reserve(size_t size, bool shrink = false);
+    // bool available(size_t len) const;
+    size_t available() const;
 
     size_t write(uint8_t data) {
         return write(&data, sizeof(data));
     }
-    size_t write(int data) {
-        return write((uint8_t)data);
-    }
-    size_t write(char data) {
-        return write((uint8_t)data);
-    }
 
-    size_t write(const uint8_t *data, size_t len) {
-        return write((uint8_t *)data, len);
-    }
-    size_t write(const char *data, size_t len) {
-        return write((uint8_t *)data, len);
-    }
-    size_t write(char *data, size_t len) {
-        return write((uint8_t *)data, len);
-    }
-    size_t write(uint8_t *data, size_t len);
+    size_t write(const uint8_t *data, size_t len);
     size_t write_P(PGM_P data, size_t len);
 
-    size_t write(const String &str) {
+    inline size_t write(const char *data, size_t len) {
+        return write(reinterpret_cast<const uint8_t *>(data), len);
+    }
+    inline size_t write(const __FlashStringHelper *data, size_t len) {
+        return write_P(reinterpret_cast<PGM_P>(data), len);
+    }
+    inline size_t write(const String &str) {
         return write(str.c_str(), str.length());
     }
+
     template<class T>
     size_t write(T *data) {
         return write(reinterpret_cast<const uint8_t *>(data), sizeof(T));
@@ -97,19 +110,37 @@ public:
     }
 
     void remove(unsigned int index, size_t count);
-    void removeAndShrink(unsigned int index, size_t count);
+    // reduce size if more than minFree bytes are available
+    void removeAndShrink(unsigned int index, size_t count, size_t minFree = 64);
 
-    Buffer &operator+=(char data);
-    Buffer &operator+=(uint8_t data);
-    Buffer &operator+=(const char *data);
-    Buffer &operator+=(const String &data);
+    inline Buffer &operator+=(char data) {
+        write(data);
+        return *this;
+    }
+    inline Buffer &operator+=(uint8_t data) {
+        write(data);
+        return *this;
+    }
+    Buffer &operator+=(const char *str);
+    Buffer &operator+=(const String &str);
+    Buffer &operator+=(const __FlashStringHelper *str);
+    Buffer &operator+=(const Buffer &buffer);
+
+    void setLength(size_t length) {
+        _length = length;
+    }
 
 protected:
     uint8_t *_buffer;
-
-private:
-    void _free();
-
     size_t _length;
     size_t _size;
+
+private:
+    inline size_t _alignSize(size_t size) const {
+#if ESP8266 || ESP32
+        return (size + 7) & ~7; // 8 byte aligned, umm block size
+#else
+        return size;
+#endif
+    }
 };

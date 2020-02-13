@@ -116,8 +116,8 @@ bool ESP8266ATModePlugin::atModeHandler(int8_t argc, char **argv) {
         }
         else if (argc == AT_MODE_QUERY_COMMAND) {
             serial.printf_P(PSTR("+CWSAP:\"%s\",\"%s\",%d,%d\n"),
-                config._H_STR(Config().soft_ap.wifi_ssid),
-                config._H_STR(Config().soft_ap.wifi_pass),
+                config._H_STR(MainConfig().network.WiFiConfig._softApSsid),
+                config._H_STR(MainConfig().network.WiFiConfig._softApPassword),
                 (int)config._H_GET(Config().soft_ap.config).channel,
                 (int)config._H_GET(Config().soft_ap.config).encryption
             );
@@ -126,8 +126,8 @@ bool ESP8266ATModePlugin::atModeHandler(int8_t argc, char **argv) {
             at_mode_print_invalid_arguments(serial);
         }
         else {
-            config._H_SET_STR(Config().soft_ap.wifi_ssid, argv[0]);
-            config._H_SET_STR(Config().soft_ap.wifi_pass, argv[1]);
+            config._H_SET_STR(MainConfig().network.WiFiConfig._softApSsid, argv[0]);
+            config._H_SET_STR(MainConfig().network.WiFiConfig._softApPassword, argv[1]);
             if (argc >= 3) {
                 config._H_SET(Config().soft_ap.config, atoi(argv[2])).channel;
                 if (argc >= 4) {
@@ -227,14 +227,14 @@ bool ESP8266ATModePlugin::atModeHandler(int8_t argc, char **argv) {
         if (esp8266_at_commands_require_mode(serial, WIFI_STA)) {
         }
         else if (argc == AT_MODE_QUERY_COMMAND) {
-            serial.printf_P(PSTR("+CWJAP:\"%s\",\"%s\"\n"), config._H_STR(Config().wifi_ssid), config._H_STR(Config().wifi_pass));
+            serial.printf_P(PSTR("+CWJAP:\"%s\",\"%s\"\n"), config._H_STR(MainConfig().network.WiFiConfig._ssid), config._H_STR(MainConfig().network.WiFiConfig._password));
             serial.printf_P(PSTR("+CWJAP: WiFi is %s\n"), WiFi.isConnected() ? PSTR("connected") : PSTR("disconnected"));
         }
         else {
             if (argc >= 1) {
-                config._H_SET_STR(Config().wifi_ssid, argv[0]);
+                config._H_SET_STR(MainConfig().network.WiFiConfig._ssid, argv[0]);
                 if (argc >= 2) {
-                    config._H_SET_STR(Config().wifi_pass, argv[1]);
+                    config._H_SET_STR(MainConfig().network.WiFiConfig._password, argv[1]);
                 }
             }
             esp8266_at_commands_reconfigure_wifi(serial);

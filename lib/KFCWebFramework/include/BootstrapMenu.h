@@ -6,6 +6,7 @@
 
 #include <Arduino_compat.h>
 #include <vector>
+#include <PrintArgs.h>
 
 #ifndef DEBUG_BOOTSTRAP_MENU
 #define DEBUG_BOOTSTRAP_MENU                    0
@@ -13,176 +14,282 @@
 
 #include "push_pack.h"
 
+class StaticString {
+public:
+
+    StaticString(StaticString &&str) {
+        *this = std::move(str);
+    }
+    StaticString(const String &str) : StaticString(str.c_str(), (uint16_t)str.length()) {
+    }
+    StaticString(const char *str) : StaticString(str, (uint16_t)strlen(str)) {
+    }
+    ~StaticString() {
+        __free();
+    }
+
+    String toString() const {
+        return _ptr ? (isProgMem() ? String(FPSTR(_ptr)) : String(reinterpret_cast<const char *>(_ptr))) : emptyString;
+    }
+
+    const char *c_str() const {
+        return reinterpret_cast<const char *>(_ptr);
+    }
+
+    PGM_P p_str() const {
+        return reinterpret_cast<PGM_P>(_ptr);
+    }
+
+    operator bool() const {
+        return _ptr != nullptr;
+    }
+
+    bool equalsIgnoreCase(const String &str) const {
+        if (_ptr) {
+            if (isProgMem()) {
+                return !strcasecmp_P(str.c_str(), p_str());
+            }
+            else {
+                return str.equalsIgnoreCase(c_str());
+            }
+        }
+        return false;
+    }
+
+    bool equalsIgnoreCase(const StaticString &str) const {
+        if (_ptr) {
+            if (isProgMem() && str.isProgMem()) {
+                return !strcasecmp_P_P(p_str(), str.p_str());
+            }
+            else if (isProgMem()) {
+                return !strcasecmp_P(str.c_str(), p_str());
+            }
+            else if (str.isProgMem()) {
+                return !strcasecmp_P(c_str(), str.p_str());
+            }
+        }
+        return false;
+    }
+
+    void __free() {
+        if (!isProgMem() && _ptr) {
+            free(_ptr);
+            _ptr = nullptr;
+        }
+        new(this) StaticString();
+    }
+
+#if ESP8266
+
+    StaticString() : _ptr() {
+    }
+
+    StaticString(const char *str, uint16_t length) : _ptr(length ? malloc(length + 1) : nullptr) {
+        if (_ptr) {
+            memcpy(_ptr, str, length + 1);
+        }
+    }
+
+    StaticString(const __FlashStringHelper *str) : _ptr(const_cast<__FlashStringHelper *>(str)) {
+    }
+
+    StaticString &operator=(StaticString &&str) {
+        _ptr = str._ptr;
+        str._ptr = nullptr;
+        return *this;
+    }
+
+    bool isProgMem() const {
+        return (((uint32_t)_ptr) >= 0x40200000);
+    }
+
+private:
+    void *_ptr;
+#else
+
+    StaticString() : _ptr(), _length(), _progmem() {
+    }
+
+    StaticString &operator=(StaticString &&str) {
+        _ptr = str._ptr;
+        _length = str._length;
+        _progmem = str._progmem;
+        str._ptr = nullptr;
+        str._length = 0;
+        str._progmem = 0;
+        return *this;
+    }
+
+    StaticString(const char *str, uint16_t length) : _ptr(length ? malloc(length + 1) : nullptr), _length(length), _progmem(false) {
+        if (_ptr) {
+            memcpy(_ptr, str, length + 1);
+        }
+    }
+
+    StaticString(const __FlashStringHelper *str) : _ptr(const_cast<__FlashStringHelper *>(str)), _length((uint16_t)strlen_P(reinterpret_cast<PGM_P>(str))), _progmem(true) {
+    }
+
+    bool isProgMem() const {
+        return _progmem;
+    }
+
+private:
+    void *_ptr;
+    uint16_t _length : 15;
+    uint16_t _progmem : 1;
+#endif
+};
+
 // 11 byte RAM usage per menu entry when using PROGMEM strings
 
 class BootstrapMenu {
 public:
+    using PrintInterface = PrintArgs::PrintInterface;
+
     typedef uint8_t menu_item_id_t;
+    typedef uint8_t menu_item_parent_id_t;
 
-    typedef struct __attribute__packed__ {
-        menu_item_id_t id;
-        menu_item_id_t parentMenuId;
-        uint8_t label_progmem : 1;
-        uint8_t URI_progmem : 1;
-    } MenuItemFlags_t;
+    static const uint8_t InvalidMenuId = ~0;
 
-    class Item {
+    class Item;
+
+    class FindHelper {
     public:
-        Item() : _label(nullptr), _URI(nullptr)
-        {
-            memset(&_flags, 0, sizeof(_flags));
-            _flags.id = INVALID_ID;
-            _flags.parentMenuId = INVALID_ID;
-        }
-        Item(BootstrapMenu &menu) : Item()
-        {
-            _flags.id = menu._getUnqiueId();
-        }
+        struct LabelType {};
+        struct UriType {};
+        struct MenuIdType {};
+        struct ParentMenuIdType {};
 
-        // needs to be called to free memory
-        void _destroy() {
-            clearLabel();
-            clearURI();
+        FindHelper(menu_item_id_t menuId, MenuIdType) : _menuId(menuId), _parentMenuId(InvalidMenuId) {
         }
-
-        void clearLabel() {
-            if (_flags.label_progmem == 0 && _label) {
-                free(_label);
-            }
-            _label = nullptr;
+        FindHelper(menu_item_parent_id_t parentMenuId, ParentMenuIdType) : _menuId(InvalidMenuId), _parentMenuId(parentMenuId) {
         }
-        void clearURI() {
-            if (_flags.URI_progmem == 0 && _URI) {
-                free(_URI);
-            }
-            _URI = nullptr;
+        FindHelper(const String &uri, menu_item_parent_id_t parentMenuId, UriType) : _uri(uri), _menuId(InvalidMenuId), _parentMenuId(parentMenuId) {
         }
-
-        void setLabel(const char *label) {
-            clearLabel();
-            _label = strdup(label);
-            _flags.label_progmem = 0;
-        }
-
-        inline void setLabel(const String &label) {
-            setLabel(label.c_str());
-        }
-
-        void setLabel(const __FlashStringHelper *label) {
-            clearLabel();
-            _label = (char *)label;
-            _flags.label_progmem = 1;
-        }
-
-        bool hasLabel() const {
-            return _label != nullptr;
-        }
-
-        void setURI(const __FlashStringHelper *uri) {
-            clearURI();
-            _URI = (char *)uri;
-            _flags.URI_progmem = 1;
-        }
-
-        void setURI(const char *uri) {
-            clearURI();
-            _URI = strdup(uri);
-            _flags.URI_progmem = 0;
-        }
-
-        inline void setURI(const String &uri) {
-            setURI(uri.c_str());
-        }
-
-        bool hashURI() const {
-            return _URI != nullptr;
-        }
-
-        String getLabel() const {
-            if (_label) {
-                if (_flags.label_progmem) {
-                    return String(FPSTR(_label));
-                }
-                else {
-                    return String(_label);
-                }
-            }
-            return String();
-        }
-
-        String getURI() const {
-            if (_URI) {
-                if (_flags.URI_progmem) {
-                    return String(FPSTR(_URI));
-                }
-                else {
-                    return String(_URI);
-                }
-            }
-            return String();
-        }
-
-        void setParentMenuId(menu_item_id_t menuId) {
-            _flags.parentMenuId = menuId;
-        }
-
-        menu_item_id_t getParentMenuId() const {
-            return _flags.parentMenuId;
-        }
-
-        menu_item_id_t getId() const {
-            return _flags.id;
+        FindHelper(const String &label, menu_item_parent_id_t parentMenuId, LabelType) : _label(label), _menuId(InvalidMenuId), _parentMenuId(parentMenuId) {
         }
 
     private:
-        char *_label;
-        char *_URI;
-        MenuItemFlags_t _flags;
+        friend Item;
+
+        String _uri;
+        String _label;
+        menu_item_id_t _menuId;
+        menu_item_parent_id_t _parentMenuId;
+    };
+
+    class Item {
+    public:
+        Item() : _label(), _uri(), _id(InvalidMenuId), _parentMenuId(InvalidMenuId) {
+        }
+        Item(BootstrapMenu &menu, StaticString &&label, StaticString &&uri, menu_item_parent_id_t parentMenuId = InvalidMenuId) :
+            _label(std::move(label)), _uri(std::move(uri)), _id(menu._getUnqiueId()), _parentMenuId(parentMenuId) {
+        }
+
+        bool operator ==(const FindHelper &helper) const {
+            return
+                (helper._menuId == InvalidMenuId || helper._menuId == _id) &&
+                (helper._parentMenuId == InvalidMenuId || helper._parentMenuId == _parentMenuId) &&
+                (helper._label.length() == 0 || _label.equalsIgnoreCase(helper._label)) &&
+                (helper._uri.length() == 0 || _uri.equalsIgnoreCase(helper._uri));
+        }
+
+        bool hasLabel() const {
+            return _label != false;
+        }
+
+        bool hashURI() const {
+            return _uri;
+        }
+
+        void setLabel(const String &label) {
+            _label = label;
+        }
+
+        void setUri(const String &uri) {
+            _uri = uri;
+        }
+
+        const StaticString &getLabel() const {
+            return _label;
+        }
+
+        const StaticString &getUri() const {
+            return _uri;
+        }
+
+        void setParentMenuId(menu_item_parent_id_t menuId) {
+            _parentMenuId = menuId;
+        }
+
+        menu_item_parent_id_t getParentMenuId() const {
+            return _parentMenuId;
+        }
+
+        menu_item_id_t getId() const {
+            return _id;
+        }
+
+    private:
+        StaticString _label;
+        StaticString _uri;
+        struct __attribute__packed__ {
+            menu_item_id_t _id;
+            menu_item_parent_id_t _parentMenuId;
+        };
     };
 
     typedef std::vector<Item> ItemsVector;
     typedef std::vector<Item>::iterator ItemsVectorIterator;
 
-    static const menu_item_id_t INVALID_ID = ~0;
-
 public:
     BootstrapMenu();
     ~BootstrapMenu();
 
-    menu_item_id_t addMenu(const __FlashStringHelper* label, menu_item_id_t afterId = 0);
-    menu_item_id_t addMenu(const String &label, menu_item_id_t afterId = 0);
-    menu_item_id_t addSubMenu(const __FlashStringHelper *label, const __FlashStringHelper *uri, menu_item_id_t parentMenuId, menu_item_id_t afterId = 0);
-    menu_item_id_t addSubMenu(const String& label, const __FlashStringHelper *uri, menu_item_id_t parentMenuId, menu_item_id_t afterId = 0);
-    menu_item_id_t addSubMenu(const __FlashStringHelper *label, const String &uri, menu_item_id_t parentMenuId, menu_item_id_t afterId = 0);
-    menu_item_id_t addSubMenu(const String &label, const String &uri, menu_item_id_t parentMenuId, menu_item_id_t afterId = 0);
+    bool isValid(ItemsVectorIterator iterator) const {
+        return iterator != _items.end();
+    }
 
-    menu_item_id_t findMenuByLabel(const String& label, menu_item_id_t menuId = INVALID_ID) const;
-    menu_item_id_t findMenuByURI(const String& uri, menu_item_id_t menuId = INVALID_ID) const;
+    menu_item_id_t getId(ItemsVectorIterator iterator) const {
+        if (isValid(iterator)) {
+            return iterator->getId();
+        }
+        return InvalidMenuId;
+    }
+
+    menu_item_parent_id_t addMenu(StaticString &&label, menu_item_id_t afterId = menu_item_id_t());
+    menu_item_id_t addSubMenu(StaticString &&label, StaticString &&uri, menu_item_parent_id_t parentMenuId, menu_item_id_t afterId = menu_item_id_t());
+
+    ItemsVectorIterator findMenuByLabel(const String &label, menu_item_parent_id_t menuId = InvalidMenuId);
+    ItemsVectorIterator findMenuByURI(const String &uri, menu_item_parent_id_t menuId = InvalidMenuId);
+
     // get number of menu items
-    menu_item_id_t getItemCount(menu_item_id_t menuId) const;
+    //menu_item_id_t getItemCount(menu_item_id_t menuId) const;
+
+    inline ItemsVectorIterator getItem(menu_item_id_t menuId) {
+        return std::find(_items.begin(), _items.end(), FindHelper(menuId, FindHelper::MenuIdType()));
+    }
 
     // create menu item
-    void html(Print& output, menu_item_id_t menuId, bool dropDown);
+    void html(PrintInterface &output, ItemsVectorIterator top);
+
     // create main menu
-    void html(Print& output);
+    void html(PrintInterface &output);
 
     // create sub menu
-    void htmlSubMenu(Print& output, menu_item_id_t menuId, uint8_t active);
+    void htmlSubMenu(PrintInterface &output, ItemsVectorIterator top, uint8_t active);
 
-    // get menu item by id
-    ItemsVectorIterator getItem(menu_item_id_t menuId);
-
-// public:
-//     void createCache();
-// private:
-//     String _cacheFilename;
+    // public:
+    //     void createCache();
+    // private:
+    //     String _cacheFilename;
 
 private:
     friend Item;
 
     menu_item_id_t _add(Item &item, menu_item_id_t afterId);
+    menu_item_id_t _add(Item &&item, menu_item_id_t afterId);
     menu_item_id_t _getUnqiueId();
-
 
 private:
     ItemsVector _items;

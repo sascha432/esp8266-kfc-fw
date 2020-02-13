@@ -17,6 +17,8 @@
 #include <KFCTimezone.h>
 #include <Buffer.h>
 #include <PrintHtmlEntities.h>
+#include <TemplateDataProvider.h>
+#include <SSIProxyStream.h>
 #include "web_server.h"
 #include "../include/templates.h"
 #include "fs_mapping.h"
@@ -37,45 +39,23 @@ private:
     JsonBuffer _jsonBuffer;
 };
 
-class AsyncAbstractTemplateResponse: public AsyncWebServerResponse {
+class AsyncProgmemFileResponse : public AsyncAbstractResponse {
 public:
-    typedef std::function<void(const String &key, PrintHtmlEntitiesString &content)> TemplateProcessor;
-
-private:
-    String _head;
-    std::vector<uint8_t> _cache;
-    size_t _readDataFromCacheOrContent(uint8_t* data, const size_t len);
-    size_t _fillBufferAndProcessTemplates(uint8_t* buf, size_t maxLen);
-
-protected:
-    TemplateProcessor _callback;
-
-public:
-    AsyncAbstractTemplateResponse(TemplateProcessor callback = nullptr);
-    void _respond(AsyncWebServerRequest *request);
-    size_t _ack(AsyncWebServerRequest *request, size_t len, uint32_t time);
-    virtual bool _sourceValid() const override {
-        return false;
-    }
-
-    virtual size_t _fillBuffer(uint8_t *buf, size_t maxLen) = 0;
-};
-
-class AsyncProgmemFileResponse : public AsyncAbstractTemplateResponse {
-public:
-    AsyncProgmemFileResponse(const String &contentType, const FSMappingEntry *mapping, AsyncAbstractTemplateResponse::TemplateProcessor templateCallback = nullptr);
+    AsyncProgmemFileResponse(const String &contentType, const FSMappingEntry *mapping, TemplateDataProvider::ResolveCallback callback = nullptr);
 
     virtual bool _sourceValid() const override;
     virtual size_t _fillBuffer(uint8_t *data, size_t len) override;
 
 private:
-    File _content;
+    File _contentWrapped;
     WebServerSetCPUSpeedHelper _setCPUSpeed;
+    TemplateDataProvider _provider;
+    SSIProxyStream _content;
 };
 
 class AsyncTemplateResponse : public AsyncProgmemFileResponse {
 public:
-    AsyncTemplateResponse(const String &contentType, const FSMappingEntry *mapping, WebTemplate *webTemplate);
+    AsyncTemplateResponse(const String &contentType, const FSMappingEntry *mapping, WebTemplate *webTemplate, TemplateDataProvider::ResolveCallback callback = nullptr);
     virtual ~AsyncTemplateResponse();
 
     void process(const String &key, PrintHtmlEntitiesString &output) {

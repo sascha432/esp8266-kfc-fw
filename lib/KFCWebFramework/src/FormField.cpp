@@ -5,7 +5,7 @@
 #include "FormField.h"
 #include "FormValidator.h"
 
-FormField::FormField(const String &name, const String &value, FieldType_t type) : _name(name), _value(value), _type(type), _formUI(nullptr), _hasChanged(false)
+FormField::FormField(const String &name, const String &value, InputFieldType type) : _name(name), _value(value), _type(type), _formUI(nullptr), _form(nullptr), _hasChanged(false)
 {
     // _notSet = false;
     // _optional = false;
@@ -13,7 +13,7 @@ FormField::FormField(const String &name, const String &value, FieldType_t type) 
 
 FormField::~FormField()
 {
-    for (auto validator: _validators) {
+    for (auto validator : _validators) {
         delete validator;
     }
     _validators.clear();
@@ -22,7 +22,7 @@ FormField::~FormField()
     }
 }
 
-void FormField::setForm(Form * form)
+void FormField::setForm(Form *form)
 {
     _form = form;
 }
@@ -50,7 +50,7 @@ const String &FormField::getValue()
 * Initialize the value of the field. Should only be used in the constructor.
 **/
 
-void FormField::initValue(const String & value)
+void FormField::initValue(const String &value)
 {
     _value = value;
     _hasChanged = false;
@@ -60,7 +60,7 @@ void FormField::initValue(const String & value)
 * This method is called when the user submits a form
 **/
 
-bool FormField::setValue(const String & value)
+bool FormField::setValue(const String &value)
 {
     if (value != _value) {
         _value = value;
@@ -80,7 +80,7 @@ void FormField::copyValue()
     FormField::getValue();
 }
 
-bool FormField::equals(FormField * field) const
+bool FormField::equals(FormField *field) const
 {
     return _value.equals(field->getValue());
 }
@@ -95,11 +95,11 @@ void FormField::setChanged(bool hasChanged)
     _hasChanged = hasChanged;
 }
 
-void FormField::setType(FieldType_t type) {
+void FormField::setType(InputFieldType type) {
     _type = type;
 }
 
-FormField::FieldType_t FormField::getType() const
+FormField::InputFieldType FormField::getType() const
 {
     return _type;
 }
@@ -113,14 +113,14 @@ void FormField::setFormUI(FormUI *formUI)
     _formUI->setParent(this);
 }
 
-void FormField::html(Print &output)
+void FormField::html(PrintInterface &output)
 {
     if (_formUI) {
         _formUI->html(output);
     }
 }
 
-void FormField::addValidator(FormValidator * validator)
+void FormField::addValidator(FormValidator *validator)
 {
     _validators.push_back(validator);
     _validators.back()->setField(this);

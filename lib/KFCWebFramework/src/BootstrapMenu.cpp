@@ -6,193 +6,120 @@
 #include <PrintHtmlEntitiesString.h>
 #include <sha1.h>
 
+#if _WIN32
+#define BOOTSTRAP_MENU_CRLF "\n"
+#else
+#define BOOTSTRAP_MENU_CRLF ""
+#endif
+
 #if DEBUG_BOOTSTRAP_MENU
 #include <debug_helper_enable.h>
 #else
 #include <debug_helper_disable.h>
 #endif
 
-BootstrapMenu::BootstrapMenu() : _unqiueId(0)
-{
+BootstrapMenu::BootstrapMenu() : _unqiueId(0) {
 }
 
-BootstrapMenu::~BootstrapMenu()
-{
-	for (auto &item : _items) {
-		item._destroy();
-	}
+BootstrapMenu::~BootstrapMenu() {
 }
 
-BootstrapMenu::menu_item_id_t BootstrapMenu::addMenu(const __FlashStringHelper* label, menu_item_id_t afterId)
+BootstrapMenu::menu_item_parent_id_t BootstrapMenu::addMenu(StaticString &&label, menu_item_id_t afterId)
 {
-	Item item(*this);
-	item.setLabel(label);
-	return _add(item, afterId);
+	return _add(std::move(Item(*this, std::move(label), std::move(StaticString()))), afterId);
 }
 
-BootstrapMenu::menu_item_id_t BootstrapMenu::addMenu(const String& label, menu_item_id_t afterId)
+BootstrapMenu::menu_item_id_t BootstrapMenu::addSubMenu(StaticString &&label, StaticString &&uri, menu_item_parent_id_t parentMenuId, menu_item_id_t afterId)
 {
-	Item item(*this);
-	item.setLabel(label);
-	return _add(item, afterId);
+	return _add(std::move(Item(*this, std::move(label), std::move(uri), parentMenuId)), afterId);
 }
 
-BootstrapMenu::menu_item_id_t BootstrapMenu::addSubMenu(const __FlashStringHelper* label, const __FlashStringHelper* uri, menu_item_id_t parentMenuId, menu_item_id_t afterId)
+BootstrapMenu::ItemsVectorIterator BootstrapMenu::findMenuByLabel(const String &label, menu_item_parent_id_t menuId)
 {
-	Item item(*this);
-	item.setLabel(label);
-	item.setURI(uri);
-	item.setParentMenuId(parentMenuId);
-	return _add(item, afterId);
+	return std::find(_items.begin(), _items.end(), FindHelper(label, menuId, FindHelper::LabelType()));
 }
 
-BootstrapMenu::menu_item_id_t BootstrapMenu::addSubMenu(const String& label, const __FlashStringHelper* uri, menu_item_id_t parentMenuId, menu_item_id_t afterId)
+BootstrapMenu::ItemsVectorIterator BootstrapMenu::findMenuByURI(const String &uri, menu_item_parent_id_t menuId)
 {
-	Item item(*this);
-	item.setLabel(label);
-	item.setURI(uri);
-	item.setParentMenuId(parentMenuId);
-	return _add(item, afterId);
+	return std::find(_items.begin(), _items.end(), FindHelper(uri, menuId, FindHelper::UriType()));
 }
 
-BootstrapMenu::menu_item_id_t BootstrapMenu::addSubMenu(const __FlashStringHelper* label, const String& uri, menu_item_id_t parentMenuId, menu_item_id_t afterId)
-{
-	Item item(*this);
-	item.setLabel(label);
-	item.setURI(uri);
-	item.setParentMenuId(parentMenuId);
-	return _add(item, afterId);
-}
+//BootstrapMenu::menu_item_id_t BootstrapMenu::getItemCount(menu_item_id_t menuId) const
+//{
+//	uint8_t count = 0;
+//	for (const auto &item : _items) {
+//		if (item.getParentMenuId() == menuId) {
+//			count++;
+//		}
+//	}
+//	_debug_printf_P(PSTR("BootstrapMenu::getItemCount(menuId=%d): count=%d\n"), menuId, count);
+//	return count;
+//}
 
-BootstrapMenu::menu_item_id_t BootstrapMenu::addSubMenu(const String& label, const String& uri, menu_item_id_t parentMenuId, menu_item_id_t afterId)
+void BootstrapMenu::html(PrintInterface &output, ItemsVectorIterator top)
 {
-	Item item(*this);
-	item.setLabel(label);
-	item.setURI(uri);
-	item.setParentMenuId(parentMenuId);
-	return _add(item, afterId);
-}
-
-BootstrapMenu::menu_item_id_t BootstrapMenu::findMenuByLabel(const String &label, menu_item_id_t menuId) const
-{
-	for (const auto &item: _items) {
-		if (item.getParentMenuId() == menuId && item.getLabel().equalsIgnoreCase(label)) {
-			return item.getId();
+	if (isValid(top)) {
+		auto menuId = top->getId();
+		_debug_printf_P(PSTR("BootstrapMenu::html(menuId=%d)\n"), menuId);
+		if (top->hashURI()) {
+			// menu bar only
+			output.printf_P(PSTR("<li class=\"nav-item\">" "<a class=\"nav-link\" href=\"%s\">%s</a></li>" BOOTSTRAP_MENU_CRLF), top->getUri().c_str(), top->getLabel().c_str());
 		}
-	}
-	return INVALID_ID;
-}
-
-BootstrapMenu::menu_item_id_t BootstrapMenu::findMenuByURI(const String &uri, menu_item_id_t menuId) const
-{
-	for (const auto &item: _items) {
-		if (item.getParentMenuId() == menuId && item.getURI().equalsIgnoreCase(uri)) {
-			return item.getId();
-		}
-	}
-	return INVALID_ID;
-}
-
-BootstrapMenu::menu_item_id_t BootstrapMenu::getItemCount(menu_item_id_t menuId) const
-{
-	menu_item_id_t count = 0;
-	for (const auto &item : _items) {
-		if (item.getParentMenuId() == menuId) {
-			count++;
-		}
-	}
-	_debug_printf_P(PSTR("BootstrapMenu::getItemCount(menuId=%d): count=%d\n"), menuId, count);
-	return count;
-}
-
-void BootstrapMenu::html(Print &output, menu_item_id_t menuId, bool dropDown)
-{
-	_debug_printf_P(PSTR("BootstrapMenu::html(menuId=%d, dropDown=%d)\n"), menuId, dropDown);
-
-	auto topMenuIterator = getItem(menuId);
-	if (topMenuIterator == _items.end()) {
-		return;
-	}
-	auto& topMenu = *topMenuIterator;
-	auto subItems = getItemCount(menuId);
-
-	if (dropDown) {
-		output.printf_P(PSTR("<a class=\"dropdown-item\" href=\"%s\">%s</a>"), topMenu.getURI().c_str(), topMenu.getLabel().c_str());
-	}
-	else if (topMenu.hashURI()) { // menu bar only
-		output.printf_P(PSTR("<li class=\"nav-item\"><a class=\"nav-link\" href=\"%s\">%s</a></li>"), topMenu.getURI().c_str(), topMenu.getLabel().c_str());
-	}
-	else if (subItems) { // drop down empty?
-		output.printf_P(("<li class=\"nav-item dropdown\"><a class=\"nav-link dropdown-toggle\" href=\"#\" id=\"navbarDropdown%u\" role=\"button\" data-toggle=\"dropdown\" aria-haspopup=\"true\" aria-expanded=\"false\">%s</a>"), menuId, topMenu.getLabel().c_str());
-		output.print(F("<div class=\"dropdown-menu\" aria-labelledby=\"navbarDropdownConfig\">"));
-		for (const auto &item: _items) {
-			if (item.getParentMenuId() == menuId) {
-				html(output, item.getId(), true);
+		else if (isValid(std::find(_items.begin(), _items.end(), FindHelper(top->getId(), FindHelper::ParentMenuIdType())))) {
+			// drop down menu
+			output.printf_P(PSTR("<li class=\"nav-item dropdown\">" BOOTSTRAP_MENU_CRLF "<a class=\"nav-link dropdown-toggle\" href=\"#\""));
+			output.printf_P(PSTR(" id=\"navbarDropdown%u\" role=\"button\" data-toggle=\"dropdown\" aria-haspopup=\"true\" aria-expanded=\"false\">%s</a>" BOOTSTRAP_MENU_CRLF), menuId, top->getLabel().c_str());
+			output.printf_P(PSTR("<div class=\"dropdown-menu\" aria-labelledby=\"navbarDropdownConfig\">" BOOTSTRAP_MENU_CRLF));
+			for (auto dropdown = top + 1; dropdown != _items.end(); ++dropdown) {
+				if (dropdown->getParentMenuId() == menuId) {
+					output.printf_P(PSTR("<a class=\"dropdown-item\" href=\"%s\">%s</a>" BOOTSTRAP_MENU_CRLF), dropdown->getUri().c_str(), dropdown->getLabel().c_str());
+				}
 			}
+			output.printf_P(PSTR("</div></li>" BOOTSTRAP_MENU_CRLF));
 		}
-		output.print(F("</div></li>"));
+		else {
+			// empty drop down, do not display
+		}
 	}
 }
 
-// void BootstrapMenu::createCache()
-// {
-// 	PrintString output;
-// 	SHA1 sha1;
-// 	uint8_t hash[sha1.hashSize()];
-// 	html(output);
-// 	sha1.update(output.c_str(), output.length());
-// 	sha1.finalize(hash, sizeof(hash));
-
-// 	_cacheFilename = PrintString(F("/c/menu%02x%02x%02x%02x%02x%02x"), hash[0], hash[1], hash[2], hash[3], hash[4], hash[5]);
-
-// 	if (!SPIFFS.exists(_cacheFilename)) {
-// 		File file = SPIFFS.open(_cacheFilename, fs::FileOpenMode::write);
-// 		if (file) {
-// 			file.write(output.c_str(), output.length());
-// 			file.close();
-// 		}
-// 	}
-// }
-
-void BootstrapMenu::html(Print& output)
+void BootstrapMenu::html(PrintInterface &output)
 {
 	_debug_printf_P(PSTR("BootstrapMenu::html()\n"));
-	for (const auto &item: _items) {
-		if (item.getParentMenuId() == INVALID_ID) {
-			html(output, item.getId(), false);
+	for (auto iterator = _items.begin(); iterator != _items.end(); ++iterator) {
+		if (iterator->getParentMenuId() == InvalidMenuId) {
+			html(output, iterator);
 		}
 	}
 }
 
-void BootstrapMenu::htmlSubMenu(Print& output, menu_item_id_t menuId, uint8_t active)
-{
-	menu_item_id_t pos = 0;
-	for (const auto &item : _items) {
-		if (item.getParentMenuId() == menuId) {
-			output.printf_P(PSTR("<a href=\"%s\" class=\"list-group-item list-group-item-action align-items-start%s\"><h5 class=\"mb-1\">%s</h5></a>"),
-				item.getURI().c_str(),
-				active == pos ? PSTR(" active") : emptyString.c_str(),
-				item.getLabel().c_str()
-			);
-			pos++;
-		}
-	}
-	_debug_printf_P(PSTR("BootstrapMenu::htmlSubMenu(menuId=%d, active=%d): items=%d\n"), menuId, active, pos);
-}
+//static const char __bootstrap_menu_template_submenu_template1[] PROGMEM = {  };
 
-BootstrapMenu::ItemsVectorIterator BootstrapMenu::getItem(menu_item_id_t menuId)
+void BootstrapMenu::htmlSubMenu(PrintInterface &output, ItemsVectorIterator top, uint8_t active)
 {
-	for (auto item = _items.begin(); item != _items.end(); ++item) {
-		if (item->getId() == menuId) {
-			return item;
+	if (isValid(top)) {
+		auto menuId = top->getId();
+		menu_item_id_t pos = 0;
+		for (auto iterator = top + 1; iterator != _items.end(); ++iterator) {
+			auto &item = *iterator;
+			if (item.getParentMenuId() == menuId) {
+				output.printf_P(PSTR("<a href=\"%s\" class=\"list-group-item list-group-item-action align-items-start%s\">"
+					"<h5 class=\"mb-1\">%s</h5></a>" BOOTSTRAP_MENU_CRLF), item.getUri().c_str(), active == pos ? PSTR(" active") : emptyString.c_str(), item.getLabel().c_str());
+				pos++;
+			}
 		}
+		_debug_printf_P(PSTR("BootstrapMenu::htmlSubMenu(menuId=%d, active=%d): items=%d\n"), menuId, active, pos);
 	}
-	return _items.end();
 }
 
 BootstrapMenu::menu_item_id_t BootstrapMenu::_add(Item &item, menu_item_id_t afterId)
 {
-	auto prev = getItem(afterId);
+	return _add(std::move(item), afterId);
+}
+
+BootstrapMenu::menu_item_id_t BootstrapMenu::_add(Item &&item, menu_item_id_t afterId)
+{
+	auto prev = std::find(_items.begin(), _items.end(), FindHelper(afterId, FindHelper::MenuIdType()));
 	if (prev == _items.end()) {
 		_items.emplace_back(std::move(item));
 		return _items.back().getId();

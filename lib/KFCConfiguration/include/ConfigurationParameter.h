@@ -63,8 +63,9 @@ public:
         uint16_t ___reserved : 3;
     } Info_t;
 
-    ConfigurationParameter(const Param_t &param);
     ConfigurationParameter(const ConfigurationParameter &) = delete;
+    ConfigurationParameter(const Param_t &param);
+    ConfigurationParameter(Handle_t handle, TypeEnum_t type);
 
     bool operator==(const ConfigurationParameter::Handle_t handle) const {
         return _param.handle == handle;
@@ -87,7 +88,7 @@ public:
         ))))));
     }
 
-    void setType(TypeEnum_t type);
+    //void setType(TypeEnum_t type);
     static uint8_t getDefaultSize(TypeEnum_t type);
 
     void setData(Configuration *conf, const uint8_t *data, uint16_t size);
@@ -96,7 +97,6 @@ public:
 
     const char *getString(Configuration *conf, uint16_t offset);
     const uint8_t *getBinary(Configuration *conf, uint16_t &length, uint16_t offset);
-
     uint16_t read(Configuration *conf, uint16_t offset);
 
     void dump(Print &output);

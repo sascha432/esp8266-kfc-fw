@@ -86,17 +86,14 @@ struct ConfigFlags {
     ConfigFlags_t softAPDHCPDEnabled:1;
     ConfigFlags_t stationModeDHCPEnabled:1;
     ConfigFlags_t webServerMode:2;
-#if defined(ESP8266)
-    ConfigFlags_t webServerPerformanceModeEnabled:1;
-#endif
     ConfigFlags_t ntpClientEnabled:1;
     ConfigFlags_t syslogProtocol:3;
     ConfigFlags_t mqttMode:2;
     ConfigFlags_t mqttAutoDiscoveryEnabled:1;
     ConfigFlags_t restApiEnabled:1;
     ConfigFlags_t serial2TCPMode:3;
-    ConfigFlags_t hueEnabled:1;
     ConfigFlags_t useStaticIPDuringWakeUp:1;
+    ConfigFlags_t webServerPerformanceModeEnabled:1;
 };
 
 struct HueConfig {
@@ -166,79 +163,6 @@ struct BlindsController {
 // NOTE: any member of an packed structure (__attribute__packed__ ) cannot be passed to forms as reference, otherwise it might cause an unaligned exception
 // marking integers as bitset prevents using it as reference, i.e. uint8_t value: 8;
 // use _H_STRUCT_VALUE() or suitable macro
-
-class Config_Network
-{
-public:
-    typedef struct {
-        uint32_t dns1;
-        uint32_t dns2;
-        uint32_t local_ip;
-        uint32_t subnet;
-        uint32_t gateway;
-    } config_t;
-    config_t config;
-
-    Config_Network();
-
-    static const char *getSSID();
-    static const char *getPassword();
-
-    char wifi_ssid[33];
-    char wifi_pass[33];
-};
-
-class Config_SoftAP
-{
-public:
-    typedef struct {
-        uint32_t address;
-        uint32_t subnet;
-        uint32_t gateway;
-        uint32_t dhcp_start;
-        uint32_t dhcp_end;
-        uint16_t channel: 8;
-        uint16_t encryption: 8;
-    } config_t;
-    config_t config;
-
-    Config_SoftAP();
-
-    IPAddress getAddress() const {
-        return IPAddress(config.address);
-    }
-
-    IPAddress getSubnet() const {
-        return IPAddress(config.subnet);
-    }
-
-    IPAddress getGateway() const {
-        return IPAddress(config.gateway);
-    }
-
-    IPAddress getDHCPStart() const {
-        return IPAddress(config.dhcp_start);
-    }
-
-    IPAddress getDHCPEnd() const {
-        return IPAddress(config.dhcp_end);
-    }
-
-    uint8_t getChannel() const {
-        return config.channel;
-    }
-
-    uint8_t getEncryption() const {
-        return config.encryption;
-    }
-
-    static const char *getAPSSID();
-    static const char *getPassword();
-
-    char wifi_ssid[33];
-    char wifi_pass[33];
-};
-
 
 class Config_HTTP
 {
@@ -618,9 +542,6 @@ typedef struct {
     char device_name[17];
     char device_pass[33];
 
-    Config_Network network;
-    Config_SoftAP soft_ap;
-
     Config_HTTP http;
     Config_Syslog syslog;
     Config_MQTT mqtt;
@@ -706,6 +627,7 @@ public:
     const char *getLastError() const;
 
     void restoreFactorySettings();
+    void customSettings();
     static const String getFirmwareVersion();
     static const String getShortFirmwareVersion();
 
@@ -794,3 +716,5 @@ extern KFCFWConfiguration config;
 #if DEBUG_HAVE_SAVECRASH
 extern EspSaveCrash SaveCrash;
 #endif
+
+#include "kfc_fw_config_classes.h"

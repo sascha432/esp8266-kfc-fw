@@ -279,7 +279,7 @@ void WiFi_Station_SSID(Print &out)
     if (WiFi.isConnected()) {
         out.print(WiFi.SSID());
     } else {
-        out.print(config._H_STR(Config().wifi_ssid));
+        out.print(config._H_STR(MainConfig().network.WiFiConfig._ssid));
     }
 }
 

@@ -8,6 +8,7 @@
 #include <vector>
 #include "FormUI.h"
 
+
 class Form;
 class FormValidator;
 
@@ -15,14 +16,16 @@ class FormField {
 public:
     typedef std::vector <FormValidator *> ValidatorsVector;
 
-    typedef enum {
-        INPUT_NONE = 0,
-        INPUT_CHECK,
-        INPUT_SELECT,
-        INPUT_TEXT,
-    } FieldType_t;
+    using PrintInterface = PrintArgs::PrintInterface;
 
-    FormField(const String &name, const String &value = String(), FieldType_t type = FormField::INPUT_NONE);
+    enum class InputFieldType {
+        NONE = 0,
+        CHECK,
+        SELECT,
+        TEXT,
+    };
+
+    FormField(const String &name, const String &value = String(), InputFieldType type = FormField::InputFieldType::NONE);
     // FormField(const String &name, const String &value, bool optional) : FormField(name, value) {
     //     _optional = optional;
     // }
@@ -66,11 +69,11 @@ public:
     bool hasChanged() const;
     void setChanged(bool hasChanged);
 
-    void setType(FieldType_t type);
-    FieldType_t getType() const;
+    void setType(InputFieldType type);
+    InputFieldType getType() const;
 
     void setFormUI(FormUI *formUI);
-    void html(Print &output);
+    void html(PrintInterface &output);
 
     void addValidator(FormValidator *validator);
     const ValidatorsVector &getValidators() const;
@@ -79,11 +82,10 @@ private:
     String _name;
     String _value;
     ValidatorsVector _validators;
-    FieldType_t _type;
+    InputFieldType _type;
     FormUI *_formUI;
     Form *_form;
     bool _hasChanged;
     // bool _optional;
     // bool _notSet;
 };
-

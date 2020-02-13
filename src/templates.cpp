@@ -108,38 +108,32 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     }
     else if (String_equals(key, PSTR("MENU_HTML_MAIN"))) {
         output.setRawOutput(true);
-        bootstrapMenu.html(output);
+        bootstrapMenu.html(PrintArgs::toPrint(output));
     }
     else if (String_startsWith(key, PSTR("MENU_HTML_MAIN_"))) {
         output.setRawOutput(true);
-        auto id = bootstrapMenu.findMenuByLabel(key.substring(15));
-        if (id != BootstrapMenu::INVALID_ID) {
-            bootstrapMenu.html(output, id, false);
-        }
+        bootstrapMenu.html(PrintArgs::toPrint(output), bootstrapMenu.findMenuByLabel(key.substring(15)));
     }
     else if (String_startsWith(key, PSTR("MENU_HTML_SUBMENU_"))) {
         output.setRawOutput(true);
-        auto id = bootstrapMenu.findMenuByLabel(key.substring(18));
-        if (id != BootstrapMenu::INVALID_ID) {
-            bootstrapMenu.htmlSubMenu(output, id, 0);
-        }
+        bootstrapMenu.htmlSubMenu(PrintArgs::toPrint(output), bootstrapMenu.findMenuByLabel(key.substring(18)), 0);
     }
     else if (String_equals(key, PSTR("FORM_HTML"))) {
         if (_form) {
             output.setRawOutput(true);
-            _form->createHtml(output);
+            _form->createHtml(PrintArgs::toPrint(output));
         }
     }
     else if (String_startsWith(key, PSTR("FORM_HTML_"))) {
         if (_form) {
             output.setRawOutput(true);
-            _form->createHtmlPart(output, atoi(key.c_str() + 10));
+            _form->createHtmlPart(PrintArgs::toPrint(output), atoi(key.c_str() + 10));
         }
     }
     else if (String_equals(key, PSTR("FORM_VALIDATOR"))) {
         if (_form) {
             output.setRawOutput(true);
-            _form->createJavascript(output);
+            _form->createJavascript(PrintArgs::toPrint(output));
         }
     }
     else if (_form) {
@@ -368,50 +362,54 @@ void PasswordTemplate::process(const String &key, PrintHtmlEntitiesString &outpu
 
 WifiSettingsForm::WifiSettingsForm(AsyncWebServerRequest *request) : SettingsForm(request)
 {
+    using KFCConfigurationClasses::MainConfig;
+
     add<uint8_t>(F("mode"), _H_FLAGS_VALUE(Config().flags, wifiMode));
     addValidator(new FormRangeValidator(F("Invalid mode"), WIFI_OFF, WIFI_AP_STA));
 
-    add(F("wifi_ssid"), _H_STR_VALUE(Config().wifi_ssid));
-    addValidator(new FormLengthValidator(1, sizeof(Config().network.wifi_ssid) - 1));
+    add(F("wifi_ssid"), _H_STR_VALUE(MainConfig().network.WiFiConfig._ssid));
+    addValidator(new FormLengthValidator(1, sizeof(MainConfig().network.WiFiConfig._ssid) - 1));
 
-    add(F("wifi_password"), _H_STR_VALUE(Config().wifi_pass));
-    addValidator(new FormLengthValidator(8, sizeof(Config().network.wifi_pass) - 1));
+    add(F("wifi_password"), _H_STR_VALUE(MainConfig().network.WiFiConfig._password));
+    addValidator(new FormLengthValidator(8, sizeof(MainConfig().network.WiFiConfig._password) - 1));
 
-    add(F("ap_wifi_ssid"), _H_STR_VALUE(Config().soft_ap.wifi_ssid));
-    addValidator(new FormLengthValidator(1, sizeof(Config().soft_ap.wifi_ssid) - 1));
+    add(F("ap_wifi_ssid"), _H_STR_VALUE(MainConfig().network.WiFiConfig._softApSsid));
+    addValidator(new FormLengthValidator(1, sizeof(MainConfig().network.WiFiConfig._softApSsid) - 1));
 
-    add(F("ap_wifi_password"), _H_STR_VALUE(Config().soft_ap.wifi_pass));
-    addValidator(new FormLengthValidator(8, sizeof(Config().soft_ap.wifi_pass) - 1));
+    add(F("ap_wifi_password"), _H_STR_VALUE(MainConfig().network.WiFiConfig._softApPassword));
+    addValidator(new FormLengthValidator(8, sizeof(MainConfig().network.WiFiConfig._softApPassword) - 1));
 
-    add<uint8_t>(F("channel"), _H_STRUCT_VALUE(Config().soft_ap.config, channel));
+    add<uint8_t>(F("channel"), _H_STRUCT_VALUE(MainConfig().network.softAp, _channel));
     addValidator(new FormRangeValidator(1, config.getMaxWiFiChannels()));
 
-    add<uint8_t>(F("encryption"), _H_STRUCT_VALUE(Config().soft_ap.config, encryption));
+    add<uint8_t>(F("encryption"), _H_STRUCT_VALUE(MainConfig().network.softAp, _encryption));
     addValidator(new FormEnumValidator<uint8_t, WIFI_ENCRYPTION_ARRAY_SIZE>(F("Invalid encryption"), WIFI_ENCRYPTION_ARRAY));
 
-    add<bool>(F("ap_hidden"), _H_FLAGS_BOOL_VALUE(Config().flags, hiddenSSID), FormField::INPUT_CHECK);
+    add<bool>(F("ap_hidden"), _H_FLAGS_BOOL_VALUE(Config().flags, hiddenSSID), FormField::InputFieldType::CHECK);
 
     finalize();
 }
 
 NetworkSettingsForm::NetworkSettingsForm(AsyncWebServerRequest *request) : SettingsForm(request)
 {
+    using KFCConfigurationClasses::MainConfig;
+
     add(F("hostname"), _H_STR_VALUE(Config().device_name));
 
     add<bool>(F("dhcp_client"), _H_FLAGS_BOOL_VALUE(Config().flags, stationModeDHCPEnabled));
 
-    add(F("ip_address"), _H_STRUCT_IP_VALUE(Config().network.config, local_ip));
-    add(F("subnet"), _H_STRUCT_IP_VALUE(Config().network.config, subnet));
-    add(F("gateway"), _H_STRUCT_IP_VALUE(Config().network.config, gateway));
-    add(F("dns1"), _H_STRUCT_IP_VALUE(Config().network.config, dns1));
-    add(F("dns2"), _H_STRUCT_IP_VALUE(Config().network.config, dns2));
+    add(F("ip_address"), _H_STRUCT_IP_VALUE(MainConfig().network.settings, _localIp));
+    add(F("subnet"), _H_STRUCT_IP_VALUE(MainConfig().network.settings, _subnet));
+    add(F("gateway"), _H_STRUCT_IP_VALUE(MainConfig().network.settings, _gateway));
+    add(F("dns1"), _H_STRUCT_IP_VALUE(MainConfig().network.settings, _dns1));
+    add(F("dns2"), _H_STRUCT_IP_VALUE(MainConfig().network.settings, _dns2));
 
     add<bool>(F("softap_dhcpd"), _H_FLAGS_BOOL_VALUE(Config().flags, softAPDHCPDEnabled));
 
-    add(F("dhcp_start"), _H_STRUCT_IP_VALUE(Config().soft_ap.config, dhcp_start));
-    add(F("dhcp_end"), _H_STRUCT_IP_VALUE(Config().soft_ap.config, dhcp_end));
-    add(F("ap_ip_address"), _H_STRUCT_IP_VALUE(Config().soft_ap.config, address));
-    add(F("ap_subnet"), _H_STRUCT_IP_VALUE(Config().soft_ap.config, subnet));
+    add(F("dhcp_start"), _H_STRUCT_IP_VALUE(MainConfig().network.softAp, _dhcpStart));
+    add(F("dhcp_end"), _H_STRUCT_IP_VALUE(MainConfig().network.softAp, _dhcpEnd));
+    add(F("ap_ip_address"), _H_STRUCT_IP_VALUE(MainConfig().network.softAp, _address));
+    add(F("ap_subnet"), _H_STRUCT_IP_VALUE(MainConfig().network.softAp, _subnet));
 
     finalize();
 }
@@ -430,7 +428,7 @@ PasswordSettingsForm::PasswordSettingsForm(AsyncWebServerRequest *request) : Set
     addValidator(new FormRangeValidator(6, sizeof(Config().device_pass) - 1))
         ->setValidateIfValid(false);
 
-    add(F("password3"), emptyString, FormField::INPUT_TEXT);
+    add(F("password3"), emptyString, FormField::InputFieldType::TEXT);
     addValidator(new FormMatchValidator(F("The password confirmation does not match"), [](FormField &field) {
             return field.equals(field.getForm().getField(F("password2")));
         }))
@@ -449,11 +447,12 @@ SettingsForm::SettingsForm(AsyncWebServerRequest *request) : Form(&_data)
             return request->arg(name);
         },
         [request](const String &name) {
-        if (!request) {
-            return false;
+            if (!request) {
+                return false;
+            }
+            return request->hasArg(name.c_str());
         }
-        return request->hasArg(name.c_str());
-    });
+    );
 }
 
 
@@ -474,4 +473,53 @@ void File2String::fromString(const String &value)
 }
 
 void EmptyTemplate::process(const String &key, PrintHtmlEntitiesString &output) {
+}
+
+#include <TemplateDataProvider.h>
+
+bool TemplateDataProvider::callback(const String& name, DataProviderInterface& provider, WebTemplate *webTemplate) {
+
+    PrintString output;
+    if (String_equals(name, PSTR("MENU_HTML_MAIN"))) {
+        //auto printArgs = new PrintArgs();
+        bootstrapMenu.html(PrintArgs::getInstance());
+        PrintArgs::getInstance().dump(MySerial);
+        provider.setFillBuffer([](uint8_t *buffer, size_t size) -> int {
+            return PrintArgs::getInstance().fillBuffer(buffer, size);
+        });
+        //return printArgs;
+        return true;
+    }
+    else if (String_startsWith(name, PSTR("MENU_HTML_MAIN_"))) {
+        //auto printArgs = new PrintArgs();
+        bootstrapMenu.html(PrintArgs::getInstance(), bootstrapMenu.findMenuByLabel(name.substring(15)));
+        PrintArgs::getInstance().dump(MySerial);
+        provider.setFillBuffer([](uint8_t *buffer, size_t size) -> int {
+            return PrintArgs::getInstance().fillBuffer(buffer, size);
+        });
+        //return printArgs;
+        return true;
+    }
+    else if (String_startsWith(name, PSTR("MENU_HTML_SUBMENU_"))) {
+        //auto printArgs = new PrintArgs();
+        PrintArgs &args = PrintArgs::getInstance();
+        bootstrapMenu.htmlSubMenu(args, bootstrapMenu.findMenuByLabel(name.substring(18)), 0);
+        PrintArgs::getInstance().dump(MySerial);
+        provider.setFillBuffer([](uint8_t *buffer, size_t size) -> int {
+            return PrintArgs::getInstance().fillBuffer(buffer, size);
+        });
+        return true;
+    }
+
+    PrintHtmlEntitiesString value;
+    webTemplate->process(name, value);
+    if (value.length()) {
+        auto stream = std::shared_ptr<BufferStream>(new BufferStream(value));
+        provider.setFillBuffer([stream](uint8_t *buffer, size_t size) mutable -> int {
+            return stream->readBytes(buffer, size);
+        });
+        return true;
+    }
+
+    return false;
 }

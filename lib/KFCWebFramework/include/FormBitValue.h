@@ -12,7 +12,7 @@
 template <typename T, size_t N>
 class FormBitValue : public FormValue<T> {
 public:
-    FormBitValue(const String &name, T *value, std::array<T, N> bitmask, FormField::FieldType_t type = FormField::INPUT_SELECT) : FormValue<T>(name, value, type), _bitmask(bitmask) {
+    FormBitValue(const String &name, T *value, std::array<T, N> bitmask, FormField::InputFieldType type = FormField::InputFieldType::SELECT) : FormValue<T>(name, value, type), _bitmask(bitmask) {
         FormField::initValue(String(_convertToValue(*value)));
     }
 

@@ -437,7 +437,7 @@ void ClockPlugin::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAu
     _debug_printf_P(PSTR("ClockPlugin::createAutoDiscovery(): format=%u\n"), format);
     String topic = MQTTClient::formatTopic(0, F("/"));
 
-    auto discovery = _debug_new MQTTAutoDiscovery();
+    auto discovery = new MQTTAutoDiscovery();
     discovery->create(this, 0, format);
     discovery->addStateTopic(topic + F("state"));
     discovery->addCommandTopic(topic + F("set"));

@@ -34,7 +34,7 @@ void Sensor_CCS811::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTT
 {
     String topic = MQTTClient::formatTopic(-1, F("/%s/"), _getId().c_str());
 
-    auto discovery = _debug_new MQTTAutoDiscovery();
+    auto discovery = new MQTTAutoDiscovery();
     discovery->create(this, 0, format);
     discovery->addStateTopic(topic);
     discovery->addUnitOfMeasurement(F("ppm"));
@@ -42,7 +42,7 @@ void Sensor_CCS811::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTT
     discovery->finalize();
     vector.emplace_back(discovery);
 
-    discovery = _debug_new MQTTAutoDiscovery();
+    discovery = new MQTTAutoDiscovery();
     discovery->create(this, 1, format);
     discovery->addStateTopic(topic);
     discovery->addUnitOfMeasurement(F("ppb"));

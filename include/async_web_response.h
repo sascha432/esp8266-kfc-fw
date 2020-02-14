@@ -21,10 +21,30 @@
 #include <SSIProxyStream.h>
 #include "web_server.h"
 #include "../include/templates.h"
-#include "fs_mapping.h"
-#include "bitmap_header.h"
+#include "../lib/KFCGfx/include/bitmap_header.h"
 
-class AsyncJsonResponse : public AsyncAbstractResponse {
+class HttpHeaders;
+
+class AsyncBaseResponse : public AsyncWebServerResponse {
+public:
+    AsyncBaseResponse(bool chunked);
+
+    virtual void _respond(AsyncWebServerRequest* request);
+    virtual size_t _ack(AsyncWebServerRequest* request, size_t len, uint32_t time);
+
+    virtual size_t _fillBuffer(uint8_t* buf, size_t maxLen) = 0;
+
+protected:
+    friend HttpHeaders;
+
+    void __assembleHead(uint8_t version);
+
+    WebServerSetCPUSpeedHelper _setCPUSpeed;
+    HttpHeadersVector _httpHeaders;
+    String _head;
+};
+
+class AsyncJsonResponse : public AsyncBaseResponse {
 public:
     AsyncJsonResponse();
 
@@ -39,35 +59,29 @@ private:
     JsonBuffer _jsonBuffer;
 };
 
-class AsyncProgmemFileResponse : public AsyncAbstractResponse {
+class AsyncProgmemFileResponse : public AsyncBaseResponse {
 public:
-    AsyncProgmemFileResponse(const String &contentType, const FSMappingEntry *mapping, TemplateDataProvider::ResolveCallback callback = nullptr);
+    AsyncProgmemFileResponse(const String &contentType, const struct FSMappingEntry_tag *mapping, TemplateDataProvider::ResolveCallback callback = nullptr);
 
     virtual bool _sourceValid() const override;
     virtual size_t _fillBuffer(uint8_t *data, size_t len) override;
 
 private:
     File _contentWrapped;
-    WebServerSetCPUSpeedHelper _setCPUSpeed;
     TemplateDataProvider _provider;
     SSIProxyStream _content;
 };
 
 class AsyncTemplateResponse : public AsyncProgmemFileResponse {
 public:
-    AsyncTemplateResponse(const String &contentType, const FSMappingEntry *mapping, WebTemplate *webTemplate, TemplateDataProvider::ResolveCallback callback = nullptr);
+    AsyncTemplateResponse(const String &contentType, const struct FSMappingEntry_tag *mapping, WebTemplate *webTemplate, TemplateDataProvider::ResolveCallback callback = nullptr);
     virtual ~AsyncTemplateResponse();
-
-    void process(const String &key, PrintHtmlEntitiesString &output) {
-        _webTemplate->process(key, output);
-    }
 
 private:
     WebTemplate *_webTemplate;
-    WebServerSetCPUSpeedHelper _setCPUSpeed;
 };
 
-class AsyncSpeedTestResponse : public AsyncAbstractResponse {
+class AsyncSpeedTestResponse : public AsyncBaseResponse {
 public:
     AsyncSpeedTestResponse(const String &contentType, uint32_t size); // size is pow(floor(sqrt(size / 2), 2) + 54
 
@@ -77,24 +91,22 @@ public:
 private:
     int32_t _size;
     BitmapFileHeader_t _header;
-    WebServerSetCPUSpeedHelper _setCPUSpeed;
 };
 
-class AsyncBufferResponse : public AsyncAbstractResponse {
-public:
-    AsyncBufferResponse(const String &contentType, Buffer *buffer, AwsTemplateProcessor templateCallback = nullptr);
-    virtual ~AsyncBufferResponse();
+// class AsyncBufferResponse : public AsyncBaseResponse {
+// public:
+//     AsyncBufferResponse(const String &contentType, Buffer *buffer, AwsTemplateProcessor templateCallback = nullptr);
+//     virtual ~AsyncBufferResponse();
 
-    virtual bool _sourceValid() const override;
-    virtual size_t _fillBuffer(uint8_t *buf, size_t maxLen) override;
+//     virtual bool _sourceValid() const override;
+//     virtual size_t _fillBuffer(uint8_t *buf, size_t maxLen) override;
 
-private:
-    Buffer *_content;
-    size_t _position;
-    WebServerSetCPUSpeedHelper _setCPUSpeed;
-};
+// private:
+//     Buffer *_content;
+//     size_t _position;
+// };
 
-class AsyncDirResponse : public AsyncAbstractResponse {
+class AsyncDirResponse : public AsyncBaseResponse {
 public:
     static const uint8_t TYPE_TMP_DIR =         2;
     static const uint8_t TYPE_MAPPED_DIR =      1;
@@ -113,10 +125,9 @@ private:
     bool _next;
     Dir _dir;
     String _dirName;
-    WebServerSetCPUSpeedHelper _setCPUSpeed;
 };
 
-class AsyncNetworkScanResponse : public AsyncAbstractResponse {
+class AsyncNetworkScanResponse : public AsyncBaseResponse {
 public:
     AsyncNetworkScanResponse(bool hidden);
     virtual ~AsyncNetworkScanResponse();
@@ -134,5 +145,4 @@ private:
     bool _hidden;
     bool _done;
     static bool _locked;
-    WebServerSetCPUSpeedHelper _setCPUSpeed;
 };

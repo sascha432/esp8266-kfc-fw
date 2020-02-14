@@ -12,11 +12,11 @@
 #endif
 
 JsonArray & JsonObjectMethods::addArray(const JsonString & name, size_t reserve) {
-    return reinterpret_cast<JsonArray &>(add(_debug_new JsonArray(name, reserve)));
+    return reinterpret_cast<JsonArray &>(add(new JsonArray(name, reserve)));
 }
 
 JsonObject & JsonObjectMethods::addObject(const JsonString & name, size_t reserve) {
-    return reinterpret_cast<JsonObject &>(add(_debug_new JsonObject(name, reserve)));
+    return reinterpret_cast<JsonObject &>(add(new JsonObject(name, reserve)));
 }
 
 AbstractJsonValue & JsonObjectMethods::replace(const JsonString & name, AbstractJsonValue * value) {

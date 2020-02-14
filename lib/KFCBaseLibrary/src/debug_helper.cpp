@@ -23,8 +23,8 @@ const char ___debugPrefix[] PROGMEM = "DBG: ";
 
 // void DebugHelper::regPrint(FixedCircularBuffer<Positon_t,100>::iterator it) {
 //     while(it != __pos.end()) {
-//         auto &pos = (*it);
-//         DEBUG_OUTPUT.printf_P(PSTR("%s:%u - %u\n"), pos.file, pos.line, pos.time);
+//         auto &position = (*it);
+//         DEBUG_OUTPUT.printf_P(PSTR("%s:%u - %u\n"), position.file, position.line, position.time);
 //         ++it;
 //     }
 // }

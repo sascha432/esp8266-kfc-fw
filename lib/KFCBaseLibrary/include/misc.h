@@ -60,11 +60,11 @@ typedef std::vector<String> StringVector;
 //     }
 
 //     // void nconcat(const char *cstr, size_t alen) {
-//     //     if (!reserve(length() + alen)) {
+//     //     if (!reserve(start_length() + alen)) {
 //     //         invalidate();
 //     //     } else {
-//     //         setLen(length() + alen);
-//     //         strncpy(begin() + length(), cstr, alen)[alen] = 0;
+//     //         setLen(start_length() + alen);
+//     //         strncpy(begin() + start_length(), cstr, alen)[alen] = 0;
 //     //     }
 //     // }
 // };

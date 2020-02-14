@@ -34,11 +34,11 @@ void syslog_setup_debug_logger() {
     parameter.setProcessId(F("DEBUG"));
 	parameter.setSeverity(SYSLOG_DEBUG);
 
-    SyslogFilter *filter = _debug_new SyslogFilter(parameter);
+    SyslogFilter *filter = new SyslogFilter(parameter);
     filter->addFilter(F("*.*"), F(DEBUG_USE_SYSLOG_TARGET));
 
-	SyslogQueue *queue = _debug_new SyslogMemoryQueue(SYSLOG_PLUGIN_QUEUE_SIZE * 4);
-    debugSyslog = _debug_new SyslogStream(filter, queue);
+	SyslogQueue *queue = new SyslogMemoryQueue(SYSLOG_PLUGIN_QUEUE_SIZE * 4);
+    debugSyslog = new SyslogStream(filter, queue);
 
     DEBUG_OUTPUT = *debugSyslog;
 
@@ -90,7 +90,7 @@ void syslog_setup_logger()
         // parameter.setFacility(SYSLOG_FACILITY_KERN);
         // parameter.setSeverity(SYSLOG_NOTICE);
 
-        SyslogFilter *filter = _debug_new SyslogFilter(config._H_STR(Config().device_name), FSPGM(kfcfw));
+        SyslogFilter *filter = new SyslogFilter(config._H_STR(Config().device_name), FSPGM(kfcfw));
         auto &parameter = filter->getParameter();
         parameter.setFacility(SYSLOG_FACILITY_KERN);
         parameter.setSeverity(SYSLOG_NOTICE);
@@ -98,11 +98,11 @@ void syslog_setup_logger()
         filter->addFilter(F("*.*"), SyslogFactory::create(parameter, (SyslogProtocol)config._H_GET(Config().flags).syslogProtocol, config._H_STR(Config().syslog_host), config._H_GET(Config().syslog_port)));
 
 #if DEBUG_USE_SYSLOG
-        SyslogQueue *queue = debugSyslog ? debugSyslog->getQueue() : _debug_new SyslogMemoryQueue(SYSLOG_PLUGIN_QUEUE_SIZE);
+        SyslogQueue *queue = debugSyslog ? debugSyslog->getQueue() : new SyslogMemoryQueue(SYSLOG_PLUGIN_QUEUE_SIZE);
 #else
-        SyslogQueue *queue = _debug_new SyslogMemoryQueue(SYSLOG_PLUGIN_QUEUE_SIZE);
+        SyslogQueue *queue = new SyslogMemoryQueue(SYSLOG_PLUGIN_QUEUE_SIZE);
 #endif
-        syslog = _debug_new SyslogStream(filter, queue);
+        syslog = new SyslogStream(filter, queue);
 
         _logger.setSyslog(syslog);
         LoopFunctions::add(syslog_process_queue);

@@ -25,7 +25,7 @@ Sensor_Battery::Sensor_Battery(const JsonString &name) : MQTTSensor(), _name(nam
 
 void Sensor_Battery::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector)
 {
-    auto discovery = _debug_new MQTTAutoDiscovery();
+    auto discovery = new MQTTAutoDiscovery();
     discovery->create(this, 0, format);
     discovery->addStateTopic(_getTopic(LEVEL));
     discovery->addUnitOfMeasurement(F("V"));
@@ -34,7 +34,7 @@ void Sensor_Battery::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQT
 
 
 #if IOT_SENSOR_BATTERY_CHARGE_DETECTION
-    discovery = _debug_new MQTTAutoDiscovery();
+    discovery = new MQTTAutoDiscovery();
     discovery->create(this, 0, format);
     discovery->addStateTopic(_getTopic(STATE));
     discovery->finalize();

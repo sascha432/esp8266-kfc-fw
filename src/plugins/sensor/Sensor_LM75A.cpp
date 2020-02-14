@@ -23,7 +23,7 @@ Sensor_LM75A::Sensor_LM75A(const JsonString &name, TwoWire &wire, uint8_t addres
 
 void Sensor_LM75A::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector)
 {
-    auto discovery = _debug_new MQTTAutoDiscovery();
+    auto discovery = new MQTTAutoDiscovery();
     discovery->create(this, 0, format);
     discovery->addStateTopic(MQTTClient::formatTopic(-1, F("/%s/"), _getId().c_str()));
     discovery->addUnitOfMeasurement(F("\u00b0C"));

@@ -4,7 +4,6 @@
 
 #pragma once
 
-
 #include <stdlib.h>
 #include "WString.h"
 #include "Print.h"
@@ -19,12 +18,9 @@ Print
         virtual void flush() {}
 
 Stream
-        virtual int available() = 0;
-        virtual int read() = 0;
-        virtual int peek() = 0;
-        virtual size_t readBytes(char *buffer, size_t length); // read chars from stream into buffer
-        virtual size_t readBytes(uint8_t *buffer, size_t length) {
-            return readBytes((char *) buffer, length);
+        virtual size_t readBytes(char *buffer, size_t start_length); // read chars from stream into buffer
+        virtual size_t readBytes(uint8_t *buffer, size_t start_length) {
+            return readBytes((char *) buffer, start_length);
         }
         virtual String readString();
 
@@ -34,153 +30,33 @@ Stream
 
 class Stream : public Print {
 public:
-    Stream() : Print() {
-        _fp = nullptr;
-        _size = 0;
-    }
-    Stream(FILE *fp) : Stream() {
-        _fp = fp;
-        if (fp) {
-            seek(0, SeekEnd);
-            _size = position();
-            seek(0);
-        }
-    }
-    //virtual ~Stream() {
-    //	if (_fp) {
-    //           fclose(_fp);
-    //	}
-    //}
+    Stream(FILE *fp = nullptr);
 
-    FILE *getFile() {
-        return _fp;
-    }
-    void setFile(FILE *fp) {
-        _fp = fp;
-        seek(0, SeekEnd);
-        _size = position();
-        seek(0);
-        clearerr(_fp);
-    }
+    virtual size_t size() const;
 
-    virtual size_t position() const {
-        return ftell(_fp);
-    }
+    virtual int available() = 0;
+    virtual int read() = 0;
+    virtual int peek() = 0;
 
-    virtual bool seek(long pos, int mode) {
-        clearerr(_fp);
-        int res = fseek(_fp, pos, mode);
-        if (res != 0) {
-            perror("seek");
-        }
-        // printf("DEBUG seek %d %d = %d => %d\n", pos, mode, res, res == 0);
-        return res == 0;
-        // return fseek(_fp, pos, mode) == 0;
-    }
-    bool seek(long pos) {
-        return seek(pos, SeekSet);
-    }
+    virtual size_t readBytes(char *buffer, size_t length);
+    virtual size_t readBytes(uint8_t *buffer, size_t length);
+    virtual size_t write(uint8_t data) = 0;
+    virtual void flush();
+    virtual String readString();
 
-    virtual size_t size() const {
-        return _size;
-    }
+    String readStringUntil(char terminator);
 
-    virtual operator bool() const {
-        return _fp != nullptr;
-    }
-
-    virtual int read() {
-        if (!_fp || ferror(_fp)) {
-            return -1;
-        }
-        uint8_t b;
-        if (fread(&b, sizeof(b), 1, _fp) != 1) {
-            if (ferror(_fp)) {
-                perror("read");
-            }
-            printf("DEBUG read -1\n");
-            return -1;
-        }
-        // printf("DEBUG read byte\n");
-        unsigned val = b;
-        return val;
-    }
-
-    virtual int peek() {
-        long pos = ftell(_fp);
-        int res = read();
-        fseek(_fp, pos, SEEK_SET);
-        clearerr(_fp);
-        return res;
-    }
-
-    int read(uint8_t *buffer, size_t len) {
-        uint8_t *ptr = buffer;
-        while (len--) {
-            int ch = read();
-            if (ch == -1) {
-                break;
-            }
-            *ptr++ = ch;
-        }
-        return ptr - buffer;
-    }
-
-    String readStringUntil(char terminator) {
-        String buf;
-        int ch;
-        while ((ch = read()) != -1) {
-            buf += (char)ch;
-            if (ch == terminator) {
-                break;
-            }
-        }
-        return buf;
-    }
-
-    String readString() {
-        String buf;
-        while (available()) {
-            int ch = read();
-            if (ch == -1) {
-                break;
-            }
-            buf += (char)ch;
-        }
-        return buf;
-    }
-
-    virtual size_t readBytes(char *buffer, size_t length) {
-        return read((uint8_t *)buffer, length);
-    }
-    virtual size_t readBytes(uint8_t *buffer, size_t length) {
-        return readBytes((char *)buffer, length);
-    }
-
-    size_t write(uint8_t data) override {
-        auto res = fwrite(&data, 1, 1, _fp);
-        if (ferror(_fp)) {
-            perror("write");
-        }
-        return res;
-    }
-    virtual size_t write(const uint8_t* buffer, size_t size) {
-        return Print::write(buffer, size);
-    }
-
-    virtual void close() {
-        if (_fp) {
-            fclose(_fp);
-        }
-    }
-
-    virtual void flush() {
-        fflush(_fp);
-    }
-
-    virtual int available() {
-        return feof(_fp) ? 0 : 1;
-    }
+public:
+    FILE *_fp_get() const;
+    void _fp_set(FILE *fp);
+    size_t _fp_position() const;
+    bool _fp_seek(long pos, SeekMode mode = SeekSet);
+    void _fp_close();
+    int _fp_available() const;
+    int _fp_read(uint8_t *buffer, size_t len);
+    size_t _fp_write(uint8_t data);
+    int _fp_read();
+    int _fp_peek();
 
 private:
     FILE *_fp;

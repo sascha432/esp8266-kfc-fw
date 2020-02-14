@@ -106,36 +106,6 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
             output.print(FSPGM(_hidden));
         }
     }
-    else if (String_equals(key, PSTR("MENU_HTML_MAIN"))) {
-        output.setRawOutput(true);
-        bootstrapMenu.html(PrintArgs::toPrint(output));
-    }
-    else if (String_startsWith(key, PSTR("MENU_HTML_MAIN_"))) {
-        output.setRawOutput(true);
-        bootstrapMenu.html(PrintArgs::toPrint(output), bootstrapMenu.findMenuByLabel(key.substring(15)));
-    }
-    else if (String_startsWith(key, PSTR("MENU_HTML_SUBMENU_"))) {
-        output.setRawOutput(true);
-        bootstrapMenu.htmlSubMenu(PrintArgs::toPrint(output), bootstrapMenu.findMenuByLabel(key.substring(18)), 0);
-    }
-    else if (String_equals(key, PSTR("FORM_HTML"))) {
-        if (_form) {
-            output.setRawOutput(true);
-            _form->createHtml(PrintArgs::toPrint(output));
-        }
-    }
-    else if (String_startsWith(key, PSTR("FORM_HTML_"))) {
-        if (_form) {
-            output.setRawOutput(true);
-            _form->createHtmlPart(PrintArgs::toPrint(output), atoi(key.c_str() + 10));
-        }
-    }
-    else if (String_equals(key, PSTR("FORM_VALIDATOR"))) {
-        if (_form) {
-            output.setRawOutput(true);
-            _form->createJavascript(PrintArgs::toPrint(output));
-        }
-    }
     else if (_form) {
         auto str = _form->process(key);
         if (str) {
@@ -477,49 +447,70 @@ void EmptyTemplate::process(const String &key, PrintHtmlEntitiesString &output) 
 
 #include <TemplateDataProvider.h>
 
-bool TemplateDataProvider::callback(const String& name, DataProviderInterface& provider, WebTemplate *webTemplate) {
+bool TemplateDataProvider::callback(const String& name, DataProviderInterface& provider, WebTemplate &webTemplate) {
 
-    PrintString output;
+    enum class FillBufferMethod {
+        NONE = 0,
+        PRINT_ARGS,
+        BUFFER_STREAM
+    };
+
+    auto &printArgs = webTemplate.getPrintArgs();
+    PrintHtmlEntitiesString value;
+    FillBufferMethod fbMethod = FillBufferMethod::NONE;
+
+    // menus
     if (String_equals(name, PSTR("MENU_HTML_MAIN"))) {
-        //auto printArgs = new PrintArgs();
-        bootstrapMenu.html(PrintArgs::getInstance());
-        PrintArgs::getInstance().dump(MySerial);
-        provider.setFillBuffer([](uint8_t *buffer, size_t size) -> int {
-            return PrintArgs::getInstance().fillBuffer(buffer, size);
-        });
-        //return printArgs;
-        return true;
+        bootstrapMenu.html(printArgs);
+        fbMethod = FillBufferMethod::PRINT_ARGS;
     }
     else if (String_startsWith(name, PSTR("MENU_HTML_MAIN_"))) {
-        //auto printArgs = new PrintArgs();
-        bootstrapMenu.html(PrintArgs::getInstance(), bootstrapMenu.findMenuByLabel(name.substring(15)));
-        PrintArgs::getInstance().dump(MySerial);
-        provider.setFillBuffer([](uint8_t *buffer, size_t size) -> int {
-            return PrintArgs::getInstance().fillBuffer(buffer, size);
-        });
-        //return printArgs;
-        return true;
+        bootstrapMenu.html(printArgs, bootstrapMenu.findMenuByLabel(name.substring(15)));
+        fbMethod = FillBufferMethod::PRINT_ARGS;
     }
     else if (String_startsWith(name, PSTR("MENU_HTML_SUBMENU_"))) {
-        //auto printArgs = new PrintArgs();
-        PrintArgs &args = PrintArgs::getInstance();
-        bootstrapMenu.htmlSubMenu(args, bootstrapMenu.findMenuByLabel(name.substring(18)), 0);
-        PrintArgs::getInstance().dump(MySerial);
-        provider.setFillBuffer([](uint8_t *buffer, size_t size) -> int {
-            return PrintArgs::getInstance().fillBuffer(buffer, size);
-        });
-        return true;
+        bootstrapMenu.htmlSubMenu(printArgs, bootstrapMenu.findMenuByLabel(name.substring(18)), 0);
+        fbMethod = FillBufferMethod::PRINT_ARGS;
+    }
+    // forms
+    else if (String_equals(name, PSTR("FORM_HTML"))) {
+        auto form = webTemplate.getForm();
+        if (form) {
+            form->createHtml(printArgs);
+            fbMethod = FillBufferMethod::PRINT_ARGS;
+        }
+    }
+    else if (String_equals(name, PSTR("FORM_VALIDATOR"))) {
+        auto form = webTemplate.getForm();
+        if (form) {
+            form->createJavascript(printArgs);
+            fbMethod = FillBufferMethod::PRINT_ARGS;
+        }
+    }
+    // other variables
+    else {
+        webTemplate.process(name, value);
+        debug_printf_P(PSTR("%s=%s\n"), name.c_str(), value.c_str());
+        fbMethod = FillBufferMethod::BUFFER_STREAM;
     }
 
-    PrintHtmlEntitiesString value;
-    webTemplate->process(name, value);
-    if (value.length()) {
-        auto stream = std::shared_ptr<BufferStream>(new BufferStream(value));
-        provider.setFillBuffer([stream](uint8_t *buffer, size_t size) mutable -> int {
-            return stream->readBytes(buffer, size);
-        });
-        return true;
+    switch(fbMethod)  {
+        case FillBufferMethod::PRINT_ARGS: {
+                provider.setFillBuffer([&printArgs](uint8_t *buffer, size_t size) {
+                    return printArgs.fillBuffer(buffer, size);
+                });
+                return true;
+            }
+        case FillBufferMethod::BUFFER_STREAM: {
+                auto stream = std::shared_ptr<BufferStream>(new BufferStream(std::move(value)));
+                provider.setFillBuffer([stream](uint8_t *buffer, size_t size) {
+                    return stream->readBytes(buffer, size);
+                });
+                return true;
+            }
+        default:
+        case FillBufferMethod::NONE:
+            break;
     }
-
     return false;
 }

@@ -17,7 +17,7 @@
 class StaticString {
 public:
 
-    StaticString(StaticString &&str) {
+    StaticString(StaticString &&str) noexcept {
         *this = std::move(str);
     }
     StaticString(const String &str) : StaticString(str.c_str(), (uint16_t)str.length()) {
@@ -110,7 +110,7 @@ private:
     StaticString() : _ptr(), _length(), _progmem() {
     }
 
-    StaticString &operator=(StaticString &&str) {
+    StaticString &operator=(StaticString &&str) noexcept {
         _ptr = str._ptr;
         _length = str._length;
         _progmem = str._progmem;

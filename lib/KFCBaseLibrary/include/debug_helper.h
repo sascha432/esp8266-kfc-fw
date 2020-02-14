@@ -9,18 +9,18 @@
 #include <vector>
 #include "constexpr_tools.h"
 
-#if _WIN32 && !defined(DEBUG_INCLUDE_SOURCE_INFO)
-#define DEBUG_INCLUDE_SOURCE_INFO 1
+#if defined(_MSC_VER) && !defined(DEBUG_INCLUDE_SOURCE_INFO)
+#define DEBUG_INCLUDE_SOURCE_INFO                       1
 #endif
 
 #if 1
 #define __BASENAME_FILE__                               StringConstExpr::basename(__FILE__)
 #endif
 
-#if defined(_MSC_VER)
-#define ____DEBUG_FUNCTION__                              __FUNCSIG__
+#ifdef _MSC_VER
+#define ____DEBUG_FUNCTION__                            __FUNCSIG__
 #else
-#define ____DEBUG_FUNCTION__                              __FUNCTION__
+#define ____DEBUG_FUNCTION__                            __FUNCTION__
 #endif
 
 #if 1
@@ -30,6 +30,15 @@
 #endif
 
 #if DEBUG
+
+#ifdef _MSC_VER
+#include <assert.h>
+#define DEBUG_ASSERT(...)                               if (!(__VA_ARGS__)) { __debugbreak(); }
+#define HAVE_DEBUG_ASSERT                               1
+#else
+#define DEBUG_ASSERT(...)                               if (!(__VA_ARGS__)) { __debugbreak_and_panic_printf_P(PSTR("assert %s failed\n"), _STRINGIFY(__VA_ARGS__)); }
+#define HAVE_DEBUG_ASSERT                               0
+#endif
 
 void ___debugbreak_and_panic(const char* filename, int line, const char* function);
 
@@ -142,11 +151,11 @@ public:
 #endif
 #define debug_prefix()                          __debug_prefix(DEBUG_OUTPUT)
 
-#define debug_println_notempty(msg)             if (DebugHelper::__state == DEBUG_HELPER_STATE_ACTIVE && msg.length()) { debug_prefix();  DEBUG_OUTPUT.println(msg); }
-#define debug_print(msg)                        if (DebugHelper::__state == DEBUG_HELPER_STATE_ACTIVE) { DEBUG_OUTPUT.print(msg); }
-#define debug_println(msg)                      if (DebugHelper::__state == DEBUG_HELPER_STATE_ACTIVE) { debug_prefix(); DEBUG_OUTPUT.println(msg); }
-#define debug_printf(fmt, ...)                  if (DebugHelper::__state == DEBUG_HELPER_STATE_ACTIVE) { debug_prefix(); DEBUG_OUTPUT.printf(fmt, ## __VA_ARGS__); }
-#define debug_printf_P(fmt, ...)                if (DebugHelper::__state == DEBUG_HELPER_STATE_ACTIVE) { debug_prefix(); DEBUG_OUTPUT.printf_P(fmt, ## __VA_ARGS__); }
+#define debug_println_notempty(msg)             CHECK_MEMORY(); if (DebugHelper::__state == DEBUG_HELPER_STATE_ACTIVE && msg.length()) { debug_prefix();  DEBUG_OUTPUT.println(msg); }
+#define debug_print(msg)                        CHECK_MEMORY(); if (DebugHelper::__state == DEBUG_HELPER_STATE_ACTIVE) { DEBUG_OUTPUT.print(msg); }
+#define debug_println(msg)                      CHECK_MEMORY(); if (DebugHelper::__state == DEBUG_HELPER_STATE_ACTIVE) { debug_prefix(); DEBUG_OUTPUT.println(msg); }
+#define debug_printf(fmt, ...)                  CHECK_MEMORY(); if (DebugHelper::__state == DEBUG_HELPER_STATE_ACTIVE) { debug_prefix(); DEBUG_OUTPUT.printf(fmt, ## __VA_ARGS__); }
+#define debug_printf_P(fmt, ...)                CHECK_MEMORY(); if (DebugHelper::__state == DEBUG_HELPER_STATE_ACTIVE) { debug_prefix(); DEBUG_OUTPUT.printf_P(fmt, ## __VA_ARGS__); }
 
 #define debug_print_result(result)              result
 #define __debug_print_result(result)              DebugHelperPosition(__BASENAME_FILE__, __LINE__, __DEBUG_FUNCTION__).printResult(result)
@@ -186,9 +195,9 @@ public:
 #define debug_wifi_diag()           ;
 #define debug_prefix(...)           ;
 
-#define debug_print_result(result)              result
+#define debug_print_result(result)  result
 
-#define debug_helper_set_src()          ;
+#define debug_helper_set_src()      ;
 
 #define IF_DEBUG(...)
 
@@ -197,6 +206,9 @@ public:
 #define DEBUG_SOURCE_PASS_ARGS
 #define DEBUG_SOURCE_APPEND_ARGS
 #define DEBUG_SOURCE_FORMAT
+
+#define DEBUG_ASSERT(...)           ;
+#define HAVE_DEBUG_ASSERT           0
 
 #endif
 

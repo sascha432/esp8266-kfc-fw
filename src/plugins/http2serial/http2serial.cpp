@@ -160,7 +160,7 @@ void Http2Serial::createInstance()
 {
     destroyInstance();
     if (!_instance) {
-        _instance = _debug_new Http2Serial();
+        _instance = new Http2Serial();
     }
 }
 
@@ -225,7 +225,7 @@ void Http2SerialPlugin::setup(PluginSetupMode_t mode)
 {
     auto server = get_web_server_object();
     if (server) {
-        wsSerialConsole = _debug_new WsClientAsyncWebSocket(F("/serial_console"));
+        wsSerialConsole = new WsClientAsyncWebSocket(F("/serial_console"));
         wsSerialConsole->onEvent(http2serial_event_handler);
         server->addHandler(wsSerialConsole);
         _debug_printf_P(PSTR("Web socket for http2serial running on port %u\n"), config.get<uint16_t>(_H(Config().http_port)));

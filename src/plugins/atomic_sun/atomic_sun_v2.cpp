@@ -81,7 +81,7 @@ void Driver_4ChDimmer::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, M
 
     uint8_t num = 0;
 
-    auto discovery = _debug_new MQTTAutoDiscovery();
+    auto discovery = new MQTTAutoDiscovery();
     discovery->create(this, num++, format);
     discovery->addStateTopic(_data.state.state);
     discovery->addCommandTopic(_data.state.set);
@@ -95,7 +95,7 @@ void Driver_4ChDimmer::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, M
     discovery->finalize();
     vector.emplace_back(discovery);
 
-    discovery = _debug_new MQTTAutoDiscovery();
+    discovery = new MQTTAutoDiscovery();
     discovery->create(this, num++, format);
     discovery->addStateTopic(_data.lockChannels.state);
     discovery->addCommandTopic(_data.lockChannels.set);
@@ -105,7 +105,7 @@ void Driver_4ChDimmer::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, M
     vector.emplace_back(discovery);
 
     for(uint8_t i = 0; i < 4; i++) {
-        discovery = _debug_new MQTTAutoDiscovery();
+        discovery = new MQTTAutoDiscovery();
         discovery->create(this, num++, format);
         discovery->addStateTopic(_data.channels[i].state);
         discovery->addCommandTopic(_data.channels[i].set);

@@ -15,18 +15,18 @@ bool JsonConverter::beginObject(bool isArray) {
     AbstractJsonValue *value;
     if (isArray) {
         if (_current && _current->hasChildName()) {
-            value = _debug_new JsonArray(getKey());
+            value = new JsonArray(getKey());
         }
         else {
-            value = _debug_new JsonUnnamedArray();
+            value = new JsonUnnamedArray();
         }
     }
     else {
         if (_current && _current->hasChildName()) {
-            value = _debug_new JsonObject(getKey());
+            value = new JsonObject(getKey());
         }
         else {
-            value = _debug_new JsonUnnamedObject();
+            value = new JsonUnnamedObject();
         }
     }
     if (_current) {
@@ -60,20 +60,20 @@ bool JsonConverter::processElement() {
     if (_current->hasChildName()) {
         switch (getType()) {
         case JSON_TYPE_BOOLEAN:
-            value = _debug_new JsonNamedVariant<bool>(_keyStr, _valueStr.length() == 4);
+            value = new JsonNamedVariant<bool>(_keyStr, _valueStr.length() == 4);
             break;
         case JSON_TYPE_NUMBER:
         case JSON_TYPE_FLOAT:
-            value = _debug_new JsonNamedVariant<JsonNumber>(_keyStr, JsonNumber(_valueStr));
+            value = new JsonNamedVariant<JsonNumber>(_keyStr, JsonNumber(_valueStr));
             break;
         case JSON_TYPE_INT:
-            value = _debug_new JsonNamedVariant<long>(_keyStr, _valueStr.toInt());
+            value = new JsonNamedVariant<long>(_keyStr, _valueStr.toInt());
             break;
         case JSON_TYPE_NULL:
-            value = _debug_new JsonNamedVariant<std::nullptr_t>(_keyStr, nullptr);
+            value = new JsonNamedVariant<std::nullptr_t>(_keyStr, nullptr);
             break;
         case JSON_TYPE_STRING:
-            value = _debug_new JsonNamedVariant<String>(_keyStr, _valueStr);
+            value = new JsonNamedVariant<String>(_keyStr, _valueStr);
             break;
         default:
             break;
@@ -82,20 +82,20 @@ bool JsonConverter::processElement() {
     else {
         switch (getType()) {
         case JSON_TYPE_BOOLEAN:
-            value = _debug_new JsonUnnamedVariant<bool>(_valueStr.length() == 4);
+            value = new JsonUnnamedVariant<bool>(_valueStr.length() == 4);
             break;
         case JSON_TYPE_NUMBER:
         case JSON_TYPE_FLOAT:
-            value = _debug_new JsonUnnamedVariant<JsonNumber>(JsonNumber(_valueStr));
+            value = new JsonUnnamedVariant<JsonNumber>(JsonNumber(_valueStr));
             break;
         case JSON_TYPE_INT:
-            value = _debug_new JsonUnnamedVariant<long>(_valueStr.toInt());
+            value = new JsonUnnamedVariant<long>(_valueStr.toInt());
             break;
         case JSON_TYPE_NULL:
-            value = _debug_new JsonUnnamedVariant<std::nullptr_t>(nullptr);
+            value = new JsonUnnamedVariant<std::nullptr_t>(nullptr);
             break;
         case JSON_TYPE_STRING:
-            value = _debug_new JsonUnnamedVariant<String>(_valueStr);
+            value = new JsonUnnamedVariant<String>(_valueStr);
             break;
         default:
             break;

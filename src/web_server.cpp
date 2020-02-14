@@ -175,8 +175,8 @@ void web_server_scan_wifi_handler(AsyncWebServerRequest *request)
     if (web_server_is_authenticated(request)) {
         HttpHeaders httpHeaders(false);
         httpHeaders.addNoCache();
-        AsyncWebServerResponse *response = new AsyncNetworkScanResponse(request->arg(F("hidden")).toInt());
-        httpHeaders.setWebServerResponseHeaders(response);
+        auto response = new AsyncNetworkScanResponse(request->arg(F("hidden")).toInt());
+        httpHeaders.setAsyncBaseResponseHeaders(response);
         request->send(response);
     } else {
         request->send(403);
@@ -185,33 +185,33 @@ void web_server_scan_wifi_handler(AsyncWebServerRequest *request)
 
 void web_server_logout_handler(AsyncWebServerRequest *request)
  {
-    AsyncWebServerResponse *response = request->beginResponse(302);
+    auto response = request->beginResponse(302);
     HttpHeaders httpHeaders;
     httpHeaders.addNoCache(true);
     httpHeaders.add(new HttpCookieHeader(FSPGM(SID)));
     httpHeaders.add(new HttpLocationHeader(FSPGM(slash)));
-    httpHeaders.setWebServerResponseHeaders(response);
+    httpHeaders.setAsyncWebServerResponseHeaders(response);
     request->send(response);
 }
 
 void web_server_is_alive_handler(AsyncWebServerRequest *request)
 {
-    AsyncWebServerResponse *response = request->beginResponse(200, FSPGM(mime_text_plain), String(request->arg(F("p")).toInt()));
+    auto response = request->beginResponse(200, FSPGM(mime_text_plain), String(request->arg(F("p")).toInt()));
     HttpHeaders httpHeaders;
     httpHeaders.addNoCache();
-    httpHeaders.setWebServerResponseHeaders(response);
+    httpHeaders.setAsyncWebServerResponseHeaders(response);
     request->send(response);
 }
 
 void web_server_get_webui_json(AsyncWebServerRequest *request)
 {
     WebServerSetCPUSpeedHelper setCPUSpeed;
-    AsyncJsonResponse *response = new AsyncJsonResponse();
+    auto response = new AsyncJsonResponse();
     WsWebUISocket::createWebUIJSON(response->getJsonObject());
     response->updateLength();
     HttpHeaders httpHeaders;
     httpHeaders.addNoCache();
-    httpHeaders.setWebServerResponseHeaders(response);
+    httpHeaders.setAsyncBaseResponseHeaders(response);
     request->send(response);
 }
 
@@ -224,7 +224,7 @@ void web_server_speed_test(AsyncWebServerRequest *request, bool zip)
         HttpHeaders httpHeaders(false);
         httpHeaders.addNoCache();
 
-        AsyncWebServerResponse *response;
+        AsyncSpeedTestResponse *response;
         auto size = std::max(1024 * 64, (int)request->arg(F("size")).toInt());
         if (zip) {
             response = new AsyncSpeedTestResponse(FSPGM(mime_application_zip), size);
@@ -232,7 +232,7 @@ void web_server_speed_test(AsyncWebServerRequest *request, bool zip)
         } else {
             response = new AsyncSpeedTestResponse(FSPGM(mime_image_bmp), size);
         }
-        httpHeaders.setWebServerResponseHeaders(response);
+        httpHeaders.setAsyncBaseResponseHeaders(response);
 
         request->send(response);
 #if !defined(SPEED_TEST_NO_AUTH) || SPEED_TEST_NO_AUTH == 0
@@ -313,7 +313,7 @@ void web_server_export_settings(AsyncWebServerRequest *request)
         PrintString content;
         config.exportAsJson(content, config.getFirmwareVersion());
         AsyncWebServerResponse *response = new AsyncBasicResponse(200, FSPGM(mime_application_json), content);
-        httpHeaders.setWebServerResponseHeaders(response);
+        httpHeaders.setAsyncWebServerResponseHeaders(response);
 
         request->send(response);
     }
@@ -351,7 +351,7 @@ void web_server_update_handler(AsyncWebServerRequest *request)
                 HttpHeaders httpHeaders(false);
                 httpHeaders.add(new HttpLocationHeader(F("/serial_console.html")));
                 httpHeaders.replace(new HttpConnectionHeader(HttpConnectionHeader::CLOSE));
-                httpHeaders.setWebServerResponseHeaders(response);
+                httpHeaders.setAsyncWebServerResponseHeaders(response);
                 request->send(response);
             }
         } else
@@ -380,7 +380,7 @@ void web_server_update_handler(AsyncWebServerRequest *request)
             HttpHeaders httpHeaders(false);
             httpHeaders.add(new HttpLocationHeader(location));
             httpHeaders.replace(new HttpConnectionHeader(HttpConnectionHeader::CLOSE));
-            httpHeaders.setWebServerResponseHeaders(response);
+            httpHeaders.setAsyncWebServerResponseHeaders(response);
             request->send(response);
 
         } else {
@@ -520,7 +520,7 @@ void init_web_server()
         return;
     }
 
-    server = _debug_new AsyncWebServer(config._H_GET(Config().http_port));
+    server = new AsyncWebServer(config._H_GET(Config().http_port));
     // server->addHandler(&events);
 
     loginFailures.readFromSPIFFS();
@@ -534,7 +534,7 @@ void init_web_server()
     //         request->send(403);
     //     }
     // });
-    // server->addHandler(_debug_new AsyncFileUploadWebHandler(F("/rest/KFC/update_webui"), [](AsyncWebServerRequest *request) {
+    // server->addHandler(new AsyncFileUploadWebHandler(F("/rest/KFC/update_webui"), [](AsyncWebServerRequest *request) {
     //     if (request->_tempObject) {
     //         rest_api_kfc_update_webui(request);
     //     } else {
@@ -575,7 +575,7 @@ void init_web_server()
 // #if DEBUG
 //             httpHeaders.add(MDNS_get_cache_ttl_header());
 // #endif
-//             httpHeaders.setWebServerResponseHeaders(response);
+//             httpHeaders.setAsyncWebServerResponseHeaders(response);
 //             request->send(response);
 //         } else {
 //             request->send(403);
@@ -659,7 +659,6 @@ PGM_P web_server_get_content_type(const String &path)
 bool web_server_send_file(String path, HttpHeaders& httpHeaders, bool client_accepts_gzip, const FSMappingEntry* mapping, AsyncWebServerRequest* request, WebTemplate* webTemplate)
 {
     WebServerSetCPUSpeedHelper setCPUSpeed;
-    AsyncWebServerResponse* response = nullptr;
 
     _debug_printf_P(PSTR("web_server_send_file(%s)\n"), path.c_str());
     if (!mapping) {
@@ -682,31 +681,30 @@ bool web_server_send_file(String path, HttpHeaders& httpHeaders, bool client_acc
             if (plugin) {
                 webTemplate = plugin->getWebTemplate(filename);
             } else if (nullptr != (plugin = PluginComponent::getForm(filename))) {
-                Form* form = _debug_new SettingsForm(nullptr);
+                Form* form = new SettingsForm(nullptr);
                 plugin->createConfigureForm(nullptr, *form);
-                webTemplate = _debug_new ConfigTemplate(form);
+                webTemplate = new ConfigTemplate(form);
             }
         }
         if (webTemplate == nullptr) {
             if (String_equals(path, PSTR("/network.html"))) {
-                webTemplate = _debug_new ConfigTemplate(_debug_new NetworkSettingsForm(nullptr));
+                webTemplate = new ConfigTemplate(new NetworkSettingsForm(nullptr));
             } else if (String_equals(path, PSTR("/wifi.html"))) {
-                webTemplate = _debug_new ConfigTemplate(_debug_new WifiSettingsForm(nullptr));
+                webTemplate = new ConfigTemplate(new WifiSettingsForm(nullptr));
             } else if (String_equals(path, PSTR("/index.html"))) {
-                webTemplate = _debug_new StatusTemplate();
+                webTemplate = new StatusTemplate();
             } else if (String_equals(path, PSTR("/status.html"))) {
-                webTemplate = _debug_new StatusTemplate();
+                webTemplate = new StatusTemplate();
             } else if (String_endsWith(path, PSTR(".html"))) {
-                webTemplate = _debug_new WebTemplate();
+                webTemplate = new WebTemplate();
             }
         }
     }
 
-
-
+    AsyncBaseResponse *response;
     if (webTemplate != nullptr) {
-        response = _debug_new AsyncTemplateResponse(FPSTR(web_server_get_content_type(path)), mapping, webTemplate, [webTemplate](const String& name, DataProviderInterface &provider) {
-            return TemplateDataProvider::callback(name, provider, webTemplate);
+        response = new AsyncTemplateResponse(FPSTR(web_server_get_content_type(path)), mapping, webTemplate, [webTemplate](const String& name, DataProviderInterface &provider) {
+            return TemplateDataProvider::callback(name, provider, *webTemplate);
         });
         httpHeaders.addNoCache(request->method() == HTTP_POST);
     } else {
@@ -720,8 +718,9 @@ bool web_server_send_file(String path, HttpHeaders& httpHeaders, bool client_acc
     if (mapping->gzipped) {
         httpHeaders.add(FSPGM(Content_Encoding), F("gzip"));
     }
-    httpHeaders.setWebServerResponseHeaders(response);
+    httpHeaders.setAsyncBaseResponseHeaders(response);
     request->send(response);
+
     return true;
 }
 

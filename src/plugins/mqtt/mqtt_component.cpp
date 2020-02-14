@@ -95,7 +95,7 @@ uint8_t MQTTComponentHelper::getAutoDiscoveryCount() const {
 }
 
 MQTTAutoDiscovery *MQTTComponentHelper::createAutoDiscovery(uint8_t count, MQTTAutoDiscovery::Format_t format) {
-    auto discovery = _debug_new MQTTAutoDiscovery();
+    auto discovery = new MQTTAutoDiscovery();
     discovery->create(this, count, format);
     return discovery;
 }

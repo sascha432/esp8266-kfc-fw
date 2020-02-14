@@ -32,20 +32,20 @@ Sensor_DS3231::Sensor_DS3231(const JsonString &name) : MQTTSensor(), _name(name)
 
 void Sensor_DS3231::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector)
 {
-    auto discovery = _debug_new MQTTAutoDiscovery();
+    auto discovery = new MQTTAutoDiscovery();
     discovery->create(this, 0, format);
     discovery->addStateTopic(MQTTClient::formatTopic(-1, F("/%s/"), FSPGM(ds3231_id_temp)));
     discovery->addUnitOfMeasurement(F("\u00b0C"));
     discovery->finalize();
     vector.emplace_back(discovery);
 
-    discovery = _debug_new MQTTAutoDiscovery();
+    discovery = new MQTTAutoDiscovery();
     discovery->create(this, 0, format);
     discovery->addStateTopic(MQTTClient::formatTopic(-1, F("/%s/"), FSPGM(ds3231_id_time)));
     discovery->finalize();
     vector.emplace_back(discovery);
 
-    discovery = _debug_new MQTTAutoDiscovery();
+    discovery = new MQTTAutoDiscovery();
     discovery->create(this, 0, format);
     discovery->addStateTopic(MQTTClient::formatTopic(-1, F("/%s/"), FSPGM(ds3231_id_lost_power)));
     discovery->finalize();

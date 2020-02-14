@@ -11,6 +11,7 @@
 #include <Arduino_compat.h>
 #include <ESPAsyncWebServer.h>
 #include <PrintHtmlEntitiesString.h>
+#include <PrintArgs.h>
 #include <pgmspace.h>
 #include <map>
 #include <KFCForms.h>
@@ -28,10 +29,15 @@ public:
     void setForm(Form *form);
     Form *getForm();
 
+    PrintArgs &getPrintArgs() {
+        return _printArgs;
+    }
+
     virtual void process(const String &key, PrintHtmlEntitiesString &output);
 
 protected:
     Form *_form;
+    PrintArgs _printArgs;
 };
 
 class EmptyTemplate : public WebTemplate {

@@ -9,6 +9,7 @@
 #include <PrintString.h>
 #include <ProgmemStream.h>
 #include <HttpHeaders.h>
+#include "fs_mapping.h"
 #include "async_web_response.h"
 #include "async_web_handler.h"
 #include "progmem_data.h"
@@ -81,7 +82,7 @@ void FileManager::_sendResponse(uint16_t httpStatusCode)
     if (!_response) {
         _response = _request->beginResponse(httpStatusCode);
     }
-    _headers.setWebServerResponseHeaders(_response);
+    _headers.setAsyncWebServerResponseHeaders(_response);
     _response->setCode(httpStatusCode);
     _debug_printf_P(PSTR("filemanager:%s response %d\n"), _uri.c_str(), httpStatusCode);
     _request->send(_response);
@@ -218,7 +219,7 @@ uint16_t FileManager::list()
     _debug_printf_P(PSTR("FileManager::list()\n"));
     auto dirName = _requireDir(FSPGM(dir));
     if (_isValidData()) {
-        _response = _debug_new AsyncDirResponse(_getDir(dirName), dirName);
+        _response = new AsyncDirResponse(_getDir(dirName), dirName);
         return 200;
     }
     return 500;

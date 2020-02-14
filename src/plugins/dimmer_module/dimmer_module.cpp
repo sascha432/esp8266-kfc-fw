@@ -136,28 +136,28 @@ void Driver_DimmerModule::createAutoDiscovery(MQTTAutoDiscovery::Format_t format
         }
     }
 
-    auto discovery = _debug_new MQTTAutoDiscovery();
+    auto discovery = new MQTTAutoDiscovery();
     discovery->create(this, 0, format);
     discovery->addStateTopic(_getMetricsTopics(0));
     discovery->addUnitOfMeasurement(F("\u00b0C"));
     discovery->finalize();
     vector.emplace_back(discovery);
 
-    discovery = _debug_new MQTTAutoDiscovery();
+    discovery = new MQTTAutoDiscovery();
     discovery->create(this, 1, format);
     discovery->addStateTopic(_getMetricsTopics(1));
     discovery->addUnitOfMeasurement(F("\u00b0C"));
     discovery->finalize();
     vector.emplace_back(discovery);
 
-    discovery = _debug_new MQTTAutoDiscovery();
+    discovery = new MQTTAutoDiscovery();
     discovery->create(this, 2, format);
     discovery->addStateTopic(_getMetricsTopics(2));
     discovery->addUnitOfMeasurement(F("V"));
     discovery->finalize();
     vector.emplace_back(discovery);
 
-    discovery = _debug_new MQTTAutoDiscovery();
+    discovery = new MQTTAutoDiscovery();
     discovery->create(this, 3, format);
     discovery->addStateTopic(_getMetricsTopics(3));
     discovery->addUnitOfMeasurement(F("Hz"));

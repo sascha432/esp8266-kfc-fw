@@ -32,7 +32,7 @@ void MQTTClient::setupInstance()
 {
     deleteInstance();
     if (Config_MQTT::getMode() != MQTT_MODE_DISABLED) {
-        _mqttClient = _debug_new MQTTClient();
+        _mqttClient = new MQTTClient();
     }
 }
 
@@ -77,7 +77,7 @@ void MQTTClient::_setupClient()
 {
     _clearQueue();
 
-    _client = _debug_new AsyncMqttClient();
+    _client = new AsyncMqttClient();
 
     _maxMessageSize = MAX_MESSAGE_SIZE;
     _autoReconnectTimeout = DEFAULT_RECONNECT_TIMEOUT;

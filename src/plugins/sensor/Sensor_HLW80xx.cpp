@@ -52,7 +52,7 @@ Sensor_HLW80xx::Sensor_HLW80xx(const String &name) : MQTTSensor(), _name(name)
 void Sensor_HLW80xx::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector)
 {
     String topic = _getTopic();
-    auto discovery = _debug_new MQTTAutoDiscovery();
+    auto discovery = new MQTTAutoDiscovery();
     discovery->create(this, 0, format);
     discovery->addStateTopic(topic);
     discovery->addUnitOfMeasurement(F("W"));
@@ -60,7 +60,7 @@ void Sensor_HLW80xx::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQT
     discovery->finalize();
     vector.emplace_back(discovery);
 
-    discovery = _debug_new MQTTAutoDiscovery();
+    discovery = new MQTTAutoDiscovery();
     discovery->create(this, 1, format);
     discovery->addStateTopic(topic);
     discovery->addUnitOfMeasurement(F("kWh"));
@@ -68,7 +68,7 @@ void Sensor_HLW80xx::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQT
     discovery->finalize();
     vector.emplace_back(discovery);
 
-    discovery = _debug_new MQTTAutoDiscovery();
+    discovery = new MQTTAutoDiscovery();
     discovery->create(this, 2, format);
     discovery->addStateTopic(topic);
     discovery->addUnitOfMeasurement(F("kWh"));
@@ -76,7 +76,7 @@ void Sensor_HLW80xx::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQT
     discovery->finalize();
     vector.emplace_back(discovery);
 
-    discovery = _debug_new MQTTAutoDiscovery();
+    discovery = new MQTTAutoDiscovery();
     discovery->create(this, 3, format);
     discovery->addStateTopic(topic);
     discovery->addUnitOfMeasurement(F("V"));
@@ -84,7 +84,7 @@ void Sensor_HLW80xx::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQT
     discovery->finalize();
     vector.emplace_back(discovery);
 
-    discovery = _debug_new MQTTAutoDiscovery();
+    discovery = new MQTTAutoDiscovery();
     discovery->create(this, 4, format);
     discovery->addStateTopic(topic);
     discovery->addUnitOfMeasurement(F("A"));
@@ -92,7 +92,7 @@ void Sensor_HLW80xx::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQT
     discovery->finalize();
     vector.emplace_back(discovery);
 
-    discovery = _debug_new MQTTAutoDiscovery();
+    discovery = new MQTTAutoDiscovery();
     discovery->create(this, 5, format);
     discovery->addStateTopic(topic);
     discovery->addUnitOfMeasurement(F(""));

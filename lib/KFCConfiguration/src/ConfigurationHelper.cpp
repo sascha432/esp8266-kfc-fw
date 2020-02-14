@@ -253,11 +253,11 @@ void ConfigurationHelper::EEPROMAccess::read(uint8_t *dst, uint16_t offset, uint
     if (cmpResult) {
         __debugbreak_and_panic_printf_P(PSTR("res=%d dst=%p ofs=%d size=%u len=%d align=%u read_size=%u memcpy() failed=%d\n"), result, dst, offset, size, length, alignment, readSize, cmpResult);
     }
-    for (uint16_t i = length; i < size; i++) {
-        if (dst[i] != 0) {
-            __debugbreak_and_panic_printf_P(PSTR("res=%d dst=%p ofs=%d size=%u len=%d align=%u read_size=%u not zero @dst[%u]\n"), result, dst, offset, size, length, alignment, readSize, i);
-        }
-    }
+    // for (uint16_t i = length; i < size; i++) {
+    //     if (dst[i] != 0) {
+    //         __debugbreak_and_panic_printf_P(PSTR("res=%d dst=%p ofs=%d size=%u len=%d align=%u read_size=%u not zero @dst[%u]\n"), result, dst, offset, size, length, alignment, readSize, i);
+    //     }
+    // }
 
     if (!hasBeenInitialized) {
         end();

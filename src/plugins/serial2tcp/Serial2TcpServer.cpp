@@ -34,7 +34,7 @@ void Serial2TcpServer::getStatus(PrintHtmlEntitiesString &output) {
 void Serial2TcpServer::begin() {
 
     end();
-    _server = _debug_new AsyncServer(getPort());
+    _server = new AsyncServer(getPort());
     _server->onClient(&Serial2TcpServer::handleNewClient, this);
 
 #if ASYNC_TCP_SSL_ENABLED

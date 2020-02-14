@@ -98,9 +98,9 @@ void Config_HomeAssistant::setActions(ActionVector &actions)
             header.id = action.getId();
             header.action = action.getAction();
             header.valuesLen = action.getNumValues();
-            buffer.write(&header);
+            buffer.writeT(&header);
             buffer.write(action.getEntityId());
-            buffer.write(action.getValues());
+            buffer.writeT(action.getValues());
         }
     }
     config.setBinary(_H(Config().homeassistant.actions), buffer.get(), buffer.length());

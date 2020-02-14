@@ -18,55 +18,55 @@ class JsonUnnamedArray;
 class JsonArrayMethods {
 public:
     AbstractJsonValue &add(const __FlashStringHelper *value) {
-        return add(_debug_new JsonUnnamedVariant<const __FlashStringHelper *>(value));
+        return add(new JsonUnnamedVariant<const __FlashStringHelper *>(value));
     }
     AbstractJsonValue &add(const char *value) {
-        return add(_debug_new JsonUnnamedVariant<const char *>(value));
+        return add(new JsonUnnamedVariant<const char *>(value));
     }
     AbstractJsonValue &add(const JsonVar &value) {
-        return add(_debug_new JsonUnnamedVariant<JsonVar>(value));
+        return add(new JsonUnnamedVariant<JsonVar>(value));
     }
     AbstractJsonValue &add(const JsonString &value) {
         if (value.isProgMem()) {
-            return add(_debug_new JsonUnnamedVariant<const __FlashStringHelper *>(value.getFPStr()));
+            return add(new JsonUnnamedVariant<const __FlashStringHelper *>(value.getFPStr()));
         }
-        return add(_debug_new JsonUnnamedVariant<JsonString>(value));
+        return add(new JsonUnnamedVariant<JsonString>(value));
     }
     AbstractJsonValue &add(JsonString &&value) {
         if (value.isProgMem()) {
-            return add(_debug_new JsonUnnamedVariant<const __FlashStringHelper *>(value.getFPStr()));
+            return add(new JsonUnnamedVariant<const __FlashStringHelper *>(value.getFPStr()));
         }
-        return add(_debug_new JsonUnnamedVariant<JsonString>(std::move(value)));
+        return add(new JsonUnnamedVariant<JsonString>(std::move(value)));
     }
     AbstractJsonValue &add(const JsonNumber &value) {
-        return add(_debug_new JsonUnnamedVariant<JsonNumber>(value));
+        return add(new JsonUnnamedVariant<JsonNumber>(value));
     }
     AbstractJsonValue &add(JsonNumber &&value) {
-        return add(_debug_new JsonUnnamedVariant<JsonNumber>(std::move(value)));
+        return add(new JsonUnnamedVariant<JsonNumber>(std::move(value)));
     }
     AbstractJsonValue &add(const String &value) {
-        return add(_debug_new JsonUnnamedVariant<JsonString>(value));
+        return add(new JsonUnnamedVariant<JsonString>(value));
     }
     AbstractJsonValue &add(bool value) {
-        return add(_debug_new JsonUnnamedVariant<bool>(value));
+        return add(new JsonUnnamedVariant<bool>(value));
     }
     AbstractJsonValue &add(std::nullptr_t value) {
-        return add(_debug_new JsonUnnamedVariant<std::nullptr_t>(value));
+        return add(new JsonUnnamedVariant<std::nullptr_t>(value));
     }
     AbstractJsonValue &add(int value) {
-        return add(_debug_new JsonUnnamedVariant<long>((long)value));
+        return add(new JsonUnnamedVariant<long>((long)value));
     }
     AbstractJsonValue &add(unsigned int value) {
-        return add(_debug_new JsonUnnamedVariant<unsigned long>((unsigned long)value));
+        return add(new JsonUnnamedVariant<unsigned long>((unsigned long)value));
     }
     AbstractJsonValue &add(long value) {
-        return add(_debug_new JsonUnnamedVariant<long>(value));
+        return add(new JsonUnnamedVariant<long>(value));
     }
     AbstractJsonValue &add(unsigned long value) {
-        return add(_debug_new JsonUnnamedVariant<unsigned long>(value));
+        return add(new JsonUnnamedVariant<unsigned long>(value));
     }
     AbstractJsonValue &add(double value) {
-        return add(_debug_new JsonUnnamedVariant<double>(value));
+        return add(new JsonUnnamedVariant<double>(value));
     }
 
     JsonUnnamedArray &addArray(size_t reserve = 0);

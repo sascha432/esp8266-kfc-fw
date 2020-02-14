@@ -85,14 +85,14 @@ Syslog* SyslogFilter::createSyslogFromString(const String &str)
                     useTLS = true;
                     ptr++;
                 }
-                syslog = _debug_new SyslogTCP(_parameter, ptr, tok[1] ? atoi(tok[1]) : (useTLS ? SYSLOG_PORT_TCP_TLS : SYSLOG_PORT_TCP), useTLS);
+                syslog = new SyslogTCP(_parameter, ptr, tok[1] ? atoi(tok[1]) : (useTLS ? SYSLOG_PORT_TCP_TLS : SYSLOG_PORT_TCP), useTLS);
             } else if (*ptr) {  // UDP
-                syslog = _debug_new SyslogUDP(_parameter, ptr, tok[1] ? atoi(tok[1]) : SYSLOG_PORT_UDP);
+                syslog = new SyslogUDP(_parameter, ptr, tok[1] ? atoi(tok[1]) : SYSLOG_PORT_UDP);
             }
         } else if (strcasecmp_P(ptr, PSTR("stop")) == 0) {
             syslog = SYSLOG_FILTER_STOP;
         } else {
-            syslog = _debug_new SyslogFile(_parameter, tok[0], tok[1] ? atoi(tok[1]) : SYSLOG_FILE_MAX_SIZE, tok[2] ? atoi(tok[2]) : SYSLOG_FILE_MAX_ROTATE);
+            syslog = new SyslogFile(_parameter, tok[0], tok[1] ? atoi(tok[1]) : SYSLOG_FILE_MAX_SIZE, tok[2] ? atoi(tok[2]) : SYSLOG_FILE_MAX_ROTATE);
         }
     }
     _syslogObjects.push_back(std::make_pair(str, syslog));

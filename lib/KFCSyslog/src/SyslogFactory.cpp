@@ -18,11 +18,11 @@
 Syslog *SyslogFactory::create(SyslogParameter &parameter, SyslogProtocol protocol, const String &host, uint16_t port) {
 	switch (protocol) {
 		case SYSLOG_PROTOCOL_UDP:
-			return _debug_new SyslogUDP(parameter, host, port == SYSLOG_DEFAULT_PORT ? SYSLOG_PORT_UDP : port);
+			return new SyslogUDP(parameter, host, port == SYSLOG_DEFAULT_PORT ? SYSLOG_PORT_UDP : port);
 		case SYSLOG_PROTOCOL_TCP:
-			return _debug_new SyslogTCP(parameter, host, port == SYSLOG_DEFAULT_PORT ? SYSLOG_PORT_TCP : port, false);
+			return new SyslogTCP(parameter, host, port == SYSLOG_DEFAULT_PORT ? SYSLOG_PORT_TCP : port, false);
 		case SYSLOG_PROTOCOL_TCP_TLS:
-			return _debug_new SyslogTCP(parameter, host, port == SYSLOG_DEFAULT_PORT ? SYSLOG_PORT_TCP_TLS : port, true);
+			return new SyslogTCP(parameter, host, port == SYSLOG_DEFAULT_PORT ? SYSLOG_PORT_TCP_TLS : port, true);
 		case SYSLOG_PROTOCOL_NONE:
 		case SYSLOG_PROTOCOL_FILE:
 			break;

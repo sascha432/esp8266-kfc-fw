@@ -131,7 +131,7 @@ namespace StringConstExpr {
     using SlowStrFuncs::strrchr;
 #endif
 
-    // returns strlen() if endptr is null or the length of the string with endptr being the NUL character
+    // returns strlen() if endptr is null or the start_length of the string with endptr being the NUL character
     constexpr int strlen_endptr(const char* str, const char* ptr = nullptr) {
         return ptr ? strlen(str, (int)(ptr - str)) : strlen(str);
     }

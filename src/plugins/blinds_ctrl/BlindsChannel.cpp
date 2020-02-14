@@ -24,7 +24,7 @@ void BlindsChannel::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTT
     _setTopic = MQTTClient::formatTopic(_number, F("/set"));
     _stateTopic = MQTTClient::formatTopic(_number, F("/state"));
 
-    auto discovery = _debug_new MQTTAutoDiscovery();
+    auto discovery = new MQTTAutoDiscovery();
     discovery->create(this, 0, format);
     discovery->addStateTopic(_stateTopic);
     discovery->addCommandTopic(_setTopic);

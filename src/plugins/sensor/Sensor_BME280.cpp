@@ -25,7 +25,7 @@ void Sensor_BME280::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTT
 {
     String topic = MQTTClient::formatTopic(-1, F("/%s/"), _getId().c_str());
 
-    auto discovery = _debug_new MQTTAutoDiscovery();
+    auto discovery = new MQTTAutoDiscovery();
     discovery->create(this, 0, format);
     discovery->addStateTopic(topic);
     discovery->addUnitOfMeasurement(F("\u00b0C"));
@@ -33,7 +33,7 @@ void Sensor_BME280::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTT
     discovery->finalize();
     vector.emplace_back(discovery);
 
-    discovery = _debug_new MQTTAutoDiscovery();
+    discovery = new MQTTAutoDiscovery();
     discovery->create(this, 1, format);
     discovery->addStateTopic(topic);
     discovery->addUnitOfMeasurement(F("%"));
@@ -41,7 +41,7 @@ void Sensor_BME280::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTT
     discovery->finalize();
     vector.emplace_back(discovery);
 
-    discovery = _debug_new MQTTAutoDiscovery();
+    discovery = new MQTTAutoDiscovery();
     discovery->create(this, 2, format);
     discovery->addStateTopic(topic);
     discovery->addUnitOfMeasurement(F("hPa"));

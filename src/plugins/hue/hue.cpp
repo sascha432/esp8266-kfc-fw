@@ -117,7 +117,7 @@ void HueEmulation::getStatus(Print &output)
 
 void HueEmulation::_initHue() {
 
-    _fauxmo = _debug_new fauxmoESP();
+    _fauxmo = new fauxmoESP();
 
     auto huePort = config._H_GET(Config().hue.tcp_port);
     auto webServerPort = config._H_GET(Config().flags).webServerMode == HTTP_MODE_UNSECURE ? config._H_GET(Config().http_port) : 0;
@@ -184,7 +184,7 @@ void hue_setup() {
         hueEmulation = nullptr;
     }
     if (config._H_GET(Config().flags).hueEnabled) {
-        hueEmulation = _debug_new HueEmulation();
+        hueEmulation = new HueEmulation();
     }
 }
 

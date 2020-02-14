@@ -45,7 +45,7 @@ void IOTSwitch::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAuto
 
     String topic = MQTTClient::formatTopic(-1, F("/"));
 
-    auto discovery = _debug_new MQTTAutoDiscovery();
+    auto discovery = new MQTTAutoDiscovery();
 
     discovery->create(this, 0, MQTTAutoDiscovery::FORMAT_JSON);
     discovery->addStateTopic(topic);

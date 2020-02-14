@@ -8,6 +8,7 @@
 #include "HttpHeaders.h"
 #if HAVE_HTTPHEADERS_ASYNCWEBSERVER
 #include <ESPAsyncWebServer.h>
+#include "async_web_response.h"
 #endif
 
 PROGMEM_STRING_DEF(Pragma, "Pragma");
@@ -63,12 +64,19 @@ HttpHeader::HttpHeader(const String &name) {
 HttpHeader::~HttpHeader() {
 }
 
-const String HttpHeader::getHeader() {
-    String tmp = getName();
-    tmp += F(": ");
-    tmp += getValue();
-    return tmp;
-    // return getName() + F(": ") + getValue();
+// const String HttpHeader::getHeader()
+// {
+//     String tmp = getName();
+//     tmp += F(": ");
+//     tmp += getValue();
+//     return tmp;
+// }
+
+void HttpHeader::printTo(Print &output) const
+{
+    output.print(getName());
+    output.print(F(": "));
+    output.println(getValue());
 }
 
 bool HttpHeader::equals(const HttpHeader &header) const {
@@ -284,22 +292,33 @@ void HttpHeaders::setHeadersCallback(SetCallback_t callback, bool doClear)
 
 #if HAVE_HTTPHEADERS_ASYNCWEBSERVER
 
-void HttpHeaders::setWebServerResponseHeaders(AsyncWebServerResponse *response)
+void HttpHeaders::setAsyncWebServerResponseHeaders(AsyncWebServerResponse *response)
 {
     setHeadersCallback([response](const String &name, const String &header) {
         response->addHeader(name, header);
     }, true);
 }
 
+
+void HttpHeaders::setAsyncBaseResponseHeaders(AsyncBaseResponse *response)
+{
+    response->_httpHeaders = std::move(_headers);
+}
+
 #endif
+
+void HttpHeaders::printTo(Print &output) {
+    for (const auto &header : _headers) {
+        header->printTo(output);
+    }
+}
+
 
 #if DEBUG
 
-void  HttpHeaders::dump(Print &output) {
+void HttpHeaders::dump(Print &output) {
     output.printf_P(PSTR("--- %d\n"), _headers.size());
-    for (const auto &header : _headers) {
-        output.println(header->getHeader());
-    }
+    printTo(output);
 }
 
 #endif

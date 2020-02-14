@@ -15,7 +15,150 @@
 #include <debug_helper_disable.h>
 #endif
 
-AsyncJsonResponse::AsyncJsonResponse() : _jsonBuffer(_json)
+
+AsyncBaseResponse::AsyncBaseResponse(bool chunked)
+{
+    if (chunked) {
+        _contentLength = 0;
+        _sendContentLength = false;
+        _chunked = true;
+    }
+}
+
+void AsyncBaseResponse::__assembleHead(uint8_t version)
+{
+    PrintString out;
+    out.printf_P(PSTR("HTTP/1.%d %d %s\r\n"), version, _code, _responseCodeToString(_code));
+
+    if (_sendContentLength) {
+        HttpContentLengthHeader(_contentLength).printTo(out);
+        //out.printf_P(PSTR("Content-Length: %d\r\n"), _contentLength);
+    }
+    if (_contentType.length()) {
+        HttpContentType(_contentType).printTo(out);
+        //out.printf_P(PSTR("Content-Type: %s\r\n"), _contentType.c_str());
+    }
+
+    HttpConnectionHeader().printTo(out);
+    //addHeader(F("Connection"), F("close"));
+
+    for(const auto &header : _headers) {
+        out.printf_P(PSTR("%s: %s\r\n"), header->name().c_str(), header->value().c_str());
+    }
+    _headers.free();
+
+    if (version) {
+        out += AsyncWebHeader(F("Accept-Ranges"), F("none")).toString();
+        if (_chunked) {
+            out += AsyncWebHeader(F("Transfer-Encoding"), F("chunked")).toString();
+        }
+    }
+
+    for(const auto &header : _httpHeaders) {
+        header->printTo(out);
+    }
+    _httpHeaders.clear();
+
+    out.println();
+    _headLength = out.length();
+    _head = std::move(out);
+}
+
+void AsyncBaseResponse::_respond(AsyncWebServerRequest *request)
+{
+    __assembleHead(request->version());
+    _state = RESPONSE_HEADERS;
+    _ack(request, 0, 0);
+}
+
+size_t AsyncBaseResponse::_ack(AsyncWebServerRequest* request, size_t len, uint32_t time)
+{
+    if (!_sourceValid()) {
+        _state = RESPONSE_FAILED;
+        request->client()->close();
+        return 0;
+    }
+    _ackedLength += len;
+    size_t space = request->client()->space();
+
+    size_t headLen = _head.length();
+    if (_state == RESPONSE_HEADERS) {
+        if (space > headLen) {
+            // do not send extra packet for remaining headers
+            _state = RESPONSE_CONTENT;
+        } else {
+            debug_printf("header write=%u\n", space);
+            _writtenLength += request->client()->write(_head.c_str(), space);
+            _head.remove(0, space);
+            return space;
+        }
+    }
+
+    if (_state == RESPONSE_CONTENT) {
+        size_t outLen;
+        space -= headLen; // remove header length if we have headers
+        if (_chunked) {
+            if (space <= 8) { // we need at 8 extra bytes for the chunked header
+                return 0;
+            }
+            outLen = space;
+        } else if (!_sendContentLength) { // unknown content length
+            outLen = space;
+        } else {
+            outLen = std::min(space, (_contentLength - _sentLength)); // max. data we have to send
+        }
+
+        auto bufPtr = std::unique_ptr<uint8_t[]>(new uint8_t[outLen + headLen]);
+        auto buf = bufPtr.get();
+        if (!buf) {
+            return 0;
+        }
+
+        size_t readLen = 0;
+        if (_chunked) {
+            buf += 6;
+            if ((readLen = _fillBuffer(buf + headLen, outLen - 8)) == RESPONSE_TRY_AGAIN) {
+                return 0;
+            }
+            auto header = PrintString(F("%x\r\n"), readLen);
+            buf -= header.length();
+            memcpy(buf + headLen, header.c_str(), header.length());
+
+            outLen = readLen + headLen + header.length();
+            buf[outLen++] = '\r';
+            buf[outLen++] = '\n';
+
+        } else {
+            if ((readLen = _fillBuffer(buf + headLen, outLen)) == RESPONSE_TRY_AGAIN) {
+                return 0;
+            }
+            outLen = readLen + headLen;
+        }
+        _sentLength += readLen;
+
+        if (headLen) {
+            memcpy(buf, _head.c_str(), headLen);
+            _head = String();
+        }
+        _writtenLength += request->client()->write(reinterpret_cast<char *>(buf), outLen);
+
+        if (!readLen) {
+            _state = RESPONSE_WAIT_ACK;
+        }
+        return outLen;
+
+    } else if (_state == RESPONSE_WAIT_ACK) {
+        if (!_sendContentLength || _ackedLength >= _writtenLength) {
+            _state = RESPONSE_END;
+            if (!_chunked && !_sendContentLength) {
+                request->client()->close(true);
+            }
+        }
+    }
+    return 0;
+}
+
+AsyncJsonResponse::AsyncJsonResponse() : AsyncBaseResponse(false), _jsonBuffer(_json)
 {
     _code = 200;
     _contentType = FSPGM(mime_application_json);
@@ -44,7 +187,7 @@ void AsyncJsonResponse::updateLength()
 }
 
 AsyncProgmemFileResponse::AsyncProgmemFileResponse(const String &contentType, const FSMappingEntry *mapping, TemplateDataProvider::ResolveCallback callback) :
-    AsyncAbstractResponse(nullptr),
+    AsyncBaseResponse(false),
     _contentWrapped(Mappings::open(mapping, fs::FileOpenMode::read)),
     _provider(callback),
     _content(_contentWrapped, _provider)
@@ -66,7 +209,7 @@ size_t AsyncProgmemFileResponse::_fillBuffer(uint8_t *data, size_t len)
     return _content.read(data, len);
 }
 
-AsyncDirResponse::AsyncDirResponse(const Dir &dir, const String &dirName) : AsyncAbstractResponse()
+AsyncDirResponse::AsyncDirResponse(const Dir &dir, const String &dirName) : AsyncBaseResponse(true)
 {
     _code = 200;
     _contentLength = 0;
@@ -233,7 +376,7 @@ size_t AsyncDirResponse::_fillBuffer(uint8_t *data, size_t len)
 
 bool AsyncNetworkScanResponse::_locked = false;
 
-AsyncNetworkScanResponse::AsyncNetworkScanResponse(bool hidden) : AsyncAbstractResponse()
+AsyncNetworkScanResponse::AsyncNetworkScanResponse(bool hidden) : AsyncBaseResponse(true)
 {
     _code = 200;
     _contentLength = 0;
@@ -376,37 +519,37 @@ void AsyncNetworkScanResponse::setLocked(bool locked)
     _locked = locked;
 }
 
-AsyncBufferResponse::AsyncBufferResponse(const String & contentType, Buffer * buffer, AwsTemplateProcessor templateCallback) : AsyncAbstractResponse(templateCallback)
-{
-    _code = 200;
-    _position = 0;
-    _content = buffer;
-    _contentLength = buffer->length();
-    _sendContentLength = true;
-    _chunked = false;
-}
+// AsyncBufferResponse::AsyncBufferResponse(const String & contentType, Buffer * buffer, AwsTemplateProcessor templateCallback) : AsyncBaseResponse(true)
+// {
+//     _code = 200;
+//     _position = 0;
+//     _content = buffer;
+//     _contentLength = buffer->length();
+//     _sendContentLength = true;
+//     _chunked = false;
+// }
 
-AsyncBufferResponse::~AsyncBufferResponse()
-{
-    delete _content;
-}
+// AsyncBufferResponse::~AsyncBufferResponse()
+// {
+//     delete _content;
+// }
 
-bool AsyncBufferResponse::_sourceValid() const
-{
-    return (bool)_content->length();
-}
+// bool AsyncBufferResponse::_sourceValid() const
+// {
+//     return (bool)_content->length();
+// }
 
-size_t AsyncBufferResponse::_fillBuffer(uint8_t * buf, size_t maxLen)
-{
-    size_t send = _content->length() - _position;
-    if (send > maxLen) {
-        send = maxLen;
-    }
-    memcpy(buf, &_content->getConstChar()[_position], send);
-    // debug_printf("%u %u %d\n", _position, send, maxLen);
-    _position += send;
-    return send;
-}
+// size_t AsyncBufferResponse::_fillBuffer(uint8_t * buf, size_t maxLen)
+// {
+//     size_t send = _content->length() - _position;
+//     if (send > maxLen) {
+//         send = maxLen;
+//     }
+//     memcpy(buf, &_content->getConstChar()[_position], send);
+//     // debug_printf("%u %u %d\n", _position, send, maxLen);
+//     _position += send;
+//     return send;
+// }
 
 
 AsyncTemplateResponse::AsyncTemplateResponse(const String &contentType, const FSMappingEntry *mapping, WebTemplate *webTemplate, TemplateDataProvider::ResolveCallback callback) :
@@ -422,7 +565,7 @@ AsyncTemplateResponse::~AsyncTemplateResponse()
     delete _webTemplate;
 }
 
-AsyncSpeedTestResponse::AsyncSpeedTestResponse(const String &contentType, uint32_t size) : AsyncAbstractResponse(nullptr)
+AsyncSpeedTestResponse::AsyncSpeedTestResponse(const String &contentType, uint32_t size) : AsyncBaseResponse(true)
 {
     uint16_t width = sqrt(size / 2);
     _size = width * width * 2 + sizeof(_header);

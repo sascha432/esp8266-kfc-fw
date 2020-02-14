@@ -41,7 +41,7 @@ typedef struct __attribute__packed__ mapping_t {
 } mapping_t;
 
 // memory structure
-typedef struct __attribute__packed__ {
+typedef struct __attribute__packed__ FSMappingEntry_tag {
     uint16_t pathOffset;
     FS_MAPPINGS_COUNTER_TYPE mappedPathUID;
     uint32_t fileSize: 31;

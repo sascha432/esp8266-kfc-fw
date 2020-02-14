@@ -37,6 +37,7 @@ PROGMEM_STRING_DECL(comma_);
 
 class AsyncWebServerResponse;
 class AsyncWebServerRequest;
+class AsyncBaseResponse;
 
 #endif
 
@@ -59,7 +60,8 @@ public:
     virtual const String getValue() const {
         return String();
     }
-    virtual const String getHeader();
+    //virtual const String getHeader();
+    void printTo(Print &output) const;
 
     virtual bool equals(const HttpHeader &header) const;
 
@@ -329,11 +331,11 @@ public:
 
 class HttpContentType : public HttpSimpleHeader {
 public:
-    HttpContentType(const String &type = String()) : HttpSimpleHeader(F("Content-Type"), type) {
-    }
-    HttpContentType(const String &type, const String &charset) : HttpSimpleHeader(F("Content-Type"), type) {
-        _header += F("; charset=");
-        _header += charset;
+    HttpContentType(const String &type, const String &charset = String()) : HttpSimpleHeader(F("Content-Type"), type) {
+        if (charset.length()) {
+            _header += F("; charset=");
+            _header += charset;
+        }
     }
 };
 
@@ -377,9 +379,11 @@ public:
     void addDefaultHeaders();
     void setHeadersCallback(SetCallback_t callback, bool doClear);
 #if HAVE_HTTPHEADERS_ASYNCWEBSERVER
-    void setWebServerResponseHeaders(AsyncWebServerResponse *response);
+    void setAsyncWebServerResponseHeaders(AsyncWebServerResponse *response);
+    void setAsyncBaseResponseHeaders(AsyncBaseResponse *response);
 #endif
 
+    void printTo(Print &output);
 #if DEBUG
     void dump(Print &output);
 #endif

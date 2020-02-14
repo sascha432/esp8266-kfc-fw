@@ -9,12 +9,8 @@
 #include <BufferStream.h>
 #include <PrintString.h>
 
-#ifndef ENABLE_PRINT_ARGS
-#define ENABLE_PRINT_ARGS                   1
-#endif
-
 #ifndef DEBUG_PRINT_ARGS
-#define DEBUG_PRINT_ARGS                    1
+#define DEBUG_PRINT_ARGS                    0
 #endif
 
 #if DEBUG_PRINT_ARGS
@@ -26,36 +22,17 @@
 class PrintArgs
 {
 public:
-#if ENABLE_PRINT_ARGS
-
     typedef PrintArgs PrintInterface;
 
-    static PrintArgs &getInstance() {
-        static PrintArgs *instance = nullptr;
-        if (!instance) {
-            instance = new PrintArgs();
-        }
-        return *instance;
-}
+    PrintArgs(const PrintArgs &print) = delete;
 
-    static PrintInterface &toPrint(Print &print) {
-        getInstance()._print = &print;
-        return getInstance();
-    }
-
-#else
-
-    typedef Print PrintInterface;
-
-    static PrintInterface &toPrint(Print &print) {
-        return print;
-    }
-
+    PrintArgs() : _bufferPtr(), _position(), _strLength() {
+#if DEBUG_PRINT_ARGS
+        _outputSize = 0;
 #endif
-
-    PrintArgs() : _bufferPtr(), _position(), _strLength(), _print() {
     }
-    PrintArgs(const PrintArgs & print) = delete;
+    ~PrintArgs() {
+    }
 
     void clear();
     size_t fillBuffer(uint8_t *data, size_t size);
@@ -63,11 +40,9 @@ public:
     template <typename T, typename... Args>
     void printf_P(const T &format, const Args &... args) {
         _buffer.write(sizeof...(args));
+        //_debug_printf_P(PSTR("this=%p buffer=%d\n"), this, _buffer.size());
         _store((size_t)format);
         _collect(args...);
-        if (_print) {
-            _print->printf_P((PGM_P)format, args...);
-        }
     }
 
 private:
@@ -88,15 +63,17 @@ private:
         _collect(args...);
     }
 
-public:
-    void dump(Print &output);
+// public:
+//     void dump(Print &output);
 
 private:
     Buffer _buffer;
     uint8_t *_bufferPtr;
-    size_t _position;
-    size_t _strLength;
-    Print *_print;
+    int _position;
+    int _strLength;
+#if DEBUG_PRINT_ARGS
+    int _outputSize;
+#endif
 };
 
 #include "debug_helper_disable.h"

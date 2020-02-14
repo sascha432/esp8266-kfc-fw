@@ -8,12 +8,22 @@
 
 #pragma once
 
-#if _DEBUG && _MSC_VER
-#define _debug_new new ( _NORMAL_BLOCK , __FILE__ , __LINE__ )
-// Replace _NORMAL_BLOCK with _CLIENT_BLOCK if you want the
-// allocations to be of _CLIENT_BLOCK type
+#if DEBUG && _MSC_VER
+#ifndef _DEBUG
+#error _DEBUG required
+#endif
+#define CHECK_MEMORY(...)                               if (_CrtCheckMemory() == false) { __debugbreak(); }
 #else
-#define _debug_new new
+#define CHECK_MEMORY(...)                               ;
+#endif
+
+#if _MSC_VER
+// place on heap for memory check
+#define stack_array(name, type, size)                   size_t name##_unique_ptr_size = sizeof(type[size]); auto name##_unique_ptr = std::unique_ptr<type[]>(new type[size]); auto *name = (name##_unique_ptr).get()
+#define sizeof_stack_array(name)                        name##_unique_ptr_size
+#else
+#define stack_array(name, type, size)                   auto name[size]
+#define sizeof_stack_array(name)                        sizeof(name)
 #endif
 
 #if defined(ESP32)
@@ -62,7 +72,9 @@ class __FlashStringHelper;
 #elif _WIN32 || _WIN64
 
 #define NOMINMAX
+#if !defined(_CRTDBG_MAP_ALLOC) && DEBUG
 #define _CRTDBG_MAP_ALLOC
+#endif
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -162,7 +174,7 @@ namespace fs {
 #endif
 #endif
 
-// support nullptr as zero length
+// support nullptr as zero start_length
 size_t constexpr constexpr_strlen(const char *str)
 {
     return StringConstExpr::strlen(str);

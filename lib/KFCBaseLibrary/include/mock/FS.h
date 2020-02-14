@@ -15,6 +15,41 @@ public:
     File(FILE *fp, FileImplPtr p = FileImplPtr(), FS* baseFS = nullptr) : _p(p), _baseFS(baseFS), Stream(fp) {
     }
 
+    operator bool() const {
+        return _fp_get() != nullptr;
+    }
+
+    size_t write(uint8_t data) override {
+        return _fp_write(data);
+    }
+    using Print::write;
+    //size_t write(const uint8_t *buffer, size_t length) override {
+    //    return Print::write(buffer, length);
+    //}
+    int available() override {
+        return _fp_available();
+    }
+    int read() override {
+        return _fp_read();
+    }
+    int peek() override {
+        return _fp_peek();
+    }
+    using Stream::readBytes;
+    size_t readBytes(char *buffer, size_t length)  override {
+        return _fp_read((uint8_t *)buffer, length);
+    }
+    bool seek(uint32_t pos, SeekMode mode = SeekSet) {
+        return _fp_seek(pos, mode);
+    }
+    void close() {
+        _fp_close();
+    }
+    size_t position() const {
+        return _fp_position();
+    }
+
+
 private:
     FileImplPtr _p;
     FS* _baseFS;

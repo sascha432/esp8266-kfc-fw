@@ -209,7 +209,7 @@ void RemoteControlPlugin::disableAutoSleepHandler(AsyncWebServerRequest *request
         HttpHeaders httpHeaders;
         httpHeaders.addNoCache(true);
         httpHeaders.add(new HttpLocationHeader(F("/status.html")));
-        httpHeaders.setWebServerResponseHeaders(response);
+        httpHeaders.setAsyncWebServerResponseHeaders(response);
         request->send(response);
     }
     else {
@@ -225,7 +225,7 @@ void RemoteControlPlugin::deepSleepHandler(AsyncWebServerRequest *request)
         HttpHeaders httpHeaders;
         httpHeaders.addNoCache(true);
         httpHeaders.add(new HttpLocationHeader(F("/status.html")));
-        httpHeaders.setWebServerResponseHeaders(response);
+        httpHeaders.setAsyncWebServerResponseHeaders(response);
         request->send(response);
 
         BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::FLICKER);

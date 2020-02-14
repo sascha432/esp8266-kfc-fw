@@ -35,7 +35,7 @@ void ping_monitor_install_web_server_hook()
 {
     auto server = get_web_server_object();
     if (server) {
-        wsPing = _debug_new WsClientAsyncWebSocket(F("/ping"));
+        wsPing = new WsClientAsyncWebSocket(F("/ping"));
         wsPing->onEvent(ping_monitor_event_handler);
         server->addHandler(wsPing);
         _debug_printf_P(PSTR("Web socket for ping running on port %u\n"), config._H_GET(Config().http_port));
@@ -86,7 +86,7 @@ WsPingClient::~WsPingClient()
 
 WsClient *WsPingClient::getInstance(AsyncWebSocketClient *socket)
 {
-    return _debug_new WsPingClient(socket);
+    return new WsPingClient(socket);
 }
 
 void WsPingClient::onText(uint8_t *data, size_t len)

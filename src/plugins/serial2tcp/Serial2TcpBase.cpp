@@ -61,7 +61,7 @@ Serial2TcpBase *Serial2TcpBase::createInstance() {
     switch(cfg.serial_port) {
         case SERIAL2TCP_SOFTWARE_CUSTOM: {
                 _debug_printf_P(PSTR("Serial2TcpBase::createInstance() software serial: RX pin %d, TX pin %d, baud %d\n"), cfg.rx_pin, cfg.tx_pin, cfg.baud_rate)
-                auto softwareSerial = _debug_new SoftwareSerial(cfg.rx_pin, cfg.tx_pin);
+                auto softwareSerial = new SoftwareSerial(cfg.rx_pin, cfg.tx_pin);
                 softwareSerial->begin(cfg.baud_rate);
                 serialPort = softwareSerial;
             }

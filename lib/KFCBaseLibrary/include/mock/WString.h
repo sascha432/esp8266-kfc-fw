@@ -41,6 +41,7 @@ public:
     String(String &&str) noexcept;
     String(const String &str);
     String(const __FlashStringHelper *str);
+    ~String();
 
     explicit String(int value, unsigned char base = 10);
     explicit String(unsigned int value, unsigned char base = 10);
@@ -79,7 +80,7 @@ public:
 
     char charAt(size_t idx) const;
 
-    String &operator=(String &&str) noexcept;
+    String &operator =(String &&str) noexcept;
     String &operator =(const String &str);
 
     String operator + (const String &str);

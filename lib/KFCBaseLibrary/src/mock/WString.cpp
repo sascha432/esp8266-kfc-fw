@@ -97,6 +97,10 @@ String::String(const String &str) {
 String::String(const __FlashStringHelper *str) : String(reinterpret_cast<const char *>(str)) {
 }
 
+String::~String() {
+    CHECK_MEMORY();
+}
+
 String::String(int value, unsigned char base) {
     char buf[65]; // max 64bit + NUL
     _itoa(value, buf, base);

@@ -26,7 +26,7 @@ public:
         _buffer = nullptr;
     }
 
-    size_t position() const override {
+    size_t position() const {
         return _position;
     }
 

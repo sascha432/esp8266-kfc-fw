@@ -125,7 +125,7 @@ TimezoneData::~TimezoneData()
 RemoteTimezone *TimezoneData::createRemoteTimezone()
 {
     _debug_printf_P(PSTR("creating RemoteTimezone object %p\n"), _remoteTimezone);
-    return (_remoteTimezone = _debug_new RemoteTimezone());
+    return (_remoteTimezone = new RemoteTimezone());
 }
 
 void TimezoneData::deleteRemoteTimezone()
@@ -301,7 +301,7 @@ void TimezoneData::updateLoop()
     if (_zoneEnd != 0 && time(nullptr) >= _zoneEnd) {
         _debug_printf_P(PSTR("triggered\n"));
         LoopFunctions::remove(TimezoneData::updateLoop); // remove once triggered
-        timezoneData = _debug_new TimezoneData();
+        timezoneData = new TimezoneData();
         if (WiFi.isConnected()) { // simulate event if WiFi is already connected
             timezoneData->wifiConnectedCallback(WiFiCallbacks::EventEnum_t::CONNECTED, nullptr);
         }
@@ -402,7 +402,7 @@ void timezone_setup()
         auto remoteUrl = config._H_STR(Config().ntp.remote_tz_dst_ofs_url);
         if (*remoteUrl) {
             if (!timezoneData) {
-                timezoneData = _debug_new TimezoneData();
+                timezoneData = new TimezoneData();
             }
             if (WiFi.isConnected()) { // simulate event if WiFi is already connected
                 TimezoneData::wifiConnectedCallback(WiFiCallbacks::EventEnum_t::CONNECTED, nullptr);

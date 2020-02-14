@@ -99,7 +99,7 @@ EventTimer *EventScheduler::Timer::operator->() const
 EventTimer *EventScheduler::addTimer(int64_t delay, RepeatType repeat, Callback callback, Priority_t priority, DeleterCallback deleter)
 {
     _debug_printf_P(PSTR("delay=%.0f repeat=%d prio=%u callback=%u deleter=%u\n"), delay / 1.0, repeat._maxRepeat, priority, callback ? 1 : 0, deleter ? 1 : 0);
-    auto timer = _debug_new EventTimer(callback, delay, repeat, priority);
+    auto timer = new EventTimer(callback, delay, repeat, priority);
     _timers.push_back(deleter ? TimerPtr(timer, deleter) : TimerPtr(timer));
 #if DEBUG_EVENT_SCHEDULER
     Scheduler._list();

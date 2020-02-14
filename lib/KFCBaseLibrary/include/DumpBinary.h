@@ -12,12 +12,14 @@ public:
     DumpBinary(const String &title, Print &output);
 
     // bytes per line
-    void setPerLine(uint8_t perLine);
+    DumpBinary &setPerLine(uint8_t perLine);
 
     // space between group of bytes
-    void setGroupBytes(uint8_t groupBytes);
+    DumpBinary &setGroupBytes(uint8_t groupBytes);
 
-    void dump(const uint8_t *data, size_t length);
+    DumpBinary &print(const String &str);
+
+    DumpBinary &dump(const uint8_t *data, size_t length, ptrdiff_t offset = 0);
 
 private:
     Print &_output;

@@ -4,11 +4,6 @@
 
 #include "BufferStream.h"
 
-BufferStream::BufferStream() : Buffer(), Stream(), _position()
-{
-    debug_printf("len=%u size=%u ptr=%p\n", length(), size(), Buffer::get());
-}
-
 int BufferStream::available()
 {
     int len = length() - _position;
@@ -21,7 +16,7 @@ size_t BufferStream::available() const
     return len > 0 ? len : 0;
 }
 
-bool BufferStream::seek(long pos, int mode) 
+bool BufferStream::seek(long pos, int mode)
 {
     if (mode == SEEK_SET) {
         if ((size_t)pos >= length()) {
@@ -44,7 +39,7 @@ bool BufferStream::seek(long pos, int mode)
     return true;
 }
 
-char BufferStream::charAt(size_t pos) const 
+char BufferStream::charAt(size_t pos) const
 {
     if (available()) {
         return _buffer[pos];
@@ -52,12 +47,12 @@ char BufferStream::charAt(size_t pos) const
     return 0;
 }
 
-size_t BufferStream::position() const 
+size_t BufferStream::position() const
 {
     return _position;
 }
 
-int BufferStream::read() 
+int BufferStream::read()
 {
     if (available()) {
         return _buffer[_position++];
@@ -65,7 +60,7 @@ int BufferStream::read()
     return -1;
 }
 
-int BufferStream::peek() 
+int BufferStream::peek()
 {
     if (available()) {
         return _buffer[_position];
@@ -73,7 +68,7 @@ int BufferStream::peek()
     return -1;
 }
 
-size_t BufferStream::_read(uint8_t *buffer, size_t length)
+size_t BufferStream::readBytes(uint8_t *buffer, size_t length)
 {
     if (available()) {
         auto len = std::min((size_t)available(), length);
@@ -81,10 +76,10 @@ size_t BufferStream::_read(uint8_t *buffer, size_t length)
         _position += len;
         return len;
     }
-    return 0;    
+    return 0;
 }
 
-void BufferStream::clear() 
+void BufferStream::clear()
 {
     Buffer::clear();
     _position = 0;

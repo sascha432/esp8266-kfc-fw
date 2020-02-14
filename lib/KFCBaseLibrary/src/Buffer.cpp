@@ -5,11 +5,17 @@
 #include <PrintString.h>
 #include "Buffer.h"
 
-#if 0
+#if 1
 #include "debug_helper_enable.h"
 #else
 #include "debug_helper_disable.h"
 #endif
+
+#define CHECK_DATA_INT() \
+    _debug_printf_P(PSTR("len=%u size=%u ptr=%p this=%p\n"), _length, _size, _buffer, this); \
+    if (_length || _size || _buffer) { \
+        __debugbreak_and_panic_printf_P(PSTR("len=%u size=%u ptr=%p this=%p\n"), _length, _size, _buffer, this); \
+    }
 
 
 MoveStringHelper::MoveStringHelper() {
@@ -41,24 +47,14 @@ void MoveStringHelper::move(Buffer &buf) {
 
 Buffer::Buffer(Buffer &&buffer) noexcept
 {
-    _debug_printf("len=%u size=%u ptr=%p this=%p\n", _length, _size, _buffer, this);
+    CHECK_DATA_INT();
     *this = std::move(buffer);
 }
 
-Buffer::Buffer(size_t size) : _buffer(nullptr), _length(0), _size(size)
+Buffer::Buffer(size_t size) : _buffer(), _length(), _size()
 {
-    _debug_printf("len=%u size=%u ptr=%p this=%p\n", _length, _size, _buffer, this);
-    if (_size) {
-        _size = _alignSize(_size);
-        if (nullptr == (_buffer = (uint8_t *)malloc(_size))) {
-            _size = 0;
-        }
-    }
-}
-
-Buffer::Buffer() : _buffer(nullptr), _length(0), _size(0)
-{
-    _debug_printf("len=%u size=%u ptr=%p this=%p\n", _length, _size, _buffer, this);
+    CHECK_DATA_INT();
+    _changeBuffer(size);
 }
 
 Buffer::~Buffer()
@@ -67,34 +63,33 @@ Buffer::~Buffer()
     if (_buffer) {
         free(_buffer);
     }
+    CHECK_MEMORY();
 }
 
 Buffer::Buffer(const __FlashStringHelper *str)
 {
-    _debug_printf("len=%u size=%u ptr=%p this=%p\n", _length, _size, _buffer, this);
+    CHECK_DATA_INT();
     write(str, strlen_P(reinterpret_cast<PGM_P>(str)));
-}
-
-Buffer::Buffer(const String &str)
-{
-    _debug_printf("len=%u size=%u ptr=%p this=%p\n", _length, _size, _buffer, this);
-    new(this)Buffer();
-    _debug_printf("len=%u size=%u ptr=%p this=%p\n", _length, _size, _buffer, this);
-    write(str);
 }
 
 Buffer::Buffer(String &&str)
 {
-    _debug_printf("len=%u size=%u ptr=%p\n", _length, _size, _buffer);
-    _buffer = nullptr;
-    _length = 0;
-    _size = 0;
-    static_cast<MoveStringHelper &&>(str).move(*this);
+    CHECK_DATA_INT();
+    *this = std::move(str);
+}
+
+Buffer::Buffer(const String &str): Buffer()
+{
+    CHECK_DATA_INT();
+    write(str);
 }
 
 Buffer &Buffer::operator =(Buffer &&buffer) noexcept
 {
     _debug_printf("len=%u size=%u ptr=%p\n", _length, _size, _buffer);
+    if (_buffer) {
+        free(_buffer);
+    }
     _buffer = buffer._buffer;
     _length = buffer._length;
     _size = buffer._size;
@@ -108,10 +103,28 @@ Buffer &Buffer::operator =(const Buffer &buffer)
 {
     _debug_printf("len=%u size=%u ptr=%p\n", _length, _size, _buffer);
     _length = buffer._length;
-    if (reserve(buffer._size, true)) {
-        // reserve limits _length if shrink is set to true
+    if (_changeBuffer(buffer._size)) {
         memcpy(_buffer, buffer._buffer, _length);
     }
+    else {
+        clear();
+    }
+    return *this;
+}
+
+Buffer &Buffer::operator=(String &&str)
+{
+    _debug_printf("len=%u size=%u ptr=%p\n", _length, _size, _buffer);
+    clear();
+    static_cast<MoveStringHelper &&>(str).move(*this);
+    return *this;
+}
+
+Buffer &Buffer::operator=(const String &str)
+{
+    _debug_printf("len=%u size=%u ptr=%p\n", _length, _size, _buffer);
+    _length = 0;
+    write(str);
     return *this;
 }
 
@@ -125,7 +138,7 @@ bool Buffer::equals(const Buffer &buffer) const
 
 void Buffer::clear()
 {
-    _debug_printf("len=%u size=%u ptr=%p\n", _length, _size, _buffer);
+    // _debug_printf("len=%u size=%u ptr=%p\n", _length, _size, _buffer);
     if (_buffer) {
         free(_buffer);
         _buffer = nullptr;
@@ -166,35 +179,6 @@ size_t Buffer::length() const
     return _length;
 }
 
-bool Buffer::reserve(size_t size, bool shrink)
-{
-    if (shrink) {
-        if (size == 0) {
-            clear();
-            return true;
-        }
-    }
-    else if (size < _size) {
-        // shrink is false, ignore...
-        return true;
-    }
-    _size = _alignSize(size);
-    if (nullptr == (_buffer = (uint8_t *)realloc(_buffer, _size))) {
-        _size = 0;
-        _length = 0;
-        return false;
-    }
-    if (_length > _size) {
-        _length = _size;
-    }
-    return true;
-}
-
-// bool Buffer::available(size_t len) const
-// {
-//     return (len + _length <= _size);
-// }
-
 size_t Buffer::available() const
 {
     if (_length < _size) {
@@ -226,10 +210,9 @@ String Buffer::toString() const
 
 size_t Buffer::write(const uint8_t *data, size_t len)
 {
-    if (_length + len > _size) {
-        if (!reserve(_length + len)) {
-            return 0;
-        }
+    // _debug_printf_P(PSTR("len=%d\n"), len);
+    if (!reserve(_length + len)) {
+        return 0;
     }
     memmove(_buffer + _length, data, len);
     _length += len;
@@ -238,18 +221,18 @@ size_t Buffer::write(const uint8_t *data, size_t len)
 
 size_t Buffer::write_P(PGM_P data, size_t len)
 {
-    if (_length + len > _size) {
-        if (!reserve(_length + len)) {
-            return 0;
-        }
+    // _debug_printf_P(PSTR("len=%d\n"), len);
+    if (!reserve(_length + len)) {
+        return 0;
     }
     memcpy_P(_buffer + _length, data, len);
     _length += len;
     return len;
 }
 
-void Buffer::remove(unsigned int index, size_t count)
+void Buffer::remove(size_t index, size_t count)
 {
+    // _debug_printf_P(PSTR("index=%d count=%d\n"), index, count);
     if(index >= _length) {
         return;
     }
@@ -265,11 +248,11 @@ void Buffer::remove(unsigned int index, size_t count)
     }
 }
 
-void Buffer::removeAndShrink(unsigned int index, size_t count, size_t minFree)
+void Buffer::removeAndShrink(size_t index, size_t count, size_t minFree)
 {
     remove(index, count);
-    if (_length < _size + minFree) {
-        reserve(_length, true);
+    if (_length + minFree < _size) {
+        shrink(_length);
     }
 }
 
@@ -296,4 +279,79 @@ Buffer &Buffer::operator+=(const Buffer &buffer)
 {
     write(buffer.get(), buffer.length());
     return *this;
+}
+
+bool Buffer::_changeBuffer(size_t newSize)
+{
+    if (_alignSize(newSize) != _size) {
+        _size = _alignSize(newSize);
+        // _debug_printf_P(PSTR("size=%d\n"), _size);
+        if (_size == 0) {
+            if (_buffer) {
+                free(_buffer);
+                _buffer = nullptr;
+            }
+        }
+        else {
+            if (_buffer == nullptr) {
+                _buffer = (uint8_t *)malloc(_size);
+            }
+            else {
+                _buffer = (uint8_t *)realloc(_buffer, _size);
+            }
+            if (_buffer == nullptr) {
+                _debug_printf_P(PSTR("alloc failed\n"));
+                _size = 0;
+                _length = 0;
+                return false;
+            }
+        }
+    }
+    if (_length > _size) {
+        _length = _size;
+    }
+    // _debug_printf_P(PSTR("length=%d size=%d\n"), _length, _size);
+    return true;
+}
+
+bool Buffer::reserve(size_t size)
+{
+    if (size > _size) {
+        if (!_changeBuffer(size)) {
+            return false;
+        }
+    }
+    return true;
+    //if (shrink) {
+    //    if (size == 0) {
+    //        clear();
+    //        return true;
+    //    }
+    //}
+    //else if (size < _size) {
+    //    // shrink is false, ignore...
+    //    return true;
+    //}
+    //_size = _alignSize(size);
+    //if (nullptr == (_buffer = (uint8_t *)realloc(_buffer, _size))) {
+    //    _size = 0;
+    //    start_length = 0;
+    //    return false;
+    //}
+    //if (start_length > _size) {
+    //    start_length = _size;
+    //}
+    //return true;
+}
+
+bool Buffer::shrink(size_t newSize)
+{
+    if (newSize == 0) {
+        newSize = _length;
+    }
+    if (_changeBuffer(newSize)) {
+        return true;
+    }
+    clear();
+    return false;
 }

@@ -17,16 +17,18 @@ public:
 class Buffer {
 public:
     Buffer(Buffer &&buffer) noexcept;
-    Buffer(size_t size);
-    Buffer();
+    Buffer(size_t size = 0);
     virtual ~Buffer();
 
     Buffer(const __FlashStringHelper *str);
-    Buffer(const String &str);
     Buffer(String &&str);
+    Buffer(const String &str);
 
     Buffer &operator =(Buffer &&buffer) noexcept;
     Buffer &operator =(const Buffer &buffer);
+
+    Buffer &operator =(const String &str);
+    Buffer &operator =(String &&str);
 
     inline bool operator ==(const Buffer &buffer) const {
         return equals(buffer);
@@ -41,6 +43,9 @@ public:
     // move buffer pointer. needs to be freed with free() if not null
     void move(uint8_t** ptr);
 
+    inline uint8_t *operator*() const {
+        return _buffer;
+    }
     inline uint8_t *get() const {
         return _buffer;
     }
@@ -63,7 +68,13 @@ public:
     }
     char *getNulByteString(); // return NUL terminated string
 
-    inline char charAt(size_t index) const {
+    inline uint8_t charAt(size_t index) const {
+        return _buffer[index];
+    }
+    inline uint8_t &charAt(size_t index) {
+        return _buffer[index];
+    }
+    uint8_t &operator[](size_t index) {
         return _buffer[index];
     }
 
@@ -79,7 +90,10 @@ public:
         return _buffer + _length;
     }
 
-    bool reserve(size_t size, bool shrink = false);
+    bool reserve(size_t newSize);
+    bool shrink(size_t newSize = 0);
+    bool _changeBuffer(size_t newSize);
+
     // bool available(size_t len) const;
     size_t available() const;
 
@@ -101,17 +115,26 @@ public:
     }
 
     template<class T>
-    size_t write(T *data) {
-        return write(reinterpret_cast<const uint8_t *>(data), sizeof(T));
+    size_t writeT(const T &data) {
+        return write(reinterpret_cast<const uint8_t *>(&data), sizeof(T));
     }
     template<class T>
-    size_t write(std::vector<T> vector) {
+    size_t writeV(std::vector<T> vector) {
         return write(reinterpret_cast<const uint8_t *>(vector.data()), vector.size() * sizeof(T));
     }
 
-    void remove(unsigned int index, size_t count);
+    template<class T>
+    size_t writeR(T first, T last) {
+        size_t written = 0;
+        for(auto iterator = first; iterator != last; ++iterator) {
+            written += writeT<typename T::value_type>(*iterator);
+        }
+        return written;
+    }
+
+    void remove(size_t index, size_t count);
     // reduce size if more than minFree bytes are available
-    void removeAndShrink(unsigned int index, size_t count, size_t minFree = 64);
+    void removeAndShrink(size_t index, size_t count, size_t minFree = 64);
 
     inline Buffer &operator+=(char data) {
         write(data);
@@ -137,7 +160,7 @@ protected:
 
 private:
     inline size_t _alignSize(size_t size) const {
-#if ESP8266 || ESP32
+#if ESP8266 || ESP32 || 1
         return (size + 7) & ~7; // 8 byte aligned, umm block size
 #else
         return size;

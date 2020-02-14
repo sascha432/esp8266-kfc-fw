@@ -8,12 +8,19 @@
 
 class BufferStream : public Buffer, public Stream {
 public:
-    using Buffer::Buffer;
+    //using Buffer::Buffer; // using seems to screw up intilizing the object with GCC. adding a constructor that calls the original works fine
     using Buffer::write;
     using Buffer::length;
     using Buffer::size;
 
-    BufferStream();
+    BufferStream() : Buffer(), _position(0) {
+    }
+    BufferStream(size_t size) : Buffer(size), _position(0) {
+    }
+    BufferStream(const String &str) : Buffer(str), _position(0) {
+    }
+    BufferStream(String &&str) : Buffer(str), _position(0) {
+    }
 
     virtual int available() override;
     size_t available() const;
@@ -22,12 +29,6 @@ public:
     size_t position() const;
     void clear();
     void reset();
-    //size_t size() const {
-    //    return Buffer::size();
-    //}
-    //size_t length() const {
-    //    return Buffer::length();
-    //}
 
     virtual int read() override;
     virtual int peek() override;
@@ -42,33 +43,14 @@ public:
     }
 
     virtual size_t readBytes(char *buffer, size_t length) {
-        return _read((uint8_t *)buffer, length);
+        return readBytes((uint8_t *)buffer, length);
     }
-
-    virtual size_t readBytes(uint8_t *buffer, size_t length) {
-        return _read(buffer, length);
-    }
-
-    //BufferStream &operator+=(const char *str) {
-    //    static_cast<Buffer &>(*this) += str;
-    //}
-    //BufferStream &operator+=(const String &str) {
-    //    static_cast<Buffer &>(*this) += str;
-    //}
-    //BufferStream &operator+=(const __FlashStringHelper *str) {
-    //    static_cast<Buffer &>(*this) += str;
-    //}
-    //BufferStream &operator+=(const Buffer &buffer) {
-    //    static_cast<Buffer &>(*this) += buffer;
-    //}
+    virtual size_t readBytes(uint8_t *buffer, size_t length);
 
 #if ESP32
     virtual void flush() {
     }
 #endif
-
-private:
-    size_t _read(uint8_t *buffer, size_t length);
 
 private:
     size_t _position;

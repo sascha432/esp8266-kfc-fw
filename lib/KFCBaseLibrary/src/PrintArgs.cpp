@@ -12,27 +12,44 @@
 
 void PrintArgs::clear()
 {
-    _buffer = Buffer();
+#if DEBUG_PRINT_ARGS
+    if (_outputSize) {
+        _debug_printf_P(PSTR("out size=%d, buf size=%d\n"), _outputSize, _buffer.size());
+        _outputSize = 0;
+    }
+#endif
+    _debug_printf_P(PSTR("this=%p buffer=%d\n"), this, _buffer.size());
+    _buffer.clear();
     _bufferPtr = nullptr;
-    _print = nullptr;
 }
 
-size_t PrintArgs::fillBuffer(uint8_t *data, size_t size)
+size_t PrintArgs::fillBuffer(uint8_t *data, size_t sizeIn)
 {
+    int size = sizeIn;
+
     void *args[8];
     if (!_bufferPtr) {
         _bufferPtr = _buffer.begin();
         _position = 0;
         _strLength = NoLength;
+#if DEBUG_PRINT_ARGS
+        _outputSize = 0;
+#endif
     }
     auto dataStart = data;
-    // _debug_printf("_buffer %p-%p, ptr %p pos %d\n", _buffer.begin(), _buffer.end(), _bufferPtr, _position);
+    // _debug_printf("_buffer %p-%p, ptr %p position %d\n", _buffer.begin(), _buffer.end(), _bufferPtr, _position);
     do {
         if (size == 0) {
+#if DEBUG_PRINT_ARGS
+            _outputSize += (data - dataStart);
+#endif
             return data - dataStart;
         }
         if (_bufferPtr >= _buffer.end()) {
             clear();
+#if DEBUG_PRINT_ARGS
+            _outputSize += (data - dataStart);
+#endif
             return data - dataStart;
         }
         uint8_t numArgs = *_bufferPtr;
@@ -66,7 +83,7 @@ size_t PrintArgs::fillBuffer(uint8_t *data, size_t size)
         }
         else {
             // we have an offset from previous writes
-            size_t left = _strLength - _position;
+            int left = _strLength - _position;
             // does the entire string fit?
             if (size - _position >= _strLength + 1) {
                 /*_strLength = */_printf(data, _strLength + 1, args);
@@ -79,7 +96,7 @@ size_t PrintArgs::fillBuffer(uint8_t *data, size_t size)
                 continue;
             }
             // we need extra space
-            size_t maxTmpLen = std::min(_strLength, size + _position) + 1;
+            int maxTmpLen = std::min(_strLength, size + _position) + 1;
             uint8_t *tmp = (uint8_t *)malloc(maxTmpLen);
             /*_strLength = */_printf(tmp, maxTmpLen, args);
             if (left <= size) {
@@ -106,7 +123,7 @@ size_t PrintArgs::fillBuffer(uint8_t *data, size_t size)
 
 int PrintArgs::_printf(uint8_t *buffer, size_t size, void **args)
 {
-    // debug_printf_P(PSTR("fmt='%s' args=%p,%p,%p,%p,%p,%p,%p\n"), args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7]);
+    //debug_printf_P(PSTR("fmt='%s' args=%p,%p,%p,%p,%p,%p,%p\n"), args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7]);
 
     return snprintf_P(reinterpret_cast<char *>(buffer), size, (PGM_P)args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7]);
     //return snprintf_P(reinterpret_cast<char *>(buffer), size, (PGM_P)args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], args[10], args[11], args[12], args[13], args[14], args[15]);
@@ -121,32 +138,31 @@ void PrintArgs::_collect()
 {
 }
 
-void PrintArgs::dump(Print &output)
-{
-    return;
-    int outLen = 0;
-    int calls = 0;
-    int argCount = 0;
-    int maxPrintSize = 0;
-    void *args[8];
-    auto ptr = _buffer.begin();
-    while (ptr < _buffer.end()) {
-        uint8_t num = *ptr++;
-        if (++num >= 8) {
-            break;
-        }
-        memset(args, 0, sizeof(args));
-        memcpy(args, ptr, num * sizeof(size_t));
-        ptr += num * sizeof(size_t);
-        argCount += num;
-        calls++;
-        output.print('|');
-        int n = output.printf_P((PGM_P)args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7]);
-        output.println('|');
-        maxPrintSize = std::max(maxPrintSize, n);
-        outLen += n;
-    }
-    output.println();
-    output.printf_P(PSTR("buffer len=%u print calls=%u arguments=%u output len=%u max print size=%u\n"), _buffer.length(), calls, argCount, outLen, maxPrintSize);
-    clear();
-}
+// void PrintArgs::dump(Print &output)
+// {
+//     int outLen = 0;
+//     int calls = 0;
+//     int argCount = 0;
+//     int maxPrintSize = 0;
+//     void *args[8];
+//     auto ptr = _buffer.begin();
+//     while (ptr < _buffer.end()) {
+//         uint8_t num = *ptr++;
+//         if (++num >= 8) {
+//             break;
+//         }
+//         memset(args, 0, sizeof(args));
+//         memcpy(args, ptr, num * sizeof(size_t));
+//         ptr += num * sizeof(size_t);
+//         argCount += num;
+//         calls++;
+//         output.print('|');
+//         int n = output.printf_P((PGM_P)args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7]);
+//         output.println('|');
+//         maxPrintSize = std::max(maxPrintSize, n);
+//         outLen += n;
+//     }
+//     output.println();
+//     output.printf_P(PSTR("buffer len=%u print calls=%u arguments=%u output len=%u max print size=%u\n"), _buffer.start_length(), calls, argCount, outLen, maxPrintSize);
+//     clear();
+// }

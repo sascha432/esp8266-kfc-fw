@@ -21,7 +21,7 @@
 class DataProviderInterface
 {
 public:
-    typedef std::function<int(uint8_t *data, size_t size)> FillBufferCallback;
+    typedef std::function<size_t(uint8_t *data, size_t size)> FillBufferCallback;
     typedef std::function<bool(const String &name, DataProviderInterface &provider)> ResolveCallback;
 
     DataProviderInterface(ResolveCallback callback) : _fillBuffer(), _callback(callback), _handled(false) {
@@ -42,35 +42,29 @@ public:
         return _handled;
     }
 
-    virtual bool resolveRecurive() {
-        return false;
-    }
-
     virtual bool begin(const String &name) {
-        _debug_printf_P(PSTR("name=%s callback=%p handled=%u\n"), name.c_str(), &_callback, _handled);
         if (_handled) {
             end();
         }
         if (_callback) {
             _handled = _callback(name, *this);
         }
-        _debug_printf_P(PSTR("callback set handled=%p fillBuffer=%p\n"), _handled, &_fillBuffer);
+        _debug_printf_P(PSTR("name=%s handled=%p callback=%p fillBuffer=%p\n"), name.c_str(), _handled, &_callback, &_fillBuffer);
         return _handled;
     }
 
     virtual void end() {
-        _debug_printf_P(PSTR("removing fillBuffer=%p\n"), &_fillBuffer);
         _handled = false;
         _fillBuffer = nullptr;
     }
 
-    virtual int fillBuffer(uint8_t *data, size_t size) {
-        int len = 0;
+    virtual size_t fillBuffer(uint8_t *data, size_t size) {
+        size_t len = 0;
         if (_fillBuffer) {
             len = _fillBuffer(data, size);
+            //_debug_printf_P(PSTR("fillBuffer size=%d: result=%d\n"), size, len);
             if (len == 0) {
-                _debug_printf_P(PSTR("removing fillBuffer=%p, len=0\n"), &_fillBuffer);
-                _fillBuffer = nullptr;
+                setFillBuffer(nullptr);
             }
         }
         return len;

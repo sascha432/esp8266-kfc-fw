@@ -28,7 +28,7 @@ public:
         if (!_file) {
             return false;
         }
-        else if (_pos < _buffer.length()) {
+        else if (_position < _buffer.length()) {
             return true;
         }
         return _file.available();
@@ -42,13 +42,11 @@ public:
         return _peek();
     }
 
-    virtual size_t read(uint8_t *buffer, size_t length) {
-        return _read(buffer, length);
+    virtual size_t readBytes(char *buffer, size_t length) {
+        return read((uint8_t *)buffer, length);
     }
 
-    size_t read(char *buffer, size_t length) {
-        return _read((uint8_t *)buffer, length);
-    }
+    size_t read(uint8_t *buffer, size_t length);
 
     virtual size_t write(uint8_t) override {
         return 0;
@@ -98,20 +96,56 @@ public:
 private:
     int _read();
     int _peek();
-    size_t _read(uint8_t *buffer, size_t length);
-    int _available() const;
-    int _readBuffer(bool templateCheck = true);
+    size_t _copy(uint8_t *buffer, size_t length);
+    size_t _available();
+    size_t _readBuffer(bool templateCheck = true);
+
+private:
+    bool isValidChar(char value) const {
+        return isalnum(value) || value == '_' || value == '-' || value == '.';
+    }
+
+    constexpr static int maxTemplateNameSize = 64;
+
+private:
+    struct {
+        typedef uint8_t *pointer;
+        const SSIProxyStream &_p;
+        pointer start() const {
+            return position ? position : _p._buffer.begin();
+        }
+        ptrdiff_t to_offset(pointer ptr) const {
+            return ptr - _p._buffer.begin();
+        }
+        pointer from_offset(ptrdiff_t offset) const {
+            return _p._buffer.begin() + ((offset < 0) ? 0 : offset);
+        }
+        size_t template_length() const {
+            return _p._length - start_length;
+        }
+        const char *template_name() const {
+            return name.c_str();
+        }
+        bool in_buffer(pointer ptr) const {
+            return ptr >= _p._buffer.begin() && ptr < _p._buffer.end();
+        }
+        size_t name_len() const {
+            return marker != -1 ? (_p._buffer.end() - from_offset(marker)) : 0;
+        }
+        void eof() {
+            marker = -1;
+            position = _p._buffer.end();
+        }
+        ptrdiff_t marker;
+        pointer position;
+        size_t start_length;
+        String name;
+    } _template;
 
 private:
     File &_file;
     Buffer _buffer;
-    size_t _pos;
+    size_t _position;
     size_t _length;
-    struct {
-        bool marker;
-        uint8_t *pos;
-        size_t _length;
-        String name;
-    } _template;
     DataProviderInterface &_provider;
 };

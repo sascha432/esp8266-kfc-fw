@@ -14,5 +14,5 @@ class TemplateDataProvider : public DataProviderInterface
 public:
     using DataProviderInterface::DataProviderInterface;
 
-    static bool callback(const String& name, DataProviderInterface& provider, WebTemplate *webTemplate);
+    static bool callback(const String& name, DataProviderInterface& provider, WebTemplate &webTemplate);
 };

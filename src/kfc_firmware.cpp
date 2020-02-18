@@ -20,8 +20,10 @@
 #if PRINTF_WRAPPER_ENABLED
 #include <printf_wrapper.h>
 #endif
-// #include <GDBStub.h>
-// extern "C" void gdbstub_do_break();
+#if HAVE_GDBSTUB
+#include <GDBStub.h>
+extern "C" void gdbstub_do_break();
+#endif
 
 
 #if SPIFFS_TMP_FILES_TTL
@@ -102,6 +104,8 @@ static void remove_crash_counter(EventScheduler::TimerPtr timer)
 #endif
 }
 
+#include "./plugins/remote/remote.h"
+
 void setup() {
 
     Serial.begin(KFC_SERIAL_RATE);
@@ -112,8 +116,10 @@ void setup() {
 #endif
     BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::OFF);
 
-    // gdbstub_do_break();
-    // disable_at_mode(Serial);
+#if HAVE_GDBSTUB
+    gdbstub_do_break();
+    disable_at_mode(Serial);
+#endif
 
     if (resetDetector.getResetCounter() >= 20) {
         delay(5000);    // delay boot if too many resets are detected

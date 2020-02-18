@@ -24,13 +24,14 @@ public:
 
     using PrintInterface = FormField::PrintInterface;
 
-    Form();
-    Form(FormData *data);
+    Form(FormData *data = nullptr);
     virtual ~Form();
 
     void clearForm();
     void setFormData(FormData *data);
     void setInvalidMissing(bool invalidMissing);
+
+    FormGroup &addGroup(const String &name, const String &label, bool expanded, FormUI::TypeEnum_t type = FormUI::TypeEnum_t::GROUP_START);
 
     int add(FormField *field);
     FormField *_add(FormField *field);
@@ -97,7 +98,6 @@ public:
     void setFormUI(const String &title, const String &submit);
     void setFormUI(const String &title);
     void createHtml(PrintInterface &out);
-    void createHtmlPart(PrintInterface &out, uint16_t num);
 
     void dump(Print &out, const String &prefix) const;
 

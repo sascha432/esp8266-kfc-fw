@@ -23,6 +23,7 @@ public:
         CHECK,
         SELECT,
         TEXT,
+        GROUP,
     };
 
     FormField(const String &name, const String &value = String(), InputFieldType type = FormField::InputFieldType::NONE);
@@ -79,6 +80,8 @@ public:
     const ValidatorsVector &getValidators() const;
 
 private:
+    friend Form;
+
     String _name;
     String _value;
     ValidatorsVector _validators;
@@ -88,4 +91,23 @@ private:
     bool _hasChanged;
     // bool _optional;
     // bool _notSet;
+};
+
+class FormGroup : public FormField {
+public:
+    FormGroup(const FormGroup &group) = delete;
+    FormGroup(const String &name, bool expanded) : FormField(name, String(), FormField::InputFieldType::GROUP), _expanded(expanded) {
+    }
+    virtual bool setValue(const String &value) override {
+        return false;
+    }
+    virtual void copyValue() override {
+    }
+    void end();
+
+    bool isExpanded() const {
+        return _expanded;
+    }
+private:
+    bool _expanded;
 };

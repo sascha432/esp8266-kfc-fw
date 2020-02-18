@@ -5,6 +5,8 @@
 #pragma once
 
 #include <Arduino_compat.h>
+#include "BufferStream.h"
+#include "LoopFunctions.h"
 
 class HTTPClient {
 public:
@@ -31,7 +33,7 @@ public:
         return _body;
     }
 
-private:
+protected:
     class HttpHeader {
     public:
         HttpHeader(const String& _name, const String& _value = String()) : name(_name), value(_value) {
@@ -76,4 +78,86 @@ struct rst_info{
     uint32_t epc3;
     uint32_t excvaddr;
     uint32_t depc;
+};
+
+
+class asyncHTTPrequest : public HTTPClient {
+public:
+    asyncHTTPrequest() : _dataCb(nullptr), _dataCbArg(nullptr), _readyStateCb(nullptr), _readyStateCbArg(nullptr) {
+    }
+
+    typedef std::function<void(void *, asyncHTTPrequest *, int readyState)> readyStateChangeCB;
+    typedef std::function<void(void *, asyncHTTPrequest *, size_t available)> onDataCB;
+
+    bool open(const char *method, const char *url) {
+        _method = method;
+        begin(url);
+        return true;
+    }
+
+    bool send(const String &payload = String()) {
+        _payload = payload;
+        _request();
+        dump(Serial);
+        LoopFunctions::callOnce([this]() {
+            loop();
+        });
+        return true;
+    }
+
+    size_t responseRead(uint8_t *buffer, size_t len) {
+        return _body.readBytes(buffer, len);
+    }
+
+    size_t available() {
+        return _body.available();
+    }
+
+    void abort() {
+        _body = BufferStream();
+    }
+
+    void setReqHeader(const String &name, const String &value) {
+        addHeader(name, value);
+    }
+
+    void onData(onDataCB cb, void *arg = nullptr) {
+        _dataCb = cb;
+        _dataCbArg = arg;
+    }
+
+    void onReadyStateChange(readyStateChangeCB cb, void *arg = nullptr) {
+        _readyStateCb = cb;
+        _readyStateCbArg = arg;
+    }
+
+    int responseHTTPcode() {
+        if (_error.length()) {
+            return -1;
+        }
+        return _httpCode;
+    }
+
+    void loop() {
+        if (_readyStateCb) {
+            _readyStateCb(_readyStateCbArg, this, 1);
+            _readyStateCb(_readyStateCbArg, this, 2);
+            _readyStateCb(_readyStateCbArg, this, 3);
+        }
+        while (available()) {
+            if (_dataCb) {
+                _dataCb(_dataCbArg, this, available());
+            }
+        }
+        if (_readyStateCb) {
+            _readyStateCb(_readyStateCbArg, this, 4);
+        }
+        end();
+    }
+
+private:
+    onDataCB _dataCb;
+    void *_dataCbArg;
+    readyStateChangeCB _readyStateCb;
+    void *_readyStateCbArg;
 };

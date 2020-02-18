@@ -5,6 +5,7 @@
 #pragma once
 
 #include <Arduino_compat.h>
+#include <misc.h>
 #include "JsonValue.h"
 #include "JsonString.h"
 #include "JsonNumber.h"
@@ -95,7 +96,7 @@ protected:
     }
     size_t _printTo(Print &output, double value) const {
         char buf[64];
-        _printDouble(buf, (uint8_t)sizeof(buf), value);
+        printDouble(buf, (uint8_t)sizeof(buf), value);
         return output.print(buf);
     }
     size_t _printTo(Print &output, const AbstractJsonValue::JsonVariantVector &value) const {
@@ -143,7 +144,7 @@ protected:
     }
     size_t _length(double value) const {
         char buf[64];
-        return _printDouble(buf, (uint8_t)sizeof(buf), value);
+        return printDouble(buf, (uint8_t)sizeof(buf), value);
     }
     size_t _length(const AbstractJsonValue::JsonVariantVector &value) const {
         size_t length = 2;
@@ -171,38 +172,12 @@ protected:
     }
 
 private:
-    // print double with maximum precision without trailing zeros, but at least one decimal place which can be 0
-    size_t _printDouble(char *buf, uint8_t size, double value) const {
-        if (isnan(value) || isinf(value)) {
-            strcat_P(buf, SPGM(null));
-            return 4;
-        }
-        uint8_t precision = std::numeric_limits<double>::digits10;
-        auto number = abs(value);
-        while ((number = (number / 10)) > 1 && precision > 1) {
-            precision--;
-        }
-        auto len = snprintf_P(buf, size, PSTR("%.*f"), precision, value);
-        char *ptr;
-        if (len < size && (ptr = strchr(buf, '.'))) {
-            ptr++;
-            char *endPtr = ptr + strlen(ptr);
-            while(--endPtr > ptr && *endPtr == '0') {
-                *endPtr = 0;
-                len--;
-            }
-        }
-        return len;
-    }
-
-private:
     T _value;
 };
 
 template <class T>
 class JsonNamedVariant : public JsonUnnamedVariant<T> {
 public:
-
     JsonNamedVariant(const JsonString &name, const __FlashStringHelper *value) : JsonUnnamedVariant<T>(value), _name(name) {
     }
     JsonNamedVariant(const JsonString &name, const char *value) : JsonUnnamedVariant<T>(value), _name(name) {

@@ -19,7 +19,13 @@ namespace JsonVariableReader {
         virtual ~Result() {
         }
 
-        virtual Result* create() = 0;
+        Result(const Result &) = delete;
+        Result(Result &&) = default;
+        Result &operator=(Result &&) = default;
+
+        virtual bool empty() const = 0;
+
+        virtual Result *create() = 0;
 
         //virtual Result *create() {
         //    // destroy results
@@ -34,11 +40,13 @@ namespace JsonVariableReader {
 
     class Element {
     public:
-        typedef std::function<bool(Result & result, Reader & reader)> AssignCallback;
+        typedef std::function<bool(Result &result, Reader &reader)> AssignCallback;
 
-        Element(const JsonString& path, AssignCallback callback = nullptr);
-        JsonString& getPath();
-        bool callback(Result& result, Reader& reader);
+        Element(const Element &) = delete;
+
+        Element(const JsonString &path, AssignCallback callback = nullptr);
+        JsonString &getPath();
+        bool callback(Result &result, Reader &reader);
 
     protected:
         JsonString _path;
@@ -47,49 +55,56 @@ namespace JsonVariableReader {
 
     class ElementGroup {
     public:
-        typedef Element* ElementPtr;
+        typedef Element *ElementPtr;
         typedef std::vector<ElementPtr> ElementsVector;
-        typedef Result* ResultPtr;
+        typedef Result *ResultPtr;
         typedef std::vector<ResultPtr> ResultsVector;
         typedef std::vector<ElementGroup> Vector;
 
-        ElementGroup(const JsonString& path);
+        ElementGroup(const JsonString &path);
         ~ElementGroup();
 
-        Element *add(const JsonString &path, Element::AssignCallback callback = nullptr);
-        Element *add(Element *var);
+        ElementGroup(const ElementGroup &) = delete;
+        ElementGroup(ElementGroup &&) = default;
+        ElementGroup &operator=(ElementGroup &&) = default;
+
+        ElementPtr add(const JsonString &path, Element::AssignCallback callback = nullptr);
+        ElementPtr add(Element *var);
         bool isPath(const String &path);
-        Element *findPath(const String &path);
-        void addResults();
-        Result *getResultObject();
+        ElementPtr findPath(const String &path);
 
+        // adds a new result object stored using _results::create
+        void flushResult();
 
+        // retrieves last result added
+        ResultPtr getLastResult();
+
+        // retrieve stored results
         template <class T>
-        std::vector<T *>& getResults() {
+        std::vector<T *> &getResults() {
+            _results.erase(std::remove_if(_results.begin(), _results.end(), [](Result *result) {
+                if (result->empty()) {
+                    delete result;
+                    return true;
+                }
+                return false;
+            }), _results.end()); // remove invalid results
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
             return reinterpret_cast<std::vector<T *> &>(_results);
+#pragma GCC diagnostic pop
         }
 
+        // set result class type
         template <class T>
-        T *getResult() {
-            if (_results.size()) {
-                return reinterpret_cast<T *>(_results.front());
-            }
-            return nullptr;
-        }
-
-        template<class T>
-        void setResult() {
-            if (_result) {
-                delete _result;
-            }
-            _result = new T();
+        void initResultType() {
+            _results.emplace_back(new T());
         }
 
     private:
         JsonString _path;
         ElementsVector _elements;
         ResultsVector _results;
-        Result* _result;
     };
 
     class Reader : public JsonBaseReader {
@@ -97,7 +112,7 @@ namespace JsonVariableReader {
         Reader();
         ~Reader();
 
-        ElementGroup::Vector* getElementGroups();
+        ElementGroup::Vector *getElementGroups();
 
         virtual bool beginObject(bool isArray);
         virtual bool endObject();
@@ -105,8 +120,8 @@ namespace JsonVariableReader {
         virtual bool recoverableError(JsonErrorEnum_t errorType);
 
     private:
-        ElementGroup::Vector* _elementGroups;
-        ElementGroup* _current;
+        ElementGroup::Vector *_elementGroups;
+        ElementGroup *_current;
         int _level;
         bool _skip;
     };

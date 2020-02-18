@@ -31,7 +31,6 @@ size_t PrintArgs::fillBuffer(uint8_t *data, size_t sizeIn)
     if (!_bufferPtr) {
         _bufferPtr = _buffer.begin();
         _position = 0;
-        _strLength = NoLength;
 #if DEBUG_PRINT_ARGS
         _outputSize = 0;
 #endif
@@ -69,7 +68,6 @@ size_t PrintArgs::fillBuffer(uint8_t *data, size_t sizeIn)
                 size -= _strLength;
                 data += _strLength;
                 _bufferPtr += advance;
-                _strLength = NoLength;
                 continue;
             }
             else {
@@ -91,7 +89,6 @@ size_t PrintArgs::fillBuffer(uint8_t *data, size_t sizeIn)
                 data += left;
                 size -= left;
                 _bufferPtr += advance;
-                _strLength = NoLength;
                 _position = 0;
                 continue;
             }
@@ -105,7 +102,6 @@ size_t PrintArgs::fillBuffer(uint8_t *data, size_t sizeIn)
                 data += left;
                 size -= left;
                 _bufferPtr += advance;
-                _strLength = NoLength;
                 _position = 0;
                 continue;
             }
@@ -132,10 +128,6 @@ int PrintArgs::_printf(uint8_t *buffer, size_t size, void **args)
 void PrintArgs::_store(size_t data)
 {
     _buffer.write(reinterpret_cast<const uint8_t *>(&data), sizeof(size_t));
-}
-
-void PrintArgs::_collect()
-{
 }
 
 // void PrintArgs::dump(Print &output)

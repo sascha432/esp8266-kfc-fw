@@ -40,10 +40,10 @@ protected:
     PrintArgs _printArgs;
 };
 
-class EmptyTemplate : public WebTemplate {
-public:
-    virtual void process(const String &key, PrintHtmlEntitiesString &output) override;
-};
+// class EmptyTemplate : public WebTemplate {
+// public:
+//     virtual void process(const String &key, PrintHtmlEntitiesString &output) override;
+// };
 
 class ConfigTemplate : public WebTemplate {
 public:

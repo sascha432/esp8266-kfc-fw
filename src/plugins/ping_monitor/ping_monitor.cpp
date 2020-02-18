@@ -386,6 +386,9 @@ public:
     PGM_P getName() const {
         return PSTR("pingmon");
     }
+    virtual const __FlashStringHelper *getFriendlyName() const {
+        return F("Ping Monitor");
+    }
 
     virtual PluginPriorityEnum_t getSetupPriority() const override {
         return (PluginPriorityEnum_t)100;
@@ -406,7 +409,7 @@ public:
         return CUSTOM;
     }
     virtual void createMenu() override {
-        bootstrapMenu.addSubMenu(F("Ping Monitor"), F("ping_monitor.html"), navMenu.config);
+        bootstrapMenu.addSubMenu(getFriendlyName(), F("ping_monitor.html"), navMenu.config);
         bootstrapMenu.addSubMenu(F("Ping Remote Host"), F("ping.html"), navMenu.util);
     }
 

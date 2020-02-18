@@ -4,14 +4,14 @@
 
 #include "JsonString.h"
 
-JsonString::JsonString(const JsonString &str) {
-    *this = str;
-}
-
-JsonString::JsonString(JsonString && str) {
-    *this = std::move(str);
-}
-
+//JsonString::JsonString(const JsonString &str) {
+//    *this = str;
+//}
+//
+//JsonString::JsonString(JsonString && str) {
+//    *this = std::move(str);
+//}
+//
 JsonString::JsonString() {
     _setType(STORED);
     *_raw = 0;
@@ -72,6 +72,9 @@ JsonString::~JsonString() {
 }
 
 JsonString & JsonString::operator=(const JsonString & str) {
+    if (_getType() == ALLOC) {
+        free(_getPtr());
+    }
     if (str._getType() == ALLOC) {
         _init(str._getConstPtr(), str._getLength());
     }
@@ -82,6 +85,9 @@ JsonString & JsonString::operator=(const JsonString & str) {
 }
 
 JsonString & JsonString::operator=(JsonString && str) {
+    if (_getType() == ALLOC) {
+        free(_getPtr());
+    }
     if (str._getType() == ALLOC) {
         _setType(ALLOC);
         _setPtr(str._getPtr());

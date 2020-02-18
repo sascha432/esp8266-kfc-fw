@@ -30,6 +30,11 @@ PluginComponent *PluginComponent::findPlugin(const __FlashStringHelper *name)
     return nullptr;
 }
 
+const __FlashStringHelper *PluginComponent::getFriendlyName() const
+{
+    return FPSTR(getName());
+}
+
 bool PluginComponent::nameEquals(const __FlashStringHelper *name) const
 {
     return strcmp_P_P(getName(), RFPSTR(name)) == 0;

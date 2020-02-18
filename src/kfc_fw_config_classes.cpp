@@ -152,4 +152,94 @@ namespace KFCConfigurationClasses {
     }
 
 
+    void Plugins::HomeAssistant::setApiEndpoint(const String &endpoint)
+    {
+        config._H_SET_STR(MainConfig().plugins.homeassistant.api_endpoint, endpoint);
+    }
+
+    void Plugins::HomeAssistant::setApiToken(const String &token)
+    {
+        config._H_SET_STR(MainConfig().plugins.homeassistant.token, token);
+    }
+
+    const char *Plugins::HomeAssistant::getApiEndpoint()
+    {
+        return config._H_STR(MainConfig().plugins.homeassistant.api_endpoint);
+    }
+
+    const char *Plugins::HomeAssistant::getApiToken()
+    {
+        return config._H_STR(MainConfig().plugins.homeassistant.token);
+    }
+
+    void Plugins::HomeAssistant::getActions(ActionVector &actions)
+    {
+        uint16_t length;
+        auto data = config.getBinary(_H(MainConfig().plugins.homeassistant.actions), length);
+        if (data) {
+            auto endPtr = data + length;
+            while(data + sizeof(ActionHeader_t) <= endPtr) {
+                auto header = reinterpret_cast<const ActionHeader_t *>(data);
+                data += sizeof(ActionHeader_t);
+                auto valuesLen = header->valuesLen * sizeof(int32_t);
+                if (data + header->entityLen + valuesLen > endPtr) {
+                    break;
+                }
+                String str = PrintString(data, header->entityLen);
+                data += header->entityLen;
+                Action::ValuesVector values(header->valuesLen);
+                memcpy(values.data(), data, valuesLen);
+                data += valuesLen;
+                actions.emplace_back(header->id, header->action, values, str);
+            }
+        }
+    }
+
+    void Plugins::HomeAssistant::setActions(ActionVector &actions)
+    {
+        Buffer buffer;
+        for(auto &action: actions) {
+            ActionHeader_t header;
+            header.entityLen = action.getEntityId().length();
+            if (header.entityLen) {
+                header.id = action.getId();
+                header.action = action.getAction();
+                header.valuesLen = action.getNumValues();
+                buffer.writeObject(header);
+                buffer.write(action.getEntityId());
+                buffer.writeVector(action.getValues());
+            }
+        }
+        config.setBinary(_H(MainConfig().plugins.homeassistant.actions), buffer.get(), buffer.length());
+    }
+
+    Plugins::HomeAssistant::Action Plugins::HomeAssistant::getAction(uint16_t id)
+    {
+        ActionVector actions;
+        getActions(actions);
+        for(auto &action: actions) {
+            if (id == action.getId()) {
+                return action;
+            }
+        }
+        return Action();
+    }
+
+    const __FlashStringHelper *Plugins::HomeAssistant::getActionStr(ActionEnum_t action)
+    {
+        switch(action) {
+            case TURN_ON:
+                return F("Turn On");
+            case TURN_OFF:
+                return F("Turn Off");
+            case SET_BRIGHTNESS:
+                return F("Set Brightness");
+            case CHANGE_BRIGHTNESS:
+                return F("Change Brightness");
+            case NONE:
+            default:
+                return F("None");
+        }
+    }
+
 };

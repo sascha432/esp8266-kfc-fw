@@ -75,27 +75,6 @@ typedef std::vector<String> StringVector;
 String formatBytes(size_t bytes);
 String formatTime(unsigned long seconds, bool days_if_not_zero = false);
 
-// G/T be any of char, const __FlashStringHelper *, const char *, String
-template<class G, class T>
-String implode(G glue, std::vector<T> *pieces) {
-    String tmp;
-    if (pieces && !pieces->empty()) {
-        auto iterator = pieces->begin();
-        tmp += *iterator;
-        while(++iterator != pieces->end()) {
-            tmp += glue;
-            tmp += *iterator;
-        }
-    }
-    return tmp;
-}
-
-String implode(const __FlashStringHelper *glue, const char **pieces, int count);
-String implode(const __FlashStringHelper *glue, String *pieces, int count);
-
-void explode(char* str, const char *separator, std::vector<char*> &vector, const char *trim = nullptr);
-
-
 String url_encode(const String &str);
 String printable_string(const uint8_t *buffer, size_t length);
 
@@ -298,3 +277,87 @@ uint16_t tokenizer(char *str, TokenizerArgs &args, bool hasCommand, char **nextC
             __VA_ARGS__; \
         } \
     }
+
+
+// creates an object on the stack and returns a reference to it
+//
+// form.createHtml(&stack_reference<PrintArgsPrintWrapper>(Serial));
+
+template<class T>
+class stack_reference {
+public:
+    stack_reference(T &&object) : _object(std::move(object)) {
+    }
+    T &get() {
+        return _object;
+    }
+    T &operator&() {
+        return _object;
+    }
+private:
+    T _object;
+};
+
+namespace split {
+
+    typedef enum {
+        NONE =          0x00,
+        EMPTY =         0x01,       // add empty strings
+        TRIM =          0x02,       // trim strings
+        _PROGMEM =      0x04,
+    } SplitFlagsType;
+
+    typedef void(*callback)(const char *str, size_t len, void *data, int flags);
+
+    void vector_callback(const char *sptr, size_t len, void *ptr, int flags);
+    void split(const char *str, char sep, callback fun, void *data, int flags = SplitFlagsType::EMPTY);
+    void split_P(PGM_P str, char sep, callback fun, void *data, int flags = SplitFlagsType::EMPTY);
+};
+
+template<class G, class C>
+String implode(G glue, const C &pieces, uint32_t max = (uint32_t)~0) {
+    String tmp;
+    if (max-- && pieces.begin() != pieces.end()) {
+        auto iterator = pieces.begin();
+        tmp += *iterator;
+        while(max-- && ++iterator != pieces.end()) {
+            tmp += glue;
+            tmp += *iterator;
+        }
+    }
+    return tmp;
+}
+
+inline void explode(const char *str, const char ch, StringVector &container) {
+    split::split(str, ch, split::vector_callback, &container, split::SplitFlagsType::EMPTY);
+}
+
+namespace xtra_containers {
+
+    template <class T>
+    void remove_duplicates(T &v)
+    {
+        auto end = v.end();
+        for (auto it = v.begin(); it != end; ++it) {
+            end = std::remove(it + 1, end, *it);
+        }
+        v.erase(end, v.end());
+    }
+
+};
+
+// print double without trailing zeros
+size_t printDouble(char *buf, size_t size, double value);
+void printDouble(Print &output, double value);
+
+template <class T>
+void *lambda_target(T callback) {
+    if (callback) {
+        auto addr = *(void **)((uint8_t *)(&callback) + 0); // if this points to flash it is a static function otherwise a mem function
+        if ((uint32_t)addr <= 0x40000000) {
+            return *(void **)((uint8_t *)(&callback) + 12); // this is the entry point of the mem function
+        }
+        return addr;
+    }
+    return 0;
+}

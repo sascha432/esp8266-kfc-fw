@@ -217,7 +217,7 @@ bool PinDebuggerPlugin::atModeHandler(AtModeArgs &args)
             auto modeStr = args.toString(1);
             StringVector results;
             auto mode = VirtualPinMode::parseString(modeStr, &results);
-            args.printf_P(PSTR("mode=%08x from=modeStr parsed=%s"), mode, modeStr.c_str(), implode('|', &results).c_str());
+            args.printf_P(PSTR("mode=%08x from=modeStr parsed=%s"), mode, modeStr.c_str(), implode('|', results).c_str());
             pinMode(pin, mode);
         }
         return true;

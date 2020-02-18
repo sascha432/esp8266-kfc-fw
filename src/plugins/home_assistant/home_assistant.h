@@ -13,14 +13,14 @@
 #include "plugins.h"
 
 #ifndef DEBUG_HOME_ASSISTANT
-#define DEBUG_HOME_ASSISTANT                            1
+#define DEBUG_HOME_ASSISTANT                            0
 #endif
 
 class HassPlugin : public PluginComponent, /*public WebUIInterface, */public KFCRestAPI {
 // PluginComponent
 public:
-    typedef Config_HomeAssistant::ActionEnum_t ActionEnum_t;
-    typedef Config_HomeAssistant::Action Action;
+    typedef KFCConfigurationClasses::Plugins::HomeAssistant::ActionEnum_t ActionEnum_t;
+    typedef KFCConfigurationClasses::Plugins::HomeAssistant::Action Action;
     typedef std::function<void(bool status)> StatusCallback_t;
     typedef std::function<void(HassJsonReader::GetState *state, KFCRestAPI::HttpRequest &request, StatusCallback_t statusCallback)> GetStateCallback_t;
     typedef std::function<void(HassJsonReader::CallService *service, KFCRestAPI::HttpRequest &request, StatusCallback_t statusCallback)> ServiceCallback_t;
@@ -29,8 +29,13 @@ public:
         REGISTER_PLUGIN(this);
     }
 
+    static HassPlugin &getInstance();
+
     virtual PGM_P getName() const {
         return PSTR("hass");
+    }
+    virtual const __FlashStringHelper *getFriendlyName() const {
+        return F("Home Assistant");
     }
     virtual PluginPriorityEnum_t getSetupPriority() const {
         return PRIO_HASS;
@@ -44,12 +49,12 @@ public:
     }
     virtual void getStatus(Print &output) override;
 
-    virtual MenuTypeEnum_t getMenuType() const override {
-        return CUSTOM;
-    }
-    virtual void createMenu() override {
-        bootstrapMenu.addSubMenu(F("Home Assistant"), F("hass.html"), navMenu.config);
-    }
+    // virtual MenuTypeEnum_t getMenuType() const override {
+    //     return CUSTOM;
+    // }
+    // virtual void createMenu() override {
+    //     bootstrapMenu.addSubMenu(F("Home Assistant"), F("hass.html"), navMenu.config);
+    // }
 
     virtual PGM_P getConfigureForm() const override {
         return getName();

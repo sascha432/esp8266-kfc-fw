@@ -225,6 +225,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PWM, "PWM", "<pin>,<level=0-1023/off>[,<fr
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(CPU, "CPU", "<80|160>", "Set CPU speed", "Display CPU speed");
 #endif
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMP, "DUMP", "[<dirty|config.name>]", "Display settings");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DUMPT, "DUMPT", "Dump timers");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DUMPFS, "DUMPFS", "Display file system information");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPEE, "DUMPEE", "[<offset>[,<length>]", "Dump EEPROM");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WRTC, "WRTC", "<id,data>", "Write uint32 to RTC memory");
@@ -283,6 +284,7 @@ void at_mode_help_commands()
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CPU), name);
 #endif
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DUMP), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DUMPT), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DUMPFS), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DUMPEE), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(WRTC), name);
@@ -644,7 +646,7 @@ void at_mode_serial_handle_event(String &commandString)
                 args.setQueryMode(false);
                 tokenizer(command, args, true, &nextCommand);
             }
-            _debug_printf_P(PSTR("cmd=%s,argc=%d,args='%s',next_cmd='%s'\n"), command, args.size(), implode(F("','"), &args.getArgs()).c_str(), nextCommand ? nextCommand : SPGM(0));
+            _debug_printf_P(PSTR("cmd=%s,argc=%d,args='%s',next_cmd='%s'\n"), command, args.size(), implode(F("','"), args.getArgs()).c_str(), nextCommand ? nextCommand : SPGM(0));
 
             args.setCommand(command);
 
@@ -1027,6 +1029,9 @@ void at_mode_serial_handle_event(String &commandString)
                     config.dump(output);
                 }
             }
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPT))) {
+                Scheduler.listETSTimers(output);
+            }
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPFS))) {
                 at_mode_dump_fs_info(output);
             }
@@ -1078,7 +1083,7 @@ void at_mode_serial_handle_event(String &commandString)
             }
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(LOG))) {
                 if (args.requireArgs(1)) {
-                    Logger_error(F("+LOG: %s"), implode(FSPGM(comma), &args.getArgs()).c_str());
+                    Logger_error(F("+LOG: %s"), implode(',', args.getArgs()).c_str());
                 }
             }
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(LOGE))) {

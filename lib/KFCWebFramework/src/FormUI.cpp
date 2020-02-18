@@ -67,40 +67,55 @@ FormUI *FormUI::addAttribute(const String &name, const String &value)
 
 void FormUI::html(PrintInterface &output)
 {
-    // TODO check html entities encoding
-    auto name = _parent->getName().c_str();
-
-    output.printf_P(PSTR("<div class=\"form-group\"><label for=\"%s\">%s</label>"), name, _label.c_str());
-
-    if (_suffix.length()) {
-        output.printf_P(PSTR("<div class=\"input-group\">"));
+    if (_type == GROUP_START) {
+        FormGroup &group = reinterpret_cast<FormGroup &>(*_parent);
+        auto id = _parent->getName().c_str();
+        output.printf_P(PSTR("<div class=\"form-group\"><button class=\"btn btn-secondary btn-block\""));
+        output.printf_P(PSTR(" type=\"button\" data-toggle=\"collapse\" data-target=\"#%s\" aria-expanded=\"false\" aria-controls=\"%s\">"), id, id);
+        output.printf_P(PSTR("%s</button></div><div class=\"collapse%s\" id=\"%s\"><div class=\"card card-body mb-3\">" FORMUI_CRLF), _label.c_str(), group.isExpanded() ? F(".show") : F(""), id);
     }
+    else if (_type == GROUP_END) {
+        output.printf_P(PSTR("</div></div>" FORMUI_CRLF));
+    }
+    else {
 
-    switch (_type) {
-    case SELECT:
-        output.printf_P(PSTR("<select class=\"form-control\" name=\"%s\" id=\"%s\"%s>"), name, name, _attributes.c_str());
-        for (auto &item : _items) {
-            PGM_P selected = _compareValue(item.first) ? PSTR(" selected") : PSTR("");
-            output.printf_P(PSTR("<option value=\"%s\"%s>%s</option>"), item.first.c_str(), selected, item.second.c_str());
+        // TODO check html entities encoding
+        auto name = _parent->getName().c_str();
+        output.printf_P(PSTR("<div class=\"form-group\"><label for=\"%s\">%s</label>" FORMUI_CRLF), name, _label.c_str());
+
+        if (_suffix.length()) {
+            output.printf_P(PSTR("<div class=\"input-group\">" FORMUI_CRLF));
         }
-        output.printf_P(PSTR("</select>"));
-        break;
-    case TEXT:
-        output.printf_P(PSTR("<input type=\"text\" class=\"form-control\" name=\"%s\" id=\"%s\" value=\"%s\"%s>"), name, name, _parent->getValue().c_str(), _attributes.c_str());
-        break;
-    case PASSWORD:
-        output.printf_P(PSTR("<input type=\"password\" class=\"form-control\" name=\"%s\" id=\"%s\" spellcheck=\"off\"%s>"), name, name, _attributes.c_str());
-        break;
-    case NEW_PASSWORD:
-        output.printf_P(PSTR("<input type=\"password\" class=\"form-control\" name=\"%s\" id=\"%s\" autocomplete=\"new-password\" data-always-visible=\"false\" data-protected=\"true\"%s>"), name, name, _attributes.c_str());
-        break;
-    }
 
-    if (_suffix.length()) {
-        output.printf_P(PSTR("<div class=\"input-group-append\"><span class=\"input-group-text\">%s</span></div></div>"), _suffix.c_str());
-    }
+        switch (_type) {
+        case SELECT:
+            output.printf_P(PSTR("<select class=\"form-control\" name=\"%s\" id=\"%s\"%s>" FORMUI_CRLF), name, name, _attributes.c_str());
+            for (auto &item : _items) {
+                PGM_P selected = _compareValue(item.first) ? PSTR(" selected") : PSTR("");
+                output.printf_P(PSTR("<option value=\"%s\"%s>%s</option>" FORMUI_CRLF), item.first.c_str(), selected, item.second.c_str());
+            }
+            output.printf_P(PSTR("</select>" FORMUI_CRLF));
+            break;
+        case TEXT:
+            output.printf_P(PSTR("<input type=\"text\" class=\"form-control\" name=\"%s\" id=\"%s\" value=\"%s\"%s>" FORMUI_CRLF), name, name, _parent->getValue().c_str(), _attributes.c_str());
+            break;
+        case PASSWORD:
+            output.printf_P(PSTR("<input type=\"password\" class=\"form-control\" name=\"%s\" id=\"%s\" spellcheck=\"off\"%s>" FORMUI_CRLF), name, name, _attributes.c_str());
+            break;
+        case NEW_PASSWORD:
+            output.printf_P(PSTR("<input type=\"password\" class=\"form-control\" name=\"%s\" id=\"%s\" autocomplete=\"new-password\" data-always-visible=\"false\" data-protected=\"true\"%s>" FORMUI_CRLF), name, name, _attributes.c_str());
+            break;
+        case GROUP_START:
+        case GROUP_END:
+            break;
+        }
 
-    output.printf_P(PSTR("</div>"));
+        if (_suffix.length()) {
+            output.printf_P(PSTR("<div class=\"input-group-append\"><span class=\"input-group-text\">%s</span></div></div>" FORMUI_CRLF), _suffix.c_str());
+        }
+
+        output.printf_P(PSTR("</div>" FORMUI_CRLF));
+    }
 }
 
 void FormUI::setParent(FormField *field)

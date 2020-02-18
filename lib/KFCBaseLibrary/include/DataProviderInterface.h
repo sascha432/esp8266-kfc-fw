@@ -9,7 +9,7 @@
 #include <StreamString.h>
 
 #ifndef DEBUG_DATA_PROVIDER_INTERFACE
-#define DEBUG_DATA_PROVIDER_INTERFACE                    1
+#define DEBUG_DATA_PROVIDER_INTERFACE                    0
 #endif
 
 #if DEBUG_DATA_PROVIDER_INTERFACE

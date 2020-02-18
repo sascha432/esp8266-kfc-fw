@@ -23,32 +23,32 @@
     <ProjectGuid>{988C0903-172A-4C59-B08D-6E3E58207E7D}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>jsontest</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -88,10 +88,11 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;DEBUG=1;_DEBUG=1;HAVE_KFC_RESTAPI=1;KFC_REST_API_USE_HTTP_CLIENT=1;HAVE_HTTPHEADERS_ASYNCWEBSERVER=0;_CRTDBG_MAP_ALLOC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\include\mock;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCJson\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\include\mock;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCJson\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCRestApi;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCWebFramework\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCJson\tests\json_test\json_test;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCTimezone\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\include\RestApi;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <DisableSpecificWarnings>26812</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -175,6 +176,9 @@
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\PrintBuffer.cpp" />
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\PrintHtmlEntities.cpp" />
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\PrintHtmlEntitiesString.cpp" />
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\PrintString.cpp" />
+    <ClCompile Include="..\..\..\..\KFCRestApi\KFCRestApi.cpp" />
+    <ClCompile Include="..\..\..\..\KFCWebFramework\src\HttpHeaders.cpp" />
     <ClCompile Include="..\..\..\src\JsonArray.cpp" />
     <ClCompile Include="..\..\..\src\JsonBaseReader.cpp" />
     <ClCompile Include="..\..\..\src\JsonCallbackReader.cpp" />
@@ -187,6 +191,7 @@
     <ClCompile Include="..\..\..\src\JsonTools.cpp" />
     <ClCompile Include="..\..\..\src\JsonValue.cpp" />
     <ClCompile Include="..\..\..\src\JsonVar.cpp" />
+    <ClCompile Include="..\..\..\src\JsonVariableReader.cpp" />
     <ClCompile Include="json_test.cpp" />
   </ItemGroup>
   <ItemGroup>

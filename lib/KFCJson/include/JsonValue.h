@@ -35,6 +35,12 @@ public:
 
     virtual JsonVariantEnum_t getType() const = 0;
 
+    String toString() const {
+        PrintString str;
+        printTo(str);
+        return str;
+    }
+
     //void dump();
 
 protected:

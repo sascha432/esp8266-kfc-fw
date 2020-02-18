@@ -10,7 +10,7 @@
 #include <DataProviderInterface.h>
 
 #ifndef DEBUG_SSI_PROXY_STREAM
-#define DEBUG_SSI_PROXY_STREAM                    1
+#define DEBUG_SSI_PROXY_STREAM                    0
 #endif
 
 class SSIProxyStream : public Stream {
@@ -18,29 +18,13 @@ public:
     SSIProxyStream(File &file, DataProviderInterface &provider);
     ~SSIProxyStream();
 
-    //File open() const;
-
     operator bool() const {
         return (bool)_file;
     }
 
-    virtual int available() override {
-        if (!_file) {
-            return false;
-        }
-        else if (_position < _buffer.length()) {
-            return true;
-        }
-        return _file.available();
-    }
-
-    virtual int read() override {
-        return _read();
-    }
-
-    virtual int peek() override {
-        return _peek();
-    }
+    virtual int available() override;
+    virtual int read() override;
+    virtual int peek() override;
 
     virtual size_t readBytes(char *buffer, size_t length) {
         return read((uint8_t *)buffer, length);
@@ -56,26 +40,7 @@ public:
         return 0;
     }
 
-    bool seek(uint32_t pos, SeekMode mode) {
-        if (mode == SEEK_END) {
-            pos = size() - pos;
-        }
-        else if (mode == SEEK_CUR) {
-            pos = position() + (int)pos;
-        }
-        else if (mode == SEEK_SET) {
-        }
-
-        if (pos < position()) { // we cannot go backwards
-            return false;
-        }
-        else {
-            while (position() < pos && _read() != -1) {
-                pos++;
-            }
-        }
-        return position() == pos;
-    }
+    bool seek(uint32_t pos, SeekMode mode);
 
     virtual size_t position() const {
         return _file.position();
@@ -94,8 +59,6 @@ public:
 #endif
 
 private:
-    int _read();
-    int _peek();
     size_t _copy(uint8_t *buffer, size_t length);
     size_t _available();
     size_t _readBuffer(bool templateCheck = true);
@@ -148,4 +111,7 @@ private:
     size_t _position;
     size_t _length;
     DataProviderInterface &_provider;
+#if DEBUG
+    uint32_t _ramUsage;
+#endif
 };

@@ -36,7 +36,7 @@ public:
         }
     }
 
-    int getFreeHeap() {
+    uint32_t getFreeHeap() {
         PROCESS_MEMORY_COUNTERS pmc;
         GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
         return pmc.WorkingSetSize;
@@ -66,7 +66,7 @@ public:
         tmpFlag |= _CRTDBG_ALLOC_MEM_DF|_CRTDBG_DELAY_FREE_MEM_DF|_CRTDBG_CHECK_ALWAYS_DF|_CRTDBG_CHECK_CRT_DF|_CRTDBG_LEAK_CHECK_DF;
 
         // Turn off CRT block checking bit.
-        //tmpFlag &= ~_CRTDBG_CHECK_CRT_DF;
+        tmpFlag &= ~_CRTDBG_CHECK_CRT_DF;
 
         // Set flag to the new value.
         _CrtSetDbgFlag(tmpFlag);

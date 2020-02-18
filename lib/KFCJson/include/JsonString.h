@@ -40,8 +40,8 @@ public:
 
     const static size_t buffer_size = 8;    // minimum size = sizeof(char *) + sizeof(length_t) + sizeof(char)
 
-    JsonString(const JsonString &str);
-    JsonString(JsonString &&str);
+    JsonString(const JsonString &str) = default;
+    JsonString(JsonString &&str) = default;
 
     JsonString();
     JsonString(const String &str);

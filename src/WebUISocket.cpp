@@ -83,8 +83,7 @@ void WsWebUISocket::onText(uint8_t *data, size_t len)
     if (isAuthenticated()) {
         auto client = getClient();
         String command;
-        const uint8_t maxArgs = 4;
-        String args[maxArgs];
+        std::array<String, 4> args;
         uint8_t argc;
 
         auto ptr = (char *)data;
@@ -103,12 +102,12 @@ void WsWebUISocket::onText(uint8_t *data, size_t len)
                 args[argc] += *ptr++;
                 len--;
             }
-            if (++argc == maxArgs) {
+            if (++argc == args.size()) {
                 break;
             }
         }
 
-        _debug_printf_P(PSTR("WsWebUISocket::onText():command=%s,args=%s\n"), command.c_str(), implode(F(","), args, argc).c_str());
+        _debug_printf_P(PSTR("WsWebUISocket::onText():command=%s,args=%s\n"), command.c_str(), implode(',', args, argc).c_str());
 
         if (strcasecmp_P(command.c_str(), PSTR("+get_values")) == 0) {
             sendValues(client);

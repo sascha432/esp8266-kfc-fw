@@ -53,97 +53,11 @@ KFCFWConfiguration config;
 EspSaveCrash SaveCrash(DEBUG_SAVECRASH_OFS, DEBUG_SAVECRASH_SIZE);
 #endif
 
-// Config_HomeAssistant
-
-const char *Config_HomeAssistant::getApiEndpoint()
-{
-    return config._H_STR(Config().homeassistant.api_endpoint);
-}
-
-const char *Config_HomeAssistant::getApiToken()
-{
-    return config._H_STR(Config().homeassistant.token);
-}
-
-void Config_HomeAssistant::getActions(ActionVector &actions)
-{
-    uint16_t length;
-    auto data = config.getBinary(_H(Config().homeassistant.actions), length);
-    if (data) {
-        auto endPtr = data + length;
-        while(data + sizeof(ActionHeader_t) <= endPtr) {
-            auto header = reinterpret_cast<const ActionHeader_t *>(data);
-            data += sizeof(ActionHeader_t);
-            auto valuesLen = header->valuesLen * sizeof(int32_t);
-            if (data + header->entityLen + valuesLen > endPtr) {
-                break;
-            }
-            String str = PrintString(data, header->entityLen);
-            data += header->entityLen;
-            Action::ValuesVector values(header->valuesLen);
-            memcpy(values.data(), data, valuesLen);
-            data += valuesLen;
-            actions.emplace_back(header->id, header->action, values, str);
-        }
-    }
-}
-
-void Config_HomeAssistant::setActions(ActionVector &actions)
-{
-    Buffer buffer;
-    for(auto &action: actions) {
-        ActionHeader_t header;
-        header.entityLen = action.getEntityId().length();
-        if (header.entityLen) {
-            header.id = action.getId();
-            header.action = action.getAction();
-            header.valuesLen = action.getNumValues();
-            buffer.writeT(&header);
-            buffer.write(action.getEntityId());
-            buffer.writeT(action.getValues());
-        }
-    }
-    config.setBinary(_H(Config().homeassistant.actions), buffer.get(), buffer.length());
-}
-
-Config_HomeAssistant::Action Config_HomeAssistant::getAction(uint16_t id)
-{
-    ActionVector actions;
-    getActions(actions);
-    for(auto &action: actions) {
-        if (id == action.getId()) {
-            return action;
-        }
-    }
-    return Action();
-}
-
-const __FlashStringHelper *Config_HomeAssistant::getActionStr(ActionEnum_t action)
-{
-    switch(action) {
-        case TURN_ON:
-            return F("Turn On");
-        case TURN_OFF:
-            return F("Turn Off");
-        case SET_BRIGHTNESS:
-            return F("Set Brightness");
-        case CHANGE_BRIGHTNESS:
-            return F("Change Brightness");
-        case NONE:
-        default:
-            return F("None");
-    }
-}
-
 // Config_NTP
 
 Config_NTP::Config_NTP() : tz()
 {
     tz.ntpRefresh = 12 * 60;
-
-    auto flags = ::config._H_GET(Config().flags);
-    flags.ntpClientEnabled = true;
-    ::config._H_SET(Config().flags, flags);
 }
 
 
@@ -182,6 +96,9 @@ void Config_NTP::defaults()
     // https://timezonedb.com/register
     ::config._H_SET_STR(Config().ntp.remote_tz_dst_ofs_url, F("http://api.timezonedb.com/v2.1/get-time-zone?key=_YOUR_API_KEY_&by=zone&format=json&zone=${timezone}"));
 #endif
+    auto flags = ::config._H_GET(Config().flags);
+    flags.ntpClientEnabled = true;
+    ::config._H_SET(Config().flags, flags);
 }
 
 
@@ -609,6 +526,7 @@ void KFCFWConfiguration::_setupWiFiCallbacks()
 using KFCConfigurationClasses::MainConfig;
 using KFCConfigurationClasses::Network;
 using KFCConfigurationClasses::System;
+using KFCConfigurationClasses::Plugins;
 
 void KFCFWConfiguration::restoreFactorySettings()
 {
@@ -666,7 +584,7 @@ void KFCFWConfiguration::restoreFactorySettings()
     _H_SET(Config().syslog_port, 514);
 #endif
 #if HOME_ASSISTANT_INTEGRATION
-    _H_SET_STR(Config().homeassistant.api_endpoint, F("http://<CHANGE_ME>:8123/api/"));
+    Plugins::HomeAssistant::setApiEndpoint(F("http://<CHANGE_ME>:8123/api/"));
 #endif
 #if HUE_EMULATION
     _H_SET(Config().hue.tcp_port, HUE_BASE_PORT);
@@ -812,23 +730,24 @@ bool KFCFWConfiguration::isConfigDirty() const
     return _dirty;
 }
 
+#include "build_id.h"
+
 const String KFCFWConfiguration::getFirmwareVersion()
 {
 #if DEBUG
-#define __DEBUG_CFS_APPEND " DEBUG"
+#if ESP8266
+    return getShortFirmwareVersion() + F("." __BUILD_ID "_" ARDUINO_ESP8266_RELEASE " " __DATE__);
 #else
-#define __DEBUG_CFS_APPEND ""
+    return getShortFirmwareVersion() + F("." __BUILD_ID " " __DATE__);
 #endif
-    return getShortFirmwareVersion() + F(" " __DATE__ __DEBUG_CFS_APPEND);
+#else
+    return getShortFirmwareVersion() + F(" " __DATE__);
+#endif
 }
 
 const String KFCFWConfiguration::getShortFirmwareVersion()
 {
-#if ESP8266
-    return F(FIRMWARE_VERSION_STR " Build " __BUILD_NUMBER "_" ARDUINO_ESP8266_RELEASE);
-#else
     return F(FIRMWARE_VERSION_STR " Build " __BUILD_NUMBER);
-#endif
 }
 
 void KFCFWConfiguration::storeQuickConnect(const uint8_t *bssid, int8_t channel)

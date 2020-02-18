@@ -4,6 +4,7 @@
 #include <iostream>
 #include <assert.h>
 #include <PrintString.h>
+#include <DumpBinary.h>
 #include <PrintHtmlEntitiesString.h>
 #include "JsonCallbackReader.h"
 #include "BufferStream.h"
@@ -12,6 +13,8 @@
 #include "JsonBuffer.h"
 #include "KFCJson.h"
 
+PROGMEM_STRING_DECL(mime_application_json);
+PROGMEM_STRING_DEF(mime_application_json, "application/json");
 
 int mem_usage, peak_mem_usage;
 int _mem_usage_stack = 1;
@@ -30,46 +33,46 @@ void print_end_mem_usage() {
     mem.clear();
 }
 
-void * operator new(size_t size) 
-{ 
-    if (_mem_usage_stack) {
-        return malloc(size);
-    } else {
-        _mem_usage_stack++;
-        void * p = malloc(size); 
-        mem_usage += size;
-        peak_mem_usage = std::max(peak_mem_usage, mem_usage);
-        printf("new %u (%u)\n", size, mem_usage);
-        {
-            PrintString s("%p", p);
-            //mem.insert(std::pair<String,size_t>(String(s),size));
-            mem[String(s)] = size;
-        }
-        _mem_usage_stack--;
-        return p; 
-    }
-} 
-
-void operator delete(void *p) {
-    if (_mem_usage_stack) {
-        free(p);
-    } else {
-        _mem_usage_stack++;
-        {
-            PrintString s("%p", p);
-            String ss(s);
-            if (mem.find(ss) != mem.end()) {
-                printf("delete %u (%u)\n", mem[ss], mem_usage);
-                mem_usage -= mem[ss];
-            }
-            else {
-                printf("delete no ptr\n");
-            }
-        }
-        free(p);
-        _mem_usage_stack--;
-    }
-}
+//void * operator new(size_t size) 
+//{ 
+//    if (_mem_usage_stack) {
+//        return malloc(size);
+//    } else {
+//        _mem_usage_stack++;
+//        void * p = malloc(size); 
+//        mem_usage += size;
+//        peak_mem_usage = std::max(peak_mem_usage, mem_usage);
+//        printf("new %u (%u)\n", size, mem_usage);
+//        {
+//            PrintString s("%p", p);
+//            //mem.insert(std::pair<String,size_t>(String(s),size));
+//            mem[String(s)] = size;
+//        }
+//        _mem_usage_stack--;
+//        return p; 
+//    }
+//} 
+//
+//void operator delete(void *p) {
+//    if (_mem_usage_stack) {
+//        free(p);
+//    } else {
+//        _mem_usage_stack++;
+//        {
+//            PrintString s("%p", p);
+//            String ss(s);
+//            if (mem.find(ss) != mem.end()) {
+//                printf("delete %u (%u)\n", mem[ss], mem_usage);
+//                mem_usage -= mem[ss];
+//            }
+//            else {
+//                printf("delete no ptr\n");
+//            }
+//        }
+//        free(p);
+//        _mem_usage_stack--;
+//    }
+//}
 
 void print_escaped(String output) {
     output.replace("\\", "\\\\");
@@ -195,7 +198,7 @@ void test(JsonString &&str) {
 }
 
 void test(const JsonString &str) {
-    v.emplace_back(std::move(str));
+    v.emplace_back(str);
 }
 
 int malloc_size(int size) {
@@ -222,30 +225,278 @@ int count_decimals(double value, uint8_t max_precision = 6, uint8_t max_decimals
     char format[8];
     snprintf_P(format, sizeof(format), PSTR("%%.%uf"), precision + 1);
     char buf[32];
-    auto len = snprintf_P(buf, sizeof(buf), format, value);
-    if (len > 1) {
-        buf[--len] = 0;
-    }
-    char *ptr;
-    if (len < sizeof(buf) && (ptr = strchr(buf, '.'))) {
-        ptr++;
-        char *endPtr = ptr + strlen(ptr);
-        while(--endPtr > ptr && *endPtr == '0') { // remove trailing zeros
-            *endPtr = 0;
-            precision--;
-        }
-    }
-    else {
-        precision = max_decimals; // buffer to small
-    }
-    printf("%.*f ", precision, value);
-    return precision;
+auto len = snprintf_P(buf, sizeof(buf), format, value);
+if (len > 1) {
+    buf[--len] = 0;
 }
+char *ptr;
+if (len < sizeof(buf) && (ptr = strchr(buf, '.'))) {
+    ptr++;
+    char *endPtr = ptr + strlen(ptr);
+    while (--endPtr > ptr &&*endPtr == '0') { // remove trailing zeros
+        *endPtr = 0;
+        precision--;
+    }
+}
+else {
+    precision = max_decimals; // buffer to small
+}
+printf("%.*f ", precision, value);
+return precision;
+}
+
+#include "C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\src\plugins\home_assistant\HassJsonReader.h"
+
+class HassStates : public JsonVariableReader::Result {
+public:
+    HassStates() {
+    }
+
+    virtual bool empty() const {
+        return !_friendlyName.length() || !_entityId.length() || !_state.length();
+    }
+
+    virtual Result *create() {
+        if (!empty()) {
+            return new HassStates(std::move(*this));
+        }
+        return nullptr;
+    }
+
+    static void apply(JsonVariableReader::ElementGroup &group) {
+        group.initResultType<HassStates>();
+        group.add(F("entity_id"), [](Result &result, JsonVariableReader::Reader &reader) {
+            auto &value = reader.getValueRef();
+            if (!value.startsWith(F("light.")) && !value.startsWith(F("switch."))) {
+                return false;
+            }
+            if (value.length()) {
+                reinterpret_cast<HassStates &>(result).setFriendlyName(value);
+            }
+            return true;
+        });
+        group.add(F("state"), [](Result &result, JsonVariableReader::Reader &reader) {
+            auto &value = reader.getValueRef();
+            if (value.equals(F("unavailable"))) {
+                return false;
+            }
+            if (value.length()) {
+                reinterpret_cast<HassStates &>(result).setState(value);
+            }
+            return true;
+        });
+        group.add(F("attributes.friendly_name"), [](Result &result, JsonVariableReader::Reader &reader) {
+            auto &value = reader.getValueRef();
+            if (value.length()) {
+                reinterpret_cast<HassStates &>(result).setEntityId(value);
+            }
+            return true;
+        });
+    }
+
+    void setFriendlyName(const String &friendlyName) {
+        _friendlyName = friendlyName;
+    }
+
+    void setEntityId(const String &entityId) {
+        _entityId = entityId;
+    }
+
+    void setState(const String &state) {
+        _state = state;
+    }
+
+    void dump() {
+        Serial.printf("%s %s %s\n", _friendlyName.c_str(), _entityId.c_str(), _state.c_str());
+    }
+
+private:
+    String _state;
+    String _friendlyName;
+    String _entityId;
+};
+
+#include "ESP8266HttpClient.h"
+
+#include "RetrieveSymbols.h"
 
 int main()
 {
+#if _DEBUG
     ESP._enableMSVCMemdebug();
+#endif
 
+#if 0
+
+    JsonUnnamedArray attriutes;
+    StringVector args;
+    args.push_back("");
+    args.push_back("");
+    args.push_back("test1=\"1234\"");
+    args.push_back("test2=123");
+    args.push_back("test3=5.4");
+
+    for (uint8_t i = 2; i < args.size(); i++) 
+    {
+        auto attribute = args.at(i); //args.toString(i);
+        auto pos = attribute.indexOf('=');
+        if (pos != -1) {
+            String name = attribute.substring(0, pos - 1);
+            if (attribute.charAt(pos + 1) == '"') {
+                String str = attribute.substring(pos + 2);
+                if (String_endsWith(str, '"')) {
+                    str.remove(str.length() - 1, 1);
+                }
+                attriutes.add(str);
+            }
+            else if (attribute.indexOf('.') != -1) {
+                attriutes.add(atof(attribute.c_str() + pos + 1));
+            }
+            else {
+                attriutes.add(atoi(attribute.c_str() + pos + 1));
+            }
+        }
+    }
+    attriutes.printTo(Serial);
+
+#endif
+
+#if 0
+
+    StringVector addresses;
+    addresses.push_back("0x40239dd5");
+    addresses.push_back("0x401004c8");
+    addresses.push_back("0x402088b8");
+    addresses.push_back("0x4021bd90");
+
+    xtra_containers::remove_duplicates(addresses);
+    RetrieveSymbols::RestApi rs;
+    rs.setAddresses(std::move(addresses));
+    String url;
+    rs.getRestUrl(url);
+    rs.call([](RetrieveSymbols::JsonReaderResult *result, const String &error) {
+    });
+
+    LoopFunctions::loop();
+
+#endif
+
+
+#if 1
+
+    HTTPClient client;
+
+    //client.begin("http://192.168.0.3:8123/api/states/light.kfc4f22d0_0");
+    client.begin("http://192.168.0.3:8123/api/states/light.floor_lamp_top");
+    
+    //client.begin("http://192.168.0.3:8123/api/states/switch.bathroom_lightx");
+
+    //client.begin("http://192.168.0.3:8123/api/services/light/turn_on");
+    //light.kfc4f22d0_0
+    
+    //client.begin("http://192.168.0.3:8123/api/states");
+
+    client.addHeader("Content-Type", "application/json");
+    client.setAuthorization("Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJiMmNlNjkwZDBhMTY0ZDI2YWY4MWUxYzJiNjgzMjM3NCIsImlhdCI6MTU0ODY0MzczMywiZXhwIjoxODY0MDAzNzMzfQ.h1287xhv5nY5Fvu2GMSzIMnP51IsyFtKg9RFCS8qMBQ");
+    client.setTimeout(5);
+
+    PrintString payload;
+    JsonUnnamedObject json;
+    json.add(F("entity_id"), F("light.kfc4f22d0_0"));
+    json.add(F("brightness"), 40);
+    json.printTo(payload);
+
+    //if (client.POST(payload) == 200) {
+    if (client.GET() == 200) {
+
+        client.dump(Serial);
+        auto reader = JsonVariableReader::Reader();
+        auto elements = reader.getElementGroups();
+
+#if 0
+        elements->emplace_back(JsonString());
+        HassJsonReader::CallService::apply(elements->back());
+        
+        reader.initParser();
+        reader.setStream(&client.getStream());
+        if (reader.parse()) {
+            auto &results = reader.getElementGroups()->front().getResults<HassJsonReader::GetState>();
+            auto &result = results.front();
+            if (result) {
+                //Serial.println(result->_brightness);
+            }
+        }
+#endif
+
+        elements->emplace_back(JsonString());
+        HassJsonReader::GetState::apply(elements->back());
+        reader.initParser();
+        reader.setStream(&client.getStream());
+        if (reader.parse()) {
+            auto &results = reader.getElementGroups()->front().getResults<HassJsonReader::GetState>();
+            auto &result = results.front();
+            if (result) {
+                Serial.println(result->_entitiyId);
+                Serial.println(result->_state);
+                Serial.println(result->_brightness);
+            }
+        }
+
+        //auto reader = JsonVariableReader::Reader();
+
+        //auto elements = reader.getElementGroups();
+        //elements->emplace_back(F("[]"));
+        //HassStates::apply(elements->back());
+
+
+        //reader.initParser();
+        //reader.setStream(&client.getStream());
+        //if (reader.parse()) {
+        //    for (auto& element : *elements) {
+        //        auto& results = element.getResults<HassStates>();
+        //        for (auto& result : results) {
+        //            result->dump();
+        //        }
+        //    }
+        //}
+    }
+    else {
+        JsonCallbackReader reader(client.getStream(), [](const String& key, const String& value, size_t partialLength, JsonBaseReader& json) {
+            if (json.getLevel() == 1 && key.equals(F("message"))) {
+                Serial.println(String("Message: ") + value);
+            }
+            return true;
+        });
+        reader.parse();
+        
+        client.dump(Serial);
+    }
+
+
+#endif
+
+#if 0
+    auto fstr = F("\t1test1\n2test2\r\r\"3test3\r");
+    String str(fstr);
+    int len;
+
+    Serial.println("--progmem");
+
+    Serial.println(JsonTools::lengthEscaped(fstr));
+    len = JsonTools::printToEscaped(Serial, fstr);
+    Serial.println();
+    Serial.println(len);
+
+    Serial.println("--string");
+
+    Serial.println(JsonTools::lengthEscaped(str));
+    len = JsonTools::printToEscaped(Serial, str);
+    Serial.println();
+    Serial.println(len);
+
+#endif
+
+#if 0
     printf("%u\n", count_decimals(1.123f));
     printf("%u\n", count_decimals(100.0f));
     printf("%u\n", count_decimals(100.78f));
@@ -256,6 +507,9 @@ int main()
     printf("%u\n", count_decimals(0.0123456f));
     printf("%u\n", count_decimals(0.0000000123456f, 6, 15));
     return 0;
+#endif
+
+#if 0
 
     {
 
@@ -396,8 +650,9 @@ int main()
     }
 
     return 0;
+#endif
 
-
+#if 0
     //{
     //    //UnnamedJsonObject json1;
     //    JsonObject json1(JsonElement::JSON_OBJECT);
@@ -448,6 +703,11 @@ int main()
     //}
     //return 0;
 
+#endif
+
+#if 0
     tests();
+#endif
+    return  0;
 }
 

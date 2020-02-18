@@ -36,12 +36,18 @@
 #include <debug_helper_disable.h>
 #endif
 
+using KFCConfigurationClasses::Plugins;
+
 static HassPlugin plugin;
+
+HassPlugin &HassPlugin::getInstance() {
+    return plugin;
+}
 
 void HassPlugin::getStatus(Print &output)
 {
-    bool hasToken = strlen(Config_HomeAssistant::getApiToken()) > 100;
-    auto endPoint = Config_HomeAssistant::getApiEndpoint();
+    bool hasToken = strlen(Plugins::HomeAssistant::getApiToken()) > 100;
+    auto endPoint = Plugins::HomeAssistant::getApiEndpoint();
     output.printf_P(PSTR("RESTful API: "));
     if (endPoint && hasToken) {
         output.print(endPoint);
@@ -100,8 +106,8 @@ bool HassPlugin::atModeHandler(AtModeArgs &args)
     else
 */
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(HASSAC))) {
-        Config_HomeAssistant::ActionVector actions;
-        Config_HomeAssistant::getActions(actions);
+        Plugins::HomeAssistant::ActionVector actions;
+        Plugins::HomeAssistant::getActions(actions);
         if (args.isQueryMode()) {
             if (actions.size()) {
                 for(auto &action: actions) {
@@ -127,11 +133,11 @@ bool HassPlugin::atModeHandler(AtModeArgs &args)
                 }
                 else {
                     args.printf_P(PSTR("removed %u (use +STORE to save)"), id);
-                    Config_HomeAssistant::setActions(actions);
+                    Plugins::HomeAssistant::setActions(actions);
                 }
             }
             else {
-                auto _action = (Config_HomeAssistant::ActionEnum_t)args.toInt(1);
+                auto _action = (Plugins::HomeAssistant::ActionEnum_t)args.toInt(1);
                 String entityId = args.toString(2);
                 Action::ValuesVector values;
                 for(uint8_t i = 3; i < args.size(); i++) {
@@ -150,7 +156,7 @@ bool HassPlugin::atModeHandler(AtModeArgs &args)
                     actions.emplace_back(id, _action, values, entityId);
                 }
                 args.printf_P(PSTR("modified id %u (use +STORE to save)"), id);
-                Config_HomeAssistant::setActions(actions);
+                Plugins::HomeAssistant::setActions(actions);
             }
         }
         return true;
@@ -158,7 +164,7 @@ bool HassPlugin::atModeHandler(AtModeArgs &args)
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(HASSEA))) {
         if (args.requireArgs(1)) {
             auto id = (uint16_t)args.toInt(0);
-            auto action = Config_HomeAssistant::getAction(id);
+            auto action = Plugins::HomeAssistant::getAction(id);
             if (action.getId()) {
                 args.printf_P(PSTR("id=%u, action=%s, values=%s, entity=%s"), id, action.getActionFStr(), action.getValuesStr().c_str(), action.getEntityId().c_str());
                 executeAction(action, [args, id](bool status) mutable {
@@ -237,8 +243,8 @@ void HassPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
     form.finalize();
 
     JsonUnnamedArray array;
-    Config_HomeAssistant::ActionVector actions;
-    Config_HomeAssistant::getActions(actions);
+    Plugins::HomeAssistant::ActionVector actions;
+    Plugins::HomeAssistant::getActions(actions);
     for(auto &action: actions) {
         auto &json = array.addObject();
         json.add(F("id"), action.getId());
@@ -275,12 +281,12 @@ void HassPlugin::setValue(const String &id, const String &value, bool hasValue, 
 
 void HassPlugin::getRestUrl(String &url) const
 {
-    url = Config_HomeAssistant::getApiEndpoint();
+    url = Plugins::HomeAssistant::getApiEndpoint();
 }
 
 void HassPlugin::getBearerToken(String &token) const
 {
-    token = Config_HomeAssistant::getApiToken();
+    token = Plugins::HomeAssistant::getApiToken();
 }
 
 void HassPlugin::executeAction(const Action &action, StatusCallback_t statusCallback)
@@ -306,23 +312,23 @@ void HassPlugin::executeAction(const Action &action, StatusCallback_t statusCall
                 json.add(F("entity_id"), action.getEntityId());
                 if (state) {
                     int brightness = state->getBrightness();
-                    if (action.getValue(3)) {
-                        if (brightness == 0 && action.getValue(0) > 0) {
-                            _debug_printf_P(PSTR("brightness=0, calling turn on\n"), brightness);
-                            callService(_getDomain(action.getEntityId()) + F("/turn_on"), json, _serviceCallback, statusCallback);
-                            return;
-                        } else if (action.getValue(0) <= brightness) {
-                            _debug_printf_P(PSTR("brightness<=value, calling turn off\n"), brightness);
-                            callService(_getDomain(action.getEntityId()) + F("/turn_off"), json, _serviceCallback, statusCallback);
-                            return;
+                    if (brightness == 0 && action.getValue(0) > 0) {
+                        _debug_printf_P(PSTR("brightness=0, calling turn on\n"), brightness);
+                        callService(_getDomain(action.getEntityId()) + F("/turn_on"), json, _serviceCallback, statusCallback);
+                        return;
+                    } else if (action.getValue(3) && brightness <= action.getValue(0)) {
+                        _debug_printf_P(PSTR("brightness %u <= value %u, calling turn off\n"), brightness, action.getValue(0));
+                        callService(_getDomain(action.getEntityId()) + F("/turn_off"), json, _serviceCallback, statusCallback);
+                        return;
+                    }
+                    else {
+                        brightness += action.getValue(0);
+                        if (brightness < action.getValue(1)) {
+                            brightness = action.getValue(1);
                         }
-                    }
-                    brightness += action.getValue(0);
-                    if (brightness > action.getValue(1)) {
-                        brightness = action.getValue(1);
-                    }
-                    if (brightness < action.getValue(2)) {
-                        brightness = action.getValue(2);
+                        if (brightness > action.getValue(2)) {
+                            brightness = action.getValue(2);
+                        }
                     }
                     json.add(F("brightness"), brightness);
                     _debug_printf_P(PSTR("new brightness=%u\n"), brightness);
@@ -342,18 +348,18 @@ void HassPlugin::executeAction(const Action &action, StatusCallback_t statusCall
 
 void HassPlugin::getState(const String &entityId, GetStateCallback_t callback, StatusCallback_t statusCallback)
 {
+    _debug_printf_P(PSTR("entity=%s\n"), entityId.c_str());
     auto jsonReader = new JsonVariableReader::Reader();
     auto groups = jsonReader->getElementGroups();
     groups->emplace_back(JsonString());
     HassJsonReader::GetState::apply(groups->back());
     _createRestApiCall(String(F("states/")) + entityId, String(), jsonReader, [callback, statusCallback](int16_t code, KFCRestAPI::HttpRequest &request) {
+        _debug_printf_P(PSTR("code=%d msg=%s\n"), code, request.getMessage().c_str());
         if (code == 200) {
-            for(auto &element: *request.getElementsGroup()) {
-                auto result = element.getResult<HassJsonReader::GetState>();
-                if (result) {
-                    callback(result, request, statusCallback);
-                    return;
-                }
+            auto &results = request.getElementsGroup()->front().getResults<HassJsonReader::GetState>();
+            if (results.size()) {
+                callback(results.front(), request, statusCallback);
+                return;
             }
         }
         callback(nullptr, request, statusCallback);
@@ -362,6 +368,7 @@ void HassPlugin::getState(const String &entityId, GetStateCallback_t callback, S
 
 void HassPlugin::callService(const String &service, const JsonUnnamedObject &payload, ServiceCallback_t callback, StatusCallback_t statusCallback)
 {
+    _debug_printf_P(PSTR("service=%s payload=%s\n"), service.c_str(), payload.toString().c_str());
     auto jsonReader = new JsonVariableReader::Reader();
     auto groups = jsonReader->getElementGroups();
     groups->emplace_back(JsonString());
@@ -369,13 +376,12 @@ void HassPlugin::callService(const String &service, const JsonUnnamedObject &pay
     PrintString payloadStr;
     payload.printTo(payloadStr);
     _createRestApiCall(String(F("services/")) + service, payloadStr, jsonReader, [callback, statusCallback](int16_t code, KFCRestAPI::HttpRequest &request) {
+        _debug_printf_P(PSTR("code=%d msg=%s\n"), code, request.getMessage().c_str());
         if (code == 200) {
-            for(auto &element: *request.getElementsGroup()) {
-                auto result = element.getResult<HassJsonReader::CallService>();
-                if (result) {
-                    callback(result, request, statusCallback);
-                    return;
-                }
+            auto &results = request.getElementsGroup()->front().getResults<HassJsonReader::CallService>();
+            if (results.size()) {
+                callback(results.front(), request, statusCallback);
+                return;
             }
         }
         callback(nullptr, request, statusCallback);

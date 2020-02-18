@@ -4,6 +4,7 @@
 
 #include "FormField.h"
 #include "FormValidator.h"
+#include "Form.h"
 
 FormField::FormField(const String &name, const String &value, InputFieldType type) : _name(name), _value(value), _type(type), _formUI(nullptr), _form(nullptr), _hasChanged(false)
 {
@@ -115,6 +116,7 @@ void FormField::setFormUI(FormUI *formUI)
 
 void FormField::html(PrintInterface &output)
 {
+    _debug_printf_P(PSTR("name=%s formUI=%p\n"), getName().c_str(), _formUI);
     if (_formUI) {
         _formUI->html(output);
     }
@@ -129,4 +131,9 @@ void FormField::addValidator(FormValidator *validator)
 const FormField::ValidatorsVector &FormField::getValidators() const
 {
     return _validators;
+}
+
+void FormGroup::end() 
+{
+    getForm().addGroup(getName(), String(), false, FormUI::TypeEnum_t::GROUP_END);
 }

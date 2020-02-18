@@ -218,7 +218,7 @@ int HTTPClient::_request()
                 if (bodyPtr) {
                     isHeader = false;
                     if (bodyPtr != _headers.c_str() + _headers.length()) {
-                        _body.write((const uint8_t *)bodyPtr, bodyPtr - _headers.c_str());
+                        _body.write((const uint8_t *)bodyPtr, received - (bodyPtr - _headers.c_str()));
                     }
                     _headers.replace(String('\r'), emptyString);
                     _headers.remove(_headers.indexOf("\n\n"), _headers.length());

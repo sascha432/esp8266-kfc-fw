@@ -42,33 +42,6 @@ String formatTime(unsigned long seconds, bool days_if_not_zero)
     return out;
 }
 
-
-String implode(const __FlashStringHelper *glue, const char **pieces, int count)
-{
-    String tmp;
-    if (count > 0) {
-        tmp += *pieces++;
-        for(int i = 1; i < count; i++) {
-            tmp += glue;
-            tmp += *pieces++;
-        }
-    }
-    return tmp;
-}
-
-String implode(const __FlashStringHelper *glue, String *pieces, int count)
-{
-    String tmp;
-    if (count > 0) {
-        tmp += *pieces++;
-        for(int i = 1; i < count; i++) {
-            tmp += glue;
-            tmp += *pieces++;
-        }
-    }
-    return tmp;
-}
-
 String url_encode(const String &str)
 {
     PrintString out_str;
@@ -212,7 +185,7 @@ String WiFi_disconnect_reason(WiFiDisconnectReason reason)
             return F("HANDSHAKE_TIMEOUT");
         default:
             PrintString out;
-            out.printf_P(PSTR("UKNOWN_REASON_%d"), reason);
+            out.printf_P(PSTR("UNKNOWN_REASON_%d"), reason);
             return out;
     }
 #elif defined(ESP8266) || _WIN32 || _WIN64
@@ -275,7 +248,7 @@ String WiFi_disconnect_reason(WiFiDisconnectReason reason)
             return F("HANDSHAKE_TIMEOUT");
         default:
             PrintString out;
-            out.printf_P(PSTR("UKNOWN_REASON_%d"), reason);
+            out.printf_P(PSTR("UNKNOWN_REASON_%d"), reason);
             return out;
     }
 #else
@@ -404,7 +377,7 @@ size_t String_rtrim_P(String &str, const char *chars)
     auto buf = new char[strlen_P(chars) + 1];
     strcpy_P(buf, chars);
     auto len = String_rtrim(str, buf);
-    delete buf;
+    delete [] buf;
     return len;
 }
 
@@ -413,7 +386,7 @@ size_t String_ltrim_P(String &str, const char *chars)
     auto buf = new char[strlen_P(chars) + 1];
     strcpy_P(buf, chars);
     auto len = String_ltrim(str, buf);
-    delete buf;
+    delete[] buf;
     return len;
 }
 
@@ -422,7 +395,7 @@ size_t String_trim_P(String &str, const char *chars)
     auto buf = new char[strlen_P(chars) + 1];
     strcpy_P(buf, chars);
     auto len = String_trim(str, buf);
-    delete buf;
+    delete[] buf;
     return len;
 }
 
@@ -713,4 +686,77 @@ void explode(char *str, const char *separator, std::vector<char*>& vector, const
     tokenizer(str, args, false, &nextCommand, [separator, trim](char ch, int type) {
         return ((type == 5 && strchr(separator, ch)) || ((trim && (type == 7 || type == 8)) && strchr(trim, ch)));
     });
+}
+
+
+void split::vector_callback(const char *sptr, size_t len, void *ptr, int flags)
+{
+    StringVector &container = *reinterpret_cast<StringVector *>(ptr);
+    String str = (flags & SplitFlagsType::_PROGMEM) ? PrintString(reinterpret_cast<const __FlashBufferHelper *>(sptr), len) : PrintString(reinterpret_cast<const uint8_t *>(sptr), len);
+    if (flags & SplitFlagsType::TRIM) {
+        str.trim();
+    }
+    if ((flags & SplitFlagsType::EMPTY) || str.length()) {
+        std::back_inserter(container) = str;
+    }
+}
+
+void split::split(const char *str, char sep, callback fun, void *data, int flags)
+{
+    unsigned int start = 0, stop;
+    for (stop = 0; str[stop]; stop++) {
+        if (str[stop] == sep) {
+            fun(str + start, stop - start, data, flags);
+            start = stop + 1;
+        }
+    }
+    fun(str + start, stop - start, data, flags);
+}
+
+void split::split_P(PGM_P str, char sep, callback fun, void *data, int flags)
+{
+    unsigned int start = 0, stop;
+    char ch;
+    flags |= SplitFlagsType::_PROGMEM;
+    for (stop = 0; (ch = pgm_read_byte(&str[stop])); stop++) {
+        if (ch == sep) {
+            fun(str + start, stop - start, data, flags);
+            start = stop + 1;
+        }
+    }
+    fun(str + start, stop - start, data, flags);
+}
+
+size_t printDouble(char *buf, size_t size, double value) {
+    if (isnan(value)) {
+        strncpy_P(buf, PSTR("nan"), size);
+        return 4;
+    }
+    else if (isnan(value)) {
+        strncpy_P(buf, PSTR("inf"), size);
+        return 4;
+    }
+    uint8_t precision = std::numeric_limits<double>::digits10;
+    auto number = abs(value);
+    while ((number = (number / 10)) > 1 && precision > 1) {
+        precision--;
+    }
+    size_t len = snprintf_P(buf, size, PSTR("%.*f"), precision, value);
+    char *ptr;
+    if (len < size && (ptr = strchr(buf, '.'))) {
+        ptr++;
+        char *endPtr = ptr + strlen(ptr);
+        while (--endPtr > ptr &&*endPtr == '0') {
+            *endPtr = 0;
+            len--;
+        }
+    }
+    return len;
+}
+
+void printDouble(Print &output, double value)
+{
+    char buf[32];
+    printDouble(buf, sizeof(buf), value);
+    output.print(buf);
 }

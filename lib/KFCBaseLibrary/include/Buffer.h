@@ -115,19 +115,19 @@ public:
     }
 
     template<class T>
-    size_t writeT(const T &data) {
+    size_t writeObject(const T &data) {
         return write(reinterpret_cast<const uint8_t *>(&data), sizeof(T));
     }
     template<class T>
-    size_t writeV(std::vector<T> vector) {
+    size_t writeVector(std::vector<T> vector) {
         return write(reinterpret_cast<const uint8_t *>(vector.data()), vector.size() * sizeof(T));
     }
 
     template<class T>
-    size_t writeR(T first, T last) {
+    size_t writeRange(T first, T last) {
         size_t written = 0;
         for(auto iterator = first; iterator != last; ++iterator) {
-            written += writeT<typename T::value_type>(*iterator);
+            written += writeObject<typename T::value_type>(*iterator);
         }
         return written;
     }

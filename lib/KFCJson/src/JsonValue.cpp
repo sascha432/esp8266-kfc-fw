@@ -34,7 +34,7 @@ AbstractJsonValue & AbstractJsonValue::add(AbstractJsonValue * value) {
 //    }
 //}
 
-AbstractJsonValue::JsonVariantVector * AbstractJsonValue::getVector() {
+AbstractJsonValue::JsonVariantVector *AbstractJsonValue::getVector() {
     return nullptr;
 }
 

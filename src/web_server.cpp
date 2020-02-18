@@ -911,6 +911,9 @@ public:
     virtual PGM_P getName() const {
         return SPGM(http);
     }
+    virtual const __FlashStringHelper *getFriendlyName() const {
+        return F("Web server");
+    }
     virtual PluginPriorityEnum_t getSetupPriority() const override {
         return PRIO_HTTP;
     }

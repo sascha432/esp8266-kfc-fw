@@ -48,6 +48,8 @@ const String  HttpHeaders::getRFC7231Date(const time_t *time) {
     char buf[32];
 #if HAS_STRFTIME_P
     strftime_P(buf, sizeof(buf), SPGM(RFC7231_date), gmtime(time));
+#elif _MSC_VER
+    strftime(buf, sizeof(buf), String(FSPGM(RFC7231_date)).c_str(), gmtime(time));
 #else
     char date_format[constexpr_strlen_P(SPGM(RFC7231_date)) + 1];
     strcpy_P(date_format, SPGM(RFC7231_date));

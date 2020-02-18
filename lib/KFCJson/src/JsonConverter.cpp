@@ -6,12 +6,12 @@
 #include "JsonArray.h"
 #include "JsonObject.h"
 
-JsonConverter::JsonConverter(Stream & stream) : JsonBaseReader(stream) {
-    _current = nullptr;
-    _ignoreInvalid = true;
+JsonConverter::JsonConverter(Stream &stream) : JsonBaseReader(stream), _current(nullptr), _ignoreInvalid(true), _filtered(0)
+{
 }
 
-bool JsonConverter::beginObject(bool isArray) {
+bool JsonConverter::beginObject(bool isArray) 
+{
     AbstractJsonValue *value;
     if (isArray) {
         if (_current && _current->hasChildName()) {
@@ -41,7 +41,8 @@ bool JsonConverter::beginObject(bool isArray) {
     return true;
 }
 
-bool JsonConverter::endObject() {
+bool JsonConverter::endObject() 
+{
     if (_stack.size()) {
         _current = _stack.back();
         _stack.pop_back();
@@ -52,9 +53,17 @@ bool JsonConverter::endObject() {
     }
 }
 
-bool JsonConverter::processElement() {
+bool JsonConverter::processElement() 
+{
     if (getType() == JSON_TYPE_INVALID) {
         return _ignoreInvalid;
+    }
+    if (_filter.size()) {
+        auto str = getPath(false);
+        auto iterator = std::find(_filter.begin(), _filter.end(), str);
+        if (iterator == _filter.end()) {
+            return true;
+        }
     }
     AbstractJsonValue *value = nullptr;
     if (_current->hasChildName()) {
@@ -105,17 +114,26 @@ bool JsonConverter::processElement() {
     return true;
 }
 
-bool JsonConverter::recoverableError(JsonErrorEnum_t errorType) {
+bool JsonConverter::recoverableError(JsonErrorEnum_t errorType) 
+{
     return _ignoreInvalid;
 }
 
-AbstractJsonValue * JsonConverter::getRoot() const {
+AbstractJsonValue *JsonConverter::getRoot() const 
+{
     if (_stack.size()) {
         return _stack.front();
     }
     return _current; // points to the root object or null
 }
 
-void JsonConverter::setIgnoreInvalid(bool ingnore) {
+void JsonConverter::setIgnoreInvalid(bool ingnore) 
+{
     _ignoreInvalid = ingnore;
+}
+
+void JsonConverter::addFilter(const JsonString &str)
+{
+    _filter.push_back(str);
+    _filtered = ~0;
 }

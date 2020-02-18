@@ -12,6 +12,10 @@
 #ifndef _DEBUG
 #error _DEBUG required
 #endif
+#if !_CRTDBG_MAP_ALLOC
+#error _CRTDBG_MAP_ALLOC required
+#endif
+#define new                                             new( _NORMAL_BLOCK , __FILE__ , __LINE__ )
 #define CHECK_MEMORY(...)                               if (_CrtCheckMemory() == false) { __debugbreak(); }
 #else
 #define CHECK_MEMORY(...)                               ;
@@ -26,6 +30,9 @@
 #define sizeof_stack_array(name)                        sizeof(name)
 #endif
 
+#define PROGMEM_STRING_DECL(name)               extern const char _shared_progmem_string_##name[] PROGMEM;
+#define PROGMEM_STRING_DEF(name, value)         const char _shared_progmem_string_##name[] PROGMEM = { value };
+
 #if defined(ESP32)
 
 #include <Arduino.h>
@@ -35,9 +42,6 @@
 #include <FS.h>
 
 #include "esp32_compat.h"
-
-#define PROGMEM_STRING_DECL(name)               extern const char _shared_progmem_string_##name[] PROGMEM;
-#define PROGMEM_STRING_DEF(name, value)         const char _shared_progmem_string_##name[] PROGMEM = { value };
 
 class __FlashStringHelper;
 
@@ -58,9 +62,6 @@ class __FlashStringHelper;
 #include <FS.h>
 
 #include "esp8266_compat.h"
-
-#define PROGMEM_STRING_DECL(name)               extern const char _shared_progmem_string_##name[] PROGMEM;
-#define PROGMEM_STRING_DEF(name, value)         const char _shared_progmem_string_##name[] PROGMEM = { value };
 
 #define SPGM(name)                              _shared_progmem_string_##name
 #define FSPGM(name)                             FPSTR(SPGM(name))
@@ -109,9 +110,6 @@ void init_winsock();
 uint16_t __builtin_bswap16(uint16_t);
 
 #include "Arduino.h"
-
-#define PROGMEM_STRING_DECL(name)               extern const char * const _shared_progmem_string_##name;
-#define PROGMEM_STRING_DEF(name, value)         const char * const _shared_progmem_string_##name = value;
 
 #define PROGMEM
 

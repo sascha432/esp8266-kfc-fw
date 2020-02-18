@@ -8,6 +8,13 @@
 #include <vector>
 #include <PrintArgs.h>
 
+#if _MSC_VER
+#define FORMUI_CRLF "\n"
+#else
+#define FORMUI_CRLF ""
+#endif
+
+class Form;
 class FormField;
 
 class FormUI {
@@ -19,6 +26,8 @@ public:
 		TEXT,
 		PASSWORD,
 		NEW_PASSWORD,
+		GROUP_START,
+		GROUP_END
 	} TypeEnum_t;
 
 	typedef std::pair<String, String> ItemPair;
@@ -44,6 +53,8 @@ private:
 	bool _compareValue(const String &value) const;
 
 private:
+	friend Form;
+
 	FormField *_parent;
 	TypeEnum_t _type;
 	String _label;

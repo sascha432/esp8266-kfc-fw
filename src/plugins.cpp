@@ -159,7 +159,9 @@ void setup_plugins(PluginComponent::PluginSetupMode_t mode) {
 
     _debug_printf_P(PSTR("setup_plugins(%d) counter %d\n"), mode, plugins.size());
 
-    create_menu();
+    if (mode != PluginComponent::PLUGIN_SETUP_DELAYED_AUTO_WAKE_UP) {
+        create_menu();
+    }
 
     for(auto plugin : plugins) {
         bool runSetup =
@@ -183,15 +185,20 @@ void setup_plugins(PluginComponent::PluginSetupMode_t mode) {
                     if (plugin->getConfigureForm()) {
                         String uri = FPSTR(plugin->getConfigureForm());
                         uri += F(".html");
-                        String name = FPSTR(plugin->getName());
-                        if (name.length() > 4) {
-                            name.toLowerCase();
-                            name[0] = toupper(name[0]);
+                        if (plugin->getFriendlyName() == FPSTR(plugin->getName())) {
+                            String name = FPSTR(plugin->getName());
+                            if (name.length() > 4) {
+                                name.toLowerCase();
+                                name[0] = toupper(name[0]);
+                            }
+                            else {
+                                name.toUpperCase();
+                            }
+                            bootstrapMenu.addSubMenu(name, uri, navMenu.config);
                         }
                         else {
-                            name.toUpperCase();
+                            bootstrapMenu.addSubMenu(plugin->getFriendlyName(), uri, navMenu.config);
                         }
-                        bootstrapMenu.addSubMenu(name, uri, navMenu.config);
                     }
                     break;
                 case PluginComponent::MenuTypeEnum_t::NONE:

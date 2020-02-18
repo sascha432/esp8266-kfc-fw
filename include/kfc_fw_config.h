@@ -281,100 +281,6 @@ public:
 };
 
 
-class Config_HomeAssistant {
-public:
-    typedef enum : uint8_t {
-        NONE = 0,
-        TURN_ON,
-        TURN_OFF,
-        SET_BRIGHTNESS,
-        CHANGE_BRIGHTNESS,  // values: min brightness(0), max brightness(255), turn on/off if brightness=0(1)/change brightness only(0)
-    } ActionEnum_t;
-    typedef struct __attribute__packed__ {
-        uint16_t id: 16;
-        ActionEnum_t action;
-        uint8_t valuesLen;
-        uint8_t entityLen;
-    } ActionHeader_t;
-
-    class Action {
-    public:
-        typedef std::vector<int32_t> ValuesVector;
-
-        Action() = default;
-        Action(uint16_t id, ActionEnum_t action, const ValuesVector &values, const String &entityId) : _id(id), _action(action), _values(values), _entityId(entityId) {
-        }
-        ActionEnum_t getAction() const {
-            return _action;
-        }
-        const __FlashStringHelper *getActionFStr() const {
-            return Config_HomeAssistant::getActionStr(_action);
-        }
-        void setAction(ActionEnum_t action) {
-            _action = action;
-        }
-        uint16_t getId() const {
-            return _id;
-        }
-        void setId(uint16_t id) {
-            _id = id;
-        }
-        int32_t getValue(uint8_t num) const {
-            if (num < _values.size()) {
-                return _values.at(num);
-            }
-            return 0;
-        }
-        void setValues(const ValuesVector &values) {
-            _values = values;
-        }
-        ValuesVector &getValues() {
-            return _values;
-        }
-        const String getValuesStr() const {
-            String str;
-            int n = 0;
-            for(auto value: _values) {
-                if (n++ > 0) {
-                    str += ',';
-                }
-                str += String(value);
-            }
-            return str;
-        }
-        uint8_t getNumValues() const {
-            return _values.size();
-        }
-        const String &getEntityId() const {
-            return _entityId;
-        }
-        void setEntityId(const String &entityId) {
-            _entityId = entityId;
-        }
-    private:
-        uint16_t _id;
-        ActionEnum_t _action;
-        ValuesVector _values;
-        String _entityId;
-    };
-
-    typedef std::vector<Action> ActionVector;
-
-    Config_HomeAssistant() {
-    }
-
-    static const char *getApiEndpoint();
-    static const char *getApiToken();
-    static void getActions(ActionVector &actions);
-    static void setActions(ActionVector &actions);
-    static Action getAction(uint16_t id);
-    static const __FlashStringHelper *getActionStr(ActionEnum_t action);
-
-    char api_endpoint[128];
-    char token[250];
-    uint8_t *actions;
-};
-
 class Config_RemoteControl {
 public:
     typedef struct __attribute__packed__ {
@@ -385,24 +291,25 @@ public:
     typedef struct __attribute__packed__ {
         uint8_t autoSleepTime: 8;
         uint16_t deepSleepTime: 16;       // ESP8266 ~14500 seconds, 0 = indefinitely
-        uint16_t shortPressTime;
         uint16_t longpressTime;
         uint16_t repeatTime;
+#if IOT_REMOTE_CONTROL_BUTTON_COUNT
+        Action_t actions[IOT_REMOTE_CONTROL_BUTTON_COUNT];
+#else
         Action_t actions[4];
+#endif
     } config_t;
     config_t config;
 
     Config_RemoteControl() : config() {
         config.autoSleepTime = 5;
-        config.shortPressTime = 300;
         config.longpressTime = 750;
         config.repeatTime = 250;
     }
 
     void validate() {
-        if (!config.shortPressTime) {
+        if (!config.longpressTime) {
             config = config_t();
-            config.shortPressTime = 300;
             config.longpressTime = 750;
             config.repeatTime = 250;
         }
@@ -560,7 +467,6 @@ typedef struct {
     struct HueConfig hue;
     Clock clock;
 
-    Config_HomeAssistant homeassistant;
     Config_Ping ping;
     Config_WeatherStation weather_station;
     Config_Sensor sensor;

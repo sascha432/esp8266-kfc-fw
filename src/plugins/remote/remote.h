@@ -26,6 +26,12 @@
 #define DEBUG_IOT_REMOTE_CONTROL                                1
 #endif
 
+#if DEBUG_IOT_REMOTE_CONTROL
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
+#endif
+
 // number of buttons available
 #ifndef IOT_REMOTE_CONTROL_BUTTON_COUNT
 #define IOT_REMOTE_CONTROL_BUTTON_COUNT                         4
@@ -46,17 +52,22 @@
 #define IOT_REMOTE_CONTROL_LED_PIN                              2
 #endif
 
+class HassPlugin;
+
 class RemoteControlPlugin : public PluginComponent {
 public:
+    static const uint32_t AutoSleepDisabled = ~0;
+
     class ButtonEvent {
     public:
         typedef enum {
-            PRESS = 1,
-            HELD = 2,
-            RELEASE = 3,
+            NONE = 0,
+            REPEAT,
+            PRESS,
+            RELEASE,
         } EventTypeEnum_t;
 
-        ButtonEvent(uint8_t button, EventTypeEnum_t type, uint16_t duration = 0, uint16_t repeat = 0) : _button(button), _type(type), _duration(duration), _repeat(repeat), _locked(0) {
+        ButtonEvent(uint8_t button, EventTypeEnum_t type, uint16_t duration = 0, uint16_t repeat = 0) : _button(button), _type(type), _duration(duration), _repeat(repeat) {
             _timestamp = millis();
         }
 
@@ -80,42 +91,27 @@ public:
             return _timestamp;
         }
 
-        void lock() {
-            _locked = 1;
-        }
-
         void remove() {
-            _locked = 2;
-        }
-
-        bool isLocked() const {
-            return _locked != 0;
-        }
-
-        bool isRemoved() const {
-            return _locked == 2;
+            _type = NONE;
         }
 
         void printTo(Print &output) const {
             output.printf_P(PSTR("%u="), _button);
             switch(_type) {
                 case PRESS:
-                    output.print(F("press"));
-                    break;
-                case HELD:
-                    output.printf_P(PSTR("held,d=%u,c=%u"), _duration, _repeat);
+                    output.printf_P(PSTR("press,d=%u"), _duration);
                     break;
                 case RELEASE:
-                    output.printf_P(PSTR("released,d=%u"), _duration);
+                    output.printf_P(PSTR("release,d=%u"), _duration);
+                    break;
+                case REPEAT:
+                    output.printf_P(PSTR("repeat,d=%u,c=%u"), _duration, _repeat);
+                    break;
+                case NONE:
+                    output.printf_P(PSTR("none"));
                     break;
             }
             output.printf_P(PSTR(",ts=%u"), _timestamp);
-            if (_locked == 1) {
-                output.printf_P(PSTR(",locked"));
-            }
-            else if (_locked == 2) {
-                output.printf_P(PSTR(",removed"));
-            }
         }
 
         String toString() const {
@@ -130,7 +126,6 @@ public:
         uint16_t _duration;
         uint16_t _repeat;
         uint32_t _timestamp;
-        uint8_t _locked;
     };
 
     typedef std::list<ButtonEvent> ButtonEventList;
@@ -140,6 +135,9 @@ public:
 
     virtual PGM_P getName() const {
         return PSTR("remotectrl");
+    }
+    virtual const __FlashStringHelper *getFriendlyName() const {
+        return F("Remote Control");
     }
 
     virtual PluginPriorityEnum_t getSetupPriority() const override {
@@ -192,6 +190,8 @@ public:
     static void disableAutoSleepHandler(AsyncWebServerRequest *request);
     static void deepSleepHandler(AsyncWebServerRequest *request);
 
+    static void fakebtn();
+
 private:
     void _loop();
     void _wifiConnected();
@@ -200,17 +200,32 @@ private:
     void _readConfig();
     void _installWebhooks();
     void _resetAutoSleep();
-    void _addButtonEvent(ButtonEvent &&event);
+    void _addButtonEvent(const ButtonEvent &event);
     void _sendEvents();
+    void _scheduleSendEvents();
+
+    bool _isButtonLocked(uint8_t button) const {
+        return _buttonsLocked & (1 << button);
+    }
+    void _lockButton(uint8_t button) {
+        _debug_printf_P(PSTR("btn %u locked\n"), button);
+        _buttonsLocked |= (1 << button);
+    }
+    void _unlockButton(uint8_t button) {
+        _debug_printf_P(PSTR("btn %u unlocked\n"), button);
+        _buttonsLocked &= ~(1 << button);
+    }
 
     uint32_t _autoSleepTimeout;
     PushButton *_buttons[IOT_REMOTE_CONTROL_BUTTON_COUNT];
+    uint32_t _buttonsLocked;
     ButtonEventList _events;
-    bool _eventsLocked;
     Config_RemoteControl _config;
+    HassPlugin &_hass;
 
     const uint8_t _buttonPins[IOT_REMOTE_CONTROL_BUTTON_COUNT] = IOT_REMOTE_CONTROL_BUTTON_PINS;
 };
 
-#endif
+#include <debug_helper_disable.h>
 
+#endif

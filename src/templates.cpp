@@ -442,10 +442,54 @@ void File2String::fromString(const String &value)
     //write((const uint8_t *)value.c_str(), value.length());
 }
 
-void EmptyTemplate::process(const String &key, PrintHtmlEntitiesString &output) {
-}
+// void EmptyTemplate::process(const String &key, PrintHtmlEntitiesString &output) {
+// }
 
 #include <TemplateDataProvider.h>
+
+class PluginStatusStream {
+public:
+    PluginStatusStream() : _iterator(plugins.begin()) {
+        _fillBuffer();
+    }
+
+    size_t readBytes(uint8_t *data, size_t size) {
+        if (_buffer.length() == 0) {
+            if (_fillBuffer() == 0) {
+                return 0;
+            }
+        }
+        if (size > _buffer.length()) {
+            size = _buffer.length();
+        }
+        memcpy(data, _buffer.c_str(), size);
+        _buffer.remove(0, size);
+        return size;
+    }
+
+private:
+    size_t _fillBuffer() {
+        while (_iterator != plugins.end()) {
+            auto &plugin = **_iterator;
+            if (plugin.hasStatus()) {
+                _buffer += F("<div class=\"row\"><div class=\"col-lg-3 col-lg-auto\">");
+                _buffer += FPSTR(plugin.getFriendlyName());
+                _buffer += "</div><div class=\"col\">";
+                plugin.getStatus(_buffer);
+                _buffer += "</div></div>";
+                ++_iterator;
+                break;
+            }
+            ++_iterator;
+        }
+        return _buffer.length();
+    }
+
+private:
+    PrintHtmlEntitiesString _buffer;
+    PluginsVector::iterator _iterator;
+};
+
 
 bool TemplateDataProvider::callback(const String& name, DataProviderInterface& provider, WebTemplate &webTemplate) {
 
@@ -487,10 +531,18 @@ bool TemplateDataProvider::callback(const String& name, DataProviderInterface& p
             fbMethod = FillBufferMethod::PRINT_ARGS;
         }
     }
+    // plugin status
+    else if (String_equals(name, PSTR("PLUGIN_STATUS"))) {
+        auto stream = std::shared_ptr<PluginStatusStream>(new PluginStatusStream());
+        provider.setFillBuffer([stream](uint8_t *buffer, size_t size) {
+            return stream->readBytes(buffer, size);
+        });
+        return true;
+    }
     // other variables
     else {
         webTemplate.process(name, value);
-        debug_printf_P(PSTR("%s=%s\n"), name.c_str(), value.c_str());
+        // debug_printf_P(PSTR("%s=%s\n"), name.c_str(), value.c_str());
         fbMethod = FillBufferMethod::BUFFER_STREAM;
     }
 

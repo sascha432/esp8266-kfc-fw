@@ -45,9 +45,14 @@ public:
     PluginComponent() : _setupTime(0) {
     }
 
+    template<class T>
+    static T *getPlugin(const __FlashStringHelper *name) {
+        return reinterpret_cast<T *>(findPlugin(name));
+    }
     static PluginComponent *findPlugin(const __FlashStringHelper *name);
 
     virtual PGM_P getName() const = 0;
+    virtual const __FlashStringHelper *getFriendlyName() const;
     bool nameEquals(const __FlashStringHelper *name) const;
     bool nameEquals(const char *name) const;
     bool nameEquals(const String &name) const;

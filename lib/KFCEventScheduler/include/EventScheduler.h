@@ -123,6 +123,8 @@ public:
         return _timers.size();
     }
 
+    void listETSTimers(Print &output);
+
 public:
     static void loop();
     static void _timerCallback(void *arg);

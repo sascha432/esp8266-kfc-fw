@@ -16,14 +16,14 @@
 #include <debug_helper_disable.h>
 #endif
 
-#if KFC_REST_API_USE_HTTP_CLIENT
+#if !KFC_REST_API_USE_HTTP_CLIENT
 #include "asyncHTTPrequest.h"
 #endif
 
 KFCRestAPI::HttpRequest::HttpRequest(KFCRestAPI &api, JsonBaseReader *json, Callback_t callback) : _json(json), _callback(callback), _message(F("None")), _code(0), _api(api)
 {
     _json->initParser();
-    _request = new asyncHTTPrequest();
+    _request = new HttpClient();
 
     String token;
     _api.getBearerToken(token);
@@ -35,7 +35,7 @@ KFCRestAPI::HttpRequest::HttpRequest(KFCRestAPI &api, JsonBaseReader *json, Call
 
 KFCRestAPI::HttpRequest::~HttpRequest()
 {
-    _debug_println(F("~HttpRequest"));
+    _debug_printf_P(PSTR("httpRequestPtr=%p\n"), this);
     delete _request;
     delete _json;
 }
@@ -51,12 +51,13 @@ int16_t KFCRestAPI::HttpRequest::getCode() const {
 
 void KFCRestAPI::HttpRequest::setMessage(const String &message)
 {
-    _debug_printf_P(PSTR("HttpRequest::setMessage(): msg=%s\n"), message.c_str());
+    _debug_printf_P(PSTR("msg=%s\n"), message.c_str());
     _message = message;
 }
 
 void KFCRestAPI::HttpRequest::finish(int16_t code)
 {
+    _debug_printf_P(PSTR("code=%d, msg=%s\n"), code, _message.c_str());
     _code = code;
     _callback(code, *this);
 }
@@ -65,12 +66,12 @@ void KFCRestAPI::HttpRequest::setUri(const String &uri)
 {
     _api.getRestUrl(_url);
     _url += uri;
-    _debug_printf_P(PSTR("HttpRequest::setUri(): url=%s\n"), _url.c_str());
+    _debug_printf_P(PSTR("url=%s\n"), _url.c_str());
 }
 
-void KFCRestAPI::_onData(void *ptr, asyncHTTPrequest *request, size_t available)
+void KFCRestAPI::_onData(void *ptr, HttpClient *request, size_t available)
 {
-    _debug_printf_P(PSTR("KFCRestAPI::_onData(): available=%u, ptr=%p\n"), available, ptr);
+    _debug_printf_P(PSTR("available=%u, httpRequestPtr=%p\n"), available, ptr);
     auto &httpRequest = *reinterpret_cast<HttpRequest *>(ptr);
     uint8_t buffer[64];
     size_t len;
@@ -87,9 +88,9 @@ void KFCRestAPI::_onData(void *ptr, asyncHTTPrequest *request, size_t available)
     }
 }
 
-void KFCRestAPI::_onReadyStateChange(void *ptr, asyncHTTPrequest *request, int readyState)
+void KFCRestAPI::_onReadyStateChange(void *ptr, HttpClient *request, int readyState)
 {
-    _debug_printf_P(PSTR("KFCRestAPI::_onReadyStateChange(): readyState=%d, ptr=%p\n"), readyState, ptr);
+    _debug_printf_P(PSTR("readyState=%d, httpRequestPtr=%p\n"), readyState, ptr);
     auto httpRequestPtr = reinterpret_cast<HttpRequest *>(ptr);
     auto &httpRequest = *httpRequestPtr;
 
@@ -136,7 +137,7 @@ void KFCRestAPI::_onReadyStateChange(void *ptr, asyncHTTPrequest *request, int r
                 httpRequest.setMessage(PrintString(F("HTTP error code %d"), httpCode));
             }
 
-            _debug_printf_P(PSTR("KFCRestAPI::_onReadyStateChange(), http code=%d, code=%d, message=%s\n"), httpCode, readyState, message.c_str());
+            _debug_printf_P(PSTR("http_code=%d code=%d message=%s\n"), httpCode, readyState, message.c_str());
             httpRequest.finish(httpCode);
         }
 
@@ -149,18 +150,22 @@ void KFCRestAPI::_onReadyStateChange(void *ptr, asyncHTTPrequest *request, int r
 
 void KFCRestAPI::_removeHttpRequest(KFCRestAPI::HttpRequest *httpRequestPtr)
 {
-    _debug_printf_P(PSTR("KFCRestAPI::_removeHttpRequest() ptr=%p\n"), httpRequestPtr);
+    _debug_printf_P(PSTR("httpRequestPtr=%p\n"), httpRequestPtr);
 
     auto &api = httpRequestPtr->getApi();
-    api._requests.erase(std::remove(api._requests.begin(), api._requests.end(), httpRequestPtr));
+    api._requests.erase(std::remove(api._requests.begin(), api._requests.end(), httpRequestPtr), api._requests.end());
     delete httpRequestPtr;
+
+    if (api._autoDelete && api._requests.empty()) {
+        _debug_printf_P(PSTR("auto delete\n"));
+        delete &api;
+    }
 }
 
 void KFCRestAPI::_createRestApiCall(const String &endPointUri, const String &body, JsonBaseReader *json, HttpRequest::Callback_t callback)
 {
-    _debug_printf_P(PSTR("KFCRestAPI::_createRestApiCall(): endpoint=%s payload=%s\n"), endPointUri.c_str(), body.c_str());
+    _debug_printf_P(PSTR("endpoint=%s payload=%s\n"), endPointUri.c_str(), body.c_str());
     auto httpRequestPtr = new HttpRequest(*this, json, callback);
-
     _debug_printf_P(PSTR("httpRequestPtr=%p\n"), httpRequestPtr);
 
     auto &httpRequest = *httpRequestPtr;
@@ -178,7 +183,9 @@ void KFCRestAPI::_createRestApiCall(const String &endPointUri, const String &bod
             request.setReqHeader(name.c_str(), header.c_str());
         }, true);
 
-        if (!request.send(body.c_str())) {
+        if (request.send(body.c_str())) {
+
+        } else {
             httpRequest.setMessage(PrintString(F("HTTP client send error (%s)"), httpRequest.getUrl()));
             httpRequest.finish(-101);
         }

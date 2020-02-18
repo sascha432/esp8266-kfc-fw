@@ -87,7 +87,6 @@ size_t AsyncBaseResponse::_ack(AsyncWebServerRequest* request, size_t len, uint3
             // do not send extra packet for remaining headers
             _state = RESPONSE_CONTENT;
         } else {
-            debug_printf("header write=%u\n", space);
             _writtenLength += request->client()->write(_head.c_str(), space);
             _head.remove(0, space);
             return space;

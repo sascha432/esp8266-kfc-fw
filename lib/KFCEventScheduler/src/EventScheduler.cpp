@@ -17,6 +17,82 @@
 EventScheduler Scheduler;
 #endif
 
+extern ETSTimer *timer_list;
+
+
+#include "../include/RestApi/RetrieveSymbols.h"
+
+void EventScheduler::listETSTimers(Print &output)
+{
+    StringVector addresses;
+    DebugDumper dumper(output);
+    ETSTimer *cur = timer_list;
+    while(cur) {
+        for(const auto &timer: _timers) {
+            if (&timer->_etsTimer == cur) {
+                addresses.push_back(PrintString(F("0x%x"), lambda_target(timer->_loopCallback)));
+                addresses.push_back(PrintString(F("0x%x"), (uint32_t)cur->timer_func));
+                addresses.push_back(PrintString(F("0x%x"), (uint32_t)cur->timer_arg));
+                break;
+            }
+        }
+        // float period_in_s = cur->timer_period / 312500.0;
+        // output.printf_P(PSTR("ETSTimer=%p func=%p arg=%p period=%u (%.3fs) exp=%u callback=%p\n"), cur, cur->timer_func, cur->timer_arg, cur->timer_period, period_in_s, cur->timer_expire, callback);
+        cur = cur->timer_next;
+    }
+
+    output.println(F("Waiting for symbols..."));
+    xtra_containers::remove_duplicates(addresses);
+    auto rs = new RetrieveSymbols::RestApi();
+    rs->setAutoDelete(true);
+    rs->setAddresses(std::move(addresses));
+    rs->call([this, &output](RetrieveSymbols::JsonReaderResult *result, const String &error) {
+        if (result) {
+            auto &items = result->getItems();
+            auto getAddr = [&items](uint32_t addr) {
+                auto it = std::find(items.begin(), items.end(), addr);
+                if (it == items.end()) {
+                    return String('-');
+                }
+                auto name = it->getName();
+                if (name.length() > 64) {
+                    name.remove(60, -1);
+                    name += F("...#");
+                    name += String(std::distance(items.begin(), it));
+                }
+                return name;
+            };
+            ETSTimer *cur = timer_list;
+            while(cur) {
+                void *callback = nullptr;
+                for(const auto &timer: _timers) {
+                    if (&timer->_etsTimer == cur) {
+                        callback = lambda_target(timer->_loopCallback);
+                        break;
+                    }
+                }
+                float period_in_s = cur->timer_period / 312500.0;
+                output.printf_P(PSTR("ETSTimer=%p func=%p[%s] arg=%p[%s] period=%u (%.3fs) exp=%u callback=%p[%s]\n"),
+                    cur,
+                    cur->timer_func, getAddr((uint32_t)cur->timer_func).c_str(),
+                    cur->timer_arg, getAddr((uint32_t)cur->timer_arg).c_str(),
+                    cur->timer_period,
+                    period_in_s,
+                    cur->timer_expire,
+                    callback, getAddr((uint32_t)callback).c_str());
+                cur = cur->timer_next;
+            }
+            size_t num = 0;
+            for (auto item : result->getItems()) {
+                output.printf_P(PSTR("#% 2u 0x%08x 0x%08x:0x%04x %s\n"), num++, item.getSrcAddress(), item.getAddress(), item.getSize(), item.getName().c_str());
+            }
+        }
+        else {
+            output.println(error);
+        }
+    });
+}
+
 void EventScheduler::begin()
 {
     LoopFunctions::add(loop);

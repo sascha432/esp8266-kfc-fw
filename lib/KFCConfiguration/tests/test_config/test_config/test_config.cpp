@@ -7,9 +7,41 @@
 #include <IntelHexFormat.h>
 #include <algorithm>
 #include <map>
+#include <forward_list>
+#include <deque>
+#include <stack>
 #include "Configuration.h"
 #include "ConfigurationParameter.h"
-#include "ConfigurationParameterReference.h"
+
+bool start_out = false;
+int total = 0;
+int del_num = 0;
+std::map<void *, size_t> memptrs;
+//
+//void *operator new(size_t size)
+//{
+//    void *ptr = malloc(size);
+//    if (start_out) {
+//        start_out = false;
+//        total += size;
+//        memptrs[ptr] = size;
+//        Serial.printf("new=%u (%u) %p\n", size, total, ptr);
+//        start_out = true;
+//    }
+//    return ptr;
+//}
+//
+//void operator delete(void *p) {
+//    if (start_out) {
+//        start_out = false;
+//        auto size = memptrs[p];
+//        total -= size;
+//        del_num++;
+//        Serial.printf("delete=%u (%u) #%u\n", size, total, del_num);
+//        start_out = true;
+//    }
+//    free(p);
+//}
 
 char tmp[] = { 0x00, 0x00 };
 
@@ -20,6 +52,32 @@ typedef struct {
 } ConfigSub2_t;
 
 typedef uint8_t blob_t[10];
+
+typedef uint32_t ConfigFlags_t;
+
+struct ConfigFlags {
+    ConfigFlags_t isFactorySettings : 1;
+    ConfigFlags_t isDefaultPassword : 1; //TODO disable password after 5min if it has not been changed
+    ConfigFlags_t ledMode : 1;
+    ConfigFlags_t wifiMode : 2;
+    ConfigFlags_t atModeEnabled : 1;
+    ConfigFlags_t hiddenSSID : 1;
+    ConfigFlags_t softAPDHCPDEnabled : 1;
+    ConfigFlags_t stationModeDHCPEnabled : 1;
+    ConfigFlags_t webServerMode : 2;
+#if defined(ESP8266)
+    ConfigFlags_t webServerPerformanceModeEnabled : 1;
+#endif
+    ConfigFlags_t ntpClientEnabled : 1;
+    ConfigFlags_t syslogProtocol : 3;
+    ConfigFlags_t mqttMode : 2;
+    ConfigFlags_t mqttAutoDiscoveryEnabled : 1;
+    ConfigFlags_t restApiEnabled : 1;
+    ConfigFlags_t serial2TCPMode : 3;
+    ConfigFlags_t hueEnabled : 1;
+    ConfigFlags_t useStaticIPDuringWakeUp : 1;
+    int counter;
+};
 
 // structure is used for code completion only
 typedef struct {
@@ -39,108 +97,297 @@ typedef struct {
     } sub1;
     ConfigSub2_t sub2;
     blob_t blob2;
+    ConfigFlags flags;
     
 } Configuration_t;
 
-void test(Configuration &config) {
-    auto str1 = ConfigurationParameterFactory::get(config, config.getWritableParameter<char *>(_H(Configuration_t().string1)));
-    auto str2 = ConfigurationParameterFactory::get(config, config.getWritableParameter<char *>(_H(Configuration_t().sub1.string2), 10));
-    auto str3 = ConfigurationParameterFactory::get(config, config.getParameter<char *>(_H(Configuration_t().sub1.string1)));
 
-    printf("str3: %s\n", str3.get());
+#include <assert.h>
 
-    auto str4 = ConfigurationParameterFactory::get(config, config.getWritableParameter<char *>(_H(Configuration_t().sub1.string1), 10));
-    str4.set("update");
-
-    auto str5 = ConfigurationParameterFactory::get(config, config.getParameter<char *>(_H(Configuration_t().sub1.string1)));
-    printf("str5: %s\n", str5.get());
-
-    str4.set("update2");
-    printf("str5: %s\n", str5.get());
-
-    auto str6 = ConfigurationParameterFactory::get(config, config.getWritableParameter<void *>(_H(Configuration_t().blob), sizeof(blob_t)));
-
-    str6.set("blob_t\x1\x2\x3", 9);
-
-    auto sub2 = ConfigurationParameterFactory::get(config, config.getWritableParameter<ConfigSub2_t>(_H(Configuration_t().sub2)));
-
-    auto &sub2Ref = sub2.getWriteable();
-    
-    sub2Ref.flag1 = 1;
-    sub2Ref.flag2 = 0;
-    sub2Ref.flag3 = 1;
-
-    printf("sub2 %d %d %d\n", sub2Ref.flag1, sub2Ref.flag2, sub2Ref.flag3);
-
-    //printf("%d\n%d\n", str4.getLength(), sub2.getLength());
-
-    //str2.set("test");
-
-    if (config.isDirty()) {
-        config.write();
-    }
-
-    printf("%s\n", str1.get());
-
-    printf("%s\n%s\n%s\n", (const char *)str1, (const char *)str2, str3.get());
-}
-
-
-void test_tokenizer() {
-    int8_t argc;
-    char *args[10];
-
-    char *cmd = strdup("command=t1,t2,t3,\"t3-1,t3-2\", \"t4-1\"\"t4-2\" , \"t5-1\\\"t5-2\\t5-3\\\\t5-4\",0");
-    //char *cmd = strdup("command=\"\"");
-    printf("cmd='%s'\n", cmd);
-    argc = tokenizer(cmd, args, 10, true);
-    int count = 0;
-    while (count < argc) {
-        printf("%d='%s'\n", count, args[count]);
-        count++;
-    }
-    free(cmd);
-    exit(-1);
-
-}
-
-void test_stringlistfind() {
-
-    auto res = stringlist_find_P_P("aa,bb,cc", "a");
-    res = stringlist_find_P_P("aa,bb,cc", "aa");
-    res = stringlist_find_P_P("aa,bb,cc", "bb");
-    res = stringlist_find_P_P("aa,bb,cc", "cc");
-
-    exit(-1);
-}
-
-
-uint16_t _pagePosition = 0, _pageSize = 128, _pageAddress = 0;
-uint8_t _pageBuffer[128];
-void _clearPageBuffer() {
-    memset(_pageBuffer, 0, sizeof(_pageBuffer));
-}
-
-FILE *fpout;
-int written = 0;
-
-void _writePage(uint16_t address, uint16_t length) {
-
-    written += length;
-
-    fprintf(fpout, "%04x: ", (address << 1) & 0xffff);
-    auto ptr = _pageBuffer;
-    auto count = length;
-    while(count--) {
-        fprintf(fpout, "%02x ", *ptr++ & 0xff);
-    }
-    fprintf(fpout, "\n");
-
-}
+#include "push_pack.h"
 
 int main() {
 
     ESP._enableMSVCMemdebug();
+    DebugHelper::activate();
+
+#if 0
+
+    class Data_t {
+    public:
+        Data_t() = delete;
+
+
+        //Data_t() {
+        //    num = 0;
+        //    id = 0;
+        //    Serial.printf("new Data_t()\n");
+        //}
+        Data_t(std::nullptr_t ptr, int _num2 = 0) {
+            static uint32_t n = 0;
+            n++;
+            //Serial.printf("new Data_t() = %d copy %d\n", num, num2);
+            num = n;
+            num2 = 0;
+            id = num / 3;
+        }
+        Data_t(uint32_t _num) : num(_num), num2() {
+            id = num / 3;
+        }
+        ~Data_t() {
+            //Serial.printf("delete Data_t() = %d copy %d\n", num, num2);
+        }
+        Data_t(const Data_t &data) {
+            *this = data;
+        }
+        Data_t(Data_t &&data) {
+            *this = std::move(data);
+        }
+        Data_t &operator=(const Data_t &data) {
+            num = data.num;
+            num2 = data.num2 + 1;
+            //Serial.printf("copy Data_t() = %d copy %d\n", num, num2);
+            id = data.id;
+            return *this;
+        }
+        Data_t &operator=(Data_t &&data) {
+            num = data.num;
+            num2 = data.num2;
+            id = data.id;
+            data.num = -1;
+            data.num2 = 0;
+            data.id = 0;
+            return *this;
+        }
+        bool operator==(int _num) const {
+            return num == _num;
+        }
+        void print() {
+            Serial.printf("Data_t() = %d copy %d\n", num, num2);
+        }
+        void cprint() const {
+            Serial.printf("Data_t() = %d copy %d\n", num, num2);
+        }
+        struct __attribute__packed__ {
+            uint32_t num;
+            uint32_t num2;
+            uint16_t id;
+        };
+    };
+
+#if 0
+    start_out = true;
+    // Data_t()=10, 32x = 320byte data
+    // std::stack, peak mem. 446, realloc 2x, mem=446
+    auto lptr = new std::stack<Data_t>;
+    auto &l = *lptr;
+    for (int i = 0; i < 31; i++) {
+        l.push(Data_t(nullptr));
+    }
+    start_out = false;
+    return 0;
+#endif
+
+#if 0
+    start_out = true;
+    // Data_t()=10, 32x = 320byte data
+    // std::deque, peak mem. 446, realloc 2x, mem=446
+    auto lptr = new std::deque<Data_t>;
+    auto &l = *lptr;
+    for (int i = 0; i < 31; i++) {
+        l.emplace_back(nullptr);
+    }
+    start_out = false;
+    return 0;
+#endif
+
+#if 0
+    start_out = true;
+    // Data_t()=10, 32x = 320byte data
+    // std::forward_list, peak mem. 512, realloc 0x, mem=512
+    auto lptr = new std::forward_list<Data_t>;
+    auto &l = *lptr;
+    for (int i = 0; i < 31; i++) {
+        l.push_front(Data_t(nullptr));
+    }
+    start_out = false;
+    return 0;
+#endif
+
+#if 0
+    start_out = true;
+    // Data_t()=10, 32x = 320byte data
+    // std::list, peak mem. 660, realloc 0x, mem=660
+    auto lptr = new std::list<Data_t>;
+    auto &l = *lptr;
+    for (int i = 0; i < 31; i++) {
+        l.push_back(Data_t(nullptr));
+    }
+    start_out = false;
+    return 0;
+#endif
+
+#if 0
+    start_out = true;
+    // Data_t()=10, 32x = 320byte data
+    // std::vector, peak mem. 724, realloc 9x, mem=444
+    auto lptr = new std::vector<Data_t>;
+    auto &l = *lptr;
+    for (int i = 0; i < 31; i++) {
+        l.push_back(Data_t(nullptr));
+    }
+    start_out = false;
+    return 0;
+#endif
+
+
+#if 0
+    xtra_containers::chunk_list_size<Data_t>::list(Serial, 1, 64, 16);
+    start_out = true;
+    // Data_t()=10, 32x = 320byte data
+    // xtra_containers::chunked_list, chunks=1, peak mem. 444, realloc 0x, mem=444, capacity=0
+    // xtra_containers::chunked_list, chunks=2, peak mem. 394, realloc 0x, mem=394, capacity=1
+    // xtra_containers::chunked_list, chunks=3, peak mem. 384, realloc 0x, mem=384, capacity=2
+    // xtra_containers::chunked_list, chunks=4, peak mem. 362, realloc 0x, mem=362, capacity=1
+    // xtra_containers::chunked_list, chunks=6, peak mem. 394, realloc 0x, mem=394, capacity=5, *16 byte memory alignment
+    // xtra_containers::chunked_list, chunks=8, peak mem. 346, realloc 0x, mem=346, capacity=1
+    // xtra_containers::chunked_list, chunks=14, peak mem. 442, realloc 0x, mem=442, capacity=11, *16 byte memory alignment
+    auto lptr = new xtra_containers::chunked_list<Data_t, 4>;
+    auto &l = *lptr;
+    for (int i = 0; i < 31; i++) {
+        l.push_back(Data_t(nullptr));
+    }
+    Serial.println(l.capacity());
+    start_out = false;
+    return 0;
+#endif
+    typedef xtra_containers::chunked_list<Data_t, 6> MyList;
+    MyList _params;
+
+    class testx {
+    public:
+        testx(MyList &l) : _l(l) {
+        }
+
+        void clist() const {
+            Serial.println("---");
+            for (const auto &param : _l) {
+                param.cprint();
+            }
+        }
+        const MyList &_l;
+    };
+
+    auto value = std::distance(_params.begin(), _params.end());
+    assert(value == 0);
+
+    MyList _params5;
+    for (int i = 0; i < 57; i++) {
+        _params.emplace_back(nullptr, i);
+
+        assert(_params.front().num == 1);
+        assert(_params.back().num == i + 1);
+
+#if 1
+        _params5 = _params;
+        assert(_params.front().num == _params5.front().num);
+        assert(_params.back().num == _params5.back().num);
+        assert(_params.front().num2 + 1 == _params5.front().num2);
+        assert(_params.back().num2 + 1 == _params5.back().num2);
+        assert(_params.capacity() == _params5.capacity());
+        assert(_params.size() == _params5.size());
+        assert(std::distance(_params.begin(), _params.end()) == std::distance(_params5.begin(), _params5.end()));
+        assert(std::distance(_params.begin(), _params.end()) == _params.size());
+#endif
+    }
+
+    auto oldSize = _params.size();
+    MyList _params8;
+    std::swap(_params8, _params);
+    _params8.swap(_params);
+    MyList _params7 = _params;
+    assert(oldSize == _params.size());
+
+    auto iterator = std::find(_params7.begin(), _params7.end(), 5);
+    assert(iterator != _params7.end());
+    assert(iterator->num == 5);
+
+    iterator = std::find_if(_params7.begin(), _params7.end(), [](const Data_t &data) {
+        return data.num == 8;
+        });
+    assert(iterator != _params7.end());
+    assert(iterator->num == 8);
+
+#if 0
+    testx(_params).clist();
+    testx(_params7).clist();
+    _params7.swap(_params);
+    testx(_params).clist();
+    testx(_params7).clist();
+#endif
+
+    //MyList _params2;
+    //_params2 = _params;
+    //MyList _params3 = std::move(_params);
+    //Serial.printf("%u %u %u", _params.size(), _params2.size(), _params3.size());
+
+
+    //testx(_params).clist();
+    //testx(_params2).clist();
+    //testx(_params3).clist();
+
+
+
+    _params.clear();
+
+    /*    auto it = _params.begin();
+        ++it;++it;++it;++it;
+        auto f = it;
+        ++it;++it;++it;++it;++it;++it;++it;
+        Serial.printf("%d %d\n", std::distance(f, it), _params.size());
+        Serial.printf("%d %d\n", std::distance(f, f), _params.size());
+        Serial.printf("%d %d\n", std::distance(it, it), _params.size());
+        *///Serial.printf("%d %d\n", std::distance(it, f), _params.size());
+
+        //_params.push_back(Data_t(nullptr));
+        //_params.push_back(Data_t(nullptr));
+        //_params.emplace_back(nullptr);
+
+
+
+        //auto it = _params.begin();
+        //++it;
+        //++it;
+        //++it;
+        //*it = Data_t(666);
+
+        //auto result = _params.end() == _params.end();
+        //auto it = _params.begin();
+        //++it;++it;++it;++it;++it;++it;++it;++it;++it;
+        //it->print();
+        //++it;
+        //result = it == _params.end();
+
+    Serial.printf("--- %u\n", _params.size());
+    for (auto iterator = _params.begin(); iterator != _params.end(); ++iterator) {
+        if (iterator->num == 666) {
+            //_params.push_back(Data_t(nullptr));
+            //_params.push_back(Data_t(nullptr));
+        }
+        iterator->print();
+        //iterator.get()->print();
+    }
+
+    Serial.printf("--- %u\n", _params.size());
+    for (auto iterator = _params.cbegin(); iterator != _params.cend(); ++iterator) {
+        //iterator.get()->cprint();
+        //iterator->cprint();
+        (*iterator).cprint();
+    }
+
+    return 0;
+
+#endif
 
 #if 0
     IntelHexFormat _file;
@@ -166,7 +413,8 @@ int main() {
                     if (length == -1) {
                         // ERROR
                         printf("length=-1\n");
-                    } else if (length == 0) {
+                    }
+                    else if (length == 0) {
                         // ERROR
                         printf("length=0, address %u, eof  %u\n", address, _file.isEOF());
                     }
@@ -252,6 +500,7 @@ int main() {
     EEPROM.clear();
 #endif
     EEPROM.begin();
+    //EEPROM.clear();
 
     Configuration config(512, 2048);
     if (!config.read()) {
@@ -259,18 +508,107 @@ int main() {
     }
     config.dump(Serial);
 
+    auto flags = config._H_GET(Configuration_t().flags);
+    //flags = ConfigFlags();
+  /*  flags.counter++;
+    flags.atModeEnabled = true;
+    flags.isDefaultPassword = true;
+    flags.stationModeDHCPEnabled = true;
+    flags.wifiMode = 3;
+    flags.webServerMode = 1;*/
+
+
+    //"2702C001"
+    //"3F03C001"
+    //"BF03C001"
+    //"BF0B C001"
+    //"BF8B C201"
+
+    flags.counter++;
+    config._H_SET(Configuration_t().flags, flags);
+
+    flags = config._H_GET(Configuration_t().flags);
+
+    flags.counter++;
+    config._H_SET(Configuration_t().flags, flags);
+
+    flags = config._H_GET(Configuration_t().flags);
+
+    flags.counter++;
+    config._H_SET(Configuration_t().flags, flags);
+
+    //auto mzstring = config._H_STR(Configuration_t().string1);
+
+
+    //config._H_SET_STR(Configuration_t().string1, emptyString);
+
+    config.write();
+
+    return 0;
+
+#if 0
+    {
+        auto &param = config.getParameterT<int>(_H(int));
+        config.makeWriteable(param);
+        param.set(123);
+    }
+    {
+        auto &param = config.getParameterT<char *>(_H(str4));
+        config.makeWriteable(param, 32);
+        param.set("test4");
+    }
+    {
+        auto &param = config.getParameterT<char *>(_H(str2));
+        if (param) {
+            config.makeWriteable(param, 32);
+            param.set("test2");
+        }
+    }
+#endif
+
+#if 0
+    auto &tmp = config.getWriteable<int>(_H(int));
+    tmp++;
+
+    //config.getWriteable<int>(_H(int2))++;
+
+    String str = config.getString(_H(str1));
+
+    str += '1';
+    config.setString(_H(str1), str.c_str());
+
+    //config.discard();
+
+    str += '2';
+    config.setString(_H(str1), str.c_str());
+#endif
+
+    config.setString(_H(str1new), "");
+
+    //config.setString(_H(str2), "str2_long");
+    //config.setString(_H(str3), "str3");
+    config.write();
+
+
+#if 1
+    return 0;
+#endif
+
+#if 0
     auto file = SPIFFS.open(F("C:/Users/sascha/Documents/PlatformIO/Projects/kfc_fw/fwbins/blindsctrl/kfcfw_config_KFCD6ECD8_b2789_20191222_154625.json"), "r");
     if (file) {
         config.importJson(file);
         file.close();
 
-        config.dump(Serial);
-        config.write();
+        //config.dump(Serial);
+        //config.write();
     }
-    return 0;
 
     config.dump(Serial);
     config.write();
+    return 0;
+#endif
+
 
     auto ptr = config._H_STR(Configuration_t().string1);
     printf("%s\n", ptr);
@@ -281,6 +619,10 @@ int main() {
      
     config.release();
 
+    config.setBinary(_H(Configuration_t().blob), "\x1\x2\x3\x4\x5\x6\x7\x8\x9\xa\xb\xc\xd\xe\xf", 15);
+    config.discard();
+
+
     /*test(config);
     config.dump(Serial);
 */
@@ -288,7 +630,10 @@ int main() {
     ConfigSub2_t s = { 1, 0 , 1 };
     config.set(_H(Configuration_t().sub2), s);
 
-    config.setBinary(_H(Configuration_t().blob), "blob\x1\x2\x3", 7);
+    config.setBinary(_H(Configuration_t().blob), "\x1\x2\x3\x4\x5\x6\x7\x8\x9\xa\xb\xc\xd\xe\xf", 15);
+    config.dump(Serial);
+    config.release();
+    config.dump(Serial);
 
     char *writeableStr = config.getWriteableString(_H(Configuration_t().sub1.string1), sizeof Configuration_t().sub1.string1);
     strcpy(writeableStr, "dummy");
@@ -312,19 +657,35 @@ int main() {
     config._H_SET(Configuration_t().val3, 0x80706050);
     config._H_SET(Configuration_t().val4, 0x8070605040302010);
 
-    config.dump(Serial);
+    //config.dump(Serial);
 
     if (config.isDirty()) {
         config.write();
     }
 
-    config.dump(Serial);
+    //config.dump(Serial);
+    DumpBinary dump(Serial);
 
-    config.exportAsJson(Serial, "KFCFW 1.x");
+    uint16_t len;
+    auto ptr2 = config.getBinary(_H(Configuration_t().blob), len);
+
+    dump.dump(ptr2, len);
+    config.release();
+    ptr2 = config.getBinary(_H(Configuration_t().blob), len);
+    dump.dump(ptr2, len);
+
+    //config.exportAsJson(Serial, "KFCFW 1.x");
 
     config.release();
 
+    {
+        auto& int32 = config.getWriteable<int32_t>(_H(Configuration_t().int32));
+        int32++;
+    }
+
     config.dump(Serial);
+
+    config.clear();
 
     return 0;
 }

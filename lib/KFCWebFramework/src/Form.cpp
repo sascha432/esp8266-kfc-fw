@@ -14,13 +14,8 @@
 #include <debug_helper_disable.h>
 #endif
 
-Form::Form() : _data(nullptr), _invalidMissing(true)
+Form::Form(FormData *data) : _data(data), _invalidMissing(true), _hasChanged(false)
 {
-}
-
-Form::Form(FormData *data) : Form()
-{
-    _data = data;
 }
 
 Form::~Form()
@@ -45,6 +40,15 @@ void Form::setFormData(FormData *data)
 void Form::setInvalidMissing(bool invalidMissing)
 {
     _invalidMissing = invalidMissing;
+}
+
+FormGroup &Form::addGroup(const String &name, const String &label, bool expanded, FormUI::TypeEnum_t type) 
+{
+    auto group = _add(new FormGroup(name, expanded));
+    auto ui = new FormUI(type);
+    ui->setLabel(label);
+    group->setFormUI(ui);
+    return reinterpret_cast<FormGroup &>(*group);
 }
 
 int Form::add(FormField *field)
@@ -100,7 +104,8 @@ FormValidator *Form::addValidator(const String &name, FormValidator *validator)
     return nullptr;
 }
 
-FormField *Form::getField(const String &name) const {
+FormField *Form::getField(const String &name) const 
+{
     for (auto field : _fields) {
         if (field->getName().equals(name)) {
             return field;
@@ -138,19 +143,21 @@ bool Form::validateOnly()
     _hasChanged = false;
     _errors.clear();
     for (auto field : _fields) {
-        if (_data->hasArg(field->getName())) {
-            _debug_printf_P(PSTR("Form::validateOnly() Set value %s = %s\n"), field->getName().c_str(), _data->arg(field->getName()).c_str());
-            if (field->setValue(_data->arg(field->getName()))) {
-                _hasChanged = true;
-            }
-            for (auto validator : field->getValidators()) {
-                if (!validator->validate()) {
-                    _errors.push_back(FormError(field, validator->getMessage()));
+        if (field->getType() != FormField::InputFieldType::GROUP) {
+            if (_data->hasArg(field->getName())) {
+                _debug_printf_P(PSTR("Form::validateOnly() Set value %s = %s\n"), field->getName().c_str(), _data->arg(field->getName()).c_str());
+                if (field->setValue(_data->arg(field->getName()))) {
+                    _hasChanged = true;
+                }
+                for (auto validator : field->getValidators()) {
+                    if (!validator->validate()) {
+                        _errors.push_back(FormError(field, validator->getMessage()));
+                    }
                 }
             }
-        }
-        else if (_invalidMissing) {
-            _errors.push_back(FormError(field, FSPGM(Form_value_missing_default_message)));
+            else if (_invalidMissing) {
+                _errors.push_back(FormError(field, FSPGM(Form_value_missing_default_message)));
+            }
         }
     }
 #if DEBUG_KFC_FORMS
@@ -262,29 +269,13 @@ void Form::setFormUI(const String &title)
 void Form::createHtml(PrintInterface &output)
 {
     if (_formTitle.length()) {
-        output.printf_P(PSTR("<h1>%s</h1>"), _formTitle.c_str());
+        output.printf_P(PSTR("<h1>%s</h1>" FORMUI_CRLF), _formTitle.c_str());
     }
     for (auto field : _fields) {
         field->html(output);
     }
     PGM_P label = _formSubmit.length() ? _formSubmit.c_str() : PSTR("Save Changes");
-    output.printf_P(PSTR("<button type=\"submit\" class=\"btn btn-primary\">%s...</button>"), label);
-}
-
-void Form::createHtmlPart(PrintInterface &output, uint16_t num)
-{
-    if (num == 0) {
-        if (_formTitle.length()) {
-            output.printf_P(PSTR("<h1>%s</h1>"), _formTitle.c_str());
-        }
-    }
-    else if (num >= 1 && num <= _fields.size()) {
-        _fields.at(num - 1)->html(output);
-    }
-    else if (num == _fields.size() + 1) {
-        PGM_P label = _formSubmit.length() ? _formSubmit.c_str() : PSTR("Save Changes");
-        output.printf_P(PSTR("<button type=\"submit\" class=\"btn btn-primary\">%s...</button>"), label);
-    }
+    output.printf_P(PSTR("<button type=\"submit\" class=\"btn btn-primary\">%s...</button>" FORMUI_CRLF), label);
 }
 
 void Form::dump(Print &out, const String &prefix) const {

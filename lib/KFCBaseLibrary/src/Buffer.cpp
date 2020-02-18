@@ -5,7 +5,7 @@
 #include <PrintString.h>
 #include "Buffer.h"
 
-#if 1
+#if 0
 #include "debug_helper_enable.h"
 #else
 #include "debug_helper_disable.h"

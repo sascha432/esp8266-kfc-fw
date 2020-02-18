@@ -19,7 +19,7 @@ OSTimer::OSTimer() : _etsTimer()
 
 OSTimer::~OSTimer()
 {
-    debug_printf_P(PSTR("_etsTimer.timer_arg=%p\n"), _etsTimer.timer_arg);
+    _debug_printf_P(PSTR("_etsTimer.timer_arg=%p\n"), _etsTimer.timer_arg);
     detach();
 }
 
@@ -46,7 +46,7 @@ void OSTimer::startTimer(uint32_t delay, bool repeat)
 
 void OSTimer::detach()
 {
-    debug_printf_P(PSTR("_etsTimer.timer_arg=%p\n"), _etsTimer.timer_arg);
+    _debug_printf_P(PSTR("_etsTimer.timer_arg=%p\n"), _etsTimer.timer_arg);
     if (_etsTimer.timer_arg == this) {
         ets_timer_disarm(&_etsTimer);
         ets_timer_done(&_etsTimer);

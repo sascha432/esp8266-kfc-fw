@@ -111,6 +111,8 @@ private:
 
 class FakeSerial : public Stdout {
 public:
+    FakeSerial(const FakeSerial &fake) = delete;
+
     FakeSerial() : Stdout() {
     }
     void begin(int baud) {

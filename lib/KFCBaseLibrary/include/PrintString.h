@@ -24,10 +24,9 @@ class PrintString : public String, public Print {
 public:
     using Print::print;
 
-    inline PrintString() : String(), Print() {
+    PrintString() {
     }
-
-    inline PrintString(const String &str) : String(str) {
+    PrintString(const String &str) : String(str) {
     }
 
     PrintString(const char *format, ...);
@@ -60,4 +59,10 @@ public:
 
     virtual size_t write(uint8_t data) override;
     virtual size_t write(const uint8_t* buf, size_t size) override;
+    size_t write(const char *buf, size_t size) {
+        return write(reinterpret_cast<const uint8_t *>(buf), size);
+    }
+
+private:
+    size_t _setLength(char *buf, size_t size, size_t len);
 };

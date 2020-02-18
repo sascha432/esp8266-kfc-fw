@@ -162,6 +162,9 @@ public:
     ClockPlugin();
 
     virtual PGM_P getName() const;
+    virtual const __FlashStringHelper *getFriendlyName() const {
+        return F("Clock");
+    }
     virtual PluginPriorityEnum_t getSetupPriority() const override {
         return MIN_PRIORITY;
     }
@@ -183,12 +186,12 @@ public:
     }
     virtual void createWebUI(WebUI &webUI) override;
 
-    virtual MenuTypeEnum_t getMenuType() const override {
-        return CUSTOM;
-    }
-    virtual void createMenu() override {
-        bootstrapMenu.addSubMenu(F("Clock"), F("clock.html"), navMenu.config);
-    }
+    // virtual MenuTypeEnum_t getMenuType() const override {
+    //     return CUSTOM;
+    // }
+    // virtual void createMenu() override {
+    //     bootstrapMenu.addSubMenu(F("Clock"), F("clock.html"), navMenu.config);
+    // }
 
     virtual PGM_P getConfigureForm() const override {
         return getName();

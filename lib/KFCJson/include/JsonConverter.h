@@ -13,6 +13,7 @@
 class JsonConverter : public JsonBaseReader {
 public:
     typedef std::vector<AbstractJsonValue *> StackVector;
+    typedef std::vector<JsonString> JsonStringVector;
 
     JsonConverter(Stream &stream);
 
@@ -24,9 +25,13 @@ public:
     AbstractJsonValue *getRoot() const;
     void setIgnoreInvalid(bool ingnore);
 
+    void addFilter(const JsonString &str);
+
 private:
     AbstractJsonValue *_current;
     StackVector _stack;
     bool _ignoreInvalid;
+    JsonStringVector _filter;
+    uint16_t _filtered;
 };
 

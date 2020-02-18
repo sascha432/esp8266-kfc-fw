@@ -4,7 +4,6 @@
 
 #include "PrintString.h"
 
-
 PrintString::PrintString(const char *format, ...)
 {
     va_list arg;
@@ -60,10 +59,10 @@ size_t PrintString::print(double n, int digits, bool trimTrailingZeros)
                     endPtr = ptr;
                 }
             }
-            return Print::write(buf, endPtr - buf);
+            return write(reinterpret_cast<const uint8_t *>(buf), endPtr - buf);
         }
         else {
-            return Print::write(buf, strlen(buf));
+            return write(reinterpret_cast<const uint8_t *>(buf), strlen(buf));
         }
     }
     else {
@@ -76,9 +75,17 @@ size_t PrintString::vprintf(const char *format, va_list arg)
     char temp[64];
     size_t len = vsnprintf(temp, sizeof(temp), format, arg);
     if (len > sizeof(temp) - 1) {
+#if WSTRING_HAVE_SETLEN
         if (reserve(length() + len)) {
-            return vsnprintf(begin() + length(), len + 1, format, arg);
+            len = vsnprintf(wbuffer() + length(), len + 1, format, arg);
+            setLen(length() + len);
+            return len;
         }
+#else
+        if (reserve(length() + len)) {
+            return vsnprintf(begin() + _setLength(temp, sizeof(temp), length() + len), len + 1, format, arg);
+        }
+#endif
         return 0;
     }
     return write(reinterpret_cast<const uint8_t *>(temp), len);
@@ -89,9 +96,17 @@ size_t PrintString::vprintf_P(PGM_P format, va_list arg)
     char temp[64];
     size_t len = vsnprintf_P(temp, sizeof(temp), format, arg);
     if (len > sizeof(temp) - 1) {
+#if WSTRING_HAVE_SETLEN
         if (reserve(length() + len)) {
-            return vsnprintf_P(begin() + length(), len + 1, format, arg);
+            len = vsnprintf_P(wbuffer() + length(), len + 1, format, arg);
+            setLen(length() + len);
+            return len;
         }
+#else
+        if (reserve(length() + len)) {
+            return vsnprintf_P(begin() + _setLength(temp, sizeof(temp), length() + len), len + 1, format, arg);
+        }
+#endif
         return 0;
     }
     return write(reinterpret_cast<const uint8_t *>(temp), len);
@@ -109,8 +124,11 @@ size_t PrintString::write(const uint8_t* buf, size_t size)
         return 0;
     }
 #if WSTRING_HAVE_SETLEN
-    reinterpret_cast<char *>(memmove(begin() + length(), buf, size))[size] = 0;
+    reinterpret_cast<char *>(memmove(wbuffer() + length(), buf, size))[size] = 0;
     setLen(length() + size);
+#elif 1
+    char temp[16];
+    memmove(begin() + _setLength(temp, sizeof(temp), length() + size), buf, size);
 #else
     const char* ptr = reinterpret_cast<const char*>(buf);
     size_t count = size;
@@ -127,8 +145,11 @@ size_t PrintString::write_P(PGM_P buf, size_t size)
         return 0;
     }
 #if WSTRING_HAVE_SETLEN
-    reinterpret_cast<char *>(memcpy_P(begin() + length(), buf, size))[size] = 0;
+    reinterpret_cast<char *>(memcpy_P(wbuffer() + length(), buf, size))[size] = 0;
     setLen(length() + size);
+#elif 1
+    char temp[16];
+    memcpy_P(begin() + _setLength(temp, sizeof(temp), length() + size), buf, size);
 #else
     size_t count = size;
     while (count--) {
@@ -136,4 +157,21 @@ size_t PrintString::write_P(PGM_P buf, size_t size)
     }
 #endif
     return size;
+}
+
+size_t PrintString::_setLength(char *buf, size_t size, size_t len)
+{
+    auto begin = length();
+    len = len - length();
+    memset(buf, ' ', size);
+    while(len) {
+        size_t fill = size - 1;
+        if (fill > len) {
+            fill = len;
+        }
+        buf[fill] = 0;
+        *this += buf;
+        len -= fill;
+    }
+    return begin;
 }

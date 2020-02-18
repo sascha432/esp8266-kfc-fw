@@ -78,6 +78,9 @@ public:
     WeatherStationPlugin();
 
     virtual PGM_P getName() const;
+    virtual const __FlashStringHelper *getFriendlyName() const {
+        return F("Weather Station");
+    }
     virtual PluginPriorityEnum_t getSetupPriority() const override {
         return (PluginPriorityEnum_t)120;
     }
@@ -90,12 +93,12 @@ public:
     virtual bool hasStatus() const override;
     virtual void getStatus(Print &output) override;
 
-    virtual MenuTypeEnum_t getMenuType() const override {
-        return CUSTOM;
-    }
-    virtual void createMenu() override {
-        bootstrapMenu.addSubMenu(F("Weather Station"), F("weather.html"), navMenu.config);
-    }
+    // virtual MenuTypeEnum_t getMenuType() const override {
+    //     return CUSTOM;
+    // }
+    // virtual void createMenu() override {
+    //     bootstrapMenu.addSubMenu(F("Weather Station"), F("weather.html"), navMenu.config);
+    // }
 
     virtual PGM_P getConfigureForm() const override {
         return getName();

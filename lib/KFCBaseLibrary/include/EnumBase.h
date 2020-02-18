@@ -122,12 +122,14 @@ namespace EnumBaseHelper {
 
     typedef int32_t ValueType;
 
-    typedef struct {
+    class ValueInfo {
+    public:
+        ValueInfo() : parsedValue(0), valueState(0) {}
         String name;
         String value;
         ValueType parsedValue;
         int8_t valueState;              // 0 = invalid, 1 valid
-    } ValueInfo;
+    };
 
     typedef std::vector<ValueInfo> ValueVector;
 
@@ -278,7 +280,7 @@ public:
 
     static bool __matchItems(char *ptr, size_t len, const ValueVector &items, ValueType &value, StringVector *results) {
         int count = 0;
-        ValueInfo tmp = ValueInfo();
+        ValueInfo tmp;
         auto slen = strlen(ptr);
         for(auto &item: items) {
             // debug_printf("%s=%u %s,%u cnt %u\n", item.name.c_str(), item.parsedValue, ptr, len, count)
@@ -326,7 +328,7 @@ public:
         bool valid = false;
         auto ptr = valuesPtr;
         while(pgm_read_byte(ptr)) {
-            ValueInfo item = ValueInfo();
+            ValueInfo item;
             PrintString value;
 
             // name

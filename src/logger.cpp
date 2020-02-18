@@ -246,7 +246,7 @@ void Logger::getLogs(StringVector &logs)
         logs.emplace_back(FSPGM(log_file_debug));
     }
 #endif
-    debug_printf_P(PSTR("Logger::getLogs(): %s\n"), implode(',', &logs).c_str());
+    debug_printf_P(PSTR("Logger::getLogs(): %s\n"), implode(',', logs).c_str());
 }
 
 void Logger::writeLog(LogLevel logLevel, const char *message, va_list arg)

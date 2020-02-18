@@ -13,14 +13,30 @@
 #endif
 
 SSIProxyStream::SSIProxyStream(File &file, DataProviderInterface &provider) : _template({ *this, -1, nullptr, 0, String() }), _file(file), _position(0), _length(0), _provider(provider) {
+#if DEBUG
+    _ramUsage = ESP.getFreeHeap();
+#endif
 }
 
 SSIProxyStream::~SSIProxyStream() {
+#if DEBUG
+    debug_printf(PSTR("min. ram=%u\n"), _ramUsage);
+#endif
 }
 
-int SSIProxyStream::_read()
+inline int SSIProxyStream::available() {
+    if (!_file) {
+        return false;
+    }
+    else if (_position < _buffer.length()) {
+        return true;
+    }
+    return _file.available();
+}
+
+int SSIProxyStream::read()
 {
-    auto data = _peek();
+    auto data = peek();
     if (data != -1) {
         _position++;
         _template.position--;
@@ -28,7 +44,7 @@ int SSIProxyStream::_read()
     return data;
 }
 
-int SSIProxyStream::_peek()
+int SSIProxyStream::peek()
 {
     int data;
     if (_position >= _buffer.length()) {
@@ -226,5 +242,6 @@ size_t SSIProxyStream::_readBuffer(bool templateCheck)
             DEBUG_ASSERT(_template.marker == -1);
         }
     }
+    _ramUsage = std::min(ESP.getFreeHeap(), _ramUsage);
     return len;
 }

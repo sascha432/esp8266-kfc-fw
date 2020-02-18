@@ -153,8 +153,24 @@ namespace KFCConfigurationClasses {
                 NONE = 0,
                 TURN_ON,
                 TURN_OFF,
+                TOGGLE,
+                TRIGGER,
                 SET_BRIGHTNESS,
                 CHANGE_BRIGHTNESS,  // values: step(0), min brightness(1), max brightness(2), turn off if less than min. brightness(3)
+                SET_KELVIN,
+                SET_RGB_COLOR,
+                MEDIA_PREVIOUS_TRACK,
+                MEDIA_NEXT_TRACK,
+                MEDIA_STOP,
+                MEDIA_PLAY,
+                MEDIA_PAUSE,
+                MEDIA_PLAY_PAUSE,
+                VOLUME_UP,
+                VOLUME_DOWN,
+                VOLUME_SET,     // values: volume(0) in %
+                VOLUME_MUTE,
+                VOLUME_UNMUTE,
+                __END,
             } ActionEnum_t;
             typedef struct __attribute__packed__ {
                 uint16_t id: 16;
@@ -197,7 +213,7 @@ namespace KFCConfigurationClasses {
                 ValuesVector &getValues() {
                     return _values;
                 }
-                const String getValuesStr() const {
+                String getValuesStr() const {
                     return implode(',', _values);
                 }
                 uint8_t getNumValues() const {

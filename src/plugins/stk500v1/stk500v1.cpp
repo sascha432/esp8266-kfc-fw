@@ -28,6 +28,9 @@ public:
     virtual PGM_P getName() const {
         return PSTR("stk500v1");
     }
+    virtual const __FlashStringHelper *getFriendlyName() const {
+        return F("STK500v1");
+    }
     virtual bool hasAtMode() const override {
         return true;
     }

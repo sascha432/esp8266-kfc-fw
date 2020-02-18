@@ -22,6 +22,9 @@ public:
     PGM_P getName() const {
         return PSTR("pindbg");
     }
+    virtual const __FlashStringHelper *getFriendlyName() const {
+        return F("PIN Debugger");
+    }
 
     virtual PluginPriorityEnum_t getSetupPriority() const override {
         return (PluginPriorityEnum_t)-125;
@@ -39,7 +42,7 @@ public:
         return CUSTOM;
     }
     virtual void createMenu() override {
-        bootstrapMenu.addSubMenu(F("Ping Remote Host"), F("pin_debugger.html"), navMenu.util);
+        bootstrapMenu.addSubMenu(getFriendlyName(), F("pin_debugger.html"), navMenu.util);
     }
 
     // virtual PGM_P getConfigureForm() const override {

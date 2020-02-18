@@ -28,6 +28,9 @@ public:
     BlindsControlPlugin();
 
     virtual PGM_P getName() const;
+    virtual const __FlashStringHelper *getFriendlyName() const {
+        return F("Blinds Controller");
+    }
     virtual void setup(PluginSetupMode_t mode) override;
     virtual void reconfigure(PGM_P source) override;
 
@@ -38,12 +41,12 @@ public:
     virtual void createWebUI(WebUI &webUI) override;
     virtual WebUIInterface *getWebUIInterface() override;
 
-    virtual MenuTypeEnum_t getMenuType() const override {
-        return CUSTOM;
-    }
-    virtual void createMenu() override {
-        bootstrapMenu.addSubMenu(F("Blinds Controller"), F("blinds.html"), navMenu.config);
-    }
+    // virtual MenuTypeEnum_t getMenuType() const override {
+    //     return CUSTOM;
+    // }
+    // virtual void createMenu() override {
+    //     bootstrapMenu.addSubMenu(F("Blinds Controller"), F("blinds.html"), navMenu.config);
+    // }
 
     virtual PGM_P getConfigureForm() const override {
         return PSTR("blinds");

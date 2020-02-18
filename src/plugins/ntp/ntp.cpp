@@ -439,6 +439,9 @@ public:
     virtual PGM_P getName() const {
         return PSTR("ntp");
     }
+    virtual const __FlashStringHelper *getFriendlyName() const {
+        return F("NTP Client");
+    }
     virtual PluginPriorityEnum_t getSetupPriority() const override {
         return PRIO_NTP;
     }

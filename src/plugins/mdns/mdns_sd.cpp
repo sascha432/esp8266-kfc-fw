@@ -70,6 +70,9 @@ public:
         REGISTER_PLUGIN(this);
     }
     PGM_P getName() const;
+    virtual const __FlashStringHelper *getFriendlyName() const {
+        return F("MDNS");
+    }
     PluginPriorityEnum_t getSetupPriority() const override;
     void setup(PluginSetupMode_t mode) override;
     void restart() override {

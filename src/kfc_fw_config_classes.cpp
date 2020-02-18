@@ -236,7 +236,36 @@ namespace KFCConfigurationClasses {
                 return F("Set Brightness");
             case CHANGE_BRIGHTNESS:
                 return F("Change Brightness");
-            case NONE:
+            case TOGGLE:
+                return F("Toggle");
+            case TRIGGER:
+                return F("Trigger");
+            case SET_KELVIN:
+                return F("Set Kelvin");
+            case SET_RGB_COLOR:
+                return F("Set RGB Color");
+            case MEDIA_NEXT_TRACK:
+                return F("Next Track");
+            case MEDIA_PAUSE:
+                return F("Media Pause");
+            case MEDIA_PLAY:
+                return F("Media Play");
+            case MEDIA_PLAY_PAUSE:
+                return F("Media Play/Pause");
+            case MEDIA_PREVIOUS_TRACK:
+                return F("Previous Track");
+            case MEDIA_STOP:
+                return F("Media Stop");
+            case VOLUME_DOWN:
+                return F("Volume Down");
+            case VOLUME_MUTE:
+                return F("Volume Mute");
+            case VOLUME_UNMUTE:
+                return F("Volume Unmute");
+            case VOLUME_SET:
+                return F("Volume Set");
+            case VOLUME_UP:
+                return F("Volume Up");
             default:
                 return F("None");
         }

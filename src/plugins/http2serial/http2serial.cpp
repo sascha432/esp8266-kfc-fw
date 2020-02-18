@@ -195,6 +195,9 @@ public:
     virtual PGM_P getName() const {
         return PSTR("http2ser");
     }
+    virtual const __FlashStringHelper *getFriendlyName() const {
+        return F("Http2Serial");
+    }
     virtual PluginPriorityEnum_t getSetupPriority() const override {
         return (PluginPriorityEnum_t)10;
     }

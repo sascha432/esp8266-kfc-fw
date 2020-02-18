@@ -63,6 +63,9 @@ public:
     virtual PGM_P getName() const {
         return PSTR("buttons");
     }
+    virtual const __FlashStringHelper *getFriendlyName() const {
+        return F("Buttons");
+    }
 
     virtual PluginPriorityEnum_t getSetupPriority() const {
         return PRIO_BUTTONS;
@@ -75,9 +78,9 @@ public:
     virtual void restart() override;
     virtual void reconfigure(PGM_P source) override;
 
-    virtual MenuTypeEnum_t getMenuType() const override {
-        return AUTO;
-    }
+    // virtual MenuTypeEnum_t getMenuType() const override {
+    //     return AUTO;
+    // }
     // virtual void createMenu() override {
     //     bootstrapMenu.addSubMenu(F("Buttons"), F("buttons.html"), navMenu.config);
     // }

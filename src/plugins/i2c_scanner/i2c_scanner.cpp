@@ -156,6 +156,9 @@ public:
     virtual PGM_P getName() const {
         return PSTR("i2c_scan");
     }
+    virtual const __FlashStringHelper *getFriendlyName() const {
+        return F("I2C Scanner");
+    }
 
     PluginPriorityEnum_t getSetupPriority() const {
         return MIN_PRIORITY;

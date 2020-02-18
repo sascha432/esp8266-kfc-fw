@@ -152,6 +152,9 @@ public:
     virtual PGM_P getName() const {
         return PSTR("atomicsun");
     }
+    virtual const __FlashStringHelper *getFriendlyName() const {
+        return F("Atomic Sun v2");
+    }
     virtual PluginPriorityEnum_t getSetupPriority() const override {
         return (AtomicSunPlugin::PluginPriorityEnum_t)100;
     }
@@ -174,12 +177,12 @@ public:
     }
     virtual void getStatus(Print &output) override;
 
-    virtual MenuTypeEnum_t getMenuType() const override {
-        return CUSTOM;
-    }
-    virtual void createMenu() override {
-        bootstrapMenu.addSubMenu(F("Atomic Sun v2"), F("dimmer_cfg.html"), navMenu.config);
-    }
+    // virtual MenuTypeEnum_t getMenuType() const override {
+    //     return CUSTOM;
+    // }
+    // virtual void createMenu() override {
+    //     bootstrapMenu.addSubMenu(getFriendlyName(), F("dimmer_cfg.html"), navMenu.config);
+    // }
 
 };
 

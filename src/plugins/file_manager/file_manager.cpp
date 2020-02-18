@@ -473,6 +473,9 @@ public:
     virtual PGM_P getName() const {
         return PSTR("filemgr");
     }
+    virtual const __FlashStringHelper *getFriendlyName() const {
+        return F("File Manager");
+    }
     virtual PluginPriorityEnum_t getSetupPriority() const override {
         return MAX_PRIORITY;
     }
@@ -487,12 +490,12 @@ public:
         return plugin->nameEquals(FSPGM(http));
     }
 
-    virtual MenuTypeEnum_t getMenuType() const override {
-        return CUSTOM;
-    }
-    virtual void createMenu() override {
-        bootstrapMenu.addSubMenu(F("File Manager"), FSPGM(file_manager_html_uri), navMenu.util);
-    }
+    // virtual MenuTypeEnum_t getMenuType() const override {
+    //     return CUSTOM;
+    // }
+    // virtual void createMenu() override {
+    //     bootstrapMenu.addSubMenu(F("File Manager"), FSPGM(file_manager_html_uri), navMenu.util);
+    // }
 };
 
 static FileManagerPlugin plugin;

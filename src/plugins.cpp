@@ -185,20 +185,7 @@ void setup_plugins(PluginComponent::PluginSetupMode_t mode) {
                     if (plugin->getConfigureForm()) {
                         String uri = FPSTR(plugin->getConfigureForm());
                         uri += F(".html");
-                        if (plugin->getFriendlyName() == FPSTR(plugin->getName())) {
-                            String name = FPSTR(plugin->getName());
-                            if (name.length() > 4) {
-                                name.toLowerCase();
-                                name[0] = toupper(name[0]);
-                            }
-                            else {
-                                name.toUpperCase();
-                            }
-                            bootstrapMenu.addSubMenu(name, uri, navMenu.config);
-                        }
-                        else {
-                            bootstrapMenu.addSubMenu(plugin->getFriendlyName(), uri, navMenu.config);
-                        }
+                        bootstrapMenu.addSubMenu(plugin->getFriendlyName(), uri, navMenu.config);
                     }
                     break;
                 case PluginComponent::MenuTypeEnum_t::NONE:

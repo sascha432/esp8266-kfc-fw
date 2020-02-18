@@ -271,6 +271,9 @@ public:
     virtual PGM_P getName() const {
         return PSTR("ssd1306");
     }
+    virtual const __FlashStringHelper *getFriendlyName() const {
+        return F("SSD1306");
+    }
 
     virtual void setup(PluginSetupMode_t mode) override {
         ssd1306_setup();

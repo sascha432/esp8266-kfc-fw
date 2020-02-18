@@ -629,6 +629,9 @@ public:
     virtual PGM_P getName() const {
         return PSTR("mqtt");
     }
+    virtual const __FlashStringHelper *getFriendlyName() const {
+        return F("MQTT");
+    }
     virtual PluginPriorityEnum_t getSetupPriority() const override;
     virtual bool autoSetupAfterDeepSleep() const override;
     virtual void setup(PluginSetupMode_t mode) override;

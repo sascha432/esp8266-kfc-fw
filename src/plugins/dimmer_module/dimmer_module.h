@@ -189,6 +189,9 @@ public:
     }
 
     virtual PGM_P getName() const override;
+    virtual const __FlashStringHelper *getFriendlyName() const {
+        return F("Dimmer");
+    }
     virtual PluginPriorityEnum_t getSetupPriority() const override {
         return (PluginPriorityEnum_t)100;
     }

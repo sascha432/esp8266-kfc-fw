@@ -76,6 +76,9 @@ public:
     }
 
     virtual PGM_P getName() const;
+    virtual const __FlashStringHelper *getFriendlyName() const {
+        return F("Sensors");
+    }
     virtual PluginPriorityEnum_t getSetupPriority() const override {
         return (PluginPriorityEnum_t)110;
     }
@@ -96,10 +99,10 @@ public:
     virtual PGM_P getConfigureForm() const override;
     virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
 
-    virtual MenuTypeEnum_t getMenuType() const override {
-        return CUSTOM;
-    }
-    virtual void createMenu() override;
+    // virtual MenuTypeEnum_t getMenuType() const override {
+    //     return CUSTOM;
+    // }
+    // virtual void createMenu() override;
 
     static void timerEvent(EventScheduler::TimerPtr timer);
 

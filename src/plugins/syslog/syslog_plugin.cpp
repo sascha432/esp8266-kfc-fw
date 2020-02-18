@@ -145,6 +145,9 @@ public:
     virtual PGM_P getName() const {
         return PSTR("syslog");
     }
+    virtual const __FlashStringHelper *getFriendlyName() const {
+        return F("Syslog");
+    }
     PluginPriorityEnum_t getSetupPriority() const override;
 
     bool autoSetupAfterDeepSleep() const override;

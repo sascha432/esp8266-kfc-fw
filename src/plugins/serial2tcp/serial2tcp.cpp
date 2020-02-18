@@ -30,6 +30,9 @@ class Serial2TcpPlugin : public PluginComponent {
 public:
     Serial2TcpPlugin();
     virtual PGM_P getName() const;
+    virtual const __FlashStringHelper *getFriendlyName() const {
+        return F("Serial2TCP");
+    }
     virtual PluginPriorityEnum_t getSetupPriority() const override;
     virtual void setup(PluginSetupMode_t mode) override;
     virtual void reconfigure(PGM_P source) override;

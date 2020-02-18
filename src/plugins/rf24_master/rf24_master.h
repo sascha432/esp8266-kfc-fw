@@ -18,6 +18,9 @@ public:
     RF24MasterPlugin();
 
     virtual PGM_P getName() const;
+    virtual const __FlashStringHelper *getFriendlyName() const {
+        return F("RF24 Master");
+    }
     virtual PluginPriorityEnum_t getSetupPriority() const override {
         return (PluginPriorityEnum_t)110;
     }

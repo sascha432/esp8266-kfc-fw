@@ -77,32 +77,17 @@
     </style>
 
     <script>
-        var items = '%HASS_ITEMS%';
+        var items = '%HASS_JSON%';
         while(items.indexOf('&quot;') != -1) {
             items = items.replace('&quot;', '"');
         }
         if (items.indexOf('%') == 0) {
-            var items = '[{"id":1,"action":1,"values":[],"entity_id":"light.floor_lamp_top"},{"id":2,"action":4,"values":[25,255,10,1],"entity_id":"light.floor_lamp_top"},{"id":3,"action":4,"values":[-25,255,10,1],"entity_id":"light.floor_lamp_top"},{"id":4,"action":2,"values":[],"entity_id":"light.floor_lamp_top"}]';
+            var items = '{"actions":[{"1":"Turn On", "2":"Turn Off"}],"items":{"id":1,"action":"Turn on","values":[],"entity_id":"light.floor_lamp_top"},{"id":2,"action":"Change Brightness","values":[25,10,255,10],"entity_id":"light.floor_lamp_top"},{"id":3,"action":"Change Brightness","values":[-25,10,255,10],"entity_id":"light.floor_lamp_top"},{"id":4,"action":"Turn Off","values":[],"entity_id":"light.floor_lamp_top"}}';
         }
         items = JSON.parse(items);
 
         function add_item(id, action, entity) {
-            actionStr = 'None';
-            switch(action) {
-                case 1:
-                    actionStr = 'Turn On';
-                    break;
-                case 2:
-                    actionStr = 'Turn Off';
-                    break;
-                case 3:
-                    actionStr = 'Set Brightness';
-                    break;
-                case 4:
-                    actionStr = 'Change Brightness';
-                    break;
-            }
-            return '<tr><td>' + id + '</td><td>' + actionStr + '</td><td>' + entity + '</td><td><button class="edit-item" data-id="' + id + '">Edit</button> <button class="remove-item" data-id="' + id + '">Remove</button></td></tr>';
+            return '<tr><td>' + id + '</td><td>' + action + '</td><td>' + entity + '</td><td><button class="edit-item" data-id="' + id + '">Edit</button> <button class="remove-item" data-id="' + id + '">Remove</button></td></tr>';
         }
 
         function add_buttons(html) {

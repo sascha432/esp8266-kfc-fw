@@ -146,7 +146,7 @@ public:
         return PSTR("syslog");
     }
     virtual const __FlashStringHelper *getFriendlyName() const {
-        return F("Syslog");
+        return F("Syslog Client");
     }
     PluginPriorityEnum_t getSetupPriority() const override;
 

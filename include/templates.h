@@ -15,6 +15,7 @@
 #include <pgmspace.h>
 #include <map>
 #include <KFCForms.h>
+#include <KFCJson.h>
 #include "kfc_fw_config.h"
 
 PROGMEM_STRING_DECL(Not_supported);
@@ -29,14 +30,15 @@ public:
     void setForm(Form *form);
     Form *getForm();
 
-    PrintArgs &getPrintArgs() {
-        return _printArgs;
-    }
+    JsonUnnamedObject *getJson();
+
+    PrintArgs &getPrintArgs();
 
     virtual void process(const String &key, PrintHtmlEntitiesString &output);
 
 protected:
     Form *_form;
+    JsonUnnamedObject *_json;
     PrintArgs _printArgs;
 };
 
@@ -111,9 +113,16 @@ public:
         return _tokens;
     }
 
+    void setJson(JsonUnnamedObject *json) {
+        _json = json;
+    }
+
 protected:
+    friend WebTemplate;
+
     FormData _data;
     TokenVector _tokens;
+    JsonUnnamedObject *_json;
 };
 
 class WifiSettingsForm : public SettingsForm {

@@ -26,31 +26,44 @@
     <!--NAV%%-->
     <div class="container">
         <h1>Home Assistant Configuration</h1>
-        <form method="POST" action="hass.html">
-            <table border="1">
-                <thead>
-                    <tr><td>Id</td><td>Action</td><td>Entity</td><td>&nbsp;</td></tr>
-                </thead>
-                <tbody id="hass_settings">
-                </tbody>
-            </table>
-            <!-- <div class="form-group">
-                <label for="id">Id:</label>
-                <input type="text" class="form-control" name="id" id="id">
+        <div class="status-table">
+            <div class="row">
+                <div class="col-lg-1 col-lg-auto">
+                    Id
+                </div>
+                <div class="col">
+                    Action
+                </div>
+                <div class="col">
+                    Entity Id
+                </div>
+                <div class="col">
+                    &nbsp;
+                </div>
             </div>
-            <div class="form-group">
-                <label for="action">Action:</label>
+        </div>
+        <div id="prototype" class="hidden">
+            <div class="row">
+                <div class="col col-lg-1 col-lg-auto">
+                </div>
+                <div class="col">
+                </div>
+                <div class="col">
+                </div>
+                <div class="col">
+                    <button class="btn btn-primary edit-item">Edit</button>
+                    <button class="btn btn-primary remove-item">Remove</button>
+                </div>
+            </div>
+        </div>
+        <div class="form-group mt-3">
+            <div class="input-group">
                 <select class="form-control" name="action" id="action">
                     <option value="0">None</option>
-                    <option value="1">Turn On</option>
-                    <option value="2">Turn Off</option>
-                    <option value="3">Change Brightness</option>
                 </select>
-            </div> -->
-            <div class="row">
-                <div class="col add-item"><button>Add</button></div>
+                <button class="btn btn-primary add-item ml-3">Add Action</button>
             </div>
-        </form>
+        </div>
         <!--%%FOOT-->
         <div class="row">
             <div class="col footer">&nbsp;</div>
@@ -67,50 +80,56 @@
 	<script debug_loader="1" type="text/javascript" src="../js/debug.js"></script>
     <!--JAVASCRIPT%%-->
 
-    <style>
-        td {
-            padding: 5px;
-        }
-        .add-item {
-            padding: 5px;
-        }
-    </style>
-
     <script>
-        var items = '%HASS_JSON%';
-        while(items.indexOf('&quot;') != -1) {
-            items = items.replace('&quot;', '"');
+        var json;
+        try {
+            json = $FORM_JSON$;
+        } catch(e) {
+            jsonStr = '{"actions":{"1":"Turn On","2":"Turn Off","3":"Toggle","4":"Trigger","5":"Set Brightness","6":"Change Brightness","7":"Set Kelvin","8":"Set RGB Color","9":"Previous Track","10":"Next Track","11":"Media Stop","12":"Media Play","13":"Media Pause","14":"Media Play/Pause","15":"Volume Up","16":"Volume Down","17":"Volume Set","18":"Volume Mute","19":"Volume Unmute"},"items":[{"id":1,"action":"Turn On","values":[],"entity_id":"light.floor_lamp_top"},{"id":2,"action":"Trigger","values":[25,10,255],"entity_id":"light.floor_lamp_top"},{"id":3,"action":"Trigger","values":[-25,10,255],"entity_id":"light.floor_lamp_top"},{"id":4,"action":"Turn Off","values":[],"entity_id":"light.floor_lamp_top"}]}';
+            json = JSON.parse(jsonStr);
         }
-        if (items.indexOf('%') == 0) {
-            var items = '{"actions":[{"1":"Turn On", "2":"Turn Off"}],"items":{"id":1,"action":"Turn on","values":[],"entity_id":"light.floor_lamp_top"},{"id":2,"action":"Change Brightness","values":[25,10,255,10],"entity_id":"light.floor_lamp_top"},{"id":3,"action":"Change Brightness","values":[-25,10,255,10],"entity_id":"light.floor_lamp_top"},{"id":4,"action":"Turn Off","values":[],"entity_id":"light.floor_lamp_top"}}';
-        }
-        items = JSON.parse(items);
+        console.log(json);
 
         function add_item(id, action, entity) {
-            return '<tr><td>' + id + '</td><td>' + action + '</td><td>' + entity + '</td><td><button class="edit-item" data-id="' + id + '">Edit</button> <button class="remove-item" data-id="' + id + '">Remove</button></td></tr>';
+            var prototype = $('#prototype').clone();
+            var cols = prototype.find('.col');
+            $(cols[0]).html(id);
+            $(cols[1]).html(action);
+            $(cols[2]).html(entity);
+            return prototype.html();
         }
 
-        function add_buttons(html) {
-            html.find('.edit-item').on('click', function(event) {
+        function add_buttons(row, id) {
+            row.find('.edit-item').attr('data-id', id).on('click', function(event) {
                 console.log('edit '+$(this).data('id'));
                 event.preventDefault();
             });
-            html.find('.remove-item').on('click', function(event) {
-                console.log('remove '+$(this).data('id'));
+            row.find('.remove-item').attr('data-id', id).on('click', function(event) {
                 event.preventDefault();
+                $(this).attr('disabled', 'disabled');
+                $.get('/hass_remove.html?id=' + $(this).data('id'), function(data) {
+                    $(this).removeAttr('disabled');
+                    if (data == 'OK') {
+                        $(this).closest('.row').remove();
+                    }
+                });
             });
-            return html;
         }
 
-        var str = '';
-        $(items).each(function(index, val) {
-            str = str + add_item(val['id'], val['action'], val['entity_id']);
+        $(json.items).each(function(index, val) {
+            var row = $('.status-table').append(add_item(val['id'], val['action'], val['entity_id'])).find('.row:last');
+            add_buttons(row, val['id']);
         });
-        $('#hass_settings').html(add_buttons($(str)));
-        $('form .add-item').on('click', function(event) {
-            console.log('add');
+        $('.container .add-item').on('click', function(event) {
+            console.log('add ' + $('#action').val());
             event.preventDefault();
         });
+
+        var options = '';
+        for (let key in json.actions) {
+            options += '<option value="' + key + '">' + json.actions[key] + '</option>';
+        }
+        $('#action').html(options);
 
     </script>
 

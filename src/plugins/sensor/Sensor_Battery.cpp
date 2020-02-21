@@ -17,7 +17,7 @@
 Sensor_Battery::Sensor_Battery(const JsonString &name) : MQTTSensor(), _name(name), _adc(A0, 20, 1)
 {
 #if DEBUG_MQTT_CLIENT
-    debug_printf_P(PSTR("Sensor_Battery(): component=%p\n"), this);
+    debug_printf_P(PSTR("component=%p\n"), this);
 #endif
     registerClient(this);
     reconfigure();
@@ -32,10 +32,9 @@ void Sensor_Battery::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQT
     discovery->finalize();
     vector.emplace_back(discovery);
 
-
 #if IOT_SENSOR_BATTERY_CHARGE_DETECTION
     discovery = new MQTTAutoDiscovery();
-    discovery->create(this, 0, format);
+    discovery->create(this, 1, format);
     discovery->addStateTopic(_getTopic(STATE));
     discovery->finalize();
     vector.emplace_back(discovery);
@@ -52,7 +51,7 @@ uint8_t Sensor_Battery::getAutoDiscoveryCount() const {
 
 void Sensor_Battery::getValues(JsonArray &array)
 {
-    _debug_printf_P(PSTR("Sensor_Battery::getValues()\n"));
+    _debug_printf_P(PSTR("\n"));
 
     auto obj = &array.addObject(3);
     obj->add(JJ(id), _getId(LEVEL));
@@ -69,8 +68,7 @@ void Sensor_Battery::getValues(JsonArray &array)
 
 void Sensor_Battery::createWebUI(WebUI &webUI, WebUIRow **row)
 {
-    _debug_printf_P(PSTR("Sensor_Battery::createWebUI()\n"));
-
+    _debug_printf_P(PSTR("\n"));
     (*row)->addSensor(_getId(LEVEL), _name, F("V"));
 #if IOT_SENSOR_BATTERY_CHARGE_DETECTION
     (*row)->addSensor(_getId(STATE), F("Charging"), F(""));
@@ -79,6 +77,7 @@ void Sensor_Battery::createWebUI(WebUI &webUI, WebUIRow **row)
 
 void Sensor_Battery::publishState(MQTTClient *client)
 {
+    _debug_printf_P(PSTR("client=%p connected=%u\n"), client, client && client->isConnected() ? 1 : 0);
     if (client && client->isConnected()) {
         client->publish(_getTopic(LEVEL), _qos, 1, String(_readSensor(), _config.precision));
 #if IOT_SENSOR_BATTERY_CHARGE_DETECTION
@@ -106,7 +105,7 @@ void Sensor_Battery::createConfigureForm(AsyncWebServerRequest *request, Form &f
 void Sensor_Battery::reconfigure()
 {
     _config = config._H_GET(Config().sensor).battery;
-    _debug_printf_P(PSTR("Sensor_Battery::reconfigure(): calibration=%f, precision=%u\n"), _config.calibration, _config.precision);
+    _debug_printf_P(PSTR("calibration=%f, precision=%u\n"), _config.calibration, _config.precision);
 }
 
 
@@ -120,7 +119,7 @@ float Sensor_Battery::readSensor()
 float Sensor_Battery::_readSensor()
 {
     double adcVoltage = _adc.read() / 1024.0;
-    _debug_printf_P(PSTR("Sensor_Battery::_readSensor(): raw = %f\n"), (((IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R2 + IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1)) / IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1) * adcVoltage)
+    _debug_printf_P(PSTR("raw = %f\n"), (((IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R2 + IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1)) / IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1) * adcVoltage)
     return ((((IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R2 + IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1)) / IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1) * adcVoltage * _config.calibration) + _config.offset;
 }
 
@@ -137,11 +136,11 @@ String Sensor_Battery::_getId(BatteryIdEnum_t type)
 {
 #if IOT_SENSOR_BATTERY_CHARGE_DETECTION
     switch(type) {
+        case BatteryIdEnum_t::STATE:
+            return F("battery_state");
         case BatteryIdEnum_t::LEVEL:
         default:
             return F("battery_level");
-        case BatteryIdEnum_t::STATE:
-            return F("battery_state");
     }
 #else
     return F("supply_voltage");

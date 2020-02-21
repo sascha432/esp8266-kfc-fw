@@ -26,11 +26,11 @@ public:
         PRIO_RESET_DETECTOR = -127,
         PRIO_CONFIG = -126,
         PRIO_BUTTONS = -100,
-        PRIO_HASS = -101,
         PRIO_MDNS = -90,
         PRIO_SYSLOG = -80,
         PRIO_NTP = -70,
         PRIO_HTTP = -60,
+        PRIO_HASS = -50,
         MAX_PRIORITY = 0,           // highest prio, -127 to -1 is reserved for the system
         DEFAULT_PRIORITY = 64,
         MIN_PRIORITY = 127

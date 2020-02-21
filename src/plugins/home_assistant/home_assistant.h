@@ -61,6 +61,13 @@ public:
     }
     virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
 
+    virtual void setup(PluginSetupMode_t mode);
+    virtual void reconfigure(PGM_P source);
+    virtual bool hasReconfigureDependecy(PluginComponent *plugin) const {
+        return plugin->nameEquals(FSPGM(http));
+    }
+
+
 #if AT_MODE_SUPPORTED
     // at mode command handler
     virtual bool hasAtMode() const override {
@@ -98,6 +105,13 @@ public:
 private:
     String _getDomain(const String &entityId);
 
+// web server
+public:
+    static void removeAction(AsyncWebServerRequest *request);
+    static void addAction(AsyncWebServerRequest *request);
+
+private:
+    void _installWebhooks();
 };
 
 #endif

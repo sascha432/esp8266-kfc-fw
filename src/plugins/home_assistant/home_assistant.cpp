@@ -28,6 +28,7 @@
 #include "kfc_fw_config.h"
 #include "home_assistant.h"
 #include "../include/templates.h"
+#include "web_server.h"
 #include "plugins.h"
 
 #if DEBUG_HOME_ASSISTANT
@@ -216,12 +217,11 @@ void HassPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
 {
     form.finalize();
 
-    JsonUnnamedObject json;
+    JsonUnnamedObject &json = *new JsonUnnamedObject();
     {
-        auto &actions = json.addArray(F("actions"));
+        auto &actions = json.addObject(F("actions"));
         for(uint8_t i = 1; i < ActionEnum_t::__END; i++) {
-            auto &action = actions.addObject();
-            action.add(String(i), Plugins::HomeAssistant::getActionStr(static_cast<ActionEnum_t>(i)));
+            actions.add(String(i), Plugins::HomeAssistant::getActionStr(static_cast<ActionEnum_t>(i)));
         }
     }
     auto &items = json.addArray(F("items"));
@@ -237,8 +237,21 @@ void HassPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
         }
         json.add(F("entity_id"), action.getEntityId());
     }
-    reinterpret_cast<SettingsForm &>(form).getTokens().push_back(std::make_pair<String, String>(F("HASS_JSON"), json.toString().c_str()));
+    reinterpret_cast<SettingsForm &>(form).setJson(&json);
 }
+
+void HassPlugin::setup(PluginSetupMode_t mode)
+{
+    _installWebhooks();
+}
+
+void HassPlugin::reconfigure(PGM_P source)
+{
+    if (!strcmp_P_P(source, SPGM(http))) {
+        _installWebhooks();
+    }
+}
+
 
 /*
 void HassPlugin::createWebUI(WebUI &webUI)
@@ -434,5 +447,57 @@ String HassPlugin::_getDomain(const String &entityId)
     }
     return String();
 }
+
+void HassPlugin::removeAction(AsyncWebServerRequest *request)
+{
+    _debug_printf_P(PSTR("is_authenticated=%u\n"), web_server_is_authenticated(request));
+    if (web_server_is_authenticated(request)) {
+
+        auto msg = SPGM(0);
+        auto id = (uint16_t)request->arg(F("id")).toInt();
+        Plugins::HomeAssistant::ActionVector actions;
+        Plugins::HomeAssistant::getActions(actions);
+        auto iterator = std::remove(actions.begin(), actions.end(), id);
+        if (iterator != actions.end()) {
+            actions.erase(iterator, actions.end());
+            Plugins::HomeAssistant::setActions(actions);
+            config.write();
+            msg = SPGM(OK);
+        }
+
+        AsyncWebServerResponse *response = request->beginResponse_P(200, FSPGM(mime_text_plain), msg);
+        HttpHeaders httpHeaders;
+        httpHeaders.addNoCache(true);
+        httpHeaders.setAsyncWebServerResponseHeaders(response);
+        request->send(response);
+    }
+    else {
+        request->send(403);
+    }
+}
+
+void HassPlugin::addAction(AsyncWebServerRequest *request)
+{
+    _debug_printf_P(PSTR("is_authenticated=%u\n"), web_server_is_authenticated(request));
+    if (web_server_is_authenticated(request)) {
+        auto msg = SPGM(0);
+        AsyncWebServerResponse *response = request->beginResponse_P(200, FSPGM(mime_text_plain), msg);
+        HttpHeaders httpHeaders;
+        httpHeaders.addNoCache(true);
+        httpHeaders.setAsyncWebServerResponseHeaders(response);
+        request->send(response);
+    }
+    else {
+        request->send(403);
+    }
+}
+
+void HassPlugin::_installWebhooks()
+{
+    _debug_printf_P(PSTR("server=%p\n"), get_web_server_object());
+    web_server_add_handler(F("/hass_remove.html"), removeAction);
+    web_server_add_handler(F("/hass_add.html"), addAction);
+}
+
 
 #endif

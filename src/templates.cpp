@@ -21,12 +21,15 @@
 #include <debug_helper_disable.h>
 #endif
 
-WebTemplate::WebTemplate() : _form(nullptr)
+WebTemplate::WebTemplate() : _form(nullptr), _json(nullptr)
 {
 }
 
 WebTemplate::~WebTemplate()
 {
+    if (_json) {
+        delete _json;
+    }
     if (_form) {
         delete _form;
     }
@@ -34,12 +37,21 @@ WebTemplate::~WebTemplate()
 
 void WebTemplate::setForm(Form *form)
 {
+    _json = static_cast<SettingsForm *>(form)->_json;
     _form = form;
 }
 
 Form *WebTemplate::getForm()
 {
     return _form;
+}
+
+JsonUnnamedObject *WebTemplate::getJson() {
+    return _json;
+}
+
+PrintArgs &WebTemplate::getPrintArgs() {
+    return _printArgs;
 }
 
 void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
@@ -407,7 +419,7 @@ PasswordSettingsForm::PasswordSettingsForm(AsyncWebServerRequest *request) : Set
     finalize();
 }
 
-SettingsForm::SettingsForm(AsyncWebServerRequest *request) : Form(&_data)
+SettingsForm::SettingsForm(AsyncWebServerRequest *request) : Form(&_data), _json(nullptr)
 {
     _data.setCallbacks(
         [request](const String &name) {
@@ -529,6 +541,16 @@ bool TemplateDataProvider::callback(const String& name, DataProviderInterface& p
         if (form) {
             form->createJavascript(printArgs);
             fbMethod = FillBufferMethod::PRINT_ARGS;
+        }
+    }
+    else if (String_equals(name, PSTR("FORM_JSON"))) {
+        auto json = webTemplate.getJson();
+        if (json) {
+            auto stream = std::shared_ptr<JsonBuffer>(new JsonBuffer(*json));
+            provider.setFillBuffer([stream](uint8_t *buffer, size_t size) {
+                return stream->fillBuffer(buffer, size);
+            });
+            return true;
         }
     }
     // plugin status

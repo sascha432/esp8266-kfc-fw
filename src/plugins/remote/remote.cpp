@@ -45,7 +45,7 @@ void RemoteControlPlugin::setup(PluginSetupMode_t mode)
         button.onHoldRepeat(_config.config.longpressTime, _config.config.repeatTime, onButtonHeld);
         button.onRelease(onButtonReleased);
         button.update();
-        _debug_printf_P(PSTR("RemoteControlPlugin::setup(): btn=%d, pressed=%d\n"), n, button.isPressed());
+        _debug_printf_P(PSTR("btn=%d, pressed=%d\n"), n, button.isPressed());
     }
     WiFiCallbacks::add(WiFiCallbacks::CONNECTED, wifiCallback);
     LoopFunctions::add(loop);
@@ -80,7 +80,7 @@ void RemoteControlPlugin::restart()
 
 void RemoteControlPlugin::prepareDeepSleep(uint32_t sleepTimeMillis)
 {
-    _debug_printf_P(PSTR("RemoteControlPlugin::prepareDeepSleep()\n"));
+    _debug_printf_P(PSTR("time=%u\n"), sleepTimeMillis);
     digitalWrite(IOT_REMOTE_CONTROL_AWAKE_PIN, LOW);
 }
 
@@ -171,19 +171,19 @@ bool RemoteControlPlugin::atModeHandler(AtModeArgs &args)
 
 void RemoteControlPlugin::onButtonPressed(Button& btn)
 {
-    _debug_printf_P(PSTR("RemoteControlPlugin::onButtonPressed(): btn=%d\n"), plugin._getButtonNum(btn));
+    _debug_printf_P(PSTR("btn=%d\n"), plugin._getButtonNum(btn));
     //plugin._addButtonEvent(ButtonEvent(plugin._getButtonNum(btn), ButtonEvent::PRESS));
 }
 
 void RemoteControlPlugin::onButtonHeld(Button& btn, uint16_t duration, uint16_t repeatCount)
 {
-    _debug_printf_P(PSTR("RemoteControlPlugin::onButtonHeld(): btn=%d, duration=%u, repeatCount=%u\n"), plugin._getButtonNum(btn), duration, repeatCount);
+    _debug_printf_P(PSTR("btn=%d, duration=%u, repeatCount=%u\n"), plugin._getButtonNum(btn), duration, repeatCount);
     plugin._addButtonEvent(ButtonEvent(plugin._getButtonNum(btn), ButtonEvent::REPEAT, duration, repeatCount));
 }
 
 void RemoteControlPlugin::onButtonReleased(Button& btn, uint16_t duration)
 {
-    _debug_printf_P(PSTR("RemoteControlPlugin::onButtonReleased(): btn=%d, duration=%u\n"), plugin._getButtonNum(btn), duration);
+    _debug_printf_P(PSTR("btn=%d, duration=%u\n"), plugin._getButtonNum(btn), duration);
     plugin._addButtonEvent(ButtonEvent(plugin._getButtonNum(btn), ButtonEvent::RELEASE, duration));
 }
 
@@ -201,13 +201,13 @@ void RemoteControlPlugin::wifiCallback(uint8_t event, void *payload)
 
 void RemoteControlPlugin::disableAutoSleep()
 {
-    _debug_printf_P(PSTR("RemoteControlPlugin::disableAutoSleep(): disabled\n"));
+    _debug_printf_P(PSTR("disabled\n"));
     plugin._autoSleepTimeout = AutoSleepDisabled;
 }
 
 void RemoteControlPlugin::disableAutoSleepHandler(AsyncWebServerRequest *request)
 {
-    _debug_printf_P(PSTR("RemoteControlPlugin::disableAutoSleepHandler(): is_authenticated=%u\n"), web_server_is_authenticated(request));
+    _debug_printf_P(PSTR("is_authenticated=%u\n"), web_server_is_authenticated(request));
     if (web_server_is_authenticated(request)) {
         disableAutoSleep();
         AsyncWebServerResponse *response = request->beginResponse(302);
@@ -222,13 +222,9 @@ void RemoteControlPlugin::disableAutoSleepHandler(AsyncWebServerRequest *request
     }
 }
 
-void RemoteControlPlugin::fakebtn() {
-        plugin._addButtonEvent(ButtonEvent(0, ButtonEvent::RELEASE, 150));
-    }
-
 void RemoteControlPlugin::deepSleepHandler(AsyncWebServerRequest *request)
 {
-    _debug_printf_P(PSTR("RemoteControlPlugin::deepSleepHandler(): is_authenticated=%u\n"), web_server_is_authenticated(request));
+    _debug_printf_P(PSTR("is_authenticated=%u\n"), web_server_is_authenticated(request));
     if (web_server_is_authenticated(request)) {
         AsyncWebServerResponse *response = request->beginResponse(302);
         HttpHeaders httpHeaders;
@@ -257,16 +253,16 @@ void RemoteControlPlugin::_loop()
     if (_autoSleepTimeout != AutoSleepDisabled) {
         if (_isUsbPowered()) {
             if (_autoSleepTimeout) {
-                _debug_printf_P(PSTR("RemoteControlPlugin::_loop(): usb power detected, disabling auto sleep\n"));
+                _debug_printf_P(PSTR("usb power detected, disabling auto sleep\n"));
                 _autoSleepTimeout = 0;
             }
         }
         else if (_autoSleepTimeout == 0) {
             _autoSleepTimeout = millis() + (_config.config.autoSleepTime * 1000UL);
-            _debug_printf_P(PSTR("RemoteControlPlugin::_loop(): auto deep sleep set %u\n"), _autoSleepTimeout);
+            _debug_printf_P(PSTR("auto deep sleep set %u\n"), _autoSleepTimeout);
         }
         if (_autoSleepTimeout && millis() > _autoSleepTimeout) {
-            _debug_printf_P(PSTR("RemoteControlPlugin::_loop(): entering deep sleep (auto=%d, time=%us)\n"), _config.config.autoSleepTime, _config.config.deepSleepTime);
+            _debug_printf_P(PSTR("entering deep sleep (auto=%d, time=%us)\n"), _config.config.autoSleepTime, _config.config.deepSleepTime);
             _autoSleepTimeout = AutoSleepDisabled;
             config.enterDeepSleep(_config.config.deepSleepTime * 1000000ULL, RF_DEFAULT, 1);
         }
@@ -275,7 +271,7 @@ void RemoteControlPlugin::_loop()
 
 void RemoteControlPlugin::_wifiConnected()
 {
-    _debug_println(F("RemoteControlPlugin::_wifiConnected(): WiFi connected event"));
+    _debug_printf_P(PSTR("events=%u\n"), _events.size());
     _sendEvents();
 }
 
@@ -302,7 +298,7 @@ void RemoteControlPlugin::_readConfig()
 
 void RemoteControlPlugin::_installWebhooks()
 {
-    _debug_printf_P(PSTR("RemoteControlPlugin::_installWebhooks(): Installing web handlers, server=%p\n"), get_web_server_object());
+    _debug_printf_P(PSTR("server=%p\n"), get_web_server_object());
     web_server_add_handler(F("/remote_sleep.html"), deepSleepHandler);
     web_server_add_handler(F("/remote_nosleep.html"), disableAutoSleepHandler);
 }
@@ -311,7 +307,7 @@ void RemoteControlPlugin::_resetAutoSleep()
 {
     if (_autoSleepTimeout != 0 && _autoSleepTimeout != AutoSleepDisabled) {
         _autoSleepTimeout = millis() + (_config.config.autoSleepTime * 1000UL);
-        _debug_printf_P(PSTR("RemoteControlPlugin::_resetAutoSleep(): auto deep sleep set %u\n"), _autoSleepTimeout);
+        _debug_printf_P(PSTR("auto deep sleep set %u\n"), _autoSleepTimeout);
     }
 }
 
@@ -388,6 +384,5 @@ void RemoteControlPlugin::_scheduleSendEvents() {
         _sendEvents();
     });
 }
-
 
 #endif

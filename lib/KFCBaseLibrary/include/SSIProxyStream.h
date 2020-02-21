@@ -64,7 +64,7 @@ private:
     size_t _readBuffer(bool templateCheck = true);
 
 private:
-    bool isValidChar(char value) const {
+    inline bool isValidChar(char value) const {
         return isalnum(value) || value == '_' || value == '-' || value == '.';
     }
 
@@ -99,6 +99,7 @@ private:
             marker = -1;
             position = _p._buffer.end();
         }
+        char delim;
         ptrdiff_t marker;
         pointer position;
         size_t start_length;

@@ -12,7 +12,7 @@
 #include "debug_helper_disable.h"
 #endif
 
-SSIProxyStream::SSIProxyStream(File &file, DataProviderInterface &provider) : _template({ *this, -1, nullptr, 0, String() }), _file(file), _position(0), _length(0), _provider(provider) {
+SSIProxyStream::SSIProxyStream(File &file, DataProviderInterface &provider) : _template({ *this, 0, -1, nullptr, 0, String() }), _file(file), _position(0), _length(0), _provider(provider) {
 #if DEBUG
     _ramUsage = ESP.getFreeHeap();
 #endif
@@ -106,7 +106,7 @@ size_t SSIProxyStream::_readBuffer(bool templateCheck)
         len = _provider.fillBuffer(buf, sizeof(buf));
         if (len <= 0) {
             _provider.end();
-            _debug_printf_P(PSTR("template %%%s%% end @ %d length=%d\n"), _template.template_name(), _length, _template.template_length());
+            _debug_printf_P(PSTR("template %c%s%c end @ %d length=%d\n"), _template.delim, _template.template_name(), _template.delim, _length, _template.template_length());
 
             DEBUG_ASSERT(_template.marker == -1);
             _template.position = _buffer.end();
@@ -125,31 +125,31 @@ size_t SSIProxyStream::_readBuffer(bool templateCheck)
         _length += len;
     }
     if (len > 0) {
-        //DumpBinary dump(Serial);
-
-        ptrdiff_t posOffset = _template.to_offset(_template.position); // safe offset
-
+        ptrdiff_t posOffset = _template.to_offset(_template.position); // save offset
         if (_template.marker == -1 && _position) {
             // only shrink if no template marker is set
-            //if (_position) dump.setPerLine(len).print("remove: ").dump(_buffer.begin(), _position);
             _buffer.removeAndShrink(0, _position);
-            posOffset -= _position;
+            posOffset -= _position; // move offset
             _position = 0;
         }
         _buffer.write(buf, len);
-        //dump.setPerLine(255).print("buffer: ").dump(_buffer.begin(), _buffer.length() - len).dump(_buffer.begin(), len, _buffer.length() - len).print("\n");
 
-        //_debug_printf_P(PSTR("buffer size=%d length=%d position=%d\n"), _buffer.size(), _buffer.length(), _position);
-
-        _template.position = _template.from_offset(posOffset); // update pointer from offset
+        _template.position = _template.from_offset(posOffset); // get new pointer from offset
         DEBUG_ASSERT(_template.in_buffer(_template.position));
 
         if (templateCheck) {
             do {
-                uint8_t *start = _template.start();
-                DEBUG_ASSERT(_template.in_buffer(start));
-                uint8_t *ptr = (uint8_t *)memchr(start, '%', _buffer.end() - start);
-                if (ptr) {
+                uint8_t *ptr = _template.start();
+                uint8_t *end = _buffer.end();
+                DEBUG_ASSERT(_template.in_buffer(ptr));
+                while(ptr < end) {
+                    if (*ptr == '%' || *ptr == '$') {
+                        _template.delim = *ptr;
+                        break;
+                    }
+                    ptr++;
+                }
+                if (ptr < end) {
                     struct {
                         constexpr size_t len() const {
                             return end - begin;
@@ -165,14 +165,14 @@ size_t SSIProxyStream::_readBuffer(bool templateCheck)
                     _template.position = ptr;
                     size_t count = 0;
                     do {
-                        if (++_template.position == _buffer.end()) { // read more data if the % is the last character
+                        if (++_template.position == _buffer.end()) { // read more data if the delimiter is the last character
                             if (_readBuffer(false) <= 0) {
                                 _template.eof();
                                 break;
                             }
                         }
-                        if (*_template.position == '%') {
-                            // name.len() will be for double %% and ignored
+                        if (*_template.position == _template.delim) {
+                            // name.len() will be zero for double delimiter and ignored
                             name.begin = _template.from_offset(_template.marker) + 1;
                             name.end = _template.position++;
                             _template.marker = -1;
@@ -185,9 +185,9 @@ size_t SSIProxyStream::_readBuffer(bool templateCheck)
                         }
                     } while (true);
 
-                    if (name.len()) { // we found the end %
-                        DEBUG_ASSERT(name.begin  && *(name.begin - 1) == '%');
-                        DEBUG_ASSERT(name.end && *(name.end + 0) == '%');
+                    if (name.len()) { // we found the end delimiter
+                        DEBUG_ASSERT(name.begin  && *(name.begin - 1) == _template.delim);
+                        DEBUG_ASSERT(name.end && *(name.end + 0) == _template.delim);
 
                         _template.position = name.end + 1;
                         _template.name = name.toString();
@@ -208,11 +208,11 @@ size_t SSIProxyStream::_readBuffer(bool templateCheck)
                         // check if data provider can resolve the name
                         if (_provider.begin(_template.name)) {
                             _template.start_length = _length;
-                            _debug_printf_P(PSTR("template %%%s%% started @ %d\n"), _template.template_name(), _template.start_length);
+                            _debug_printf_P(PSTR("template %c%s%c started @ %d\n"), _template.delim, _template.template_name(), _template.delim, _template.start_length);
 
                             // remove buffer after template name starts
                             size_t templateStartOfs = name.begin - _buffer.begin() - 1;
-                            DEBUG_ASSERT(_buffer[templateStartOfs] == '%');
+                            DEBUG_ASSERT(_buffer[templateStartOfs] == _template.delim);
                             DEBUG_ASSERT(_position <= templateStartOfs);
                             _buffer.remove(templateStartOfs, -1);
 
@@ -224,7 +224,7 @@ size_t SSIProxyStream::_readBuffer(bool templateCheck)
                         }
                         else {
                             // skip name
-                            _debug_printf_P(PSTR("template %%%s%% skipped\n"), _template.template_name());
+                            _debug_printf_P(PSTR("template %c%s%c skipped\n"), _template.delim, _template.template_name(), _template.delim);
                             _template.name = String();
                             _template.position = name.end + 1;
                         }
@@ -233,7 +233,7 @@ size_t SSIProxyStream::_readBuffer(bool templateCheck)
 
                 }
                 else {
-                    // no % found, end loop
+                    // no delimter found, end loop
                     _template.position = _buffer.end();
                 }
 

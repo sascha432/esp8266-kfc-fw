@@ -82,6 +82,9 @@ public:
     virtual PluginPriorityEnum_t getSetupPriority() const override {
         return (PluginPriorityEnum_t)110;
     }
+    virtual bool autoSetupAfterDeepSleep() const override {
+        return true;
+    }
 
     virtual void setup(PluginSetupMode_t mode) override;
     virtual void reconfigure(PGM_P source) override;

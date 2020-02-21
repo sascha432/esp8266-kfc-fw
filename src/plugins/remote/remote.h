@@ -190,8 +190,6 @@ public:
     static void disableAutoSleepHandler(AsyncWebServerRequest *request);
     static void deepSleepHandler(AsyncWebServerRequest *request);
 
-    static void fakebtn();
-
 private:
     void _loop();
     void _wifiConnected();

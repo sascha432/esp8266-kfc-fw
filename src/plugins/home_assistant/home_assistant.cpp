@@ -6,23 +6,6 @@
 
 // https://developers.home-assistant.io/docs/en/external_api_rest.html#post-api-services-lt-domain-lt-service
 
-/*
-
-+hassgs=light.kfc4f22d0_0
-+hasscs=light/turn_on,light.kfc4f22d0_0
-+hasscs=light/turn_off,light.kfc4f22d0_0
-+hasscs=light/turn_on,light.kfc4f22d0_0,brightness=85
-+hasscs=light/turn_on,light.atomic_sun,brightness=60
-
-
-+hassreq=services/light/turn_on,{"entity_id":"light.kfc4f22d0_0", "attributes":{"brightness": 20}}
-+hassreq=services/light/turn_on,"{\"entity_id\":\"light.kfc4f22d0_0\"}"
-+hassreq=services/light/turn_off,"{\"entity_id\":\"light.kfc4f22d0_0\"}"
-+hassreq=services/light/turn_on,{"entity_id":"light.floor_lamp_top",",\"brightness\": 120}"
-+hassreq=services/light/turn_on,{"entity_id":"light.floor_lamp_top",",\"brightness\":20}"
-+hassreq=services/light/turn_off,{"entity_id":"light.floor_lamp_top"}
-*/
-
 #include <KFCForms.h>
 #include <KFCJson.h>
 #include "kfc_fw_config.h"
@@ -267,7 +250,7 @@ void HassPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
             action.setAction(static_cast<Plugins::HomeAssistant::ActionEnum_t>(request->arg(F("action")).toInt()));
         }
         if (request->method() & WebRequestMethod::HTTP_POST) { // store changes
-            action.setId(actionId);
+            //action.setId(actionId);
             action.setEntityId(request->arg(F("entity_id")));
 
             Plugins::HomeAssistant::Action::ValuesVector values;
@@ -296,7 +279,10 @@ void HassPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
         form.add(F("id"), String(action.getId()), FormField::InputFieldType::TEXT)
             ->setFormUI(new FormUI(FormUI::HIDDEN, emptyString));
 
-        form.add(F("action"), String(action.getActionFStr()), FormField::InputFieldType::TEXT)
+        form.add(F("action"), String(action.getAction()), FormField::InputFieldType::TEXT)
+            ->setFormUI(new FormUI(FormUI::HIDDEN, emptyString));
+
+        form.add(F("action_str"), String(action.getActionFStr()), FormField::InputFieldType::TEXT)
             ->setFormUI((new FormUI(FormUI::TEXT, F("Action")))->setReadOnly());
 
         form.add(F("entity_id"), action.getEntityId(), FormField::InputFieldType::TEXT)

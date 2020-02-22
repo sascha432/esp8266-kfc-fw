@@ -56,10 +56,12 @@ void ConfigurationParameter::_release(Configuration *conf)
 
 void ConfigurationParameter::_free()
 {
-    if (!_info.data || !_info.dirty) {
+    if (!_info.dirty) {
         __debugbreak_and_panic_printf_P(PSTR("%s free called on parameter without heap allocation\n"), toString().c_str());
     }
-    free(_info.data);
+    if (_info.data) {
+        free(_info.data);
+    }
     _info = Info_t();
 }
 

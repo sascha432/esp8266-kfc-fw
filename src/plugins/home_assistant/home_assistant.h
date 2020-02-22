@@ -19,8 +19,9 @@
 class HassPlugin : public PluginComponent, /*public WebUIInterface, */public KFCRestAPI {
 // PluginComponent
 public:
-    typedef KFCConfigurationClasses::Plugins::HomeAssistant::ActionEnum_t ActionEnum_t;
-    typedef KFCConfigurationClasses::Plugins::HomeAssistant::Action Action;
+    using ActionEnum_t = KFCConfigurationClasses::Plugins::HomeAssistant::ActionEnum_t;
+    using Action = KFCConfigurationClasses::Plugins::HomeAssistant::Action;
+
     typedef std::function<void(bool status)> StatusCallback_t;
     typedef std::function<void(HassJsonReader::GetState *state, KFCRestAPI::HttpRequest &request, StatusCallback_t statusCallback)> GetStateCallback_t;
     typedef std::function<void(HassJsonReader::CallService *service, KFCRestAPI::HttpRequest &request, StatusCallback_t statusCallback)> ServiceCallback_t;

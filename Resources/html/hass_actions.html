@@ -26,9 +26,9 @@
     <!--NAV%%-->
     <div class="container">
         <h1>Home Assistant Configuration</h1>
-        <div class="status-table">
+        <div class="status-table" id="home_assistant_actions">
             <div class="row">
-                <div class="col">
+                <div class="col col-md-1">
                     Id
                 </div>
                 <div class="col">
@@ -44,7 +44,7 @@
         </div>
         <div id="prototype" class="hidden">
             <div class="row">
-                <div class="col">
+                <div class="col col-md-1">
                 </div>
                 <div class="col">
                 </div>
@@ -112,7 +112,7 @@
         }
 
         $(json.items).each(function(index, val) {
-            var row = $('.status-table').append(add_item(val['id'], val['action'], val['entity_id'])).find('.row:last');
+            var row = $('#home_assistant_actions').append(add_item(val['id'], val['action'], val['entity_id'])).find('.row:last');
             add_buttons(row, val['id']);
         });
 

@@ -58,11 +58,18 @@ FormUI *FormUI::addAttribute(const String &name, const String &value)
 {
     _attributes += ' ';
     _attributes += name;
-    _attributes += '=';
-    _attributes += '"';
-    _attributes += value; // TODO encode
-    _attributes += '"';
+    if (value.length()) {
+        _attributes += '=';
+        _attributes += '"';
+        _attributes += value; // TODO encode
+        _attributes += '"';
+    }
     return this;
+}
+
+FormUI *FormUI::setReadOnly()
+{
+    return addAttribute(F("readonly"), String());
 }
 
 void FormUI::html(PrintInterface &output)
@@ -76,6 +83,11 @@ void FormUI::html(PrintInterface &output)
     }
     else if (_type == GROUP_END) {
         output.printf_P(PSTR("</div></div>" FORMUI_CRLF));
+    }
+    else if (_type == HIDDEN) {
+        // TODO check html entities encoding
+        auto name = _parent->getName().c_str();
+        output.printf_P(PSTR("<input type=\"hidden\" name=\"%s\" id=\"%s\" value=\"%s\"%s>" FORMUI_CRLF), name, name, _parent->getValue().c_str(), _attributes.c_str());
     }
     else {
 
@@ -107,6 +119,7 @@ void FormUI::html(PrintInterface &output)
             break;
         case GROUP_START:
         case GROUP_END:
+        case HIDDEN:
             break;
         }
 

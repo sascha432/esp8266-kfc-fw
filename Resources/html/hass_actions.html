@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<!--%%HEAD-->
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" debug_loader="1">
+    <link rel="stylesheet" href="../../lib/KFCWebBuilder/Resources/css/bootstrap.min.css" debug_loader="1">
+    <link rel="stylesheet" href="../css/styles.css" debug_loader="1">
+    <link rel="stylesheet" href="../../lib/KFCWebBuilder/Resources/css/open-iconic-bootstrap.css" debug_loader="1">
+    <title>KFC FW</title>
+</head>
+<!--HEAD%%-->
+
+<body>
+    <!--%%NAV-->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <a class="navbar-brand" href="index.html">KFC FW</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        </div>
+    </nav>
+    <!--NAV%%-->
+    <div class="container">
+        <h1>Home Assistant Configuration</h1>
+        <div class="status-table">
+            <div class="row">
+                <div class="col">
+                    Id
+                </div>
+                <div class="col">
+                    Action
+                </div>
+                <div class="col">
+                    Entity Id
+                </div>
+                <div class="col">
+                    &nbsp;
+                </div>
+            </div>
+        </div>
+        <div id="prototype" class="hidden">
+            <div class="row">
+                <div class="col">
+                </div>
+                <div class="col">
+                </div>
+                <div class="col">
+                </div>
+                <div class="col">
+                    <div class="float-right">
+                        <a class="btn btn-primary edit-item" href="hass_edit.html?id=" role="button">Edit</a>
+                        <a class="btn btn-primary remove-item" href="hass_remove.html?id=" role="button">Remove</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="form-group mt-3">
+            <div class="input-group">
+                <select class="form-control" name="action" id="action">
+                    <option value="0">None</option>
+                </select>
+                <a class="btn btn-primary add-item ml-3" href="hass_edit.html" role="button">Add Action</a>
+            </div>
+        </div>
+        <!--%%FOOT-->
+        <div class="row">
+            <div class="col footer">&nbsp;</div>
+        </div>
+        <!--FOOT%%-->
+    </div>
+    <!--%%JAVASCRIPT-->
+	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/jquery-3.3.1.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/popper.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/popper.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/bootstrap.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/js.cookie.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../js/main.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../js/debug.js"></script>
+    <!--JAVASCRIPT%%-->
+
+    <script>
+        json = $FORM_JSON$;
+
+        function add_item(id, action, entity) {
+            var prototype = $('#prototype').clone();
+            var cols = prototype.find('.col');
+            $(cols[0]).html(id);
+            $(cols[1]).html(json.actions[action]);
+            $(cols[2]).html(entity);
+            return prototype.html();
+        }
+
+        function add_buttons(row, id) {
+            var edit = row.find('.edit-item');
+            edit.attr('href', edit.attr('href') + id);
+            var remove = row.find('.remove-item');
+            remove.attr('href', remove.attr('href') + id).on('click', function(event) {
+                event.preventDefault();
+                $(this).addClass('disabled');
+                var row = $(this).closest('.row');
+                $.get($(this).attr('href'), function(data) {
+                    $(this).removeClass('disabled');
+                    if (data == 'OK') {
+                        row.remove();
+                    }
+                });
+            });
+        }
+
+        $(json.items).each(function(index, val) {
+            var row = $('.status-table').append(add_item(val['id'], val['action'], val['entity_id'])).find('.row:last');
+            add_buttons(row, val['id']);
+        });
+
+        $('.container .add-item').on('click', function(event) {
+            $(this).attr('href', 'hass_edit.html?action=' + $(this).closest('div').find('select').val());
+        });
+
+        var options = '';
+        for (let key in json.actions) {
+            options += '<option value="' + key + '">' + json.actions[key] + '</option>';
+        }
+        $('#action').html(options);
+
+    </script>
+
+    %FORM_VALIDATOR%
+
+</body>
+</html>

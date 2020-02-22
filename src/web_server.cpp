@@ -681,8 +681,8 @@ bool web_server_send_file(String path, HttpHeaders& httpHeaders, bool client_acc
             if (plugin) {
                 webTemplate = plugin->getWebTemplate(filename);
             } else if (nullptr != (plugin = PluginComponent::getForm(filename))) {
-                Form* form = new SettingsForm(nullptr);
-                plugin->createConfigureForm(nullptr, *form);
+                Form *form = new SettingsForm(nullptr);
+                plugin->createConfigureForm(request, *form);
                 webTemplate = new ConfigTemplate(form);
             }
         }

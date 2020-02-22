@@ -27,7 +27,8 @@ public:
 		PASSWORD,
 		NEW_PASSWORD,
 		GROUP_START,
-		GROUP_END
+		GROUP_END,
+		HIDDEN,
 	} TypeEnum_t;
 
 	typedef std::pair<String, String> ItemPair;
@@ -44,6 +45,7 @@ public:
 	FormUI *setSuffix(const String &suffix);
 	FormUI *setPlaceholder(const String &placeholder);
 	FormUI *addAttribute(const String &name, const String &value);
+	FormUI *setReadOnly();
 
 	void html(PrintInterface &output);
 

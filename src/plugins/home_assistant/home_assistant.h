@@ -49,15 +49,12 @@ public:
     }
     virtual void getStatus(Print &output) override;
 
-    // virtual MenuTypeEnum_t getMenuType() const override {
-    //     return CUSTOM;
-    // }
-    // virtual void createMenu() override {
-    //     bootstrapMenu.addSubMenu(F("Home Assistant"), F("hass.html"), navMenu.config);
-    // }
 
     virtual PGM_P getConfigureForm() const override {
         return getName();
+    }
+    virtual bool canHandleForm(const String &formName) const {
+        return (formName.equals(FPSTR(getName())) || formName.equals(F("hass_edit")) || formName.equals(F("hass_actions")));
     }
     virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
 
@@ -108,7 +105,6 @@ private:
 // web server
 public:
     static void removeAction(AsyncWebServerRequest *request);
-    static void addAction(AsyncWebServerRequest *request);
 
 private:
     void _installWebhooks();

@@ -93,13 +93,6 @@ public:
     virtual bool hasStatus() const override;
     virtual void getStatus(Print &output) override;
 
-    // virtual MenuTypeEnum_t getMenuType() const override {
-    //     return CUSTOM;
-    // }
-    // virtual void createMenu() override {
-    //     bootstrapMenu.addSubMenu(F("Weather Station"), F("weather.html"), navMenu.config);
-    // }
-
     virtual PGM_P getConfigureForm() const override {
         return getName();
     }

@@ -51,8 +51,6 @@ uint8_t Sensor_Battery::getAutoDiscoveryCount() const {
 
 void Sensor_Battery::getValues(JsonArray &array)
 {
-    _debug_printf_P(PSTR("\n"));
-
     auto obj = &array.addObject(3);
     obj->add(JJ(id), _getId(LEVEL));
     obj->add(JJ(state), true);
@@ -68,7 +66,6 @@ void Sensor_Battery::getValues(JsonArray &array)
 
 void Sensor_Battery::createWebUI(WebUI &webUI, WebUIRow **row)
 {
-    _debug_printf_P(PSTR("\n"));
     (*row)->addSensor(_getId(LEVEL), _name, F("V"));
 #if IOT_SENSOR_BATTERY_CHARGE_DETECTION
     (*row)->addSensor(_getId(STATE), F("Charging"), F(""));

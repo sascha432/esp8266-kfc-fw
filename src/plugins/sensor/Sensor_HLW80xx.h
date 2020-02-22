@@ -56,7 +56,7 @@
 
 // current shunt resistance
 #ifndef IOT_SENSOR_HLW80xx_SHUNT
-#define IOT_SENSOR_HLW80xx_SHUNT                        0.003
+#define IOT_SENSOR_HLW80xx_SHUNT                        0.008
 #endif
 
 // compensate current when the load is dimmed or switched off

@@ -49,7 +49,7 @@ void HassPlugin::getStatus(Print &output)
 {
     bool hasToken = strlen(Plugins::HomeAssistant::getApiToken()) > 100;
     auto endPoint = Plugins::HomeAssistant::getApiEndpoint();
-    output.printf_P(PSTR("RESTful API: "));
+    output.print(F("RESTful API: "));
     if (endPoint && hasToken) {
         output.print(endPoint);
     }
@@ -215,29 +215,130 @@ bool HassPlugin::atModeHandler(AtModeArgs &args)
 
 void HassPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
 {
-    form.finalize();
+    debug_printf_P(PSTR("url=%s method=%s\n"), request->url().c_str(), request->methodToString());
+    if (request->url().endsWith(F("hass.html"))) {
 
-    JsonUnnamedObject &json = *new JsonUnnamedObject();
-    {
-        auto &actions = json.addObject(F("actions"));
-        for(uint8_t i = 1; i < ActionEnum_t::__END; i++) {
-            actions.add(String(i), Plugins::HomeAssistant::getActionStr(static_cast<ActionEnum_t>(i)));
-        }
+        using KFCConfigurationClasses::MainConfig;
+
+        form.add(F("api_endpoint"), _H_STR_VALUE(MainConfig().plugins.homeassistant.api_endpoint));
+        form.addValidator(new FormLengthValidator(1, sizeof(MainConfig().plugins.homeassistant.api_endpoint) - 1));
+
+        form.add(F("token"), _H_STR_VALUE(MainConfig().plugins.homeassistant.token));
+        form.addValidator(new FormLengthValidator(1, sizeof(MainConfig().plugins.homeassistant.token) - 1));
+
     }
-    auto &items = json.addArray(F("items"));
-    Plugins::HomeAssistant::ActionVector actions;
-    Plugins::HomeAssistant::getActions(actions);
-    for(auto &action: actions) {
-        auto &json = items.addObject();
-        json.add(F("id"), action.getId());
-        json.add(F("action"), action.getActionFStr());
-        auto &values = json.addArray(F("values"));
-        for(auto value: action.getValues()) {
-            values.add(value);
+    else if (request->url().endsWith(F("actions.html"))) {
+
+        JsonUnnamedObject &json = *new JsonUnnamedObject();
+        {
+            auto &actions = json.addObject(F("actions"));
+            for(uint8_t i = 1; i < ActionEnum_t::__END; i++) {
+                actions.add(String(i), Plugins::HomeAssistant::getActionStr(static_cast<Plugins::HomeAssistant::ActionEnum_t>(i)));
+            }
         }
-        json.add(F("entity_id"), action.getEntityId());
+        auto &items = json.addArray(F("items"));
+        Plugins::HomeAssistant::ActionVector actions;
+        Plugins::HomeAssistant::getActions(actions);
+        for(auto &action: actions) {
+            auto &json = items.addObject();
+            json.add(F("id"), action.getId());
+            json.add(F("action"), action.getAction());
+            auto &values = json.addArray(F("values"));
+            for(auto value: action.getValues()) {
+                values.add(value);
+            }
+            json.add(F("entity_id"), action.getEntityId());
+        }
+        reinterpret_cast<SettingsForm &>(form).setJson(&json);
     }
-    reinterpret_cast<SettingsForm &>(form).setJson(&json);
+    else {
+        auto actionId = (uint16_t)request->arg(F("id")).toInt();
+        Plugins::HomeAssistant::Action action = Plugins::HomeAssistant::getAction(actionId);
+        if (action.getId()) { // edit action
+        }
+        else { // new action
+            Plugins::HomeAssistant::ActionVector actions;
+            Plugins::HomeAssistant::getActions(actions);
+            actionId = 1;
+            for(auto &action: actions) {
+                actionId = std::max(actionId, (uint16_t)(action.getId() + 1));
+            }
+            action.setId(actionId);
+            action.setAction(static_cast<Plugins::HomeAssistant::ActionEnum_t>(request->arg(F("action")).toInt()));
+        }
+        if (request->method() & WebRequestMethod::HTTP_POST) { // store changes
+            action.setId(actionId);
+            action.setEntityId(request->arg(F("entity_id")));
+
+            Plugins::HomeAssistant::Action::ValuesVector values;
+            for(uint8_t i = 0; i < 8; i++) {
+                String name = PrintString(F("values[%u]"), i);
+                if (!request->hasArg(name.c_str())) {
+                    break;
+                }
+                values.push_back(request->arg(name).toInt());
+            }
+            action.setValues(values);
+
+            Plugins::HomeAssistant::ActionVector actions;
+            Plugins::HomeAssistant::getActions(actions);
+            auto iterator = std::find(actions.begin(), actions.end(), actionId);
+            if (iterator != actions.end()) {
+                *iterator = action;
+            }
+            else {
+                actions.push_back(action);
+            }
+            _debug_printf_P(PSTR("storing actions, updated id=%u\n"), actionId);
+            Plugins::HomeAssistant::setActions(actions);
+        }
+
+        form.add(F("id"), String(action.getId()), FormField::InputFieldType::TEXT)
+            ->setFormUI(new FormUI(FormUI::HIDDEN, emptyString));
+
+        form.add(F("action"), String(action.getActionFStr()), FormField::InputFieldType::TEXT)
+            ->setFormUI((new FormUI(FormUI::TEXT, F("Action")))->setReadOnly());
+
+        form.add(F("entity_id"), action.getEntityId(), FormField::InputFieldType::TEXT)
+            ->setFormUI(new FormUI(FormUI::TEXT, F("Entity Id")));
+
+        switch(action.getAction()) {
+            case ActionEnum_t::SET_BRIGHTNESS:
+                form.add(F("values[0]"), String(action.getValue(0)), FormField::InputFieldType::TEXT)
+                    ->setFormUI(new FormUI(FormUI::TEXT, F("Brightness")));
+                break;
+            case ActionEnum_t::CHANGE_BRIGHTNESS:
+                form.add(F("values[0]"), String(action.getValue(0)), FormField::InputFieldType::TEXT)
+                    ->setFormUI((new FormUI(FormUI::TEXT, F("Brightness")))->setSuffix(F("&#177;")));
+                form.add(F("values[1]"), String(action.getValue(1)), FormField::InputFieldType::TEXT)
+                    ->setFormUI(new FormUI(FormUI::TEXT, F("Min. Brightness")));
+                form.add(F("values[2]"), String(action.getValue(2)), FormField::InputFieldType::TEXT)
+                    ->setFormUI(new FormUI(FormUI::TEXT, F("Max. Brightness")));
+                form.add(F("values[3]"), String(action.getValue(3)), FormField::InputFieldType::SELECT)
+                    ->setFormUI((new FormUI(FormUI::SELECT, F("Below Min. Brightness")))->setBoolItems(F("Turn Off"), F("Min. Brightness")));
+                break;
+            case ActionEnum_t::SET_KELVIN:
+                form.add(F("values[0]"), String(action.getValue(0)), FormField::InputFieldType::TEXT)
+                    ->setFormUI(new FormUI(FormUI::TEXT, F("Kelvin")));
+                break;
+            case ActionEnum_t::SET_RGB_COLOR:
+                form.add(F("values[0]"), String(action.getValue(0)), FormField::InputFieldType::TEXT)
+                    ->setFormUI(new FormUI(FormUI::TEXT, F("Red")));
+                form.add(F("values[1]"), String(action.getValue(1)), FormField::InputFieldType::TEXT)
+                    ->setFormUI(new FormUI(FormUI::TEXT, F("Green")));
+                form.add(F("values[2]"), String(action.getValue(2)), FormField::InputFieldType::TEXT)
+                    ->setFormUI(new FormUI(FormUI::TEXT, F("Blue")));
+                break;
+            case ActionEnum_t::VOLUME_SET:
+                form.add(F("values[0]"), String(action.getValue(0)), FormField::InputFieldType::TEXT)
+                    ->setFormUI((new FormUI(FormUI::TEXT, F("Volume")))->setSuffix(F("&#37;")));
+                break;
+            default:
+                break;
+        }
+
+    }
+    form.finalize();
 }
 
 void HassPlugin::setup(PluginSetupMode_t mode)
@@ -247,7 +348,7 @@ void HassPlugin::setup(PluginSetupMode_t mode)
 
 void HassPlugin::reconfigure(PGM_P source)
 {
-    if (!strcmp_P_P(source, SPGM(http))) {
+    if (source != nullptr) {
         _installWebhooks();
     }
 }
@@ -459,28 +560,12 @@ void HassPlugin::removeAction(AsyncWebServerRequest *request)
         Plugins::HomeAssistant::getActions(actions);
         auto iterator = std::remove(actions.begin(), actions.end(), id);
         if (iterator != actions.end()) {
-            actions.erase(iterator, actions.end());
+            iterator->setEntityId(emptyString);
             Plugins::HomeAssistant::setActions(actions);
-            config.write();
+            //config.write();
             msg = SPGM(OK);
         }
 
-        AsyncWebServerResponse *response = request->beginResponse_P(200, FSPGM(mime_text_plain), msg);
-        HttpHeaders httpHeaders;
-        httpHeaders.addNoCache(true);
-        httpHeaders.setAsyncWebServerResponseHeaders(response);
-        request->send(response);
-    }
-    else {
-        request->send(403);
-    }
-}
-
-void HassPlugin::addAction(AsyncWebServerRequest *request)
-{
-    _debug_printf_P(PSTR("is_authenticated=%u\n"), web_server_is_authenticated(request));
-    if (web_server_is_authenticated(request)) {
-        auto msg = SPGM(0);
         AsyncWebServerResponse *response = request->beginResponse_P(200, FSPGM(mime_text_plain), msg);
         HttpHeaders httpHeaders;
         httpHeaders.addNoCache(true);
@@ -496,8 +581,6 @@ void HassPlugin::_installWebhooks()
 {
     _debug_printf_P(PSTR("server=%p\n"), get_web_server_object());
     web_server_add_handler(F("/hass_remove.html"), removeAction);
-    web_server_add_handler(F("/hass_add.html"), addAction);
 }
-
 
 #endif

@@ -5,7 +5,7 @@
 #pragma once
 
 #ifndef DEBUG_CONFIGURATION
-#define DEBUG_CONFIGURATION                 1
+#define DEBUG_CONFIGURATION                 0
 #endif
 
 #include <Arduino_compat.h>

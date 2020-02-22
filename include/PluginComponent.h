@@ -76,7 +76,7 @@ public:
     // calls reconfigure for all dependencies
     void invokeReconfigureNow(PGM_P source);
 
-    // adds a timer to call invokeReconfigureNow() in the main loop() to avoid issues from being called inside interrupts
+    // adds a scheduled function call invokeReconfigureNow() to avoid issues from being called inside interrupts
     void invokeReconfigure(PGM_P source);
 
     // executed to get status information

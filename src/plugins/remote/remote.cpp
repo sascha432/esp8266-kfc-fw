@@ -311,13 +311,13 @@ void RemoteControlPlugin::_resetAutoSleep()
     }
 }
 
-void RemoteControlPlugin::_addButtonEvent(const ButtonEvent &event)
+void RemoteControlPlugin::_addButtonEvent(RemoteControlPlugin::ButtonEvent &&event)
 {
     _resetAutoSleep();
     if (_events.size() > 32) {
         _events.pop_front();
     }
-    _events.push_back(event);
+    _events.emplace_back(event);
     _scheduleSendEvents();
 }
 
@@ -361,9 +361,7 @@ void RemoteControlPlugin::_sendEvents()
                 auto button = event.getButton();
                 _hass.executeAction(action, [this, button](bool status) {
                     _unlockButton(button);
-                    if (!_events.empty()) {
-                        _scheduleSendEvents();
-                    }
+                    _scheduleSendEvents();
                 });
                 return;
             }
@@ -380,9 +378,11 @@ void RemoteControlPlugin::_sendEvents()
 }
 
 void RemoteControlPlugin::_scheduleSendEvents() {
-    LoopFunctions::callOnce([this]() {
-        _sendEvents();
-    });
+    if (_events.size()) {
+        LoopFunctions::callOnce([this]() {
+            _sendEvents();
+        });
+    }
 }
 
 #endif

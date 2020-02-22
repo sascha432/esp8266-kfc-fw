@@ -155,10 +155,10 @@ namespace KFCConfigurationClasses {
                 TURN_OFF,
                 TOGGLE,
                 TRIGGER,
-                SET_BRIGHTNESS,
+                SET_BRIGHTNESS,     // values: brightness(0)
                 CHANGE_BRIGHTNESS,  // values: step(0), min brightness(1), max brightness(2), turn off if less than min. brightness(3)
-                SET_KELVIN,
-                SET_RGB_COLOR,
+                SET_KELVIN,         // values: kelvin(0)
+                SET_RGB_COLOR,      // values: red(0), green(1), blue(2)
                 MEDIA_PREVIOUS_TRACK,
                 MEDIA_NEXT_TRACK,
                 MEDIA_STOP,
@@ -167,7 +167,7 @@ namespace KFCConfigurationClasses {
                 MEDIA_PLAY_PAUSE,
                 VOLUME_UP,
                 VOLUME_DOWN,
-                VOLUME_SET,     // values: volume(0) in %
+                VOLUME_SET,         // values: volume(0) in %
                 VOLUME_MUTE,
                 VOLUME_UNMUTE,
                 __END,

@@ -31,9 +31,11 @@ void register_plugin(PluginComponent *plugin, const char *name)
 {
     Serial.begin(KFC_SERIAL_RATE);
     Serial.printf_P(PSTR("register_plugin(%p): name=%s\n"), plugin, name);
+    //os_printf("register_plugin(%p): name=%s\n", plugin, name);
 #else
 void register_plugin(PluginComponent *plugin)
 {
+    os_printf_plus("register_plugin %p\n", plugin);
 #endif
     if (plugins.size()) {
         _debug_printf(PSTR("Registering plugins completed already, skipping %s\n"), plugin->getName());

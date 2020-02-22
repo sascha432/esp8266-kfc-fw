@@ -94,8 +94,8 @@ def copy_spiffs(source, target, env):
 #env.AddPostAction("$BUILD_DIR/${PROGNAME}.elf", record_size)
 
 env.AddPreAction("$BUILD_DIR/${PROGNAME}.elf", update_build_id)
-env.AddPostAction("$BUILD_DIR/${PROGNAME}.elf", copy_firmware)
-env.AddPostAction("$BUILD_DIR/${PROGNAME}.bin", copy_firmware)
+# env.AddPostAction("$BUILD_DIR/${PROGNAME}.elf", copy_firmware)
+# env.AddPostAction("$BUILD_DIR/${PROGNAME}.bin", copy_firmware)
 
 env.AddPreAction("uploadfs", upload_fs)
 # env.AddPostAction("uploadfs", copy_spiffs)

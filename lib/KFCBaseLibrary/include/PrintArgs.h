@@ -19,7 +19,11 @@
 #include "debug_helper_disable.h"
 #endif
 
-// use PrintArgsPrintWrapper(Print &output) to write to any Print Object
+// adds streaming capabilities to Print objects
+// supported method: printf_P
+// all pointers passed to printf_P must be valid until PrintArgs gets destroyed
+
+// use PrintArgsPrintWrapper(Print &output) to write to any Print object without streaming (pass through mode)
 
 class PrintArgs
 {

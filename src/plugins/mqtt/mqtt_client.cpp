@@ -691,10 +691,8 @@ void MQTTPlugin::getStatus(Print &output)
     MQTTClient::getStatus(output);
 }
 
-void MQTTPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form) {
-
-    //TODO save form doesnt work
-
+void MQTTPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
+{
     form.add<uint8_t>(F("mqtt_enabled"), _H_FLAGS_VALUE(Config().flags, mqttMode));
     form.addValidator(new FormRangeValidator(MQTT_MODE_DISABLED, MQTT_MODE_SECURE));
 

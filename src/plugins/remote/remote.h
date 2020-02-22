@@ -198,7 +198,7 @@ private:
     void _readConfig();
     void _installWebhooks();
     void _resetAutoSleep();
-    void _addButtonEvent(const ButtonEvent &event);
+    void _addButtonEvent(ButtonEvent &&event);
     void _sendEvents();
     void _scheduleSendEvents();
 

@@ -931,11 +931,6 @@ void KFCFWConfiguration::enterDeepSleep(uint32_t time_in_ms, RFMode mode, uint16
     }
     _debug_printf_P(PSTR("Entering deep sleep for %d milliseconds, RF mode %d\n"), time_in_ms, mode);
 
-#if NTP_RESTORE_SYSTEM_TIME_AFTER_WAKEUP
-    // save current time to restore when waking up
-    ntp_client_prepare_deep_sleep(time_in_ms);
-#endif
-
 #if __LED_BUILTIN == -3
     BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::OFF);
 #endif

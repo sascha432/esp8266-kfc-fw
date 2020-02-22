@@ -72,7 +72,7 @@ String ConfigurationParameter::toString() const
     //return PrintString(F("handle=%s[%04x] size=%u len=%u data=%p type=%s dirty=%u (%p:%p %u %u)"), getHandleName(_param.handle), _param.handle, _info.size, _param.length, _info.data, getTypeString(_param.getType()), _info.dirty, dataPtr, _info.data, dataOfs, dataLen);
     return PrintString(F("handle=%s[%04x] size=%u len=%u data=%p type=%s dirty=%u"), getHandleName(_param.handle), _param.handle, _info.size, _param.length, _info.data, getTypeString(_param.getType()), _info.dirty);
 #else
-    return PrintString(F("handle=%04x size=%u len=%u data=%p type=%s dirty=%u"), _param.handle, _info.size, _param.length, _info.data, getTypeString(_param.getType()).c_str(), _info.dirty);
+    return PrintString(F("handle=%04x size=%u len=%u data=%p type=%s dirty=%u"), _param.handle, _info.size, _param.length, _info.data, getTypeString(_param.getType()), _info.dirty);
 #endif
 }
 

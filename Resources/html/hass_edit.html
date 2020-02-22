@@ -13,7 +13,7 @@
 <!--HEAD%%-->
 
 <body>
-        <!--%%NAV-->
+    <!--%%NAV-->
     <nav class="navbar navbar-expand-lg navbar-light bg-light">
         <a class="navbar-brand" href="index.html">KFC FW</a>
         <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
@@ -26,18 +26,9 @@
     <!--NAV%%-->
     <div class="container">
         <h1>Home Assistant Configuration</h1>
-        <form method="POST" action="home_assistant.html" id="home_assistant_settings">
-            <div class="form-group">
-                <label for="api_endpoint">API Endpoint:</label>
-                <input type="text" class="form-control" name="api_endpoint" id="api_endpoint" value="%API_ENDPOINT%">
-            </div>
-            <div class="form-group">
-                <label for="token">Token:</label>
-                <input type="text" class="form-control" name="token" id="token" value="%TOKEN%">
-            </div>
-            <div class="form-group">
-                <button type="submit" class="btn btn-primary">Save Changes...</button>
-            </div>
+        <a href="hass_actions.html" class="btn btn-secondary mb-4" role="button">Define Actions</a>
+        <form method="POST" action="hass_edit.html">
+            %FORM_HTML%
         </form>
         <!--%%FOOT-->
         <div class="row">
@@ -54,6 +45,8 @@
 	<script debug_loader="1" type="text/javascript" src="../js/main.min.js"></script>
 	<script debug_loader="1" type="text/javascript" src="../js/debug.js"></script>
     <!--JAVASCRIPT%%-->
+
+    %FORM_VALIDATOR%
 
 </body>
 

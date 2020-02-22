@@ -155,13 +155,6 @@ void SensorPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &for
     form.finalize();
 }
 
-// void SensorPlugin::createMenu()
-// {
-//     if (_hasConfigureForm()) {
-//         bootstrapMenu.addSubMenu(F("Sensors"), F("sensor.html"), navMenu.config);
-//     }
-// }
-
 void SensorPlugin::createWebUI(WebUI &webUI)
 {
     auto row = &webUI.addRow();

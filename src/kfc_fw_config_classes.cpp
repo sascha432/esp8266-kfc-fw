@@ -198,7 +198,6 @@ namespace KFCConfigurationClasses {
     void Plugins::HomeAssistant::setActions(ActionVector &actions)
     {
         Buffer buffer;
-        // debug_printf_P(PSTR("size=%u\n"), actions.size());
         for(auto &action: actions) {
             ActionHeader_t header;
             header.entityLen = action.getEntityId().length();
@@ -206,9 +205,6 @@ namespace KFCConfigurationClasses {
                 header.id = action.getId();
                 header.action = action.getAction();
                 header.valuesLen = action.getNumValues();
-                // debug_printf_P(PSTR("id=%u\n"), header.id);
-                // debug_printf_P(PSTR("entityLen=%u\n"), header.entityLen);
-                // debug_printf_P(PSTR("valuesLen=%u\n"), header.valuesLen);
                 buffer.writeObject(header);
                 buffer.write(action.getEntityId());
                 buffer.writeVector(action.getValues());

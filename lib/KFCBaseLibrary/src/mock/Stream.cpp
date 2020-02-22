@@ -161,7 +161,10 @@ int Stream::_fp_read() {
     }
     uint8_t buf[1];
     int res = _fp_read(buf, 1);
-    return res;
+    if (res != 1) {
+        return -1;
+    }
+    return *buf;
 }
 
 #endif

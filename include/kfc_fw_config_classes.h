@@ -186,6 +186,9 @@ namespace KFCConfigurationClasses {
                 Action() = default;
                 Action(uint16_t id, ActionEnum_t action, const ValuesVector &values, const String &entityId) : _id(id), _action(action), _values(values), _entityId(entityId) {
                 }
+                bool operator==(ActionEnum_t id) const {
+                    return _id == id;
+                }
                 bool operator==(uint16_t id) const {
                     return _id == id;
                 }

@@ -198,7 +198,7 @@ void ConfigurationParameter::_makeWriteable(Configuration *conf, uint16_t size)
             auto ptr = _info.data;
             auto oldSize = _param.getSize();
             conf->_writeAllocate(*this, size);                              // allocate new memory
-            memcpy(_info.data, ptr, oldSize);                               // copy data
+            memcpy(_info.data, ptr, std::min(oldSize, size));               // copy data
             conf->_release(ptr);                                            // release pool ptr
         }
         _info.dirty = 1;

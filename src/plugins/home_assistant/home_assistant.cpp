@@ -215,7 +215,7 @@ bool HassPlugin::atModeHandler(AtModeArgs &args)
 
 void HassPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
 {
-    debug_printf_P(PSTR("url=%s method=%s\n"), request->url().c_str(), request->methodToString());
+    _debug_printf_P(PSTR("url=%s method=%s\n"), request->url().c_str(), request->methodToString());
     if (request->url().endsWith(F("hass.html"))) {
 
         using KFCConfigurationClasses::MainConfig;
@@ -534,7 +534,7 @@ void HassPlugin::callService(const String &service, const JsonUnnamedObject &pay
     });
 }
 
-void HassPlugin::_serviceCallback(HassJsonReader::CallService *service, KFCRestAPI::HttpRequest &request, StatusCallback_t statusCallback)
+void HassPlugin::_serviceCallback(HassJsonReader::CallService *service, HassPlugin::KFCRestAPI::HttpRequest &request, StatusCallback_t statusCallback)
 {
     _debug_printf_P(PSTR("service=%p http=%u\n"), service, request.getCode());
     statusCallback(service != nullptr);
@@ -560,9 +560,9 @@ void HassPlugin::removeAction(AsyncWebServerRequest *request)
         Plugins::HomeAssistant::getActions(actions);
         auto iterator = std::remove(actions.begin(), actions.end(), id);
         if (iterator != actions.end()) {
-            iterator->setEntityId(emptyString);
+            actions.erase(iterator);
             Plugins::HomeAssistant::setActions(actions);
-            //config.write();
+            config.write();
             msg = SPGM(OK);
         }
 

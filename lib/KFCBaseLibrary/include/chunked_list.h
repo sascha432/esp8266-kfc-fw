@@ -7,7 +7,7 @@
 #include <stdint.h>
 
 #ifndef XTRA_CONTAINERS_CHUNK_LIST_ASSERT
-#define XTRA_CONTAINERS_CHUNK_LIST_ASSERT               1
+#define XTRA_CONTAINERS_CHUNK_LIST_ASSERT               0
 #endif
 
 #if XTRA_CONTAINERS_CHUNK_LIST_ASSERT
@@ -19,6 +19,11 @@
 #define XTRA_CONTAINERS_CHUNK_LIST_DESTROY_RECURSIVE    0
 #endif
 
+#ifdef new
+#pragma push_macro("new")
+#undef new
+#define pop_macro_new
+#endif
 
 namespace xtra_containers {
 
@@ -75,7 +80,8 @@ namespace xtra_containers {
     private:
         class chunk_value_ptr {
         public:
-            chunk_value_ptr() = default;
+            chunk_value_ptr() : _ptr(nullptr) {
+            }
             chunk_value_ptr(pointer ptr) : _ptr(reinterpret_cast<void *>(ptr)) {
             }
             inline chunk_pointer chunk(chunk_pointer chunk) {
@@ -324,8 +330,8 @@ namespace xtra_containers {
             emplace_back(std::move(data));
         }
 
-        template<typename... _Args>
-        void emplace_back(_Args &&... __args) {
+        template<typename... Args>
+        void emplace_back(Args &&... args) {
             if (!_firstChunk) {
                 // create first chunk
                 _firstChunk = new chunk();
@@ -341,7 +347,7 @@ namespace xtra_containers {
                 }
             }
             // emplace data
-            new(_lastChunk->_ptr.forward()) value_type(std::forward<_Args>(__args)...);
+            new(_lastChunk->_ptr.forward()) value_type(std::forward<Args>(args)...);
             _size++;
         }
 
@@ -418,3 +424,8 @@ namespace xtra_containers {
 
 
 };
+
+#ifdef pop_macro_new
+#pragma pop_macro("new")
+#undef pop_macro_new
+#endif

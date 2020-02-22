@@ -314,7 +314,7 @@ void RemoteControlPlugin::_resetAutoSleep()
 void RemoteControlPlugin::_addButtonEvent(RemoteControlPlugin::ButtonEvent &&event)
 {
     _resetAutoSleep();
-    if (_events.size() > 32) {
+    if (_events.size() > 32) { // discard events
         _events.pop_front();
     }
     _events.emplace_back(event);
@@ -325,7 +325,7 @@ void RemoteControlPlugin::_sendEvents()
 {
     _debug_printf_P(PSTR("wifi=%u events=%u locked=%s\n"), config.isWiFiUp(), _events.size(), String(_buttonsLocked & 0b1111, 2).c_str());
 
-    if (config.isWiFiUp() && !_events.empty()) {
+    if (config.isWiFiUp() && _events.size()) {
         for(auto iterator = _events.begin(); iterator != _events.end(); ++iterator) {
             auto &event = *iterator;
             _debug_printf_P(PSTR("event=%s locked=%u\n"), event.toString().c_str(), _isButtonLocked(event.getButton()));

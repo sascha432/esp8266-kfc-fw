@@ -7,7 +7,7 @@
 #include <Arduino_compat.h>
 
 #ifndef DEBUG_NTP_CLIENT
-#define DEBUG_NTP_CLIENT                        0
+#define DEBUG_NTP_CLIENT                        1
 #endif
 
 // TODO this fails if the wake up was caused by an external event and not the timer
@@ -29,10 +29,6 @@
 #endif
 
 #define NTP_CLIENT_RTC_MEM_ID                   3
-
-#if NTP_RESTORE_SYSTEM_TIME_AFTER_WAKEUP
-void ntp_client_prepare_deep_sleep(uint32_t time);
-#endif
 
 #if NTP_HAVE_CALLBACKS
 

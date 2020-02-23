@@ -583,9 +583,14 @@ void KFCFWConfiguration::restoreFactorySettings()
 #if SYSLOG
     _H_SET(Config().syslog_port, 514);
 #endif
+
 #if HOME_ASSISTANT_INTEGRATION
     Plugins::HomeAssistant::setApiEndpoint(F("http://<CHANGE_ME>:8123/api/"));
 #endif
+#if IOT_REMOTE_CONTROL
+    Plugins::RemoteControl::defaults();
+#endif
+
 #if HUE_EMULATION
     _H_SET(Config().hue.tcp_port, HUE_BASE_PORT);
     _H_SET_STR(Config().hue.devices, F("lamp 1\nlamp 2"));
@@ -690,12 +695,7 @@ void KFCFWConfiguration::restoreFactorySettings()
     }
 #endif
 
-#if IOT_REMOTE_CONTROL
-    _H_SET(Config().remote_control, Config_RemoteControl());
-#endif
-
     customSettings();
-
 }
 
 #if CUSTOM_CONFIG_PRESET

@@ -23,7 +23,7 @@
 #include  "plugins.h"
 
 #ifndef DEBUG_IOT_REMOTE_CONTROL
-#define DEBUG_IOT_REMOTE_CONTROL                                1
+#define DEBUG_IOT_REMOTE_CONTROL                                0
 #endif
 
 #if DEBUG_IOT_REMOTE_CONTROL
@@ -218,7 +218,7 @@ private:
     PushButton *_buttons[IOT_REMOTE_CONTROL_BUTTON_COUNT];
     uint32_t _buttonsLocked;
     ButtonEventList _events;
-    Config_RemoteControl _config;
+    KFCConfigurationClasses::Plugins::RemoteControl _config;
     HassPlugin &_hass;
 
     const uint8_t _buttonPins[IOT_REMOTE_CONTROL_BUTTON_COUNT] = IOT_REMOTE_CONTROL_BUTTON_PINS;

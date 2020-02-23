@@ -280,45 +280,6 @@ public:
     Timezone_t tz;
 };
 
-
-class Config_RemoteControl {
-public:
-    typedef struct __attribute__packed__ {
-        uint16_t shortpress;
-        uint16_t longpress;
-        uint16_t repeat;
-    } Action_t;
-    typedef struct __attribute__packed__ {
-        uint8_t autoSleepTime: 8;
-        uint16_t deepSleepTime: 16;       // ESP8266 ~14500 seconds, 0 = indefinitely
-        uint16_t longpressTime;
-        uint16_t repeatTime;
-#if IOT_REMOTE_CONTROL_BUTTON_COUNT
-        Action_t actions[IOT_REMOTE_CONTROL_BUTTON_COUNT];
-#else
-        Action_t actions[4];
-#endif
-    } config_t;
-    config_t config;
-
-    Config_RemoteControl() : config() {
-        config.autoSleepTime = 5;
-        config.longpressTime = 750;
-        config.repeatTime = 250;
-    }
-
-    void validate() {
-        if (!config.longpressTime) {
-            config = config_t();
-            config.longpressTime = 750;
-            config.repeatTime = 250;
-        }
-        if (!config.autoSleepTime) {
-            config.autoSleepTime = 5;
-        }
-    }
-};
-
 class Config_Sensor {
 public:
 #if IOT_SENSOR_HAVE_BATTERY
@@ -470,7 +431,6 @@ typedef struct {
     Config_Ping ping;
     Config_WeatherStation weather_station;
     Config_Sensor sensor;
-    Config_RemoteControl remote_control;
     Config_Button buttons;
 } Config;
 

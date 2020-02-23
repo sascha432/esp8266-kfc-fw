@@ -29,7 +29,7 @@ static RemoteControlPlugin plugin;
 RemoteControlPlugin::RemoteControlPlugin() : _autoSleepTimeout(0), _buttonsLocked(~0), _hass(HassPlugin::getInstance())
 {
     REGISTER_PLUGIN(this);
-    _config.config.autoSleepTime = 15;
+    _config.autoSleepTime = 15;
     for(auto pin : _buttonPins) {
         pinMode(_buttonPins[pin], INPUT);
     }
@@ -42,7 +42,7 @@ void RemoteControlPlugin::setup(PluginSetupMode_t mode)
     for(uint8_t n = 0; n < IOT_REMOTE_CONTROL_BUTTON_COUNT; n++) {
         auto &button = *(_buttons[n] = new PushButton(_buttonPins[n], PRESSED_WHEN_HIGH));
         button.onPress(onButtonPressed);
-        button.onHoldRepeat(_config.config.longpressTime, _config.config.repeatTime, onButtonHeld);
+        button.onHoldRepeat(_config.longpressTime, _config.repeatTime, onButtonHeld);
         button.onRelease(onButtonReleased);
         button.update();
         _debug_printf_P(PSTR("btn=%d, pressed=%d\n"), n, button.isPressed());
@@ -66,7 +66,7 @@ void RemoteControlPlugin::reconfigure(PGM_P source)
     else {
         for(auto button : _buttons) {
             button->onPress(onButtonPressed);
-            button->onHoldRepeat(_config.config.longpressTime, _config.config.repeatTime, onButtonHeld);
+            button->onHoldRepeat(_config.longpressTime, _config.repeatTime, onButtonHeld);
             button->onRelease(onButtonReleased);
         }
     }
@@ -101,16 +101,18 @@ void RemoteControlPlugin::createMenu()
 
 void RemoteControlPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
 {
+    using KFCConfigurationClasses::MainConfig;
+
     form.setFormUI(F("Remote Control Configuration"));
 
-    form.add<uint8_t>(F("auto_sleep_time"), _H_STRUCT_VALUE(Config().remote_control, config.autoSleepTime))
+    form.add<uint8_t>(F("auto_sleep_time"), _H_STRUCT_VALUE(MainConfig().plugins.remotecontrol, autoSleepTime))
         ->setFormUI((new FormUI(FormUI::TEXT, F("Auto Sleep Time")))->setSuffix(F("seconds")));
-    form.add<uint16_t>(F("deep_sleep_time"), _H_STRUCT_VALUE(Config().remote_control, config.deepSleepTime))
+    form.add<uint16_t>(F("deep_sleep_time"), _H_STRUCT_VALUE(MainConfig().plugins.remotecontrol, deepSleepTime))
         ->setFormUI((new FormUI(FormUI::TEXT, F("Deep Sleep Time")))->setSuffix(F("seconds (0 = indefinitely)")));
 
-    form.add<uint16_t>(F("long_press_time"), _H_STRUCT_VALUE(Config().remote_control, config.longpressTime))
+    form.add<uint16_t>(F("long_press_time"), _H_STRUCT_VALUE(MainConfig().plugins.remotecontrol, longpressTime))
         ->setFormUI((new FormUI(FormUI::TEXT, F("Long Press Time")))->setSuffix(F("milliseconds")));
-    form.add<uint16_t>(F("repeat_time"), _H_STRUCT_VALUE(Config().remote_control, config.repeatTime))
+    form.add<uint16_t>(F("repeat_time"), _H_STRUCT_VALUE(MainConfig().plugins.remotecontrol, repeatTime))
         ->setFormUI((new FormUI(FormUI::TEXT, F("Repeat Time")))->setSuffix(F("milliseconds")));
 
     FormUI::ItemsList actions;
@@ -129,16 +131,16 @@ void RemoteControlPlugin::createConfigureForm(AsyncWebServerRequest *request, Fo
     for(uint8_t i = 0; i < IOT_REMOTE_CONTROL_BUTTON_COUNT; i++) {
 
         auto &group = form.addGroup(PrintString(F("remote_%u"), i), PrintString(F("Button %u Action"), i + 1),
-            (_config.config.actions[i].shortpress || _config.config.actions[i].longpress || _config.config.actions[i].repeat)
+            (_config.actions[i].shortpress || _config.actions[i].longpress || _config.actions[i].repeat)
         );
 
-        form.add<uint16_t>(PrintString(F("shortpress_action_%u"), i), _H_STRUCT_VALUE(Config().remote_control, config.actions[i].shortpress, i))
+        form.add<uint16_t>(PrintString(F("shortpress_action_%u"), i), _H_STRUCT_VALUE(MainConfig().plugins.remotecontrol, actions[i].shortpress, i))
             ->setFormUI((new FormUI(FormUI::SELECT, F("Short Press")))->addItems(actions));
 
-        form.add<uint16_t>(PrintString(F("longpress_action_%u"), i), _H_STRUCT_VALUE(Config().remote_control, config.actions[i].longpress, i))
+        form.add<uint16_t>(PrintString(F("longpress_action_%u"), i), _H_STRUCT_VALUE(MainConfig().plugins.remotecontrol, actions[i].longpress, i))
             ->setFormUI((new FormUI(FormUI::SELECT, F("Long Press")))->addItems(actions));
 
-        form.add<uint16_t>(PrintString(F("repeat_action_%u"), i), _H_STRUCT_VALUE(Config().remote_control, config.actions[i].repeat, i))
+        form.add<uint16_t>(PrintString(F("repeat_action_%u"), i), _H_STRUCT_VALUE(MainConfig().plugins.remotecontrol, actions[i].repeat, i))
             ->setFormUI((new FormUI(FormUI::SELECT, F("Repeat")))->addItems(actions));
 
         group.end();
@@ -237,7 +239,7 @@ void RemoteControlPlugin::deepSleepHandler(AsyncWebServerRequest *request)
         disableAutoSleep();
 
         Scheduler.addTimer(2000, false, [](EventScheduler::TimerPtr) {
-            config.enterDeepSleep(plugin._config.config.deepSleepTime * 1000000ULL, RF_DEFAULT, 1);
+            config.enterDeepSleep(plugin._config.deepSleepTime * 1000000ULL, RF_DEFAULT, 1);
         });
     }
     else {
@@ -258,13 +260,13 @@ void RemoteControlPlugin::_loop()
             }
         }
         else if (_autoSleepTimeout == 0) {
-            _autoSleepTimeout = millis() + (_config.config.autoSleepTime * 1000UL);
+            _autoSleepTimeout = millis() + (_config.autoSleepTime * 1000UL);
             _debug_printf_P(PSTR("auto deep sleep set %u\n"), _autoSleepTimeout);
         }
         if (_autoSleepTimeout && millis() > _autoSleepTimeout) {
-            _debug_printf_P(PSTR("entering deep sleep (auto=%d, time=%us)\n"), _config.config.autoSleepTime, _config.config.deepSleepTime);
+            _debug_printf_P(PSTR("entering deep sleep (auto=%d, time=%us)\n"), _config.autoSleepTime, _config.deepSleepTime);
             _autoSleepTimeout = AutoSleepDisabled;
-            config.enterDeepSleep(_config.config.deepSleepTime * 1000000ULL, RF_DEFAULT, 1);
+            config.enterDeepSleep(_config.deepSleepTime * 1000000ULL, RF_DEFAULT, 1);
         }
     }
 }
@@ -292,7 +294,7 @@ bool RemoteControlPlugin::_isUsbPowered() const
 
 void RemoteControlPlugin::_readConfig()
 {
-    _config = config._H_GET(Config().remote_control);
+    _config = Plugins::RemoteControl::get();
     _config.validate();
 }
 
@@ -306,7 +308,7 @@ void RemoteControlPlugin::_installWebhooks()
 void RemoteControlPlugin::_resetAutoSleep()
 {
     if (_autoSleepTimeout != 0 && _autoSleepTimeout != AutoSleepDisabled) {
-        _autoSleepTimeout = millis() + (_config.config.autoSleepTime * 1000UL);
+        _autoSleepTimeout = millis() + (_config.autoSleepTime * 1000UL);
         _debug_printf_P(PSTR("auto deep sleep set %u\n"), _autoSleepTimeout);
     }
 }
@@ -334,13 +336,13 @@ void RemoteControlPlugin::_sendEvents()
             }
 
             uint16_t actionId;
-            auto &actions = _config.config.actions[event.getButton()];
+            auto &actions = _config.actions[event.getButton()];
             switch(event.getType()) {
                 case ButtonEvent::REPEAT:
                     actionId = actions.repeat;
                     break;
                 case ButtonEvent::RELEASE:
-                    if (event.getDuration() < _config.config.longpressTime) {
+                    if (event.getDuration() < _config.longpressTime) {
                         actionId = actions.shortpress;
                     }
                     else {

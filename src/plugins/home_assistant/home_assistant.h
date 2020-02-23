@@ -100,6 +100,7 @@ public:
     void callService(const String &service, const JsonUnnamedObject &payload, ServiceCallback_t callback, StatusCallback_t statusCallback);
 
     static void _serviceCallback(HassJsonReader::CallService *service, KFCRestAPI::HttpRequest &request, StatusCallback_t statusCallback);
+
 private:
     String _getDomain(const String &entityId);
 

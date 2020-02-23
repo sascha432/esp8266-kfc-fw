@@ -4,12 +4,6 @@
 
 #pragma once
 
-// TODO
-// add mqtt switch
-// form to configure auto sleep delay, button settings etc..
-// button settings, hold time, repeat time, double click?
-// button action, mqtt, http postback
-
 #if IOT_REMOTE_CONTROL
 
 #include <EventScheduler.h>
@@ -23,7 +17,7 @@
 #include  "plugins.h"
 
 #ifndef DEBUG_IOT_REMOTE_CONTROL
-#define DEBUG_IOT_REMOTE_CONTROL                                0
+#define DEBUG_IOT_REMOTE_CONTROL                                1
 #endif
 
 #if DEBUG_IOT_REMOTE_CONTROL
@@ -57,6 +51,8 @@ class HassPlugin;
 class RemoteControlPlugin : public PluginComponent {
 public:
     static const uint32_t AutoSleepDisabled = ~0;
+
+    using RemoteControlConfig = KFCConfigurationClasses::Plugins::RemoteControl;
 
     class ButtonEvent {
     public:
@@ -95,6 +91,7 @@ public:
             _type = NONE;
         }
 
+#if DEBUG_IOT_REMOTE_CONTROL
         void printTo(Print &output) const {
             output.printf_P(PSTR("%u="), _button);
             switch(_type) {
@@ -119,6 +116,7 @@ public:
             printTo(str);
             return str;
         }
+#endif
 
     private:
         uint8_t _button;
@@ -128,7 +126,7 @@ public:
         uint32_t _timestamp;
     };
 
-    typedef std::list<ButtonEvent> ButtonEventList;
+    using ButtonEventList = std::list<ButtonEvent>;
 
 public:
     RemoteControlPlugin();
@@ -193,7 +191,7 @@ public:
 private:
     void _loop();
     void _wifiConnected();
-    int8_t _getButtonNum(Button &btn) const;
+    int8_t _getButtonNum(const Button &btn) const;
     bool _isUsbPowered() const;
     void _readConfig();
     void _installWebhooks();
@@ -215,10 +213,10 @@ private:
     }
 
     uint32_t _autoSleepTimeout;
-    PushButton *_buttons[IOT_REMOTE_CONTROL_BUTTON_COUNT];
+    std::array<PushButton *, IOT_REMOTE_CONTROL_BUTTON_COUNT> _buttons;
     uint32_t _buttonsLocked;
     ButtonEventList _events;
-    KFCConfigurationClasses::Plugins::RemoteControl _config;
+    RemoteControlConfig _config;
     HassPlugin &_hass;
 
     const uint8_t _buttonPins[IOT_REMOTE_CONTROL_BUTTON_COUNT] = IOT_REMOTE_CONTROL_BUTTON_PINS;

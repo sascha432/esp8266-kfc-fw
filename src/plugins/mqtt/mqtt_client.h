@@ -12,7 +12,12 @@
 
 // home assistant auto discovery
 #ifndef MQTT_AUTO_DISCOVERY
-#define MQTT_AUTO_DISCOVERY                 0
+#define MQTT_AUTO_DISCOVERY                 1
+#endif
+
+// disable last will. status is set to offline when disconnecting only
+#ifndef MQTT_SET_LAST_WILL
+#define MQTT_SET_LAST_WILL                  1
 #endif
 
 // run auto discovery client on device and provide additional AT commands. needs a lot memory when active
@@ -115,6 +120,7 @@ public:
 
     void connect();
     void disconnect(bool forceDisconnect = false);
+    void setLastWill(char value = 0);
     bool isConnected() const;
     void setAutoReconnect(uint32_t timeout);
 
@@ -180,7 +186,7 @@ private:
     void _setupClient();
     void autoReconnect(uint32_t timeout);
 
-    const String _reasonToString(AsyncMqttClientDisconnectReason reason) const;
+    const __FlashStringHelper *_reasonToString(AsyncMqttClientDisconnectReason reason) const;
 
     // match wild cards
     bool _isTopicMatch(const char *topic, const char *match) const;
@@ -214,6 +220,7 @@ private:
     MQTTTopicVector _topics;
     Buffer _buffer;
     String _lastWillTopic;
+    String _lastWillPayload;
 
     static MQTTClient *_mqttClient;
 };

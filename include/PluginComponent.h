@@ -32,6 +32,7 @@ public:
         PRIO_HTTP = -60,
         PRIO_HASS = -50,
         MAX_PRIORITY = 0,           // highest prio, -127 to -1 is reserved for the system
+        PRIO_MQTT = 20,
         DEFAULT_PRIORITY = 64,
         MIN_PRIORITY = 127
     } PluginPriorityEnum_t;

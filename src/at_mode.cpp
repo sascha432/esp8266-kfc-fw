@@ -655,7 +655,7 @@ void at_mode_serial_handle_event(String &commandString)
                     args.printf_P(PSTR("Max. deep sleep %.3f seconds"), ESP.deepSleepMax() / 1000000.0);
                 }
                 else {
-                    uint32_t time = args.toMillis(0);
+                    KFCFWConfiguration::milliseconds time(args.toMillis(0));
                     RFMode mode = (RFMode)args.toInt(1, RF_DEFAULT);
                     args.print(F("Entering deep sleep..."));
                     config.enterDeepSleep(time, mode, 1);

@@ -910,8 +910,7 @@ static void clear_crash_counter()
     remove_crash_counter(false);
 }
 
-
-void KFCFWConfiguration::enterDeepSleep(uint32_t time_in_ms, RFMode mode, uint16_t delayAfterPrepare)
+void KFCFWConfiguration::enterDeepSleep(milliseconds time, RFMode mode, uint16_t delayAfterPrepare)
 {
     _debug_printf_P(PSTR("KFCFWConfiguration::enterDeepSleep(%d, %d, %d)\n"), time_in_ms, mode, delayAfterPrepare);
 
@@ -924,22 +923,22 @@ void KFCFWConfiguration::enterDeepSleep(uint32_t time_in_ms, RFMode mode, uint16
     delay(1);
 
     for(auto plugin: plugins) {
-        plugin->prepareDeepSleep(time_in_ms);
+        plugin->prepareDeepSleep(time.count());
     }
     if (delayAfterPrepare) {
         delay(delayAfterPrepare);
     }
-    _debug_printf_P(PSTR("Entering deep sleep for %d milliseconds, RF mode %d\n"), time_in_ms, mode);
+    _debug_printf_P(PSTR("Entering deep sleep for %d milliseconds, RF mode %d\n"), time.count(), mode);
 
 #if __LED_BUILTIN == -3
     BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::OFF);
 #endif
 
 #if defined(ESP8266)
-    ESP.deepSleep(time_in_ms * 1000ULL, mode);
+    ESP.deepSleep(time.count() * 1000ULL, mode);
     ESP.deepSleep(0, mode); // if the first attempt fails try with 0
 #else
-    ESP.deepSleep(time_in_ms * 1000UL);
+    ESP.deepSleep(time.count() * 1000UL);
     ESP.deepSleep(0);
 #endif
 }

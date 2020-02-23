@@ -6,6 +6,7 @@
 #include <Form.h>
 #include <algorithm>
 #include "RTCMemoryManager.h"
+#include "progmem_data.h"
 #include "misc.h"
 #ifndef DISABLE_EVENT_SCHEDULER
 #include <EventScheduler.h>
@@ -31,11 +32,9 @@ void register_plugin(PluginComponent *plugin, const char *name)
 {
     Serial.begin(KFC_SERIAL_RATE);
     Serial.printf_P(PSTR("register_plugin(%p): name=%s\n"), plugin, name);
-    //os_printf("register_plugin(%p): name=%s\n", plugin, name);
 #else
 void register_plugin(PluginComponent *plugin)
 {
-    os_printf_plus("register_plugin %p\n", plugin);
 #endif
     if (plugins.size()) {
         _debug_printf(PSTR("Registering plugins completed already, skipping %s\n"), plugin->getName());
@@ -53,9 +52,7 @@ void dump_plugin_list(Print &output) {
 
 #if DEBUG
 
-    PGM_P yesStr = PSTR("yes");
-    PGM_P noStr = PSTR("no");
-    #define BOOL_STR(value) (value ? yesStr : noStr)
+    #define BOOL_STR(value) (value ? SPGM(yes) : SPGM(no))
 
     //                    123456789   12345   123456789   123456789012   1234567890    123456   123456  12345  123456789012
     PGM_P header = PSTR("+-----------+------+-----------+--------------+------------+--------+--------+-------+------------+\n");
@@ -97,7 +94,7 @@ void prepare_plugins() {
 #if DEBUG
     // check for duplicate RTC memory ids
     uint8_t i = 0;
-    for(auto plugin: plugins) {
+    for(const auto plugin : plugins) {
 #if DEBUG_PLUGINS
         _debug_printf_P(PSTR("%s prio %d\n"), plugin->getName(), plugin->getSetupPriority());
 #endif
@@ -107,7 +104,7 @@ void prepare_plugins() {
         }
         if (plugin->getRtcMemoryId()) {
             uint8_t j = 0;
-            for(auto plugin2: plugins) {
+            for(const auto plugin2 : plugins) {
                 if (i != j && plugin2->getRtcMemoryId() && plugin->getRtcMemoryId() == plugin2->getRtcMemoryId()) {
                     _debug_printf_P(PSTR("WARNING! Plugin %s and %s use the same id (%d) to identify the RTC memory data\n"), plugin->getName(), plugin2->getName(), plugin->getRtcMemoryId());
                 }
@@ -165,7 +162,7 @@ void setup_plugins(PluginComponent::PluginSetupMode_t mode) {
         create_menu();
     }
 
-    for(auto plugin : plugins) {
+    for(const auto plugin : plugins) {
         bool runSetup =
             (mode == PluginComponent::PLUGIN_SETUP_DEFAULT) ||
             (mode == PluginComponent::PLUGIN_SETUP_SAFE_MODE && plugin->allowSafeMode()) ||
@@ -198,12 +195,13 @@ void setup_plugins(PluginComponent::PluginSetupMode_t mode) {
     }
 
     if (enableWebUIMenu) {
-        auto webUi = F("Web UI");
         auto url = F("webui.html");
-        bootstrapMenu.addSubMenu(webUi, url, navMenu.device);
-        bootstrapMenu.addSubMenu(webUi, url, navMenu.home, bootstrapMenu.getId(bootstrapMenu.findMenuByURI(F("status.html"), navMenu.home)));
+        if (!bootstrapMenu.isValid(bootstrapMenu.findMenuByURI(url, navMenu.device))) {
+            auto webUi = F("Web UI");
+            bootstrapMenu.addSubMenu(webUi, url, navMenu.device);
+            bootstrapMenu.addSubMenu(webUi, url, navMenu.home, bootstrapMenu.getId(bootstrapMenu.findMenuByURI(F("status.html"), navMenu.home)));
+        }
     }
-    // bootstrapMenu.createCache();
 
 #ifndef DISABLE_EVENT_SCHEDULER
     if (mode == PluginComponent::PLUGIN_SETUP_AUTO_WAKE_UP) {

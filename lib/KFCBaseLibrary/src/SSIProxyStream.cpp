@@ -20,7 +20,7 @@ SSIProxyStream::SSIProxyStream(File &file, DataProviderInterface &provider) : _t
 
 SSIProxyStream::~SSIProxyStream() {
 #if DEBUG
-    debug_printf(PSTR("min. ram=%u\n"), _ramUsage);
+    debug_printf(PSTR("ram=%u\n"), _ramUsage);
 #endif
 }
 

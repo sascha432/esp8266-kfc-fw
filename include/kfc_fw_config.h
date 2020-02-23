@@ -13,6 +13,7 @@
 #include <vector>
 #include <functional>
 #include <bitset>
+#include <chrono>
 #include <Configuration.h>
 #if SYSLOG
 #include <KFCSyslog.h>
@@ -486,6 +487,9 @@ typedef struct {
 
 class KFCFWConfiguration : public Configuration {
 public:
+    using milliseconds = std::chrono::duration<uint32_t, std::milli>;
+    using seconds = std::chrono::duration<uint32_t, std::ratio<1>>;
+
     KFCFWConfiguration();
     ~KFCFWConfiguration();
 
@@ -511,7 +515,7 @@ public:
     void write();
 
     void wakeUpFromDeepSleep();
-    void enterDeepSleep(uint32_t time_in_ms, RFMode mode, uint16_t delayAfterPrepare = 0);
+    void enterDeepSleep(milliseconds time, RFMode mode, uint16_t delayAfterPrepare = 0);
     void restartDevice();
 
     static void printVersion(Print &output);

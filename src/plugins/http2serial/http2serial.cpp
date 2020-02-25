@@ -231,7 +231,7 @@ void Http2SerialPlugin::setup(PluginSetupMode_t mode)
         wsSerialConsole = new WsClientAsyncWebSocket(F("/serial_console"));
         wsSerialConsole->onEvent(http2serial_event_handler);
         server->addHandler(wsSerialConsole);
-        _debug_printf_P(PSTR("Web socket for http2serial running on port %u\n"), config.get<uint16_t>(_H(Config().http_port)));
+        _debug_printf_P(PSTR("Web socket for http2serial running on port %u\n"), config._H_GET(Config().http_port));
     }
 }
 

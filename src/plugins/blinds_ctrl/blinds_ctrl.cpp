@@ -27,7 +27,9 @@ class BlindsControlPlugin : public PluginComponent, public BlindsControl {
 public:
     BlindsControlPlugin();
 
-    virtual PGM_P getName() const;
+    virtual PGM_P getName() const {
+        return PSTR("blindsctrl");
+    }
     virtual const __FlashStringHelper *getFriendlyName() const {
         return F("Blinds Controller");
     }
@@ -40,13 +42,6 @@ public:
     virtual bool hasWebUI() const override;
     virtual void createWebUI(WebUI &webUI) override;
     virtual WebUIInterface *getWebUIInterface() override;
-
-    // virtual MenuTypeEnum_t getMenuType() const override {
-    //     return CUSTOM;
-    // }
-    // virtual void createMenu() override {
-    //     bootstrapMenu.addSubMenu(F("Blinds Controller"), F("blinds.html"), navMenu.config);
-    // }
 
     virtual PGM_P getConfigureForm() const override {
         return PSTR("blinds");
@@ -88,12 +83,8 @@ BlindsControlPlugin::BlindsControlPlugin() : BlindsControl(), _isTestMode(false)
     REGISTER_PLUGIN(this);
 }
 
-PGM_P BlindsControlPlugin::getName() const {
-    return PSTR("blindsctrl");
-}
-
-void BlindsControlPlugin::setup(PluginSetupMode_t mode) {
-
+void BlindsControlPlugin::setup(PluginSetupMode_t mode)
+{
     _setup();
     LoopFunctions::add(loopMethod);
 }
@@ -106,13 +97,14 @@ bool BlindsControlPlugin::hasStatus() const {
     return true;
 }
 
-void BlindsControlPlugin::getStatus(Print &output) {
+void BlindsControlPlugin::getStatus(Print &output)
+{
     output.printf_P(PSTR("PWM %.2fkHz" HTML_S(br)), IOT_BLINDS_CTRL_PWM_FREQ / 1000.0);
 #if IOT_BLINDS_CTRL_RPM_PIN
     output.print(F("Position sensing and stall protection" HTML_S(br)));
 #endif
 
-    for(uint8_t i = 0; i < 2; i++) {
+    for(uint8_t i = 0; i < _channels.size(); i++) {
         auto &_channel = _channels[i].getChannel();
         output.printf_P(PSTR("Channel %u, state %s, open %ums, close %ums, current limit %umA/%ums" HTML_S(br)),
             (i + 1),
@@ -143,11 +135,11 @@ void BlindsControlPlugin::createConfigureForm(AsyncWebServerRequest *request, Fo
     auto motorSpeed = F("0-1023");
     FormUI::ItemsList currentLimitItems;
 
-    currentLimitItems.push_back(std::make_pair(F("5"), F("Extra Fast (5ms)")));
-    currentLimitItems.push_back(std::make_pair(F("20"), F("Fast (20ms)")));
-    currentLimitItems.push_back(std::make_pair(F("50"), F("Medium (50ms)")));
-    currentLimitItems.push_back(std::make_pair(F("150"), F("Slow (150ms)")));
-    currentLimitItems.push_back(std::make_pair(F("250"), F("Extra Slow (250ms)")));
+    currentLimitItems.emplace_back(F("5"), F("Extra Fast (5ms)"));
+    currentLimitItems.emplace_back(F("20"), F("Fast (20ms)"));
+    currentLimitItems.emplace_back(F("50"), F("Medium (50ms)"));
+    currentLimitItems.emplace_back(F("150"), F("Slow (150ms)"));
+    currentLimitItems.emplace_back(F("250"), F("Extra Slow (250ms)"));
 
     form.setFormUI(F("Blinds Controller"));
 
@@ -155,7 +147,7 @@ void BlindsControlPlugin::createConfigureForm(AsyncWebServerRequest *request, Fo
     form.add<bool>(F("channel1_dir"), &blinds->channel1_dir)->setFormUI((new FormUI(FormUI::SELECT, F("Channel 1 Direction")))->setBoolItems(reverse, forward));
     form.add<bool>(F("swap_channels"), &blinds->swap_channels)->setFormUI((new FormUI(FormUI::SELECT, F("Swap Channels")))->setBoolItems(FSPGM(Yes), FSPGM(No)));
 
-    for (uint8_t i = 0; i < 2; i++) {
+    for (uint8_t i = 0; i < _channels.size(); i++) {
         form.add<uint16_t>(PrintString(F("channel%u_close_time"), i), &blinds->channels[i].closeTime)
             ->setFormUI((new FormUI(FormUI::TEXT, PrintString(F("Channel %u Open Time Limit"), i)))->setSuffix(ms));
         form.add<uint16_t>(PrintString(F("channel%u_open_time"), i), &blinds->channels[i].openTime)
@@ -190,13 +182,13 @@ void BlindsControlPlugin::createWebUI(WebUI &webUI) {
     row->addGroup(F("Blinds"), false);
 
     row = &webUI.addRow();
-    row->addBadgeSensor(FSPGM(blinds_controller_channel1_sensor), F("Turn"), F(""));
+    row->addBadgeSensor(FSPGM(blinds_controller_channel1_sensor), F("Turn"), JsonString());
 
     row = &webUI.addRow();
     row->addSwitch(FSPGM(blinds_controller_channel1), F("Channel 1"));
 
     row = &webUI.addRow();
-    row->addBadgeSensor(FSPGM(blinds_controller_channel2_sensor), F("Move"), F(""));
+    row->addBadgeSensor(FSPGM(blinds_controller_channel2_sensor), F("Move"), JsonString());
 
     row = &webUI.addRow();
     row->addSwitch(FSPGM(blinds_controller_channel2), F("Channel 2"));
@@ -216,7 +208,8 @@ void BlindsControl::rpmIntCallback(InterruptInfo info) {
 #error Test mode requires AT_MODE_SUPPORTED=1
 #endif
 
-void BlindsControlPlugin::loopMethod() {
+void BlindsControlPlugin::loopMethod()
+{
     if (plugin._isTestMode) {
         plugin._testLoopMethod();
     }
@@ -254,7 +247,8 @@ void BlindsControlPlugin::_printTestInfo() {
 #endif
 }
 
-void BlindsControlPlugin::_testLoopMethod() {
+void BlindsControlPlugin::_testLoopMethod()
+{
     if (_motorTimeout.isActive()) {
         _updateAdc();
 
@@ -314,7 +308,7 @@ bool BlindsControlPlugin::atModeHandler(AtModeArgs &args)
 {
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(BCMS))) {
         if (args.requireArgs(2, 2)) {
-            uint8_t channel = args.toInt(0) % 2;
+            uint8_t channel = args.toInt(0) % _channels.size();
             _channels[channel].setState(args.isFalse(1) ? BlindsChannel::CLOSED : BlindsChannel::OPEN);
             _saveState();
             args.printf_P(PSTR("channel %u state %s"), channel, BlindsChannel::_stateStr(_channels[channel].getState()));
@@ -388,7 +382,7 @@ bool BlindsControlPlugin::atModeHandler(AtModeArgs &args)
             if (cfg.swap_channels) {
                 channel++;
             }
-            channel %= 2;
+            channel %= _channels.size();
             if (channel == 0 && cfg.channel0_dir) {
                 direction++;
             }

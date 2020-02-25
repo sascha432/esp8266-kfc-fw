@@ -38,28 +38,33 @@ PROGMEM_STRING_DEF(mqtt_rgb_command_topic, "rgb_command_topic");
 PROGMEM_STRING_DEF(mqtt_unit_of_measurement, "unit_of_measurement");
 PROGMEM_STRING_DEF(mqtt_value_template, "value_template");
 
-MQTTComponent::MQTTComponent(ComponentTypeEnum_t type) : _type(type), _num(0xff) {
+MQTTComponent::MQTTComponent(ComponentTypeEnum_t type) : _type(type), _num(0xff)
+{
 }
 
-MQTTComponent::~MQTTComponent() {
+MQTTComponent::~MQTTComponent()
+{
 }
 
-void MQTTComponent::onConnect(MQTTClient *client) {
+void MQTTComponent::onConnect(MQTTClient *client)
+{
 }
 
-void MQTTComponent::onDisconnect(MQTTClient *client, AsyncMqttClientDisconnectReason reason) {
+void MQTTComponent::onDisconnect(MQTTClient *client, AsyncMqttClientDisconnectReason reason)
+{
 }
 
-void MQTTComponent::onMessage(MQTTClient *client, char *topic, char *payload, size_t len) {
+void MQTTComponent::onMessage(MQTTClient *client, char *topic, char *payload, size_t len)
+{
 }
 
 #if MQTT_AUTO_DISCOVERY
-void MQTTComponent::publishAutoDiscovery(MQTTClient *client) {
-
+void MQTTComponent::publishAutoDiscovery(MQTTClient *client)
+{
     if (MQTTAutoDiscovery::isEnabled()) {
         MQTTAutoDiscoveryVector vector;
         createAutoDiscovery(MQTTAutoDiscovery::FORMAT_JSON, vector);
-        for(auto &&discovery: vector) {
+        for(const auto &discovery: vector) {
             _debug_printf_P(PSTR("MQTTComponent::publishAutoDiscovery(): topic=%s, payload=%s\n"), discovery->getTopic().c_str(), discovery->getPayload().c_str());
             client->publish(discovery->getTopic(), client->getDefaultQos(), true, discovery->getPayload());
         }
@@ -68,7 +73,8 @@ void MQTTComponent::publishAutoDiscovery(MQTTClient *client) {
 }
 #endif
 
-PGM_P MQTTComponent::getComponentName() {
+PGM_P MQTTComponent::getComponentName()
+{
     switch(_type) {
         case LIGHT:
             return SPGM(mqtt_component_light);
@@ -84,17 +90,21 @@ PGM_P MQTTComponent::getComponentName() {
 }
 
 
-MQTTComponentHelper::MQTTComponentHelper(ComponentTypeEnum_t type) : MQTTComponent(type) {
+MQTTComponentHelper::MQTTComponentHelper(ComponentTypeEnum_t type) : MQTTComponent(type)
+{
 }
 
-void MQTTComponentHelper::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector) {
+void MQTTComponentHelper::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector)
+{
 }
 
-uint8_t MQTTComponentHelper::getAutoDiscoveryCount() const {
+uint8_t MQTTComponentHelper::getAutoDiscoveryCount() const
+{
     return 0;
 }
 
-MQTTAutoDiscovery *MQTTComponentHelper::createAutoDiscovery(uint8_t count, MQTTAutoDiscovery::Format_t format) {
+MQTTAutoDiscovery *MQTTComponentHelper::createAutoDiscovery(uint8_t count, MQTTAutoDiscovery::Format_t format)
+{
     auto discovery = new MQTTAutoDiscovery();
     discovery->create(this, count, format);
     return discovery;

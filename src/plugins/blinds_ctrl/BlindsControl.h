@@ -94,7 +94,7 @@ protected:
 protected:
     String _getTopic() const;
 
-    BlindsChannel _channels[ChannelEnum_t::CHANNEL_SIZE];
+    std::array<BlindsChannel, ChannelEnum_t::CHANNEL_SIZE> _channels;
     uint8_t _swapChannels: 1;
     uint8_t _channel0Dir: 1;
     uint8_t _channel1Dir: 1;

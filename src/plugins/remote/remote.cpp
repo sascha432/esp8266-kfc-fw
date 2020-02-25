@@ -24,7 +24,7 @@ using KFCConfigurationClasses::Plugins;
 
 static RemoteControlPlugin plugin;
 
-RemoteControlPlugin::RemoteControlPlugin() : _autoSleepTimeout(0), _buttonsLocked(~0), _hass(HassPlugin::getInstance())
+RemoteControlPlugin::RemoteControlPlugin() : _autoSleepTimeout(0), _buttonsLocked(~0), _longPress(0), _comboButton(-1), _hass(HassPlugin::getInstance())
 {
     REGISTER_PLUGIN(this);
     _config.autoSleepTime = 15;
@@ -85,7 +85,7 @@ void RemoteControlPlugin::prepareDeepSleep(uint32_t sleepTimeMillis)
 void RemoteControlPlugin::getStatus(Print &output)
 {
     output.printf_P(PSTR("%u Button Remote Control"), _buttons.size());
-    if (_autoSleepTimeout != 0 || _autoSleepTimeout == AutoSleepDisabled) {
+    if (_autoSleepTimeout == 0 || _autoSleepTimeout == AutoSleepDisabled) {
         output.print(F(", auto sleep disabled"));
     }
 }
@@ -177,15 +177,97 @@ void RemoteControlPlugin::onButtonPressed(Button& btn)
 
 void RemoteControlPlugin::onButtonHeld(Button& btn, uint16_t duration, uint16_t repeatCount)
 {
-    _debug_printf_P(PSTR("btn=%d duration=%u repeatCount=%u\n"), plugin._getButtonNum(btn), duration, repeatCount);
-    plugin._addButtonEvent(ButtonEvent(plugin._getButtonNum(btn), ButtonEvent::REPEAT, duration, repeatCount));
+    _debug_printf_P(PSTR("btn=%d duration=%d repeat=%d\n"), plugin._getButtonNum(btn), duration, repeatCount);
+    plugin._onButtonHeld(btn, duration, repeatCount);
 }
 
 void RemoteControlPlugin::onButtonReleased(Button& btn, uint16_t duration)
 {
-    _debug_printf_P(PSTR("btn=%d duration=%u\n"), plugin._getButtonNum(btn), duration);
-    plugin._addButtonEvent(ButtonEvent(plugin._getButtonNum(btn), ButtonEvent::RELEASE, duration));
+    _debug_printf_P(PSTR("btn=%d duration=%d\n"), plugin._getButtonNum(btn), duration);
+    plugin._onButtonReleased(btn, duration);
 }
+
+void RemoteControlPlugin::_onButtonHeld(Button& btn, uint16_t duration, uint16_t repeatCount)
+{
+    auto buttonNum = _getButtonNum(btn);
+#if IOT_REMOTE_CONTROL_COMBO_BTN
+    if (_anyButton(&btn)) { // is any button pressed except btn?
+        _resetAutoSleep();
+        if (duration < 5000 || _comboButton != 3) {
+            if (_comboButton == -1) {
+                _comboButton = buttonNum; // store first button held
+                _debug_printf_P(PSTR("longpress=%d combo=%d\n"), _longPress, _comboButton);
+            }
+            if (buttonNum != _comboButton) { // fire event for any other button that is held except first one
+                _addButtonEvent(ButtonEvent(buttonNum, ButtonEvent::COMBO_REPEAT, duration, repeatCount, _comboButton));
+            }
+        }
+        else if (_comboButton == 3) { // button 4 has special functions
+            if (duration > 5000 && _longPress == 0) {
+                // indicate long press by setting LED to flicker
+                _debug_printf_P(PSTR("2 buttons held >5 seconds: %u\n"), buttonNum);
+                BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::FLICKER);
+                _longPress = 1;
+                _debug_printf_P(PSTR("longpress=%d combo=%d\n"), _longPress, _comboButton);
+            }
+            else if (duration > 8000 && _longPress == 1) {
+                _debug_printf_P(PSTR("2 buttons held >8 seconds: %u\n"), buttonNum);
+                _longPress = 2;
+                _debug_printf_P(PSTR("longpress=%d combo=%d\n"), _longPress, _comboButton);
+                BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::SOLID);
+                if (buttonNum == 0) {
+                    _debug_printf_P(PSTR("disable auto sleep\n"));
+                    disableAutoSleep();
+                }
+                else if (buttonNum == 1) {
+                    _debug_printf_P(PSTR("restart\n"));
+                    restart();
+                    Scheduler.addTimer(3000, false, [](EventScheduler::TimerPtr) {
+                        config.restartDevice();
+                    });
+                }
+                else if (buttonNum == 2) {
+                    _debug_printf_P(PSTR("restore factory settings\n"));
+                    restart();
+                    Scheduler.addTimer(3000, false, [](EventScheduler::TimerPtr) {
+                        config.restoreFactorySettings();
+                        config.write();
+                        config.restartDevice();
+                    });
+                }
+            }
+        }
+    }
+    else
+#endif
+    {
+        _addButtonEvent(ButtonEvent(buttonNum, ButtonEvent::REPEAT, duration, repeatCount));
+    }
+}
+
+void RemoteControlPlugin::_onButtonReleased(Button& btn, uint16_t duration)
+{
+#if IOT_REMOTE_CONTROL_COMBO_BTN
+    if (_longPress) {
+        if (!_anyButton()) {
+            // disable LED after all buttons have been released
+            BlinkLEDTimer::setBlink(__LED_BUILTIN, config.isWiFiUp() ? BlinkLEDTimer::SOLID : BlinkLEDTimer::OFF);
+            _debug_printf_P(PSTR("longpress=%d combo=%d\n"), _longPress, _comboButton);
+            _longPress = 0;
+            _comboButton = -1;
+        }
+    }
+    else if (_comboButton != -1) {
+        _addButtonEvent(ButtonEvent(_getButtonNum(btn), ButtonEvent::COMBO_RELEASE, duration, _comboButton));
+        _comboButton = -1;
+    }
+    else
+#endif
+    {
+        _addButtonEvent(ButtonEvent(_getButtonNum(btn), ButtonEvent::RELEASE, duration));
+    }
+}
+
 
 void RemoteControlPlugin::loop()
 {
@@ -281,7 +363,7 @@ void RemoteControlPlugin::_wifiConnected()
 {
     _debug_printf_P(PSTR("events=%u\n"), _events.size());
     _resetAutoSleep();
-    _sendEvents();
+    _scheduleSendEvents();
 }
 
 int8_t RemoteControlPlugin::_getButtonNum(const Button &btn) const
@@ -292,6 +374,16 @@ int8_t RemoteControlPlugin::_getButtonNum(const Button &btn) const
         }
     }
     return -1;
+}
+
+bool RemoteControlPlugin::_anyButton(const Button *btn) const
+{
+    for(const auto button : _buttons) {
+        if (button != btn && button->isPressed()) {
+            return true;
+        }
+    }
+    return false;
 }
 
 bool RemoteControlPlugin::_isUsbPowered() const
@@ -314,7 +406,7 @@ void RemoteControlPlugin::_installWebhooks()
 
 void RemoteControlPlugin::_resetAutoSleep()
 {
-    if (_autoSleepTimeout != 0 && _autoSleepTimeout != AutoSleepDisabled) {
+    if (_autoSleepTimeout && _autoSleepTimeout != AutoSleepDisabled) {
         _autoSleepTimeout = millis() + (_config.autoSleepTime * 1000UL);
         _debug_printf_P(PSTR("auto deep sleep set %u\n"), _autoSleepTimeout);
     }
@@ -327,6 +419,7 @@ void RemoteControlPlugin::_addButtonEvent(ButtonEvent &&event)
         _events.pop_front();
     }
     _events.emplace_back(event);
+    _debug_printf_P(PSTR("event=%s\n"), _events.back().toString().c_str());
     _scheduleSendEvents();
 }
 
@@ -336,6 +429,9 @@ void RemoteControlPlugin::_sendEvents()
 
     if (config.isWiFiUp() && _events.size()) {
         for(auto iterator = _events.begin(); iterator != _events.end(); ++iterator) {
+            if (iterator->getType() == ButtonEvent::NONE) {
+                continue;
+            }
             auto &event = *iterator;
             _debug_printf_P(PSTR("event=%s locked=%u\n"), event.toString().c_str(), _isButtonLocked(event.getButton()));
             if (_isButtonLocked(event.getButton())) {
@@ -356,6 +452,19 @@ void RemoteControlPlugin::_sendEvents()
                         actionId = actions.longpress;
                     }
                     break;
+#if IOT_REMOTE_CONTROL_COMBO_BTN
+                case ButtonEvent::COMBO_REPEAT:
+                    actionId = event.getCombo(actions).repeat;
+                    break;
+                case ButtonEvent::COMBO_RELEASE:
+                    if (event.getDuration() < _config.longpressTime) {
+                        actionId = event.getCombo(actions).shortpress;
+                    }
+                    else {
+                        actionId = event.getCombo(actions).longpress;
+                    }
+                    break;
+#endif
                 default:
                     actionId = 0;
                     break;
@@ -364,10 +473,12 @@ void RemoteControlPlugin::_sendEvents()
             auto action = Plugins::HomeAssistant::getAction(actionId);
             if (action.getId()) {
                 Logger_notice(F("firing event: %s"), event.toString().c_str());
-                _events.erase(iterator);
 
                 _lockButton(event.getButton());
                 auto button = event.getButton();
+                //_events.erase(iterator);
+                event.remove();
+
                 _hass.executeAction(action, [this, button](bool status) {
                     _unlockButton(button);
                     _scheduleSendEvents();

@@ -10,9 +10,11 @@
 class dynamic_bitset {
 private:
     class bit_helper {
-    public:
+    private:
+        friend dynamic_bitset;
         bit_helper(dynamic_bitset *bitset, uint8_t index);
 
+    public:
         bit_helper &operator=(unsigned int value) {
             _bitset->set(_index, (bool)value);
             return *this;
@@ -40,17 +42,38 @@ public:
     dynamic_bitset(const char *fromBytes, uint8_t length, uint8_t size);
     ~dynamic_bitset();
 
-    dynamic_bitset & operator =(unsigned int value) {
-        setValue(value);
+    dynamic_bitset(const dynamic_bitset &bits) {
+        *this = bits;
+    }
+    dynamic_bitset(dynamic_bitset &&bits) {
+        *this = std::move(bits);
+    }
+
+    dynamic_bitset &operator =(dynamic_bitset &&bits) {
+        if (_buffer) {
+            free(_buffer);
+        }
+        _size = bits._size;
+        _maxSize = bits._maxSize;
+        _buffer = bits._buffer;
+        bits._size = 0;
+        bits._maxSize = 0;
+        bits._buffer = nullptr;
         return *this;
     }
-    dynamic_bitset & operator =(const dynamic_bitset &bitset) {
+
+    dynamic_bitset &operator =(const dynamic_bitset &bitset) {
 		setMaxSize(bitset._maxSize);
         setSize(bitset._size);
         memcpy(_buffer, bitset._buffer, ((_maxSize + 7) >> 3));
         return *this;
     }
-	dynamic_bitset & operator =(const char * str) {
+
+    dynamic_bitset &operator =(unsigned int value) {
+        setValue(value);
+        return *this;
+    }
+	dynamic_bitset &operator =(const char * str) {
 		setString(str);
 		return *this;
     }

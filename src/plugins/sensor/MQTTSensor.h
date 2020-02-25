@@ -35,6 +35,8 @@ class MQTTSensor : public MQTTComponent {
 public:
     const uint8_t DEFAULT_UPDATE_RATE = 60;
 
+    using SensorType = MQTTSensorSensorType;
+
     MQTTSensor();
     virtual ~MQTTSensor();
 
@@ -57,8 +59,8 @@ public:
     virtual void createWebUI(WebUI &webUI, WebUIRow **row) = 0;
     virtual void getStatus(PrintHtmlEntitiesString &output) = 0;
 
-    virtual MQTTSensorSensorType getType() const {
-        return MQTTSensorSensorType::UNKNOWN;
+    virtual SensorType getType() const {
+        return SensorType::UNKNOWN;
     }
 
     virtual bool hasForm() const {

@@ -26,11 +26,13 @@
 #include <debug_helper_disable.h>
 #endif
 
+Dimmer_Base::Dimmer_Base() :
 #if IOT_DIMMER_MODULE_INTERFACE_UART
-Dimmer_Base::Dimmer_Base() : _serial(Serial), _wire(*new SerialTwoWire(Serial)), _wireLocked(false) {
+    _serial(Serial), _wire(*new SerialTwoWire(Serial)), _wireLocked(false)
 #else
-Dimmer_Base::Dimmer_Base() : _wire(config.initTwoWire()) {
+    _wire(config.initTwoWire())
 #endif
+{
     _version = DIMMER_DISABLED;
 }
 
@@ -44,7 +46,7 @@ Dimmer_Base::~Dimmer_Base()
 void Dimmer_Base::_begin()
 {
     _version = 0;
-    _debug_println(F("Dimmer_Base::_begin()"));
+    _debug_println();
 #if IOT_DIMMER_MODULE_INTERFACE_UART
     #if SERIAL_HANDLER
         _wire.onReadSerial(SerialHandler::serialLoop);
@@ -105,7 +107,7 @@ void Dimmer_Base::_begin()
 
 void Dimmer_Base::_end()
 {
-    _debug_println(F("Dimmer_Base::_end()"));
+    _debug_println();
 
     _version = DIMMER_DISABLED;
 
@@ -132,7 +134,7 @@ void Dimmer_Base::_end()
 
 void Dimmer_Base::onData(uint8_t type, const uint8_t *buffer, size_t len)
 {
-    // _debug_printf_P(PSTR("Driver_DimmerModule::onData(): length %u\n"), len);
+    // _debug_printf_P(PSTR("length=%u\n"), len);
     while(len--) {
         dimmer_plugin._wire.feed(*buffer++);
     }
@@ -140,14 +142,14 @@ void Dimmer_Base::onData(uint8_t type, const uint8_t *buffer, size_t len)
 
 void Dimmer_Base::onReceive(int length)
 {
-    // _debug_printf_P(PSTR("Driver_DimmerModule::onReceive(%u)\n"), length);
+    // _debug_printf_P(PSTR("length=%u\n"), len);
     dimmer_plugin._onReceive(length);
 }
 
 void Dimmer_Base::_onReceive(size_t length)
 {
     auto type = _wire.read();
-    _debug_printf_P(PSTR("Driver_DimmerModule::_onReceive(%u): type %02x\n"), length, type);
+    _debug_printf_P(PSTR("length=%u type=%02x\n"), length, type);
 
     if (type == DIMMER_METRICS_REPORT && length >= sizeof(dimmer_metrics_t) + 1) {
         dimmer_metrics_t metrics;
@@ -368,7 +370,7 @@ void Dimmer_Base::_printStatus(Print &output)
 
 void Dimmer_Base::_updateMetrics(uint16_t vcc, float frequency, float internalTemperature, float ntcTemperature)
 {
-    _debug_printf_P(PSTR("Dimmer_Base::_updateMetrics(%u, %.3f, %.2f, %.2f)\n"), vcc, frequency, internalTemperature, ntcTemperature);
+    _debug_printf_P(PSTR("vcc=%u freq=%.3f intTemp=%.2f ntcTemp=%.2f\n"), vcc, frequency, internalTemperature, ntcTemperature);
     if (_vcc != vcc || _frequency != frequency || _internalTemperature != internalTemperature || _ntcTemperature != ntcTemperature) {
         auto client = MQTTClient::getClient();
         if (client && client->isConnected()) {
@@ -424,7 +426,7 @@ void Dimmer_Base::_updateMetrics(uint16_t vcc, float frequency, float internalTe
 
 void Dimmer_Base::_fade(uint8_t channel, int16_t toLevel, float fadeTime)
 {
-    _debug_printf_P(PSTR("Dimmer_Base::_fade(%u, %u, %f)\n"), channel, toLevel, fadeTime);
+    _debug_printf_P(PSTR("channel=%u toLevel=%u fadeTime=%f\n"), channel, toLevel, fadeTime);
 
     if (_lockWire()) {
         _wire.beginTransmission(DIMMER_I2C_ADDRESS);
@@ -451,7 +453,7 @@ void Dimmer_Base::_setDimmingLevels() {
     }
     level = level / (float)(IOT_DIMMER_MODULE_MAX_BRIGHTNESS * getChannelCount());
     for(auto sensor: SensorPlugin::getSensors()) {
-        if (sensor->getType() == MQTTSensor::HLW8012 || sensor->getType() == MQTTSensor::HLW8032) {
+        if (sensor->getType() == MQTTSensor::SensorType::HLW8012 || sensor->getType() == MQTTSensor::SensorType::HLW8032) {
             reinterpret_cast<Sensor_HLW80xx *>(sensor)->setDimmingLevel(level);
         }
     }
@@ -461,7 +463,7 @@ void Dimmer_Base::_setDimmingLevels() {
 
 void Dimmer_Base::writeEEPROM(bool noLocking)
 {
-    _debug_printf_P(PSTR("Dimmer_Base::writeEEPROM()\n"));
+    _debug_printf_P(PSTR("noLocking=%d\n"), noLocking);
     if (noLocking || _lockWire()) {
         _wire.beginTransmission(DIMMER_I2C_ADDRESS);
         _wire.write(DIMMER_REGISTER_COMMAND);
@@ -493,15 +495,15 @@ String Dimmer_Base::_getMetricsTopics(uint8_t num) const
 
 
 #if DEBUG_IOT_DIMMER_MODULE
-uint8_t Dimmer_Base::_endTransmission() {
-    auto result = _wire.endTransmission();
-    _debug_printf_P(PSTR("Dimmer_Base::endTransmission(): returned %u\n"), result);
-    return result;
+uint8_t Dimmer_Base::_endTransmission()
+{
+    return _debug_print_result(_wire.endTransmission());
 }
 #endif
 
-void Dimmer_Base::getValues(JsonArray &array) {
-    _debug_printf_P(PSTR("Dimmer_Base::getValues()\n"));
+void Dimmer_Base::getValues(JsonArray &array)
+{
+    _debug_println();
     JsonUnnamedObject *obj;
 
     for (uint8_t i = 0; i < getChannelCount(); i++) {
@@ -535,11 +537,11 @@ void Dimmer_Base::getValues(JsonArray &array) {
 
 void Dimmer_Base::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
 {
-    _debug_printf_P(PSTR("Dimmer_Base::setValue %s\n"), id.c_str());
+    _debug_printf_P(PSTR("id=%s\n"), id.c_str());
 
     if (String_startsWith(id, PSTR("dimmer_channel"))) {
         uint8_t channel = id[14] - '0';
-        _debug_printf_P(PSTR("Dimmer_Base::setValue channel %d hasValue %d value %d hasState %d state %d\n"), channel, hasValue, value.toInt(), hasState, state);
+        _debug_printf_P(PSTR("channel=%d hasValue=%d value=%d hasState=%d state=%d\n"), channel, hasValue, value.toInt(), hasState, state);
 
         if (channel < getChannelCount()) {
             if (hasState) {
@@ -558,7 +560,7 @@ void Dimmer_Base::setValue(const String &id, const String &value, bool hasValue,
 
 void Dimmer_Base::setupWebServer()
 {
-    _debug_printf_P(PSTR("Dimmer_Base::setupWebServer(): %p\n"), get_web_server_object());
+    _debug_printf_P(PSTR("server=%p\n"), get_web_server_object());
     web_server_add_handler(F("/dimmer_rstfw.html"), Dimmer_Base::handleWebServer);
 }
 
@@ -568,7 +570,9 @@ void Dimmer_Base::handleWebServer(AsyncWebServerRequest *request)
         resetDimmerMCU();
         HttpHeaders httpHeaders(false);
         httpHeaders.addNoCache();
-        request->send_P(200, FSPGM(mime_text_plain), SPGM(OK));
+        auto response = request->beginResponse_P(200, FSPGM(mime_text_plain), SPGM(OK));
+        httpHeaders.setAsyncWebServerResponseHeaders(response);
+        request->send(response);
     } else {
         request->send(403);
     }

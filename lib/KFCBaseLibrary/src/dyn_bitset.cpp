@@ -7,7 +7,7 @@
 #include <algorithm>
 
 
-dynamic_bitset::dynamic_bitset() : dynamic_bitset((uint32_t)0, 0, 0) {
+dynamic_bitset::dynamic_bitset() : _size(0), _maxSize(0), _buffer(nullptr) {
 }
 
 dynamic_bitset::dynamic_bitset(uint8_t maxSize) : dynamic_bitset((uint32_t)0, maxSize, maxSize) {
@@ -16,10 +16,7 @@ dynamic_bitset::dynamic_bitset(uint8_t maxSize) : dynamic_bitset((uint32_t)0, ma
 dynamic_bitset::dynamic_bitset(uint8_t size, uint8_t maxSize) : dynamic_bitset((uint32_t)0, size, maxSize) {
 }
 
-dynamic_bitset::dynamic_bitset(uint32_t value, uint8_t size, uint8_t maxSize) {
-    _buffer = nullptr;
-    _maxSize = maxSize;
-    _size = size;
+dynamic_bitset::dynamic_bitset(uint32_t value, uint8_t size, uint8_t maxSize) : _size(size), _maxSize(maxSize), _buffer(nullptr) {
     if (_maxSize) {
         _init();
         setValue(value);
@@ -189,7 +186,7 @@ void dynamic_bitset::_init() {
     _buffer = (uint8_t *)calloc(((_maxSize + 7) >> 3), 1);
 }
 
- dynamic_bitset::bit_helper::bit_helper(dynamic_bitset * bitset, uint8_t index) {
+ dynamic_bitset::bit_helper::bit_helper(dynamic_bitset *bitset, uint8_t index) {
      _index = index;
      _bitset = bitset;
  }

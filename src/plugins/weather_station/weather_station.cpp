@@ -71,7 +71,7 @@ void WeatherStationPlugin::_sendScreenCaptureBMP(AsyncWebServerRequest *request)
         auto response = new AsyncBitmapStreamResponse(plugin.getCanvas());
         HttpHeaders httpHeaders;
         httpHeaders.addNoCache();
-        httpHeaders.setWebServerResponseHeaders(response);
+        httpHeaders.setAsyncWebServerResponseHeaders(response);
         request->send(response);
     }
     else {
@@ -237,15 +237,15 @@ void WeatherStationPlugin::createConfigureForm(AsyncWebServerRequest *request, F
 
     form.setFormUI(F("Weather Station Configuration"));
 
-    form.add<uint8_t>(F("time_format_24h"), &config.time_format_24h)->setFormUI((new FormUI(FormUI::SELECT, F("Time Format")))->setBoolItems(F("24h"), F("12h")));
-    form.add<uint8_t>(F("is_metric"), &config.is_metric)->setFormUI((new FormUI(FormUI::SELECT, F("Units")))->setBoolItems(F("Metric"), F("Imperial")));
+    form.add<uint8_t>(F("time_format_24h"), _H_STRUCT_VALUE(Config().weather_station.config, time_format_24h))->setFormUI((new FormUI(FormUI::SELECT, F("Time Format")))->setBoolItems(F("24h"), F("12h")));
+    form.add<uint8_t>(F("is_metric"), _H_STRUCT_VALUE(Config().weather_station.config, is_metric))->setFormUI((new FormUI(FormUI::SELECT, F("Units")))->setBoolItems(F("Metric"), F("Imperial")));
 
-    form.add<uint16_t>(F("weather_poll_interval"), &config.weather_poll_interval)->setFormUI((new FormUI(FormUI::TEXT, F("Weather Poll Interval")))->setSuffix(F("minutes")));
-    form.add<uint16_t>(F("api_timeout"), &config.api_timeout)->setFormUI((new FormUI(FormUI::TEXT, F("API Timeout")))->setSuffix(F("seconds")));
+    form.add<uint16_t>(F("weather_poll_interval"), _H_STRUCT_VALUE(config, weather_poll_interval))->setFormUI((new FormUI(FormUI::TEXT, F("Weather Poll Interval")))->setSuffix(F("minutes")));
+    form.add<uint16_t>(F("api_timeout"), _H_STRUCT_VALUE(Config().weather_station.config, api_timeout))->setFormUI((new FormUI(FormUI::TEXT, F("API Timeout")))->setSuffix(F("seconds")));
 
-    form.add<uint8_t>(F("backlight_level"), &config.backlight_level)->setFormUI((new FormUI(FormUI::TEXT, F("Backlight Level")))->setSuffix(F("&#37;")));
-    form.add<uint8_t>(F("touch_threshold"), &config.touch_threshold)->setFormUI(new FormUI(FormUI::TEXT, F("Touch Threshold")));
-    form.add<uint8_t>(F("released_threshold"), &config.released_threshold)->setFormUI(new FormUI(FormUI::TEXT, F("Release Threshold")));
+    form.add<uint8_t>(F("backlight_level"), _H_STRUCT_VALUE(Config().weather_station.config, backlight_level))->setFormUI((new FormUI(FormUI::TEXT, F("Backlight Level")))->setSuffix(F("&#37;")));
+    form.add<uint8_t>(F("touch_threshold"), _H_STRUCT_VALUE(Config().weather_station.config, touch_threshold))->setFormUI(new FormUI(FormUI::TEXT, F("Touch Threshold")));
+    form.add<uint8_t>(F("released_threshold"), _H_STRUCT_VALUE(Config().weather_station.config, released_threshold))->setFormUI(new FormUI(FormUI::TEXT, F("Release Threshold")));
 
     // form.add<uint8_t>(F("blink_colon"), &clock->blink_colon)->setFormUI(
     //     (new FormUI(FormUI::SELECT, F("Blink Colon")))

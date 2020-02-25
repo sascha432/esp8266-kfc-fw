@@ -46,6 +46,11 @@
 #define IOT_REMOTE_CONTROL_LED_PIN                              2
 #endif
 
+#ifndef IOT_REMOTE_CONTROL_COMBO_BTN
+#define IOT_REMOTE_CONTROL_COMBO_BTN                            1
+#endif
+
+
 class HassPlugin;
 
 class RemoteControlPlugin : public PluginComponent {
@@ -53,6 +58,8 @@ public:
     static const uint32_t AutoSleepDisabled = ~0;
 
     using RemoteControlConfig = KFCConfigurationClasses::Plugins::RemoteControl;
+    using Action_t = KFCConfigurationClasses::Plugins::RemoteControl::Action_t;
+    using ComboAction_t = KFCConfigurationClasses::Plugins::RemoteControl::ComboAction_t;
 
     class ButtonEvent {
     public:
@@ -61,14 +68,27 @@ public:
             REPEAT,
             PRESS,
             RELEASE,
+            COMBO_REPEAT,
+            COMBO_RELEASE,
         } EventTypeEnum_t;
 
-        ButtonEvent(uint8_t button, EventTypeEnum_t type, uint16_t duration = 0, uint16_t repeat = 0) : _button(button), _type(type), _duration(duration), _repeat(repeat) {
+        ButtonEvent(uint8_t button, EventTypeEnum_t type, uint16_t duration = 0, uint16_t repeat = 0, int8_t comboButton = -1) : _button(button), _type(type), _duration(duration), _repeat(repeat), _comboButton(comboButton) {
             _timestamp = millis();
         }
 
         uint8_t getButton() const {
             return _button;
+        }
+
+        int8_t getComboButton() const {
+            return _comboButton;
+        }
+
+        ComboAction_t getCombo(const Action_t &actions) const {
+            if (_comboButton != -1) {
+                return actions.combo[_comboButton];
+            }
+            return ComboAction_t();
         }
 
         EventTypeEnum_t getType() const {
@@ -104,6 +124,12 @@ public:
                 case REPEAT:
                     output.printf_P(PSTR("repeat,d=%u,c=%u"), _duration, _repeat);
                     break;
+                case COMBO_RELEASE:
+                    output.printf_P(PSTR("release,combo=%d,d=%u"), _comboButton, _duration);
+                    break;
+                case COMBO_REPEAT:
+                    output.printf_P(PSTR("repeat,combo=%d,d=%u,c=%u"), _comboButton, _duration, _repeat);
+                    break;
                 case NONE:
                     output.printf_P(PSTR("none"));
                     break;
@@ -124,6 +150,7 @@ public:
         uint16_t _duration;
         uint16_t _repeat;
         uint32_t _timestamp;
+        int8_t _comboButton;
     };
 
     using ButtonEventList = std::list<ButtonEvent>;
@@ -192,6 +219,9 @@ private:
     void _loop();
     void _wifiConnected();
     int8_t _getButtonNum(const Button &btn) const;
+    bool _anyButton(const Button *btn = nullptr) const;
+    void _onButtonHeld(Button& btn, uint16_t duration, uint16_t repeatCount);
+    void _onButtonReleased(Button& btn, uint16_t duration);
     bool _isUsbPowered() const;
     void _readConfig();
     void _installWebhooks();
@@ -215,6 +245,8 @@ private:
     uint32_t _autoSleepTimeout;
     std::array<PushButton *, IOT_REMOTE_CONTROL_BUTTON_COUNT> _buttons;
     uint32_t _buttonsLocked;
+    uint8_t _longPress;
+    int8_t _comboButton;
     ButtonEventList _events;
     RemoteControlConfig _config;
     HassPlugin &_hass;

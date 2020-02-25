@@ -26,7 +26,9 @@ public:
     BlindsChannel();
 
     virtual void createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTComponent::MQTTAutoDiscoveryVector &vector) override;
-    virtual uint8_t getAutoDiscoveryCount() const override;
+    virtual uint8_t getAutoDiscoveryCount() const override {
+        return 1;
+    }
     virtual void onConnect(MQTTClient *client) override;
     virtual void onMessage(MQTTClient *client, char *topic, char *payload, size_t len) override;
 
@@ -41,7 +43,7 @@ public:
     void setNumber(uint8_t number);
     void setController(BlindsControl *controller);
 
-    static PGM_P _stateStr(StateEnum_t state);
+    static const __FlashStringHelper *_stateStr(StateEnum_t state);
 
 private:
     StateEnum_t _state;

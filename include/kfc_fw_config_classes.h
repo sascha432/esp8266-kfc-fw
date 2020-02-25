@@ -257,23 +257,31 @@ namespace KFCConfigurationClasses {
             uint8_t *actions;
         };
 
+        #ifndef IOT_REMOTE_CONTROL_BUTTON_COUNT
+        #define IOT_REMOTE_CONTROL_BUTTON_COUNT 4
+        #endif
+
         class RemoteControl {
         public:
             typedef struct __attribute__packed__ {
                 uint16_t shortpress;
                 uint16_t longpress;
                 uint16_t repeat;
+            } ComboAction_t;
+
+            typedef struct __attribute__packed__ {
+                uint16_t shortpress;
+                uint16_t longpress;
+                uint16_t repeat;
+                ComboAction_t combo[IOT_REMOTE_CONTROL_BUTTON_COUNT];
             } Action_t;
+
             struct __attribute__packed__ {
                 uint8_t autoSleepTime: 8;
                 uint16_t deepSleepTime: 16;       // ESP8266 max. ~14500 seconds, 0 = indefinitely
                 uint16_t longpressTime;
                 uint16_t repeatTime;
-        #if IOT_REMOTE_CONTROL_BUTTON_COUNT
                 Action_t actions[IOT_REMOTE_CONTROL_BUTTON_COUNT];
-        #else
-                Action_t actions[4];
-        #endif
             };
 
             RemoteControl() {
@@ -301,7 +309,6 @@ namespace KFCConfigurationClasses {
         RemoteControl remotecontrol;
 
     };
-
 
     struct MainConfig {
 

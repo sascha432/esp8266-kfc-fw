@@ -128,7 +128,7 @@ void MQTTClient::registerComponent(MQTTComponentPtr component)
     unregisterComponent(component);
     _components.emplace_back(component);
     uint8_t num = 0;
-    for(auto component: _components) {
+    for(const auto &component: _components) {
         component->setNumber(num);
         num += component->getAutoDiscoveryCount();
     }
@@ -147,7 +147,7 @@ void MQTTClient::unregisterComponent(MQTTComponentPtr component)
 bool MQTTClient::hasMultipleComponments() const
 {
     uint8_t count = 0;
-    for(auto &&component: _components) {
+    for(const auto &component: _components) {
         count += component->getAutoDiscoveryCount();
         if (count > 1) {
             return true;
@@ -280,7 +280,7 @@ void MQTTClient::onConnect(bool sessionPresent)
     // reset reconnect timer if connection was successful
     setAutoReconnect(DEFAULT_RECONNECT_TIMEOUT);
 
-    for(auto component: _components) {
+    for(const auto &component: _components) {
         component->onConnect(this);
 #if MQTT_AUTO_DISCOVERY
         component->publishAutoDiscovery(this);
@@ -296,7 +296,7 @@ void MQTTClient::onDisconnect(AsyncMqttClientDisconnectReason reason)
         str.printf_P(PSTR(", reconnecting in %d ms"), _autoReconnectTimeout);
     }
     Logger_notice(F("Disconnected from MQTT server %s, reason: %s%s"), connectionDetailsString().c_str(), _reasonToString(reason), str.c_str());
-    for(auto &&component: _components) {
+    for(const auto &component: _components) {
         component->onDisconnect(this, reason);
     }
     _topics.clear();
@@ -388,7 +388,7 @@ int MQTTClient::publishWithId(const String &topic, uint8_t qos, bool retain, con
 
 void MQTTClient::onMessageRaw(char *topic, char *payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total)
 {
-    _debug_printf_P(PSTR("topic=%s payload=%s idx:len:total=%d:%d:%d qos=%u dup=%d retain=%d\n"), topic, printable_string((const uint8_t *)payload, std::min(32, (int)len)).c_str(), index, len, total, properties.qos, properties.dup, properties.retain);
+    _debug_printf_P(PSTR("topic=%s payload=%s idx:len:total=%d:%d:%d qos=%u dup=%d retain=%d\n"), topic, printable_string(payload, len, 32).c_str(), index, len, total, properties.qos, properties.dup, properties.retain);
     if (total > _maxMessageSize) {
         _debug_printf(PSTR("discarding message, size exceeded %d/%d\n"), (unsigned)total, _maxMessageSize);
         return;
@@ -407,18 +407,17 @@ void MQTTClient::onMessageRaw(char *topic, char *payload, AsyncMqttClientMessage
         _buffer.write(payload, len);
     }
     if (_buffer.length() == total) {
-        _buffer.write(0);
-        onMessage(topic, _buffer.getChar(), properties, total);
+        onMessage(topic, _buffer.begin_str(), properties, total);
         _buffer.clear();
     }
 }
 
 void MQTTClient::onMessage(char *topic, char *payload, AsyncMqttClientMessageProperties properties, size_t len)
 {
-    _debug_printf_P(PSTR("topic=%s payload=%s len=%d qos=%u dup=%d retain=%d\n"), topic, printable_string((const uint8_t *)payload, std::min(200, (int)len)).c_str(), len, properties.qos, properties.dup, properties.retain);
-    for(auto iterator = _topics.begin(); iterator != _topics.end(); ++iterator) {
-        if (_isTopicMatch(topic, iterator->getTopic().c_str())) {
-            iterator->getComponent()->onMessage(this, topic, payload, len);
+    _debug_printf_P(PSTR("topic=%s payload=%s len=%d qos=%u dup=%d retain=%d\n"), topic, printable_string(payload, len, 200).c_str(), len, properties.qos, properties.dup, properties.retain);
+    for(const auto &mqttTopic : _topics) {
+        if (_isTopicMatch(topic, mqttTopic.getTopic().c_str())) {
+            mqttTopic.getComponent()->onMessage(this, topic, payload, len);
         }
     }
 }
@@ -618,6 +617,7 @@ void MQTTClient::_queueTimerCallback(EventScheduler::TimerPtr timer)
 
 void MQTTClient::queueTimerCallback(EventScheduler::TimerPtr timer)
 {
+    DEBUG_ASSERT(getClient() != nullptr);
     getClient()->_queueTimerCallback(timer);
 }
 

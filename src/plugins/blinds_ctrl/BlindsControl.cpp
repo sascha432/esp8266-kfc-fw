@@ -28,8 +28,9 @@ BlindsControl::BlindsControl() : MQTTComponent(SENSOR), WebUIInterface(), _activ
     _channels[1].setController(this);
 }
 
-void BlindsControl::_setup() {
-    _debug_println(F("BlindsControl::_setup()"));
+void BlindsControl::_setup()
+{
+    _debug_println();
     _readConfig();
 
     digitalWrite(IOT_BLINDS_CTRL_M1_PIN, LOW);
@@ -103,7 +104,7 @@ void BlindsControl::getValues(JsonArray &array)
 
 void BlindsControl::onConnect(MQTTClient *client)
 {
-    _debug_printf_P(PSTR("BlindsControl::onConnect()\n"));
+    _debug_printf_P(PSTR("client=%p\n"), client);
     _readConfig();
     _publishState(client);
 }
@@ -111,7 +112,7 @@ void BlindsControl::onConnect(MQTTClient *client)
 void BlindsControl::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
 {
     auto name = PSTR("blinds_channel");
-    _debug_printf_P(PSTR("BlindsControl::setValue(): %s value(%u) %s state(%u) %u\n"), id.c_str(), hasValue, value.c_str(), hasState, state);
+    _debug_printf_P(PSTR("id=%s hasValue=%u value=%s hasState=%u state=%u\n"), id.c_str(), hasValue, value.c_str(), hasState, state);
     if (hasValue) {
         if (String_startsWith(id, name)) {
             uint8_t channel = (id.charAt(strlen_P(name)) - '1') % 2;
@@ -122,7 +123,7 @@ void BlindsControl::setValue(const String &id, const String &value, bool hasValu
 
 void BlindsControl::setChannel(uint8_t channel, BlindsChannel::StateEnum_t state)
 {
-    _debug_printf_P(PSTR("BlindsControl::setChannel(%u, %u)\n"), channel, state);
+    _debug_printf_P(PSTR("channel=%u state=%u\n"), channel, state);
     // perform action in _loopMethod
     _action.set(state, channel);
 }
@@ -190,7 +191,7 @@ const __FlashStringHelper *BlindsControl::_getStateStr(uint8_t channel) const
     if (_motorTimeout.isActive() && _activeChannel == channel) {
         return F("Busy");
     }
-    return FPSTR(BlindsChannel::_stateStr(_channels[channel].getState()));
+    return BlindsChannel::_stateStr(_channels[channel].getState());
 }
 
 void BlindsControl::_clearAdc()
@@ -200,7 +201,7 @@ void BlindsControl::_clearAdc()
         channel++;
         _debug_printf_P(PSTR("BlindsControl::_clearAdc(): channels swapped\n"));
     }
-    channel %= 2;
+    channel %= _channels.size();
 
     _debug_printf_P(PSTR("BlindsControl::_clearAdc(): rssel=%u\n"), channel == 0 ? HIGH : LOW);
 
@@ -232,7 +233,7 @@ void BlindsControl::_setMotorSpeed(uint8_t channel, uint16_t speed, bool directi
         channel++;
         _debug_printf_P(PSTR("BlindsControl::_setMotorSpeed(): channels swapped\n"));
     }
-    channel %= 2;
+    channel %= _channels.size();
 
     if (channel == 0 && _channel0Dir) {
         _debug_printf_P(PSTR("BlindsControl::_setMotorSpeed(): direction inverted\n"));
@@ -288,10 +289,10 @@ void BlindsControl::_publishState(MQTTClient *client)
     if (client) {
         uint8_t _qos = MQTTClient::getDefaultQos();
         String topic = _getTopic();
-        client->publish(topic + '1', _qos, 1, _getStateStr(0));
-        client->publish(topic + '2', _qos, 1, _getStateStr(1));
-        _channels[0]._publishState(client, _qos);
-        _channels[1]._publishState(client, _qos);
+        for(size_t i = 0; i < _channels.size(); i++) {
+            client->publish(topic + (char)(i + '1'), _qos, 1, _getStateStr(i));
+            _channels[i]._publishState(client, _qos);
+        }
     }
 
     JsonUnnamedObject object(2);
@@ -306,34 +307,40 @@ void BlindsControl::_publishState(MQTTClient *client)
 void BlindsControl::_loadState()
 {
 #if IOT_BLINDS_CTRL_SAVE_STATE
-    BlindsChannel::StateEnum_t state[2] = { BlindsChannel::UNKNOWN, BlindsChannel::UNKNOWN };
+    BlindsChannel::StateEnum_t state[_channels.size()];
+    memset(&state, 0, sizeof(state));
     auto file = SPIFFS.open(FSPGM(iot_blinds_control_state_file), fs::FileOpenMode::read);
     if (file) {
         file.read(reinterpret_cast<uint8_t *>(&state), sizeof(state));
-        _channels[0].setState(state[0]);
-        _channels[1].setState(state[1]);
+        for(size_t i = 0; i < _channels.size(); i++) {
+            _channels[i].setState(state[i]);
+        }
     }
-    _debug_printf_P(PSTR("BlindsControl::_loadState(): file=%u, state=%u,%u\n"), (bool)file, state[0], state[1]);
+    _debug_printf_P(PSTR("file=%u state=%u,%u\n"), (bool)file, state[0], state[1]);
 #endif
 }
 
 void BlindsControl::_saveState()
 {
 #if IOT_BLINDS_CTRL_SAVE_STATE
-    BlindsChannel::StateEnum_t state[2] = { _channels[0].getState(), _channels[1].getState() };
+    BlindsChannel::StateEnum_t state[_channels.size()];
+    for(size_t i = 0; i < _channels.size(); i++) {
+        state[i] = _channels[i].getState();
+    }
     auto file = SPIFFS.open(FSPGM(iot_blinds_control_state_file), fs::FileOpenMode::write);
     if (file) {
         file.write(reinterpret_cast<const uint8_t *>(&state), sizeof(state));
     }
-    _debug_printf_P(PSTR("BlindsControl::_saveState(): file=%u, state=%u,%u\n"), (bool)file, state[0], state[1]);
+    _debug_printf_P(PSTR("file=%u state=%u,%u\n"), (bool)file, state[0], state[1]);
 #endif
 }
 
 void BlindsControl::_readConfig()
 {
     auto cfg = config._H_GET(Config().blinds_controller);
-    _channels[0].setChannel(cfg.channels[0]);
-    _channels[1].setChannel(cfg.channels[1]);
+    for(size_t i = 0; i < _channels.size(); i++) {
+        _channels[i].setChannel(cfg.channels[i]);
+    }
     _swapChannels = cfg.swap_channels;
     _channel0Dir = cfg.channel0_dir;
     _channel1Dir = cfg.channel1_dir;

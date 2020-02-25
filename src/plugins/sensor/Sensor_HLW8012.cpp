@@ -168,14 +168,13 @@ void Sensor_HLW8012::_loop()
 float calculateSD(float data[])
 {
     float sum = 0.0, mean, standardDeviation = 0.0;
-    int i;
-    for(i = 0; i < 10; ++i)
-    {
+    for(int i = 0; i < 10; i++) {
         sum += data[i];
     }
-    mean = sum/10;
-    for(i = 0; i < 10; ++i)
+    mean = sum / 10;
+    for(int i = 0; i < 10; i++) {
         standardDeviation += pow(data[i] - mean, 2);
+    }
     return sqrt(standardDeviation / 10);
 }
 
@@ -189,7 +188,7 @@ bool Sensor_HLW8012::_processInterruptBuffer(InterruptBuffer &buffer, SensorInpu
         auto client = _getWebSocketClient();
         bool convertUnits = false;
         uint16_t dataType = 0;
-        if (client && client->isConnected()) {
+        if (client) {
             convertUnits = _getWebSocketPlotData() & WebSocketDataTypeEnum_t::CONVERT_UNIT;
             if ((_getWebSocketPlotData() & WebSocketDataTypeEnum_t::CURRENT) && (&input == &_inputCFI)) {
                 dataType = 'I';
@@ -364,9 +363,9 @@ void Sensor_HLW8012::getStatus(PrintHtmlEntitiesString &output)
     output.print(F("R" HTML_S(br)));
 }
 
-MQTTSensorSensorType Sensor_HLW8012::getType() const
+MQTTSensor::SensorType Sensor_HLW8012::getType() const
 {
-    return MQTTSensorSensorType::HLW8012;
+    return SensorType::HLW8012;
 }
 
 String Sensor_HLW8012::_getId(const __FlashStringHelper *type)

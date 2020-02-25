@@ -86,7 +86,9 @@ public:
     virtual int16_t getChannel(uint8_t channel) const override;
     virtual bool getChannelState(uint8_t channel) const override;
     virtual void setChannel(uint8_t channel, int16_t level, float time) override;
-    virtual uint8_t getChannelCount() const override;
+    virtual uint8_t getChannelCount() const override {
+        return _channels.size();
+    }
 
    void publishState(MQTTClient *client = nullptr);
 
@@ -123,9 +125,11 @@ private:
     inline uint8_t endTransmission();
 #endif
 
+    using ChannelsArray = std::array<int16_t, 4>;
+
     Driver_4ChDimmer_MQTTComponentData_t _data;
-    int16_t _storedChannels[4];
-    int16_t _channels[4];
+    ChannelsArray _storedChannels;
+    ChannelsArray _channels;
     float _ratio[2];
     uint8_t _qos;
     EventScheduler::Timer _publishTimer;
@@ -176,14 +180,6 @@ public:
         return true;
     }
     virtual void getStatus(Print &output) override;
-
-    // virtual MenuTypeEnum_t getMenuType() const override {
-    //     return CUSTOM;
-    // }
-    // virtual void createMenu() override {
-    //     bootstrapMenu.addSubMenu(getFriendlyName(), F("dimmer_cfg.html"), navMenu.config);
-    // }
-
 };
 
 extern AtomicSunPlugin dimmer_plugin;

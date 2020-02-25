@@ -204,8 +204,10 @@ public:
     virtual bool atModeHandler(AtModeArgs &args) override;
 #endif
 
+    using EnergyCounterArray = std::array<uint64_t, IOT_SENSOR_HLW80xx_NUM_ENERGY_COUNTERS>;
+
     void resetEnergyCounter();
-    uint64_t *getEnergyCounters() {
+    EnergyCounterArray &getEnergyCounters() {
         return _energyCounter;
     }
     uint64_t &getEnergyPrimaryCounter() {
@@ -232,13 +234,13 @@ protected:
     String _getTopic();
 
     static bool _compareFuncHLW8012(MQTTSensor &sensor, Sensor_HLW8012 &) {
-        return sensor.getType() == MQTTSensor::HLW8012;
+        return sensor.getType() == MQTTSensor::SensorType::HLW8012;
     }
     static bool _compareFuncHLW8032(MQTTSensor &sensor, Sensor_HLW8032 &) {
-        return sensor.getType() == MQTTSensor::HLW8032;
+        return sensor.getType() == MQTTSensor::SensorType::HLW8032;
     }
     static bool _compareFunc(MQTTSensor &sensor, Sensor_HLW80xx &) {
-        return (sensor.getType() == MQTTSensor::HLW8012 || sensor.getType() == MQTTSensor::HLW8032);
+        return (sensor.getType() == MQTTSensor::SensorType::HLW8012 || sensor.getType() == MQTTSensor::SensorType::HLW8032);
     }
 
     String _name;
@@ -261,7 +263,7 @@ public:
         _extraDigits = std::max((int8_t)0, std::min((int8_t)6, digits));
         config._H_W_GET(Config().sensor).hlw80xx.extraDigits = _extraDigits;
     }
-    uint64_t _energyCounter[IOT_SENSOR_HLW80xx_NUM_ENERGY_COUNTERS];
+    EnergyCounterArray _energyCounter;
 
 #if IOT_SENSOR_HLW80xx_ADJUST_CURRENT
 protected:

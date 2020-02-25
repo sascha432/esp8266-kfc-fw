@@ -76,7 +76,10 @@ String formatBytes(size_t bytes);
 String formatTime(unsigned long seconds, bool days_if_not_zero = false);
 
 String url_encode(const String &str);
-String printable_string(const uint8_t *buffer, size_t length);
+String printable_string(const uint8_t *buffer, size_t length, size_t maxLength = 0);
+inline String printable_string(const char *buffer, size_t length, size_t maxLength = 0) {
+    return printable_string(reinterpret_cast<const uint8_t *>(buffer), length, maxLength);
+}
 
 void append_slash(String &dir);
 void remove_trailing_slash(String &dir);

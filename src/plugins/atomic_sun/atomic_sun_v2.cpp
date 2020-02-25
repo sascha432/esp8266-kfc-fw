@@ -9,6 +9,7 @@
 #include <PrintHtmlEntitiesString.h>
 #include <StreamString.h>
 #include "../include/templates.h"
+#include "LoopFunctions.h"
 #include "progmem_data.h"
 #include "plugins.h"
 #include "atomic_sun_v2.h"
@@ -34,8 +35,8 @@ Driver_4ChDimmer::Driver_4ChDimmer() : MQTTComponent(LIGHT), Dimmer_Base()
 void Driver_4ChDimmer::_begin()
 {
     Dimmer_Base::_begin();
-    memset(&_channels, 0, sizeof(_channels));
-    memset(&_storedChannels, 0, sizeof(_storedChannels));
+    _channels = ChannelsArray();
+    _storedChannels = ChannelsArray();
     auto mqttClient = MQTTClient::getClient();
     if (mqttClient) {
         mqttClient->registerComponent(this);
@@ -214,7 +215,7 @@ void Driver_4ChDimmer::onConnect(MQTTClient *client)
 void Driver_4ChDimmer::onMessage(MQTTClient *client, char *topic, char *payload, size_t len)
 {
     int value = atoi(payload);
-    _debug_printf_P(PSTR("Driver_4ChDimmer::onMessage(): topic %s, value %d\n"), topic, value);
+    _debug_printf_P(PSTR("topic=%s value=%d\n"), topic, value);
 
     if (_data.state.set.equals(topic)) {
 
@@ -285,7 +286,7 @@ void Driver_4ChDimmer::onMessage(MQTTClient *client, char *topic, char *payload,
 
 void Driver_4ChDimmer::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
 {
-    _debug_printf_P(PSTR("Driver_4ChDimmer::setValue %s, value %s, hasValue %u, state %u, hasState %u\n"), id.c_str(), value.c_str(), hasValue, state, hasState);
+    _debug_printf_P(PSTR("id=%s value=%s hasValue=%u state=%u hasState=%u\n"), id.c_str(), value.c_str(), hasValue, state, hasState);
 
     auto ptr = id.c_str();
     if (!strncmp_P(ptr, PSTR("dimmer_"), 7)) {
@@ -438,7 +439,7 @@ void Driver_4ChDimmer::_printStatus(Print &out)
 bool Driver_4ChDimmer::on(uint8_t channel)
 {
     if (!_data.state.value) {
-        memcpy(_channels, _storedChannels, sizeof(_channels));
+        _channels = _storedChannels;
         _channelsToBrightness();
         _setChannels(getOnOffFadeTime());
         publishState();
@@ -450,7 +451,7 @@ bool Driver_4ChDimmer::on(uint8_t channel)
 bool Driver_4ChDimmer::off(uint8_t channel)
 {
     if (_data.state.value) {
-        memcpy(_storedChannels, _channels, sizeof(_storedChannels));
+        _storedChannels = _channels;
         _data.state.value = false;
         _data.brightness.value = 0;
         _setChannels(getOnOffFadeTime());
@@ -588,28 +589,23 @@ void Driver_4ChDimmer::setChannel(uint8_t channel, int16_t level, float time)
     _setChannels(time);
 }
 
-uint8_t Driver_4ChDimmer::getChannelCount() const
-{
-    return 4;
-}
-
 void Driver_4ChDimmer::_setChannels(float fadetime)
 {
     if (fadetime == -1) {
         fadetime = getFadeTime();
     }
-    _debug_printf_P(PSTR("Driver_4ChDimmer::_setChannels(): %u,%u,%u,%u state=%u\n"), _channels[0], _channels[1], _channels[2], _channels[3], _data.state.value);
-    _fade(0, _channels[0], fadetime);
-    _fade(1, _channels[1], fadetime);
-    _fade(2, _channels[2], fadetime);
-    _fade(3, _channels[3], fadetime);
+
+    _debug_printf_P(PSTR("channels=%s state=%u\n"), implode(',', _channels).c_str(), _data.state.value);
+    for(size_t i = 0; i < _channels.size(); i++) {
+        _fade(i, _channels[i], fadetime);
+    }
     writeEEPROM();
 }
 
 // get brightness values from dimmer
 void Driver_4ChDimmer::_getChannels()
 {
-    _debug_printf_P(PSTR("Driver_4ChDimmer::_getChannels()\n"));
+    _debug_println();
     if (_lockWire()) {
         _wire.beginTransmission(DIMMER_I2C_ADDRESS);
         _wire.write(DIMMER_REGISTER_COMMAND);
@@ -618,15 +614,15 @@ void Driver_4ChDimmer::_getChannels()
         if (_endTransmission() == 0) {
             if (_wire.requestFrom(DIMMER_I2C_ADDRESS, sizeof(_channels)) == sizeof(_channels)) {
                 _wire.readBytes(reinterpret_cast<uint8_t *>(&_channels), sizeof(_channels));
-                _debug_printf_P(PSTR("Driver_4ChDimmer::_getChannels(): %u,%u,%u,%u\n"), _channels[0], _channels[1], _channels[2], _channels[3]);
+                _debug_printf_P(PSTR("channels=%s\n"), implode(',', _channels).c_str());
             }
         }
         _unlockWire();
 
 #if IOT_SENSOR_HLW80xx_ADJUST_CURRENT
-    Scheduler.addTimer(100, false, [this](EventScheduler::TimerPtr) {
-        _setDimmingLevels();
-    });
+        LoopFunctions::callOnce([this]() {
+            _setDimmingLevels();
+        });
 #endif
     }
 }

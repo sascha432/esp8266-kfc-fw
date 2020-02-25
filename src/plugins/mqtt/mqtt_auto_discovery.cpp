@@ -21,25 +21,26 @@
 #include <debug_helper_disable.h>
 #endif
 
-void MQTTAutoDiscovery::create(MQTTComponent *component, uint8_t count, MQTTAutoDiscovery::Format_t format) {
+void MQTTAutoDiscovery::create(MQTTComponent *component, uint8_t count, MQTTAutoDiscovery::Format_t format)
+{
     String name = MQTTClient::getComponentName(component->getNumber() + count);
     String uniqueId;
 
     _format = format;
-    _topic = Config_MQTT::getDiscoveryPrefix();
-    _topic += '/';
-    _topic += FPSTR(component->getComponentName());
-    _topic += '/';
-    _topic += name;
-    _topic += F("/config");
+    _topic = PrintString(F("%s/%s/%s/config"), Config_MQTT::getDiscoveryPrefix(), component->getComponentName(), name.c_str());
+    // _topic = Config_MQTT::getDiscoveryPrefix();
+    // _topic += '/';
+    // _topic += FPSTR(component->getComponentName());
+    // _topic += '/';
+    // _topic += name;
+    // _topic += F("/config");
 
     _discovery = PrintString();
     if (_format == FORMAT_JSON) {
         _discovery += '{';
     } else {
         _discovery += FPSTR(component->getComponentName());
-        _discovery += ':';
-        _discovery += F("\n  - ");
+        _discovery += F(":\n  - ");
     }
     addParameter(F("name"), name);
     addParameter(F("platform"), F("mqtt"));
@@ -82,7 +83,8 @@ void MQTTAutoDiscovery::create(MQTTComponent *component, uint8_t count, MQTTAuto
     _debug_printf_P(PSTR("MQTT auto discovery topic '%s', name %s, number %d\n"), _topic.c_str(), component->getComponentName(), component->getNumber());
 }
 
-void MQTTAutoDiscovery::addParameter(const String &name, const String &value) {
+void MQTTAutoDiscovery::addParameter(const String &name, const String &value)
+{
     if (_format == FORMAT_JSON) {
         _discovery.printf_P(PSTR("\"%s\":\"%s\","), name.c_str(), value.c_str());
     } else {
@@ -90,60 +92,74 @@ void MQTTAutoDiscovery::addParameter(const String &name, const String &value) {
     }
 }
 
-void MQTTAutoDiscovery::addStateTopic(const String &value) {
+void MQTTAutoDiscovery::addStateTopic(const String &value)
+{
     addParameter(FSPGM(mqtt_state_topic), value);
 }
 
-void MQTTAutoDiscovery::addCommandTopic(const String &value) {
+void MQTTAutoDiscovery::addCommandTopic(const String &value)
+{
     addParameter(FSPGM(mqtt_command_topic), value);
 }
 
-void MQTTAutoDiscovery::addPayloadOn(const String &value) {
+void MQTTAutoDiscovery::addPayloadOn(const String &value)
+{
     addParameter(FSPGM(mqtt_payload_on), value);
 }
 
-void MQTTAutoDiscovery::addPayloadOff(const String &value) {
+void MQTTAutoDiscovery::addPayloadOff(const String &value)
+{
     addParameter(FSPGM(mqtt_payload_off), value);
 }
 
-void MQTTAutoDiscovery::addBrightnessStateTopic(const String &value) {
+void MQTTAutoDiscovery::addBrightnessStateTopic(const String &value)
+{
     addParameter(FSPGM(mqtt_brightness_state_topic), value);
 }
 
-void MQTTAutoDiscovery::addBrightnessCommandTopic(const String &value) {
+void MQTTAutoDiscovery::addBrightnessCommandTopic(const String &value)
+{
     addParameter(FSPGM(mqtt_brightness_command_topic), value);
 }
 
-void MQTTAutoDiscovery::addBrightnessScale(uint32_t brightness) {
+void MQTTAutoDiscovery::addBrightnessScale(uint32_t brightness)
+{
     addParameter(FSPGM(mqtt_brightness_scale), String(brightness));
 }
 
-void MQTTAutoDiscovery::addColorTempStateTopic(const String &value) {
+void MQTTAutoDiscovery::addColorTempStateTopic(const String &value)
+{
     addParameter(FSPGM(mqtt_color_temp_state_topic), value);
 }
 
-void MQTTAutoDiscovery::addColorTempCommandTopic(const String &value) {
+void MQTTAutoDiscovery::addColorTempCommandTopic(const String &value)
+{
     addParameter(FSPGM(mqtt_color_temp_command_topic), value);
 }
 
-void MQTTAutoDiscovery::addRGBStateTopic(const String &value) {
+void MQTTAutoDiscovery::addRGBStateTopic(const String &value)
+{
     addParameter(FSPGM(mqtt_rgb_state_topic), value);
 }
 
-void MQTTAutoDiscovery::addRGBCommandTopic(const String &value) {
+void MQTTAutoDiscovery::addRGBCommandTopic(const String &value)
+{
     addParameter(FSPGM(mqtt_rgb_command_topic), value);
 }
 
-void MQTTAutoDiscovery::addUnitOfMeasurement(const String &value) {
+void MQTTAutoDiscovery::addUnitOfMeasurement(const String &value)
+{
     addParameter(FSPGM(mqtt_unit_of_measurement), value);
 }
 
-void MQTTAutoDiscovery::addValueTemplate(const String &value) {
+void MQTTAutoDiscovery::addValueTemplate(const String &value)
+{
     PrintString value_json(F("{{ value_json.%s }}"), value.c_str());
     addParameter(FSPGM(mqtt_value_template), value_json);
 }
 
-void MQTTAutoDiscovery::finalize() {
+void MQTTAutoDiscovery::finalize()
+{
     if (_format == FORMAT_JSON) {
         _discovery.remove(_discovery.length() - 1);
         _discovery += '}';
@@ -153,15 +169,18 @@ void MQTTAutoDiscovery::finalize() {
     _debug_printf_P(PSTR("MQTT auto discovery payload '%s'\n"), _discovery.c_str());
 }
 
-PrintString &MQTTAutoDiscovery::getPayload() {
+PrintString &MQTTAutoDiscovery::getPayload()
+{
     return _discovery;
 }
 
-String &MQTTAutoDiscovery::getTopic() {
+String &MQTTAutoDiscovery::getTopic()
+{
     return _topic;
 }
 
-bool MQTTAutoDiscovery::isEnabled() {
+bool MQTTAutoDiscovery::isEnabled()
+{
 #if MQTT_AUTO_DISCOVERY
     return config._H_GET(Config().flags).mqttAutoDiscoveryEnabled;
 #else
@@ -169,7 +188,8 @@ bool MQTTAutoDiscovery::isEnabled() {
 #endif
 }
 
-const String MQTTAutoDiscovery::_getUnqiueId(const String &name) {
+const String MQTTAutoDiscovery::_getUnqiueId(const String &name)
+{
     uint16_t crc[3];
 
 #if defined(ESP8266)

@@ -66,9 +66,8 @@ private:
 
 #endif
 
-BlinkLEDTimer::BlinkLEDTimer() : OSTimer()
+BlinkLEDTimer::BlinkLEDTimer() : _pin(INVALID_PIN)//, _on(false)
 {
-    _pin = INVALID_PIN;
 }
 
 void ICACHE_RAM_ATTR BlinkLEDTimer::run()
@@ -76,9 +75,10 @@ void ICACHE_RAM_ATTR BlinkLEDTimer::run()
     digitalWrite(_pin, BUILTIN_LED_STATE(_pattern.test(_counter++ % _pattern.size())));
 }
 
-void BlinkLEDTimer::set(uint32_t delay, int8_t pin, dynamic_bitset &pattern)
+void BlinkLEDTimer::set(uint32_t delay, int8_t pin, dynamic_bitset &&pattern)
 {
-    _pattern = pattern;
+    _pattern = std::move(pattern);
+    //_on = pattern.size();
     if (_pin != pin) {
         // set PIN as output
         _pin = pin;
@@ -100,14 +100,24 @@ void BlinkLEDTimer::detach()
         analogWrite(_pin, 0);
         digitalWrite(_pin, BUILTIN_LED_STATE(false));
     }
+    //_on = false;
     OSTimer::detach();
 }
 
-void BlinkLEDTimer::setPattern(int8_t pin, int delay, dynamic_bitset &pattern)
+// void setPattern(int8_t pin, int delay, const dynamic_bitset &pattern)
+// {
+//     ledTimer->set(delay, pin, std::move(dynamic_bitset(pattern)));
+// }
+
+void BlinkLEDTimer::setPattern(int8_t pin, int delay, dynamic_bitset &&pattern)
 {
-    // _debug_printf_P(PSTR("blink_led pin %d, pattern %s, delay %d\n"), pin, pattern.toString().c_str(), delay);
-    ledTimer->set(delay, pin, pattern);
+    ledTimer->set(delay, pin, std::move(pattern));
 }
+
+// bool BlinkLEDTimer::isOn() {
+//     return ledTimer->_on;
+// }
+
 
 void BlinkLEDTimer::setBlink(int8_t pin, uint16_t delay, int32_t color)
 {
@@ -165,11 +175,13 @@ void BlinkLEDTimer::setBlink(int8_t pin, uint16_t delay, int32_t color)
             // reset pin
             analogWrite(pin, 0);
             digitalWrite(pin, BUILTIN_LED_STATE(false));
+//            ledTimer->_on = false;
 
             if (delay == BlinkLEDTimer::OFF) {
                 digitalWrite(pin, BUILTIN_LED_STATE(false));
             } else if (delay == BlinkLEDTimer::SOLID) {
                 digitalWrite(pin, BUILTIN_LED_STATE(true));
+                // ledTimer->_on = true;
             } else {
                 dynamic_bitset pattern;
                 if (delay == BlinkLEDTimer::SOS) {
@@ -181,7 +193,7 @@ void BlinkLEDTimer::setBlink(int8_t pin, uint16_t delay, int32_t color)
                     pattern = 0b10;
                     delay = _max(50, _min(delay, 5000));
                 }
-                ledTimer->set(delay, pin, pattern);
+                ledTimer->set(delay, pin, std::move(pattern));
             }
         }
     }

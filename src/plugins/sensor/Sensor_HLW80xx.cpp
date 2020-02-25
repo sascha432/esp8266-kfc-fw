@@ -190,25 +190,25 @@ void Sensor_HLW80xx::restart()
 
 void Sensor_HLW80xx::createConfigureForm(AsyncWebServerRequest *request, Form &form)
 {
-    auto *sensor = &config._H_W_GET(Config().sensor); // must be a pointer
+    auto &sensor = config._H_W_GET(Config().sensor);
     auto kWh = String(F("kWh"));
 
-    form.add<float>(F("hlw80xx_calibrationU"), &sensor->hlw80xx.calibrationU)->setFormUI(new FormUI(FormUI::TEXT, F("HLW8012 Voltage Calibration")));
-    form.add<float>(F("hlw80xx_calibrationI"), &sensor->hlw80xx.calibrationI)->setFormUI(new FormUI(FormUI::TEXT, F("HLW8012 Current Calibration")));
-    form.add<float>(F("hlw80xx_calibrationP"), &sensor->hlw80xx.calibrationP)->setFormUI(new FormUI(FormUI::TEXT, F("HLW8012 Power Calibration")));
-    form.add<uint8_t>(F("hlw80xx_extra_digits"), &sensor->hlw80xx.extraDigits)->setFormUI(new FormUI(FormUI::TEXT, F("HLW8012 Extra Digits/Precision")));
+    form.add<float>(F("hlw80xx_calibrationU"), _H_STRUCT_VALUE(Config().sensor, hlw80xx.calibrationU))->setFormUI(new FormUI(FormUI::TEXT, F("HLW8012 Voltage Calibration")));
+    form.add<float>(F("hlw80xx_calibrationI"), _H_STRUCT_VALUE(Config().sensor, hlw80xx.calibrationI))->setFormUI(new FormUI(FormUI::TEXT, F("HLW8012 Current Calibration")));
+    form.add<float>(F("hlw80xx_calibrationP"), _H_STRUCT_VALUE(Config().sensor, hlw80xx.calibrationP))->setFormUI(new FormUI(FormUI::TEXT, F("HLW8012 Power Calibration")));
+    form.add<uint8_t>(F("hlw80xx_extra_digits"), _H_STRUCT_VALUE(Config().sensor, hlw80xx.extraDigits))->setFormUI(new FormUI(FormUI::TEXT, F("HLW8012 Extra Digits/Precision")));
     form.addValidator(new FormRangeValidator(F("Enter 0 to 4 for extra digits"), 0, 4));
 
-    form.add(F("energyCounterPrimary"), String())
+    form.add(F("energyCounterPrimary"), String(), FormField::InputFieldType::TEXT)
         ->setFormUI((new FormUI(FormUI::TEXT, F("HLW8012 Total Energy")))->setSuffix(kWh)->setPlaceholder(String(IOT_SENSOR_HLW80xx_PULSE_TO_KWH(getEnergyPrimaryCounter()), 3)));
-    form.addValidator(new FormCallbackValidator([sensor, this](String value, FormField &field) {
+    form.addValidator(new FormCallbackValidator([&sensor, this](String value, FormField &field) {
         if (value.length()) {
-            sensor->hlw80xx.energyCounter = IOT_SENSOR_HLW80xx_KWH_TO_PULSE(value.toFloat());
-            getEnergyPrimaryCounter() = sensor->hlw80xx.energyCounter;
+            sensor.hlw80xx.energyCounter = IOT_SENSOR_HLW80xx_KWH_TO_PULSE(value.toFloat());
+            getEnergyPrimaryCounter() = sensor.hlw80xx.energyCounter;
         }
         return true;
     }));
-    form.add(F("energyCounterSecondary"), String())
+    form.add(F("energyCounterSecondary"), String(), FormField::InputFieldType::TEXT)
         ->setFormUI((new FormUI(FormUI::TEXT, F("HLW8012 Energy")))->setSuffix(kWh)->setPlaceholder(String(IOT_SENSOR_HLW80xx_PULSE_TO_KWH(getEnergySecondaryCounter()), 3)));
     form.addValidator(new FormCallbackValidator([this](String value, FormField &field) {
         if (value.length()) {
@@ -245,13 +245,13 @@ void Sensor_HLW80xx::publishState(MQTTClient *client)
 
 void Sensor_HLW80xx::resetEnergyCounter()
 {
-    memset(&_energyCounter, 0, sizeof(_energyCounter));
+    _energyCounter = {};
     _saveEnergyCounter();
 }
 
 void Sensor_HLW80xx::_incrEnergyCounters(uint32_t count)
 {
-    for(uint8_t i = 0; i < IOT_SENSOR_HLW80xx_NUM_ENERGY_COUNTERS; i++) {
+    for(uint8_t i = 0; i < _energyCounter.size(); i++) {
         _energyCounter[i] += count;
     }
 }
@@ -262,7 +262,7 @@ void Sensor_HLW80xx::_saveEnergyCounter()
 #if IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT
     auto file = SPIFFS.open(FSPGM(iot_sensor_hlw80xx_state_file), fs::FileOpenMode::write);
     if (file) {
-        file.write(reinterpret_cast<uint8_t *>(&_energyCounter), sizeof(_energyCounter));
+        file.write(reinterpret_cast<const uint8_t *>(_energyCounter.data()), sizeof(_energyCounter));
         file.close();
     }
     _saveEnergyCounterTimeout = millis() + IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT;
@@ -276,7 +276,7 @@ void Sensor_HLW80xx::_loadEnergyCounter()
     _debug_printf_P(PSTR("Sensor_HLW80xx::_loadEnergyCounter()\n"));
 #if IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT
     auto file = SPIFFS.open(FSPGM(iot_sensor_hlw80xx_state_file), fs::FileOpenMode::read);
-    if (!file || file.read(reinterpret_cast<uint8_t *>(&_energyCounter), sizeof(_energyCounter)) != sizeof(_energyCounter)) {
+    if (!file || file.read(reinterpret_cast<uint8_t *>(_energyCounter.data()), sizeof(_energyCounter)) != sizeof(_energyCounter)) {
         resetEnergyCounter();
         _energyCounter[0] = config._H_GET(Config().sensor).hlw80xx.energyCounter; // restore data from EEPROM in case SPIFFS was updated
     }

@@ -30,19 +30,22 @@ public:
     BlinkLEDTimer();
 
     virtual ICACHE_RAM_ATTR void run() override;
-    void set(uint32_t delay, int8_t pin, dynamic_bitset &pattern);
+    void set(uint32_t delay, int8_t pin, dynamic_bitset &&pattern);
     virtual void detach() override;
 
-    static void setPattern(int8_t pin, int delay, dynamic_bitset &pattern);
-    static void setBlink(int8_t pin, uint16_t delay, int32_t color = -1); // predefined values BlinkDelayEnum_t
-    inline static void setBlink(int8_t pin, BlinkDelayEnum_t delay, int32_t color = -1) {
+    static void setPattern(int8_t pin, int delay, dynamic_bitset &&pattern);
+    //static void setPattern(int8_t pin, int delay, const dynamic_bitset &pattern);
+    static void setBlink(int8_t pin, BlinkDelayEnum_t delay, int32_t color = -1) {
         setBlink(pin, (uint16_t)delay, color);
     }
+    static void setBlink(int8_t pin, uint16_t delay, int32_t color = -1); // predefined values BlinkDelayEnum_t
+    // static bool isOn();
 
 protected:
     int8_t _pin;
     uint16_t _counter;
     dynamic_bitset _pattern;
+    // bool _on;
 };
 
 extern BlinkLEDTimer *ledTimer;

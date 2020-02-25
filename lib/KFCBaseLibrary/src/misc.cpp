@@ -57,19 +57,22 @@ String url_encode(const String &str)
     return out_str;
 }
 
-String printable_string(const uint8_t *buffer, size_t length)
+String printable_string(const uint8_t *buffer, size_t length, size_t maxLength)
 {
-    PrintString out_str;
-    const char *ptr = (const char *)buffer;
+    if (maxLength) {
+        length = std::min(maxLength, length);
+    }
+    PrintString str;
+    auto ptr = buffer;
     while(length--) {
         if (isprint(*ptr)) {
-            out_str += *ptr;
+            str += (char)*ptr;
         } else {
-            out_str.printf_P(PSTR("\\%02X"), (int)(*ptr & 0xff));
+            str.printf_P(PSTR("\\%02X"), (int)(*ptr & 0xff));
         }
         ptr++;
     }
-    return out_str;
+    return str;
 }
 
 void append_slash(String &dir) {

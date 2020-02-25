@@ -18,6 +18,7 @@
 #include <PrintString.h>
 #include <PrintHtmlEntitiesString.h>
 #include <WebUIComponent.h>
+#include <array>
 #include "kfc_fw_config.h"
 #include "../mqtt/mqtt_client.h"
 #include "serial_handler.h"
@@ -115,7 +116,9 @@ public:
     virtual int16_t getChannel(uint8_t channel) const override;
     virtual bool getChannelState(uint8_t channel) const override;
     virtual void setChannel(uint8_t channel, int16_t level, float time = -1) override;
-    virtual uint8_t getChannelCount() const override;
+    virtual uint8_t getChannelCount() const override {
+        return _channels.size();
+    }
 
     virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override {
         Dimmer_Base::readConfig();
@@ -130,7 +133,8 @@ protected:
 private:
     void _getChannels();
 
-    DimmerChannel _channels[IOT_DIMMER_MODULE_CHANNELS];
+protected:
+    std::array<DimmerChannel, IOT_DIMMER_MODULE_CHANNELS> _channels;
 
 // buttons
 #if IOT_DIMMER_MODULE_HAS_BUTTONS
@@ -176,9 +180,9 @@ private:
     typedef std::vector<DimmerButton> DimmerButtonVector;
 
     DimmerButtonVector _buttons;
-    EventScheduler::Timer _turnOffTimer[IOT_DIMMER_MODULE_CHANNELS];
-    uint8_t _turnOffTimerRepeat[IOT_DIMMER_MODULE_CHANNELS];
-    int16_t _turnOffLevel[IOT_DIMMER_MODULE_CHANNELS];
+    std::array<EventScheduler::Timer, IOT_DIMMER_MODULE_CHANNELS> _turnOffTimer;
+    std::array<uint8_t, IOT_DIMMER_MODULE_CHANNELS> _turnOffTimerRepeat;
+    std::array<int16_t, IOT_DIMMER_MODULE_CHANNELS> _turnOffLevel;
 #endif
 };
 

@@ -63,7 +63,10 @@ public:
     }
 
     String toString() const;
-    inline const char* c_str() {
+    inline const char *c_str() {
+        return getNulByteString();
+    }
+    inline char *begin_str() {
         return getNulByteString();
     }
     char *getNulByteString(); // return NUL terminated string

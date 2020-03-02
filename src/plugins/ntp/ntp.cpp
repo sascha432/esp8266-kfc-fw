@@ -332,7 +332,7 @@ commandNow:
         else {
             auto &timezone = get_default_timezone();
             strftime_P(timestamp, sizeof(timestamp), SPGM(strftime_date_time_zone), gmtime(&now));
-            args.printf_P(PSTR("%s, unixtime=%u, valid=%u, dst=%u, SNTP tz=%d"), timestamp, now, timezone.isValid(), timezone.isDst(), sntp_get_timezone());
+            args.printf_P(PSTR("%s, unixtime=%u, valid=%u, dst=%u"), timestamp, now, timezone.isValid(), timezone.isDst());
             timezone_strftime_P(timestamp, sizeof(timestamp), SPGM(strftime_date_time_zone), timezone_localtime(&now));
             args.print(timestamp);
         }

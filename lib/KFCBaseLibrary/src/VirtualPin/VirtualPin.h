@@ -2,6 +2,8 @@
 * Author: sascha_lammers@gmx.de
 */
 
+#ifndef ESP32
+
 #pragma once
 
 // abstract class for digital and analog IO ports
@@ -10,7 +12,7 @@
 #include "EnumBitset.h"
 
 #ifndef DEBUG_VIRTUAL_PIN
-#define DEBUG_VIRTUAL_PIN                                   1
+#define DEBUG_VIRTUAL_PIN                                   0
 #endif
 
 #if ESP8266
@@ -37,6 +39,10 @@ DECLARE_ENUM_BITSET(VirtualPinMode, uint8_t,
 );
 
 #else
+
+#undef INPUT
+#undef OUTPUT
+#undef BIT
 
 DECLARE_ENUM(VirtualPinMode, uint8_t,
     INPUT             = 0x00,
@@ -98,3 +104,5 @@ public:
         return getPin();
     }
 };
+
+#endif

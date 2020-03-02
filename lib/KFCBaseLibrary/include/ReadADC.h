@@ -75,7 +75,7 @@ private:
         uint32_t sum = 0;
         for(uint8_t i = 0; i < _num; i++) {
             sum += analogRead(_pin);
-            if (delay) {
+            if (_delay) {
                 delay(_delay);
             }
         }

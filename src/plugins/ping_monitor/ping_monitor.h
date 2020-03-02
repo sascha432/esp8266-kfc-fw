@@ -7,13 +7,15 @@
 #if PING_MONITOR
 
 #ifndef DEBUG_PING_MONITOR
-#define DEBUG_PING_MONITOR 0
+#define DEBUG_PING_MONITOR                  1
 #endif
 
 #include <Arduino_compat.h>
 #include <ESPAsyncWebServer.h>
 #include "AsyncPing.h"
 #include "web_socket.h"
+
+using AsyncPingPtr = std::shared_ptr<AsyncPing>;
 
 class WsPingClient : public WsClient {
 public:
@@ -26,23 +28,27 @@ public:
     virtual void onDisconnect(uint8_t *data, size_t len) override;
     virtual void onError(WsErrorType type, uint8_t *data, size_t len) override;
 
-    AsyncPing &getPing();
+    AsyncPingPtr &getPing();
 
 private:
     void _cancelPing();
-    AsyncPing _ping;
-    char *_loopFunction;
+    AsyncPingPtr _ping;
 };
 
 class PingMonitorTask {
 public:
-    typedef struct {
+    using PingMonitorTaskPtr = std::shared_ptr<PingMonitorTask>;
+
+    class PingHost {
+    public:
+        PingHost(const String &_host = String()) : host(_host), success(0), failure(0) {
+        }
         String host;
         uint32_t success;
         uint32_t failure;
-    } PingHost_t;
+    } ;
 
-    typedef std::vector<PingHost_t> PingVector;
+    typedef std::vector<PingHost> PingVector;
 
     PingMonitorTask();
     ~PingMonitorTask();
@@ -63,7 +69,7 @@ public:
 
     void printStats(Print &out);
 
-    inline ulong isNext() const {
+    inline bool isNext() const {
         return (_nextHost != 0 && millis() > _nextHost);
     }
 
@@ -76,7 +82,7 @@ private:
     uint16_t _timeout;
     unsigned long _nextHost;
     PingVector _pingHosts;
-    AsyncPing *_ping;
+    AsyncPingPtr _ping;
 };
 
 #endif

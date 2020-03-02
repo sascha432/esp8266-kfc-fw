@@ -216,7 +216,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(FSM, "FSM", "Display FS mapping");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PINM, "PINM", "[<1=start|0=stop>}", "List or monitor PINs");
 #endif
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(PLUGINS, "PLUGINS", "List plugins");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PLGI, "PLGI", "<name>", "Init plugin");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PLGI, "PLGI", "<name>[,1=end]", "Init or end plugin");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HEAP, "HEAP", "[interval in seconds|0=disable]", "Display free heap");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RSSI, "RSSI", "[interval in seconds|0=disable]", "Display WiFi RSSI");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(GPIO, "GPIO", "[interval in seconds|0=disable]", "Display GPIO states");
@@ -225,6 +225,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PWM, "PWM", "<pin>,<level=0-1023/off>[,<fr
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(CPU, "CPU", "<80|160>", "Set CPU speed", "Display CPU speed");
 #endif
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMP, "DUMP", "[<dirty|config.name>]", "Display settings");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPR, "DUMPR", "<pointer>", "Print symbol");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DUMPT, "DUMPT", "Dump timers");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DUMPFS, "DUMPFS", "Display file system information");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPEE, "DUMPEE", "[<offset>[,<length>]", "Dump EEPROM");
@@ -284,6 +285,7 @@ void at_mode_help_commands()
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CPU), name);
 #endif
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DUMP), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DUMPR), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DUMPT), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DUMPFS), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DUMPEE), name);
@@ -601,6 +603,66 @@ void at_mode_print_prefix(Stream &output, const char *command)
     output.printf_P(PSTR("+%s: "), command);
 }
 
+#include <map>
+#include "../include/RestApi/RetrieveSymbols.h"
+
+static std::map<void *, String> at_mode_resolve_map;
+
+void *resolve_lambda(void *ptr)
+{
+    at_mode_resolve(ptr, [](const String &symbol) {
+        MySerial.printf_P(PSTR("lambda: %s\n"), symbol.c_str());
+    });
+    return ptr;
+}
+
+void at_mode_resolve(void *ptr, AtModeResolveACallback resolve_callback)
+{
+    auto iterator = at_mode_resolve_map.find(ptr);
+    if (iterator != at_mode_resolve_map.end()) {
+        resolve_callback(iterator->second);
+    }
+    else {
+        if (ptr) {
+            StringVector addresses;
+            addresses.push_back(PrintString(F("0x%x"), ptr));
+            auto rs = new RetrieveSymbols::RestApi();
+            rs->setAddresses(std::move(addresses));
+            int retries = 0;
+            rs->call([rs, resolve_callback, ptr, retries](RetrieveSymbols::JsonReaderResult *result, const String &error) mutable {
+                rs->setAutoDelete(true);
+                if (result) {
+                    PrintString str;
+                    int num = 1;
+                    for (const auto &item : result->getItems()) {
+                        if (str.length()) {
+                            str.println();
+                        }
+                        str.printf_P(PSTR("%u 0x%08x 0x%08x:0x%04x %s"), num++, item.getSrcAddress(), item.getAddress(), item.getSize(), item.getName().c_str());
+                    }
+                    at_mode_resolve_map[ptr] = str;
+                }
+                else {
+                    if (++retries <= 3 && false) {
+                        debug_printf_P(PSTR("retries=%d\n"), retries);
+                        rs->setAutoDelete(false);
+                        Scheduler.addTimer(5000, false, [rs](EventScheduler::TimerPtr) {
+                            rs->call(rs->_callback);
+                        });
+                    }
+                    at_mode_resolve_map[ptr] = PrintString(F("%p - %s"), ptr, error.c_str());
+                }
+                resolve_callback(at_mode_resolve_map[ptr]);
+            });
+
+        }
+        else {
+            at_mode_resolve_map[ptr] = SPGM(null);
+            resolve_callback(at_mode_resolve_map[ptr]);
+        }
+    }
+}
+
 void at_mode_serial_handle_event(String &commandString)
 {
     auto &output = MySerial;
@@ -651,15 +713,10 @@ void at_mode_serial_handle_event(String &commandString)
             args.setCommand(command);
 
             if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DSLP))) {
-                if (args.isQueryMode()) {
-                    args.printf_P(PSTR("Max. deep sleep %.3f seconds"), ESP.deepSleepMax() / 1000000.0);
-                }
-                else {
-                    KFCFWConfiguration::milliseconds time(args.toMillis(0));
-                    RFMode mode = (RFMode)args.toInt(1, RF_DEFAULT);
-                    args.print(F("Entering deep sleep..."));
-                    config.enterDeepSleep(time, mode, 1);
-                }
+                KFCFWConfiguration::milliseconds time(args.toMillis(0));
+                RFMode mode = (RFMode)args.toInt(1, RF_DEFAULT);
+                args.print(F("Entering deep sleep..."));
+                config.enterDeepSleep(time, mode, 1);
             }
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(HLP))) {
                 String plugin;
@@ -947,8 +1004,9 @@ void at_mode_serial_handle_event(String &commandString)
                 dump_plugin_list(output);
             }
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(PLGI))) {
-                if (args.requireArgs(1, 1)) {
+                if (args.requireArgs(1, 2)) {
                     auto name = args.toString(0);
+                    auto end = args.isTrue(1);
                     PluginComponent *plugin = nullptr;
                     for(const auto plugin2 : plugins) {
                         if (name.equalsIgnoreCase(FPSTR(plugin2->getName()))) {
@@ -957,8 +1015,14 @@ void at_mode_serial_handle_event(String &commandString)
                         }
                     }
                     if (plugin) {
-                        args.printf_P(PSTR("Calling %s.setup()"), name.c_str());
-                        plugin->setup(PluginComponent::PLUGIN_SETUP_DEFAULT);
+                        if (end) {
+                            args.printf_P(PSTR("Calling %s.restart()"), name.c_str());
+                            plugin->restart();
+                        }
+                        else {
+                            args.printf_P(PSTR("Calling %s.setup()"), name.c_str());
+                            plugin->setup(PluginComponent::PLUGIN_SETUP_DEFAULT);
+                        }
                     }
                     else {
                         args.printf_P(PSTR("Cannot find plugin '%s'"), name.c_str());
@@ -1001,7 +1065,9 @@ void at_mode_serial_handle_event(String &commandString)
                         auto level = (uint16_t)args.toInt(1, 0);
                         auto freq = (uint16_t)args.toInt(2, 1000);
                         pinMode(pin, OUTPUT);
+#if ESP266
                         analogWriteFreq(freq);
+#endif
                         analogWrite(pin, level * 1.02); // this might be different, just tested with a single ESP12F
                         double dc = (1000000 / (double)freq) * (level / 1024.0);
                         args.printf_P(PSTR("set pin=%u to OUTPUT, level=%u (%.2fµs), f=%uHz"), pin, level, dc, freq);
@@ -1029,6 +1095,14 @@ void at_mode_serial_handle_event(String &commandString)
                     config.dump(output);
                 }
             }
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPR))) {
+                if (args.requireArgs(1, 1)) {
+                    output.println(F("Waiting for symbols..."));
+                    at_mode_resolve((void *)args.toNumber(0), [args](const String &symbol) mutable {
+                        args.printf_P(PSTR("%s"), symbol.c_str());
+                    });
+                }
+            }
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPT))) {
                 Scheduler.listETSTimers(output);
             }
@@ -1043,7 +1117,7 @@ void at_mode_serial_handle_event(String &commandString)
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(WRTC))) {
                 if (args.requireArgs(2, 2)) {
                     uint8_t rtcMemId = (uint8_t)args.toInt(0);
-                    uint32_t data = (uint32_t)strtoul(args.get(1), nullptr, 0); // auto detect base
+                    uint32_t data = (uint32_t)args.toNumber(1);
                     RTCMemoryManager::write(rtcMemId, &data, sizeof(data));
                     args.printf_P(PSTR("id=%u, data=%u (%x)"), rtcMemId, data, data);
                 }
@@ -1105,7 +1179,7 @@ void at_mode_serial_handle_event(String &commandString)
 #endif
             else {
                 bool commandWasHandled = false;
-                for(auto plugin : plugins) { // send command to plugins
+                for(const auto plugin : plugins) { // send command to plugins
                     if (plugin->hasAtMode()) {
                         if (true == (commandWasHandled = plugin->atModeHandler(args))) {
                             break;
@@ -1176,6 +1250,12 @@ void at_mode_serial_input_handler(uint8_t type, const uint8_t *buffer, size_t le
             ptr++;
         }
     }
+}
+
+#else
+
+void *resolve_lambda(void *ptr) {
+    return ptr;
 }
 
 #endif

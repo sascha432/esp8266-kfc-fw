@@ -2,6 +2,8 @@
 * Author: sascha_lammers@gmx.de
 */
 
+#ifndef ESP32
+
 #pragma once
 
 #include <Arduino_compat.h>
@@ -148,3 +150,5 @@ private:
 };
 
 #include <debug_helper_disable.h>
+
+#endif

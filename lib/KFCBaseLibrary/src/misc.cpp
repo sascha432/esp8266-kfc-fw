@@ -474,7 +474,7 @@ bool __while(uint32_t time_in_ms, std::function<bool()> loop)
     return __while(time_in_ms, loop, 0, nullptr);
 }
 
-#if ESP8266
+#if ESP8266 || ESP32
 
 const char *strchr_P(const char *str, int c)
 {

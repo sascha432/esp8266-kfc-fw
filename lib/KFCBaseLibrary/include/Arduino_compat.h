@@ -37,7 +37,6 @@
 
 #include <Arduino.h>
 #include <global.h>
-#include <SPIFFS.h>
 #include <WiFi.h>
 #include <FS.h>
 

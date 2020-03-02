@@ -7,6 +7,7 @@
 #include <EventScheduler.h>
 #include <PrintString.h>
 #include <LoopFunctions.h>
+#include <HeapStream.h>
 #include "KFCRestApi.h"
 #include "progmem_data.h"
 
@@ -17,7 +18,11 @@
 #endif
 
 #if !KFC_REST_API_USE_HTTP_CLIENT
+#if ESP32
+#include "asyncHTTPrequest_ESP32.h"
+#else
 #include "asyncHTTPrequest.h"
+#endif
 #endif
 
 KFCRestAPI::HttpRequest::HttpRequest(KFCRestAPI &api, JsonBaseReader *json, Callback_t callback) : _json(json), _callback(callback), _message(F("None")), _code(0), _api(api)

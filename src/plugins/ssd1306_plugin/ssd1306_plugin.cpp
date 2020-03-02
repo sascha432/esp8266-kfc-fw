@@ -140,7 +140,7 @@ private:
 Adafruit_SSD1306 Display(SSD1306_PLUGIN_WIDTH, SSD1306_PLUGIN_HEIGHT, &Wire, SSD1306_PLUGIN_RESET_PIN);
 GFXfontContainer::Ptr clockFont;
 
-static EventScheduler::TimerPtr ssd1306_status_timer = nullptr;
+static EventScheduler::Timer ssd1306_status_timer ;
 
 void ssd1306_update_time(EventScheduler::TimerPtr timer) {
     _debug_println(F("ssd1306_update_time()"));
@@ -198,26 +198,25 @@ void ssd1306_update_status() {
 
 void ssd1306_wifi_event(uint8_t event, void *payload) {
     _debug_println(F("ssd1306_wifi_event()"));
-    if (ssd1306_status_timer) {
+    if (ssd1306_status_timer.active()) {
         ssd1306_update_status();
     }
 }
 
 void ssd1306_disable_status() {
     _debug_println(F("ssd1306_disable_status()"));
-    if (Scheduler.hasTimer(ssd1306_status_timer)) {
-        Scheduler.removeTimer(ssd1306_status_timer);
-        ssd1306_status_timer = nullptr;
+    if (ssd1306_status_timer.active()) {
+        ssd1306_status_timer.remove();
         ssd1306_clear_display();
     }
 }
 
 void ssd1306_enable_status() {
     _debug_println(F("ssd1306_enable_status()"));
-    Scheduler.removeTimer(ssd1306_status_timer);
+    ssd1306_status_timer.remove();
     ssd1306_clear_display();
     ssd1306_update_status();
-    Scheduler.addTimer(&ssd1306_status_timer, 1000, true, ssd1306_update_time);
+    ssd1306_status_timer.add(1000, true, ssd1306_update_time);
 }
 
 void ssd1306_setup() {
@@ -320,13 +319,13 @@ void SSD1306Plugin::atModeHelpGenerator()
 
 bool SSD1306Plugin::atModeHandler(AtModeArgs &args)
 {
-    if (IsCommand(PROGMEM_AT_MODE_HELP_COMMAND(SSDCLR))) {
+    if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(SSDCLR))) {
         ssd1306_disable_status();
         ssd1306_clear_display();
-        at_mode_print_ok(serial);
+        args.ok();
         return true;
     }
-    else if (IsCommand(PROGMEM_AT_MODE_HELP_COMMAND(SSDDF))) {
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(SSDDF))) {
         if (args.requireArgs(1, 1)) {
             HTTPClient http;
             auto url = args.get(0);
@@ -334,14 +333,14 @@ bool SSD1306Plugin::atModeHandler(AtModeArgs &args)
             int httpCode = http.GET();
             if (httpCode == 200) {
                 Stream &stream = http.getStream();
-                serial.printf_P("+SSDDF: Downloading %d bytes from %s...\n", http.getSize(), url);
+                args.printf_P("Downloading %d bytes from %s...", http.getSize(), url);
                 if (GFXfontContainer::readFromStream(stream, currentFont)) {
-                    at_mode_print_ok(serial);
+                    args.ok();
                 } else {
-                    serial.println(F("+SSDDF: Failed to load font"));
+                    args.print(F("Failed to load font"));
                 }
             } else {
-                serial.printf_P(PSTR("+SSDDF: HTTP error, code %d"), httpCode);
+                args.printf_P(PSTR("HTTP error, code %d"), httpCode);
             }
             http.end();
             if (currentFont) {
@@ -350,50 +349,50 @@ bool SSD1306Plugin::atModeHandler(AtModeArgs &args)
         }
         return true;
     }
-    else if (IsCommand(PROGMEM_AT_MODE_HELP_COMMAND(SSDRF))) {
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(SSDRF))) {
         if (args.requireArgs(1, 1)) {
             auto filename = args.get(0);
             auto file = SPIFFS.open(filename, fs::FileOpenMode::read);
             if (file) {
                 ssd1306_disable_status();
-                serial.printf_P("+SSDRF: Reading %d bytes from %s...\n", file.size(), filename);
+                args.printf_P(PSTR("Reading %d bytes from %s..."), file.size(), filename);
                 if (GFXfontContainer::readFromStream(file, currentFont)) {
-                    at_mode_print_ok(serial);
+                    args.ok();
                 } else {
-                    serial.println(F("+SSDRF: Failed to load font"));
+                    args.print(F("Failed to load font"));
                 }
                 file.close();
                 if (currentFont) {
                     Display.setFont(currentFont->getFontPtr());
                 }
             } else {
-                serial.printf_P(PSTR("+SSDRF: Cannot open %s\n"), filename);
+                args.printf_P(PSTR("Cannot open %s"), filename);
             }
         }
         return true;
     }
-    else if (IsCommand(PROGMEM_AT_MODE_HELP_COMMAND(SSDXY))) {
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(SSDXY))) {
         if (args.requireArgs(2, 2)) {
             ssd1306_disable_status();
             uint16_t x = (uint16_t)args.toInt(0);
             uint16_t y = (uint16_t)args.toInt(1);
             Display.setCursor(x, y);
-            serial.printf_P(PSTR("+SSDXY: x=%d,y=%d\n"), x, y);
+            args.printf_P(PSTR("x=%d,y=%d"), x, y);
         }
         return true;
     }
-    else if (IsCommand(PROGMEM_AT_MODE_HELP_COMMAND(SSDW))) {
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(SSDW))) {
         ssd1306_disable_status();
         for(auto line: args.getArgs()) {
             Display.println(line);
         }
         Display.display();
-        at_mode_print_ok(serial);
+        args.ok();
         return true;
     }
-    else if (IsCommand(PROGMEM_AT_MODE_HELP_COMMAND(SSDST))) {
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(SSDST))) {
         ssd1306_enable_status();
-        at_mode_print_ok(serial);
+        args.ok();
         return true;
     }
     return false;

@@ -6,6 +6,7 @@
 
 #if defined(ESP32)
 
+#include "../src/SPIFFS.h"
 #include <FS.h>
 
 #include <esp_timer.h>
@@ -17,35 +18,14 @@ typedef struct esp_timer os_timer_t;
 #define OS_TIMER_DEBUG                      0
 #endif
 
-#if OS_TIMER_DEBUG
-
-// #define os_timer_create(timer, cb, arg)
-//     {
-//         const esp_timer_create_args_t args = { cb, arg, ESP_TIMER_TASK, emptyString.c_str() };
-//         esp_err_t result;
-//         if ((result = esp_timer_create(&args, &timer)) != ESP_OK) {
-//             debug_printf_P(PSTR("esp_timer_create() failed: %d\n"), result);
-//         } \
-//     }
-// #define os_timer_create(timer, cb, arg)
-//     {
-//         const esp_timer_create_args_t args = { cb, arg, ESP_TIMER_TASK, emptyString.c_str() };
-//         esp_timer_create(&args, &timer);
-//     }
-// #define os_timer_arm(timer, period, repeat)
-//     if ((repeat)) {
-//         esp_timer_start_periodic(timer, period * 1000ULL);
-//     } else {
-//         esp_timer_start_once(timer, period * 1000ULL);
-//     }
-// #endif
-// #define os_timer_disarm(timer)              esp_timer_stop(timer)
-// #define os_timer_delete(timer)              esp_timer_delete(timer)
-
 #include <esp_wifi.h>
-#define wifi_get_country(country)           (esp_wifi_get_country(country) == ESP_OK)
+
+inline bool wifi_get_country(wifi_country_t *country) {
+    return esp_wifi_get_country(country) == ESP_OK;
+}
 
 #include <esp_wifi_types.h>
+
 typedef wifi_err_reason_t WiFiDisconnectReason;
 
 enum RFMode {
@@ -95,35 +75,73 @@ enum dhcp_status wifi_station_dhcpc_status(void);
 
 #define SPIFFS_openDir(dirname)             Dir(SPIFFS.open(dirname))
 
-class Dir {
-public:
-    Dir() {
-    }
-    Dir(const fs::File &root) {
-        _root = root;
-    }
+namespace fs {
 
-    bool next() {
-        _file = _root.openNextFile();
-        return (bool)_file;
-    }
+    enum OpenMode {
+        OM_DEFAULT = 0,
+        OM_CREATE = 1,
+        OM_APPEND = 2,
+        OM_TRUNCATE = 4
+    };
 
-    String fileName() const {
-        return _file.name();
-    }
+    enum AccessMode {
+        AM_READ = 1,
+        AM_WRITE = 2,
+        AM_RW = AM_READ | AM_WRITE
+    };
 
-    size_t fileSize() const {
-        return _file.size();
-    }
+    class DirImpl {
+    public:
+        virtual ~DirImpl() { }
+        virtual FileImplPtr openFile(OpenMode openMode, AccessMode accessMode) = 0;
+        virtual const char* fileName() = 0;
+        virtual size_t fileSize() = 0;
+        virtual bool isFile() const = 0;
+        virtual bool isDirectory() const = 0;
+        virtual bool next() = 0;
+        virtual bool rewind() = 0;
+    };
 
-    fs::File openFile(const char *mode) {
-        return _file;
-    }
 
-private:
-    fs::File _root;
-    fs::File _file;
+    class Dir : public DirImpl {
+    public:
+        Dir() {
+        }
+        Dir(const File &root) {
+            _root = root;
+        }
+
+        virtual FileImplPtr openFile(OpenMode openMode, AccessMode accessMode) {
+            return FileImplPtr(nullptr);
+        }
+        virtual String fileName() {
+            return _file.name();
+        }
+        virtual size_t fileSize() {
+            return _file.size();
+        }
+        virtual bool isFile() const {
+            return false;
+        }
+        virtual bool isDirectory() const {
+            return false;
+        }
+        virtual bool next()  {
+            return false;
+        }
+        virtual bool rewind() {
+            return false;
+        }
+
+
+    private:
+        File _root;
+        File _file;
+    };
+
 };
+
+typedef fs::Dir Dir;
 
 typedef struct {
     size_t totalBytes;
@@ -140,6 +158,14 @@ typedef struct {
     info.totalBytes = SPIFFS.totalBytes(); \
     info.usedBytes = SPIFFS.usedBytes();
 
+
+inline void ets_timer_arm_new(ETSTimer *timer, uint32_t tmout, bool repeat, bool millis) {
+    if (millis) {
+        ets_timer_arm(timer, tmout, repeat);
+    } else {
+        ets_timer_arm_us(timer, tmout, repeat);
+    }
+}
 
 void analogWrite(uint8_t pin, uint16_t value);
 

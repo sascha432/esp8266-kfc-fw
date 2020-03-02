@@ -310,7 +310,7 @@ void setup() {
             Dir dir = SPIFFS_openDir(sys_get_temp_dir());
             while(dir.next()) {
                 bool status = SPIFFS.remove(dir.fileName());
-                debug_printf_P(PSTR("Remove(%s) = %d\n"), dir.fileName().c_str(), status);
+                debug_printf_P(PSTR("remove=%s result=%d\n"), dir.fileName().c_str(), status);
             }
         }
 #endif

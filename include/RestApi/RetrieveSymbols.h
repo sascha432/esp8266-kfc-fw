@@ -146,6 +146,7 @@ namespace RetrieveSymbols {
             result->emplace_back(JsonString());
             JsonReaderResult::apply(result->back());
 
+            _callback  = callback;
             _createRestApiCall(emptyString, emptyString, reader, [callback](int16_t code, KFCRestAPI::HttpRequest &request) {
                 if (code == 200) {
                     auto &group = request.getElementsGroup()->front();
@@ -172,6 +173,8 @@ namespace RetrieveSymbols {
         String _file;
         StringVector _names;
         StringVector _addresses;
+    public:
+        Callback _callback;
     };
 
 };

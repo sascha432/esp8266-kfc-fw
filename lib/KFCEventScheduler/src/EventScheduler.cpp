@@ -19,7 +19,6 @@ EventScheduler Scheduler;
 
 extern ETSTimer *timer_list;
 
-
 #include "../include/RestApi/RetrieveSymbols.h"
 
 void EventScheduler::listETSTimers(Print &output)

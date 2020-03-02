@@ -21,10 +21,10 @@
 #define SevenSegmentPixel_SEGMENT_TO_BIT(segment)                (1 << segment)
 #define SevenSegmentPixel_COLOR(color, segment, bitset)          ((bitset & SevenSegmentPixel_SEGMENT_TO_BIT(segment)) ? color : 0)
 
-#define SevenSegmentPixel_NUM_PIXELS(digits, numPixel, colons)   ((digits * numPixel * SevenSegmentPixel::SegmentEnum_t::NUM) + (colons * IOT_CLOCK_NUM_PX_PER_COLON * sizeof(SevenSegmentPixel::pixel_address_t)))
+#define SevenSegmentPixel_NUM_PIXELS(digits, numPixel, colons)   ((digits * numPixel * SevenSegmentPixel::SegmentEnum_t::NUM) + (colons * (IOT_CLOCK_NUM_PX_PER_DOT * 2) * sizeof(SevenSegmentPixel::pixel_address_t)))
 
 #define SevenSegmentPixel_DIGITS_NUM_PIXELS                      (int)SevenSegmentPixel_NUM_PIXELS(IOT_CLOCK_NUM_PIXELS, IOT_CLOCK_NUM_DIGITS, 0)
-#define SevenSegmentPixel_TOTAL_NUM_PIXELS                       (int)SevenSegmentPixel_NUM_PIXELS(IOT_CLOCK_NUM_PIXELS, IOT_CLOCK_NUM_DIGITS, IOT_CLOCK_NUM_PX_PER_COLON)
+#define SevenSegmentPixel_TOTAL_NUM_PIXELS                       (int)SevenSegmentPixel_NUM_PIXELS(IOT_CLOCK_NUM_PIXELS, IOT_CLOCK_NUM_DIGITS, IOT_CLOCK_NUM_COLONS)
 
 class SevenSegmentPixel {
 public:

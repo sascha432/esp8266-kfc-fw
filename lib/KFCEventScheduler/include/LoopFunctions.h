@@ -5,11 +5,16 @@
 #pragma once
 
 #ifndef DEBUG_LOOP_FUNCTIONS
-#define DEBUG_LOOP_FUNCTIONS            0
+#define DEBUG_LOOP_FUNCTIONS            1
+#include <debug_helper_enable.h>
 #endif
 
 #include <Arduino_compat.h>
+#if ESP8266
 #include <Schedule.h>
+#elif ESP32
+#include <EventScheduler.h>
+#endif
 #include <functional>
 #include <vector>
 
@@ -35,7 +40,16 @@ public:
         add(nullptr, callbackPtr);
     }
     static bool callOnce(Callback_t callback) {
+#if ESP32
+#warning TODO find schedule_function()
+        Scheduler.addTimer(1, false, [callback](EventScheduler::TimerPtr) {
+            callback();
+        });
+        return true;
+#else
+        _debug_resolve_lambda(lambda_target(callback));
         return schedule_function(callback);
+#endif
     }
     static void remove(CallbackPtr_t callbackPtr);
 
@@ -43,9 +57,12 @@ public:
         add(callback, reinterpret_cast<CallbackPtr_t>(callbackPtr));
     }
     inline static void remove(void *callbackPtr) {
+        _debug_resolve_lambda(callbackPtr);
         remove(reinterpret_cast<CallbackPtr_t>(callbackPtr));
     }
 
     static FunctionsVector &getVector();
     static size_t size();
 };
+
+#include <debug_helper_disable.h>

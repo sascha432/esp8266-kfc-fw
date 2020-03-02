@@ -324,7 +324,11 @@ void ConfigurationHelper::EEPROMAccess::dump(Print &output, bool asByteArray, ui
     }
     else {
         DumpBinary dumper(output);
-        dumper.dump(EEPROM.getConstDataPtr() + offset, length);
+#if ESP32
+        dumper.dump(EEPROM.getDataPtr() + offset, length);
+#else
+    dumper.dump(EEPROM.getConstDataPtr() + offset, length);
+#endif
 //#if 1
 //        output.printf_P(PSTR("Dumping flash (spi_read) %d:%d\n"), offset, length);
 //        endEEPROM();

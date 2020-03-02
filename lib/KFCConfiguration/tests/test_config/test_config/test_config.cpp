@@ -12,6 +12,7 @@
 #include <stack>
 #include "Configuration.h"
 #include "ConfigurationParameter.h"
+#include <chrono>
 
 bool start_out = false;
 int total = 0;
@@ -110,6 +111,18 @@ int main() {
 
     ESP._enableMSVCMemdebug();
     DebugHelper::activate();
+
+#if 0
+    using milliseconds = std::chrono::duration<uint32_t, std::milli>;
+    using seconds = std::chrono::duration<uint32_t, std::ratio<1>>;
+    using namespace std::chrono_literals;
+
+    [](milliseconds time) {
+        Serial.println(time.count());
+    }(seconds(1));
+
+    return 0;
+#endif
 
 #if 0
 
@@ -541,6 +554,11 @@ int main() {
 
 
     //config._H_SET_STR(Configuration_t().string1, emptyString);
+
+    char data[200] = {};
+
+    config.setBinary(_H(binary), data, 0);
+    config.setBinary(_H(binary), data, 0);
 
     config.write();
 

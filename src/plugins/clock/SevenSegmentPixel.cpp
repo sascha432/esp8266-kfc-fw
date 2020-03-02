@@ -9,14 +9,11 @@
 
 static const char _digits2SegmentsTable[]  = { 0x3f, 0x06, 0x5b, 0x4f, 0x66, 0x6d, 0x7d, 0x07, 0x7f, 0x6f, 0x77, 0x7c, 0x39, 0x5e, 0x79, 0x71 };  // 0-F
 
-SevenSegmentPixel::SevenSegmentPixel(uint8_t numDigits, uint8_t numPixels, uint8_t numColons) : _pixelOrder(nullptr), _callback(nullptr), _brightness(MAX_BRIGHTNESS)
+SevenSegmentPixel::SevenSegmentPixel(uint8_t numDigits, uint8_t numPixels, uint8_t numColons) : _numDigits(numDigits), _numPixels(numPixels), _numColons(numColons), _pixelOrder(nullptr), _callback(nullptr), _brightness(MAX_BRIGHTNESS)
 {
-    _numDigits = numDigits;
-    _numPixels = numPixels;
-    _numColons = numColons;
     pixel_address_t num = SevenSegmentPixel_NUM_PIXELS(numDigits, numPixels, _numColons);
     _pixelAddress = reinterpret_cast<pixel_address_t *>(malloc(numDigits * numPixels * SegmentEnum_t::NUM * sizeof(pixel_address_t)));
-    _dotPixelAddress = reinterpret_cast<pixel_address_t *>(malloc(_numColons * IOT_CLOCK_NUM_PX_PER_COLON * sizeof(pixel_address_t)));
+    _dotPixelAddress = reinterpret_cast<pixel_address_t *>(malloc(_numColons * IOT_CLOCK_NUM_PX_PER_DOT * 2 * sizeof(pixel_address_t)));
 #if IOT_CLOCK_NEOPIXEL
     _pixels = new Adafruit_NeoPixel(num, IOT_CLOCK_NEOPIXEL_PIN, NEO_GRB|NEO_KHZ800);
     _pixels->begin();
@@ -42,11 +39,13 @@ SevenSegmentPixel::~SevenSegmentPixel()
     }
 }
 
-void SevenSegmentPixel::clear() {
+void SevenSegmentPixel::clear()
+{
     setColor(0);
 }
 
-void SevenSegmentPixel::setColor(color_t color) {
+void SevenSegmentPixel::setColor(color_t color)
+{
 #if IOT_CLOCK_NEOPIXEL
     for(pixel_address_t i = 0; i < _pixels->numPixels(); i++) {
         _pixels->setPixelColor(i, color);
@@ -60,7 +59,8 @@ void SevenSegmentPixel::setColor(color_t color) {
 #endif
 }
 
-void SevenSegmentPixel::setColor(pixel_address_t num, color_t color) {
+void SevenSegmentPixel::setColor(pixel_address_t num, color_t color)
+{
 #if IOT_CLOCK_NEOPIXEL
     _pixels->setPixelColor(num, color);
 #else
@@ -89,7 +89,6 @@ SevenSegmentPixel::pixel_address_t SevenSegmentPixel::setSegments(uint8_t digit,
 
 SevenSegmentPixel::pixel_address_t SevenSegmentPixel::setColons(uint8_t num, pixel_address_t lowerAddress, pixel_address_t upperAddress) {
     if (num < _numColons) {
-        num *= 2;
         _dotPixelAddress[num++] = lowerAddress;
         _dotPixelAddress[num++] = upperAddress;
     }
@@ -119,10 +118,9 @@ void SevenSegmentPixel::setDigit(uint8_t digit, uint8_t number, color_t color)
 void SevenSegmentPixel::setColon(uint8_t num, ColonEnum_t type, color_t color)
 {
     pixel_address_t addr;
-    num *= 2;
     if (type & ColonEnum_t::LOWER) {
         addr = _dotPixelAddress[num];
-        for(uint8_t i = 0; i < IOT_CLOCK_NUM_PX_PER_COLON; i++) {
+        for(uint8_t i = 0; i < IOT_CLOCK_NUM_PX_PER_DOT; i++) {
 #if IOT_CLOCK_NEOPIXEL
             _pixels->setPixelColor(addr, _getColor(addr, color));
 #else
@@ -133,7 +131,7 @@ void SevenSegmentPixel::setColon(uint8_t num, ColonEnum_t type, color_t color)
     }
     if (type & ColonEnum_t::UPPER) {
         addr = _dotPixelAddress[num + 1];
-        for(uint8_t i = 0; i < IOT_CLOCK_NUM_PX_PER_COLON; i++) {
+        for(uint8_t i = 0; i < IOT_CLOCK_NUM_PX_PER_DOT; i++) {
 #if IOT_CLOCK_NEOPIXEL
             _pixels->setPixelColor(addr, _getColor(addr, color));
 #else
@@ -216,7 +214,7 @@ void SevenSegmentPixel::setBrightness(uint16_t brightness, float fadeTime, Callb
         if (!steps) {
             steps = 1;
         }
-        _debug_printf_P(PSTR("SevenSegmentPixel::setBrightness(): to %u steps %u fade time %f\n"), _brightness, steps, fadeTime);
+        _debug_printf_P(PSTR("to=%u steps=%u time=%f\n"), _brightness, steps, fadeTime);
         _brightnessTimer.add(25, true, [this, steps, callback](EventScheduler::TimerPtr timer) {
             int32_t tmp = _brightness;
             if (tmp < _targetBrightness) {

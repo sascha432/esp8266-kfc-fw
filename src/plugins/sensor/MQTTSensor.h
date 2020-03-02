@@ -7,7 +7,7 @@
 #if IOT_SENSOR
 
 #ifndef DEBUG_IOT_SENSOR
-#define DEBUG_IOT_SENSOR            0
+#define DEBUG_IOT_SENSOR            1
 #endif
 
 #include <Arduino_compat.h>

@@ -59,6 +59,9 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     if (String_equals(key, PSTR("HOSTNAME"))) {
         output.print(config._H_STR(Config().device_name));
     }
+    else if (String_equals(key, F("TITLE"))) {
+        output.print(config._H_STR(Config().device_title));
+    }
     else if (String_equals(key, PSTR("HARDWARE"))) {
 #if defined(ESP8266)
         output.printf_P(PSTR("ESP8266 %s Flash, %d Mhz, Free RAM %s"), formatBytes(ESP.getFlashChipRealSize()).c_str(), system_get_cpu_freq(), formatBytes(ESP.getFreeHeap()).c_str());
@@ -365,7 +368,8 @@ WifiSettingsForm::WifiSettingsForm(AsyncWebServerRequest *request) : SettingsFor
     addValidator(new FormRangeValidator(1, config.getMaxWiFiChannels()));
 
     add<uint8_t>(F("encryption"), _H_STRUCT_VALUE(MainConfig().network.softAp, _encryption));
-    addValidator(new FormEnumValidator<uint8_t, WIFI_ENCRYPTION_ARRAY_SIZE>(F("Invalid encryption"), WIFI_ENCRYPTION_ARRAY));
+
+    addValidator(new FormEnumValidator<uint8_t, WiFiEncryptionTypeArray().size()>(F("Invalid encryption"), WIFI_ENCRYPTION_ARRAY));
 
     add<bool>(F("ap_hidden"), _H_FLAGS_BOOL_VALUE(Config().flags, hiddenSSID), FormField::InputFieldType::CHECK);
 
@@ -377,6 +381,9 @@ NetworkSettingsForm::NetworkSettingsForm(AsyncWebServerRequest *request) : Setti
     using KFCConfigurationClasses::MainConfig;
 
     add(F("hostname"), _H_STR_VALUE(Config().device_name));
+    addValidator(new FormLengthValidator(4, sizeof(Config().device_name) - 1));
+    add(F("title"), _H_STR_VALUE(Config().device_title));
+    addValidator(new FormLengthValidator(1, sizeof(Config().device_title) - 1));
 
     add<bool>(F("dhcp_client"), _H_FLAGS_BOOL_VALUE(Config().flags, stationModeDHCPEnabled));
 

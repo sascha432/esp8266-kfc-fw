@@ -2,12 +2,18 @@
 * Author: sascha_lammers@gmx.de
 */
 
+#ifndef ESP32
+
 #include "VirtualPinGPIO.h"
 
 #if DEBUG_VIRTUAL_PIN
 #include <debug_helper_enable.h>
 #else
 #include <debug_helper_disable.h>
+#endif
+
+#if ESP32
+#define PIN_A0  255
 #endif
 
 VirtualPinGPIO::VirtualPinGPIO() : _pin(0)
@@ -60,4 +66,7 @@ uint8_t VirtualPinGPIO::getPin() const
 {
     return _pin;
 }
+
+
+#endif
 

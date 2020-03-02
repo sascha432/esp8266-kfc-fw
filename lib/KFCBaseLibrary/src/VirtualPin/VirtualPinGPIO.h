@@ -2,6 +2,8 @@
 * Author: sascha_lammers@gmx.de
 */
 
+#ifndef ESP32
+
 #pragma once
 
 #include <Arduino_compat.h>
@@ -25,3 +27,5 @@ public:
 private:
     uint8_t _pin;
 };
+
+#endif

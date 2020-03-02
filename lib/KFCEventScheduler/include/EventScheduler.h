@@ -7,7 +7,7 @@
 #include <Arduino_compat.h>
 
 #ifndef DEBUG_EVENT_SCHEDULER
-#define DEBUG_EVENT_SCHEDULER 0
+#define DEBUG_EVENT_SCHEDULER                   1
 #endif
 
 class EventTimer;

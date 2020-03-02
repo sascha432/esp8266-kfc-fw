@@ -44,7 +44,7 @@ ClockPlugin::ClockPlugin() :
     else {
 #if DEBUG
         if (sizeof(pixel_order) * IOT_CLOCK_NUM_DIGITS < SevenSegmentPixel_DIGITS_NUM_PIXELS) {
-            __debugbreak_and_panic_printf_P(PSTR("ClockPlugin::ClockPlugin(): sizeof(pixel_order)*IOT_CLOCK_NUM_DIGITS=%u < SevenSegmentPixel_DIGITS_NUM_PIXELS=%u\n"), sizeof(pixel_order) * IOT_CLOCK_NUM_DIGITS, SevenSegmentPixel_DIGITS_NUM_PIXELS );
+            __debugbreak_and_panic_printf_P(PSTR("sizeof(pixel_order)*IOT_CLOCK_NUM_DIGITS=%u < SevenSegmentPixel_DIGITS_NUM_PIXELS=%u\n"), sizeof(pixel_order) * IOT_CLOCK_NUM_DIGITS, SevenSegmentPixel_DIGITS_NUM_PIXELS );
         }
 #endif
         _pixelOrder = (char *)malloc(sizeof(pixel_order) * IOT_CLOCK_NUM_DIGITS);
@@ -72,10 +72,9 @@ ClockPlugin::ClockPlugin() :
     REGISTER_PLUGIN(this);
 }
 
-
 void ClockPlugin::getValues(JsonArray &array)
 {
-    _debug_printf_P(PSTR("ClockPlugin::getValues()\n"));
+    _debug_println();
 
     auto obj = &array.addObject(3);
     obj->add(JJ(id), F("btn_colon"));
@@ -100,7 +99,7 @@ void ClockPlugin::getValues(JsonArray &array)
 
 void ClockPlugin::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
 {
-    _debug_printf_P(PSTR("ClockPlugin::setValue(%s)\n"), id.c_str());
+    _debug_printf_P(PSTR("id=%s\n"), id.c_str());
     if (hasValue) {
         auto val = (uint8_t)value.toInt();
         if (id == F("btn_colon")) {
@@ -169,14 +168,9 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
     }
 }
 
-PGM_P ClockPlugin::getName() const
-{
-    return PSTR("clock");
-}
-
 void ClockPlugin::setup(PluginSetupMode_t mode)
 {
-    _debug_println(F("ClockPlugin::setup()"));
+    _debug_println();
 
     _display = new SevenSegmentPixel(IOT_CLOCK_NUM_DIGITS, IOT_CLOCK_NUM_PIXELS, IOT_CLOCK_NUM_COLONS);
 
@@ -205,14 +199,14 @@ void ClockPlugin::setup(PluginSetupMode_t mode)
 
 void ClockPlugin::reconfigure(PGM_P source)
 {
-    _debug_println(F("ClockPlugin::reconfigure()"));
+    _debug_println();
     auto cfg = updateConfig();
     _setSevenSegmentDisplay(cfg);
 }
 
 void ClockPlugin::getStatus(Print &output)
 {
-    output.print(F("Clock Plugin"));
+    output.printf_P(PSTR("Clock Plugin" HTML_S(br) "Total pixels %u, digit pixels %u"), SevenSegmentPixel_TOTAL_NUM_PIXELS, SevenSegmentPixel_DIGITS_NUM_PIXELS);
 }
 
 void ClockPlugin::createWebUI(WebUI &webUI)
@@ -233,14 +227,14 @@ void ClockPlugin::createWebUI(WebUI &webUI)
 
 void ClockPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
 {
-    auto *clock = &config._H_W_GET(Config().clock); // must be a pointer
+    auto &clock = config._H_W_GET(Config().clock);
 
     form.setFormUI(F("Clock Configuration"));
 
-    form.add<bool>(F("time_format_24h"), &clock->time_format_24h)
+    form.add<bool>(F("time_format_24h"), _H_STRUCT_VALUE(Config().clock, time_format_24h))
         ->setFormUI((new FormUI(FormUI::SELECT, F("Time Format")))->setBoolItems(F("24h"), F("12h")));
 
-    form.add<uint8_t>(F("blink_colon"), &clock->blink_colon)->setFormUI(
+    form.add<uint8_t>(F("blink_colon"), _H_STRUCT_VALUE(Config().clock, blink_colon))->setFormUI(
         (new FormUI(FormUI::SELECT, F("Blink Colon")))
             ->addItems(String(BlinkColonEnum_t::SOLID), F("Solid"))
             ->addItems(String(BlinkColonEnum_t::NORMAL), F("Normal"))
@@ -248,18 +242,18 @@ void ClockPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form
     );
     form.addValidator(new FormRangeValidator(F("Invalid value"), BlinkColonEnum_t::SOLID, BlinkColonEnum_t::FAST));
 
-    form.add<int8_t>(F("animation"), &clock->animation)->setFormUI(
+    form.add<int8_t>(F("animation"), _H_STRUCT_VALUE(Config().clock, animation))->setFormUI(
         (new FormUI(FormUI::SELECT, F("Animation")))
             ->addItems(String(AnimationEnum_t::NONE), F("Solid"))
             ->addItems(String(AnimationEnum_t::RAINBOW), F("Rainbow"))
     );
     form.addValidator(new FormRangeValidator(F("Invalid animation"), AnimationEnum_t::NONE, AnimationEnum_t::FADE));
 
-    form.add<uint8_t>(F("brightness"), &clock->brightness)
+    form.add<uint8_t>(F("brightness"), _H_STRUCT_VALUE(Config().clock, brightness))
         ->setFormUI((new FormUI(FormUI::TEXT, F("Brightness")))->setSuffix(F("0-255")));
 
-    String str = PrintString(F("#%02X%02X%02X"), clock->solid_color[0], clock->solid_color[1], clock->solid_color[2]);
-    form.add(F("solid_color"), str)
+    String str = PrintString(F("#%02X%02X%02X"), clock.solid_color[0], clock.solid_color[1], clock.solid_color[2]);
+    form.add(F("solid_color"), str, FormField::InputFieldType::TEXT)
         ->setFormUI(new FormUI(FormUI::TEXT, F("Solid Color")));
     form.addValidator(new FormCallbackValidator([](const String &value, FormField &field) {
         auto ptr = value.c_str();
@@ -668,8 +662,9 @@ Clock ClockPlugin::updateConfig()
 
 #if IOT_CLOCK_BUTTON_PIN
 
-void ClockPlugin::onButtonHeld(Button& btn, uint16_t duration, uint16_t repeatCount) {
-    _debug_printf_P(PSTR("ClockPlugin::onButtonHeld() duration %u repeat %u\n"), duration, repeatCount);
+void ClockPlugin::onButtonHeld(Button& btn, uint16_t duration, uint16_t repeatCount)
+{
+    _debug_printf_P(PSTR("duration=%u repeat=%u\n"), duration, repeatCount);
     if (repeatCount == 1) {
         plugin.updateConfig();
         plugin._buttonCounter = 0;
@@ -680,21 +675,23 @@ void ClockPlugin::onButtonHeld(Button& btn, uint16_t duration, uint16_t repeatCo
         plugin._updateRate = 50;
 
         Scheduler.addTimer(1000, false, [](EventScheduler::TimerPtr) {   // call restart if no reset occured
-            _debug_printf_P(PSTR("ClockPlugin::onButtonHeld() restart device\n"));
+            _debug_printf_P(PSTR("restarting device\n"));
             config.restartDevice();
         });
     }
 }
 
-void ClockPlugin::onButtonReleased(Button& btn, uint16_t duration) {
-    _debug_printf_P(PSTR("ClockPlugin::onButtonReleased() duration %u\n"), duration);
+void ClockPlugin::onButtonReleased(Button& btn, uint16_t duration)
+{
+    _debug_printf_P(PSTR("duration=%u\n"), duration);
     if (duration < 800) {
         plugin._onButtonReleased(duration);
     }
 }
 
-void ClockPlugin::_onButtonReleased(uint16_t duration) {
-    _debug_printf_P(PSTR("ClockPlugin::onButtonReleased(): press=%u\n"), _buttonCounter);
+void ClockPlugin::_onButtonReleased(uint16_t duration)
+{
+    _debug_printf_P(PSTR("press=%u\n"), _buttonCounter);
     switch(_buttonCounter) {
         case 0:
             setAnimation(FAST_BLINK_COLON);
@@ -724,6 +721,7 @@ void ClockPlugin::_onButtonReleased(uint16_t duration) {
 
 void ClockPlugin::_loop()
 {
+    return ;
 #if IOT_CLOCK_BUTTON_PIN
     _button.update();
 #endif
@@ -817,15 +815,17 @@ void ClockPlugin::_setSevenSegmentDisplay(Clock &cfg)
         int n = pgm_read_byte(ptr++);
         if (n >= 30) {
             n -= 30;
-            _debug_printf_P(PSTR("ClockPlugin::_setSevenSegmentDisplay(): address=%u, colon=%u\n"), addr, n);
+            _debug_printf_P(PSTR("address=%u colon=%u\n"), addr, n);
 #if IOT_CLOCK_NUM_PX_PER_COLON == 1
-            addr = _display->setColons(n, addr + 1, addr);
+            _display->setColons(n, addr + IOT_CLOCK_NUM_PX_PER_DOT, addr);
 #else
-            addr = _display->setColons(n, addr, addr + IOT_CLOCK_NUM_PX_PER_COLON) * IOT_CLOCK_NUM_PX_PER_COLON;
+            _display->setColons(n, addr, addr + IOT_CLOCK_NUM_PX_PER_DOT);
+
 #endif
+            addr += IOT_CLOCK_NUM_PX_PER_DOT * 2;
         }
         else {
-            _debug_printf_P(PSTR("ClockPlugin::_setSevenSegmentDisplay(): address=%u, digit=%u\n"), addr, n);
+            _debug_printf_P(PSTR("address=%u digit=%u\n"), addr, n);
             addr = _display->setSegments(n, addr, pgm_segment_order);
         }
     }

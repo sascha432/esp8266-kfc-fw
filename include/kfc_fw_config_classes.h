@@ -82,7 +82,7 @@ namespace KFCConfigurationClasses {
 
         class SoftAP {
         public:
-            using EncryptionType = wl_enc_type;
+            using EncryptionType = WiFiEncryptionType;
 
             SoftAP();
             static SoftAP read();

@@ -2,6 +2,8 @@
 * Author: sascha_lammers@gmx.de
 */
 
+#ifndef ESP32
+
 #include <EventTimer.h>
 #include <EventScheduler.h>
 #include <FunctionalInterrupt.h>
@@ -353,3 +355,5 @@ void VirtualPinDebugger::removeAll()
         getInstance()._pins.clear();
     }
 }
+
+#endif

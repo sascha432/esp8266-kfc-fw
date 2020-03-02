@@ -14,7 +14,7 @@ static LoopFunctions::FunctionsVector _functions;
 
 void LoopFunctions::add(LoopFunctions::Callback_t callback, CallbackPtr_t callbackPtr)
 {
-    _debug_printf_P(PSTR("callbackPtr=%p\n"), callbackPtr);
+    _debug_printf_P(PSTR("callbackPtr=%p\n"), resolve_lambda((void *)callbackPtr));
     for(auto &entry: _functions) {
         if (entry.callbackPtr == callbackPtr) {
             _debug_printf_P(PSTR("callbackPtr=%p already exists, deleted state %d\n"), callbackPtr, entry.deleteCallback);
@@ -27,7 +27,7 @@ void LoopFunctions::add(LoopFunctions::Callback_t callback, CallbackPtr_t callba
 
 void LoopFunctions::remove(CallbackPtr_t callbackPtr)
 {
-    _debug_printf_P(PSTR("callbackPtr=%p\n"), callbackPtr);
+    _debug_printf_P(PSTR("callbackPtr=%p\n"), resolve_lambda((void *)callbackPtr));
     for(auto &entry: _functions) {
         if (entry.callbackPtr == callbackPtr) {
             entry.deleteCallback = true;

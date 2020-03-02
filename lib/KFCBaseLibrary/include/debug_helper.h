@@ -41,6 +41,7 @@
 #endif
 
 void ___debugbreak_and_panic(const char* filename, int line, const char* function);
+void *resolve_lambda(void *ptr);
 
 extern const char ___debugPrefix[] PROGMEM;
 

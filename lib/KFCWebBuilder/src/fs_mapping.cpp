@@ -223,7 +223,11 @@ const File SPIFFSWrapper::open(Dir dir, const char *mode)
     if (entry) {
         return map.openFile(entry, mode);
     }
+#if ESP32
+    return File();
+#else
     return dir.openFile(mode);
+#endif
 }
 
 const File SPIFFSWrapper::open(const char *path, const char *mode)
@@ -287,7 +291,7 @@ FSMappingDirImpl::FSMappingDirImpl(FS &fs, const String &dirName) : _fs(fs), _di
 
 FileImplPtr FSMappingDirImpl::openFile(OpenMode openMode, AccessMode accessMode)
 {
-    _debug_printf_P(PSTR("FSMappingDirImpl::openFile(): %s\n"), _fileName.c_str());
+    _debug_printf_P(PSTR("file=%s\n"), _fileName.c_str());
     String mode;
     if (openMode == OM_APPEND) {
         mode = 'a';
@@ -317,7 +321,10 @@ size_t FSMappingDirImpl::fileSize()
 
 bool FSMappingDirImpl::rewind()
 {
-    _debug_println(F("FSMappingDirImpl::rewind()"));
+#if ESP32
+    return false;
+#else
+    _debug_println();
     _dirs.clear();
     _dirs.push_back(_dirName);
     _dir = _fs.openDir(FSPGM(slash));
@@ -326,6 +333,7 @@ bool FSMappingDirImpl::rewind()
     _iterator = map.begin();
     _end = map.end();
     return _isValid != INVALID;
+#endif
 }
 
 

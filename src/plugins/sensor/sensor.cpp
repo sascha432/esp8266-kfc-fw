@@ -119,6 +119,7 @@ void SensorPlugin::restart()
         sensor->restart();
         delete sensor;
     }
+    _sensors.clear();
 }
 
 bool SensorPlugin::hasWebUI() const

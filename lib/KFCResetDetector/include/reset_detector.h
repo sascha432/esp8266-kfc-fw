@@ -88,7 +88,7 @@ public:
     const String getResetReason() const;
     const String getResetInfo() const;
 
-    os_timer_t *getTimer();
+    ETSTimer *getTimer() ;
     void armTimer();
     void disarmTimer();
     static void _timerCallback(void *arg);

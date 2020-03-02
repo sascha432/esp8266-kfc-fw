@@ -319,6 +319,9 @@ private:
 #include "ESP8266HttpClient.h"
 
 #include "RetrieveSymbols.h"
+#include "RemoteTimezone.h"
+
+
 
 int main()
 {
@@ -386,8 +389,10 @@ int main()
 
     HTTPClient client;
 
+    //client.begin("http://www.d0g3.space/timezone/api.php?by=zone&format=json&zone=America/Vancouver");
+
     //client.begin("http://192.168.0.3:8123/api/states/light.kfc4f22d0_0");
-    client.begin("http://192.168.0.3:8123/api/states/light.floor_lamp_top");
+    //client.begin("http://192.168.0.3:8123/api/states/light.floor_lamp_top");
     
     //client.begin("http://192.168.0.3:8123/api/states/switch.bathroom_lightx");
 
@@ -397,8 +402,22 @@ int main()
     //client.begin("http://192.168.0.3:8123/api/states");
 
     client.addHeader("Content-Type", "application/json");
-    client.setAuthorization("Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJiMmNlNjkwZDBhMTY0ZDI2YWY4MWUxYzJiNjgzMjM3NCIsImlhdCI6MTU0ODY0MzczMywiZXhwIjoxODY0MDAzNzMzfQ.h1287xhv5nY5Fvu2GMSzIMnP51IsyFtKg9RFCS8qMBQ");
+    //client.setAuthorization("Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJiMmNlNjkwZDBhMTY0ZDI2YWY4MWUxYzJiNjgzMjM3NCIsImlhdCI6MTU0ODY0MzczMywiZXhwIjoxODY0MDAzNzMzfQ.h1287xhv5nY5Fvu2GMSzIMnP51IsyFtKg9RFCS8qMBQ");
     client.setTimeout(5);
+
+    auto rt = new RemoteTimezone::RestApi();
+    rt->setUrl(F("http://www.d0g3.space/timezone/api.php?by=zone&format=json&zone=${timezone}"));
+    rt->setZoneName(F("America/Vancouver"));
+
+    rt->setAutoDelete(true);
+    rt->call([](RemoteTimezone::JsonReaderResult *result, const String &error) {
+        int k = 0;
+    });
+
+    LoopFunctions::loop();
+    LoopFunctions::loop();
+
+    return 0;
 
     PrintString payload;
     JsonUnnamedObject json;

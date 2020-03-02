@@ -14,7 +14,7 @@ static WiFiCallbacks::CallbackVector _callbacks;
 
 uint8_t WiFiCallbacks::add(uint8_t events, WiFiCallbacks::Callback_t callback, WiFiCallbacks::CallbackPtr_t callbackPtr)
 {
-    _debug_printf_P(PSTR("events=%u, callbackPtr=%p\n"), events, callbackPtr);
+    _debug_printf_P(PSTR("events=%u, callbackPtr=%p callback=%p\n"), events, resolve_lambda((void *)callbackPtr), resolve_lambda(lambda_target(callback)));
 
     events &= EventEnum_t::ANY;
 
@@ -32,7 +32,7 @@ uint8_t WiFiCallbacks::add(uint8_t events, WiFiCallbacks::Callback_t callback, W
 
 int8_t WiFiCallbacks::remove(uint8_t events, WiFiCallbacks::CallbackPtr_t callbackPtr)
 {
-    _debug_printf_P(PSTR("events=%u, callbackPtr=%p\n"), events, callbackPtr);
+    _debug_printf_P(PSTR("events=%u, callbackPtr=%p\n"), events, resolve_lambda((void *)callbackPtr));
     for (auto iterator = _callbacks.begin(); iterator != _callbacks.end(); ++iterator) {
         if (callbackPtr == iterator->callbackPtr) {
             _debug_printf_P(PSTR("callbackPtr=%p changed events from %u to %u\n"), callbackPtr, iterator->events, iterator->events & ~events);
@@ -49,14 +49,14 @@ int8_t WiFiCallbacks::remove(uint8_t events, WiFiCallbacks::CallbackPtr_t callba
 
 void WiFiCallbacks::callEvent(WiFiCallbacks::EventEnum_t event, void *payload)
 {
-    _debug_printf_P(PSTR("event=%u, payload=%p\n"), event, payload);
+    _debug_printf_P(PSTR("event=%u payload=%p\n"), event, payload);
     for (const auto &entry : _callbacks) {
         if (entry.events & event) {
             if (entry.callback) {
-                _debug_printf_P(PSTR("calling callback func()\n"));
+                _debug_printf_P(PSTR("callback=%p\n"), resolve_lambda(lambda_target(entry.callback)));
                 entry.callback(event, payload);
             } else {
-                _debug_printf_P(PSTR("calling callbackPtr=%p\n"), entry.callbackPtr);
+                _debug_printf_P(PSTR("callbackPtr=%p\n"), resolve_lambda((void *)entry.callbackPtr));
                 entry.callbackPtr(event, payload);
             }
         }

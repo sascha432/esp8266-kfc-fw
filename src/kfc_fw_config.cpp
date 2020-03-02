@@ -302,9 +302,9 @@ void KFCFWConfiguration::_onWiFiDisconnectCb(const WiFiEventStationModeDisconnec
     }
 
     // work around for ESP32 losing the connection and not reconnecting automatically
-    static EventScheduler::TimerPtr _reconnectTimer = nullptr;
-    if (!_reconnectTimer) {
-        Scheduler.addTimer(&_reconnectTimer, 60000, true, [this](EventScheduler::TimerPtr timer) {
+    static EventScheduler::Timer _reconnectTimer;
+    if (!_reconnectTimer.active()) {
+        _reconnectTimer.add(60000, true, [this](EventScheduler::TimerPtr timer) {
             if (_wifiConnected) {
                 timer->detach();
             }
@@ -561,6 +561,7 @@ void KFCFWConfiguration::restoreFactorySettings()
     auto deviceName = PrintString(F("KFC%02X%02X%02X"), mac[3], mac[4], mac[5]);
     _H_SET_STR(Config().device_name, deviceName);
     _H_SET_STR(Config().device_pass, defaultPassword);
+    _H_SET_STR(Config().device_title, F("KFC Firmware"));
 
     Network::WiFiConfig::setSSID(deviceName);
     Network::WiFiConfig::setPassword(defaultPassword);
@@ -1139,8 +1140,8 @@ bool KFCFWConfiguration::connectWiFi()
 
             dhcps_lease_t lease;
             lease.enable = flags.softAPDHCPDEnabled;
-            lease.start_ip.addr = softAp.dhcp_start;
-            lease.end_ip.addr = softAp.dhcp_end;
+            lease.start_ip.addr = softAp._dhcpStart;
+            lease.end_ip.addr = softAp._dhcpEnd;
 
             if (tcpip_adapter_dhcps_option(TCPIP_ADAPTER_OP_SET, TCPIP_ADAPTER_REQUESTED_IP_ADDRESS, &lease, sizeof(lease)) != ESP_OK) {
                 String message = F("Failed to configure DHCP server");

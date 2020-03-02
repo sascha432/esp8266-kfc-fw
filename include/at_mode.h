@@ -15,7 +15,6 @@
 #define PROGMEM_AT_MODE_HELP_COMMAND(name)                                  nullptr
 #define PROGMEM_AT_MODE_HELP_COMMAND_T(name)                                nullptr
 
-
 #else
 
 #include <Arduino_compat.h>
@@ -144,6 +143,8 @@ void at_mode_print_prefix(Stream &output, const char *command);
 inline void at_mode_print_prefix(Stream &output, const String &command) {
     at_mode_print_prefix(output, (const char *)command.c_str());
 }
+typedef std::function<void(const String &name)> AtModeResolveACallback;
+void at_mode_resolve(void *ptr, AtModeResolveACallback resolve_callback);
 void enable_at_mode(Stream &output);
 void disable_at_mode(Stream &output);
 
@@ -356,7 +357,7 @@ public:
         if (nullptr == (arg = get(num)) || *arg == 0) {
             return false;
         }
-        int result;
+        int result = 0;
         if ((_isValidInt(arg, result) && result != 0) || (_isAnyMatchIgnoreCase(arg, F("yes" STRLS "y" STRLS "true" STRLS "on" STRLS "enable")))) {
             return true;
         }

@@ -86,13 +86,13 @@ namespace KFCConfigurationClasses {
         _gateway = IPAddress(192, 168, 4, 1);
         _dhcpStart = IPAddress(192, 168, 4, 2);
         _dhcpEnd = IPAddress(192, 168, 4, 100);
-        _encryption = WIFI_DEFAULT_ENCRYPTION;
+        _encryption = WiFiEncryptionTypeDefault;
         _channel = 7;
     }
 
     Network::SoftAP Network::SoftAP::read()
     {
-        return config._H_GET(MainConfig().network.softAp);
+        return (Network::SoftAP)config._H_GET(MainConfig().network.softAp);
     }
 
     void Network::SoftAP::defaults()

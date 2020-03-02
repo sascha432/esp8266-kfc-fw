@@ -27,17 +27,16 @@ PROGMEM_STRING_DEF(wss, "wss");
 PROGMEM_STRING_DEF(ws, "ws");
 PROGMEM_STRING_DEF(v, "v");
 
-#if defined(ESP8266)
 
 void MDNS_wifi_callback(uint8_t event, void *payload) {
+#if ESP8266
     MDNS.notifyAPChange();
+#endif
 }
 
 void MDNS_setup_wifi_event_callback() {
     WiFiCallbacks::add(WiFiCallbacks::EventEnum_t::CONNECTED|WiFiCallbacks::EventEnum_t::MODE_CHANGE, MDNS_wifi_callback);
 }
-
-#endif
 
 void MDNS_query_service(const char *service, const char *proto, Stream *output) {
 #if defined(ESP32)

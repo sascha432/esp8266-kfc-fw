@@ -13,8 +13,8 @@
 #include "kfc_fw_config.h"
 #include "./plugins/mqtt/mqtt_component.h"
 
-#ifndef DEBUG_IOT_CLOCK
-#define DEBUG_IOT_CLOCK                 0
+#ifndef DEBUG_IO1T_CLOCK
+#define DEBUG_IOT_CLOCK                 1
 #endif
 
 #if SPEED_BOOSTER_ENABLED
@@ -44,8 +44,8 @@
 #define IOT_CLOCK_NUM_PIXELS            2
 #endif
 
-#ifndef IOT_CLOCK_NUM_PX_PER_COLON
-#define IOT_CLOCK_NUM_PX_PER_COLON      1
+#ifndef IOT_CLOCK_NUM_PX_PER_DOT
+#define IOT_CLOCK_NUM_PX_PER_DOT        2
 #endif
 
 // order of the segments (a-g)
@@ -161,7 +161,9 @@ public:
 
     ClockPlugin();
 
-    virtual PGM_P getName() const;
+    virtual PGM_P getName() const {
+        return PSTR("clock");
+    }
     virtual const __FlashStringHelper *getFriendlyName() const {
         return F("Clock");
     }

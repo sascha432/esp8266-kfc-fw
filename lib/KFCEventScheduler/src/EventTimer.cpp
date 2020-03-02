@@ -29,7 +29,7 @@ EventTimer::~EventTimer()
 {
     auto hasTimer = Scheduler.hasTimer(this);
     if (hasTimer || _etsTimer.timer_func || !_disarmed)  {
-        __debugbreak_and_panic_printf_P(PSTR("timer=%p _etsTimer.timer_func=%p hasTimer=%u disarmed=%d object deleted while active\n"), this, _etsTimer.timer_func, hasTimer, _disarmed);
+        __debugbreak_and_panic_printf_P(PSTR("timer=%p timer_func=%p callback=%p hasTimer=%u disarmed=%d object deleted while active\n"), this, _etsTimer.timer_func, resolve_lambda(lambda_target(_loopCallback)), hasTimer, _disarmed);
     }
     // detach();
     ets_timer_done(&_etsTimer);
@@ -83,7 +83,7 @@ void ICACHE_RAM_ATTR EventTimer::_rearmEtsTimer()
         delay = std::max(MIN_DELAY, (int32_t)_delay);
         repeat = _repeat.hasRepeat();
     }
-    _debug_printf_P(PSTR("rearm _etsTimer.timer_arg=%p\n"), _etsTimer.timer_arg);
+    _debug_printf_P(PSTR("rearm timer_arg=%p callback=%p\n"), _etsTimer.timer_arg, resolve_lambda(lambda_target(_loopCallback)));
     _callbackScheduled = false;
     ets_timer_setfn(&_etsTimer, reinterpret_cast<ETSTimerFunc *>(EventScheduler::_timerCallback), reinterpret_cast<void *>(this));
     _disarmed = false;
@@ -92,7 +92,7 @@ void ICACHE_RAM_ATTR EventTimer::_rearmEtsTimer()
 
 void ICACHE_RAM_ATTR EventTimer::detach()
 {
-    _debug_printf_P(PSTR("timer=%p _etsTimer.timer_func=%p\n"), this, _etsTimer.timer_func);
+    _debug_printf_P(PSTR("timer=%p timer_func=%p callback=%p\n"), this, _etsTimer.timer_func, resolve_lambda(lambda_target(_loopCallback)));
     if (_etsTimer.timer_func) {
         ets_timer_disarm(&_etsTimer);
         _disarmed = true;
@@ -106,7 +106,7 @@ static void ICACHE_RAM_ATTR _no_deleter(void *) {
 void ICACHE_RAM_ATTR EventTimer::_invokeCallback()
 {
     EventScheduler::TimerPtr timerPtr(this, _no_deleter);
-    _debug_printf_P(PSTR("timer=%p: priority %d\n"), this, _priority);
+    _debug_printf_P(PSTR("timer=%p callback=%p priority %d\n"), this, resolve_lambda(lambda_target(_loopCallback)), _priority);
     _loopCallback(timerPtr);
     _repeat._counter++;
     if (_repeat.hasRepeat() && _etsTimer.timer_func != nullptr) {
@@ -114,13 +114,13 @@ void ICACHE_RAM_ATTR EventTimer::_invokeCallback()
             _rearmEtsTimer();
         }
     } else {
-        _debug_printf_P(PSTR("timer=%p _etsTimer.timer_func=%p removing EventTimer, repeat %d/%d\n"), this, _etsTimer.timer_func, _repeat._counter, _repeat._maxRepeat);
+        _debug_printf_P(PSTR("timer=%p timer_func=%p callback=%p removing EventTimer, repeat %d/%d\n"), this, _etsTimer.timer_func, resolve_lambda(lambda_target(_loopCallback)), _repeat._counter, _repeat._maxRepeat);
         Scheduler._removeTimer(this);
     }
 }
 
 void ICACHE_RAM_ATTR EventTimer::_remove()
 {
-    _debug_printf_P(PSTR("timer=%p: removing EventTimer, repeat %d/%d\n"), this, _repeat._counter, _repeat._maxRepeat);
+    _debug_printf_P(PSTR("timer=%p callback=%p removing EventTimer, repeat %d/%d\n"), this, resolve_lambda(lambda_target(_loopCallback)), _repeat._counter, _repeat._maxRepeat);
     Scheduler._removeTimer(this);
 }

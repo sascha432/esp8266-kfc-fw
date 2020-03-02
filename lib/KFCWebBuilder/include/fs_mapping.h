@@ -173,7 +173,7 @@ public:
 class FSMappingFileImp : public FileImpl {
 public:
     FSMappingFileImp(const File &file) : _file(file) {
-        _debug_printf("FSMappingFileImp(): name=%s\n", file.fullName() ? file.fullName() : "");
+        _debug_printf("FSMappingFileImp(): name=%s\n", file.name() ? file.name() : "");
     }
     virtual size_t write(const uint8_t *buf, size_t size) {
         return _file.write(buf, size);
@@ -194,7 +194,10 @@ public:
         return _file.size();
     }
     virtual bool truncate(uint32_t size) {
+#if ESP32
+#else
         return _file.truncate(size);
+#endif
     }
     virtual void close() {
         _file.close();
@@ -203,14 +206,25 @@ public:
         return _file.name();
     }
     virtual const char* fullName() const {
-        return _file.fullName();
+        return name();
     }
     virtual bool isFile() const {
+#if ESP32
+#else
         return _file.isFile();
+#endif
     }
     virtual bool isDirectory() const {
+#if ESP32
+#else
         return _file.isDirectory();
+#endif
     }
+#if ESP32
+     virtual time_t getLastWrite()  {
+         return 0;
+     }
+#endif
 
 private:
     File _file;
@@ -233,6 +247,45 @@ public:
     }
     virtual bool next();
     virtual bool rewind();
+
+#if ESP32
+    virtual size_t write(const uint8_t *buf, size_t size) {
+
+    }
+    virtual size_t read(uint8_t* buf, size_t size) {
+
+    }
+    virtual void flush() {
+    }
+    virtual bool seek(uint32_t pos, SeekMode mode) {
+
+    }
+
+    virtual size_t position() const {
+
+    }
+    virtual size_t size() const {
+
+    }
+    virtual void close()  {
+
+    }
+    virtual time_t getLastWrite() {
+
+    }
+    virtual const char* name() const {
+
+    }
+    virtual FileImplPtr openNextFile(const char* mode) {
+
+    }
+    virtual void rewindDirectory(void) {
+
+    }
+    virtual operator bool() {
+
+    }
+#endif
 
 private:
     bool _validate(const String &path);

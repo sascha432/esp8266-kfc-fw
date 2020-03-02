@@ -1036,6 +1036,9 @@ void WebServerPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &
 
 #endif
 
+    form.add(F("device_token"), _H_STR_VALUE(Config().device_token));
+    form.addValidator(new FormLengthValidator(16, sizeof(Config().device_token) - 1));
+
     form.finalize();
 }
 

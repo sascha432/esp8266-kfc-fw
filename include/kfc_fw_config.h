@@ -33,13 +33,16 @@
 #endif
 
 #if defined(ESP32)
-#define WIFI_DEFAULT_ENCRYPTION             WIFI_AUTH_WPA2_PSK
+#include <esp_wifi_types.h>
 #define WIFI_ENCRYPTION_ARRAY               array_of<uint8_t>(WIFI_AUTH_OPEN, WIFI_AUTH_WEP, WIFI_AUTH_WPA_PSK, WIFI_AUTH_WPA2_PSK, WIFI_AUTH_WPA_WPA2_PSK, WIFI_AUTH_WPA2_ENTERPRISE)
-#define WIFI_ENCRYPTION_ARRAY_SIZE          6
+using WiFiEncryptionTypeArray = std::array<uint8_t, 6>;
+using WiFiEncryptionType = wifi_auth_mode_t;
+static auto const WiFiEncryptionTypeDefault = WIFI_AUTH_WPA2_PSK;
 #elif defined(ESP8266)
-#define WIFI_DEFAULT_ENCRYPTION             ENC_TYPE_CCMP
 #define WIFI_ENCRYPTION_ARRAY               array_of<uint8_t>(ENC_TYPE_NONE, ENC_TYPE_TKIP, ENC_TYPE_WEP, ENC_TYPE_CCMP, ENC_TYPE_AUTO)
-#define WIFI_ENCRYPTION_ARRAY_SIZE          5
+using WiFiEncryptionTypeArray = std::array<uint8_t, 5>;
+using WiFiEncryptionType = wl_enc_type;
+static auto const WiFiEncryptionTypeDefault = ENC_TYPE_CCMP;
 #else
 #error Platform not supported
 #endif
@@ -409,7 +412,9 @@ typedef struct {
     uint32_t version;
     ConfigFlags flags;
     char device_name[17];
+    char device_title[33];
     char device_pass[33];
+    char device_token[128];
 
     Config_HTTP http;
     Config_Syslog syslog;

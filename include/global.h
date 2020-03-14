@@ -93,27 +93,6 @@
 #error SPIFFS support required
 #endif
 
-#ifndef FS_MAPPING_SORTED
-#define FS_MAPPING_SORTED               1               // Mappings are sorted by path
-#endif
-
-#ifndef FS_MAPPINGS_COUNTER_TYPE                        // type of the counter of .mappings
-#define FS_MAPPINGS_COUNTER_TYPE         uint8_t
-#endif
-
-#define FS_MAPPINGS_FILE_FMT            "%s%02x"        // format for UID to filename conversion
-
-#ifndef FS_MAPPINGS_FLAGS_GZIPPED                       // flags bitset of .mappings
-#define FS_MAPPINGS_FLAGS_GZIPPED       0x01
-#endif
-
-#ifndef FS_MAPPINGS_HASH_ALGO                            // hash function to generate file hashes for .mappings
-// #define FS_MAPPINGS_PHP_HASH_FUNCTION   "sha256"
-// #define FS_MAPPINGS_HASH_LENGTH         32           // length of the binary hash
-#define FS_MAPPINGS_HASH_ALGO           "sha1"
-#define FS_MAPPINGS_HASH_LENGTH         20              // length of the binary hash
-#endif
-
 #ifndef LOGGER
 #define LOGGER                          1               // Logging to files on SPIFFS
 #endif

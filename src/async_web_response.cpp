@@ -185,9 +185,9 @@ void AsyncJsonResponse::updateLength()
     _contentLength = _json.length();
 }
 
-AsyncProgmemFileResponse::AsyncProgmemFileResponse(const String &contentType, const FSMappingEntry *mapping, TemplateDataProvider::ResolveCallback callback) :
+AsyncProgmemFileResponse::AsyncProgmemFileResponse(const String &contentType, const File &file, TemplateDataProvider::ResolveCallback callback) :
     AsyncBaseResponse(false),
-    _contentWrapped(Mappings::open(mapping, fs::FileOpenMode::read)),
+    _contentWrapped(file),
     _provider(callback),
     _content(_contentWrapped, _provider)
 {
@@ -277,12 +277,12 @@ size_t AsyncDirResponse::_fillBuffer(uint8_t *data, size_t len)
         String path;
         while (_next) {
             path = _dir.fileName();
-            auto mapping = Mappings::getEntry(path);
+            auto mapping = FileMapping(path.c_str());
             modified[0] = '0';
             modified[1] = 0;
 
 #if SPIFFS_TMP_FILES_TTL || SPIFFS_CLEANUP_TMP_DURING_BOOT
-            if (!mapping && path.length() > tmp_dir.length() && path.startsWith(tmp_dir)) { // check if the name matches the location of temporary files, exclude mapped files
+            if (mapping.exists() && path.length() > tmp_dir.length() && path.startsWith(tmp_dir)) { // check if the name matches the location of temporary files, exclude mapped files
 #  if SPIFFS_TMP_FILES_TTL
 
                 ulong ttl = strtoul(path.substring(tmp_dir.length()).c_str(), NULL, HEX);
@@ -301,8 +301,8 @@ size_t AsyncDirResponse::_fillBuffer(uint8_t *data, size_t len)
 #  endif
                 }
             }
-            else if (mapping) {
-                auto time = mapping->modificationTime;
+            else if (mapping.exists()) {
+                time_t time = mapping.getModificationTime();
                 auto tm = timezone_localtime(&time);
                 timezone_strftime_P(modified, sizeof(modified), PSTR("\"%Y-%m-%d %H:%M\""), tm);
             }
@@ -320,7 +320,7 @@ size_t AsyncDirResponse::_fillBuffer(uint8_t *data, size_t len)
                 if ((result = snprintf_P(ptr, space, PSTR("{\"f\":\"%s\",\"n\":\"%s\",\"m\":%d,\"t\":%s,\"d\":1},"),
                     location.c_str(),
                     name.c_str(),
-                    path.startsWith(tmp_dir) ? TYPE_TMP_DIR : (mapping ? TYPE_MAPPED_DIR : TYPE_REGULAR_DIR),
+                    path.startsWith(tmp_dir) ? TYPE_TMP_DIR : (mapping.exists() ? TYPE_MAPPED_DIR : TYPE_REGULAR_DIR),
                     modified)) >= space)
                 {
                     break;
@@ -335,7 +335,7 @@ size_t AsyncDirResponse::_fillBuffer(uint8_t *data, size_t len)
                     name.c_str(),
                     formatBytes(_dir.fileSize()).c_str(),
                     _dir.fileSize(),
-                    mapping ? TYPE_MAPPED_FILE : TYPE_REGULAR_FILE,
+                    mapping.exists() ? TYPE_MAPPED_FILE : TYPE_REGULAR_FILE,
                     modified)
                 ) >= space) {
                     break;
@@ -551,8 +551,8 @@ void AsyncNetworkScanResponse::setLocked(bool locked)
 // }
 
 
-AsyncTemplateResponse::AsyncTemplateResponse(const String &contentType, const FSMappingEntry *mapping, WebTemplate *webTemplate, TemplateDataProvider::ResolveCallback callback) :
-    AsyncProgmemFileResponse(contentType, mapping, callback), _webTemplate(webTemplate)
+AsyncTemplateResponse::AsyncTemplateResponse(const String &contentType, const File &file, WebTemplate *webTemplate, TemplateDataProvider::ResolveCallback callback) :
+    AsyncProgmemFileResponse(contentType, file, callback), _webTemplate(webTemplate)
 {
     _contentLength = 0;
     _sendContentLength = false;

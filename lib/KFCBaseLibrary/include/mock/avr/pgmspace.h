@@ -15,6 +15,7 @@ Author: sascha_lammers@gmx.de
 #define vsnprintf_P vsnprintf
 #ifndef pgm_read_byte
 #define pgm_read_byte(a)                        (*a)
+#define pgm_read_byte_near(a)                        (*a)
 #endif
 #define pgm_read_word(addr)                     (*reinterpret_cast<const uint16_t*>(addr))
 #define pgm_read_dword(addr) 		            (*reinterpret_cast<const uint32_t*>(addr))

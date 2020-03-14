@@ -42,7 +42,7 @@ void Form::setInvalidMissing(bool invalidMissing)
     _invalidMissing = invalidMissing;
 }
 
-FormGroup &Form::addGroup(const String &name, const String &label, bool expanded, FormUI::TypeEnum_t type) 
+FormGroup &Form::addGroup(const String &name, const String &label, bool expanded, FormUI::TypeEnum_t type)
 {
     auto group = _add(new FormGroup(name, expanded));
     auto ui = new FormUI(type);
@@ -104,7 +104,7 @@ FormValidator *Form::addValidator(const String &name, FormValidator *validator)
     return nullptr;
 }
 
-FormField *Form::getField(const String &name) const 
+FormField *Form::getField(const String &name) const
 {
     for (auto field : _fields) {
         if (field->getName().equals(name)) {

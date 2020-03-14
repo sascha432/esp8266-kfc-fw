@@ -133,7 +133,7 @@ const FormField::ValidatorsVector &FormField::getValidators() const
     return _validators;
 }
 
-void FormGroup::end() 
+void FormGroup::end()
 {
     getForm().addGroup(getName(), String(), false, FormUI::TypeEnum_t::GROUP_END);
 }

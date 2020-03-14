@@ -12,6 +12,15 @@
 #ifndef _DEBUG
 #error _DEBUG required
 #endif
+#if ARDUINO <= 100
+#error ARDUINO>100 required
+#endif
+#if !UNICODE || !_UNICODE
+#error UNICODE and _UNICODE required
+#endif
+#if !_CRT_SECURE_NO_WARNINGS
+#error _CRT_SECURE_NO_WARNINGS required
+#endif
 #if !_CRTDBG_MAP_ALLOC
 #error _CRTDBG_MAP_ALLOC required
 #endif
@@ -69,7 +78,7 @@ class __FlashStringHelper;
 #include "debug_helper.h"
 #include "misc.h"
 
-#elif _WIN32 || _WIN64
+#elif _MSC_VER
 
 #define NOMINMAX
 #if !defined(_CRTDBG_MAP_ALLOC) && DEBUG

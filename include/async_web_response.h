@@ -61,7 +61,7 @@ private:
 
 class AsyncProgmemFileResponse : public AsyncBaseResponse {
 public:
-    AsyncProgmemFileResponse(const String &contentType, const struct FSMappingEntry_tag *mapping, TemplateDataProvider::ResolveCallback callback = nullptr);
+    AsyncProgmemFileResponse(const String &contentType, const File &file, TemplateDataProvider::ResolveCallback callback = nullptr);
 
     virtual bool _sourceValid() const override;
     virtual size_t _fillBuffer(uint8_t *data, size_t len) override;
@@ -74,7 +74,7 @@ private:
 
 class AsyncTemplateResponse : public AsyncProgmemFileResponse {
 public:
-    AsyncTemplateResponse(const String &contentType, const struct FSMappingEntry_tag *mapping, WebTemplate *webTemplate, TemplateDataProvider::ResolveCallback callback = nullptr);
+    AsyncTemplateResponse(const String &contentType, const File &file, WebTemplate *webTemplate, TemplateDataProvider::ResolveCallback callback = nullptr);
     virtual ~AsyncTemplateResponse();
 
 private:

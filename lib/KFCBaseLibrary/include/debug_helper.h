@@ -119,6 +119,7 @@ public:
     }
 
     virtual void printPrefix() {
+        unsigned long millis(void);
         printf_P(___debugPrefix, millis(), _file, _line, ESP.getFreeHeap(), _functionName);
     }
 

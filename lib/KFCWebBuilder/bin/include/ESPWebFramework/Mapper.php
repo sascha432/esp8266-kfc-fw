@@ -40,10 +40,6 @@ class Mapper implements PluginInterface
      */
     private $verbose;
     /**
-     * @var int
-     */
-    private $counterTypeSize;
-    /**
      * @var array
      */
     private $flags;
@@ -101,37 +97,13 @@ class Mapper implements PluginInterface
         // }
 
         $this->flags = array();
-        if (($gzippedFlag = $webBuilder->getConfigReader()->getPlatformIOParser()->getDefinition('FS_MAPPINGS_FLAGS_GZIPPED')) === null) {
-            throw new \RuntimeException('Constant FS_MAPPINGS_FLAGS_GZIPPED is not defined');
-        }
-        $this->flags[self::FLAGS_GZIPPED] = $gzippedFlag;
-
-        if (($type = $webBuilder->getConfigReader()->getPlatformIOParser()->getDefinition('FS_MAPPINGS_COUNTER_TYPE')) === null) {
-            throw new \RuntimeException('Constant FS_MAPPINGS_COUNTER_TYPE is not defined');
-        }
-        switch(strtolower($type)) {
-            case 'byte':
-            case 'char':
-            case 'unsigned char':
-            case 'int8_t':
-            case 'uint8_t':
-                $this->counterTypeSize = 1;
-                $hexLength = 2;
-                break;
-            case 'word':
-            case 'short':
-            case 'unsigned short':
-            case 'int16_t':
-            case 'uint16_t':
-                $this->counterTypeSize = 2;
-                $hexLength = 4;
-                break;
-            default:
-                throw new \RuntimeException(sprintf('FS_MAPPINGS_COUNTER_TYPE type %s is not supported', $type));
-        }
+        // if (($gzippedFlag = $webBuilder->getConfigReader()->getPlatformIOParser()->getDefinition('FS_MAPPINGS_FLAGS_GZIPPED')) === null) {
+        //     throw new \RuntimeException('Constant FS_MAPPINGS_FLAGS_GZIPPED is not defined');
+        // }
+        $this->flags[self::FLAGS_GZIPPED] = 0x01;
 
         if ($this->webDir) {
-            ConfigReader::recursiveDelete($this->webDir, false, '/^([a-z0-9]{'.$hexLength.'}|'.preg_quote(basename($this->mappingsFile), '/').')$/');
+            ConfigReader::recursiveDelete($this->webDir, false, '/^([a-z0-9]{2,8}(?:\.(lnk|gz))?|'.preg_quote(basename($this->mappingsFile), '/').')$/');
         }
     }
 
@@ -146,31 +118,23 @@ class Mapper implements PluginInterface
             return strcmp($a['mapped_file'], $b['mapped_file']);
         });
 
-        $filenameMappings = '';
-        $headers = pack($this->counterTypeSize === 1 ? 'C' : 'S', count($this->mappedFiles));
-        $packFormat = $this->counterTypeSize === 1 ? 'SCCLL' : 'SSCLL';
+        $headers = pack('S', count($this->mappedFiles));
         $totalSize = 0;
 
         foreach($this->mappedFiles as $file) {
 
-            $ofs1 = strlen($filenameMappings);
-            $filenameMappings .= $file['mapped_file']."\0";
-            // $ofs2 = strlen($filenameMappings);
-            // $filenameMappings .= $file['spiffs_file']."\0";
             $totalSize += $file['file_size'];
-
             if ($this->verbose) {
                 echo $file['mapped_file'].' => '.$file['spiffs_file'].(($file['flags'] & $this->flags[self::FLAGS_GZIPPED]) ? ', gzipped' : '').', size '.$file['original_file_size'].'/'.$file['file_size'].', '.sprintf('%.2f%%', $file['file_size'] / $file['original_file_size'] * 100).' mtime '.$file['mtime']."\n";
             }
+            $sizeAndFlags = $file['file_size'] | ($file['flags'] << 24);
 
-            $headers .= pack($packFormat, $ofs1, $file['uid'], $file['flags'], $file['mtime'], $file['file_size']);
-
-            //$headers .= pack('SScLL', $ofs1, $ofs2, $file['flags'], $file['mtime'], $file['file_size']).$file['hash'];
+            $headers .= pack('LLL', $file['uid'], $file['mtime'], $sizeAndFlags);
 
         }
-        $totalSize += strlen($headers) + strlen($filenameMappings);
+        $totalSize += strlen($headers);
 
-        file_put_contents($this->mappingsFile, $headers.$filenameMappings);
+        //file_put_contents($this->mappingsFile, $headers);
 
         echo "--------------------------------------------\n";
         echo "Total size of SPIFFS usage: $totalSize\n";
@@ -184,8 +148,10 @@ class Mapper implements PluginInterface
     public function process(Processor\File $file): bool
     {
         $num = count($this->mappedFiles);
-        $outFile = $this->webDir.sprintf(DIRECTORY_SEPARATOR.($this->counterTypeSize === 1 ? '%02x' : '%04x'), $num);
 
+        $mappedFile = str_replace('\\', '/', substr($file->getTarget(), strlen($this->webDir)));
+        $mappedFileCrc = hash("crc32b", $mappedFile);
+        $outFile = $this->webDir.sprintf(DIRECTORY_SEPARATOR.$mappedFileCrc);
         if (!@copy($file->getTmpIn(), $outFile)) {
             throw new \RuntimeException(sprintf('%s: Cannot copy %s to %s', $file->getSourceAsString(), $file->getTmpIn(), $outFile));
         }
@@ -209,18 +175,34 @@ class Mapper implements PluginInterface
             $header = fread($fd, 3);
             if (strcmp($header, "\x1f\x8b\x8") === 0) {
                 $flags |= $this->flags[self::FLAGS_GZIPPED];
+                // $zipped = $outFile.'.gz';
+                // if (!@file_put_contents($zipped, pack('L', $orgFileSize))) {
+                //     throw new \RuntimeException(sprintf('%s: Cannot create %s', $file->getSourceAsString(), $zipped));
+                // }
             }
             fclose($fd);
         }
 
+        $symlink = $outFile.'.lnk';
+        if (!@file_put_contents($symlink, pack('LL', $mtime, ($flags << 24) | $orgFileSize).$mappedFile)) {
+            throw new \RuntimeException(sprintf('%s: Cannot create %s', $file->getSourceAsString(), $symlink));
+        }
+
+        foreach($this->mappedFiles as $data) {
+            if ($data['crc'] == $mappedFileCrc) {
+                throw new \RuntimeException(sprintf('%s: %s and %s have the same crc', $file->getSourceAsString(), $data['mapped_file'], $mappedFile));
+            }
+        }
+
         $this->mappedFiles[$num] = array(
             'spiffs_file' => str_replace('\\', '/', substr($outFile, strlen($this->dataDir))),
-            'mapped_file' => str_replace('\\', '/', substr($file->getTarget(), strlen($this->webDir))),
+            'mapped_file' => $mappedFile,
             'original_file_size' => $orgFileSize,
             'file_size' => filesize($outFile),
+            'crc' => $mappedFileCrc,
             'flags' => $flags,
             'mtime' => $mtime,
-            'uid' => $num,
+            'uid' => $mappedFileCrc,
             // 'hash' => call_user_func($this->hashFunction, $outFile, true),
         );
 

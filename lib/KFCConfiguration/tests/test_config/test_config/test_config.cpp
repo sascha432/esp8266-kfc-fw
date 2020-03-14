@@ -107,10 +107,25 @@ typedef struct {
 
 #include "push_pack.h"
 
+struct __attribute__packed__  {
+    uint32_t _modificationTime;
+    uint32_t _fileSize: 24;
+    uint32_t _gzipped : 1;
+    uint32_t ___reserved : 7;
+} x;
+
 int main() {
 
     ESP._enableMSVCMemdebug();
     DebugHelper::activate();
+
+    File file = SPIFFS.open("C:\\Users\\sascha\\Documents\\PlatformIO\\Projects\\kfc_fw\\data\\webui\\1a22101e.lnk", "r");
+    auto l = file.readBytes(reinterpret_cast<char *>(&x), sizeof(x));
+
+    Serial.printf("%u\n", x._fileSize);
+
+    int k = 0;
+    return 0;
 
 #if 0
     using milliseconds = std::chrono::duration<uint32_t, std::milli>;

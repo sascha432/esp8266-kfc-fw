@@ -249,6 +249,7 @@ void delay(unsigned long time_ms) {
 
 void delayMicroseconds(unsigned int us)
 {
+    Sleep((DWORD)ceil(us / 1000.0));
 }
 
 unsigned long pulseIn(uint8_t pin, uint8_t state, unsigned long timeout)

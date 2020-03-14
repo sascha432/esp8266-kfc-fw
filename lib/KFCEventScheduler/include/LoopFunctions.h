@@ -5,7 +5,7 @@
 #pragma once
 
 #ifndef DEBUG_LOOP_FUNCTIONS
-#define DEBUG_LOOP_FUNCTIONS            1
+#define DEBUG_LOOP_FUNCTIONS            0
 #include <debug_helper_enable.h>
 #endif
 

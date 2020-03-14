@@ -88,7 +88,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>CONFIG_MAGIC_DWORD=0x72a82165;_CRT_SECURE_NO_WARNINGS;DEBUG=1;DEBUG_CONFIGURATION=1;_DEBUG=1;_CRTDBG_MAP_ALLOC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>CONFIG_MAGIC_DWORD=0x72a82165;_CRT_SECURE_NO_WARNINGS;DEBUG=1;DEBUG_CONFIGURATION=1;_DEBUG=1;_CRTDBG_MAP_ALLOC;ARDUINO=101;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCJson\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCConfiguration\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\include\mock;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>

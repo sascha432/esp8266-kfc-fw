@@ -4,7 +4,7 @@
 
 #include "DumpBinary.h"
 
-DumpBinary::DumpBinary(Print &output) : _output(output) 
+DumpBinary::DumpBinary(Print &output) : _output(output)
 {
     _perLine = 16;
     _groupBytes = 2;

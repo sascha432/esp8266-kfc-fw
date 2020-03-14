@@ -31,115 +31,68 @@ PROGMEM_STRING_DECL(fs_mapping_dir);
 
 #include <push_pack.h>
 
-// file structure
-typedef struct __attribute__packed__ mapping_t {
-    uint16_t path_offset;
-    FS_MAPPINGS_COUNTER_TYPE mapped_path_uid;
-    uint8_t flags;
-    uint32_t mtime;
-    uint32_t file_size;
-} mapping_t;
+uint32_t crc32b(const void *message, size_t length, uint32_t crc = ~0);
 
-// memory structure
-typedef struct __attribute__packed__ FSMappingEntry_tag {
-    uint16_t pathOffset;
-    FS_MAPPINGS_COUNTER_TYPE mappedPathUID;
-    uint32_t fileSize: 31;
-    uint32_t gzipped: 1;
-    time_t modificationTime: 32; // the bitfield prevents using it as pointer. create a copy on stack if passed to time() or other libc functions that might not like unaligned pointers
-} FSMappingEntry;
+class FileMapping {
+public:
+    FileMapping() = default;
+
+    FileMapping(uint32_t uuid) : _uuid(uuid) {
+        _openByUUID();
+    }
+    FileMapping(const char *filename) : _filename(filename) {
+        _openByFilename();
+    }
+    FileMapping(const __FlashStringHelper *filename) : _filename(filename) {
+        _openByFilename();
+    }
+
+    const File open(const char *mode) const;
+
+    const char *getFilename() const {
+        return _filename.c_str();
+    }
+
+    const String &getFilenameString() const {
+        return _filename;
+    }
+
+    uint32_t fileSize() const {
+        return _fileSize;
+    }
+
+    uint32_t getModificationTime() const{
+        return _modificationTime;
+    }
+
+    bool isGz() const {
+        return _gzipped;
+    }
+
+    bool exists() const {
+        return _filename.length() != 0;
+    }
+
+    bool isMapped() const {
+        return _uuid != 0;
+    }
+
+private:
+    void _openByFilename();
+    void _openByUUID();
+
+private:
+    String _filename;
+    uint32_t _uuid;
+    struct __attribute__packed__  {
+        uint32_t _modificationTime;
+        uint32_t _fileSize: 24;
+        uint32_t _gzipped : 1;
+        uint32_t ___reserved : 7;
+    };
+};
 
 #include <pop_pack.h>
-
-#ifdef strcmp_P
-inline int __strcmp_P(const char *str1, const char *str2) {
-    return strcmp_P(str1, str2);
-}
-#else
-#define __strcmp_P strcmp_P
-#endif
-
-class Mappings {
-public:
-    Mappings();
-    ~Mappings();
-
-    static Mappings &getInstance();
-
-public:
-    bool empty() const {
-        return !_count;
-    }
-    size_t size() const {
-        return _count;
-    }
-    const FSMappingEntry *begin() const {
-        return &_entries[0];
-    }
-    const FSMappingEntry *end() const {
-        return &_entries[_instance._count];
-    }
-    // returns nullptr if mappings are not in memory
-    static const FSMappingEntry *endIterator() {
-        return _instance._entries + _instance._count;
-    }
-
-public:
-    typedef int(* compareFunc)(const char *, const char *);
-
-    const FSMappingEntry *findEntry(const char *path, compareFunc compare) const;
-    const FSMappingEntry *findEntry(const String &path) const {
-        return findEntry(path.c_str(), strcmp);
-    }
-    const FSMappingEntry *findEntry(const char *path) const {
-        return findEntry(path, strcmp);
-    }
-    const FSMappingEntry *findEntry(const __FlashStringHelper *path) const {
-        return findEntry(RFPSTR(path), __strcmp_P);
-    }
-
-    const char *getPath(const FSMappingEntry *entry) const {
-        if (entry) {
-            return _data + entry->pathOffset;
-        }
-        return nullptr;
-    }
-    const char *getMappedPath(const FSMappingEntry *entry, char *buf, size_t size) const;
-    String getMappedPath(const FSMappingEntry *entry) const;
-
-    const File openFile(const FSMappingEntry *mapping, const char *mode) const;
-
-public:
-    void dump(Print &output);
-
-    static void gc();
-    static const FSMappingEntry *getEntry(const String &path) {
-        return getInstance().findEntry(path.c_str());
-    }
-    static const FSMappingEntry *getEntry(const char *path) {
-        return getInstance().findEntry(path);
-    }
-    static const FSMappingEntry *getEntry(const __FlashStringHelper *path) {
-        return getInstance().findEntry(path);
-    }
-    static const File open(const FSMappingEntry *mapping, const char *mode) {
-        return getInstance().openFile(mapping, mode);
-    }
-
-private:
-    void _gc();
-    void _loadMappings();
-    bool _readMappings();
-    void _freeMappings();
-
-private:
-    uint8_t _count;
-    char *_data;
-    FSMappingEntry *_entries;
-    uint32_t _releaseTimeout;
-
-    static Mappings _instance;
-};
 
 class SPIFFSWrapper {
 public:
@@ -163,152 +116,152 @@ public:
     static bool remove(const String &path) {
         return remove(path.c_str());
     }
-    static Dir openDir(const char *path);
-    static Dir openDir(const String &path) {
-        return openDir(path.c_str());
-    }
+    // static Dir openDir(const char *path);
+    // static Dir openDir(const String &path) {
+    //     return openDir(path.c_str());
+    // }
 };
 
-// since we cannot access FileImpl inside File we need to wrap another one around
-class FSMappingFileImp : public FileImpl {
-public:
-    FSMappingFileImp(const File &file) : _file(file) {
-        _debug_printf("FSMappingFileImp(): name=%s\n", file.name() ? file.name() : "");
-    }
-    virtual size_t write(const uint8_t *buf, size_t size) {
-        return _file.write(buf, size);
-    }
-    virtual size_t read(uint8_t* buf, size_t size) {
-        return _file.read(buf, size);
-    }
-    virtual void flush() {
-        _file.flush();
-    }
-    virtual bool seek(uint32_t pos, SeekMode mode) {
-        return _file.seek(pos, mode);
-    }
-    virtual size_t position() const {
-        return _file.position();
-    }
-    virtual size_t size() const {
-        return _file.size();
-    }
-    virtual bool truncate(uint32_t size) {
-#if ESP32
-#else
-        return _file.truncate(size);
-#endif
-    }
-    virtual void close() {
-        _file.close();
-    }
-    virtual const char* name() const {
-        return _file.name();
-    }
-    virtual const char* fullName() const {
-        return name();
-    }
-    virtual bool isFile() const {
-#if ESP32
-#else
-        return _file.isFile();
-#endif
-    }
-    virtual bool isDirectory() const {
-#if ESP32
-#else
-        return _file.isDirectory();
-#endif
-    }
-#if ESP32
-     virtual time_t getLastWrite()  {
-         return 0;
-     }
-#endif
+// // since we cannot access FileImpl inside File we need to wrap another one around
+// class FSMappingFileImp : public FileImpl {
+// public:
+//     FSMappingFileImp(const File &file) : _file(file) {
+//         _debug_printf("FSMappingFileImp(): name=%s\n", file.name() ? file.name() : "");
+//     }
+//     virtual size_t write(const uint8_t *buf, size_t size) {
+//         return _file.write(buf, size);
+//     }
+//     virtual size_t read(uint8_t* buf, size_t size) {
+//         return _file.read(buf, size);
+//     }
+//     virtual void flush() {
+//         _file.flush();
+//     }
+//     virtual bool seek(uint32_t pos, SeekMode mode) {
+//         return _file.seek(pos, mode);
+//     }
+//     virtual size_t position() const {
+//         return _file.position();
+//     }
+//     virtual size_t size() const {
+//         return _file.size();
+//     }
+//     virtual bool truncate(uint32_t size) {
+// #if ESP32
+// #else
+//         return _file.truncate(size);
+// #endif
+//     }
+//     virtual void close() {
+//         _file.close();
+//     }
+//     virtual const char* name() const {
+//         return _file.name();
+//     }
+//     virtual const char* fullName() const {
+//         return name();
+//     }
+//     virtual bool isFile() const {
+// #if ESP32
+// #else
+//         return _file.isFile();
+// #endif
+//     }
+//     virtual bool isDirectory() const {
+// #if ESP32
+// #else
+//         return _file.isDirectory();
+// #endif
+//     }
+// #if ESP32
+//      virtual time_t getLastWrite()  {
+//          return 0;
+//      }
+// #endif
 
-private:
-    File _file;
-};
+// private:
+//     File _file;
+// };
 
-class FSMappingDirImpl : public DirImpl {
-public:
-    FSMappingDirImpl(FS &fs, const String &dirName);
+// class FSMappingDirImpl : public DirImpl {
+// public:
+//     FSMappingDirImpl(FS &fs, const String &dirName);
 
-    virtual FileImplPtr openFile(OpenMode openMode, AccessMode accessMode);
-    virtual const char *fileName() {
-        return _fileName.c_str();
-    }
-    virtual size_t fileSize();
-    virtual bool isFile() const {
-        return _isValid == FILE;
-    }
-    virtual bool isDirectory() const {
-        return _isValid == DIR;
-    }
-    virtual bool next();
-    virtual bool rewind();
+//     virtual FileImplPtr openFile(OpenMode openMode, AccessMode accessMode);
+//     virtual const char *fileName() {
+//         return _fileName.c_str();
+//     }
+//     virtual size_t fileSize();
+//     virtual bool isFile() const {
+//         return _isValid == FILE;
+//     }
+//     virtual bool isDirectory() const {
+//         return _isValid == DIR;
+//     }
+//     virtual bool next();
+//     virtual bool rewind();
 
-#if ESP32
-    virtual size_t write(const uint8_t *buf, size_t size) {
+// #if ESP32
+//     virtual size_t write(const uint8_t *buf, size_t size) {
 
-    }
-    virtual size_t read(uint8_t* buf, size_t size) {
+//     }
+//     virtual size_t read(uint8_t* buf, size_t size) {
 
-    }
-    virtual void flush() {
-    }
-    virtual bool seek(uint32_t pos, SeekMode mode) {
+//     }
+//     virtual void flush() {
+//     }
+//     virtual bool seek(uint32_t pos, SeekMode mode) {
 
-    }
+//     }
 
-    virtual size_t position() const {
+//     virtual size_t position() const {
 
-    }
-    virtual size_t size() const {
+//     }
+//     virtual size_t size() const {
 
-    }
-    virtual void close()  {
+//     }
+//     virtual void close()  {
 
-    }
-    virtual time_t getLastWrite() {
+//     }
+//     virtual time_t getLastWrite() {
 
-    }
-    virtual const char* name() const {
+//     }
+//     virtual const char* name() const {
 
-    }
-    virtual FileImplPtr openNextFile(const char* mode) {
+//     }
+//     virtual FileImplPtr openNextFile(const char* mode) {
 
-    }
-    virtual void rewindDirectory(void) {
+//     }
+//     virtual void rewindDirectory(void) {
 
-    }
-    virtual operator bool() {
+//     }
+//     virtual operator bool() {
 
-    }
-#endif
+//     }
+// #endif
 
-private:
-    bool _validate(const String &path);
+// private:
+//     bool _validate(const String &path);
 
-private:
-    typedef enum {
-        INVALID = 0,
-        FIRST_DIR = -1,
-        DIR = 1,
-        FILE = 2,
-    } ValidEnum_t;
+// private:
+//     typedef enum {
+//         INVALID = 0,
+//         FIRST_DIR = -1,
+//         DIR = 1,
+//         FILE = 2,
+//     } ValidEnum_t;
 
-    FS &_fs;
-    ValidEnum_t _isValid;
-    Dir _dir;
-    String _dirName;
-    String _fileName;
-    String _virtualRoot;
-    const FSMappingEntry *_iterator;
-    const FSMappingEntry *_end;
-    StringVector _dirs;
-#if LOGGER
-    StringVector _logs;
-    StringVector::iterator _logsIterator;
-#endif
-};
+//     FS &_fs;
+//     ValidEnum_t _isValid;
+//     Dir _dir;
+//     String _dirName;
+//     String _fileName;
+//     String _virtualRoot;
+//     const FSMappingEntry *_iterator;
+//     const FSMappingEntry *_end;
+//     StringVector _dirs;
+// #if LOGGER
+//     StringVector _logs;
+//     StringVector::iterator _logsIterator;
+// #endif
+// };

@@ -1015,7 +1015,6 @@ void KFCFWConfiguration::loop()
 {
     rng.loop();
     config.gc();
-    Mappings::gc();
 }
 
 uint8_t KFCFWConfiguration::getMaxWiFiChannels()

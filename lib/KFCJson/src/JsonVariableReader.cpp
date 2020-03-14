@@ -6,16 +6,16 @@
 
 namespace JsonVariableReader {
 
-    Element::Element(const JsonString &path, AssignCallback callback) : _path(path), _callback(callback) 
+    Element::Element(const JsonString &path, AssignCallback callback) : _path(path), _callback(callback)
     {
     }
 
-    JsonString &Element::getPath() 
+    JsonString &Element::getPath()
     {
         return _path;
     }
 
-    bool Element::callback(Result &result, Reader &reader) 
+    bool Element::callback(Result &result, Reader &reader)
     {
         if (_callback) {
             return _callback(result, reader);
@@ -24,11 +24,11 @@ namespace JsonVariableReader {
     }
 
 
-    ElementGroup::ElementGroup(const JsonString &path) : _path(path) 
+    ElementGroup::ElementGroup(const JsonString &path) : _path(path)
     {
     }
 
-    ElementGroup::~ElementGroup() 
+    ElementGroup::~ElementGroup()
     {
         for (auto element : _elements) {
             delete element;
@@ -80,7 +80,7 @@ namespace JsonVariableReader {
     }
 
 
-    Reader::Reader() : JsonBaseReader(nullptr), _elementGroups(new ElementGroup::Vector()), _current(nullptr), _level(0), _skip(false) 
+    Reader::Reader() : JsonBaseReader(nullptr), _elementGroups(new ElementGroup::Vector()), _current(nullptr), _level(0), _skip(false)
     {
     }
 
@@ -122,7 +122,7 @@ namespace JsonVariableReader {
                     _skip = false;
                     _current->flushResult();
                 }
-                else { 
+                else {
                     _current->flushResult();
                 }
                 //Serial.printf("new element skip %u\n", _skip);
@@ -152,7 +152,7 @@ namespace JsonVariableReader {
         return true;
     }
 
-    bool Reader::recoverableError(JsonErrorEnum_t errorType) 
+    bool Reader::recoverableError(JsonErrorEnum_t errorType)
     {
         return true;
     }

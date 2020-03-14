@@ -123,7 +123,7 @@ Dir FileManager::_getDir(const String &path)
     if (!path.length()) {
         return Dir();
     }
-    Dir dir = SPIFFSWrapper::openDir(path);
+    Dir dir = SPIFFS.openDir(path);
     if (!dir.next()) {
         _errors++;
         _debug_printf_P(PSTR("Directory %s does not exist or empty\n"), path.c_str());

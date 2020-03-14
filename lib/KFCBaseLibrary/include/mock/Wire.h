@@ -5,25 +5,18 @@
 #pragma once
 
 #include <Arduino_compat.h>
+#include <BufferStream.h>
 
-#define BUFFER_LENGTH 32
-
-// WIRE_HAS_END means Wire has end()
-#define WIRE_HAS_END 1
+HANDLE get_com_handle();
+String serial_read_byte(HANDLE hComm);
+int serial_write(HANDLE hComm, const char *buffer, DWORD length);
+inline int serial_write(HANDLE hComm, const char *buffer) {
+    return serial_write(hComm, buffer, strlen(buffer));
+}
 
 class TwoWire : public Stream
 {
   private:
-    static uint8_t rxBuffer[];
-    static uint8_t rxBufferIndex;
-    static uint8_t rxBufferLength;
-
-    static uint8_t txAddress;
-    static uint8_t txBuffer[];
-    static uint8_t txBufferIndex;
-    static uint8_t txBufferLength;
-
-    static uint8_t transmitting;
     static void (*user_onRequest)(void);
     static void (*user_onReceive)(int);
     static void onRequestService(void);
@@ -58,6 +51,14 @@ class TwoWire : public Stream
     inline size_t write(unsigned int n) { return write((uint8_t)n); }
     inline size_t write(int n) { return write((uint8_t)n); }
     using Print::write;
+
+private:
+    int _waitForResponse();
+
+private:
+    HANDLE _hComm;
+    String _buffer;
+    BufferStream _out;
 };
 
 extern TwoWire Wire;

@@ -6,7 +6,7 @@
 #pragma once
 
 #ifndef DEBUG_WIFICALLBACKS
-#define DEBUG_WIFICALLBACKS                         1
+#define DEBUG_WIFICALLBACKS                         0
 #include <debug_helper_enable.h>
 #endif
 

@@ -397,7 +397,7 @@ void web_server_update_handler(AsyncWebServerRequest *request)
 
             HttpHeaders httpHeaders(false);
             httpHeaders.addNoCache();
-            if (!web_server_send_file(F("/update_fw.html"), httpHeaders, web_server_client_accepts_gzip(request), nullptr, request, new UpgradeTemplate(message))) {
+            if (!web_server_send_file(F("/update_fw.html"), httpHeaders, web_server_client_accepts_gzip(request), request, new UpgradeTemplate(message))) {
                 message += F("<br><a href=\"/\">Home</a>");
                 request->send(200, FSPGM(mime_text_plain), message);
             }
@@ -656,20 +656,14 @@ PGM_P web_server_get_content_type(const String &path)
     }
 }
 
-bool web_server_send_file(String path, HttpHeaders& httpHeaders, bool client_accepts_gzip, const FSMappingEntry* mapping, AsyncWebServerRequest* request, WebTemplate* webTemplate)
+bool web_server_send_file(const FileMapping &mapping, HttpHeaders& httpHeaders, bool client_accepts_gzip, AsyncWebServerRequest* request, WebTemplate* webTemplate)
 {
     WebServerSetCPUSpeedHelper setCPUSpeed;
 
-    _debug_printf_P(PSTR("web_server_send_file(%s)\n"), path.c_str());
-    if (!mapping) {
-        mapping = Mappings::getEntry(path);
-        if (!mapping) {
-            _debug_printf_P(PSTR("Not found: %s\n"), path.c_str());
-            if (webTemplate) {
-                delete webTemplate;
-            }
-            return false;
-        }
+    const String &path = mapping.getFilenameString();
+    _debug_printf_P(PSTR("file=%s exists=%d\n"), path.c_str(), mapping.exists());
+    if (!mapping.exists()) {
+        return false;
     }
 
     // _debug_printf_P(PSTR("Mapping %s, %s, %d, content type %s\n"), mapping->getPath(), mapping->getMappedPath(), mapping->getFileSize(), web_server_get_content_type(path));
@@ -703,19 +697,19 @@ bool web_server_send_file(String path, HttpHeaders& httpHeaders, bool client_acc
 
     AsyncBaseResponse *response;
     if (webTemplate != nullptr) {
-        response = new AsyncTemplateResponse(FPSTR(web_server_get_content_type(path)), mapping, webTemplate, [webTemplate](const String& name, DataProviderInterface &provider) {
+        response = new AsyncTemplateResponse(FPSTR(web_server_get_content_type(path)), mapping.open(FileOpenMode::read), webTemplate, [webTemplate](const String& name, DataProviderInterface &provider) {
             return TemplateDataProvider::callback(name, provider, *webTemplate);
         });
         httpHeaders.addNoCache(request->method() == HTTP_POST);
     } else {
-        response = new AsyncProgmemFileResponse(FPSTR(web_server_get_content_type(path)), mapping);
+        response = new AsyncProgmemFileResponse(FPSTR(web_server_get_content_type(path)), mapping.open(FileOpenMode::read));
         httpHeaders.replace(new HttpDateHeader(FSPGM(Expires), 86400 * 30));
-        httpHeaders.replace(new HttpDateHeader(FSPGM(Last_Modified), mapping->modificationTime));
+        httpHeaders.replace(new HttpDateHeader(FSPGM(Last_Modified), mapping.getModificationTime()));
         if (web_server_is_public_path(path)) {
             httpHeaders.replace(new HttpCacheControlHeader(HttpCacheControlHeader::PUBLIC));
         }
     }
-    if (mapping->gzipped) {
+    if (mapping.isGz()) {
         httpHeaders.add(FSPGM(Content_Encoding), F("gzip"));
     }
     httpHeaders.setAsyncBaseResponseHeaders(response);
@@ -743,12 +737,12 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
         return false;
     }
 
-    auto mapping = Mappings::getEntry(path);
-    if (!mapping) {
+    auto mapping = FileMapping(path.c_str());
+    if (!mapping.exists()) {
         _debug_printf_P(PSTR("Not found: %s\n"), path.c_str());
         return false;
     }
-    if (mapping->gzipped && !client_accepts_gzip) {
+    if (mapping.isGz() && !client_accepts_gzip) {
         _debug_printf_P(PSTR("Client does not accept gzip encoding: %s\n"), path.c_str());
         request->send_P(503, FSPGM(mime_text_plain), PSTR("503: Client does not support gzip Content Encoding"));
         return true;
@@ -794,11 +788,11 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
                 loginError = F("Invalid username or password.");
                 const FailureCounter &failure = loginFailures.addFailure(remote_addr);
                 Logger_security(F("Login from %s failed %d times since %s"), remote_addr.toString().c_str(), failure.getCounter(), failure.getFirstFailure().c_str());
-                return web_server_send_file(FSPGM(login_html), httpHeaders, client_accepts_gzip, nullptr, request, new LoginTemplate(loginError));
+                return web_server_send_file(FSPGM(login_html), httpHeaders, client_accepts_gzip, request, new LoginTemplate(loginError));
             }
         } else {
             if (String_endsWith(path, PSTR(".html"))) {
-                return web_server_send_file(FSPGM(login_html), httpHeaders, client_accepts_gzip, nullptr, request, new LoginTemplate(loginError));
+                return web_server_send_file(FSPGM(login_html), httpHeaders, client_accepts_gzip, request, new LoginTemplate(loginError));
             } else {
                 request->send(403);
                 return true;
@@ -866,7 +860,7 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
                     request->onDisconnect([]() {
                         config.restartDevice();
                     });
-                    mapping = Mappings::getEntry(F("/rebooting.html"));
+                    mapping = FileMapping(F("/rebooting.html"));
                 } else {
                     request->redirect(F("/index.html"));
                 }
@@ -878,7 +872,7 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
                     request->onDisconnect([]() {
                         config.restartDevice();
                     });
-                    mapping = Mappings::getEntry(F("/rebooting.html"));
+                    mapping = FileMapping(F("/rebooting.html"));
                 } else {
                     request->redirect(F("/index.html"));
                 }
@@ -900,7 +894,7 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
         */
     }
 
-    return web_server_send_file(path, httpHeaders, client_accepts_gzip, mapping, request, webTemplate);
+    return web_server_send_file(mapping, httpHeaders, client_accepts_gzip, request, webTemplate);
 }
 
 class WebServerPlugin : public PluginComponent {

@@ -10,7 +10,7 @@ JsonConverter::JsonConverter(Stream &stream) : JsonBaseReader(stream), _current(
 {
 }
 
-bool JsonConverter::beginObject(bool isArray) 
+bool JsonConverter::beginObject(bool isArray)
 {
     AbstractJsonValue *value;
     if (isArray) {
@@ -41,7 +41,7 @@ bool JsonConverter::beginObject(bool isArray)
     return true;
 }
 
-bool JsonConverter::endObject() 
+bool JsonConverter::endObject()
 {
     if (_stack.size()) {
         _current = _stack.back();
@@ -53,7 +53,7 @@ bool JsonConverter::endObject()
     }
 }
 
-bool JsonConverter::processElement() 
+bool JsonConverter::processElement()
 {
     if (getType() == JSON_TYPE_INVALID) {
         return _ignoreInvalid;
@@ -114,12 +114,12 @@ bool JsonConverter::processElement()
     return true;
 }
 
-bool JsonConverter::recoverableError(JsonErrorEnum_t errorType) 
+bool JsonConverter::recoverableError(JsonErrorEnum_t errorType)
 {
     return _ignoreInvalid;
 }
 
-AbstractJsonValue *JsonConverter::getRoot() const 
+AbstractJsonValue *JsonConverter::getRoot() const
 {
     if (_stack.size()) {
         return _stack.front();
@@ -127,7 +127,7 @@ AbstractJsonValue *JsonConverter::getRoot() const
     return _current; // points to the root object or null
 }
 
-void JsonConverter::setIgnoreInvalid(bool ingnore) 
+void JsonConverter::setIgnoreInvalid(bool ingnore)
 {
     _ignoreInvalid = ingnore;
 }

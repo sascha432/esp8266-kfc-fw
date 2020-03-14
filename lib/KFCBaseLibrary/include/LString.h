@@ -27,7 +27,7 @@ public:
     char *strcpy(char *dst);
     char *strcat(char *dst);
     errno_t strcpy_s(char *dst, size_t destSize);
-    errno_t strcat_s(char *dst, size_t destSize); 
+    errno_t strcat_s(char *dst, size_t destSize);
 
     inline size_t length() const {
         return _length;

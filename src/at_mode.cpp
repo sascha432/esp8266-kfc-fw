@@ -618,6 +618,7 @@ void *resolve_lambda(void *ptr)
 
 void at_mode_resolve(void *ptr, AtModeResolveACallback resolve_callback)
 {
+#if 0
     auto iterator = at_mode_resolve_map.find(ptr);
     if (iterator != at_mode_resolve_map.end()) {
         resolve_callback(iterator->second);
@@ -661,6 +662,7 @@ void at_mode_resolve(void *ptr, AtModeResolveACallback resolve_callback)
             resolve_callback(at_mode_resolve_map[ptr]);
         }
     }
+#endif
 }
 
 void at_mode_serial_handle_event(String &commandString)
@@ -926,7 +928,7 @@ void at_mode_serial_handle_event(String &commandString)
                 }
             }
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(LS))) {
-                Dir dir = SPIFFSWrapper::openDir(args.get(0));
+                Dir dir = SPIFFS.openDir(args.toString(0));
                 while(dir.next()) {
                     output.print(F("+LS: "));
                     if (dir.isFile()) {
@@ -976,7 +978,7 @@ void at_mode_serial_handle_event(String &commandString)
 #endif
 #if DEBUG
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(FSM))) {
-                Mappings::getInstance().dump(output);
+                // Mappings::getInstance().dump(output);
             }
     #if PIN_MONITOR
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(PINM))) {

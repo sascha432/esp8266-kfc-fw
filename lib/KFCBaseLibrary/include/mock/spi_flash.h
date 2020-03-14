@@ -67,7 +67,7 @@ inline SpiFlashOpResult spi_flash_write(uint32_t des_addr, uint32_t *src_addr, u
 	return SPI_FLASH_RESULT_ERR;
 }
 
-inline SpiFlashOpResult spi_flash_read(uint32_t src_addr, uint32_t *des_addr, uint32_t size) 
+inline SpiFlashOpResult spi_flash_read(uint32_t src_addr, uint32_t *des_addr, uint32_t size)
 {
 	auto eeprom_start_address = ((uint32_t)&_EEPROM_start - EEPROM_ADDR);
 	auto eeprom_ofs = (uint32_t)(src_addr - eeprom_start_address);

@@ -913,9 +913,8 @@ static void clear_crash_counter()
 
 void KFCFWConfiguration::enterDeepSleep(milliseconds time, RFMode mode, uint16_t delayAfterPrepare)
 {
-    _debug_printf_P(PSTR("KFCFWConfiguration::enterDeepSleep(%d, %d, %d)\n"), time_in_ms, mode, delayAfterPrepare);
+    _debug_printf_P(PSTR("time=%d mode=%d delay_prep=%d\n"), time_in_ms, mode, delayAfterPrepare);
 
-    _debug_printf_P(PSTR("Prepearing device for deep sleep...\n"));
     // WiFiCallbacks::getVector().clear(); // disable WiFi callbacks to speed up shutdown
     // Scheduler.terminate(); // halt scheduler
 
@@ -923,7 +922,7 @@ void KFCFWConfiguration::enterDeepSleep(milliseconds time, RFMode mode, uint16_t
 
     delay(1);
 
-    for(auto plugin: plugins) {
+    for(const auto plugin: plugins) {
         plugin->prepareDeepSleep(time.count());
     }
     if (delayAfterPrepare) {
@@ -964,7 +963,7 @@ static void restart_device()
 
 void KFCFWConfiguration::restartDevice()
 {
-    _debug_println(F("KFCFWConfiguration::restartDevice()"));
+    _debug_println();
 
     Logger_notice(F("Device is being restarted"));
     BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::FLICKER);
@@ -978,7 +977,7 @@ void KFCFWConfiguration::restartDevice()
         ESP.restart();
     }
 
-    _debug_printf_P(PSTR("restart(): Scheduled tasks %u, WiFi callbacks %u, Loop Functions %u\n"), Scheduler.size(), WiFiCallbacks::getVector().size(), LoopFunctions::size());
+    _debug_printf_P(PSTR("Scheduled tasks %u, WiFi callbacks %u, Loop Functions %u\n"), Scheduler.size(), WiFiCallbacks::getVector().size(), LoopFunctions::size());
 
     auto webUiSocket = WsWebUISocket::getWsWebUI();
     if (webUiSocket) {
@@ -987,23 +986,20 @@ void KFCFWConfiguration::restartDevice()
 
     // execute in reverse order
     for(auto iterator = plugins.rbegin(); iterator != plugins.rend(); ++iterator) {
-        auto plugin = *iterator;
-        _debug_printf("restart(): plugin %s\n", plugin->getName());
+        const auto plugin = *iterator;
+        _debug_printf("plugin=%s\n", plugin->getName());
         plugin->restart();
     }
 
-    _debug_printf_P(PSTR("restart(): After plugins: Scheduled tasks %u, WiFi callbacks %u, Loop Functions %u\n"), Scheduler.size(), WiFiCallbacks::getVector().size(), LoopFunctions::size());
+    _debug_printf_P(PSTR("After plugins: Scheduled tasks %u, WiFi callbacks %u, Loop Functions %u\n"), Scheduler.size(), WiFiCallbacks::getVector().size(), LoopFunctions::size());
 
     WiFiCallbacks::clear();
     LoopFunctions::clear();
     Scheduler.end();
 
 #if PIN_MONITOR
-    auto pinMonitor = PinMonitor::getInstance();
-    if (pinMonitor) {
-        debug_printf_P(PSTR("Pin monitor has %u pins attached\n"), pinMonitor->size());
-        PinMonitor::deleteInstance();
-    }
+    _debug_printf_P(PSTR("Pin monitor has %u pins attached\n"), PinMonitor::getInstance() ? PinMonitor::getInstance()->size() : 0);
+    PinMonitor::deleteInstance();
 #endif
 
     // give system time to finish all tasks
@@ -1062,7 +1058,7 @@ String KFCFWConfiguration::getWiFiEncryptionType(uint8_t type)
 
 bool KFCFWConfiguration::reconfigureWiFi()
 {
-    _debug_println(F("KFCFWConfiguration::reconfigureWiFi()"));
+    _debug_println();
 
     WiFi.persistent(false); // disable during disconnects since it saves the configuration
     WiFi.setAutoConnect(false);
@@ -1076,7 +1072,6 @@ bool KFCFWConfiguration::reconfigureWiFi()
 
 bool KFCFWConfiguration::connectWiFi()
 {
-    _debug_println(F("KFCFWConfiguration::connectWiFi()"));
     setLastError(String());
 
     bool station_mode_success = false;
@@ -1084,7 +1079,7 @@ bool KFCFWConfiguration::connectWiFi()
 
     auto flags = config._H_GET(Config().flags);
     if (flags.wifiMode & WIFI_STA) {
-        _debug_println(F("KFCFWConfiguration::connectWiFi(): station mode"));
+        _debug_println(F("init station mode"));
         WiFi.setAutoConnect(false); // WiFi callbacks have to be installed first during boot
         WiFi.setAutoReconnect(true);
 
@@ -1113,13 +1108,13 @@ bool KFCFWConfiguration::connectWiFi()
         }
     }
     else {
-        _debug_println(F("KFCFWConfiguration::connectWiFi(): disabling station mode"));
+        _debug_println(F("disabling station mode"));
         WiFi.disconnect(true);
         station_mode_success = true;
     }
 
     if (flags.wifiMode & WIFI_AP) {
-        _debug_println(F("KFCFWConfiguration::connectWiFi(): ap mode"));
+        _debug_println(F("init AP mode"));
 
         // config._H_GET(Config().soft_ap.encryption not used
 
@@ -1188,7 +1183,7 @@ bool KFCFWConfiguration::connectWiFi()
         }
     }
     else {
-        _debug_println(F("KFCFWConfiguration::connectWiFi(): disabling AP mode"));
+        _debug_println(F("disabling AP mode"));
         WiFi.softAPdisconnect(true);
         ap_mode_success = true;
     }
@@ -1232,9 +1227,8 @@ void KFCFWConfiguration::printInfo(Print &output)
         output.println(F("Running on factory settings"));
     }
     if (flags.isDefaultPassword) {
-        String str = FSPGM(default_password_warning);
-        Logger_security(str);
-        output.println(str);
+        Logger_security(FSPGM(default_password_warning));
+        output.println(FSPGM(default_password_warning));
     }
     output.printf_P(PSTR("Device %s ready!\n"), config._H_STR(Config().device_name));
 
@@ -1300,15 +1294,15 @@ uint32_t KFCFWConfiguration::getRTC()
     initTwoWire();
     if (rtc.begin()) {
         auto unixtime = rtc.now().unixtime();
-        debug_printf_P(PSTR("KFCFWConfiguration::getRTC(): time=%u\n"), unixtime);
+        debug_printf_P(PSTR("time=%u\n"), unixtime);
         if (rtc.lostPower()) {
-            debug_printf_P(PSTR("KFCFWConfiguration::getRTC(): time=0, lostPower=true\n"));
+            debug_printf_P(PSTR("time=0, lostPower=true\n"));
             return 0;
         }
         return unixtime;
     }
 #endif
-    debug_printf_P(PSTR("KFCFWConfiguration::getRTC(): time=error\n"));
+    debug_printf_P(PSTR("time=error\n"));
     return 0;
 }
 

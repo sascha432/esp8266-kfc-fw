@@ -59,6 +59,7 @@ void MQTTComponent::onMessage(MQTTClient *client, char *topic, char *payload, si
 }
 
 #if MQTT_AUTO_DISCOVERY
+
 void MQTTComponent::publishAutoDiscovery(MQTTClient *client)
 {
     if (MQTTAutoDiscovery::isEnabled()) {
@@ -69,8 +70,8 @@ void MQTTComponent::publishAutoDiscovery(MQTTClient *client)
             client->publish(discovery->getTopic(), client->getDefaultQos(), true, discovery->getPayload());
         }
     }
-
 }
+
 #endif
 
 PGM_P MQTTComponent::getComponentName()

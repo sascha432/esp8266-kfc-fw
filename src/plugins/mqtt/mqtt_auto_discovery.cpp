@@ -182,7 +182,7 @@ String &MQTTAutoDiscovery::getTopic()
 bool MQTTAutoDiscovery::isEnabled()
 {
 #if MQTT_AUTO_DISCOVERY
-    return config._H_GET(Config().flags).mqttAutoDiscoveryEnabled;
+    return !resetDetector.hasWakeUpDetected() && config._H_GET(Config().flags).mqttAutoDiscoveryEnabled;
 #else
     return false;
 #endif
@@ -209,11 +209,10 @@ const String MQTTAutoDiscovery::_getUnqiueId(const String &name)
     deviceId += WiFi.macAddress();
     crc[2] = crc16_update(crc[1], (uint8_t *)deviceId.c_str(), deviceId.length());
 
-    PrintString uniqueId;
-    uniqueId += name;
+    PrintString uniqueId = name;
     uniqueId += '_';
     for(uint8_t i = 0; i < 3; i++) {
-        uniqueId.printf("%04x", crc[i]);
+        uniqueId.printf_P(PSTR("%04x"), crc[i]);
     }
     return uniqueId;
 }

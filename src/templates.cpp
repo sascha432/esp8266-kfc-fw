@@ -224,14 +224,14 @@ void ConfigTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     if (String_equals(key, F("NETWORK_MODE"))) {
         bool m = false;
         if (config._H_GET(Config().flags).wifiMode & WIFI_AP) {
-            output.print(F("#station_mode"));
+            output.print(F("#ap_mode"));
             m = true;
         }
         if (config._H_GET(Config().flags).wifiMode & WIFI_STA) {
             if (m) {
                 output.print(',');
             }
-            output.print(F("#ap_mode"));
+            output.print(F("#station_mode"));
         }
     }
     else if (String_startsWith(key, F("MAX_CHANNELS"))) {

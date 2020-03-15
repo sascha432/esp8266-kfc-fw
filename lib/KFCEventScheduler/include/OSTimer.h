@@ -5,7 +5,7 @@
 #pragma once
 
 #ifndef DEBUG_OSTIMER
-#define DEBUG_OSTIMER 0
+#define DEBUG_OSTIMER             0
 #endif
 
 #include <Arduino_compat.h>

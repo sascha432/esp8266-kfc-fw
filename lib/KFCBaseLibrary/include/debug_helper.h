@@ -176,7 +176,7 @@ public:
 
 #define debug_println_notempty(msg)             CHECK_MEMORY(); if (DebugHelper::__state == DEBUG_HELPER_STATE_ACTIVE && msg.length()) { debug_prefix();  DEBUG_OUTPUT.println(msg); }
 #define debug_print(msg)                        CHECK_MEMORY(); if (DebugHelper::__state == DEBUG_HELPER_STATE_ACTIVE) { DEBUG_OUTPUT.print(msg); }
-#define debug_println(...)                      CHECK_MEMORY(); if (DebugHelper::__state == DEBUG_HELPER_STATE_ACTIVE) { debug_prefix(); DEBUG_OUTPUT.println(## __VA_ARGS__); }
+#define debug_println(...)                      CHECK_MEMORY(); if (DebugHelper::__state == DEBUG_HELPER_STATE_ACTIVE) { debug_prefix(); DEBUG_OUTPUT.println(__VA_ARGS__); }
 #define debug_printf(fmt, ...)                  CHECK_MEMORY(); if (DebugHelper::__state == DEBUG_HELPER_STATE_ACTIVE) { debug_prefix(); DEBUG_OUTPUT.printf(fmt, ## __VA_ARGS__); }
 #define debug_printf_P(fmt, ...)                CHECK_MEMORY(); if (DebugHelper::__state == DEBUG_HELPER_STATE_ACTIVE) { debug_prefix(); DEBUG_OUTPUT.printf_P(fmt, ## __VA_ARGS__); }
 #define debug_dump_args(...)                    CHECK_MEMORY(); if (DebugHelper::__state == DEBUG_HELPER_STATE_ACTIVE) { debug_prefix(); DebugDumper(DEBUG_OUTPUT).dumpArgs(DEBUG_DUMPER_ARGS(__VA_ARGS__)); }

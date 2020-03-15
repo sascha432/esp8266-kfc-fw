@@ -21,19 +21,32 @@ namespace KFCConfigurationClasses {
         _flags.isFactorySettings = true;
         _flags.isDefaultPassword = true;
         _flags.atModeEnabled = true;
+
+        _flags.wifiMode = WIFI_AP_STA;
+        _flags.stationModeDHCPEnabled = true;
+        _flags.softAPDHCPDEnabled = true;
+
+        _flags.mqttAutoDiscoveryEnabled = true;
+        _flags.mqttMode = MQTT_MODE_DISABLED;
+
+        _flags.ntpClientEnabled = true;
+
 #if defined(ESP32) && WEBSERVER_TLS_SUPPORT
         _flags.webServerMode = HTTP_MODE_SECURE;
 #else
         _flags.webServerMode = HTTP_MODE_UNSECURE;
 #endif
-#if defined(ESP8266)
         _flags.webServerPerformanceModeEnabled = true;
-#endif
+
         _flags.ledMode = true;
+
         _flags.useStaticIPDuringWakeUp = true;
-#if SERIAL2TCP
+
         _flags.serial2TCPMode = SERIAL2TCP_MODE_DISABLED;
-#endif
+
+        _flags.syslogProtocol = SYSLOG_PROTOCOL_TCP;
+
+        _flags.serial2TCPMode = SERIAL2TCP_MODE_DISABLED;
     }
 
     System::Flags System::Flags::read()

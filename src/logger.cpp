@@ -9,12 +9,12 @@
 #if SYSLOG
 #include <KFCSyslog.h>
 #endif
+#include <misc.h>
 #include "timezone.h"
 #include "kfc_fw_config.h"
 
 #if DEBUG_LOGGER
 #include <debug_helper_enable.h>
-#include <misc.h>
 #else
 #include <debug_helper_disable.h>
 #endif
@@ -246,7 +246,7 @@ void Logger::getLogs(StringVector &logs)
         logs.emplace_back(FSPGM(log_file_debug));
     }
 #endif
-    debug_printf_P(PSTR("Logger::getLogs(): %s\n"), implode(',', logs).c_str());
+    _debug_printf_P(PSTR("Logger::getLogs(): %s\n"), implode(',', logs).c_str());
 }
 
 void Logger::writeLog(LogLevel logLevel, const char *message, va_list arg)

@@ -30,7 +30,7 @@ static void ICACHE_RAM_ATTR _callback(void *arg)
 
 void OSTimer::startTimer(uint32_t delay, bool repeat)
 {
-    debug_printf_P(PSTR("delay=%u repeat=%u\n"), delay, repeat);
+    _debug_printf_P(PSTR("delay=%u repeat=%u\n"), delay, repeat);
     if (delay < EventTimer::MIN_DELAY) {
         __debugbreak_and_panic_printf_P(PSTR("delay %u < %u is not supported\n"), delay, EventTimer::MIN_DELAY);
         delay = EventTimer::MIN_DELAY;
@@ -53,4 +53,3 @@ void OSTimer::detach()
         _etsTimer.timer_arg = nullptr;
     }
 }
-

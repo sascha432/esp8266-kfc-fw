@@ -5,7 +5,12 @@
 #pragma once
 
 #ifndef DEBUG_KFC_CONFIG
-#define DEBUG_KFC_CONFIG        0
+#define DEBUG_KFC_CONFIG            0
+#endif
+
+// basic load statistics
+#ifndef LOAD_STATISTICS
+#define LOAD_STATISTICS             1
 #endif
 
 #include <Arduino_compat.h>
@@ -32,6 +37,13 @@
 #undef dhcp_start
 #endif
 
+#if LOAD_STATISTICS
+extern unsigned long load_avg_timer;
+extern uint32_t load_avg_counter;
+extern float load_avg[3]; // 1min, 5min, 15min
+#define LOOP_COUNTER_LOAD(avg) (avg ? 45900 / avg : NAN)    // this calculates the load compared to safe mode @ 1.0, no wifi and no load, 80MHz
+#endif
+
 #if defined(ESP32)
 #include <esp_wifi_types.h>
 #define WIFI_ENCRYPTION_ARRAY               array_of<uint8_t>(WIFI_AUTH_OPEN, WIFI_AUTH_WEP, WIFI_AUTH_WPA_PSK, WIFI_AUTH_WPA2_PSK, WIFI_AUTH_WPA_WPA2_PSK, WIFI_AUTH_WPA2_ENTERPRISE)
@@ -48,7 +60,7 @@ static auto const WiFiEncryptionTypeDefault = ENC_TYPE_CCMP;
 #endif
 
 
-#define HASH_SIZE               64
+#define HASH_SIZE                   64
 
 enum HttpMode_t : uint8_t {
     HTTP_MODE_DISABLED = 0,
@@ -216,7 +228,7 @@ public:
         return config.qos;
     }
 
-    static void defaults(MQTTMode_t mode = MQTT_MODE_UNSECURE);
+    static void defaults();
 
     static Config_MQTT::config_t getConfig();
     static MQTTMode_t getMode();
@@ -263,8 +275,8 @@ public:
     typedef struct __attribute__packed__ {
         int32_t offset: 32;
         char abbreviation[4];
-        bool dst;
-        uint16_t ntpRefresh;
+        uint16_t ntpRefresh: 16;
+        uint8_t dst: 1;
     } Timezone_t;
 
     Config_NTP();

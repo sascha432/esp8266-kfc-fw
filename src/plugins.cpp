@@ -48,8 +48,8 @@ void register_plugin(PluginComponent *plugin)
     pluginsPtr->push_back(plugin);
 }
 
-void dump_plugin_list(Print &output) {
-
+void dump_plugin_list(Print &output)
+{
 #if DEBUG
 
     #define BOOL_STR(value) (value ? SPGM(yes) : SPGM(no))
@@ -80,8 +80,8 @@ void dump_plugin_list(Print &output) {
 
 }
 
-void prepare_plugins() {
-
+void prepare_plugins()
+{
     // copy & sort plugins and free temporary data
     plugins.resize(pluginsPtr->size());
     std::partial_sort_copy(pluginsPtr->begin(), pluginsPtr->end(), plugins.begin(), plugins.end(), [](const PluginComponent *a, const PluginComponent *b) {
@@ -89,14 +89,14 @@ void prepare_plugins() {
     });
     free(pluginsPtr);
 
-    _debug_printf_P(PSTR("prepare_plugins() counter %d\n"), plugins.size());
+    _debug_printf_P(PSTR("counter=%d\n"), plugins.size());
 
 #if DEBUG
     // check for duplicate RTC memory ids
     uint8_t i = 0;
     for(const auto plugin : plugins) {
 #if DEBUG_PLUGINS
-        _debug_printf_P(PSTR("%s prio %d\n"), plugin->getName(), plugin->getSetupPriority());
+        _debug_printf_P(PSTR("name=%s prio=%d\n"), plugin->getName(), plugin->getSetupPriority());
 #endif
 
         if (plugin->getRtcMemoryId() > PLUGIN_RTC_MEM_MAX_ID) {
@@ -154,9 +154,9 @@ static void create_menu()
 
 static bool enableWebUIMenu = false;
 
-void setup_plugins(PluginComponent::PluginSetupMode_t mode) {
-
-    _debug_printf_P(PSTR("setup_plugins(%d) counter %d\n"), mode, plugins.size());
+void setup_plugins(PluginComponent::PluginSetupMode_t mode)
+{
+    _debug_printf_P(PSTR("mode=%d counter=%d\n"), mode, plugins.size());
 
     if (mode != PluginComponent::PLUGIN_SETUP_DELAYED_AUTO_WAKE_UP) {
         create_menu();
@@ -168,7 +168,7 @@ void setup_plugins(PluginComponent::PluginSetupMode_t mode) {
             (mode == PluginComponent::PLUGIN_SETUP_SAFE_MODE && plugin->allowSafeMode()) ||
             (mode == PluginComponent::PLUGIN_SETUP_AUTO_WAKE_UP && plugin->autoSetupAfterDeepSleep()) ||
             (mode == PluginComponent::PLUGIN_SETUP_DELAYED_AUTO_WAKE_UP && !plugin->autoSetupAfterDeepSleep());
-        _debug_printf_P(PSTR("setup_plugins(%d) %s priority %d run setup %d\n"), mode, plugin->getName(), plugin->getSetupPriority(), runSetup);
+        _debug_printf_P(PSTR("name=%s prio=%d setup=%d\n"), plugin->getName(), plugin->getSetupPriority(), runSetup);
         if (runSetup) {
             plugin->setSetupTime();
             plugin->setup(mode);

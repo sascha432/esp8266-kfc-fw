@@ -96,9 +96,6 @@ void Config_NTP::defaults()
     // https://timezonedb.com/register
     ::config._H_SET_STR(Config().ntp.remote_tz_dst_ofs_url, F("http://api.timezonedb.com/v2.1/get-time-zone?key=_YOUR_API_KEY_&by=zone&format=json&zone=${timezone}"));
 #endif
-    auto flags = ::config._H_GET(Config().flags);
-    flags.ntpClientEnabled = true;
-    ::config._H_SET(Config().flags, flags);
 }
 
 
@@ -136,18 +133,15 @@ Config_WeatherStation::WeatherStationConfig_t Config_WeatherStation::getConfig()
 
 Config_MQTT::Config_MQTT()
 {
-    config.port = (::config._H_GET(Config().flags).mqttMode == MQTT_MODE_SECURE) ? 8883 : 1883;
+    using KFCConfigurationClasses::System;
+
+    config.port = (System::Flags::read()->mqttMode == MQTT_MODE_SECURE) ? 8883 : 1883;
     config.keepalive = 10;
     config.qos = 2;
 }
 
-void Config_MQTT::defaults(MQTTMode_t mode)
+void Config_MQTT::defaults()
 {
-    auto flags = ::config._H_GET(Config().flags);
-    flags.mqttMode = mode;
-    flags.mqttAutoDiscoveryEnabled = true;
-    ::config._H_SET(Config().flags, flags);
-
     ::config._H_SET(Config().mqtt.config, Config_MQTT().config);
     ::config._H_SET_STR(Config().mqtt.username, emptyString);
     ::config._H_SET_STR(Config().mqtt.password, emptyString);
@@ -530,30 +524,14 @@ using KFCConfigurationClasses::Plugins;
 
 void KFCFWConfiguration::restoreFactorySettings()
 {
-    _debug_println(F("KFCFWConfiguration::restoreFactorySettings()"));
+    _debug_println();
     PrintString str;
 
     clear();
     _H_SET(Config().version, FIRMWARE_VERSION);
 
-    ConfigFlags flags = ConfigFlags();
-    flags.isFactorySettings = true;
-    flags.isDefaultPassword = true;
-    flags.atModeEnabled = true;
-#if defined(ESP32) && WEBSERVER_TLS_SUPPORT
-    flags.webServerMode = HTTP_MODE_SECURE;
-#else
-    flags.webServerMode = HTTP_MODE_UNSECURE;
-#endif
-#if defined(ESP8266)
-    flags.webServerPerformanceModeEnabled = true;
-#endif
-    flags.ledMode = true;
-    flags.useStaticIPDuringWakeUp = true;
-#if SERIAL2TCP
-    flags.serial2TCPMode = SERIAL2TCP_MODE_DISABLED;
-#endif
-    _H_SET(Config().flags, flags);
+    auto flags = System::Flags();
+    flags.write();
 
     auto defaultPassword = F("12345678");
     uint8_t mac[6];
@@ -696,10 +674,13 @@ void KFCFWConfiguration::restoreFactorySettings()
     }
 #endif
 
+#if CUSTOM_CONFIG_PRESET
     customSettings();
+#endif
 }
 
 #if CUSTOM_CONFIG_PRESET
+    // set CUSTOM_CONFIG_PRESET to 0 if no custom config is being used
     #include "retracted/custom_config.h"
 #endif
 
@@ -913,7 +894,7 @@ static void clear_crash_counter()
 
 void KFCFWConfiguration::enterDeepSleep(milliseconds time, RFMode mode, uint16_t delayAfterPrepare)
 {
-    _debug_printf_P(PSTR("time=%d mode=%d delay_prep=%d\n"), time_in_ms, mode, delayAfterPrepare);
+    _debug_printf_P(PSTR("time=%d mode=%d delay_prep=%d\n"), time.count(), mode, delayAfterPrepare);
 
     // WiFiCallbacks::getVector().clear(); // disable WiFi callbacks to speed up shutdown
     // Scheduler.terminate(); // halt scheduler

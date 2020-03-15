@@ -22,11 +22,7 @@
 // store enum names and values as string
 // can be displayed with toString() and dump()
 #ifndef ENUM_BASE_STORE_ENUM_AS_STRING
-#if DEBUG
-#define ENUM_BASE_STORE_ENUM_AS_STRING                      1
-#else
-#define ENUM_BASE_STORE_ENUM_AS_STRING                      0
-#endif
+#define ENUM_BASE_STORE_ENUM_AS_STRING                      DEBUG
 #endif
 
 #if ENUM_BASE_STORE_ENUM_AS_STRING
@@ -34,7 +30,7 @@
 // provides
 // object = ENUMVALS for settings
 // object == ENUMVALS for comparing
-// object ? "any value aother than zero" : "zero"
+// object ? "any value other than zero" : "zero"
 // object.toString() to convert to string (decimal value if debug mode is disabled)
 // object.dump(Print &) display debug info
 // ClassName::ENUM::ENUMVALS

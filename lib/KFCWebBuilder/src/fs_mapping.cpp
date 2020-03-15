@@ -23,9 +23,6 @@
 #include "logger.h"
 #endif
 
-#undef DEBUG_FS_MAPPING
-#define DEBUG_FS_MAPPING                    1
-
 #if DEBUG_FS_MAPPING
 #include <debug_helper_enable.h>
 #else

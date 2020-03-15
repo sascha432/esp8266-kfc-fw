@@ -217,7 +217,11 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PINM, "PINM", "[<1=start|0=stop>}", "List 
 #endif
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(PLUGINS, "PLUGINS", "List plugins");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PLGI, "PLGI", "<name>[,1=end]", "Init or end plugin");
+#if LOAD_STATISTICS
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HEAP, "HEAP", "[interval in seconds|0=disable]", "Display free heap and system load");
+#else
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HEAP, "HEAP", "[interval in seconds|0=disable]", "Display free heap");
+#endif
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RSSI, "RSSI", "[interval in seconds|0=disable]", "Display WiFi RSSI");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(GPIO, "GPIO", "[interval in seconds|0=disable]", "Display GPIO states");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PWM, "PWM", "<pin>,<level=0-1023/off>[,<frequency=1000Hz>]", "PWM output on PIN");
@@ -373,7 +377,11 @@ DisplayTimer displayTimer;
 static void heap_timer_callback(EventScheduler::TimerPtr timer)
 {
     if (displayTimer._type == DisplayTimer::HEAP) {
-        MySerial.printf_P(PSTR("+HEAP: Free %u CPU %d MHz\n"), ESP.getFreeHeap(), ESP.getCpuFreqMHz());
+        MySerial.printf_P(PSTR("+HEAP: Free %u CPU %d MHz"), ESP.getFreeHeap(), ESP.getCpuFreqMHz());
+#if LOAD_STATISTICS
+        MySerial.printf_P(PSTR(" load avg %.2f %.2f %.2f"), LOOP_COUNTER_LOAD(load_avg[0]), LOOP_COUNTER_LOAD(load_avg[1]), LOOP_COUNTER_LOAD(load_avg[2]));
+#endif
+        MySerial.println();
     }
     else if (displayTimer._type == DisplayTimer::GPIO) {
         MySerial.printf_P(PSTR("+GPIO: "));

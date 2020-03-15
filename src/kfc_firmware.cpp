@@ -24,11 +24,16 @@
 #include <GDBStub.h>
 extern "C" void gdbstub_do_break();
 #endif
-
+#if 1
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
+#endif
 
 #if SPIFFS_TMP_FILES_TTL
 
-void cleanup_tmp_dir() {
+void cleanup_tmp_dir()
+{
     static MillisTimer timer(SPIFFS_TMP_CLEAUP_INTERVAL * 1000UL);
     if (timer.reached()) {
         ulong now = (millis() / 1000UL);
@@ -48,15 +53,15 @@ void cleanup_tmp_dir() {
                 }
             }
         }
-        // debug_printf_P(PSTR("Cleanup %s: Removed %d file(s)\n"), tmp_dir.c_str(), deleted);
+        _debug_printf_P(PSTR("Cleanup %s: Removed %d file(s)\n"), tmp_dir.c_str(), deleted);
 
         timer.restart();
     }
 }
 #endif
 
-void check_flash_size() {
-
+void check_flash_size()
+{
 #if defined(ESP8266)
     uint32_t realSize = ESP.getFlashChipRealSize();
 #endif
@@ -106,10 +111,11 @@ static void remove_crash_counter(EventScheduler::TimerPtr timer)
 
 #include "./plugins/remote/remote.h"
 
-void setup() {
-
+void setup()
+{
     Serial.begin(KFC_SERIAL_RATE);
     DEBUG_HELPER_INIT();
+    _debug_println(F("begin"));
 
 #if DEBUG_RESET_DETECTOR
     resetDetector._init();
@@ -279,7 +285,7 @@ void setup() {
         Scheduler.addTimer(1000, true, [](EventScheduler::TimerPtr timer) {
             timer->rearm(60000);
             if (!WiFi.isConnected()) {
-                debug_println(F("restarting WiFi"));
+                _debug_println(F("WiFi not connected, restarting"));
                 config.reconfigureWiFi();
             }
         });
@@ -297,20 +303,20 @@ void setup() {
 #if DEBUG
         if (!resetDetector.hasWakeUpDetected()) {
             check_flash_size();
-            debug_printf_P(PSTR("Free Sketch Space %u\n"), ESP.getFreeSketchSpace());
+            _debug_printf_P(PSTR("Free Sketch Space %u\n"), ESP.getFreeSketchSpace());
 #if defined(ESP8266)
-            debug_printf_P(PSTR("CPU frequency %d\n"), system_get_cpu_freq());
+            _debug_printf_P(PSTR("CPU frequency %d\n"), system_get_cpu_freq());
 #endif
         }
 #endif
 
 #if SPIFFS_CLEANUP_TMP_DURING_BOOT
         if (!resetDetector.hasWakeUpDetected()) {
-            debug_println(F("Cleaning up /tmp directory"));
+            _debug_println(F("Cleaning up /tmp directory"));
             Dir dir = SPIFFS_openDir(sys_get_temp_dir());
             while(dir.next()) {
-                bool status = SPIFFS.remove(dir.fileName());
-                debug_printf_P(PSTR("remove=%s result=%d\n"), dir.fileName().c_str(), status);
+                _IF_DEBUG(bool status =) SPIFFS.remove(dir.fileName());
+                _debug_printf_P(PSTR("remove=%s result=%d\n"), dir.fileName().c_str(), status);
             }
         }
 #endif
@@ -323,16 +329,29 @@ void setup() {
         setup_plugins(resetDetector.hasWakeUpDetected() ? PluginComponent::PLUGIN_SETUP_AUTO_WAKE_UP : PluginComponent::PLUGIN_SETUP_DEFAULT);
 
 #if SPIFFS_SUPPORT
+        _debug_printf_P(PSTR("remove crash counter=180s\n"));
         Scheduler.addTimer(180 * 1000UL, false, [](EventScheduler::TimerPtr timer) {
             remove_crash_counter(timer);
             resetDetector.clearCounter();
         }); // remove file and reset counters after 3min.
 #endif
-
     }
+
+#if LOAD_STATISTICS
+    load_avg_timer = millis() + 30000;
+#endif
+
+    _debug_println(F("end"));
 }
 
-void loop() {
+#if LOAD_STATISTICS
+unsigned long load_avg_timer = 0;
+uint32_t load_avg_counter = 0;
+float load_avg[3] = {0, 0, 0};
+#endif
+
+void loop()
+{
     auto &loopFunctions = LoopFunctions::getVector();
     for(uint8_t i = 0; i < loopFunctions.size(); i++) { // do not use iterators since the vector can be modifed inside the callback
         if (loopFunctions[i].deleteCallback) {
@@ -344,4 +363,22 @@ void loop() {
             loopFunctions[i].callbackPtr();
         }
     }
+#if LOAD_STATISTICS
+    load_avg_counter++;
+    if (millis() >= load_avg_timer) {
+        load_avg_timer = millis() + 1000;
+        if (load_avg[0] == 0) {
+            load_avg[0] = load_avg_counter / 30;
+            load_avg[1] = load_avg_counter / 30;
+            load_avg[2] = load_avg_counter / 30;
+
+        } else {
+            load_avg[0] = ((load_avg[0] * 60) + load_avg_counter) / (60 + 1);
+            load_avg[1] = ((load_avg[1] * 300) + load_avg_counter) / (300 + 1);
+            load_avg[2] = ((load_avg[2] * 900) + load_avg_counter) / (900 + 1);
+
+        }
+        load_avg_counter = 0;
+    }
+#endif
 }

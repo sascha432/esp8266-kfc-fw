@@ -25,24 +25,25 @@ Framework to build WebUIs with bootstrap and store them mostly compressed in a v
 
 ### KFCVirtualFileSystem
 
-Read only file system with long filename support, optimized for low memory environments
+~~Read only file system with long filename support, optimized for low memory environments~~
+Due to constantly changing file system implementations in the Arduno frameworks currently replaced with long filename support on top of SPIFFS/LittleFS, but no transparent access for Dir()/File() anymore
 
 ### KFCJson
 
-Library to read streamed JSON documents
+Library to read streamed JSON documents and create JSON streams with small buffer size
 
 ### KFCEventScheduler
 
-Platform indepentend Timer, Scheduler, WiFi Callbacks and loop function callbacks
+Platform indepentend timer, scheduler with prioritized queue, WiFi callbacks and loop functions with basic support for calculating load average
 
 ### KFCResetDetector
 
 Detect crashes and offer safe mode by pressing reset button during boot, count number of resets for extended functionality (reset configuration, open public hotspot etc...)
-It also offers a RTC memory mananger to store data identified by an unqiue id
+It also offers a RTC memory mananger to store data identified by an unqiue id and crc check
 
 ### KFCConfiguration
 
-Library to handle configurations stored in the EEPROM, read on demand to save memory, manage changes in structure automatically
+Library to handle configurations stored in the EEPROM, read on demand to save memory, manage changes in structure automatically, export and import configuration as JSON
 
 ### KFCRestApi
 
@@ -64,7 +65,7 @@ Serial console access over the WebUI using web sockets
 
 ### Serial2TCP
 
-Serial console redirection via TCP
+Serial console redirection via TCP in client or server mode
 
 ### STK500v1
 
@@ -80,24 +81,24 @@ NTP Client with timezone support via REST API
 
 ### Syslog
 
-Send log messages to a syslog server
+Send log messages to a syslog server via TCP/UDP
 
 ### Ping Monitor
 
-Ping remote hosts over the webui and run background ping statistics
+Ping remote hosts over the WebUI and run background ping statistics
 
 ### I2C Scanner
 
-Scan all GPIO pins for I2C devices
+Scan GPIO pins for I2C devices
 
 ### Weather Station
 
 Weather Station for TFT displays with openweathermap.org API.
-Remote view over WebUI.
+Live remote view over WebUI and screenshots in .BMP format
 
 ### Sensor
 
-Plugin for different sensors. Voltage/Battery charger, BME280, BME680, CCS811, HLW8012, LM75A, DS3231, INA219.
+Plugin for different sensors. Voltage/Battery with charging indicator, BME280, BME680, CCS811, HLW8012, LM75A, DS3231, INA219.
 Support for native WebUI and MQTT.
 
 ### Clock

@@ -194,11 +194,11 @@ const uint8_t *Config_MQTT::getFingerprint()
 
 const char *Config_Ping::getHost(uint8_t num)
 {
-    static const uint16_t handles[] PROGMEM = { CONFIG_GET_HANDLE(Config().ping.host1), CONFIG_GET_HANDLE(Config().ping.host2), CONFIG_GET_HANDLE(Config().ping.host3), CONFIG_GET_HANDLE(Config().ping.host4) };
+    const uint16_t handles[] = { CONFIG_GET_HANDLE(Config().ping.host1), CONFIG_GET_HANDLE(Config().ping.host2), CONFIG_GET_HANDLE(Config().ping.host3), CONFIG_GET_HANDLE(Config().ping.host4) };
     if (num >= sizeof(handles)) {
         return nullptr;
     }
-    return ::config._H_STR(pgm_read_word(handles[num]));
+    return ::config._H_STR(handles[num]);
 
 }
 
@@ -521,6 +521,8 @@ using KFCConfigurationClasses::MainConfig;
 using KFCConfigurationClasses::Network;
 using KFCConfigurationClasses::System;
 using KFCConfigurationClasses::Plugins;
+
+// TODO add option to keep WiFi SSID, username and password
 
 void KFCFWConfiguration::restoreFactorySettings()
 {

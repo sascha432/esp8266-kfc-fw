@@ -40,6 +40,11 @@ void ICACHE_RAM_ATTR EventTimer::setCallback(EventScheduler::Callback loopCallba
     _loopCallback = loopCallback;
 }
 
+EventScheduler::Callback EventTimer::getCallback()
+{
+    return _loopCallback;
+}
+
 void ICACHE_RAM_ATTR EventTimer::setPriority(EventScheduler::Priority_t priority)
 {
     _priority = priority;

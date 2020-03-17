@@ -293,5 +293,4 @@ namespace KFCConfigurationClasses {
     {
         return config._H_GET(MainConfig().plugins.remotecontrol);
     }
-
 };

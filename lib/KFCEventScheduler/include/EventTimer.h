@@ -41,6 +41,7 @@ public:
     // }
 
     void setCallback(EventScheduler::Callback loopCallback);
+    EventScheduler::Callback getCallback();
     void setPriority(EventScheduler::Priority_t priority = EventScheduler::PRIO_LOW);
 
     // cancels timer and updates options

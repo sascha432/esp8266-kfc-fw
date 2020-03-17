@@ -866,7 +866,7 @@ void at_mode_serial_handle_event(String &commandString)
                 auto flags = config._H_GET(Config().flags);
                 args.printf_P("DHCP %u, station mode %s, SSID %s, connected %u, IP %s",
                     flags.softAPDHCPDEnabled,
-                    (flags.wifiMode & WIFI_STA) ? PSTR("on") : PSTR("off"),
+                    (flags.wifiMode & WIFI_STA) ? SPGM(on) : SPGM(off),
                     config._H_STR(MainConfig().network.WiFiConfig._ssid),
                     WiFi.isConnected(),
                     WiFi.localIP().toString().c_str()

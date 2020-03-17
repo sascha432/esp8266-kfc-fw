@@ -7,77 +7,105 @@
 #pragma once
 
 #ifndef DEBUG_IOT_SWITCH
-#define DEBUG_IOT_SWITCH                    0
+#define DEBUG_IOT_SWITCH                    1
 #endif
 
 #include <Arduino_compat.h>
-#include <vector>
+#include <EventScheduler.h>
 #include "../mqtt/mqtt_client.h"
-#include "pin_monitor.h"
-#include <Button.h>
-#include <ButtonEventCallback.h>
-#include <PushButton.h>
-#include <Bounce2.h>
+#include "plugins.h"
+#include "kfc_fw_config.h"
 
-#ifndef IOT_SWITCH_PINS
-#error IOT_SWITCH_PINS needs to list button pins for example "#define IOT_SWITCH_PINS D6,D7"
+#ifndef IOT_SWITCH_ON_STATE
+#define IOT_SWITCH_ON_STATE                         HIGH
 #endif
 
-// active state either LOW or HIGH
-#ifndef IOT_SWITCH_ACTIVE_STATE
-#define IOT_SWITCH_ACTIVE_STATE             PRESSED_WHEN_LOW
+// interval to publish the state of all channels, 0 to disable
+#ifndef IOT_SWITCH_PUBLISH_MQTT_INTERVAL
+#define IOT_SWITCH_PUBLISH_MQTT_INTERVAL            60000
 #endif
 
-// initial time to trigger hold event, 0 to disable
-#ifndef IOT_SWITCH_HOLD_DURATION
-#define IOT_SWITCH_HOLD_DURATION            800
+// store states on file system
+#ifndef IOT_SWITCH_STORE_STATES
+#define IOT_SWITCH_STORE_STATES                     1
 #endif
 
-// trigger hold down event every n milliseconds
-#ifndef IOT_SWITCH_HOLD_REPEAT
-#define IOT_SWITCH_HOLD_REPEAT              100
+#ifndef IOT_SWITCH_STORE_STATES_WRITE_DELAY
+#define IOT_SWITCH_STORE_STATES_WRITE_DELAY         30000
 #endif
 
-class IOTSwitch : public MQTTComponent {
+#ifndef IOT_SWITCH_CHANNEL_NUM
+#error IOT_SWITCH_CHANNEL_NUM not defined
+#endif
+
+#ifndef IOT_SWITCH_CHANNEL_PINS
+#error IOT_SWITCH_CHANNEL_PINS not defined
+#endif
+
+class SwitchPlugin : public PluginComponent, public MQTTComponent {
 public:
-    class ButtonContainer {
-    public:
-        ButtonContainer(uint8_t pin) : _pin(pin), _button(pin, IOT_SWITCH_ACTIVE_STATE) {
-        }
+    SwitchPlugin();
 
-        inline uint8_t getPin() const {
-            return _pin;
-        }
+// PluginComponent
+public:
+    virtual PGM_P getName() const override {
+        return PSTR("switch");
+    }
+    virtual const __FlashStringHelper *getFriendlyName() const override {
+        return F("Switch");
+    }
+    virtual PluginPriorityEnum_t getSetupPriority() const override {
+        return DEFAULT_PRIORITY;
+    }
 
-        inline PushButton &getButton() {
-            return _button;
-        }
+    virtual void setup(PluginSetupMode_t mode) override;
+    virtual void restart() override;
+    virtual void reconfigure(PGM_P source) override;
 
-    private:
-        uint8_t _pin;
-        PushButton _button;
-    };
+    virtual bool hasStatus() const override {
+        return true;
+    }
+    virtual void getStatus(Print &output) override;
 
-    typedef std::vector<ButtonContainer> ButtonVector;
+    virtual PGM_P getConfigureForm() const override {
+        return PSTR("switch");
+    }
+    virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
 
-    IOTSwitch();
-    virtual ~IOTSwitch();
 
+// MQTTComponent
+public:
     virtual void createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector) override;
     virtual uint8_t getAutoDiscoveryCount() const override;
-
-    static void pinCallback(void *arg);
-    static void loop();
-
-    static void onButtonPressed(Button& btn);
-    static void onButtonHeld(Button& btn, uint16_t duration, uint16_t repeatCount);
-    static void onButtonReleased(Button& btn, uint16_t duration);
+    virtual void onConnect(MQTTClient *client) override;
+    virtual void onMessage(MQTTClient *client, char *topic, char *payload, size_t len) override;
 
 private:
-    ButtonVector _buttons;
+    void _publishState(MQTTClient *client, int8_t channel = -1);
 
-    void _pinCallback(PinMonitor::Pin_t &pin);
-    void _loop();
+#if IOT_SWITCH_PUBLISH_MQTT_INTERVAL
+    EventScheduler::Timer _updateTimer;
+#endif
+#if IOT_SWITCH_STORE_STATES
+    EventScheduler::Timer _delayedWrite;
+#endif
+
+private:
+    void _setChannel(uint8_t channel, bool state);
+    bool _getChannel(uint8_t channel) const;
+    String _getChannelName(uint8_t channel) const;
+    void _readConfig();
+    void _readStates();
+    void _writeStates();
+
+private:
+    using SwitchConfig = KFCConfigurationClasses::Plugins::IOTSwitch::Switch_t;
+    using SwitchStateEnum = KFCConfigurationClasses::Plugins::IOTSwitch::StateEnum_t;
+
+    std::array<String, IOT_SWITCH_CHANNEL_NUM> _names;
+    std::array<SwitchConfig, IOT_SWITCH_CHANNEL_NUM> _configs;
+    uint32_t _states;
+    const std::array<uint8_t, IOT_SWITCH_CHANNEL_NUM> _pins;
 };
 
 #endif

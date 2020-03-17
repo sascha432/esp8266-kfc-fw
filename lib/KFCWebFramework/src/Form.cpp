@@ -135,6 +135,9 @@ bool Form::validate()
     if (_hasChanged) {
         copyValidatedData();
     }
+    if (_validateCallback) {
+        return _validateCallback(*this);
+    }
     return isValid();
 }
 

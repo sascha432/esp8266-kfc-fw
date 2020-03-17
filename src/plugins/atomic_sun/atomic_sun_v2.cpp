@@ -427,9 +427,9 @@ void Driver_4ChDimmer::_printStatus(Print &out)
 {
     out.print(F(", Fading enabled" HTML_S(br) "Power "));
     if (_data.state.value) {
-        out.print(F("on"));
+        out.print(FSPGM(on));
     } else {
-        out.print(F("off"));
+        out.print(FSPGM(off));
     }
     out.printf_P(PSTR(", brightness %.1f%%"), _data.brightness.value * 100.0 / IOT_ATOMIC_SUN_MAX_BRIGHTNESS);
     out.printf_P(PSTR(", color temperature %d K" HTML_S(br)), (int)_data.color.value != 0 ? (((1000000 * 100) / (int)_data.color.value)) : 0);

@@ -101,6 +101,11 @@ Live remote view over WebUI and screenshots in .BMP format
 Plugin for different sensors. Voltage/Battery with charging indicator, BME280, BME680, CCS811, HLW8012, LM75A, DS3231, INA219.
 Support for native WebUI and MQTT.
 
+### Switch
+
+Plugin for relays and other devices connected to GPIO pins.
+Support for MQTT.
+
 ### Clock
 
 Plugin for my WS2812 Based 7 Segment Clock

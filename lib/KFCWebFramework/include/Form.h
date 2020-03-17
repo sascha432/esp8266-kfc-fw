@@ -21,6 +21,7 @@ class Form {
 public:
     typedef std::vector<FormField *> FieldsVector;
     typedef std::vector<FormError> ErrorsVector;
+    typedef std::function<bool(Form &form)> ValidateCallback_t;
 
     using PrintInterface = FormField::PrintInterface;
 
@@ -105,6 +106,10 @@ public:
         return _data;
     }
 
+    void setValidateCallback(ValidateCallback_t validateCallback) {
+        _validateCallback = validateCallback;
+    }
+
 private:
     FormData *_data;
     FieldsVector _fields;
@@ -113,4 +118,5 @@ private:
     bool _hasChanged;
     String _formTitle;
     String _formSubmit;
+    ValidateCallback_t _validateCallback;
 };

@@ -305,8 +305,54 @@ namespace KFCConfigurationClasses {
             static RemoteControl get();
         };
 
+        class IOTSwitch {
+        public:
+            typedef enum : uint8_t {
+                OFF =       0x00,
+                ON =        0x01,
+                RESTORE =   0x02,
+            } StateEnum_t;
+            typedef struct __attribute__packed__ {
+                uint8_t length;
+                StateEnum_t state;
+            } Switch_t;
+
+            // T = std::array<String, N>, R = std::array<Switch_t, N>
+            template <class T, class R>
+            static void getConfig(T &names, R &configs) {
+                names = {};
+                configs = {};
+                uint16_t length = 0;
+                auto ptr = config.getBinary(_H(MainConfig().plugins.iotswitch), length);
+                if (ptr) {
+                    size_t i = 0;
+                    auto endPtr = ptr + length;
+                    while(ptr + sizeof(Switch_t) <= endPtr && i < names.size()) {
+                        configs[i] = *reinterpret_cast<Switch_t *>(const_cast<uint8_t *>(ptr));
+                        ptr += sizeof(Switch_t);
+                        if (ptr + configs[i].length <= endPtr) {
+                            names[i] = PrintString(ptr, configs[i].length);
+                        }
+                        ptr += configs[i++].length;
+                    }
+                }
+            }
+
+            template <class T, class R>
+            static void setConfig(const T &names, R &configs) {
+                Buffer buffer;
+                for(size_t i = 0; i < names.size(); i++) {
+                    configs[i].length = names[i].length();
+                    buffer.writeObject(configs[i]);
+                    buffer.write(names[i]);
+                }
+                config.setBinary(_H(MainConfig().plugins.iotswitch), buffer.begin(), buffer.length());
+            }
+        };
+
         HomeAssistant homeassistant;
         RemoteControl remotecontrol;
+        IOTSwitch iotswitch;
 
     };
 

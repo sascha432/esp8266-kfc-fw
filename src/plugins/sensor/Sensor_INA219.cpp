@@ -18,10 +18,7 @@
 
 Sensor_INA219::Sensor_INA219(const JsonString &name, TwoWire &wire, uint8_t address) : MQTTSensor(), _name(name), _address(address), _ina219(address)
 {
-#if DEBUG_MQTT_CLIENT
-    debug_printf_P(PSTR("Sensor_INA219(): component=%p\n"), this);
-#endif
-    registerClient(this);
+    REGISTER_SENSOR_CLIENT(this);
     _ina219.begin(&config.initTwoWire());
     _ina219.setCalibration(IOT_SENSOR_INA219_BUS_URANGE, IOT_SENSOR_INA219_GAIN, IOT_SENSOR_INA219_SHUNT_ADC_RES, IOT_SENSOR_INA219_R_SHUNT);
 

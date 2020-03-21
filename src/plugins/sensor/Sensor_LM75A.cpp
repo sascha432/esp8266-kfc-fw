@@ -14,10 +14,7 @@
 
 Sensor_LM75A::Sensor_LM75A(const JsonString &name, TwoWire &wire, uint8_t address) : MQTTSensor(), _name(name), _wire(wire), _address(address)
 {
-#if DEBUG_MQTT_CLIENT
-    debug_printf_P(PSTR("Sensor_LM75A(): component=%p\n"), this);
-#endif
-    registerClient(this);
+    REGISTER_SENSOR_CLIENT(this);
     config.initTwoWire();
 }
 

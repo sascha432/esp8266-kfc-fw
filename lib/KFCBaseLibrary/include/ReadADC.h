@@ -10,6 +10,12 @@
 #include <Arduino_compat.h>
 #include "FixedCircularBuffer.h"
 
+#if 0
+#include "debug_helper_enable.h"
+#else
+#include "debug_helper_disable.h"
+#endif
+
 class ReadADC {
 public:
     ReadADC(uint8_t pin = A0, uint8_t num = 3, uint8_t delay = 5) : _pin(pin), _num(num), _delay(delay) {
@@ -18,9 +24,10 @@ public:
 
 #if ESP8266
     void init() {
+        _debug_println();
         for(uint8_t i = 0; i < 32; i++) {
             _buffer.push_back(analogRead(_pin));
-            delay(1);
+            delayMicroseconds(1000);
         }
     }
 
@@ -31,7 +38,7 @@ public:
         for(uint8_t i = 0; i < _num * 10; i++) {
             uint16_t value = analogRead(_pin);
             _get(min, max);
-            // debug_printf_P(PSTR("readadc(): value=%u, %u/%u=%u\n"), value, min, max, (value >= min && value <= max));
+            _debug_printf_P(PSTR("i=%u value=%u %u/%u=%u\n"), i, value, min, max, (value >= min && value <= max));
             if (value >= min && value <= max) {
                 sum += value;
                 i += 9;
@@ -39,16 +46,16 @@ public:
             }
             _buffer.push_back(value);
             if (_delay) {
-                delay(_delay);
+                delayMicroseconds(_delay * 1000UL);
             }
         }
         if (numValues == 0) {
             uint16_t value = analogRead(_pin);
             _buffer.push_back(value);
-            // debug_printf_P(PSTR("readadc(): result=%u/0\n"), value);
+            _debug_printf_P(PSTR("result=%u/0\n"), value);
             return value;
         }
-        // debug_printf_P(PSTR("readadc(): result=%u/%u\n"), sum / numValues, numValues);
+        _debug_printf_P(PSTR("result=%u/%u\n"), sum / numValues, numValues);
         return sum / numValues;
     }
 
@@ -76,7 +83,7 @@ private:
         for(uint8_t i = 0; i < _num; i++) {
             sum += analogRead(_pin);
             if (_delay) {
-                delay(_delay);
+                delayMicroseconds(_delay * 1000UL);
             }
         }
         return sum / _num;
@@ -88,3 +95,5 @@ private:
     uint8_t _num;
     uint8_t _delay;
 };
+
+#include "debug_helper_disable.h"

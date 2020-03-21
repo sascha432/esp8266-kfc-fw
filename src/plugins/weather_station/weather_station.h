@@ -10,8 +10,8 @@
 #include <SPI.h>
 #include <vector>
 #include <EventScheduler.h>
-#include <asyncHTTPrequest.h>
 #include <StreamString.h>
+#include <KFCRestApi.h>
 #include "WebUIComponent.h"
 #include "WSDraw.h"
 #include "NeoPixel_esp.h"
@@ -153,6 +153,7 @@ private:
     void _loop();
 
     void _fadeBacklight(uint16_t fromLevel, uint16_t toLevel, int8_t step = 16);
+    void _fadeStatusLED();
     void _broadcastCanvas(int16_t x, int16_t y, int16_t w, int16_t h);
 
 private:

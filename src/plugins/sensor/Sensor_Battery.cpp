@@ -16,10 +16,7 @@
 
 Sensor_Battery::Sensor_Battery(const JsonString &name) : MQTTSensor(), _name(name), _adc(A0, 20, 1)
 {
-#if DEBUG_MQTT_CLIENT
-    debug_printf_P(PSTR("component=%p\n"), this);
-#endif
-    registerClient(this);
+    REGISTER_SENSOR_CLIENT(this);
     reconfigure();
 }
 

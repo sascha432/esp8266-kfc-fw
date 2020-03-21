@@ -100,19 +100,23 @@ OpenWeatherMapAPI::WeatherForecast &OpenWeatherMapAPI::getWeatherForecast()
     return _forecast;
 }
 
-OpenWeatherMapAPI::WeatherInfo::WeatherInfo() {
-    memset(&val, 0, sizeof(val));
+OpenWeatherMapAPI::WeatherInfo::WeatherInfo() : val()
+{
 }
 
-bool OpenWeatherMapAPI::WeatherInfo::hasData() const {
+bool OpenWeatherMapAPI::WeatherInfo::hasData() const
+{
+    debug_printf_P(PSTR("location=%s weather=%u\n"), location.c_str(), weather.size());
     return location.length() && weather.size();
 }
 
-time_t OpenWeatherMapAPI::WeatherInfo::getSunRiseAsGMT() const {
+time_t OpenWeatherMapAPI::WeatherInfo::getSunRiseAsGMT() const
+{
     return val.sunrise + val.timezone;
 }
 
-time_t OpenWeatherMapAPI::WeatherInfo::getSunSetAsGMT() const {
+time_t OpenWeatherMapAPI::WeatherInfo::getSunSetAsGMT() const
+{
     return val.sunset + val.timezone;
 }
 
@@ -154,11 +158,12 @@ void OpenWeatherMapAPI::WeatherInfo::dump(Print &output) const
     }
 }
 
-OpenWeatherMapAPI::WeatherForecast::WeatherForecast() {
-    memset(&val, 0, sizeof(val));
+OpenWeatherMapAPI::WeatherForecast::WeatherForecast() : val()
+{
 }
 
-bool OpenWeatherMapAPI::WeatherForecast::hasData() const {
+bool OpenWeatherMapAPI::WeatherForecast::hasData() const
+{
     return forecast.size() && city.length();
 }
 

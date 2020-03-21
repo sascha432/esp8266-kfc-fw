@@ -26,10 +26,7 @@ void ICACHE_RAM_ATTR Sensor_HLW8032_callbackPF() {
 #endif
 
 Sensor_HLW8032::Sensor_HLW8032(const String &name, uint8_t pinRx, uint8_t pinTx, uint8_t pinPF) : Sensor_HLW80xx(name), _pinPF(pinPF), _serial(pinTx, pinRx), _lastData(0) {
-#if DEBUG_MQTT_CLIENT
-    debug_printf_P(PSTR("Sensor_HLW8012(): component=%p\n"), this);
-#endif
-    registerClient(this);
+    REGISTER_SENSOR_CLIENT(this);
 
 #if IOT_SENSOR_HLW8032_PF
     pinMode(_pinPF, INPUT);

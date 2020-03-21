@@ -169,7 +169,7 @@ void KFCRestAPI::_removeHttpRequest(KFCRestAPI::HttpRequest *httpRequestPtr)
 
 void KFCRestAPI::_createRestApiCall(const String &endPointUri, const String &body, JsonBaseReader *json, HttpRequest::Callback_t callback)
 {
-    _debug_printf_P(PSTR("endpoint=%s payload=%s\n"), endPointUri.c_str(), body.c_str());
+    _debug_printf_P(PSTR("endpoint=%s payload=%s timeout=%u\n"), endPointUri.c_str(), body.c_str(), _timeout);
     auto httpRequestPtr = new HttpRequest(*this, json, callback);
     _debug_printf_P(PSTR("httpRequestPtr=%p\n"), httpRequestPtr);
 
@@ -179,7 +179,7 @@ void KFCRestAPI::_createRestApiCall(const String &endPointUri, const String &bod
 
     request.onData(_onData, httpRequestPtr);
     request.onReadyStateChange(_onReadyStateChange, httpRequestPtr);
-    request.setTimeout(15);
+    request.setTimeout(_timeout);
     httpRequest.setUri(endPointUri);
 
     if (request.open(body.length() ? "POST" : "GET", httpRequest.getUrl())) {

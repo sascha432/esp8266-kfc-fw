@@ -144,7 +144,6 @@ void WSDraw::_drawWeather()
 
 void WSDraw::_drawWeather(GFXCanvasCompressed& canvas, uint8_t top)
 {
-    // _debug_printf_P(PSTR("WSDraw::_drawWeather()\n"));
     _offsetY = top;
 
     auto &info = _weatherApi.getWeatherInfo();
@@ -195,7 +194,7 @@ void WSDraw::_drawWeather(GFXCanvasCompressed& canvas, uint8_t top)
             canvas.getTextBounds(unit, 0, 0, &x1, &y1, &w, &h);
             uint8_t r = h / 5;
             r = std::max(std::min(5, (int)r), 1);
-            x1 = pos.x + pos.w - (w * 5 / 6) + _offsetX;
+            x1 = pos.x + pos.w - (w * 5 / 6) + _offsetX + 2;
             y1 = Y_POSITION_TEMPERATURE + r;
             do {
                 canvas.drawCircle(x1, y1, r--, COLORS_TEMPERATURE);

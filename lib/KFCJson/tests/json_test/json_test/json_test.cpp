@@ -321,6 +321,7 @@ private:
 #include "RetrieveSymbols.h"
 #include "RemoteTimezone.h"
 
+#include "C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\src\plugins\weather_station\RestAPI.h"
 
 
 int main()
@@ -405,6 +406,10 @@ int main()
     //client.setAuthorization("Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJiMmNlNjkwZDBhMTY0ZDI2YWY4MWUxYzJiNjgzMjM3NCIsImlhdCI6MTU0ODY0MzczMywiZXhwIjoxODY0MDAzNzMzfQ.h1287xhv5nY5Fvu2GMSzIMnP51IsyFtKg9RFCS8qMBQ");
     client.setTimeout(5);
 
+    auto rt = new WeatherStation::RestAPI("http://api.openweathermap.org/data/2.5/weather?q=north%20vancouver%2Cca&appid=d8c0e3a217161f7495602b7a98f994f5");
+    rt->call(nullptr, 15);
+
+#if 0
     auto rt = new RemoteTimezone::RestApi();
     rt->setUrl(F("http://www.d0g3.space/timezone/api.php?by=zone&format=json&zone=${timezone}"));
     rt->setZoneName(F("America/Vancouver"));
@@ -413,6 +418,7 @@ int main()
     rt->call([](RemoteTimezone::JsonReaderResult *result, const String &error) {
         int k = 0;
     });
+#endif
 
     LoopFunctions::loop();
     LoopFunctions::loop();

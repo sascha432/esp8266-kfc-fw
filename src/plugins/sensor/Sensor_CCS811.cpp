@@ -18,10 +18,7 @@
 
 Sensor_CCS811::Sensor_CCS811(const String &name, uint8_t address) : MQTTSensor(), _name(name), _address(address)
 {
-#if DEBUG_MQTT_CLIENT
-    debug_printf_P(PSTR("Sensor_CCS811(): component=%p\n"), this);
-#endif
-    registerClient(this);
+    REGISTER_SENSOR_CLIENT(this);
     config.initTwoWire();
     _ccs811.beg
     setUpdateRate(10); // faster update rate until valid data is available

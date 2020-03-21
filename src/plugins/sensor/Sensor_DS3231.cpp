@@ -24,10 +24,7 @@ PROGMEM_STRING_DEF(ds3231_id_lost_power, "ds3231_lost_power");
 
 Sensor_DS3231::Sensor_DS3231(const JsonString &name) : MQTTSensor(), _name(name), _wire(&config.initTwoWire())
 {
-#if DEBUG_MQTT_CLIENT
-    debug_printf_P(PSTR("Sensor_DS3231(): component=%p\n"), this);
-#endif
-    registerClient(this);
+    REGISTER_SENSOR_CLIENT(this);
 }
 
 void Sensor_DS3231::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector)

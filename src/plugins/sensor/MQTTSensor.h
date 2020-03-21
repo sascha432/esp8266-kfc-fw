@@ -31,6 +31,12 @@ DECLARE_ENUM(MQTTSensorSensorType, uint8_t,
     INA219
 );
 
+#if DEBUG_IOT_SENSOR
+#define REGISTER_SENSOR_CLIENT(sensor)                  { debug_printf_P(PSTR("registerClient %s\n"), __CLASS__); registerClient(sensor); }
+#else
+#define REGISTER_SENSOR_CLIENT(sensor)                  registerClient(sensor);
+#endif
+
 class MQTTSensor : public MQTTComponent {
 public:
     const uint8_t DEFAULT_UPDATE_RATE = 60;
@@ -52,6 +58,9 @@ public:
     //virtual uint8_t getAutoDiscoveryCount() const override;
     virtual void onConnect(MQTTClient *client) override;
     virtual void onMessage(MQTTClient *client, char *topic, char *payload, size_t len) override {
+#if DEBUG_IOT_SENSOR
+        debug_println();
+#endif
     }
 
     virtual void publishState(MQTTClient *client) = 0;

@@ -15,11 +15,13 @@
 
 MQTTSensor::MQTTSensor() : MQTTComponent(SENSOR), _updateRate(DEFAULT_UPDATE_RATE)
 {
+    _debug_println();
     _nextUpdate = 0;
 }
 
 MQTTSensor::~MQTTSensor()
 {
+    _debug_println();
     auto mqttClient = MQTTClient::getClient();
     if (mqttClient) {
         mqttClient->unregisterComponent(this);
@@ -28,6 +30,7 @@ MQTTSensor::~MQTTSensor()
 
 void MQTTSensor::onConnect(MQTTClient *client)
 {
+    _debug_println();
     _qos = MQTTClient::getDefaultQos();
 #if MQTT_AUTO_DISCOVERY
     if (MQTTAutoDiscovery::isEnabled()) {
@@ -48,6 +51,7 @@ void MQTTSensor::timerEvent(JsonArray &array)
     if (currentTime > _nextUpdate) {
         _nextUpdate = currentTime + _updateRate;
 
+        _debug_println();
         publishState(MQTTClient::getClient());
         getValues(array);
     }

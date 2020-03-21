@@ -135,7 +135,7 @@ extern const GFXfont DialogInput_plain_9 PROGMEM;
 #define Y_POSITION_CITY                 (3 + _offsetY)
 #define H_POSITION_CITY                 AdafruitGFXExtension::RIGHT
 
-#define X_POSITION_TEMPERATURE          X_POSITION_CITY
+#define X_POSITION_TEMPERATURE          (X_POSITION_CITY - 2)
 #define Y_POSITION_TEMPERATURE          (17 + _offsetY)
 #define H_POSITION_TEMPERATURE          AdafruitGFXExtension::RIGHT
 

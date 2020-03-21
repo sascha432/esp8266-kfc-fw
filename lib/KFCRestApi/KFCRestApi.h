@@ -103,7 +103,7 @@ public:
     virtual void getBearerToken(String &token) const {}
 
 public:
-    KFCRestAPI() : _headers(false), _autoDelete(false) {
+    KFCRestAPI() : _headers(false), _autoDelete(false), _timeout(15) {
     }
     virtual ~KFCRestAPI() {
     }
@@ -126,6 +126,7 @@ protected:
     HttpRequestVector _requests;
     HttpHeaders _headers;
     bool _autoDelete;
+    uint16_t _timeout;
 };
 
 #include <debug_helper_disable.h>

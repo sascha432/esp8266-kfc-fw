@@ -14,10 +14,7 @@
 
 Sensor_BME680::Sensor_BME680(const String &name, uint8_t address) : MQTTSensor(), _name(name), _address(address)
 {
-#if DEBUG_MQTT_CLIENT
-    debug_printf_P(PSTR("Sensor_BME680(): component=%p\n"), this);
-#endif
-    registerClient(this);
+    REGISTER_SENSOR_CLIENT(this);
     config.initTwoWire();
 }
 

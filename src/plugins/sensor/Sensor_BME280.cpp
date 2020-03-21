@@ -14,15 +14,13 @@
 
 Sensor_BME280::Sensor_BME280(const String &name, TwoWire &wire, uint8_t address) : MQTTSensor(), _name(name), _address(address), _callback(nullptr)
 {
-#if DEBUG_MQTT_CLIENT
-    debug_printf_P(PSTR("component=%p\n"), this);
-#endif
-    registerClient(this);
+    REGISTER_SENSOR_CLIENT(this);
     _bme280.begin(_address, &config.initTwoWire());
 }
 
 void Sensor_BME280::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector)
 {
+    _debug_println();
     String topic = MQTTClient::formatTopic(-1, F("/%s/"), _getId().c_str());
 
     auto discovery = new MQTTAutoDiscovery();

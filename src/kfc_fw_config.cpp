@@ -99,36 +99,6 @@ void Config_NTP::defaults()
 }
 
 
-// Config_WeatherStation
-
-void Config_WeatherStation::defaults()
-{
-    Config_WeatherStation ws;
-    ::config._H_SET_STR(Config().weather_station.openweather_api_key, F("GET_YOUR_API_KEY_openweathermap.org"));
-    ::config._H_SET_STR(Config().weather_station.openweather_api_query, F("New York,US"));
-    ::config._H_SET(Config().weather_station.config, ws.config);
-}
-
-const char *Config_WeatherStation::getApiKey()
-{
-    return ::config._H_STR(Config().weather_station.openweather_api_key);
-}
-
-const char *Config_WeatherStation::getQueryString()
-{
-    return ::config._H_STR(Config().weather_station.openweather_api_query);
-}
-
-Config_WeatherStation::WeatherStationConfig_t &Config_WeatherStation::getWriteableConfig()
-{
-    return ::config._H_W_GET(Config().weather_station.config);
-}
-
-Config_WeatherStation::WeatherStationConfig_t Config_WeatherStation::getConfig()
-{
-    return ::config._H_GET(Config().weather_station.config);
-}
-
 // Config_MQTT
 
 Config_MQTT::Config_MQTT()
@@ -652,7 +622,7 @@ void KFCFWConfiguration::restoreFactorySettings()
 #endif
 
 #if IOT_WEATHER_STATION
-    Config_WeatherStation::defaults();
+    Plugins::WeatherStation::defaults();
 #endif
 
 #if IOT_SENSOR && (IOT_SENSOR_HAVE_BATTERY || IOT_SENSOR_HAVE_HLW8012 || IOT_SENSOR_HAVE_HLW8032)

@@ -293,4 +293,34 @@ namespace KFCConfigurationClasses {
     {
         return config._H_GET(MainConfig().plugins.remotecontrol);
     }
+
+
+    void Plugins::WeatherStation::defaults()
+    {
+        Plugins::WeatherStation ws;
+        ::config._H_SET_STR(MainConfig().plugins.weatherstation.openweather_api_key, F("GET_YOUR_API_KEY_openweathermap.org"));
+        ::config._H_SET_STR(MainConfig().plugins.weatherstation.openweather_api_query, F("New York,US"));
+        ::config._H_SET(MainConfig().plugins.weatherstation.config, ws.config);
+    }
+
+    const char *Plugins::WeatherStation::getApiKey()
+    {
+        return ::config._H_STR(MainConfig().plugins.weatherstation.openweather_api_key);
+    }
+
+    const char *Plugins::WeatherStation::getQueryString()
+    {
+        return ::config._H_STR(MainConfig().plugins.weatherstation.openweather_api_query);
+    }
+
+    Plugins::WeatherStation::WeatherStationConfig_t &Plugins::WeatherStation::getWriteableConfig()
+    {
+        return ::config._H_W_GET(MainConfig().plugins.weatherstation.config);
+    }
+
+    Plugins::WeatherStation::WeatherStationConfig_t Plugins::WeatherStation::getConfig()
+    {
+        return ::config._H_GET(MainConfig().plugins.weatherstation.config);
+    }
+
 };

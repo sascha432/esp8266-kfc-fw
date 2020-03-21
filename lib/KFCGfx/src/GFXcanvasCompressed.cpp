@@ -519,7 +519,7 @@ void GFXCanvasCompressed::_encodeLine(Cache &cache)
 #if DEBUG_GFXCANVASCOMPRESSED_STATS
         stats.malloc++;
 #endif
-        buffer.reserve(buffer.length(), true);
+        buffer.shrink(buffer.length());
     }
     cache.setWriteFlag(false);
 

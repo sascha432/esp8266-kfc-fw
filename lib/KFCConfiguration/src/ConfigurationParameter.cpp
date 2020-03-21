@@ -39,18 +39,18 @@ uint8_t *ConfigurationParameter::_allocate(Configuration *conf)
         memset(_info.data, 0, _info.size);
         return _info.data;
     }
-    conf->_release(_info.data);
+    conf->__release(_info.data);
     _info.data = conf->_allocate(_param.getSize());
     _info.size = _param.getSize();
     return _info.data;
 }
 
-void ConfigurationParameter::_release(Configuration *conf)
+void ConfigurationParameter::__release(Configuration *conf)
 {
     if (_info.dirty) {
         __debugbreak_and_panic_printf_P(PSTR("%s release called on dirty parameter\n"), toString().c_str());
     }
-    conf->_release(_info.data);
+    conf->__release(_info.data);
     _info = Info_t();
 }
 
@@ -201,7 +201,7 @@ void ConfigurationParameter::_makeWriteable(Configuration *conf, uint16_t size)
             auto oldSize = _param.getSize();
             conf->_writeAllocate(*this, size);                              // allocate new memory
             memcpy(_info.data, ptr, std::min(oldSize, size));               // copy data
-            conf->_release(ptr);                                            // release pool ptr
+            conf->__release(ptr);                                            // release pool ptr
         }
         _info.dirty = 1;
     }

@@ -81,31 +81,31 @@ Mpr121Touchpad::GesturesType Mpr121Touchpad::Event::getGestures() const
     GesturesType value;
     if (_swipe == false) {
         if (isTap()) {
-            value += GesturesType::BIT::TAP;
+            value += GesturesType::BITS::TAP;
         }
         if (isPress()) {
-            value += GesturesType::BIT::PRESS;
+            value += GesturesType::BITS::PRESS;
         }
         if (value) {
             if (_counter == 2) {
-                value += GesturesType::BIT::DOUBLE;
+                value += GesturesType::BITS::DOUBLE;
             } else if (_counter > 2) {
-                value += GesturesType::BIT::MULTI;
+                value += GesturesType::BITS::MULTI;
             }
         }
     }
     else {
         if (_swipe.y > 0) {
-            value += GesturesType::BIT::UP;
+            value += GesturesType::BITS::UP;
         }
         if (_swipe.y < 0) {
-            value += GesturesType::BIT::DOWN;
+            value += GesturesType::BITS::DOWN;
         }
         if (_swipe.x < 0) {
-            value += GesturesType::BIT::LEFT;
+            value += GesturesType::BITS::LEFT;
         }
         if (_swipe.x > 0) {
-            value += GesturesType::BIT::RIGHT;
+            value += GesturesType::BITS::RIGHT;
 
         }
     }
@@ -205,7 +205,7 @@ void Mpr121Touchpad::Event::touched()
             _counter = 0;
         }
     }
-    _type = EventType::BIT::TOUCH;
+    _type = EventType::BITS::TOUCH;
     if (get_time_diff(_releasedTime, _curEvent.time) > 500) {
         _debug_println(F("removing predicted position"));
         _predict = Coordinates(-1, -1);
@@ -227,7 +227,7 @@ void Mpr121Touchpad::Event::touched()
 
 void Mpr121Touchpad::Event::released()
 {
-    _type = EventType::BIT::RELEASED;
+    _type = EventType::BITS::RELEASED;
     _releasedTime = _curEvent.time;
     gestures();
     addMovement();
@@ -250,16 +250,16 @@ void Mpr121Touchpad::Event::gestures()
         _sumP.y <= 5 && _sumN.y >= -5 && moveY <= 2
     )
     {
-        if (_type & EventType::BIT::RELEASED) {
+        if (_type & EventType::BITS::RELEASED) {
             if (duration <= 1000) {
-                _type += EventType::BIT::TAP;
+                _type += EventType::BITS::TAP;
                 if (_lastTap) {
                     _counter++;
                 }
                 _lastTap = _curEvent.time;
                 _lastPress = 0;
             } else {
-                _type += EventType::BIT::PRESS;
+                _type += EventType::BITS::PRESS;
                 if (_lastPress) {
                     _counter++;
                 }
@@ -268,7 +268,7 @@ void Mpr121Touchpad::Event::gestures()
             }
         }
         else if (duration > 250) {
-            _type += EventType::BIT::HOLD;
+            _type += EventType::BITS::HOLD;
         }
     }
     else {
@@ -282,17 +282,17 @@ void Mpr121Touchpad::Event::gestures()
 
     // debug_println_notempty(__toString());
 
-    if (_type & EventType::BIT::RELEASED) {
+    if (_type & EventType::BITS::RELEASED) {
         if (_swipe.x  || _swipe.y) {
-            _type += EventType::BIT::SWIPE;
+            _type += EventType::BITS::SWIPE;
             _lastTap = 0;
             _lastPress = 0;
             _counter = 0;
         }
     }
-    else if (duration > 1000 && _type & EventType::BIT::MOVE) {
+    else if (duration > 1000 && _type & EventType::BITS::MOVE) {
         if (_swipe.x  || _swipe.y) {
-            _type += EventType::BIT::DRAG;
+            _type += EventType::BITS::DRAG;
         }
     }
     addMovement();
@@ -329,7 +329,7 @@ void Mpr121Touchpad::Event::move(const Coordinates &prev)
             _sumP.y += moveY;
         }
     }
-    _type = EventType::BIT::MOVE;
+    _type = EventType::BITS::MOVE;
     gestures();
 }
 
@@ -608,7 +608,7 @@ void Mpr121Touchpad::_fireEvent()
     debug_println_notempty(_event.__toString());
     if (_event._type && _event._bubble) {
         for(const auto &callback: _callbacks) {
-            if (callback.events & _event.getType()) {
+            if (callback.events == _event.getType()) {
                 debug_printf_P(PSTR("callback=%p\n"), &callback.callback);
                 callback.callback(_event);
             }

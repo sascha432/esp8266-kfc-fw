@@ -39,11 +39,15 @@
 #define IOT_WEATHER_STATION_TEMP_COMP_OFS       -3.0
 #endif
 
+// calculate RH from compensated temperature
+#ifndef IOT_WEATHER_STATION_COMP_RH
+#define IOT_WEATHER_STATION_COMP_RH             0
+#endif
+
 // address if LM75 is used
 #ifndef IOT_WEATHER_STATION_TEMP_COMP_LM75A
 #define IOT_WEATHER_STATION_TEMP_COMP_LM75A     0x48
 #endif
-
 
 // IRC pin
 #ifndef IOT_WEATHER_STATION_MPR121_PIN
@@ -73,6 +77,10 @@
 #endif
 
 class WeatherStationPlugin : public PluginComponent, public WebUIInterface, public WSDraw {
+public:
+    using WeatherStation = KFCConfigurationClasses::Plugins::WeatherStation;
+    using MainConfig = KFCConfigurationClasses::MainConfig;
+
 // PluginComponent
 public:
     WeatherStationPlugin();

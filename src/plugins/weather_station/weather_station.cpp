@@ -20,7 +20,9 @@
 #include "progmem_data.h"
 #include "./plugins/sensor/sensor.h"
 #include "./plugins/sensor/Sensor_BME280.h"
+#if IOT_WEATHER_STATION_COMP_RH
 #include "./plugins/sensor/EnvComp.h"
+#endif
 #include "kfc_fw_config.h"
 
 // web accesss for screen capture
@@ -87,7 +89,7 @@ void WeatherStationPlugin::_installWebhooks()
 
 void WeatherStationPlugin::_readConfig()
 {
-    _config = Config_WeatherStation::getConfig();
+    _config = WeatherStation::getConfig();
     _backlightLevel = std::min(1024 * _config.backlight_level / 100, 1023);
 }
 
@@ -97,8 +99,8 @@ void WeatherStationPlugin::setup(PluginSetupMode_t mode)
     _readConfig();
     _init();
 
-    _weatherApi.setAPIKey(Config_WeatherStation::getApiKey());
-    _weatherApi.setQuery(Config_WeatherStation::getQueryString());
+    _weatherApi.setAPIKey(WeatherStation::getApiKey());
+    _weatherApi.setQuery(WeatherStation::getQueryString());
     _getWeatherInfo([this](bool status) {
         _draw();
     });
@@ -137,7 +139,9 @@ void WeatherStationPlugin::setup(PluginSetupMode_t mode)
 #error TODO
 #endif
 
+#if IOT_WEATHER_STATION_COMP_RH
         sensor.humidity = EnvComp::getCompensatedRH(sensor.temperature, sensor.humidity, realTemp);
+#endif
         sensor.temperature = realTemp;
     };
     for(auto sensor: SensorPlugin::getSensors()) {
@@ -233,19 +237,21 @@ void WeatherStationPlugin::getStatus(Print &output)
 
 void WeatherStationPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
 {
-    auto &config = Config_WeatherStation::getWriteableConfig();
+    using KFCConfigurationClasses::Plugins;
+
+    //auto cfg = Plugins::WeatherStation::getConfig();
 
     form.setFormUI(F("Weather Station Configuration"));
 
-    form.add<uint8_t>(F("time_format_24h"), _H_STRUCT_VALUE(Config().weather_station.config, time_format_24h))->setFormUI((new FormUI(FormUI::SELECT, F("Time Format")))->setBoolItems(F("24h"), F("12h")));
-    form.add<uint8_t>(F("is_metric"), _H_STRUCT_VALUE(Config().weather_station.config, is_metric))->setFormUI((new FormUI(FormUI::SELECT, F("Units")))->setBoolItems(F("Metric"), F("Imperial")));
+    form.add<uint8_t>(F("time_format_24h"), _H_FLAGS_VALUE(MainConfig().plugins.weatherstation.config, time_format_24h))->setFormUI((new FormUI(FormUI::SELECT, F("Time Format")))->setBoolItems(F("24h"), F("12h")));
+    form.add<uint8_t>(F("is_metric"), _H_FLAGS_VALUE(MainConfig().plugins.weatherstation.config, is_metric))->setFormUI((new FormUI(FormUI::SELECT, F("Units")))->setBoolItems(F("Metric"), F("Imperial")));
 
-    form.add<uint16_t>(F("weather_poll_interval"), _H_STRUCT_VALUE(config, weather_poll_interval))->setFormUI((new FormUI(FormUI::TEXT, F("Weather Poll Interval")))->setSuffix(F("minutes")));
-    form.add<uint16_t>(F("api_timeout"), _H_STRUCT_VALUE(Config().weather_station.config, api_timeout))->setFormUI((new FormUI(FormUI::TEXT, F("API Timeout")))->setSuffix(F("seconds")));
+    form.add<uint16_t>(F("weather_poll_interval"), _H_STRUCT_VALUE(MainConfig().plugins.weatherstation.config, weather_poll_interval))->setFormUI((new FormUI(FormUI::TEXT, F("Weather Poll Interval")))->setSuffix(F("minutes")));
+    form.add<uint16_t>(F("api_timeout"), _H_STRUCT_VALUE(MainConfig().plugins.weatherstation.config, api_timeout))->setFormUI((new FormUI(FormUI::TEXT, F("API Timeout")))->setSuffix(F("seconds")));
 
-    form.add<uint8_t>(F("backlight_level"), _H_STRUCT_VALUE(Config().weather_station.config, backlight_level))->setFormUI((new FormUI(FormUI::TEXT, F("Backlight Level")))->setSuffix(F("&#37;")));
-    form.add<uint8_t>(F("touch_threshold"), _H_STRUCT_VALUE(Config().weather_station.config, touch_threshold))->setFormUI(new FormUI(FormUI::TEXT, F("Touch Threshold")));
-    form.add<uint8_t>(F("released_threshold"), _H_STRUCT_VALUE(Config().weather_station.config, released_threshold))->setFormUI(new FormUI(FormUI::TEXT, F("Release Threshold")));
+    form.add<uint8_t>(F("backlight_level"), _H_STRUCT_VALUE(MainConfig().plugins.weatherstation.config, backlight_level))->setFormUI((new FormUI(FormUI::TEXT, F("Backlight Level")))->setSuffix(F("&#37;")));
+    form.add<uint8_t>(F("touch_threshold"), _H_STRUCT_VALUE(MainConfig().plugins.weatherstation.config, touch_threshold))->setFormUI(new FormUI(FormUI::TEXT, F("Touch Threshold")));
+    form.add<uint8_t>(F("released_threshold"), _H_STRUCT_VALUE(MainConfig().plugins.weatherstation.config, released_threshold))->setFormUI(new FormUI(FormUI::TEXT, F("Release Threshold")));
 
     // form.add<uint8_t>(F("blink_colon"), &clock->blink_colon)->setFormUI(
     //     (new FormUI(FormUI::SELECT, F("Blink Colon")))
@@ -566,7 +572,7 @@ void WeatherStationPlugin::_getWeatherInfo(Callback_t finishedCallback)
 
 #endif
 
-    _httpRequest(_weatherApi.getWeatherApiUrl(), std::min(config._H_GET(Config().weather_station.config).api_timeout, (uint16_t)10), _weatherApi.getWeatherInfoParser(), finishedCallback);
+    _httpRequest(_weatherApi.getWeatherApiUrl(), std::min(WeatherStation::getConfig().api_timeout, (uint16_t)10), _weatherApi.getWeatherInfoParser(), finishedCallback);
 }
 
 void WeatherStationPlugin::_getWeatherForecast(Callback_t finishedCallback)
@@ -579,7 +585,7 @@ void WeatherStationPlugin::_getWeatherForecast(Callback_t finishedCallback)
     };
 #endif
 
-    _httpRequest(_weatherApi.getForecastApiUrl(), std::min(config._H_GET(Config().weather_station.config).api_timeout, (uint16_t)10), _weatherApi.getWeatherForecastParser(), finishedCallback);
+    _httpRequest(_weatherApi.getForecastApiUrl(), std::min(WeatherStation::getConfig().api_timeout, (uint16_t)10), _weatherApi.getWeatherForecastParser(), finishedCallback);
 }
 
 void WeatherStationPlugin::_fadeBacklight(uint16_t fromLevel, uint16_t toLevel, int8_t step)

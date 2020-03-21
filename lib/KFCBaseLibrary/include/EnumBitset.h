@@ -19,7 +19,7 @@
 // object = ANY set all bits (even undefined ones)
 // object.toString() to convert to string (binary for uint8 or decimal for other types if debug mode is disabled)
 // object.dump(Print &) display debug info
-// ClassName::BIT::ENUMVALS
+// ClassName::BITS::ENUMVALS
 // ClassName::ENUMVALS
 
 #if ENUM_BASE_STORE_ENUM_AS_STRING
@@ -36,23 +36,23 @@
         using EnumBitset<name##EnumClassDefinition, type>::EnumBitset; \
         typedef enum { \
             __VA_ARGS__ \
-        } BIT; \
+        } BITS; \
         typedef type TYPE; \
         name() : EnumBitset(NONE) { \
         } \
-        name(BIT value) : EnumBitset<name##EnumClassDefinition, TYPE>(static_cast<name##EnumClassDefinition>(value)) {\
+        name(BITS value) : EnumBitset<name##EnumClassDefinition, TYPE>(static_cast<name##EnumClassDefinition>(value)) {\
         } \
-        inline operator BIT() { \
-            return static_cast<BIT>(_value); \
+        inline operator BITS() { \
+            return static_cast<BITS>(_value); \
         } \
-        inline EnumBitset& operator=(BIT value) { \
+        inline EnumBitset& operator=(BITS value) { \
             _value = static_cast<type>(value); \
             return *this; \
         } \
-        inline bool operator==(BIT value) const { \
+        inline bool operator==(BITS value) const { \
             return _value == static_cast<type>(value); \
         } \
-        inline EnumBitset& operator+=(BIT value) { \
+        inline EnumBitset& operator+=(BITS value) { \
             _value |= static_cast<type>(value); \
             return *this; \
         } \
@@ -60,7 +60,7 @@
             _value |= value._value; \
             return *this; \
         } \
-        inline EnumBitset& operator-=(BIT value) { \
+        inline EnumBitset& operator-=(BITS value) { \
             _value &= ~static_cast<type>(value); \
             return *this; \
         } \
@@ -68,10 +68,10 @@
             _value &= ~value._value; \
             return *this; \
         } \
-        inline bool operator&(BIT value) { \
+        inline bool operator&(BITS value) { \
             return (_value & static_cast<type>(value)) != 0; \
         } \
-        inline bool operator%(BIT value) { \
+        inline bool operator%(BITS value) { \
             return (_value & static_cast<type>(value)) == static_cast<type>(value); \
         } \
     }; \
@@ -87,8 +87,8 @@
     inline name##EnumClassDefinition operator| (name##EnumClassDefinition value, name##EnumClassDefinition value2) { \
         return (name##EnumClassDefinition)(static_cast<name::TYPE>(value) | static_cast<name::TYPE>(value2)); \
     } \
-    inline name::BIT operator| (name::BIT value, name::BIT value2) { \
-        return static_cast<name::BIT>(static_cast<name::TYPE>(value) | static_cast<name::TYPE>(value2)); \
+    inline name::BITS operator| (name::BITS value, name::BITS value2) { \
+        return static_cast<name::BITS>(static_cast<name::TYPE>(value) | static_cast<name::TYPE>(value2)); \
     }
 
 //const char* EnumBase<name##EnumClassDefinition, name::TYPE>::valuesPtr = name##DebugEnumValues.array;
@@ -106,22 +106,22 @@
     class name : public EnumBitset<name##EnumClassDefinition, type> { \
     public: \
         using EnumBitset<name##EnumClassDefinition, type>::EnumBitset; \
+        using TYPE = type; \
         typedef enum { \
             __VA_ARGS__ \
-        } BIT; \
-        typedef type TYPE; \
+        } BITS; \
         name() : EnumBitset(NONE) { \
         } \
-        name(BIT value) : EnumBitset<name##EnumClassDefinition, TYPE>(static_cast<name##EnumClassDefinition>(value)) {\
+        name(BITS value) : EnumBitset<name##EnumClassDefinition, TYPE>(static_cast<name##EnumClassDefinition>(value)) {\
         } \
-        EnumBitset& operator=(BIT value) { \
+        EnumBitset& operator=(BITS value) { \
             _value = static_cast<type>(value); \
             return *this; \
         } \
-        inline bool operator==(BIT value) const { \
+        inline bool operator==(BITS value) const { \
             return _value == static_cast<type>(value); \
         } \
-        inline EnumBitset& operator+=(BIT value) { \
+        inline EnumBitset& operator+=(BITS value) { \
             _value |= static_cast<type>(value); \
             return *this; \
         } \
@@ -129,7 +129,7 @@
             _value |= value._value; \
             return *this; \
         } \
-        inline EnumBitset& operator-=(BIT value) { \
+        inline EnumBitset& operator-=(BITS value) { \
             _value &= ~static_cast<type>(value); \
             return *this; \
         } \
@@ -137,10 +137,10 @@
             _value &= ~value._value; \
             return *this; \
         } \
-        inline bool operator&(BIT value) { \
+        inline bool operator&(BITS value) { \
             return (_value & static_cast<type>(value)) != 0; \
         } \
-        inline bool operator%(BIT value) { \
+        inline bool operator%(BITS value) { \
             return (_value & static_cast<type>(value)) == static_cast<type>(value); \
         } \
     };
@@ -150,8 +150,8 @@
     inline name##EnumClassDefinition operator|(name##EnumClassDefinition value, name##EnumClassDefinition value2) { \
         return (name##EnumClassDefinition)(static_cast<name::TYPE>(value) | static_cast<name::TYPE>(value2)); \
     } \
-    inline name::BIT operator| (name::BIT value, name::BIT value2) { \
-        return static_cast<name::BIT>(static_cast<name::TYPE>(value) | static_cast<name::TYPE>(value2)); \
+    inline name::BITS operator| (name::BITS value, name::BITS value2) { \
+        return static_cast<name::BITS>(static_cast<name::TYPE>(value) | static_cast<name::TYPE>(value2)); \
     }
 
 #endif

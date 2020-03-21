@@ -48,10 +48,10 @@
         using EnumBase<name##EnumClassDefinition, type>::getValues; \
         using EnumBase<name##EnumClassDefinition, type>::getValuesAsString; \
         using EnumBase<name##EnumClassDefinition, type>::parseString; \
+        using TYPE = type; \
         typedef enum { \
             __VA_ARGS__ \
         } ENUM; \
-        typedef type TYPE; \
         name() : EnumBase<name##EnumClassDefinition, TYPE>() { \
         } \
         name(ENUM value) : EnumBase<name##EnumClassDefinition, TYPE>(static_cast<name##EnumClassDefinition>(value)) { \

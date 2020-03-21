@@ -72,7 +72,7 @@ public:
     }
 
     uint8_t* _allocate(Configuration *conf);
-    void _release(Configuration *conf);
+    void __release(Configuration *conf);
     void _free();
 
     template <typename T>

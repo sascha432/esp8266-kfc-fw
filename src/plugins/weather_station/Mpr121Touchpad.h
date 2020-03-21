@@ -63,8 +63,8 @@ public:
 
     typedef FixedCircularBuffer<TouchpadEvent_t, 64> ReadBuffer;
 
-    typedef Mpr121TouchpadEventType EventType;
-    typedef Mpr121TouchpadGesturesType GesturesType;
+    using EventType = Mpr121TouchpadEventType;
+    using GesturesType = Mpr121TouchpadGesturesType;
 
     class Coordinates {
     public:

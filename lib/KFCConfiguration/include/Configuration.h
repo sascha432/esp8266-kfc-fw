@@ -263,7 +263,7 @@ public:
             auto ptr = param.getBinary(this, length, offset);
             if (ptr && length != sizeof(T)) {
                 __debugbreak_and_panic_printf_P(PSTR("%s size does not match len=%u size=%u\n"), param.toString().c_str(), length, sizeof(T));
-                //_release(ptr);
+                //__release(ptr);
                 //ptr = nullptr;
             }
         }
@@ -276,20 +276,20 @@ public:
         //    _writeAllocate(param, maxLength);
         //    if (ptr) {
         //        strncpy(reinterpret_cast<char *>(param._info.data), ptr, maxLength)[maxLength] = 0;
-        //        _release(ptr);
+        //        __release(ptr);
         //    }
         //}
         //else {
         //    uint16_t length;
         //    auto ptr = param.getBinary(this, length, offset);
         //    if (length != sizeof(T)) {
-        //        _release(ptr);
+        //        __release(ptr);
         //        ptr = nullptr;
         //    }
         //    _writeAllocate(param, sizeof(T));
         //    if (ptr) {
         //        memcpy(param._info.data, ptr, sizeof(T));
-        //        _release(ptr);
+        //        __release(ptr);
         //    }
         //}
         //param._info.dirty = 1;
@@ -408,7 +408,7 @@ private:
 
     void _writeAllocate(ConfigurationParameter &param, uint16_t size);
     uint8_t *_allocate(uint16_t size, PoolVector *pool = nullptr);
-    void _release(const void *ptr);
+    void __release(const void *ptr);
     Pool *_getPool(const void *ptr);
     Pool *_findPool(uint16_t length, PoolVector *poolVector) const;
     void _shrinkStorage();

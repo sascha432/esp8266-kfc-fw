@@ -326,51 +326,6 @@ public:
     }
 };
 
-class Config_WeatherStation
-{
-public:
-    typedef struct __attribute__packed__ {
-        uint8_t is_metric: 1;
-        uint8_t time_format_24h: 1;
-        uint16_t weather_poll_interval;
-        uint16_t api_timeout;
-        uint8_t backlight_level;
-        uint8_t touch_threshold;
-        uint8_t released_threshold;
-        float temp_offset;
-
-        void reset() {
-            *this = {false, false, 15, 30, 100, 5, 8, 0.0};
-        }
-
-        void validate() {
-            if (weather_poll_interval == 0 || api_timeout == 0 || touch_threshold == 0 || released_threshold == 0) {
-                reset();
-            }
-            if (backlight_level < 10) {
-                backlight_level = 10;
-            }
-        }
-        uint32_t getPollIntervalMillis() {
-            return weather_poll_interval * 60000UL;
-        }
-    } WeatherStationConfig_t;
-
-    Config_WeatherStation() {
-        config.reset();
-    }
-
-    static void defaults();
-    static const char *getApiKey();
-    static const char *getQueryString();
-    static WeatherStationConfig_t &getWriteableConfig();
-    static WeatherStationConfig_t getConfig();
-
-    char openweather_api_key[65];
-    char openweather_api_query[65];
-    WeatherStationConfig_t config;
-};
-
 class Config_Button {
 public:
     typedef struct __attribute__packed__ {
@@ -447,7 +402,6 @@ typedef struct {
     Clock clock;
 
     Config_Ping ping;
-    Config_WeatherStation weather_station;
     Config_Sensor sensor;
     Config_Button buttons;
 } Config;

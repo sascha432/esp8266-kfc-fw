@@ -138,7 +138,7 @@ void Configuration::discard()
             parameter._info = ConfigurationParameter::Info_t();
         }
         else {
-            parameter._release(this);
+            parameter.__release(this);
         }
     }
     _eeprom.end();
@@ -153,7 +153,7 @@ void Configuration::release()
     _debug_printf_P(PSTR("params=%u last_read=%d dirty=%d\n"), _params.size(), (int)(_readAccess == 0 ? -1 : millis() - _readAccess), isDirty());
     for (auto &parameter : _params) {
         if (!parameter.isDirty()) {
-            parameter._release(this);
+            parameter.__release(this);
         }
     }
     _eeprom.end();
@@ -388,7 +388,7 @@ uint8_t *Configuration::_allocate(uint16_t size, PoolVector *poolVector)
     return poolPtr->allocate(size);
 }
 
-void Configuration::_release(const void *ptr)
+void Configuration::__release(const void *ptr)
 {
     if (ptr) {
         auto pool = _getPool(ptr);

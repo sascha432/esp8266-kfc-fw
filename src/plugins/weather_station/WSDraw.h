@@ -254,6 +254,8 @@ public:
     };
 
 protected:
+    using WeatherStationConfigType = KFCConfigurationClasses::Plugins::WeatherStation::WeatherStationConfig_t;
+
     typedef enum {
         MAIN = 0,
         NUM_SCREENS,
@@ -278,7 +280,7 @@ protected:
     const GFXfont *_textFont;
 
     time_t _lastTime;
-    Config_WeatherStation::WeatherStationConfig_t _config;
+    WeatherStationConfigType _config;
 
     uint8_t _offsetX;
     uint8_t _offsetY;

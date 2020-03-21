@@ -114,11 +114,14 @@ struct __attribute__packed__  {
     uint32_t ___reserved : 7;
 } x;
 
+
+
 int main() {
 
     ESP._enableMSVCMemdebug();
     DebugHelper::activate();
 
+#if 0
     File file = SPIFFS.open("C:\\Users\\sascha\\Documents\\PlatformIO\\Projects\\kfc_fw\\data\\webui\\1a22101e.lnk", "r");
     auto l = file.readBytes(reinterpret_cast<char *>(&x), sizeof(x));
 
@@ -126,6 +129,7 @@ int main() {
 
     int k = 0;
     return 0;
+#endif
 
 #if 0
     using milliseconds = std::chrono::duration<uint32_t, std::milli>;

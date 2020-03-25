@@ -109,8 +109,6 @@ static void remove_crash_counter(EventScheduler::TimerPtr timer)
 #endif
 }
 
-#include "./plugins/remote/remote.h"
-
 void setup()
 {
     Serial.begin(KFC_SERIAL_RATE);

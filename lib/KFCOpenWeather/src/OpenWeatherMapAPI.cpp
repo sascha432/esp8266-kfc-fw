@@ -148,12 +148,12 @@ void OpenWeatherMapAPI::WeatherInfo::dump(Print &output) const
     output.printf_P(PSTR("Visibility: %.1f km\n"), val.visibility / 1000.0f);
     output.printf_P(PSTR("Visibility: %.1f mi\n"), kmToMiles(val.visibility / 1000.0f));
 
-    for (const auto &w : weather) {
+    for (auto &w : weather) {
         output.printf_P(PSTR("Weather id/main/icon: %u - %s (%s)\n"), w.id, w.main.c_str(), w.icon.c_str());
         output.printf_P(PSTR("Weather description: %s\n"), w.descr.c_str());
     }
 
-    for (const auto &rain : rain_mm) {
+    for (auto &rain : rain_mm) {
         output.printf_P(PSTR("Rain: %s - %.2f mm\n"), rain.first.c_str(), rain.second);
     }
 }

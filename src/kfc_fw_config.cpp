@@ -875,7 +875,7 @@ void KFCFWConfiguration::enterDeepSleep(milliseconds time, RFMode mode, uint16_t
 
     delay(1);
 
-    for(const auto plugin: plugins) {
+    for(auto plugin: plugins) {
         plugin->prepareDeepSleep(time.count());
     }
     if (delayAfterPrepare) {

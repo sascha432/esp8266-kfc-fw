@@ -347,7 +347,7 @@ void Configuration::dump(Print &output, bool dirty, const String &name)
 
 bool Configuration::isDirty() const
 {
-    for(const auto &param: _params) {
+    for(auto &param: _params) {
         if (param.isDirty()) {
             return true;
         }

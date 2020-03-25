@@ -361,7 +361,7 @@ String JsonBaseReader::getObjectPath(bool numericIndex, int fromIndex) const
 {
     String _path;
 	int n = 0;
-    for (const auto &state : _stack) {
+    for (auto &state : _stack) {
 		if (fromIndex > n++) {
 			continue;
 		}

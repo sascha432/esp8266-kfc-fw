@@ -94,7 +94,7 @@ public:
     void finalize() const;
 
     const char *process(const String &name) const;
-    void createJavascript(PrintInterface &out);
+    void createJavascript(PrintInterface &out) const;
 
     void setFormUI(const String &title, const String &submit);
     void setFormUI(const String &title);

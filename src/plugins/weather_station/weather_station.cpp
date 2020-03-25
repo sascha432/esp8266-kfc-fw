@@ -442,11 +442,11 @@ void WeatherStationPlugin::_drawEnvironmentalSensor(GFXCanvasCompressed& canvas,
     canvas._drawTextAligned(0, _offsetY, str, AdafruitGFXExtension::LEFT);
 }
 
-void WeatherStationPlugin::_httpRequest(const String &url, uint16_t timeout, JsonBaseReader *jsonReader, Callback_t finishedCallback)
+void WeatherStationPlugin::_httpRequest(const String &url, int timeout, JsonBaseReader *jsonReader, Callback_t finishedCallback)
 {
     auto rest = new ::WeatherStation::RestAPI(url);
     rest->setAutoDelete(true);
-    rest->call(jsonReader, timeout, [this, url, finishedCallback](bool status, const String &error) {
+    rest->call(jsonReader, std::max(15, timeout), [this, url, finishedCallback](bool status, const String &error) {
         _debug_printf_P(PSTR("status=%u error=%s url=%s\n"), status, error.c_str(), url.c_str());
         if (!status) {
             _weatherError = F("Failed to load data");
@@ -483,7 +483,7 @@ void WeatherStationPlugin::_getWeatherInfo(Callback_t finishedCallback)
 
 #endif
 
-    _httpRequest(_weatherApi.getWeatherApiUrl(), std::min(WeatherStation::getConfig().api_timeout, (uint16_t)10), _weatherApi.getWeatherInfoParser(), finishedCallback);
+    _httpRequest(_weatherApi.getWeatherApiUrl(), WeatherStation::getConfig().api_timeout, _weatherApi.getWeatherInfoParser(), finishedCallback);
 }
 
 void WeatherStationPlugin::_getWeatherForecast(Callback_t finishedCallback)
@@ -496,7 +496,7 @@ void WeatherStationPlugin::_getWeatherForecast(Callback_t finishedCallback)
     };
 #endif
 
-    _httpRequest(_weatherApi.getForecastApiUrl(), std::min(WeatherStation::getConfig().api_timeout, (uint16_t)10), _weatherApi.getWeatherForecastParser(), finishedCallback);
+    _httpRequest(_weatherApi.getForecastApiUrl(), WeatherStation::getConfig().api_timeout, _weatherApi.getWeatherForecastParser(), finishedCallback);
 }
 
 void WeatherStationPlugin::_fadeBacklight(uint16_t fromLevel, uint16_t toLevel, int8_t step)

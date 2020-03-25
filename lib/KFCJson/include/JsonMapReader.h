@@ -22,7 +22,7 @@ public:
 
 	virtual bool processElement() override;
 
-    JsonVar get(const String &path);
+    JsonVar get(const String &path) const;
 
     void dump(Print &out);
 

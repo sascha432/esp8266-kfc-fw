@@ -47,7 +47,7 @@ BootstrapMenu::ItemsVectorIterator BootstrapMenu::findMenuByURI(const String &ur
 //BootstrapMenu::menu_item_id_t BootstrapMenu::getItemCount(menu_item_id_t menuId) const
 //{
 //	uint8_t count = 0;
-//	for (const auto &item : _items) {
+//	for (auto &item : _items) {
 //		if (item.getParentMenuId() == menuId) {
 //			count++;
 //		}

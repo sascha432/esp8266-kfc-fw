@@ -145,7 +145,7 @@ private:
 
     void _drawEnvironmentalSensor(GFXCanvasCompressed& canvas, uint8_t top);
 
-    void _httpRequest(const String &url, uint16_t timeout, JsonBaseReader *jsonReader, Callback_t finishedCallback);
+    void _httpRequest(const String &url, int timeout, JsonBaseReader *jsonReader, Callback_t finishedCallback);
     void _getWeatherInfo(Callback_t finishedCallback);
     void _getWeatherForecast(Callback_t finishedCallback);
 

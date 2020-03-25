@@ -34,8 +34,8 @@ void JsonMapReader::dump(Print &out) {
 	}
 }
 
-JsonVar JsonMapReader::get(const String &path) {
-	const auto &it = _map.find(path);
+JsonVar JsonMapReader::get(const String &path) const {
+	auto it = _map.find(path);
 	if (it != _map.end()) {
 		return it->second;
 	}

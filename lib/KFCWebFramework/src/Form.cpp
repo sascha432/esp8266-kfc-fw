@@ -181,7 +181,7 @@ bool Form::hasChanged() const
 
 bool Form::hasError(FormField *field) const
 {
-    for (const auto &error : _errors) {
+    for (auto &error : _errors) {
         if (error.is(field)) {
             return true;
         }
@@ -245,13 +245,13 @@ const char *Form::process(const String &name) const
     return nullptr;
 }
 
-void Form::createJavascript(PrintInterface &out)
+void Form::createJavascript(PrintInterface &out) const
 {
     if (!isValid()) {
         _debug_printf_P(PSTR("Form::createJavascript(): errors=%d\n"), _errors.size());
         out.printf_P(PSTR("<script>\n$.formValidator.addErrors(["));
         uint8_t idx = 0;
-        for (const auto &error : _errors) {
+        for (auto &error : _errors) {
             out.printf_P(PSTR("%s{'target':'#%s','error':'%s'}"), idx++ ? PSTR(",") : emptyString.c_str(), error.getName().c_str(), error.getMessage().c_str()); //TODO escape quotes etc
         }
         out.printf_P(PSTR("]);\n</script>"));
@@ -290,7 +290,7 @@ void Form::dump(Print &out, const String &prefix) const {
         out.println(F("None"));
     }
     else {
-        for (const auto &error : _errors) {
+        for (auto &error : _errors) {
             out.print(prefix);
             out.print(error.getName());
             out.print(F(": "));

@@ -216,21 +216,21 @@ File Logger::openMessagesLog()
     return _file;
 }
 
+#if DEBUG
+
 File Logger::openDebugLog()
 {
     _openLog(LOGLEVEL_DEBUG, false);
     return _file;
 }
 
-#if DEBUG
+#endif
 
 File Logger::openAccessLog()
 {
     _openLog(LOGLEVEL_ACCESS, false);
     return _file;
 }
-
-#endif
 
 void Logger::getLogs(StringVector &logs)
 {

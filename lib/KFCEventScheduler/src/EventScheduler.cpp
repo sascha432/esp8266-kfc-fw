@@ -24,7 +24,7 @@ extern ETSTimer *timer_list;
 void EventScheduler::listETSTimers(Print &output)
 {
     StringVector addresses;
-    DebugDumper dumper(output);
+    //DebugDumper dumper(output);
     ETSTimer *cur = timer_list;
     while(cur) {
         for(const auto &timer: _timers) {

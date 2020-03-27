@@ -611,6 +611,8 @@ void at_mode_print_prefix(Stream &output, const char *command)
     output.printf_P(PSTR("+%s: "), command);
 }
 
+#if DEBUG
+
 #include <map>
 #include "../include/RestApi/RetrieveSymbols.h"
 
@@ -623,6 +625,8 @@ void *resolve_lambda(void *ptr)
     });
     return ptr;
 }
+
+#endif
 
 void at_mode_resolve(void *ptr, AtModeResolveACallback resolve_callback)
 {
@@ -1042,7 +1046,7 @@ void at_mode_serial_handle_event(String &commandString)
             }
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RSSI)) || args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(HEAP)) || args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(GPIO))) {
                 if (args.requireArgs(1, 1)) {
-                    auto interval = args.toMillis(0, 500);
+                    auto interval = args.toMillis(0, 500, ~0, 0, String('s'));
                     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RSSI))) {
                         displayTimer._type = DisplayTimer::RSSI;
                     }

@@ -93,13 +93,16 @@
     class name : public EnumBase<name##EnumClassDefinition, type> { \
     public: \
         using EnumBase<name##EnumClassDefinition, type>::EnumBase; \
+        using TYPE = type; \
         typedef enum { \
             __VA_ARGS__ \
         } ENUM; \
-        typedef type TYPE; \
         name() : EnumBase<name##EnumClassDefinition, TYPE>() { \
         } \
         name(ENUM value) : EnumBase<name##EnumClassDefinition, TYPE>(static_cast<name##EnumClassDefinition>(value)) { \
+        } \
+        operator ENUM() { \
+            return static_cast<ENUM>(_value); \
         } \
         EnumBase& operator=(ENUM value) { \
             _value = static_cast<TYPE>(value); \

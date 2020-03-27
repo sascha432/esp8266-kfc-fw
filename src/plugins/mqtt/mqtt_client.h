@@ -42,7 +42,7 @@
 #include "kfc_fw_config.h"
 #include "mqtt_component.h"
 
-DECLARE_ENUM(MQTTQueueType, uint8_t,
+DECLARE_ENUM(MQTTQueueEnum_t, uint8_t,
     SUBSCRIBE = 0,
     UNSUBSCRIBE,
     PUBLISH,
@@ -50,7 +50,7 @@ DECLARE_ENUM(MQTTQueueType, uint8_t,
 
 class MQTTClient {
 public:
-    typedef MQTTQueueType MQTTQueueEnum_t;
+    using MQTTQueueType = MQTTQueueEnum_t;
 
     class MQTTTopic {
     public:

@@ -31,31 +31,37 @@ Stream &MySerial = _MySerial;
 Stream &DebugSerial = _MySerial;
 
 
-SerialHandler::SerialHandler(SerialWrapper &wrapper) : _wrapper(wrapper) {
+SerialHandler::SerialHandler(SerialWrapper &wrapper) : _wrapper(wrapper)
+{
     begin();
 }
 
-void SerialHandler::clear() {
+void SerialHandler::clear()
+{
     _handlers.clear();
 }
 
-void SerialHandler::begin() {
+void SerialHandler::begin()
+{
     _debug_println(F("SerialHandler::begin()"));
     LoopFunctions::add(SerialHandler::serialLoop);
 }
 
-void SerialHandler::end() {
+void SerialHandler::end()
+{
     _debug_println(F("SerialHandler::end()"));
     LoopFunctions::remove(SerialHandler::serialLoop);
 }
 
-void SerialHandler::addHandler(SerialHandlerCallback_t callback, uint8_t flags) {
+void SerialHandler::addHandler(SerialHandlerCallback_t callback, uint8_t flags)
+{
 
     _debug_printf_P(PSTR("SerialHandler::addHandler(%p, rx %d tx %d remoterx %d localtx %d buffered %d)\n"), callback, (flags & RECEIVE ? 1 : 0), (flags & TRANSMIT ? 1 : 0), (flags & REMOTE_RX ? 1 : 0), (flags & LOCAL_TX ? 1 : 0), 0);
     _handlers.emplace_back(callback, flags);
 }
 
-void SerialHandler::removeHandler(SerialHandlerCallback_t callback) {
+void SerialHandler::removeHandler(SerialHandlerCallback_t callback)
+{
     _debug_printf_P(PSTR("SerialHandler::removeHandler(%p)\n"), callback);
     _handlers.erase(std::remove(_handlers.begin(), _handlers.end(), callback), _handlers.end());
     // _handlers.erase(std::remove_if(_handlers.begin(), _handlers.end(), [&callback](const Callback &handlers) {
@@ -66,12 +72,13 @@ void SerialHandler::removeHandler(SerialHandlerCallback_t callback) {
     // }), _handlers.end());
 }
 
-void SerialHandler::serialLoop() {
+void SerialHandler::serialLoop()
+{
     _instance->_serialLoop();
 }
 
-void SerialHandler::_serialLoop() {
-
+void SerialHandler::_serialLoop()
+{
     while(_wrapper.available()) {
         uint8_t buf[128];
         uint8_t *ptr = buf;
@@ -84,12 +91,14 @@ void SerialHandler::_serialLoop() {
     }
 }
 
-void SerialHandler::writeToTransmit(SerialDataType_t type, const uint8_t *buffer, size_t len) {
+void SerialHandler::writeToTransmit(SerialDataType_t type, const uint8_t *buffer, size_t len)
+{
     // Serial.printf_P(PSTR("SerialHandler::writeToTransmit(%d, %p, %u)\n"), type, buffer, len);
     writeToTransmit(type, nullptr, buffer, len);
 }
 
-void SerialHandler::writeToTransmit(SerialDataType_t type, SerialHandlerCallback_t callback, const uint8_t *buffer, size_t len) {
+void SerialHandler::writeToTransmit(SerialDataType_t type, SerialHandlerCallback_t callback, const uint8_t *buffer, size_t len)
+{
     static bool locked = false;
     if (locked) {
         _debug_printf_P(PSTR("SerialHandler::writeToTransmit(%d, %p, len %d, locked %d)\n"), type, callback, len, locked);
@@ -106,12 +115,14 @@ void SerialHandler::writeToTransmit(SerialDataType_t type, SerialHandlerCallback
     locked = false;
 }
 
-void SerialHandler::writeToReceive(SerialDataType_t type, const uint8_t *buffer, size_t len) {
+void SerialHandler::writeToReceive(SerialDataType_t type, const uint8_t *buffer, size_t len)
+{
     writeToReceive(type, nullptr, buffer, len);
 }
 
 // sends to rx callbacks (=receiving data from serial)
-void SerialHandler::writeToReceive(SerialDataType_t type, SerialHandlerCallback_t callback, const uint8_t *buffer, size_t len) {
+void SerialHandler::writeToReceive(SerialDataType_t type, SerialHandlerCallback_t callback, const uint8_t *buffer, size_t len)
+{
     static bool locked = false;
     if (locked) {
         _debug_printf_P(PSTR("SerialHandler::writeToReceive(%d, %p, len %d, locked %d)\n"), type, callback, len, locked);
@@ -140,11 +151,12 @@ void SerialHandler::receivedFromRemote(SerialHandlerCallback_t callback, const u
 
 
 
-SerialWrapper::SerialWrapper(Stream &serial) : _serial(serial) {
+SerialWrapper::SerialWrapper(Stream &serial) : _serial(serial)
+{
 }
 
-
-size_t SerialWrapper::write(uint8_t data) {
+size_t SerialWrapper::write(uint8_t data)
+{
     size_t written = _serial.write(data);
     if (written) {
         SerialHandler::getInstance().writeToTransmit(SerialHandler::LOCAL_TX, &data, sizeof(data));
@@ -152,7 +164,8 @@ size_t SerialWrapper::write(uint8_t data) {
     return written;
 }
 
-size_t SerialWrapper::write(const uint8_t *data, size_t len) {
+size_t SerialWrapper::write(const uint8_t *data, size_t len)
+{
     size_t written = _serial.write(data, len);
     if (written) {
         SerialHandler::getInstance().writeToTransmit(SerialHandler::LOCAL_TX, data, written);
@@ -160,24 +173,29 @@ size_t SerialWrapper::write(const uint8_t *data, size_t len) {
     return written;
 }
 
-size_t SerialWrapper::write(const char *buffer) {
+size_t SerialWrapper::write(const char *buffer)
+{
     return write((const uint8_t *)buffer, strlen(buffer));
 }
 
-void SerialWrapper::flush() {
+void SerialWrapper::flush()
+{
     _serial.flush();
     // SerialHandler::_flush();
 }
 
-int SerialWrapper::available() {
+int SerialWrapper::available()
+{
     return _serial.available();
 }
 
-int SerialWrapper::read() {
+int SerialWrapper::read()
+{
     return _serial.read();
 }
 
-int SerialWrapper::peek() {
+int SerialWrapper::peek()
+{
     return _serial.peek();
 }
 

@@ -172,7 +172,7 @@ bool Sensor_Battery::atModeHandler(AtModeArgs &args)
             );
         };
         printVoltage(nullptr);
-        auto repeat = args.toMillis(AtModeArgs::FIRST, 500);
+        auto repeat = args.toMillis(AtModeArgs::FIRST, 500, ~0, 0, String('s'));
         if (repeat) {
             _timer.add(repeat, true, printVoltage);
         }

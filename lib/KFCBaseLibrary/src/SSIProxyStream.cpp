@@ -242,6 +242,8 @@ size_t SSIProxyStream::_readBuffer(bool templateCheck)
             DEBUG_ASSERT(_template.marker == -1);
         }
     }
+#if DEBUG
     _ramUsage = std::min(ESP.getFreeHeap(), _ramUsage);
+#endif
     return len;
 }

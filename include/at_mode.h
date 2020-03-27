@@ -254,18 +254,18 @@ public:
 
     // convert time to milliseconds
     // format:
-    // <time as int or float><suffix>
+    // <time as int or float><suffix[default=ms]>
     //
     // suffix:
-    // ms, milli*, none - milliseconds
+    // ms, milli* - milliseconds
     // s, sec* - seconds
-    // min* - minutes
+    // m, min* - minutes
     // h, hour* - hours
     // d, day* - days
     //
     // example:
     // "123ms" = 123
-    // "15" = 15
+    // "15" = 15 (using default suffix)
     // "2.5s" = 2500
     // "10.7ms" = 10
     // "123s" = 123000
@@ -273,7 +273,7 @@ public:
     // "0.7days" = 60480000
     //
     // returns defaultValue if the time is lower than minTime or if the argument does not exist
-    uint32_t toMillis(uint16_t num, uint32_t minTime = 0, uint32_t maxTime = ~0, uint32_t defaultValue = 0) const;
+    uint32_t toMillis(uint16_t num, uint32_t minTime = 0, uint32_t maxTime = ~0, uint32_t defaultValue = 0, const String &defaultSuffix = String()) const;
 
     int toChar(uint16_t num, int defaultValue = -1) const;
 

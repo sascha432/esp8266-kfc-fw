@@ -452,7 +452,7 @@ bool Sensor_HLW80xx::atModeHandler(AtModeArgs &args)
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(HLWDUMP))) {
         _dumpTimer.remove();
 
-        auto interval = args.toMillis(0, 500);
+        auto interval = args.toMillis(0, 500, ~0, 0, String('s'));
         if (interval) {
             auto &serial = args.getStream();
             _dumpTimer.add(interval, true, [this, &serial](EventScheduler::TimerPtr) {

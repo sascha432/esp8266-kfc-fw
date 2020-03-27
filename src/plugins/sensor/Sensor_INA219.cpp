@@ -207,7 +207,7 @@ bool Sensor_INA219::atModeHandler(AtModeArgs &args)
             serial.printf_P(PSTR("+%s: No sensor found\n"), PROGMEM_AT_MODE_HELP_COMMAND(SENSORINA219));
         }
         else {
-            auto repeat = args.toMillis(AtModeArgs::FIRST, 500);
+            auto repeat = args.toMillis(AtModeArgs::FIRST, 500, ~0, 0, String('s'));
             if (repeat) {
                 Scheduler.addTimer(&timer, repeat, true, timerPrintFunc);
             }

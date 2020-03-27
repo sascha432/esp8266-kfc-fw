@@ -41,7 +41,7 @@ uint8_t VirtualPinGPIO::digitalRead() const
 
 void VirtualPinGPIO::pinMode(VirtualPinMode mode)
 {
-    ::pinMode(_pin, static_cast<uint8_t>(mode));
+    ::pinMode(_pin, mode.getValue());
 }
 
 bool VirtualPinGPIO::isAnalog() const

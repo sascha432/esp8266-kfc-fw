@@ -235,7 +235,7 @@ uint8_t VirtualPinDebug::digitalRead() const
 
 void VirtualPinDebug::pinMode(VirtualPinMode mode)
 {
-    ::pinMode(_pin, mode);
+    ::pinMode(_pin, mode.getValue());
 }
 
 bool VirtualPinDebug::isAnalog() const

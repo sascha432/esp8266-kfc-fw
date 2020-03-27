@@ -133,7 +133,7 @@ double AtModeArgs::toDouble(uint16_t num, double defaultValue) const
 }
 
 
-uint32_t AtModeArgs::toMillis(uint16_t num, uint32_t minTime, uint32_t maxTime, uint32_t defaultValue) const
+uint32_t AtModeArgs::toMillis(uint16_t num, uint32_t minTime, uint32_t maxTime, uint32_t defaultValue, const String &defaultSuffix) const
 {
     auto arg = get(num);
     if (!arg) {
@@ -144,6 +144,9 @@ uint32_t AtModeArgs::toMillis(uint16_t num, uint32_t minTime, uint32_t maxTime, 
     auto value = strtod(arg, &endPtr);
     String suffix(endPtr);
     suffix.trim();
+    if (suffix.length() == 0) {
+        suffix = defaultSuffix;
+    }
     suffix.toLowerCase();
 
     uint32_t result;
@@ -153,7 +156,7 @@ uint32_t AtModeArgs::toMillis(uint16_t num, uint32_t minTime, uint32_t maxTime, 
     }
     else
 */
-    if (String_startsWith(suffix, F("min"))) {
+    if (String_equals(suffix, F("m")) || String_startsWith(suffix, F("min"))) {
         result =  (uint32_t)(value * 1000.0 * 60);
     }
     else if (String_equals(suffix, F("h")) || String_startsWith(suffix, F("hour"))) {
@@ -166,7 +169,7 @@ uint32_t AtModeArgs::toMillis(uint16_t num, uint32_t minTime, uint32_t maxTime, 
         result = (uint32_t)(value * 1000.0);
     }
     else {
-        result = (uint32_t)value;
+        result = (uint32_t)value;   // use default suffix
     }
     result = std::min(maxTime, result);
     if (result < minTime) {

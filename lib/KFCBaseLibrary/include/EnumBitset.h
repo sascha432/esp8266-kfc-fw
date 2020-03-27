@@ -164,9 +164,11 @@ template<class T, class ST>
 class EnumBitset : public EnumBase<T, ST> {
 public:
     using EnumBase<T, ST>::EnumBase;
+    using EnumBase<T, ST>::_value;
+#if ENUM_BASE_STORE_ENUM_AS_STRING
     using EnumBase<T, ST>::__printParsedValue;
     using EnumBase<T, ST>::__getValues;
-    using EnumBase<T, ST>::_value;
+#endif
 
     static const T ANY = static_cast<T>(~static_cast<ST>(0));
     static const T NONE = static_cast<T>(0);

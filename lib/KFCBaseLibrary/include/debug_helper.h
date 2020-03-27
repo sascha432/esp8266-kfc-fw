@@ -210,6 +210,8 @@ public:
 #define __debugbreak_and_panic()                        panic();
 #define __debugbreak_and_panic_printf_P(fmt, ...)       Serial.printf_P(fmt, ## __VA_ARGS__); panic();
 
+#define resolve_lambda(ptr)         (ptr)
+
 #define debug_println_notempty(msg) ;
 #define debug_print(...)            ;
 #define debug_println(...)          ;

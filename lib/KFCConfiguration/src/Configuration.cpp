@@ -317,7 +317,7 @@ void Configuration::dump(Print &output, bool dirty, const String &name)
 
     uint16_t offset = _dataOffset;
     for (auto &parameter : _params) {
-        DebugHelper::activate(false);
+        DEBUG_HELPER_SILENT();
         auto display = true;
         auto &param = parameter._param;
         if (name.length()) {
@@ -331,7 +331,7 @@ void Configuration::dump(Print &output, bool dirty, const String &name)
             }
         }
         auto length = parameter.read(this, offset);
-        DebugHelper::activate(true);
+        DEBUG_HELPER_INIT();
         if (display) {
 #if DEBUG_GETHANDLE
             output.printf_P(PSTR("%s[%04x]: "), getHandleName(param.handle), param.handle);

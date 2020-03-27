@@ -2,8 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if IOT_BLINDS_CTRL
-
 #pragma once
 
 #include <Arduino_compat.h>
@@ -121,5 +119,3 @@ protected:
     uint32_t _rpmCounter;
 #endif
 };
-
-#endif

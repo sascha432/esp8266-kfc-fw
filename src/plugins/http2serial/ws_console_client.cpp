@@ -2,8 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if HTTP2SERIAL
-
 #include "ws_console_client.h"
 #include <StreamString.h>
 #include "http2serial.h"
@@ -75,5 +73,3 @@ void WsConsoleClient::onEnd()
     _debug_printf_P(PSTR("no authenticated clients connected, Http2Serial instance %p\n"), Http2Serial::getInstance());
     Http2Serial::destroyInstance();
 }
-
-#endif

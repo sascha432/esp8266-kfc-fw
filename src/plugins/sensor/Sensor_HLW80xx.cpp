@@ -2,7 +2,7 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if IOT_SENSOR && (IOT_SENSOR_HAVE_HLW8012 || IOT_SENSOR_HAVE_HLW8032)
+#if IOT_SENSOR_HAVE_HLW8012 || IOT_SENSOR_HAVE_HLW8032
 
 #include <EventTimer.h>
 #include <Timezone.h>

@@ -2,7 +2,9 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if MDNS_SUPPORT
+#if !MDNS_SUPPORT
+#error Plugin not active
+#endif
 
 #ifndef DEBUG_MDNS_SD
 #define DEBUG_MDNS_SD                   0
@@ -20,5 +22,3 @@
 
 // void MDNS_auto_discovery(Stream &out);
 void MDNS_query_service(const char *service, const char *proto, Stream &stream);
-
-#endif

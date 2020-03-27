@@ -2,8 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if IOT_SENSOR
-
 #include "MQTTSensor.h"
 #include <time.h>
 
@@ -56,5 +54,3 @@ void MQTTSensor::timerEvent(JsonArray &array)
         getValues(array);
     }
 }
-
-#endif

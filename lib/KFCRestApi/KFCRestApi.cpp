@@ -2,8 +2,6 @@
   Author: sascha_lammers@gmx.de
 */
 
-#if HAVE_KFC_RESTAPI
-
 #include <EventScheduler.h>
 #include <PrintString.h>
 #include <LoopFunctions.h>
@@ -201,5 +199,3 @@ void KFCRestAPI::_createRestApiCall(const String &endPointUri, const String &bod
         httpRequest.finish(-100);
     }
 }
-
-#endif

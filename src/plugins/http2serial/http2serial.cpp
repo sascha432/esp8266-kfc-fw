@@ -2,8 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if HTTP2SERIAL
-
 // Allows to connect over web sockets to the serial port, similar to Serial2TCP
 
 #include <Arduino_compat.h>
@@ -17,6 +15,7 @@
 #include "web_socket.h"
 #include "progmem_data.h"
 #include "plugins.h"
+#include "plugins_menu.h"
 
 #if DEBUG_HTTP2SERIAL
 #include <debug_helper_enable.h>
@@ -303,7 +302,5 @@ bool Http2SerialPlugin::atModeHandler(AtModeArgs &args)
     }
     return false;
 }
-
-#endif
 
 #endif

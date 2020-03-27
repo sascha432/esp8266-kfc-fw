@@ -16,6 +16,7 @@
 #include "logger.h"
 #include "web_server.h"
 #include "plugins.h"
+#include "plugins_menu.h"
 
 #if DEBUG_PING_MONITOR
 #include <debug_helper_enable.h>

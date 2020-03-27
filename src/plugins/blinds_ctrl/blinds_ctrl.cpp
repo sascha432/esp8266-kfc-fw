@@ -2,8 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if IOT_BLINDS_CTRL
-
 #include <Arduino_compat.h>
 #include <LoopFunctions.h>
 #include <MicrosTimer.h>
@@ -414,7 +412,5 @@ bool BlindsControlPlugin::atModeHandler(AtModeArgs &args)
 #endif
     return false;
 }
-
-#endif
 
 #endif

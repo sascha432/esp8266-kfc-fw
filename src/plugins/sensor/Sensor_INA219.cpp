@@ -2,7 +2,7 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if IOT_SENSOR && IOT_SENSOR_HAVE_INA219
+#if IOT_SENSOR_HAVE_INA219
 
 #include "Sensor_INA219.h"
 #include "sensor.h"

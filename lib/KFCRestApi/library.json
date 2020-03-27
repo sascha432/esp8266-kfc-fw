@@ -1,0 +1,23 @@
+{
+  "name": "KFCRestApi",
+  "version": "0.1",
+  "authors": {
+    "name": "sascha lammers",
+    "maintainer": true
+  },
+  "frameworks": "arduino",
+  "platforms": [
+    "espressif8266",
+    "espressif32"
+  ],
+  "dependencies": [
+    {
+      "name": "KFCBaseLibrary",
+      "authors": "sascha lammers"
+    },
+    {
+      "name": "KFCJson",
+      "authors": "sascha lammers"
+    }
+  ]
+}

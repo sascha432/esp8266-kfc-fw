@@ -2,8 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if IOT_ATOMIC_SUN_V2
-
 // v2 uses a 4 channel mosfet dimmer with a different serial protocol
 
 #include <PrintHtmlEntitiesString.h>
@@ -685,5 +683,3 @@ void AtomicSunPlugin::createWebUI(WebUI &webUI)
         row->addSlider(PrintString(F("dimmer_channel%u"), order[j]), PrintString(F("Channel %u"), j + 1), 0, IOT_ATOMIC_SUN_MAX_BRIGHTNESS);
     }
 }
-
-#endif

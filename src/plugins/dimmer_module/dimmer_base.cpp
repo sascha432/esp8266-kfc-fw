@@ -2,8 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if IOT_DIMMER_MODULE || IOT_ATOMIC_SUN_V2
-
 #include "dimmer_base.h"
 #include <KFCJson.h>
 #include <ESPAsyncWebServer.h>
@@ -586,5 +584,3 @@ void Dimmer_Base::resetDimmerMCU()
     delay(10);
     pinMode(STK500V1_RESET_PIN, INPUT);
 }
-
-#endif

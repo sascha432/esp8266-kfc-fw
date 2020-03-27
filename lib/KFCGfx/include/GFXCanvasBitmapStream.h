@@ -4,8 +4,6 @@
 
 #pragma once
 
-#if HAVE_GFX_LIB
-
 #include <Arduino_compat.h>
 #include "GFXCanvas.h"
 #include "bitmap_header.h"
@@ -48,5 +46,3 @@ private:
     uint16_t _width;
     uint16_t _height;
 };
-
-#endif

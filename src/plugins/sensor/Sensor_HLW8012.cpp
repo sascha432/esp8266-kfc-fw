@@ -2,7 +2,7 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if IOT_SENSOR && IOT_SENSOR_HAVE_HLW8012
+#if IOT_SENSOR_HAVE_HLW8012
 
 #include <LoopFunctions.h>
 #include <EventTimer.h>

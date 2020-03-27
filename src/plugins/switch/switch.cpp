@@ -2,8 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if IOT_SWITCH
-
 #include "switch.h"
 #include <LoopFunctions.h>
 #include <PrintHtmlEntities.h>
@@ -238,5 +236,3 @@ void SwitchPlugin::_publishState(MQTTClient *client, int8_t channel)
         }
     }
 }
-
-#endif

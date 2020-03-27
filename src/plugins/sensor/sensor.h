@@ -2,7 +2,9 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if IOT_SENSOR
+#if !IOT_SENSOR
+#error Plugin not active
+#endif
 
 #pragma once
 
@@ -159,6 +161,3 @@ public:
         return count;
     }
 };
-
-#endif
-

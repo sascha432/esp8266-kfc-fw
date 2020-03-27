@@ -2,8 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if MDNS_SUPPORT
-
 #include "mdns_sd.h"
 #if defined(ESP8266)
 #include <ESP8266mDNS.h>
@@ -169,7 +167,5 @@ bool MDNSPlugin::atModeHandler(AtModeArgs &args)
     // }
     return false;
 }
-
-#endif
 
 #endif

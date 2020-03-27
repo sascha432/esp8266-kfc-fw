@@ -2,8 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if HAVE_GFX_LIB
-
 #include "AdafruitGFXExtension.h"
 
 void AdafruitGFXExtension::_drawTextAligned(int16_t x, int16_t y, const String& text, TextAlignEnum_t align, TextVAlignEnum_t valign, Position_t* pos)
@@ -136,5 +134,3 @@ void AdafruitGFXExtension::_drawBitmap(int16_t x, int16_t y, PGM_P bmp, const ui
         dim->h = height;
     }
 }
-
-#endif

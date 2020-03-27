@@ -28,10 +28,6 @@
 #include "at_mode.h"
 #include "reset_detector.h"
 #include "dyn_bitset.h"
-#if DEBUG_HAVE_SAVECRASH
-#include "../.pio/libdeps/remote/EspSaveCrash/src/EspSaveCrash.h"
-// #include <EspSaveCrash.h>
-#endif
 
 #ifdef dhcp_start // defined in framework-arduinoespressif8266@2.20402.4/tools/sdk/lwip2/include/arch/cc.h
 #undef dhcp_start
@@ -555,6 +551,7 @@ private:
 extern KFCFWConfiguration config;
 
 #if DEBUG_HAVE_SAVECRASH
+class EspSaveCrash;
 extern EspSaveCrash SaveCrash;
 #endif
 

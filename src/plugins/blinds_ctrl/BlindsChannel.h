@@ -2,8 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if IOT_BLINDS_CTRL
-
 #pragma once
 
 #include <Arduino_compat.h>
@@ -53,5 +51,3 @@ private:
     uint8_t _number;
     BlindsControl *_controller;
 };
-
-#endif

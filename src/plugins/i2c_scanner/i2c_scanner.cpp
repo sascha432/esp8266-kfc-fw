@@ -10,7 +10,6 @@
 * D8 throws exceptions thus it has been left out
 *
 */
-#if I2CSCANNER_PLUGIN
 
 // TODO could have some more options and cleaner code
 
@@ -433,7 +432,5 @@ bool I2CScannerPlugin::atModeHandler(AtModeArgs &args)
     }
     return false;
 }
-
-#endif
 
 #endif

@@ -21,7 +21,8 @@
 #include <printf_wrapper.h>
 #endif
 #if HAVE_GDBSTUB
-#include <GDBStub.h>
+#error uncomment the line below
+// #include <GDBStub.h>
 extern "C" void gdbstub_do_break();
 #endif
 #if 0

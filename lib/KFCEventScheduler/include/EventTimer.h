@@ -53,6 +53,7 @@ public:
 private:
     friend EventScheduler;
     friend EventScheduler::Timer;
+    friend void at_mode_list_ets_timers(Print &output);
 
     // void _setScheduleCallback(bool enable);
     void _rearmEtsTimer();

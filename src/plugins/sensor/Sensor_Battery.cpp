@@ -2,7 +2,7 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if IOT_SENSOR && IOT_SENSOR_HAVE_BATTERY
+#if IOT_SENSOR_HAVE_BATTERY
 
 #include "Sensor_Battery.h"
 #include "progmem_data.h"

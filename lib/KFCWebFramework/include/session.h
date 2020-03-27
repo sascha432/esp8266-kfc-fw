@@ -8,8 +8,8 @@
 #include <Arduino_compat.h>
 
 #ifndef SESSION_CONFIGURATION_SET
-#define SESSION_RNG_RANDOM              1
-#define SESSION_SALT_LENGTH             8
+#define SESSION_RNG_RANDOM                      1
+#define SESSION_SALT_LENGTH                     8
 #endif
 
 #if SESSION_RNG_RANDOM
@@ -18,7 +18,16 @@ extern RNGClass rng;
 #endif
 
 #ifndef SESSION_CONFIGURATION_SET
-#define SESSION_CONFIGURATION_SET   1
+#define SESSION_CONFIGURATION_SET               1
+
+#ifdef HAVE_SESSION_DEVICE_TOKEN
+#define HAVE_SESSION_DEVICE_TOKEN               1
+#endif
+
+#if HAVE_SESSION_DEVICE_TOKEN
+extern const char *session_get_device_token();
+#endif
+
 
 #if defined(ESP32) || defined(ESP8266)
 

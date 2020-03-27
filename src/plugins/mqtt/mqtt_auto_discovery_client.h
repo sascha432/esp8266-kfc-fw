@@ -2,8 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if MQTT_SUPPORT
-
 #pragma once
 
 // Auto Discovery Client for MQTT
@@ -63,7 +61,5 @@ private:
     static uint16_t _uniqueId;
     static MQTTAutoDiscoveryClient *_instance;
 };
-
-#endif
 
 #endif

@@ -2,7 +2,9 @@
   Author: sascha_lammers@gmx.de
 */
 
-#if IOT_SWITCH
+#if !IOT_SWITCH
+#error Plugin not active
+#endif
 
 #pragma once
 
@@ -107,5 +109,3 @@ private:
     uint32_t _states;
     const std::array<uint8_t, IOT_SWITCH_CHANNEL_NUM> _pins;
 };
-
-#endif

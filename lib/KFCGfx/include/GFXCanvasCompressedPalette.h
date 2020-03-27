@@ -4,8 +4,6 @@
 
 #pragma once
 
-#if HAVE_GFX_LIB
-
 #include "GFXCanvasCompressed.h"
 
 class GFXCanvasCompressedPalette : public GFXCanvasCompressed {
@@ -30,5 +28,3 @@ private:
     uint16_t _palette[15];
     uint8_t _paletteCount;
 };
-
-#endif

@@ -2,8 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if IOT_BLINDS_CTRL
-
 #include "blinds_ctrl.h"
 #include "BlindsChannel.h"
 #include "BlindsControl.h"
@@ -103,5 +101,3 @@ const __FlashStringHelper *BlindsChannel::_stateStr(StateEnum_t state)
     }
     return F("???");
 }
-
-#endif

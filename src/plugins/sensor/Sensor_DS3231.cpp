@@ -2,7 +2,7 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if IOT_SENSOR && IOT_SENSOR_HAVE_DS3231
+#if IOT_SENSOR_HAVE_DS3231
 
 #include <Timezone.h>
 #include "Sensor_DS3231.h"

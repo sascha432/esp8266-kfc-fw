@@ -4,8 +4,6 @@
 
 #pragma once
 
-#if IOT_DIMMER_MODULE
-
 #include <Arduino_compat.h>
 #include "kfc_fw_config.h"
 #include "../mqtt/mqtt_client.h"
@@ -64,5 +62,3 @@ private:
     Driver_DimmerModule *_dimmer;
     uint8_t _channel;
 };
-
-#endif

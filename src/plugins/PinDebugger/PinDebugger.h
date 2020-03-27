@@ -13,6 +13,7 @@
 #include <Arduino_compat.h>
 #include <VirtualPinDebug.h>
 #include "plugins.h"
+#include "plugins_menu.h"
 
 class PinDebuggerPlugin : public PluginComponent {
 public:

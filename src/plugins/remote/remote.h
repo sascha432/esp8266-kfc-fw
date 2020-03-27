@@ -4,7 +4,9 @@
 
 #pragma once
 
-#if IOT_REMOTE_CONTROL
+#if !IOT_REMOTE_CONTROL
+#error Plugin not active
+#endif
 
 #include <EventScheduler.h>
 #include <EventTimer.h>
@@ -255,5 +257,3 @@ private:
 };
 
 #include <debug_helper_disable.h>
-
-#endif

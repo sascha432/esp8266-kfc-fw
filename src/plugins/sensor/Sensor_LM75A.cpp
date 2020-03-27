@@ -2,7 +2,7 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if IOT_SENSOR && IOT_SENSOR_HAVE_LM75A
+#if IOT_SENSOR_HAVE_LM75A
 
 #include "Sensor_LM75A.h"
 

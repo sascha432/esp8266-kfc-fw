@@ -2,7 +2,7 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if IOT_SENSOR && IOT_SENSOR_HAVE_CCS811
+#if IOT_SENSOR_HAVE_CCS811
 
 #include "Sensor_CCS811.h"
 #include "Sensor_LM75A.h"

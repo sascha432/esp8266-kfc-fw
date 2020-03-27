@@ -4,8 +4,6 @@
 
 #pragma once
 
-#if IOT_SENSOR
-
 #ifndef DEBUG_IOT_SENSOR
 #define DEBUG_IOT_SENSOR                    0
 #endif
@@ -105,5 +103,3 @@ private:
     uint8_t _updateRate;
     time_t _nextUpdate;
 };
-
-#endif

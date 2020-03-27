@@ -2,8 +2,6 @@
 * Author: sascha_lammers@gmx.de
 */
 
-#if HAVE_GFX_LIB
-
 #include "GFXcanvas.h"
 
 #if DEBUG_GFXCANVAS
@@ -180,5 +178,3 @@ uint16_t GFXCanvas::convertRGBtoRGB565(uint32_t rgb)
 {
     return convertRGBtoRGB565(rgb, rgb >> 8, rgb >> 16);
 }
-
-#endif

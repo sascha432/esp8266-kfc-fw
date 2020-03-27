@@ -2,8 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if IOT_DIMMER_MODULE
-
 #include "../include/templates.h"
 #include <LoopFunctions.h>
 #include <EventScheduler.h>
@@ -558,7 +556,5 @@ bool DimmerModulePlugin::atModeHandler(AtModeArgs &args)
     }
     return false;
 }
-
-#endif
 
 #endif

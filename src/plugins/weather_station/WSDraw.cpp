@@ -2,8 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if IOT_WEATHER_STATION
-
 #include "WSDraw.h"
 
 // DejaVu_Sans_Bold_20
@@ -450,5 +448,3 @@ void WSDraw::_broadcastCanvas(int16_t x, int16_t y, int16_t w, int16_t h)
     // file.close();
 
 }
-
-#endif

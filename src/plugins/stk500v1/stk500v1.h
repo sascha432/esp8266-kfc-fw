@@ -2,7 +2,9 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if STK500V1
+#if !STK500V1
+#error Plugin not active
+#endif
 
 // STK500v1 programmer plugin
 // fully asynchronous implementation
@@ -46,6 +48,4 @@
 
 #ifndef STK500V1_RESET_PIN
 #error Reset pin not defined
-#endif
-
 #endif

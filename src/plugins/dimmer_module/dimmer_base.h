@@ -4,8 +4,6 @@
 
 #pragma once
 
-#if IOT_DIMMER_MODULE || IOT_ATOMIC_SUN_V2
-
 #include <Arduino_compat.h>
 #include <PrintHtmlEntitiesString.h>
 #include <WebUIComponent.h>
@@ -148,5 +146,3 @@ public:
     static void handleWebServer(AsyncWebServerRequest *request);
     static void resetDimmerMCU();
 };
-
-#endif

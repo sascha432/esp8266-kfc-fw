@@ -2,8 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if IOT_WEATHER_STATION
-
 #include "weather_station.h"
 #include <PrintHtmlEntitiesString.h>
 #include <LoopFunctions.h>
@@ -697,5 +695,3 @@ void WeatherStationPlugin::_broadcastCanvas(int16_t x, int16_t y, int16_t w, int
         }
     }
 }
-
-#endif

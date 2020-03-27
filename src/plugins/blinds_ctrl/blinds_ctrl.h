@@ -8,7 +8,9 @@
 // optional position tracking/rpm sensing/improved stall detection
 // https://easyeda.com/sascha23095123423/rpm-sensing-for-iot-blinds-controller
 
-#if IOT_BLINDS_CTRL
+#if !IOT_BLINDS_CTRL
+#error Plugin not active
+#endif
 
 #pragma once
 
@@ -96,6 +98,3 @@
 // I=(ADC/1024)*V/RS
 // mA=((value/1024)*(IOT_BLINDS_CTRL_ADCV/1000)/(IOT_BLINDS_CTRL_SHUNT/1000))*1000
 #define ADC_TO_CURRENT(value)       (uint32_t)round((IOT_BLINDS_CTRL_ADCV * value * 1000UL) / (double)(IOT_BLINDS_CTRL_SHUNT * 1024UL))
-
-
-#endif

@@ -4,8 +4,6 @@
 
 // Yaml code for Home Assistant and auto discovery
 
-#if MQTT_SUPPORT
-
 #include <Arduino_compat.h>
 #include <PrintString.h>
 #include <JsonTools.h>
@@ -216,5 +214,3 @@ const String MQTTAutoDiscovery::_getUnqiueId(const String &name)
     }
     return uniqueId;
 }
-
-#endif

@@ -8,7 +8,6 @@
 #include "HttpHeaders.h"
 #if HAVE_HTTPHEADERS_ASYNCWEBSERVER
 #include <ESPAsyncWebServer.h>
-#include "async_web_response.h"
 #endif
 
 PROGMEM_STRING_DEF(Pragma, "Pragma");
@@ -301,20 +300,14 @@ void HttpHeaders::setAsyncWebServerResponseHeaders(AsyncWebServerResponse *respo
     }, true);
 }
 
-
-void HttpHeaders::setAsyncBaseResponseHeaders(AsyncBaseResponse *response)
-{
-    response->_httpHeaders = std::move(_headers);
-}
-
 #endif
 
-void HttpHeaders::printTo(Print &output) {
-    for (const auto &header : _headers) {
+void HttpHeaders::printTo(Print &output)
+{
+    for (auto &header : _headers) {
         header->printTo(output);
     }
 }
-
 
 #if DEBUG
 

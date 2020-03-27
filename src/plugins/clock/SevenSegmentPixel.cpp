@@ -2,8 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if IOT_CLOCK
-
 #include "SevenSegmentPixel.h"
 #include <avr/pgmspace.h>
 
@@ -284,5 +282,3 @@ void SevenSegmentPixel::dump(Print &output)
         output.printf_P(PSTR("colon %u: lower address=%u upper=%u\n"), c, _dotPixelAddress[c * 2], _dotPixelAddress[c * 2 + 1]);
     }
 }
-
-#endif

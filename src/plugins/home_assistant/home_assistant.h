@@ -2,7 +2,9 @@
   Author: sascha_lammers@gmx.de
 */
 
-#if HOME_ASSISTANT_INTEGRATION
+#if !HOME_ASSISTANT_INTEGRATION
+#error Plugin not active
+#endif
 
 #pragma once
 
@@ -111,5 +113,3 @@ public:
 private:
     void _installWebhooks();
 };
-
-#endif

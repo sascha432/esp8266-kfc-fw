@@ -2,8 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if STK500V1
-
 #include <LoopFunctions.h>
 #include <ctype.h>
 #include <Timezone.h>
@@ -748,5 +746,3 @@ void STK500v1Programmer::_endPosition(const String &message, bool error) {
     str.printf_P(PSTR(" | %s\n\n"), message.c_str());
     _status(str);
 }
-
-#endif

@@ -4,7 +4,7 @@
 
 #pragma once
 
-#if IOT_SENSOR && IOT_SENSOR_HAVE_LM75A
+#if IOT_SENSOR_HAVE_LM75A
 
 #include <Arduino_compat.h>
 #include <Wire.h>

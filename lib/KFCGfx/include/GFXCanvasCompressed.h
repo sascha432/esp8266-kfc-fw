@@ -4,8 +4,6 @@
 
 #pragma once
 
-#if HAVE_GFX_LIB
-
 /*
 
 RLE compressed 16bit canvas
@@ -135,5 +133,3 @@ protected:
     Stats stats;
 #endif
 };
-
-#endif

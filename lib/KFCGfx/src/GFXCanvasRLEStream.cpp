@@ -2,8 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if HAVE_GFX_LIB
-
 #include "GFXCanvasRLEStream.h"
 #include "GFXCanvasCompressed.h"
 
@@ -128,5 +126,3 @@ uint8_t GFXCanvasRLEStream::_sendBufferedByte()
     _buffer.remove(0, 1);
     return byte;
 }
-
-#endif

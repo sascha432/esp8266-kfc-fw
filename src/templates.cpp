@@ -14,6 +14,7 @@
 #include "status.h"
 #include "reset_detector.h"
 #include "plugins.h"
+#include "plugins_menu.h"
 
 #if DEBUG_TEMPLATES
 #include <debug_helper_enable.h>

@@ -2,8 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if IOT_WEATHER_STATION
-
 #pragma once
 
 #include <Arduino_compat.h>
@@ -285,5 +283,3 @@ protected:
     uint8_t _offsetX;
     uint8_t _offsetY;
 };
-
-#endif

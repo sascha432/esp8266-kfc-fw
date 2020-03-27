@@ -2,8 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if SYSLOG
-
 #include <Arduino_compat.h>
 #include <Buffer.h>
 #include <KFCSyslog.h>
@@ -330,7 +328,5 @@ bool SyslogPlugin::atModeHandler(AtModeArgs &args)
     }
     return false;
 }
-
-#endif
 
 #endif

@@ -2,7 +2,9 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if HTTP2SERIAL
+#if !HTTP2SERIAL
+#error Plugin not active
+#endif
 
 #pragma once
 
@@ -65,5 +67,3 @@ private:
     uint16_t _outputBufferMaxSize;
     uint16_t _outputBufferDelay;
 };
-
-#endif

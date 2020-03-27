@@ -2,8 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if IOT_BLINDS_CTRL
-
 #include "WebUISocket.h"
 #include "BlindsControl.h"
 #include "progmem_data.h"
@@ -376,7 +374,5 @@ bool BlindsControl::_hasStalled()
     // interval for 500 rpm = ~40ms with 3 pulses
     return (_rpmLastInterrupt.getTime() > (1000000UL / 500UL/*rpm*/ * 60UL / IOT_BLINDS_CTRL_RPM_PULSES));
 }
-
-#endif
 
 #endif

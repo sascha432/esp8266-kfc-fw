@@ -4,7 +4,7 @@
 
 #pragma once
 
-#if IOT_SENSOR && IOT_SENSOR_HAVE_INA219
+#if IOT_SENSOR_HAVE_INA219
 
 #include <Arduino_compat.h>
 #include <Adafruit_INA219.h>

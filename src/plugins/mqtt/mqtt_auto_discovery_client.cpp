@@ -2,8 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if MQTT_SUPPORT
-
 #include "mqtt_auto_discovery_client.h"
 #include "mqtt_client.h"
 #include "JsonCallbackReader.h"
@@ -151,7 +149,5 @@ void MQTTAutoDiscoveryClient::onMessage(MQTTClient *client, char *topic, char *p
     _uniqueId++; // increase counter for each new device
     _discovery.push_back(std::move(discoveryPtr));
 }
-
-#endif
 
 #endif

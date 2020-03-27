@@ -4,8 +4,6 @@
 
 #pragma once
 
-#if HAVE_GFX_LIB
-
 #include <Arduino_compat.h>
 #include <assert.h>
 #include <Buffer.h>
@@ -137,5 +135,3 @@ namespace GFXCanvas {
     uint16_t convertRGBtoRGB565(uint32_t rgb);
 
 };
-
-#endif

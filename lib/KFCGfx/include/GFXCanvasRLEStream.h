@@ -4,8 +4,6 @@
 
 #pragma once
 
-#if HAVE_GFX_LIB
-
 #include <Arduino_compat.h>
 #include <Buffer.h>
 #include "GFXCanvas.h"
@@ -55,5 +53,3 @@ private:
     int32_t _position;
     uint16_t _lastColor;
 };
-
-#endif

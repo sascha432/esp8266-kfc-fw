@@ -4,7 +4,9 @@
 
 #pragma once
 
-#if IOT_RF24_MASTER
+#if !IOT_RF24_MASTER
+#error Plugin not active
+#endif
 
 #include <Arduino_compat.h>
 #include <vector>
@@ -56,5 +58,3 @@ private:
     PCF8574 _pcf8574;
 #endif
 };
-
-#endif

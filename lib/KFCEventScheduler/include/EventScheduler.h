@@ -123,8 +123,6 @@ public:
         return _timers.size();
     }
 
-    void listETSTimers(Print &output);
-
 public:
     static void loop();
     static void _timerCallback(void *arg);
@@ -134,6 +132,7 @@ private:
     void _list();
 #endif
     friend EventTimer;
+    friend void at_mode_list_ets_timers(Print &output);
 
     void _removeTimer(EventTimer *timer);
     void _loop();

@@ -6,7 +6,6 @@
 
 #include <Arduino_compat.h>
 #include <vector>
-#include <BootstrapMenu.h>
 #include "PluginComponent.h"
 
 #ifndef DEBUG_PLUGINS
@@ -29,18 +28,7 @@
 
 typedef std::vector<PluginComponent *> PluginsVector;
 
-typedef struct {
-    BootstrapMenu::menu_item_id_t home;
-    BootstrapMenu::menu_item_id_t status;
-    BootstrapMenu::menu_item_id_t config;
-    BootstrapMenu::menu_item_id_t device;
-    BootstrapMenu::menu_item_id_t admin;
-    BootstrapMenu::menu_item_id_t util;
-} NavMenu_t;
-
 extern PluginsVector plugins;
-extern BootstrapMenu bootstrapMenu;
-extern NavMenu_t navMenu;
 
 // dump list of plug-ins and some details
 void dump_plugin_list(Print &output);

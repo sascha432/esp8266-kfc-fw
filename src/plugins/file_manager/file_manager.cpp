@@ -2,8 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if FILE_MANAGER
-
 #include "file_manager.h"
 #include <Buffer.h>
 #include <PrintString.h>
@@ -499,5 +497,3 @@ public:
 };
 
 static FileManagerPlugin plugin;
-
-#endif

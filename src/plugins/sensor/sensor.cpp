@@ -2,8 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if IOT_SENSOR
-
 #include "sensor.h"
 #include <PrintHtmlEntitiesString.h>
 #include <KFCJson.h>
@@ -209,7 +207,5 @@ bool SensorPlugin::atModeHandler(AtModeArgs &args)
     }
     return false;
 }
-
-#endif
 
 #endif

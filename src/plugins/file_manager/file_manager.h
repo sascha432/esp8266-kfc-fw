@@ -2,7 +2,9 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if FILE_MANAGER
+#if !FILE_MANAGER
+#error Plugin not active
+#endif
 
 #pragma once
 
@@ -70,5 +72,3 @@ public:
 private:
     const __FlashStringHelper *_uri;
 };
-
-#endif

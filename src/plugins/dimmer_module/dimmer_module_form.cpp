@@ -3,8 +3,6 @@
  */
 
 
-#if IOT_ATOMIC_SUN_V2 || IOT_DIMMER_MODULE
-
 #include "dimmer_module_form.h"
 #include <PrintHtmlEntitiesString.h>
 #include "../include/templates.h"
@@ -98,5 +96,3 @@ void DimmerModuleForm::createConfigureForm(AsyncWebServerRequest *request, Form 
 
     reinterpret_cast<SettingsForm &>(form).getTokens().push_back(std::make_pair<String, String>(F("HASS_YAML"), code.c_str()));
 }
-
-#endif

@@ -22,7 +22,7 @@
 #include <debug_helper_disable.h>
 #endif
 
-DEFINE_ENUM(MQTTQueueType_t);
+DEFINE_ENUM(MQTTQueueEnum_t);
 
 PROGMEM_STRING_DEF(Anonymous, "Anonymous");
 

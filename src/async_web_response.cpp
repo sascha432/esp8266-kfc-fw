@@ -15,7 +15,6 @@
 #include <debug_helper_disable.h>
 #endif
 
-
 AsyncBaseResponse::AsyncBaseResponse(bool chunked)
 {
     if (chunked) {

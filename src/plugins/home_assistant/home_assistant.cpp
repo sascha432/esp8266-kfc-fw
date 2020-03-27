@@ -2,8 +2,6 @@
   Author: sascha_lammers@gmx.de
 */
 
-#if HOME_ASSISTANT_INTEGRATION
-
 // https://developers.home-assistant.io/docs/en/external_api_rest.html#post-api-services-lt-domain-lt-service
 
 #include <KFCForms.h>
@@ -568,5 +566,3 @@ void HassPlugin::_installWebhooks()
     _debug_printf_P(PSTR("server=%p\n"), get_web_server_object());
     web_server_add_handler(F("/hass_remove.html"), removeAction);
 }
-
-#endif

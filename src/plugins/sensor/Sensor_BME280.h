@@ -4,7 +4,7 @@
 
 #pragma once
 
-#if IOT_SENSOR && IOT_SENSOR_HAVE_BME280
+#if IOT_SENSOR_HAVE_BME280
 
 #include <Arduino_compat.h>
 #include <Wire.h>

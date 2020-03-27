@@ -2,7 +2,9 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if IOT_CLOCK
+#if !IOT_CLOCK
+#error Plugin not active
+#endif
 
 #include <Arduino_compat.h>
 #include <vector>
@@ -279,5 +281,3 @@ private:
     bool _timeFormat24h;
     AnimationData_t _animationData;
 };
-
-#endif

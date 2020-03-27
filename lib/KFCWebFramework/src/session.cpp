@@ -4,7 +4,6 @@
 
 #include <Arduino_compat.h>
 #include "session.h"
-#include "kfc_fw_config.h"
 
 RNGClass rng;
 
@@ -77,12 +76,16 @@ String generate_session_id(const char *username, const char *password, char *sal
 bool verify_session_id(const char *session_id, const char *username, const char *password) {
     char salt[8];
 
-    const char *token = config._H_STR(Config().device_token);
-    if (strlen(token) > 16) {
+#if HAVE_SESSION_DEVICE_TOKEN
+
+    const char *token = session_get_device_token();
+    if (token && strlen(token) > 16) {
         if (strcmp(session_id, token) == 0) {
             return true;
         }
     }
+
+#endif
 
     if (strlen(session_id) != (SESSION_SALT_LENGTH + SESSION_HASH_LENGTH) * 2) {
         // debug_printf("SID length %d != %d\n", strlen(session_id), (8 + SESSION_HASH_LENGTH) * 2);

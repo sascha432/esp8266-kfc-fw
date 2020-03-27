@@ -2,8 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if IOT_DIMMER_MODULE
-
 #include "dimmer_channel.h"
 #include "dimmer_module.h"
 #include "progmem_data.h"
@@ -166,6 +164,3 @@ void DimmerChannel::publishState(MQTTClient *client) {
     obj.add(JJ(state), _data.state.value);
     WsWebUISocket::broadcast(WsWebUISocket::getSender(), json);
 }
-
-#endif
-

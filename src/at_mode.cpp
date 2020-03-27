@@ -31,6 +31,9 @@
 #if IOT_DIMMER_MODULE || IOT_ATOMIC_SUN_V2
 #include "plugins/dimmer_module/dimmer_base.h"
 #endif
+#if DEBUG_HAVE_SAVECRASH
+#include <EspSaveCrash.h>
+#endif
 
 #if DEBUG_AT_MODE
 #include <debug_helper_enable.h>
@@ -614,7 +617,7 @@ void at_mode_print_prefix(Stream &output, const char *command)
 #if DEBUG
 
 #include <map>
-#include "../include/RestApi/RetrieveSymbols.h"
+#include "RestApi/RetrieveSymbols.h"
 
 static std::map<void *, String> at_mode_resolve_map;
 
@@ -676,6 +679,82 @@ void at_mode_resolve(void *ptr, AtModeResolveACallback resolve_callback)
     }
 #endif
 }
+
+#if DEBUG
+
+extern ETSTimer *timer_list;
+
+void at_mode_list_ets_timers(Print &output)
+{
+    StringVector addresses;
+    ETSTimer *cur = timer_list;
+    while(cur) {
+        for(const auto &timer: Scheduler._timers) {
+            if (&timer->_etsTimer == cur) {
+                addresses.push_back(PrintString(F("0x%x"), lambda_target(timer->_loopCallback)));
+                addresses.push_back(PrintString(F("0x%x"), (uint32_t)cur->timer_func));
+                addresses.push_back(PrintString(F("0x%x"), (uint32_t)cur->timer_arg));
+                break;
+            }
+        }
+        // float period_in_s = cur->timer_period / 312500.0;
+        // output.printf_P(PSTR("ETSTimer=%p func=%p arg=%p period=%u (%.3fs) exp=%u callback=%p\n"), cur, cur->timer_func, cur->timer_arg, cur->timer_period, period_in_s, cur->timer_expire, callback);
+        cur = cur->timer_next;
+    }
+
+    output.println(F("Waiting for symbols..."));
+    xtra_containers::remove_duplicates(addresses);
+    auto rs = new RetrieveSymbols::RestApi();
+    rs->setAutoDelete(true);
+    rs->setAddresses(std::move(addresses));
+    rs->call([&output](RetrieveSymbols::JsonReaderResult *result, const String &error) {
+        if (result) {
+            auto &items = result->getItems();
+            auto getAddr = [&items](uint32_t addr) {
+                auto it = std::find(items.begin(), items.end(), addr);
+                if (it == items.end()) {
+                    return String('-');
+                }
+                auto name = it->getName();
+                if (name.length() > 64) {
+                    name.remove(60, -1);
+                    name += F("...#");
+                    name += String(std::distance(items.begin(), it));
+                }
+                return name;
+            };
+            ETSTimer *cur = timer_list;
+            while(cur) {
+                void *callback = nullptr;
+                for(const auto &timer: Scheduler._timers) {
+                    if (&timer->_etsTimer == cur) {
+                        callback = lambda_target(timer->_loopCallback);
+                        break;
+                    }
+                }
+                float period_in_s = cur->timer_period / 312500.0;
+                output.printf_P(PSTR("ETSTimer=%p func=%p[%s] arg=%p[%s] period=%u (%.3fs) exp=%u callback=%p[%s]\n"),
+                    cur,
+                    cur->timer_func, getAddr((uint32_t)cur->timer_func).c_str(),
+                    cur->timer_arg, getAddr((uint32_t)cur->timer_arg).c_str(),
+                    cur->timer_period,
+                    period_in_s,
+                    cur->timer_expire,
+                    callback, getAddr((uint32_t)callback).c_str());
+                cur = cur->timer_next;
+            }
+            size_t num = 0;
+            for (auto item : result->getItems()) {
+                output.printf_P(PSTR("#% 2u 0x%08x 0x%08x:0x%04x %s\n"), num++, item.getSrcAddress(), item.getAddress(), item.getSize(), item.getName().c_str());
+            }
+        }
+        else {
+            output.println(error);
+        }
+    });
+}
+
+#endif
 
 void at_mode_serial_handle_event(String &commandString)
 {
@@ -1118,7 +1197,7 @@ void at_mode_serial_handle_event(String &commandString)
                 }
             }
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPT))) {
-                Scheduler.listETSTimers(output);
+                at_mode_list_ets_timers(output);
             }
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPFS))) {
                 at_mode_dump_fs_info(output);

@@ -4,7 +4,9 @@
 
 #pragma once
 
-#if IOT_WEATHER_STATION
+#if !IOT_WEATHER_STATION
+#error Plugin not active
+#endif
 
 #include <Arduino_compat.h>
 #include <SPI.h>
@@ -180,5 +182,3 @@ public:
     bool _debugDisplayCanvasBorder;
 #endif
 };
-
-#endif

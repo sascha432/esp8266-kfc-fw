@@ -2,7 +2,9 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if NTP_CLIENT
+#if !NTP_CLIENT
+#error Plugin not active
+#endif
 
 #include <Arduino_compat.h>
 
@@ -38,7 +40,5 @@ typedef std::function<void(time_t now)> TimeUpdatedCallback_t;
 
 // gets called if the system time is updated (now = time(nullptr)) or timezone is set (NTP_IS_TIMEZONE_UPDATE(now) == true)
 void addTimeUpdatedCallback(TimeUpdatedCallback_t callback);
-
-#endif
 
 #endif

@@ -2,9 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if IOT_CLOCK
-
-
 #define IOT_CLOCK_PIXEL_ORDER {28,29,30,31,24,25,26,27,11,10,9,8,20,21,22,23,16,17,18,19,15,14,13,12,11,10,9,8,7,6,5,4}
 
 #include "clock.h"
@@ -839,5 +836,3 @@ void ClockPlugin::setBrightness(uint16_t brightness)
         _updateRate = oldUpdateRate;
     });
 }
-
-#endif

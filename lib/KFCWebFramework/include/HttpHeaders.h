@@ -380,7 +380,12 @@ public:
     void setHeadersCallback(SetCallback_t callback, bool doClear);
 #if HAVE_HTTPHEADERS_ASYNCWEBSERVER
     void setAsyncWebServerResponseHeaders(AsyncWebServerResponse *response);
-    void setAsyncBaseResponseHeaders(AsyncBaseResponse *response);
+
+    template <class __AsyncBaseResponse>
+    void setAsyncBaseResponseHeaders(__AsyncBaseResponse *response)
+    {
+        response->_httpHeaders = std::move(_headers);
+    }
 #endif
 
     void printTo(Print &output);

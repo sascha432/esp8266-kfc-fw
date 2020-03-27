@@ -2,8 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if MQTT_SUPPORT
-
 #include "mqtt_component.h"
 #include "mqtt_client.h"
 
@@ -110,5 +108,3 @@ MQTTAutoDiscovery *MQTTComponentHelper::createAutoDiscovery(uint8_t count, MQTTA
     discovery->create(this, count, format);
     return discovery;
 }
-
-#endif

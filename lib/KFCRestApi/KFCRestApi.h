@@ -3,8 +3,6 @@
   Author: sascha_lammers@gmx.de
 */
 
-#if HAVE_KFC_RESTAPI
-
 #pragma once
 
 #include <Arduino_compat.h>
@@ -130,6 +128,3 @@ protected:
 };
 
 #include <debug_helper_disable.h>
-
-#endif
-

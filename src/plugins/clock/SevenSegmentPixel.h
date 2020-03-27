@@ -2,8 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if IOT_CLOCK
-
 #pragma once
 
 #if IOT_CLOCK_NEOPIXEL
@@ -174,5 +172,3 @@ private:
     uint16_t _targetBrightness;
     EventScheduler::Timer _brightnessTimer;
 };
-
-#endif

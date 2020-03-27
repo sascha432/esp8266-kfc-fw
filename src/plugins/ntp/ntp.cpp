@@ -2,8 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if NTP_CLIENT
-
 #include "ntp_plugin.h"
 #include <time.h>
 #include <sys/time.h>
@@ -320,7 +318,9 @@ bool NTPPlugin::atModeHandler(AtModeArgs &args)
     else
 #endif
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(NOW))) {
+#if DEBUG
 commandNow:
+#endif
         time_t now = time(nullptr);
         char timestamp[64];
         if (!IS_TIME_VALID(now)) {
@@ -542,5 +542,3 @@ void NTPPlugin::removeCallbacks()
 }
 
 #include <pop_pack.h>
-
-#endif

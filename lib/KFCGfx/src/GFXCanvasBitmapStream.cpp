@@ -2,8 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if HAVE_GFX_LIB
-
 #include "GFXCanvasBitmapStream.h"
 #include "GFXCanvasCompressed.h"
 
@@ -78,5 +76,3 @@ void GFXCanvasBitmapStream::_createHeader()
     _header.h.bih.biWidth = _width;
     _header.h.bih.biHeight = -_height; // negative means top to bottom
 }
-
-#endif

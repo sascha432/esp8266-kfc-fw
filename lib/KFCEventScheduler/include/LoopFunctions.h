@@ -57,8 +57,7 @@ public:
         add(callback, reinterpret_cast<CallbackPtr_t>(callbackPtr));
     }
     inline static void remove(void *callbackPtr) {
-        _debug_resolve_lambda(callbackPtr);
-        remove(reinterpret_cast<CallbackPtr_t>(callbackPtr));
+        remove(reinterpret_cast<CallbackPtr_t>(_debug_resolve_lambda(callbackPtr)));
     }
 
     static FunctionsVector &getVector();

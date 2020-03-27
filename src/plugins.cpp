@@ -3,6 +3,7 @@
 */
 
 #include "plugins.h"
+#include "plugins_menu.h"
 #include <Form.h>
 #include <algorithm>
 #include "RTCMemoryManager.h"

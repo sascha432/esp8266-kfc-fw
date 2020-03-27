@@ -2,8 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if HTTP2SERIAL
-
 #pragma once
 
 #include <Arduino_compat.h>
@@ -25,5 +23,3 @@ public:
     virtual void onStart() override;
     virtual void onEnd() override;
 };
-
-#endif

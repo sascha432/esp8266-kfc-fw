@@ -2,7 +2,7 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if IOT_SENSOR && IOT_SENSOR_HAVE_BME680
+#if IOT_SENSOR_HAVE_BME680
 
 #include "Sensor_BME680.h"
 

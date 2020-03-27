@@ -4,7 +4,9 @@
 
 #pragma once
 
-#if IOT_ATOMIC_SUN_V2
+#if !IOT_ATOMIC_SUN_V2
+#error Plugin not active
+#endif
 
 #include <Arduino_compat.h>
 #include <HardwareSerial.h>
@@ -183,5 +185,3 @@ public:
 };
 
 extern AtomicSunPlugin dimmer_plugin;
-
-#endif

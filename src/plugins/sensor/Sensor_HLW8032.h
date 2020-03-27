@@ -4,7 +4,7 @@
 
 #pragma once
 
-#if IOT_SENSOR && IOT_SENSOR_HAVE_HLW8032
+#if IOT_SENSOR_HAVE_HLW8032
 
 #include <Arduino_compat.h>
 #include <SoftwareSerial.h>

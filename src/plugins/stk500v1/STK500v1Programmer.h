@@ -2,8 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if STK500V1
-
 #include <Arduino_compat.h>
 #include <IntelHexFormat.h>
 #include <Buffer.h>
@@ -189,5 +187,3 @@ private:
 };
 
 extern STK500v1Programmer *stk500v1;
-
-#endif

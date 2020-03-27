@@ -2,8 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if STK500V1
-
 #include "stk500v1.h"
 // SoftwareSerial removed, does not compile, type error
 //#include <SoftwareSerial.h>
@@ -120,5 +118,3 @@ bool STK500v1Plugin::atModeHandler(AtModeArgs &args) {
     }
     return false;
 }
-
-#endif

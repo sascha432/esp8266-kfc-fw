@@ -2,8 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if MQTT_SUPPORT
-
 #pragma once
 
 #include <Arduino_compat.h>
@@ -86,5 +84,3 @@ public:
 
     MQTTAutoDiscovery *createAutoDiscovery(uint8_t count, MQTTAutoDiscovery::Format_t format);
 };
-
-#endif

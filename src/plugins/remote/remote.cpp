@@ -2,8 +2,6 @@
   Author: sascha_lammers@gmx.de
 */
 
-#if IOT_REMOTE_CONTROL
-
 #include <WiFiCallbacks.h>
 #include <LoopFunctions.h>
 #include <KFCForms.h>
@@ -13,6 +11,7 @@
 #include "blink_led_timer.h"
 #include "remote.h"
 #include "./plugins/home_assistant/home_assistant.h"
+#include "plugins_menu.h"
 
 #if DEBUG_IOT_REMOTE_CONTROL
 #include <debug_helper_enable.h>
@@ -504,5 +503,3 @@ void RemoteControlPlugin::_scheduleSendEvents() {
         });
     }
 }
-
-#endif

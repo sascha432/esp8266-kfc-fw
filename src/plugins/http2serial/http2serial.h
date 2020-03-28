@@ -2,10 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if !HTTP2SERIAL
-#error Plugin not active
-#endif
-
 #pragma once
 
 #ifndef DEBUG_HTTP2SERIAL

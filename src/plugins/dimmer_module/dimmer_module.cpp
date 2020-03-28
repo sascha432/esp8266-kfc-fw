@@ -11,14 +11,14 @@
 #include "dimmer_module.h"
 #include "WebUISocket.h"
 
+#include <dimmer_protocol.h>
+#include <dimmer_reg_mem.h>
+
 #if DEBUG_IOT_DIMMER_MODULE
 #include <debug_helper_enable.h>
 #else
 #include <debug_helper_disable.h>
 #endif
-
-#include "../../trailing_edge_dimmer/src/dimmer_protocol.h"
-#include "../../trailing_edge_dimmer/src/dimmer_reg_mem.h"
 
 Driver_DimmerModule::Driver_DimmerModule() : MQTTComponent(SENSOR), Dimmer_Base()
 {

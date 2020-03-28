@@ -8,15 +8,16 @@
 #include "WebUISocket.h"
 #include "progmem_data.h"
 #include "../mqtt/mqtt_client.h"
-#include "dimmer_module.h"
 #if IOT_ATOMIC_SUN_V2
 #include "../atomic_sun/atomic_sun_v2.h"
+#else
+#include "dimmer_module.h"
 #endif
 #include "serial_handler.h"
 #include "EventTimer.h"
 
-#include "../../trailing_edge_dimmer/src/dimmer_protocol.h"
-#include "../../trailing_edge_dimmer/src/dimmer_reg_mem.h"
+#include <dimmer_protocol.h>
+#include <dimmer_reg_mem.h>
 
 #if DEBUG_IOT_DIMMER_MODULE
 #include <debug_helper_enable.h>

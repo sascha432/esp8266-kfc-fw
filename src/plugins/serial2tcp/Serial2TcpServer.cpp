@@ -2,8 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if SERIAL2TCP
-
 #include <Arduino_compat.h>
 #include <StreamString.h>
 #include "Serial2TcpServer.h"
@@ -206,5 +204,3 @@ void Serial2TcpServer::_onEnd() {
         enable_at_mode(MySerial);
     }
 }
-
-#endif

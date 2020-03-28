@@ -2,8 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if IOT_BUTTONS
-
 #pragma once
 
 #include <Arduino_compat.h>
@@ -105,5 +103,3 @@ private:
 private:
     ButtonVector _buttons;
 };
-
-#endif

@@ -4,10 +4,6 @@
 
 #pragma once
 
-#if !MQTT_SUPPORT
-#error Plugin not active
-#endif
-
 #ifndef DEBUG_MQTT_CLIENT
 #define DEBUG_MQTT_CLIENT                   0
 #endif

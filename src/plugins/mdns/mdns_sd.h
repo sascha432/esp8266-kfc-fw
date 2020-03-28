@@ -2,15 +2,11 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if !MDNS_SUPPORT
-#error Plugin not active
-#endif
+#pragma once
 
 #ifndef DEBUG_MDNS_SD
 #define DEBUG_MDNS_SD                   0
 #endif
-
-#pragma once
 
 #include <Arduino_compat.h>
 // #include <HttpHeaders.h>

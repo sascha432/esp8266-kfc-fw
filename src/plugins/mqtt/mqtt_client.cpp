@@ -2,8 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if MQTT_SUPPORT
-
 #include <ESPAsyncWebServer.h>
 #include <KFCForms.h>
 #include <kfc_fw_config.h>
@@ -981,7 +979,5 @@ bool MQTTPlugin::atModeHandler(AtModeArgs &args)
 #endif
     return false;
 }
-
-#endif
 
 #endif

@@ -2,10 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if !IOT_CLOCK
-#error Plugin not active
-#endif
-
 #include <Arduino_compat.h>
 #include <vector>
 #include <EventScheduler.h>

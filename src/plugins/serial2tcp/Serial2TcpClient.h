@@ -2,8 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if SERIAL2TCP
-
 #pragma once
 
 #include <Arduino_compat.h>
@@ -53,5 +51,3 @@ private:
     Serial2TcpConnection *_conn;
     EventScheduler::TimerPtr _timer;
 };
-
-#endif

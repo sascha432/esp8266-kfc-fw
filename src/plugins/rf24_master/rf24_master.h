@@ -4,10 +4,6 @@
 
 #pragma once
 
-#if !IOT_RF24_MASTER
-#error Plugin not active
-#endif
-
 #include <Arduino_compat.h>
 #include <vector>
 #include <EventScheduler.h>

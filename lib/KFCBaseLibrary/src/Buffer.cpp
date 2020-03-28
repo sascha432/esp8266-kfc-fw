@@ -22,15 +22,17 @@ MoveStringHelper::MoveStringHelper() {
 }
 
 void MoveStringHelper::move(Buffer &buf) {
-    _debug_println("");
+    _debug_println();
 #if ESP8266
     if (length()) {
+#if defined(ARDUINO_ESP8266_RELEASE_2_6_3)
+        if (isSSO()) {
+#else
         if (sso()) {
-    debug_println("");
+#endif
             buf.write(*this);
         }
         else {
-    debug_println("");
             buf.setBuffer((uint8_t *)wbuffer(), capacity());
             buf.setLength(length());
         }

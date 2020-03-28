@@ -2,8 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if SERIAL2TCP
-
 #pragma once
 
 #include <Arduino_compat.h>
@@ -66,5 +64,3 @@ private:
     Buffer _rxBuffer;
     Buffer _nvt;
 };
-
-#endif

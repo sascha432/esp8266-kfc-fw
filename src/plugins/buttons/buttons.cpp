@@ -2,8 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if IOT_BUTTONS
-
 #include <LoopFunctions.h>
 #include <KFCForms.h>
 #include "buttons.h"
@@ -99,6 +97,3 @@ void ButtonsPlugin::onButtonReleased(::Button& btn, uint16_t duration)
 {
 
 }
-
-
-#endif

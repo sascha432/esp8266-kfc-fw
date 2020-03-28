@@ -2,8 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if SSD1306_PLUGIN
-
 #pragma once
 
 #ifndef DEBUG_SSD1306_PLUGIN
@@ -52,5 +50,3 @@ void ssd1306_enable_status();
 void ssd1306_clear_display();
 
 extern Adafruit_SSD1306 Display;
-
-#endif

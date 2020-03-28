@@ -2,10 +2,6 @@
   Author: sascha_lammers@gmx.de
 */
 
-#if !IOT_SWITCH
-#error Plugin not active
-#endif
-
 #pragma once
 
 #ifndef DEBUG_IOT_SWITCH

@@ -2,10 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if !STK500V1
-#error Plugin not active
-#endif
-
 // STK500v1 programmer plugin
 // fully asynchronous implementation
 // http://www.amelek.gda.pl/avr/uisp/doc2525.pdf

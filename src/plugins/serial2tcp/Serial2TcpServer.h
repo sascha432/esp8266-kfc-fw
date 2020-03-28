@@ -2,8 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if SERIAL2TCP
-
 #pragma once
 
 #include <Arduino_compat.h>
@@ -51,5 +49,3 @@ private:
     ConnectionsVector _connections;
     AsyncServer *_server;
 };
-
-#endif

@@ -4,10 +4,6 @@
 
 #pragma once
 
-#if !IOT_WEATHER_STATION
-#error Plugin not active
-#endif
-
 #include <Arduino_compat.h>
 #include <SPI.h>
 #include <vector>

@@ -2,8 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if SERIAL2TCP
-
 // Allows to connect over TCP to serial ports
 
 #pragma once
@@ -60,5 +58,3 @@ With NVT/RFC2217 support
 com2tcp-rfc2217.bat \\.\CNCB0  192.168.0.72 2323
 
  */
-
-#endif

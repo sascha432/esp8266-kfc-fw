@@ -1,11 +1,18 @@
 {
     "name": "KFCEventScheduler",
-    "version": "0.1",
+    "version": "0.0.1",
+    "include": "lib/KFCEventScheduler",
     "authors":
     {
       "name": "sascha lammers",
       "maintainer": true
     },
     "frameworks": "arduino",
-    "platforms": ["espressif8266", "espressif32"]
+    "platforms": ["espressif8266", "espressif32"],
+    "dependencies": [
+      {
+        "name": "KFCBaseLibrary",
+        "authors": "sascha lammers"
+      }
+    ]
 }

@@ -5,8 +5,8 @@
 #pragma once
 
 #include <Arduino_compat.h>
+#include <bitmap_header.h>
 #include "GFXCanvas.h"
-#include "bitmap_header.h"
 
 class GFXCanvasCompressed;
 

@@ -396,6 +396,11 @@ void NTPPlugin::updateNtpCallback()
 {
     _debug_printf_P(PSTR("new time=%u, tz=%d\n"), (uint32_t)time(nullptr), sntp_get_timezone());
 
+#if RTC_SUPPORT
+    // update RTC
+    config.setRTC(time(nullptr));
+#endif
+
     if (get_time_diff(_lastNtpCallback, millis()) < 1000) {
         _debug_printf_P(PSTR("called twice within 1000ms (%u), ignored multiple calls\n"), get_time_diff(_lastNtpCallback, millis()));
         return;
@@ -412,10 +417,6 @@ void NTPPlugin::updateNtpCallback()
     _lastNtpCallback = millis();
     _lastNtpUpdate = _lastNtpCallback;
 
-#if RTC_SUPPORT
-    // update RTC
-    config.setRTC(time(nullptr));
-#endif
 #if NTP_HAVE_CALLBACKS
     for(auto callback: _callbacks) {
         callback(time(nullptr));

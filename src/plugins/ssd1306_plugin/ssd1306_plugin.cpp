@@ -2,8 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if SSD1306_PLUGIN
-
 #include "ssd1306_plugin.h"
 #include <Adafruit_GFX.h>
 #include <WiFiCallbacks.h>
@@ -397,7 +395,5 @@ bool SSD1306Plugin::atModeHandler(AtModeArgs &args)
     }
     return false;
 }
-
-#endif
 
 #endif

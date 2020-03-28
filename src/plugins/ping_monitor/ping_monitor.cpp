@@ -2,8 +2,6 @@
   Author: sascha_lammers@gmx.de
 */
 
-#if PING_MONITOR
-
 #include <Arduino_compat.h>
 #include <PrintHtmlEntitiesString.h>
 #include <LoopFunctions.h>
@@ -522,7 +520,5 @@ bool PingMonitorPlugin::atModeHandler(AtModeArgs &args)
     }
     return false;
 }
-
-#endif
 
 #endif

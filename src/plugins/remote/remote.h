@@ -4,10 +4,6 @@
 
 #pragma once
 
-#if !IOT_REMOTE_CONTROL
-#error Plugin not active
-#endif
-
 #include <EventScheduler.h>
 #include <EventTimer.h>
 #include <Button.h>

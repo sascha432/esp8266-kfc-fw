@@ -35,7 +35,11 @@
         </div>
         <h1>Update Firmware</h1>
         <form method="POST" action="/update" enctype="multipart/form-data" id="firmware_update">
-            <div class="form-group">
+            <div class="form-group" id="firmware_upload_fullscreen">
+                <div id="firmware_image_overlay" class="overlay soften" style="display: none">
+                    <div class="overlay darken"></div>
+                    <div class="overlay text">&gt;&gt; Drop your files here &lt;&lt;</div>
+                </div>
                 <label for="firmware_image">Firmware Image:</label>
                 <input type="file" class="form-control-file" name="firmware_image" id="firmware_image">
             </div>
@@ -45,9 +49,9 @@
                     <option value="">Auto Select</option>
                     <option value="u_flash">Firmware</option>
                     <option value="u_spiffs">SPI Flash File System</option>
-<!--#if STK500V1 -->
+                    <!--#if STK500V1 -->
                     <option value="u_atmega">ATmega Firmware</option>
-<!--#endif-->
+                    <!--#endif-->
                 </select>
             </div>
             <div class="form-group">
@@ -61,17 +65,20 @@
         <!--FOOT%%-->
     </div>
     <!--%%JAVASCRIPT-->
-	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/jquery-3.3.1.min.js"></script>
-	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/popper.min.js"></script>
-	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/popper.min.js"></script>
-	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/bootstrap.min.js"></script>
-	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/js.cookie.min.js"></script>
-	<script debug_loader="1" type="text/javascript" src="../js/main.min.js"></script>
-	<script debug_loader="1" type="text/javascript" src="../js/debug.js"></script>
+    <script debug_loader="1" type="text/javascript"
+        src="../../lib/KFCWebBuilder/Resources/js/jquery-3.3.1.min.js"></script>
+    <script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/popper.min.js"></script>
+    <script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/popper.min.js"></script>
+    <script debug_loader="1" type="text/javascript"
+        src="../../lib/KFCWebBuilder/Resources/js/bootstrap.min.js"></script>
+    <script debug_loader="1" type="text/javascript"
+        src="../../lib/KFCWebBuilder/Resources/js/js.cookie.min.js"></script>
+    <script debug_loader="1" type="text/javascript" src="../js/main.min.js"></script>
+    <script debug_loader="1" type="text/javascript" src="../js/debug.js"></script>
     <!--JAVASCRIPT%%-->
 
-    <script>
-    </script>
-</body>
+    <style>
 
+    </style>
+</body>
 </html>

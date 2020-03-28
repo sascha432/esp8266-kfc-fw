@@ -160,9 +160,11 @@ class PlatformIOParser {
      * @param string $line
      * @return string
      */
-    private function resolveVariables(string $line): string
+    private function resolveVariables(string $lineIn): string
     {
-        if (preg_match_all('/\$\{(?:([a-zA-Z0-9_-]+)\.)([a-zA-Z0-9_-]+)\}/', $line, $out)) {
+        $line = $lineIn;
+        while (preg_match_all('/\$\{(?:([a-zA-Z0-9_-]+)\.)([a-zA-Z0-9_-]+)\}/', $line, $out)) {
+
             foreach($out[0] as $num => $var) {
                 $env = $out[1][$num];
                 $keyword = $out[2][$num];
@@ -325,28 +327,61 @@ class PlatformIOParser {
         }
     }
 
+    // error handler to collect undefined constants
+    private $undefinedConstants;
+
+    function evaluateExpressionErrorHandler($errno, $errstr, $errfile, $errline)
+    {
+        if ($errno == E_WARNING) {
+            if (strstr($errstr, 'Use of undefined constant')) {
+                if (preg_match('/- assumed \'(.*?)\' \(this will throw an Error in a future version of PHP\)/', $errstr, $matches)) {
+                    $this->undefinedConstants[] = $matches[1];
+                }
+            }
+        }
+        return true;
+    }
+
     /**
      * Resolve preprocessor macros with eval()
      *
      * @param string $expr
      * @return bool
      */
-    public function evaluateExpression(string $expr): bool
+    public function evaluateExpression(string $exprIn): bool
     {
+        $expr = $exprIn;
         if (preg_match_all('/defined[ (]+?([^ )]*?)[ )]+/', $expr, $out)) {
             foreach($out[0] as $key => $value) {
                 $expr = str_replace($value, isset($this->defines[$out[1][$key]]) ? 'true' : 'false', $expr);
             }
         }
-        foreach($this->defines as $define => $value) {
-            $define = preg_quote($define);
-            $expr = preg_replace("/(?<![a-zA-Z0-9_-])$define(?![a-zA-Z0-9_-])/", $value, $expr);
-        }
+        // foreach($this->defines as $define => $value) {
+        //     $define = preg_quote($define);
+        //     $expr = preg_replace("/(?<![a-zA-Z0-9_-])$define(?![a-zA-Z0-9_-])/", $value, $expr);
+        // }
 
         $expr = $this->stripComments($expr, true);
 
-        $____result = false;
-        @eval('$____result = '.$expr.';');
+        // run expression until all undefined constants have been resolved
+        // $resolved = array();
+        $____old_error_handler = set_error_handler(array($this, "evaluateExpressionErrorHandler"));
+        while(true) {
+            $this->undefinedConstants = array();
+            $____result = false;
+            @eval('$____result = '.$expr.';');
+            if (sizeof($this->undefinedConstants) == 0) {
+                break;
+            }
+            foreach($this->undefinedConstants as $name) {
+                $expr = str_replace($name, isset($this->defines[$name]) ? $this->defines[$name] : 'false', $expr);
+                // $resolved[] = $name.'='.(isset($this->defines[$name]) ? $this->defines[$name] : '*UNDEF*');
+            }
+        }
+        set_error_handler($____old_error_handler);
+
+        // echo "$exprIn = $expr = ".($____result ? "true" : "false")." RESOLVED ".implode(',', $resolved)."\n";
+
         return $____result;
     }
 

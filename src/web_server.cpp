@@ -52,7 +52,8 @@ static UpdateFirmwareCallback_t updateFirmwareCallback = nullptr;
 #define U_ATMEGA 254
 
 #if defined(ARDUINO_ESP8266_RELEASE_2_6_3)
-#error OTA(SPIFFS) update does not work with this version
+extern "C" uint32_t _FS_start;
+extern "C" uint32_t _FS_end;
 #ifndef U_SPIFFS
 #define U_SPIFFS U_FS
 #endif
@@ -462,7 +463,11 @@ void web_server_update_upload_handler(AsyncWebServerRequest *request, String fil
 #endif
             {
                 if (imageType) {
+#if defined(ARDUINO_ESP8266_RELEASE_2_6_3)
+                    size = ((size_t) &_FS_end - (size_t) &_FS_start);
+#else
                     size = 1048576;
+#endif
                     command = U_SPIFFS;
                     // SPIFFS.end();
                     // SPIFFS.format();
@@ -471,7 +476,7 @@ void web_server_update_upload_handler(AsyncWebServerRequest *request, String fil
                     command = U_FLASH;
                 }
                 status->command = command;
-                _debug_printf_P(PSTR("Update Start: %s, image type %d, size %d, command %d\n"), filename.c_str(), imageType, (int)size, command);
+                debug_printf_P(PSTR("Update Start: %s, image type %d, size %d, command %d\n"), filename.c_str(), imageType, (int)size, command);
 
     #if defined(ESP8266)
                 Update.runAsync(true);

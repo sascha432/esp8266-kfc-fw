@@ -4,12 +4,6 @@
 
 #pragma once
 
-#ifndef PIN_DEBUGGER
-#define PIN_DEBUGGER                            0
-#endif
-
-#if PIN_DEBUGGER
-
 #include <Arduino_compat.h>
 #include <VirtualPinDebug.h>
 #include "plugins.h"
@@ -59,5 +53,3 @@ public:
     virtual bool atModeHandler(AtModeArgs &args) override;
 #endif
 };
-
-#endif

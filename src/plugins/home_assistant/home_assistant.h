@@ -2,10 +2,6 @@
   Author: sascha_lammers@gmx.de
 */
 
-#if !HOME_ASSISTANT_INTEGRATION
-#error Plugin not active
-#endif
-
 #pragma once
 
 #include <Arduino_compat.h>

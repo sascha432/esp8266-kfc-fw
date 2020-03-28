@@ -1,11 +1,24 @@
 {
-    "name": "KFCTimezone",
-    "version": "0.1",
-    "authors":
+  "name": "KFCTimezone",
+  "version": "0.1",
+  "include": "lib/KFCTimezone",
+  "authors": {
+    "name": "sascha lammers",
+    "maintainer": true
+  },
+  "frameworks": "arduino",
+  "platforms": [
+    "espressif8266",
+    "espressif32"
+  ],
+  "dependencies": [
     {
-      "name": "sascha lammers",
-      "maintainer": true
+      "name": "KFCBaseLibrary",
+      "authors": "sascha lammers"
     },
-    "frameworks": "arduino",
-    "platforms": ["espressif8266", "espressif32"]
+    {
+      "name": "KFCRestApi",
+      "authors": "sascha lammers"
+    }
+  ]
 }

@@ -2,8 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if SERIAL2TCP
-
 #include <SoftwareSerial.h>
 #include <LoopFunctions.h>
 #include "serial_handler.h"
@@ -398,5 +396,3 @@ void Serial2TcpBase::_onData(AsyncClient *client, void *data, size_t len) {
 void Serial2TcpBase::_onDisconnect(AsyncClient *client, const __FlashStringHelper *reason) {
     _debug_printf_P(PSTR("Serial2TcpBase::_onDisconnect(): reason: %s\n"), RFPSTR(reason));
 }
-
-#endif

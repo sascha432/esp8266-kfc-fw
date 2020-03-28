@@ -2,8 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if SERIAL2TCP
-
 #include <Arduino_compat.h>
 #include <StreamString.h>
 #include "Serial2TcpClient.h"
@@ -144,5 +142,3 @@ void Serial2TcpClient::_disconnect() {
         _conn = nullptr;
     }
 }
-
-#endif

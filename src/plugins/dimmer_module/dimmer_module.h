@@ -4,10 +4,6 @@
 
 #pragma once
 
-#if !IOT_DIMMER_MODULE
-#error Plugin not active
-#endif
-
 // Trailing edge dimmer module
 // I2C or UART interface
 // 1 - 8 channels

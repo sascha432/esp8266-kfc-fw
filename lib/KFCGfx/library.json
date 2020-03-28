@@ -1,6 +1,6 @@
 {
   "name": "KFCGfx",
-  "version": "0.1",
+  "version": "0.0.1",
   "authors": {
     "name": "sascha lammers",
     "maintainer": true
@@ -18,8 +18,5 @@
     {
       "name": "Adafruit GFX Library"
     }
-  ],
-  "build": {
-    "extraScript": "extra_script.py"
-  }
+  ]
 }

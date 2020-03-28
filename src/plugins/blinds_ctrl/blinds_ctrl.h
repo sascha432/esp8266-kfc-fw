@@ -8,10 +8,6 @@
 // optional position tracking/rpm sensing/improved stall detection
 // https://easyeda.com/sascha23095123423/rpm-sensing-for-iot-blinds-controller
 
-#if !IOT_BLINDS_CTRL
-#error Plugin not active
-#endif
-
 #pragma once
 
 #include <Arduino_compat.h>

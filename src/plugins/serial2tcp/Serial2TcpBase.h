@@ -2,8 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if SERIAL2TCP
-
 #pragma once
 
 #include <Arduino_compat.h>
@@ -160,5 +158,3 @@ public:
     static bool _debugOutput;
 #endif
 };
-
-#endif

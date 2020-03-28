@@ -4,8 +4,6 @@
 
 // support for some esp8266 AT commands that seem useful
 
-#if AT_MODE_SUPPORTED && ESP8266_AT_MODE_SUPPORT
-
 #include <Arduino_compat.h>
 #include "async_web_response.h"
 #include "kfc_fw_config.h"
@@ -304,5 +302,3 @@ bool ESP8266ATModePlugin::atModeHandler(int8_t argc, char **argv) {
     }
     return false;
 }
-
-#endif

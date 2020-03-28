@@ -13,8 +13,6 @@
 #include <debug_helper_disable.h>
 #endif
 
-#if PIN_DEBUGGER
-
 static PinDebuggerPlugin plugin;
 
 void PinDebuggerPlugin::setup(PluginSetupMode_t mode)
@@ -224,7 +222,5 @@ bool PinDebuggerPlugin::atModeHandler(AtModeArgs &args)
     }
     return false;
 }
-
-#endif
 
 #endif

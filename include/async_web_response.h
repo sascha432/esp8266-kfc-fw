@@ -21,7 +21,7 @@
 #include <SSIProxyStream.h>
 #include "web_server.h"
 #include "../include/templates.h"
-#include "../lib/KFCGfx/include/bitmap_header.h"
+#include "bitmap_header.h"
 
 class HttpHeaders;
 

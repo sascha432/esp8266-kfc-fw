@@ -2,10 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if !FILE_MANAGER
-#error Plugin not active
-#endif
-
 #pragma once
 
 #ifndef DEBUG_FILE_MANAGER

@@ -191,7 +191,7 @@ void BlinkLEDTimer::setBlink(int8_t pin, uint16_t delay, int32_t color)
                 } else {
                     pattern.setMaxSize(2);
                     pattern = 0b10;
-                    delay = _max(50, _min(delay, 5000));
+                    delay = std::max((uint16_t)50, std::min(delay, (uint16_t)5000));
                 }
                 ledTimer->set(delay, pin, std::move(pattern));
             }

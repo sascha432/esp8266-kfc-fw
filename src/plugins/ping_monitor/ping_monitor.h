@@ -4,8 +4,6 @@
 
 #pragma once
 
-#if PING_MONITOR
-
 #ifndef DEBUG_PING_MONITOR
 #define DEBUG_PING_MONITOR                  1
 #endif
@@ -84,5 +82,3 @@ private:
     PingVector _pingHosts;
     AsyncPingPtr _ping;
 };
-
-#endif

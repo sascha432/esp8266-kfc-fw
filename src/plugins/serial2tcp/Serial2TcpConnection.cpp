@@ -2,8 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if SERIAL2TCP
-
 #include "Serial2TcpConnection.h"
 
 #if DEBUG_SERIAL2TCP
@@ -52,5 +50,3 @@ Buffer &Serial2TcpConnection::getRxBuffer() {
 Buffer &Serial2TcpConnection::getNvtBuffer() {
     return _nvt;
 }
-
-#endif

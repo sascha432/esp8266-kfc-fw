@@ -20,8 +20,8 @@
         "minify_html": "${bin.java} -jar ${bin.html_compressor} --type html --compress-js --compress-css --output ${file.tmp_out} ${file.tmp_in}",
         "minify_css": "${bin.java} -jar ${bin.yui_compressor} --type css ${file.tmp_in} > ${file.tmp_out}",
         "compress_gzip": "${bin.gzip} -9 -k -n -c ${file.tmp_in} > ${file.tmp_out}",
-        "create_spiffs": "${bin.mkspiffs} -c data -p 256 -b 8192 -s 1028096 .pio/build/${pio.env}/spiffs.bin"
-        // "pio_upload_spiffs": "${bin.platformio_activate} && ${bin.platformio} run --target uploadfs -v"
+        "create_spiffs": "${bin.mkspiffs} -c data -p 256 -b 8192 -s 1024000 .pio/build/${pio.env}/spiffs.bin",
+        "pio_upload_spiffs": "${bin.platformio_activate} && ${bin.platformio} run --target uploadfs -v"
     },
     "bin": {
         "platformio_activate": {

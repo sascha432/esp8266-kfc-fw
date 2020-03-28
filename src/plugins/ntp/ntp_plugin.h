@@ -2,9 +2,7 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if !NTP_CLIENT
-#error Plugin not active
-#endif
+#pragma once
 
 #include <Arduino_compat.h>
 

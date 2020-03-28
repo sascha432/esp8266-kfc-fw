@@ -15,13 +15,14 @@
 #include "SerialTwoWire.h"
 #include "WebUISocket.h"
 
+#include <dimmer_protocol.h>
+#include <dimmer_reg_mem.h>
+
 #ifdef DEBUG_4CH_DIMMER
 #include <debug_helper_enable.h>
 #else
 #include <debug_helper_disable.h>
 #endif
-
-#include "../../trailing_edge_dimmer/src/dimmer_protocol.h"
 
 Driver_4ChDimmer::Driver_4ChDimmer() : MQTTComponent(LIGHT), Dimmer_Base()
 {

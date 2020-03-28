@@ -1,6 +1,7 @@
 {
   "name": "KFCRestApi",
-  "version": "0.1",
+  "version": "0.0.1",
+  "include": "lib/KFCRestApi",
   "authors": {
     "name": "sascha lammers",
     "maintainer": true

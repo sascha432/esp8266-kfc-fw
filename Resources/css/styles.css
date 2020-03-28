@@ -272,3 +272,69 @@
     background-image: -webkit-linear-gradient(rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.35));
     background-image: linear-gradient(rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.35));
 }
+
+#firmware_upload_fullscreen .overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    margin: 0;
+}
+
+#firmware_upload_fullscreen .soften {
+    background-color: #ffffff;
+    opacity: 0.76;
+    z-index: 97;
+}
+
+#firmware_upload_fullscreen .darken {
+    background-color: #000000;
+    opacity: 0.08;
+    z-index: 98;
+}
+
+#firmware_upload_fullscreen .text {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 48px;
+    opacity: 1.0;
+    z-index: 99;
+    color: #000000;
+    font-weight: bolder;
+    border-style: dashed;
+    border-color: red;
+    border-width: 5px;
+    margin: 1%;
+}
+
+#firmware_upload_fullscreen .input {
+    z-index: 100;
+    opacity: 0;
+}
+
+@media only screen and (max-width: 640px) {
+    #firmware_upload_fullscreen .text {
+        font-size: 22px;
+    }
+}
+
+@media only screen and (max-width: 920px) and (min-width: 640px) {
+    #firmware_upload_fullscreen .text {
+        font-size: 44px;
+    }
+}
+
+@media only screen and (max-width: 1290px) and (min-width: 920px) {
+    #firmware_upload_fullscreen .text {
+        font-size: 66px;
+    }
+}
+
+@media only screen and (min-width: 1290px) {
+    #firmware_upload_fullscreen .text {
+        font-size: 88px;
+    }
+}
+

@@ -2,8 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if SERIAL2TCP
-
 #include "serial2tcp.h"
 #include "plugins.h"
 #include "Serial2TcpBase.h"
@@ -186,7 +184,5 @@ bool Serial2TcpPlugin::atModeHandler(int8_t argc, char **argv) {
     return false;
 
 }
-
-#endif
 
 #endif

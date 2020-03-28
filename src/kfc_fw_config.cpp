@@ -288,7 +288,10 @@ void KFCFWConfiguration::_onWiFiDisconnectCb(const WiFiEventStationModeDisconnec
         _offlineSince = millis();
         _wifiConnected = false;
         _wifiUp = -1UL;
-        WiFiCallbacks::callEvent(WiFiCallbacks::DISCONNECTED, (void *)&event);
+        LoopFunctions::callOnce([event]() {
+            WiFiCallbacks::callEvent(WiFiCallbacks::DISCONNECTED, (void *)&event);
+        });
+
     }
 #if defined(ESP32)
     else {
@@ -331,7 +334,9 @@ void KFCFWConfiguration::_onWiFiGotIPCb(const WiFiEventStationModeGotIP &event)
     _wifiUp = millis();
     config.storeStationConfig(event.ip, event.mask, event.gw);
 
-    WiFiCallbacks::callEvent(WiFiCallbacks::CONNECTED, (void *)&event);
+    LoopFunctions::callOnce([event]() {
+        WiFiCallbacks::callEvent(WiFiCallbacks::CONNECTED, (void *)&event);
+    });
 }
 
 void KFCFWConfiguration::_onWiFiOnDHCPTimeoutCb()

@@ -9,7 +9,12 @@
 #endif
 
 #include <Arduino_compat.h>
-// #include <HttpHeaders.h>
+#if defined(ESP8266)
+#include <ESP8266mDNS.h>
+#endif
+#if defined(ESP32)
+#include <ESPmDNS.h>
+#endif
 
 #define MDNS_QUERY_CACHE_MIN_TIME_LEFT  10                                          // time left before cache expires and a new query is started
 #define MDNS_QUERY_CACHE_TIMEOUT        (30 + MDNS_QUERY_CACHE_MIN_TIME_LEFT)       // clean cache after n seconds

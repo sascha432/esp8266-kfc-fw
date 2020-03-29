@@ -331,6 +331,20 @@ String implode(G glue, const C &pieces, uint32_t max = (uint32_t)~0) {
     return tmp;
 }
 
+template<class G, class C, class CB>
+String implode(G glue, const C &pieces, CB toString, uint32_t max = (uint32_t)~0) {
+    String tmp;
+    if (max-- && pieces.begin() != pieces.end()) {
+        auto iterator = pieces.begin();
+        tmp += toString(*iterator);
+        while(max-- && ++iterator != pieces.end()) {
+            tmp += glue;
+            tmp += toString(*iterator);
+        }
+    }
+    return tmp;
+}
+
 inline void explode(const char *str, const char ch, StringVector &container) {
     split::split(str, ch, split::vector_callback, &container, split::SplitFlagsType::EMPTY);
 }

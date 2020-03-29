@@ -181,7 +181,7 @@
                     // encrypt buf to get the SID
             }
 #endif
-            if (verify_session_id(ptr, config._H_STR(Config().device_name), config._H_STR(Config().device_pass))) {
+            if (verify_session_id(ptr, config.getDeviceName(), config._H_STR(Config().device_pass))) {
 
                 wsClient->setAuthenticated(true);
                 WsClient::invokeStartOrEndCallback(wsClient, true);

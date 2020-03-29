@@ -8,10 +8,10 @@
 #include <EventTimer.h>
 #include <WiFiCallbacks.h>
 #include <LoopFunctions.h>
+#include <misc.h>
 #include "progmem_data.h"
 #include "kfc_fw_config.h"
 #include "misc.h"
-#include "plugins.h"
 
 #if DEBUG_MDNS_SD
 #include <debug_helper_enable.h>
@@ -19,101 +19,87 @@
 #include <debug_helper_disable.h>
 #endif
 
-PROGMEM_STRING_DEF(kfcmdns, "kfcmdns");
-PROGMEM_STRING_DEF(tcp, "tcp");
-PROGMEM_STRING_DEF(udp, "udp");
-PROGMEM_STRING_DEF(https, "https");
-PROGMEM_STRING_DEF(wss, "wss");
-PROGMEM_STRING_DEF(ws, "ws");
 
+#if MDNS_PLUGIN
 
-void MDNS_query_service(const char *service, const char *proto, Stream *output)
+bool MDNSService::addService(const String &service, const String &proto, uint16_t port)
 {
-#if defined(ESP32)
-    String serviceStr = service;
-    String protoStr = proto;
-    Scheduler.1(10, false, [output, serviceStr, protoStr](EventScheduler::TimerPtr timer) {
-        auto results = (uint8_t)MDNS.queryService(serviceStr, protoStr);
-        if (results) {
-            for(uint8_t i = 0; i < results; i++) {
-                output->printf_P(PSTR("+MDNS: host=%s,ip=%s,port=%u,txts="), MDNS.hostname(i).c_str(), MDNS.IP(i).toString().c_str(), MDNS.port(i));
-                auto numTxt = (uint8_t)MDNS.numTxt(i);
-                for(uint8_t j = 0; j < numTxt; j++) {
-                    if (j) {
-                        output->print(',');
-                    }
-                    output->print(MDNS.txt(i, j));
-                }
-                output->println();
-            }
-        } else {
-            output->println(F("+MDNS: Query did not return any results"));
-        }
-    });
-#endif
+    _debug_printf_P(PSTR("service=%s proto=%s port=%u\n"), service.c_str(), proto.c_str(), port);
+    return _debug_print_result(MDNS.addService(service, proto, port));
 }
 
-class MDNSPlugin : public PluginComponent {
-public:
-    MDNSPlugin() : _running(false) {
-        REGISTER_PLUGIN(this);
-    }
-    PGM_P getName() const {
-        return PSTR("mdns");
-    }
-    virtual const __FlashStringHelper *getFriendlyName() const {
-        return F("MDNS");
-    }
-    PluginPriorityEnum_t getSetupPriority() const override {
-        return PRIO_MDNS;
-    }
-    void setup(PluginSetupMode_t mode) override;
+bool MDNSService::addServiceTxt(const String &service, const String &proto, const String &key, const String &value)
+{
+    _debug_printf_P(PSTR("service=%s proto=%s key=%s value=%s\n"), service.c_str(), proto.c_str(), key.c_str(), value.c_str());
+    return _debug_print_result(MDNS.addServiceTxt(service, proto, key, value));
+}
 
-    virtual bool hasStatus() const override {
-        return true;
-    }
-    virtual void getStatus(Print &output) override;
+bool MDNSService::removeService(const String &service, const String &proto)
+{
+    _debug_printf_P(PSTR("service=%s proto=%s\n"), service.c_str(), proto.c_str());
+    return _debug_print_result(MDNS.removeService(nullptr, service.c_str(), proto.c_str()));
+}
 
-#if AT_MODE_SUPPORTED
-    bool hasAtMode() const override {
-        return true;
-    }
-    void atModeHelpGenerator() override;
-    bool atModeHandler(AtModeArgs &args) override;
-#endif
+bool MDNSService::removeServiceTxt(const String &service, const String &proto, const String &key)
+{
+    _debug_printf_P(PSTR("service=%s proto=%s key=%s\n"), service.c_str(), proto.c_str(), key.c_str());
+    return _debug_print_result(MDNS.removeServiceTxt(nullptr, service.c_str(), proto.c_str(), key.c_str()));
+}
 
-public:
-    static void loop();
-    void start(const IPAddress &address);
-    void stop();
+void MDNSService::announce()
+{
+    _debug_println();
+    MDNS.announce();
+}
 
-private:
-    void _loop();
+PROGMEM_STRING_DEF(kfcmdns, "kfcmdns");
 
-private:
-    bool _running;
-};
+// void MDNS_query_service(const char *service, const char *proto, Stream *output)
+// {
+// #if defined(ESP32)
+//     String serviceStr = service;
+//     String protoStr = proto;
+//     Scheduler.1(10, false, [output, serviceStr, protoStr](EventScheduler::TimerPtr timer) {
+//         auto results = (uint8_t)MDNS.queryService(serviceStr, protoStr);
+//         if (results) {
+//             for(uint8_t i = 0; i < results; i++) {
+//                 output->printf_P(PSTR("+MDNS: host=%s,ip=%s,port=%u,txts="), MDNS.hostname(i).c_str(), MDNS.IP(i).toString().c_str(), MDNS.port(i));
+//                 auto numTxt = (uint8_t)MDNS.numTxt(i);
+//                 for(uint8_t j = 0; j < numTxt; j++) {
+//                     if (j) {
+//                         output->print(',');
+//                     }
+//                     output->print(MDNS.txt(i, j));
+//                 }
+//                 output->println();
+//             }
+//         } else {
+//             output->println(F("+MDNS: Query did not return any results"));
+//         }
+//     });
+// #endif
+// }
+
 
 static MDNSPlugin plugin;
 
 void MDNSPlugin::setup(PluginSetupMode_t mode)
 {
     auto flags = config._H_GET(Config().flags);
-    if (flags.wifiMode & WIFI_STA) { // if station mode is active, wait for the interface to become online
+    if (flags.wifiMode & WIFI_STA) {
         if (config.isWiFiUp() && WiFi.localIP().isSet()) { // already online
             start(WiFi.localIP());
         }
-        else { // wait for event
+        else {
+            start(INADDR_ANY);
             WiFiCallbacks::add(WiFiCallbacks::EventEnum_t::CONNECTED, [this](uint8_t event, void *payload) {
-                start(WiFi.localIP());
-                LoopFunctions::callOnce([this]() {
-                    WiFiCallbacks::remove(WiFiCallbacks::EventEnum_t::ANY, this);
-                });
+                _debug_printf_P(PSTR("MDNS.begin interface=%s\n"), WiFi.localIP().toString().c_str());
+                MDNS.end();
+                MDNS.begin(config.getDeviceName(), WiFi.localIP());
+                MDNS.announce();
+                WiFiCallbacks::remove(WiFiCallbacks::EventEnum_t::ANY, this);
             }, this);
         }
-    }
-    else {
-        start(INADDR_ANY);
     }
 }
 
@@ -126,33 +112,15 @@ void MDNSPlugin::start(const IPAddress &address)
 {
     stop();
 
-    _debug_printf_P(PSTR("hostname=%s address=%s\n"), config._H_STR(Config().device_name), address.toString().c_str());
+    _debug_printf_P(PSTR("hostname=%s address=%s\n"), config.getDeviceName(), address.toString().c_str());
 
-    if (!MDNS.begin(config._H_STR(Config().device_name), address)) {
+    if (!MDNS.begin(config.getDeviceName(), address)) {
         _debug_println(F("MDNS failed"));
         return;
     }
 
-#if WEBSERVER_SUPPORT
-    auto httpPort = config._H_GET(Config().http_port);
-#  if WEBSERVER_TLS_SUPPORT
-    auto flags = config._H_GET(Config().flags);
-    if (flags.webServerMode == HTTP_MODE_SECURE) {
-        MDNS.addService(FSPGM(https), FSPGM(tcp), httpPort);
-        MDNS.addService(FSPGM(wss), FSPGM(tcp), httpPort);
-    } else
-#  endif
-    if (config._H_GET(Config().flags).webServerMode != HTTP_MODE_DISABLED) {
-        MDNS.addService(FSPGM(http), FSPGM(tcp), httpPort);
-        MDNS.addService(FSPGM(ws), FSPGM(tcp), httpPort);
-    }
-#endif
-
-    if (MDNS.addService(FSPGM(kfcmdns), FSPGM(udp), 5353)) {
-        MDNS.addServiceTxt(FSPGM(kfcmdns), FSPGM(udp), String('v'), FIRMWARE_VERSION_STR);
-    }
-    else {
-        _debug_printf_P(PSTR("failed to add kfcmdns\n"));
+    if (MDNSService::addService(FSPGM(kfcmdns), FSPGM(udp), 5353)) {
+        MDNSService::addServiceTxt(FSPGM(kfcmdns), FSPGM(udp), String('v'), FIRMWARE_VERSION_STR);
     }
     _running = true;
     LoopFunctions::add(loop);
@@ -162,8 +130,8 @@ void MDNSPlugin::stop()
 {
     _debug_printf_P(PSTR("running=%u\n"), _running);
     if (_running) {
-        MDNS.removeService(nullptr, String(FSPGM(kfcmdns)).c_str(), String(FSPGM(udp)).c_str());
-        MDNS.removeServiceTxt(nullptr, String(FSPGM(kfcmdns)).c_str(), String(FSPGM(udp)).c_str(), String('v').c_str());
+        MDNSService::removeService(FSPGM(kfcmdns), FSPGM(udp));
+        MDNSService::announce();
 
         MDNS.end();
         _running = false;
@@ -178,7 +146,7 @@ void MDNSPlugin::_loop()
 
 void MDNSPlugin::getStatus(Print &output)
 {
-    output.printf_P(PSTR("Hostname '%s' "), config._H_STR(Config().device_name));
+    output.printf_P(PSTR("Service for hostname %s "), config.getDeviceName());
     if (!_running) {
         output.print(F("not "));
     }
@@ -189,30 +157,85 @@ void MDNSPlugin::getStatus(Print &output)
 
 #include "at_mode.h"
 
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(MDNS, "MDNS", "<service>,<proto>", "Query MDNS");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(MDNSR, "MDNSR", "<interface address>", "Restart MDNS");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(MDNSQ, "MDNSQ", "<service>,<proto>,[<wait=2000ms>]", "Query MDNS");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(MDNSR, "MDNSR", "<interface address>", "Restart MDNS and run on selected interface");
 // PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(MDNSBSD, "MDNSBSD", "Broadcast service discovery on selected interfaces");
 
 void MDNSPlugin::atModeHelpGenerator()
 {
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(MDNS), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(MDNSQ), getName());
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(MDNSR), getName());
     // at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(MDNSBSD), getName());
 }
 
+void MDNSPlugin::serviceCallback(MDNSResponder::MDNSServiceInfo &mdnsServiceInfo, MDNSResponder::AnswerType answerType, bool p_bSetContent)
+{
+    _debug_printf_P(PSTR("answerType=%u p_bSetContent=%u\n"), answerType, p_bSetContent)
+    PrintString str;
+
+    auto iterator = std::find_if(_services.begin(), _services.end(), [&mdnsServiceInfo](const ServiceInfo &info) {
+        return info.serviceDomain.equals(mdnsServiceInfo.serviceDomain());
+    });
+    ServiceInfo *infoPtr;
+    if (iterator != _services.end()) {
+        infoPtr = &(*iterator);
+    }
+    else {
+        _services.emplace_back(mdnsServiceInfo.serviceDomain());
+        infoPtr = &_services.back();
+    }
+    auto &info = *infoPtr;
+    if (mdnsServiceInfo.hostDomainAvailable()) {
+        info.domain = mdnsServiceInfo.hostDomain();
+    }
+    if (mdnsServiceInfo.IP4AddressAvailable()) {
+        info.addresses = mdnsServiceInfo.IP4Adresses();
+    }
+    if (mdnsServiceInfo.hostPortAvailable()) {
+        info.port = mdnsServiceInfo.hostPort();
+    }
+    if (mdnsServiceInfo.txtAvailable()) {
+        info.txts = mdnsServiceInfo.strKeyValue();
+    }
+}
+
 bool MDNSPlugin::atModeHandler(AtModeArgs &args)
 {
-    if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(MDNS))) {
-        if (args.requireArgs(2, 2)) {
-            MDNS_query_service(args.get(0), args.get(1), &args.getStream());
-            args.print(F("Querying..."));
+    if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(MDNSQ))) {
+        if (!_running) {
+            args.print(F("MDNS service is not running"));
+        }
+        else if (args.requireArgs(2, 3)) {
+            auto timeout = args.toMillis(2, 100, ~0, 2000);
+            auto query = PrintString(F("service=%s proto=%s wait=%ums"), args.toString(0).c_str(), args.toString(1).c_str(), timeout);
+            args.printf_P(PSTR("Querying: %s"), query.c_str());
+
+            auto serviceQuery = MDNS.installServiceQuery(args.toString(0).c_str(), args.toString(1).c_str(), [this](MDNSResponder::MDNSServiceInfo mdnsServiceInfo, MDNSResponder::AnswerType answerType, bool p_bSetContent) {
+                serviceCallback(mdnsServiceInfo, answerType, p_bSetContent);
+            });
+
+            Scheduler.addTimer(timeout, false, [args, serviceQuery, this](EventScheduler::TimerPtr) mutable {
+                _IF_DEBUG(auto result = ) MDNS.removeServiceQuery(serviceQuery);
+                _debug_printf_P(PSTR("removeServiceQuery=%u\n"), result);
+                if (_services.empty()) {
+                    args.print(F("No response"));
+                }
+                else {
+                    for(auto &svc: _services) {
+                        args.printf_P(PSTR("domain=%s port=%u ips=%s txts=%s"), svc.domain.c_str(), svc.port, implode(',', svc.addresses, [](const IPAddress &addr) {
+                            return addr.toString();
+                        }).c_str(), svc.txts.c_str());
+                    }
+                }
+                _services.clear();
+            });
         }
         return true;
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(MDNSR))) {
         IPAddress addr;
         addr.fromString(args.toString(0));
-        args.printf_P(PSTR("MDNS on IP %s..."), addr.toString().c_str());
+        args.printf_P(PSTR("Restarting MDNS, interface IP %s..."), addr.toString().c_str());
         plugin.start(addr);
         return true;
     }
@@ -221,6 +244,34 @@ bool MDNSPlugin::atModeHandler(AtModeArgs &args)
     //     return true;
     // }
     return false;
+}
+
+#endif
+
+#else
+
+bool MDNSService::addService(const String &service, const String &proto, uint16_t port)
+{
+    return false;
+}
+
+bool MDNSService::addServiceTxt(const String &service, const String &proto, const String &key, const String &value)
+{
+    return false;
+}
+
+bool MDNSService::removeService(const String &service, const String &proto)
+{
+    return false;
+}
+
+bool MDNSService::removeServiceTxt(const String &service, const String &proto, const String &key)
+{
+    return false;
+}
+
+void MDNSService::announce()
+{
 }
 
 #endif

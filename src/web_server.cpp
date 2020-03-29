@@ -35,6 +35,7 @@
 #if STK500V1
 #include "plugins/stk500v1/STK500v1Programmer.h"
 #endif
+#include "./plugins/mdns/mdns_sd.h"
 #if IOT_REMOTE_CONTROL
 #include "./plugins/remote/remote.h"
 #endif
@@ -119,7 +120,7 @@ bool web_server_is_authenticated(AsyncWebServerRequest *request)
         if (SID.length() == 0) {
             return false;
         }
-        if (verify_session_id(SID.c_str(), config._H_STR(Config().device_name), config._H_STR(Config().device_pass))) {
+        if (verify_session_id(SID.c_str(), config.getDeviceName(), config._H_STR(Config().device_pass))) {
             return true;
         }
     }
@@ -317,7 +318,7 @@ void web_server_export_settings(AsyncWebServerRequest *request)
         HttpHeaders httpHeaders(false);
         httpHeaders.addNoCache();
 
-        auto hostname = config._H_STR(Config().device_name);
+        auto hostname = config.getDeviceName();
 
         char timeStr[32];
         auto now = time(nullptr);
@@ -536,11 +537,24 @@ void web_server_update_upload_handler(AsyncWebServerRequest *request, String fil
 
 void init_web_server()
 {
-    if (config._H_GET(Config().flags).webServerMode == HTTP_MODE_DISABLED) {
+    auto flags = config._H_GET(Config().flags);
+    if (flags.webServerMode == HTTP_MODE_DISABLED) {
+        MDNSService::announce();
         return;
     }
 
-    server = new AsyncWebServer(config._H_GET(Config().http_port));
+    auto port = config._H_GET(Config().http_port);
+    if (flags.webServerMode != HTTP_MODE_DISABLED) {
+        String service = FSPGM(http);
+        if (flags.webServerMode == HTTP_MODE_SECURE) {
+            service += 's';
+        }
+        MDNSService::addService(service, FSPGM(tcp), port);
+    }
+    MDNSService::announce();
+
+
+    server = new AsyncWebServer(port);
     // server->addHandler(&events);
 
     loginFailures.readFromSPIFFS();
@@ -615,7 +629,7 @@ void init_web_server()
     server->on(String(F("/update")).c_str(), HTTP_POST, web_server_update_handler, web_server_update_upload_handler);
 
     server->begin();
-    _debug_printf_P(PSTR("HTTP running on port %u\n"), config._H_GET(Config().http_port));
+    _debug_printf_P(PSTR("HTTP running on port %u\n"), port);
 }
 
 
@@ -786,9 +800,9 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
         if (request->method() == HTTP_POST && request->hasArg(F("username")) && request->hasArg(F("password"))) {
             IPAddress remote_addr = request->client()->remoteIP();
 
-            if (loginFailures.isAddressBlocked(remote_addr) == false && request->arg(F("username")) == config._H_STR(Config().device_name) && request->arg(F("password")) == config._H_STR(Config().device_pass)) {
+            if (loginFailures.isAddressBlocked(remote_addr) == false && request->arg(F("username")) == config.getDeviceName() && request->arg(F("password")) == config._H_STR(Config().device_pass)) {
                 auto cookie = new HttpCookieHeader(FSPGM(SID));
-                cookie->setValue(generate_session_id(config._H_STR(Config().device_name), config._H_STR(Config().device_pass), NULL));
+                cookie->setValue(generate_session_id(config.getDeviceName(), config._H_STR(Config().device_pass), NULL));
                 cookie->setPath(FSPGM(slash));
                 httpHeaders.add(cookie);
 
@@ -972,6 +986,8 @@ void WebServerPlugin::reconfigure(PGM_P source)
     if (server) {
         delete server;
         server = nullptr;
+        MDNSService::removeService(FSPGM(http), FSPGM(tcp));
+        MDNSService::removeService(FSPGM(https), FSPGM(tcp));
     }
     init_web_server();
 }

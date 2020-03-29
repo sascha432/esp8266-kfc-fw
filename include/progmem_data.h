@@ -47,6 +47,7 @@ PROGMEM_STRING_DECL(dot);
 PROGMEM_STRING_DECL(comma);
 PROGMEM_STRING_DECL(comma_);
 PROGMEM_STRING_DECL(http);
+PROGMEM_STRING_DECL(https);
 extern const char _shared_progmem_string_auto_discovery_html[] PROGMEM;
 extern const char _shared_progmem_string_filename[] PROGMEM;
 extern const char _shared_progmem_string_dir[] PROGMEM;
@@ -70,6 +71,8 @@ PROGMEM_STRING_DECL(private);
 PROGMEM_STRING_DECL(close);
 PROGMEM_STRING_DECL(keep_alive);
 PROGMEM_STRING_DECL(comma_);
+PROGMEM_STRING_DECL(tcp);
+PROGMEM_STRING_DECL(udp);
 
 extern const char _shared_progmem_string_SPIFFS_tmp_dir[] PROGMEM;
 extern const char _shared_progmem_string_SID[] PROGMEM;

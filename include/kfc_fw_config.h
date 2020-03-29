@@ -526,6 +526,8 @@ public:
     bool rtcLostPower() ;
     void printRTCStatus(Print &output, bool plain = true);
 
+    const char *getDeviceName() const;
+
 private:
     friend class KFCConfigurationPlugin;
 

@@ -283,15 +283,9 @@ extern class Stream &DebugSerial;
 #define CONFIG_EEPROM_MAX_LENGTH        4096
 #endif
 
-#ifndef MDNS_SUPPORT
-#define MDNS_SUPPORT                    1               // support for MDNS_SUPPORT
+#ifndef MDNS_PLUGIN
+#define MDNS_PLUGIN                     1
 #endif
-
-// #if MDNS_SUPPORT
-// #ifndef NO_GLOBAL_MDNS
-// #error requires NO_GLOBAL_MDNS to be defined
-// #endif
-// #endif
 
 #ifndef SERIAL_HANDLER
 #if SERIAL2TCP || HTTP2SERIAL || AT_MODE_SUPPORTED

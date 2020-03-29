@@ -267,7 +267,7 @@ void KFCFWConfiguration::_onWiFiConnectCb(const WiFiEventStationModeConnected &e
         config.storeQuickConnect(event.bssid, event.channel);
 
 #if defined(ESP32)
-        auto hostname = config._H_STR(Config().device_name);
+        auto hostname = config.getDeviceName();
         _debug_printf_P(PSTR("WiFi.setHostname(%s)\n"), hostname);
         if (!WiFi.setHostname(hostname)) {
             _debug_printf_P(PSTR("WiFi.setHostname(%s) failed\n"), hostname);
@@ -745,7 +745,7 @@ const String KFCFWConfiguration::getShortFirmwareVersion()
 
 void KFCFWConfiguration::storeQuickConnect(const uint8_t *bssid, int8_t channel)
 {
-    _debug_printf_P(PSTR("KFCFWConfiguration::storeQuickConnect(%s, %d)\n"), mac2String(bssid).c_str(), channel);
+    _debug_printf_P(PSTR("bssid=%s channel=%d\n"), mac2String(bssid).c_str(), channel);
 
     Config_QuickConnect::WiFiQuickConnect_t quickConnect;
     RTCMemoryManager::read(CONFIG_RTC_MEM_ID, &quickConnect, sizeof(quickConnect));
@@ -756,7 +756,7 @@ void KFCFWConfiguration::storeQuickConnect(const uint8_t *bssid, int8_t channel)
 
 void KFCFWConfiguration::storeStationConfig(uint32_t ip, uint32_t netmask, uint32_t gateway)
 {
-    _debug_printf_P(PSTR("KFCFWConfiguration::storeStationConfig(%s, %s, %s): dhcp client started = %d\n"),
+    _debug_printf_P(PSTR("ip=%s netmask=%s gw=%s dhcp=%u\n"),
         IPAddress(ip).toString().c_str(),
         IPAddress(netmask).toString().c_str(),
         IPAddress(gateway).toString().c_str(),
@@ -775,7 +775,7 @@ void KFCFWConfiguration::storeStationConfig(uint32_t ip, uint32_t netmask, uint3
         quickConnect.use_static_ip = flags.useStaticIPDuringWakeUp || !flags.stationModeDHCPEnabled;
         RTCMemoryManager::write(CONFIG_RTC_MEM_ID, &quickConnect, sizeof(quickConnect));
     } else {
-        _debug_println(F("KFCFWConfiguration::storeStationConfig(): reading RTC memory failed"));
+        _debug_println(F("reading RTC memory failed"));
     }
 }
 
@@ -800,7 +800,7 @@ void KFCFWConfiguration::setup()
 
 void KFCFWConfiguration::read()
 {
-    _debug_println(F("KFCFWConfiguration::read()"));
+    _debug_println();
 
     if (!Configuration::read()) {
         Logger_error(F("Failed to read configuration, restoring factory settings"));
@@ -833,7 +833,7 @@ void KFCFWConfiguration::write()
 
 void KFCFWConfiguration::wakeUpFromDeepSleep()
 {
-    _debug_println(F("KFCFWConfiguration::wakeUpFromDeepSleep()"));
+    _debug_println();
 
 #if defined(ESP32)
     WiFi.mode(WIFI_STA); // needs to be called to initialize wifi
@@ -866,7 +866,7 @@ void KFCFWConfiguration::wakeUpFromDeepSleep()
         } else {
 
             if (quickConnect.use_static_ip && quickConnect.local_ip) {
-                _debug_printf_P(PSTR("WiFi.config(): configuring static ip\n"));
+                _debug_printf_P(PSTR("configuring static ip\n"));
                 WiFi.config(quickConnect.local_ip, quickConnect.gateway, quickConnect.subnet, quickConnect.dns1, quickConnect.dns2);
             }
 
@@ -940,7 +940,7 @@ static uint32_t restart_device_timeout;
 static void restart_device()
 {
     if (millis() > restart_device_timeout) {
-        _debug_printf("restart(): restart_device\n");
+        _debug_println();
 
 #if __LED_BUILTIN == -3
         BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::OFF);
@@ -1184,7 +1184,7 @@ bool KFCFWConfiguration::connectWiFi()
         BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::FAST);
     }
 
-    auto hostname = config._H_STR(Config().device_name);
+    auto hostname = config.getDeviceName();
 #if defined(ESP32)
     WiFi.setHostname(hostname);
     WiFi.softAPsetHostname(hostname);
@@ -1222,7 +1222,7 @@ void KFCFWConfiguration::printInfo(Print &output)
         Logger_security(FSPGM(default_password_warning));
         output.println(FSPGM(default_password_warning));
     }
-    output.printf_P(PSTR("Device %s ready!\n"), config._H_STR(Config().device_name));
+    output.printf_P(PSTR("Device %s ready!\n"), config.getDeviceName());
 
 #if AT_MODE_SUPPORTED
     if (flags.atModeEnabled) {
@@ -1260,7 +1260,7 @@ TwoWire &KFCFWConfiguration::initTwoWire(bool reset, Print *output)
 
 bool KFCFWConfiguration::setRTC(uint32_t unixtime)
 {
-    debug_printf_P(PSTR("KFCFWConfiguration::setRTC(): time=%u\n"), unixtime);
+    debug_printf_P(PSTR("time=%u\n"), unixtime);
 #if RTC_SUPPORT
     initTwoWire();
     if (rtc.begin()) {
@@ -1338,6 +1338,10 @@ void KFCFWConfiguration::printRTCStatus(Print &output, bool plain)
 #endif
 }
 
+const char *KFCFWConfiguration::getDeviceName() const
+{
+    return config._H_STR(Config().device_name);
+}
 
 class KFCConfigurationPlugin : public PluginComponent {
 public:
@@ -1369,7 +1373,7 @@ static KFCConfigurationPlugin plugin;
 
 void KFCConfigurationPlugin::setup(PluginSetupMode_t mode)
 {
-    _debug_printf_P(PSTR("config_init(): safe mode %d, wake up %d\n"), (mode == PLUGIN_SETUP_SAFE_MODE), resetDetector.hasWakeUpDetected());
+    _debug_printf_P(PSTR("safe mode %d, wake up %d\n"), (mode == PLUGIN_SETUP_SAFE_MODE), resetDetector.hasWakeUpDetected());
 
     config.setup();
 

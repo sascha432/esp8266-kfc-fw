@@ -27,7 +27,7 @@ SyslogStream *debugSyslog = nullptr;
 void syslog_setup_debug_logger() {
 
     SyslogParameter parameter;
-    parameter.setHostname(config._H_STR(Config().device_name));
+    parameter.setHostname(config.getDeviceName());
     parameter.setAppName(FSPGM(kfcfw));
     parameter.setProcessId(F("DEBUG"));
 	parameter.setSeverity(SYSLOG_DEBUG);
@@ -83,12 +83,12 @@ void syslog_setup_logger()
     if (config._H_GET(Config().flags).syslogProtocol != SYSLOG_PROTOCOL_NONE) {
 
         // SyslogParameter parameter;
-        // parameter.setHostname(config._H_STR(Config().device_name));
+        // parameter.setHostname(config.getDeviceName());
         // parameter.setAppName(FSPGM(kfcfw));
         // parameter.setFacility(SYSLOG_FACILITY_KERN);
         // parameter.setSeverity(SYSLOG_NOTICE);
 
-        SyslogFilter *filter = new SyslogFilter(config._H_STR(Config().device_name), FSPGM(kfcfw));
+        SyslogFilter *filter = new SyslogFilter(config.getDeviceName(), FSPGM(kfcfw));
         auto &parameter = filter->getParameter();
         parameter.setFacility(SYSLOG_FACILITY_KERN);
         parameter.setSeverity(SYSLOG_NOTICE);

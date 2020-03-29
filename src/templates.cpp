@@ -66,7 +66,7 @@ void WebTemplate::printSystemTime(time_t now, PrintHtmlEntitiesString &output)
 void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 {
     if (String_equals(key, PSTR("HOSTNAME"))) {
-        output.print(config._H_STR(Config().device_name));
+        output.print(config.getDeviceName());
     }
     else if (String_equals(key, F("TITLE"))) {
         output.print(config._H_STR(Config().device_title));

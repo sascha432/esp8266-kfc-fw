@@ -55,6 +55,8 @@
                         "./Resources/js/aes.js",
                         "./Resources/js/sha512.js",
                         "./Resources/js/main.min.js",
+                        "./Resources/js/forms/*.js",
+                        "./Resources/js/sync_time.js",
                         "./Resources/js/file_manager.js",
                         "./Resources/js/ws_console.js",
                         "./Resources/js/http2serial.js",

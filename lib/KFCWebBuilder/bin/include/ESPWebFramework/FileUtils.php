@@ -24,6 +24,27 @@ class FileUtils {
         static::$baseDir = $baseDir;
     }
 
+    public static function findFiles(string $filename): array
+    {
+        if (file_exists($filename)) {
+            return array(realpath($filename));
+        }
+        $path = dirname($filename);
+        $basename = basename($filename);
+        $wildcard = sha1('fibonacci').md5('fibonacci');
+        $pattern = '#^'.str_replace($wildcard, '.*?', preg_quote(str_replace('*', $wildcard, $basename))).'$#';
+        $dir = Dir($path);
+        $files = array();
+        while(false !== ($entry = $dir->read())) {
+            if ($entry{0} != '.') {
+                if (preg_match($pattern, $entry)) {
+                    $files[] = realpath($path.'/'.$entry);
+                }
+            }
+        }
+        return $files;
+    }
+
     /**
      * @param string $path
      * @return string

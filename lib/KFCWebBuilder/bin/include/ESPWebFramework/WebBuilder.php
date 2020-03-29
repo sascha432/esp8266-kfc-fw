@@ -12,6 +12,7 @@ use ESPWebFramework\JsonConfiguration\JsonConfiguration;
 use ESPWebFramework\JsonConfiguration\Processors;
 use ESPWebFramework\Dependencies\Directory;
 use ESPWebFramework\Dependencies\File;
+use ESPWebFramework\FileUtils;
 
 /**
  * Class WebBuilder
@@ -149,14 +150,19 @@ class WebBuilder extends Logger {
                     $this->packageFiles->addDirectory($dir);
                 }
                 foreach($targetDir->getSourceFiles() as $sourceFiles)  {
-                    $file = new File();
-                    $file
-                        ->setIsStatic(true)
-                        ->setPath($sourceFiles->getSourceFile())
-                        ->setTargetDir($targetDir->getTargetDir())
-                        ->addGroup($group)
-                    ;
-                    $this->packageFiles->addFile($file);
+
+                    foreach(FileUtils::findFiles($sourceFiles->getSourceFile()) as $sourceFile) {
+                        $file = new File();
+                        $file
+                            ->setIsStatic(true)
+                            ->setPath($sourceFile)
+                            // ->setPath($sourceFiles->getSourceFile())
+                            ->setTargetDir($targetDir->getTargetDir())
+                            ->addGroup($group)
+                        ;
+                        $this->packageFiles->addFile($file);
+
+                    }
                 }
             }
         }

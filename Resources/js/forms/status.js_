@@ -1,0 +1,24 @@
+/**
+ * Author: sascha_lammers@gmx.de
+ */
+
+ // status.html
+if ($('#pollm_dns').length) {
+    function poll_mdns(first) {
+        $.get($.getHttpLocation('/poll_mdns/') + '?SID=' + $.getSessionId() + "&id=" + random_str(), function(html) {
+            if (html) {
+                console.log("response "+html);
+                $('#pollm_dns').html(html);
+            } else {
+                console.log("empty response, poll again");
+                window.setTimeout(poll_mdns, 1000);
+            }
+        }).fail(function(data, textStatus, xhr) {
+            console.log("response code "+xhr.status);
+            $('#pollm_dns').find('td:last').html("Failed to poll MDNS");
+        });
+    }
+    window.setTimeout(function() {
+        poll_mdns(true);
+    }, 1000);
+}

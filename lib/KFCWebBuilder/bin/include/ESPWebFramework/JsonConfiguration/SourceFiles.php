@@ -11,9 +11,10 @@ class SourceFiles
 {
     /**
      * @var string|null
-     * @validator \ESPWebFramework\FileUtils::realpath
-     * @validator file_exists
-     * @validator is_file
+     * @validator \ESPWebFramework\FileUtils::findFiles
+     * validator \ESPWebFramework\FileUtils::realpath
+     * validator file_exists
+     * validator is_file
      */
     private $sourceFile;
 

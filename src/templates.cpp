@@ -55,6 +55,14 @@ PrintArgs &WebTemplate::getPrintArgs() {
     return _printArgs;
 }
 
+void WebTemplate::printSystemTime(time_t now, PrintHtmlEntitiesString &output)
+{
+    char buf[80];
+    auto format = PSTR("%a, %d %b %Y " HTML_SA(span, HTML_A("id", "system_time")) "%H:%M:%S" HTML_E(span) " %Z");
+    timezone_strftime_P(buf, sizeof(buf), format, timezone_localtime(&now));
+    output.printf_P(PSTR(HTML_SA(span, HTML_A("id", "system_date") HTML_A("format", "%s")) "%s" HTML_E(span)), PrintHtmlEntitiesString(FPSTR(format)).c_str(), buf);
+}
+
 void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 {
     if (String_equals(key, PSTR("HOSTNAME"))) {
@@ -95,9 +103,7 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         if (!IS_TIME_VALID(now)) {
             output.print(F("No time available"));
         } else {
-            char buf[32];
-            timezone_strftime_P(buf, sizeof(buf), PSTR("%a, %d %b %Y %H:%M:%S %Z"), timezone_localtime(&now));
-            output.print(buf);
+            printSystemTime(now, output);
         }
     }
 #endif

@@ -53,7 +53,9 @@ size_t PrintHtmlEntities::translate(uint8_t data)
                 return writeRaw('"');
             case '\5':
                 return writeRaw('=');
-            // case 39:
+            case '\6':
+                return writeRaw('%');
+                // case 39:
             //     break;
             // default:
             //     if (data >= 0xa0 && data <= 0xbf) {

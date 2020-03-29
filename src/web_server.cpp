@@ -204,6 +204,21 @@ void web_server_is_alive_handler(AsyncWebServerRequest *request)
     request->send(response);
 }
 
+void web_server_sync_time_handler(AsyncWebServerRequest *request)
+{
+    if (web_server_is_authenticated(request)) {
+        HttpHeaders httpHeaders(false);
+        httpHeaders.addNoCache();
+        PrintHtmlEntitiesString str;
+        WebTemplate::printSystemTime(time(nullptr), str);
+        auto response = new AsyncBasicResponse(200, FSPGM(mime_text_html), str);
+        httpHeaders.setAsyncWebServerResponseHeaders(response);
+        request->send(response);
+    } else {
+        request->send(403);
+    }
+}
+
 void web_server_get_webui_json(AsyncWebServerRequest *request)
 {
     WebServerSetCPUSpeedHelper setCPUSpeed;
@@ -591,6 +606,7 @@ void init_web_server()
     web_server_add_handler(F("/scan_wifi/"), web_server_scan_wifi_handler);
     web_server_add_handler(F("/logout"), web_server_logout_handler);
     web_server_add_handler(F("/is_alive"), web_server_is_alive_handler);
+    web_server_add_handler(F("/sync_time"), web_server_sync_time_handler);
     web_server_add_handler(F("/webui_get"), web_server_get_webui_json);
     web_server_add_handler(F("/export_settings"), web_server_export_settings);
     web_server_add_handler(F("/import_settings"), web_server_import_settings);

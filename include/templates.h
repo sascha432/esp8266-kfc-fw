@@ -36,6 +36,8 @@ public:
 
     virtual void process(const String &key, PrintHtmlEntitiesString &output);
 
+    static void printSystemTime(time_t now, PrintHtmlEntitiesString &output);
+
 protected:
     Form *_form;
     JsonUnnamedObject *_json;

@@ -10,7 +10,8 @@ Author: sascha_lammers@gmx.de
 #include <debug_helper_disable.h>
 #endif
 
-static WiFiCallbacks::CallbackVector _callbacks;
+WiFiCallbacks::CallbackVector WiFiCallbacks::_callbacks;
+bool WiFiCallbacks::_locked = false;
 
 uint8_t WiFiCallbacks::add(uint8_t events, WiFiCallbacks::Callback_t callback, WiFiCallbacks::CallbackPtr_t callbackPtr)
 {
@@ -38,7 +39,9 @@ int8_t WiFiCallbacks::remove(uint8_t events, WiFiCallbacks::CallbackPtr_t callba
             _debug_printf_P(PSTR("callbackPtr=%p changed events from %u to %u\n"), callbackPtr, iterator->events, iterator->events & ~events);
             iterator->events &= ~events;
             if (iterator->events == 0) {
-                _callbacks.erase(iterator);
+                if (!_locked) {
+                    _callbacks.erase(iterator);
+                }
                 return 0;
             }
             return iterator->events;
@@ -50,6 +53,7 @@ int8_t WiFiCallbacks::remove(uint8_t events, WiFiCallbacks::CallbackPtr_t callba
 void WiFiCallbacks::callEvent(WiFiCallbacks::EventEnum_t event, void *payload)
 {
     _debug_printf_P(PSTR("event=%u payload=%p\n"), event, payload);
+    _locked = true;
     for (const auto &entry : _callbacks) {
         if (entry.events & event) {
             if (entry.callback) {
@@ -61,6 +65,10 @@ void WiFiCallbacks::callEvent(WiFiCallbacks::EventEnum_t event, void *payload)
             }
         }
     }
+    _callbacks.erase(std::remove_if(_callbacks.begin(), _callbacks.end(), [](const CallbackEntry_t &wc) {
+        return wc.events == 0;
+    }), _callbacks.end());
+    _locked = false;
 }
 
 WiFiCallbacks::CallbackVector &WiFiCallbacks::getVector()

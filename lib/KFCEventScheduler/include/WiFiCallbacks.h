@@ -56,6 +56,10 @@ public:
 
     static void callEvent(EventEnum_t event, void *payload);
     static CallbackVector &getVector();
+
+private:
+    static CallbackVector _callbacks;
+    static bool _locked;
 };
 
 #include <debug_helper_disable.h>

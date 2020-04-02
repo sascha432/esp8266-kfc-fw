@@ -1,0 +1,834 @@
+{
+    "Content_Length": {
+        "use_counter": 1,
+        "default": "Content-Length"
+    },
+    "Cache_Control": {
+        "use_counter": 1,
+        "default": "Cache-Control"
+    },
+    "Set_Cookie": {
+        "use_counter": 1,
+        "default": "Set-Cookie"
+    },
+    "mime_text_plain": {
+        "use_counter": 16,
+        "default": "text/plain"
+    },
+    "1": {
+        "use_counter": 15,
+        "default": "1"
+    },
+    "0": {
+        "use_counter": 15,
+        "default": "0"
+    },
+    "null": {
+        "use_counter": 4,
+        "default": "null"
+    },
+    "FormLengthValidator_default_message": {
+        "use_counter": 1,
+        "default": "This field must be between %min% and %max% characters"
+    },
+    "FormValidator_min_macro": {
+        "use_counter": 2,
+        "default": "%min%"
+    },
+    "FormValidator_max_macro": {
+        "use_counter": 2,
+        "default": "%max%"
+    },
+    "FormEnumValidator_default_message": {
+        "use_counter": 1,
+        "default": "Invalid value: %allowed%"
+    },
+    "FormValidator_allowed_macro": {
+        "use_counter": 2,
+        "default": "%allowed%"
+    },
+    "FormValidHostOrIpValidator_default_message": {
+        "use_counter": 1,
+        "default": "Invalid hostname or IP address"
+    },
+    "webui_json_id": {
+        "use_counter": 31,
+        "default": "id"
+    },
+    "webui_json_name": {
+        "use_counter": 2,
+        "default": "name"
+    },
+    "webui_json_unit": {
+        "use_counter": 1,
+        "default": "unit"
+    },
+    "webui_json_columns": {
+        "use_counter": 3,
+        "default": "columns"
+    },
+    "webui_json_offset": {
+        "use_counter": 1,
+        "default": "offset"
+    },
+    "webui_json_value": {
+        "use_counter": 31,
+        "default": "value"
+    },
+    "webui_json_state": {
+        "use_counter": 23,
+        "default": "state"
+    },
+    "mime_application_json": {
+        "use_counter": 6,
+        "default": "application/json"
+    },
+    "OK": {
+        "use_counter": 5,
+        "default": "OK"
+    },
+    "atmode_file_autorun": {
+        "use_counter": 1,
+        "default": "/autorun_atmode.cmd"
+    },
+    "on": {
+        "use_counter": 2,
+        "default": "on"
+    },
+    "off": {
+        "use_counter": 2,
+        "default": "off"
+    },
+    "crash_counter_file": {
+        "use_counter": 4,
+        "default": "/crash_counter"
+    },
+    "Device_is_rebooting": {
+        "use_counter": 1,
+        "default": "Device is rebooting...\\n"
+    },
+    "safe_mode_enabled": {
+        "use_counter": 2,
+        "default": "Device started in SAFE MODE"
+    },
+    "default_password_warning": {
+        "use_counter": 3,
+        "default": "WARNING! Default password has not been changed"
+    },
+    "log_file_messages": {
+        "use_counter": 2,
+        "default": "log://messages"
+    },
+    "log_file_debug": {
+        "use_counter": 2,
+        "default": "log://debug"
+    },
+    "log_file_access": {
+        "use_counter": 2,
+        "default": "log://access"
+    },
+    "__pure_virtual": {
+        "use_counter": 7,
+        "default": "pure virtual call: %s\\n"
+    },
+    "yes": {
+        "use_counter": 5,
+        "default": "yes"
+    },
+    "no": {
+        "use_counter": 5,
+        "default": "no"
+    },
+    "comma_": {
+        "use_counter": 8,
+        "default": ", "
+    },
+    "_hidden": {
+        "use_counter": 4,
+        "default": " hidden"
+    },
+    "Not_supported": {
+        "use_counter": 1,
+        "default": "Not supported"
+    },
+    "_selected": {
+        "use_counter": 1,
+        "default": " selected"
+    },
+    "server_crt": {
+        "use_counter": 1,
+        "default": "/server.crt"
+    },
+    "server_key": {
+        "use_counter": 1,
+        "default": "/server.key"
+    },
+    "webui_json_type": {
+        "use_counter": 17,
+        "default": "type"
+    },
+    "webui_json_row": {
+        "use_counter": 1,
+        "default": "row"
+    },
+    "webui_json_align": {
+        "use_counter": 3,
+        "default": "align"
+    },
+    "webui_json_center": {
+        "use_counter": 1,
+        "default": "center"
+    },
+    "webui_json_right": {
+        "use_counter": 1,
+        "default": "right"
+    },
+    "webui_json_left": {
+        "use_counter": 1,
+        "default": "left"
+    },
+    "webui_json_extra_classes": {
+        "use_counter": 1,
+        "default": "extra_classes"
+    },
+    "webui_json_group": {
+        "use_counter": 1,
+        "default": "group"
+    },
+    "webui_json_has_switch": {
+        "use_counter": 1,
+        "default": "has_switch"
+    },
+    "webui_json_switch": {
+        "use_counter": 1,
+        "default": "switch"
+    },
+    "webui_json_zero_off": {
+        "use_counter": 2,
+        "default": "zero_off"
+    },
+    "webui_json_display_name": {
+        "use_counter": 1,
+        "default": "display_name"
+    },
+    "webui_json_slider": {
+        "use_counter": 2,
+        "default": "slider"
+    },
+    "webui_json_min": {
+        "use_counter": 1,
+        "default": "min"
+    },
+    "webui_json_max": {
+        "use_counter": 1,
+        "default": "max"
+    },
+    "webui_json_color": {
+        "use_counter": 1,
+        "default": "color"
+    },
+    "webui_json_temperature": {
+        "use_counter": 1,
+        "default": "temperature"
+    },
+    "webui_json_sensor": {
+        "use_counter": 1,
+        "default": "sensor"
+    },
+    "webui_json_render_type": {
+        "use_counter": 3,
+        "default": "render_type"
+    },
+    "webui_json_wide": {
+        "use_counter": 1,
+        "default": "wide"
+    },
+    "webui_json_badge": {
+        "use_counter": 1,
+        "default": "badge"
+    },
+    "webui_json_big": {
+        "use_counter": 1,
+        "default": "big"
+    },
+    "webui_json_binary_sensor": {
+        "use_counter": 1,
+        "default": "binary_sensor"
+    },
+    "webui_json_screen": {
+        "use_counter": 1,
+        "default": "screen"
+    },
+    "webui_json_width": {
+        "use_counter": 1,
+        "default": "width"
+    },
+    "webui_json_height": {
+        "use_counter": 2,
+        "default": "height"
+    },
+    "webui_json_buttons": {
+        "use_counter": 2,
+        "default": "buttons"
+    },
+    "webui_json_ui": {
+        "use_counter": 1,
+        "default": "ui"
+    },
+    "webui_json_data": {
+        "use_counter": 1,
+        "default": "data"
+    },
+    "webui_socket_uri": {
+        "use_counter": 1,
+        "default": "/webui_ws"
+    },
+    "webui_json_ue": {
+        "use_counter": 7,
+        "default": "ue"
+    },
+    "webui_json_events": {
+        "use_counter": 7,
+        "default": "events"
+    },
+    "http": {
+        "use_counter": 13,
+        "default": "http"
+    },
+    "SID": {
+        "use_counter": 7,
+        "default": "SID"
+    },
+    "Accept_Encoding": {
+        "use_counter": 1,
+        "default": "Accept-Encoding"
+    },
+    "slash": {
+        "use_counter": 3,
+        "default": "/"
+    },
+    "mime_text_html": {
+        "use_counter": 2,
+        "default": "text/html"
+    },
+    "mime_application_zip": {
+        "use_counter": 2,
+        "default": "application/zip"
+    },
+    "mime_image_bmp": {
+        "use_counter": 1,
+        "default": "image/bmp"
+    },
+    "tcp": {
+        "use_counter": 3,
+        "default": "tcp"
+    },
+    "mime_text_css": {
+        "use_counter": 1,
+        "default": "text/css"
+    },
+    "mime_application_javascript": {
+        "use_counter": 1,
+        "default": "application/javascript"
+    },
+    "mime_image_png": {
+        "use_counter": 1,
+        "default": "image/png"
+    },
+    "mime_image_gif": {
+        "use_counter": 1,
+        "default": "image/gif"
+    },
+    "mime_image_jpeg": {
+        "use_counter": 1,
+        "default": "image/jpeg"
+    },
+    "mime_text_xml": {
+        "use_counter": 1,
+        "default": "text/xml"
+    },
+    "mime_application_x_gzip": {
+        "use_counter": 1,
+        "default": "application/x-gzip"
+    },
+    "Expires": {
+        "use_counter": 3,
+        "default": "Expires"
+    },
+    "Last_Modified": {
+        "use_counter": 2,
+        "default": "Last-Modified"
+    },
+    "Content_Encoding": {
+        "use_counter": 1,
+        "default": "Content-Encoding"
+    },
+    "login_html": {
+        "use_counter": 2,
+        "default": "/login.html"
+    },
+    "https": {
+        "use_counter": 1,
+        "default": "https"
+    },
+    "disabled": {
+        "use_counter": 8,
+        "default": "disabled"
+    },
+    "mqtt_color_temp_state_topic": {
+        "use_counter": 2,
+        "default": "color_temp_state_topic"
+    },
+    "mqtt_color_temp_command_topic": {
+        "use_counter": 2,
+        "default": "color_temp_command_topic"
+    },
+    "blinds_controller_channel1_sensor": {
+        "use_counter": 2,
+        "default": "blinds_channel1_sensor"
+    },
+    "blinds_controller_channel1": {
+        "use_counter": 2,
+        "default": "blinds_channel1"
+    },
+    "blinds_controller_channel2_sensor": {
+        "use_counter": 2,
+        "default": "blinds_channel2_sensor"
+    },
+    "blinds_controller_channel2": {
+        "use_counter": 2,
+        "default": "blinds_channel2"
+    },
+    "iot_blinds_control_state_file": {
+        "use_counter": 2,
+        "default": "/blinds_ctrl.state"
+    },
+    "Yes": {
+        "use_counter": 4,
+        "default": "Yes"
+    },
+    "No": {
+        "use_counter": 4,
+        "default": "No"
+    },
+    "webui_json_title": {
+        "use_counter": 5,
+        "default": "title"
+    },
+    "upload": {
+        "use_counter": 3,
+        "default": "upload"
+    },
+    "file_manager_base_uri": {
+        "use_counter": 2,
+        "default": "/file_manager/"
+    },
+    "dir": {
+        "use_counter": 3,
+        "default": "dir"
+    },
+    "ERROR_": {
+        "use_counter": 12,
+        "default": "ERROR:"
+    },
+    "success": {
+        "use_counter": 3,
+        "default": "success"
+    },
+    "failure": {
+        "use_counter": 3,
+        "default": "failure"
+    },
+    "upload_file": {
+        "use_counter": 2,
+        "default": "upload_file"
+    },
+    "file_manager_html_uri": {
+        "use_counter": 1,
+        "default": "file_manager.html"
+    },
+    "filename": {
+        "use_counter": 6,
+        "default": "filename"
+    },
+    "kfcmdns": {
+        "use_counter": 3,
+        "default": "kfcmdns"
+    },
+    "udp": {
+        "use_counter": 3,
+        "default": "udp"
+    },
+    "mqtt_unique_id": {
+        "use_counter": 1,
+        "default": "unique_id"
+    },
+    "mqtt_availability_topic": {
+        "use_counter": 1,
+        "default": "availability_topic"
+    },
+    "mqtt_status_topic": {
+        "use_counter": 2,
+        "default": "/status"
+    },
+    "mqtt_payload_available": {
+        "use_counter": 1,
+        "default": "payload_available"
+    },
+    "mqtt_payload_not_available": {
+        "use_counter": 1,
+        "default": "payload_not_available"
+    },
+    "mqtt_state_topic": {
+        "use_counter": 1,
+        "default": "state_topic"
+    },
+    "mqtt_command_topic": {
+        "use_counter": 1,
+        "default": "command_topic"
+    },
+    "mqtt_payload_on": {
+        "use_counter": 1,
+        "default": "payload_on"
+    },
+    "mqtt_payload_off": {
+        "use_counter": 1,
+        "default": "payload_off"
+    },
+    "mqtt_brightness_state_topic": {
+        "use_counter": 1,
+        "default": "brightness_state_topic"
+    },
+    "mqtt_brightness_command_topic": {
+        "use_counter": 1,
+        "default": "brightness_command_topic"
+    },
+    "mqtt_brightness_scale": {
+        "use_counter": 1,
+        "default": "brightness_scale"
+    },
+    "mqtt_rgb_state_topic": {
+        "use_counter": 1,
+        "default": "rgb_state_topic"
+    },
+    "mqtt_rgb_command_topic": {
+        "use_counter": 1,
+        "default": "rgb_command_topic"
+    },
+    "mqtt_unit_of_measurement": {
+        "use_counter": 1,
+        "default": "unit_of_measurement"
+    },
+    "mqtt_value_template": {
+        "use_counter": 1,
+        "default": "value_template"
+    },
+    "Anonymous": {
+        "use_counter": 1,
+        "default": "Anonymous"
+    },
+    "empty": {
+        "use_counter": 1,
+        "default": ""
+    },
+    "Disabled": {
+        "use_counter": 5,
+        "default": "Disabled"
+    },
+    "enabled": {
+        "use_counter": 6,
+        "default": "enabled"
+    },
+    "mqtt_component_light": {
+        "use_counter": 1,
+        "default": "light"
+    },
+    "mqtt_component_sensor": {
+        "use_counter": 1,
+        "default": "sensor"
+    },
+    "mqtt_component_binary_sensor": {
+        "use_counter": 1,
+        "default": "binary_sensor"
+    },
+    "mqtt_component_switch": {
+        "use_counter": 1,
+        "default": "switch"
+    },
+    "strftime_date_time_zone": {
+        "use_counter": 4,
+        "default": "%FT%T %Z"
+    },
+    "ping_monitor_response": {
+        "use_counter": 2,
+        "default": "%d bytes from %s: icmp_seq=%d ttl=%d time=%ld ms"
+    },
+    "ping_monitor_request_timeout": {
+        "use_counter": 2,
+        "default": "Request timed out."
+    },
+    "ping_monitor_end_response": {
+        "use_counter": 2,
+        "default": "Total answer from %s sent %d recevied %d time %ld ms"
+    },
+    "ping_monitor_ethernet_detected": {
+        "use_counter": 2,
+        "default": "Detected eth address %s"
+    },
+    "stk500v1_log_file": {
+        "use_counter": 4,
+        "default": "/stk500v1/debug.log"
+    },
+    "stk500v1_sig_file": {
+        "use_counter": 1,
+        "default": "/stk500v1/atmega.csv"
+    },
+    "On": {
+        "use_counter": 2,
+        "default": "On"
+    },
+    "Off": {
+        "use_counter": 2,
+        "default": "Off"
+    },
+    "mqtt_switch_state": {
+        "use_counter": 2,
+        "default": "/switch/state"
+    },
+    "mqtt_switch_set": {
+        "use_counter": 4,
+        "default": "/switch/set"
+    },
+    "iot_switch_states_file": {
+        "use_counter": 2,
+        "default": "/switch.states"
+    },
+    "kfcfw": {
+        "use_counter": 1,
+        "default": "kfcfw"
+    },
+    "moon_phase_0": {
+        "use_counter": 1,
+        "default": "Full Moon"
+    },
+    "moon_phase_1": {
+        "use_counter": 1,
+        "default": "Waning Gibbous"
+    },
+    "moon_phase_2": {
+        "use_counter": 1,
+        "default": "Last Quarter"
+    },
+    "moon_phase_3": {
+        "use_counter": 1,
+        "default": "Old Crescent"
+    },
+    "moon_phase_4": {
+        "use_counter": 1,
+        "default": "New Moon"
+    },
+    "moon_phase_5": {
+        "use_counter": 1,
+        "default": "New Crescent"
+    },
+    "moon_phase_6": {
+        "use_counter": 1,
+        "default": "First Quarter"
+    },
+    "moon_phase_7": {
+        "use_counter": 1,
+        "default": "Waxing Gibbous"
+    },
+    "weather_station_webui_id": {
+        "use_counter": 3,
+        "default": "weather_station"
+    },
+    "SPIFFS_tmp_dir": {
+        "use_counter": 1,
+        "default": "/tmp/"
+    },
+    "config_object_name": {
+        "use_counter": 2,
+        "default": "config"
+    },
+    "true": {
+        "use_counter": 2,
+        "default": "true"
+    },
+    "false": {
+        "use_counter": 2,
+        "default": "false"
+    },
+    "openweathermap_api_url": {
+        "use_counter": 1,
+        "default": "http://api.openweathermap.org/data/2.5/{api_type}?q={query}&appid={api_key}"
+    },
+    "kern": {
+        "use_counter": 1,
+        "default": "kern"
+    },
+    "user": {
+        "use_counter": 1,
+        "default": "user"
+    },
+    "mail": {
+        "use_counter": 1,
+        "default": "mail"
+    },
+    "daemon": {
+        "use_counter": 1,
+        "default": "daemon"
+    },
+    "secure": {
+        "use_counter": 1,
+        "default": "secure"
+    },
+    "syslog": {
+        "use_counter": 1,
+        "default": "syslog"
+    },
+    "ntp": {
+        "use_counter": 1,
+        "default": "ntp"
+    },
+    "local0": {
+        "use_counter": 1,
+        "default": "local0"
+    },
+    "local1": {
+        "use_counter": 1,
+        "default": "local1"
+    },
+    "local2": {
+        "use_counter": 1,
+        "default": "local2"
+    },
+    "local3": {
+        "use_counter": 1,
+        "default": "local3"
+    },
+    "local4": {
+        "use_counter": 1,
+        "default": "local4"
+    },
+    "local5": {
+        "use_counter": 1,
+        "default": "local5"
+    },
+    "local6": {
+        "use_counter": 1,
+        "default": "local6"
+    },
+    "local7": {
+        "use_counter": 1,
+        "default": "local7"
+    },
+    "emerg": {
+        "use_counter": 1,
+        "default": "emerg"
+    },
+    "emergency": {
+        "use_counter": 1,
+        "default": "emergency"
+    },
+    "alert": {
+        "use_counter": 1,
+        "default": "alert"
+    },
+    "crit": {
+        "use_counter": 1,
+        "default": "crit"
+    },
+    "critical": {
+        "use_counter": 1,
+        "default": "critical"
+    },
+    "err": {
+        "use_counter": 1,
+        "default": "err"
+    },
+    "error": {
+        "use_counter": 1,
+        "default": "error"
+    },
+    "warn": {
+        "use_counter": 1,
+        "default": "warn"
+    },
+    "warning": {
+        "use_counter": 1,
+        "default": "warning"
+    },
+    "notice": {
+        "use_counter": 1,
+        "default": "notice"
+    },
+    "info": {
+        "use_counter": 1,
+        "default": "info"
+    },
+    "debug": {
+        "use_counter": 1,
+        "default": "debug"
+    },
+    "fs_mapping_dir": {
+        "use_counter": 2,
+        "default": "/webui/"
+    },
+    "login_failure_file": {
+        "use_counter": 3,
+        "default": "/login_failures"
+    },
+    "Form_value_missing_default_message": {
+        "use_counter": 1,
+        "default": "This field is missing"
+    },
+    "FormRangeValidator_default_message": {
+        "use_counter": 1,
+        "default": "This fields value must be between %min% and %max%"
+    },
+    "RFC7231_date": {
+        "use_counter": 1,
+        "default": "%a, %d %b %Y %H:%M:%S GMT"
+    },
+    "Pragma": {
+        "use_counter": 1,
+        "default": "Pragma"
+    },
+    "Location": {
+        "use_counter": 1,
+        "default": "Location"
+    },
+    "Link": {
+        "use_counter": 1,
+        "default": "Link"
+    },
+    "no_cache": {
+        "use_counter": 2,
+        "default": "no-cache"
+    },
+    "private": {
+        "use_counter": 1,
+        "default": "private"
+    },
+    "public": {
+        "use_counter": 1,
+        "default": "public"
+    },
+    "Cookie": {
+        "use_counter": 1,
+        "default": "Cookie"
+    },
+    "Connection": {
+        "use_counter": 1,
+        "default": "Connection"
+    },
+    "close": {
+        "use_counter": 1,
+        "default": "close"
+    },
+    "keep_alive": {
+        "use_counter": 1,
+        "default": "keep-alive"
+    }
+}

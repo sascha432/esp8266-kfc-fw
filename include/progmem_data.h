@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include "FlashStringGeneratorAuto.h"
+
 PROGMEM_STRING_DECL(mime_text_html);
 PROGMEM_STRING_DECL(mime_text_xml);
 PROGMEM_STRING_DECL(mime_text_plain);
@@ -16,7 +18,6 @@ PROGMEM_STRING_DECL(mime_image_jpeg);
 PROGMEM_STRING_DECL(mime_image_png);
 PROGMEM_STRING_DECL(mime_image_gif);
 PROGMEM_STRING_DECL(mime_image_bmp);
-
 PROGMEM_STRING_DECL(Device_is_rebooting);
 PROGMEM_STRING_DECL(Not_supported);
 PROGMEM_STRING_DECL(default_password_warning);
@@ -73,20 +74,11 @@ PROGMEM_STRING_DECL(keep_alive);
 PROGMEM_STRING_DECL(comma_);
 PROGMEM_STRING_DECL(tcp);
 PROGMEM_STRING_DECL(udp);
-
-extern const char _shared_progmem_string_SPIFFS_tmp_dir[] PROGMEM;
-extern const char _shared_progmem_string_SID[] PROGMEM;
-extern const char _shared_progmem_string_login_html[] PROGMEM;
-// extern const char _shared_progmem_string_webui_mappings[] PROGMEM;
-extern const char _shared_progmem_string_Accept_Encoding[] PROGMEM;
-extern const char _shared_progmem_string_server_crt[] PROGMEM;
-extern const char _shared_progmem_string_server_key[] PROGMEM;
-extern const char _shared_progmem_string_component_light[] PROGMEM;
-extern const char _shared_progmem_string_component_switch[] PROGMEM;
-extern const char _shared_progmem_string_component_sensor[] PROGMEM;
-extern const char _shared_progmem_string_component_binary_sensor[] PROGMEM;
-extern const char _shared_progmem_string_mqtt_prefix[] PROGMEM;
-extern const char _shared_progmem_string_mqtt_auto_discovery[] PROGMEM;
-extern const char _shared_progmem_string_mqtt_remote_config[] PROGMEM;
-extern const char _shared_progmem_string_kfcfw[] PROGMEM;
-extern const char _shared_progmem_string_invalid_flash_ptr[] PROGMEM;
+PROGMEM_STRING_DECL(SPIFFS_tmp_dir);
+PROGMEM_STRING_DECL(SID);
+PROGMEM_STRING_DECL(login_html);
+PROGMEM_STRING_DECL(Accept_Encoding);
+PROGMEM_STRING_DECL(server_crt);
+PROGMEM_STRING_DECL(server_key);
+PROGMEM_STRING_DECL(kfcfw);
+PROGMEM_STRING_DECL(invalid_flash_ptr);

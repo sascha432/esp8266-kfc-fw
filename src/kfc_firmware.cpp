@@ -114,7 +114,6 @@ void setup()
 {
     Serial.begin(KFC_SERIAL_RATE);
     DEBUG_HELPER_INIT();
-    _debug_println(F("begin"));
 
 #if DEBUG_RESET_DETECTOR
     resetDetector._init();

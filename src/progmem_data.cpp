@@ -18,7 +18,6 @@ PROGMEM_STRING_DEF(mime_image_jpeg, "image/jpeg");
 PROGMEM_STRING_DEF(mime_image_png, "image/png");
 PROGMEM_STRING_DEF(mime_image_gif, "image/gif");
 PROGMEM_STRING_DEF(mime_image_bmp, "image/bmp");
-
 PROGMEM_STRING_DEF(_hidden, " hidden");
 PROGMEM_STRING_DEF(_selected, " selected");
 PROGMEM_STRING_DEF(_checked, " checked");

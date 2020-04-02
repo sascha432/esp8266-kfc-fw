@@ -581,10 +581,6 @@ void KFCFWConfiguration::restoreFactorySettings()
     Plugins::RemoteControl::defaults();
 #endif
 
-#if HUE_EMULATION
-    _H_SET(Config().hue.tcp_port, HUE_BASE_PORT);
-    _H_SET_STR(Config().hue.devices, F("lamp 1\nlamp 2"));
-#endif
 #if PING_MONITOR
     Config_Ping::defaults();
 #endif

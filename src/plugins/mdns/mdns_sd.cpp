@@ -54,33 +54,6 @@ void MDNSService::announce()
 
 PROGMEM_STRING_DEF(kfcmdns, "kfcmdns");
 
-// void MDNS_query_service(const char *service, const char *proto, Stream *output)
-// {
-// #if defined(ESP32)
-//     String serviceStr = service;
-//     String protoStr = proto;
-//     Scheduler.1(10, false, [output, serviceStr, protoStr](EventScheduler::TimerPtr timer) {
-//         auto results = (uint8_t)MDNS.queryService(serviceStr, protoStr);
-//         if (results) {
-//             for(uint8_t i = 0; i < results; i++) {
-//                 output->printf_P(PSTR("+MDNS: host=%s,ip=%s,port=%u,txts="), MDNS.hostname(i).c_str(), MDNS.IP(i).toString().c_str(), MDNS.port(i));
-//                 auto numTxt = (uint8_t)MDNS.numTxt(i);
-//                 for(uint8_t j = 0; j < numTxt; j++) {
-//                     if (j) {
-//                         output->print(',');
-//                     }
-//                     output->print(MDNS.txt(i, j));
-//                 }
-//                 output->println();
-//             }
-//         } else {
-//             output->println(F("+MDNS: Query did not return any results"));
-//         }
-//     });
-// #endif
-// }
-
-
 static MDNSPlugin plugin;
 
 void MDNSPlugin::setup(PluginSetupMode_t mode)

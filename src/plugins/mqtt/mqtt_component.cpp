@@ -15,7 +15,6 @@ PROGMEM_STRING_DEF(mqtt_component_switch, "switch");
 PROGMEM_STRING_DEF(mqtt_component_light, "light");
 PROGMEM_STRING_DEF(mqtt_component_sensor, "sensor");
 PROGMEM_STRING_DEF(mqtt_component_binary_sensor, "binary_sensor");
-
 PROGMEM_STRING_DEF(mqtt_unique_id, "unique_id");
 PROGMEM_STRING_DEF(mqtt_name, "name");
 PROGMEM_STRING_DEF(mqtt_availability_topic, "availability_topic");

@@ -70,6 +70,9 @@ public:
         return 0;
     }
 
+    virtual void flush() {
+    }
+
 private:
     size_t _available;
     const char *_dataPtr;

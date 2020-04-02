@@ -73,7 +73,9 @@ public:
     }
     void atModeHelpGenerator() override;
     bool atModeHandler(AtModeArgs &args) override;
+#if ESP8266
     void serviceCallback(MDNSResponder::MDNSServiceInfo &mdnsServiceInfo, MDNSResponder::AnswerType answerType, bool p_bSetContent);
+#endif
 
 private:
     ServiceInfoVector _services;

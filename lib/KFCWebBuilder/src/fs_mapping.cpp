@@ -94,7 +94,12 @@ const File FileMapping::open(const char *mode) const
 
 const File SPIFFSWrapper::open(Dir dir, const char *mode)
 {
+#if ESP8266
     return dir.openFile(mode);
+#else
+    return File();
+    // return dir.open(mode);
+#endif
 }
 
 const File SPIFFSWrapper::open(const char *path, const char *mode)

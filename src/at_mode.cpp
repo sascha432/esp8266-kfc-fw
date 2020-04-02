@@ -233,7 +233,9 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF(CPU, "CPU", "<80|160>", "Set CPU speed", "Displ
 #endif
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMP, "DUMP", "[<dirty|config.name>]", "Display settings");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPR, "DUMPR", "<pointer>", "Print symbol");
+#if DEBUG && ESP8266
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DUMPT, "DUMPT", "Dump timers");
+#endif
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DUMPFS, "DUMPFS", "Display file system information");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPEE, "DUMPEE", "[<offset>[,<length>]", "Dump EEPROM");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WRTC, "WRTC", "<id,data>", "Write uint32 to RTC memory");
@@ -293,7 +295,9 @@ void at_mode_help_commands()
 #endif
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DUMP), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DUMPR), name);
+#if DEBUG && ESP8266
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DUMPT), name);
+#endif
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DUMPFS), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DUMPEE), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(WRTC), name);
@@ -680,7 +684,7 @@ void at_mode_resolve(void *ptr, AtModeResolveACallback resolve_callback)
 #endif
 }
 
-#if DEBUG
+#if DEBUG && ESP8266
 
 extern ETSTimer *timer_list;
 
@@ -745,7 +749,7 @@ void at_mode_list_ets_timers(Print &output)
             }
             size_t num = 0;
             for (auto item : result->getItems()) {
-                output.printf_P(PSTR("#% 2u 0x%08x 0x%08x:0x%04x %s\n"), num++, item.getSrcAddress(), item.getAddress(), item.getSize(), item.getName().c_str());
+                output.printf_P(PSTR("#% 2u 0x%08x 0x%08x:0x%04x %s\n"), num++, item.getSrcAddress(), item.getAddress(), (uint32_t)item.getSize(), item.getName().c_str());
             }
         }
         else {
@@ -1019,7 +1023,7 @@ void at_mode_serial_handle_event(String &commandString)
                 }
             }
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(LS))) {
-                Dir dir = SPIFFS.openDir(args.toString(0));
+                Dir dir = SPIFFS_openDir(args.toString(0));
                 while(dir.next()) {
                     output.print(F("+LS: "));
                     if (dir.isFile()) {
@@ -1196,9 +1200,11 @@ void at_mode_serial_handle_event(String &commandString)
                     });
                 }
             }
+#if DEBUG && ESP8266
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPT))) {
                 at_mode_list_ets_timers(output);
             }
+#endif
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPFS))) {
                 at_mode_dump_fs_info(output);
             }

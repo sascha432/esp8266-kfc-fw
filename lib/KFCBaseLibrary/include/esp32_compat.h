@@ -73,75 +73,115 @@ enum dhcp_status {
 
 enum dhcp_status wifi_station_dhcpc_status(void);
 
-#define SPIFFS_openDir(dirname)             Dir(SPIFFS.open(dirname))
-
 namespace fs {
 
-    enum OpenMode {
-        OM_DEFAULT = 0,
-        OM_CREATE = 1,
-        OM_APPEND = 2,
-        OM_TRUNCATE = 4
-    };
-
-    enum AccessMode {
-        AM_READ = 1,
-        AM_WRITE = 2,
-        AM_RW = AM_READ | AM_WRITE
-    };
-
-    class DirImpl {
+    class Dir : public File {
     public:
-        virtual ~DirImpl() { }
-        virtual FileImplPtr openFile(OpenMode openMode, AccessMode accessMode) = 0;
-        virtual const char* fileName() = 0;
-        virtual size_t fileSize() = 0;
-        virtual bool isFile() const = 0;
-        virtual bool isDirectory() const = 0;
-        virtual bool next() = 0;
-        virtual bool rewind() = 0;
-    };
+        using File::File;
 
-
-    class Dir : public DirImpl {
-    public:
+        Dir(const File &file) : _file(file) {
+        }
         Dir() {
         }
-        Dir(const File &root) {
-            _root = root;
+
+        bool rewind() {
+            rewindDirectory();
+            return true;
         }
 
-        virtual FileImplPtr openFile(OpenMode openMode, AccessMode accessMode) {
-            return FileImplPtr(nullptr);
-        }
-        virtual String fileName() {
-            return _file.name();
-        }
-        virtual size_t fileSize() {
-            return _file.size();
-        }
-        virtual bool isFile() const {
-            return false;
-        }
-        virtual bool isDirectory() const {
-            return false;
-        }
-        virtual bool next()  {
-            return false;
-        }
-        virtual bool rewind() {
+        bool next() {
             return false;
         }
 
+        const char *fileName() const {
+            return name();
+        }
+
+        size_t fileSize() const {
+            return size();
+        }
+
+        bool isFile() {
+            return !isDirectory();
+        }
 
     private:
-        File _root;
         File _file;
     };
 
 };
 
-typedef fs::Dir Dir;
+using Dir = fs::Dir;
+
+#define SPIFFS_openDir(dirname)             Dir(SPIFFS.open(dirname))
+
+// namespace fs {
+
+//     enum OpenMode {
+//         OM_DEFAULT = 0,
+//         OM_CREATE = 1,
+//         OM_APPEND = 2,
+//         OM_TRUNCATE = 4
+//     };
+
+//     enum AccessMode {
+//         AM_READ = 1,
+//         AM_WRITE = 2,
+//         AM_RW = AM_READ | AM_WRITE
+//     };
+
+//     class DirImpl {
+//     public:
+//         virtual ~DirImpl() { }
+//         virtual FileImplPtr openFile(OpenMode openMode, AccessMode accessMode) = 0;
+//         virtual const char* fileName() = 0;
+//         virtual size_t fileSize() = 0;
+//         virtual bool isFile() const = 0;
+//         virtual bool isDirectory() const = 0;
+//         virtual bool next() = 0;
+//         virtual bool rewind() = 0;
+//     };
+
+
+//     class Dir : public DirImpl {
+//     public:
+//         Dir() {
+//         }
+//         Dir(const File &root) {
+//             _root = root;
+//         }
+
+//         virtual FileImplPtr openFile(OpenMode openMode, AccessMode accessMode) {
+//             return FileImplPtr(nullptr);
+//         }
+//         virtual String fileName() {
+//             return _file.name();
+//         }
+//         virtual size_t fileSize() {
+//             return _file.size();
+//         }
+//         virtual bool isFile() const {
+//             return false;
+//         }
+//         virtual bool isDirectory() const {
+//             return false;
+//         }
+//         virtual bool next()  {
+//             return false;
+//         }
+//         virtual bool rewind() {
+//             return false;
+//         }
+
+
+//     private:
+//         File _root;
+//         File _file;
+//     };
+
+// };
+
+// typedef fs::Dir Dir;
 
 typedef struct {
     size_t totalBytes;

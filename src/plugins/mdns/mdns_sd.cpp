@@ -25,31 +25,51 @@
 bool MDNSService::addService(const String &service, const String &proto, uint16_t port)
 {
     _debug_printf_P(PSTR("service=%s proto=%s port=%u\n"), service.c_str(), proto.c_str(), port);
+#if ESP8266
     return _debug_print_result(MDNS.addService(service, proto, port));
+#else
+    MDNS.addService(service, proto, port);
+    return true;;
+#endif
 }
 
 bool MDNSService::addServiceTxt(const String &service, const String &proto, const String &key, const String &value)
 {
     _debug_printf_P(PSTR("service=%s proto=%s key=%s value=%s\n"), service.c_str(), proto.c_str(), key.c_str(), value.c_str());
+#if ESP8266
     return _debug_print_result(MDNS.addServiceTxt(service, proto, key, value));
+#else
+    MDNS.addServiceTxt(service, proto, key, value);
+    return true;
+#endif
 }
 
 bool MDNSService::removeService(const String &service, const String &proto)
 {
     _debug_printf_P(PSTR("service=%s proto=%s\n"), service.c_str(), proto.c_str());
+#if ESP8266
     return _debug_print_result(MDNS.removeService(nullptr, service.c_str(), proto.c_str()));
+#else
+    return true;
+#endif
 }
 
 bool MDNSService::removeServiceTxt(const String &service, const String &proto, const String &key)
 {
     _debug_printf_P(PSTR("service=%s proto=%s key=%s\n"), service.c_str(), proto.c_str(), key.c_str());
+#if ESP8266
     return _debug_print_result(MDNS.removeServiceTxt(nullptr, service.c_str(), proto.c_str(), key.c_str()));
+#else
+    return true;
+#endif
 }
 
 void MDNSService::announce()
 {
     _debug_println();
+#if ESP8266
     MDNS.announce();
+#endif
 }
 
 PROGMEM_STRING_DEF(kfcmdns, "kfcmdns");
@@ -60,6 +80,7 @@ void MDNSPlugin::setup(PluginSetupMode_t mode)
 {
     auto flags = config._H_GET(Config().flags);
     if (flags.wifiMode & WIFI_STA) {
+#if ESP8266
         if (config.isWiFiUp() && WiFi.localIP().isSet()) { // already online
             start(WiFi.localIP());
         }
@@ -73,6 +94,20 @@ void MDNSPlugin::setup(PluginSetupMode_t mode)
                 WiFiCallbacks::remove(WiFiCallbacks::EventEnum_t::ANY, this);
             }, this);
         }
+#else
+        if (config.isWiFiUp() && WiFi.localIP() != INADDR_NONE) { // already online
+            start(WiFi.localIP());
+        }
+        else {
+            start(INADDR_NONE);
+            WiFiCallbacks::add(WiFiCallbacks::EventEnum_t::CONNECTED, [this](uint8_t event, void *payload) {
+                _debug_printf_P(PSTR("MDNS.begin\n"));
+                MDNS.end();
+                MDNS.begin(config.getDeviceName());
+                WiFiCallbacks::remove(WiFiCallbacks::EventEnum_t::ANY, this);
+            }, this);
+        }
+#endif
     }
 }
 
@@ -87,10 +122,17 @@ void MDNSPlugin::start(const IPAddress &address)
 
     _debug_printf_P(PSTR("hostname=%s address=%s\n"), config.getDeviceName(), address.toString().c_str());
 
+#if ESP8266
     if (!MDNS.begin(config.getDeviceName(), address)) {
         _debug_println(F("MDNS failed"));
         return;
     }
+#else
+    if (!MDNS.begin(config.getDeviceName())) {
+        _debug_println(F("MDNS failed"));
+        return;
+    }
+#endif
 
     if (MDNSService::addService(FSPGM(kfcmdns), FSPGM(udp), 5353)) {
         MDNSService::addServiceTxt(FSPGM(kfcmdns), FSPGM(udp), String('v'), FIRMWARE_VERSION_STR);
@@ -114,7 +156,9 @@ void MDNSPlugin::stop()
 
 void MDNSPlugin::_loop()
 {
+#if ESP8266
     MDNS.update();
+#endif
 }
 
 void MDNSPlugin::getStatus(Print &output)
@@ -140,6 +184,8 @@ void MDNSPlugin::atModeHelpGenerator()
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(MDNSR), getName());
     // at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(MDNSBSD), getName());
 }
+
+#if ESP8266
 
 void MDNSPlugin::serviceCallback(MDNSResponder::MDNSServiceInfo &mdnsServiceInfo, MDNSResponder::AnswerType answerType, bool p_bSetContent)
 {
@@ -172,6 +218,8 @@ void MDNSPlugin::serviceCallback(MDNSResponder::MDNSServiceInfo &mdnsServiceInfo
     }
 }
 
+#endif
+
 bool MDNSPlugin::atModeHandler(AtModeArgs &args)
 {
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(MDNSQ))) {
@@ -179,6 +227,7 @@ bool MDNSPlugin::atModeHandler(AtModeArgs &args)
             args.print(F("MDNS service is not running"));
         }
         else if (args.requireArgs(2, 3)) {
+#if ESP8266
             auto timeout = args.toMillis(2, 100, ~0, 2000);
             auto query = PrintString(F("service=%s proto=%s wait=%ums"), args.toString(0).c_str(), args.toString(1).c_str(), timeout);
             args.printf_P(PSTR("Querying: %s"), query.c_str());
@@ -202,6 +251,7 @@ bool MDNSPlugin::atModeHandler(AtModeArgs &args)
                 }
                 _services.clear();
             });
+#endif
         }
         return true;
     }

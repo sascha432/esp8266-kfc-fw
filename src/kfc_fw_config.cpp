@@ -166,12 +166,19 @@ const uint8_t *Config_MQTT::getFingerprint()
 
 const char *Config_Ping::getHost(uint8_t num)
 {
-    const uint16_t handles[] = { CONFIG_GET_HANDLE(Config().ping.host1), CONFIG_GET_HANDLE(Config().ping.host2), CONFIG_GET_HANDLE(Config().ping.host3), CONFIG_GET_HANDLE(Config().ping.host4) };
-    if (num >= sizeof(handles)) {
-        return nullptr;
+    switch(num) {
+        case 0:
+            return ::config._H_STR(Config().ping.host1);
+        case 1:
+            return ::config._H_STR(Config().ping.host2);
+        case 2:
+            return ::config._H_STR(Config().ping.host3);
+        case 3:
+            return ::config._H_STR(Config().ping.host4);
+        default:
+            break;
     }
-    return ::config._H_STR(handles[num]);
-
+    return nullptr;
 }
 
 void Config_Ping::defaults()

@@ -431,25 +431,26 @@ void PingMonitorPlugin::createConfigureForm(AsyncWebServerRequest *request, Form
 {
     auto gateway = F("${gateway}");
 
-    form.add<sizeof Config().ping.host1>(F("ping_host1"), config._H_W_STR(Config().ping.host1));
+    form.add(F("ping_host1"), _H_STR_VALUE(Config().ping.host1));
     form.addValidator((new FormValidHostOrIpValidator(true))->addAllowString(gateway));
 
-    form.add<sizeof Config().ping.host2>(F("ping_host2"), config._H_W_STR(Config().ping.host2));
+    form.add(F("ping_host2"), _H_STR_VALUE(Config().ping.host2));
     form.addValidator((new FormValidHostOrIpValidator(true))->addAllowString(gateway));
 
-    form.add<sizeof Config().ping.host3>(F("ping_host3"), config._H_W_STR(Config().ping.host3));
+    form.add(F("ping_host3"), _H_STR_VALUE(Config().ping.host3));
     form.addValidator((new FormValidHostOrIpValidator(true))->addAllowString(gateway));
 
-    form.add<sizeof Config().ping.host4>(F("ping_host4"), config._H_W_STR(Config().ping.host4));
+    form.add(F("ping_host4"), _H_STR_VALUE(Config().ping.host4));
     form.addValidator((new FormValidHostOrIpValidator(true))->addAllowString(gateway));
 
-    form.add<uint16_t>(F("ping_interval"), &config._H_W_GET(Config().ping.config.interval));
+
+    form.add<uint16_t>(F("ping_interval"), _H_STRUCT_VALUE(Config().ping.config, interval));
     form.addValidator(new FormRangeValidator(0, 65535));
 
-    form.add<uint8_t>(F("ping_count"), &config._H_W_GET(Config().ping.config.count));
+    form.add<uint8_t>(F("ping_count"), _H_STRUCT_VALUE(Config().ping.config, count));
     form.addValidator(new FormRangeValidator(0, 255));
 
-    form.add<uint16_t>(F("ping_timeout"), &config._H_W_GET(Config().ping.config.timeout));
+    form.add<uint16_t>(F("ping_timeout"), _H_STRUCT_VALUE(Config().ping.config, timeout));
     form.addValidator(new FormRangeValidator(0, 65535));
 
     form.finalize();

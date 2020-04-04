@@ -14,6 +14,7 @@
 #include "misc.h"
 #include "logger.h"
 #include "plugins.h"
+#include "plugins_menu.h"
 
 #if DEBUG_FILE_MANAGER
 #include <debug_helper_enable.h>
@@ -488,12 +489,12 @@ public:
         return plugin->nameEquals(FSPGM(http));
     }
 
-    // virtual MenuTypeEnum_t getMenuType() const override {
-    //     return CUSTOM;
-    // }
-    // virtual void createMenu() override {
-    //     bootstrapMenu.addSubMenu(F("File Manager"), FSPGM(file_manager_html_uri), navMenu.util);
-    // }
+    virtual MenuTypeEnum_t getMenuType() const override {
+        return CUSTOM;
+    }
+    virtual void createMenu() override {
+        bootstrapMenu.addSubMenu(F("File Manager"), FSPGM(file_manager_html_uri), navMenu.util);
+    }
 };
 
 static FileManagerPlugin plugin;

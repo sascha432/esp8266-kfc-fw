@@ -332,7 +332,7 @@ String implode(G glue, const C &pieces, uint32_t max = (uint32_t)~0) {
 }
 
 template<class G, class C, class CB>
-String implode(G glue, const C &pieces, CB toString, uint32_t max = (uint32_t)~0) {
+String implode_cb(G glue, const C &pieces, CB toString, uint32_t max = (uint32_t)~0) {
     String tmp;
     if (max-- && pieces.begin() != pieces.end()) {
         auto iterator = pieces.begin();

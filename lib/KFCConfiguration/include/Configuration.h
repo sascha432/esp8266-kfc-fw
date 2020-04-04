@@ -352,7 +352,7 @@ public:
         if (!ptr || length != sizeof(T)) {
 #if DEBUG_CONFIGURATION
             if (ptr && length != sizeof(T)) {
-                _debug_printf_P(PSTR("size does not match, handle %04x (%s)\n"), ConfigurationParameter::getTypeString(param->_param.getType()), handle, getHandleName(handle));
+                _debug_printf_P(PSTR("size does not match, type=%s handle %04x (%s)\n"), (const char *)ConfigurationParameter::getTypeString(param->_param.getType()), handle, getHandleName(handle));
             }
 #endif
             return T();

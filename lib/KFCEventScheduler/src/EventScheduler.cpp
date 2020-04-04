@@ -225,7 +225,7 @@ void EventScheduler::_list()
     } else {
         int scheduled = 0;
         for(const auto &timer: _timers) {
-            _debug_printf_P(PSTR("%p: delay %.3f repeat %d/%d, scheduled %d\n"), timer.get(), timer->_delay / 1000.0, timer->_callCounter, timer->_repeat, timer->_callbackScheduled);
+            _debug_printf_P(PSTR("%p: delay %.3f repeat %d/%d, scheduled %d\n"), timer.get(), timer->_delay / 1000.0, timer->_repeat._counter, timer->_repeat._maxRepeat, timer->_callbackScheduled);
             if (timer->_callbackScheduled) {
                 scheduled++;
             }

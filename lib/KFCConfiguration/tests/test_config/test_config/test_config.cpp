@@ -7,6 +7,7 @@
 #include <IntelHexFormat.h>
 #include <algorithm>
 #include <map>
+#include <misc.h>
 #include <forward_list>
 #include <deque>
 #include <stack>
@@ -114,12 +115,69 @@ struct __attribute__packed__  {
     uint32_t ___reserved : 7;
 } x;
 
+#include "PrintHtmlEntitiesString.h"
 
+template<class G, class C>
+String implodex(G glue, const C &pieces, uint32_t max = (uint32_t)~0) {
+    String tmp;
+    if (max-- && pieces.begin() != pieces.end()) {
+        auto iterator = pieces.begin();
+        tmp += *iterator;
+        while (max-- && ++iterator != pieces.end()) {
+            tmp += glue;
+            tmp += *iterator;
+        }
+    }
+    return tmp;
+}
+
+template<class G, class C, class CB, typename std::enable_if<std::is_arithmetic<CB>::value>::type = 0>
+String implodex(G glue, const C &pieces, CB toString, uint32_t max = (uint32_t)~0) {
+    String tmp;
+    if (max-- && pieces.begin() != pieces.end()) {
+        auto iterator = pieces.begin();
+        tmp += toString(*iterator);
+        while (max-- && ++iterator != pieces.end()) {
+            tmp += glue;
+            tmp += toString(*iterator);
+        }
+    }
+    return tmp;
+}
 
 int main() {
 
     ESP._enableMSVCMemdebug();
     DebugHelper::activate();
+
+    //char buf[80];
+    //auto now = time(nullptr);
+    //auto format = PSTR("%a, %d %b %Y " HTML_SA(div, HTML_A("id", "system_time")) "%H:%M:%S" HTML_E(div) "%Z");
+    //strftime(buf, sizeof(buf), format, localtime(&now));
+    //Serial.println(PrintHtmlEntitiesString(buf));
+    //PrintHtmlEntitiesString test1;
+    //test1.printf_P(PSTR(HTML_SA(div, HTML_A("id", "system_date") HTML_A("format", "%s")) "%s" HTML_E(div)), PrintHtmlEntitiesString(FPSTR(format)).c_str(), buf);
+    //Serial.println(test1);
+
+    //return 0;
+
+    int argc = 2;
+    std::vector<String> argv;
+
+    argv.push_back("1");
+    argv.push_back("2");
+    argv.push_back("3");
+
+    Serial.println(implodex(',', argv, argc));
+
+    Serial.println(implodex(',', argv, String(), 0));
+
+
+    Serial.println(implodex(',', argv, [](const String &x) {
+        return '#' + x;
+    }, 0));
+
+    return 0;
 
 #if 0
     File file = SPIFFS.open("C:\\Users\\sascha\\Documents\\PlatformIO\\Projects\\kfc_fw\\data\\webui\\1a22101e.lnk", "r");

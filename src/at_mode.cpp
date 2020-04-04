@@ -109,7 +109,7 @@ static void _appendHelpString(String &output, PGM_P str)
 void at_mode_display_help(Stream &output, StringVector *findText = nullptr)
 {
 #if DEBUG_AT_MODE
-    _debug_printf_P(PSTR("size=%d, find=%s\n"), at_mode_help.size(), findText ? (findText->empty() ? PSTR("count=0") : implode(FSPGM(comma), findText).c_str()) : PSTR("nullptr"));
+    _debug_printf_P(PSTR("size=%d, find=%s\n"), at_mode_help.size(), findText ? (findText->empty() ? PSTR("count=0") : implode(FSPGM(comma), *findText).c_str()) : PSTR("nullptr"));
 #endif
     if (findText && findText->empty()) {
         findText = nullptr;
@@ -314,7 +314,7 @@ void at_mode_help_commands()
 
 void at_mode_generate_help(Stream &output, StringVector *findText = nullptr)
 {
-    _debug_printf_P(PSTR("find=%s\n"), implode(FSPGM(comma), findText).c_str());
+    _debug_printf_P(PSTR("find=%s\n"), findText ? implode(FSPGM(comma), *findText).c_str() : PSTR("nullptr"));
     // call handler to gather help for all commands
     at_mode_help_commands();
     for(auto plugin: plugins) {
@@ -402,7 +402,7 @@ static void heap_timer_callback(EventScheduler::TimerPtr timer)
         // pinMode(A0, INPUT);
         MySerial.printf_P(PSTR(" A0=%u\n"), analogRead(A0));
 #else
-#warning not implemented
+// #warning not implemented
 #endif
     }
     else {
@@ -450,7 +450,7 @@ static void at_mode_autorun()
 {
     LoopFunctions::callOnce([]() {
         File file = SPIFFS.open(FSPGM(atmode_file_autorun), FileOpenMode::read);
-        _debug_printf_P(PSTR("autorun=%s size=%u\n"), FSPGM(atmode_file_autorun), file.size());
+        _debug_printf_P(PSTR("autorun=%s size=%u\n"), SPGM(atmode_file_autorun), file.size());
         if (file) {
             class CmdAt {
             public:

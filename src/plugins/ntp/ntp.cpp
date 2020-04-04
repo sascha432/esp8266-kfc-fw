@@ -394,7 +394,8 @@ void NTPPlugin::configTime()
 
 void NTPPlugin::updateNtpCallback()
 {
-    _debug_printf_P(PSTR("new time=%u, tz=%d\n"), (uint32_t)time(nullptr), sntp_get_timezone());
+    _debug_printf_P(PSTR("new time=%u\n"), (uint32_t)time(nullptr));
+    // _debug_printf_P(PSTR("new time=%u, tz=%d\n"), (uint32_t)time(nullptr), sntp_get_timezone());
 
 #if RTC_SUPPORT
     // update RTC

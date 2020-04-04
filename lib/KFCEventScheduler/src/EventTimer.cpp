@@ -14,7 +14,7 @@
 EventTimer::EventTimer(EventScheduler::Callback loopCallback, int64_t delay, EventScheduler::RepeatType repeat, EventScheduler::Priority_t priority) : _etsTimer()
 {
     if (delay < MIN_DELAY) {
-        __debugbreak_and_panic_printf_P(PSTR("delay < %u\n"), MIN_DELAY);
+        __debugbreak_and_panic_printf_P(PSTR("delay %lu < %u\n"), (ulong)delay, MIN_DELAY);
     }
     _loopCallback = loopCallback;
     _callbackScheduled = false;
@@ -29,7 +29,8 @@ EventTimer::~EventTimer()
 {
     auto hasTimer = Scheduler.hasTimer(this);
     if (hasTimer || _etsTimer.timer_func || !_disarmed)  {
-        __debugbreak_and_panic_printf_P(PSTR("timer=%p timer_func=%p callback=%p hasTimer=%u disarmed=%d object deleted while active\n"), this, _etsTimer.timer_func, resolve_lambda(lambda_target(_loopCallback)), hasTimer, _disarmed);
+        debug_printf_P(PSTR("timer=%p timer_func=%p callback=%p hasTimer=%u disarmed=%d object deleted while active\n"), this, _etsTimer.timer_func, resolve_lambda(lambda_target(_loopCallback)), hasTimer, _disarmed);
+        // __debugbreak_and_panic_printf_P(PSTR("timer=%p timer_func=%p callback=%p hasTimer=%u disarmed=%d object deleted while active\n"), this, _etsTimer.timer_func, resolve_lambda(lambda_target(_loopCallback)), hasTimer, _disarmed);
     }
     // detach();
     ets_timer_done(&_etsTimer);

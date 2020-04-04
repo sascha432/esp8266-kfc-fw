@@ -18,6 +18,11 @@
 #include <functional>
 #include <vector>
 
+#if ESP32
+bool schedule_function (const std::function<void(void)>& fn);
+void run_scheduled_functions();
+#endif
+
 class LoopFunctions {
 public:
     typedef std::function<void(void)> Callback_t;
@@ -40,16 +45,8 @@ public:
         add(nullptr, callbackPtr);
     }
     static bool callOnce(Callback_t callback) {
-#if ESP32
-#warning TODO find schedule_function()
-        Scheduler.addTimer(1, false, [callback](EventScheduler::TimerPtr) {
-            callback();
-        });
-        return true;
-#else
         _debug_resolve_lambda(lambda_target(callback));
         return schedule_function(callback);
-#endif
     }
     static void remove(CallbackPtr_t callbackPtr);
 
@@ -62,6 +59,7 @@ public:
 
     static FunctionsVector &getVector();
     static size_t size();
+
 };
 
 #include <debug_helper_disable.h>

@@ -224,7 +224,7 @@ void ClockPlugin::createWebUI(WebUI &webUI)
 
 void ClockPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
 {
-    auto &clock = config._H_W_GET(Config().clock);
+    // auto &clock = config._H_W_GET(Config().clock);
 
     form.setFormUI(F("Clock Configuration"));
 
@@ -258,10 +258,11 @@ void ClockPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form
             ptr++;
         }
         auto color = strtol(ptr, nullptr, 16);
-        auto &colorArr = config._H_W_GET(Config().clock).solid_color;
-        colorArr[0] = color >> 16;
-        colorArr[1] = color >> 8;
-        colorArr[2] = (uint8_t)color;
+        auto cfg = config._H_GET(Config().clock);
+        cfg.solid_color[0] = color >> 16;
+        cfg.solid_color[1] = color >> 8;
+        cfg.solid_color[2] = (uint8_t)color;
+        config._H_SET(Config().clock, cfg);
         return true;
     }));
 

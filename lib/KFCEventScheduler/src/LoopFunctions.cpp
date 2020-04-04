@@ -10,6 +10,35 @@
 #include <debug_helper_disable.h>
 #endif
 
+
+#if ESP32
+
+#define SCHEDULED_FN_MAX_COUNT 32
+
+static std::vector<LoopFunctions::Callback_t> scheduled_functions;
+
+
+bool ICACHE_RAM_ATTR schedule_function (const std::function<void(void)>& fn)
+{
+    if (fn) {
+        if (scheduled_functions.size() < SCHEDULED_FN_MAX_COUNT) {
+            scheduled_functions.emplace_back(fn);
+            return true;
+        }
+    }
+    return false;
+}
+
+void run_scheduled_functions()
+{
+    for(auto fn: scheduled_functions) {
+        fn();
+    }
+    scheduled_functions.clear();
+}
+
+#endif
+
 static LoopFunctions::FunctionsVector _functions;
 
 void LoopFunctions::add(LoopFunctions::Callback_t callback, CallbackPtr_t callbackPtr)

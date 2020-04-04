@@ -379,4 +379,7 @@ void loop()
         load_avg_counter = 0;
     }
 #endif
+#if ESP32
+    run_scheduled_functions();
+#endif
 }

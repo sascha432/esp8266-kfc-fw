@@ -2,7 +2,9 @@
  * Author: sascha_lammers@gmx.de
  */
 
- // webui.html
-if ($('#webui').length) {
-    webUIComponent.init();
-}
+$(function() {
+    // webui.html
+    if ($('#webui').length) {
+        webUIComponent.init();
+    }
+});

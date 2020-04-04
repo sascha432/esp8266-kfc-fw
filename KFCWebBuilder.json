@@ -22,17 +22,16 @@
             "test_www"
         ],
         "conditional_excludes": {
-            "#if 1": [ "./Resources/html/fmtest.html", "./Resources/html/fmtest.html", "./Resources/html/webuitest.html", "./Resources/html/serialtest.html", "./Resources/html/wemo.html" , "./Resources/html/hue.html" ],
-            "#if !IOT_DIMMER_MODULE && !IOT_ATOMIC_SUN_V2": "./Resources/html/dimmer_cfg.html",
+            "#if 1": [ "./Resources/html/fmtest.html", "./Resources/html/fmtest.html", "./Resources/html/webuitest.html", "./Resources/html/serialtest.html", "./Resources/html/wemo.html" ],
+            "#if !IOT_DIMMER_MODULE && !IOT_ATOMIC_SUN_V2": [ "./Resources/html/dimmer_cfg.html", "./Resources/js/forms/dimmer_cfg.js" ],
             "#if !STK500V1": "./src/plugins/stk500v1/atmega.csv",
             "#if !SSD1306_PLUGIN": "./src/plugins/ssd1306_plugin/fonts/7digit",
             "#if !FILE_MANAGER": [ "./Resources/html/file_manager.html", "./Resources/js/file_manager.js" ],
-            "#if !MQTT_SUPPORT": "./Resources/html/mqtt.html",
-            "#if !SYSLOG": "./Resources/html/syslog.html",
-            "#if !NTP_CLIENT": [ "./Resources/html/ntp.html", "./Resources/html/timezone.html" ],
+            "#if !MQTT_SUPPORT": [ "./Resources/html/mqtt.html", "./Resources/js/forms/mqtt.js" ],
+            "#if !SYSLOG": [ "./Resources/html/syslog.html", "./Resources/js/forms/syslog.js" ],
+            "#if !NTP_CLIENT": [ "./Resources/html/ntp.html", "./Resources/html/timezone.html", "./Resources/js/forms/ntp.js" ],
             "#if !HTTP2SERIAL": [ "./Resources/html/serial_console.html", "./lib/KFCWebBuilder/Resources/js/selectize.min.js", "./Resources/js/http2serial.js" ],
             "#if !PING_MONITOR":  [ "./Resources/html/ping.html", "./Resources/html/ping_monitor.html" ],
-            "#if !HUE_EMULATION": "./Resources/html/hue.html",
             "#if !IOT_CLOCK": "./Resources/html/clock.html",
             "#if !IOT_BLINDS_CTRL": "./Resources/html/blinds.html",
             "#if !IOT_SENSOR": "./Resources/html/sensor.html",
@@ -41,7 +40,7 @@
             "#if !REST_API_SUPPORT": "./Resources/html/rest_api.html",
             "#if !HOME_ASSISTANT_INTEGRATION": [ "./Resources/html/hass.html", "./Resources/html/hass_edit.html", "./Resources/html/hass_actions.html" ],
             "#if !WEB_SOCKET_ENCRYPTION": [ "./Resources/js/aes.js", "./Resources/js/sha512.js" ],
-            "#if !SERIAL2TCP": "./Resources/html/serial2tcp.html"
+            "#if !SERIAL2TCP": [ "./Resources/html/serial2tcp.html", "./Resources/js/forms/serial2tcp.js" ]
         },
         "groups": {
             "js_main": {
@@ -54,7 +53,8 @@
                         "./lib/KFCWebBuilder/Resources/js/rangeslider.min.js",
                         "./Resources/js/aes.js",
                         "./Resources/js/sha512.js",
-                        "./Resources/js/main.min.js",
+                        "./Resources/js/common.js",
+                        "./Resources/js/forms.js",
                         "./Resources/js/forms/*.js",
                         "./Resources/js/sync_time.js",
                         "./Resources/js/file_manager.js",

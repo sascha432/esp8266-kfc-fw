@@ -29,9 +29,6 @@
 #include "WebUISocket.h"
 #include "kfc_fw_config.h"
 #include "plugins.h"
-#if HUE_EMULATION
-#include "plugins/hue/hue.h"
-#endif
 #if STK500V1
 #include "plugins/stk500v1/STK500v1Programmer.h"
 #endif
@@ -158,13 +155,6 @@ void web_server_add_handler(const String &uri, ArRequestHandlerFunction onReques
 
 void web_server_not_found_handler(AsyncWebServerRequest *request)
 {
-
-#if HUE_EMULATION
-    if (HueEmulation::onNotFound(request)) {
-        return; // request was handled
-    }
-#endif
-
     WebServerSetCPUSpeedHelper setCPUSpeed;
     if (!web_server_handle_file_read(request->url(), web_server_client_accepts_gzip(request), request)) {
         request->send(404);
@@ -575,11 +565,6 @@ void init_web_server()
     //         request->send(403);
     //     }
     // }));
-#endif
-
-#if HUE_EMULATION
-    // adding handler here instead of the plugin setup method that it is more visible
-    server->onRequestBody(HueEmulation::onRequestBody);
 #endif
 
     WsWebUISocket::setup();

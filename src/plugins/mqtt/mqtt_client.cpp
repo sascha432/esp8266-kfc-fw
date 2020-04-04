@@ -838,7 +838,6 @@ bool MQTTPlugin::atModeHandler(AtModeArgs &args)
                 client.disconnect(true);
             }
             else if (args.isTrue(0)) {
-                config.discard();
                 auto flags = config._H_GET(Config().flags);
                 flags.mqttMode = MQTT_MODE_UNSECURE;
                 config._H_SET(Config().flags, flags);
@@ -846,7 +845,6 @@ bool MQTTPlugin::atModeHandler(AtModeArgs &args)
                 args.printf_P(PSTR("MQTT unsecure %s"), FSPGM(enabled));
             }
             else if (args.isAnyMatchIgnoreCase(0, F("secure"))) {
-                config.discard();
                 auto flags = config._H_GET(Config().flags);
                 flags.mqttMode = MQTT_MODE_SECURE;
                 config._H_SET(Config().flags, flags);
@@ -854,7 +852,6 @@ bool MQTTPlugin::atModeHandler(AtModeArgs &args)
                 args.printf_P(PSTR("MQTT secure %s"), FSPGM(enabled));
             }
             else if (args.isFalse(0)) {
-                config.discard();
                 auto flags = config._H_GET(Config().flags);
                 flags.mqttMode = MQTT_MODE_DISABLED;
                 config._H_SET(Config().flags, flags);

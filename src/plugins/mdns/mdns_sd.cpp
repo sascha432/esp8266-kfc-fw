@@ -244,7 +244,7 @@ bool MDNSPlugin::atModeHandler(AtModeArgs &args)
                 }
                 else {
                     for(auto &svc: _services) {
-                        args.printf_P(PSTR("domain=%s port=%u ips=%s txts=%s"), svc.domain.c_str(), svc.port, implode(',', svc.addresses, [](const IPAddress &addr) {
+                        args.printf_P(PSTR("domain=%s port=%u ips=%s txts=%s"), svc.domain.c_str(), svc.port, implode_cb(',', svc.addresses, [](const IPAddress &addr) {
                             return addr.toString();
                         }).c_str(), svc.txts.c_str());
                     }

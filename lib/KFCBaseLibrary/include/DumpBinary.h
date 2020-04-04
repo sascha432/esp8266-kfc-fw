@@ -21,6 +21,10 @@ public:
 
     DumpBinary &dump(const uint8_t *data, size_t length, ptrdiff_t offset = 0);
 
+    inline DumpBinary &dump(const void *data, size_t length, ptrdiff_t offset = 0) {
+        return dump(reinterpret_cast<const uint8_t *>(data), length, offset);
+    }
+
 private:
     Print &_output;
     uint8_t _perLine;

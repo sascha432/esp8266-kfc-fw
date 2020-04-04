@@ -180,8 +180,6 @@ void Sensor_HLW80xx::restart()
 {
     _saveEnergyCounter();
 
-    // discard changes
-    config.discard();
     // update energy counter in EEPROM
     auto &sensor = config._H_W_GET(Config().sensor).hlw80xx;
     sensor.energyCounter = _energyCounter[0];

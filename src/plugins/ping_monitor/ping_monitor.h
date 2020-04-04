@@ -5,7 +5,7 @@
 #pragma once
 
 #ifndef DEBUG_PING_MONITOR
-#define DEBUG_PING_MONITOR                  1
+#define DEBUG_PING_MONITOR                  0
 #endif
 
 #include <Arduino_compat.h>

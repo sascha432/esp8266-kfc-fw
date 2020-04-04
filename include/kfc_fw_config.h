@@ -269,10 +269,10 @@ public:
 class Config_NTP {
 public:
     typedef struct __attribute__packed__ {
-        int32_t offset: 32;
+        int32_t offset;
         char abbreviation[4];
-        uint16_t ntpRefresh: 16;
-        uint8_t dst: 1;
+        uint16_t ntpRefresh;
+        uint8_t dst;
     } Timezone_t;
 
     Config_NTP();

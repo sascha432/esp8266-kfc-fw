@@ -228,12 +228,10 @@ void timezone_config_save(int32_t _timezoneOffset, bool _dst, const String &_zon
 {
     auto cfg = config._H_GET(Config().ntp.tz);
     if (cfg.offset != _timezoneOffset || !_abbreviation.equals(cfg.abbreviation) || cfg.dst != _dst) {
-        Config_NTP::Timezone_t tz;
-        tz.offset = _timezoneOffset;
-        tz.dst = _dst;
-        strncpy(tz.abbreviation, _abbreviation.c_str(), sizeof(tz.abbreviation) - 1)[sizeof(tz.abbreviation) - 1] = 0;
-        config.discard();
-        config._H_SET(Config().ntp.tz, tz);
+        cfg.offset = _timezoneOffset;
+        cfg.dst = _dst;
+        strncpy(cfg.abbreviation, _abbreviation.c_str(), sizeof(cfg.abbreviation) - 1)[sizeof(cfg.abbreviation) - 1] = 0;
+        config._H_SET(Config().ntp.tz, cfg);
         config.write();
         debug_printf_P(PSTR("abbreviation=%s, offset=%d, dst=%u\n"), _abbreviation.c_str(), _timezoneOffset, _dst);
     }

@@ -39,7 +39,7 @@ public:
     String _requireFile(const String &name, bool mustExist);
     File _requireFile(const String &name);
     String _requireDir(const String &name);
-    Dir _getDir(const String &path);
+    ListDir _getDir(const String &path);
     String _requireArgument(const String &name);
     String _getArgument(const String &name);
 

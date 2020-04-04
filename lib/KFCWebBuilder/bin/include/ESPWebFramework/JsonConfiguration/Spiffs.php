@@ -30,6 +30,12 @@ class Spiffs
     private $mappingsFile;
 
     /**
+     * @var string|null
+     * @validator \ESPWebFramework\FileUtils::realpath
+     */
+    private $listingsFile;
+
+    /**
      * @return string|null
      */
     public function getDataDir(): ?string
@@ -51,5 +57,13 @@ class Spiffs
     public function getMappingsFile(): ?string
     {
         return $this->mappingsFile;
+    }
+
+    /**
+     * @return string|null
+     */
+    public function getListingsFile(): ?string
+    {
+        return $this->listingsFile;
     }
 }

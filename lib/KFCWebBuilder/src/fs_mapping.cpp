@@ -30,6 +30,7 @@
 #endif
 
 PROGMEM_STRING_DEF(fs_mapping_dir, "/webui/");
+PROGMEM_STRING_DEF(fs_mapping_listings, "/webui/.listings");
 
 uint32_t crc32b(const void *message, size_t length, uint32_t crc)
 {

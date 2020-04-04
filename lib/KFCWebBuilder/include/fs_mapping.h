@@ -26,8 +26,8 @@ using namespace fs;
 #define FS_MAPPING_MAX_FILENAME_LEN         33
 #endif
 
-PROGMEM_STRING_DECL(fs_mapping_file);
 PROGMEM_STRING_DECL(fs_mapping_dir);
+PROGMEM_STRING_DECL(fs_mapping_listings);
 
 #include <push_pack.h>
 

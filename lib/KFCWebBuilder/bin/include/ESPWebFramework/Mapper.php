@@ -14,6 +14,7 @@ use ESPWebFramework\Processor\File;
 class Mapper implements PluginInterface
 {
     private const FLAGS_GZIPPED = 0x01;
+    private const FLAGS_DIR     = 0x02;
 
     /**
      * @var Mapper
@@ -31,6 +32,10 @@ class Mapper implements PluginInterface
      * @var string
      */
     private $mappingsFile;
+    /**
+     * @var string
+     */
+    private $listingsFile;
     /**
      * @var array
      */
@@ -71,6 +76,7 @@ class Mapper implements PluginInterface
         $this->dataDir = $spiffs->getDataDir();
         $this->webDir = $spiffs->getWebTargetDir();
         $this->mappingsFile = $spiffs->getMappingsFile();
+        $this->listingsFile = $spiffs->getListingsFile();
         $this->verbose = $webBuilder->isVerbose();
 
         // if (($hashAlgorithm = $webBuilder->getConfigReader()->getPlatformIOParser()->getDefinition('FS_MAPPINGS_HASH_ALGO')) === null) {
@@ -135,6 +141,26 @@ class Mapper implements PluginInterface
         $totalSize += strlen($headers);
 
         //file_put_contents($this->mappingsFile, $headers);
+
+        $listing = '';
+
+        $dirs = array();
+        foreach($this->mappedFiles as $file) {
+            $dirs[] = dirname($file['mapped_file']);
+        }
+        $dirs = array_unique($dirs);
+
+        foreach($dirs as $dirname) {
+            $listing .= pack('LLLLC', 0, 0, 0, 0, self::FLAGS_DIR);
+            $listing .= $dirname."\n";
+        }
+
+        foreach($this->mappedFiles as $file) {
+            $listing .= pack('LLLLC', $file['uid'], $file['file_size'], $file['original_file_size'], $file['mtime'], $file['flags']);
+            $listing .= $file['mapped_file']."\n";
+        }
+
+        file_put_contents($this->listingsFile, $listing);
 
         echo "--------------------------------------------\n";
         echo "Total size of SPIFFS usage: $totalSize\n";

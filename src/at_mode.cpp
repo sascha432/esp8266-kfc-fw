@@ -14,6 +14,7 @@
 #include <StreamString.h>
 #include <vector>
 #include <JsonTools.h>
+#include <ListDir.h>
 #include "at_mode.h"
 #include "kfc_fw_config.h"
 #include "progmem_data.h"
@@ -1023,7 +1024,7 @@ void at_mode_serial_handle_event(String &commandString)
                 }
             }
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(LS))) {
-                Dir dir = SPIFFS_openDir(args.toString(0));
+                auto dir = ListDir(args.toString(0));
                 while(dir.next()) {
                     output.print(F("+LS: "));
                     if (dir.isFile()) {

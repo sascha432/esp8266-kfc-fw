@@ -333,10 +333,6 @@ extern class Stream &DebugSerial;
 #define ESP8266_AT_MODE_SUPPORT 0
 #endif
 
-#ifndef HUE_EMULATION
-#define HUE_EMULATION 0
-#endif
-
 #ifndef REST_API_SUPPORT
 #define REST_API_SUPPORT 0
 #endif

@@ -7,6 +7,7 @@
 #include <PrintString.h>
 #include <ProgmemStream.h>
 #include <HttpHeaders.h>
+#include <ListDir.h>
 #include "fs_mapping.h"
 #include "async_web_response.h"
 #include "async_web_handler.h"
@@ -117,12 +118,12 @@ String FileManager::_requireDir(const String &name)
     return path;
 }
 
-Dir FileManager::_getDir(const String &path)
+ListDir FileManager::_getDir(const String &path)
 {
     if (!path.length()) {
-        return Dir();
+        return ListDir();
     }
-    Dir dir = SPIFFS_openDir(path);
+    auto dir = ListDir(path);
     if (!dir.next()) {
         _errors++;
         _debug_printf_P(PSTR("Directory %s does not exist or empty\n"), path.c_str());

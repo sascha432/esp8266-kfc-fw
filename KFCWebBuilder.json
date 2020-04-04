@@ -5,7 +5,8 @@
     "spiffs": {
         "data_dir": "./data",
         "web_target_dir": "./data/webui",
-        "mappings_file": "${spiffs.web_target_dir}/.mappings"
+        "mappings_file": "${spiffs.web_target_dir}/.mappings",
+        "listings_file": "${spiffs.web_target_dir}/.listings"
     },
     "configuration": {
         "set_env": [

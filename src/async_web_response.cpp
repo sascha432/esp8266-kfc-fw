@@ -207,7 +207,7 @@ size_t AsyncProgmemFileResponse::_fillBuffer(uint8_t *data, size_t len)
     return _content.read(data, len);
 }
 
-AsyncDirResponse::AsyncDirResponse(const Dir &dir, const String &dirName) : AsyncBaseResponse(true)
+AsyncDirResponse::AsyncDirResponse(const ListDir &dir, const String &dirName) : AsyncBaseResponse(true)
 {
     _code = 200;
     _contentLength = 0;
@@ -276,12 +276,11 @@ size_t AsyncDirResponse::_fillBuffer(uint8_t *data, size_t len)
         String path;
         while (_next) {
             path = _dir.fileName();
-            auto mapping = FileMapping(path.c_str());
             modified[0] = '0';
             modified[1] = 0;
 
 #if SPIFFS_TMP_FILES_TTL || SPIFFS_CLEANUP_TMP_DURING_BOOT
-            if (mapping.exists() && path.length() > tmp_dir.length() && path.startsWith(tmp_dir)) { // check if the name matches the location of temporary files, exclude mapped files
+            if (path.length() > tmp_dir.length() && path.startsWith(tmp_dir)) { // check if the name matches the location of temporary files, exclude mapped files
 #  if SPIFFS_TMP_FILES_TTL
 
                 ulong ttl = strtoul(path.substring(tmp_dir.length()).c_str(), NULL, HEX);
@@ -300,8 +299,8 @@ size_t AsyncDirResponse::_fillBuffer(uint8_t *data, size_t len)
 #  endif
                 }
             }
-            else if (mapping.exists()) {
-                time_t time = mapping.getModificationTime();
+            else if (_dir.isMapping()) {
+                time_t time = _dir.fileTime();
                 auto tm = timezone_localtime(&time);
                 timezone_strftime_P(modified, sizeof(modified), PSTR("\"%Y-%m-%d %H:%M\""), tm);
             }
@@ -319,7 +318,7 @@ size_t AsyncDirResponse::_fillBuffer(uint8_t *data, size_t len)
                 if ((result = snprintf_P(ptr, space, PSTR("{\"f\":\"%s\",\"n\":\"%s\",\"m\":%d,\"t\":%s,\"d\":1},"),
                     location.c_str(),
                     name.c_str(),
-                    path.startsWith(tmp_dir) ? TYPE_TMP_DIR : (mapping.exists() ? TYPE_MAPPED_DIR : TYPE_REGULAR_DIR),
+                    path.startsWith(tmp_dir) ? TYPE_TMP_DIR : (_dir.isMapping() ? TYPE_MAPPED_DIR : TYPE_REGULAR_DIR),
                     modified)) >= space)
                 {
                     break;
@@ -334,7 +333,7 @@ size_t AsyncDirResponse::_fillBuffer(uint8_t *data, size_t len)
                     name.c_str(),
                     formatBytes(_dir.fileSize()).c_str(),
                     _dir.fileSize(),
-                    mapping.exists() ? TYPE_MAPPED_FILE : TYPE_REGULAR_FILE,
+                    _dir.isMapping() ? TYPE_MAPPED_FILE : TYPE_REGULAR_FILE,
                     modified)
                 ) >= space) {
                     break;

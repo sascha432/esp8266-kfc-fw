@@ -15,6 +15,7 @@
 #include <map>
 #include <functional>
 #include <KFCTimezone.h>
+#include <ListDir.h>
 #include <Buffer.h>
 #include <PrintHtmlEntities.h>
 #include <TemplateDataProvider.h>
@@ -114,7 +115,7 @@ public:
     static const uint8_t TYPE_MAPPED_FILE =     1;
     static const uint8_t TYPE_REGULAR_FILE =    0;
 
-    AsyncDirResponse(const Dir &dir, const String &dirName);
+    AsyncDirResponse(const ListDir &dir, const String &dirName);
 
     bool _sourceValid() const;
 
@@ -123,7 +124,7 @@ public:
 private:
     uint8_t _state;
     bool _next;
-    Dir _dir;
+    ListDir _dir;
     String _dirName;
 };
 

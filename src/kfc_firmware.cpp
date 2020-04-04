@@ -10,6 +10,7 @@
 #include <EventTimer.h>
 #include <WiFiCallbacks.h>
 #include <PrintString.h>
+#include <ListDir.h>
 #include "kfc_fw_config.h"
 #include "blink_led_timer.h"
 #include "at_mode.h"
@@ -39,7 +40,7 @@ void cleanup_tmp_dir()
     if (timer.reached()) {
         ulong now = (millis() / 1000UL);
         String tmp_dir = sys_get_temp_dir();
-        Dir dir = SPIFFS_openDir(tmp_dir);
+        auto dir = ListDir(tmp_dir);
 #if DEBUG
         int deleted = 0;
 #endif
@@ -311,7 +312,7 @@ void setup()
 #if SPIFFS_CLEANUP_TMP_DURING_BOOT
         if (!resetDetector.hasWakeUpDetected()) {
             _debug_println(F("Cleaning up /tmp directory"));
-            Dir dir = SPIFFS_openDir(sys_get_temp_dir());
+            auto dir = ListDir(sys_get_temp_dir());
             while(dir.next()) {
                 _IF_DEBUG(bool status =) SPIFFS.remove(dir.fileName());
                 _debug_printf_P(PSTR("remove=%s result=%d\n"), dir.fileName().c_str(), status);

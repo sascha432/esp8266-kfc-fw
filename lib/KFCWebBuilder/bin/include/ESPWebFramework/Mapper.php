@@ -146,12 +146,14 @@ class Mapper implements PluginInterface
 
         $dirs = array();
         foreach($this->mappedFiles as $file) {
-            $dirs[] = dirname($file['mapped_file']);
+            $name = str_replace('\\', '/', dirname($file['mapped_file']));
+            if ($name != '/') {
+                $dirs[$name] = max(@$dirs[$name], $file['mtime']);
+            }
         }
-        $dirs = array_unique($dirs);
 
-        foreach($dirs as $dirname) {
-            $listing .= pack('LLLLC', 0, 0, 0, 0, self::FLAGS_DIR);
+        foreach($dirs as $dirname => $mtime) {
+            $listing .= pack('LLLLC', 0, 0, 0, $mtime, self::FLAGS_DIR);
             $listing .= $dirname."\n";
         }
 

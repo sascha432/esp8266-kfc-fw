@@ -10,7 +10,7 @@
 #include <KFCSyslog.h>
 #endif
 #include <misc.h>
-#include "timezone.h"
+#include <Timezone.h>
 #include "kfc_fw_config.h"
 
 #if DEBUG_LOGGER

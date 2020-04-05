@@ -5,11 +5,11 @@
 #include "../include/templates.h"
 #include <PrintString.h>
 #include <PrintHtmlEntitiesString.h>
+#include <Timezone.h>
 #include "progmem_data.h"
 #include "kfc_fw_config.h"
 #include "build.h"
 #include "misc.h"
-#include "timezone.h"
 #include "web_server.h"
 #include "status.h"
 #include "reset_detector.h"

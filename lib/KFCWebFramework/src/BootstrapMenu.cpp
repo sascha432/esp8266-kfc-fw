@@ -4,7 +4,7 @@
 
 #include "BootstrapMenu.h"
 #include <PrintHtmlEntitiesString.h>
-#include <sha1.h>
+#include <SHA1.h>
 
 #if _WIN32
 #define BOOTSTRAP_MENU_CRLF "\n"

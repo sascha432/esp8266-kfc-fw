@@ -12,6 +12,7 @@
 #include <StreamString.h>
 #include <BufferStream.h>
 #include <SpeedBooster.h>
+#include <Timezone.h>
 #include "progmem_data.h"
 #include "build.h"
 #include "web_server.h"
@@ -24,7 +25,6 @@
 #include "fs_mapping.h"
 #include "session.h"
 #include "../include/templates.h"
-#include "timezone.h"
 #include "web_socket.h"
 #include "WebUISocket.h"
 #include "kfc_fw_config.h"

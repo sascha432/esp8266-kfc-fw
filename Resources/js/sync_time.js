@@ -2,7 +2,14 @@
  * Author: sascha_lammers@gmx.de
  */
 
-if ($('#system_time').length) {
+var system_time_interval = null;
+
+function system_time_attach_handler() {
+    // clear interval if already running
+    if (system_time_interval !== null) {
+        window.clearInterval(system_time_interval);
+        system_time_interval = null;
+    }
     var h, m, s;
     var system_time = $('#system_time');
     function parse_time(system_time) {
@@ -23,13 +30,13 @@ if ($('#system_time').length) {
             var system_date = $('#system_date');
             $.get('/sync_time', function(data) {
                 system_date.html(data);
-                system_time = $('#system_time');
+                system_time = $('#system_time'); // update element
                 parse_time(system_time);
             });
         }
     }
     parse_time(system_time);
-    window.setInterval(function() {
+    system_time_interval = window.setInterval(function() {
         if (++s == 60) {
             s = 0;
             sync_system_date();
@@ -43,4 +50,8 @@ if ($('#system_time').length) {
         }
         system_time.html(fmt(h) + ':' + fmt(m) + ':' + fmt(s));
     }, 1000);
+}
+
+if ($('#system_time').length) {
+    system_time_attach_handler();
 }

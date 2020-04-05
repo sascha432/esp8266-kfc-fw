@@ -56,7 +56,7 @@ uint8_t Sensor_DS3231::getAutoDiscoveryCount() const
 
 void Sensor_DS3231::getValues(JsonArray &array)
 {
-    _debug_printf_P(PSTR("Sensor_DS3231::getValues()\n"));
+    _debug_println();
 
     auto obj = &array.addObject(3);
     auto temp = _readSensorTemp();
@@ -73,9 +73,10 @@ void Sensor_DS3231::getValues(JsonArray &array)
 
 void Sensor_DS3231::createWebUI(WebUI &webUI, WebUIRow **row)
 {
-    _debug_printf_P(PSTR("Sensor_DS3231::createWebUI()\n"));
+    _debug_println();
     (*row)->addSensor(FSPGM(ds3231_id_temp), _name, F("\u00b0C"));
-    (*row)->addSensor(FSPGM(ds3231_id_time), F("Time"), F(""));
+    auto &clock = (*row)->addSensor(FSPGM(ds3231_id_time), F("RTC Clock"), F(""));
+    clock.add(JJ(head), F("h4"));
 }
 
 void Sensor_DS3231::publishState(MQTTClient *client)
@@ -99,7 +100,7 @@ MQTTSensorSensorType Sensor_DS3231::getType() const
 
 float Sensor_DS3231::_readSensorTemp()
 {
-    _debug_printf_P(PSTR("Sensor_DS3231::_readSensorTemp()\n"));
+    _debug_println();
     if (!rtc.begin()) {
         return NAN;
     }
@@ -108,7 +109,7 @@ float Sensor_DS3231::_readSensorTemp()
 
 time_t Sensor_DS3231::_readSensorTime()
 {
-    _debug_printf_P(PSTR("Sensor_DS3231::_readSensorTime()\n"));
+    _debug_println();
     if (!rtc.begin()) {
         return 0;
     }
@@ -117,8 +118,8 @@ time_t Sensor_DS3231::_readSensorTime()
 
 int8_t Sensor_DS3231::_readSensorLostPower()
 {
-    return 0;
-    _debug_printf_P(PSTR("Sensor_DS3231::_readSensorLostPower()\n"));
+    // return 0;
+    _debug_println();
     if (!rtc.begin()) {
         return -1;
     }
@@ -131,10 +132,13 @@ String Sensor_DS3231::_getTimeStr()
     auto now = _readSensorTime();
     if (now) {
         auto tm = gmtime(&now);
-        char buf[32];
-        strftime_P(buf, sizeof(buf), PSTR("%Y-%m-%d\n%H:%M:%S"), tm);
+        char buf[16];
+        strftime_P(buf, sizeof(buf), PSTR("%Y-%m-%d"), tm);
         str = buf;
-        str += F("\nLost Power: ");
+        str += F(" <span id=\"system_time\">");
+        strftime_P(buf, sizeof(buf), PSTR("%H:%M:%S"), tm);
+        str += buf;
+        str += F("</span><br>\nLost Power: ");
         str += _readSensorLostPower() ? FSPGM(Yes) : FSPGM(No);
     }
     else {

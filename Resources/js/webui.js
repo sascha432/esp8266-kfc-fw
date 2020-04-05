@@ -15,7 +15,7 @@ var webUIComponent = {
             switch: { min: 0, max: 1, columns: 2, zero_off: true, display_name: false, attributes: [ 'min', 'max', 'value', 'zero-off', 'display-name' ] },
             slider: { min: 0, max: 255, columns: 12, attributes: [ 'min', 'max', 'zero-off', 'value' ] },
             color_slider: { min: 15300, max: 50000 },
-            sensor: { columns: 3 },
+            sensor: { columns: 3, head: false, attributes: [ 'head' ] },
             screen: { columns: 3, width: 128, height: 32, attributes: [ 'width', 'height' ] },
             binary_sensor: { columns: 2 },
             buttons: { columns: 3, buttons: [], height: 0, attributes: [ 'height', 'buttons' ] },
@@ -249,14 +249,20 @@ var webUIComponent = {
                 options.value = 'N/A';
             }
             if (options.render_type == 'badge') {
-                var element = this.createColumn(options, $('<div class="badge-sensor"><div class="row"><div class="col"><div class="outer-badge"><div class="inner-badge"><h4 id="' + options.id + '">' + options.value + '</h4><div class="unit">' + options.unit + '</div></div></div></div></div><div class="row"><div class="col text-center">' + options.name + '</div></div></div>'));
+                if (options.head === false) {
+                    options.head = 'h4';
+                }
+                var element = this.createColumn(options, $('<div class="badge-sensor"><div class="row"><div class="col"><div class="outer-badge"><div class="inner-badge"><' + options.head + ' id="' + options.id + '">' + options.value + '</' + options.head + '><div class="unit">' + options.unit + '</div></div></div></div></div><div class="row"><div class="col text-center">' + options.name + '</div></div></div>'));
             }
             else if (options.render_type == 'wide') {
             }
             else if (options.render_type == 'medium') {
             }
             else {
-                var element = this.createColumn(options, $('<div class="sensor"><h3>' + options.name + '</h3><h1><span id="' + options.id + '">' + options.value + '</span><span class="unit">' + options.unit + '</span></h1>'));
+                if (options.head === false) {
+                    options.head = 'h1';
+                }
+                var element = this.createColumn(options, $('<div class="sensor"><h3>' + options.name + '</h3><' + options.head + '><span id="' + options.id + '">' + options.value + '</span><span class="unit">' + options.unit + '</span></' + options.head + '>'));
             }
             // this.addToGroup(options);
             return element;
@@ -337,6 +343,10 @@ var webUIComponent = {
             self.updateSliderCSS($this.rangeslider(options));
         });
 
+        if (this.container.find('#system_time').length) {
+            system_time_attach_handler();
+        }
+
         this.lockPublish = false;
     },
 
@@ -407,6 +417,9 @@ var webUIComponent = {
                     else if (element[0].nodeName != 'INPUT') {
                         // console.log("update_event", "innerHtml", this);
                         element.html(this.value);
+                        if (element.find('#system_time').length) {
+                            system_time_attach_handler();
+                        }
                     }
                     else {
                         // console.log("update_event", "input", this);

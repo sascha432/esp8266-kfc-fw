@@ -66,6 +66,7 @@ WEBUI_PROGMEM_STRING_DECL(wide)
 WEBUI_PROGMEM_STRING_DECL(width)
 WEBUI_PROGMEM_STRING_DECL(zero_off)
 WEBUI_PROGMEM_STRING_DECL(display_name)
+WEBUI_PROGMEM_STRING_DECL(head)
 
 class WebUIComponent : public JsonUnnamedObject {
 public:

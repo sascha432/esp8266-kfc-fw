@@ -78,8 +78,8 @@ try {
     }
     $zoneStart = $trans[$current]["ts"];
     $abbreviation = $trans[$current]["abbr"];
-    $current++;
     $dst = $trans[$current]["isdst"] ? "1" : "0";
+    $current++;
     $zoneEnd = $trans[$current]["ts"] - 1;
     $nextAbbreviation = $trans[$current]["abbr"];
 

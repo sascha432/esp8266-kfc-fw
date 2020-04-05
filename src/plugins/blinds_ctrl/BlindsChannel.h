@@ -46,8 +46,6 @@ public:
 private:
     StateEnum_t _state;
     Channel_t _channel;
-    String _setTopic;
-    String _stateTopic;
     uint8_t _number;
     BlindsControl *_controller;
 };

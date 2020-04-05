@@ -63,7 +63,7 @@ void MQTTComponent::publishAutoDiscovery(MQTTClient *client)
         MQTTAutoDiscoveryVector vector;
         createAutoDiscovery(MQTTAutoDiscovery::FORMAT_JSON, vector);
         for(const auto &discovery: vector) {
-            _debug_printf_P(PSTR("MQTTComponent::publishAutoDiscovery(): topic=%s, payload=%s\n"), discovery->getTopic().c_str(), discovery->getPayload().c_str());
+            _debug_printf_P(PSTR("topic=%s payload=%s\n"), discovery->getTopic().c_str(), printable_string(discovery->getPayload().c_str(), discovery->getPayload().length(), DEBUG_MQTT_CLIENT_PAYLOAD_LEN).c_str());
             client->publish(discovery->getTopic(), client->getDefaultQos(), true, discovery->getPayload());
         }
     }

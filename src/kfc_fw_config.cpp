@@ -108,7 +108,7 @@ Config_MQTT::Config_MQTT()
     using KFCConfigurationClasses::System;
 
     config.port = (System::Flags::read()->mqttMode == MQTT_MODE_SECURE) ? 8883 : 1883;
-    config.keepalive = 10;
+    config.keepalive = 15;
     config.qos = 2;
 }
 
@@ -221,7 +221,7 @@ void timezone_config_load(int32_t &_timezoneOffset, bool &_dst, String &_zoneNam
     _zoneName = _abbreviation;
     _timezoneOffset = cfg.offset;
     _dst = cfg.dst;
-    debug_printf_P(PSTR("abbreviation=%s, offset=%d, dst=%u\n"), cfg.abbreviation, cfg.offset, cfg.dst);
+    _debug_printf_P(PSTR("abbreviation=%s, offset=%d, dst=%u\n"), cfg.abbreviation, cfg.offset, cfg.dst);
 }
 
 void timezone_config_save(int32_t _timezoneOffset, bool _dst, const String &_zoneName, const String &_abbreviation)
@@ -233,7 +233,7 @@ void timezone_config_save(int32_t _timezoneOffset, bool _dst, const String &_zon
         strncpy(cfg.abbreviation, _abbreviation.c_str(), sizeof(cfg.abbreviation) - 1)[sizeof(cfg.abbreviation) - 1] = 0;
         config._H_SET(Config().ntp.tz, cfg);
         config.write();
-        debug_printf_P(PSTR("abbreviation=%s, offset=%d, dst=%u\n"), _abbreviation.c_str(), _timezoneOffset, _dst);
+        _debug_printf_P(PSTR("abbreviation=%s, offset=%d, dst=%u\n"), _abbreviation.c_str(), _timezoneOffset, _dst);
     }
 }
 

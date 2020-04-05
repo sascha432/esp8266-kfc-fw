@@ -8,6 +8,10 @@
 #define DEBUG_MQTT_CLIENT                   0
 #endif
 
+#ifndef DEBUG_MQTT_CLIENT_PAYLOAD_LEN
+#define DEBUG_MQTT_CLIENT_PAYLOAD_LEN       16
+#endif
+
 // home assistant auto discovery
 #ifndef MQTT_AUTO_DISCOVERY
 #define MQTT_AUTO_DISCOVERY                 1
@@ -156,8 +160,8 @@ public:
     static void setupInstance();
     static void deleteInstance();
 
-    static const String connectionDetailsString();
-    static const String connectionStatusString();
+    static String connectionDetailsString();
+    static String connectionStatusString();
     static void getStatus(Print &output);
     static void handleWiFiEvents(uint8_t event, void *payload);
 

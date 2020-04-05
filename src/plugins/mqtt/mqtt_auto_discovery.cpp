@@ -164,7 +164,7 @@ void MQTTAutoDiscovery::finalize()
     } else {
         _discovery.remove(_discovery.length() - 4);
     }
-    _debug_printf_P(PSTR("MQTT auto discovery payload '%s'\n"), _discovery.c_str());
+    _debug_printf_P(PSTR("MQTT auto discovery payload '%s'\n"), printable_string(_discovery.c_str(), _discovery.length(), DEBUG_MQTT_CLIENT_PAYLOAD_LEN).c_str());
 }
 
 PrintString &MQTTAutoDiscovery::getPayload()

@@ -29,7 +29,7 @@ public:
     } Listing_t;
 
     ListDir() {}
-    ListDir(const String &dirName);
+    ListDir(const String &dirName, bool filterSubdirs = false);
 
     File openFile(const char *mode);
 
@@ -44,11 +44,15 @@ public:
     bool isMapping() const;
 
 private:
+    bool _isSubdir(const String &dir) const;
+
+private:
     String _filename;
     String _dirName;
     File _listings;
     Listing_t _listing;
     bool _isDir;
+    bool _filterSubdirs;
 
 #if ESP8266
 

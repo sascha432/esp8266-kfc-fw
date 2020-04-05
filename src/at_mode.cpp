@@ -201,6 +201,9 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CAT, "CAT", "<filename>", "Display text fi
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RM, "RM", "<filename>", "Delete file");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RN, "RN", "<filename>,<new filename>", "Rename file");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LS, "LS", "[<directory>]", "List files and directory");
+#if ESP8266
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LSR, "LSR", "[<directory>]", "List files and directory in raw mode");
+#endif
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WIFI, "WIFI", "[<reconnect>]", "Display WiFi info");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(REM, "REM", "Ignore comment");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LED, "LED", "<slow,fast,flicker,off,solid,sos>,[,color=0xff0000][,pin]", "Set LED mode");
@@ -268,6 +271,9 @@ void at_mode_help_commands()
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(RM), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(RN), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(LS), name);
+#if ESP8266
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(LSR), name);
+#endif
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(WIFI), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(LED), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(REM), name);
@@ -1036,6 +1042,21 @@ void at_mode_serial_handle_event(String &commandString)
                     output.println(dir.fileName());
                 }
             }
+#if ESP8266
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(LSR))) {
+                auto dir = SPIFFS.openDir(args.toString(0));
+                while(dir.next()) {
+                    output.print(F("+LS: "));
+                    if (dir.isFile()) {
+                        output.printf_P(PSTR("%8.8s "), formatBytes(dir.fileSize()).c_str());
+                    }
+                    else {
+                        output.print(F("[...]    "));
+                    }
+                    output.println(dir.fileName());
+                }
+            }
+#endif
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CAT))) {
                 if (args.requireArgs(1, 1)) {
                     auto filename = args.get(0);

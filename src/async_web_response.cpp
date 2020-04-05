@@ -207,26 +207,23 @@ size_t AsyncProgmemFileResponse::_fillBuffer(uint8_t *data, size_t len)
     return _content.read(data, len);
 }
 
-AsyncDirResponse::AsyncDirResponse(const ListDir &dir, const String &dirName) : AsyncBaseResponse(true)
+AsyncDirResponse::AsyncDirResponse(const ListDir &dir, const String &dirName) : AsyncBaseResponse(true), _state(0), _dir(dir), _next(_dir.next()), _dirName(dirName)
 {
     _code = 200;
     _contentLength = 0;
     _sendContentLength = false;
     _contentType = FSPGM(mime_application_json);
     _chunked = true;
-    _dir = dir;
-    _state = 0;
-    _dirName = dirName;
     append_slash(_dirName);
     _debug_printf_P(PSTR("AsyncDirResponse::AsyncDirResponse(%s)\n"), _dirName.c_str());
 
-    if (!_dir.rewind()) {
-        _code = 404;
-        _sendContentLength = true;
-        _chunked = false;
-        _state = 2;
-        _debug_printf_P(PSTR("listing %s isValid()==true, next state 2, sending 404\n"), _dirName.c_str());
-    }
+    // if (!_next) {
+    //     _code = 404;
+    //     _sendContentLength = true;
+    //     _chunked = false;
+    //     _state = 2;
+    //     _debug_printf_P(PSTR("listing %s isValid()==true, next state 2, sending 404\n"), _dirName.c_str());
+    // }
 }
 
 bool AsyncDirResponse::_sourceValid() const
@@ -264,7 +261,7 @@ size_t AsyncDirResponse::_fillBuffer(uint8_t *data, size_t len)
         sptr = ptr;
 
         _state = 1;
-        _next = _dir.next();
+        //_next = _dir.next();
         _debug_printf_P(PSTR("init list %s next=%d\n"), _dirName.c_str(), _next);
     }
     if (_state == 1) {

@@ -123,8 +123,8 @@ public:
 
 private:
     uint8_t _state;
-    bool _next;
     ListDir _dir;
+    bool _next;
     String _dirName;
 };
 

@@ -11,7 +11,7 @@
 
 #if ESP8266
 
-ListDir::ListDir(const String &dirName) : _dirName(dirName), _listings(SPIFFS.open(FSPGM(fs_mapping_listings), FileOpenMode::read)), _listing(), _isDir(false), _dir(SPIFFS.openDir(dirName))
+ListDir::ListDir(const String &dirName, bool filterSubdirs) : _dirName(dirName), _listings(SPIFFS.open(FSPGM(fs_mapping_listings), FileOpenMode::read)), _listing(), _isDir(false), _filterSubdirs(filterSubdirs), _dir(SPIFFS.openDir(dirName))
 {
     if (!String_endsWith(_dirName, '/')) {
         _dirName += '/';
@@ -48,6 +48,28 @@ time_t ListDir::fileTime()
     return _dir.fileTime();
 }
 
+bool ListDir::_isSubdir(const String &dir) const
+{
+    if (!_filterSubdirs) {
+        return false;
+    }
+    if (dir.startsWith(_dirName)) {
+        auto subdir = dir.substring(_dirName.length());
+        _debug_printf_P(PSTR("subdir=%s\n"), subdir.c_str());
+        auto pos = subdir.indexOf('/');
+        if (pos != -1) {
+            auto filename = subdir.substring(pos);
+            _debug_printf_P(PSTR("filename=%s pos=%u\n"), filename.c_str(), pos);
+            if (filename.equals(F("/."))) {
+                return false;
+            }
+            return true;
+        }
+    }
+    return false;
+}
+
+
 bool ListDir::next()
 {
     if (_listings) {
@@ -68,7 +90,7 @@ bool ListDir::next()
                 }
                 else {
                     _debug_printf_P(PSTR("uuid=%x filename=%s filesize=%u/%u mtime=%u gzipped=%u dir=%u skip=%u\n"), _listing.header.uuid, _listing.filename.c_str(), _listing.header.size, _listing.header.orgSize, _listing.header.mtime, _listing.header.gzipped, _listing.header.isDir, !_listing.filename.startsWith(_dirName));
-                    if (_listing.filename.startsWith(_dirName)) {
+                    if (_listing.filename.startsWith(_dirName) && !_isSubdir(_listing.filename)) {
                         _listing.valid = true;
                         return true;
                     }
@@ -78,11 +100,20 @@ bool ListDir::next()
     }
     while (_dir.next()) {
         _filename = _dir.fileName();
+        _debug_printf_P(PSTR("filename=%s\n"), _filename.c_str());
+        if (_isSubdir(_filename)) {
+            continue;
+        }
         if (_filename.endsWith(F("/."))) {   // directory emulation
             _isDir = true;
+            if (_filename.substring(0, _filename.length() - 1) == _dirName) {
+                continue;
+            }
             _filename.remove(_filename.length() - 2);
         }
-        _isDir = false;
+        else {
+            _isDir = false;
+        }
         if (strncmp_P(_filename.c_str(), SPGM(fs_mapping_dir), strlen_P(SPGM(fs_mapping_dir)))) {
             return true;
         }

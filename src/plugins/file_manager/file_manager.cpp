@@ -123,12 +123,13 @@ ListDir FileManager::_getDir(const String &path)
     if (!path.length()) {
         return ListDir();
     }
-    auto dir = ListDir(path);
-    if (!dir.next()) {
-        _errors++;
-        _debug_printf_P(PSTR("Directory %s does not exist or empty\n"), path.c_str());
-    }
-    return dir;
+    return ListDir(path, true);
+    // auto dir = ListDir(path, true);
+    // if (!dir.next()) {
+    //     _errors++;
+    //     _debug_printf_P(PSTR("Directory %s does not exist or empty\n"), path.c_str());
+    // }
+    // return dir;
 }
 
 String FileManager::_requireFile(const String &name, bool mustExists)
@@ -227,7 +228,7 @@ uint16_t FileManager::list()
 
 uint16_t FileManager::mkdir()
 {
-    auto dir = _getDir(_requireDir(FSPGM(dir)));
+    auto dir = _requireDir(FSPGM(dir));
     auto newDir = _requireArgument(F("new_dir"));
     uint16_t httpCode = 200;
     String message;
@@ -236,7 +237,8 @@ uint16_t FileManager::mkdir()
     append_slash(newDir);
     newDir += '.';
     if (newDir.charAt(0) != '/') {
-        newDir = dir.fileName() + newDir;
+        append_slash(dir);
+        newDir = dir + newDir;
     }
     normalizeFilename(newDir);
 
@@ -264,7 +266,7 @@ uint16_t FileManager::upload()
     uint16_t httpCode = 500;
     PrintString message;
     auto success = false;
-    auto uploadDir = _getDir(_requireDir(F("upload_current_dir")));
+    auto uploadDir = _requireDir(F("upload_current_dir"));
     auto filename = _request->arg(F("upload_filename"));
     if (!_request->_tempObject) {
         _debug_printf_P(PSTR("_tempObject is null\n"));
@@ -279,9 +281,8 @@ uint16_t FileManager::upload()
             filename = p->value();
         }
         if (filename.charAt(0) != '/') {
-            String dir = uploadDir.fileName();
-            append_slash(dir);
-            filename = dir + filename;
+            append_slash(uploadDir);
+            filename = uploadDir + filename;
         }
         normalizeFilename(filename);
 
@@ -328,7 +329,7 @@ uint16_t FileManager::upload()
             url += String(httpCode);
         }
         url += '#';
-        url += uploadDir.fileName();
+        url += uploadDir;
 
         message = String();
         httpCode = 302;
@@ -397,7 +398,7 @@ uint16_t FileManager::rename()
     auto success = false;
     auto file = _requireFile(FSPGM(filename));
     auto requestFilename = _request->arg(FSPGM(filename));
-    auto dir = _getDir(_requireDir(FSPGM(dir)));
+    auto dir = _requireDir(FSPGM(dir));
     auto renameTo = _requireArgument(F("to"));
 
     if (!file) {
@@ -411,9 +412,8 @@ uint16_t FileManager::rename()
         file.close();
 
         if (renameTo.charAt(0) != '/') {
-            String dir2 = dir.fileName();
-            append_slash(dir2);
-            renameTo = dir2 + renameTo;
+            append_slash(dir);
+            renameTo = dir + renameTo;
         }
         normalizeFilename(renameTo);
 

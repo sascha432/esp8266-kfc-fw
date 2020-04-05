@@ -72,14 +72,13 @@ try {
 
     // timestamp is between current and next transition
     foreach($trans as $current => $data) {
-        var_dump($data);
         if ($timestamp > $data['ts'] && $timestamp <= $trans[$current + 1]['ts']) {
             break;
         }
     }
     $zoneStart = $trans[$current]["ts"];
-    $current++;
     $abbreviation = $trans[$current]["abbr"];
+    $current++;
     $dst = $trans[$current]["isdst"] ? "1" : "0";
     $zoneEnd = $trans[$current]["ts"] - 1;
     $nextAbbreviation = $trans[$current]["abbr"];

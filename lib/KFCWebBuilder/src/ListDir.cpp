@@ -6,16 +6,14 @@
 #include <misc.h>
 #include "fs_mapping.h"
 
-#include "debug_helper_disable.h"
-// #include "debug_helper_enable.h"
+// #include "debug_helper_disable.h"
+#include "debug_helper_enable.h"
 
 #if ESP8266
 
 ListDir::ListDir(const String &dirName, bool filterSubdirs) : _dirName(dirName), _listings(SPIFFS.open(FSPGM(fs_mapping_listings), FileOpenMode::read)), _listing(), _isDir(false), _filterSubdirs(filterSubdirs), _dir(SPIFFS.openDir(dirName))
 {
-    if (!String_endsWith(_dirName, '/')) {
-        _dirName += '/';
-    }
+    append_slash(_dirName);
     _debug_printf_P(PSTR("dirName=%s\n"), _dirName.c_str());
 }
 
@@ -23,6 +21,21 @@ File ListDir::openFile(const char* mode)
 {
     return _dir.openFile(mode);
 }
+
+#elif ESP32
+
+ListDir::ListDir(const String &dirName, bool filterSubdirs) : _dirName(dirName), _listings(SPIFFS.open(FSPGM(fs_mapping_listings), FileOpenMode::read)), _listing(), _isDir(false), _filterSubdirs(filterSubdirs), _dir(SPIFFS.open(dirName))
+{
+    append_slash(_dirName);
+    _debug_printf_P(PSTR("dirName=%s\n"), _dirName.c_str());
+}
+
+File ListDir::openFile(const char* mode)
+{
+    return SPIFFS.open(_file.name(), mode);
+}
+
+#endif
 
 String ListDir::fileName()
 {
@@ -37,7 +50,11 @@ size_t ListDir::fileSize()
     if (_listing.valid) {
         return _listing.header.orgSize;
     }
+#if ESP8266
     return _dir.fileSize();
+#elif ESP32
+    return _file.size();
+#endif
 }
 
 time_t ListDir::fileTime()
@@ -45,7 +62,11 @@ time_t ListDir::fileTime()
     if (_listing.valid) {
         return _listing.header.mtime;
     }
+#if ESP8266
     return _dir.fileTime();
+#elif ESP32
+    return 0;
+#endif
 }
 
 bool ListDir::_isSubdir(const String &dir) const
@@ -68,7 +89,6 @@ bool ListDir::_isSubdir(const String &dir) const
     }
     return false;
 }
-
 
 bool ListDir::next()
 {
@@ -98,8 +118,14 @@ bool ListDir::next()
             }
         }
     }
+#if ESP8266
     while (_dir.next()) {
         _filename = _dir.fileName();
+#elif ESP32
+    File next;
+    while((next = _dir.openNextFile())) {
+        _filename = next.name();
+#endif
         _debug_printf_P(PSTR("filename=%s\n"), _filename.c_str());
         if (_isSubdir(_filename)) {
             continue;
@@ -114,6 +140,11 @@ bool ListDir::next()
         else {
             _isDir = false;
         }
+#if ESP32
+        if (_file.isDirectory()) {
+            _isDir = true;
+        }
+#endif
         if (strncmp_P(_filename.c_str(), SPGM(fs_mapping_dir), strlen_P(SPGM(fs_mapping_dir)))) {
             return true;
         }
@@ -124,7 +155,12 @@ bool ListDir::next()
 bool ListDir::rewind()
 {
     _listings = SPIFFS.open(FSPGM(fs_mapping_listings), FileOpenMode::read);
+#if ESP8266
     return _dir.rewind();
+#elif ESP32
+    _dir.rewindDirectory();
+    return true;
+#endif    
 }
 
 bool ListDir::isFile() const
@@ -140,12 +176,15 @@ bool ListDir::isDirectory() const
     if (_isDir) {
         return true;
     }
+#if ESP8266
     return _dir.isDirectory();
+#elif ESP32
+    return false;
+#endif    
+
 }
 
 bool ListDir::isMapping() const
 {
     return _listing.valid;
 }
-
-#endif

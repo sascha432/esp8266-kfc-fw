@@ -62,6 +62,8 @@ private:
 #elif ESP32
 
 private:
+    fs::File _dir;
+    fs::File _file;
 #endif
 };
 

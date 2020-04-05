@@ -231,11 +231,11 @@ const char *Form::process(const String &name) const
             else if (name.charAt(len) == '_') {
                 int value = name.substring(len + 1).toInt();
                 if (value == field->getValue().toInt()) {
-                    _debug_printf_P(PSTR("Form::process(%s) INPUT_SELECT %d = %d\n"), name.c_str(), value, field->getValue().toInt());
+                    _debug_printf_P(PSTR("Form::process(%s) INPUT_SELECT %d = %d\n"), name.c_str(), value, (int)field->getValue().toInt());
                     return " selected";
                 }
                 else {
-                    _debug_printf_P(PSTR("Form::process(%s) INPUT_SELECT %d != %d\n"), name.c_str(), value, field->getValue().toInt());
+                    _debug_printf_P(PSTR("Form::process(%s) INPUT_SELECT %d != %d\n"), name.c_str(), value, (int)field->getValue().toInt());
                     return "";
                 }
             }

@@ -41,11 +41,15 @@ public:
 
     static uint8_t add(uint8_t events, Callback_t callback, CallbackPtr_t callbackPtr);
     static uint8_t add(uint8_t events, Callback_t callback, void *callbackPtr) {
+#if DEBUG_WIFICALLBACKS
         _debug_resolve_lambda(lambda_target(callback));
+#endif
         return add(events, callback, reinterpret_cast<CallbackPtr_t>(callbackPtr));
     }
     static uint8_t add(uint8_t events, CallbackPtr_t callbackPtr) {
+#if DEBUG_WIFICALLBACKS
         _debug_resolve_lambda((void *)callbackPtr);
+#endif
         return add(events, nullptr, callbackPtr);
     }
     // returns -1 if not found, 0 if the callback has been removed or EventEnum_t of callbacks left for this pointer

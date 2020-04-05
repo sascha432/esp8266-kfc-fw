@@ -71,7 +71,7 @@ uint32_t *RTCMemoryManager::_readMemory(uint16_t &length) {
         memPtr = reinterpret_cast<uint32_t *>(RTCMemoryManager_allocated_block + offset);
         uint16_t crc = crc16_calc((const uint8_t *)memPtr, header.length + sizeof(header) - sizeof(header.crc));
         if (crc != header.crc) {
-            _debug_printf(PSTR("RTC memory: CRC mismatch %04x != %04x, length %d\n"), crc, header.crc, size);
+            _debug_printf(PSTR("RTC memory: CRC mismatch %04x != %04x, length %d\n"), crc, header.crc, header.length);
             return nullptr;
         }
 #else

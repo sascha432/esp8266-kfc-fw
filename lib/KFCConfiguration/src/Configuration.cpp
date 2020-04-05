@@ -338,7 +338,7 @@ void Configuration::dump(Print &output, bool dirty, const String &name)
 #else
             output.printf_P(PSTR("%04x: "), param.handle);
 #endif
-            output.printf_P(PSTR("type=%s ofs=%d size=%d dirty=%u value: "), parameter.getTypeString(parameter._param.getType()), offset, /*calculateOffset(param.handle),*/ length, parameter._info.dirty);
+            output.printf_P(PSTR("type=%s ofs=%d size=%d dirty=%u value: "), (const char *)parameter.getTypeString(parameter._param.getType()), offset, /*calculateOffset(param.handle),*/ length, parameter._info.dirty);
             parameter.dump(output);
         }
         offset += param.length;
@@ -484,7 +484,7 @@ void Configuration::exportAsJson(Print &output, const String &version)
 
         auto length = parameter.read(this, offset);
         output.printf_P(PSTR("\t\t\t\"type\": %d,\n"), parameter._param.getType());
-        output.printf_P(PSTR("\t\t\t\"type_name\": \"%s\",\n"), parameter.getTypeString(parameter._param.getType()));
+        output.printf_P(PSTR("\t\t\t\"type_name\": \"%s\",\n"), (const char *)parameter.getTypeString(parameter._param.getType()));
         output.printf_P(PSTR("\t\t\t\"length\": %d,\n"), length);
         output.print(F("\t\t\t\"data\": "));
         parameter.exportAsJson(output);
@@ -525,7 +525,7 @@ Configuration::ParameterList::iterator Configuration::_findParam(ConfigurationPa
             offset += it->_param.length;
         }
     }
-    _debug_printf_P(PSTR("handle=%s[%04x] type=%s = NOT FOUND\n"), getHandleName(handle), handle, ConfigurationParameter::getTypeString(type));
+    _debug_printf_P(PSTR("handle=%s[%04x] type=%s = NOT FOUND\n"), getHandleName(handle), handle, (const char *)ConfigurationParameter::getTypeString(type));
     return _params.end();
 }
 
@@ -538,7 +538,7 @@ ConfigurationParameter &Configuration::_getOrCreateParam(ConfigurationParameter:
         return _params.back();
     }
     else if (type != iterator->_param.getType()) {
-        __debugbreak_and_panic_printf_P(PSTR("%s new_type=%s type different\n"), iterator->toString().c_str(), getHandleName(iterator->_param.handle), ConfigurationParameter::getTypeString(type));
+        __debugbreak_and_panic_printf_P(PSTR("%s: new_type=%s type=%s different\n"), getHandleName(iterator->_param.handle), iterator->toString().c_str(), (const char *)ConfigurationParameter::getTypeString(type));
     }
     return *iterator;
 }

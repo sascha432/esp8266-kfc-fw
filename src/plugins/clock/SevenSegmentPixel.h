@@ -49,8 +49,12 @@ public:
         return NUM_DIGITS;
     }
 
+    static constexpr size_t getNumPixelsPerDigit() {
+        return NUM_DIGIT_PIXELS * SevenSegmentPixel::SegmentEnum_t::NUM;
+    }
+
     static constexpr size_t getTotalPixels() {
-        return (NUM_DIGITS * NUM_DIGIT_PIXELS * SevenSegmentPixel::SegmentEnum_t::NUM) + (NUM_COLONS * NUM_COLON_PIXELS);
+        return (NUM_DIGITS * NUM_DIGIT_PIXELS * SevenSegmentPixel::SegmentEnum_t::NUM) + (NUM_COLONS * NUM_COLON_PIXELS * 2);
     }
 
     static constexpr size_t getDigitsPixels() {
@@ -58,7 +62,7 @@ public:
     }
 
     static constexpr size_t getColonsPixels() {
-        return (NUM_COLONS * NUM_COLON_PIXELS);
+        return (NUM_COLONS * NUM_COLON_PIXELS * 2);
     }
 
     static constexpr color_t getSegmentColor(uint32_t color, uint8_t segment, uint8_t number) {
@@ -68,7 +72,6 @@ public:
     static constexpr pixel_address_t getPixelAddress(uint8_t digit, uint8_t pixel, uint8_t segment) {
         return (digit * NUM_DIGIT_PIXELS * SegmentEnum_t::NUM) + (segment * NUM_DIGIT_PIXELS) + pixel;
     }
-
 
 public:
 
@@ -298,6 +301,7 @@ public:
     char getSegmentChar(int segment) {
         return 'a' + (segment % SegmentEnum_t::NUM);
     }
+
     inline char getSegmentChar(SegmentEnum_t segment) {
         return getSegmentChar((int)segment);
     }
@@ -316,9 +320,21 @@ public:
                 output.println();
             }
         }
-        for(uint8_t c = 0; c < NUM_COLONS; c++) {
-            output.printf_P(PSTR("colon %u: lower address=%u upper=%u\n"), c, _colonPixelAddress[c * 2], _colonPixelAddress[c * 2 + 1]);
+        for(size_t c = 0; c < NUM_COLONS; c++) {
+            output.printf_P(PSTR("colon %u: lower address="), c);
+            for(size_t p = 0; p < IOT_CLOCK_NUM_COLON_PIXELS; p++) {
+                output.printf_P(PSTR("%u "), _colonPixelAddress[c * 2] + p);
+            }
+            output.println();
+            output.printf_P(PSTR("colon %u: upper address="), c);
+            for(size_t p = 0; p < IOT_CLOCK_NUM_COLON_PIXELS; p++) {
+                output.printf_P(PSTR("%u "), _colonPixelAddress[c * 2 + 1] + p);
+            }
+            output.println();
         }
+        output.printf_P(PSTR("total pixels: %u\n"), getTotalPixels());
+        output.printf_P(PSTR("digit pixels: %u\n"), getDigitsPixels());
+        output.printf_P(PSTR("colon pixels: %u\n"), getColonsPixels());
     }
 
 
@@ -330,7 +346,7 @@ public:
     }
 
 private:
-    color_t _getColor(pixel_address_t addr, color_t color) {
+    color_t _getColor(pixel_address_t addr, color_t color) const {
         if (!color) {
             return 0;
         }

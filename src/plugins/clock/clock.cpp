@@ -2,8 +2,7 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#define IOT_CLOCK_PIXEL_ORDER {28,29,30,31,24,25,26,27,11,10,9,8,20,21,22,23,16,17,18,19,15,14,13,12,11,10,9,8,7,6,5,4}
-
+#include <Arduino_compat.h>
 #include "clock.h"
 #include <Timezone.h>
 #include <MicrosTimer.h>
@@ -25,7 +24,7 @@
 
 static ClockPlugin plugin;
 
-static const char pixel_order[] PROGMEM = IOT_CLOCK_PIXEL_ORDER;
+static const char pixel_order[] PROGMEM = IOT_CLOCK_PIXEL_ANIMATION_ORDER;
 
 ClockPlugin::ClockPlugin() :
     MQTTComponent(LIGHT),
@@ -36,14 +35,15 @@ ClockPlugin::ClockPlugin() :
     _color(0, 0, 80), _updateTimer(0), _time(0), _updateRate(1000), _isSyncing(1), _timeFormat24h(true)
 {
 
+    size_t ofs = 0;
     auto ptr = _pixelOrder.data();
     for(int i = 0; i < IOT_CLOCK_NUM_DIGITS; i++) {
-        memcpy_P(ptr, pixel_order, sizeof(pixel_order));
-        auto endPtr = ptr + sizeof(pixel_order);
-        auto ofs = i * sizeof(pixel_order);
-        while(ptr < endPtr) {
-            *ptr++ += ofs;
+        memcpy_P(ptr, pixel_order, IOT_CLOCK_PIXEL_ANIMATION_ORDER_LEN);
+        for (int j = 0; j < IOT_CLOCK_PIXEL_ANIMATION_ORDER_LEN; j++) {
+            ptr[j] += ofs;
         }
+        ofs += SevenSegmentDisplay::getNumPixelsPerDigit();
+        ptr += IOT_CLOCK_PIXEL_ANIMATION_ORDER_LEN;
     }
 
     _colors[0] = 0;
@@ -167,11 +167,15 @@ void ClockPlugin::setup(PluginSetupMode_t mode)
     _button.onRelease(onButtonReleased);
 #endif
 
-    LoopFunctions::add(loop);
     WiFiCallbacks::add(WiFiCallbacks::CONNECTED, wifiCallback);
+    if (config.isWiFiUp()) {
+        wifiCallback(WiFiCallbacks::CONNECTED, nullptr);
+    }
 
     if (!IS_TIME_VALID(time(nullptr))) {
         setSyncing(true);
+    } else {
+        _isSyncing = 0;
     }
     addTimeUpdatedCallback(ntpCallback);
 
@@ -179,14 +183,23 @@ void ClockPlugin::setup(PluginSetupMode_t mode)
     if (mqttClient) {
         mqttClient->registerComponent(this);
     }
-}
 
+    LoopFunctions::add(ClockPlugin::loop);
+}
 
 void ClockPlugin::reconfigure(PGM_P source)
 {
     _debug_println();
     auto cfg = updateConfig();
     _setSevenSegmentDisplay(cfg);
+}
+
+void ClockPlugin::restart()
+{
+    _debug_println();
+    LoopFunctions::remove(loop);
+    _display.clear();
+    _display.show();
 }
 
 void ClockPlugin::getStatus(Print &output)
@@ -256,161 +269,6 @@ void ClockPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form
 
     form.finalize();
 }
-
-#if AT_MODE_SUPPORTED
-
-#include "at_mode.h"
-
-#undef PROGMEM_AT_MODE_HELP_COMMAND_PREFIX
-#define PROGMEM_AT_MODE_HELP_COMMAND_PREFIX "CLOCK"
-
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKPX, "PX", "<led>,<r>,<g>,<b>", "Set level of a single pixel");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKP, "P", "<00[:.]00[:.]00>", "Display strings");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKC, "C", "<r>,<g>,<b>", "Set color");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKTS, "TS", "<num>,<segment>", "Set segment for digit <num>");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF(CLOCKA, "A", "<num>", "Set animation", "Display available animations");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(CLOCKD, "D", "Dump pixel addresses");
-
-void ClockPlugin::atModeHelpGenerator()
-{
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CLOCKPX), getName());
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CLOCKP), getName());
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CLOCKC), getName());
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CLOCKTS), getName());
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CLOCKA), getName());
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CLOCKD), getName());
-}
-
-bool ClockPlugin::atModeHandler(AtModeArgs &args)
-{
-    if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKTS))) {
-        if (args.size() == 2) {
-            enable(false);
-            uint8_t digit = args.toInt(0);
-            uint8_t segment = args.toInt(1);
-            auto &serial = args.getStream();
-            serial.printf_P(PSTR("+CLOCKTS: digit=%u, segment=%c, color=#%06x\n"), digit, _display.getSegmentChar(segment), _color.get());
-            _display.setSegment(digit, segment, _color);
-            _display.show();
-        }
-        else {
-            enable(true);
-        }
-        return true;
-    }
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKP))) {
-        if (args.size() < 1) {
-            args.print(F("clear"));
-            _display.clear();
-            _display.show();
-            enable(true);
-        }
-        else {
-            enable(false);
-            auto text = args.get(0);
-            args.printf_P(PSTR("'%s'"), text);
-            _display.print(text, _color);
-            _display.show();
-        }
-        return true;
-    }
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKA))) {
-        if (args.isQueryMode()) {
-            auto &serial = args.getStream();
-            serial.printf_P(PSTR(
-                    "+CLOCKA: %u - blink colon twice per second\n"
-                    "+CLOCKA: %u - blink colon once per second\n"
-                    "+CLOCKA: %u - solid colon\n"
-                    "+CLOCKA: %u - rainbow animation\n"
-                    "+CLOCKA: %u - flashing\n"
-                    "+CLOCKA: %u - fade to color (+CLOCKA=%u,r,g,b)\n"
-                    "+CLOCKA: 1000 = disable clock\n"
-                    "+CLOCKA: 1001 = enable clock\n"
-                    "+CLOCKA: 1002 = all pixels on\n"
-                ),
-                BLINK_COLON,
-                FAST_BLINK_COLON,
-                SOLID_COLON,
-                RAINBOW,
-                FLASHING,
-                FADE, FADE
-            );
-        }
-        else if (args.size() >= 1) {
-            int value = args.toInt(0);
-            if (value == 1000) {
-                enable(false);
-            }
-            else if (value == 1001) {
-                enable(true);
-            }
-            else if (value == 1002) {
-                enable(false);
-                _display.setColor(0xffffff);
-            }
-            else {
-                if (value == AnimationEnum_t::FADE) {
-                    if (args.size() >= 4) {
-                        _animationData.fade.toColor = Color(args.toInt(1), args.toInt(2), args.toInt(3));
-                    }
-                    else {
-                        _animationData.fade.toColor = ~_color & 0xffffff;
-                    }
-                }
-                setAnimation((AnimationEnum_t)value);
-            }
-        }
-        else {
-            setAnimation(SOLID_COLON);
-        }
-        return true;
-    }
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKC))) {
-        if (args.size() == 1) {
-            _color = Color(args.toNumber(0, 0xff0000), true);
-        }
-        else if (args.requireArgs(3, 3)) {
-            _color = Color(args.toNumber(0, 0), args.toNumber(1, 0), args.toNumber(2, 0x80));
-        }
-        args.printf_P(PSTR("color=#%06x"), _color.get());
-        for(size_t i = 0; i  < SevenSegmentDisplay::getTotalPixels(); i++) {
-            if (_display.getPixelColor(i)) {
-                _display.setPixelColor(i, _color);
-            }
-        }
-
-        return true;
-    }
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKPX))) {
-        if (args.requireArgs(4, 4)) {
-            enable(false);
-
-            int num = args.toInt(0);
-            Color color(args.toInt(1), args.toInt(2), args.toInt(3));
-            if (num < 0) {
-#if IOT_CLOCK_NEOPIXEL
-                args.printf_P(PSTR("pixel=0-%u, color=#%06x"), _display->getTotalPixelCount(), color.get());
-#else
-                args.printf_P(PSTR("pixel=0-%u, color=#%06x"), FastLED.size(), color.get());
-#endif
-                _display.setColor(color);
-            }
-            else {
-                args.printf_P(PSTR("pixel=%u, color=#%06x"), num, color.get());
-                _display.setColor(num, color);
-            }
-        }
-        return true;
-    }
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKD))) {
-        _display.dump(args.getStream());
-        return true;
-    }
-    return false;
-}
-
-#endif
-
 
 void ClockPlugin::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector)
 {
@@ -512,7 +370,6 @@ void ClockPlugin::publishState(MQTTClient *client)
     WsWebUISocket::broadcast(WsWebUISocket::getSender(), json);
 }
 
-
 void ClockPlugin::loop()
 {
     plugin._loop();
@@ -520,12 +377,14 @@ void ClockPlugin::loop()
 
 void ClockPlugin::wifiCallback(uint8_t event, void *payload)
 {
+    _debug_printf_P(PSTR("event=%u\n"), event);
     // turn LED off after wifi has been connected
     BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::BlinkDelayEnum_t::OFF);
 }
 
 void ClockPlugin::ntpCallback(time_t now)
 {
+    _debug_printf_P(PSTR("ntp_update=%u\n"), NTP_IS_TIMEZONE_UPDATE(now));
     if (NTP_IS_TIMEZONE_UPDATE(now)) {
         plugin.setSyncing(false);
     }
@@ -534,7 +393,8 @@ void ClockPlugin::ntpCallback(time_t now)
 void ClockPlugin::enable(bool enable)
 {
     _debug_printf_P(PSTR("enable=%u\n"), enable);
-    setSyncing(false);
+    _display.clear();
+    _display.show();
     if (enable) {
         LoopFunctions::add(loop);
     }
@@ -545,10 +405,12 @@ void ClockPlugin::enable(bool enable)
 
 void ClockPlugin::setSyncing(bool sync)
 {
-    _debug_printf_P(PSTR("syncing=%u\n"), sync);
-    _isSyncing = sync ? 1 : 0;
-    _time = 0;
-    _off();
+    _debug_printf_P(PSTR("sync=%u syncing=%u\n"), sync, _isSyncing);
+    if (sync != (bool)_isSyncing) {
+        _isSyncing = sync ? 1 : 0;
+        _time = 0;
+        _display.clear();
+    }
 }
 
 void ClockPlugin::setBlinkColon(BlinkColonEnum_t value)
@@ -826,3 +688,158 @@ void ClockPlugin::setBrightness(uint16_t brightness)
         _updateRate = oldUpdateRate;
     });
 }
+
+#if AT_MODE_SUPPORTED
+
+#include "at_mode.h"
+
+#undef PROGMEM_AT_MODE_HELP_COMMAND_PREFIX
+#define PROGMEM_AT_MODE_HELP_COMMAND_PREFIX "CLOCK"
+
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKPX, "PX", "<led>,<r>,<g>,<b>", "Set level of a single pixel");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKP, "P", "<00[:.]00[:.]00>", "Display strings");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKC, "C", "<r>,<g>,<b>", "Set color");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKTS, "TS", "<num>,<segment>", "Set segment for digit <num>");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF(CLOCKA, "A", "<num>", "Set animation", "Display available animations");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(CLOCKD, "D", "Dump pixel addresses");
+
+void ClockPlugin::atModeHelpGenerator()
+{
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CLOCKPX), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CLOCKP), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CLOCKC), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CLOCKTS), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CLOCKA), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CLOCKD), getName());
+}
+
+bool ClockPlugin::atModeHandler(AtModeArgs &args)
+{
+    if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKTS))) {
+        if (args.size() == 2) {
+            enable(false);
+            uint8_t digit = args.toInt(0);
+            uint8_t segment = args.toInt(1);
+            args.printf_P(PSTR("digit=%u segment=%c color=#%06x"), digit, _display.getSegmentChar(segment), _color.get());
+            _display.setSegment(digit, segment, _color);
+            _display.show();
+        }
+        return true;
+    }
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKP))) {
+        enable(false);
+        if (args.size() < 1) {
+            args.print(F("clear"));
+            _display.clear();
+            _display.show();
+        }
+        else {
+            auto text = args.get(0);
+            args.printf_P(PSTR("'%s'"), text);
+            _display.print(text, _color);
+            _display.show();
+        }
+        return true;
+    }
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKA))) {
+        if (args.isQueryMode()) {
+            args.printf_P(PSTR("%u - blink colon twice per second"), BLINK_COLON);
+            args.printf_P(PSTR("%u - blink colon once per second"), FAST_BLINK_COLON);
+            args.printf_P(PSTR("%u - solid colon"), SOLID_COLON);
+            args.printf_P(PSTR("%u - rainbow animation"), RAINBOW);
+            args.printf_P(PSTR("%u - flashing"), FLASHING);
+            args.printf_P(PSTR("%u - fade to color (+CLOCKA=%u,r,g,b)"), FADE, FADE);
+            args.print(F("1000 = disable clock"));
+            args.print(F("1001 = enable clock"));
+            args.print(F("1002 = all pixels on"));
+            args.print(F("1003 = test pixel animation order"));
+        }
+        else if (args.size() >= 1) {
+            int value = args.toInt(0);
+            if (value == 1000) {
+                enable(false);
+            }
+            else if (value == 1001) {
+                enable(true);
+            }
+            else if (value == 1002) {
+                enable(false);
+                _display.setColor(0xffffff);
+            }
+            else if (value == 1003) {
+                int interval = args.toInt(1, 500);
+                enable(false);
+                size_t num = 0;
+                Scheduler.addTimer(interval, true, [num, this](EventScheduler::TimerPtr timer) mutable {
+                    _debug_printf_P(PSTR("pixel=%u\n"), num);
+                    if (num == _pixelOrder.size()) {
+                        _display.clear();
+                        _display.show();
+                        timer->detach();
+                    }
+                    else {
+                        if (num) {
+                            _display.setPixelColor(_pixelOrder[num - 1], 0);
+                        }
+                        _display.setColor(_pixelOrder[num++], 0x22);
+                    }
+                });
+            }
+            else {
+                if (value == AnimationEnum_t::FADE) {
+                    if (args.size() >= 4) {
+                        _animationData.fade.toColor = Color(args.toInt(1), args.toInt(2), args.toInt(3));
+                    }
+                    else {
+                        _animationData.fade.toColor = ~_color & 0xffffff;
+                    }
+                }
+                setAnimation((AnimationEnum_t)value);
+            }
+        }
+        else {
+            setAnimation(SOLID_COLON);
+        }
+        return true;
+    }
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKC))) {
+        if (args.size() == 1) {
+            _color = Color(args.toNumber(0, 0xff0000), true);
+        }
+        else if (args.requireArgs(3, 3)) {
+            _color = Color(args.toNumber(0, 0), args.toNumber(1, 0), args.toNumber(2, 0x80));
+        }
+        args.printf_P(PSTR("color=#%06x"), _color.get());
+        for(size_t i = 0; i  < SevenSegmentDisplay::getTotalPixels(); i++) {
+            if (_display.getPixelColor(i)) {
+                _display.setPixelColor(i, _color);
+            }
+        }
+        _display.show();
+        return true;
+    }
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKPX))) {
+        if (args.requireArgs(4, 4)) {
+            enable(false);
+
+            int num = args.toInt(0);
+            Color color(args.toInt(1), args.toInt(2), args.toInt(3));
+            if (num < 0) {
+                args.printf_P(PSTR("pixel=0-%u, color=#%06x"), _display.getTotalPixels(), color.get());
+                _display.setColor(color);
+            }
+            else {
+                args.printf_P(PSTR("pixel=%u, color=#%06x"), num, color.get());
+                _display.setColor(num, color);
+            }
+        }
+        return true;
+    }
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKD))) {
+        _display.dump(args.getStream());
+        return true;
+    }
+    return false;
+}
+
+#endif

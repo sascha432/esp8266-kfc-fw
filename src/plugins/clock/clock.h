@@ -3,15 +3,15 @@
  */
 
 #include <Arduino_compat.h>
-#include <vector>
 #include <EventScheduler.h>
+#include <vector>
 #include "SevenSegmentPixel.h"
 #include "WebUIComponent.h"
 #include "plugins.h"
 #include "kfc_fw_config.h"
 #include "./plugins/mqtt/mqtt_component.h"
 
-#ifndef DEBUG_IO1T_CLOCK
+#ifndef DEBUG_IOT_CLOCK
 #define DEBUG_IOT_CLOCK                 1
 #endif
 
@@ -173,6 +173,7 @@ public:
     virtual void setup(PluginSetupMode_t mode) override;
     virtual void reconfigure(PGM_P source) override;
     //virtual bool hasReconfigureDependecy(PluginComponent *plugin) const override;
+    virtual void restart() override;
 
     virtual bool hasStatus() const override {
         return true;
@@ -239,9 +240,6 @@ public:
 private:
     void _loop();
     void _setSevenSegmentDisplay(Clock &cfg);
-    void _off() {
-        _display.clear();
-    }
     void setBrightness(uint16_t brightness);
 
 private:
@@ -270,7 +268,7 @@ private:
     using SevenSegmentDisplay = SevenSegmentPixel<uint8_t, IOT_CLOCK_NUM_DIGITS, IOT_CLOCK_NUM_PIXELS, IOT_CLOCK_NUM_COLONS, IOT_CLOCK_NUM_COLON_PIXELS>;
 
     SevenSegmentDisplay _display;
-    std::array<SevenSegmentDisplay::pixel_address_t, SevenSegmentDisplay::getTotalPixels()> _pixelOrder;
+    std::array<SevenSegmentDisplay::pixel_address_t, IOT_CLOCK_PIXEL_ANIMATION_ORDER_LEN * IOT_CLOCK_NUM_DIGITS> _pixelOrder;
 
     Color _color;
     BlinkColonEnum_t _blinkColon;

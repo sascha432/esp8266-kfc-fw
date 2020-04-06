@@ -2,6 +2,7 @@
  * Author: sascha_lammers@gmx.de
  */
 
+#include <Arduino_compat.h>
 #include "file_manager.h"
 #include <Buffer.h>
 #include <PrintString.h>

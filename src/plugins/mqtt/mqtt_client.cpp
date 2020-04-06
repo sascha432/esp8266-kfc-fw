@@ -2,6 +2,7 @@
  * Author: sascha_lammers@gmx.de
  */
 
+#include <Arduino_compat.h>
 #include <ESPAsyncWebServer.h>
 #include <KFCForms.h>
 #include <kfc_fw_config.h>
@@ -503,17 +504,8 @@ const __FlashStringHelper *MQTTClient::_reasonToString(AsyncMqttClientDisconnect
 
 String MQTTClient::connectionDetailsString()
 {
-    String message;
     auto username = Config_MQTT::getUsername();
-    if (*username) {
-        message = username;
-    } else {
-        message = FSPGM(Anonymous);
-    }
-    message += '@';
-    message += Config_MQTT::getHost();
-    message += ':';
-    message += String(Config_MQTT::getConfig().port);
+    auto message = PrintString(F("%s@%s:%u"), *username ? username : SPGM(Anonymous), Config_MQTT::getHost(), Config_MQTT::getConfig().port);
 #if ASYNC_TCP_SSL_ENABLED
     if (Config_MQTT::getMode() == MQTT_MODE_SECURE) {
         message += F(", Secure MQTT");

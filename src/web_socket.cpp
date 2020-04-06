@@ -5,11 +5,11 @@
 //#include <sha512.h>
 // #include <base64.hpp>
 #include <Arduino_compat.h>
-#include <memory>
-#include <map>
-#include <vector>
-#include <algorithm>
-#include <functional>
+// #include <memory>
+// #include <map>
+// #include <vector>
+// #include <algorithm>
+// #include <functional>
 #include <PrintString.h>
 #include <Buffer.h>
 #include <DumpBinary.h>

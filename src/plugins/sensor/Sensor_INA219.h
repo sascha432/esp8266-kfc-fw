@@ -9,7 +9,6 @@
 #include <Arduino_compat.h>
 #include <Adafruit_INA219.h>
 #include <Wire.h>
-#include <vector>
 #include "WebUIComponent.h"
 #include "plugins.h"
 #include "MQTTSensor.h"

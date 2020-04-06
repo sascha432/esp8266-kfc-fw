@@ -4,6 +4,7 @@
 
 #if IOT_SENSOR_HAVE_BME280
 
+#include <Arduino_compat.h>
 #include "Sensor_BME280.h"
 
 #if DEBUG_IOT_SENSOR

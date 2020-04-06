@@ -2,6 +2,7 @@
  * Author: sascha_lammers@gmx.de
  */
 
+#include <Arduino_compat.h>
 #include "ws_console_client.h"
 #include <StreamString.h>
 #include "http2serial.h"

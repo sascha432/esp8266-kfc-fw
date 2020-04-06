@@ -4,6 +4,7 @@
 
 #if IOT_SENSOR_HAVE_INA219
 
+#include <Arduino_compat.h>
 #include "Sensor_INA219.h"
 #include "sensor.h"
 #include <LoopFunctions.h>

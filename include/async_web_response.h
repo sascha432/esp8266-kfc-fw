@@ -22,6 +22,7 @@
 #include <SSIProxyStream.h>
 #include "web_server.h"
 #include "../include/templates.h"
+#include "./plugins/mdns/mdns_sd.h"
 #include "bitmap_header.h"
 
 class HttpHeaders;
@@ -58,6 +59,26 @@ public:
 private:
     JsonUnnamedObject _json;
     JsonBuffer _jsonBuffer;
+};
+
+class AsyncMDNSResponse : public AsyncJsonResponse {
+public:
+    AsyncMDNSResponse(MDNSResponder::hMDNSServiceQuery serviceQuery, MDNSPlugin::ServiceInfoVector *services, int timeout) : _serviceQuery(serviceQuery), _services(services), _timeout(millis() + timeout) {
+        _contentLength = 0;
+        _sendContentLength = false;
+        _chunked = true;
+    }
+    ~AsyncMDNSResponse() {
+        MDNS.removeServiceQuery(_serviceQuery);
+        delete _services;
+    }
+
+    virtual size_t _fillBuffer(uint8_t *data, size_t len) override;
+
+private:
+    MDNSResponder::hMDNSServiceQuery _serviceQuery;
+    MDNSPlugin::ServiceInfoVector *_services;
+    uint32_t _timeout;
 };
 
 class AsyncProgmemFileResponse : public AsyncBaseResponse {

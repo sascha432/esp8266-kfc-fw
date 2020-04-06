@@ -9,7 +9,9 @@
 #endif
 
 #include <Arduino_compat.h>
+#include "progmem_data.h"
 #include "plugins.h"
+#include "plugins_menu.h"
 #if defined(ESP8266)
 #include <ESP8266mDNS.h>
 #endif
@@ -35,27 +37,6 @@ public:
 
 #endif
 
-public:
-    MDNSPlugin() : _running(false) {
-        REGISTER_PLUGIN(this);
-    }
-    PGM_P getName() const {
-        return PSTR("mdns");
-    }
-    virtual const __FlashStringHelper *getFriendlyName() const {
-        return F("MDNS");
-    }
-    PluginPriorityEnum_t getSetupPriority() const override {
-        return PRIO_MDNS;
-    }
-    void setup(PluginSetupMode_t mode) override;
-
-    virtual bool hasStatus() const override {
-        return true;
-    }
-    virtual void getStatus(Print &output) override;
-
-#if AT_MODE_SUPPORTED
     class ServiceInfo {
     public:
         ServiceInfo(const char *_serviceDomain) : serviceDomain(_serviceDomain), port(0) {
@@ -65,20 +46,54 @@ public:
         uint16_t port;
         std::vector<IPAddress> addresses;
         String txts;
+        std::map<const String, String> map;
     };
     typedef std::vector<ServiceInfo> ServiceInfoVector;
 
-    bool hasAtMode() const override {
+public:
+    MDNSPlugin() : _running(false) {
+        REGISTER_PLUGIN(this);
+    }
+    virtual PGM_P getName() const {
+        return PSTR("mdns");
+    }
+    virtual const __FlashStringHelper *getFriendlyName() const {
+        return F("MDNS");
+    }
+    virtual PluginPriorityEnum_t getSetupPriority() const override {
+        return PRIO_MDNS;
+    }
+    virtual void setup(PluginSetupMode_t mode) override;
+    virtual void reconfigure(PGM_P source) override;
+    virtual bool hasReconfigureDependecy(PluginComponent *plugin) const override {
+        return plugin->nameEquals(FSPGM(http));
+    }
+
+    virtual bool hasStatus() const override {
         return true;
     }
-    void atModeHelpGenerator() override;
-    bool atModeHandler(AtModeArgs &args) override;
+    virtual void getStatus(Print &output) override;
+
 #if ESP8266
-    void serviceCallback(MDNSResponder::MDNSServiceInfo &mdnsServiceInfo, MDNSResponder::AnswerType answerType, bool p_bSetContent);
+
+    virtual MenuTypeEnum_t getMenuType() const override {
+        return CUSTOM;
+    }
+    virtual void createMenu() override {
+        bootstrapMenu.addSubMenu(F("MDNS Discovery"), F("mdns_discovery.html"), navMenu.util);
+    }
+
+    static void mdnsDiscoveryHandler(AsyncWebServerRequest *request);
+    void serviceCallback(ServiceInfoVector &services, bool map, MDNSResponder::MDNSServiceInfo &mdnsServiceInfo, MDNSResponder::AnswerType answerType, bool p_bSetContent);
+
 #endif
 
-private:
-    ServiceInfoVector _services;
+#if AT_MODE_SUPPORTED
+    virtual bool hasAtMode() const override {
+        return true;
+    }
+    virtual void atModeHelpGenerator() override;
+    virtual bool atModeHandler(AtModeArgs &args) override;
 #endif
 
 public:
@@ -88,6 +103,7 @@ public:
 
 private:
     void _loop();
+    void _installWebServerHooks();
 
 private:
     bool _running;

@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<!--%%HEAD-->
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" debug_loader="1">
+    <link rel="stylesheet" href="../../lib/KFCWebBuilder/Resources/css/bootstrap.min.css" debug_loader="1">
+    <link rel="stylesheet" href="../css/styles.css" debug_loader="1">
+    <link rel="stylesheet" href="../../lib/KFCWebBuilder/Resources/css/open-iconic-bootstrap.css" debug_loader="1">
+    <title>KFC FW</title>
+</head>
+<!--HEAD%%-->
+
+<body>
+    <!--%%NAV-->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <a class="navbar-brand" href="index.html">KFC FW</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        </div>
+    </nav>
+    <!--NAV%%-->
+    <div class="container">
+        <h1>MDNS Discovery</h1>
+        <div class="row mdns-console">
+            <table class="table table-striped">
+                <thead class="thead-light">
+                    <tr><th>Hostname</th><th>Addresses</th><th>Device Name</th><th>Device Title</th><th>Version</th></tr>
+                </thead>
+                <tbody>
+                    <tr scope="row" class="spinner">
+                        <td colspan="5" class="text-center bg-white">
+                            <img src="images/spinner.gif" width="64" height="64">
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <!--%%FOOT-->
+        <div class="row">
+            <div class="col footer">&nbsp;</div>
+        </div>
+        <!--FOOT%%-->
+    </div>
+    <!--%%JAVASCRIPT-->
+	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/jquery-3.3.1.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/popper.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/popper.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/bootstrap.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/js.cookie.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../js/main.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../js/debug.js"></script>
+    <!--JAVASCRIPT%%-->
+
+    <script>
+        // mdns_discovery.html
+        if ($('.mdns-console').length) {
+            var timeout = 2000;
+            var interval = 1000;
+            function update_mdns_discovery() {
+                var callback = function(data) {
+                    var tbody = $('.mdns-console').find('tbody');
+                    tbody.find('.spinner').remove();
+                    $(data['l']).each(function(key, val) {
+                        var row = tbody.find('#mdns_id_' + val['n']);
+                        var version = val['v'];
+                        if (val['b']) {
+                            version = version + '-' + val['b'];
+                        }
+                        var title = val['t'] ? val['t'] : '-';
+                        var html = '<tr scope="row" id="mdns_id_' + val['n'] + '"><td>' + val['h'] + '</td><td>' + val['a'] + '</td><td>' + val['n'] + '</td><td>' + title + '</td><td>' + version + '</td></tr>';
+                        if (row.length) {
+                            row.html($(html).find('tr').html());
+                        }
+                        else {
+                            tbody.append(html);
+                        }
+                    });
+                    window.setTimeout(update_mdns_discovery, interval);
+                    timeout = 15000;
+                    interval = 30000;
+                };
+                $.get('/mdns_discovery/?timeout=' + timeout, callback);
+            }
+            update_mdns_discovery();
+        }
+    </script>
+</body>
+</html>

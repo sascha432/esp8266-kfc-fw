@@ -184,6 +184,54 @@ void AsyncJsonResponse::updateLength()
     _contentLength = _json.length();
 }
 
+
+size_t AsyncMDNSResponse::_fillBuffer(uint8_t *data, size_t len)
+{
+    if (millis() > _timeout) {
+        auto &json = getJsonObject();
+        if (!json.size()) {
+            auto &rows = json.addArray(F("l"));
+            for(auto &svc: *_services) {
+                auto &row = rows.addObject(6);
+
+                svc.domain.toLowerCase();
+                row.add(F("h"), svc.domain);
+
+                String name = svc.domain;
+                auto pos = name.indexOf('.');
+                if (pos != -1) {
+                    name.remove(pos);
+                }
+                name.toUpperCase();
+                row.add(F("n"), name);
+
+                row.add(F("a"), implode_cb(',', svc.addresses, [](const IPAddress &addr) {
+                    return addr.toString();
+                }));
+
+                auto version = String('-');
+                for(const auto &item: svc.map) {
+                    if (!strcmp_P(item.first.c_str(), PSTR("v"))) {
+                        version = item.second;
+                    }
+                    else if (!strcmp_P(item.first.c_str(), PSTR("b"))) {
+                        row.add(F("b"), item.second);
+                    }
+                    else if (!strcmp_P(item.first.c_str(), PSTR("t"))) {
+                        row.add(F("t"), item.second);
+                    }
+                }
+                row.add(F("v"), version);
+            }
+        }
+        return AsyncJsonResponse::_fillBuffer(data, len);
+    }
+    else {
+        return RESPONSE_TRY_AGAIN;
+    }
+}
+
+
 AsyncProgmemFileResponse::AsyncProgmemFileResponse(const String &contentType, const File &file, TemplateDataProvider::ResolveCallback callback) :
     AsyncBaseResponse(false),
     _contentWrapped(file),

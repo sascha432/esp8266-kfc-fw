@@ -11,6 +11,8 @@
 #include <misc.h>
 #include "progmem_data.h"
 #include "kfc_fw_config.h"
+#include "web_server.h"
+#include "async_web_response.h"
 #include "misc.h"
 
 #if DEBUG_MDNS_SD
@@ -19,6 +21,8 @@
 #include <debug_helper_disable.h>
 #endif
 
+#include "build.h"
+#include "build_id.h"
 
 #if MDNS_PLUGIN
 
@@ -76,6 +80,43 @@ PROGMEM_STRING_DEF(kfcmdns, "kfcmdns");
 
 static MDNSPlugin plugin;
 
+void MDNSPlugin::_installWebServerHooks()
+{
+#if ESP8266
+    auto server = get_web_server_object();
+    if (server) {
+        _debug_println();
+        web_server_add_handler(F("/mdns_discovery/"), mdnsDiscoveryHandler);
+    }
+#endif
+}
+
+#if ESP8266
+
+void MDNSPlugin::mdnsDiscoveryHandler(AsyncWebServerRequest *request)
+{
+    if (web_server_is_authenticated(request)) {
+        auto timeout = request->arg(F("timeout")).toInt();
+        if (timeout == 0) {
+            timeout = 2000;
+        }
+        ServiceInfoVector *services = new ServiceInfoVector();
+        HttpHeaders httpHeaders(false);
+        httpHeaders.addNoCache();
+
+        auto serviceQuery = MDNS.installServiceQuery(String(FSPGM(kfcmdns)).c_str(), String(FSPGM(udp)).c_str(), [services](MDNSResponder::MDNSServiceInfo mdnsServiceInfo, MDNSResponder::AnswerType answerType, bool p_bSetContent) {
+            plugin.serviceCallback(*services, true, mdnsServiceInfo, answerType, p_bSetContent);
+        });
+        auto response = new AsyncMDNSResponse(serviceQuery, services, timeout);
+        httpHeaders.setAsyncBaseResponseHeaders(response);
+        request->send(response);
+    } else {
+        request->send(403);
+    }
+}
+
+#endif
+
 void MDNSPlugin::setup(PluginSetupMode_t mode)
 {
     auto flags = config._H_GET(Config().flags);
@@ -109,6 +150,14 @@ void MDNSPlugin::setup(PluginSetupMode_t mode)
         }
 #endif
     }
+    LoopFunctions::callOnce([this]() {
+        _installWebServerHooks();
+    });
+}
+
+void MDNSPlugin::reconfigure(PGM_P source)
+{
+    _installWebServerHooks();
 }
 
 void MDNSPlugin::loop()
@@ -136,6 +185,8 @@ void MDNSPlugin::start(const IPAddress &address)
 
     if (MDNSService::addService(FSPGM(kfcmdns), FSPGM(udp), 5353)) {
         MDNSService::addServiceTxt(FSPGM(kfcmdns), FSPGM(udp), String('v'), FIRMWARE_VERSION_STR);
+        MDNSService::addServiceTxt(FSPGM(kfcmdns), FSPGM(udp), String('b'), F(__BUILD_NUMBER "." __BUILD_ID));
+        MDNSService::addServiceTxt(FSPGM(kfcmdns), FSPGM(udp), String('t'), config._H_STR(Config().device_title));
     }
     _running = true;
     LoopFunctions::add(loop);
@@ -187,21 +238,21 @@ void MDNSPlugin::atModeHelpGenerator()
 
 #if ESP8266
 
-void MDNSPlugin::serviceCallback(MDNSResponder::MDNSServiceInfo &mdnsServiceInfo, MDNSResponder::AnswerType answerType, bool p_bSetContent)
+void MDNSPlugin::serviceCallback(ServiceInfoVector &services, bool map, MDNSResponder::MDNSServiceInfo &mdnsServiceInfo, MDNSResponder::AnswerType answerType, bool p_bSetContent)
 {
     _debug_printf_P(PSTR("answerType=%u p_bSetContent=%u\n"), answerType, p_bSetContent)
     PrintString str;
 
-    auto iterator = std::find_if(_services.begin(), _services.end(), [&mdnsServiceInfo](const ServiceInfo &info) {
+    auto iterator = std::find_if(services.begin(), services.end(), [&mdnsServiceInfo](const ServiceInfo &info) {
         return info.serviceDomain.equals(mdnsServiceInfo.serviceDomain());
     });
     ServiceInfo *infoPtr;
-    if (iterator != _services.end()) {
+    if (iterator != services.end()) {
         infoPtr = &(*iterator);
     }
     else {
-        _services.emplace_back(mdnsServiceInfo.serviceDomain());
-        infoPtr = &_services.back();
+        services.emplace_back(mdnsServiceInfo.serviceDomain());
+        infoPtr = &services.back();
     }
     auto &info = *infoPtr;
     if (mdnsServiceInfo.hostDomainAvailable()) {
@@ -214,7 +265,14 @@ void MDNSPlugin::serviceCallback(MDNSResponder::MDNSServiceInfo &mdnsServiceInfo
         info.port = mdnsServiceInfo.hostPort();
     }
     if (mdnsServiceInfo.txtAvailable()) {
-        info.txts = mdnsServiceInfo.strKeyValue();
+        if (map) {
+            for(const auto &item: mdnsServiceInfo.keyValues()) {
+                info.map[item.first] = item.second;
+            }
+        }
+        else {
+            info.txts = mdnsServiceInfo.strKeyValue();
+        }
     }
 }
 
@@ -232,24 +290,26 @@ bool MDNSPlugin::atModeHandler(AtModeArgs &args)
             auto query = PrintString(F("service=%s proto=%s wait=%ums"), args.toString(0).c_str(), args.toString(1).c_str(), timeout);
             args.printf_P(PSTR("Querying: %s"), query.c_str());
 
-            auto serviceQuery = MDNS.installServiceQuery(args.toString(0).c_str(), args.toString(1).c_str(), [this](MDNSResponder::MDNSServiceInfo mdnsServiceInfo, MDNSResponder::AnswerType answerType, bool p_bSetContent) {
-                serviceCallback(mdnsServiceInfo, answerType, p_bSetContent);
+            ServiceInfoVector *services = new ServiceInfoVector();
+
+            auto serviceQuery = MDNS.installServiceQuery(args.toString(0).c_str(), args.toString(1).c_str(), [this, services](MDNSResponder::MDNSServiceInfo mdnsServiceInfo, MDNSResponder::AnswerType answerType, bool p_bSetContent) {
+                serviceCallback(*services, false, mdnsServiceInfo, answerType, p_bSetContent);
             });
 
-            Scheduler.addTimer(timeout, false, [args, serviceQuery, this](EventScheduler::TimerPtr) mutable {
+            Scheduler.addTimer(timeout, false, [args, serviceQuery, services, this](EventScheduler::TimerPtr) mutable {
                 _IF_DEBUG(auto result = ) MDNS.removeServiceQuery(serviceQuery);
                 _debug_printf_P(PSTR("removeServiceQuery=%u\n"), result);
-                if (_services.empty()) {
+                if (services->empty()) {
                     args.print(F("No response"));
                 }
                 else {
-                    for(auto &svc: _services) {
+                    for(auto &svc: *services) {
                         args.printf_P(PSTR("domain=%s port=%u ips=%s txts=%s"), svc.domain.c_str(), svc.port, implode_cb(',', svc.addresses, [](const IPAddress &addr) {
                             return addr.toString();
                         }).c_str(), svc.txts.c_str());
                     }
                 }
-                _services.clear();
+                delete services;
             });
 #endif
         }

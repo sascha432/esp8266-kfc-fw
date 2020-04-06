@@ -13,8 +13,8 @@
 
 EventTimer::EventTimer(EventScheduler::Callback loopCallback, int64_t delay, EventScheduler::RepeatType repeat, EventScheduler::Priority_t priority) : _etsTimer()
 {
-    if (delay < MIN_DELAY) {
-        __debugbreak_and_panic_printf_P(PSTR("delay %lu < %u\n"), (ulong)delay, MIN_DELAY);
+    if (delay < MinDelay) {
+        __debugbreak_and_panic_printf_P(PSTR("delay %lu < %u\n"), (ulong)delay, MinDelay);
     }
     _loopCallback = loopCallback;
     _callbackScheduled = false;
@@ -69,24 +69,24 @@ void ICACHE_RAM_ATTR EventTimer::_rearmEtsTimer()
         _etsTimer.timer_func = nullptr;
         _disarmed = true;
     }
-    if (_remainingDelay == 0 && _delay > MAX_DELAY) { // init, rearm
+    if (_remainingDelay == 0 && _delay > MaxDelay) { // init, rearm
         _remainingDelay = _delay;
     }
 
     int32_t delay;
     bool repeat = false;
-    if (_remainingDelay > MAX_DELAY) { // delay too long, chop up
-        _debug_printf_P(PSTR("timer=%p delay %.0f remaining %.0f delay %ums\n"), this, _delay / 1.0, _remainingDelay / 1.0, MAX_DELAY);
-        _remainingDelay -= MAX_DELAY;
-        delay = MAX_DELAY;
+    if (_remainingDelay > MaxDelay) { // delay too long, chop up
+        _debug_printf_P(PSTR("timer=%p delay %.0f remaining %.0f delay %ums\n"), this, _delay / 1.0, _remainingDelay / 1.0, MaxDelay);
+        _remainingDelay -= MaxDelay;
+        delay = MaxDelay;
     }
     else if (_remainingDelay) { // wait for remainig delay
-        delay = std::max(MIN_DELAY, (int32_t)_remainingDelay);
+        delay = std::max(MinDelay, (int32_t)_remainingDelay);
         _remainingDelay = 0;
         _debug_printf_P(PSTR("timer=%p delay %.0fs remaining 0s delay %ums\n"), this, _delay / 1.0, delay);
     }
     else { // default delay
-        delay = std::max(MIN_DELAY, (int32_t)_delay);
+        delay = std::max(MinDelay, (int32_t)_delay);
         repeat = _repeat.hasRepeat();
     }
     _debug_printf_P(PSTR("rearm timer_arg=%p callback=%p\n"), _etsTimer.timer_arg, resolve_lambda(lambda_target(_loopCallback)));
@@ -116,7 +116,7 @@ void ICACHE_RAM_ATTR EventTimer::_invokeCallback()
     _loopCallback(timerPtr);
     _repeat._counter++;
     if (_repeat.hasRepeat() && _etsTimer.timer_func != nullptr) {
-        if (_delay > EventTimer::MAX_DELAY) { // if max delay is exceeded we need to reschedule
+        if (_delay > EventTimer::MaxDelay) { // if max delay is exceeded we need to reschedule
             _rearmEtsTimer();
         }
     } else {

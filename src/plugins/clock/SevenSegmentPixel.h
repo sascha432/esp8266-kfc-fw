@@ -10,23 +10,18 @@
 #include <FastLED.h>
 #endif
 #include <EventTimer.h>
+#include <avr/pgmspace.h>
 
-#ifndef IOT_CLOCK_NEOPIXEL_PIN
-#define IOT_CLOCK_NEOPIXEL_PIN                                   12
+#ifndef IOT_CLOCK_LED_PIN
+#define IOT_CLOCK_LED_PIN                                       12
 #endif
 
-#define SevenSegmentPixel_PIXEL_ADDRESS(digit, pixel, segment)   ((digit * _numPixels * SegmentEnum_t::NUM) + (segment * _numPixels) + pixel)
-#define SevenSegmentPixel_SEGMENT_TO_BIT(segment)                (1 << segment)
-#define SevenSegmentPixel_COLOR(color, segment, bitset)          ((bitset & SevenSegmentPixel_SEGMENT_TO_BIT(segment)) ? color : 0)
+static constexpr char _digits2SegmentsTable[]  = { 0x3f, 0x06, 0x5b, 0x4f, 0x66, 0x6d, 0x7d, 0x07, 0x7f, 0x6f, 0x77, 0x7c, 0x39, 0x5e, 0x79, 0x71 };  // 0-F
 
-#define SevenSegmentPixel_NUM_PIXELS(digits, numPixel, colons)   ((digits * numPixel * SevenSegmentPixel::SegmentEnum_t::NUM) + (colons * (IOT_CLOCK_NUM_PX_PER_DOT * 2) * sizeof(SevenSegmentPixel::pixel_address_t)))
-
-#define SevenSegmentPixel_DIGITS_NUM_PIXELS                      (int)SevenSegmentPixel_NUM_PIXELS(IOT_CLOCK_NUM_PIXELS, IOT_CLOCK_NUM_DIGITS, 0)
-#define SevenSegmentPixel_TOTAL_NUM_PIXELS                       (int)SevenSegmentPixel_NUM_PIXELS(IOT_CLOCK_NUM_PIXELS, IOT_CLOCK_NUM_DIGITS, IOT_CLOCK_NUM_COLONS)
-
+template<typename PIXEL_ADDR_T, size_t NUM_DIGITS, size_t NUM_DIGIT_PIXELS, size_t NUM_COLONS, size_t NUM_COLON_PIXELS>
 class SevenSegmentPixel {
 public:
-    typedef uint8_t pixel_address_t;    // uint16_t for more than 256 pixels
+    typedef PIXEL_ADDR_T pixel_address_t;
     typedef uint32_t color_t;
 
     typedef enum {
@@ -50,48 +45,167 @@ public:
     static const uint16_t MAX_BRIGHTNESS = 0xffff;
     typedef std::function<void(uint16_t brightness)> Callback_t;
 
-    SevenSegmentPixel(uint8_t numDigits, uint8_t numPixels, uint8_t numColons);
-    ~SevenSegmentPixel();
+    static constexpr size_t getNumDigits() {
+        return NUM_DIGITS;
+    }
 
-    pixel_address_t setSegments(uint8_t digit, pixel_address_t offset, PGM_P order);
-    pixel_address_t setColons(uint8_t num, pixel_address_t lowerAddress, pixel_address_t upperAddress);
+    static constexpr size_t getTotalPixels() {
+        return (NUM_DIGITS * NUM_DIGIT_PIXELS * SevenSegmentPixel::SegmentEnum_t::NUM) + (NUM_COLONS * NUM_COLON_PIXELS);
+    }
 
-    inline void show() __attribute__((always_inline)) {
+    static constexpr size_t getDigitsPixels() {
+        return (NUM_DIGITS * NUM_DIGIT_PIXELS * SevenSegmentPixel::SegmentEnum_t::NUM);
+    }
+
+    static constexpr size_t getColonsPixels() {
+        return (NUM_COLONS * NUM_COLON_PIXELS);
+    }
+
+    static constexpr color_t getSegmentColor(uint32_t color, uint8_t segment, uint8_t number) {
+        return (_digits2SegmentsTable[number & 0xf] & (1 << segment)) ? color : 0;
+    }
+
+    static constexpr pixel_address_t getPixelAddress(uint8_t digit, uint8_t pixel, uint8_t segment) {
+        return (digit * NUM_DIGIT_PIXELS * SegmentEnum_t::NUM) + (segment * NUM_DIGIT_PIXELS) + pixel;
+    }
+
+
+public:
+
+    SevenSegmentPixel() :
 #if IOT_CLOCK_NEOPIXEL
-        _pixels->show();
+        _pixels(getTotalPixels(), IOT_CLOCK_LED_PIN, NEO_GRB|NEO_KHZ800),
+#else
+        _controller( FastLED.addLeds<IOT_CLOCK_FASTLED_CHIPSET, IOT_CLOCK_LED_PIN>(_pixels.data(), getTotalPixels()) ),
+#endif
+        _callback(nullptr), _brightness(MAX_BRIGHTNESS)
+    {
+#if IOT_CLOCK_NEOPIXEL
+        _pixels.begin();
+#endif
+    }
+
+    ~SevenSegmentPixel() {
+        _brightnessTimer.remove();
+    }
+
+    pixel_address_t setSegments(uint8_t digit, pixel_address_t offset, PGM_P order) {
+        if (digit < NUM_DIGITS) {
+            for(size_t i = 0; i < NUM_DIGIT_PIXELS; i++) {
+                auto ptr = order;
+                _pixelAddress[getPixelAddress(digit, i, SegmentEnum_t::A)] = offset + i + (NUM_DIGIT_PIXELS * pgm_read_byte(ptr++));
+                _pixelAddress[getPixelAddress(digit, i, SegmentEnum_t::B)] = offset + i + (NUM_DIGIT_PIXELS * pgm_read_byte(ptr++));
+                _pixelAddress[getPixelAddress(digit, i, SegmentEnum_t::C)] = offset + i + (NUM_DIGIT_PIXELS * pgm_read_byte(ptr++));
+                _pixelAddress[getPixelAddress(digit, i, SegmentEnum_t::D)] = offset + i + (NUM_DIGIT_PIXELS * pgm_read_byte(ptr++));
+                _pixelAddress[getPixelAddress(digit, i, SegmentEnum_t::E)] = offset + i + (NUM_DIGIT_PIXELS * pgm_read_byte(ptr++));
+                _pixelAddress[getPixelAddress(digit, i, SegmentEnum_t::F)] = offset + i + (NUM_DIGIT_PIXELS * pgm_read_byte(ptr++));
+                _pixelAddress[getPixelAddress(digit, i, SegmentEnum_t::G)] = offset + i + (NUM_DIGIT_PIXELS * pgm_read_byte(ptr));
+            }
+        }
+        return offset + (SegmentEnum_t::NUM * NUM_DIGIT_PIXELS);
+    }
+
+    pixel_address_t setColons(uint8_t num, pixel_address_t lowerAddress, pixel_address_t upperAddress) {
+        if (num < NUM_COLONS) {
+            _colonPixelAddress[num++] = lowerAddress;
+            _colonPixelAddress[num++] = upperAddress;
+        }
+        return num;
+    }
+
+
+    inline void show() {
+#if IOT_CLOCK_NEOPIXEL
+        _pixels.show();
 #else
         FastLED.show();
 #endif
     }
 
-    void clear();
-    void setColor(color_t color);
-    void setColor(pixel_address_t num, color_t color);
+    inline void clear() {
+        setColor(0);
+    }
 
-    void setDigit(uint8_t digit, uint8_t number, color_t color);
+    void setColor(color_t color) {
+        for(pixel_address_t i = 0; i < getTotalPixels(); i++) {
+            setPixelColor(i, color);
+        }
+        show();
+    }
+
+    void setColor(pixel_address_t num, color_t color) {
+        setPixelColor(num, color);
+        show();
+    }
+
+    void setDigit(uint8_t digit, uint8_t number, color_t color) {
+        for(uint8_t j = SegmentEnum_t::A; j < SegmentEnum_t::NUM; j++) {
+            color_t segmentColor = getSegmentColor(color, j, number);
+            for(size_t i = 0; i < NUM_DIGIT_PIXELS; i++) {
+                pixel_address_t addr = _pixelAddress[getPixelAddress(digit, i, j)];
+                setPixelColor(addr, _getColor(addr, segmentColor));
+            }
+        }
+    }
 
     void clearDigit(uint8_t digit) {
         setDigit(digit, 0xff, 0);
     }
 
-    void setColon(uint8_t num, ColonEnum_t type, color_t color);
+    void setColon(uint8_t num, ColonEnum_t type, color_t color) {
+        pixel_address_t addr;
+        if (type & ColonEnum_t::LOWER) {
+            addr = _colonPixelAddress[num];
+            for(uint8_t i = 0; i < NUM_COLON_PIXELS; i++) {
+                setPixelColor(addr, _getColor(addr, color));
+                addr++;
+            }
+        }
+        if (type & ColonEnum_t::UPPER) {
+            addr = _colonPixelAddress[num + 1];
+            for(uint8_t i = 0; i < NUM_COLON_PIXELS; i++) {
+                setPixelColor(addr, _getColor(addr, color));
+                addr++;
+            }
+        }
+    }
 
     void clearColon(uint8_t num) {
         setColon(num, BOTH, 0);
     }
 
-    void rotate(uint8_t digit, uint8_t position, color_t color, char *order, size_t orderSize);
+    void rotate(uint8_t digit, uint8_t position, color_t color, pixel_address_t *order, size_t orderSize) {
+        clearDigit(digit);
+        auto addr = order ? order[digit * orderSize + position] : _pixelAddress[getPixelAddress(digit, position % IOT_CLOCK_NUM_PIXELS, position / IOT_CLOCK_NUM_PIXELS)];
+        setPixelColor(addr, _getColor(addr, color));
+    }
+
     void setSegment(uint8_t digit, SegmentEnum_t segment, color_t color) {
         setSegment(digit, (int)segment, color);
     }
-    void setSegment(uint8_t digit, int segment, color_t color);
 
-    uint32_t getPixelColor(uint16_t n) const {
-        return _getPixels().getPixelColor(n);
+    void setSegment(uint8_t digit, int segment, color_t color) {
+        segment = ((uint8_t)segment) % SegmentEnum_t::NUM;
+        for(uint8_t i = 0; i < NUM_DIGIT_PIXELS; i++) {
+            auto addr = getPixelAddress(digit, i, segment);
+            setPixelColor(addr, _getColor(addr, color));
+        }
     }
 
-    void setPixelColor(uint16_t n, uint32_t c) {
-        return _getPixels().setPixelColor(n, c);
+    inline color_t getPixelColor(uint16_t n) const {
+#if IOT_CLOCK_NEOPIXEL
+        return _pixels.getPixelColor(n);
+#else
+        return _pixels[n];
+#endif
+    }
+
+    inline void setPixelColor(uint16_t n, uint32_t c) {
+#if IOT_CLOCK_NEOPIXEL
+        _pixels.setPixelColor(n, c);
+#else
+        _pixels[n] = c;
+#endif
     }
 
     /**
@@ -106,27 +220,80 @@ public:
     void print(const String &text, color_t color) {
         print(text.c_str(), color);
     }
-    void print(const char *text, color_t color);
 
-    uint8_t numDigits() const {
-        return _numDigits;
-    }
-    uint8_t numColons() const {
-        return _numColons;
-    }
-    uint8_t numPixels() const {
-        return _numPixels;
+    void print(const char *text, color_t color) {
+        if (!text || !*text){
+            clear();
+        }
+        uint8_t digit = 0;
+        uint8_t colon = 0;
+        while(*text) {
+            if (isdigit(*text) || *text == '#') {
+                if (digit >= NUM_DIGITS) {
+                    break;
+                }
+                if (*text == '#') {
+                    clearDigit(digit);
+                }
+                else {
+                    setDigit(digit, *text - '0', color);
+                }
+                digit++;
+            }
+            else if (*text == ' ' || *text == '.' || *text == ':') {
+                if (colon < NUM_COLONS) {
+                    if (*text == ' ') {
+                        clearColon(colon);
+                    }
+                    else if (*text == ':') {
+                        setColon(colon, BOTH, color);
+                    }
+                    else if (*text == '.') {
+                        setColon(colon, LOWER, color);
+                        setColon(colon, UPPER, 0);
+                    }
+                    colon++;
+                }
+
+            }
+            text++;
+        }
     }
 
-    uint16_t getTotalPixelCount() const {
-#if IOT_CLOCK_NEOPIXEL
-        return _pixels->numPixels();
-#else
-        return FastLED.size();
-#endif
-    }
+    void setBrightness(uint16_t brightness, float fadeTime, Callback_t callback = nullptr) {
+        _targetBrightness = brightness;
+        if (!_brightnessTimer.active()) {
+            uint16_t steps = (uint16_t)(MAX_BRIGHTNESS / (fadeTime * (1000 / 25.0)));      // 0-100%, 3 seconds fade time
+            if (!steps) {
+                steps = 1;
+            }
+            _debug_printf_P(PSTR("to=%u steps=%u time=%f\n"), _brightness, steps, fadeTime);
+            _brightnessTimer.add(25, true, [this, steps, callback](EventScheduler::TimerPtr timer) {
+                int32_t tmp = _brightness;
+                if (tmp < _targetBrightness) {
+                    tmp += steps;
+                    if (tmp > _targetBrightness) {
+                        tmp = _targetBrightness;
+                    }
+                    _brightness = tmp;
+                }
+                else if (tmp > _targetBrightness) {
+                    tmp -= steps;
+                    if (tmp < _targetBrightness) {
+                        tmp = _targetBrightness;
+                    }
+                    _brightness = tmp;
+                }
+                else {
+                    timer->detach();
+                    if (callback) {
+                        callback(_brightness);
+                    }
+                }
 
-    void setBrightness(uint16_t brightness, float fadeTime, Callback_t callback = nullptr);
+            }, EventScheduler::PRIO_HIGH);
+        }
+    }
 
     char getSegmentChar(int segment) {
         return 'a' + (segment % SegmentEnum_t::NUM);
@@ -136,7 +303,23 @@ public:
     }
 
     // dump pixel addresses
-    void dump(Print &output);
+    void dump(Print &output) {
+        for(size_t d = 0; d < NUM_DIGITS; d++) {
+            for(uint8_t s = 0; s < SegmentEnum_t::NUM; s++) {
+                output.printf_P(PSTR("segment: digit=%u, segment=%c, addresses="), d, getSegmentChar(s));
+                for(size_t p = 0; p < NUM_DIGIT_PIXELS; p++) {
+                    output.print(_pixelAddress[getPixelAddress(d, p, s)]);
+                    if (p != NUM_DIGIT_PIXELS - 1) {
+                        output.print(F(", "));
+                    }
+                }
+                output.println();
+            }
+        }
+        for(uint8_t c = 0; c < NUM_COLONS; c++) {
+            output.printf_P(PSTR("colon %u: lower address=%u upper=%u\n"), c, _colonPixelAddress[c * 2], _colonPixelAddress[c * 2 + 1]);
+        }
+    }
 
 
 public:
@@ -147,26 +330,38 @@ public:
     }
 
 private:
-    color_t _getColor(pixel_address_t addr, color_t color);
-    color_t _adjustBrightness(color_t color) const;
+    color_t _getColor(pixel_address_t addr, color_t color) {
+        if (!color) {
+            return 0;
+        }
+        if (_callback) {
+            // if (_pixelOrder) {
+            //     return _adjustBrightness(_callback(_pixelOrder[addr], color));
+            // }
+            return _adjustBrightness(_callback(addr, color));
+        }
+        return _adjustBrightness(color);
+    }
+
+    color_t _adjustBrightness(color_t color) const {
+        return (
+            ((color & 0xff) * _brightness / MAX_BRIGHTNESS) |
+            ((((color >> 8) & 0xff) * _brightness / MAX_BRIGHTNESS) << 8) |
+            ((((color >> 16) & 0xff) * _brightness / MAX_BRIGHTNESS) << 16)
+        );
+    }
 
 private:
 #if IOT_CLOCK_NEOPIXEL
-    Adafruit_NeoPixel &_getPixels() const {
-        return *_pixels;
-    }
-
-    Adafruit_NeoPixel *_pixels;
+    Adafruit_NeoPixel _pixels;
 #else
-    CRGB *_pixels;
-    CLEDController *_controller;
+    std::array<CRGB, getTotalPixels()> _pixels;
+    CLEDController &_controller;
 #endif
-    uint8_t _numDigits;
-    uint8_t _numPixels;
-    uint8_t _numColons;
-    pixel_address_t *_pixelAddress;
-    pixel_address_t *_dotPixelAddress;
-    pixel_address_t *_pixelOrder;
+    std::array<pixel_address_t, getDigitsPixels()> _pixelAddress;
+    std::array<pixel_address_t, getColonsPixels()> _colonPixelAddress;
+    // std::array<pixel_address_t, getTotalPixels()> _pixelOrder;
+
     AnimationCallback_t _callback;
     uint16_t _brightness;
     uint16_t _targetBrightness;

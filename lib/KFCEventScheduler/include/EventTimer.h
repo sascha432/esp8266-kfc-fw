@@ -13,8 +13,8 @@ public:
         DELAY_NO_CHANGE =   -1,
     } ChangeOptionsDelayEnum_t;
 
-    static const int32_t MIN_DELAY = 5;
-    static const int32_t MAX_DELAY = 0x68D7A3; // 6870947ms / 6870.947 seconds
+    static const int32_t MinDelay = 5;
+    static const int32_t MaxDelay = 0x68D7A3; // 6870947ms / 6870.947 seconds
 
     EventTimer(EventScheduler::Callback loopCallback, int64_t delay, EventScheduler::RepeatType repeat, EventScheduler::Priority_t priority);
     ~EventTimer();

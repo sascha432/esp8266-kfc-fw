@@ -35,24 +35,14 @@ ClockPlugin::ClockPlugin() :
 #endif
     _color(0, 0, 80), _updateTimer(0), _time(0), _updateRate(1000), _isSyncing(1), _timeFormat24h(true)
 {
-    if (!pgm_read_byte(pixel_order)) {
-        _pixelOrder = nullptr;
-    }
-    else {
-#if DEBUG
-        if (sizeof(pixel_order) * IOT_CLOCK_NUM_DIGITS < SevenSegmentPixel_DIGITS_NUM_PIXELS) {
-            __debugbreak_and_panic_printf_P(PSTR("sizeof(pixel_order)*IOT_CLOCK_NUM_DIGITS=%u < SevenSegmentPixel_DIGITS_NUM_PIXELS=%u\n"), sizeof(pixel_order) * IOT_CLOCK_NUM_DIGITS, SevenSegmentPixel_DIGITS_NUM_PIXELS );
-        }
-#endif
-        _pixelOrder = (char *)malloc(sizeof(pixel_order) * IOT_CLOCK_NUM_DIGITS);
-        auto ptr = _pixelOrder;
-        for(int i = 0; i < IOT_CLOCK_NUM_DIGITS; i++) {
-            memcpy_P(ptr, pixel_order, sizeof(pixel_order));
-            auto endPtr = ptr + sizeof(pixel_order);
-            auto ofs = i * sizeof(pixel_order);
-            while(ptr < endPtr) {
-                *ptr++ += ofs;
-            }
+
+    auto ptr = _pixelOrder.data();
+    for(int i = 0; i < IOT_CLOCK_NUM_DIGITS; i++) {
+        memcpy_P(ptr, pixel_order, sizeof(pixel_order));
+        auto endPtr = ptr + sizeof(pixel_order);
+        auto ofs = i * sizeof(pixel_order);
+        while(ptr < endPtr) {
+            *ptr++ += ofs;
         }
     }
 
@@ -169,8 +159,6 @@ void ClockPlugin::setup(PluginSetupMode_t mode)
 {
     _debug_println();
 
-    _display = new SevenSegmentPixel(IOT_CLOCK_NUM_DIGITS, IOT_CLOCK_NUM_PIXELS, IOT_CLOCK_NUM_COLONS);
-
     auto cfg = updateConfig();
     _setSevenSegmentDisplay(cfg);
 
@@ -203,7 +191,7 @@ void ClockPlugin::reconfigure(PGM_P source)
 
 void ClockPlugin::getStatus(Print &output)
 {
-    output.printf_P(PSTR("Clock Plugin" HTML_S(br) "Total pixels %u, digit pixels %u"), SevenSegmentPixel_TOTAL_NUM_PIXELS, SevenSegmentPixel_DIGITS_NUM_PIXELS);
+    output.printf_P(PSTR("Clock Plugin" HTML_S(br) "Total pixels %u, digit pixels %u"), SevenSegmentDisplay::getTotalPixels(), SevenSegmentDisplay::getDigitsPixels());
 }
 
 void ClockPlugin::createWebUI(WebUI &webUI)
@@ -213,7 +201,7 @@ void ClockPlugin::createWebUI(WebUI &webUI)
     row->addGroup(F("Clock"), false);
 
     row = &webUI.addRow();
-    row->addSlider(F("brightness"), F("brightness"), 0, SevenSegmentPixel::MAX_BRIGHTNESS, true);
+    row->addSlider(F("brightness"), F("brightness"), 0, SevenSegmentDisplay::MAX_BRIGHTNESS, true);
 
     row = &webUI.addRow();
     static const uint16_t height = 280;
@@ -224,7 +212,7 @@ void ClockPlugin::createWebUI(WebUI &webUI)
 
 void ClockPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
 {
-    // auto &clock = config._H_W_GET(Config().clock);
+    auto clock = config._H_GET(Config().clock);
 
     form.setFormUI(F("Clock Configuration"));
 
@@ -301,9 +289,9 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             uint8_t digit = args.toInt(0);
             uint8_t segment = args.toInt(1);
             auto &serial = args.getStream();
-            serial.printf_P(PSTR("+CLOCKTS: digit=%u, segment=%c, color=#%06x\n"), digit, _display->getSegmentChar(segment), _color.get());
-            _display->setSegment(digit, segment, _color);
-            _display->show();
+            serial.printf_P(PSTR("+CLOCKTS: digit=%u, segment=%c, color=#%06x\n"), digit, _display.getSegmentChar(segment), _color.get());
+            _display.setSegment(digit, segment, _color);
+            _display.show();
         }
         else {
             enable(true);
@@ -313,16 +301,16 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKP))) {
         if (args.size() < 1) {
             args.print(F("clear"));
-            _display->clear();
-            _display->show();
+            _display.clear();
+            _display.show();
             enable(true);
         }
         else {
             enable(false);
             auto text = args.get(0);
             args.printf_P(PSTR("'%s'"), text);
-            _display->print(text, _color);
-            _display->show();
+            _display.print(text, _color);
+            _display.show();
         }
         return true;
     }
@@ -358,7 +346,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             }
             else if (value == 1002) {
                 enable(false);
-                _display->setColor(0xffffff);
+                _display.setColor(0xffffff);
             }
             else {
                 if (value == AnimationEnum_t::FADE) {
@@ -385,9 +373,9 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             _color = Color(args.toNumber(0, 0), args.toNumber(1, 0), args.toNumber(2, 0x80));
         }
         args.printf_P(PSTR("color=#%06x"), _color.get());
-        for(int i = 0; i  < SevenSegmentPixel_TOTAL_NUM_PIXELS; i++) {
-            if (_display->getPixelColor(i)) {
-                _display->setPixelColor(i, _color);
+        for(size_t i = 0; i  < SevenSegmentDisplay::getTotalPixels(); i++) {
+            if (_display.getPixelColor(i)) {
+                _display.setPixelColor(i, _color);
             }
         }
 
@@ -405,17 +393,17 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
 #else
                 args.printf_P(PSTR("pixel=0-%u, color=#%06x"), FastLED.size(), color.get());
 #endif
-                _display->setColor(color);
+                _display.setColor(color);
             }
             else {
                 args.printf_P(PSTR("pixel=%u, color=#%06x"), num, color.get());
-                _display->setColor(num, color);
+                _display.setColor(num, color);
             }
         }
         return true;
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKD))) {
-        _display->dump(args.getStream());
+        _display.dump(args.getStream());
         return true;
     }
     return false;
@@ -426,7 +414,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
 
 void ClockPlugin::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector)
 {
-    _debug_printf_P(PSTR("ClockPlugin::createAutoDiscovery(): format=%u\n"), format);
+    _debug_printf_P(PSTR("format=%u\n"), format);
     String topic = MQTTClient::formatTopic(0, F("/"));
 
     auto discovery = new MQTTAutoDiscovery();
@@ -437,7 +425,7 @@ void ClockPlugin::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAu
     discovery->addPayloadOff(FSPGM(0));
     discovery->addBrightnessStateTopic(topic + F("brightness/state"));
     discovery->addBrightnessCommandTopic(topic + F("brightness/set"));
-    discovery->addBrightnessScale(SevenSegmentPixel::MAX_BRIGHTNESS);
+    discovery->addBrightnessScale(SevenSegmentDisplay::MAX_BRIGHTNESS);
     discovery->addRGBStateTopic(topic + F("color/state"));
     discovery->addRGBCommandTopic(topic + F("color/set"));
     discovery->finalize();
@@ -448,7 +436,7 @@ void ClockPlugin::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAu
 
 void ClockPlugin::onConnect(MQTTClient *client)
 {
-    _debug_printf_P(PSTR("ClockPlugin::onConnect()\n"));
+    _debug_println();
     String topic = MQTTClient::formatTopic(0, F("/"));
 
     client->subscribe(this, topic + F("set"), _qos);
@@ -460,7 +448,7 @@ void ClockPlugin::onConnect(MQTTClient *client)
 
 void ClockPlugin::onMessage(MQTTClient *client, char *topic, char *payload, size_t len)
 {
-    _debug_printf_P(PSTR("ClockPlugin::onMessage(): topic=%s, payload=%*.*s\n"), topic, len, len, payload);
+    _debug_printf_P(PSTR("topic=%s payload=%*.*s\n"), topic, len, len, payload);
 
     if (strstr(topic, "brightness/set")) {
         _brightness = atoi(payload);
@@ -501,7 +489,7 @@ void ClockPlugin::_setColor()
 
 void ClockPlugin::publishState(MQTTClient *client)
 {
-    _debug_printf_P(PSTR("ClockPlugin::publishState(%p)\n"), client);
+    _debug_printf_P(PSTR("client=%p\n"), client);
     if (!client) {
         client = MQTTClient::getClient();
     }
@@ -545,7 +533,7 @@ void ClockPlugin::ntpCallback(time_t now)
 
 void ClockPlugin::enable(bool enable)
 {
-    _debug_printf_P(PSTR("ClockPlugin::enable(%u)\n"), enable);
+    _debug_printf_P(PSTR("enable=%u\n"), enable);
     setSyncing(false);
     if (enable) {
         LoopFunctions::add(loop);
@@ -557,7 +545,7 @@ void ClockPlugin::enable(bool enable)
 
 void ClockPlugin::setSyncing(bool sync)
 {
-    _debug_printf_P(PSTR("ClockPlugin::setSyncing(%u)\n"), sync);
+    _debug_printf_P(PSTR("syncing=%u\n"), sync);
     _isSyncing = sync ? 1 : 0;
     _time = 0;
     _off();
@@ -565,15 +553,15 @@ void ClockPlugin::setSyncing(bool sync)
 
 void ClockPlugin::setBlinkColon(BlinkColonEnum_t value)
 {
-    _debug_printf_P(PSTR("ClockPlugin::setBlinkColon(%u)\n"), value);
+    _debug_printf_P(PSTR("blinkcolon=%u\n"), value);
     _blinkColon = value;
 }
 
 void ClockPlugin::setAnimation(AnimationEnum_t animation)
 {
-    _debug_printf_P(PSTR("ClockPlugin::setAnimation(%d)\n"), animation);
+    _debug_printf_P(PSTR("animation=%d\n"), animation);
     _animationData.callback = nullptr;
-    _display->setCallback(nullptr);
+    _display.setCallback(nullptr);
     switch(animation) {
         case BLINK_COLON:
             setBlinkColon(NORMAL);
@@ -589,9 +577,9 @@ void ClockPlugin::setAnimation(AnimationEnum_t animation)
             break;
         case RAINBOW:
             _animationData.rainbow.movementSpeed = 30;
-            _display->setCallback([this](SevenSegmentPixel::pixel_address_t addr, SevenSegmentPixel::color_t color) {
+            _display.setCallback([this](SevenSegmentDisplay::pixel_address_t addr, SevenSegmentDisplay::color_t color) {
                 float factor1, factor2;
-                uint16_t ind = addr * 4.285714285714286 * IOT_CLOCK_NUM_PIXELS;
+                uint16_t ind = addr * 4.285714285714286 * SevenSegmentDisplay::getTotalPixels();
                 ind += (millis() / _animationData.rainbow.movementSpeed);
                 uint8_t idx = ((ind % 120) / 40);
                 factor1 = 1.0 - ((float)(ind % 120 - (idx * 40)) / 40);
@@ -632,7 +620,7 @@ void ClockPlugin::setAnimation(AnimationEnum_t animation)
             break;
         case FLASHING:
             _animationData.flashing.color = _color;
-            _display->setCallback([this](SevenSegmentPixel::pixel_address_t addr, SevenSegmentPixel::color_t color) {
+            _display.setCallback([this](SevenSegmentDisplay::pixel_address_t addr, SevenSegmentDisplay::color_t color) {
                 return (millis() / _updateRate) % 2 == 0 ? _animationData.flashing.color : 0;
             });
             _updateRate = 50;
@@ -654,6 +642,7 @@ Clock ClockPlugin::updateConfig()
     _timeFormat24h = cfg.time_format_24h;
     _brightness = cfg.brightness << 8;
     setAnimation((AnimationEnum_t)cfg.animation);
+    setBrightness(_brightness);
 
     return cfg;
 }
@@ -719,7 +708,7 @@ void ClockPlugin::_onButtonReleased(uint16_t duration)
 
 void ClockPlugin::_loop()
 {
-    return ;
+    return;
 #if IOT_CLOCK_BUTTON_PIN
     _button.update();
 #endif
@@ -728,23 +717,23 @@ void ClockPlugin::_loop()
             _updateTimer = millis();
 
             // show syncing animation until the time is valid
-            if (_pixelOrder) {
+            // if (_pixelOrder) {
                 if (++_isSyncing > sizeof(pixel_order)) {
                     _isSyncing = 1;
                 }
-                for(uint8_t i = 0; i < _display->numDigits(); i++) {
-                    _display->rotate(i, _isSyncing - 1, _color, _pixelOrder, sizeof(pixel_order));
+                for(uint8_t i = 0; i < SevenSegmentDisplay::getNumDigits(); i++) {
+                    _display.rotate(i, _isSyncing - 1, _color, _pixelOrder.data(), _pixelOrder.size());
                 }
-            }
-            else {
-                if (++_isSyncing > SevenSegmentPixel_DIGITS_NUM_PIXELS) {
-                    _isSyncing = 1;
-                }
-                for(uint8_t i = 0; i < _display->numDigits(); i++) {
-                    _display->rotate(i, _isSyncing - 1, _color, nullptr, 0);
-                }
-            }
-            _display->show();
+            // }
+            // else {
+            //     if (++_isSyncing > SevenSegmentPixel_DIGITS_NUM_PIXELS) {
+            //         _isSyncing = 1;
+            //     }
+            //     for(uint8_t i = 0; i < _display->numDigits(); i++) {
+            //         _display->rotate(i, _isSyncing - 1, _color, nullptr, 0);
+            //     }
+            // }
+            _display.show();
         }
         return;
     }
@@ -774,29 +763,29 @@ Serial.printf("%04u %u\n",time,timecnt);
 }
 #endif
 
-        _display->setDigit(0, hour / 10, color);
-        _display->setDigit(1, hour % 10, color);
-        _display->setDigit(2, tm->tm_min / 10, color);
-        _display->setDigit(3, tm->tm_min % 10, color);
+        _display.setDigit(0, hour / 10, color);
+        _display.setDigit(1, hour % 10, color);
+        _display.setDigit(2, tm->tm_min / 10, color);
+        _display.setDigit(3, tm->tm_min % 10, color);
 #if IOT_CLOCK_NUM_DIGITS == 6
-        _display->setDigit(4, tm->tm_sec / 10, color);
-        _display->setDigit(5, tm->tm_sec % 10, color);
+        _display.setDigit(4, tm->tm_sec / 10, color);
+        _display.setDigit(5, tm->tm_sec % 10, color);
 #endif
 
         if (_blinkColon != SOLID && (millis() / (_blinkColon == FAST ? 500 : 1000)) % 2 == 0) {
-            _display->clearColon(0);
+            _display.clearColon(0);
 #if IOT_CLOCK_NUM_COLONS == 2
-            _display->clearColon(1);
+            _display.clearColon(1);
 #endif
         }
         else {
-            _display->setColon(0, SevenSegmentPixel::BOTH, color);
+            _display.setColon(0, SevenSegmentDisplay::BOTH, color);
 #if IOT_CLOCK_NUM_COLONS == 2
-            _display->setColon(1, SevenSegmentPixel::BOTH, color);
+            _display.setColon(1, SevenSegmentDisplay::BOTH, color);
 #endif
         }
 
-        _display->show();
+        _display.show();
     }
 }
 
@@ -805,7 +794,7 @@ static const char pgm_segment_order[] PROGMEM = IOT_CLOCK_SEGMENT_ORDER;
 
 void ClockPlugin::_setSevenSegmentDisplay(Clock &cfg)
 {
-    SevenSegmentPixel::pixel_address_t addr = 0;
+    SevenSegmentDisplay::pixel_address_t addr = 0;
     auto ptr = pgm_digit_order;
     auto endPtr = ptr + sizeof(pgm_digit_order);
 
@@ -815,16 +804,16 @@ void ClockPlugin::_setSevenSegmentDisplay(Clock &cfg)
             n -= 30;
             _debug_printf_P(PSTR("address=%u colon=%u\n"), addr, n);
 #if IOT_CLOCK_NUM_PX_PER_COLON == 1
-            _display->setColons(n, addr + IOT_CLOCK_NUM_PX_PER_DOT, addr);
+            _display.setColons(n, addr + IOT_CLOCK_NUM_PX_PER_DOT, addr);
 #else
-            _display->setColons(n, addr, addr + IOT_CLOCK_NUM_PX_PER_DOT);
+            _display.setColons(n, addr, addr + IOT_CLOCK_NUM_PX_PER_DOT);
 
 #endif
             addr += IOT_CLOCK_NUM_PX_PER_DOT * 2;
         }
         else {
             _debug_printf_P(PSTR("address=%u digit=%u\n"), addr, n);
-            addr = _display->setSegments(n, addr, pgm_segment_order);
+            addr = _display.setSegments(n, addr, pgm_segment_order);
         }
     }
 }
@@ -833,7 +822,7 @@ void ClockPlugin::setBrightness(uint16_t brightness)
 {
     auto oldUpdateRate = _updateRate;
     _updateRate = 25;
-    _display->setBrightness(_brightness, 2.5, [this, oldUpdateRate](uint16_t) {
+    _display.setBrightness(_brightness, 2.5, [this, oldUpdateRate](uint16_t) {
         _updateRate = oldUpdateRate;
     });
 }

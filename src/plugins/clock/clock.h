@@ -28,6 +28,11 @@
 #define IOT_CLOCK_NUM_DIGITS            4
 #endif
 
+// pixels per segment
+#ifndef IOT_CLOCK_NUM_PIXELS
+#define IOT_CLOCK_NUM_PIXELS            2
+#endif
+
 // number of colons
 #ifndef IOT_CLOCK_NUM_COLONS
 #if IOT_CLOCK_NUM_DIGITS == 4
@@ -37,10 +42,13 @@
 #endif
 #endif
 
-// pixels per segment
-#ifndef IOT_CLOCK_NUM_PIXELS
-#define IOT_CLOCK_NUM_PIXELS            2
+// pixels per colon
+#ifndef IOT_CLOCK_NUM_COLON_PIXELS
+#define IOT_CLOCK_NUM_COLON_PIXELS      4
 #endif
+
+
+
 
 #ifndef IOT_CLOCK_NUM_PX_PER_DOT
 #define IOT_CLOCK_NUM_PX_PER_DOT        2
@@ -239,7 +247,7 @@ private:
     void _loop();
     void _setSevenSegmentDisplay(Clock &cfg);
     void _off() {
-        _display->clear();
+        _display.clear();
     }
     void setBrightness(uint16_t brightness);
 
@@ -266,8 +274,11 @@ private:
     PushButton _button;
     uint8_t _buttonCounter;
 #endif
-    SevenSegmentPixel *_display;
-    char *_pixelOrder;
+    using SevenSegmentDisplay = SevenSegmentPixel<uint8_t, IOT_CLOCK_NUM_DIGITS, IOT_CLOCK_NUM_PIXELS, IOT_CLOCK_NUM_COLONS, IOT_CLOCK_NUM_COLON_PIXELS>;
+
+    SevenSegmentDisplay _display;
+    std::array<SevenSegmentDisplay::pixel_address_t, SevenSegmentDisplay::getTotalPixels()> _pixelOrder;
+
     Color _color;
     BlinkColonEnum_t _blinkColon;
     uint32_t _updateTimer;

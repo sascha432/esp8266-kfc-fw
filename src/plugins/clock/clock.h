@@ -42,16 +42,9 @@
 #endif
 #endif
 
-// pixels per colon
+// pixels per dot
 #ifndef IOT_CLOCK_NUM_COLON_PIXELS
-#define IOT_CLOCK_NUM_COLON_PIXELS      4
-#endif
-
-
-
-
-#ifndef IOT_CLOCK_NUM_PX_PER_DOT
-#define IOT_CLOCK_NUM_PX_PER_DOT        2
+#define IOT_CLOCK_NUM_COLON_PIXELS      2
 #endif
 
 // order of the segments (a-g)

@@ -708,7 +708,7 @@ void ClockPlugin::_onButtonReleased(uint16_t duration)
 
 void ClockPlugin::_loop()
 {
-    return;
+    // return;
 #if IOT_CLOCK_BUTTON_PIN
     _button.update();
 #endif
@@ -804,12 +804,12 @@ void ClockPlugin::_setSevenSegmentDisplay(Clock &cfg)
             n -= 30;
             _debug_printf_P(PSTR("address=%u colon=%u\n"), addr, n);
 #if IOT_CLOCK_NUM_PX_PER_COLON == 1
-            _display.setColons(n, addr + IOT_CLOCK_NUM_PX_PER_DOT, addr);
+            _display.setColons(n, addr + IOT_CLOCK_NUM_COLON_PIXELS, addr);
 #else
-            _display.setColons(n, addr, addr + IOT_CLOCK_NUM_PX_PER_DOT);
+            _display.setColons(n, addr, addr + IOT_CLOCK_NUM_COLON_PIXELS);
 
 #endif
-            addr += IOT_CLOCK_NUM_PX_PER_DOT * 2;
+            addr += IOT_CLOCK_NUM_COLON_PIXELS * 2;
         }
         else {
             _debug_printf_P(PSTR("address=%u digit=%u\n"), addr, n);

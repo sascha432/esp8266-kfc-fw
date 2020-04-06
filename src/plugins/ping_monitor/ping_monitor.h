@@ -10,7 +10,7 @@
 
 #include <Arduino_compat.h>
 #include <ESPAsyncWebServer.h>
-#include "AsyncPing.h"
+#include <AsyncPing.h>
 #include "web_socket.h"
 
 using AsyncPingPtr = std::shared_ptr<AsyncPing>;

@@ -6,8 +6,8 @@
 #include <misc.h>
 #include "fs_mapping.h"
 
-// #include "debug_helper_disable.h"
-#include "debug_helper_enable.h"
+#include "debug_helper_disable.h"
+// #include "debug_helper_enable.h"
 
 #if ESP8266
 
@@ -160,7 +160,7 @@ bool ListDir::rewind()
 #elif ESP32
     _dir.rewindDirectory();
     return true;
-#endif    
+#endif
 }
 
 bool ListDir::isFile() const
@@ -180,7 +180,7 @@ bool ListDir::isDirectory() const
     return _dir.isDirectory();
 #elif ESP32
     return false;
-#endif    
+#endif
 
 }
 

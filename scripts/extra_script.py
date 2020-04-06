@@ -12,13 +12,13 @@ import os.path
 config = {
     "kfcfw_build_dir": "\\\\192.168.0.3\\kfcfw",
     "git_bin": "C:/Users/sascha/AppData/Local/GitHubDesktop/app-1.5.1/resources/app/git/cmd/git",
-    "python_bin": "python",
+    "python_bin": env['PYTHONEXE'],
     "php_bin": "php"
 }
 
 def build_webui(source, target, env):
     print("build_webui")
-    env.Execute(config["php_bin"] + " lib/KFCWebBuilder/bin/include/cli_tool.php ./KFCWebBuilder.json -b spiffs -e env:${PIOENV} --clean-exit-code")
+    env.Execute(config["php_bin"] + " lib/KFCWebBuilder/bin/include/cli_tool.php ./KFCWebBuilder.json -b spiffs -e env:${PIOENV}")
 
 def upload_fs(source, target, env):
     build_webui(source, target, env)
@@ -50,16 +50,15 @@ def get_last_build_id():
         return output.strip()
     return None
 
+def update_build_id(source, target, env):
+    env.Execute(config["python_bin"] + " \"${PROJECT_DIR}/scripts/build_number.py\" -v \"${PROJECT_DIR}/include/build_id.h\" --name __BUILD_ID");
+
 def git_get_head():
     p = subprocess.Popen([config["git_bin"], "rev-parse", "HEAD"], stdout=subprocess.PIPE, text=True)
     output, errors = p.communicate()
     if p.wait()==0:
         return output.strip()
     return "NA"
-
-
-def update_build_id(source, target, env):
-    env.Execute(config["python_bin"] + " \"${PROJECT_DIR}/scripts/build_number.py\" -v \"${PROJECT_DIR}/include/build_id.h\" --name __BUILD_ID");
 
 def copy_file(source_path):
     id = get_last_build_id()
@@ -82,17 +81,6 @@ def copy_firmware(source, target, env):
 def copy_spiffs(source, target, env):
     copy_file(str(target[0]))
 
-# def pre_upload(source, target, env):
-#     build_webui(source, target, env)
-
-# def post_upload(source, target, env):
-    # record_size(source, target, env)
-
-# env.AddPreAction("uploadfs", pre_upload)
-# env.AddPostAction("upload", post_upload)
-
-#env.AddPostAction("$BUILD_DIR/${PROGNAME}.elf", record_size)
-
 env.AddPreAction("$BUILD_DIR/${PROGNAME}.elf", update_build_id)
 # env.AddPostAction("$BUILD_DIR/${PROGNAME}.elf", copy_firmware)
 # env.AddPostAction("$BUILD_DIR/${PROGNAME}.bin", copy_firmware)
@@ -102,6 +90,6 @@ env.AddPreAction("uploadfs", upload_fs)
 
 env.AlwaysBuild(env.Alias("webui", None, build_webui))
 env.AlwaysBuild(env.Alias("buildfs", None, build_webui))
-env.AlwaysBuild(env.Alias("rebuild_webui", None, rebuild_webui))
 env.AlwaysBuild(env.Alias("rebuildfs", None, rebuild_webui))
+
 env.AlwaysBuild(env.Alias("newbuild", None, new_build))

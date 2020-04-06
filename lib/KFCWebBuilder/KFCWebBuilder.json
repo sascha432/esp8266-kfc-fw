@@ -7,9 +7,9 @@
         "#else": "Unknown"
     },
     "configuration": {
-        // "run_command_on_success": "${path.current_config}/../../lib/KFCVirtualFileSystem/vfs_builder/run.bat ; ${commands.pio_upload_spiffs}",
-        //  "run_command_on_success": "${commands.pio_upload_spiffs}",
-        "run_command_on_success": "${commands.create_spiffs}",
+        "run_command_on_success": "",
+        // "run_command_on_success": "${commands.pio_upload_spiffs}",
+        // "run_command_on_success": "${commands.create_spiffs}",
         "scanner_database_dir": "${path.sys_temp_dir}",
         "package_hash_file": "${path.shared_temp_dir}/kfcfw-package.hash"
     },
@@ -21,7 +21,10 @@
         "minify_css": "${bin.java} -jar ${bin.yui_compressor} --type css ${file.tmp_in} > ${file.tmp_out}",
         "compress_gzip": "${bin.gzip} -9 -k -n -c ${file.tmp_in} > ${file.tmp_out}",
         "create_spiffs": "${bin.mkspiffs} -c data -p 256 -b 8192 -s 1024000 .pio/build/${pio.env}/spiffs.bin",
-        "pio_upload_spiffs": "${bin.platformio_activate} && ${bin.platformio} run --target uploadfs -v"
+        "pio_upload_spiffs": {
+            "#if OS_WIN": "${bin.platformio_activate} && ${bin.platformio} run --target uploadfs -v",
+            "#else": ". ${bin.platformio_activate} && ${bin.platformio} run --target uploadfs -v"
+        }
     },
     "bin": {
         "platformio_activate": {
@@ -37,26 +40,28 @@
             "#else": "java"
         },
         "mkspiffs": {
-            "#if OS_WIN": "~/.platformio/packages/tool-mkspiffs@1.200.0/mkspiffs.exe",
-            "#else": "~/.platformio/packages/tool-mkspiffs/mkspiffs"
+            "#if OS_WIN && ESP8266": "~/.platformio/packages/tool-mkspiffs/mkspiffs_espressif8266_arduino.exe",
+            "#elif OS_WIN && ESP32": "~/.platformio/packages/tool-mkspiffs/mkspiffs_espressif32_arduino.exe",
+            "#elif ESP8266": "~/.platformio/packages/tool-mkspiffs/mkspiffs/mkspiffs_espressif8266_arduino",
+            "#elif ESP32": "~/.platformio/packages/tool-mkspiffs/mkspiffs/mkspiffs_espressif32_arduino"
         },
         "nodejs": {
             "#if OS_WIN": "${env.ProgramFiles}/nodejs/node.exe",
             "#elif OS_OSX": "/usr/local/opt/nodejs",
-            "#else OS_UNIX": "/usr/bin/nodejs"
+            "#else": "/usr/bin/nodejs"
         },
         "php": {
-            "#if OS_WIN": "C:/Users/sascha/Desktop/dev/bin/php7.2/php.exe",
+            "#if OS_WIN": "php.exe",
             "#elif OS_OSX": "/usr/bin/php",
-            "#else OS_UNIX": "/usr/local/bin/php"
+            "#else": "/usr/bin/php"
         },
         "gzip": {
-            "#if OS_WIN": "C:/Program Files/Git/usr/bin/gzip.exe",
-            "#else OS_UNIX": "/bin/gzip"
+            "#if OS_WIN": "gzip.exe",
+            "#else": "/bin/gzip"
         },
         "uglify_js": {
             "#if OS_WIN": "%APPDATA%/npm/node_modules/uglify-js/bin/uglifyjs",
-            "#else": "/usr/local/lib/node_modules/uglify-js/bin/uglifyjs"
+            "#else": "/usr/bin/uglifyjs"
         },
         "closure_compiler": "${path.current_config}/bin/closure-compiler-v20181210.jar",
         "html_compressor": "${path.current_config}/bin/htmlcompressor-1.5.3.jar",

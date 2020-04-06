@@ -112,7 +112,7 @@ private:
     size_t _position;
     size_t _length;
     DataProviderInterface &_provider;
-#if DEBUG
+#if DEBUG_SSI_PROXY_STREAM
     uint32_t _ramUsage;
 #endif
 };

@@ -31,13 +31,13 @@ static void ICACHE_RAM_ATTR _callback(void *arg)
 void OSTimer::startTimer(uint32_t delay, bool repeat)
 {
     _debug_printf_P(PSTR("delay=%u repeat=%u\n"), delay, repeat);
-    if (delay < EventTimer::MIN_DELAY) {
-        __debugbreak_and_panic_printf_P(PSTR("delay %u < %u is not supported\n"), delay, EventTimer::MIN_DELAY);
-        delay = EventTimer::MIN_DELAY;
+    if (delay < EventTimer::MinDelay) {
+        __debugbreak_and_panic_printf_P(PSTR("delay %u < %u is not supported\n"), delay, EventTimer::MinDelay);
+        delay = EventTimer::MinDelay;
     }
-    else if (delay > EventTimer::MAX_DELAY) {
-        __debugbreak_and_panic_printf_P(PSTR("delay %u > %u is not supported\n"), delay, EventTimer::MAX_DELAY);
-        delay = EventTimer::MAX_DELAY;
+    else if (delay > EventTimer::MaxDelay) {
+        __debugbreak_and_panic_printf_P(PSTR("delay %u > %u is not supported\n"), delay, EventTimer::MaxDelay);
+        delay = EventTimer::MaxDelay;
     }
     ets_timer_disarm(&_etsTimer);
     ets_timer_setfn(&_etsTimer, reinterpret_cast<ETSTimerFunc *>(_callback), reinterpret_cast<void *>(this));

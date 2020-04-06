@@ -10,7 +10,7 @@
 
 // basic load statistics
 #ifndef LOAD_STATISTICS
-#define LOAD_STATISTICS             1
+#define LOAD_STATISTICS             0
 #endif
 
 #include <Arduino_compat.h>

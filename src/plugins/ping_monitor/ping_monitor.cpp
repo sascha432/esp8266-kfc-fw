@@ -100,7 +100,7 @@ void WsPingClient::onText(uint8_t *data, size_t len)
             StringVector items;
             explode(buffer.c_str(), ' ', items);
 
-            _debug_printf_P(PSTR("WsPingClient::onText(): data='%s', strlen=%d\n"), buffer.c_str(), buffer.length());
+            _debug_printf_P(PSTR("data=%s strlen=%d\n"), buffer.c_str(), buffer.length());
 
             if (items.size() == 3) {
                 auto count = items[1].toInt();
@@ -202,14 +202,14 @@ void ping_monitor_loop_function()
 
 bool ping_monitor_response_handler(const AsyncPingResponse &response)
 {
-    _debug_println(F("ping_monitor_response_handler"));
+    _debug_println();
     pingMonitorTask->addAnswer(response.answer);
     return false;
 }
 
 bool ping_monitor_end_handler(const AsyncPingResponse &response)
 {
-    _debug_println(F("ping_monitor_end_handler"));
+    _debug_println();
     pingMonitorTask->next();
     return true;
 }
@@ -319,7 +319,6 @@ void PingMonitorTask::_cancelPing()
 {
     _debug_printf_P(PSTR("ping=%p\n"), _ping.get());
     if (_ping) {
-        _debug_printf_P(PSTR("PingMonitorTask::_cancelPing()\n"));
         LoopFunctions::remove(ping_monitor_loop_function);
         _ping->cancel();
         _ping = nullptr;

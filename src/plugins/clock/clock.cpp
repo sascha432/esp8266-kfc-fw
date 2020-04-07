@@ -24,19 +24,18 @@
 
 static ClockPlugin plugin;
 
-static const char pixel_order[] PROGMEM = IOT_CLOCK_PIXEL_ANIMATION_ORDER;
-
 ClockPlugin::ClockPlugin() :
     MQTTComponent(LIGHT),
 #if IOT_CLOCK_BUTTON_PIN
     _button(IOT_CLOCK_BUTTON_PIN, PRESSED_WHEN_HIGH),
     _buttonCounter(0),
 #endif
-    _color(0, 0, 80), _updateTimer(0), _time(0), _updateRate(1000), _isSyncing(1), _timeFormat24h(true)
+    _color(0, 0, 80), _updateTimer(0), _time(0), _updateRate(1000), _isSyncing(1), _timeFormat24h(true), _animationData()
 {
 
     size_t ofs = 0;
     auto ptr = _pixelOrder.data();
+    static const char pixel_order[] PROGMEM = IOT_CLOCK_PIXEL_ANIMATION_ORDER;
     for(int i = 0; i < IOT_CLOCK_NUM_DIGITS; i++) {
         memcpy_P(ptr, pixel_order, IOT_CLOCK_PIXEL_ANIMATION_ORDER_LEN);
         for (int j = 0; j < IOT_CLOCK_PIXEL_ANIMATION_ORDER_LEN; j++) {
@@ -49,7 +48,6 @@ ClockPlugin::ClockPlugin() :
     _colors[0] = 0;
     _colors[1] = 0;
     _colors[2] = 0x7f;
-    memset(&_animationData, 0, sizeof(_animationData));
     setBlinkColon(SOLID);
 
     _ui_colon = 0;
@@ -504,7 +502,7 @@ Clock ClockPlugin::updateConfig()
     _timeFormat24h = cfg.time_format_24h;
     _brightness = cfg.brightness << 8;
     setAnimation((AnimationEnum_t)cfg.animation);
-    setBrightness(_brightness);
+    _display.setBrightness(_brightness);
 
     return cfg;
 }
@@ -580,7 +578,7 @@ void ClockPlugin::_loop()
 
             // show syncing animation until the time is valid
             // if (_pixelOrder) {
-                if (++_isSyncing > sizeof(pixel_order)) {
+                if (++_isSyncing > IOT_CLOCK_PIXEL_ANIMATION_ORDER_LEN) {
                     _isSyncing = 1;
                 }
                 for(uint8_t i = 0; i < SevenSegmentDisplay::getNumDigits(); i++) {
@@ -610,20 +608,10 @@ void ClockPlugin::_loop()
 
         uint32_t color = _color;
         struct tm *tm = timezone_localtime(&now);
-        // struct tm *tm = localtime(&now);
         uint8_t hour = tm->tm_hour;
         if (!_timeFormat24h) {
             hour = ((hour + 23) % 12) + 1;
         }
-
-#if 0
-static int time = 0,timecnt=0;
-if (time!=hour*100+tm->tm_min) {
-time=hour*100+tm->tm_min;
-timecnt++;
-Serial.printf("%04u %u\n",time,timecnt);
-}
-#endif
 
         _display.setDigit(0, hour / 10, color);
         _display.setDigit(1, hour % 10, color);

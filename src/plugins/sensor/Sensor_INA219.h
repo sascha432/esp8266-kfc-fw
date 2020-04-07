@@ -54,7 +54,7 @@ public:
         PEAK_CURRENT =  'm',
     } SensorTypeEnum_t;
 
-    Sensor_INA219(const JsonString &name, TwoWire &wire, uint8_t address = INA219_ADDRESS);
+    Sensor_INA219(const JsonString &name, TwoWire &wire, uint8_t address = IOT_SENSOR_HAVE_INA219);
     virtual ~Sensor_INA219();
 
     virtual void createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector) override;

@@ -263,6 +263,10 @@ public:
         }
     }
 
+    void setBrightness(uint16_t brightness) {
+        _brightness = brightness;
+    }
+
     void setBrightness(uint16_t brightness, float fadeTime, Callback_t callback = nullptr) {
         _targetBrightness = brightness;
         if (!_brightnessTimer.active()) {

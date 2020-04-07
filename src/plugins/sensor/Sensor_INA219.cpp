@@ -17,19 +17,14 @@
 #include <debug_helper_disable.h>
 #endif
 
-Sensor_INA219::Sensor_INA219(const JsonString &name, TwoWire &wire, uint8_t address) : MQTTSensor(), _name(name), _address(address), _ina219(address)
+Sensor_INA219::Sensor_INA219(const JsonString &name, TwoWire &wire, uint8_t address) : MQTTSensor(), _name(name), _address(address), _updateTimer(0), _holdPeakTimer(0), _Uint(NAN), _Iint(NAN), _Pint(NAN), _Ipeak(NAN), _ina219(address)
 {
     REGISTER_SENSOR_CLIENT(this);
     _ina219.begin(&config.initTwoWire());
     _ina219.setCalibration(IOT_SENSOR_INA219_BUS_URANGE, IOT_SENSOR_INA219_GAIN, IOT_SENSOR_INA219_SHUNT_ADC_RES, IOT_SENSOR_INA219_R_SHUNT);
 
     _debug_printf_P(PSTR("Sensor_INA219::Sensor_INA219(): address=%x, voltage range=%x, gain=%x, shunt ADC resolution=%x\n"), _address, IOT_SENSOR_INA219_BUS_URANGE, IOT_SENSOR_INA219_GAIN, IOT_SENSOR_INA219_SHUNT_ADC_RES);
-    _Uint = NAN;
-    _Iint = NAN;
-    _Pint = NAN;
-    _Ipeak = NAN;
-    _holdPeakTimer = 0;
-    _updateTimer = 0;
+
     setUpdateRate(IN219_UPDATE_RATE);
     LoopFunctions::add([this]() {
         this->_loop();
@@ -138,32 +133,16 @@ String Sensor_INA219::_getId(SensorTypeEnum_t type)
 
 void Sensor_INA219::_loop()
 {
-    uint32_t diff = get_time_diff(_updateTimer, millis());
-
-    if (diff > 1000) { // reset
-        _updateTimer = millis();
+    if (millis() > _updateTimer) { // reset
+        _updateTimer = millis() + IOT_SENSOR_INA219_READ_INTERVAL;
         _Uint = _ina219.getBusVoltage_V();
         _Iint = _ina219.getCurrent_mA();
-        _Pint = _ina219.getPower_mW();
-    }
-    else if (diff >= IOT_SENSOR_INA219_READ_INTERVAL) {
-        _updateTimer = millis();
-        // calculate averages over half IN219_UPDATE_RATE period
-        double num = (IN219_UPDATE_RATE * 1000 / 2) / (double)diff;
-        auto current = _ina219.getCurrent_mA();
-        _Uint = ((_Uint * num) + (_ina219.getBusVoltage_V())) / (num + 1);
-        _Iint = ((_Iint * num) + current) / (num + 1);
-        _Pint = ((_Pint * num) + (_ina219.getPower_mW())) / (num + 1);
-        if (current > _Ipeak) {
-            _Ipeak = current;
-            _holdPeakTimer = millis();
+        _Pint = _Uint * _Iint;
+        // reset peak current after IOT_SENSOR_INA219_PEAK_HOLD_TIME seconds or store new peak
+        if (_Iint > _Ipeak || millis() > _holdPeakTimer) {
+            _Ipeak = _Iint;
+            _holdPeakTimer = millis() + IOT_SENSOR_INA219_PEAK_HOLD_TIME * 1000;
         }
-    }
-
-    // reset peak current after IOT_SENSOR_INA219_PEAK_HOLD_TIME seconds
-    if (get_time_diff(_holdPeakTimer, millis()) > IOT_SENSOR_INA219_PEAK_HOLD_TIME * 1000) {
-        _holdPeakTimer = millis();
-        _Ipeak = 0;
     }
 }
 
@@ -182,8 +161,8 @@ bool Sensor_INA219::atModeHandler(AtModeArgs &args)
 {
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(SENSORINA219))) {
 
-        static EventScheduler::TimerPtr timer = nullptr;
-        Scheduler.removeTimer(&timer);
+        static EventScheduler::Timer timer;
+        timer.remove();
 
         auto &serial = args.getStream();
         auto timerPrintFunc = [this, &serial](EventScheduler::TimerPtr) {
@@ -196,7 +175,7 @@ bool Sensor_INA219::atModeHandler(AtModeArgs &args)
                     ina219.getPower_raw(),
                     ina219.getBusVoltage_V(),
                     ina219.getCurrent_mA(),
-                    ina219.getPower_mW(),
+                    ina219.getBusVoltage_V() * ina219.getCurrent_mA(),
                     sensor.getVoltage(),
                     sensor.getCurrent(),
                     sensor.getPower()
@@ -210,7 +189,7 @@ bool Sensor_INA219::atModeHandler(AtModeArgs &args)
         else {
             auto repeat = args.toMillis(AtModeArgs::FIRST, 500, ~0, 0, String('s'));
             if (repeat) {
-                Scheduler.addTimer(&timer, repeat, true, timerPrintFunc);
+                timer.add(repeat, true, timerPrintFunc);
             }
         }
         return true;

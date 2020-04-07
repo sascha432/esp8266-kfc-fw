@@ -43,10 +43,18 @@
 #define IOT_SENSOR_INA219_PEAK_HOLD_TIME    60
 #endif
 
+// webui update rate in seconds
+#ifndef IN219_UPDATE_RATE
+#define IN219_UPDATE_RATE                   5
+#endif
+
+// mqtt update rate in milliseconds
+#ifndef IN219_MQTT_UPDATE_RATE
+#define IN219_MQTT_UPDATE_RATE             (30 * 1000)
+#endif
+
 class Sensor_INA219 : public MQTTSensor {
 public:
-    static const uint8_t IN219_UPDATE_RATE = 10;
-
     typedef enum : char {
         VOLTAGE =       'u',
         CURRENT =       'i',
@@ -61,7 +69,7 @@ public:
     virtual uint8_t getAutoDiscoveryCount() const override;
 
     virtual void publishState(MQTTClient *client) override;
-    virtual void getValues(JsonArray &json) override;
+    virtual void getValues(JsonArray &json, bool timer) override;
     virtual void createWebUI(WebUI &webUI, WebUIRow **row) override;
     virtual void getStatus(PrintHtmlEntitiesString &output) override;
     virtual MQTTSensorSensorType getType() const override;
@@ -78,19 +86,54 @@ public:
 
     // average values
     float getVoltage() const {
-        return _Uint;
+        return _data.U();
     }
     float getCurrent() const {
-        return _Iint;
+        return _data.I();
     }
     float getPower() const {
-        return _Pint;
+        return _data.P();
     }
     float getPeakCurrent() const {
         return _Ipeak;
     }
 
 private:
+    class SensorData {
+    public:
+        SensorData() : _V(0), _I(0), _count(0) {
+        }
+
+        float U() const {
+            return _count ? (_V / _count) : NAN;
+        }
+
+        float I() const {
+            return _count ? (_I / _count) : NAN;
+        }
+
+        float P() const {
+            return _count ? U() * I() : NAN;
+        }
+
+        void add(float U, float I) {
+            _V += U;
+            _I += I;
+            _count++;
+        }
+
+        void set(float U, float I) {
+            _V = U;
+            _I = I;
+            _count = 1;
+        }
+
+    private:
+        float _V;
+        float _I;
+        size_t _count;
+    };
+
     void _loop();
     String _getId(SensorTypeEnum_t type);
 
@@ -98,11 +141,11 @@ private:
     uint8_t _address;
 
     uint32_t _updateTimer;
+    uint32_t _mqttUpdateTimer;
     uint32_t _holdPeakTimer;
-    double _Uint;
-    double _Iint;
-    double _Ipeak;
-    double _Pint;
+    SensorData _data;
+    SensorData _mqttData;
+    float _Ipeak;
 
     Adafruit_INA219 _ina219;
 };

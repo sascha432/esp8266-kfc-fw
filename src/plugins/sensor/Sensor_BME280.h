@@ -31,7 +31,7 @@ public:
     virtual uint8_t getAutoDiscoveryCount() const override;
 
     virtual void publishState(MQTTClient *client) override;
-    virtual void getValues(JsonArray &json) override;
+    virtual void getValues(JsonArray &json, bool timer) override;
     virtual void createWebUI(WebUI &webUI, WebUIRow **row) override;
     virtual void getStatus(PrintHtmlEntitiesString &output) override;
     virtual MQTTSensorSensorType getType() const override;

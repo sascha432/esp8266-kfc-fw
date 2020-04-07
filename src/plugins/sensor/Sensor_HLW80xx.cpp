@@ -106,7 +106,7 @@ uint8_t Sensor_HLW80xx::getAutoDiscoveryCount() const
     return 6;
 }
 
-void Sensor_HLW80xx::getValues(JsonArray &array)
+void Sensor_HLW80xx::getValues(JsonArray &array, bool timer)
 {
     _debug_printf_P(PSTR("Sensor_HLW8012::getValues()\n"));
 

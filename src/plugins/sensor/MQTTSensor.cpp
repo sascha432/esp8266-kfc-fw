@@ -52,6 +52,6 @@ void MQTTSensor::timerEvent(JsonArray &array)
 
         _debug_println();
         publishState(MQTTClient::getClient());
-        getValues(array);
+        getValues(array, true);
     }
 }

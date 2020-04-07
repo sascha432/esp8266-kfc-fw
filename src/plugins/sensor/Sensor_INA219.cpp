@@ -17,7 +17,7 @@
 #include <debug_helper_disable.h>
 #endif
 
-Sensor_INA219::Sensor_INA219(const JsonString &name, TwoWire &wire, uint8_t address) : MQTTSensor(), _name(name), _address(address), _updateTimer(0), _holdPeakTimer(0), _Uint(NAN), _Iint(NAN), _Pint(NAN), _Ipeak(NAN), _ina219(address)
+Sensor_INA219::Sensor_INA219(const JsonString &name, TwoWire &wire, uint8_t address) : MQTTSensor(), _name(name), _address(address), _updateTimer(0), _mqttUpdateTimer(0), _holdPeakTimer(0), _Ipeak(NAN), _ina219(address)
 {
     REGISTER_SENSOR_CLIENT(this);
     _ina219.begin(&config.initTwoWire());
@@ -73,28 +73,35 @@ uint8_t Sensor_INA219::getAutoDiscoveryCount() const
     return 4;
 }
 
-void Sensor_INA219::getValues(JsonArray &array)
+void Sensor_INA219::getValues(JsonArray &array, bool timer)
 {
     _debug_printf_P(PSTR("Sensor_INA219::getValues()\n"));
     auto *obj = &array.addObject(3);
     obj->add(JJ(id), _getId(VOLTAGE));
-    obj->add(JJ(state), !isnan(_Uint));
-    obj->add(JJ(value), JsonNumber(_Uint, 2));
+    auto U = _data.U();
+    obj->add(JJ(state), !isnan(U));
+    obj->add(JJ(value), JsonNumber(U, 2));
 
     obj = &array.addObject(3);
     obj->add(JJ(id), _getId(CURRENT));
-    obj->add(JJ(state), !isnan(_Iint));
-    obj->add(JJ(value), JsonNumber(_Iint, 0));
+    auto I = _data.I();
+    obj->add(JJ(state), !isnan(I));
+    obj->add(JJ(value), JsonNumber(I, 0));
 
     obj = &array.addObject(3);
     obj->add(JJ(id), _getId(POWER));
-    obj->add(JJ(state), !isnan(_Pint));
-    obj->add(JJ(value), JsonNumber(_Pint, 0));
+    auto P = _data.P();
+    obj->add(JJ(state), !isnan(P));
+    obj->add(JJ(value), JsonNumber(P, 0));
 
     obj = &array.addObject(3);
     obj->add(JJ(id), _getId(PEAK_CURRENT));
     obj->add(JJ(state), !isnan(_Ipeak));
     obj->add(JJ(value), JsonNumber(_Ipeak, 0));
+
+    if (timer) {
+        _data = SensorData();
+    }
 }
 
 void Sensor_INA219::createWebUI(WebUI &webUI, WebUIRow **row)
@@ -109,10 +116,14 @@ void Sensor_INA219::createWebUI(WebUI &webUI, WebUIRow **row)
 void Sensor_INA219::publishState(MQTTClient *client)
 {
     if (client && client->isConnected()) {
-        client->publish(MQTTClient::formatTopic(-1, F("/%s/"), _getId(VOLTAGE).c_str()), _qos, 1, String(_Uint, 2));
-        client->publish(MQTTClient::formatTopic(-1, F("/%s/"), _getId(CURRENT).c_str()), _qos, 1, String(_Iint, 0));
-        client->publish(MQTTClient::formatTopic(-1, F("/%s/"), _getId(POWER).c_str()), _qos, 1, String(_Pint, 0));
-        client->publish(MQTTClient::formatTopic(-1, F("/%s/"), _getId(PEAK_CURRENT).c_str()), _qos, 1, String(_Ipeak, 0));
+        if (millis() > _mqttUpdateTimer) {
+            client->publish(MQTTClient::formatTopic(-1, F("/%s/"), _getId(VOLTAGE).c_str()), _qos, 1, String(_mqttData.U(), 2));
+            client->publish(MQTTClient::formatTopic(-1, F("/%s/"), _getId(CURRENT).c_str()), _qos, 1, String(_mqttData.I(), 0));
+            client->publish(MQTTClient::formatTopic(-1, F("/%s/"), _getId(POWER).c_str()), _qos, 1, String(_mqttData.P(), 0));
+            client->publish(MQTTClient::formatTopic(-1, F("/%s/"), _getId(PEAK_CURRENT).c_str()), _qos, 1, String(_Ipeak, 0));
+            _mqttUpdateTimer = millis() + IN219_MQTT_UPDATE_RATE;
+            _mqttData = SensorData();
+        }
     }
 }
 
@@ -133,16 +144,17 @@ String Sensor_INA219::_getId(SensorTypeEnum_t type)
 
 void Sensor_INA219::_loop()
 {
-    if (millis() > _updateTimer) { // reset
+    if (millis() > _updateTimer) {
         _updateTimer = millis() + IOT_SENSOR_INA219_READ_INTERVAL;
-        _Uint = _ina219.getBusVoltage_V();
-        _Iint = _ina219.getCurrent_mA();
-        _Pint = _Uint * _Iint;
+        float U = _ina219.getBusVoltage_V();
+        float I = _ina219.getCurrent_mA();
         // reset peak current after IOT_SENSOR_INA219_PEAK_HOLD_TIME seconds or store new peak
-        if (_Iint > _Ipeak || millis() > _holdPeakTimer) {
-            _Ipeak = _Iint;
+        if (I > _Ipeak || millis() > _holdPeakTimer) {
+            _Ipeak = I;
             _holdPeakTimer = millis() + IOT_SENSOR_INA219_PEAK_HOLD_TIME * 1000;
         }
+        _data.add(U, I);
+        _mqttData.add(U, I);
     }
 }
 

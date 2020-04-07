@@ -59,7 +59,7 @@ uint8_t Sensor_BME680::getAutoDiscoveryCount() const {
     return 4;
 }
 
-void Sensor_BME680::getValues(JsonArray &array) {
+void Sensor_BME680::getValues(JsonArray &array, bool timer) {
     _debug_printf_P(PSTR("Sensor_BME680::getValues()\n"));
 
     auto sensor = _readSensor();

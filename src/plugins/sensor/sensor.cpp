@@ -19,9 +19,9 @@ static SensorPlugin plugin;
 
 void SensorPlugin::getValues(JsonArray &array)
 {
-    _debug_println(F(""));
+    _debug_println();
     for(auto sensor: _sensors) {
-        sensor->getValues(array);
+        sensor->getValues(array, false);
     }
 }
 

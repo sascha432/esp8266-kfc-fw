@@ -46,7 +46,7 @@ uint8_t Sensor_Battery::getAutoDiscoveryCount() const {
 #endif
 }
 
-void Sensor_Battery::getValues(JsonArray &array)
+void Sensor_Battery::getValues(JsonArray &array, bool timer)
 {
     auto obj = &array.addObject(3);
     obj->add(JJ(id), _getId(LEVEL));

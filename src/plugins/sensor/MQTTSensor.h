@@ -62,7 +62,7 @@ public:
     }
 
     virtual void publishState(MQTTClient *client) = 0;
-    virtual void getValues(JsonArray &json) = 0;
+    virtual void getValues(JsonArray &json, bool timer) = 0;
     virtual void createWebUI(WebUI &webUI, WebUIRow **row) = 0;
     virtual void getStatus(PrintHtmlEntitiesString &output) = 0;
 

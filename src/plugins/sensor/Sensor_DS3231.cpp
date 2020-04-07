@@ -54,7 +54,7 @@ uint8_t Sensor_DS3231::getAutoDiscoveryCount() const
     return 3;
 }
 
-void Sensor_DS3231::getValues(JsonArray &array)
+void Sensor_DS3231::getValues(JsonArray &array, bool timer)
 {
     _debug_println();
 

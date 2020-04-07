@@ -33,7 +33,7 @@ uint8_t Sensor_LM75A::getAutoDiscoveryCount() const
     return 1;
 }
 
-void Sensor_LM75A::getValues(JsonArray &array)
+void Sensor_LM75A::getValues(JsonArray &array, bool timer)
 {
     _debug_printf_P(PSTR("Sensor_LM75A::getValues()\n"));
     auto &obj = array.addObject(3);

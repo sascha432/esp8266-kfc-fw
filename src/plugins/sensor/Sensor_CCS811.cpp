@@ -53,7 +53,7 @@ uint8_t Sensor_CCS811::getAutoDiscoveryCount() const
     return 2;
 }
 
-void Sensor_CCS811::getValues(JsonArray &array)
+void Sensor_CCS811::getValues(JsonArray &array, bool timer)
 {
     _debug_printf_P(PSTR("Sensor_CCS811::getValues()\n"));
 

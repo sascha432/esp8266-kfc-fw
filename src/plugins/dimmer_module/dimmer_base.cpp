@@ -418,7 +418,6 @@ void Dimmer_Base::_updateMetrics(uint16_t vcc, float frequency, float internalTe
             if (events.size()) {
                 WsWebUISocket::broadcast(WsWebUISocket::getSender(), object);
             }
-
         }
     }
 }

@@ -160,7 +160,7 @@ void BlinkLEDTimer::setBlink(int8_t pin, uint16_t delay, int32_t color)
             } else {
                 pattern.setMaxSize(2);
                 pattern = 0b10;
-                delay = _max(50, _min(delay, 5000));
+                delay = std::max((uint16_t)50, std::min(delay, (uint16_t)5000));
                 timer->setColor(color == -1 ? ((delay < 100) ? 0x050500 : 0x000010) : color);  // yellow / blue
             }
             timer->set(delay, pin, pattern);

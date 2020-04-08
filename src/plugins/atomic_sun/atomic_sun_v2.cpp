@@ -27,7 +27,7 @@
 Driver_4ChDimmer::Driver_4ChDimmer() : MQTTComponent(LIGHT), Dimmer_Base()
 {
 #if DEBUG_MQTT_CLIENT
-    debug_printf_P(PSTR("Driver_4ChDimmer(): component=%p\n"), this);
+    debug_printf_P(PSTR("component=%p\n"), this);
 #endif
 }
 
@@ -336,7 +336,7 @@ void Driver_4ChDimmer::setValue(const String &id, const String &value, bool hasV
 
 void Driver_4ChDimmer::getValues(JsonArray &array)
 {
-    _debug_printf_P(PSTR("Driver_4ChDimmer::getValues()\n"));
+    _debug_println();
     Dimmer_Base::getValues(array);
 
     auto obj = &array.addObject(2);
@@ -361,7 +361,7 @@ void Driver_4ChDimmer::getValues(JsonArray &array)
 
 void Driver_4ChDimmer::publishState(MQTTClient *client)
 {
-    _debug_printf_P(PSTR("Driver_4ChDimmer::publishState()\n"));
+    _debug_println();
 
 #if IOT_ATOMIC_SUN_CALC_POWER
     auto power = _calcTotalPower();
@@ -475,7 +475,7 @@ void Driver_4ChDimmer::_channelsToBrightness()
         _data.state.value = false;
     }
     _calcRatios();
-    _debug_printf_P(PSTR("Driver_4ChDimmer::_brightnessToChannels(): ww=%u,%u cw=%u,%u = brightness=%u,color=%f, ratio=%f,%f\n"),
+    _debug_printf_P(PSTR("ww=%u,%u cw=%u,%u = brightness=%u color=%f ratio=%f,%f\n"),
         _channels[CHANNEL_WW1],
         _channels[CHANNEL_WW2],
         _channels[CHANNEL_CW1],
@@ -497,7 +497,7 @@ void Driver_4ChDimmer::_brightnessToChannels()
     _channels[CHANNEL_WW1] = ww - _channels[CHANNEL_WW2];
     _channels[CHANNEL_CW2] = cw / _ratio[1];
     _channels[CHANNEL_CW1] = cw - _channels[CHANNEL_CW2];
-    _debug_printf_P(PSTR("Driver_4ChDimmer::_brightnessToChannels(): brightness=%u,color=%f(%f) = ww=%u,%u cw=%u,%u, ratio=%f,%f\n"),
+    _debug_printf_P(PSTR("brightness=%u color=%f(%f) = ww=%u,%u cw=%u,%u, ratio=%f,%f\n"),
         _data.brightness.value,
         _data.color.value,
         color,
@@ -523,7 +523,7 @@ void Driver_4ChDimmer::_calcRatios()
 {
     _ratio[0] = _channels[CHANNEL_WW2] ? ((_channels[CHANNEL_WW1] + _channels[CHANNEL_WW2]) / (float)_channels[CHANNEL_WW2]) : (_channels[CHANNEL_WW1] ? INFINITY : 2);
     _ratio[1] = _channels[CHANNEL_CW2] ? ((_channels[CHANNEL_CW1] + _channels[CHANNEL_CW2]) / (float)_channels[CHANNEL_CW2]) : (_channels[CHANNEL_CW1] ? INFINITY : 2);
-    _debug_printf_P(PSTR("Driver_4ChDimmer::_calcRatios(): %f,%f\n"), _ratio[0], _ratio[1]);
+    _debug_printf_P(PSTR("ratio=%f ratio=%f\n"), _ratio[0], _ratio[1]);
 }
 
 #if IOT_ATOMIC_SUN_CALC_POWER
@@ -564,7 +564,7 @@ bool Driver_4ChDimmer::getChannelState(uint8_t channel) const
 
 void Driver_4ChDimmer::setChannel(uint8_t channel, int16_t level, float time)
 {
-    _debug_printf_P(PSTR("Driver_4ChDimmer::setChannel(%u, %u, %f): locked=%u\n"), channel, level, time, _data.lockChannels.value);
+    _debug_printf_P(PSTR("channel=%u level=%u time=%f locked=%u\n"), channel, level, time, _data.lockChannels.value);
     _channels[channel] = level;
     if (_data.lockChannels.value) {
         switch(channel) {
@@ -684,3 +684,64 @@ void AtomicSunPlugin::createWebUI(WebUI &webUI)
         row->addSlider(PrintString(F("dimmer_channel%u"), order[j]), PrintString(F("Channel %u"), j + 1), 0, IOT_ATOMIC_SUN_MAX_BRIGHTNESS);
     }
 }
+
+#if AT_MODE_SUPPORTED
+
+#include "at_mode.h"
+
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DIMG, "DIMG", "Get level");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DIMS, "DIMS", "<channel>,<level>[,<time>]", "Set level");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DIMW, "DIMW", "Write EEPROM");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DIMR, "DIMR", "Reset ATmega");
+
+bool AtomicSunPlugin::hasAtMode() const
+{
+    return true;
+}
+
+void AtomicSunPlugin::atModeHelpGenerator()
+{
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DIMG), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DIMS), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DIMW), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DIMR), getName());
+}
+
+bool AtomicSunPlugin::atModeHandler(AtModeArgs &args)
+{
+    if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DIMW))) {
+        writeEEPROM();
+        args.ok();
+        return true;
+    }
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DIMG))) {
+        for(uint8_t i = 0; i < _channels.size(); i++) {
+            args.printf_P(PSTR("%u: %d"), i, getChannel(i));
+        }
+        return true;
+    }
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DIMR))) {
+        args.printf_P(PSTR("Pulling GPIO%u low for 10ms"), STK500V1_RESET_PIN);
+        dimmer_plugin.resetDimmerMCU();
+        args.printf_P(PSTR("GPIO%u set to input"), STK500V1_RESET_PIN);
+        return true;
+    }
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DIMS))) {
+        if (args.requireArgs(2, 2)) {
+            size_t channel = args.toInt(0);
+            if (channel >= 0 && channel < _channels.size()) {
+                int level = args.toIntMinMax(1, 0, IOT_DIMMER_MODULE_MAX_BRIGHTNESS);
+                float time = args.toFloat(2, -1);
+                args.printf_P(PSTR("Set %u: %d (time %.2f)"), channel, level, time);
+                setChannel(channel, level, time);
+            }
+            else {
+                args.print(F("Invalid channel"));
+            }
+        }
+        return true;
+    }
+    return false;
+}
+
+#endif

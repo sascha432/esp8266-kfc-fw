@@ -505,7 +505,7 @@ bool DimmerModulePlugin::hasStatus() const
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DIMG, "DIMG", "Get level");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DIMS, "DIMS", "<channel>,<level>[,<time>]", "Set level");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DIMW, "DIMW", "Write EEPROM");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DIMR, "DIMR", "Reset ATmega via GPIO5");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DIMR, "DIMR", "Reset ATmega");
 
 bool DimmerModulePlugin::hasAtMode() const
 {
@@ -534,9 +534,9 @@ bool DimmerModulePlugin::atModeHandler(AtModeArgs &args)
         return true;
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DIMR))) {
-        args.print(F("Pulling GPIO5 low for 10ms"));
+        args.printf_P(PSTR("Pulling GPIO%u low for 10ms"), STK500V1_RESET_PIN);
         dimmer_plugin.resetDimmerMCU();
-        args.print(F("GPIO5 set to input"));
+        args.printf_P(PSTR("GPIO%u set to input"), STK500V1_RESET_PIN);
         return true;
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DIMS))) {

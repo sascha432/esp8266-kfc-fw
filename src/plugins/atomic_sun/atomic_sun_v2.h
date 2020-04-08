@@ -116,7 +116,7 @@ private:
     float _calcTotalPower();
 #endif
 
-private:
+protected:
 #if DEBUG_4CH_DIMMER
     uint8_t endTransmission();
 #else
@@ -178,6 +178,12 @@ public:
         return true;
     }
     virtual void getStatus(Print &output) override;
+
+#if AT_MODE_SUPPORTED
+    virtual bool hasAtMode() const override;
+    virtual void atModeHelpGenerator() override;
+    virtual bool atModeHandler(AtModeArgs &args) override;
+#endif
 };
 
 extern AtomicSunPlugin dimmer_plugin;

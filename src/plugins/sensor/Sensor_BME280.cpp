@@ -54,7 +54,7 @@ uint8_t Sensor_BME280::getAutoDiscoveryCount() const
     return 3;
 }
 
-void Sensor_BME280::getValues(JsonArray &arra, bool timer)
+void Sensor_BME280::getValues(JsonArray &array, bool timer)
 {
     _debug_println(emptyString);
 

@@ -24,6 +24,7 @@ public:
         Cmnd_STK_PROG_FUSE_EXT =        0x65,
         Cmnd_STK_READ_PAGE =            0x74,
         Cmnd_STK_READ_SIGN =            0x75,
+        Cmnd_STK_READ_FUSE_EXT =        0x77,
     } CommandsEnum_t;
 
     typedef enum : uint8_t {
@@ -124,6 +125,7 @@ private:
     void _delay(uint16_t time, Callback_t callback);
     void _sendCommand_P_repeat(PGM_P command, uint8_t length, uint8_t num, uint16_t delay);
     void _sendCommand_P(PGM_P command, uint8_t length);
+    void _sendCommand(const char *command, uint8_t length);
     void _sendCommandSetOptions(const Options_t &options);
     void _sendCommandLoadAddress(uint16_t address);
     void _sendCommandProgPage(const uint8_t *data, uint16_t length);
@@ -132,11 +134,12 @@ private:
     void _setResponse_P(PGM_P response, uint8_t length);
     void _loopFunction();
     void _readResponse(Callback_t success, Callback_t failure);
+    void _skipResponse(Callback_t success, Callback_t failure);
     void _printBuffer(Print &str, const Buffer &buffer);
     void _printResponse();
     void _setTimeout(uint16_t timeout);
     void _done(bool success);
-    void _clearReponse(uint16_t delay, Callback_t callback);
+    void _clearResponse(uint16_t delay, Callback_t callback);
     void _clearPageBuffer();
     void _uploadCallback();
     void _readFile(PageCallback_t callback, Callback_t success, Callback_t failure);
@@ -168,6 +171,7 @@ private:
     uint16_t _pageAddress;
     uint16_t _pagePosition;
     uint16_t _verified;
+    unsigned long _startTime;
 
 private:
     void _status(const String &message);

@@ -55,15 +55,18 @@ WEBUI_PROGMEM_STRING_DEF(display_name)
 WEBUI_PROGMEM_STRING_DEF(head)
 
 
-WebUIRow::WebUIRow() : JsonUnnamedObject(2) {
+WebUIRow::WebUIRow() : JsonUnnamedObject(2)
+{
     add(JJ(type), JJ(row));
 }
 
-void WebUIRow::setName(const JsonString &name) {
+void WebUIRow::setName(const JsonString &name)
+{
     add(JJ(name), name);
 }
 
-void WebUIRow::setAlignment(AlignmentEnum_t alignment) {
+void WebUIRow::setAlignment(AlignmentEnum_t alignment)
+{
     switch(alignment) {
         case CENTER:
             add(JJ(align), JJ(center));
@@ -77,17 +80,20 @@ void WebUIRow::setAlignment(AlignmentEnum_t alignment) {
     }
 }
 
-void WebUIRow::setExtraClass(const JsonString &extraClasses) {
+void WebUIRow::setExtraClass(const JsonString &extraClasses)
+{
     add(JJ(extra_classes), extraClasses);
 }
 
-WebUIComponent &WebUIRow::addColumn(size_t reserve) {
+WebUIComponent &WebUIRow::addColumn(size_t reserve)
+{
     auto &column = *new WebUIComponent(reserve);
     _getColumns().add(reinterpret_cast<AbstractJsonValue *>(&column));
     return column;
 }
 
-JsonArray &WebUIRow::_getColumns() {
+JsonArray &WebUIRow::_getColumns()
+{
     auto columns = find(J(columns));
     if (!columns) {
         return addArray(JJ(columns));
@@ -95,7 +101,8 @@ JsonArray &WebUIRow::_getColumns() {
     return reinterpret_cast<JsonArray &>(*columns);
 }
 
-WebUIComponent &WebUIRow::addGroup(const JsonString &name, bool hasSwitch) {
+WebUIComponent &WebUIRow::addGroup(const JsonString &name, bool hasSwitch)
+{
     WebUIComponent &column = addColumn(3);
     column.add(JJ(type), JJ(group));
     column.setName(name);
@@ -103,7 +110,8 @@ WebUIComponent &WebUIRow::addGroup(const JsonString &name, bool hasSwitch) {
     return column;
 }
 
-WebUIComponent &WebUIRow::addSwitch(const String &id, const JsonString &name, bool zeroOff, bool displayName) {
+WebUIComponent &WebUIRow::addSwitch(const String &id, const JsonString &name, bool zeroOff, bool displayName)
+{
     WebUIComponent &column = addColumn(4);
     column.add(JJ(type), JJ(switch));
     column.setId(id);
@@ -113,7 +121,8 @@ WebUIComponent &WebUIRow::addSwitch(const String &id, const JsonString &name, bo
     return column;
 }
 
-WebUIComponent &WebUIRow::addSlider(const String &id, const JsonString &name, int min, int max, bool zeroOff) {
+WebUIComponent &WebUIRow::addSlider(const String &id, const JsonString &name, int min, int max, bool zeroOff)
+{
     WebUIComponent &column = addColumn(6);
     column.add(JJ(type), JJ(slider));
     column.setId(id);
@@ -124,7 +133,8 @@ WebUIComponent &WebUIRow::addSlider(const String &id, const JsonString &name, in
     return column;
 }
 
-WebUIComponent &WebUIRow::addColorSlider(const String &id, const JsonString &name) {
+WebUIComponent &WebUIRow::addColorSlider(const String &id, const JsonString &name)
+{
     WebUIComponent &column = addColumn(4);
     column.add(JJ(type), JJ(slider));
     column.setId(id);
@@ -133,7 +143,8 @@ WebUIComponent &WebUIRow::addColorSlider(const String &id, const JsonString &nam
     return column;
 }
 
-WebUIComponent &WebUIRow::addSensor(const String &id, const JsonString &name, const JsonString &unit, WebUIComponent::SensorRenderEnum_t render) {
+WebUIComponent &WebUIRow::addSensor(const String &id, const JsonString &name, const JsonString &unit, WebUIComponent::SensorRenderEnum_t render)
+{
     WebUIComponent &column = addColumn(6);
     column.add(JJ(type), JJ(sensor));
     column.setId(id);
@@ -155,17 +166,20 @@ WebUIComponent &WebUIRow::addSensor(const String &id, const JsonString &name, co
     return column;
 }
 
-WebUIComponent &WebUIRow::addBadgeSensor(const String &id, const JsonString &name, const JsonString &unit) {
+WebUIComponent &WebUIRow::addBadgeSensor(const String &id, const JsonString &name, const JsonString &unit)
+{
     return addSensor(id, name, unit, WebUIComponent::SensorRenderEnum_t::BADGE);
 }
 
-WebUIComponent &WebUIRow::addBinarySensor(const String &id, const JsonString &name, const JsonString &unit, WebUIComponent::SensorRenderEnum_t render) {
+WebUIComponent &WebUIRow::addBinarySensor(const String &id, const JsonString &name, const JsonString &unit, WebUIComponent::SensorRenderEnum_t render)
+{
     WebUIComponent &column = addSensor(id, name, unit, render);
     column.replace(JJ(type), JJ(binary_sensor));
     return column;
 }
 
-WebUIComponent &WebUIRow::addScreen(const String &id, uint16_t width, uint16_t height) {
+WebUIComponent &WebUIRow::addScreen(const String &id, uint16_t width, uint16_t height)
+{
     WebUIComponent &column = addColumn(6);
     column.add(JJ(type), JJ(screen));
     column.setId(id);
@@ -174,7 +188,8 @@ WebUIComponent &WebUIRow::addScreen(const String &id, uint16_t width, uint16_t h
     return column;
 }
 
-WebUIComponent &WebUIRow::addButtonGroup(const String &id, const JsonString &name, const JsonString &buttons, uint16_t height) {
+WebUIComponent &WebUIRow::addButtonGroup(const String &id, const JsonString &name, const JsonString &buttons, uint16_t height)
+{
     WebUIComponent &column = addColumn(6);
     column.add(JJ(type), JJ(buttons));
     column.setId(id);
@@ -186,23 +201,26 @@ WebUIComponent &WebUIRow::addButtonGroup(const String &id, const JsonString &nam
     return column;
 }
 
-WebUI::WebUI(JsonUnnamedObject &json) : _json(json) {
+WebUI::WebUI(JsonUnnamedObject &json) : _json(json)
+{
     _json.add(JJ(type), JJ(ui));
     _rows = &_json.addArray(JJ(data));
 }
 
-WebUIRow &WebUI::addRow() {
+WebUIRow &WebUI::addRow()
+{
     auto rowPtr = new WebUIRow();
     _rows->add(reinterpret_cast<AbstractJsonValue *>(rowPtr));
     return *rowPtr;
 }
 
-void WebUI::addValues() {
+void WebUI::addValues()
+{
     auto &array = _json.addArray(F("values"));
     for(auto plugin: plugins) {
         if (plugin->hasWebUI()) {
             auto interface = plugin->getWebUIInterface();
-            _debug_printf_P(PSTR("WebUI::addValues(): plugin %s interface %p\n"), plugin->getName(), interface);
+            _debug_printf_P(PSTR("plugin=%s interface=%p\n"), plugin->getName(), interface);
             if (interface) {
                 interface->getValues(array);
             }

@@ -10,11 +10,11 @@
 #include "WebUISocket.h"
 
 #if IOT_DIMMER_MODULE
-#include "plugins/dimmer_module/dimmer_module.h"
+#include "./plugins/dimmer_module/dimmer_module.h"
 #endif
 
 #if IOT_ATOMIC_SUN_V2
-#include "plugins/atomic_sun/atomic_sun_v2.h"
+#include "./plugins/atomic_sun/atomic_sun_v2.h"
 #endif
 
 #if DEBUG_WEBUI
@@ -57,7 +57,7 @@ void WsWebUISocket::broadcast(WsWebUISocket *sender, JsonUnnamedObject &json)
     if (wsWebUI) {
         auto buffer = wsWebUI->makeBuffer(json.length());
         assert(JsonBuffer(json).fillBuffer(buffer->get(), buffer->length()) == buffer->length());
-        _debug_printf_P(PSTR("WsWebUISocket::broadcast(): %s\n"), buffer->get());
+        _debug_printf_P(PSTR("buffer=%s\n"), buffer->get());
         WsClient::broadcast(wsWebUI, sender, buffer);
     }
 }
@@ -74,14 +74,14 @@ WsClientAsyncWebSocket *WsWebUISocket::getWsWebUI()
 
 WsClient *WsWebUISocket::getInstance(AsyncWebSocketClient *socket)
 {
-    _debug_println(F("WsWebUISocket::getInstance()"));
+    _debug_println();
     return new WsWebUISocket(socket);
 }
 
 
 void WsWebUISocket::onText(uint8_t *data, size_t len)
 {
-    _debug_printf_P(PSTR("WsWebUISocket::onText(%p, %d)\n"), data, len);
+    _debug_printf_P(PSTR("data=%p len=%d\n"), data, len);
     if (isAuthenticated()) {
         auto client = getClient();
         String command;
@@ -109,7 +109,7 @@ void WsWebUISocket::onText(uint8_t *data, size_t len)
             }
         }
 
-        _debug_printf_P(PSTR("WsWebUISocket::onText():command=%s,args=%s\n"), command.c_str(), implode(',', args, argc).c_str());
+        _debug_printf_P(PSTR("command=%s args=%s\n"), command.c_str(), implode(',', args, argc).c_str());
 
         if (strcasecmp_P(command.c_str(), PSTR("+get_values")) == 0) {
             sendValues(client);

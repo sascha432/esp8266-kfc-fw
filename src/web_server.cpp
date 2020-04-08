@@ -745,7 +745,7 @@ void web_server_set_update_firmware_callback(UpdateFirmwareCallback_t callback)
 
 bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWebServerRequest *request)
 {
-    _debug_printf_P(PSTR("web_server_handle_file_read: %s\n"), path.c_str());
+    _debug_printf_P(PSTR("path=%s\n"), path.c_str());
     WebServerSetCPUSpeedHelper setCPUSpeed;
 
     if (String_endsWith(path, '/')) {
@@ -840,7 +840,7 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
                 }
             }
         }
-        _debug_printf_P(PSTR("web_server_handle_file_read: webTemplate=%p\n"), webTemplate);
+        _debug_printf_P(PSTR("webTemplate=%p\n"), webTemplate);
         if (!webTemplate) {
             if (String_equals(path, PSTR("/wifi.html"))) {
                 Form *form = new WifiSettingsForm(request);

@@ -498,7 +498,7 @@ bool DimmerModulePlugin::hasStatus() const
     return true;
 }
 
-#if AT_MODE_SUPPORTED //&& !IOT_DIMMER_MODULE_INTERFACE_UART
+#if AT_MODE_SUPPORTED
 
 #include "at_mode.h"
 

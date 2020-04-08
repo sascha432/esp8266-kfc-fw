@@ -10,7 +10,7 @@
 // https://github.com/sascha432/trailing_edge_dimmer
 //
 // default I2C pins are D3 (0) and D5 (14)
-// NOTE: Wire.onReceive() is not working on ESP8266
+// NOTE: I2C Wire.onReceive() is not working on ESP8266
 
 #include <Arduino_compat.h>
 #include <PrintString.h>
@@ -24,10 +24,6 @@
 #include "dimmer_channel.h"
 #include "dimmer_base.h"
 #include "pin_monitor.h"
-#include <Button.h>
-#include <ButtonEventCallback.h>
-#include <PushButton.h>
-#include <Bounce2.h>
 
 #ifndef DEBUG_IOT_DIMMER_MODULE
 #define DEBUG_IOT_DIMMER_MODULE             0
@@ -78,6 +74,13 @@
 // enable or disable buttons
 #ifndef IOT_DIMMER_MODULE_HAS_BUTTONS
 #define IOT_DIMMER_MODULE_HAS_BUTTONS       0
+#endif
+
+#if IOT_DIMMER_MODULE_HAS_BUTTONS
+#include <Button.h>
+#include <ButtonEventCallback.h>
+#include <PushButton.h>
+#include <Bounce2.h>
 #endif
 
 #if IOT_DIMMER_MODULE_HAS_BUTTONS && !PIN_MONITOR
@@ -210,7 +213,7 @@ public:
     virtual void createWebUI(WebUI &webUI) override;
     virtual WebUIInterface *getWebUIInterface() override;
 
-#if AT_MODE_SUPPORTED //&& !IOT_DIMMER_MODULE_INTERFACE_UART
+#if AT_MODE_SUPPORTED
     virtual bool hasAtMode() const override;
     virtual void atModeHelpGenerator() override;
     virtual bool atModeHandler(AtModeArgs &args) override;

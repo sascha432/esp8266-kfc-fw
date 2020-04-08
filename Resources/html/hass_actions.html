@@ -83,49 +83,50 @@
     <!--JAVASCRIPT%%-->
 
     <script>
-        json = $FORM_JSON$;
+        $(function() {
+            var json = $FORM_JSON$;
 
-        function add_item(id, action, entity) {
-            var prototype = $('#prototype').clone();
-            var cols = prototype.find('.col');
-            $(cols[0]).html(id);
-            $(cols[1]).html(json.actions[action]);
-            $(cols[2]).html(entity);
-            return prototype.html();
-        }
+            function add_item(id, action, entity) {
+                var prototype = $('#prototype').clone();
+                var cols = prototype.find('.col');
+                $(cols[0]).html(id);
+                $(cols[1]).html(json.actions[action]);
+                $(cols[2]).html(entity);
+                return prototype.html();
+            }
 
-        function add_buttons(row, id) {
-            var edit = row.find('.edit-item');
-            edit.attr('href', edit.attr('href') + id);
-            var remove = row.find('.remove-item');
-            remove.attr('href', remove.attr('href') + id).on('click', function(event) {
-                event.preventDefault();
-                $(this).addClass('disabled');
-                var row = $(this).closest('.row');
-                $.get($(this).attr('href'), function(data) {
-                    $(this).removeClass('disabled');
-                    if (data == 'OK') {
-                        row.remove();
-                    }
+            function add_buttons(row, id) {
+                var edit = row.find('.edit-item');
+                edit.attr('href', edit.attr('href') + id);
+                var remove = row.find('.remove-item');
+                remove.attr('href', remove.attr('href') + id).on('click', function(event) {
+                    event.preventDefault();
+                    $(this).addClass('disabled');
+                    var row = $(this).closest('.row');
+                    $.get($(this).attr('href'), function(data) {
+                        $(this).removeClass('disabled');
+                        if (data == 'OK') {
+                            row.remove();
+                        }
+                    });
                 });
+            }
+
+            $(json.items).each(function(index, val) {
+                var row = $('#home_assistant_actions').append(add_item(val['id'], val['action'], val['entity_id'])).find('.row:last');
+                add_buttons(row, val['id']);
             });
-        }
 
-        $(json.items).each(function(index, val) {
-            var row = $('#home_assistant_actions').append(add_item(val['id'], val['action'], val['entity_id'])).find('.row:last');
-            add_buttons(row, val['id']);
+            $('.container .add-item').on('click', function(event) {
+                $(this).attr('href', 'hass_edit.html?action=' + $(this).closest('div').find('select').val());
+            });
+
+            var options = '';
+            for (let key in json.actions) {
+                options += '<option value="' + key + '">' + json.actions[key] + '</option>';
+            }
+            $('#action').html(options);
         });
-
-        $('.container .add-item').on('click', function(event) {
-            $(this).attr('href', 'hass_edit.html?action=' + $(this).closest('div').find('select').val());
-        });
-
-        var options = '';
-        for (let key in json.actions) {
-            options += '<option value="' + key + '">' + json.actions[key] + '</option>';
-        }
-        $('#action').html(options);
-
     </script>
 
     %FORM_VALIDATOR%

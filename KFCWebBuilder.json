@@ -32,7 +32,7 @@
             "#if !SYSLOG": [ "./Resources/html/syslog.html", "./Resources/js/forms/syslog.js" ],
             "#if !NTP_CLIENT": [ "./Resources/html/ntp.html", "./Resources/html/timezone.html", "./Resources/js/forms/ntp.js" ],
             "#if !HTTP2SERIAL": [ "./Resources/html/serial_console.html", "./lib/KFCWebBuilder/Resources/js/selectize.min.js", "./Resources/js/http2serial.js" ],
-            "#if !PING_MONITOR":  [ "./Resources/html/ping.html", "./Resources/html/ping_monitor.html" ],
+            "#if !PING_MONITOR":  [ "./Resources/html/ping.html", "./Resources/html/ping_monitor.html", "./Resources/js/ping_console.js" ],
             "#if !IOT_CLOCK": "./Resources/html/clock.html",
             "#if !IOT_BLINDS_CTRL": "./Resources/html/blinds.html",
             "#if !IOT_SENSOR": "./Resources/html/sensor.html",
@@ -61,6 +61,7 @@
                         "./Resources/js/file_manager.js",
                         "./Resources/js/ws_console.js",
                         "./Resources/js/http2serial.js",
+                        "./Resources/js/ping_console.js",
                         "./Resources/js/webui.js"
                     ]
                 },

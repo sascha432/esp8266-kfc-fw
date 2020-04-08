@@ -40,7 +40,6 @@
             "#if !IOT_REMOTE_CONTROL": "./Resources/html/remotectrl.html",
             "#if !REST_API_SUPPORT": "./Resources/html/rest_api.html",
             "#if !HOME_ASSISTANT_INTEGRATION": [ "./Resources/html/hass.html", "./Resources/html/hass_edit.html", "./Resources/html/hass_actions.html" ],
-            "#if !WEB_SOCKET_ENCRYPTION": [ "./Resources/js/aes.js", "./Resources/js/sha512.js" ],
             "#if !SERIAL2TCP": [ "./Resources/html/serial2tcp.html", "./Resources/js/forms/serial2tcp.js" ]
         },
         "groups": {

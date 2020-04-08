@@ -31,48 +31,26 @@
  WsClient::ClientCallbackVector_t  WsClient::_clientCallback;
  WsClient::AsyncWebSocketVector WsClient::_webSockets;
 
- WsClient::WsClient(AsyncWebSocketClient * client) {
-     _authenticated = false;
-     _isEncryped = false;
-     _client = client;
-#if WEB_SOCKET_ENCRYPTION
-     _iv = nullptr;
-     _salt = nullptr;
-#endif
+ WsClient::WsClient(AsyncWebSocketClient * client) : _authenticated(false), _client(client)
+ {
  }
 
- WsClient::~WsClient() {
-#if WEB_SOCKET_ENCRYPTION
-     if (_iv != nullptr) {
-         free(_iv);
-         free(_salt);
-     }
-#endif
+ WsClient::~WsClient()
+ {
  }
 
- void WsClient::setAuthenticated(bool authenticated) {
+ void WsClient::setAuthenticated(bool authenticated)
+ {
      _authenticated = authenticated;
  }
 
- bool WsClient::isAuthenticated() const {
+ bool WsClient::isAuthenticated() const
+ {
      return _authenticated;
  }
 
-#if WEB_SOCKET_ENCRYPTION
-
- bool WsClient::isEncrypted() const {
-     return _iv != nullptr;
- }
-
- void WsClient::initEncryption(uint8_t * iv, uint8_t * salt) {
-     _iv = iv;
-     _salt = salt;
- }
-
-#endif
-
- void WsClient::onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, int type, uint8_t *data, size_t len, void *arg, WsGetInstance getInstance) {
-
+ void WsClient::onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, int type, uint8_t *data, size_t len, void *arg, WsGetInstance getInstance)
+ {
     auto result = std::find(WsClient::_webSockets.begin(), WsClient::_webSockets.end(), server);
     if (result == WsClient::_webSockets.end()) {
         debug_printf("WsClient::onWsEvent(): websocket %p has been removed, event type %u\n", server, type);
@@ -148,16 +126,6 @@
 
             wsClient->onData(static_cast<AwsFrameType>(reinterpret_cast<AwsFrameInfo *>(arg)->opcode), data, len);
 
-        } else if (len == 22 && strncmp_P(reinterpret_cast<const char *>(data), PSTR("+REQ_ENCRYPTION "), 16) == 0) {     // client requests an encrypted connection
-
-#if WEB_SOCKET_ENCRYPTION
-            char cipher[7];
-            strncpy(cipher, (char *)data[16], sizeof(cipher))[sizeof(cipher)] = 0;
-            ws_request_encryption(*wsClient, client, cipher);
-#else
-            client->text(F("+ENCRYPTION_NOT_SUPPORTED"));
-#endif
-
         } else if (len > 10 && strncmp_P((const char *)data, PSTR("+SID "), 5) == 0) {          // client sent authentication
 
             Buffer buffer = Buffer();
@@ -170,17 +138,6 @@
             }
             char *ptr = buffer.getChar();
             strncpy(ptr, dataPtr, len)[len] = 0;
-#if WEB_SOCKET_ENCRYPTION
-            unsigned char buf[256];
-            if ((*wsClient)->isEncrypted()) {
-                buf[0] = 0;
-                if (decode_base64_length((unsigned char *)ptr) < 256) {
-                        buf[decode_base64((unsigned char *)ptr, buf)] = 0;
-                }
-                    //TODO
-                    // encrypt buf to get the SID
-            }
-#endif
             if (verify_session_id(ptr, config.getDeviceName(), config._H_STR(Config().device_pass))) {
 
                 wsClient->setAuthenticated(true);
@@ -206,18 +163,21 @@
 /**
  *  gets called when the first client has been authenticated.
  **/
-void WsClient::onStart() {
+void WsClient::onStart()
+{
     _debug_println(F("WebSocket::onConnect()"));
 }
 /**
  * gets called once all authenticated clients have been disconnected. onStart() will be called
  * again when authenticated clients become available.
  **/
-void WsClient::onEnd() {
+void WsClient::onEnd()
+{
     _debug_println(F("WebSocket::onEnd()"));
 }
 
-void WsClient::onData(AwsFrameType type, uint8_t *data, size_t len) {
+void WsClient::onData(AwsFrameType type, uint8_t *data, size_t len)
+{
     if (type == WS_TEXT) {
         onText(data, len);
     } else if (type == WS_BINARY) {
@@ -227,72 +187,13 @@ void WsClient::onData(AwsFrameType type, uint8_t *data, size_t len) {
     }
 }
 
-/*
-  } else if(type == WS_EVT_DATA){
-    AwsFrameInfo * info = (AwsFrameInfo*)arg;
-    String msg = "";
-    if(info->final && info->index == 0 && info->len == len){
-      //the whole message is in a single frame and we got all of it's data
-      Serial.printf("ws[%s][%u] %s-message[%llu]: ", server->url(), client->id(), (info->opcode == WS_TEXT)?"text":"binary", info->len);
-
-      if(info->opcode == WS_TEXT){
-        for(size_t i=0; i < info->len; i++) {
-          msg += (char) data[i];
-        }
-      } else {
-        char buff[3];
-        for(size_t i=0; i < info->len; i++) {
-          sprintf(buff, "%02x ", (uint8_t) data[i]);
-          msg += buff ;
-        }
-      }
-      Serial.printf("%s\n",msg.c_str());
-
-      if(info->opcode == WS_TEXT)
-        client->text("I got your text message");
-      else
-        client->binary("I got your binary message");
-    } else {
-      //message is comprised of multiple frames or the frame is split into multiple packets
-      if(info->index == 0){
-        if(info->num == 0)
-          Serial.printf("ws[%s][%u] %s-message start\n", server->url(), client->id(), (info->message_opcode == WS_TEXT)?"text":"binary");
-        Serial.printf("ws[%s][%u] frame[%u] start[%llu]\n", server->url(), client->id(), info->num, info->len);
-      }
-
-      Serial.printf("ws[%s][%u] frame[%u] %s[%llu - %llu]: ", server->url(), client->id(), info->num, (info->message_opcode == WS_TEXT)?"text":"binary", info->index, info->index + len);
-
-      if(info->opcode == WS_TEXT){
-        for(size_t i=0; i < info->len; i++) {
-          msg += (char) data[i];
-        }
-      } else {
-        char buff[3];
-        for(size_t i=0; i < info->len; i++) {
-          sprintf(buff, "%02x ", (uint8_t) data[i]);
-          msg += buff ;
-        }
-      }
-      Serial.printf("%s\n",msg.c_str());
-
-      if((info->index + len) == info->len){
-        Serial.printf("ws[%s][%u] frame[%u] end[%llu]\n", server->url(), client->id(), info->num, info->len);
-        if(info->final){
-          Serial.printf("ws[%s][%u] %s-message end\n", server->url(), client->id(), (info->message_opcode == WS_TEXT)?"text":"binary");
-          if(info->message_opcode == WS_TEXT)
-            client->text("I got your text message");
-          else
-            client->binary("I got your binary message");
-        }
-      }
-    }
-  }*/
-
-void WsClient::addClientCallback(ClientCallback_t callback) {
+void WsClient::addClientCallback(ClientCallback_t callback)
+{
     _clientCallback.push_back(callback);
 }
 
-void WsClient::invokeStartOrEndCallback(WsClient *wsClient, bool isStart) {
+void WsClient::invokeStartOrEndCallback(WsClient *wsClient, bool isStart)
+{
     uint16_t authenticatedClients = 0;
     auto client = wsClient->getClient();
     for(auto socket: client->server()->getClients()) {
@@ -315,7 +216,8 @@ void WsClient::invokeStartOrEndCallback(WsClient *wsClient, bool isStart) {
     }
 }
 
-void WsClient::broadcast(AsyncWebSocket *server, WsClient *sender, AsyncWebSocketMessageBuffer *buffer) {
+void WsClient::broadcast(AsyncWebSocket *server, WsClient *sender, AsyncWebSocketMessageBuffer *buffer)
+{
     if (server == nullptr) {
         server = sender->getClient()->server();
     }
@@ -330,7 +232,8 @@ void WsClient::broadcast(AsyncWebSocket *server, WsClient *sender, AsyncWebSocke
     server->_cleanBuffers();
 }
 
-void WsClient::broadcast(AsyncWebSocket *server, WsClient *sender, const char *str, size_t length) {
+void WsClient::broadcast(AsyncWebSocket *server, WsClient *sender, const char *str, size_t length)
+{
     if (server == nullptr) {
         server = sender->getClient()->server();
     }
@@ -339,7 +242,8 @@ void WsClient::broadcast(AsyncWebSocket *server, WsClient *sender, const char *s
     broadcast(server, sender, buffer);
 }
 
-void WsClient::broadcast(AsyncWebSocket *server, WsClient *sender, const __FlashStringHelper *str, size_t length) {
+void WsClient::broadcast(AsyncWebSocket *server, WsClient *sender, const __FlashStringHelper *str, size_t length)
+{
     if (server == nullptr) {
         server = sender->getClient()->server();
     }
@@ -348,7 +252,8 @@ void WsClient::broadcast(AsyncWebSocket *server, WsClient *sender, const __Flash
     broadcast(server, sender, buffer);
 }
 
-void WsClient::safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, const String &message) {
+void WsClient::safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, const String &message)
+{
     for(auto socket: server->getClients()) {
         if (client == socket && socket->status() == WS_CONNECTED && socket->_tempObject && reinterpret_cast<WsClient *>(socket->_tempObject)->isAuthenticated()) {
             _debug_printf_P(PSTR("WsClient::safeSend(): server=%p, client=%p, message=%s\n"), server, client, message.c_str());
@@ -358,96 +263,3 @@ void WsClient::safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, co
     }
     _debug_printf_P(PSTR("WsClient::safeSend(): server=%p, client NOT found=%p, message=%s\n"), server, client, message.c_str());
 }
-
-#if WEB_SOCKET_ENCRYPTION
-
-#define HMAC_DIGEST_SIZE  	20
-#define PBKDF2_ITERATIONS	100
-
-/*
- * Password-Based Key Derivation Function 2 (PKCS #5 v2.0)
- * Source Code From PolarSSL
- */
-void PBKDF2( uint8_t *pass, uint32_t pass_len, uint8_t *salt, uint32_t salt_len,uint8_t *output, uint32_t key_len, uint32_t rounds )
-{
-	register int ret,j;
-	register uint32_t i;
-	register uint8_t md1[HMAC_DIGEST_SIZE],work[HMAC_DIGEST_SIZE];
-	register size_t use_len;
-	register uint8_t *out_p = output;
-	register uint8_t counter[4];
-
-	for ( i = 0 ; i < sizeof ( counter ) ; i++ )
-		counter[i] = 0;
-	counter[3] = 1;
-
-	while (key_len)
-	{
-        uint8_t *hmac;
-
-        Sha1.initHmac(pass,pass_len);
-		Sha1.write(salt,salt_len);
-		Sha1.write(counter,4);
-		hmac = Sha1.resultHmac();
-
-		for ( i = 0 ; i < HMAC_DIGEST_SIZE ; i++ )
-			work[i] = md1[i] = hmac[i];
-
-		for ( i = 1 ; i < rounds ; i++ )
-		{
-			Sha1.initHmac(pass, pass_len);
-			Sha1.write(md1, HMAC_DIGEST_SIZE);
-			hmac = Sha1.resultHmac();
-
-			for ( j = 0 ; j < HMAC_DIGEST_SIZE ; j++ )
-			{
-				md1[j] = hmac[j];
-				work[j] ^= md1[j];
-			}
-		}
-
-		use_len = (key_len < HMAC_DIGEST_SIZE ) ? key_len : HMAC_DIGEST_SIZE;
-		for ( i = 0 ; i < use_len ; i++ )
-			out_p[i] = work[i];
-
-		key_len -= use_len;
-		out_p += use_len;
-
-		for ( i = 4 ; i > 0 ; i-- )
-			if ( ++counter[i-1] != 0 )
-				break;
-	}
-}
-
-void ws_request_encryption(WsClient *wsClient, AsyncWebSocketClient *client, String cipher) {
-    uint8_t *iv, *salt;
-
-    if (cipher != F("AES128") && cipher != F("AES192") && cipher != F("AES256") {
-        client->text(F("Encryption cipher not supported"));
-        client->close();
-        return;
-    }
-
-    if (rng.available(16)) {
-        iv = (uint8_t *)malloc(16);
-        rng.rand(iv, 16);
-        if (rng.available(16)) {
-            salt = (uint8_t *)malloc(16);
-            rng.rand(salt, 16);
-            wsClient->initEncryption(iv, salt);
-        } else {
-            free(iv);
-        }
-    }
-    if (wsClient->isEncrypted()) {
-        unsigned char iv_str[25], salt_str[25];
-        encode_base64(iv, 16, iv_str);
-        encode_base64(iv, 16, salt_str);
-        client->printf_P(PSTR("+REQ_ENCRYPTION %s %s %s"), cipher.c_str(), iv_str, salt_str);
-    } else {
-        client->text(F("+ERROR Failed to initialize encryption, try later again..."));
-        client->close();
-    }
-}
-
-#endif

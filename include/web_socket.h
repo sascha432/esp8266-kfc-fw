@@ -39,12 +39,6 @@ public:
     void setAuthenticated(bool authenticated);
     bool isAuthenticated() const;
 
-#if WEB_SOCKET_ENCRYPTION
-    bool isEncrypted() const;
-
-    void initEncryption(uint8_t *iv, uint8_t *salt);
-#endif
-
     inline void setClient(AsyncWebSocketClient *client) {
         _client = client;
     }
@@ -116,11 +110,6 @@ protected:
 
 private:
     bool _authenticated;
-    bool _isEncryped;
-#if WEB_SOCKET_ENCRYPTION
-    uint8_t *_iv;
-    uint8_t *_salt;
-#endif
     AsyncWebSocketClient *_client;
     static ClientCallbackVector_t _clientCallback;
 

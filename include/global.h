@@ -144,11 +144,6 @@
 #define AT_MODE_SUPPORTED               1               // AT commands over serial
 #endif
 
-#ifndef WEB_SOCKET_ENCRYPTION
-//#define WEB_SOCKET_ENCRYPTION           WEBSERVER_SUPPORT   // AES 128, 192 and 256 encryption for web sockets
-#define WEB_SOCKET_ENCRYPTION 0 // not implemeneted
-#endif
-
 #ifndef HTTP2SERIAL
 #define HTTP2SERIAL                     1               // HTTP2Serial bridge (requires ATMODE support)
 #endif
@@ -327,10 +322,6 @@ extern class Stream &DebugSerial;
 
 #ifndef PING_MONITOR
 #define PING_MONITOR 0
-#endif
-
-#ifndef ESP8266_AT_MODE_SUPPORT
-#define ESP8266_AT_MODE_SUPPORT 0
 #endif
 
 #ifndef REST_API_SUPPORT

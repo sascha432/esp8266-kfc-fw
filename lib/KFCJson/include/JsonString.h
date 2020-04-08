@@ -6,22 +6,6 @@
 
 #include <Arduino_compat.h>
 
-// assuming malloc is allocation 16 byte blocks:
-
-//JsonString 8 = buffer_size, malloc 16
-//JsonNamedVariant<JsonString> sizeof 20, malloc 32
-//JsonUnnamedVariant<JsonString> sizeof 12, malloc 16
-//JsonNamedVariant<String> sizeof 40, malloc 48
-//JsonUnnamedVariant<const __FlashStringHelper *> sizeof 8, malloc 16
-//JsonNamedVariant<const __FlashStringHelper *> sizeof 16, malloc 16
-
-//JsonString 16 = buffer_size, malloc 16
-//JsonNamedVariant<JsonString> sizeof 36, malloc 48
-//JsonUnnamedVariant<JsonString> sizeof 20, malloc 32
-//JsonNamedVariant<String> sizeof 48, malloc 48
-//JsonUnnamedVariant<const __FlashStringHelper *> sizeof 8, malloc 16
-//JsonNamedVariant<const __FlashStringHelper *> sizeof 24, malloc 32
-
 class JsonString {
 public:
     typedef enum : uint8_t {

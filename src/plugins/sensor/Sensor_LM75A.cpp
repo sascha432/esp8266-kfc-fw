@@ -35,7 +35,7 @@ uint8_t Sensor_LM75A::getAutoDiscoveryCount() const
 
 void Sensor_LM75A::getValues(JsonArray &array, bool timer)
 {
-    _debug_printf_P(PSTR("Sensor_LM75A::getValues()\n"));
+    _debug_println();
     auto &obj = array.addObject(3);
     auto temp = _readSensor();
     obj.add(JJ(id), _getId());
@@ -45,7 +45,7 @@ void Sensor_LM75A::getValues(JsonArray &array, bool timer)
 
 void Sensor_LM75A::createWebUI(WebUI &webUI, WebUIRow **row)
 {
-    _debug_printf_P(PSTR("Sensor_LM75A::createWebUI()\n"));
+    _debug_println();
     // if ((*row)->size() > 3) {
     //     *row = &webUI.addRow();
     // }

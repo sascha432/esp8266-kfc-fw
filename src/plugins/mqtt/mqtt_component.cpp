@@ -74,15 +74,14 @@ void MQTTComponent::publishAutoDiscovery(MQTTClient *client)
 PGM_P MQTTComponent::getComponentName()
 {
     switch(_type) {
-        case LIGHT:
+        case ComponentTypeEnum_t::LIGHT:
             return SPGM(mqtt_component_light);
-        case SENSOR:
+        case ComponentTypeEnum_t::SENSOR:
             return SPGM(mqtt_component_sensor);
-        case BINARY_SENSOR:
+        case ComponentTypeEnum_t::BINARY_SENSOR:
             return SPGM(mqtt_component_binary_sensor);
-        case SWITCH:
+        case ComponentTypeEnum_t::SWITCH:
             break;
-
     }
     return SPGM(mqtt_component_switch);
 }

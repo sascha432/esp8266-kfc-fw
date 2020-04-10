@@ -12,7 +12,7 @@
 #include <debug_helper_disable.h>
 #endif
 
-MQTTSensor::MQTTSensor() : MQTTComponent(SENSOR), _updateRate(DEFAULT_UPDATE_RATE), _nextUpdate(0), _mqttUpdateRate(DEFAULT_MQTT_UPDATE_RATE), _nextMqttUpdate(0)
+MQTTSensor::MQTTSensor() : MQTTComponent(ComponentTypeEnum_t::SENSOR), _updateRate(DEFAULT_UPDATE_RATE), _nextUpdate(0), _mqttUpdateRate(DEFAULT_MQTT_UPDATE_RATE), _nextMqttUpdate(0)
 {
     _debug_println();
 }

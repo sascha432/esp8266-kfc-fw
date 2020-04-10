@@ -39,12 +39,7 @@ public:
     typedef std::unique_ptr<MQTTAutoDiscovery> MQTTAutoDiscoveryPtr;
     typedef std::vector<MQTTAutoDiscoveryPtr> MQTTAutoDiscoveryVector;
 
-    typedef enum {
-        SWITCH = 1,
-        LIGHT,
-        SENSOR,
-        BINARY_SENSOR,
-    } ComponentTypeEnum_t;
+    using ComponentTypeEnum_t = MQTTAutoDiscovery::ComponentTypeEnum_t;
 
     MQTTComponent(ComponentTypeEnum_t type);
     virtual ~MQTTComponent();

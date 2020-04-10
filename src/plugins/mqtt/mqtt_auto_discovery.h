@@ -13,6 +13,13 @@ class MQTTComponent;
 class MQTTAutoDiscovery {
 public:
     typedef enum {
+        SWITCH = 1,
+        LIGHT,
+        SENSOR,
+        BINARY_SENSOR,
+    } ComponentTypeEnum_t;
+
+    typedef enum {
         FORMAT_JSON = 0,
         FORMAT_YAML = 1,
     } Format_t;

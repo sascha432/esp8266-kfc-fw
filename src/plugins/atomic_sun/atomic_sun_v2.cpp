@@ -24,7 +24,7 @@
 #include <debug_helper_disable.h>
 #endif
 
-Driver_4ChDimmer::Driver_4ChDimmer() : MQTTComponent(LIGHT), Dimmer_Base()
+Driver_4ChDimmer::Driver_4ChDimmer() : MQTTComponent(ComponentTypeEnum_t::LIGHT), Dimmer_Base()
 {
 #if DEBUG_MQTT_CLIENT
     debug_printf_P(PSTR("component=%p\n"), this);
@@ -118,7 +118,7 @@ void Driver_4ChDimmer::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, M
         vector.emplace_back(discovery);
     }
 
-    MQTTComponentHelper component(MQTTComponent::SENSOR);
+    MQTTComponentHelper component(MQTTComponent::ComponentTypeEnum_t::SENSOR);
 
     num = 0;
     component.setNumber(0);

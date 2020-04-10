@@ -15,7 +15,7 @@
 #include "../dimmer_module/dimmer_module_form.h"
 
 #ifndef DEBUG_4CH_DIMMER
-#define DEBUG_4CH_DIMMER 0
+#define DEBUG_4CH_DIMMER                    0
 #endif
 
 #ifndef IOT_ATOMIC_SUN_BAUD_RATE

@@ -26,12 +26,16 @@
 static ClockPlugin plugin;
 
 ClockPlugin::ClockPlugin() :
-    MQTTComponent(LIGHT),
+    MQTTComponent(ComponentTypeEnum_t::LIGHT),
 #if IOT_CLOCK_BUTTON_PIN
     _button(IOT_CLOCK_BUTTON_PIN, PRESSED_WHEN_HIGH),
     _buttonCounter(0),
 #endif
-    _color(0, 0, 80), _updateTimer(0), _time(0), _updateRate(1000), _isSyncing(1), _animationData()
+    _color(0, 0, 80), _updateTimer(0), _time(0), _updateRate(1000), _isSyncing(1),
+#if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
+    _autoBrightness(1023), _autoBrightnessValue(0), _autoBrightnessValueLast(0),
+#endif
+    _animationData()
 {
 
     size_t ofs = 0;
@@ -56,31 +60,6 @@ ClockPlugin::ClockPlugin() :
     _ui_color = 2;
 
     REGISTER_PLUGIN(this);
-}
-
-void ClockPlugin::getValues(JsonArray &array)
-{
-    _debug_println();
-
-    auto obj = &array.addObject(3);
-    obj->add(JJ(id), F("btn_colon"));
-    obj->add(JJ(state), true);
-    obj->add(JJ(value), _ui_colon);
-
-    obj = &array.addObject(3);
-    obj->add(JJ(id), F("btn_animation"));
-    obj->add(JJ(state), true);
-    obj->add(JJ(value), _ui_animation);
-
-    obj = &array.addObject(3);
-    obj->add(JJ(id), F("btn_color"));
-    obj->add(JJ(state), true);
-    obj->add(JJ(value), _ui_color);
-
-    obj = &array.addObject(3);
-    obj->add(JJ(id), F("brightness"));
-    obj->add(JJ(state), true);
-    obj->add(JJ(value), _brightness);
 }
 
 void ClockPlugin::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
@@ -148,11 +127,69 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
         }
         else if (id == F("brightness")) {
             _brightness = value.toInt();
-            setBrightness(_brightness);
+            _setBrightness();
         }
         publishState(nullptr);
     }
 }
+
+#if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
+
+void ClockPlugin::_adjustAutobrightness()
+{
+    if (_autoBrightness != -1) {
+        auto adc = analogRead(A0);
+        float value = adc / (float)_autoBrightness;
+        if (value > 1) {
+            value = 1;
+        }
+        else if (value < 0.10) {
+            value = 0.10;
+        }
+        if (_autoBrightnessValue == 0) {
+            _autoBrightnessValue = value;
+        }
+        else {
+            const float interval = 2000 / IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL;
+            _autoBrightnessValue = ((_autoBrightnessValue * interval) + value) / (interval + 1.0); // integrate over 2 seconds to get a smooth transition and avoid flickering
+            if ((uint8_t)(_autoBrightnessValue * 100) != _autoBrightnessValueLast) {
+                _autoBrightnessValueLast = (_autoBrightnessValue * 100);
+                _updateLightSensorWebUI();
+            }
+        }
+        _display.setBrightness(_brightness * _autoBrightnessValue);
+    }
+}
+
+void ClockPlugin::_updateLightSensorWebUI()
+{
+    JsonUnnamedObject json(2);
+    json.add(JJ(type), JJ(ue));
+    auto &events = json.addArray(JJ(events), 1);
+    auto &obj = events.addObject(3);
+    obj.add(JJ(id), F("light_sensor"));
+    obj.add(JJ(value), JsonNumber(_autoBrightness == -1 ? NAN : _autoBrightnessValue * 100, 0));
+    obj.add(JJ(state), _autoBrightness == -1 ? false : true);
+
+    WsWebUISocket::broadcast(WsWebUISocket::getSender(), json);
+}
+
+uint16_t ClockPlugin::_getBrightness() const
+{
+    if (_autoBrightness == -1) {
+        return _brightness;
+    }
+    return _brightness * _autoBrightnessValue;
+}
+
+#else
+
+uint16_t ClockPlugin::_getBrightness() const
+{
+    return _brightness;
+}
+
+#endif
 
 void ClockPlugin::setup(PluginSetupMode_t mode)
 {
@@ -166,21 +203,41 @@ void ClockPlugin::setup(PluginSetupMode_t mode)
     _button.onRelease(onButtonReleased);
 #endif
 
-    // check temperature every 10 seconds
+#if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
+
+#if DEBUG_IOT_CLOCK
+    Scheduler.addTimer(1000, true, [this](EventScheduler::TimerPtr) {
+        _debug_printf_P(PSTR("auto brightness %f\n"), _autoBrightnessValue);
+    });
+#endif
+
+    _autoBrightnessTimer.add(IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL, true, [this](EventScheduler::TimerPtr) {
+        _adjustAutobrightness();
+    });
+    _adjustAutobrightness();
+
+#endif
+
+    _mqttTimer.add(60000, true, [this](EventScheduler::TimerPtr) {
+        publishState(nullptr);
+    });
+
     _tempTimer.add(10000, true, [this](EventScheduler::TimerPtr) {
         SensorPlugin::for_each<Sensor_LM75A>(nullptr, [](MQTTSensor &sensor, Sensor_LM75A &) {
             return (sensor.getType() == MQTTSensor::SensorType::LM75A);
         }, [this](Sensor_LM75A &sensor) {
             auto temp = sensor.readSensor();
-            _debug_printf_P(PSTR("temp timer: %f\n"), temp);
+            _debug_printf_P(PSTR("temp timer %f\n"), temp);
             if (temp > _config.temp_prot) {
                 // over temp. protection, reduce brightness to 20% and flash red
                 if (_brightness > SevenSegmentDisplay::MAX_BRIGHTNESS  / 5) {
                     _debug_printf_P(PSTR("over temperature protection\n"));
-                    _display.setBrightness(SevenSegmentDisplay::MAX_BRIGHTNESS  / 5);
+                    _brightness = SevenSegmentDisplay::MAX_BRIGHTNESS / 5;
+                    _display.setBrightness(_brightness);
                     _color = Color(255, 0, 0);
                     setAnimation(FLASHING);
                     _updateRate = 2500;
+                    publishState(nullptr);
                 }
             }
             else if (temp > _config.temp_50) {
@@ -188,7 +245,8 @@ void ClockPlugin::setup(PluginSetupMode_t mode)
                 if (_brightness > SevenSegmentDisplay::MAX_BRIGHTNESS / 2) {
                     _debug_printf_P(PSTR("temperature > 60C, reducing brightness to 50%%\n"));
                     _brightness = SevenSegmentDisplay::MAX_BRIGHTNESS / 2;
-                    setBrightness(_brightness);
+                    _setBrightness();
+                    publishState(nullptr);
                 }
             }
             else if (temp > _config.temp_75) {
@@ -196,8 +254,15 @@ void ClockPlugin::setup(PluginSetupMode_t mode)
                 if (_brightness > SevenSegmentDisplay::MAX_BRIGHTNESS / 1.3333) {
                     _debug_printf_P(PSTR("temperature > 50C, reducing brightness to 75%%\n"));
                     _brightness = SevenSegmentDisplay::MAX_BRIGHTNESS / 1.3333;
-                    setBrightness(_brightness);
+                    _setBrightness();
+                    publishState(nullptr);
                 }
+            }
+            else if (temp < _config.temp_75 - 10 && _autoBrightness == -1) {
+                // reactivate auto brightness
+                _autoBrightness = _config.auto_brightness;
+                _adjustAutobrightness();
+                publishState(nullptr);
             }
         });
     });
@@ -233,6 +298,9 @@ void ClockPlugin::restart()
 {
     _debug_println();
     _tempTimer.remove();
+#if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
+    _autoBrightnessTimer.remove();
+#endif
     LoopFunctions::remove(loop);
     _display.clear();
     _display.show();
@@ -257,12 +325,12 @@ void ClockPlugin::createWebUI(WebUI &webUI)
     row->addButtonGroup(F("btn_colon"), F("Colon"), F("Solid,Blink slowly,Blink fast"), height);
     row->addButtonGroup(F("btn_animation"), F("Animation"), F("Solid,Rainbow,Flash,Fade"), height);
     row->addButtonGroup(F("btn_color"), F("Color"), F("Red,Green,Blue,Random"), height);
+    auto &sensor = row->addSensor(F("light_sensor"), F("Ambient light sensor"), F("&#37;"));
+    sensor.add(JJ(height), height);
 }
 
 void ClockPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
 {
-    auto clock = config._H_GET(Config().clock);
-
     form.setFormUI(F("Clock Configuration"));
 
     form.add<bool>(F("time_format_24h"), _H_STRUCT_VALUE(Config().clock, time_format_24h))
@@ -286,7 +354,8 @@ void ClockPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form
     form.add<uint8_t>(F("brightness"), _H_STRUCT_VALUE(Config().clock, brightness))
         ->setFormUI((new FormUI(FormUI::TEXT, F("Brightness")))->setSuffix(F("0-255")));
 
-    String str = PrintString(F("#%02X%02X%02X"), clock.solid_color[0], clock.solid_color[1], clock.solid_color[2]);
+    auto solid_color = config._H_GET(Config().clock).solid_color;
+    String str = PrintString(F("#%02X%02X%02X"), solid_color[0], solid_color[1], solid_color[2]);
     form.add(F("solid_color"), str, FormField::InputFieldType::TEXT)
         ->setFormUI(new FormUI(FormUI::TEXT, F("Solid Color")));
     form.addValidator(new FormCallbackValidator([](const String &value, FormField &field) {
@@ -298,10 +367,17 @@ void ClockPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form
         auto cfg = config._H_GET(Config().clock);
         cfg.solid_color[0] = color >> 16;
         cfg.solid_color[1] = color >> 8;
-        cfg.solid_color[2] = (uint8_t)color;
+        cfg.solid_color[2] = color;
         config._H_SET(Config().clock, cfg);
         return true;
     }));
+
+#if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
+
+    form.add<uint16_t>(F("auto_brightness"), _H_STRUCT_VALUE(Config().clock, auto_brightness))
+        ->setFormUI((new FormUI(FormUI::TEXT, F("Auto brightness value")))->setSuffix(F("-1 = disable")));
+
+#endif
 
     form.add<uint8_t>(F("temp_75"), _H_STRUCT_VALUE(Config().clock, temp_75))
         ->setFormUI((new FormUI(FormUI::TEXT, F("Temperature to reduce brightness to 75%")))->setSuffix(F("°C")));
@@ -311,7 +387,6 @@ void ClockPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form
 
     form.add<uint8_t>(F("temp_prot"), _H_STRUCT_VALUE(Config().clock, temp_prot))
         ->setFormUI((new FormUI(FormUI::TEXT, F("Over temperature protection")))->setSuffix(F("°C")));
-
 
     form.finalize();
 }
@@ -335,6 +410,16 @@ void ClockPlugin::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAu
     discovery->finalize();
     vector.emplace_back(discovery);
 
+#if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
+    MQTTComponentHelper component(MQTTComponent::ComponentTypeEnum_t::SENSOR);
+    component.setNumber(0);
+    discovery = component.createAutoDiscovery(SensorPlugin::getSensorCount(), format);
+    discovery->addStateTopic(MQTTClient::formatTopic(SensorPlugin::getSensorCount(), F("/light_sensor")));
+    discovery->addUnitOfMeasurement(F("%"));
+    discovery->finalize();
+    vector.emplace_back(discovery);
+#endif
+
     _qos = MQTTClient::getDefaultQos();
 }
 
@@ -356,7 +441,7 @@ void ClockPlugin::onMessage(MQTTClient *client, char *topic, char *payload, size
 
     if (strstr(topic, "brightness/set")) {
         _brightness = atoi(payload);
-        setBrightness(_brightness);
+        _setBrightness();
     }
     else if (strstr(topic, "color/set")) {
         char *r, *g, *b;
@@ -391,6 +476,38 @@ void ClockPlugin::_setColor()
     _updateTimer = millis();
 }
 
+void ClockPlugin::getValues(JsonArray &array)
+{
+    _debug_println();
+
+    auto obj = &array.addObject(3);
+    obj->add(JJ(id), F("btn_colon"));
+    obj->add(JJ(state), true);
+    obj->add(JJ(value), _ui_colon);
+
+    obj = &array.addObject(3);
+    obj->add(JJ(id), F("btn_animation"));
+    obj->add(JJ(state), true);
+    obj->add(JJ(value), _ui_animation);
+
+    obj = &array.addObject(3);
+    obj->add(JJ(id), F("btn_color"));
+    obj->add(JJ(state), true);
+    obj->add(JJ(value), _ui_color);
+
+    obj = &array.addObject(3);
+    obj->add(JJ(id), F("brightness"));
+    obj->add(JJ(state), true);
+    obj->add(JJ(value), _brightness);
+
+#if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
+    obj = &array.addObject(3);
+    obj->add(JJ(id), F("light_sensor"));
+    obj->add(JJ(value), JsonNumber(_autoBrightness == -1 ? NAN : _autoBrightnessValue * 100, 0));
+    obj->add(JJ(state), _autoBrightness == -1 ? false : true);
+#endif
+}
+
 void ClockPlugin::publishState(MQTTClient *client)
 {
     _debug_printf_P(PSTR("client=%p\n"), client);
@@ -404,15 +521,14 @@ void ClockPlugin::publishState(MQTTClient *client)
         client->publish(topic + F("brightness/state"), _qos, 1, String(_brightness));
         PrintString str(F("%u,%u,%u"), _colors[0], _colors[1], _colors[2]);
         client->publish(topic + F("color/state"), _qos, 1, str);
+#if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
+        client->publish(MQTTClient::formatTopic(SensorPlugin::getSensorCount(), F("/light_sensor")), _qos, 1, _autoBrightness == -1 ? String(F("Off")) : String((int)_autoBrightnessValue * 100));
+#endif
     }
 
     JsonUnnamedObject json(2);
     json.add(JJ(type), JJ(ue));
-    auto &events = json.addArray(JJ(events), 1);
-    auto &obj = events.addObject(3);
-    obj.add(JJ(id), F("brightness"));
-    obj.add(JJ(value), _brightness);
-    obj.add(JJ(state), true);
+    getValues(json.addArray(JJ(events)));
     WsWebUISocket::broadcast(WsWebUISocket::getSender(), json);
 }
 
@@ -547,6 +663,7 @@ void ClockPlugin::readConfig()
 
     _color = Color(_config.solid_color);
     _brightness = _config.brightness << 8;
+    _autoBrightness = _config.auto_brightness;
     setAnimation((AnimationEnum_t)_config.animation);
     _display.setBrightness(_brightness);
 }
@@ -711,11 +828,11 @@ void ClockPlugin::_setSevenSegmentDisplay()
     }
 }
 
-void ClockPlugin::setBrightness(uint16_t brightness)
+void ClockPlugin::_setBrightness()
 {
     auto oldUpdateRate = _updateRate;
     _updateRate = 25;
-    _display.setBrightness(_brightness, 2.5, [this, oldUpdateRate](uint16_t) {
+    _display.setBrightness(_getBrightness(), 2.5, [this, oldUpdateRate](uint16_t) {
         _updateRate = oldUpdateRate;
     });
 }

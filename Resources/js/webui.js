@@ -15,7 +15,7 @@ var webUIComponent = {
             switch: { min: 0, max: 1, columns: 2, zero_off: true, display_name: false, attributes: [ 'min', 'max', 'value', 'zero-off', 'display-name' ] },
             slider: { min: 0, max: 255, columns: 12, attributes: [ 'min', 'max', 'zero-off', 'value' ] },
             color_slider: { min: 15300, max: 50000 },
-            sensor: { columns: 3, head: false, attributes: [ 'head' ] },
+            sensor: { columns: 3, head: false, height: 0, attributes: [ 'head', 'height' ] },
             screen: { columns: 3, width: 128, height: 32, attributes: [ 'width', 'height' ] },
             binary_sensor: { columns: 2 },
             buttons: { columns: 3, buttons: [], height: 0, attributes: [ 'height', 'buttons' ] },
@@ -253,6 +253,9 @@ var webUIComponent = {
                     options.head = 'h4';
                 }
                 var element = this.createColumn(options, $('<div class="badge-sensor"><div class="row"><div class="col"><div class="outer-badge"><div class="inner-badge"><' + options.head + ' id="' + options.id + '">' + options.value + '</' + options.head + '><div class="unit">' + options.unit + '</div></div></div></div></div><div class="row"><div class="col text-center">' + options.name + '</div></div></div>'));
+                if (options.height) {
+                    $(element).find('.badge-sensor').height(options.height + 'px');
+                }
             }
             else if (options.render_type == 'wide') {
             }
@@ -263,6 +266,9 @@ var webUIComponent = {
                     options.head = 'h1';
                 }
                 var element = this.createColumn(options, $('<div class="sensor"><h3>' + options.name + '</h3><' + options.head + '><span id="' + options.id + '">' + options.value + '</span><span class="unit">' + options.unit + '</span></' + options.head + '>'));
+                if (options.height) {
+                    $(element).find('.sensor').height(options.height + 'px');
+                }
             }
             // this.addToGroup(options);
             return element;

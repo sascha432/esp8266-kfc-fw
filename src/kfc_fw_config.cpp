@@ -682,6 +682,7 @@ void KFCFWConfiguration::restoreFactorySettings()
         cfg.temp_75 = 50;
         cfg.temp_50 = 60;
         cfg.temp_prot = 70;
+        cfg.auto_brightness = 1023;
         // cfg.segmentOrder = 0;
         // static const int8_t order[8] PROGMEM = { 0, 1, -1, 2, 3, -2, 4, 5 }; // <1st digit> <2nd digit> <1st colon> <3rd digit> <4th digit> <2nd colon> <5th digit> <6th digit>
         // memcpy_P(cfg.order, order, sizeof(cfg.order));

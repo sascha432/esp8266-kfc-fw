@@ -356,6 +356,7 @@ struct Clock {
     uint8_t temp_75;
     uint8_t temp_50;
     uint8_t temp_prot;
+    int16_t auto_brightness;
     // int8_t order[8];
     // uint8_t segmentOrder;
 };

@@ -25,45 +25,50 @@
 
 // number of digits
 #ifndef IOT_CLOCK_NUM_DIGITS
-#define IOT_CLOCK_NUM_DIGITS            4
+#define IOT_CLOCK_NUM_DIGITS                    4
 #endif
 
 // pixels per segment
 #ifndef IOT_CLOCK_NUM_PIXELS
-#define IOT_CLOCK_NUM_PIXELS            2
+#define IOT_CLOCK_NUM_PIXELS                    2
 #endif
 
 // number of colons
 #ifndef IOT_CLOCK_NUM_COLONS
 #if IOT_CLOCK_NUM_DIGITS == 4
-#define IOT_CLOCK_NUM_COLONS            1
+#define IOT_CLOCK_NUM_COLONS                    1
 #else
-#define IOT_CLOCK_NUM_COLONS            2
+#define IOT_CLOCK_NUM_COLONS                    2
 #endif
 #endif
 
 // pixels per dot
 #ifndef IOT_CLOCK_NUM_COLON_PIXELS
-#define IOT_CLOCK_NUM_COLON_PIXELS      2
+#define IOT_CLOCK_NUM_COLON_PIXELS              2
 #endif
 
 // order of the segments (a-g)
 #ifndef IOT_CLOCK_SEGMENT_ORDER
-#define IOT_CLOCK_SEGMENT_ORDER         { 0, 1, 3, 4, 5, 6, 2 }
+#define IOT_CLOCK_SEGMENT_ORDER                 { 0, 1, 3, 4, 5, 6, 2 }
 #endif
 
 // digit order, 30=colon #1,31=#2, etc...
 #ifndef IOT_CLOCK_DIGIT_ORDER
-#define IOT_CLOCK_DIGIT_ORDER           { 0, 1, 30, 2, 3, 31, 4, 5 }
+#define IOT_CLOCK_DIGIT_ORDER                   { 0, 1, 30, 2, 3, 31, 4, 5 }
 #endif
 
 // pixel order of pixels that belong to digits, 0 to use pixel addresses of the 7 segment class
 #ifndef IOT_CLOCK_PIXEL_ORDER
-#define IOT_CLOCK_PIXEL_ORDER           { 0 }
+#define IOT_CLOCK_PIXEL_ORDER                   { 0 }
 #endif
 
 #ifndef IOT_CLOCK_BUTTON_PIN
-#define IOT_CLOCK_BUTTON_PIN            14
+#define IOT_CLOCK_BUTTON_PIN                    14
+#endif
+
+// update interval in ms, 0 to disable
+#ifndef IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
+#define IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL      25
 #endif
 
 #if IOT_CLOCK_BUTTON_PIN
@@ -205,7 +210,11 @@ public:
 public:
     virtual void createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector);
     virtual uint8_t getAutoDiscoveryCount() const {
+#if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
+        return 2;
+#else
         return 1;
+#endif
     }
     virtual void onConnect(MQTTClient *client);
     virtual void onMessage(MQTTClient *client, char *topic, char *payload, size_t len);
@@ -240,7 +249,12 @@ public:
 private:
     void _loop();
     void _setSevenSegmentDisplay();
-    void setBrightness(uint16_t brightness);
+    void _setBrightness();
+    uint16_t _getBrightness() const;
+#if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
+    void _adjustAutobrightness();
+    void _updateLightSensorWebUI();
+#endif
 
 private:
     typedef struct {
@@ -275,7 +289,14 @@ private:
     time_t _time;
     uint16_t _updateRate;
     uint8_t _isSyncing;
+#if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
+    int16_t _autoBrightness;
+    float _autoBrightnessValue;
+    uint8_t _autoBrightnessValueLast;
+    EventScheduler::Timer _autoBrightnessTimer;
+#endif
     Clock _config;
     AnimationData_t _animationData;
     EventScheduler::Timer _tempTimer;
+    EventScheduler::Timer _mqttTimer;
 };

@@ -37,7 +37,8 @@ DECLARE_ENUM(MQTTSensorSensorType, uint8_t,
 
 class MQTTSensor : public MQTTComponent {
 public:
-    const uint8_t DEFAULT_UPDATE_RATE = 60;
+    const uint8_t DEFAULT_UPDATE_RATE = 10;
+    const uint8_t DEFAULT_MQTT_UPDATE_RATE = 60;
 
     using SensorType = MQTTSensorSensorType;
 
@@ -61,8 +62,11 @@ public:
 #endif
     }
 
+    // using MQTT update rate
     virtual void publishState(MQTTClient *client) = 0;
+    // using update rate
     virtual void getValues(JsonArray &json, bool timer) = 0;
+
     virtual void createWebUI(WebUI &webUI, WebUIRow **row) = 0;
     virtual void getStatus(PrintHtmlEntitiesString &output) = 0;
 
@@ -91,9 +95,14 @@ public:
 
     void timerEvent(JsonArray &array);
 
-    inline void setUpdateRate(uint8_t updateRate) {
+    void setUpdateRate(uint8_t updateRate) {
         _updateRate = updateRate;
         _nextUpdate = 0;
+    }
+
+    void setMQTTUpdateRate(uint8_t updateRate) {
+        _mqttUpdateRate = updateRate;
+        _nextMqttUpdate = 0;
     }
 
 protected:
@@ -102,4 +111,6 @@ protected:
 private:
     uint8_t _updateRate;
     time_t _nextUpdate;
+    uint8_t _mqttUpdateRate;
+    time_t _nextMqttUpdate;
 };

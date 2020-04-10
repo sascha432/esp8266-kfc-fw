@@ -44,13 +44,8 @@
 #endif
 
 // webui update rate in seconds
-#ifndef IN219_UPDATE_RATE
-#define IN219_UPDATE_RATE                   5
-#endif
-
-// mqtt update rate in milliseconds
-#ifndef IN219_MQTT_UPDATE_RATE
-#define IN219_MQTT_UPDATE_RATE             (30 * 1000)
+#ifndef IN219_WEBUI_UPDATE_RATE
+#define IN219_WEBUI_UPDATE_RATE             5
 #endif
 
 class Sensor_INA219 : public MQTTSensor {
@@ -141,7 +136,6 @@ private:
     uint8_t _address;
 
     uint32_t _updateTimer;
-    uint32_t _mqttUpdateTimer;
     uint32_t _holdPeakTimer;
     SensorData _data;
     SensorData _mqttData;

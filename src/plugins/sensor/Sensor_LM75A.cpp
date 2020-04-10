@@ -12,11 +12,10 @@
 #include <debug_helper_disable.h>
 #endif
 
-Sensor_LM75A::Sensor_LM75A(const JsonString &name, TwoWire &wire, uint8_t address) : MQTTSensor(), _name(name), _wire(wire), _address(address), _mqttUpdateTimer(0)
+Sensor_LM75A::Sensor_LM75A(const JsonString &name, TwoWire &wire, uint8_t address) : MQTTSensor(), _name(name), _wire(wire), _address(address)
 {
     REGISTER_SENSOR_CLIENT(this);
     config.initTwoWire();
-    setUpdateRate(WEBUI_UPDATERATE);
 }
 
 void Sensor_LM75A::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector)
@@ -56,10 +55,7 @@ void Sensor_LM75A::createWebUI(WebUI &webUI, WebUIRow **row)
 void Sensor_LM75A::publishState(MQTTClient *client)
 {
     if (client && client->isConnected()) {
-        if (millis() > _mqttUpdateTimer) {
-            _mqttUpdateTimer = millis() + (DEFAULT_UPDATE_RATE * 1000);
-            client->publish(MQTTClient::formatTopic(-1, F("/%s/"), _getId().c_str()), _qos, 1, String(_readSensor(), 2));
-        }
+        client->publish(MQTTClient::formatTopic(-1, F("/%s/"), _getId().c_str()), _qos, 1, String(_readSensor(), 2));
     }
 }
 

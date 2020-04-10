@@ -40,7 +40,7 @@ Sensor_HLW80xx::Sensor_HLW80xx(const String &name) : MQTTSensor(), _name(name)
     reconfigure();
 
     setUpdateRate(IOT_SENSOR_HLW80xx_UPDATE_RATE);
-    _nextMQTTUpdate = 0;
+    setMqttUpdateRate(IOT_SENSOR_HLW80xx_UPDATE_RATE_MQTT);
 
 #if IOT_SENSOR_HLW80xx_DATA_PLOT
     _webSocketClient = nullptr;
@@ -218,14 +218,6 @@ void Sensor_HLW80xx::createConfigureForm(AsyncWebServerRequest *request, Form &f
 
 void Sensor_HLW80xx::publishState(MQTTClient *client)
 {
-    auto currentTime = time(nullptr);
-    if (currentTime > _nextMQTTUpdate) {
-        _nextMQTTUpdate = currentTime + IOT_SENSOR_HLW80xx_UPDATE_RATE_MQTT;
-    }
-    else {
-        return; // we skip this round
-    }
-
     if (client && client->isConnected()) {
         PrintString str;
         JsonUnnamedObject json;

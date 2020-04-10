@@ -17,7 +17,7 @@
 #include <debug_helper_disable.h>
 #endif
 
-Sensor_INA219::Sensor_INA219(const JsonString &name, TwoWire &wire, uint8_t address) : MQTTSensor(), _name(name), _address(address), _updateTimer(0), _mqttUpdateTimer(0), _holdPeakTimer(0), _Ipeak(NAN), _ina219(address)
+Sensor_INA219::Sensor_INA219(const JsonString &name, TwoWire &wire, uint8_t address) : MQTTSensor(), _name(name), _address(address), _updateTimer(0), _holdPeakTimer(0), _Ipeak(NAN), _ina219(address)
 {
     REGISTER_SENSOR_CLIENT(this);
     _ina219.begin(&config.initTwoWire());
@@ -25,7 +25,7 @@ Sensor_INA219::Sensor_INA219(const JsonString &name, TwoWire &wire, uint8_t addr
 
     _debug_printf_P(PSTR("Sensor_INA219::Sensor_INA219(): address=%x, voltage range=%x, gain=%x, shunt ADC resolution=%x\n"), _address, IOT_SENSOR_INA219_BUS_URANGE, IOT_SENSOR_INA219_GAIN, IOT_SENSOR_INA219_SHUNT_ADC_RES);
 
-    setUpdateRate(IN219_UPDATE_RATE);
+    setUpdateRate(IN219_WEBUI_UPDATE_RATE);
     LoopFunctions::add([this]() {
         this->_loop();
     }, reinterpret_cast<LoopFunctions::CallbackPtr_t>(this));
@@ -116,14 +116,11 @@ void Sensor_INA219::createWebUI(WebUI &webUI, WebUIRow **row)
 void Sensor_INA219::publishState(MQTTClient *client)
 {
     if (client && client->isConnected()) {
-        if (millis() > _mqttUpdateTimer) {
-            client->publish(MQTTClient::formatTopic(-1, F("/%s/"), _getId(VOLTAGE).c_str()), _qos, 1, String(_mqttData.U(), 2));
-            client->publish(MQTTClient::formatTopic(-1, F("/%s/"), _getId(CURRENT).c_str()), _qos, 1, String(_mqttData.I(), 0));
-            client->publish(MQTTClient::formatTopic(-1, F("/%s/"), _getId(POWER).c_str()), _qos, 1, String(_mqttData.P(), 0));
-            client->publish(MQTTClient::formatTopic(-1, F("/%s/"), _getId(PEAK_CURRENT).c_str()), _qos, 1, String(_Ipeak, 0));
-            _mqttUpdateTimer = millis() + IN219_MQTT_UPDATE_RATE;
-            _mqttData = SensorData();
-        }
+        client->publish(MQTTClient::formatTopic(-1, F("/%s/"), _getId(VOLTAGE).c_str()), _qos, 1, String(_mqttData.U(), 2));
+        client->publish(MQTTClient::formatTopic(-1, F("/%s/"), _getId(CURRENT).c_str()), _qos, 1, String(_mqttData.I(), 0));
+        client->publish(MQTTClient::formatTopic(-1, F("/%s/"), _getId(POWER).c_str()), _qos, 1, String(_mqttData.P(), 0));
+        client->publish(MQTTClient::formatTopic(-1, F("/%s/"), _getId(PEAK_CURRENT).c_str()), _qos, 1, String(_Ipeak, 0));
+        _mqttData = SensorData();
     }
 }
 

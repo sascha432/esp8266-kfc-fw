@@ -12,10 +12,9 @@
 #include <debug_helper_disable.h>
 #endif
 
-MQTTSensor::MQTTSensor() : MQTTComponent(SENSOR), _updateRate(DEFAULT_UPDATE_RATE)
+MQTTSensor::MQTTSensor() : MQTTComponent(SENSOR), _updateRate(DEFAULT_UPDATE_RATE), _nextUpdate(0), _mqttUpdateRate(DEFAULT_MQTT_UPDATE_RATE), _nextMqttUpdate(0)
 {
     _debug_println();
-    _nextUpdate = 0;
 }
 
 MQTTSensor::~MQTTSensor()
@@ -51,7 +50,12 @@ void MQTTSensor::timerEvent(JsonArray &array)
         _nextUpdate = currentTime + _updateRate;
 
         _debug_println();
-        publishState(MQTTClient::getClient());
         getValues(array, true);
+    }
+    if (currentTime > _nextMqttUpdate) {
+        _nextMqttUpdate = currentTime + _mqttUpdateRate;
+
+        _debug_println();
+        publishState(MQTTClient::getClient());
     }
 }

@@ -111,8 +111,6 @@
 #define IOT_SENSOR_HLW80xx_CURRENT_MIN_PULSE            (uint32_t)((32.0 * IOT_SENSOR_HLW80xx_VREF) / (3.0 * IOT_SENSOR_HLW80xx_F_OSC * IOT_SENSOR_HLW80xx_MAX_CURRENT * IOT_SENSOR_HLW80xx_SHUNT))
 #define IOT_SENSOR_HLW80xx_CURRENT_MAX_PULSE            (uint32_t)((32.0 * IOT_SENSOR_HLW80xx_VREF) / (3.0 * IOT_SENSOR_HLW80xx_F_OSC * IOT_SENSOR_HLW80xx_MIN_CURRENT * IOT_SENSOR_HLW80xx_SHUNT))
 
-
-
 // update rate WebUI
 #ifndef IOT_SENSOR_HLW80xx_UPDATE_RATE
 #define IOT_SENSOR_HLW80xx_UPDATE_RATE                  2
@@ -120,7 +118,7 @@
 
 // update rate MQTT
 #ifndef IOT_SENSOR_HLW80xx_UPDATE_RATE_MQTT
-#define IOT_SENSOR_HLW80xx_UPDATE_RATE_MQTT             30
+#define IOT_SENSOR_HLW80xx_UPDATE_RATE_MQTT             60
 #endif
 
 // internal voltage reference
@@ -254,7 +252,6 @@ protected:
     uint8_t _extraDigits;
 
     unsigned long _saveEnergyCounterTimeout;
-    time_t _nextMQTTUpdate;
 
 public:
     EventScheduler::Timer _dumpTimer;

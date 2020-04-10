@@ -232,6 +232,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HEAP, "HEAP", "[interval in seconds|0=disa
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RSSI, "RSSI", "[interval in seconds|0=disable]", "Display WiFi RSSI");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(GPIO, "GPIO", "[interval in seconds|0=disable]", "Display GPIO states");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PWM, "PWM", "<pin>,<level=0-1023/off>[,<frequency=1000Hz>]", "PWM output on PIN");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(ADC, "ADC", "[interval in seconds|0=disable]", "Display ADC voltage");
 #if defined(ESP8266)
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(CPU, "CPU", "<80|160>", "Set CPU speed", "Display CPU speed");
 #endif
@@ -297,6 +298,7 @@ void at_mode_help_commands()
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(RSSI), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(GPIO), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(PWM), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(ADC), name);
 #if defined(ESP8266)
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CPU), name);
 #endif
@@ -1190,6 +1192,24 @@ void at_mode_serial_handle_event(String &commandString)
                         analogWrite(pin, level * 1.02); // this might be different, just tested with a single ESP12F
                         double dc = (1000000 / (double)freq) * (level / 1024.0);
                         args.printf_P(PSTR("set pin=%u to OUTPUT, level=%u (%.2fµs), f=%uHz"), pin, level, dc, freq);
+                    }
+                }
+            }
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(ADC))) {
+                static EventScheduler::Timer adcTimer;
+                if (args.requireArgs(1)) {
+                    if (args.equalsIgnoreCase(1, F("off"))) {
+                        args.print(F("ADC display off"));
+                        adcTimer.remove();
+                    }
+                    else {
+                        auto interval = (uint16_t)args.toMillis(0, 100, ~0, 1000, String('s'));
+                        args.printf_P(PSTR("ADC interval %ums"), interval);
+                        auto &stream = args.getStream();
+                        adcTimer.add(interval, true, [&stream](EventScheduler::TimerPtr) {
+                            auto value = analogRead(A0);
+                            stream.printf_P(PSTR("+ADC: %u - %.3fV\n"), value, value / 1024.0);
+                        });
                     }
                 }
             }

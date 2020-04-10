@@ -353,6 +353,9 @@ struct Clock {
     bool time_format_24h;
     uint8_t solid_color[3];
     uint8_t brightness;
+    uint8_t temp_75;
+    uint8_t temp_50;
+    uint8_t temp_prot;
     // int8_t order[8];
     // uint8_t segmentOrder;
 };

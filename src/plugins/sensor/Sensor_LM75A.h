@@ -17,6 +17,8 @@ class Sensor_CCS811;
 
 class Sensor_LM75A : public MQTTSensor {
 public:
+    static const uint8_t WEBUI_UPDATERATE = 10;
+
     Sensor_LM75A(const JsonString &name, TwoWire &wire, uint8_t address = 0x48);
 
     virtual void createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector) override;
@@ -41,6 +43,7 @@ private:
     JsonString _name;
     TwoWire &_wire;
     uint8_t _address;
+    uint32_t _mqttUpdateTimer;
 };
 
 #endif

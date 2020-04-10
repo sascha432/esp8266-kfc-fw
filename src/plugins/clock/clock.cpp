@@ -186,7 +186,7 @@ void ClockPlugin::setup(PluginSetupMode_t mode)
             else if (temp > _config.temp_50) {
                 // temp. too high, reduce to 50% brightness
                 if (_brightness > SevenSegmentDisplay::MAX_BRIGHTNESS / 2) {
-                    _debug_printf_P(PSTR("temperature > 60C, reducing brightness to 50%\n"));
+                    _debug_printf_P(PSTR("temperature > 60C, reducing brightness to 50%%\n"));
                     _brightness = SevenSegmentDisplay::MAX_BRIGHTNESS / 2;
                     setBrightness(_brightness);
                 }
@@ -194,7 +194,7 @@ void ClockPlugin::setup(PluginSetupMode_t mode)
             else if (temp > _config.temp_75) {
                 // temp. too high, reduce to 75% brightness
                 if (_brightness > SevenSegmentDisplay::MAX_BRIGHTNESS / 1.3333) {
-                    _debug_printf_P(PSTR("temperature > 50C, reducing brightness to 75%\n"));
+                    _debug_printf_P(PSTR("temperature > 50C, reducing brightness to 75%%\n"));
                     _brightness = SevenSegmentDisplay::MAX_BRIGHTNESS / 1.3333;
                     setBrightness(_brightness);
                 }

@@ -235,11 +235,11 @@ public:
     void setSyncing(bool sync);
     void setBlinkColon(BlinkColonEnum_t value);
     void setAnimation(AnimationEnum_t animation);
-    Clock updateConfig();
+    void readConfig();
 
 private:
     void _loop();
-    void _setSevenSegmentDisplay(Clock &cfg);
+    void _setSevenSegmentDisplay();
     void setBrightness(uint16_t brightness);
 
 private:
@@ -271,11 +271,11 @@ private:
     std::array<SevenSegmentDisplay::pixel_address_t, IOT_CLOCK_PIXEL_ANIMATION_ORDER_LEN * IOT_CLOCK_NUM_DIGITS> _pixelOrder;
 
     Color _color;
-    BlinkColonEnum_t _blinkColon;
     uint32_t _updateTimer;
     time_t _time;
     uint16_t _updateRate;
     uint8_t _isSyncing;
-    bool _timeFormat24h;
+    Clock _config;
     AnimationData_t _animationData;
+    EventScheduler::Timer _tempTimer;
 };

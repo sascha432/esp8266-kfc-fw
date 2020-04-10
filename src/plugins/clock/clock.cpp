@@ -15,6 +15,7 @@
 #include "progmem_data.h"
 #include "./plugins/mqtt/mqtt_client.h"
 #include "./plugins/ntp/ntp_plugin.h"
+#include "./plugins/sensor/sensor.h"
 
 #if DEBUG_IOT_CLOCK
 #include <debug_helper_enable.h>
@@ -30,7 +31,7 @@ ClockPlugin::ClockPlugin() :
     _button(IOT_CLOCK_BUTTON_PIN, PRESSED_WHEN_HIGH),
     _buttonCounter(0),
 #endif
-    _color(0, 0, 80), _updateTimer(0), _time(0), _updateRate(1000), _isSyncing(1), _timeFormat24h(true), _animationData()
+    _color(0, 0, 80), _updateTimer(0), _time(0), _updateRate(1000), _isSyncing(1), _animationData()
 {
 
     size_t ofs = 0;
@@ -157,13 +158,49 @@ void ClockPlugin::setup(PluginSetupMode_t mode)
 {
     _debug_println();
 
-    auto cfg = updateConfig();
-    _setSevenSegmentDisplay(cfg);
+    readConfig();
+    _setSevenSegmentDisplay();
 
 #if IOT_CLOCK_BUTTON_PIN
     _button.onHoldRepeat(800, 100, onButtonHeld);
     _button.onRelease(onButtonReleased);
 #endif
+
+    // check temperature every 10 seconds
+    _tempTimer.add(10000, true, [this](EventScheduler::TimerPtr) {
+        SensorPlugin::for_each<Sensor_LM75A>(nullptr, [](MQTTSensor &sensor, Sensor_LM75A &) {
+            return (sensor.getType() == MQTTSensor::SensorType::LM75A);
+        }, [this](Sensor_LM75A &sensor) {
+            auto temp = sensor.readSensor();
+            _debug_printf_P(PSTR("temp timer: %f\n"), temp);
+            if (temp > _config.temp_prot) {
+                // over temp. protection, reduce brightness to 20% and flash red
+                if (_brightness > SevenSegmentDisplay::MAX_BRIGHTNESS  / 5) {
+                    _debug_printf_P(PSTR("over temperature protection\n"));
+                    _display.setBrightness(SevenSegmentDisplay::MAX_BRIGHTNESS  / 5);
+                    _color = Color(255, 0, 0);
+                    setAnimation(FLASHING);
+                    _updateRate = 2500;
+                }
+            }
+            else if (temp > _config.temp_50) {
+                // temp. too high, reduce to 50% brightness
+                if (_brightness > SevenSegmentDisplay::MAX_BRIGHTNESS / 2) {
+                    _debug_printf_P(PSTR("temperature > 60C, reducing brightness to 50%\n"));
+                    _brightness = SevenSegmentDisplay::MAX_BRIGHTNESS / 2;
+                    setBrightness(_brightness);
+                }
+            }
+            else if (temp > _config.temp_75) {
+                // temp. too high, reduce to 75% brightness
+                if (_brightness > SevenSegmentDisplay::MAX_BRIGHTNESS / 1.3333) {
+                    _debug_printf_P(PSTR("temperature > 50C, reducing brightness to 75%\n"));
+                    _brightness = SevenSegmentDisplay::MAX_BRIGHTNESS / 1.3333;
+                    setBrightness(_brightness);
+                }
+            }
+        });
+    });
 
     WiFiCallbacks::add(WiFiCallbacks::CONNECTED, wifiCallback);
     if (config.isWiFiUp()) {
@@ -188,13 +225,14 @@ void ClockPlugin::setup(PluginSetupMode_t mode)
 void ClockPlugin::reconfigure(PGM_P source)
 {
     _debug_println();
-    auto cfg = updateConfig();
-    _setSevenSegmentDisplay(cfg);
+    readConfig();
+    _setSevenSegmentDisplay();
 }
 
 void ClockPlugin::restart()
 {
     _debug_println();
+    _tempTimer.remove();
     LoopFunctions::remove(loop);
     _display.clear();
     _display.show();
@@ -264,6 +302,16 @@ void ClockPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form
         config._H_SET(Config().clock, cfg);
         return true;
     }));
+
+    form.add<uint8_t>(F("temp_75"), _H_STRUCT_VALUE(Config().clock, temp_75))
+        ->setFormUI((new FormUI(FormUI::TEXT, F("Temperature to reduce brightness to 75%")))->setSuffix(F("°C")));
+
+    form.add<uint8_t>(F("temp_50"), _H_STRUCT_VALUE(Config().clock, temp_50))
+        ->setFormUI((new FormUI(FormUI::TEXT, F("Temperature to reduce brightness to 50%")))->setSuffix(F("°C")));
+
+    form.add<uint8_t>(F("temp_prot"), _H_STRUCT_VALUE(Config().clock, temp_prot))
+        ->setFormUI((new FormUI(FormUI::TEXT, F("Over temperature protection")))->setSuffix(F("°C")));
+
 
     form.finalize();
 }
@@ -414,7 +462,7 @@ void ClockPlugin::setSyncing(bool sync)
 void ClockPlugin::setBlinkColon(BlinkColonEnum_t value)
 {
     _debug_printf_P(PSTR("blinkcolon=%u\n"), value);
-    _blinkColon = value;
+    _config.blink_colon = value;
 }
 
 void ClockPlugin::setAnimation(AnimationEnum_t animation)
@@ -487,24 +535,20 @@ void ClockPlugin::setAnimation(AnimationEnum_t animation)
             break;
         case NONE:
         default:
-            _updateRate = _blinkColon == FAST ? 500 : 1000;
+            _updateRate = (BlinkColonEnum_t)_config.blink_colon == FAST ? 500 : 1000;
             break;
     }
     _updateTimer = 0;
 }
 
-Clock ClockPlugin::updateConfig()
+void ClockPlugin::readConfig()
 {
-    auto cfg = config._H_GET(Config().clock);
+    _config = config._H_GET(Config().clock);
 
-    _blinkColon = (BlinkColonEnum_t)cfg.blink_colon;
-    _color = Color(cfg.solid_color);
-    _timeFormat24h = cfg.time_format_24h;
-    _brightness = cfg.brightness << 8;
-    setAnimation((AnimationEnum_t)cfg.animation);
+    _color = Color(_config.solid_color);
+    _brightness = _config.brightness << 8;
+    setAnimation((AnimationEnum_t)_config.animation);
     _display.setBrightness(_brightness);
-
-    return cfg;
 }
 
 #if IOT_CLOCK_BUTTON_PIN
@@ -513,7 +557,7 @@ void ClockPlugin::onButtonHeld(Button& btn, uint16_t duration, uint16_t repeatCo
 {
     _debug_printf_P(PSTR("duration=%u repeat=%u\n"), duration, repeatCount);
     if (repeatCount == 1) {
-        plugin.updateConfig();
+        plugin.readConfig();
         plugin._buttonCounter = 0;
     }
     if (repeatCount == 12) {    // start flashing after 2 seconds, hard reset occurs ~2.5s
@@ -568,7 +612,6 @@ void ClockPlugin::_onButtonReleased(uint16_t duration)
 
 void ClockPlugin::_loop()
 {
-    // return;
 #if IOT_CLOCK_BUTTON_PIN
     _button.update();
 #endif
@@ -609,7 +652,7 @@ void ClockPlugin::_loop()
         uint32_t color = _color;
         struct tm *tm = timezone_localtime(&now);
         uint8_t hour = tm->tm_hour;
-        if (!_timeFormat24h) {
+        if (!_config.time_format_24h) {
             hour = ((hour + 23) % 12) + 1;
         }
 
@@ -622,7 +665,7 @@ void ClockPlugin::_loop()
         _display.setDigit(5, tm->tm_sec % 10, color);
 #endif
 
-        if (_blinkColon != SOLID && (millis() / (_blinkColon == FAST ? 500 : 1000)) % 2 == 0) {
+        if ((BlinkColonEnum_t)_config.blink_colon != SOLID && (millis() / ((BlinkColonEnum_t)_config.blink_colon == FAST ? 500 : 1000)) % 2 == 0) {
             _display.clearColon(0);
 #if IOT_CLOCK_NUM_COLONS == 2
             _display.clearColon(1);
@@ -642,7 +685,7 @@ void ClockPlugin::_loop()
 static const char pgm_digit_order[] PROGMEM = IOT_CLOCK_DIGIT_ORDER;
 static const char pgm_segment_order[] PROGMEM = IOT_CLOCK_SEGMENT_ORDER;
 
-void ClockPlugin::_setSevenSegmentDisplay(Clock &cfg)
+void ClockPlugin::_setSevenSegmentDisplay()
 {
     SevenSegmentDisplay::pixel_address_t addr = 0;
     auto ptr = pgm_digit_order;

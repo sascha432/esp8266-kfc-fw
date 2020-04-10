@@ -28,6 +28,10 @@ public:
     virtual void getStatus(PrintHtmlEntitiesString &output) override;
     virtual MQTTSensorSensorType getType() const override;
 
+    float readSensor() {
+        return _readSensor();
+    }
+
 private:
     friend Sensor_CCS811;
 

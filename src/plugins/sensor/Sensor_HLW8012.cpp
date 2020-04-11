@@ -78,6 +78,8 @@ Sensor_HLW8012::Sensor_HLW8012(const String &name, uint8_t pinSel, uint8_t pinCF
     pinMode(_pinCF, INPUT);
     pinMode(_pinCF1, INPUT);
 
+    _debug_printf_P(PSTR("pin sel=%u cf=%u cf1=%u\n"), _pinSel, _pinCF, _pinCF1);
+
     _inputCF1 = &_inputCFI;
     _toggleOutputMode();
 
@@ -358,6 +360,11 @@ void Sensor_HLW8012::getStatus(PrintHtmlEntitiesString &output)
     output.printf_P(PSTR("Calibration U=%f, I=%f, P=%f, Rs="), _calibrationU, _calibrationI, _calibrationP);
     output.print(IOT_SENSOR_HLW80xx_SHUNT, 5, true);
     output.print(F("R" HTML_S(br)));
+
+#if DEBUG_IOT_SENSOR
+    output.printf_P(PSTR(HTML_S(br) "PINS: sel=%u cf=%u cf1=%u"), _pinSel, _pinCF, _pinCF1);
+#endif
+
 }
 
 MQTTSensor::SensorType Sensor_HLW8012::getType() const
@@ -377,7 +384,7 @@ String Sensor_HLW8012::_getId(const __FlashStringHelper *type)
 
 void Sensor_HLW8012::_setOutputMode(OutputTypeEnum_t outputMode, int delay)
 {
-    _debug_printf_P(PSTR("Sensor_HLW8012::_setOutputMode(): mode=%u\n"), outputMode);
+    _debug_printf_P(PSTR("mode=%u\n"), outputMode);
     if (outputMode == VOLTAGE) {
         _inputCF1 = &_inputCFI;
     }

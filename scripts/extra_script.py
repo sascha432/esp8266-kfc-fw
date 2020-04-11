@@ -85,6 +85,7 @@ env.AddPreAction("$BUILD_DIR/${PROGNAME}.elf", update_build_id)
 # env.AddPostAction("$BUILD_DIR/${PROGNAME}.elf", copy_firmware)
 # env.AddPostAction("$BUILD_DIR/${PROGNAME}.bin", copy_firmware)
 
+# FIX TODO builds files after creating the SPIFFS
 env.AddPreAction("uploadfs", upload_fs)
 # env.AddPostAction("uploadfs", copy_spiffs)
 

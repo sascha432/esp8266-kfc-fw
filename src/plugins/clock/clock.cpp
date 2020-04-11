@@ -522,7 +522,7 @@ void ClockPlugin::publishState(MQTTClient *client)
         PrintString str(F("%u,%u,%u"), _colors[0], _colors[1], _colors[2]);
         client->publish(topic + F("color/state"), _qos, 1, str);
 #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
-        client->publish(MQTTClient::formatTopic(SensorPlugin::getSensorCount(), F("/light_sensor")), _qos, 1, _autoBrightness == -1 ? String(F("Off")) : String((int)_autoBrightnessValue * 100));
+        client->publish(MQTTClient::formatTopic(SensorPlugin::getSensorCount(), F("/light_sensor")), _qos, 1, _autoBrightness == -1 ? String(F("Off")) : String((int)(_autoBrightnessValue * 100)));
 #endif
     }
 

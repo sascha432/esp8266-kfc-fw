@@ -2,6 +2,8 @@
 # Author: sascha_lammers@gmx.de
 #
 
+# pip install matplotlib websocket-client
+
 from pprint import pprint
 import tkinter
 import tkinter as tk

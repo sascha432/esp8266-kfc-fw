@@ -100,7 +100,7 @@ public:
         _nextUpdate = 0;
     }
 
-    void setMQTTUpdateRate(uint8_t updateRate) {
+    void setMqttUpdateRate(uint8_t updateRate) {
         _mqttUpdateRate = updateRate;
         _nextMqttUpdate = 0;
     }

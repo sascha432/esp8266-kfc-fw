@@ -51,8 +51,6 @@
                         "./lib/KFCWebBuilder/Resources/js/js.cookie.min.js",
                         "./lib/KFCWebBuilder/Resources/js/selectize.min.js",
                         "./lib/KFCWebBuilder/Resources/js/rangeslider.min.js",
-                        "./Resources/js/aes.js",
-                        "./Resources/js/sha512.js",
                         "./Resources/js/common.js",
                         "./Resources/js/forms.js",
                         "./Resources/js/forms/*.js",

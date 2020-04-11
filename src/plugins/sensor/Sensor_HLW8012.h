@@ -16,8 +16,14 @@
 #ifndef IOT_SENSOR_HLW8012_SEL
 #define IOT_SENSOR_HLW8012_SEL                      16
 #endif
+
+#ifndef IOT_SENSOR_HLW8012_SEL_VOLTAGE
 #define IOT_SENSOR_HLW8012_SEL_VOLTAGE              LOW
+#endif
+
+#ifndef IOT_SENSOR_HLW8012_SEL_CURRENT
 #define IOT_SENSOR_HLW8012_SEL_CURRENT              HIGH
+#endif
 
 #ifndef IOT_SENSOR_HLW8012_CF
 #define IOT_SENSOR_HLW8012_CF                       14

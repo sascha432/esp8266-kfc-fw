@@ -33,9 +33,9 @@ ClockPlugin::ClockPlugin() :
 #endif
     _color(0, 0, 80), _updateTimer(0), _time(0), _updateRate(1000), _isSyncing(1),
 #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
-    _autoBrightness(1023), _autoBrightnessValue(0), _autoBrightnessValueLast(0),
+    _autoBrightness(1023), _autoBrightnessValue(0), _autoBrightnessLastValue(0),
 #endif
-    _animationData()
+    _animationData(), _timerCounter(0)
 {
 
     size_t ofs = 0;
@@ -152,10 +152,6 @@ void ClockPlugin::_adjustAutobrightness()
         else {
             const float interval = 2000 / IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL;
             _autoBrightnessValue = ((_autoBrightnessValue * interval) + value) / (interval + 1.0); // integrate over 2 seconds to get a smooth transition and avoid flickering
-            if ((uint8_t)(_autoBrightnessValue * 100) != _autoBrightnessValueLast) {
-                _autoBrightnessValueLast = (_autoBrightnessValue * 100);
-                _updateLightSensorWebUI();
-            }
         }
         _display.setBrightness(_brightness * _autoBrightnessValue);
     }
@@ -205,12 +201,6 @@ void ClockPlugin::setup(PluginSetupMode_t mode)
 
 #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
 
-#if DEBUG_IOT_CLOCK
-    Scheduler.addTimer(1000, true, [this](EventScheduler::TimerPtr) {
-        _debug_printf_P(PSTR("auto brightness %f\n"), _autoBrightnessValue);
-    });
-#endif
-
     _autoBrightnessTimer.add(IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL, true, [this](EventScheduler::TimerPtr) {
         _adjustAutobrightness();
     });
@@ -218,53 +208,70 @@ void ClockPlugin::setup(PluginSetupMode_t mode)
 
 #endif
 
-    _mqttTimer.add(60000, true, [this](EventScheduler::TimerPtr) {
-        publishState(nullptr);
-    });
-
-    _tempTimer.add(10000, true, [this](EventScheduler::TimerPtr) {
-        SensorPlugin::for_each<Sensor_LM75A>(nullptr, [](MQTTSensor &sensor, Sensor_LM75A &) {
-            return (sensor.getType() == MQTTSensor::SensorType::LM75A);
-        }, [this](Sensor_LM75A &sensor) {
-            auto temp = sensor.readSensor();
-            _debug_printf_P(PSTR("temp timer %f\n"), temp);
-            if (temp > _config.temp_prot) {
-                // over temp. protection, reduce brightness to 20% and flash red
-                if (_brightness > SevenSegmentDisplay::MAX_BRIGHTNESS  / 5) {
-                    _debug_printf_P(PSTR("over temperature protection\n"));
-                    _brightness = SevenSegmentDisplay::MAX_BRIGHTNESS / 5;
-                    _display.setBrightness(_brightness);
-                    _color = Color(255, 0, 0);
-                    setAnimation(FLASHING);
-                    _updateRate = 2500;
+    _timer.add(1000, true, [this](EventScheduler::TimerPtr) {
+        _timerCounter++;
+#if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
+        // update auto brightness timer
+        if (_timerCounter % 2 == 0) {
+#if DEBUG_IOT_CLOCK
+            _debug_printf_P(PSTR("auto brightness %f\n"), _autoBrightnessValue);
+#endif
+            uint8_t tmp = _autoBrightnessValue * 100;
+            if (tmp != _autoBrightnessLastValue) {
+                _autoBrightnessLastValue = tmp;
+                _updateLightSensorWebUI();
+            }
+        }
+#endif
+        // temperature protection timer
+        if (_timerCounter % 10 == 0) {
+            SensorPlugin::for_each<Sensor_LM75A>(nullptr, [](MQTTSensor &sensor, Sensor_LM75A &) {
+                return (sensor.getType() == MQTTSensor::SensorType::LM75A);
+            }, [this](Sensor_LM75A &sensor) {
+                auto temp = sensor.readSensor();
+                _debug_printf_P(PSTR("temp timer %f\n"), temp);
+                if (temp > _config.temp_prot) {
+                    // over temp. protection, reduce brightness to 20% and flash red
+                    if (_brightness > SevenSegmentDisplay::MAX_BRIGHTNESS  / 5) {
+                        _debug_printf_P(PSTR("over temperature protection\n"));
+                        _brightness = SevenSegmentDisplay::MAX_BRIGHTNESS / 5;
+                        _display.setBrightness(_brightness);
+                        _color = Color(255, 0, 0);
+                        setAnimation(FLASHING);
+                        _updateRate = 2500;
+                        publishState(nullptr);
+                    }
+                }
+                else if (temp > _config.temp_50) {
+                    // temp. too high, reduce to 50% brightness
+                    if (_brightness > SevenSegmentDisplay::MAX_BRIGHTNESS / 2) {
+                        _debug_printf_P(PSTR("temperature > 60C, reducing brightness to 50%%\n"));
+                        _brightness = SevenSegmentDisplay::MAX_BRIGHTNESS / 2;
+                        _setBrightness();
+                        publishState(nullptr);
+                    }
+                }
+                else if (temp > _config.temp_75) {
+                    // temp. too high, reduce to 75% brightness
+                    if (_brightness > SevenSegmentDisplay::MAX_BRIGHTNESS / 1.3333) {
+                        _debug_printf_P(PSTR("temperature > 50C, reducing brightness to 75%%\n"));
+                        _brightness = SevenSegmentDisplay::MAX_BRIGHTNESS / 1.3333;
+                        _setBrightness();
+                        publishState(nullptr);
+                    }
+                }
+                else if (temp < _config.temp_75 - 10 && _autoBrightness == -1) {
+                    // reactivate auto brightness
+                    _autoBrightness = _config.auto_brightness;
+                    _adjustAutobrightness();
                     publishState(nullptr);
                 }
-            }
-            else if (temp > _config.temp_50) {
-                // temp. too high, reduce to 50% brightness
-                if (_brightness > SevenSegmentDisplay::MAX_BRIGHTNESS / 2) {
-                    _debug_printf_P(PSTR("temperature > 60C, reducing brightness to 50%%\n"));
-                    _brightness = SevenSegmentDisplay::MAX_BRIGHTNESS / 2;
-                    _setBrightness();
-                    publishState(nullptr);
-                }
-            }
-            else if (temp > _config.temp_75) {
-                // temp. too high, reduce to 75% brightness
-                if (_brightness > SevenSegmentDisplay::MAX_BRIGHTNESS / 1.3333) {
-                    _debug_printf_P(PSTR("temperature > 50C, reducing brightness to 75%%\n"));
-                    _brightness = SevenSegmentDisplay::MAX_BRIGHTNESS / 1.3333;
-                    _setBrightness();
-                    publishState(nullptr);
-                }
-            }
-            else if (temp < _config.temp_75 - 10 && _autoBrightness == -1) {
-                // reactivate auto brightness
-                _autoBrightness = _config.auto_brightness;
-                _adjustAutobrightness();
-                publishState(nullptr);
-            }
-        });
+            });
+        }
+        // mqtt update timer
+        if (_timerCounter % 60 == 0) {
+            publishState(nullptr);
+        }
     });
 
     WiFiCallbacks::add(WiFiCallbacks::CONNECTED, wifiCallback);
@@ -297,7 +304,7 @@ void ClockPlugin::reconfigure(PGM_P source)
 void ClockPlugin::restart()
 {
     _debug_println();
-    _tempTimer.remove();
+    _timer.remove();
 #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
     _autoBrightnessTimer.remove();
 #endif
@@ -325,7 +332,7 @@ void ClockPlugin::createWebUI(WebUI &webUI)
     row->addButtonGroup(F("btn_colon"), F("Colon"), F("Solid,Blink slowly,Blink fast"), height);
     row->addButtonGroup(F("btn_animation"), F("Animation"), F("Solid,Rainbow,Flash,Fade"), height);
     row->addButtonGroup(F("btn_color"), F("Color"), F("Red,Green,Blue,Random"), height);
-    auto &sensor = row->addSensor(F("light_sensor"), F("Ambient light sensor"), F("&#37;"));
+    auto &sensor = row->addSensor(F("light_sensor"), F("Ambient light sensor"), F("&#37;<br><img src=\"http://simpleicon.com/wp-content/uploads/light.svg\" width=\"80\" height=\"80\" style=\"margin-top:10px\">"));
     sensor.add(JJ(height), height);
 }
 

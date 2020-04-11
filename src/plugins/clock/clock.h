@@ -292,11 +292,11 @@ private:
 #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
     int16_t _autoBrightness;
     float _autoBrightnessValue;
-    uint8_t _autoBrightnessValueLast;
+    uint8_t _autoBrightnessLastValue;
     EventScheduler::Timer _autoBrightnessTimer;
 #endif
     Clock _config;
     AnimationData_t _animationData;
-    EventScheduler::Timer _tempTimer;
-    EventScheduler::Timer _mqttTimer;
+    EventScheduler::Timer _timer;
+    uint32_t _timerCounter;
 };

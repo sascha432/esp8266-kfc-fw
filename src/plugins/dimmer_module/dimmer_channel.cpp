@@ -14,7 +14,7 @@
 #include <debug_helper_disable.h>
 #endif
 
-DimmerChannel::DimmerChannel() : MQTTComponent(LIGHT) {
+DimmerChannel::DimmerChannel() : MQTTComponent(ComponentTypeEnum_t::LIGHT) {
 #if DEBUG_MQTT_CLIENT
     debug_printf_P(PSTR("DimmerChannel(): component=%p\n"), this);
 #endif

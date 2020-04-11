@@ -20,7 +20,7 @@
 #include <debug_helper_disable.h>
 #endif
 
-Driver_DimmerModule::Driver_DimmerModule() : MQTTComponent(SENSOR), Dimmer_Base()
+Driver_DimmerModule::Driver_DimmerModule() : MQTTComponent(ComponentTypeEnum_t::SENSOR), Dimmer_Base()
 {
 }
 

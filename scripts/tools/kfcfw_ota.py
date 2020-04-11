@@ -18,6 +18,25 @@ import re
 import json
 import hashlib
 
+class SimpleProgressBar:
+
+    def __init__(self, max_value, redirect_stdout=True):
+        self.bar = None
+        # self.bar = progressbar.ProgressBar(...)
+
+    def start(self):
+        if self.bar!=None:
+            self.bar.start()
+
+    def update(self, value, max_value = 0):
+        if self.bar!=None:
+            self.bar.update(value, max_value)
+
+    def finish(self):
+        if self.bar!=None:
+            self.bar.finish()
+
+
 def verbose(msg, new_line=True):
     global args
     if args.quiet==False:
@@ -79,7 +98,7 @@ def get_status(url, target, sid):
         content = resp.content.decode()
         login_error = get_login_error(content)
         if login_error!=None:
-            error("Log failed: " + login_error)
+            error("Login failed: " + login_error + ". Check password or use --sha1 for old authentication method")
         software = get_div("Software", content)
         hardware = get_div("Hardware", content)
         if software!=None:
@@ -91,7 +110,7 @@ def get_status(url, target, sid):
     elif resp.status_code==403:
         error("Access denied", 2)
     elif resp.status_code==404:
-        error("Status page not found", 2)
+        error("Status page not found. Use -n to skip this check", 2)
     else:
         error("Invalid response code " + str(resp.status_code), 2)
 
@@ -111,7 +130,7 @@ def flash(url, type, target, sid):
     filesize = os.fstat(args.image.fileno()).st_size
     verbose("Uploading " + str(filesize) + " Bytes: " + args.image.name)
 
-    bar = progressbar.ProgressBar(max_value=filesize, redirect_stdout=True)
+    bar = SimpleProgressBar(max_value=filesize, redirect_stdout=True)
     bar.start();
     encoder = MultipartEncoder(fields={ "image_type": image_type, "SID": sid, "firmware_image": ("filename", args.image, "application/octet-stream") })
 
@@ -138,9 +157,9 @@ def flash(url, type, target, sid):
     if args.no_wait==False:
         max_wait = 60
         step = 0
-        verbose("Waiting for device to reboot", False)
+        verbose("Waiting for device to reboot...")
         if args.quiet==False:
-            bar = progressbar.ProgressBar(max_value=progressbar.UnknownLength, redirect_stdout=True)
+            bar = SimpleProgressBar(max_value=progressbar.UnknownLength, redirect_stdout=True)
             for i in range(0, 40):
                 bar.update(step)
                 step = step + 1

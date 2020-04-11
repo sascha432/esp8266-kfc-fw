@@ -33,7 +33,7 @@
             "#if !NTP_CLIENT": [ "./Resources/html/ntp.html", "./Resources/html/timezone.html", "./Resources/js/forms/ntp.js" ],
             "#if !HTTP2SERIAL": [ "./Resources/html/serial_console.html", "./lib/KFCWebBuilder/Resources/js/selectize.min.js", "./Resources/js/http2serial.js" ],
             "#if !PING_MONITOR":  [ "./Resources/html/ping.html", "./Resources/html/ping_monitor.html", "./Resources/js/ping_console.js" ],
-            "#if !IOT_CLOCK": "./Resources/html/clock.html",
+            "#if !IOT_CLOCK": [ "./Resources/html/clock.html", "./Resources/images/light.svg" ],
             "#if !IOT_BLINDS_CTRL": "./Resources/html/blinds.html",
             "#if !IOT_SENSOR": "./Resources/html/sensor.html",
             "#if !IOT_WEATHER_STATION": "./Resources/html/weather.html",
@@ -145,7 +145,7 @@
             },
             "static_content": {
                 "target_dirs": {
-                    "./data/webui/images": [ "./lib/KFCWebBuilder/Resources/images/spinner.gif" ],
+                    "./data/webui/images": [ "./lib/KFCWebBuilder/Resources/images/spinner.gif", "./Resources/images/light.svg" ],
                     "./data/webui/fonts": { "./lib/KFCWebBuilder/Resources/fonts": "/^open-iconic\\..*/" },
                     "./stk500v1": [ "./src/plugins/stk500v1/atmega.csv" ],
                     "./fonts": [ "./src/plugins/ssd1306_plugin/fonts/7digit" ]

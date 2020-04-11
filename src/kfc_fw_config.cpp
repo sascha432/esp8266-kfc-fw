@@ -734,7 +734,7 @@ const String KFCFWConfiguration::getFirmwareVersion()
 {
 #if DEBUG
 #if ESP8266
-    return getShortFirmwareVersion() + F("." __BUILD_ID "_" ARDUINO_ESP8266_RELEASE " " __DATE__);
+    return getShortFirmwareVersion() + F("." __BUILD_ID "." ARDUINO_ESP8266_RELEASE " " __DATE__);
 #else
     return getShortFirmwareVersion() + F("." __BUILD_ID " " __DATE__);
 #endif

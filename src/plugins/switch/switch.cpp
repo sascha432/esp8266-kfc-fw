@@ -24,7 +24,7 @@ PROGMEM_STRING_DEF(iot_switch_states_file, "/switch.states");
 
 SwitchPlugin plugin;
 
-SwitchPlugin::SwitchPlugin() : MQTTComponent(SWITCH), _states(0), _pins({IOT_SWITCH_CHANNEL_PINS})
+SwitchPlugin::SwitchPlugin() : MQTTComponent(ComponentTypeEnum_t::SWITCH), _states(0), _pins({IOT_SWITCH_CHANNEL_PINS})
 {
     REGISTER_PLUGIN(this);
 }

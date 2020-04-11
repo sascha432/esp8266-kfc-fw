@@ -21,7 +21,7 @@ MQTTAutoDiscoveryClient *MQTTAutoDiscoveryClient::_instance = nullptr;
 
 PROGMEM_STRING_DEF(mqtt_auto_discovery_client, "MQTT auto discovery: ");
 
-MQTTAutoDiscoveryClient::MQTTAutoDiscoveryClient(Stream *stream) : MQTTComponent(BINARY_SENSOR), _stream(stream) {
+MQTTAutoDiscoveryClient::MQTTAutoDiscoveryClient(Stream *stream) : MQTTComponent(ComponentTypeEnum_t::BINARY_SENSOR), _stream(stream) {
     _debug_println(F("MQTTAutoDiscoveryClient::MQTTAutoDiscoveryClient()"));
     auto client = MQTTClient::getClient();
     if (client && client->isConnected()) { // already connected? emulate onConnect callback

@@ -13,7 +13,7 @@
 #include <debug_helper_disable.h>
 #endif
 
-BlindsChannel::BlindsChannel() : MQTTComponent(SWITCH), _state(UNKNOWN), _channel(), _controller(nullptr)
+BlindsChannel::BlindsChannel() : MQTTComponent(ComponentTypeEnum_t::SWITCH), _state(UNKNOWN), _channel(), _controller(nullptr)
 {
 }
 

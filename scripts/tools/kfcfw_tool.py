@@ -758,7 +758,7 @@ class StartPage(tk.Frame):
 
         self.controller = controller
         self.password_placeholder = '********'
-        self.config_filename = os.path.dirname(os.path.realpath(__file__)) + '/hlw8012_config.json'
+        self.config_filename = os.path.dirname(os.path.realpath(__file__)) + '/kfcfw_tool.json'
         self.read_config()
 
         connection_name = 'NOT CONNECTED'

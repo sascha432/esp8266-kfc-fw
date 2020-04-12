@@ -26,6 +26,14 @@
 #define IOT_ATOMIC_SUN_MAX_BRIGHTNESS       8333
 #endif
 
+//  channel order
+#ifndef IOT_ATOMIC_SUN_CHANNEL_WW1
+#define IOT_ATOMIC_SUN_CHANNEL_WW1          1
+#define IOT_ATOMIC_SUN_CHANNEL_WW2          3
+#define IOT_ATOMIC_SUN_CHANNEL_CW1          2
+#define IOT_ATOMIC_SUN_CHANNEL_CW2          0
+#endif
+
 #if !defined(IOT_SENSOR_HAVE_HLW8012) || IOT_SENSOR_HAVE_HLW8012 == 0
 // calculate power if sensor is not available
 #define IOT_ATOMIC_SUN_CALC_POWER           1
@@ -130,16 +138,15 @@ protected:
     ChannelsArray _channels;
     float _ratio[2];
     uint8_t _qos;
-    EventScheduler::Timer _publishTimer;
 
 public:
     // channels are displayed in this order in the web ui
     // warm white
-    static const int8_t CHANNEL_WW1 = 1;
-    static const int8_t CHANNEL_WW2 = 3;
+    static const int8_t CHANNEL_WW1 = IOT_ATOMIC_SUN_CHANNEL_WW1;
+    static const int8_t CHANNEL_WW2 = IOT_ATOMIC_SUN_CHANNEL_WW2;
     // cold white
-    static const int8_t CHANNEL_CW1 = 2;
-    static const int8_t CHANNEL_CW2 = 0;
+    static const int8_t CHANNEL_CW1 = IOT_ATOMIC_SUN_CHANNEL_CW1;
+    static const int8_t CHANNEL_CW2 = IOT_ATOMIC_SUN_CHANNEL_CW2;
 
     static const uint16_t COLOR_MIN = 15300;
     static const uint16_t COLOR_MAX = 50000;

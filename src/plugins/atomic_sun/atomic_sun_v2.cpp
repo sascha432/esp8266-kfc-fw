@@ -51,7 +51,6 @@ void Driver_4ChDimmer::_begin()
 
 void Driver_4ChDimmer::_end()
 {
-    _publishTimer.remove();
     auto mqttClient = MQTTClient::getClient();
     if (mqttClient) {
         mqttClient->unregisterComponent(this);
@@ -414,11 +413,11 @@ void Driver_4ChDimmer::publishState(MQTTClient *client)
     obj->add(JJ(value), JsonNumber(power, 1));
 #endif
 
-    StreamString buffer;
-    json.printTo(buffer);
+    auto buffer = std::shared_ptr<StreamString>(new StreamString());
+    json.printTo(*buffer);
 
-    _publishTimer.add(100, false, [this, buffer](EventScheduler::TimerPtr timer) {
-        WsClient::broadcast(WsWebUISocket::getWsWebUI(), WsWebUISocket::getSender(), buffer.c_str(), buffer.length());
+    LoopFunctions::callOnce([this, buffer]() {
+        WsClient::broadcast(WsWebUISocket::getWsWebUI(), WsWebUISocket::getSender(), buffer->c_str(), buffer->length());
     });
 }
 

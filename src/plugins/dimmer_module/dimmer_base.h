@@ -132,7 +132,7 @@ protected:
     void _onReceive(size_t length);
 #else
     TwoWire &_wire;
-    EventScheduler::TimerPtr _timer;
+    EventScheduler::Timer _timer;
 
     void _fetchMetrics();
 #endif

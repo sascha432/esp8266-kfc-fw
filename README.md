@@ -26,7 +26,7 @@ Framework to build WebUIs with bootstrap and store them mostly compressed in a v
 ### KFCVirtualFileSystem
 
 ~~Read only file system with long filename support, optimized for low memory environments~~
-Due to constantly changing file system implementations in the Arduno frameworks currently replaced with long filename support on top of SPIFFS/LittleFS, but no transparent access for Dir()/File() anymore
+Due to constantly changing file system implementations in the Arduno frameworks currently replaced with long filename support on top of SPIFFS/LittleFS, but no transparent access for Dir()/File() anymore. Replacement classes ListDir and SPIFFSWrapper.
 
 ### KFCJson
 
@@ -69,7 +69,7 @@ Serial console redirection via TCP in client or server mode
 
 ### STK500v1
 
-STK500v1 programmer over WiFi/Serial
+Fully asynchronous STK500v1 programmer over WiFi, serial or web server upload...
 
 ### RF24 Master
 
@@ -91,11 +91,6 @@ Ping remote hosts over the WebUI and run background ping statistics
 
 Scan GPIO pins for I2C devices
 
-### Weather Station
-
-Weather Station for TFT displays with openweathermap.org API.
-Live remote view over WebUI and screenshots in .BMP format
-
 ### Sensor
 
 Plugin for different sensors. Voltage/Battery with charging indicator, BME280, BME680, CCS811, HLW8012, LM75A, DS3231, INA219.
@@ -103,13 +98,15 @@ Support for native WebUI and MQTT.
 
 ### Switch
 
-Plugin for relays and other devices connected to GPIO pins.
+Plugin for relays and other devices connected to GPIO pins, for example Sonoff basic.
 Support for MQTT.
 
 ### Clock
 
-Plugin for my WS2812 Based 7 Segment Clock
+Plugin for my WS2812 Based 7 Segment Clocks
 
+https://github.com/sascha432/ESP8266-WiFi-Clock
+https://easyeda.com/sascha23095123423/iot_wifi_7segment
 https://easyeda.com/sascha23095123423/iot_wifi_clock_controller
 
 ### Dimmer
@@ -118,17 +115,35 @@ Plugin to control my trailing edge WiFi dimmer with energy monitor
 
 https://github.com/sascha432/trailing_edge_dimmer
 
+4 Channel with power monitor
+https://easyeda.com/sascha23095123423/iot-4-channel-dimmer-with-pm
+
+1 Channel in-wall or plugin with power monitor
+https://easyeda.com/sascha23095123423/iot_1ch_dimmer_copy_copy_copy
+Control module
+https://easyeda.com/sascha23095123423/esp12e_iot_module_copy
+
 ### Blinds Controller
 
 Plugin for my 2 channel blinds controller
 
+https://github.com/sascha432/ESP8266-WiFi-Blinds
 https://easyeda.com/sascha23095123423/iot_blinds_controller
 
 ### Remote Control
 
 Plugin for my 4 button ultra low power WiFi remote control
 
+https://github.com/sascha432/ESP8266-WiFi-Remote-Control
 https://easyeda.com/sascha23095123423/iot_4ch_remote
+
+### Weather Station
+
+Weather Station for TFT displays with openweathermap.org API.
+Live remote view over WebUI and screenshots in .BMP format
+
+https://easyeda.com/sascha23095123423/iot_weather_station
+https://github.com/sascha432/ESP8266-WiFi-Weather-Station
 
 ### Home Assistant
 

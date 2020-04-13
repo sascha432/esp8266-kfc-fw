@@ -64,6 +64,7 @@ void dump_plugin_list(Print &output)
     output.printf_P(titles);
     output.print(FPSTR(header));
     for(const auto plugin : plugins) {
+        _debug_printf_P(PSTR("plugin=%p\n"), plugin);
         output.printf_P(format,
             plugin->getName(),
             plugin->getSetupPriority(),
@@ -97,7 +98,7 @@ void prepare_plugins()
     uint8_t i = 0;
     for(const auto plugin : plugins) {
 #if DEBUG_PLUGINS
-        _debug_printf_P(PSTR("name=%s prio=%d\n"), plugin->getName(), plugin->getSetupPriority());
+        _debug_printf_P(PSTR("name=%s plugin=%p prio=%d\n"), plugin->getName(), plugin, plugin->getSetupPriority());
 #endif
 
         if (plugin->getRtcMemoryId() > PLUGIN_RTC_MEM_MAX_ID) {

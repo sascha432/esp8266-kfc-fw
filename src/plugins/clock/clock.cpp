@@ -745,12 +745,12 @@ void ClockPlugin::_loop()
 
             // show syncing animation until the time is valid
             // if (_pixelOrder) {
-                if (++_isSyncing > IOT_CLOCK_PIXEL_ANIMATION_ORDER_LEN) {
-                    _isSyncing = 1;
-                }
-                for(uint8_t i = 0; i < SevenSegmentDisplay::getNumDigits(); i++) {
-                    _display.rotate(i, _isSyncing - 1, _color, _pixelOrder.data(), _pixelOrder.size());
-                }
+                // if (++_isSyncing > IOT_CLOCK_PIXEL_ANIMATION_ORDER_LEN) {
+                //     _isSyncing = 1;
+                // }
+                // for(uint8_t i = 0; i < SevenSegmentDisplay::getNumDigits(); i++) {
+                //     _display.rotate(i, _isSyncing - 1, _color, _pixelOrder.data(), _pixelOrder.size());
+                // }
             // }
             // else {
             //     if (++_isSyncing > SevenSegmentPixel_DIGITS_NUM_PIXELS) {

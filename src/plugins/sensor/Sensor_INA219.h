@@ -14,13 +14,15 @@
 #include "MQTTSensor.h"
 
 #ifndef IOT_SENSOR_INA219_R_SHUNT
-// the adafruit breakout board uses 0.1R
-#define IOT_SENSOR_INA219_R_SHUNT           0.1
+// NOTE: 0.064 or 4x the value is required for a 0.016 shunt for an unknown reason (INA219_CONFIG_GAIN_2_80MV)
+// The value is multiplied in the constructor
+// _ina219.setCalibration(..., IOT_SENSOR_INA219_R_SHUNT * 4);
+#define IOT_SENSOR_INA219_R_SHUNT           0.016
 #endif
 
 #ifndef IOT_SENSOR_INA219_GAIN
-// maximum gain, 3.2A @ 0.1R
-#define IOT_SENSOR_INA219_GAIN              INA219_CONFIG_GAIN_8_320MV
+// 80mV range, max. 5A @ 0.016R
+#define IOT_SENSOR_INA219_GAIN              INA219_CONFIG_GAIN_2_80MV
 #endif
 
 #ifndef IOT_SENSOR_INA219_BUS_URANGE

@@ -33,7 +33,7 @@ bool MDNSService::addService(const String &service, const String &proto, uint16_
     return _debug_print_result(MDNS.addService(service, proto, port));
 #else
     MDNS.addService(service, proto, port);
-    return true;;
+    return true;
 #endif
 }
 

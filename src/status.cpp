@@ -271,6 +271,10 @@ void WiFi_get_status(Print &out)
 #else
 #error Platform not supported
 #endif
+    if (resetDetector.hasWakeUpDetected() && ResetDetectorPlugin::_deepSleepWifiTime != (unsigned long)~0) {
+        out.print(F(HTML_S(br) HTML_S(br) HTML_S(strong) "Quick connect:" HTML_E(strong) HTML_S(br)));
+        out.printf_P(PSTR("WiFi connected established after %lums" HTML_S(br)), ResetDetectorPlugin::_deepSleepWifiTime);
+    }
 }
 
 

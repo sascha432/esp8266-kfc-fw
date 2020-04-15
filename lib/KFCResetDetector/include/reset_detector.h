@@ -108,4 +108,34 @@ private:
 
 extern ResetDetector resetDetector;
 
+#if HAVE_KFC_PLUGINS
+
+class ResetDetectorPlugin : public PluginComponent {
+public:
+    ResetDetectorPlugin() {
+        REGISTER_PLUGIN(this);
+    }
+    virtual PGM_P getName() const {
+        return PSTR("rd");
+    }
+    virtual PluginPriorityEnum_t getSetupPriority() const override {
+        return PRIO_RESET_DETECTOR;
+    }
+    virtual uint8_t getRtcMemoryId() const override {
+        return RESET_DETECTOR_RTC_MEM_ID;
+    }
+
+#if AT_MODE_SUPPORTED
+    virtual bool hasAtMode() const override {
+        return true;
+    }
+    void atModeHelpGenerator() override;
+    bool atModeHandler(AtModeArgs &args) override;
+#endif
+
+    static unsigned long _deepSleepWifiTime;
+};
+
+#endif
+
 #include <pop_pack.h>

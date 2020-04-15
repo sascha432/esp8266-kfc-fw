@@ -261,7 +261,8 @@ void KFCFWConfiguration::_onWiFiConnectCb(const WiFiEventStationModeConnected &e
     if (!_wifiConnected) {
 
         if (resetDetector.hasWakeUpDetected() && _offlineSince == -1UL) {
-            Logger_notice(F("WiFi connected to %s after %lu ms"), event.ssid.c_str(), millis());
+            ResetDetectorPlugin::_deepSleepWifiTime = millis();
+            Logger_notice(F("WiFi connected to %s after %lu ms"), event.ssid.c_str(), ResetDetectorPlugin::_deepSleepWifiTime);
         } else{
             Logger_notice(F("WiFi connected to %s"), event.ssid.c_str());
         }

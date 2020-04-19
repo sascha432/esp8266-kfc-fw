@@ -11,9 +11,8 @@
 #include <EventScheduler.h>
 #include <StreamString.h>
 #include <BufferStream.h>
-#include <SpeedBooster.h>
 #include <Timezone.h>
-#include "progmem_data.h"
+#include <JsonConfigReader.h>
 #include "build.h"
 #include "web_server.h"
 #include "rest_api.h"
@@ -21,14 +20,12 @@
 #include "async_web_handler.h"
 #include "kfc_fw_config.h"
 #include "blink_led_timer.h"
-#include "failure_counter.h"
 #include "fs_mapping.h"
 #include "session.h"
 #include "../include/templates.h"
 #include "web_socket.h"
 #include "WebUISocket.h"
 #include "kfc_fw_config.h"
-#include "plugins.h"
 #if STK500V1
 #include "plugins/stk500v1/STK500v1Programmer.h"
 #endif
@@ -43,9 +40,7 @@
 #include <debug_helper_disable.h>
 #endif
 
-AsyncWebServer *server = nullptr;
-FailureCounterContainer loginFailures;
-static UpdateFirmwareCallback_t updateFirmwareCallback = nullptr;
+static WebServerPlugin plugin;
 
 #define U_ATMEGA 254
 
@@ -56,7 +51,6 @@ extern "C" uint32_t _FS_end;
 #define U_SPIFFS U_FS
 #endif
 #endif
-
 struct UploadStatus_t {
     AsyncWebServerResponse *response;
     bool error;
@@ -74,7 +68,7 @@ WebServerSetCPUSpeedHelper::WebServerSetCPUSpeedHelper() : SpeedBooster(
 
 AsyncWebServer *get_web_server_object()
 {
-    return server;
+    return WebServerPlugin::getWebServerObject();
 }
 
 // #if LOGGER
@@ -92,7 +86,7 @@ AsyncWebServer *get_web_server_object()
 // #endif
 
 
-bool web_server_is_public_path(const String &pathString)
+bool WebServerPlugin::_isPublic(const String &pathString) const
 {
     auto path = pathString.c_str();
     if (strstr_P(path, PSTR(".."))) {
@@ -108,26 +102,9 @@ bool web_server_is_public_path(const String &pathString)
     return false;
 }
 
-bool web_server_is_authenticated(AsyncWebServerRequest *request)
+bool WebServerPlugin::_clientAcceptsGzip(AsyncWebServerRequest *request) const
 {
-    String SID;
-    if ((request->hasArg(FSPGM(SID)) && (SID = request->arg(FSPGM(SID)))) || HttpCookieHeader::parseCookie(request, FSPGM(SID), SID)) {
-
-        _debug_printf_P(PSTR("web_server_is_authenticated with SID '%s' from %s\n"), SID.c_str(), request->client()->remoteIP().toString().c_str());
-        if (SID.length() == 0) {
-            return false;
-        }
-        if (verify_session_id(SID.c_str(), config.getDeviceName(), config._H_STR(Config().device_pass))) {
-            return true;
-        }
-    }
-    _debug_println(F("web_server_is_authenticated failed"));
-    return false;
-}
-
-bool web_server_client_accepts_gzip(AsyncWebServerRequest *request)
-{
-    auto header = request->getHeader(String(FSPGM(Accept_Encoding)));
+    auto header = request->getHeader(FSPGM(Accept_Encoding));
     if (!header) {
         return false;
     }
@@ -135,36 +112,17 @@ bool web_server_client_accepts_gzip(AsyncWebServerRequest *request)
     return (strstr_P(acceptEncoding, PSTR("gzip")) || strstr_P(acceptEncoding, PSTR("deflate")));
 }
 
-void web_server_add_handler(AsyncWebHandler* handler)
-{
-    if (server) {
-        server->addHandler(handler);
-    }
-}
-
-void web_server_add_handler(const String &uri, ArRequestHandlerFunction onRequest)
-{
-    if (server) {
-        AsyncCallbackWebHandler *handler = new AsyncCallbackWebHandler();
-        handler->setUri(uri);
-        handler->onRequest(onRequest);
-        server->addHandler(handler);
-    }
-}
-
-
-void web_server_not_found_handler(AsyncWebServerRequest *request)
+void WebServerPlugin::handlerNotFound(AsyncWebServerRequest *request)
 {
     WebServerSetCPUSpeedHelper setCPUSpeed;
-    if (!web_server_handle_file_read(request->url(), web_server_client_accepts_gzip(request), request)) {
+    if (!plugin._handleFileRead(request->url(), plugin._clientAcceptsGzip(request), request)) {
         request->send(404);
     }
 }
 
-
-void web_server_scan_wifi_handler(AsyncWebServerRequest *request)
+void WebServerPlugin::handlerScanWiFi(AsyncWebServerRequest *request)
 {
-    if (web_server_is_authenticated(request)) {
+    if (plugin.isAuthenticated(request)) {
         HttpHeaders httpHeaders(false);
         httpHeaders.addNoCache();
         auto response = new AsyncNetworkScanResponse(request->arg(F("hidden")).toInt());
@@ -175,7 +133,7 @@ void web_server_scan_wifi_handler(AsyncWebServerRequest *request)
     }
 }
 
-void web_server_logout_handler(AsyncWebServerRequest *request)
+void WebServerPlugin::handlerLogout(AsyncWebServerRequest *request)
  {
     auto response = request->beginResponse(302);
     HttpHeaders httpHeaders;
@@ -186,7 +144,7 @@ void web_server_logout_handler(AsyncWebServerRequest *request)
     request->send(response);
 }
 
-void web_server_is_alive_handler(AsyncWebServerRequest *request)
+void WebServerPlugin::handlerAlive(AsyncWebServerRequest *request)
 {
     auto response = request->beginResponse(200, FSPGM(mime_text_plain), String(request->arg(F("p")).toInt()));
     HttpHeaders httpHeaders;
@@ -195,9 +153,9 @@ void web_server_is_alive_handler(AsyncWebServerRequest *request)
     request->send(response);
 }
 
-void web_server_sync_time_handler(AsyncWebServerRequest *request)
+void WebServerPlugin::handlerSyncTime(AsyncWebServerRequest *request)
 {
-    if (web_server_is_authenticated(request)) {
+    if (plugin.isAuthenticated(request)) {
         HttpHeaders httpHeaders(false);
         httpHeaders.addNoCache();
         PrintHtmlEntitiesString str;
@@ -205,28 +163,34 @@ void web_server_sync_time_handler(AsyncWebServerRequest *request)
         auto response = new AsyncBasicResponse(200, FSPGM(mime_text_html), str);
         httpHeaders.setAsyncWebServerResponseHeaders(response);
         request->send(response);
-    } else {
+    }
+    else {
         request->send(403);
     }
 }
 
-void web_server_get_webui_json(AsyncWebServerRequest *request)
+void WebServerPlugin::handlerWebUI(AsyncWebServerRequest *request)
 {
-    WebServerSetCPUSpeedHelper setCPUSpeed;
-    auto response = new AsyncJsonResponse();
-    WsWebUISocket::createWebUIJSON(response->getJsonObject());
-    response->updateLength();
-    HttpHeaders httpHeaders;
-    httpHeaders.addNoCache();
-    httpHeaders.setAsyncBaseResponseHeaders(response);
-    request->send(response);
+    if (plugin.isAuthenticated(request)) {
+        WebServerSetCPUSpeedHelper setCPUSpeed;
+        auto response = new AsyncJsonResponse();
+        WsWebUISocket::createWebUIJSON(response->getJsonObject());
+        response->updateLength();
+        HttpHeaders httpHeaders;
+        httpHeaders.addNoCache();
+        httpHeaders.setAsyncBaseResponseHeaders(response);
+        request->send(response);
+    }
+    else {
+        request->send(403);
+    }
 }
 
-void web_server_speed_test(AsyncWebServerRequest *request, bool zip)
+void WebServerPlugin::handlerSpeedTest(AsyncWebServerRequest *request, bool zip)
 {
     WebServerSetCPUSpeedHelper setCPUSpeed;
 #if !defined(SPEED_TEST_NO_AUTH) || SPEED_TEST_NO_AUTH == 0
-    if (web_server_is_authenticated(request)) {
+    if (plugin.isAuthenticated(request)) {
 #endif
         HttpHeaders httpHeaders(false);
         httpHeaders.addNoCache();
@@ -249,22 +213,21 @@ void web_server_speed_test(AsyncWebServerRequest *request, bool zip)
 #endif
 }
 
-void web_server_speed_test_zip(AsyncWebServerRequest *request)
+
+void WebServerPlugin::handlerSpeedTestZip(AsyncWebServerRequest *request)
 {
-    web_server_speed_test(request, true);
+    handlerSpeedTest(request, true);
 }
 
-void web_server_speed_test_image(AsyncWebServerRequest *request)
+void WebServerPlugin::handlerSpeedTestImage(AsyncWebServerRequest *request)
 {
-    web_server_speed_test(request, false);
+    handlerSpeedTest(request, false);
 }
 
-#include <JsonConfigReader.h>
-
-void web_server_import_settings(AsyncWebServerRequest *request)
+void WebServerPlugin::handlerImportSettings(AsyncWebServerRequest *request)
 {
     WebServerSetCPUSpeedHelper setCPUSpeed;
-    if (web_server_is_authenticated(request)) {
+    if (plugin.isAuthenticated(request)) {
         HttpHeaders httpHeaders(false);
         httpHeaders.addNoCache();
 
@@ -300,10 +263,10 @@ void web_server_import_settings(AsyncWebServerRequest *request)
     }
 }
 
-void web_server_export_settings(AsyncWebServerRequest *request)
+void WebServerPlugin::handlerExportSettings(AsyncWebServerRequest *request)
 {
     WebServerSetCPUSpeedHelper setCPUSpeed;
-    if (web_server_is_authenticated(request)) {
+    if (plugin.isAuthenticated(request)) {
 
         HttpHeaders httpHeaders(false);
         httpHeaders.addNoCache();
@@ -329,7 +292,7 @@ void web_server_export_settings(AsyncWebServerRequest *request)
     }
 }
 
-void web_server_update_handler(AsyncWebServerRequest *request)
+void WebServerPlugin::handlerUpdate(AsyncWebServerRequest *request)
 {
     if (request->_tempObject) {
         UploadStatus_t *status = reinterpret_cast<UploadStatus_t *>(request->_tempObject);
@@ -404,7 +367,7 @@ void web_server_update_handler(AsyncWebServerRequest *request)
 
             HttpHeaders httpHeaders(false);
             httpHeaders.addNoCache();
-            if (!web_server_send_file(F("/update_fw.html"), httpHeaders, web_server_client_accepts_gzip(request), request, new UpgradeTemplate(message))) {
+            if (!plugin._sendFile(F("/update_fw.html"), httpHeaders, plugin._clientAcceptsGzip(request), request, new UpgradeTemplate(message))) {
                 message += F("<br><a href=\"/\">Home</a>");
                 request->send(200, FSPGM(mime_text_plain), message);
             }
@@ -415,12 +378,12 @@ void web_server_update_handler(AsyncWebServerRequest *request)
     }
 }
 
-void web_server_update_upload_handler(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final)
+void WebServerPlugin::handlerUploadUpdate(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final)
 {
 #if STK500V1
     static File firmwareTempFile;
 #endif
-    if (index == 0 && !request->_tempObject && web_server_is_authenticated(request)) {
+    if (index == 0 && !request->_tempObject && plugin.isAuthenticated(request)) {
         request->_tempObject = calloc(sizeof(UploadStatus_t), 1);
         Logger_notice(F("Firmware upload started"));
 #if IOT_REMOTE_CONTROL
@@ -428,8 +391,8 @@ void web_server_update_upload_handler(AsyncWebServerRequest *request, String fil
 #endif
     }
     UploadStatus_t *status = reinterpret_cast<UploadStatus_t *>(request->_tempObject);
-    if (updateFirmwareCallback) {
-        updateFirmwareCallback(index + len, request->contentLength());
+    if (plugin._updateFirmwareCallback) {
+        plugin._updateFirmwareCallback(index + len, request->contentLength());
     }
     if (status && !status->error) {
         PrintString out;
@@ -525,7 +488,15 @@ void web_server_update_upload_handler(AsyncWebServerRequest *request, String fil
     }
 }
 
-void init_web_server()
+void WebServerPlugin::end()
+{
+    if (_server) {
+        delete _server;
+        _server = nullptr;
+    }
+}
+
+void WebServerPlugin::begin()
 {
     auto flags = config._H_GET(Config().flags);
     if (flags.webServerMode == HTTP_MODE_DISABLED) {
@@ -544,15 +515,15 @@ void init_web_server()
     MDNSService::announce();
 
 
-    server = new AsyncWebServer(port);
+    _server = new AsyncWebServer(port);
     // server->addHandler(&events);
 
-    loginFailures.readFromSPIFFS();
+    _loginFailures.readFromSPIFFS();
 
 #if REST_API_SUPPORT
     // // download /.mappings
     // web_server_add_handler(F("/rest/KFC/webui_details"), [](AsyncWebServerRequest *request) {
-    //     if (web_server_is_authenticated(request)) {
+    //     if (isAuthenticated(request)) {
     //         rest_api_kfc_webui_details(request);
     //     } else {
     //         request->send(403);
@@ -569,7 +540,7 @@ void init_web_server()
 
     WsWebUISocket::setup();
 
-    server->onNotFound(web_server_not_found_handler);
+    _server->onNotFound(handlerNotFound);
 
 // #if MDNS_SUPPORT
 //     web_server_add_handler(F("/poll_mdns/"), [&httpHeaders](AsyncWebServerRequest *request) {
@@ -577,7 +548,7 @@ void init_web_server()
 //         web_server_set_cpu_speed_for_request(request);
 
 //         httpHeaders.addNoCache();
-//         if (web_server_is_authenticated(request)) {
+//         if (isAuthenticated(request)) {
 //             AsyncWebServerResponse *response;
 //             bool isRunning = false;//MDNS_async_query_running();
 //             String &result = MDNS_get_html_result();
@@ -602,18 +573,18 @@ void init_web_server()
 //     });
 // #endif
 
-    web_server_add_handler(F("/scan_wifi/"), web_server_scan_wifi_handler);
-    web_server_add_handler(F("/logout"), web_server_logout_handler);
-    web_server_add_handler(F("/is_alive"), web_server_is_alive_handler);
-    web_server_add_handler(F("/sync_time"), web_server_sync_time_handler);
-    web_server_add_handler(F("/webui_get"), web_server_get_webui_json);
-    web_server_add_handler(F("/export_settings"), web_server_export_settings);
-    web_server_add_handler(F("/import_settings"), web_server_import_settings);
-    web_server_add_handler(F("/speedtest.zip"), web_server_speed_test_zip);
-    web_server_add_handler(F("/speedtest.bmp"), web_server_speed_test_image);
-    server->on(String(F("/update")).c_str(), HTTP_POST, web_server_update_handler, web_server_update_upload_handler);
+    web_server_add_handler(F("/scan_wifi/"), handlerScanWiFi);
+    web_server_add_handler(F("/logout"), handlerLogout);
+    web_server_add_handler(F("/is_alive"), handlerAlive);
+    web_server_add_handler(F("/sync_time"), handlerSyncTime);
+    web_server_add_handler(F("/webui_get"), handlerWebUI);
+    web_server_add_handler(F("/export_settings"), handlerExportSettings);
+    web_server_add_handler(F("/import_settings"), handlerImportSettings);
+    web_server_add_handler(F("/speedtest.zip"), handlerSpeedTestZip);
+    web_server_add_handler(F("/speedtest.bmp"), handlerSpeedTestImage);
+    _server->on(String(F("/update")).c_str(), HTTP_POST, handlerUpdate, handlerUploadUpdate);
 
-    server->begin();
+    _server->begin();
     _debug_printf_P(PSTR("HTTP running on port %u\n"), port);
 }
 
@@ -676,7 +647,7 @@ PGM_P web_server_get_content_type(const String &path)
     }
 }
 
-bool web_server_send_file(const FileMapping &mapping, HttpHeaders& httpHeaders, bool client_accepts_gzip, AsyncWebServerRequest* request, WebTemplate* webTemplate)
+bool WebServerPlugin::_sendFile(const FileMapping &mapping, HttpHeaders &httpHeaders, bool client_accepts_gzip, AsyncWebServerRequest *request, WebTemplate *webTemplate)
 {
     WebServerSetCPUSpeedHelper setCPUSpeed;
 
@@ -725,7 +696,7 @@ bool web_server_send_file(const FileMapping &mapping, HttpHeaders& httpHeaders, 
         response = new AsyncProgmemFileResponse(FPSTR(web_server_get_content_type(path)), mapping.open(FileOpenMode::read));
         httpHeaders.replace(new HttpDateHeader(FSPGM(Expires), 86400 * 30));
         httpHeaders.replace(new HttpDateHeader(FSPGM(Last_Modified), mapping.getModificationTime()));
-        if (web_server_is_public_path(path)) {
+        if (_isPublic(path)) {
             httpHeaders.replace(new HttpCacheControlHeader(HttpCacheControlHeader::PUBLIC));
         }
     }
@@ -738,12 +709,13 @@ bool web_server_send_file(const FileMapping &mapping, HttpHeaders& httpHeaders, 
     return true;
 }
 
-void web_server_set_update_firmware_callback(UpdateFirmwareCallback_t callback)
+
+void WebServerPlugin::setUpdateFirmwareCallback(UpdateFirmwareCallback_t callback)
 {
-    updateFirmwareCallback = callback;
+    _updateFirmwareCallback = callback;
 }
 
-bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWebServerRequest *request)
+bool WebServerPlugin::_handleFileRead(String path, bool client_accepts_gzip, AsyncWebServerRequest *request)
 {
     _debug_printf_P(PSTR("path=%s\n"), path.c_str());
     WebServerSetCPUSpeedHelper setCPUSpeed;
@@ -768,11 +740,11 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
         return true;
     }
 
-    bool _is_authenticated = web_server_is_authenticated(request);
+    bool _is_authenticated = isAuthenticated(request);
     WebTemplate *webTemplate = nullptr;
     HttpHeaders httpHeaders;
 
-    if (!web_server_is_public_path(path) && !_is_authenticated) {
+    if (!_isPublic(path) && !_is_authenticated) {
         String loginError = F("Your session has expired.");
 
         if (request->hasArg(FSPGM(SID))) { // just report failures if the cookie is invalid
@@ -785,7 +757,7 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
         if (request->method() == HTTP_POST && request->hasArg(F("username")) && request->hasArg(F("password"))) {
             IPAddress remote_addr = request->client()->remoteIP();
 
-            if (loginFailures.isAddressBlocked(remote_addr) == false && request->arg(F("username")) == config.getDeviceName() && request->arg(F("password")) == config._H_STR(Config().device_pass)) {
+            if (_loginFailures.isAddressBlocked(remote_addr) == false && request->arg(F("username")) == config.getDeviceName() && request->arg(F("password")) == config._H_STR(Config().device_pass)) {
                 auto cookie = new HttpCookieHeader(FSPGM(SID));
                 cookie->setValue(generate_session_id(config.getDeviceName(), config._H_STR(Config().device_pass), NULL));
                 cookie->setPath(FSPGM(slash));
@@ -806,13 +778,13 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
                 Logger_security(F("Login successful from %s"), remote_addr.toString().c_str());
             } else {
                 loginError = F("Invalid username or password.");
-                const FailureCounter &failure = loginFailures.addFailure(remote_addr);
+                const FailureCounter &failure = _loginFailures.addFailure(remote_addr);
                 Logger_security(F("Login from %s failed %d times since %s"), remote_addr.toString().c_str(), failure.getCounter(), failure.getFirstFailure().c_str());
-                return web_server_send_file(FSPGM(login_html), httpHeaders, client_accepts_gzip, request, new LoginTemplate(loginError));
+                return _sendFile(FSPGM(login_html), httpHeaders, client_accepts_gzip, request, new LoginTemplate(loginError));
             }
         } else {
             if (String_endsWith(path, PSTR(".html"))) {
-                return web_server_send_file(FSPGM(login_html), httpHeaders, client_accepts_gzip, request, new LoginTemplate(loginError));
+                return _sendFile(FSPGM(login_html), httpHeaders, client_accepts_gzip, request, new LoginTemplate(loginError));
             } else {
                 request->send(403);
                 return true;
@@ -914,53 +886,12 @@ bool web_server_handle_file_read(String path, bool client_accepts_gzip, AsyncWeb
         */
     }
 
-    return web_server_send_file(mapping, httpHeaders, client_accepts_gzip, request, webTemplate);
+    return _sendFile(mapping, httpHeaders, client_accepts_gzip, request, webTemplate);
 }
-
-class WebServerPlugin : public PluginComponent {
-public:
-    WebServerPlugin() {
-        REGISTER_PLUGIN(this);
-    }
-    virtual PGM_P getName() const {
-        return SPGM(http);
-    }
-    virtual const __FlashStringHelper *getFriendlyName() const {
-        return F("Web server");
-    }
-    virtual PluginPriorityEnum_t getSetupPriority() const override {
-        return PRIO_HTTP;
-    }
-    virtual bool allowSafeMode() const override {
-        return true;
-    }
-
-    virtual void setup(PluginSetupMode_t mode) override;
-    virtual void reconfigure(PGM_P source) override;
-    virtual void restart() override;
-    virtual bool hasReconfigureDependecy(PluginComponent *plugin) const override {
-        return false;
-    }
-
-    virtual bool hasStatus() const override {
-        return true;
-    }
-    virtual void getStatus(Print &output) override;
-
-    virtual MenuTypeEnum_t getMenuType() const override {
-        return NONE;
-    }
-    virtual PGM_P getConfigureForm() const override {
-        return PSTR("remote");
-    }
-    virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
-};
-
-static WebServerPlugin plugin;
 
 void WebServerPlugin::setup(PluginSetupMode_t mode)
 {
-    init_web_server();
+    begin();
     if (mode == PLUGIN_SETUP_DELAYED_AUTO_WAKE_UP) {
         invokeReconfigureNow(getName());
     }
@@ -968,21 +899,17 @@ void WebServerPlugin::setup(PluginSetupMode_t mode)
 
 void WebServerPlugin::reconfigure(PGM_P source)
 {
-    if (server) {
-        delete server;
-        server = nullptr;
+    if (_server) {
+        end();
         MDNSService::removeService(FSPGM(http), FSPGM(tcp));
         MDNSService::removeService(FSPGM(https), FSPGM(tcp));
     }
-    init_web_server();
+    begin();
 }
 
 void WebServerPlugin::restart()
 {
-    if (server) {
-        delete server;
-        server = nullptr;
-    }
+    end();
 }
 
 void WebServerPlugin::getStatus(Print &output)
@@ -1005,6 +932,10 @@ void WebServerPlugin::getStatus(Print &output)
             clients += socket->count();
         }
         output.printf_P(PSTR(HTML_S(br) "%u WebSocket(s), %u client(s) connected"), sockets, clients);
+        int count = _restCallbacks.size();
+        if (count) {
+            output.printf_P(PSTR(HTML_S(br) "%d Rest API endpoints"), count);
+        }
     }
     else {
         output.print(FSPGM(disabled));
@@ -1056,6 +987,67 @@ void WebServerPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &
     form.addValidator(new FormLengthValidator(16, sizeof(Config().device_token) - 1));
 
     form.finalize();
+}
+
+WebServerPlugin &WebServerPlugin::getInstance()
+{
+    return plugin;
+}
+
+AsyncWebServer *WebServerPlugin::getWebServerObject()
+{
+    return plugin._server;
+}
+
+bool WebServerPlugin::addHandler(AsyncWebHandler* handler)
+{
+    if (!plugin._server) {
+        return false;
+    }
+    plugin._server->addHandler(handler);
+    return true;
+}
+
+bool WebServerPlugin::addHandler(const String &uri, ArRequestHandlerFunction onRequest)
+{
+    if (!plugin._server) {
+        return false;
+    }
+    AsyncCallbackWebHandler *handler = new AsyncCallbackWebHandler();
+    handler->setUri(uri);
+    handler->onRequest(onRequest);
+    plugin._server->addHandler(handler);
+    return true;
+}
+
+bool WebServerPlugin::addRestHandler(const String &uri, RestCallback_t calback)
+{
+    if (!plugin._server) {
+        return false;
+    }
+    return true;
+}
+
+bool WebServerPlugin::isRunning() const
+{
+    return _server != nullptr;
+}
+
+bool WebServerPlugin::isAuthenticated(AsyncWebServerRequest *request) const
+{
+    String SID;
+    if ((request->hasArg(FSPGM(SID)) && (SID = request->arg(FSPGM(SID)))) || HttpCookieHeader::parseCookie(request, FSPGM(SID), SID)) {
+
+        _debug_printf_P(PSTR("SID='%s' from %s\n"), SID.c_str(), request->client()->remoteIP().toString().c_str());
+        if (SID.length() == 0) {
+            return false;
+        }
+        if (verify_session_id(SID.c_str(), config.getDeviceName(), config._H_STR(Config().device_pass))) {
+            return true;
+        }
+    }
+    _debug_println(F("failed"));
+    return false;
 }
 
 #endif

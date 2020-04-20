@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "FlashStringGeneratorAuto.h"
+#include "../src/generated/FlashStringGeneratorAuto.h"
 
 PROGMEM_STRING_DECL(mime_text_html);
 PROGMEM_STRING_DECL(mime_text_xml);

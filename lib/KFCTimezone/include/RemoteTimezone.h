@@ -7,6 +7,7 @@
 #include <Arduino_compat.h>
 #include <functional>
 #include <KFCRestApi.h>
+#include "progmem_data.h"
 
 #ifndef DEBUG_REMOTE_TIMEZONE
 #define DEBUG_REMOTE_TIMEZONE 					0
@@ -33,11 +34,11 @@ namespace RemoteTimezone {
 
         static void apply(JsonVariableReader::ElementGroup &group) {
             group.initResultType<JsonReaderResult>();
-            group.add(F("status"), [](Result &_result, JsonVariableReader::Reader &reader) {
+            group.add(FSPGM(status), [](Result &_result, JsonVariableReader::Reader &reader) {
                 reinterpret_cast<JsonReaderResult &>(_result)._status = reader.getValueRef().equalsIgnoreCase(F("OK"));
                 return true;
             });
-            group.add(F("message"), [](Result &_result, JsonVariableReader::Reader &reader) {
+            group.add(FSPGM(message), [](Result &_result, JsonVariableReader::Reader &reader) {
                 reinterpret_cast<JsonReaderResult &>(_result)._message = reader.getValueRef();
                 return true;
             });

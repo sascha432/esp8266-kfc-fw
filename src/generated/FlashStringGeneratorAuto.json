@@ -52,7 +52,7 @@
         "default": "Invalid hostname or IP address"
     },
     "webui_json_id": {
-        "use_counter": 31,
+        "use_counter": 37,
         "default": "id"
     },
     "webui_json_name": {
@@ -72,11 +72,11 @@
         "default": "offset"
     },
     "webui_json_value": {
-        "use_counter": 31,
+        "use_counter": 37,
         "default": "value"
     },
     "webui_json_state": {
-        "use_counter": 23,
+        "use_counter": 29,
         "default": "state"
     },
     "mime_application_json": {
@@ -132,11 +132,11 @@
         "default": "pure virtual call: %s\\n"
     },
     "yes": {
-        "use_counter": 5,
+        "use_counter": 6,
         "default": "yes"
     },
     "no": {
-        "use_counter": 5,
+        "use_counter": 6,
         "default": "no"
     },
     "comma_": {
@@ -164,7 +164,7 @@
         "default": "/server.key"
     },
     "webui_json_type": {
-        "use_counter": 17,
+        "use_counter": 18,
         "default": "type"
     },
     "webui_json_row": {
@@ -264,7 +264,7 @@
         "default": "width"
     },
     "webui_json_height": {
-        "use_counter": 2,
+        "use_counter": 3,
         "default": "height"
     },
     "webui_json_buttons": {
@@ -284,15 +284,15 @@
         "default": "/webui_ws"
     },
     "webui_json_ue": {
-        "use_counter": 7,
+        "use_counter": 8,
         "default": "ue"
     },
     "webui_json_events": {
-        "use_counter": 7,
+        "use_counter": 8,
         "default": "events"
     },
     "http": {
-        "use_counter": 13,
+        "use_counter": 14,
         "default": "http"
     },
     "SID": {
@@ -404,11 +404,11 @@
         "default": "/blinds_ctrl.state"
     },
     "Yes": {
-        "use_counter": 4,
+        "use_counter": 2,
         "default": "Yes"
     },
     "No": {
-        "use_counter": 4,
+        "use_counter": 2,
         "default": "No"
     },
     "webui_json_title": {
@@ -444,7 +444,7 @@
         "default": "upload_file"
     },
     "file_manager_html_uri": {
-        "use_counter": 1,
+        "use_counter": 2,
         "default": "file_manager.html"
     },
     "filename": {
@@ -452,11 +452,11 @@
         "default": "filename"
     },
     "kfcmdns": {
-        "use_counter": 3,
+        "use_counter": 6,
         "default": "kfcmdns"
     },
     "udp": {
-        "use_counter": 3,
+        "use_counter": 6,
         "default": "udp"
     },
     "mqtt_unique_id": {
@@ -772,7 +772,7 @@
         "default": "debug"
     },
     "fs_mapping_dir": {
-        "use_counter": 2,
+        "use_counter": 4,
         "default": "/webui/"
     },
     "login_failure_file": {
@@ -830,5 +830,41 @@
     "keep_alive": {
         "use_counter": 1,
         "default": "keep-alive"
+    },
+    "status": {
+        "use_counter": 2,
+        "default": "status"
+    },
+    "message": {
+        "use_counter": 2,
+        "default": "message"
+    },
+    "ds3231_id_temp": {
+        "use_counter": 4,
+        "default": "ds3231_temp"
+    },
+    "ds3231_id_time": {
+        "use_counter": 4,
+        "default": "ds3231_time"
+    },
+    "ds3231_id_lost_power": {
+        "use_counter": 2,
+        "default": "ds3231_lost_power"
+    },
+    "webui_json_head": {
+        "use_counter": 1,
+        "default": "head"
+    },
+    "fs_mapping_listings": {
+        "use_counter": 2,
+        "default": "/webui/.listings"
+    },
+    "_html": {
+        "use_counter": 5,
+        "default": ".html"
+    },
+    "status__u": {
+        "use_counter": 4,
+        "default": "status=%u"
     }
 }

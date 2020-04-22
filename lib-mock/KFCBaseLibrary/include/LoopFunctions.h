@@ -2,9 +2,10 @@
   Author: sascha_lammers@gmx.de
 */
 
-#if _MSC_VER
-
 #pragma once
+
+#include <functional>
+#include <vector>
 
 class LoopFunctions {
 public:
@@ -30,5 +31,3 @@ public:
     }
 
 };
-
-#endif

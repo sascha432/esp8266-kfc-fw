@@ -7,6 +7,8 @@
 #include "Wire.h"
 #include "PrintString.h"
 
+#define ENABLE_TWO_WIRE   0
+
 #ifndef DEVICE_NAME
 #define DEVICE_NAME "COM4"
 #endif
@@ -16,6 +18,7 @@
 static HANDLE hComm = 0;
 
 HANDLE get_com_handle() {
+#if ENABLE_TWO_WIRE
     if (hComm) {
         return hComm;
     }
@@ -43,6 +46,9 @@ HANDLE get_com_handle() {
         __debugbreak_and_panic_printf_P(PSTR("Cannot open " DEVICE_NAME "\n"));
     }
     return hComm;
+#else
+    return 0;
+#endif
 }
 
 static String line;

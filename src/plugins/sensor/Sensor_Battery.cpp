@@ -86,8 +86,19 @@ void Sensor_Battery::getStatus(PrintHtmlEntitiesString &output)
 #if IOT_SENSOR_BATTERY_CHARGE_DETECTION
     output.printf_P(PSTR(", charging: %s"), _isCharging() ? SPGM(Yes) : SPGM(No));
 #endif
-    output.printf_P(PSTR(", calibration %f" HTML_S(br)),  _config.calibration);
+    output.printf_P(PSTR(", calibration %f" HTML_S(br)), _config.calibration);
 }
+
+bool Sensor_Battery::getSensorData(String &name, StringVector &values)
+{
+    name = F("Supply Voltage");
+    values.emplace_back(String(_readSensor(), _config.precision) + F(" V"));
+#if IOT_SENSOR_BATTERY_CHARGE_DETECTION
+    values.emplace_back(PrintString(F("Charging: %s"), _isCharging() ? SPGM(Yes) : SPGM(No)));
+#endif
+    return true;
+}
+
 
 void Sensor_Battery::createConfigureForm(AsyncWebServerRequest *request, Form &form)
 {

@@ -36,6 +36,7 @@ public:
     virtual void createWebUI(WebUI &webUI, WebUIRow **row) override;
     virtual void getStatus(PrintHtmlEntitiesString &output) override;
     virtual MQTTSensorSensorType getType() const override;
+    virtual bool getSensorData(String &name, StringVector &values) override;
 
 private:
     float _readSensorTemp();

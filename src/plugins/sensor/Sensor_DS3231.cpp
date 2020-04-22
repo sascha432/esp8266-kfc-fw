@@ -98,6 +98,22 @@ MQTTSensorSensorType Sensor_DS3231::getType() const
     return MQTTSensorSensorType::DS3231;
 }
 
+bool Sensor_DS3231::getSensorData(String &name, StringVector &values)
+{
+    auto now = _readSensorTime();
+    if (!now) {
+        return false;
+    }
+    auto tm = gmtime(&now);
+    char buf[32];
+    strftime_P(buf, sizeof(buf), PSTR("RTC %Y-%m-%d %H:%M:%S"), tm);
+    name = F("DS3231");
+    values.emplace_back(buf);
+    values.emplace_back(PrintString(F("%.2f °C"), _readSensorTemp()));
+    values.emplace_back(PrintString(F("Lost Power: %s"), _readSensorLostPower() ? SPGM(Yes) : SPGM(No)));
+    return true;
+}
+
 float Sensor_DS3231::_readSensorTemp()
 {
     _debug_println();

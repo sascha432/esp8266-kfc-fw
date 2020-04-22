@@ -95,6 +95,16 @@ MQTTSensorSensorType Sensor_BME280::getType() const
     return MQTTSensorSensorType::BME280;
 }
 
+bool Sensor_BME280::getSensorData(String &name, StringVector &values)
+{
+    name = F("BME280");
+    auto sensor = _readSensor();
+    values.emplace_back(PrintString(F("%.2f °C"), sensor.temperature));
+    values.emplace_back(PrintString(F("%.2f %%"), sensor.humidity));
+    values.emplace_back(PrintString(F("%.2f hPa"), sensor.pressure));
+    return true;
+}
+
 void Sensor_BME280::publishState(MQTTClient *client)
 {
     if (client && client->isConnected()) {

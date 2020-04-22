@@ -51,6 +51,7 @@ public:
     virtual MQTTSensorSensorType getType() const override {
         return MQTTSensorSensorType::BATTERY;
     }
+    virtual bool getSensorData(String &name, StringVector &values) override;
 
     virtual bool hasForm() const {
         return true;

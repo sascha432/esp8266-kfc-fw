@@ -74,6 +74,10 @@ public:
         return SensorType::UNKNOWN;
     }
 
+    virtual bool getSensorData(String &name, StringVector &values) {
+        return false;
+    }
+
     virtual bool hasForm() const {
         return false;
     }

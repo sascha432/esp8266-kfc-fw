@@ -69,6 +69,13 @@ MQTTSensorSensorType Sensor_LM75A::getType() const
     return MQTTSensorSensorType::LM75A;
 }
 
+bool Sensor_LM75A::getSensorData(String &name, StringVector &values)
+{
+    name = F("LM75A");
+    values.emplace_back(PrintString(F("%.2f °C"), _readSensor()));
+    return true;
+}
+
 float Sensor_LM75A::_readSensor()
 {
     _wire.beginTransmission(_address);

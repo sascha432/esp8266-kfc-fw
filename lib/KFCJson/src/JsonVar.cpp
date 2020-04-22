@@ -33,6 +33,18 @@ String JsonVar::getValue() const {
     return _value;
 }
 
+JsonVar::BooleanValueType JsonVar::getBooleanValue() const {
+    if (_type == JsonBaseReader::JSON_TYPE_BOOLEAN) {
+        if (strcasecmp_P(_value.c_str(), SPGM(true)) != 0) {
+            return BooleanValueType::TRUE;
+        }
+        if (strcasecmp_P(_value.c_str(), SPGM(false)) != 0) {
+            return BooleanValueType::FALSE;
+        }
+    }
+    return BooleanValueType::INVALID;
+}
+
 JsonVar::JsonType_t JsonVar::getType() const {
     return _type;
 }

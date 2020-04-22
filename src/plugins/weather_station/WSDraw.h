@@ -197,12 +197,16 @@ public:
     void _drawTime();
     void _drawWeather();
     void _drawWeather(GFXCanvasCompressed &canvas, uint8_t top);
+    void _drawIndoor();
+    void _drawIndoor(GFXCanvasCompressed &canvas, uint8_t top);
     void _drawSunAndMoon();
     void _drawScreen0();
 
     void _doScroll();
     void _scrollTimer(WSDraw &draw);
     bool _isScrolling() const;
+
+    void _displayMessage(const String &title, const String &message, const GFXfont *font, uint16_t color, uint32_t timeout);
 
     void _updateTime();
     void _drawText(const String &text, const GFXfont *font, uint16_t color, bool clear = false);
@@ -282,4 +286,6 @@ protected:
 
     uint8_t _offsetX;
     uint8_t _offsetY;
+
+    EventScheduler::Timer _displayMessageTimer;
 };

@@ -28,12 +28,19 @@ public:
 
     typedef JsonBaseReader::JsonType_t JsonType_t;
 
+    enum class BooleanValueType {
+        INVALID = -1,
+        FALSE = 0,
+        TRUE = 1,
+    };
+
     JsonVar();
     JsonVar(JsonType_t type);
     JsonVar(JsonType_t type, const String &value);
 
     void setValue(const String &value);
     String getValue() const;
+    BooleanValueType getBooleanValue() const;
     JsonBaseReader::JsonType_t getType() const;
 
     // format JSON Variant

@@ -12,6 +12,8 @@
 class HeapStream : public Stream
 {
 public:
+    HeapStream() : _available(0) {
+    }
     HeapStream(const char *data, size_t length) : _available(length) {
         setData(data);
     }

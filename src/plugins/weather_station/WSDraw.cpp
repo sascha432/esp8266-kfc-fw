@@ -2,6 +2,7 @@
  * Author: sascha_lammers@gmx.de
  */
 
+#include <LoopFunctions.h>
 #include "WSDraw.h"
 
 // DejaVu_Sans_Bold_20
@@ -75,6 +76,7 @@ WSDraw::WSDraw() :
 
 WSDraw::~WSDraw()
 {
+    _displayMessageTimer.remove();
     ScrollCanvas::destroy(this);
 }
 
@@ -133,6 +135,16 @@ void WSDraw::_drawTime()
         timezone_strftime_P(buf, sizeof(buf), PSTR("%p - %Z"), tm);
     }
     _canvas._drawTextAligned(X_POSITION_TIMEZONE, Y_POSITION_TIMEZONE, buf, H_POSITION_TIMEZONE);
+}
+
+void WSDraw::_drawIndoor()
+{
+    _drawIndoor(_canvas, Y_START_POSITION_WEATHER);
+}
+
+void WSDraw::_drawIndoor(GFXCanvasCompressed& canvas, uint8_t top)
+{
+
 }
 
 void WSDraw::_drawWeather()
@@ -222,7 +234,7 @@ void WSDraw::_drawWeather(GFXCanvasCompressed& canvas, uint8_t top)
     else {
         canvas.setFont(FONTS_DEFAULT_MEDIUM);
         canvas.setTextColor(COLORS_DEFAULT_TEXT);
-        canvas._drawTextAligned(TFT_WIDTH / 2, (Y_END_POSITION_WEATHER - Y_START_POSITION_WEATHER) / 2, _weatherError, AdafruitGFXExtension::CENTER, AdafruitGFXExtension::MIDDLE);
+        canvas._drawTextAligned(TFT_WIDTH / 2, (Y_END_POSITION_WEATHER - Y_START_POSITION_WEATHER), _weatherError, AdafruitGFXExtension::CENTER, AdafruitGFXExtension::MIDDLE);
     }
 }
 
@@ -329,8 +341,39 @@ bool WSDraw::_isScrolling() const
     return _scrollCanvas != nullptr;
 }
 
+void WSDraw::_displayMessage(const String &title, const String &message, const GFXfont *font, uint16_t color, uint32_t timeout)
+{
+    ScrollCanvas::destroy(this);
+    _displayMessageTimer.add(timeout * 1000, false, [this](EventScheduler::TimerPtr timer) {
+        _draw();
+    });
+
+    _canvas.fillScreen(COLORS_BACKGROUND);
+    _canvas.fillScreenPartial(0, 16, ST77XX_ORANGE);
+
+    // TODO wordwrap
+    if (title.length()) {
+        _canvas.setCursor(8, 60);
+        _canvas.setTextColor(ST77XX_YELLOW);
+        _canvas.setFont(&DejaVu_Sans_Bold_20);
+        _canvas.println(title);
+        _canvas.setCursor(8, 80);
+    }
+    else {
+        _canvas.setCursor(8, 40);
+    }
+    _canvas.setTextColor(color);
+    _canvas.setFont(font);
+    _canvas.println(message);
+
+    _displayScreen(0, 0, TFT_WIDTH, TFT_HEIGHT);
+}
+
 void WSDraw::_updateTime()
 {
+    if (_displayMessageTimer.active()) {
+        return;
+    }
     SpeedBooster speedBooster;
 #if DEBUG_GFXCANVASCOMPRESSED_STATS
     _canvas.clearStats();
@@ -374,6 +417,9 @@ void WSDraw::_drawText(const String &text, const GFXfont *font, uint16_t color, 
 
 void WSDraw::_draw()
 {
+    if (_displayMessageTimer.active()) {
+        return;
+    }
     if (_isScrolling()) {
         return;
     }

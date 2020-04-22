@@ -17,6 +17,7 @@
 #include "RestAPI.h"
 #include "web_server.h"
 #include "progmem_data.h"
+#include "async_web_response.h"
 #include "./plugins/sensor/sensor.h"
 #include "./plugins/sensor/Sensor_BME280.h"
 #if IOT_WEATHER_STATION_COMP_RH
@@ -64,9 +65,9 @@ PGM_P WeatherStationPlugin::getName() const
 
 void WeatherStationPlugin::_sendScreenCaptureBMP(AsyncWebServerRequest *request)
 {
-    // _debug_printf_P(PSTR("WeatherStationPlugin::_sendScreenCapture(): is_authenticated=%u\n"), web_server_is_authenticated(request));
+    // _debug_printf_P(PSTR("WeatherStationPlugin::_sendScreenCapture(): is_authenticated=%u\n"), WebServerPlugin::getInstance().isAuthenticated(request) == true);
 
-    if (web_server_is_authenticated(request)) {
+    if (WebServerPlugin::getInstance().isAuthenticated(request) == true) {
         //auto response = new AsyncClonedBitmapStreamResponse(plugin.getCanvas().clone());
         debug_printf("AsyncBitmapStreamResponse\n");
         auto response = new AsyncBitmapStreamResponse(plugin.getCanvas());
@@ -82,8 +83,90 @@ void WeatherStationPlugin::_sendScreenCaptureBMP(AsyncWebServerRequest *request)
 
 void WeatherStationPlugin::_installWebhooks()
 {
-    _debug_printf_P(PSTR("WeatherStationPlugin::_installWebhooks(): Installing web handler for screen capture, server=%p\n"), get_web_server_object());
-    web_server_add_handler(F("/images/screen_capture.bmp"), _sendScreenCaptureBMP);
+    _debug_printf_P(PSTR("server=%p\n"), WebServerPlugin::getWebServerObject());
+    WebServerPlugin::addHandler(F("/images/screen_capture.bmp"), _sendScreenCaptureBMP);
+
+    WebServerPlugin::addRestHandler(WebServerPlugin::RestHandler(F(KFC_RESTAPI_ENDPOINT "ws"), [this](AsyncWebServerRequest *request, WebServerPlugin::RestRequest &rest) -> AsyncWebServerResponse * {
+        auto response = new AsyncJsonResponse();
+        auto &json = response->getJsonObject();
+        auto &reader = rest.getJsonReader();
+
+        if (rest.isUriMatch(FSPGM(message))) {
+
+            auto title = reader.get(F("title")).getValue();
+            auto message = reader.get(FSPGM(message)).getValue();
+            auto timeout = reader.get(F("timeout")).getValue().toInt();
+            auto confirm = reader.get(F("confirm")).getBooleanValue();
+
+            // default time if not set
+            if (timeout == 0) {
+                timeout = 60;
+            }
+            // display until message has been confirmed
+            if (confirm == JsonVar::BooleanValueType::TRUE) {
+                timeout = 0;
+
+            }
+
+            if (message.length() == 0) {
+                json.add(FSPGM(status), 400);
+                json.add(FSPGM(message), F("Empty message"));
+            }
+            else {
+                json.add(FSPGM(status), 200);
+                json.add(FSPGM(message), AsyncWebServerResponse::responseCodeToString(200));
+
+                LoopFunctions::callOnce([this, title, message, timeout]() {
+                    _displayMessage(title, message, &Dialog_bold_10, ST77XX_WHITE, timeout);
+                });
+
+            }
+        }
+        else if (rest.isUriMatch(FSPGM(display))) {
+            json.add(FSPGM(status), 501);
+            json.add(FSPGM(message), AsyncWebServerResponse::responseCodeToString(501));
+        }
+        else if (rest.isUriMatch(F("backlight"))) {
+            auto levelVar = reader.get(F("level"));
+            int level = levelVar.getValue().toInt();
+            if (levelVar.getType() != JsonBaseReader::JSON_TYPE_INT || level < 0 || level > 1023) {
+                json.add(FSPGM(status), 400);
+                json.add(FSPGM(message), F("Backlight level out of range (0-1023)"));
+            }
+            else {
+                json.add(FSPGM(status), 200);
+                json.add(FSPGM(message), PrintString(F("Backlight level set to %u"), level));
+                _fadeBacklight(_backlightLevel, level);
+                _backlightLevel = level;
+            }
+        }
+        else if (rest.isUriMatch(FSPGM(sensors))) {
+            json.add(FSPGM(status), 200);
+            auto &sensors = json.addArray(FSPGM(sensors));
+            for(const auto sensor: SensorPlugin::getSensors()) {
+                String name;
+                StringVector values;
+                if (sensor->getSensorData(name, values)) {
+                    auto &sensor = sensors.addObject(2);
+                    sensor.add(FSPGM(name), name);
+                    auto &vals = sensor.addArray(FSPGM(values));
+                    for(const auto &value: values) {
+                        vals.add(value);
+                    }
+                }
+            }
+        }
+        else if (rest.isUriMatch(nullptr)) {
+            json.add(FSPGM(status), 200);
+            json.add(FSPGM(message), AsyncWebServerResponse::responseCodeToString(200));
+        }
+        else {
+            json.add(FSPGM(status), 404);
+            json.add(FSPGM(message), AsyncWebServerResponse::responseCodeToString(404));
+        }
+
+        return response->finalize();
+    }));
 }
 
 void WeatherStationPlugin::_readConfig()
@@ -91,7 +174,6 @@ void WeatherStationPlugin::_readConfig()
     _config = WeatherStation::getConfig();
     _backlightLevel = std::min(1024 * _config.backlight_level / 100, 1023);
 }
-
 
 void WeatherStationPlugin::setup(PluginSetupMode_t mode)
 {
@@ -107,7 +189,7 @@ void WeatherStationPlugin::setup(PluginSetupMode_t mode)
     _draw();
     _fadeBacklight(0, _backlightLevel);
     int progressValue = -1;
-    web_server_set_update_firmware_callback([this, progressValue](size_t position, size_t size) mutable {
+    WebServerPlugin::getInstance().setUpdateFirmwareCallback([this, progressValue](size_t position, size_t size) mutable {
         int progress = position * 100 / size;
         if (progressValue != progress) {
             if (progressValue == -1) {
@@ -131,7 +213,7 @@ void WeatherStationPlugin::setup(PluginSetupMode_t mode)
     auto compensationCallback = [this](Sensor_BME280::SensorData_t &sensor) {
         float realTemp;
 #if IOT_WEATHER_STATION_TEMP_COMP == 1
-        realTemp = sensor.temperature + IOT_WEATHER_STATION_TEMP_COMP_OFS;
+        realTemp = sensor.temperature + _config.temp_offset;
 #elif IOT_WEATHER_STATION_TEMP_COMP == 2
         realTemp = config.getRTCTemperature()  + IOT_WEATHER_STATION_TEMP_COMP_OFS;
 #else
@@ -238,39 +320,7 @@ void WeatherStationPlugin::createConfigureForm(AsyncWebServerRequest *request, F
     form.add<uint8_t>(F("touch_threshold"), _H_STRUCT_VALUE(MainConfig().plugins.weatherstation.config, touch_threshold))->setFormUI(new FormUI(FormUI::TEXT, F("Touch Threshold")));
     form.add<uint8_t>(F("released_threshold"), _H_STRUCT_VALUE(MainConfig().plugins.weatherstation.config, released_threshold))->setFormUI(new FormUI(FormUI::TEXT, F("Release Threshold")));
 
-    // form.add<uint8_t>(F("blink_colon"), &clock->blink_colon)->setFormUI(
-    //     (new FormUI(FormUI::SELECT, F("Blink Colon")))
-    //         ->addItems(String(BlinkColonEnum_t::SOLID), F("Solid"))
-    //         ->addItems(String(BlinkColonEnum_t::NORMAL), F("Normal"))
-    //         ->addItems(String(BlinkColonEnum_t::FAST), F("Fast"))
-    // );
-    // form.addValidator(new FormRangeValidator(F("Invalid value"), BlinkColonEnum_t::SOLID, BlinkColonEnum_t::FAST));
-
-    // form.add<int8_t>(F("animation"), &clock->animation)->setFormUI(
-    //     (new FormUI(FormUI::SELECT, F("Animation")))
-    //         ->addItems(String(AnimationEnum_t::NONE), F("Solid"))
-    //         ->addItems(String(AnimationEnum_t::RAINBOW), F("Rainbow"))
-    // );
-    // form.addValidator(new FormRangeValidator(F("Invalid animation"), AnimationEnum_t::NONE, AnimationEnum_t::FADE));
-
-    // form.add<uint8_t>(F("brightness"), &clock->brightness)
-    //     ->setFormUI((new FormUI(FormUI::TEXT, F("Brightness")))->setSuffix(F("0-255")));
-
-    // String str = PrintString(F("#%02X%02X%02X"), clock->solid_color[0], clock->solid_color[1], clock->solid_color[2]);
-    // form.add(F("solid_color"), str)
-    //     ->setFormUI(new FormUI(FormUI::TEXT, F("Solid Color")));
-    // form.addValidator(new FormCallbackValidator([](const String &value, FormField &field) {
-    //     auto ptr = value.c_str();
-    //     if (*ptr == '#') {
-    //         ptr++;
-    //     }
-    //     auto color = strtol(ptr, nullptr, 16);
-    //     auto &colorArr = config._H_W_GET(Config().clock).solid_color;
-    //     colorArr[0] = color >> 16;
-    //     colorArr[1] = color >> 8;
-    //     colorArr[2] = (uint8_t)color;
-    //     return true;
-    // }));
+    form.add<float>(F("temp_offset"), _H_STRUCT_VALUE(MainConfig().plugins.weatherstation.config, temp_offset))->setFormUI((new FormUI(FormUI::TEXT, F("BMP280 Temperature Offset")))->setSuffix(F("&deg;")));
 
     form.finalize();
 
@@ -402,14 +452,14 @@ bool WeatherStationPlugin::atModeHandler(AtModeArgs &args)
         if (args.equals(0, 'f')) {
             args.print(F("Updating forecast..."));
             _getWeatherForecast([this, args](bool status) mutable {
-                args.printf_P(PSTR("status=%u"), status);
+                args.printf_P(SPGM(status__u), status);
                 _draw();
             });
         }
         else {
             args.print(F("Updating info..."));
             _getWeatherInfo([this, args](bool status) mutable {
-                args.printf_P(PSTR("status=%u"), status);
+                args.printf_P(SPGM(status__u), status);
                 _draw();
             });
         }

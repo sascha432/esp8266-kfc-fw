@@ -32,11 +32,6 @@
 #define IOT_WEATHER_STATION_TEMP_COMP           1
 #endif
 
-// temperature offset if relative
-#ifndef IOT_WEATHER_STATION_TEMP_COMP_OFS
-#define IOT_WEATHER_STATION_TEMP_COMP_OFS       -3.0
-#endif
-
 // calculate RH from compensated temperature
 #ifndef IOT_WEATHER_STATION_COMP_RH
 #define IOT_WEATHER_STATION_COMP_RH             0

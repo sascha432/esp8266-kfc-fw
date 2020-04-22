@@ -71,9 +71,9 @@ class __FlashStringHelper;
 
 #include "esp8266_compat.h"
 
-#define SPGM(name)                              _shared_progmem_string_##name
-#define FSPGM(name)                             FPSTR(SPGM(name))
-#define PSPGM(name)                             (PGM_P)(SPGM(name))
+#define SPGM(name, ...)                                 _shared_progmem_string_##name
+#define FSPGM(name, ...)                                FPSTR(SPGM(name))
+#define PSPGM(name, ...)                                (PGM_P)(SPGM(name))
 
 #include "debug_helper.h"
 #include "misc.h"

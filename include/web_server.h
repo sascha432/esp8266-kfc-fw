@@ -16,6 +16,7 @@
 #include <HttpHeaders.h>
 #include <SpeedBooster.h>
 #include <KFCJson.h>
+#include <HeapStream.h>
 #include "failure_counter.h"
 #include "progmem_data.h"
 #include "plugins.h"
@@ -81,13 +82,60 @@ private:
 public:
     typedef std::function<void(size_t position, size_t size)> UpdateFirmwareCallback_t;
 
-    typedef struct {
-        int httpCode;
-        AsyncWebServerResponse *response;
-    } RestResponse_t;
+    enum class AuthType {
+        UNKNOWN =           -1,
+        NONE,
+        SID,
+        SID_COOKIE,
+        BEARER,
+    };
 
-    typedef std::function<RestResponse_t(AbstractJsonValue &json, AbstractJsonValue::JsonVariantEnum_t type)> RestCallback_t;
-    typedef std::vector<RestCallback_t> RestCallbackVector;
+    class RestRequest;
+
+    class RestHandler {
+    public:
+        typedef std::function<AsyncWebServerResponse *(AsyncWebServerRequest *request, RestRequest &rest)> Callback;
+        typedef std::vector<RestHandler> Vector;
+
+        RestHandler(const __FlashStringHelper *url, Callback callback);
+        const __FlashStringHelper *getURL() const;
+        AsyncWebServerResponse *invokeCallback(AsyncWebServerRequest *request, RestRequest &rest);
+
+    private:
+        const __FlashStringHelper *_url;
+        Callback _callback;
+    };
+
+    class RestRequest {
+    public:
+        RestRequest(AsyncWebServerRequest *request, const WebServerPlugin::RestHandler &handler, AuthType auth);
+
+        AuthType getAuth() const;
+
+        RestHandler &getHandler();
+        JsonMapReader &getJsonReader();
+
+        AsyncWebServerResponse *createResponse(AsyncWebServerRequest *request);
+        void writeBody(uint8_t *data, size_t len);
+
+        bool isUriMatch(const __FlashStringHelper *uri) const;
+
+    private:
+        AsyncWebServerRequest *_request;
+        RestHandler _handler;
+        AuthType _auth;
+        HeapStream _stream;
+        JsonMapReader _reader;
+        bool _readerError;
+    };
+
+    class AsyncRestWebHandler : public AsyncWebHandler {
+    public:
+        AsyncRestWebHandler();
+        virtual bool canHandle(AsyncWebServerRequest *request) override;
+        virtual void handleBody(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) override;
+        virtual void handleRequest(AsyncWebServerRequest *request) override;
+    };
 
 public:
     static WebServerPlugin &getInstance();
@@ -96,14 +144,15 @@ public:
     static bool addHandler(AsyncWebHandler* handler);
     static bool addHandler(const String &uri, ArRequestHandlerFunction onRequest);
 
-    static bool addRestHandler(const String &uri, RestCallback_t callback);
+    static bool addRestHandler(RestHandler &&handler);
 
     void setUpdateFirmwareCallback(UpdateFirmwareCallback_t callback);
 
 private:
     UpdateFirmwareCallback_t _updateFirmwareCallback;
-    RestCallbackVector _restCallbacks;
+    RestHandler::Vector _restCallbacks;
     AsyncWebServer *_server;
+public:
     FailureCounterContainer _loginFailures;
 
 // AsyncWebServer handlers
@@ -123,22 +172,26 @@ public:
     static void handlerUploadUpdate(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final);
 
 public:
+    static const __FlashStringHelper *getAuthTypeStr(AuthType type) {
+        switch(type) {
+            case AuthType::SID:
+                return F("Session");
+            case AuthType::SID_COOKIE:
+                return F("Session Cookie");
+            case AuthType::BEARER:
+                return F("Bearer Toklen");
+            default:
+                return F("Not Authorized");
+        }
+    }
+
     bool isRunning() const;
-    bool isAuthenticated(AsyncWebServerRequest *request) const;
+    AuthType isAuthenticated(AsyncWebServerRequest *request) const;
 };
 
-inline bool web_server_is_authenticated(AsyncWebServerRequest *request) {
-    return WebServerPlugin::getInstance().isAuthenticated(request);
+inline bool operator ==(const WebServerPlugin::AuthType &auth, bool invert) {
+    auto result = static_cast<int>(auth) >= static_cast<int>(WebServerPlugin::AuthType::SID);
+    return invert ? result : !result;
 }
-
-inline void web_server_add_handler(AsyncWebHandler* handler) {
-    WebServerPlugin::addHandler(handler);
-}
-
-inline void web_server_add_handler(const String &uri, ArRequestHandlerFunction onRequest) {
-    WebServerPlugin::addHandler(uri, onRequest);
-}
-
-AsyncWebServer *get_web_server_object();
 
 #endif

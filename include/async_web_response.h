@@ -56,6 +56,11 @@ public:
     JsonUnnamedObject &getJsonObject();
     void updateLength();
 
+    inline AsyncJsonResponse *finalize() {
+        updateLength();
+        return this;
+    }
+
 private:
     JsonUnnamedObject _json;
     JsonBuffer _jsonBuffer;

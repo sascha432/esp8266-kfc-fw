@@ -16,11 +16,11 @@
         "default": "text/plain"
     },
     "1": {
-        "use_counter": 15,
+        "use_counter": 12,
         "default": "1"
     },
     "0": {
-        "use_counter": 15,
+        "use_counter": 12,
         "default": "0"
     },
     "null": {
@@ -132,7 +132,7 @@
         "default": "pure virtual call: %s\\n"
     },
     "yes": {
-        "use_counter": 6,
+        "use_counter": 8,
         "default": "yes"
     },
     "no": {
@@ -404,11 +404,11 @@
         "default": "/blinds_ctrl.state"
     },
     "Yes": {
-        "use_counter": 2,
+        "use_counter": 3,
         "default": "Yes"
     },
     "No": {
-        "use_counter": 2,
+        "use_counter": 3,
         "default": "No"
     },
     "webui_json_title": {
@@ -652,11 +652,11 @@
         "default": "config"
     },
     "true": {
-        "use_counter": 2,
+        "use_counter": 5,
         "default": "true"
     },
     "false": {
-        "use_counter": 2,
+        "use_counter": 5,
         "default": "false"
     },
     "openweathermap_api_url": {
@@ -832,11 +832,11 @@
         "default": "keep-alive"
     },
     "status": {
-        "use_counter": 2,
+        "use_counter": 8,
         "default": "status"
     },
     "message": {
-        "use_counter": 2,
+        "use_counter": 7,
         "default": "message"
     },
     "ds3231_id_temp": {
@@ -863,8 +863,121 @@
         "use_counter": 5,
         "default": ".html"
     },
+    "Authorization": {
+        "use_counter": 3,
+        "default": "Authorization"
+    },
+    "Bearer_": {
+        "use_counter": 2,
+        "default": "Bearer "
+    },
+    "cfg": {
+        "use_counter": 3,
+        "default": "cfg"
+    },
+    "wifi": {
+        "use_counter": 1,
+        "default": "wifi"
+    },
+    "safe_mode": {
+        "use_counter": 1,
+        "default": "safe mode"
+    },
+    "_rebooting_html": {
+        "use_counter": 2,
+        "default": "/rebooting.html",
+        "annotations": {
+            "translation": {
+                "*": "/rebooting.html"
+            },
+            "file": "src/web_server.cpp",
+            "line": 856
+        }
+    },
+    "_index_html": {
+        "use_counter": 2,
+        "default": "/index.html",
+        "annotations": {
+            "translation": {
+                "*": "/index.html"
+            },
+            "file": "src/web_server.cpp",
+            "line": 858
+        }
+    },
+    "_factory_html": {
+        "use_counter": 1,
+        "auto": " factory html",
+        "annotations": {
+            "translation": {
+                "*": "/factory.html"
+            },
+            "file": "src/web_server.cpp",
+            "line": 860
+        }
+    },
+    "_network_html": {
+        "use_counter": 1,
+        "default": "/network.html",
+        "annotations": {
+            "translation": {
+                "*": "/network.html"
+            },
+            "file": "src/web_server.cpp",
+            "line": 826
+        }
+    },
+    "_reboot_html": {
+        "use_counter": 1,
+        "auto": " reboot html",
+        "annotations": {
+            "translation": {
+                "*": "/reboot.html"
+            },
+            "file": "src/web_server.cpp",
+            "line": 847
+        }
+    },
+    "network": {
+        "use_counter": 1,
+        "annotations": {
+            "translation": {
+                "*": "network"
+            },
+            "file": "src/web_server.cpp",
+            "line": 831
+        },
+        "auto": "network"
+    },
+    "password": {
+        "use_counter": 1,
+        "default": "password"
+    },
     "status__u": {
         "use_counter": 4,
-        "default": "status=%u"
+        "annotations": {
+            "translation": {
+                "*": "status=%u"
+            },
+            "file": "src/plugins/home_assistant/home_assistant.cpp",
+            "line": 170
+        },
+        "auto": "status  u"
+    },
+    "display": {
+        "use_counter": 1,
+        "default": "display"
+    },
+    "sensors": {
+        "use_counter": 2,
+        "default": "sensors"
+    },
+    "name": {
+        "use_counter": 1,
+        "default": "name"
+    },
+    "values": {
+        "use_counter": 1,
+        "default": "values"
     }
 }

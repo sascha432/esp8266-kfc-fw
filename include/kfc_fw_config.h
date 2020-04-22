@@ -556,6 +556,8 @@ private:
 
 extern KFCFWConfiguration config;
 
+extern const char *session_get_device_token();
+
 #if DEBUG_HAVE_SAVECRASH
 class EspSaveCrash;
 extern EspSaveCrash SaveCrash;

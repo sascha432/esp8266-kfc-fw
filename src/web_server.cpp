@@ -42,6 +42,11 @@
 
 static WebServerPlugin plugin;
 
+#if SECURITY_LOGIN_ATTEMPTS
+FailureCounterContainer &loginFailures = plugin._loginFailures;
+#endif
+
+
 #define U_ATMEGA 254
 
 #if defined(ARDUINO_ESP8266_RELEASE_2_6_3)
@@ -51,6 +56,7 @@ extern "C" uint32_t _FS_end;
 #define U_SPIFFS U_FS
 #endif
 #endif
+
 struct UploadStatus_t {
     AsyncWebServerResponse *response;
     bool error;
@@ -65,10 +71,62 @@ WebServerSetCPUSpeedHelper::WebServerSetCPUSpeedHelper() : SpeedBooster(
 ) {
 }
 
-
-AsyncWebServer *get_web_server_object()
+const __FlashStringHelper *getContentType(const String &path)
 {
-    return WebServerPlugin::getWebServerObject();
+    if (String_endsWith(path, SPGM(_html)) || String_endsWith(path, PSTR(".htm"))) {
+        return FSPGM(mime_text_html);
+    }
+    else if (String_endsWith(path, PSTR(".css"))) {
+        return FSPGM(mime_text_css);
+    }
+    else if (String_endsWith(path, PSTR(".json"))) {
+        return FSPGM(mime_application_json);
+    }
+    else if (String_endsWith(path, PSTR(".js"))) {
+        return FSPGM(mime_application_javascript);
+    }
+    else if (String_endsWith(path, PSTR(".png"))) {
+        return FSPGM(mime_image_png);
+    }
+    else if (String_endsWith(path, PSTR(".gif"))) {
+        return FSPGM(mime_image_gif);
+    }
+    else if (String_endsWith(path, PSTR(".jpg"))) {
+        return FSPGM(mime_image_jpeg);
+    }
+    else if (String_endsWith(path, PSTR(".ico"))) {
+        return F("image/x-icon");
+    }
+    else if (String_endsWith(path, PSTR(".svg"))) {
+        return F("image/svg+xml");
+    }
+    else if (String_endsWith(path, PSTR(".eot"))) {
+        return F("font/eot");
+    }
+    else if (String_endsWith(path, PSTR(".woff"))) {
+        return F("font/woff");
+    }
+    else if (String_endsWith(path, PSTR(".woff2"))) {
+        return F("font/woff2");
+    }
+    else if (String_endsWith(path, PSTR(".ttf"))) {
+        return F("font/ttf");
+    }
+    else if (String_endsWith(path, PSTR(".xml"))) {
+        return FSPGM(mime_text_xml);
+    }
+    else if (String_endsWith(path, PSTR(".pdf"))) {
+        return F("application/pdf");
+    }
+    else if (String_endsWith(path, PSTR(".zip"))) {
+        return FSPGM(mime_application_zip);
+    }
+    else if (String_endsWith(path, PSTR(".gz"))) {
+        return FSPGM(mime_application_x_gzip);
+    }
+    else {
+        return FSPGM(mime_text_plain);
+    }
 }
 
 // #if LOGGER
@@ -122,7 +180,7 @@ void WebServerPlugin::handlerNotFound(AsyncWebServerRequest *request)
 
 void WebServerPlugin::handlerScanWiFi(AsyncWebServerRequest *request)
 {
-    if (plugin.isAuthenticated(request)) {
+    if (plugin.isAuthenticated(request) == true) {
         HttpHeaders httpHeaders(false);
         httpHeaders.addNoCache();
         auto response = new AsyncNetworkScanResponse(request->arg(F("hidden")).toInt());
@@ -155,7 +213,7 @@ void WebServerPlugin::handlerAlive(AsyncWebServerRequest *request)
 
 void WebServerPlugin::handlerSyncTime(AsyncWebServerRequest *request)
 {
-    if (plugin.isAuthenticated(request)) {
+    if (plugin.isAuthenticated(request) == true) {
         HttpHeaders httpHeaders(false);
         httpHeaders.addNoCache();
         PrintHtmlEntitiesString str;
@@ -171,7 +229,7 @@ void WebServerPlugin::handlerSyncTime(AsyncWebServerRequest *request)
 
 void WebServerPlugin::handlerWebUI(AsyncWebServerRequest *request)
 {
-    if (plugin.isAuthenticated(request)) {
+    if (plugin.isAuthenticated(request) == true) {
         WebServerSetCPUSpeedHelper setCPUSpeed;
         auto response = new AsyncJsonResponse();
         WsWebUISocket::createWebUIJSON(response->getJsonObject());
@@ -227,7 +285,7 @@ void WebServerPlugin::handlerSpeedTestImage(AsyncWebServerRequest *request)
 void WebServerPlugin::handlerImportSettings(AsyncWebServerRequest *request)
 {
     WebServerSetCPUSpeedHelper setCPUSpeed;
-    if (plugin.isAuthenticated(request)) {
+    if (plugin.isAuthenticated(request) == true) {
         HttpHeaders httpHeaders(false);
         httpHeaders.addNoCache();
 
@@ -266,7 +324,7 @@ void WebServerPlugin::handlerImportSettings(AsyncWebServerRequest *request)
 void WebServerPlugin::handlerExportSettings(AsyncWebServerRequest *request)
 {
     WebServerSetCPUSpeedHelper setCPUSpeed;
-    if (plugin.isAuthenticated(request)) {
+    if (plugin.isAuthenticated(request) == true) {
 
         HttpHeaders httpHeaders(false);
         httpHeaders.addNoCache();
@@ -383,7 +441,7 @@ void WebServerPlugin::handlerUploadUpdate(AsyncWebServerRequest *request, String
 #if STK500V1
     static File firmwareTempFile;
 #endif
-    if (index == 0 && !request->_tempObject && plugin.isAuthenticated(request)) {
+    if (index == 0 && !request->_tempObject && plugin.isAuthenticated(request) == true) {
         request->_tempObject = calloc(sizeof(UploadStatus_t), 1);
         Logger_notice(F("Firmware upload started"));
 #if IOT_REMOTE_CONTROL
@@ -522,7 +580,7 @@ void WebServerPlugin::begin()
 
 #if REST_API_SUPPORT
     // // download /.mappings
-    // web_server_add_handler(F("/rest/KFC/webui_details"), [](AsyncWebServerRequest *request) {
+    // WebServerPlugin::addHandler(F("/rest/KFC/webui_details"), [](AsyncWebServerRequest *request) {
     //     if (isAuthenticated(request)) {
     //         rest_api_kfc_webui_details(request);
     //     } else {
@@ -543,7 +601,7 @@ void WebServerPlugin::begin()
     _server->onNotFound(handlerNotFound);
 
 // #if MDNS_SUPPORT
-//     web_server_add_handler(F("/poll_mdns/"), [&httpHeaders](AsyncWebServerRequest *request) {
+//     WebServerPlugin::addHandler(F("/poll_mdns/"), [&httpHeaders](AsyncWebServerRequest *request) {
 
 //         web_server_set_cpu_speed_for_request(request);
 
@@ -573,78 +631,19 @@ void WebServerPlugin::begin()
 //     });
 // #endif
 
-    web_server_add_handler(F("/scan_wifi/"), handlerScanWiFi);
-    web_server_add_handler(F("/logout"), handlerLogout);
-    web_server_add_handler(F("/is_alive"), handlerAlive);
-    web_server_add_handler(F("/sync_time"), handlerSyncTime);
-    web_server_add_handler(F("/webui_get"), handlerWebUI);
-    web_server_add_handler(F("/export_settings"), handlerExportSettings);
-    web_server_add_handler(F("/import_settings"), handlerImportSettings);
-    web_server_add_handler(F("/speedtest.zip"), handlerSpeedTestZip);
-    web_server_add_handler(F("/speedtest.bmp"), handlerSpeedTestImage);
+    WebServerPlugin::addHandler(F("/scan_wifi/"), handlerScanWiFi);
+    WebServerPlugin::addHandler(F("/logout"), handlerLogout);
+    WebServerPlugin::addHandler(F("/is_alive"), handlerAlive);
+    WebServerPlugin::addHandler(F("/sync_time"), handlerSyncTime);
+    WebServerPlugin::addHandler(F("/webui_get"), handlerWebUI);
+    WebServerPlugin::addHandler(F("/export_settings"), handlerExportSettings);
+    WebServerPlugin::addHandler(F("/import_settings"), handlerImportSettings);
+    WebServerPlugin::addHandler(F("/speedtest.zip"), handlerSpeedTestZip);
+    WebServerPlugin::addHandler(F("/speedtest.bmp"), handlerSpeedTestImage);
     _server->on(String(F("/update")).c_str(), HTTP_POST, handlerUpdate, handlerUploadUpdate);
 
     _server->begin();
     _debug_printf_P(PSTR("HTTP running on port %u\n"), port);
-}
-
-
-PGM_P web_server_get_content_type(const String &path)
-{
-    if (String_endsWith(path, PSTR(".html")) || String_endsWith(path, PSTR(".htm"))) {
-        return SPGM(mime_text_html);
-    }
-    else if (String_endsWith(path, PSTR(".css"))) {
-        return SPGM(mime_text_css);
-    }
-    else if (String_endsWith(path, PSTR(".json"))) {
-        return SPGM(mime_application_json);
-    }
-    else if (String_endsWith(path, PSTR(".js"))) {
-        return SPGM(mime_application_javascript);
-    }
-    else if (String_endsWith(path, PSTR(".png"))) {
-        return SPGM(mime_image_png);
-    }
-    else if (String_endsWith(path, PSTR(".gif"))) {
-        return SPGM(mime_image_gif);
-    }
-    else if (String_endsWith(path, PSTR(".jpg"))) {
-        return SPGM(mime_image_jpeg);
-    }
-    else if (String_endsWith(path, PSTR(".ico"))) {
-        return PSTR("image/x-icon");
-    }
-    else if (String_endsWith(path, PSTR(".svg"))) {
-        return PSTR("image/svg+xml");
-    }
-    else if (String_endsWith(path, PSTR(".eot"))) {
-        return PSTR("font/eot");
-    }
-    else if (String_endsWith(path, PSTR(".woff"))) {
-        return PSTR("font/woff");
-    }
-    else if (String_endsWith(path, PSTR(".woff2"))) {
-        return PSTR("font/woff2");
-    }
-    else if (String_endsWith(path, PSTR(".ttf"))) {
-        return PSTR("font/ttf");
-    }
-    else if (String_endsWith(path, PSTR(".xml"))) {
-        return SPGM(mime_text_xml);
-    }
-    else if (String_endsWith(path, PSTR(".pdf"))) {
-        return PSTR("application/pdf");
-    }
-    else if (String_endsWith(path, PSTR(".zip"))) {
-        return SPGM(mime_application_zip);
-    }
-    else if (String_endsWith(path, PSTR(".gz"))) {
-        return SPGM(mime_application_x_gzip);
-    }
-    else {
-        return SPGM(mime_text_plain);
-    }
 }
 
 bool WebServerPlugin::_sendFile(const FileMapping &mapping, HttpHeaders &httpHeaders, bool client_accepts_gzip, AsyncWebServerRequest *request, WebTemplate *webTemplate)
@@ -657,10 +656,10 @@ bool WebServerPlugin::_sendFile(const FileMapping &mapping, HttpHeaders &httpHea
         return false;
     }
 
-    // _debug_printf_P(PSTR("Mapping %s, %s, %d, content type %s\n"), mapping->getPath(), mapping->getMappedPath(), mapping->getFileSize(), web_server_get_content_type(path));
+    // _debug_printf_P(PSTR("Mapping %s, %s, %d, content type %s\n"), mapping->getPath(), mapping->getMappedPath(), mapping->getFileSize(), getContentType(path));
 
     if (webTemplate == nullptr) {
-        if (path.charAt(0) == '/' && String_endsWith(path, PSTR(".html"))) {
+        if (path.charAt(0) == '/' && String_endsWith(path, SPGM(_html))) {
             String filename = path.substring(1, path.length() - 5);
             auto plugin = PluginComponent::getTemplate(filename);
             if (plugin) {
@@ -680,7 +679,7 @@ bool WebServerPlugin::_sendFile(const FileMapping &mapping, HttpHeaders &httpHea
                 webTemplate = new StatusTemplate();
             } else if (String_equals(path, PSTR("/status.html"))) {
                 webTemplate = new StatusTemplate();
-            } else if (String_endsWith(path, PSTR(".html"))) {
+            } else if (String_endsWith(path, SPGM(_html))) {
                 webTemplate = new WebTemplate();
             }
         }
@@ -688,12 +687,12 @@ bool WebServerPlugin::_sendFile(const FileMapping &mapping, HttpHeaders &httpHea
 
     AsyncBaseResponse *response;
     if (webTemplate != nullptr) {
-        response = new AsyncTemplateResponse(FPSTR(web_server_get_content_type(path)), mapping.open(FileOpenMode::read), webTemplate, [webTemplate](const String& name, DataProviderInterface &provider) {
+        response = new AsyncTemplateResponse(FPSTR(getContentType(path)), mapping.open(FileOpenMode::read), webTemplate, [webTemplate](const String& name, DataProviderInterface &provider) {
             return TemplateDataProvider::callback(name, provider, *webTemplate);
         });
         httpHeaders.addNoCache(request->method() == HTTP_POST);
     } else {
-        response = new AsyncProgmemFileResponse(FPSTR(web_server_get_content_type(path)), mapping.open(FileOpenMode::read));
+        response = new AsyncProgmemFileResponse(FPSTR(getContentType(path)), mapping.open(FileOpenMode::read));
         httpHeaders.replace(new HttpDateHeader(FSPGM(Expires), 86400 * 30));
         httpHeaders.replace(new HttpDateHeader(FSPGM(Last_Modified), mapping.getModificationTime()));
         if (_isPublic(path)) {
@@ -740,11 +739,12 @@ bool WebServerPlugin::_handleFileRead(String path, bool client_accepts_gzip, Asy
         return true;
     }
 
-    bool _is_authenticated = isAuthenticated(request);
+    auto authType = isAuthenticated(request);
+    bool isAuthenticated = (authType == true);
     WebTemplate *webTemplate = nullptr;
     HttpHeaders httpHeaders;
 
-    if (!_isPublic(path) && !_is_authenticated) {
+    if (!_isPublic(path) && !isAuthenticated) {
         String loginError = F("Your session has expired.");
 
         if (request->hasArg(FSPGM(SID))) { // just report failures if the cookie is invalid
@@ -773,17 +773,17 @@ bool WebServerPlugin::_handleFileRead(String path, bool client_accepts_gzip, Asy
                     }
                 }
 
-                _debug_printf_P(PSTR("Login successful, cookie %s\n"), cookie->getValue().c_str());
-                _is_authenticated = true;
-                Logger_security(F("Login successful from %s"), remote_addr.toString().c_str());
+                _debug_printf_P(PSTR("Login successful: type=%u cookie=%s\n"), getAuthTypeStr(authType), cookie->getValue().c_str());
+                isAuthenticated = true;
+                Logger_security(F("Login successful from %s (%s)"), remote_addr.toString().c_str(), getAuthTypeStr(authType));
             } else {
                 loginError = F("Invalid username or password.");
                 const FailureCounter &failure = _loginFailures.addFailure(remote_addr);
-                Logger_security(F("Login from %s failed %d times since %s"), remote_addr.toString().c_str(), failure.getCounter(), failure.getFirstFailure().c_str());
+                Logger_security(F("Login from %s failed %d times since %s (%s)"), remote_addr.toString().c_str(), failure.getCounter(), failure.getFirstFailure().c_str(), getAuthTypeStr(authType));
                 return _sendFile(FSPGM(login_html), httpHeaders, client_accepts_gzip, request, new LoginTemplate(loginError));
             }
         } else {
-            if (String_endsWith(path, PSTR(".html"))) {
+            if (String_endsWith(path, SPGM(_html))) {
                 return _sendFile(FSPGM(login_html), httpHeaders, client_accepts_gzip, request, new LoginTemplate(loginError));
             } else {
                 request->send(403);
@@ -792,13 +792,13 @@ bool WebServerPlugin::_handleFileRead(String path, bool client_accepts_gzip, Asy
         }
     }
 
-    if (_is_authenticated && request->method() == HTTP_POST) {  // http POST processing
+    if (isAuthenticated && request->method() == HTTP_POST) {  // http POST processing
 
         _debug_printf_P(PSTR("HTTP post %s\n"), path.c_str());
 
         httpHeaders.addNoCache(true);
 
-        if (path.charAt(0) == '/' && String_endsWith(path, PSTR(".html"))) {
+        if (path.charAt(0) == '/' && String_endsWith(path, SPGM(_html))) {
             auto plugin = PluginComponent::getForm(path.substring(1, path.length() - 5));
             if (plugin) {
                 Form *form = new SettingsForm(request);
@@ -819,16 +819,16 @@ bool WebServerPlugin::_handleFileRead(String path, bool client_accepts_gzip, Asy
                 webTemplate = new ConfigTemplate(form);
                 if (form->validate()) {
                     config.write();
-                    PluginComponent::getByName(PSTR("cfg"))->invokeReconfigure(PSTR("wifi"));
+                    PluginComponent::getByName(SPGM(cfg))->invokeReconfigure(SPGM(wifi));
                 } else {
                     config.discard();
                 }
-            } else if (String_equals(path, PSTR("/network.html"))) {
+            } else if (String_equals(path, SPGM(_network_html, "/network.html"))) {
                 Form *form = new NetworkSettingsForm(request);
                 webTemplate = new ConfigTemplate(form);
                 if (form->validate()) {
                     config.write();
-                    PluginComponent::getByName(PSTR("cfg"))->invokeReconfigure(PSTR("network"));
+                    PluginComponent::getByName(SPGM(cfg))->invokeReconfigure(SPGM(network, "network"));
                 } else {
                     config.discard();
                 }
@@ -840,33 +840,34 @@ bool WebServerPlugin::_handleFileRead(String path, bool client_accepts_gzip, Asy
                     flags.isDefaultPassword = false;
                     config._H_SET(Config().flags, flags);
                     config.write();
-                    PluginComponent::getByName(PSTR("cfg"))->invokeReconfigure(PSTR("password"));
+                    PluginComponent::getByName(SPGM(cfg))->invokeReconfigure(SPGM(password));
                 } else {
                     config.discard();
                 }
-            } else if (String_equals(path, PSTR("/reboot.html"))) {
-                if (request->hasArg(F("yes"))) {
-                    if (request->arg(F("safe_mode")).toInt()) {
+            } else if (String_equals(path, SPGM(_reboot_html, "/reboot.html"))) {
+                if (request->hasArg(FSPGM(yes))) {
+                    if (request->arg(FSPGM(safe_mode)).toInt()) {
                         resetDetector.setSafeMode(1);
                     }
                     request->onDisconnect([]() {
                         config.restartDevice();
                     });
-                    mapping = FileMapping(F("/rebooting.html"));
+
+                    mapping = FileMapping(FSPGM(_rebooting_html, "/rebooting.html"));
                 } else {
-                    request->redirect(F("/index.html"));
+                    request->redirect(FSPGM(_index_html, "/index.html"));
                 }
-            } else if (String_equals(path, PSTR("/factory.html"))) {
-                if (request->hasArg(F("yes"))) {
+            } else if (String_equals(path, FSPGM(_factory_html, "/factory.html"))) {
+                if (request->hasArg(FSPGM(yes))) {
                     config.restoreFactorySettings();
                     config.write();
                     RTCMemoryManager::clear();
                     request->onDisconnect([]() {
                         config.restartDevice();
                     });
-                    mapping = FileMapping(F("/rebooting.html"));
+                    mapping = FileMapping(FSPGM(_rebooting_html));
                 } else {
-                    request->redirect(F("/index.html"));
+                    request->redirect(FSPGM(_index_html));
                 }
             }
         }
@@ -984,7 +985,7 @@ void WebServerPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &
 #endif
 
     form.add(F("device_token"), _H_STR_VALUE(Config().device_token));
-    form.addValidator(new FormLengthValidator(16, sizeof(Config().device_token) - 1));
+    form.addValidator(new FormLengthValidator(SESSION_DEVICE_TOKEN_MIN_LENGTH, sizeof(Config().device_token) - 1));
 
     form.finalize();
 }
@@ -1020,11 +1021,17 @@ bool WebServerPlugin::addHandler(const String &uri, ArRequestHandlerFunction onR
     return true;
 }
 
-bool WebServerPlugin::addRestHandler(const String &uri, RestCallback_t calback)
+bool WebServerPlugin::addRestHandler(RestHandler &&handler)
 {
+    debug_printf_P(PSTR("uri=%s\n"), handler.getURL());
     if (!plugin._server) {
         return false;
     }
+    if (plugin._restCallbacks.empty()) {
+        debug_printf_P(PSTR("installing REST handler\n"));
+        plugin._server->addHandler(new AsyncRestWebHandler());
+    }
+    plugin._restCallbacks.emplace_back(handler);
     return true;
 }
 
@@ -1033,21 +1040,190 @@ bool WebServerPlugin::isRunning() const
     return _server != nullptr;
 }
 
-bool WebServerPlugin::isAuthenticated(AsyncWebServerRequest *request) const
+WebServerPlugin::AuthType WebServerPlugin::isAuthenticated(AsyncWebServerRequest *request) const
 {
     String SID;
-    if ((request->hasArg(FSPGM(SID)) && (SID = request->arg(FSPGM(SID)))) || HttpCookieHeader::parseCookie(request, FSPGM(SID), SID)) {
-
+    auto auth = request->getHeader(FSPGM(Authorization));
+    auto hasSID = request->hasArg(FSPGM(SID));
+    if (auth) {
+        auto &value = auth->value();
+        _debug_printf_P(PSTR("Authorization='%s' from %s\n"), value.c_str(), request->client()->remoteIP().toString().c_str());
+        if (String_startsWith(value, FSPGM(Bearer_))) {
+            auto token = value.c_str() + 7;
+            const auto len = value.length() - 7;
+            // _debug_printf_P(PSTR("token='%s'/'%s' len=%u\n"), token, session_get_device_token(), len);
+            if (len >= SESSION_DEVICE_TOKEN_MIN_LENGTH && !strcmp(token, session_get_device_token())) {
+                return AuthType::BEARER;
+            }
+        }
+        _debug_println(F("Authorization header failed"));
+    }
+    else if ((hasSID && (SID = request->arg(FSPGM(SID)))) || HttpCookieHeader::parseCookie(request, FSPGM(SID), SID)) {
         _debug_printf_P(PSTR("SID='%s' from %s\n"), SID.c_str(), request->client()->remoteIP().toString().c_str());
         if (SID.length() == 0) {
-            return false;
+            return AuthType::NONE;
         }
         if (verify_session_id(SID.c_str(), config.getDeviceName(), config._H_STR(Config().device_pass))) {
+            return hasSID ? AuthType::SID : AuthType::SID_COOKIE;
+        }
+        _debug_println(F("SID cookie/param failed"));
+    }
+    return AuthType::NONE;
+}
+
+
+// ------------------------------------------------------------------------
+// RestRequest
+// ------------------------------------------------------------------------
+
+WebServerPlugin::RestHandler::RestHandler(const __FlashStringHelper *url, Callback callback) : _url(url), _callback(callback)
+{
+
+}
+
+const __FlashStringHelper *WebServerPlugin::RestHandler::getURL() const
+{
+    return _url;
+}
+
+AsyncWebServerResponse *WebServerPlugin::RestHandler::invokeCallback(AsyncWebServerRequest *request, RestRequest &rest)
+{
+    return _callback(request, rest);
+}
+
+// ------------------------------------------------------------------------
+// RestRequest
+// ------------------------------------------------------------------------
+
+WebServerPlugin::RestRequest::RestRequest(AsyncWebServerRequest *request, const WebServerPlugin::RestHandler &handler, AuthType auth) :
+    _request(request),
+    _handler(handler),
+    _auth(auth),
+    _stream(),
+    _reader(_stream),
+    _readerError(false)
+{
+    _reader.initParser();
+}
+
+WebServerPlugin::AuthType WebServerPlugin::RestRequest::getAuth() const
+{
+    return _auth;
+}
+
+AsyncWebServerResponse *WebServerPlugin::RestRequest::createResponse(AsyncWebServerRequest *request)
+{
+    if (_auth == true && !_readerError) {
+        return getHandler().invokeCallback(request, *this);
+    }
+
+    auto response = new AsyncJsonResponse();
+    auto &json = response->getJsonObject();
+    if (_auth == false) {
+        json.add(FSPGM(status), 401);
+        json.add(FSPGM(message), AsyncWebServerResponse::responseCodeToString(401));
+    }
+    else if (_readerError) {
+        json.add(FSPGM(status), 400);
+        json.add(FSPGM(message), _reader.getLastErrorMessage());
+    }
+    return response->finalize();
+}
+
+WebServerPlugin::RestHandler &WebServerPlugin::RestRequest::getHandler()
+{
+    return _handler;
+}
+
+JsonMapReader &WebServerPlugin::RestRequest::getJsonReader()
+{
+    return _reader;
+}
+
+void WebServerPlugin::RestRequest::writeBody(uint8_t *data, size_t len)
+{
+    if (!_readerError) {
+        _stream.setData(data, len);
+        if (!_reader.parseStream()) {
+            _debug_printf_P(PSTR("json parser: %s\n"), _reader.getLastErrorMessage().c_str());
+            _readerError = true;
+        }
+    }
+}
+
+bool WebServerPlugin::RestRequest::isUriMatch(const __FlashStringHelper *uri) const
+{
+    auto handlerUri = reinterpret_cast<PGM_P>(_handler.getURL());
+    auto matchUri = reinterpret_cast<PGM_P>(uri);
+    if (matchUri == nullptr || pgm_read_byte(matchUri) == 0) {
+        return strcmp_P(_request->url().c_str(), handlerUri) == 0;
+    }
+
+    // check if the length is ok
+    const auto handlerUriLen = strlen_P(handlerUri);
+    auto &requestUrl = _request->url();
+    if (handlerUriLen > requestUrl.length()) {
+        return false;
+    }
+
+    // pointer to the end of the base uri
+    auto ptr = _request->url().c_str() + handlerUriLen;
+    // check if the handler has a trailing slash
+    if (pgm_read_byte(&handlerUri[handlerUriLen - 1]) != '/') {
+        if (*ptr++ != '/') { // check if the url has a slash as well
+            return false;
+        }
+    }
+    return strcmp_P(ptr, matchUri) == 0;
+}
+
+
+// ------------------------------------------------------------------------
+// AsyncRestWebHandler
+// ------------------------------------------------------------------------
+
+WebServerPlugin::AsyncRestWebHandler::AsyncRestWebHandler() : AsyncWebHandler()
+{
+}
+
+bool WebServerPlugin::AsyncRestWebHandler::canHandle(AsyncWebServerRequest *request)
+{
+    _debug_printf_P(PSTR("url=%s auth=%d\n"), request->url().c_str(), WebServerPlugin::getInstance().isAuthenticated(request));
+    for(const auto &handler: plugin._restCallbacks) {
+        auto url = request->url().c_str();
+        auto handlerUrl = reinterpret_cast<PGM_P>(handler.getURL());
+        const auto handlerUrlLen = strlen_P(handlerUrl);
+        // match "/api/endpoint" and "/api/endpoint/*"
+        if (strncmp_P(url, handlerUrl, handlerUrlLen) == 0 && (url[handlerUrlLen] == 0 || url[handlerUrlLen] == '/')) {
+            request->addInterestingHeader(FSPGM(Authorization));
+            request->_tempObject = new WebServerPlugin::RestRequest(request, handler, WebServerPlugin::getInstance().isAuthenticated(request));
+            request->onDisconnect([this, request]() {
+                delete reinterpret_cast<WebServerPlugin::RestRequest *>(request->_tempObject);
+                request->_tempObject = nullptr;
+            });
             return true;
         }
     }
-    _debug_println(F("failed"));
     return false;
+}
+
+void WebServerPlugin::AsyncRestWebHandler::handleBody(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
+{
+    _debug_printf_P(PSTR("url=%s data='%*.*s' idx=%u len=%u total=%u\n"), request->url().c_str(), len, len, data, index, len, total);
+    auto &rest = *reinterpret_cast<WebServerPlugin::RestRequest *>(request->_tempObject);
+    if (rest.getAuth() == true) {
+        rest.writeBody(data, len);
+    }
+}
+
+void WebServerPlugin::AsyncRestWebHandler::handleRequest(AsyncWebServerRequest *request)
+{
+    _debug_printf_P(PSTR("url=%s json data=\n"), request->url().c_str());
+    auto &rest = *reinterpret_cast<WebServerPlugin::RestRequest *>(request->_tempObject);
+#if DEBUG_WEB_SERVER
+    rest.getJsonReader().dump(DEBUG_OUTPUT);
+#endif
+    request->send(rest.createResponse(request));
 }
 
 #endif

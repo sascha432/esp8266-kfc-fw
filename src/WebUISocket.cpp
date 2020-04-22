@@ -35,7 +35,7 @@ void webui_socket_event_handler(AsyncWebSocket *server, AsyncWebSocketClient *cl
 
 void WsWebUISocket::setup()
 {
-    auto server = get_web_server_object();
+    auto server = WebServerPlugin::getWebServerObject();
     if (server) {
         wsWebUI = new WsClientAsyncWebSocket(FSPGM(webui_socket_uri));
         wsWebUI->onEvent(webui_socket_event_handler);

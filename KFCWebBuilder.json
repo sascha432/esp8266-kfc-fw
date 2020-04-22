@@ -51,6 +51,7 @@
                         "./lib/KFCWebBuilder/Resources/js/js.cookie.min.js",
                         "./lib/KFCWebBuilder/Resources/js/selectize.min.js",
                         "./lib/KFCWebBuilder/Resources/js/rangeslider.min.js",
+                        "./Resources/js/jQuery.base64.js",
                         "./Resources/js/common.js",
                         "./Resources/js/forms.js",
                         "./Resources/js/forms/*.js",

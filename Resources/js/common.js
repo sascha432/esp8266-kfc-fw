@@ -65,3 +65,25 @@ $.getWebSocketLocation = function(uri) {
     var url =  window.location.protocol == 'http:' ? 'ws://' + window.location.host + (hasPort ? '' : ':80') : 'wss://' + window.location.host + (hasPort ? '' : ':443');
     return url + (uri ? uri : '');
 }
+
+$.getRandomBytes = function(n) {
+    var crypto = (self.crypto || self.msCrypto), QUOTA = 65536;
+    var a = new Uint8Array(n);
+    for (var i = 0; i < n; i += QUOTA) {
+        crypto.getRandomValues(a.subarray(i, i + Math.min(n - i, QUOTA)));
+    }
+    return a;
+};
+
+$(function() {
+    var tokenButton = $('#generate-bearer-token');
+    if (tokenButton.length) {
+        tokenButton.on('click', function() {
+            var len = parseInt($(this).data('len'));
+            if (len == 0) {
+                len = 32;
+            }
+            $($(this).data('for')).val($.base64Encode(String.fromCharCode.apply(String, $.getRandomBytes(len))));
+        })
+    }
+});

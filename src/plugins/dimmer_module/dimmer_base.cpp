@@ -567,13 +567,13 @@ void Dimmer_Base::setValue(const String &id, const String &value, bool hasValue,
 
 void Dimmer_Base::setupWebServer()
 {
-    _debug_printf_P(PSTR("server=%p\n"), get_web_server_object());
-    web_server_add_handler(F("/dimmer_rstfw.html"), Dimmer_Base::handleWebServer);
+    _debug_printf_P(PSTR("server=%p\n"), WebServerPlugin::getWebServerObject());
+    WebServerPlugin::addHandler(F("/dimmer_rstfw.html"), Dimmer_Base::handleWebServer);
 }
 
 void Dimmer_Base::handleWebServer(AsyncWebServerRequest *request)
 {
-    if (web_server_is_authenticated(request)) {
+    if (WebServerPlugin::getInstance().isAuthenticated(request) == true) {
         resetDimmerMCU();
         HttpHeaders httpHeaders(false);
         httpHeaders.addNoCache();

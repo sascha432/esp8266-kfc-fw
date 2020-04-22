@@ -32,7 +32,7 @@ void ping_monitor_event_handler(AsyncWebSocket *server, AsyncWebSocketClient *cl
 
 void ping_monitor_install_web_server_hook()
 {
-    auto server = get_web_server_object();
+    auto server = WebServerPlugin::getWebServerObject();
     if (server) {
         wsPing = new WsClientAsyncWebSocket(F("/ping"));
         wsPing->onEvent(ping_monitor_event_handler);

@@ -288,8 +288,8 @@ void RemoteControlPlugin::disableAutoSleep()
 
 void RemoteControlPlugin::disableAutoSleepHandler(AsyncWebServerRequest *request)
 {
-    _debug_printf_P(PSTR("is_authenticated=%u\n"), web_server_is_authenticated(request));
-    if (web_server_is_authenticated(request)) {
+    _debug_printf_P(PSTR("is_authenticated=%u\n"), WebServerPlugin::getInstance().isAuthenticated(request) == true);
+    if (WebServerPlugin::getInstance().isAuthenticated(request) == true) {
         disableAutoSleep();
         AsyncWebServerResponse *response = request->beginResponse(302);
         HttpHeaders httpHeaders;
@@ -305,8 +305,8 @@ void RemoteControlPlugin::disableAutoSleepHandler(AsyncWebServerRequest *request
 
 void RemoteControlPlugin::deepSleepHandler(AsyncWebServerRequest *request)
 {
-    _debug_printf_P(PSTR("is_authenticated=%u\n"), web_server_is_authenticated(request));
-    if (web_server_is_authenticated(request)) {
+    _debug_printf_P(PSTR("is_authenticated=%u\n"), WebServerPlugin::getInstance().isAuthenticated(request) == true);
+    if (WebServerPlugin::getInstance().isAuthenticated(request) == true) {
         AsyncWebServerResponse *response = request->beginResponse(302);
         HttpHeaders httpHeaders;
         httpHeaders.addNoCache(true);
@@ -398,9 +398,9 @@ void RemoteControlPlugin::_readConfig()
 
 void RemoteControlPlugin::_installWebhooks()
 {
-    _debug_printf_P(PSTR("server=%p\n"), get_web_server_object());
-    web_server_add_handler(F("/remote_sleep.html"), deepSleepHandler);
-    web_server_add_handler(F("/remote_nosleep.html"), disableAutoSleepHandler);
+    _debug_printf_P(PSTR("server=%p\n"), WebServerPlugin::getWebServerObject());
+    WebServerPlugin::addHandler(F("/remote_sleep.html"), deepSleepHandler);
+    WebServerPlugin::addHandler(F("/remote_nosleep.html"), disableAutoSleepHandler);
 }
 
 void RemoteControlPlugin::_resetAutoSleep()

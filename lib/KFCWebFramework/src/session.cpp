@@ -79,7 +79,7 @@ bool verify_session_id(const char *session_id, const char *username, const char 
 #if HAVE_SESSION_DEVICE_TOKEN
 
     const char *token = session_get_device_token();
-    if (token && strlen(token) > 16) {
+    if (token && strlen(token) >= SESSION_DEVICE_TOKEN_MIN_LENGTH) {
         if (strcmp(session_id, token) == 0) {
             return true;
         }

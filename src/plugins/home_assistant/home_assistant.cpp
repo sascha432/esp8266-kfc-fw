@@ -167,7 +167,7 @@ bool HassPlugin::atModeHandler(AtModeArgs &args)
                     statusCallback(false);
                 }
             }, [args](bool status) mutable {
-                args.printf_P(PSTR("status=%u"), status);
+                args.printf_P(SPGM(status__u, "status=%u"), status);
             });
         }
         return true;
@@ -184,7 +184,7 @@ bool HassPlugin::atModeHandler(AtModeArgs &args)
                     statusCallback(false);
                 }
             }, [args](bool status) mutable {
-                args.printf_P(PSTR("status=%u"), status);
+                args.printf_P(SPGM(status__u), status);
             });
         }
         return true;
@@ -535,8 +535,8 @@ String HassPlugin::_getDomain(const String &entityId)
 
 void HassPlugin::removeAction(AsyncWebServerRequest *request)
 {
-    _debug_printf_P(PSTR("is_authenticated=%u\n"), web_server_is_authenticated(request));
-    if (web_server_is_authenticated(request)) {
+    _debug_printf_P(PSTR("is_authenticated=%u\n"), WebServerPlugin::getInstance().isAuthenticated(request) == true);
+    if (WebServerPlugin::getInstance().isAuthenticated(request) == true) {
 
         auto msg = SPGM(0);
         auto id = (uint16_t)request->arg(F("id")).toInt();
@@ -563,6 +563,6 @@ void HassPlugin::removeAction(AsyncWebServerRequest *request)
 
 void HassPlugin::_installWebhooks()
 {
-    _debug_printf_P(PSTR("server=%p\n"), get_web_server_object());
-    web_server_add_handler(F("/hass_remove.html"), removeAction);
+    _debug_printf_P(PSTR("server=%p\n"), WebServerPlugin::getWebServerObject());
+    WebServerPlugin::addHandler(F("/hass_remove.html"), removeAction);
 }

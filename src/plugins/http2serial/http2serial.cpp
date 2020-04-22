@@ -225,7 +225,7 @@ static Http2SerialPlugin plugin;
 
 void Http2SerialPlugin::setup(PluginSetupMode_t mode)
 {
-    auto server = get_web_server_object();
+    auto server = WebServerPlugin::getWebServerObject();
     if (server) {
         wsSerialConsole = new WsClientAsyncWebSocket(F("/serial_console"));
         wsSerialConsole->onEvent(http2serial_event_handler);

@@ -24,6 +24,10 @@ extern RNGClass rng;
 #define HAVE_SESSION_DEVICE_TOKEN               1
 #endif
 
+#ifndef SESSION_DEVICE_TOKEN_MIN_LENGTH
+#define SESSION_DEVICE_TOKEN_MIN_LENGTH         16
+#endif
+
 #if HAVE_SESSION_DEVICE_TOKEN
 extern const char *session_get_device_token();
 #endif

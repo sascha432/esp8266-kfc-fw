@@ -36,7 +36,7 @@ PROGMEM_STRING_DEF(ERROR_, "ERROR:");
 void file_manager_upload_handler(AsyncWebServerRequest *request)
 {
     if (request->_tempObject) {
-        FileManager fm(request, web_server_is_authenticated(request), FSPGM(upload));
+        FileManager fm(request, WebServerPlugin::getInstance().isAuthenticated(request) == true, FSPGM(upload));
         fm.handleRequest();
     } else {
         request->send(403);
@@ -45,11 +45,11 @@ void file_manager_upload_handler(AsyncWebServerRequest *request)
 
 void file_manager_install_web_server_hook()
 {
-    if (get_web_server_object()) {
+    if (WebServerPlugin::getWebServerObject()) {
         String uploadDir = FSPGM(file_manager_base_uri);
         uploadDir += FSPGM(upload);
-        web_server_add_handler(new AsyncFileUploadWebHandler(uploadDir, file_manager_upload_handler));
-        web_server_add_handler(new FileManagerWebHandler(FSPGM(file_manager_base_uri)));
+        WebServerPlugin::addHandler(new AsyncFileUploadWebHandler(uploadDir, file_manager_upload_handler));
+        WebServerPlugin::addHandler(new FileManagerWebHandler(FSPGM(file_manager_base_uri)));
     }
 }
 
@@ -461,7 +461,7 @@ void FileManagerWebHandler::handleRequest(AsyncWebServerRequest *request)
 {
     auto uri = request->url().substring(strlen_P(RFPSTR(_uri)));
     _debug_printf_P(PSTR("file manager %s (%s)\n"), uri.c_str(), request->url().c_str())
-    FileManager fm(request, web_server_is_authenticated(request), uri);
+    FileManager fm(request, WebServerPlugin::getInstance().isAuthenticated(request) == true, uri);
     fm.handleRequest();
 }
 

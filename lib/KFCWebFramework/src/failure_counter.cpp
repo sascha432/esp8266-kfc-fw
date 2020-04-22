@@ -11,7 +11,7 @@
 PROGMEM_STRING_DEF(login_failure_file, SECURITY_LOGIN_FILE);
 #endif
 
-extern FailureCounterContainer loginFailures;
+extern FailureCounterContainer &loginFailures;
 
 FailureCounter::FailureCounter(const FailureCounterFileRecord_t &record)
 {

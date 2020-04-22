@@ -83,10 +83,10 @@ static MDNSPlugin plugin;
 void MDNSPlugin::_installWebServerHooks()
 {
 #if ESP8266
-    auto server = get_web_server_object();
+    auto server = WebServerPlugin::getWebServerObject();
     if (server) {
         _debug_println();
-        web_server_add_handler(F("/mdns_discovery/"), mdnsDiscoveryHandler);
+        WebServerPlugin::addHandler(F("/mdns_discovery/"), mdnsDiscoveryHandler);
     }
 #endif
 }
@@ -95,7 +95,7 @@ void MDNSPlugin::_installWebServerHooks()
 
 void MDNSPlugin::mdnsDiscoveryHandler(AsyncWebServerRequest *request)
 {
-    if (web_server_is_authenticated(request)) {
+    if (WebServerPlugin::getInstance().isAuthenticated(request) == true) {
         auto timeout = request->arg(F("timeout")).toInt();
         if (timeout == 0) {
             timeout = 2000;

@@ -27,6 +27,8 @@ PROGMEM_STRING_DECL(public);
 PROGMEM_STRING_DECL(private);
 PROGMEM_STRING_DECL(close);
 PROGMEM_STRING_DECL(keep_alive);
+PROGMEM_STRING_DECL(Authorization);
+PROGMEM_STRING_DECL(Bearer_);
 PROGMEM_STRING_DECL(comma_);
 
 #ifndef HAVE_HTTPHEADERS_ASYNCWEBSERVER
@@ -314,7 +316,7 @@ public:
         BEARER = 1,
     } AuthorizationTypeEnum_t;
 
-    HttpAuthorization(const String &auth = String()) : HttpSimpleHeader(F("Authorization"), auth) {
+    HttpAuthorization(const String &auth = String()) : HttpSimpleHeader(FSPGM(Authorization), auth) {
     }
     HttpAuthorization(AuthorizationTypeEnum_t type, const String &auth) : HttpAuthorization(auth) {
         switch(type) {
@@ -322,7 +324,7 @@ public:
                 setHeader(F("Basic "));
                 break;
             case BEARER:
-                setHeader(F("Bearer "));
+                setHeader(FSPGM(Bearer_));
                 break;
         }
         _header += auth;

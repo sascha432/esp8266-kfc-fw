@@ -1,0 +1,52 @@
+#!/bin/bash
+
+FONTCONVERT_BIN=$(which fontconvert_org fontconvert)
+FONTCONVERT_BIN=(${FONTCONVERT_BIN[@]})
+FONTCONVERT_BIN=${FONTCONVERT_BIN[0]}
+
+FONT_SIZES="2 3 4 5 6 7 8 9 10 11 12 13 14 15"
+FONT_CHARS="32 254"
+OUTDIR=./output
+HEADER=fonts.h
+INCLUDES=fonts_includes.h
+FONTS=*.ttf
+
+TMP=$(mktemp)
+rm -f $TMP
+mkdir $TMP
+
+HEADER_TMP=$(mktemp)
+INCLUDES_TMP=$(mktemp)
+
+echo -e "// AUTO GENERATED FILE - DO NOT MODIFY\n#pragma once" > $HEADER_TMP
+echo -e "// AUTO GENERATED FILE - DO NOT MODIFY\n#include \"$HEADER\"" > $INCLUDES_TMP
+
+for FONT in $FONTS; do
+	NAME=${FONT//\.ttf/}
+	NAME=${NAME//[- ]/_}
+	DIR="$OUTDIR/$NAME"
+	mkdir -p "$DIR"
+	for SIZE in $FONT_SIZES; do
+		FONTNAME=${NAME}_${SIZE}pt8b
+		OUTFILE=$DIR/${FONTNAME}.h
+		echo -n "$NAME $SIZE "
+		if [ -e "$OUTFILE" ] ; then
+			echo "exists"
+		else
+			FONTTMP="$TMP/${NAME}_"
+			cp "$FONT" "$FONTTMP"
+			$FONTCONVERT_BIN "$FONTTMP" $SIZE $FONT_CHARS > $OUTFILE
+			rm -f "$FONTTMP"
+			echo "OK"
+		fi
+		echo "extern const GFXfont ${FONTNAME} PROGMEM;" >> $HEADER_TMP
+		echo "#include \"$OUTFILE\"" >> $INCLUDES_TMP
+	done
+done
+
+echo Copying headers
+mv $HEADER_TMP $HEADER
+mv $INCLUDES_TMP $INCLUDES
+
+rm -fR $TMP
+echo Done.

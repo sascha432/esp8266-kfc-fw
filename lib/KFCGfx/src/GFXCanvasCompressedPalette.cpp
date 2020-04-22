@@ -165,7 +165,7 @@ void GFXCanvasCompressedPalette::setPalette(uint16_t* palette, uint8_t count)
 String GFXCanvasCompressedPalette::getDetails() const
 {
     PrintString str = GFXCanvasCompressed::getDetails();
-    str.printf_P(PSTR(" palette %u - "), _paletteCount);
+    str.printf_P(PSTR("palette %u - "), _paletteCount);
 
     for (uint8_t i = 0; i < _paletteCount; i++) {
         str.printf("[%u]%06x,", i, GFXCanvas::convertToRGB(_palette[i]));

@@ -137,6 +137,7 @@ private:
     typedef std::function<void (bool status)> Callback_t;
 
     void _drawEnvironmentalSensor(GFXCanvasCompressed& canvas, uint8_t top);
+    virtual void _getIndoorValues(float *data) override;
 
     void _httpRequest(const String &url, int timeout, JsonBaseReader *jsonReader, Callback_t finishedCallback);
     void _getWeatherInfo(Callback_t finishedCallback);

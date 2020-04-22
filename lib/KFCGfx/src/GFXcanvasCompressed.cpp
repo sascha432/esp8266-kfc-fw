@@ -265,7 +265,7 @@ void GFXCanvasCompressed::freeLineCache()
     _caches.clear();
 }
 
-void GFXCanvasCompressed::setMaxCachedLines(uint8_t max)
+void GFXCanvasCompressed::setMaxCachedLines(uint16_t max)
 {
     _maxCachedLines = max;
 }
@@ -284,7 +284,7 @@ Cache &GFXCanvasCompressed::_getCache(int16_t y)
             return cache;
         }
     }
-    uint8_t counter = 0;
+    uint16_t counter = 0;
     CacheForwardListIterator back;
     // no cache available, find invalid ones
     for (auto iterator = _caches.begin(); iterator != _caches.end(); ++iterator) {
@@ -392,8 +392,8 @@ void GFXCanvasCompressed::_RLEencode(uint16_t *data, Buffer &buffer)
         count += rle;
 #endif
         buffer.write(rle);
-        buffer.write(lastColor);
-        buffer.write(lastColor >> 8);
+        buffer.write((uint8_t)lastColor);
+        buffer.write((uint8_t)(lastColor >> 8));
     }
 #if DEBUG_GFXCANVASCOMPRESSED_BOUNDS_CHECK
     if (count != _width) {

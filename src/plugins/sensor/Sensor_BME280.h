@@ -37,8 +37,8 @@ public:
     virtual MQTTSensorSensorType getType() const override;
     virtual bool getSensorData(String &name, StringVector &values) override;
 
-    inline SensorData_t readSensor() {
-        return _readSensor();
+    inline void readSensor(SensorData_t &data) {
+        _readSensor(data);
     }
 
     // temperature or offset to compensate temperature and humidity readings
@@ -50,7 +50,7 @@ private:
     friend Sensor_CCS811;
 
     String _getId(const __FlashStringHelper *type = nullptr);
-    SensorData_t _readSensor();
+    void _readSensor(SensorData_t &data);
 
     String _name;
     uint8_t _address;

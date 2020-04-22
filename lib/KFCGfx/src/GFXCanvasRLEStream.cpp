@@ -115,8 +115,8 @@ void GFXCanvasRLEStream::_writeColor(uint8_t rle, uint16_t color)
     }
     else {
         _buffer.write(rle);
-        _buffer.write(color);
-        _buffer.write(color >> 8);
+        _buffer.write((uint8_t)color);
+        _buffer.write((uint8_t)(color >> 8));
     }
 }
 

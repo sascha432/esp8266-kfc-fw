@@ -12,44 +12,10 @@
 #include <OpenWeatherMapAPI.h>
 #include <SpeedBooster.h>
 #include <Timezone.h>
-#if _WIN32
-// class EventTimer {
-// public:
-//     void detach() {}
-// };
-// class EventScheduler {
-// public:
-//     typedef EventTimer *TimerPtr;
-//     class Timer {
-//     public:
-//         Timer() {
-
-//         }
-//         void remove() {
-//         }
-//     };
-// };
-// class Config_WeatherStation {
-// public:
-//     typedef struct __attribute__packed__ {
-//         uint8_t is_metric: 1;
-//         uint8_t time_format_24h: 1;
-//         uint16_t weather_poll_interval;
-//         uint16_t api_timeout;
-//         uint8_t backlight_level;
-//         uint8_t touch_threshold;
-//         uint8_t released_threshold;
-//         float temp_offset;
-//     } WeatherStationConfig_t;
-//     Config_WeatherStation() {
-//         config = {1,1,0,30,255,5,8,0};
-//     }
-// };
-#else
 #include <EventScheduler.h>
 #include <EventTimer.h>
 #include "kfc_fw_config.h"
-#endif
+#include "fonts/fonts.h"
 #include "moon_phase.h"
 
 #ifndef TFT_PIN_CS
@@ -74,9 +40,6 @@
 
 #if TFT_WIDTH == 128 && TFT_HEIGHT == 160
 
-#define HAVE_DEGREE_SYMBOL              0
-#define DEGREE_STR                      " "
-
 #define COLORS_BACKGROUND               ST77XX_BLACK
 #define COLORS_DEFAULT_TEXT             ST77XX_WHITE
 #define COLORS_DATE                     ST77XX_WHITE
@@ -90,25 +53,20 @@
 #define COLORS_SUN_RISE_SET             ST77XX_WHITE
 #define COLORS_MOON_PHASE               ST77XX_WHITE
 
-#define FONTS_DEFAULT_SMALL             &DejaVu_Sans_10
-#define FONTS_DEFAULT_MEDIUM            &Dialog_bold_10
-#define FONTS_DEFAULT_BIG               &DejaVu_Sans_Bold_20
-#define FONTS_DATE                      &Dialog_bold_10
-#define FONTS_TIME                      &DejaVu_Sans_Bold_20
-#define FONTS_TIMEZONE                  &DejaVu_Sans_10
-#define FONTS_TEMPERATURE               &DejaVu_Sans_Bold_20
-#define FONTS_CITY                      &DialogInput_plain_9
-#define FONTS_WEATHER_DESCR             &DialogInput_plain_9
-#define FONTS_SUN_AND_MOON              &DejaVu_Sans_10
+#define FONTS_DEFAULT_SMALL             &DejaVuSans_5pt8b
+#define FONTS_DEFAULT_MEDIUM            &Dialog_Bold_7pt8b
+#define FONTS_DEFAULT_BIG               &DejaVuSans_Bold_10pt8b
+#define FONTS_DATE                      &DejaVuSans_Bold_5pt8b
+#define FONTS_TIME                      &DejaVuSans_Bold_10pt8b
+#define FONTS_TIMEZONE                  &DejaVuSans_5pt8b
+#define FONTS_TEMPERATURE               &DejaVuSans_Bold_10pt8b
+#define FONTS_CITY                      &Dialog_6pt8b
+#define FONTS_WEATHER_DESCR             &Dialog_6pt8b
+#define FONTS_SUN_AND_MOON              &DejaVuSans_5pt8b
 #define FONTS_MOON_PHASE                &moon_phases14pt7b
 #define FONTS_MOON_PHASE_UPPERCASE      true
-
-extern const GFXfont DejaVu_Sans_Bold_20 PROGMEM;
-extern const GFXfont DejaVu_Sans_Bold_12 PROGMEM;
-extern const GFXfont DejaVu_Sans_Bold_11 PROGMEM;
-extern const GFXfont DejaVu_Sans_10 PROGMEM;
-extern const GFXfont Dialog_bold_10 PROGMEM;
-extern const GFXfont DialogInput_plain_9 PROGMEM;
+#define FONTS_MESSAGE_TITLE             &DejaVuSans_Bold_10pt8b
+#define FONTS_MESSAGE_TEXT              &Dialog_Bold_7pt8b
 
 // time
 
@@ -180,6 +138,9 @@ extern const GFXfont DialogInput_plain_9 PROGMEM;
 #define Y_START_POSITION_WEATHER        (Y_END_POSITION_TIME + 2)
 #define Y_END_POSITION_WEATHER          (70 + Y_START_POSITION_WEATHER)
 
+#define Y_START_POSITION_INDOOR         (Y_END_POSITION_TIME + 2)
+#define Y_END_POSITION_INDOOR           (70 + Y_START_POSITION_WEATHER)
+
 #define Y_START_POSITION_SUN_MOON       (Y_END_POSITION_WEATHER + 2)
 #define Y_END_POSITION_SUN_MOON         (TFT_HEIGHT - 1)
 
@@ -200,13 +161,16 @@ public:
     void _drawIndoor();
     void _drawIndoor(GFXCanvasCompressed &canvas, uint8_t top);
     void _drawSunAndMoon();
-    void _drawScreen0();
+
+    void _drawScreenMain();
+    void _drawScreenIndoor();
+    void _drawScreenForecast();
 
     void _doScroll();
     void _scrollTimer(WSDraw &draw);
     bool _isScrolling() const;
 
-    void _displayMessage(const String &title, const String &message, const GFXfont *font, uint16_t color, uint32_t timeout);
+    void _displayMessage(const String &title, const String &message, uint16_t titleColor, uint16_t messageColor, uint32_t timeout);
 
     void _updateTime();
     void _drawText(const String &text, const GFXfont *font, uint16_t color, bool clear = false);
@@ -221,6 +185,14 @@ public:
 
     GFXCanvasCompressed& getCanvas() {
         return _canvas;
+    }
+
+    void setScreen(uint8_t screen) {
+        _currentScreen = screen;
+        _draw();
+    }
+    uint8_t getScreen() const {
+        return _currentScreen;
     }
 
 public:
@@ -255,13 +227,21 @@ public:
         EventScheduler::Timer _timer;
     };
 
+private:
+    void _statsBegin();
+    void _statsEnd();
+    MicrosTimer _statsTimer;
+
 protected:
     using WeatherStationConfigType = KFCConfigurationClasses::Plugins::WeatherStation::WeatherStationConfig_t;
 
     typedef enum {
         MAIN = 0,
+        INDOOR,
+        FORECAST,
         NUM_SCREENS,
         TEXT_CLEAR,
+        TEXT_UPDATE,
         TEXT,
     } ScreenEnum_t;
 
@@ -269,6 +249,9 @@ protected:
         _text = text;
         _textFont = textFont;
     }
+
+    String _getTemperature(float value, bool kelvin = false/*celsius = true*/);
+    virtual void _getIndoorValues(float *data);
 
     Adafruit_ST7735 _tft;
     GFXCanvasCompressedPalette  _canvas;

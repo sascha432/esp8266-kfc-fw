@@ -91,8 +91,11 @@ void WeatherStationPlugin::_installWebhooks()
         auto &json = response->getJsonObject();
         auto &reader = rest.getJsonReader();
 
-        if (rest.isUriMatch(FSPGM(message))) {
-
+        if (_currentScreen == TEXT_UPDATE) {
+            json.add(FSPGM(status), 503);
+            json.add(FSPGM(message), F("Firmware update in progress"));
+        }
+        else if (rest.isUriMatch(FSPGM(message))) {
             auto title = reader.get(F("title")).getValue();
             auto message = reader.get(FSPGM(message)).getValue();
             auto timeout = reader.get(F("timeout")).getValue().toInt();
@@ -115,16 +118,18 @@ void WeatherStationPlugin::_installWebhooks()
             else {
                 json.add(FSPGM(status), 200);
                 json.add(FSPGM(message), AsyncWebServerResponse::responseCodeToString(200));
-
                 LoopFunctions::callOnce([this, title, message, timeout]() {
-                    _displayMessage(title, message, &Dialog_bold_10, ST77XX_WHITE, timeout);
+                    _displayMessage(title, message, ST77XX_YELLOW, ST77XX_WHITE, timeout);
                 });
-
             }
         }
         else if (rest.isUriMatch(FSPGM(display))) {
-            json.add(FSPGM(status), 501);
-            json.add(FSPGM(message), AsyncWebServerResponse::responseCodeToString(501));
+            _currentScreen = ((uint8_t)reader.get(F("screen")).getValue().toInt()) % NUM_SCREENS;
+            json.add(FSPGM(status), 200);
+            json.add(FSPGM(message), PrintString(F("Screen set to #%u"), _currentScreen));
+            LoopFunctions::callOnce([this]() {
+                _draw();
+            });
         }
         else if (rest.isUriMatch(F("backlight"))) {
             auto levelVar = reader.get(F("level"));
@@ -193,7 +198,7 @@ void WeatherStationPlugin::setup(PluginSetupMode_t mode)
         int progress = position * 100 / size;
         if (progressValue != progress) {
             if (progressValue == -1) {
-                _currentScreen = TEXT_CLEAR;
+                _currentScreen = TEXT_UPDATE;
             }
             setText(PrintString(F("Updating\n%d%%"), progress), FONTS_DEFAULT_MEDIUM);
             progressValue = progress;
@@ -413,6 +418,11 @@ bool WeatherStationPlugin::atModeHandler(AtModeArgs &args)
                 _draw();
                 args.printf_P(PSTR("metrics=%u"), state);
             }
+            else if (args.equalsIgnoreCase(1, F("screen"))) {
+                _currentScreen = (_currentScreen + 1) % NUM_SCREENS;
+                _draw();
+                args.printf_P(PSTR("screen=%u"), _currentScreen);
+            }
             else if (args.equalsIgnoreCase(1, F("tft"))) {
                 _tft.initR(INITR_BLACKTAB);
                 _tft.fillScreen(state ? ST77XX_YELLOW : ST77XX_RED);
@@ -479,7 +489,7 @@ void WeatherStationPlugin::_drawEnvironmentalSensor(GFXCanvasCompressed& canvas,
     for(auto sensor: SensorPlugin::getSensors()) {
         if (sensor->getType() == MQTTSensorSensorType::ENUM::BME280) {
             auto &bme280 = *(reinterpret_cast<Sensor_BME280 *>(sensor));
-            values = bme280.readSensor();
+            bme280.readSensor(values);
             break;
         }
     }
@@ -488,6 +498,21 @@ void WeatherStationPlugin::_drawEnvironmentalSensor(GFXCanvasCompressed& canvas,
     canvas.setTextColor(COLORS_WEATHER_DESCR);
     PrintString str(F("\n\nTemperature %.2f°C\nHumidty %.2f%%\nPressure %.2fhPa"), values.temperature, values.humidity, values.pressure);
     canvas._drawTextAligned(0, _offsetY, str, AdafruitGFXExtension::LEFT);
+}
+
+void WeatherStationPlugin::_getIndoorValues(float *data)
+{
+    Sensor_BME280::SensorData_t values = { NAN, NAN, NAN };
+    for(auto sensor: SensorPlugin::getSensors()) {
+        if (sensor->getType() == MQTTSensorSensorType::ENUM::BME280) {
+            auto &bme280 = *(reinterpret_cast<Sensor_BME280 *>(sensor));
+            bme280.readSensor(values);
+            break;
+        }
+    }
+    data[0] = values.temperature;
+    data[1] = values.humidity;
+    data[2] = values.pressure;
 }
 
 void WeatherStationPlugin::_httpRequest(const String &url, int timeout, JsonBaseReader *jsonReader, Callback_t finishedCallback)
@@ -615,21 +640,23 @@ void WeatherStationPlugin::_loop()
     if (_config.weather_poll_interval && is_millis_diff_greater(_pollTimer, _config.getPollIntervalMillis())) {
         _pollTimer = millis();
         _debug_println(F("WeatherStationPlugin::_loop(): poll interval"));
-        //TODO
 
         _getWeatherInfo([this](bool status) {
             _draw();
+            if (!status) {
+                _pollTimer = millis() + _config.getPollIntervalMillis() - 30000; // retry in 30 seconds
+            }
         });
 
     }
-    else if (is_millis_diff_greater(_updateTimer, 60000)) { // update once per minute
+    else if (is_millis_diff_greater(_updateTimer, 30000)) { // update every 30s
         _draw();
         _updateTimer = millis();
     }
-    else if (_currentScreen == TEXT_CLEAR) {
+    else if (_currentScreen == TEXT_CLEAR || _currentScreen == TEXT_UPDATE) {
         _draw();
     }
-    else if (_currentScreen == MAIN && _lastTime != _time) {
+    else if (_currentScreen < NUM_SCREENS && _lastTime != _time) {
         if (_time - _lastTime > 10) {   // time jumped, redraw everything
             _draw();
         }

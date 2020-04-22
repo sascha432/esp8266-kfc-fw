@@ -56,9 +56,10 @@ uint8_t Sensor_BME280::getAutoDiscoveryCount() const
 
 void Sensor_BME280::getValues(JsonArray &array, bool timer)
 {
-    _debug_println(emptyString);
+    _debug_println();
 
-    auto sensor = _readSensor();
+    SensorData_t sensor;
+    _readSensor(sensor);
 
     auto obj = &array.addObject(3);
     obj->add(JJ(id), _getId(F("temperature")));
@@ -98,7 +99,8 @@ MQTTSensorSensorType Sensor_BME280::getType() const
 bool Sensor_BME280::getSensorData(String &name, StringVector &values)
 {
     name = F("BME280");
-    auto sensor = _readSensor();
+    SensorData_t sensor;
+    _readSensor(sensor);
     values.emplace_back(PrintString(F("%.2f °C"), sensor.temperature));
     values.emplace_back(PrintString(F("%.2f %%"), sensor.humidity));
     values.emplace_back(PrintString(F("%.2f hPa"), sensor.pressure));
@@ -108,7 +110,8 @@ bool Sensor_BME280::getSensorData(String &name, StringVector &values)
 void Sensor_BME280::publishState(MQTTClient *client)
 {
     if (client && client->isConnected()) {
-        auto sensor = _readSensor();
+        SensorData_t sensor;
+        _readSensor(sensor);
         PrintString str;
         JsonUnnamedObject json;
         json.add(F("temperature"), JsonNumber(sensor.temperature, 2));
@@ -120,9 +123,8 @@ void Sensor_BME280::publishState(MQTTClient *client)
     }
 }
 
-Sensor_BME280::SensorData_t Sensor_BME280::_readSensor()
+void Sensor_BME280::_readSensor(SensorData_t &sensor)
 {
-    SensorData_t sensor;
     sensor.temperature = _bme280.readTemperature();
     sensor.humidity = _bme280.readHumidity();
     sensor.pressure = _bme280.readPressure() / 100.0;
@@ -133,8 +135,6 @@ Sensor_BME280::SensorData_t Sensor_BME280::_readSensor()
         _callback(sensor);
         _debug_printf_P(PSTR("compensated %.2f °C, %.2f%%\n"), sensor.temperature, sensor.humidity);
     }
-
-    return sensor;
 }
 
 String Sensor_BME280::_getId(const __FlashStringHelper *type)

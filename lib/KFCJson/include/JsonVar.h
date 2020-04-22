@@ -8,6 +8,10 @@
 #include "JsonBaseReader.h"
 
 // JSON value storage using by JsonBaseReader
+#if _MSC_VER
+#undef TRUE
+#undef FALSE
+#endif
 
 class JsonVar {
 public:

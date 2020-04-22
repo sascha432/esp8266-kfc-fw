@@ -4,6 +4,11 @@
 
 #include "AdafruitGFXExtension.h"
 
+uint8_t AdafruitGFXExtension::getFontHeight(const GFXfont *f) const
+{
+    return pgm_read_byte(&f->yAdvance);;
+}
+
 void AdafruitGFXExtension::_drawTextAligned(int16_t x, int16_t y, const String& text, TextAlignEnum_t align, TextVAlignEnum_t valign, Position_t* pos)
 {
     _drawTextAligned(x, y, text.c_str(), align, valign, pos);

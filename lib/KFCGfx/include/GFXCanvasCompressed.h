@@ -44,7 +44,7 @@ public:
     // GFXCANVAS_MAX_CACHED_LINES=1 uses a single cached line and frees the memory after drawInto()
     //
 #if !(GFXCANVAS_MAX_CACHED_LINES < 2)
-    void setMaxCachedLines(uint8_t max);
+    void setMaxCachedLines(uint16_t max);
 #endif
     void flushLineCache();
     void freeLineCache();
@@ -119,7 +119,7 @@ private:
     typedef std::forward_list<Cache> CacheForwardList;
     typedef CacheForwardList::iterator CacheForwardListIterator;
     CacheForwardList _caches;
-    uint8_t _maxCachedLines;
+    uint16_t _maxCachedLines;
 #endif
 
 #if DEBUG_GFXCANVASCOMPRESSED_STATS

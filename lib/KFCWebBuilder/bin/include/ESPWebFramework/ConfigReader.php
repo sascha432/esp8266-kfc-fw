@@ -131,7 +131,7 @@ class ConfigReader {
      */
     private function resolveVariable(string $val, array $from, array $to, string $name): ?string
     {
-//        echo "$name=$val\n";
+        // echo "resolveVariable: $name=$val\n";
 
         if (strpos($val, '~') === 0) {
             $val = $this->homePath.substr($val, 1);
@@ -388,6 +388,9 @@ class ConfigReader {
         foreach($json->bin as $key => &$bin) {
             if (strncmp($key, self::UNESCAPED_STRING_MARKED, strlen(self::UNESCAPED_STRING_MARKED)) === 0) {
                 continue;
+            }
+            if (!is_string($bin)) {
+                throw new \RuntimeException(sprintf('bin.%s=empty', $key));
             }
             $file = $this->resolveVariable($bin, array(), array(), "bin.$key");
             if (!FileUtils::isAbsoluteDir($file)) {

@@ -149,6 +149,13 @@ class PlatformIOParser {
     private function processIniLine(?string $environment, ?string $keyword, string $line): void
     {
         if ($environment !== null && $keyword !== null) {
+            if ($keyword == 'extends') {
+                $line = trim($line);
+                if (!isset($this->envConfig[$line])) {
+                    throw new \RuntimeException("extends missing environment '".$line."'");
+                }
+                $this->mergeEnvironments($environment, $line);
+            }
             $this->envConfig[$environment][$keyword] = $line;
             // echo "[$environment],$keyword:$line\n";
         }
@@ -220,14 +227,19 @@ class PlatformIOParser {
     }
 
     /**
-     * Merge devault environment "env" into active environment
+     * Merge 2 environments
+     * *
+     * @param string $environment
+     * @param string $sourceEnv
      *
      * @return void
      */
-    private function mergeDefaultEnv(string $environment): void
+    private function mergeEnvironments(string $environment, string $sourceEnv): void
     {
+        // echo "mergeEnvironments: $sourceEnv => $environment\n";
+
         $selectedEnv = &$this->envConfig[$environment];
-        foreach($this->envConfig['env'] as $keyword => $value) { // copy config from default environment if it does not exist
+        foreach($this->envConfig[$sourceEnv] as $keyword => $value) { // copy config from default environment if it does not exist
             if (!isset($selectedEnv[$keyword])) {
                 $selectedEnv[$keyword] = $value;
             }
@@ -323,7 +335,7 @@ class PlatformIOParser {
             if (!$sectionFound) {
                 throw new \RuntimeException(sprintf('Environment %s not found in %s', $this->environment, $filename));
             }
-            $this->mergeDefaultEnv($this->environment);
+            $this->mergeEnvironments($this->environment, 'env');
         }
     }
 

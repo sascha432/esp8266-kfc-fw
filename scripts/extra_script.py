@@ -9,52 +9,36 @@ import subprocess
 import shutil
 import os.path
 
-config = {
-    "kfcfw_build_dir": "\\\\192.168.0.3\\kfcfw",
-    "git_bin": "C:/Users/sascha/AppData/Local/GitHubDesktop/app-1.5.1/resources/app/git/cmd/git",
-    "python_bin": env['PYTHONEXE'],
-    "php_bin": "php"
-}
+def modify_upload_command(source, target, env, fs = False):
+    if env["UPLOAD_PROTOCOL"]=='espota':
+        (login, host) = env["UPLOAD_PORT"].split('@', 2)
+        (username, password) = login.split(':', 2)
+        if fs:
+            cmd = 'uploadfs'
+        else:
+            cmd = 'upload'
+        args = [ '--user', username, '--pass', password, '--image', str(source[0]), cmd, host ]
 
-def build_webui(source, target, env):
-    print("build_webui")
-    env.Execute(config["php_bin"] + " lib/KFCWebBuilder/bin/include/cli_tool.php ./KFCWebBuilder.json -b spiffs -e env:${PIOENV}")
+        env.Replace(UPLOAD_FLAGS=' '.join(args))
 
-def upload_fs(source, target, env):
-    build_webui(source, target, env)
-    try:
-        values = [str(target[0]), env["UPLOAD_PORT"], "--image=" + str(source[0])]
-        for value in env["UPLOAD_FLAGS"]:
-            if value[0:6]=="--user" or value[0:6]=="--pass":
-                values.append(value);
-        env._update({"UPLOAD_FLAGS": values})
-    except:
-        pass
-
-def rebuild_webui(source, target, env):
-    print("rebuild_webui")
-    env.Execute(config["php_bin"] + " lib/KFCWebBuilder/bin/include/cli_tool.php ./KFCWebBuilder.json -f -b spiffs -e env:${PIOENV}")
-
-def before_clean(source, target, env):
-    print("Cleaning data\webui")
-    env.Execute("del ${PROJECTDATA_DIR}/webui/ -Recurse")
-    env.Execute(config["php_bin"] + " ${PROJECT_DIR}/lib/KFCWebBuilder/bin/include/cli_tool.php ${PROJECT_DIR}/KFCWebBuilder.json -b spiffs -e env:${PIOENV} --dirty")
+def modify_upload_command_fs(source, target, env):
+    modify_upload_command(source, target, env, True)
 
 def new_build(source, target, env):
-    env.Execute(config["python_bin"] + " \"${PROJECT_DIR}/scripts/build_number.py\" -v \"${PROJECT_DIR}/include/build.h\"");
+    env.Execute(env['PYTHONEXE'] + " \"${PROJECT_DIR}/scripts/build_number.py\" -v \"${PROJECT_DIR}/include/build.h\"");
 
 def get_last_build_id():
-    p = subprocess.Popen([config["python_bin"], "./scripts/build_number.py", "./include/build_id.h", "--name", "__BUILD_ID", "--print-number", "--add", "-1", "--format", "bid{0:08x}"], stdout=subprocess.PIPE, text=True)
+    p = subprocess.Popen([env['PYTHONEXE'], "./scripts/build_number.py", "./include/build_id.h", "--name", "__BUILD_ID", "--print-number", "--add", "-1", "--format", "bid{0:08x}"], stdout=subprocess.PIPE, text=True)
     output, errors = p.communicate()
     if p.wait()==0:
         return output.strip()
     return None
 
 def update_build_id(source, target, env):
-    env.Execute(config["python_bin"] + " \"${PROJECT_DIR}/scripts/build_number.py\" -v \"${PROJECT_DIR}/include/build_id.h\" --name __BUILD_ID");
+    env.Execute(env['PYTHONEXE'] + " \"${PROJECT_DIR}/scripts/build_number.py\" -v \"${PROJECT_DIR}/include/build_id.h\" --name __BUILD_ID");
 
 def git_get_head():
-    p = subprocess.Popen([config["git_bin"], "rev-parse", "HEAD"], stdout=subprocess.PIPE, text=True)
+    p = subprocess.Popen(["%GITEXE%", "rev-parse", "HEAD"], stdout=subprocess.PIPE, text=True)
     output, errors = p.communicate()
     if p.wait()==0:
         return output.strip()
@@ -64,7 +48,7 @@ def copy_file(source_path):
     id = get_last_build_id()
     if id!=None:
         target_file = os.path.basename(source_path)
-        target_dir = config["kfcfw_build_dir"] + "\\" + id + "_"
+        target_dir = "\\\\192.168.0.3\\kfcfw\\" + id + "_"
         target_path = target_dir + target_file
         shutil.copy2(source_path, target_path)
     try:
@@ -81,16 +65,15 @@ def copy_firmware(source, target, env):
 def copy_spiffs(source, target, env):
     copy_file(str(target[0]))
 
+env.AddPreAction("upload", modify_upload_command)
+env.AddPreAction("uploadota", modify_upload_command)
+env.AddPreAction("uploadfs", modify_upload_command_fs)
+env.AddPreAction("uploadfsota", modify_upload_command_fs)
+
+
+env.AlwaysBuild(env.Alias("newbuild", None, new_build))
+
 env.AddPreAction("$BUILD_DIR/${PROGNAME}.elf", update_build_id)
 # env.AddPostAction("$BUILD_DIR/${PROGNAME}.elf", copy_firmware)
 # env.AddPostAction("$BUILD_DIR/${PROGNAME}.bin", copy_firmware)
 
-# FIX TODO builds files after creating the SPIFFS
-env.AddPreAction("uploadfs", upload_fs)
-# env.AddPostAction("uploadfs", copy_spiffs)
-
-env.AlwaysBuild(env.Alias("webui", None, build_webui))
-env.AlwaysBuild(env.Alias("buildfs", None, build_webui))
-env.AlwaysBuild(env.Alias("rebuildfs", None, rebuild_webui))
-
-env.AlwaysBuild(env.Alias("newbuild", None, new_build))

@@ -90,27 +90,6 @@ void check_flash_size()
 #endif
 }
 
-void remove_crash_counter(bool initSPIFFS)
-{
-#if SPIFFS_SUPPORT
-    if (initSPIFFS) {
-        SPIFFS.begin();
-    }
-    char filename[strlen_P(SPGM(crash_counter_file)) + 1];
-    strcpy_P(filename, SPGM(crash_counter_file));
-    if (SPIFFS.exists(filename)) {
-        SPIFFS.remove(filename);
-    }
-#endif
-}
-
-static void remove_crash_counter(EventScheduler::TimerPtr timer)
-{
-#if SPIFFS_SUPPORT
-    remove_crash_counter(false);
-#endif
-}
-
 void setup()
 {
     Serial.begin(KFC_SERIAL_RATE);
@@ -197,7 +176,7 @@ void setup()
                     switch(Serial.read()) {
                         case 'c':
                             RTCMemoryManager::clear();
-                            remove_crash_counter(nullptr);
+                            SaveCrash::removeCrashCounter();
                             KFC_SAFE_MODE_SERIAL_PORT.println(F("RTC memory cleared"));
                             break;
                         case 'l':
@@ -214,7 +193,7 @@ void setup()
                         case 'r':
                             resetDetector.setSafeMode(false);
                             resetDetector.clearCounter();
-                            remove_crash_counter(nullptr);
+                            SaveCrash::removeCrashCounter();
                             safe_mode = false;
                             config.setSafeMode(false);
                             return false;
@@ -249,15 +228,7 @@ void setup()
 #if SPIFFS_SUPPORT
     SPIFFS.begin();
     if (resetDetector.hasCrashDetected() || incr_crash_counter) {
-        File file = SPIFFS.open(FSPGM(crash_counter_file), fs::FileOpenMode::read);
-        char counter = 0;
-        if (file) {
-            counter = file.read() + 1;
-            file.close();
-        }
-        file = SPIFFS.open(FSPGM(crash_counter_file), fs::FileOpenMode::write);
-        file.write(counter);
-        file.close();
+        uint8_t counter = SaveCrash::getCrashCounter();
         if (counter >= 3) {  // boot in safe mode if there were 3 crashes within the first minute
             resetDetector.setSafeMode(1);
         }
@@ -328,11 +299,12 @@ void setup()
         setup_plugins(resetDetector.hasWakeUpDetected() ? PluginComponent::PLUGIN_SETUP_AUTO_WAKE_UP : PluginComponent::PLUGIN_SETUP_DEFAULT);
 
 #if SPIFFS_SUPPORT
-        _debug_printf_P(PSTR("remove crash counter=180s\n"));
-        Scheduler.addTimer(180 * 1000UL, false, [](EventScheduler::TimerPtr timer) {
-            remove_crash_counter(timer);
-            resetDetector.clearCounter();
-        }); // remove file and reset counters after 3min.
+#if DEBUG_HAVE_SAVECRASH
+        // save and clear crash dump eeprom after
+        SaveCrash::installSafeCrashTimer(10);
+#endif
+        // reset crash counter after 3min
+        SaveCrash::installRemoveCrashCounter(180);
 #endif
     }
 

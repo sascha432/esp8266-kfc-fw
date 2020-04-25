@@ -61,5 +61,6 @@ PROGMEM_STRING_DEF(kfcfw, "kfcfw");
 PROGMEM_STRING_DEF(Failed_to_reserve_string_size, "Failed to reserve string size %d\n");
 PROGMEM_STRING_DEF(invalid_flash_ptr, "INVALID_FLASH_PTR");
 PROGMEM_STRING_DEF(crash_counter_file, "/crash_counter");
+PROGMEM_STRING_DEF(crash_dump_file, "/crash.%03x");
 PROGMEM_STRING_DEF(tcp, "tcp");
 PROGMEM_STRING_DEF(udp, "udp");

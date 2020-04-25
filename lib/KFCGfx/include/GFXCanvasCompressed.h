@@ -56,10 +56,48 @@ public:
     // Adafruit_ST7735 _tft;
     // _tft.startWrite();
     // _tft.setAddrWindow(0, 0, 128, 160);
+    //
+    // _canvas.drawInto(_tft, 0, 0, 128, 160);
+    // ***OR***
     // _canvas.drawInto(0, 0, 128, 160, [_tft](uint16_t x, uint16_t y, uint16_t w, uint16_t *pcolors) {
     //     _tft.writePixels(pcolors, w);
     // });
+    //
     // _tft.endWrite();
+
+    bool _drawIntoClipping(scoord_x_t &x, scoord_y_t &y, scoord_x_t &w, scoord_y_t &h, scoord_y_t &xOfs, scoord_y_t &yOfs);
+
+    template<class T>
+    void drawInto(T &target, scoord_x_t x, scoord_y_t y, scoord_x_t w, scoord_y_t h) {
+#if DEBUG_GFXCANVASCOMPRESSED_STATS
+        MicrosTimer timer;
+        timer.start();
+#endif
+        scoord_x_t xOfs;
+        scoord_y_t yOfs;
+        if (_drawIntoClipping(x, y, w, h, xOfs, yOfs)) {
+            y -= yOfs;
+            h -= yOfs;
+
+            for (; y < h; y++) {
+                auto &cache = _decodeLine(y);
+                auto ptr = cache.getBuffer() - xOfs;
+                target.writePixels(ptr, w);
+            }
+        }
+
+#if GFXCANVAS_MAX_CACHED_LINES < 2
+        freeLineCache();
+#endif
+#if DEBUG_GFXCANVASCOMPRESSED_STATS
+        stats.drawInto += timer.getTime();
+#endif
+    }
+
+    template<class T>
+    void drawInto(T &target) {
+        drawInto(target, 0, 0, _width, _height);
+    }
 
     void drawInto(scoord_x_t x, scoord_y_t y, scoord_x_t w, scoord_y_t h, DrawLineCallback_t callback);
     void drawInto(DrawLineCallback_t callback);

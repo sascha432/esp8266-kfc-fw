@@ -28,7 +28,7 @@
 // web accesss for screen capture
 //
 // screen capture
-// http://192.168.0.91/images/screen_capture.bmp
+// http://192.168.0.95/images/screen_capture.bmp
 //
 //
 
@@ -44,10 +44,12 @@ static WeatherStationPlugin plugin;
 
 WeatherStationPlugin::WeatherStationPlugin() :
     WSDraw(),
-    _updateTimer(0),
+    // _updateTimer(0),
+    _updateCounter(0),
     _backlightLevel(1023),
     _pollTimer(0),
-    _httpClient(nullptr)
+    _httpClient(nullptr),
+    _toggleScreenTimer(0)
 {
 #if DEBUG_IOT_WEATHER_STATION
     _debugDisplayCanvasBorder = false;
@@ -124,7 +126,7 @@ void WeatherStationPlugin::_installWebhooks()
             }
         }
         else if (rest.isUriMatch(FSPGM(display))) {
-            _currentScreen = ((uint8_t)reader.get(F("screen")).getValue().toInt()) % NUM_SCREENS;
+            _setScreen(((uint8_t)reader.get(F("screen")).getValue().toInt()) % NUM_SCREENS);
             json.add(FSPGM(status), 200);
             json.add(FSPGM(message), PrintString(F("Screen set to #%u"), _currentScreen));
             LoopFunctions::callOnce([this]() {
@@ -188,9 +190,12 @@ void WeatherStationPlugin::setup(PluginSetupMode_t mode)
     _weatherApi.setAPIKey(WeatherStation::getApiKey());
     _weatherApi.setQuery(WeatherStation::getQueryString());
     _getWeatherInfo([this](bool status) {
-        _draw();
+        if (_currentScreen == MAIN) {
+            _draw();
+        }
     });
 
+    _setScreen(MAIN); // TODO add config options for initial screen
     _draw();
     _fadeBacklight(0, _backlightLevel);
     int progressValue = -1;
@@ -198,7 +203,7 @@ void WeatherStationPlugin::setup(PluginSetupMode_t mode)
         int progress = position * 100 / size;
         if (progressValue != progress) {
             if (progressValue == -1) {
-                _currentScreen = TEXT_UPDATE;
+                _setScreen(TEXT_UPDATE);
             }
             setText(PrintString(F("Updating\n%d%%"), progress), FONTS_DEFAULT_MEDIUM);
             progressValue = progress;
@@ -214,29 +219,21 @@ void WeatherStationPlugin::setup(PluginSetupMode_t mode)
     }
 #endif
 
-#if IOT_WEATHER_STATION_TEMP_COMP
     auto compensationCallback = [this](Sensor_BME280::SensorData_t &sensor) {
-        float realTemp;
-#if IOT_WEATHER_STATION_TEMP_COMP == 1
-        realTemp = sensor.temperature + _config.temp_offset;
-#elif IOT_WEATHER_STATION_TEMP_COMP == 2
-        realTemp = config.getRTCTemperature()  + IOT_WEATHER_STATION_TEMP_COMP_OFS;
-#else
-#error TODO
-#endif
-
+        sensor.humidity += _config.humidity_offset;
+        sensor.pressure += _config.pressure_offset;
 #if IOT_WEATHER_STATION_COMP_RH
-        sensor.humidity = EnvComp::getCompensatedRH(sensor.temperature, sensor.humidity, realTemp);
+        float temp = sensor.temperature + _config.temp_offset;
+        sensor.humidity = EnvComp::getCompensatedRH(sensor.temperature, sensor.humidity, temp);
+#else
+        sensor.temperature += _config.temp_offset;
 #endif
-        sensor.temperature = realTemp;
     };
     for(auto sensor: SensorPlugin::getSensors()) {
         if (sensor->getType() == MQTTSensorSensorType::ENUM::BME280) {
             reinterpret_cast<Sensor_BME280 *>(sensor)->setCompensationCallback(compensationCallback);
         }
     }
-
-#endif
 
     LoopFunctions::add(loop);
 
@@ -307,6 +304,7 @@ void WeatherStationPlugin::getStatus(Print &output)
     output.printf_P(PSTR("Weather Station Plugin"));
 }
 
+
 void WeatherStationPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
 {
     using KFCConfigurationClasses::Plugins;
@@ -326,10 +324,26 @@ void WeatherStationPlugin::createConfigureForm(AsyncWebServerRequest *request, F
     form.add<uint8_t>(F("released_threshold"), _H_STRUCT_VALUE(MainConfig().plugins.weatherstation.config, released_threshold))->setFormUI(new FormUI(FormUI::TEXT, F("Release Threshold")));
 
     form.add<float>(F("temp_offset"), _H_STRUCT_VALUE(MainConfig().plugins.weatherstation.config, temp_offset))->setFormUI((new FormUI(FormUI::TEXT, F("BMP280 Temperature Offset")))->setSuffix(F("&deg;")));
+    form.add<float>(F("humidity_offset"), _H_STRUCT_VALUE(MainConfig().plugins.weatherstation.config, humidity_offset))->setFormUI((new FormUI(FormUI::TEXT, F("Humidity Offset")))->setSuffix(F("&#37;")));
+    form.add<float>(F("pressure_offset"), _H_STRUCT_VALUE(MainConfig().plugins.weatherstation.config, pressure_offset))->setFormUI((new FormUI(FormUI::TEXT, F("Preassure Offset")))->setSuffix(F("hPa")));
+
+    for(uint8_t i = 0; i < WeatherStationPlugin::ScreenEnum_t::NUM_SCREENS; i++) {
+        PrintString str;
+        if (i == 0) {
+            str = F("Display screen for the specified time and switch to next one.<br>");
+        }
+        str.printf_P(PSTR("Screen #%u, %s"), i + 1, WeatherStationPlugin::getScreenName(i));
+
+        form.add<uint8_t>(PrintString(F("screen_timer[%u]"), i), _H_STRUCT_VALUE_TYPE(MainConfig().plugins.weatherstation.config, screenTimer[i], uint8_t, i))
+            ->setFormUI((new FormUI(FormUI::TEXT, str))->setSuffix(F("seconds")));
+        // form.add<uint16_t>(WeatherStationPlugin::getScreenName(i), config._H_GET(MainConfig().plugins.weatherstation.config).screenTimer[i],
+    }
+
+    form.add<uint8_t>(F("show_webui"), _H_FLAGS_VALUE(MainConfig().plugins.weatherstation.config, show_webui))->setFormUI((new FormUI(FormUI::SELECT, F("Show TFT contents in WebUI")))->setBoolItems(FSPGM(Yes), FSPGM(No)));
 
     form.finalize();
-
 }
+
 
 void WeatherStationPlugin::loop()
 {
@@ -354,12 +368,15 @@ WeatherStationPlugin &WeatherStationPlugin::_getInstance()
 
 void WeatherStationPlugin::createWebUI(WebUI &webUI)
 {
-    auto row = &webUI.addRow();
-    row->setExtraClass(JJ(title));
-    row->addGroup(F("Weather Station"), false);
+    if (_config.show_webui) {
+        auto row = &webUI.addRow();
+        row->setExtraClass(JJ(title));
+        row->addGroup(F("Weather Station"), false);
 
-    row = &webUI.addRow();
-    row->addScreen(FSPGM(weather_station_webui_id), _canvas.width(), _canvas.height());
+        row = &webUI.addRow();
+        row->addScreen(FSPGM(weather_station_webui_id), _canvas.width(), _canvas.height());
+   }
+
 }
 
 
@@ -386,7 +403,7 @@ void WeatherStationPlugin::setValue(const String &id, const String &value, bool 
 #include "at_mode.h"
 // #include <Adafruit_NeoPixel.h>
 
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WSSET, "WSSET", "<on/off>,<touchpad/timeformat24h/metrics/tft/scroll>", "Enable/disable function");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WSSET, "WSSET", "<touchpad/timeformat24h/metrics/tft/scroll/stats>,<on/off/options>", "Enable/disable function");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WSBL, "WSBL", "<level=0-1023>", "Set backlight level");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WSU, "WSU", "<i/f>", "Update weather info/forecast");
 
@@ -402,34 +419,34 @@ bool WeatherStationPlugin::atModeHandler(AtModeArgs &args)
 {
 #if IOT_WEATHER_STATION_HAS_TOUCHPAD
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(WSSET))) {
-        if (args.requireArgs(2, 2)) {
-            bool state = args.isTrue(0);
-            if (args.equalsIgnoreCase(1, F("touchpad"))) {
+        if (args.requireArgs(1, 2)) {
+            bool state = !args.isFalse(1);
+            if (args.equalsIgnoreCase(0, F("touchpad"))) {
                 _touchpadDebug = state;
                 args.printf_P(PSTR("touchpad debug=%u"), state);
             }
-            else if (args.equalsIgnoreCase(1, F("timeformat24h"))) {
+            else if (args.equalsIgnoreCase(0, F("timeformat24h"))) {
                 _config.time_format_24h = state;
                 _draw();
                 args.printf_P(PSTR("time format 24h=%u"), state);
             }
-            else if (args.equalsIgnoreCase(1, F("metrics"))) {
+            else if (args.equalsIgnoreCase(0, F("metrics"))) {
                 _config.is_metric = state;
                 _draw();
                 args.printf_P(PSTR("metrics=%u"), state);
             }
-            else if (args.equalsIgnoreCase(1, F("screen"))) {
-                _currentScreen = (_currentScreen + 1) % NUM_SCREENS;
+            else if (args.equalsIgnoreCase(0, F("screen"))) {
+                _setScreen((_currentScreen + 1) % NUM_SCREENS);
                 _draw();
                 args.printf_P(PSTR("screen=%u"), _currentScreen);
             }
-            else if (args.equalsIgnoreCase(1, F("tft"))) {
+            else if (args.equalsIgnoreCase(0, F("tft"))) {
                 _tft.initR(INITR_BLACKTAB);
                 _tft.fillScreen(state ? ST77XX_YELLOW : ST77XX_RED);
                 _tft.setRotation(0);
                 args.printf_P(PSTR("set color"));
             }
-            else if (args.equalsIgnoreCase(1, F("scroll"))) {
+            else if (args.equalsIgnoreCase(0, F("scroll"))) {
                 if (!_isScrolling()) {
                     _doScroll();
                     _drawEnvironmentalSensor(_scrollCanvas->getCanvas(), 0);
@@ -438,9 +455,26 @@ bool WeatherStationPlugin::atModeHandler(AtModeArgs &args)
                     });
                 }
             }
-            else if (args.equalsIgnoreCase(1, F("text"))) {
-                setText(args.get(0), FONTS_DEFAULT_MEDIUM);
-                _currentScreen = TEXT_CLEAR;
+            else if (args.equalsIgnoreCase(0, F("text"))) {
+                setText(args.get(1), FONTS_DEFAULT_MEDIUM);
+                _setScreen(TEXT_CLEAR);
+            }
+            else if (args.equalsIgnoreCase(0, F("stats"))) {
+                if (args.equalsIgnoreCase(1, F("print"))) {
+                    for(const auto &item: _stats) {
+                        PrintString str;
+                        str.printf_P(PSTR("%s: "), item.first.c_str());
+                        auto iterator = item.second.begin();
+                        while(iterator != item.second.end()) {
+                            str.printf_P(PSTR("%.2f "), *iterator);
+                            ++iterator;
+                        }
+                        args.print(str.c_str());
+                    }
+                }
+                else {
+                    _debug_stats = state;
+                }
             }
             else {
                 args.print("Invalid type");
@@ -496,8 +530,8 @@ void WeatherStationPlugin::_drawEnvironmentalSensor(GFXCanvasCompressed& canvas,
 
     canvas.setFont(FONTS_WEATHER_DESCR);
     canvas.setTextColor(COLORS_WEATHER_DESCR);
-    PrintString str(F("\n\nTemperature %.2f°C\nHumidty %.2f%%\nPressure %.2fhPa"), values.temperature, values.humidity, values.pressure);
-    canvas._drawTextAligned(0, _offsetY, str, AdafruitGFXExtension::LEFT);
+    PrintString str(F("\n\nTemperature %.2f°C\nHumidity %.2f%%\nPressure %.2fhPa"), values.temperature, values.humidity, values.pressure);
+    canvas.drawTextAligned(0, _offsetY, str, AdafruitGFXExtension::LEFT);
 }
 
 void WeatherStationPlugin::_getIndoorValues(float *data)
@@ -614,8 +648,6 @@ void WeatherStationPlugin::_fadeStatusLED()
 
 void WeatherStationPlugin::_loop()
 {
-    time_t _time = time(nullptr);
-
 #if IOT_WEATHER_STATION_HAS_TOUCHPAD
     if (_touchpadDebug) {
         SpeedBooster speedBooster;
@@ -638,82 +670,58 @@ void WeatherStationPlugin::_loop()
 #endif
 
     if (_config.weather_poll_interval && is_millis_diff_greater(_pollTimer, _config.getPollIntervalMillis())) {
+        _debug_println(F("polling weather info"));
         _pollTimer = millis();
-        _debug_println(F("WeatherStationPlugin::_loop(): poll interval"));
-
         _getWeatherInfo([this](bool status) {
-            _draw();
-            if (!status) {
-                _pollTimer = millis() + _config.getPollIntervalMillis() - 30000; // retry in 30 seconds
+            if (_currentScreen == MAIN) {
+                _draw();
             }
         });
+    }
 
-    }
-    else if (is_millis_diff_greater(_updateTimer, 30000)) { // update every 30s
+    if (_toggleScreenTimer && millis() > _toggleScreenTimer) {
+        // _debug_printf_P(PSTR("_toggleScreenTimer %lu\n"), _toggleScreenTimer);
+        _setScreen((_currentScreen + 1) % NUM_SCREENS);
         _draw();
-        _updateTimer = millis();
+        return;
     }
-    else if (_currentScreen == TEXT_CLEAR || _currentScreen == TEXT_UPDATE) {
+
+    time_t _time = time(nullptr);
+    // if (is_millis_diff_greater(_updateTimer, 60000)) { // update every 60s
+    //     _draw();
+    //     _updateTimer = millis();
+    // }
+    // else
+    if (_currentScreen == TEXT_CLEAR || _currentScreen == TEXT_UPDATE) {
         _draw();
     }
     else if (_currentScreen < NUM_SCREENS && _lastTime != _time) {
-        if (_time - _lastTime > 10) {   // time jumped, redraw everything
-            _draw();
-        }
-        else {
-            _updateTime();
-        }
+        _updateCounter++;
+        do {
+            if (/*_currentScreen == ScreenEnum_t::MAIN &&*/ (_updateCounter % 60 == 0)) {
+                // redraw all screens once per minute
+                _draw();
+                break;
+            }
+            else if (_currentScreen == ScreenEnum_t::INDOOR && (_updateCounter % 5 == 0)) {
+                // update indoor section every 5 seconds
+                _updateScreenIndoor();
+            }
+            else if (_currentScreen == ScreenEnum_t::MAIN && (_updateCounter % 5 == 0)) {
+                // update indoor section every 5 seconds
+                _updateWeatherIndoor();
+            }
+
+            if (_time - _lastTime > 10) {
+                // time jumped, redraw everything
+                _draw();
+            }
+            else {
+                _updateTime();
+            }
+        } while(false);
     }
 }
-
-// void WeatherStationPlugin::_serialHandler(const uint8_t *buffer, size_t len)
-// {
-//     const uint8_t numScreens = 1;
-//     auto ptr = buffer;
-//     while(len--) {
-//         switch(*ptr++) {
-// #if 0
-//             case '+': // next screen
-//                 _currentScreen++;
-//                 _currentScreen %= numScreens;
-//                 _draw();
-//                 break;
-//             case '-': // prev screen
-//                 _currentScreen += numScreens;
-//                 _currentScreen--;
-//                 _currentScreen %= numScreens;
-//                 _draw();
-//                 break;
-//             case 'd': // redraw
-//                 _draw();
-//                 break;
-//             case 'u': // update weather info
-//                 _getWeatherInfo([this](bool status) {
-//                     _draw();
-//                 });
-//                 break;
-//             case 'f': // update weather info
-//                 _getWeatherForecast([this](bool status) {
-//                     _draw();
-//                 });
-//                 break;
-//             case 'g': // gfx debug
-//                 _debugDisplayCanvasBorder = !_debugDisplayCanvasBorder;
-//                 _draw();
-//                 break;
-//             case 's':
-//                 if (!_isScrolling()) {
-//                     _doScroll();
-//                     _drawE(_scrollCanvas->getCanvas(), 0);
-//                     Scheduler.addTimer(20, true, [this](EventScheduler::TimerPtr timer) {
-//                         _scrollTimer(this);
-//                     });
-//                 }
-//                 break;
-// #endif
-//         }
-//     }
-// }
 
 
 // void WeatherStationPlugin::_drawRGBBitmap(int16_t x, int16_t y, uint16_t *pcolors, int16_t w, int16_t h) {
@@ -741,8 +749,11 @@ void WeatherStationPlugin::_loop()
 
 void WeatherStationPlugin::_broadcastCanvas(int16_t x, int16_t y, int16_t w, int16_t h)
 {
-    return;//TODO
+    if (!_config.show_webui) {
+        return;
+    }
     auto webSocketUI = WsWebUISocket::getWsWebUI();
+    debug_printf_P(PSTR("x=%d y=%d w=%d h=%d ws=%p empty=%u\n"), x, y, w, h, webSocketUI, webSocketUI->getClients().isEmpty());
     if (webSocketUI && !webSocketUI->getClients().isEmpty()) {
         Buffer buffer;
 
@@ -760,6 +771,7 @@ void WeatherStationPlugin::_broadcastCanvas(int16_t x, int16_t y, int16_t w, int
 
         auto wsBuffer = webSocketUI->makeBuffer(buffer.get(), buffer.length());
         buffer.clear();
+        debug_printf_P(PSTR("buf=%p len=%u\n"), wsBuffer, buffer.length());
         if (wsBuffer) {
             wsBuffer->lock();
             for(auto socket: webSocketUI->getClients()) {
@@ -771,4 +783,34 @@ void WeatherStationPlugin::_broadcastCanvas(int16_t x, int16_t y, int16_t w, int
             webSocketUI->_cleanBuffers();
         }
     }
+}
+
+void WeatherStationPlugin::_setScreen(uint8_t screen)
+{
+    if (screen < NUM_SCREENS) {
+        auto time = _config.screenTimer[screen];
+        auto next = _getNextScreen(screen);
+        _debug_printf_P(PSTR("set screen=%u time=%u next=%u\n"), screen, time, next);
+        if (time && next != screen) {
+            _currentScreen = screen;
+            _toggleScreenTimer = millis() + (time * 1000UL);
+            return;
+        }
+        // else ... current screen has no timer or no other screens are available
+    }
+    // else ... no screen active
+
+    _debug_printf_P(PSTR("timer removed screen=%u current=%u\n"), screen, _currentScreen);
+    _currentScreen = screen;
+    _toggleScreenTimer = 0;
+}
+
+uint8_t WeatherStationPlugin::_getNextScreen(uint8_t screen)
+{
+    for(uint8_t i = screen + 1; i < screen + NUM_SCREENS; i++) {
+        if (_config.screenTimer[i % NUM_SCREENS]) {
+            return i % NUM_SCREENS;
+        }
+    }
+    return screen;
 }

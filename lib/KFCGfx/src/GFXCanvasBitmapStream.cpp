@@ -2,6 +2,9 @@
  * Author: sascha_lammers@gmx.de
  */
 
+#include <push_optimize.h>
+#pragma GCC optimize ("O3")
+
 #include "GFXCanvasBitmapStream.h"
 #include "GFXCanvasCompressed.h"
 
@@ -76,3 +79,5 @@ void GFXCanvasBitmapStream::_createHeader()
     _header.h.bih.biWidth = _width;
     _header.h.bih.biHeight = -_height; // negative means top to bottom
 }
+
+#include <pop_optimize.h>

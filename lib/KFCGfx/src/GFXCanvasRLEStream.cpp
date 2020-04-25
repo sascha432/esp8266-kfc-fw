@@ -2,6 +2,9 @@
  * Author: sascha_lammers@gmx.de
  */
 
+#include <push_optimize.h>
+#pragma GCC optimize ("O3")
+
 #include "GFXCanvasRLEStream.h"
 #include "GFXCanvasCompressed.h"
 
@@ -126,3 +129,5 @@ uint8_t GFXCanvasRLEStream::_sendBufferedByte()
     _buffer.remove(0, 1);
     return byte;
 }
+
+#include <pop_optimize.h>

@@ -178,21 +178,21 @@ void setup_plugins(PluginComponent::PluginSetupMode_t mode)
             if (plugin->hasWebUI()) {
                 enableWebUIMenu = true;
             }
-            switch(plugin->getMenuType()) {
-                case PluginComponent::MenuTypeEnum_t::CUSTOM:
-                    plugin->createMenu();
-                    break;
-                case PluginComponent::MenuTypeEnum_t::AUTO:
-                    if (plugin->getConfigureForm()) {
-                        String uri = FPSTR(plugin->getConfigureForm());
-                        uri += F(".html");
-                        bootstrapMenu.addSubMenu(plugin->getFriendlyName(), uri, navMenu.config);
-                    }
-                    break;
-                case PluginComponent::MenuTypeEnum_t::NONE:
-                default:
-                    break;
-            }
+        }
+        switch(plugin->getMenuType()) {
+            case PluginComponent::MenuTypeEnum_t::CUSTOM:
+                plugin->createMenu();
+                break;
+            case PluginComponent::MenuTypeEnum_t::AUTO:
+                if (plugin->getConfigureForm()) {
+                    String uri = FPSTR(plugin->getConfigureForm());
+                    uri += F(".html");
+                    bootstrapMenu.addSubMenu(plugin->getFriendlyName(), uri, navMenu.config);
+                }
+                break;
+            case PluginComponent::MenuTypeEnum_t::NONE:
+            default:
+                break;
         }
     }
 

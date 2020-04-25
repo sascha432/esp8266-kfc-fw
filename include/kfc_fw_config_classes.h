@@ -361,10 +361,14 @@ namespace KFCConfigurationClasses {
                 uint8_t released_threshold;
                 uint8_t is_metric: 1;
                 uint8_t time_format_24h: 1;
+                uint8_t show_webui: 1;
                 float temp_offset;
+                float humidity_offset;
+                float pressure_offset;
+                uint8_t screenTimer[8];
 
                 void reset() {
-                    *this = { 15, 30, 100, 5, 8, false, false, 0.0 };
+                    *this = { 15, 30, 100, 5, 8, false, false, false, 0.0, 0.0, 0.0, { 10, 10, 0, 0, 0, 0, 0, 0 } };
                 }
 
                 void validate() {

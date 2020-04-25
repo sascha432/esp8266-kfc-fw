@@ -763,6 +763,27 @@ void at_mode_list_ets_timers(Print &output)
         }
         else {
             output.println(error);
+            ETSTimer *cur = timer_list;
+            while(cur) {
+                void *callback = nullptr;
+                for(const auto &timer: Scheduler._timers) {
+                    if (&timer->_etsTimer == cur) {
+                        callback = lambda_target(timer->_loopCallback);
+                        break;
+                    }
+                }
+                float period_in_s = cur->timer_period / 312500.0;
+                output.printf_P(PSTR("ETSTimer=%p func=%p arg=%p period=%u (%.3fs) exp=%u callback=%p\n"),
+                    cur,
+                    cur->timer_func,
+                    cur->timer_arg,
+                    cur->timer_period,
+                    period_in_s,
+                    cur->timer_expire,
+                    callback);
+                cur = cur->timer_next;
+            }
+
         }
     });
 }
@@ -1088,11 +1109,11 @@ void at_mode_serial_handle_event(String &commandString)
             }
 #if DEBUG_HAVE_SAVECRASH
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(SAVECRASHC))) {
-                SaveCrash.clear();
+                espSaveCrash.clear();
                 args.print(F("Cleared"));
             }
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(SAVECRASHP))) {
-                SaveCrash.print(output);
+                espSaveCrash.print(output);
             }
 #endif
 #if DEBUG

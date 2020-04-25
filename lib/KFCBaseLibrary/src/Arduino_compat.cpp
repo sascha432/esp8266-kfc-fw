@@ -15,7 +15,7 @@ const char *fs::FileOpenMode::append = "a";
 void ___debugbreak_and_panic(const char *filename, int line, const char *function) {
 #if DEBUG
     DEBUG_OUTPUT.printf_P(PSTR("___debugbreak_and_panic() called in %s:%u - %s\n"), filename, line, function);
-#endif
+#endif 
 #if _MSC_VER
     bool doPanic = false;
     __try {

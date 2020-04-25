@@ -65,11 +65,12 @@ void EventScheduler::Timer::add(int64_t delayMillis, RepeatType repeat, Callback
         }
         _timer = nullptr;
     });
+    _debug_printf_P(PSTR("timer=%p hasTimer=%u\n"), _timer, Scheduler.hasTimer(_timer));
 }
 
 bool EventScheduler::Timer::remove()
 {
-    _debug_printf_P(PSTR("_timer %p hasTimer=%u\n"), _timer, Scheduler.hasTimer(_timer));
+    _debug_printf_P(PSTR("timer=%p hasTimer=%u\n"), _timer, Scheduler.hasTimer(_timer));
     if (_timer) {
         _timer->_remove();
         _timer = nullptr;
@@ -122,7 +123,7 @@ bool ICACHE_RAM_ATTR EventScheduler::hasTimer(EventTimer *timer) const
 
 bool EventScheduler::removeTimer(EventTimer *timer)
 {
-    _debug_printf_P(PSTR("timer=%p result=%d\n"), timer, hasTimer(timer));
+    _debug_printf_P(PSTR("t=%p r=%d\n"), timer, hasTimer(timer));
     if (!hasTimer(timer)) {
         return false;
     }
@@ -132,7 +133,7 @@ bool EventScheduler::removeTimer(EventTimer *timer)
 
 void ICACHE_RAM_ATTR EventScheduler::_removeTimer(EventTimer *timer)
 {
-    _debug_printf_P(PSTR("timer=%p, _etsTimer.timer_func=%p\n"), timer, timer ? timer->_etsTimer.timer_func : nullptr);
+    _debug_printf_P(PSTR("t=%p et=%p\n"), timer, timer ? timer->_etsTimer.timer_func : nullptr);
 
     timer->detach();
 

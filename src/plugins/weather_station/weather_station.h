@@ -23,23 +23,9 @@
 #define IOT_WEATHER_STATION_HAS_TOUCHPAD        1
 #endif
 
-#ifndef IOT_WEATHER_STATION_TEMP_COMP
-// 0 disable
-// 1 fixed, relative
-// 2 RTC, relative
-// 3 LM75A, relative
-// 4 LM75A, absolute
-#define IOT_WEATHER_STATION_TEMP_COMP           1
-#endif
-
 // calculate RH from compensated temperature
 #ifndef IOT_WEATHER_STATION_COMP_RH
 #define IOT_WEATHER_STATION_COMP_RH             0
-#endif
-
-// address if LM75 is used
-#ifndef IOT_WEATHER_STATION_TEMP_COMP_LM75A
-#define IOT_WEATHER_STATION_TEMP_COMP_LM75A     0x48
 #endif
 
 // IRC pin
@@ -151,7 +137,8 @@ private:
     void _broadcastCanvas(int16_t x, int16_t y, int16_t w, int16_t h);
 
 private:
-    uint32_t _updateTimer;
+    // uint32_t _updateTimer;
+    uint32_t _updateCounter;
     uint16_t _backlightLevel;
 
 private:
@@ -168,6 +155,12 @@ private:
     EventScheduler::Timer _pixelTimer;
     uint8_t _pixels[IOT_WEATHER_STATION_WS2812_NUM * 3];
 #endif
+
+private:
+    void _setScreen(uint8_t screen);
+    uint8_t _getNextScreen(uint8_t screen);
+
+    uint32_t _toggleScreenTimer;
 
 #if DEBUG_IOT_WEATHER_STATION
 public:

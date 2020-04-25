@@ -53,7 +53,7 @@ void ICACHE_RAM_ATTR EventTimer::setPriority(EventScheduler::Priority_t priority
 
 void ICACHE_RAM_ATTR EventTimer::rearm(int64_t delay, EventScheduler::RepeatUpdateType repeat)
 {
-    _debug_printf_P(PSTR("rearm=%.0f repeat=%d\n"), delay / 1.0, repeat._maxRepeat);
+    _debug_printf_P(PSTR("rearm=%.0f rep=%d\n"), delay / 1.0, repeat._maxRepeat);
     _delay = delay;
     _remainingDelay = 0;
     if (repeat.isUpdateRequired()) {
@@ -76,20 +76,20 @@ void ICACHE_RAM_ATTR EventTimer::_rearmEtsTimer()
     int32_t delay;
     bool repeat = false;
     if (_remainingDelay > MaxDelay) { // delay too long, chop up
-        _debug_printf_P(PSTR("timer=%p delay %.0f remaining %.0f delay %ums\n"), this, _delay / 1.0, _remainingDelay / 1.0, MaxDelay);
+        _debug_printf_P(PSTR("t=%p d=%.0f r=%.0f d=%ums\n"), this, _delay / 1.0, _remainingDelay / 1.0, MaxDelay);
         _remainingDelay -= MaxDelay;
         delay = MaxDelay;
     }
     else if (_remainingDelay) { // wait for remainig delay
         delay = std::max(MinDelay, (int32_t)_remainingDelay);
         _remainingDelay = 0;
-        _debug_printf_P(PSTR("timer=%p delay %.0fs remaining 0s delay %ums\n"), this, _delay / 1.0, delay);
+        _debug_printf_P(PSTR("t=%p d=%.0fs re0s d=%ums\n"), this, _delay / 1.0, delay);
     }
     else { // default delay
         delay = std::max(MinDelay, (int32_t)_delay);
         repeat = _repeat.hasRepeat();
     }
-    _debug_printf_P(PSTR("rearm timer_arg=%p callback=%p\n"), _etsTimer.timer_arg, resolve_lambda(lambda_target(_loopCallback)));
+    _debug_printf_P(PSTR("rearm ta=%p cb=%p\n"), _etsTimer.timer_arg, resolve_lambda(lambda_target(_loopCallback)));
     _callbackScheduled = false;
     ets_timer_setfn(&_etsTimer, reinterpret_cast<ETSTimerFunc *>(EventScheduler::_timerCallback), reinterpret_cast<void *>(this));
     _disarmed = false;
@@ -98,7 +98,7 @@ void ICACHE_RAM_ATTR EventTimer::_rearmEtsTimer()
 
 void ICACHE_RAM_ATTR EventTimer::detach()
 {
-    _debug_printf_P(PSTR("timer=%p timer_func=%p callback=%p\n"), this, _etsTimer.timer_func, resolve_lambda(lambda_target(_loopCallback)));
+    _debug_printf_P(PSTR("t=%p tf=%p cb=%p\n"), this, _etsTimer.timer_func, resolve_lambda(lambda_target(_loopCallback)));
     if (_etsTimer.timer_func) {
         ets_timer_disarm(&_etsTimer);
         _disarmed = true;
@@ -112,7 +112,7 @@ static void ICACHE_RAM_ATTR _no_deleter(void *) {
 void ICACHE_RAM_ATTR EventTimer::_invokeCallback()
 {
     EventScheduler::TimerPtr timerPtr(this, _no_deleter);
-    _debug_printf_P(PSTR("timer=%p callback=%p priority %d\n"), this, resolve_lambda(lambda_target(_loopCallback)), _priority);
+    _debug_printf_P(PSTR("t=%p cb=%p p=%d\n"), this, resolve_lambda(lambda_target(_loopCallback)), _priority);
     _loopCallback(timerPtr);
     _repeat._counter++;
     if (_repeat.hasRepeat() && _etsTimer.timer_func != nullptr) {
@@ -120,13 +120,13 @@ void ICACHE_RAM_ATTR EventTimer::_invokeCallback()
             _rearmEtsTimer();
         }
     } else {
-        _debug_printf_P(PSTR("timer=%p timer_func=%p callback=%p removing EventTimer, repeat %d/%d\n"), this, _etsTimer.timer_func, resolve_lambda(lambda_target(_loopCallback)), _repeat._counter, _repeat._maxRepeat);
+        _debug_printf_P(PSTR("t=%p tf=%p cb=%p, rep=%d/%d\n"), this, _etsTimer.timer_func, resolve_lambda(lambda_target(_loopCallback)), _repeat._counter, _repeat._maxRepeat);
         Scheduler._removeTimer(this);
     }
 }
 
 void ICACHE_RAM_ATTR EventTimer::_remove()
 {
-    _debug_printf_P(PSTR("timer=%p callback=%p removing EventTimer, repeat %d/%d\n"), this, resolve_lambda(lambda_target(_loopCallback)), _repeat._counter, _repeat._maxRepeat);
+    _debug_printf_P(PSTR("t=%p cb=%p, rep=%d/%d\n"), this, resolve_lambda(lambda_target(_loopCallback)), _repeat._counter, _repeat._maxRepeat);
     Scheduler._removeTimer(this);
 }

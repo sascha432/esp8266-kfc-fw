@@ -14,6 +14,7 @@
 #include <Timezone.h>
 #include <EventScheduler.h>
 #include <EventTimer.h>
+#include "FixedCircularBuffer.h"
 #include "kfc_fw_config.h"
 #include "fonts/fonts.h"
 #include "moon_phase.h"
@@ -144,6 +145,14 @@
 #define Y_START_POSITION_SUN_MOON       (Y_END_POSITION_WEATHER + 2)
 #define Y_END_POSITION_SUN_MOON         (TFT_HEIGHT - 1)
 
+#define FONTS_WEATHER_INDOOR                            &DejaVuSans_5pt8b
+#define X_POSITION_WEATHER_INDOOR_TEMP                  (2 + _offsetX)
+#define X_POSITION_WEATHER_INDOOR_HUMIDITY              (TFT_WIDTH / 2 - 5)
+#define X_POSITION_WEATHER_INDOOR_PRESSURE              (128 - 2 + _offsetX)
+#define Y_POSITION_WEATHER_INDOOR_TEMP                  (60 + _offsetY)
+#define Y_POSITION_WEATHER_INDDOR_HUMIDITY              (60 + _offsetY)
+#define Y_POSITION_WEATHER_INDDOR_PRESSURE              (60 + _offsetY)
+
 #else
 
 #error No theme available for TFT dimensions
@@ -156,14 +165,21 @@ public:
     virtual ~WSDraw();
 
     void _drawTime();
+    void _updateTime();
+
     void _drawWeather();
-    void _drawWeather(GFXCanvasCompressed &canvas, uint8_t top);
+    void _drawWeather(GFXCanvasCompressed &canvas, int16_t top);
+    void _drawWeatherIndoor(GFXCanvasCompressed &canvas, int16_t top);
+    void _updateWeatherIndoor();
     void _drawIndoor();
-    void _drawIndoor(GFXCanvasCompressed &canvas, uint8_t top);
+    void _drawIndoor(GFXCanvasCompressed &canvas, int16_t top);
     void _drawSunAndMoon();
 
     void _drawScreenMain();
+
     void _drawScreenIndoor();
+    void _updateScreenIndoor();
+
     void _drawScreenForecast();
 
     void _doScroll();
@@ -172,7 +188,6 @@ public:
 
     void _displayMessage(const String &title, const String &message, uint16_t titleColor, uint16_t messageColor, uint32_t timeout);
 
-    void _updateTime();
     void _drawText(const String &text, const GFXfont *font, uint16_t color, bool clear = false);
     void _draw();
 
@@ -189,7 +204,6 @@ public:
 
     void setScreen(uint8_t screen) {
         _currentScreen = screen;
-        _draw();
     }
     uint8_t getScreen() const {
         return _currentScreen;
@@ -210,7 +224,7 @@ public:
             return _canvas;
         }
 
-        static void create(WSDraw *draw, uint16_t width, uint16_t height) {
+        static void create(WSDraw *draw, uint16_t width, int16_t height) {
             destroy(draw);
             draw->_scrollCanvas = new ScrollCanvas(*draw, width, height);
         }
@@ -229,22 +243,34 @@ public:
 
 private:
     void _statsBegin();
-    void _statsEnd();
+    void _statsEnd(const __FlashStringHelper *name);
     MicrosTimer _statsTimer;
 
-protected:
-    using WeatherStationConfigType = KFCConfigurationClasses::Plugins::WeatherStation::WeatherStationConfig_t;
-
+public:
     typedef enum {
         MAIN = 0,
         INDOOR,
         FORECAST,
-        NUM_SCREENS,
+        NUM_SCREENS = FORECAST, //forecast=disabled
         TEXT_CLEAR,
         TEXT_UPDATE,
         TEXT,
     } ScreenEnum_t;
 
+    static const __FlashStringHelper *getScreenName(uint8_t screen) {
+        switch(screen) {
+            case MAIN:
+                return F("Current Weather, Sun and Moon");
+            case INDOOR:
+                return F("Indoor Climate");
+            case FORECAST:
+                return F("Weather Forecast");
+        }
+        return F("Unknown");
+    }
+
+protected:
+    using WeatherStationConfigType = KFCConfigurationClasses::Plugins::WeatherStation::WeatherStationConfig_t;
     void setText(const String &text, const GFXfont *textFont) {
         _text = text;
         _textFont = textFont;
@@ -267,8 +293,13 @@ protected:
     time_t _lastTime;
     WeatherStationConfigType _config;
 
-    uint8_t _offsetX;
-    uint8_t _offsetY;
+    uint16_t _offsetX;
+    int16_t _offsetY;
 
     EventScheduler::Timer _displayMessageTimer;
+
+    bool _debug_stats;
+
+    using StatsBuffer = FixedCircularBuffer<float, 10>;
+    std::map<String, StatsBuffer> _stats;
 };

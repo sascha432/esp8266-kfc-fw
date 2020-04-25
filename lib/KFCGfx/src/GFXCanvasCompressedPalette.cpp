@@ -2,6 +2,9 @@
  * Author: sascha_lammers@gmx.de
  */
 
+#include <push_optimize.h>
+#pragma GCC optimize ("O3")
+
 #include "GFXCanvasCompressedPalette.h"
 
 #if DEBUG_GFXCANVAS
@@ -101,8 +104,8 @@ void GFXCanvasCompressedPalette::_RLEencode(color_t *data, ByteBuffer &buffer)
 #endif
             auto index = getColor(lastColor);
             if (rle > 0xf) {
-                buffer.write(index << 4);
-                buffer.write(rle);
+                buffer.write(index << 4, rle);
+                //buffer.write(rle);
             }
             else {
                 buffer.write(rle | (index << 4));
@@ -117,8 +120,8 @@ void GFXCanvasCompressedPalette::_RLEencode(color_t *data, ByteBuffer &buffer)
 #endif
         auto index = getColor(lastColor);
         if (rle > 0xf) {
-            buffer.write(index << 4);
-            buffer.write(rle);
+            buffer.write(index << 4, rle);
+            //buffer.write(rle);
         }
         else {
             buffer.write(rle | (index << 4));
@@ -145,8 +148,8 @@ uint16_t GFXCanvasCompressedPalette::getColor(color_t color, bool addIfNotExists
 #endif
             return INVALID_COLOR;
         }
-        _palette[_paletteCount++] = color;
-        return _paletteCount - 1;
+        _palette[_paletteCount] = color;
+        return _paletteCount++;
     }
     return INVALID_COLOR;
 }
@@ -174,3 +177,5 @@ String GFXCanvasCompressedPalette::getDetails() const
     str.write('\n');
     return str;
 }
+
+#include <pop_optimize.h>

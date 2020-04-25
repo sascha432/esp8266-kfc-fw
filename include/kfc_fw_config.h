@@ -23,6 +23,7 @@
 #if SYSLOG
 #include <KFCSyslog.h>
 #endif
+#include <SaveCrash.h>
 #include "logger.h"
 #include "misc.h"
 #include "at_mode.h"
@@ -432,6 +433,13 @@ typedef struct {
         return false; \
     }
 
+#define _H_STRUCT_VALUE_TYPE(name, field, type, ...) \
+    config._H_GET(name).field, [__VA_ARGS__](const type &value, FormField &, bool) { \
+        auto &data = config._H_W_GET(name); \
+        data.field = value; \
+        return false; \
+    }
+
 #define _H_FLAGS_BOOL_VALUE(name, field, ...) \
     config._H_GET(name).field, [__VA_ARGS__](bool &value, FormField &, bool) { \
         auto &data = config._H_W_GET(name); \
@@ -557,10 +565,5 @@ private:
 extern KFCFWConfiguration config;
 
 extern const char *session_get_device_token();
-
-#if DEBUG_HAVE_SAVECRASH
-class EspSaveCrash;
-extern EspSaveCrash SaveCrash;
-#endif
 
 #include "kfc_fw_config_classes.h"

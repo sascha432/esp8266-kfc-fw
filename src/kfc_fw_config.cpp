@@ -49,12 +49,6 @@ PROGMEM_STRING_DEF(SPIFF_configuration_backup, "/configuration.backup");
 
 KFCFWConfiguration config;
 
-#if DEBUG_HAVE_SAVECRASH
-#include <EspSaveCrash.h>
-
-EspSaveCrash SaveCrash(DEBUG_SAVECRASH_OFS, DEBUG_SAVECRASH_SIZE);
-#endif
-
 // Config_NTP
 
 Config_NTP::Config_NTP() : tz()
@@ -239,7 +233,7 @@ void timezone_config_save(int32_t _timezoneOffset, bool _dst, const String &_zon
 
 // KFCFWConfiguration
 
-KFCFWConfiguration::KFCFWConfiguration() : Configuration(CONFIG_EEPROM_OFFSET, CONFIG_EEPROM_MAX_LENGTH)
+KFCFWConfiguration::KFCFWConfiguration() : Configuration(0, 4096 - SAVE_CRASH_OFFSET)
 {
     _garbageCollectionCycleDelay = 5000;
     _wifiConnected = false;
@@ -901,14 +895,6 @@ void KFCFWConfiguration::wakeUpFromDeepSleep()
 
 }
 
-extern void remove_crash_counter(bool initSPIFFS);
-
-static void clear_crash_counter()
-{
-    resetDetector.clearCounter();
-    remove_crash_counter(false);
-}
-
 void KFCFWConfiguration::enterDeepSleep(milliseconds time, RFMode mode, uint16_t delayAfterPrepare)
 {
     _debug_printf_P(PSTR("time=%d mode=%d delay_prep=%d\n"), time.count(), mode, delayAfterPrepare);
@@ -916,7 +902,8 @@ void KFCFWConfiguration::enterDeepSleep(milliseconds time, RFMode mode, uint16_t
     // WiFiCallbacks::getVector().clear(); // disable WiFi callbacks to speed up shutdown
     // Scheduler.terminate(); // halt scheduler
 
-    clear_crash_counter();
+    resetDetector.clearCounter();
+    SaveCrash::removeCrashCounter();
 
     delay(1);
 
@@ -943,15 +930,19 @@ void KFCFWConfiguration::enterDeepSleep(milliseconds time, RFMode mode, uint16_t
 
 static uint32_t restart_device_timeout;
 
+static void invoke_ESP_restart()
+{
+#if __LED_BUILTIN == -3
+    BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::OFF);
+#endif
+    ESP.restart();
+}
+
 static void restart_device()
 {
     if (millis() > restart_device_timeout) {
         _debug_println();
-
-#if __LED_BUILTIN == -3
-        BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::OFF);
-#endif
-        ESP.restart();
+        invoke_ESP_restart();
     }
 }
 
@@ -966,13 +957,9 @@ void KFCFWConfiguration::restartDevice()
     Logger_notice(F("Device is being restarted"));
     BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::FLICKER);
 
-    clear_crash_counter();
+    SaveCrash::removeCrashCounterAndSafeMode();
     if (_safeMode) {
-        resetDetector.clearCounter();
-#if __LED_BUILTIN == -3
-        BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::OFF);
-#endif
-        ESP.restart();
+        invoke_ESP_restart();
     }
 
     _debug_printf_P(PSTR("Scheduled tasks %u, WiFi callbacks %u, Loop Functions %u\n"), Scheduler.size(), WiFiCallbacks::getVector().size(), LoopFunctions::size());

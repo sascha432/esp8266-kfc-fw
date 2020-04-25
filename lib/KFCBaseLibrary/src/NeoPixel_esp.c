@@ -8,8 +8,10 @@
 #include <Arduino.h>
 #ifdef ESP8266
 #include <eagle_soc.h>
+#include <user_interface.h>
 #endif
 
+#include <push_optimize.h>
 #pragma GCC optimize ("O2")
 
 void ICACHE_RAM_ATTR NeoPixel_fillColor(uint8_t *pixels, uint16_t numBytes, uint32_t color)
@@ -34,6 +36,12 @@ static inline uint32_t _getCycleCount(void)
 void ICACHE_RAM_ATTR espShow(uint8_t pin, uint8_t *pixels, uint32_t numBytes, boolean is800KHz) {
 
 #ifdef ESP8266
+#if SPEED_BOOSTER_ENABLED
+    uint8_t freq = system_get_cpu_freq();
+    if (freq == SYS_CPU_160MHZ) {
+        system_update_cpu_freq(SYS_CPU_80MHZ);
+    }
+#endif
 // compensation for if (pin == ...)
 // high 400-410ns low 800-810ns period 1300ns 769kHz
 #define COMP_CYCLES     3
@@ -117,6 +125,12 @@ void ICACHE_RAM_ATTR espShow(uint8_t pin, uint8_t *pixels, uint32_t numBytes, bo
     }
     while ((_getCycleCount() - startTime) < period)
         ; // Wait for last bit
+#if SPEED_BOOSTER_ENABLED && ESP8266
+    if (freq == SYS_CPU_160MHZ) {
+        system_update_cpu_freq(SYS_CPU_160MHZ);
+    }
+#endif
+
 }
 
 extern void ICACHE_RAM_ATTR NeoPixel_espShow(uint8_t pin, uint8_t *pixels, uint32_t numBytes, boolean is800KHz)
@@ -125,3 +139,5 @@ extern void ICACHE_RAM_ATTR NeoPixel_espShow(uint8_t pin, uint8_t *pixels, uint3
 }
 
 #endif
+
+#include <pop_optimize.h>

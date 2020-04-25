@@ -10,6 +10,7 @@
 class AdafruitGFXExtension : public Adafruit_GFX {
 public:
 	using Adafruit_GFX::Adafruit_GFX;
+    using Adafruit_GFX::drawBitmap;
 
     typedef enum {
         LEFT,
@@ -37,9 +38,9 @@ public:
 
     uint8_t getFontHeight(const GFXfont *f) const;
 
-    void _drawTextAligned(int16_t x, int16_t y, const String& text, TextAlignEnum_t align = LEFT, TextVAlignEnum_t valign = TOP, Position_t* pos = nullptr);
-    void _drawTextAligned(int16_t x, int16_t y, const char* text, TextAlignEnum_t align = LEFT, TextVAlignEnum_t valign = TOP, Position_t* pos = nullptr);
+    void drawTextAligned(int16_t x, int16_t y, const String& text, TextAlignEnum_t align = LEFT, TextVAlignEnum_t valign = TOP, Position_t* pos = nullptr);
+    void drawTextAligned(int16_t x, int16_t y, const char* text, TextAlignEnum_t align = LEFT, TextVAlignEnum_t valign = TOP, Position_t* pos = nullptr);
 
     // draw bitmaps with header, supports 2 bit/4 colors using the rgb565 colors passed in palette
-    void _drawBitmap(int16_t x, int16_t y, PGM_P bmp, const uint16_t /*PROGMEM*/ *palette, Dimensions_t* dim = nullptr);
+    void drawBitmap(int16_t x, int16_t y, PGM_P bmp, const uint16_t /*PROGMEM*/ *palette, Dimensions_t* dim = nullptr);
 };

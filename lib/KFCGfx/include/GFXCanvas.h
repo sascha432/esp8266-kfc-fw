@@ -17,9 +17,11 @@
 #if _MSC_VER
 #define DEBUG_GFXCANVASCOMPRESSED_BOUNDS_CHECK      1
 #define DEBUG_GFXCANVASCOMPRESSED_STATS             1
-#define GFXCANVAS_MAX_CACHED_LINES                  255
+#define DEBUG_GFXCANVASCOMPRESSED_STATS_DETAILS     1
+#define GFXCANVAS_MAX_CACHED_LINES                  16
 #endif
 
+// max. number of cached lines
 #ifndef GFXCANVAS_MAX_CACHED_LINES
 #define GFXCANVAS_MAX_CACHED_LINES                  1
 #endif
@@ -33,6 +35,10 @@
 #define DEBUG_GFXCANVASCOMPRESSED_STATS             1
 #endif
 
+#ifndef DEBUG_GFXCANVASCOMPRESSED_STATS_DETAILS
+#define DEBUG_GFXCANVASCOMPRESSED_STATS_DETAILS     0
+#endif
+
 namespace GFXCanvas {
 
     using coord_x_t = uint16_t;
@@ -44,9 +50,7 @@ namespace GFXCanvas {
 #if DEBUG_GFXCANVASCOMPRESSED_STATS
     class Stats {
     public:
-        Stats() {
-            memset(this, 0, sizeof(*this));
-        }
+        Stats() = default;
         void dump(Print &output) const;
 
         int decode_count;
@@ -61,12 +65,13 @@ namespace GFXCanvas {
         int cache_max;
         uint32_t drawInto;
         int malloc;
+        int modified_skipped;
     };
 #endif
 
     class ByteBuffer {
     public:
-        using coord_x_t = uint16_t;
+        using size_t = uint16_t;
 
         ByteBuffer() : _buffer(nullptr), _length(0), _size(0) {
         }
@@ -76,15 +81,15 @@ namespace GFXCanvas {
             }
         }
 
-        uint8_t *get() const {
+        inline __attribute__((always_inline)) uint8_t *get() const {
             return _buffer;
         }
 
-        size_t length() const {
+        inline __attribute__((always_inline)) size_t length() const {
             return _length;
         }
 
-        size_t size() const {
+        inline __attribute__((always_inline)) size_t size() const {
             return _size;
         }
 
@@ -97,21 +102,45 @@ namespace GFXCanvas {
             _length = 0;
         }
 
-        size_t write(const uint8_t *data, size_t len) {
-            if (!reserve(_length + len)) {
-                return 0;
+        void write(const uint8_t *data, size_t len) {
+            if (reserve(_length + len)) {
+                memcpy(_buffer + _length, data, len);
+                _length += len;
             }
-            memmove(_buffer + _length, data, len);
-            _length += len;
-            return len;
         }
 
-        inline size_t write(int data) {
-            return write((uint8_t)data);
+        inline __attribute__((always_inline)) void write(uint8_t data) {
+            if (reserve(_length + 1)) {
+                _buffer[_length++] = data;
+            }
         }
 
-        size_t write(uint8_t data) {
-            return write(&data, sizeof(data));
+        inline __attribute__((always_inline)) void write(uint8_t data1, uint8_t data2) {
+            if (reserve(_length + 2)) {
+                _buffer[_length++] = data1;
+                _buffer[_length++] = data2;
+                //auto ptr = _buffer + _length;
+                //*ptr++ = data1;
+                //*ptr++ = data2;
+                //_length += 2;
+            }
+        }
+
+        inline __attribute__((always_inline)) void writeWord(uint16_t data) {
+            if (reserve(_length + 2)) {
+                auto ptr = _buffer + _length;
+                *reinterpret_cast<uint16_t *>(ptr) = data;
+                _length += 2;
+            }
+        }
+
+        inline __attribute__((always_inline)) void writeByteWord(uint8_t data1, uint16_t data2) {
+            if (reserve(_length + 3)) {
+                auto ptr = _buffer + _length;
+                *ptr++ = data1;
+                *reinterpret_cast<uint16_t *>(ptr) = data2;
+                _length += 3;
+            }
         }
 
         bool shrink(size_t newSize) {
@@ -125,7 +154,7 @@ namespace GFXCanvas {
             return false;
         }
 
-        bool reserve(size_t size) {
+        inline __attribute__((always_inline)) bool reserve(size_t size) {
             if (size > _size) {
                 if (!_changeBuffer(size)) {
                     return false;
@@ -163,23 +192,27 @@ namespace GFXCanvas {
             return true;
         }
 
-        void remove(size_t index, size_t count) {
-            if (index >= _length) {
-                return;
-            }
-            if (count <= 0) {
-                return;
-            }
-            if (count > _length - index) {
-                count = _length - index;
-            }
-            _length = _length - count;
-            if (_length - index) {
-                memmove(_buffer + index, _buffer + index + count, _length - index);
-            }
+        inline __attribute__((always_inline)) void removeContent() {
+            _length = 0;
         }
 
-        inline uint16_t _alignSize(size_t size) const {
+        //void remove(size_t index, size_t count) {
+        //    if (index >= _length) {
+        //        return;
+        //    }
+        //    if (count <= 0) {
+        //        return;
+        //    }
+        //    if (count > _length - index) {
+        //        count = _length - index;
+        //    }
+        //    _length = _length - count;
+        //    if (_length - index) {
+        //        memmove(_buffer + index, _buffer + index + count, _length - index);
+        //    }
+        //}
+
+        inline __attribute__((always_inline)) uint16_t _alignSize(size_t size) const {
             return (size + 7) & ~7;
         }
 
@@ -194,36 +227,62 @@ namespace GFXCanvas {
     public:
         static const scoord_y_t INVALID = -1;
 
-        explicit Cache();
+        Cache() = delete;
         Cache(const Cache& cache) = delete;
-        //    Cache(const Cache &cache) {
-        //    __debugbreak_and_panic();
-        //}
+
         Cache(Cache &&cache);
-        Cache(coord_x_t width, scoord_y_t y);
-        Cache(coord_x_t width);
+        Cache(coord_x_t width, scoord_y_t y = 0);
         ~Cache();
 
         Cache &operator =(const Cache &cache) = delete;
         Cache &operator =(Cache &&cache);
 
+#if GFXCANVAS_MAX_CACHED_LINES > 1
         void allocBuffer();
         void freeBuffer();
+#endif
 
-        bool isY(scoord_y_t y) const;
-        scoord_y_t getY() const;
-        void setY(scoord_y_t y);               // if the y position is changed, flags are cleared. in case the write flag is set, the cache must be written before
-        bool isValid() const;
+        inline __attribute__((always_inline)) bool isY(scoord_y_t y) const {
+            return _y == y;
+        }
 
-        bool hasWriteFlag() const;          // indicates that the cache has not been written
-        void setWriteFlag(bool value);
+        inline __attribute__((always_inline)) scoord_y_t getY() const {
+            return _y;
+        }
 
-        bool hasReadFlag() const;           // indicates that the cache contains a copy
-        void setReadFlag(bool value);
+        inline __attribute__((always_inline)) void setY(scoord_y_t y) {
+            _read = 0;
+            _write = 0;
+            _y = y;
+        }               
+        // if the y position is changed, flags are cleared. in case the write flag is set, the cache must be written before
+        inline __attribute__((always_inline)) bool isValid() const {
+            return _y != INVALID;
+        }
 
-        color_t *getBuffer() const;
 
-        inline void setPixel(scoord_x_t x, color_t color) {
+        inline __attribute__((always_inline)) bool hasWriteFlag() const {
+            return _write;
+        }          
+        // indicates that the cache has not been written
+        inline __attribute__((always_inline))  void setWriteFlag(bool value) {
+            _write = value;
+        }
+
+        inline __attribute__((always_inline)) bool hasReadFlag() const {
+            return _read;
+        }           
+        // indicates that the cache contains a copy
+        inline __attribute__((always_inline)) void setReadFlag(bool value) {
+            _read = value;
+        }
+
+        inline __attribute__((always_inline)) color_t *getBuffer() const
+        {
+            return _buffer;
+        }
+
+        inline __attribute__((always_inline)) void setPixel(scoord_x_t x, color_t color) {
 #if DEBUG_GFXCANVASCOMPRESSED_BOUNDS_CHECK
             if (!(x >= 0 && x < _width)) {
                 __debugbreak_and_panic();
@@ -245,13 +304,30 @@ namespace GFXCanvas {
     public:
         LineBuffer();
 
-        void clear(color_t fillColor);
-        coord_x_t getLength() const;
-        ByteBuffer &getBuffer();
-        void setFillColor(color_t fillColor) {
+        inline __attribute__((always_inline)) void clear(color_t fillColor)
+        {
+            _fillColor = fillColor;
+            if (_buffer.length()) {
+                _buffer.clear();
+            }
+            
+        }
+
+        inline __attribute__((always_inline)) coord_x_t getLength() const
+        {
+            return (coord_x_t)_buffer.length();
+        }
+
+        inline __attribute__((always_inline)) ByteBuffer &getBuffer()
+        {
+            return _buffer;
+        }
+
+        inline __attribute__((always_inline)) void setFillColor(color_t fillColor) {
             _fillColor = fillColor;
         }
-        color_t getFillColor() const {
+
+        inline __attribute__((always_inline)) color_t getFillColor() const {
             return _fillColor;
         }
 

@@ -2,6 +2,9 @@
  * Author: sascha_lammers@gmx.de
  */
 
+#include <push_optimize.h>
+#pragma GCC optimize ("O3")
+
 #include "AdafruitGFXExtension.h"
 
 uint8_t AdafruitGFXExtension::getFontHeight(const GFXfont *f) const
@@ -9,12 +12,12 @@ uint8_t AdafruitGFXExtension::getFontHeight(const GFXfont *f) const
     return pgm_read_byte(&f->yAdvance);
 }
 
-void AdafruitGFXExtension::_drawTextAligned(int16_t x, int16_t y, const String& text, TextAlignEnum_t align, TextVAlignEnum_t valign, Position_t* pos)
+void AdafruitGFXExtension::drawTextAligned(int16_t x, int16_t y, const String &text, TextAlignEnum_t align, TextVAlignEnum_t valign, Position_t *pos)
 {
-    _drawTextAligned(x, y, text.c_str(), align, valign, pos);
+    drawTextAligned(x, y, text.c_str(), align, valign, pos);
 }
 
-void AdafruitGFXExtension::_drawTextAligned(int16_t x, int16_t y, const char* text, TextAlignEnum_t align, TextVAlignEnum_t valign, Position_t* pos)
+void AdafruitGFXExtension::drawTextAligned(int16_t x, int16_t y, const char *text, TextAlignEnum_t align, TextVAlignEnum_t valign, Position_t *pos)
 {
     int16_t x1, y1, sy;
     uint16_t w, h, lineH;
@@ -90,7 +93,7 @@ void AdafruitGFXExtension::_drawTextAligned(int16_t x, int16_t y, const char* te
         x = sx;
         y = sy + lineH;
 
-    } while(endPos);
+    } while (endPos);
 
 
     if (pos) {
@@ -103,7 +106,7 @@ void AdafruitGFXExtension::_drawTextAligned(int16_t x, int16_t y, const char* te
     free(buf);
 }
 
-void AdafruitGFXExtension::_drawBitmap(int16_t x, int16_t y, PGM_P bmp, const uint16_t *palette, Dimensions_t* dim)
+void AdafruitGFXExtension::drawBitmap(int16_t x, int16_t y, PGM_P bmp, const uint16_t *palette, Dimensions_t *dim)
 {
     uint16_t width = 0, height = 0;
 
@@ -114,7 +117,7 @@ void AdafruitGFXExtension::_drawBitmap(int16_t x, int16_t y, PGM_P bmp, const ui
         height = (pgm_read_byte(dataPtr++) >> 8);
         height |= pgm_read_byte(dataPtr++);
 
-        // _debug_printf_P(PSTR("_drawBitmap(): %u (%u) x %u x %u\n"), width, ((width + 7) & ~7), height, pgm_read_byte(bmp + 1));
+        // _debug_printf_P(PSTR("drawBitmap(): %u (%u) x %u x %u\n"), width, ((width + 7) & ~7), height, pgm_read_byte(bmp + 1));
 
         width += x; // set to x end position
         uint8_t ofs = (x & 3); // first bit relative to x1, indicator for reading a new byte
@@ -139,3 +142,5 @@ void AdafruitGFXExtension::_drawBitmap(int16_t x, int16_t y, PGM_P bmp, const ui
         dim->h = height;
     }
 }
+
+#include <pop_optimize.h>

@@ -5,7 +5,7 @@
 #include "GFXCanvasRLEStream.h"
 #include "GFXCanvasCompressed.h"
 
-GFXCanvasRLEStream::GFXCanvasRLEStream(GFXCanvasCompressed& canvas) : GFXCanvasRLEStream(canvas, 0, 0, _canvas.width(), canvas.height())
+GFXCanvasRLEStream::GFXCanvasRLEStream(GFXCanvasCompressed& canvas) : GFXCanvasRLEStream(canvas, 0, 0, canvas.width(), canvas.height())
 {
 }
 

@@ -20,7 +20,7 @@ extern "C" {
 
 using namespace GFXCanvas;
 
-GFXCanvasCompressed::GFXCanvasCompressed(uint16_t w, uint16_t h) :
+GFXCanvasCompressed::GFXCanvasCompressed(coord_x_t w, coord_y_t h) :
     AdafruitGFXExtension(w, h),
 #if GFXCANVAS_MAX_CACHED_LINES < 2
     _cache(w)
@@ -41,7 +41,7 @@ GFXCanvasCompressed::~GFXCanvasCompressed()
 GFXCanvasCompressed *GFXCanvasCompressed::clone()
 {
     GFXCanvasCompressed* target = new GFXCanvasCompressed(width(), height());
-    for (uint16_t y = 0; y < _height; y++) {
+    for (coord_y_t y = 0; y < _height; y++) {
         target->_lineBuffer[y].clone(_lineBuffer[y]);
     }
     return target;
@@ -61,7 +61,7 @@ void GFXCanvasCompressed::drawPixel(int16_t x, int16_t y, uint16_t color)
     }
 }
 
-void GFXCanvasCompressed::fillScreen(uint16_t color)
+void GFXCanvasCompressed::fillScreen(color_t color)
 {
     auto count = _height;
     while(count--) {
@@ -73,9 +73,9 @@ void GFXCanvasCompressed::fillScreen(uint16_t color)
     freeLineCache();
 }
 
-void GFXCanvasCompressed::fillScreenPartial(int16_t y, uint16_t height, uint16_t color)
+void GFXCanvasCompressed::fillScreenPartial(int16_t y, int16_t height, uint16_t color)
 {
-    auto endY = y + height;
+    int16_t endY = y + height;
     limitY(y, endY);
 #if GFXCANVAS_MAX_CACHED_LINES < 2
     _cache.setY(Cache::INVALID);
@@ -101,12 +101,12 @@ void GFXCanvasCompressed::fillRect(int16_t x, int16_t y, int16_t w, int16_t h, u
         fillScreenPartial(y, h, color);
     }
     else {
-        int16_t x2 = x + w;
-        int16_t y2 = y + h;
+        scoord_y_t x2 = x + w;
+        scoord_y_t y2 = y + h;
         limitX(x, x2);
         limitY(y, y2);
         while (y < y2) {
-            int16_t x1 = x;
+            scoord_y_t x1 = x;
             auto& cache = _decodeLine(y);
             cache.setWriteFlag(true);
             while (x1 < x2) {
@@ -118,7 +118,7 @@ void GFXCanvasCompressed::fillRect(int16_t x, int16_t y, int16_t w, int16_t h, u
     }
 }
 
-void GFXCanvasCompressed::drawFastHLine(int16_t x, int16_t y, int16_t w, uint16_t color) {
+void GFXCanvasCompressed::drawFastHLine(int16_t x, int16_t y, int16_t w, color_t color) {
     if ((uint16_t)y < (uint16_t)_height) {
         if (x <= 0 && x + w >= _width) {
             auto &cache = _getCache(y);
@@ -131,7 +131,7 @@ void GFXCanvasCompressed::drawFastHLine(int16_t x, int16_t y, int16_t w, uint16_
         else {
             auto& cache = _decodeLine(y);
             cache.setWriteFlag(true);
-            int16_t endX = w + x;
+            scoord_x_t endX = w + x;
             limitX(x, endX);
             while (x < endX) {
                 cache.setPixel(x++, color);
@@ -140,15 +140,15 @@ void GFXCanvasCompressed::drawFastHLine(int16_t x, int16_t y, int16_t w, uint16_
     }
 }
 
-void GFXCanvasCompressed::drawInto(int16_t x, int16_t y, int16_t w, int16_t h, DrawLineCallback_t callback)
+void GFXCanvasCompressed::drawInto(scoord_x_t x, scoord_y_t y, scoord_x_t w, scoord_y_t h, DrawLineCallback_t callback)
 {
 #if DEBUG_GFXCANVASCOMPRESSED_STATS
     MicrosTimer timer;
     timer.start();
 #endif
     // clipping
-    int16_t y1, y2, x1, x2;
-    int16_t yOfs, xOfs;
+    scoord_y_t y1, y2, yOfs;
+    scoord_x_t x1, x2, xOfs;
     if (y < 0) {
         y1 = 0;
         yOfs = y;
@@ -174,7 +174,7 @@ void GFXCanvasCompressed::drawInto(int16_t x, int16_t y, int16_t w, int16_t h, D
         x2 = _width;
     }
     w = x2 - x1;
-    for(int16_t y = y1; y < y2; y++) {
+    for(auto y = y1; y < y2; y++) {
         auto &cache = _decodeLine(y - yOfs);
         auto ptr = cache.getBuffer() - xOfs;
 
@@ -217,10 +217,10 @@ void GFXCanvasCompressed::freeLineCache()
     _cache.freeBuffer();
 }
 
-Cache& GFXCanvasCompressed::_getCache(int16_t y)
+Cache& GFXCanvasCompressed::_getCache(scoord_y_t y)
 {
 #if DEBUG_GFXCANVASCOMPRESSED_BOUNDS_CHECK
-    if (!((uint16_t)y < (uint16_t)_height)) {
+    if (!((coord_y_t)y < (coord_y_t)_height)) {
         __debugbreak_and_panic();
     }
 #endif
@@ -265,16 +265,16 @@ void GFXCanvasCompressed::freeLineCache()
     _caches.clear();
 }
 
-void GFXCanvasCompressed::setMaxCachedLines(uint16_t max)
+void GFXCanvasCompressed::setMaxCachedLines(coord_y_t max)
 {
     _maxCachedLines = max;
 }
 
 
-Cache &GFXCanvasCompressed::_getCache(int16_t y)
+Cache &GFXCanvasCompressed::_getCache(scoord_y_t y)
 {
 #if DEBUG_GFXCANVASCOMPRESSED_BOUNDS_CHECK
-    if (!((uint16_t)y < (uint16_t)_height)) {
+    if (!((coord_y_t)y < (coord_y_t)_height)) {
         __debugbreak_and_panic();
     }
 #endif
@@ -333,7 +333,7 @@ Cache &GFXCanvasCompressed::_getCache(int16_t y)
 
 #endif
 
-void GFXCanvasCompressed::_RLEdecode(Buffer &buffer, uint16_t* output)
+void GFXCanvasCompressed::_RLEdecode(ByteBuffer &buffer, color_t *output)
 {
 #if DEBUG_GFXCANVASCOMPRESSED_BOUNDS_CHECK
     auto outputEndPtr = &output[_width];
@@ -362,7 +362,7 @@ void GFXCanvasCompressed::_RLEdecode(Buffer &buffer, uint16_t* output)
 #endif
 }
 
-void GFXCanvasCompressed::_RLEencode(uint16_t *data, Buffer &buffer)
+void GFXCanvasCompressed::_RLEencode(color_t *data, ByteBuffer &buffer)
 {
     uint8_t rle = 0;
     auto endPtr = &data[_width];
@@ -381,8 +381,8 @@ void GFXCanvasCompressed::_RLEencode(uint16_t *data, Buffer &buffer)
             count += rle;
 #endif
             buffer.write(rle);
-            buffer.write(lastColor);
-            buffer.write(lastColor >> 8);
+            buffer.write((uint8_t)lastColor);
+            buffer.write((uint8_t)(lastColor >> 8));
             lastColor = color;
             rle = 1;
         }
@@ -392,8 +392,8 @@ void GFXCanvasCompressed::_RLEencode(uint16_t *data, Buffer &buffer)
         count += rle;
 #endif
         buffer.write(rle);
-        buffer.write((uint8_t)lastColor);
-        buffer.write((uint8_t)(lastColor >> 8));
+        buffer.write(lastColor);
+        buffer.write(lastColor >> 8);
     }
 #if DEBUG_GFXCANVASCOMPRESSED_BOUNDS_CHECK
     if (count != _width) {
@@ -402,18 +402,18 @@ void GFXCanvasCompressed::_RLEencode(uint16_t *data, Buffer &buffer)
 #endif
 }
 
-uint16_t GFXCanvasCompressed::getColor(uint16_t color, bool addIfNotExists)
+color_t GFXCanvasCompressed::getColor(color_t color, bool addIfNotExists)
 {
     return color;
 }
 
-uint16_t *GFXCanvasCompressed::getPalette(uint8_t &count)
+color_t *GFXCanvasCompressed::getPalette(uint8_t &count)
 {
     count = 0;
     return nullptr;
 }
 
-void GFXCanvasCompressed::setPalette(uint16_t* palette, uint8_t count)
+void GFXCanvasCompressed::setPalette(color_t *palette, uint8_t count)
 {
 }
 
@@ -437,10 +437,10 @@ void GFXCanvasCompressed::_decodeLine(Cache &cache)
     cache.setReadFlag(true);
 }
 
-Cache &GFXCanvasCompressed::_decodeLine(int16_t y)
+Cache &GFXCanvasCompressed::_decodeLine(scoord_y_t y)
 {
 #if DEBUG_GFXCANVASCOMPRESSED_BOUNDS_CHECK
-    if (!((uint16_t)y < (uint16_t)_height)) {
+    if (!((coord_y_t)y < (coord_y_t)_height)) {
         __debugbreak_and_panic();
     }
 #endif
@@ -539,12 +539,12 @@ String GFXCanvasCompressed::getDetails() const
     }
     uint32_t rawSize = _width * _height * sizeof(uint16_t);
     int empty = 0;
-    for (uint16_t y = 0; y < _height; y++) {
+    for (coord_y_t y = 0; y < _height; y++) {
         if (_lineBuffer[y].getLength() == 0) {
             empty++;
         }
     }
-    str.printf_P(PSTR("%ux%ux16 memory: %u/%u (%.2f%%) empty rows: %d\n"), _width, _height, size, rawSize, 100.0 - (size * 100.0 / (float)rawSize), empty);
+    str.printf_P(PSTR("%ux%ux16 mem %u/%u (%.2f%%) empty=%d\n"), _width, _height, size, rawSize, 100.0 - (size * 100.0 / (float)rawSize), empty);
 #if DEBUG_GFXCANVASCOMPRESSED_STATS
     stats.dump(str);
 #endif
@@ -556,7 +556,7 @@ GFXCanvasBitmapStream GFXCanvasCompressed::getBitmap()
     return GFXCanvasBitmapStream(*this);
 }
 
-GFXCanvasBitmapStream GFXCanvasCompressed::getBitmap(uint16_t x, uint16_t y, uint16_t w, uint16_t h)
+GFXCanvasBitmapStream GFXCanvasCompressed::getBitmap(coord_x_t x, coord_y_t y, coord_x_t w, coord_y_t h)
 {
     return GFXCanvasBitmapStream(*this, x, y, w, h);
 }
@@ -566,12 +566,12 @@ GFXCanvasRLEStream GFXCanvasCompressed::getRLEStream()
     return GFXCanvasRLEStream(*this);
 }
 
-GFXCanvasRLEStream GFXCanvasCompressed::getRLEStream(uint16_t x, uint16_t y, uint16_t w, uint16_t h)
+GFXCanvasRLEStream GFXCanvasCompressed::getRLEStream(coord_x_t x, coord_y_t y, coord_x_t w, coord_y_t h)
 {
     return GFXCanvasRLEStream(*this, x, y, w, h);
 }
 
-Cache &GFXCanvasCompressed::getLine(int16_t y)
+Cache &GFXCanvasCompressed::getLine(scoord_y_t y)
 {
     return _decodeLine(y);
 }

@@ -11,14 +11,14 @@
 #endif
 
 
-GFXCanvasCompressedPalette::GFXCanvasCompressedPalette(uint16_t width, uint16_t height) : GFXCanvasCompressed(width, height) , _paletteCount(0)
+GFXCanvasCompressedPalette::GFXCanvasCompressedPalette(coord_x_t width, coord_y_t height) : GFXCanvasCompressed(width, height), _palette(), _paletteCount(0)
 {
 }
 
 GFXCanvasCompressed* GFXCanvasCompressedPalette::clone()
 {
     GFXCanvasCompressedPalette* target = new GFXCanvasCompressedPalette(width(), height());
-    for (uint16_t y = 0; y < _height; y++) {
+    for (coord_y_t y = 0; y < _height; y++) {
         target->_lineBuffer[y].clone(_lineBuffer[y]);
     }
     memcpy(target->_palette, _palette, sizeof(target->_palette));
@@ -27,13 +27,13 @@ GFXCanvasCompressed* GFXCanvasCompressedPalette::clone()
     return target;
 }
 
-void GFXCanvasCompressedPalette::fillScreen(uint16_t color)
+void GFXCanvasCompressedPalette::fillScreen(color_t color)
 {
     _paletteCount = 0;
     GFXCanvasCompressed::fillScreen(color);
 }
 
-void GFXCanvasCompressedPalette::_RLEdecode(Buffer &buffer, uint16_t *output)
+void GFXCanvasCompressedPalette::_RLEdecode(ByteBuffer &buffer, color_t *output)
 {
 #if DEBUG_GFXCANVASCOMPRESSED_BOUNDS_CHECK
     auto outputEndPtr = &output[_width];
@@ -75,7 +75,7 @@ void GFXCanvasCompressedPalette::_RLEdecode(Buffer &buffer, uint16_t *output)
 #endif
 }
 
-void GFXCanvasCompressedPalette::_RLEencode(uint16_t *data, Buffer &buffer)
+void GFXCanvasCompressedPalette::_RLEencode(color_t *data, ByteBuffer &buffer)
 {
     // 4 bit: length, 0 indicates additional 8 bit
     // 4 bit: palette index
@@ -131,7 +131,7 @@ void GFXCanvasCompressedPalette::_RLEencode(uint16_t *data, Buffer &buffer)
 #endif
 }
 
-uint16_t GFXCanvasCompressedPalette::getColor(uint16_t color, bool addIfNotExists)
+uint16_t GFXCanvasCompressedPalette::getColor(color_t color, bool addIfNotExists)
 {
     for (uint8_t i = 0; i < _paletteCount; i++) {
         if (_palette[i] == color) {
@@ -157,9 +157,9 @@ uint16_t *GFXCanvasCompressedPalette::getPalette(uint8_t &count)
     return _palette;
 }
 
-void GFXCanvasCompressedPalette::setPalette(uint16_t* palette, uint8_t count)
+void GFXCanvasCompressedPalette::setPalette(color_t *palette, uint8_t count)
 {
-    memcpy(_palette, palette, count * sizeof(uint16_t));
+    memcpy(_palette, palette, count * sizeof(color_t));
 }
 
 String GFXCanvasCompressedPalette::getDetails() const

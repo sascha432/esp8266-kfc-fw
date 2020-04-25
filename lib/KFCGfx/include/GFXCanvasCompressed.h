@@ -11,7 +11,6 @@ RLE compressed 16bit canvas
 */
 
 #include <MicrosTimer.h>
-#include <Buffer.h>
 #include <PrintString.h>
 #include <forward_list>
 #include "AdafruitGFXExtension.h"
@@ -23,9 +22,10 @@ using namespace GFXCanvas;
 
 class GFXCanvasCompressed : public AdafruitGFXExtension {
 public:
-    typedef std::function<void(uint16_t x, uint16_t y, uint16_t w, uint16_t *pcolors)> DrawLineCallback_t;
+    using ByteBuffer = GFXCanvas::ByteBuffer;
+    typedef std::function<void(coord_x_t x, coord_y_t y, coord_x_t w, color_t *pcolors)> DrawLineCallback_t;
 
-    GFXCanvasCompressed(uint16_t w, uint16_t h);
+    GFXCanvasCompressed(coord_x_t w, coord_y_t h);
     virtual ~GFXCanvasCompressed();
 
     virtual GFXCanvasCompressed *clone();
@@ -34,7 +34,7 @@ public:
 
     virtual void drawPixel(int16_t x, int16_t y, uint16_t color);
     virtual void fillScreen(uint16_t color);
-    void fillScreenPartial(int16_t y, uint16_t height, uint16_t color);
+    void fillScreenPartial(int16_t y, int16_t height, uint16_t color);
     virtual void fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color);
     virtual void drawFastHLine(int16_t x, int16_t y, int16_t w, uint16_t color);
 
@@ -44,7 +44,7 @@ public:
     // GFXCANVAS_MAX_CACHED_LINES=1 uses a single cached line and frees the memory after drawInto()
     //
 #if !(GFXCANVAS_MAX_CACHED_LINES < 2)
-    void setMaxCachedLines(uint16_t max);
+    void setMaxCachedLines(coord_y_t max);
 #endif
     void flushLineCache();
     void freeLineCache();
@@ -61,35 +61,35 @@ public:
     // });
     // _tft.endWrite();
 
-    void drawInto(int16_t x, int16_t y, int16_t w, int16_t h, DrawLineCallback_t callback);
+    void drawInto(scoord_x_t x, scoord_y_t y, scoord_x_t w, scoord_y_t h, DrawLineCallback_t callback);
     void drawInto(DrawLineCallback_t callback);
 
     virtual String getDetails() const;
 
     GFXCanvasBitmapStream getBitmap();
-    GFXCanvasBitmapStream getBitmap(uint16_t x, uint16_t y, uint16_t w, uint16_t h);
+    GFXCanvasBitmapStream getBitmap(coord_x_t x, coord_y_t y, coord_x_t w, coord_y_t h);
     GFXCanvasRLEStream getRLEStream();
-    GFXCanvasRLEStream getRLEStream(uint16_t x, uint16_t y, uint16_t w, uint16_t h);
+    GFXCanvasRLEStream getRLEStream(coord_x_t x, coord_y_t y, coord_x_t w, coord_y_t h);
 
-    Cache &getLine(int16_t y);
+    Cache &getLine(scoord_y_t y);
 
 private:
     friend class GFXCanvasBitmapStream;
     friend class GFXCanvasRLEStream;
 
-    Cache &_getCache(int16_t y);
+    Cache &_getCache(scoord_y_t y);
     void _decodeLine(Cache &);
-    Cache &_decodeLine(int16_t y);
+    Cache &_decodeLine(scoord_y_t y);
     void _encodeLine(Cache &cache);
 
 protected:
-    virtual void _RLEdecode(Buffer &buffer, uint16_t *output);
-    virtual void _RLEencode(uint16_t *data, Buffer &buffer);
+    virtual void _RLEdecode(ByteBuffer &buffer, color_t *output);
+    virtual void _RLEencode(color_t *data, ByteBuffer &buffer);
 
     // colors are translated only inside the decode/encode methods
-    virtual uint16_t getColor(uint16_t color, bool addIfNotExists = true);
-    virtual uint16_t *getPalette(uint8_t &count);
-    virtual void setPalette(uint16_t *palette, uint8_t count);
+    virtual color_t getColor(color_t color, bool addIfNotExists = true);
+    virtual color_t *getPalette(uint8_t &count);
+    virtual void setPalette(color_t *palette, uint8_t count);
 
 private:
     inline void limitX(int16_t &x1, int16_t x2) {
@@ -119,7 +119,7 @@ private:
     typedef std::forward_list<Cache> CacheForwardList;
     typedef CacheForwardList::iterator CacheForwardListIterator;
     CacheForwardList _caches;
-    uint16_t _maxCachedLines;
+    coord_y_t _maxCachedLines;
 #endif
 
 #if DEBUG_GFXCANVASCOMPRESSED_STATS

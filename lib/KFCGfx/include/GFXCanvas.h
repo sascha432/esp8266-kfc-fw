@@ -6,8 +6,9 @@
 
 #include <Arduino_compat.h>
 #include <assert.h>
-#include <Buffer.h>
 #include <MicrosTimer.h>
+
+#include <push_pack.h>
 
 #ifndef DEBUG_GFXCANVAS
 #define DEBUG_GFXCANVAS                             1
@@ -34,6 +35,12 @@
 
 namespace GFXCanvas {
 
+    using coord_x_t = uint16_t;
+    using coord_y_t = uint16_t;
+    using scoord_x_t = int16_t;
+    using scoord_y_t = int16_t;
+    using color_t = uint16_t;
+
 #if DEBUG_GFXCANVASCOMPRESSED_STATS
     class Stats {
     public:
@@ -57,9 +64,135 @@ namespace GFXCanvas {
     };
 #endif
 
+    class ByteBuffer {
+    public:
+        using coord_x_t = uint16_t;
+
+        ByteBuffer() : _buffer(nullptr), _length(0), _size(0) {
+        }
+        ~ByteBuffer() {
+            if (_buffer) {
+                free(_buffer);
+            }
+        }
+
+        uint8_t *get() const {
+            return _buffer;
+        }
+
+        size_t length() const {
+            return _length;
+        }
+
+        size_t size() const {
+            return _size;
+        }
+
+        void clear() {
+            if (_buffer) {
+                free(_buffer);
+                _buffer = nullptr;
+            }
+            _size = 0;
+            _length = 0;
+        }
+
+        size_t write(const uint8_t *data, size_t len) {
+            if (!reserve(_length + len)) {
+                return 0;
+            }
+            memmove(_buffer + _length, data, len);
+            _length += len;
+            return len;
+        }
+
+        inline size_t write(int data) {
+            return write((uint8_t)data);
+        }
+
+        size_t write(uint8_t data) {
+            return write(&data, sizeof(data));
+        }
+
+        bool shrink(size_t newSize) {
+            if (newSize == 0) {
+                newSize = _length;
+            }
+            if (_changeBuffer(newSize)) {
+                return true;
+            }
+            clear();
+            return false;
+        }
+
+        bool reserve(size_t size) {
+            if (size > _size) {
+                if (!_changeBuffer(size)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        bool _changeBuffer(size_t newSize) {
+            if (_alignSize(newSize) != _size) {
+                _size = _alignSize(newSize);
+                if (_size == 0) {
+                    if (_buffer) {
+                        free(_buffer);
+                        _buffer = nullptr;
+                    }
+                }
+                else {
+                    if (_buffer == nullptr) {
+                        _buffer = (uint8_t *)malloc(_size);
+                    }
+                    else {
+                        _buffer = (uint8_t *)realloc(_buffer, _size);
+                    }
+                    if (_buffer == nullptr) {
+                        _size = 0;
+                        _length = 0;
+                        return false;
+                    }
+                }
+            }
+            if (_length > _size) {
+                _length = _size;
+            }
+            return true;
+        }
+
+        void remove(size_t index, size_t count) {
+            if (index >= _length) {
+                return;
+            }
+            if (count <= 0) {
+                return;
+            }
+            if (count > _length - index) {
+                count = _length - index;
+            }
+            _length = _length - count;
+            if (_length - index) {
+                memmove(_buffer + index, _buffer + index + count, _length - index);
+            }
+        }
+
+        inline uint16_t _alignSize(size_t size) const {
+            return (size + 7) & ~7;
+        }
+
+    private:
+        uint8_t *_buffer;
+        size_t _length;
+        size_t _size;
+    };
+
+
     class Cache {
     public:
-        static const int16_t INVALID = -1;
+        static const scoord_y_t INVALID = -1;
 
         explicit Cache();
         Cache(const Cache& cache) = delete;
@@ -67,8 +200,8 @@ namespace GFXCanvas {
         //    __debugbreak_and_panic();
         //}
         Cache(Cache &&cache);
-        Cache(uint16_t width, int16_t y);
-        Cache(uint16_t width);
+        Cache(coord_x_t width, scoord_y_t y);
+        Cache(coord_x_t width);
         ~Cache();
 
         Cache &operator =(const Cache &cache) = delete;
@@ -77,9 +210,9 @@ namespace GFXCanvas {
         void allocBuffer();
         void freeBuffer();
 
-        bool isY(int16_t y) const;
-        int16_t getY() const;
-        void setY(int16_t y);               // if the y position is changed, flags are cleared. in case the write flag is set, the cache must be written before
+        bool isY(scoord_y_t y) const;
+        scoord_y_t getY() const;
+        void setY(scoord_y_t y);               // if the y position is changed, flags are cleared. in case the write flag is set, the cache must be written before
         bool isValid() const;
 
         bool hasWriteFlag() const;          // indicates that the cache has not been written
@@ -88,9 +221,9 @@ namespace GFXCanvas {
         bool hasReadFlag() const;           // indicates that the cache contains a copy
         void setReadFlag(bool value);
 
-        uint16_t *getBuffer() const;
+        color_t *getBuffer() const;
 
-        inline void setPixel(int16_t x, uint16_t color) {
+        inline void setPixel(scoord_x_t x, color_t color) {
 #if DEBUG_GFXCANVASCOMPRESSED_BOUNDS_CHECK
             if (!(x >= 0 && x < _width)) {
                 __debugbreak_and_panic();
@@ -101,9 +234,9 @@ namespace GFXCanvas {
 
 
     private:
-        uint16_t *_buffer;
-        int16_t _y;
-        uint16_t _width;
+        color_t *_buffer;
+        scoord_y_t _y;
+        coord_x_t _width;
         uint8_t _read: 1;
         uint8_t _write: 1;
     };
@@ -112,26 +245,28 @@ namespace GFXCanvas {
     public:
         LineBuffer();
 
-        void clear(uint16_t fillColor);
-        uint16_t getLength() const;
-        Buffer &getBuffer();
-        void setFillColor(uint16_t fillColor) {
+        void clear(color_t fillColor);
+        coord_x_t getLength() const;
+        ByteBuffer &getBuffer();
+        void setFillColor(color_t fillColor) {
             _fillColor = fillColor;
         }
-        uint16_t getFillColor() const {
+        color_t getFillColor() const {
             return _fillColor;
         }
 
         void clone(LineBuffer& source);
 
     private:
-        Buffer _buffer;
-        uint16_t _fillColor;
+        ByteBuffer _buffer;
+        color_t _fillColor;
     };
 
-    void convertToRGB(uint16_t color, uint8_t& r, uint8_t& g, uint8_t& b);
-    uint32_t convertToRGB(uint16_t color);
-    uint16_t convertRGBtoRGB565(uint8_t r, uint8_t g, uint8_t b);
-    uint16_t convertRGBtoRGB565(uint32_t rgb);
+    void convertToRGB(color_t color, uint8_t& r, uint8_t& g, uint8_t& b);
+    uint32_t convertToRGB(color_t color);
+    color_t convertRGBtoRGB565(uint8_t r, uint8_t g, uint8_t b);
+    color_t convertRGBtoRGB565(uint32_t rgb);
 
 };
+
+#include <pop_pack.h>

@@ -267,30 +267,15 @@ extern class Stream &DebugSerial;
 #endif
 #endif
 
-#if DEBUG_HAVE_SAVECRASH
-    #if SAVE_CRASH_FLASH_ADDRESS==0 || SAVE_CRASH_FLASH_ADDRESS==0x40200000
-        #ifndef SAVE_CRASH_SIZE
-        #define SAVE_CRASH_SIZE                 256
-        #endif
-        #ifndef SAVE_CRASH_OFFSET
-        #define SAVE_CRASH_OFFSET               (4096 - SAVE_CRASH_SIZE)
-        #endif
-    #else
-        #ifndef SAVE_CRASH_SIZE
-        #define SAVE_CRASH_SIZE                 4096
-        #endif
-        #ifndef SAVE_CRASH_OFFSET
-        #define SAVE_CRASH_OFFSET               (4096 - SAVE_CRASH_SIZE)
-        #endif
-    #endif
-#else
-    #define SAVE_CRASH_SIZE                     0
-    #define SAVE_CRASH_OFFSET                   4096
+// offset of the configuration in the EEPROM
+#ifndef CONFIG_EEPROM_OFFSET
+#define CONFIG_EEPROM_OFFSET            0
 #endif
 
-// #ifndef CONFIG_EEPROM_MAX_LENGTH
-// #define CONFIG_EEPROM_MAX_LENGTH        (4096 - CONFIG_EEPROM_OFFSET)
-// #endif
+// writing data to the EEPROM requires CONFIG_EEPROM_OFFSET + CONFIG_EEPROM_SIZE memory
+#ifndef CONFIG_EEPROM_SIZE
+#define CONFIG_EEPROM_SIZE              2048
+#endif
 
 #ifndef MDNS_PLUGIN
 #define MDNS_PLUGIN                     1

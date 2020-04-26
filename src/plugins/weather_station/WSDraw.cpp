@@ -71,7 +71,8 @@ const unsigned char icon_house[] PROGMEM = {
 
 WSDraw::WSDraw() :
     _tft(TFT_PIN_CS, TFT_PIN_DC, TFT_PIN_RST),
-    _canvas(_tft.width(), _tft.height()),
+    _canvasPtr(new GFXCanvasCompressedPalette(_tft.width(), _tft.height())),
+    _canvas(*_canvasPtr),
     _scrollCanvas(nullptr),
     _scrollPosition(0),
     _weatherError(F("No data available")),

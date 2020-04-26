@@ -280,7 +280,8 @@ protected:
     virtual void _getIndoorValues(float *data);
 
     Adafruit_ST7735 _tft;
-    GFXCanvasCompressedPalette  _canvas;
+    GFXCanvasCompressedPalette *_canvasPtr;
+    GFXCanvasCompressedPalette &_canvas;
     ScrollCanvas *_scrollCanvas;
     uint8_t _scrollPosition;
     OpenWeatherMapAPI _weatherApi;

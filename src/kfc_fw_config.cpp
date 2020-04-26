@@ -233,7 +233,15 @@ void timezone_config_save(int32_t _timezoneOffset, bool _dst, const String &_zon
 
 // KFCFWConfiguration
 
-KFCFWConfiguration::KFCFWConfiguration() : Configuration(0, 4096 - SAVE_CRASH_OFFSET)
+#if CONFIG_EEPROM_SIZE < 1024
+#error At least 1KB required
+#endif
+
+#if (CONFIG_EEPROM_OFFSET + CONFIG_EEPROM_SIZE) > 4096
+#error max. EEPROM size exceeded
+#endif
+
+KFCFWConfiguration::KFCFWConfiguration() : Configuration(CONFIG_EEPROM_OFFSET, CONFIG_EEPROM_SIZE)
 {
     _garbageCollectionCycleDelay = 5000;
     _wifiConnected = false;
@@ -242,6 +250,10 @@ KFCFWConfiguration::KFCFWConfiguration() : Configuration(0, 4096 - SAVE_CRASH_OF
     _offlineSince = -1UL;
     _wifiUp = -1UL;
     _setupWiFiCallbacks();
+    EspSaveCrash::addCallback([this]() {
+        // release all memory in the event of a crash
+        discard();
+    });
 }
 
 KFCFWConfiguration::~KFCFWConfiguration()

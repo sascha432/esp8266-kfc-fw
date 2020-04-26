@@ -45,7 +45,7 @@ namespace SaveCrash {
 
 #if DEBUG_HAVE_SAVECRASH
 
-EspSaveCrash espSaveCrash(SAVE_CRASH_OFFSET, SAVE_CRASH_SIZE);
+EspSaveCrash espSaveCrash;
 
 namespace SaveCrash {
 

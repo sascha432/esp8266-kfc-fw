@@ -14,6 +14,7 @@
 #include <WebUISocket.h>
 #include <AsyncBitmapStreamResponse.h>
 #include <GFXCanvasRLEStream.h>
+#include <EspSaveCrash.h>
 #include "RestAPI.h"
 #include "web_server.h"
 #include "progmem_data.h"
@@ -58,6 +59,12 @@ WeatherStationPlugin::WeatherStationPlugin() :
 #if IOT_WEATHER_STATION_HAS_TOUCHPAD
     _touchpadDebug = false;
 #endif
+    EspSaveCrash::addCallback([this]() {
+        if (_canvasPtr) {
+            delete _canvasPtr;
+            _canvasPtr = nullptr;
+        }
+    });
 }
 
 PGM_P WeatherStationPlugin::getName() const

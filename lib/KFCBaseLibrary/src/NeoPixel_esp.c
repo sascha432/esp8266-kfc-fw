@@ -56,6 +56,8 @@ void ICACHE_RAM_ATTR espShow(uint8_t pin, uint8_t *pixels, uint32_t numBytes, bo
 #define CYCLES_400_T1H  (F_CPU / 833333) // 1.2us
 #define CYCLES_400      (F_CPU / 400000) // 2.5us per bit
 
+    noInterrupts();
+
     uint8_t *p, *end, pix, mask;
     uint32_t t, time0, time1, period, c, startTime, pinMask;
 
@@ -125,6 +127,9 @@ void ICACHE_RAM_ATTR espShow(uint8_t pin, uint8_t *pixels, uint32_t numBytes, bo
     }
     while ((_getCycleCount() - startTime) < period)
         ; // Wait for last bit
+
+
+    interrupts();
 #if SPEED_BOOSTER_ENABLED && ESP8266
     if (freq == SYS_CPU_160MHZ) {
         system_update_cpu_freq(SYS_CPU_160MHZ);

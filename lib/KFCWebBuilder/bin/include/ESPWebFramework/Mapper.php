@@ -177,7 +177,19 @@ class Mapper implements PluginInterface
     {
         $num = count($this->mappedFiles);
 
-        $mappedFile = str_replace('\\', '/', substr($file->getTarget(), strlen($this->webDir)));
+        $target = str_replace('\\', '/', $file->getTarget());
+        $webDir = str_replace('\\', '/', $this->webDir);
+        $dataDir = str_replace('\\', '/', $this->dataDir);
+        if (substr($target, 0, strlen($webDir)) == $webDir) {
+            $mappedFile = substr($target, strlen($webDir));
+        }
+        else if (substr($target, 0, strlen($dataDir)) == $dataDir) {
+            $mappedFile = substr($target, strlen($dataDir));
+        }
+        else {
+            throw new \RuntimeException(sprintf('%s: Outside data directoy %s', $file->getSourceAsString(), $target));
+        }
+
         $mappedFileCrc = hash("crc32b", $mappedFile);
         $outFile = $this->webDir.sprintf(DIRECTORY_SEPARATOR.$mappedFileCrc);
         if (!@copy($file->getTmpIn(), $outFile)) {

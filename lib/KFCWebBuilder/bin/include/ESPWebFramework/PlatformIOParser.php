@@ -236,8 +236,7 @@ class PlatformIOParser {
      */
     private function mergeEnvironments(string $environment, string $sourceEnv): void
     {
-        // echo "mergeEnvironments: $sourceEnv => $environment\n";
-
+        //echo "mergeEnvironments: $sourceEnv => $environment\n";
         $selectedEnv = &$this->envConfig[$environment];
         foreach($this->envConfig[$sourceEnv] as $keyword => $value) { // copy config from default environment if it does not exist
             if (!isset($selectedEnv[$keyword])) {
@@ -292,6 +291,7 @@ class PlatformIOParser {
             $line = $this->stripComments($line, false);
 
             if (preg_match('/^\s*\[([^\]]+)\]\s*$/', $line, $out)) {
+
                 if ($keyword !== null) {
                     $this->processIniLine($environment, $keyword, $fullLine);
                 }
@@ -306,9 +306,16 @@ class PlatformIOParser {
                         $sectionFound = true;
                     }
                 }
+
             } else {
-                if (preg_match('/^([a-zA-Z0-9_-]+)\s*=\s*(.*)/', $line, $out)) {
+                if (preg_match('/^([a-zA-Z0-9_.-]+)\s*=\s*(.*)/', $line, $out)) {
+
+                    if ($keyword !== null) {
+                        $this->processIniLine($environment, $keyword, $fullLine);
+                    }
+                    // new keyword
                     list(, $keyword, $fullLine) = $out;
+
                 } else if ($keyword !== null) {
                     if (preg_match('/^\s/', $line)) { // line starts with white space
                         $fullLine .= $line;
@@ -316,6 +323,12 @@ class PlatformIOParser {
                         $this->processIniLine($environment, $keyword, $fullLine);
                         $keyword = null;
                         $fullLine = '';
+                    }
+                }
+                else {
+                    $line = trim($line);
+                    if ($line != "") {
+                        echo "WARNING! '$line' skipped\n";
                     }
                 }
             }
@@ -338,6 +351,21 @@ class PlatformIOParser {
             $this->mergeEnvironments($this->environment, 'env');
         }
     }
+
+    // function resolveExtends($env) {
+    //     echo "resolveExtends\n";
+    //     var_dump($this->envConfig[$env]);
+    //     if (isset($this->envConfig[$env]['extends'])) {
+    //         $extends = $this->envConfig[$env]['extends'];
+    //         echo "resolveExtends $extends\n";
+    //         if (!isset($this->envConfig[$extends])) {
+    //             throw new \RuntimeException("Cannot find extends=$extends");
+    //         }
+    //         //$this->resolveExtends($extends);
+
+    //     }
+    //     exit;
+    // }
 
     // error handler to collect undefined constants
     private $undefinedConstants;

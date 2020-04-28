@@ -17,7 +17,9 @@ def build_webui(source, target, env, clean = False):
         "-b",
         "spiffs",
         "-e",
-        '"env:${PIOENV}"'
+        '"env:${PIOENV}"',
+        "--clean-exit-code",
+        "0"
     ]
     env.Execute(' '.join(args))
 

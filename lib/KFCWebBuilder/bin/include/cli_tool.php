@@ -26,8 +26,8 @@ $argParser->addBoolOption('dirty', array('--dirty'), null, 'Mark files as modifi
 $argParser->addBoolOption('verbose', array('-v', '--verbose'), false, 'Be more talkative');
 $argParser->addOption('env', array('-e', '--env'), null, null, 'Specify which platformIO environment to use');
 $argParser->addMultiOption('branches', array('-b', '--branch'), array(), null, 'Specify one or more branches to execute');
-$argParser->addBoolOption('clean_exit_code', array('--clean-exit-code'), 127, 'Exit code if the project has not been modified');
-$argParser->addBoolOption('dirty_exit_code', array('--dirty-exit-code'), 0, 'Exit code if the project has been modified');
+$argParser->addOption('clean_exit_code', array('--clean-exit-code'), 127, null, 'Exit code if the project has not been modified');
+$argParser->addOption('dirty_exit_code', array('--dirty-exit-code'), 0, null, 'Exit code if the project has been modified');
 $argParser->addBoolOption('dependencies', array('--dep'), false, 'Display external dependencies');
 $argParser->addBoolOption('files', array('--files'), false, 'Scan for files and result');
 $argParser->addBoolOption('show_env', array('--show-env'), false, 'Show available environments');
@@ -94,13 +94,13 @@ try {
     if ($webBuilder->scanDependencies()) {
         if ($argParser->isFalse('force')) {
             echo "No changes detected.\n";
-            exit($argParser->getOption("clean_exit_code"));
+            exit(intval($argParser->getOption("clean_exit_code")));
         }
         echo "No changes detected, build forced...\n";
     }
     $webBuilder->build();
     $webBuilder->onSuccess();
-    exit($argParser->getOption("dirty_exit_code"));
+    exit(intval($argParser->getOption("dirty_exit_code")));
 
 } catch (\Exception $exception) {
     $webBuilder->onFailure();

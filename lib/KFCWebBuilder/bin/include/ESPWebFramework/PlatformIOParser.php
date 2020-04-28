@@ -154,7 +154,7 @@ class PlatformIOParser {
                 if (!isset($this->envConfig[$line])) {
                     throw new \RuntimeException("extends missing environment '".$line."'");
                 }
-                $this->mergeEnvironments($environment, $line);
+                $this->mergeEnvironments($environment, $line, false);
             }
             $this->envConfig[$environment][$keyword] = $line;
             // echo "[$environment],$keyword:$line\n";
@@ -231,10 +231,11 @@ class PlatformIOParser {
      * *
      * @param string $environment
      * @param string $sourceEnv
+     * @param bool $parseBuildFlags
      *
      * @return void
      */
-    private function mergeEnvironments(string $environment, string $sourceEnv): void
+    private function mergeEnvironments(string $environment, string $sourceEnv, bool $parseBuildFlags): void
     {
         //echo "mergeEnvironments: $sourceEnv => $environment\n";
         $selectedEnv = &$this->envConfig[$environment];
@@ -244,7 +245,7 @@ class PlatformIOParser {
             }
         }
 
-        if (isset($selectedEnv['build_flags'])) { // get all preprocessor defines
+        if ($parseBuildFlags && isset($selectedEnv['build_flags'])) { // get all preprocessor defines
 
             $line = $this->resolveVariables($selectedEnv['build_flags']);
 
@@ -258,6 +259,7 @@ class PlatformIOParser {
                     }
                     @list($name, $value) = explode('=', $token, 2);
                     $this->defines[$name] = $value;
+
                 }
                 $token = strtok("\t ");
             }
@@ -348,7 +350,7 @@ class PlatformIOParser {
             if (!$sectionFound) {
                 throw new \RuntimeException(sprintf('Environment %s not found in %s', $this->environment, $filename));
             }
-            $this->mergeEnvironments($this->environment, 'env');
+            $this->mergeEnvironments($this->environment, 'env', true);
         }
     }
 

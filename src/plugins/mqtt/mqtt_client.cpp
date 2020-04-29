@@ -49,6 +49,9 @@ MQTTClient::MQTTClient() : _client(nullptr), _useNodeId(false), _lastWillPayload
 {
     _debug_println();
 
+    _host = Config_MQTT::getHost();
+    _config = Config_MQTT::getConfig();
+
     _setupClient();
     WiFiCallbacks::add(WiFiCallbacks::EventEnum_t::ANY, MQTTClient::handleWiFiEvents);
 
@@ -81,14 +84,12 @@ void MQTTClient::_setupClient()
     _maxMessageSize = MAX_MESSAGE_SIZE;
     _autoReconnectTimeout = DEFAULT_RECONNECT_TIMEOUT;
 
-    auto cfg = Config_MQTT::getConfig();
-    auto host = Config_MQTT::getHost();
     IPAddress ip;
-    if (ip.fromString(host)) {
-        _client->setServer(ip, cfg.port);
+    if (ip.fromString(_host)) {
+        _client->setServer(ip, _config.port);
     }
     else {
-        _client->setServer(host, cfg.port);
+        _client->setServer(_host.c_str(), _config.port);
     }
 #if ASYNC_TCP_SSL_ENABLED
     if (Config_MQTT::getMode() == MQTT_MODE_SECURE) {
@@ -100,7 +101,7 @@ void MQTTClient::_setupClient()
     }
 #endif
     _client->setCredentials(Config_MQTT::getUsername(), Config_MQTT::getPassword());
-    _client->setKeepAlive(cfg.keepalive);
+    _client->setKeepAlive(_config.keepalive);
 
     _client->onConnect([this](bool sessionPresent) {
         this->onConnect(sessionPresent);
@@ -297,7 +298,7 @@ void MQTTClient::onDisconnect(AsyncMqttClientDisconnectReason reason)
     if (_autoReconnectTimeout) {
         str.printf_P(PSTR(", reconnecting in %d ms"), _autoReconnectTimeout);
     }
-    Logger_notice(F("Disconnected from MQTT server %s, reason: %s%s"), connectionDetailsString().c_str(), _reasonToString(reason), str.c_str());
+    Logger_notice(F("Disconnected from MQTT server, reason: %s%s"), _reasonToString(reason), str.c_str());
     for(const auto &component: _components) {
         component->onDisconnect(this, reason);
     }
@@ -505,7 +506,7 @@ const __FlashStringHelper *MQTTClient::_reasonToString(AsyncMqttClientDisconnect
 String MQTTClient::connectionDetailsString()
 {
     auto username = Config_MQTT::getUsername();
-    auto message = PrintString(F("%s@%s:%u"), *username ? username : SPGM(Anonymous), Config_MQTT::getHost(), Config_MQTT::getConfig().port);
+    auto message = PrintString(F("%s@%s:%u"), *username ? username : SPGM(Anonymous), _mqttClient ? _mqttClient->_host.c_str() : PSTR("null"), Config_MQTT::getConfig().port);
 #if ASYNC_TCP_SSL_ENABLED
     if (Config_MQTT::getMode() == MQTT_MODE_SECURE) {
         message += F(", Secure MQTT");

@@ -157,14 +157,7 @@ extern const String emptyString;
 
 #endif
 
-namespace fs {
-    class FileOpenMode {
-    public:
-        static const char *read;
-        static const char *write;
-        static const char *append;
-    };
-};
+#include "FileOpenMode.h"
 
 #include "constexpr_tools.h"
 

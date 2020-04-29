@@ -106,7 +106,7 @@ OpenWeatherMapAPI::WeatherInfo::WeatherInfo() : val()
 
 bool OpenWeatherMapAPI::WeatherInfo::hasData() const
 {
-    _debug_printf_P(PSTR("location=%s weather=%u\n"), location.c_str(), weather.size());
+    // _debug_printf_P(PSTR("location=%s weather=%u\n"), location.c_str(), weather.size());
     return location.length() && weather.size();
 }
 

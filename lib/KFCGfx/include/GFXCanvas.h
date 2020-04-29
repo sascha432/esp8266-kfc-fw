@@ -73,6 +73,9 @@ namespace GFXCanvas {
     public:
         using size_t = uint16_t;
 
+        ByteBuffer(const ByteBuffer &) = delete;
+        ByteBuffer(ByteBuffer &&) = delete;
+
         ByteBuffer() : _buffer(nullptr), _length(0), _size(0) {
         }
         ~ByteBuffer() {
@@ -254,7 +257,7 @@ namespace GFXCanvas {
             _read = 0;
             _write = 0;
             _y = y;
-        }               
+        }
         // if the y position is changed, flags are cleared. in case the write flag is set, the cache must be written before
         inline __attribute__((always_inline)) bool isValid() const {
             return _y != INVALID;
@@ -263,7 +266,7 @@ namespace GFXCanvas {
 
         inline __attribute__((always_inline)) bool hasWriteFlag() const {
             return _write;
-        }          
+        }
         // indicates that the cache has not been written
         inline __attribute__((always_inline))  void setWriteFlag(bool value) {
             _write = value;
@@ -271,7 +274,7 @@ namespace GFXCanvas {
 
         inline __attribute__((always_inline)) bool hasReadFlag() const {
             return _read;
-        }           
+        }
         // indicates that the cache contains a copy
         inline __attribute__((always_inline)) void setReadFlag(bool value) {
             _read = value;
@@ -310,7 +313,7 @@ namespace GFXCanvas {
             if (_buffer.length()) {
                 _buffer.clear();
             }
-            
+
         }
 
         inline __attribute__((always_inline)) coord_x_t getLength() const

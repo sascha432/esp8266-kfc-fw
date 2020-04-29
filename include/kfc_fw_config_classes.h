@@ -312,9 +312,15 @@ namespace KFCConfigurationClasses {
                 ON =        0x01,
                 RESTORE =   0x02,
             } StateEnum_t;
+            typedef enum : uint8_t {
+                NONE =      0x00,
+                HIDE =      0x01,
+                NEW_ROW =   0x02,
+            } WebUIEnum_t;
             typedef struct __attribute__packed__ {
                 uint8_t length;
                 StateEnum_t state;
+                WebUIEnum_t webUI;
             } Switch_t;
 
             // T = std::array<String, N>, R = std::array<Switch_t, N>

@@ -39,7 +39,7 @@ void SyslogFile::addHeader(String& buffer) {
 void SyslogFile::transmit(const String &message, Callback_t callback) {
     _debug_printf_P(PSTR("SyslogFile::transmit '%s' length %d\n"), message.c_str(), message.length());
 
-    auto logFile = SPIFFS.open(_filename, "a+"); // TODO "a+" required to get the file size with size() ?
+    auto logFile = SPIFFS.open(_filename, fs::FileOpenMode::appendplus); // TODO "a+" required to get the file size with size() ?
     if (logFile) {
         if (_maxSize && (message.length() + logFile.size() + 1) >= _maxSize) {
             logFile.close();

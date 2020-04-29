@@ -170,6 +170,9 @@ public:
     }
 
     inline static uint8_t getDefaultQos() {
+        if (_mqttClient) {
+            return _mqttClient->_config.qos;
+        }
         return config._H_GET(Config().mqtt.config).qos;
     }
 
@@ -213,6 +216,8 @@ public:
     static void queueTimerCallback(EventScheduler::TimerPtr timer);
 
 private:
+    String _host;
+    Config_MQTT::config_t _config;
     AsyncMqttClient *_client;
     EventScheduler::Timer _timer;
     uint32_t _autoReconnectTimeout;

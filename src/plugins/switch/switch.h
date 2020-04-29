@@ -10,6 +10,7 @@
 
 #include <Arduino_compat.h>
 #include <EventScheduler.h>
+#include <WebUIComponent.h>
 #include "../mqtt/mqtt_client.h"
 #include "plugins.h"
 #include "kfc_fw_config.h"
@@ -40,7 +41,7 @@
 #error IOT_SWITCH_CHANNEL_PINS not defined
 #endif
 
-class SwitchPlugin : public PluginComponent, public MQTTComponent {
+class SwitchPlugin : public PluginComponent, public MQTTComponent, public WebUIInterface {
 public:
     SwitchPlugin();
 
@@ -70,6 +71,18 @@ public:
     }
     virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
 
+// WebUIInterface
+public:
+    virtual bool hasWebUI() const override {
+        return true;
+    }
+    virtual void createWebUI(WebUI &webUI) override;
+    virtual WebUIInterface *getWebUIInterface() override {
+        return this;
+    }
+
+    virtual void getValues(JsonArray &array);
+    virtual void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState);
 
 // MQTTComponent
 public:
@@ -99,6 +112,7 @@ private:
 private:
     using SwitchConfig = KFCConfigurationClasses::Plugins::IOTSwitch::Switch_t;
     using SwitchStateEnum = KFCConfigurationClasses::Plugins::IOTSwitch::StateEnum_t;
+    using WebUIEnum = KFCConfigurationClasses::Plugins::IOTSwitch::WebUIEnum_t;
 
     std::array<String, IOT_SWITCH_CHANNEL_NUM> _names;
     std::array<SwitchConfig, IOT_SWITCH_CHANNEL_NUM> _configs;

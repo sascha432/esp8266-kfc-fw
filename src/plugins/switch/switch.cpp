@@ -8,6 +8,8 @@
 #include <KFCForms.h>
 #include <ESPAsyncWebServer.h>
 #include <EventTimer.h>
+#include <StreamString.h>
+#include <WebUISocket.h>
 #include "PluginComponent.h"
 #include "plugins.h"
 #include "progmem_data.h"
@@ -90,6 +92,11 @@ void SwitchPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &for
     states.emplace_back(String(SwitchStateEnum::ON), FSPGM(On));
     states.emplace_back(String(SwitchStateEnum::RESTORE), F("Restore Last State"));
 
+    FormUI::ItemsList webUI;
+    webUI.emplace_back(String(WebUIEnum::NONE), F("None"));
+    webUI.emplace_back(String(WebUIEnum::HIDE), F("Hide"));
+    webUI.emplace_back(String(WebUIEnum::NEW_ROW), F("New row after switch"));
+
     for (size_t i = 0; i < _pins.size(); i++) {
 
         FormGroup *group = nullptr;
@@ -107,6 +114,11 @@ void SwitchPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &for
             return false;
         }, FormField::InputFieldType::SELECT)->setFormUI((new FormUI(FormUI::SELECT, F("Default State")))->addItems(states));
 
+        form.add<WebUIEnum>(PrintString(F("webui[%u]"), i), _configs[i].webUI, [this, i](WebUIEnum webUI, FormField &, bool) {
+            _configs[i].webUI = webUI;
+            return false;
+        }, FormField::InputFieldType::SELECT)->setFormUI((new FormUI(FormUI::SELECT, F("WebUI")))->addItems(webUI));
+
         if (group) {
             group->end();
         }
@@ -119,10 +131,62 @@ void SwitchPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &for
             return true;
         }
         return false;
-
     });
 
     form.finalize();
+}
+
+void SwitchPlugin::createWebUI(WebUI &webUI)
+{
+    auto row = &webUI.addRow();
+    row->setExtraClass(F("title"));
+    row->addGroup(F("Switch"), false);
+
+    row = &webUI.addRow();
+    for (size_t i = 0; i < _pins.size(); i++) {
+        if (_configs[i].webUI != WebUIEnum::HIDE) {
+            PrintString name;
+            if (_names[i].length()) {
+                name = _names[i];
+            }
+            else {
+                name = PrintString(F("Channel %u"), i);
+            }
+            row->addSwitch(PrintString(F("switch_%u"), i), name, true, true);
+        }
+        if (_configs[i].webUI == WebUIEnum::NEW_ROW) {
+            row = &webUI.addRow();
+        }
+    }
+
+}
+
+void SwitchPlugin::getValues(JsonArray &array)
+{
+    _debug_println();
+
+    auto obj = &array.addObject(2);
+    for (size_t i = 0; i < _pins.size(); i++) {
+        obj->add(JJ(id), PrintString(F("switch_%u"), i));
+        obj->add(JJ(value), (int)_getChannel(i));
+        obj->add(JJ(state), true);
+    }
+}
+
+void SwitchPlugin::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
+{
+    _debug_printf_P(PSTR("id=%s value=%s hasValue=%u state=%u hasState=%u\n"), id.c_str(), value.c_str(), hasValue, state, hasState);
+
+    auto ptr = id.c_str();
+    if (!strncmp_P(ptr, PSTR("switch_"), 7) && hasValue) {
+        bool state = value.toInt();
+        ptr += 7;
+        uint8_t channel = (uint8_t)atoi(ptr);
+        if (channel <_pins.size()) {
+            _setChannel(channel, state);
+            _publishState(MQTTClient::getClient(), channel);
+        }
+    }
 }
 
 void SwitchPlugin::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector)
@@ -234,5 +298,26 @@ void SwitchPlugin::_publishState(MQTTClient *client, int8_t channel)
                 client->publish(MQTTClient::formatTopic(i, FSPGM(mqtt_switch_state)), qos, true, _getChannel(i) ? FSPGM(1) : FSPGM(0));
             }
         }
+    }
+
+    JsonUnnamedObject json(2);
+    json.add(JJ(type), JJ(ue));
+    auto &events = json.addArray(JJ(events));
+    JsonUnnamedObject *obj;
+    for (size_t i = 0; i < _pins.size(); i++) {
+        if (channel == -1 || (uint8_t)channel == i) {
+            obj = &events.addObject(2);
+            obj->add(JJ(id), PrintString(F("switch_%u"), i));
+            obj->add(JJ(value), (int)_getChannel(i));
+            obj->add(JJ(state), true);
+        }
+    }
+    if (events.size()) {
+        auto buffer = std::shared_ptr<StreamString>(new StreamString());
+        json.printTo(*buffer);
+
+        LoopFunctions::callOnce([this, buffer]() {
+            WsClient::broadcast(WsWebUISocket::getWsWebUI(), WsWebUISocket::getSender(), buffer->c_str(), buffer->length());
+        });
     }
 }

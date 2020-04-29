@@ -99,7 +99,7 @@ Support for native WebUI and MQTT.
 ### Switch
 
 Plugin for relays and other devices connected to GPIO pins, for example Sonoff basic.
-Support for MQTT.
+Support for native WebUI and MQTT.
 
 ### Clock
 

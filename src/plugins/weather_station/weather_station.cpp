@@ -196,11 +196,6 @@ void WeatherStationPlugin::setup(PluginSetupMode_t mode)
 
     _weatherApi.setAPIKey(WeatherStation::getApiKey());
     _weatherApi.setQuery(WeatherStation::getQueryString());
-    _getWeatherInfo([this](bool status) {
-        if (_currentScreen == MAIN) {
-            _draw();
-        }
-    });
 
     _setScreen(MAIN); // TODO add config options for initial screen
     _draw();
@@ -375,15 +370,17 @@ WeatherStationPlugin &WeatherStationPlugin::_getInstance()
 
 void WeatherStationPlugin::createWebUI(WebUI &webUI)
 {
-    if (_config.show_webui) {
-        auto row = &webUI.addRow();
-        row->setExtraClass(JJ(title));
-        row->addGroup(F("Weather Station"), false);
+    auto row = &webUI.addRow();
+    row->setExtraClass(JJ(title));
+    row->addGroup(F("Weather Station"), false);
 
+    row = &webUI.addRow();
+    row->addSlider(F("bl_brightness"), F("Backlight Brightness"), 0, 1023);
+
+    if (_config.show_webui) {
         row = &webUI.addRow();
         row->addScreen(FSPGM(weather_station_webui_id), _canvas.width(), _canvas.height());
    }
-
 }
 
 
@@ -395,6 +392,11 @@ void WeatherStationPlugin::createWebUI(WebUI &webUI)
 void WeatherStationPlugin::getValues(JsonArray &array)
 {
     _debug_printf_P(PSTR("WeatherStationPlugin::getValues()\n"));
+
+    auto obj = &array.addObject(2);
+    obj->add(JJ(id), F("bl_brightness"));
+    obj->add(JJ(value), _backlightLevel);
+
     LoopFunctions::callOnce([this]() {
         _draw();
     });
@@ -403,12 +405,19 @@ void WeatherStationPlugin::getValues(JsonArray &array)
 void WeatherStationPlugin::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
 {
     _debug_printf_P(PSTR("WeatherStationPlugin::setValue()\n"));
+
+    if (String_equals(id, F("bl_brightness"))) {
+        if (hasValue) {
+            int level =  value.toInt();
+            _fadeBacklight(_backlightLevel, level);
+            _backlightLevel = level;
+        }
+    }
 }
 
 #if AT_MODE_SUPPORTED
 
 #include "at_mode.h"
-// #include <Adafruit_NeoPixel.h>
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WSSET, "WSSET", "<touchpad/timeformat24h/metrics/tft/scroll/stats>,<on/off/options>", "Enable/disable function");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WSBL, "WSBL", "<level=0-1023>", "Set backlight level");
@@ -563,6 +572,7 @@ void WeatherStationPlugin::_httpRequest(const String &url, int timeout, JsonBase
     rest->call(jsonReader, std::max(15, timeout), [this, url, finishedCallback](bool status, const String &error) {
         _debug_printf_P(PSTR("status=%u error=%s url=%s\n"), status, error.c_str(), url.c_str());
         if (!status) {
+            Logger_notice(F("Failed to load %s, error %s"), url.c_str(), error.c_str());
             _weatherError = F("Failed to load data");
         }
         LoopFunctions::callOnce([finishedCallback, status]() {
@@ -676,14 +686,22 @@ void WeatherStationPlugin::_loop()
     }
 #endif
 
-    if (_config.weather_poll_interval && is_millis_diff_greater(_pollTimer, _config.getPollIntervalMillis())) {
-        _debug_println(F("polling weather info"));
-        _pollTimer = millis();
-        _getWeatherInfo([this](bool status) {
-            if (_currentScreen == MAIN) {
-                _draw();
-            }
-        });
+    if (_config.weather_poll_interval && millis() > _pollTimer) {
+        if (config.isWiFiUp()) {
+            _debug_println(F("polling weather info"));
+            _pollTimer = millis() + _config.getPollIntervalMillis();
+            _getWeatherInfo([this](bool status) {
+                if (!status) {
+                    _pollTimer = millis() + 60000;
+                }
+                if (_currentScreen == MAIN) {
+                    _draw();
+                }
+            });
+        }
+        else {
+            _pollTimer = millis() + 1000;
+        }
     }
 
     if (_toggleScreenTimer && millis() > _toggleScreenTimer) {

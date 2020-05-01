@@ -22,7 +22,7 @@ PROVIDE ( _ESPSAVECRASH_start = 0x405fa000 );
 PROVIDE ( _EEPROM_start = 0x405fb000 );
 /* The following symbols are DEPRECATED and will be REMOVED in a future release */
 PROVIDE ( _SPIFFS_start = 0x40500000 );
-PROVIDE ( _SPIFFS_end = 0x405FA000 );
+PROVIDE ( _SPIFFS_end = 0x405F9000 );
 PROVIDE ( _SPIFFS_page = 0x100 );
 PROVIDE ( _SPIFFS_block = 0x2000 );
 

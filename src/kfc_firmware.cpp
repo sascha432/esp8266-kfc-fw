@@ -299,10 +299,6 @@ void setup()
         setup_plugins(resetDetector.hasWakeUpDetected() ? PluginComponent::PLUGIN_SETUP_AUTO_WAKE_UP : PluginComponent::PLUGIN_SETUP_DEFAULT);
 
 #if SPIFFS_SUPPORT
-#if DEBUG_HAVE_SAVECRASH
-        // save and clear crash dump eeprom after
-        SaveCrash::installSafeCrashTimer(10);
-#endif
         // reset crash counter after 3min
         SaveCrash::installRemoveCrashCounter(180);
 #endif

@@ -12,6 +12,7 @@ namespace SaveCrash {
     uint8_t getCrashCounter();
     void removeCrashCounterAndSafeMode();
     void removeCrashCounter();
+    void installRemoveCrashCounter(uint32_t delay_seconds);
 
 };
 
@@ -22,7 +23,6 @@ namespace SaveCrash {
 extern EspSaveCrash espSaveCrash;
 
 namespace SaveCrash {
-    void installRemoveCrashCounter(uint32_t delay_seconds);
     void installSafeCrashTimer(uint32_t delay_seconds);
 }
 

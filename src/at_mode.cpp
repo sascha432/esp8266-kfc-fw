@@ -32,9 +32,6 @@
 #if IOT_DIMMER_MODULE || IOT_ATOMIC_SUN_V2
 #include "plugins/dimmer_module/dimmer_base.h"
 #endif
-#if DEBUG_HAVE_SAVECRASH
-#include <EspSaveCrash.h>
-#endif
 
 #if DEBUG_AT_MODE
 #include <debug_helper_enable.h>
@@ -211,11 +208,6 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LED, "LED", "<slow,fast,flicker,off,solid,
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(RTC, "RTC", "[<set>]", "Set RTC time", "Display RTC time");
 #endif
 
-#if DEBUG_HAVE_SAVECRASH
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(SAVECRASHC, "SAVECRASHC", "Clear crash memory");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(SAVECRASHP, "SAVECRASHP", "Print saved crash details");
-#endif
-
 #if DEBUG
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(FSM, "FSM", "Display FS mapping");
@@ -280,11 +272,6 @@ void at_mode_help_commands()
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(REM), name);
 #if RTC_SUPPORT
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(RTC), name);
-#endif
-
-#if DEBUG_HAVE_SAVECRASH
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SAVECRASHC), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SAVECRASHP), name);
 #endif
 
 #if DEBUG
@@ -1107,15 +1094,6 @@ void at_mode_serial_handle_event(String &commandString)
                     }
                 }
             }
-#if DEBUG_HAVE_SAVECRASH
-            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(SAVECRASHC))) {
-                espSaveCrash.clear();
-                args.print(F("Cleared"));
-            }
-            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(SAVECRASHP))) {
-                espSaveCrash.print(output);
-            }
-#endif
 #if DEBUG
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(FSM))) {
                 // Mappings::getInstance().dump(output);

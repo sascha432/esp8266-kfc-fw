@@ -2,9 +2,9 @@
  * Author: sascha_lammers@gmx.de
  */
 
-
 #include <Arduino_compat.h>
 #include <reset_detector.h>
+#include <ListDir.h>
 #include "progmem_data.h"
 #include "SaveCrash.h"
 
@@ -41,14 +41,6 @@ namespace SaveCrash {
 #endif
     }
 
-}
-
-#if DEBUG_HAVE_SAVECRASH
-
-EspSaveCrash espSaveCrash;
-
-namespace SaveCrash {
-
     void installRemoveCrashCounter(uint32_t delay_seconds)
     {
         Scheduler.addTimer(delay_seconds * 1000UL, false, [](EventScheduler::TimerPtr timer) {
@@ -56,6 +48,14 @@ namespace SaveCrash {
             resetDetector.clearCounter();
         });
     }
+
+}
+
+#if DEBUG_HAVE_SAVECRASH
+
+EspSaveCrash espSaveCrash;
+
+namespace SaveCrash {
 
     void installSafeCrashTimer(uint32_t delay_seconds)
     {
@@ -78,6 +78,86 @@ namespace SaveCrash {
             }
         });
     }
+
 }
+
+#if AT_MODE_SUPPORTED
+
+#include "at_mode.h"
+
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(SAVECRASHC, "SAVECRASHC", "Clear crash memory");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(SAVECRASHP, "SAVECRASHP", "Print saved crash details");
+
+#endif
+
+class SaveCrashPlugin : public PluginComponent {
+// PluginComponent
+public:
+    SaveCrashPlugin() {
+        REGISTER_PLUGIN(this);
+    }
+
+    virtual PGM_P getName() const {
+        return PSTR("savecrash");
+    }
+    virtual const __FlashStringHelper *getFriendlyName() const {
+        return F("EspSaveCrash");
+    }
+    virtual PluginPriorityEnum_t getSetupPriority() const override {
+        return MAX_PRIORITY;
+    }
+
+#if SPIFFS_SUPPORT
+    virtual void setup(PluginSetupMode_t mode) {
+        // save and clear crash dump eeprom after
+        SaveCrash::installSafeCrashTimer(10);
+    }
+#endif
+
+    virtual bool hasStatus() const override {
+        return true;
+    }
+    virtual void getStatus(Print &output) override {
+        int counter = espSaveCrash.count();
+#if SPIFFS_SUPPORT
+        ListDir dir(String('/'));
+        while(dir.next()) {
+            if (dir.isFile() && dir.fileName().startsWith(F("/crash."))) {
+                counter++;
+            }
+        }
+#endif
+        output.printf_P(PSTR("Crash reports: %u"), counter);
+    }
+
+public:
+#if AT_MODE_SUPPORTED
+    virtual bool hasAtMode() const override {
+        return true;
+    }
+
+    virtual void atModeHelpGenerator() override {
+        auto name = getName();
+        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SAVECRASHC), name);
+        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SAVECRASHP), name);
+    }
+
+    virtual bool atModeHandler(AtModeArgs &args) override {
+        if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(SAVECRASHC))) {
+            espSaveCrash.clear();
+            args.print(F("Cleared"));
+            return true;
+        }
+        else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(SAVECRASHP))) {
+            espSaveCrash.print(args.getStream());
+            return true;
+        }
+        return false;
+    }
+
+#endif
+};
+
+static SaveCrashPlugin plugin;
 
 #endif

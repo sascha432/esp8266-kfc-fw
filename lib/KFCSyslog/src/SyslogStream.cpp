@@ -30,6 +30,7 @@ SyslogStream::SyslogStream(SyslogFilter* filter, SyslogQueue* queue) : _paramete
 SyslogStream::~SyslogStream() {
     if (_queue) {
         delete _queue;
+        _queue = nullptr;
     }
     if (_filter) {
         delete _filter;

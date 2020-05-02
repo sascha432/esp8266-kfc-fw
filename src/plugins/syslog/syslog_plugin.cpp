@@ -73,6 +73,7 @@ static void syslog_deliver(uint16_t timeout) {
             syslog->deliverQueue();
             delay(1);
         }
+        syslog->getQueue()->clear();
     }
 }
 

@@ -5,7 +5,7 @@
 #pragma once
 
 #ifndef DEBUG_IOT_SWITCH
-#define DEBUG_IOT_SWITCH                    1
+#define DEBUG_IOT_SWITCH                            0
 #endif
 
 #include <Arduino_compat.h>

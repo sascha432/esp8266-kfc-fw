@@ -13,7 +13,8 @@
 #include <debug_helper_disable.h>
 #endif
 
-SyslogTCP::SyslogTCP(SyslogParameter& parameter, const String &host, uint16_t port, bool useTLS) : Syslog(parameter) {
+SyslogTCP::SyslogTCP(SyslogParameter& parameter, const String &host, uint16_t port, bool useTLS) : Syslog(parameter)
+{
     _debug_printf_P(PSTR("SyslogTCP::SyslogTCP %s:%d TLS %d\n"), host.c_str(), port, useTLS);
 
     _host = host;
@@ -28,6 +29,18 @@ SyslogTCP::SyslogTCP(SyslogParameter& parameter, const String &host, uint16_t po
     _client.onAck(_onAck, this);
     _client.onError(_onError, this);
     _client.onTimeout(_onTimeout, this);
+}
+
+SyslogTCP::~SyslogTCP()
+{
+    _queue.isSending = false;
+    _client.onConnect(nullptr, nullptr);
+    _client.onPoll(nullptr, nullptr);
+    _client.onDisconnect(nullptr, nullptr);
+    _client.onAck(nullptr, nullptr);
+    _client.onError(nullptr, nullptr);
+    _client.onTimeout(nullptr, nullptr);
+    _client.abort();
 }
 
 void SyslogTCP::__onPoll(AsyncClient *client) {

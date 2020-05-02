@@ -92,6 +92,7 @@ public:
     typedef std::function<void(bool success)> Callback_t;
 
     Syslog(SyslogParameter &parameter);
+    virtual ~Syslog() {}
 
     virtual void transmit(const String &message, Callback_t callback);
 

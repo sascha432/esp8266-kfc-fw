@@ -22,14 +22,6 @@
 #define MQTT_SET_LAST_WILL                  1
 #endif
 
-// run auto discovery client on device and provide additional AT commands. needs a lot memory when active
-// Enabled/disable with +MMQTAD=1/0
-#ifndef MQTT_AUTO_DISCOVERY_CLIENT
-#if MQTT_AUTO_DISCOVERY && AT_MODE_SUPPORTED
-#define MQTT_AUTO_DISCOVERY_CLIENT          0
-#endif
-#endif
-
 // enable callbacks for QoS. onSubscribe(), onPublish() and onUnsubscribe()
 #ifndef MQTT_USE_PACKET_CALLBACKS
 #define MQTT_USE_PACKET_CALLBACKS           0
@@ -160,10 +152,9 @@ public:
     static void setupInstance();
     static void deleteInstance();
 
-    static String connectionDetailsString();
-    static String connectionStatusString();
-    static void getStatus(Print &output);
-    static void handleWiFiEvents(uint8_t event, void *payload);
+    inline static void handleWiFiEvents(uint8_t event, void *payload) {
+        _mqttClient->_handleWiFiEvents(event, payload);
+    }
 
     inline static MQTTClient *getClient() {
         return _mqttClient;
@@ -176,6 +167,10 @@ public:
         return config._H_GET(Config().mqtt.config).qos;
     }
 
+    String connectionDetailsString();
+    String connectionStatusString();
+
+    void _handleWiFiEvents(uint8_t event, void *payload);
     void onConnect(bool sessionPresent);
     void onDisconnect(AsyncMqttClientDisconnectReason reason);
     void onMessageRaw(char *topic, char *payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total);
@@ -207,16 +202,15 @@ private:
     // stop timer and clear queue
     void _clearQueue();
     // process queue
-    void _queueTimerCallback(EventScheduler::TimerPtr timer);
+    void _queueTimerCallback();
 
     MQTTQueueVector _queue;
     EventScheduler::Timer _queueTimer;
 
-public:
-    static void queueTimerCallback(EventScheduler::TimerPtr timer);
-
 private:
     String _host;
+    String _username;
+    String _password;
     Config_MQTT::config_t _config;
     AsyncMqttClient *_client;
     EventScheduler::Timer _timer;

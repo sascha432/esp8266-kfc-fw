@@ -50,6 +50,8 @@ MQTTClient::MQTTClient() : _client(nullptr), _useNodeId(false), _lastWillPayload
     _debug_println();
 
     _host = Config_MQTT::getHost();
+    _username = Config_MQTT::getUsername();
+    _password = Config_MQTT::getPassword();
     _config = Config_MQTT::getConfig();
 
     _setupClient();
@@ -100,27 +102,27 @@ void MQTTClient::_setupClient()
         }
     }
 #endif
-    _client->setCredentials(Config_MQTT::getUsername(), Config_MQTT::getPassword());
+    _client->setCredentials(_username.c_str(), _password.c_str());
     _client->setKeepAlive(_config.keepalive);
 
     _client->onConnect([this](bool sessionPresent) {
-        this->onConnect(sessionPresent);
+        onConnect(sessionPresent);
     });
     _client->onDisconnect([this](AsyncMqttClientDisconnectReason reason) {
-        this->onDisconnect(reason);
+        onDisconnect(reason);
     });
     _client->onMessage([this](char *topic, char *payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total) {
-        this->onMessageRaw(topic, payload, properties, len, index, total);
+        onMessageRaw(topic, payload, properties, len, index, total);
     });
 #if MQTT_USE_PACKET_CALLBACKS
     _client->onPublish([this](uint16_t packetId) {
-        this->onPublish(packetId);
+        onPublish(packetId);
     });
     _client->onSubscribe([this](uint16_t packetId, uint8_t qos) {
-        this->onSubscribe(packetId, qos);
+        onSubscribe(packetId, qos);
     });
     _client->onUnsubscribe([this](uint16_t packetId) {
-        this->onUnsubscribe(packetId);
+        onUnsubscribe(packetId);
     });
 #endif
 }
@@ -184,17 +186,6 @@ String MQTTClient::formatTopic(uint8_t num, const __FlashStringHelper *format, .
     // _debug_printf_P(PSTR("MQTTClient::formatTopic(): number=%u,topic=%s\n"), num, topic.c_str());
     return topic;
 }
-
-// String MQTTClient::formatTopic(uint8_t num, const char *format, ...) {
-//     PrintString topic = config._H_STR(Config().mqtt_topic);
-//     va_list arg;
-
-//     va_start(arg, format);
-//     topic.vprintf(format, arg);
-//     va_end(arg);
-//     topic.replace(F("${device_name}"), getComponentName(num));
-//     return topic;
-// }
 
 bool MQTTClient::isConnected() const
 {
@@ -268,6 +259,38 @@ void MQTTClient::autoReconnect(uint32_t timeout)
         // increase timeout on each reconnect attempt
         setAutoReconnect(timeout + timeout * 0.3);
     }
+}
+
+String MQTTClient::connectionDetailsString()
+{
+    auto message = PrintString(F("%s@%s:%u"), _username.length() ? _username.c_str() : SPGM(Anonymous), _host.c_str(), _config.port);
+#if ASYNC_TCP_SSL_ENABLED
+    if (Config_MQTT::getMode() == MQTT_MODE_SECURE) {
+        message += F(", Secure MQTT");
+    }
+#endif
+    return message;
+}
+
+String MQTTClient::connectionStatusString()
+{
+    String message = connectionDetailsString();
+    if (isConnected()) {
+        message += F(", connected, ");
+    } else {
+        message += F(", disconnected, ");
+    }
+    message += F("topic ");
+
+    message += formatTopic(-1, FSPGM(empty));
+#if MQTT_AUTO_DISCOVERY
+    if (config._H_GET(Config().flags).mqttAutoDiscoveryEnabled) {
+        message += F(", discovery prefix '");
+        message += Config_MQTT::getDiscoveryPrefix();
+        message += '\'';
+    }
+#endif
+    return message;
 }
 
 void MQTTClient::onConnect(bool sessionPresent)
@@ -410,6 +433,7 @@ void MQTTClient::onMessageRaw(char *topic, char *payload, AsyncMqttClientMessage
     } else if (index > 0) {
         if (index != _buffer.length()) {
             _debug_printf(PSTR("discarding message, index=%u buffer=%u\n"), index, _buffer.length());
+            _buffer.clear();
             return;
         }
         _buffer.write(payload, len);
@@ -503,74 +527,18 @@ const __FlashStringHelper *MQTTClient::_reasonToString(AsyncMqttClientDisconnect
     return F("Unknown");
 }
 
-String MQTTClient::connectionDetailsString()
+void MQTTClient::_handleWiFiEvents(uint8_t event, void *payload)
 {
-    auto username = Config_MQTT::getUsername();
-    auto message = PrintString(F("%s@%s:%u"), *username ? username : SPGM(Anonymous), _mqttClient ? _mqttClient->_host.c_str() : PSTR("null"), Config_MQTT::getConfig().port);
-#if ASYNC_TCP_SSL_ENABLED
-    if (Config_MQTT::getMode() == MQTT_MODE_SECURE) {
-        message += F(", Secure MQTT");
-    }
-#endif
-    return message;
-}
-
-String MQTTClient::connectionStatusString()
-{
-    String message = connectionDetailsString();
-    if (getClient() && getClient()->isConnected()) {
-        message += F(", connected, ");
-    } else {
-        message += F(", disconnected, ");
-    }
-    message += F("topic ");
-
-    message += formatTopic(-1, FSPGM(empty));
-#if MQTT_AUTO_DISCOVERY
-    if (config._H_GET(Config().flags).mqttAutoDiscoveryEnabled) {
-        message += F(", discovery prefix '");
-        message += Config_MQTT::getDiscoveryPrefix();
-        message += '\'';
-    }
-#endif
-    return message;
-}
-
-void MQTTClient::getStatus(Print &out)
-{
-    if (getClient()) {
-        out.print(connectionStatusString());
-        out.print(F(HTML_S(br)));
-        // auto &lwt = mqtt_session->getWill();
-        // out.printf_P(PSTR("Last will: %s, qos %d, retain %s, available %s, not available %s" HTML_S(br) HTML_S(br) "Subscribed to:" HTML_S(br)), lwt.topic.c_str(), lwt.qos, lwt.retain ? "yes" : "no", lwt.available.c_str(), lwt.not_available.c_str());
-        // for(auto &topic: mqtt_session->getTopics()) {
-        //     out.print(topic.topic);
-        //     out.printf_P(PSTR("<%u>"), topic.qos & ~0xc0);
-        //     out.print(topic.qos & 0x080 ? F(" waiting for ack") : topic.qos & 0x040 ? F(" removal pending") : F(" acknowledged"));
-        //     out.print(F(HTML_S(br)));
-        // }
-        // out.printf_P(PSTR(HTML_S(br) "Published/Acknowledged: %d/%d " HTML_S(br) "Received: %d " HTML_S(br)), mqtt_session->getPublished(), mqtt_session->getPublishedAck(), mqtt_session->getReceived());
-    }
-    else {
-        out.print(FSPGM(Disabled));
-    }
-}
-
-void MQTTClient::handleWiFiEvents(uint8_t event, void *payload)
-{
-    auto client = getClient();
-    _debug_printf_P(PSTR("event=%d payload=%p client=%p connected=%d\n"), event, payload, client, client ? client->isConnected() : false);
-    if (client) {
-        if (event == WiFiCallbacks::EventEnum_t::CONNECTED) {
-            if (!client->isConnected()) {
-                client->setAutoReconnect(MQTTClient::DEFAULT_RECONNECT_TIMEOUT);
-                client->connect();
-            }
-        } else if (event == WiFiCallbacks::EventEnum_t::DISCONNECTED) {
-            if (client->isConnected()) {
-                client->setAutoReconnect(0);
-                client->disconnect(true);
-            }
+    _debug_printf_P(PSTR("event=%d payload=%p connected=%d\n"), event, payload, isConnected());
+    if (event == WiFiCallbacks::EventEnum_t::CONNECTED) {
+        if (!isConnected()) {
+            setAutoReconnect(MQTTClient::DEFAULT_RECONNECT_TIMEOUT);
+            connect();
+        }
+    } else if (event == WiFiCallbacks::EventEnum_t::DISCONNECTED) {
+        if (isConnected()) {
+            setAutoReconnect(0);
+            disconnect(true);
         }
     }
 }
@@ -580,10 +548,12 @@ void MQTTClient::_addQueue(MQTTQueueEnum_t type, MQTTComponent *component, const
     _debug_printf_P(PSTR("type=%s topic=%s\n"), type.toString().c_str(), topic.c_str());
 
     _queue.emplace_back(type, component, topic, qos, retain, payload);
-    _queueTimer.add(250, 20, MQTTClient::queueTimerCallback); // retry 20 times x 0.25s = 5s
+    _queueTimer.add(250, 20, [this](EventScheduler::TimerPtr timer) {
+        _queueTimerCallback();
+    }); // retry 20 times x 0.25s = 5s
 }
 
-void MQTTClient::_queueTimerCallback(EventScheduler::TimerPtr timer)
+void MQTTClient::_queueTimerCallback()
 {
     // process queue
     while(_queue.size()) {
@@ -609,12 +579,6 @@ void MQTTClient::_queueTimerCallback(EventScheduler::TimerPtr timer)
 
     _debug_println(F("queue done"));
     _queueTimer.remove();
-}
-
-void MQTTClient::queueTimerCallback(EventScheduler::TimerPtr timer)
-{
-    DEBUG_ASSERT(getClient() != nullptr);
-    getClient()->_queueTimerCallback(timer);
 }
 
 void MQTTClient::_clearQueue()
@@ -691,7 +655,23 @@ void MQTTPlugin::restart()
 
 void MQTTPlugin::getStatus(Print &output)
 {
-    MQTTClient::getStatus(output);
+    auto client = MQTTClient::getClient();
+    if (client) {
+        output.print(client->connectionStatusString());
+        output.print(F(HTML_S(br)));
+        // auto &lwt = mqtt_session->getWill();
+        // out.printf_P(PSTR("Last will: %s, qos %d, retain %s, available %s, not available %s" HTML_S(br) HTML_S(br) "Subscribed to:" HTML_S(br)), lwt.topic.c_str(), lwt.qos, lwt.retain ? "yes" : "no", lwt.available.c_str(), lwt.not_available.c_str());
+        // for(auto &topic: mqtt_session->getTopics()) {
+        //     out.print(topic.topic);
+        //     out.printf_P(PSTR("<%u>"), topic.qos & ~0xc0);
+        //     out.print(topic.qos & 0x080 ? F(" waiting for ack") : topic.qos & 0x040 ? F(" removal pending") : F(" acknowledged"));
+        //     out.print(F(HTML_S(br)));
+        // }
+        // out.printf_P(PSTR(HTML_S(br) "Published/Acknowledged: %d/%d " HTML_S(br) "Received: %d " HTML_S(br)), mqtt_session->getPublished(), mqtt_session->getPublishedAck(), mqtt_session->getReceived());
+    }
+    else {
+        output.print(FSPGM(Disabled));
+    }
 }
 
 void MQTTPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
@@ -746,92 +726,35 @@ void MQTTPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(MQTT, "MQTT", "<connect|disconnect|force-disconnect|secure|unsecure|disable>", "Connect or disconnect from server", "Display MQTT status");
 
-#if MQTT_AUTO_DISCOVERY_CLIENT
-
-#include "mqtt_auto_discovery_client.h"
-#include <JsonCallbackReader.h>
-#include <JsonVar.h>
-#include <BufferStream.h>
-
-#if LOGGER
-#include "logger_stream.h"
-#endif
-
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(MQTTAD, "MQTTAD", "<1=enable|0=disable>", "Enable MQTT auto discovery");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(MQTTLAD, "MQTTLAD", "List MQTT auto discovery");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(MQTTPAD, "MQTTPAD", "[<id>][,<parsed|raw>]", "Print auto discovery payload");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(MQTTDAD, "MQTTDAD", "<id>[,<id>,...]", "Delete MQTT auto discovery");
-#endif
-
-#if MQTT_AUTO_DISCOVERY_CLIENT
-
-static bool mqtt_at_mode_is_connected(AtModeArgs &args)
-{
-    if (!MQTTClient::getClient() || !MQTTClient::getClient()->isConnected()) {
-        args.print(F("Client not connected"));
-        return false;
-    }
-    return true;
-}
-
-static bool mqtt_at_mode_auto_discovery(AtModeArgs &args)
-{
-    if (!MQTTAutoDiscovery::isEnabled()) {
-        args.print(F("Auto discovery disabled"));
-        return false;
-    }
-    return true;
-}
-
-static bool mqtt_at_mode_auto_discovery_client(AtModeArgs &args)
-{
-    if (!MQTTAutoDiscoveryClient::getInstance()) {
-        args.print(F("Auto discovery client not running"));
-        return false;
-    }
-    return true;
-}
-
-#endif
-
 void MQTTPlugin::atModeHelpGenerator()
 {
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(MQTT), getName());
-#if MQTT_AUTO_DISCOVERY_CLIENT
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(MQTTAD), getName());
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(MQTTLAD), getName());
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(MQTTPAD), getName());
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(MQTTDAD), getName());
-#endif
 }
 
 bool MQTTPlugin::atModeHandler(AtModeArgs &args)
 {
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(MQTT))) {
+        auto client = MQTTClient::getClient();
         auto &serial = args.getStream();
         if (args.isQueryMode()) {
-            if (MQTTClient::getClient()) {
-                args.print();
-                serial.print(F("status: "));
-                serial.println(MQTTClient::connectionStatusString());
+            if (client) {
+                args.printf_P(PSTR("status: %s"), client->connectionStatusString().c_str());
             } else {
                 serial.println(FSPGM(disabled));
             }
-        } else if (MQTTClient::getClient() && args.requireArgs(1, 1)) {
+        } else if (client && args.requireArgs(1, 1)) {
             auto &client = *MQTTClient::getClient();
-            args.print();
             if (args.isAnyMatchIgnoreCase(0, F("connect,con"))) {
-                serial.print(F("connect: "));
-                serial.println(MQTTClient::connectionStatusString());
+                args.printf_P(PSTR("connect: %s"), client.connectionStatusString().c_str());
                 client.setAutoReconnect(MQTTClient::DEFAULT_RECONNECT_TIMEOUT);
                 client.connect();
             }
             else if (args.isAnyMatchIgnoreCase(0, F("disconnect,dis"))) {
-                serial.println(F("disconnect"));
+                args.print(F("disconnect"));
                 client.disconnect(false);
             }
             else if (args.equalsIgnoreCase(0, F("force-disconnect,fdis"))) {
-                serial.println(F("force disconnect"));
+                args.print(F("force disconnect"));
                 client.setAutoReconnect(0);
                 client.disconnect(true);
             }
@@ -861,117 +784,6 @@ bool MQTTPlugin::atModeHandler(AtModeArgs &args)
         }
         return true;
     }
-#if MQTT_AUTO_DISCOVERY_CLIENT
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(MQTTAD))) {
-        if (args.requireArgs(1, 1) && mqtt_at_mode_is_connected(args) && mqtt_at_mode_auto_discovery(args)) {
-            int state = args.toInt(0);
-            if (state == 0 && MQTTAutoDiscoveryClient::getInstance()) {
-                MQTTAutoDiscoveryClient::deleteInstance();
-                args.ok();
-            }
-            else if (state && !MQTTAutoDiscoveryClient::getInstance()) {
-                args.ok();
-#if LOGGER && 0
-                MQTTAutoDiscoveryClient::createInstance(new LoggerStream()); // we don't care about that memory leak
-#else
-                MQTTAutoDiscoveryClient::createInstance(&serial);
-#endif
-            }
-        }
-        return true;
-    }
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(MQTTLAD))) {
-         if (mqtt_at_mode_auto_discovery(args) && mqtt_at_mode_auto_discovery_client(args)) {
-             for(const auto &devicePtr: MQTTAutoDiscoveryClient::getInstance()->getDiscovery()) {
-                 const auto &device = *devicePtr;
-                 args.printf_P(PSTR("Id=%03u, name='%s' topic='%s' payload=%u model='%*.*s' sw_version='%*.*s' manufacturer='%*.*s'"),
-                    device.id,
-                    device.name.c_str(),
-                    device.topic.c_str(),
-                    device.payload.length(),
-                    device.model.length(), device.model.length(), device.model.getData(),
-                    device.swVersion.length(), device.swVersion.length(), device.swVersion.getData(),
-                    device.manufacturer.length(), device.manufacturer.length(), device.manufacturer.getData()
-                );
-             }
-        }
-        return true;
-    }
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(MQTTPAD))) {
-        if (mqtt_at_mode_auto_discovery(args) && mqtt_at_mode_auto_discovery_client(args)) {
-            uint16_t id = args.toInt(0);
-            auto formatRaw = args.equalsIgnoreCase(1, F("raw"));
-            bool found = false;
-
-            for(const auto &devicePtr: MQTTAutoDiscoveryClient::getInstance()->getDiscovery()) {
-                if (devicePtr->id == id || id == 0) {
-                    auto &serial = args.getStream();
-                    const auto &device = *devicePtr;
-                    found = true;
-                    args.printf_P(PSTR("%s (%u):"), device.name.c_str(), device.id);
-
-                    if (id == 0) {
-                        repeat(78, serial.write(repeat_last_iteration ? '\n' : '-'));
-                    }
-                    if (formatRaw) {
-                        serial.println(device.payload);
-                    }
-                    else {
-                        BufferStream payload;
-                        payload.write(reinterpret_cast<const uint8_t *>(device.payload.c_str()), device.payload.length());
-                        JsonCallbackReader reader(payload, [&serial](const String &key, const String &value, size_t partialLength, JsonBaseReader &json) {
-                            serial.printf_P(PSTR("%s = %s\n"), json.getPath().c_str(), JsonVar::formatValue(value, json.getType()).c_str());
-                            return true;
-                        });
-                        reader.parse();
-                    }
-                    if (id == 0) {
-                        repeat(78, serial.write(repeat_last_iteration ? '\n' : '-'));
-                    }
-                }
-            }
-            if (!found) {
-                if (id) {
-                    args.printf_P(PSTR("Could not find id %u"), id);
-                }
-                else {
-                    args.printf_P(PSTR("+MQTTPAD: No devices found"));
-                }
-            }
-        }
-        return true;
-    }
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(MQTTDAD))) {
-        if (args.requireArgs(1) && mqtt_at_mode_auto_discovery(args) && mqtt_at_mode_auto_discovery_client(args)) {
-            std::vector<uint16_t> ids;
-            ids.reserve(args.size());
-            for(auto arg: args.getArgs()) {
-                ids.push_back(atoi(*arg));
-            }
-            for(const auto &devicePtr: MQTTAutoDiscoveryClient::getInstance()->getDiscovery()) {
-                auto iterator = std::find(ids.begin(), ids.end(), devicePtr->id);
-                if (iterator != ids.end()) {
-                    args.printf_P(PSTR("Sending empty payload to %s"), devicePtr->topic.c_str());
-                    MQTTClient::getClient()->publish(devicePtr->topic, 2, true, emptyString);
-                    ids.erase(iterator);
-                    if (!ids.size()) {
-                        break;
-                    }
-                }
-            }
-            if (ids.size()) {
-                auto &serial = args.getStream();
-                serial.printf_P(PSTR("+MQTTDAD: Could not find: "));
-                for(auto id: ids) {
-                    serial.print(id);
-                    serial.print(' ');
-                }
-                serial.println();
-            }
-         }
-         return true;
-    }
-#endif
     return false;
 }
 

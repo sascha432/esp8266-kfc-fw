@@ -170,7 +170,7 @@ class PlatformIOParser {
     private function resolveVariables(string $lineIn): string
     {
         $line = $lineIn;
-        while (preg_match_all('/\$\{(?:([a-zA-Z0-9_-]+)\.)([a-zA-Z0-9_-]+)\}/', $line, $out)) {
+        while (preg_match_all('/\$\{(?:([a-zA-Z0-9_:-]+)\.)([a-zA-Z0-9_-]+)\}/', $line, $out)) {
 
             foreach($out[0] as $num => $var) {
                 $env = $out[1][$num];

@@ -165,8 +165,8 @@ void SwitchPlugin::getValues(JsonArray &array)
 {
     _debug_println();
 
-    auto obj = &array.addObject(2);
     for (size_t i = 0; i < _pins.size(); i++) {
+        auto obj = &array.addObject(2);
         obj->add(JJ(id), PrintString(F("switch_%u"), i));
         obj->add(JJ(value), (int)_getChannel(i));
         obj->add(JJ(state), true);

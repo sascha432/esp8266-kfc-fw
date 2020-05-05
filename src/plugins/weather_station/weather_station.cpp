@@ -302,8 +302,13 @@ bool WeatherStationPlugin::hasStatus() const
 
 void WeatherStationPlugin::getStatus(Print &output)
 {
-    _debug_printf_P(PSTR("WeatherStationPlugin::getStatus()\n"));
-    output.printf_P(PSTR("Weather Station Plugin"));
+    output.printf_P(PSTR("%ux%u TFT"), TFT_WIDTH, TFT_HEIGHT);
+#if IOT_WEATHER_STATION_WS2812_NUM
+    output.printf_P(PSTR(HTML_S(br) "%ux WS2812 RGB LED"), IOT_WEATHER_STATION_WS2812_NUM);
+#endif
+#if IOT_WEATHER_STATION_HAS_TOUCHPAD
+    output.printf_P(PSTR(HTML_S(br) "MPR121 Touch Pad"));
+#endif
 }
 
 

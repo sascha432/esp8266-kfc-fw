@@ -185,6 +185,20 @@ void AsyncJsonResponse::updateLength()
 }
 
 
+#if ESP32
+
+size_t AsyncMDNSResponse::_fillBuffer(uint8_t *data, size_t len)
+{
+    auto &json = getJsonObject();
+    if (!json.size()) {
+        auto &rows = json.addArray(F("l"));
+        return AsyncJsonResponse::_fillBuffer(data, len);
+    }
+    return 0;
+}
+
+#else
+
 size_t AsyncMDNSResponse::_fillBuffer(uint8_t *data, size_t len)
 {
     if (millis() > _timeout) {
@@ -231,6 +245,7 @@ size_t AsyncMDNSResponse::_fillBuffer(uint8_t *data, size_t len)
     }
 }
 
+#endif
 
 AsyncProgmemFileResponse::AsyncProgmemFileResponse(const String &contentType, const File &file, TemplateDataProvider::ResolveCallback callback) :
     AsyncBaseResponse(false),

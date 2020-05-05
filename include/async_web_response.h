@@ -66,6 +66,23 @@ private:
     JsonBuffer _jsonBuffer;
 };
 
+#if ESP32
+
+class AsyncMDNSResponse : public AsyncJsonResponse {
+public:
+    AsyncMDNSResponse() {
+        _contentLength = 0;
+        _sendContentLength = false;
+        _chunked = true;
+    }
+    ~AsyncMDNSResponse() {
+    }
+
+    virtual size_t _fillBuffer(uint8_t *data, size_t len) override;
+};
+
+#else
+
 class AsyncMDNSResponse : public AsyncJsonResponse {
 public:
     AsyncMDNSResponse(MDNSResponder::hMDNSServiceQuery serviceQuery, MDNSPlugin::ServiceInfoVector *services, int timeout) : _serviceQuery(serviceQuery), _services(services), _timeout(millis() + timeout) {
@@ -85,6 +102,8 @@ private:
     MDNSPlugin::ServiceInfoVector *_services;
     uint32_t _timeout;
 };
+
+#endif
 
 class AsyncProgmemFileResponse : public AsyncBaseResponse {
 public:

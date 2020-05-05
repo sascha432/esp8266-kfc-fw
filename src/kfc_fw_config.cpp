@@ -250,10 +250,12 @@ KFCFWConfiguration::KFCFWConfiguration() : Configuration(CONFIG_EEPROM_OFFSET, C
     _offlineSince = -1UL;
     _wifiUp = -1UL;
     _setupWiFiCallbacks();
+#if DEBUG_HAVE_SAVECRASH
     EspSaveCrash::addCallback([this]() {
         // release all memory in the event of a crash
         discard();
     });
+#endif
 }
 
 KFCFWConfiguration::~KFCFWConfiguration()

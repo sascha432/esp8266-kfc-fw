@@ -38,7 +38,7 @@ Dimmer_Base::Dimmer_Base() :
 Dimmer_Base::~Dimmer_Base()
 {
 #if IOT_DIMMER_MODULE_INTERFACE_UART
-    delete &_wire;
+    delete reinterpret_cast<SerialTwoWire *>(&_wire);
 #endif
 }
 

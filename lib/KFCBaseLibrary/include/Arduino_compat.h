@@ -53,9 +53,9 @@
 
 class __FlashStringHelper;
 
-#define SPGM(name)                              _shared_progmem_string_##name
-#define FSPGM(name)                             reinterpret_cast<const __FlashStringHelper *>(SPGM(name))
-#define PSPGM(name)                             (PGM_P)(SPGM(name))
+#define SPGM(name, ...)                                 _shared_progmem_string_##name
+#define FSPGM(name, ...)                                reinterpret_cast<const __FlashStringHelper *>(SPGM(name))
+#define PSPGM(name, ...)                                (PGM_P)(SPGM(name))
 
 #include "debug_helper.h"
 #include "misc.h"

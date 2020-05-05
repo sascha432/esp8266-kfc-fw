@@ -16,7 +16,7 @@
 #endif
 
 #if SPEED_BOOSTER_ENABLED
-#warning The speed booster causes timing issues and should be deactivated
+#error The speed booster causes timing issues and should be deactivated
 #endif
 
 #if !NTP_CLIENT || !NTP_HAVE_CALLBACKS

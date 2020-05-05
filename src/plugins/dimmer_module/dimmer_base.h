@@ -32,7 +32,6 @@ public:
     static const uint32_t METRICS_DEFAULT_UPDATE_RATE = 60e3;
 
     Dimmer_Base();
-    virtual ~Dimmer_Base();
 
 #if IOT_DIMMER_MODULE_INTERFACE_UART
     static void onData(uint8_t type, const uint8_t *buffer, size_t len);
@@ -107,13 +106,8 @@ protected:
         return _version != DIMMER_DISABLED;
     }
 
-#if DEBUG_IOT_DIMMER_MODULE
     uint8_t _endTransmission();
-#else
-    inline uint8_t _endTransmission() {
-        return _wire.endTransmission();
-    }
-#endif
+
     uint16_t _version;
     uint16_t _vcc;
     float _frequency;
@@ -125,8 +119,7 @@ protected:
     float _onOffFadeTime;
 
 #if IOT_DIMMER_MODULE_INTERFACE_UART
-    HardwareSerial &_serial;
-    SerialTwoWire &_wire;
+    SerialTwoWire _wire;
     bool _wireLocked;
 
     void _onReceive(size_t length);

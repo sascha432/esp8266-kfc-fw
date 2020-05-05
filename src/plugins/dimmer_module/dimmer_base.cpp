@@ -27,19 +27,12 @@
 
 Dimmer_Base::Dimmer_Base() :
 #if IOT_DIMMER_MODULE_INTERFACE_UART
-    _serial(Serial), _wire(*new SerialTwoWire(Serial)), _wireLocked(false)
+    _wire(Serial), _wireLocked(false)
 #else
     _wire(config.initTwoWire())
 #endif
 {
     _version = DIMMER_DISABLED;
-}
-
-Dimmer_Base::~Dimmer_Base()
-{
-#if IOT_DIMMER_MODULE_INTERFACE_UART
-    delete reinterpret_cast<SerialTwoWire *>(&_wire);
-#endif
 }
 
 void Dimmer_Base::_begin()
@@ -135,13 +128,14 @@ void Dimmer_Base::onData(uint8_t type, const uint8_t *buffer, size_t len)
 {
     // _debug_printf_P(PSTR("length=%u\n"), len);
     while(len--) {
+        // _debug_printf_P(PSTR("feed=%u '%c'\n"), *buffer, *buffer);
         dimmer_plugin._wire.feed(*buffer++);
     }
 }
 
 void Dimmer_Base::onReceive(int length)
 {
-    // _debug_printf_P(PSTR("length=%u\n"), len);
+    // _debug_printf_P(PSTR("length=%u\n"), length);
     dimmer_plugin._onReceive(length);
 }
 
@@ -501,12 +495,14 @@ String Dimmer_Base::_getMetricsTopics(uint8_t num) const
 }
 
 
-#if DEBUG_IOT_DIMMER_MODULE
 uint8_t Dimmer_Base::_endTransmission()
 {
+#if DEBUG_IOT_DIMMER_MODULE
     return _debug_print_result(_wire.endTransmission());
-}
+#else
+    return _wire.endTransmission();
 #endif
+}
 
 void Dimmer_Base::getValues(JsonArray &array)
 {

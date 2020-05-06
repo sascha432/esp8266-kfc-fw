@@ -90,7 +90,6 @@ private:
     bool _mqttSplitTopics(String &state, String &set);
     void _mqttSet(const String &topic, int value);
     void _mqttGet(const String &topic, std::function<void(bool status, int)> callback);
-    // bool mqttGet(const String &topic, int &value);
 
 private:
     typedef struct {
@@ -120,11 +119,14 @@ public:
     virtual void getRestUrl(String &url) const;
     virtual void getBearerToken(String &token) const;
 
+private:
+    uint8_t _apiId;
+
 public:
     void executeAction(const Action &action, StatusCallback_t statusCallback);
 
-    void getState(const String &entityId, GetStateCallback_t callback, StatusCallback_t statusCallback);
-    void callService(const String &service, const JsonUnnamedObject &payload, ServiceCallback_t callback, StatusCallback_t statusCallback);
+    void getState(const String &entityId, uint8_t apiId, GetStateCallback_t callback, StatusCallback_t statusCallback);
+    void callService(const String &service, uint8_t apiId, const JsonUnnamedObject &payload, ServiceCallback_t callback, StatusCallback_t statusCallback);
 
     static void _serviceCallback(HassJsonReader::CallService *service, KFCRestAPI::HttpRequest &request, StatusCallback_t statusCallback);
 

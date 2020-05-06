@@ -181,6 +181,7 @@ namespace KFCConfigurationClasses {
                 ActionEnum_t action;
                 uint8_t valuesLen;
                 uint8_t entityLen;
+                uint8_t apiId;
             } ActionHeader_t;
 
             class Action {
@@ -188,7 +189,7 @@ namespace KFCConfigurationClasses {
                 typedef std::vector<int32_t> ValuesVector;
 
                 Action() = default;
-                Action(uint16_t id, ActionEnum_t action, const ValuesVector &values, const String &entityId) : _id(id), _action(action), _values(values), _entityId(entityId) {
+                Action(uint16_t id, uint8_t apiId, ActionEnum_t action, const ValuesVector &values, const String &entityId) : _id(id), _apiId(apiId), _action(action), _values(values), _entityId(entityId) {
                 }
                 bool operator==(ActionEnum_t id) const {
                     return _id == id;
@@ -210,6 +211,12 @@ namespace KFCConfigurationClasses {
                 }
                 void setId(uint16_t id) {
                     _id = id;
+                }
+                uint8_t getApiId() const {
+                    return _apiId;
+                }
+                void setApiId(uint8_t apiId) {
+                    _apiId = apiId;
                 }
                 int32_t getValue(uint8_t num) const {
                     if (num < _values.size()) {
@@ -237,6 +244,7 @@ namespace KFCConfigurationClasses {
                 }
             private:
                 uint16_t _id;
+                uint8_t _apiId;
                 ActionEnum_t _action;
                 ValuesVector _values;
                 String _entityId;
@@ -247,10 +255,10 @@ namespace KFCConfigurationClasses {
             HomeAssistant() {
             }
 
-            static void setApiEndpoint(const String &endpoint);
-            static void setApiToken(const String &token);
-            static const char *getApiEndpoint();
-            static const char *getApiToken();
+            static void setApiEndpoint(const String &endpoint, uint8_t apiId = 0);
+            static void setApiToken(const String &token, uint8_t apiId = 0);
+            static const char *getApiEndpoint(uint8_t apiId = 0);
+            static const char *getApiToken(uint8_t apiId = 0);
             static void getActions(ActionVector &actions);
             static void setActions(ActionVector &actions);
             static Action getAction(uint16_t id);
@@ -258,6 +266,12 @@ namespace KFCConfigurationClasses {
 
             char api_endpoint[128];
             char token[250];
+            char api_endpoint1[128];
+            char token1[250];
+            char api_endpoint2[128];
+            char token2[250];
+            char api_endpoint3[128];
+            char token3[250];
             uint8_t *actions;
         };
 

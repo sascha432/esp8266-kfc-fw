@@ -165,24 +165,78 @@ namespace KFCConfigurationClasses {
     }
 
 
-    void Plugins::HomeAssistant::setApiEndpoint(const String &endpoint)
+    void Plugins::HomeAssistant::setApiEndpoint(const String &endpoint, uint8_t apiId)
     {
-        config._H_SET_STR(MainConfig().plugins.homeassistant.api_endpoint, endpoint);
+        switch(apiId) {
+            case 0:
+                config._H_SET_STR(MainConfig().plugins.homeassistant.api_endpoint, endpoint);
+                break;
+            case 1:
+                config._H_SET_STR(MainConfig().plugins.homeassistant.api_endpoint1, endpoint);
+                break;
+            case 2:
+                config._H_SET_STR(MainConfig().plugins.homeassistant.api_endpoint2, endpoint);
+                break;
+            case 3:
+                config._H_SET_STR(MainConfig().plugins.homeassistant.api_endpoint3, endpoint);
+                break;
+            default:
+                __debugbreak_and_panic_printf_P(PSTR("invalid api_id=%u\n"), apiId);
+        }
     }
 
-    void Plugins::HomeAssistant::setApiToken(const String &token)
+    void Plugins::HomeAssistant::setApiToken(const String &token, uint8_t apiId)
     {
-        config._H_SET_STR(MainConfig().plugins.homeassistant.token, token);
+        switch(apiId) {
+            case 0:
+                config._H_SET_STR(MainConfig().plugins.homeassistant.token, token);
+                break;
+            case 1:
+                config._H_SET_STR(MainConfig().plugins.homeassistant.token1, token);
+                break;
+            case 2:
+                config._H_SET_STR(MainConfig().plugins.homeassistant.token2, token);
+                break;
+            case 3:
+                config._H_SET_STR(MainConfig().plugins.homeassistant.token3, token);
+                break;
+            default:
+                __debugbreak_and_panic_printf_P(PSTR("invalid api_id=%u\n"), apiId);
+        }
     }
 
-    const char *Plugins::HomeAssistant::getApiEndpoint()
+    const char *Plugins::HomeAssistant::getApiEndpoint(uint8_t apiId)
     {
-        return config._H_STR(MainConfig().plugins.homeassistant.api_endpoint);
+        switch(apiId) {
+            case 0:
+                return config._H_STR(MainConfig().plugins.homeassistant.api_endpoint);
+            case 1:
+                return config._H_STR(MainConfig().plugins.homeassistant.api_endpoint1);
+            case 2:
+                return config._H_STR(MainConfig().plugins.homeassistant.api_endpoint2);
+            case 3:
+                return config._H_STR(MainConfig().plugins.homeassistant.api_endpoint3);
+
+        }
+        __debugbreak_and_panic_printf_P(PSTR("invalid api_id=%u\n"), apiId);
+        return nullptr;
     }
 
-    const char *Plugins::HomeAssistant::getApiToken()
+    const char *Plugins::HomeAssistant::getApiToken(uint8_t apiId)
     {
-        return config._H_STR(MainConfig().plugins.homeassistant.token);
+        switch(apiId) {
+            case 0:
+                return config._H_STR(MainConfig().plugins.homeassistant.token);
+            case 1:
+                return config._H_STR(MainConfig().plugins.homeassistant.token1);
+            case 2:
+                return config._H_STR(MainConfig().plugins.homeassistant.token2);
+            case 3:
+                return config._H_STR(MainConfig().plugins.homeassistant.token3);
+
+        }
+        __debugbreak_and_panic_printf_P(PSTR("invalid api_id=%u\n"), apiId);
+        return nullptr;
     }
 
     void Plugins::HomeAssistant::getActions(ActionVector &actions)
@@ -203,7 +257,7 @@ namespace KFCConfigurationClasses {
                 Action::ValuesVector values(header->valuesLen);
                 memcpy(values.data(), data, valuesLen);
                 data += valuesLen;
-                actions.emplace_back(header->id, header->action, values, str);
+                actions.emplace_back(header->id, header->apiId, header->action, values, str);
             }
         }
     }
@@ -218,6 +272,7 @@ namespace KFCConfigurationClasses {
                 header.id = action.getId();
                 header.action = action.getAction();
                 header.valuesLen = action.getNumValues();
+                header.apiId = action.getApiId();
                 buffer.writeObject(header);
                 buffer.write(action.getEntityId());
                 buffer.writeVector(action.getValues());

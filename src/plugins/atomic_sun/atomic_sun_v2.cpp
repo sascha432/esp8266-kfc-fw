@@ -180,14 +180,15 @@ void Driver_4ChDimmer::_createTopics()
         _data.color.set = MQTTClient::formatTopic(num, F("/color/set"));
         _data.color.state = MQTTClient::formatTopic(num, F("/color/state"));
         num++;
-        _data.lockChannels.set = MQTTClient::formatTopic(num, F("/set"));
-        _data.lockChannels.state = MQTTClient::formatTopic(num, F("/state"));
+        _data.lockChannels.set = MQTTClient::formatTopic(num, F("/lock/set"));
+        _data.lockChannels.state = MQTTClient::formatTopic(num, F("/lock/state"));
         num++;
         for(uint8_t i = 0; i < 4; i++) {
-            _data.channels[i].set = MQTTClient::formatTopic(num, F("/set"));
-            _data.channels[i].state = MQTTClient::formatTopic(num, F("/state"));
-            _data.channels[i].brightnessSet = MQTTClient::formatTopic(num, F("/brightness/set"));
-            _data.channels[i].brightnessState = MQTTClient::formatTopic(num, F("/brightness/state"));
+            String channel = '/' + String(i);
+            _data.channels[i].set = MQTTClient::formatTopic(num, FPSTR(String(channel + F("/set")).c_str()));
+            _data.channels[i].state = MQTTClient::formatTopic(num, FPSTR(String(channel + F("/state")).c_str()));
+            _data.channels[i].brightnessSet = MQTTClient::formatTopic(num, FPSTR(String(channel + F("/brightness/set")).c_str()));
+            _data.channels[i].brightnessState = MQTTClient::formatTopic(num, FPSTR(String(channel + F("/brightness/state")).c_str()));
             num++;
         }
     }
@@ -370,11 +371,12 @@ void Driver_4ChDimmer::publishState(MQTTClient *client)
         client = MQTTClient::getClient();
     }
     if (client && client->isConnected()) {
-        client->publish(_data.state.state, _qos, 1, String(_data.state.value));
+        client->publish(_data.state.state, _qos, 1, String(_data.state.value ? 1 : 0));
         client->publish(_data.brightness.state, _qos, 1, String(_data.brightness.value));
-        client->publish(_data.color.state, _qos, 1, String(_data.color.value / 100.0, 2));
+        client->publish(_data.color.state, _qos, 1, String((int)(_data.color.value / 100)));
         for(uint8_t i = 0; i < 4; i++) {
-            client->publish(_data.channels[i].state, _qos, 1, String(_channels[i]));
+            client->publish(_data.channels[i].state, _qos, 1, String(_channels[i] ? 1 : 0));
+            client->publish(_data.channels[i].brightnessState, _qos, 1, String(_channels[i]));
         }
         client->publish(_data.lockChannels.state, _qos, 1, String(_data.lockChannels.value));
 #if IOT_ATOMIC_SUN_CALC_POWER

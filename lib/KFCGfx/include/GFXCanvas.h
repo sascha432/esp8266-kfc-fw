@@ -98,6 +98,7 @@ namespace GFXCanvas {
 
         void clear() {
             if (_buffer) {
+                // debug_printf_P(PSTR("free %p this %p\n"), _buffer, this);
                 free(_buffer);
                 _buffer = nullptr;
             }
@@ -118,7 +119,8 @@ namespace GFXCanvas {
             }
         }
 
-        inline __attribute__((always_inline)) void write(uint8_t data1, uint8_t data2) {
+        inline __attribute__((always_inline)) void write(uint8_t data1, uint8_t data2)
+        {
             if (reserve(_length + 2)) {
                 _buffer[_length++] = data1;
                 _buffer[_length++] = data2;
@@ -129,7 +131,8 @@ namespace GFXCanvas {
             }
         }
 
-        inline __attribute__((always_inline)) void writeWord(uint16_t data) {
+        inline __attribute__((always_inline)) void writeWord(uint16_t data)
+        {
             if (reserve(_length + 2)) {
                 auto ptr = _buffer + _length;
                 *reinterpret_cast<uint16_t *>(ptr) = data;
@@ -137,7 +140,8 @@ namespace GFXCanvas {
             }
         }
 
-        inline __attribute__((always_inline)) void writeByteWord(uint8_t data1, uint16_t data2) {
+        inline __attribute__((always_inline)) void writeByteWord(uint8_t data1, uint16_t data2)
+        {
             if (reserve(_length + 3)) {
                 auto ptr = _buffer + _length;
                 *ptr++ = data1;
@@ -146,7 +150,8 @@ namespace GFXCanvas {
             }
         }
 
-        bool shrink(size_t newSize) {
+        bool shrink(size_t newSize)
+        {
             if (newSize == 0) {
                 newSize = _length;
             }
@@ -157,7 +162,8 @@ namespace GFXCanvas {
             return false;
         }
 
-        inline __attribute__((always_inline)) bool reserve(size_t size) {
+        inline __attribute__((always_inline)) bool reserve(size_t size)
+        {
             if (size > _size) {
                 if (!_changeBuffer(size)) {
                     return false;
@@ -166,7 +172,8 @@ namespace GFXCanvas {
             return true;
         }
 
-        bool _changeBuffer(size_t newSize) {
+        bool _changeBuffer(size_t newSize)
+        {
             if (_alignSize(newSize) != _size) {
                 _size = _alignSize(newSize);
                 if (_size == 0) {
@@ -182,6 +189,7 @@ namespace GFXCanvas {
                     else {
                         _buffer = (uint8_t *)realloc(_buffer, _size);
                     }
+                    // debug_printf_P(PSTR("alloc %p this %p\n"), _buffer, this);
                     if (_buffer == nullptr) {
                         _size = 0;
                         _length = 0;
@@ -198,22 +206,6 @@ namespace GFXCanvas {
         inline __attribute__((always_inline)) void removeContent() {
             _length = 0;
         }
-
-        //void remove(size_t index, size_t count) {
-        //    if (index >= _length) {
-        //        return;
-        //    }
-        //    if (count <= 0) {
-        //        return;
-        //    }
-        //    if (count > _length - index) {
-        //        count = _length - index;
-        //    }
-        //    _length = _length - count;
-        //    if (_length - index) {
-        //        memmove(_buffer + index, _buffer + index + count, _length - index);
-        //    }
-        //}
 
         inline __attribute__((always_inline)) uint16_t _alignSize(size_t size) const {
             return (size + 7) & ~7;
@@ -262,7 +254,6 @@ namespace GFXCanvas {
         inline __attribute__((always_inline)) bool isValid() const {
             return _y != INVALID;
         }
-
 
         inline __attribute__((always_inline)) bool hasWriteFlag() const {
             return _write;

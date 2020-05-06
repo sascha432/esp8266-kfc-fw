@@ -161,9 +161,6 @@ void WSDraw::_drawTime()
 
 void WSDraw::_updateTime()
 {
-    if (_displayMessageTimer.active()) {
-        return;
-    }
     SpeedBooster speedBooster;
     _statsBegin();
 
@@ -419,9 +416,10 @@ bool WSDraw::_isScrolling() const
 
 void WSDraw::_displayMessage(const String &title, const String &message, uint16_t titleColor, uint16_t messageColor, uint32_t timeout)
 {
+    SpeedBooster speedBooster;
     ScrollCanvas::destroy(this);
     _displayMessageTimer.add(timeout * 1000, false, [this](EventScheduler::TimerPtr timer) {
-        _draw();
+        _redraw();
     });
 
     int16_t _top = 16;
@@ -429,7 +427,7 @@ void WSDraw::_displayMessage(const String &title, const String &message, uint16_
     _canvas.fillScreen(COLORS_BACKGROUND);
     _canvas.fillScreenPartial(0, _top, ST77XX_ORANGE);
 
-    _top += 4;
+    _top -= 2;
     // TODO wordwrap
     if (title.length()) {
 
@@ -534,10 +532,13 @@ void WSDraw::_draw()
 
 void WSDraw::_displayScreen(int16_t x, int16_t y, int16_t w, int16_t h)
 {
+    // copy canvas into tft memory
     _tft.startWrite();
     _tft.setAddrWindow(x, y, w, h);
     _canvas.drawInto(_tft, x, y, w, h);
     _tft.endWrite();
+
+    // broadcast to web sockets
     _broadcastCanvas(x, y, w, h);
 }
 

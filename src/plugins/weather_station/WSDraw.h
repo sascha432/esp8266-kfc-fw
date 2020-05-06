@@ -193,6 +193,9 @@ public:
 
     void _displayScreen(int16_t x, int16_t y, int16_t w, int16_t h);
     virtual void _broadcastCanvas(int16_t x, int16_t y, int16_t w, int16_t h);
+    virtual void _redraw() {
+        _draw();
+    }
 
     Adafruit_ST7735& getST7735() {
         return _tft;

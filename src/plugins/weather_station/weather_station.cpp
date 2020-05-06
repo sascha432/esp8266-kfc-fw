@@ -117,7 +117,6 @@ void WeatherStationPlugin::_installWebhooks()
             // display until message has been confirmed
             if (confirm == JsonVar::BooleanValueType::TRUE) {
                 timeout = 0;
-
             }
 
             if (message.length() == 0) {
@@ -402,9 +401,12 @@ void WeatherStationPlugin::getValues(JsonArray &array)
     obj->add(JJ(id), F("bl_brightness"));
     obj->add(JJ(value), _backlightLevel);
 
-    LoopFunctions::callOnce([this]() {
-        _draw();
-    });
+    if (_config.show_webui) {
+        // broadcast entire screen for each new client that connects
+        LoopFunctions::callOnce([this]() {
+            _broadcastCanvas(0, 0, TFT_WIDTH, TFT_HEIGHT);
+        });
+    }
 }
 
 void WeatherStationPlugin::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
@@ -699,9 +701,7 @@ void WeatherStationPlugin::_loop()
                 if (!status) {
                     _pollTimer = millis() + 60000;
                 }
-                if (_currentScreen == MAIN) {
-                    _draw();
-                }
+                _redraw();
             });
         }
         else {
@@ -709,73 +709,52 @@ void WeatherStationPlugin::_loop()
         }
     }
 
-    if (_toggleScreenTimer && millis() > _toggleScreenTimer) {
-        // _debug_printf_P(PSTR("_toggleScreenTimer %lu\n"), _toggleScreenTimer);
-        _setScreen((_currentScreen + 1) % NUM_SCREENS);
-        _draw();
-        return;
-    }
-
-    time_t _time = time(nullptr);
-    // if (is_millis_diff_greater(_updateTimer, 60000)) { // update every 60s
-    //     _draw();
-    //     _updateTimer = millis();
-    // }
-    // else
     if (_currentScreen == TEXT_CLEAR || _currentScreen == TEXT_UPDATE) {
         _draw();
     }
-    else if (_currentScreen < NUM_SCREENS && _lastTime != _time) {
-        _updateCounter++;
-        do {
-            if (/*_currentScreen == ScreenEnum_t::MAIN &&*/ (_updateCounter % 60 == 0)) {
-                // redraw all screens once per minute
-                _draw();
-                break;
-            }
-            else if (_currentScreen == ScreenEnum_t::INDOOR && (_updateCounter % 5 == 0)) {
-                // update indoor section every 5 seconds
-                _updateScreenIndoor();
-            }
-            else if (_currentScreen == ScreenEnum_t::MAIN && (_updateCounter % 5 == 0)) {
-                // update indoor section every 5 seconds
-                _updateWeatherIndoor();
-            }
+    else {
 
-            if (_time - _lastTime > 10) {
-                // time jumped, redraw everything
-                _draw();
-            }
-            else {
-                _updateTime();
-            }
-        } while(false);
+        if (_displayMessageTimer.active()) {
+            return;
+        }
+
+        if (_toggleScreenTimer && millis() > _toggleScreenTimer) {
+            // _debug_printf_P(PSTR("_toggleScreenTimer %lu\n"), _toggleScreenTimer);
+            _setScreen((_currentScreen + 1) % NUM_SCREENS);
+            _draw();
+            return;
+        }
+
+        time_t _time = time(nullptr);
+        if (_currentScreen < NUM_SCREENS && _lastTime != _time) {
+            _updateCounter++;
+            do {
+                if (/*_currentScreen == ScreenEnum_t::MAIN &&*/ (_updateCounter % 60 == 0)) {
+                    // redraw all screens once per minute
+                    _draw();
+                    break;
+                }
+                else if (_currentScreen == ScreenEnum_t::INDOOR && (_updateCounter % 5 == 0)) {
+                    // update indoor section every 5 seconds
+                    _updateScreenIndoor();
+                }
+                else if (_currentScreen == ScreenEnum_t::MAIN && (_updateCounter % 5 == 0)) {
+                    // update indoor section every 5 seconds
+                    _updateWeatherIndoor();
+                }
+
+                if (_time - _lastTime > 10) {
+                    // time jumped, redraw everything
+                    _draw();
+                }
+                else {
+                    _updateTime();
+                }
+            } while(false);
+        }
+
     }
 }
-
-
-// void WeatherStationPlugin::_drawRGBBitmap(int16_t x, int16_t y, uint16_t *pcolors, int16_t w, int16_t h) {
-// #if DEBUG_IOT_WEATHER_STATION
-
-//     static int16_t max_height = 0;
-//     max_height = std::max(max_height, h);
-
-//     // _tft.drawRGBBitmap(x, y, pcolors, w, h);
-//     _broadcastRGBBitmap(x, y, pcolors, w, h);
-
-//     if (_debugDisplayCanvasBorder) {
-//         _debug_printf_P(PSTR("WeatherStationPlugin::_drawRGBBitmap(): x=%d, y=%d, w=%u, h=%u (max. %u)\n"), x, y, w, h, max_height);
-//         uint16_t colors[] = { ST77XX_CYAN, ST77XX_RED, ST77XX_YELLOW, ST77XX_BLUE };
-//         _tft.drawRect(x, y, w, h, colors[y % 4]);
-//     }
-
-// #else
-
-//     _tft.drawRGBBitmap(x, y, pcolors, w, h);
-//     _broadcastRGBBitmap(x, y, pcolors, w, h);
-
-// #endif
-// }
 
 void WeatherStationPlugin::_broadcastCanvas(int16_t x, int16_t y, int16_t w, int16_t h)
 {
@@ -783,7 +762,7 @@ void WeatherStationPlugin::_broadcastCanvas(int16_t x, int16_t y, int16_t w, int
         return;
     }
     auto webSocketUI = WsWebUISocket::getWsWebUI();
-    debug_printf_P(PSTR("x=%d y=%d w=%d h=%d ws=%p empty=%u\n"), x, y, w, h, webSocketUI, webSocketUI->getClients().isEmpty());
+    //_debug_printf_P(PSTR("x=%d y=%d w=%d h=%d ws=%p empty=%u\n"), x, y, w, h, webSocketUI, webSocketUI->getClients().isEmpty());
     if (webSocketUI && !webSocketUI->getClients().isEmpty()) {
         Buffer buffer;
 
@@ -800,8 +779,7 @@ void WeatherStationPlugin::_broadcastCanvas(int16_t x, int16_t y, int16_t w, int
         }
 
         auto wsBuffer = webSocketUI->makeBuffer(buffer.get(), buffer.length());
-        buffer.clear();
-        debug_printf_P(PSTR("buf=%p len=%u\n"), wsBuffer, buffer.length());
+        // _debug_printf_P(PSTR("buf=%p len=%u\n"), wsBuffer, buffer.length());
         if (wsBuffer) {
             wsBuffer->lock();
             for(auto socket: webSocketUI->getClients()) {

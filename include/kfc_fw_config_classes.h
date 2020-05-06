@@ -170,6 +170,10 @@ namespace KFCConfigurationClasses {
                 VOLUME_SET,         // values: volume(0) in %
                 VOLUME_MUTE,
                 VOLUME_UNMUTE,
+                MQTT_SET,
+                MQTT_TOGGLE,
+                MQTT_INCR,
+                MQTT_DECR,
                 __END,
             } ActionEnum_t;
             typedef struct __attribute__packed__ {

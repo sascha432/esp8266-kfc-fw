@@ -279,6 +279,14 @@ namespace KFCConfigurationClasses {
                 return F("Volume Set");
             case VOLUME_UP:
                 return F("Volume Up");
+            case MQTT_SET:
+                return F("MQTT Set");
+            case MQTT_TOGGLE:
+                return F("MQTT Toggle");
+            case MQTT_INCR:
+                return F("MQTT Increase");
+            case MQTT_DECR:
+                return F("MQTT Decrease");
             default:
                 return F("None");
         }

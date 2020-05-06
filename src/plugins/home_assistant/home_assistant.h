@@ -5,16 +5,18 @@
 #pragma once
 
 #include <Arduino_compat.h>
+#include <vector>
+#include <./plugins/mqtt/mqtt_client.h>
 #include "KFCRestApi.h"
 #include "progmem_data.h"
 #include "HassJsonReader.h"
 #include "plugins.h"
 
 #ifndef DEBUG_HOME_ASSISTANT
-#define DEBUG_HOME_ASSISTANT                            0
+#define DEBUG_HOME_ASSISTANT                            1
 #endif
 
-class HassPlugin : public PluginComponent, /*public WebUIInterface, */public KFCRestAPI {
+class HassPlugin : public PluginComponent, /*public WebUIInterface, */public KFCRestAPI, public MQTTComponent {
 // PluginComponent
 public:
     using ActionEnum_t = KFCConfigurationClasses::Plugins::HomeAssistant::ActionEnum_t;
@@ -24,7 +26,7 @@ public:
     typedef std::function<void(HassJsonReader::GetState *state, KFCRestAPI::HttpRequest &request, StatusCallback_t statusCallback)> GetStateCallback_t;
     typedef std::function<void(HassJsonReader::CallService *service, KFCRestAPI::HttpRequest &request, StatusCallback_t statusCallback)> ServiceCallback_t;
 
-    HassPlugin() {
+    HassPlugin() : MQTTComponent(MQTTComponent::ComponentTypeEnum_t::BINARY_SENSOR) {
         REGISTER_PLUGIN(this);
     }
 
@@ -72,6 +74,33 @@ public:
     virtual void atModeHelpGenerator() override;
     virtual bool atModeHandler(AtModeArgs &args) override;
 #endif
+
+// MQTTComponent
+public:
+    virtual void createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector) override {
+    }
+    virtual uint8_t getAutoDiscoveryCount() const override {
+        return 0;
+    }
+
+    virtual void onConnect(MQTTClient *client) override;
+    virtual void onMessage(MQTTClient *client, char *topic, char *payload, size_t len) override;
+
+private:
+    bool _mqttSplitTopics(String &state, String &set);
+    void _mqttSet(const String &topic, int value);
+    void _mqttGet(const String &topic, std::function<void(bool status, int)> callback);
+    // bool mqttGet(const String &topic, int &value);
+
+private:
+    typedef struct {
+        String topic;
+        int value;
+    } TopicValue_t;
+
+    typedef std::vector<TopicValue_t> TopicValueVector;
+
+    TopicValueVector _topics;
 
 // // WebUIInterface
 // public:

@@ -6,6 +6,7 @@
 
 #include <KFCForms.h>
 #include <KFCJson.h>
+#include <LoopFunctions.h>
 #include "kfc_fw_config.h"
 #include "home_assistant.h"
 #include "../include/templates.h"
@@ -194,6 +195,87 @@ bool HassPlugin::atModeHandler(AtModeArgs &args)
 
 #endif
 
+void HassPlugin::onConnect(MQTTClient *client)
+{
+        Plugins::HomeAssistant::ActionVector actions;
+        Plugins::HomeAssistant::getActions(actions);
+        for(auto &action: actions) {
+            switch(action.getAction()) {
+                case ActionEnum_t::MQTT_TOGGLE:
+                case ActionEnum_t::MQTT_INCR:
+                case ActionEnum_t::MQTT_DECR:
+                    {
+                        auto topic = action.getEntityId();
+                        auto pos = topic.indexOf(';');
+                        if (pos != -1) {
+                            topic.remove(pos);
+                            _debug_printf_P(PSTR("subscribe %s\n"), topic.c_str());
+                            client->subscribe(this, topic, client->getDefaultQos());
+                        }
+                    }
+                    break;
+                default:
+                    break;
+            }
+        }
+
+}
+
+void HassPlugin::onMessage(MQTTClient *client, char *topic, char *payload, size_t len)
+{
+    auto iterator = std::find_if(_topics.begin(), _topics.end(), [topic](const TopicValue_t &tv){
+        return tv.topic == topic;
+    });
+    if (iterator == _topics.end()) {
+        _debug_printf_P(PSTR("add=%s value=%u\n"), topic, atoi(payload));
+        _topics.push_back({ topic, atoi(payload) });
+    }
+    else {
+        _debug_printf_P(PSTR("change=%s value=%u\n"), topic, atoi(payload));
+        iterator->value = atoi(payload);
+    }
+}
+
+bool HassPlugin::_mqttSplitTopics(String &state, String &set)
+{
+    auto pos = state.indexOf(';');
+    if (pos != -1) {
+        set = state.substring(pos + 1);
+        state.remove(pos);
+        _debug_printf_P(PSTR("state=%s set=%s\n"), state.c_str(), set.c_str());
+        return true;
+    }
+    return false;
+}
+
+void HassPlugin::_mqttSet(const String &topic, int value)
+{
+    auto client = MQTTClient::getClient();
+    _debug_printf_P(PSTR("client=%p topic=%s value=%u\n"), client, topic.c_str(), value);
+    if (client) {
+        client->publish(topic, client->getDefaultQos(), true, String(value));
+    }
+}
+
+void HassPlugin::_mqttGet(const String &topic, std::function<void(bool, int)> callback)
+{
+    //TODO rewrite for async callback
+    for(int i = 0; i < 200; i++) {
+        auto iterator = std::find_if(_topics.begin(), _topics.end(), [topic](const TopicValue_t &tv){
+            return tv.topic == topic;
+        });
+        _debug_printf_P(PSTR("topic=%s i=%u found=%u\n"), topic.c_str(), i, iterator != _topics.end());
+        if (iterator != _topics.end()) {
+            _debug_printf_P(PSTR("value=%u\n"), iterator->value);
+            callback(true, iterator->value);
+            break;
+        }
+        delay(10);
+    }
+    callback(false, 0);
+}
+
+
 void HassPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
 {
     _debug_printf_P(PSTR("url=%s method=%s\n"), request->url().c_str(), request->methodToString());
@@ -284,7 +366,7 @@ void HassPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
             ->setFormUI((new FormUI(FormUI::TEXT, F("Action")))->setReadOnly());
 
         form.add(F("entity_id"), action.getEntityId(), FormField::InputFieldType::TEXT)
-            ->setFormUI(new FormUI(FormUI::TEXT, F("Entity Id")));
+            ->setFormUI(new FormUI(FormUI::TEXT, (action.getAction() >= ActionEnum_t::MQTT_SET) ? F("MQTT Topic") : F("Entity Id")));
 
         switch(action.getAction()) {
             case ActionEnum_t::SET_BRIGHTNESS:
@@ -317,6 +399,28 @@ void HassPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
                 form.add(F("values[0]"), String(action.getValue(0)), FormField::InputFieldType::TEXT)
                     ->setFormUI((new FormUI(FormUI::TEXT, F("Volume")))->setSuffix(F("&#37;")));
                 break;
+            case ActionEnum_t::MQTT_SET:
+                form.add(F("values[0]"), String(action.getValue(0)), FormField::InputFieldType::TEXT)
+                    ->setFormUI(new FormUI(FormUI::TEXT, F("Value")));
+                break;
+            case ActionEnum_t::MQTT_TOGGLE:
+                form.add(F("values[0]"), String(action.getValue(0)), FormField::InputFieldType::TEXT)
+                    ->setFormUI(new FormUI(FormUI::TEXT, F("On Value")));
+                form.add(F("values[1]"), String(action.getValue(1)), FormField::InputFieldType::TEXT)
+                    ->setFormUI(new FormUI(FormUI::TEXT, F("Off Value")));
+                break;
+            case ActionEnum_t::MQTT_INCR:
+                form.add(F("values[0]"), String(action.getValue(0)), FormField::InputFieldType::TEXT)
+                    ->setFormUI(new FormUI(FormUI::TEXT, F("Value")));
+                form.add(F("values[1]"), String(action.getValue(1)), FormField::InputFieldType::TEXT)
+                    ->setFormUI(new FormUI(FormUI::TEXT, F("Max. Value")));
+                break;
+            case ActionEnum_t::MQTT_DECR:
+                form.add(F("values[0]"), String(action.getValue(0)), FormField::InputFieldType::TEXT)
+                    ->setFormUI(new FormUI(FormUI::TEXT, F("Value")));
+                form.add(F("values[1]"), String(action.getValue(1)), FormField::InputFieldType::TEXT)
+                    ->setFormUI(new FormUI(FormUI::TEXT, F("Min. Value")));
+                break;
             default:
                 break;
         }
@@ -328,6 +432,12 @@ void HassPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
 void HassPlugin::setup(PluginSetupMode_t mode)
 {
     _installWebhooks();
+    LoopFunctions::callOnce([this]() {
+        auto mqttClient = MQTTClient::getClient();
+        if (mqttClient) {
+            mqttClient->registerComponent(this);
+        }
+    });
 }
 
 void HassPlugin::reconfigure(PGM_P source)
@@ -470,6 +580,66 @@ void HassPlugin::executeAction(const Action &action, StatusCallback_t statusCall
             break;
         case ActionEnum_t::VOLUME_UP:
             callService(_getDomain(action.getEntityId()) + F("/volume_up"), json, _serviceCallback, statusCallback);
+            break;
+        case ActionEnum_t::MQTT_SET:
+            _mqttSet(action.getEntityId(), action.getValue(0));
+            statusCallback(true);
+            break;
+        case ActionEnum_t::MQTT_TOGGLE:
+            {
+                String stateTopic = action.getEntityId();
+                String setTopic;
+                if (_mqttSplitTopics(stateTopic, setTopic)) {
+                    auto value0 = action.getValue(0);
+                    auto value1 = action.getValue(1);
+                    _mqttGet(stateTopic, [this, value0, value1, setTopic, statusCallback](bool status, int value) {
+                        if (status) {
+                            _mqttSet(setTopic, (value == value0) ? value1 : value0);
+                        }
+                        statusCallback(status);
+                    });
+                }
+            }
+            break;
+        case ActionEnum_t::MQTT_INCR:
+            {
+                String stateTopic = action.getEntityId();
+                String setTopic;
+                if (_mqttSplitTopics(stateTopic, setTopic)) {
+                    auto incr = action.getValue(0);
+                    auto max = action.getValue(1);
+                    _mqttGet(stateTopic, [this, incr, max, setTopic, statusCallback](bool status, int value) {
+                        if (status) {
+                            value += incr;
+                            if (value > max) {
+                                value = max;
+                            }
+                            _mqttSet(setTopic, value);
+                        }
+                        statusCallback(status);
+                    });
+                }
+            }
+            break;
+        case ActionEnum_t::MQTT_DECR:
+            {
+                String stateTopic = action.getEntityId();
+                String setTopic;
+                if (_mqttSplitTopics(stateTopic, setTopic)) {
+                    auto decr = action.getValue(0);
+                    auto min = action.getValue(1);
+                    _mqttGet(stateTopic, [this, decr, min, setTopic, statusCallback](bool status, int value) {
+                        if (status) {
+                            value -= decr;
+                            if (value < min) {
+                                value = min;
+                            }
+                            _mqttSet(setTopic, value);
+                        }
+                        statusCallback(status);
+                    });
+                }
+            }
             break;
         case ActionEnum_t::NONE:
         default:

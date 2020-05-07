@@ -310,6 +310,8 @@ namespace KFCConfigurationClasses {
                 return F("Trigger");
             case SET_KELVIN:
                 return F("Set Kelvin");
+            case SET_MIREDS:
+                return F("Set Mireds");
             case SET_RGB_COLOR:
                 return F("Set RGB Color");
             case MEDIA_NEXT_TRACK:

@@ -423,6 +423,10 @@ void HassPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
                 form.add(F("values[0]"), String(action.getValue(0)), FormField::InputFieldType::TEXT)
                     ->setFormUI(new FormUI(FormUI::TEXT, F("Kelvin")));
                 break;
+            case ActionEnum_t::SET_MIREDS:
+                form.add(F("values[0]"), String(action.getValue(0)), FormField::InputFieldType::TEXT)
+                    ->setFormUI(new FormUI(FormUI::TEXT, F("Mireds")));
+                break;
             case ActionEnum_t::SET_RGB_COLOR:
                 form.add(F("values[0]"), String(action.getValue(0)), FormField::InputFieldType::TEXT)
                     ->setFormUI(new FormUI(FormUI::TEXT, F("Red")));
@@ -573,6 +577,10 @@ void HassPlugin::executeAction(const Action &action, StatusCallback_t statusCall
             break;
         case ActionEnum_t::SET_KELVIN:
             json.add(F("kelvin"), action.getValue(0));
+            callService(_getDomain(action.getEntityId()) + F("/turn_on"), action.getApiId(), json, _serviceCallback, statusCallback);
+            break;
+        case ActionEnum_t::SET_MIREDS:
+            json.add(F("color_temp"), action.getValue(0));
             callService(_getDomain(action.getEntityId()) + F("/turn_on"), action.getApiId(), json, _serviceCallback, statusCallback);
             break;
         case ActionEnum_t::SET_RGB_COLOR:

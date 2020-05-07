@@ -15,7 +15,7 @@
 #include  "plugins.h"
 
 #ifndef DEBUG_IOT_REMOTE_CONTROL
-#define DEBUG_IOT_REMOTE_CONTROL                                1
+#define DEBUG_IOT_REMOTE_CONTROL                                0
 #endif
 
 #if DEBUG_IOT_REMOTE_CONTROL

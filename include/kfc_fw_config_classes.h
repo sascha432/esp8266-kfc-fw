@@ -158,6 +158,7 @@ namespace KFCConfigurationClasses {
                 SET_BRIGHTNESS,     // values: brightness(0)
                 CHANGE_BRIGHTNESS,  // values: step(0), min brightness(1), max brightness(2), turn off if less than min. brightness(3)
                 SET_KELVIN,         // values: kelvin(0)
+                SET_MIREDS,         // values: mireds(0)
                 SET_RGB_COLOR,      // values: red(0), green(1), blue(2)
                 MEDIA_PREVIOUS_TRACK,
                 MEDIA_NEXT_TRACK,

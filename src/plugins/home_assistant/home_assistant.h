@@ -13,7 +13,7 @@
 #include "plugins.h"
 
 #ifndef DEBUG_HOME_ASSISTANT
-#define DEBUG_HOME_ASSISTANT                            1
+#define DEBUG_HOME_ASSISTANT                            0
 #endif
 
 class HassPlugin : public PluginComponent, /*public WebUIInterface, */public KFCRestAPI, public MQTTComponent {

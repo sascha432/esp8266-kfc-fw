@@ -471,7 +471,7 @@ void RemoteControlPlugin::_sendEvents()
 
             auto action = Plugins::HomeAssistant::getAction(actionId);
             if (action.getId()) {
-                Logger_notice(F("firing event: %s"), event.toString().c_str());
+                // Logger_notice(F("firing event: %s"), event.toString().c_str());
 
                 _lockButton(event.getButton());
                 auto button = event.getButton();

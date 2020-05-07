@@ -227,20 +227,20 @@ bool I2CScannerPlugin::atModeHandler(AtModeArgs &args)
                 serial.print(F("+I2CS: "));
                 config.initTwoWire(true, &serial);
             }
-            else if (args.isFalse(0)) {
+            else if (args.isFalse(0) && args.size() == 1) {
                 pinMode(KFC_TWOWIRE_SDA, INPUT);
-                pinMode(KFC_TWOWIRE_SCL, KFC_TWOWIRE_SCL);
-                args.printf_P(PSTR("set pin %/%u to input"), KFC_TWOWIRE_SDA, KFC_TWOWIRE_SCL);
+                pinMode(KFC_TWOWIRE_SCL, INPUT);
+                args.printf_P(PSTR("I2C disabled, set pin %u/%u to input"), KFC_TWOWIRE_SDA, KFC_TWOWIRE_SCL);
             }
             else if (args.requireArgs(2, 4)) {
-                int sda = args.toNumber(0, KFC_TWOWIRE_SDA);
-                int scl = args.toNumber(1, KFC_TWOWIRE_SCL);
+                int sda = args.toNumber(0);
+                int scl = args.toNumber(1);
                 uint32_t speed = args.toNumber(2, 100) * 1000UL;
-                uint32_t setClockStretchLimit = args.toInt(3);
+                uint32_t setClockStretchLimit = args.toInt(3, KFC_TWOWIRE_CLOCK_STRETCH);
                 Wire.setClock(speed);
-                if (setClockStretchLimit) {
-                    Wire.setClockStretchLimit(setClockStretchLimit);
-                }
+                // if (setClockStretchLimit) {
+                Wire.setClockStretchLimit(setClockStretchLimit);
+                // }
                 args.printf_P(PSTR("SDA=%d, SCL=%d, speed=%ukHz, setClockStretchLimit=%u"), sda, scl, speed / 1000U, setClockStretchLimit);
             }
         }

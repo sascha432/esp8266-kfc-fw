@@ -66,6 +66,9 @@ void SensorPlugin::setup(PluginSetupMode_t mode)
 #if IOT_SENSOR_HAVE_INA219
     _sensors.push_back(new Sensor_INA219(F(IOT_SENSOR_NAMES_INA219), config.initTwoWire(), IOT_SENSOR_HAVE_INA219));
 #endif
+#if IOT_SENSOR_HAVE_DHTxx
+    _sensors.push_back(new Sensor_DHTxx(F(IOT_SENSOR_NAMES_DHTxx), IOT_SENSOR_HAVE_DHTxx_PIN));
+#endif
 }
 
 void SensorPlugin::reconfigure(PGM_P source)

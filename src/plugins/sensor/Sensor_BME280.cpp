@@ -77,7 +77,7 @@ void Sensor_BME280::getValues(JsonArray &array, bool timer)
 
 void Sensor_BME280::createWebUI(WebUI &webUI, WebUIRow **row)
 {
-    _debug_printf_P(PSTR("Sensor_BME280::createWebUI()\n"));
+    _debug_println();
     // if ((*row)->size() > 1) {
         // *row = &webUI.addRow();
     // }

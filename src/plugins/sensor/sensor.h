@@ -21,6 +21,7 @@
 #include "Sensor_Battery.h"
 #include "Sensor_DS3231.h"
 #include "Sensor_INA219.h"
+#include "Sensor_DHTxx.h"
 
 #ifndef IOT_SENSOR_NAMES_LM75A
 #define IOT_SENSOR_NAMES_LM75A      "LM75A Temperature"
@@ -28,6 +29,10 @@
 
 #ifndef IOT_SENSOR_NAMES_BME280
 #define IOT_SENSOR_NAMES_BME280     "BME280"
+#endif
+
+#ifndef IOT_SENSOR_NAMES_DHTxx
+#define IOT_SENSOR_NAMES_DHTxx      "DHT11"
 #endif
 
 #ifndef IOT_SENSOR_NAMES_BME680

@@ -26,7 +26,8 @@ DECLARE_ENUM(MQTTSensorSensorType, uint8_t,
     HLW8032,
     BATTERY,
     DS3231,
-    INA219
+    INA219,
+    DHTxx
 );
 
 #if DEBUG_IOT_SENSOR

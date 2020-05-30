@@ -331,7 +331,7 @@ void WeatherStationPlugin::createConfigureForm(AsyncWebServerRequest *request, F
 
     form.add<float>(F("temp_offset"), _H_STRUCT_VALUE(MainConfig().plugins.weatherstation.config, temp_offset))->setFormUI((new FormUI(FormUI::TEXT, F("BMP280 Temperature Offset")))->setSuffix(F("&deg;")));
     form.add<float>(F("humidity_offset"), _H_STRUCT_VALUE(MainConfig().plugins.weatherstation.config, humidity_offset))->setFormUI((new FormUI(FormUI::TEXT, F("Humidity Offset")))->setSuffix(F("&#37;")));
-    form.add<float>(F("pressure_offset"), _H_STRUCT_VALUE(MainConfig().plugins.weatherstation.config, pressure_offset))->setFormUI((new FormUI(FormUI::TEXT, F("Preassure Offset")))->setSuffix(F("hPa")));
+    form.add<float>(F("pressure_offset"), _H_STRUCT_VALUE(MainConfig().plugins.weatherstation.config, pressure_offset))->setFormUI((new FormUI(FormUI::TEXT, F("Pressure Offset")))->setSuffix(F("hPa")));
 
     for(uint8_t i = 0; i < WeatherStationPlugin::ScreenEnum_t::NUM_SCREENS; i++) {
         PrintString str;

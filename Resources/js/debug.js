@@ -1,12 +1,14 @@
 // settings at the end of the file
 
-$(function() {
+console.log('holding ready events');
+$.holdReady(true);
 
+// prepare page first before executing any ready functions
+window.onload = function() {
     $.get("http://www.d0g3.space/dev/nav.php", function(data) {
         $('nav:first').replaceWith(data);
 
         var imgarr = [['images/spinner.gif', '../../lib/KFCWebBuilder/Resources/images/spinner.gif']];
-
         $('img').each(function() {
             if (this.complete && this.naturalHeight == 0) {
                 for(i = 0; i < imgarr.length; i++) {
@@ -16,8 +18,11 @@ $(function() {
                 }
             }
         });
+    }).always(function() {
+        console.log('releasing ready events');
+        $.holdReady(false);
     });
-});
+};
 
 $.__debug_wrapper = {
     getSessionId: $.getSessionId,
@@ -48,8 +53,12 @@ $.getWebSocketLocation = function(uri) {
     return $.__debug_wrapper.getWebSocketLocation(uri);
 }
 
-$.visible_password_options.always_visible  = true;
-$.visible_password_options.protected = false;
+$(function() {
+    if ($.visible_password_options) {
+        $.visible_password_options.always_visible  = true;
+        $.visible_password_options.protected = false;
+    }
+});
 
 // $.___debug_host = 'kfc10f41a.local';
 $.___debug_host = '192.168.0.56';

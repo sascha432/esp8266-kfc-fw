@@ -86,4 +86,28 @@ $(function() {
             $($(this).data('for')).val($.base64Encode(String.fromCharCode.apply(String, $.getRandomBytes(len))));
         })
     }
+
+    if (window.alerts) {
+        if (window.alerts.length) {
+            var container = $('#alert_container');
+            var alert = container.html();
+            $(window.alerts).each(function(key, val) {
+                // val[i]=id,[m]=message,[t]=type,[n=true]=no dismiss
+                var new_alert = $(alert);
+                new_alert.removeClass('hidden').addClass('fade show alert-' + val['t']);
+                new_alert.find('.alert-content').html(val['m']);
+                var close = new_alert.find('.close');
+                if (val['n']) {
+                    close.remove();
+                } else {
+                    close.data('alert-id', val['i']).on('click', function() {
+                        $.get('/dismiss_alert?id=' + $(this).data('alert-id'), function(data) {
+                        });
+                    });
+                }
+                container.append(new_alert);
+            });
+            container.removeClass('hidden');
+        }
+    }
 });

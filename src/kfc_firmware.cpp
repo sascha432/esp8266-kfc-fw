@@ -241,6 +241,7 @@ void setup()
     if (safe_mode) {
 
         config.setSafeMode(true);
+        config.addAlert(F("Running in Safe Mode"), KFCFWConfiguration::AlertMessage::TypeEnum_t::DANGER);
         MySerialWrapper.replace(&KFC_SAFE_MODE_SERIAL_PORT, true);
         DebugSerial = MySerialWrapper;
 
@@ -268,6 +269,7 @@ void setup()
 
         if (resetDetector.hasCrashDetected()) {
             Logger_error(F("System crash detected: %s\n"), resetDetector.getResetInfo().c_str());
+            config.addAlert(PrintString(F("System crash detected.<br>%s"), resetDetector.getResetInfo().c_str()), KFCFWConfiguration::AlertMessage::TypeEnum_t::DANGER);
         }
 
 #if DEBUG

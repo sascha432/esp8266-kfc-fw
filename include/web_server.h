@@ -162,6 +162,7 @@ public:
     static void handlerLogout(AsyncWebServerRequest *request);
     static void handlerAlive(AsyncWebServerRequest *request);
     static void handlerSyncTime(AsyncWebServerRequest *request);
+    static void handlerDismissAlert(AsyncWebServerRequest *request);
     static void handlerWebUI(AsyncWebServerRequest *request);
     static void handlerSpeedTest(AsyncWebServerRequest *request, bool zip);
     static void handlerSpeedTestZip(AsyncWebServerRequest *request);

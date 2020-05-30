@@ -244,6 +244,21 @@ void WebServerPlugin::handlerWebUI(AsyncWebServerRequest *request)
     }
 }
 
+void WebServerPlugin::handlerDismissAlert(AsyncWebServerRequest *request)
+{
+    if (plugin.isAuthenticated(request) == true) {
+        WebServerSetCPUSpeedHelper setCPUSpeed;
+        auto alertId = (uint32_t)request->arg(F("id")).toInt();
+        if (alertId) {
+            config.dismissAlert(alertId);
+        }
+        request->send(200, FSPGM(mime_text_plain), FSPGM(OK));
+    }
+    else {
+        request->send(403);
+    }
+}
+
 void WebServerPlugin::handlerSpeedTest(AsyncWebServerRequest *request, bool zip)
 {
     WebServerSetCPUSpeedHelper setCPUSpeed;
@@ -640,6 +655,7 @@ void WebServerPlugin::begin()
     WebServerPlugin::addHandler(F("/import_settings"), handlerImportSettings);
     WebServerPlugin::addHandler(F("/speedtest.zip"), handlerSpeedTestZip);
     WebServerPlugin::addHandler(F("/speedtest.bmp"), handlerSpeedTestImage);
+    WebServerPlugin::addHandler(F("/dismiss_alert"), handlerDismissAlert);
     _server->on(String(F("/update")).c_str(), HTTP_POST, handlerUpdate, handlerUploadUpdate);
 
     _server->begin();

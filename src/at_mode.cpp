@@ -210,6 +210,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF(RTC, "RTC", "[<set>]", "Set RTC time", "Display
 
 #if DEBUG
 
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(ALERT, "ALERT", "<message>[,<type|0-3>]", "Add WebUI alert");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(FSM, "FSM", "Display FS mapping");
 #if PIN_MONITOR
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PINM, "PINM", "[<1=start|0=stop>}", "List or monitor PINs");
@@ -1098,6 +1099,13 @@ void at_mode_serial_handle_event(String &commandString)
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(FSM))) {
                 // Mappings::getInstance().dump(output);
             }
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(ALERT))) {
+                if (args.requireArgs(1, 2)) {
+                    config.addAlert(args.get(0), static_cast<KFCFWConfiguration::AlertMessage::TypeEnum_t>(args.toInt(1, 0)));
+                    args.print(F("Alert added, reload WebUI"));
+                }
+            }
+
     #if PIN_MONITOR
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(PINM))) {
                 if (!PinMonitor::getInstance()) {

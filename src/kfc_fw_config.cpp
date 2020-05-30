@@ -618,6 +618,17 @@ void KFCFWConfiguration::restoreFactorySettings()
 #if IOT_ATOMIC_SUN_V2
     dimmer.fade_time = 5.0;
     dimmer.on_fade_time = 7.5;
+#ifdef IOT_ATOMIC_SUN_CHANNEL_WW1
+    dimmer.channel_mapping[0] = IOT_ATOMIC_SUN_CHANNEL_WW1;
+    dimmer.channel_mapping[1] = IOT_ATOMIC_SUN_CHANNEL_WW2;
+    dimmer.channel_mapping[2] = IOT_ATOMIC_SUN_CHANNEL_CW1;
+    dimmer.channel_mapping[3] = IOT_ATOMIC_SUN_CHANNEL_CW2;
+#else
+    dimmer.channel_mapping[0] = 0;
+    dimmer.channel_mapping[1] = 1;
+    dimmer.channel_mapping[2] = 2;
+    dimmer.channel_mapping[3] = 3;
+#endif
 #else
     dimmer.fade_time = 3.0;
     dimmer.on_fade_time = 4.5;
@@ -702,6 +713,7 @@ void KFCFWConfiguration::restoreFactorySettings()
 #if CUSTOM_CONFIG_PRESET
     customSettings();
 #endif
+    config.addAlert(F("Factory settings restored"), KFCFWConfiguration::AlertMessage::TypeEnum_t::INFO);
 }
 
 #if CUSTOM_CONFIG_PRESET
@@ -1349,6 +1361,26 @@ const char *KFCFWConfiguration::getDeviceName() const
 {
     return config._H_STR(Config().device_name);
 }
+
+void KFCFWConfiguration::AlertMessage::remove() {
+    config.dismissAlert(_id);
+}
+
+uint32_t KFCFWConfiguration::addAlert(const String &message, AlertMessage::TypeEnum_t type, bool persistent, bool dismissable)
+{
+    _alertId++;
+    _alerts.emplace_back(_alertId, message, type, persistent, dismissable);
+    //TODO add persistence
+    return _alertId;
+}
+
+void KFCFWConfiguration::dismissAlert(uint32_t id)
+{
+    _alerts.erase(std::remove_if(_alerts.begin(), _alerts.end(), [id](const AlertMessage &_alert) {
+        return _alert.getId() == id;
+    }), _alerts.end());
+}
+
 
 class KFCConfigurationPlugin : public PluginComponent {
 public:

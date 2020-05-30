@@ -6,15 +6,18 @@
     <div class="collapse navbar-collapse" id="navbarMain">
         <ul class="navbar-nav mr-auto">
             %MENU_HTML_MAIN%
-            <li class="nav-text%CONFIG_DIRTY_CLASS%">
-                <span class="alert alert-danger" role="alert">
-                    <a href="reboot.html"><button class="btn btn-danger reload-button"><span class="oi oi-reload"></span></button></a>
-                    <small>The Configuration has been changed, reboot the device to apply all settings</small>
-                </span>
-            </li>
         </ul>
         <span class="navbar-text">
             <a class="nav-link disabled" href="/logout">Logout <span class="oi oi-account-logout" title="Logout" aria-hidden="true"></span></a>
         </span>
     </div>
 </nav>
+<div class="container-fluid p-3 hidden" id="alert_container">
+    <div class="alert alert-dismissible hidden" role="alert">
+        <span class="alert-content"></span>
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+    %ALERTS_JAVASCRIPT%
+</div>

@@ -48,9 +48,9 @@ public:
     virtual uint8_t getChannelCount() const = 0;
 
     // read config from dimmer
-    void readConfig();
+    virtual void readConfig();
     // write config to dimmer
-    void writeConfig();
+    virtual void writeConfig();
     // store dimmer config in EEPROM
     void writeEEPROM(bool noLocking = false);
 

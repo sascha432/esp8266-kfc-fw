@@ -306,16 +306,21 @@ void Dimmer_Base::writeConfig()
             }
 
             _wire.beginTransmission(DIMMER_I2C_ADDRESS);
+            uint8_t addr = DIMMER_REGISTER_OPTIONS;
             _wire.write(DIMMER_REGISTER_OPTIONS);
-            _wire.write(options);                                                                                       // DIMMER_REGISTER_OPTIONS             0xA2 - byte
-            _wire.write(dimmer.max_temperature);                                                                        // DIMMER_REGISTER_MAX_TEMP            0xA3 - byte
-            _wire.write(reinterpret_cast<const uint8_t *>(&dimmer.on_fade_time), sizeof(float));                        // DIMMER_REGISTER_FADE_IN_TIME        0xA4 - float
-            _wire.write(2);                                                                                             // DIMMER_REGISTER_TEMP_CHECK_INT      0xA8 - byte
-            _wire.write(reinterpret_cast<const uint8_t *>(&dimmer.linear_correction), sizeof(float));                   // DIMMER_REGISTER_LC_FACTOR           0xA9 - float
-            if (_endTransmission() == 0) {
+            addr += _wire.write(options);                                                                                       // DIMMER_REGISTER_OPTIONS             0xA2 - byte
+            addr += _wire.write(dimmer.max_temperature);                                                                        // DIMMER_REGISTER_MAX_TEMP            0xA3 - byte
+            addr += _wire.write(reinterpret_cast<const uint8_t *>(&dimmer.on_fade_time), sizeof(float));                        // DIMMER_REGISTER_FADE_IN_TIME        0xA4 - float
+            addr += _wire.write(2);                                                                                             // DIMMER_REGISTER_TEMP_CHECK_INT      0xA8 - byte
+            addr += _wire.write(reinterpret_cast<const uint8_t *>(&dimmer.linear_correction), sizeof(float));                   // DIMMER_REGISTER_LC_FACTOR           0xA9 - float
+            if (addr != DIMMER_REGISTER_ZC_DELAY_TICKS) {
+                _endTransmission();
+                config.addAlert(F("Dimmer firmware corrupted"), KFCFWConfiguration::AlertMessage::TypeEnum_t::DANGER, true);
+             }
+            else if (_endTransmission() == 0) {
                 _wire.beginTransmission(DIMMER_I2C_ADDRESS);
                 _wire.write(DIMMER_REGISTER_METRICS_INT);
-                _wire.write(dimmer.metrics_int);                                                                        // DIMMER_REGISTER_METRICS_INT         0xB8 - byte
+                _wire.write(dimmer.metrics_int);                                                                                // DIMMER_REGISTER_METRICS_INT         0xB8 - byte
                 if (_endTransmission() == 0) {
                     writeEEPROM(true);
                 }

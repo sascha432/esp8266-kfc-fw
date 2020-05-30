@@ -44,6 +44,18 @@ void DimmerModuleForm::createConfigureForm(AsyncWebServerRequest *request, Form 
     form.add<uint8_t>(F("metrics_int"), &dimmer->metrics_int); //->setFormUI((new FormUI(FormUI::TEXT, F("Metrics report interval")))->setPlaceholder(String(30))->setSuffix(seconds));
     form.addValidator(new FormRangeValidator(F("Invalid interval: %min%-%max%"), 10, 255));
 
+#if IOT_ATOMIC_SUN_V2
+    auto channelErrorMsg = String(F("Channel out of range: %min%-%max%"));
+    form.add<int8_t>(F("channel0"), &dimmer->channel_mapping[0]); //->setFormUI((new FormUI(FormUI::TEXT, F("Channel Warm White 1")))->setPlaceholder(String(IOT_ATOMIC_SUN_CHANNEL_WW1)));
+    form.addValidator(new FormRangeValidator(channelErrorMsg, 0, 3));
+    form.add<int8_t>(F("channel1"), &dimmer->channel_mapping[1]); //->setFormUI((new FormUI(FormUI::TEXT, F("Channel Warm White 2")))->setPlaceholder(String(IOT_ATOMIC_SUN_CHANNEL_WW2)));
+    form.addValidator(new FormRangeValidator(channelErrorMsg, 0, 3));
+    form.add<int8_t>(F("channel2"), &dimmer->channel_mapping[2]); //->setFormUI((new FormUI(FormUI::TEXT, F("Channel Cold White 1")))->setPlaceholder(String(IOT_ATOMIC_SUN_CHANNEL_CW1)));
+    form.addValidator(new FormRangeValidator(channelErrorMsg, 0, 3));
+    form.add<int8_t>(F("channel3"), &dimmer->channel_mapping[3]); //->setFormUI((new FormUI(FormUI::TEXT, F("Channel Cold White 2")))->setPlaceholder(String(IOT_ATOMIC_SUN_CHANNEL_CW2)));
+    form.addValidator(new FormRangeValidator(channelErrorMsg, 0, 3));
+#endif
+
 #if IOT_DIMMER_MODULE_HAS_BUTTONS
 
     auto *dimmer_buttons = &config._H_W_GET(Config().dimmer_buttons);

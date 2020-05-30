@@ -24,12 +24,29 @@
 #include <debug_helper_disable.h>
 #endif
 
-Driver_4ChDimmer::Driver_4ChDimmer() : MQTTComponent(ComponentTypeEnum_t::LIGHT), Dimmer_Base()
+Driver_4ChDimmer::Driver_4ChDimmer() :
+    MQTTComponent(ComponentTypeEnum_t::LIGHT),
+    Dimmer_Base(),
+    channel_ww1(IOT_ATOMIC_SUN_CHANNEL_WW1),
+    channel_ww2(IOT_ATOMIC_SUN_CHANNEL_WW2),
+    channel_cw1(IOT_ATOMIC_SUN_CHANNEL_CW1),
+    channel_cw2(IOT_ATOMIC_SUN_CHANNEL_CW2)
 {
 #if DEBUG_MQTT_CLIENT
     debug_printf_P(PSTR("component=%p\n"), this);
 #endif
 }
+
+void Driver_4ChDimmer::readConfig()
+{
+    Dimmer_Base::readConfig();
+    auto &dimmer = config._H_GET(Config().dimmer);
+    channel_ww1 = dimmer.channel_mapping[0];
+    channel_ww2 = dimmer.channel_mapping[1];
+    channel_cw1 = dimmer.channel_mapping[2];
+    channel_cw2 = dimmer.channel_mapping[3];
+}
+
 
 void Driver_4ChDimmer::_begin()
 {
@@ -425,7 +442,7 @@ void Driver_4ChDimmer::publishState(MQTTClient *client)
 
 void Driver_4ChDimmer::_printStatus(Print &out)
 {
-    out.print(F(", Fading enabled" HTML_S(br) "Power "));
+    out.printf_P(PSTR(HTML_S(br) "Channel order WW1: %d WW2: %d CW1: %d CW2: %d" HTML_S(br) "Power "), channel_ww1, channel_ww2, channel_cw1, channel_cw2);
     if (_data.state.value) {
         out.print(FSPGM(on));
     } else {
@@ -467,7 +484,7 @@ void Driver_4ChDimmer::_channelsToBrightness()
     // calculate color and brightness values from dimmer channels
     int32_t sum = _channels[0] + _channels[1] + _channels[2] + _channels[3];
     if (sum) {
-        _data.color.value = ((_channels[CHANNEL_WW1] + _channels[CHANNEL_WW2]) * COLOR_RANGE) / (double)sum + COLOR_MIN;
+        _data.color.value = ((_channels[channel_ww1] + _channels[channel_ww2]) * COLOR_RANGE) / (double)sum + COLOR_MIN;
         _data.brightness.value = sum;
         _data.state.value = true;
     } else {
@@ -477,10 +494,10 @@ void Driver_4ChDimmer::_channelsToBrightness()
     }
     _calcRatios();
     _debug_printf_P(PSTR("ww=%u,%u cw=%u,%u = brightness=%u color=%f ratio=%f,%f\n"),
-        _channels[CHANNEL_WW1],
-        _channels[CHANNEL_WW2],
-        _channels[CHANNEL_CW1],
-        _channels[CHANNEL_CW2],
+        _channels[channel_ww1],
+        _channels[channel_ww2],
+        _channels[channel_cw1],
+        _channels[channel_cw2],
         _data.brightness.value,
         _data.color.value,
         _ratio[0],
@@ -494,18 +511,18 @@ void Driver_4ChDimmer::_brightnessToChannels()
     double color = (_data.color.value - COLOR_MIN) / COLOR_RANGE;
     uint16_t ww = _data.brightness.value * color;
     uint16_t cw = _data.brightness.value * (1.0 - color);
-    _channels[CHANNEL_WW2] = ww / _ratio[0];
-    _channels[CHANNEL_WW1] = ww - _channels[CHANNEL_WW2];
-    _channels[CHANNEL_CW2] = cw / _ratio[1];
-    _channels[CHANNEL_CW1] = cw - _channels[CHANNEL_CW2];
+    _channels[channel_ww2] = ww / _ratio[0];
+    _channels[channel_ww1] = ww - _channels[channel_ww2];
+    _channels[channel_cw2] = cw / _ratio[1];
+    _channels[channel_cw1] = cw - _channels[channel_cw2];
     _debug_printf_P(PSTR("brightness=%u color=%f(%f) = ww=%u,%u cw=%u,%u, ratio=%f,%f\n"),
         _data.brightness.value,
         _data.color.value,
         color,
-        _channels[CHANNEL_WW1],
-        _channels[CHANNEL_WW2],
-        _channels[CHANNEL_CW1],
-        _channels[CHANNEL_CW2],
+        _channels[channel_ww1],
+        _channels[channel_ww2],
+        _channels[channel_cw1],
+        _channels[channel_cw2],
         _ratio[0],
         _ratio[1]
     );
@@ -522,8 +539,8 @@ void Driver_4ChDimmer::_setLockChannels(bool value)
 
 void Driver_4ChDimmer::_calcRatios()
 {
-    _ratio[0] = _channels[CHANNEL_WW2] ? ((_channels[CHANNEL_WW1] + _channels[CHANNEL_WW2]) / (float)_channels[CHANNEL_WW2]) : (_channels[CHANNEL_WW1] ? INFINITY : 2);
-    _ratio[1] = _channels[CHANNEL_CW2] ? ((_channels[CHANNEL_CW1] + _channels[CHANNEL_CW2]) / (float)_channels[CHANNEL_CW2]) : (_channels[CHANNEL_CW1] ? INFINITY : 2);
+    _ratio[0] = _channels[channel_ww2] ? ((_channels[channel_ww1] + _channels[channel_ww2]) / (float)_channels[channel_ww2]) : (_channels[channel_ww1] ? INFINITY : 2);
+    _ratio[1] = _channels[channel_cw2] ? ((_channels[channel_cw1] + _channels[channel_cw2]) / (float)_channels[channel_cw2]) : (_channels[channel_cw1] ? INFINITY : 2);
     _debug_printf_P(PSTR("ratio=%f ratio=%f\n"), _ratio[0], _ratio[1]);
 }
 
@@ -568,19 +585,17 @@ void Driver_4ChDimmer::setChannel(uint8_t channel, int16_t level, float time)
     _debug_printf_P(PSTR("channel=%u level=%u time=%f locked=%u\n"), channel, level, time, _data.lockChannels.value);
     _channels[channel] = level;
     if (_data.lockChannels.value) {
-        switch(channel) {
-            case CHANNEL_WW1:
-                _channels[CHANNEL_WW2] = level;
-                break;
-            case CHANNEL_WW2:
-                _channels[CHANNEL_WW1] = level;
-                break;
-            case CHANNEL_CW1:
-                _channels[CHANNEL_CW2] = level;
-                break;
-            case CHANNEL_CW2:
-                _channels[CHANNEL_CW1] = level;
-                break;
+        if (channel == channel_ww1) {
+            _channels[channel_ww2] = level;
+        }
+        else if (channel == channel_ww2) {
+            _channels[channel_ww1] = level;
+        }
+        else if (channel == channel_cw1) {
+            _channels[channel_cw2] = level;
+        }
+        else if (channel == channel_cw2) {
+            _channels[channel_cw1] = level;
         }
     } else {
         _calcRatios();
@@ -639,6 +654,8 @@ void AtomicSunPlugin::reconfigure(PGM_P source)
 {
     if (!source) {
         writeConfig();
+        _end();
+        _begin();
     }
     else if (!strcmp_P_P(source, SPGM(http))) {
         setupWebServer();
@@ -679,7 +696,7 @@ void AtomicSunPlugin::createWebUI(WebUI &webUI)
 
     row->addGroup(F("Channels"), false);
 
-    const uint8_t order[4] = { CHANNEL_WW1, CHANNEL_WW2, CHANNEL_CW1, CHANNEL_CW2 };
+    const int8_t order[4] = { channel_ww1, channel_ww2, channel_cw1, channel_cw2 };
     for(uint8_t j = 0; j < 4; j++) {
         row = &webUI.addRow();
         row->addSlider(PrintString(F("dimmer_channel%u"), order[j]), PrintString(F("Channel %u"), j + 1), 0, IOT_ATOMIC_SUN_MAX_BRIGHTNESS);

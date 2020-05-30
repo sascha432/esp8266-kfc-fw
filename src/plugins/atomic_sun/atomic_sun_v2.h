@@ -79,6 +79,8 @@ class Driver_4ChDimmer : public MQTTComponent, public Dimmer_Base, public Dimmer
 public:
     Driver_4ChDimmer();
 
+    virtual void readConfig() override;
+
     virtual void createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector) override;
     virtual uint8_t getAutoDiscoveryCount() const override;
     virtual void onConnect(MQTTClient *client) override;
@@ -99,7 +101,7 @@ public:
    void publishState(MQTTClient *client = nullptr);
 
     virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override {
-        Dimmer_Base::readConfig();
+        readConfig();
         DimmerModuleForm::createConfigureForm(request, form);
     }
 protected:
@@ -142,11 +144,19 @@ protected:
 public:
     // channels are displayed in this order in the web ui
     // warm white
-    static const int8_t CHANNEL_WW1 = IOT_ATOMIC_SUN_CHANNEL_WW1;
-    static const int8_t CHANNEL_WW2 = IOT_ATOMIC_SUN_CHANNEL_WW2;
+    int8_t channel_ww1;
+    int8_t channel_ww2;
     // cold white
-    static const int8_t CHANNEL_CW1 = IOT_ATOMIC_SUN_CHANNEL_CW1;
-    static const int8_t CHANNEL_CW2 = IOT_ATOMIC_SUN_CHANNEL_CW2;
+    int8_t channel_cw1;
+    int8_t channel_cw2;
+
+    // // channels are displayed in this order in the web ui
+    // // warm white
+    // static const int8_t CHANNEL_WW1 = IOT_ATOMIC_SUN_CHANNEL_WW1;
+    // static const int8_t CHANNEL_WW2 = IOT_ATOMIC_SUN_CHANNEL_WW2;
+    // // cold white
+    // static const int8_t CHANNEL_CW1 = IOT_ATOMIC_SUN_CHANNEL_CW1;
+    // static const int8_t CHANNEL_CW2 = IOT_ATOMIC_SUN_CHANNEL_CW2;
 
     static const uint16_t COLOR_MIN = 15300;
     static const uint16_t COLOR_MAX = 50000;

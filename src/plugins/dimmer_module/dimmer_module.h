@@ -122,7 +122,7 @@ public:
     }
 
     virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override {
-        Dimmer_Base::readConfig();
+        readConfig();
         DimmerModuleForm::createConfigureForm(request, form);
     }
 

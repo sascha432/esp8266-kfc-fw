@@ -67,6 +67,24 @@
 					<div class="input-group-append"><span class="input-group-text">seconds</span></div>
 				</div>
             </div>
+			<!--#if defined(IOT_ATOMIC_SUN_V2) && IOT_ATOMIC_SUN_V2-->
+			<div class="form-group">
+				<label for="channel0">Channel Warm White 1:</label>
+				<input type="text" class="form-control setting-requires-restart" name="channel0" id="channel0" value="%CHANNEL0%" placeholder="0">
+            </div>
+			<div class="form-group">
+				<label for="channel1">Channel Warm White 2:</label>
+				<input type="text" class="form-control setting-requires-restart" name="channel1" id="channel1" value="%CHANNEL1%" placeholder="1">
+            </div>
+			<div class="form-group">
+				<label for="channel2">Channel Cold White 1:</label>
+				<input type="text" class="form-control setting-requires-restart" name="channel2" id="channel2" value="%CHANNEL2%" placeholder="2">
+            </div>
+			<div class="form-group">
+				<label for="channel3">Channel Cold White 2:</label>
+				<input type="text" class="form-control setting-requires-restart" name="channel3" id="channel3" value="%CHANNEL3%" placeholder="3">
+            </div>
+			<!--#endif-->
             <!--#if defined(IOT_DIMMER_MODULE_HAS_BUTTONS) && IOT_DIMMER_MODULE_HAS_BUTTONS-->
 			<div class="form-group">
 				<label for="shortpress_time">Short press time:</label>
@@ -172,7 +190,6 @@
     </div>
     <!--%%JAVASCRIPT-->
 	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/jquery-3.3.1.min.js"></script>
-	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/popper.min.js"></script>
 	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/popper.min.js"></script>
 	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/bootstrap.min.js"></script>
 	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/js.cookie.min.js"></script>

@@ -6,8 +6,19 @@
 
 #include <Arduino_compat.h>
 #include <time.h>
+#include <limits.h>
 
-#define IS_TIME_VALID(time) (time > (30 * 86400))
+#if 1
+
+typedef char end_of_time_t_2038[(time_t)(1UL<<31)==INT32_MIN ? 1 : -1];
+#define IS_TIME_VALID(time) (((time_t)time < 0) || time > 946684800L)
+
+#else
+
+typedef char end_of_time_t_2106[(time_t)(1UL<<31)==(INT32_MAX+1UL) ? 1 : -1];
+#define IS_TIME_VALID(time) (time > 946684800UL)
+
+#endif
 
 class Timezone {
 public:

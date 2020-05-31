@@ -4,10 +4,19 @@
 
 #include "Arduino_compat.h"
 
+// mode	description	starts..
+// r	rb		open for reading (The file must exist)	beginning
+// w	wb		open for writing (creates file if it doesn't exist). Deletes content and overwrites the file.	beginning
+// a	ab		open for appending (creates file if it doesn't exist)	end
+// r+	rb+	r+b	open for reading and writing (The file must exist)	beginning
+// w+	wb+	w+b	open for reading and writing. If file exists deletes content and overwrites the file, otherwise creates an empty new file	beginning
+// a+	ab+	a+b	open for reading and writing (append if file exists)	end
+
 const char *fs::FileOpenMode::read = "r";
 const char *fs::FileOpenMode::write = "w";
-const char *fs::FileOpenMode::readplus = "r+";
 const char *fs::FileOpenMode::append = "a";
+const char *fs::FileOpenMode::readplus = "r+";
+const char *fs::FileOpenMode::writeplus = "w+";
 const char *fs::FileOpenMode::appendplus = "a+";
 
 #if _MSC_VER

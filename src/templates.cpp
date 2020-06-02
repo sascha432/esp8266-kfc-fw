@@ -132,6 +132,9 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         }
     }
 #if WEBUI_ALERTS_ENABLED
+    else if (String_equals(key, PSTR("WEBUI_ALERTS_STATUS"))) {
+        output.printf_P(PSTR("Storage %s, rewrite size %d, poll interval %.2fs, WebUI max. height %s"), SPGM(alerts_storage_filename), WEBUI_ALERTS_REWRITE_SIZE, WEBUI_ALERTS_POLL_INTERVAL / 1000.0, WEBUI_ALERTS_MAX_HEIGHT);
+    }
     else if (String_equals(key, PSTR("WEBUI_ALERTS_JSON"))) {
         WebUIAlerts_printAsJson(output, 1);
     }

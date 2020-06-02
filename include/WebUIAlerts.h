@@ -4,42 +4,17 @@
 
 #pragma once
 
+class AlertMessage {
+public:
+    typedef enum {
+        SUCCESS,
+        DANGER,
+        WARNING,
+        INFO,
+    } TypeEnum_t;
+
 #if WEBUI_ALERTS_ENABLED
 
-#ifndef DEBUG_WEBUI_ALERTS
-#define DEBUG_WEBUI_ALERTS                          1
-#endif
-
-#ifndef WEBUI_ALERTS_SPIFF_STORAGE
-#define WEBUI_ALERTS_SPIFF_STORAGE                  "/.alerts_storage"
-#endif
-
-#ifndef WEBUI_ALERTS_POLL_INTERVAL
-#define WEBUI_ALERTS_POLL_INTERVAL                  10000
-#endif
-
-#ifndef WEBUI_ALERTS_MAX_HEIGHT
-#define WEBUI_ALERTS_MAX_HEIGHT                     "200px"
-#endif
-
-#define WebUIAlerts_add(message, ...)
-#define WebUIAlerts_remove(alertId)
-#define WebUIAlerts_printAsJson(output, minAlertId)
-#define WebUIAlerts_readStorage()
-
-class[
-
-    _alertId(1),
-
-
-    class AlertMessage {
-    public:
-        typedef enum {
-            SUCCESS,
-            DANGER,
-            WARNING,
-            INFO,
-        } TypeEnum_t;
         typedef enum {
             EXPIRED = -2,
             REBOOT = -1,
@@ -155,20 +130,61 @@ private:
     AlertVector _alerts;
     uint32_t _alertId;
 
+#else
 
-]
+    static void logger(const String &message, AlertMessage::TypeEnum_t type) {
+        auto str = String(F("WebUI Alert: "));
+        str += message;
+        switch(type) {
+            case TypeEnum_t::DANGER:
+                Logger_error(str);
+                break;
+            case TypeEnum_t::WARNING:
+                Logger_warning(str);
+            case TypeEnum_t::SUCCESS:
+            case TypeEnum_t::INFO:
+            default:
+                Logger_notice(str);
+                break;
+        }
+    }
 
-    // uint32_t addAlert(const String &message, AlertMessage::TypeEnum_t type, int32_t expires = AlertMessage::ExpiresEnum_t::NEVER, bool dismissable = true);
-    // void dismissAlert(uint32_t id);
-    // AlertVector &getAlerts() {
-    //     return _alerts;
-    // }
-    // void printAlertsAsJson(Print &output, bool sep, uint32_t minAlertId);
+#endif
 
+};
+
+#if WEBUI_ALERTS_ENABLED
+
+#ifndef DEBUG_WEBUI_ALERTS
+#define DEBUG_WEBUI_ALERTS                          1
+#endif
+
+#ifndef WEBUI_ALERTS_SPIFF_STORAGE
+#define WEBUI_ALERTS_SPIFF_STORAGE                  "/.alerts_storage"
+#endif
+
+PROGMEM_STRING_DECL(alerts_storage_filename);
+
+#ifndef WEBUI_ALERTS_POLL_INTERVAL
+#define WEBUI_ALERTS_POLL_INTERVAL                  10000
+#endif
+
+#ifndef WEBUI_ALERTS_REWRITE_SIZE
+#define WEBUI_ALERTS_REWRITE_SIZE                   3500
+#endif
+
+#ifndef WEBUI_ALERTS_MAX_HEIGHT
+#define WEBUI_ALERTS_MAX_HEIGHT                     "200px"
+#endif
+
+#define WebUIAlerts_add(message, ...)
+#define WebUIAlerts_remove(alertId)
+#define WebUIAlerts_printAsJson(output, minAlertId)
+#define WebUIAlerts_readStorage()
 
 #else
 
-#define WebUIAlerts_add(message, ...)                   ;
+#define WebUIAlerts_add(message, type, ...)             AlertMessage::logger(message, type);
 #define WebUIAlerts_remove(alertId)                     ;
 #define WebUIAlerts_printAsJson(output, minAlertId)     ;
 #define WebUIAlerts_readStorage()                       ;

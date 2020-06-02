@@ -75,7 +75,7 @@ namespace SaveCrash {
                         file.close();
                         espSaveCrash.clear();
                         debug_printf_P(PSTR("Saved crash dump to %s\n"), filename.c_str());
-                        WebUIAlerts_add(PrintString(F("Crash dump saved to: %s"), filename.c_str()), KFCFWConfiguration::AlertMessage::TypeEnum_t::WARNING);
+                        WebUIAlerts_add(PrintString(F("Crash dump saved to: %s"), filename.c_str()), AlertMessage::TypeEnum_t::WARNING);
                     }
                 }
             }

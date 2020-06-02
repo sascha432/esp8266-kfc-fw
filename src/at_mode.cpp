@@ -1110,7 +1110,7 @@ void at_mode_serial_handle_event(String &commandString)
     #if WEBUI_ALERTS_ENABLED
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(ALERT))) {
                 if (args.size() > 0) {
-                    WebUIAlerts_add((args.get(0), static_cast<KFCFWConfiguration::AlertMessage::TypeEnum_t>(args.toInt(1, 0)));
+                    WebUIAlerts_add((args.get(0), static_cast<AlertMessage::TypeEnum_t>(args.toInt(1, 0)));
                     args.print(F("Alert added, reload WebUI"));
                 }
                 for(auto &alert: config.getAlerts()) {

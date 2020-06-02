@@ -12,7 +12,7 @@
 #include <debug_helper_disable.h>
 #endif
 
-PROGMEM_STRING_DEF(alert_storage_filename, WEBUI_ALERTS_SPIFF_STORAGE);
+PROGMEM_STRING_DEF(alerts_storage_filename, WEBUI_ALERTS_SPIFF_STORAGE);
 
 
 void KFCFWConfiguration::AlertMessage::remove()
@@ -186,7 +186,7 @@ void KFCFWConfiguration::_readAlertStorage()
 File KFCFWConfiguration::_openAlertStorage(bool append)
 {
     debug_printf_P(PSTR("file=%s,append=%d\n"), SPGM(alert_storage_filename), append);
-    return SPIFFS.open(FSPGM(alert_storage_filename), append ? FileOpenMode::appendplus : FileOpenMode::read);
+    return SPIFFS.open(FSPGM(alerts_storage_filename), append ? FileOpenMode::appendplus : FileOpenMode::read);
 }
 
 void KFCFWConfiguration::_closeAlertStorage(File &file)

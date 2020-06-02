@@ -25,6 +25,7 @@
 #include "../include/templates.h"
 #include "web_socket.h"
 #include "WebUISocket.h"
+#include "WebUIAlerts.h"
 #include "kfc_fw_config.h"
 #if STK500V1
 #include "plugins/stk500v1/STK500v1Programmer.h"
@@ -244,20 +245,40 @@ void WebServerPlugin::handlerWebUI(AsyncWebServerRequest *request)
     }
 }
 
-void WebServerPlugin::handlerDismissAlert(AsyncWebServerRequest *request)
+#if WEBUI_ALERTS_ENABLED
+
+void WebServerPlugin::handlerAlerts(AsyncWebServerRequest *request)
 {
     if (plugin.isAuthenticated(request) == true) {
         WebServerSetCPUSpeedHelper setCPUSpeed;
-        auto alertId = (uint32_t)request->arg(F("id")).toInt();
-        if (alertId) {
-            config.dismissAlert(alertId);
+        auto pollId = (uint32_t)request->arg(F("poll_id")).toInt();
+        if (pollId) {
+            PrintHtmlEntitiesString str = String('[');
+            config.printAlertsAsJson(str, false, pollId);
+            str += ']';
+            AsyncWebServerResponse *response = new AsyncBasicResponse(200, FSPGM(mime_application_json), str);
+            HttpHeaders httpHeaders;
+            httpHeaders.addNoCache();
+            httpHeaders.setAsyncWebServerResponseHeaders(response);
+            request->send(response);
+            return;
         }
-        request->send(200, FSPGM(mime_text_plain), FSPGM(OK));
+        else {
+            auto alertId = (uint32_t)request->arg(F("id")).toInt();
+            if (alertId) {
+                WebUIAlerts_remove(alertId);
+                request->send(200, FSPGM(mime_text_plain), FSPGM(OK));
+                return;
+            }
+        }
+        request->send(400);
     }
     else {
         request->send(403);
     }
 }
+
+#endif
 
 void WebServerPlugin::handlerSpeedTest(AsyncWebServerRequest *request, bool zip)
 {
@@ -655,7 +676,9 @@ void WebServerPlugin::begin()
     WebServerPlugin::addHandler(F("/import_settings"), handlerImportSettings);
     WebServerPlugin::addHandler(F("/speedtest.zip"), handlerSpeedTestZip);
     WebServerPlugin::addHandler(F("/speedtest.bmp"), handlerSpeedTestImage);
-    WebServerPlugin::addHandler(F("/dismiss_alert"), handlerDismissAlert);
+#if WEBUI_ALERTS_ENABLED
+    WebServerPlugin::addHandler(F("/alerts"), handlerAlerts);
+#endif
     _server->on(String(F("/update")).c_str(), HTTP_POST, handlerUpdate, handlerUploadUpdate);
 
     _server->begin();
@@ -908,6 +931,7 @@ bool WebServerPlugin::_handleFileRead(String path, bool client_accepts_gzip, Asy
 
 void WebServerPlugin::setup(PluginSetupMode_t mode)
 {
+    WebUIAlerts_readStorage()
     begin();
     if (mode == PLUGIN_SETUP_DELAYED_AUTO_WAKE_UP) {
         invokeReconfigureNow(getName());

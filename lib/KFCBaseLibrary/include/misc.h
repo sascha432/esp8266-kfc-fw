@@ -313,8 +313,8 @@ namespace split {
     typedef void(*callback)(const char *str, size_t len, void *data, int flags);
 
     void vector_callback(const char *sptr, size_t len, void *ptr, int flags);
-    void split(const char *str, char sep, callback fun, void *data, int flags = SplitFlagsType::EMPTY);
-    void split_P(PGM_P str, char sep, callback fun, void *data, int flags = SplitFlagsType::EMPTY);
+    void split(const char *str, char sep, callback fun, void *data, int flags = SplitFlagsType::EMPTY, uint16_t limit = UINT16_MAX);
+    void split_P(PGM_P str, char sep, callback fun, void *data, int flags = SplitFlagsType::EMPTY, uint16_t limit = UINT16_MAX);
 };
 
 template<class G, class C>
@@ -345,8 +345,8 @@ String implode_cb(G glue, const C &pieces, CB toString, uint32_t max = (uint32_t
     return tmp;
 }
 
-inline void explode(const char *str, const char ch, StringVector &container) {
-    split::split(str, ch, split::vector_callback, &container, split::SplitFlagsType::EMPTY);
+inline void explode(const char *str, const char ch, StringVector &container, uint16_t limit = UINT16_MAX) {
+    split::split(str, ch, split::vector_callback, &container, split::SplitFlagsType::EMPTY, limit);
 }
 
 namespace xtra_containers {

@@ -18,6 +18,7 @@
 #include "reset_detector.h"
 #include "progmem_data.h"
 #include "plugins.h"
+#include "WebUIAlerts.h"
 #if PRINTF_WRAPPER_ENABLED
 #include <printf_wrapper.h>
 #endif
@@ -241,7 +242,7 @@ void setup()
     if (safe_mode) {
 
         config.setSafeMode(true);
-        config.addAlert(F("Running in Safe Mode"), KFCFWConfiguration::AlertMessage::TypeEnum_t::DANGER);
+        WebUIAlerts_add(F("Running in Safe Mode"), KFCFWConfiguration::AlertMessage::TypeEnum_t::DANGER, KFCFWConfiguration::AlertMessage::ExpiresEnum_t::REBOOT);
         MySerialWrapper.replace(&KFC_SAFE_MODE_SERIAL_PORT, true);
         DebugSerial = MySerialWrapper;
 
@@ -269,7 +270,7 @@ void setup()
 
         if (resetDetector.hasCrashDetected()) {
             Logger_error(F("System crash detected: %s\n"), resetDetector.getResetInfo().c_str());
-            config.addAlert(PrintString(F("System crash detected.<br>%s"), resetDetector.getResetInfo().c_str()), KFCFWConfiguration::AlertMessage::TypeEnum_t::DANGER);
+            WebUIAlerts_add(PrintString(F("System crash detected.<br>%s"), resetDetector.getResetInfo().c_str()), KFCFWConfiguration::AlertMessage::TypeEnum_t::DANGER);
         }
 
 #if DEBUG

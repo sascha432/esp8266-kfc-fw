@@ -106,19 +106,9 @@ WS_Console.prototype.connect = function(authenticated_callback) {
     var ws_console = this;
     this.socket.onmessage = function(e) {
         if (window.ws_console_is_debug) console.log("onMessage", e);
-        // if (e.data.substring(0, 16) == "+REQ_ENCRYPTION ") {
-        //     data = e.data.split(" ");
-        //     if (window.ws_console_is_debug) console.log("Authenticated and " + data[1] + " encryption requested");
-        //     ws_console.authenticated = false;
-        //     var key = convertHex(sha512(ws_console.get_sid() + data[2]));
-        //     var aes = new aesjs.AES(key);
-        //     ws_console.send("+SID " + window.btoa(aes.encrypt(ws_console.sid)));
-        // } else
         if (e.data == "+REQ_AUTH") {
             ws_console.authenticated = false;
             ws_console.send("+SID " + ws_console.get_sid());
-            // request encryption for the socket
-            //ws_console.send("+REQ_ENCRYPTION AES256");
         } else if (e.data == "+AUTH_OK") {
             ws_console.console_log("Authentication successful");
             ws_console.callback({type: 'auth', success: true, socket: ws_console});

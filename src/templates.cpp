@@ -126,25 +126,16 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     else if (String_equals(key, PSTR("FIRMWARE_UPGRADE_FAILURE_CLASS"))) {
         output.print(FSPGM(_hidden));
     }
-    else if (String_equals(key, PSTR("ALERTS_JAVASCRIPT"))) {
-        output.setRawOutput(true);
-        String head = F("<script type=\"text/javascript\">window.alerts=[");
-        if (config.isConfigDirty()) {
-            output.print(head);
-            head = String(',');
-            output.print(F("{'t':'danger','n':true,'i':0,'m':'<a href=\"reboot.html\"><button class=\"btn btn-danger reload-button\"><span class=\"oi oi-reload\"></span></button></a><small>The Configuration has been changed, reboot the device to apply all settings</small>'}"));
-        }
-        for(auto &alert: config.getAlerts()) {
-            output.print(head);
-            head = String(',');
-            PrintString message;
-            JsonTools::printToEscaped(message, alert.getMessage());
-            output.printf_P(PSTR("{'t':'%s','i':%d,'m':'%s','n':%s}"), alert.getTypeStr(), alert.getId(), message.c_str(), alert.isDismissable() ? FSPGM(false) : FSPGM(true));
-        }
-        if (head.length() == 1) {
-            output.print(F("];</script>"));
+    else if (String_equals(key, PSTR("IS_CONFIG_DIRTY"))) {
+        if (!config.isConfigDirty()) {
+            output.print(FSPGM(_hidden));
         }
     }
+#if WEBUI_ALERTS_ENABLED
+    else if (String_equals(key, PSTR("WEBUI_ALERTS_JSON"))) {
+        WebUIAlerts_printAsJson(output, 1);
+    }
+#endif
     else if (_form) {
         auto str = _form->process(key);
         if (str) {

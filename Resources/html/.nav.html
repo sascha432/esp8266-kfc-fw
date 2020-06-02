@@ -12,12 +12,14 @@
         </span>
     </div>
 </nav>
-<div class="container-fluid p-3 hidden" id="alert_container">
-    <div class="alert alert-dismissible hidden" role="alert">
-        <span class="alert-content"></span>
+<div class="container-fluid p-3 %IS_CONFIG_DIRTY%" id="alert_container">
+    <div class="alert alert-dismissible fade show %IS_CONFIG_DIRTY%" role="alert">
+        <span class="alert-content"><a href="reboot.html"><button class="btn btn-danger reload-button"><span class="oi oi-reload"></span></button></a><small>The Configuration has been changed, reboot the device to apply all settings</small></span>
         <button type="button" class="close" data-dismiss="alert" aria-label="Close">
           <span aria-hidden="true">&times;</span>
         </button>
     </div>
-    %ALERTS_JAVASCRIPT%
+<!--#if defined(WEBUI_ALERTS_ENABLED) && WEBUI_ALERTS_ENABLED-->
+    <script type="text/javascript">window.alerts=$WEBUI_ALERTS_JSON$</script>
+<!--#endif-->
 </div>

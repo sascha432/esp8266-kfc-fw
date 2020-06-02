@@ -16,6 +16,7 @@
 #include "progmem_data.h"
 #include "fs_mapping.h"
 #include "WebUISocket.h"
+#include "WebUIAlerts.h"
 #include "web_server.h"
 #include "build.h"
 #if NTP_CLIENT
@@ -45,7 +46,7 @@ RTC_DS3231 rtc;
 #endif
 
 PROGMEM_STRING_DEF(safe_mode_enabled, "Device started in SAFE MODE");
-PROGMEM_STRING_DEF(SPIFF_configuration_backup, "/configuration.backup");
+//PROGMEM_STRING_DEF(configuration_backup, "/configuration.backup"); // unused?
 
 KFCFWConfiguration config;
 
@@ -241,14 +242,16 @@ void timezone_config_save(int32_t _timezoneOffset, bool _dst, const String &_zon
 #error max. EEPROM size exceeded
 #endif
 
-KFCFWConfiguration::KFCFWConfiguration() : Configuration(CONFIG_EEPROM_OFFSET, CONFIG_EEPROM_SIZE)
+KFCFWConfiguration::KFCFWConfiguration() :
+    Configuration(CONFIG_EEPROM_OFFSET, CONFIG_EEPROM_SIZE),
+    _garbageCollectionCycleDelay(5000),
+    _dirty(false),
+    _wifiConnected(false),
+    _initTwoWire(false),
+    _safeMode(false),
+    _wifiUp(~0UL),
+    _offlineSince(~0UL)
 {
-    _garbageCollectionCycleDelay = 5000;
-    _wifiConnected = false;
-    _initTwoWire = false;
-    _safeMode = false;
-    _offlineSince = -1UL;
-    _wifiUp = -1UL;
     _setupWiFiCallbacks();
 #if DEBUG_HAVE_SAVECRASH
     EspSaveCrash::addCallback([this]() {
@@ -268,14 +271,14 @@ void KFCFWConfiguration::_onWiFiConnectCb(const WiFiEventStationModeConnected &e
     _debug_printf_P(PSTR("KFCFWConfiguration::_onWiFiConnectCb(%s, %d, %s)\n"), event.ssid.c_str(), (int)event.channel, mac2String(event.bssid).c_str());
     if (!_wifiConnected) {
 
-        if (resetDetector.hasWakeUpDetected() && _offlineSince == -1UL) {
+        if (resetDetector.hasWakeUpDetected() && _offlineSince == ~0UL) {
             ResetDetectorPlugin::_deepSleepWifiTime = millis();
             Logger_notice(F("WiFi connected to %s after %lu ms"), event.ssid.c_str(), ResetDetectorPlugin::_deepSleepWifiTime);
         } else{
             Logger_notice(F("WiFi connected to %s"), event.ssid.c_str());
         }
 
-        _debug_printf_P(PSTR("Station: WiFi connected to %s, offline for %.3f, millis = %lu\n"), event.ssid.c_str(), _offlineSince == -1UL ? 0 : ((millis() - _offlineSince) / 1000.0), millis());
+        _debug_printf_P(PSTR("Station: WiFi connected to %s, offline for %.3f, millis = %lu\n"), event.ssid.c_str(), _offlineSince == ~0UL ? 0 : ((millis() - _offlineSince) / 1000.0), millis());
         _debug_printf_P(PSTR("Free heap %s\n"), formatBytes(ESP.getFreeHeap()).c_str());
         _wifiConnected = true;
         config.storeQuickConnect(event.bssid, event.channel);
@@ -296,12 +299,12 @@ void KFCFWConfiguration::_onWiFiDisconnectCb(const WiFiEventStationModeDisconnec
     _debug_printf_P(PSTR("KFCFWConfiguration::_onWiFiDisconnectCb(%d = %s)\n"), (int)event.reason, WiFi_disconnect_reason(event.reason).c_str());
     if (_wifiConnected) {
         BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::FAST);
-        _debug_printf_P(PSTR("WiFi disconnected after %.3f seconds, millis = %lu\n"), ((_wifiUp == -1UL) ? -1.0 : ((millis() - _wifiUp) / 1000.0)), millis());
+        _debug_printf_P(PSTR("WiFi disconnected after %.3f seconds, millis = %lu\n"), ((_wifiUp == ~0UL) ? -1.0 : ((millis() - _wifiUp) / 1000.0)), millis());
 
         Logger_notice(F("WiFi disconnected, SSID %s, reason %s"), event.ssid.c_str(), WiFi_disconnect_reason(event.reason).c_str());
         _offlineSince = millis();
         _wifiConnected = false;
-        _wifiUp = -1UL;
+        _wifiUp = ~0UL;
         LoopFunctions::callOnce([event]() {
             WiFiCallbacks::callEvent(WiFiCallbacks::DISCONNECTED, (void *)&event);
         });
@@ -713,7 +716,7 @@ void KFCFWConfiguration::restoreFactorySettings()
 #if CUSTOM_CONFIG_PRESET
     customSettings();
 #endif
-    config.addAlert(F("Factory settings restored"), KFCFWConfiguration::AlertMessage::TypeEnum_t::INFO);
+    WebUIAlerts_add(F("Factory settings restored"), KFCFWConfiguration::AlertMessage::TypeEnum_t::INFO);
 }
 
 #if CUSTOM_CONFIG_PRESET
@@ -1252,7 +1255,7 @@ void KFCFWConfiguration::printInfo(Print &output)
 
 bool KFCFWConfiguration::isWiFiUp()
 {
-    return config._wifiUp != -1UL;
+    return config._wifiUp != ~0UL;
 }
 
 unsigned long KFCFWConfiguration::getWiFiUp()
@@ -1362,25 +1365,6 @@ const char *KFCFWConfiguration::getDeviceName() const
     return config._H_STR(Config().device_name);
 }
 
-void KFCFWConfiguration::AlertMessage::remove() {
-    config.dismissAlert(_id);
-}
-
-uint32_t KFCFWConfiguration::addAlert(const String &message, AlertMessage::TypeEnum_t type, bool persistent, bool dismissable)
-{
-    _alertId++;
-    _alerts.emplace_back(_alertId, message, type, persistent, dismissable);
-    //TODO add persistence
-    return _alertId;
-}
-
-void KFCFWConfiguration::dismissAlert(uint32_t id)
-{
-    _alerts.erase(std::remove_if(_alerts.begin(), _alerts.end(), [id](const AlertMessage &_alert) {
-        return _alert.getId() == id;
-    }), _alerts.end());
-}
-
 
 class KFCConfigurationPlugin : public PluginComponent {
 public:
@@ -1428,7 +1412,6 @@ void KFCConfigurationPlugin::setup(PluginSetupMode_t mode)
     }
 #endif
 
-    // during wake up, the WiFI is already configured at this point
     if (!resetDetector.hasWakeUpDetected()) {
         config.printInfo(MySerial);
 

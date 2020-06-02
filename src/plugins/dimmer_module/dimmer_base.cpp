@@ -6,6 +6,7 @@
 #include <KFCJson.h>
 #include <ESPAsyncWebServer.h>
 #include "WebUISocket.h"
+#include "WebUIAlerts.h"
 #include "progmem_data.h"
 #include "../mqtt/mqtt_client.h"
 #if IOT_ATOMIC_SUN_V2
@@ -315,7 +316,7 @@ void Dimmer_Base::writeConfig()
             addr += _wire.write(reinterpret_cast<const uint8_t *>(&dimmer.linear_correction), sizeof(float));                   // DIMMER_REGISTER_LC_FACTOR           0xA9 - float
             if (addr != DIMMER_REGISTER_ZC_DELAY_TICKS) {
                 _endTransmission();
-                config.addAlert(F("Dimmer firmware corrupted"), KFCFWConfiguration::AlertMessage::TypeEnum_t::DANGER, true);
+                WebUIAlerts_add(F("Dimmer firmware corrupted"), KFCFWConfiguration::AlertMessage::TypeEnum_t::DANGER);
              }
             else if (_endTransmission() == 0) {
                 _wire.beginTransmission(DIMMER_I2C_ADDRESS);

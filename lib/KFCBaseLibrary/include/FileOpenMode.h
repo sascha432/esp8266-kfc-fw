@@ -9,8 +9,9 @@ namespace fs {
     public:
         static const char *read;
         static const char *write;
-        static const char *readplus;
         static const char *append;
+        static const char *readplus;
+        static const char *writeplus;
         static const char *appendplus;
     };
 };

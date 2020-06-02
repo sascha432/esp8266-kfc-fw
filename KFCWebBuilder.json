@@ -40,7 +40,8 @@
             "#if !IOT_REMOTE_CONTROL": "./Resources/html/remotectrl.html",
             "#if !REST_API_SUPPORT": "./Resources/html/rest_api.html",
             "#if !HOME_ASSISTANT_INTEGRATION": [ "./Resources/html/hass.html", "./Resources/html/hass_edit.html", "./Resources/html/hass_actions.html" ],
-            "#if !SERIAL2TCP": [ "./Resources/html/serial2tcp.html", "./Resources/js/forms/serial2tcp.js" ]
+            "#if !SERIAL2TCP": [ "./Resources/html/serial2tcp.html", "./Resources/js/forms/serial2tcp.js" ],
+            "#if !WEBUI_ALERTS_ENABLED": [ "./Resources/js/forms/alerts.js" ]
         },
         "groups": {
             "js_main": {
@@ -60,7 +61,8 @@
                         "./Resources/js/ws_console.js",
                         "./Resources/js/http2serial.js",
                         "./Resources/js/ping_console.js",
-                        "./Resources/js/webui.js"
+                        "./Resources/js/webui.js",
+                        "./Resources/js/alerts.js"
                     ]
                 },
                 "processors":  {

@@ -29,6 +29,7 @@
 #include "pin_monitor.h"
 #include "NeoPixel_esp.h"
 #include "plugins.h"
+#include "WebUIAlerts.h"
 #if IOT_DIMMER_MODULE || IOT_ATOMIC_SUN_V2
 #include "plugins/dimmer_module/dimmer_base.h"
 #endif
@@ -189,7 +190,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DSLP, "DSLP", "[<milliseconds>[,<mode>]]",
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RST, "RST", "[<s>]", "Soft reset. 's' enables safe mode");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(CMDS, "CMDS", "Send a list of available AT commands");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(LOAD, "LOAD", "Discard changes and load settings from EEPROM");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(IMPORT, "IMPORT", "<filename>[,<handle>[,<handle>,...]]", "Import settings from JSON file");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(IMPORT, "IMPORT", "<filename|set_dirty>[,<handle>[,<handle>,...]]", "Import settings from JSON file");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(STORE, "STORE", "Store current settings in EEPROM");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(FACTORY, "FACTORY", "Restore factory settings (but do not store in EEPROM)");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(ATMODE, "ATMODE", "<1|0>", "Enable/disable AT Mode");
@@ -210,7 +211,9 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF(RTC, "RTC", "[<set>]", "Set RTC time", "Display
 
 #if DEBUG
 
+#if WEBUI_ALERTS_ENABLED
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(ALERT, "ALERT", "<message>[,<type|0-3>]", "Add WebUI alert");
+#endif
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(FSM, "FSM", "Display FS mapping");
 #if PIN_MONITOR
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PINM, "PINM", "[<1=start|0=stop>}", "List or monitor PINs");
@@ -871,32 +874,37 @@ void at_mode_serial_handle_event(String &commandString)
                 if (args.requireArgs(1)) {
                     auto res = false;
                     auto filename = args.get(0);
-                    auto file = SPIFFS.open(filename, fs::FileOpenMode::read);
-                    if (file) {
-                        args.print(filename);
-                        Configuration::Handle_t *handlesPtr = nullptr;
-                        Configuration::Handle_t handles[AT_MODE_MAX_ARGUMENTS + 1];
-                        auto iterator = args.begin();
-                        if (++iterator != args.end()) {
-                            output.print(F(": "));
-                            handlesPtr = &handles[0];
-                            auto count = 0;
-                            while(iterator != args.end() && count < AT_MODE_MAX_ARGUMENTS) {
-                                handles[count++] = (uint16_t)strtoul(*iterator, nullptr, 0); // auto detect base
-                                handles[count] = 0;
-                                output.printf_P(PSTR("0x%04x "), handles[count - 1]);
-                                ++iterator;
-                            }
-                        }
-                        output.println();
-                        res = config.importJson(file, handlesPtr);
-                    }
-                    if (res) {
-                        args.ok();
-                        config.write();
+                    if (strcmp_P(filename, PSTR("set_dirty"))) {
                         config.setConfigDirty(true);
-                    } else {
-                        args.printf_P(PSTR("Failed to import: %s"), filename);
+                    }
+                    else {
+                        auto file = SPIFFS.open(filename, fs::FileOpenMode::read);
+                        if (file) {
+                            args.print(filename);
+                            Configuration::Handle_t *handlesPtr = nullptr;
+                            Configuration::Handle_t handles[AT_MODE_MAX_ARGUMENTS + 1];
+                            auto iterator = args.begin();
+                            if (++iterator != args.end()) {
+                                output.print(F(": "));
+                                handlesPtr = &handles[0];
+                                auto count = 0;
+                                while(iterator != args.end() && count < AT_MODE_MAX_ARGUMENTS) {
+                                    handles[count++] = (uint16_t)strtoul(*iterator, nullptr, 0); // auto detect base
+                                    handles[count] = 0;
+                                    output.printf_P(PSTR("0x%04x "), handles[count - 1]);
+                                    ++iterator;
+                                }
+                            }
+                            output.println();
+                            res = config.importJson(file, handlesPtr);
+                        }
+                        if (res) {
+                            args.ok();
+                            config.write();
+                            config.setConfigDirty(true);
+                        } else {
+                            args.printf_P(PSTR("Failed to import: %s"), filename);
+                        }
                     }
                 }
             }
@@ -1099,13 +1107,20 @@ void at_mode_serial_handle_event(String &commandString)
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(FSM))) {
                 // Mappings::getInstance().dump(output);
             }
+    #if WEBUI_ALERTS_ENABLED
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(ALERT))) {
-                if (args.requireArgs(1, 2)) {
-                    config.addAlert(args.get(0), static_cast<KFCFWConfiguration::AlertMessage::TypeEnum_t>(args.toInt(1, 0)));
+                if (args.size() > 0) {
+                    WebUIAlerts_add((args.get(0), static_cast<KFCFWConfiguration::AlertMessage::TypeEnum_t>(args.toInt(1, 0)));
                     args.print(F("Alert added, reload WebUI"));
                 }
+                for(auto &alert: config.getAlerts()) {
+                    String str;
+                    KFCFWConfiguration::AlertMessage::toString(str, alert);
+                    String_rtrim_P(str, PSTR("\r\n"));
+                    args.print(str.c_str());
+                }
             }
-
+    #endif
     #if PIN_MONITOR
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(PINM))) {
                 if (!PinMonitor::getInstance()) {

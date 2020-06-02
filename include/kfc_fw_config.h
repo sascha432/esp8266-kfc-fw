@@ -23,6 +23,7 @@
 #if SYSLOG
 #include <KFCSyslog.h>
 #endif
+#include <Timezone.h>
 #include <SaveCrash.h>
 #include "logger.h"
 #include "misc.h"
@@ -544,61 +545,6 @@ public:
     const char *getDeviceName() const;
 
 public:
-    class AlertMessage {
-    public:
-        typedef enum {
-            SUCCESS,
-            DANGER,
-            WARNING,
-            INFO,
-        } TypeEnum_t;
-        AlertMessage(uint32_t id, const String &message, TypeEnum_t type, bool persistent = false, bool dismissable = true) : _id(id), _message(message), _type(type), _persistent(persistent), _dismissable(dismissable) {
-        }
-        uint32_t getId() const {
-            return _id;
-        }
-        const String &getMessage() const {
-            return _message;
-        }
-        bool isDismissable() const {
-            return _dismissable;
-        }
-        void remove();
-        TypeEnum_t getType() const {
-            return _type;
-        }
-        const __FlashStringHelper *getTypeStr() const {
-            switch(_type) {
-                case TypeEnum_t::SUCCESS:
-                    return F("success");
-                case TypeEnum_t::WARNING:
-                    return F("warning");
-                case TypeEnum_t::INFO:
-                    return F("info");
-                case TypeEnum_t::DANGER:
-                default:
-                    return F("danger");
-            }
-        }
-    private:
-        uint32_t _id;
-        String _message;
-        TypeEnum_t _type;
-        bool _persistent;
-        bool _dismissable;
-    };
-    typedef std::vector<AlertMessage> AlertVector;
-
-    uint32_t addAlert(const String &message, AlertMessage::TypeEnum_t type, bool persistent = false, bool dismissable = true);
-    void dismissAlert(uint32_t id);
-    AlertVector &getAlerts() {
-        return _alerts;
-    }
-
-private:
-    AlertVector _alerts;
-    uint32_t _alertId;
-
 private:
     friend class KFCConfigurationPlugin;
 

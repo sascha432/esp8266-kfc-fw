@@ -682,15 +682,14 @@ uint16_t tokenizer(char *str, TokenizerArgs &args, bool hasCommand, char **nextC
     return argc;
 }
 
-void explode(char *str, const char *separator, std::vector<char*>& vector, const char *trim)
-{
-    char *nextCommand;
-    TokenizerArgsVector<char *> args(vector);
-    tokenizer(str, args, false, &nextCommand, [separator, trim](char ch, int type) {
-        return ((type == 5 && strchr(separator, ch)) || ((trim && (type == 7 || type == 8)) && strchr(trim, ch)));
-    });
-}
-
+// void explode(char *str, const char *separator, std::vector<char*>& vector, const char *trim)
+// {
+//     char *nextCommand;
+//     TokenizerArgsVector<char *> args(vector);
+//     tokenizer(str, args, false, &nextCommand, [separator, trim](char ch, int type) {
+//         return ((type == 5 && strchr(separator, ch)) || ((trim && (type == 7 || type == 8)) && strchr(trim, ch)));
+//     });
+// }
 
 void split::vector_callback(const char *sptr, size_t len, void *ptr, int flags)
 {
@@ -704,11 +703,12 @@ void split::vector_callback(const char *sptr, size_t len, void *ptr, int flags)
     }
 }
 
-void split::split(const char *str, char sep, callback fun, void *data, int flags)
+void split::split(const char *str, char sep, callback fun, void *data, int flags, uint16_t limit)
 {
     unsigned int start = 0, stop;
     for (stop = 0; str[stop]; stop++) {
-        if (str[stop] == sep) {
+        if (limit > 0 && str[stop] == sep) {
+            limit--;
             fun(str + start, stop - start, data, flags);
             start = stop + 1;
         }
@@ -716,13 +716,14 @@ void split::split(const char *str, char sep, callback fun, void *data, int flags
     fun(str + start, stop - start, data, flags);
 }
 
-void split::split_P(PGM_P str, char sep, callback fun, void *data, int flags)
+void split::split_P(PGM_P str, char sep, callback fun, void *data, int flags, uint16_t limit)
 {
     unsigned int start = 0, stop;
     char ch;
     flags |= SplitFlagsType::_PROGMEM;
     for (stop = 0; (ch = pgm_read_byte(&str[stop])); stop++) {
-        if (ch == sep) {
+        if (limit > 0 && ch == sep) {
+            limit--;
             fun(str + start, stop - start, data, flags);
             start = stop + 1;
         }

@@ -31,14 +31,22 @@ namespace KFCConfigurationClasses {
         public:
             Device() {
             }
-            static const char *getName();
-            static const char *getPassword();
-            static void setName(const String &name);
-            static void setPassword(const String &name);
+            static void defaults();
 
-        private:
-            char _name[17];
-            char _pass[33];
+            static const char *getName();
+            static const char *getTitle();
+            static const char *getPassword();
+            static const char *getToken();
+            static void setName(const String &name);
+            static void setTitle(const String &title);
+            static void setPassword(const String &password);
+            static void setToken(const String &token);
+
+            static void setSafeModeRebootTime(uint16_t minutes);
+            static uint16_t getSafeModeRebootTime();
+
+        public:
+            uint16_t safeModeRebootTime;
         };
 
         Flags flags;

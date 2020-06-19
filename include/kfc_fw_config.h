@@ -108,6 +108,7 @@ struct ConfigFlags {
     ConfigFlags_t serial2TCPMode:3;
     ConfigFlags_t useStaticIPDuringWakeUp:1;
     ConfigFlags_t webServerPerformanceModeEnabled:1;
+    ConfigFlags_t apStandByMode: 1;
 };
 
 struct HueConfig {

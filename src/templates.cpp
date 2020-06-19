@@ -15,6 +15,7 @@
 #include "reset_detector.h"
 #include "plugins.h"
 #include "plugins_menu.h"
+#include "WebUIAlerts.h"
 
 #if DEBUG_TEMPLATES
 #include <debug_helper_enable.h>
@@ -131,14 +132,27 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
             output.print(FSPGM(_hidden));
         }
     }
-#if WEBUI_ALERTS_ENABLED
+    else if (String_equals(key, PSTR("IS_CONFIG_DIRTY_CLASS"))) {
+        if (config.isConfigDirty()) {
+            output.print(F(" fade show"));
+        } else {
+            output.print(FSPGM(_hidden));
+        }
+    }
     else if (String_equals(key, PSTR("WEBUI_ALERTS_STATUS"))) {
+#if WEBUI_ALERTS_ENABLED
         output.printf_P(PSTR("Storage %s, rewrite size %d, poll interval %.2fs, WebUI max. height %s"), SPGM(alerts_storage_filename), WEBUI_ALERTS_REWRITE_SIZE, WEBUI_ALERTS_POLL_INTERVAL / 1000.0, WEBUI_ALERTS_MAX_HEIGHT);
+#elif WEBUI_ALERTS_SEND_TO_LOGGER
+        output.print(F("Send to logger"));
+#else
+        output.print(F("Disabled"));
+#endif
     }
     else if (String_equals(key, PSTR("WEBUI_ALERTS_JSON"))) {
+#if WEBUI_ALERTS_ENABLED
         WebUIAlerts_printAsJson(output, 1);
-    }
 #endif
+    }
     else if (_form) {
         auto str = _form->process(key);
         if (str) {
@@ -390,6 +404,7 @@ WifiSettingsForm::WifiSettingsForm(AsyncWebServerRequest *request) : SettingsFor
     addValidator(new FormEnumValidator<uint8_t, WiFiEncryptionTypeArray().size()>(F("Invalid encryption"), WIFI_ENCRYPTION_ARRAY));
 
     add<bool>(F("ap_hidden"), _H_FLAGS_BOOL_VALUE(Config().flags, hiddenSSID), FormField::InputFieldType::CHECK);
+    add<bool>(F("standby_ap_mode"), _H_FLAGS_BOOL_VALUE(Config().flags, apStandByMode), FormField::InputFieldType::CHECK);
 
     finalize();
 }
@@ -402,6 +417,7 @@ NetworkSettingsForm::NetworkSettingsForm(AsyncWebServerRequest *request) : Setti
     addValidator(new FormLengthValidator(4, sizeof(Config().device_name) - 1));
     add(F("title"), _H_STR_VALUE(Config().device_title));
     addValidator(new FormLengthValidator(1, sizeof(Config().device_title) - 1));
+    add<uint16_t>(F("safe_mode_reboot_time"), _H_STRUCT_VALUE(MainConfig().system.device, safeModeRebootTime));
 
     add<bool>(F("dhcp_client"), _H_FLAGS_BOOL_VALUE(Config().flags, stationModeDHCPEnabled));
 

@@ -206,7 +206,8 @@ void Config_Button::setButtons(ButtonVector &buttons)
 
 const char *session_get_device_token()
 {
-    return config._H_STR(Config().device_token);
+    using KFCConfigurationClasses::System;
+    return System::Device::getToken();
 }
 
 void timezone_config_load(int32_t &_timezoneOffset, bool &_dst, String &_zoneName, String &_abbreviation)
@@ -565,9 +566,10 @@ void KFCFWConfiguration::restoreFactorySettings()
     uint8_t mac[6];
     WiFi.macAddress(mac);
     auto deviceName = PrintString(F("KFC%02X%02X%02X"), mac[3], mac[4], mac[5]);
-    _H_SET_STR(Config().device_name, deviceName);
-    _H_SET_STR(Config().device_pass, defaultPassword);
-    _H_SET_STR(Config().device_title, F("KFC Firmware"));
+    System::Device::defaults();
+    System::Device::setName(deviceName);
+    System::Device::setTitle(F("KFC Firmware"));
+    System::Device::setPassword(defaultPassword);
 
     Network::WiFiConfig::setSSID(deviceName);
     Network::WiFiConfig::setPassword(defaultPassword);

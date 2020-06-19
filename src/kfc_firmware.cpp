@@ -262,6 +262,14 @@ void setup()
             }
         });
 
+        auto rebootDelay = KFCConfigurationClasses::System::Device::getSafeModeRebootTime();
+        if (rebootDelay) {
+            // restart device if running in safe mode for rebootDelay minutes
+            Scheduler.addTimer(rebootDelay * 60000UL, false, [](EventScheduler::TimerPtr timer) {
+                config.restartDevice();
+            });
+        }
+
     } else {
 
         #if AT_MODE_SUPPORTED
@@ -300,6 +308,24 @@ void setup()
         prepare_plugins();
 
         setup_plugins(resetDetector.hasWakeUpDetected() ? PluginComponent::PLUGIN_SETUP_AUTO_WAKE_UP : PluginComponent::PLUGIN_SETUP_DEFAULT);
+
+        // check if wifi is up
+        Scheduler.addTimer(60000, true, [](EventScheduler::TimerPtr timer) {
+            auto flags = config._H_GET(Config().flags);
+            if (flags.wifiMode & WIFI_STA) {
+                if (!WiFi.isConnected()) {
+                    // WiFi is down, wait 30 seconds if it reconnects automatically
+                    Scheduler.addTimer(30000, false, [](EventScheduler::TimerPtr timer) {
+                        if (!WiFi.isConnected()) {
+                            // restart entire wifi subsystem
+                            config.reconfigureWiFi();
+                            Logger_notice(F("WiFi subsystem restarted"));
+                        }
+                    });
+                }
+            }
+        });
+
 
 #if SPIFFS_SUPPORT
         // reset crash counter after 3min

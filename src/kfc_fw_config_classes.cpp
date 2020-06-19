@@ -47,6 +47,8 @@ namespace KFCConfigurationClasses {
         _flags.syslogProtocol = SYSLOG_PROTOCOL_TCP;
 
         _flags.serial2TCPMode = SERIAL2TCP_MODE_DISABLED;
+
+        _flags.apStandByMode = true;
     }
 
     System::Flags System::Flags::read()
@@ -57,6 +59,62 @@ namespace KFCConfigurationClasses {
     void System::Flags::write()
     {
         config._H_SET(Config().flags, _flags);
+    }
+
+    void System::Device::defaults()
+    {
+        setSafeModeRebootTime(0);
+        setTitle(F("KFC Firmware"));
+    }
+
+    const char *System::Device::getName()
+    {
+        return config._H_STR(Config().device_name);
+    }
+
+    const char *System::Device::getTitle()
+    {
+        return config._H_STR(Config().device_title);
+    }
+
+    const char *System::Device::getPassword()
+    {
+        return config._H_STR(Config().device_pass);
+    }
+
+    const char *System::Device::getToken()
+    {
+        return config._H_STR(Config().device_token);
+    }
+
+    void System::Device::setName(const String &name)
+    {
+        config._H_SET_STR(Config().device_name, name);
+    }
+
+    void System::Device::setTitle(const String &title)
+    {
+        config._H_SET_STR(Config().device_title, title);
+    }
+
+    void System::Device::setPassword(const String &password)
+    {
+        config._H_SET_STR(Config().device_pass, password);
+    }
+
+    void System::Device::setToken(const String &token)
+    {
+        config._H_SET_STR(Config().device_token, token);
+    }
+
+    void System::Device::setSafeModeRebootTime(uint16_t minutes)
+    {
+        config._H_SET(MainConfig().system.device.safeModeRebootTime, minutes);
+    }
+
+    uint16_t System::Device::getSafeModeRebootTime()
+    {
+        return config._H_GET(MainConfig().system.device.safeModeRebootTime);
     }
 
 
@@ -88,6 +146,7 @@ namespace KFCConfigurationClasses {
 
         auto flags = System::Flags();
         flags->wifiMode = WIFI_AP;
+        flags->apStandByMode = true;
         flags->stationModeDHCPEnabled = true;
         flags.write();
     }

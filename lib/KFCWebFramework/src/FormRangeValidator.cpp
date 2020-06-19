@@ -6,23 +6,30 @@
 #include "FormField.h"
 #include "FormBase.h"
 
-FormRangeValidator::FormRangeValidator(long min, long max) : FormRangeValidator(FSPGM(FormRangeValidator_default_message), min, max) {
+#ifdef _max
+#undef _max
+#undef _min
+#endif
+
+FormRangeValidator::FormRangeValidator(long min, long max, bool allowZero) : FormRangeValidator(FSPGM(FormRangeValidator_default_message), min, max, allowZero)
+{
 }
 
-FormRangeValidator::FormRangeValidator(const String & message, long min, long max) : FormValidator(message) {
-    _min = min;
-    _max = max;
+FormRangeValidator::FormRangeValidator(const String & message, long min, long max, bool allowZero) : FormValidator(message), _min(min), _max(max), _allowZero(allowZero)
+{
 }
 
-bool FormRangeValidator::validate() {
+bool FormRangeValidator::validate()
+{
     if (FormValidator::validate()) {
         long value = getField().getValue().toInt();
-        return (value >= _min && value <= _max);
+        return (_allowZero && value == 0) || (value >= _min && value <= _max);
     }
     return false;
 }
 
-String FormRangeValidator::getMessage() {
+String FormRangeValidator::getMessage()
+{
     String message = FormValidator::getMessage();
     message.replace(FSPGM(FormValidator_min_macro), String(_min));
     message.replace(FSPGM(FormValidator_max_macro), String(_max));

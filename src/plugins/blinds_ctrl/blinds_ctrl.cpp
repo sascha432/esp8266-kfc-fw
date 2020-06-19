@@ -149,7 +149,7 @@ void BlindsControlPlugin::createConfigureForm(AsyncWebServerRequest *request, Fo
         form.add<uint16_t>(PrintString(F("channel%u_close_time"), i), &blinds->channels[i].closeTime)
             ->setFormUI((new FormUI(FormUI::TEXT, PrintString(F("Channel %u Open Time Limit"), i)))->setSuffix(ms));
         form.add<uint16_t>(PrintString(F("channel%u_open_time"), i), &blinds->channels[i].openTime)
-            ->setFormUI((new FormUI(FormUI::TEXT, PrintString(F("Channel % Close Time Limit"), i)))->setSuffix(ms));
+            ->setFormUI((new FormUI(FormUI::TEXT, PrintString(F("Channel %u Close Time Limit"), i)))->setSuffix(ms));
         form.add<uint16_t>(PrintString(F("channel%u_current_limit"), i), &blinds->channels[i].currentLimit, [](uint16_t &value, FormField &field, bool isSetter){
                 if (isSetter) {
                     value = CURRENT_TO_ADC(value);

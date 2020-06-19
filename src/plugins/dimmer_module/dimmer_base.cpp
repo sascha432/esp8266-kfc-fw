@@ -265,24 +265,25 @@ void Dimmer_Base::readConfig()
     auto &dimmer = config._H_W_GET(Config().dimmer);
 
     if (_lockWire()) {
+        register_mem_cfg_t cfg;
         _wire.beginTransmission(DIMMER_I2C_ADDRESS);
         _wire.write(DIMMER_REGISTER_READ_LENGTH);
-        _wire.write(11);
-        _wire.write(DIMMER_REGISTER_OPTIONS);
-        if (_endTransmission() == 0 && _wire.requestFrom(DIMMER_I2C_ADDRESS, 11) == 11) {
-            dimmer.restore_level = (_wire.read() & DIMMER_OPTIONS_RESTORE_LEVEL) ? true : false;
-            dimmer.max_temperature = _wire.read();
-            _wire.readBytes(reinterpret_cast<uint8_t *>(&dimmer.on_fade_time), sizeof(dimmer.on_fade_time));
-            _wire.read();
-            _wire.readBytes(reinterpret_cast<uint8_t *>(&dimmer.linear_correction), sizeof(dimmer.linear_correction));
-
-            _wire.beginTransmission(DIMMER_I2C_ADDRESS);
-            _wire.write(DIMMER_REGISTER_READ_LENGTH);
-            _wire.write(1);
-            _wire.write(DIMMER_REGISTER_METRICS_INT);
-            if (_endTransmission() == 0 && _wire.requestFrom(DIMMER_I2C_ADDRESS, 1) == 1) {
-                dimmer.metrics_int = _wire.read();
-            }
+        _wire.write(DIMMER_REGISTER_CONFIG_SZ);
+        _wire.write(DIMMER_REGISTER_CONFIG_OFS);
+        if (_endTransmission() == 0 && _wire.requestFrom(DIMMER_I2C_ADDRESS, DIMMER_REGISTER_CONFIG_SZ) == sizeof(cfg)) {
+            dimmer.restore_level = cfg.bits.restore_level;
+            dimmer.max_temperature = cfg.max_temp;
+            dimmer.on_fade_time = cfg.fade_in_time;
+            // cfg.temp_check_interval;
+            dimmer.linear_correction = cfg.linear_correction_factor;
+            dimmer.metrics_int = cfg.report_metrics_max_interval;
+            // cfg.zero_crossing_delay_ticks;
+            // cfg.minimum_on_time_ticks;
+            // cfg.adjust_halfwave_time_ticks;
+            // cfg.internal_1_1v_ref;
+            // cfg.int_temp_offset;
+            // cfg.ntc_temp_offset;
+            dimmer.metrics_int = cfg.report_metrics_max_interval;
         }
     }
     _unlockWire();
@@ -293,38 +294,36 @@ void Dimmer_Base::writeConfig()
     auto dimmer = config._H_GET(Config().dimmer);
 
     if (_lockWire()) {
+        register_mem_cfg_t cfg;
+
         _wire.beginTransmission(DIMMER_I2C_ADDRESS);
         _wire.write(DIMMER_REGISTER_READ_LENGTH);
-        _wire.write(1);
-        _wire.write(DIMMER_REGISTER_OPTIONS);
-        if (_endTransmission() == 0 && _wire.requestFrom(DIMMER_I2C_ADDRESS, 1) == 1) {
-            uint8_t options = _wire.read();
+        _wire.write(DIMMER_REGISTER_CONFIG_SZ);
+        _wire.write(DIMMER_REGISTER_CONFIG_OFS);
+        if (
+            (_endTransmission() == 0) &&
+            (_wire.requestFrom(DIMMER_I2C_ADDRESS, DIMMER_REGISTER_CONFIG_SZ) == DIMMER_REGISTER_CONFIG_SZ) &&
+            (_wire.readBytes(reinterpret_cast<uint8_t *>(&cfg), sizeof(cfg)) == DIMMER_REGISTER_CONFIG_SZ)
+        ) {
 
-            if (dimmer.restore_level) {
-                options |= DIMMER_OPTIONS_RESTORE_LEVEL;
-            } else {
-                options &= ~DIMMER_OPTIONS_RESTORE_LEVEL;
-            }
+            cfg.bits.restore_level = dimmer.restore_level;
+            cfg.max_temp = dimmer.max_temperature;
+            cfg.fade_in_time = dimmer.on_fade_time;
+            cfg.temp_check_interval = 2;
+            cfg.linear_correction_factor = dimmer.linear_correction;
+            // cfg.zero_crossing_delay_ticks;
+            // cfg.minimum_on_time_ticks;
+            // cfg.adjust_halfwave_time_ticks;
+            // cfg.internal_1_1v_ref;
+            // cfg.int_temp_offset;
+            // cfg.ntc_temp_offset;
+            cfg.report_metrics_max_interval = dimmer.metrics_int;
 
             _wire.beginTransmission(DIMMER_I2C_ADDRESS);
-            uint8_t addr = DIMMER_REGISTER_OPTIONS;
-            _wire.write(DIMMER_REGISTER_OPTIONS);
-            addr += _wire.write(options);                                                                                       // DIMMER_REGISTER_OPTIONS             0xA2 - byte
-            addr += _wire.write(dimmer.max_temperature);                                                                        // DIMMER_REGISTER_MAX_TEMP            0xA3 - byte
-            addr += _wire.write(reinterpret_cast<const uint8_t *>(&dimmer.on_fade_time), sizeof(float));                        // DIMMER_REGISTER_FADE_IN_TIME        0xA4 - float
-            addr += _wire.write(2);                                                                                             // DIMMER_REGISTER_TEMP_CHECK_INT      0xA8 - byte
-            addr += _wire.write(reinterpret_cast<const uint8_t *>(&dimmer.linear_correction), sizeof(float));                   // DIMMER_REGISTER_LC_FACTOR           0xA9 - float
-            if (addr != DIMMER_REGISTER_ZC_DELAY_TICKS) {
-                _endTransmission();
-                WebUIAlerts_add(F("Dimmer firmware corrupted"), AlertMessage::TypeEnum_t::DANGER);
-             }
-            else if (_endTransmission() == 0) {
-                _wire.beginTransmission(DIMMER_I2C_ADDRESS);
-                _wire.write(DIMMER_REGISTER_METRICS_INT);
-                _wire.write(dimmer.metrics_int);                                                                                // DIMMER_REGISTER_METRICS_INT         0xB8 - byte
-                if (_endTransmission() == 0) {
-                    writeEEPROM(true);
-                }
+            _wire.write(DIMMER_REGISTER_CONFIG_OFS);
+            _wire.write(reinterpret_cast<const uint8_t *>(&cfg), sizeof(cfg));
+            if (_endTransmission() == 0) {
+                writeEEPROM(true);
             }
         }
     }

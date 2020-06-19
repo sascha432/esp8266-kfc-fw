@@ -16,11 +16,11 @@
         "default": "text/plain"
     },
     "1": {
-        "use_counter": 12,
+        "use_counter": 15,
         "default": "1"
     },
     "0": {
-        "use_counter": 12,
+        "use_counter": 15,
         "default": "0"
     },
     "null": {
@@ -52,7 +52,7 @@
         "default": "Invalid hostname or IP address"
     },
     "webui_json_id": {
-        "use_counter": 37,
+        "use_counter": 40,
         "default": "id"
     },
     "webui_json_name": {
@@ -72,11 +72,11 @@
         "default": "offset"
     },
     "webui_json_value": {
-        "use_counter": 37,
+        "use_counter": 40,
         "default": "value"
     },
     "webui_json_state": {
-        "use_counter": 29,
+        "use_counter": 31,
         "default": "state"
     },
     "mime_application_json": {
@@ -100,7 +100,7 @@
         "default": "off"
     },
     "crash_counter_file": {
-        "use_counter": 4,
+        "use_counter": 3,
         "default": "/crash_counter"
     },
     "Device_is_rebooting": {
@@ -144,11 +144,11 @@
         "default": ", "
     },
     "_hidden": {
-        "use_counter": 4,
+        "use_counter": 5,
         "default": " hidden"
     },
     "Not_supported": {
-        "use_counter": 1,
+        "use_counter": 2,
         "default": "Not supported"
     },
     "_selected": {
@@ -164,7 +164,7 @@
         "default": "/server.key"
     },
     "webui_json_type": {
-        "use_counter": 18,
+        "use_counter": 19,
         "default": "type"
     },
     "webui_json_row": {
@@ -284,11 +284,11 @@
         "default": "/webui_ws"
     },
     "webui_json_ue": {
-        "use_counter": 8,
+        "use_counter": 9,
         "default": "ue"
     },
     "webui_json_events": {
-        "use_counter": 8,
+        "use_counter": 9,
         "default": "events"
     },
     "http": {
@@ -404,11 +404,11 @@
         "default": "/blinds_ctrl.state"
     },
     "Yes": {
-        "use_counter": 3,
+        "use_counter": 4,
         "default": "Yes"
     },
     "No": {
-        "use_counter": 3,
+        "use_counter": 4,
         "default": "No"
     },
     "webui_json_title": {
@@ -596,7 +596,7 @@
         "default": "/switch/state"
     },
     "mqtt_switch_set": {
-        "use_counter": 4,
+        "use_counter": 3,
         "default": "/switch/set"
     },
     "iot_switch_states_file": {
@@ -652,11 +652,11 @@
         "default": "config"
     },
     "true": {
-        "use_counter": 5,
+        "use_counter": 3,
         "default": "true"
     },
     "false": {
-        "use_counter": 5,
+        "use_counter": 3,
         "default": "false"
     },
     "openweathermap_api_url": {
@@ -832,11 +832,11 @@
         "default": "keep-alive"
     },
     "status": {
-        "use_counter": 8,
+        "use_counter": 12,
         "default": "status"
     },
     "message": {
-        "use_counter": 7,
+        "use_counter": 13,
         "default": "message"
     },
     "ds3231_id_temp": {
@@ -872,7 +872,7 @@
         "default": "Bearer "
     },
     "cfg": {
-        "use_counter": 3,
+        "use_counter": 4,
         "default": "cfg"
     },
     "wifi": {
@@ -884,7 +884,7 @@
         "default": "safe mode"
     },
     "_rebooting_html": {
-        "use_counter": 2,
+        "use_counter": 0,
         "default": "/rebooting.html",
         "annotations": {
             "translation": {
@@ -895,7 +895,7 @@
         }
     },
     "_index_html": {
-        "use_counter": 2,
+        "use_counter": 0,
         "default": "/index.html",
         "annotations": {
             "translation": {
@@ -905,56 +905,12 @@
             "line": 858
         }
     },
-    "_factory_html": {
-        "use_counter": 1,
-        "auto": " factory html",
-        "annotations": {
-            "translation": {
-                "*": "/factory.html"
-            },
-            "file": "src/web_server.cpp",
-            "line": 860
-        }
-    },
-    "_network_html": {
-        "use_counter": 1,
-        "default": "/network.html",
-        "annotations": {
-            "translation": {
-                "*": "/network.html"
-            },
-            "file": "src/web_server.cpp",
-            "line": 826
-        }
-    },
-    "_reboot_html": {
-        "use_counter": 1,
-        "auto": " reboot html",
-        "annotations": {
-            "translation": {
-                "*": "/reboot.html"
-            },
-            "file": "src/web_server.cpp",
-            "line": 847
-        }
-    },
-    "network": {
-        "use_counter": 1,
-        "annotations": {
-            "translation": {
-                "*": "network"
-            },
-            "file": "src/web_server.cpp",
-            "line": 831
-        },
-        "auto": "network"
-    },
     "password": {
-        "use_counter": 1,
+        "use_counter": 4,
         "default": "password"
     },
     "status__u": {
-        "use_counter": 4,
+        "use_counter": 3,
         "annotations": {
             "translation": {
                 "*": "status=%u"
@@ -979,5 +935,93 @@
     "values": {
         "use_counter": 1,
         "default": "values"
+    },
+    "Home": {
+        "use_counter": 2,
+        "default": "Home"
+    },
+    "index_html": {
+        "use_counter": 5,
+        "default": "index.html"
+    },
+    "Status": {
+        "use_counter": 2,
+        "default": "Status"
+    },
+    "status_html": {
+        "use_counter": 4,
+        "default": "status.html"
+    },
+    "wifi_html": {
+        "use_counter": 3,
+        "default": "wifi.html"
+    },
+    "network_html": {
+        "use_counter": 3,
+        "default": "network.html"
+    },
+    "Change_Password": {
+        "use_counter": 2,
+        "default": "Change Password"
+    },
+    "password_html": {
+        "use_counter": 2,
+        "default": "password.html"
+    },
+    "reboot_html": {
+        "use_counter": 2,
+        "default": "reboot.html"
+    },
+    "Configuration": {
+        "use_counter": 1,
+        "default": "Configuration"
+    },
+    "WiFi": {
+        "use_counter": 1,
+        "default": "WiFi"
+    },
+    "Network": {
+        "use_counter": 1,
+        "default": "Network"
+    },
+    "Device": {
+        "use_counter": 2,
+        "default": "Device"
+    },
+    "device_html": {
+        "use_counter": 1,
+        "default": "device.html"
+    },
+    "remote_html": {
+        "use_counter": 1,
+        "default": "remote.html"
+    },
+    "Admin": {
+        "use_counter": 1,
+        "default": "Admin"
+    },
+    "factory_html": {
+        "use_counter": 2,
+        "default": "factory.html"
+    },
+    "crash_dump_file": {
+        "use_counter": 1,
+        "default": "/crash.%03x"
+    },
+    "username": {
+        "use_counter": 2,
+        "default": "username"
+    },
+    "rebooting_html": {
+        "use_counter": 2,
+        "default": "rebooting.html"
+    },
+    "Reboot_Device": {
+        "use_counter": 2,
+        "default": "Reboot Device"
+    },
+    "title": {
+        "use_counter": 5,
+        "default": "title"
     }
 }

@@ -60,6 +60,13 @@
                     <h2>Access Point</h2>
                 </div>
                 <div class="form-group">
+                    <label for="standby_ap_mode">AP Mode:</label>
+                    <select class="form-control" name="standby_ap_mode" id="standby_ap_mode">
+                        <option value="0" %STANDBY_AP_MODE_0%>Enable AP Mode permanently</option>
+                        <option value="1" %STANDBY_AP_MODE_1%>Enable AP Mode if station is not connected</option>
+                    </select>
+                </div>
+                    <div class="form-group">
                     <label for="ap_ssid">SSID:</label>
                     <div class="input-group">
                         <input type="text" class="form-control" name="ap_wifi_ssid" id="ap_wifi_ssid" value="%AP_WIFI_SSID%">

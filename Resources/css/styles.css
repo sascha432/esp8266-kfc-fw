@@ -1,6 +1,9 @@
 .hidden {
 	display: none;
 }
+.hidden-override {
+	display: none !important;
+}
 .custom-pin-row label {
 	display: none;
 }
@@ -337,3 +340,17 @@
         font-size: 88px;
     }
 }
+
+.navbar-expand-lg .alerts-icon-sm {
+    font-size: 1.25rem;
+}
+
+@media (min-width: 992px) {
+    .navbar-expand-lg .alerts-icon-sm {
+        display: none;
+    }
+    .navbar-expand-lg .alerts-icon-lg {
+        display: inline;
+    }
+}
+

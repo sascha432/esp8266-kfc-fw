@@ -23,5 +23,11 @@ $(function() {
         $('#softap_dhcpd').change(dhcpd_change);
         dhcp_change();
         dhcpd_change();
+        $('#safe_mode_reboot_time').on('blur', function() {
+            var value = parseInt($(this).val());
+            if (value == 0) {
+                $(this).val('');
+            }
+        });
     }
 });

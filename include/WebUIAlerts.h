@@ -4,6 +4,12 @@
 
 #pragma once
 
+#if WEBUI_ALERTS_ENABLED
+#define WEBUI_ALERTS_SEND_TO_LOGGER                 0
+#else
+#define WEBUI_ALERTS_SEND_TO_LOGGER                 1
+#endif
+
 class AlertMessage {
 public:
     typedef enum {
@@ -130,10 +136,11 @@ private:
     AlertVector _alerts;
     uint32_t _alertId;
 
-#else
+#elif WEBUI_ALERTS_SEND_TO_LOGGER && !WEBUI_ALERTS_ENABLED
 
     static void logger(const String &message, AlertMessage::TypeEnum_t type) {
         auto str = String(F("WebUI Alert: "));
+        //TODO remove html
         str += message;
         switch(type) {
             case TypeEnum_t::DANGER:
@@ -180,13 +187,19 @@ PROGMEM_STRING_DECL(alerts_storage_filename);
 #define WebUIAlerts_add(message, ...)
 #define WebUIAlerts_remove(alertId)
 #define WebUIAlerts_printAsJson(output, minAlertId)
+#define WebUIAlerts_getCount()                          0
 #define WebUIAlerts_readStorage()
 
 #else
 
+#if WEBUI_ALERTS_SEND_TO_LOGGER
 #define WebUIAlerts_add(message, type, ...)             AlertMessage::logger(message, type);
+#else
+#define WebUIAlerts_add(message, type, ...)             ;
+#endif
 #define WebUIAlerts_remove(alertId)                     ;
 #define WebUIAlerts_printAsJson(output, minAlertId)     ;
+#define WebUIAlerts_getCount()                          0
 #define WebUIAlerts_readStorage()                       ;
 
 #endif

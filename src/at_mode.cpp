@@ -211,7 +211,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF(RTC, "RTC", "[<set>]", "Set RTC time", "Display
 
 #if DEBUG
 
-#if WEBUI_ALERTS_ENABLED
+#if WEBUI_ALERTS_ENABLED || WEBUI_ALERTS_SEND_TO_LOGGER
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(ALERT, "ALERT", "<message>[,<type|0-3>]", "Add WebUI alert");
 #endif
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(FSM, "FSM", "Display FS mapping");
@@ -874,8 +874,9 @@ void at_mode_serial_handle_event(String &commandString)
                 if (args.requireArgs(1)) {
                     auto res = false;
                     auto filename = args.get(0);
-                    if (strcmp_P(filename, PSTR("set_dirty"))) {
+                    if (!strcmp_P(filename, PSTR("set_dirty"))) {
                         config.setConfigDirty(true);
+                        args.print(F("configuration marked dirty"));
                     }
                     else {
                         auto file = SPIFFS.open(filename, fs::FileOpenMode::read);
@@ -1107,18 +1108,20 @@ void at_mode_serial_handle_event(String &commandString)
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(FSM))) {
                 // Mappings::getInstance().dump(output);
             }
-    #if WEBUI_ALERTS_ENABLED
+    #if WEBUI_ALERTS_ENABLED || WEBUI_ALERTS_SEND_TO_LOGGER
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(ALERT))) {
                 if (args.size() > 0) {
-                    WebUIAlerts_add((args.get(0), static_cast<AlertMessage::TypeEnum_t>(args.toInt(1, 0)));
-                    args.print(F("Alert added, reload WebUI"));
+                    WebUIAlerts_add(args.get(0), static_cast<AlertMessage::TypeEnum_t>(args.toInt(1, 0)));
+                    args.print(F("Alert added"));
                 }
+                #if WEBUI_ALERTS_ENABLED
                 for(auto &alert: config.getAlerts()) {
                     String str;
                     KFCFWConfiguration::AlertMessage::toString(str, alert);
                     String_rtrim_P(str, PSTR("\r\n"));
                     args.print(str.c_str());
                 }
+                #endif
             }
     #endif
     #if PIN_MONITOR

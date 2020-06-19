@@ -75,6 +75,11 @@ $.getRandomBytes = function(n) {
     return a;
 };
 
+$.WebUIAlerts = {
+    icon: false,
+    alerts: ['/%%%WEBUI_ALERTS_JSON%%%/']
+};
+
 $(function() {
     var tokenButton = $('#generate-bearer-token');
     if (tokenButton.length) {

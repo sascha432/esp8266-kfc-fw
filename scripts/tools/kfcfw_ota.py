@@ -11,7 +11,7 @@ import time
 import argparse
 import kfcfw_session
 import kfcfw_configuration
-import progressbar
+# import progressbar
 from requests_toolbelt import MultipartEncoder, MultipartEncoderMonitor
 import requests
 import re

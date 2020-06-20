@@ -202,7 +202,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LS, "LS", "[<directory>]", "List files and
 #if ESP8266
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LSR, "LSR", "[<directory>]", "List files and directory in raw mode");
 #endif
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WIFI, "WIFI", "[<reconnect|on|off|ap_on|ap_off>]", "Display WiFi info");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WIFI, "WIFI", "[<reset|on|off|ap_on|ap_off>]", "Modify WiFi settings");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(REM, "REM", "Ignore comment");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LED, "LED", "<slow,fast,flicker,off,solid,sos>,[,color=0xff0000][,pin]", "Set LED mode");
 #if RTC_SUPPORT
@@ -974,24 +974,25 @@ void at_mode_serial_handle_event(String &commandString)
 #endif
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(WIFI))) {
                 if (!args.empty()) {
-                    if (String_equalsIgnoreCase(args.toString(0), F("on"))) {
+                    auto arg0 = args.toString(0);
+                    if (String_equalsIgnoreCase(arg0, FSPGM(on))) {
                         args.print(F("enabling station mode"));
                         WiFi.enableSTA(true);
                         WiFi.reconnect();
                     }
-                    else if (String_equalsIgnoreCase(args.toString(0), F("off"))) {
+                    else if (String_equalsIgnoreCase(arg0, FSPGM(off))) {
                         args.print(F("disabling station mode"));
                         WiFi.enableSTA(false);
                     }
-                    else if (String_equalsIgnoreCase(args.toString(0), F("ap_on"))) {
+                    else if (String_equalsIgnoreCase(arg0, F("ap_on"))) {
                         args.print(F("enabling AP mode"));
                         WiFi.enableAP(true);
                     }
-                    else if (String_equalsIgnoreCase(args.toString(0), F("app_off"))) {
+                    else if (String_equalsIgnoreCase(arg0, F("app_off"))) {
                         args.print(F("disabling AP mode"));
                         WiFi.enableAP(false);
                     }
-                    else {
+                    else if (String_equalsIgnoreCase(arg0, F("reset"))) {
                         config.reconfigureWiFi();
                     }
                 }
@@ -1006,42 +1007,13 @@ void at_mode_serial_handle_event(String &commandString)
                     WiFi.isConnected() ? SPGM(yes) : SPGM(no),
                     WiFi.localIP().toString().c_str()
                 );
-                if (flags.wifiMode & WIFI_AP) {
-                    args.printf_P("AP mode %s, DHCP %s, SSID %s, clients connected %u, IP %s",
-                        (WiFi.getMode() & WIFI_AP) ? ((flags.apStandByMode) ? PSTR("stand-by") : SPGM(on)) : SPGM(off),
-                        flags.softAPDHCPDEnabled ? SPGM(on) : SPGM(off),
-                        config._H_STR(MainConfig().network.WiFiConfig._softApSsid),
-                        WiFi.softAPgetStationNum(),
-                        config._H_GET(MainConfig().network.softAp).address().toString().c_str()
-                    );
-
-                }
-
-#if 0
-                PrintString str;
-                auto network = config._H_GET(Config().network.config);
-                auto softAp = config._H_GET(Config().soft_ap.config);
-
-                str += "local_ip=";
-                IPAddress(network.local_ip).printTo(str);
-                str += " subnet=";
-                IPAddress(network.subnet).printTo(str);
-                str += " gateway=";
-                IPAddress(network.gateway).printTo(str);
-                str += " dns1=";
-                IPAddress(network.dns1).printTo(str);
-                str += " dns2=";
-                IPAddress(network.dns2).printTo(str);
-                args.print(str.c_str());
-
-                str = "address=";
-                IPAddress(softAp.address).printTo(str);
-                str += " subnet=";
-                IPAddress(softAp.subnet).printTo(str);
-                str += " gateway=";
-                IPAddress(softAp.gateway).printTo(str);
-                args.print(str.c_str());
-#endif
+                args.printf_P("AP mode %s, DHCP %s, SSID %s, clients connected %u, IP %s",
+                    (flags.wifiMode & WIFI_AP) ? ((flags.apStandByMode) ? ((WiFi.getMode() & WIFI_AP) ? SPGM(on) : PSTR("stand-by")) : SPGM(on)) : SPGM(off),
+                    flags.softAPDHCPDEnabled ? SPGM(on) : SPGM(off),
+                    config._H_STR(MainConfig().network.WiFiConfig._softApSsid),
+                    WiFi.softAPgetStationNum(),
+                    config._H_GET(MainConfig().network.softAp).address().toString().c_str()
+                );
             }
 #if RTC_SUPPORT
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RTC))) {

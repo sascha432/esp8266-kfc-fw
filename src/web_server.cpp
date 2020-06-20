@@ -19,6 +19,7 @@
 #include "async_web_response.h"
 #include "async_web_handler.h"
 #include "kfc_fw_config.h"
+#include "kfc_fw_config_classes.h"
 #include "blink_led_timer.h"
 #include "fs_mapping.h"
 #include "session.h"
@@ -128,6 +129,15 @@ const __FlashStringHelper *getContentType(const String &path)
     else {
         return FSPGM(mime_text_plain);
     }
+}
+
+static void executeDelayed(AsyncWebServerRequest *request, std::function<void()> callback)
+{
+    request->onDisconnect([callback]() {
+        Scheduler.addTimer(2000, false, [callback](EventScheduler::TimerPtr timer) {
+            callback();
+        });
+    });
 }
 
 // #if LOGGER
@@ -424,20 +434,20 @@ void WebServerPlugin::handlerUpdate(AsyncWebServerRequest *request)
             Logger_security(F("Firmware upgrade successful"));
 
             BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::SLOW);
-            request->onDisconnect([]() {
-                Logger_notice(F("Rebooting after upgrade"));
-                Scheduler.addTimer(2000, false, [](EventScheduler::TimerPtr timer) {
-                    config.restartDevice();
-                });
+            Logger_notice(F("Rebooting after upgrade"));
+            executeDelayed(request, []() {
+                config.restartDevice();
             });
 
             String location;
             switch(status->command) {
                 case U_FLASH:
-                    location += F("/rebooting.html#u_flash");
+                    WebTemplate::_aliveRedirection = F("update_fw.html#u_flash");
+                    location += F("/rebooting.html");
                     break;
                 case U_SPIFFS:
-                    location += F("/update_fw.html#u_spiffs");
+                    WebTemplate::_aliveRedirection = F("update_fw.html#u_spiffs");
+                    location += F("/rebooting.html");
                     break;
             }
             response = request->beginResponse(302);
@@ -592,7 +602,7 @@ void WebServerPlugin::end()
 
 void WebServerPlugin::begin()
 {
-    auto flags = config._H_GET(Config().flags);
+    auto flags = KFCConfigurationClasses::System::Flags::get();
     if (flags.webServerMode == HTTP_MODE_DISABLED) {
         MDNSService::announce();
         return;
@@ -632,7 +642,9 @@ void WebServerPlugin::begin()
     // }));
 #endif
 
-    WsWebUISocket::setup();
+    if (!flags.disableWebUI) {
+        WsWebUISocket::setup();
+    }
 
     _server->onNotFound(handlerNotFound);
 
@@ -671,13 +683,17 @@ void WebServerPlugin::begin()
     WebServerPlugin::addHandler(F("/logout"), handlerLogout);
     WebServerPlugin::addHandler(F("/is_alive"), handlerAlive);
     WebServerPlugin::addHandler(F("/sync_time"), handlerSyncTime);
-    WebServerPlugin::addHandler(F("/webui_get"), handlerWebUI);
+    if (!flags.disableWebUI) {
+        WebServerPlugin::addHandler(F("/webui_get"), handlerWebUI);
+    }
     WebServerPlugin::addHandler(F("/export_settings"), handlerExportSettings);
     WebServerPlugin::addHandler(F("/import_settings"), handlerImportSettings);
     WebServerPlugin::addHandler(F("/speedtest.zip"), handlerSpeedTestZip);
     WebServerPlugin::addHandler(F("/speedtest.bmp"), handlerSpeedTestImage);
 #if WEBUI_ALERTS_ENABLED
-    WebServerPlugin::addHandler(F("/alerts"), handlerAlerts);
+    if (!flags->disableWebAlerts) {
+        WebServerPlugin::addHandler(F("/alerts"), handlerAlerts);
+    }
 #endif
     _server->on(String(F("/update")).c_str(), HTTP_POST, handlerUpdate, handlerUploadUpdate);
 
@@ -703,23 +719,34 @@ bool WebServerPlugin::_sendFile(const FileMapping &mapping, HttpHeaders &httpHea
             auto plugin = PluginComponent::getTemplate(filename);
             if (plugin) {
                 webTemplate = plugin->getWebTemplate(filename);
-            } else if (nullptr != (plugin = PluginComponent::getForm(filename))) {
+            }
+            else if (nullptr != (plugin = PluginComponent::getForm(filename))) {
                 Form *form = new SettingsForm(nullptr);
                 plugin->createConfigureForm(request, *form);
                 webTemplate = new ConfigTemplate(form);
             }
         }
         if (webTemplate == nullptr) {
-            if (String_equals(path, PSTR("/network.html"))) {
-                webTemplate = new ConfigTemplate(new NetworkSettingsForm(nullptr));
-            } else if (String_equals(path, PSTR("/wifi.html"))) {
-                webTemplate = new ConfigTemplate(new WifiSettingsForm(nullptr));
-            } else if (String_equals(path, PSTR("/index.html"))) {
-                webTemplate = new StatusTemplate();
-            } else if (String_equals(path, PSTR("/status.html"))) {
-                webTemplate = new StatusTemplate();
-            } else if (String_endsWith(path, SPGM(_html))) {
-                webTemplate = new WebTemplate();
+            if (path.charAt(0) == '/') {
+                auto path2 = path.substring(1);
+                if (String_equals(path2, SPGM(network_html))) {
+                    webTemplate = new ConfigTemplate(new NetworkSettingsForm(nullptr));
+                }
+                else if (String_equals(path2, SPGM(wifi_html))) {
+                    webTemplate = new ConfigTemplate(new WifiSettingsForm(nullptr));
+                }
+                else if (String_equals(path2, SPGM(device_html))) {
+                    webTemplate = new ConfigTemplate(new DeviceSettingsForm(nullptr));
+                }
+                else if (String_equals(path2, SPGM(index_html))) {
+                    webTemplate = new StatusTemplate();
+                }
+                else if (String_equals(path2, SPGM(status_html))) {
+                    webTemplate = new StatusTemplate();
+                }
+                else if (String_endsWith(path2, SPGM(_html))) {
+                    webTemplate = new WebTemplate();
+                }
             }
         }
     }
@@ -730,7 +757,8 @@ bool WebServerPlugin::_sendFile(const FileMapping &mapping, HttpHeaders &httpHea
             return TemplateDataProvider::callback(name, provider, *webTemplate);
         });
         httpHeaders.addNoCache(request->method() == HTTP_POST);
-    } else {
+    }
+    else {
         response = new AsyncProgmemFileResponse(FPSTR(getContentType(path)), mapping.open(FileOpenMode::read));
         httpHeaders.replace(new HttpDateHeader(FSPGM(Expires), 86400 * 30));
         httpHeaders.replace(new HttpDateHeader(FSPGM(Last_Modified), mapping.getModificationTime()));
@@ -793,10 +821,10 @@ bool WebServerPlugin::_handleFileRead(String path, bool client_accepts_gzip, Asy
         httpHeaders.addNoCache(true);
 
         // no_cache_headers();
-        if (request->method() == HTTP_POST && request->hasArg(F("username")) && request->hasArg(F("password"))) {
+        if (request->method() == HTTP_POST && request->hasArg(FSPGM(username)) && request->hasArg(FSPGM(password))) {
             IPAddress remote_addr = request->client()->remoteIP();
 
-            if (_loginFailures.isAddressBlocked(remote_addr) == false && request->arg(F("username")) == config.getDeviceName() && request->arg(F("password")) == config._H_STR(Config().device_pass)) {
+            if (_loginFailures.isAddressBlocked(remote_addr) == false && request->arg(FSPGM(username)) == config.getDeviceName() && request->arg(FSPGM(password)) == config._H_STR(Config().device_pass)) {
                 auto cookie = new HttpCookieHeader(FSPGM(SID));
                 cookie->setValue(generate_session_id(config.getDeviceName(), config._H_STR(Config().device_pass), NULL));
                 cookie->setPath(FSPGM(slash));
@@ -845,68 +873,114 @@ bool WebServerPlugin::_handleFileRead(String path, bool client_accepts_gzip, Asy
                 webTemplate = new ConfigTemplate(form);
                 if (form->validate()) {
                     config.write();
-                    plugin->invokeReconfigure(nullptr);
-                } else {
+                    executeDelayed(request, [plugin]() {
+                        plugin->invokeReconfigure(nullptr);
+                    });
+                    WebTemplate::_aliveRedirection = path.substring(1);
+                    mapping = FileMapping(FSPGM(applying_html), true);
+                }
+                else {
                     config.discard();
                 }
             }
         }
         _debug_printf_P(PSTR("webTemplate=%p\n"), webTemplate);
         if (!webTemplate) {
-            if (String_equals(path, PSTR("/wifi.html"))) {
-                Form *form = new WifiSettingsForm(request);
-                webTemplate = new ConfigTemplate(form);
-                if (form->validate()) {
-                    config.write();
-                    PluginComponent::getByName(SPGM(cfg))->invokeReconfigure(SPGM(wifi));
-                } else {
-                    config.discard();
-                }
-            } else if (String_equals(path, SPGM(_network_html, "/network.html"))) {
-                Form *form = new NetworkSettingsForm(request);
-                webTemplate = new ConfigTemplate(form);
-                if (form->validate()) {
-                    config.write();
-                    PluginComponent::getByName(SPGM(cfg))->invokeReconfigure(SPGM(network, "network"));
-                } else {
-                    config.discard();
-                }
-            } else if (String_equals(path, PSTR("/password.html"))) {
-                Form *form = new PasswordSettingsForm(request);
-                webTemplate = new ConfigTemplate(form);
-                if (form->validate()) {
-                    auto flags = config._H_GET(Config().flags);
-                    flags.isDefaultPassword = false;
-                    config._H_SET(Config().flags, flags);
-                    config.write();
-                    PluginComponent::getByName(SPGM(cfg))->invokeReconfigure(SPGM(password));
-                } else {
-                    config.discard();
-                }
-            } else if (String_equals(path, SPGM(_reboot_html, "/reboot.html"))) {
-                if (request->hasArg(FSPGM(yes))) {
-                    if (request->arg(FSPGM(safe_mode)).toInt()) {
-                        resetDetector.setSafeMode(1);
+            if (path.charAt(0) == '/') {
+                path.remove(0, 1);
+                if (String_equals(path, SPGM(wifi_html, "wifi.html"))) {
+                    Form *form = new WifiSettingsForm(request);
+                    webTemplate = new ConfigTemplate(form);
+                    if (form->validate()) {
+                        config.write();
+                        executeDelayed(request, []() {
+                            PluginComponent::getByName(SPGM(cfg))->invokeReconfigure(SPGM(wifi));
+                        });
+                        WebTemplate::_aliveRedirection = FSPGM(wifi_html);
+                        mapping = FileMapping(FSPGM(applying_html), true);
                     }
-                    request->onDisconnect([]() {
-                        config.restartDevice();
-                    });
-
-                    mapping = FileMapping(FSPGM(_rebooting_html, "/rebooting.html"));
-                } else {
-                    request->redirect(FSPGM(_index_html, "/index.html"));
+                    else {
+                        config.discard();
+                    }
                 }
-            } else if (String_equals(path, FSPGM(_factory_html, "/factory.html"))) {
-                if (request->hasArg(FSPGM(yes))) {
-                    config.restoreFactorySettings();
-                    config.write();
-                    RTCMemoryManager::clear();
-                    request->onDisconnect([]() {
-                        config.restartDevice();
-                    });
-                    mapping = FileMapping(FSPGM(_rebooting_html));
-                } else {
-                    request->redirect(FSPGM(_index_html));
+                else if (String_equals(path, SPGM(network_html, "network.html"))) {
+                    Form *form = new NetworkSettingsForm(request);
+                    webTemplate = new ConfigTemplate(form);
+                    if (form->validate()) {
+                        config.write();
+                        executeDelayed(request, []() {
+                            PluginComponent::getByName(SPGM(cfg))->invokeReconfigure(SPGM(network, "network"));
+                        });
+                        WebTemplate::_aliveRedirection = FSPGM(network_html);
+                        mapping = FileMapping(FSPGM(applying_html), true);
+                    }
+                    else {
+                        config.discard();
+                    }
+                }
+                else if (String_equals(path, SPGM(device_html, "device.html"))) {
+                    Form *form = new DeviceSettingsForm(request);
+                    webTemplate = new ConfigTemplate(form);
+                    if (form->validate()) {
+                        config.write();
+                        config.setConfigDirty(true);
+                        executeDelayed(request, []() {
+                            PluginComponent::getByName(SPGM(cfg))->invokeReconfigure(SPGM(device, "device"));
+                        });
+                        WebTemplate::_aliveRedirection = FSPGM(device_html);
+                        mapping = FileMapping(FSPGM(applying_html), true);
+                    }
+                    else {
+                        config.discard();
+                    }
+                }
+                else if (String_equals(path, SPGM(password_html, "password.html"))) {
+                    Form *form = new PasswordSettingsForm(request);
+                    webTemplate = new ConfigTemplate(form);
+                    if (form->validate()) {
+                        auto flags = config._H_GET(Config().flags);
+                        flags.isDefaultPassword = false;
+                        config._H_SET(Config().flags, flags);
+                        config.write();
+                        executeDelayed(request, []() {
+                            PluginComponent::getByName(SPGM(cfg))->invokeReconfigure(SPGM(password));
+                        });
+                        WebTemplate::_aliveRedirection = FSPGM(password_html);
+                        mapping = FileMapping(FSPGM(applying_html), true);
+                    }
+                    else {
+                        config.discard();
+                    }
+                }
+                else if (String_equals(path, SPGM(reboot_html, "reboot.html"))) {
+                    if (request->hasArg(FSPGM(yes))) {
+                        if (request->arg(FSPGM(safe_mode)).toInt()) {
+                            resetDetector.setSafeMode(1);
+                        }
+                        executeDelayed(request, []() {
+                            config.restartDevice();
+                        });
+
+                        WebTemplate::_aliveRedirection = FSPGM(status_html);
+                        mapping = FileMapping(FSPGM(rebooting_html), true);
+                    }
+                    else {
+                        request->redirect(FSPGM(index_html, "index.html"));
+                    }
+                }
+                else if (String_equals(path, FSPGM(factory_html, "factory.html"))) {
+                    if (request->hasArg(FSPGM(yes))) {
+                        config.restoreFactorySettings();
+                        config.write();
+                        RTCMemoryManager::clear();
+                        executeDelayed(request, []() {
+                            config.restartDevice();
+                        });
+                        WebTemplate::_aliveRedirection = FSPGM(factory_html);
+                        mapping = FileMapping(FSPGM(rebooting_html), true);
+                    } else {
+                        request->redirect(String('/') + FSPGM(index_html));
+                    }
                 }
             }
         }

@@ -264,6 +264,7 @@ void setup()
 
         auto rebootDelay = KFCConfigurationClasses::System::Device::getSafeModeRebootTime();
         if (rebootDelay) {
+            debug_printf_P(PSTR("rebooting in %u minutes\n"), rebootDelay * 60);
             // restart device if running in safe mode for rebootDelay minutes
             Scheduler.addTimer(rebootDelay * 60000UL, false, [](EventScheduler::TimerPtr timer) {
                 config.restartDevice();

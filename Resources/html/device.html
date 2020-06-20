@@ -25,42 +25,38 @@
     </nav>
     <!--NAV%%-->
     <div class="container">
-        <h1>WEMO device emulation</h1>
-        <form method="POST" action="wemo.html" id="wemo_settings_form">
+        <h1>Device Configuration</h1>
+        <h5>Most settings required a restart...</h5>
+        <form method="POST" action="device.html" id="device_settings">
             <div class="form-group">
-                <label for="wemo_enabled">WEMO Device Emulation</label>
-                <select class="form-control" name="wemo_enabled" id="wemo_enabled">
-                    <option value="0" %WEMO_ENABLED_0%>Disabled</option>
-                    <option value="1" %WEMO_ENABLED_1%>Enabled</option>
+                <label for="hostname">Hostname:</label>
+                <input type="text" class="form-control" name="hostname" id="hostname" value="%HOSTNAME%">
+            </div>
+            <div class="form-group">
+                <label for="title">Title:</label>
+                <input type="text" class="form-control" name="title" id="title" value="%TITLE%">
+            </div>
+            <div class="form-group">
+                <label for="safe_mode_reboot_time">Reboot delay running in Safe Mode:</label>
+                <div class="input-group">
+                    <input type="text" class="form-control" name="safe_mode_reboot_time" id="safe_mode_reboot_time" value="%SAFE_MODE_REBOOT_TIME%" size="4" placeholder="Disabled">
+                    <div class="input-group-append"><span class="input-group-text">minutes</span></div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="disable_webalerts">Web Alerts:</label>
+                <select class="form-control" name="disable_webalerts" id="disable_webalerts">
+                    <option value="1" %DISABLE_WEBALERTS_1%>Disabled</option>
+                    <option value="0" %DISABLE_WEBALERTS_0%>Enabled</option>
                 </select>
             </div>
-            <span id="wemo_settings">
-                <div class="form-group">
-                    <label for="tcp_base_port">TCP Base Port:</label>
-                    <input type="text" class="form-control" name="tcp_base_port" id="tcp_base_port"
-                        oldvalue="%WEMO_TCP_BASE_PORT%" value="%WEMO_TCP_BASE_PORT%">
-                </div>
-                <span id="wemo_devices">
-                </span>
-                <div class="form-group">
-                    <button class="btn btn-outline-secondary" type="button" id="add_device">Add device...</button>
-                </div>
-            </span>
-            </span>
-            <span class="hidden" id="wemo_device_prototype">
-                <div class="form-group">
-                    <label for="device_name">Device Name $NUM$:</label>
-                    <div class="input-group">
-                        <input type="text" class="form-control" name="device_name[]" id="device_name_$ID$" value="$NAME$"
-                            placeholder="Device name" length="16">
-                        <div class="input-group-append">
-                            <button class="btn btn-default" type="button" id="remove_device_name_$ID$"><span class="oi oi-trash"
-                                    title="Remove device" aria-hidden="true"></span></button>
-                        </div>
-                    </div>
-                </div>
-            </span>
-            %WEMO_DEVICES%
+            <div class="form-group">
+                <label for="disable_webui">Web UI:</label>
+                <select class="form-control" name="disable_webui" id="disable_webui">
+                    <option value="1" %DISABLE_WEBUI_1%>Disabled</option>
+                    <option value="0" %DISABLE_WEBUI_0%>Enabled</option>
+                </select>
+            </div>
             <div class="form-group">
                 <button type="submit" class="btn btn-primary">Save Changes...</button>
             </div>
@@ -73,7 +69,6 @@
     </div>
     <!--%%JAVASCRIPT-->
     <script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/jquery-3.3.1.min.js"></script>
-    <script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/popper.min.js"></script>
     <script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/popper.min.js"></script>
     <script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/bootstrap.min.js"></script>
     <script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/js.cookie.min.js"></script>

@@ -18,8 +18,6 @@
 #include <KFCJson.h>
 #include "kfc_fw_config.h"
 
-PROGMEM_STRING_DECL(Not_supported);
-
 class SettingsForm;
 
 class WebTemplate {
@@ -37,6 +35,9 @@ public:
     virtual void process(const String &key, PrintHtmlEntitiesString &output);
 
     static void printSystemTime(time_t now, PrintHtmlEntitiesString &output);
+
+public:
+    static String _aliveRedirection;
 
 protected:
     Form *_form;
@@ -135,6 +136,11 @@ public:
 class NetworkSettingsForm : public SettingsForm {
 public:
     NetworkSettingsForm(AsyncWebServerRequest *request);
+};
+
+class DeviceSettingsForm : public SettingsForm {
+public:
+    DeviceSettingsForm(AsyncWebServerRequest *request);
 };
 
 class PasswordSettingsForm : public SettingsForm {

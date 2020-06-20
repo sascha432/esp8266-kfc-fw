@@ -64,3 +64,4 @@ PROGMEM_STRING_DEF(crash_counter_file, "/crash_counter");
 PROGMEM_STRING_DEF(crash_dump_file, "/crash.%03x");
 PROGMEM_STRING_DEF(tcp, "tcp");
 PROGMEM_STRING_DEF(udp, "udp");
+PROGMEM_STRING_DEF(KFC_Firmware, "KFC Firmware");

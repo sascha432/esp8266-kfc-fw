@@ -77,9 +77,8 @@ $.getRandomBytes = function(n) {
 
 $.WebUIAlerts = {
     icon: false,
-    alerts: ['/%%%WEBUI_ALERTS_JSON%%%/']
+    alerts: []
 };
-
 $(function() {
     var tokenButton = $('#generate-bearer-token');
     if (tokenButton.length) {

@@ -35,13 +35,6 @@
                 <label for="title">Title:</label>
                 <input type="text" class="form-control" name="title" id="title" value="%TITLE%">
             </div>
-            <div class="form-group">
-                <label for="safe_mode_reboot_time">Reboot delay running in Safe Mode:</label>
-                <div class="input-group">
-                    <input type="text" class="form-control" name="safe_mode_reboot_time" id="safe_mode_reboot_time" value="%SAFE_MODE_REBOOT_TIME%" size="5" placeholder="Disabled">
-                    <div class="input-group-append"><span class="input-group-text">minutes</span></div>
-                </div>
-            </div>
             <span id="station_mode">
                 <div class="form-group">
                     <h2>Station</h2>
@@ -49,8 +42,8 @@
                 <div class="form-group">
                     <label for="dhcp_client">DHCP</label>
                     <select class="form-control" name="dhcp_client" id="dhcp_client">
-                        <option value="0" %DHCP_CLIENT_0%>Disable</option>
-                        <option value="1" %DHCP_CLIENT_1%>Enable</option>
+                        <option value="0" %DHCP_CLIENT_0%>Disabled</option>
+                        <option value="1" %DHCP_CLIENT_1%>Enabled</option>
                     </select>
                 </div>
                 <span id="static_address">
@@ -82,10 +75,10 @@
                     <h2>Access Point</h2>
                 </div>
                 <div class="form-group">
-                    <label for="softap_dhcpd">DHCP Server</label>
+                    <label for="softap_dhcpd">DHCP Server:</label>
                     <select class="form-control" name="softap_dhcpd" id="softap_dhcpd">
-                        <option value="0" %SOFTAP_DHCPD_0%>Disable</option>
-                        <option value="1" %SOFTAP_DHCPD_1%>Enable</option>
+                        <option value="0" %SOFTAP_DHCPD_0%>Disabled</option>
+                        <option value="1" %SOFTAP_DHCPD_1%>Enabled</option>
                     </select>
                 </div>
                 <div class="form-group">

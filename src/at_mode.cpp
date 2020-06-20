@@ -202,7 +202,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LS, "LS", "[<directory>]", "List files and
 #if ESP8266
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LSR, "LSR", "[<directory>]", "List files and directory in raw mode");
 #endif
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WIFI, "WIFI", "[<reconnect>]", "Display WiFi info");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WIFI, "WIFI", "[<reconnect|on|off|ap_on|ap_off>]", "Display WiFi info");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(REM, "REM", "Ignore comment");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LED, "LED", "<slow,fast,flicker,off,solid,sos>,[,color=0xff0000][,pin]", "Set LED mode");
 #if RTC_SUPPORT
@@ -974,17 +974,48 @@ void at_mode_serial_handle_event(String &commandString)
 #endif
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(WIFI))) {
                 if (!args.empty()) {
-                    config.reconfigureWiFi();
+                    if (String_equalsIgnoreCase(args.toString(0), F("on"))) {
+                        args.print(F("enabling station mode"));
+                        WiFi.enableSTA(true);
+                        WiFi.reconnect();
+                    }
+                    else if (String_equalsIgnoreCase(args.toString(0), F("off"))) {
+                        args.print(F("disabling station mode"));
+                        WiFi.enableSTA(false);
+                    }
+                    else if (String_equalsIgnoreCase(args.toString(0), F("ap_on"))) {
+                        args.print(F("enabling AP mode"));
+                        WiFi.enableAP(true);
+                    }
+                    else if (String_equalsIgnoreCase(args.toString(0), F("app_off"))) {
+                        args.print(F("disabling AP mode"));
+                        WiFi.enableAP(false);
+                    }
+                    else {
+                        config.reconfigureWiFi();
+                    }
                 }
 
+                using KFCConfigurationClasses::MainConfig;
+
                 auto flags = config._H_GET(Config().flags);
-                args.printf_P("DHCP %u, station mode %s, SSID %s, connected %u, IP %s",
-                    flags.softAPDHCPDEnabled,
-                    (flags.wifiMode & WIFI_STA) ? SPGM(on) : SPGM(off),
+                args.printf_P("station mode %s, DHCP %s, SSID %s, connected %s, IP %s",
+                    (WiFi.getMode() & WIFI_STA) ? SPGM(on) : SPGM(off),
+                    flags.stationModeDHCPEnabled ? SPGM(on) : SPGM(off),
                     config._H_STR(MainConfig().network.WiFiConfig._ssid),
-                    WiFi.isConnected(),
+                    WiFi.isConnected() ? SPGM(yes) : SPGM(no),
                     WiFi.localIP().toString().c_str()
                 );
+                if (flags.wifiMode & WIFI_AP) {
+                    args.printf_P("AP mode %s, DHCP %s, SSID %s, clients connected %u, IP %s",
+                        (WiFi.getMode() & WIFI_AP) ? ((flags.apStandByMode) ? PSTR("stand-by") : SPGM(on)) : SPGM(off),
+                        flags.softAPDHCPDEnabled ? SPGM(on) : SPGM(off),
+                        config._H_STR(MainConfig().network.WiFiConfig._softApSsid),
+                        WiFi.softAPgetStationNum(),
+                        config._H_GET(MainConfig().network.softAp).address().toString().c_str()
+                    );
+
+                }
 
 #if 0
                 PrintString str;

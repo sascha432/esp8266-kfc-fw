@@ -21,7 +21,21 @@ namespace KFCConfigurationClasses {
                 return &_flags;
             }
             static Flags read();
+            static ConfigFlags get();
             void write();
+
+            inline bool isWiFiEnabled() const {
+                return _flags.wifiMode & WIFI_AP_STA;
+            }
+            inline bool isSoftAPEnabled() const {
+                return _flags.wifiMode & WIFI_AP;
+            }
+            inline bool isStationEnabled() const {
+                return _flags.wifiMode & WIFI_STA;
+            }
+            inline bool isSoftApStandByModeEnabled() const {
+                return _flags.apStandByMode;
+            }
 
         private:
             ConfigFlags _flags;
@@ -46,7 +60,11 @@ namespace KFCConfigurationClasses {
             static uint16_t getSafeModeRebootTime();
 
         public:
-            uint16_t safeModeRebootTime;
+            typedef struct __attribute__packed__ {
+                uint16_t _safeModeRebootTime;
+            } DeviceSettings_t;
+
+            DeviceSettings_t settings;
         };
 
         Flags flags;

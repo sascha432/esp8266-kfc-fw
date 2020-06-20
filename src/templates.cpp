@@ -23,6 +23,8 @@
 #include <debug_helper_disable.h>
 #endif
 
+String WebTemplate::_aliveRedirection;
+
 WebTemplate::WebTemplate() : _form(nullptr), _json(nullptr)
 {
 }
@@ -127,6 +129,15 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     else if (String_equals(key, PSTR("FIRMWARE_UPGRADE_FAILURE_CLASS"))) {
         output.print(FSPGM(_hidden));
     }
+    else if (String_equals(key, PSTR("ALIVE_REDIRECTION"))) {
+        if (_aliveRedirection.length()) {
+            output.print(_aliveRedirection);
+        }
+        else {
+            output.print(FSPGM(index_html));
+        }
+
+    }
     else if (String_equals(key, PSTR("IS_CONFIG_DIRTY"))) {
         if (!config.isConfigDirty()) {
             output.print(FSPGM(_hidden));
@@ -141,7 +152,11 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     }
     else if (String_equals(key, PSTR("WEBUI_ALERTS_STATUS"))) {
 #if WEBUI_ALERTS_ENABLED
-        output.printf_P(PSTR("Storage %s, rewrite size %d, poll interval %.2fs, WebUI max. height %s"), SPGM(alerts_storage_filename), WEBUI_ALERTS_REWRITE_SIZE, WEBUI_ALERTS_POLL_INTERVAL / 1000.0, WEBUI_ALERTS_MAX_HEIGHT);
+        if (config._H_GET(Config().flags).disableWebAlerts) {
+            output.print(F("Disabled"));
+        } else {
+            output.printf_P(PSTR("Storage %s, rewrite size %d, poll interval %.2fs, WebUI max. height %s"), SPGM(alerts_storage_filename), WEBUI_ALERTS_REWRITE_SIZE, WEBUI_ALERTS_POLL_INTERVAL / 1000.0, WEBUI_ALERTS_MAX_HEIGHT);
+        }
 #elif WEBUI_ALERTS_SEND_TO_LOGGER
         output.print(F("Send to logger"));
 #else
@@ -317,9 +332,13 @@ void StatusTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     }
     else if (String_equals(key, F("WIFI_MODE"))) {
         switch (WiFi.getMode()) {
-            case WIFI_STA:
-                output.print(F("Station mode"));
-                break;
+            case WIFI_STA: {
+                    output.print(F("Station mode"));
+                    auto flags = KFCConfigurationClasses::System::Flags::read();
+                    if ((flags->wifiMode & WIFI_AP) && flags->apStandByMode) {
+                        output.print(F(" (Access Point in stand-by mode)"));
+                    }
+                } break;
             case WIFI_AP:
                 output.print(F("Access Point"));
                 break;
@@ -404,7 +423,7 @@ WifiSettingsForm::WifiSettingsForm(AsyncWebServerRequest *request) : SettingsFor
     addValidator(new FormEnumValidator<uint8_t, WiFiEncryptionTypeArray().size()>(F("Invalid encryption"), WIFI_ENCRYPTION_ARRAY));
 
     add<bool>(F("ap_hidden"), _H_FLAGS_BOOL_VALUE(Config().flags, hiddenSSID), FormField::InputFieldType::CHECK);
-    add<bool>(F("standby_ap_mode"), _H_FLAGS_BOOL_VALUE(Config().flags, apStandByMode), FormField::InputFieldType::CHECK);
+    add<bool>(F("ap_standby_mode"), _H_FLAGS_BOOL_VALUE(Config().flags, apStandByMode), FormField::InputFieldType::SELECT);
 
     finalize();
 }
@@ -415,9 +434,8 @@ NetworkSettingsForm::NetworkSettingsForm(AsyncWebServerRequest *request) : Setti
 
     add(F("hostname"), _H_STR_VALUE(Config().device_name));
     addValidator(new FormLengthValidator(4, sizeof(Config().device_name) - 1));
-    add(F("title"), _H_STR_VALUE(Config().device_title));
+    add(FSPGM(title), _H_STR_VALUE(Config().device_title));
     addValidator(new FormLengthValidator(1, sizeof(Config().device_title) - 1));
-    add<uint16_t>(F("safe_mode_reboot_time"), _H_STRUCT_VALUE(MainConfig().system.device, safeModeRebootTime));
 
     add<bool>(F("dhcp_client"), _H_FLAGS_BOOL_VALUE(Config().flags, stationModeDHCPEnabled));
 
@@ -437,9 +455,25 @@ NetworkSettingsForm::NetworkSettingsForm(AsyncWebServerRequest *request) : Setti
     finalize();
 }
 
+DeviceSettingsForm::DeviceSettingsForm(AsyncWebServerRequest *request) : SettingsForm(request)
+{
+    using KFCConfigurationClasses::MainConfig;
+
+    add(FSPGM(title), _H_STR_VALUE(Config().device_title));
+    addValidator(new FormLengthValidator(1, sizeof(Config().device_title) - 1));
+
+    add<uint16_t>(F("safe_mode_reboot_time"), _H_STRUCT_VALUE(MainConfig().system.device.settings, _safeModeRebootTime));
+    addValidator(new FormRangeValidator(5, 1440, true));
+
+    add<bool>(F("disable_webalerts"), _H_FLAGS_BOOL_VALUE(Config().flags, disableWebAlerts));
+    add<bool>(F("disable_webui"), _H_FLAGS_BOOL_VALUE(Config().flags, disableWebUI));
+
+    finalize();
+}
+
 PasswordSettingsForm::PasswordSettingsForm(AsyncWebServerRequest *request) : SettingsForm(request)
 {
-    add(new FormField(F("password"), config._H_STR(Config().device_pass)));
+    add(new FormField(FSPGM(password), config._H_STR(Config().device_pass)));
     addValidator(new FormMatchValidator(F("The entered password is not correct"), [](FormField &field) {
         return field.getValue().equals(config._H_STR(Config().device_pass));
     }));

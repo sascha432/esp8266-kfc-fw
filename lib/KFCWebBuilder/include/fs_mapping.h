@@ -43,7 +43,14 @@ public:
     FileMapping(const char *filename) : _filename(filename) {
         _openByFilename();
     }
+    FileMapping(const String &filename) : _filename(filename) {
+        _openByFilename();
+    }
     FileMapping(const __FlashStringHelper *filename) : _filename(filename) {
+        _openByFilename();
+    }
+    FileMapping(const __FlashStringHelper *filename, bool prependSlash) : _filename('/') {
+        _filename += filename;
         _openByFilename();
     }
 

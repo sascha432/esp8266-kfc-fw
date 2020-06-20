@@ -5,6 +5,7 @@
 #include <Configuration.h>
 #include "kfc_fw_config.h"
 #include "kfc_fw_config_classes.h"
+#include "progmem_data.h"
 
 /*
 
@@ -56,6 +57,11 @@ namespace KFCConfigurationClasses {
         return Flags(config._H_GET(Config().flags));
     }
 
+    ConfigFlags System::Flags::get()
+    {
+        return config._H_GET(Config().flags);
+    }
+
     void System::Flags::write()
     {
         config._H_SET(Config().flags, _flags);
@@ -63,8 +69,12 @@ namespace KFCConfigurationClasses {
 
     void System::Device::defaults()
     {
+        DeviceSettings_t settings;
+        settings._safeModeRebootTime = 0;
+        config._H_SET(MainConfig().system.device.settings, settings);
+
         setSafeModeRebootTime(0);
-        setTitle(F("KFC Firmware"));
+        setTitle(FSPGM(KFC_Firmware));
     }
 
     const char *System::Device::getName()
@@ -109,12 +119,14 @@ namespace KFCConfigurationClasses {
 
     void System::Device::setSafeModeRebootTime(uint16_t minutes)
     {
-        config._H_SET(MainConfig().system.device.safeModeRebootTime, minutes);
+        auto settings = config._H_GET(MainConfig().system.device.settings);
+        settings._safeModeRebootTime = minutes;
+        config._H_SET(MainConfig().system.device.settings, settings);
     }
 
     uint16_t System::Device::getSafeModeRebootTime()
     {
-        return config._H_GET(MainConfig().system.device.safeModeRebootTime);
+        return config._H_GET(MainConfig().system.device.settings)._safeModeRebootTime;
     }
 
 

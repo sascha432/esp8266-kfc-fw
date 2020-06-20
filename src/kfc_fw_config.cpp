@@ -514,9 +514,14 @@ static void __softAPModeStationDisconnectedCb(const WiFiEventSoftAPModeStationDi
 
 #endif
 
+void KFCFWConfiguration::apStandModehandler(uint8_t event, void *payload)
+{
+    config._apStandModehandler(event);
+}
+
 void KFCFWConfiguration::_setupWiFiCallbacks()
 {
-    _debug_println(F("KFCFWConfiguration::_setupWiFiCallbacks()"));
+    _debug_println();
 
 #if defined(ESP32)
 
@@ -544,6 +549,19 @@ void KFCFWConfiguration::_setupWiFiCallbacks()
 #endif
 }
 
+void KFCFWConfiguration::_apStandModehandler(uint8_t event)
+{
+    _debug_printf_P(PSTR("event=%u\n"), event);
+    if (event == WiFiCallbacks::CONNECTED) {
+        WiFi.enableAP(false);
+        Logger_notice(F("AP Mode disabled"));
+    }
+    else if (event == WiFiCallbacks::DISCONNECTED) {
+        WiFi.enableAP(true);
+        Logger_notice(F("AP Mode enabled"));
+    }
+}
+
 using KFCConfigurationClasses::MainConfig;
 using KFCConfigurationClasses::Network;
 using KFCConfigurationClasses::System;
@@ -568,7 +586,7 @@ void KFCFWConfiguration::restoreFactorySettings()
     auto deviceName = PrintString(F("KFC%02X%02X%02X"), mac[3], mac[4], mac[5]);
     System::Device::defaults();
     System::Device::setName(deviceName);
-    System::Device::setTitle(F("KFC Firmware"));
+    System::Device::setTitle(FSPGM(KFC_Firmware));
     System::Device::setPassword(defaultPassword);
 
     Network::WiFiConfig::setSSID(deviceName);
@@ -1197,6 +1215,14 @@ bool KFCFWConfiguration::connectWiFi()
                 ap_mode_success = true;
             }
         }
+
+        // install hnalder to enable AP mode if station mode goes down
+        if (flags.apStandByMode) {
+            WiFiCallbacks::add(WiFiCallbacks::CONNECTED|WiFiCallbacks::DISCONNECTED, KFCFWConfiguration::apStandModehandler);
+        } else {
+            WiFiCallbacks::remove(WiFiCallbacks::ANY, KFCFWConfiguration::apStandModehandler);
+        }
+
     }
     else {
         _debug_println(F("disabling AP mode"));

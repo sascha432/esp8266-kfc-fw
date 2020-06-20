@@ -60,10 +60,10 @@
                     <h2>Access Point</h2>
                 </div>
                 <div class="form-group">
-                    <label for="standby_ap_mode">AP Mode:</label>
-                    <select class="form-control" name="standby_ap_mode" id="standby_ap_mode">
-                        <option value="0" %STANDBY_AP_MODE_0%>Enable AP Mode permanently</option>
-                        <option value="1" %STANDBY_AP_MODE_1%>Enable AP Mode if station is not connected</option>
+                    <label for="ap_standby_mode">AP Mode:</label>
+                    <select class="form-control" name="ap_standby_mode" id="ap_standby_mode">
+                        <option value="0" %AP_STANDBY_MODE_0%>Enable AP Mode permanently</option>
+                        <option value="1" %AP_STANDBY_MODE_1%>Enable AP Mode if station is disconnected</option>
                     </select>
                 </div>
                     <div class="form-group">
@@ -85,7 +85,7 @@
                 </div>
                 <div class="form-group">
                     <label for="channel">Channel</label>
-                    <select class="form-control" name="channel" id="channel">
+                    <select class="form-control" name="channel" id="channel" data-max-channels="%MAX_CHANNELS%">
                         <option value="0" %CHANNEL_0%>Auto</option>
                         <option value="1" %CHANNEL_1%>1</option>
                         <option value="2" %CHANNEL_2%>2</option>
@@ -152,7 +152,6 @@
                 </div>
             </div>
         </div>
-
         <!--%%FOOT-->
         <div class="row">
             <div class="col footer">&nbsp;</div>

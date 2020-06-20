@@ -50,11 +50,9 @@ PROGMEM_STRING_DECL(comma);
 PROGMEM_STRING_DECL(comma_);
 PROGMEM_STRING_DECL(http);
 PROGMEM_STRING_DECL(https);
-extern const char _shared_progmem_string_auto_discovery_html[] PROGMEM;
-extern const char _shared_progmem_string_filename[] PROGMEM;
-extern const char _shared_progmem_string_dir[] PROGMEM;
-
-
+PROGMEM_STRING_DECL(auto_discovery_html);
+PROGMEM_STRING_DECL(filename);
+PROGMEM_STRING_DECL(dir);
 PROGMEM_STRING_DECL(Pragma);
 PROGMEM_STRING_DECL(Link);
 PROGMEM_STRING_DECL(Location);
@@ -83,3 +81,4 @@ PROGMEM_STRING_DECL(server_crt);
 PROGMEM_STRING_DECL(server_key);
 PROGMEM_STRING_DECL(kfcfw);
 PROGMEM_STRING_DECL(invalid_flash_ptr);
+PROGMEM_STRING_DECL(KFC_Firmware);

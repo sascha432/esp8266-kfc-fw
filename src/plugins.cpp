@@ -6,6 +6,8 @@
 #include "plugins_menu.h"
 #include <Form.h>
 #include <algorithm>
+#include "kfc_fw_config.h"
+#include "kfc_fw_config_classes.h"
 #include "RTCMemoryManager.h"
 #include "progmem_data.h"
 #include "misc.h"
@@ -121,32 +123,33 @@ void prepare_plugins()
 
 static void create_menu()
 {
-    navMenu.home = bootstrapMenu.addMenu(F("Home"));
-    bootstrapMenu.getItem(navMenu.home)->setUri(F("index.html"));
+    navMenu.home = bootstrapMenu.addMenu(FSPGM(Home));
+    bootstrapMenu.getItem(navMenu.home)->setUri(FSPGM(index_html));
 
     // since "home" has an URI, this menu is hidden
-    bootstrapMenu.addSubMenu(F("Home"), F("index.html"), navMenu.home);
-    bootstrapMenu.addSubMenu(F("Status"), F("status.html"), navMenu.home);
-    bootstrapMenu.addSubMenu(F("Manage WiFi"), F("wifi.html"), navMenu.home);
-    bootstrapMenu.addSubMenu(F("Configure Network"), F("network.html"), navMenu.home);
-    bootstrapMenu.addSubMenu(F("Change Password"), F("password.html"), navMenu.home);
-    bootstrapMenu.addSubMenu(F("Reboot Device"), F("reboot.html"), navMenu.home);
+    bootstrapMenu.addSubMenu(FSPGM(Home), FSPGM(index_html), navMenu.home);
+    bootstrapMenu.addSubMenu(FSPGM(Status), FSPGM(status_html), navMenu.home);
+    bootstrapMenu.addSubMenu(F("Manage WiFi"), FSPGM(wifi_html), navMenu.home);
+    bootstrapMenu.addSubMenu(F("Configure Network"), FSPGM(network_html), navMenu.home);
+    bootstrapMenu.addSubMenu(FSPGM(Change_Password), FSPGM(password_html), navMenu.home);
+    bootstrapMenu.addSubMenu(FSPGM(Reboot_Device), FSPGM(reboot_html), navMenu.home);
     bootstrapMenu.addSubMenu(F("About"), F("about.html"), navMenu.home);
 
-    navMenu.status = bootstrapMenu.addMenu(F("Status"));
-    bootstrapMenu.getItem(navMenu.status)->setUri(F("status.html"));
+    navMenu.status = bootstrapMenu.addMenu(FSPGM(Status));
+    bootstrapMenu.getItem(navMenu.status)->setUri(FSPGM(status_html));
 
-    navMenu.config = bootstrapMenu.addMenu(F("Configuration"));
-    bootstrapMenu.addSubMenu(F("WiFi"), F("wifi.html"), navMenu.config);
-    bootstrapMenu.addSubMenu(F("Network"), F("network.html"), navMenu.config);
-    bootstrapMenu.addSubMenu(F("Remote Access"), F("remote.html"), navMenu.config);
+    navMenu.config = bootstrapMenu.addMenu(FSPGM(Configuration));
+    bootstrapMenu.addSubMenu(FSPGM(WiFi), FSPGM(wifi_html), navMenu.config);
+    bootstrapMenu.addSubMenu(FSPGM(Network), FSPGM(network_html), navMenu.config);
+    bootstrapMenu.addSubMenu(FSPGM(Device), FSPGM(device_html), navMenu.config);
+    bootstrapMenu.addSubMenu(F("Remote Access"), FSPGM(remote_html), navMenu.config);
 
-    navMenu.device = bootstrapMenu.addMenu(F("Device"));
+    navMenu.device = bootstrapMenu.addMenu(FSPGM(Device));
 
-    navMenu.admin = bootstrapMenu.addMenu(F("Admin"));
-    bootstrapMenu.addSubMenu(F("Change Password"), F("password.html"), navMenu.admin);
-    bootstrapMenu.addSubMenu(F("Reboot Device"), F("reboot.html"), navMenu.admin);
-    bootstrapMenu.addSubMenu(F("Restore Factory Defaults"), F("factory.html"), navMenu.admin);
+    navMenu.admin = bootstrapMenu.addMenu(FSPGM(Admin));
+    bootstrapMenu.addSubMenu(FSPGM(Change_Password), FSPGM(password_html), navMenu.admin);
+    bootstrapMenu.addSubMenu(FSPGM(Reboot_Device), FSPGM(reboot_html), navMenu.admin);
+    bootstrapMenu.addSubMenu(F("Restore Factory Defaults"), FSPGM(factory_html), navMenu.admin);
     bootstrapMenu.addSubMenu(F("Export Settings"), F("export_settings"), navMenu.admin);
     bootstrapMenu.addSubMenu(F("Update Firmware"), F("update_fw.html"), navMenu.admin);
 
@@ -187,7 +190,7 @@ void setup_plugins(PluginComponent::PluginSetupMode_t mode)
                 case PluginComponent::MenuTypeEnum_t::AUTO:
                     if (plugin->getConfigureForm()) {
                         String uri = FPSTR(plugin->getConfigureForm());
-                        uri += F(".html");
+                        uri += FSPGM(_html);
                         bootstrapMenu.addSubMenu(plugin->getFriendlyName(), uri, navMenu.config);
                     }
                     break;
@@ -198,12 +201,12 @@ void setup_plugins(PluginComponent::PluginSetupMode_t mode)
         }
     }
 
-    if (enableWebUIMenu) {
+    if (enableWebUIMenu && !KFCConfigurationClasses::System::Flags::read()->disableWebUI) {
         auto url = F("webui.html");
         if (!bootstrapMenu.isValid(bootstrapMenu.findMenuByURI(url, navMenu.device))) {
             auto webUi = F("Web UI");
             bootstrapMenu.addSubMenu(webUi, url, navMenu.device);
-            bootstrapMenu.addSubMenu(webUi, url, navMenu.home, bootstrapMenu.getId(bootstrapMenu.findMenuByURI(F("status.html"), navMenu.home)));
+            bootstrapMenu.addSubMenu(webUi, url, navMenu.home, bootstrapMenu.getId(bootstrapMenu.findMenuByURI(FSPGM(status_html), navMenu.home)));
         }
     }
 

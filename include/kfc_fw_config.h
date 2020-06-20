@@ -109,6 +109,8 @@ struct ConfigFlags {
     ConfigFlags_t useStaticIPDuringWakeUp:1;
     ConfigFlags_t webServerPerformanceModeEnabled:1;
     ConfigFlags_t apStandByMode: 1;
+    ConfigFlags_t disableWebUI: 1;
+    ConfigFlags_t disableWebAlerts: 1;
 };
 
 struct HueConfig {
@@ -517,8 +519,11 @@ public:
         _safeMode = mode;
     }
 
+    static void apStandModehandler(uint8_t event, void *payload);
+
 private:
     void _setupWiFiCallbacks();
+    void _apStandModehandler(uint8_t event);
 #if defined(ESP32)
     static void _onWiFiEvent(WiFiEvent_t event, WiFiEventInfo_t info);
 #elif USE_WIFI_SET_EVENT_HANDLER_CB

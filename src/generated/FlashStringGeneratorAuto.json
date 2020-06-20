@@ -860,7 +860,7 @@
         "default": "/webui/.listings"
     },
     "_html": {
-        "use_counter": 5,
+        "use_counter": 6,
         "default": ".html"
     },
     "Authorization": {
@@ -989,7 +989,7 @@
         "default": "Device"
     },
     "device_html": {
-        "use_counter": 1,
+        "use_counter": 2,
         "default": "device.html"
     },
     "remote_html": {
@@ -1023,5 +1023,13 @@
     "title": {
         "use_counter": 5,
         "default": "title"
+    },
+    "KFC_Firmware": {
+        "use_counter": 2,
+        "default": "KFC Firmware"
+    },
+    "applying_html": {
+        "use_counter": 4,
+        "default": "applying.html"
     }
 }

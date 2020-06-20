@@ -133,11 +133,11 @@ void BlindsControlPlugin::createConfigureForm(AsyncWebServerRequest *request, Fo
     auto motorSpeed = F("0-1023");
     FormUI::ItemsList currentLimitItems;
 
-    currentLimitItems.emplace_back(F("5"), F("Extra Fast (5ms)"));
-    currentLimitItems.emplace_back(F("20"), F("Fast (20ms)"));
-    currentLimitItems.emplace_back(F("50"), F("Medium (50ms)"));
-    currentLimitItems.emplace_back(F("150"), F("Slow (150ms)"));
-    currentLimitItems.emplace_back(F("250"), F("Extra Slow (250ms)"));
+    currentLimitItems.emplace_back(String(5), F("Extra Fast (5ms)"));
+    currentLimitItems.emplace_back(String(20), F("Fast (20ms)"));
+    currentLimitItems.emplace_back(String(50), F("Medium (50ms)"));
+    currentLimitItems.emplace_back(String(150), F("Slow (150ms)"));
+    currentLimitItems.emplace_back(String(250), F("Extra Slow (250ms)"));
 
     form.setFormUI(F("Blinds Controller"));
 

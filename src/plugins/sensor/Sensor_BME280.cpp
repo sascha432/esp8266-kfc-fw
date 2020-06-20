@@ -35,7 +35,7 @@ void Sensor_BME280::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTT
     discovery = new MQTTAutoDiscovery();
     discovery->create(this, 1, format);
     discovery->addStateTopic(topic);
-    discovery->addUnitOfMeasurement(F("%"));
+    discovery->addUnitOfMeasurement('%');
     discovery->addValueTemplate(F("humidity"));
     discovery->finalize();
     vector.emplace_back(discovery);
@@ -82,7 +82,7 @@ void Sensor_BME280::createWebUI(WebUI &webUI, WebUIRow **row)
         // *row = &webUI.addRow();
     // }
     (*row)->addSensor(_getId(F("temperature")), _name + F(" Temperature"), F("\u00b0C"));
-    (*row)->addSensor(_getId(F("humidity")), _name + F(" Humidity"), F("%"));
+    (*row)->addSensor(_getId(F("humidity")), _name + F(" Humidity"), '%');
     (*row)->addSensor(_getId(F("pressure")), _name + F(" Pressure"), F("hPa"));
 }
 

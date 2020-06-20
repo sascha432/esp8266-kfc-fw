@@ -37,6 +37,7 @@ PROGMEM_STRING_DEF(Yes, "Yes");
 PROGMEM_STRING_DEF(No, "No");
 PROGMEM_STRING_DEF(yes, "yes");
 PROGMEM_STRING_DEF(no, "no");
+PROGMEM_STRING_DEF(hidden, "hidden");
 PROGMEM_STRING_DEF(enabled, "enabled");
 PROGMEM_STRING_DEF(disabled, "disabled");
 PROGMEM_STRING_DEF(Enabled, "Enabled");

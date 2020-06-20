@@ -11,6 +11,7 @@
 #include <Arduino_compat.h>
 
 PROGMEM_STRING_DECL(FormRangeValidator_default_message);
+PROGMEM_STRING_DECL(FormRangeValidator_default_message_zero_allowed);
 PROGMEM_STRING_DECL(FormLengthValidator_default_message);
 PROGMEM_STRING_DECL(FormEnumValidator_default_message);
 PROGMEM_STRING_DECL(FormValidHostOrIpValidator_default_message);

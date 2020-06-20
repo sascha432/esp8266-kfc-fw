@@ -41,7 +41,7 @@ void Sensor_INA219::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTT
     auto discovery = new MQTTAutoDiscovery();
     discovery->create(this, 0, format);
     discovery->addStateTopic(MQTTClient::formatTopic(-1, F("/%s/"), _getId(VOLTAGE).c_str()));
-    discovery->addUnitOfMeasurement(F("V"));
+    discovery->addUnitOfMeasurement(String('V'));
     discovery->finalize();
     vector.emplace_back(discovery);
 
@@ -107,7 +107,7 @@ void Sensor_INA219::getValues(JsonArray &array, bool timer)
 void Sensor_INA219::createWebUI(WebUI &webUI, WebUIRow **row)
 {
     _debug_printf_P(PSTR("Sensor_INA219::createWebUI()\n"));
-    (*row)->addSensor(_getId(VOLTAGE), _name, F("V"));
+    (*row)->addSensor(_getId(VOLTAGE), _name, 'V');
     (*row)->addSensor(_getId(CURRENT), F("Current"), F("mA"));
     (*row)->addSensor(_getId(POWER), F("Power"), F("mW"));
     (*row)->addSensor(_getId(PEAK_CURRENT), F("Peak Current"), F("mA"));

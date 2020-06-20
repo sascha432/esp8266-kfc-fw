@@ -65,7 +65,7 @@ void Sensor_DHTxx::getValues(JsonArray &array, bool timer)
 void Sensor_DHTxx::createWebUI(WebUI &webUI, WebUIRow **row)
 {
     (*row)->addSensor(_getId(F("temperature")), _name + F(" Temperature"), F("\u00b0C"));
-    (*row)->addSensor(_getId(F("humidity")), _name + F(" Humidity"), F("%"));
+    (*row)->addSensor(_getId(F("humidity")), _name + F(" Humidity"), '%');
 }
 
 void Sensor_DHTxx::getStatus(PrintHtmlEntitiesString &output)

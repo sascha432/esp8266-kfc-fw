@@ -58,10 +58,14 @@ namespace KFCConfigurationClasses {
 
             static void setSafeModeRebootTime(uint16_t minutes);
             static uint16_t getSafeModeRebootTime();
+            static void setWebUIKeepLoggedInDays(uint8_t days);
+            static uint8_t getWebUIKeepLoggedInDays();
+            static uint32_t getWebUIKeepLoggedInSeconds();
 
         public:
             typedef struct __attribute__packed__ {
                 uint16_t _safeModeRebootTime;
+                uint8_t _webUIKeepLoggedInDays;
             } DeviceSettings_t;
 
             DeviceSettings_t settings;

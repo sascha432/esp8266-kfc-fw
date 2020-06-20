@@ -16,7 +16,7 @@
         "default": "text/plain"
     },
     "1": {
-        "use_counter": 15,
+        "use_counter": 14,
         "default": "1"
     },
     "0": {
@@ -92,11 +92,11 @@
         "default": "/autorun_atmode.cmd"
     },
     "on": {
-        "use_counter": 2,
+        "use_counter": 7,
         "default": "on"
     },
     "off": {
-        "use_counter": 2,
+        "use_counter": 6,
         "default": "off"
     },
     "crash_counter_file": {
@@ -132,11 +132,11 @@
         "default": "pure virtual call: %s\\n"
     },
     "yes": {
-        "use_counter": 8,
+        "use_counter": 9,
         "default": "yes"
     },
     "no": {
-        "use_counter": 6,
+        "use_counter": 7,
         "default": "no"
     },
     "comma_": {
@@ -296,7 +296,7 @@
         "default": "http"
     },
     "SID": {
-        "use_counter": 7,
+        "use_counter": 6,
         "default": "SID"
     },
     "Accept_Encoding": {
@@ -304,7 +304,7 @@
         "default": "Accept-Encoding"
     },
     "slash": {
-        "use_counter": 3,
+        "use_counter": 2,
         "default": "/"
     },
     "mime_text_html": {
@@ -919,7 +919,7 @@
         "default": "Home"
     },
     "index_html": {
-        "use_counter": 5,
+        "use_counter": 7,
         "default": "index.html"
     },
     "Status": {
@@ -927,15 +927,15 @@
         "default": "Status"
     },
     "status_html": {
-        "use_counter": 4,
+        "use_counter": 6,
         "default": "status.html"
     },
     "wifi_html": {
-        "use_counter": 3,
+        "use_counter": 4,
         "default": "wifi.html"
     },
     "network_html": {
-        "use_counter": 3,
+        "use_counter": 4,
         "default": "network.html"
     },
     "Change_Password": {
@@ -943,7 +943,7 @@
         "default": "Change Password"
     },
     "password_html": {
-        "use_counter": 2,
+        "use_counter": 3,
         "default": "password.html"
     },
     "reboot_html": {
@@ -967,7 +967,7 @@
         "default": "Device"
     },
     "device_html": {
-        "use_counter": 2,
+        "use_counter": 3,
         "default": "device.html"
     },
     "remote_html": {
@@ -1007,7 +1007,15 @@
         "default": "KFC Firmware"
     },
     "applying_html": {
-        "use_counter": 4,
+        "use_counter": 5,
         "default": "applying.html"
+    },
+    "hidden": {
+        "use_counter": 1,
+        "default": "hidden"
+    },
+    "FormRangeValidator_default_message_zero_allowed": {
+        "use_counter": 1,
+        "default": "This fields value must be between %min% and %max% or 0"
     }
 }

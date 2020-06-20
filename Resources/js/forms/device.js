@@ -4,15 +4,14 @@
 
 $(function() {
     // device.html
-    function normalize_safe_mode_reboot_time() {
-        var field = $('#safe_mode_reboot_time');
-        var value = parseInt(field.val());
+    function normalize_0_value() { // display placeholder if int value is 0
+        var value = parseInt($(this).val());
         if (value == 0) {
-            field.val('');
+            $(this).val('');
         }
     }
     if ($('#device_settings').length) {
-        $('#safe_mode_reboot_time').on('blur', normalize_safe_mode_reboot_time);
+        $('#safe_mode_reboot_time').on('blur', normalize_0_value).each(normalize_0_value);
+        $('#webui_keep_logged_in_days').on('blur', normalize_0_value).each(normalize_0_value);
     }
-    normalize_safe_mode_reboot_time();
 });

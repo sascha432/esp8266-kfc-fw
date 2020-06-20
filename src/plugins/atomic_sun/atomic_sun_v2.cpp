@@ -154,7 +154,7 @@ void Driver_4ChDimmer::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, M
 
     discovery = component.createAutoDiscovery(num, format);
     discovery->addStateTopic(_getMetricsTopics(2));
-    discovery->addUnitOfMeasurement(F("V"));
+    discovery->addUnitOfMeasurement('V');
     discovery->finalize();
     vector.emplace_back(discovery);
     num++;
@@ -169,7 +169,7 @@ void Driver_4ChDimmer::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, M
 #if IOT_ATOMIC_SUN_CALC_POWER
     discovery = component.createAutoDiscovery(num, format);
     discovery->addStateTopic(_getMetricsTopics(4));
-    discovery->addUnitOfMeasurement(F("W"));
+    discovery->addUnitOfMeasurement('W');
     discovery->finalize();
     vector.emplace_back(discovery);
 
@@ -685,12 +685,12 @@ void AtomicSunPlugin::createWebUI(WebUI &webUI)
     row->addColorSlider(F("dimmer_color"), F("Atomic Sun Color"));
 
     row = &webUI.addRow();
-    row->addBadgeSensor(F("dimmer_vcc"), F("Atomic Sun VCC"), F("V"));
+    row->addBadgeSensor(F("dimmer_vcc"), F("Atomic Sun VCC"), 'V');
     row->addBadgeSensor(F("dimmer_frequency"), F("Frequency"), F("Hz"));
     row->addBadgeSensor(F("dimmer_int_temp"), F("ATmega"), F("\u00b0C"));
     row->addBadgeSensor(F("dimmer_ntc_temp"), F("NTC"), F("\u00b0C"));
 #if IOT_ATOMIC_SUN_CALC_POWER
-    row->addBadgeSensor(F("dimmer_power"), F("Power"), F("W"));
+    row->addBadgeSensor(F("dimmer_power"), F("Power"), 'W');
 #endif
     row->addSwitch(F("dimmer_lock"), F("Lock Channels"), false, true);
 

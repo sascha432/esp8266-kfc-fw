@@ -25,7 +25,7 @@ void Sensor_Battery::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQT
     auto discovery = new MQTTAutoDiscovery();
     discovery->create(this, 0, format);
     discovery->addStateTopic(_getTopic(LEVEL));
-    discovery->addUnitOfMeasurement(F("V"));
+    discovery->addUnitOfMeasurement('V');
     discovery->finalize();
     vector.emplace_back(discovery);
 
@@ -63,9 +63,9 @@ void Sensor_Battery::getValues(JsonArray &array, bool timer)
 
 void Sensor_Battery::createWebUI(WebUI &webUI, WebUIRow **row)
 {
-    (*row)->addSensor(_getId(LEVEL), _name, F("V"));
+    (*row)->addSensor(_getId(LEVEL), _name, 'V');
 #if IOT_SENSOR_BATTERY_CHARGE_DETECTION
-    (*row)->addSensor(_getId(STATE), F("Charging"), F(""));
+    (*row)->addSensor(_getId(STATE), F("Charging"), JsonString());
 #endif
 }
 

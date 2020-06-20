@@ -99,7 +99,7 @@ File tmpfile(const String &dir, const String &prefix, long ttl)
     append_slash(tmp);
     tmp += String((millis() / 1000UL) + ttl, HEX);
     if (isxdigit(prefix.charAt(0))) {
-        tmp += F("_"); // add separator if next character is a hex digit
+        tmp += '_'; // add separator if next character is a hex digit
     }
     tmp += prefix;
 #else

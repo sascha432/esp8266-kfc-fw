@@ -454,11 +454,12 @@ void ClockPlugin::onMessage(MQTTClient *client, char *topic, char *payload, size
     }
     else if (strstr(topic, "color/set")) {
         char *r, *g, *b;
-        r = strtok(payload, ",");
+        const char *comma = ",";
+        r = strtok(payload, comma);
         if (r) {
-            g = strtok(nullptr, ",");
+            g = strtok(nullptr, comma);
             if (g) {
-                b = strtok(nullptr, ",");
+                b = strtok(nullptr, comma);
                 if (b) {
                     _colors[0] = atoi(r);
                     _colors[1] = atoi(g);

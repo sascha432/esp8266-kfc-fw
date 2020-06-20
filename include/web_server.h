@@ -87,6 +87,7 @@ public:
         NONE,
         SID,
         SID_COOKIE,
+        PASSWORD,
         BEARER,
     };
 
@@ -181,6 +182,8 @@ public:
                 return F("Session Cookie");
             case AuthType::BEARER:
                 return F("Bearer Toklen");
+            case AuthType::PASSWORD:
+                return F("Password");
             default:
                 return F("Not Authorized");
         }

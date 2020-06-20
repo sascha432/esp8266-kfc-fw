@@ -43,6 +43,11 @@ JsonString::JsonString(const char *str)
     }
 }
 
+JsonString::JsonString(char ch)
+{
+    _init(&ch, 1);
+}
+
 JsonString::JsonString(const __FlashStringHelper *str)
 {
     // while checking string length we can copy already from slow flash

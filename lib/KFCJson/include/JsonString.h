@@ -28,6 +28,7 @@ public:
     JsonString(JsonString &&str);
 
     JsonString();
+    JsonString(char ch);
     JsonString(const String &str);
     JsonString(const char *str);
     JsonString(const __FlashStringHelper *str);

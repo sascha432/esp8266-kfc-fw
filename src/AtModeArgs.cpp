@@ -156,16 +156,16 @@ uint32_t AtModeArgs::toMillis(uint16_t num, uint32_t minTime, uint32_t maxTime, 
     }
     else
 */
-    if (String_equals(suffix, F("m")) || String_startsWith(suffix, F("min"))) {
+    if (suffix.equals(String('m')) || String_startsWith(suffix, F("min"))) {
         result =  (uint32_t)(value * 1000.0 * 60);
     }
-    else if (String_equals(suffix, F("h")) || String_startsWith(suffix, F("hour"))) {
+    else if (suffix.equals(String('h')) || String_startsWith(suffix, F("hour"))) {
         result =  (uint32_t)(value * 1000.0 * 60 * 60);
     }
-    else if (String_equals(suffix, F("d")) || String_startsWith(suffix, F("day"))) {
+    else if (suffix.equals(String('d')) || String_startsWith(suffix, F("day"))) {
         result =  (uint32_t)(value * 1000.0 * 60 * 60 * 24);
     }
-    else if (String_equals(suffix, F("s")) || String_startsWith(suffix, F("sec"))) {
+    else if (suffix.equals(String('s')) || String_startsWith(suffix, F("sec"))) {
         result = (uint32_t)(value * 1000.0);
     }
     else {

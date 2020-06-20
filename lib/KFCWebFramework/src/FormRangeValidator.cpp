@@ -11,7 +11,7 @@
 #undef _min
 #endif
 
-FormRangeValidator::FormRangeValidator(long min, long max, bool allowZero) : FormRangeValidator(FSPGM(FormRangeValidator_default_message), min, max, allowZero)
+FormRangeValidator::FormRangeValidator(long min, long max, bool allowZero) : FormRangeValidator(allowZero ? FSPGM(FormRangeValidator_default_message_zero_allowed) : FSPGM(FormRangeValidator_default_message), min, max, allowZero)
 {
 }
 

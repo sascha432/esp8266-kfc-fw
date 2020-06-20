@@ -275,7 +275,7 @@ void HttpHeaders::addNoCache(bool noStore)
 
 void HttpHeaders::addDefaultHeaders()
 {
-    add(F("Access-Control-Allow-Origin"), F("*"));
+    add(F("Access-Control-Allow-Origin"), String('*'));
     add(new HttpLinkHeader(F("<https://fonts.gstatic.com>; rel=preconnect; crossorigin")));
     add(F("X-Frame-Options"), F("SAMEORIGIN"));
     add(new HttpDateHeader(FSPGM(Expires), 86400 * 30));

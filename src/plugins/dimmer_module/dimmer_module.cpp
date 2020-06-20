@@ -486,7 +486,7 @@ void DimmerModulePlugin::createWebUI(WebUI &webUI)
     }
 
     row = &webUI.addRow();
-    row->addBadgeSensor(F("dimmer_vcc"), F("Dimmer VCC"), F("V"));
+    row->addBadgeSensor(F("dimmer_vcc"), F("Dimmer VCC"), 'V');
     row->addBadgeSensor(F("dimmer_frequency"), F("Dimmer Frequency"), F("Hz"));
     row->addBadgeSensor(F("dimmer_int_temp"), F("Dimmer ATmega"), F("\u00b0C"));
     row->addBadgeSensor(F("dimmer_ntc_temp"), F("Dimmer NTC"), F("\u00b0C"));

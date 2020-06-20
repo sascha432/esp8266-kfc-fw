@@ -106,7 +106,7 @@
         DumpBinary dumper(str);
         dumper.dump(data, len);
 
-        str.replace(F("\n"), F(" "));
+        str.replace(String('\n'), String(' '));
 
         Logger_notice(F(WS_PREFIX "Error(%u): data='%s', length=%d"), WS_PREFIX_ARGS, *reinterpret_cast<uint16_t *>(arg), str.c_str(), len);
         wsClient->onError(WsClient::ERROR_FROM_SERVER, data, len);

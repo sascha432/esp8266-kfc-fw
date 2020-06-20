@@ -154,7 +154,7 @@ void at_mode_display_help(Stream &output, StringVector *findText = nullptr)
                 }
                 output.print(FPSTR(commandHelp.command));
             }
-            output.println(F("?"));
+            output.println('?');
             at_mode_display_help_indent(output, commandHelp.helpQueryMode);
         }
 

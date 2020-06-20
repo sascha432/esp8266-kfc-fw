@@ -116,7 +116,7 @@ void RemoteControlPlugin::createConfigureForm(AsyncWebServerRequest *request, Fo
     Plugins::HomeAssistant::ActionVector vector;
     Plugins::HomeAssistant::getActions(vector);
 
-    actions.emplace_back(F("0"), F("None"));
+    actions.emplace_back('0', F("None"));
     for(const auto &action: vector) {
         auto str = PrintString(F("%s: %s"), action.getEntityId().c_str(), action.getActionFStr());
         if (action.getNumValues()) {

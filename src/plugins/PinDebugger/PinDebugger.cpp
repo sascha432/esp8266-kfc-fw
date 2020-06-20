@@ -208,7 +208,7 @@ bool PinDebuggerPlugin::atModeHandler(AtModeArgs &args)
         auto values = VirtualPinMode::getValues();
         // auto &serial = args.getStream();
         if (args.isQueryMode()) {
-            args.printf_P("values=%s", VirtualPinMode::getValuesAsString(F("|")).c_str());
+            args.printf_P("values=%s", VirtualPinMode::getValuesAsString('|').c_str());
         }
         else  if (args.requireArgs(2, 2)) {
             auto pin = (uint8_t)args.toInt(0);

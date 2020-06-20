@@ -235,6 +235,9 @@ void LoginTemplate::process(const String &key, PrintHtmlEntitiesString &output)
             output.print(FSPGM(_hidden));
         }
     }
+    else if (String_equals(key, F("LOGIN_KEEP_DAYS"))) {
+        output.print(KFCConfigurationClasses::System::Device::getWebUIKeepLoggedInDays());
+    }
     else {
         WebTemplate::process(key, output);
     }
@@ -464,6 +467,9 @@ DeviceSettingsForm::DeviceSettingsForm(AsyncWebServerRequest *request) : Setting
 
     add<uint16_t>(F("safe_mode_reboot_time"), _H_STRUCT_VALUE(MainConfig().system.device.settings, _safeModeRebootTime));
     addValidator(new FormRangeValidator(5, 1440, true));
+
+    add<uint16_t>(F("webui_keep_logged_in_days"), _H_STRUCT_VALUE(MainConfig().system.device.settings, _webUIKeepLoggedInDays));
+    addValidator(new FormRangeValidator(3, 180, true));
 
     add<bool>(F("disable_webalerts"), _H_FLAGS_BOOL_VALUE(Config().flags, disableWebAlerts));
     add<bool>(F("disable_webui"), _H_FLAGS_BOOL_VALUE(Config().flags, disableWebUI));

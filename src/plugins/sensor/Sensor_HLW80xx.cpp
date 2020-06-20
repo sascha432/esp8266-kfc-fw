@@ -55,7 +55,7 @@ void Sensor_HLW80xx::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQT
     auto discovery = new MQTTAutoDiscovery();
     discovery->create(this, 0, format);
     discovery->addStateTopic(topic);
-    discovery->addUnitOfMeasurement(F("W"));
+    discovery->addUnitOfMeasurement('W');
     discovery->addValueTemplate(F("power"));
     discovery->finalize();
     vector.emplace_back(discovery);
@@ -79,7 +79,7 @@ void Sensor_HLW80xx::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQT
     discovery = new MQTTAutoDiscovery();
     discovery->create(this, 3, format);
     discovery->addStateTopic(topic);
-    discovery->addUnitOfMeasurement(F("V"));
+    discovery->addUnitOfMeasurement('V');
     discovery->addValueTemplate(F("voltage"));
     discovery->finalize();
     vector.emplace_back(discovery);
@@ -87,7 +87,7 @@ void Sensor_HLW80xx::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQT
     discovery = new MQTTAutoDiscovery();
     discovery->create(this, 4, format);
     discovery->addStateTopic(topic);
-    discovery->addUnitOfMeasurement(F("A"));
+    discovery->addUnitOfMeasurement('A');
     discovery->addValueTemplate(F("current"));
     discovery->finalize();
     vector.emplace_back(discovery);
@@ -95,7 +95,7 @@ void Sensor_HLW80xx::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQT
     discovery = new MQTTAutoDiscovery();
     discovery->create(this, 5, format);
     discovery->addStateTopic(topic);
-    discovery->addUnitOfMeasurement(F(""));
+    discovery->addUnitOfMeasurement(emptyString);
     discovery->addValueTemplate(F("pf"));
     discovery->finalize();
     vector.emplace_back(discovery);
@@ -152,12 +152,12 @@ void Sensor_HLW80xx::createWebUI(WebUI &webUI, WebUIRow **row)
     //     *row = &webUI.addRow();
     // }
 
-    (*row)->addSensor(_getId(F("power")), _name + F(" Power"), F("W"));
+    (*row)->addSensor(_getId(F("power")), _name + F(" Power"), 'W');
     (*row)->addSensor(_getId(F("energy_total")), _name + F(" Energy Total"), F("kWh"));
     (*row)->addSensor(_getId(F("energy")), _name + F(" Energy"), F("kWh"));
-    (*row)->addSensor(_getId(F("voltage")), _name + F(" Voltage"), F("V"));
-    (*row)->addSensor(_getId(F("current")), _name + F(" Current"), F("A"));
-    (*row)->addSensor(_getId(F("pf")), _name + F(" Power Factor"), F(""));
+    (*row)->addSensor(_getId(F("voltage")), _name + F(" Voltage"), 'V');
+    (*row)->addSensor(_getId(F("current")), _name + F(" Current"), 'A');
+    (*row)->addSensor(_getId(F("pf")), _name + F(" Power Factor"), JsonString());
 }
 
 void Sensor_HLW80xx::reconfigure()

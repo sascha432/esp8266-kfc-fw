@@ -216,7 +216,7 @@ public:
     };
 #endif
 
-    HttpCookieHeader(const String &name, const String &value = String(), const String &path = String(), time_t expires = 0) : HttpHeader(FSPGM(Set_Cookie)), _cookieName(name), _value(value), _path(path) {
+    HttpCookieHeader(const String &name, const String &value = String(), const String &path = String(), time_t expires = COOKIE_SESSION) : HttpHeader(FSPGM(Set_Cookie)), _cookieName(name), _value(value), _path(path) {
         setExpires(expires);
     }
 

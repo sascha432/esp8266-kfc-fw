@@ -214,10 +214,9 @@ size_t Print::printNumber(unsigned long n, uint8_t base) {
 size_t Print::printFloat(double number, uint8_t digits) {
     size_t n = 0;
 
-    if (isnan(number)) return print("nan");
-    if (isinf(number)) return print("inf");
-    if (number > 4294967040.0) return print("ovf");  // constant determined empirically
-    if (number < -4294967040.0) return print("ovf");  // constant determined empirically
+    if (isnan(number)) return print(F("nan"));
+    if (isinf(number)) return print(F("inf"));
+    if (number > 4294967040.0 || nnumber < -4294967040.0) return print(F("ovf"));  // constant determined empirically
 
                                                       // Handle negative numbers
     if (number < 0.0) {
@@ -238,7 +237,7 @@ size_t Print::printFloat(double number, uint8_t digits) {
 
     // Print the decimal point, but only if there are digits beyond
     if (digits > 0) {
-        n += print(".");
+        n += print('.');
     }
 
     // Extract digits from the remainder one at a time

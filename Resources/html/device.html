@@ -26,7 +26,6 @@
     <!--NAV%%-->
     <div class="container">
         <h1>Device Configuration</h1>
-        <h5>Most settings required a restart...</h5>
         <form method="POST" action="device.html" id="device_settings">
             <div class="form-group">
                 <label for="hostname">Hostname:</label>
@@ -41,6 +40,15 @@
                 <div class="input-group">
                     <input type="text" class="form-control" name="safe_mode_reboot_time" id="safe_mode_reboot_time" value="%SAFE_MODE_REBOOT_TIME%" size="4" placeholder="Disabled">
                     <div class="input-group-append"><span class="input-group-text">minutes</span></div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="webui_keep_logged_in_days">Allow to store credentials in a cookie to automatically login:<br>
+                    <span class="oi oi-shield p-2"></span><small>If the cookie is stolen, it is not going to expire and changing the password is the only options to invalidate it.</small>
+                </label>
+                <div class="input-group">
+                    <input type="text" class="form-control" name="webui_keep_logged_in_days" id="webui_keep_logged_in_days" value="%WEBUI_KEEP_LOGGED_IN_DAYS%" size="3" placeholder="Disabled">
+                    <div class="input-group-append"><span class="input-group-text">days</span></div>
                 </div>
             </div>
             <div class="form-group">

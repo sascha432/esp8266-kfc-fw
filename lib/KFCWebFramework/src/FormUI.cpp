@@ -25,8 +25,8 @@ FormUI *FormUI::setLabel(const String &label, bool raw)
 
 FormUI *FormUI::setBoolItems(const String &yes, const String &no)
 {
-    addItems(F("0"), no);
-    addItems(F("1"), yes);
+    addItems(String('0'), no);
+    addItems(String('1'), yes);
     return this;
 }
 

@@ -29,7 +29,7 @@
 #include "WebUIAlerts.h"
 #include "kfc_fw_config.h"
 #if STK500V1
-#include "plugins/stk500v1/STK500v1Programmer.h"
+#include "./plugins/stk500v1/STK500v1Programmer.h"
 #endif
 #include "./plugins/mdns/mdns_sd.h"
 #if IOT_REMOTE_CONTROL
@@ -71,6 +71,11 @@ WebServerSetCPUSpeedHelper::WebServerSetCPUSpeedHelper() : SpeedBooster(
     config._H_GET(Config().flags).webServerPerformanceModeEnabled
 #endif
 ) {
+}
+
+HttpCookieHeader *createRemoveSessionIdCookie()
+{
+    return new HttpCookieHeader(FSPGM(SID), String(), String('/'), HttpCookieHeader::COOKIE_EXPIRED);
 }
 
 const __FlashStringHelper *getContentType(const String &path)
@@ -194,7 +199,7 @@ void WebServerPlugin::handlerScanWiFi(AsyncWebServerRequest *request)
     if (plugin.isAuthenticated(request) == true) {
         HttpHeaders httpHeaders(false);
         httpHeaders.addNoCache();
-        auto response = new AsyncNetworkScanResponse(request->arg(F("hidden")).toInt());
+        auto response = new AsyncNetworkScanResponse(request->arg(FSPGM(hidden)).toInt());
         httpHeaders.setAsyncBaseResponseHeaders(response);
         request->send(response);
     } else {
@@ -207,7 +212,7 @@ void WebServerPlugin::handlerLogout(AsyncWebServerRequest *request)
     auto response = request->beginResponse(302);
     HttpHeaders httpHeaders;
     httpHeaders.addNoCache(true);
-    httpHeaders.add(new HttpCookieHeader(FSPGM(SID)));
+    httpHeaders.add(createRemoveSessionIdCookie());
     httpHeaders.add(new HttpLocationHeader(FSPGM(slash)));
     httpHeaders.setAsyncWebServerResponseHeaders(response);
     request->send(response);
@@ -215,7 +220,7 @@ void WebServerPlugin::handlerLogout(AsyncWebServerRequest *request)
 
 void WebServerPlugin::handlerAlive(AsyncWebServerRequest *request)
 {
-    auto response = request->beginResponse(200, FSPGM(mime_text_plain), String(request->arg(F("p")).toInt()));
+    auto response = request->beginResponse(200, FSPGM(mime_text_plain), String(request->arg(String('p')).toInt()));
     HttpHeaders httpHeaders;
     httpHeaders.addNoCache();
     httpHeaders.setAsyncWebServerResponseHeaders(response);
@@ -787,7 +792,7 @@ bool WebServerPlugin::_handleFileRead(String path, bool client_accepts_gzip, Asy
     WebServerSetCPUSpeedHelper setCPUSpeed;
 
     if (String_endsWith(path, '/')) {
-        path += F("index.html");
+        path += FSPGM(index_html);
     }
 
     if (String_startsWith(path, PSTR("/settings/"))) { // deny access
@@ -807,7 +812,7 @@ bool WebServerPlugin::_handleFileRead(String path, bool client_accepts_gzip, Asy
     }
 
     auto authType = isAuthenticated(request);
-    bool isAuthenticated = (authType == true);
+    bool isAuthenticated = (authType > AuthType::NONE);
     WebTemplate *webTemplate = nullptr;
     HttpHeaders httpHeaders;
 
@@ -825,34 +830,38 @@ bool WebServerPlugin::_handleFileRead(String path, bool client_accepts_gzip, Asy
             IPAddress remote_addr = request->client()->remoteIP();
 
             if (_loginFailures.isAddressBlocked(remote_addr) == false && request->arg(FSPGM(username)) == config.getDeviceName() && request->arg(FSPGM(password)) == config._H_STR(Config().device_pass)) {
-                auto cookie = new HttpCookieHeader(FSPGM(SID));
-                cookie->setValue(generate_session_id(config.getDeviceName(), config._H_STR(Config().device_pass), NULL));
-                cookie->setPath(FSPGM(slash));
-                httpHeaders.add(cookie);
 
-                if (request->arg(F("keep")) == FSPGM(1)) {
-                    auto _time = time(nullptr);
-                    if (IS_TIME_VALID(_time)) {
-                        auto keepCookie = new HttpCookieHeader(FSPGM(SID));
-                        *keepCookie = *cookie;
-                        keepCookie->setExpires(_time + 86400 * 30);
-                        httpHeaders.add(keepCookie);
+                auto cookie = new HttpCookieHeader(FSPGM(SID), generate_session_id(config.getDeviceName(), config._H_STR(Config().device_pass), NULL), String('/'));
+                authType = AuthType::PASSWORD;
+                time_t keepTime = request->arg(F("keep")).toInt();
+                if (keepTime) {
+                    _debug_printf_P(PSTR("keep time %u\n"), keepTime);
+                    auto now = time(nullptr);
+                    keepTime = (keepTime == 1 && IS_TIME_VALID(now)) ? now : keepTime; // check if the time was provied, otherwise use system time
+                    if (IS_TIME_VALID(keepTime)) {
+                        cookie->setExpires(keepTime + KFCConfigurationClasses::System::Device::getWebUIKeepLoggedInSeconds());
                     }
                 }
+                _debug_printf_P(PSTR("cookie %s\n"), cookie->getValue().c_str());
+                httpHeaders.add(cookie);
 
                 _debug_printf_P(PSTR("Login successful: type=%u cookie=%s\n"), getAuthTypeStr(authType), cookie->getValue().c_str());
                 isAuthenticated = true;
                 Logger_security(F("Login successful from %s (%s)"), remote_addr.toString().c_str(), getAuthTypeStr(authType));
-            } else {
+            }
+            else {
                 loginError = F("Invalid username or password.");
                 const FailureCounter &failure = _loginFailures.addFailure(remote_addr);
                 Logger_security(F("Login from %s failed %d times since %s (%s)"), remote_addr.toString().c_str(), failure.getCounter(), failure.getFirstFailure().c_str(), getAuthTypeStr(authType));
                 return _sendFile(FSPGM(login_html), httpHeaders, client_accepts_gzip, request, new LoginTemplate(loginError));
             }
-        } else {
+        }
+        else {
             if (String_endsWith(path, SPGM(_html))) {
+                httpHeaders.add(createRemoveSessionIdCookie());
                 return _sendFile(FSPGM(login_html), httpHeaders, client_accepts_gzip, request, new LoginTemplate(loginError));
-            } else {
+            }
+            else {
                 request->send(403);
                 return true;
             }
@@ -974,7 +983,7 @@ bool WebServerPlugin::_handleFileRead(String path, bool client_accepts_gzip, Asy
                         executeDelayed(request, []() {
                             config.restartDevice();
                         });
-                        WebTemplate::_aliveRedirection = FSPGM(factory_html);
+                        WebTemplate::_aliveRedirection = FSPGM(status_html);
                         mapping = FileMapping(FSPGM(rebooting_html), true);
                     } else {
                         request->redirect(String('/') + FSPGM(index_html));
@@ -1154,6 +1163,7 @@ bool WebServerPlugin::isRunning() const
 
 WebServerPlugin::AuthType WebServerPlugin::isAuthenticated(AsyncWebServerRequest *request) const
 {
+    //TODO xxx
     String SID;
     auto auth = request->getHeader(FSPGM(Authorization));
     auto hasSID = request->hasArg(FSPGM(SID));
@@ -1178,7 +1188,7 @@ WebServerPlugin::AuthType WebServerPlugin::isAuthenticated(AsyncWebServerRequest
         if (verify_session_id(SID.c_str(), config.getDeviceName(), config._H_STR(Config().device_pass))) {
             return hasSID ? AuthType::SID : AuthType::SID_COOKIE;
         }
-        _debug_println(F("SID cookie/param failed"));
+        debug_println(F("SID cookie/param failed"));
     }
     return AuthType::NONE;
 }

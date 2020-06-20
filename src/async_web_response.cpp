@@ -191,7 +191,7 @@ size_t AsyncMDNSResponse::_fillBuffer(uint8_t *data, size_t len)
 {
     auto &json = getJsonObject();
     if (!json.size()) {
-        auto &rows = json.addArray(F("l"));
+        auto &rows = json.addArray('l');
         return AsyncJsonResponse::_fillBuffer(data, len);
     }
     return 0;
@@ -204,12 +204,12 @@ size_t AsyncMDNSResponse::_fillBuffer(uint8_t *data, size_t len)
     if (millis() > _timeout) {
         auto &json = getJsonObject();
         if (!json.size()) {
-            auto &rows = json.addArray(F("l"));
+            auto &rows = json.addArray('l');
             for(auto &svc: *_services) {
                 auto &row = rows.addObject(6);
 
                 svc.domain.toLowerCase();
-                row.add(F("h"), svc.domain);
+                row.add('h', svc.domain);
 
                 String name = svc.domain;
                 auto pos = name.indexOf('.');
@@ -217,25 +217,25 @@ size_t AsyncMDNSResponse::_fillBuffer(uint8_t *data, size_t len)
                     name.remove(pos);
                 }
                 name.toUpperCase();
-                row.add(F("n"), name);
+                row.add('n', name);
 
-                row.add(F("a"), implode_cb(',', svc.addresses, [](const IPAddress &addr) {
+                row.add('a', implode_cb(',', svc.addresses, [](const IPAddress &addr) {
                     return addr.toString();
                 }));
 
                 auto version = String('-');
                 for(const auto &item: svc.map) {
-                    if (!strcmp_P(item.first.c_str(), PSTR("v"))) {
+                    if (item.first.equals(String('v'))) {
                         version = item.second;
                     }
-                    else if (!strcmp_P(item.first.c_str(), PSTR("b"))) {
-                        row.add(F("b"), item.second);
+                    else if (item.first.equals(String('v'))) {
+                        row.add('b', item.second);
                     }
-                    else if (!strcmp_P(item.first.c_str(), PSTR("t"))) {
-                        row.add(F("t"), item.second);
+                    else if (item.first.equals(String('t'))) {
+                        row.add('t', item.second);
                     }
                 }
-                row.add(F("v"), version);
+                row.add('v', version);
             }
         }
         return AsyncJsonResponse::_fillBuffer(data, len);
@@ -520,7 +520,7 @@ size_t AsyncNetworkScanResponse::_fillBuffer(uint8_t *data, size_t len)
             }
             else {
                 String tmp = WiFi.SSID(_position);
-                tmp.replace(F("\""), F("\\\""));
+                tmp.replace(String('"'), F("\\\""));
                 if ((int16_t)tmp.length() >= space) {
                     break;
                 }

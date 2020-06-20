@@ -71,6 +71,7 @@ namespace KFCConfigurationClasses {
     {
         DeviceSettings_t settings;
         settings._safeModeRebootTime = 0;
+        settings._webUIKeepLoggedInDays = 30;
         config._H_SET(MainConfig().system.device.settings, settings);
 
         setSafeModeRebootTime(0);
@@ -129,6 +130,22 @@ namespace KFCConfigurationClasses {
         return config._H_GET(MainConfig().system.device.settings)._safeModeRebootTime;
     }
 
+    uint8_t System::Device::getWebUIKeepLoggedInDays()
+    {
+        return config._H_GET(MainConfig().system.device.settings)._webUIKeepLoggedInDays;
+    }
+
+    uint32_t System::Device::getWebUIKeepLoggedInSeconds()
+    {
+        return getWebUIKeepLoggedInDays() * 86400;
+    }
+
+    void System::Device::setWebUIKeepLoggedInDays(uint8_t days)
+    {
+        auto settings = config._H_GET(MainConfig().system.device.settings);
+        settings._webUIKeepLoggedInDays = days;
+        config._H_SET(MainConfig().system.device.settings, settings);
+    }
 
     Network::Settings::Settings()
     {

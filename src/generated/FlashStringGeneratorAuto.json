@@ -881,29 +881,7 @@
     },
     "safe_mode": {
         "use_counter": 1,
-        "default": "safe mode"
-    },
-    "_rebooting_html": {
-        "use_counter": 0,
-        "default": "/rebooting.html",
-        "annotations": {
-            "translation": {
-                "*": "/rebooting.html"
-            },
-            "file": "src/web_server.cpp",
-            "line": 856
-        }
-    },
-    "_index_html": {
-        "use_counter": 0,
-        "default": "/index.html",
-        "annotations": {
-            "translation": {
-                "*": "/index.html"
-            },
-            "file": "src/web_server.cpp",
-            "line": 858
-        }
+        "default": "safe_mode"
     },
     "password": {
         "use_counter": 4,

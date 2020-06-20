@@ -954,11 +954,9 @@ bool WebServerPlugin::_handleFileRead(String path, bool client_accepts_gzip, Asy
                 }
                 else if (String_equals(path, SPGM(reboot_html, "reboot.html"))) {
                     if (request->hasArg(FSPGM(yes))) {
-                        if (request->arg(FSPGM(safe_mode)).toInt()) {
-                            resetDetector.setSafeMode(1);
-                        }
-                        executeDelayed(request, []() {
-                            config.restartDevice();
+                        bool safeMode = request->arg(FSPGM(safe_mode)).toInt();
+                        executeDelayed(request, [safeMode]() {
+                            config.restartDevice(safeMode);
                         });
 
                         WebTemplate::_aliveRedirection = FSPGM(status_html);

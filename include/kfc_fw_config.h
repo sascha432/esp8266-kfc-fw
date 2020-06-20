@@ -502,7 +502,7 @@ public:
 
     void wakeUpFromDeepSleep();
     void enterDeepSleep(milliseconds time, RFMode mode, uint16_t delayAfterPrepare = 0);
-    void restartDevice();
+    void restartDevice(bool safeMode = false);
 
     static void printVersion(Print &output);
     void printInfo(Print &output);

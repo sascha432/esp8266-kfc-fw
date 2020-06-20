@@ -999,14 +999,19 @@ static void restart_device()
 #include "pin_monitor.h"
 #endif
 
-void KFCFWConfiguration::restartDevice()
+void KFCFWConfiguration::restartDevice(bool safeMode)
 {
     _debug_println();
 
-    Logger_notice(F("Device is being restarted"));
+    String msg = F("Device is being restarted");
+    if (safeMode) {
+        msg += F(" in SAFE MODE");
+    }
+    Logger_notice(msg);
     BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::FLICKER);
 
     SaveCrash::removeCrashCounterAndSafeMode();
+    resetDetector.setSafeMode(safeMode);
     if (_safeMode) {
         invoke_ESP_restart();
     }

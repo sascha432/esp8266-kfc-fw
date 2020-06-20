@@ -848,14 +848,15 @@ void at_mode_serial_handle_event(String &commandString)
                 at_mode_generate_help(output, &findItems);
             }
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RST))) {
+                bool safeMode = false;
                 if (args.equals(0, 's')) {
-                    resetDetector.setSafeMode(1);
+                    safeMode = true;
                     args.print(F("Software reset, safe mode enabled..."));
                 }
                 else {
                     args.print(F("Software reset..."));
                 }
-                config.restartDevice();
+                config.restartDevice(safeMode);
             }
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CMDS))) {
                 output.print(F("+CMDS="));

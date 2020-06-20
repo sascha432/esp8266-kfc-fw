@@ -104,7 +104,7 @@ PROGMEM_STRING_DEF(wifi, "wifi");
 // src/web_server.cpp:923
 PROGMEM_STRING_DEF(applying_html, "applying.html");
 // src/web_server.cpp:931
-PROGMEM_STRING_DEF(safe_mode, "safe mode");
+PROGMEM_STRING_DEF(safe_mode, "safe_mode");
 // src/web_server.cpp:938
 // src/web_server.cpp:952
 PROGMEM_STRING_DEF(rebooting_html, "rebooting.html");

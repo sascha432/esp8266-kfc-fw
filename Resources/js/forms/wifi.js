@@ -5,8 +5,9 @@
 $(function () {
     // wifi.html
     if ($('#wifi_settings').length) {
+        var max_channels = parseInt($('#channel').data('max-channels'));
         $('#channel option').each(function () {
-            if (parseInt($(this).val()) > '/%%%MAX_CHANNELS%%%/') {
+            if (parseInt($(this).val()) > max_channels) {
                 $(this).remove();
             }
         });

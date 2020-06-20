@@ -988,7 +988,7 @@ void at_mode_serial_handle_event(String &commandString)
                         args.print(F("enabling AP mode"));
                         WiFi.enableAP(true);
                     }
-                    else if (String_equalsIgnoreCase(arg0, F("app_off"))) {
+                    else if (String_equalsIgnoreCase(arg0, F("ap_off"))) {
                         args.print(F("disabling AP mode"));
                         WiFi.enableAP(false);
                     }

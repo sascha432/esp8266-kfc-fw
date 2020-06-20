@@ -213,11 +213,9 @@ void ClockPlugin::setup(PluginSetupMode_t mode)
 #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
         // update auto brightness timer
         if (_timerCounter % 2 == 0) {
-#if DEBUG_IOT_CLOCK
-            _debug_printf_P(PSTR("auto brightness %f\n"), _autoBrightnessValue);
-#endif
             uint8_t tmp = _autoBrightnessValue * 100;
             if (tmp != _autoBrightnessLastValue) {
+                _debug_printf_P(PSTR("auto brightness %f\n"), _autoBrightnessValue);
                 _autoBrightnessLastValue = tmp;
                 _updateLightSensorWebUI();
             }
@@ -229,7 +227,11 @@ void ClockPlugin::setup(PluginSetupMode_t mode)
                 return (sensor.getType() == MQTTSensor::SensorType::LM75A);
             }, [this](Sensor_LM75A &sensor) {
                 auto temp = sensor.readSensor();
-                _debug_printf_P(PSTR("temp timer %f\n"), temp);
+#if DEBUG_IOT_CLOCK
+                if (!isnan(temp)) {
+                    _debug_printf_P(PSTR("temp timer %f\n"), temp);
+                }
+#endif
                 if (temp > _config.temp_prot) {
                     // over temp. protection, reduce brightness to 20% and flash red
                     if (_brightness > SevenSegmentDisplay::MAX_BRIGHTNESS  / 5) {

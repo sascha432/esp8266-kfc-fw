@@ -139,7 +139,7 @@ void SwitchPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &for
 void SwitchPlugin::createWebUI(WebUI &webUI)
 {
     auto row = &webUI.addRow();
-    row->setExtraClass(F("title"));
+    row->setExtraClass(FSPGM(title));
     row->addGroup(F("Switch"), false);
 
     row = &webUI.addRow();

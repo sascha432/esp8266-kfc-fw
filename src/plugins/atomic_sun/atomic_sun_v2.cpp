@@ -675,7 +675,7 @@ bool AtomicSunPlugin::hasReconfigureDependecy(PluginComponent *plugin) const
 void AtomicSunPlugin::createWebUI(WebUI &webUI)
 {
     auto row = &webUI.addRow();
-    row->setExtraClass(F("title"));
+    row->setExtraClass(FSPGM(title));
     row->addGroup(F("Atomic Sun"), false);
 
     row = &webUI.addRow();

@@ -105,7 +105,7 @@ void WeatherStationPlugin::_installWebhooks()
             json.add(FSPGM(message), F("Firmware update in progress"));
         }
         else if (rest.isUriMatch(FSPGM(message))) {
-            auto title = reader.get(F("title")).getValue();
+            auto title = reader.get(FSPGM(title)).getValue();
             auto message = reader.get(FSPGM(message)).getValue();
             auto timeout = reader.get(F("timeout")).getValue().toInt();
             auto confirm = reader.get(F("confirm")).getBooleanValue();

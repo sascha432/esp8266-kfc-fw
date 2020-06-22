@@ -9,6 +9,12 @@ The firmware offers a plugin interface to easily extend its functionality. The p
 1M with most features activated, no OTA updates
 2M with OTA
 
+## ChangeLog
+
+[Version 0.0.3](./CHANGELOG.md)
+
+[Version 0.0.2](./blob/027305464fb486606840fa821595f7bce6e6ef1d/CHANGELOG.md)
+
 ## Libraries
 
 ### KFCSyslog

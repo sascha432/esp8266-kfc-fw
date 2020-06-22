@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 0.0.3
+
+- Device configuration page for WebUI
+
 ## Version 0.0.2
 
 - Option to enable SoftAP only if WiFi station mode is not connected

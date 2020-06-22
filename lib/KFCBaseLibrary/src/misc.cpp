@@ -6,14 +6,6 @@
 #include <PrintString.h>
 #include "misc.h"
 
-PROGMEM_STRING_DECL(slash);
-PROGMEM_STRING_DECL(SPIFFS_tmp_dir);
-
-#if _WIN32
-PROGMEM_STRING_DEF(slash, "/");
-PROGMEM_STRING_DEF(SPIFFS_tmp_dir, "c:/temp/");
-#endif
-
 String formatBytes(size_t bytes)
 {
     char buf[16];
@@ -89,7 +81,7 @@ void remove_trailing_slash(String &dir) {
 }
 
 String sys_get_temp_dir() {
-    return FSPGM(SPIFFS_tmp_dir);
+    return F("/tmp/");
 }
 
 #if SPIFFS_TMP_FILES_TTL

@@ -4,7 +4,6 @@
 
 #include "dimmer_channel.h"
 #include "dimmer_module.h"
-#include "progmem_data.h"
 #include <PrintString.h>
 #include "WebUISocket.h"
 
@@ -34,8 +33,8 @@ void DimmerChannel::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTT
     discovery->create(this, _channel, format);
     discovery->addStateTopic(_data.state.state);
     discovery->addCommandTopic(_data.state.set);
-    discovery->addPayloadOn(FSPGM(1));
-    discovery->addPayloadOff(FSPGM(0));
+    discovery->addPayloadOn(String(1));
+    discovery->addPayloadOff(String(0));
     discovery->addBrightnessStateTopic(_data.brightness.state);
     discovery->addBrightnessCommandTopic(_data.brightness.set);
     discovery->addBrightnessScale(IOT_DIMMER_MODULE_MAX_BRIGHTNESS);

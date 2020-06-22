@@ -9,7 +9,6 @@
 #include "kfc_fw_config.h"
 #include "kfc_fw_config_classes.h"
 #include "RTCMemoryManager.h"
-#include "progmem_data.h"
 #include "misc.h"
 #ifndef DISABLE_EVENT_SCHEDULER
 #include <EventScheduler.h>
@@ -151,7 +150,7 @@ static void create_menu()
     bootstrapMenu.addSubMenu(FSPGM(Reboot_Device), FSPGM(reboot_html), navMenu.admin);
     bootstrapMenu.addSubMenu(F("Restore Factory Defaults"), FSPGM(factory_html), navMenu.admin);
     bootstrapMenu.addSubMenu(F("Export Settings"), F("export_settings"), navMenu.admin);
-    bootstrapMenu.addSubMenu(F("Update Firmware"), F("update_fw.html"), navMenu.admin);
+    bootstrapMenu.addSubMenu(F("Update Firmware"), FSPGM(update_fw_html), navMenu.admin);
 
     navMenu.util = bootstrapMenu.addMenu(F("Utilities"));
     bootstrapMenu.addSubMenu(F("Speed Test"), F("speed_test.html"), navMenu.util);

@@ -17,8 +17,8 @@
 #include <SpeedBooster.h>
 #include <KFCJson.h>
 #include <HeapStream.h>
+#include "../src/generated/FlashStringGeneratorAuto.h"
 #include "failure_counter.h"
-#include "progmem_data.h"
 #include "plugins.h"
 
 class FileMapping;

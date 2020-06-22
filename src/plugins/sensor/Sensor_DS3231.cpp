@@ -6,7 +6,6 @@
 
 #include <Timezone.h>
 #include "Sensor_DS3231.h"
-#include "progmem_data.h"
 
 #if DEBUG_IOT_SENSOR
 #include <debug_helper_enable.h>

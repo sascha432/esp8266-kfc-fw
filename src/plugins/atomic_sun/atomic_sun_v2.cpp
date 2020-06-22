@@ -8,7 +8,6 @@
 #include <StreamString.h>
 #include "../include/templates.h"
 #include "LoopFunctions.h"
-#include "progmem_data.h"
 #include "plugins.h"
 #include "atomic_sun_v2.h"
 #include "../dimmer_module/dimmer_module_form.h"
@@ -101,8 +100,8 @@ void Driver_4ChDimmer::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, M
     discovery->create(this, num++, format);
     discovery->addStateTopic(_data.state.state);
     discovery->addCommandTopic(_data.state.set);
-    discovery->addPayloadOn(FSPGM(1));
-    discovery->addPayloadOff(FSPGM(0));
+    discovery->addPayloadOn(String(1));
+    discovery->addPayloadOff(String(0));
     discovery->addBrightnessStateTopic(_data.brightness.state);
     discovery->addBrightnessCommandTopic(_data.brightness.set);
     discovery->addBrightnessScale(IOT_ATOMIC_SUN_MAX_BRIGHTNESS * 4);
@@ -115,8 +114,8 @@ void Driver_4ChDimmer::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, M
     discovery->create(this, num++, format);
     discovery->addStateTopic(_data.lockChannels.state);
     discovery->addCommandTopic(_data.lockChannels.set);
-    discovery->addPayloadOn(FSPGM(1));
-    discovery->addPayloadOff(FSPGM(0));
+    discovery->addPayloadOn(String(1));
+    discovery->addPayloadOff(String(0));
     discovery->finalize();
     vector.emplace_back(discovery);
 
@@ -128,8 +127,8 @@ void Driver_4ChDimmer::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, M
         discovery->addBrightnessStateTopic(_data.channels[i].brightnessState);
         discovery->addBrightnessCommandTopic(_data.channels[i].brightnessSet);
         discovery->addBrightnessScale(IOT_ATOMIC_SUN_MAX_BRIGHTNESS);
-        discovery->addPayloadOn(FSPGM(1));
-        discovery->addPayloadOff(FSPGM(0));
+        discovery->addPayloadOn(String(1));
+        discovery->addPayloadOff(String(0));
         discovery->finalize();
         vector.emplace_back(discovery);
     }

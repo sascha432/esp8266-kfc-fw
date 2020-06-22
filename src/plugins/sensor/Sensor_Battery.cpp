@@ -5,7 +5,6 @@
 #if IOT_SENSOR_HAVE_BATTERY
 
 #include "Sensor_Battery.h"
-#include "progmem_data.h"
 #include "sensor.h"
 
 #if DEBUG_IOT_SENSOR

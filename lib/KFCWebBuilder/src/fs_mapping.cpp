@@ -17,7 +17,6 @@
 #endif
 #include <time.h>
 #include <ProgmemStream.h>
-#include "progmem_data.h"
 #include "fs_mapping.h"
 #if LOGGER
 #include "logger.h"
@@ -156,7 +155,7 @@ bool SPIFFSWrapper::remove(const char *path)
 //     append_slash(_dirName);
 //     _debug_printf_P(PSTR("FSMappingDirImpl::FSMappingDirImpl(): dirName=%s\n"), _dirName.c_str());
 // #if LOGGER
-//     if (_dirName.equals(FSPGM(slash))) {
+//     if (_dirName.equals(String('/'))) {
 //         _logger.getLogs(_logs);
 //         _logsIterator = _logs.begin();
 //     }
@@ -202,7 +201,7 @@ bool SPIFFSWrapper::remove(const char *path)
 //     _debug_println();
 //     _dirs.clear();
 //     _dirs.push_back(_dirName);
-//     _dir = _fs.openDir(FSPGM(slash));
+//     _dir = _fs.openDir(String('/'));
 //     _isValid = _dir.next() ? FIRST_DIR : INVALID;
 //     auto &map = Mappings::getInstance();
 //     _iterator = map.begin();

@@ -7,7 +7,6 @@
 #include <LoopFunctions.h>
 #include <HeapStream.h>
 #include "KFCRestApi.h"
-#include "progmem_data.h"
 
 #if DEBUG_KFC_REST_API
 #include <debug_helper_enable.h>

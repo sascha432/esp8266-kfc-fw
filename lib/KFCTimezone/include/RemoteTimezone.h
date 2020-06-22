@@ -7,7 +7,7 @@
 #include <Arduino_compat.h>
 #include <functional>
 #include <KFCRestApi.h>
-#include "progmem_data.h"
+#include "../src/generated/FlashStringGeneratorAuto.h"
 
 #ifndef DEBUG_REMOTE_TIMEZONE
 #define DEBUG_REMOTE_TIMEZONE 					0

@@ -10,7 +10,6 @@
 // #include "kfc_fw_config.h"
 // #include "status.h"
 #include "at_mode.h"
-#include "progmem_data.h"
 // #include "misc.h"
 // #if IOT_DIMMER_MODULE
 // #include "plugins/dimmer_module/dimmer_module.h"

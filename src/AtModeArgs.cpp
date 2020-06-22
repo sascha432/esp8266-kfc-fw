@@ -6,7 +6,6 @@
 
 #include <Arduino_compat.h>
 #include "at_mode.h"
-#include "progmem_data.h"
 #include "kfc_fw_config.h"
 
 #if DEBUG_AT_MODE
@@ -212,7 +211,7 @@ void AtModeArgs::ok()
         _output.println(F("OK - SAFE MODE"));
     }
     else {
-        _output.println(FSPGM(OK));
+        _output.println(FSPGM(OK, "OK"));
     }
 }
 

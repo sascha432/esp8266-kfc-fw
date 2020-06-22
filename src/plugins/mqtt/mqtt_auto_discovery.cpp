@@ -11,7 +11,6 @@
 #include "mqtt_auto_discovery.h"
 #include "mqtt_component.h"
 #include "mqtt_client.h"
-#include "progmem_data.h"
 
 #if DEBUG_MQTT_CLIENT
 #include <debug_helper_enable.h>
@@ -47,8 +46,8 @@ void MQTTAutoDiscovery::create(MQTTComponent *component, uint8_t count, MQTTAuto
         addParameter(FSPGM(mqtt_unique_id), uniqueId);
     }
     addParameter(FSPGM(mqtt_availability_topic), MQTTClient::formatTopic(-1, FSPGM(mqtt_status_topic)));
-    addParameter(FSPGM(mqtt_payload_available), FSPGM(1));
-    addParameter(FSPGM(mqtt_payload_not_available), FSPGM(0));
+    addParameter(FSPGM(mqtt_payload_available), String(1));
+    addParameter(FSPGM(mqtt_payload_not_available), String(0));
 
     if (_format == FORMAT_JSON) {
         String model;

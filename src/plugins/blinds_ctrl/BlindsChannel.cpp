@@ -5,7 +5,6 @@
 #include "blinds_ctrl.h"
 #include "BlindsChannel.h"
 #include "BlindsControl.h"
-#include "progmem_data.h"
 
 #if DEBUG_IOT_BLINDS_CTRL
 #include <debug_helper_enable.h>
@@ -23,8 +22,8 @@ void BlindsChannel::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTT
     discovery->create(this, 0, format);
     discovery->addStateTopic(MQTTClient::formatTopic(_number, F("/state")));
     discovery->addCommandTopic(MQTTClient::formatTopic(_number, F("/set")));
-    discovery->addPayloadOn(FSPGM(1));
-    discovery->addPayloadOff(FSPGM(0));
+    discovery->addPayloadOn(String(1));
+    discovery->addPayloadOff(String(0));
     discovery->finalize();
     vector.emplace_back(discovery);
 }

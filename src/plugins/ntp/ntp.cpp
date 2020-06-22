@@ -14,7 +14,6 @@
 #include <MicrosTimer.h>
 #include "kfc_fw_config.h"
 #include "../include/templates.h"
-#include "progmem_data.h"
 #include "logger.h"
 #include "plugins.h"
 

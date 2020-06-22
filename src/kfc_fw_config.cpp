@@ -13,7 +13,6 @@
 #include <misc.h>
 #include <Timezone.h>
 #include "blink_led_timer.h"
-#include "progmem_data.h"
 #include "fs_mapping.h"
 #include "WebUISocket.h"
 #include "WebUIAlerts.h"
@@ -586,7 +585,7 @@ void KFCFWConfiguration::restoreFactorySettings()
     auto deviceName = PrintString(F("KFC%02X%02X%02X"), mac[3], mac[4], mac[5]);
     System::Device::defaults();
     System::Device::setName(deviceName);
-    System::Device::setTitle(FSPGM(KFC_Firmware));
+    System::Device::setTitle(FSPGM(KFC_Firmware, "KFC Firmware"));
     System::Device::setPassword(defaultPassword);
 
     Network::WiFiConfig::setSSID(deviceName);
@@ -1275,7 +1274,7 @@ void KFCFWConfiguration::printInfo(Print &output)
     }
     if (flags.isDefaultPassword) {
         Logger_security(FSPGM(default_password_warning));
-        output.println(FSPGM(default_password_warning));
+        output.println(FSPGM(default_password_warning, "WARNING! Default password has not been changed"));
     }
     output.printf_P(PSTR("Device %s ready!\n"), config.getDeviceName());
 
@@ -1381,7 +1380,7 @@ void KFCFWConfiguration::printRTCStatus(Print &output, bool plain)
             output.print(F("Timestamp: "));
             output.print(now.timestamp());
 #if RTC_DEVICE_DS3231
-            output.printf_P(PSTR(", temperature: %.2f&deg;C, lost power: %s"), rtc.getTemperature(), rtc.lostPower() ? SPGM(yes) : SPGM(no));
+            output.printf_P(PSTR(", temperature: %.2f&deg;C, lost power: %s"), rtc.getTemperature(), rtc.lostPower() ? SPGM(yes, "yes") : SPGM(no, "no"));
 #endif
         }
     }

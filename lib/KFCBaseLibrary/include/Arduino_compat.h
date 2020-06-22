@@ -39,8 +39,10 @@
 #define sizeof_stack_array(name)                        sizeof(name)
 #endif
 
-#define PROGMEM_STRING_DECL(name)               extern const char _shared_progmem_string_##name[] PROGMEM;
-#define PROGMEM_STRING_DEF(name, value)         const char _shared_progmem_string_##name[] PROGMEM = { value };
+#define PROGMEM_STRING_ID(name)                         SPGM_##name
+
+#define PROGMEM_STRING_DECL(name)                       extern const char PROGMEM_STRING_ID(name)[] PROGMEM;
+#define PROGMEM_STRING_DEF(name, value)                 const char PROGMEM_STRING_ID(name)[] PROGMEM = { value };
 
 #if defined(ESP32)
 
@@ -53,7 +55,7 @@
 
 class __FlashStringHelper;
 
-#define SPGM(name, ...)                                 _shared_progmem_string_##name
+#define SPGM(name, ...)                                 PROGMEM_STRING_ID(name)
 #define FSPGM(name, ...)                                reinterpret_cast<const __FlashStringHelper *>(SPGM(name))
 #define PSPGM(name, ...)                                (PGM_P)(SPGM(name))
 
@@ -71,7 +73,7 @@ class __FlashStringHelper;
 
 #include "esp8266_compat.h"
 
-#define SPGM(name, ...)                                 _shared_progmem_string_##name
+#define SPGM(name, ...)                                 PROGMEM_STRING_ID(name)
 #define FSPGM(name, ...)                                FPSTR(SPGM(name))
 #define PSPGM(name, ...)                                (PGM_P)(SPGM(name))
 
@@ -121,9 +123,9 @@ uint16_t __builtin_bswap16(uint16_t);
 
 #define PROGMEM
 
-#define SPGM(name)                              _shared_progmem_string_##name
-#define FSPGM(name)                             FPSTR(SPGM(name))
-#define PSPGM(name)                             (PGM_P)(SPGM(name))
+#define SPGM(name, ...)                                 PROGMEM_STRING_ID(name)
+#define FSPGM(name, ...)                                FPSTR(SPGM(name))
+#define PSPGM(name, ...)                                (PGM_P)(SPGM(name))
 
 #include <pgmspace.h>
 

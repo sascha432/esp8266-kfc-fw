@@ -8,7 +8,6 @@
 #include <PrintHtmlEntitiesString.h>
 #include <LoopFunctions.h>
 #include "kfc_fw_config.h"
-#include "progmem_data.h"
 #include "../include/templates.h"
 #include "plugins.h"
 
@@ -28,7 +27,7 @@ void syslog_setup_debug_logger() {
 
     SyslogParameter parameter;
     parameter.setHostname(config.getDeviceName());
-    parameter.setAppName(FSPGM(kfcfw));
+    parameter.setAppName(FSPGM(kfcfw, "kfcfw"));
     parameter.setProcessId(F("DEBUG"));
 	parameter.setSeverity(SYSLOG_DEBUG);
 
@@ -245,7 +244,7 @@ void SyslogPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &for
         }
         return true;
     }));
-    form.addValidator(new FormRangeValidator(F("Invalid port"), 1, 65535));
+    form.addValidator(new FormRangeValidator(FSPGM(Invalid_port), 1, 65535));
 
     form.finalize();
 }

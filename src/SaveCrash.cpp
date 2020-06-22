@@ -5,7 +5,6 @@
 #include <Arduino_compat.h>
 #include <reset_detector.h>
 #include <ListDir.h>
-#include "progmem_data.h"
 #include "SaveCrash.h"
 #include "kfc_fw_config.h"
 #include "WebUIAlerts.h"
@@ -36,7 +35,7 @@ namespace SaveCrash {
     {
 #if SPIFFS_SUPPORT
         SPIFFS.begin();
-        auto filename = String(FSPGM(crash_counter_file));
+        auto filename = String(FSPGM(crash_counter_file, "/crash_counter"));
         if (SPIFFS.exists(filename)) {
             SPIFFS.remove(filename);
         }
@@ -66,7 +65,7 @@ namespace SaveCrash {
                 int num = 0;
                 PrintString filename;
                 do {
-                    filename = PrintString(FSPGM(crash_dump_file), num++);
+                    filename = PrintString(FSPGM(crash_dump_file, "/crash.%03x"), num++);
                 } while(SPIFFS.exists(filename));
                 auto file = SPIFFS.open(filename, fs::FileOpenMode::write);
                 if (file) {

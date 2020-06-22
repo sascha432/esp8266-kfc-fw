@@ -9,7 +9,6 @@
 #endif
 
 #include <Arduino_compat.h>
-#include "progmem_data.h"
 #include "plugins.h"
 #include "plugins_menu.h"
 #if defined(ESP8266)

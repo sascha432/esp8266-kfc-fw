@@ -10,7 +10,6 @@
 #include <WiFiCallbacks.h>
 #include <EventScheduler.h>
 #include <EventTimer.h>
-#include "progmem_data.h"
 #include "mqtt_client.h"
 #include "logger.h"
 #include "plugins.h"
@@ -225,7 +224,7 @@ void MQTTClient::disconnect(bool forceDisconnect)
     _debug_printf_P(PSTR("forceDisconnect=%d status=%s connected=%u\n"), forceDisconnect, connectionStatusString().c_str(), _client->connected());
     if (!forceDisconnect) {
         // set offline
-        publish(_lastWillTopic, getDefaultQos(), 1, FSPGM(0));
+        publish(_lastWillTopic, getDefaultQos(), 1, String(0));
     }
     _client->disconnect(forceDisconnect);
 }
@@ -696,7 +695,7 @@ void MQTTPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
         }
         return true;
     }));
-    form.addValidator(new FormRangeValidator(F("Invalid port"), 1, 65535));
+    form.addValidator(new FormRangeValidator(FSPGM(Invalid_port), 1, 65535));
 
     form.add(F("mqtt_username"), _H_STR_VALUE(Config().mqtt.username));
     form.addValidator(new FormLengthValidator(0, sizeof(Config().mqtt.username) - 1));

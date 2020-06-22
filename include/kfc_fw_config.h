@@ -25,6 +25,7 @@
 #endif
 #include <Timezone.h>
 #include <SaveCrash.h>
+#include "../src/generated/FlashStringGeneratorAuto.h"
 #include "logger.h"
 #include "misc.h"
 #include "at_mode.h"

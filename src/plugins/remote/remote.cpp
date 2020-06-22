@@ -6,7 +6,6 @@
 #include <LoopFunctions.h>
 #include <KFCForms.h>
 #include "kfc_fw_config.h"
-#include "progmem_data.h"
 #include "web_server.h"
 #include "blink_led_timer.h"
 #include "remote.h"

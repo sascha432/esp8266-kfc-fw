@@ -145,10 +145,99 @@ String implodex(G glue, const C &pieces, CB toString, uint32_t max = (uint32_t)~
     return tmp;
 }
 
+class xxxxx {
+public:
+    enum class AuthType {
+        UNKNOWN = -1,
+        NONE,
+        SID,
+        SID_COOKIE,
+        BEARER,
+    };
+};
+
+bool operator ==(const xxxxx::AuthType &auth, bool invert) {
+    auto result = static_cast<int>(auth) >= static_cast<int>(xxxxx::AuthType::SID);
+    return invert ? result : !result;
+}
+
+
+uint8_t flash[4096] = {};
+
+void spi_flash_read(size_t ofs, uint32_t *buf, size_t len) {
+    ofs -= 0x40201000;
+    //Serial.printf("spi_flash_read %u %u\n", ofs, len);
+    memcpy(buf, flash + ofs, len);
+}
+
+void spi_flash_write(size_t ofs, uint32_t *buf, size_t len) {
+    ofs -= 0x40201000;
+    //Serial.printf("spi_flash_write %u %u\n", ofs, len);
+    memcpy(flash + ofs, buf, len);
+}
+
+
+namespace EspSaveCrash {
+
+    uint16_t _offset = 0x0010;
+    uint16_t _size = 0x0200;
+};
+
+#define SAVE_CRASH_FLASH_SECTOR 0x40201000
+#include "C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\.pio\libdeps\clockv2\EspSaveCrash\src\FlashEEPROM.h"
+
+FlashEEPROM EE;
+
 int main() {
 
     ESP._enableMSVCMemdebug();
     DebugHelper::activate();
+
+    memset(flash, 0, sizeof(flash));
+    EEPROM.clear();
+
+    EEPROM.begin(4096);
+    EE.begin(4096);
+
+    char buf2[24];
+    for (int j = 0; j < 24; j++) {
+        buf2[j] = j;
+    }
+
+    int i;
+    for (int j = 0; j < 1000; j++) {
+        i = rand() % 3500;
+        EE.write(i, i);
+        EEPROM.write(i, i);
+        i++;
+        long l = 0x12345678;
+        EE.put(i, l);
+        EEPROM.put(i, l);
+        i += sizeof(l);
+        EE.put(i, buf2);
+        EEPROM.put(i, buf2);
+    }
+    EE.commit();
+    EEPROM.commit();
+
+    EE.begin(4096);
+    EEPROM.begin(4096);
+    for (int i = 0; i < 4096; i++) {
+        if (EE.read(i) != EEPROM.read(i)) {
+            Serial.printf("read error %u (%u %u)\n", i, EE.read(i), EEPROM.read(i));
+        }
+    }
+
+    EE.end();
+    EEPROM.end();
+
+    return 0;
+
+    xxxxx::AuthType test111 = xxxxx::AuthType::SID;
+
+    Serial.printf("%u\n", (test111 == true));
+    Serial.printf("%u\n", (test111 == false));
+    return 0;
 
     //char buf[80];
     //auto now = time(nullptr);
@@ -168,14 +257,17 @@ int main() {
     argv.push_back("2");
     argv.push_back("3");
 
-    Serial.println(implodex(',', argv, argc));
+    int32_t iii = -25200;
+    char *buf = (char *)&iii;
 
-    Serial.println(implodex(',', argv, String(), 0));
+    //Serial.println(implodex(',', argv, argc));
+
+    //Serial.println(implodex(',', argv, String(), 0));
 
 
-    Serial.println(implodex(',', argv, [](const String &x) {
-        return '#' + x;
-    }, 0));
+    //Serial.println(implodex(',', argv, [](const String &x) {
+    //    return '#' + x;
+    //}, 0));
 
     return 0;
 

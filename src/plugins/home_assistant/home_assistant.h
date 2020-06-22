@@ -8,7 +8,6 @@
 #include <vector>
 #include <./plugins/mqtt/mqtt_client.h>
 #include "KFCRestApi.h"
-#include "progmem_data.h"
 #include "HassJsonReader.h"
 #include "plugins.h"
 

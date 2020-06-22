@@ -6,8 +6,6 @@
 #include <PrintHtmlEntitiesString.h>
 #include "status.h"
 #include "kfc_fw_config.h"
-#include "progmem_data.h"
-#include "kfc_fw_config.h"
 
 void WiFi_get_address(Print &out)
 {
@@ -140,7 +138,7 @@ void WiFi_get_status(Print &out)
             WiFi.gatewayIP().printTo(out);
             out.print(F(", DNS "));
             WiFi.dnsIP().printTo(out);
-            out.print(FSPGM(comma_));
+            out.print(F(", "));
             WiFi.dnsIP(1).printTo(out);
     }
 

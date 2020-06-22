@@ -6,7 +6,6 @@
 #include "dimmer_module_form.h"
 #include <PrintHtmlEntitiesString.h>
 #include "../include/templates.h"
-#include "progmem_data.h"
 #include "plugins.h"
 #if IOT_ATOMIC_SUN_V2
 #include "../atomic_sun/atomic_sun_v2.h"

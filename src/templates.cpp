@@ -6,7 +6,6 @@
 #include <PrintString.h>
 #include <PrintHtmlEntitiesString.h>
 #include <Timezone.h>
-#include "progmem_data.h"
 #include "kfc_fw_config.h"
 #include "build.h"
 #include "misc.h"
@@ -182,7 +181,7 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
                 return;
             }
         }
-        output.print(FSPGM(Not_supported));
+        output.print(FSPGM(Not_supported, "Not supported"));
     }
     else {
         output.print(F("KEY NOT FOUND: %"));
@@ -286,12 +285,12 @@ void ConfigTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     }
     else if (String_startsWith(key, F("MODE_"))) {
         if (config._H_GET(Config().flags).wifiMode == key.substring(5).toInt()) {
-            output.print(FSPGM(_selected));
+            output.print(FSPGM(_selected, " selected"));
         }
     }
     else if (String_equals(key, F("SSL_CERT"))) {
 #if SPIFFS_SUPPORT
-        File file = SPIFFS.open(FSPGM(server_crt), fs::FileOpenMode::read);
+        File file = SPIFFS.open(FSPGM(server_crt, "/server.crt"), fs::FileOpenMode::read);
         if (file) {
             output.print(file.readString());
         }
@@ -299,7 +298,7 @@ void ConfigTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     }
     else if (String_equals(key, F("SSL_KEY"))) {
 #if SPIFFS_SUPPORT
-        File file = SPIFFS.open(FSPGM(server_key), fs::FileOpenMode::read);
+        File file = SPIFFS.open(FSPGM(server_key, "/server.key"), fs::FileOpenMode::read);
         if (file) {
             output.print(file.readString());
         }

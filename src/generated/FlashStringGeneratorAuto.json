@@ -16,11 +16,11 @@
         "default": "text/plain"
     },
     "1": {
-        "use_counter": 14,
+        "use_counter": 3,
         "default": "1"
     },
     "0": {
-        "use_counter": 15,
+        "use_counter": 3,
         "default": "0"
     },
     "null": {
@@ -304,7 +304,7 @@
         "default": "Accept-Encoding"
     },
     "slash": {
-        "use_counter": 2,
+        "use_counter": 0,
         "default": "/"
     },
     "mime_text_html": {
@@ -364,7 +364,7 @@
         "default": "Content-Encoding"
     },
     "login_html": {
-        "use_counter": 2,
+        "use_counter": 0,
         "default": "/login.html"
     },
     "https": {
@@ -652,11 +652,11 @@
         "default": "config"
     },
     "true": {
-        "use_counter": 3,
+        "use_counter": 6,
         "default": "true"
     },
     "false": {
-        "use_counter": 3,
+        "use_counter": 6,
         "default": "false"
     },
     "openweathermap_api_url": {
@@ -888,7 +888,7 @@
         "default": "password"
     },
     "status__u": {
-        "use_counter": 3,
+        "use_counter": 4,
         "annotations": {
             "translation": {
                 "*": "status=%u"
@@ -896,7 +896,7 @@
             "file": "src/plugins/home_assistant/home_assistant.cpp",
             "line": 170
         },
-        "auto": "status  u"
+        "default": "status=%u"
     },
     "display": {
         "use_counter": 1,
@@ -931,11 +931,11 @@
         "default": "status.html"
     },
     "wifi_html": {
-        "use_counter": 4,
+        "use_counter": 5,
         "default": "wifi.html"
     },
     "network_html": {
-        "use_counter": 4,
+        "use_counter": 5,
         "default": "network.html"
     },
     "Change_Password": {
@@ -943,11 +943,11 @@
         "default": "Change Password"
     },
     "password_html": {
-        "use_counter": 3,
+        "use_counter": 4,
         "default": "password.html"
     },
     "reboot_html": {
-        "use_counter": 2,
+        "use_counter": 3,
         "default": "reboot.html"
     },
     "Configuration": {
@@ -967,7 +967,7 @@
         "default": "Device"
     },
     "device_html": {
-        "use_counter": 3,
+        "use_counter": 4,
         "default": "device.html"
     },
     "remote_html": {
@@ -991,7 +991,7 @@
         "default": "username"
     },
     "rebooting_html": {
-        "use_counter": 2,
+        "use_counter": 4,
         "default": "rebooting.html"
     },
     "Reboot_Device": {
@@ -1017,5 +1017,69 @@
     "FormRangeValidator_default_message_zero_allowed": {
         "use_counter": 1,
         "default": "This fields value must be between %min% and %max% or 0"
+    },
+    "network": {
+        "use_counter": 1,
+        "default": "network"
+    },
+    "device": {
+        "use_counter": 1,
+        "default": "device"
+    },
+    "mime_image_icon": {
+        "use_counter": 1,
+        "default": "image/x-icon"
+    },
+    "mime_image_svg_xml": {
+        "use_counter": 1,
+        "default": "image/svg+xml"
+    },
+    "mime_font_eot": {
+        "use_counter": 1,
+        "default": "font/eot"
+    },
+    "mime_font_woff": {
+        "use_counter": 1,
+        "default": "font/woff"
+    },
+    "mime_font_woff2": {
+        "use_counter": 1,
+        "default": "font/woff2"
+    },
+    "mime_font_ttf": {
+        "use_counter": 1,
+        "default": "font/ttf"
+    },
+    "mime_application_pdf": {
+        "use_counter": 1,
+        "default": "application/pdf"
+    },
+    "gzip": {
+        "use_counter": 2,
+        "default": "gzip"
+    },
+    "deflate": {
+        "use_counter": 1,
+        "default": "deflate"
+    },
+    "config": {
+        "use_counter": 1,
+        "default": "config"
+    },
+    "Success": {
+        "use_counter": 1,
+        "default": "Success"
+    },
+    "update_fw_html": {
+        "use_counter": 4,
+        "default": "update_fw.html"
+    },
+    "Invalid_port": {
+        "use_counter": 3,
+        "default": "Invalid port"
+    },
+    "_login_html": {
+        "use_counter": 2,
+        "default": "/login,html"
     }
 }

@@ -16,7 +16,6 @@
 #include "at_mode.h"
 #include "serial_handler.h"
 #include "reset_detector.h"
-#include "progmem_data.h"
 #include "plugins.h"
 #include "WebUIAlerts.h"
 #if PRINTF_WRAPPER_ENABLED

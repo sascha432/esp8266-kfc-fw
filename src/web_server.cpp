@@ -75,64 +75,64 @@ WebServerSetCPUSpeedHelper::WebServerSetCPUSpeedHelper() : SpeedBooster(
 
 HttpCookieHeader *createRemoveSessionIdCookie()
 {
-    return new HttpCookieHeader(FSPGM(SID), String(), String('/'), HttpCookieHeader::COOKIE_EXPIRED);
+    return new HttpCookieHeader(FSPGM(SID, "SID"), String(), String('/'), HttpCookieHeader::COOKIE_EXPIRED);
 }
 
 const __FlashStringHelper *getContentType(const String &path)
 {
     if (String_endsWith(path, SPGM(_html)) || String_endsWith(path, PSTR(".htm"))) {
-        return FSPGM(mime_text_html);
+        return FSPGM(mime_text_html, "text/html");
     }
     else if (String_endsWith(path, PSTR(".css"))) {
-        return FSPGM(mime_text_css);
+        return FSPGM(mime_text_css, "text/css");
     }
     else if (String_endsWith(path, PSTR(".json"))) {
-        return FSPGM(mime_application_json);
+        return FSPGM(mime_application_json, "application/json");
     }
     else if (String_endsWith(path, PSTR(".js"))) {
-        return FSPGM(mime_application_javascript);
+        return FSPGM(mime_application_javascript, "application/javascript");
     }
     else if (String_endsWith(path, PSTR(".png"))) {
-        return FSPGM(mime_image_png);
+        return FSPGM(mime_image_png, "image/png");
     }
     else if (String_endsWith(path, PSTR(".gif"))) {
-        return FSPGM(mime_image_gif);
+        return FSPGM(mime_image_gif, "image/gif");
     }
     else if (String_endsWith(path, PSTR(".jpg"))) {
-        return FSPGM(mime_image_jpeg);
+        return FSPGM(mime_image_jpeg, "image/jpeg");
     }
     else if (String_endsWith(path, PSTR(".ico"))) {
-        return F("image/x-icon");
+        return FSPGM(mime_image_icon, "image/x-icon");
     }
     else if (String_endsWith(path, PSTR(".svg"))) {
-        return F("image/svg+xml");
+        return FSPGM(mime_image_svg_xml, "image/svg+xml");
     }
     else if (String_endsWith(path, PSTR(".eot"))) {
-        return F("font/eot");
+        return FSPGM(mime_font_eot, "font/eot");
     }
     else if (String_endsWith(path, PSTR(".woff"))) {
-        return F("font/woff");
+        return FSPGM(mime_font_woff, "font/woff");
     }
     else if (String_endsWith(path, PSTR(".woff2"))) {
-        return F("font/woff2");
+        return FSPGM(mime_font_woff2, "font/woff2");
     }
     else if (String_endsWith(path, PSTR(".ttf"))) {
-        return F("font/ttf");
+        return FSPGM(mime_font_ttf, "font/ttf");
     }
     else if (String_endsWith(path, PSTR(".xml"))) {
-        return FSPGM(mime_text_xml);
+        return FSPGM(mime_text_xml, "text/xml");
     }
     else if (String_endsWith(path, PSTR(".pdf"))) {
-        return F("application/pdf");
+        return FSPGM(mime_application_pdf, "application/pdf");
     }
     else if (String_endsWith(path, PSTR(".zip"))) {
-        return FSPGM(mime_application_zip);
+        return FSPGM(mime_application_zip, "application/zip");
     }
     else if (String_endsWith(path, PSTR(".gz"))) {
-        return FSPGM(mime_application_x_gzip);
+        return FSPGM(mime_application_x_gzip, "application/x-gzip");
     }
     else {
-        return FSPGM(mime_text_plain);
+        return FSPGM(mime_text_plain, "text/plain");
     }
 }
 
@@ -178,12 +178,12 @@ bool WebServerPlugin::_isPublic(const String &pathString) const
 
 bool WebServerPlugin::_clientAcceptsGzip(AsyncWebServerRequest *request) const
 {
-    auto header = request->getHeader(FSPGM(Accept_Encoding));
+    auto header = request->getHeader(FSPGM(Accept_Encoding, "Accept-Encoding"));
     if (!header) {
         return false;
     }
     auto acceptEncoding = header->value().c_str();
-    return (strstr_P(acceptEncoding, PSTR("gzip")) || strstr_P(acceptEncoding, PSTR("deflate")));
+    return (strstr_P(acceptEncoding, SPGM(gzip, "gzip")) || strstr_P(acceptEncoding, SPGM(deflate, "deflate")));
 }
 
 void WebServerPlugin::handlerNotFound(AsyncWebServerRequest *request)
@@ -199,7 +199,7 @@ void WebServerPlugin::handlerScanWiFi(AsyncWebServerRequest *request)
     if (plugin.isAuthenticated(request) == true) {
         HttpHeaders httpHeaders(false);
         httpHeaders.addNoCache();
-        auto response = new AsyncNetworkScanResponse(request->arg(FSPGM(hidden)).toInt());
+        auto response = new AsyncNetworkScanResponse(request->arg(FSPGM(hidden, "hidden")).toInt());
         httpHeaders.setAsyncBaseResponseHeaders(response);
         request->send(response);
     } else {
@@ -213,7 +213,7 @@ void WebServerPlugin::handlerLogout(AsyncWebServerRequest *request)
     HttpHeaders httpHeaders;
     httpHeaders.addNoCache(true);
     httpHeaders.add(createRemoveSessionIdCookie());
-    httpHeaders.add(new HttpLocationHeader(FSPGM(slash)));
+    httpHeaders.add(new HttpLocationHeader(String('/')));
     httpHeaders.setAsyncWebServerResponseHeaders(response);
     request->send(response);
 }
@@ -343,7 +343,7 @@ void WebServerPlugin::handlerImportSettings(AsyncWebServerRequest *request)
         PGM_P message;
         int count = -1;
 
-        auto configArg = F("config");
+        auto configArg = FSPGM(config, "config");
         if (request->method() == HTTP_POST && request->hasArg(configArg)) {
             StreamString data;
             data.print(request->arg(configArg));
@@ -356,7 +356,7 @@ void WebServerPlugin::handlerImportSettings(AsyncWebServerRequest *request)
                 config.write();
 
                 count = reader.getImportedHandles().size();
-                message = PSTR("Success");
+                message = SPGM(Success, "Success");
             }
             else {
                 message = PSTR("Failed to parse JSON data");
@@ -447,12 +447,14 @@ void WebServerPlugin::handlerUpdate(AsyncWebServerRequest *request)
             String location;
             switch(status->command) {
                 case U_FLASH:
-                    WebTemplate::_aliveRedirection = F("update_fw.html#u_flash");
-                    location += F("/rebooting.html");
+                    WebTemplate::_aliveRedirection = String(FSPGM(update_fw_html, "update_fw.html")) + F("#u_flash");
+                    location += '/';
+                    location += FSPGM(rebooting_html);
                     break;
                 case U_SPIFFS:
-                    WebTemplate::_aliveRedirection = F("update_fw.html#u_spiffs");
-                    location += F("/rebooting.html");
+                    WebTemplate::_aliveRedirection = String(FSPGM(update_fw_html)) + F("#u_spiffs");
+                    location += '/';
+                    location += FSPGM(rebooting_html);
                     break;
             }
             response = request->beginResponse(302);
@@ -476,7 +478,7 @@ void WebServerPlugin::handlerUpdate(AsyncWebServerRequest *request)
 
             HttpHeaders httpHeaders(false);
             httpHeaders.addNoCache();
-            if (!plugin._sendFile(F("/update_fw.html"), httpHeaders, plugin._clientAcceptsGzip(request), request, new UpgradeTemplate(message))) {
+            if (!plugin._sendFile(String('/') + FSPGM(update_fw_html), httpHeaders, plugin._clientAcceptsGzip(request), request, new UpgradeTemplate(message))) {
                 message += F("<br><a href=\"/\">Home</a>");
                 request->send(200, FSPGM(mime_text_plain), message);
             }
@@ -619,7 +621,7 @@ void WebServerPlugin::begin()
         if (flags.webServerMode == HTTP_MODE_SECURE) {
             service += 's';
         }
-        MDNSService::addService(service, FSPGM(tcp), port);
+        MDNSService::addService(service, FSPGM(tcp, "tcp"), port);
     }
     MDNSService::announce();
 
@@ -772,7 +774,7 @@ bool WebServerPlugin::_sendFile(const FileMapping &mapping, HttpHeaders &httpHea
         }
     }
     if (mapping.isGz()) {
-        httpHeaders.add(FSPGM(Content_Encoding), F("gzip"));
+        httpHeaders.add(FSPGM(Content_Encoding), FSPGM(gzip));
     }
     httpHeaders.setAsyncBaseResponseHeaders(response);
     request->send(response);
@@ -853,13 +855,13 @@ bool WebServerPlugin::_handleFileRead(String path, bool client_accepts_gzip, Asy
                 loginError = F("Invalid username or password.");
                 const FailureCounter &failure = _loginFailures.addFailure(remote_addr);
                 Logger_security(F("Login from %s failed %d times since %s (%s)"), remote_addr.toString().c_str(), failure.getCounter(), failure.getFirstFailure().c_str(), getAuthTypeStr(authType));
-                return _sendFile(FSPGM(login_html), httpHeaders, client_accepts_gzip, request, new LoginTemplate(loginError));
+                return _sendFile(FSPGM(_login_html, "/login,html"), httpHeaders, client_accepts_gzip, request, new LoginTemplate(loginError));
             }
         }
         else {
             if (String_endsWith(path, SPGM(_html))) {
                 httpHeaders.add(createRemoveSessionIdCookie());
-                return _sendFile(FSPGM(login_html), httpHeaders, client_accepts_gzip, request, new LoginTemplate(loginError));
+                return _sendFile(FSPGM(_login_html), httpHeaders, client_accepts_gzip, request, new LoginTemplate(loginError));
             }
             else {
                 request->send(403);
@@ -1023,8 +1025,8 @@ void WebServerPlugin::reconfigure(PGM_P source)
 {
     if (_server) {
         end();
-        MDNSService::removeService(FSPGM(http), FSPGM(tcp));
-        MDNSService::removeService(FSPGM(https), FSPGM(tcp));
+        MDNSService::removeService(FSPGM(http, "http"), FSPGM(tcp));
+        MDNSService::removeService(FSPGM(https, "https"), FSPGM(tcp));
     }
     begin();
 }
@@ -1096,7 +1098,7 @@ void WebServerPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &
         field.setValue(String(port));
         return true;
     }));
-    form.addValidator(new FormRangeValidator(F("Invalid port"), 1, 65535));
+    form.addValidator(new FormRangeValidator(FSPGM(Invalid_port, "Invalid port"), 1, 65535));
 
 #if SPIFFS_SUPPORT && WEBSERVER_TLS_SUPPORT
 

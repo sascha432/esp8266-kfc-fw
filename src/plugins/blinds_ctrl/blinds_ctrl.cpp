@@ -11,7 +11,6 @@
 #include "blinds_ctrl.h"
 #include "BlindsControl.h"
 #include "BlindsChannel.h"
-#include "progmem_data.h"
 
 #if DEBUG_IOT_BLINDS_CTRL
 #include <debug_helper_enable.h>

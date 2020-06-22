@@ -12,7 +12,6 @@
 #include "fs_mapping.h"
 #include "async_web_response.h"
 #include "async_web_handler.h"
-#include "progmem_data.h"
 #include "misc.h"
 #include "logger.h"
 #include "plugins.h"
@@ -24,19 +23,10 @@
 #include <debug_helper_disable.h>
 #endif
 
-PROGMEM_STRING_DEF(success, "success");
-PROGMEM_STRING_DEF(failure, "failure");
-PROGMEM_STRING_DEF(file_manager_base_uri, "/file_manager/");
-PROGMEM_STRING_DEF(file_manager_html_uri, "file_manager.html");
-PROGMEM_STRING_DEF(upload, "upload");
-PROGMEM_STRING_DEF(upload_file, "upload_file");
-PROGMEM_STRING_DEF(ERROR_, "ERROR:");
-
-
 void file_manager_upload_handler(AsyncWebServerRequest *request)
 {
     if (request->_tempObject) {
-        FileManager fm(request, WebServerPlugin::getInstance().isAuthenticated(request) == true, FSPGM(upload));
+        FileManager fm(request, WebServerPlugin::getInstance().isAuthenticated(request) == true, FSPGM(upload, "upload"));
         fm.handleRequest();
     } else {
         request->send(403);
@@ -46,7 +36,7 @@ void file_manager_upload_handler(AsyncWebServerRequest *request)
 void file_manager_install_web_server_hook()
 {
     if (WebServerPlugin::getWebServerObject()) {
-        String uploadDir = FSPGM(file_manager_base_uri);
+        String uploadDir = FSPGM(file_manager_base_uri, "/file_manager/");
         uploadDir += FSPGM(upload);
         WebServerPlugin::addHandler(new AsyncFileUploadWebHandler(uploadDir, file_manager_upload_handler));
         WebServerPlugin::addHandler(new FileManagerWebHandler(FSPGM(file_manager_base_uri)));
@@ -244,7 +234,7 @@ uint16_t FileManager::mkdir()
     normalizeFilename(newDir);
 
     if (SPIFFSWrapper::exists(newDir)) {
-        message = FSPGM(ERROR_);
+        message = FSPGM(ERROR_, "ERROR:");
         message += F("Directory already exists");
     } else {
         File file = SPIFFSWrapper::open(newDir, fs::FileOpenMode::write);
@@ -257,7 +247,7 @@ uint16_t FileManager::mkdir()
         }
     }
 
-    Logger_notice(F("Create directory %s - %s"), newDir.c_str(), success ? SPGM(success) : SPGM(failure));
+    Logger_notice(F("Create directory %s - %s"), newDir.c_str(), success ? SPGM(success, "success") : SPGM(failure, "failure"));
     _response = _request->beginResponse(httpCode, FSPGM(mime_text_plain), message);
     return httpCode;
 }
@@ -275,7 +265,7 @@ uint16_t FileManager::upload()
     }
 
     httpCode = 200;
-    if (_request->hasParam(FSPGM(upload_file), true, true)) {
+    if (_request->hasParam(FSPGM(upload_file, "upload_file"), true, true)) {
         AsyncWebParameter *p = _request->getParam(FSPGM(upload_file), true, true);
 
         if (filename.length() == 0) {
@@ -321,7 +311,7 @@ uint16_t FileManager::upload()
     }
 
     if (!ajax_request) {
-        String url = PrintString(F("/%s?_message="), SPGM(file_manager_html_uri));
+        String url = PrintString(F("/%s?_message="), SPGM(file_manager_html_uri, "file_manager.html"));
         url += url_encode(message);
         if (success) {
             url += F("&_type=success&_title=Information");
@@ -345,7 +335,7 @@ uint16_t FileManager::upload()
 uint16_t FileManager::view(bool isDownload)
 {
     uint16_t httpCode = 200;
-    File file = _requireFile(FSPGM(filename));
+    File file = _requireFile(FSPGM(filename, "filename"));
     String requestFilename = _request->arg(FSPGM(filename));
     if (!file) {
         String message = FSPGM(ERROR_);
@@ -444,7 +434,7 @@ void FileManager::normalizeFilename(String &filename)
 {
     auto doubleSlash = String(F("//"));
     while(filename.indexOf(doubleSlash) != -1) {
-        filename.replace(doubleSlash, FSPGM(slash));
+        filename.replace(doubleSlash, String('/'));
     }
 }
 

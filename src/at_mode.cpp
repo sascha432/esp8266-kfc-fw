@@ -18,7 +18,6 @@
 #include <Timezone.h>
 #include "at_mode.h"
 #include "kfc_fw_config.h"
-#include "progmem_data.h"
 #include "fs_mapping.h"
 #include "logger.h"
 #include "misc.h"
@@ -108,7 +107,7 @@ static void _appendHelpString(String &output, PGM_P str)
 void at_mode_display_help(Stream &output, StringVector *findText = nullptr)
 {
 #if DEBUG_AT_MODE
-    _debug_printf_P(PSTR("size=%d, find=%s\n"), at_mode_help.size(), findText ? (findText->empty() ? PSTR("count=0") : implode(FSPGM(comma), *findText).c_str()) : PSTR("nullptr"));
+    _debug_printf_P(PSTR("size=%d, find=%s\n"), at_mode_help.size(), findText ? (findText->empty() ? PSTR("count=0") : implode(',', *findText).c_str()) : PSTR("nullptr"));
 #endif
     if (findText && findText->empty()) {
         findText = nullptr;
@@ -314,7 +313,7 @@ void at_mode_help_commands()
 
 void at_mode_generate_help(Stream &output, StringVector *findText = nullptr)
 {
-    _debug_printf_P(PSTR("find=%s\n"), findText ? implode(FSPGM(comma), *findText).c_str() : PSTR("nullptr"));
+    _debug_printf_P(PSTR("find=%s\n"), findText ? implode(',', *findText).c_str() : PSTR("nullptr"));
     // call handler to gather help for all commands
     at_mode_help_commands();
     for(auto plugin: plugins) {
@@ -826,7 +825,7 @@ void at_mode_serial_handle_event(String &commandString)
                 args.setQueryMode(false);
                 tokenizer(command, args, true, &nextCommand);
             }
-            _debug_printf_P(PSTR("cmd=%s,argc=%d,args='%s',next_cmd='%s'\n"), command, args.size(), implode(F("','"), args.getArgs()).c_str(), nextCommand ? nextCommand : SPGM(0));
+            _debug_printf_P(PSTR("cmd=%s,argc=%d,args='%s',next_cmd='%s'\n"), command, args.size(), implode(F("','"), args.getArgs()).c_str(), nextCommand ? nextCommand : SPGM(0, "0"));
 
             args.setCommand(command);
 

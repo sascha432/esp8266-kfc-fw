@@ -12,7 +12,7 @@
 #include <algorithm>
 #include <vector>
 #include <ESPAsyncWebServer.h>
-#include "progmem_data.h"
+#include "../src/generated/FlashStringGeneratorAuto.h"
 
 #define WS_PREFIX "ws[%s][%u] "
 #define WS_PREFIX_ARGS server->url(), client->id()
@@ -135,7 +135,7 @@ public:
     }
 
     void restart() {
-        closeAll(503, String(FSPGM(Device_is_rebooting)).c_str());
+        closeAll(503, String(FSPGM(Device_is_rebooting, "Device is rebooting...\n")).c_str());
         disableSocket();
     }
 

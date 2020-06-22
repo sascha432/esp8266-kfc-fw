@@ -1,13 +1,16 @@
 
 #include <Arduino_compat.h>
+#include <FS.h>
 #include <array>
 #include <assert.h>
 #include <misc.h>
 #include <PrintString.h>
+#include <PrintHtmlEntitiesString.h>
 #include "KFCForms.h"
-#include "BootstrapMenu.h"
 #include "EnumBase.h"
 #include "EnumBitset.h"
+
+
 
 typedef enum WiFiMode 
 {
@@ -45,7 +48,7 @@ public:
         });
         addValidator(new FormRangeValidator(F("Invalid mode"), WIFI_OFF, WIFI_AP_STA));
 
-        // string with length validation
+        // string with start_length validation
         add<sizeof wifi_ssid>(F("wifi_ssid"), wifi_ssid);
         addValidator(new FormLengthValidator(1, sizeof(wifi_ssid) - 1));
 
@@ -65,7 +68,7 @@ public:
         add<bool>(F("ap_hidden"), is_hidden_ssid, [this](bool value, FormField &, bool) {
             is_hidden_ssid = value ? 123 : 0;
             return false;
-        }, FormField::INPUT_CHECK)->setFormUI(
+        }, FormField::InputFieldType::CHECK)->setFormUI(
             (new FormUI(FormUI::TypeEnum_t::SELECT, F("SSID")))->setBoolItems(F("Show SSID"), F("Hide SSID"))
         );
 
@@ -83,12 +86,15 @@ public:
         add<sizeof mqtt_host>(F("mqtt_host"), mqtt_host);
         addValidator(new FormValidHostOrIpValidator());
 
-        add(new FormObject<IPAddress&>(F("dns1"), dns1, FormField::INPUT_TEXT));
-        add(new FormObject<IPAddress>(F("dns2"), dns2, [this](const IPAddress &addr, FormField &) {
-            dns2 = addr;
-        }));
+        auto &group = addGroup("group_1", "Group Test", true);
 
-        add<uint16_t>(F("mqtt_port"), &mqtt_port);
+        add(new FormObject<IPAddress&>(F("dns1"), dns1, FormField::InputFieldType::TEXT));
+        add(F("dns2"), dns2, [this](const IPAddress &addr, FormField &, bool) {
+            dns2 = addr;
+            return false;
+        })->setFormUI(new FormUI(FormUI::TypeEnum_t::TEXT, F("DNS1")));
+
+        add<uint16_t>(F("mqtt_port"), &mqtt_port)->setFormUI(new FormUI(FormUI::TypeEnum_t::TEXT, F("MQTT Port")));
         addValidator(new FormTCallbackValidator<uint16_t>([](uint16_t value, FormField &field) {
             if (value == 0) {
                 value = 1883;
@@ -98,11 +104,14 @@ public:
         }));
         addValidator(new FormRangeValidator(F("Invalid port"), 1, 65535));
 
+        group.end();
+
         finalize();
 
-        PrintString str;
         setFormUI(F("Form Title"), F("Save Changes"));
-        createHtml(str);
+        //createHtml(*stack_reference<PrintArgsPrintWrapper>(Serial));
+
+        //a.dump(Serial);
     }
 
     uint32_t flags;
@@ -119,6 +128,7 @@ public:
 };
 
 
+#if 0
 
 struct DimmerModule {
     float fade_time;
@@ -171,7 +181,7 @@ public:
         add<uint8_t>(F("metrics_int"), &dimmer->metrics_int); //->setFormUI((new FormUI(FormUI::TEXT, F("Metrics report interval")))->setPlaceholder(String(30))->setSuffix(seconds));
         addValidator(new FormRangeValidator(F("Invalid interval: %min%-%max%"), 10, 255));
 
-#if 1
+#if 0
 
         auto *dimmer_buttons = &dimmer_buttons_cfg;
         //auto milliseconds = String(F("milliseconds"));
@@ -214,324 +224,58 @@ public:
         delete getFormData();
     }
 };
+#endif
 
-#include <FixedCircularBuffer.h>
+#include "TypeName.h"
 
-typedef FixedCircularBuffer<int, 5> CBuf;
-typedef FixedCircularBuffer<short, 3> CBuf2;
-CBuf* aaaa = new CBuf();
-CBuf &b=*aaaa;
+#include <string>
+#include <sstream>
+#include <algorithm>
+#include <iterator>
 
-template<class T, size_t S>
-void dis_b(FixedCircularBuffer<T,S> &b) {
-    //auto iterator = b.begin();
-    //while (iterator != b.end()) {
-    //    Serial.printf("%u ", *iterator);
-    //    ++iterator;
-    //}
-    //Serial.println();
-    
-    //Serial.printf("%u: %d %d %d - ", 
-    //    b.getCount(), CBuf::distance(b.begin(), b.end() - 1),
-    //    b.front(), b.back()
-    //);
+int test() {
+    int a = 123;
+    return debug_print_result(a);
+}
 
-    auto iterator = b.begin();
-    Serial.print("> ");
-    while (iterator != b.end()) {
-        Serial.printf("%u ", *iterator);
-        ++iterator;
-    }
-    Serial.println();
-    Serial.print("<");
-    iterator = b.end();
-    if (iterator != b.begin()) {
-        do {
-            --iterator;
-            Serial.printf("%u ", *iterator);
-        } while (iterator != b.begin());
-    }
-    Serial.println();
+void func(int *) {
 
 }
 
-int n = 1;
-
-void add(CBuf& b) {
-    Serial.printf("add %u: ", n);
-    b.push_back(n++);
-    Serial.printf("distance %d\n", b.distance(b.begin(), b.end()));
-}
-
-#include <PrintString.h>
-
-//class EnumTest3 : public BitsetEnum<>
-
-typedef_enum_bitset(TestEnumClass, uint8_t,
-    A = 1,
-    B = 2,
-    C = 4,
-    D,
-    E,
-    F,
-);
-
-define_enum_bitset(TestEnumClass);
-
-typedef_enum(TestEnumClass2, int32_t,
-    AA = 6,
-    BB = 7,
-    CC = 8,
-    DD,
-    EE,
-    FF,
-    );
-
-
-define_enum(TestEnumClass2);
-
-typedef_enum_bitset(Mpr121TouchpadEventType, uint8_t,
-    TOUCH = 0x0001,
-    RELEASED = 0x0002,
-    MOVE = 0x0004,
-    TAP = 0x0008,
-    PRESS = 0x0010,
-    HOLD = 0x0020,
-    SWIPE = 0x0040,
-    DRAG = 0x0080
-);
-
-define_enum_bitset(Mpr121TouchpadEventType);
-
-int main()
-{
-    ESP._enableMSVCMemdebug();
-
-    Mpr121TouchpadEventType type;
-
-    type = Mpr121TouchpadEventType::BIT::TOUCH;
-    type.dump(Serial);
-
-
-    Serial.println(type.toString());
-
-
-
-
-    return 0;
-
-    typedef TestEnumClass ECT;
-    typedef TestEnumClass2 E2;
-    ECT ec;
-    ec.dump(Serial);
-
-    E2 e2(E2::ENUM::AA);
-
-    e2 = E2::ENUM::AA;
-    e2.dump(Serial);
-
-    auto z = ECT::BIT::A;
-
-
-    ec.dump(Serial);
-    ec += z;
-    ec.dump(Serial);
-    ec += ECT::BIT::A;
-
-    ec = ECT::ANY;
-    ec.dump(Serial);
-
-    ec += ECT::BIT::A;
-    ec -= ec;
-    ec += ECT::BIT::B;
-    ec = ECT::NONE;
-    ec += ECT::BIT::B;
-    ec += ECT::BIT::A;
-
-    ec = ECT::BIT::A | ECT::BIT::B | ECT::BIT::C;
-
-    ec.dump(Serial);
-
-    ec = ECT::BIT::A;
-    if (ec == ECT::BIT::A) {
-        Serial.println("&A only");
-    }
-    if (ec & ECT::BIT::A) {
-        Serial.println("&A");
-    }
-    if (ec & ECT::BIT::B) {
-        Serial.println("&B");
-    }
-    if (ec & ECT::BIT::C) {
-        Serial.println("&C");
-    }
-
-
-    //Serial.println(ECT::toString(ECT::ENUM::A));
-    Serial.println(ec.toString());
-
-
-    return 0;
-
- /*   PrintString s;
-    double start = 0.00015;
-    double tmp = start;
-    s = String(); s.print(tmp, 3, true); Serial.println(s); tmp *= 10;
-    s = String(); s.print(tmp, 3, true); Serial.println(s); tmp *= 10;
-    s = String(); s.print(tmp, 3, true); Serial.println(s); tmp *= 10;
-    s = String(); s.print(tmp, 3, true); Serial.println(s); tmp *= 10;
-    s = String(); s.print(tmp, 3, true); Serial.println(s); tmp *= 10;
-    s = String(); s.print(tmp, 3, true); Serial.println(s); tmp *= 10;
-    s = String(); s.print(tmp, 3, true); Serial.println(s); tmp *= 10;
-    tmp += 0.123456789;
-    s = String(); s.print(tmp, 3, true); Serial.println(s); tmp *= 10;
-    s = String(); s.print(tmp, 4, true); Serial.println(s); tmp *= 10;
-
-    s = String(); s.print(tmp, 200, true); Serial.println(s); tmp *= 10;
-
-    tmp = 5.5;
-    s = String(); s.print(tmp, 0, true); Serial.println(s);
-    s = String(); s.print(tmp, 1, true); Serial.println(s);
-    s = String(); s.print(tmp, 2, true); Serial.println(s);
-
-    tmp = 5.0;
-    s = String(); s.print(tmp, 0, true); Serial.println(s);
-    s = String(); s.print(tmp, 1, true); Serial.println(s);
-    s = String(); s.print(tmp, 2, true); Serial.println(s);
-
-
-    return 0;*/
-
-    auto it = b.begin();
-
-    //add(b);
-    //add(b);
-    //b.pop_front();
-    //add(b);
-    //add(b);
-    //b.pop_front();
-    //add(b);
-    //add(b);
-    //b.pop_front();
-    //add(b);
-    //add(b);
-    //b.pop_front();
-    //add(b);
-    //add(b);
-    //b.pop_front();
-
-    //auto val = b.pop_front();
-    //Serial.printf("front=%u end=%u\n", val, b.begin() == b.end());
-    //val = b.pop_front();
-    //Serial.printf("front=%u end=%u\n", val, b.begin() == b.end());
-
-    for (int i = 0; i < 13; i++) {
-        dis_b(b);
-        add(b);
-        Serial.printf("size %u\n", b.size());
-    }
-
-    CBuf2 test2;
-    b.copy(test2, b.begin(), b.end());
-
-    CBuf aa = b.slice(b.begin(), b.end());
-    dis_b(aa);
-    aa.shrink(aa.end() - 2, aa.end());
-    aa.push_back(99);
-    //aa.shrink(aa.end() - 2, aa.end() - 1);
-    //aa.shrink(aa.begin(), aa.end());
-    dis_b(aa);
-    //dis_b(aa);
-    return 0;
-
-    Serial.println("b");
-    dis_b(b);
-    Serial.println("test2");
-    dis_b(test2);
-    return 0;
-
-    while (b.begin() != b.end()) {
-        Serial.printf("%u\n", b.pop_front());        
-        Serial.printf("size %u\n", b.size());
-    }
-
-    //b.pop_front();
-//    b.pop_front();
-    if (b.size() >= 2) {
-
-
-        CBuf a = b.slice(b.begin() + 1, b.end());
-        b = std::move(b.slice(b.end() - 1, b.end()));
-
-        dis_b(a);
-        dis_b(b);
-
-    }
-
-    delete aaaa;
-
-    return 0;
-
-#if 1
-
-    SettingsForm form;
-    auto data = form.getFormData();
-
-    data->set("max_temperature", "156");
-
-    if (form.validate()) {
-
-    }
-    else {
-        form.dump(Serial, "");
-    }
-
-#endif
-
-#if 0
-
-    BootstrapMenu bootstrapMenu;
-
-    auto id = bootstrapMenu.addMenu(F("Device"));
-    bootstrapMenu.addSubMenu(String("test"), String("test.html"), id);
-
-    id = bootstrapMenu.addMenu(F("Home"));
-    bootstrapMenu.getItem(id)->setURI(F("index.html"));
-
-    bootstrapMenu.addSubMenu(F("Home"), F("index.html"), id);
-    bootstrapMenu.addSubMenu(F("Status"), F("status.html"), id);
-    bootstrapMenu.addSubMenu(F("Manage WiFi"), F("wifi.html"), id);
-    bootstrapMenu.addSubMenu(F("Configure Network"), F("network.html"), id);
-    bootstrapMenu.addSubMenu(F("Change Password"), F("password.html"), id);
-    bootstrapMenu.addSubMenu(F("Reboot Device"), F("reboot.html"), id);
-    bootstrapMenu.addSubMenu(F("About"), F("about.html"), id);
-
-    bootstrapMenu.addSubMenu(F("WebUI"), F("webui.html"), id, bootstrapMenu.findMenuByLabel(F("Home"), id));
-
-    id = bootstrapMenu.addMenu(F("Status"));
-    bootstrapMenu.getItem(id)->setURI(F("status.html"));
-
-    id = bootstrapMenu.addMenu(F("Configuration"));
-    bootstrapMenu.addSubMenu(F("WiFi"), F("wifi.html"), id);
-    bootstrapMenu.addSubMenu(F("Network"), F("network.html"), id);
-    bootstrapMenu.addSubMenu(F("Remote Access"), F("remote.html"), id);
-
-    id = bootstrapMenu.addMenu(F("Admin"));
-    bootstrapMenu.addSubMenu(F("Change Password"), F("password.html"), id);
-    bootstrapMenu.addSubMenu(F("Reboot Device"), F("reboot.html"), id);
-    bootstrapMenu.addSubMenu(F("Restore Factory Settings"), F("factory.html"), id);
-    bootstrapMenu.addSubMenu(F("Update Firmware"), F("update_fw.html"), id);
-
-
-    bootstrapMenu.html(Serial);
-
-    bootstrapMenu.htmlSubMenu(Serial, bootstrapMenu.findMenuByLabel(F("home")), 0);
-
-#endif
-
-#if 0
+int main() {
     FormData data;
 
+    ESP._enableMSVCMemdebug();
+    DebugHelper::activate(true);
+
+#if 1
+    int aaa = 23, &b = aaa;
+    float c = 5.55f;
+    auto d = nullptr;
+    char str1[6] = { "test1" };
+    const char *str2 = "test2";
+    String str3 = String("str3");
+    auto fstr = F("fstr");
+    char *str4 = str1;
+    String &str5 = str3;
+    auto addr = IPAddress(1, 2, 3, 4);
+
+    struct {
+        int a;
+        int b;
+        char *c;
+    } tests = {1,2,nullptr};
+    auto *t = &tests;
+
+    test();
+    
+    debug_dump_args(t->a, t->b, (void *)t->c, reinterpret_cast<void *> (t->c), (void *)(t->c));
+
+    return 0;
+#endif
+
+
+    return 0;
 
     // user submitted data
     data.clear();
@@ -591,6 +335,8 @@ int main()
 
     assert(String(f1.process("A_FLOAT")) == "1.234");
 
+    f1.createHtml(&stack_reference<PrintArgsPrintWrapper>(Serial));
+
     // submit user data to form without errors using the validate method
 
     assert(f1.validate());
@@ -625,7 +371,6 @@ int main()
     f1.clearErrors();
     assert(f1.getErrors().size() == 0);
 
-#endif
-
     return 0;
 }
+

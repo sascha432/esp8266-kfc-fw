@@ -6,7 +6,6 @@
 #include <LoopFunctions.h>
 #include <EventScheduler.h>
 #include <EventTimer.h>
-#include "progmem_data.h"
 #include "plugins.h"
 #include "dimmer_module.h"
 #include "WebUISocket.h"

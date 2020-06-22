@@ -12,7 +12,6 @@
 #include <KFCForms.h>
 #include <WebUISocket.h>
 #include "blink_led_timer.h"
-#include "progmem_data.h"
 #include "./plugins/mqtt/mqtt_client.h"
 #include "./plugins/ntp/ntp_plugin.h"
 #include "./plugins/sensor/sensor.h"
@@ -409,8 +408,8 @@ void ClockPlugin::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAu
     discovery->create(this, 0, format);
     discovery->addStateTopic(topic + F("state"));
     discovery->addCommandTopic(topic + F("set"));
-    discovery->addPayloadOn(FSPGM(1));
-    discovery->addPayloadOff(FSPGM(0));
+    discovery->addPayloadOn(String(1));
+    discovery->addPayloadOff(String(0));
     discovery->addBrightnessStateTopic(topic + F("brightness/state"));
     discovery->addBrightnessCommandTopic(topic + F("brightness/set"));
     discovery->addBrightnessScale(SevenSegmentDisplay::MAX_BRIGHTNESS);

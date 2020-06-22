@@ -7,7 +7,6 @@
 #include <ESPAsyncWebServer.h>
 #include "WebUISocket.h"
 #include "WebUIAlerts.h"
-#include "progmem_data.h"
 #include "../mqtt/mqtt_client.h"
 #if IOT_ATOMIC_SUN_V2
 #include "../atomic_sun/atomic_sun_v2.h"

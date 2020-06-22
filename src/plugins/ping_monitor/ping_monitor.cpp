@@ -9,7 +9,6 @@
 #include <KFCForms.h>
 #include <Buffer.h>
 #include "ping_monitor.h"
-#include "progmem_data.h"
 #include "kfc_fw_config.h"
 #include "logger.h"
 #include "web_server.h"

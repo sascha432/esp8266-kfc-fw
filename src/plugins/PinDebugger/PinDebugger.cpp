@@ -4,7 +4,6 @@
 
 #include <Arduino_compat.h>
 #include <PrintHtmlEntities.h>
-#include "progmem_data.h"
 #include "PinDebugger.h"
 
 #if DEBUG_VIRTUAL_PIN

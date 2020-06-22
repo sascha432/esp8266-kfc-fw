@@ -17,7 +17,6 @@
 #include <EspSaveCrash.h>
 #include "RestAPI.h"
 #include "web_server.h"
-#include "progmem_data.h"
 #include "async_web_response.h"
 #include "./plugins/sensor/sensor.h"
 #include "./plugins/sensor/Sensor_BME280.h"

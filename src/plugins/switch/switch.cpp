@@ -12,7 +12,6 @@
 #include <WebUISocket.h>
 #include "PluginComponent.h"
 #include "plugins.h"
-#include "progmem_data.h"
 
 #if DEBUG_IOT_SWITCH
 #include <debug_helper_enable.h>
@@ -196,8 +195,8 @@ void SwitchPlugin::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTA
         discovery->create(this, i, format);
         discovery->addStateTopic(MQTTClient::formatTopic(i, FSPGM(mqtt_switch_state)));
         discovery->addCommandTopic(MQTTClient::formatTopic(i, FSPGM(mqtt_switch_set)));
-        discovery->addPayloadOn(FSPGM(1));
-        discovery->addPayloadOff(FSPGM(0));
+        discovery->addPayloadOn(String(1));
+        discovery->addPayloadOff(String(0));
         discovery->finalize();
         vector.emplace_back(discovery);
     }
@@ -295,7 +294,7 @@ void SwitchPlugin::_publishState(MQTTClient *client, int8_t channel)
         for (size_t i = 0; i < _pins.size(); i++) {
             if (channel == -1 || (uint8_t)channel == i) {
                 _debug_printf_P(PSTR("pin=%u state=%u\n"), _pins[i], _getChannel(i));
-                client->publish(MQTTClient::formatTopic(i, FSPGM(mqtt_switch_state)), qos, true, _getChannel(i) ? FSPGM(1) : FSPGM(0));
+                client->publish(MQTTClient::formatTopic(i, FSPGM(mqtt_switch_state)), qos, true, _getChannel(i) ? SPGM(1) : SPGM(0));
             }
         }
     }

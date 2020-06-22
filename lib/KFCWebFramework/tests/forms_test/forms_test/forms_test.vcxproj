@@ -84,10 +84,13 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32;DEBUG_KFC_FORMS=1;DEBUG=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32;DEBUG_KFC_FORMS=1;DEBUG=1;_DEBUG=1;_CRTDBG_MAP_ALLOC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\include\mock;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCWebFramework\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\include\mock;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCWebFramework\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\tests\enum_test\pattern_test;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp14</LanguageStandard>
+      <BrowseInformation>true</BrowseInformation>
+      <DisableSpecificWarnings>26812 </DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -121,7 +124,8 @@
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32;DEBUG_KFC_FORMS=1;DEBUG=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\include\mock;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCWebFramework\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\include\mock;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCWebFramework\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\tests\enum_test\pattern_test;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp14</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -154,6 +158,7 @@
     <ClInclude Include="..\..\..\..\KFCBaseLibrary\include\Arduino_compat.h" />
     <ClInclude Include="..\..\..\..\KFCBaseLibrary\include\Buffer.h" />
     <ClInclude Include="..\..\..\..\KFCBaseLibrary\include\PrintString.h" />
+    <ClInclude Include="..\..\..\..\KFCBaseLibrary\tests\enum_test\pattern_test\test.h" />
     <ClInclude Include="..\..\..\include\Form.h" />
     <ClInclude Include="..\..\..\include\FormBitValue.h" />
     <ClInclude Include="..\..\..\include\FormCallbackValidator.h" />
@@ -178,7 +183,6 @@
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\BufferStream.cpp" />
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\debug_helper.cpp" />
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\DumpBinary.cpp" />
-    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\EnumBitset.cpp" />
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\misc.cpp" />
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\mock\EEPROM.cpp" />
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\mock\ESP8266HttpClient.cpp" />
@@ -191,7 +195,12 @@
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\mock\WiFi.cpp" />
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\mock\WiFiUDP.cpp" />
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\mock\WString.cpp" />
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\PrintArgs.cpp" />
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\PrintHtmlEntities.cpp" />
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\PrintHtmlEntitiesString.cpp" />
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\PrintString.cpp" />
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\SSIProxyStream.cpp" />
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\TypeName.cpp" />
     <ClCompile Include="..\..\..\src\BootstrapMenu.cpp" />
     <ClCompile Include="..\..\..\src\Form.cpp" />
     <ClCompile Include="..\..\..\src\FormCallbackValidator.cpp" />

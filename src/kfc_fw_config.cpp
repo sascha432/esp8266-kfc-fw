@@ -271,17 +271,23 @@ void KFCFWConfiguration::_onWiFiConnectCb(const WiFiEventStationModeConnected &e
     _debug_printf_P(PSTR("KFCFWConfiguration::_onWiFiConnectCb(%s, %d, %s)\n"), event.ssid.c_str(), (int)event.channel, mac2String(event.bssid).c_str());
     if (!_wifiConnected) {
 
+#if ENABLE_DEEP_SLEEP
         if (resetDetector.hasWakeUpDetected() && _offlineSince == ~0UL) {
             ResetDetectorPlugin::_deepSleepWifiTime = millis();
             Logger_notice(F("WiFi connected to %s after %lu ms"), event.ssid.c_str(), ResetDetectorPlugin::_deepSleepWifiTime);
-        } else{
+        }
+        else
+#endif
+        {
             Logger_notice(F("WiFi connected to %s"), event.ssid.c_str());
         }
 
         _debug_printf_P(PSTR("Station: WiFi connected to %s, offline for %.3f, millis = %lu\n"), event.ssid.c_str(), _offlineSince == ~0UL ? 0 : ((millis() - _offlineSince) / 1000.0), millis());
         _debug_printf_P(PSTR("Free heap %s\n"), formatBytes(ESP.getFreeHeap()).c_str());
         _wifiConnected = true;
+ #if ENABLE_DEEP_SLEEP
         config.storeQuickConnect(event.bssid, event.channel);
+#endif
 
 #if defined(ESP32)
         auto hostname = config.getDeviceName();
@@ -347,9 +353,13 @@ void KFCFWConfiguration::_onWiFiGotIPCb(const WiFiEventStationModeGotIP &event)
 
     Logger_notice(F("%s: IP/Net %s/%s GW %s DNS: %s, %s"), config._H_GET(Config().flags).stationModeDHCPEnabled ? PSTR("DHCP") : PSTR("Static configuration"), ip.c_str(), mask.c_str(), gw.c_str(), dns1.c_str(), dns2.c_str());
 
-    BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::SOLID);
+    using KFCConfigurationClasses::System;
+
+    BlinkLEDTimer::setBlink(__LED_BUILTIN, (System::Device::getStatusLedMode() == System::Device::StatusLEDModeEnum::SOLID_WHEN_CONNECTED) ? BlinkLEDTimer::SOLID : BlinkLEDTimer::OFF);
     _wifiUp = millis();
+#if ENABLE_DEEP_SLEEP
     config.storeStationConfig(event.ip, event.mask, event.gw);
+#endif
 
     LoopFunctions::callOnce([event]() {
         WiFiCallbacks::callEvent(WiFiCallbacks::CONNECTED, (void *)&event);
@@ -791,6 +801,8 @@ const String KFCFWConfiguration::getShortFirmwareVersion()
     return F(FIRMWARE_VERSION_STR " Build " __BUILD_NUMBER);
 }
 
+#if ENABLE_DEEP_SLEEP
+
 void KFCFWConfiguration::storeQuickConnect(const uint8_t *bssid, int8_t channel)
 {
     _debug_printf_P(PSTR("bssid=%s channel=%d\n"), mac2String(bssid).c_str(), channel);
@@ -811,7 +823,6 @@ void KFCFWConfiguration::storeStationConfig(uint32_t ip, uint32_t netmask, uint3
         (wifi_station_dhcpc_status() == DHCP_STARTED)
     );
 
-
     Config_QuickConnect::WiFiQuickConnect_t quickConnect;
     if (RTCMemoryManager::read(CONFIG_RTC_MEM_ID, &quickConnect, sizeof(quickConnect))) {
         quickConnect.local_ip = ip;
@@ -827,10 +838,15 @@ void KFCFWConfiguration::storeStationConfig(uint32_t ip, uint32_t netmask, uint3
     }
 }
 
+#endif
+
 void KFCFWConfiguration::setup()
 {
     String version = KFCFWConfiguration::getFirmwareVersion();
-    if (!resetDetector.hasWakeUpDetected()) {
+#if ENABLE_DEEP_SLEEP
+    if (!resetDetector.hasWakeUpDetected())
+#endif
+    {
         Logger_notice(F("Starting KFCFW %s"), version.c_str());
         BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::FLICKER);
     }
@@ -878,6 +894,8 @@ void KFCFWConfiguration::write()
         Logger_error(F("Failure to write settings to EEPROM"));
     }
 }
+
+#if ENABLE_DEEP_SLEEP
 
 void KFCFWConfiguration::wakeUpFromDeepSleep()
 {
@@ -975,6 +993,8 @@ void KFCFWConfiguration::enterDeepSleep(milliseconds time, RFMode mode, uint16_t
     ESP.deepSleep(0);
 #endif
 }
+
+#endif
 
 static uint32_t restart_device_timeout;
 
@@ -1416,9 +1436,11 @@ public:
         return CONFIG_RTC_MEM_ID;
     }
 
+#if ENABLE_DEEP_SLEEP
     virtual bool autoSetupAfterDeepSleep() const override {
         return true;
     }
+#endif
 
     void setup(PluginSetupMode_t mode) override;
     void reconfigure(PGM_P source) override;
@@ -1444,7 +1466,10 @@ void KFCConfigurationPlugin::setup(PluginSetupMode_t mode)
     }
 #endif
 
-    if (!resetDetector.hasWakeUpDetected()) {
+#if ENABLE_DEEP_SLEEP
+    if (!resetDetector.hasWakeUpDetected())
+#endif
+    {
         config.printInfo(MySerial);
 
         if (!config.connectWiFi()) {

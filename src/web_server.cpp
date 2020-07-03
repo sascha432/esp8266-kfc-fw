@@ -51,7 +51,7 @@ FailureCounterContainer &loginFailures = plugin._loginFailures;
 
 #define U_ATMEGA 254
 
-#if defined(ARDUINO_ESP8266_RELEASE_2_6_3)
+#if ARDUINO_ESP8266_VERSION_COMBINED >= 0x020603
 extern "C" uint32_t _FS_start;
 extern "C" uint32_t _FS_end;
 #ifndef U_SPIFFS
@@ -543,7 +543,7 @@ void WebServerPlugin::handlerUploadUpdate(AsyncWebServerRequest *request, String
 #endif
             {
                 if (imageType) {
-#if defined(ARDUINO_ESP8266_RELEASE_2_6_3)
+#if ARDUINO_ESP8266_VERSION_COMBINED >= 0x020603
                     size = ((size_t) &_FS_end - (size_t) &_FS_start);
 #else
                     size = 1048576;

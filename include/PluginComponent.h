@@ -61,7 +61,9 @@ public:
     virtual PluginPriorityEnum_t getSetupPriority() const;
     virtual uint8_t getRtcMemoryId() const;
     virtual bool allowSafeMode() const;
+#if ENABLE_DEEP_SLEEP
     virtual bool autoSetupAfterDeepSleep() const;
+#endif
 
     // executed during boot
     virtual void setup(PluginSetupMode_t mode);
@@ -104,8 +106,10 @@ public:
     virtual void createWebUI(WebUI &webUI);
     virtual WebUIInterface *getWebUIInterface();
 
+#if ENABLE_DEEP_SLEEP
     // executed before entering deep sleep
     virtual void prepareDeepSleep(uint32_t sleepTimeMillis);
+#endif
 
 #if AT_MODE_SUPPORTED
     // at mode command handler

@@ -235,7 +235,7 @@ bool Configuration::write()
 
     auto dptr = _eeprom.getDataPtr() + _offset;
     auto &header = *reinterpret_cast<Header_t *>(dptr);
-    header = Header_t({ CONFIG_MAGIC_DWORD, crc16_calc(buffer.get(), len), len, _params.size() });
+    header = Header_t({ CONFIG_MAGIC_DWORD, crc16_update(buffer.get(), len), len, _params.size() });
     memcpy(dptr + sizeof(header), buffer.get(), len);
 
     _debug_printf_P(PSTR("CRC %04x, length %d\n"), header.crc, len);
@@ -591,7 +591,7 @@ bool Configuration::_readParams()
         // now we know the required size, initialize EEPROM
         _eeprom.begin(_offset + sizeof(hdr.header) + hdr.header.length);
 
-        uint16_t crc = crc16_calc(_eeprom.getConstDataPtr() + _offset + sizeof(hdr.header), hdr.header.length);
+        uint16_t crc = crc16_update(_eeprom.getConstDataPtr() + _offset + sizeof(hdr.header), hdr.header.length);
         if (hdr.header.crc != crc) {
             _debug_printf_P(PSTR("CRC mismatch %04x != %04x\n"), crc, hdr.header.crc);
             break;

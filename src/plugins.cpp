@@ -70,7 +70,11 @@ void dump_plugin_list(Print &output)
             plugin->getName(),
             plugin->getSetupPriority(),
             BOOL_STR(plugin->allowSafeMode()),
+#if ENABLE_DEEP_SLEEP
             BOOL_STR(plugin->autoSetupAfterDeepSleep()),
+#else
+            SPGM(n_a, "n/a"),
+#endif
             plugin->getRtcMemoryId(),
             BOOL_STR(plugin->hasStatus()),
             BOOL_STR(plugin->hasAtMode()),
@@ -167,11 +171,15 @@ void setup_plugins(PluginComponent::PluginSetupMode_t mode)
     }
 
     for(const auto plugin : plugins) {
-        bool runSetup =
+        bool runSetup = (
             (mode == PluginComponent::PLUGIN_SETUP_DEFAULT) ||
-            (mode == PluginComponent::PLUGIN_SETUP_SAFE_MODE && plugin->allowSafeMode()) ||
+            (mode == PluginComponent::PLUGIN_SETUP_SAFE_MODE && plugin->allowSafeMode())
+#if ENABLE_DEEP_SLEEP
+            ||
             (mode == PluginComponent::PLUGIN_SETUP_AUTO_WAKE_UP && plugin->autoSetupAfterDeepSleep()) ||
-            (mode == PluginComponent::PLUGIN_SETUP_DELAYED_AUTO_WAKE_UP && !plugin->autoSetupAfterDeepSleep());
+            (mode == PluginComponent::PLUGIN_SETUP_DELAYED_AUTO_WAKE_UP && !plugin->autoSetupAfterDeepSleep())
+#endif
+        );
         _debug_printf_P(PSTR("name=%s prio=%d setup=%d\n"), plugin->getName(), plugin->getSetupPriority(), runSetup);
         if (runSetup) {
             plugin->setSetupTime();
@@ -210,10 +218,12 @@ void setup_plugins(PluginComponent::PluginSetupMode_t mode)
     }
 
 #ifndef DISABLE_EVENT_SCHEDULER
+#if ENABLE_DEEP_SLEEP
     if (mode == PluginComponent::PLUGIN_SETUP_AUTO_WAKE_UP) {
         Scheduler.addTimer(PLUGIN_DEEP_SLEEP_DELAYED_START_TIME, false, [](EventScheduler::TimerPtr timer) {
             setup_plugins(PluginComponent::PLUGIN_SETUP_DELAYED_AUTO_WAKE_UP);
         });
     }
+#endif
 #endif
 }

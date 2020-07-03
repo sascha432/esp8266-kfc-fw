@@ -66,6 +66,13 @@
                 </select>
             </div>
             <div class="form-group">
+                <label for="status_led_mode">Status LED Mode:</label>
+                <select class="form-control" name="status_led_mode" id="status_led_mode">
+                    <option value="1" %STATUS_LED_MODE_1%>Solid when connected to WiFi</option>
+                    <option value="0" %STATUS_LED_MODE_0%>Turn off when connected to WiFi</option>
+                </select>
+            </div>
+            <div class="form-group">
                 <button type="submit" class="btn btn-primary">Save Changes...</button>
             </div>
         </form>

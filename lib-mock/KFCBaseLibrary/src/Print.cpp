@@ -216,7 +216,7 @@ size_t Print::printFloat(double number, uint8_t digits) {
 
     if (isnan(number)) return print(F("nan"));
     if (isinf(number)) return print(F("inf"));
-    if (number > 4294967040.0 || nnumber < -4294967040.0) return print(F("ovf"));  // constant determined empirically
+    if (number > 4294967040.0 || number < -4294967040.0) return print(F("ovf"));  // constant determined empirically
 
                                                       // Handle negative numbers
     if (number < 0.0) {

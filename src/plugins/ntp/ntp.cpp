@@ -143,7 +143,7 @@ void NTPPlugin::setup(PluginSetupMode_t mode)
         // force SNTP update on WiFi connect
         WiFiCallbacks::add(WiFiCallbacks::EventEnum_t::CONNECTED, wifiConnectedCallback);
 
-#if NTP_RESTORE_TIMEZONE_AFTER_WAKEUP
+#if NTP_RESTORE_TIMEZONE_AFTER_WAKEUP && ENABLE_DEEP_SLEEP
         if (resetDetector.hasWakeUpDetected()) { // restore timezone from RTC memory
             NTPClientData_t ntp;
             if (RTCMemoryManager::read(NTP_CLIENT_RTC_MEM_ID, &ntp, sizeof(ntp))) {

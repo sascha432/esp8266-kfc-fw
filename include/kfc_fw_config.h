@@ -492,17 +492,22 @@ public:
     void setConfigDirty(bool dirty);
     bool isConfigDirty() const;
 
-    void storeQuickConnect(const uint8_t *bssid, int8_t channel);
-    void storeStationConfig(uint32_t ip, uint32_t netmask, uint32_t gateway);
-
     void setup();
     bool reconfigureWiFi();
     bool connectWiFi();
     void read();
     void write();
 
+#if ENABLE_DEEP_SLEEP
+
+    void storeQuickConnect(const uint8_t *bssid, int8_t channel);
+    void storeStationConfig(uint32_t ip, uint32_t netmask, uint32_t gateway);
+
     void wakeUpFromDeepSleep();
     void enterDeepSleep(milliseconds time, RFMode mode, uint16_t delayAfterPrepare = 0);
+
+#endif
+
     void restartDevice(bool safeMode = false);
 
     static void printVersion(Print &output);

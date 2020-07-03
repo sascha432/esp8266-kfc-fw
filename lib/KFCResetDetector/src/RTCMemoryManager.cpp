@@ -78,7 +78,7 @@ uint32_t *RTCMemoryManager::_readMemory(uint16_t &length) {
         uint16_t size = __memorySize - offset;
         memPtr = (uint32_t *)calloc(1, size);
         uint16_t crc = -1;
-        if (!system_rtc_mem_read(offset / __blockSize, memPtr, size) || ((crc = crc16_calc((const uint8_t *)memPtr, header.length + sizeof(header) - sizeof(header.crc))) != header.crc)) {
+        if (!system_rtc_mem_read(offset / __blockSize, memPtr, size) || ((crc = crc16_update(memPtr, header.length + sizeof(header) - sizeof(header.crc))) != header.crc)) {
             _debug_printf(PSTR("RTC memory: CRC mismatch %04x != %04x, length %d\n"), crc, header.crc, size);
             freeMemPtr(memPtr);
             return nullptr;
@@ -179,7 +179,7 @@ bool RTCMemoryManager::write(uint8_t id, void *dataPtr, uint8_t dataLength) {
     }
 
     // update CRC in newData and store
-    *(uint16_t *)(newData.get() + crcPosition) = crc16_calc(newData.get(), header.length + sizeof(header) - sizeof(header.crc));
+    *(uint16_t *)(newData.get() + crcPosition) = crc16_update(newData.get(), header.length + sizeof(header) - sizeof(header.crc));
     auto result = system_rtc_mem_write((__memorySize - newData.length()) / __blockSize, (uint32_t *)newData.get(), newData.length());
 
     //ESP.rtcMemDump();

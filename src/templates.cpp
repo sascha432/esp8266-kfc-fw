@@ -472,6 +472,7 @@ DeviceSettingsForm::DeviceSettingsForm(AsyncWebServerRequest *request) : Setting
 
     add<bool>(F("disable_webalerts"), _H_FLAGS_BOOL_VALUE(Config().flags, disableWebAlerts));
     add<bool>(F("disable_webui"), _H_FLAGS_BOOL_VALUE(Config().flags, disableWebUI));
+    add<uint8_t>(F("status_led_mode"), _H_STRUCT_VALUE(MainConfig().system.device.settings, _statusLedMode));
 
     finalize();
 }

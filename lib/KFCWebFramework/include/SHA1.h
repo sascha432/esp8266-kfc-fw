@@ -7,8 +7,9 @@
 #if defined(ESP8266)
 
 #include <Arduino.h>
+#include "global.h"
 
-#ifdef ARDUINO_ESP8266_RELEASE_2_6_3
+#if ARDUINO_ESP8266_VERSION_COMBINED >= 0x020603
 
 extern "C" {
     #include <bearssl/bearssl_hash.h>

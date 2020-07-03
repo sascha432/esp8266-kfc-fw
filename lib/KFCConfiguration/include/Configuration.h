@@ -91,7 +91,7 @@ const char *getHandleName(ConfigurationParameter::Handle_t crc);
 #define DEBUG_GETHANDLE 0
 #define CONSTEXPR_CONFIG_HANDLE_T constexpr ConfigurationParameter::Handle_t
 ConfigurationParameter::Handle_t constexpr getHandle(const char *name) {
-    return constexpr_crc16_calc((const uint8_t *)name, constexpr_strlen(name));
+    return constexpr_crc16_update((const uint8_t *)name, constexpr_strlen(name));
 }
 const char *getHandleName(ConfigurationParameter::Handle_t crc);
 #endif

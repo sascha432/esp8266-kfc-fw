@@ -236,7 +236,6 @@ public:
     void _onButtonReleased(uint16_t duration);
 #endif
     static void loop();
-    static void wifiCallback(uint8_t event, void *payload);
     static void ntpCallback(time_t now);
 
 public:

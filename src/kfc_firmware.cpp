@@ -111,10 +111,12 @@ void setup()
     }
     Serial.println(F("Booting KFC firmware..."));
 
+#if ENABLE_DEEP_SLEEP
     if (resetDetector.hasWakeUpDetected()) {
         config.wakeUpFromDeepSleep();
         resetDetector.clearCounter();
     }
+#endif
     Serial.printf_P(PSTR("SAFE MODE %d, reset counter %d, wake up %d\n"), resetDetector.getSafeMode(), resetDetector.getResetCounter(), resetDetector.hasWakeUpDetected());
     config.setSafeMode(resetDetector.getSafeMode());
 
@@ -282,7 +284,10 @@ void setup()
         }
 
 #if DEBUG
-        if (!resetDetector.hasWakeUpDetected()) {
+#if ENABLE_DEEP_SLEEP
+        if (!resetDetector.hasWakeUpDetected())
+#endif
+        {
             check_flash_size();
             _debug_printf_P(PSTR("Free Sketch Space %u\n"), ESP.getFreeSketchSpace());
 #if defined(ESP8266)
@@ -292,7 +297,10 @@ void setup()
 #endif
 
 #if SPIFFS_CLEANUP_TMP_DURING_BOOT
-        if (!resetDetector.hasWakeUpDetected()) {
+#if ENABLE_DEEP_SLEEP
+        if (!resetDetector.hasWakeUpDetected())
+#endif
+        {
             _debug_println(F("Cleaning up /tmp directory"));
             auto dir = ListDir(sys_get_temp_dir());
             while(dir.next()) {
@@ -307,7 +315,13 @@ void setup()
 
         prepare_plugins();
 
-        setup_plugins(resetDetector.hasWakeUpDetected() ? PluginComponent::PLUGIN_SETUP_AUTO_WAKE_UP : PluginComponent::PLUGIN_SETUP_DEFAULT);
+        setup_plugins(
+#if ENABLE_DEEP_SLEEP
+            resetDetector.hasWakeUpDetected() ?
+                PluginComponent::PLUGIN_SETUP_AUTO_WAKE_UP :
+#endif
+                PluginComponent::PLUGIN_SETUP_DEFAULT
+        );
 
         // check if wifi is up
         Scheduler.addTimer(60000, true, [](EventScheduler::TimerPtr timer) {

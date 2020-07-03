@@ -25,7 +25,7 @@ void MoveStringHelper::move(Buffer &buf) {
     _debug_println();
 #if ESP8266
     if (length()) {
-#if defined(ARDUINO_ESP8266_RELEASE_2_6_3)
+#if ARDUINO_ESP8266_VERSION_COMBINED >= 0x020603
         if (isSSO()) {
 #else
         if (sso()) {

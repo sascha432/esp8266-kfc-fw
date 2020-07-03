@@ -22,8 +22,8 @@ void BlindsChannel::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTT
     discovery->create(this, 0, format);
     discovery->addStateTopic(MQTTClient::formatTopic(_number, F("/state")));
     discovery->addCommandTopic(MQTTClient::formatTopic(_number, F("/set")));
-    discovery->addPayloadOn(String(1));
-    discovery->addPayloadOff(String(0));
+    discovery->addPayloadOn(1);
+    discovery->addPayloadOff(0);
     discovery->finalize();
     vector.emplace_back(discovery);
 }

@@ -3,6 +3,9 @@
 ## Version 0.0.3
 
 - Device configuration page for WebUI
+- Option to turn status LED off when connected to WiFi
+- Deep sleep support can be disabled
+- Ardunino ESP8266 2.6.3 release changes
 
 ## Version 0.0.2
 

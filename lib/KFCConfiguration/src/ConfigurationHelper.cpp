@@ -27,7 +27,7 @@ extern "C" {
 #include "spi_flash.h"
 }
 
-#if defined(ARDUINO_ESP8266_RELEASE_2_6_3)
+#if ARDUINO_ESP8266_VERSION_COMBINED >= 0x020603
 extern "C" uint32_t _EEPROM_start;
 #elif defined(ARDUINO_ESP8266_RELEASE_2_5_2)
 extern "C" uint32_t _SPIFFS_end;

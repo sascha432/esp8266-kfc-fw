@@ -23,8 +23,10 @@
 #define PLUGIN_DEFAULT_PRIORITY                     64
 #define PLUGIN_MIN_PRIORITY                         127         // lowest
 
+#if ENABLE_DEEP_SLEEP
 #ifndef PLUGIN_DEEP_SLEEP_DELAYED_START_TIME
 #define PLUGIN_DEEP_SLEEP_DELAYED_START_TIME        30000
+#endif
 #endif
 
 typedef std::vector<PluginComponent *> PluginsVector;

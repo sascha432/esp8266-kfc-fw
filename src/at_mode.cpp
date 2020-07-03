@@ -185,7 +185,9 @@ void at_mode_display_help(Stream &output, StringVector *findText = nullptr)
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_NNPP(AT, "Print OK", "Show help");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HLP, "HLP", "[single][,word][,or entire phrase]", "Search help");
+#if ENABLE_DEEP_SLEEP
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DSLP, "DSLP", "[<milliseconds>[,<mode>]]", "Enter deep sleep");
+#endif
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RST, "RST", "[<s>]", "Soft reset. 's' enables safe mode");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(CMDS, "CMDS", "Send a list of available AT commands");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(LOAD, "LOAD", "Discard changes and load settings from EEPROM");
@@ -241,7 +243,9 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPEE, "DUMPEE", "[<offset>[,<length>]", 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WRTC, "WRTC", "<id,data>", "Write uint32 to RTC memory");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DUMPRTC, "DUMPRTC", "Dump RTC memory");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(RTCCLR, "RTCCLR", "Clear RTC memory");
+#if ENABLE_DEEP_SLEEP
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RTCQCC, "RTCQCC", "<0=channel/bssid|1=static ip config.>", "Clear quick connect RTC memory");
+#endif
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WIMO, "WIMO", "<0=off|1=STA|2=AP|3=STA+AP>", "Set WiFi mode, store configuration and reboot");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LOG, "LOG", "<message>", "Send an error to the logger component");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LOGE, "LOGE", "<debug=enable/disable>", "Enable/disable writing to file log://debug");
@@ -254,7 +258,9 @@ void at_mode_help_commands()
     auto name = PSTR("at_mode");
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(AT), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(HLP), name);
+#if ENABLE_DEEP_SLEEP
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DSLP), name);
+#endif
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(RST), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CMDS), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(LOAD), name);
@@ -302,7 +308,9 @@ void at_mode_help_commands()
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(WRTC), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DUMPRTC), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(RTCCLR), name);
+#if ENABLE_DEEP_SLEEP
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(RTCQCC), name);
+#endif
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(WIMO), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(LOG), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(LOGE), name);
@@ -829,13 +837,16 @@ void at_mode_serial_handle_event(String &commandString)
 
             args.setCommand(command);
 
+#if ENABLE_DEEP_SLEEP
             if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DSLP))) {
                 KFCFWConfiguration::milliseconds time(args.toMillis(0));
                 RFMode mode = (RFMode)args.toInt(1, RF_DEFAULT);
                 args.print(F("Entering deep sleep..."));
                 config.enterDeepSleep(time, mode, 1);
             }
-            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(HLP))) {
+            else
+#endif
+            if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(HLP))) {
                 String plugin;
                 StringVector findItems;
                 for(auto strPtr: args.getArgs()) {
@@ -1298,6 +1309,7 @@ void at_mode_serial_handle_event(String &commandString)
                 RTCMemoryManager::clear();
                 args.print(F("Memory cleared"));
             }
+#if ENABLE_DEEP_SLEEP
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RTCQCC))) {
                 if (args.requireArgs(1, 1)) {
                     int num = args.toInt(0);
@@ -1314,6 +1326,7 @@ void at_mode_serial_handle_event(String &commandString)
                     }
                 }
             }
+#endif
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(WIMO))) {
                 if (args.requireArgs(1, 1)) {
                     args.print(F("Setting WiFi mode and restarting device..."));

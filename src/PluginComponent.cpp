@@ -67,10 +67,14 @@ bool PluginComponent::allowSafeMode() const
     return false;
 }
 
+#if ENABLE_DEEP_SLEEP
+
 bool PluginComponent::autoSetupAfterDeepSleep() const
 {
     return false;
 }
+
+#endif
 
 
 void PluginComponent::setup(PluginSetupMode_t mode) {
@@ -168,9 +172,13 @@ WebUIInterface *PluginComponent::getWebUIInterface()
     return nullptr;
 }
 
+#if ENABLE_DEEP_SLEEP
+
 void PluginComponent::prepareDeepSleep(uint32_t sleepTimeMillis)
 {
 }
+
+#endif
 
 #if AT_MODE_SUPPORTED
 

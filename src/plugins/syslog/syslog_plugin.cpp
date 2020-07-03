@@ -148,7 +148,6 @@ public:
     }
     PluginPriorityEnum_t getSetupPriority() const override;
 
-    bool autoSetupAfterDeepSleep() const override;
     void setup(PluginSetupMode_t mode) override;
     void reconfigure(PGM_P source) override;
     void restart() override;
@@ -161,7 +160,10 @@ public:
     }
     void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
 
+#if ENABLE_DEEP_SLEEP
+    bool autoSetupAfterDeepSleep() const override;
     void prepareDeepSleep(uint32_t sleepTimeMillis) override;
+#endif
 
 #if AT_MODE_SUPPORTED
     bool hasAtMode() const override;
@@ -177,10 +179,6 @@ SyslogPlugin::PluginPriorityEnum_t SyslogPlugin::getSetupPriority() const
     return (PluginPriorityEnum_t)PRIO_SYSLOG;
 }
 
-bool SyslogPlugin::autoSetupAfterDeepSleep() const
-{
-    return true;
-}
 
 void SyslogPlugin::setup(PluginSetupMode_t mode)
 {
@@ -249,6 +247,13 @@ void SyslogPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &for
     form.finalize();
 }
 
+#if ENABLE_DEEP_SLEEP
+
+bool SyslogPlugin::autoSetupAfterDeepSleep() const
+{
+    return true;
+}
+
 void SyslogPlugin::prepareDeepSleep(uint32_t sleepTimeMillis)
 {
     uint16_t defaultWaitTime = 250;
@@ -267,6 +272,8 @@ void SyslogPlugin::prepareDeepSleep(uint32_t sleepTimeMillis)
 #endif
     syslog_deliver(defaultWaitTime);
 }
+
+#endif
 
 #if AT_MODE_SUPPORTED
 

@@ -179,7 +179,11 @@ String &MQTTAutoDiscovery::getTopic()
 bool MQTTAutoDiscovery::isEnabled()
 {
 #if MQTT_AUTO_DISCOVERY
-    return !resetDetector.hasWakeUpDetected() && config._H_GET(Config().flags).mqttAutoDiscoveryEnabled;
+    return
+#if ENABLE_DEEP_SLEEP
+        !resetDetector.hasWakeUpDetected() &&
+#endif
+        config._H_GET(Config().flags).mqttAutoDiscoveryEnabled;
 #else
     return false;
 #endif

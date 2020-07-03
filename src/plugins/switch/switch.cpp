@@ -195,8 +195,8 @@ void SwitchPlugin::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTA
         discovery->create(this, i, format);
         discovery->addStateTopic(MQTTClient::formatTopic(i, FSPGM(mqtt_switch_state)));
         discovery->addCommandTopic(MQTTClient::formatTopic(i, FSPGM(mqtt_switch_set)));
-        discovery->addPayloadOn(String(1));
-        discovery->addPayloadOff(String(0));
+        discovery->addPayloadOn(1);
+        discovery->addPayloadOff(0);
         discovery->finalize();
         vector.emplace_back(discovery);
     }

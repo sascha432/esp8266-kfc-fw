@@ -10,8 +10,7 @@
 #include "dimmer_module.h"
 #include "WebUISocket.h"
 
-#include <dimmer_protocol.h>
-#include <dimmer_reg_mem.h>
+#include "firmware_protocol.h"
 
 #if DEBUG_IOT_DIMMER_MODULE
 #include <debug_helper_enable.h>

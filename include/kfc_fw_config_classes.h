@@ -43,6 +43,12 @@ namespace KFCConfigurationClasses {
 
         class Device {
         public:
+            enum class StatusLEDModeEnum : uint8_t {
+                OFF_WHEN_CONNECTED = 0,
+                SOLID_WHEN_CONNECTED = 1,
+            };
+
+        public:
             Device() {
             }
             static void defaults();
@@ -61,11 +67,14 @@ namespace KFCConfigurationClasses {
             static void setWebUIKeepLoggedInDays(uint8_t days);
             static uint8_t getWebUIKeepLoggedInDays();
             static uint32_t getWebUIKeepLoggedInSeconds();
+            static void setStatusLedMode(StatusLEDModeEnum mode);
+            static StatusLEDModeEnum getStatusLedMode();
 
         public:
             typedef struct __attribute__packed__ {
                 uint16_t _safeModeRebootTime;
                 uint8_t _webUIKeepLoggedInDays;
+                uint8_t _statusLedMode: 1;
             } DeviceSettings_t;
 
             DeviceSettings_t settings;

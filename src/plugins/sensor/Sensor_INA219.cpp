@@ -41,7 +41,7 @@ void Sensor_INA219::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTT
     auto discovery = new MQTTAutoDiscovery();
     discovery->create(this, 0, format);
     discovery->addStateTopic(MQTTClient::formatTopic(-1, F("/%s/"), _getId(VOLTAGE).c_str()));
-    discovery->addUnitOfMeasurement(String('V'));
+    discovery->addUnitOfMeasurement('V');
     discovery->finalize();
     vector.emplace_back(discovery);
 

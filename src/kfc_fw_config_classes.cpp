@@ -71,6 +71,7 @@ namespace KFCConfigurationClasses {
         DeviceSettings_t settings;
         settings._safeModeRebootTime = 0;
         settings._webUIKeepLoggedInDays = 30;
+        settings._statusLedMode = static_cast<uint8_t>(StatusLEDModeEnum::SOLID_WHEN_CONNECTED);
         config._H_SET(MainConfig().system.device.settings, settings);
 
         setSafeModeRebootTime(0);
@@ -145,6 +146,19 @@ namespace KFCConfigurationClasses {
         settings._webUIKeepLoggedInDays = days;
         config._H_SET(MainConfig().system.device.settings, settings);
     }
+
+    void System::Device::setStatusLedMode(StatusLEDModeEnum mode)
+    {
+        auto settings = config._H_GET(MainConfig().system.device.settings);
+        settings._statusLedMode = static_cast<uint8_t>(mode);
+        config._H_SET(MainConfig().system.device.settings, settings);
+    }
+
+    System::Device::StatusLEDModeEnum System::Device::getStatusLedMode()
+    {
+        return static_cast<StatusLEDModeEnum>(config._H_GET(MainConfig().system.device.settings)._statusLedMode);
+    }
+
 
     Network::Settings::Settings()
     {

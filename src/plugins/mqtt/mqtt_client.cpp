@@ -599,7 +599,11 @@ public:
         return F("MQTT");
     }
     virtual PluginPriorityEnum_t getSetupPriority() const override;
-    virtual bool autoSetupAfterDeepSleep() const override;
+#if ENABLE_DEEP_SLEEP
+    virtual bool autoSetupAfterDeepSleep() const override {
+        return true;
+    }
+#endif
     virtual void setup(PluginSetupMode_t mode) override;
     virtual void reconfigure(PGM_P source) override;
     virtual void restart() override;
@@ -627,10 +631,6 @@ static MQTTPlugin plugin;
 
 MQTTPlugin::PluginPriorityEnum_t MQTTPlugin::getSetupPriority() const {
     return PRIO_MQTT;
-}
-
-bool MQTTPlugin::autoSetupAfterDeepSleep() const {
-    return true;
 }
 
 void MQTTPlugin::setup(PluginSetupMode_t mode)

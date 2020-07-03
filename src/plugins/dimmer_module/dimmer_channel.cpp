@@ -33,8 +33,8 @@ void DimmerChannel::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTT
     discovery->create(this, _channel, format);
     discovery->addStateTopic(_data.state.state);
     discovery->addCommandTopic(_data.state.set);
-    discovery->addPayloadOn(String(1));
-    discovery->addPayloadOff(String(0));
+    discovery->addPayloadOn(1);
+    discovery->addPayloadOff(0);
     discovery->addBrightnessStateTopic(_data.brightness.state);
     discovery->addBrightnessCommandTopic(_data.brightness.set);
     discovery->addBrightnessScale(IOT_DIMMER_MODULE_MAX_BRIGHTNESS);

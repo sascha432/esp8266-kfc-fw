@@ -5,9 +5,10 @@
 #if defined(ESP8266)
 
 #include <Arduino.h>
+#include "global.h"
 #include "esp8266_compat.h"
 
-#if defined(ARDUINO_ESP8266_RELEASE_2_6_3)
+#if ARDUINO_ESP8266_VERSION_COMBINED >= 0x020603
 
 #include "esp_settimeofday_cb.h"
 

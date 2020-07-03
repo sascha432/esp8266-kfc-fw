@@ -7,7 +7,6 @@
 #include <Timezone.h>
 #include <MicrosTimer.h>
 #include <LoopFunctions.h>
-#include <WiFiCallbacks.h>
 #include <EventTimer.h>
 #include <KFCForms.h>
 #include <WebUISocket.h>
@@ -275,11 +274,6 @@ void ClockPlugin::setup(PluginSetupMode_t mode)
         }
     });
 
-    WiFiCallbacks::add(WiFiCallbacks::CONNECTED, wifiCallback);
-    if (config.isWiFiUp()) {
-        wifiCallback(WiFiCallbacks::CONNECTED, nullptr);
-    }
-
     if (!IS_TIME_VALID(time(nullptr))) {
         setSyncing(true);
     } else {
@@ -408,8 +402,8 @@ void ClockPlugin::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAu
     discovery->create(this, 0, format);
     discovery->addStateTopic(topic + F("state"));
     discovery->addCommandTopic(topic + F("set"));
-    discovery->addPayloadOn(String(1));
-    discovery->addPayloadOff(String(0));
+    discovery->addPayloadOn(1);
+    discovery->addPayloadOff(0);
     discovery->addBrightnessStateTopic(topic + F("brightness/state"));
     discovery->addBrightnessCommandTopic(topic + F("brightness/set"));
     discovery->addBrightnessScale(SevenSegmentDisplay::MAX_BRIGHTNESS);
@@ -544,13 +538,6 @@ void ClockPlugin::publishState(MQTTClient *client)
 void ClockPlugin::loop()
 {
     plugin._loop();
-}
-
-void ClockPlugin::wifiCallback(uint8_t event, void *payload)
-{
-    _debug_printf_P(PSTR("event=%u\n"), event);
-    // turn LED off after wifi has been connected
-    BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::BlinkDelayEnum_t::OFF);
 }
 
 void ClockPlugin::ntpCallback(time_t now)

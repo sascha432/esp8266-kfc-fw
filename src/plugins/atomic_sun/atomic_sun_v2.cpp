@@ -14,8 +14,7 @@
 #include "SerialTwoWire.h"
 #include "WebUISocket.h"
 
-#include <dimmer_protocol.h>
-#include <dimmer_reg_mem.h>
+#include "../dimmer_module/firmware_protocol.h"
 
 #ifdef DEBUG_4CH_DIMMER
 #include <debug_helper_enable.h>
@@ -100,8 +99,8 @@ void Driver_4ChDimmer::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, M
     discovery->create(this, num++, format);
     discovery->addStateTopic(_data.state.state);
     discovery->addCommandTopic(_data.state.set);
-    discovery->addPayloadOn(String(1));
-    discovery->addPayloadOff(String(0));
+    discovery->addPayloadOn(1);
+    discovery->addPayloadOff(0);
     discovery->addBrightnessStateTopic(_data.brightness.state);
     discovery->addBrightnessCommandTopic(_data.brightness.set);
     discovery->addBrightnessScale(IOT_ATOMIC_SUN_MAX_BRIGHTNESS * 4);
@@ -114,8 +113,8 @@ void Driver_4ChDimmer::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, M
     discovery->create(this, num++, format);
     discovery->addStateTopic(_data.lockChannels.state);
     discovery->addCommandTopic(_data.lockChannels.set);
-    discovery->addPayloadOn(String(1));
-    discovery->addPayloadOff(String(0));
+    discovery->addPayloadOn(1);
+    discovery->addPayloadOff(0);
     discovery->finalize();
     vector.emplace_back(discovery);
 
@@ -127,8 +126,8 @@ void Driver_4ChDimmer::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, M
         discovery->addBrightnessStateTopic(_data.channels[i].brightnessState);
         discovery->addBrightnessCommandTopic(_data.channels[i].brightnessSet);
         discovery->addBrightnessScale(IOT_ATOMIC_SUN_MAX_BRIGHTNESS);
-        discovery->addPayloadOn(String(1));
-        discovery->addPayloadOff(String(0));
+        discovery->addPayloadOn(1);
+        discovery->addPayloadOff(0);
         discovery->finalize();
         vector.emplace_back(discovery);
     }

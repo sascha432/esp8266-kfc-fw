@@ -41,6 +41,22 @@ public:
     void addUnitOfMeasurement(const String &value);
     void addValueTemplate(const String &value);
 
+    inline void addPayloadOn(int value) {
+        addPayloadOn(String(value));
+    }
+    inline void addPayloadOn(char value) {
+        addPayloadOn(String(value));
+    }
+    inline void addPayloadOff(int value) {
+        addPayloadOff(String(value));
+    }
+    inline void addPayloadOff(char value) {
+        addPayloadOff(String(value));
+    }
+    inline void addUnitOfMeasurement(char value) {
+        addUnitOfMeasurement(String(value));
+    }
+
     void finalize();
     PrintString &getPayload();
     String &getTopic();

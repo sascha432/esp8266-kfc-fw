@@ -132,15 +132,15 @@
         "default": "pure virtual call: %s\\n"
     },
     "yes": {
-        "use_counter": 9,
+        "use_counter": 8,
         "default": "yes"
     },
     "no": {
-        "use_counter": 7,
+        "use_counter": 6,
         "default": "no"
     },
     "comma_": {
-        "use_counter": 8,
+        "use_counter": 7,
         "default": ", "
     },
     "_hidden": {
@@ -644,7 +644,7 @@
         "default": "weather_station"
     },
     "SPIFFS_tmp_dir": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "/tmp/"
     },
     "config_object_name": {
@@ -1081,5 +1081,9 @@
     "_login_html": {
         "use_counter": 2,
         "default": "/login,html"
+    },
+    "n_a": {
+        "use_counter": 1,
+        "default": "n/a"
     }
 }

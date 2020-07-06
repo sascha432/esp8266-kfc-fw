@@ -7,6 +7,9 @@
 - Deep sleep support can be disabled
 - Ardunino ESP8266 2.6.3 release changes
 - Support for MQTT component names instead enumeration
+- Conditional attributes for HTML forms
+- Form validator for double
+- Advanced firmware configuration for dimmer plugin
 
 ## Version 0.0.2
 

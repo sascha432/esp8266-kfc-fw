@@ -102,14 +102,14 @@ void RemoteControlPlugin::createConfigureForm(AsyncWebServerRequest *request, Fo
     form.setFormUI(F("Remote Control Configuration"));
 
     form.add<uint8_t>(F("auto_sleep_time"), _H_STRUCT_VALUE(MainConfig().plugins.remotecontrol, autoSleepTime))
-        ->setFormUI((new FormUI(FormUI::TEXT, F("Auto Sleep Time")))->setSuffix(F("seconds")));
+        ->setFormUI((new FormUI(FormUI::TEXT, F("Auto Sleep Time")))->setSuffix(FSPGM(seconds, "seconds")));
     form.add<uint16_t>(F("deep_sleep_time"), _H_STRUCT_VALUE(MainConfig().plugins.remotecontrol, deepSleepTime))
         ->setFormUI((new FormUI(FormUI::TEXT, F("Deep Sleep Time")))->setSuffix(F("seconds (0 = indefinitely)")));
 
     form.add<uint16_t>(F("long_press_time"), _H_STRUCT_VALUE(MainConfig().plugins.remotecontrol, longpressTime))
-        ->setFormUI((new FormUI(FormUI::TEXT, F("Long Press Time")))->setSuffix(F("milliseconds")));
+        ->setFormUI((new FormUI(FormUI::TEXT, F("Long Press Time")))->setSuffix(FSPGM(milliseconds, "milliseconds")));
     form.add<uint16_t>(F("repeat_time"), _H_STRUCT_VALUE(MainConfig().plugins.remotecontrol, repeatTime))
-        ->setFormUI((new FormUI(FormUI::TEXT, F("Repeat Time")))->setSuffix(F("milliseconds")));
+        ->setFormUI((new FormUI(FormUI::TEXT, F("Repeat Time")))->setSuffix(FSPGM(milliseconds)));
 
     FormUI::ItemsList actions;
     Plugins::HomeAssistant::ActionVector vector;

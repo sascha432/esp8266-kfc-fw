@@ -27,7 +27,7 @@ void DimmerModuleForm::createConfigureForm(AsyncWebServerRequest *request, Form 
     // changed to static html since the form creator requires 2x5.1kb RAM when its being loaded over the web server + 2x1.3kb for the home assistant yaml code
 
     // form.setFormUI(F("Dimmer Configuration"));
-    // auto seconds = String(F("seconds"));
+    // auto seconds = String(FSPGM(seconds));
 
     form.add<float>(F("fade_time"), &dimmer->fade_time); //->setFormUI((new FormUI(FormUI::TEXT, F("Fade in/out time")))->setPlaceholder(String(5.0, 1))->setSuffix(seconds));
 
@@ -58,7 +58,7 @@ void DimmerModuleForm::createConfigureForm(AsyncWebServerRequest *request, Form 
 #if IOT_DIMMER_MODULE_HAS_BUTTONS
 
     auto *dimmer_buttons = &config._H_W_GET(Config().dimmer_buttons);
-    //auto milliseconds = String(F("milliseconds"));
+    //auto milliseconds = String(FSPGM(milliseconds));
     //auto percent = String(F("&#37;"));
 
     form.add<uint16_t>(F("shortpress_time"), &dimmer_buttons->shortpress_time); //->setFormUI((new FormUI(FormUI::TEXT, F("Short press time")))->setPlaceholder(String(250))->setSuffix(milliseconds));

@@ -31,7 +31,7 @@ void DimmerChannel::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTT
     _createTopics();
 
     auto discovery = new MQTTAutoDiscovery();
-    discovery->create(this, PrintString(F("channel_%u"), _channel), format);
+    discovery->create(this, PrintString(FSPGM(channel__u), _channel), format);
     discovery->addStateTopic(_data.state.state);
     discovery->addCommandTopic(_data.state.set);
     discovery->addPayloadOn(1);
@@ -51,7 +51,7 @@ uint8_t DimmerChannel::getAutoDiscoveryCount() const
 void DimmerChannel::_createTopics()
 {
 #if IOT_DIMMER_MODULE_CHANNELS > 1
-    String name = PrintString(F("channel_%u"), _channel);
+    String name = PrintString(FSPGM(channel__u), _channel);
 #else
     String name;
 #endif

@@ -118,7 +118,7 @@ void Driver_4ChDimmer::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, M
 
     for(uint8_t i = 0; i < _channels.size(); i++) {
         discovery = new MQTTAutoDiscovery();
-        discovery->create(this, PrintString(F("channel_%u"), i), format);
+        discovery->create(this, PrintString(FSPGM(channel__u, "channel_%u"), i), format);
         discovery->addStateTopic(_data.channels[i].state);
         discovery->addCommandTopic(_data.channels[i].set);
         discovery->addBrightnessStateTopic(_data.channels[i].brightnessState);
@@ -192,7 +192,7 @@ void Driver_4ChDimmer::_createTopics()
         _data.lockChannels.state = MQTTClient::formatTopic(lockChannels, F("/lock/state"));
 
         for(uint8_t i = 0; i < _channels.size(); i++) {
-            auto channel = PrintString(F("channel_%u"), i);
+            auto channel = PrintString(FSPGM(channel__u), i);
             _data.channels[i].set = MQTTClient::formatTopic(channel, F("/set"));
             _data.channels[i].state = MQTTClient::formatTopic(channel, F("/state"));
             _data.channels[i].brightnessSet = MQTTClient::formatTopic(channel, F("/brightness/set"));

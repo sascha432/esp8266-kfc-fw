@@ -21,3 +21,18 @@ private:
     bool _allowZero;
 };
 
+class FormRangeValidatorDouble : public FormValidator {
+public:
+    FormRangeValidatorDouble(double min, double max, uint8_t digits = 2, bool allowZero = false);
+    FormRangeValidatorDouble(const String &message, double min, double max, uint8_t digits = 2, bool allowZero = false);
+
+    bool validate();
+    virtual String getMessage() override;
+
+private:
+    double _min;
+    double _max;
+    uint8_t _digits;
+    bool _allowZero;
+};
+

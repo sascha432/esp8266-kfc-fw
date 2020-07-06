@@ -29,7 +29,7 @@ Sensor_CCS811::Sensor_CCS811(const String &name, uint8_t address) : MQTTSensor()
 
 void Sensor_CCS811::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector)
 {
-    String topic = MQTTClient::formatTopic(MQTTClient::NUM_NONE, FSPGM(__s_), _getId().c_str());
+    String topic = MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(__s_), _getId().c_str());
 
     auto discovery = new MQTTAutoDiscovery();
     discovery->create(this, _getId(F("eco2")), format);
@@ -101,7 +101,7 @@ void Sensor_CCS811::publishState(MQTTClient *client)
             json.add(F("TVOC"), sensor.TVOC);
             json.printTo(str);
 
-            client->publish(MQTTClient::formatTopic(MQTTClient::NUM_NONE, FSPGM(__s_), _getId().c_str()), _qos, 1, str);
+            client->publish(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(__s_), _getId().c_str()), _qos, 1, str);
         }
     }
 }

@@ -55,7 +55,7 @@ void MQTTAutoDiscovery::_create(MQTTComponent *component, const String &name, MQ
         uniqueId = _getUnqiueId(name);
         addParameter(FSPGM(mqtt_unique_id), uniqueId);
     }
-    addParameter(FSPGM(mqtt_availability_topic), MQTTClient::formatTopic(MQTTClient::NUM_NONE, FSPGM(mqtt_status_topic)));
+    addParameter(FSPGM(mqtt_availability_topic), MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(mqtt_status_topic)));
     addParameter(FSPGM(mqtt_payload_available), 1);
     addParameter(FSPGM(mqtt_payload_not_available), 0);
 

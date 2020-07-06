@@ -22,7 +22,7 @@ Sensor_BME280::Sensor_BME280(const String &name, TwoWire &wire, uint8_t address)
 void Sensor_BME280::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector)
 {
     _debug_println();
-    String topic = MQTTClient::formatTopic(MQTTClient::NUM_NONE, FSPGM(__s_), _getId().c_str());
+    String topic = MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(__s_), _getId().c_str());
 
     auto discovery = new MQTTAutoDiscovery();
     discovery->create(this, _getId(FSPGM(temperature, "temperature")), format);
@@ -119,7 +119,7 @@ void Sensor_BME280::publishState(MQTTClient *client)
         json.add(FSPGM(pressure), JsonNumber(sensor.pressure, 2));
         json.printTo(str);
 
-        client->publish(MQTTClient::formatTopic(MQTTClient::NUM_NONE, FSPGM(__s_), _getId().c_str()), _qos, 1, str);
+        client->publish(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(__s_), _getId().c_str()), _qos, 1, str);
     }
 }
 

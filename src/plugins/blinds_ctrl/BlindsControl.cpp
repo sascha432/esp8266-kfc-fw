@@ -273,7 +273,7 @@ void BlindsControl::_stop()
 }
 
 String BlindsControl::_getTopic() const {
-    return MQTTClient::formatTopic(-1, F("/metrics/"));
+    return MQTTClient::formatTopic(MQTTClient::NO_ENUM, F("/metrics/"));
 }
 
 void BlindsControl::_publishState(MQTTClient *client)

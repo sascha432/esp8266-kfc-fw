@@ -109,7 +109,7 @@ public:
     static const int DEFAULT_RECONNECT_TIMEOUT = 5000;
     static const int MAX_MESSAGE_SIZE = 1024;
 
-    static constexpr uint8_t NUM_NONE = ~0;
+    static constexpr uint8_t NO_ENUM = ~0;
 
     MQTTClient();
     virtual ~MQTTClient();
@@ -135,7 +135,7 @@ public:
         _useNodeId = useNodeId;
     }
 
-    static void getComponentName(String &name, String &suffix, uint8_t num = NUM_NONE);
+    static void getComponentName(String &name, String &suffix, uint8_t num = NO_ENUM);
     static String formatTopic(uint8_t num, const __FlashStringHelper *format, ...);
     static String formatTopic(const String &componentName, const __FlashStringHelper *format, ...);
 

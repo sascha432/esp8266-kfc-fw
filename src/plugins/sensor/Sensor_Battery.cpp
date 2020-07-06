@@ -153,7 +153,7 @@ String Sensor_Battery::_getId(BatteryIdEnum_t type)
 
 String Sensor_Battery::_getTopic(BatteryIdEnum_t type)
 {
-    return MQTTClient::formatTopic(MQTTClient::NUM_NONE, FSPGM(__s_, "/%s/"), _getId(type).c_str());
+    return MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(__s_, "/%s/"), _getId(type).c_str());
 }
 
 #if AT_MODE_SUPPORTED

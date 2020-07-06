@@ -23,7 +23,7 @@ Sensor_DHTxx::Sensor_DHTxx(const String &name, uint8_t pin/*, uint8_t type*/) : 
 void Sensor_DHTxx::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector)
 {
     _debug_println();
-    String topic = MQTTClient::formatTopic(MQTTClient::NUM_NONE, FSPGM(__s_), _getId().c_str());
+    String topic = MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(__s_), _getId().c_str());
 
     auto discovery = new MQTTAutoDiscovery();
     discovery->create(this, _getId(FSPGM(temperature)), format);
@@ -99,7 +99,7 @@ void Sensor_DHTxx::publishState(MQTTClient *client)
         json.add(FSPGM(humidity), JsonNumber(sensor.humidity, 2));
         json.printTo(str);
 
-        client->publish(MQTTClient::formatTopic(MQTTClient::NUM_NONE, FSPGM(__s_), _getId().c_str()), _qos, 1, str);
+        client->publish(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(__s_), _getId().c_str()), _qos, 1, str);
     }
 }
 

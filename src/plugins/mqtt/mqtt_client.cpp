@@ -166,7 +166,7 @@ void MQTTClient::getComponentName(String &name, String &suffix, uint8_t num)
     suffix = String();
     auto mqttClient = getClient();
 
-    if (num != NUM_NONE && mqttClient && mqttClient->hasMultipleComponments()) {
+    if (num != NO_ENUM && mqttClient && mqttClient->hasMultipleComponments()) {
         suffix += mqttClient->useNodeId() ? '/' : '_';
         suffix += String(num);
     }
@@ -259,7 +259,7 @@ void MQTTClient::setLastWill(char value)
         _lastWillPayload = value;
     }
 
-    _lastWillTopic = formatTopic(-1, FSPGM(mqtt_status_topic));
+    _lastWillTopic = formatTopic(MQTTClient::NO_ENUM, FSPGM(mqtt_status_topic));
     _debug_printf_P(PSTR("topic=%s value=%s\n"), _lastWillTopic.c_str(), _lastWillPayload.c_str());
 #if MQTT_SET_LAST_WILL
     _client->setWill(_lastWillTopic.c_str(), getDefaultQos(), 1, _lastWillPayload.c_str(), _lastWillPayload.length());
@@ -303,7 +303,7 @@ String MQTTClient::connectionStatusString()
     }
     message += F("topic ");
 
-    message += formatTopic(-1, FSPGM(empty));
+    message += formatTopic(NO_ENUM, FSPGM(empty));
 #if MQTT_AUTO_DISCOVERY
     if (config._H_GET(Config().flags).mqttAutoDiscoveryEnabled) {
         message += F(", discovery prefix '");

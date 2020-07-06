@@ -22,7 +22,7 @@ void Sensor_LM75A::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTA
 {
     auto discovery = new MQTTAutoDiscovery();
     discovery->create(this, _getId(), format);
-    discovery->addStateTopic(MQTTClient::formatTopic(MQTTClient::NUM_NONE, FSPGM(__s_), _getId().c_str()));
+    discovery->addStateTopic(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(__s_), _getId().c_str()));
     discovery->addUnitOfMeasurement(F("\u00b0C"));
     discovery->finalize();
     vector.emplace_back(discovery);
@@ -55,7 +55,7 @@ void Sensor_LM75A::createWebUI(WebUI &webUI, WebUIRow **row)
 void Sensor_LM75A::publishState(MQTTClient *client)
 {
     if (client && client->isConnected()) {
-        client->publish(MQTTClient::formatTopic(MQTTClient::NUM_NONE, FSPGM(__s_), _getId().c_str()), _qos, 1, String(_readSensor(), 2));
+        client->publish(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(__s_), _getId().c_str()), _qos, 1, String(_readSensor(), 2));
     }
 }
 

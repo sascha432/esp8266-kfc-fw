@@ -67,6 +67,14 @@ FormUI *FormUI::addAttribute(const String &name, const String &value)
     return this;
 }
 
+FormUI *FormUI::addConditionalAttribute(bool cond, const String &name, const String &value)
+{
+    if (cond) {
+        return addAttribute(name, value);
+    }
+    return this;
+}
+
 FormUI *FormUI::setReadOnly()
 {
     return addAttribute(F("readonly"), String());

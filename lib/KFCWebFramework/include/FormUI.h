@@ -45,6 +45,7 @@ public:
 	FormUI *setSuffix(const String &suffix);
 	FormUI *setPlaceholder(const String &placeholder);
 	FormUI *addAttribute(const String &name, const String &value);
+	FormUI *addConditionalAttribute(bool cond, const String &name, const String &value);
 	FormUI *setReadOnly();
 
 	void html(PrintInterface &output);

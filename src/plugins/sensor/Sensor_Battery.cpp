@@ -22,7 +22,7 @@ Sensor_Battery::Sensor_Battery(const JsonString &name) : MQTTSensor(), _name(nam
 void Sensor_Battery::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector)
 {
     auto discovery = new MQTTAutoDiscovery();
-    discovery->create(this, 0, format);
+    discovery->create(this, _getId(LEVEL), format);
     discovery->addStateTopic(_getTopic(LEVEL));
     discovery->addUnitOfMeasurement('V');
     discovery->finalize();
@@ -30,7 +30,7 @@ void Sensor_Battery::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQT
 
 #if IOT_SENSOR_BATTERY_CHARGE_DETECTION
     discovery = new MQTTAutoDiscovery();
-    discovery->create(this, 1, format);
+    discovery->create(this, _getId(STATE), format);
     discovery->addStateTopic(_getTopic(STATE));
     discovery->finalize();
     vector.emplace_back(discovery);
@@ -153,7 +153,7 @@ String Sensor_Battery::_getId(BatteryIdEnum_t type)
 
 String Sensor_Battery::_getTopic(BatteryIdEnum_t type)
 {
-    return MQTTClient::formatTopic(-1, F("/%s/"), _getId(type).c_str());
+    return MQTTClient::formatTopic(MQTTClient::NUM_NONE, FSPGM(__s_, "/%s/"), _getId(type).c_str());
 }
 
 #if AT_MODE_SUPPORTED

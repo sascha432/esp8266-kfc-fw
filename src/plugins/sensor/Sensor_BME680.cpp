@@ -20,34 +20,34 @@ Sensor_BME680::Sensor_BME680(const String &name, uint8_t address) : MQTTSensor()
 
 void Sensor_BME680::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector)
 {
-    String topic = MQTTClient::formatTopic(-1, F("/%s/"), _getId().c_str());
+    String topic = MQTTClient::formatTopic(MQTTClient::NUM_NONE, FSPGM(__s_), _getId().c_str());
 
     auto discovery = new MQTTAutoDiscovery();
-    discovery->create(this, 0, format);
+    discovery->create(this, _getId(FSPGM(temperature)), format);
     discovery->addStateTopic(topic);
     discovery->addUnitOfMeasurement(F("\u00b0C"));
-    discovery->addValueTemplate(F("temperature"));
+    discovery->addValueTemplate(FSPGM(temperature));
     discovery->finalize();
     vector.emplace_back(discovery);
 
     discovery = new MQTTAutoDiscovery();
-    discovery->create(this, 1, format);
+    discovery->create(this, _getId(FSPGM(humidity)), format);
     discovery->addStateTopic(topic);
     discovery->addUnitOfMeasurement('%');
-    discovery->addValueTemplate(F("humidity"));
+    discovery->addValueTemplate(FSPGM(humidity));
     discovery->finalize();
     vector.emplace_back(discovery);
 
     discovery = new MQTTAutoDiscovery();
-    discovery->create(this, 2, format);
+    discovery->create(this, _getId(FSPGM(pressure)), format);
     discovery->addStateTopic(topic);
-    discovery->addUnitOfMeasurement(F("hPa"));
-    discovery->addValueTemplate(F("pressure"));
+    discovery->addUnitOfMeasurement(FSPGM(hPa));
+    discovery->addValueTemplate(FSPGM(pressure));
     discovery->finalize();
     vector.emplace_back(discovery);
 
     discovery = new MQTTAutoDiscovery();
-    discovery->create(this, 3, format);
+    discovery->create(this, _getId(F("gas")), format);
     discovery->addStateTopic(topic);
     discovery->addUnitOfMeasurement(emptyString);
     discovery->addValueTemplate(F("gas"));
@@ -65,15 +65,15 @@ void Sensor_BME680::getValues(JsonArray &array, bool timer) {
     auto sensor = _readSensor();
 
     auto obj = &array.addObject(4);
-    obj->add(JJ(id), _getId(F("temperature")));
+    obj->add(JJ(id), _getId(FSPGM(temperature)));
     obj->add(JJ(state), true);
     obj->add(JJ(value), JsonNumber(sensor.temperature, 2));
     obj = &array.addObject(3);
-    obj->add(JJ(id), _getId(F("humidity")));
+    obj->add(JJ(id), _getId(FSPGM(humidity)));
     obj->add(JJ(state), true);
     obj->add(JJ(value), JsonNumber(sensor.humidity, 2));
     obj = &array.addObject(3);
-    obj->add(JJ(id), _getId(F("pressure")));
+    obj->add(JJ(id), _getId(FSPGM(pressure)));
     obj->add(JJ(state), true);
     obj->add(JJ(value), JsonNumber(sensor.pressure, 2));
     obj = &array.addObject(3);
@@ -87,9 +87,9 @@ void Sensor_BME680::createWebUI(WebUI &webUI, WebUIRow **row)
     _debug_printf_P(PSTR("Sensor_BME680::createWebUI()\n"));
 
     *row = &webUI.addRow();
-    (*row)->addSensor(_getId(F("temperature")), _name + F(" Temperature"), F("\u00b0C"));
-    (*row)->addSensor(_getId(F("humidity")), _name + F(" Humidity"), '%');
-    (*row)->addSensor(_getId(F("pressure")), _name + F(" Pressure"), F("hPa"));
+    (*row)->addSensor(_getId(FSPGM(temperature)), _name + F(" Temperature"), F("\u00b0C"));
+    (*row)->addSensor(_getId(FSPGM(humidity)), _name + F(" Humidity"), '%');
+    (*row)->addSensor(_getId(FSPGM(pressure)), _name + F(" Pressure"), F("hPa"));
     (*row)->addSensor(_getId(F("gas")), _name + F(" Gas"), emptyString);
 }
 
@@ -109,13 +109,13 @@ void Sensor_BME680::publishState(MQTTClient *client)
         auto sensor = _readSensor();
         PrintString str;
         JsonUnnamedObject json;
-        json.add(F("temperature"), JsonNumber(sensor.temperature, 2));
-        json.add(F("humidity"), JsonNumber(sensor.humidity, 2));
-        json.add(F("pressure"), JsonNumber(sensor.pressure, 2));
+        json.add(FSPGM(temperature), JsonNumber(sensor.temperature, 2));
+        json.add(FSPGM(humidity), JsonNumber(sensor.humidity, 2));
+        json.add(FSPGM(pressure), JsonNumber(sensor.pressure, 2));
         json.add(F("gas"), JsonNumber(sensor.gas, 2));
         json.printTo(str);
 
-        client->publish(MQTTClient::formatTopic(-1, F("/%s/"), _getId().c_str()), _qos, 1, str);
+        client->publish(MQTTClient::formatTopic(MQTTClient::NUM_NONE, FSPGM(__s_), _getId().c_str()), _qos, 1, str);
     }
 }
 

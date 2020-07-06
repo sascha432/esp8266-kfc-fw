@@ -29,21 +29,21 @@ Sensor_DS3231::Sensor_DS3231(const JsonString &name) : MQTTSensor(), _name(name)
 void Sensor_DS3231::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector)
 {
     auto discovery = new MQTTAutoDiscovery();
-    discovery->create(this, 0, format);
-    discovery->addStateTopic(MQTTClient::formatTopic(-1, F("/%s/"), FSPGM(ds3231_id_temp)));
+    discovery->create(this, FSPGM(ds3231_id_temp), format);
+    discovery->addStateTopic(MQTTClient::formatTopic(MQTTClient::NUM_NONE, FSPGM(__s_), FSPGM(ds3231_id_temp)));
     discovery->addUnitOfMeasurement(F("\u00b0C"));
     discovery->finalize();
     vector.emplace_back(discovery);
 
     discovery = new MQTTAutoDiscovery();
-    discovery->create(this, 0, format);
-    discovery->addStateTopic(MQTTClient::formatTopic(-1, F("/%s/"), FSPGM(ds3231_id_time)));
+    discovery->create(this, FSPGM(ds3231_id_time), format);
+    discovery->addStateTopic(MQTTClient::formatTopic(MQTTClient::NUM_NONE, FSPGM(__s_), FSPGM(ds3231_id_time)));
     discovery->finalize();
     vector.emplace_back(discovery);
 
     discovery = new MQTTAutoDiscovery();
-    discovery->create(this, 0, format);
-    discovery->addStateTopic(MQTTClient::formatTopic(-1, F("/%s/"), FSPGM(ds3231_id_lost_power)));
+    discovery->create(this, FSPGM(ds3231_id_lost_power), format);
+    discovery->addStateTopic(MQTTClient::formatTopic(MQTTClient::NUM_NONE, FSPGM(__s_), FSPGM(ds3231_id_lost_power)));
     discovery->finalize();
     vector.emplace_back(discovery);
 }
@@ -74,16 +74,16 @@ void Sensor_DS3231::createWebUI(WebUI &webUI, WebUIRow **row)
 {
     _debug_println();
     (*row)->addSensor(FSPGM(ds3231_id_temp), _name, F("\u00b0C"));
-    auto &clock = (*row)->addSensor(FSPGM(ds3231_id_time), F("RTC Clock"), F(""));
+    auto &clock = (*row)->addSensor(FSPGM(ds3231_id_time), F("RTC Clock"), JsonString());
     clock.add(JJ(head), F("h4"));
 }
 
 void Sensor_DS3231::publishState(MQTTClient *client)
 {
     if (client && client->isConnected()) {
-        client->publish(MQTTClient::formatTopic(-1, F("/%s/"), FSPGM(ds3231_id_temp)), _qos, 1, String(_readSensorTemp(), 2));
-        client->publish(MQTTClient::formatTopic(-1, F("/%s/"), FSPGM(ds3231_id_time)), _qos, 1, String((uint32_t)_readSensorTime()));
-        client->publish(MQTTClient::formatTopic(-1, F("/%s/"), FSPGM(ds3231_id_lost_power)), _qos, 1, String(_readSensorLostPower()));
+        client->publish(MQTTClient::formatTopic(MQTTClient::NUM_NONE, FSPGM(__s_), FSPGM(ds3231_id_temp)), _qos, 1, String(_readSensorTemp(), 2));
+        client->publish(MQTTClient::formatTopic(MQTTClient::NUM_NONE, FSPGM(__s_), FSPGM(ds3231_id_time)), _qos, 1, String((uint32_t)_readSensorTime()));
+        client->publish(MQTTClient::formatTopic(MQTTClient::NUM_NONE, FSPGM(__s_), FSPGM(ds3231_id_lost_power)), _qos, 1, String(_readSensorLostPower()));
     }
 }
 

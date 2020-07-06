@@ -23,21 +23,21 @@ Sensor_DHTxx::Sensor_DHTxx(const String &name, uint8_t pin/*, uint8_t type*/) : 
 void Sensor_DHTxx::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector)
 {
     _debug_println();
-    String topic = MQTTClient::formatTopic(-1, F("/%s/"), _getId().c_str());
+    String topic = MQTTClient::formatTopic(MQTTClient::NUM_NONE, FSPGM(__s_), _getId().c_str());
 
     auto discovery = new MQTTAutoDiscovery();
-    discovery->create(this, 0, format);
+    discovery->create(this, _getId(FSPGM(temperature)), format);
     discovery->addStateTopic(topic);
     discovery->addUnitOfMeasurement(F("\u00b0C"));
-    discovery->addValueTemplate(F("temperature"));
+    discovery->addValueTemplate(FSPGM(temperature));
     discovery->finalize();
     vector.emplace_back(discovery);
 
     discovery = new MQTTAutoDiscovery();
-    discovery->create(this, 1, format);
+    discovery->create(this, _getId(FSPGM(humidity)), format);
     discovery->addStateTopic(topic);
     discovery->addUnitOfMeasurement(F("%"));
-    discovery->addValueTemplate(F("humidity"));
+    discovery->addValueTemplate(FSPGM(humidity));
     discovery->finalize();
     vector.emplace_back(discovery);
 }
@@ -53,19 +53,19 @@ void Sensor_DHTxx::getValues(JsonArray &array, bool timer)
     _readSensor(sensor);
 
     auto obj = &array.addObject(3);
-    obj->add(JJ(id), _getId(F("temperature")));
+    obj->add(JJ(id), _getId(FSPGM(temperature)));
     obj->add(JJ(state), true);
     obj->add(JJ(value), JsonNumber(sensor.temperature, 2));
     obj = &array.addObject(3);
-    obj->add(JJ(id), _getId(F("humidity")));
+    obj->add(JJ(id), _getId(FSPGM(humidity)));
     obj->add(JJ(state), true);
     obj->add(JJ(value), JsonNumber(sensor.humidity, 2));
 }
 
 void Sensor_DHTxx::createWebUI(WebUI &webUI, WebUIRow **row)
 {
-    (*row)->addSensor(_getId(F("temperature")), _name + F(" Temperature"), F("\u00b0C"));
-    (*row)->addSensor(_getId(F("humidity")), _name + F(" Humidity"), '%');
+    (*row)->addSensor(_getId(FSPGM(temperature)), _name + F(" Temperature"), F("\u00b0C"));
+    (*row)->addSensor(_getId(FSPGM(humidity)), _name + F(" Humidity"), '%');
 }
 
 void Sensor_DHTxx::getStatus(PrintHtmlEntitiesString &output)
@@ -95,11 +95,11 @@ void Sensor_DHTxx::publishState(MQTTClient *client)
         _readSensor(sensor);
         PrintString str;
         JsonUnnamedObject json;
-        json.add(F("temperature"), JsonNumber(sensor.temperature, 2));
-        json.add(F("humidity"), JsonNumber(sensor.humidity, 2));
+        json.add(FSPGM(temperature), JsonNumber(sensor.temperature, 2));
+        json.add(FSPGM(humidity), JsonNumber(sensor.humidity, 2));
         json.printTo(str);
 
-        client->publish(MQTTClient::formatTopic(-1, F("/%s/"), _getId().c_str()), _qos, 1, str);
+        client->publish(MQTTClient::formatTopic(MQTTClient::NUM_NONE, FSPGM(__s_), _getId().c_str()), _qos, 1, str);
     }
 }
 

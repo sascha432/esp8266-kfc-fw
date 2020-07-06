@@ -29,10 +29,10 @@ Sensor_CCS811::Sensor_CCS811(const String &name, uint8_t address) : MQTTSensor()
 
 void Sensor_CCS811::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector)
 {
-    String topic = MQTTClient::formatTopic(-1, F("/%s/"), _getId().c_str());
+    String topic = MQTTClient::formatTopic(MQTTClient::NUM_NONE, FSPGM(__s_), _getId().c_str());
 
     auto discovery = new MQTTAutoDiscovery();
-    discovery->create(this, 0, format);
+    discovery->create(this, _getId(F("eco2")), format);
     discovery->addStateTopic(topic);
     discovery->addUnitOfMeasurement(F("ppm"));
     discovery->addValueTemplate(F("eCO2"));
@@ -40,7 +40,7 @@ void Sensor_CCS811::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTT
     vector.emplace_back(discovery);
 
     discovery = new MQTTAutoDiscovery();
-    discovery->create(this, 1, format);
+    discovery->create(this, _getId(F("tvoc")), format);
     discovery->addStateTopic(topic);
     discovery->addUnitOfMeasurement(F("ppb"));
     discovery->addValueTemplate(F("TVOC"));
@@ -101,7 +101,7 @@ void Sensor_CCS811::publishState(MQTTClient *client)
             json.add(F("TVOC"), sensor.TVOC);
             json.printTo(str);
 
-            client->publish(MQTTClient::formatTopic(-1, F("/%s/"), _getId().c_str()), _qos, 1, str);
+            client->publish(MQTTClient::formatTopic(MQTTClient::NUM_NONE, FSPGM(__s_), _getId().c_str()), _qos, 1, str);
         }
     }
 }

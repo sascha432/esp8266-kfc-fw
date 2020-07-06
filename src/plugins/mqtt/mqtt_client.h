@@ -109,6 +109,8 @@ public:
     static const int DEFAULT_RECONNECT_TIMEOUT = 5000;
     static const int MAX_MESSAGE_SIZE = 1024;
 
+    static constexpr uint8_t NUM_NONE = ~0;
+
     MQTTClient();
     virtual ~MQTTClient();
 
@@ -126,15 +128,17 @@ public:
     bool useNodeId() const {
         return _useNodeId;
     }
-    // false <discovery_prefix>/<component>/<name>_<node_id>
-    // true <discovery_prefix>/<component>/<name>/<node_id>
+    // false <discovery_prefix>/<component>/<device_name>_<node_id>
+    // true <discovery_prefix>/<component>/<device_name>/<node_id>
+    // it does not affect <discovery_prefix>/<component>/<device_name>/<component_name>
     void setUseNodeId(bool useNodeId) {
         _useNodeId = useNodeId;
     }
 
-    static const String getComponentName(uint8_t num = -1);
+    static void getComponentName(String &name, String &suffix, uint8_t num = NUM_NONE);
     static String formatTopic(uint8_t num, const __FlashStringHelper *format, ...);
-    // static String formatTopic(uint8_t num, const char *format, ...);
+    static String formatTopic(const String &componentName, const __FlashStringHelper *format, ...);
+
     void subscribe(MQTTComponentPtr component, const String &topic, uint8_t qos);
     void unsubscribe(MQTTComponentPtr component, const String &topic);
     void remove(MQTTComponentPtr component);

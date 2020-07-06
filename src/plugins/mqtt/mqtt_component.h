@@ -77,4 +77,5 @@ public:
     virtual uint8_t getAutoDiscoveryCount() const override;
 
     MQTTAutoDiscovery *createAutoDiscovery(uint8_t count, MQTTAutoDiscovery::Format_t format);
+    MQTTAutoDiscovery *createAutoDiscovery(const String &componentName, MQTTAutoDiscovery::Format_t format);
 };

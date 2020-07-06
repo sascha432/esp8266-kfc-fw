@@ -106,3 +106,10 @@ MQTTAutoDiscovery *MQTTComponentHelper::createAutoDiscovery(uint8_t count, MQTTA
     discovery->create(this, count, format);
     return discovery;
 }
+
+MQTTAutoDiscovery *MQTTComponentHelper::createAutoDiscovery(const String &componentName, MQTTAutoDiscovery::Format_t format)
+{
+    auto discovery = new MQTTAutoDiscovery();
+    discovery->create(this, componentName, format);
+    return discovery;
+}

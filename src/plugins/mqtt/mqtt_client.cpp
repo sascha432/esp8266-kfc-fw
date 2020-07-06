@@ -160,28 +160,50 @@ bool MQTTClient::hasMultipleComponments() const
     return false;
 }
 
-const String MQTTClient::getComponentName(uint8_t num)
+void MQTTClient::getComponentName(String &name, String &suffix, uint8_t num)
 {
-    String deviceName = config.getDeviceName();
+    name = config.getDeviceName();
+    suffix = String();
     auto mqttClient = getClient();
 
-    if (num != 0xff && mqttClient && mqttClient->hasMultipleComponments()) {
-        deviceName += mqttClient->useNodeId() ? '/' : '_';
-        deviceName += String(num);
+    if (num != NUM_NONE && mqttClient && mqttClient->hasMultipleComponments()) {
+        suffix += mqttClient->useNodeId() ? '/' : '_';
+        suffix += String(num);
     }
     // _debug_printf_P(PSTR("MQTTClient::getComponentName(): number=%u,client=%p,multiple=%u,device=%s\n"), num, mqttClient, mqttClient->hasMultipleComponments(), deviceName.c_str());
-    return deviceName;
 }
 
 String MQTTClient::formatTopic(uint8_t num, const __FlashStringHelper *format, ...)
 {
     PrintString topic = Config_MQTT::getTopic();
+    String deviceName, suffix;
     va_list arg;
+
+    getComponentName(deviceName, suffix, num);
+    topic += suffix;
 
     va_start(arg, format);
     topic.vprintf_P(RFPSTR(format), arg);
     va_end(arg);
-    topic.replace(F("${device_name}"), getComponentName(num));
+    topic.replace(F("${device_name}"), deviceName);
+    // _debug_printf_P(PSTR("MQTTClient::formatTopic(): number=%u,topic=%s\n"), num, topic.c_str());
+    return topic;
+}
+
+String MQTTClient::formatTopic(const String &componentName, const __FlashStringHelper *format, ...)
+{
+    PrintString topic = Config_MQTT::getTopic();
+    va_list arg;
+
+    if (componentName.length()) {
+        topic += '/';
+        topic += componentName;
+    }
+
+    va_start(arg, format);
+    topic.vprintf_P(RFPSTR(format), arg);
+    va_end(arg);
+    topic.replace(F("${device_name}"), config.getDeviceName());
     // _debug_printf_P(PSTR("MQTTClient::formatTopic(): number=%u,topic=%s\n"), num, topic.c_str());
     return topic;
 }

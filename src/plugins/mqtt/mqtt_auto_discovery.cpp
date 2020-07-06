@@ -20,17 +20,27 @@
 
 void MQTTAutoDiscovery::create(MQTTComponent *component, uint8_t count, MQTTAutoDiscovery::Format_t format)
 {
-    String name = MQTTClient::getComponentName(component->getNumber() + count);
+    String deviceName, suffix;
+    MQTTClient::getComponentName(deviceName, suffix, component->getNumber() + count);
+    _create(component, deviceName + suffix, format);
+}
+
+void MQTTAutoDiscovery::create(MQTTComponent *component, const String &componentName, MQTTAutoDiscovery::Format_t format)
+{
+    String name = config.getDeviceName();
+    if (componentName.length()) {
+        name += '/';
+        name += componentName;
+    }
+    _create(component, name, format);
+}
+
+void MQTTAutoDiscovery::_create(MQTTComponent *component, const String &name, MQTTAutoDiscovery::Format_t format)
+{
     String uniqueId;
 
     _format = format;
     _topic = PrintString(F("%s/%s/%s/config"), Config_MQTT::getDiscoveryPrefix(), component->getComponentName(), name.c_str());
-    // _topic = Config_MQTT::getDiscoveryPrefix();
-    // _topic += '/';
-    // _topic += FPSTR(component->getComponentName());
-    // _topic += '/';
-    // _topic += name;
-    // _topic += F("/config");
 
     _discovery = PrintString();
     if (_format == FORMAT_JSON) {
@@ -45,9 +55,9 @@ void MQTTAutoDiscovery::create(MQTTComponent *component, uint8_t count, MQTTAuto
         uniqueId = _getUnqiueId(name);
         addParameter(FSPGM(mqtt_unique_id), uniqueId);
     }
-    addParameter(FSPGM(mqtt_availability_topic), MQTTClient::formatTopic(-1, FSPGM(mqtt_status_topic)));
-    addParameter(FSPGM(mqtt_payload_available), String(1));
-    addParameter(FSPGM(mqtt_payload_not_available), String(0));
+    addParameter(FSPGM(mqtt_availability_topic), MQTTClient::formatTopic(MQTTClient::NUM_NONE, FSPGM(mqtt_status_topic)));
+    addParameter(FSPGM(mqtt_payload_available), 1);
+    addParameter(FSPGM(mqtt_payload_not_available), 0);
 
     if (_format == FORMAT_JSON) {
         String model;

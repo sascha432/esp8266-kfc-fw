@@ -53,7 +53,7 @@ void Sensor_HLW80xx::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQT
 {
     String topic = _getTopic();
     auto discovery = new MQTTAutoDiscovery();
-    discovery->create(this, 0, format);
+    discovery->create(this, F("power"), format);
     discovery->addStateTopic(topic);
     discovery->addUnitOfMeasurement('W');
     discovery->addValueTemplate(F("power"));
@@ -61,7 +61,7 @@ void Sensor_HLW80xx::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQT
     vector.emplace_back(discovery);
 
     discovery = new MQTTAutoDiscovery();
-    discovery->create(this, 1, format);
+    discovery->create(this, F("energy_total"), format);
     discovery->addStateTopic(topic);
     discovery->addUnitOfMeasurement(F("kWh"));
     discovery->addValueTemplate(F("energy_total"));
@@ -69,7 +69,7 @@ void Sensor_HLW80xx::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQT
     vector.emplace_back(discovery);
 
     discovery = new MQTTAutoDiscovery();
-    discovery->create(this, 2, format);
+    discovery->create(this, F("energy"), format);
     discovery->addStateTopic(topic);
     discovery->addUnitOfMeasurement(F("kWh"));
     discovery->addValueTemplate(F("energy"));
@@ -77,7 +77,7 @@ void Sensor_HLW80xx::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQT
     vector.emplace_back(discovery);
 
     discovery = new MQTTAutoDiscovery();
-    discovery->create(this, 3, format);
+    discovery->create(this, F("voltage"), format);
     discovery->addStateTopic(topic);
     discovery->addUnitOfMeasurement('V');
     discovery->addValueTemplate(F("voltage"));
@@ -85,7 +85,7 @@ void Sensor_HLW80xx::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQT
     vector.emplace_back(discovery);
 
     discovery = new MQTTAutoDiscovery();
-    discovery->create(this, 4, format);
+    discovery->create(this, F("current"), format);
     discovery->addStateTopic(topic);
     discovery->addUnitOfMeasurement('A');
     discovery->addValueTemplate(F("current"));
@@ -93,7 +93,7 @@ void Sensor_HLW80xx::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQT
     vector.emplace_back(discovery);
 
     discovery = new MQTTAutoDiscovery();
-    discovery->create(this, 5, format);
+    discovery->create(this, F("pf"), format);
     discovery->addStateTopic(topic);
     discovery->addUnitOfMeasurement(emptyString);
     discovery->addValueTemplate(F("pf"));
@@ -324,7 +324,7 @@ float Sensor_HLW80xx::_getEnergy(uint8_t num) const
 
 String Sensor_HLW80xx::_getTopic()
 {
-    return MQTTClient::formatTopic(-1, F("/%s/"), _getId().c_str());
+    return MQTTClient::formatTopic(F("energy_monitor"), F("/%s/"), _getId().c_str());
 }
 
 void Sensor_HLW80xx::dump(Print &output)

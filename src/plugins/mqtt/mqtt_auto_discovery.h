@@ -25,6 +25,7 @@ public:
     } Format_t;
 
     void create(MQTTComponent *component, uint8_t count, Format_t format);
+    void create(MQTTComponent *component, const String &componentName, Format_t format);
     void addParameter(const String &name, const String &value);
 
     void addStateTopic(const String &value);
@@ -41,6 +42,12 @@ public:
     void addUnitOfMeasurement(const String &value);
     void addValueTemplate(const String &value);
 
+    inline void addParameter(const String &name, int value) {
+        addParameter(name, String(value));
+    }
+    inline void addParameter(const String &name, char value) {
+        addParameter(name, String(value));
+    }
     inline void addPayloadOn(int value) {
         addPayloadOn(String(value));
     }
@@ -64,6 +71,7 @@ public:
     static bool isEnabled();
 
 private:
+    void _create(MQTTComponent *component, const String &name, Format_t format);
     const String _getUnqiueId(const String &name);
 
     Format_t _format;

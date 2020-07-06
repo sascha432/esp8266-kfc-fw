@@ -19,3 +19,5 @@
 #define DIMMER_REGISTER_CONFIG_SZ                   sizeof(register_mem_t)
 
 #endif
+
+#define DIMMER_VERSION_SPLIT(version)               (version >> 10), ((version >> 5) & 0x1f), (version & 0x1f)

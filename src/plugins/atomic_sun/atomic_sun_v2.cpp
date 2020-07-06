@@ -93,10 +93,8 @@ void Driver_4ChDimmer::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, M
 {
     _createTopics();
 
-    uint8_t num = 0;
-
     auto discovery = new MQTTAutoDiscovery();
-    discovery->create(this, num++, format);
+    discovery->create(this, F("main"), format);
     discovery->addStateTopic(_data.state.state);
     discovery->addCommandTopic(_data.state.set);
     discovery->addPayloadOn(1);
@@ -104,13 +102,13 @@ void Driver_4ChDimmer::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, M
     discovery->addBrightnessStateTopic(_data.brightness.state);
     discovery->addBrightnessCommandTopic(_data.brightness.set);
     discovery->addBrightnessScale(IOT_ATOMIC_SUN_MAX_BRIGHTNESS * 4);
-    discovery->addParameter(FSPGM(mqtt_color_temp_state_topic), _data.color.state);
-    discovery->addParameter(FSPGM(mqtt_color_temp_command_topic), _data.color.set);
+    discovery->addColorTempStateTopic(_data.color.state);
+    discovery->addColorTempCommandTopic(_data.color.set);
     discovery->finalize();
     vector.emplace_back(discovery);
 
     discovery = new MQTTAutoDiscovery();
-    discovery->create(this, num++, format);
+    discovery->create(this, F("lock_channels"), format);
     discovery->addStateTopic(_data.lockChannels.state);
     discovery->addCommandTopic(_data.lockChannels.set);
     discovery->addPayloadOn(1);
@@ -120,7 +118,7 @@ void Driver_4ChDimmer::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, M
 
     for(uint8_t i = 0; i < 4; i++) {
         discovery = new MQTTAutoDiscovery();
-        discovery->create(this, num++, format);
+        discovery->create(this, PrintString(F("channel_%u"), i), format);
         discovery->addStateTopic(_data.channels[i].state);
         discovery->addCommandTopic(_data.channels[i].set);
         discovery->addBrightnessStateTopic(_data.channels[i].brightnessState);
@@ -134,38 +132,32 @@ void Driver_4ChDimmer::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, M
 
     MQTTComponentHelper component(MQTTComponent::ComponentTypeEnum_t::SENSOR);
 
-    num = 0;
-    component.setNumber(0);
-    discovery = component.createAutoDiscovery(num, format);
+    discovery = component.createAutoDiscovery(F("temp"), format);
     discovery->addStateTopic(_getMetricsTopics(0));
     discovery->addUnitOfMeasurement(F("\u00b0C"));
     discovery->finalize();
     vector.emplace_back(discovery);
-    num++;
 
-    discovery = component.createAutoDiscovery(num, format);
+    discovery = component.createAutoDiscovery(F("temp2"), format);
     discovery->addStateTopic(_getMetricsTopics(1));
     discovery->addUnitOfMeasurement(F("\u00b0C"));
     discovery->finalize();
     vector.emplace_back(discovery);
-    num++;
 
-    discovery = component.createAutoDiscovery(num, format);
+    discovery = component.createAutoDiscovery(F("vcc"), format);
     discovery->addStateTopic(_getMetricsTopics(2));
     discovery->addUnitOfMeasurement('V');
     discovery->finalize();
     vector.emplace_back(discovery);
-    num++;
 
-    discovery = component.createAutoDiscovery(num, format);
+    discovery = component.createAutoDiscovery(F("frequency"), format);
     discovery->addStateTopic(_getMetricsTopics(3));
     discovery->addUnitOfMeasurement(F("Hz"));
     discovery->finalize();
     vector.emplace_back(discovery);
-    num++;
 
 #if IOT_ATOMIC_SUN_CALC_POWER
-    discovery = component.createAutoDiscovery(num, format);
+    discovery = component.createAutoDiscovery(F("power"), format);
     discovery->addStateTopic(_getMetricsTopics(4));
     discovery->addUnitOfMeasurement('W');
     discovery->finalize();
@@ -186,25 +178,25 @@ uint8_t Driver_4ChDimmer::getAutoDiscoveryCount() const
 void Driver_4ChDimmer::_createTopics()
 {
     if (_data.state.set.length() == 0) {
+        String main = F("main");
+        String lockChannels = F("lock_channels");
 
-        uint8_t num = 0;
-        _data.state.set = MQTTClient::formatTopic(num, F("/set"));
-        _data.state.state = MQTTClient::formatTopic(num, F("/state"));
-        _data.brightness.set = MQTTClient::formatTopic(num, F("/brightness/set"));
-        _data.brightness.state = MQTTClient::formatTopic(num, F("/brightness/state"));
-        _data.color.set = MQTTClient::formatTopic(num, F("/color/set"));
-        _data.color.state = MQTTClient::formatTopic(num, F("/color/state"));
-        num++;
-        _data.lockChannels.set = MQTTClient::formatTopic(num, F("/lock/set"));
-        _data.lockChannels.state = MQTTClient::formatTopic(num, F("/lock/state"));
-        num++;
+        _data.state.set = MQTTClient::formatTopic(main, F("/set"));
+        _data.state.state = MQTTClient::formatTopic(main, F("/state"));
+        _data.brightness.set = MQTTClient::formatTopic(main, F("/brightness/set"));
+        _data.brightness.state = MQTTClient::formatTopic(main, F("/brightness/state"));
+        _data.color.set = MQTTClient::formatTopic(main, F("/color/set"));
+        _data.color.state = MQTTClient::formatTopic(main, F("/color/state"));
+
+        _data.lockChannels.set = MQTTClient::formatTopic(lockChannels, F("/lock/set"));
+        _data.lockChannels.state = MQTTClient::formatTopic(lockChannels, F("/lock/state"));
+
         for(uint8_t i = 0; i < 4; i++) {
-            String channel = '/' + String(i);
-            _data.channels[i].set = MQTTClient::formatTopic(num, FPSTR(String(channel + F("/set")).c_str()));
-            _data.channels[i].state = MQTTClient::formatTopic(num, FPSTR(String(channel + F("/state")).c_str()));
-            _data.channels[i].brightnessSet = MQTTClient::formatTopic(num, FPSTR(String(channel + F("/brightness/set")).c_str()));
-            _data.channels[i].brightnessState = MQTTClient::formatTopic(num, FPSTR(String(channel + F("/brightness/state")).c_str()));
-            num++;
+            auto channel = PrintString(F("channel_%u"), i);
+            _data.channels[i].set = MQTTClient::formatTopic(channel, F("/set"));
+            _data.channels[i].state = MQTTClient::formatTopic(channel, F("/state"));
+            _data.channels[i].brightnessSet = MQTTClient::formatTopic(channel, F("/brightness/set"));
+            _data.channels[i].brightnessState = MQTTClient::formatTopic(channel, F("/brightness/state"));
         }
     }
 }
@@ -221,6 +213,7 @@ void Driver_4ChDimmer::onConnect(MQTTClient *client)
     client->subscribe(this, _data.lockChannels.set, _qos);
     for(uint8_t i = 0; i < 4; i++) {
         client->subscribe(this, _data.channels[i].set, _qos);
+        client->subscribe(this, _data.channels[i].brightnessSet, _qos);
     }
 
     publishState(client);
@@ -284,18 +277,54 @@ void Driver_4ChDimmer::onMessage(MQTTClient *client, char *topic, char *payload,
 
     }
     else {
-        uint8_t channel = _data.channels[0].set.equals(topic) ? 1 : 0;
-        channel += _data.channels[1].set.equals(topic) ? 2 : 0;
-        channel += _data.channels[2].set.equals(topic) ? 3 : 0;
-        channel += _data.channels[3].set.equals(topic) ? 4 : 0;
-        if (channel) {
-            channel--;
-            _channels[channel] = value;
-            _channelsToBrightness();
-            _setChannels(getFadeTime());
-            publishState(client);
+
+        for(uint8_t i = 0; i < 4; i++) {
+            auto &channel =_data.channels[i];
+
+            if (channel.brightnessSet.equals(topic)) {
+
+                float fadetime = (_channels[i] && value > 0) ? getFadeTime() : getOnOffFadeTime();
+                _channels[i] = value;
+                _channelsToBrightness();
+                _setChannels(fadetime);
+                publishState(client);
+                break;
+
+            }
+            else if (channel.set.equals(topic)) {
+
+                if (value && _channels[i]) {
+                    // already on
+                    break;
+                }
+                else if (value == 0 && _channels[i] == 0) {
+                    // already off
+                    break;
+                }
+                else {
+                    float fadetime = getOnOffFadeTime();
+                    if (value) {
+                        value = _storedChannels[i]; // restore last state
+                        if (value == 0) {
+                            value = IOT_ATOMIC_SUN_MAX_BRIGHTNESS / 5; // set to 20% if no stored value is available
+                        }
+                    }
+                    else {
+                        // value = 0;
+                    }
+
+                    _channels[i] = value;
+                    _channelsToBrightness();
+                    _setChannels(fadetime);
+                    publishState(client);
+                    break;
+                }
+
+            }
+
         }
     }
+
 }
 
 void Driver_4ChDimmer::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
@@ -455,6 +484,11 @@ bool Driver_4ChDimmer::on(uint8_t channel)
 {
     if (!_data.state.value) {
         _channels = _storedChannels;
+        if (_getChannelSum() == 0) { // if off, set all channels to 20%
+            for(uint8_t i = 0; i < 4; i++) {
+                _channels[i] = IOT_ATOMIC_SUN_MAX_BRIGHTNESS / 5;
+            }
+        }
         _channelsToBrightness();
         _setChannels(getOnOffFadeTime());
         publishState();
@@ -466,9 +500,11 @@ bool Driver_4ChDimmer::on(uint8_t channel)
 bool Driver_4ChDimmer::off(uint8_t channel)
 {
     if (_data.state.value) {
-        _storedChannels = _channels;
         _data.state.value = false;
         _data.brightness.value = 0;
+            for(uint8_t i = 0; i < 4; i++) {
+                _channels[i] = 0;
+            }
         _setChannels(getOnOffFadeTime());
         publishState();
         return true;
@@ -476,11 +512,16 @@ bool Driver_4ChDimmer::off(uint8_t channel)
     return false;
 }
 
+int32_t Driver_4ChDimmer::_getChannelSum() const
+{
+    return _channels[0] + _channels[1] + _channels[2] + _channels[3];
+}
+
 // convert channels to brightness and color
 void Driver_4ChDimmer::_channelsToBrightness()
 {
     // calculate color and brightness values from dimmer channels
-    int32_t sum = _channels[0] + _channels[1] + _channels[2] + _channels[3];
+    int32_t sum = _getChannelSum();
     if (sum) {
         _data.color.value = ((_channels[channel_ww1] + _channels[channel_ww2]) * COLOR_RANGE) / (double)sum + COLOR_MIN;
         _data.brightness.value = sum;
@@ -610,6 +651,9 @@ void Driver_4ChDimmer::_setChannels(float fadetime)
 
     _debug_printf_P(PSTR("channels=%s state=%u\n"), implode(',', _channels).c_str(), _data.state.value);
     for(size_t i = 0; i < _channels.size(); i++) {
+        if (_channels[i]) {
+            _storedChannels[i] = _channels[i];
+        }
         _fade(i, _channels[i], fadetime);
     }
     writeEEPROM();
@@ -619,18 +663,18 @@ void Driver_4ChDimmer::_setChannels(float fadetime)
 void Driver_4ChDimmer::_getChannels()
 {
     _debug_println();
-    if (_lockWire()) {
+    if (_wire.lock()) {
         _wire.beginTransmission(DIMMER_I2C_ADDRESS);
         _wire.write(DIMMER_REGISTER_COMMAND);
         _wire.write(DIMMER_COMMAND_READ_CHANNELS);
         _wire.write((uint8_t)(sizeof(_channels) / sizeof(_channels[0])) << 4);
-        if (_endTransmission() == 0) {
+        if (_wire.endTransmission() == 0) {
             if (_wire.requestFrom(DIMMER_I2C_ADDRESS, sizeof(_channels)) == sizeof(_channels)) {
-                _wire.readBytes(reinterpret_cast<uint8_t *>(&_channels), sizeof(_channels));
+                _wire.read(_channels);
                 _debug_printf_P(PSTR("channels=%s\n"), implode(',', _channels).c_str());
             }
         }
-        _unlockWire();
+        _wire.unlock();
 
 #if IOT_SENSOR_HLW80xx_ADJUST_CURRENT
         LoopFunctions::callOnce([this]() {

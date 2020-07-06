@@ -1,4 +1,4 @@
-# Firmware flashing
+# Firmware Flashing
 
 ## ESP8266 Serial
 
@@ -20,7 +20,7 @@ Change `-patmega328pb` to `-patmega328p` for 328P
 
 `avrdude -C avrdude.conf -v -patmega328pb -carduino -PCOMx -D -b19200 -e -Ulock:w:0x3F:m -Uefuse:w:0xFF:m -Uhfuse:w:0xDA:m -Ulfuse:w:0xFF:m`
 
-### Boot loader
+### Boot Loader
 
 The bootloader is for ATmega328P but works with ATmega328PB and identifies as such.
 

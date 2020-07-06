@@ -115,6 +115,7 @@ private:
 
     void _setChannels(float fadetime);
     void _getChannels();
+    int32_t _getChannelSum() const;
 
     void _channelsToBrightness();
     void _brightnessToChannels();

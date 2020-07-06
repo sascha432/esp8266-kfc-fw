@@ -13,24 +13,25 @@
 #include <debug_helper_disable.h>
 #endif
 
-DimmerChannel::DimmerChannel() : MQTTComponent(ComponentTypeEnum_t::LIGHT) {
+DimmerChannel::DimmerChannel() : MQTTComponent(ComponentTypeEnum_t::LIGHT), _data(), _storedBrightness(0)
+{
 #if DEBUG_MQTT_CLIENT
     debug_printf_P(PSTR("DimmerChannel(): component=%p\n"), this);
 #endif
-    memset(&_data, 0, sizeof(_data));
-    _storedBrightness = 0;
 }
 
-void DimmerChannel::setup(Driver_DimmerModule *dimmer, uint8_t channel) {
+void DimmerChannel::setup(Driver_DimmerModule *dimmer, uint8_t channel)
+{
     _dimmer = dimmer;
     _channel = channel;
 }
 
-void DimmerChannel::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector) {
+void DimmerChannel::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector)
+{
     _createTopics();
 
     auto discovery = new MQTTAutoDiscovery();
-    discovery->create(this, _channel, format);
+    discovery->create(this, PrintString(F("channel_%u"), _channel), format);
     discovery->addStateTopic(_data.state.state);
     discovery->addCommandTopic(_data.state.set);
     discovery->addPayloadOn(1);
@@ -42,26 +43,27 @@ void DimmerChannel::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTT
     vector.emplace_back(discovery);
 }
 
-uint8_t DimmerChannel::getAutoDiscoveryCount() const {
+uint8_t DimmerChannel::getAutoDiscoveryCount() const
+{
     return 1;
 }
 
-void DimmerChannel::_createTopics() {
-
+void DimmerChannel::_createTopics()
+{
 #if IOT_DIMMER_MODULE_CHANNELS > 1
-    auto num = getNumber();
+    String name = PrintString(F("channel_%u"), _channel);
 #else
-    uint8_t num = 0xff;
+    String name;
 #endif
 
-    _data.state.set = MQTTClient::formatTopic(num, F("/set"));
-    _data.state.state = MQTTClient::formatTopic(num, F("/state"));
-    _data.brightness.set = MQTTClient::formatTopic(num, F("/brightness/set"));
-    _data.brightness.state = MQTTClient::formatTopic(num, F("/brightness/state"));
+    _data.state.set = MQTTClient::formatTopic(name, F("/set"));
+    _data.state.state = MQTTClient::formatTopic(name, F("/state"));
+    _data.brightness.set = MQTTClient::formatTopic(name, F("/brightness/set"));
+    _data.brightness.state = MQTTClient::formatTopic(name, F("/brightness/state"));
 }
 
-void DimmerChannel::onConnect(MQTTClient *client) {
-
+void DimmerChannel::onConnect(MQTTClient *client)
+{
     uint8_t _qos = MQTTClient::getDefaultQos();
 
     _createTopics();
@@ -75,7 +77,8 @@ void DimmerChannel::onConnect(MQTTClient *client) {
     publishState(client);
 }
 
-void DimmerChannel::onMessage(MQTTClient *client, char *topic, char *payload, size_t len) {
+void DimmerChannel::onMessage(MQTTClient *client, char *topic, char *payload, size_t len)
+{
     _debug_printf_P(PSTR("DimmerChannel[%u]::onMessage(%s)\n"), _channel, topic);
 
     int value = atoi(payload);
@@ -111,7 +114,8 @@ void DimmerChannel::onMessage(MQTTClient *client, char *topic, char *payload, si
     }
 }
 
-bool DimmerChannel::on() {
+bool DimmerChannel::on()
+{
     if (!_data.state.value) {
         _data.brightness.value = _storedBrightness;
         if (_data.brightness.value == 0) {
@@ -127,7 +131,8 @@ bool DimmerChannel::on() {
     return false;
 }
 
-bool DimmerChannel::off() {
+bool DimmerChannel::off()
+{
     if (_data.state.value) {
         _storedBrightness = _data.brightness.value;
         _data.brightness.value = 0;
@@ -141,7 +146,8 @@ bool DimmerChannel::off() {
     return false;
 }
 
-void DimmerChannel::publishState(MQTTClient *client) {
+void DimmerChannel::publishState(MQTTClient *client)
+{
     if (!client) {
         client = MQTTClient::getClient();
     }

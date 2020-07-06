@@ -322,7 +322,7 @@ void WeatherStationPlugin::createConfigureForm(AsyncWebServerRequest *request, F
     form.add<uint8_t>(F("is_metric"), _H_FLAGS_VALUE(MainConfig().plugins.weatherstation.config, is_metric))->setFormUI((new FormUI(FormUI::SELECT, F("Units")))->setBoolItems(F("Metric"), F("Imperial")));
 
     form.add<uint16_t>(F("weather_poll_interval"), _H_STRUCT_VALUE(MainConfig().plugins.weatherstation.config, weather_poll_interval))->setFormUI((new FormUI(FormUI::TEXT, F("Weather Poll Interval")))->setSuffix(F("minutes")));
-    form.add<uint16_t>(F("api_timeout"), _H_STRUCT_VALUE(MainConfig().plugins.weatherstation.config, api_timeout))->setFormUI((new FormUI(FormUI::TEXT, F("API Timeout")))->setSuffix(F("seconds")));
+    form.add<uint16_t>(F("api_timeout"), _H_STRUCT_VALUE(MainConfig().plugins.weatherstation.config, api_timeout))->setFormUI((new FormUI(FormUI::TEXT, F("API Timeout")))->setSuffix(FSPGM(seconds)));
 
     form.add<uint8_t>(F("backlight_level"), _H_STRUCT_VALUE(MainConfig().plugins.weatherstation.config, backlight_level))->setFormUI((new FormUI(FormUI::TEXT, F("Backlight Level")))->setSuffix(F("&#37;")));
     form.add<uint8_t>(F("touch_threshold"), _H_STRUCT_VALUE(MainConfig().plugins.weatherstation.config, touch_threshold))->setFormUI(new FormUI(FormUI::TEXT, F("Touch Threshold")));
@@ -330,7 +330,7 @@ void WeatherStationPlugin::createConfigureForm(AsyncWebServerRequest *request, F
 
     form.add<float>(F("temp_offset"), _H_STRUCT_VALUE(MainConfig().plugins.weatherstation.config, temp_offset))->setFormUI((new FormUI(FormUI::TEXT, F("BMP280 Temperature Offset")))->setSuffix(F("&deg;")));
     form.add<float>(F("humidity_offset"), _H_STRUCT_VALUE(MainConfig().plugins.weatherstation.config, humidity_offset))->setFormUI((new FormUI(FormUI::TEXT, F("Humidity Offset")))->setSuffix(F("&#37;")));
-    form.add<float>(F("pressure_offset"), _H_STRUCT_VALUE(MainConfig().plugins.weatherstation.config, pressure_offset))->setFormUI((new FormUI(FormUI::TEXT, F("Pressure Offset")))->setSuffix(F("hPa")));
+    form.add<float>(F("pressure_offset"), _H_STRUCT_VALUE(MainConfig().plugins.weatherstation.config, pressure_offset))->setFormUI((new FormUI(FormUI::TEXT, F("Pressure Offset")))->setSuffix(FSPGM(hPa)));
 
     for(uint8_t i = 0; i < WeatherStationPlugin::ScreenEnum_t::NUM_SCREENS; i++) {
         PrintString str;
@@ -340,7 +340,7 @@ void WeatherStationPlugin::createConfigureForm(AsyncWebServerRequest *request, F
         str.printf_P(PSTR("Screen #%u, %s"), i + 1, WeatherStationPlugin::getScreenName(i));
 
         form.add<uint8_t>(PrintString(F("screen_timer[%u]"), i), _H_STRUCT_VALUE_TYPE(MainConfig().plugins.weatherstation.config, screenTimer[i], uint8_t, i))
-            ->setFormUI((new FormUI(FormUI::TEXT, str))->setSuffix(F("seconds")));
+            ->setFormUI((new FormUI(FormUI::TEXT, str))->setSuffix(FSPGM(seconds)));
         // form.add<uint16_t>(WeatherStationPlugin::getScreenName(i), config._H_GET(MainConfig().plugins.weatherstation.config).screenTimer[i],
     }
 

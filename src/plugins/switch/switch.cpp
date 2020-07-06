@@ -100,7 +100,7 @@ void SwitchPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &for
 
         FormGroup *group = nullptr;
         if (_pins.size() > 1) {
-            group = &form.addGroup(PrintString(F("channel_%u"), i), PrintString(F("Channel %u"), i), true);
+            group = &form.addGroup(PrintString(FSPGM(channel__u), i), PrintString(F("Channel %u"), i), true);
         }
 
         form.add(PrintString(F("name[%u]"), i), _names[i], [this, i](const String &name, FormField &, bool) {

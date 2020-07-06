@@ -163,17 +163,6 @@ void WsWebUISocket::createWebUIJSON(JsonUnnamedObject &json)
 {
     WebUI webUI(json);
 
-    // auto row = &webUI.addRow();
-    // row->setExtraClass(F("webuicomponent-top"));
-    // row->setAlignment(WebUIRow::CENTER);
-
-    // row->addBadgeSensor(F("temperature"), F("Temperature"), F("\u00b0C")).setValue(F("25.78"));
-    // row->addBadgeSensor(F("humidity"), F("Humidity"), '%').setValue(F("47.23"));
-    // row->addBadgeSensor(F("pressure"), F("Pressure"), F("hPa")).setValue(F("1023.42"));
-    // row->addBadgeSensor(F("vcc"), F("VCC"), 'V').setValue(F("3.286"));
-    // row->addBadgeSensor(F("frequency"), F("Frequency"), F("Hz")).setValue(F("59.869"));
-    // row->addBadgeSensor(F("int_temp"), F("Int. Temp"), F("\u00b0C")).setValue(F("47.28"));
-
     for(auto plugin: plugins) {
         if (plugin->hasWebUI()) {
             plugin->createWebUI(webUI);

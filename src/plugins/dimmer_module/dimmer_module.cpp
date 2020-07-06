@@ -203,16 +203,16 @@ void Driver_DimmerModule::_getChannels()
 {
     _debug_println();
 
-    if (_lockWire()) {
+    if (_wire.lock()) {
         _wire.beginTransmission(DIMMER_I2C_ADDRESS);
         _wire.write(DIMMER_REGISTER_COMMAND);
         _wire.write(DIMMER_COMMAND_READ_CHANNELS);
         _wire.write(_channels.size() << 4);
         int16_t level;
         const int len = _channels.size() * sizeof(level);
-        if (_endTransmission() == 0 && _wire.requestFrom(DIMMER_I2C_ADDRESS, len) == len) {
+        if (_wire.endTransmission() == 0 && _wire.requestFrom(DIMMER_I2C_ADDRESS, len) == len) {
             for(uint8_t i = 0; i < _channels.size(); i++) {
-                _wire.readBytes(reinterpret_cast<uint8_t *>(&level), sizeof(level));
+                _wire.read(level);
                 _channels[i].setLevel(level);
             }
 #if DEBUG_IOT_DIMMER_MODULE
@@ -224,7 +224,7 @@ void Driver_DimmerModule::_getChannels()
             _debug_printf_P(PSTR("%s\n"), str.c_str());
 #endif
         }
-        _unlockWire();
+        _wire.unlock();
 
 #if IOT_SENSOR_HLW80xx_ADJUST_CURRENT
     // sensors are initialized after the dimmer plugin
@@ -478,7 +478,7 @@ void DimmerModulePlugin::createWebUI(WebUI &webUI)
     row->setExtraClass(JJ(title));
     row->addGroup(F("Dimmer"), true);
 
-    for (uint8_t i = 0; i < getChannelCount(); i++) {
+    for (uint8_t i = 0; i < _channels.size(); i++) {
         row = &webUI.addRow();
         row->addSlider(PrintString(F("dimmer_channel%u"), i), PrintString(F("dimmer_channel%u"), i), 0, IOT_DIMMER_MODULE_MAX_BRIGHTNESS, true);
     }

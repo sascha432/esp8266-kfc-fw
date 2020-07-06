@@ -83,3 +83,7 @@ typedef struct __attribute__packed__ {
     uint8_t bytes_written;      // might be 0 if the data has not been changed
 } dimmer_eeprom_written_t;
 
+typedef struct __attribute__packed__ {
+    uint8_t channel;
+    uint16_t level;
+} dimmer_fading_complete_event_t;

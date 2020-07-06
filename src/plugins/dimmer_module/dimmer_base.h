@@ -173,7 +173,8 @@ protected:
 #if IOT_DIMMER_MODULE_INTERFACE_UART
     DimmerTwoWireEx _wire;
 
-    void _onReceive(size_t length);
+public:
+    virtual void _onReceive(size_t length);
 #else
     DimmerTwoWireEx &_wire;
     EventScheduler::Timer _timer;

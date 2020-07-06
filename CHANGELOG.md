@@ -6,6 +6,7 @@
 - Option to turn status LED off when connected to WiFi
 - Deep sleep support can be disabled
 - Ardunino ESP8266 2.6.3 release changes
+- Support for MQTT component names instead enumeration
 
 ## Version 0.0.2
 

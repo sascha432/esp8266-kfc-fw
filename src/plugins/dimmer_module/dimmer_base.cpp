@@ -159,6 +159,9 @@ void Dimmer_Base::_onReceive(size_t length)
         Logger_error(message);
         WebUIAlerts_add(message, AlertMessage::TypeEnum_t::DANGER);
     }
+    // else if (type == DIMMER_FADING_COMPLETE) {
+
+    // }
 }
 
 #else

@@ -45,6 +45,26 @@
 #error STK500V1_RESET_PIN not defined
 #endif
 
+class ChannelsArray : public std::array<int16_t, 4>
+{
+public:
+    void setAll(int16_t value) {
+        auto ptr = data();
+        for (uint8_t i = 0; i < size(); i++) {
+            *ptr++ = value;
+        }
+    }
+
+    int32_t getSum() const {
+        int32_t sum = 0;
+        auto ptr = data();
+        for (uint8_t i = 0; i < size(); i++) {
+            sum += *ptr++;
+        }
+        return sum;
+    }
+};
+
 typedef struct {
     struct {
         String set;
@@ -104,6 +124,9 @@ public:
         readConfig();
         DimmerModuleForm::createConfigureForm(request, form);
     }
+
+    virtual void _onReceive(size_t length) override;
+
 protected:
     void _begin();
     void _end();
@@ -115,7 +138,6 @@ private:
 
     void _setChannels(float fadetime);
     void _getChannels();
-    int32_t _getChannelSum() const;
 
     void _channelsToBrightness();
     void _brightnessToChannels();
@@ -128,13 +150,7 @@ private:
 #endif
 
 protected:
-#if DEBUG_4CH_DIMMER
-    uint8_t endTransmission();
-#else
-    inline uint8_t endTransmission();
-#endif
-
-    using ChannelsArray = std::array<int16_t, 4>;
+    // using ChannelsArray = std::array<int16_t, 4>;
 
     Driver_4ChDimmer_MQTTComponentData_t _data;
     ChannelsArray _storedChannels;

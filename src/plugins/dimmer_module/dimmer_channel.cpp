@@ -119,7 +119,7 @@ bool DimmerChannel::on()
     if (!_data.state.value) {
         _data.brightness.value = _storedBrightness;
         if (_data.brightness.value == 0) {
-            _data.brightness.value = IOT_DIMMER_MODULE_MAX_BRIGHTNESS;
+            _data.brightness.value = IOT_DIMMER_MODULE_MAX_BRIGHTNESS / 2; // set to 50%
         }
         _data.state.value = true;
         _dimmer->_fade(_channel, _data.brightness.value, _dimmer->getOnOffFadeTime());

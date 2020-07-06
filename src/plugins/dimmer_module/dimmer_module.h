@@ -121,6 +121,8 @@ public:
         return _channels.size();
     }
 
+    virtual void _onReceive(size_t length) override;
+
     virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override {
         readConfig();
         DimmerModuleForm::createConfigureForm(request, form);

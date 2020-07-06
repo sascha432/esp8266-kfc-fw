@@ -135,14 +135,19 @@ struct Serial2Tcp {
     uint16_t idle_timeout;
 };
 
+#include "./plugins/dimmer_module/firmware_protocol.h"
+
 struct DimmerModule {
-    float fade_time;
+    register_mem_cfg_t cfg;
     float on_fade_time;
-    float linear_correction;
-    uint8_t max_temperature;
-    uint8_t metrics_int;
-    uint8_t report_temp;
-    uint8_t restore_level;
+    bool config_valid;
+    // float fade_time;
+    // float on_fade_time;
+    // float linear_correction;
+    // uint8_t max_temperature;
+    // uint8_t metrics_int;
+    // uint8_t report_temp;
+    // uint8_t restore_level;
 #if IOT_ATOMIC_SUN_V2
     int8_t channel_mapping[4];
 #endif

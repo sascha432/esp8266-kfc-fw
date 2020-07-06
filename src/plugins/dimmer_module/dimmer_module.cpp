@@ -133,28 +133,28 @@ void Driver_DimmerModule::createAutoDiscovery(MQTTAutoDiscovery::Format_t format
     }
 
     auto discovery = new MQTTAutoDiscovery();
-    discovery->create(this, 0, format);
+    discovery->create(this, F("temp"), format);
     discovery->addStateTopic(_getMetricsTopics(0));
     discovery->addUnitOfMeasurement(F("\u00b0C"));
     discovery->finalize();
     vector.emplace_back(discovery);
 
     discovery = new MQTTAutoDiscovery();
-    discovery->create(this, 1, format);
+    discovery->create(this, F("temp2"), format);
     discovery->addStateTopic(_getMetricsTopics(1));
     discovery->addUnitOfMeasurement(F("\u00b0C"));
     discovery->finalize();
     vector.emplace_back(discovery);
 
     discovery = new MQTTAutoDiscovery();
-    discovery->create(this, 2, format);
+    discovery->create(this, F("vcc"), format);
     discovery->addStateTopic(_getMetricsTopics(2));
     discovery->addUnitOfMeasurement(F("V"));
     discovery->finalize();
     vector.emplace_back(discovery);
 
     discovery = new MQTTAutoDiscovery();
-    discovery->create(this, 3, format);
+    discovery->create(this, F("frequency"), format);
     discovery->addStateTopic(_getMetricsTopics(3));
     discovery->addUnitOfMeasurement(F("Hz"));
     discovery->finalize();
@@ -255,6 +255,29 @@ void Driver_DimmerModule::setChannel(uint8_t channel, int16_t level, float time)
     writeEEPROM();
     _channels[channel].publishState();
 }
+
+void Driver_DimmerModule::_onReceive(size_t length)
+{
+   if (_wire.peek() == DIMMER_FADING_COMPLETE) {
+        _wire.read();
+        length--;
+
+        dimmer_fading_complete_event_t event;
+        while(length >= sizeof(event)) {
+            length -= _wire.read(event);
+            if (event.channel < _channels.size()) {
+                if (_channels[event.channel].getLevel() != event.level) {  // update level if out of sync
+                    _channels[event.channel].setLevel(event.level);
+                    _channels[event.channel].publishState();
+                }
+            }
+        }
+    }
+    else {
+        Dimmer_Base::_onReceive(length);
+    }
+}
+
 
 // buttons
 #if IOT_DIMMER_MODULE_HAS_BUTTONS

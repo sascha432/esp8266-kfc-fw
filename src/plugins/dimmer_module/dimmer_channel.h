@@ -26,6 +26,10 @@ class Driver_DimmerModule;
 class DimmerChannel : public MQTTComponent
 {
 public:
+    static constexpr int16_t MAX_LEVEL = IOT_DIMMER_MODULE_MAX_BRIGHTNESS;
+    static constexpr int16_t MIN_LEVEL = MAX_LEVEL / 100;
+    static constexpr int16_t DEFAULT_LEVEL = MAX_LEVEL / 2;
+public:
     DimmerChannel();
 
     void setup(Driver_DimmerModule *dimmer, uint8_t channel);
@@ -39,20 +43,10 @@ public:
     bool off();
     void publishState(MQTTClient *client = nullptr);
 
-    inline bool getOnState() const {
-        return _data.state.value;
-    }
-    inline int16_t getLevel() const {
-        return _data.brightness.value;
-    }
-    void setLevel(int16_t level) {
-        _data.brightness.value = level;
-        _data.state.value = (level != 0);
-    }
-
-    inline void setStoredBrightness(uint16_t storedBrightness) {
-        _storedBrightness = storedBrightness;
-    }
+    bool getOnState() const;
+    int16_t getLevel() const;
+    void setLevel(int16_t level);
+    void setStoredBrightness(uint16_t store);
 
 private:
     void _createTopics();

@@ -38,7 +38,7 @@ void DimmerChannel::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTT
     discovery->addPayloadOff(0);
     discovery->addBrightnessStateTopic(_data.brightness.state);
     discovery->addBrightnessCommandTopic(_data.brightness.set);
-    discovery->addBrightnessScale(IOT_DIMMER_MODULE_MAX_BRIGHTNESS);
+    discovery->addBrightnessScale(MAX_LEVEL);
     discovery->finalize();
     vector.emplace_back(discovery);
 }
@@ -51,15 +51,15 @@ uint8_t DimmerChannel::getAutoDiscoveryCount() const
 void DimmerChannel::_createTopics()
 {
 #if IOT_DIMMER_MODULE_CHANNELS > 1
-    String name = PrintString(FSPGM(channel__u), _channel);
+    String value = PrintString(FSPGM(channel__u), _channel);
 #else
-    String name;
+    uint8_t value = MQTTClient::NO_ENUM;
 #endif
 
-    _data.state.set = MQTTClient::formatTopic(name, F("/set"));
-    _data.state.state = MQTTClient::formatTopic(name, F("/state"));
-    _data.brightness.set = MQTTClient::formatTopic(name, F("/brightness/set"));
-    _data.brightness.state = MQTTClient::formatTopic(name, F("/brightness/state"));
+    _data.state.set = MQTTClient::formatTopic(value, F("/set"));
+    _data.state.state = MQTTClient::formatTopic(value, F("/state"));
+    _data.brightness.set = MQTTClient::formatTopic(value, F("/brightness/set"));
+    _data.brightness.state = MQTTClient::formatTopic(value, F("/brightness/state"));
 }
 
 void DimmerChannel::onConnect(MQTTClient *client)
@@ -103,7 +103,8 @@ void DimmerChannel::onMessage(MQTTClient *client, char *topic, char *payload, si
         if (value > 0) {
             fadetime = _data.state.value ? _dimmer->getFadeTime() : _dimmer->getOnOffFadeTime();
             _data.state.value = true;
-            _data.brightness.value = std::min(value, IOT_DIMMER_MODULE_MAX_BRIGHTNESS);
+            _data.brightness.value = std::min(value, (int)MAX_LEVEL);
+            setStoredBrightness(_data.brightness.value);
         } else {
             fadetime = _data.state.value ? _dimmer->getOnOffFadeTime() : _dimmer->getFadeTime();
             _data.state.value = false;
@@ -118,8 +119,8 @@ bool DimmerChannel::on()
 {
     if (!_data.state.value) {
         _data.brightness.value = _storedBrightness;
-        if (_data.brightness.value == 0) {
-            _data.brightness.value = IOT_DIMMER_MODULE_MAX_BRIGHTNESS / 2; // set to 50%
+        if (_data.brightness.value <= MIN_LEVEL) {
+            _data.brightness.value = DEFAULT_LEVEL;
         }
         _data.state.value = true;
         _dimmer->_fade(_channel, _data.brightness.value, _dimmer->getOnOffFadeTime());
@@ -134,7 +135,7 @@ bool DimmerChannel::on()
 bool DimmerChannel::off()
 {
     if (_data.state.value) {
-        _storedBrightness = _data.brightness.value;
+        setStoredBrightness(_data.brightness.value);
         _data.brightness.value = 0;
         _data.state.value = false;
         _dimmer->_fade(_channel, 0, _dimmer->getOnOffFadeTime());
@@ -168,4 +169,28 @@ void DimmerChannel::publishState(MQTTClient *client)
     obj.add(JJ(value), _data.brightness.value);
     obj.add(JJ(state), _data.state.value);
     WsWebUISocket::broadcast(WsWebUISocket::getSender(), json);
+}
+
+bool DimmerChannel::getOnState() const
+{
+    return _data.state.value;
+}
+
+int16_t DimmerChannel::getLevel() const
+{
+    return _data.brightness.value;
+}
+
+void DimmerChannel::setLevel(int16_t level)
+{
+    _data.brightness.value = level;
+    _data.state.value = (level != 0);
+    setStoredBrightness(level);
+}
+
+void DimmerChannel::setStoredBrightness(uint16_t store)
+{
+    if (store > MIN_LEVEL) {
+        _storedBrightness = store;
+    }
 }

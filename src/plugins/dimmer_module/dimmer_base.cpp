@@ -57,8 +57,8 @@ void Dimmer_Base::_begin()
 #endif
     readConfig();
     auto dimmer = config._H_GET(Config().dimmer);
-    _fadeTime = dimmer.fade_time;
-    _onOffFadeTime = dimmer.on_fade_time;
+    _fadeTime = dimmer.cfg.fade_in_time;
+    _onOffFadeTime = dimmer.cfg.fade_in_time;
     _vcc = 0;
     _frequency = NAN;
     _internalTemperature = NAN;
@@ -159,9 +159,6 @@ void Dimmer_Base::_onReceive(size_t length)
         Logger_error(message);
         WebUIAlerts_add(message, AlertMessage::TypeEnum_t::DANGER);
     }
-    // else if (type == DIMMER_FADING_COMPLETE) {
-
-    // }
 }
 
 #else
@@ -263,6 +260,7 @@ void Dimmer_Base::_fetchMetrics()
 void Dimmer_Base::readConfig()
 {
     auto &dimmer = config._H_W_GET(Config().dimmer);
+    dimmer.config_valid = false;
 
     if (_wire.lock()) {
         register_mem_cfg_t cfg;
@@ -272,22 +270,14 @@ void Dimmer_Base::readConfig()
         _wire.write(DIMMER_REGISTER_CONFIG_OFS);
         if (
             (_wire.endTransmission() == 0) &&
-            (_wire.requestFrom(DIMMER_I2C_ADDRESS, DIMMER_REGISTER_CONFIG_SZ) == DIMMER_REGISTER_CONFIG_SZ) &&
-            (_wire.read(cfg) == DIMMER_REGISTER_CONFIG_SZ)
+            (_wire.requestFrom(DIMMER_I2C_ADDRESS, DIMMER_REGISTER_CONFIG_SZ) == sizeof(cfg)) &&
+            (_wire.read(cfg) == sizeof(cfg))
         ) {
-            dimmer.restore_level = cfg.bits.restore_level;
-            dimmer.max_temperature = cfg.max_temp;
-            dimmer.on_fade_time = cfg.fade_in_time;
-            // cfg.temp_check_interval;
-            dimmer.linear_correction = cfg.linear_correction_factor;
-            dimmer.metrics_int = cfg.report_metrics_max_interval;
-            // cfg.zero_crossing_delay_ticks;
-            // cfg.minimum_on_time_ticks;
-            // cfg.adjust_halfwave_time_ticks;
-            // cfg.internal_1_1v_ref;
-            // cfg.int_temp_offset;
-            // cfg.ntc_temp_offset;
-            dimmer.metrics_int = cfg.report_metrics_max_interval;
+            dimmer.config_valid = true;
+            dimmer.cfg = cfg;
+        }
+        else {
+            dimmer.cfg = {};
         }
     }
     _wire.unlock();
@@ -297,38 +287,16 @@ void Dimmer_Base::writeConfig()
 {
     auto dimmer = config._H_GET(Config().dimmer);
 
+    if (!dimmer.config_valid) { // readConfig() was not successful
+        return;
+    }
+
     if (_wire.lock()) {
-        register_mem_cfg_t cfg;
-
         _wire.beginTransmission(DIMMER_I2C_ADDRESS);
-        _wire.write(DIMMER_REGISTER_READ_LENGTH);
-        _wire.write(DIMMER_REGISTER_CONFIG_SZ);
         _wire.write(DIMMER_REGISTER_CONFIG_OFS);
-        if (
-            (_wire.endTransmission() == 0) &&
-            (_wire.requestFrom(DIMMER_I2C_ADDRESS, DIMMER_REGISTER_CONFIG_SZ) == DIMMER_REGISTER_CONFIG_SZ) &&
-            (_wire.read(cfg) == sizeof(cfg))
-        ) {
-
-            cfg.bits.restore_level = dimmer.restore_level;
-            cfg.max_temp = dimmer.max_temperature;
-            cfg.fade_in_time = dimmer.on_fade_time;
-            cfg.temp_check_interval = 2;
-            cfg.linear_correction_factor = dimmer.linear_correction;
-            // cfg.zero_crossing_delay_ticks;
-            // cfg.minimum_on_time_ticks;
-            // cfg.adjust_halfwave_time_ticks;
-            // cfg.internal_1_1v_ref;
-            // cfg.int_temp_offset;
-            // cfg.ntc_temp_offset;
-            cfg.report_metrics_max_interval = dimmer.metrics_int;
-
-            _wire.beginTransmission(DIMMER_I2C_ADDRESS);
-            _wire.write(DIMMER_REGISTER_CONFIG_OFS);
-            _wire.write(cfg);
-            if (_wire.endTransmission() == 0) {
-                writeEEPROM(true);
-            }
+        _wire.write(dimmer.cfg);
+        if (_wire.endTransmission() == 0) {
+            writeEEPROM(true);
         }
     }
     _wire.unlock();
@@ -488,7 +456,7 @@ void Dimmer_Base::writeEEPROM(bool noLocking)
 
 String Dimmer_Base::_getMetricsTopics(uint8_t num) const
 {
-    String topic = MQTTClient::formatTopic(-1, F("/metrics/"));
+    String topic = MQTTClient::formatTopic(MQTTClient::NO_ENUM, F("/metrics/"));
     switch(num) {
         case 0:
             return topic + F("int_temp");

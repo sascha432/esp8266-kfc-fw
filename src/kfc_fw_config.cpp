@@ -647,9 +647,9 @@ void KFCFWConfiguration::restoreFactorySettings()
 #endif
 #if IOT_DIMMER_MODULE || IOT_ATOMIC_SUN_V2
     DimmerModule dimmer;
-#if IOT_ATOMIC_SUN_V2
-    dimmer.fade_time = 5.0;
+    dimmer.config_valid = false;
     dimmer.on_fade_time = 7.5;
+#if IOT_ATOMIC_SUN_V2
 #ifdef IOT_ATOMIC_SUN_CHANNEL_WW1
     dimmer.channel_mapping[0] = IOT_ATOMIC_SUN_CHANNEL_WW1;
     dimmer.channel_mapping[1] = IOT_ATOMIC_SUN_CHANNEL_WW2;
@@ -661,15 +661,7 @@ void KFCFWConfiguration::restoreFactorySettings()
     dimmer.channel_mapping[2] = 2;
     dimmer.channel_mapping[3] = 3;
 #endif
-#else
-    dimmer.fade_time = 3.0;
-    dimmer.on_fade_time = 4.5;
 #endif
-    dimmer.linear_correction = 1.0;
-    dimmer.max_temperature = 85;
-    dimmer.metrics_int = 10;
-    dimmer.restore_level = true;
-    dimmer.report_temp = true;
     _H_SET(Config().dimmer, dimmer);
 #if IOT_DIMMER_MODULE_HAS_BUTTONS
     DimmerModuleButtons dimmer_buttons;

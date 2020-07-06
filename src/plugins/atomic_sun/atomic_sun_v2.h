@@ -28,10 +28,10 @@
 
 //  channel order
 #ifndef IOT_ATOMIC_SUN_CHANNEL_WW1
-#define IOT_ATOMIC_SUN_CHANNEL_WW1          1
-#define IOT_ATOMIC_SUN_CHANNEL_WW2          3
+#define IOT_ATOMIC_SUN_CHANNEL_WW1          0
+#define IOT_ATOMIC_SUN_CHANNEL_WW2          1
 #define IOT_ATOMIC_SUN_CHANNEL_CW1          2
-#define IOT_ATOMIC_SUN_CHANNEL_CW2          0
+#define IOT_ATOMIC_SUN_CHANNEL_CW2          3
 #endif
 
 #if !defined(IOT_SENSOR_HAVE_HLW8012) || IOT_SENSOR_HAVE_HLW8012 == 0
@@ -60,6 +60,18 @@ public:
         auto ptr = data();
         for (uint8_t i = 0; i < size(); i++) {
             sum += *ptr++;
+        }
+        return sum;
+    }
+
+    int32_t getSum(int16_t minLevel) const {
+        int32_t sum = 0;
+        auto ptr = data();
+        for (uint8_t i = 0; i < size(); i++) {
+            if (*ptr > minLevel) {
+                sum += *ptr;
+            }
+            ptr++;
         }
         return sum;
     }
@@ -167,17 +179,15 @@ public:
     int8_t channel_cw1;
     int8_t channel_cw2;
 
-    // // channels are displayed in this order in the web ui
-    // // warm white
-    // static const int8_t CHANNEL_WW1 = IOT_ATOMIC_SUN_CHANNEL_WW1;
-    // static const int8_t CHANNEL_WW2 = IOT_ATOMIC_SUN_CHANNEL_WW2;
-    // // cold white
-    // static const int8_t CHANNEL_CW1 = IOT_ATOMIC_SUN_CHANNEL_CW1;
-    // static const int8_t CHANNEL_CW2 = IOT_ATOMIC_SUN_CHANNEL_CW2;
+    static constexpr uint16_t COLOR_MIN = 15300;
+    static constexpr uint16_t COLOR_MAX = 50000;
+    static constexpr uint16_t COLOR_RANGE = (COLOR_MAX - COLOR_MIN);
 
-    static const uint16_t COLOR_MIN = 15300;
-    static const uint16_t COLOR_MAX = 50000;
-    static const uint16_t COLOR_RANGE = (COLOR_MAX - COLOR_MIN);
+    static constexpr uint8_t MAX_CHANNELS = 4;
+    static constexpr int16_t MAX_LEVEL = IOT_ATOMIC_SUN_MAX_BRIGHTNESS;
+    static constexpr int16_t MIN_LEVEL = (MAX_LEVEL / 100);    // below is treat as off
+    static constexpr int16_t DEFAULT_LEVEL = MAX_LEVEL / 3;     // set this level if a channel is turned on without a brightness value
+    static constexpr int32_t MAX_LEVEL_ALL_CHANNELS = MAX_LEVEL * MAX_CHANNELS;
 };
 
 class AtomicSunPlugin : public Driver_4ChDimmer {

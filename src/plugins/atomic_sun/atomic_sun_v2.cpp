@@ -16,7 +16,7 @@
 
 #include "../dimmer_module/firmware_protocol.h"
 
-#ifdef DEBUG_4CH_DIMMER
+#if DEBUG_4CH_DIMMER
 #include <debug_helper_enable.h>
 #else
 #include <debug_helper_disable.h>
@@ -44,7 +44,6 @@ void Driver_4ChDimmer::readConfig()
     channel_cw1 = dimmer.channel_mapping[2];
     channel_cw2 = dimmer.channel_mapping[3];
 }
-
 
 void Driver_4ChDimmer::_begin()
 {
@@ -156,23 +155,11 @@ void Driver_4ChDimmer::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, M
     discovery->finalize();
     vector.emplace_back(discovery);
 
-#if IOT_ATOMIC_SUN_CALC_POWER
-    discovery = component.createAutoDiscovery(F("power"), format);
-    discovery->addStateTopic(_getMetricsTopics(4));
-    discovery->addUnitOfMeasurement('W');
-    discovery->finalize();
-    vector.emplace_back(discovery);
-
-#endif
 }
 
 uint8_t Driver_4ChDimmer::getAutoDiscoveryCount() const
 {
-#if IOT_ATOMIC_SUN_CALC_POWER
-    return MAX_CHANNELS + 7;
-#else
     return MAX_CHANNELS + 6;
-#endif
 }
 
 void Driver_4ChDimmer::_createTopics()
@@ -394,22 +381,12 @@ void Driver_4ChDimmer::getValues(JsonArray &array)
     obj = &array.addObject(2);
     obj->add(JJ(id), F("dimmer_lock"));
     obj->add(JJ(value), (int)_data.lockChannels.value);
-
-#if IOT_ATOMIC_SUN_CALC_POWER
-    obj = &array.addObject(2);
-    obj->add(JJ(id), F("dimmer_power"));
-    obj->add(JJ(value), JsonNumber(_calcTotalPower(), 1));
-#endif
 }
 
 
 void Driver_4ChDimmer::publishState(MQTTClient *client)
 {
     _debug_println();
-
-#if IOT_ATOMIC_SUN_CALC_POWER
-    auto power = _calcTotalPower();
-#endif
 
     if (!client) {
         client = MQTTClient::getClient();
@@ -423,9 +400,6 @@ void Driver_4ChDimmer::publishState(MQTTClient *client)
             client->publish(_data.channels[i].brightnessState, _qos, 1, String(_channels[i]));
         }
         client->publish(_data.lockChannels.state, _qos, 1, String(_data.lockChannels.value));
-#if IOT_ATOMIC_SUN_CALC_POWER
-        client->publish(_getMetricsTopics(4), _qos, 1, String(power, 1));
-#endif
     }
 
     JsonUnnamedObject json(2);
@@ -452,12 +426,6 @@ void Driver_4ChDimmer::publishState(MQTTClient *client)
         obj->add(JJ(value), _channels[i]);
         // obj->add(JJ(state), _channels[i] > 0);
     }
-
-#if IOT_ATOMIC_SUN_CALC_POWER
-    obj = &events.addObject(2);
-    obj->add(JJ(id), F("dimmer_power"));
-    obj->add(JJ(value), JsonNumber(power, 1));
-#endif
 
     auto buffer = std::shared_ptr<StreamString>(new StreamString());
     json.printTo(*buffer);
@@ -603,32 +571,6 @@ void Driver_4ChDimmer::_calcRatios()
     _debug_printf_P(PSTR("ratio=%f ratio=%f\n"), _ratio[0], _ratio[1]);
 }
 
-#if IOT_ATOMIC_SUN_CALC_POWER
-float Driver_4ChDimmer::_calcPower(uint8_t channel)
-{
-    // this calculation is based on measurements of the bulbs being used
-    static float adjust[4] PROGMEM = { 0.9945, 0.9671, .9863, 0.9041 };
-    auto value = _channels[channel];
-    if (value > 5400) {
-        return 36.5 * adjust[channel];
-    }
-    else if (value <= 1000) {
-        return 0;
-    }
-    else if (value <= 2300) {
-        return 0.1;
-    }
-    else {
-        return (41.2 + (-41.2 / (1 + pow((value - 2300.9) / 1240.9, 2.2)))) * adjust[channel];
-    }
-}
-
-float Driver_4ChDimmer::_calcTotalPower()
-{
-    return _calcPower(0) + _calcPower(1) + _calcPower(2) + _calcPower(3) + 0.6;
-}
-#endif
-
 int16_t Driver_4ChDimmer::getChannel(uint8_t channel) const
 {
     return _channels[channel];
@@ -716,8 +658,9 @@ void AtomicSunPlugin::reconfigure(PGM_P source)
 {
     if (!source) {
         writeConfig();
-        _end();
-        _begin();
+        auto dimmer = config._H_GET(Config().dimmer);
+        _fadeTime = dimmer.fade_time;
+        _onOffFadeTime = dimmer.on_off_fade_time;
     }
     else if (!strcmp_P_P(source, SPGM(http))) {
         setupWebServer();
@@ -751,9 +694,6 @@ void AtomicSunPlugin::createWebUI(WebUI &webUI)
     row->addBadgeSensor(F("dimmer_frequency"), F("Frequency"), F("Hz"));
     row->addBadgeSensor(F("dimmer_int_temp"), F("ATmega"), F("\u00b0C"));
     row->addBadgeSensor(F("dimmer_ntc_temp"), F("NTC"), F("\u00b0C"));
-#if IOT_ATOMIC_SUN_CALC_POWER
-    row->addBadgeSensor(F("dimmer_power"), F("Power"), 'W');
-#endif
     row->addSwitch(F("dimmer_lock"), F("Lock Channels"), false, true);
 
     row->addGroup(F("Channels"), false);

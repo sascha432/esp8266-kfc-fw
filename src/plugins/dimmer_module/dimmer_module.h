@@ -25,10 +25,6 @@
 #include "dimmer_base.h"
 #include "pin_monitor.h"
 
-#ifndef DEBUG_IOT_DIMMER_MODULE
-#define DEBUG_IOT_DIMMER_MODULE             0
-#endif
-
 // number of channels
 #ifndef IOT_DIMMER_MODULE_CHANNELS
 #define IOT_DIMMER_MODULE_CHANNELS          1
@@ -131,6 +127,8 @@ public:
 protected:
     void _begin();
     void _end();
+    void _beginButtons();
+    void _endButtons();
     void _printStatus(Print &out);
 
 private:

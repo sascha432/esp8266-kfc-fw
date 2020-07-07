@@ -87,3 +87,4 @@ typedef struct __attribute__packed__ {
     uint8_t channel;
     uint16_t level;
 } dimmer_fading_complete_event_t;
+

@@ -35,11 +35,24 @@ Dimmer_Base::Dimmer_Base() : _version(DIMMER_DISABLED),
 
 void Dimmer_Base::_begin()
 {
-    _version = 0;
     _debug_println();
+    _version = 0;
+    _vcc = 0;
+    _frequency = NAN;
+    _internalTemperature = NAN;
+    _ntcTemperature = NAN;
+
 #if IOT_DIMMER_MODULE_INTERFACE_UART
     #if SERIAL_HANDLER
         _wire.onReadSerial(SerialHandler::serialLoop);
+        SerialHandler::getInstance().addHandler(onData, SerialHandler::RECEIVE);
+    #endif
+    #if AT_MODE_SUPPORTED
+        // disable_at_mode(Serial);
+        #if IOT_DIMMER_MODULE_BAUD_RATE != KFC_SERIAL_RATE
+            Serial.flush();
+            Serial.begin(IOT_DIMMER_MODULE_BAUD_RATE);
+        #endif
     #endif
     _wire.begin(DIMMER_I2C_ADDRESS + 1);
     _wire.onReceive(Dimmer_Base::onReceive);
@@ -54,30 +67,15 @@ void Dimmer_Base::_begin()
         }
     });
 
-#endif
-    readConfig();
-    auto dimmer = config._H_GET(Config().dimmer);
-    _fadeTime = dimmer.cfg.fade_in_time;
-    _onOffFadeTime = dimmer.cfg.fade_in_time;
-    _vcc = 0;
-    _frequency = NAN;
-    _internalTemperature = NAN;
-    _ntcTemperature = NAN;
-#if IOT_DIMMER_MODULE_INTERFACE_UART
-    #if AT_MODE_SUPPORTED
-        // disable_at_mode(Serial);
-        #if IOT_DIMMER_MODULE_BAUD_RATE != KFC_SERIAL_RATE
-            Serial.flush();
-            Serial.begin(IOT_DIMMER_MODULE_BAUD_RATE);
-        #endif
-    #endif
-    #if SERIAL_HANDLER
-        SerialHandler::getInstance().addHandler(onData, SerialHandler::RECEIVE);
-    #endif
 #else
     // ESP I2C does not support slave mode. Use timer to poll metrics instead
     _timer.addTimer(2000, true, Dimmer_Base::fetchMetrics);
 #endif
+
+    readConfig();
+    auto dimmer = config._H_GET(Config().dimmer);
+    _fadeTime = dimmer.fade_time;
+    _onOffFadeTime = dimmer.on_off_fade_time;
 
     if (_wire.lock()) {
         uint16_t version;
@@ -106,10 +104,6 @@ void Dimmer_Base::_end()
 
 #if IOT_DIMMER_MODULE_INTERFACE_UART
     _wire.onReceive(nullptr);
-#else
-    _timer.remove();
-#endif
-#if IOT_DIMMER_MODULE_INTERFACE_UART
     #if SERIAL_HANDLER
         SerialHandler::getInstance().removeHandler(onData);
     #endif
@@ -120,6 +114,8 @@ void Dimmer_Base::_end()
     #if AT_MODE_SUPPORTED
         // enable_at_mode(Serial);
     #endif
+#else
+    _timer.remove();
 #endif
 }
 
@@ -147,9 +143,9 @@ void Dimmer_Base::_onReceive(size_t length)
 
     if (type == DIMMER_METRICS_REPORT && length >= sizeof(dimmer_metrics_t) + 1) {
         dimmer_metrics_t metrics;
-        // _wire.read(metrics);
-        metrics.temp_check_value = _wire.read();
-        _wire.readBytes(reinterpret_cast<uint8_t *>(&metrics.vcc), sizeof(metrics) - offsetof(dimmer_metrics_t, vcc));
+         _wire.read(metrics);
+        // metrics.temp_check_value = _wire.read();
+        // _wire.readBytes(reinterpret_cast<uint8_t *>(&metrics.vcc), sizeof(metrics) - offsetof(dimmer_metrics_t, vcc));
         _updateMetrics(metrics);
     }
     else if (type == DIMMER_TEMPERATURE_ALERT && length == 3) {
@@ -262,25 +258,37 @@ void Dimmer_Base::readConfig()
     auto &dimmer = config._H_W_GET(Config().dimmer);
     dimmer.config_valid = false;
 
-    if (_wire.lock()) {
-        register_mem_cfg_t cfg;
-        _wire.beginTransmission(DIMMER_I2C_ADDRESS);
-        _wire.write(DIMMER_REGISTER_READ_LENGTH);
-        _wire.write(DIMMER_REGISTER_CONFIG_SZ);
-        _wire.write(DIMMER_REGISTER_CONFIG_OFS);
-        if (
-            (_wire.endTransmission() == 0) &&
-            (_wire.requestFrom(DIMMER_I2C_ADDRESS, DIMMER_REGISTER_CONFIG_SZ) == sizeof(cfg)) &&
-            (_wire.read(cfg) == sizeof(cfg))
-        ) {
-            dimmer.config_valid = true;
-            dimmer.cfg = cfg;
+    for(uint8_t i = 0; i < 3; i++) {
+
+        _debug_printf_P(PSTR("attempt=%u\n"), i);
+
+        if (_wire.lock()) {
+            register_mem_cfg_t cfg;
+            _wire.beginTransmission(DIMMER_I2C_ADDRESS);
+            _wire.write(DIMMER_REGISTER_READ_LENGTH);
+            _wire.write(DIMMER_REGISTER_CONFIG_SZ);
+            _wire.write(DIMMER_REGISTER_CONFIG_OFS);
+            if (
+                (_wire.endTransmission() == 0) &&
+                (_wire.requestFrom(DIMMER_I2C_ADDRESS, DIMMER_REGISTER_CONFIG_SZ) == sizeof(cfg)) &&
+                (_wire.read(cfg) == sizeof(cfg))
+            ) {
+                dimmer.config_valid = true;
+                dimmer.cfg = cfg;
+                _wire.unlock();
+                _debug_println(F("read success"));
+                return;
+            }
+            else {
+                dimmer.cfg = {};
+            }
         }
-        else {
-            dimmer.cfg = {};
-        }
+        _wire.unlock();
+
+        delay(50);
     }
-    _wire.unlock();
+    _debug_println(F("read failed"));
+    WebUIAlerts_add(F("Reading firmware configuration failed"), AlertMessage::TypeEnum_t::DANGER, AlertMessage::ExpiresEnum_t::REBOOT);
 }
 
 void Dimmer_Base::writeConfig()
@@ -288,18 +296,34 @@ void Dimmer_Base::writeConfig()
     auto dimmer = config._H_GET(Config().dimmer);
 
     if (!dimmer.config_valid) { // readConfig() was not successful
+        _debug_println(F("invalid config"));
+        WebUIAlerts_add(F("Cannot write firmware configuration"), AlertMessage::TypeEnum_t::DANGER, AlertMessage::ExpiresEnum_t::REBOOT);
         return;
     }
 
-    if (_wire.lock()) {
-        _wire.beginTransmission(DIMMER_I2C_ADDRESS);
-        _wire.write(DIMMER_REGISTER_CONFIG_OFS);
-        _wire.write(dimmer.cfg);
-        if (_wire.endTransmission() == 0) {
-            writeEEPROM(true);
+    dimmer.cfg.fade_in_time = dimmer.fade_time;
+
+    for(uint8_t i = 0; i < 3; i++) {
+
+        _debug_printf_P(PSTR("attempt=%u\n"), i);
+
+        if (_wire.lock()) {
+            _wire.beginTransmission(DIMMER_I2C_ADDRESS);
+            _wire.write(DIMMER_REGISTER_CONFIG_OFS);
+            _wire.write(dimmer.cfg);
+            if (_wire.endTransmission() == 0) {
+                writeEEPROM(true);
+                _wire.unlock();
+                _debug_println(F("write success"));
+                return;
+            }
         }
+        _wire.unlock();
+
+        delay(50);
     }
-    _wire.unlock();
+    _debug_println(F("write failed"));
+    WebUIAlerts_add(F("Writing firmware configuration failed"), AlertMessage::TypeEnum_t::DANGER, AlertMessage::ExpiresEnum_t::REBOOT);
 }
 
 void Dimmer_Base::_printStatus(Print &output)
@@ -409,11 +433,7 @@ void Dimmer_Base::_fade(uint8_t channel, int16_t toLevel, float fadeTime)
 
     if (_wire.lock()) {
         _wire.beginTransmission(DIMMER_I2C_ADDRESS);
-        _wire.write(DIMMER_REGISTER_CHANNEL);
-        _wire.write(channel);
-        _wire.write<uint16_t>(toLevel);
-        _wire.write(fadeTime);
-        _wire.write(DIMMER_COMMAND_FADE);
+        _wire.write(DimmerFadeCommand(channel, DIMMER_CURRENT_LEVEL, toLevel, fadeTime).data());
         _wire.endTransmission();
         _wire.unlock();
     }

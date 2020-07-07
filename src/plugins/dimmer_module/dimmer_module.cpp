@@ -54,9 +54,31 @@ void Driver_DimmerModule::_begin()
         mqttClient->registerComponent(this);
     }
 
-#if IOT_DIMMER_MODULE_HAS_BUTTONS
-    //memset(&_turnOffTimer, 0, sizeof(_turnOffTimer));
+    _beginButtons();
+    _getChannels();
+}
 
+void Driver_DimmerModule::_end()
+{
+    _debug_println();
+
+    _endButtons();
+
+    _debug_println(F("removing mqtt client"));
+    auto mqttClient = MQTTClient::getClient();
+    if (mqttClient) {
+        mqttClient->unregisterComponent(this);
+        for(uint8_t i = 0; i < _channels.size(); i++) {
+            mqttClient->unregisterComponent(&_channels[i]);
+        }
+    }
+
+    Dimmer_Base::_end();
+}
+
+void Driver_DimmerModule::_beginButtons()
+{
+#if IOT_DIMMER_MODULE_HAS_BUTTONS
     PinMonitor &monitor = *PinMonitor::createInstance();
     auto config = getButtonConfig();
 
@@ -84,19 +106,14 @@ void Driver_DimmerModule::_begin()
         }
     }
 #endif
-
-    _getChannels();
 }
 
-void Driver_DimmerModule::_end()
+void Driver_DimmerModule::_endButtons()
 {
-    _debug_println();
-
 #if IOT_DIMMER_MODULE_HAS_BUTTONS
     _debug_println(F("removing timers"));
     for(uint8_t i = 0; i < _channels.size(); i++) {
         _turnOffTimer[i].remove();
-        // Scheduler.removeTimer(_turnOffTimer[i]);
     }
 
     _debug_println(F("removing pin monitor"));
@@ -111,17 +128,6 @@ void Driver_DimmerModule::_end()
     }
     LoopFunctions::remove(Driver_DimmerModule::loop);
 #endif
-
-    _debug_println(F("removing mqtt client"));
-    auto mqttClient = MQTTClient::getClient();
-    if (mqttClient) {
-        mqttClient->unregisterComponent(this);
-        for(uint8_t i = 0; i < _channels.size(); i++) {
-            mqttClient->unregisterComponent(&_channels[i]);
-        }
-    }
-
-    Dimmer_Base::_end();
 }
 
 void Driver_DimmerModule::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTComponent::MQTTAutoDiscoveryVector &vector)
@@ -467,8 +473,12 @@ void DimmerModulePlugin::reconfigure(PGM_P source)
 {
     if (source == nullptr) {
         writeConfig();
-        _end();
-        _begin();
+        auto dimmer = config._H_GET(Config().dimmer);
+        _fadeTime = dimmer.fade_time;
+        _onOffFadeTime = dimmer.on_off_fade_time;
+
+        _endButtons();
+        _beginButtons();
     }
     else if (!strcmp_P_P(source, SPGM(http))) {
         setupWebServer();

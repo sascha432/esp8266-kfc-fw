@@ -27,9 +27,9 @@ void DimmerModuleForm::createConfigureForm(AsyncWebServerRequest *request, Form 
 
     form.setFormUI(F("Dimmer Configuration"));
 
-    form.add<float>(F("fade_time"), _H_STRUCT_VALUE(Config().dimmer, cfg.fade_in_time))->setFormUI((new FormUI(FormUI::TEXT, F("Fade In/Out Time")))->setPlaceholder(String(5.0, 1))->addConditionalAttribute(isInvalid, FSPGM(disabled), FSPGM(disabled))->setSuffix(FSPGM(seconds)));
+    form.add<float>(F("fade_time"), _H_STRUCT_VALUE(Config().dimmer, fade_time))->setFormUI((new FormUI(FormUI::TEXT, F("Fade In/Out Time")))->setPlaceholder(String(5.0, 1))->setSuffix(FSPGM(seconds)));
 
-    form.add<float>(F("on_fade_time"), _H_STRUCT_VALUE(Config().dimmer, on_fade_time))->setFormUI((new FormUI(FormUI::TEXT, F("Turn On/Off Fade Time")))->setPlaceholder(String(7.5, 1))->setSuffix(FSPGM(seconds)));
+    form.add<float>(F("on_fade_time"), _H_STRUCT_VALUE(Config().dimmer, on_off_fade_time))->setFormUI((new FormUI(FormUI::TEXT, F("Turn On/Off Fade Time")))->setPlaceholder(String(7.5, 1))->setSuffix(FSPGM(seconds)));
 
 #if DIMMER_FIRMWARE_VERSION < 0x030000
     form.add<float>(F("linear_correction"), _H_STRUCT_VALUE(Config().dimmer, cfg.linear_correction_factor))->setFormUI((new FormUI(FormUI::TEXT, F("Linear Correction Factor")))->addConditionalAttribute(isInvalid, FSPGM(disabled), FSPGM(disabled))->setPlaceholder(String(1.0, 1)));
@@ -98,16 +98,16 @@ void DimmerModuleForm::createConfigureForm(AsyncWebServerRequest *request, Form 
     form.add<uint8_t>(F("shortpress_step"), _H_STRUCT_VALUE(Config().dimmer_buttons, shortpress_step))->setFormUI((new FormUI(FormUI::TEXT, F("Brightness Steps")))->setPlaceholder(String(5))->setSuffix(F("&#37;")));
     form.addValidator(new FormRangeValidator(F("Invalid level"), 1, 100));
 
-    form.add<uint16_t>(F("shortpress_no_repeat_time"), _H_STRUCT_VALUE(Config().dimmer_buttons, shortpress_no_repeat_time))->setFormUI((new FormUI(FormUI::TEXT, F("Short Press Down = Off/No Repeat Time")))->setPlaceholder(String(800))->setSuffix(FSPGM(milliseconds)));0
+    form.add<uint16_t>(F("shortpress_no_repeat_time"), _H_STRUCT_VALUE(Config().dimmer_buttons, shortpress_no_repeat_time))->setFormUI((new FormUI(FormUI::TEXT, F("Short Press Down = Off/No Repeat Time")))->setPlaceholder(String(800))->setSuffix(FSPGM(milliseconds)));
     form.addValidator(new FormRangeValidator(F("Invalid time"), 250, 2500));
 
     form.add<uint8_t>(F("min_brightness"), _H_STRUCT_VALUE(Config().dimmer_buttons, min_brightness))->setFormUI((new FormUI(FormUI::TEXT, F("Min. Brightness")))->setPlaceholder(String(15))->setSuffix(F("&#37;")));
     form.addValidator(new FormRangeValidator(F("Invalid brightness"), 0, 100));
 
-    form.add<uint8_t>(F("longpress_max_brightness"), _H_STRUCT_VALUE(Config().dimmer_buttons, longpress_max_brightness))->setFormUI((new FormUI(FormUI::TEXT, F("Long Press Up/Max. Brightness")))->setPlaceholder(String(100))->setSuffix(percent));
+    form.add<uint8_t>(F("longpress_max_brightness"), _H_STRUCT_VALUE(Config().dimmer_buttons, longpress_max_brightness))->setFormUI((new FormUI(FormUI::TEXT, F("Long Press Up/Max. Brightness")))->setPlaceholder(String(100))->setSuffix(F("&#37;")));
     form.addValidator(new FormRangeValidator(F("Invalid brightness"), 0, 100));
 
-    form.add<uint8_t>(F("longpress_min_brightness"), _H_STRUCT_VALUE(Config().dimmer_buttons, longpress_min_brightness))->setFormUI((new FormUI(FormUI::TEXT, F("Long Press Down/Min. Brightness")))->setPlaceholder(String(33))->setSuffix(percent));
+    form.add<uint8_t>(F("longpress_min_brightness"), _H_STRUCT_VALUE(Config().dimmer_buttons, longpress_min_brightness))->setFormUI((new FormUI(FormUI::TEXT, F("Long Press Down/Min. Brightness")))->setPlaceholder(String(33))->setSuffix(F("&#37;")));
     form.addValidator(new FormRangeValidator(F("Invalid brightness"), 0, 100));
 
     form.add<float>(F("shortpress_fadetime"), _H_STRUCT_VALUE(Config().dimmer_buttons, shortpress_fadetime))->setFormUI((new FormUI(FormUI::TEXT, F("Short Press Fade Time")))->setPlaceholder(String(1.0, 1))->setSuffix(FSPGM(seconds)));

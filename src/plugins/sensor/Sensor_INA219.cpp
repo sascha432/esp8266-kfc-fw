@@ -59,7 +59,6 @@ void Sensor_INA219::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTT
     discovery->finalize();
     vector.emplace_back(discovery);
 
-
     discovery = new MQTTAutoDiscovery();
     discovery->create(this, _getId(PEAK_CURRENT), format);
     discovery->addStateTopic(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(__s_), _getId(PEAK_CURRENT).c_str()));

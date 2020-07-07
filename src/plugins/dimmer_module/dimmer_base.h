@@ -21,6 +21,10 @@
 #error STK500V1_RESET_PIN not defined
 #endif
 
+#ifndef DEBUG_IOT_DIMMER_MODULE
+#define DEBUG_IOT_DIMMER_MODULE             0
+#endif
+
 #if IOT_SENSOR && (IOT_SENSOR_HAVE_HLW8012 || IOT_SENSOR_HAVE_HLW8032)
 #include "./plugins/sensor/sensor.h"
 #include "./plugins/sensor/Sensor_HLW80xx.h"

@@ -5,6 +5,12 @@
 // settimeofday_cb() emulation, requires
 // build_flags = -Wl,--wrap=settimeofday
 
+#if ESP8266 && ARDUINO_ESP8266_VERSION_COMBINED >= 0x020701
+#error remove wrapper
+#endif
+
+#include <LoopFunctions.h>
+
 extern "C" {
 
 static void (*_settimeofday_cb)(void) = nullptr;
@@ -21,7 +27,7 @@ int __wrap_settimeofday(const struct timeval* tv, const struct timezone* tz)
     // call original function first and invoke callback if set
     int result = __real_settimeofday(tv, tz);
     if (_settimeofday_cb) {
-        _settimeofday_cb();
+        LoopFunctions::callOnce(_settimeofday_cb);
     }
     return result;
 }

@@ -83,6 +83,8 @@ public:
 
 #else
 
+#if MDNS_PLUGIN
+
 class AsyncMDNSResponse : public AsyncJsonResponse {
 public:
     AsyncMDNSResponse(MDNSResponder::hMDNSServiceQuery serviceQuery, MDNSPlugin::ServiceInfoVector *services, int timeout) : _serviceQuery(serviceQuery), _services(services), _timeout(millis() + timeout) {
@@ -102,6 +104,8 @@ private:
     MDNSPlugin::ServiceInfoVector *_services;
     uint32_t _timeout;
 };
+
+#endif
 
 #endif
 

@@ -21,7 +21,9 @@ extern "C" {
     void ets_timer_disarm (ETSTimer *ptimer);
     void ets_timer_done (ETSTimer *ptimer);
 
+#if ARDUINO_ESP8266_VERSION_COMBINED == 0x020603
     void settimeofday_cb (void (*cb)(void));
+#endif
 
 }
 

@@ -198,6 +198,8 @@ size_t AsyncMDNSResponse::_fillBuffer(uint8_t *data, size_t len)
 
 #else
 
+#if MDNS_PLUGIN
+
 size_t AsyncMDNSResponse::_fillBuffer(uint8_t *data, size_t len)
 {
     if (millis() > _timeout) {
@@ -224,15 +226,27 @@ size_t AsyncMDNSResponse::_fillBuffer(uint8_t *data, size_t len)
 
                 auto version = String('-');
                 for(const auto &item: svc.map) {
-                    if (item.first.equals(String('v'))) {
-                        version = item.second;
+                    if (item.first.length() == 1) {
+                        char ch = item.first.charAt(0);
+                        switch(ch) {
+                            case 'v':
+                                version = item.second;
+                                break;
+                            case 'b':
+                            case 't':
+                                row.add(ch, item.second);
+                                break;
+                        }
                     }
-                    else if (item.first.equals(String('v'))) {
-                        row.add('b', item.second);
-                    }
-                    else if (item.first.equals(String('t'))) {
-                        row.add('t', item.second);
-                    }
+                    // if (item.first.equals(String('v'))) {
+                    //     version = item.second;
+                    // }
+                    // else if (item.first.equals(String('b'))) {
+                    //     row.add('b', item.second);
+                    // }
+                    // else if (item.first.equals(String('t'))) {
+                    //     row.add('t', item.second);
+                    // }
                 }
                 row.add('v', version);
             }
@@ -243,6 +257,8 @@ size_t AsyncMDNSResponse::_fillBuffer(uint8_t *data, size_t len)
         return RESPONSE_TRY_AGAIN;
     }
 }
+
+#endif
 
 #endif
 

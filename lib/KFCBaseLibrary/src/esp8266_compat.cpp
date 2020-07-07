@@ -8,7 +8,11 @@
 #include "global.h"
 #include "esp8266_compat.h"
 
-#if ARDUINO_ESP8266_VERSION_COMBINED >= 0x020603
+#if ARDUINO_ESP8266_VERSION_COMBINED >= 0x020701
+
+// settimeofday_cb() working again?
+
+#elif ARDUINO_ESP8266_VERSION_COMBINED == 0x020603
 
 #include "esp_settimeofday_cb.h"
 

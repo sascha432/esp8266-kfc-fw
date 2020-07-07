@@ -136,6 +136,37 @@ uint32_t NTPPlugin::_lastNtpCallback = 0;
 
 static NTPPlugin plugin;
 
+#if SNTP_STARTUP_DELAY
+
+#ifndef SNTP_STARTUP_DELAY_MAX_TIME
+#define SNTP_STARTUP_DELAY_MAX_TIME         1000UL
+#endif
+
+uint32_t sntp_startup_delay_MS_rfc_not_less_than_60000()
+{
+    return rand() % SNTP_STARTUP_DELAY_MAX_TIME;
+}
+
+#endif
+
+#if SNTP_UPDATE_DELAY_TIME
+
+#ifndef SNTP_UPDATE_DELAY_TIME
+#define SNTP_UPDATE_DELAY_TIME              900000UL
+#endif
+
+#if SNTP_UPDATE_DELAY_TIME < (5 * 60 * 1000UL)
+#error update delay must be >5 minutes
+#endif
+
+// SNTP_UPDATE_DELAY +-10%
+uint32_t sntp_update_delay_MS_rfc_not_less_than_15000()
+{
+    return SNTP_UPDATE_DELAY_TIME + (rand() % (SNTP_UPDATE_DELAY_TIME / 10));
+}
+
+#endif
+
 void NTPPlugin::setup(PluginSetupMode_t mode)
 {
     if (config._H_GET(Config().flags).ntpClientEnabled) {

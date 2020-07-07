@@ -396,10 +396,10 @@ void ClockPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form
 void ClockPlugin::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector)
 {
     _debug_printf_P(PSTR("format=%u\n"), format);
-    String topic = MQTTClient::formatTopic(0, F("/"));
+    String topic = MQTTClient::formatTopic(MQTTClient::NO_ENUM, F("/"));
 
     auto discovery = new MQTTAutoDiscovery();
-    discovery->create(this, 0, format);
+    discovery->create(this, F("clock"), format);
     discovery->addStateTopic(topic + F("state"));
     discovery->addCommandTopic(topic + F("set"));
     discovery->addPayloadOn(1);
@@ -414,9 +414,8 @@ void ClockPlugin::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAu
 
 #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
     MQTTComponentHelper component(MQTTComponent::ComponentTypeEnum_t::SENSOR);
-    component.setNumber(0);
-    discovery = component.createAutoDiscovery(SensorPlugin::getSensorCount(), format);
-    discovery->addStateTopic(MQTTClient::formatTopic(SensorPlugin::getSensorCount(), F("/light_sensor")));
+    discovery = component.createAutoDiscovery(F("light_sensor"), format);
+    discovery->addStateTopic(MQTTClient::formatTopic(MQTTClient::NO_ENUM, F("/light_sensor")));
     discovery->addUnitOfMeasurement(F("%"));
     discovery->finalize();
     vector.emplace_back(discovery);
@@ -428,7 +427,7 @@ void ClockPlugin::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAu
 void ClockPlugin::onConnect(MQTTClient *client)
 {
     _debug_println();
-    String topic = MQTTClient::formatTopic(0, F("/"));
+    String topic = MQTTClient::formatTopic(MQTTClient::NO_ENUM, F("/"));
 
     client->subscribe(this, topic + F("set"), _qos);
     client->subscribe(this, topic + F("color/set"), _qos);
@@ -518,14 +517,14 @@ void ClockPlugin::publishState(MQTTClient *client)
         client = MQTTClient::getClient();
     }
     if (client && client->isConnected()) {
-        String topic = MQTTClient::formatTopic(0, F("/"));
+        String topic = MQTTClient::formatTopic(MQTTClient::NO_ENUM, F("/"));
 
         client->publish(topic + F("state"), _qos, 1, String(_color ? 1 : 0));
         client->publish(topic + F("brightness/state"), _qos, 1, String(_brightness));
         PrintString str(F("%u,%u,%u"), _colors[0], _colors[1], _colors[2]);
         client->publish(topic + F("color/state"), _qos, 1, str);
 #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
-        client->publish(MQTTClient::formatTopic(SensorPlugin::getSensorCount(), F("/light_sensor")), _qos, 1, _autoBrightness == -1 ? String(F("Off")) : String((int)(_autoBrightnessValue * 100)));
+        client->publish(MQTTClient::formatTopic(MQTTClient::NO_ENUM, F("/light_sensor")), _qos, 1, _autoBrightness == -1 ? String(F("Off")) : String((int)(_autoBrightnessValue * 100)));
 #endif
     }
 

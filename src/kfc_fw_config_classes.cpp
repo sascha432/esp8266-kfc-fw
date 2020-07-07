@@ -49,6 +49,8 @@ namespace KFCConfigurationClasses {
         _flags.serial2TCPMode = SERIAL2TCP_MODE_DISABLED;
 
         _flags.apStandByMode = true;
+
+        _flags.enableMDNS = true;
     }
 
     System::Flags System::Flags::read()

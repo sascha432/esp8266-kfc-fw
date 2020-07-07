@@ -350,7 +350,7 @@ public:
 
     }
 
-    // return true for "yes", "Y", "true", "on", "enable" and any integer != 0
+    // return true for "yes", "Y", "true", "start", "on", "enable" and any integer != 0
     // arguments out of range return false
     bool isTrue(uint16_t num) const {
         ArgumentPtr arg;
@@ -358,13 +358,13 @@ public:
             return false;
         }
         int result = 0;
-        if ((_isValidInt(arg, result) && result != 0) || (_isAnyMatchIgnoreCase(arg, F("yes" STRLS "y" STRLS "true" STRLS "on" STRLS "enable")))) {
+        if ((_isValidInt(arg, result) && result != 0) || (_isAnyMatchIgnoreCase(arg, F("start" STRLS "yes" STRLS "y" STRLS "true" STRLS "on" STRLS "enable")))) {
             return true;
         }
         return false;
     }
 
-    // return true for "", "no", "N", "false", "off", "disable" and any integer == 0
+    // return true for "", "stop", "no", "N", "false", "off", "disable" and any integer == 0
     // arguments out of range return false
     bool isFalse(uint16_t num) const {
         ArgumentPtr arg;
@@ -372,7 +372,7 @@ public:
             return false;
         }
         int result;
-        if (*arg == 0 || (_isValidInt(arg, result) && result == 0) || (_isAnyMatchIgnoreCase(arg, F("no" STRLS "n" STRLS "false" STRLS "off" STRLS "disable")))) {
+        if (*arg == 0 || (_isValidInt(arg, result) && result == 0) || (_isAnyMatchIgnoreCase(arg, F("stop" STRLS "no" STRLS "n" STRLS "false" STRLS "off" STRLS "disable")))) {
             return true;
         }
         return false;

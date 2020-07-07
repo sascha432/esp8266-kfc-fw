@@ -648,7 +648,8 @@ void KFCFWConfiguration::restoreFactorySettings()
 #if IOT_DIMMER_MODULE || IOT_ATOMIC_SUN_V2
     DimmerModule dimmer;
     dimmer.config_valid = false;
-    dimmer.on_fade_time = 7.5;
+    dimmer.on_off_fade_time = 7.5;
+    dimmer.fade_time = 5.0;
 #if IOT_ATOMIC_SUN_V2
 #ifdef IOT_ATOMIC_SUN_CHANNEL_WW1
     dimmer.channel_mapping[0] = IOT_ATOMIC_SUN_CHANNEL_WW1;

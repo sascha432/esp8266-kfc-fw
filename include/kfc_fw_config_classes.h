@@ -24,17 +24,23 @@ namespace KFCConfigurationClasses {
             static ConfigFlags get();
             void write();
 
-            inline bool isWiFiEnabled() const {
+            bool isWiFiEnabled() const {
                 return _flags.wifiMode & WIFI_AP_STA;
             }
-            inline bool isSoftAPEnabled() const {
+            bool isSoftAPEnabled() const {
                 return _flags.wifiMode & WIFI_AP;
             }
-            inline bool isStationEnabled() const {
+            bool isStationEnabled() const {
                 return _flags.wifiMode & WIFI_STA;
             }
-            inline bool isSoftApStandByModeEnabled() const {
+            bool isSoftApStandByModeEnabled() const {
                 return _flags.apStandByMode;
+            }
+            bool isMDNSEnabled() const {
+                return _flags.enableMDNS;
+            }
+            void setMDNSEnabled(bool state) {
+                _flags.enableMDNS = state;
             }
 
         private:

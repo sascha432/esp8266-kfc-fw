@@ -112,7 +112,10 @@ struct ConfigFlags {
     ConfigFlags_t apStandByMode: 1;
     ConfigFlags_t disableWebUI: 1;
     ConfigFlags_t disableWebAlerts: 1;
+    ConfigFlags_t enableMDNS: 1;
 };
+
+static_assert(sizeof(ConfigFlags) == sizeof(uint32_t), "32bit exceeded");
 
 struct HueConfig {
     uint16_t tcp_port;
@@ -139,7 +142,8 @@ struct Serial2Tcp {
 
 struct DimmerModule {
     register_mem_cfg_t cfg;
-    float on_fade_time;
+    float on_off_fade_time;
+    float fade_time;
     bool config_valid;
     // float fade_time;
     // float on_fade_time;

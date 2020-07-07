@@ -467,6 +467,8 @@ DeviceSettingsForm::DeviceSettingsForm(AsyncWebServerRequest *request) : Setting
     add<uint16_t>(F("safe_mode_reboot_time"), _H_STRUCT_VALUE(MainConfig().system.device.settings, _safeModeRebootTime));
     addValidator(new FormRangeValidator(5, 1440, true));
 
+    add<bool>(F("enable_mdns"), _H_FLAGS_BOOL_VALUE(Config().flags, enableMDNS));
+
     add<uint16_t>(F("webui_keep_logged_in_days"), _H_STRUCT_VALUE(MainConfig().system.device.settings, _webUIKeepLoggedInDays));
     addValidator(new FormRangeValidator(3, 180, true));
 

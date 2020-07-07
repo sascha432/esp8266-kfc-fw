@@ -49,6 +49,7 @@ void MQTTComponent::onConnect(MQTTClient *client)
 
 void MQTTComponent::onDisconnect(MQTTClient *client, AsyncMqttClientDisconnectReason reason)
 {
+    _autoDiscoveryTimer.remove();
 }
 
 void MQTTComponent::onMessage(MQTTClient *client, char *topic, char *payload, size_t len)
@@ -60,12 +61,33 @@ void MQTTComponent::onMessage(MQTTClient *client, char *topic, char *payload, si
 void MQTTComponent::publishAutoDiscovery(MQTTClient *client)
 {
     if (MQTTAutoDiscovery::isEnabled()) {
-        MQTTAutoDiscoveryVector vector;
-        createAutoDiscovery(MQTTAutoDiscovery::FORMAT_JSON, vector);
-        for(const auto &discovery: vector) {
-            _debug_printf_P(PSTR("topic=%s payload=%s\n"), discovery->getTopic().c_str(), printable_string(discovery->getPayload().c_str(), discovery->getPayload().length(), DEBUG_MQTT_CLIENT_PAYLOAD_LEN).c_str());
-            client->publish(discovery->getTopic(), client->getDefaultQos(), true, discovery->getPayload());
-        }
+        _autoDiscoveryTimer.remove();
+
+        auto vector = std::shared_ptr<MQTTAutoDiscoveryVector>(new MQTTAutoDiscoveryVector());
+        createAutoDiscovery(MQTTAutoDiscovery::FORMAT_JSON, *vector);
+
+        _autoDiscoveryTimer.add(250, true, [vector](EventScheduler::TimerPtr timer) {
+            auto client = MQTTClient::getClient();
+            if (!client || !client->isConnected() || vector->empty()) {
+                timer->detach();
+            }
+            else {
+                const auto &discovery = vector->front();
+                debug_printf_P(PSTR("topic=%s payload=%s\n"), discovery->getTopic().c_str(), printable_string(discovery->getPayload().c_str(), discovery->getPayload().length(), DEBUG_MQTT_CLIENT_PAYLOAD_LEN).c_str());
+                client->publish(discovery->getTopic(), client->getDefaultQos(), true, discovery->getPayload());
+                vector->erase(vector->begin());
+                if (vector->empty()) {
+                    timer->detach();
+                }
+            }
+        });
+
+        // MQTTAutoDiscoveryVector vector;
+        // createAutoDiscovery(MQTTAutoDiscovery::FORMAT_JSON, vector);
+        // for(const auto &discovery: vector) {
+        //     _debug_printf_P(PSTR("topic=%s payload=%s\n"), discovery->getTopic().c_str(), printable_string(discovery->getPayload().c_str(), discovery->getPayload().length(), DEBUG_MQTT_CLIENT_PAYLOAD_LEN).c_str());
+        //     client->publish(discovery->getTopic(), client->getDefaultQos(), true, discovery->getPayload());
+        // }
     }
 }
 

@@ -6,6 +6,8 @@
 
 #include <Arduino_compat.h>
 #include <AsyncMqttClient.h>
+#include <EventScheduler.h>
+#include <EventTimer.h>
 #include "mqtt_auto_discovery.h"
 
 PROGMEM_STRING_DECL(mqtt_component_switch);
@@ -47,8 +49,9 @@ public:
     virtual void createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector) = 0;
     virtual uint8_t getAutoDiscoveryCount() const = 0;
 
+
     virtual void onConnect(MQTTClient *client);
-    virtual void onDisconnect(MQTTClient *client, AsyncMqttClientDisconnectReason reason);
+    virtual void onDisconnect(MQTTClient *client, AsyncMqttClientDisconnectReason reason);  // call base method when overriding
     virtual void onMessage(MQTTClient *client, char *topic, char *payload, size_t len);
 
 #if MQTT_AUTO_DISCOVERY
@@ -67,6 +70,7 @@ public:
 private:
     ComponentTypeEnum_t _type;
     uint8_t _num;
+    EventScheduler::Timer _autoDiscoveryTimer;
 };
 
 // for creating auto discovery without an actual component

@@ -5,7 +5,7 @@
 #pragma once
 
 #ifndef DEBUG_MDNS_SD
-#define DEBUG_MDNS_SD                   0
+#define DEBUG_MDNS_SD                       0
 #endif
 
 #include <Arduino_compat.h>
@@ -50,7 +50,7 @@ public:
     typedef std::vector<ServiceInfo> ServiceInfoVector;
 
 public:
-    MDNSPlugin() : _running(false) {
+    MDNSPlugin() : _running(false), _enabled(false) {
         REGISTER_PLUGIN(this);
     }
     virtual PGM_P getName() const {
@@ -79,7 +79,9 @@ public:
         return CUSTOM;
     }
     virtual void createMenu() override {
-        bootstrapMenu.addSubMenu(F("MDNS Discovery"), F("mdns_discovery.html"), navMenu.util);
+        if (_enabled) {
+            bootstrapMenu.addSubMenu(F("MDNS Discovery"), F("mdns_discovery.html"), navMenu.util);
+        }
     }
 
     static void mdnsDiscoveryHandler(AsyncWebServerRequest *request);
@@ -96,16 +98,28 @@ public:
 #endif
 
 public:
+    static void wifiCallback(uint8_t event, void *payload);
     static void loop();
-    void start(const IPAddress &address);
-    void stop();
+
+    // ESP8266: begin must be called once early in the program execution
+    // otherwise it crashes when adding services
+    void begin();
+    void end();
 
 private:
+    friend MDNSService;
+    bool _isRunning() const;
+
+    bool _MDNS_begin();
+    void _begin();
+    void _end();
+    void _wifiCallback(uint8_t event, void *payload);
     void _loop();
     void _installWebServerHooks();
 
 private:
-    bool _running;
+    uint8_t _running: 1;
+    uint8_t _enabled: 1;
 };
 
 #endif

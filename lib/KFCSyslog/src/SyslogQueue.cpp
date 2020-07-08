@@ -14,7 +14,7 @@
 #include <debug_helper_disable.h>
 #endif
 
-SyslogQueue::SyslogQueue() {
+SyslogQueue::SyslogQueue() : _reportEmpty(false) {
 }
 
 SyslogQueueId_t SyslogQueue::add(const String &message, Syslog *syslog) {
@@ -31,7 +31,7 @@ void SyslogQueue::remove(SyslogQueueItemPtr &item, bool success) {
 }
 
 size_t SyslogQueue::size() const {
-    return _item ? 1 : 0;
+    return _reportEmpty ? 0 : (_item ? 1 : 0);
 }
 
 SyslogQueue::SyslogQueueItemPtr &SyslogQueue::at(SyslogQueueIndex_t index) {
@@ -74,7 +74,7 @@ void SyslogMemoryQueue::remove(SyslogQueue::SyslogQueueItemPtr &removeItem, bool
 }
 
 size_t SyslogMemoryQueue::size() const {
-    return _items.size();
+    return _reportEmpty ? 0 : _items.size();
 }
 
 SyslogQueue::SyslogQueueItemPtr &SyslogMemoryQueue::at(SyslogQueueIndex_t index) {

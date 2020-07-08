@@ -69,6 +69,15 @@ public:
         }
     }
 
+    // called before restarting
+    // leave data to avoid dangling pointers
+    void kill() {
+        _reportEmpty = true;
+    }
+
+protected:
+    bool _reportEmpty;
+
 private:
     SyslogQueueItemPtr _item;
 };

@@ -64,11 +64,20 @@ const char *Config_NTP::getTimezone()
 
 const char *Config_NTP::getServers(uint8_t num)
 {
-    static const uint16_t handles[] PROGMEM = { CONFIG_GET_HANDLE(Config().ntp.servers[0]), CONFIG_GET_HANDLE(Config().ntp.servers[1]), CONFIG_GET_HANDLE(Config().ntp.servers[2]) };
-    if (num >= sizeof(handles)) {
-        return nullptr;
+    switch(num) {
+        case 0:
+            return config._H_STR(Config().ntp.servers[0]);
+        case 1:
+            return config._H_STR(Config().ntp.servers[1]);
+        case 2:
+            return config._H_STR(Config().ntp.servers[2]);
     }
-    return config._H_STR(pgm_read_word(handles[num]));
+    return nullptr;
+}
+
+const char *Config_NTP::getPosixTZ()
+{
+    return config._H_STR(Config().ntp.posix_tz);
 }
 
 const char *Config_NTP::getUrl()
@@ -86,11 +95,13 @@ void Config_NTP::defaults()
     ::config._H_SET(Config().ntp.tz, Config_NTP().tz);
     ::config._H_SET_STR(Config().ntp.timezone, F("UTC"));
     ::config._H_SET_STR(Config().ntp.servers[0], F("pool.ntp.org"));
-    ::config._H_SET_STR(Config().ntp.servers[1], F("time.nist.gov"));
-    ::config._H_SET_STR(Config().ntp.servers[2], F("time.windows.com"));
+    ::config._H_SET_STR(Config().ntp.servers[1], F("time.windows.com"));
+    ::config._H_SET_STR(Config().ntp.servers[2], F("time.nist.gov"));
 #if USE_REMOTE_TIMEZONE
     // https://timezonedb.com/register
     ::config._H_SET_STR(Config().ntp.remote_tz_dst_ofs_url, F("http://api.timezonedb.com/v2.1/get-time-zone?key=_YOUR_API_KEY_&by=zone&format=json&zone=${timezone}"));
+#else
+    ::config._H_SET_STR(Config().ntp.posix_tz, F("UTC"));
 #endif
 }
 
@@ -1032,14 +1043,14 @@ void KFCFWConfiguration::restartDevice(bool safeMode)
 
     auto webUiSocket = WsWebUISocket::getWsWebUI();
     if (webUiSocket) {
-        webUiSocket->restart();
+        webUiSocket->shutdown();
     }
 
     // execute in reverse order
     for(auto iterator = plugins.rbegin(); iterator != plugins.rend(); ++iterator) {
         const auto plugin = *iterator;
         _debug_printf("plugin=%s\n", plugin->getName());
-        plugin->restart();
+        plugin->shutdown();
     }
 
     _debug_printf_P(PSTR("After plugins: Scheduled tasks %u, WiFi callbacks %u, Loop Functions %u\n"), Scheduler.size(), WiFiCallbacks::getVector().size(), LoopFunctions::size());

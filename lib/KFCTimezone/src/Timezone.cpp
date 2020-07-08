@@ -3,9 +3,30 @@
  */
 
 #include <Arduino_compat.h>
+#include <time.h>
+#if defined(ESP8266)
+#include <sntp.h>
+#include <sntp-lwip2.h>
+#elif defined(ESP32)
+#include <lwip/apps/sntp.h>
+#endif
 #include "Timezone.h"
 
 Timezone default_timezone;
+
+
+#if ESP8266
+
+// extern char *_tzname[2];
+// extern int daylight;
+
+char *Timezone::_GMT = _tzname[0];
+
+#else
+
+const char Timezone::_GMT[] PROGMEM = { "GMT" };
+
+#endif
 
 Timezone &get_default_timezone()
 {
@@ -14,6 +35,9 @@ Timezone &get_default_timezone()
 
 tm *timezone_localtime(const time_t *timer)
 {
+#if ESP8266
+    return localtime(timer);
+#else
     struct tm *_tm;
     time_t now;
     if (!timer) {
@@ -29,6 +53,7 @@ tm *timezone_localtime(const time_t *timer)
         _tm = localtime(&now);
     }
     return _tm;
+#endif
 }
 
 size_t strftime_P(char *buf, size_t size, PGM_P format, const struct tm *tm)
@@ -42,13 +67,16 @@ size_t strftime_P(char *buf, size_t size, PGM_P format, const struct tm *tm)
     return strftime(buf, size, fmt, tm);
 }
 
-size_t timezone_strftime_P(char *buf, size_t size, PGM_P format, const struct tm *tm)
+size_t timezone_strftime(char *buf, size_t size, const char *format, const struct tm *tm)
 {
-    return timezone_strftime(buf, size, format, tm);
+    return strftime(buf, size, format, tm);
 }
 
-size_t timezone_strftime(char *buf, size_t size, PGM_P format, const struct tm *tm)
+size_t timezone_strftime_P(char *buf, size_t size, PGM_P format, const struct tm *tm)
 {
+#if ESP8266
+    return strftime_P(buf, size, format, tm);
+#else
 	String _z = F("%z");
     String fmt = FPSTR(format);
     if (default_timezone.isValid()) {
@@ -67,6 +95,7 @@ size_t timezone_strftime(char *buf, size_t size, PGM_P format, const struct tm *
         fmt.replace(_z, emptyString);
         return strftime(buf, size, fmt.c_str(), tm);
     }
+#endif
 }
 
 
@@ -79,7 +108,7 @@ void Timezone::invalidate()
 {
     _timezoneOffset = Timezone::INVALID;
     _dst = false;
-    _abbreviation = String();
+    _abbreviation = _GMT;
     _zoneName = String();
 }
 
@@ -96,11 +125,6 @@ void Timezone::setTimezone(time_t now, const String zoneName)
 const String &Timezone::getTimezone() const
 {
     return _zoneName;
-}
-
-void Timezone::setAbbreviation(const char *abbreviation)
-{
-	_abbreviation = abbreviation;
 }
 
 void Timezone::setAbbreviation(const String abbreviation)

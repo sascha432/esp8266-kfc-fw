@@ -13,6 +13,7 @@
 #include <WiFiCallbacks.h>
 #include <MicrosTimer.h>
 #include "kfc_fw_config.h"
+#include "kfc_fw_config_classes.h"
 #include "../include/templates.h"
 #include "logger.h"
 #include "plugins.h"
@@ -84,7 +85,7 @@ public:
 #endif
     virtual void setup(PluginSetupMode_t mode) override;
     virtual void reconfigure(PGM_P source) override;
-    virtual void restart() override;
+    virtual void shutdown() override;
 
     virtual bool hasStatus() const override {
         return true;
@@ -105,10 +106,12 @@ public:
 #endif
 
 public:
+    static void execConfigTime();
+    static void updateNtpCallback();
+
+#if USE_REMOTE_TIMEZONE
     static void wifiConnectedCallback(uint8_t event, void *payload);
     static void updateLoop();
-    static void configTime();
-    static void updateNtpCallback();
 
 private:
     static void _callback(RemoteTimezone::JsonReaderResult *result, const String &error);
@@ -126,12 +129,21 @@ private:
     static unsigned long _lastNtpUpdate;
     static unsigned long _ntpRefreshTime;
     static uint32_t _lastNtpCallback;
+#endif
+
+public:
+    static uint32_t _ntpRefreshTimeMillis;
 };
+
+#if USE_REMOTE_TIMEZONE
 
 time_t NTPPlugin::_zoneEnd = 0;
 unsigned long NTPPlugin::_lastNtpUpdate = 0;
 unsigned long NTPPlugin::_ntpRefreshTime = 3600000;
 uint32_t NTPPlugin::_lastNtpCallback = 0;
+#endif
+
+uint32_t NTPPlugin::_ntpRefreshTimeMillis = 15000;
 
 
 static NTPPlugin plugin;
@@ -149,130 +161,9 @@ uint32_t sntp_startup_delay_MS_rfc_not_less_than_60000()
 
 #endif
 
-#if SNTP_UPDATE_DELAY_TIME
-
-#ifndef SNTP_UPDATE_DELAY_TIME
-#define SNTP_UPDATE_DELAY_TIME              900000UL
-#endif
-
-#if SNTP_UPDATE_DELAY_TIME < (5 * 60 * 1000UL)
-#error update delay must be >5 minutes
-#endif
-
-// SNTP_UPDATE_DELAY +-10%
 uint32_t sntp_update_delay_MS_rfc_not_less_than_15000()
 {
-    return SNTP_UPDATE_DELAY_TIME + (rand() % (SNTP_UPDATE_DELAY_TIME / 10));
-}
-
-#endif
-
-void NTPPlugin::setup(PluginSetupMode_t mode)
-{
-    if (config._H_GET(Config().flags).ntpClientEnabled) {
-
-        // force SNTP update on WiFi connect
-        WiFiCallbacks::add(WiFiCallbacks::EventEnum_t::CONNECTED, wifiConnectedCallback);
-
-#if NTP_RESTORE_TIMEZONE_AFTER_WAKEUP && ENABLE_DEEP_SLEEP
-        if (resetDetector.hasWakeUpDetected()) { // restore timezone from RTC memory
-            NTPClientData_t ntp;
-            if (RTCMemoryManager::read(NTP_CLIENT_RTC_MEM_ID, &ntp, sizeof(ntp))) {
-
-                auto &timezone = get_default_timezone();
-                timezone.setOffset(ntp.offset);
-                timezone.setAbbreviation(ntp.abbreviation);
-                _zoneEnd = ntp.zoneEnd;
-                if (_zoneEnd) {
-                    LoopFunctions::add(updateLoop);
-                }
-
-// restore time if no RTC is present
-#if NTP_RESTORE_SYSTEM_TIME_AFTER_WAKEUP && !RTC_SUPPORT
-                time_t msec = ntp.sleepTime + millis();             // add sleep time + time since wake up
-                time_t seconds = msec / 1000UL;
-                msec -= seconds;                                    // remove full seconds
-                struct timeval tv = { (time_t)(ntp.currentTime + seconds), (suseconds_t)(msec * 1000L) };
-                settimeofday(&tv, nullptr);
-                _debug_printf_P(PSTR("stored time %lu, sleep time %u, millis() %lu, new time sec %lu usec %lu\n"), ntp.currentTime, ntp.sleepTime, millis(), tv.tv_sec, tv.tv_usec);
-#endif
-                configTime();     // request real time from ntp
-
-                _debug_printf_P(PSTR("restored timezone after wake up. abbreviation=%s, offset=%d, zoneEnd=%lu\n"), ntp.abbreviation, ntp.offset, ntp.zoneEnd);
-                return;
-            }
-        }
-#endif
-
-        configTime();
-
-        auto remoteUrl = config._H_STR(Config().ntp.remote_tz_dst_ofs_url);
-        if (*remoteUrl) {
-            if (WiFi.isConnected()) { // simulate event if WiFi is already connected
-                wifiConnectedCallback(WiFiCallbacks::EventEnum_t::CONNECTED, nullptr);
-            }
-        }
-
-    } else {
-
-		auto str = emptyString.c_str();
-		::configTime(0, 0, str, str, str);
-        // sntp_set_timezone(0);
-
-        removeCallbacks();
-    }
-}
-
-void NTPPlugin::reconfigure(PGM_P source)
-{
-    setup(PLUGIN_SETUP_DEFAULT);
-}
-
-void NTPPlugin::restart()
-{
-    settimeofday_cb(nullptr);
-    removeCallbacks();
-}
-
-void NTPPlugin::getStatus(Print &output)
-{
-    if (config._H_GET(Config().flags).ntpClientEnabled) {
-        auto firstServer = true;
-        auto &timezone = get_default_timezone();
-        output.print(F("Timezone "));
-        if (timezone.isValid()) {
-            output.printf_P(PSTR("%s, %02d:%02u %s"), timezone.getTimezone().c_str(), timezone.getOffset() / 3600, timezone.getOffset() % 60, timezone.getAbbreviation().c_str());
-            if (_zoneEnd) {
-                auto tm = timezone_localtime(&_zoneEnd);
-                char buf[32];
-                timezone_strftime_P(buf, sizeof(buf), SPGM(strftime_date_time_zone), tm);
-                output.printf_P(PSTR(", next check on %s"), buf);
-            }
-        } else {
-            output.printf_P(PSTR("%s, status invalid"), config._H_STR(Config().ntp.timezone));
-        }
-        static const ConfigurationParameter::Handle_t handles[] = { _H(Config().ntp.servers[0]), _H(Config().ntp.servers[1]), _H(Config().ntp.servers[2]) };
-        for (int i = 0; i < 2; i++) {
-            auto server = config.getString(handles[i]);
-            if (*server) {
-                if (firstServer) {
-                    firstServer = false;
-                    output.print(F(HTML_S(br) "Servers "));
-                } else {
-                    output.print(FSPGM(comma_));
-                }
-                output.print(server);
-            }
-        }
-        if (_lastNtpCallback) {
-            float seconds = get_time_diff(_lastNtpCallback, millis()) / 1000.0;
-            unsigned int nextSeconds = (_ntpRefreshTime - get_time_diff(_lastNtpUpdate, millis())) / 1000;
-            output.printf_P(PSTR(HTML_S(br) "Last update %.2f seconds ago, next update in %u seconds"), seconds, nextSeconds);
-        }
-    }
-    else {
-        output.print(FSPGM(Disabled));
-    }
+    return NTPPlugin::_ntpRefreshTimeMillis;
 }
 
 void NTPPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
@@ -289,6 +180,11 @@ void NTPPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
     form.addValidator(new FormValidHostOrIpValidator(true));
 
     form.add(F("ntp_timezone"), _H_STR_VALUE(Config().ntp.timezone));
+
+#if !USE_REMOTE_TIMEZONE
+    form.add(F("ntp_posix_tz"), _H_STR_VALUE(Config().ntp.posix_tz));
+    //https://github.com/nayarsystems/posix_tz_db/blob/master/zones.csv
+#endif
 
     form.add<uint16_t>(F("ntp_refresh"), _H_STRUCT_VALUE(Config().ntp.tz, ntpRefresh));
     form.addValidator(new FormRangeValidator(F("Invalid refresh interval: %min%-%max% minutes"), 60, 43200));
@@ -337,7 +233,7 @@ bool NTPPlugin::atModeHandler(AtModeArgs &args)
 {
 #if DEBUG
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(SNTPFU))) {
-        configTime();
+        execConfigTime();
         args.print(F("Waiting up to 5 seconds for a valid time..."));
         ulong end = millis() + 5000;
         while(millis() < end && !IS_TIME_VALID(time(nullptr))) {
@@ -362,38 +258,75 @@ commandNow:
         else {
             auto &timezone = get_default_timezone();
             strftime_P(timestamp, sizeof(timestamp), SPGM(strftime_date_time_zone), gmtime(&now));
-            args.printf_P(PSTR("%s, unixtime=%u, valid=%u, dst=%u"), timestamp, now, timezone.isValid(), timezone.isDst());
+            args.printf_P(PSTR("timezone_strftime_P(timezone_localtime)=%s, unixtime=%u, valid=%u, dst=%u"), timestamp, now, timezone.isValid(), timezone.isDst());
             timezone_strftime_P(timestamp, sizeof(timestamp), SPGM(strftime_date_time_zone), timezone_localtime(&now));
             args.print(timestamp);
+
+            auto str = String(SPGM(strftime_date_time_zone));
+            str += " %z %p %H";
+            strftime(timestamp, sizeof(timestamp), str.c_str(), gmtime(&now));
+            args.printf_P(PSTR("strftime(gmtime)=%s"), timestamp);
+            strftime(timestamp, sizeof(timestamp), str.c_str(), localtime(&now));
+            args.printf_P(PSTR("strftime(localtime)=%s"), timestamp);
+            args.printf_P(PSTR("dst=%u %u"), localtime(&now)->tm_isdst, timezone_localtime(&now)->tm_isdst);
         }
         return true;
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(TZ))) {
-        auto &timezone = get_default_timezone();
-        if (args.isQueryMode()) { // TZ?
-            if (timezone.isValid()) {
-                char buf[32];
-                if (!_zoneEnd) {
-                    strcpy_P(buf, PSTR("not scheduled"));
-                }
-                else {
-                    timezone_strftime_P(buf, sizeof(buf), SPGM(strftime_date_time_zone), timezone_localtime(&_zoneEnd));
-                }
-                args.printf_P(PSTR("Timezone %s abbreviation %s offset %02d:%02u next update %s"), timezone.getTimezone().c_str(), timezone.getAbbreviation().c_str(), timezone.getOffset() / 3600, timezone.getOffset() % 60, buf);
-            } else {
-                args.print(F("No valid timezone set"));
+        if (args.isQueryMode()) {
+            auto fmt = PSTR("%FT%T %Z %z");
+            String fmtStr = fmt;
+            auto &tz = *__gettzinfo();
+            Serial.printf_P(PSTR("_tzname[0]=%s,_tzname[1]=%s\n"), _tzname[0], _tzname[1]);
+            Serial.printf_P(PSTR("__tznorth=%u,__tzyear=%u\n"), tz.__tznorth, tz.__tzyear);
+            for(int i = 0; i < 2; i++) {
+                Serial.printf_P(PSTR("ch=%c,m=%d,n=%d,d=%d,s=%d,change=%ld,offset=%ld\n"), tz.__tzrule[i].ch, tz.__tzrule[i].m, tz.__tzrule[i].n, tz.__tzrule[i].d, tz.__tzrule[i].s, tz.__tzrule[i].change, tz.__tzrule[i].offset);
+            }
+        } else if (args.requireArgs(2, 2)) {
+            auto arg = args.get(1);
+            if (args.isAnyMatchIgnoreCase(0, F("tz"))) {
+                setTZ(arg);
+                auto now = time(nullptr);
+                localtime(&now); // update __gettzinfo()
+                args.printf_P(PSTR("TZ set to '%s'"), arg);
+            }
+            else if (args.isAnyMatchIgnoreCase(0, F("ntp"))) {
+                _ntpRefreshTimeMillis = 15000;
+                configTime(arg, "pool.ntp.org");
+                args.printf_P(PSTR("configTime called with '%s'"), arg);
             }
         }
-        else if (args.requireArgs(1, 1)) {
-            if (config._H_GET(Config().flags).ntpClientEnabled) {
-                config._H_SET_STR(Config().ntp.timezone, args.get(0));
-                args.printf_P(PSTR("Timezone set to %s"), config._H_STR(_Config.ntp.timezone));
-                setup(PLUGIN_SETUP_DEFAULT);
-            }
-            else {
-                args.printf_P(PSTR("NTP %s"), FSPGM(disabled));
-            }
-        }
+// +TZ=ntp,"EST5EDT,M3.2.0,M11.1.0"
+// +TZ=ntp,"PST8PDT,M3.2.0,M11.1.0"
+// +TZ=tz,"PST8PDT,M3.2.0,M11.1.0"
+// +NOW
+// +TZ=ntp,"PST8PDT"
+
+        // auto &timezone = get_default_timezone();
+        // if (args.isQueryMode()) { // TZ?
+        //     if (timezone.isValid()) {
+        //         char buf[32];
+        //         if (!_zoneEnd) {
+        //             strcpy_P(buf, PSTR("not scheduled"));
+        //         }
+        //         else {
+        //             timezone_strftime_P(buf, sizeof(buf), SPGM(strftime_date_time_zone), timezone_localtime(&_zoneEnd));
+        //         }
+        //         args.printf_P(PSTR("Timezone %s abbreviation %s offset %02d:%02u next update %s"), timezone.getTimezone().c_str(), timezone.getAbbreviation().c_str(), timezone.getOffset() / 3600, timezone.getOffset() % 60, buf);
+        //     } else {
+        //         args.print(F("No valid timezone set"));
+        //     }
+        // }
+        // else if (args.requireArgs(1, 1)) {
+        //     if (config._H_GET(Config().flags).ntpClientEnabled) {
+        //         config._H_SET_STR(Config().ntp.timezone, args.get(0));
+        //         args.printf_P(PSTR("Timezone set to %s"), config._H_STR(_Config.ntp.timezone));
+        //         setup(PLUGIN_SETUP_DEFAULT);
+        //     }
+        //     else {
+        //         args.printf_P(PSTR("NTP %s"), FSPGM(disabled));
+        //     }
+        // }
         return true;
     }
     return false;
@@ -401,7 +334,264 @@ commandNow:
 
 #endif
 
-void NTPPlugin::configTime()
+#if !USE_REMOTE_TIMEZONE
+
+void NTPPlugin::setup(PluginSetupMode_t mode)
+{
+    if (config._H_GET(Config().flags).ntpClientEnabled) {
+
+#if NTP_RESTORE_TIMEZONE_AFTER_WAKEUP && ENABLE_DEEP_SLEEP
+        if (resetDetector.hasWakeUpDetected()) { // restore timezone from RTC memory
+            NTPClientData_t ntp;
+            if (RTCMemoryManager::read(NTP_CLIENT_RTC_MEM_ID, &ntp, sizeof(ntp))) {
+
+                auto &timezone = get_default_timezone();
+                timezone.setOffset(ntp.offset);
+                timezone.setAbbreviation(ntp.abbreviation);
+                timezone.update();
+                _zoneEnd = ntp.zoneEnd;
+                if (_zoneEnd) {
+                    LoopFunctions::add(updateLoop);
+                }
+
+// restore time if no RTC is present
+#if NTP_RESTORE_SYSTEM_TIME_AFTER_WAKEUP && !RTC_SUPPORT
+                time_t msec = ntp.sleepTime + millis();             // add sleep time + time since wake up
+                time_t seconds = msec / 1000UL;
+                msec -= seconds;                                    // remove full seconds
+                struct timeval tv = { (time_t)(ntp.currentTime + seconds), (suseconds_t)(msec * 1000L) };
+                settimeofday(&tv, nullptr);
+                _debug_printf_P(PSTR("stored time %lu, sleep time %u, millis() %lu, new time sec %lu usec %lu\n"), ntp.currentTime, ntp.sleepTime, millis(), tv.tv_sec, tv.tv_usec);
+#endif
+                execConfigTime();     // request real time from ntp
+
+                _debug_printf_P(PSTR("restored timezone after wake up. abbreviation=%s, offset=%d, zoneEnd=%lu\n"), ntp.abbreviation, ntp.offset, ntp.zoneEnd);
+                return;
+            }
+        }
+#endif
+
+        execConfigTime();
+
+    } else {
+
+		auto str = emptyString.c_str();
+		configTime(Timezone::_GMT, str, str, str);
+    }
+}
+
+void NTPPlugin::reconfigure(PGM_P source)
+{
+    setup(PLUGIN_SETUP_DEFAULT);
+}
+
+void NTPPlugin::shutdown()
+{
+    settimeofday_cb(nullptr);
+}
+
+void NTPPlugin::getStatus(Print &output)
+{
+    if (config._H_GET(Config().flags).ntpClientEnabled) {
+        auto &timezone = get_default_timezone();
+        output.print(F("Timezone "));
+        if (timezone.isValid()) {
+            output.printf_P(PSTR("%s, %02d:%02u %s"), timezone.getTimezone().c_str(), timezone.getOffset() / 3600, timezone.getOffset() % 60, timezone.getAbbreviation().c_str());
+        } else {
+            output.printf_P(PSTR("%s, status invalid"), Config_NTP::getPosixTZ());
+        }
+
+        auto firstServer = true;
+        const char *server;
+        for (int i = 0; (server = Config_NTP::getServers(i)) != nullptr; i++) {
+            String serverStr = server;
+            serverStr.trim();
+            if (serverStr.length()) {
+                if (firstServer) {
+                    firstServer = false;
+                    output.print(F(HTML_S(br) "Servers "));
+                } else {
+                    output.print(FSPGM(comma_));
+                }
+                output.print(serverStr);
+            }
+        }
+    }
+    else {
+        output.print(FSPGM(Disabled));
+    }
+}
+
+
+void NTPPlugin::execConfigTime()
+{
+    settimeofday_cb(updateNtpCallback);
+    _debug_printf_P(PSTR("server1=%s,server2=%s,server3=%s, refresh in %.0f seconds\n"), Config_NTP::getServers(0), Config_NTP::getServers(1), Config_NTP::getServers(2), _ntpRefreshTimeMillis / 1000.0);
+    _ntpRefreshTimeMillis = 15000;
+    configTime(Config_NTP::getPosixTZ(), Config_NTP::getServers(0), Config_NTP::getServers(1), Config_NTP::getServers(2));
+}
+
+void NTPPlugin::updateNtpCallback()
+{
+    _debug_printf_P(PSTR("new time=%u\n"), (uint32_t)time(nullptr));
+
+#if RTC_SUPPORT
+    // update RTC
+    config.setRTC(time(nullptr));
+#endif
+
+    if (IS_TIME_VALID(time(nullptr))) {
+        NTPPlugin::_ntpRefreshTimeMillis = Config_NTP::getTZ().ntpRefresh * 60 * 1000UL;
+    }
+
+    Timezone &tz = get_default_timezone();
+    char buf[16];
+    auto now = time(nullptr);
+    strftime_P(buf, sizeof(buf), PSTR("%Z"), localtime(&now));
+    tz.setAbbreviation(buf);
+    tz.setTimezone(now, Config_NTP::getPosixTZ());
+    auto tzPtr = __gettzinfo();
+    if (!strcmp(buf, _tzname[0])) {
+        tz.setOffset(-tzPtr->__tzrule[0].offset);
+        tz.setDst(false);
+    }
+    else if (!strcmp(buf, _tzname[1])) {
+        tz.setOffset(-tzPtr->__tzrule[1].offset);
+        tz.setDst(true);
+    }
+    tz.save();
+
+
+#if NTP_LOG_TIME_UPDATE
+    char buf[32];
+    auto now = time(nullptr);
+    auto tm = timezone_localtime(&now);
+    timezone_strftime_P(buf, sizeof(buf), SPGM(strftime_date_time_zone), tm);
+    Logger_notice(F("NTP: new time: %s"), buf);
+#endif
+
+#if NTP_HAVE_CALLBACKS
+    for(auto callback: _callbacks) {
+        callback(time(nullptr));
+    }
+#endif
+}
+
+#endif
+
+#if USE_REMOTE_TIMEZONE
+
+void NTPPlugin::setup(PluginSetupMode_t mode)
+{
+    if (config._H_GET(Config().flags).ntpClientEnabled) {
+
+        // force SNTP update on WiFi connect
+        WiFiCallbacks::add(WiFiCallbacks::EventEnum_t::CONNECTED, wifiConnectedCallback);
+
+#if NTP_RESTORE_TIMEZONE_AFTER_WAKEUP && ENABLE_DEEP_SLEEP
+        if (resetDetector.hasWakeUpDetected()) { // restore timezone from RTC memory
+            NTPClientData_t ntp;
+            if (RTCMemoryManager::read(NTP_CLIENT_RTC_MEM_ID, &ntp, sizeof(ntp))) {
+
+                auto &timezone = get_default_timezone();
+                timezone.setOffset(ntp.offset);
+                timezone.setAbbreviation(ntp.abbreviation);
+                timezone.update();
+                _zoneEnd = ntp.zoneEnd;
+                if (_zoneEnd) {
+                    LoopFunctions::add(updateLoop);
+                }
+
+// restore time if no RTC is present
+#if NTP_RESTORE_SYSTEM_TIME_AFTER_WAKEUP && !RTC_SUPPORT
+                time_t msec = ntp.sleepTime + millis();             // add sleep time + time since wake up
+                time_t seconds = msec / 1000UL;
+                msec -= seconds;                                    // remove full seconds
+                struct timeval tv = { (time_t)(ntp.currentTime + seconds), (suseconds_t)(msec * 1000L) };
+                settimeofday(&tv, nullptr);
+                _debug_printf_P(PSTR("stored time %lu, sleep time %u, millis() %lu, new time sec %lu usec %lu\n"), ntp.currentTime, ntp.sleepTime, millis(), tv.tv_sec, tv.tv_usec);
+#endif
+                execConfigTime();     // request real time from ntp
+
+                _debug_printf_P(PSTR("restored timezone after wake up. abbreviation=%s, offset=%d, zoneEnd=%lu\n"), ntp.abbreviation, ntp.offset, ntp.zoneEnd);
+                return;
+            }
+        }
+#endif
+
+        execConfigTime();
+
+        auto remoteUrl = config._H_STR(Config().ntp.remote_tz_dst_ofs_url);
+        if (*remoteUrl) {
+            if (WiFi.isConnected()) { // simulate event if WiFi is already connected
+                wifiConnectedCallback(WiFiCallbacks::EventEnum_t::CONNECTED, nullptr);
+            }
+        }
+
+    } else {
+
+		auto str = emptyString.c_str();
+		configTime(Timezone::_GMT, str, str, str);
+
+        removeCallbacks();
+    }
+}
+
+void NTPPlugin::reconfigure(PGM_P source)
+{
+    setup(PLUGIN_SETUP_DEFAULT);
+}
+
+void NTPPlugin::shutdown()
+{
+    settimeofday_cb(nullptr);
+    removeCallbacks();
+}
+
+void NTPPlugin::getStatus(Print &output)
+{
+    if (config._H_GET(Config().flags).ntpClientEnabled) {
+        auto &timezone = get_default_timezone();
+        output.print(F("Timezone "));
+        if (timezone.isValid()) {
+            output.printf_P(PSTR("%s, %02d:%02u %s"), timezone.getTimezone().c_str(), timezone.getOffset() / 3600, timezone.getOffset() % 60, timezone.getAbbreviation().c_str());
+            if (_zoneEnd) {
+                auto tm = timezone_localtime(&_zoneEnd);
+                char buf[32];
+                timezone_strftime_P(buf, sizeof(buf), SPGM(strftime_date_time_zone), tm);
+                output.printf_P(PSTR(", next check on %s"), buf);
+            }
+        } else {
+            output.printf_P(PSTR("%s, status invalid"), config._H_STR(Config().ntp.timezone));
+        }
+
+        auto firstServer = true;
+        const char *server;
+        for (int i = 0; (server = Config_NTP::getServers(i)) != nullptr; i++) {
+            String serverStr = server;
+            serverStr.trim();
+            if (serverStr.length()) {
+                if (firstServer) {
+                    firstServer = false;
+                    output.print(F(HTML_S(br) "Servers "));
+                } else {
+                    output.print(FSPGM(comma_));
+                }
+                output.print(serverStr);
+            }
+        }
+        if (_lastNtpCallback) {
+            float seconds = get_time_diff(_lastNtpCallback, millis()) / 1000.0;
+            unsigned int nextSeconds = (_ntpRefreshTime - get_time_diff(_lastNtpUpdate, millis())) / 1000;
+            output.printf_P(PSTR(HTML_S(br) "Last update %.2f seconds ago, next update in %u seconds"), seconds, nextSeconds);
+        }
+    }
+    else {
+        output.print(FSPGM(Disabled));
+    }
+}
+
+void NTPPlugin::execConfigTime()
 {
     if (get_time_diff(_lastNtpUpdate, millis()) < 1000) {
         _debug_printf_P(PSTR("skipped multiple calls within 1000ms\n"));
@@ -417,9 +607,11 @@ void NTPPlugin::configTime()
 
     settimeofday_cb(updateNtpCallback);
 
-    _debug_printf_P(PSTR("server1=%s,server2=%s,server3=%s, refresh in %.0f seconds\n"), config._H_STR(Config().ntp.servers[0]), config._H_STR(Config().ntp.servers[1]), config._H_STR(Config().ntp.servers[2]), _ntpRefreshTime / 1000.0);
+    _debug_printf_P(PSTR("server1=%s,server2=%s,server3=%s, refresh in %.0f seconds\n"), Config_NTP::getServers(0), Config_NTP::getServers(1), Config_NTP::getServers(2), _ntpRefreshTime / 1000.0);
     // force SNTP to update the time
-    ::configTime(0, 0, config._H_STR(Config().ntp.servers[0]), config._H_STR(Config().ntp.servers[1]), config._H_STR(Config().ntp.servers[2]));
+
+    _ntpRefreshTimeMillis = 15000;
+    configTime(Timezone::_GMT, Config_NTP::getServers(0), Config_NTP::getServers(1), Config_NTP::getServers(2));
 }
 
 void NTPPlugin::updateNtpCallback()
@@ -435,6 +627,10 @@ void NTPPlugin::updateNtpCallback()
     if (get_time_diff(_lastNtpCallback, millis()) < 1000) {
         _debug_printf_P(PSTR("called twice within 1000ms (%u), ignored multiple calls\n"), get_time_diff(_lastNtpCallback, millis()));
         return;
+    }
+
+    if (IS_TIME_VALID(time(nullptr))) {
+        NTPPlugin::_ntpRefreshTimeMillis = Config_NTP::getTZ().ntpRefresh * 60 * 1000UL;
     }
 
 #if NTP_LOG_TIME_UPDATE
@@ -459,7 +655,7 @@ void NTPPlugin::updateLoop()
 {
     if (get_time_diff(_lastNtpUpdate, millis()) > _ntpRefreshTime) { // refresh NTP time manually
         _debug_println(F("refreshing NTP time manually"));
-        configTime();
+        execConfigTime();
     }
     if (_zoneEnd != 0 && time(nullptr) >= _zoneEnd) {
         _debug_printf_P(PSTR("triggered\n"));
@@ -478,7 +674,7 @@ void NTPPlugin::wifiConnectedCallback(uint8_t event, void *payload)
     _debug_printf_P(PSTR("event=%u payload=%p\n"), event, payload);
     if (!IS_TIME_VALID(time(nullptr))) {
         _debug_printf_P(PSTR("time not valid, updating SNTP\n"));
-        configTime();
+        execConfigTime();
     }
 
     _debug_printf_P(PSTR("updateRequired=%d\n"), updateRequired());
@@ -503,6 +699,7 @@ void NTPPlugin::_callback(RemoteTimezone::JsonReaderResult *result, const String
         timezone.setTimezone(0, result->getZoneName());
         timezone.setDst(result->getDst());
         timezone.save();
+        timezone.update();
 
         auto offset = timezone.getOffset();
         // do not set sntp_set_timezone()
@@ -572,5 +769,7 @@ void NTPPlugin::removeCallbacks()
     WiFiCallbacks::remove(WiFiCallbacks::EventEnum_t::ANY, wifiConnectedCallback);
     LoopFunctions::remove(updateLoop);
 }
+
+#endif
 
 #include <pop_pack.h>

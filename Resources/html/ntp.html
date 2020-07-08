@@ -74,6 +74,11 @@
                     <label for="ntp_remote_tz_url">Remote Timezone URL: (Register at <a href="https://timezonedb.com/register" target="_blank">https://timezonedb.com/register</a> or see documentation how to self-host the timezone script)</label>
                     <input type="text" class="form-control" name="ntp_remote_tz_url" id="ntp_remote_tz_url" value="%NTP_REMOTE_TZ_URL%" size="254">
                 </div>
+                <!--#else-->
+                <div class="form-group">
+                    <label for="ntp_posix_tz">Posix Timezone:</label>
+                    <input type="text" class="form-control" name="ntp_posix_tz" id="ntp_posix_tz" value="%NTP_POSIX_TZ%" size="64">
+                </div>
                 <!--#endif-->
             </span>
             <div class="form-group">

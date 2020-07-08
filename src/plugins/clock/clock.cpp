@@ -296,7 +296,7 @@ void ClockPlugin::reconfigure(PGM_P source)
     _setSevenSegmentDisplay();
 }
 
-void ClockPlugin::restart()
+void ClockPlugin::shutdown()
 {
     _debug_println();
     _timer.remove();
@@ -393,35 +393,41 @@ void ClockPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form
     form.finalize();
 }
 
-void ClockPlugin::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector)
+MQTTComponent::MQTTAutoDiscoveryPtr ClockPlugin::nextAutoDiscovery(MQTTAutoDiscovery::Format_t format, uint8_t num)
 {
+    if (num >= getAutoDiscoveryCount()) {
+        return nullptr;
+    }
     _debug_printf_P(PSTR("format=%u\n"), format);
-    String topic = MQTTClient::formatTopic(MQTTClient::NO_ENUM, F("/"));
-
-    auto discovery = new MQTTAutoDiscovery();
-    discovery->create(this, F("clock"), format);
-    discovery->addStateTopic(topic + F("state"));
-    discovery->addCommandTopic(topic + F("set"));
-    discovery->addPayloadOn(1);
-    discovery->addPayloadOff(0);
-    discovery->addBrightnessStateTopic(topic + F("brightness/state"));
-    discovery->addBrightnessCommandTopic(topic + F("brightness/set"));
-    discovery->addBrightnessScale(SevenSegmentDisplay::MAX_BRIGHTNESS);
-    discovery->addRGBStateTopic(topic + F("color/state"));
-    discovery->addRGBCommandTopic(topic + F("color/set"));
-    discovery->finalize();
-    vector.emplace_back(discovery);
-
+    MQTTAutoDiscoveryPtr discovery;
+    switch(num) {
+        case 0: {
+            _qos = MQTTClient::getDefaultQos();
+            discovery = new MQTTAutoDiscovery();
+            discovery->create(this, F("clock"), format);
+            discovery->addStateTopic(MQTTClient::formatTopic(MQTTClient::NO_ENUM, F("/state")));
+            discovery->addCommandTopic(MQTTClient::formatTopic(MQTTClient::NO_ENUM, F("/set")));
+            discovery->addPayloadOn(1);
+            discovery->addPayloadOff(0);
+            discovery->addBrightnessStateTopic(MQTTClient::formatTopic(MQTTClient::NO_ENUM, F("/brightness/state")));
+            discovery->addBrightnessCommandTopic(MQTTClient::formatTopic(MQTTClient::NO_ENUM, F("/brightness/set")));
+            discovery->addBrightnessScale(SevenSegmentDisplay::MAX_BRIGHTNESS);
+            discovery->addRGBStateTopic(MQTTClient::formatTopic(MQTTClient::NO_ENUM, F("/color/state")));
+            discovery->addRGBCommandTopic(MQTTClient::formatTopic(MQTTClient::NO_ENUM, F("/color/set")));
+        }
+        break;
 #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
-    MQTTComponentHelper component(MQTTComponent::ComponentTypeEnum_t::SENSOR);
-    discovery = component.createAutoDiscovery(F("light_sensor"), format);
-    discovery->addStateTopic(MQTTClient::formatTopic(MQTTClient::NO_ENUM, F("/light_sensor")));
-    discovery->addUnitOfMeasurement(F("%"));
-    discovery->finalize();
-    vector.emplace_back(discovery);
+        case 1: {
+            MQTTComponentHelper component(MQTTComponent::ComponentTypeEnum_t::SENSOR);
+            discovery = component.createAutoDiscovery(F("light_sensor"), format);
+            discovery->addStateTopic(MQTTClient::formatTopic(MQTTClient::NO_ENUM, F("/light_sensor")));
+            discovery->addUnitOfMeasurement(String('%'));
+        }
+        break;
 #endif
-
-    _qos = MQTTClient::getDefaultQos();
+    }
+    discovery->finalize();
+    return discovery;
 }
 
 void ClockPlugin::onConnect(MQTTClient *client)

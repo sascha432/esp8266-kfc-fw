@@ -29,7 +29,7 @@ void ButtonsPlugin::setup(PluginSetupMode_t mode)
     }
 }
 
-void ButtonsPlugin::restart()
+void ButtonsPlugin::shutdown()
 {
     PinMonitor *monitor = PinMonitor::getInstance();
     if (monitor) {

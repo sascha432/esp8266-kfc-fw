@@ -18,14 +18,21 @@ Sensor_LM75A::Sensor_LM75A(const JsonString &name, TwoWire &wire, uint8_t addres
     config.initTwoWire();
 }
 
-void Sensor_LM75A::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector)
+MQTTComponent::MQTTAutoDiscoveryPtr Sensor_LM75A::nextAutoDiscovery(MQTTAutoDiscovery::Format_t format, uint8_t num)
 {
+    if (num >= getAutoDiscoveryCount()) {
+        return nullptr;
+    }
     auto discovery = new MQTTAutoDiscovery();
-    discovery->create(this, _getId(), format);
-    discovery->addStateTopic(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(__s_), _getId().c_str()));
-    discovery->addUnitOfMeasurement(F("\u00b0C"));
+    switch(num) {
+        case 0:
+            discovery->create(this, _getId(), format);
+            discovery->addStateTopic(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(__s_), _getId().c_str()));
+            discovery->addUnitOfMeasurement(F("\u00b0C"));
+            break;
+    }
     discovery->finalize();
-    vector.emplace_back(discovery);
+    return discovery;
 }
 
 uint8_t Sensor_LM75A::getAutoDiscoveryCount() const
@@ -55,6 +62,7 @@ void Sensor_LM75A::createWebUI(WebUI &webUI, WebUIRow **row)
 void Sensor_LM75A::publishState(MQTTClient *client)
 {
     if (client && client->isConnected()) {
+        auto _qos = MQTTClient::getDefaultQos();
         client->publish(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(__s_), _getId().c_str()), _qos, 1, String(_readSensor(), 2));
     }
 }

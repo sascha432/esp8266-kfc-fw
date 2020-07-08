@@ -68,7 +68,7 @@ void RemoteControlPlugin::reconfigure(PGM_P source)
     }
 }
 
-void RemoteControlPlugin::restart()
+void RemoteControlPlugin::shutdown()
 {
     LoopFunctions::remove(loop);
     WiFiCallbacks::remove(WiFiCallbacks::ANY, wifiCallback);

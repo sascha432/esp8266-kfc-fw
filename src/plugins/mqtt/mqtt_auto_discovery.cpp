@@ -186,6 +186,11 @@ String &MQTTAutoDiscovery::getTopic()
     return _topic;
 }
 
+size_t MQTTAutoDiscovery::getMessageSize() const
+{
+    return _discovery.length() + _topic.length() + 16;
+}
+
 bool MQTTAutoDiscovery::isEnabled()
 {
 #if MQTT_AUTO_DISCOVERY

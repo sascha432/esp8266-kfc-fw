@@ -365,7 +365,7 @@ public:
     }
     virtual void setup(PluginSetupMode_t mode) override;
     virtual void reconfigure(PGM_P source) override;
-    virtual void restart() override;
+    virtual void shutdown() override;
     virtual bool hasReconfigureDependecy(PluginComponent *plugin) const override {
         return plugin->nameEquals(FSPGM(http));
     }
@@ -409,10 +409,10 @@ void PingMonitorPlugin::reconfigure(PGM_P source)
     ping_monitor_setup();
 }
 
-void PingMonitorPlugin::restart()
+void PingMonitorPlugin::shutdown()
 {
     pingMonitorTask = nullptr;
-    wsPing->restart();
+    wsPing->shutdown();
 }
 
 void PingMonitorPlugin::getStatus(Print &output)

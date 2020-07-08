@@ -1176,8 +1176,8 @@ void at_mode_serial_handle_event(String &commandString)
                     }
                     if (plugin) {
                         if (end) {
-                            args.printf_P(PSTR("Calling %s.restart()"), name.c_str());
-                            plugin->restart();
+                            args.printf_P(PSTR("Calling %s.shutdown()"), name.c_str());
+                            plugin->shutdown();
                         }
                         else {
                             args.printf_P(PSTR("Calling %s.setup()"), name.c_str());

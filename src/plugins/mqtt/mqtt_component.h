@@ -38,25 +38,25 @@ class MQTTClient;
 
 class MQTTComponent {
 public:
-    typedef std::unique_ptr<MQTTAutoDiscovery> MQTTAutoDiscoveryPtr;
-    typedef std::vector<MQTTAutoDiscoveryPtr> MQTTAutoDiscoveryVector;
-
+    using MQTTAutoDiscoveryPtr = MQTTAutoDiscovery *;
     using ComponentTypeEnum_t = MQTTAutoDiscovery::ComponentTypeEnum_t;
+    using Ptr = MQTTComponent *;
+    using Vector = std::vector<Ptr>;
 
     MQTTComponent(ComponentTypeEnum_t type);
     virtual ~MQTTComponent();
 
-    virtual void createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector) = 0;
+#if MQTT_AUTO_DISCOVERY
+    virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTTAutoDiscovery::Format_t format, uint8_t num) = 0;
     virtual uint8_t getAutoDiscoveryCount() const = 0;
 
+    uint8_t rewindAutoDiscovery();
+    uint8_t getAutoDiscoveryNumber();
+#endif
 
     virtual void onConnect(MQTTClient *client);
-    virtual void onDisconnect(MQTTClient *client, AsyncMqttClientDisconnectReason reason);  // call base method when overriding
+    virtual void onDisconnect(MQTTClient *client, AsyncMqttClientDisconnectReason reason);
     virtual void onMessage(MQTTClient *client, char *topic, char *payload, size_t len);
-
-#if MQTT_AUTO_DISCOVERY
-    void publishAutoDiscovery(MQTTClient *client);
-#endif
 
     PGM_P getComponentName();
 
@@ -70,14 +70,17 @@ public:
 private:
     ComponentTypeEnum_t _type;
     uint8_t _num;
-    EventScheduler::Timer _autoDiscoveryTimer;
+#if MQTT_AUTO_DISCOVERY
+    friend class MQTTAutoDiscoveryQueue;
+    uint8_t _autoDiscoveryNum;
+#endif
 };
 
 // for creating auto discovery without an actual component
 class MQTTComponentHelper : public MQTTComponent {
 public:
     MQTTComponentHelper(ComponentTypeEnum_t type);
-    virtual void createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector) override;
+    virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTTAutoDiscovery::Format_t format, uint8_t num) override;
     virtual uint8_t getAutoDiscoveryCount() const override;
 
     MQTTAutoDiscovery *createAutoDiscovery(uint8_t count, MQTTAutoDiscovery::Format_t format);

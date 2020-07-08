@@ -58,7 +58,7 @@ public:
     }
 
     virtual void setup(PluginSetupMode_t mode) override;
-    virtual void restart() override;
+    virtual void shutdown() override;
     virtual void reconfigure(PGM_P source) override;
 
     virtual bool hasStatus() const override {
@@ -86,7 +86,7 @@ public:
 
 // MQTTComponent
 public:
-    virtual void createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector) override;
+    virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTTAutoDiscovery::Format_t format, uint8_t num) override;
     virtual uint8_t getAutoDiscoveryCount() const override;
     virtual void onConnect(MQTTClient *client) override;
     virtual void onMessage(MQTTClient *client, char *topic, char *payload, size_t len) override;

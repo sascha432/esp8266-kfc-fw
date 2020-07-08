@@ -54,7 +54,7 @@ void SwitchPlugin::setup(PluginSetupMode_t mode)
 #endif
 }
 
-void SwitchPlugin::restart()
+void SwitchPlugin::shutdown()
 {
 #if IOT_SWITCH_PUBLISH_MQTT_INTERVAL
     _updateTimer.remove();

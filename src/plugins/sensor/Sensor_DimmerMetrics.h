@@ -4,29 +4,18 @@
 
 #pragma once
 
-#if IOT_SENSOR_HAVE_DS3231
+#if IOT_ATOMIC_SUN_V2 || IOT_DIMMER_MODULE
 
 #include <Arduino_compat.h>
 #include <Wire.h>
 #include <vector>
-#include <Wire.h>
 #include "WebUIComponent.h"
 #include "plugins.h"
 #include "MQTTSensor.h"
 
-#if !RTC_SUPPORT
-#error RTC_SUPPORT not enabled
-#endif
-
-#if !defined(RTC_DEVICE_DS3231) || RTC_DEVICE_DS3231 == 0
-#error RTC_DEVICE_DS3231 not set
-#else
-#include <RTClib.h>
-#endif
-
-class Sensor_DS3231 : public MQTTSensor {
+class Sensor_DimmerMetrics : public MQTTSensor {
 public:
-    Sensor_DS3231(const JsonString &name);
+    Sensor_DimmerMetrics(const String &name);
 
     virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTTAutoDiscovery::Format_t format, uint8_t num) override;
     virtual uint8_t getAutoDiscoveryCount() const override;
@@ -36,16 +25,20 @@ public:
     virtual void createWebUI(WebUI &webUI, WebUIRow **row) override;
     virtual void getStatus(PrintHtmlEntitiesString &output) override;
     virtual MQTTSensorSensorType getType() const override;
-    virtual bool getSensorData(String &name, StringVector &values) override;
 
 private:
-    float _readSensorTemp();
-    time_t _readSensorTime();
-    int8_t _readSensorLostPower();
-    String _getTimeStr();
+    friend class AtomicSunPlugin;
+    friend class DimmerModulePlugin;
+    friend class Dimmer_Base;
 
-    JsonString _name;
-    TwoWire *_wire;
+    String _getMetricsTopics(uint8_t num) const;
+    DimmerMetrics &_updateMetrics(const dimmer_metrics_t &metrics);
+    void _createWebUI(WebUI &webUI, WebUIRow **row);
+
+    // String _getId(const __FlashStringHelper *type = nullptr);
+    String _name;
+    DimmerMetrics _metrics;
+    bool _webUIinitialized;
 };
 
 #endif

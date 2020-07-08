@@ -178,7 +178,7 @@ public:
     virtual void setup(PluginSetupMode_t mode) override;
     virtual void reconfigure(PGM_P source) override;
     //virtual bool hasReconfigureDependecy(PluginComponent *plugin) const override;
-    virtual void restart() override;
+    virtual void shutdown() override;
 
     virtual bool hasStatus() const override {
         return true;
@@ -208,7 +208,7 @@ public:
 #endif
 
 public:
-    virtual void createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector);
+    virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTTAutoDiscovery::Format_t format, uint8_t num) override;
     virtual uint8_t getAutoDiscoveryCount() const {
 #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
         return 2;

@@ -76,7 +76,8 @@ public:
 
 // MQTTComponent
 public:
-    virtual void createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector) override {
+    virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTTAutoDiscovery::Format_t format, uint8_t num) override {
+        return nullptr;
     }
     virtual uint8_t getAutoDiscoveryCount() const override {
         return 0;

@@ -73,7 +73,7 @@ public:
     }
 
     virtual void setup(PluginSetupMode_t mode) override;
-    virtual void restart() override;
+    virtual void shutdown() override;
     virtual void reconfigure(PGM_P source) override;
 
     // virtual MenuTypeEnum_t getMenuType() const override {

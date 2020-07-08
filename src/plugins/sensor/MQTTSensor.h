@@ -27,7 +27,8 @@ DECLARE_ENUM(MQTTSensorSensorType, uint8_t,
     BATTERY,
     DS3231,
     INA219,
-    DHTxx
+    DHTxx,
+    DIMMER_METRICS
 );
 
 #if DEBUG_IOT_SENSOR
@@ -54,14 +55,16 @@ public:
         }
     }
 
-    //virtual void createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector) override;
+    // virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTTAutoDiscovery::Format_t format, uint8_t num) override;
     //virtual uint8_t getAutoDiscoveryCount() const override;
+
     virtual void onConnect(MQTTClient *client) override;
-    virtual void onMessage(MQTTClient *client, char *topic, char *payload, size_t len) override {
-#if DEBUG_IOT_SENSOR
-        debug_println();
-#endif
-    }
+
+//     virtual void onMessage(MQTTClient *client, char *topic, char *payload, size_t len) override {
+// #if DEBUG_IOT_SENSOR
+//         debug_println();
+// #endif
+//     }
 
     // using MQTT update rate
     virtual void publishState(MQTTClient *client) = 0;
@@ -87,7 +90,7 @@ public:
 
     virtual void reconfigure() {
     }
-    virtual void restart() {
+    virtual void shutdown() {
     }
 
 #if AT_MODE_SUPPORTED
@@ -109,9 +112,6 @@ public:
         _mqttUpdateRate = updateRate;
         _nextMqttUpdate = 0;
     }
-
-protected:
-    uint8_t _qos;
 
 private:
     uint8_t _updateRate;

@@ -68,7 +68,7 @@ public:
     // executed during boot
     virtual void setup(PluginSetupMode_t mode);
     // executed before a restart
-    virtual void restart();
+    virtual void shutdown();
 
     // executed after the configuration has been changed
 protected:

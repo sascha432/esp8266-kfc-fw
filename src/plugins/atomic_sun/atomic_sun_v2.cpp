@@ -88,78 +88,58 @@ void AtomicSunPlugin::getStatus(Print &output)
         output.print(FSPGM(disabled));
     }
 }
-void Driver_4ChDimmer::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector)
+
+MQTTComponent::MQTTAutoDiscoveryPtr Driver_4ChDimmer::nextAutoDiscovery(MQTTAutoDiscovery::Format_t format, uint8_t num)
 {
-    _createTopics();
-
-    auto discovery = new MQTTAutoDiscovery();
-    discovery->create(this, F("main"), format);
-    discovery->addStateTopic(_data.state.state);
-    discovery->addCommandTopic(_data.state.set);
-    discovery->addPayloadOn(1);
-    discovery->addPayloadOff(0);
-    discovery->addBrightnessStateTopic(_data.brightness.state);
-    discovery->addBrightnessCommandTopic(_data.brightness.set);
-    discovery->addBrightnessScale(MAX_LEVEL_ALL_CHANNELS);
-    discovery->addColorTempStateTopic(_data.color.state);
-    discovery->addColorTempCommandTopic(_data.color.set);
-    discovery->finalize();
-    vector.emplace_back(discovery);
-
-    discovery = new MQTTAutoDiscovery();
-    discovery->create(this, F("lock_channels"), format);
-    discovery->addStateTopic(_data.lockChannels.state);
-    discovery->addCommandTopic(_data.lockChannels.set);
-    discovery->addPayloadOn(1);
-    discovery->addPayloadOff(0);
-    discovery->finalize();
-    vector.emplace_back(discovery);
-
-    for(uint8_t i = 0; i < MAX_CHANNELS; i++) {
-        discovery = new MQTTAutoDiscovery();
-        discovery->create(this, PrintString(FSPGM(channel__u, "channel_%u"), i), format);
-        discovery->addStateTopic(_data.channels[i].state);
-        discovery->addCommandTopic(_data.channels[i].set);
-        discovery->addBrightnessStateTopic(_data.channels[i].brightnessState);
-        discovery->addBrightnessCommandTopic(_data.channels[i].brightnessSet);
-        discovery->addBrightnessScale(MAX_LEVEL);
-        discovery->addPayloadOn(1);
-        discovery->addPayloadOff(0);
-        discovery->finalize();
-        vector.emplace_back(discovery);
+    if (num > 5) {
+        return nullptr;
     }
-
-    MQTTComponentHelper component(MQTTComponent::ComponentTypeEnum_t::SENSOR);
-
-    discovery = component.createAutoDiscovery(F("temp"), format);
-    discovery->addStateTopic(_getMetricsTopics(0));
-    discovery->addUnitOfMeasurement(F("\u00b0C"));
+    auto discovery = new MQTTAutoDiscovery();
+    switch(num) {
+        case 0:
+            _createTopics();
+            discovery->create(this, F("main"), format);
+            discovery->addStateTopic(_data.state.state);
+            discovery->addCommandTopic(_data.state.set);
+            discovery->addPayloadOn(1);
+            discovery->addPayloadOff(0);
+            discovery->addBrightnessStateTopic(_data.brightness.state);
+            discovery->addBrightnessCommandTopic(_data.brightness.set);
+            discovery->addBrightnessScale(MAX_LEVEL_ALL_CHANNELS);
+            discovery->addColorTempStateTopic(_data.color.state);
+            discovery->addColorTempCommandTopic(_data.color.set);
+            break;
+        case 1:
+            discovery->create(this, F("lock_channels"), format);
+            discovery->addStateTopic(_data.lockChannels.state);
+            discovery->addCommandTopic(_data.lockChannels.set);
+            discovery->addPayloadOn(1);
+            discovery->addPayloadOff(0);
+            discovery->finalize();
+            break;
+        case 2:
+        case 3:
+        case 4:
+        case 5: {
+            uint8_t i = num - 2;
+            discovery->create(this, PrintString(FSPGM(channel__u, "channel_%u"), i), format);
+            discovery->addStateTopic(_data.channels[i].state);
+            discovery->addCommandTopic(_data.channels[i].set);
+            discovery->addBrightnessStateTopic(_data.channels[i].brightnessState);
+            discovery->addBrightnessCommandTopic(_data.channels[i].brightnessSet);
+            discovery->addBrightnessScale(MAX_LEVEL);
+            discovery->addPayloadOn(1);
+            discovery->addPayloadOff(0);
+        }
+        break;
+    }
     discovery->finalize();
-    vector.emplace_back(discovery);
-
-    discovery = component.createAutoDiscovery(F("temp2"), format);
-    discovery->addStateTopic(_getMetricsTopics(1));
-    discovery->addUnitOfMeasurement(F("\u00b0C"));
-    discovery->finalize();
-    vector.emplace_back(discovery);
-
-    discovery = component.createAutoDiscovery(F("vcc"), format);
-    discovery->addStateTopic(_getMetricsTopics(2));
-    discovery->addUnitOfMeasurement('V');
-    discovery->finalize();
-    vector.emplace_back(discovery);
-
-    discovery = component.createAutoDiscovery(F("frequency"), format);
-    discovery->addStateTopic(_getMetricsTopics(3));
-    discovery->addUnitOfMeasurement(F("Hz"));
-    discovery->finalize();
-    vector.emplace_back(discovery);
-
+    return discovery;
 }
 
 uint8_t Driver_4ChDimmer::getAutoDiscoveryCount() const
 {
-    return MAX_CHANNELS + 6;
+    return 6;
 }
 
 void Driver_4ChDimmer::_createTopics()
@@ -178,7 +158,7 @@ void Driver_4ChDimmer::_createTopics()
         _data.lockChannels.set = MQTTClient::formatTopic(lockChannels, F("/lock/set"));
         _data.lockChannels.state = MQTTClient::formatTopic(lockChannels, F("/lock/state"));
 
-        for(uint8_t i = 0; i < MAX_CHANNELS; i++) {
+        for(uint8_t i = 0; i < _channels.size(); i++) {
             auto channel = PrintString(FSPGM(channel__u), i);
             _data.channels[i].set = MQTTClient::formatTopic(channel, F("/set"));
             _data.channels[i].state = MQTTClient::formatTopic(channel, F("/state"));
@@ -198,7 +178,7 @@ void Driver_4ChDimmer::onConnect(MQTTClient *client)
     client->subscribe(this, _data.brightness.set, _qos);
     client->subscribe(this, _data.color.set, _qos);
     client->subscribe(this, _data.lockChannels.set, _qos);
-    for(uint8_t i = 0; i < MAX_CHANNELS; i++) {
+    for(uint8_t i = 0; i < _channels.size(); i++) {
         client->subscribe(this, _data.channels[i].set, _qos);
         client->subscribe(this, _data.channels[i].brightnessSet, _qos);
     }
@@ -265,7 +245,7 @@ void Driver_4ChDimmer::onMessage(MQTTClient *client, char *topic, char *payload,
     }
     else {
 
-        for(uint8_t i = 0; i < MAX_CHANNELS; i++) {
+        for(uint8_t i = 0; i < _channels.size(); i++) {
             auto &channel =_data.channels[i];
 
             if (channel.brightnessSet.equals(topic)) {
@@ -667,7 +647,7 @@ void AtomicSunPlugin::reconfigure(PGM_P source)
     }
 }
 
-void AtomicSunPlugin::restart()
+void AtomicSunPlugin::shutdown()
 {
     _end();
 }
@@ -690,10 +670,14 @@ void AtomicSunPlugin::createWebUI(WebUI &webUI)
     row->addColorSlider(F("dimmer_color"), F("Atomic Sun Color"));
 
     row = &webUI.addRow();
-    row->addBadgeSensor(F("dimmer_vcc"), F("Atomic Sun VCC"), 'V');
-    row->addBadgeSensor(F("dimmer_frequency"), F("Frequency"), F("Hz"));
-    row->addBadgeSensor(F("dimmer_int_temp"), F("ATmega"), F("\u00b0C"));
-    row->addBadgeSensor(F("dimmer_ntc_temp"), F("NTC"), F("\u00b0C"));
+    auto sensor = getMetricsSensor();
+    if (sensor) {
+        sensor->_createWebUI(webUI, &row);
+    }
+    // row->addBadgeSensor(F("dimmer_vcc"), F("Atomic Sun VCC"), 'V');
+    // row->addBadgeSensor(F("dimmer_frequency"), F("Frequency"), F("Hz"));
+    // row->addBadgeSensor(F("dimmer_int_temp"), F("ATmega"), F("\u00b0C"));
+    // row->addBadgeSensor(F("dimmer_ntc_temp"), F("NTC"), F("\u00b0C"));
     row->addSwitch(F("dimmer_lock"), F("Lock Channels"), false, true);
 
     row->addGroup(F("Channels"), false);

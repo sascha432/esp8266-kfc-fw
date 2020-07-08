@@ -8,10 +8,6 @@
 #define DEBUG_MQTT_CLIENT                   0
 #endif
 
-#ifndef DEBUG_MQTT_CLIENT_PAYLOAD_LEN
-#define DEBUG_MQTT_CLIENT_PAYLOAD_LEN       16
-#endif
-
 // home assistant auto discovery
 #ifndef MQTT_AUTO_DISCOVERY
 #define MQTT_AUTO_DISCOVERY                 1
@@ -35,6 +31,7 @@
 #include "EnumBase.h"
 #include "kfc_fw_config.h"
 #include "mqtt_component.h"
+#include "mqtt_auto_discovery_queue.h"
 
 DECLARE_ENUM(MQTTQueueEnum_t, uint8_t,
     SUBSCRIBE = 0,
@@ -45,6 +42,8 @@ DECLARE_ENUM(MQTTQueueEnum_t, uint8_t,
 class MQTTClient {
 public:
     using MQTTQueueType = MQTTQueueEnum_t;
+    using MQTTComponentPtr = MQTTComponent::Ptr;
+    using MQTTComponentVector = MQTTComponent::Vector;
 
     class MQTTTopic {
     public:
@@ -101,8 +100,6 @@ public:
         String _payload;
     };
 
-    typedef MQTTComponent* MQTTComponentPtr;
-    typedef std::vector<MQTTComponentPtr> MQTTComponentVector;
     typedef std::vector<MQTTTopic> MQTTTopicVector;
     typedef std::vector<MQTTQueue> MQTTQueueVector; // this is not used for QoS at the moment
 
@@ -212,6 +209,15 @@ private:
     EventScheduler::Timer _queueTimer;
 
 private:
+    friend MQTTAutoDiscoveryQueue;
+
+    // add
+    // friend class MQTTClient;
+    // to AsyncMqttClient
+    size_t getClientSpace() const {
+        return _client->_client.space();
+    }
+
     String _host;
     String _username;
     String _password;
@@ -226,6 +232,7 @@ private:
     Buffer _buffer;
     String _lastWillTopic;
     String _lastWillPayload;
+    MQTTAutoDiscoveryQueue _autoDiscoveryQueue;
 
     static MQTTClient *_mqttClient;
 };

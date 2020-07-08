@@ -142,7 +142,13 @@ void MDNSPlugin::_wifiCallback(uint8_t event, void *payload)
     _debug_printf_P(PSTR("event=%u, running=%u\n"), event, _running);
     if (WiFiCallbacks::EventEnum_t::CONNECTED) {
         _end();
+#if MDNS_DELAYED_START_AFTER_WIFI_CONNECT
+        _delayedStart.add(MDNS_DELAYED_START_AFTER_WIFI_CONNECT, false, [this](EventScheduler::TimerPtr) {
+            _begin();
+        });
+#else
         _begin();
+#endif
     }
     else if (WiFiCallbacks::EventEnum_t::DISCONNECTED) {
         _end();
@@ -242,6 +248,9 @@ void MDNSPlugin::_begin()
 
 void MDNSPlugin::_end()
 {
+#if MDNS_DELAYED_START_AFTER_WIFI_CONNECT
+    _delayedStart.remove();
+#endif
     _debug_printf_P(PSTR("running=%u\n"), _running);
     _debug_println();
     MDNS.end();

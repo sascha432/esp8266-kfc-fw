@@ -62,7 +62,7 @@ public:
     Sensor_INA219(const JsonString &name, TwoWire &wire, uint8_t address = IOT_SENSOR_HAVE_INA219);
     virtual ~Sensor_INA219();
 
-    virtual void createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector) override;
+    virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTTAutoDiscovery::Format_t format, uint8_t num) override;
     virtual uint8_t getAutoDiscoveryCount() const override;
 
     virtual void publishState(MQTTClient *client) override;

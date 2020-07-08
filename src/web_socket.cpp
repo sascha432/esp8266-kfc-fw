@@ -50,6 +50,9 @@
 
  void WsClient::onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, int type, uint8_t *data, size_t len, void *arg, WsGetInstance getInstance)
  {
+     if (WsClient::_webSockets.empty()) {
+         return;
+     }
     auto result = std::find(WsClient::_webSockets.begin(), WsClient::_webSockets.end(), server);
     if (result == WsClient::_webSockets.end()) {
         __debugbreak_and_panic_printf_P(PSTR("websocket %p has been removed, event type %u\n"), server, type);

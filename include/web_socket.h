@@ -134,7 +134,7 @@ public:
         disableSocket();
     }
 
-    void restart() {
+    void shutdown() {
         closeAll(503, String(FSPGM(Device_is_rebooting, "Device is rebooting...\n")).c_str());
         disableSocket();
     }

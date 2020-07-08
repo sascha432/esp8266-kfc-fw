@@ -104,7 +104,7 @@ class Driver_DimmerModule: public MQTTComponent, public Dimmer_Base, public Dimm
 public:
     Driver_DimmerModule();
 
-    virtual void createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTComponent::MQTTAutoDiscoveryVector &vector) override;
+    virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTTAutoDiscovery::Format_t format, uint8_t num) override;
     virtual uint8_t getAutoDiscoveryCount() const override;
     virtual void onConnect(MQTTClient *client) override;
 
@@ -204,7 +204,7 @@ public:
     virtual void setup(PluginSetupMode_t mode) override;
     virtual void reconfigure(PGM_P source) override;
     virtual bool hasReconfigureDependecy(PluginComponent *plugin) const override;
-    virtual void restart() override;
+    virtual void shutdown() override;
 
     virtual bool hasStatus() const override;
     virtual void getStatus(Print &output) override;

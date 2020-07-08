@@ -34,13 +34,6 @@
 #define IOT_ATOMIC_SUN_CHANNEL_CW2          3
 #endif
 
-#if !defined(IOT_SENSOR_HAVE_HLW8012) || IOT_SENSOR_HAVE_HLW8012 == 0
-// calculate power if sensor is not available
-#define IOT_ATOMIC_SUN_CALC_POWER           1
-#else
-#define IOT_ATOMIC_SUN_CALC_POWER           0
-#endif
-
 #ifndef STK500V1_RESET_PIN
 #error STK500V1_RESET_PIN not defined
 #endif
@@ -113,7 +106,7 @@ public:
 
     virtual void readConfig() override;
 
-    virtual void createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector) override;
+    virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTTAutoDiscovery::Format_t format, uint8_t num) override;
     virtual uint8_t getAutoDiscoveryCount() const override;
     virtual void onConnect(MQTTClient *client) override;
     virtual void onMessage(MQTTClient *client, char *topic, char *payload, size_t len) override;
@@ -155,11 +148,6 @@ private:
     void _brightnessToChannels();
     void _setLockChannels(bool value);
     void _calcRatios();
-
-#if IOT_ATOMIC_SUN_CALC_POWER
-    float _calcPower(uint8_t channel);
-    float _calcTotalPower();
-#endif
 
 protected:
     // using ChannelsArray = std::array<int16_t, 4>;
@@ -207,7 +195,7 @@ public:
 
     virtual void setup(PluginSetupMode_t mode) override;
     virtual void reconfigure(PGM_P source) override;
-    virtual void restart() override;
+    virtual void shutdown() override;
     virtual bool hasReconfigureDependecy(PluginComponent *plugin) const;
 
     virtual bool hasWebUI() const override {

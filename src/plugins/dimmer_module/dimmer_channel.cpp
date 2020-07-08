@@ -26,21 +26,27 @@ void DimmerChannel::setup(Driver_DimmerModule *dimmer, uint8_t channel)
     _channel = channel;
 }
 
-void DimmerChannel::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector)
+MQTTComponent::MQTTAutoDiscoveryPtr DimmerChannel::nextAutoDiscovery(MQTTAutoDiscovery::Format_t format, uint8_t num)
 {
-    _createTopics();
-
+    if (num > 0) {
+        return nullptr;
+    }
     auto discovery = new MQTTAutoDiscovery();
-    discovery->create(this, PrintString(FSPGM(channel__u), _channel), format);
-    discovery->addStateTopic(_data.state.state);
-    discovery->addCommandTopic(_data.state.set);
-    discovery->addPayloadOn(1);
-    discovery->addPayloadOff(0);
-    discovery->addBrightnessStateTopic(_data.brightness.state);
-    discovery->addBrightnessCommandTopic(_data.brightness.set);
-    discovery->addBrightnessScale(MAX_LEVEL);
+    switch(num) {
+        case 0:
+            _createTopics();
+            discovery->create(this, PrintString(FSPGM(channel__u), _channel), format);
+            discovery->addStateTopic(_data.state.state);
+            discovery->addCommandTopic(_data.state.set);
+            discovery->addPayloadOn(1);
+            discovery->addPayloadOff(0);
+            discovery->addBrightnessStateTopic(_data.brightness.state);
+            discovery->addBrightnessCommandTopic(_data.brightness.set);
+            discovery->addBrightnessScale(MAX_LEVEL);
+            break;
+    }
     discovery->finalize();
-    vector.emplace_back(discovery);
+    return discovery;
 }
 
 uint8_t DimmerChannel::getAutoDiscoveryCount() const

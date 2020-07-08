@@ -202,7 +202,7 @@ public:
     virtual void setup(PluginSetupMode_t mode) override;
     virtual void reconfigure(PGM_P source) override;
     virtual bool hasReconfigureDependecy(PluginComponent *plugin) const override;
-    virtual void restart() override;
+    virtual void shutdown() override;
 
     virtual MenuTypeEnum_t getMenuType() const override {
         return CUSTOM;
@@ -243,9 +243,9 @@ bool Http2SerialPlugin::hasReconfigureDependecy(PluginComponent *plugin) const
     return plugin->nameEquals(FSPGM(http));
 }
 
-void Http2SerialPlugin::restart()
+void Http2SerialPlugin::shutdown()
 {
-    wsSerialConsole->restart();
+    wsSerialConsole->shutdown();
     Http2Serial::destroyInstance();
 }
 

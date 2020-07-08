@@ -8,11 +8,14 @@
 #include <PrintHtmlEntitiesString.h>
 #include <WebUIComponent.h>
 #include <EventScheduler.h>
+#include "../src/plugins/sensor/Sensor_DimmerMetrics.h"
+
 #if IOT_DIMMER_MODULE_INTERFACE_UART
-#include <HardwareSerial.h>
 #include "SerialTwoWire.h"
+using DimmerTwoWireClass = SerialTwoWire;
 #else
 #include <Wire.h>
+using DimmerTwoWireClass = TwoWire;
 #endif
 
 #include "firmware_protocol.h"
@@ -28,12 +31,6 @@
 #if IOT_SENSOR && (IOT_SENSOR_HAVE_HLW8012 || IOT_SENSOR_HAVE_HLW8032)
 #include "./plugins/sensor/sensor.h"
 #include "./plugins/sensor/Sensor_HLW80xx.h"
-#endif
-
-#if IOT_DIMMER_MODULE_INTERFACE_UART
-using DimmerTwoWireClass = SerialTwoWire;
-#else
-using DimmerTwoWireClass = TwoWire;
 #endif
 
 class DimmerTwoWireEx : public DimmerTwoWireClass
@@ -145,6 +142,7 @@ protected:
 #if IOT_SENSOR_HLW80xx_ADJUST_CURRENT
     void _setDimmingLevels();
 #endif
+    Sensor_DimmerMetrics *getMetricsSensor() const;
 
     inline float getFadeTime() {
         return _fadeTime;
@@ -156,21 +154,17 @@ protected:
 protected:
     String _getMetricsTopics(uint8_t num) const;
 
-    static const uint16_t DIMMER_DISABLED = ~0;
+    using Version = DimmerRetrieveVersionLegacy::Version;
+    static constexpr uint16_t DIMMER_DISABLED = DimmerRetrieveVersionLegacy::INVALID_VERSION;
 
     bool _isEnabled() const {
-        return _version != DIMMER_DISABLED;
+        return _version;
     }
 
     uint8_t _endTransmission();
 
-    uint16_t _version;
-    uint16_t _vcc;
-    float _frequency;
-    float _internalTemperature;
-    float _ntcTemperature;
-    // float _powerUsage;
-
+    Version _version;
+    DimmerMetrics _metrics;
     float _fadeTime;
     float _onOffFadeTime;
 

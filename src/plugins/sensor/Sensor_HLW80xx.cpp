@@ -49,56 +49,54 @@ Sensor_HLW80xx::Sensor_HLW80xx(const String &name) : MQTTSensor(), _name(name)
 #endif
 }
 
-void Sensor_HLW80xx::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector)
+MQTTComponent::MQTTAutoDiscoveryPtr Sensor_HLW80xx::nextAutoDiscovery(MQTTAutoDiscovery::Format_t format, uint8_t num)
 {
+    if (num > 5) {
+        return nullptr;
+    }
     String topic = _getTopic();
     auto discovery = new MQTTAutoDiscovery();
-    discovery->create(this, F("power"), format);
-    discovery->addStateTopic(topic);
-    discovery->addUnitOfMeasurement('W');
-    discovery->addValueTemplate(F("power"));
+    switch(num) {
+        case 0:
+            discovery->create(this, F("power"), format);
+            discovery->addStateTopic(topic);
+            discovery->addUnitOfMeasurement('W');
+            discovery->addValueTemplate(F("power"));
+            break;
+        case 1:
+            discovery->create(this, F("energy_total"), format);
+            discovery->addStateTopic(topic);
+            discovery->addUnitOfMeasurement(F("kWh"));
+            discovery->addValueTemplate(F("energy_total"));
+            break;
+        case 2:
+            discovery->create(this, F("energy"), format);
+            discovery->addStateTopic(topic);
+            discovery->addUnitOfMeasurement(F("kWh"));
+            discovery->addValueTemplate(F("energy"));
+            break;
+        case 3:
+            discovery->create(this, F("voltage"), format);
+            discovery->addStateTopic(topic);
+            discovery->addUnitOfMeasurement('V');
+            discovery->addValueTemplate(F("voltage"));
+            break;
+        case 4:
+            discovery->create(this, F("current"), format);
+            discovery->addStateTopic(topic);
+            discovery->addUnitOfMeasurement('A');
+            discovery->addValueTemplate(F("current"));
+            break;
+        case 5:
+            discovery->create(this, F("pf"), format);
+            discovery->addStateTopic(topic);
+            discovery->addUnitOfMeasurement(emptyString);
+            discovery->addValueTemplate(F("pf"));
+            discovery->finalize();
+            break;
+    }
     discovery->finalize();
-    vector.emplace_back(discovery);
-
-    discovery = new MQTTAutoDiscovery();
-    discovery->create(this, F("energy_total"), format);
-    discovery->addStateTopic(topic);
-    discovery->addUnitOfMeasurement(F("kWh"));
-    discovery->addValueTemplate(F("energy_total"));
-    discovery->finalize();
-    vector.emplace_back(discovery);
-
-    discovery = new MQTTAutoDiscovery();
-    discovery->create(this, F("energy"), format);
-    discovery->addStateTopic(topic);
-    discovery->addUnitOfMeasurement(F("kWh"));
-    discovery->addValueTemplate(F("energy"));
-    discovery->finalize();
-    vector.emplace_back(discovery);
-
-    discovery = new MQTTAutoDiscovery();
-    discovery->create(this, F("voltage"), format);
-    discovery->addStateTopic(topic);
-    discovery->addUnitOfMeasurement('V');
-    discovery->addValueTemplate(F("voltage"));
-    discovery->finalize();
-    vector.emplace_back(discovery);
-
-    discovery = new MQTTAutoDiscovery();
-    discovery->create(this, F("current"), format);
-    discovery->addStateTopic(topic);
-    discovery->addUnitOfMeasurement('A');
-    discovery->addValueTemplate(F("current"));
-    discovery->finalize();
-    vector.emplace_back(discovery);
-
-    discovery = new MQTTAutoDiscovery();
-    discovery->create(this, F("pf"), format);
-    discovery->addStateTopic(topic);
-    discovery->addUnitOfMeasurement(emptyString);
-    discovery->addValueTemplate(F("pf"));
-    discovery->finalize();
-    vector.emplace_back(discovery);
+    return discovery;
 }
 
 uint8_t Sensor_HLW80xx::getAutoDiscoveryCount() const
@@ -176,7 +174,7 @@ void Sensor_HLW80xx::reconfigure()
     _debug_printf_P(PSTR("Sensor_HLW80xx::Sensor_HLW80xx(): calibration U=%f, I=%f, P=%f\n"), _calibrationU, _calibrationI, _calibrationP);
 }
 
-void Sensor_HLW80xx::restart()
+void Sensor_HLW80xx::shutdown()
 {
     _saveEnergyCounter();
 
@@ -229,7 +227,7 @@ void Sensor_HLW80xx::publishState(MQTTClient *client)
         auto pf = _getPowerFactor();
         json.add(F("pf"), String(pf, 2));
         json.printTo(str);
-        client->publish(_getTopic(), _qos, 1, str);
+        client->publish(_getTopic(), _qos(), 1, str);
     }
 }
 

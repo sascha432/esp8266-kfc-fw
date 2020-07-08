@@ -123,12 +123,13 @@ void DimmerModuleForm::createConfigureForm(AsyncWebServerRequest *request, Form 
     form.finalize();
 
     PrintHtmlEntitiesString code;
-    MQTTComponent::MQTTAutoDiscoveryVector vector;
-    createAutoDiscovery(MQTTAutoDiscovery::FORMAT_YAML, vector);
-    for(auto &&discovery: vector) {
+    MQTTComponent::MQTTAutoDiscoveryPtr discovery;
+    uint8_t num = 0;
+    while ((discovery = nextAutoDiscovery(MQTTAutoDiscovery::FORMAT_YAML, num++)) != nullptr) {
         const auto &payload = discovery->getPayload();
         code.write((const uint8_t *)payload.c_str(), payload.length());
-    }
+        delete discovery;
+    };
 
     reinterpret_cast<SettingsForm &>(form).getTokens().push_back(std::make_pair<String, String>(F("HASS_YAML"), code.c_str()));
 }

@@ -60,7 +60,7 @@ String printable_string(const uint8_t *buffer, size_t length, size_t maxLength)
         if (isprint(*ptr)) {
             str += (char)*ptr;
         } else {
-            str.printf_P(PSTR("\\%02X"), (int)(*ptr & 0xff));
+            str.printf_P(PSTR("\\x%02X"), (int)(*ptr & 0xff));
         }
         ptr++;
     }

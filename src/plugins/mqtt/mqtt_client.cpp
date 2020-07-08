@@ -44,7 +44,7 @@ void MQTTClient::deleteInstance()
     }
 }
 
-MQTTClient::MQTTClient() : _client(nullptr), _useNodeId(false), _lastWillPayload('0')
+MQTTClient::MQTTClient() : _client(nullptr), _useNodeId(false), _lastWillPayload('0'), _autoDiscoveryQueue(*this)
 {
     _debug_println();
 
@@ -329,10 +329,12 @@ void MQTTClient::onConnect(bool sessionPresent)
 
     for(const auto &component: _components) {
         component->onConnect(this);
-#if MQTT_AUTO_DISCOVERY
-        component->publishAutoDiscovery(this);
-#endif
     }
+#if MQTT_AUTO_DISCOVERY
+    if (MQTTAutoDiscovery::isEnabled()) {
+        _autoDiscoveryQueue.publish();
+    }
+#endif
 }
 
 void MQTTClient::onDisconnect(AsyncMqttClientDisconnectReason reason)
@@ -580,7 +582,7 @@ void MQTTClient::_queueTimerCallback()
     while(_queue.size()) {
         int result = -1;
         auto queue = _queue.front();
-        _debug_printf_P(PSTR("queue=%u topic=%s space=%u\n"), _queue.size(), queue.getTopic().c_str(), _client->_client.space());
+        _debug_printf_P(PSTR("queue=%u topic=%s space=%u\n"), _queue.size(), queue.getTopic().c_str(), getClientSpace());
         switch(queue.getType()) {
             case MQTTQueueType::SUBSCRIBE:
                 result = subscribeWithId(queue.getComponent(), queue.getTopic(), queue.getQos());
@@ -604,6 +606,7 @@ void MQTTClient::_queueTimerCallback()
 
 void MQTTClient::_clearQueue()
 {
+    _autoDiscoveryQueue.clear();
     _queueTimer.remove();
     _queue.clear();
 }
@@ -628,7 +631,7 @@ public:
 #endif
     virtual void setup(PluginSetupMode_t mode) override;
     virtual void reconfigure(PGM_P source) override;
-    virtual void restart() override;
+    virtual void shutdown() override;
 
     virtual bool hasStatus() const override {
         return true;
@@ -668,7 +671,7 @@ void MQTTPlugin::reconfigure(PGM_P source)
     }
 }
 
-void MQTTPlugin::restart()
+void MQTTPlugin::shutdown()
 {
     // crashing sometimes
     // MQTTClient::deleteInstance();

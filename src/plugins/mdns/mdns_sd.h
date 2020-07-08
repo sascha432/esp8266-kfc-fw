@@ -4,11 +4,8 @@
 
 #pragma once
 
-#ifndef DEBUG_MDNS_SD
-#define DEBUG_MDNS_SD                       0
-#endif
-
 #include <Arduino_compat.h>
+#include <EventScheduler.h>
 #include "plugins.h"
 #include "plugins_menu.h"
 #if defined(ESP8266)
@@ -16,6 +13,15 @@
 #endif
 #if defined(ESP32)
 #include <ESPmDNS.h>
+#endif
+
+#ifndef DEBUG_MDNS_SD
+#define DEBUG_MDNS_SD                                       0
+#endif
+
+#ifndef MDNS_DELAYED_START_AFTER_WIFI_CONNECT
+// #define MDNS_DELAYED_START_AFTER_WIFI_CONNECT               10000UL
+#define MDNS_DELAYED_START_AFTER_WIFI_CONNECT               0
 #endif
 
 class MDNSService {
@@ -120,6 +126,9 @@ private:
 private:
     uint8_t _running: 1;
     uint8_t _enabled: 1;
+#if MDNS_DELAYED_START_AFTER_WIFI_CONNECT
+    EventScheduler::Timer _delayedStart;
+#endif
 };
 
 #endif

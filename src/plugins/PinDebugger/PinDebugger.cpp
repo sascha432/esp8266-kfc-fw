@@ -22,7 +22,7 @@ void PinDebuggerPlugin::reconfigure(PGM_P source)
 {
 }
 
-void PinDebuggerPlugin::restart()
+void PinDebuggerPlugin::shutdown()
 {
     VirtualPinDebugger::removeAll();
 }

@@ -178,7 +178,7 @@ class Sensor_HLW80xx : public MQTTSensor {
 public:
     Sensor_HLW80xx(const String &name);
 
-    virtual void createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector) override;
+    virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTTAutoDiscovery::Format_t format, uint8_t num) override;
     virtual uint8_t getAutoDiscoveryCount() const override;
 
     virtual void publishState(MQTTClient *client) override;
@@ -195,7 +195,7 @@ public:
     virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form);
 
     virtual void reconfigure() override;
-    virtual void restart() override;
+    virtual void shutdown() override;
 
 #if AT_MODE_SUPPORTED
     virtual void atModeHelpGenerator() override;

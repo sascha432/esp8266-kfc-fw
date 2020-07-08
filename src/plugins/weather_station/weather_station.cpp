@@ -274,7 +274,7 @@ void WeatherStationPlugin::reconfigure(PGM_P source)
     _fadeBacklight(oldLevel, _backlightLevel);
 }
 
-void WeatherStationPlugin::restart()
+void WeatherStationPlugin::shutdown()
 {
 #if IOT_WEATHER_STATION_WS2812_NUM
     _pixelTimer.remove();

@@ -1031,7 +1031,7 @@ void WebServerPlugin::reconfigure(PGM_P source)
     begin();
 }
 
-void WebServerPlugin::restart()
+void WebServerPlugin::shutdown()
 {
     end();
 }

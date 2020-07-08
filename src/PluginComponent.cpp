@@ -198,7 +198,7 @@ bool PluginComponent::atModeHandler(AtModeArgs &args)
 
 #endif
 
-void PluginComponent::restart()
+void PluginComponent::shutdown()
 {
 }
 

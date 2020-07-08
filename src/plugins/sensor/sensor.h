@@ -22,45 +22,54 @@
 #include "Sensor_DS3231.h"
 #include "Sensor_INA219.h"
 #include "Sensor_DHTxx.h"
+#include "Sensor_DimmerMetrics.h"
 
 #ifndef IOT_SENSOR_NAMES_LM75A
-#define IOT_SENSOR_NAMES_LM75A      "LM75A Temperature"
+#define IOT_SENSOR_NAMES_LM75A                  "LM75A Temperature"
 #endif
 
 #ifndef IOT_SENSOR_NAMES_BME280
-#define IOT_SENSOR_NAMES_BME280     "BME280"
+#define IOT_SENSOR_NAMES_BME280                 "BME280"
 #endif
 
 #ifndef IOT_SENSOR_NAMES_DHTxx
-#define IOT_SENSOR_NAMES_DHTxx      "DHT11"
+#define IOT_SENSOR_NAMES_DHTxx                  "DHT11"
 #endif
 
 #ifndef IOT_SENSOR_NAMES_BME680
-#define IOT_SENSOR_NAMES_BME680     "BME680"
+#define IOT_SENSOR_NAMES_BME680                 "BME680"
 #endif
 
 #ifndef IOT_SENSOR_NAMES_CCS811
-#define IOT_SENSOR_NAMES_CCS811     "CCS811"
+#define IOT_SENSOR_NAMES_CCS811                 "CCS811"
 #endif
 
 #ifndef IOT_SENSOR_NAMES_HLW8012
-#define IOT_SENSOR_NAMES_HLW8012    "HLW8012"
+#define IOT_SENSOR_NAMES_HLW8012                "HLW8012"
 #endif
 
 #ifndef IOT_SENSOR_NAMES_HLW8032
-#define IOT_SENSOR_NAMES_HLW8032    "HLW8032"
+#define IOT_SENSOR_NAMES_HLW8032                "HLW8032"
 #endif
 
 #ifndef IOT_SENSOR_NAMES_BATTERY
-#define IOT_SENSOR_NAMES_BATTERY    "Battery"
+#define IOT_SENSOR_NAMES_BATTERY                "Battery"
 #endif
 
 #ifndef IOT_SENSOR_NAMES_DS3231
-#define IOT_SENSOR_NAMES_DS3231     "DS3231 Temperature"
+#define IOT_SENSOR_NAMES_DS3231                 "DS3231 Temperature"
 #endif
 
 #ifndef IOT_SENSOR_NAMES_INA219
-#define IOT_SENSOR_NAMES_INA219     "INA219 Voltage"
+#define IOT_SENSOR_NAMES_INA219                 "INA219 Voltage"
+#endif
+
+#ifndef IOT_SENSOR_NAMES_DIMMER_METRICS
+#if IOT_ATOMIC_SUN_V2
+#define IOT_SENSOR_NAMES_DIMMER_METRICS         "Atomic Sun VCC"
+#else
+#define IOT_SENSOR_NAMES_DIMMER_METRICS         "Dimmer VCC"
+#endif
 #endif
 
 class SensorPlugin : public PluginComponent, public WebUIInterface {
@@ -93,7 +102,7 @@ public:
 
     virtual void setup(PluginSetupMode_t mode) override;
     virtual void reconfigure(PGM_P source) override;
-    virtual void restart() override;
+    virtual void shutdown() override;
 
     virtual bool hasStatus() const override {
         return true;

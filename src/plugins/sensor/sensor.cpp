@@ -51,6 +51,9 @@ void SensorPlugin::setup(PluginSetupMode_t mode)
 #if IOT_SENSOR_HAVE_CCS811
     _sensors.push_back(new Sensor_CCS811(F(IOT_SENSOR_NAMES_CCS811), IOT_SENSOR_HAVE_CCS811));
 #endif
+#if IOT_ATOMIC_SUN_V2 || IOT_DIMMER_MODULE
+    _sensors.push_back(new Sensor_DimmerMetrics(F(IOT_SENSOR_NAMES_DIMMER_METRICS)));
+#endif
 #if IOT_SENSOR_HAVE_HLW8012
     _sensors.push_back(new Sensor_HLW8012(F(IOT_SENSOR_NAMES_HLW8012), IOT_SENSOR_HLW8012_SEL, IOT_SENSOR_HLW8012_CF, IOT_SENSOR_HLW8012_CF1));
 #endif
@@ -112,12 +115,12 @@ void SensorPlugin::_timerEvent()
     }
 }
 
-void SensorPlugin::restart()
+void SensorPlugin::shutdown()
 {
     _timer.remove();
     for(auto sensor: _sensors) {
         _debug_printf_P(PSTR("type=%u\n"), sensor->getType());
-        sensor->restart();
+        sensor->shutdown();
         delete sensor;
     }
     _sensors.clear();

@@ -298,6 +298,7 @@ public:
     static const char *getTimezone();
     static const char *getServers(uint8_t num);
     static const char *getUrl();
+    static const char *getPosixTZ();
     static Timezone_t getTZ();
 
     static void defaults();
@@ -306,6 +307,8 @@ public:
     char servers[3][65];
 #if USE_REMOTE_TIMEZONE
     char remote_tz_dst_ofs_url[255];
+#else
+    char posix_tz[255];
 #endif
     Timezone_t tz;
 };

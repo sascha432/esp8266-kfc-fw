@@ -212,12 +212,8 @@ extern class Stream &DebugSerial;
 #endif
 
 #ifndef USE_REMOTE_TIMEZONE
-#define USE_REMOTE_TIMEZONE             1               // Use remote server to determine timezone offset and daylight saving offset
+#define USE_REMOTE_TIMEZONE             0               // Use remote server to determine timezone offset and daylight saving offset
                                                         // Currently https://timezonedb.com/register is supported as well as any similar API
-                                                        // TODO add php API for self hosting
-#endif
-#if !USE_REMOTE_TIMEZONE
-#define INCLUDE_TZ_AND_DST_OFS          1               // Include timezone and dst offsets
 #endif
 
 #ifndef MQTT_SUPPORT

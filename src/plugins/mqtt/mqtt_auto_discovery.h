@@ -68,6 +68,9 @@ public:
     PrintString &getPayload();
     String &getTopic();
 
+    // roughly the free space needed in the MQTT clients tcp buffer
+    size_t getMessageSize() const;
+
     static bool isEnabled();
 
 private:

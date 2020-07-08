@@ -36,35 +36,36 @@ Sensor_INA219::~Sensor_INA219()
     LoopFunctions::remove(reinterpret_cast<LoopFunctions::CallbackPtr_t>(this));
 }
 
-void Sensor_INA219::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector)
+MQTTComponent::MQTTAutoDiscoveryPtr Sensor_INA219::nextAutoDiscovery(MQTTAutoDiscovery::Format_t format, uint8_t num)
 {
+    if (num >= getAutoDiscoveryCount()) {
+        return nullptr;
+    }
     auto discovery = new MQTTAutoDiscovery();
-    discovery->create(this, _getId(VOLTAGE), format);
-    discovery->addStateTopic(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(__s_), _getId(VOLTAGE).c_str()));
-    discovery->addUnitOfMeasurement('V');
+    switch(num) {
+        case 0:
+            discovery->create(this, _getId(VOLTAGE), format);
+            discovery->addStateTopic(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(__s_), _getId(VOLTAGE).c_str()));
+            discovery->addUnitOfMeasurement('V');
+            break;
+        case 1:
+            discovery->create(this, _getId(CURRENT), format);
+            discovery->addStateTopic(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(__s_), _getId(CURRENT).c_str()));
+            discovery->addUnitOfMeasurement(F("mA"));
+            break;
+        case 2:
+            discovery->create(this, _getId(POWER), format);
+            discovery->addStateTopic(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(__s_), _getId(POWER).c_str()));
+            discovery->addUnitOfMeasurement(F("mW"));
+            break;
+        case 3:
+            discovery->create(this, _getId(PEAK_CURRENT), format);
+            discovery->addStateTopic(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(__s_), _getId(PEAK_CURRENT).c_str()));
+            discovery->addUnitOfMeasurement(F("mA"));
+            break;
+    }
     discovery->finalize();
-    vector.emplace_back(discovery);
-
-    discovery = new MQTTAutoDiscovery();
-    discovery->create(this, _getId(CURRENT), format);
-    discovery->addStateTopic(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(__s_), _getId(CURRENT).c_str()));
-    discovery->addUnitOfMeasurement(F("mA"));
-    discovery->finalize();
-    vector.emplace_back(discovery);
-
-    discovery = new MQTTAutoDiscovery();
-    discovery->create(this, _getId(POWER), format);
-    discovery->addStateTopic(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(__s_), _getId(POWER).c_str()));
-    discovery->addUnitOfMeasurement(F("mW"));
-    discovery->finalize();
-    vector.emplace_back(discovery);
-
-    discovery = new MQTTAutoDiscovery();
-    discovery->create(this, _getId(PEAK_CURRENT), format);
-    discovery->addStateTopic(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(__s_), _getId(PEAK_CURRENT).c_str()));
-    discovery->addUnitOfMeasurement(F("mA"));
-    discovery->finalize();
-    vector.emplace_back(discovery);
+    return discovery;
 }
 
 uint8_t Sensor_INA219::getAutoDiscoveryCount() const
@@ -115,6 +116,7 @@ void Sensor_INA219::createWebUI(WebUI &webUI, WebUIRow **row)
 void Sensor_INA219::publishState(MQTTClient *client)
 {
     if (client && client->isConnected()) {
+        auto _qos = MQTTClient::getDefaultQos();
         client->publish(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(__s_), _getId(VOLTAGE).c_str()), _qos, 1, String(_mqttData.U(), 2));
         client->publish(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(__s_), _getId(CURRENT).c_str()), _qos, 1, String(_mqttData.I(), 0));
         client->publish(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(__s_), _getId(POWER).c_str()), _qos, 1, String(_mqttData.P(), 0));

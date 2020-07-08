@@ -35,7 +35,7 @@ PROGMEM_STRING_DEF(mqtt_rgb_command_topic, "rgb_command_topic");
 PROGMEM_STRING_DEF(mqtt_unit_of_measurement, "unit_of_measurement");
 PROGMEM_STRING_DEF(mqtt_value_template, "value_template");
 
-MQTTComponent::MQTTComponent(ComponentTypeEnum_t type) : _type(type), _num(0xff)
+MQTTComponent::MQTTComponent(ComponentTypeEnum_t type) : _type(type), _num(MQTTClient::NO_ENUM), _autoDiscoveryNum(0)
 {
 }
 
@@ -49,7 +49,6 @@ void MQTTComponent::onConnect(MQTTClient *client)
 
 void MQTTComponent::onDisconnect(MQTTClient *client, AsyncMqttClientDisconnectReason reason)
 {
-    _autoDiscoveryTimer.remove();
 }
 
 void MQTTComponent::onMessage(MQTTClient *client, char *topic, char *payload, size_t len)
@@ -58,37 +57,19 @@ void MQTTComponent::onMessage(MQTTClient *client, char *topic, char *payload, si
 
 #if MQTT_AUTO_DISCOVERY
 
-void MQTTComponent::publishAutoDiscovery(MQTTClient *client)
+uint8_t MQTTComponent::rewindAutoDiscovery()
 {
-    if (MQTTAutoDiscovery::isEnabled()) {
-        _autoDiscoveryTimer.remove();
-
-        auto vector = std::shared_ptr<MQTTAutoDiscoveryVector>(new MQTTAutoDiscoveryVector());
-        createAutoDiscovery(MQTTAutoDiscovery::FORMAT_JSON, *vector);
-
-        _autoDiscoveryTimer.add(250, true, [vector](EventScheduler::TimerPtr timer) {
-            auto client = MQTTClient::getClient();
-            if (!client || !client->isConnected() || vector->empty()) {
-                timer->detach();
-            }
-            else {
-                const auto &discovery = vector->front();
-                debug_printf_P(PSTR("topic=%s payload=%s\n"), discovery->getTopic().c_str(), printable_string(discovery->getPayload().c_str(), discovery->getPayload().length(), DEBUG_MQTT_CLIENT_PAYLOAD_LEN).c_str());
-                client->publish(discovery->getTopic(), client->getDefaultQos(), true, discovery->getPayload());
-                vector->erase(vector->begin());
-                if (vector->empty()) {
-                    timer->detach();
-                }
-            }
-        });
-
-        // MQTTAutoDiscoveryVector vector;
-        // createAutoDiscovery(MQTTAutoDiscovery::FORMAT_JSON, vector);
-        // for(const auto &discovery: vector) {
-        //     _debug_printf_P(PSTR("topic=%s payload=%s\n"), discovery->getTopic().c_str(), printable_string(discovery->getPayload().c_str(), discovery->getPayload().length(), DEBUG_MQTT_CLIENT_PAYLOAD_LEN).c_str());
-        //     client->publish(discovery->getTopic(), client->getDefaultQos(), true, discovery->getPayload());
-        // }
+    uint8_t count;
+    if ((count = getAutoDiscoveryCount()) != 0) {
+        _autoDiscoveryNum = 0;
+        return true;
     }
+    return false;
+}
+
+uint8_t MQTTComponent::getAutoDiscoveryNumber()
+{
+    return _autoDiscoveryNum++;
 }
 
 #endif
@@ -113,8 +94,9 @@ MQTTComponentHelper::MQTTComponentHelper(ComponentTypeEnum_t type) : MQTTCompone
 {
 }
 
-void MQTTComponentHelper::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector)
+MQTTComponent::MQTTAutoDiscoveryPtr MQTTComponentHelper::nextAutoDiscovery(MQTTAutoDiscovery::Format_t format, uint8_t num)
 {
+    return nullptr;
 }
 
 uint8_t MQTTComponentHelper::getAutoDiscoveryCount() const

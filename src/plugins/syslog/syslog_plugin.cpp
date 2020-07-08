@@ -65,14 +65,16 @@ static void syslog_end()
     }
 }
 
-static void syslog_deliver(uint16_t timeout) {
+static void syslog_kill(uint16_t timeout)
+{
+    LoopFunctions::remove(syslog_process_queue);
     if (syslog) {
         auto endTime = millis() + timeout;
         while(syslog->hasQueuedMessages() && millis() < endTime) {
             syslog->deliverQueue();
             delay(1);
         }
-        syslog->getQueue()->clear();
+        syslog->getQueue()->kill();
     }
 }
 
@@ -150,7 +152,7 @@ public:
 
     void setup(PluginSetupMode_t mode) override;
     void reconfigure(PGM_P source) override;
-    void restart() override;
+    void shutdown() override;
 
     virtual bool hasStatus() const override;
     virtual void getStatus(Print &output) override;
@@ -190,10 +192,9 @@ void SyslogPlugin::reconfigure(PGM_P source)
     syslog_setup();
 }
 
-void SyslogPlugin::restart()
+void SyslogPlugin::shutdown()
 {
-    syslog_deliver(250);
-    syslog_end();
+    syslog_kill(250);
 }
 
 bool SyslogPlugin::hasStatus() const
@@ -270,7 +271,7 @@ void SyslogPlugin::prepareDeepSleep(uint32_t sleepTimeMillis)
         }
     }
 #endif
-    syslog_deliver(defaultWaitTime);
+    syslog_kill(defaultWaitTime);
 }
 
 #endif

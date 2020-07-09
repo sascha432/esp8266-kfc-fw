@@ -19,7 +19,9 @@ MQTTAutoDiscoveryQueue::MQTTAutoDiscoveryQueue(MQTTClient &client) : _client(cli
 
 MQTTAutoDiscoveryQueue::~MQTTAutoDiscoveryQueue()
 {
-    _timer.remove();
+    if (_timer.active()) {
+        _timer.remove();
+    }
 }
 
 void MQTTAutoDiscoveryQueue::clear()
@@ -107,11 +109,8 @@ void MQTTAutoDiscoveryQueue::_timerCallback(EventScheduler::TimerPtr timer)
             _maxQueueSkipCounter++;
             _debug_printf_P(PSTR("tcp buffer full: %u > %u\n"), msgSize, _client.getClientSpace());
 #endif
-            if (msgSize >= MQTT_AUTO_DISCOVERY_MAX_MESSAGE_SIZE) { // size limit exceeded, discard
-                Logger_error(F("MQTT auto discovery exceeds size limit %u/%u: '%s'"), msgSize, MQTT_AUTO_DISCOVERY_MAX_MESSAGE_SIZE, discovery->getTopic().c_str());
-            }
-            else {
-                // retry later
+            if (!MQTTClient::_isMessageSizeExceeded(msgSize, discovery->getTopic().c_str())) {
+                // retry if size not exceeded
                 component->_autoDiscoveryNum--;
             }
         }
@@ -135,4 +134,5 @@ void MQTTAutoDiscoveryQueue::_publishDone()
     _debug_printf_P(PSTR("done components=%u discovery=%u size=%u time=%.4fs max_queue=%u queue_skip=%u iterations=%u\n"), _client._components.size(), _discoveryCount, _size, dur / 1000.0, _maxQueue, _maxQueueSkipCounter, _counter);
 #endif
     Logger_notice(F("MQTT auto discovery published [components=%u, size=%s]"), _discoveryCount, formatBytes(_size).c_str());
+    _client._autoDiscoveryQueue.reset();
 }

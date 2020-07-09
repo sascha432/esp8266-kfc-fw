@@ -19,7 +19,11 @@
 #include "web_server.h"
 #include "build.h"
 #if NTP_CLIENT
-#include "./plugins/ntp/ntp_plugin.h"
+#include "../src/plugins/ntp/ntp_plugin.h"
+#endif
+#if MQTT_SUPPORT
+#include "../src/plugins/mqtt/mqtt_client.h"
+#include "../src/plugins/mqtt/mqtt_persistant_storage.h"
 #endif
 
 #if defined(ESP8266)
@@ -1421,6 +1425,17 @@ const char *KFCFWConfiguration::getDeviceName() const
     return config._H_STR(Config().device_name);
 }
 
+bool KFCFWConfiguration::callPersistantConfig(KeyValueStoreVectorPtr data, PersistantConfigCallback callback)
+{
+#if MQTT_SUPPORT
+    bool result = false;
+    auto client = MQTTClient::getClient();
+    if (client && client->isConnected()) {
+        result = MQTTPersistantStorageComponent::create(client, data, callback);
+    }
+#endif
+    return _debug_print_result(result);
+}
 
 class KFCConfigurationPlugin : public PluginComponent {
 public:

@@ -28,10 +28,6 @@
 #define MQTT_AUTO_DISCOVERY_QUEUE_DELAY                         1000
 #endif
 
-#ifndef MQTT_AUTO_DISCOVERY_MAX_MESSAGE_SIZE
-#define MQTT_AUTO_DISCOVERY_MAX_MESSAGE_SIZE                    (TCP_SND_BUF - 64)
-#endif
-
 class MQTTClient;
 
 class MQTTAutoDiscoveryQueue {

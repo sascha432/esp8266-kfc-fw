@@ -56,7 +56,8 @@ public:
     virtual bool hasForm() const {
         return true;
     }
-    virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form);
+    virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
+    virtual void configurationSaved() override;
 
     virtual void reconfigure() override;
 

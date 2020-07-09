@@ -857,6 +857,21 @@ void at_mode_serial_handle_event(String &commandString)
                 }
                 at_mode_generate_help(output, &findItems);
             }
+
+
+            else if (args.isCommand(F("PERS"))) {
+                auto data = KFCFWConfiguration::KeyValueStoreVectorPtr(new KFCFWConfiguration::KeyValueStoreVector());
+                const char *arg = args.get(0);
+                if (!arg) {
+                    arg = "test";
+                }
+                data->emplace_back(arg, String(rand()));
+                config.callPersistantConfig(data, [](KFCFWConfiguration::KeyValueStoreVectorPtr data) {
+                    auto ptr = data.get();
+                    debug_printf_P(PSTR("data=%d\n"), ptr ? ptr->size() : -1);
+                });
+            }
+
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RST))) {
                 bool safeMode = false;
                 if (args.equals(0, 's')) {

@@ -134,6 +134,10 @@ void PluginComponent::createConfigureForm(AsyncWebServerRequest *request, Form &
     __debugbreak_and_panic_printf_P(SPGM(__pure_virtual), getName());
 }
 
+void PluginComponent::configurationSaved()
+{
+}
+
 PluginComponent::MenuTypeEnum_t PluginComponent::getMenuType() const
 {
     return AUTO;

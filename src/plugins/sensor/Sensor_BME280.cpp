@@ -19,34 +19,35 @@ Sensor_BME280::Sensor_BME280(const String &name, TwoWire &wire, uint8_t address)
     _bme280.begin(_address, &config.initTwoWire());
 }
 
-void Sensor_BME280::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector)
+MQTTComponent::MQTTAutoDiscoveryPtr Sensor_BME280::nextAutoDiscovery(MQTTAutoDiscovery::Format_t format, uint8_t num)
 {
-    _debug_println();
-    String topic = MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(__s_), _getId().c_str());
-
+    if (num >= getAutoDiscoveryCount()) {
+        return nullptr;
+    }
     auto discovery = new MQTTAutoDiscovery();
-    discovery->create(this, _getId(FSPGM(temperature, "temperature")), format);
-    discovery->addStateTopic(topic);
-    discovery->addUnitOfMeasurement(F("\u00b0C"));
-    discovery->addValueTemplate(FSPGM(temperature));
+    String topic = MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(__s_), _getId().c_str());
+    switch(num) {
+        case 0:
+            discovery->create(this, _getId(FSPGM(temperature, "temperature")), format);
+            discovery->addStateTopic(topic);
+            discovery->addUnitOfMeasurement(F("\u00b0C"));
+            discovery->addValueTemplate(FSPGM(temperature));
+            break;
+        case 1:
+            discovery->create(this, _getId(FSPGM(humidity, "humidity")), format);
+            discovery->addStateTopic(topic);
+            discovery->addUnitOfMeasurement('%');
+            discovery->addValueTemplate(FSPGM(humidity));
+            break;
+        case 2:
+            discovery->create(this, _getId(FSPGM(pressure, "pressure")), format);
+            discovery->addStateTopic(topic);
+            discovery->addUnitOfMeasurement(FSPGM(hPa, "hPa"));
+            discovery->addValueTemplate(FSPGM(pressure));
+            break;
+    }
     discovery->finalize();
-    vector.emplace_back(discovery);
-
-    discovery = new MQTTAutoDiscovery();
-    discovery->create(this, _getId(FSPGM(humidity, "humidity")), format);
-    discovery->addStateTopic(topic);
-    discovery->addUnitOfMeasurement('%');
-    discovery->addValueTemplate(FSPGM(humidity));
-    discovery->finalize();
-    vector.emplace_back(discovery);
-
-    discovery = new MQTTAutoDiscovery();
-    discovery->create(this, _getId(FSPGM(pressure, "pressure")), format);
-    discovery->addStateTopic(topic);
-    discovery->addUnitOfMeasurement(FSPGM(hPa, "hPa"));
-    discovery->addValueTemplate(FSPGM(pressure));
-    discovery->finalize();
-    vector.emplace_back(discovery);
+    return discovery;
 }
 
 uint8_t Sensor_BME280::getAutoDiscoveryCount() const
@@ -119,6 +120,7 @@ void Sensor_BME280::publishState(MQTTClient *client)
         json.add(FSPGM(pressure), JsonNumber(sensor.pressure, 2));
         json.printTo(str);
 
+        auto _qos = MQTTClient::getDefaultQos();
         client->publish(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(__s_), _getId().c_str()), _qos, 1, str);
     }
 }

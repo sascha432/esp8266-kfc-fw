@@ -5,22 +5,46 @@
 #pragma once
 
 #ifndef DEBUG_MQTT_CLIENT
-#define DEBUG_MQTT_CLIENT                   0
+#define DEBUG_MQTT_CLIENT                       0
 #endif
 
 // home assistant auto discovery
 #ifndef MQTT_AUTO_DISCOVERY
-#define MQTT_AUTO_DISCOVERY                 1
+#define MQTT_AUTO_DISCOVERY                     1
 #endif
 
 // disable last will. status is set to offline when disconnecting only
 #ifndef MQTT_SET_LAST_WILL
-#define MQTT_SET_LAST_WILL                  1
+#define MQTT_SET_LAST_WILL                      1
 #endif
 
 // enable callbacks for QoS. onSubscribe(), onPublish() and onUnsubscribe()
 #ifndef MQTT_USE_PACKET_CALLBACKS
-#define MQTT_USE_PACKET_CALLBACKS           0
+#define MQTT_USE_PACKET_CALLBACKS               0
+#endif
+
+#ifndef MQTT_AUTO_RECONNECT_TIMEOUT
+#define MQTT_AUTO_RECONNECT_TIMEOUT             5000
+#endif
+
+// timeout if subscribe/unsubcribe/publish cannot be sent
+#ifndef MQTT_QUEUE_TIMEOUT
+#define MQTT_QUEUE_TIMEOUT                      7500
+#endif
+
+// delay before retrying subscribe/unsubcribe/publish
+#ifndef MQTT_QUEUE_RETRY_DELAY
+#define MQTT_QUEUE_RETRY_DELAY                  250
+#endif
+
+// maximum size of topc + payload + header (~7 byte) + safety limit for sending messages
+#ifndef MQTT_MAX_MESSAGE_SIZE
+#define MQTT_MAX_MESSAGE_SIZE                   (TCP_SND_BUF - 64)
+#endif
+
+// incoming message that exceed the limit are discarded
+#ifndef MQTT_RECV_MAX_MESSAGE_SIZE
+#define MQTT_RECV_MAX_MESSAGE_SIZE              1024
 #endif
 
 #include <Arduino_compat.h>
@@ -38,6 +62,8 @@ DECLARE_ENUM(MQTTQueueEnum_t, uint8_t,
     UNSUBSCRIBE,
     PUBLISH,
 );
+
+class MQTTPersistantStorageComponent;
 
 class MQTTClient {
 public:
@@ -102,9 +128,6 @@ public:
 
     typedef std::vector<MQTTTopic> MQTTTopicVector;
     typedef std::vector<MQTTQueue> MQTTQueueVector; // this is not used for QoS at the moment
-
-    static const int DEFAULT_RECONNECT_TIMEOUT = 5000;
-    static const int MAX_MESSAGE_SIZE = 1024;
 
     static constexpr uint8_t NO_ENUM = ~0;
 
@@ -210,13 +233,10 @@ private:
 
 private:
     friend MQTTAutoDiscoveryQueue;
+    friend MQTTPersistantStorageComponent;
 
-    // add
-    // friend class MQTTClient;
-    // to AsyncMqttClient
-    size_t getClientSpace() const {
-        return _client->_client.space();
-    }
+    size_t getClientSpace() const;
+    static bool _isMessageSizeExceeded(size_t len, const char *topic);
 
     String _host;
     String _username;
@@ -232,7 +252,7 @@ private:
     Buffer _buffer;
     String _lastWillTopic;
     String _lastWillPayload;
-    MQTTAutoDiscoveryQueue _autoDiscoveryQueue;
+    std::unique_ptr<MQTTAutoDiscoveryQueue> _autoDiscoveryQueue;
 
     static MQTTClient *_mqttClient;
 };

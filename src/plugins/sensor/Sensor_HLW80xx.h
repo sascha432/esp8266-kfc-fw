@@ -193,6 +193,7 @@ public:
         return true;
     }
     virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form);
+    virtual void configurationSaved();
 
     virtual void reconfigure() override;
     virtual void shutdown() override;

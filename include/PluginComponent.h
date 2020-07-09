@@ -92,6 +92,8 @@ public:
     virtual bool canHandleForm(const String &formName) const;
     // executed to get the configure form
     virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form);
+    // called after a form has been submitted and before config.write() is called
+    virtual void configurationSaved();
 
     // get type of menu entry
     virtual MenuTypeEnum_t getMenuType() const;

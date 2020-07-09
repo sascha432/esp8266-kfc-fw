@@ -44,7 +44,7 @@ void MQTTClient::deleteInstance()
     }
 }
 
-MQTTClient::MQTTClient() : _client(nullptr), _useNodeId(false), _lastWillPayload('0'), _autoDiscoveryQueue(*this)
+MQTTClient::MQTTClient() : _client(nullptr), _useNodeId(false), _lastWillPayload('0')
 {
     _debug_println();
 
@@ -71,6 +71,7 @@ MQTTClient::~MQTTClient()
     _autoReconnectTimeout = 0;
     if (isConnected()) {
         disconnect(true);
+        onDisconnect(AsyncMqttClientDisconnectReason::TCP_DISCONNECTED);
     }
     delete _client;
 }
@@ -82,8 +83,7 @@ void MQTTClient::_setupClient()
 
     _client = new AsyncMqttClient();
 
-    _maxMessageSize = MAX_MESSAGE_SIZE;
-    _autoReconnectTimeout = DEFAULT_RECONNECT_TIMEOUT;
+    _autoReconnectTimeout = MQTT_AUTO_RECONNECT_TIMEOUT;
 
     IPAddress ip;
     if (ip.fromString(_host)) {
@@ -325,14 +325,15 @@ void MQTTClient::onConnect(bool sessionPresent)
     publish(_lastWillTopic, getDefaultQos(), 1, FSPGM(1));
 
     // reset reconnect timer if connection was successful
-    setAutoReconnect(DEFAULT_RECONNECT_TIMEOUT);
+    setAutoReconnect(MQTT_AUTO_RECONNECT_TIMEOUT);
 
     for(const auto &component: _components) {
         component->onConnect(this);
     }
 #if MQTT_AUTO_DISCOVERY
-    if (MQTTAutoDiscovery::isEnabled()) {
-        _autoDiscoveryQueue.publish();
+    if (MQTTAutoDiscovery::isEnabled() && !_components.empty()) {
+        _autoDiscoveryQueue.reset(new MQTTAutoDiscoveryQueue(*this));
+        _autoDiscoveryQueue->publish();
     }
 #endif
 }
@@ -357,7 +358,7 @@ void MQTTClient::onDisconnect(AsyncMqttClientDisconnectReason reason)
 
 void MQTTClient::subscribe(MQTTComponentPtr component, const String &topic, uint8_t qos)
 {
-    if (subscribeWithId(component, topic, qos) == 0) {
+    if (!_queue.empty() || subscribeWithId(component, topic, qos) == 0) {
         _addQueue(MQTTQueueType::SUBSCRIBE, component, topic, qos, 0, String());
     }
 }
@@ -379,7 +380,7 @@ int MQTTClient::subscribeWithId(MQTTComponentPtr component, const String &topic,
 
 void MQTTClient::unsubscribe(MQTTComponentPtr component, const String &topic)
 {
-    if (unsubscribeWithId(component, topic) == 0) {
+    if (!_queue.empty() || unsubscribeWithId(component, topic) == 0) {
         _addQueue(MQTTQueueType::UNSUBSCRIBE, component, topic, 0, 0, String());
     }
 }
@@ -443,8 +444,8 @@ int MQTTClient::publishWithId(const String &topic, uint8_t qos, bool retain, con
 void MQTTClient::onMessageRaw(char *topic, char *payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total)
 {
     _debug_printf_P(PSTR("topic=%s payload=%s idx:len:total=%d:%d:%d qos=%u dup=%d retain=%d\n"), topic, printable_string(payload, len, DEBUG_MQTT_CLIENT_PAYLOAD_LEN).c_str(), index, len, total, properties.qos, properties.dup, properties.retain);
-    if (total > _maxMessageSize) {
-        _debug_printf(PSTR("discarding message, size exceeded %d/%d\n"), (unsigned)total, _maxMessageSize);
+    if (total > MQTT_RECV_MAX_MESSAGE_SIZE) {
+        _debug_printf(PSTR("discarding message, size exceeded %d/%d\n"), (unsigned)total, MQTT_RECV_MAX_MESSAGE_SIZE);
         return;
     }
     if (index == 0) {
@@ -555,7 +556,7 @@ void MQTTClient::_handleWiFiEvents(uint8_t event, void *payload)
     _debug_printf_P(PSTR("event=%d payload=%p connected=%d\n"), event, payload, isConnected());
     if (event == WiFiCallbacks::EventEnum_t::CONNECTED) {
         if (!isConnected()) {
-            setAutoReconnect(MQTTClient::DEFAULT_RECONNECT_TIMEOUT);
+            setAutoReconnect(MQTT_AUTO_RECONNECT_TIMEOUT);
             connect();
         }
     } else if (event == WiFiCallbacks::EventEnum_t::DISCONNECTED) {
@@ -570,10 +571,15 @@ void MQTTClient::_addQueue(MQTTQueueEnum_t type, MQTTComponent *component, const
 {
     _debug_printf_P(PSTR("type=%s topic=%s\n"), type.toString().c_str(), topic.c_str());
 
+    if (MQTTClient::_isMessageSizeExceeded(topic.length() + payload.length(), topic.c_str())) {
+        return;
+    }
+
+
     _queue.emplace_back(type, component, topic, qos, retain, payload);
-    _queueTimer.add(250, 20, [this](EventScheduler::TimerPtr timer) {
+    _queueTimer.add(MQTT_QUEUE_RETRY_DELAY, (MQTT_QUEUE_TIMEOUT / MQTT_QUEUE_RETRY_DELAY), [this](EventScheduler::TimerPtr timer) {
         _queueTimerCallback();
-    }); // retry 20 times x 0.25s = 5s
+    });
 }
 
 void MQTTClient::_queueTimerCallback()
@@ -606,9 +612,26 @@ void MQTTClient::_queueTimerCallback()
 
 void MQTTClient::_clearQueue()
 {
-    _autoDiscoveryQueue.clear();
+    _autoDiscoveryQueue.reset();
     _queueTimer.remove();
     _queue.clear();
+}
+
+size_t MQTTClient::getClientSpace() const
+{
+    // add
+    // friend class MQTTClient;
+    // to AsyncMqttClient
+    return _client->_client.space();
+}
+
+bool MQTTClient::_isMessageSizeExceeded(size_t len, const char *topic)
+{
+    if (len > MQTT_MAX_MESSAGE_SIZE) {
+        Logger_error(F("MQTT maximum message size exceeded: %u/%u: %s"), len, MQTT_MAX_MESSAGE_SIZE, topic);
+        return true;
+    }
+    return false;
 }
 
 
@@ -770,7 +793,7 @@ bool MQTTPlugin::atModeHandler(AtModeArgs &args)
             auto &client = *MQTTClient::getClient();
             if (args.isAnyMatchIgnoreCase(0, F("connect,con"))) {
                 args.printf_P(PSTR("connect: %s"), client.connectionStatusString().c_str());
-                client.setAutoReconnect(MQTTClient::DEFAULT_RECONNECT_TIMEOUT);
+                client.setAutoReconnect(MQTT_AUTO_RECONNECT_TIMEOUT);
                 client.connect();
             }
             else if (args.isAnyMatchIgnoreCase(0, F("disconnect,dis"))) {

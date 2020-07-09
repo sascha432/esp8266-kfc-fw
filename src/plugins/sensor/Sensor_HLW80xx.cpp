@@ -208,10 +208,23 @@ void Sensor_HLW80xx::createConfigureForm(AsyncWebServerRequest *request, Form &f
         ->setFormUI((new FormUI(FormUI::TEXT, F("HLW8012 Energy")))->setSuffix(kWh)->setPlaceholder(String(IOT_SENSOR_HLW80xx_PULSE_TO_KWH(getEnergySecondaryCounter()), 3)));
     form.addValidator(new FormCallbackValidator([this](String value, FormField &field) {
         if (value.length()) {
-            getEnergySecondaryCounter() = IOT_SENSOR_HLW80xx_KWH_TO_PULSE(value.toFloat());;
+            getEnergySecondaryCounter() = IOT_SENSOR_HLW80xx_KWH_TO_PULSE(value.toFloat());
         }
         return true;
     }));
+
+}
+
+void Sensor_HLW80xx::configurationSaved()
+{
+    auto sensor = config._H_GET(Config().sensor);
+    auto data = KFCFWConfiguration::KeyValueStoreVectorPtr(new KFCFWConfiguration::KeyValueStoreVector);
+    data->emplace_back(F("hlw80xx_u"), String(sensor.hlw80xx.calibrationU, 6));
+    data->emplace_back(F("hlw80xx_i"), String(sensor.hlw80xx.calibrationI, 6));
+    data->emplace_back(F("hlw80xx_p"), String(sensor.hlw80xx.calibrationP, 6));
+    data->emplace_back(F("hlw80xx_e1"), String((double)getEnergyPrimaryCounter(), 0));
+    data->emplace_back(F("hlw80xx_e2"), String((double)getEnergySecondaryCounter(), 0));
+    config.callPersistantConfig(data);
 }
 
 void Sensor_HLW80xx::publishState(MQTTClient *client)
@@ -227,7 +240,8 @@ void Sensor_HLW80xx::publishState(MQTTClient *client)
         auto pf = _getPowerFactor();
         json.add(F("pf"), String(pf, 2));
         json.printTo(str);
-        client->publish(_getTopic(), _qos(), 1, str);
+        auto _qos = MQTTClient::getDefaultQos();
+        client->publish(_getTopic(), _qos, 1, str);
     }
 }
 

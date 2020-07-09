@@ -84,6 +84,7 @@ public:
         return getName();
     }
     virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
+    virtual void configurationSaved() override;
 
 
 // WebUIInterface

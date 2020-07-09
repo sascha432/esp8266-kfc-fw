@@ -17,6 +17,7 @@ public:
         LIGHT,
         SENSOR,
         BINARY_SENSOR,
+        STORAGE,
     } ComponentTypeEnum_t;
 
     typedef enum {

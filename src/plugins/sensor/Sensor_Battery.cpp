@@ -19,22 +19,25 @@ Sensor_Battery::Sensor_Battery(const JsonString &name) : MQTTSensor(), _name(nam
     reconfigure();
 }
 
-void Sensor_Battery::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector)
+MQTTComponent::MQTTAutoDiscoveryPtr Sensor_Battery::nextAutoDiscovery(MQTTAutoDiscovery::Format_t format, uint8_t num)
 {
+    if (num >= getAutoDiscoveryCount()) {
+        return nullptr;
+    }
     auto discovery = new MQTTAutoDiscovery();
-    discovery->create(this, _getId(LEVEL), format);
-    discovery->addStateTopic(_getTopic(LEVEL));
-    discovery->addUnitOfMeasurement('V');
+    switch(num) {
+        case 0:
+            discovery->create(this, _getId(LEVEL), format);
+            discovery->addStateTopic(_getTopic(LEVEL));
+            discovery->addUnitOfMeasurement('V');
+            break;
+        case 1:
+            discovery->create(this, _getId(STATE), format);
+            discovery->addStateTopic(_getTopic(STATE));
+            break;
+    }
     discovery->finalize();
-    vector.emplace_back(discovery);
-
-#if IOT_SENSOR_BATTERY_CHARGE_DETECTION
-    discovery = new MQTTAutoDiscovery();
-    discovery->create(this, _getId(STATE), format);
-    discovery->addStateTopic(_getTopic(STATE));
-    discovery->finalize();
-    vector.emplace_back(discovery);
-#endif
+    return discovery;
 }
 
 uint8_t Sensor_Battery::getAutoDiscoveryCount() const {
@@ -72,6 +75,7 @@ void Sensor_Battery::publishState(MQTTClient *client)
 {
     _debug_printf_P(PSTR("client=%p connected=%u\n"), client, client && client->isConnected() ? 1 : 0);
     if (client && client->isConnected()) {
+        auto _qos = MQTTClient::getDefaultQos();
         client->publish(_getTopic(LEVEL), _qos, 1, String(_readSensor(), _config.precision));
 #if IOT_SENSOR_BATTERY_CHARGE_DETECTION
         client->publish(_getTopic(STATE), _qos, 1, _isCharging() ? FSPGM(Yes) : FSPGM(No));
@@ -98,12 +102,21 @@ bool Sensor_Battery::getSensorData(String &name, StringVector &values)
     return true;
 }
 
-
 void Sensor_Battery::createConfigureForm(AsyncWebServerRequest *request, Form &form)
 {
     form.add<float>(F("battery_calibration"), _H_STRUCT_VALUE(Config().sensor, battery.calibration))->setFormUI(new FormUI(FormUI::TEXT, F("Supply Voltage Calibration")));
     form.add<float>(F("battery_offset"), _H_STRUCT_VALUE(Config().sensor, battery.offset))->setFormUI(new FormUI(FormUI::TEXT, F("Supply Voltage Offset")));
     form.add<uint8_t>(F("battery_precision"), _H_STRUCT_VALUE(Config().sensor, battery.precision))->setFormUI(new FormUI(FormUI::TEXT, F("Supply Voltage Precision")));
+}
+
+void Sensor_Battery::configurationSaved()
+{
+    auto sensor = config._H_GET(Config().sensor);
+    auto data = KFCFWConfiguration::KeyValueStoreVectorPtr(new KFCFWConfiguration::KeyValueStoreVector);
+    data->emplace_back(F("battery_cal"), String(sensor.battery.calibration, 6));
+    data->emplace_back(F("battery_ofs"), String(sensor.battery.offset, 6));
+    data->emplace_back(F("battery_prec"), String(sensor.battery.precision));
+    config.callPersistantConfig(data);
 }
 
 void Sensor_Battery::reconfigure()

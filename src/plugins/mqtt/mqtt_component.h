@@ -14,6 +14,7 @@ PROGMEM_STRING_DECL(mqtt_component_switch);
 PROGMEM_STRING_DECL(mqtt_component_light);
 PROGMEM_STRING_DECL(mqtt_component_sensor);
 PROGMEM_STRING_DECL(mqtt_component_binary_sensor);
+PROGMEM_STRING_DECL(mqtt_component_storage);
 PROGMEM_STRING_DECL(mqtt_unique_id);
 PROGMEM_STRING_DECL(mqtt_name);
 PROGMEM_STRING_DECL(mqtt_availability_topic);

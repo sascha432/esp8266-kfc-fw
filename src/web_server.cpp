@@ -883,6 +883,7 @@ bool WebServerPlugin::_handleFileRead(String path, bool client_accepts_gzip, Asy
                 plugin->createConfigureForm(request, *form);
                 webTemplate = new ConfigTemplate(form);
                 if (form->validate()) {
+                    plugin->configurationSaved();
                     config.write();
                     executeDelayed(request, [plugin]() {
                         plugin->invokeReconfigure(nullptr);

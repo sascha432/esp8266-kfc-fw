@@ -395,9 +395,6 @@ void ClockPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form
 
 MQTTComponent::MQTTAutoDiscoveryPtr ClockPlugin::nextAutoDiscovery(MQTTAutoDiscovery::Format_t format, uint8_t num)
 {
-    if (num >= getAutoDiscoveryCount()) {
-        return nullptr;
-    }
     _debug_printf_P(PSTR("format=%u\n"), format);
     MQTTAutoDiscoveryPtr discovery;
     switch(num) {
@@ -425,6 +422,8 @@ MQTTComponent::MQTTAutoDiscoveryPtr ClockPlugin::nextAutoDiscovery(MQTTAutoDisco
         }
         break;
 #endif
+        default:
+            return nullptr;
     }
     discovery->finalize();
     return discovery;

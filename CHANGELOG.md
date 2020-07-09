@@ -5,11 +5,17 @@
 - Device configuration page for WebUI
 - Option to turn status LED off when connected to WiFi
 - Deep sleep support can be disabled
-- Ardunino ESP8266 2.6.3 release changes
+- Arduino ESP8266 2.6.3 release changes
 - Support for MQTT component names instead enumeration
 - Conditional attributes for HTML forms
 - Form validator for double
 - Advanced firmware configuration for dimmer plugin
+- Option to enable/disable mDNS
+- Arduino ESP8266 2.7.1 release changes/fixes
+- NTP startup delay reduced to 1 second (from up to 5 minutes)
+- Support for POSIX time zones
+- MQTT auto discovery queue to reduce memory usage and network load
+- Send calibration information to MQTT for recovery after firmware updates
 
 ## Version 0.0.2
 

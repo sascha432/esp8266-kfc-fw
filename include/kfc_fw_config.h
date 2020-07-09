@@ -569,6 +569,20 @@ public:
     const char *getDeviceName() const;
 
 public:
+    class KeyValueStore {
+    public:
+        KeyValueStore() {}
+        KeyValueStore(const String &key, const String &value) : _key(key), _value(value) {}
+
+        String _key;
+        String _value;
+    };
+    using KeyValueStoreVector = std::vector<KeyValueStore>;
+    using KeyValueStoreVectorPtr = std::shared_ptr<KeyValueStoreVector>;
+    using PersistantConfigCallback = std::function<void(KeyValueStoreVectorPtr data)>;
+
+    bool callPersistantConfig(KeyValueStoreVectorPtr data, PersistantConfigCallback callback = nullptr);
+
 private:
     friend class KFCConfigurationPlugin;
 

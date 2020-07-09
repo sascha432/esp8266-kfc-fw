@@ -115,6 +115,7 @@ public:
 
     virtual PGM_P getConfigureForm() const override;
     virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
+    virtual void configurationSaved() override;
 
     static void timerEvent(EventScheduler::TimerPtr timer);
 

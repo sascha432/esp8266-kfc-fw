@@ -349,6 +349,15 @@ void WeatherStationPlugin::createConfigureForm(AsyncWebServerRequest *request, F
     form.finalize();
 }
 
+void WeatherStationPlugin::configurationSaved()
+{
+    auto config = config._H_GET(MainConfig().plugins.weatherstation.config);
+    auto data = KFCFWConfiguration::KeyValueStoreVectorPtr(new KFCFWConfiguration::KeyValueStoreVector);
+    data->emplace_back(F("wst_humidity_ofs"), String(config.humidity_offset, 6));
+    data->emplace_back(F("wst_pressure_ofs"), String(config.pressure_offset, 6));
+    data->emplace_back(F("wst_temp_ofs"), String(config.temp_offset, 6));
+    config.callPersistantConfig(data);
+}
 
 void WeatherStationPlugin::loop()
 {

@@ -87,10 +87,6 @@ void Dimmer_Base::_begin()
         }
         _wire.unlock();
     }
-
-    Scheduler.addTimer(5000, true, [this](EventScheduler::TimerPtr) {
-        _updateMetrics(dimmer_metrics_t({0, 4500+rand()%5000, 60,(rand()%100)/10.0, (rand()%100)/10.0}));
-    });
 }
 
 void Dimmer_Base::_end()
@@ -300,68 +296,6 @@ void Dimmer_Base::_updateMetrics(const dimmer_metrics_t &metrics)
     if (sensor) {
         _metrics = sensor->_updateMetrics(metrics);
     }
-
-
-    // _debug_printf_P(PSTR("vcc=%u freq=%.3f intTemp=%.2f ntcTemp=%.2f update=%u\n"), metrics.vcc, metrics.frequency, metrics.internal_temp, metrics.ntc_temp, (_vcc != metrics.vcc || _frequency != metrics.frequency || _internalTemperature != metrics.internal_temp || _ntcTemperature != metrics.ntc_temp));
-    // if (_vcc != metrics.vcc || _frequency != metrics.frequency || _internalTemperature != metrics.internal_temp || _ntcTemperature != metrics.ntc_temp) {
-    //     auto client = MQTTClient::getClient();
-    //     auto qos = MQTTClient::getDefaultQos();
-    //     if (client && !client->isConnected()) {
-    //         client = nullptr;
-    //     }
-    //     JsonUnnamedObject object(2);
-    //     object.add(JJ(type), JJ(ue));
-    //     auto &events = object.addArray(JJ(events));
-
-    //     if (_internalTemperature != metrics.internal_temp) {
-    //         _internalTemperature = metrics.internal_temp;
-    //         auto tempStr = String(_internalTemperature, 2);
-    //         if (client) {
-    //             client->publish(_getMetricsTopics(0), qos, 1, tempStr);
-    //         }
-    //         auto &value = events.addObject(3);
-    //         value.add(JJ(id), F("dimmer_int_temp"));
-    //         value.add(JJ(state), true);
-    //         value.add(JJ(value), JsonNumber(tempStr));
-    //     }
-    //     if (_ntcTemperature != metrics.ntc_temp) {
-    //         _ntcTemperature = metrics.ntc_temp;
-    //         auto tempStr = String(_ntcTemperature, 2);
-    //         if (client) {
-    //             client->publish(_getMetricsTopics(1), qos, 1, tempStr);
-    //         }
-    //         auto &value = events.addObject(3);
-    //         value.add(JJ(id), F("dimmer_ntc_temp"));
-    //         value.add(JJ(state), true);
-    //         value.add(JJ(value), JsonNumber(tempStr));
-    //     }
-    //     if (_vcc != metrics.vcc) {
-    //         _vcc = metrics.vcc;
-    //         auto vccStr = String(_vcc / 1000.0, 3);
-    //         if (client) {
-    //             client->publish(_getMetricsTopics(2), qos, 1, vccStr);
-    //         }
-    //         auto &value = events.addObject(3);
-    //         value.add(JJ(id), F("dimmer_vcc"));
-    //         value.add(JJ(state), true);
-    //         value.add(JJ(value), JsonNumber(vccStr));
-    //     }
-    //     if (_frequency != metrics.frequency) {
-    //         _frequency = metrics.frequency;
-    //         auto freqStr = String(_frequency, 2);
-    //         if (client) {
-    //             client->publish(_getMetricsTopics(3), qos, 1, freqStr);
-    //         }
-    //         auto &value = events.addObject(3);
-    //         value.add(JJ(id), F("dimmer_frequency"));
-    //         value.add(JJ(state), true);
-    //         value.add(JJ(value), JsonNumber(freqStr));
-    //     }
-
-    //     if (events.size()) {
-    //         WsWebUISocket::broadcast(WsWebUISocket::getSender(), object);
-    //     }
-    // }
 }
 
 void Dimmer_Base::_fade(uint8_t channel, int16_t toLevel, float fadeTime)

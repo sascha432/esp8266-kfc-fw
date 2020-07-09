@@ -160,6 +160,13 @@ void SensorPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &for
     form.finalize();
 }
 
+void SensorPlugin::configurationSaved()
+{
+    for(auto sensor: _sensors) {
+        sensor->configurationSaved();
+    }
+}
+
 void SensorPlugin::createWebUI(WebUI &webUI)
 {
     auto row = &webUI.addRow();
@@ -174,7 +181,6 @@ void SensorPlugin::createWebUI(WebUI &webUI)
         sensor->createWebUI(webUI, &row);
     }
 }
-
 
 void SensorPlugin::getStatus(Print &output)
 {

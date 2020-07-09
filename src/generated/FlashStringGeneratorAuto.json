@@ -12,7 +12,7 @@
         "default": "Set-Cookie"
     },
     "mime_text_plain": {
-        "use_counter": 17,
+        "use_counter": 16,
         "default": "text/plain"
     },
     "1": {
@@ -32,11 +32,11 @@
         "default": "This field must be between %min% and %max% characters"
     },
     "FormValidator_min_macro": {
-        "use_counter": 2,
+        "use_counter": 3,
         "default": "%min%"
     },
     "FormValidator_max_macro": {
-        "use_counter": 2,
+        "use_counter": 3,
         "default": "%max%"
     },
     "FormEnumValidator_default_message": {
@@ -52,7 +52,7 @@
         "default": "Invalid hostname or IP address"
     },
     "webui_json_id": {
-        "use_counter": 37,
+        "use_counter": 30,
         "default": "id"
     },
     "webui_json_name": {
@@ -72,11 +72,11 @@
         "default": "offset"
     },
     "webui_json_value": {
-        "use_counter": 37,
+        "use_counter": 30,
         "default": "value"
     },
     "webui_json_state": {
-        "use_counter": 30,
+        "use_counter": 23,
         "default": "state"
     },
     "mime_application_json": {
@@ -132,11 +132,11 @@
         "default": "pure virtual call: %s\\n"
     },
     "yes": {
-        "use_counter": 7,
+        "use_counter": 8,
         "default": "yes"
     },
     "no": {
-        "use_counter": 5,
+        "use_counter": 6,
         "default": "no"
     },
     "comma_": {
@@ -148,7 +148,7 @@
         "default": " hidden"
     },
     "Not_supported": {
-        "use_counter": 2,
+        "use_counter": 1,
         "default": "Not supported"
     },
     "_selected": {
@@ -164,7 +164,7 @@
         "default": "/server.key"
     },
     "webui_json_type": {
-        "use_counter": 19,
+        "use_counter": 18,
         "default": "type"
     },
     "webui_json_row": {
@@ -284,11 +284,11 @@
         "default": "/webui_ws"
     },
     "webui_json_ue": {
-        "use_counter": 9,
+        "use_counter": 8,
         "default": "ue"
     },
     "webui_json_events": {
-        "use_counter": 9,
+        "use_counter": 8,
         "default": "events"
     },
     "http": {
@@ -372,7 +372,7 @@
         "default": "https"
     },
     "disabled": {
-        "use_counter": 8,
+        "use_counter": 28,
         "default": "disabled"
     },
     "mqtt_color_temp_state_topic": {
@@ -404,11 +404,11 @@
         "default": "/blinds_ctrl.state"
     },
     "Yes": {
-        "use_counter": 2,
+        "use_counter": 4,
         "default": "Yes"
     },
     "No": {
-        "use_counter": 2,
+        "use_counter": 4,
         "default": "No"
     },
     "webui_json_title": {
@@ -536,7 +536,7 @@
         "default": "Disabled"
     },
     "enabled": {
-        "use_counter": 6,
+        "use_counter": 7,
         "default": "enabled"
     },
     "mqtt_component_light": {
@@ -556,7 +556,7 @@
         "default": "switch"
     },
     "strftime_date_time_zone": {
-        "use_counter": 4,
+        "use_counter": 3,
         "default": "%FT%T %Z"
     },
     "ping_monitor_response": {
@@ -576,7 +576,7 @@
         "default": "Detected eth address %s"
     },
     "stk500v1_log_file": {
-        "use_counter": 5,
+        "use_counter": 4,
         "default": "/stk500v1/debug.log"
     },
     "stk500v1_sig_file": {
@@ -784,7 +784,7 @@
         "default": "This field is missing"
     },
     "FormRangeValidator_default_message": {
-        "use_counter": 1,
+        "use_counter": 2,
         "default": "This fields value must be between %min% and %max%"
     },
     "RFC7231_date": {
@@ -840,19 +840,19 @@
         "default": "message"
     },
     "ds3231_id_temp": {
-        "use_counter": 0,
+        "use_counter": 5,
         "default": "ds3231_temp"
     },
     "ds3231_id_time": {
-        "use_counter": 0,
+        "use_counter": 5,
         "default": "ds3231_time"
     },
     "ds3231_id_lost_power": {
-        "use_counter": 0,
+        "use_counter": 3,
         "default": "ds3231_lost_power"
     },
     "webui_json_head": {
-        "use_counter": 0,
+        "use_counter": 1,
         "default": "head"
     },
     "fs_mapping_listings": {
@@ -1015,7 +1015,7 @@
         "default": "hidden"
     },
     "FormRangeValidator_default_message_zero_allowed": {
-        "use_counter": 1,
+        "use_counter": 2,
         "default": "This fields value must be between %min% and %max% or 0"
     },
     "network": {
@@ -1087,15 +1087,15 @@
         "default": "n/a"
     },
     "stk500v1_tmp_file": {
-        "use_counter": 2,
+        "use_counter": 0,
         "default": "/stk500v1/firmware_tmp.hex"
     },
     "iot_sensor_hlw80xx_state_file": {
-        "use_counter": 2,
+        "use_counter": 0,
         "default": "/hlw80xx.state"
     },
     "seconds": {
-        "use_counter": 3,
+        "use_counter": 6,
         "default": "seconds"
     },
     "milliseconds": {
@@ -1103,15 +1103,27 @@
         "default": "milliseconds"
     },
     "__s_": {
-        "use_counter": 1,
+        "use_counter": 11,
         "default": "/%s/"
     },
     "hPa": {
-        "use_counter": 1,
+        "use_counter": 3,
         "default": "hPa"
     },
     "channel__u": {
         "use_counter": 4,
         "default": "channel_%u"
+    },
+    "temperature": {
+        "use_counter": 5,
+        "default": "temperature"
+    },
+    "humidity": {
+        "use_counter": 5,
+        "default": "humidity"
+    },
+    "pressure": {
+        "use_counter": 5,
+        "default": "pressure"
     }
 }

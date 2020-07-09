@@ -40,7 +40,7 @@ DECLARE_ENUM(MQTTSensorSensorType, uint8_t,
 class MQTTSensor : public MQTTComponent {
 public:
     const uint8_t DEFAULT_UPDATE_RATE = 10;
-    const uint8_t DEFAULT_MQTT_UPDATE_RATE = 60;
+    const uint8_t DEFAULT_MQTT_UPDATE_RATE = 30;
 
     using SensorType = MQTTSensorSensorType;
 
@@ -86,6 +86,8 @@ public:
         return false;
     }
     virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) {
+    }
+    virtual void configurationSaved() {
     }
 
     virtual void reconfigure() {

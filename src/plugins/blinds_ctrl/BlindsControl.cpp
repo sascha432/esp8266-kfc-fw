@@ -57,21 +57,24 @@ void BlindsControl::_setup()
     }
 }
 
-void BlindsControl::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTComponent::MQTTAutoDiscoveryVector &vector)
+MQTTComponent::MQTTAutoDiscoveryPtr BlindsControl::nextAutoDiscovery(MQTTAutoDiscovery::Format_t format, uint8_t num)
 {
-    String topic = _getTopic();
-
+    if (num >= getAutoDiscoveryCount()) {
+        return nullptr;
+    }
     auto discovery = new MQTTAutoDiscovery();
-    discovery->create(this, 0, format);
-    discovery->addStateTopic(topic + '1');
+    switch(num) {
+        case 0:
+            discovery->create(this, 0, format);
+            discovery->addStateTopic(_getTopic(1));
+            break;
+        case 1:
+            discovery->create(this, 1, format);
+            discovery->addStateTopic(_getTopic(2));
+            break;
+    }
     discovery->finalize();
-    vector.emplace_back(discovery);
-
-    discovery = new MQTTAutoDiscovery();
-    discovery->create(this, 1, format);
-    discovery->addStateTopic(topic + '2');
-    discovery->finalize();
-    vector.emplace_back(discovery);
+    return discovery;
 }
 
 void BlindsControl::getValues(JsonArray &array)
@@ -272,8 +275,9 @@ void BlindsControl::_stop()
     analogWrite(IOT_BLINDS_CTRL_M4_PIN, 0);
 }
 
-String BlindsControl::_getTopic() const {
-    return MQTTClient::formatTopic(MQTTClient::NO_ENUM, F("/metrics/"));
+String BlindsControl::_getTopic(uint8_t channel) const
+{
+    return MQTTClient::formatTopic(MQTTClient::NO_ENUM, F("/metrics/channel_%u/"), channel);
 }
 
 void BlindsControl::_publishState(MQTTClient *client)
@@ -285,9 +289,8 @@ void BlindsControl::_publishState(MQTTClient *client)
 
     if (client) {
         uint8_t _qos = MQTTClient::getDefaultQos();
-        String topic = _getTopic();
         for(size_t i = 0; i < _channels.size(); i++) {
-            client->publish(topic + (char)(i + '1'), _qos, 1, _getStateStr(i));
+            client->publish(_getTopic(i + 1), _qos, 1, _getStateStr(i));
             _channels[i]._publishState(client, _qos);
         }
     }

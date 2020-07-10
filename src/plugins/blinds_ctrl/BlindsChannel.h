@@ -44,6 +44,13 @@ public:
     static const __FlashStringHelper *_stateStr(StateEnum_t state);
 
 private:
+    enum class TopicType {
+        SET,
+        STATE
+    };
+
+    String _getTopic(uint8_t channel, TopicType type) const;
+
     StateEnum_t _state;
     Channel_t _channel;
     uint8_t _number;

@@ -22,11 +22,11 @@ class MQTTPersistantStorageComponent : public MQTTComponent
 {
 public:
     using Callback = KFCFWConfiguration::PersistantConfigCallback;
-    using Vector = KFCFWConfiguration::KeyValueStoreVector;
-    using VectorPtr = KFCFWConfiguration::KeyValueStoreVectorPtr;
+    using Container = KeyValueStorage::Container;
+    using ContainerPtr = KeyValueStorage::ContainerPtr;
 
 private:
-    MQTTPersistantStorageComponent(VectorPtr data, Callback callback);
+    MQTTPersistantStorageComponent(ContainerPtr data, Callback callback);
 public:
     ~MQTTPersistantStorageComponent();
 
@@ -41,17 +41,17 @@ public:
     virtual void onMessage(MQTTClient *client, char *topic, char *payload, size_t len);
 
 public:
-    static bool create(MQTTClient *client, VectorPtr data, Callback callback);
+    static bool create(MQTTClient *client, ContainerPtr data, Callback callback);
+    static void remove(MQTTPersistantStorageComponent *component);
     static bool isActive();
 
 private:
     bool _begin(MQTTClient *client);
-    String _serialize(VectorPtr data);
-    VectorPtr _unserialize(const char *str);
-    void _merge(VectorPtr target, VectorPtr data);
+    void _end(MQTTClient *client);
+    void _remove();
 
     String _topic;
-    VectorPtr _data;
+    ContainerPtr _data;
     Callback _callback;
     EventScheduler::Timer _timer;
     bool _ignoreMessages;

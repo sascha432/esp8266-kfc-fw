@@ -105,7 +105,7 @@ public:
     }
 };
 
-#include "DebugDumper.h"
+// #include "DebugDumper.h"
 
 #include "DebugHelperPrintValue.h"
 
@@ -123,6 +123,7 @@ public:
         printf_P(___debugPrefix, millis(), _file, _line, ESP.getFreeHeap(), _functionName);
     }
 
+#if 0
     template<class T>
     const T &printResult(const T &value) {
         if (*this) {
@@ -142,6 +143,7 @@ public:
         }
         return value;
     }
+#endif
 
     const char* _file;
     int _line;

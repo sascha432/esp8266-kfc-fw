@@ -7,6 +7,7 @@
 #include <MicrosTimer.h>
 #include <KFCForms.h>
 #include <PrintHtmlEntitiesString.h>
+#include <StringKeyValueStore.h>
 #include "plugins.h"
 #include "blinds_ctrl.h"
 #include "BlindsControl.h"
@@ -44,6 +45,7 @@ public:
         return PSTR("blinds");
     }
     virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
+    virtual void configurationSaved() override;
 
 #if AT_MODE_SUPPORTED
     virtual bool hasAtMode() const override;
@@ -171,6 +173,28 @@ void BlindsControlPlugin::createConfigureForm(AsyncWebServerRequest *request, Fo
 
     form.finalize();
 }
+
+void BlindsControlPlugin::configurationSaved()
+{
+    using KeyValueStorage::Container;
+    using KeyValueStorage::ContainerPtr;
+    using KeyValueStorage::Item;
+
+    auto blinds = config._H_GET(Config().blinds_controller);
+    bool dir[2] = { blinds.channel0_dir, blinds.channel1_dir };
+    auto container = ContainerPtr(new Container());
+    container->add(Item::create(F("blinds_swap_ch"), blinds.swap_channels));
+    for(uint8_t i = 0; i < 2; i++) {
+        container->add(Item::create(PrintString(F("blinds[%u]dir"), i), dir[i]));
+        container->add(Item::create(PrintString(F("blinds[%u]close_time"), i), blinds.channels[i].closeTime));
+        container->add(Item::create(PrintString(F("blinds[%u]I_limit"), i), blinds.channels[i].currentLimit));
+        container->add(Item::create(PrintString(F("blinds[%u]I_limit_time"), i), blinds.channels[i].currentLimitTime));
+        container->add(Item::create(PrintString(F("blinds[%u]open_time"), i), blinds.channels[i].openTime));
+        container->add(Item::create(PrintString(F("blinds[%u]pwm"), i), blinds.channels[i].pwmValue));
+    }
+    config.callPersistantConfig(container);
+}
+
 
 void BlindsControlPlugin::createWebUI(WebUI &webUI) {
 

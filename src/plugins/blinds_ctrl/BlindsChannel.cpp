@@ -16,21 +16,29 @@ BlindsChannel::BlindsChannel() : MQTTComponent(ComponentTypeEnum_t::SWITCH), _st
 {
 }
 
-void BlindsChannel::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTComponent::MQTTAutoDiscoveryVector &vector)
+
+MQTTComponent::MQTTAutoDiscoveryPtr BlindsChannel::nextAutoDiscovery(MQTTAutoDiscovery::Format_t format, uint8_t num)
 {
+    if (num >= getAutoDiscoveryCount()) {
+        return nullptr;
+    }
     auto discovery = new MQTTAutoDiscovery();
-    discovery->create(this, 0, format);
-    discovery->addStateTopic(MQTTClient::formatTopic(_number, F("/state")));
-    discovery->addCommandTopic(MQTTClient::formatTopic(_number, F("/set")));
-    discovery->addPayloadOn(1);
-    discovery->addPayloadOff(0);
+    switch(num) {
+        case 0:
+            discovery->create(this, 0, format);
+            discovery->addStateTopic(_getTopic(_number, TopicType::STATE));
+            discovery->addCommandTopic(_getTopic(_number, TopicType::SET));
+            discovery->addPayloadOn(1);
+            discovery->addPayloadOff(0);
+            break;
+    }
     discovery->finalize();
-    vector.emplace_back(discovery);
+    return discovery;
 }
 
 void BlindsChannel::onConnect(MQTTClient *client)
 {
-    client->subscribe(this, MQTTClient::formatTopic(_number, F("/set")), MQTTClient::getDefaultQos());
+    client->subscribe(this, _getTopic(_number, TopicType::SET), MQTTClient::getDefaultQos());
 }
 
 void BlindsChannel::onMessage(MQTTClient *client, char *topic, char *payload, size_t len)
@@ -42,7 +50,7 @@ void BlindsChannel::onMessage(MQTTClient *client, char *topic, char *payload, si
 
 void BlindsChannel::_publishState(MQTTClient *client, uint8_t qos)
 {
-    client->publish(MQTTClient::formatTopic(_number, F("/state")), qos, 1, _state == OPEN ? FSPGM(1) : FSPGM(0));
+    client->publish(_getTopic(_number, TopicType::STATE), qos, 1, _state == OPEN ? String(1) : String(0));
 }
 
 void BlindsChannel::setState(StateEnum_t state)
@@ -75,7 +83,8 @@ BlindsChannel::Channel_t &BlindsChannel::getChannel()
     return _channel;
 }
 
-void BlindsChannel::setNumber(uint8_t number) {
+void BlindsChannel::setNumber(uint8_t number)
+{
     _number = number;
 }
 
@@ -97,4 +106,19 @@ const __FlashStringHelper *BlindsChannel::_stateStr(StateEnum_t state)
             break;
     }
     return F("???");
+}
+
+String BlindsChannel::_getTopic(uint8_t channel, TopicType type) const
+{
+    PGM_P str;
+    switch(type) {
+        case TopicType::SET:
+            str = PSTR("set");
+            break;
+        case TopicType::STATE:
+        default:
+            str = PSTR("state");
+            break;
+    }
+    return MQTTClient::formatTopic(MQTTClient::NO_ENUM, F("/channel_%u/%s"), channel + 1, str);
 }

@@ -2,6 +2,7 @@
  * Author: sascha_lammers@gmx.de
  */
 
+#include <LoopFunctions.h>
 #include "mqtt_persistant_storage.h"
 #include "mqtt_client.h"
 
@@ -13,123 +14,94 @@
 
 bool MQTTPersistantStorageComponent::_active = false;
 
-MQTTPersistantStorageComponent::MQTTPersistantStorageComponent(VectorPtr data, Callback callback) : MQTTComponent(ComponentTypeEnum_t::STORAGE), _data(data), _callback(callback), _ignoreMessages(false)
+MQTTPersistantStorageComponent::MQTTPersistantStorageComponent(ContainerPtr data, Callback callback) : MQTTComponent(ComponentTypeEnum_t::STORAGE), _data(data), _callback(callback), _ignoreMessages(false)
 {
+    _debug_println();
     _active = true;
 }
 
 MQTTPersistantStorageComponent::~MQTTPersistantStorageComponent()
 {
-    auto client = MQTTClient::getClient();
-    if (client) {
-        client->unregisterComponent(this);
-        client->unsubscribe(nullptr, _topic);
-    }
+    _debug_println();
     _active = false;
 }
 
 void MQTTPersistantStorageComponent::onDisconnect(MQTTClient *client, AsyncMqttClientDisconnectReason reason)
 {
-    // on disconnect topics are unsubscribed automatically
-    delete this;
+    _debug_println();
+    _remove();
 }
 
 void MQTTPersistantStorageComponent::onMessage(MQTTClient *client, char *topic, char *payload, size_t len)
 {
     _debug_printf_P(PSTR("topic=%s payload=%s len=%u ignore=%u\n"), topic, payload, len, _ignoreMessages);
     if (!_ignoreMessages) {
-        auto target = _unserialize(payload);
+        KeyValueStorage::Container storedData;
+        storedData.unserialize(payload);
         if (_data->size()) {
-            _merge(target, _data);
+            storedData.merge(*_data);
         }
         if (_callback) {
-            _callback(target);
+            _callback(storedData);
         }
         _ignoreMessages = true;
         _timer.remove();
-        client->publish(_topic, MQTTClient::getDefaultQos(), true, _serialize(target));
-        delete this;
+        PrintString newData;
+        storedData.serialize(newData);
+        client->publish(_topic, MQTTClient::getDefaultQos(), true, newData);
+        _remove();
     }
 }
 
 bool MQTTPersistantStorageComponent::_begin(MQTTClient *client)
 {
     _topic = MQTTClient::formatTopic(MQTTClient::NO_ENUM, F("/persistant_storage"));
+    _debug_printf_P(PSTR("topic=%s\n"), _topic.c_str());
     // if we cannot subscribe, report an error
     for(uint8_t i = 0; i < 3; i++) {
         if (client->subscribeWithId(this, _topic.c_str(), MQTTClient::getDefaultQos())) {
             _timer.add(MQTT_PERSISTANT_STORAGE_TIMEOUT, false, [this](EventScheduler::TimerPtr) {
+                _debug_printf_P(PSTR("MQTTPersistantStorageComponent data=%u callback=%p\n"), _data->size(), &_callback);
+                if (_callback) {
+                    _callback(*_data);
+                }
                 if (!_data->empty()) {
                     auto client = MQTTClient::getClient();
                     if (client) {
                         _ignoreMessages = true;
-                        client->publish(_topic, MQTTClient::getDefaultQos(), true, _serialize(_data));
+                        PrintString newData;
+                        _data->serialize(newData);
+                        client->publish(_topic, MQTTClient::getDefaultQos(), true, newData);
                     }
                 }
-                _callback(VectorPtr(nullptr));
-                delete this;
+                _remove();
             });
             return true;
         }
         delay(50);
     }
-    if (_callback) {
-        _callback(VectorPtr(nullptr));
-    }
     return false;
 }
 
-String MQTTPersistantStorageComponent::_serialize(VectorPtr data)
+void MQTTPersistantStorageComponent::_end(MQTTClient *client)
 {
-    StringVector list;
-    for(const auto &item: *data) {
-        list.emplace_back(item._key + '=' + item._value);
+    _debug_printf_P(PSTR("client=%p\n"), client);
+    if (client && _topic.length()) {
+        client->unsubscribe(nullptr, _topic);
     }
-    auto str = implode(',', list);
-    _debug_printf_P(PSTR("str=%s\n"), str.c_str());
-    return str;
 }
 
-MQTTPersistantStorageComponent::VectorPtr MQTTPersistantStorageComponent::_unserialize(const char *str)
+void MQTTPersistantStorageComponent::_remove()
 {
-    StringVector list;
-    auto data = VectorPtr(new Vector());
-    _debug_printf_P(PSTR("str=%s\n"), str);
-    explode(str, ',', list);
-    for(auto &item: list) {
-        int pos = item.indexOf('=');
-        if (pos != -1) {
-            data->emplace_back(item.substring(0, pos), item.substring(pos + 1));
-        }
-        else {
-            data->emplace_back(item, String());
-        }
-    }
-    return data;
+    _debug_println();
+    LoopFunctions::callOnce([this]() {
+        MQTTPersistantStorageComponent::remove(this);
+    });
 }
 
-void MQTTPersistantStorageComponent::_merge(VectorPtr target, VectorPtr data)
+bool MQTTPersistantStorageComponent::create(MQTTClient *client, ContainerPtr data, Callback callback)
 {
-    _debug_printf_P(PSTR("in=%s data=%s\n"), _serialize(target).c_str(), _serialize(data).c_str());
-
-    for(const auto &item: *data) {
-        bool found = false;
-        for(auto &item2: *target) {
-            if (item._key == item2._key) {
-                item2._value = item._value;
-                found = true;
-                break;
-            }
-        }
-        if (!found) {
-            target->push_back(item);
-        }
-    }
-    _debug_printf_P(PSTR("out=%s\n"), _serialize(target).c_str());
-}
-
-bool MQTTPersistantStorageComponent::create(MQTTClient *client, VectorPtr data, Callback callback)
-{
+    _debug_printf_P(PSTR("client=%p active=%u\n"), client, isActive());
     if (isActive()) {
         return false;
     }
@@ -140,6 +112,17 @@ bool MQTTPersistantStorageComponent::create(MQTTClient *client, VectorPtr data, 
         delete component;
     }
     return result;
+}
+
+void MQTTPersistantStorageComponent::remove(MQTTPersistantStorageComponent *component)
+{
+    auto client = MQTTClient::getClient();
+    _debug_printf_P(PSTR("client=%p\n"), client);
+    if (client) {
+        component->_end(client);
+        client->unregisterComponent(component);
+    }
+    delete component;
 }
 
 bool MQTTPersistantStorageComponent::isActive()

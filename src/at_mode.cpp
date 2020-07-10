@@ -16,6 +16,7 @@
 #include <JsonTools.h>
 #include <ListDir.h>
 #include <Timezone.h>
+#include <StringKeyValueStore.h>
 #include "at_mode.h"
 #include "kfc_fw_config.h"
 #include "fs_mapping.h"
@@ -233,6 +234,8 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(ADC, "ADC", "[interval in seconds|0=disabl
 #if defined(ESP8266)
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(CPU, "CPU", "<80|160>", "Set CPU speed", "Display CPU speed");
 #endif
+
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PSTORE, "PSTORE", "[<clear|remove|add>[,<key>[,<value>]]]", "Display/modify persistant storage");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMP, "DUMP", "[<dirty|config.name>]", "Display settings");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPR, "DUMPR", "<pointer>", "Print symbol");
 #if DEBUG && ESP8266
@@ -298,6 +301,7 @@ void at_mode_help_commands()
 #if defined(ESP8266)
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CPU), name);
 #endif
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(PSTORE), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DUMP), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DUMPR), name);
 #if DEBUG && ESP8266
@@ -857,21 +861,41 @@ void at_mode_serial_handle_event(String &commandString)
                 }
                 at_mode_generate_help(output, &findItems);
             }
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(PSTORE))) {
+                using KeyValueStorage::Container;
+                using KeyValueStorage::ContainerPtr;
 
-
-            else if (args.isCommand(F("PERS"))) {
-                auto data = KFCFWConfiguration::KeyValueStoreVectorPtr(new KFCFWConfiguration::KeyValueStoreVector());
-                const char *arg = args.get(0);
-                if (!arg) {
-                    arg = "test";
+                if (args.equalsIgnoreCase(0, F("add"))) {
+                    if (args.requireArgs(3, 3)) {
+                        //TODO
+                    }
                 }
-                data->emplace_back(arg, String(rand()));
-                config.callPersistantConfig(data, [](KFCFWConfiguration::KeyValueStoreVectorPtr data) {
-                    auto ptr = data.get();
-                    debug_printf_P(PSTR("data=%d\n"), ptr ? ptr->size() : -1);
-                });
-            }
+                else if (args.equalsIgnoreCase(0, F("remove"))) {
+                    if (args.requireArgs(2, 2)) {
+                        //TODO
+                    }
+                }
+                else if (args.equalsIgnoreCase(0, F("clear"))) {
+                    args.print(F("Sending clear request..."));
+                    config.callPersistantConfig(ContainerPtr(new Container()), [args](Container &data) mutable {
+                        data.clear();
+                        args.print(F("Cleared"));
+                    });
+                }
+                else {
+                    args.print(F("Requesting data..."));
 
+                    config.callPersistantConfig(ContainerPtr(new Container()), [args](Container &data) mutable {
+                        PrintString output;
+                        output.printf_P(PSTR("Stored items: %u\n"), data.size());
+                        data.serialize(output);
+                        // for(const auto &item: *data) {
+                        //     output.printf_P(PSTR("  key='%s' value='%s'\n"), item._key.c_str(), item._value.c_str());
+                        // }
+                        args.print(output);
+                    });
+                }
+            }
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RST))) {
                 bool safeMode = false;
                 if (args.equals(0, 's')) {

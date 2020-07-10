@@ -619,10 +619,7 @@ void MQTTClient::_clearQueue()
 
 size_t MQTTClient::getClientSpace() const
 {
-    // add
-    // friend class MQTTClient;
-    // to AsyncMqttClient
-    return _client->_client.space();
+    return _client->getAsyncClient().space();
 }
 
 bool MQTTClient::_isMessageSizeExceeded(size_t len, const char *topic)

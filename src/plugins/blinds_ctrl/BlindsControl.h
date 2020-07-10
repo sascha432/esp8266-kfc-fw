@@ -90,7 +90,7 @@ protected:
     void _readConfig();
 
 protected:
-    String _getTopic() const;
+    String _getTopic(uint8_t channel) const;
 
     std::array<BlindsChannel, ChannelEnum_t::CHANNEL_SIZE> _channels;
     uint8_t _swapChannels: 1;

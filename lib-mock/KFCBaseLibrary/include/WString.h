@@ -94,6 +94,10 @@ public:
     String &operator += (const char ch);
     String &operator += (const __FlashStringHelper *str);
 
+    operator const char *() const {
+        return c_str();
+    }
+
     LPWStr LPWStr();
     std::wstring w_str();
 };

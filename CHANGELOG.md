@@ -15,7 +15,8 @@
 - NTP startup delay reduced to 1 second (from up to 5 minutes)
 - Support for POSIX time zones
 - MQTT auto discovery queue to reduce memory usage and network load
-- Send calibration information to MQTT for recovery after firmware updates
+- Send calibration/config. to MQTT for recovery after firmware updates
+- MQTT auto discovery abbreviations
 
 ## Version 0.0.2
 

@@ -1,0 +1,6 @@
+#!/bin/bash
+#
+# put into /etc/cron.daily to record values for recovery
+#
+date >> /var/log/mqtt_persistant_storage.log
+mosquitto_sub -t 'home/+/persistant_storage' -v -W 5 >> /var/log/mqtt_persistant_storage.log

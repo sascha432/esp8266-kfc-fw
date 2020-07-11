@@ -1135,18 +1135,19 @@ void at_mode_serial_handle_event(String &commandString)
                     auto filename = args.get(0);
                     auto file = SPIFFSWrapper::open(filename, fs::FileOpenMode::read);
                     if (file) {
+                        args.printf_P(PSTR("--- %s ---"), filename);
                         Scheduler.addTimer(10, true, [&output, &args, file](EventScheduler::TimerPtr timer) mutable {
-                            char buf[256];
+                            uint8_t buf[128];
                             if (file.available()) {
-                                auto len = file.readBytes(buf, sizeof(buf) - 1);
+                                auto len = file.readBytes(reinterpret_cast<char *>(buf), sizeof(buf) - 1);
                                 if (len) {
                                     buf[len] = 0;
-                                    output.print(buf);
+                                    printable_string(output, buf, len);
                                     output.flush();
                                 }
                             }
                             else {
-                                args.printf_P(PSTR("%s: %u"), file.name(), (unsigned)file.size());
+                                args.printf_P(PSTR("--- size %u ---"), (unsigned)file.size());
                                 file.close();
                                 timer->detach();
                             }

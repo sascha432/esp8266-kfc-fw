@@ -15,14 +15,6 @@
         "use_counter": 16,
         "default": "text/plain"
     },
-    "1": {
-        "use_counter": 3,
-        "default": "1"
-    },
-    "0": {
-        "use_counter": 3,
-        "default": "0"
-    },
     "null": {
         "use_counter": 4,
         "default": "null"
@@ -889,13 +881,6 @@
     },
     "status__u": {
         "use_counter": 4,
-        "annotations": {
-            "translation": {
-                "*": "status=%u"
-            },
-            "file": "src/plugins/home_assistant/home_assistant.cpp",
-            "line": 170
-        },
         "default": "status=%u"
     },
     "display": {
@@ -1080,7 +1065,7 @@
     },
     "_login_html": {
         "use_counter": 2,
-        "default": "/login,html"
+        "default": "/login.html"
     },
     "n_a": {
         "use_counter": 1,
@@ -1125,5 +1110,17 @@
     "pressure": {
         "use_counter": 5,
         "default": "pressure"
+    },
+    "mqtt_component_storage": {
+        "use_counter": 1,
+        "default": "storage"
+    },
+    "image_type": {
+        "use_counter": 2,
+        "default": "image_type"
+    },
+    "id": {
+        "use_counter": 5,
+        "default": "id"
     }
 }

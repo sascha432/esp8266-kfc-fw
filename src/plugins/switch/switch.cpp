@@ -294,7 +294,7 @@ void SwitchPlugin::_publishState(MQTTClient *client, int8_t channel)
         for (size_t i = 0; i < _pins.size(); i++) {
             if (channel == -1 || (uint8_t)channel == i) {
                 _debug_printf_P(PSTR("pin=%u state=%u\n"), _pins[i], _getChannel(i));
-                client->publish(MQTTClient::formatTopic(i, FSPGM(mqtt_switch_state)), qos, true, _getChannel(i) ? SPGM(1) : SPGM(0));
+                client->publish(MQTTClient::formatTopic(i, FSPGM(mqtt_switch_state)), qos, true, String(_getChannel(i) ? 1 : 0));
             }
         }
     }

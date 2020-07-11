@@ -49,8 +49,8 @@ void MQTTAutoDiscovery::_create(MQTTComponent *component, const String &name, MQ
         _discovery += FPSTR(component->getComponentName());
         _discovery += F(":\n  - ");
     }
-    addParameter(F("name"), name);
-    addParameter(F("platform"), F("mqtt"));
+    addParameter(FSPGM(name), name);
+    addParameter(F("platform"), FSPGM(mqtt));
     if (format == FORMAT_JSON) {
         uniqueId = _getUnqiueId(name);
         addParameter(FSPGM(mqtt_unique_id), uniqueId);
@@ -61,25 +61,31 @@ void MQTTAutoDiscovery::_create(MQTTComponent *component, const String &name, MQ
 
     if (_format == FORMAT_JSON) {
         String model;
-#if IOT_DIMMER_MODULE
-    #if IOT_DIMMER_MODULE_CHANNELS
-        model += F(_STRINGIFY(IOT_DIMMER_MODULE_CHANNELS) " Channel MOSFET Dimmer/");
+#if defined(MQTT_AUTO_DISCOVERY_MODEL)
+        model = F(MQTT_AUTO_DISCOVERY_MODEL);
+#elif IOT_SWITCH
+    #if IOT_SWITCH_CHANNEL_NUM>1
+        model = F(_STRINGIFY(IOT_SWITCH_CHANNEL_NUM) " Channel Switch");
     #else
-        model += F("MOSFET Dimmer/");
+        model = F("Switch");
     #endif
-#elif IOT_ATOMIC_SUN_V2
-        model += F("Atomic Sun V2/");
+#elif IOT_DIMMER_MODULE
+    #if IOT_DIMMER_MODULE_CHANNELS > 1
+        model = F(_STRINGIFY(IOT_DIMMER_MODULE_CHANNELS) " Channel MOSFET Dimmer");
+    #else
+        model = F("MOSFET Dimmer");
+    #endif
 #else
-        model = F("Generic/");
+        model = F("Generic");
 #endif
 #if defined(ESP8266)
-        model += F("ESP8266");
+        model += F("/ESP8266");
 #elif defined(ESP32)
-        model += F("ESP32");
+        model += F("/ESP32");
 #elif defined(__AVR__) || defined(__avr__)
-        model += F("AVR");
+        model += F("/AVR");
 #else
-        model += F("Unknown");
+        model += F("/Unknown");
 #endif
 
         _discovery += F("\"device\":{\"identifiers\":[\"");

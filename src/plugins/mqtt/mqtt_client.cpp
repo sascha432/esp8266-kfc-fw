@@ -182,9 +182,11 @@ String MQTTClient::formatTopic(uint8_t num, const __FlashStringHelper *format, .
     getComponentName(deviceName, suffix, num);
     topic += suffix;
 
-    va_start(arg, format);
-    topic.vprintf_P(RFPSTR(format), arg);
-    va_end(arg);
+    if (format) {
+        va_start(arg, format);
+        topic.vprintf_P(RFPSTR(format), arg);
+        va_end(arg);
+    }
     topic.replace(F("${device_name}"), deviceName);
     // _debug_printf_P(PSTR("MQTTClient::formatTopic(): number=%u,topic=%s\n"), num, topic.c_str());
     return topic;
@@ -200,11 +202,13 @@ String MQTTClient::formatTopic(const String &componentName, const __FlashStringH
         topic += componentName;
     }
 
-    va_start(arg, format);
-    topic.vprintf_P(RFPSTR(format), arg);
-    va_end(arg);
+    if (format) {
+        va_start(arg, format);
+        topic.vprintf_P(RFPSTR(format), arg);
+        va_end(arg);
+    }
     topic.replace(F("${device_name}"), config.getDeviceName());
-    // _debug_printf_P(PSTR("MQTTClient::formatTopic(): number=%u,topic=%s\n"), num, topic.c_str());
+    // _debug_printf_P(PSTR("MQTTClient::formatTopic(): name=%s,topic=%s\n"), componentName.c_str(), topic.c_str());
     return topic;
 }
 
@@ -303,7 +307,7 @@ String MQTTClient::connectionStatusString()
     }
     message += F("topic ");
 
-    message += formatTopic(NO_ENUM, FSPGM(empty));
+    message += formatTopic(NO_ENUM, nullptr);
 #if MQTT_AUTO_DISCOVERY
     if (config._H_GET(Config().flags).mqttAutoDiscoveryEnabled) {
         message += F(", discovery prefix '");
@@ -322,7 +326,7 @@ void MQTTClient::onConnect(bool sessionPresent)
     _clearQueue();
 
     // set online
-    publish(_lastWillTopic, getDefaultQos(), 1, FSPGM(1));
+    publish(_lastWillTopic, getDefaultQos(), 1, String(1));
 
     // reset reconnect timer if connection was successful
     setAutoReconnect(MQTT_AUTO_RECONNECT_TIMEOUT);
@@ -575,7 +579,6 @@ void MQTTClient::_addQueue(MQTTQueueEnum_t type, MQTTComponent *component, const
         return;
     }
 
-
     _queue.emplace_back(type, component, topic, qos, retain, payload);
     _queueTimer.add(MQTT_QUEUE_RETRY_DELAY, (MQTT_QUEUE_TIMEOUT / MQTT_QUEUE_RETRY_DELAY), [this](EventScheduler::TimerPtr timer) {
         _queueTimerCallback();
@@ -638,7 +641,7 @@ public:
         REGISTER_PLUGIN(this);
     }
     virtual PGM_P getName() const {
-        return PSTR("mqtt");
+        return SPGM(mqtt);
     }
     virtual const __FlashStringHelper *getFriendlyName() const {
         return F("MQTT");

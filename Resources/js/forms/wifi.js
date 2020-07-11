@@ -46,7 +46,7 @@ $(function () {
                 check_scan();
             }
             function check_scan() {
-                $.get('/scan_wifi/?SID=' + SID + '&id=' + random_str(), function (data) {
+                $.get('/scan_wifi?SID=' + SID + '&id=' + random_str(), function (data) {
                     console.log(data);
                     if (data.pending) {
                         window.setTimeout(check_scan, 1000);

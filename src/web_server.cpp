@@ -279,7 +279,7 @@ void WebServerPlugin::handlerAlerts(AsyncWebServerRequest *request)
             return;
         }
         else {
-            auto alertId = (uint32_t)request->arg(F("id")).toInt();
+            auto alertId = (uint32_t)request->arg(FSPGM(id)).toInt();
             if (alertId) {
                 WebUIAlerts_remove(alertId);
                 request->send(200, FSPGM(mime_text_plain), FSPGM(OK));
@@ -516,14 +516,14 @@ void WebServerPlugin::handlerUploadUpdate(AsyncWebServerRequest *request, String
 
             uint8_t imageType = 0;
 
-            if (String_equals(request->arg(F("image_type")), PSTR("u_flash"))) { // firmware selected
+            if (String_equals(request->arg(FSPGM(image_type)), PSTR("u_flash"))) { // firmware selected
                 imageType = 0;
             }
-            else if (String_equals(request->arg(F("image_type")), PSTR("u_spiffs"))) { // spiffs selected
+            else if (String_equals(request->arg(FSPGM(image_type)), PSTR("u_spiffs"))) { // spiffs selected
                 imageType = 1;
             }
 #if STK500V1
-            else if (String_equals(request->arg(F("image_type")), PSTR("u_atmega"))) { // atmega selected
+            else if (String_equals(request->arg(FSPGM(image_type)), PSTR("u_atmega"))) { // atmega selected
                 imageType = 3;
             }
             else if (strstr_P(filename.c_str(), PSTR(".hex"))) { // auto select
@@ -655,38 +655,7 @@ void WebServerPlugin::begin()
 
     _server->onNotFound(handlerNotFound);
 
-// #if MDNS_SUPPORT
-//     WebServerPlugin::addHandler(F("/poll_mdns/"), [&httpHeaders](AsyncWebServerRequest *request) {
-
-//         web_server_set_cpu_speed_for_request(request);
-
-//         httpHeaders.addNoCache();
-//         if (isAuthenticated(request)) {
-//             AsyncWebServerResponse *response;
-//             bool isRunning = false;//MDNS_async_query_running();
-//             String &result = MDNS_get_html_result();
-
-//             _debug_printf_P(PSTR("HTTP MDS: Query running %d, response length %d\n"), isRunning, result.length());
-
-//             if (result.length()) {
-//                 response = request->beginResponse(200, FSPGM(text_html), result);
-//             } else if (isRunning) {
-//                 response = request->beginResponse(204, FSPGM(text_html), emptyString); // an emtpy response lets the client know to poll again
-//             } else {
-//                 response = request->beginResponse(503);
-//             }
-// #if DEBUG
-//             httpHeaders.add(MDNS_get_cache_ttl_header());
-// #endif
-//             httpHeaders.setAsyncWebServerResponseHeaders(response);
-//             request->send(response);
-//         } else {
-//             request->send(403);
-//         }
-//     });
-// #endif
-
-    WebServerPlugin::addHandler(F("/scan_wifi/"), handlerScanWiFi);
+    WebServerPlugin::addHandler(F("/scan_wifi"), handlerScanWiFi);
     WebServerPlugin::addHandler(F("/logout"), handlerLogout);
     WebServerPlugin::addHandler(F("/is_alive"), handlerAlive);
     WebServerPlugin::addHandler(F("/sync_time"), handlerSyncTime);
@@ -855,7 +824,7 @@ bool WebServerPlugin::_handleFileRead(String path, bool client_accepts_gzip, Asy
                 loginError = F("Invalid username or password.");
                 const FailureCounter &failure = _loginFailures.addFailure(remote_addr);
                 Logger_security(F("Login from %s failed %d times since %s (%s)"), remote_addr.toString().c_str(), failure.getCounter(), failure.getFirstFailure().c_str(), getAuthTypeStr(authType));
-                return _sendFile(FSPGM(_login_html, "/login,html"), httpHeaders, client_accepts_gzip, request, new LoginTemplate(loginError));
+                return _sendFile(FSPGM(_login_html, "/login.html"), httpHeaders, client_accepts_gzip, request, new LoginTemplate(loginError));
             }
         }
         else {

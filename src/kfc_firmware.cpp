@@ -340,7 +340,6 @@ void setup()
             }
         });
 
-
 #if SPIFFS_SUPPORT
         // reset crash counter after 3min
         SaveCrash::installRemoveCrashCounter(180);

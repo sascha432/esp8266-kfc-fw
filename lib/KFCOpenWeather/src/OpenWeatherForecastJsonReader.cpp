@@ -74,7 +74,7 @@ bool OpenWeatherForecastJsonReader::processElement()
             else if (!strcmp_P(key, PSTR("icon"))) {
                 item.icon = getValue();
             }
-            else if (!strcmp_P(key, PSTR("id"))) {
+            else if (!strcmp_P(key, SPGM(id))) {
                 item.id = (uint16_t)getIntValue();;
             }
         }

@@ -330,7 +330,7 @@ void HassPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
         Plugins::HomeAssistant::getActions(actions);
         for(auto &action: actions) {
             auto &json = items.addObject();
-            json.add(F("id"), action.getId());
+            json.add(FSPGM(id), action.getId());
             json.add(F("action"), action.getAction());
             auto &values = json.addArray(F("values"));
             for(auto value: action.getValues()) {
@@ -341,7 +341,7 @@ void HassPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
         reinterpret_cast<SettingsForm &>(form).setJson(&json);
     }
     else {
-        auto actionId = (uint16_t)request->arg(F("id")).toInt();
+        auto actionId = (uint16_t)request->arg(FSPGM(id)).toInt();
         Plugins::HomeAssistant::Action action = Plugins::HomeAssistant::getAction(actionId);
         if (action.getId()) { // edit action
         }
@@ -383,7 +383,7 @@ void HassPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
             Plugins::HomeAssistant::setActions(actions);
         }
 
-        form.add(F("id"), String(action.getId()), FormField::InputFieldType::TEXT)
+        form.add(FSPGM(id), String(action.getId()), FormField::InputFieldType::TEXT)
             ->setFormUI(new FormUI(FormUI::HIDDEN, emptyString));
 
         form.add(F("action"), String(action.getAction()), FormField::InputFieldType::TEXT)
@@ -756,8 +756,8 @@ void HassPlugin::removeAction(AsyncWebServerRequest *request)
     _debug_printf_P(PSTR("is_authenticated=%u\n"), WebServerPlugin::getInstance().isAuthenticated(request) == true);
     if (WebServerPlugin::getInstance().isAuthenticated(request) == true) {
 
-        auto msg = SPGM(0);
-        auto id = (uint16_t)request->arg(F("id")).toInt();
+        auto msg = String(0);
+        auto id = (uint16_t)request->arg(FSPGM(id)).toInt();
         Plugins::HomeAssistant::ActionVector actions;
         Plugins::HomeAssistant::getActions(actions);
         auto iterator = std::remove(actions.begin(), actions.end(), id);
@@ -765,10 +765,10 @@ void HassPlugin::removeAction(AsyncWebServerRequest *request)
             actions.erase(iterator);
             Plugins::HomeAssistant::setActions(actions);
             config.write();
-            msg = SPGM(OK);
+            msg = FSPGM(OK);
         }
 
-        AsyncWebServerResponse *response = request->beginResponse_P(200, FSPGM(mime_text_plain), msg);
+        AsyncWebServerResponse *response = request->beginResponse(200, FSPGM(mime_text_plain), msg);
         HttpHeaders httpHeaders;
         httpHeaders.addNoCache(true);
         httpHeaders.setAsyncWebServerResponseHeaders(response);

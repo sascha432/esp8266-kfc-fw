@@ -25,7 +25,7 @@ MQTTComponent::MQTTAutoDiscoveryPtr BlindsChannel::nextAutoDiscovery(MQTTAutoDis
     auto discovery = new MQTTAutoDiscovery();
     switch(num) {
         case 0:
-            discovery->create(this, 0, format);
+            discovery->create(this, PrintString(FSPGM(channel__u, "channel_%u"), _number), format);
             discovery->addStateTopic(_getTopic(_number, TopicType::STATE));
             discovery->addCommandTopic(_getTopic(_number, TopicType::SET));
             discovery->addPayloadOn(1);
@@ -110,15 +110,11 @@ const __FlashStringHelper *BlindsChannel::_stateStr(StateEnum_t state)
 
 String BlindsChannel::_getTopic(uint8_t channel, TopicType type) const
 {
-    PGM_P str;
+    auto str = F("/state");
     switch(type) {
         case TopicType::SET:
-            str = PSTR("set");
-            break;
-        case TopicType::STATE:
-        default:
-            str = PSTR("state");
+            str = F("/set");
             break;
     }
-    return MQTTClient::formatTopic(MQTTClient::NO_ENUM, F("/channel_%u/%s"), channel + 1, str);
+    return MQTTClient::formatTopic(PrintString(FSPGM(channel__u, "channel_%u"), channel), str);
 }

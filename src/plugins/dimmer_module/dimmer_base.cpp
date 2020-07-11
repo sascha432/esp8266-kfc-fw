@@ -334,11 +334,13 @@ void Dimmer_Base::_setDimmingLevels()
 
 void Dimmer_Base::_forceMetricsUpdate(uint8_t delay)
 {
+#if IOT_SENSOR_HAVE_HLW8012 || IOT_SENSOR_HAVE_HLW8032
     for(auto sensor: SensorPlugin::getSensors()) {
         if (sensor->getType() == MQTTSensor::SensorType::HLW8012 || sensor->getType() == MQTTSensor::SensorType::HLW8032) {
             reinterpret_cast<Sensor_HLW80xx *>(sensor)->setNextMqttUpdate(delay);
         }
     }
+#endif
 }
 
 Sensor_DimmerMetrics *Dimmer_Base::getMetricsSensor() const

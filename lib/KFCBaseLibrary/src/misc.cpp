@@ -51,20 +51,25 @@ String url_encode(const String &str)
 
 String printable_string(const uint8_t *buffer, size_t length, size_t maxLength)
 {
+    PrintString str;
+    printable_string(str, buffer, length, maxLength);
+    return str;
+}
+
+void printable_string(Print &output, const uint8_t *buffer, size_t length, size_t maxLength)
+{
     if (maxLength) {
         length = std::min(maxLength, length);
     }
-    PrintString str;
     auto ptr = buffer;
     while(length--) {
         if (isprint(*ptr)) {
-            str += (char)*ptr;
+            output.print((char)*ptr);
         } else {
-            str.printf_P(PSTR("\\x%02X"), (int)(*ptr & 0xff));
+            output.printf_P(PSTR("\\x%02X"), (int)(*ptr & 0xff));
         }
         ptr++;
     }
-    return str;
 }
 
 void append_slash(String &dir) {

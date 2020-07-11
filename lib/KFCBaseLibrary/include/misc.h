@@ -76,6 +76,7 @@ String formatBytes(size_t bytes);
 String formatTime(unsigned long seconds, bool days_if_not_zero = false);
 
 String url_encode(const String &str);
+void printable_string(Print &output, const uint8_t *buffer, size_t length, size_t maxLength = 0);
 String printable_string(const uint8_t *buffer, size_t length, size_t maxLength = 0);
 inline String printable_string(const char *buffer, size_t length, size_t maxLength = 0) {
     return printable_string(reinterpret_cast<const uint8_t *>(buffer), length, maxLength);

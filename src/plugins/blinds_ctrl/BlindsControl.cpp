@@ -50,7 +50,6 @@ void BlindsControl::_setup()
 
     auto client = MQTTClient::getClient();
     if (client) {
-        client->setUseNodeId(true);
         client->registerComponent(&_channels[0]);
         client->registerComponent(&_channels[1]);
         client->registerComponent(this);
@@ -65,12 +64,9 @@ MQTTComponent::MQTTAutoDiscoveryPtr BlindsControl::nextAutoDiscovery(MQTTAutoDis
     auto discovery = new MQTTAutoDiscovery();
     switch(num) {
         case 0:
-            discovery->create(this, 0, format);
-            discovery->addStateTopic(_getTopic(1));
-            break;
         case 1:
-            discovery->create(this, 1, format);
-            discovery->addStateTopic(_getTopic(2));
+            discovery->create(this, PrintString(F("metrics_%u"), num), format);
+            discovery->addStateTopic(_getTopic(num));
             break;
     }
     discovery->finalize();
@@ -277,7 +273,7 @@ void BlindsControl::_stop()
 
 String BlindsControl::_getTopic(uint8_t channel) const
 {
-    return MQTTClient::formatTopic(MQTTClient::NO_ENUM, F("/metrics/channel_%u/"), channel);
+    return MQTTClient::formatTopic(PrintString(FSPGM(channel__u, "channel_%u"), channel), F("/metrics"));
 }
 
 void BlindsControl::_publishState(MQTTClient *client)
@@ -290,7 +286,7 @@ void BlindsControl::_publishState(MQTTClient *client)
     if (client) {
         uint8_t _qos = MQTTClient::getDefaultQos();
         for(size_t i = 0; i < _channels.size(); i++) {
-            client->publish(_getTopic(i + 1), _qos, 1, _getStateStr(i));
+            client->publish(_getTopic(i), _qos, 1, _getStateStr(i));
             _channels[i]._publishState(client, _qos);
         }
     }

@@ -105,15 +105,15 @@ const __FlashStringHelper *BlindsChannel::_stateStr(StateEnum_t state)
         default:
             break;
     }
-    return F("???");
+    return FSPGM(n_a);
 }
 
 String BlindsChannel::_getTopic(uint8_t channel, TopicType type) const
 {
-    auto str = F("/state");
+    auto str = FSPGM(_state, "/state");
     switch(type) {
         case TopicType::SET:
-            str = F("/set");
+            str = FSPGM(_set, "/set");
             break;
     }
     return MQTTClient::formatTopic(PrintString(FSPGM(channel__u, "channel_%u"), channel), str);

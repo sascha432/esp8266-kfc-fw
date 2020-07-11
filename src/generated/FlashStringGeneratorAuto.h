@@ -347,20 +347,20 @@ PROGMEM_STRING_DECL(https);
 // src/plugins/dimmer_module/dimmer_module_form.cpp:76
 // src/plugins/dimmer_module/dimmer_module_form.cpp:82
 // src/plugins/dimmer_module/dimmer_module_form.cpp:82
-// src/plugins/mqtt/mqtt_client.cpp:787
-// src/plugins/mqtt/mqtt_client.cpp:826
+// src/plugins/mqtt/mqtt_client.cpp:790
+// src/plugins/mqtt/mqtt_client.cpp:829
 // src/plugins/ntp/ntp.cpp:253
 // src/plugins/PinDebugger/PinDebugger.cpp:125
 // src/plugins/serial2tcp/serial2tcp.cpp:91
 // src/plugins/serial2tcp/serial2tcp.cpp:92
 PROGMEM_STRING_DECL(disabled);
 // src/web_server.cpp:1071
-// src/plugins/mqtt/mqtt_client.cpp:743
+// src/plugins/mqtt/mqtt_client.cpp:746
 // src/plugins/syslog/syslog_plugin.cpp:246
 PROGMEM_STRING_DECL(Invalid_port);
 // src/plugins/atomic_sun/atomic_sun_v2.cpp:79
-// src/plugins/mqtt/mqtt_client.cpp:810
-// src/plugins/mqtt/mqtt_client.cpp:817
+// src/plugins/mqtt/mqtt_client.cpp:813
+// src/plugins/mqtt/mqtt_client.cpp:820
 // src/plugins/ntp/ntp.cpp:253
 // src/plugins/PinDebugger/PinDebugger.cpp:125
 // src/plugins/serial2tcp/serial2tcp.cpp:91
@@ -451,9 +451,13 @@ PROGMEM_STRING_DECL(id);
 // src/plugins/mdns/mdns_sd.cpp:204
 // src/plugins/mdns/mdns_sd.cpp:213
 PROGMEM_STRING_DECL(udp);
-// src/plugins/mqtt/mqtt_client.cpp:306
-PROGMEM_STRING_DECL(empty);
-// src/plugins/mqtt/mqtt_client.cpp:717
+// src/plugins/mqtt/mqtt_auto_discovery.cpp:52
+// src/plugins/weather_station/weather_station.cpp:164
+PROGMEM_STRING_DECL(name);
+// src/plugins/mqtt/mqtt_auto_discovery.cpp:53
+// src/plugins/mqtt/mqtt_client.cpp:644
+PROGMEM_STRING_DECL(mqtt);
+// src/plugins/mqtt/mqtt_client.cpp:720
 // src/plugins/ntp/ntp.cpp:421
 // src/plugins/ping_monitor/ping_monitor.cpp:424
 // src/plugins/serial2tcp/serial2tcp.cpp:79
@@ -509,8 +513,6 @@ PROGMEM_STRING_DECL(display);
 // src/plugins/weather_station/weather_station.cpp:156
 // src/plugins/weather_station/weather_station.cpp:158
 PROGMEM_STRING_DECL(sensors);
-// src/plugins/weather_station/weather_station.cpp:164
-PROGMEM_STRING_DECL(name);
 // src/plugins/weather_station/weather_station.cpp:165
 PROGMEM_STRING_DECL(values);
 #ifdef __cplusplus

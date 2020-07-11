@@ -47,6 +47,11 @@
 #define MQTT_RECV_MAX_MESSAGE_SIZE              1024
 #endif
 
+// use abbreviations to reduce the size of the auto discovery
+#ifndef MQTT_AUTO_DISCOVERY_USE_ABBREVIATIONS
+#define MQTT_AUTO_DISCOVERY_USE_ABBREVIATIONS   1
+#endif
+
 #include <Arduino_compat.h>
 #include <AsyncMqttClient.h>
 #include <Buffer.h>

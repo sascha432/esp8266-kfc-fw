@@ -16,10 +16,33 @@ PROGMEM_STRING_DEF(mqtt_component_light, "light");
 PROGMEM_STRING_DEF(mqtt_component_sensor, "sensor");
 PROGMEM_STRING_DEF(mqtt_component_binary_sensor, "binary_sensor");
 PROGMEM_STRING_DEF(mqtt_component_storage, "storage");
-PROGMEM_STRING_DEF(mqtt_unique_id, "unique_id");
 PROGMEM_STRING_DEF(mqtt_name, "name");
-PROGMEM_STRING_DEF(mqtt_availability_topic, "availability_topic");
 PROGMEM_STRING_DEF(mqtt_status_topic, "/status");
+
+#if MQTT_AUTO_DISCOVERY_USE_ABBREVIATIONS
+
+PROGMEM_STRING_DEF(mqtt_unique_id, "uniq_id");
+PROGMEM_STRING_DEF(mqtt_availability_topic, "avty_t");
+PROGMEM_STRING_DEF(mqtt_payload_available, "pl_avail");
+PROGMEM_STRING_DEF(mqtt_payload_not_available, "pl_not_avail");
+PROGMEM_STRING_DEF(mqtt_state_topic, "stat_t");
+PROGMEM_STRING_DEF(mqtt_command_topic, "cmd_t");
+PROGMEM_STRING_DEF(mqtt_payload_on, "pl_on");
+PROGMEM_STRING_DEF(mqtt_payload_off, "pl_off");
+PROGMEM_STRING_DEF(mqtt_brightness_state_topic, "bri_stat_t");
+PROGMEM_STRING_DEF(mqtt_brightness_command_topic, "bri_cmd_t");
+PROGMEM_STRING_DEF(mqtt_brightness_scale, "bri_scl");
+PROGMEM_STRING_DEF(mqtt_color_temp_state_topic, "clr_temp_stat_t");
+PROGMEM_STRING_DEF(mqtt_color_temp_command_topic, "clr_temp_cmd_t");
+PROGMEM_STRING_DEF(mqtt_rgb_state_topic, "rgb_stat_t");
+PROGMEM_STRING_DEF(mqtt_rgb_command_topic, "rgb_cmd_t");
+PROGMEM_STRING_DEF(mqtt_unit_of_measurement, "unit_of_meas");
+PROGMEM_STRING_DEF(mqtt_value_template, "val_tpl");
+
+#else
+
+PROGMEM_STRING_DEF(mqtt_unique_id, "unique_id");
+PROGMEM_STRING_DEF(mqtt_availability_topic, "availability_topic");
 PROGMEM_STRING_DEF(mqtt_payload_available, "payload_available");
 PROGMEM_STRING_DEF(mqtt_payload_not_available, "payload_not_available");
 PROGMEM_STRING_DEF(mqtt_state_topic, "state_topic");
@@ -36,8 +59,13 @@ PROGMEM_STRING_DEF(mqtt_rgb_command_topic, "rgb_command_topic");
 PROGMEM_STRING_DEF(mqtt_unit_of_measurement, "unit_of_measurement");
 PROGMEM_STRING_DEF(mqtt_value_template, "value_template");
 
+#endif
+
 
 /*
+
+https://www.home-assistant.io/docs/mqtt/discovery/
+
 'act_t':               'action_topic',
 'act_tpl':             'action_template',
 'atype':               'automation_type',

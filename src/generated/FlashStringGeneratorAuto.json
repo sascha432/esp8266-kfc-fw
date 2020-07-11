@@ -369,11 +369,11 @@
     },
     "mqtt_color_temp_state_topic": {
         "use_counter": 1,
-        "default": "color_temp_state_topic"
+        "default": "clr_temp_stat_t"
     },
     "mqtt_color_temp_command_topic": {
         "use_counter": 1,
-        "default": "color_temp_command_topic"
+        "default": "clr_temp_cmd_t"
     },
     "blinds_controller_channel1_sensor": {
         "use_counter": 2,
@@ -453,11 +453,11 @@
     },
     "mqtt_unique_id": {
         "use_counter": 1,
-        "default": "unique_id"
+        "default": "uniq_id"
     },
     "mqtt_availability_topic": {
         "use_counter": 1,
-        "default": "availability_topic"
+        "default": "avty_t"
     },
     "mqtt_status_topic": {
         "use_counter": 2,
@@ -465,63 +465,59 @@
     },
     "mqtt_payload_available": {
         "use_counter": 1,
-        "default": "payload_available"
+        "default": "pl_avail"
     },
     "mqtt_payload_not_available": {
         "use_counter": 1,
-        "default": "payload_not_available"
+        "default": "pl_not_avail"
     },
     "mqtt_state_topic": {
         "use_counter": 1,
-        "default": "state_topic"
+        "default": "stat_t"
     },
     "mqtt_command_topic": {
         "use_counter": 1,
-        "default": "command_topic"
+        "default": "cmd_t"
     },
     "mqtt_payload_on": {
         "use_counter": 1,
-        "default": "payload_on"
+        "default": "pl_on"
     },
     "mqtt_payload_off": {
         "use_counter": 1,
-        "default": "payload_off"
+        "default": "pl_off"
     },
     "mqtt_brightness_state_topic": {
         "use_counter": 1,
-        "default": "brightness_state_topic"
+        "default": "bri_stat_t"
     },
     "mqtt_brightness_command_topic": {
         "use_counter": 1,
-        "default": "brightness_command_topic"
+        "default": "bri_cmd_t"
     },
     "mqtt_brightness_scale": {
         "use_counter": 1,
-        "default": "brightness_scale"
+        "default": "bri_scl"
     },
     "mqtt_rgb_state_topic": {
         "use_counter": 1,
-        "default": "rgb_state_topic"
+        "default": "rgb_stat_t"
     },
     "mqtt_rgb_command_topic": {
         "use_counter": 1,
-        "default": "rgb_command_topic"
+        "default": "rgb_cmd_t"
     },
     "mqtt_unit_of_measurement": {
         "use_counter": 1,
-        "default": "unit_of_measurement"
+        "default": "unit_of_meas"
     },
     "mqtt_value_template": {
         "use_counter": 1,
-        "default": "value_template"
+        "default": "val_tpl"
     },
     "Anonymous": {
         "use_counter": 1,
         "default": "Anonymous"
-    },
-    "empty": {
-        "use_counter": 1,
-        "default": ""
     },
     "Disabled": {
         "use_counter": 5,
@@ -892,7 +888,7 @@
         "default": "sensors"
     },
     "name": {
-        "use_counter": 1,
+        "use_counter": 2,
         "default": "name"
     },
     "values": {
@@ -1122,5 +1118,9 @@
     "id": {
         "use_counter": 5,
         "default": "id"
+    },
+    "mqtt": {
+        "use_counter": 2,
+        "default": "mqtt"
     }
 }

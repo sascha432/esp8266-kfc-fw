@@ -872,7 +872,11 @@ void at_mode_serial_handle_event(String &commandString)
                 }
                 else if (args.equalsIgnoreCase(0, F("remove"))) {
                     if (args.requireArgs(2, 2)) {
-                        //TODO
+                        args.print(F("Sending remove request..."));
+                        config.callPersistantConfig(ContainerPtr(new Container()), [args](Container &data) mutable {
+                            auto item = args.get(1);
+                            args.printf_P(PSTR("Item '%s' removed=%u"), item, data.remove(item));
+                        });
                     }
                 }
                 else if (args.equalsIgnoreCase(0, F("clear"))) {
@@ -884,15 +888,11 @@ void at_mode_serial_handle_event(String &commandString)
                 }
                 else {
                     args.print(F("Requesting data..."));
-
                     config.callPersistantConfig(ContainerPtr(new Container()), [args](Container &data) mutable {
-                        PrintString output;
-                        output.printf_P(PSTR("Stored items: %u\n"), data.size());
-                        data.serialize(output);
-                        // for(const auto &item: *data) {
-                        //     output.printf_P(PSTR("  key='%s' value='%s'\n"), item._key.c_str(), item._value.c_str());
-                        // }
-                        args.print(output);
+                        args.printf_P(PSTR("Stored items: %u"), data.size());
+                        for(const auto &item: data) {
+                            args.printf_P(PSTR("key='%s' value='%s'"), item->getName().c_str(), item->getValue().c_str());
+                        }
                     });
                 }
             }
@@ -926,7 +926,7 @@ void at_mode_serial_handle_event(String &commandString)
                     auto filename = args.get(0);
                     if (!strcmp_P(filename, PSTR("set_dirty"))) {
                         config.setConfigDirty(true);
-                        args.print(F("configuration marked dirty"));
+                        args.print(F("Configuration marked dirty"));
                     }
                     else {
                         auto file = SPIFFS.open(filename, fs::FileOpenMode::read);

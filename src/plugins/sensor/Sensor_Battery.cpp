@@ -4,6 +4,7 @@
 
 #if IOT_SENSOR_HAVE_BATTERY
 
+#include <StringKeyValueStore.h>
 #include "Sensor_Battery.h"
 #include "sensor.h"
 
@@ -111,12 +112,16 @@ void Sensor_Battery::createConfigureForm(AsyncWebServerRequest *request, Form &f
 
 void Sensor_Battery::configurationSaved()
 {
+    using KeyValueStorage::Container;
+    using KeyValueStorage::ContainerPtr;
+    using KeyValueStorage::Item;
+
     auto sensor = config._H_GET(Config().sensor);
-    auto data = KFCFWConfiguration::KeyValueStoreVectorPtr(new KFCFWConfiguration::KeyValueStoreVector);
-    data->emplace_back(F("battery_cal"), String(sensor.battery.calibration, 6));
-    data->emplace_back(F("battery_ofs"), String(sensor.battery.offset, 6));
-    data->emplace_back(F("battery_prec"), String(sensor.battery.precision));
-    config.callPersistantConfig(data);
+    auto container = ContainerPtr(new Container());
+    container->add(Item::create(F("battery_cal"), sensor.battery.calibration));
+    container->add(Item::create(F("battery_ofs"), sensor.battery.offset));
+    container->add(Item::create(F("battery_prec"), sensor.battery.precision));
+    config.callPersistantConfig(container);
 }
 
 void Sensor_Battery::reconfigure()

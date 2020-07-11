@@ -14,6 +14,7 @@
 #include <WebUISocket.h>
 #include <AsyncBitmapStreamResponse.h>
 #include <GFXCanvasRLEStream.h>
+#include <StringKeyValueStore.h>
 #include <EspSaveCrash.h>
 #include "RestAPI.h"
 #include "web_server.h"
@@ -351,12 +352,16 @@ void WeatherStationPlugin::createConfigureForm(AsyncWebServerRequest *request, F
 
 void WeatherStationPlugin::configurationSaved()
 {
-    auto config = config._H_GET(MainConfig().plugins.weatherstation.config);
-    auto data = KFCFWConfiguration::KeyValueStoreVectorPtr(new KFCFWConfiguration::KeyValueStoreVector);
-    data->emplace_back(F("wst_humidity_ofs"), String(config.humidity_offset, 6));
-    data->emplace_back(F("wst_pressure_ofs"), String(config.pressure_offset, 6));
-    data->emplace_back(F("wst_temp_ofs"), String(config.temp_offset, 6));
-    config.callPersistantConfig(data);
+    using KeyValueStorage::Container;
+    using KeyValueStorage::ContainerPtr;
+    using KeyValueStorage::Item;
+
+    auto cfg = config._H_GET(MainConfig().plugins.weatherstation.config);
+    auto container = ContainerPtr(new Container());
+    container->add(Item::create(F("wst_humidity_ofs"), cfg.humidity_offset));
+    container->add(Item::create(F("wst_pressure_ofs"), cfg.pressure_offset));
+    container->add(Item::create(F("wst_temp_ofs"), cfg.temp_offset));
+    config.callPersistantConfig(container);
 }
 
 void WeatherStationPlugin::loop()

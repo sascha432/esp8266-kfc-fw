@@ -93,10 +93,11 @@ void MQTTPersistantStorageComponent::_end(MQTTClient *client)
 
 void MQTTPersistantStorageComponent::_remove()
 {
-    _debug_println();
-    LoopFunctions::callOnce([this]() {
-        MQTTPersistantStorageComponent::remove(this);
-    });
+    MQTTPersistantStorageComponent::remove(this);
+    // _debug_println();
+    // LoopFunctions::callOnce([this]() {
+    //     MQTTPersistantStorageComponent::remove(this);
+    // });
 }
 
 bool MQTTPersistantStorageComponent::create(MQTTClient *client, ContainerPtr data, Callback callback)

@@ -5,6 +5,7 @@
 #pragma once
 
 #include <Arduino_compat.h>
+#include <PrintString.h>
 #include <TypeName.h>
 
 namespace KeyValueStorage {
@@ -41,6 +42,9 @@ namespace KeyValueStorage {
 
         const String &getName() const {
             return _name;
+        }
+        virtual String getValue() const {
+            return String();
         }
 
 #if TYPENAME_HAVE_PROGMEM_NAME
@@ -99,6 +103,10 @@ namespace KeyValueStorage {
     public:
         ItemULong(const String &name, unsigned long value, TypeNameEnum type = TypeNameEnum::ULONG);
 
+        virtual String getValue() const {
+            return String(_value.value);
+        }
+
     protected:
         virtual void _serializeData(String &str) const;
 
@@ -117,6 +125,10 @@ namespace KeyValueStorage {
     public:
         ItemLong(const String &name, long value, TypeNameEnum type = TypeNameEnum::LONG);
 
+        virtual String getValue() const {
+            return String(_value.s_value);
+        }
+
     protected:
         virtual void _serializeData(String &str) const;
     };
@@ -124,6 +136,12 @@ namespace KeyValueStorage {
     class ItemDouble : public Item {
     public:
         ItemDouble(const String &name, double value, uint8_t precision = 6, TypeNameEnum type = TypeNameEnum::DOUBLE);
+
+        virtual String getValue() const {
+            PrintString str;
+            _serializeData(str);
+            return str;
+        }
 
     protected:
         virtual void _serializeData(String &str) const;
@@ -136,6 +154,10 @@ namespace KeyValueStorage {
     class ItemUInt64 : public Item {
     public:
         ItemUInt64(const String &name, uint64_t value, TypeNameEnum type = TypeNameEnum::UINT64_T);
+
+        virtual String getValue() const {
+            return String((double)_value._value, 0);
+        }
 
     protected:
         union {
@@ -161,6 +183,10 @@ namespace KeyValueStorage {
     class ItemInt64 : public ItemUInt64 {
     public:
         ItemInt64(const String &name, int64_t value, TypeNameEnum type = TypeNameEnum::INT64_T);
+
+        virtual String getValue() const {
+            return String((double)_value._s_value, 0);
+        }
 
     protected:
         virtual void _serializeData(String &str) const;
@@ -190,6 +216,13 @@ namespace KeyValueStorage {
         bool replace(Item *item);
         bool remove(const Item &item);
         bool remove(const String &name);
+
+        Container::ItemsVector::iterator begin() {
+            return _items.begin();
+        }
+        Container::ItemsVector::iterator end() {
+            return _items.end();
+        }
 
     private:
         const char *_getName(String &name, const char *value, const char *end);

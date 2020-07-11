@@ -6,6 +6,7 @@
 
 #include <EventTimer.h>
 #include <Timezone.h>
+#include <StringKeyValueStore.h>
 #include "Sensor_HLW80xx.h"
 #include "sensor.h"
 #include "MicrosTimer.h"
@@ -217,14 +218,18 @@ void Sensor_HLW80xx::createConfigureForm(AsyncWebServerRequest *request, Form &f
 
 void Sensor_HLW80xx::configurationSaved()
 {
+    using KeyValueStorage::Container;
+    using KeyValueStorage::ContainerPtr;
+    using KeyValueStorage::Item;
+
     auto sensor = config._H_GET(Config().sensor);
-    auto data = KFCFWConfiguration::KeyValueStoreVectorPtr(new KFCFWConfiguration::KeyValueStoreVector);
-    data->emplace_back(F("hlw80xx_u"), String(sensor.hlw80xx.calibrationU, 6));
-    data->emplace_back(F("hlw80xx_i"), String(sensor.hlw80xx.calibrationI, 6));
-    data->emplace_back(F("hlw80xx_p"), String(sensor.hlw80xx.calibrationP, 6));
-    data->emplace_back(F("hlw80xx_e1"), String((double)getEnergyPrimaryCounter(), 0));
-    data->emplace_back(F("hlw80xx_e2"), String((double)getEnergySecondaryCounter(), 0));
-    config.callPersistantConfig(data);
+    auto container = ContainerPtr(new Container());
+    container->add(Item::create(F("hlw80xx_u"), sensor.hlw80xx.calibrationU));
+    container->add(Item::create(F("hlw80xx_i"), sensor.hlw80xx.calibrationI));
+    container->add(Item::create(F("hlw80xx_p"), sensor.hlw80xx.calibrationP));
+    container->add(Item::create(F("hlw80xx_e1"), getEnergyPrimaryCounter()));
+    container->add(Item::create(F("hlw80xx_e2"), getEnergySecondaryCounter()));
+    config.callPersistantConfig(container);
 }
 
 void Sensor_HLW80xx::publishState(MQTTClient *client)
@@ -268,6 +273,15 @@ void Sensor_HLW80xx::_saveEnergyCounter()
         file.close();
     }
     _saveEnergyCounterTimeout = millis() + IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT;
+
+    using KeyValueStorage::Container;
+    using KeyValueStorage::ContainerPtr;
+    using KeyValueStorage::Item;
+
+    config.callPersistantConfig(ContainerPtr(new Container()), [this](Container &data) {
+        data.replace(Item::create(F("hlw80xx_e1_a"), getEnergyPrimaryCounter()));
+        data.replace(Item::create(F("hlw80xx_e2_a"), getEnergySecondaryCounter()));
+    });
 #else
     _saveEnergyCounterTimeout = ~0;
 #endif

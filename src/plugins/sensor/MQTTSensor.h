@@ -115,6 +115,10 @@ public:
         _nextMqttUpdate = 0;
     }
 
+    void setNextMqttUpdate(uint8_t delay) {
+        _nextMqttUpdate = time(nullptr) + delay;
+    }
+
 private:
     uint8_t _updateRate;
     time_t _nextUpdate;

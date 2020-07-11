@@ -320,6 +320,9 @@ void Driver_DimmerModule::_onReceive(size_t length)
                 }
             }
         }
+
+        // update MQTT
+        _forceMetricsUpdate(5);
     }
     else {
         Dimmer_Base::_onReceive(length);

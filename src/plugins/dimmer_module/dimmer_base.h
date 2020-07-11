@@ -142,6 +142,7 @@ protected:
 #if IOT_SENSOR_HLW80xx_ADJUST_CURRENT
     void _setDimmingLevels();
 #endif
+    void _forceMetricsUpdate(uint8_t delay);
     Sensor_DimmerMetrics *getMetricsSensor() const;
 
     inline float getFadeTime() {

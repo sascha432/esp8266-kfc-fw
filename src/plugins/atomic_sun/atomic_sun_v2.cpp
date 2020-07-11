@@ -451,6 +451,9 @@ void Driver_4ChDimmer::_onReceive(size_t length)
         if (update) {
             publishState();
         }
+
+        // update MQTT
+        _forceMetricsUpdate(5);
     }
     else {
         Dimmer_Base::_onReceive(length);

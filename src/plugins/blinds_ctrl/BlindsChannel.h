@@ -23,7 +23,7 @@ public:
 
     BlindsChannel();
 
-    virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTTAutoDiscovery::Format_t format, uint8_t num) override;
+    virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num) override;
     virtual uint8_t getAutoDiscoveryCount() const override {
         return 1;
     }
@@ -49,7 +49,7 @@ private:
         STATE
     };
 
-    String _getTopic(uint8_t channel, TopicType type) const;
+    String _getTopic(MQTTTopicType topicType, uint8_t channel, TopicType type) const;
 
     StateEnum_t _state;
     Channel_t _channel;

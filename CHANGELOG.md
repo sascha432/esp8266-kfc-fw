@@ -6,7 +6,7 @@
 - Option to turn status LED off when connected to WiFi
 - Deep sleep support can be disabled
 - Arduino ESP8266 2.6.3 release changes
-- Support for MQTT component names instead enumeration
+- Support for MQTT component names instead of enumeration
 - Conditional attributes for HTML forms
 - Form validator for double
 - Advanced firmware configuration for dimmer plugin
@@ -17,6 +17,7 @@
 - MQTT auto discovery queue to reduce memory usage and network load
 - Send calibration/config. to MQTT for recovery after firmware updates
 - MQTT auto discovery abbreviations
+- MQTT auto discovery aggregates all entities as single device
 
 ## Version 0.0.2
 

@@ -50,7 +50,7 @@ Sensor_HLW80xx::Sensor_HLW80xx(const String &name) : MQTTSensor(), _name(name)
 #endif
 }
 
-MQTTComponent::MQTTAutoDiscoveryPtr Sensor_HLW80xx::nextAutoDiscovery(MQTTAutoDiscovery::Format_t format, uint8_t num)
+MQTTComponent::MQTTAutoDiscoveryPtr Sensor_HLW80xx::nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num)
 {
     if (num > 5) {
         return nullptr;
@@ -350,7 +350,7 @@ float Sensor_HLW80xx::_getEnergy(uint8_t num) const
 
 String Sensor_HLW80xx::_getTopic()
 {
-    return MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(__s_), _getId().c_str());
+    return MQTTClient::formatTopic(_getId(), nullptr);
 }
 
 void Sensor_HLW80xx::dump(Print &output)

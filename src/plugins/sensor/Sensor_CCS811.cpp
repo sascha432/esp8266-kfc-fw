@@ -27,7 +27,7 @@ Sensor_CCS811::Sensor_CCS811(const String &name, uint8_t address) : MQTTSensor()
     _sensor.available = false;
 }
 
-void Sensor_CCS811::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector)
+void Sensor_CCS811::createAutoDiscovery(MQTTAutoDiscovery::FormatType format, MQTTAutoDiscoveryVector &vector)
 {
     String topic = MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(__s_), _getId().c_str());
 

@@ -34,7 +34,7 @@ public:
 
     void setup(Driver_DimmerModule *dimmer, uint8_t channel);
 
-    virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTTAutoDiscovery::Format_t format, uint8_t num) override;
+    virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num) override;
     virtual uint8_t getAutoDiscoveryCount() const override;
     virtual void onConnect(MQTTClient *client) override;
     virtual void onMessage(MQTTClient *client, char *topic, char *payload, size_t len) override;

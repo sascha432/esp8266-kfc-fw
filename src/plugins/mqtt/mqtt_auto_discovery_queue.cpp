@@ -91,7 +91,7 @@ void MQTTAutoDiscoveryQueue::_timerCallback(EventScheduler::TimerPtr timer)
     }
 
     auto component = *_next;
-    auto discovery = component->nextAutoDiscovery(MQTTAutoDiscovery::FORMAT_JSON, component->getAutoDiscoveryNumber());
+    auto discovery = component->nextAutoDiscovery(MQTTAutoDiscovery::FormatType::JSON, component->getAutoDiscoveryNumber());
     if (discovery) {
         // do we have enough space to send?
         auto msgSize = discovery->getMessageSize();

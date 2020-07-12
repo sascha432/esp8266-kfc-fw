@@ -18,9 +18,9 @@ Sensor_DimmerMetrics::Sensor_DimmerMetrics(const String &name) : MQTTSensor(), _
     REGISTER_SENSOR_CLIENT(this);
 }
 
-Sensor_DimmerMetrics::MQTTAutoDiscoveryPtr Sensor_DimmerMetrics::nextAutoDiscovery(MQTTAutoDiscovery::Format_t format, uint8_t num)
+Sensor_DimmerMetrics::MQTTAutoDiscoveryPtr Sensor_DimmerMetrics::nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num)
 {
-    if (num > 3) {
+    if (num >= getAutoDiscoveryCount()) {
         return nullptr;
     }
     auto discovery = new MQTTAutoDiscovery();

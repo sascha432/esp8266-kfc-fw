@@ -20,6 +20,15 @@
 #include <debug_helper_disable.h>
 #endif
 
+// mosquitto CLI
+//
+// delete all entries that contain KFCAC52DB
+// mosquitto_sub -t '#' -v -W 1 | grep KFCAC52DB | cut -f 1 -d ' ' | xargs -l mosquitto_pub -n -r -t
+//
+// display auto discovery for KFCAC52DB
+// mosquitto_sub -t 'homeassistant/KFCAC52DB/#' -t 'homeassistant/+/KFCAC52DB/#' -v
+
+
 DEFINE_ENUM(MQTTQueueEnum_t);
 
 PROGMEM_STRING_DEF(Anonymous, "Anonymous");
@@ -160,55 +169,58 @@ bool MQTTClient::hasMultipleComponments() const
     return false;
 }
 
-void MQTTClient::getComponentName(String &name, String &suffix, uint8_t num)
+void MQTTClient::getComponentName(String &suffix, uint8_t num)
 {
-    name = config.getDeviceName();
-    suffix = String();
-    auto mqttClient = getClient();
-
-    if (num != NO_ENUM && mqttClient && mqttClient->hasMultipleComponments()) {
-        suffix += mqttClient->useNodeId() ? '/' : '_';
-        suffix += String(num);
+    if (num != NO_ENUM) {
+        auto mqttClient = getClient();
+        if (mqttClient && mqttClient->hasMultipleComponments()) {
+            suffix += mqttClient->useNodeId() ? '/' : '_';
+            suffix += String(num);
+        }
     }
-    // _debug_printf_P(PSTR("MQTTClient::getComponentName(): number=%u,client=%p,multiple=%u,device=%s\n"), num, mqttClient, mqttClient->hasMultipleComponments(), deviceName.c_str());
+    // _debug_printf_P(PSTR("number=%u,client=%p,multiple=%u,device=%s\n"), num, mqttClient, mqttClient->hasMultipleComponments(), deviceName.c_str());
 }
 
 String MQTTClient::formatTopic(uint8_t num, const __FlashStringHelper *format, ...)
 {
-    PrintString topic = Config_MQTT::getTopic();
-    String deviceName, suffix;
+    String suffix;
+    getComponentName(suffix, num);
+
     va_list arg;
-
-    getComponentName(deviceName, suffix, num);
-    topic += suffix;
-
-    if (format) {
-        va_start(arg, format);
-        topic.vprintf_P(RFPSTR(format), arg);
-        va_end(arg);
-    }
-    topic.replace(F("${device_name}"), deviceName);
-    // _debug_printf_P(PSTR("MQTTClient::formatTopic(): number=%u,topic=%s\n"), num, topic.c_str());
+    va_start(arg, format);
+    String topic = _formatTopic(suffix, format, arg);
+    va_end(arg);
     return topic;
 }
 
 String MQTTClient::formatTopic(const String &componentName, const __FlashStringHelper *format, ...)
 {
-    PrintString topic = Config_MQTT::getTopic();
-    va_list arg;
-
+    String suffix;
     if (componentName.length()) {
-        topic += '/';
-        topic += componentName;
+        suffix = '/';
+        suffix += componentName;
     }
+    va_list arg;
+    va_start(arg, format);
+    String topic = _formatTopic(suffix, format, arg);
+    va_end(arg);
+    return topic;
+}
 
-    if (format) {
-        va_start(arg, format);
-        topic.vprintf_P(RFPSTR(format), arg);
-        va_end(arg);
-    }
+String MQTTClient::_formatTopic(const String &suffix, const __FlashStringHelper *format, va_list arg)
+{
+    PrintString topic;
+    // if (type == MQTTTopicType::JSON) {
+    //     topic.print('~');
+    // } else {
+    topic = Config_MQTT::getTopic();
     topic.replace(F("${device_name}"), config.getDeviceName());
-    // _debug_printf_P(PSTR("MQTTClient::formatTopic(): name=%s,topic=%s\n"), componentName.c_str(), topic.c_str());
+    // }
+    topic.print(suffix);
+    if (format) {
+        topic.vprintf_P(RFPSTR(format), arg);
+    }
+     _debug_printf_P(PSTR("topic=%s\n"), topic.c_str());
     return topic;
 }
 
@@ -250,7 +262,7 @@ void MQTTClient::disconnect(bool forceDisconnect)
     _debug_printf_P(PSTR("forceDisconnect=%d status=%s connected=%u\n"), forceDisconnect, connectionStatusString().c_str(), _client->connected());
     if (!forceDisconnect) {
         // set offline
-        publish(_lastWillTopic, getDefaultQos(), 1, String(0));
+        publish(_lastWillTopic, getDefaultQos(), true, String(0));
     }
     _client->disconnect(forceDisconnect);
 }

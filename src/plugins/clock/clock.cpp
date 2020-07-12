@@ -65,7 +65,7 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
     _debug_printf_P(PSTR("id=%s\n"), id.c_str());
     if (hasValue) {
         auto val = (uint8_t)value.toInt();
-        if (id == F("btn_colon")) {
+        if (String_equals(id, PSTR("btn_colon"))) {
             switch(_ui_colon = val) {
                 case 0:
                     setBlinkColon(SOLID);
@@ -84,7 +84,7 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
                     break;
             }
         }
-        else if (id == F("btn_animation")) {
+        else if (String_equals(id, PSTR("btn_animation"))) {
             switch(_ui_animation = val) {
                 case 0:
                     setAnimation(NONE);
@@ -103,7 +103,7 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
                     break;
             }
         }
-        else if (id == F("btn_color")) {
+        else if (String_equals(id, PSTR("btn_color"))) {
             switch(_ui_color = val) {
                 case 0:
                     _color = Color(255, 0, 0);
@@ -123,7 +123,7 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
             }
             _updateTimer = 0;
         }
-        else if (id == F("brightness")) {
+        else if (String_equals(id, SPGM(brightness))) {
             _brightness = value.toInt();
             _setBrightness();
         }
@@ -320,7 +320,7 @@ void ClockPlugin::createWebUI(WebUI &webUI)
     row->addGroup(F("Clock"), false);
 
     row = &webUI.addRow();
-    row->addSlider(F("brightness"), F("brightness"), 0, SevenSegmentDisplay::MAX_BRIGHTNESS, true);
+    row->addSlider(FSPGM(brightness), FSPGM(brightness), 0, SevenSegmentDisplay::MAX_BRIGHTNESS, true);
 
     row = &webUI.addRow();
     static const uint16_t height = 280;
@@ -353,7 +353,7 @@ void ClockPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form
     );
     form.addValidator(new FormRangeValidator(F("Invalid animation"), AnimationEnum_t::NONE, AnimationEnum_t::FADE));
 
-    form.add<uint8_t>(F("brightness"), _H_STRUCT_VALUE(Config().clock, brightness))
+    form.add<uint8_t>(FSPGM(brightness), _H_STRUCT_VALUE(Config().clock, brightness))
         ->setFormUI((new FormUI(FormUI::TEXT, F("Brightness")))->setSuffix(F("0-255")));
 
     auto solid_color = config._H_GET(Config().clock).solid_color;
@@ -393,7 +393,7 @@ void ClockPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form
     form.finalize();
 }
 
-MQTTComponent::MQTTAutoDiscoveryPtr ClockPlugin::nextAutoDiscovery(MQTTAutoDiscovery::Format_t format, uint8_t num)
+MQTTComponent::MQTTAutoDiscoveryPtr ClockPlugin::nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num)
 {
     _debug_printf_P(PSTR("format=%u\n"), format);
     MQTTAutoDiscoveryPtr discovery;
@@ -402,15 +402,15 @@ MQTTComponent::MQTTAutoDiscoveryPtr ClockPlugin::nextAutoDiscovery(MQTTAutoDisco
             _qos = MQTTClient::getDefaultQos();
             discovery = new MQTTAutoDiscovery();
             discovery->create(this, F("clock"), format);
-            discovery->addStateTopic(MQTTClient::formatTopic(MQTTClient::NO_ENUM, F("/state")));
-            discovery->addCommandTopic(MQTTClient::formatTopic(MQTTClient::NO_ENUM, F("/set")));
+            discovery->addStateTopic(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(_state)));
+            discovery->addCommandTopic(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(_set)));
             discovery->addPayloadOn(1);
             discovery->addPayloadOff(0);
-            discovery->addBrightnessStateTopic(MQTTClient::formatTopic(MQTTClient::NO_ENUM, F("/brightness/state")));
-            discovery->addBrightnessCommandTopic(MQTTClient::formatTopic(MQTTClient::NO_ENUM, F("/brightness/set")));
+            discovery->addBrightnessStateTopic(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(_brightness_state)));
+            discovery->addBrightnessCommandTopic(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(_brightness_set)));
             discovery->addBrightnessScale(SevenSegmentDisplay::MAX_BRIGHTNESS);
-            discovery->addRGBStateTopic(MQTTClient::formatTopic(MQTTClient::NO_ENUM, F("/color/state")));
-            discovery->addRGBCommandTopic(MQTTClient::formatTopic(MQTTClient::NO_ENUM, F("/color/set")));
+            discovery->addRGBStateTopic(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(_color_state)));
+            discovery->addRGBCommandTopic(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(_color_set)));
         }
         break;
 #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
@@ -432,11 +432,9 @@ MQTTComponent::MQTTAutoDiscoveryPtr ClockPlugin::nextAutoDiscovery(MQTTAutoDisco
 void ClockPlugin::onConnect(MQTTClient *client)
 {
     _debug_println();
-    String topic = MQTTClient::formatTopic(MQTTClient::NO_ENUM, F("/"));
-
-    client->subscribe(this, topic + F("set"), _qos);
-    client->subscribe(this, topic + F("color/set"), _qos);
-    client->subscribe(this, topic + F("brightness/set"), _qos);
+    client->subscribe(this, MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(_set)), _qos);
+    client->subscribe(this, MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(_color_set)), _qos);
+    client->subscribe(this, MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(_brightness_set)), _qos);
 
     publishState(client);
 }
@@ -445,11 +443,11 @@ void ClockPlugin::onMessage(MQTTClient *client, char *topic, char *payload, size
 {
     _debug_printf_P(PSTR("topic=%s payload=%*.*s\n"), topic, len, len, payload);
 
-    if (strstr(topic, "brightness/set")) {
+    if (strstr_P(topic, SPGM(_brightness_set))) {
         _brightness = atoi(payload);
         _setBrightness();
     }
-    else if (strstr(topic, "color/set")) {
+    else if (strstr_P(topic, PSMG(_color_set))) {
         char *r, *g, *b;
         const char *comma = ",";
         r = strtok(payload, comma);
@@ -466,7 +464,7 @@ void ClockPlugin::onMessage(MQTTClient *client, char *topic, char *payload, size
             }
         }
     }
-    else if (strstr(topic, "/set")) {
+    else if (strstr_P(topic, SPGM(_set))) {
         auto value = atoi(payload);
         if (value && _color == 0) {
             _setColor();
@@ -503,7 +501,7 @@ void ClockPlugin::getValues(JsonArray &array)
     obj->add(JJ(value), _ui_color);
 
     obj = &array.addObject(3);
-    obj->add(JJ(id), F("brightness"));
+    obj->add(JJ(id), FSPGM(brightness));
     obj->add(JJ(state), true);
     obj->add(JJ(value), _brightness);
 

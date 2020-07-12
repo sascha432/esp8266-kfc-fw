@@ -178,7 +178,7 @@ class Sensor_HLW80xx : public MQTTSensor {
 public:
     Sensor_HLW80xx(const String &name);
 
-    virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTTAutoDiscovery::Format_t format, uint8_t num) override;
+    virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num) override;
     virtual uint8_t getAutoDiscoveryCount() const override;
 
     virtual void publishState(MQTTClient *client) override;

@@ -36,7 +36,7 @@ Sensor_INA219::~Sensor_INA219()
     LoopFunctions::remove(reinterpret_cast<LoopFunctions::CallbackPtr_t>(this));
 }
 
-MQTTComponent::MQTTAutoDiscoveryPtr Sensor_INA219::nextAutoDiscovery(MQTTAutoDiscovery::Format_t format, uint8_t num)
+MQTTComponent::MQTTAutoDiscoveryPtr Sensor_INA219::nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num)
 {
     if (num >= getAutoDiscoveryCount()) {
         return nullptr;

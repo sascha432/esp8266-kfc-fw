@@ -20,15 +20,24 @@ public:
         STORAGE,
     } ComponentTypeEnum_t;
 
-    typedef enum {
-        FORMAT_JSON = 0,
-        FORMAT_YAML = 1,
-    } Format_t;
+    enum class FormatType : uint8_t {
+        JSON,
+        YAML,
+    };
 
-    void create(MQTTComponent *component, uint8_t count, Format_t format);
-    void create(MQTTComponent *component, const String &componentName, Format_t format);
-    void addParameter(const String &name, const String &value);
+    void create(MQTTComponent *component, uint8_t count, FormatType format);
+    void create(MQTTComponent *component, const String &componentName, FormatType format);
 
+public:
+    void addParameter(const __FlashStringHelper *name, const String &value);
+    inline void addParameter(const __FlashStringHelper *name, int value) {
+        addParameter(name, String(value));
+    }
+    inline void addParameter(const __FlashStringHelper *name, char value) {
+        addParameter(name, String(value));
+    }
+
+public:
     void addStateTopic(const String &value);
     void addCommandTopic(const String &value);
     void addPayloadOn(const String &value);
@@ -43,12 +52,6 @@ public:
     void addUnitOfMeasurement(const String &value);
     void addValueTemplate(const String &value);
 
-    inline void addParameter(const String &name, int value) {
-        addParameter(name, String(value));
-    }
-    inline void addParameter(const String &name, char value) {
-        addParameter(name, String(value));
-    }
     inline void addPayloadOn(int value) {
         addPayloadOn(String(value));
     }
@@ -75,10 +78,13 @@ public:
     static bool isEnabled();
 
 private:
-    void _create(MQTTComponent *component, const String &name, Format_t format);
+    void _create(MQTTComponent *component, const String &name, FormatType format);
     const String _getUnqiueId(const String &name);
 
-    Format_t _format;
+    FormatType _format;
     PrintString _discovery;
     String _topic;
+#if MQTT_AUTO_DISCOVERY_USE_ABBREVIATIONS
+    String _baseTopic;
+#endif
 };

@@ -568,6 +568,7 @@ public:
     void printRTCStatus(Print &output, bool plain = true);
 
     const char *getDeviceName() const;
+    const char *getDeviceTitle() const;
 
 public:
     using Container = KeyValueStorage::Container;

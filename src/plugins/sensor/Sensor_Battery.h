@@ -34,14 +34,14 @@ extern bool Sensor_Battery_charging_detection();
 
 class Sensor_Battery : public MQTTSensor {
 public:
-    typedef enum {
+    enum class BatteryType {
         LEVEL,
-        STATE
-    } BatteryIdEnum_t;
+        CHARGING
+    };
 
     Sensor_Battery(const JsonString &name);
 
-    virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTTAutoDiscovery::Format_t format, uint8_t num) override;
+    virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num) override;
     virtual uint8_t getAutoDiscoveryCount() const override;
 
     virtual void publishState(MQTTClient *client) override;
@@ -69,8 +69,8 @@ public:
     static float readSensor();
 
 private:
-    String _getId(BatteryIdEnum_t type = LEVEL);
-    String _getTopic(BatteryIdEnum_t type = LEVEL);
+    String _getId(BatteryType type = BatteryType::LEVEL);
+    String _getTopic(BatteryType type = BatteryType::LEVEL);
 
     float _readSensor();
     bool _isCharging() const;

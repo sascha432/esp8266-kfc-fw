@@ -532,7 +532,7 @@ void HassPlugin::executeAction(const Action &action, StatusCallback_t statusCall
             callService(_getDomain(action.getEntityId()) + F("/turn_off"), action.getApiId(), json, _serviceCallback, statusCallback);
             break;
         case ActionEnum_t::SET_BRIGHTNESS:
-            json.add(F("brightness"), action.getValue(0));
+            json.add(FSPGM(brightness), action.getValue(0));
             callService(_getDomain(action.getEntityId()) + F("/turn_on"), action.getApiId(), json, _serviceCallback, statusCallback);
             break;
         case ActionEnum_t::CHANGE_BRIGHTNESS:
@@ -560,7 +560,7 @@ void HassPlugin::executeAction(const Action &action, StatusCallback_t statusCall
                             brightness = action.getValue(2);
                         }
                     }
-                    json.add(F("brightness"), brightness);
+                    json.add(FSPGM(brightness), brightness);
                     _debug_printf_P(PSTR("new brightness=%u\n"), brightness);
                     callService(_getDomain(action.getEntityId()) + F("/turn_on"), action.getApiId(), json, _serviceCallback, statusCallback);
                 }

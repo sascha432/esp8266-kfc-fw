@@ -208,7 +208,7 @@ public:
 #endif
 
 public:
-    virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTTAutoDiscovery::Format_t format, uint8_t num) override;
+    virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num) override;
     virtual uint8_t getAutoDiscoveryCount() const {
 #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
         return 2;

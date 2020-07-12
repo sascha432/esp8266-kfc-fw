@@ -56,7 +56,7 @@ void BlindsControl::_setup()
     }
 }
 
-MQTTComponent::MQTTAutoDiscoveryPtr BlindsControl::nextAutoDiscovery(MQTTAutoDiscovery::Format_t format, uint8_t num)
+MQTTComponent::MQTTAutoDiscoveryPtr BlindsControl::nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num)
 {
     if (num >= getAutoDiscoveryCount()) {
         return nullptr;
@@ -66,7 +66,7 @@ MQTTComponent::MQTTAutoDiscoveryPtr BlindsControl::nextAutoDiscovery(MQTTAutoDis
         case 0:
         case 1:
             discovery->create(this, PrintString(F("metrics_%u"), num), format);
-            discovery->addStateTopic(_getTopic(num));
+            discovery->addStateTopic(_getTopic(format, num));
             break;
     }
     discovery->finalize();
@@ -271,9 +271,9 @@ void BlindsControl::_stop()
     analogWrite(IOT_BLINDS_CTRL_M4_PIN, 0);
 }
 
-String BlindsControl::_getTopic(uint8_t channel) const
+String BlindsControl::_getTopic(MQTTTopicType type, uint8_t channel) const
 {
-    return MQTTClient::formatTopic(PrintString(FSPGM(channel__u, "channel_%u"), channel), F("/metrics"));
+    return MQTTClient::formatTopic(type, PrintString(FSPGM(channel__u, "channel_%u"), channel), F("/metrics"));
 }
 
 void BlindsControl::_publishState(MQTTClient *client)
@@ -286,7 +286,7 @@ void BlindsControl::_publishState(MQTTClient *client)
     if (client) {
         uint8_t _qos = MQTTClient::getDefaultQos();
         for(size_t i = 0; i < _channels.size(); i++) {
-            client->publish(_getTopic(i), _qos, 1, _getStateStr(i));
+            client->publish(_getTopic(MQTTTopicType::TOPIC, i), _qos, 1, _getStateStr(i));
             _channels[i]._publishState(client, _qos);
         }
     }

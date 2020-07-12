@@ -26,7 +26,7 @@ void DimmerChannel::setup(Driver_DimmerModule *dimmer, uint8_t channel)
     _channel = channel;
 }
 
-MQTTComponent::MQTTAutoDiscoveryPtr DimmerChannel::nextAutoDiscovery(MQTTAutoDiscovery::Format_t format, uint8_t num)
+MQTTComponent::MQTTAutoDiscoveryPtr DimmerChannel::nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num)
 {
     if (num > 0) {
         return nullptr;
@@ -62,10 +62,10 @@ void DimmerChannel::_createTopics()
     uint8_t value = MQTTClient::NO_ENUM;
 #endif
 
-    _data.state.set = MQTTClient::formatTopic(value, F("/set"));
-    _data.state.state = MQTTClient::formatTopic(value, F("/state"));
-    _data.brightness.set = MQTTClient::formatTopic(value, F("/brightness/set"));
-    _data.brightness.state = MQTTClient::formatTopic(value, F("/brightness/state"));
+    _data.state.set = MQTTClient::formatTopic(value, FSPGM(_set));
+    _data.state.state = MQTTClient::formatTopic(value, FSPGM(_state));
+    _data.brightness.set = MQTTClient::formatTopic(value, FSPGM(_brightness_set));
+    _data.brightness.state = MQTTClient::formatTopic(value, FSPGM(_brightness_state));
 }
 
 void DimmerChannel::onConnect(MQTTClient *client)

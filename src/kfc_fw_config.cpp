@@ -1425,6 +1425,11 @@ const char *KFCFWConfiguration::getDeviceName() const
     return config._H_STR(Config().device_name);
 }
 
+const char *KFCFWConfiguration::getDeviceTitle() const
+{
+    return config._H_STR(Config().device_title);
+}
+
 bool KFCFWConfiguration::callPersistantConfig(ContainerPtr data, PersistantConfigCallback callback)
 {
 #if MQTT_SUPPORT

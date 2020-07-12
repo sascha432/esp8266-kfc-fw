@@ -125,7 +125,7 @@ void DimmerModuleForm::createConfigureForm(AsyncWebServerRequest *request, Form 
     PrintHtmlEntitiesString code;
     MQTTComponent::MQTTAutoDiscoveryPtr discovery;
     uint8_t num = 0;
-    while ((discovery = nextAutoDiscovery(MQTTAutoDiscovery::FORMAT_YAML, num++)) != nullptr) {
+    while ((discovery = nextAutoDiscovery(MQTTAutoDiscovery::FormatType::YAML, num++)) != nullptr) {
         const auto &payload = discovery->getPayload();
         code.write((const uint8_t *)payload.c_str(), payload.length());
         delete discovery;

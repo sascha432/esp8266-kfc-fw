@@ -10,6 +10,11 @@
 #include <EventTimer.h>
 #include "mqtt_auto_discovery.h"
 
+// use abbreviations to reduce the size of the auto discovery
+#ifndef MQTT_AUTO_DISCOVERY_USE_ABBREVIATIONS
+#define MQTT_AUTO_DISCOVERY_USE_ABBREVIATIONS   1
+#endif
+
 PROGMEM_STRING_DECL(mqtt_component_switch);
 PROGMEM_STRING_DECL(mqtt_component_light);
 PROGMEM_STRING_DECL(mqtt_component_sensor);
@@ -18,6 +23,7 @@ PROGMEM_STRING_DECL(mqtt_component_storage);
 PROGMEM_STRING_DECL(mqtt_unique_id);
 PROGMEM_STRING_DECL(mqtt_name);
 PROGMEM_STRING_DECL(mqtt_availability_topic);
+PROGMEM_STRING_DECL(mqtt_topic);
 PROGMEM_STRING_DECL(mqtt_status_topic);
 PROGMEM_STRING_DECL(mqtt_payload_available);
 PROGMEM_STRING_DECL(mqtt_payload_not_available);
@@ -35,6 +41,26 @@ PROGMEM_STRING_DECL(mqtt_rgb_command_topic);
 PROGMEM_STRING_DECL(mqtt_unit_of_measurement);
 PROGMEM_STRING_DECL(mqtt_value_template);
 
+#if MQTT_AUTO_DISCOVERY_USE_ABBREVIATIONS
+
+#define MQTT_DEVICE_REG_CONNECTIONS             "cns"
+#define MQTT_DEVICE_REG_IDENTIFIERS             "ids"
+#define MQTT_DEVICE_REG_NAME                    "name"
+#define MQTT_DEVICE_REG_MANUFACTURER            "mf"
+#define MQTT_DEVICE_REG_MODEL                   "mdl"
+#define MQTT_DEVICE_REG_SW_VERSION              "sw"
+
+#else
+
+#define MQTT_DEVICE_REG_CONNECTIONS             "connections"
+#define MQTT_DEVICE_REG_IDENTIFIERS             "identifiers"
+#define MQTT_DEVICE_REG_NAME                    "name"
+#define MQTT_DEVICE_REG_MANUFACTURER            "manufacturer"
+#define MQTT_DEVICE_REG_MODEL                   "model"
+#define MQTT_DEVICE_REG_SW_VERSION              "sw_version"
+
+#endif
+
 class MQTTClient;
 
 class MQTTComponent {
@@ -48,7 +74,7 @@ public:
     virtual ~MQTTComponent();
 
 #if MQTT_AUTO_DISCOVERY
-    virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTTAutoDiscovery::Format_t format, uint8_t num) = 0;
+    virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num) = 0;
     virtual uint8_t getAutoDiscoveryCount() const = 0;
 
     uint8_t rewindAutoDiscovery();
@@ -81,9 +107,9 @@ private:
 class MQTTComponentHelper : public MQTTComponent {
 public:
     MQTTComponentHelper(ComponentTypeEnum_t type);
-    virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTTAutoDiscovery::Format_t format, uint8_t num) override;
+    virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num) override;
     virtual uint8_t getAutoDiscoveryCount() const override;
 
-    MQTTAutoDiscovery *createAutoDiscovery(uint8_t count, MQTTAutoDiscovery::Format_t format);
-    MQTTAutoDiscovery *createAutoDiscovery(const String &componentName, MQTTAutoDiscovery::Format_t format);
+    MQTTAutoDiscovery *createAutoDiscovery(uint8_t count, MQTTAutoDiscovery::FormatType format);
+    MQTTAutoDiscovery *createAutoDiscovery(const String &componentName, MQTTAutoDiscovery::FormatType format);
 };

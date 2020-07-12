@@ -25,6 +25,7 @@ PROGMEM_STRING_DEF(mqtt_unique_id, "uniq_id");
 PROGMEM_STRING_DEF(mqtt_availability_topic, "avty_t");
 PROGMEM_STRING_DEF(mqtt_payload_available, "pl_avail");
 PROGMEM_STRING_DEF(mqtt_payload_not_available, "pl_not_avail");
+PROGMEM_STRING_DEF(mqtt_topic, "t");
 PROGMEM_STRING_DEF(mqtt_state_topic, "stat_t");
 PROGMEM_STRING_DEF(mqtt_command_topic, "cmd_t");
 PROGMEM_STRING_DEF(mqtt_payload_on, "pl_on");
@@ -45,6 +46,7 @@ PROGMEM_STRING_DEF(mqtt_unique_id, "unique_id");
 PROGMEM_STRING_DEF(mqtt_availability_topic, "availability_topic");
 PROGMEM_STRING_DEF(mqtt_payload_available, "payload_available");
 PROGMEM_STRING_DEF(mqtt_payload_not_available, "payload_not_available");
+PROGMEM_STRING_DEF(mqtt_topic, "topic");
 PROGMEM_STRING_DEF(mqtt_state_topic, "state_topic");
 PROGMEM_STRING_DEF(mqtt_command_topic, "command_topic");
 PROGMEM_STRING_DEF(mqtt_payload_on, "payload_on");
@@ -60,7 +62,6 @@ PROGMEM_STRING_DEF(mqtt_unit_of_measurement, "unit_of_measurement");
 PROGMEM_STRING_DEF(mqtt_value_template, "value_template");
 
 #endif
-
 
 /*
 
@@ -308,7 +309,7 @@ MQTTComponentHelper::MQTTComponentHelper(ComponentTypeEnum_t type) : MQTTCompone
 {
 }
 
-MQTTComponent::MQTTAutoDiscoveryPtr MQTTComponentHelper::nextAutoDiscovery(MQTTAutoDiscovery::Format_t format, uint8_t num)
+MQTTComponent::MQTTAutoDiscoveryPtr MQTTComponentHelper::nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num)
 {
     return nullptr;
 }
@@ -318,14 +319,14 @@ uint8_t MQTTComponentHelper::getAutoDiscoveryCount() const
     return 0;
 }
 
-MQTTAutoDiscovery *MQTTComponentHelper::createAutoDiscovery(uint8_t count, MQTTAutoDiscovery::Format_t format)
+MQTTAutoDiscovery *MQTTComponentHelper::createAutoDiscovery(uint8_t count, MQTTAutoDiscovery::FormatType format)
 {
     auto discovery = new MQTTAutoDiscovery();
     discovery->create(this, count, format);
     return discovery;
 }
 
-MQTTAutoDiscovery *MQTTComponentHelper::createAutoDiscovery(const String &componentName, MQTTAutoDiscovery::Format_t format)
+MQTTAutoDiscovery *MQTTComponentHelper::createAutoDiscovery(const String &componentName, MQTTAutoDiscovery::FormatType format)
 {
     auto discovery = new MQTTAutoDiscovery();
     discovery->create(this, componentName, format);

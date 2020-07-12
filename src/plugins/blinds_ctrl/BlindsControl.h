@@ -59,7 +59,7 @@ public:
 public:
     BlindsControl();
 
-    virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTTAutoDiscovery::Format_t format, uint8_t num) override;
+    virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num) override;
     virtual uint8_t getAutoDiscoveryCount() const override {
         return 2;
     }
@@ -90,7 +90,7 @@ protected:
     void _readConfig();
 
 protected:
-    String _getTopic(uint8_t channel) const;
+    String _getTopic(MQTTTopicType type, uint8_t channel) const;
 
     std::array<BlindsChannel, ChannelEnum_t::CHANNEL_SIZE> _channels;
     uint8_t _swapChannels: 1;

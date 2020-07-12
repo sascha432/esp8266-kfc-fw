@@ -47,11 +47,6 @@
 #define MQTT_RECV_MAX_MESSAGE_SIZE              1024
 #endif
 
-// use abbreviations to reduce the size of the auto discovery
-#ifndef MQTT_AUTO_DISCOVERY_USE_ABBREVIATIONS
-#define MQTT_AUTO_DISCOVERY_USE_ABBREVIATIONS   1
-#endif
-
 #include <Arduino_compat.h>
 #include <AsyncMqttClient.h>
 #include <Buffer.h>
@@ -60,6 +55,7 @@
 #include "EnumBase.h"
 #include "kfc_fw_config.h"
 #include "mqtt_component.h"
+#include "mqtt_auto_discovery.h"
 #include "mqtt_auto_discovery_queue.h"
 
 DECLARE_ENUM(MQTTQueueEnum_t, uint8_t,
@@ -160,10 +156,13 @@ public:
         _useNodeId = useNodeId;
     }
 
-    static void getComponentName(String &name, String &suffix, uint8_t num = NO_ENUM);
+    static void getComponentName(String &suffix, uint8_t num = NO_ENUM);
     static String formatTopic(uint8_t num, const __FlashStringHelper *format, ...);
     static String formatTopic(const String &componentName, const __FlashStringHelper *format, ...);
+private:
+    static String _formatTopic(const String &suffix, const __FlashStringHelper *format, va_list arg);
 
+public:
     void subscribe(MQTTComponentPtr component, const String &topic, uint8_t qos);
     void unsubscribe(MQTTComponentPtr component, const String &topic);
     void remove(MQTTComponentPtr component);

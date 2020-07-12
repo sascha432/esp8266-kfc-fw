@@ -18,7 +18,7 @@ Sensor_BME680::Sensor_BME680(const String &name, uint8_t address) : MQTTSensor()
     config.initTwoWire();
 }
 
-void Sensor_BME680::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector)
+void Sensor_BME680::createAutoDiscovery(MQTTAutoDiscovery::FormatType format, MQTTAutoDiscoveryVector &vector)
 {
     String topic = MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(__s_), _getId().c_str());
 

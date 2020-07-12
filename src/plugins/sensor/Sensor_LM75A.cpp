@@ -18,7 +18,7 @@ Sensor_LM75A::Sensor_LM75A(const JsonString &name, TwoWire &wire, uint8_t addres
     config.initTwoWire();
 }
 
-MQTTComponent::MQTTAutoDiscoveryPtr Sensor_LM75A::nextAutoDiscovery(MQTTAutoDiscovery::Format_t format, uint8_t num)
+MQTTComponent::MQTTAutoDiscoveryPtr Sensor_LM75A::nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num)
 {
     if (num >= getAutoDiscoveryCount()) {
         return nullptr;

@@ -30,7 +30,7 @@ private:
 public:
     ~MQTTPersistantStorageComponent();
 
-    virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTTAutoDiscovery::Format_t format, uint8_t num) {
+    virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num) {
         return nullptr;
     }
     virtual uint8_t getAutoDiscoveryCount() const {

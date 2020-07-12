@@ -89,16 +89,16 @@ void AtomicSunPlugin::getStatus(Print &output)
     }
 }
 
-MQTTComponent::MQTTAutoDiscoveryPtr Driver_4ChDimmer::nextAutoDiscovery(MQTTAutoDiscovery::Format_t format, uint8_t num)
+MQTTComponent::MQTTAutoDiscoveryPtr Driver_4ChDimmer::nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num)
 {
-    if (num > 5) {
+    if (num >= getAutoDiscoveryCount()) {
         return nullptr;
     }
     auto discovery = new MQTTAutoDiscovery();
     switch(num) {
         case 0:
             _createTopics();
-            discovery->create(this, F("main"), format);
+            discovery->create(this, FSPGM(main), format);
             discovery->addStateTopic(_data.state.state);
             discovery->addCommandTopic(_data.state.set);
             discovery->addPayloadOn(1);
@@ -110,12 +110,11 @@ MQTTComponent::MQTTAutoDiscoveryPtr Driver_4ChDimmer::nextAutoDiscovery(MQTTAuto
             discovery->addColorTempCommandTopic(_data.color.set);
             break;
         case 1:
-            discovery->create(this, F("lock_channels"), format);
+            discovery->create(this, FSPGM(lock_channels, "lock_channels"), format);
             discovery->addStateTopic(_data.lockChannels.state);
             discovery->addCommandTopic(_data.lockChannels.set);
             discovery->addPayloadOn(1);
             discovery->addPayloadOff(0);
-            discovery->finalize();
             break;
         case 2:
         case 3:
@@ -145,25 +144,25 @@ uint8_t Driver_4ChDimmer::getAutoDiscoveryCount() const
 void Driver_4ChDimmer::_createTopics()
 {
     if (_data.state.set.length() == 0) {
-        String main = F("main");
-        String lockChannels = F("lock_channels");
+        String main = FSPGM(main);
+        String lockChannels = FSPGM(lock_channels);
 
-        _data.state.set = MQTTClient::formatTopic(main, F("/set"));
-        _data.state.state = MQTTClient::formatTopic(main, F("/state"));
-        _data.brightness.set = MQTTClient::formatTopic(main, F("/brightness/set"));
-        _data.brightness.state = MQTTClient::formatTopic(main, F("/brightness/state"));
-        _data.color.set = MQTTClient::formatTopic(main, F("/color/set"));
-        _data.color.state = MQTTClient::formatTopic(main, F("/color/state"));
+        _data.state.set = MQTTClient::formatTopic(main, FSPGM(_set));
+        _data.state.state = MQTTClient::formatTopic(main, FSPGM(_state));
+        _data.brightness.set = MQTTClient::formatTopic(main, FSPGM(_brightness_set, "/brightness/set"));
+        _data.brightness.state = MQTTClient::formatTopic(main, FSPGM(_brightness_state, "/brightness/state"));
+        _data.color.set = MQTTClient::formatTopic(main, FSPGM(_color_set, "/color/set"));
+        _data.color.state = MQTTClient::formatTopic(main, FSPGM(_color_state, "/color/state"));
 
         _data.lockChannels.set = MQTTClient::formatTopic(lockChannels, F("/lock/set"));
         _data.lockChannels.state = MQTTClient::formatTopic(lockChannels, F("/lock/state"));
 
         for(uint8_t i = 0; i < _channels.size(); i++) {
             auto channel = PrintString(FSPGM(channel__u), i);
-            _data.channels[i].set = MQTTClient::formatTopic(channel, F("/set"));
-            _data.channels[i].state = MQTTClient::formatTopic(channel, F("/state"));
-            _data.channels[i].brightnessSet = MQTTClient::formatTopic(channel, F("/brightness/set"));
-            _data.channels[i].brightnessState = MQTTClient::formatTopic(channel, F("/brightness/state"));
+            _data.channels[i].set = MQTTClient::formatTopic(channel, FSPGM(_set));
+            _data.channels[i].state = MQTTClient::formatTopic(channel, FSPGM(_state));
+            _data.channels[i].brightnessSet = MQTTClient::formatTopic(channel, FSPGM(_brightness_set));
+            _data.channels[i].brightnessState = MQTTClient::formatTopic(channel, FSPGM(_brightness_state));
         }
     }
 }
@@ -301,7 +300,7 @@ void Driver_4ChDimmer::setValue(const String &id, const String &value, bool hasV
     auto ptr = id.c_str();
     if (!strncmp_P(ptr, PSTR("dimmer_"), 7)) {
         ptr += 7;
-        if (!strcmp_P(ptr, PSTR("brightness"))) {
+        if (!strcmp_P(ptr, SPGM(brightness))) {
             if (hasValue) {
                 int val =  value.toInt();
                 float fadetime;

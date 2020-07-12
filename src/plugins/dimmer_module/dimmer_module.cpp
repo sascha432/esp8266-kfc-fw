@@ -130,12 +130,12 @@ void Driver_DimmerModule::_endButtons()
 #endif
 }
 
-MQTTComponent::MQTTAutoDiscoveryPtr Driver_DimmerModule::nextAutoDiscovery(MQTTAutoDiscovery::Format_t format, uint8_t num)
+MQTTComponent::MQTTAutoDiscoveryPtr Driver_DimmerModule::nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num)
 {
     return nullptr;
 }
 
-// MQTTComponent::MQTTAutoDiscoveryPtr Driver_DimmerModule::nextAutoDiscovery(MQTTAutoDiscovery::Format_t format, uint8_t num)
+// MQTTComponent::MQTTAutoDiscoveryPtr Driver_DimmerModule::nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num)
 // {
 //     if (num >= getAutoDiscoveryCount()) {
 //         return nullptr;
@@ -172,7 +172,7 @@ MQTTComponent::MQTTAutoDiscoveryPtr Driver_DimmerModule::nextAutoDiscovery(MQTTA
 // }
 
 
-// // void Driver_DimmerModule::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTComponent::MQTTAutoDiscoveryVector &vector)
+// // void Driver_DimmerModule::createAutoDiscovery(MQTTAutoDiscovery::FormatType format, MQTTComponent::MQTTAutoDiscoveryVector &vector)
 // // {
 // //     if (format == MQTTAutoDiscovery::FORMAT_YAML) {
 // //         for(uint8_t i = 0; i < _channels.size(); i++) {

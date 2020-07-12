@@ -20,7 +20,7 @@ Sensor_DHTxx::Sensor_DHTxx(const String &name, uint8_t pin/*, uint8_t type*/) : 
     // _dht.begin();
 }
 
-void Sensor_DHTxx::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector)
+void Sensor_DHTxx::createAutoDiscovery(MQTTAutoDiscovery::FormatType format, MQTTAutoDiscoveryVector &vector)
 {
     _debug_println();
     String topic = MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(__s_), _getId().c_str());

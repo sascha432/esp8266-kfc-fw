@@ -20,7 +20,7 @@ Sensor_Battery::Sensor_Battery(const JsonString &name) : MQTTSensor(), _name(nam
     reconfigure();
 }
 
-MQTTComponent::MQTTAutoDiscoveryPtr Sensor_Battery::nextAutoDiscovery(MQTTAutoDiscovery::Format_t format, uint8_t num)
+MQTTComponent::MQTTAutoDiscoveryPtr Sensor_Battery::nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num)
 {
     if (num >= getAutoDiscoveryCount()) {
         return nullptr;
@@ -28,13 +28,13 @@ MQTTComponent::MQTTAutoDiscoveryPtr Sensor_Battery::nextAutoDiscovery(MQTTAutoDi
     auto discovery = new MQTTAutoDiscovery();
     switch(num) {
         case 0:
-            discovery->create(this, _getId(LEVEL), format);
-            discovery->addStateTopic(_getTopic(LEVEL));
+            discovery->create(this, _getId(BatteryType::LEVEL), format);
+            discovery->addStateTopic(_getTopic(BatteryType::LEVEL));
             discovery->addUnitOfMeasurement('V');
             break;
         case 1:
-            discovery->create(this, _getId(STATE), format);
-            discovery->addStateTopic(_getTopic(STATE));
+            discovery->create(this, _getId(BatteryType::CHARGING), format);
+            discovery->addStateTopic(_getTopic(BatteryType::CHARGING));
             break;
     }
     discovery->finalize();
@@ -52,13 +52,13 @@ uint8_t Sensor_Battery::getAutoDiscoveryCount() const {
 void Sensor_Battery::getValues(JsonArray &array, bool timer)
 {
     auto obj = &array.addObject(3);
-    obj->add(JJ(id), _getId(LEVEL));
+    obj->add(JJ(id), _getId(BatteryType::LEVEL));
     obj->add(JJ(state), true);
     obj->add(JJ(value), String(_readSensor(), _config.precision));
 
 #if IOT_SENSOR_BATTERY_CHARGE_DETECTION
     obj = &array.addObject(3);
-    obj->add(JJ(id), _getId(STATE));
+    obj->add(JJ(id), _getId(BatteryType::CHARGING));
     obj->add(JJ(state), true);
     obj->add(JJ(value), _isCharging() ? FSPGM(Yes) : FSPGM(No));
 #endif
@@ -66,9 +66,9 @@ void Sensor_Battery::getValues(JsonArray &array, bool timer)
 
 void Sensor_Battery::createWebUI(WebUI &webUI, WebUIRow **row)
 {
-    (*row)->addSensor(_getId(LEVEL), _name, 'V');
+    (*row)->addSensor(_getId(BatteryType::LEVEL), _name, 'V');
 #if IOT_SENSOR_BATTERY_CHARGE_DETECTION
-    (*row)->addSensor(_getId(STATE), F("Charging"), JsonString());
+    (*row)->addSensor(_getId(BatteryType::CHARGING), F("Charging"), JsonString());
 #endif
 }
 
@@ -77,9 +77,9 @@ void Sensor_Battery::publishState(MQTTClient *client)
     _debug_printf_P(PSTR("client=%p connected=%u\n"), client, client && client->isConnected() ? 1 : 0);
     if (client && client->isConnected()) {
         auto _qos = MQTTClient::getDefaultQos();
-        client->publish(_getTopic(LEVEL), _qos, 1, String(_readSensor(), _config.precision));
+        client->publish(_getTopic(BatteryType::LEVEL), _qos, true, String(_readSensor(), _config.precision));
 #if IOT_SENSOR_BATTERY_CHARGE_DETECTION
-        client->publish(_getTopic(STATE), _qos, 1, _isCharging() ? FSPGM(Yes) : FSPGM(No));
+        client->publish(_getTopic(BatteryType::CHARGING), _qos, true, String(_isCharging()));
 #endif
     }
 }
@@ -154,13 +154,13 @@ bool Sensor_Battery::_isCharging() const
 #endif
 }
 
-String Sensor_Battery::_getId(BatteryIdEnum_t type)
+String Sensor_Battery::_getId(BatteryType type)
 {
 #if IOT_SENSOR_BATTERY_CHARGE_DETECTION
     switch(type) {
-        case BatteryIdEnum_t::STATE:
-            return F("battery_state");
-        case BatteryIdEnum_t::LEVEL:
+        case BatteryType::STATE:
+            return F("battery_charging");
+        case BatteryType::LEVEL:
         default:
             return F("battery_level");
     }
@@ -169,9 +169,9 @@ String Sensor_Battery::_getId(BatteryIdEnum_t type)
 #endif
 }
 
-String Sensor_Battery::_getTopic(BatteryIdEnum_t type)
+String Sensor_Battery::_getTopic(BatteryType type)
 {
-    return MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(__s_, "/%s/"), _getId(type).c_str());
+    return MQTTClient::formatTopic(_getId(type), nullptr);
 }
 
 #if AT_MODE_SUPPORTED

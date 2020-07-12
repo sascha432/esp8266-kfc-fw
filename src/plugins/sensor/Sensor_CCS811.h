@@ -26,7 +26,7 @@ public:
 
     Sensor_CCS811(const String &name, uint8_t address = CCS811_ADDRESS);
 
-    virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTTAutoDiscovery::Format_t format, uint8_t num) override;
+    virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num) override;
     virtual uint8_t getAutoDiscoveryCount() const override;
 
     virtual void publishState(MQTTClient *client) override;

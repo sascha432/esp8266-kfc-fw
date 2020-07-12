@@ -18,40 +18,49 @@
 #include <debug_helper_disable.h>
 #endif
 
-void MQTTAutoDiscovery::create(MQTTComponent *component, uint8_t count, MQTTAutoDiscovery::Format_t format)
+void MQTTAutoDiscovery::create(MQTTComponent *component, uint8_t count, MQTTAutoDiscovery::FormatType format)
 {
-    String deviceName, suffix;
-    MQTTClient::getComponentName(deviceName, suffix, component->getNumber() + count);
-    _create(component, deviceName + suffix, format);
+    String suffix = config.getDeviceName();
+    MQTTClient::getComponentName(suffix, component->getNumber() + count);
+    _create(component, suffix, format);
 }
 
-void MQTTAutoDiscovery::create(MQTTComponent *component, const String &componentName, MQTTAutoDiscovery::Format_t format)
+void MQTTAutoDiscovery::create(MQTTComponent *component, const String &componentName, MQTTAutoDiscovery::FormatType format)
 {
-    String name = config.getDeviceName();
+    String suffix = config.getDeviceName();
     if (componentName.length()) {
-        name += '/';
-        name += componentName;
+        suffix += '/';
+        suffix += componentName;
     }
-    _create(component, name, format);
+    _create(component, suffix, format);
 }
 
-void MQTTAutoDiscovery::_create(MQTTComponent *component, const String &name, MQTTAutoDiscovery::Format_t format)
+void MQTTAutoDiscovery::_create(MQTTComponent *component, const String &name, MQTTAutoDiscovery::FormatType format)
 {
     String uniqueId;
 
     _format = format;
-    _topic = PrintString(F("%s/%s/%s/config"), Config_MQTT::getDiscoveryPrefix(), component->getComponentName(), name.c_str());
+    _topic = Config_MQTT::getDiscoveryPrefix();
+    _topic += '/';
+    _topic += FPSTR(component->getComponentName());
+    _topic += '/';
+    _topic += name;
+    _topic += F("/config");
 
     _discovery = PrintString();
-    if (_format == FORMAT_JSON) {
+    if (_format == FormatType::JSON) {
         _discovery += '{';
+#if MQTT_AUTO_DISCOVERY_USE_ABBREVIATIONS
+        _baseTopic = MQTTClient::formatTopic(MQTTClient::NO_ENUM, nullptr);
+        addParameter(F("~"), _baseTopic);
+#endif
     } else {
         _discovery += FPSTR(component->getComponentName());
         _discovery += F(":\n  - ");
     }
     addParameter(FSPGM(name), name);
     addParameter(F("platform"), FSPGM(mqtt));
-    if (format == FORMAT_JSON) {
+    if (format == FormatType::JSON) {
         uniqueId = _getUnqiueId(name);
         addParameter(FSPGM(mqtt_unique_id), uniqueId);
     }
@@ -59,7 +68,7 @@ void MQTTAutoDiscovery::_create(MQTTComponent *component, const String &name, MQ
     addParameter(FSPGM(mqtt_payload_available), 1);
     addParameter(FSPGM(mqtt_payload_not_available), 0);
 
-    if (_format == FORMAT_JSON) {
+    if (_format == FormatType::JSON) {
         String model;
 #if defined(MQTT_AUTO_DISCOVERY_MODEL)
         model = F(MQTT_AUTO_DISCOVERY_MODEL);
@@ -88,20 +97,41 @@ void MQTTAutoDiscovery::_create(MQTTComponent *component, const String &name, MQ
         model += F("/Unknown");
 #endif
 
-        _discovery += F("\"device\":{\"identifiers\":[\"");
-        _discovery.printf_P(PSTR("%s\"],\"name\":\"%s\",\"model\":\"%s\",\"sw_version\":\"KFC FW %s\",\"manufacturer\":\"KFCLabs\""), uniqueId.c_str(), name.c_str(), model.c_str(), KFCFWConfiguration::getFirmwareVersion().c_str());
-        _discovery += F("},");
+        #define JSON_VALUE_START            "\":\""
+        #define JSON_NEXT_KEY_START         "\",\""
+
+        _discovery.print(F("\"device\":{\"" MQTT_DEVICE_REG_IDENTIFIERS "\":[\""));
+        _discovery.print(uniqueId);
+        _discovery.print(F("\"],\"" MQTT_DEVICE_REG_CONNECTIONS "\":[[\"mac" JSON_NEXT_KEY_START));
+        _discovery.print(WiFi.macAddress());
+        _discovery.print(F("\"]],\"" MQTT_DEVICE_REG_MODEL JSON_VALUE_START));
+        _discovery.print(model);
+        _discovery.print(F(JSON_NEXT_KEY_START MQTT_DEVICE_REG_NAME JSON_VALUE_START));
+        _discovery.print(config.getDeviceName());
+        _discovery.print(F(JSON_NEXT_KEY_START MQTT_DEVICE_REG_SW_VERSION JSON_VALUE_START "KFC FW "));
+        _discovery.print(KFCFWConfiguration::getFirmwareVersion());
+        _discovery.print(F(JSON_NEXT_KEY_START MQTT_DEVICE_REG_MANUFACTURER JSON_VALUE_START "KFCLabs\"},"));
     }
 
     _debug_printf_P(PSTR("MQTT auto discovery topic '%s', name %s, number %d\n"), _topic.c_str(), component->getComponentName(), component->getNumber());
 }
 
-void MQTTAutoDiscovery::addParameter(const String &name, const String &value)
+void MQTTAutoDiscovery::addParameter(const __FlashStringHelper *name, const String &value)
 {
-    if (_format == FORMAT_JSON) {
-        _discovery.printf_P(PSTR("\"%s\":\"%s\","), name.c_str(), value.c_str());
-    } else {
-        _discovery.printf_P(PSTR("%s: %s\n    "), name.c_str(), value.c_str());
+    if (_format == FormatType::JSON) {
+#if MQTT_AUTO_DISCOVERY_USE_ABBREVIATIONS
+        String valueAbbr = value;
+        auto len = strlen_P(RFPSTR(name));
+        if (len > 2 && pgm_read_word(RFPSTR(name) + len - 2) == (('_') | ('t' << 8))) { // check if the name ends with "_t"
+            valueAbbr.replace(_baseTopic, String('~'));
+        }
+        _discovery.printf_P(PSTR("\"%s\":\"%s\","), name, valueAbbr.c_str());
+#else
+        _discovery.printf_P(PSTR("\"%s\":\"%s\","), name, value.c_str());
+#endif
+    }
+    else {
+        _discovery.printf_P(PSTR("%s: %s\n    "), name, value.c_str());
     }
 }
 
@@ -173,7 +203,7 @@ void MQTTAutoDiscovery::addValueTemplate(const String &value)
 
 void MQTTAutoDiscovery::finalize()
 {
-    if (_format == FORMAT_JSON) {
+    if (_format == FormatType::JSON) {
         _discovery.remove(_discovery.length() - 1);
         _discovery += '}';
     } else {
@@ -212,29 +242,49 @@ bool MQTTAutoDiscovery::isEnabled()
 
 const String MQTTAutoDiscovery::_getUnqiueId(const String &name)
 {
-    uint16_t crc[3];
+    uint16_t crc[4];
 
 #if defined(ESP8266)
-    String deviceId = String(ESP.getChipId(), HEX);
-    crc[0] = crc16_update(~0, (uint8_t *)deviceId.c_str(), deviceId.length());
-    deviceId += String(ESP.getFlashChipId(), HEX);
-    crc[1] = crc16_update(crc[0], (uint8_t *)deviceId.c_str(), deviceId.length());
+
+    typedef struct __attribute__packed__ {
+        uint32_t chip_id;
+        uint32_t flash_chip_id;
+        uint8_t mac[2 * 6];
+    } unique_device_info_t;
+    unique_device_info_t info = { system_get_chip_id(), ESP.getFlashChipId()/* cached version of spi_flash_get_id() */ };
+    wifi_get_macaddr(STATION_IF, info.mac);
+    wifi_get_macaddr(SOFTAP_IF, info.mac + 6);
+
 #elif defined(ESP32)
-    String deviceId = String(ESP.getChipRevision(), HEX);
-    crc[0] = crc16_update(~0, (uint8_t *)deviceId.c_str(), deviceId.length());
-    deviceId += String(ESP.getFlashChipSize(), HEX);
-    crc[1] = crc16_update(crc[0], (uint8_t *)deviceId.c_str(), deviceId.length());
+
+    typedef struct __attribute__packed__ {
+        esp_chip_info_t chip_id;
+        uint32_t flash_chip_id;
+        uint8_t mac[4 * 6];
+    } unique_device_info_t;
+    unique_device_info_t info;
+
+    esp_chip_info(&info.chip_id);
+    info.flash_chip_id = ESP.getFlashChipSize();
+    esp_read_mac(info.mac, ESP_MAC_WIFI_STA);
+    esp_read_mac(info.mac + 6, ESP_MAC_WIFI_SOFTAP);
+    esp_read_mac(info.mac + 12, ESP_MAC_BT);
+    esp_read_mac(info.mac + 18, ESP_MAC_ETH);
+
 #else
 #error Platform not supported
 #endif
 
-    deviceId += WiFi.macAddress();
-    crc[2] = crc16_update(crc[1], (uint8_t *)deviceId.c_str(), deviceId.length());
+    crc[0] = crc16_update(~0, &info, sizeof(info));
+    crc[1] = crc16_update(crc[0], &info.chip_id, sizeof(info.chip_id));
+    crc[1] = crc16_update(crc[1], &info.flash_chip_id, sizeof(info.flash_chip_id));
+    crc[2] = crc16_update(crc[1], info.mac, sizeof(info.mac));
+    crc[3] = crc16_update(~0, name.c_str(), name.length());
 
-    PrintString uniqueId = name;
-    uniqueId += '_';
-    for(uint8_t i = 0; i < 3; i++) {
+    PrintString uniqueId;
+    for(uint8_t i = 0; i < 4; i++) {
         uniqueId.printf_P(PSTR("%04x"), crc[i]);
     }
+
     return uniqueId;
 }

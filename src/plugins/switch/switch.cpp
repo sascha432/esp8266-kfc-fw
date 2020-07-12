@@ -188,7 +188,7 @@ void SwitchPlugin::setValue(const String &id, const String &value, bool hasValue
     }
 }
 
-void SwitchPlugin::createAutoDiscovery(MQTTAutoDiscovery::Format_t format, MQTTAutoDiscoveryVector &vector)
+void SwitchPlugin::createAutoDiscovery(MQTTAutoDiscovery::FormatType format, MQTTAutoDiscoveryVector &vector)
 {
     for (size_t i = 0; i < _pins.size(); i++) {
         auto discovery = new MQTTAutoDiscovery();

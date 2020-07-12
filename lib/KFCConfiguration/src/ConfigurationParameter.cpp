@@ -353,15 +353,17 @@ bool ConfigurationParameter::_readData(Configuration *conf, uint16_t offset)
     if (_param.length) {
         conf->_eeprom.read(ptr, offset, _param.length, ConfigurationHelper::Pool::align(_info.size));
     }
+
+    if (_param.isString()) {
+       ptr[_param.length] = 0;
+    }
+
 #if DEBUG_CONFIGURATION
     if (_param.isString()) {
         if (ptr[_param.length] != 0) {
             __debugbreak_and_panic_printf_P(PSTR("%s last byte not NUL\n"), toString().c_str());
         }
     }
-    //if (_param.isString()) {
-    //    ptr[_param.length] = 0;
-    //}
 #endif
 
 #if DEBUG_CONFIGURATION

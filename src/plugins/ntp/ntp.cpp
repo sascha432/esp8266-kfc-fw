@@ -161,46 +161,30 @@ void NTPPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
 
 #include "at_mode.h"
 
-#if DEBUG
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(SNTPFU, "SNTPFU", "Force SNTP to update time");
-#endif
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(NOW, "NOW", "Display current time");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(NOW, "NOW", "<update>", "Display current time or update NTP");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(TZ, "TZ", "<timezone>", "Set timezone", "Show timezone information");
 
 void NTPPlugin::atModeHelpGenerator()
 {
-#if DEBUG
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SNTPFU), getName());
-#endif
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(NOW), getName());
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(TZ), getName());
 }
 
 bool NTPPlugin::atModeHandler(AtModeArgs &args)
 {
-#if DEBUG
-    if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(SNTPFU))) {
-        execConfigTime();
-        args.print(F("Waiting up to 5 seconds for a valid time..."));
-        ulong end = millis() + 5000;
-        while(millis() < end && !IS_TIME_VALID(time(nullptr))) {
-            delay(10);
-        }
-        goto commandNow;
-    }
-    else
-#endif
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(NOW))) {
-#if DEBUG
-commandNow:
-#endif
+        if (args.size()) {
+            execConfigTime();
+            args.print(F("Waiting up to 5 seconds for a valid time..."));
+            ulong end = millis() + 5000;
+            while(millis() < end && !IS_TIME_VALID(time(nullptr))) {
+                delay(10);
+            }
+        }
         time_t now = time(nullptr);
         char timestamp[64];
         if (!IS_TIME_VALID(now)) {
             args.printf_P(PSTR("Time is currently not set (%lu). NTP is %s"), now, (config._H_GET(Config().flags).ntpClientEnabled ? FSPGM(enabled) : FSPGM(disabled)));
-#if DEBUG && defined(ESP32)
-            args.printf_P(PSTR("sntp_enabled() = %d"), sntp_enabled());
-#endif
         }
         else {
             strftime_P(timestamp, sizeof(timestamp), SPGM(strftime_date_time_zone), gmtime(&now));
@@ -235,12 +219,6 @@ commandNow:
                 args.printf_P(PSTR("configTime called with '%s'"), arg);
             }
         }
-// +TZ=ntp,"EST5EDT,M3.2.0,M11.1.0"
-// +TZ=ntp,"PST8PDT,M3.2.0,M11.1.0"
-// +TZ=tz,"PST8PDT,M3.2.0,M11.1.0"
-// +NOW
-// +TZ=ntp,"PST8PDT"
-
         return true;
     }
     return false;

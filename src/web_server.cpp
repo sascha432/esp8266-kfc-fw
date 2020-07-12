@@ -11,7 +11,6 @@
 #include <EventScheduler.h>
 #include <StreamString.h>
 #include <BufferStream.h>
-#include <Timezone.h>
 #include <JsonConfigReader.h>
 #include "build.h"
 #include "web_server.h"
@@ -384,8 +383,8 @@ void WebServerPlugin::handlerExportSettings(AsyncWebServerRequest *request)
 
         char timeStr[32];
         auto now = time(nullptr);
-        struct tm *tm = timezone_localtime(&now);
-        timezone_strftime_P(timeStr, sizeof(timeStr), PSTR("%Y%m%d_%H%M%S"), tm);
+        struct tm *tm = localtime(&now);
+        strftime_P(timeStr, sizeof(timeStr), PSTR("%Y%m%d_%H%M%S"), tm);
         PrintString filename(F("kfcfw_config_%s_b" __BUILD_NUMBER "_%s.json"), hostname, timeStr);
         httpHeaders.add(new HttpDispositionHeader(filename));
 

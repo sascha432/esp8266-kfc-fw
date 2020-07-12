@@ -23,7 +23,6 @@
 #if SYSLOG
 #include <KFCSyslog.h>
 #endif
-#include <Timezone.h>
 #include <SaveCrash.h>
 #include <StringKeyValueStore.h>
 #include "../src/generated/FlashStringGeneratorAuto.h"

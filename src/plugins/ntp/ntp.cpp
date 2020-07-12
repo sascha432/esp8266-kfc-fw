@@ -5,7 +5,6 @@
 #include "ntp_plugin.h"
 #include <time.h>
 #include <sys/time.h>
-#include <KFCTimezone.h>
 #include <KFCForms.h>
 #include <PrintHtmlEntitiesString.h>
 #include <EventScheduler.h>
@@ -34,6 +33,13 @@
 #include <push_pack.h>
 
 PROGMEM_STRING_DEF(strftime_date_time_zone, "%FT%T %Z");
+
+#if ESP8266
+static char *_GMT = _tzname[0]; // copy pointer, points to static char gmt[] = "GMT";
+#else
+static const char _GMT[] = "GMT";
+#endif
+
 
 #if NTP_HAVE_CALLBACKS
 
@@ -151,7 +157,6 @@ void NTPPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
     form.finalize();
 }
 
-
 #if AT_MODE_SUPPORTED
 
 #include "at_mode.h"
@@ -198,19 +203,11 @@ commandNow:
 #endif
         }
         else {
-            auto &timezone = get_default_timezone();
             strftime_P(timestamp, sizeof(timestamp), SPGM(strftime_date_time_zone), gmtime(&now));
-            args.printf_P(PSTR("timezone_strftime_P(timezone_localtime)=%s, unixtime=%u, valid=%u, dst=%u"), timestamp, now, timezone.isValid(), timezone.isDst());
-            timezone_strftime_P(timestamp, sizeof(timestamp), SPGM(strftime_date_time_zone), timezone_localtime(&now));
-            args.print(timestamp);
+            args.printf_P(PSTR("gmtime=%s, unixtime=%u"), timestamp, now);
 
-            auto str = String(SPGM(strftime_date_time_zone));
-            str += " %z %p %H";
-            strftime(timestamp, sizeof(timestamp), str.c_str(), gmtime(&now));
-            args.printf_P(PSTR("strftime(gmtime)=%s"), timestamp);
-            strftime(timestamp, sizeof(timestamp), str.c_str(), localtime(&now));
-            args.printf_P(PSTR("strftime(localtime)=%s"), timestamp);
-            args.printf_P(PSTR("dst=%u %u"), localtime(&now)->tm_isdst, timezone_localtime(&now)->tm_isdst);
+            strftime_P(timestamp, sizeof(timestamp), SPGM(strftime_date_time_zone), localtime(&now));
+            args.printf_P(PSTR("localtime=%s"), timestamp);
         }
         return true;
     }
@@ -254,13 +251,10 @@ commandNow:
 void NTPPlugin::setup(PluginSetupMode_t mode)
 {
     if (config._H_GET(Config().flags).ntpClientEnabled) {
-
         execConfigTime();
-
     } else {
-
 		auto str = emptyString.c_str();
-		configTime(Timezone::_GMT, str, str, str);
+		configTime(_GMT, str, str, str);
     }
 }
 
@@ -277,13 +271,12 @@ void NTPPlugin::shutdown()
 void NTPPlugin::getStatus(Print &output)
 {
     if (config._H_GET(Config().flags).ntpClientEnabled) {
-        auto &timezone = get_default_timezone();
-        output.print(F("Timezone "));
-        if (timezone.isValid()) {
-            output.printf_P(PSTR("%s, %02d:%02u %s"), timezone.getTimezone().c_str(), timezone.getOffset() / 3600, timezone.getOffset() % 60, timezone.getAbbreviation().c_str());
-        } else {
-            output.printf_P(PSTR("%s, status invalid"), Config_NTP::getPosixTZ());
-        }
+
+        char buf[16];
+        auto now = time(nullptr);
+        auto tm = localtime(&now);
+        strftime_P(buf, sizeof(buf), PSTR("%z %Z"), tm);
+        output.printf_P(PSTR("Timezone %s, %s"), Config_NTP::getTimezone(), buf);
 
         auto firstServer = true;
         const char *server;
@@ -325,20 +318,18 @@ void NTPPlugin::updateNtpCallback()
         NTPPlugin::_ntpRefreshTimeMillis = Config_NTP::getNtpRfresh() * 60 * 1000UL;
     }
 
-    Timezone &tz = get_default_timezone();
-    tz.updateFromSystem(Config_NTP::getPosixTZ(), Config_NTP::getTimezone());
-
 #if RTC_SUPPORT
     // set RTC to local time. when the time is read from the RTC during boot, the timezone is UTC until the NTP update has finished
-    config.setRTC(time(nullptr) + tz.getOffset());
+    //  + tz.getOffset()
+    config.setRTC(time(nullptr));
 #endif
 
 
 #if NTP_LOG_TIME_UPDATE
     char buf[32];
     auto now = time(nullptr);
-    auto tm = timezone_localtime(&now);
-    timezone_strftime_P(buf, sizeof(buf), SPGM(strftime_date_time_zone), tm);
+    auto tm = localtime(&now);
+    strftime_P(buf, sizeof(buf), SPGM(strftime_date_time_zone), tm);
     Logger_notice(F("NTP: new time: %s"), buf);
 #endif
 

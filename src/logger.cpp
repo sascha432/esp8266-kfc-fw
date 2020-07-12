@@ -10,7 +10,6 @@
 #include <KFCSyslog.h>
 #endif
 #include <misc.h>
-#include <Timezone.h>
 #include "kfc_fw_config.h"
 
 #if DEBUG_LOGGER
@@ -263,8 +262,8 @@ void Logger::writeLog(LogLevel logLevel, const char *message, va_list arg)
     bool isOpen = _openLog(logLevel);
     struct tm *tm;
 
-    tm = timezone_localtime(&now);
-    timezone_strftime_P(temp, sizeof(temp), PSTR("%FT%TZ"), tm);
+    tm = localtime(&now);
+    strftime_P(temp, sizeof(temp), PSTR("%FT%TZ"), tm);
     if (isOpen) {
         _file.write((const uint8_t *)temp, strlen(temp));
     } else {
@@ -286,7 +285,7 @@ void Logger::writeLog(LogLevel logLevel, const char *message, va_list arg)
 #if LOGGER_SERIAL_OUTPUT
     if (config._H_GET(Config().flags).atModeEnabled) {
         char temp2[32];
-        timezone_strftime_P(temp2, sizeof(temp2), PSTR("%FT%TZ"), tm);
+        strftime_P(temp2, sizeof(temp2), PSTR("%FT%TZ"), tm);
 #if DEBUG
         debug_printf_P(PSTR("%s [%s] %s\n"), temp2, logLevelStr.c_str(), buffer);
 #else

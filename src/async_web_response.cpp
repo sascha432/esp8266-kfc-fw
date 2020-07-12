@@ -376,8 +376,8 @@ size_t AsyncDirResponse::_fillBuffer(uint8_t *data, size_t len)
             }
             else if (_dir.isMapping()) {
                 time_t time = _dir.fileTime();
-                auto tm = timezone_localtime(&time);
-                timezone_strftime_P(modified, sizeof(modified), PSTR("\"%Y-%m-%d %H:%M\""), tm);
+                auto tm = localtime(&time);
+                strftime_P(modified, sizeof(modified), PSTR("\"%Y-%m-%d %H:%M\""), tm);
             }
 #endif
 

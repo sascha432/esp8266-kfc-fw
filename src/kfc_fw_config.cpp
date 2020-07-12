@@ -11,7 +11,6 @@
 #include <EventTimer.h>
 #include <session.h>
 #include <misc.h>
-#include <Timezone.h>
 #include "blink_led_timer.h"
 #include "fs_mapping.h"
 #include "WebUISocket.h"

@@ -3,7 +3,6 @@
  */
 
 #include <Arduino_compat.h>
-#include <KFCTimezone.h>
 #include "SyslogParameter.h"
 #include "Syslog.h"
 #include "SyslogFilter.h"
@@ -134,10 +133,10 @@ void Syslog::transmit(const String &message, Callback_t callback)
 void Syslog::_addTimestamp(String& buffer, PGM_P format)
 {
 	auto now = time(nullptr);
-	auto tm = timezone_localtime(&now);
+	auto tm = localtime(&now);
 	if (tm && IS_TIME_VALID(now)) {
 		char buf[40];
-		timezone_strftime_P(buf, sizeof(buf), format, tm);
+		strftime_P(buf, sizeof(buf), format, tm);
 		buffer += buf;
 #if SEND_NILVALUE_IF_INVALID_TIMESTAMP == 0
 		buffer += ' ';

@@ -14,7 +14,6 @@
 #include <vector>
 #include <map>
 #include <functional>
-#include <KFCTimezone.h>
 #include <ListDir.h>
 #include <Buffer.h>
 #include <PrintHtmlEntities.h>

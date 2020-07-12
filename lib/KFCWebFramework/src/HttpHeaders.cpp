@@ -2,7 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#include <Timezone.h>
 #include <algorithm>
 #include <PrintString.h>
 #include "HttpHeaders.h"

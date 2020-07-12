@@ -15,6 +15,7 @@
 #include <MillisTimer.h>
 #include <crc16.h>
 #include <float.h>
+#include <limits.h>
 
 #if defined(ESP8266) || defined(ESP32) || _WIN32
 #ifndef PROGMEM_DWORD_ALIGNED
@@ -379,3 +380,19 @@ void *lambda_target(T callback) {
     }
     return 0;
 }
+
+// timezone support
+
+#if 1
+
+typedef char end_of_time_t_2038[(time_t)(1UL<<31)==INT32_MIN ? 1 : -1];
+#define IS_TIME_VALID(time) (((time_t)time < 0) || time > 946684800L)
+
+#else
+
+typedef char end_of_time_t_2106[(time_t)(1UL<<31)==(INT32_MAX+1UL) ? 1 : -1];
+#define IS_TIME_VALID(time) (time > 946684800UL)
+
+#endif
+
+size_t strftime_P(char *buf, size_t size, PGM_P format, const struct tm *tm);

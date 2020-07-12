@@ -5,7 +5,6 @@
 #if IOT_SENSOR_HAVE_HLW8012 || IOT_SENSOR_HAVE_HLW8032
 
 #include <EventTimer.h>
-#include <Timezone.h>
 #include <StringKeyValueStore.h>
 #include "Sensor_HLW80xx.h"
 #include "sensor.h"

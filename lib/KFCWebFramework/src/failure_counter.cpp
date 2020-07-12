@@ -2,7 +2,7 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#include <KFCTimezone.h>
+#include <global.h>
 #include "failure_counter.h"
 
 #if SECURITY_LOGIN_ATTEMPTS
@@ -126,7 +126,7 @@ bool FailureCounterContainer::isAddressBlocked(const IPAddress &addr)
 String FailureCounter::getFirstFailure() const
 {
     char buf[32];
-    timezone_strftime_P(buf, sizeof(buf), PSTR("%Y-%m-%dT%H:%M:%S %Z"), timezone_localtime(&_firstFailure));
+    strftime_P(buf, sizeof(buf), PSTR("%Y-%m-%dT%H:%M:%S %Z"), localtime(&_firstFailure));
     return buf;
 }
 

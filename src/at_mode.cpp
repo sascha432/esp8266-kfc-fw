@@ -15,7 +15,6 @@
 #include <vector>
 #include <JsonTools.h>
 #include <ListDir.h>
-#include <Timezone.h>
 #include <StringKeyValueStore.h>
 #include "at_mode.h"
 #include "kfc_fw_config.h"

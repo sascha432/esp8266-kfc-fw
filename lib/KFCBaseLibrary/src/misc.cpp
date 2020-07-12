@@ -761,3 +761,69 @@ void printDouble(Print &output, double value)
     printDouble(buf, sizeof(buf), value);
     output.print(buf);
 }
+
+// timezone support
+
+size_t strftime_P(char *buf, size_t size, PGM_P format, const struct tm *tm)
+{
+#if defined(ESP8266)
+    // strftime does not support PROGMEM
+    char fmt[strlen_P(format) + 1];
+    strcpy_P(fmt, format);
+#else
+    auto fmt = format;
+#endif
+    return strftime(buf, size, fmt, tm);
+}
+
+#if 0
+
+// old function for time zone support
+
+tm *timezone_localtime(const time_t *timer)
+{
+    struct tm *_tm;
+    time_t now;
+    if (!timer) {
+        time(&now);
+    } else {
+        now = *timer;
+    }
+    if (default_timezone.isValid()) {
+        now += default_timezone.getOffset();
+        _tm = gmtime(&now);
+        _tm->tm_isdst = default_timezone.isDst() ? 1 : 0;
+    } else {
+        _tm = localtime(&now);
+    }
+    return _tm;
+}
+
+size_t timezone_strftime_P(char *buf, size_t size, PGM_P format, const struct tm *tm)
+{
+	String _z = F("%z");
+    String fmt = FPSTR(format);
+    if (default_timezone.isValid()) {
+        if (fmt.indexOf(_z) != -1) {
+            int32_t ofs = default_timezone.getOffset();
+            char buf[8];
+            snprintf_P(buf, sizeof(buf), PSTR("%c%02u:%02u"), ofs < 0 ? '-' : '+', (int)(std::abs(ofs) / 3600) % 24, (int)(std::abs(ofs) % 60));
+            fmt.replace(_z, buf);
+        }
+		_z.toUpperCase();
+        fmt.replace(_z, default_timezone.getAbbreviation());
+        return strftime(buf, size, fmt.c_str(), tm);
+    } else {
+		fmt.replace(_z, emptyString);
+        _z.toUpperCase();
+        fmt.replace(_z, emptyString);
+        return strftime(buf, size, fmt.c_str(), tm);
+    }
+}
+
+size_t timezone_strftime(char *buf, size_t size, const char *format, const struct tm *tm)
+{
+    return timezone_strftime_P(buf, size, format, tm);
+}
+
+#endif

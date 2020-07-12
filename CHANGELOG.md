@@ -13,11 +13,11 @@
 - Option to enable/disable mDNS
 - Arduino ESP8266 2.7.1 release changes/fixes
 - NTP startup delay reduced to 1 second (from up to 5 minutes)
-- Support for POSIX time zones
 - MQTT auto discovery queue to reduce memory usage and network load
 - Send calibration/config. to MQTT for recovery after firmware updates
 - MQTT auto discovery abbreviations
 - MQTT auto discovery aggregates all entities as single device
+- Replaced remote timezone with native POSIX timezone support
 
 ## Version 0.0.2
 

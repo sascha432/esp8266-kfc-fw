@@ -5,7 +5,6 @@
 #include "../include/templates.h"
 #include <PrintString.h>
 #include <PrintHtmlEntitiesString.h>
-#include <Timezone.h>
 #include "kfc_fw_config.h"
 #include "build.h"
 #include "misc.h"
@@ -61,7 +60,7 @@ void WebTemplate::printSystemTime(time_t now, PrintHtmlEntitiesString &output)
 {
     char buf[80];
     auto format = PSTR("%a, %d %b %Y " HTML_SA(span, HTML_A("id", "system_time")) "%H:%M:%S" HTML_E(span) " %Z");
-    timezone_strftime_P(buf, sizeof(buf), format, timezone_localtime(&now));
+    strftime_P(buf, sizeof(buf), format, localtime(&now));
     output.printf_P(PSTR(HTML_SA(span, HTML_A("id", "system_date") HTML_A("format", "%s")) "%s" HTML_E(span)), PrintHtmlEntitiesString(FPSTR(format)).c_str(), buf);
 }
 

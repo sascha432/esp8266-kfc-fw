@@ -4,7 +4,6 @@
 
 #if IOT_SENSOR_HAVE_DS3231
 
-#include <Timezone.h>
 #include "Sensor_DS3231.h"
 
 #if DEBUG_IOT_SENSOR

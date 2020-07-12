@@ -5,7 +5,6 @@
 #include "ssd1306_plugin.h"
 #include <Adafruit_GFX.h>
 #include <WiFiCallbacks.h>
-#include <Timezone.h>
 #include "kfc_fw_config.h"
 #include "EventScheduler.h"
 #include "plugins.h"
@@ -146,7 +145,7 @@ void ssd1306_update_time(EventScheduler::TimerPtr timer) {
     time_t now = time(nullptr);
     Display.setCursor(0, 24);
 #if SSD1306_PLUGIN_HEIGHT == 64
-    timezone_strftime_P(buf, sizeof(buf), PSTR("%F %Z\n%T"), timezone_localtime(&now));
+    strftime_P(buf, sizeof(buf), PSTR("%F %Z\n%T"), localtime(&now));
     Display.fillRect(0, 24, SSD1306_PLUGIN_WIDTH, SSD1306_PLUGIN_HEIGHT - 24, BLACK);
     Display.print(strtok(buf, "\n"));
     if (clockFont) {
@@ -161,7 +160,7 @@ void ssd1306_update_time(EventScheduler::TimerPtr timer) {
     Display.setFont(nullptr);
 #else
     Display.fillRect(0, 24, SSD1306_PLUGIN_WIDTH, SSD1306_PLUGIN_HEIGHT - 24, BLACK);
-    timezone_strftime_P(buf, sizeof(buf), PSTR("%F %T"), timezone_localtime(&now));
+    strftime_P(buf, sizeof(buf), PSTR("%F %T"), localtime(&now));
     Display.print(buf);
 #endif
     Display.display();

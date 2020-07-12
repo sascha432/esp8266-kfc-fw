@@ -4,7 +4,6 @@
 
 #include <LoopFunctions.h>
 #include <ctype.h>
-#include <Timezone.h>
 #include <StreamString.h>
 #include "at_mode.h"
 #include "logger.h"
@@ -261,8 +260,8 @@ void STK500v1Programmer::_flash()
     char temp[64];
 
     _startTime = millis();
-    tm = timezone_localtime(&now);
-    timezone_strftime_P(temp, sizeof(temp), PSTR("%FT%TZ"), tm);
+    tm = localtime(&now);
+    strftime_P(temp, sizeof(temp), PSTR("%FT%TZ"), tm);
     _logPrintf_P(PSTR("--- %s"), temp);
 
     if (!_file.validate()) {

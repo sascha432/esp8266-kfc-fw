@@ -4,7 +4,6 @@
 
 #include <Arduino_compat.h>
 #include "clock.h"
-#include <Timezone.h>
 #include <MicrosTimer.h>
 #include <LoopFunctions.h>
 #include <EventTimer.h>
@@ -765,7 +764,7 @@ void ClockPlugin::_loop()
         }
 
         uint32_t color = _color;
-        struct tm *tm = timezone_localtime(&now);
+        struct tm *tm = localtime(&now);
         uint8_t hour = tm->tm_hour;
         if (!_config.time_format_24h) {
             hour = ((hour + 23) % 12) + 1;

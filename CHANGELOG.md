@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 0.0.4
+
+- README update
+
 ## Version 0.0.3
 
 - Device configuration page for WebUI

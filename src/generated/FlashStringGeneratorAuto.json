@@ -12,7 +12,7 @@
         "default": "Set-Cookie"
     },
     "mime_text_plain": {
-        "use_counter": 16,
+        "use_counter": 17,
         "default": "text/plain"
     },
     "null": {
@@ -44,7 +44,7 @@
         "default": "Invalid hostname or IP address"
     },
     "webui_json_id": {
-        "use_counter": 30,
+        "use_counter": 33,
         "default": "id"
     },
     "webui_json_name": {
@@ -64,11 +64,11 @@
         "default": "offset"
     },
     "webui_json_value": {
-        "use_counter": 30,
+        "use_counter": 33,
         "default": "value"
     },
     "webui_json_state": {
-        "use_counter": 23,
+        "use_counter": 26,
         "default": "state"
     },
     "mime_application_json": {
@@ -124,11 +124,11 @@
         "default": "pure virtual call: %s\\n"
     },
     "yes": {
-        "use_counter": 8,
+        "use_counter": 7,
         "default": "yes"
     },
     "no": {
-        "use_counter": 6,
+        "use_counter": 5,
         "default": "no"
     },
     "comma_": {
@@ -140,7 +140,7 @@
         "default": " hidden"
     },
     "Not_supported": {
-        "use_counter": 1,
+        "use_counter": 2,
         "default": "Not supported"
     },
     "_selected": {
@@ -396,11 +396,11 @@
         "default": "/blinds_ctrl.state"
     },
     "Yes": {
-        "use_counter": 4,
+        "use_counter": 2,
         "default": "Yes"
     },
     "No": {
-        "use_counter": 4,
+        "use_counter": 2,
         "default": "No"
     },
     "webui_json_title": {
@@ -564,7 +564,7 @@
         "default": "Detected eth address %s"
     },
     "stk500v1_log_file": {
-        "use_counter": 4,
+        "use_counter": 5,
         "default": "/stk500v1/debug.log"
     },
     "stk500v1_sig_file": {
@@ -828,19 +828,19 @@
         "default": "message"
     },
     "ds3231_id_temp": {
-        "use_counter": 5,
+        "use_counter": 0,
         "default": "ds3231_temp"
     },
     "ds3231_id_time": {
-        "use_counter": 5,
+        "use_counter": 0,
         "default": "ds3231_time"
     },
     "ds3231_id_lost_power": {
-        "use_counter": 3,
+        "use_counter": 0,
         "default": "ds3231_lost_power"
     },
     "webui_json_head": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "head"
     },
     "fs_mapping_listings": {
@@ -1064,15 +1064,15 @@
         "default": "/login.html"
     },
     "n_a": {
-        "use_counter": 1,
+        "use_counter": 2,
         "default": "n/a"
     },
     "stk500v1_tmp_file": {
-        "use_counter": 0,
+        "use_counter": 2,
         "default": "/stk500v1/firmware_tmp.hex"
     },
     "iot_sensor_hlw80xx_state_file": {
-        "use_counter": 0,
+        "use_counter": 2,
         "default": "/hlw80xx.state"
     },
     "seconds": {
@@ -1084,27 +1084,27 @@
         "default": "milliseconds"
     },
     "__s_": {
-        "use_counter": 11,
+        "use_counter": 1,
         "default": "/%s/"
     },
     "hPa": {
-        "use_counter": 3,
+        "use_counter": 1,
         "default": "hPa"
     },
     "channel__u": {
-        "use_counter": 4,
+        "use_counter": 7,
         "default": "channel_%u"
     },
     "temperature": {
-        "use_counter": 5,
+        "use_counter": 0,
         "default": "temperature"
     },
     "humidity": {
-        "use_counter": 5,
+        "use_counter": 0,
         "default": "humidity"
     },
     "pressure": {
-        "use_counter": 5,
+        "use_counter": 0,
         "default": "pressure"
     },
     "mqtt_component_storage": {
@@ -1112,7 +1112,7 @@
         "default": "storage"
     },
     "image_type": {
-        "use_counter": 2,
+        "use_counter": 3,
         "default": "image_type"
     },
     "id": {
@@ -1122,5 +1122,41 @@
     "mqtt": {
         "use_counter": 2,
         "default": "mqtt"
+    },
+    "_set": {
+        "use_counter": 7,
+        "default": "/set"
+    },
+    "_state": {
+        "use_counter": 5,
+        "default": "/state"
+    },
+    "_brightness_set": {
+        "use_counter": 6,
+        "default": "/brightness/set"
+    },
+    "_brightness_state": {
+        "use_counter": 4,
+        "default": "/brightness/state"
+    },
+    "_color_set": {
+        "use_counter": 3,
+        "default": "/color/set"
+    },
+    "_color_state": {
+        "use_counter": 2,
+        "default": "/color/state"
+    },
+    "main": {
+        "use_counter": 2,
+        "default": "main"
+    },
+    "lock_channels": {
+        "use_counter": 2,
+        "default": "lock_channels"
+    },
+    "brightness": {
+        "use_counter": 8,
+        "default": "brightness"
     }
 }

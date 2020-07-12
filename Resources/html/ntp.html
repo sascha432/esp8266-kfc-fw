@@ -44,7 +44,7 @@
     var s = '';
     for (let key in timezone_list) {
         var val = timezone_list[key];
-        s += '<option value="' + val + '"' + ('%NTP_POSIX_TZ%' == val ? ' selected' : '') + '>' + key + '</option>';
+        s += '<option value="' + val + '"' + ('%NTP_TIMEZONE%' == key ? ' selected' : '') + '>' + key + '</option>';
     }
     document.getElementById('ntp_posix_tz').innerHTML = s;
 })();

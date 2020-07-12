@@ -29,7 +29,6 @@ PROGMEM_STRING_DEF(public, "public");
 PROGMEM_STRING_DEF(private, "private");
 PROGMEM_STRING_DEF(Authorization, "Authorization");
 PROGMEM_STRING_DEF(Bearer_, "Bearer ");
-PROGMEM_STRING_DEF(comma_, ", ");
 
 HttpHeaders::HttpHeaders() {
     init();

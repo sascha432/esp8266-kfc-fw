@@ -36,19 +36,21 @@
             </div>
             <span id="ntp_settings">
                 <div class="form-group">
-                    <label for="ntp_timezone">Timezone:</label>
-                    <select class="form-control" name="ntp_timezone" id="ntp_timezone">
+                    <label for="ntp_posix_tz">Timezone:</label>
+                    <select class="form-control" name="ntp_posix_tz" id="ntp_posix_tz">
 <script>(function(){var timezone_list =
-/*--%%TIMEZONE_LIST_JS--*/[];
+/*--%%TIMEZONE_LIST_JS--*/{};
 /*--TIMEZONE_LIST_JS%%--*/
     var s = '';
-    for (i = 0; i < timezone_list.length; i++) {
-        s += '<option value="' + timezone_list[i] + '"' + ('%NTP_TIMEZONE%' == timezone_list[i] ? ' selected' : '') + '>' + timezone_list[i] + '</option>';
+    for (let key in timezone_list) {
+        var val = timezone_list[key];
+        s += '<option value="' + val + '"' + ('%NTP_POSIX_TZ%' == val ? ' selected' : '') + '>' + key + '</option>';
     }
-    document.getElementById('ntp_timezone').innerHTML = s;
+    document.getElementById('ntp_posix_tz').innerHTML = s;
 })();
 </script>
 </select>
+<input type="hidden" name="ntp_timezone" id="ntp_timezone" value="%NTP_TIMEZONE%">
                 </div>
                 <div class="form-group">
                     <label for="ntp_server1">NTP Server 1:</label>
@@ -69,17 +71,6 @@
                         <div class="input-group-append"><span class="input-group-text">minutes &#177;5&#37;</span></div>
                     </div>
                 </div>
-                <!--#if USE_REMOTE_TIMEZONE-->
-                <div class="form-group">
-                    <label for="ntp_remote_tz_url">Remote Timezone URL: (Register at <a href="https://timezonedb.com/register" target="_blank">https://timezonedb.com/register</a> or see documentation how to self-host the timezone script)</label>
-                    <input type="text" class="form-control" name="ntp_remote_tz_url" id="ntp_remote_tz_url" value="%NTP_REMOTE_TZ_URL%" size="254">
-                </div>
-                <!--#else-->
-                <div class="form-group">
-                    <label for="ntp_posix_tz">Posix Timezone:</label>
-                    <input type="text" class="form-control" name="ntp_posix_tz" id="ntp_posix_tz" value="%NTP_POSIX_TZ%" size="64">
-                </div>
-                <!--#endif-->
             </span>
             <div class="form-group">
                 <button type="submit" class="btn btn-primary">Save Changes...</button>

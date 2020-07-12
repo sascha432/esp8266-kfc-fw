@@ -4,6 +4,7 @@
 
 #include <Arduino_compat.h>
 #include <time.h>
+#include <Logger.h>
 #if defined(ESP8266)
 #include <sntp.h>
 #include <sntp-lwip2.h>
@@ -106,18 +107,49 @@ Timezone::Timezone()
 
 void Timezone::invalidate()
 {
-    _timezoneOffset = Timezone::INVALID;
+    _timezoneOffset = INVALID;
     _dst = false;
     _abbreviation = _GMT;
-    _zoneName = String();
+    _posixTZ = F("UTC0");
+    _zoneName = F("Etc/Universal");
 }
 
-void Timezone::setTimezone(time_t now, const char *zoneName)
+void Timezone::updateFromSystem(const char *posixTZ, const char *zoneName)
 {
-	_zoneName = zoneName;
+#if ESP8266
+    char buf[16];
+    auto now = time(nullptr);
+    strftime_P(buf, sizeof(buf), PSTR("%Z"), localtime(&now));
+    _abbreviation = buf;
+    if (zoneName && *zoneName) {
+        _zoneName = zoneName;
+    }
+    else {
+        _zoneName = posixTZ;
+    }
+    _posixTZ = posixTZ;
+
+    auto tzPtr = __gettzinfo();
+    // compare abbreviation to find which rule is active
+    if (!strcmp(buf, _tzname[0])) {
+        _timezoneOffset = -tzPtr->__tzrule[0].offset;
+        _dst = false;
+    }
+    else if (!strcmp(buf, _tzname[1])) {
+        _timezoneOffset = -tzPtr->__tzrule[1].offset;
+        _dst = true;
+    }
+    else {
+        Logger_error(F("Cannot determine timezone offset for %s"), buf);
+        _timezoneOffset = INVALID;
+        _dst = false;
+    }
+#else
+#error not implemeneted
+#endif
 }
 
-void Timezone::setTimezone(time_t now, const String zoneName)
+void Timezone::setTimezone(const String zoneName)
 {
     _zoneName = zoneName;
 }
@@ -125,6 +157,16 @@ void Timezone::setTimezone(time_t now, const String zoneName)
 const String &Timezone::getTimezone() const
 {
     return _zoneName;
+}
+
+void Timezone::setPosixTZ(const String &posixTZ)
+{
+    _posixTZ = posixTZ;
+}
+
+const String &Timezone::getPosixTZ() const
+{
+    return _posixTZ;
 }
 
 void Timezone::setAbbreviation(const String abbreviation)
@@ -160,20 +202,4 @@ void Timezone::setDst(bool dst)
 bool Timezone::isDst() const
 {
 	return _dst;
-}
-
-void Timezone::load()
-{
-#ifndef _WIN32
-    extern void timezone_config_load(int32_t &_timezoneOffset, bool &_dst, String &_zoneName, String &_abbreviation);
-    timezone_config_load(_timezoneOffset, _dst, _zoneName, _abbreviation);
-#endif
-}
-
-void Timezone::save()
-{
-#ifndef _WIN32
-    extern void timezone_config_save(int32_t _timezoneOffset, bool _dst, const String &_zoneName, const String &_abbreviation);
-    timezone_config_save(_timezoneOffset, _dst, _zoneName, _abbreviation);
-#endif
 }

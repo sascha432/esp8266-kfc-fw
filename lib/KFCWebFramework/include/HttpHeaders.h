@@ -5,6 +5,7 @@
 #pragma once
 
 #include <Arduino_compat.h>
+#include "../src/generated/FlashStringGeneratorAuto.h"
 #include <time.h>
 #include <functional>
 #include <memory>
@@ -29,7 +30,6 @@ PROGMEM_STRING_DECL(close);
 PROGMEM_STRING_DECL(keep_alive);
 PROGMEM_STRING_DECL(Authorization);
 PROGMEM_STRING_DECL(Bearer_);
-PROGMEM_STRING_DECL(comma_);
 
 #ifndef HAVE_HTTPHEADERS_ASYNCWEBSERVER
 #define HAVE_HTTPHEADERS_ASYNCWEBSERVER 1

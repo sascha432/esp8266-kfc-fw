@@ -49,21 +49,22 @@ RTC_DS3231 rtc;
 #endif
 
 PROGMEM_STRING_DEF(safe_mode_enabled, "Device started in SAFE MODE");
-//PROGMEM_STRING_DEF(configuration_backup, "/configuration.backup"); // unused?
 
 KFCFWConfiguration config;
 
 // Config_NTP
 
-Config_NTP::Config_NTP() : tz()
-{
-    tz.ntpRefresh = 12 * 60;
+Config_NTP::Config_NTP() {
 }
-
 
 const char *Config_NTP::getTimezone()
 {
     return config._H_STR(Config().ntp.timezone);
+}
+
+const char *Config_NTP::getPosixTZ()
+{
+    return config._H_STR(Config().ntp.posix_tz);
 }
 
 const char *Config_NTP::getServers(uint8_t num)
@@ -79,36 +80,25 @@ const char *Config_NTP::getServers(uint8_t num)
     return nullptr;
 }
 
-const char *Config_NTP::getPosixTZ()
-{
-    return config._H_STR(Config().ntp.posix_tz);
-}
-
 const char *Config_NTP::getUrl()
 {
     return config._H_STR(Config().ntp.remote_tz_dst_ofs_url);
 }
 
-Config_NTP::Timezone_t Config_NTP::getTZ()
+uint16_t Config_NTP::getNtpRfresh()
 {
-    return config._H_GET(Config().ntp.tz);
+    return config._H_GET(Config().ntp.ntpRefresh);
 }
 
 void Config_NTP::defaults()
 {
-    ::config._H_SET(Config().ntp.tz, Config_NTP().tz);
-    ::config._H_SET_STR(Config().ntp.timezone, F("UTC"));
+    ::config._H_SET(Config().ntp.ntpRefresh, 12 * 60);
+    ::config._H_SET_STR(Config().ntp.timezone, F("Etc/Universal"));
+    ::config._H_SET_STR(Config().ntp.posix_tz, F("UTC0"));
     ::config._H_SET_STR(Config().ntp.servers[0], F("pool.ntp.org"));
-    ::config._H_SET_STR(Config().ntp.servers[1], F("time.windows.com"));
-    ::config._H_SET_STR(Config().ntp.servers[2], F("time.nist.gov"));
-#if USE_REMOTE_TIMEZONE
-    // https://timezonedb.com/register
-    ::config._H_SET_STR(Config().ntp.remote_tz_dst_ofs_url, F("http://api.timezonedb.com/v2.1/get-time-zone?key=_YOUR_API_KEY_&by=zone&format=json&zone=${timezone}"));
-#else
-    ::config._H_SET_STR(Config().ntp.posix_tz, F("UTC"));
-#endif
+    ::config._H_SET_STR(Config().ntp.servers[1], F("time.nist.gov"));
+    ::config._H_SET_STR(Config().ntp.servers[2], F("time.windows.com"));
 }
-
 
 // Config_MQTT
 
@@ -222,29 +212,6 @@ const char *session_get_device_token()
 {
     using KFCConfigurationClasses::System;
     return System::Device::getToken();
-}
-
-void timezone_config_load(int32_t &_timezoneOffset, bool &_dst, String &_zoneName, String &_abbreviation)
-{
-    auto cfg = config._H_GET(Config().ntp.tz);
-    _abbreviation = cfg.abbreviation;
-    _zoneName = _abbreviation;
-    _timezoneOffset = cfg.offset;
-    _dst = cfg.dst;
-    _debug_printf_P(PSTR("abbreviation=%s, offset=%d, dst=%u\n"), cfg.abbreviation, cfg.offset, cfg.dst);
-}
-
-void timezone_config_save(int32_t _timezoneOffset, bool _dst, const String &_zoneName, const String &_abbreviation)
-{
-    auto cfg = config._H_GET(Config().ntp.tz);
-    if (cfg.offset != _timezoneOffset || !_abbreviation.equals(cfg.abbreviation) || cfg.dst != _dst) {
-        cfg.offset = _timezoneOffset;
-        cfg.dst = _dst;
-        strncpy(cfg.abbreviation, _abbreviation.c_str(), sizeof(cfg.abbreviation) - 1)[sizeof(cfg.abbreviation) - 1] = 0;
-        config._H_SET(Config().ntp.tz, cfg);
-        config.write();
-        _debug_printf_P(PSTR("abbreviation=%s, offset=%d, dst=%u\n"), _abbreviation.c_str(), _timezoneOffset, _dst);
-    }
 }
 
 // KFCFWConfiguration
@@ -1478,11 +1445,7 @@ void KFCConfigurationPlugin::setup(PluginSetupMode_t mode)
 
     config.setup();
 
-    auto &timezone = get_default_timezone();
-    timezone.load();
 #if RTC_SUPPORT
-    // remove timezone before using settimeofday
-    sntp_set_timezone_in_seconds(0);
     auto rtc = config.getRTC();
     if (rtc != 0) {
         struct timeval tv = { (time_t)rtc, 0 };

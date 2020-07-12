@@ -24,12 +24,17 @@ class Timezone {
 public:
 	Timezone();
 
+	// set to GMT/UTC
     void invalidate();
+	// copy timezone from posix compatible system
+	void updateFromSystem(const char *posixTZ, const char *zoneName);
 	bool isValid() const;
 
-	void setTimezone(time_t now, const char *zoneName);
-    void setTimezone(time_t now, const String zoneName);
+    void setTimezone(const String zoneName);
 	const String &getTimezone() const;
+
+	void setPosixTZ(const String &posixTZ);
+	const String &getPosixTZ() const;
 
     void setAbbreviation(const String abbreviation);
 	const String &getAbbreviation() const;
@@ -41,16 +46,14 @@ public:
 	void setDst(bool dst);
 	bool isDst() const;
 
-	void load();
-	void save();
-
 private:
-	static constexpr int32_t INVALID = -1;
+	static constexpr int32_t INVALID = -1;	// not set = GMT/UTC
 
     int32_t _timezoneOffset;
     bool _dst;
     String _zoneName;
     String _abbreviation;
+    String _posixTZ;
 
 public:
 #if ESP8266

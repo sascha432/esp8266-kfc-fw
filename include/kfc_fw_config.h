@@ -287,31 +287,20 @@ public:
 
 class Config_NTP {
 public:
-    typedef struct __attribute__packed__ {
-        int32_t offset;
-        char abbreviation[4];
-        uint16_t ntpRefresh;
-        uint8_t dst;
-    } Timezone_t;
-
     Config_NTP();
 
     static const char *getTimezone();
+    static const char *getPosixTZ();
     static const char *getServers(uint8_t num);
     static const char *getUrl();
-    static const char *getPosixTZ();
-    static Timezone_t getTZ();
+    static uint16_t getNtpRfresh();
 
     static void defaults();
 
     char timezone[33];
     char servers[3][65];
-#if USE_REMOTE_TIMEZONE
-    char remote_tz_dst_ofs_url[255];
-#else
-    char posix_tz[255];
-#endif
-    Timezone_t tz;
+    char posix_tz[33];
+    uint16_t ntpRefresh;
 };
 
 class Config_Sensor {

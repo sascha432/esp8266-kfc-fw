@@ -213,11 +213,6 @@ extern class Stream &DebugSerial;
 #endif
 #endif
 
-#ifndef USE_REMOTE_TIMEZONE
-#define USE_REMOTE_TIMEZONE             0               // Use remote server to determine timezone offset and daylight saving offset
-                                                        // Currently https://timezonedb.com/register is supported as well as any similar API
-#endif
-
 #ifndef MQTT_SUPPORT
 #define MQTT_SUPPORT                    1               // Support for a MQTT broker
 #endif

@@ -4,9 +4,10 @@
 
 #include "Configuration.h"
 
-#if _WIN32
+#if _MSC_VER
 #define ESP8266 1
-#define ARDUINO_ESP8266_RELEASE_2_6_3 1
+#define ARDUINO_ESP8266_RELEASE_2_7_2 1
+#define ARDUINO_ESP8266_VERSION_COMBINED 0x020702
 #endif
 
 #define DEBUG_POOL_ENABLE              0

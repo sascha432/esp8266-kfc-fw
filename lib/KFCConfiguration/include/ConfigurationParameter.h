@@ -43,23 +43,29 @@ public:
 
     typedef struct __attribute__packed__ {
         Handle_t handle;
-        uint16_t type : 4;
-        uint16_t length : 12;
+        uint16_t type : 4;                              // type of data
+        uint16_t length : 12;                           // stores the length of the data currently stored in the EEPROM
         TypeEnum_t getType() const {
             return static_cast<TypeEnum_t>(type);
         }
         bool isString() const {
             return type == STRING;
         }
+        bool isBinary() const {
+            return type == BINARY;
+        }
         uint16_t getSize() const {
-            return type == STRING ? length + 1 : length;
+            return getSize(length);
+        };
+        uint16_t getSize(uint16_t len) const {
+            return type == STRING ? len + 1 : len;
         };
     } Param_t;
 
     typedef struct __attribute__packed__ {
-        uint8_t *data;              //            pointer to data
-        uint16_t size : 12;         //            max. size of data
-        uint16_t dirty : 1;         //            data has been changed
+        uint8_t *data;                                  // pointer to data
+        uint16_t size : 12;                             // max. size of data
+        uint16_t dirty : 1;                             // data has been changed
         uint16_t ___reserved : 3;
     } Info_t;
 
@@ -109,6 +115,12 @@ public:
     }
 
     uint16_t getLength() const {
+        if (isDirty()) {
+            if (_param.isString()) {
+                return (uint16_t)strlen(reinterpret_cast<const char *>(_info.data));
+            }
+            return _info.size;
+        }
         return _param.length;
     }
 

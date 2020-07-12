@@ -83,7 +83,7 @@ void writeHandles()
 
 uint16_t getHandle(const char *name)
 {
-    ConfigurationParameter::Handle_t crc = constexpr_crc16_calc((const uint8_t *)name, constexpr_strlen(name));
+    ConfigurationParameter::Handle_t crc = constexpr_crc16_update(name, constexpr_strlen(name));
     auto iterator = std::find(handles.begin(), handles.end(), crc);
     if (iterator == handles.end()) {
         handles.emplace_back(name, crc);
@@ -179,31 +179,36 @@ bool Configuration::write()
 {
     _debug_printf_P(PSTR("params=%u\n"), _params.size());
 
-    Buffer buffer;
-    uint16_t dataOffset;
+    Buffer buffer; // storage for parameter information and data
 
     _storage.clear();
-
     _eeprom.begin();
 
-    dataOffset = _dataOffset;
+    // store current data offset
+    uint16_t dataOffset = _dataOffset;
     for (auto &parameter : _params) {
+        auto length = parameter._param.length;
+
         if (parameter.isDirty()) {
             if (parameter._param.isString()) {
                 parameter.updateStringLength();
             }
+            else { //if (parameter._param.isBinary()) {
+                parameter._param.length = parameter._info.size;
+            }
         }
         else {
-            // store EEPROM location for unmodified parameters
-            parameter._info.data = (uint8_t *)_eeprom.getConstDataPtr() + dataOffset;
+            // update EEPROM location for unmodified parameters
+            parameter._info.data = const_cast<uint8_t *>(_eeprom.getConstDataPtr()) + dataOffset;
         }
 
         // write parameter headers
-        _debug_printf_P(PSTR("write_header: %s ofs=%d\n"), parameter.toString().c_str(), (int)(buffer.length() + _offset + sizeof(Header_t)));
-        buffer.write((const uint8_t *)&parameter._param, sizeof(parameter._param));
-        dataOffset += parameter._param.length;
+        _debug_printf_P(PSTR("write_header: %s ofs=%d prev_data_offset=%u\n"), parameter.toString().c_str(), (int)(buffer.length() + _offset + sizeof(Header_t)), dataOffset);
+        buffer.write(reinterpret_cast<const uint8_t *>(&parameter._param), sizeof(parameter._param));
+        dataOffset += length;
     }
 
+    // new data offset is base offset + size of header + size of stored parameter information
     _dataOffset = _offset + (uint16_t)(buffer.length() + sizeof(Header_t));
 #if DEBUG_CONFIGURATION
     auto calcOfs = _offset + (sizeof(ConfigurationParameter::Param_t) * _params.size()) + sizeof(Header_t);
@@ -233,10 +238,13 @@ bool Configuration::write()
     auto eepromSize = _offset + len + sizeof(Header_t);
     _eeprom.begin(eepromSize); // update size
 
-    auto dptr = _eeprom.getDataPtr() + _offset;
-    auto &header = *reinterpret_cast<Header_t *>(dptr);
+    auto headerPtr = _eeprom.getDataPtr() + _offset;
+    auto &header = *reinterpret_cast<Header_t *>(headerPtr);
+    // update header
     header = Header_t({ CONFIG_MAGIC_DWORD, crc16_update(buffer.get(), len), len, _params.size() });
-    memcpy(dptr + sizeof(header), buffer.get(), len);
+
+    // update parameter info and data
+    memcpy(headerPtr + sizeof(header), buffer.get(), len);
 
     _debug_printf_P(PSTR("CRC %04x, length %d\n"), header.crc, len);
 
@@ -357,8 +365,8 @@ bool Configuration::isDirty() const
 
 void Configuration::_writeAllocate(ConfigurationParameter &param, uint16_t size)
 {
-    param._param.length = size;
-    param._info.size = param._param.getSize();
+    //param._param.length = size;
+    param._info.size = param._param.getSize(size);
     param._info.data = reinterpret_cast<uint8_t*>(calloc(param._info.size, 1));
     _debug_printf_P(PSTR("calloc %s\n"), param.toString().c_str());
 }
@@ -466,11 +474,11 @@ void Configuration::exportAsJson(Print &output, const String &version)
     output.printf_P(PSTR("{\n\t\"magic\": \"%#08x\",\n\t\"version\": \"%s\",\n"), CONFIG_MAGIC_DWORD, version.c_str());
     output.print(F("\t\"config\": {\n"));
 
-    uint16_t offset = _dataOffset;
+    uint16_t dataOffset = _dataOffset;
     for (auto &parameter : _params) {
         auto &param = parameter._param;
 
-        if (offset != _dataOffset) {
+        if (dataOffset != _dataOffset) {
             output.print(F(",\n"));
         }
 
@@ -482,14 +490,14 @@ void Configuration::exportAsJson(Print &output, const String &version)
         output.print(F("\",\n"));
 #endif
 
-        auto length = parameter.read(this, offset);
+        auto length = parameter.read(this, dataOffset);
         output.printf_P(PSTR("\t\t\t\"type\": %d,\n"), parameter._param.getType());
         output.printf_P(PSTR("\t\t\t\"type_name\": \"%s\",\n"), (const char *)parameter.getTypeString(parameter._param.getType()));
         output.printf_P(PSTR("\t\t\t\"length\": %d,\n"), length);
         output.print(F("\t\t\t\"data\": "));
         parameter.exportAsJson(output);
         output.print(F("\n"));
-        offset += param.length;
+        dataOffset += param.length;
 
         output.print(F("\t\t}"));
     }
@@ -543,27 +551,27 @@ ConfigurationParameter &Configuration::_getOrCreateParam(ConfigurationParameter:
     return *iterator;
 }
 
-bool Configuration::_readParams()
+uint16_t Configuration::_readHeader(uint16_t offset, HeaderAligned_t &hdr)
 {
-    uint16_t offset = _offset;
-
-    union {
-        uint8_t headerBuffer[(sizeof(Header_t) + 7) & ~7]; // add 4 byte if the size of the header is dword aligned or 8 byte if not
-        Header_t header;
-    } hdr;
-
-    _eeprom.end();
-
 #if defined(ESP8266)
-//|| defined(ESP32)
-    // read header directly from flash since we do not know the size of the configuration
+    //|| defined(ESP32)
+        // read header directly from flash since we do not know the size of the configuration
     _eeprom.read(hdr.headerBuffer, (uint16_t)offset, (uint16_t)sizeof(hdr.header), (uint16_t)sizeof(hdr.headerBuffer));
 #else
     _eeprom.begin(_offset + sizeof(hdr.header));
     _eeprom.get(offset, hdr.header);
     _eeprom.end();
 #endif
-    offset += sizeof(hdr.header);
+    return offset + sizeof(hdr.header);
+}
+
+bool Configuration::_readParams()
+{
+    uint16_t offset = _offset;
+    HeaderAligned_t hdr;
+
+    _eeprom.end();
+    offset = _readHeader(offset, hdr);
 
 #if DEBUG_CONFIGURATION
     DumpBinary dump(F("Header:"), DEBUG_OUTPUT);
@@ -597,7 +605,7 @@ bool Configuration::_readParams()
             break;
         }
 
-        _dataOffset = sizeof(ConfigurationParameter::Param_t) * hdr.header.params + offset;
+        _dataOffset = (sizeof(ConfigurationParameter::Param_t) * hdr.header.params) + offset;
         auto dataOffset = _dataOffset;
 
         for(;;) {

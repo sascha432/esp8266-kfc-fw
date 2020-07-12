@@ -176,7 +176,11 @@ namespace ConfigurationHelper {
                 __debugbreak_and_panic_printf_P(PSTR("EEPROM is not initialized\n"));
             }
 #endif
+#if _MSC_VER
+            return const_cast<uint8_t *>(EEPROM.getConstDataPtr());
+#else
             return EEPROM.getDataPtr();
+#endif
         }
 
         const uint8_t *getConstDataPtr() const {
@@ -228,6 +232,11 @@ public:
             return sizeof(ConfigurationParameter::Param_t) * params;
         };
     } Header_t;
+
+    typedef union __attribute__packed__ {
+        uint8_t headerBuffer[(sizeof(Header_t) + 7) & ~7]; // align size to dwords
+        Header_t header;
+    } HeaderAligned_t;
 
     // typedef std::list<ConfigurationParameter> ParameterList;
     typedef xtra_containers::chunked_list<ConfigurationParameter, 6> ParameterList;
@@ -420,6 +429,7 @@ private:
 
     // read parameter headers
     bool _readParams();
+    uint16_t _readHeader(uint16_t offset, HeaderAligned_t &header);
 
 private:
     uint16_t _offset;

@@ -176,19 +176,26 @@ uint16_t ConfigurationParameter::read(Configuration *conf, uint16_t offset)
     if (!_info.data && !_readData(conf, offset)) {
         return 0;
     }
-    return _param.length;
+    return getLength();
+    //if (_info.dirty) {
+    //    if (_param.isString()) {
+    //        return (uint16_t)strlen(reinterpret_cast<const char *>(_info.data));
+    //    }
+    //    return _info.size;
+    //}
+    //return _param.length;
 }
 
 void ConfigurationParameter::_makeWriteable(Configuration *conf, uint16_t size)
 {
     if (isDirty()) {
-        if (size != _param.length) {
-            auto oldSize = _param.getSize();
-            _param.length = size;
-            _info.size = _param.getSize();
+        // check if the size has changed
+        if (_param.getSize(size) != _info.size) {
+            uint16_t oldSize = _info.size;
+            _info.size = _param.getSize(size);
             _info.data = reinterpret_cast<uint8_t *>(realloc(_info.data, _info.size));
-            if (_param.getSize() > oldSize) {
-                memset(_info.data + oldSize, 0, _param.getSize() - oldSize);
+            if (_info.size > oldSize) {
+                memset(_info.data + oldSize, 0, _info.size - oldSize);
             }
         }
     }
@@ -199,9 +206,9 @@ void ConfigurationParameter::_makeWriteable(Configuration *conf, uint16_t size)
         else {
             auto ptr = _info.data;
             auto oldSize = _param.getSize();
-            conf->_writeAllocate(*this, size);                              // allocate new memory
-            memcpy(_info.data, ptr, std::min(oldSize, size));               // copy data
-            conf->__release(ptr);                                            // release pool ptr
+            conf->_writeAllocate(*this, size);                                  // allocate new memory
+            memcpy(_info.data, ptr, std::min(oldSize, size));                   // copy data
+            conf->__release(ptr);                                               // release pool ptr
         }
         _info.dirty = 1;
     }
@@ -265,11 +272,7 @@ void ConfigurationParameter::dump(Print &output)
         } break;
         case QWORD: {
             auto value = *(uint64_t *)_info.data;
-#if defined(ESP32)
-            output.printf_P(PSTR("%llu (%lld, %08llX)\n"), value, value, value);
-#else
-            output.printf_P(PSTR("%lu (%ld, %08lX)\n"), value, value, value);
-#endif
+            output.printf_P(PSTR("%.0f\n"), (double)value);
         } break;
         case FLOAT: {
                 auto value = *(float *)_info.data;
@@ -293,14 +296,15 @@ void ConfigurationParameter::exportAsJson(Print& output)
     }
     else {
         switch (_param.type) {
-        case STRING:
+        case STRING: {
             output.print('"');
-            JsonTools::printToEscaped(output, reinterpret_cast<const char *>(_info.data), _param.length, false);
+            auto str = reinterpret_cast<const char *>(_info.data);
+            JsonTools::printToEscaped(output, str, _info.dirty ? strlen(str) : _param.length, false);
             output.print('"');
-            break;
+        } break;
         case BINARY: {
             auto ptr = _info.data;
-            auto size = _param.length;
+            auto size = _info.size;
             output.print('"');
             while (size--) {
                 output.printf_P(PSTR("%02x"), *ptr & 0xff);
@@ -322,11 +326,7 @@ void ConfigurationParameter::exportAsJson(Print& output)
         } break;
         case QWORD: {
             auto value = *(uint64_t *)_info.data;
-#if defined(ESP32)
-            output.printf_P(PSTR("%llu"), value);
-#else
-            output.printf_P(PSTR("%lu"), value);
-#endif
+            output.printf_P(PSTR("%.0f"), (double)value); //TODO write as uint64
         } break;
         case FLOAT: {
             auto value = *(float *)_info.data;

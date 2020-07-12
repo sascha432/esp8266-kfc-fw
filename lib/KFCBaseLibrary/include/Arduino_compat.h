@@ -39,6 +39,12 @@
 #define sizeof_stack_array(name)                        sizeof(name)
 #endif
 
+//
+// NOTE:
+// if a flash string is not defined, run
+// pio run -t buildspgm
+// to rebuild the string database
+//
 #define PROGMEM_STRING_ID(name)                         SPGM_##name
 
 #define PROGMEM_STRING_DECL(name)                       extern const char PROGMEM_STRING_ID(name)[] PROGMEM;

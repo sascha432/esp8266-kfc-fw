@@ -195,6 +195,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(LOAD, "LOAD", "Discard changes and load se
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(IMPORT, "IMPORT", "<filename|set_dirty>[,<handle>[,<handle>,...]]", "Import settings from JSON file");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(STORE, "STORE", "Store current settings in EEPROM");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(FACTORY, "FACTORY", "Restore factory settings (but do not store in EEPROM)");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(FSR, "FSR", "FACTORY, STORE, RST in sequence");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(ATMODE, "ATMODE", "<1|0>", "Enable/disable AT Mode");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DLY, "DLY", "<milliseconds>", "Call delay(milliseconds)");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CAT, "CAT", "<filename>", "Display text file");
@@ -270,6 +271,7 @@ void at_mode_help_commands()
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(IMPORT), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(STORE), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(FACTORY), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(FSR), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(ATMODE), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DLY), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CAT), name);
@@ -962,6 +964,12 @@ void at_mode_serial_handle_event(String &commandString)
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(FACTORY))) {
                 config.restoreFactorySettings();
                 args.ok();
+            }
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(FSR))) {
+                config.restoreFactorySettings();
+                config.write();
+                args.ok();
+                config.restartDevice(false);
             }
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(ATMODE))) {
                 if (args.requireArgs(1, 1)) {

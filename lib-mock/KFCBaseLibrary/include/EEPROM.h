@@ -153,7 +153,7 @@ public:
     size_t length() const;
     
     EEPtr getDataPtr() const;
-    EEPtr getConstDataPtr() const;
+    const uint8_t *getConstDataPtr() const;
 
     EERef operator[](const int idx);
 

@@ -71,9 +71,9 @@ EEPtr EEPROMFile::getDataPtr() const
     return EEPtr(0, this);
 }
 
-EEPtr EEPROMFile::getConstDataPtr() const 
+const uint8_t *EEPROMFile::getConstDataPtr() const
 {
-    return EEPtr(0, this);
+    return _eeprom;
 }
 
 EERef EEPROMFile::operator[](const int idx) 

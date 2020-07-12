@@ -2,7 +2,7 @@
 * Author: sascha_lammers@gmx.de
 */
 
-#if _WIN32
+#if _MSC_VER
 
 // SPI EEPROM emulation
 
@@ -38,6 +38,7 @@ extern SpiFlashChip *flashchip; // in ram ROM-BIOS
 
 extern "C" uint32_t _EEPROM_start;
 
+#define EEPROM_getDataPtr() const_cast<uint8_t *>(EEPROM.getConstDataPtr())
 
 inline uint32_t spi_flash_get_id(void) {
 	return 0;
@@ -46,7 +47,7 @@ inline uint32_t spi_flash_get_id(void) {
 inline SpiFlashOpResult spi_flash_erase_sector(uint16_t sec) {
 	if (sec == (((uint32_t)&_EEPROM_start - EEPROM_ADDR) / SPI_FLASH_SEC_SIZE)) {
 		if (EEPROM.begin()) {
-			memset(EEPROM.getDataPtr(), 0, SPI_FLASH_SEC_SIZE);
+			memset(EEPROM_getDataPtr(), 0, SPI_FLASH_SEC_SIZE);
 			EEPROM.commit();
 			return SPI_FLASH_RESULT_OK;
 		}
@@ -59,7 +60,7 @@ inline SpiFlashOpResult spi_flash_write(uint32_t des_addr, uint32_t *src_addr, u
 	auto eeprom_ofs = (uint32_t)(src_addr - eeprom_start_address);
 	if (eeprom_ofs + size <= SPI_FLASH_SEC_SIZE && (size % 4 == 0) && (((uint32_t)&des_addr) % 4 == 0)) {
 		if (EEPROM.begin()) {
-			memcpy(EEPROM.getDataPtr() + eeprom_ofs, src_addr, size);
+			memcpy(EEPROM_getDataPtr() + eeprom_ofs, src_addr, size);
 			EEPROM.commit();
 			return SPI_FLASH_RESULT_OK;
 		}

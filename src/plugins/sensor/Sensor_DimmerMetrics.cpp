@@ -27,23 +27,23 @@ Sensor_DimmerMetrics::MQTTAutoDiscoveryPtr Sensor_DimmerMetrics::nextAutoDiscove
     switch(num) {
         case 0:
             discovery->create(this, F("temp"), format);
-            discovery->addStateTopic(_getMetricsTopics(0));
-            discovery->addUnitOfMeasurement(F("\u00b0C"));
+            discovery->addStateTopic(_getMetricsTopics(TopicType::TEMPERATURE));
+            discovery->addUnitOfMeasurement(FSPGM(_degreeC, "\u00b0C"));
             break;
         case 1:
             discovery->create(this, F("temp2"), format);
-            discovery->addStateTopic(_getMetricsTopics(1));
-            discovery->addUnitOfMeasurement(F("\u00b0C"));
+            discovery->addStateTopic(_getMetricsTopics(TopicType::TEMPERATURE2));
+            discovery->addUnitOfMeasurement(FSPGM(_degreeC));
             break;
         case 2:
-            discovery->create(this, F("vcc"), format);
-            discovery->addStateTopic(_getMetricsTopics(2));
+            discovery->create(this, FSPGM(vcc), format);
+            discovery->addStateTopic(_getMetricsTopics(TopicType::VCC));
             discovery->addUnitOfMeasurement('V');
             break;
         case 3:
-            discovery->create(this, F("frequency"), format);
-            discovery->addStateTopic(_getMetricsTopics(3));
-            discovery->addUnitOfMeasurement(F("Hz"));
+            discovery->create(this, FSPGM(frequency), format);
+            discovery->addStateTopic(_getMetricsTopics(TopicType::FREQUENCY));
+            discovery->addUnitOfMeasurement(FSPGM(Hz, "Hz"));
             break;
     }
     discovery->finalize();
@@ -83,9 +83,9 @@ void Sensor_DimmerMetrics::getValues(JsonArray &array, bool timer)
 void Sensor_DimmerMetrics::_createWebUI(WebUI &webUI, WebUIRow **row)
 {
     (*row)->addBadgeSensor(F("dimmer_vcc"), _name, 'V');
-    (*row)->addBadgeSensor(F("dimmer_frequency"), F("Frequency"), F("Hz"));
-    (*row)->addBadgeSensor(F("dimmer_int_temp"), F("ATmega"), F("\u00b0C"));
-    (*row)->addBadgeSensor(F("dimmer_ntc_temp"), F("NTC"), F("\u00b0C"));
+    (*row)->addBadgeSensor(F("dimmer_frequency"), F("Frequency"), FSPGM(Hz));
+    (*row)->addBadgeSensor(F("dimmer_int_temp"), F("ATmega"), FSPGM(_degreeC));
+    (*row)->addBadgeSensor(F("dimmer_ntc_temp"), F("NTC"), FSPGM(_degreeC));
     _webUIinitialized = true;
 }
 
@@ -100,10 +100,10 @@ void Sensor_DimmerMetrics::publishState(MQTTClient *client)
 {
     if (client && client->isConnected()) {
         auto _qos = MQTTClient::getDefaultQos();
-        client->publish(_getMetricsTopics(0), _qos, 1, String(_metrics.getTemp2(), 2));
-        client->publish(_getMetricsTopics(1), _qos, 1, String(_metrics.getTemp(), 2));
-        client->publish(_getMetricsTopics(2), _qos, 1, String(_metrics.getVCC(), 3));
-        client->publish(_getMetricsTopics(3), _qos, 1, String(_metrics.getFrequency(), 2));
+        client->publish(_getMetricsTopics(TopicType::TEMPERATURE2), _qos, true, String(_metrics.getTemp2(), 2));
+        client->publish(_getMetricsTopics(TopicType::TEMPERATURE), _qos, true, String(_metrics.getTemp(), 2));
+        client->publish(_getMetricsTopics(TopicType::VCC), _qos, true, String(_metrics.getVCC(), 3));
+        client->publish(_getMetricsTopics(TopicType::FREQUENCY), _qos, true, String(_metrics.getFrequency(), 2));
     }
 }
 
@@ -116,20 +116,19 @@ MQTTSensorSensorType Sensor_DimmerMetrics::getType() const
     return MQTTSensorSensorType::DIMMER_METRICS;
 }
 
-String Sensor_DimmerMetrics::_getMetricsTopics(uint8_t num) const
+
+String Sensor_DimmerMetrics::_getMetricsTopics(TopicType num) const
 {
-    String topic = MQTTClient::formatTopic(MQTTClient::NO_ENUM, F("/metrics/"));
+    String topic = MQTTClient::formatTopic(F("metrics/"), nullptr);
     switch(num) {
-        case 0:
+        case TopicType::TEMPERATURE2:
             return topic + F("int_temp");
-        case 1:
+        case TopicType::TEMPERATURE:
             return topic + F("ntc_temp");
-        case 2:
-            return topic + F("vcc");
-        case 3:
-            return topic + F("frequency");
-        case 4:
-            return topic + F("power");
+        case TopicType::VCC:
+            return topic + FSPGM(vcc);
+        case TopicType::FREQUENCY:
+            return topic + FSPGM(frequency);
     }
     return topic;
 }

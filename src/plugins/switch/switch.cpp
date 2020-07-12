@@ -19,8 +19,6 @@
 #include <debug_helper_disable.h>
 #endif
 
-PROGMEM_STRING_DEF(mqtt_switch_state, "/switch/state");
-PROGMEM_STRING_DEF(mqtt_switch_set, "/switch/set");
 PROGMEM_STRING_DEF(iot_switch_states_file, "/switch.states");
 
 SwitchPlugin plugin;
@@ -151,7 +149,7 @@ void SwitchPlugin::createWebUI(WebUI &webUI)
             else {
                 name = PrintString(F("Channel %u"), i);
             }
-            row->addSwitch(PrintString(F("switch_%u"), i), name, true, true);
+            row->addSwitch(PrintString(FSPGM(channel__u), i), name, true, true);
         }
         if (_configs[i].webUI == WebUIEnum::NEW_ROW) {
             row = &webUI.addRow();
@@ -166,7 +164,7 @@ void SwitchPlugin::getValues(JsonArray &array)
 
     for (size_t i = 0; i < _pins.size(); i++) {
         auto obj = &array.addObject(2);
-        obj->add(JJ(id), PrintString(F("switch_%u"), i));
+        obj->add(JJ(id), PrintString(FSPGM(channel__u), i));
         obj->add(JJ(value), (int)_getChannel(i));
         obj->add(JJ(state), true);
     }
@@ -188,18 +186,20 @@ void SwitchPlugin::setValue(const String &id, const String &value, bool hasValue
     }
 }
 
-void SwitchPlugin::createAutoDiscovery(MQTTAutoDiscovery::FormatType format, MQTTAutoDiscoveryVector &vector)
+MQTTComponent::MQTTAutoDiscoveryPtr SwitchPlugin::nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num)
 {
-    for (size_t i = 0; i < _pins.size(); i++) {
-        auto discovery = new MQTTAutoDiscovery();
-        discovery->create(this, i, format);
-        discovery->addStateTopic(MQTTClient::formatTopic(i, FSPGM(mqtt_switch_state)));
-        discovery->addCommandTopic(MQTTClient::formatTopic(i, FSPGM(mqtt_switch_set)));
-        discovery->addPayloadOn(1);
-        discovery->addPayloadOff(0);
-        discovery->finalize();
-        vector.emplace_back(discovery);
+    if (num >= getAutoDiscoveryCount()) {
+        return nullptr;
     }
+    auto discovery = new MQTTAutoDiscovery();
+    auto channel = PrintString(FSPGM(channel__u), num);
+    discovery->create(this, channel, format);
+    discovery->addStateTopic(MQTTClient::formatTopic(channel, FSPGM(_state)));
+    discovery->addCommandTopic(MQTTClient::formatTopic(channel, FSPGM(_set)));
+    discovery->addPayloadOn(1);
+    discovery->addPayloadOff(0);
+    discovery->finalize();
+    return discovery;
 }
 
 uint8_t SwitchPlugin::getAutoDiscoveryCount() const
@@ -213,8 +213,7 @@ void SwitchPlugin::onConnect(MQTTClient *client)
     MQTTComponent::onConnect(client);
     auto qos = client->getDefaultQos();
     for (size_t i = 0; i < _pins.size(); i++) {
-        _debug_printf_P(PSTR("subscribe=%s\n"), MQTTClient::formatTopic(i, FSPGM(mqtt_switch_set)).c_str());
-        client->subscribe(this, MQTTClient::formatTopic(i, FSPGM(mqtt_switch_set)), qos);
+        client->subscribe(this, MQTTClient::formatTopic(PrintString(FSPGM(channel__u), i), FSPGM(_set)), qos);
     }
     _publishState(client);
 }
@@ -223,7 +222,7 @@ void SwitchPlugin::onMessage(MQTTClient *client, char *topic, char *payload, siz
 {
     _debug_printf_P(PSTR("topic=%s payload=%s\n"), topic, payload);
     for (size_t i = 0; i < _pins.size(); i++) {
-        if (MQTTClient::formatTopic(i, FSPGM(mqtt_switch_set)).equals(topic)) {
+        if (MQTTClient::formatTopic(PrintString(FSPGM(channel__u), i), FSPGM(_set)).equals(topic)) {
             bool state = atoi(payload);
             _setChannel(i, state);
             _publishState(client, i);
@@ -294,7 +293,7 @@ void SwitchPlugin::_publishState(MQTTClient *client, int8_t channel)
         for (size_t i = 0; i < _pins.size(); i++) {
             if (channel == -1 || (uint8_t)channel == i) {
                 _debug_printf_P(PSTR("pin=%u state=%u\n"), _pins[i], _getChannel(i));
-                client->publish(MQTTClient::formatTopic(i, FSPGM(mqtt_switch_state)), qos, true, String(_getChannel(i) ? 1 : 0));
+                client->publish(MQTTClient::formatTopic(PrintString(FSPGM(channel__u), i), FSPGM(_state)), qos, true, String(_getChannel(i) ? 1 : 0));
             }
         }
     }
@@ -306,7 +305,7 @@ void SwitchPlugin::_publishState(MQTTClient *client, int8_t channel)
     for (size_t i = 0; i < _pins.size(); i++) {
         if (channel == -1 || (uint8_t)channel == i) {
             obj = &events.addObject(2);
-            obj->add(JJ(id), PrintString(F("switch_%u"), i));
+            obj->add(JJ(id), PrintString(FSPGM(channel__u), i));
             obj->add(JJ(value), (int)_getChannel(i));
             obj->add(JJ(state), true);
         }

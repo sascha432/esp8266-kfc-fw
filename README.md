@@ -83,7 +83,7 @@ Secure communication (no encryption though) with NRF24L01+ modules. Support for 
 
 ### NTP Client
 
-NTP Client with timezone support via REST API
+NTP Client with timezone support
 
 ### Syslog
 

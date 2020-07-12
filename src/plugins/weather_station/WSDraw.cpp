@@ -130,31 +130,30 @@ void WSDraw::_drawTime()
 
     char buf[32];
     _lastTime = time(nullptr);
-
-    struct tm *tm = timezone_localtime(&_lastTime);
+    struct tm *tm = localtime(&_lastTime);
 
     _canvas.setFont(FONTS_DATE);
     _canvas.setTextColor(COLORS_DATE);
-    timezone_strftime_P(buf, sizeof(buf), PSTR("%a %b %d %Y"), tm);
+    strftime_P(buf, sizeof(buf), PSTR("%a %b %d %Y"), tm);
     _canvas.drawTextAligned(X_POSITION_DATE, Y_POSITION_DATE, buf, H_POSITION_DATE);
 
     _canvas.setFont(FONTS_TIME);
     _canvas.setTextColor(COLORS_TIME);
     if (_config.time_format_24h) {
-        timezone_strftime_P(buf, sizeof(buf), PSTR("%H:%M:%S"), tm);
+        strftime_P(buf, sizeof(buf), PSTR("%H:%M:%S"), tm);
     }
     else {
-        timezone_strftime_P(buf, sizeof(buf), PSTR("%I:%M:%S"), tm);
+        strftime_P(buf, sizeof(buf), PSTR("%I:%M:%S"), tm);
     }
     _canvas.drawTextAligned(X_POSITION_TIME, Y_POSITION_TIME, buf, H_POSITION_TIME);
 
     _canvas.setFont(FONTS_TIMEZONE);
     _canvas.setTextColor(COLORS_TIMEZONE);
     if (_config.time_format_24h) {
-        timezone_strftime_P(buf, sizeof(buf), PSTR("%Z"), tm);
+        strftime_P(buf, sizeof(buf), PSTR("%Z"), tm);
     }
     else {
-        timezone_strftime_P(buf, sizeof(buf), PSTR("%p - %Z"), tm);
+        strftime_P(buf, sizeof(buf), PSTR("%p - %Z"), tm);
     }
     _canvas.drawTextAligned(X_POSITION_TIMEZONE, Y_POSITION_TIMEZONE, buf, H_POSITION_TIMEZONE);
 }

@@ -25,7 +25,7 @@ void Sensor_BME680::createAutoDiscovery(MQTTAutoDiscovery::FormatType format, MQ
     auto discovery = new MQTTAutoDiscovery();
     discovery->create(this, _getId(FSPGM(temperature)), format);
     discovery->addStateTopic(topic);
-    discovery->addUnitOfMeasurement(F("\u00b0C"));
+    discovery->addUnitOfMeasurement(FSPGM(_degreeC));
     discovery->addValueTemplate(FSPGM(temperature));
     discovery->finalize();
     vector.emplace_back(discovery);
@@ -87,9 +87,9 @@ void Sensor_BME680::createWebUI(WebUI &webUI, WebUIRow **row)
     _debug_printf_P(PSTR("Sensor_BME680::createWebUI()\n"));
 
     *row = &webUI.addRow();
-    (*row)->addSensor(_getId(FSPGM(temperature)), _name + F(" Temperature"), F("\u00b0C"));
+    (*row)->addSensor(_getId(FSPGM(temperature)), _name + F(" Temperature"), FSPGM(_degreeC));
     (*row)->addSensor(_getId(FSPGM(humidity)), _name + F(" Humidity"), '%');
-    (*row)->addSensor(_getId(FSPGM(pressure)), _name + F(" Pressure"), F("hPa"));
+    (*row)->addSensor(_getId(FSPGM(pressure)), _name + F(" Pressure"), FSPGM(hPa));
     (*row)->addSensor(_getId(F("gas")), _name + F(" Gas"), emptyString);
 }
 

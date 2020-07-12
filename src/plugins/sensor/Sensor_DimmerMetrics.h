@@ -31,7 +31,14 @@ private:
     friend class DimmerModulePlugin;
     friend class Dimmer_Base;
 
-    String _getMetricsTopics(uint8_t num) const;
+    enum class TopicType : uint8_t {
+        TEMPERATURE,
+        TEMPERATURE2,
+        VCC,
+        FREQUENCY
+    };
+
+    String _getMetricsTopics(TopicType num) const;
     DimmerMetrics &_updateMetrics(const dimmer_metrics_t &metrics);
     void _createWebUI(WebUI &webUI, WebUIRow **row);
 

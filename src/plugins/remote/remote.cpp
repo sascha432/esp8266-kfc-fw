@@ -115,7 +115,7 @@ void RemoteControlPlugin::createConfigureForm(AsyncWebServerRequest *request, Fo
     Plugins::HomeAssistant::ActionVector vector;
     Plugins::HomeAssistant::getActions(vector);
 
-    actions.emplace_back('0', F("None"));
+    actions.emplace_back(String(0), String(F("None")));
     for(const auto &action: vector) {
         auto str = PrintString(F("%s: %s"), action.getEntityId().c_str(), action.getActionFStr());
         if (action.getNumValues()) {
@@ -219,14 +219,14 @@ void RemoteControlPlugin::_onButtonHeld(Button& btn, uint16_t duration, uint16_t
                 }
                 else if (buttonNum == 1) {
                     _debug_printf_P(PSTR("restart\n"));
-                    restart();
+                    shutdown();
                     Scheduler.addTimer(3000, false, [](EventScheduler::TimerPtr) {
                         config.restartDevice();
                     });
                 }
                 else if (buttonNum == 2) {
                     _debug_printf_P(PSTR("restore factory settings\n"));
-                    restart();
+                    shutdown();
                     Scheduler.addTimer(3000, false, [](EventScheduler::TimerPtr) {
                         config.restoreFactorySettings();
                         config.write();

@@ -11,7 +11,6 @@
 #include <GFXCanvasCompressedPalette.h>
 #include <OpenWeatherMapAPI.h>
 #include <SpeedBooster.h>
-#include <Timezone.h>
 #include <EventScheduler.h>
 #include <EventTimer.h>
 #include "FixedCircularBuffer.h"

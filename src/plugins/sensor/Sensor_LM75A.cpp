@@ -28,7 +28,7 @@ MQTTComponent::MQTTAutoDiscoveryPtr Sensor_LM75A::nextAutoDiscovery(MQTTAutoDisc
         case 0:
             discovery->create(this, _getId(), format);
             discovery->addStateTopic(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(__s_), _getId().c_str()));
-            discovery->addUnitOfMeasurement(F("\u00b0C"));
+            discovery->addUnitOfMeasurement(FSPGM(_degreeC));
             break;
     }
     discovery->finalize();
@@ -56,7 +56,7 @@ void Sensor_LM75A::createWebUI(WebUI &webUI, WebUIRow **row)
     // if ((*row)->size() > 3) {
     //     *row = &webUI.addRow();
     // }
-    (*row)->addSensor(_getId(), _name, F("\u00b0C"));
+    (*row)->addSensor(_getId(), _name, FSPGM(_degreeC));
 }
 
 void Sensor_LM75A::publishState(MQTTClient *client)

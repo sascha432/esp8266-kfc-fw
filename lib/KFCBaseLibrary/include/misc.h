@@ -383,7 +383,11 @@ void *lambda_target(T callback) {
 
 // timezone support
 
-#if 1
+#if _MSC_VER
+
+#define IS_TIME_VALID(time) (time > 946684800UL)
+
+#elif 1
 
 typedef char end_of_time_t_2038[(time_t)(1UL<<31)==INT32_MIN ? 1 : -1];
 #define IS_TIME_VALID(time) (((time_t)time < 0) || time > 946684800L)

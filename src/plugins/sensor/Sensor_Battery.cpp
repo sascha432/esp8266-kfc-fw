@@ -158,7 +158,7 @@ String Sensor_Battery::_getId(BatteryType type)
 {
 #if IOT_SENSOR_BATTERY_CHARGE_DETECTION
     switch(type) {
-        case BatteryType::STATE:
+        case BatteryType::CHARGING:
             return F("battery_charging");
         case BatteryType::LEVEL:
         default:

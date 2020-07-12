@@ -28,7 +28,7 @@ void Sensor_DHTxx::createAutoDiscovery(MQTTAutoDiscovery::FormatType format, MQT
     auto discovery = new MQTTAutoDiscovery();
     discovery->create(this, _getId(FSPGM(temperature)), format);
     discovery->addStateTopic(topic);
-    discovery->addUnitOfMeasurement(F("\u00b0C"));
+    discovery->addUnitOfMeasurement(FSPGM(_degreeC));
     discovery->addValueTemplate(FSPGM(temperature));
     discovery->finalize();
     vector.emplace_back(discovery);
@@ -64,7 +64,7 @@ void Sensor_DHTxx::getValues(JsonArray &array, bool timer)
 
 void Sensor_DHTxx::createWebUI(WebUI &webUI, WebUIRow **row)
 {
-    (*row)->addSensor(_getId(FSPGM(temperature)), _name + F(" Temperature"), F("\u00b0C"));
+    (*row)->addSensor(_getId(FSPGM(temperature)), _name + F(" Temperature"), FSPGM(_degreeC));
     (*row)->addSensor(_getId(FSPGM(humidity)), _name + F(" Humidity"), '%');
 }
 

@@ -183,28 +183,28 @@ MQTTComponent::MQTTAutoDiscoveryPtr Driver_DimmerModule::nextAutoDiscovery(MQTTA
 //     auto discovery = new MQTTAutoDiscovery();
 //     discovery->create(this, F("temp"), format);
 //     discovery->addStateTopic(_getMetricsTopics(0));
-//     discovery->addUnitOfMeasurement(F("\u00b0C"));
+//     discovery->addUnitOfMeasurement(FSPGM(_degreeC));
 //     discovery->finalize();
 //     vector.emplace_back(discovery);
 
 //     discovery = new MQTTAutoDiscovery();
 //     discovery->create(this, F("temp2"), format);
 //     discovery->addStateTopic(_getMetricsTopics(1));
-//     discovery->addUnitOfMeasurement(F("\u00b0C"));
+//     discovery->addUnitOfMeasurement(FSPGM(_degreeC));
 //     discovery->finalize();
 //     vector.emplace_back(discovery);
 
 //     discovery = new MQTTAutoDiscovery();
-//     discovery->create(this, F("vcc"), format);
+//     discovery->create(this, FSPGM(vcc), format);
 //     discovery->addStateTopic(_getMetricsTopics(2));
 //     discovery->addUnitOfMeasurement(F("V"));
 //     discovery->finalize();
 //     vector.emplace_back(discovery);
 
 //     discovery = new MQTTAutoDiscovery();
-//     discovery->create(this, F("frequency"), format);
+//     discovery->create(this, FSPGM(frequency), format);
 //     discovery->addStateTopic(_getMetricsTopics(3));
-//     discovery->addUnitOfMeasurement(F("Hz"));
+//     discovery->addUnitOfMeasurement(FSPGM(Hz));
 //     discovery->finalize();
 //     vector.emplace_back(discovery);
 // }
@@ -567,9 +567,9 @@ void DimmerModulePlugin::createWebUI(WebUI &webUI)
         sensor->_createWebUI(webUI, &row);
     }
     // row->addBadgeSensor(F("dimmer_vcc"), F("Dimmer VCC"), 'V');
-    // row->addBadgeSensor(F("dimmer_frequency"), F("Dimmer Frequency"), F("Hz"));
-    // row->addBadgeSensor(F("dimmer_int_temp"), F("Dimmer ATmega"), F("\u00b0C"));
-    // row->addBadgeSensor(F("dimmer_ntc_temp"), F("Dimmer NTC"), F("\u00b0C"));
+    // row->addBadgeSensor(F("dimmer_frequency"), F("Dimmer Frequency"), FSPGM(Hz));
+    // row->addBadgeSensor(F("dimmer_int_temp"), F("Dimmer ATmega"), FSPGM(_degreeC));
+    // row->addBadgeSensor(F("dimmer_ntc_temp"), F("Dimmer NTC"), FSPGM(_degreeC));
 }
 
 

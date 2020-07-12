@@ -49,7 +49,7 @@ private:
         STATE
     };
 
-    String _getTopic(MQTTTopicType topicType, uint8_t channel, TopicType type) const;
+    String _getTopic(uint8_t channel, TopicType type) const;
 
     StateEnum_t _state;
     Channel_t _channel;

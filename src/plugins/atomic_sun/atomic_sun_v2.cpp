@@ -677,9 +677,9 @@ void AtomicSunPlugin::createWebUI(WebUI &webUI)
         sensor->_createWebUI(webUI, &row);
     }
     // row->addBadgeSensor(F("dimmer_vcc"), F("Atomic Sun VCC"), 'V');
-    // row->addBadgeSensor(F("dimmer_frequency"), F("Frequency"), F("Hz"));
-    // row->addBadgeSensor(F("dimmer_int_temp"), F("ATmega"), F("\u00b0C"));
-    // row->addBadgeSensor(F("dimmer_ntc_temp"), F("NTC"), F("\u00b0C"));
+    // row->addBadgeSensor(F("dimmer_frequency"), F("Frequency"), FSPGM(Hz));
+    // row->addBadgeSensor(F("dimmer_int_temp"), F("ATmega"), FSPGM(_degreeC));
+    // row->addBadgeSensor(F("dimmer_ntc_temp"), F("NTC"), FSPGM(_degreeC));
     row->addSwitch(F("dimmer_lock"), F("Lock Channels"), false, true);
 
     row->addGroup(F("Channels"), false);

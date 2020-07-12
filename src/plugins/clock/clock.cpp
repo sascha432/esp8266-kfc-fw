@@ -160,7 +160,7 @@ void ClockPlugin::_updateLightSensorWebUI()
     json.add(JJ(type), JJ(ue));
     auto &events = json.addArray(JJ(events), 1);
     auto &obj = events.addObject(3);
-    obj.add(JJ(id), F("light_sensor"));
+    obj.add(JJ(id), FSPGM(light_sensor, "light_sensor"));
     obj.add(JJ(value), JsonNumber(_autoBrightness == -1 ? NAN : _autoBrightnessValue * 100, 0));
     obj.add(JJ(state), _autoBrightness == -1 ? false : true);
 
@@ -326,7 +326,7 @@ void ClockPlugin::createWebUI(WebUI &webUI)
     row->addButtonGroup(F("btn_colon"), F("Colon"), F("Solid,Blink slowly,Blink fast"), height);
     row->addButtonGroup(F("btn_animation"), F("Animation"), F("Solid,Rainbow,Flash,Fade"), height);
     row->addButtonGroup(F("btn_color"), F("Color"), F("Red,Green,Blue,Random"), height);
-    auto &sensor = row->addSensor(F("light_sensor"), F("Ambient light sensor"), F("&#37;<br><img src=\"http://simpleicon.com/wp-content/uploads/light.svg\" width=\"80\" height=\"80\" style=\"margin-top:10px\">"));
+    auto &sensor = row->addSensor(FSPGM(light_sensor), F("Ambient light sensor"), F("&#37;<br><img src=\"http://simpleicon.com/wp-content/uploads/light.svg\" width=\"80\" height=\"80\" style=\"margin-top:10px\">"));
     sensor.add(JJ(height), height);
 }
 
@@ -381,13 +381,13 @@ void ClockPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form
 #endif
 
     form.add<uint8_t>(F("temp_75"), _H_STRUCT_VALUE(Config().clock, temp_75))
-        ->setFormUI((new FormUI(FormUI::TEXT, F("Temperature to reduce brightness to 75%")))->setSuffix(F("°C")));
+        ->setFormUI((new FormUI(FormUI::TEXT, F("Temperature to reduce brightness to 75%")))->setSuffix(FSPGM(_degreeC)));
 
     form.add<uint8_t>(F("temp_50"), _H_STRUCT_VALUE(Config().clock, temp_50))
-        ->setFormUI((new FormUI(FormUI::TEXT, F("Temperature to reduce brightness to 50%")))->setSuffix(F("°C")));
+        ->setFormUI((new FormUI(FormUI::TEXT, F("Temperature to reduce brightness to 50%")))->setSuffix(FSPGM(_degreeC)));
 
     form.add<uint8_t>(F("temp_prot"), _H_STRUCT_VALUE(Config().clock, temp_prot))
-        ->setFormUI((new FormUI(FormUI::TEXT, F("Over temperature protection")))->setSuffix(F("°C")));
+        ->setFormUI((new FormUI(FormUI::TEXT, F("Over temperature protection")))->setSuffix(FSPGM(_degreeC)));
 
     form.finalize();
 }
@@ -415,8 +415,8 @@ MQTTComponent::MQTTAutoDiscoveryPtr ClockPlugin::nextAutoDiscovery(MQTTAutoDisco
 #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
         case 1: {
             MQTTComponentHelper component(MQTTComponent::ComponentTypeEnum_t::SENSOR);
-            discovery = component.createAutoDiscovery(F("light_sensor"), format);
-            discovery->addStateTopic(MQTTClient::formatTopic(MQTTClient::NO_ENUM, F("/light_sensor")));
+            discovery = component.createAutoDiscovery(FSPGM(light_sensor), format);
+            discovery->addStateTopic(MQTTClient::formatTopic(FSPGM(light_sensor), nullptr));
             discovery->addUnitOfMeasurement(String('%'));
         }
         break;
@@ -446,7 +446,7 @@ void ClockPlugin::onMessage(MQTTClient *client, char *topic, char *payload, size
         _brightness = atoi(payload);
         _setBrightness();
     }
-    else if (strstr_P(topic, PSMG(_color_set))) {
+    else if (strstr_P(topic, SPGM(_color_set))) {
         char *r, *g, *b;
         const char *comma = ",";
         r = strtok(payload, comma);
@@ -506,7 +506,7 @@ void ClockPlugin::getValues(JsonArray &array)
 
 #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
     obj = &array.addObject(3);
-    obj->add(JJ(id), F("light_sensor"));
+    obj->add(JJ(id), FSPGM(light_sensor));
     obj->add(JJ(value), JsonNumber(_autoBrightness == -1 ? NAN : _autoBrightnessValue * 100, 0));
     obj->add(JJ(state), _autoBrightness == -1 ? false : true);
 #endif
@@ -519,14 +519,11 @@ void ClockPlugin::publishState(MQTTClient *client)
         client = MQTTClient::getClient();
     }
     if (client && client->isConnected()) {
-        String topic = MQTTClient::formatTopic(MQTTClient::NO_ENUM, F("/"));
-
-        client->publish(topic + F("state"), _qos, 1, String(_color ? 1 : 0));
-        client->publish(topic + F("brightness/state"), _qos, 1, String(_brightness));
-        PrintString str(F("%u,%u,%u"), _colors[0], _colors[1], _colors[2]);
-        client->publish(topic + F("color/state"), _qos, 1, str);
+        client->publish(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(_state)), _qos, true, String(_color ? 1 : 0));
+        client->publish(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(_brightness_state)), _qos, true, String(_brightness));
+        client->publish(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(_color_state)), _qos, true, PrintString(F("%u,%u,%u"), _colors[0], _colors[1], _colors[2]));
 #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
-        client->publish(MQTTClient::formatTopic(MQTTClient::NO_ENUM, F("/light_sensor")), _qos, 1, _autoBrightness == -1 ? String(F("Off")) : String((int)(_autoBrightnessValue * 100)));
+        client->publish(MQTTClient::formatTopic(FSPGM(light_sensor), nullptr), _qos, true, _autoBrightness == -1 ? String(FSPGM(Off)) : String((int)(_autoBrightnessValue * 100)));
 #endif
     }
 

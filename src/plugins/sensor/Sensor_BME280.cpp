@@ -25,12 +25,12 @@ MQTTComponent::MQTTAutoDiscoveryPtr Sensor_BME280::nextAutoDiscovery(MQTTAutoDis
         return nullptr;
     }
     auto discovery = new MQTTAutoDiscovery();
-    String topic = MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(__s_), _getId().c_str());
+    String topic = MQTTClient::formatTopic(_getId(), nullptr);
     switch(num) {
         case 0:
             discovery->create(this, _getId(FSPGM(temperature, "temperature")), format);
             discovery->addStateTopic(topic);
-            discovery->addUnitOfMeasurement(F("\u00b0C"));
+            discovery->addUnitOfMeasurement(FSPGM(_degreeC));
             discovery->addValueTemplate(FSPGM(temperature));
             break;
         case 1:
@@ -82,7 +82,7 @@ void Sensor_BME280::createWebUI(WebUI &webUI, WebUIRow **row)
     // if ((*row)->size() > 1) {
         // *row = &webUI.addRow();
     // }
-    (*row)->addSensor(_getId(FSPGM(temperature)), _name + F(" Temperature"), F("\u00b0C"));
+    (*row)->addSensor(_getId(FSPGM(temperature)), _name + F(" Temperature"), FSPGM(_degreeC));
     (*row)->addSensor(_getId(FSPGM(humidity)), _name + F(" Humidity"), '%');
     (*row)->addSensor(_getId(FSPGM(pressure)), _name + F(" Pressure"), FSPGM(hPa));
 }
@@ -121,7 +121,7 @@ void Sensor_BME280::publishState(MQTTClient *client)
         json.printTo(str);
 
         auto _qos = MQTTClient::getDefaultQos();
-        client->publish(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(__s_), _getId().c_str()), _qos, 1, str);
+        client->publish(MQTTClient::formatTopic(_getId(), nullptr), _qos, true, str);
     }
 }
 

@@ -544,7 +544,7 @@
         "default": "switch"
     },
     "strftime_date_time_zone": {
-        "use_counter": 3,
+        "use_counter": 2,
         "default": "%FT%T %Z"
     },
     "ping_monitor_response": {
@@ -576,15 +576,15 @@
         "default": "On"
     },
     "Off": {
-        "use_counter": 2,
+        "use_counter": 3,
         "default": "Off"
     },
     "mqtt_switch_state": {
-        "use_counter": 2,
+        "use_counter": 0,
         "default": "/switch/state"
     },
     "mqtt_switch_set": {
-        "use_counter": 3,
+        "use_counter": 0,
         "default": "/switch/set"
     },
     "iot_switch_states_file": {
@@ -1092,7 +1092,7 @@
         "default": "hPa"
     },
     "channel__u": {
-        "use_counter": 7,
+        "use_counter": 14,
         "default": "channel_%u"
     },
     "temperature": {
@@ -1124,11 +1124,11 @@
         "default": "mqtt"
     },
     "_set": {
-        "use_counter": 7,
+        "use_counter": 10,
         "default": "/set"
     },
     "_state": {
-        "use_counter": 5,
+        "use_counter": 8,
         "default": "/state"
     },
     "_brightness_set": {
@@ -1136,15 +1136,15 @@
         "default": "/brightness/set"
     },
     "_brightness_state": {
-        "use_counter": 4,
+        "use_counter": 5,
         "default": "/brightness/state"
     },
     "_color_set": {
-        "use_counter": 3,
+        "use_counter": 4,
         "default": "/color/set"
     },
     "_color_state": {
-        "use_counter": 2,
+        "use_counter": 3,
         "default": "/color/state"
     },
     "main": {
@@ -1158,5 +1158,25 @@
     "brightness": {
         "use_counter": 8,
         "default": "brightness"
+    },
+    "_degreeC": {
+        "use_counter": 7,
+        "default": "\\u00b0C"
+    },
+    "vcc": {
+        "use_counter": 2,
+        "auto": "vcc"
+    },
+    "frequency": {
+        "use_counter": 2,
+        "auto": "frequency"
+    },
+    "Hz": {
+        "use_counter": 2,
+        "default": "Hz"
+    },
+    "light_sensor": {
+        "use_counter": 6,
+        "default": "light_sensor"
     }
 }

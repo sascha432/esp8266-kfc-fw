@@ -35,7 +35,7 @@ MQTTComponent::MQTTAutoDiscoveryPtr Sensor_DS3231::nextAutoDiscovery(MQTTAutoDis
         case 0:
             discovery->create(this, FSPGM(ds3231_id_temp), format);
             discovery->addStateTopic(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(__s_), FSPGM(ds3231_id_temp)));
-            discovery->addUnitOfMeasurement(F("\u00b0C"));
+            discovery->addUnitOfMeasurement(FSPGM(_degreeC));
             break;
         case 1:
             discovery->create(this, FSPGM(ds3231_id_time), format);
@@ -75,7 +75,7 @@ void Sensor_DS3231::getValues(JsonArray &array, bool timer)
 void Sensor_DS3231::createWebUI(WebUI &webUI, WebUIRow **row)
 {
     _debug_println();
-    (*row)->addSensor(FSPGM(ds3231_id_temp), _name, F("\u00b0C"));
+    (*row)->addSensor(FSPGM(ds3231_id_temp), _name, FSPGM(_degreeC));
     auto &clock = (*row)->addSensor(FSPGM(ds3231_id_time), F("RTC Clock"), JsonString());
     clock.add(JJ(head), F("h4"));
 }

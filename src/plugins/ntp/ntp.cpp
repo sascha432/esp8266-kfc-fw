@@ -294,7 +294,8 @@ void NTPPlugin::execConfigTime()
     _debug_printf_P(PSTR("server1=%s,server2=%s,server3=%s, refresh in %u seconds\n"), Config_NTP::getServers(0), Config_NTP::getServers(1), Config_NTP::getServers(2), (unsigned)(_ntpRefreshTimeMillis / 1000));
     configTime(Config_NTP::getPosixTZ(), Config_NTP::getServers(0), Config_NTP::getServers(1), Config_NTP::getServers(2));
 
-
+    // check time every minute
+    // for some reason, NTP does not always update the time even with _ntpRefreshTimeMillis = 15seconds
     plugin._checkTimer.add(60000, true, _checkTimerCallback);
 }
 
@@ -304,21 +305,19 @@ void NTPPlugin::updateNtpCallback()
 
     if (IS_TIME_VALID(time(nullptr))) {
         NTPPlugin::_ntpRefreshTimeMillis = Config_NTP::getNtpRfresh() * 60 * 1000UL;
+        plugin._checkTimer.remove();
     }
 
 #if RTC_SUPPORT
-    // set RTC to local time. when the time is read from the RTC during boot, the timezone is UTC until the NTP update has finished
-    //  + tz.getOffset()
+    // update RTC
     config.setRTC(time(nullptr));
 #endif
-
 
 #if NTP_LOG_TIME_UPDATE
     char buf[32];
     auto now = time(nullptr);
-    auto tm = localtime(&now);
-    strftime_P(buf, sizeof(buf), SPGM(strftime_date_time_zone), tm);
-    Logger_notice(F("NTP: new time: %s"), buf);
+    strftime_P(buf, sizeof(buf), SPGM(strftime_date_time_zone), localtime(&now));
+    Logger_notice(F("NTP time: %s"), buf);
 #endif
 
 #if NTP_HAVE_CALLBACKS
@@ -331,9 +330,11 @@ void NTPPlugin::updateNtpCallback()
 void NTPPlugin::_checkTimerCallback(EventScheduler::TimerPtr timer)
 {
     if (IS_TIME_VALID(time(nullptr))) {
+        _debug_printf_P(PSTR("detaching NTP check timer\n"));
         timer->detach();
     }
     else {
+        _debug_printf_P(PSTR("NTP did not update, calling configTime() again\n"));
         execConfigTime();
     }
 }

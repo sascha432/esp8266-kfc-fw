@@ -7,7 +7,7 @@
 #include <Arduino_compat.h>
 
 #ifndef DEBUG_NTP_CLIENT
-#define DEBUG_NTP_CLIENT                        0
+#define DEBUG_NTP_CLIENT                        1
 #endif
 
 #ifndef NTP_HAVE_CALLBACKS
@@ -15,12 +15,12 @@
 #endif
 
 #ifndef NTP_LOG_TIME_UPDATE
-#define NTP_LOG_TIME_UPDATE                     0
+#define NTP_LOG_TIME_UPDATE                     1
 #endif
 
 #if NTP_HAVE_CALLBACKS
 
-#define NTP_IS_TIMEZONE_UPDATE(now)             (now == -1)
+PROGMEM_STRING_DECL(strftime_date_time_zone);
 
 typedef std::function<void(time_t now)> TimeUpdatedCallback_t;
 

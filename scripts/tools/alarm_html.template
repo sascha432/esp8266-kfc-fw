@@ -5,22 +5,22 @@
                                 <div class="form-group">
                                     <div class="form-row align-items-center">
                                         <div class="col-auto">
-                                            <select name="alarm_$NUM_hour" class="form-control custom-select">
+                                            <select name="a_$NUM_h" id="alarm_$NUM_hour" class="form-control custom-select">
                                                 $HOURS
                                             </select>
                                         </div>
                                         <div class="col-auto"><strong>:</strong></div>
                                         <div class="col-auto">
-                                            <select name="alarm_$NUM_minute" class="form-control custom-select">
+                                            <select name="a_$NUM_m" id="alarm_$NUM_minute" class="form-control custom-select">
                                                 $MINUTES
                                             </select>
                                         </div>
                                         <!--#if IOT_ALARM_FORM_HAS_BUZZER && IOT_ALARM_FORM_HAS_SILENT -->
                                         <div class="col-auto pl-2 pr-2">
-                                            <select name="alarm_$NUM_type" class="form-control custom-select">
-                                                <option value="0"%ALARM_$NUM_TYPE_0%>Both</option>
-                                                <option value="1"%ALARM_$NUM_TYPE_1%>Silent</option>
-                                                <option value="2"%ALARM_$NUM_TYPE_2%>Buzzer</option>
+                                            <select name="a_$NUM_t" id="alarm_$NUM_type" class="form-control custom-select">
+                                                <option value="0"%A_$NUM_T_0%>Both</option>
+                                                <option value="1"%A_$NUM_T_1%>Silent</option>
+                                                <option value="2"%A_$NUM_T_2%>Buzzer</option>
                                             </select>
                                         </div>
                                         <!--#endif-->
@@ -30,20 +30,20 @@
                             </div>
                             <div class="col-12">
                                 <div class="form-group">
-                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">S</button><input type="checkbox" class="hidden" name="_alarm_$NUM_weekday_0" id="_alarm_$NUM_weekday_0" value="1"%ALARM_$NUM_WEEKDAY_0% data-label="HIDDEN"><input type="hidden" name="alarm_$NUM_weekday_0" id="alarm_$NUM_weekday_0"></span>
-                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">M</button><input type="checkbox" class="hidden" name="_alarm_$NUM_weekday_1" id="_alarm_$NUM_weekday_1" value="1"%ALARM_$NUM_WEEKDAY_1% data-label="HIDDEN"><input type="hidden" name="alarm_$NUM_weekday_1" id="alarm_$NUM_weekday_1"></span>
-                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">T</button><input type="checkbox" class="hidden" name="_alarm_$NUM_weekday_2" id="_alarm_$NUM_weekday_2" value="1"%ALARM_$NUM_WEEKDAY_2% data-label="HIDDEN"><input type="hidden" name="alarm_$NUM_weekday_2" id="alarm_$NUM_weekday_2"></span>
-                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">W</button><input type="checkbox" class="hidden" name="_alarm_$NUM_weekday_3" id="_alarm_$NUM_weekday_3" value="1"%ALARM_$NUM_WEEKDAY_3% data-label="HIDDEN"><input type="hidden" name="alarm_$NUM_weekday_3" id="alarm_$NUM_weekday_3"></span>
-                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">T</button><input type="checkbox" class="hidden" name="_alarm_$NUM_weekday_4" id="_alarm_$NUM_weekday_4" value="1"%ALARM_$NUM_WEEKDAY_4% data-label="HIDDEN"><input type="hidden" name="alarm_$NUM_weekday_4" id="alarm_$NUM_weekday_4"></span>
-                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">F</button><input type="checkbox" class="hidden" name="_alarm_$NUM_weekday_5" id="_alarm_$NUM_weekday_5" value="1"%ALARM_$NUM_WEEKDAY_5% data-label="HIDDEN"><input type="hidden" name="alarm_$NUM_weekday_5" id="alarm_$NUM_weekday_5"></span>
-                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">S</button><input type="checkbox" class="hidden" name="_alarm_$NUM_weekday_6" id="_alarm_$NUM_weekday_6" value="1"%ALARM_$NUM_WEEKDAY_6% data-label="HIDDEN"><input type="hidden" name="alarm_$NUM_weekday_6" id="alarm_$NUM_weekday_6"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">S</button><input type="checkbox" class="hidden" name="_alarm_$NUM_weekday_0" id="_alarm_$NUM_weekday_0" value="1"%A_$NUM_W_0% data-label="HIDDEN"><input type="hidden" name="a_$NUM_w_0" id="alarm_$NUM_weekday_0"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">M</button><input type="checkbox" class="hidden" name="_alarm_$NUM_weekday_1" id="_alarm_$NUM_weekday_1" value="1"%A_$NUM_W_1% data-label="HIDDEN"><input type="hidden" name="a_$NUM_w_1" id="alarm_$NUM_weekday_1"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">T</button><input type="checkbox" class="hidden" name="_alarm_$NUM_weekday_2" id="_alarm_$NUM_weekday_2" value="1"%A_$NUM_W_2% data-label="HIDDEN"><input type="hidden" name="a_$NUM_w_2" id="alarm_$NUM_weekday_2"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">W</button><input type="checkbox" class="hidden" name="_alarm_$NUM_weekday_3" id="_alarm_$NUM_weekday_3" value="1"%A_$NUM_W_3% data-label="HIDDEN"><input type="hidden" name="a_$NUM_w_3" id="alarm_$NUM_weekday_3"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">T</button><input type="checkbox" class="hidden" name="_alarm_$NUM_weekday_4" id="_alarm_$NUM_weekday_4" value="1"%A_$NUM_W_4% data-label="HIDDEN"><input type="hidden" name="a_$NUM_w_4" id="alarm_$NUM_weekday_4"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">F</button><input type="checkbox" class="hidden" name="_alarm_$NUM_weekday_5" id="_alarm_$NUM_weekday_5" value="1"%A_$NUM_W_5% data-label="HIDDEN"><input type="hidden" name="a_$NUM_w_5" id="alarm_$NUM_weekday_5"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">S</button><input type="checkbox" class="hidden" name="_alarm_$NUM_weekday_6" id="_alarm_$NUM_weekday_6" value="1"%A_$NUM_W_6% data-label="HIDDEN"><input type="hidden" name="a_$NUM_w_6" id="alarm_$NUM_weekday_6"></span>
                                 </div>
                             </div>
                         </div>
                     </div>
                     <div class="col-lg-3">
                         <div class="alarm-enable-slider m-3">
-                            <input type="range" min="0" max="1" value="%ALARM_$NUM_ENABLED%" id="alarm_$NUM_enabled">
+                            <input type="range" min="0" max="1" value="%A_$NUM_E%" name="a_$NUM_e" id="alarm_$NUM_enabled">
                         </div>
                     </div>
                 </div>

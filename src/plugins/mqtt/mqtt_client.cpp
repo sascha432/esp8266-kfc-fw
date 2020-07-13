@@ -53,7 +53,7 @@ void MQTTClient::deleteInstance()
     }
 }
 
-MQTTClient::MQTTClient() : _client(nullptr), _useNodeId(false), _lastWillPayload('0')
+MQTTClient::MQTTClient() : _client(nullptr), _componentsEntityCount(0), _lastWillPayload('0')
 {
     _debug_println();
 
@@ -138,66 +138,38 @@ void MQTTClient::_setupClient()
 void MQTTClient::registerComponent(MQTTComponentPtr component)
 {
     _debug_printf_P(PSTR("component=%p\n"), component);
-    unregisterComponent(component);
-    _components.emplace_back(component);
-    uint8_t num = 0;
-    for(const auto &component: _components) {
-        component->setNumber(num);
-        num += component->getAutoDiscoveryCount();
+    if (unregisterComponent(component)) {
+        debug_printf_P(PSTR("component registered multiple times: name=%s component=%p\n"), component->getComponentName(), component);
     }
-    _debug_printf_P(PSTR("count=%d\n"), _components.size());
+    _components.emplace_back(component);
+    _componentsEntityCount += component->getAutoDiscoveryCount();
+    _debug_printf_P(PSTR("components=%u entities=%u\n"), _components.size(), _componentsEntityCount);
 }
 
-void MQTTClient::unregisterComponent(MQTTComponentPtr component)
+bool MQTTClient::unregisterComponent(MQTTComponentPtr component)
 {
-    _debug_printf_P(PSTR("component=%p components=%u\n"), component, _components.size());
+    _debug_printf_P(PSTR("component=%p components=%u entities=%u\n"), component, _components.size(), _componentsEntityCount);
+    bool removed = false;
     if (_components.size()) {
         remove(component);
-        _components.erase(std::remove(_components.begin(), _components.end(), component), _components.end());
-    }
-}
-
-bool MQTTClient::hasMultipleComponments() const
-{
-    uint8_t count = 0;
-    for(const auto &component: _components) {
-        count += component->getAutoDiscoveryCount();
-        if (count > 1) {
-            return true;
+        auto iterator = std::remove(_components.begin(), _components.end(), component);
+        if (iterator != _components.end()) {
+            _componentsEntityCount -= component->getAutoDiscoveryCount();
+            _components.erase(iterator, _components.end());
+            removed = true;
         }
     }
-    return false;
-}
-
-void MQTTClient::getComponentName(String &suffix, uint8_t num)
-{
-    if (num != NO_ENUM) {
-        auto mqttClient = getClient();
-        if (mqttClient && mqttClient->hasMultipleComponments()) {
-            suffix += mqttClient->useNodeId() ? '/' : '_';
-            suffix += String(num);
-        }
-    }
-    // _debug_printf_P(PSTR("number=%u,client=%p,multiple=%u,device=%s\n"), num, mqttClient, mqttClient->hasMultipleComponments(), deviceName.c_str());
-}
-
-String MQTTClient::formatTopic(uint8_t num, const __FlashStringHelper *format, ...)
-{
-    String suffix;
-    getComponentName(suffix, num);
-
-    va_list arg;
-    va_start(arg, format);
-    String topic = _formatTopic(suffix, format, arg);
-    va_end(arg);
-    return topic;
+    _debug_printf_P(PSTR("components=%u entities=%u removed=%u\n"), _components.size(), _componentsEntityCount, removed);
+    return removed;
 }
 
 String MQTTClient::formatTopic(const String &componentName, const __FlashStringHelper *format, ...)
 {
     String suffix;
     if (componentName.length()) {
-        suffix = '/';
+        if (componentName.charAt(0) != '/') { // avoid double slash
+            suffix = '/';
+        }
         suffix += componentName;
     }
     va_list arg;
@@ -210,17 +182,17 @@ String MQTTClient::formatTopic(const String &componentName, const __FlashStringH
 String MQTTClient::_formatTopic(const String &suffix, const __FlashStringHelper *format, va_list arg)
 {
     PrintString topic;
-    // if (type == MQTTTopicType::JSON) {
-    //     topic.print('~');
-    // } else {
     topic = Config_MQTT::getTopic();
     topic.replace(F("${device_name}"), config.getDeviceName());
-    // }
     topic.print(suffix);
     if (format) {
-        topic.vprintf_P(RFPSTR(format), arg);
+        auto format_P = RFPSTR(format);
+        // if (pgm_read_byte(format_P) == '/' && String_endsWith(topic, '/')) { // avoid double slash
+        //     format_P++;
+        // }
+        topic.vprintf_P(format_P, arg);
     }
-     _debug_printf_P(PSTR("topic=%s\n"), topic.c_str());
+    _debug_printf_P(PSTR("topic=%s\n"), topic.c_str());
     return topic;
 }
 
@@ -275,10 +247,10 @@ void MQTTClient::setLastWill(char value)
         _lastWillPayload = value;
     }
 
-    _lastWillTopic = formatTopic(MQTTClient::NO_ENUM, FSPGM(mqtt_status_topic));
+    _lastWillTopic = formatTopic(FSPGM(mqtt_status_topic));
     _debug_printf_P(PSTR("topic=%s value=%s\n"), _lastWillTopic.c_str(), _lastWillPayload.c_str());
 #if MQTT_SET_LAST_WILL
-    _client->setWill(_lastWillTopic.c_str(), getDefaultQos(), 1, _lastWillPayload.c_str(), _lastWillPayload.length());
+    _client->setWill(_lastWillTopic.c_str(), getDefaultQos(), true, _lastWillPayload.c_str(), _lastWillPayload.length());
 #endif
 }
 
@@ -319,7 +291,7 @@ String MQTTClient::connectionStatusString()
     }
     message += F("topic ");
 
-    message += formatTopic(NO_ENUM, nullptr);
+    message += formatTopic(emptyString);
 #if MQTT_AUTO_DISCOVERY
     if (config._H_GET(Config().flags).mqttAutoDiscoveryEnabled) {
         message += F(", discovery prefix '");
@@ -338,7 +310,7 @@ void MQTTClient::onConnect(bool sessionPresent)
     _clearQueue();
 
     // set online
-    publish(_lastWillTopic, getDefaultQos(), 1, String(1));
+    publish(_lastWillTopic, getDefaultQos(), true, String(1));
 
     // reset reconnect timer if connection was successful
     setAutoReconnect(MQTT_AUTO_RECONNECT_TIMEOUT);
@@ -717,7 +689,7 @@ void MQTTPlugin::getStatus(Print &output)
     auto client = MQTTClient::getClient();
     if (client) {
         output.print(client->connectionStatusString());
-        output.print(F(HTML_S(br)));
+        output.printf_P(PSTR(HTML_S(br) "%u components, %u entities" HTML_S(br)), client->_components.size(), client->_componentsEntityCount);
         // auto &lwt = mqtt_session->getWill();
         // out.printf_P(PSTR("Last will: %s, qos %d, retain %s, available %s, not available %s" HTML_S(br) HTML_S(br) "Subscribed to:" HTML_S(br)), lwt.topic.c_str(), lwt.qos, lwt.retain ? "yes" : "no", lwt.available.c_str(), lwt.not_available.c_str());
         // for(auto &topic: mqtt_session->getTopics()) {

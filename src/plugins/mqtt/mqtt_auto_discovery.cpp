@@ -18,13 +18,6 @@
 #include <debug_helper_disable.h>
 #endif
 
-void MQTTAutoDiscovery::create(MQTTComponent *component, uint8_t count, MQTTAutoDiscovery::FormatType format)
-{
-    String suffix = config.getDeviceName();
-    MQTTClient::getComponentName(suffix, component->getNumber() + count);
-    _create(component, suffix, format);
-}
-
 void MQTTAutoDiscovery::create(MQTTComponent *component, const String &componentName, MQTTAutoDiscovery::FormatType format)
 {
     String suffix = config.getDeviceName();
@@ -42,7 +35,7 @@ void MQTTAutoDiscovery::_create(MQTTComponent *component, const String &name, MQ
     _format = format;
     _topic = Config_MQTT::getDiscoveryPrefix();
     _topic += '/';
-    _topic += FPSTR(component->getComponentName());
+    _topic += component->getComponentName();
     _topic += '/';
     _topic += name;
     _topic += F("/config");
@@ -51,11 +44,11 @@ void MQTTAutoDiscovery::_create(MQTTComponent *component, const String &name, MQ
     if (_format == FormatType::JSON) {
         _discovery += '{';
 #if MQTT_AUTO_DISCOVERY_USE_ABBREVIATIONS
-        _baseTopic = MQTTClient::formatTopic(MQTTClient::NO_ENUM, nullptr);
+        _baseTopic = MQTTClient::formatTopic(emptyString);
         addParameter(F("~"), _baseTopic);
 #endif
     } else {
-        _discovery += FPSTR(component->getComponentName());
+        _discovery += component->getComponentName();
         _discovery += F(":\n  - ");
     }
     addParameter(FSPGM(name), name);
@@ -64,7 +57,7 @@ void MQTTAutoDiscovery::_create(MQTTComponent *component, const String &name, MQ
         uniqueId = _getUnqiueId(name);
         addParameter(FSPGM(mqtt_unique_id), uniqueId);
     }
-    addParameter(FSPGM(mqtt_availability_topic), MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(mqtt_status_topic)));
+    addParameter(FSPGM(mqtt_availability_topic), MQTTClient::formatTopic(FSPGM(mqtt_status_topic)));
     addParameter(FSPGM(mqtt_payload_available), 1);
     addParameter(FSPGM(mqtt_payload_not_available), 0);
 

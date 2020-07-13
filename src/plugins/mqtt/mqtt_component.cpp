@@ -248,7 +248,7 @@ https://www.home-assistant.io/docs/mqtt/discovery/
 'xy_val_tpl':          'xy_value_template',
 */
 
-MQTTComponent::MQTTComponent(ComponentTypeEnum_t type) : _type(type), _num(MQTTClient::NO_ENUM), _autoDiscoveryNum(0)
+MQTTComponent::MQTTComponent(ComponentTypeEnum_t type) : _type(type), _autoDiscoveryNum(0)
 {
 }
 
@@ -287,23 +287,22 @@ uint8_t MQTTComponent::getAutoDiscoveryNumber()
 
 #endif
 
-PGM_P MQTTComponent::getComponentName()
+const __FlashStringHelper *MQTTComponent::getComponentName() const
 {
     switch(_type) {
         case ComponentTypeEnum_t::LIGHT:
-            return SPGM(mqtt_component_light);
+            return FSPGM(mqtt_component_light);
         case ComponentTypeEnum_t::SENSOR:
-            return SPGM(mqtt_component_sensor);
+            return FSPGM(mqtt_component_sensor);
         case ComponentTypeEnum_t::BINARY_SENSOR:
-            return SPGM(mqtt_component_binary_sensor);
+            return FSPGM(mqtt_component_binary_sensor);
         case ComponentTypeEnum_t::STORAGE:
-            return SPGM(mqtt_component_storage);
+            return FSPGM(mqtt_component_storage);
         case ComponentTypeEnum_t::SWITCH:
         default:
-            return SPGM(mqtt_component_switch);
+            return FSPGM(mqtt_component_switch);
     }
 }
-
 
 MQTTComponentHelper::MQTTComponentHelper(ComponentTypeEnum_t type) : MQTTComponent(type)
 {
@@ -317,13 +316,6 @@ MQTTComponent::MQTTAutoDiscoveryPtr MQTTComponentHelper::nextAutoDiscovery(MQTTA
 uint8_t MQTTComponentHelper::getAutoDiscoveryCount() const
 {
     return 0;
-}
-
-MQTTAutoDiscovery *MQTTComponentHelper::createAutoDiscovery(uint8_t count, MQTTAutoDiscovery::FormatType format)
-{
-    auto discovery = new MQTTAutoDiscovery();
-    discovery->create(this, count, format);
-    return discovery;
 }
 
 MQTTAutoDiscovery *MQTTComponentHelper::createAutoDiscovery(const String &componentName, MQTTAutoDiscovery::FormatType format)

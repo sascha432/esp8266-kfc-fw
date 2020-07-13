@@ -25,7 +25,6 @@ public:
         YAML,
     };
 
-    void create(MQTTComponent *component, uint8_t count, FormatType format);
     void create(MQTTComponent *component, const String &componentName, FormatType format);
 
 public:

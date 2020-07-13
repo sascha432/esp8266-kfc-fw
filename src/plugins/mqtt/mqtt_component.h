@@ -85,18 +85,10 @@ public:
     virtual void onDisconnect(MQTTClient *client, AsyncMqttClientDisconnectReason reason);
     virtual void onMessage(MQTTClient *client, char *topic, char *payload, size_t len);
 
-    PGM_P getComponentName();
-
-    inline void setNumber(uint8_t num) {
-        _num = num;
-    }
-    inline uint8_t getNumber() {
-        return _num;
-    }
+    const __FlashStringHelper *getComponentName() const;
 
 private:
     ComponentTypeEnum_t _type;
-    uint8_t _num;
 #if MQTT_AUTO_DISCOVERY
     friend class MQTTAutoDiscoveryQueue;
     uint8_t _autoDiscoveryNum;
@@ -107,9 +99,9 @@ private:
 class MQTTComponentHelper : public MQTTComponent {
 public:
     MQTTComponentHelper(ComponentTypeEnum_t type);
+
     virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num) override;
     virtual uint8_t getAutoDiscoveryCount() const override;
 
-    MQTTAutoDiscovery *createAutoDiscovery(uint8_t count, MQTTAutoDiscovery::FormatType format);
     MQTTAutoDiscovery *createAutoDiscovery(const String &componentName, MQTTAutoDiscovery::FormatType format);
 };

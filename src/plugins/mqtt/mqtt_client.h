@@ -65,6 +65,7 @@ DECLARE_ENUM(MQTTQueueEnum_t, uint8_t,
 );
 
 class MQTTPersistantStorageComponent;
+class MQTTPlugin;
 
 class MQTTClient {
 public:
@@ -92,7 +93,7 @@ public:
 
     class MQTTQueue {
     public:
-        MQTTQueue(MQTTQueueType type, MQTTComponent *component, const String &topic, uint8_t qos, uint8_t retain, const String &payload) :
+        MQTTQueue(MQTTQueueType type, MQTTComponent *component, const String &topic, uint8_t qos, bool retain, const String &payload) :
             _type(type),
             _component(component),
             _topic(topic),
@@ -112,7 +113,7 @@ public:
         inline uint8_t getQos() const {
             return _qos;
         }
-        inline uint8_t getRetain() const {
+        inline bool getRetain() const {
             return _retain;
         }
         inline const String &getPayload() const {
@@ -130,8 +131,6 @@ public:
     typedef std::vector<MQTTTopic> MQTTTopicVector;
     typedef std::vector<MQTTQueue> MQTTQueueVector; // this is not used for QoS at the moment
 
-    static constexpr uint8_t NO_ENUM = ~0;
-
     MQTTClient();
     virtual ~MQTTClient();
 
@@ -142,23 +141,11 @@ public:
     void setAutoReconnect(uint32_t timeout);
 
     void registerComponent(MQTTComponentPtr component);
-    void unregisterComponent(MQTTComponentPtr component);
+    bool unregisterComponent(MQTTComponentPtr component);
 
-    bool hasMultipleComponments() const;
-
-    bool useNodeId() const {
-        return _useNodeId;
-    }
-    // false <discovery_prefix>/<component>/<device_name>_<node_id>
-    // true <discovery_prefix>/<component>/<device_name>/<node_id>
-    // it does not affect <discovery_prefix>/<component>/<device_name>/<component_name>
-    void setUseNodeId(bool useNodeId) {
-        _useNodeId = useNodeId;
-    }
-
-    static void getComponentName(String &suffix, uint8_t num = NO_ENUM);
-    static String formatTopic(uint8_t num, const __FlashStringHelper *format, ...);
-    static String formatTopic(const String &componentName, const __FlashStringHelper *format, ...);
+    // <mqtt_topic=home/${device_name}>/component_name><format>
+    // NOTE: there is no slash between the component name and format
+    static String formatTopic(const String &componentName, const __FlashStringHelper *format = nullptr, ...);
 private:
     static String _formatTopic(const String &suffix, const __FlashStringHelper *format, va_list arg);
 
@@ -238,6 +225,7 @@ private:
 private:
     friend MQTTAutoDiscoveryQueue;
     friend MQTTPersistantStorageComponent;
+    friend MQTTPlugin;
 
     size_t getClientSpace() const;
     static bool _isMessageSizeExceeded(size_t len, const char *topic);
@@ -250,7 +238,7 @@ private:
     EventScheduler::Timer _timer;
     uint32_t _autoReconnectTimeout;
     uint16_t _maxMessageSize;
-    uint8_t _useNodeId: 1;
+    uint16_t _componentsEntityCount;
     MQTTComponentVector _components;
     MQTTTopicVector _topics;
     Buffer _buffer;

@@ -55,7 +55,7 @@ void MQTTPersistantStorageComponent::onMessage(MQTTClient *client, char *topic, 
 
 bool MQTTPersistantStorageComponent::_begin(MQTTClient *client)
 {
-    _topic = MQTTClient::formatTopic(MQTTClient::NO_ENUM, F("/persistant_storage"));
+    _topic = MQTTClient::formatTopic(F("/persistant_storage"));
     _debug_printf_P(PSTR("topic=%s\n"), _topic.c_str());
     // if we cannot subscribe, report an error
     for(uint8_t i = 0; i < 3; i++) {

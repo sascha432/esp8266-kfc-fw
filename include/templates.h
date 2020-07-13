@@ -27,6 +27,7 @@ public:
 
     void setForm(Form *form);
     Form *getForm();
+    void releaseForm();
 
     JsonUnnamedObject *getJson();
 

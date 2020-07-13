@@ -373,10 +373,10 @@ void ClockPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form
 
     form.setFormUI(F("Clock Configuration"));
 
-    form.add<bool>(F("time_format_24h"), _H_STRUCT_VALUE(Config().clock, time_format_24h))
+    form.add<bool>(F("timefmt24h"), _H_STRUCT_VALUE(Config().clock, time_format_24h))
         ->setFormUI((new FormUI(FormUI::SELECT, F("Time Format")))->setBoolItems(F("24h"), F("12h")));
 
-    form.add<uint8_t>(F("blink_colon"), _H_STRUCT_VALUE(Config().clock, blink_colon))->setFormUI(
+    form.add<uint8_t>(F("blink_col"), _H_STRUCT_VALUE(Config().clock, blink_colon))->setFormUI(
         (new FormUI(FormUI::SELECT, F("Blink Colon")))
             ->addItems(String(BlinkColonEnum_t::SOLID), F("Solid"))
             ->addItems(String(BlinkColonEnum_t::NORMAL), F("Normal"))
@@ -396,7 +396,7 @@ void ClockPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form
 
     auto solid_color = config._H_GET(Config().clock).solid_color;
     String str = PrintString(F("#%02X%02X%02X"), solid_color[0], solid_color[1], solid_color[2]);
-    form.add(F("solid_color"), str, FormField::InputFieldType::TEXT)
+    form.add(F("solid_col"), str, FormField::InputFieldType::TEXT)
         ->setFormUI(new FormUI(FormUI::TEXT, F("Solid Color")));
     form.addValidator(new FormCallbackValidator([](const String &value, FormField &field) {
         auto ptr = value.c_str();
@@ -433,29 +433,28 @@ void ClockPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form
 
 MQTTComponent::MQTTAutoDiscoveryPtr ClockPlugin::nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num)
 {
-    _debug_printf_P(PSTR("format=%u\n"), format);
     MQTTAutoDiscoveryPtr discovery;
     switch(num) {
         case 0: {
             _qos = MQTTClient::getDefaultQos();
             discovery = new MQTTAutoDiscovery();
             discovery->create(this, F("clock"), format);
-            discovery->addStateTopic(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(_state)));
-            discovery->addCommandTopic(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(_set)));
+            discovery->addStateTopic(MQTTClient::formatTopic(FSPGM(_state)));
+            discovery->addCommandTopic(MQTTClient::formatTopic(FSPGM(_set)));
             discovery->addPayloadOn(1);
             discovery->addPayloadOff(0);
-            discovery->addBrightnessStateTopic(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(_brightness_state)));
-            discovery->addBrightnessCommandTopic(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(_brightness_set)));
+            discovery->addBrightnessStateTopic(MQTTClient::formatTopic(FSPGM(_brightness_state)));
+            discovery->addBrightnessCommandTopic(MQTTClient::formatTopic(FSPGM(_brightness_set)));
             discovery->addBrightnessScale(SevenSegmentDisplay::MAX_BRIGHTNESS);
-            discovery->addRGBStateTopic(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(_color_state)));
-            discovery->addRGBCommandTopic(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(_color_set)));
+            discovery->addRGBStateTopic(MQTTClient::formatTopic(FSPGM(_color_state)));
+            discovery->addRGBCommandTopic(MQTTClient::formatTopic(FSPGM(_color_set)));
         }
         break;
 #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
         case 1: {
             MQTTComponentHelper component(MQTTComponent::ComponentTypeEnum_t::SENSOR);
             discovery = component.createAutoDiscovery(FSPGM(light_sensor), format);
-            discovery->addStateTopic(MQTTClient::formatTopic(FSPGM(light_sensor), nullptr));
+            discovery->addStateTopic(MQTTClient::formatTopic(FSPGM(light_sensor)));
             discovery->addUnitOfMeasurement(String('%'));
         }
         break;
@@ -470,9 +469,9 @@ MQTTComponent::MQTTAutoDiscoveryPtr ClockPlugin::nextAutoDiscovery(MQTTAutoDisco
 void ClockPlugin::onConnect(MQTTClient *client)
 {
     _debug_println();
-    client->subscribe(this, MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(_set)), _qos);
-    client->subscribe(this, MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(_color_set)), _qos);
-    client->subscribe(this, MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(_brightness_set)), _qos);
+    client->subscribe(this, MQTTClient::formatTopic(FSPGM(_set)), _qos);
+    client->subscribe(this, MQTTClient::formatTopic(FSPGM(_color_set)), _qos);
+    client->subscribe(this, MQTTClient::formatTopic(FSPGM(_brightness_set)), _qos);
 
     publishState(client);
 }
@@ -521,8 +520,6 @@ void ClockPlugin::_setColor()
 
 void ClockPlugin::getValues(JsonArray &array)
 {
-    _debug_println();
-
     auto obj = &array.addObject(3);
     obj->add(JJ(id), F("btn_colon"));
     obj->add(JJ(state), true);
@@ -558,9 +555,9 @@ void ClockPlugin::publishState(MQTTClient *client)
         client = MQTTClient::getClient();
     }
     if (client && client->isConnected()) {
-        client->publish(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(_state)), _qos, true, String(_color ? 1 : 0));
-        client->publish(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(_brightness_state)), _qos, true, String(_brightness));
-        client->publish(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(_color_state)), _qos, true, PrintString(F("%u,%u,%u"), _colors[0], _colors[1], _colors[2]));
+        client->publish(MQTTClient::formatTopic(FSPGM(_state)), _qos, true, String(_color ? 1 : 0));
+        client->publish(MQTTClient::formatTopic(FSPGM(_brightness_state)), _qos, true, String(_brightness));
+        client->publish(MQTTClient::formatTopic(FSPGM(_color_state)), _qos, true, PrintString(F("%u,%u,%u"), _colors[0], _colors[1], _colors[2]));
 #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
         client->publish(MQTTClient::formatTopic(FSPGM(light_sensor), nullptr), _qos, true, _autoBrightness == -1 ? String(FSPGM(Off)) : String(_autoBrightnessValue * 100, 0));
 #endif
@@ -579,10 +576,7 @@ void ClockPlugin::loop()
 
 void ClockPlugin::ntpCallback(time_t now)
 {
-    _debug_printf_P(PSTR("ntp_update=%u\n"), NTP_IS_TIMEZONE_UPDATE(now));
-    if (NTP_IS_TIMEZONE_UPDATE(now)) {
-        plugin.setSyncing(false);
-    }
+    plugin.setSyncing(false);
 }
 
 void ClockPlugin::enable(bool enable)

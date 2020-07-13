@@ -13,13 +13,13 @@ alarm_html_new = path.join(path.dirname(path.realpath(__file__)), '../../Resourc
 def minutes(num):
     s = ''
     for i in range(0, 60):
-        s += '<option value="%u"%%A_%u_M_%u%%>%02u</option>' % (i, num, i, i)
+        s += '<option value="%u"%%A%uM_%u%%>%02u</option>' % (i, num, i, i)
     return s
 
 def hours(num):
     s = ''
     for i in range(0, 24):
-        s += '<option value="%u"%%A_%u_H_%u%%>%02u</option>' % (i, num, i, i)
+        s += '<option value="%u"%%A%uH_%u%%>%02u</option>' % (i, num, i, i)
     return s
 
 alarm_form = ''

@@ -417,49 +417,63 @@ typedef struct {
 } Config;
 
 #define _H_IP_VALUE(name, ...) \
-    IPAddress(config._H_GET_IP(name)), [__VA_ARGS__](const IPAddress &addr, FormField &, bool) { \
-        config._H_SET_IP(name, addr); \
+    IPAddress(config._H_GET_IP(name)), [__VA_ARGS__](const IPAddress &addr, FormField &, bool store) { \
+        if (store) { \
+            config._H_SET_IP(name, addr); \
+        } \
         return false; \
     }
 
 #define _H_STR_VALUE(name, ...) \
-    String(config._H_STR(name)), [__VA_ARGS__](const String &str, FormField &, bool) { \
-        config._H_SET_STR(name, str); \
+    String(config._H_STR(name)), [__VA_ARGS__](const String &str, FormField &, bool store) { \
+        if (store) { \
+            config._H_SET_STR(name, str); \
+        } \
         return false; \
     }
 
 #define _H_STRUCT_IP_VALUE(name, field, ...) \
-    IPAddress(config._H_GET(name).field), [__VA_ARGS__](const IPAddress &value, FormField &, bool) { \
-        auto &data = config._H_W_GET(name); \
-        data.field = value; \
+    IPAddress(config._H_GET(name).field), [__VA_ARGS__](const IPAddress &value, FormField &, bool store) { \
+        if (store) { \
+            auto &data = config._H_W_GET(name); \
+            data.field = value; \
+        } \
         return false; \
     }
 
 #define _H_STRUCT_VALUE(name, field, ...) \
-    config._H_GET(name).field, [__VA_ARGS__](const decltype(name.field) &value, FormField &, bool) { \
-        auto &data = config._H_W_GET(name); \
-        data.field = value; \
+    config._H_GET(name).field, [__VA_ARGS__](const decltype(name.field) &value, FormField &, bool store) { \
+        if (store) { \
+            auto &data = config._H_W_GET(name); \
+            data.field = value; \
+        } \
         return false; \
     }
 
 #define _H_STRUCT_VALUE_TYPE(name, field, type, ...) \
-    config._H_GET(name).field, [__VA_ARGS__](const type &value, FormField &, bool) { \
-        auto &data = config._H_W_GET(name); \
-        data.field = value; \
+    config._H_GET(name).field, [__VA_ARGS__](const type &value, FormField &, bool store) { \
+        if (store) { \
+            auto &data = config._H_W_GET(name); \
+            data.field = value; \
+        } \
         return false; \
     }
 
 #define _H_FLAGS_BOOL_VALUE(name, field, ...) \
-    config._H_GET(name).field, [__VA_ARGS__](bool &value, FormField &, bool) { \
-        auto &data = config._H_W_GET(name); \
-        data.field = value; \
+    config._H_GET(name).field, [__VA_ARGS__](bool &value, FormField &, bool store) { \
+        if (store) { \
+            auto &data = config._H_W_GET(name); \
+            data.field = value; \
+        } \
         return false; \
     }
 
 #define _H_FLAGS_VALUE(name, field, ...) \
-    config._H_GET(name).field, [__VA_ARGS__](uint8_t &value, FormField &, bool) { \
-        auto &data = config._H_W_GET(name); \
-        data.field = value; \
+    config._H_GET(name).field, [__VA_ARGS__](uint8_t &value, FormField &, bool store) { \
+        if (store) { \
+            auto &data = config._H_W_GET(name); \
+            data.field = value; \
+        } \
         return false; \
     }
 

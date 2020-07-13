@@ -26,52 +26,62 @@ void AlarmForm::reconfigure(PGM_P source)
     _debug_println();
 }
 
+using Alarm = KFCConfigurationClasses::Plugins::Alarm;
+
+static bool form_enabled_callback(bool value, FormField &field, bool store)
+{
+    uint8_t alarmNum = (field.getName().charAt(1) - '0');
+    _debug_printf_P(PSTR("name=%s alarm=%u store=%u value=%u\n"), field.getName().c_str(), alarmNum, store, value);
+    if (store) {
+        auto &cfg = Alarm::getWriteableConfig();
+        Alarm::setEnabled(cfg.alarms[alarmNum], value);
+    }
+    return false;
+}
+
+static bool form_weekday_callback(bool value, FormField &field, bool store)
+{
+    uint8_t alarmNum = (field.getName().charAt(1) - '0');
+    uint8_t weekdayNum = (field.getName().charAt(3) - '0');
+    _debug_printf_P(PSTR("name=%s alarm=%u weekday=%u store=%u value=%u\n"), field.getName().c_str(), alarmNum, weekdayNum, store, value);
+    if (store) {
+        auto &cfg = Alarm::getWriteableConfig();
+        auto &weekdays = cfg.alarms[alarmNum].time.week_day.week_days;
+        if (value) {
+            weekdays |= _BV(weekdayNum);
+        }
+        else {
+            weekdays &= ~_BV(weekdayNum);
+        }
+    }
+    return false;
+}
+
 void AlarmForm::createConfigureForm(AsyncWebServerRequest *request, Form &form)
 {
-    using Alarm = KFCConfigurationClasses::Plugins::Alarm;
-    auto cfg = &Alarm::getWriteableConfig();
+// TODO runs out of memory
+// 14368 !!!
+// short names: 10608
+// no lambdas 9408
+
+    size_t heap = ESP.getFreeHeap();
+    auto &cfg = Alarm::getWriteableConfig();
 
     for(uint8_t i = 0; i < Alarm::MAX_ALARMS; i++) {
-        String prefix = PrintString(F("alarm_%u_"), i);
-        auto alarm = &cfg->alarms[i];
+        String prefix = 'a' + String(i);
+        auto &alarm = cfg.alarms[i];
 
-        _debug_printf_P(PSTR("%s: %u\n"), String(prefix + FSPGM(enabled)).c_str(), Alarm::isEnabled(*alarm));
+        form.add<bool>(prefix + String('e'), Alarm::isEnabled(alarm), form_enabled_callback);
 
-        form.add<bool>(prefix + FSPGM(enabled), Alarm::isEnabled(*alarm), [alarm](bool value, FormField &, bool) {
-            Alarm::setEnabled(*alarm, value);
-            return false;
-        });
-
-        form.add<uint8_t>(prefix + F("hour"), &alarm->time.hour);
-        form.add<uint8_t>(prefix + F("minute"), &alarm->time.minute);
-
-        form.add<uint8_t>(prefix + F("type"), &alarm->mode);
-
-// TODO runs out of memory
-// D00025711 (alarm_form.cpp:38<16992> createConfigureForm): alarm_0_enabled: 0
-// D00025719 (alarm_form.cpp:38<15544> createConfigureForm): alarm_1_enabled: 0
-// D00025726 (alarm_form.cpp:38<14104> createConfigureForm): alarm_2_enabled: 0
-// D00025732 (alarm_form.cpp:38<12600> createConfigureForm): alarm_3_enabled: 0
-// D00025739 (alarm_form.cpp:38<11224> createConfigureForm): alarm_4_enabled: 0
-// D00025746 (alarm_form.cpp:38<9848> createConfigureForm): alarm_5_enabled: 0
-// D00025752 (alarm_form.cpp:38<8216> createConfigureForm): alarm_6_enabled: 0
-// D00025759 (alarm_form.cpp:38<6840> createConfigureForm): alarm_7_enabled: 0
-// D00025766 (alarm_form.cpp:38<5464> createConfigureForm): alarm_8_enabled: 0
-// D00025772 (alarm_form.cpp:38<4088> createConfigureForm): alarm_9_enabled: 0
+        form.add<uint8_t>(prefix + String('h'), &alarm.time.hour);
+        form.add<uint8_t>(prefix + String('m'), &alarm.time.minute);
+        form.add<uint8_t>(prefix + String('t'), &alarm.mode);
 
         for(uint8_t j = 0; j < 7; j++) {
-            form.add<bool>(prefix + PrintString(F("weekday_%u"), j), alarm->time.week_day.week_days & _BV(j), [alarm, j](bool value, FormField &, bool) {
-                if (value) {
-                    alarm->time.week_day.week_days |= _BV(j);
-                }
-                else {
-                    alarm->time.week_day.week_days &= ~_BV(j);
-                }
-                return false;
-            }, FormField::InputFieldType::CHECK);
+            form.add<bool>(prefix + String('w') + String(j), alarm.time.week_day.week_days & _BV(j), form_weekday_callback, FormField::InputFieldType::CHECK);
         }
-
     }
 
     form.finalize();
+    _debug_printf_P(PSTR("heap %u\n"), heap-ESP.getFreeHeap());
 }

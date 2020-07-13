@@ -63,6 +63,16 @@ public:
         return write(reinterpret_cast<const uint8_t *>(buf), size);
     }
 
+#if defined(ESP8266)
+    static constexpr size_t getSSOSIZE() {
+        return String::SSOSIZE;
+    }
+#else
+    static constexpr size_t getSSOSIZE() {
+        return 0xffff;
+    }
+#endif
+
 private:
     size_t _setLength(char *buf, size_t size, size_t len);
 };

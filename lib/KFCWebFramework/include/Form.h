@@ -36,7 +36,16 @@ public:
 
     int add(FormField *field);
     FormField *_add(FormField *field);
+
+    //
+    // NOTE: variable names that fit into the String's SSOSIZE saves a lot memory (ESP8266 length < 11)
+    //
+
     FormField *add(const String &name, const String &value, FormField::InputFieldType type = FormField::InputFieldType::TEXT);
+
+    //
+    // NOTE: lambda functions as callbacks requires memory. use a static function whenever possible
+    //
 
     FormField *add(const String &name, const String &value, FormStringObject::SetterCallback_t setter = nullptr, FormField::InputFieldType type = FormField::InputFieldType::TEXT);
     FormField *add(const String &name, String *value, FormField::InputFieldType type = FormField::InputFieldType::TEXT);

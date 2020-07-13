@@ -9,7 +9,7 @@
 
 class FormStringObject : public FormField {
 public:
-    typedef std::function<bool(const String &, FormField &, bool)> SetterCallback_t;
+    typedef std::function<bool(const String &strValue, FormField &field, bool store)> SetterCallback_t;
 
     FormStringObject(const String &name, const String &str, SetterCallback_t setter = nullptr, FormField::InputFieldType type = FormField::InputFieldType::TEXT) : FormField(name, str, type), _setter(setter), _str(nullptr) {
     }

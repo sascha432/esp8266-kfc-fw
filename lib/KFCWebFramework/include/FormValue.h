@@ -12,7 +12,7 @@ template <typename T>
 class FormValue : public FormField {
 public:
     // isSetter indicates to translate the variable to user format. return false if the getter callback is not supported
-    typedef std::function<bool(T &, FormField&, bool isSetter)> GetterSetterCallback_t;
+    typedef std::function<bool(T &value, FormField &field, bool store)> GetterSetterCallback_t;
 
     FormValue(const String& name, T value, GetterSetterCallback_t callback = nullptr, FormField::InputFieldType type = FormField::InputFieldType::SELECT) : FormField(name), _value(nullptr), _callback(callback) {
         setType(type);

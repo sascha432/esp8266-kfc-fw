@@ -8,6 +8,11 @@
 
 FormField::FormField(const String &name, const String &value, InputFieldType type) : _name(name), _value(value), _type(type), _formUI(nullptr), _form(nullptr), _hasChanged(false)
 {
+#if DEBUG && defined(ESP8266)
+    if (name.length() >= PrintString::getSSOSIZE()) {
+        debug_printf_P(PSTR("name '%s' exceeds SSOSIZE: %u >= %u. consider reducing the length to save memory\n"), name.c_str(), name.length(), PrintString::getSSOSIZE());
+    }
+#endif
     // _notSet = false;
     // _optional = false;
 }

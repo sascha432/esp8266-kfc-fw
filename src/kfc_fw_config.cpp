@@ -1453,6 +1453,13 @@ void KFCConfigurationPlugin::setup(PluginSetupMode_t mode)
     if (rtc != 0) {
         struct timeval tv = { (time_t)rtc, 0 };
         settimeofday(&tv, nullptr);
+
+#if NTP_LOG_TIME_UPDATE
+        char buf[32];
+        auto now = time(nullptr);
+        strftime_P(buf, sizeof(buf), SPGM(strftime_date_time_zone), localtime(&now));
+        Logger_notice(F("RTC time: %s"), buf);
+#endif
     }
 #endif
 

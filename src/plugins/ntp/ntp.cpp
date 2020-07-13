@@ -8,6 +8,7 @@
 #include <KFCForms.h>
 #include <PrintHtmlEntitiesString.h>
 #include <EventScheduler.h>
+#include <EventTimer.h>
 #include <LoopFunctions.h>
 #include <WiFiCallbacks.h>
 #include <MicrosTimer.h>
@@ -102,9 +103,13 @@ public:
     // sets the callback and executes configTime()
     static void execConfigTime();
     static void updateNtpCallback();
+    static void _checkTimerCallback(EventScheduler::TimerPtr);
 
 public:
     static uint32_t _ntpRefreshTimeMillis;
+
+private:
+    EventScheduler::Timer _checkTimer;
 };
 
 uint32_t NTPPlugin::_ntpRefreshTimeMillis = 15000;
@@ -238,11 +243,13 @@ void NTPPlugin::setup(PluginSetupMode_t mode)
 
 void NTPPlugin::reconfigure(PGM_P source)
 {
+    _checkTimer.remove();
     setup(PLUGIN_SETUP_DEFAULT);
 }
 
 void NTPPlugin::shutdown()
 {
+    _checkTimer.remove();
     settimeofday_cb(nullptr);
 }
 
@@ -286,6 +293,9 @@ void NTPPlugin::execConfigTime()
     _ntpRefreshTimeMillis = 15000;
     _debug_printf_P(PSTR("server1=%s,server2=%s,server3=%s, refresh in %u seconds\n"), Config_NTP::getServers(0), Config_NTP::getServers(1), Config_NTP::getServers(2), (unsigned)(_ntpRefreshTimeMillis / 1000));
     configTime(Config_NTP::getPosixTZ(), Config_NTP::getServers(0), Config_NTP::getServers(1), Config_NTP::getServers(2));
+
+
+    plugin._checkTimer.add(60000, true, _checkTimerCallback);
 }
 
 void NTPPlugin::updateNtpCallback()
@@ -316,6 +326,16 @@ void NTPPlugin::updateNtpCallback()
         callback(time(nullptr));
     }
 #endif
+}
+
+void NTPPlugin::_checkTimerCallback(EventScheduler::TimerPtr timer)
+{
+    if (IS_TIME_VALID(time(nullptr))) {
+        timer->detach();
+    }
+    else {
+        execConfigTime();
+    }
 }
 
 #include <pop_pack.h>

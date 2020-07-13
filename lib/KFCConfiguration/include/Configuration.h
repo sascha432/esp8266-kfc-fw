@@ -271,39 +271,15 @@ public:
             uint16_t length;
             auto ptr = param.getBinary(this, length, offset);
             if (ptr && length != sizeof(T)) {
-                __debugbreak_and_panic_printf_P(PSTR("%s size does not match len=%u size=%u\n"), param.toString().c_str(), length, sizeof(T));
+                debug_printf_P(PSTR("resizing binary blob: %u to %u\n"), length, sizeof(T));
+                maxLength = sizeof(T);
+                // __debugbreak_and_panic_printf_P(PSTR("%s size does not match len=%u size=%u\n"), param.toString().c_str(), length, sizeof(T));
                 //__release(ptr);
                 //ptr = nullptr;
             }
         }
         makeWriteable(param, maxLength);
         return param;
-
-        //_debug_printf_P(PSTR("type=%s, max_len=%u\n"), ConfigurationParameter::getTypeString(param._param.getType()), maxLength);
-        //if (param._param.isString()) {
-        //    auto ptr = param.getString(this, offset);
-        //    _writeAllocate(param, maxLength);
-        //    if (ptr) {
-        //        strncpy(reinterpret_cast<char *>(param._info.data), ptr, maxLength)[maxLength] = 0;
-        //        __release(ptr);
-        //    }
-        //}
-        //else {
-        //    uint16_t length;
-        //    auto ptr = param.getBinary(this, length, offset);
-        //    if (length != sizeof(T)) {
-        //        __release(ptr);
-        //        ptr = nullptr;
-        //    }
-        //    _writeAllocate(param, sizeof(T));
-        //    if (ptr) {
-        //        memcpy(param._info.data, ptr, sizeof(T));
-        //        __release(ptr);
-        //    }
-        //}
-        //param._info.dirty = 1;
-        //_debug_printf_P(PSTR("param size=%u len=%u\n"), param._info.size, param.getLength());
-        //return param;
     }
 
     template <typename T>

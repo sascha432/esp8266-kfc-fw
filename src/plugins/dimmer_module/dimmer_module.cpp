@@ -306,7 +306,8 @@ void Driver_DimmerModule::setChannel(uint8_t channel, int16_t level, float time)
 
 void Driver_DimmerModule::_onReceive(size_t length)
 {
-   if (_wire.peek() == DIMMER_FADING_COMPLETE) {
+    _debug_printf_P(PSTR("length=%u type=%02x\n"), length, _wire.peek());
+    if (_wire.peek() == DIMMER_FADING_COMPLETE) {
         _wire.read();
         length--;
 

@@ -175,9 +175,9 @@ void SwitchPlugin::setValue(const String &id, const String &value, bool hasValue
     _debug_printf_P(PSTR("id=%s value=%s hasValue=%u state=%u hasState=%u\n"), id.c_str(), value.c_str(), hasValue, state, hasState);
 
     auto ptr = id.c_str();
-    if (!strncmp_P(ptr, PSTR("switch_"), 7) && hasValue) {
+    if (!strncmp_P(ptr, PSTR("channel_"), 8) && hasValue) {
         bool state = value.toInt();
-        ptr += 7;
+        ptr += 8;
         uint8_t channel = (uint8_t)atoi(ptr);
         if (channel <_pins.size()) {
             _setChannel(channel, state);

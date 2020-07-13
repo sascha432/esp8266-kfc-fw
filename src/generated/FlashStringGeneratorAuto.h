@@ -25,7 +25,6 @@ PROGMEM_STRING_DECL(http);
 // src/web_server.cpp:134
 // src/web_server.cpp:222
 // src/web_server.cpp:367
-// src/web_server.cpp:411
 // src/web_server.cpp:482
 // src/web_server.cpp:780
 // src/plugins/dimmer_module/dimmer_base.cpp:441
@@ -50,8 +49,6 @@ PROGMEM_STRING_DECL(mime_application_json);
 // src/plugins/file_manager/file_manager.cpp:421
 // src/plugins/home_assistant/home_assistant.cpp:768
 PROGMEM_STRING_DECL(OK);
-// include/web_socket.h:138
-PROGMEM_STRING_DECL(Device_is_rebooting);
 // src/at_mode.cpp:1035
 // src/at_mode.cpp:1061
 // src/at_mode.cpp:1062
@@ -68,6 +65,7 @@ PROGMEM_STRING_DECL(on);
 // src/plugins/atomic_sun/atomic_sun_v2.cpp:423
 PROGMEM_STRING_DECL(off);
 // src/at_mode.cpp:1064
+// src/kfc_fw_config.cpp:1377
 // src/plugins.cpp:72
 // src/plugins.cpp:79
 // src/plugins.cpp:80
@@ -76,11 +74,14 @@ PROGMEM_STRING_DECL(off);
 // src/web_server.cpp:950
 PROGMEM_STRING_DECL(yes);
 // src/at_mode.cpp:1064
+// src/kfc_fw_config.cpp:1377
 // src/plugins.cpp:72
 // src/plugins.cpp:79
 // src/plugins.cpp:80
 // src/plugins.cpp:81
 PROGMEM_STRING_DECL(no);
+// include/web_socket.h:138
+PROGMEM_STRING_DECL(Device_is_rebooting);
 // src/kfc_fw_config.cpp:579
 // src/kfc_fw_config_classes.cpp:80
 PROGMEM_STRING_DECL(KFC_Firmware);
@@ -275,7 +276,6 @@ PROGMEM_STRING_DECL(Success);
 PROGMEM_STRING_DECL(rebooting_html);
 // src/web_server.cpp:518
 // src/web_server.cpp:521
-// src/web_server.cpp:525
 PROGMEM_STRING_DECL(image_type);
 // src/web_server.cpp:623
 // src/web_server.cpp:997
@@ -447,9 +447,13 @@ PROGMEM_STRING_DECL(_color_state);
 // src/plugins/home_assistant/home_assistant.cpp:563
 PROGMEM_STRING_DECL(brightness);
 // src/plugins/blinds_ctrl/blinds_ctrl.cpp:147
+// src/plugins/sensor/Sensor_DS3231.cpp:115
+// src/plugins/sensor/Sensor_DS3231.cpp:160
 // src/plugins/weather_station/weather_station.cpp:348
 PROGMEM_STRING_DECL(Yes);
 // src/plugins/blinds_ctrl/blinds_ctrl.cpp:147
+// src/plugins/sensor/Sensor_DS3231.cpp:115
+// src/plugins/sensor/Sensor_DS3231.cpp:160
 // src/plugins/weather_station/weather_station.cpp:348
 PROGMEM_STRING_DECL(No);
 // src/plugins/clock/clock.cpp:163
@@ -462,10 +466,10 @@ PROGMEM_STRING_DECL(light_sensor);
 // src/plugins/clock/clock.cpp:384
 // src/plugins/clock/clock.cpp:387
 // src/plugins/clock/clock.cpp:390
-// src/plugins/sensor/Sensor_DimmerMetrics.cpp:31
-// src/plugins/sensor/Sensor_DimmerMetrics.cpp:36
-// src/plugins/sensor/Sensor_DimmerMetrics.cpp:87
-// src/plugins/sensor/Sensor_DimmerMetrics.cpp:88
+// src/plugins/sensor/Sensor_DS3231.cpp:38
+// src/plugins/sensor/Sensor_DS3231.cpp:78
+// src/plugins/sensor/Sensor_LM75A.cpp:31
+// src/plugins/sensor/Sensor_LM75A.cpp:59
 PROGMEM_STRING_DECL(_degreeC);
 // src/plugins/clock/clock.cpp:526
 // src/plugins/switch/switch.cpp:77
@@ -556,15 +560,23 @@ PROGMEM_STRING_DECL(Disabled);
 // src/plugins/remote/remote.cpp:110
 // src/plugins/remote/remote.cpp:112
 PROGMEM_STRING_DECL(milliseconds);
-// src/plugins/sensor/Sensor_DimmerMetrics.cpp:39
-// src/plugins/sensor/Sensor_DimmerMetrics.cpp:129
-PROGMEM_STRING_DECL(vcc);
-// src/plugins/sensor/Sensor_DimmerMetrics.cpp:44
-// src/plugins/sensor/Sensor_DimmerMetrics.cpp:131
-PROGMEM_STRING_DECL(frequency);
-// src/plugins/sensor/Sensor_DimmerMetrics.cpp:46
-// src/plugins/sensor/Sensor_DimmerMetrics.cpp:86
-PROGMEM_STRING_DECL(Hz);
+// src/plugins/sensor/Sensor_DS3231.cpp:37
+// src/plugins/sensor/Sensor_DS3231.cpp:42
+// src/plugins/sensor/Sensor_DS3231.cpp:46
+// src/plugins/sensor/Sensor_DS3231.cpp:87
+// src/plugins/sensor/Sensor_DS3231.cpp:88
+// src/plugins/sensor/Sensor_DS3231.cpp:89
+// src/plugins/sensor/Sensor_INA219.cpp:48
+// src/plugins/sensor/Sensor_INA219.cpp:53
+// src/plugins/sensor/Sensor_INA219.cpp:58
+// src/plugins/sensor/Sensor_INA219.cpp:63
+// src/plugins/sensor/Sensor_INA219.cpp:120
+// src/plugins/sensor/Sensor_INA219.cpp:121
+// src/plugins/sensor/Sensor_INA219.cpp:122
+// src/plugins/sensor/Sensor_INA219.cpp:123
+// src/plugins/sensor/Sensor_LM75A.cpp:30
+// src/plugins/sensor/Sensor_LM75A.cpp:66
+PROGMEM_STRING_DECL(__s_);
 // src/plugins/switch/switch.cpp:77
 // src/plugins/switch/switch.cpp:89
 PROGMEM_STRING_DECL(On);

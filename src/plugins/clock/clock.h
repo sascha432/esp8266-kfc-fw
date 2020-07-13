@@ -9,10 +9,11 @@
 #include "WebUIComponent.h"
 #include "plugins.h"
 #include "kfc_fw_config.h"
+#include "alarm_form.h"
 #include "./plugins/mqtt/mqtt_component.h"
 
 #ifndef DEBUG_IOT_CLOCK
-#define DEBUG_IOT_CLOCK                 1
+#define DEBUG_IOT_CLOCK                         1
 #endif
 
 #if SPEED_BOOSTER_ENABLED
@@ -71,6 +72,11 @@
 #define IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL      25
 #endif
 
+// show rotating animation while time is invalid
+#ifndef IOT_CLOCK_PIXEL_SYNC_ANIMATION
+#define IOT_CLOCK_PIXEL_SYNC_ANIMATION               0
+#endif
+
 #if IOT_CLOCK_BUTTON_PIN
 #include <Button.h>
 #include <ButtonEventCallback.h>
@@ -78,7 +84,11 @@
 #include <Bounce2.h>
 #endif
 
-class ClockPlugin : public PluginComponent, public MQTTComponent, public WebUIInterface {
+#ifndef IOT_ALARM_FORM_ENABLED
+#define IOT_ALARM_FORM_ENABLED                             0
+#endif
+
+class ClockPlugin : public AlarmFormClass, public MQTTComponent, public WebUIInterface {
 
 // WebUIInterface
 public:
@@ -193,6 +203,23 @@ public:
     }
     virtual void createWebUI(WebUI &webUI) override;
 
+#if IOT_ALARM_FORM_ENABLED
+    virtual bool canHandleForm(const String &formName) const override {
+        debug_printf_P(PSTR("name=%s\n"), formName.c_str());
+        if (String_equals(formName, getName())) {
+            return true;
+        }
+        return AlarmForm::canHandleForm(formName);
+    }
+
+    virtual void createMenu() override {
+        bootstrapMenu.addSubMenu(getFriendlyName(), F("clock.html"), navMenu.config);
+        AlarmForm::createMenu();
+    }
+
+    virtual void triggerAlarm(AlarmType type, uint16_t duration);
+#endif
+
     virtual PGM_P getConfigureForm() const override {
         return getName();
     }
@@ -281,7 +308,7 @@ private:
     using SevenSegmentDisplay = SevenSegmentPixel<uint8_t, IOT_CLOCK_NUM_DIGITS, IOT_CLOCK_NUM_PIXELS, IOT_CLOCK_NUM_COLONS, IOT_CLOCK_NUM_COLON_PIXELS>;
 
     SevenSegmentDisplay _display;
-    std::array<SevenSegmentDisplay::pixel_address_t, IOT_CLOCK_PIXEL_ANIMATION_ORDER_LEN * IOT_CLOCK_NUM_DIGITS> _pixelOrder;
+    std::array<SevenSegmentDisplay::pixel_address_t, IOT_CLOCK_PIXEL_ORDER_LEN * IOT_CLOCK_NUM_DIGITS> _pixelOrder;
 
     Color _color;
     uint32_t _updateTimer;

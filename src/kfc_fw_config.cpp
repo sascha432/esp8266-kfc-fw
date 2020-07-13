@@ -687,6 +687,10 @@ void KFCFWConfiguration::restoreFactorySettings()
     _H_SET(Config().blinds_controller, blinds);
 #endif
 
+#if IOT_ALARM_FORM_ENABLED
+    Plugins::Alarm::defaults();
+#endif
+
 #if IOT_WEATHER_STATION
     Plugins::WeatherStation::defaults();
 #endif

@@ -54,7 +54,7 @@ public:
         return getName();
     }
     virtual bool canHandleForm(const String &formName) const {
-        return (formName.equals(FPSTR(getName())) || formName.equals(F("hass_edit")) || formName.equals(F("hass_actions")));
+        return String_equals(formName, getName()) || String_equals(formName, PSTR("hass_edit")) || String_equals(formName, PSTR("hass_actions"));
     }
     virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
 

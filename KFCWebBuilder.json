@@ -70,6 +70,10 @@
                 "./Resources/html/clock.html",
                 "./Resources/images/light.svg"
             ],
+            "#if !IOT_ALARM_FORM_ENABLED": [
+                "./Resources/html/alarm.html",
+                "./Resources/js/forms/alarm.js"
+            ],
             "#if !IOT_BLINDS_CTRL": "./Resources/html/blinds.html",
             "#if !IOT_SENSOR": "./Resources/html/sensor.html",
             "#if !IOT_WEATHER_STATION": "./Resources/html/weather.html",

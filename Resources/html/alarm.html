@@ -1,0 +1,656 @@
+<!doctype html>
+<html lang="en">
+<!--%%HEAD-->
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" debug_loader="1">
+    <link rel="stylesheet" href="../../lib/KFCWebBuilder/Resources/css/bootstrap.min.css" debug_loader="1">
+    <link rel="stylesheet" href="../css/styles.css" debug_loader="1">
+    <link rel="stylesheet" href="../../lib/KFCWebBuilder/Resources/css/open-iconic-bootstrap.css" debug_loader="1">
+    <link rel="stylesheet" href="../../lib/KFCWebBuilder/Resources/css/rangeslider.css" debug_loader="1">
+    <title>KFC FW</title>
+</head>
+<!--HEAD%%-->
+
+<body>
+    <!--%%NAV-->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <a class="navbar-brand" href="index.html">KFC FW</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        </div>
+    </nav>
+    <!--NAV%%-->
+    <div class="container">
+        <form method="POST" action="alarm.html" id="alarm_settings">
+            <div class="form-group text-center">
+                <h1>Alarm Configuration</h1>
+            </div>
+
+            <div class="form-group pt-3 pb-3 text-center">
+                <h2 class="pt-3 pb-3">%TIME%</h2>
+            </div>
+
+            <div class="row" id="spinner_container">
+                <div class="col-12 text-center">
+                    <img src="images/spinner.gif">
+                </div>
+            </div>
+
+            <div class="hidden" id="alarm_container">
+                <div class="row align-items-center" id="alarm_0_container">
+                    <div class="col-lg-9">
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="form-group">
+                                    <div class="form-row align-items-center">
+                                        <div class="col-auto">
+                                            <select name="alarm_0_hour" class="form-control custom-select">
+                                                <option value="0"%ALARM_0_HOUR_0%>00</option><option value="1"%ALARM_0_HOUR_1%>01</option><option value="2"%ALARM_0_HOUR_2%>02</option><option value="3"%ALARM_0_HOUR_3%>03</option><option value="4"%ALARM_0_HOUR_4%>04</option><option value="5"%ALARM_0_HOUR_5%>05</option><option value="6"%ALARM_0_HOUR_6%>06</option><option value="7"%ALARM_0_HOUR_7%>07</option><option value="8"%ALARM_0_HOUR_8%>08</option><option value="9"%ALARM_0_HOUR_9%>09</option><option value="10"%ALARM_0_HOUR_10%>10</option><option value="11"%ALARM_0_HOUR_11%>11</option><option value="12"%ALARM_0_HOUR_12%>12</option><option value="13"%ALARM_0_HOUR_13%>13</option><option value="14"%ALARM_0_HOUR_14%>14</option><option value="15"%ALARM_0_HOUR_15%>15</option><option value="16"%ALARM_0_HOUR_16%>16</option><option value="17"%ALARM_0_HOUR_17%>17</option><option value="18"%ALARM_0_HOUR_18%>18</option><option value="19"%ALARM_0_HOUR_19%>19</option><option value="20"%ALARM_0_HOUR_20%>20</option><option value="21"%ALARM_0_HOUR_21%>21</option><option value="22"%ALARM_0_HOUR_22%>22</option><option value="23"%ALARM_0_HOUR_23%>23</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-auto"><strong>:</strong></div>
+                                        <div class="col-auto">
+                                            <select name="alarm_0_minute" class="form-control custom-select">
+                                                <option value="0"%ALARM_0_MINUTE_0%>00</option><option value="1"%ALARM_0_MINUTE_1%>01</option><option value="2"%ALARM_0_MINUTE_2%>02</option><option value="3"%ALARM_0_MINUTE_3%>03</option><option value="4"%ALARM_0_MINUTE_4%>04</option><option value="5"%ALARM_0_MINUTE_5%>05</option><option value="6"%ALARM_0_MINUTE_6%>06</option><option value="7"%ALARM_0_MINUTE_7%>07</option><option value="8"%ALARM_0_MINUTE_8%>08</option><option value="9"%ALARM_0_MINUTE_9%>09</option><option value="10"%ALARM_0_MINUTE_10%>10</option><option value="11"%ALARM_0_MINUTE_11%>11</option><option value="12"%ALARM_0_MINUTE_12%>12</option><option value="13"%ALARM_0_MINUTE_13%>13</option><option value="14"%ALARM_0_MINUTE_14%>14</option><option value="15"%ALARM_0_MINUTE_15%>15</option><option value="16"%ALARM_0_MINUTE_16%>16</option><option value="17"%ALARM_0_MINUTE_17%>17</option><option value="18"%ALARM_0_MINUTE_18%>18</option><option value="19"%ALARM_0_MINUTE_19%>19</option><option value="20"%ALARM_0_MINUTE_20%>20</option><option value="21"%ALARM_0_MINUTE_21%>21</option><option value="22"%ALARM_0_MINUTE_22%>22</option><option value="23"%ALARM_0_MINUTE_23%>23</option><option value="24"%ALARM_0_MINUTE_24%>24</option><option value="25"%ALARM_0_MINUTE_25%>25</option><option value="26"%ALARM_0_MINUTE_26%>26</option><option value="27"%ALARM_0_MINUTE_27%>27</option><option value="28"%ALARM_0_MINUTE_28%>28</option><option value="29"%ALARM_0_MINUTE_29%>29</option><option value="30"%ALARM_0_MINUTE_30%>30</option><option value="31"%ALARM_0_MINUTE_31%>31</option><option value="32"%ALARM_0_MINUTE_32%>32</option><option value="33"%ALARM_0_MINUTE_33%>33</option><option value="34"%ALARM_0_MINUTE_34%>34</option><option value="35"%ALARM_0_MINUTE_35%>35</option><option value="36"%ALARM_0_MINUTE_36%>36</option><option value="37"%ALARM_0_MINUTE_37%>37</option><option value="38"%ALARM_0_MINUTE_38%>38</option><option value="39"%ALARM_0_MINUTE_39%>39</option><option value="40"%ALARM_0_MINUTE_40%>40</option><option value="41"%ALARM_0_MINUTE_41%>41</option><option value="42"%ALARM_0_MINUTE_42%>42</option><option value="43"%ALARM_0_MINUTE_43%>43</option><option value="44"%ALARM_0_MINUTE_44%>44</option><option value="45"%ALARM_0_MINUTE_45%>45</option><option value="46"%ALARM_0_MINUTE_46%>46</option><option value="47"%ALARM_0_MINUTE_47%>47</option><option value="48"%ALARM_0_MINUTE_48%>48</option><option value="49"%ALARM_0_MINUTE_49%>49</option><option value="50"%ALARM_0_MINUTE_50%>50</option><option value="51"%ALARM_0_MINUTE_51%>51</option><option value="52"%ALARM_0_MINUTE_52%>52</option><option value="53"%ALARM_0_MINUTE_53%>53</option><option value="54"%ALARM_0_MINUTE_54%>54</option><option value="55"%ALARM_0_MINUTE_55%>55</option><option value="56"%ALARM_0_MINUTE_56%>56</option><option value="57"%ALARM_0_MINUTE_57%>57</option><option value="58"%ALARM_0_MINUTE_58%>58</option><option value="59"%ALARM_0_MINUTE_59%>59</option>
+                                            </select>
+                                        </div>
+                                        <!--#if IOT_ALARM_FORM_HAS_BUZZER && IOT_ALARM_FORM_HAS_SILENT -->
+                                        <div class="col-auto pl-2 pr-2">
+                                            <select name="alarm_0_type" class="form-control custom-select">
+                                                <option value="0"%ALARM_0_TYPE_0%>Both</option>
+                                                <option value="1"%ALARM_0_TYPE_1%>Silent</option>
+                                                <option value="2"%ALARM_0_TYPE_2%>Buzzer</option>
+                                            </select>
+                                        </div>
+                                        <!--#endif-->
+                                        <div class="col-auto hidden" id="alarm_0_repeat"><strong>Repeat Once</strong></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="form-group">
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">S</button><input type="checkbox" class="hidden" name="_alarm_0_weekday_0" id="_alarm_0_weekday_0" value="1"%ALARM_0_WEEKDAY_0% data-label="HIDDEN"><input type="hidden" name="alarm_0_weekday_0" id="alarm_0_weekday_0"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">M</button><input type="checkbox" class="hidden" name="_alarm_0_weekday_1" id="_alarm_0_weekday_1" value="1"%ALARM_0_WEEKDAY_1% data-label="HIDDEN"><input type="hidden" name="alarm_0_weekday_1" id="alarm_0_weekday_1"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">T</button><input type="checkbox" class="hidden" name="_alarm_0_weekday_2" id="_alarm_0_weekday_2" value="1"%ALARM_0_WEEKDAY_2% data-label="HIDDEN"><input type="hidden" name="alarm_0_weekday_2" id="alarm_0_weekday_2"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">W</button><input type="checkbox" class="hidden" name="_alarm_0_weekday_3" id="_alarm_0_weekday_3" value="1"%ALARM_0_WEEKDAY_3% data-label="HIDDEN"><input type="hidden" name="alarm_0_weekday_3" id="alarm_0_weekday_3"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">T</button><input type="checkbox" class="hidden" name="_alarm_0_weekday_4" id="_alarm_0_weekday_4" value="1"%ALARM_0_WEEKDAY_4% data-label="HIDDEN"><input type="hidden" name="alarm_0_weekday_4" id="alarm_0_weekday_4"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">F</button><input type="checkbox" class="hidden" name="_alarm_0_weekday_5" id="_alarm_0_weekday_5" value="1"%ALARM_0_WEEKDAY_5% data-label="HIDDEN"><input type="hidden" name="alarm_0_weekday_5" id="alarm_0_weekday_5"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">S</button><input type="checkbox" class="hidden" name="_alarm_0_weekday_6" id="_alarm_0_weekday_6" value="1"%ALARM_0_WEEKDAY_6% data-label="HIDDEN"><input type="hidden" name="alarm_0_weekday_6" id="alarm_0_weekday_6"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-3">
+                        <div class="alarm-enable-slider m-3">
+                            <input type="range" min="0" max="1" value="%ALARM_0_ENABLED%" id="alarm_0_enabled">
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12"><hr></div>
+                </div>
+                <div class="row align-items-center" id="alarm_1_container">
+                    <div class="col-lg-9">
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="form-group">
+                                    <div class="form-row align-items-center">
+                                        <div class="col-auto">
+                                            <select name="alarm_1_hour" class="form-control custom-select">
+                                                <option value="0"%ALARM_1_HOUR_0%>00</option><option value="1"%ALARM_1_HOUR_1%>01</option><option value="2"%ALARM_1_HOUR_2%>02</option><option value="3"%ALARM_1_HOUR_3%>03</option><option value="4"%ALARM_1_HOUR_4%>04</option><option value="5"%ALARM_1_HOUR_5%>05</option><option value="6"%ALARM_1_HOUR_6%>06</option><option value="7"%ALARM_1_HOUR_7%>07</option><option value="8"%ALARM_1_HOUR_8%>08</option><option value="9"%ALARM_1_HOUR_9%>09</option><option value="10"%ALARM_1_HOUR_10%>10</option><option value="11"%ALARM_1_HOUR_11%>11</option><option value="12"%ALARM_1_HOUR_12%>12</option><option value="13"%ALARM_1_HOUR_13%>13</option><option value="14"%ALARM_1_HOUR_14%>14</option><option value="15"%ALARM_1_HOUR_15%>15</option><option value="16"%ALARM_1_HOUR_16%>16</option><option value="17"%ALARM_1_HOUR_17%>17</option><option value="18"%ALARM_1_HOUR_18%>18</option><option value="19"%ALARM_1_HOUR_19%>19</option><option value="20"%ALARM_1_HOUR_20%>20</option><option value="21"%ALARM_1_HOUR_21%>21</option><option value="22"%ALARM_1_HOUR_22%>22</option><option value="23"%ALARM_1_HOUR_23%>23</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-auto"><strong>:</strong></div>
+                                        <div class="col-auto">
+                                            <select name="alarm_1_minute" class="form-control custom-select">
+                                                <option value="0"%ALARM_1_MINUTE_0%>00</option><option value="1"%ALARM_1_MINUTE_1%>01</option><option value="2"%ALARM_1_MINUTE_2%>02</option><option value="3"%ALARM_1_MINUTE_3%>03</option><option value="4"%ALARM_1_MINUTE_4%>04</option><option value="5"%ALARM_1_MINUTE_5%>05</option><option value="6"%ALARM_1_MINUTE_6%>06</option><option value="7"%ALARM_1_MINUTE_7%>07</option><option value="8"%ALARM_1_MINUTE_8%>08</option><option value="9"%ALARM_1_MINUTE_9%>09</option><option value="10"%ALARM_1_MINUTE_10%>10</option><option value="11"%ALARM_1_MINUTE_11%>11</option><option value="12"%ALARM_1_MINUTE_12%>12</option><option value="13"%ALARM_1_MINUTE_13%>13</option><option value="14"%ALARM_1_MINUTE_14%>14</option><option value="15"%ALARM_1_MINUTE_15%>15</option><option value="16"%ALARM_1_MINUTE_16%>16</option><option value="17"%ALARM_1_MINUTE_17%>17</option><option value="18"%ALARM_1_MINUTE_18%>18</option><option value="19"%ALARM_1_MINUTE_19%>19</option><option value="20"%ALARM_1_MINUTE_20%>20</option><option value="21"%ALARM_1_MINUTE_21%>21</option><option value="22"%ALARM_1_MINUTE_22%>22</option><option value="23"%ALARM_1_MINUTE_23%>23</option><option value="24"%ALARM_1_MINUTE_24%>24</option><option value="25"%ALARM_1_MINUTE_25%>25</option><option value="26"%ALARM_1_MINUTE_26%>26</option><option value="27"%ALARM_1_MINUTE_27%>27</option><option value="28"%ALARM_1_MINUTE_28%>28</option><option value="29"%ALARM_1_MINUTE_29%>29</option><option value="30"%ALARM_1_MINUTE_30%>30</option><option value="31"%ALARM_1_MINUTE_31%>31</option><option value="32"%ALARM_1_MINUTE_32%>32</option><option value="33"%ALARM_1_MINUTE_33%>33</option><option value="34"%ALARM_1_MINUTE_34%>34</option><option value="35"%ALARM_1_MINUTE_35%>35</option><option value="36"%ALARM_1_MINUTE_36%>36</option><option value="37"%ALARM_1_MINUTE_37%>37</option><option value="38"%ALARM_1_MINUTE_38%>38</option><option value="39"%ALARM_1_MINUTE_39%>39</option><option value="40"%ALARM_1_MINUTE_40%>40</option><option value="41"%ALARM_1_MINUTE_41%>41</option><option value="42"%ALARM_1_MINUTE_42%>42</option><option value="43"%ALARM_1_MINUTE_43%>43</option><option value="44"%ALARM_1_MINUTE_44%>44</option><option value="45"%ALARM_1_MINUTE_45%>45</option><option value="46"%ALARM_1_MINUTE_46%>46</option><option value="47"%ALARM_1_MINUTE_47%>47</option><option value="48"%ALARM_1_MINUTE_48%>48</option><option value="49"%ALARM_1_MINUTE_49%>49</option><option value="50"%ALARM_1_MINUTE_50%>50</option><option value="51"%ALARM_1_MINUTE_51%>51</option><option value="52"%ALARM_1_MINUTE_52%>52</option><option value="53"%ALARM_1_MINUTE_53%>53</option><option value="54"%ALARM_1_MINUTE_54%>54</option><option value="55"%ALARM_1_MINUTE_55%>55</option><option value="56"%ALARM_1_MINUTE_56%>56</option><option value="57"%ALARM_1_MINUTE_57%>57</option><option value="58"%ALARM_1_MINUTE_58%>58</option><option value="59"%ALARM_1_MINUTE_59%>59</option>
+                                            </select>
+                                        </div>
+                                        <!--#if IOT_ALARM_FORM_HAS_BUZZER && IOT_ALARM_FORM_HAS_SILENT -->
+                                        <div class="col-auto pl-2 pr-2">
+                                            <select name="alarm_1_type" class="form-control custom-select">
+                                                <option value="0"%ALARM_1_TYPE_0%>Both</option>
+                                                <option value="1"%ALARM_1_TYPE_1%>Silent</option>
+                                                <option value="2"%ALARM_1_TYPE_2%>Buzzer</option>
+                                            </select>
+                                        </div>
+                                        <!--#endif-->
+                                        <div class="col-auto hidden" id="alarm_1_repeat"><strong>Repeat Once</strong></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="form-group">
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">S</button><input type="checkbox" class="hidden" name="_alarm_1_weekday_0" id="_alarm_1_weekday_0" value="1"%ALARM_1_WEEKDAY_0% data-label="HIDDEN"><input type="hidden" name="alarm_1_weekday_0" id="alarm_1_weekday_0"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">M</button><input type="checkbox" class="hidden" name="_alarm_1_weekday_1" id="_alarm_1_weekday_1" value="1"%ALARM_1_WEEKDAY_1% data-label="HIDDEN"><input type="hidden" name="alarm_1_weekday_1" id="alarm_1_weekday_1"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">T</button><input type="checkbox" class="hidden" name="_alarm_1_weekday_2" id="_alarm_1_weekday_2" value="1"%ALARM_1_WEEKDAY_2% data-label="HIDDEN"><input type="hidden" name="alarm_1_weekday_2" id="alarm_1_weekday_2"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">W</button><input type="checkbox" class="hidden" name="_alarm_1_weekday_3" id="_alarm_1_weekday_3" value="1"%ALARM_1_WEEKDAY_3% data-label="HIDDEN"><input type="hidden" name="alarm_1_weekday_3" id="alarm_1_weekday_3"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">T</button><input type="checkbox" class="hidden" name="_alarm_1_weekday_4" id="_alarm_1_weekday_4" value="1"%ALARM_1_WEEKDAY_4% data-label="HIDDEN"><input type="hidden" name="alarm_1_weekday_4" id="alarm_1_weekday_4"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">F</button><input type="checkbox" class="hidden" name="_alarm_1_weekday_5" id="_alarm_1_weekday_5" value="1"%ALARM_1_WEEKDAY_5% data-label="HIDDEN"><input type="hidden" name="alarm_1_weekday_5" id="alarm_1_weekday_5"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">S</button><input type="checkbox" class="hidden" name="_alarm_1_weekday_6" id="_alarm_1_weekday_6" value="1"%ALARM_1_WEEKDAY_6% data-label="HIDDEN"><input type="hidden" name="alarm_1_weekday_6" id="alarm_1_weekday_6"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-3">
+                        <div class="alarm-enable-slider m-3">
+                            <input type="range" min="0" max="1" value="%ALARM_1_ENABLED%" id="alarm_1_enabled">
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12"><hr></div>
+                </div>
+                <div class="row align-items-center" id="alarm_2_container">
+                    <div class="col-lg-9">
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="form-group">
+                                    <div class="form-row align-items-center">
+                                        <div class="col-auto">
+                                            <select name="alarm_2_hour" class="form-control custom-select">
+                                                <option value="0"%ALARM_2_HOUR_0%>00</option><option value="1"%ALARM_2_HOUR_1%>01</option><option value="2"%ALARM_2_HOUR_2%>02</option><option value="3"%ALARM_2_HOUR_3%>03</option><option value="4"%ALARM_2_HOUR_4%>04</option><option value="5"%ALARM_2_HOUR_5%>05</option><option value="6"%ALARM_2_HOUR_6%>06</option><option value="7"%ALARM_2_HOUR_7%>07</option><option value="8"%ALARM_2_HOUR_8%>08</option><option value="9"%ALARM_2_HOUR_9%>09</option><option value="10"%ALARM_2_HOUR_10%>10</option><option value="11"%ALARM_2_HOUR_11%>11</option><option value="12"%ALARM_2_HOUR_12%>12</option><option value="13"%ALARM_2_HOUR_13%>13</option><option value="14"%ALARM_2_HOUR_14%>14</option><option value="15"%ALARM_2_HOUR_15%>15</option><option value="16"%ALARM_2_HOUR_16%>16</option><option value="17"%ALARM_2_HOUR_17%>17</option><option value="18"%ALARM_2_HOUR_18%>18</option><option value="19"%ALARM_2_HOUR_19%>19</option><option value="20"%ALARM_2_HOUR_20%>20</option><option value="21"%ALARM_2_HOUR_21%>21</option><option value="22"%ALARM_2_HOUR_22%>22</option><option value="23"%ALARM_2_HOUR_23%>23</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-auto"><strong>:</strong></div>
+                                        <div class="col-auto">
+                                            <select name="alarm_2_minute" class="form-control custom-select">
+                                                <option value="0"%ALARM_2_MINUTE_0%>00</option><option value="1"%ALARM_2_MINUTE_1%>01</option><option value="2"%ALARM_2_MINUTE_2%>02</option><option value="3"%ALARM_2_MINUTE_3%>03</option><option value="4"%ALARM_2_MINUTE_4%>04</option><option value="5"%ALARM_2_MINUTE_5%>05</option><option value="6"%ALARM_2_MINUTE_6%>06</option><option value="7"%ALARM_2_MINUTE_7%>07</option><option value="8"%ALARM_2_MINUTE_8%>08</option><option value="9"%ALARM_2_MINUTE_9%>09</option><option value="10"%ALARM_2_MINUTE_10%>10</option><option value="11"%ALARM_2_MINUTE_11%>11</option><option value="12"%ALARM_2_MINUTE_12%>12</option><option value="13"%ALARM_2_MINUTE_13%>13</option><option value="14"%ALARM_2_MINUTE_14%>14</option><option value="15"%ALARM_2_MINUTE_15%>15</option><option value="16"%ALARM_2_MINUTE_16%>16</option><option value="17"%ALARM_2_MINUTE_17%>17</option><option value="18"%ALARM_2_MINUTE_18%>18</option><option value="19"%ALARM_2_MINUTE_19%>19</option><option value="20"%ALARM_2_MINUTE_20%>20</option><option value="21"%ALARM_2_MINUTE_21%>21</option><option value="22"%ALARM_2_MINUTE_22%>22</option><option value="23"%ALARM_2_MINUTE_23%>23</option><option value="24"%ALARM_2_MINUTE_24%>24</option><option value="25"%ALARM_2_MINUTE_25%>25</option><option value="26"%ALARM_2_MINUTE_26%>26</option><option value="27"%ALARM_2_MINUTE_27%>27</option><option value="28"%ALARM_2_MINUTE_28%>28</option><option value="29"%ALARM_2_MINUTE_29%>29</option><option value="30"%ALARM_2_MINUTE_30%>30</option><option value="31"%ALARM_2_MINUTE_31%>31</option><option value="32"%ALARM_2_MINUTE_32%>32</option><option value="33"%ALARM_2_MINUTE_33%>33</option><option value="34"%ALARM_2_MINUTE_34%>34</option><option value="35"%ALARM_2_MINUTE_35%>35</option><option value="36"%ALARM_2_MINUTE_36%>36</option><option value="37"%ALARM_2_MINUTE_37%>37</option><option value="38"%ALARM_2_MINUTE_38%>38</option><option value="39"%ALARM_2_MINUTE_39%>39</option><option value="40"%ALARM_2_MINUTE_40%>40</option><option value="41"%ALARM_2_MINUTE_41%>41</option><option value="42"%ALARM_2_MINUTE_42%>42</option><option value="43"%ALARM_2_MINUTE_43%>43</option><option value="44"%ALARM_2_MINUTE_44%>44</option><option value="45"%ALARM_2_MINUTE_45%>45</option><option value="46"%ALARM_2_MINUTE_46%>46</option><option value="47"%ALARM_2_MINUTE_47%>47</option><option value="48"%ALARM_2_MINUTE_48%>48</option><option value="49"%ALARM_2_MINUTE_49%>49</option><option value="50"%ALARM_2_MINUTE_50%>50</option><option value="51"%ALARM_2_MINUTE_51%>51</option><option value="52"%ALARM_2_MINUTE_52%>52</option><option value="53"%ALARM_2_MINUTE_53%>53</option><option value="54"%ALARM_2_MINUTE_54%>54</option><option value="55"%ALARM_2_MINUTE_55%>55</option><option value="56"%ALARM_2_MINUTE_56%>56</option><option value="57"%ALARM_2_MINUTE_57%>57</option><option value="58"%ALARM_2_MINUTE_58%>58</option><option value="59"%ALARM_2_MINUTE_59%>59</option>
+                                            </select>
+                                        </div>
+                                        <!--#if IOT_ALARM_FORM_HAS_BUZZER && IOT_ALARM_FORM_HAS_SILENT -->
+                                        <div class="col-auto pl-2 pr-2">
+                                            <select name="alarm_2_type" class="form-control custom-select">
+                                                <option value="0"%ALARM_2_TYPE_0%>Both</option>
+                                                <option value="1"%ALARM_2_TYPE_1%>Silent</option>
+                                                <option value="2"%ALARM_2_TYPE_2%>Buzzer</option>
+                                            </select>
+                                        </div>
+                                        <!--#endif-->
+                                        <div class="col-auto hidden" id="alarm_2_repeat"><strong>Repeat Once</strong></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="form-group">
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">S</button><input type="checkbox" class="hidden" name="_alarm_2_weekday_0" id="_alarm_2_weekday_0" value="1"%ALARM_2_WEEKDAY_0% data-label="HIDDEN"><input type="hidden" name="alarm_2_weekday_0" id="alarm_2_weekday_0"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">M</button><input type="checkbox" class="hidden" name="_alarm_2_weekday_1" id="_alarm_2_weekday_1" value="1"%ALARM_2_WEEKDAY_1% data-label="HIDDEN"><input type="hidden" name="alarm_2_weekday_1" id="alarm_2_weekday_1"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">T</button><input type="checkbox" class="hidden" name="_alarm_2_weekday_2" id="_alarm_2_weekday_2" value="1"%ALARM_2_WEEKDAY_2% data-label="HIDDEN"><input type="hidden" name="alarm_2_weekday_2" id="alarm_2_weekday_2"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">W</button><input type="checkbox" class="hidden" name="_alarm_2_weekday_3" id="_alarm_2_weekday_3" value="1"%ALARM_2_WEEKDAY_3% data-label="HIDDEN"><input type="hidden" name="alarm_2_weekday_3" id="alarm_2_weekday_3"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">T</button><input type="checkbox" class="hidden" name="_alarm_2_weekday_4" id="_alarm_2_weekday_4" value="1"%ALARM_2_WEEKDAY_4% data-label="HIDDEN"><input type="hidden" name="alarm_2_weekday_4" id="alarm_2_weekday_4"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">F</button><input type="checkbox" class="hidden" name="_alarm_2_weekday_5" id="_alarm_2_weekday_5" value="1"%ALARM_2_WEEKDAY_5% data-label="HIDDEN"><input type="hidden" name="alarm_2_weekday_5" id="alarm_2_weekday_5"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">S</button><input type="checkbox" class="hidden" name="_alarm_2_weekday_6" id="_alarm_2_weekday_6" value="1"%ALARM_2_WEEKDAY_6% data-label="HIDDEN"><input type="hidden" name="alarm_2_weekday_6" id="alarm_2_weekday_6"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-3">
+                        <div class="alarm-enable-slider m-3">
+                            <input type="range" min="0" max="1" value="%ALARM_2_ENABLED%" id="alarm_2_enabled">
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12"><hr></div>
+                </div>
+                <div class="row align-items-center" id="alarm_3_container">
+                    <div class="col-lg-9">
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="form-group">
+                                    <div class="form-row align-items-center">
+                                        <div class="col-auto">
+                                            <select name="alarm_3_hour" class="form-control custom-select">
+                                                <option value="0"%ALARM_3_HOUR_0%>00</option><option value="1"%ALARM_3_HOUR_1%>01</option><option value="2"%ALARM_3_HOUR_2%>02</option><option value="3"%ALARM_3_HOUR_3%>03</option><option value="4"%ALARM_3_HOUR_4%>04</option><option value="5"%ALARM_3_HOUR_5%>05</option><option value="6"%ALARM_3_HOUR_6%>06</option><option value="7"%ALARM_3_HOUR_7%>07</option><option value="8"%ALARM_3_HOUR_8%>08</option><option value="9"%ALARM_3_HOUR_9%>09</option><option value="10"%ALARM_3_HOUR_10%>10</option><option value="11"%ALARM_3_HOUR_11%>11</option><option value="12"%ALARM_3_HOUR_12%>12</option><option value="13"%ALARM_3_HOUR_13%>13</option><option value="14"%ALARM_3_HOUR_14%>14</option><option value="15"%ALARM_3_HOUR_15%>15</option><option value="16"%ALARM_3_HOUR_16%>16</option><option value="17"%ALARM_3_HOUR_17%>17</option><option value="18"%ALARM_3_HOUR_18%>18</option><option value="19"%ALARM_3_HOUR_19%>19</option><option value="20"%ALARM_3_HOUR_20%>20</option><option value="21"%ALARM_3_HOUR_21%>21</option><option value="22"%ALARM_3_HOUR_22%>22</option><option value="23"%ALARM_3_HOUR_23%>23</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-auto"><strong>:</strong></div>
+                                        <div class="col-auto">
+                                            <select name="alarm_3_minute" class="form-control custom-select">
+                                                <option value="0"%ALARM_3_MINUTE_0%>00</option><option value="1"%ALARM_3_MINUTE_1%>01</option><option value="2"%ALARM_3_MINUTE_2%>02</option><option value="3"%ALARM_3_MINUTE_3%>03</option><option value="4"%ALARM_3_MINUTE_4%>04</option><option value="5"%ALARM_3_MINUTE_5%>05</option><option value="6"%ALARM_3_MINUTE_6%>06</option><option value="7"%ALARM_3_MINUTE_7%>07</option><option value="8"%ALARM_3_MINUTE_8%>08</option><option value="9"%ALARM_3_MINUTE_9%>09</option><option value="10"%ALARM_3_MINUTE_10%>10</option><option value="11"%ALARM_3_MINUTE_11%>11</option><option value="12"%ALARM_3_MINUTE_12%>12</option><option value="13"%ALARM_3_MINUTE_13%>13</option><option value="14"%ALARM_3_MINUTE_14%>14</option><option value="15"%ALARM_3_MINUTE_15%>15</option><option value="16"%ALARM_3_MINUTE_16%>16</option><option value="17"%ALARM_3_MINUTE_17%>17</option><option value="18"%ALARM_3_MINUTE_18%>18</option><option value="19"%ALARM_3_MINUTE_19%>19</option><option value="20"%ALARM_3_MINUTE_20%>20</option><option value="21"%ALARM_3_MINUTE_21%>21</option><option value="22"%ALARM_3_MINUTE_22%>22</option><option value="23"%ALARM_3_MINUTE_23%>23</option><option value="24"%ALARM_3_MINUTE_24%>24</option><option value="25"%ALARM_3_MINUTE_25%>25</option><option value="26"%ALARM_3_MINUTE_26%>26</option><option value="27"%ALARM_3_MINUTE_27%>27</option><option value="28"%ALARM_3_MINUTE_28%>28</option><option value="29"%ALARM_3_MINUTE_29%>29</option><option value="30"%ALARM_3_MINUTE_30%>30</option><option value="31"%ALARM_3_MINUTE_31%>31</option><option value="32"%ALARM_3_MINUTE_32%>32</option><option value="33"%ALARM_3_MINUTE_33%>33</option><option value="34"%ALARM_3_MINUTE_34%>34</option><option value="35"%ALARM_3_MINUTE_35%>35</option><option value="36"%ALARM_3_MINUTE_36%>36</option><option value="37"%ALARM_3_MINUTE_37%>37</option><option value="38"%ALARM_3_MINUTE_38%>38</option><option value="39"%ALARM_3_MINUTE_39%>39</option><option value="40"%ALARM_3_MINUTE_40%>40</option><option value="41"%ALARM_3_MINUTE_41%>41</option><option value="42"%ALARM_3_MINUTE_42%>42</option><option value="43"%ALARM_3_MINUTE_43%>43</option><option value="44"%ALARM_3_MINUTE_44%>44</option><option value="45"%ALARM_3_MINUTE_45%>45</option><option value="46"%ALARM_3_MINUTE_46%>46</option><option value="47"%ALARM_3_MINUTE_47%>47</option><option value="48"%ALARM_3_MINUTE_48%>48</option><option value="49"%ALARM_3_MINUTE_49%>49</option><option value="50"%ALARM_3_MINUTE_50%>50</option><option value="51"%ALARM_3_MINUTE_51%>51</option><option value="52"%ALARM_3_MINUTE_52%>52</option><option value="53"%ALARM_3_MINUTE_53%>53</option><option value="54"%ALARM_3_MINUTE_54%>54</option><option value="55"%ALARM_3_MINUTE_55%>55</option><option value="56"%ALARM_3_MINUTE_56%>56</option><option value="57"%ALARM_3_MINUTE_57%>57</option><option value="58"%ALARM_3_MINUTE_58%>58</option><option value="59"%ALARM_3_MINUTE_59%>59</option>
+                                            </select>
+                                        </div>
+                                        <!--#if IOT_ALARM_FORM_HAS_BUZZER && IOT_ALARM_FORM_HAS_SILENT -->
+                                        <div class="col-auto pl-2 pr-2">
+                                            <select name="alarm_3_type" class="form-control custom-select">
+                                                <option value="0"%ALARM_3_TYPE_0%>Both</option>
+                                                <option value="1"%ALARM_3_TYPE_1%>Silent</option>
+                                                <option value="2"%ALARM_3_TYPE_2%>Buzzer</option>
+                                            </select>
+                                        </div>
+                                        <!--#endif-->
+                                        <div class="col-auto hidden" id="alarm_3_repeat"><strong>Repeat Once</strong></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="form-group">
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">S</button><input type="checkbox" class="hidden" name="_alarm_3_weekday_0" id="_alarm_3_weekday_0" value="1"%ALARM_3_WEEKDAY_0% data-label="HIDDEN"><input type="hidden" name="alarm_3_weekday_0" id="alarm_3_weekday_0"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">M</button><input type="checkbox" class="hidden" name="_alarm_3_weekday_1" id="_alarm_3_weekday_1" value="1"%ALARM_3_WEEKDAY_1% data-label="HIDDEN"><input type="hidden" name="alarm_3_weekday_1" id="alarm_3_weekday_1"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">T</button><input type="checkbox" class="hidden" name="_alarm_3_weekday_2" id="_alarm_3_weekday_2" value="1"%ALARM_3_WEEKDAY_2% data-label="HIDDEN"><input type="hidden" name="alarm_3_weekday_2" id="alarm_3_weekday_2"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">W</button><input type="checkbox" class="hidden" name="_alarm_3_weekday_3" id="_alarm_3_weekday_3" value="1"%ALARM_3_WEEKDAY_3% data-label="HIDDEN"><input type="hidden" name="alarm_3_weekday_3" id="alarm_3_weekday_3"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">T</button><input type="checkbox" class="hidden" name="_alarm_3_weekday_4" id="_alarm_3_weekday_4" value="1"%ALARM_3_WEEKDAY_4% data-label="HIDDEN"><input type="hidden" name="alarm_3_weekday_4" id="alarm_3_weekday_4"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">F</button><input type="checkbox" class="hidden" name="_alarm_3_weekday_5" id="_alarm_3_weekday_5" value="1"%ALARM_3_WEEKDAY_5% data-label="HIDDEN"><input type="hidden" name="alarm_3_weekday_5" id="alarm_3_weekday_5"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">S</button><input type="checkbox" class="hidden" name="_alarm_3_weekday_6" id="_alarm_3_weekday_6" value="1"%ALARM_3_WEEKDAY_6% data-label="HIDDEN"><input type="hidden" name="alarm_3_weekday_6" id="alarm_3_weekday_6"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-3">
+                        <div class="alarm-enable-slider m-3">
+                            <input type="range" min="0" max="1" value="%ALARM_3_ENABLED%" id="alarm_3_enabled">
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12"><hr></div>
+                </div>
+                <div class="row align-items-center" id="alarm_4_container">
+                    <div class="col-lg-9">
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="form-group">
+                                    <div class="form-row align-items-center">
+                                        <div class="col-auto">
+                                            <select name="alarm_4_hour" class="form-control custom-select">
+                                                <option value="0"%ALARM_4_HOUR_0%>00</option><option value="1"%ALARM_4_HOUR_1%>01</option><option value="2"%ALARM_4_HOUR_2%>02</option><option value="3"%ALARM_4_HOUR_3%>03</option><option value="4"%ALARM_4_HOUR_4%>04</option><option value="5"%ALARM_4_HOUR_5%>05</option><option value="6"%ALARM_4_HOUR_6%>06</option><option value="7"%ALARM_4_HOUR_7%>07</option><option value="8"%ALARM_4_HOUR_8%>08</option><option value="9"%ALARM_4_HOUR_9%>09</option><option value="10"%ALARM_4_HOUR_10%>10</option><option value="11"%ALARM_4_HOUR_11%>11</option><option value="12"%ALARM_4_HOUR_12%>12</option><option value="13"%ALARM_4_HOUR_13%>13</option><option value="14"%ALARM_4_HOUR_14%>14</option><option value="15"%ALARM_4_HOUR_15%>15</option><option value="16"%ALARM_4_HOUR_16%>16</option><option value="17"%ALARM_4_HOUR_17%>17</option><option value="18"%ALARM_4_HOUR_18%>18</option><option value="19"%ALARM_4_HOUR_19%>19</option><option value="20"%ALARM_4_HOUR_20%>20</option><option value="21"%ALARM_4_HOUR_21%>21</option><option value="22"%ALARM_4_HOUR_22%>22</option><option value="23"%ALARM_4_HOUR_23%>23</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-auto"><strong>:</strong></div>
+                                        <div class="col-auto">
+                                            <select name="alarm_4_minute" class="form-control custom-select">
+                                                <option value="0"%ALARM_4_MINUTE_0%>00</option><option value="1"%ALARM_4_MINUTE_1%>01</option><option value="2"%ALARM_4_MINUTE_2%>02</option><option value="3"%ALARM_4_MINUTE_3%>03</option><option value="4"%ALARM_4_MINUTE_4%>04</option><option value="5"%ALARM_4_MINUTE_5%>05</option><option value="6"%ALARM_4_MINUTE_6%>06</option><option value="7"%ALARM_4_MINUTE_7%>07</option><option value="8"%ALARM_4_MINUTE_8%>08</option><option value="9"%ALARM_4_MINUTE_9%>09</option><option value="10"%ALARM_4_MINUTE_10%>10</option><option value="11"%ALARM_4_MINUTE_11%>11</option><option value="12"%ALARM_4_MINUTE_12%>12</option><option value="13"%ALARM_4_MINUTE_13%>13</option><option value="14"%ALARM_4_MINUTE_14%>14</option><option value="15"%ALARM_4_MINUTE_15%>15</option><option value="16"%ALARM_4_MINUTE_16%>16</option><option value="17"%ALARM_4_MINUTE_17%>17</option><option value="18"%ALARM_4_MINUTE_18%>18</option><option value="19"%ALARM_4_MINUTE_19%>19</option><option value="20"%ALARM_4_MINUTE_20%>20</option><option value="21"%ALARM_4_MINUTE_21%>21</option><option value="22"%ALARM_4_MINUTE_22%>22</option><option value="23"%ALARM_4_MINUTE_23%>23</option><option value="24"%ALARM_4_MINUTE_24%>24</option><option value="25"%ALARM_4_MINUTE_25%>25</option><option value="26"%ALARM_4_MINUTE_26%>26</option><option value="27"%ALARM_4_MINUTE_27%>27</option><option value="28"%ALARM_4_MINUTE_28%>28</option><option value="29"%ALARM_4_MINUTE_29%>29</option><option value="30"%ALARM_4_MINUTE_30%>30</option><option value="31"%ALARM_4_MINUTE_31%>31</option><option value="32"%ALARM_4_MINUTE_32%>32</option><option value="33"%ALARM_4_MINUTE_33%>33</option><option value="34"%ALARM_4_MINUTE_34%>34</option><option value="35"%ALARM_4_MINUTE_35%>35</option><option value="36"%ALARM_4_MINUTE_36%>36</option><option value="37"%ALARM_4_MINUTE_37%>37</option><option value="38"%ALARM_4_MINUTE_38%>38</option><option value="39"%ALARM_4_MINUTE_39%>39</option><option value="40"%ALARM_4_MINUTE_40%>40</option><option value="41"%ALARM_4_MINUTE_41%>41</option><option value="42"%ALARM_4_MINUTE_42%>42</option><option value="43"%ALARM_4_MINUTE_43%>43</option><option value="44"%ALARM_4_MINUTE_44%>44</option><option value="45"%ALARM_4_MINUTE_45%>45</option><option value="46"%ALARM_4_MINUTE_46%>46</option><option value="47"%ALARM_4_MINUTE_47%>47</option><option value="48"%ALARM_4_MINUTE_48%>48</option><option value="49"%ALARM_4_MINUTE_49%>49</option><option value="50"%ALARM_4_MINUTE_50%>50</option><option value="51"%ALARM_4_MINUTE_51%>51</option><option value="52"%ALARM_4_MINUTE_52%>52</option><option value="53"%ALARM_4_MINUTE_53%>53</option><option value="54"%ALARM_4_MINUTE_54%>54</option><option value="55"%ALARM_4_MINUTE_55%>55</option><option value="56"%ALARM_4_MINUTE_56%>56</option><option value="57"%ALARM_4_MINUTE_57%>57</option><option value="58"%ALARM_4_MINUTE_58%>58</option><option value="59"%ALARM_4_MINUTE_59%>59</option>
+                                            </select>
+                                        </div>
+                                        <!--#if IOT_ALARM_FORM_HAS_BUZZER && IOT_ALARM_FORM_HAS_SILENT -->
+                                        <div class="col-auto pl-2 pr-2">
+                                            <select name="alarm_4_type" class="form-control custom-select">
+                                                <option value="0"%ALARM_4_TYPE_0%>Both</option>
+                                                <option value="1"%ALARM_4_TYPE_1%>Silent</option>
+                                                <option value="2"%ALARM_4_TYPE_2%>Buzzer</option>
+                                            </select>
+                                        </div>
+                                        <!--#endif-->
+                                        <div class="col-auto hidden" id="alarm_4_repeat"><strong>Repeat Once</strong></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="form-group">
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">S</button><input type="checkbox" class="hidden" name="_alarm_4_weekday_0" id="_alarm_4_weekday_0" value="1"%ALARM_4_WEEKDAY_0% data-label="HIDDEN"><input type="hidden" name="alarm_4_weekday_0" id="alarm_4_weekday_0"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">M</button><input type="checkbox" class="hidden" name="_alarm_4_weekday_1" id="_alarm_4_weekday_1" value="1"%ALARM_4_WEEKDAY_1% data-label="HIDDEN"><input type="hidden" name="alarm_4_weekday_1" id="alarm_4_weekday_1"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">T</button><input type="checkbox" class="hidden" name="_alarm_4_weekday_2" id="_alarm_4_weekday_2" value="1"%ALARM_4_WEEKDAY_2% data-label="HIDDEN"><input type="hidden" name="alarm_4_weekday_2" id="alarm_4_weekday_2"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">W</button><input type="checkbox" class="hidden" name="_alarm_4_weekday_3" id="_alarm_4_weekday_3" value="1"%ALARM_4_WEEKDAY_3% data-label="HIDDEN"><input type="hidden" name="alarm_4_weekday_3" id="alarm_4_weekday_3"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">T</button><input type="checkbox" class="hidden" name="_alarm_4_weekday_4" id="_alarm_4_weekday_4" value="1"%ALARM_4_WEEKDAY_4% data-label="HIDDEN"><input type="hidden" name="alarm_4_weekday_4" id="alarm_4_weekday_4"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">F</button><input type="checkbox" class="hidden" name="_alarm_4_weekday_5" id="_alarm_4_weekday_5" value="1"%ALARM_4_WEEKDAY_5% data-label="HIDDEN"><input type="hidden" name="alarm_4_weekday_5" id="alarm_4_weekday_5"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">S</button><input type="checkbox" class="hidden" name="_alarm_4_weekday_6" id="_alarm_4_weekday_6" value="1"%ALARM_4_WEEKDAY_6% data-label="HIDDEN"><input type="hidden" name="alarm_4_weekday_6" id="alarm_4_weekday_6"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-3">
+                        <div class="alarm-enable-slider m-3">
+                            <input type="range" min="0" max="1" value="%ALARM_4_ENABLED%" id="alarm_4_enabled">
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12"><hr></div>
+                </div>
+                <div class="row align-items-center" id="alarm_5_container">
+                    <div class="col-lg-9">
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="form-group">
+                                    <div class="form-row align-items-center">
+                                        <div class="col-auto">
+                                            <select name="alarm_5_hour" class="form-control custom-select">
+                                                <option value="0"%ALARM_5_HOUR_0%>00</option><option value="1"%ALARM_5_HOUR_1%>01</option><option value="2"%ALARM_5_HOUR_2%>02</option><option value="3"%ALARM_5_HOUR_3%>03</option><option value="4"%ALARM_5_HOUR_4%>04</option><option value="5"%ALARM_5_HOUR_5%>05</option><option value="6"%ALARM_5_HOUR_6%>06</option><option value="7"%ALARM_5_HOUR_7%>07</option><option value="8"%ALARM_5_HOUR_8%>08</option><option value="9"%ALARM_5_HOUR_9%>09</option><option value="10"%ALARM_5_HOUR_10%>10</option><option value="11"%ALARM_5_HOUR_11%>11</option><option value="12"%ALARM_5_HOUR_12%>12</option><option value="13"%ALARM_5_HOUR_13%>13</option><option value="14"%ALARM_5_HOUR_14%>14</option><option value="15"%ALARM_5_HOUR_15%>15</option><option value="16"%ALARM_5_HOUR_16%>16</option><option value="17"%ALARM_5_HOUR_17%>17</option><option value="18"%ALARM_5_HOUR_18%>18</option><option value="19"%ALARM_5_HOUR_19%>19</option><option value="20"%ALARM_5_HOUR_20%>20</option><option value="21"%ALARM_5_HOUR_21%>21</option><option value="22"%ALARM_5_HOUR_22%>22</option><option value="23"%ALARM_5_HOUR_23%>23</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-auto"><strong>:</strong></div>
+                                        <div class="col-auto">
+                                            <select name="alarm_5_minute" class="form-control custom-select">
+                                                <option value="0"%ALARM_5_MINUTE_0%>00</option><option value="1"%ALARM_5_MINUTE_1%>01</option><option value="2"%ALARM_5_MINUTE_2%>02</option><option value="3"%ALARM_5_MINUTE_3%>03</option><option value="4"%ALARM_5_MINUTE_4%>04</option><option value="5"%ALARM_5_MINUTE_5%>05</option><option value="6"%ALARM_5_MINUTE_6%>06</option><option value="7"%ALARM_5_MINUTE_7%>07</option><option value="8"%ALARM_5_MINUTE_8%>08</option><option value="9"%ALARM_5_MINUTE_9%>09</option><option value="10"%ALARM_5_MINUTE_10%>10</option><option value="11"%ALARM_5_MINUTE_11%>11</option><option value="12"%ALARM_5_MINUTE_12%>12</option><option value="13"%ALARM_5_MINUTE_13%>13</option><option value="14"%ALARM_5_MINUTE_14%>14</option><option value="15"%ALARM_5_MINUTE_15%>15</option><option value="16"%ALARM_5_MINUTE_16%>16</option><option value="17"%ALARM_5_MINUTE_17%>17</option><option value="18"%ALARM_5_MINUTE_18%>18</option><option value="19"%ALARM_5_MINUTE_19%>19</option><option value="20"%ALARM_5_MINUTE_20%>20</option><option value="21"%ALARM_5_MINUTE_21%>21</option><option value="22"%ALARM_5_MINUTE_22%>22</option><option value="23"%ALARM_5_MINUTE_23%>23</option><option value="24"%ALARM_5_MINUTE_24%>24</option><option value="25"%ALARM_5_MINUTE_25%>25</option><option value="26"%ALARM_5_MINUTE_26%>26</option><option value="27"%ALARM_5_MINUTE_27%>27</option><option value="28"%ALARM_5_MINUTE_28%>28</option><option value="29"%ALARM_5_MINUTE_29%>29</option><option value="30"%ALARM_5_MINUTE_30%>30</option><option value="31"%ALARM_5_MINUTE_31%>31</option><option value="32"%ALARM_5_MINUTE_32%>32</option><option value="33"%ALARM_5_MINUTE_33%>33</option><option value="34"%ALARM_5_MINUTE_34%>34</option><option value="35"%ALARM_5_MINUTE_35%>35</option><option value="36"%ALARM_5_MINUTE_36%>36</option><option value="37"%ALARM_5_MINUTE_37%>37</option><option value="38"%ALARM_5_MINUTE_38%>38</option><option value="39"%ALARM_5_MINUTE_39%>39</option><option value="40"%ALARM_5_MINUTE_40%>40</option><option value="41"%ALARM_5_MINUTE_41%>41</option><option value="42"%ALARM_5_MINUTE_42%>42</option><option value="43"%ALARM_5_MINUTE_43%>43</option><option value="44"%ALARM_5_MINUTE_44%>44</option><option value="45"%ALARM_5_MINUTE_45%>45</option><option value="46"%ALARM_5_MINUTE_46%>46</option><option value="47"%ALARM_5_MINUTE_47%>47</option><option value="48"%ALARM_5_MINUTE_48%>48</option><option value="49"%ALARM_5_MINUTE_49%>49</option><option value="50"%ALARM_5_MINUTE_50%>50</option><option value="51"%ALARM_5_MINUTE_51%>51</option><option value="52"%ALARM_5_MINUTE_52%>52</option><option value="53"%ALARM_5_MINUTE_53%>53</option><option value="54"%ALARM_5_MINUTE_54%>54</option><option value="55"%ALARM_5_MINUTE_55%>55</option><option value="56"%ALARM_5_MINUTE_56%>56</option><option value="57"%ALARM_5_MINUTE_57%>57</option><option value="58"%ALARM_5_MINUTE_58%>58</option><option value="59"%ALARM_5_MINUTE_59%>59</option>
+                                            </select>
+                                        </div>
+                                        <!--#if IOT_ALARM_FORM_HAS_BUZZER && IOT_ALARM_FORM_HAS_SILENT -->
+                                        <div class="col-auto pl-2 pr-2">
+                                            <select name="alarm_5_type" class="form-control custom-select">
+                                                <option value="0"%ALARM_5_TYPE_0%>Both</option>
+                                                <option value="1"%ALARM_5_TYPE_1%>Silent</option>
+                                                <option value="2"%ALARM_5_TYPE_2%>Buzzer</option>
+                                            </select>
+                                        </div>
+                                        <!--#endif-->
+                                        <div class="col-auto hidden" id="alarm_5_repeat"><strong>Repeat Once</strong></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="form-group">
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">S</button><input type="checkbox" class="hidden" name="_alarm_5_weekday_0" id="_alarm_5_weekday_0" value="1"%ALARM_5_WEEKDAY_0% data-label="HIDDEN"><input type="hidden" name="alarm_5_weekday_0" id="alarm_5_weekday_0"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">M</button><input type="checkbox" class="hidden" name="_alarm_5_weekday_1" id="_alarm_5_weekday_1" value="1"%ALARM_5_WEEKDAY_1% data-label="HIDDEN"><input type="hidden" name="alarm_5_weekday_1" id="alarm_5_weekday_1"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">T</button><input type="checkbox" class="hidden" name="_alarm_5_weekday_2" id="_alarm_5_weekday_2" value="1"%ALARM_5_WEEKDAY_2% data-label="HIDDEN"><input type="hidden" name="alarm_5_weekday_2" id="alarm_5_weekday_2"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">W</button><input type="checkbox" class="hidden" name="_alarm_5_weekday_3" id="_alarm_5_weekday_3" value="1"%ALARM_5_WEEKDAY_3% data-label="HIDDEN"><input type="hidden" name="alarm_5_weekday_3" id="alarm_5_weekday_3"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">T</button><input type="checkbox" class="hidden" name="_alarm_5_weekday_4" id="_alarm_5_weekday_4" value="1"%ALARM_5_WEEKDAY_4% data-label="HIDDEN"><input type="hidden" name="alarm_5_weekday_4" id="alarm_5_weekday_4"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">F</button><input type="checkbox" class="hidden" name="_alarm_5_weekday_5" id="_alarm_5_weekday_5" value="1"%ALARM_5_WEEKDAY_5% data-label="HIDDEN"><input type="hidden" name="alarm_5_weekday_5" id="alarm_5_weekday_5"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">S</button><input type="checkbox" class="hidden" name="_alarm_5_weekday_6" id="_alarm_5_weekday_6" value="1"%ALARM_5_WEEKDAY_6% data-label="HIDDEN"><input type="hidden" name="alarm_5_weekday_6" id="alarm_5_weekday_6"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-3">
+                        <div class="alarm-enable-slider m-3">
+                            <input type="range" min="0" max="1" value="%ALARM_5_ENABLED%" id="alarm_5_enabled">
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12"><hr></div>
+                </div>
+                <div class="row align-items-center" id="alarm_6_container">
+                    <div class="col-lg-9">
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="form-group">
+                                    <div class="form-row align-items-center">
+                                        <div class="col-auto">
+                                            <select name="alarm_6_hour" class="form-control custom-select">
+                                                <option value="0"%ALARM_6_HOUR_0%>00</option><option value="1"%ALARM_6_HOUR_1%>01</option><option value="2"%ALARM_6_HOUR_2%>02</option><option value="3"%ALARM_6_HOUR_3%>03</option><option value="4"%ALARM_6_HOUR_4%>04</option><option value="5"%ALARM_6_HOUR_5%>05</option><option value="6"%ALARM_6_HOUR_6%>06</option><option value="7"%ALARM_6_HOUR_7%>07</option><option value="8"%ALARM_6_HOUR_8%>08</option><option value="9"%ALARM_6_HOUR_9%>09</option><option value="10"%ALARM_6_HOUR_10%>10</option><option value="11"%ALARM_6_HOUR_11%>11</option><option value="12"%ALARM_6_HOUR_12%>12</option><option value="13"%ALARM_6_HOUR_13%>13</option><option value="14"%ALARM_6_HOUR_14%>14</option><option value="15"%ALARM_6_HOUR_15%>15</option><option value="16"%ALARM_6_HOUR_16%>16</option><option value="17"%ALARM_6_HOUR_17%>17</option><option value="18"%ALARM_6_HOUR_18%>18</option><option value="19"%ALARM_6_HOUR_19%>19</option><option value="20"%ALARM_6_HOUR_20%>20</option><option value="21"%ALARM_6_HOUR_21%>21</option><option value="22"%ALARM_6_HOUR_22%>22</option><option value="23"%ALARM_6_HOUR_23%>23</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-auto"><strong>:</strong></div>
+                                        <div class="col-auto">
+                                            <select name="alarm_6_minute" class="form-control custom-select">
+                                                <option value="0"%ALARM_6_MINUTE_0%>00</option><option value="1"%ALARM_6_MINUTE_1%>01</option><option value="2"%ALARM_6_MINUTE_2%>02</option><option value="3"%ALARM_6_MINUTE_3%>03</option><option value="4"%ALARM_6_MINUTE_4%>04</option><option value="5"%ALARM_6_MINUTE_5%>05</option><option value="6"%ALARM_6_MINUTE_6%>06</option><option value="7"%ALARM_6_MINUTE_7%>07</option><option value="8"%ALARM_6_MINUTE_8%>08</option><option value="9"%ALARM_6_MINUTE_9%>09</option><option value="10"%ALARM_6_MINUTE_10%>10</option><option value="11"%ALARM_6_MINUTE_11%>11</option><option value="12"%ALARM_6_MINUTE_12%>12</option><option value="13"%ALARM_6_MINUTE_13%>13</option><option value="14"%ALARM_6_MINUTE_14%>14</option><option value="15"%ALARM_6_MINUTE_15%>15</option><option value="16"%ALARM_6_MINUTE_16%>16</option><option value="17"%ALARM_6_MINUTE_17%>17</option><option value="18"%ALARM_6_MINUTE_18%>18</option><option value="19"%ALARM_6_MINUTE_19%>19</option><option value="20"%ALARM_6_MINUTE_20%>20</option><option value="21"%ALARM_6_MINUTE_21%>21</option><option value="22"%ALARM_6_MINUTE_22%>22</option><option value="23"%ALARM_6_MINUTE_23%>23</option><option value="24"%ALARM_6_MINUTE_24%>24</option><option value="25"%ALARM_6_MINUTE_25%>25</option><option value="26"%ALARM_6_MINUTE_26%>26</option><option value="27"%ALARM_6_MINUTE_27%>27</option><option value="28"%ALARM_6_MINUTE_28%>28</option><option value="29"%ALARM_6_MINUTE_29%>29</option><option value="30"%ALARM_6_MINUTE_30%>30</option><option value="31"%ALARM_6_MINUTE_31%>31</option><option value="32"%ALARM_6_MINUTE_32%>32</option><option value="33"%ALARM_6_MINUTE_33%>33</option><option value="34"%ALARM_6_MINUTE_34%>34</option><option value="35"%ALARM_6_MINUTE_35%>35</option><option value="36"%ALARM_6_MINUTE_36%>36</option><option value="37"%ALARM_6_MINUTE_37%>37</option><option value="38"%ALARM_6_MINUTE_38%>38</option><option value="39"%ALARM_6_MINUTE_39%>39</option><option value="40"%ALARM_6_MINUTE_40%>40</option><option value="41"%ALARM_6_MINUTE_41%>41</option><option value="42"%ALARM_6_MINUTE_42%>42</option><option value="43"%ALARM_6_MINUTE_43%>43</option><option value="44"%ALARM_6_MINUTE_44%>44</option><option value="45"%ALARM_6_MINUTE_45%>45</option><option value="46"%ALARM_6_MINUTE_46%>46</option><option value="47"%ALARM_6_MINUTE_47%>47</option><option value="48"%ALARM_6_MINUTE_48%>48</option><option value="49"%ALARM_6_MINUTE_49%>49</option><option value="50"%ALARM_6_MINUTE_50%>50</option><option value="51"%ALARM_6_MINUTE_51%>51</option><option value="52"%ALARM_6_MINUTE_52%>52</option><option value="53"%ALARM_6_MINUTE_53%>53</option><option value="54"%ALARM_6_MINUTE_54%>54</option><option value="55"%ALARM_6_MINUTE_55%>55</option><option value="56"%ALARM_6_MINUTE_56%>56</option><option value="57"%ALARM_6_MINUTE_57%>57</option><option value="58"%ALARM_6_MINUTE_58%>58</option><option value="59"%ALARM_6_MINUTE_59%>59</option>
+                                            </select>
+                                        </div>
+                                        <!--#if IOT_ALARM_FORM_HAS_BUZZER && IOT_ALARM_FORM_HAS_SILENT -->
+                                        <div class="col-auto pl-2 pr-2">
+                                            <select name="alarm_6_type" class="form-control custom-select">
+                                                <option value="0"%ALARM_6_TYPE_0%>Both</option>
+                                                <option value="1"%ALARM_6_TYPE_1%>Silent</option>
+                                                <option value="2"%ALARM_6_TYPE_2%>Buzzer</option>
+                                            </select>
+                                        </div>
+                                        <!--#endif-->
+                                        <div class="col-auto hidden" id="alarm_6_repeat"><strong>Repeat Once</strong></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="form-group">
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">S</button><input type="checkbox" class="hidden" name="_alarm_6_weekday_0" id="_alarm_6_weekday_0" value="1"%ALARM_6_WEEKDAY_0% data-label="HIDDEN"><input type="hidden" name="alarm_6_weekday_0" id="alarm_6_weekday_0"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">M</button><input type="checkbox" class="hidden" name="_alarm_6_weekday_1" id="_alarm_6_weekday_1" value="1"%ALARM_6_WEEKDAY_1% data-label="HIDDEN"><input type="hidden" name="alarm_6_weekday_1" id="alarm_6_weekday_1"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">T</button><input type="checkbox" class="hidden" name="_alarm_6_weekday_2" id="_alarm_6_weekday_2" value="1"%ALARM_6_WEEKDAY_2% data-label="HIDDEN"><input type="hidden" name="alarm_6_weekday_2" id="alarm_6_weekday_2"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">W</button><input type="checkbox" class="hidden" name="_alarm_6_weekday_3" id="_alarm_6_weekday_3" value="1"%ALARM_6_WEEKDAY_3% data-label="HIDDEN"><input type="hidden" name="alarm_6_weekday_3" id="alarm_6_weekday_3"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">T</button><input type="checkbox" class="hidden" name="_alarm_6_weekday_4" id="_alarm_6_weekday_4" value="1"%ALARM_6_WEEKDAY_4% data-label="HIDDEN"><input type="hidden" name="alarm_6_weekday_4" id="alarm_6_weekday_4"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">F</button><input type="checkbox" class="hidden" name="_alarm_6_weekday_5" id="_alarm_6_weekday_5" value="1"%ALARM_6_WEEKDAY_5% data-label="HIDDEN"><input type="hidden" name="alarm_6_weekday_5" id="alarm_6_weekday_5"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">S</button><input type="checkbox" class="hidden" name="_alarm_6_weekday_6" id="_alarm_6_weekday_6" value="1"%ALARM_6_WEEKDAY_6% data-label="HIDDEN"><input type="hidden" name="alarm_6_weekday_6" id="alarm_6_weekday_6"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-3">
+                        <div class="alarm-enable-slider m-3">
+                            <input type="range" min="0" max="1" value="%ALARM_6_ENABLED%" id="alarm_6_enabled">
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12"><hr></div>
+                </div>
+                <div class="row align-items-center" id="alarm_7_container">
+                    <div class="col-lg-9">
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="form-group">
+                                    <div class="form-row align-items-center">
+                                        <div class="col-auto">
+                                            <select name="alarm_7_hour" class="form-control custom-select">
+                                                <option value="0"%ALARM_7_HOUR_0%>00</option><option value="1"%ALARM_7_HOUR_1%>01</option><option value="2"%ALARM_7_HOUR_2%>02</option><option value="3"%ALARM_7_HOUR_3%>03</option><option value="4"%ALARM_7_HOUR_4%>04</option><option value="5"%ALARM_7_HOUR_5%>05</option><option value="6"%ALARM_7_HOUR_6%>06</option><option value="7"%ALARM_7_HOUR_7%>07</option><option value="8"%ALARM_7_HOUR_8%>08</option><option value="9"%ALARM_7_HOUR_9%>09</option><option value="10"%ALARM_7_HOUR_10%>10</option><option value="11"%ALARM_7_HOUR_11%>11</option><option value="12"%ALARM_7_HOUR_12%>12</option><option value="13"%ALARM_7_HOUR_13%>13</option><option value="14"%ALARM_7_HOUR_14%>14</option><option value="15"%ALARM_7_HOUR_15%>15</option><option value="16"%ALARM_7_HOUR_16%>16</option><option value="17"%ALARM_7_HOUR_17%>17</option><option value="18"%ALARM_7_HOUR_18%>18</option><option value="19"%ALARM_7_HOUR_19%>19</option><option value="20"%ALARM_7_HOUR_20%>20</option><option value="21"%ALARM_7_HOUR_21%>21</option><option value="22"%ALARM_7_HOUR_22%>22</option><option value="23"%ALARM_7_HOUR_23%>23</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-auto"><strong>:</strong></div>
+                                        <div class="col-auto">
+                                            <select name="alarm_7_minute" class="form-control custom-select">
+                                                <option value="0"%ALARM_7_MINUTE_0%>00</option><option value="1"%ALARM_7_MINUTE_1%>01</option><option value="2"%ALARM_7_MINUTE_2%>02</option><option value="3"%ALARM_7_MINUTE_3%>03</option><option value="4"%ALARM_7_MINUTE_4%>04</option><option value="5"%ALARM_7_MINUTE_5%>05</option><option value="6"%ALARM_7_MINUTE_6%>06</option><option value="7"%ALARM_7_MINUTE_7%>07</option><option value="8"%ALARM_7_MINUTE_8%>08</option><option value="9"%ALARM_7_MINUTE_9%>09</option><option value="10"%ALARM_7_MINUTE_10%>10</option><option value="11"%ALARM_7_MINUTE_11%>11</option><option value="12"%ALARM_7_MINUTE_12%>12</option><option value="13"%ALARM_7_MINUTE_13%>13</option><option value="14"%ALARM_7_MINUTE_14%>14</option><option value="15"%ALARM_7_MINUTE_15%>15</option><option value="16"%ALARM_7_MINUTE_16%>16</option><option value="17"%ALARM_7_MINUTE_17%>17</option><option value="18"%ALARM_7_MINUTE_18%>18</option><option value="19"%ALARM_7_MINUTE_19%>19</option><option value="20"%ALARM_7_MINUTE_20%>20</option><option value="21"%ALARM_7_MINUTE_21%>21</option><option value="22"%ALARM_7_MINUTE_22%>22</option><option value="23"%ALARM_7_MINUTE_23%>23</option><option value="24"%ALARM_7_MINUTE_24%>24</option><option value="25"%ALARM_7_MINUTE_25%>25</option><option value="26"%ALARM_7_MINUTE_26%>26</option><option value="27"%ALARM_7_MINUTE_27%>27</option><option value="28"%ALARM_7_MINUTE_28%>28</option><option value="29"%ALARM_7_MINUTE_29%>29</option><option value="30"%ALARM_7_MINUTE_30%>30</option><option value="31"%ALARM_7_MINUTE_31%>31</option><option value="32"%ALARM_7_MINUTE_32%>32</option><option value="33"%ALARM_7_MINUTE_33%>33</option><option value="34"%ALARM_7_MINUTE_34%>34</option><option value="35"%ALARM_7_MINUTE_35%>35</option><option value="36"%ALARM_7_MINUTE_36%>36</option><option value="37"%ALARM_7_MINUTE_37%>37</option><option value="38"%ALARM_7_MINUTE_38%>38</option><option value="39"%ALARM_7_MINUTE_39%>39</option><option value="40"%ALARM_7_MINUTE_40%>40</option><option value="41"%ALARM_7_MINUTE_41%>41</option><option value="42"%ALARM_7_MINUTE_42%>42</option><option value="43"%ALARM_7_MINUTE_43%>43</option><option value="44"%ALARM_7_MINUTE_44%>44</option><option value="45"%ALARM_7_MINUTE_45%>45</option><option value="46"%ALARM_7_MINUTE_46%>46</option><option value="47"%ALARM_7_MINUTE_47%>47</option><option value="48"%ALARM_7_MINUTE_48%>48</option><option value="49"%ALARM_7_MINUTE_49%>49</option><option value="50"%ALARM_7_MINUTE_50%>50</option><option value="51"%ALARM_7_MINUTE_51%>51</option><option value="52"%ALARM_7_MINUTE_52%>52</option><option value="53"%ALARM_7_MINUTE_53%>53</option><option value="54"%ALARM_7_MINUTE_54%>54</option><option value="55"%ALARM_7_MINUTE_55%>55</option><option value="56"%ALARM_7_MINUTE_56%>56</option><option value="57"%ALARM_7_MINUTE_57%>57</option><option value="58"%ALARM_7_MINUTE_58%>58</option><option value="59"%ALARM_7_MINUTE_59%>59</option>
+                                            </select>
+                                        </div>
+                                        <!--#if IOT_ALARM_FORM_HAS_BUZZER && IOT_ALARM_FORM_HAS_SILENT -->
+                                        <div class="col-auto pl-2 pr-2">
+                                            <select name="alarm_7_type" class="form-control custom-select">
+                                                <option value="0"%ALARM_7_TYPE_0%>Both</option>
+                                                <option value="1"%ALARM_7_TYPE_1%>Silent</option>
+                                                <option value="2"%ALARM_7_TYPE_2%>Buzzer</option>
+                                            </select>
+                                        </div>
+                                        <!--#endif-->
+                                        <div class="col-auto hidden" id="alarm_7_repeat"><strong>Repeat Once</strong></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="form-group">
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">S</button><input type="checkbox" class="hidden" name="_alarm_7_weekday_0" id="_alarm_7_weekday_0" value="1"%ALARM_7_WEEKDAY_0% data-label="HIDDEN"><input type="hidden" name="alarm_7_weekday_0" id="alarm_7_weekday_0"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">M</button><input type="checkbox" class="hidden" name="_alarm_7_weekday_1" id="_alarm_7_weekday_1" value="1"%ALARM_7_WEEKDAY_1% data-label="HIDDEN"><input type="hidden" name="alarm_7_weekday_1" id="alarm_7_weekday_1"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">T</button><input type="checkbox" class="hidden" name="_alarm_7_weekday_2" id="_alarm_7_weekday_2" value="1"%ALARM_7_WEEKDAY_2% data-label="HIDDEN"><input type="hidden" name="alarm_7_weekday_2" id="alarm_7_weekday_2"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">W</button><input type="checkbox" class="hidden" name="_alarm_7_weekday_3" id="_alarm_7_weekday_3" value="1"%ALARM_7_WEEKDAY_3% data-label="HIDDEN"><input type="hidden" name="alarm_7_weekday_3" id="alarm_7_weekday_3"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">T</button><input type="checkbox" class="hidden" name="_alarm_7_weekday_4" id="_alarm_7_weekday_4" value="1"%ALARM_7_WEEKDAY_4% data-label="HIDDEN"><input type="hidden" name="alarm_7_weekday_4" id="alarm_7_weekday_4"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">F</button><input type="checkbox" class="hidden" name="_alarm_7_weekday_5" id="_alarm_7_weekday_5" value="1"%ALARM_7_WEEKDAY_5% data-label="HIDDEN"><input type="hidden" name="alarm_7_weekday_5" id="alarm_7_weekday_5"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">S</button><input type="checkbox" class="hidden" name="_alarm_7_weekday_6" id="_alarm_7_weekday_6" value="1"%ALARM_7_WEEKDAY_6% data-label="HIDDEN"><input type="hidden" name="alarm_7_weekday_6" id="alarm_7_weekday_6"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-3">
+                        <div class="alarm-enable-slider m-3">
+                            <input type="range" min="0" max="1" value="%ALARM_7_ENABLED%" id="alarm_7_enabled">
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12"><hr></div>
+                </div>
+                <div class="row align-items-center" id="alarm_8_container">
+                    <div class="col-lg-9">
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="form-group">
+                                    <div class="form-row align-items-center">
+                                        <div class="col-auto">
+                                            <select name="alarm_8_hour" class="form-control custom-select">
+                                                <option value="0"%ALARM_8_HOUR_0%>00</option><option value="1"%ALARM_8_HOUR_1%>01</option><option value="2"%ALARM_8_HOUR_2%>02</option><option value="3"%ALARM_8_HOUR_3%>03</option><option value="4"%ALARM_8_HOUR_4%>04</option><option value="5"%ALARM_8_HOUR_5%>05</option><option value="6"%ALARM_8_HOUR_6%>06</option><option value="7"%ALARM_8_HOUR_7%>07</option><option value="8"%ALARM_8_HOUR_8%>08</option><option value="9"%ALARM_8_HOUR_9%>09</option><option value="10"%ALARM_8_HOUR_10%>10</option><option value="11"%ALARM_8_HOUR_11%>11</option><option value="12"%ALARM_8_HOUR_12%>12</option><option value="13"%ALARM_8_HOUR_13%>13</option><option value="14"%ALARM_8_HOUR_14%>14</option><option value="15"%ALARM_8_HOUR_15%>15</option><option value="16"%ALARM_8_HOUR_16%>16</option><option value="17"%ALARM_8_HOUR_17%>17</option><option value="18"%ALARM_8_HOUR_18%>18</option><option value="19"%ALARM_8_HOUR_19%>19</option><option value="20"%ALARM_8_HOUR_20%>20</option><option value="21"%ALARM_8_HOUR_21%>21</option><option value="22"%ALARM_8_HOUR_22%>22</option><option value="23"%ALARM_8_HOUR_23%>23</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-auto"><strong>:</strong></div>
+                                        <div class="col-auto">
+                                            <select name="alarm_8_minute" class="form-control custom-select">
+                                                <option value="0"%ALARM_8_MINUTE_0%>00</option><option value="1"%ALARM_8_MINUTE_1%>01</option><option value="2"%ALARM_8_MINUTE_2%>02</option><option value="3"%ALARM_8_MINUTE_3%>03</option><option value="4"%ALARM_8_MINUTE_4%>04</option><option value="5"%ALARM_8_MINUTE_5%>05</option><option value="6"%ALARM_8_MINUTE_6%>06</option><option value="7"%ALARM_8_MINUTE_7%>07</option><option value="8"%ALARM_8_MINUTE_8%>08</option><option value="9"%ALARM_8_MINUTE_9%>09</option><option value="10"%ALARM_8_MINUTE_10%>10</option><option value="11"%ALARM_8_MINUTE_11%>11</option><option value="12"%ALARM_8_MINUTE_12%>12</option><option value="13"%ALARM_8_MINUTE_13%>13</option><option value="14"%ALARM_8_MINUTE_14%>14</option><option value="15"%ALARM_8_MINUTE_15%>15</option><option value="16"%ALARM_8_MINUTE_16%>16</option><option value="17"%ALARM_8_MINUTE_17%>17</option><option value="18"%ALARM_8_MINUTE_18%>18</option><option value="19"%ALARM_8_MINUTE_19%>19</option><option value="20"%ALARM_8_MINUTE_20%>20</option><option value="21"%ALARM_8_MINUTE_21%>21</option><option value="22"%ALARM_8_MINUTE_22%>22</option><option value="23"%ALARM_8_MINUTE_23%>23</option><option value="24"%ALARM_8_MINUTE_24%>24</option><option value="25"%ALARM_8_MINUTE_25%>25</option><option value="26"%ALARM_8_MINUTE_26%>26</option><option value="27"%ALARM_8_MINUTE_27%>27</option><option value="28"%ALARM_8_MINUTE_28%>28</option><option value="29"%ALARM_8_MINUTE_29%>29</option><option value="30"%ALARM_8_MINUTE_30%>30</option><option value="31"%ALARM_8_MINUTE_31%>31</option><option value="32"%ALARM_8_MINUTE_32%>32</option><option value="33"%ALARM_8_MINUTE_33%>33</option><option value="34"%ALARM_8_MINUTE_34%>34</option><option value="35"%ALARM_8_MINUTE_35%>35</option><option value="36"%ALARM_8_MINUTE_36%>36</option><option value="37"%ALARM_8_MINUTE_37%>37</option><option value="38"%ALARM_8_MINUTE_38%>38</option><option value="39"%ALARM_8_MINUTE_39%>39</option><option value="40"%ALARM_8_MINUTE_40%>40</option><option value="41"%ALARM_8_MINUTE_41%>41</option><option value="42"%ALARM_8_MINUTE_42%>42</option><option value="43"%ALARM_8_MINUTE_43%>43</option><option value="44"%ALARM_8_MINUTE_44%>44</option><option value="45"%ALARM_8_MINUTE_45%>45</option><option value="46"%ALARM_8_MINUTE_46%>46</option><option value="47"%ALARM_8_MINUTE_47%>47</option><option value="48"%ALARM_8_MINUTE_48%>48</option><option value="49"%ALARM_8_MINUTE_49%>49</option><option value="50"%ALARM_8_MINUTE_50%>50</option><option value="51"%ALARM_8_MINUTE_51%>51</option><option value="52"%ALARM_8_MINUTE_52%>52</option><option value="53"%ALARM_8_MINUTE_53%>53</option><option value="54"%ALARM_8_MINUTE_54%>54</option><option value="55"%ALARM_8_MINUTE_55%>55</option><option value="56"%ALARM_8_MINUTE_56%>56</option><option value="57"%ALARM_8_MINUTE_57%>57</option><option value="58"%ALARM_8_MINUTE_58%>58</option><option value="59"%ALARM_8_MINUTE_59%>59</option>
+                                            </select>
+                                        </div>
+                                        <!--#if IOT_ALARM_FORM_HAS_BUZZER && IOT_ALARM_FORM_HAS_SILENT -->
+                                        <div class="col-auto pl-2 pr-2">
+                                            <select name="alarm_8_type" class="form-control custom-select">
+                                                <option value="0"%ALARM_8_TYPE_0%>Both</option>
+                                                <option value="1"%ALARM_8_TYPE_1%>Silent</option>
+                                                <option value="2"%ALARM_8_TYPE_2%>Buzzer</option>
+                                            </select>
+                                        </div>
+                                        <!--#endif-->
+                                        <div class="col-auto hidden" id="alarm_8_repeat"><strong>Repeat Once</strong></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="form-group">
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">S</button><input type="checkbox" class="hidden" name="_alarm_8_weekday_0" id="_alarm_8_weekday_0" value="1"%ALARM_8_WEEKDAY_0% data-label="HIDDEN"><input type="hidden" name="alarm_8_weekday_0" id="alarm_8_weekday_0"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">M</button><input type="checkbox" class="hidden" name="_alarm_8_weekday_1" id="_alarm_8_weekday_1" value="1"%ALARM_8_WEEKDAY_1% data-label="HIDDEN"><input type="hidden" name="alarm_8_weekday_1" id="alarm_8_weekday_1"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">T</button><input type="checkbox" class="hidden" name="_alarm_8_weekday_2" id="_alarm_8_weekday_2" value="1"%ALARM_8_WEEKDAY_2% data-label="HIDDEN"><input type="hidden" name="alarm_8_weekday_2" id="alarm_8_weekday_2"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">W</button><input type="checkbox" class="hidden" name="_alarm_8_weekday_3" id="_alarm_8_weekday_3" value="1"%ALARM_8_WEEKDAY_3% data-label="HIDDEN"><input type="hidden" name="alarm_8_weekday_3" id="alarm_8_weekday_3"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">T</button><input type="checkbox" class="hidden" name="_alarm_8_weekday_4" id="_alarm_8_weekday_4" value="1"%ALARM_8_WEEKDAY_4% data-label="HIDDEN"><input type="hidden" name="alarm_8_weekday_4" id="alarm_8_weekday_4"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">F</button><input type="checkbox" class="hidden" name="_alarm_8_weekday_5" id="_alarm_8_weekday_5" value="1"%ALARM_8_WEEKDAY_5% data-label="HIDDEN"><input type="hidden" name="alarm_8_weekday_5" id="alarm_8_weekday_5"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">S</button><input type="checkbox" class="hidden" name="_alarm_8_weekday_6" id="_alarm_8_weekday_6" value="1"%ALARM_8_WEEKDAY_6% data-label="HIDDEN"><input type="hidden" name="alarm_8_weekday_6" id="alarm_8_weekday_6"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-3">
+                        <div class="alarm-enable-slider m-3">
+                            <input type="range" min="0" max="1" value="%ALARM_8_ENABLED%" id="alarm_8_enabled">
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12"><hr></div>
+                </div>
+                <div class="row align-items-center" id="alarm_9_container">
+                    <div class="col-lg-9">
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="form-group">
+                                    <div class="form-row align-items-center">
+                                        <div class="col-auto">
+                                            <select name="alarm_9_hour" class="form-control custom-select">
+                                                <option value="0"%ALARM_9_HOUR_0%>00</option><option value="1"%ALARM_9_HOUR_1%>01</option><option value="2"%ALARM_9_HOUR_2%>02</option><option value="3"%ALARM_9_HOUR_3%>03</option><option value="4"%ALARM_9_HOUR_4%>04</option><option value="5"%ALARM_9_HOUR_5%>05</option><option value="6"%ALARM_9_HOUR_6%>06</option><option value="7"%ALARM_9_HOUR_7%>07</option><option value="8"%ALARM_9_HOUR_8%>08</option><option value="9"%ALARM_9_HOUR_9%>09</option><option value="10"%ALARM_9_HOUR_10%>10</option><option value="11"%ALARM_9_HOUR_11%>11</option><option value="12"%ALARM_9_HOUR_12%>12</option><option value="13"%ALARM_9_HOUR_13%>13</option><option value="14"%ALARM_9_HOUR_14%>14</option><option value="15"%ALARM_9_HOUR_15%>15</option><option value="16"%ALARM_9_HOUR_16%>16</option><option value="17"%ALARM_9_HOUR_17%>17</option><option value="18"%ALARM_9_HOUR_18%>18</option><option value="19"%ALARM_9_HOUR_19%>19</option><option value="20"%ALARM_9_HOUR_20%>20</option><option value="21"%ALARM_9_HOUR_21%>21</option><option value="22"%ALARM_9_HOUR_22%>22</option><option value="23"%ALARM_9_HOUR_23%>23</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-auto"><strong>:</strong></div>
+                                        <div class="col-auto">
+                                            <select name="alarm_9_minute" class="form-control custom-select">
+                                                <option value="0"%ALARM_9_MINUTE_0%>00</option><option value="1"%ALARM_9_MINUTE_1%>01</option><option value="2"%ALARM_9_MINUTE_2%>02</option><option value="3"%ALARM_9_MINUTE_3%>03</option><option value="4"%ALARM_9_MINUTE_4%>04</option><option value="5"%ALARM_9_MINUTE_5%>05</option><option value="6"%ALARM_9_MINUTE_6%>06</option><option value="7"%ALARM_9_MINUTE_7%>07</option><option value="8"%ALARM_9_MINUTE_8%>08</option><option value="9"%ALARM_9_MINUTE_9%>09</option><option value="10"%ALARM_9_MINUTE_10%>10</option><option value="11"%ALARM_9_MINUTE_11%>11</option><option value="12"%ALARM_9_MINUTE_12%>12</option><option value="13"%ALARM_9_MINUTE_13%>13</option><option value="14"%ALARM_9_MINUTE_14%>14</option><option value="15"%ALARM_9_MINUTE_15%>15</option><option value="16"%ALARM_9_MINUTE_16%>16</option><option value="17"%ALARM_9_MINUTE_17%>17</option><option value="18"%ALARM_9_MINUTE_18%>18</option><option value="19"%ALARM_9_MINUTE_19%>19</option><option value="20"%ALARM_9_MINUTE_20%>20</option><option value="21"%ALARM_9_MINUTE_21%>21</option><option value="22"%ALARM_9_MINUTE_22%>22</option><option value="23"%ALARM_9_MINUTE_23%>23</option><option value="24"%ALARM_9_MINUTE_24%>24</option><option value="25"%ALARM_9_MINUTE_25%>25</option><option value="26"%ALARM_9_MINUTE_26%>26</option><option value="27"%ALARM_9_MINUTE_27%>27</option><option value="28"%ALARM_9_MINUTE_28%>28</option><option value="29"%ALARM_9_MINUTE_29%>29</option><option value="30"%ALARM_9_MINUTE_30%>30</option><option value="31"%ALARM_9_MINUTE_31%>31</option><option value="32"%ALARM_9_MINUTE_32%>32</option><option value="33"%ALARM_9_MINUTE_33%>33</option><option value="34"%ALARM_9_MINUTE_34%>34</option><option value="35"%ALARM_9_MINUTE_35%>35</option><option value="36"%ALARM_9_MINUTE_36%>36</option><option value="37"%ALARM_9_MINUTE_37%>37</option><option value="38"%ALARM_9_MINUTE_38%>38</option><option value="39"%ALARM_9_MINUTE_39%>39</option><option value="40"%ALARM_9_MINUTE_40%>40</option><option value="41"%ALARM_9_MINUTE_41%>41</option><option value="42"%ALARM_9_MINUTE_42%>42</option><option value="43"%ALARM_9_MINUTE_43%>43</option><option value="44"%ALARM_9_MINUTE_44%>44</option><option value="45"%ALARM_9_MINUTE_45%>45</option><option value="46"%ALARM_9_MINUTE_46%>46</option><option value="47"%ALARM_9_MINUTE_47%>47</option><option value="48"%ALARM_9_MINUTE_48%>48</option><option value="49"%ALARM_9_MINUTE_49%>49</option><option value="50"%ALARM_9_MINUTE_50%>50</option><option value="51"%ALARM_9_MINUTE_51%>51</option><option value="52"%ALARM_9_MINUTE_52%>52</option><option value="53"%ALARM_9_MINUTE_53%>53</option><option value="54"%ALARM_9_MINUTE_54%>54</option><option value="55"%ALARM_9_MINUTE_55%>55</option><option value="56"%ALARM_9_MINUTE_56%>56</option><option value="57"%ALARM_9_MINUTE_57%>57</option><option value="58"%ALARM_9_MINUTE_58%>58</option><option value="59"%ALARM_9_MINUTE_59%>59</option>
+                                            </select>
+                                        </div>
+                                        <!--#if IOT_ALARM_FORM_HAS_BUZZER && IOT_ALARM_FORM_HAS_SILENT -->
+                                        <div class="col-auto pl-2 pr-2">
+                                            <select name="alarm_9_type" class="form-control custom-select">
+                                                <option value="0"%ALARM_9_TYPE_0%>Both</option>
+                                                <option value="1"%ALARM_9_TYPE_1%>Silent</option>
+                                                <option value="2"%ALARM_9_TYPE_2%>Buzzer</option>
+                                            </select>
+                                        </div>
+                                        <!--#endif-->
+                                        <div class="col-auto hidden" id="alarm_9_repeat"><strong>Repeat Once</strong></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="form-group">
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">S</button><input type="checkbox" class="hidden" name="_alarm_9_weekday_0" id="_alarm_9_weekday_0" value="1"%ALARM_9_WEEKDAY_0% data-label="HIDDEN"><input type="hidden" name="alarm_9_weekday_0" id="alarm_9_weekday_0"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">M</button><input type="checkbox" class="hidden" name="_alarm_9_weekday_1" id="_alarm_9_weekday_1" value="1"%ALARM_9_WEEKDAY_1% data-label="HIDDEN"><input type="hidden" name="alarm_9_weekday_1" id="alarm_9_weekday_1"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">T</button><input type="checkbox" class="hidden" name="_alarm_9_weekday_2" id="_alarm_9_weekday_2" value="1"%ALARM_9_WEEKDAY_2% data-label="HIDDEN"><input type="hidden" name="alarm_9_weekday_2" id="alarm_9_weekday_2"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">W</button><input type="checkbox" class="hidden" name="_alarm_9_weekday_3" id="_alarm_9_weekday_3" value="1"%ALARM_9_WEEKDAY_3% data-label="HIDDEN"><input type="hidden" name="alarm_9_weekday_3" id="alarm_9_weekday_3"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">T</button><input type="checkbox" class="hidden" name="_alarm_9_weekday_4" id="_alarm_9_weekday_4" value="1"%ALARM_9_WEEKDAY_4% data-label="HIDDEN"><input type="hidden" name="alarm_9_weekday_4" id="alarm_9_weekday_4"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">F</button><input type="checkbox" class="hidden" name="_alarm_9_weekday_5" id="_alarm_9_weekday_5" value="1"%ALARM_9_WEEKDAY_5% data-label="HIDDEN"><input type="hidden" name="alarm_9_weekday_5" id="alarm_9_weekday_5"></span>
+                                    <span class="button-checkbox"><button type="button" class="btn btn-lg alarm-week-day-button" data-color="primary">S</button><input type="checkbox" class="hidden" name="_alarm_9_weekday_6" id="_alarm_9_weekday_6" value="1"%ALARM_9_WEEKDAY_6% data-label="HIDDEN"><input type="hidden" name="alarm_9_weekday_6" id="alarm_9_weekday_6"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-3">
+                        <div class="alarm-enable-slider m-3">
+                            <input type="range" min="0" max="1" value="%ALARM_9_ENABLED%" id="alarm_9_enabled">
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12"><hr></div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <button type="submit" class="btn btn-primary">Save Changes...</button>
+            </div>
+
+        </form>
+        <!--%%FOOT-->
+        <div class="row">
+            <div class="col footer">&nbsp;</div>
+        </div>
+        <!--FOOT%%-->
+    </div>
+    <!--%%JAVASCRIPT-->
+	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/jquery-3.3.1.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/rangeslider.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/popper.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/bootstrap.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/js.cookie.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../js/common.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../js/forms.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../js/debug.js"></script>
+    <!--JAVASCRIPT%%-->
+
+    %FORM_VALIDATOR%
+
+    <script>
+        $(function() {
+            if ($('#alarm_settings').length) {
+
+                function check_days(num) {
+                    var count = 0;
+                    for (j = 0; j < 7; j++) {
+                        var name = 'alarm_' + num + '_weekday_' + j;
+                        if ($('#_' + name).is(':checked')) {
+                            count++;
+                        }
+                    }
+                    return count;
+                }
+
+                function update_one_time_alert(num) {
+                    // check if any days are checked and the alarm is enabled
+                    var count = check_days(num);
+                    var enabled = parseInt($('#alarm_' + num + '_enabled').val());
+                    // if not, display one time alert
+                    var repeat_id = '#alarm_' + num + '_repeat';
+                    if (count == 0 && enabled == 1) {
+                        $(repeat_id).show();
+                    }
+                    else {
+                        $(repeat_id).hide();
+                    }
+                }
+
+                $('.button-checkbox input').on('change', function() {
+                    var items = $(this).attr('id').split('_');
+                    update_one_time_alert(items[2]);
+                });
+
+                for(i = 0; i < 10; i++) {
+                    update_one_time_alert(i);
+                }
+
+                $('form').on('submit', function () {
+                    var i, j;
+                    // copy button checkbox values to hidden fields
+                    for(i = 0; i < 10; i++) {
+                        for (j = 0; j < 7; j++) {
+                            var name = 'alarm_' + i + '_weekday_' + j;
+                            $('#' + name).val($('#_' + name).prop('checked') ? '1' : '0');
+                        }
+                    }
+                });
+
+                $('.alarm-enable-slider input').rangeslider({
+                    polyfill : false
+                }).on('change', function() {
+                    var items = $(this).attr('id').split('_');
+                    update_one_time_alert(items[1]);
+                });
+
+                $('#spinner_container').hide();
+                $('#alarm_container').show();
+
+            }
+
+        });
+    </script>
+
+</body>
+</html>

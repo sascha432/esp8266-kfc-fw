@@ -491,4 +491,36 @@ namespace KFCConfigurationClasses {
         return ::config._H_GET(MainConfig().plugins.weatherstation.config);
     }
 
+
+    Plugins::Alarm::Alarm() : cfg({})
+    {
+        cfg.alarms[0].time.week_day.week_days_enum = WeekDaysType::WEEK_DAYS;
+        cfg.alarms[0].time.hour = 6;
+        cfg.alarms[0].time.minute = 30;
+        cfg.alarms[1].time.week_day.week_days_enum = WeekDaysType::WEEK_END;
+        cfg.alarms[1].time.hour = 10;
+        cfg.alarms[1].time.minute = 0;
+    }
+
+    void Plugins::Alarm::defaults()
+    {
+        Alarm alarm;
+        config._H_SET(MainConfig().plugins.alarm.cfg, alarm.cfg);
+    }
+
+    Plugins::Alarm::Alarm_t &Plugins::Alarm::getWriteableConfig()
+    {
+        return config._H_W_GET(MainConfig().plugins.alarm.cfg);
+    }
+
+    Plugins::Alarm::Alarm_t Plugins::Alarm::getConfig()
+    {
+        return config._H_GET(MainConfig().plugins.alarm.cfg);
+    }
+
+    void Plugins::Alarm::setConfig(Alarm_t &alarm)
+    {
+        config._H_SET(MainConfig().plugins.alarm.cfg, alarm);
+    }
+
 };

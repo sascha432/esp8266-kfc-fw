@@ -194,10 +194,10 @@ $(function() {
             color = $button.data('color'),
             settings = {
                 on: {
-                    icon: 'oi oi-task'
+                    icon: $(this).data('on-icon')
                 },
                 off: {
-                    icon: 'oi oi-ban'
+                    icon: $(this).data('off-icon')
                 }
             };
 
@@ -240,7 +240,7 @@ $(function() {
         function init() {
             updateDisplay();
             // Inject the icon if applicable
-            if ($button.find('.state-icon').length == 0) {
+            if ($button.find('.state-icon').length == 0 && settings[$button.data('state')].icon) {
                 $button.prepend('<i class="state-icon ' + settings[$button.data('state')].icon + '"></i> ');
             }
         }

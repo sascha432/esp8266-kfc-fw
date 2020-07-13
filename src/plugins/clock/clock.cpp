@@ -37,14 +37,14 @@ ClockPlugin::ClockPlugin() :
 
     size_t ofs = 0;
     auto ptr = _pixelOrder.data();
-    static const char pixel_order[] PROGMEM = IOT_CLOCK_PIXEL_ANIMATION_ORDER;
+    static const char pixel_order[] PROGMEM = IOT_CLOCK_PIXEL_ORDER;
     for(int i = 0; i < IOT_CLOCK_NUM_DIGITS; i++) {
-        memcpy_P(ptr, pixel_order, IOT_CLOCK_PIXEL_ANIMATION_ORDER_LEN);
-        for (int j = 0; j < IOT_CLOCK_PIXEL_ANIMATION_ORDER_LEN; j++) {
+        memcpy_P(ptr, pixel_order, IOT_CLOCK_PIXEL_ORDER_LEN);
+        for (int j = 0; j < IOT_CLOCK_PIXEL_ORDER_LEN; j++) {
             ptr[j] += ofs;
         }
         ofs += SevenSegmentDisplay::getNumPixelsPerDigit();
-        ptr += IOT_CLOCK_PIXEL_ANIMATION_ORDER_LEN;
+        ptr += IOT_CLOCK_PIXEL_ORDER_LEN;
     }
 
     _colors[0] = 0;
@@ -286,6 +286,10 @@ void ClockPlugin::setup(PluginSetupMode_t mode)
     }
 
     LoopFunctions::add(ClockPlugin::loop);
+
+#if IOT_ALARM_FORM_ENABLED
+    AlarmForm::setup(mode);
+#endif
 }
 
 void ClockPlugin::reconfigure(PGM_P source)
@@ -293,6 +297,9 @@ void ClockPlugin::reconfigure(PGM_P source)
     _debug_println();
     readConfig();
     _setSevenSegmentDisplay();
+#if IOT_ALARM_FORM_ENABLED
+    AlarmForm::reconfigure(source);
+#endif
 }
 
 void ClockPlugin::shutdown()
@@ -309,7 +316,22 @@ void ClockPlugin::shutdown()
 
 void ClockPlugin::getStatus(Print &output)
 {
-    output.printf_P(PSTR("Clock Plugin" HTML_S(br) "Total pixels %u, digit pixels %u"), SevenSegmentDisplay::getTotalPixels(), SevenSegmentDisplay::getDigitsPixels());
+    output.print(F("Clock Plugin" HTML_S(br)));
+#if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
+    output.print(F("Ambient light sensor"));
+    if (_config.temp_prot < 85) {
+        output.print(F(", over-temperature protection enabled"));
+    }
+    output.print(F(HTML_S(br)));
+#else
+    if (_config.temp_prot < 85) {
+        output.print(F("Over-temperature protection enabled" HTML_S(br)));
+    }
+#endif
+#if IOT_ALARM_FORM_ENABLED
+    output.print(F("Alarm support enabled" HTML_S(br)));
+#endif
+    output.printf_P(PSTR("Total pixels %u, digits pixels %u"), SevenSegmentDisplay::getTotalPixels(), SevenSegmentDisplay::getDigitsPixels());
 }
 
 void ClockPlugin::createWebUI(WebUI &webUI)
@@ -330,8 +352,25 @@ void ClockPlugin::createWebUI(WebUI &webUI)
     sensor.add(JJ(height), height);
 }
 
+#if IOT_ALARM_FORM_ENABLED
+
+void ClockPlugin::triggerAlarm(AlarmType type, uint16_t duration)
+{
+    _debug_printf_P(PSTR("type=%u dur=%u"), (int)type, duration);
+}
+
+#endif
+
 void ClockPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
 {
+    _debug_printf_P(PSTR("url=%s\n"), request->url().c_str());
+#if IOT_ALARM_FORM_ENABLED
+    if (request->url().endsWith(F("alarm.html"))) {
+        AlarmForm::createConfigureForm(request, form);
+        return;
+    }
+#endif
+
     form.setFormUI(F("Clock Configuration"));
 
     form.add<bool>(F("time_format_24h"), _H_STRUCT_VALUE(Config().clock, time_format_24h))
@@ -523,7 +562,7 @@ void ClockPlugin::publishState(MQTTClient *client)
         client->publish(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(_brightness_state)), _qos, true, String(_brightness));
         client->publish(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(_color_state)), _qos, true, PrintString(F("%u,%u,%u"), _colors[0], _colors[1], _colors[2]));
 #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
-        client->publish(MQTTClient::formatTopic(FSPGM(light_sensor), nullptr), _qos, true, _autoBrightness == -1 ? String(FSPGM(Off)) : String((int)(_autoBrightnessValue * 100)));
+        client->publish(MQTTClient::formatTopic(FSPGM(light_sensor), nullptr), _qos, true, _autoBrightness == -1 ? String(FSPGM(Off)) : String(_autoBrightnessValue * 100, 0));
 #endif
     }
 
@@ -730,23 +769,27 @@ void ClockPlugin::_loop()
         if (get_time_diff(_updateTimer, millis()) >= 100) {
             _updateTimer = millis();
 
+#if IOT_CLOCK_PIXEL_SYNC_ANIMATION
+            #error crashing
+
             // show syncing animation until the time is valid
-            // if (_pixelOrder) {
-                // if (++_isSyncing > IOT_CLOCK_PIXEL_ANIMATION_ORDER_LEN) {
-                //     _isSyncing = 1;
-                // }
-                // for(uint8_t i = 0; i < SevenSegmentDisplay::getNumDigits(); i++) {
-                //     _display.rotate(i, _isSyncing - 1, _color, _pixelOrder.data(), _pixelOrder.size());
-                // }
-            // }
-            // else {
-            //     if (++_isSyncing > SevenSegmentPixel_DIGITS_NUM_PIXELS) {
-            //         _isSyncing = 1;
-            //     }
-            //     for(uint8_t i = 0; i < _display->numDigits(); i++) {
-            //         _display->rotate(i, _isSyncing - 1, _color, nullptr, 0);
-            //     }
-            // }
+            if (_pixelOrder) {
+                if (++_isSyncing > IOT_CLOCK_PIXEL_ORDER_LEN) {
+                    _isSyncing = 1;
+                }
+                for(uint8_t i = 0; i < SevenSegmentDisplay::getNumDigits(); i++) {
+                    _display.rotate(i, _isSyncing - 1, _color, _pixelOrder.data(), _pixelOrder.size());
+                }
+            }
+            else {
+                if (++_isSyncing > SevenSegmentPixel_DIGITS_NUM_PIXELS) {
+                    _isSyncing = 1;
+                }
+                for(uint8_t i = 0; i < _display->numDigits(); i++) {
+                    _display->rotate(i, _isSyncing - 1, _color, nullptr, 0);
+                }
+            }
+#endif
             _display.show();
         }
         return;

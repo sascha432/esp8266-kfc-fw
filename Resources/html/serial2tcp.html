@@ -43,13 +43,13 @@
                     <div class="input-group">
                         <input type="text" class="form-control" name="serial2tcp_host" id="serial2tcp_host" value="%SERIAL2TCP_HOST%">
                         <div class="input-group-append">
-                            <span class="button-checkbox" style="margin-right:3px; margin-left:3px;">
+                            <span class="button-checkbox mr-1 ml-2" data-on-icon="oi oi-task" data-off-icon="oi oi-ban">
                                 <button type="button" class="btn" data-color="primary">Auto Connect</button>
                                 <input type="checkbox" class="hidden" name="_serial2tcp_auto_connect" id="_serial2tcp_auto_connect"
                                     value="1" %SERIAL2TCP_AUTO_CONNECT% data-label="HIDDEN">
                                 <input type="hidden" name="serial2tcp_auto_connect" id="serial2tcp_auto_connect">
                             </span>
-                            <span class="button-checkbox">
+                            <span class="button-checkbox" data-on-icon="oi oi-task" data-off-icon="oi oi-ban">
                                 <button type="button" class="btn" data-color="primary">Reconnect</button>
                                 <input type="checkbox" class="hidden" name="_serial2tcp_auto_reconnect" id="_serial2tcp_auto_reconnect"
                                     value="1" %SERIAL2TCP_AUTO_RECONNECT% data-label="HIDDEN">
@@ -126,10 +126,10 @@
     <!--%%JAVASCRIPT-->
     <script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/jquery-3.3.1.min.js"></script>
     <script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/popper.min.js"></script>
-    <script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/popper.min.js"></script>
     <script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/bootstrap.min.js"></script>
     <script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/js.cookie.min.js"></script>
-    <script debug_loader="1" type="text/javascript" src="../js/main.min.js"></script>
+    <script debug_loader="1" type="text/javascript" src="../js/common.js"></script>
+    <script debug_loader="1" type="text/javascript" src="../js/forms.js"></script>
     <script debug_loader="1" type="text/javascript" src="../js/debug.js"></script>
     <!--JAVASCRIPT%%-->
 

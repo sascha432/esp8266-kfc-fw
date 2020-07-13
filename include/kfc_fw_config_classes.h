@@ -469,11 +469,93 @@ namespace KFCConfigurationClasses {
             WeatherStationConfig_t config;
         };
 
+        class Alarm
+        {
+        public:
+            static constexpr uint8_t MAX_ALARMS = 10;
+
+            enum class AlarmModeType : uint8_t {
+                BOTH,       // can be used if silent or buzzer is not available
+                SILENT,
+                BUZZER
+            };
+
+            enum class WeekDaysType : uint8_t {
+                NONE,
+                SUNDAY = _BV(0),
+                MONDAY = _BV(1),
+                TUESDAY = _BV(2),
+                WEDNESDAY = _BV(3),
+                THURSDAY = _BV(4),
+                FRIDAY = _BV(5),
+                SATURDAY = _BV(6),
+                WEEK_DAYS = _BV(1)|_BV(2)|_BV(3)|_BV(4)|_BV(5),
+                WEEK_END = _BV(0)|_BV(6),
+                IS_ENABLED = _BV(7)
+            };
+
+            typedef union __attribute__packed__ {
+                WeekDaysType week_days_enum;
+                uint8_t week_days;
+                struct {
+                    uint8_t sunday: 1;              // 0
+                    uint8_t monday: 1;              // 1
+                    uint8_t tuesday: 1;             // 2
+                    uint8_t wednesday: 1;           // 3
+                    uint8_t thursday: 1;            // 4
+                    uint8_t friday: 1;              // 5
+                    uint8_t saturday: 1;            // 6
+                    uint8_t enabled: 1;             // 7
+                };
+            } WeekDay_t;
+
+            typedef struct __attribute__packed__ {
+                union {
+                    uint32_t timestamp;
+                    struct __attribute__packed__ {
+                        uint8_t hour;
+                        uint8_t minute;
+                    };
+                };
+                WeekDay_t week_day;
+            } AlarmTime_t;
+
+            typedef struct __attribute__packed__ {
+                AlarmTime_t time;
+                union {
+                    AlarmModeType mode_type;
+                    uint8_t mode;
+                };
+                uint16_t max_duration;       // limit in seconds, 0 = unlimited
+            } SingleAlarm_t;
+
+            typedef struct __attribute__packed__ {
+                SingleAlarm_t alarms[MAX_ALARMS];
+            } Alarm_t;
+
+            Alarm();
+
+            static bool isEnabled(const SingleAlarm_t &alarm) {
+                return alarm.time.week_day.enabled;
+            }
+            static void setEnabled(SingleAlarm_t &alarm, bool state) {
+                alarm.time.week_day.enabled = state;
+            }
+
+            static void defaults();
+            static Alarm_t &getWriteableConfig();
+            static Alarm_t getConfig();
+            static void setConfig(Alarm_t &alarm);
+
+            Alarm_t cfg;
+        };
+
 
         HomeAssistant homeassistant;
         RemoteControl remotecontrol;
         IOTSwitch iotswitch;
         WeatherStation weatherstation;
+        Alarm alarm;
 
     };
 

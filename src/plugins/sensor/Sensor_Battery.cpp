@@ -171,7 +171,7 @@ String Sensor_Battery::_getId(BatteryType type)
 
 String Sensor_Battery::_getTopic(BatteryType type)
 {
-    return MQTTClient::formatTopic(_getId(type), nullptr);
+    return MQTTClient::formatTopic(_getId(type));
 }
 
 #if AT_MODE_SUPPORTED

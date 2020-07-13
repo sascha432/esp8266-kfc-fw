@@ -45,22 +45,22 @@ MQTTComponent::MQTTAutoDiscoveryPtr Sensor_INA219::nextAutoDiscovery(MQTTAutoDis
     switch(num) {
         case 0:
             discovery->create(this, _getId(VOLTAGE), format);
-            discovery->addStateTopic(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(__s_), _getId(VOLTAGE).c_str()));
+            discovery->addStateTopic(MQTTClient::formatTopic(_getId(VOLTAGE)));
             discovery->addUnitOfMeasurement('V');
             break;
         case 1:
             discovery->create(this, _getId(CURRENT), format);
-            discovery->addStateTopic(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(__s_), _getId(CURRENT).c_str()));
+            discovery->addStateTopic(MQTTClient::formatTopic(_getId(CURRENT)));
             discovery->addUnitOfMeasurement(F("mA"));
             break;
         case 2:
             discovery->create(this, _getId(POWER), format);
-            discovery->addStateTopic(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(__s_), _getId(POWER).c_str()));
+            discovery->addStateTopic(MQTTClient::formatTopic(_getId(POWER)));
             discovery->addUnitOfMeasurement(F("mW"));
             break;
         case 3:
             discovery->create(this, _getId(PEAK_CURRENT), format);
-            discovery->addStateTopic(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(__s_), _getId(PEAK_CURRENT).c_str()));
+            discovery->addStateTopic(MQTTClient::formatTopic(_getId(PEAK_CURRENT)));
             discovery->addUnitOfMeasurement(F("mA"));
             break;
     }
@@ -117,10 +117,10 @@ void Sensor_INA219::publishState(MQTTClient *client)
 {
     if (client && client->isConnected()) {
         auto _qos = MQTTClient::getDefaultQos();
-        client->publish(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(__s_), _getId(VOLTAGE).c_str()), _qos, 1, String(_mqttData.U(), 2));
-        client->publish(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(__s_), _getId(CURRENT).c_str()), _qos, 1, String(_mqttData.I(), 0));
-        client->publish(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(__s_), _getId(POWER).c_str()), _qos, 1, String(_mqttData.P(), 0));
-        client->publish(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(__s_), _getId(PEAK_CURRENT).c_str()), _qos, 1, String(_Ipeak, 0));
+        client->publish(MQTTClient::formatTopic(_getId(VOLTAGE)), _qos, true, String(_mqttData.U(), 2));
+        client->publish(MQTTClient::formatTopic(_getId(CURRENT)), _qos, true, String(_mqttData.I(), 0));
+        client->publish(MQTTClient::formatTopic(_getId(POWER)), _qos, true, String(_mqttData.P(), 0));
+        client->publish(MQTTClient::formatTopic(_getId(PEAK_CURRENT)), _qos, true, String(_Ipeak, 0));
         _mqttData = SensorData();
     }
 }

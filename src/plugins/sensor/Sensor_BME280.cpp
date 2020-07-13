@@ -25,7 +25,7 @@ MQTTComponent::MQTTAutoDiscoveryPtr Sensor_BME280::nextAutoDiscovery(MQTTAutoDis
         return nullptr;
     }
     auto discovery = new MQTTAutoDiscovery();
-    String topic = MQTTClient::formatTopic(_getId(), nullptr);
+    String topic = MQTTClient::formatTopic(_getId());
     switch(num) {
         case 0:
             discovery->create(this, _getId(FSPGM(temperature, "temperature")), format);
@@ -121,7 +121,7 @@ void Sensor_BME280::publishState(MQTTClient *client)
         json.printTo(str);
 
         auto _qos = MQTTClient::getDefaultQos();
-        client->publish(MQTTClient::formatTopic(_getId(), nullptr), _qos, true, str);
+        client->publish(MQTTClient::formatTopic(_getId()), _qos, true, str);
     }
 }
 

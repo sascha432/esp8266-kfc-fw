@@ -27,7 +27,7 @@ MQTTComponent::MQTTAutoDiscoveryPtr Sensor_LM75A::nextAutoDiscovery(MQTTAutoDisc
     switch(num) {
         case 0:
             discovery->create(this, _getId(), format);
-            discovery->addStateTopic(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(__s_), _getId().c_str()));
+            discovery->addStateTopic(MQTTClient::formatTopic(_getId()));
             discovery->addUnitOfMeasurement(FSPGM(_degreeC));
             break;
     }
@@ -63,7 +63,7 @@ void Sensor_LM75A::publishState(MQTTClient *client)
 {
     if (client && client->isConnected()) {
         auto _qos = MQTTClient::getDefaultQos();
-        client->publish(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(__s_), _getId().c_str()), _qos, 1, String(_readSensor(), 2));
+        client->publish(MQTTClient::formatTopic(_getId()), _qos, true, String(_readSensor(), 2));
     }
 }
 

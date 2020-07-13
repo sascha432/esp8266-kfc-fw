@@ -34,16 +34,16 @@ MQTTComponent::MQTTAutoDiscoveryPtr Sensor_DS3231::nextAutoDiscovery(MQTTAutoDis
     switch(num) {
         case 0:
             discovery->create(this, FSPGM(ds3231_id_temp), format);
-            discovery->addStateTopic(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(__s_), FSPGM(ds3231_id_temp)));
+            discovery->addStateTopic(MQTTClient::formatTopic(FSPGM(ds3231_id_temp)));
             discovery->addUnitOfMeasurement(FSPGM(_degreeC));
             break;
         case 1:
             discovery->create(this, FSPGM(ds3231_id_time), format);
-            discovery->addStateTopic(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(__s_), FSPGM(ds3231_id_time)));
+            discovery->addStateTopic(MQTTClient::formatTopic(FSPGM(ds3231_id_time)));
             break;
         case 2:
             discovery->create(this, FSPGM(ds3231_id_lost_power), format);
-            discovery->addStateTopic(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(__s_), FSPGM(ds3231_id_lost_power)));
+            discovery->addStateTopic(MQTTClient::formatTopic(FSPGM(ds3231_id_lost_power)));
             break;
     }
     discovery->finalize();
@@ -84,9 +84,9 @@ void Sensor_DS3231::publishState(MQTTClient *client)
 {
     if (client && client->isConnected()) {
         auto _qos = MQTTClient::getDefaultQos();
-        client->publish(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(__s_), FSPGM(ds3231_id_temp)), _qos, 1, String(_readSensorTemp(), 2));
-        client->publish(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(__s_), FSPGM(ds3231_id_time)), _qos, 1, String((uint32_t)_readSensorTime()));
-        client->publish(MQTTClient::formatTopic(MQTTClient::NO_ENUM, FSPGM(__s_), FSPGM(ds3231_id_lost_power)), _qos, 1, String(_readSensorLostPower()));
+        client->publish(MQTTClient::formatTopic(FSPGM(ds3231_id_temp)), _qos, true, String(_readSensorTemp(), 2));
+        client->publish(MQTTClient::formatTopic(FSPGM(ds3231_id_time)), _qos, true, String((uint32_t)_readSensorTime()));
+        client->publish(MQTTClient::formatTopic(FSPGM(ds3231_id_lost_power)), _qos, true, String(_readSensorLostPower()));
     }
 }
 

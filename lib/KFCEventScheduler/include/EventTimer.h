@@ -19,10 +19,7 @@ public:
     EventTimer(EventScheduler::Callback loopCallback, int64_t delay, EventScheduler::RepeatType repeat, EventScheduler::Priority_t priority);
     ~EventTimer();
 
-    operator bool() const {
-        __debugbreak_and_panic_printf_P(PSTR("operator bool was used to check if a timer is active, use active()"));
-        return false;
-    }
+    // force inline to avoid ICACHE_RAM_ATTR
 
     inline void initTimer() __attribute__((always_inline)) {
         _rearmEtsTimer();
@@ -36,13 +33,22 @@ public:
         return _delay;
     }
 
-    // inline EventScheduler::RepeatType getRepeat() const {
-    //     return _repeat;
-    // }
+    // make sure the delay does not exceed UINT32_MAX
+    inline uint32_t getDelayUInt32() const __attribute__((always_inline))  {
+        return (uint32_t)_delay;
+    }
 
-    void setCallback(EventScheduler::Callback loopCallback);
-    EventScheduler::Callback getCallback();
-    void setPriority(EventScheduler::Priority_t priority = EventScheduler::PRIO_LOW);
+    inline void setCallback(EventScheduler::Callback loopCallback) __attribute__((always_inline)) {
+        _loopCallback = loopCallback;
+    }
+
+    inline EventScheduler::Callback getCallback() __attribute__((always_inline)) {
+        return _loopCallback;
+    }
+
+    inline void setPriority(EventScheduler::Priority_t priority) __attribute__((always_inline)) {
+        _priority = priority;
+    }
 
     // cancels timer and updates options
     void rearm(int64_t delay, EventScheduler::RepeatUpdateType repeat = EventScheduler::RepeatUpdateType());

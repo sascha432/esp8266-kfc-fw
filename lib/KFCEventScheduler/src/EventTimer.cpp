@@ -11,18 +11,19 @@
 #include <debug_helper_disable.h>
 #endif
 
-EventTimer::EventTimer(EventScheduler::Callback loopCallback, int64_t delay, EventScheduler::RepeatType repeat, EventScheduler::Priority_t priority) : _etsTimer()
+EventTimer::EventTimer(EventScheduler::Callback loopCallback, int64_t delay, EventScheduler::RepeatType repeat, EventScheduler::Priority_t priority) :
+    _etsTimer({}),
+    _loopCallback(loopCallback),
+    _delay(delay),
+    _remainingDelay(0),
+    _priority(priority),
+    _repeat(repeat),
+    _callbackScheduled(false),
+    _disarmed(true)
 {
     if (delay < MinDelay) {
         __debugbreak_and_panic_printf_P(PSTR("delay %lu < %u\n"), (ulong)delay, MinDelay);
     }
-    _loopCallback = loopCallback;
-    _callbackScheduled = false;
-    _delay = delay;
-    _remainingDelay = 0;
-    _repeat = repeat;
-    _priority = priority;
-    _disarmed = true;
 }
 
 EventTimer::~EventTimer()
@@ -34,21 +35,6 @@ EventTimer::~EventTimer()
     }
     // detach();
     ets_timer_done(&_etsTimer);
-}
-
-void ICACHE_RAM_ATTR EventTimer::setCallback(EventScheduler::Callback loopCallback)
-{
-    _loopCallback = loopCallback;
-}
-
-EventScheduler::Callback EventTimer::getCallback()
-{
-    return _loopCallback;
-}
-
-void ICACHE_RAM_ATTR EventTimer::setPriority(EventScheduler::Priority_t priority)
-{
-    _priority = priority;
 }
 
 void ICACHE_RAM_ATTR EventTimer::rearm(int64_t delay, EventScheduler::RepeatUpdateType repeat)

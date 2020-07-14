@@ -296,7 +296,7 @@ void NTPPlugin::execConfigTime()
 
     // check time every minute
     // for some reason, NTP does not always update the time even with _ntpRefreshTimeMillis = 15seconds
-    plugin._checkTimer.add(60000, true, _checkTimerCallback);
+    plugin._checkTimer.add(15000, true, _checkTimerCallback);
 }
 
 void NTPPlugin::updateNtpCallback()
@@ -334,8 +334,11 @@ void NTPPlugin::_checkTimerCallback(EventScheduler::TimerPtr timer)
         timer->detach();
     }
     else {
-        _debug_printf_P(PSTR("NTP did not update, calling configTime() again\n"));
+        _debug_printf_P(PSTR("NTP did not update, calling configTime() again, delay=%u\n"), timer->getDelayUInt32());
         execConfigTime();
+        if (timer->getDelayUInt32() < 60000U) { // change to 60 seconds after first attempt
+            timer->rearm(60000);
+        }
     }
 }
 

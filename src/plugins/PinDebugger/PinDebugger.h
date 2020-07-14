@@ -21,10 +21,10 @@ public:
         return F("PIN Debugger");
     }
 
-    virtual PluginPriorityEnum_t getSetupPriority() const override {
-        return (PluginPriorityEnum_t)-125;
+    virtual PriorityType getSetupPriority() const override {
+        return (PriorityType)-125;
     }
-    virtual void setup(PluginSetupMode_t mode) override;
+    virtual void setup(SetupModeType mode) override;
     virtual void reconfigure(PGM_P source) override;
     virtual void shutdown() override;
 
@@ -33,8 +33,8 @@ public:
     }
     virtual void getStatus(Print &output) override;
 
-    virtual MenuTypeEnum_t getMenuType() const override {
-        return CUSTOM;
+    virtual MenuType getMenuType() const override {
+        return MenuType::CUSTOM;
     }
     virtual void createMenu() override {
         bootstrapMenu.addSubMenu(getFriendlyName(), F("pin_debugger.html"), navMenu.util);

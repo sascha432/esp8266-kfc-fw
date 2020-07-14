@@ -65,19 +65,19 @@ public:
         return F("Buttons");
     }
 
-    virtual PluginPriorityEnum_t getSetupPriority() const {
-        return PRIO_BUTTONS;
+    virtual PriorityType getSetupPriority() const {
+        return PriorityType::BUTTONS;
     }
     virtual bool autoSetupAfterDeepSleep() const override {
         return true;
     }
 
-    virtual void setup(PluginSetupMode_t mode) override;
+    virtual void setup(SetupModeType mode) override;
     virtual void shutdown() override;
     virtual void reconfigure(PGM_P source) override;
 
-    // virtual MenuTypeEnum_t getMenuType() const override {
-    //     return AUTO;
+    // virtual MenuType getMenuType() const override {
+    //     return MenuType::AUTO;
     // }
     // virtual void createMenu() override {
     //     bootstrapMenu.addSubMenu(F("Buttons"), F("buttons.html"), navMenu.config);

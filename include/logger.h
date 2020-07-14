@@ -65,7 +65,7 @@ public:
     const String getLogLevelAsString(LogLevel logLevel);
     void setLogLevel(LogLevel logLevel);
 
-#if SYSLOG
+#if SYSLOG_SUPPORT
     void setSyslog(SyslogStream *syslog);
 #endif
 
@@ -97,7 +97,7 @@ private:
     size_t _accessLogSize;
     size_t _debugLogSize;
     LogLevel _logLevel;
-#if SYSLOG
+#if SYSLOG_SUPPORT
     SyslogStream *_syslog;
 #endif
 };

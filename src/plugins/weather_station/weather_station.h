@@ -68,11 +68,11 @@ public:
     virtual const __FlashStringHelper *getFriendlyName() const {
         return F("Weather Station");
     }
-    virtual PluginPriorityEnum_t getSetupPriority() const override {
-        return (PluginPriorityEnum_t)120;
+    virtual PriorityType getSetupPriority() const override {
+        return static_cast<PriorityType>(120);
     }
 
-    virtual void setup(PluginSetupMode_t mode) override;
+    virtual void setup(SetupModeType mode) override;
     virtual void reconfigure(PGM_P source) override;
     virtual void shutdown() override;
     virtual bool hasReconfigureDependecy(PluginComponent *plugin) const override;

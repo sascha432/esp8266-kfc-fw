@@ -690,12 +690,12 @@ bool WebServerPlugin::_sendFile(const FileMapping &mapping, HttpHeaders &httpHea
 
     if (webTemplate == nullptr) {
         if (path.charAt(0) == '/' && String_endsWith(path, SPGM(_html))) {
-            String filename = path.substring(1, path.length() - 5);
-            auto plugin = PluginComponent::getTemplate(filename);
+            String itemName = path.substring(1, path.length() - 5);
+            auto plugin = PluginComponent::getTemplate(itemName);
             if (plugin) {
-                webTemplate = plugin->getWebTemplate(filename);
+                webTemplate = plugin->getWebTemplate(itemName);
             }
-            else if (nullptr != (plugin = PluginComponent::getForm(filename))) {
+            else if (nullptr != (plugin = PluginComponent::getForm(itemName))) {
                 Form *form = new SettingsForm(nullptr);
                 plugin->createConfigureForm(request, *form);
                 webTemplate = new ConfigTemplate(form);
@@ -851,7 +851,7 @@ bool WebServerPlugin::_handleFileRead(String path, bool client_accepts_gzip, Asy
                 plugin->createConfigureForm(request, *form);
                 webTemplate = new ConfigTemplate(form);
                 if (form->validate()) {
-                    plugin->configurationSaved();
+                    plugin->configurationSaved(form);
                     config.write();
                     executeDelayed(request, [plugin]() {
                         plugin->invokeReconfigure(nullptr);
@@ -860,6 +860,7 @@ bool WebServerPlugin::_handleFileRead(String path, bool client_accepts_gzip, Asy
                     mapping = FileMapping(FSPGM(applying_html), true);
                 }
                 else {
+                    plugin->configurationDiscarded(form);
                     config.discard();
                 }
             }
@@ -981,11 +982,11 @@ bool WebServerPlugin::_handleFileRead(String path, bool client_accepts_gzip, Asy
     return _sendFile(mapping, httpHeaders, client_accepts_gzip, request, webTemplate);
 }
 
-void WebServerPlugin::setup(PluginSetupMode_t mode)
+void WebServerPlugin::setup(SetupModeType mode)
 {
     WebUIAlerts_readStorage()
     begin();
-    if (mode == PLUGIN_SETUP_DELAYED_AUTO_WAKE_UP) {
+    if (mode == SetupModeType::DELAYED_AUTO_WAKE_UP) {
         invokeReconfigureNow(getName());
     }
 }

@@ -159,11 +159,11 @@ public:
         return F("I2C Scanner");
     }
 
-    PluginPriorityEnum_t getSetupPriority() const {
-        return MIN_PRIORITY;
+    virtual PriorityType getSetupPriority() const override {
+        return PriorityType::MIN;
     }
 
-    void setup(PluginSetupMode_t mode) override {
+    void setup(SetupModeType mode) override {
         config.initTwoWire();
     }
 

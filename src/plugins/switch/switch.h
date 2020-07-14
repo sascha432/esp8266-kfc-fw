@@ -53,11 +53,11 @@ public:
     virtual const __FlashStringHelper *getFriendlyName() const override {
         return F("Switch");
     }
-    virtual PluginPriorityEnum_t getSetupPriority() const override {
-        return DEFAULT_PRIORITY;
+    virtual PriorityType getSetupPriority() const override {
+        return PriorityType::DEFAULT;
     }
 
-    virtual void setup(PluginSetupMode_t mode) override;
+    virtual void setup(SetupModeType mode) override;
     virtual void shutdown() override;
     virtual void reconfigure(PGM_P source) override;
 

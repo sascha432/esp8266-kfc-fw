@@ -163,14 +163,14 @@ public:
         return F("Remote Control");
     }
 
-    virtual PluginPriorityEnum_t getSetupPriority() const override {
-        return MAX_PRIORITY;
+    virtual PriorityType getSetupPriority() const override {
+        return PriorityType::MAX;
     }
     virtual bool autoSetupAfterDeepSleep() const override {
         return true;
     }
 
-    virtual void setup(PluginSetupMode_t mode) override;
+    virtual void setup(SetupModeType mode) override;
     virtual void reconfigure(PGM_P source) override;
     virtual void shutdown() override;
     virtual void prepareDeepSleep(uint32_t sleepTimeMillis);
@@ -183,8 +183,8 @@ public:
     }
     virtual void getStatus(Print &output) override;
 
-    virtual MenuTypeEnum_t getMenuType() const override {
-        return CUSTOM;
+    virtual MenuType getMenuType() const override {
+        return MenuType::CUSTOM;
     }
     virtual void createMenu() override;
 

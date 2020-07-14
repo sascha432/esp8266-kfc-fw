@@ -87,12 +87,12 @@ public:
     virtual bool hasForm() const {
         return false;
     }
+
     virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) {
     }
-    virtual void configurationSaved() {
+    virtual void configurationSaved(Form *form) {
     }
-
-    virtual void reconfigure() {
+    virtual void reconfigure(PGM_P source) {
     }
     virtual void shutdown() {
     }

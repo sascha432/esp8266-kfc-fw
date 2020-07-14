@@ -20,10 +20,6 @@
 #define IOT_ALARM_PLUGIN_HAS_SILENT                     0
 #endif
 
-#ifndef IOT_ALARM_PLUGIN_ENABLED
-#define IOT_ALARM_PLUGIN_ENABLED                        0
-#endif
-
 class AsyncWebServerRequest;
 
 class AlarmPlugin : public PluginComponent {

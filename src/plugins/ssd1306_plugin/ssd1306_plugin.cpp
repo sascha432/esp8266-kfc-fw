@@ -271,7 +271,7 @@ public:
         return F("SSD1306");
     }
 
-    virtual void setup(PluginSetupMode_t mode) override {
+    virtual void setup(SetupModeType mode) override {
         ssd1306_setup();
     }
 

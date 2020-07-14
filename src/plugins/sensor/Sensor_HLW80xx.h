@@ -193,9 +193,9 @@ public:
         return true;
     }
     virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form);
-    virtual void configurationSaved();
+    virtual void configurationSaved(Form *form);
 
-    virtual void reconfigure() override;
+    virtual void reconfigure(PGM_P source) override;
     virtual void shutdown() override;
 
 #if AT_MODE_SUPPORTED

@@ -10,8 +10,8 @@ extern "C"{
 // src/web_server.cpp:997
 // src/plugins/atomic_sun/atomic_sun_v2.cpp:647
 // src/plugins/atomic_sun/atomic_sun_v2.cpp:659
-// src/plugins/dimmer_module/dimmer_module.cpp:528
-// src/plugins/dimmer_module/dimmer_module.cpp:535
+// src/plugins/dimmer_module/dimmer_module.cpp:529
+// src/plugins/dimmer_module/dimmer_module.cpp:536
 // src/plugins/file_manager/file_manager.cpp:481
 // src/plugins/home_assistant/home_assistant.h:64
 // src/plugins/http2serial/http2serial.cpp:243
@@ -65,7 +65,7 @@ PROGMEM_STRING_DECL(on);
 // src/plugins/atomic_sun/atomic_sun_v2.cpp:423
 PROGMEM_STRING_DECL(off);
 // src/at_mode.cpp:1064
-// src/kfc_fw_config.cpp:1377
+// src/kfc_fw_config.cpp:1381
 // src/plugins.cpp:72
 // src/plugins.cpp:79
 // src/plugins.cpp:80
@@ -74,7 +74,7 @@ PROGMEM_STRING_DECL(off);
 // src/web_server.cpp:950
 PROGMEM_STRING_DECL(yes);
 // src/at_mode.cpp:1064
-// src/kfc_fw_config.cpp:1377
+// src/kfc_fw_config.cpp:1381
 // src/plugins.cpp:72
 // src/plugins.cpp:79
 // src/plugins.cpp:80
@@ -85,8 +85,8 @@ PROGMEM_STRING_DECL(Device_is_rebooting);
 // src/kfc_fw_config.cpp:579
 // src/kfc_fw_config_classes.cpp:80
 PROGMEM_STRING_DECL(KFC_Firmware);
-// src/kfc_fw_config.cpp:1270
-// src/kfc_fw_config.cpp:1271
+// src/kfc_fw_config.cpp:1274
+// src/kfc_fw_config.cpp:1275
 // src/templates.cpp:91
 PROGMEM_STRING_DECL(default_password_warning);
 // src/plugins.cpp:76
@@ -367,6 +367,8 @@ PROGMEM_STRING_DECL(status);
 // src/plugins/weather_station/weather_station.cpp:178
 PROGMEM_STRING_DECL(message);
 // src/plugins/atomic_sun/atomic_sun_v2.cpp:79
+// src/plugins/clock/alarm_form.cpp:38
+// src/plugins/clock/alarm_form.cpp:40
 // src/plugins/mqtt/mqtt_client.cpp:825
 // src/plugins/mqtt/mqtt_client.cpp:832
 // src/plugins/ntp/ntp.cpp:187
@@ -398,9 +400,9 @@ PROGMEM_STRING_DECL(channel__u);
 // src/plugins/atomic_sun/atomic_sun_v2.cpp:150
 // src/plugins/atomic_sun/atomic_sun_v2.cpp:162
 // src/plugins/blinds_ctrl/BlindsChannel.cpp:116
-// src/plugins/clock/clock.cpp:405
-// src/plugins/clock/clock.cpp:434
-// src/plugins/clock/clock.cpp:466
+// src/plugins/clock/clock.cpp:444
+// src/plugins/clock/clock.cpp:473
+// src/plugins/clock/clock.cpp:505
 // src/plugins/dimmer_module/dimmer_channel.cpp:65
 // src/plugins/switch/switch.cpp:198
 // src/plugins/switch/switch.cpp:216
@@ -409,40 +411,40 @@ PROGMEM_STRING_DECL(_set);
 // src/plugins/atomic_sun/atomic_sun_v2.cpp:151
 // src/plugins/atomic_sun/atomic_sun_v2.cpp:163
 // src/plugins/blinds_ctrl/BlindsChannel.cpp:120
-// src/plugins/clock/clock.cpp:404
-// src/plugins/clock/clock.cpp:522
+// src/plugins/clock/clock.cpp:443
+// src/plugins/clock/clock.cpp:561
 // src/plugins/dimmer_module/dimmer_channel.cpp:66
 // src/plugins/switch/switch.cpp:197
 // src/plugins/switch/switch.cpp:296
 PROGMEM_STRING_DECL(_state);
 // src/plugins/atomic_sun/atomic_sun_v2.cpp:152
 // src/plugins/atomic_sun/atomic_sun_v2.cpp:164
-// src/plugins/clock/clock.cpp:409
-// src/plugins/clock/clock.cpp:436
-// src/plugins/clock/clock.cpp:445
+// src/plugins/clock/clock.cpp:448
+// src/plugins/clock/clock.cpp:475
+// src/plugins/clock/clock.cpp:484
 // src/plugins/dimmer_module/dimmer_channel.cpp:67
 PROGMEM_STRING_DECL(_brightness_set);
 // src/plugins/atomic_sun/atomic_sun_v2.cpp:153
 // src/plugins/atomic_sun/atomic_sun_v2.cpp:165
-// src/plugins/clock/clock.cpp:408
-// src/plugins/clock/clock.cpp:523
+// src/plugins/clock/clock.cpp:447
+// src/plugins/clock/clock.cpp:562
 // src/plugins/dimmer_module/dimmer_channel.cpp:68
 PROGMEM_STRING_DECL(_brightness_state);
 // src/plugins/atomic_sun/atomic_sun_v2.cpp:154
-// src/plugins/clock/clock.cpp:412
-// src/plugins/clock/clock.cpp:435
-// src/plugins/clock/clock.cpp:449
+// src/plugins/clock/clock.cpp:451
+// src/plugins/clock/clock.cpp:474
+// src/plugins/clock/clock.cpp:488
 PROGMEM_STRING_DECL(_color_set);
 // src/plugins/atomic_sun/atomic_sun_v2.cpp:155
-// src/plugins/clock/clock.cpp:411
-// src/plugins/clock/clock.cpp:524
+// src/plugins/clock/clock.cpp:450
+// src/plugins/clock/clock.cpp:563
 PROGMEM_STRING_DECL(_color_state);
 // src/plugins/atomic_sun/atomic_sun_v2.cpp:303
 // src/plugins/clock/clock.cpp:125
-// src/plugins/clock/clock.cpp:322
-// src/plugins/clock/clock.cpp:322
-// src/plugins/clock/clock.cpp:355
-// src/plugins/clock/clock.cpp:503
+// src/plugins/clock/clock.cpp:344
+// src/plugins/clock/clock.cpp:344
+// src/plugins/clock/clock.cpp:394
+// src/plugins/clock/clock.cpp:542
 // src/plugins/home_assistant/home_assistant.cpp:535
 // src/plugins/home_assistant/home_assistant.cpp:563
 PROGMEM_STRING_DECL(brightness);
@@ -457,21 +459,21 @@ PROGMEM_STRING_DECL(Yes);
 // src/plugins/weather_station/weather_station.cpp:348
 PROGMEM_STRING_DECL(No);
 // src/plugins/clock/clock.cpp:163
-// src/plugins/clock/clock.cpp:329
-// src/plugins/clock/clock.cpp:418
-// src/plugins/clock/clock.cpp:419
-// src/plugins/clock/clock.cpp:509
-// src/plugins/clock/clock.cpp:526
+// src/plugins/clock/clock.cpp:351
+// src/plugins/clock/clock.cpp:457
+// src/plugins/clock/clock.cpp:458
+// src/plugins/clock/clock.cpp:548
+// src/plugins/clock/clock.cpp:565
 PROGMEM_STRING_DECL(light_sensor);
-// src/plugins/clock/clock.cpp:384
-// src/plugins/clock/clock.cpp:387
-// src/plugins/clock/clock.cpp:390
+// src/plugins/clock/clock.cpp:423
+// src/plugins/clock/clock.cpp:426
+// src/plugins/clock/clock.cpp:429
 // src/plugins/sensor/Sensor_DS3231.cpp:38
 // src/plugins/sensor/Sensor_DS3231.cpp:78
 // src/plugins/sensor/Sensor_LM75A.cpp:31
 // src/plugins/sensor/Sensor_LM75A.cpp:59
 PROGMEM_STRING_DECL(_degreeC);
-// src/plugins/clock/clock.cpp:526
+// src/plugins/clock/clock.cpp:565
 // src/plugins/switch/switch.cpp:77
 // src/plugins/switch/switch.cpp:88
 PROGMEM_STRING_DECL(Off);

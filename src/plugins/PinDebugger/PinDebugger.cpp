@@ -14,7 +14,7 @@
 
 static PinDebuggerPlugin plugin;
 
-void PinDebuggerPlugin::setup(PluginSetupMode_t mode)
+void PinDebuggerPlugin::setup(SetupModeType mode)
 {
 }
 

@@ -36,7 +36,7 @@ PGM_P SensorPlugin::getName() const
     return PSTR("sensor");
 }
 
-void SensorPlugin::setup(PluginSetupMode_t mode)
+void SensorPlugin::setup(SetupModeType mode)
 {
     _timer.add(1000, true, SensorPlugin::timerEvent);
 #if IOT_SENSOR_HAVE_LM75A
@@ -77,7 +77,7 @@ void SensorPlugin::setup(PluginSetupMode_t mode)
 void SensorPlugin::reconfigure(PGM_P source)
 {
     for(auto sensor: _sensors) {
-        sensor->reconfigure();
+        sensor->reconfigure(source);
     }
 }
 
@@ -160,10 +160,10 @@ void SensorPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &for
     form.finalize();
 }
 
-void SensorPlugin::configurationSaved()
+void SensorPlugin::configurationSaved(Form *form)
 {
     for(auto sensor: _sensors) {
-        sensor->configurationSaved();
+        sensor->configurationSaved(form);
     }
 }
 

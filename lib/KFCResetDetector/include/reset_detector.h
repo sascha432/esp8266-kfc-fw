@@ -118,8 +118,8 @@ public:
     virtual PGM_P getName() const {
         return PSTR("rd");
     }
-    virtual PluginPriorityEnum_t getSetupPriority() const override {
-        return PRIO_RESET_DETECTOR;
+    virtual PriorityType getSetupPriority() const override {
+        return PriorityType::RESET_DETECTOR;
     }
     virtual uint8_t getRtcMemoryId() const override {
         return RESET_DETECTOR_RTC_MEM_ID;

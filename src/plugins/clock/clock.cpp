@@ -184,7 +184,7 @@ uint16_t ClockPlugin::_getBrightness() const
 
 #endif
 
-void ClockPlugin::setup(PluginSetupMode_t mode)
+void ClockPlugin::setup(SetupModeType mode)
 {
     _debug_println();
 
@@ -286,20 +286,13 @@ void ClockPlugin::setup(PluginSetupMode_t mode)
     }
 
     LoopFunctions::add(ClockPlugin::loop);
-
-#if IOT_ALARM_FORM_ENABLED
-    AlarmForm::setup(mode);
-#endif
 }
 
 void ClockPlugin::reconfigure(PGM_P source)
 {
-    _debug_println();
+    _debug_printf_P(PSTR("source=%p/%s\n"), source, source ? source : emptyString.c_str());
     readConfig();
     _setSevenSegmentDisplay();
-#if IOT_ALARM_FORM_ENABLED
-    AlarmForm::reconfigure(source);
-#endif
 }
 
 void ClockPlugin::shutdown()
@@ -328,9 +321,6 @@ void ClockPlugin::getStatus(Print &output)
         output.print(F("Over-temperature protection enabled" HTML_S(br)));
     }
 #endif
-#if IOT_ALARM_FORM_ENABLED
-    output.print(F("Alarm support enabled" HTML_S(br)));
-#endif
     output.printf_P(PSTR("Total pixels %u, digits pixels %u"), SevenSegmentDisplay::getTotalPixels(), SevenSegmentDisplay::getDigitsPixels());
 }
 
@@ -352,25 +342,9 @@ void ClockPlugin::createWebUI(WebUI &webUI)
     sensor.add(JJ(height), height);
 }
 
-#if IOT_ALARM_FORM_ENABLED
-
-void ClockPlugin::triggerAlarm(AlarmType type, uint16_t duration)
-{
-    _debug_printf_P(PSTR("type=%u dur=%u"), (int)type, duration);
-}
-
-#endif
-
 void ClockPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
 {
     _debug_printf_P(PSTR("url=%s\n"), request->url().c_str());
-#if IOT_ALARM_FORM_ENABLED
-    if (request->url().endsWith(F("alarm.html"))) {
-        AlarmForm::createConfigureForm(request, form);
-        return;
-    }
-#endif
-
     form.setFormUI(F("Clock Configuration"));
 
     form.add<bool>(F("timefmt24h"), _H_STRUCT_VALUE(Config().clock, time_format_24h))
@@ -414,7 +388,7 @@ void ClockPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form
 
 #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
 
-    form.add<uint16_t>(F("auto_brightness"), _H_STRUCT_VALUE(Config().clock, auto_brightness))
+    form.add<uint16_t>(F("auto_br"), _H_STRUCT_VALUE(Config().clock, auto_brightness))
         ->setFormUI((new FormUI(FormUI::TEXT, F("Auto brightness value")))->setSuffix(F("-1 = disable")));
 
 #endif

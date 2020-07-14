@@ -32,7 +32,9 @@ WebTemplate::~WebTemplate()
     if (_json) {
         delete _json;
     }
-    releaseForm();
+    if (_form) {
+        delete _form;
+    }
 }
 
 void WebTemplate::setForm(Form *form)
@@ -46,19 +48,13 @@ Form *WebTemplate::getForm()
     return _form;
 }
 
-void WebTemplate::releaseForm()
+JsonUnnamedObject *WebTemplate::getJson()
 {
-    if (_form) {
-        delete _form;
-        _form = nullptr;
-    }
-}
-
-JsonUnnamedObject *WebTemplate::getJson() {
     return _json;
 }
 
-PrintArgs &WebTemplate::getPrintArgs() {
+PrintArgs &WebTemplate::getPrintArgs()
+{
     return _printArgs;
 }
 
@@ -630,12 +626,7 @@ bool TemplateDataProvider::callback(const String& name, DataProviderInterface& p
             form->createJavascript(printArgs);
             fbMethod = FillBufferMethod::PRINT_ARGS;
         }
-        // free memory now otherwise it will be allocated until the connection is terminated (web server ondisconnect event)
-        webTemplate.releaseForm();
     }
-    // else if (String_equals(name, PSTR("FORM_RELEASE"))) {
-    //     webTemplate.releaseForm();
-    // }
     else if (String_equals(name, PSTR("FORM_JSON"))) {
         auto json = webTemplate.getJson();
         if (json) {

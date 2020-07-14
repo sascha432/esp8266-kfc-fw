@@ -47,7 +47,7 @@
                 "./Resources/html/mqtt.html",
                 "./Resources/js/forms/mqtt.js"
             ],
-            "#if !SYSLOG": [
+            "#if !SYSLOG_SUPPORT": [
                 "./Resources/html/syslog.html",
                 "./Resources/js/forms/syslog.js"
             ],
@@ -56,12 +56,12 @@
                 "./Resources/html/timezone.html",
                 "./Resources/js/forms/ntp.js"
             ],
-            "#if !HTTP2SERIAL": [
+            "#if !HTTP2SERIAL_SUPPORT": [
                 "./Resources/html/serial_console.html",
                 "./lib/KFCWebBuilder/Resources/js/selectize.min.js",
                 "./Resources/js/http2serial.js"
             ],
-            "#if !PING_MONITOR": [
+            "#if !PING_MONITOR_SUPPORT": [
                 "./Resources/html/ping.html",
                 "./Resources/html/ping_monitor.html",
                 "./Resources/js/ping_console.js"
@@ -70,7 +70,7 @@
                 "./Resources/html/clock.html",
                 "./Resources/images/light.svg"
             ],
-            "#if !IOT_ALARM_FORM_ENABLED": [
+            "#if !IOT_ALARM_PLUGIN_ENABLED": [
                 "./Resources/html/alarm.html",
                 "./Resources/js/forms/alarm.js"
             ],

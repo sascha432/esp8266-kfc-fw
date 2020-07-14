@@ -8,7 +8,7 @@
 
 static ButtonsPlugin plugin;
 
-void ButtonsPlugin::setup(PluginSetupMode_t mode)
+void ButtonsPlugin::setup(SetupModeType mode)
 {
     _readConfig();
     PinMonitor &monitor = *PinMonitor::createInstance();

@@ -1228,7 +1228,7 @@ void at_mode_serial_handle_event(String &commandString)
                         }
                         else {
                             args.printf_P(PSTR("Calling %s.setup()"), name.c_str());
-                            plugin->setup(PluginComponent::PLUGIN_SETUP_DEFAULT);
+                            plugin->setup(PluginComponent::SetupModeType::DEFAULT);
                         }
                     }
                     else {

@@ -469,7 +469,7 @@ void HassPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
     form.finalize();
 }
 
-void HassPlugin::setup(PluginSetupMode_t mode)
+void HassPlugin::setup(SetupModeType mode)
 {
     _installWebhooks();
     LoopFunctions::callOnce([this]() {

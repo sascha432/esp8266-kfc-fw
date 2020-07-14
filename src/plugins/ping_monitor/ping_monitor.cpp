@@ -360,10 +360,10 @@ public:
         return F("Ping Monitor");
     }
 
-    virtual PluginPriorityEnum_t getSetupPriority() const override {
-        return (PluginPriorityEnum_t)100;
+    virtual PriorityType getSetupPriority() const override {
+        return PriorityType::PING_MONITOR;
     }
-    virtual void setup(PluginSetupMode_t mode) override;
+    virtual void setup(SetupModeType mode) override;
     virtual void reconfigure(PGM_P source) override;
     virtual void shutdown() override;
     virtual bool hasReconfigureDependecy(PluginComponent *plugin) const override {
@@ -375,8 +375,8 @@ public:
     }
     virtual void getStatus(Print &output) override;
 
-    virtual MenuTypeEnum_t getMenuType() const override {
-        return CUSTOM;
+    virtual MenuType getMenuType() const override {
+        return MenuType::CUSTOM;
     }
     virtual void createMenu() override {
         bootstrapMenu.addSubMenu(getFriendlyName(), F("ping_monitor.html"), navMenu.config);
@@ -399,7 +399,7 @@ public:
 
 static PingMonitorPlugin plugin;
 
-void PingMonitorPlugin::setup(PluginSetupMode_t mode)
+void PingMonitorPlugin::setup(SetupModeType mode)
 {
     ping_monitor_setup();
 }

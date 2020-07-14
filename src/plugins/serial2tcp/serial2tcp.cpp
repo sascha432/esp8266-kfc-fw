@@ -30,8 +30,8 @@ public:
     virtual const __FlashStringHelper *getFriendlyName() const {
         return F("Serial2TCP");
     }
-    virtual PluginPriorityEnum_t getSetupPriority() const override;
-    virtual void setup(PluginSetupMode_t mode) override;
+    virtual PriorityType getSetupPriority() const override;
+    virtual void setup(SetupModeType mode) override;
     virtual void reconfigure(PGM_P source) override;
     virtual bool hasStatus() const override;
     virtual void getStatus(Print &output) override;
@@ -52,11 +52,11 @@ PGM_P Serial2TcpPlugin::getName() const {
     return PSTR("serial2tcp");
 }
 
-Serial2TcpPlugin::PluginPriorityEnum_t Serial2TcpPlugin::getSetupPriority() const {
-    return PluginPriorityEnum_t::MAX_PRIORITY;
+Serial2TcpPlugin::PriorityType Serial2TcpPlugin::getSetupPriority() const {
+    return PriorityType::MAX;
 }
 
-void Serial2TcpPlugin::setup(PluginSetupMode_t mode) {
+void Serial2TcpPlugin::setup(SetupModeType mode) {
     auto instance = Serial2TcpBase::createInstance();
     if (instance) {
         instance->begin();
@@ -64,7 +64,7 @@ void Serial2TcpPlugin::setup(PluginSetupMode_t mode) {
 }
 
 void Serial2TcpPlugin::reconfigure(PGM_P source) {
-    setup(PLUGIN_SETUP_DEFAULT);
+    setup(SetupModeType::DEFAULT);
 }
 
 bool Serial2TcpPlugin::hasStatus() const {

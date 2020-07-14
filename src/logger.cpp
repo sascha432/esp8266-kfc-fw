@@ -6,7 +6,7 @@
 
 #include "logger.h"
 #include <time.h>
-#if SYSLOG
+#if SYSLOG_SUPPORT
 #include <KFCSyslog.h>
 #endif
 #include <misc.h>
@@ -29,7 +29,7 @@ Logger _logger;
 Logger::Logger()
 {
     _logLevel = LOGLEVEL_ACCESS;
-#if SYSLOG
+#if SYSLOG_SUPPORT
     _syslog = nullptr;
 #endif
     _messagesLogSize = 0;
@@ -185,7 +185,7 @@ void Logger::setLogLevel(LogLevel logLevel)
     _logLevel = logLevel;
 }
 
-#if SYSLOG
+#if SYSLOG_SUPPORT
 void Logger::setSyslog(SyslogStream * syslog)
 {
     _syslog = syslog;
@@ -306,7 +306,7 @@ void Logger::writeLog(LogLevel logLevel, const char *message, va_list arg)
 
     _closeLog();
 
-#if SYSLOG
+#if SYSLOG_SUPPORT
     if (_syslog) {
         _debug_println(F("sending message to syslog"));
         switch(logLevel) {

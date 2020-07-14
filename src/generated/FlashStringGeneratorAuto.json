@@ -524,7 +524,7 @@
         "default": "Disabled"
     },
     "enabled": {
-        "use_counter": 7,
+        "use_counter": 9,
         "default": "enabled"
     },
     "mqtt_component_light": {

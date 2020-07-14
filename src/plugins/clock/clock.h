@@ -9,7 +9,6 @@
 #include "WebUIComponent.h"
 #include "plugins.h"
 #include "kfc_fw_config.h"
-#include "alarm_form.h"
 #include "./plugins/mqtt/mqtt_component.h"
 
 #ifndef DEBUG_IOT_CLOCK
@@ -84,11 +83,7 @@
 #include <Bounce2.h>
 #endif
 
-#ifndef IOT_ALARM_FORM_ENABLED
-#define IOT_ALARM_FORM_ENABLED                             0
-#endif
-
-class ClockPlugin : public AlarmFormClass, public MQTTComponent, public WebUIInterface {
+class ClockPlugin : public PluginComponent, public MQTTComponent, public WebUIInterface {
 
 // WebUIInterface
 public:
@@ -181,11 +176,11 @@ public:
     virtual const __FlashStringHelper *getFriendlyName() const {
         return F("Clock");
     }
-    virtual PluginPriorityEnum_t getSetupPriority() const override {
-        return MIN_PRIORITY;
+    virtual PriorityType getSetupPriority() const override {
+        return PriorityType::MIN;
     }
 
-    virtual void setup(PluginSetupMode_t mode) override;
+    virtual void setup(SetupModeType mode) override;
     virtual void reconfigure(PGM_P source) override;
     //virtual bool hasReconfigureDependecy(PluginComponent *plugin) const override;
     virtual void shutdown() override;
@@ -202,23 +197,6 @@ public:
         return this;
     }
     virtual void createWebUI(WebUI &webUI) override;
-
-#if IOT_ALARM_FORM_ENABLED
-    virtual bool canHandleForm(const String &formName) const override {
-        debug_printf_P(PSTR("name=%s\n"), formName.c_str());
-        if (String_equals(formName, getName())) {
-            return true;
-        }
-        return AlarmForm::canHandleForm(formName);
-    }
-
-    virtual void createMenu() override {
-        bootstrapMenu.addSubMenu(getFriendlyName(), F("clock.html"), navMenu.config);
-        AlarmForm::createMenu();
-    }
-
-    virtual void triggerAlarm(AlarmType type, uint16_t duration);
-#endif
 
     virtual PGM_P getConfigureForm() const override {
         return getName();

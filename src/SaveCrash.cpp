@@ -105,12 +105,12 @@ public:
     virtual const __FlashStringHelper *getFriendlyName() const {
         return F("EspSaveCrash");
     }
-    virtual PluginPriorityEnum_t getSetupPriority() const override {
-        return MAX_PRIORITY;
+    virtual PriorityType getSetupPriority() const override {
+        return PriorityType::MAX;
     }
 
 #if SPIFFS_SUPPORT
-    virtual void setup(PluginSetupMode_t mode) {
+    virtual void setup(SetupModeType mode) {
         // save and clear crash dump eeprom after
         SaveCrash::installSafeCrashTimer(10);
     }

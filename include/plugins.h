@@ -49,4 +49,4 @@ void register_plugin(PluginComponent *plugin);
 void prepare_plugins();
 
 // setup all plug-ins
-void setup_plugins(PluginComponent::PluginSetupMode_t mode);
+void setup_plugins(PluginComponent::SetupModeType mode);

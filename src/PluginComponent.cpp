@@ -52,9 +52,9 @@ bool PluginComponent::nameEquals(const String &name) const
     return strcmp_P(name.c_str(), getName()) == 0;
 }
 
-PluginComponent::PluginPriorityEnum_t PluginComponent::getSetupPriority() const
+PluginComponent::PriorityType PluginComponent::getSetupPriority() const
 {
-    return DEFAULT_PRIORITY;
+    return PriorityType::DEFAULT;
 }
 
 uint8_t PluginComponent::getRtcMemoryId() const
@@ -77,7 +77,7 @@ bool PluginComponent::autoSetupAfterDeepSleep() const
 #endif
 
 
-void PluginComponent::setup(PluginSetupMode_t mode) {
+void PluginComponent::setup(SetupModeType mode) {
 }
 
 void PluginComponent::reconfigure(PGM_P source) {
@@ -123,10 +123,7 @@ PGM_P PluginComponent::getConfigureForm() const
 
 bool PluginComponent::canHandleForm(const String &formName) const
 {
-    if (!getConfigureForm()) {
-        return false;
-    }
-    return strcmp_P(formName.c_str(), getConfigureForm()) == 0;
+    return (getConfigureForm() && strcmp_P(formName.c_str(), getConfigureForm()) == 0);
 }
 
 void PluginComponent::createConfigureForm(AsyncWebServerRequest *request, Form &form)
@@ -134,13 +131,17 @@ void PluginComponent::createConfigureForm(AsyncWebServerRequest *request, Form &
     __debugbreak_and_panic_printf_P(SPGM(__pure_virtual), getName());
 }
 
-void PluginComponent::configurationSaved()
+void PluginComponent::configurationSaved(Form *form)
 {
 }
 
-PluginComponent::MenuTypeEnum_t PluginComponent::getMenuType() const
+void PluginComponent::configurationDiscarded(Form *form)
 {
-    return AUTO;
+}
+
+PluginComponent::MenuType PluginComponent::getMenuType() const
+{
+    return MenuType::AUTO;
 }
 
 void PluginComponent::createMenu()
@@ -208,9 +209,9 @@ void PluginComponent::shutdown()
 
 PluginComponent *PluginComponent::getForm(const String &formName)
 {
-    for(auto plugin: plugins) {
+    for(const auto plugin: plugins) {
         if (plugin->canHandleForm(formName)) {
-            _debug_printf_P(PSTR("form=%s result=%s\n"), formName.c_str(), plugin->getName());
+            debug_printf_P(PSTR("form=%s name=%s\n"), formName.c_str(), plugin->getName());
             return plugin;
         }
     }
@@ -220,7 +221,7 @@ PluginComponent *PluginComponent::getForm(const String &formName)
 
 PluginComponent *PluginComponent::getTemplate(const String &formName)
 {
-    for(auto plugin: plugins) {
+    for(const auto plugin: plugins) {
         if (plugin->hasWebTemplate(formName)) {
             _debug_printf_P(PSTR("template=%s result=%s\n"), formName.c_str(), plugin->getName());
             return plugin;
@@ -232,7 +233,7 @@ PluginComponent *PluginComponent::getTemplate(const String &formName)
 
 PluginComponent *PluginComponent::getByName(PGM_P name)
 {
-    for(auto plugin: plugins) {
+    for(const auto plugin: plugins) {
         if (plugin->nameEquals(FPSTR(name))) {
             _debug_printf_P(PSTR("name=%s result=%s\n"), name, plugin->getName());
             return plugin;
@@ -244,7 +245,7 @@ PluginComponent *PluginComponent::getByName(PGM_P name)
 
 PluginComponent *PluginComponent::getByMemoryId(uint8_t memoryId)
 {
-    for(auto plugin: plugins) {
+    for(const auto plugin: plugins) {
         if (plugin->getRtcMemoryId() == memoryId) {
             _debug_printf_P(PSTR("id=%u result=%s\n"), memoryId, plugin->getName());
             return plugin;

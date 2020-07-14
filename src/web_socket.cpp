@@ -17,7 +17,7 @@
 #include "kfc_fw_config.h"
 #include "logger.h"
 #include "web_socket.h"
-#if HTTP2SERIAL
+#if HTTP2SERIAL_SUPPORT
 #include "./plugins/http2serial/http2serial.h"
 #endif
 

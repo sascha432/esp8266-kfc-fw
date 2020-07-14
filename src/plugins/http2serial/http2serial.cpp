@@ -196,16 +196,16 @@ public:
     virtual const __FlashStringHelper *getFriendlyName() const {
         return F("Http2Serial");
     }
-    virtual PluginPriorityEnum_t getSetupPriority() const override {
-        return (PluginPriorityEnum_t)10;
+    virtual PriorityType getSetupPriority() const override {
+        return PriorityType::HTTP2SERIAL;
     }
-    virtual void setup(PluginSetupMode_t mode) override;
+    virtual void setup(SetupModeType mode) override;
     virtual void reconfigure(PGM_P source) override;
     virtual bool hasReconfigureDependecy(PluginComponent *plugin) const override;
     virtual void shutdown() override;
 
-    virtual MenuTypeEnum_t getMenuType() const override {
-        return CUSTOM;
+    virtual MenuType getMenuType() const override {
+        return MenuType::CUSTOM;
     }
     virtual void createMenu() override {
         bootstrapMenu.addSubMenu(F("Serial Console"), F("serial_console.html"), navMenu.util);
@@ -222,7 +222,7 @@ public:
 
 static Http2SerialPlugin plugin;
 
-void Http2SerialPlugin::setup(PluginSetupMode_t mode)
+void Http2SerialPlugin::setup(SetupModeType mode)
 {
     auto server = WebServerPlugin::getWebServerObject();
     if (server) {
@@ -235,7 +235,7 @@ void Http2SerialPlugin::setup(PluginSetupMode_t mode)
 
 void Http2SerialPlugin::reconfigure(PGM_P source)
 {
-    setup(PLUGIN_SETUP_DEFAULT);
+    setup(SetupModeType::DEFAULT);
 }
 
 bool Http2SerialPlugin::hasReconfigureDependecy(PluginComponent *plugin) const

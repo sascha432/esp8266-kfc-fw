@@ -43,14 +43,14 @@ public:
     virtual const __FlashStringHelper *getFriendlyName() const {
         return F("Web server");
     }
-    virtual PluginPriorityEnum_t getSetupPriority() const override {
-        return PRIO_HTTP;
+    virtual PriorityType getSetupPriority() const override {
+        return PriorityType::HTTP;
     }
     virtual bool allowSafeMode() const override {
         return true;
     }
 
-    virtual void setup(PluginSetupMode_t mode) override;
+    virtual void setup(SetupModeType mode) override;
     virtual void reconfigure(PGM_P source) override;
     virtual void shutdown() override;
     virtual bool hasReconfigureDependecy(PluginComponent *plugin) const override {
@@ -62,8 +62,8 @@ public:
     }
     virtual void getStatus(Print &output) override;
 
-    virtual MenuTypeEnum_t getMenuType() const override {
-        return NONE;
+    virtual MenuType getMenuType() const override {
+        return MenuType::NONE;
     }
     virtual PGM_P getConfigureForm() const override {
         return PSTR("remote");

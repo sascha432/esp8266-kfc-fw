@@ -252,7 +252,7 @@ void setup()
         #endif
 
         prepare_plugins();
-        setup_plugins(PluginComponent::PLUGIN_SETUP_SAFE_MODE);
+        setup_plugins(PluginComponent::SetupModeType::SAFE_MODE);
 
         // check if wifi is up
         Scheduler.addTimer(1000, true, [](EventScheduler::TimerPtr timer) {
@@ -318,9 +318,9 @@ void setup()
         setup_plugins(
 #if ENABLE_DEEP_SLEEP
             resetDetector.hasWakeUpDetected() ?
-                PluginComponent::PLUGIN_SETUP_AUTO_WAKE_UP :
+                PluginComponent::SetupModeType::AUTO_WAKE_UP :
 #endif
-                PluginComponent::PLUGIN_SETUP_DEFAULT
+                PluginComponent::SetupModeType::DEFAULT
         );
 
         // check if wifi is up

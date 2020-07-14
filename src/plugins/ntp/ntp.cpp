@@ -67,8 +67,8 @@ public:
     virtual const __FlashStringHelper *getFriendlyName() const {
         return F("NTP Client");
     }
-    virtual PluginPriorityEnum_t getSetupPriority() const override {
-        return PRIO_NTP;
+    virtual PriorityType getSetupPriority() const override {
+        return PriorityType::NTP;
     }
 
 #if ENABLE_DEEP_SLEEP
@@ -77,7 +77,7 @@ public:
     }
 #endif
 
-    virtual void setup(PluginSetupMode_t mode) override;
+    virtual void setup(SetupModeType mode) override;
     virtual void reconfigure(PGM_P source) override;
     virtual void shutdown() override;
 
@@ -231,7 +231,7 @@ bool NTPPlugin::atModeHandler(AtModeArgs &args)
 
 #endif
 
-void NTPPlugin::setup(PluginSetupMode_t mode)
+void NTPPlugin::setup(SetupModeType mode)
 {
     if (config._H_GET(Config().flags).ntpClientEnabled) {
         execConfigTime();
@@ -244,7 +244,7 @@ void NTPPlugin::setup(PluginSetupMode_t mode)
 void NTPPlugin::reconfigure(PGM_P source)
 {
     _checkTimer.remove();
-    setup(PLUGIN_SETUP_DEFAULT);
+    setup(SetupModeType::DEFAULT);
 }
 
 void NTPPlugin::shutdown()

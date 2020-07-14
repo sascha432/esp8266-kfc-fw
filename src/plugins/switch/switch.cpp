@@ -28,7 +28,7 @@ SwitchPlugin::SwitchPlugin() : MQTTComponent(ComponentTypeEnum_t::SWITCH), _stat
     REGISTER_PLUGIN(this);
 }
 
-void SwitchPlugin::setup(PluginSetupMode_t mode)
+void SwitchPlugin::setup(SetupModeType mode)
 {
     _readConfig();
     _readStates();

@@ -91,8 +91,8 @@ public:
     virtual const __FlashStringHelper *getFriendlyName() const {
         return F("Sensors");
     }
-    virtual PluginPriorityEnum_t getSetupPriority() const override {
-        return (PluginPriorityEnum_t)110;
+    virtual PriorityType getSetupPriority() const override {
+        return PriorityType::SENSOR;
     }
 #if ENABLE_DEEP_SLEEP
     virtual bool autoSetupAfterDeepSleep() const override {
@@ -100,7 +100,7 @@ public:
     }
 #endif
 
-    virtual void setup(PluginSetupMode_t mode) override;
+    virtual void setup(SetupModeType mode) override;
     virtual void reconfigure(PGM_P source) override;
     virtual void shutdown() override;
 
@@ -115,7 +115,7 @@ public:
 
     virtual PGM_P getConfigureForm() const override;
     virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
-    virtual void configurationSaved() override;
+    virtual void configurationSaved(Form *form) override;
 
     static void timerEvent(EventScheduler::TimerPtr timer);
 

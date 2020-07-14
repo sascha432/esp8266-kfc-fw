@@ -509,7 +509,7 @@ PGM_P DimmerModulePlugin::getName() const
     return PSTR("dimmer");
 }
 
-void DimmerModulePlugin::setup(PluginSetupMode_t mode)
+void DimmerModulePlugin::setup(SetupModeType mode)
 {
     setupWebServer();
     _begin();

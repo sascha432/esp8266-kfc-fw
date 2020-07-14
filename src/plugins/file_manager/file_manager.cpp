@@ -467,11 +467,11 @@ public:
     virtual const __FlashStringHelper *getFriendlyName() const {
         return F("File Manager");
     }
-    virtual PluginPriorityEnum_t getSetupPriority() const override {
-        return MAX_PRIORITY;
+    virtual PriorityType getSetupPriority() const override {
+        return PriorityType::MAX;
     }
 
-    virtual void setup(PluginSetupMode_t mode) override {
+    virtual void setup(SetupModeType mode) override {
         file_manager_install_web_server_hook();
     }
     virtual void reconfigure(PGM_P source) override {
@@ -481,8 +481,8 @@ public:
         return plugin->nameEquals(FSPGM(http));
     }
 
-    virtual MenuTypeEnum_t getMenuType() const override {
-        return CUSTOM;
+    virtual MenuType getMenuType() const override {
+        return MenuType::CUSTOM;
     }
     virtual void createMenu() override {
         bootstrapMenu.addSubMenu(F("File Manager"), FSPGM(file_manager_html_uri), navMenu.util);

@@ -148,9 +148,9 @@ public:
     virtual const __FlashStringHelper *getFriendlyName() const {
         return F("Syslog Client");
     }
-    PluginPriorityEnum_t getSetupPriority() const override;
+    PriorityType getSetupPriority() const override;
 
-    void setup(PluginSetupMode_t mode) override;
+    void setup(SetupModeType mode) override;
     void reconfigure(PGM_P source) override;
     void shutdown() override;
 
@@ -176,13 +176,13 @@ public:
 
 static SyslogPlugin plugin;
 
-SyslogPlugin::PluginPriorityEnum_t SyslogPlugin::getSetupPriority() const
+SyslogPlugin::PriorityType SyslogPlugin::getSetupPriority() const
 {
-    return (PluginPriorityEnum_t)PRIO_SYSLOG;
+    return PriorityType::SYSLOG;
 }
 
 
-void SyslogPlugin::setup(PluginSetupMode_t mode)
+void SyslogPlugin::setup(SetupModeType mode)
 {
     syslog_setup();
 }
@@ -204,7 +204,7 @@ bool SyslogPlugin::hasStatus() const
 
 void SyslogPlugin::getStatus(Print &output)
 {
-#if SYSLOG
+#if SYSLOG_SUPPORT
     switch(config._H_GET(Config().flags).syslogProtocol) {
         case SYSLOG_PROTOCOL_UDP:
             output.printf_P(PSTR("UDP @ %s:%u"), config._H_STR(Config().syslog_host), config._H_GET(Config().syslog_port));

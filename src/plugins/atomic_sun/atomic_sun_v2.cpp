@@ -630,7 +630,7 @@ void Driver_4ChDimmer::_getChannels()
 
 AtomicSunPlugin dimmer_plugin;
 
-void AtomicSunPlugin::setup(PluginSetupMode_t mode)
+void AtomicSunPlugin::setup(SetupModeType mode)
 {
     _begin();
     setupWebServer();

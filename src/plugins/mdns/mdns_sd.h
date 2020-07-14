@@ -65,10 +65,10 @@ public:
     virtual const __FlashStringHelper *getFriendlyName() const {
         return F("MDNS");
     }
-    virtual PluginPriorityEnum_t getSetupPriority() const override {
-        return PRIO_MDNS;
+    virtual PriorityType getSetupPriority() const override {
+        return PriorityType::MDNS;
     }
-    virtual void setup(PluginSetupMode_t mode) override;
+    virtual void setup(SetupModeType mode) override;
     virtual void reconfigure(PGM_P source) override;
     virtual bool hasReconfigureDependecy(PluginComponent *plugin) const override {
         return plugin->nameEquals(FSPGM(http));
@@ -81,8 +81,8 @@ public:
 
 #if ESP8266
 
-    virtual MenuTypeEnum_t getMenuType() const override {
-        return CUSTOM;
+    virtual MenuType getMenuType() const override {
+        return MenuType::CUSTOM;
     }
     virtual void createMenu() override {
         if (_enabled) {

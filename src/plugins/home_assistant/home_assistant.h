@@ -37,8 +37,8 @@ public:
     virtual const __FlashStringHelper *getFriendlyName() const {
         return F("Home Assistant");
     }
-    virtual PluginPriorityEnum_t getSetupPriority() const {
-        return PRIO_HASS;
+    virtual PriorityType getSetupPriority() const {
+        return PriorityType::HASS;
     }
     virtual bool autoSetupAfterDeepSleep() const override {
         return true;
@@ -58,7 +58,7 @@ public:
     }
     virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
 
-    virtual void setup(PluginSetupMode_t mode);
+    virtual void setup(SetupModeType mode);
     virtual void reconfigure(PGM_P source);
     virtual bool hasReconfigureDependecy(PluginComponent *plugin) const {
         return plugin->nameEquals(FSPGM(http));

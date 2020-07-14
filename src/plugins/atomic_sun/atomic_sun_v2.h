@@ -189,11 +189,11 @@ public:
     virtual const __FlashStringHelper *getFriendlyName() const {
         return F("Atomic Sun v2");
     }
-    virtual PluginPriorityEnum_t getSetupPriority() const override {
-        return (AtomicSunPlugin::PluginPriorityEnum_t)100;
+    virtual PriorityType getSetupPriority() const override {
+        return static_cast<PriorityType>(100);
     }
 
-    virtual void setup(PluginSetupMode_t mode) override;
+    virtual void setup(SetupModeType mode) override;
     virtual void reconfigure(PGM_P source) override;
     virtual void shutdown() override;
     virtual bool hasReconfigureDependecy(PluginComponent *plugin) const;

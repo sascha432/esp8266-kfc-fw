@@ -31,7 +31,7 @@ RemoteControlPlugin::RemoteControlPlugin() : _autoSleepTimeout(0), _buttonsLocke
     }
 }
 
-void RemoteControlPlugin::setup(PluginSetupMode_t mode)
+void RemoteControlPlugin::setup(SetupModeType mode)
 {
     _readConfig();
 

@@ -31,7 +31,7 @@ public:
     virtual const __FlashStringHelper *getFriendlyName() const {
         return F("Blinds Controller");
     }
-    virtual void setup(PluginSetupMode_t mode) override;
+    virtual void setup(SetupModeType mode) override;
     virtual void reconfigure(PGM_P source) override;
 
     virtual bool hasStatus() const override;
@@ -82,7 +82,7 @@ BlindsControlPlugin::BlindsControlPlugin() : BlindsControl(), _isTestMode(false)
     REGISTER_PLUGIN(this);
 }
 
-void BlindsControlPlugin::setup(PluginSetupMode_t mode)
+void BlindsControlPlugin::setup(SetupModeType mode)
 {
     _setup();
     LoopFunctions::add(loopMethod);

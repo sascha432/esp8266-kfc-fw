@@ -37,7 +37,7 @@ Sensor_HLW80xx::Sensor_HLW80xx(const String &name) : MQTTSensor(), _name(name)
     _calibrationP = 1;
     _calibrationU = 1;
     _extraDigits = 0;
-    reconfigure();
+    reconfigure(nullptr);
 
     setUpdateRate(IOT_SENSOR_HLW80xx_UPDATE_RATE);
     setMqttUpdateRate(IOT_SENSOR_HLW80xx_UPDATE_RATE_MQTT);
@@ -158,7 +158,7 @@ void Sensor_HLW80xx::createWebUI(WebUI &webUI, WebUIRow **row)
     (*row)->addSensor(_getId(F("pf")), _name + F(" Power Factor"), JsonString());
 }
 
-void Sensor_HLW80xx::reconfigure()
+void Sensor_HLW80xx::reconfigure(PGM_P source)
 {
     auto sensor = config._H_GET(Config().sensor).hlw80xx;
     if (sensor.calibrationU) {
@@ -197,6 +197,9 @@ void Sensor_HLW80xx::createConfigureForm(AsyncWebServerRequest *request, Form &f
 
     form.add(F("energyCounterPrimary"), String(), FormField::InputFieldType::TEXT)
         ->setFormUI((new FormUI(FormUI::TEXT, F("HLW8012 Total Energy")))->setSuffix(kWh)->setPlaceholder(String(IOT_SENSOR_HLW80xx_PULSE_TO_KWH(getEnergyPrimaryCounter()), 3)));
+
+#error  TODOs
+        //TODO move to configurationSaved, if the form is invalid these values are wrong
     form.addValidator(new FormCallbackValidator([&sensor, this](String value, FormField &field) {
         if (value.length()) {
             sensor.hlw80xx.energyCounter = IOT_SENSOR_HLW80xx_KWH_TO_PULSE(value.toFloat());
@@ -206,6 +209,8 @@ void Sensor_HLW80xx::createConfigureForm(AsyncWebServerRequest *request, Form &f
     }));
     form.add(F("energyCounterSecondary"), String(), FormField::InputFieldType::TEXT)
         ->setFormUI((new FormUI(FormUI::TEXT, F("HLW8012 Energy")))->setSuffix(kWh)->setPlaceholder(String(IOT_SENSOR_HLW80xx_PULSE_TO_KWH(getEnergySecondaryCounter()), 3)));
+
+        //TODO move to configurationSaved, if the form is invalid these values are wrong
     form.addValidator(new FormCallbackValidator([this](String value, FormField &field) {
         if (value.length()) {
             getEnergySecondaryCounter() = IOT_SENSOR_HLW80xx_KWH_TO_PULSE(value.toFloat());
@@ -215,7 +220,7 @@ void Sensor_HLW80xx::createConfigureForm(AsyncWebServerRequest *request, Form &f
 
 }
 
-void Sensor_HLW80xx::configurationSaved()
+void Sensor_HLW80xx::configurationSaved(Form *form)
 {
     using KeyValueStorage::Container;
     using KeyValueStorage::ContainerPtr;

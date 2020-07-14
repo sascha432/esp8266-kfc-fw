@@ -10,7 +10,7 @@
 #include "serial_handler.h"
 #include "STK500v1Programmer.h"
 #include "blink_led_timer.h"
-#if HTTP2SERIAL
+#if HTTP2SERIAL_SUPPORT
 #include "plugins/http2serial/http2serial.h"
 #endif
 
@@ -740,7 +740,7 @@ void STK500v1Programmer::_reset()
 
 void STK500v1Programmer::_status(const String &message)
 {
-#if HTTP2SERIAL
+#if HTTP2SERIAL_SUPPORT
     auto http2server = Http2Serial::getConsoleServer();
     if (http2server) {
         if (http2server->getClients().length()) {

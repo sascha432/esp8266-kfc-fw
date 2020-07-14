@@ -155,7 +155,7 @@ void MDNSPlugin::_wifiCallback(uint8_t event, void *payload)
     }
 }
 
-void MDNSPlugin::setup(PluginSetupMode_t mode)
+void MDNSPlugin::setup(SetupModeType mode)
 {
     auto flags = config._H_GET(Config().flags);
     if (flags.enableMDNS && flags.wifiMode & WIFI_STA) {

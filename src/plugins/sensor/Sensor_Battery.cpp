@@ -17,7 +17,7 @@
 Sensor_Battery::Sensor_Battery(const JsonString &name) : MQTTSensor(), _name(name), _adc(A0, 20, 1)
 {
     REGISTER_SENSOR_CLIENT(this);
-    reconfigure();
+    reconfigure(nullptr);
 }
 
 Sensor_Battery::~Sensor_Battery()
@@ -116,7 +116,7 @@ void Sensor_Battery::createConfigureForm(AsyncWebServerRequest *request, Form &f
     form.add<uint8_t>(F("battery_precision"), _H_STRUCT_VALUE(Config().sensor, battery.precision))->setFormUI(new FormUI(FormUI::TEXT, F("Supply Voltage Precision")));
 }
 
-void Sensor_Battery::configurationSaved()
+void Sensor_Battery::configurationSaved(Form *form)
 {
     using KeyValueStorage::Container;
     using KeyValueStorage::ContainerPtr;
@@ -130,7 +130,7 @@ void Sensor_Battery::configurationSaved()
     config.callPersistantConfig(container);
 }
 
-void Sensor_Battery::reconfigure()
+void Sensor_Battery::reconfigure(PGM_P source)
 {
     _config = config._H_GET(Config().sensor).battery;
     _debug_printf_P(PSTR("calibration=%f, precision=%u\n"), _config.calibration, _config.precision);

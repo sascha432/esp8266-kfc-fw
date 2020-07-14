@@ -532,7 +532,7 @@ int strcmp_end_P(const char *str1, size_t len1, PGM_P str2, size_t len2)
     }
 #endif
     if (len2 > len1) {
-        return false;
+        return -1;
     } else if (len2 == len1) {
         return strcmp_P(str1, str2);
     }

@@ -256,14 +256,30 @@ String WiFi_disconnect_reason(WiFiDisconnectReason reason)
 #endif
 }
 
+#ifndef DEBUG_STRING_CHECK_NULLPTR
+#define DEBUG_STRING_CHECK_NULLPTR          DEBUG
+#endif
+
 int16_t stringlist_find_P_P(PGM_P list, PGM_P find, char separator)
 {
+#if DEBUG_STRING_CHECK_NULLPTR
+    if (!list || !find) {
+        debug_printf_P(PSTR("list=%p find=%p separator=%c\n"), list, find, separator);
+        return -1;
+    }
+#endif
     const char separator_str[2] = { separator, 0 };
     return stringlist_find_P_P(list, find, separator_str);
 }
 
 int16_t stringlist_find_P_P(PGM_P list, PGM_P find, const char *separator/*, int &position*/)
 {
+#if DEBUG_STRING_CHECK_NULLPTR
+    if (!list || !find || !separator) {
+        debug_printf_P(PSTR("list=%p find=%p separator=%p\n"), list, find, separator);
+        return -1;
+    }
+#endif
     PGM_P ptr1 = list;
     PGM_P ptr2 = find;
     uint8_t ch;
@@ -298,6 +314,12 @@ int16_t stringlist_find_P_P(PGM_P list, PGM_P find, const char *separator/*, int
 
 int strcmp_P_P(PGM_P str1, PGM_P str2)
 {
+#if DEBUG_STRING_CHECK_NULLPTR
+    if (!str1 || !str2) {
+        debug_printf_P(PSTR("str1=%p str2=%p\n"), str1, str2);
+        return 1;
+    }
+#endif
     uint8_t ch;
     do {
         ch = pgm_read_byte(str1++);
@@ -310,6 +332,12 @@ int strcmp_P_P(PGM_P str1, PGM_P str2)
 
 int strcasecmp_P_P(PGM_P str1, PGM_P str2)
 {
+#if DEBUG_STRING_CHECK_NULLPTR
+    if (!str1 || !str2) {
+        debug_printf_P(PSTR("str1=%p str2=%p\n"), str1, str2);
+        return 1;
+    }
+#endif
     uint8_t ch;
     do {
         ch = pgm_read_byte(str1++);
@@ -348,6 +376,12 @@ size_t String_trim(String &str)
 
 size_t String_rtrim(String &str, const char *chars)
 {
+#if DEBUG_STRING_CHECK_NULLPTR
+    if (!chars) {
+        debug_printf_P(PSTR("str=%s chars=%p\n"), str.c_str(), chars);
+        return str.length();
+    }
+#endif
     size_t len = str.length();
     while (len && strchr(chars, str.charAt(len - 1))) {
         len--;
@@ -358,6 +392,12 @@ size_t String_rtrim(String &str, const char *chars)
 
 size_t String_ltrim(String &str, const char *chars)
 {
+#if DEBUG_STRING_CHECK_NULLPTR
+    if (!chars) {
+        debug_printf_P(PSTR("str=%s chars=%p\n"), str.c_str(), chars);
+        return str.length();
+    }
+#endif
     size_t remove = 0;
     while (strchr(chars, str.charAt(remove))) {
         remove++;
@@ -368,12 +408,24 @@ size_t String_ltrim(String &str, const char *chars)
 
 size_t String_trim(String &str, const char *chars)
 {
+#if DEBUG_STRING_CHECK_NULLPTR
+    if (!chars) {
+        debug_printf_P(PSTR("str=%s chars=%p\n"), str.c_str(), chars);
+        return str.length();
+    }
+#endif
     String_rtrim(str, chars);
     return String_ltrim(str, chars);
 }
 
 size_t String_rtrim_P(String &str, const char *chars)
 {
+#if DEBUG_STRING_CHECK_NULLPTR
+    if (!chars) {
+        debug_printf_P(PSTR("str=%s chars=%p\n"), str.c_str(), chars);
+        return str.length();
+    }
+#endif
     auto buf = new char[strlen_P(chars) + 1];
     strcpy_P(buf, chars);
     auto len = String_rtrim(str, buf);
@@ -383,6 +435,12 @@ size_t String_rtrim_P(String &str, const char *chars)
 
 size_t String_ltrim_P(String &str, const char *chars)
 {
+#if DEBUG_STRING_CHECK_NULLPTR
+    if (!chars) {
+        debug_printf_P(PSTR("str=%s chars=%p\n"), str.c_str(), chars);
+        return str.length();
+    }
+#endif
     auto buf = new char[strlen_P(chars) + 1];
     strcpy_P(buf, chars);
     auto len = String_ltrim(str, buf);
@@ -392,6 +450,12 @@ size_t String_ltrim_P(String &str, const char *chars)
 
 size_t String_trim_P(String &str, const char *chars)
 {
+#if DEBUG_STRING_CHECK_NULLPTR
+    if (!chars) {
+        debug_printf_P(PSTR("str=%s chars=%p\n"), str.c_str(), chars);
+        return str.length();
+    }
+#endif
     auto buf = new char[strlen_P(chars) + 1];
     strcpy_P(buf, chars);
     auto len = String_trim(str, buf);
@@ -404,12 +468,24 @@ size_t String_trim_P(String &str, const char *chars)
 
 bool String_equals(const String &str1, PGM_P str2)
 {
+#if DEBUG_STRING_CHECK_NULLPTR
+    if (!str2) {
+        debug_printf_P(PSTR("str1=%s str2=%p\n"), str1.c_str(), str2);
+        return false;
+    }
+#endif
     const size_t strlen2 = strlen_P(str2);
     return (str1.length() == strlen2) && !strcmp_P(str1.c_str(), str2);
 }
 
 bool String_equalsIgnoreCase(const String &str1, PGM_P str2)
 {
+#if DEBUG_STRING_CHECK_NULLPTR
+    if (!str2) {
+        debug_printf_P(PSTR("str1=%s str2=%p\n"), str1.c_str(), str2);
+        return false;
+    }
+#endif
     const size_t strlen2 = strlen_P(str2);
     return (str1.length() == strlen2) && !strcasecmp_P(str1.c_str(), str2);
 }
@@ -418,24 +494,43 @@ bool String_equalsIgnoreCase(const String &str1, PGM_P str2)
 
 bool String_startsWith(const String &str1, PGM_P str2)
 {
+#if DEBUG_STRING_CHECK_NULLPTR
+    if (!str2) {
+        debug_printf_P(PSTR("str1=%s str2=%p\n"), str1.c_str(), str2);
+        return false;
+    }
+#endif
     const size_t strlen2 = strlen_P(str2);
     return (str1.length() >= strlen2) && !strncmp_P(str1.c_str(), str2, strlen2);
 }
 
 bool String_endsWith(const String &str1, PGM_P str2)
 {
+#if DEBUG_STRING_CHECK_NULLPTR
+    if (!str2) {
+        debug_printf_P(PSTR("str1=%s str2=%p\n"), str1.c_str(), str2);
+        return false;
+    }
+#endif
     const size_t strlen2 = strlen_P(str2);
     auto len = str1.length();
     return (len >= strlen2) && !strcmp_P(str1.c_str() + len - strlen2, str2);
 }
 
-bool String_endsWith(const String &str1, char ch) {
+bool String_endsWith(const String &str1, char ch)
+{
     auto len = str1.length();
     return (len != 0) && (str1.charAt(len - 1) == ch);
 }
 
 int strcmp_end_P(const char *str1, size_t len1, PGM_P str2, size_t len2)
 {
+#if DEBUG_STRING_CHECK_NULLPTR
+    if (!str1 || !str2) {
+        debug_printf_P(PSTR("str1=%p len1=%u str2=%p len2=%u\n"), str1, len1, str2, len2);
+        return 1;
+    }
+#endif
     if (len2 > len1) {
         return false;
     } else if (len2 == len1) {
@@ -471,10 +566,15 @@ bool __while(uint32_t time_in_ms, std::function<bool()> loop)
     return __while(time_in_ms, loop, 0, nullptr);
 }
 
-#if ESP8266 || ESP32
+#if defined(ESP8266) || defined(ESP32)
 
 const char *strchr_P(const char *str, int c)
 {
+#if DEBUG_STRING_CHECK_NULLPTR
+    if (str) {
+        debug_printf_P(PSTR("str=%p int=%u\n"), str, c);
+    }
+#endif
     if (str) {
         char ch;
         while(0 != (ch = pgm_read_byte(str))) {
@@ -824,6 +924,55 @@ size_t timezone_strftime_P(char *buf, size_t size, PGM_P format, const struct tm
 size_t timezone_strftime(char *buf, size_t size, const char *format, const struct tm *tm)
 {
     return timezone_strftime_P(buf, size, format, tm);
+}
+
+#endif
+
+#if defined(ESP8266) || defined(ESP32) || defined(_MSC_VER)
+
+uint32_t getSystemUptime()
+{
+    return micros64() / 1000000UL;
+}
+
+uint64_t getSystemUptimeMillis()
+{
+    return micros64() / 1000UL;
+}
+
+#else
+
+#include <push_pack.h>
+
+typedef union {
+    uint64_t value;
+    struct __attribute__packed__ {
+        uint32_t millis;
+        uint16_t overflow;
+    };
+} UptimeInfo_t;
+
+static UptimeInfo_t uptimeInfo = { 0 };
+
+#include <pop_pack.h>
+
+// fallback if micros64() is not available
+#warning these functions do not work properly if not called at least once every 49 days
+
+uint32_t getSystemUptime()
+{
+    Serial.println(sizeof(UptimeInfo_t));
+    return (uint32_t)(getSystemUptimeMillis() / 1000UL);
+}
+
+uint64_t getSystemUptimeMillis()
+{
+    uint32_t ms;
+    if ((ms = millis()) < uptimeInfo.millis) {
+        uptimeInfo.overflow++;
+    }
+    uptimeInfo.millis = ms;
+    return uptimeInfo.value;
 }
 
 #endif

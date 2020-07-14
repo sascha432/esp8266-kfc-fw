@@ -48,6 +48,7 @@ public:
     typedef std::function<void(SensorData_t &data)> CompensationCallback_t;
 
     Sensor_DHTxx(const String &name, uint8_t pin/*, uint8_t type*/);
+    virtual ~Sensor_DHTxx();
 
     virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num) override;
     virtual uint8_t getAutoDiscoveryCount() const override;

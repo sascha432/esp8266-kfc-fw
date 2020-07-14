@@ -26,6 +26,7 @@ public:
     } SensorData_t;
 
     Sensor_BME680(const String &name, uint8_t address = 0x77);
+    virtual ~Sensor_BME680();
 
     virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num) override;
     virtual uint8_t getAutoDiscoveryCount() const override;

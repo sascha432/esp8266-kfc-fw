@@ -16,6 +16,7 @@
 class Sensor_DimmerMetrics : public MQTTSensor {
 public:
     Sensor_DimmerMetrics(const String &name);
+    virtual ~Sensor_DimmerMetrics();
 
     virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num) override;
     virtual uint8_t getAutoDiscoveryCount() const override;

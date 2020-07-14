@@ -20,6 +20,11 @@ Sensor_DHTxx::Sensor_DHTxx(const String &name, uint8_t pin/*, uint8_t type*/) : 
     // _dht.begin();
 }
 
+Sensor_DHTxx::~Sensor_DHTxx()
+{
+    UNREGISTER_SENSOR_CLIENT(this);
+}
+
 void Sensor_DHTxx::createAutoDiscovery(MQTTAutoDiscovery::FormatType format, MQTTAutoDiscoveryVector &vector)
 {
     _debug_println();

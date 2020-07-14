@@ -19,6 +19,12 @@ Sensor_BME280::Sensor_BME280(const String &name, TwoWire &wire, uint8_t address)
     _bme280.begin(_address, &config.initTwoWire());
 }
 
+Sensor_BME280::~Sensor_BME280()
+{
+    UNREGISTER_SENSOR_CLIENT(this);
+}
+
+
 MQTTComponent::MQTTAutoDiscoveryPtr Sensor_BME280::nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num)
 {
     if (num >= getAutoDiscoveryCount()) {

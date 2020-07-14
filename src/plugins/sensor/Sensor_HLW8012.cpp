@@ -95,6 +95,7 @@ Sensor_HLW8012::~Sensor_HLW8012()
     sensor = nullptr;
     detachInterrupt(digitalPinToInterrupt(_pinCF));
     detachInterrupt(digitalPinToInterrupt(_pinCF1));
+    UNREGISTER_SENSOR_CLIENT(this);
 }
 
 

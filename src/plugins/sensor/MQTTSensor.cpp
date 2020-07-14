@@ -19,11 +19,11 @@ MQTTSensor::MQTTSensor() : MQTTComponent(ComponentTypeEnum_t::SENSOR), _updateRa
 
 MQTTSensor::~MQTTSensor()
 {
-    _debug_println();
-    auto mqttClient = MQTTClient::getClient();
-    if (mqttClient) {
-        mqttClient->unregisterComponent(this);
-    }
+    // _debug_println();
+    // auto mqttClient = MQTTClient::getClient();
+    // if (mqttClient) {
+    //     mqttClient->unregisterComponent(this);
+    // }
 }
 
 void MQTTSensor::onConnect(MQTTClient *client)

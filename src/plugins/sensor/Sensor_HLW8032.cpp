@@ -25,7 +25,8 @@ void ICACHE_RAM_ATTR Sensor_HLW8032_callbackPF() {
 
 #endif
 
-Sensor_HLW8032::Sensor_HLW8032(const String &name, uint8_t pinRx, uint8_t pinTx, uint8_t pinPF) : Sensor_HLW80xx(name), _pinPF(pinPF), _serial(pinTx, pinRx), _lastData(0) {
+Sensor_HLW8032::Sensor_HLW8032(const String &name, uint8_t pinRx, uint8_t pinTx, uint8_t pinPF) : Sensor_HLW80xx(name), _pinPF(pinPF), _serial(pinTx, pinRx), _lastData(0)
+{
     REGISTER_SENSOR_CLIENT(this);
 
 #if IOT_SENSOR_HLW8032_PF
@@ -41,10 +42,12 @@ Sensor_HLW8032::Sensor_HLW8032(const String &name, uint8_t pinRx, uint8_t pinTx,
     });
 }
 
-Sensor_HLW8032::~Sensor_HLW8032() {
+Sensor_HLW8032::~Sensor_HLW8032()
+{
 #if IOT_SENSOR_HLW8032_PF
     detachInterrupt(digitalPinToInterrupt(_pinPF));
 #endif
+    UNREGISTER_SENSOR_CLIENT(this);
 }
 
 

@@ -690,15 +690,6 @@ void MQTTPlugin::getStatus(Print &output)
     if (client) {
         output.print(client->connectionStatusString());
         output.printf_P(PSTR(HTML_S(br) "%u components, %u entities" HTML_S(br)), client->_components.size(), client->_componentsEntityCount);
-        // auto &lwt = mqtt_session->getWill();
-        // out.printf_P(PSTR("Last will: %s, qos %d, retain %s, available %s, not available %s" HTML_S(br) HTML_S(br) "Subscribed to:" HTML_S(br)), lwt.topic.c_str(), lwt.qos, lwt.retain ? "yes" : "no", lwt.available.c_str(), lwt.not_available.c_str());
-        // for(auto &topic: mqtt_session->getTopics()) {
-        //     out.print(topic.topic);
-        //     out.printf_P(PSTR("<%u>"), topic.qos & ~0xc0);
-        //     out.print(topic.qos & 0x080 ? F(" waiting for ack") : topic.qos & 0x040 ? F(" removal pending") : F(" acknowledged"));
-        //     out.print(F(HTML_S(br)));
-        // }
-        // out.printf_P(PSTR(HTML_S(br) "Published/Acknowledged: %d/%d " HTML_S(br) "Received: %d " HTML_S(br)), mqtt_session->getPublished(), mqtt_session->getPublishedAck(), mqtt_session->getReceived());
     }
     else {
         output.print(FSPGM(Disabled));

@@ -26,6 +26,7 @@ public:
     typedef std::function<void(SensorData_t &data)> CompensationCallback_t;
 
     Sensor_BME280(const String &name, TwoWire &wire, uint8_t address = 0x76);
+    virtual ~Sensor_BME280();
 
     virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num) override;
     virtual uint8_t getAutoDiscoveryCount() const override;

@@ -40,6 +40,7 @@ public:
     };
 
     Sensor_Battery(const JsonString &name);
+    virtual ~Sensor_Battery();
 
     virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num) override;
     virtual uint8_t getAutoDiscoveryCount() const override;

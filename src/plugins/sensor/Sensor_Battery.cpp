@@ -20,6 +20,12 @@ Sensor_Battery::Sensor_Battery(const JsonString &name) : MQTTSensor(), _name(nam
     reconfigure();
 }
 
+Sensor_Battery::~Sensor_Battery()
+{
+    UNREGISTER_SENSOR_CLIENT(this);
+}
+
+
 MQTTComponent::MQTTAutoDiscoveryPtr Sensor_Battery::nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num)
 {
     if (num >= getAutoDiscoveryCount()) {

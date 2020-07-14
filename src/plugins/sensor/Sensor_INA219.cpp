@@ -34,6 +34,7 @@ Sensor_INA219::Sensor_INA219(const JsonString &name, TwoWire &wire, uint8_t addr
 Sensor_INA219::~Sensor_INA219()
 {
     LoopFunctions::remove(reinterpret_cast<LoopFunctions::CallbackPtr_t>(this));
+    UNREGISTER_SENSOR_CLIENT(this);
 }
 
 MQTTComponent::MQTTAutoDiscoveryPtr Sensor_INA219::nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num)

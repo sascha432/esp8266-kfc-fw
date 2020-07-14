@@ -27,6 +27,12 @@ Sensor_CCS811::Sensor_CCS811(const String &name, uint8_t address) : MQTTSensor()
     _sensor.available = false;
 }
 
+Sensor_CCS811::~Sensor_CCS811()
+{
+    UNREGISTER_SENSOR_CLIENT(this);
+}
+
+
 void Sensor_CCS811::createAutoDiscovery(MQTTAutoDiscovery::FormatType format, MQTTAutoDiscoveryVector &vector)
 {
     String topic = MQTTClient::formatTopic(_getId());

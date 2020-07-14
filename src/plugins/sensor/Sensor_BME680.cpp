@@ -18,6 +18,12 @@ Sensor_BME680::Sensor_BME680(const String &name, uint8_t address) : MQTTSensor()
     config.initTwoWire();
 }
 
+Sensor_BME680::~Sensor_BME680()
+{
+    UNREGISTER_SENSOR_CLIENT(this);
+}
+
+
 void Sensor_BME680::createAutoDiscovery(MQTTAutoDiscovery::FormatType format, MQTTAutoDiscoveryVector &vector)
 {
     String topic = MQTTClient::formatTopic(_getId());

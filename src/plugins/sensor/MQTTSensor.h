@@ -36,6 +36,7 @@ DECLARE_ENUM(MQTTSensorSensorType, uint8_t,
 #else
 #define REGISTER_SENSOR_CLIENT(sensor)                  registerClient(sensor);
 #endif
+#define UNREGISTER_SENSOR_CLIENT(sensor)                unregisterClient(sensor);
 
 class MQTTSensor : public MQTTComponent {
 public:
@@ -47,24 +48,25 @@ public:
     MQTTSensor();
     virtual ~MQTTSensor();
 
+    // REGISTER_SENSOR_CLIENT(this) must be called in the constructor of the sensor
     template <class T>
-    void registerClient(T client) {
-        auto mqttClient = MQTTClient::getClient();
-        if (mqttClient) {
-            mqttClient->registerComponent(client);
+    void registerClient(T sensor) {
+        auto client = MQTTClient::getClient();
+        if (client) {
+            client->registerComponent(sensor);
         }
     }
 
-    // virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num) override;
-    //virtual uint8_t getAutoDiscoveryCount() const override;
+    // UNREGISTER_SENSOR_CLIENT(this) must be called in the destructor of the sensor
+    template <class T>
+    void unregisterClient(T sensor) {
+        auto client = MQTTClient::getClient();
+        if (client) {
+            client->unregisterComponent(sensor);
+        }
+    }
 
     virtual void onConnect(MQTTClient *client) override;
-
-//     virtual void onMessage(MQTTClient *client, char *topic, char *payload, size_t len) override {
-// #if DEBUG_IOT_SENSOR
-//         debug_println();
-// #endif
-//     }
 
     // using MQTT update rate
     virtual void publishState(MQTTClient *client) = 0;

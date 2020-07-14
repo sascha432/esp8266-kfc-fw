@@ -51,5 +51,21 @@ if not container_end:
     print("ERROR: container end marker not found")
     sys.exit(-1)
 
-print("Created: %s" % alarm_html_new)
+# try to create a backup and rename the file
+success = False
+for i in range(0, 100):
+    try:
+        alarm_html_backup = '%s.%d.bak' % (alarm_html, i)
+        os.rename(alarm_html, alarm_html_backup)
+        print("Created backup: %s" % alarm_html_backup)
+        os.rename(alarm_html_new, alarm_html)
+        print("Updated: %s" % alarm_html)
+        success = True
+    except:
+        pass
+    if success:
+        break
+
+if not success:
+    print("Created: %s" % alarm_html_new)
 

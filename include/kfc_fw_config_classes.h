@@ -469,10 +469,14 @@ namespace KFCConfigurationClasses {
             WeatherStationConfig_t config;
         };
 
+        #ifndef IOT_ALARM_FORM_MAX_ALERTS
+        #define IOT_ALARM_FORM_MAX_ALERTS               10
+        #endif
+
         class Alarm
         {
         public:
-            static constexpr uint8_t MAX_ALARMS = 10;
+            static constexpr uint8_t MAX_ALARMS = IOT_ALARM_FORM_MAX_ALERTS;
 
             enum class AlarmModeType : uint8_t {
                 BOTH,       // can be used if silent or buzzer is not available
@@ -491,7 +495,6 @@ namespace KFCConfigurationClasses {
                 SATURDAY = _BV(6),
                 WEEK_DAYS = _BV(1)|_BV(2)|_BV(3)|_BV(4)|_BV(5),
                 WEEK_END = _BV(0)|_BV(6),
-                IS_ENABLED = _BV(7)
             };
 
             typedef union __attribute__packed__ {
@@ -505,17 +508,14 @@ namespace KFCConfigurationClasses {
                     uint8_t thursday: 1;            // 4
                     uint8_t friday: 1;              // 5
                     uint8_t saturday: 1;            // 6
-                    uint8_t enabled: 1;             // 7
                 };
             } WeekDay_t;
 
             typedef struct __attribute__packed__ {
-                union {
-                    uint32_t timestamp;
-                    struct __attribute__packed__ {
-                        uint8_t hour;
-                        uint8_t minute;
-                    };
+                uint32_t timestamp;
+                struct __attribute__packed__ {
+                    uint8_t hour;
+                    uint8_t minute;
                 };
                 WeekDay_t week_day;
             } AlarmTime_t;
@@ -526,7 +526,8 @@ namespace KFCConfigurationClasses {
                     AlarmModeType mode_type;
                     uint8_t mode;
                 };
-                uint16_t max_duration;       // limit in seconds, 0 = unlimited
+                uint16_t max_duration: 15;       // limit in seconds, 0 = unlimited
+                uint16_t is_enabled: 1;
             } SingleAlarm_t;
 
             typedef struct __attribute__packed__ {
@@ -535,14 +536,19 @@ namespace KFCConfigurationClasses {
 
             Alarm();
 
-            static bool isEnabled(const SingleAlarm_t &alarm) {
-                return alarm.time.week_day.enabled;
-            }
-            static void setEnabled(SingleAlarm_t &alarm, bool state) {
-                alarm.time.week_day.enabled = state;
-            }
+            // update timestamp for a single alarm
+            // set now to the current time plus a safety margin to let the system install the alarm: for example (time(nullptr) + 90)
+            // - if the alarm is disabled, timestamp is set to 0
+            // - if any weekday is selected, the timestamp is set to 0
+            // - if none of the weekdays are selected, the timestamp is set to unixtime at hour:minute of today. if hour:minute has
+            // passed already, the alarm is set for tomorrow (+1 day) at hour:minute
+            static void updateTimestamp(time_t now, SingleAlarm_t &alarm);
+
+            // calls updateTimestamp() for each entry
+            static void updateTimestamps(time_t now, Alarm_t &cfg);
 
             static void defaults();
+            static void dump(Print &output, Alarm_t &cfg);
             static Alarm_t &getWriteableConfig();
             static Alarm_t getConfig();
             static void setConfig(Alarm_t &alarm);

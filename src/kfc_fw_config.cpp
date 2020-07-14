@@ -597,7 +597,7 @@ void KFCFWConfiguration::restoreFactorySettings()
 #if MQTT_SUPPORT
     Config_MQTT::defaults();
 #endif
-#if SYSLOG
+#if SYSLOG_SUPPORT
     _H_SET(Config().syslog_port, 514);
 #endif
 
@@ -608,7 +608,7 @@ void KFCFWConfiguration::restoreFactorySettings()
     Plugins::RemoteControl::defaults();
 #endif
 
-#if PING_MONITOR
+#if PING_MONITOR_SUPPORT
     Config_Ping::defaults();
 #endif
 #if SERIAL2TCP
@@ -687,7 +687,7 @@ void KFCFWConfiguration::restoreFactorySettings()
     _H_SET(Config().blinds_controller, blinds);
 #endif
 
-#if IOT_ALARM_FORM_ENABLED
+#if IOT_ALARM_PLUGIN_ENABLED
     Plugins::Alarm::defaults();
 #endif
 
@@ -1422,8 +1422,8 @@ public:
         return PSTR("cfg");
     }
 
-    virtual PluginPriorityEnum_t getSetupPriority() const override {
-        return PluginComponent::PRIO_CONFIG;
+    virtual PriorityType getSetupPriority() const override {
+        return PriorityType::CONFIG;
     }
 
     virtual uint8_t getRtcMemoryId() const override {
@@ -1436,13 +1436,13 @@ public:
     }
 #endif
 
-    void setup(PluginSetupMode_t mode) override;
+    void setup(SetupModeType mode) override;
     void reconfigure(PGM_P source) override;
 };
 
 static KFCConfigurationPlugin plugin;
 
-void KFCConfigurationPlugin::setup(PluginSetupMode_t mode)
+void KFCConfigurationPlugin::setup(SetupModeType mode)
 {
     _debug_printf_P(PSTR("safe mode %d, wake up %d\n"), (mode == PLUGIN_SETUP_SAFE_MODE), resetDetector.hasWakeUpDetected());
 

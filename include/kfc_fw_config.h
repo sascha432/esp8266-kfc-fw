@@ -20,7 +20,7 @@
 #include <bitset>
 #include <chrono>
 #include <Configuration.h>
-#if SYSLOG
+#if SYSLOG_SUPPORT
 #include <KFCSyslog.h>
 #endif
 #include <SaveCrash.h>

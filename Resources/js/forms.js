@@ -15,7 +15,7 @@ $.formValidator = {
     errors: [],
     validated: false,
     markAsValid: false,
-    valiate: function() {
+    validate: function() {
         $.formValidator.validated = true;
         var $form = $($.formValidator.form);
         if ($.formValidator.markAsValid) {
@@ -28,7 +28,13 @@ $.formValidator = {
             if (parent.length == 0) {
                 parent = $(e.target).closest('.form-group');
             }
-            parent.children().last().after('<div class="invalid-feedback">' + e.error + '</div>')
+            var field = parent.children().last();
+            if (field.length) {
+                field.after('<div class="invalid-feedback">' + e.error + '</div>')
+            }
+            else {
+                alert('Form error: ' + e.error); // TODO add to top of the form, usually an error in the form code itself
+            }
         }
     },
     addErrors: function(errors, target) {
@@ -38,7 +44,7 @@ $.formValidator = {
         } else {
             $.formValidator.form = $($.formValidator.name);
         }
-        $.formValidator.valiate();
+        $.formValidator.validate();
     }
 };
 
@@ -202,13 +208,13 @@ $(function() {
             };
 
         // Event Handlers
+        $checkbox.on('change', function () {
+            updateDisplay();
+        });
         $button.on('click', function () {
             $checkbox.prop('checked', !$checkbox.is(':checked'));
             $checkbox.triggerHandler('change');
-            updateDisplay();
-        });
-        $checkbox.on('change', function () {
-            updateDisplay();
+            //updateDisplay();
         });
 
         // Actions

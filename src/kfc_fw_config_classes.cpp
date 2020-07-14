@@ -502,11 +502,63 @@ namespace KFCConfigurationClasses {
         cfg.alarms[1].time.minute = 0;
     }
 
+    void Plugins::Alarm::updateTimestamps(time_t now, Alarm_t &cfg)
+    {
+        for(uint8_t i = 0; i < MAX_ALARMS; i++) {
+            updateTimestamp(now, cfg.alarms[i]);
+        }
+    }
+
+    void Plugins::Alarm::updateTimestamp(time_t now, SingleAlarm_t &alarm)
+    {
+        if (alarm.is_enabled && alarm.time.week_day.week_days == 0) {
+            auto tm = localtime(&now);
+            if (!(alarm.time.hour > tm->tm_hour) || (alarm.time.hour == tm->tm_hour && alarm.time.minute > tm->tm_min)) {
+                // alarm for tomorrow
+                tm->tm_mday++;
+                /* mktime(): tm_mday may contain values above 31, which are interpreted accordingly as the days that follow the last day of the selected month. */
+            }
+            tm->tm_hour = alarm.time.hour;
+            tm->tm_min = alarm.time.minute;
+            tm->tm_sec = 0;
+            alarm.time.timestamp = mktime(tm); // convert to unixtime
+        }
+        else {
+            alarm.time.timestamp = 0;
+        }
+    }
+
     void Plugins::Alarm::defaults()
     {
         Alarm alarm;
         config._H_SET(MainConfig().plugins.alarm.cfg, alarm.cfg);
     }
+
+    void Plugins::Alarm::dump(Print &output, Alarm_t &cfg)
+    {
+        static auto weekdays = PSTR("SMTWTFS");
+        for(uint8_t i = 0; i < MAX_ALARMS; i++) {
+            const auto &alarm = cfg.alarms[i];
+            output.printf_P(PSTR("alarm %u: enabled=%u, mode=%u, dur=%u, timestamp=%u, time=%02u:%02u, weekdays="),
+                i, alarm.is_enabled, alarm.mode, alarm.max_duration,
+                alarm.time.timestamp, alarm.time.hour % 24, alarm.time.minute % 60
+            );
+            for(uint8_t j = 0; j < 7; j++) {
+                output.print(
+                    (alarm.time.week_day.week_days & _BV(j)) ? (char)pgm_read_byte(weekdays + j) : 'x'
+                );
+            }
+            if (alarm.time.timestamp) {
+                char buf[32];
+                time_t now = alarm.time.timestamp;
+                strftime_P(buf, sizeof(buf), PSTR("%FT%T %Z"), localtime(&now));
+                output.print(F(", localtime="));
+                output.print(buf);
+            }
+            output.println();
+        }
+    }
+
 
     Plugins::Alarm::Alarm_t &Plugins::Alarm::getWriteableConfig()
     {

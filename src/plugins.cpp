@@ -162,18 +162,18 @@ static void create_menu()
 
 static bool enableWebUIMenu = false;
 
-void setup_plugins(PluginComponent::PluginSetupMode_t mode)
+void setup_plugins(PluginComponent::SetupModeType mode)
 {
     _debug_printf_P(PSTR("mode=%d counter=%d\n"), mode, plugins.size());
 
-    if (mode != PluginComponent::PLUGIN_SETUP_DELAYED_AUTO_WAKE_UP) {
+    if (mode != PluginComponent::SetupModeType::DELAYED_AUTO_WAKE_UP) {
         create_menu();
     }
 
     for(const auto plugin : plugins) {
         bool runSetup = (
-            (mode == PluginComponent::PLUGIN_SETUP_DEFAULT) ||
-            (mode == PluginComponent::PLUGIN_SETUP_SAFE_MODE && plugin->allowSafeMode())
+            (mode == PluginComponent::SetupModeType::DELAYED_AUTO_WAKE_UP) ||
+            (mode == PluginComponent::SetupModeType::SAFE_MODE && plugin->allowSafeMode())
 #if ENABLE_DEEP_SLEEP
             ||
             (mode == PluginComponent::PLUGIN_SETUP_AUTO_WAKE_UP && plugin->autoSetupAfterDeepSleep()) ||
@@ -189,19 +189,19 @@ void setup_plugins(PluginComponent::PluginSetupMode_t mode)
                 enableWebUIMenu = true;
             }
         }
-        if (mode != PluginComponent::PLUGIN_SETUP_DELAYED_AUTO_WAKE_UP) {
+        if (mode != PluginComponent::SetupModeType::DELAYED_AUTO_WAKE_UP) {
             switch(plugin->getMenuType()) {
-                case PluginComponent::MenuTypeEnum_t::CUSTOM:
+                case PluginComponent::MenuType::CUSTOM:
                     plugin->createMenu();
                     break;
-                case PluginComponent::MenuTypeEnum_t::AUTO:
+                case PluginComponent::MenuType::AUTO:
                     if (plugin->getConfigureForm()) {
                         String uri = FPSTR(plugin->getConfigureForm());
                         uri += FSPGM(_html);
                         bootstrapMenu.addSubMenu(plugin->getFriendlyName(), uri, navMenu.config);
                     }
                     break;
-                case PluginComponent::MenuTypeEnum_t::NONE:
+                case PluginComponent::MenuType::NONE:
                 default:
                     break;
             }

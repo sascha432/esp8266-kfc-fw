@@ -119,6 +119,10 @@ public:
         _validateCallback = validateCallback;
     }
 
+    // FieldsVector &getFields() {
+    //     return _fields;
+    // }
+
 private:
     FormData *_data;
     FieldsVector _fields;

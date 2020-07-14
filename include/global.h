@@ -138,8 +138,8 @@
 #endif
 #endif
 
-#ifndef SYSLOG
-#define SYSLOG                          1
+#ifndef SYSLOG_SUPPORT
+#define SYSLOG_SUPPORT                  1
 #endif
 #ifndef SYSLOG_SPIFF_QUEUE_SIZE
 #define SYSLOG_SPIFF_QUEUE_SIZE        (1024 * 32)
@@ -150,7 +150,7 @@
 #ifndef SYSLOG_QUEUE_DELAY
 #define SYSLOG_QUEUE_DELAY              10000             // Delay before sending a queued message or transmitting the next one
 #endif
-#if !SPIFFS_SUPPORT && SYSLOG && SYSLOG_SPIFF_QUEUE_SIZE
+#if !SPIFFS_SUPPORT && SYSLOG_SUPPORT && SYSLOG_SPIFF_QUEUE_SIZE
 #error SPIFFS support required
 #endif
 
@@ -159,8 +159,8 @@
 #endif
 
 #if DEBUG_USE_SYSLOG
-#  if !SYSLOG
-#    error DEBUG_USE_SYSLOG requires SYSLOG
+#  if !SYSLOG_SUPPORT
+#    error DEBUG_USE_SYSLOG requires SYSLOG_SUPPORT
 #  endif
 #ifndef DEBUG_USE_SYSLOG_PORT
 #define DEBUG_USE_SYSLOG_PORT           514
@@ -174,20 +174,20 @@
 #define AT_MODE_SUPPORTED               1               // AT commands over serial
 #endif
 
-#ifndef HTTP2SERIAL
-#define HTTP2SERIAL                     1               // HTTP2Serial bridge (requires ATMODE support)
+#ifndef HTTP2SERIAL_SUPPORT
+#define HTTP2SERIAL_SUPPORT                     1               // HTTP2Serial bridge (requires ATMODE support)
 #endif
 
-#if HTTP2SERIAL && !WEBSERVER_SUPPORT
-#pragma message("HTTP2SERIAL requires WEBSERVER_SUPPORT. Automatically disabled!")
-#undef HTTP2SERIAL
-#define HTTP2SERIAL 0
+#if HTTP2SERIAL_SUPPORT && !WEBSERVER_SUPPORT
+#pragma message("HTTP2SERIAL_SUPPORT requires WEBSERVER_SUPPORT. Automatically disabled!")
+#undef HTTP2SERIAL_SUPPORT
+#define HTTP2SERIAL_SUPPORT 0
 #endif
 
 // The serial buffer is to increase the size of the web socket packets. The delay allows to collect more in the buffer
 // before it is sent to the client. There is a certain threshold where the small packets cause more lagg than having a
 // delay, but that depends on different factors like wifi, web browser...
-#if HTTP2SERIAL
+#if HTTP2SERIAL_SUPPORT
 #define SERIAL_BUFFER_FLUSH_DELAY       60
 #define SERIAL_BUFFER_MAX_LEN           512             // maximum size of output buffer
 #endif
@@ -303,7 +303,7 @@ extern class Stream &DebugSerial;
 #endif
 
 #ifndef SERIAL_HANDLER
-#if SERIAL2TCP || HTTP2SERIAL || AT_MODE_SUPPORTED
+#if SERIAL2TCP || HTTP2SERIAL_SUPPORT || AT_MODE_SUPPORTED
 #define SERIAL_HANDLER                  1
 #else
 #define SERIAL_HANDLER                  0
@@ -340,8 +340,8 @@ extern class Stream &DebugSerial;
 #define IOT_BLINDS_CTRL 0
 #endif
 
-#ifndef PING_MONITOR
-#define PING_MONITOR 0
+#ifndef PING_MONITOR_SUPPORT
+#define PING_MONITOR_SUPPORT 0
 #endif
 
 #ifndef REST_API_SUPPORT
@@ -358,6 +358,10 @@ extern class Stream &DebugSerial;
 
 #ifndef IOT_CLOCK
 #define IOT_CLOCK 0
+#endif
+
+#ifndef IOT_ALARM_PLUGIN_ENABLED
+#define IOT_ALARM_PLUGIN_ENABLED 0
 #endif
 
 #ifndef IOT_RF24_MASTER

@@ -145,7 +145,7 @@ bool Form::validateOnly()
 {
     _hasChanged = false;
     _errors.clear();
-    for (auto field : _fields) {
+    for (auto field: _fields) {
         if (field->getType() != FormField::InputFieldType::GROUP) {
             if (_data->hasArg(field->getName())) {
                 _debug_printf_P(PSTR("Form::validateOnly() Set value %s = %s\n"), field->getName().c_str(), _data->arg(field->getName()).c_str());
@@ -181,7 +181,7 @@ bool Form::hasChanged() const
 
 bool Form::hasError(FormField *field) const
 {
-    for (auto &error : _errors) {
+    for (auto &error: _errors) {
         if (error.is(field)) {
             return true;
         }
@@ -250,9 +250,10 @@ void Form::createJavascript(PrintInterface &out) const
     if (!isValid()) {
         _debug_printf_P(PSTR("Form::createJavascript(): errors=%d\n"), _errors.size());
         out.printf_P(PSTR("<script>\n$.formValidator.addErrors(["));
+        auto comma = PSTR(",");
         uint8_t idx = 0;
-        for (auto &error : _errors) {
-            out.printf_P(PSTR("%s{'target':'#%s','error':'%s'}"), idx++ ? PSTR(",") : emptyString.c_str(), error.getName().c_str(), error.getMessage().c_str()); //TODO escape quotes etc
+        for (auto &error: _errors) {
+            out.printf_P(PSTR("%s{'target':'#%s','error':'%s'}"), idx++ ? comma : emptyString.c_str(), error.getName().c_str(), error.getMessage().c_str()); //TODO escape quotes etc
         }
         out.printf_P(PSTR("]);\n</script>"));
     }

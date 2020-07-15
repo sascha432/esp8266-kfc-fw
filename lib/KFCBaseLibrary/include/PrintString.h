@@ -9,6 +9,7 @@
 #pragma once
 
 #include <Arduino_compat.h>
+#include "int64_to_string.h"
 
 #ifndef WSTRING_HAVE_SETLEN
 #if ESP8266
@@ -19,11 +20,8 @@
 #define WSTRING_HAVE_SETLEN                 1
 #endif
 #endif
-
 class PrintString : public String, public Print {
 public:
-    using Print::print;
-
     PrintString() {
     }
     PrintString(const String &str) : String(str) {
@@ -41,6 +39,14 @@ public:
     size_t vprintf(const char *format, va_list arg);
     size_t vprintf_P(PGM_P format, va_list arg);
     size_t write_P(PGM_P buf, size_t size);
+
+    size_t print(uint64_t value);
+    size_t print(int64_t value);
+    using Print::print;
+
+    PrintString &operator+=(uint64_t);
+    PrintString &operator+=(int64_t);
+    using String::operator+=;
 
     size_t ltrim() {
         return String_ltrim(*this);
@@ -62,6 +68,7 @@ public:
     size_t write(const char *buf, size_t size) {
         return write(reinterpret_cast<const uint8_t *>(buf), size);
     }
+
 
 #if defined(ESP8266)
     static constexpr size_t getSSOSIZE() {

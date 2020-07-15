@@ -33,9 +33,9 @@ void ping_monitor_install_web_server_hook()
 {
     auto server = WebServerPlugin::getWebServerObject();
     if (server) {
-        wsPing = new WsClientAsyncWebSocket(F("/ping"));
-        wsPing->onEvent(ping_monitor_event_handler);
-        server->addHandler(wsPing);
+        auto ws = new WsClientAsyncWebSocket(F("/ping"), &wsPing);
+        ws->onEvent(ping_monitor_event_handler);
+        server->addHandler(ws);
         _debug_printf_P(PSTR("Web socket for ping running on port %u\n"), config._H_GET(Config().http_port));
     }
 }
@@ -412,7 +412,6 @@ void PingMonitorPlugin::reconfigure(PGM_P source)
 void PingMonitorPlugin::shutdown()
 {
     pingMonitorTask = nullptr;
-    wsPing->shutdown();
 }
 
 void PingMonitorPlugin::getStatus(Print &output)

@@ -2,7 +2,8 @@
 
 ## Version 0.0.4
 
-- README update
+- Alarm plugin for Clock, Weather Station, ...
+- NTP plugin: Check once per minute if the time is valid and call configTime() again if not
 
 ## Version 0.0.3
 

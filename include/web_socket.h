@@ -122,16 +122,27 @@ public:
     static AsyncWebSocketVector _webSockets;
 };
 
-
 class WsClientAsyncWebSocket : public AsyncWebSocket {
 public:
-    WsClientAsyncWebSocket(const String &url) : AsyncWebSocket(url) {
+    WsClientAsyncWebSocket(const String &url, WsClientAsyncWebSocket **ptr = nullptr) : AsyncWebSocket(url), _ptr(ptr) {
         // debug_printf("WsClientAsyncWebSocket(): new=%p\n", this);
         WsClient::_webSockets.push_back(this);
+        if (_ptr) {
+            if (*_ptr) {
+                debug_printf_P(PSTR("_instance already set %p\n"), *_ptr);
+            }
+            *_ptr = this;
+        }
     }
     ~WsClientAsyncWebSocket() {
         // debug_printf("~WsClientAsyncWebSocket(): delete=%p, clients=%u, connected=%u\n", this, getClients().length(), count());
         disableSocket();
+        if (_ptr) {
+            if (!*_ptr) {
+                debug_printf_P(PSTR("_instance already set to %p\n"), *_ptr);
+            }
+            *_ptr = nullptr;
+        }
     }
 
     void shutdown() {
@@ -142,4 +153,13 @@ public:
     void disableSocket() {
         WsClient::_webSockets.erase(std::remove(WsClient::_webSockets.begin(), WsClient::_webSockets.end(), this), WsClient::_webSockets.end());
     }
+
+public:
+    void addWebSocketPtr(WsClientAsyncWebSocket **ptr) {
+        _ptr = ptr;
+        *_ptr = this;
+    }
+
+private:
+    WsClientAsyncWebSocket **_ptr;
 };

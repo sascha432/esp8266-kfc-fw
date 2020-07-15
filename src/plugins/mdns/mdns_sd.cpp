@@ -101,7 +101,7 @@ void MDNSPlugin::_installWebServerHooks()
     auto server = WebServerPlugin::getWebServerObject();
     if (server) {
         _debug_println();
-        WebServerPlugin::addHandler(F("/mdns_discovery/"), mdnsDiscoveryHandler);
+        WebServerPlugin::addHandler(F("/mdns_discovery"), mdnsDiscoveryHandler);
     }
 #endif
 }
@@ -110,7 +110,7 @@ void MDNSPlugin::_installWebServerHooks()
 
 void MDNSPlugin::mdnsDiscoveryHandler(AsyncWebServerRequest *request)
 {
-    _debug_printf_P(PSTR("running=%u\n"), plugin._isRunning());
+    debug_printf_P(PSTR("running=%u\n"), plugin._isRunning());
     if (plugin._isRunning()) {
         if (WebServerPlugin::getInstance().isAuthenticated(request) == true) {
             auto timeout = request->arg(F("timeout")).toInt();
@@ -176,10 +176,18 @@ void MDNSPlugin::setup(SetupModeType mode)
 
 void MDNSPlugin::reconfigure(PGM_P source)
 {
-    _debug_printf_P(PSTR("running=%u\n"), _running);
-    _installWebServerHooks();
+    _debug_printf_P(PSTR("running=%u source=%s\n"), _running, String(FPSTR(source)).c_str());
+    if (!strcmp_P_P(source, WebServerPlugin::getPSTRName())) {
+        _installWebServerHooks();
+    }
     _end();
     _begin();
+}
+
+void MDNSPlugin::shutdown()
+{
+    debug_println();
+    end();
 }
 
 void MDNSPlugin::wifiCallback(uint8_t event, void *payload)

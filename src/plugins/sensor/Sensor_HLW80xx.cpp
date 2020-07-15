@@ -354,7 +354,7 @@ float Sensor_HLW80xx::_getEnergy(uint8_t num) const
 
 String Sensor_HLW80xx::_getTopic()
 {
-    return MQTTClient::formatTopic(_getId(), nullptr);
+    return MQTTClient::formatTopic(_getId());
 }
 
 void Sensor_HLW80xx::dump(Print &output)

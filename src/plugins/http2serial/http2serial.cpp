@@ -26,6 +26,7 @@
 Http2Serial *Http2Serial::_instance = nullptr;
 WsClientAsyncWebSocket *wsSerialConsole = nullptr;
 
+
 Http2Serial::Http2Serial() : _outputBufferMaxSize(SERIAL_BUFFER_MAX_LEN), _outputBufferDelay(SERIAL_BUFFER_FLUSH_DELAY)
 {
     _locked = false;
@@ -226,9 +227,9 @@ void Http2SerialPlugin::setup(SetupModeType mode)
 {
     auto server = WebServerPlugin::getWebServerObject();
     if (server) {
-        wsSerialConsole = new WsClientAsyncWebSocket(F("/serial_console"));
-        wsSerialConsole->onEvent(http2serial_event_handler);
-        server->addHandler(wsSerialConsole);
+        auto ws = new WsClientAsyncWebSocket(F("/serial_console"), &wsSerialConsole);
+        ws->onEvent(http2serial_event_handler);
+        server->addHandler(ws);
         _debug_printf_P(PSTR("Web socket for http2serial running on port %u\n"), config._H_GET(Config().http_port));
     }
 }
@@ -240,12 +241,11 @@ void Http2SerialPlugin::reconfigure(PGM_P source)
 
 bool Http2SerialPlugin::hasReconfigureDependecy(PluginComponent *plugin) const
 {
-    return plugin->nameEquals(FSPGM(http));
+    return plugin->nameEquals(WebServerPlugin::getFPSTRName());
 }
 
 void Http2SerialPlugin::shutdown()
 {
-    wsSerialConsole->shutdown();
     Http2Serial::destroyInstance();
 }
 

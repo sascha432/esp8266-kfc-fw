@@ -38,6 +38,7 @@ void file_manager_install_web_server_hook()
     if (WebServerPlugin::getWebServerObject()) {
         String uploadDir = FSPGM(file_manager_base_uri, "/file_manager/");
         uploadDir += FSPGM(upload);
+        debug_println();
         WebServerPlugin::addHandler(new AsyncFileUploadWebHandler(uploadDir, file_manager_upload_handler));
         WebServerPlugin::addHandler(new FileManagerWebHandler(FSPGM(file_manager_base_uri)));
     }

@@ -12,6 +12,7 @@
 #include <StreamString.h>
 #include <BufferStream.h>
 #include <JsonConfigReader.h>
+#include <ESPAsyncWebServer.h>
 #include "build.h"
 #include "web_server.h"
 #include "rest_api.h"
@@ -648,19 +649,17 @@ void WebServerPlugin::begin()
     // }));
 #endif
 
+    _server->onNotFound(handlerNotFound);
+
     if (!flags.disableWebUI) {
         WsWebUISocket::setup();
+        WebServerPlugin::addHandler(F("/webui_get"), handlerWebUI);
     }
-
-    _server->onNotFound(handlerNotFound);
 
     WebServerPlugin::addHandler(F("/scan_wifi"), handlerScanWiFi);
     WebServerPlugin::addHandler(F("/logout"), handlerLogout);
     WebServerPlugin::addHandler(F("/is_alive"), handlerAlive);
     WebServerPlugin::addHandler(F("/sync_time"), handlerSyncTime);
-    if (!flags.disableWebUI) {
-        WebServerPlugin::addHandler(F("/webui_get"), handlerWebUI);
-    }
     WebServerPlugin::addHandler(F("/export_settings"), handlerExportSettings);
     WebServerPlugin::addHandler(F("/import_settings"), handlerImportSettings);
     WebServerPlugin::addHandler(F("/speedtest.zip"), handlerSpeedTestZip);
@@ -1003,6 +1002,10 @@ void WebServerPlugin::reconfigure(PGM_P source)
 
 void WebServerPlugin::shutdown()
 {
+    // auto mdns = PluginComponent::getPlugin<MDNSPlugin>(F("mdns"));
+    // if (mdns) {
+    //     mdns->shutdown();
+    // }
     end();
 }
 
@@ -1093,44 +1096,49 @@ AsyncWebServer *WebServerPlugin::getWebServerObject()
     return plugin._server;
 }
 
-bool WebServerPlugin::addHandler(AsyncWebHandler* handler)
+bool WebServerPlugin::addHandler(AsyncWebHandler *handler)
 {
     if (!plugin._server) {
         return false;
     }
     plugin._server->addHandler(handler);
+    debug_printf_P(PSTR("handler=%p\n"), handler);
     return true;
 }
 
-bool WebServerPlugin::addHandler(const String &uri, ArRequestHandlerFunction onRequest)
+AsyncCallbackWebHandler *WebServerPlugin::addHandler(const String &uri, ArRequestHandlerFunction onRequest)
 {
     if (!plugin._server) {
-        return false;
+        return nullptr;
     }
-    AsyncCallbackWebHandler *handler = new AsyncCallbackWebHandler();
+    auto handler = new AsyncCallbackWebHandler();
+    debug_printf_P(PSTR("handler=%p uri=%s\n"), handler, uri.c_str());
     handler->setUri(uri);
     handler->onRequest(onRequest);
     plugin._server->addHandler(handler);
-    return true;
+    return handler;
 }
 
-bool WebServerPlugin::addRestHandler(RestHandler &&handler)
+WebServerPlugin::AsyncRestWebHandler *WebServerPlugin::addRestHandler(RestHandler &&handler)
 {
+    AsyncRestWebHandler *restHandler = nullptr;
     debug_printf_P(PSTR("uri=%s\n"), handler.getURL());
     if (!plugin._server) {
-        return false;
+        return restHandler;
     }
     if (plugin._restCallbacks.empty()) {
         debug_printf_P(PSTR("installing REST handler\n"));
-        plugin._server->addHandler(new AsyncRestWebHandler());
+        restHandler = new AsyncRestWebHandler();
+        plugin._server->addHandler(restHandler);
+        debug_printf_P(PSTR("handler=%p\n"), restHandler);
     }
     plugin._restCallbacks.emplace_back(handler);
-    return true;
+    return restHandler;
 }
 
 bool WebServerPlugin::isRunning() const
 {
-    return _server != nullptr;
+    return (_server != nullptr);
 }
 
 WebServerPlugin::AuthType WebServerPlugin::isAuthenticated(AsyncWebServerRequest *request) const

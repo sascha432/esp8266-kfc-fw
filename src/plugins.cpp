@@ -172,12 +172,12 @@ void setup_plugins(PluginComponent::SetupModeType mode)
 
     for(const auto plugin : plugins) {
         bool runSetup = (
-            (mode == PluginComponent::SetupModeType::DELAYED_AUTO_WAKE_UP) ||
+            (mode == PluginComponent::SetupModeType::DEFAULT) ||
             (mode == PluginComponent::SetupModeType::SAFE_MODE && plugin->allowSafeMode())
 #if ENABLE_DEEP_SLEEP
             ||
-            (mode == PluginComponent::PLUGIN_SETUP_AUTO_WAKE_UP && plugin->autoSetupAfterDeepSleep()) ||
-            (mode == PluginComponent::PLUGIN_SETUP_DELAYED_AUTO_WAKE_UP && !plugin->autoSetupAfterDeepSleep())
+            (mode == PluginComponent::SetupModeType::AUTO_WAKE_UP && plugin->autoSetupAfterDeepSleep()) ||
+            (mode == PluginComponent::SetupModeType::DELAYED_AUTO_WAKE_UP && !plugin->autoSetupAfterDeepSleep())
 #endif
         );
         _debug_printf_P(PSTR("name=%s prio=%d setup=%d\n"), plugin->getName(), plugin->getSetupPriority(), runSetup);

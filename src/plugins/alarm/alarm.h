@@ -29,9 +29,9 @@ public:
     virtual PGM_P getName() const {
         return PSTR("alarm");
     }
-    // virtual const __FlashStringHelper *getFriendlyName() const {
-    //     return F("Alarm");
-    // }
+    virtual const __FlashStringHelper *getFriendlyName() const {
+        return F("Alarm");
+    }
     virtual PriorityType getSetupPriority() const override {
         return PriorityType::ALARM;
     }

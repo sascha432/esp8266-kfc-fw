@@ -1017,13 +1017,14 @@ void KFCFWConfiguration::restartDevice(bool safeMode)
 
     auto webUiSocket = WsWebUISocket::getWsWebUI();
     if (webUiSocket) {
+        debug_printf_P(PSTR("websocket %p\n"), webUiSocket);
         webUiSocket->shutdown();
     }
 
     // execute in reverse order
     for(auto iterator = plugins.rbegin(); iterator != plugins.rend(); ++iterator) {
         const auto plugin = *iterator;
-        _debug_printf("plugin=%s\n", plugin->getName());
+        debug_printf("plugin=%s\n", plugin->getName());
         plugin->shutdown();
     }
 
@@ -1444,7 +1445,7 @@ static KFCConfigurationPlugin plugin;
 
 void KFCConfigurationPlugin::setup(SetupModeType mode)
 {
-    _debug_printf_P(PSTR("safe mode %d, wake up %d\n"), (mode == PLUGIN_SETUP_SAFE_MODE), resetDetector.hasWakeUpDetected());
+    _debug_printf_P(PSTR("safe mode %d, wake up %d\n"), (mode == SetupModeType::SAFE_MODE), resetDetector.hasWakeUpDetected());
 
     config.setup();
 

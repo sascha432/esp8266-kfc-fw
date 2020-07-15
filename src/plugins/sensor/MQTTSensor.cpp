@@ -12,18 +12,19 @@
 #include <debug_helper_disable.h>
 #endif
 
-MQTTSensor::MQTTSensor() : MQTTComponent(ComponentTypeEnum_t::SENSOR), _updateRate(DEFAULT_UPDATE_RATE), _nextUpdate(0), _mqttUpdateRate(DEFAULT_MQTT_UPDATE_RATE), _nextMqttUpdate(0)
+MQTTSensor::MQTTSensor() : MQTTComponent(ComponentTypeEnum_t::SENSOR), _updateRate(DEFAULT_UPDATE_RATE), _mqttUpdateRate(DEFAULT_MQTT_UPDATE_RATE), _nextUpdate(0), _nextMqttUpdate(0)
 {
     _debug_println();
 }
 
 MQTTSensor::~MQTTSensor()
 {
-    // _debug_println();
-    // auto mqttClient = MQTTClient::getClient();
-    // if (mqttClient) {
-    //     mqttClient->unregisterComponent(this);
-    // }
+#if DEBUG
+    auto client = MQTTClient::getClient();
+    if (client && client->isComponentRegistered(this)) {
+        __debugbreak_and_panic_printf_P(PSTR("component=%p type=%d is still registered\n"), this, (int)getType());
+    }
+#endif
 }
 
 void MQTTSensor::onConnect(MQTTClient *client)

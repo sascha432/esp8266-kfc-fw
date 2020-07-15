@@ -396,9 +396,9 @@ DisplayTimer displayTimer;
 static void heap_timer_callback(EventScheduler::TimerPtr timer)
 {
     if (displayTimer._type == DisplayTimer::HEAP) {
-        MySerial.printf_P(PSTR("+HEAP: Free %u CPU %d MHz"), ESP.getFreeHeap(), ESP.getCpuFreqMHz());
+        MySerial.printf_P(PSTR("+HEAP: free=%u cpu=%dMHz"), ESP.getFreeHeap(), ESP.getCpuFreqMHz());
 #if LOAD_STATISTICS
-        MySerial.printf_P(PSTR(" load avg %.2f %.2f %.2f"), LOOP_COUNTER_LOAD(load_avg[0]), LOOP_COUNTER_LOAD(load_avg[1]), LOOP_COUNTER_LOAD(load_avg[2]));
+        MySerial.printf_P(PSTR(" load avg=%.2f %.2f %.2f"), LOOP_COUNTER_LOAD(load_avg[0]), LOOP_COUNTER_LOAD(load_avg[1]), LOOP_COUNTER_LOAD(load_avg[2]));
 #endif
         MySerial.println();
     }
@@ -1143,13 +1143,13 @@ void at_mode_serial_handle_event(String &commandString)
                     auto file = SPIFFSWrapper::open(filename, fs::FileOpenMode::read);
                     if (file) {
                         args.printf_P(PSTR("--- %s ---"), filename);
-                        Scheduler.addTimer(10, true, [&output, &args, file](EventScheduler::TimerPtr timer) mutable {
+                        Scheduler.addTimer(100, true, [&output, &args, file](EventScheduler::TimerPtr timer) mutable {
                             uint8_t buf[128];
                             if (file.available()) {
                                 auto len = file.readBytes(reinterpret_cast<char *>(buf), sizeof(buf) - 1);
                                 if (len) {
                                     buf[len] = 0;
-                                    printable_string(output, buf, len);
+                                    printable_string(output, buf, len, len, "\n\r");
                                     output.flush();
                                 }
                             }

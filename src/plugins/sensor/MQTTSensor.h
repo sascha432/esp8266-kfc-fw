@@ -28,7 +28,8 @@ DECLARE_ENUM(MQTTSensorSensorType, uint8_t,
     DS3231,
     INA219,
     DHTxx,
-    DIMMER_METRICS
+    DIMMER_METRICS,
+    SYSTEM_METRICS
 );
 
 #if DEBUG_IOT_SENSOR
@@ -40,8 +41,8 @@ DECLARE_ENUM(MQTTSensorSensorType, uint8_t,
 
 class MQTTSensor : public MQTTComponent {
 public:
-    const uint8_t DEFAULT_UPDATE_RATE = 10;
-    const uint8_t DEFAULT_MQTT_UPDATE_RATE = 30;
+    static constexpr uint16_t DEFAULT_UPDATE_RATE = 10;
+    static constexpr uint16_t DEFAULT_MQTT_UPDATE_RATE = 30;
 
     using SensorType = MQTTSensorSensorType;
 
@@ -107,23 +108,23 @@ public:
 
     void timerEvent(JsonArray &array);
 
-    void setUpdateRate(uint8_t updateRate) {
+    void setUpdateRate(uint16_t updateRate) {
         _updateRate = updateRate;
         _nextUpdate = 0;
     }
 
-    void setMqttUpdateRate(uint8_t updateRate) {
+    void setMqttUpdateRate(uint16_t updateRate) {
         _mqttUpdateRate = updateRate;
         _nextMqttUpdate = 0;
     }
 
-    void setNextMqttUpdate(uint8_t delay) {
+    void setNextMqttUpdate(uint16_t delay) {
         _nextMqttUpdate = time(nullptr) + delay;
     }
 
 private:
-    uint8_t _updateRate;
+    uint16_t _updateRate;
+    uint16_t _mqttUpdateRate;
     time_t _nextUpdate;
-    uint8_t _mqttUpdateRate;
     time_t _nextMqttUpdate;
 };

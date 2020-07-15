@@ -2,7 +2,7 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if _WIN32 || _WIN64
+#if _MSC_VER
 
 #ifndef __attribute__packed__
 #define __attribute__packed__

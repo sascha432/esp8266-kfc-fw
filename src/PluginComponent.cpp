@@ -211,7 +211,7 @@ PluginComponent *PluginComponent::getForm(const String &formName)
 {
     for(const auto plugin: plugins) {
         if (plugin->canHandleForm(formName)) {
-            debug_printf_P(PSTR("form=%s name=%s\n"), formName.c_str(), plugin->getName());
+            _debug_printf_P(PSTR("form=%s name=%s\n"), formName.c_str(), plugin->getName());
             return plugin;
         }
     }

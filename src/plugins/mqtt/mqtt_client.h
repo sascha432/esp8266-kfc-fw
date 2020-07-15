@@ -142,6 +142,7 @@ public:
 
     void registerComponent(MQTTComponentPtr component);
     bool unregisterComponent(MQTTComponentPtr component);
+    bool isComponentRegistered(MQTTComponentPtr component);
 
     // <mqtt_topic=home/${device_name}>/component_name><format>
     // NOTE: there is no slash between the component name and format

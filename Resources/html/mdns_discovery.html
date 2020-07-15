@@ -84,7 +84,7 @@
                     timeout = 15000;
                     interval = 30000;
                 };
-                $.get('/mdns_discovery/?timeout=' + timeout, callback);
+                $.get('/mdns_discovery?timeout=' + timeout, callback);
             }
             update_mdns_discovery();
         }

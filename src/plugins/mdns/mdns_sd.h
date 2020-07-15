@@ -56,7 +56,8 @@ public:
     typedef std::vector<ServiceInfo> ServiceInfoVector;
 
 public:
-    MDNSPlugin() : _running(false), _enabled(false) {
+    MDNSPlugin() : _running(false), _enabled(false)
+    {
         REGISTER_PLUGIN(this);
     }
     virtual PGM_P getName() const {
@@ -73,6 +74,7 @@ public:
     virtual bool hasReconfigureDependecy(PluginComponent *plugin) const override {
         return plugin->nameEquals(FSPGM(http));
     }
+    virtual void shutdown() override;
 
     virtual bool hasStatus() const override {
         return true;

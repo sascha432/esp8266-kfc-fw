@@ -11,6 +11,7 @@
 #include "WebUIComponent.h"
 #include "plugins.h"
 #include "MQTTSensor.h"
+#include "Sensor_SystemMetrics.h"
 #include "Sensor_LM75A.h"
 #include "Sensor_BME280.h"
 #include "Sensor_BME680.h"

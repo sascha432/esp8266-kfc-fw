@@ -163,6 +163,11 @@ bool MQTTClient::unregisterComponent(MQTTComponentPtr component)
     return removed;
 }
 
+bool MQTTClient::isComponentRegistered(MQTTComponentPtr component)
+{
+    return std::find(_components.begin(), _components.end(), component) != _components.end();
+}
+
 String MQTTClient::formatTopic(const String &componentName, const __FlashStringHelper *format, ...)
 {
     String suffix;

@@ -393,6 +393,10 @@ extern class Stream &DebugSerial;
 #endif
 #define IOT_SENSOR_HAS(name)    defined(IOT_SENSOR_##name) && (IOT_SENSOR_##name)
 
+#ifndef IOT_SENSOR_HAVE_SYSTEM_METRICS
+#define IOT_SENSOR_HAVE_SYSTEM_METRICS 1
+#endif
+
 #ifndef SERIAL2TCP
 #define SERIAL2TCP 0
 #endif

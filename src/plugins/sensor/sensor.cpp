@@ -39,6 +39,9 @@ PGM_P SensorPlugin::getName() const
 void SensorPlugin::setup(SetupModeType mode)
 {
     _timer.add(1000, true, SensorPlugin::timerEvent);
+#if IOT_SENSOR_HAVE_SYSTEM_METRICS
+    _sensors.push_back(new Sensor_SystemMetrics());
+#endif
 #if IOT_SENSOR_HAVE_LM75A
     _sensors.push_back(new Sensor_LM75A(F(IOT_SENSOR_NAMES_LM75A), config.initTwoWire(), IOT_SENSOR_HAVE_LM75A));
 #endif

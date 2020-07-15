@@ -34,11 +34,20 @@ String network_scan_html(int8_t num_networks);
 
 class WebServerPlugin : public PluginComponent {
 public:
+    static PGM_P getPSTRName() {
+        return SPGM(http);
+    }
+    static const __FlashStringHelper *getFPSTRName() {
+        return FPSTR(getPSTRName());
+    }
+
+public:
     WebServerPlugin() : _updateFirmwareCallback(nullptr), _server(nullptr) {
         REGISTER_PLUGIN(this);
     }
+
     virtual PGM_P getName() const {
-        return SPGM(http);
+        return getPSTRName();
     }
     virtual const __FlashStringHelper *getFriendlyName() const {
         return F("Web server");
@@ -143,9 +152,8 @@ public:
     static AsyncWebServer *getWebServerObject();
 
     static bool addHandler(AsyncWebHandler* handler);
-    static bool addHandler(const String &uri, ArRequestHandlerFunction onRequest);
-
-    static bool addRestHandler(RestHandler &&handler);
+    static AsyncCallbackWebHandler *addHandler(const String &uri, ArRequestHandlerFunction onRequest);
+    static AsyncRestWebHandler *addRestHandler(RestHandler &&handler);
 
     void setUpdateFirmwareCallback(UpdateFirmwareCallback_t callback);
 

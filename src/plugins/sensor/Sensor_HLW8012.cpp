@@ -114,6 +114,7 @@ void Sensor_HLW8012::_loop()
             _inputCF.setTarget(_inputCF.pulseWidthIntegral);
         }
         // add energy counter
+        // decltype(energyCounter) tempCounter2 = 0;
         noInterrupts();
         auto tempCounter = energyCounter;
         energyCounter = 0;

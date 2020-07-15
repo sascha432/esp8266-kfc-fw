@@ -51,7 +51,7 @@ void ButtonsPlugin::reconfigure(PGM_P source)
             monitor->removePin(button.getPin(), this);
         }
     }
-    setup(PLUGIN_SETUP_DEFAULT);
+    setup(SetupModeType::DEFAULT);
     if (!monitor->size()) {
         PinMonitor::deleteInstance();
     }

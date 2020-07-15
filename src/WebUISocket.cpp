@@ -37,9 +37,9 @@ void WsWebUISocket::setup()
 {
     auto server = WebServerPlugin::getWebServerObject();
     if (server) {
-        wsWebUI = new WsClientAsyncWebSocket(FSPGM(webui_socket_uri));
-        wsWebUI->onEvent(webui_socket_event_handler);
-        server->addHandler(wsWebUI);
+        auto ws = new WsClientAsyncWebSocket(FSPGM(webui_socket_uri), &wsWebUI);
+        ws->onEvent(webui_socket_event_handler);
+        server->addHandler(ws);
         _debug_printf_P(PSTR("Web socket for UI running on port %u\n"), config._H_GET(Config().http_port));
     }
 }
@@ -77,7 +77,6 @@ WsClient *WsWebUISocket::getInstance(AsyncWebSocketClient *socket)
     _debug_println();
     return new WsWebUISocket(socket);
 }
-
 
 void WsWebUISocket::onText(uint8_t *data, size_t len)
 {

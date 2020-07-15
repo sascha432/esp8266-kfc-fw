@@ -43,7 +43,7 @@ void ___debugbreak_and_panic(const char *filename, int line, const char *functio
 #endif
 }
 
-#if _WIN32 || _WIN64
+#if _MSC_VER
 
 #include <algorithm>
 #include <BufferStream.h>
@@ -61,16 +61,6 @@ const String emptyString;
 void throwException(PGM_P message) {
     printf("EXCEPTION: %s\n", (const char *)message);
     exit(-1);
-}
-
-static bool init_millis();
-
-static ULONG64 millis_start_time = 0;
-static bool millis_initialized = init_millis();
-
-static bool init_millis() {
-    millis_start_time = millis();
-    return true;
 }
 
 class GPIOPin {
@@ -118,18 +108,39 @@ void analogWrite(uint8_t pin, int value)
     printf("analogWrite(%u, %u)\n", pin, value);
 }
 
-unsigned long millis(void) {
-    SYSTEMTIME sysTime;
-    GetSystemTime(&sysTime);
-    time_t now = time(nullptr);
-    return (unsigned long)((sysTime.wMilliseconds + now * 1000) - millis_start_time);
+typedef union {
+    FILETIME filetime;
+    uint64_t micros;
+} MicrosTime_t;
+
+static bool init_micros();
+static MicrosTime_t micros_start_time;
+static bool millis_initialized = init_micros();
+
+static bool init_micros() 
+{
+    GetSystemTimePreciseAsFileTime(&micros_start_time.filetime);
+    micros_start_time.micros /= 10;
+    return true;
+}
+
+uint64_t micros64() 
+{
+    MicrosTime_t now;
+    GetSystemTimePreciseAsFileTime(&now.filetime);
+    now.micros /= 10;
+    return now.micros - micros_start_time.micros;
+}
+
+unsigned long millis(void) 
+{
+    return (unsigned long)(micros64() / 1000ULL);
 }
 
 unsigned long micros(void)
 {
-    return millis() * 1000UL;
+    return (unsigned long)micros64();
 }
-
 
 void shiftOut(uint8_t dataPin, uint8_t clockPin, uint8_t bitOrder, uint8_t val)
 {

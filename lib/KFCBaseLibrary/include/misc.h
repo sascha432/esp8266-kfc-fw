@@ -77,7 +77,7 @@ String formatBytes(size_t bytes);
 String formatTime(unsigned long seconds, bool days_if_not_zero = false);
 
 String url_encode(const String &str);
-void printable_string(Print &output, const uint8_t *buffer, size_t length, size_t maxLength = 0);
+void printable_string(Print &output, const uint8_t *buffer, size_t length, size_t maxLength = 0, const char *extra = nullptr);
 String printable_string(const uint8_t *buffer, size_t length, size_t maxLength = 0);
 inline String printable_string(const char *buffer, size_t length, size_t maxLength = 0) {
     return printable_string(reinterpret_cast<const uint8_t *>(buffer), length, maxLength);
@@ -400,3 +400,9 @@ typedef char end_of_time_t_2106[(time_t)(1UL<<31)==(INT32_MAX+1UL) ? 1 : -1];
 #endif
 
 size_t strftime_P(char *buf, size_t size, PGM_P format, const struct tm *tm);
+
+// seconds since boot
+uint32_t getSystemUptime();
+
+// milliseconds
+uint64_t getSystemUptimeMillis();

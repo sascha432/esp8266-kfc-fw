@@ -16,6 +16,8 @@
 
 extern "C" {
 
+    uint64_t micros64();
+
     void ets_timer_setfn (ETSTimer *ptimer, ETSTimerFunc *pfunction, void *parg);
     // void ets_timer_arm_new(ETSTimer *ptimer, int time_ms, int repeat_flag, int isMillis);
     void ets_timer_disarm (ETSTimer *ptimer);

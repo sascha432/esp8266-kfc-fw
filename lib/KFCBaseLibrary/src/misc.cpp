@@ -56,14 +56,14 @@ String printable_string(const uint8_t *buffer, size_t length, size_t maxLength)
     return str;
 }
 
-void printable_string(Print &output, const uint8_t *buffer, size_t length, size_t maxLength)
+void printable_string(Print &output, const uint8_t *buffer, size_t length, size_t maxLength, const char *extra)
 {
     if (maxLength) {
         length = std::min(maxLength, length);
     }
     auto ptr = buffer;
     while(length--) {
-        if (isprint(*ptr)) {
+        if (isprint(*ptr) || (extra && strchr(extra, *ptr))) {
             output.print((char)*ptr);
         } else {
             output.printf_P(PSTR("\\x%02X"), (int)(*ptr & 0xff));
@@ -571,7 +571,7 @@ bool __while(uint32_t time_in_ms, std::function<bool()> loop)
 const char *strchr_P(const char *str, int c)
 {
 #if DEBUG_STRING_CHECK_NULLPTR
-    if (str) {
+    if (!str) {
         debug_printf_P(PSTR("str=%p int=%u\n"), str, c);
     }
 #endif
@@ -932,12 +932,12 @@ size_t timezone_strftime(char *buf, size_t size, const char *format, const struc
 
 uint32_t getSystemUptime()
 {
-    return micros64() / 1000000UL;
+    return (uint32_t)(micros64() / 1000000UL);
 }
 
 uint64_t getSystemUptimeMillis()
 {
-    return micros64() / 1000UL;
+    return (uint64_t)(micros64() / 1000UL);
 }
 
 #else

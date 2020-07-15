@@ -11,6 +11,10 @@
 
 #include <esp_timer.h>
 
+inline uint64_t micros64() {
+    return esp_timer_get_time();
+}
+
 typedef esp_timer_cb_t os_timer_func_t_ptr;
 typedef struct esp_timer os_timer_t;
 

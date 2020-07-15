@@ -119,6 +119,8 @@ void yield();
 
 void init_winsock();
 
+uint64_t micros64();
+
 #ifndef strdup
 #define strdup _strdup
 #endif

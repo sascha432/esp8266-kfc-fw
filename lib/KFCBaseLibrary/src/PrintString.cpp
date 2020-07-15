@@ -159,6 +159,28 @@ size_t PrintString::write_P(PGM_P buf, size_t size)
     return size;
 }
 
+size_t PrintString::print(uint64_t value)
+{
+    return concat_to_string(*this, value);
+}
+
+size_t PrintString::print(int64_t value)
+{
+    return concat_to_string(*this, value);
+}
+
+PrintString &PrintString::operator+=(uint64_t value)
+{
+    print(value);
+    return *this;
+}
+
+PrintString &PrintString::operator+=(int64_t value)
+{
+    print(value);
+    return *this;
+}
+
 size_t PrintString::_setLength(char *buf, size_t size, size_t len)
 {
     auto begin = length();

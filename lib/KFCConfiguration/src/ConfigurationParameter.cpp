@@ -272,7 +272,8 @@ void ConfigurationParameter::dump(Print &output)
         } break;
         case QWORD: {
             auto value = *(uint64_t *)_info.data;
-            output.printf_P(PSTR("%.0f\n"), (double)value);
+            print_string(output, value);
+            output.println();
         } break;
         case FLOAT: {
                 auto value = *(float *)_info.data;
@@ -326,7 +327,7 @@ void ConfigurationParameter::exportAsJson(Print& output)
         } break;
         case QWORD: {
             auto value = *(uint64_t *)_info.data;
-            output.printf_P(PSTR("%.0f"), (double)value); //TODO write as uint64
+            print_string(output, value);
         } break;
         case FLOAT: {
             auto value = *(float *)_info.data;

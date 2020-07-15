@@ -236,6 +236,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF(CPU, "CPU", "<80|160>", "Set CPU speed", "Displ
 #endif
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PSTORE, "PSTORE", "[<clear|remove|add>[,<key>[,<value>]]]", "Display/modify persistant storage");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(METRICS, "METRICS", "Display system metrics");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMP, "DUMP", "[<dirty|config.name>]", "Display settings");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPR, "DUMPR", "<pointer>", "Print symbol");
 #if DEBUG && ESP8266
@@ -303,6 +304,7 @@ void at_mode_help_commands()
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CPU), name);
 #endif
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(PSTORE), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(METRICS), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DUMP), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DUMPR), name);
 #if DEBUG && ESP8266
@@ -861,6 +863,15 @@ void at_mode_serial_handle_event(String &commandString)
                     findItems.push_back(str);
                 }
                 at_mode_generate_help(output, &findItems);
+            }
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(METRICS))) {
+                args.printf_P(PSTR("Device Name: %s"), config.getDeviceName());
+                args.printf_P(PSTR("Uptime: %u seconds / %s"), getSystemUptime(), formatTime(getSystemUptime(), true).c_str());
+                args.printf_P(PSTR("Free Heap/Fragmentation: %u / %u"), ESP.getFreeHeap(), ESP.getHeapFragmentation());
+                args.printf_P(PSTR("CPU Frequency: %uMHz"), ESP.getCpuFreqMHz());
+                args.printf_P(PSTR("VCC: %u"), system_adc_read());
+                args.printf_P(PSTR("Flash Size: %s"), formatBytes(ESP.getFlashChipRealSize()).c_str());
+                args.printf_P(PSTR("Firmware Size: %s"), formatBytes(ESP.getSketchSize()).c_str());
             }
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(PSTORE))) {
                 using KeyValueStorage::Container;

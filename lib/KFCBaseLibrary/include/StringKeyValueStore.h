@@ -156,7 +156,7 @@ namespace KeyValueStorage {
         ItemUInt64(const String &name, uint64_t value, TypeNameEnum type = TypeNameEnum::UINT64_T);
 
         virtual String getValue() const {
-            return String((double)_value._value, 0);
+            return to_string(_value._value);
         }
 
     protected:
@@ -185,7 +185,7 @@ namespace KeyValueStorage {
         ItemInt64(const String &name, int64_t value, TypeNameEnum type = TypeNameEnum::INT64_T);
 
         virtual String getValue() const {
-            return String((double)_value._s_value, 0);
+            return to_string(_value._s_value);
         }
 
     protected:

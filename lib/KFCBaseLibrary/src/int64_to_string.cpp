@@ -22,16 +22,28 @@ size_t concat_to_string(String &str, const int64_t value)
 {
     char buffer[21];
     auto len = Integral_to_string::_Integral_to_string<int64_t, uint64_t>(value, buffer);
-    str.concat(buffer + 21 - len, len);
-    return len;
+    return str.concat(buffer + 21 - len, len) ? len : 0;
 }
 
-size_t concat_to_string(String &str, const uint64_t value) 
+size_t concat_to_string(String &str, const uint64_t value)
 {
     char buffer[21];
     auto len = Integral_to_string::_Integral_to_string<uint64_t, uint64_t>(value, buffer);
-    str.concat(buffer + 21 - len, len);
-    return len;
+    return str.concat(buffer + 21 - len, len) ? len : 0;
+}
+
+size_t print_string(Print &output, const int64_t value)
+{
+    char buffer[21];
+    auto len = Integral_to_string::_Integral_to_string<int64_t, uint64_t>(value, buffer);
+    return output.write(reinterpret_cast<const uint8_t *>(buffer + 21 - len), len);
+}
+
+size_t print_string(Print &output, const uint64_t value)
+{
+    char buffer[21];
+    auto len = Integral_to_string::_Integral_to_string<uint64_t, uint64_t>(value, buffer);
+    return output.write(reinterpret_cast<const uint8_t *>(buffer + 21 - len), len);
 }
 
 char *ulltoa(unsigned long long value, char *buffer)

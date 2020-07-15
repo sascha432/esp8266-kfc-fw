@@ -40,6 +40,9 @@ public:
     virtual void reconfigure(PGM_P source) override;
     virtual void shutdown() override;
 
+    virtual PGM_P getConfigureForm() const override {
+        return getName();
+    }
     virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
     virtual void configurationSaved(Form *form) override;
 

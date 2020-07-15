@@ -10,6 +10,9 @@
 size_t concat_to_string(String &str, const int64_t value);
 size_t concat_to_string(String &str, const uint64_t value);
 
+size_t print_string(Print &output, const int64_t value);
+size_t print_string(Print &output, const uint64_t value);
+
 String to_string(const int64_t value);
 String to_string(const uint64_t value);
 

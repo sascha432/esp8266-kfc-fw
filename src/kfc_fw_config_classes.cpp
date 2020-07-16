@@ -162,6 +162,36 @@ namespace KFCConfigurationClasses {
     }
 
 
+    const uint8_t *System::Firmware::getElfHash(uint16_t &length)
+    {
+        length = getElfHashSize();
+        return config.getBinary(_H(MainConfig().system.firmware.elf_sha1), length);
+    }
+
+    uint8_t System::Firmware::getElfHashHex(String &str)
+    {
+        uint16_t length = 0;
+        str = String();
+        auto ptr = getElfHash(length);
+        if (ptr && length == getElfHashSize()) {
+            bin2hex_append(str, ptr, length);
+        }
+        return static_cast<uint8_t>(str.length());
+    }
+
+    void System::Firmware::setElfHash(const uint8_t *data)
+    {
+        config.setBinary(_H(MainConfig().system.firmware.elf_sha1), data, getElfHashSize());
+    }
+
+    void System::Firmware::setElfHashHex(const char *data)
+    {
+        uint8_t buf[getElfHashSize()];
+        hex2bin(buf, sizeof(buf), data);
+        setElfHash(buf);
+    }
+
+
     Network::Settings::Settings()
     {
         uint8_t mac[6];

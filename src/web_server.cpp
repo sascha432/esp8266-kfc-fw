@@ -446,11 +446,19 @@ void WebServerPlugin::handlerUpdate(AsyncWebServerRequest *request)
 
             String location;
             switch(status->command) {
-                case U_FLASH:
+                case U_FLASH: {
+#if DEBUG
+                    auto hash = request->arg(F("elf_hash"));
+                    _debug_printf_P(PSTR("hash %u %s\n"), hash.length(), hash.c_str());
+                    if (hash.length() == KFCConfigurationClasses::System::Firmware::getElfHashHexSize()) {
+                        KFCConfigurationClasses::System::Firmware::setElfHashHex(hash.c_str());
+                        config.write();
+                    }
+#endif
                     WebTemplate::_aliveRedirection = String(FSPGM(update_fw_html, "update_fw.html")) + F("#u_flash");
                     location += '/';
                     location += FSPGM(rebooting_html);
-                    break;
+                } break;
                 case U_SPIFFS:
                     WebTemplate::_aliveRedirection = String(FSPGM(update_fw_html)) + F("#u_spiffs");
                     location += '/';

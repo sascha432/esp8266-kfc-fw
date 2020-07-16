@@ -17,6 +17,7 @@ import requests
 import re
 import json
 import hashlib
+import shutil
 
 class SimpleProgressBar:
 
@@ -128,11 +129,29 @@ def flash(url, type, target, sid):
         get_status(url, target, sid)
 
     filesize = os.fstat(args.image.fileno()).st_size
-    verbose("Uploading " + str(filesize) + " Bytes: " + args.image.name)
+    verbose("Uploading %u Bytes: %s" % (filesize, args.image.name))
+
+    elf_hash = ''
+    if args.elf and type=='flash':
+        try:
+            elf = args.image.name.replace('.bin', '.elf')
+            h = hashlib.sha1()
+            with open(elf, 'rb') as file:
+                while True:
+                    data = file.read(1024)
+                    if not data:
+                        break
+                    h.update(data)
+            elf_hash = h.hexdigest();
+            elf_out = os.path.join(args.elf, elf_hash + '.elf')
+            shutil.copyfile(elf, elf_out)
+            verbose('Copied %s' % elf_out)
+        except Exception as e:
+            error(str(e), 5);
 
     bar = SimpleProgressBar(max_value=filesize, redirect_stdout=True)
     bar.start();
-    encoder = MultipartEncoder(fields={ "image_type": image_type, "SID": sid, "firmware_image": ("filename", args.image, "application/octet-stream") })
+    encoder = MultipartEncoder(fields={ "image_type": image_type, "SID": sid, "elf_hash": elf_hash, "firmware_image": ("filename", args.image, "application/octet-stream") })
 
     monitor = MultipartEncoderMonitor(encoder, lambda monitor: bar.update(min(monitor.bytes_read, filesize)))
 
@@ -244,14 +263,14 @@ def import_settings(url, target, sid, file, params):
     elif resp['count']>0:
         verbose(str(resp["count"]) + " configuration setting(s) imported")
         if resp['count']!=len(data):
-            error("Settings count does not match: " + str(len(data)))
+            error("Settings count does not match: %u" % len(data))
     else:
         error("Failed to import: " + resp["message"])
 
 
 # main
 
-parser = argparse.ArgumentParser(description="OTA for KFC Firmware", formatter_class=argparse.RawDescriptionHelpFormatter, epilog="exit codes:\n  0 - success\n  1 - general error\n  2 - device did not respond\n  3 - update failed\n  4 - device did not respond after update")
+parser = argparse.ArgumentParser(description="OTA for KFC Firmware", formatter_class=argparse.RawDescriptionHelpFormatter, epilog="exit codes:\n  0 - success\n  1 - general error\n  2 - device did not respond\n  3 - update failed\n  4 - device did not respond after update\n  5 - copying ELF firmware failed")
 parser.add_argument("action", help="action to execute", choices=["flash", "upload", "spiffs", "uploadfs", "atmega", "status", "alive", "export", "import"])
 parser.add_argument("hostname", help="web server hostname")
 parser.add_argument("-u", "--user", help="username", required=True)
@@ -265,6 +284,7 @@ parser.add_argument("-s", "--secure", help="use https to upload", action="store_
 parser.add_argument("-q", "--quiet", help="do not show any output", action="store_true", default=False)
 parser.add_argument("-n", "--no-status", help="do not query status", action="store_true", default=False)
 parser.add_argument("-W", "--no-wait", help="wait after upload until device has been rebooted", action="store_true", default=False)
+parser.add_argument("--elf", help="copy firmware ELF file and store hash in firmware config (flash/upload action)", type=str, default=None)
 parser.add_argument("--sha1", help="use sha1 authentication", action="store_true", default=False)
 args = parser.parse_args()
 

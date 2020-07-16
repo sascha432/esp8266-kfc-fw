@@ -4,32 +4,12 @@
 
 #include <Arduino_compat.h>
 #include "session.h"
+#include "misc.h"
 
 RNGClass rng;
 
-void  bin2hex_append(String &str, char *data, int length) {
-    char *p = data;
-    char buf[3];
-    while (length--) {
-        snprintf(buf, 3, "%02x", (int)*p++);
-        str += buf;
-    }
-}
-
-void  hex2bin(char *buf, int length, const char *str) {
-    char hex[3];
-    const char *p = str;
-    uint8_t *q = (uint8_t *)buf;
-    hex[2] = 0;
-    while (length--) {
-        if ((hex[0] = *p++) == 0 || (hex[1] = *p++) == 0) {
-            break;
-        }
-        *q++ = (unsigned char)strtoul(hex, nullptr, HEX);
-    }
-}
-
-char *pepper_and_salt(char *salt, SESSION_HASH_CLASSNAME &hash, char *buf, size_t size) {
+char *pepper_and_salt(char *salt, SESSION_HASH_CLASSNAME &hash, char *buf, size_t size)
+{
     if (!salt) {
         salt = (char *)malloc(SESSION_SALT_LENGTH);
         rng.rand((uint8_t *)salt, SESSION_SALT_LENGTH);
@@ -41,14 +21,15 @@ char *pepper_and_salt(char *salt, SESSION_HASH_CLASSNAME &hash, char *buf, size_
     return salt;
 }
 
-void free_pepper_and_salt(char *org_salt, char *salt) {
+void free_pepper_and_salt(char *org_salt, char *salt)
+{
     if (org_salt != salt) {
         free(salt);
     }
 }
 
-String generate_session_id(const char *username, const char *password, char *salt) {
-
+String generate_session_id(const char *username, const char *password, char *salt)
+{
     String sid;
     SESSION_HASH_CLASSNAME hash;
     char buf[hash.hashSize()];
@@ -73,8 +54,9 @@ String generate_session_id(const char *username, const char *password, char *sal
     return sid;
 }
 
-bool verify_session_id(const char *session_id, const char *username, const char *password) {
-    char salt[8];
+bool verify_session_id(const char *session_id, const char *username, const char *password)
+{
+    char salt[SESSION_SALT_LENGTH];
 
 #if HAVE_SESSION_DEVICE_TOKEN
 
@@ -91,7 +73,7 @@ bool verify_session_id(const char *session_id, const char *username, const char 
         // debug_printf("SID length %d != %d\n", strlen(session_id), (8 + SESSION_HASH_LENGTH) * 2);
         return false;
     }
-    hex2bin(salt, SESSION_SALT_LENGTH, session_id);
+    hex2bin(salt, SESSION_SALT_LENGTH, session_id); // get the salt from the beginning of the session id
     // #if DEBUG
     // String tmp;
     // bin2hex_append(tmp, salt, 8);

@@ -865,12 +865,18 @@ void at_mode_serial_handle_event(String &commandString)
                 at_mode_generate_help(output, &findItems);
             }
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(METRICS))) {
-                args.printf_P(PSTR("Device Name: %s"), config.getDeviceName());
+                args.printf_P(PSTR("Device name: %s"), config.getDeviceName());
                 args.printf_P(PSTR("Uptime: %u seconds / %s"), getSystemUptime(), formatTime(getSystemUptime(), true).c_str());
-                args.printf_P(PSTR("Free Heap/Fragmentation: %u / %u"), ESP.getFreeHeap(), ESP.getHeapFragmentation());
-                args.printf_P(PSTR("CPU Frequency: %uMHz"), ESP.getCpuFreqMHz());
-                args.printf_P(PSTR("Flash Size: %s"), formatBytes(ESP.getFlashChipRealSize()).c_str());
-                args.printf_P(PSTR("Firmware Size: %s"), formatBytes(ESP.getSketchSize()).c_str());
+                args.printf_P(PSTR("Free heap/fragmentation: %u / %u"), ESP.getFreeHeap(), ESP.getHeapFragmentation());
+                args.printf_P(PSTR("CPU frequency: %uMHz"), ESP.getCpuFreqMHz());
+                args.printf_P(PSTR("Flash size: %s"), formatBytes(ESP.getFlashChipRealSize()).c_str());
+                args.printf_P(PSTR("Firmware size: %s"), formatBytes(ESP.getSketchSize()).c_str());
+#if DEBUG
+                String hash;
+                if (KFCConfigurationClasses::System::Firmware::getElfHashHex(hash)) {
+                    args.printf_P(PSTR("Firmware ELF hash: %s"), hash.c_str());
+                }
+#endif
             }
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(PSTORE))) {
                 using KeyValueStorage::Container;

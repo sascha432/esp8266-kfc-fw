@@ -630,6 +630,30 @@ char nibble2hex(uint8_t nibble, char hex_char)
     return nibble > 9 ? nibble + hex_char : nibble + '0';
 }
 
+void bin2hex_append(String &str, const void *data, size_t length)
+{
+    char hex[3];
+    auto ptr = reinterpret_cast<const uint8_t *>(data);
+    while (length--) {
+        snprintf(hex, 3, "%02x", (*ptr++) & 0xff);
+        str += hex;
+    }
+}
+
+size_t hex2bin(void *buf, size_t length, const char *str)
+{
+    char hex[3];
+    auto ptr = reinterpret_cast<uint8_t *>(buf);
+    hex[2] = 0;
+    while (length--) {
+        if ((hex[0] = *str++) == 0 || (hex[1] = *str++) == 0) {
+            break;
+        }
+        *ptr++ = (unsigned char)strtoul(hex, nullptr, HEX);
+    }
+    return ptr - reinterpret_cast<uint8_t *>(buf);
+}
+
 const char *mac2char_s(char *dst, size_t size, const uint8_t *mac, char separator)
 {
     constexpr uint8_t len = 6;

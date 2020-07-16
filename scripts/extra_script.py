@@ -13,11 +13,16 @@ def modify_upload_command(source, target, env, fs = False):
     if env["UPLOAD_PROTOCOL"]=='espota':
         (login, host) = env["UPLOAD_PORT"].split('@', 2)
         (username, password) = login.split(':', 2)
+
+        args = [ '--user', username, '--pass', password, '--image', str(source[0]) ]
         if fs:
-            cmd = 'uploadfs'
+            args.append('uploadfs')
+            args.append(host)
         else:
-            cmd = 'upload'
-        args = [ '--user', username, '--pass', password, '--image', str(source[0]), cmd, host ]
+            args.append('upload')
+            args.append(host)
+            args.append('--elf')
+            args.append(os.path.realpath(os.path.join(env.subst("$PROJECT_DIR"), 'elf')))
 
         env.Replace(UPLOAD_FLAGS=' '.join(args))
 
@@ -69,7 +74,6 @@ env.AddPreAction("upload", modify_upload_command)
 env.AddPreAction("uploadota", modify_upload_command)
 env.AddPreAction("uploadfs", modify_upload_command_fs)
 env.AddPreAction("uploadfsota", modify_upload_command_fs)
-
 
 env.AlwaysBuild(env.Alias("newbuild", None, new_build))
 

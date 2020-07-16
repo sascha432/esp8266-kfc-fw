@@ -127,6 +127,9 @@ const char *inet_ntoa_s(char *dst, size_t size, uint32_t ip);
 // 4bit 2 hex
 char nibble2hex(uint8_t nibble, char hex_char = NIBBLE2HEX_LC);
 
+void bin2hex_append(String &str, const void *data, size_t length);
+size_t hex2bin(void *buf, size_t length, const char *str);
+
 // memcpy with the minimum size of both variables
 #define MEMNCPY_S(dst, src)                     { memcpy((void *)dst, (void *)src, min(sizeof(src), sizeof(dst))); }
 

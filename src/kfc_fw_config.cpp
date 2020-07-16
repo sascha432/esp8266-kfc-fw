@@ -564,8 +564,24 @@ void KFCFWConfiguration::restoreFactorySettings()
     _debug_println();
     PrintString str;
 
+#if DEBUG
+    uint16_t length = 0;
+    auto hash = System::Firmware::getElfHash(length);
+    uint8_t hashCopy[System::Firmware::getElfHashSize()];
+    if (hash && length == sizeof(hashCopy)) {
+        memcpy(hashCopy, hash, sizeof(hashCopy));
+    } else {
+        length = 0;
+    }
+#endif
+
     clear();
     _H_SET(Config().version, FIRMWARE_VERSION);
+#if DEBUG
+    if (length) {
+        System::Firmware::setElfHash(hashCopy);
+    }
+#endif
 
     auto flags = System::Flags();
     flags.write();

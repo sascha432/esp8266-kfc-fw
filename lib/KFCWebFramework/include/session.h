@@ -55,9 +55,6 @@ extern const char *session_get_device_token();
 
 #endif
 
-void bin2hex_append(String &str, char *data, int length);
-void hex2bin(char *buf, int length, const char *str);
-
 char *pepper_and_salt(char *org_salt, SESSION_HASH_CLASSNAME &hash, char *buf = nullptr, size_t size = 0);
 void free_pepper_and_salt(char *org_salt, char *salt);
 

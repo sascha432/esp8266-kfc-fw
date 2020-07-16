@@ -86,8 +86,26 @@ namespace KFCConfigurationClasses {
             DeviceSettings_t settings;
         };
 
+        class Firmware {
+        public:
+            // sha1 of the firmware.elf file
+            static const uint8_t *getElfHash(uint16_t &length);     // length getElfHashSize byte
+            static uint8_t getElfHashHex(String &str);
+            static void setElfHash(const uint8_t *data);            // length getElfHashSize byte
+            static void setElfHashHex(const char *data);            // getElfHashHexSize() + nul byte
+            static constexpr uint8_t getElfHashSize() {
+                return static_cast<uint8_t>(sizeof(elf_sha1));
+            }
+            static constexpr uint8_t getElfHashHexSize() {
+                return static_cast<uint8_t>(sizeof(elf_sha1)) * 2;
+            }
+
+            uint8_t elf_sha1[20];
+        };
+
         Flags flags;
         Device device;
+        Firmware firmware;
 
     };
 

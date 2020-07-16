@@ -50,25 +50,19 @@ void Driver_4ChDimmer::_begin()
     Dimmer_Base::_begin();
     _channels = ChannelsArray();
     _storedChannels = ChannelsArray();
-    auto mqttClient = MQTTClient::getClient();
-    if (mqttClient) {
-        mqttClient->registerComponent(this);
-    }
+    MQTTClient::safeRegisterComponent(this);
+    _qos = MQTTClient::getDefaultQos();
     _data.state.value = false;
     _data.brightness.value = 0;
     _data.color.value = 0;
     _data.lockChannels.value = false;
-    _qos = MQTTClient::getDefaultQos();
     _getChannels();
     _channelsToBrightness();
 }
 
 void Driver_4ChDimmer::_end()
 {
-    auto mqttClient = MQTTClient::getClient();
-    if (mqttClient) {
-        mqttClient->unregisterComponent(this);
-    }
+    MQTTClient::safeUnregisterComponent(this);
     Dimmer_Base::_end();
 }
 

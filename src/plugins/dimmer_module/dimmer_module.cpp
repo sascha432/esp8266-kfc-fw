@@ -18,7 +18,11 @@
 #include <debug_helper_disable.h>
 #endif
 
-Driver_DimmerModule::Driver_DimmerModule() : MQTTComponent(ComponentTypeEnum_t::SENSOR), Dimmer_Base()
+Driver_DimmerModule::Driver_DimmerModule() :
+#if !IOT_DIMMER_MODULE_INTERFACE_UART
+    MQTTComponent(ComponentTypeEnum_t::SENSOR),
+#endif
+    Dimmer_Base()
 {
 }
 
@@ -46,12 +50,13 @@ void Driver_DimmerModule::_begin()
 
     auto mqttClient = MQTTClient::getClient();
     if (mqttClient) {
-        mqttClient->setUseNodeId(true);
         for (uint8_t i = 0; i < _channels.size(); i++) {
             _channels[i].setup(this, i);
             mqttClient->registerComponent(&_channels[i]);
         }
+#if !IOT_DIMMER_MODULE_INTERFACE_UART
         mqttClient->registerComponent(this);
+#endif
     }
 
     _beginButtons();
@@ -67,7 +72,9 @@ void Driver_DimmerModule::_end()
     _debug_println(F("removing mqtt client"));
     auto mqttClient = MQTTClient::getClient();
     if (mqttClient) {
+#if !IOT_DIMMER_MODULE_INTERFACE_UART
         mqttClient->unregisterComponent(this);
+#endif
         for(uint8_t i = 0; i < _channels.size(); i++) {
             mqttClient->unregisterComponent(&_channels[i]);
         }
@@ -130,10 +137,10 @@ void Driver_DimmerModule::_endButtons()
 #endif
 }
 
-MQTTComponent::MQTTAutoDiscoveryPtr Driver_DimmerModule::nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num)
-{
-    return nullptr;
-}
+// MQTTComponent::MQTTAutoDiscoveryPtr Driver_DimmerModule::nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num)
+// {
+//     return nullptr;
+// }
 
 // MQTTComponent::MQTTAutoDiscoveryPtr Driver_DimmerModule::nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num)
 // {
@@ -209,17 +216,17 @@ MQTTComponent::MQTTAutoDiscoveryPtr Driver_DimmerModule::nextAutoDiscovery(MQTTA
 //     vector.emplace_back(discovery);
 // }
 
-uint8_t Driver_DimmerModule::getAutoDiscoveryCount() const
-{
-    return 0; //4;
-}
+// uint8_t Driver_DimmerModule::getAutoDiscoveryCount() const
+// {
+//     return 0; //4;
+// }
 
+#if !IOT_DIMMER_MODULE_INTERFACE_UART
 void Driver_DimmerModule::onConnect(MQTTClient *client)
 {
-#if !IOT_DIMMER_MODULE_INTERFACE_UART
     _fetchMetrics();
-#endif
 }
+#endif
 
 void Driver_DimmerModule::_printStatus(Print &out)
 {

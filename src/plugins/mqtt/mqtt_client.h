@@ -172,11 +172,38 @@ public:
         _mqttClient->_handleWiFiEvents(event, payload);
     }
 
-    inline static MQTTClient *getClient() {
+    static MQTTClient *getClient() {
         return _mqttClient;
     }
 
-    inline static uint8_t getDefaultQos() {
+    static void safePublish(const String &topic, bool retain, const String &value) {
+        if (_mqttClient) {
+            _mqttClient->publish(topic, _mqttClient->_config.qos, retain, value);
+        }
+    }
+
+    static void safeRegisterComponent(MQTTComponentPtr component) {
+        if (_mqttClient) {
+            _mqttClient->registerComponent(component);
+        }
+    }
+
+    static bool safeUnregisterComponent(MQTTComponentPtr component) {
+        if (_mqttClient) {
+            return _mqttClient->unregisterComponent(component);
+        }
+        return false;
+    }
+
+    static void safeReRegisterComponent(MQTTComponentPtr component) {
+        if (_mqttClient) {
+            _mqttClient->unregisterComponent(component);
+            _mqttClient->registerComponent(component);
+        }
+    }
+
+
+    static uint8_t getDefaultQos() {
         if (_mqttClient) {
             return _mqttClient->_config.qos;
         }

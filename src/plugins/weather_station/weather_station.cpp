@@ -19,6 +19,7 @@
 #include "RestAPI.h"
 #include "web_server.h"
 #include "async_web_response.h"
+#include "blink_led_timer.h"
 #include "./plugins/sensor/sensor.h"
 #include "./plugins/sensor/Sensor_BME280.h"
 #if IOT_WEATHER_STATION_COMP_RH
@@ -220,6 +221,16 @@ void WeatherStationPlugin::setup(SetupModeType mode)
     }
 #endif
 
+#if IOT_ALARM_PLUGIN_ENABLED
+    AlarmPlugin::setCallback(alarmCallback);
+#if IOT_WEATHER_STATION_HAS_TOUCHPAD
+    // needs to be first callback to stop the event to be passed to other callbacks if the alarm is active
+    _touchpad.addCallback(Mpr121Touchpad::EventType::ANY, 1, [this](const Mpr121Touchpad::Event &) {
+        return _resetAlarm();
+    });
+#endif
+#endif
+
     auto compensationCallback = [this](Sensor_BME280::SensorData_t &sensor) {
         sensor.humidity += _config.humidity_offset;
         sensor.pressure += _config.pressure_offset;
@@ -277,6 +288,10 @@ void WeatherStationPlugin::reconfigure(PGM_P source)
 
 void WeatherStationPlugin::shutdown()
 {
+#if IOT_ALARM_PLUGIN_ENABLED
+    _resetAlarm();
+    AlarmPlugin::setCallback(nullptr);
+#endif
 #if IOT_WEATHER_STATION_WS2812_NUM
     _pixelTimer.remove();
 #endif
@@ -350,7 +365,7 @@ void WeatherStationPlugin::createConfigureForm(AsyncWebServerRequest *request, F
     form.finalize();
 }
 
-void WeatherStationPlugin::configurationSaved()
+void WeatherStationPlugin::configurationSaved(Form *form)
 {
     using KeyValueStorage::Container;
     using KeyValueStorage::ContainerPtr;
@@ -835,3 +850,63 @@ uint8_t WeatherStationPlugin::_getNextScreen(uint8_t screen)
     }
     return screen;
 }
+
+#if IOT_ALARM_PLUGIN_ENABLED
+
+void WeatherStationPlugin::alarmCallback(Alarm::AlarmModeType mode, uint16_t maxDuration)
+{
+    plugin._alarmCallback(mode, maxDuration);
+}
+
+void WeatherStationPlugin::_alarmCallback(Alarm::AlarmModeType mode, uint16_t maxDuration)
+{
+    if (!_resetAlarmFunc) {
+        // auto animation = static_cast<AnimationEnum_t>(_config.animation);
+        // auto brightness = _brightness;
+        // auto autoBrightness = _autoBrightness;
+
+        _resetAlarmFunc = [this](EventScheduler::TimerPtr) {
+        //     _autoBrightness = autoBrightness;
+        //     _brightness = brightness;
+        //     _display.setBrightness(brightness);
+        //     setAnimation(animation);
+#if IOT_WEATHER_STATION_WS2812_NUM
+            BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::OFF);
+#endif
+            _alarmTimer.remove(); // make sure the scheduler is not calling a dangling pointer.. not using the TimerPtr in case it is not called from the scheduler
+            _resetAlarmFunc = nullptr;
+        };
+    }
+
+    // check if an alarm is already active
+    if (!_alarmTimer.active()) {
+#if IOT_WEATHER_STATION_WS2812_NUM
+        BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::FAST, 0xff0000);
+#endif
+        // _debug_println(F("set to flashing"));
+        // _autoBrightness = AUTO_BRIGHTNESS_OFF;
+        // _brightness = SevenSegmentDisplay::MAX_BRIGHTNESS;
+        // _display.setBrightness(_brightness);
+        // setAnimation(AnimationEnum_t::FLASHING);
+        // _animationData.flashing.color = Color(255, 0, 0);
+        // _updateRate = 250;
+    }
+
+    if (maxDuration == 0) {
+        maxDuration = 300; // limit time
+    }
+    // reset time if alarms overlap
+    _debug_printf_P(PSTR("alarm duration %u\n"), maxDuration);
+    _alarmTimer.add(maxDuration * 1000UL, false, _resetAlarmFunc);
+}
+
+bool WeatherStationPlugin::_resetAlarm()
+{
+    if (_resetAlarmFunc) {
+        _resetAlarmFunc(nullptr);
+        return true;
+    }
+    return false;
+}
+
+#endif

@@ -20,7 +20,7 @@ namespace KFCConfigurationClasses {
         temp_offset(0),
         humidity_offset(0),
         pressure_offset(0),
-        screenTimer({})
+        screenTimer()
     {
         screenTimer[0] = 10;
         screenTimer[1] = 10;

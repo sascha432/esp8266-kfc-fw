@@ -272,7 +272,8 @@ public:
     }
 
 protected:
-    using WeatherStationConfigType = KFCConfigurationClasses::Plugins::WeatherStation::WeatherStationConfig_t;
+    using WeatherStationConfigType = KFCConfigurationClasses::Plugins::WeatherStation::WeatherStationConfig;
+
     void setText(const String &text, const GFXfont *textFont) {
         _text = text;
         _textFont = textFont;

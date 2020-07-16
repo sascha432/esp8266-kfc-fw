@@ -14,6 +14,9 @@
 #include "WSDraw.h"
 #include "NeoPixel_esp.h"
 #include "plugins.h"
+#if IOT_ALARM_PLUGIN_ENABLED
+#include "./plugins/alarm/alarm.h"
+#endif
 
 #ifndef DEBUG_IOT_WEATHER_STATION
 #define DEBUG_IOT_WEATHER_STATION               0
@@ -84,7 +87,7 @@ public:
         return getName();
     }
     virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
-    virtual void configurationSaved() override;
+    virtual void configurationSaved(Form *form) override;
 
 
 // WebUIInterface
@@ -166,6 +169,20 @@ private:
     uint8_t _getNextScreen(uint8_t screen);
 
     uint32_t _toggleScreenTimer;
+
+#if IOT_ALARM_PLUGIN_ENABLED
+public:
+    using Alarm = KFCConfigurationClasses::Plugins::Alarm;
+
+    static void alarmCallback(Alarm::AlarmModeType mode, uint16_t maxDuration);
+
+private:
+    void _alarmCallback(Alarm::AlarmModeType mode, uint16_t maxDuration);
+    bool _resetAlarm(); // returns true if alarm was reset
+
+    EventScheduler::Timer _alarmTimer;
+    EventScheduler::Callback _resetAlarmFunc;
+#endif
 
 #if DEBUG_IOT_WEATHER_STATION
 public:

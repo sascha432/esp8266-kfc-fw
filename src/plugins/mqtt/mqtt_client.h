@@ -177,7 +177,7 @@ public:
     }
 
     static void safePublish(const String &topic, bool retain, const String &value) {
-        if (_mqttClient) {
+        if (_mqttClient && _mqttClient->isConnected()) {
             _mqttClient->publish(topic, _mqttClient->_config.qos, retain, value);
         }
     }

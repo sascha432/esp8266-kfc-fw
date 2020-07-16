@@ -163,8 +163,8 @@ void DimmerChannel::publishState(MQTTClient *client)
         _debug_printf_P(PSTR("DimmerChannel[%u]::publishState(): brightness %d, state %u, client %p\n"), _channel, _data.brightness.value, _data.state.value, client);
         uint8_t _qos = MQTTClient::getDefaultQos();
 
-        client->publish(_data.state.state, _qos, 1, String(_data.state.value));
-        client->publish(_data.brightness.state, _qos, 1, String(_data.brightness.value));
+        client->publish(_data.state.state, _qos, true, String(_data.state.value));
+        client->publish(_data.brightness.state, _qos, true, String(_data.brightness.value));
     }
 
     JsonUnnamedObject json(2);

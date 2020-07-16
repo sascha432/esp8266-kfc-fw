@@ -243,7 +243,7 @@ extern class Stream &DebugSerial;
 #if SPIFFS_SUPPORT                                      // store failed logins on SPIFFS
 #define SECURITY_LOGIN_REWRITE_INTERVAL 3600            // rewrite file every hour to remove old records
 #define SECURITY_LOGIN_STORE_TIMEFRAME  86400           // keep failed attempts stored on SPIFFS
-#define SECURITY_LOGIN_FILE             "/login_failures"
+#define SECURITY_LOGIN_FILE             "/.pvt/login_failures"
 #endif
 #endif
 

@@ -35,7 +35,7 @@ namespace SaveCrash {
     {
 #if SPIFFS_SUPPORT
         SPIFFS.begin();
-        auto filename = String(FSPGM(crash_counter_file, "/.dumps/crash_counter"));
+        auto filename = String(FSPGM(crash_counter_file, "/.pvt/crash_counter"));
         if (SPIFFS.exists(filename)) {
             SPIFFS.remove(filename);
         }
@@ -65,7 +65,7 @@ namespace SaveCrash {
                 int num = 0;
                 PrintString filename;
                 do {
-                    filename = PrintString(FSPGM(crash_dump_file, "/.dumps/crash.%03x"), num++);
+                    filename = PrintString(FSPGM(crash_dump_file, "/.pvt/crash.%03x"), num++);
                 } while(SPIFFS.exists(filename));
                 auto file = SPIFFS.open(filename, fs::FileOpenMode::write);
                 if (file) {

@@ -19,7 +19,7 @@
 #include <debug_helper_disable.h>
 #endif
 
-PROGMEM_STRING_DEF(iot_switch_states_file, "/switch.states");
+PROGMEM_STRING_DEF(iot_switch_states_file, "/.pvt/switch.states");
 
 SwitchPlugin plugin;
 

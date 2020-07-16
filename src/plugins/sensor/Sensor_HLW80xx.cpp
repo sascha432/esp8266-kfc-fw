@@ -19,7 +19,7 @@
 #include <debug_helper_disable.h>
 #endif
 
-PROGMEM_STRING_DEF(iot_sensor_hlw80xx_state_file, "/hlw80xx.state");
+PROGMEM_STRING_DEF(iot_sensor_hlw80xx_state_file, "/.pvt/hlw80xx.state");
 
 Sensor_HLW80xx::Sensor_HLW80xx(const String &name) : MQTTSensor(), _name(name)
 {

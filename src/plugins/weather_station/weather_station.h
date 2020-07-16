@@ -19,7 +19,7 @@
 #endif
 
 #ifndef DEBUG_IOT_WEATHER_STATION
-#define DEBUG_IOT_WEATHER_STATION               1
+#define DEBUG_IOT_WEATHER_STATION               0
 #endif
 
 #ifndef IOT_WEATHER_STATION_HAS_TOUCHPAD

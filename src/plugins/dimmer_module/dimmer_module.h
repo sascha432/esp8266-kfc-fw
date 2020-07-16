@@ -99,16 +99,11 @@
 
 class DimmerModuleForm;
 
-class Driver_DimmerModule:
-#if !IOT_DIMMER_MODULE_INTERFACE_UART
-    public MQTTComponent,
-#endif
-    public Dimmer_Base, public DimmerModuleForm
+class Driver_DimmerModule: public MQTTComponent, public Dimmer_Base, public DimmerModuleForm
 {
 public:
     Driver_DimmerModule();
 
-#if !IOT_DIMMER_MODULE_INTERFACE_UART
     virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num) override {
         return nullptr;
     }
@@ -116,7 +111,6 @@ public:
         return 0;
     }
     virtual void onConnect(MQTTClient *client) override;
-#endif
 
     virtual bool on(uint8_t channel = -1) override;
     virtual bool off(uint8_t channel = -1) override;

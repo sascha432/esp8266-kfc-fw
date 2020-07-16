@@ -21,7 +21,7 @@
 
 void DimmerModuleForm::createConfigureForm(AsyncWebServerRequest *request, Form &form)
 {
-    _debug_printf_P(PSTR("DimmerModuleForm::createConfigureForm()\n"));
+    _debug_println();
 
     auto isInvalid = !config._H_GET(Config().dimmer).config_valid;
 

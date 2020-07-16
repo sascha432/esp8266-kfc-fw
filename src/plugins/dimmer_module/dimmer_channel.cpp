@@ -58,14 +58,15 @@ void DimmerChannel::_createTopics()
 {
 #if IOT_DIMMER_MODULE_CHANNELS > 1
     String value = PrintString(FSPGM(channel__u), _channel);
+    #define VALUE value,
 #else
-    uint8_t value = MQTTClient::NO_ENUM;
+    #define VALUE
 #endif
 
-    _data.state.set = MQTTClient::formatTopic(value, FSPGM(_set));
-    _data.state.state = MQTTClient::formatTopic(value, FSPGM(_state));
-    _data.brightness.set = MQTTClient::formatTopic(value, FSPGM(_brightness_set));
-    _data.brightness.state = MQTTClient::formatTopic(value, FSPGM(_brightness_state));
+    _data.state.set = MQTTClient::formatTopic(VALUE FSPGM(_set));
+    _data.state.state = MQTTClient::formatTopic(VALUE FSPGM(_state));
+    _data.brightness.set = MQTTClient::formatTopic(VALUE FSPGM(_brightness_set));
+    _data.brightness.state = MQTTClient::formatTopic(VALUE FSPGM(_brightness_state));
 }
 
 void DimmerChannel::onConnect(MQTTClient *client)

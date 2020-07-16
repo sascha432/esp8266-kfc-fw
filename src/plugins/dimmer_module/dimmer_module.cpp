@@ -18,11 +18,7 @@
 #include <debug_helper_disable.h>
 #endif
 
-Driver_DimmerModule::Driver_DimmerModule() :
-#if !IOT_DIMMER_MODULE_INTERFACE_UART
-    MQTTComponent(ComponentTypeEnum_t::SENSOR),
-#endif
-    Dimmer_Base()
+Driver_DimmerModule::Driver_DimmerModule() : MQTTComponent(ComponentTypeEnum_t::SENSOR), Dimmer_Base()
 {
 }
 
@@ -54,9 +50,7 @@ void Driver_DimmerModule::_begin()
             _channels[i].setup(this, i);
             mqttClient->registerComponent(&_channels[i]);
         }
-#if !IOT_DIMMER_MODULE_INTERFACE_UART
         mqttClient->registerComponent(this);
-#endif
     }
 
     _beginButtons();
@@ -72,9 +66,7 @@ void Driver_DimmerModule::_end()
     _debug_println(F("removing mqtt client"));
     auto mqttClient = MQTTClient::getClient();
     if (mqttClient) {
-#if !IOT_DIMMER_MODULE_INTERFACE_UART
         mqttClient->unregisterComponent(this);
-#endif
         for(uint8_t i = 0; i < _channels.size(); i++) {
             mqttClient->unregisterComponent(&_channels[i]);
         }
@@ -137,96 +129,12 @@ void Driver_DimmerModule::_endButtons()
 #endif
 }
 
-// MQTTComponent::MQTTAutoDiscoveryPtr Driver_DimmerModule::nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num)
-// {
-//     return nullptr;
-// }
-
-// MQTTComponent::MQTTAutoDiscoveryPtr Driver_DimmerModule::nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num)
-// {
-//     if (num >= getAutoDiscoveryCount()) {
-//         return nullptr;
-//     }
-//     auto discovery = new MQTTAutoDiscovery();
-//     switch(num) {
-//         case 0:
-//             break;
-//         case 1:
-//             break;
-//         case 2:
-//             break;
-//         case 3:
-//             break;
-//         case 4:
-//             break;
-//         case 5:
-//             break;
-//         case 6:
-//             break;
-//         case 7:
-//             break;
-//         case 8:
-//             break;
-//         case 9:
-//             break;
-//         case 0:
-//             break;
-//         case ß:
-//             break;
-//     }
-//     discovery->finalize();
-//     return discovery;
-// }
-
-
-// // void Driver_DimmerModule::createAutoDiscovery(MQTTAutoDiscovery::FormatType format, MQTTComponent::MQTTAutoDiscoveryVector &vector)
-// // {
-// //     if (format == MQTTAutoDiscovery::FORMAT_YAML) {
-// //         for(uint8_t i = 0; i < _channels.size(); i++) {
-// //             _channels[i].createAutoDiscovery(format, vector);
-// //         }
-// //     }
-
-//     auto discovery = new MQTTAutoDiscovery();
-//     discovery->create(this, F("temp"), format);
-//     discovery->addStateTopic(_getMetricsTopics(0));
-//     discovery->addUnitOfMeasurement(FSPGM(_degreeC));
-//     discovery->finalize();
-//     vector.emplace_back(discovery);
-
-//     discovery = new MQTTAutoDiscovery();
-//     discovery->create(this, F("temp2"), format);
-//     discovery->addStateTopic(_getMetricsTopics(1));
-//     discovery->addUnitOfMeasurement(FSPGM(_degreeC));
-//     discovery->finalize();
-//     vector.emplace_back(discovery);
-
-//     discovery = new MQTTAutoDiscovery();
-//     discovery->create(this, FSPGM(vcc), format);
-//     discovery->addStateTopic(_getMetricsTopics(2));
-//     discovery->addUnitOfMeasurement(F("V"));
-//     discovery->finalize();
-//     vector.emplace_back(discovery);
-
-//     discovery = new MQTTAutoDiscovery();
-//     discovery->create(this, FSPGM(frequency), format);
-//     discovery->addStateTopic(_getMetricsTopics(3));
-//     discovery->addUnitOfMeasurement(FSPGM(Hz));
-//     discovery->finalize();
-//     vector.emplace_back(discovery);
-// }
-
-// uint8_t Driver_DimmerModule::getAutoDiscoveryCount() const
-// {
-//     return 0; //4;
-// }
-
-#if !IOT_DIMMER_MODULE_INTERFACE_UART
 void Driver_DimmerModule::onConnect(MQTTClient *client)
 {
+#if !IOT_DIMMER_MODULE_INTERFACE_UART
     _fetchMetrics();
-}
 #endif
+}
 
 void Driver_DimmerModule::_printStatus(Print &out)
 {

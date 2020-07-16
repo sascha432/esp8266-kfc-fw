@@ -254,9 +254,10 @@ public:
 
 private:
     void _alarmCallback(Alarm::AlarmModeType mode, uint16_t maxDuration);
+    bool _resetAlarm(); // returns true if alarm was reset
 
     EventScheduler::Timer _alarmTimer;
-    std::function<void(EventScheduler::TimerPtr)> _resetAlarm;
+    EventScheduler::Callback _resetAlarmFunc;
 #endif
 
 public:

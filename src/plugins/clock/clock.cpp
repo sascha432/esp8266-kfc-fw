@@ -63,6 +63,7 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
 {
     _debug_printf_P(PSTR("id=%s\n"), id.c_str());
     if (hasValue) {
+        _resetAlarm();
         auto val = (uint8_t)value.toInt();
         if (String_equals(id, PSTR("btn_colon"))) {
             switch(_ui_colon = val) {
@@ -461,6 +462,8 @@ void ClockPlugin::onMessage(MQTTClient *client, char *topic, char *payload, size
 {
     _debug_printf_P(PSTR("topic=%s payload=%*.*s\n"), topic, len, len, payload);
 
+    _resetAlarm();
+
     if (strstr_P(topic, SPGM(_brightness_set))) {
         _brightness = atoi(payload);
         _setBrightness();
@@ -686,6 +689,8 @@ void ClockPlugin::onButtonHeld(Button& btn, uint16_t duration, uint16_t repeatCo
         plugin._buttonCounter = 0;
     }
     if (repeatCount == 12) {    // start flashing after 2 seconds, hard reset occurs ~2.5s
+        plugin._autoBrightness = -1;
+        plugin._display.setBrightness(SevenSegmentDisplay::MAX_BRIGHTNESS);
         plugin.setAnimation(FLASHING);
         plugin._animationData.flashing.color = Color(255, 0, 0);
         plugin._updateRate = 50;
@@ -708,6 +713,9 @@ void ClockPlugin::onButtonReleased(Button& btn, uint16_t duration)
 void ClockPlugin::_onButtonReleased(uint16_t duration)
 {
     _debug_printf_P(PSTR("press=%u\n"), _buttonCounter);
+    if (_resetAlarm()) {
+        return;
+    }
     switch(_buttonCounter) {
         case 0:
             setAnimation(FAST_BLINK_COLON);
@@ -858,19 +866,18 @@ void ClockPlugin::alarmCallback(Alarm::AlarmModeType mode, uint16_t maxDuration)
 
 void ClockPlugin::_alarmCallback(Alarm::AlarmModeType mode, uint16_t maxDuration)
 {
-    if (!_resetAlarm) {
+    if (!_resetAlarmFunc) {
         auto animation = static_cast<AnimationEnum_t>(_config.animation);
         auto brightness = _brightness;
         auto autoBrightness = _autoBrightness;
-        auto color = _color;
 
         _debug_println(F("storing parameters"));
-        _resetAlarm = [this, animation, brightness, autoBrightness, color](EventScheduler::TimerPtr) {
+        _resetAlarmFunc = [this, animation, brightness, autoBrightness](EventScheduler::TimerPtr) {
             _autoBrightness = autoBrightness;
             _display.setBrightness(brightness);
-            _color = color;
             setAnimation(animation);
-            _resetAlarm = nullptr;
+            _alarmTimer.remove(); // make sure the scheduler is not calling a dangling pointer.. not using the TimerPtr in case it is not called from the scheduler
+            _resetAlarmFunc = nullptr;
         };
     }
 
@@ -878,9 +885,9 @@ void ClockPlugin::_alarmCallback(Alarm::AlarmModeType mode, uint16_t maxDuration
     if (!_alarmTimer.active()) {
         _debug_println(F("set to flashing"));
         _autoBrightness = -1;
-        _color = Color(0xff, 0, 0);
         _display.setBrightness(SevenSegmentDisplay::MAX_BRIGHTNESS);
         setAnimation(AnimationEnum_t::FLASHING);
+        plugin._animationData.flashing.color = Color(255, 0, 0);
     }
 
     if (maxDuration == 0) {
@@ -888,7 +895,16 @@ void ClockPlugin::_alarmCallback(Alarm::AlarmModeType mode, uint16_t maxDuration
     }
     // reset time if alarms overlap
     _debug_printf_P(PSTR("alarm duration %u\n"), maxDuration);
-    _alarmTimer.add(maxDuration * 1000UL, false, _resetAlarm);
+    _alarmTimer.add(maxDuration * 1000UL, false, _resetAlarmFunc);
+}
+
+bool ClockPlugin::_resetAlarm()
+{
+    if (_resetAlarmFunc) {
+        _resetAlarmFunc(nullptr);
+        return true;
+    }
+    return false;
 }
 
 #endif

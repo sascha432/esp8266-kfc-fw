@@ -198,22 +198,20 @@ void Sensor_HLW80xx::createConfigureForm(AsyncWebServerRequest *request, Form &f
     form.add(F("energyCounterPrimary"), String(), FormField::InputFieldType::TEXT)
         ->setFormUI((new FormUI(FormUI::TEXT, F("HLW8012 Total Energy")))->setSuffix(kWh)->setPlaceholder(String(IOT_SENSOR_HLW80xx_PULSE_TO_KWH(getEnergyPrimaryCounter()), 3)));
 
-#error  TODOs
-        //TODO move to configurationSaved, if the form is invalid these values are wrong
     form.addValidator(new FormCallbackValidator([&sensor, this](String value, FormField &field) {
         if (value.length()) {
+            // gets copied to getEnergyPrimaryCounter() in configurationSaved()
             sensor.hlw80xx.energyCounter = IOT_SENSOR_HLW80xx_KWH_TO_PULSE(value.toFloat());
-            getEnergyPrimaryCounter() = sensor.hlw80xx.energyCounter;
         }
         return true;
     }));
     form.add(F("energyCounterSecondary"), String(), FormField::InputFieldType::TEXT)
         ->setFormUI((new FormUI(FormUI::TEXT, F("HLW8012 Energy")))->setSuffix(kWh)->setPlaceholder(String(IOT_SENSOR_HLW80xx_PULSE_TO_KWH(getEnergySecondaryCounter()), 3)));
 
-        //TODO move to configurationSaved, if the form is invalid these values are wrong
     form.addValidator(new FormCallbackValidator([this](String value, FormField &field) {
         if (value.length()) {
             getEnergySecondaryCounter() = IOT_SENSOR_HLW80xx_KWH_TO_PULSE(value.toFloat());
+
         }
         return true;
     }));
@@ -226,7 +224,9 @@ void Sensor_HLW80xx::configurationSaved(Form *form)
     using KeyValueStorage::ContainerPtr;
     using KeyValueStorage::Item;
 
-    auto sensor = config._H_GET(Config().sensor);
+    auto &sensor = config._H_W_GET(Config().sensor);
+    getEnergyPrimaryCounter() = sensor.hlw80xx.energyCounter;
+
     auto container = ContainerPtr(new Container());
     container->add(Item::create(F("hlw80xx_u"), sensor.hlw80xx.calibrationU));
     container->add(Item::create(F("hlw80xx_i"), sensor.hlw80xx.calibrationI));

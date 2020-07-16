@@ -12,59 +12,65 @@
 #include <EventScheduler.h>
 #include <FixedCircularBuffer.h>
 #include "plugins/http2serial/http2serial.h"
-#include "EnumBitset.h"
+
+#ifndef DEBUG_TOUCHPAD
+#define DEBUG_TOUCHPAD                      0
+#endif
 
 class Mpr121Touchpad;
 class WeatherStationPlugin;
 
-DECLARE_ENUM_BITSET(Mpr121TouchpadEventType, uint8_t,
-    TOUCH       = 0x0001,
-    RELEASED    = 0x0002,
-    MOVE        = 0x0004,
-    TAP         = 0x0008,
-    PRESS       = 0x0010,
-    HOLD        = 0x0020,
-    SWIPE       = 0x0040,
-    DRAG        = 0x0080
-);
-
-DECLARE_ENUM_BITSET(Mpr121TouchpadGesturesType, uint8_t,
-    UP =        0x01,
-    DOWN =      0x02,
-    LEFT =      0x04,
-    RIGHT =     0x08,
-    TAP =       0x10,
-    PRESS =     0x20,
-    DOUBLE =    0x40,
-    MULTI =     0x80
-);
-
 class Mpr121Touchpad {
 public:
-    typedef int8_t Position;
+    using EventBaseType = uint8_t;
+    using GesturesBaseType = uint8_t;
 
-    const uint16_t MULTIPLE_MIN_TIME = 10;
-    const uint16_t MULTIPLE_MAX_TIME = 1000;
-    const uint16_t REPEAT_TIME = 250;
-    const uint16_t PRESS_TIME = 750;
+    enum EventType : EventBaseType {
+        NONE        = 0,
+        TOUCH       = 0x01,
+        RELEASED    = 0x02,
+        MOVE        = 0x04,
+        TAP         = 0x08,
+        PRESS       = 0x10,
+        HOLD        = 0x20,
+        SWIPE       = 0x40,
+        DRAG        = 0x80,
+        ANY         = 0xff
+    };
 
-    static const Position _MinX = 1;
-    static const Position _MinY = 1;
-    static const Position _MaxX = 14;
-    static const Position _MaxY = 8;
-    static const Position _PredictionZone = 1;
-    static const bool _InvertX = true;
-    static const bool _InvertY = true;
+    enum class GesturesType : GesturesBaseType {
+        NONE =      0,
+        UP =        0x01,
+        DOWN =      0x02,
+        LEFT =      0x04,
+        RIGHT =     0x08,
+        TAP =       0x10,
+        PRESS =     0x20,
+        DOUBLE =    0x40,
+        MULTI =     0x80
+    };
 
-    typedef struct  {
+    using Position = int8_t;
+
+    static constexpr uint16_t kMultiMinTime = 10;
+    static constexpr uint16_t kMultiMaxTime = 1000;
+    static constexpr uint16_t kRepeatTime = 250;
+    static constexpr uint16_t kPressTime = 750;
+
+    static constexpr Position kMinX = 1;
+    static constexpr Position kMinY = 1;
+    static constexpr Position kMaxX = 14;
+    static constexpr Position kMaxY = 8;
+    static constexpr Position kPredictionZone = 1;
+    static constexpr bool kInvertX = true;
+    static constexpr bool kInvertY = true;
+
+    typedef struct __attribute__packed__ {
         uint16_t touched;
         uint32_t time;
     } TouchpadEvent_t;
 
-    typedef FixedCircularBuffer<TouchpadEvent_t, 64> ReadBuffer;
-
-    using EventType = Mpr121TouchpadEventType;
-    using GesturesType = Mpr121TouchpadGesturesType;
+    using ReadBuffer = FixedCircularBuffer<TouchpadEvent_t, 64> ;
 
     class Coordinates {
     public:
@@ -101,6 +107,8 @@ public:
 
     class Movement {
     public:
+        using EventType = Mpr121Touchpad::EventType;
+
         Movement(uint32_t eventId, const Coordinates &coords, uint32_t time, EventType type) : _eventId(eventId), _coords(coords), _time(time), _type(type) {
         }
 
@@ -139,10 +147,14 @@ public:
         EventType _type;
     };
 
-    typedef std::vector<Movement> MovementVector;
+    using MovementVector = std::vector<Movement>;
 
     class Event {
     public:
+        using EventType = Mpr121Touchpad::EventType;
+        using Coordinates = Mpr121Touchpad::Coordinates;
+        using MovementVector = Mpr121Touchpad::MovementVector;
+
         Event(Mpr121Touchpad &pad);
         EventType getType() const;
         uint32_t getDuration() const;
@@ -182,7 +194,7 @@ public:
 
         String __toString() {
             PrintString str;
-            if (_type) {
+            if (_type != EventType::NONE) {
                 // PrintString movementsStr;
                 // movementsStr.printf_P(PSTR("%u:"), _movements.size());
                 // for(auto &movement: _movements) {
@@ -234,23 +246,23 @@ public:
         uint32_t _lastPress;
         uint8_t _counter;
         bool _press;
-        bool _bubble;
+        // bool _bubble;
         MovementVector _movements;
         TouchpadEvent_t _curEvent;
     };
 
-    typedef std::function<void(const Event &event)> Callback_t;
+    using Callback = std::function<bool(const Event &event)>;       // return true to stop bubbling events to other callbacks
 
     class CallbackEvent {
     public:
-        CallbackEvent(uint32_t _id, EventType _events, Callback_t _callback) : id(_id), events(_events), callback(_callback) {
+        CallbackEvent(uint32_t _id, EventType _events, Callback _callback) : id(_id), events(_events), callback(_callback) {
         }
         uint32_t id;
         EventType events;
-        Callback_t callback;
+        Callback callback;
     };
 
-    typedef std::vector<CallbackEvent> CallbackEventVector;
+    using CallbackEventVector = std::vector<CallbackEvent>;
 
     Mpr121Touchpad();
     ~Mpr121Touchpad();
@@ -267,7 +279,7 @@ public:
     void get(Coordinates &coords);
     const Coordinates &get() const;
 
-    void addCallback(EventType events, uint32_t id, Callback_t callback);
+    void addCallback(EventType events, uint32_t id, Callback callback);
     void removeCallback(EventType events, uint32_t id);
 
     Adafruit_MPR121 &getMPR121() {

@@ -140,7 +140,7 @@
         "default": " hidden"
     },
     "Not_supported": {
-        "use_counter": 2,
+        "use_counter": 1,
         "default": "Not supported"
     },
     "_selected": {
@@ -284,7 +284,7 @@
         "default": "events"
     },
     "http": {
-        "use_counter": 14,
+        "use_counter": 13,
         "default": "http"
     },
     "SID": {
@@ -524,7 +524,7 @@
         "default": "Disabled"
     },
     "enabled": {
-        "use_counter": 9,
+        "use_counter": 7,
         "default": "enabled"
     },
     "mqtt_component_light": {
@@ -544,7 +544,7 @@
         "default": "switch"
     },
     "strftime_date_time_zone": {
-        "use_counter": 2,
+        "use_counter": 6,
         "default": "%FT%T %Z"
     },
     "ping_monitor_response": {
@@ -1076,7 +1076,7 @@
         "default": "/hlw80xx.state"
     },
     "seconds": {
-        "use_counter": 6,
+        "use_counter": 7,
         "default": "seconds"
     },
     "milliseconds": {
@@ -1084,11 +1084,11 @@
         "default": "milliseconds"
     },
     "__s_": {
-        "use_counter": 16,
+        "use_counter": 0,
         "default": "/%s/"
     },
     "hPa": {
-        "use_counter": 1,
+        "use_counter": 3,
         "default": "hPa"
     },
     "channel__u": {
@@ -1096,15 +1096,15 @@
         "default": "channel_%u"
     },
     "temperature": {
-        "use_counter": 0,
+        "use_counter": 5,
         "default": "temperature"
     },
     "humidity": {
-        "use_counter": 0,
+        "use_counter": 5,
         "default": "humidity"
     },
     "pressure": {
-        "use_counter": 0,
+        "use_counter": 5,
         "default": "pressure"
     },
     "mqtt_component_storage": {
@@ -1160,7 +1160,7 @@
         "default": "brightness"
     },
     "_degreeC": {
-        "use_counter": 7,
+        "use_counter": 9,
         "default": "\\u00b0C"
     },
     "vcc": {

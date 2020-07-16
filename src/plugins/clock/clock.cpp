@@ -303,8 +303,8 @@ void ClockPlugin::shutdown()
 {
     _debug_println();
 #if IOT_ALARM_PLUGIN_ENABLED
+    _resetAlarm();
     AlarmPlugin::setCallback(nullptr);
-    _alarmTimer.remove();
 #endif
     _timer.remove();
 #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL

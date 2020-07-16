@@ -8,22 +8,35 @@
 
 namespace KFCConfigurationClasses {
 
-    void Plugins::WeatherStation::WeatherStationConfig_t::reset()
+    Plugins::WeatherStation::WeatherStationConfig::WeatherStationConfig() :
+        weather_poll_interval(15),
+        api_timeout(30),
+        backlight_level(100),
+        touch_threshold(5),
+        released_threshold(8),
+        is_metric(true),
+        time_format_24h(true),
+        show_webui(false),
+        temp_offset(0),
+        humidity_offset(0),
+        pressure_offset(0),
+        screenTimer({})
     {
-        *this = { 15, 30, 100, 5, 8, false, false, false, 0.0, 0.0, 0.0, { 10, 10, 0, 0, 0, 0, 0, 0 } };
+        screenTimer[0] = 10;
+        screenTimer[1] = 10;
     }
 
-    void Plugins::WeatherStation::WeatherStationConfig_t::validate()
+    void Plugins::WeatherStation::WeatherStationConfig::validate()
     {
         if (weather_poll_interval == 0 || api_timeout == 0 || touch_threshold == 0 || released_threshold == 0) {
-            reset();
+            *this = WeatherStationConfig();
         }
         if (backlight_level < 10) {
             backlight_level = 10;
         }
     }
 
-    uint32_t Plugins::WeatherStation::WeatherStationConfig_t::getPollIntervalMillis()
+    uint32_t Plugins::WeatherStation::WeatherStationConfig::getPollIntervalMillis()
     {
         return weather_poll_interval * 60000UL;
     }
@@ -31,7 +44,6 @@ namespace KFCConfigurationClasses {
 
     Plugins::WeatherStation::WeatherStation()
     {
-        config.reset();
     }
 
     void Plugins::WeatherStation::defaults()
@@ -52,12 +64,12 @@ namespace KFCConfigurationClasses {
         return ::config._H_STR(MainConfig().plugins.weatherstation.openweather_api_query);
     }
 
-    Plugins::WeatherStation::WeatherStationConfig_t &Plugins::WeatherStation::getWriteableConfig()
+    Plugins::WeatherStation::WeatherStationConfig &Plugins::WeatherStation::getWriteableConfig()
     {
         return ::config._H_W_GET(MainConfig().plugins.weatherstation.config);
     }
 
-    Plugins::WeatherStation::WeatherStationConfig_t Plugins::WeatherStation::getConfig()
+    Plugins::WeatherStation::WeatherStationConfig Plugins::WeatherStation::getConfig()
     {
         return ::config._H_GET(MainConfig().plugins.weatherstation.config);
     }

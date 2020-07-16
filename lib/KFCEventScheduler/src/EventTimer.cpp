@@ -21,8 +21,8 @@ EventTimer::EventTimer(EventScheduler::Callback loopCallback, int64_t delay, Eve
     _callbackScheduled(false),
     _disarmed(true)
 {
-    if (delay < MinDelay) {
-        __debugbreak_and_panic_printf_P(PSTR("delay %lu < %u\n"), (ulong)delay, MinDelay);
+    if (delay < kMinDelay) {
+        __debugbreak_and_panic_printf_P(PSTR("delay %lu < %u\n"), (ulong)delay, kMinDelay);
     }
 }
 
@@ -55,24 +55,24 @@ void ICACHE_RAM_ATTR EventTimer::_rearmEtsTimer()
         _etsTimer.timer_func = nullptr;
         _disarmed = true;
     }
-    if (_remainingDelay == 0 && _delay > MaxDelay) { // init, rearm
+    if (_remainingDelay == 0 && _delay > kMaxDelay) { // init, rearm
         _remainingDelay = _delay;
     }
 
     int32_t delay;
     bool repeat = false;
-    if (_remainingDelay > MaxDelay) { // delay too long, chop up
+    if (_remainingDelay > kMaxDelay) { // delay too long, chop up
         _debug_printf_P(PSTR("t=%p d=%.0f r=%.0f d=%ums\n"), this, _delay / 1.0, _remainingDelay / 1.0, MaxDelay);
-        _remainingDelay -= MaxDelay;
-        delay = MaxDelay;
+        _remainingDelay -= kMaxDelay;
+        delay = kMaxDelay;
     }
     else if (_remainingDelay) { // wait for remainig delay
-        delay = std::max(MinDelay, (int32_t)_remainingDelay);
+        delay = std::max(kMinDelay, (int32_t)_remainingDelay);
         _remainingDelay = 0;
         _debug_printf_P(PSTR("t=%p d=%.0fs re0s d=%ums\n"), this, _delay / 1.0, delay);
     }
     else { // default delay
-        delay = std::max(MinDelay, (int32_t)_delay);
+        delay = std::max(kMinDelay, (int32_t)_delay);
         repeat = _repeat.hasRepeat();
     }
     _debug_printf_P(PSTR("rearm ta=%p cb=%p\n"), _etsTimer.timer_arg, resolve_lambda(lambda_target(_loopCallback)));
@@ -102,7 +102,7 @@ void ICACHE_RAM_ATTR EventTimer::_invokeCallback()
     _loopCallback(timerPtr);
     _repeat._counter++;
     if (_repeat.hasRepeat() && _etsTimer.timer_func != nullptr) {
-        if (_delay > EventTimer::MaxDelay) { // if max delay is exceeded we need to reschedule
+        if (_delay > EventTimer::kMaxDelay) { // if max delay is exceeded we need to reschedule
             _rearmEtsTimer();
         }
     } else {

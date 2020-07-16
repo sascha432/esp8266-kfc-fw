@@ -17,6 +17,7 @@
 #include "../include/templates.h"
 #include "logger.h"
 #include "plugins.h"
+#include "../src/generated/FlashStringGeneratorAuto.h"
 
 #if defined(ESP8266)
 #include <sntp.h>
@@ -32,8 +33,6 @@
 #endif
 
 #include <push_pack.h>
-
-PROGMEM_STRING_DEF(strftime_date_time_zone, "%FT%T %Z");
 
 #if ESP8266
 static char *_GMT = _tzname[0]; // copy pointer, points to static char gmt[] = "GMT";
@@ -316,7 +315,7 @@ void NTPPlugin::updateNtpCallback()
 
 #if NTP_LOG_TIME_UPDATE
     char buf[32];
-    strftime_P(buf, sizeof(buf), SPGM(strftime_date_time_zone), localtime(&now));
+    strftime_P(buf, sizeof(buf), SPGM(strftime_date_time_zone, "%FT%T %Z"), localtime(&now));
     Logger_notice(F("NTP time: %s"), buf);
 #endif
 

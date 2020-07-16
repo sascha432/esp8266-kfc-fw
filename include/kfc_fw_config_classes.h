@@ -426,37 +426,38 @@ namespace KFCConfigurationClasses {
         class WeatherStation
         {
         public:
-            typedef struct __attribute__packed__ {
-                uint16_t weather_poll_interval;
-                uint16_t api_timeout;
-                uint8_t backlight_level;
-                uint8_t touch_threshold;
-                uint8_t released_threshold;
-                uint8_t is_metric: 1;
-                uint8_t time_format_24h: 1;
-                uint8_t show_webui: 1;
-                float temp_offset;
-                float humidity_offset;
-                float pressure_offset;
-                uint8_t screenTimer[8];
-
-                void reset();
+            class WeatherStationConfig {
+            public:
+                WeatherStationConfig();
                 void validate();
                 uint32_t getPollIntervalMillis();
-
-            } WeatherStationConfig_t;
+                struct __attribute__packed__ {
+                    uint16_t weather_poll_interval;
+                    uint16_t api_timeout;
+                    uint8_t backlight_level;
+                    uint8_t touch_threshold;
+                    uint8_t released_threshold;
+                    uint8_t is_metric: 1;
+                    uint8_t time_format_24h: 1;
+                    uint8_t show_webui: 1;
+                    float temp_offset;
+                    float humidity_offset;
+                    float pressure_offset;
+                    uint8_t screenTimer[8];
+                };
+            };
 
             WeatherStation();
 
             static void defaults();
             static const char *getApiKey();
             static const char *getQueryString();
-            static WeatherStationConfig_t &getWriteableConfig();
-            static WeatherStationConfig_t getConfig();
+            static WeatherStationConfig &getWriteableConfig();
+            static WeatherStationConfig getConfig();
 
             char openweather_api_key[65];
             char openweather_api_query[65];
-            WeatherStationConfig_t config;
+            WeatherStationConfig config;
         };
 
 

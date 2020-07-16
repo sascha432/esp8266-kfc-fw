@@ -15,12 +15,10 @@
 #endif
 
 #ifndef NTP_LOG_TIME_UPDATE
-#define NTP_LOG_TIME_UPDATE                     1
+#define NTP_LOG_TIME_UPDATE                     0
 #endif
 
 #if NTP_HAVE_CALLBACKS
-
-PROGMEM_STRING_DECL(strftime_date_time_zone);
 
 typedef std::function<void(time_t now)> TimeUpdatedCallback_t;
 

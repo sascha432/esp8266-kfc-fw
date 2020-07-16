@@ -59,6 +59,8 @@ char *lltoa(long long value, char *buffer);
 // -9223372036854775808
 // 18446744073709551615
 // --------------------
+
+
 // from microsoft STL
 namespace Integral_to_string {
 

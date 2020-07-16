@@ -59,5 +59,3 @@ char *lltoa(long long value, char *buffer)
     buffer[21] = 0;
     return buffer + 21 - len;
 }
-
-

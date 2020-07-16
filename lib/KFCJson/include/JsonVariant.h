@@ -95,9 +95,9 @@ protected:
         return output.print(value);
     }
     size_t _printTo(Print &output, double value) const {
-        char buf[64];
-        printDouble(buf, (uint8_t)sizeof(buf), value);
-        return output.print(buf);
+        auto tmp = PrintString(F("%f"), value);
+        String_rtrim(tmp, '0');
+        return output.print(tmp);
     }
     size_t _printTo(Print &output, const AbstractJsonValue::JsonVariantVector &value) const {
         size_t length = 0;
@@ -143,8 +143,9 @@ protected:
         return snprintf_P(nullptr, 0, PSTR("%lu"), value);
     }
     size_t _length(double value) const {
-        char buf[64];
-        return printDouble(buf, (uint8_t)sizeof(buf), value);
+        auto tmp = PrintString(F("%f"), value);
+        String_rtrim(tmp, '0');
+        return tmp.length();
     }
     size_t _length(const AbstractJsonValue::JsonVariantVector &value) const {
         size_t length = 2;

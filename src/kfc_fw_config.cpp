@@ -711,7 +711,16 @@ void KFCFWConfiguration::restoreFactorySettings()
     Plugins::WeatherStation::defaults();
 #endif
 
-#if IOT_SENSOR && (IOT_SENSOR_HAVE_BATTERY || IOT_SENSOR_HAVE_HLW8012 || IOT_SENSOR_HAVE_HLW8032)
+#if defined(IOT_SENSOR_HLW8012_U)
+    {
+        auto sensor = Config_Sensor();
+        sensor.hlw80xx.calibrationU = IOT_SENSOR_HLW8012_U;
+        sensor.hlw80xx.calibrationI = IOT_SENSOR_HLW8012_I;
+        sensor.hlw80xx.calibrationP = IOT_SENSOR_HLW8012_P;
+        config._H_SET(Config().sensor, sensor);
+
+    }
+#elif IOT_SENSOR
     _H_SET(Config().sensor, Config_Sensor());
 #endif
 

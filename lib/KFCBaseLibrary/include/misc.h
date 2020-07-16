@@ -159,9 +159,17 @@ size_t String_rtrim(String &str, const char *chars);
 size_t String_ltrim(String &str, const char *chars);
 size_t String_trim(String &str, const char *chars);
 
+size_t String_rtrim(String &str, char chars);
+size_t String_ltrim(String &str, char chars);
+size_t String_trim(String &str, char chars);
+
 size_t String_rtrim_P(String &str, const char *chars);
 size_t String_ltrim_P(String &str, const char *chars);
 size_t String_trim_P(String &str, const char *chars);
+
+size_t String_rtrim_P(String &str, char chars);
+size_t String_ltrim_P(String &str, char chars);
+size_t String_trim_P(String &str, char chars);
 
 inline bool String_startsWith(const String &str1, char ch) {
     return str1.charAt(0) == ch;
@@ -365,10 +373,6 @@ namespace xtra_containers {
 
 };
 
-// print double without trailing zeros
-size_t printDouble(char *buf, size_t size, double value);
-void printDouble(Print &output, double value);
-
 template <class T>
 void *lambda_target(T callback) {
     if (callback) {
@@ -390,7 +394,7 @@ void *lambda_target(T callback) {
 #elif 1
 
 typedef char end_of_time_t_2038[(time_t)(1UL<<31)==INT32_MIN ? 1 : -1];
-#define IS_TIME_VALID(time) (((time_t)time < 0) || time > 946684800L)
+#define IS_TIME_VALID(time) (((time_t)time < -1) || time > 946684800L)
 
 #else
 

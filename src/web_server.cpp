@@ -1102,7 +1102,7 @@ bool WebServerPlugin::addHandler(AsyncWebHandler *handler)
         return false;
     }
     plugin._server->addHandler(handler);
-    debug_printf_P(PSTR("handler=%p\n"), handler);
+    _debug_printf_P(PSTR("handler=%p\n"), handler);
     return true;
 }
 
@@ -1112,7 +1112,7 @@ AsyncCallbackWebHandler *WebServerPlugin::addHandler(const String &uri, ArReques
         return nullptr;
     }
     auto handler = new AsyncCallbackWebHandler();
-    debug_printf_P(PSTR("handler=%p uri=%s\n"), handler, uri.c_str());
+    _debug_printf_P(PSTR("handler=%p uri=%s\n"), handler, uri.c_str());
     handler->setUri(uri);
     handler->onRequest(onRequest);
     plugin._server->addHandler(handler);
@@ -1122,15 +1122,15 @@ AsyncCallbackWebHandler *WebServerPlugin::addHandler(const String &uri, ArReques
 WebServerPlugin::AsyncRestWebHandler *WebServerPlugin::addRestHandler(RestHandler &&handler)
 {
     AsyncRestWebHandler *restHandler = nullptr;
-    debug_printf_P(PSTR("uri=%s\n"), handler.getURL());
+    _debug_printf_P(PSTR("uri=%s\n"), handler.getURL());
     if (!plugin._server) {
         return restHandler;
     }
     if (plugin._restCallbacks.empty()) {
-        debug_printf_P(PSTR("installing REST handler\n"));
+        _debug_printf_P(PSTR("installing REST handler\n"));
         restHandler = new AsyncRestWebHandler();
         plugin._server->addHandler(restHandler);
-        debug_printf_P(PSTR("handler=%p\n"), restHandler);
+        _debug_printf_P(PSTR("handler=%p\n"), restHandler);
     }
     plugin._restCallbacks.emplace_back(handler);
     return restHandler;

@@ -5,8 +5,9 @@
 
 #include <PrintHtmlEntitiesString.h>
 #include <ESPAsyncWebServer.h>
+#include <EventTimer.h>
 #include "../include/templates.h"
-#include "kfc_fw_config_classes.h"
+#include "../src/plugins/ntp/ntp_plugin.h"
 #include "plugins.h"
 #include "alarm.h"
 
@@ -25,12 +26,14 @@ AlarmPlugin::AlarmPlugin()
 
 void AlarmPlugin::setup(SetupModeType mode)
 {
-    _installAlarms();
     _debug_println();
+    _installAlarms();
+    addTimeUpdatedCallback(ntpCallback);
 }
 
 void AlarmPlugin::reconfigure(PGM_P source)
 {
+    _debug_println();
     _removeAlarms();
     _installAlarms();
 }
@@ -40,11 +43,9 @@ void AlarmPlugin::shutdown()
     _removeAlarms();
 }
 
-using Alarm = KFCConfigurationClasses::Plugins::Alarm;
-
 static uint8_t form_get_alarm_num(const String &varName)
 {
-#if IOT_ALARM_FORM_MAX_ALERTS <= 10
+#if IOT_ALARM_PLUGIN_MAX_ALERTS <= 10
     return (varName.charAt(1) - '0');
 #else
     return (uint8_t)atoi(varName.c_str() + 1);
@@ -55,8 +56,8 @@ static bool form_enabled_callback(bool value, FormField &field, bool store)
 {
     if (store) {
         auto alarmNum = form_get_alarm_num(field.getName());
-        _debug_printf_P(PSTR("name=%s alarm=%u store=%u value=%u\n"), field.getName().c_str(), alarmNum, store, value);
-        auto &cfg = Alarm::getWriteableConfig();
+        // _debug_printf_P(PSTR("name=%s alarm=%u store=%u value=%u\n"), field.getName().c_str(), alarmNum, store, value);
+        auto &cfg = AlarmPlugin::Alarm::getWriteableConfig();
         cfg.alarms[alarmNum].is_enabled = value;
     }
     return false;
@@ -66,9 +67,20 @@ static bool form_weekday_callback(uint8_t value, FormField &field, bool store)
 {
     if (store) {
         auto alarmNum = form_get_alarm_num(field.getName());
-        _debug_printf_P(PSTR("name=%s alarm=%u store=%u value=%u\n"), field.getName().c_str(), alarmNum, store, value);
-        auto &cfg = Alarm::getWriteableConfig();
+        // _debug_printf_P(PSTR("name=%s alarm=%u store=%u value=%u\n"), field.getName().c_str(), alarmNum, store, value);
+        auto &cfg = AlarmPlugin::Alarm::getWriteableConfig();
         cfg.alarms[alarmNum].time.week_day.week_days = value;
+    }
+    return false;
+}
+
+static bool form_duration_callback(uint16_t value, FormField &field, bool store)
+{
+    if (store) {
+        auto alarmNum = form_get_alarm_num(field.getName());
+        // _debug_printf_P(PSTR("name=%s alarm=%u store=%u value=%u\n"), field.getName().c_str(), alarmNum, store, value);
+        auto &cfg = AlarmPlugin::Alarm::getWriteableConfig();
+        cfg.alarms[alarmNum].max_duration = value;
     }
     return false;
 }
@@ -77,13 +89,16 @@ void AlarmPlugin::configurationSaved(Form *form)
 {
     _debug_println();
     auto &cfg = Alarm::getWriteableConfig();
-    Alarm::updateTimestamps(time(nullptr) + 90, cfg);
+    auto now = time(nullptr) + 30;
+    Alarm::updateTimestamps(localtime(&now), cfg);
+#if DEBUG_ALARM_FORM
     Alarm::dump(DEBUG_OUTPUT, cfg);
+#endif
 }
 
 void AlarmPlugin::getStatus(Print &output)
 {
-    output.print(F("Alarm Plugin"));
+    output.printf_P(PSTR("%u alarm(s) set"), _alarms.size());
 }
 
 void AlarmPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
@@ -118,6 +133,7 @@ void AlarmPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form
 #else
         alarm.mode_type = Alarm::AlarmModeType::BOTH;
 #endif
+        form.add<uint16_t>(prefix + String('d'), alarm.max_duration, form_duration_callback);
 
         form.add<uint8_t>(prefix + String('w'), alarm.time.week_day.week_days, form_weekday_callback);
     }
@@ -125,12 +141,137 @@ void AlarmPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form
     form.finalize();
 }
 
-void AlarmPlugin::_installAlarms()
+void AlarmPlugin::setCallback(Callback callback)
+{
+    plugin._callback = callback;
+}
+
+void AlarmPlugin::ntpCallback(time_t now)
+{
+    plugin._ntpCallback(now);
+}
+
+void AlarmPlugin::timerCallback(EventScheduler::TimerPtr timer)
+{
+    plugin._timerCallback(timer);
+}
+
+void AlarmPlugin::_installAlarms(EventScheduler::TimerPtr timer)
 {
     _debug_println();
+    Alarm::TimeType delay = 300;
+    Alarm::TimeType minAlarmTime = std::numeric_limits<Alarm::TimeType>::max();
+    if (!IS_TIME_VALID(time(nullptr))) {
+        _debug_printf_P(PSTR("time not valid: %u\n"), (int)time(nullptr));
+    }
+    else {
+        auto now = time(nullptr) + 30;
+        const auto tm = *localtime(&now); // we need a copy in ase the debug code is active and calls localtime() again
+        now -= 30; // remove safety margin
+        auto cfg = Alarm::getConfig();
+        for(uint8_t i = 0; i < Alarm::MAX_ALARMS; i++) {
+            auto &alarm = cfg.alarms[i];
+            auto alarmTime = Alarm::getTime(&tm, alarm);
+
+#if DEBUG_ALARM_FORM
+            char buf[32] = { 0 };
+            time_t _now = (time_t)alarmTime;
+            if (_now) {
+                strftime_P(buf, sizeof(buf), PSTR("(%FT%T %Z)"), localtime(&_now));
+            }
+            _debug_printf_P(PSTR("alarm %u: enabled=%u alarm_time=%u%s time=%02u:%02u duration=%u ts=%u mode=%u weekdays=%s\n"),
+                i, alarm.is_enabled, (int)alarmTime, buf, alarm.time.hour, alarm.time.minute, alarm.max_duration,
+                (int)alarm.time.timestamp, alarm.mode, Alarm::getWeekDaysString(alarm.time.week_day.week_days).c_str()
+            );
+#endif
+
+            if (alarmTime && alarmTime >= static_cast<Alarm::TimeType>(now)) {
+                minAlarmTime = std::min(minAlarmTime, alarmTime);
+                _alarms.emplace_back(alarmTime, alarm);
+            }
+        }
+
+        if (!_alarms.empty()) {
+            delay = minAlarmTime - now;
+            if (delay > 360) {
+                delay = 300;
+            }
+            else if (delay < 1) {
+                delay = 1;
+            }
+        }
+    }
+
+    // run timer every 5min. in case time changed and we missed it
+    // daylight savings time or any other issue with time changing without a callback
+    _debug_printf_P(PSTR("timer delay=%u min_time=%d alarms=%u\n"), (int)delay, (int)minAlarmTime, _alarms.size());
+    if (timer) {
+        timer->rearm(delay * 1000UL); // rearm timer inside timer callback
+    }
+    else {
+        _timer.add(delay * 1000UL, true, timerCallback);
+    }
 }
 
 void AlarmPlugin::_removeAlarms()
 {
     _debug_println();
+    _timer.remove();
+    _alarms.clear();
+}
+
+void AlarmPlugin::_ntpCallback(time_t now)
+{
+    _debug_printf_P(PSTR("time=%u\n"), (int)now);
+    if (IS_TIME_VALID(now)) {
+        // reinstall alarms if time changed
+        _removeAlarms();
+        _installAlarms();
+    }
+}
+
+void AlarmPlugin::_timerCallback(EventScheduler::TimerPtr timer)
+{
+    _debug_println();
+    if (!_alarms.empty()) {
+        bool store = false;
+        auto now = time(nullptr) + 30;
+        for(auto &alarm: _alarms) {
+            if (alarm._time && static_cast<Alarm::TimeType>(now) >= alarm._time) {
+                auto ts = alarm._alarm.time.timestamp;
+                PrintString message = F("Alarm triggered");
+                if (ts) {
+                    message.print(F(", one time"));
+                }
+                if (alarm._alarm.mode_type == Alarm::AlarmModeType::SILENT) {
+                    message.print(F(", silent"));
+                }
+                else if (alarm._alarm.mode_type == Alarm::AlarmModeType::BUZZER) {
+                    message.print(F(", buzzer"));
+                }
+                Logger_notice(message);
+                if (_callback) {
+                    _callback(alarm._alarm.mode_type, alarm._alarm.max_duration);
+                }
+
+                if (ts) { // remove one time alarms
+                    auto &cfg = Alarm::getWriteableConfig();
+                    for(uint8_t i = 0; i < Alarm::MAX_ALARMS; i++) {
+                        auto &alarm = cfg.alarms[i];
+                        if (alarm.time.timestamp == ts) {
+                            alarm.time.timestamp = 0;
+                            alarm.is_enabled = false;
+                            store = true;
+                        }
+                    }
+                }
+            }
+        }
+        if (store) {
+            config.write();
+        }
+        _alarms.clear();
+    }
+
+    _installAlarms(timer);
 }

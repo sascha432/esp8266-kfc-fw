@@ -869,7 +869,6 @@ void at_mode_serial_handle_event(String &commandString)
                 args.printf_P(PSTR("Uptime: %u seconds / %s"), getSystemUptime(), formatTime(getSystemUptime(), true).c_str());
                 args.printf_P(PSTR("Free Heap/Fragmentation: %u / %u"), ESP.getFreeHeap(), ESP.getHeapFragmentation());
                 args.printf_P(PSTR("CPU Frequency: %uMHz"), ESP.getCpuFreqMHz());
-                args.printf_P(PSTR("VCC: %u"), system_adc_read());
                 args.printf_P(PSTR("Flash Size: %s"), formatBytes(ESP.getFlashChipRealSize()).c_str());
                 args.printf_P(PSTR("Firmware Size: %s"), formatBytes(ESP.getSketchSize()).c_str());
             }

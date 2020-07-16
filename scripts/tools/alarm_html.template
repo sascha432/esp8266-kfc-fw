@@ -24,6 +24,19 @@
                                             </select>
                                         </div>
                                         <!--#endif-->
+                                        <div class="col-auto pl-2 pr-2">
+                                            <select name="a$NUMd" id="alarm_$NUM_duration" class="form-control custom-select">
+                                                <option value="0"%A$NUMD_0%>Unlimited</option>
+                                                <option value="10"%A$NUMD_10%>for 10 seconds</option>
+                                                <option value="30"%A$NUMD_30%>for 30 seconds</option>
+                                                <option value="60"%A$NUMD_60%>for 1 minute</option>
+                                                <option value="120"%A$NUMD_120%>for 2 minutes</option>
+                                                <option value="300"%A$NUMD_300%>for 5 minutes</option>
+                                                <option value="600"%A$NUMD_600%>for 10 minutes</option>
+                                                <option value="900"%A$NUMD_900%>for 15 minutes</option>
+                                                <option value="1800"%A$NUMD_1800%>for 30 minutes</option>
+                                            </select>
+                                        </div>
                                         <div class="col-auto hidden" id="alarm_$NUM_repeat"><strong>Repeat Once</strong></div>
                                     </div>
                                 </div>

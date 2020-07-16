@@ -10,6 +10,7 @@
 #include "plugins.h"
 #include "kfc_fw_config.h"
 #include "./plugins/mqtt/mqtt_component.h"
+#include "./plugins/alarm/alarm.h"
 
 #ifndef DEBUG_IOT_CLOCK
 #define DEBUG_IOT_CLOCK                         1
@@ -84,6 +85,8 @@
 #endif
 
 class ClockPlugin : public PluginComponent, public MQTTComponent, public WebUIInterface {
+public:
+    using SevenSegmentDisplay = SevenSegmentPixel<uint8_t, IOT_CLOCK_NUM_DIGITS, IOT_CLOCK_NUM_PIXELS, IOT_CLOCK_NUM_COLONS, IOT_CLOCK_NUM_COLON_PIXELS>;
 
 // WebUIInterface
 public:
@@ -243,6 +246,19 @@ public:
     static void loop();
     static void ntpCallback(time_t now);
 
+#if IOT_ALARM_PLUGIN_ENABLED
+public:
+    using Alarm = KFCConfigurationClasses::Plugins::Alarm;
+
+    static void alarmCallback(Alarm::AlarmModeType mode, uint16_t maxDuration);
+
+private:
+    void _alarmCallback(Alarm::AlarmModeType mode, uint16_t maxDuration);
+
+    EventScheduler::Timer _alarmTimer;
+    std::function<void(EventScheduler::TimerPtr)> _resetAlarm;
+#endif
+
 public:
     void enable(bool enable);
     void setSyncing(bool sync);
@@ -283,7 +299,6 @@ private:
     PushButton _button;
     uint8_t _buttonCounter;
 #endif
-    using SevenSegmentDisplay = SevenSegmentPixel<uint8_t, IOT_CLOCK_NUM_DIGITS, IOT_CLOCK_NUM_PIXELS, IOT_CLOCK_NUM_COLONS, IOT_CLOCK_NUM_COLON_PIXELS>;
 
     SevenSegmentDisplay _display;
     std::array<SevenSegmentDisplay::pixel_address_t, IOT_CLOCK_PIXEL_ORDER_LEN * IOT_CLOCK_NUM_DIGITS> _pixelOrder;

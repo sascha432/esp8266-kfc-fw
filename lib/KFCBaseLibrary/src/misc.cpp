@@ -463,6 +463,42 @@ size_t String_trim_P(String &str, const char *chars)
     return len;
 }
 
+size_t String_rtrim_P(String &str, char _chars)
+{
+    char chars[2] = { _chars, 0 };
+    return String_rtrim_P(str, chars);
+}
+
+size_t String_ltrim_P(String &str, char ch)
+{
+    char chars[2] = { ch, 0 };
+    return String_ltrim_P(str, chars);
+}
+
+size_t String_trim_P(String &str, char ch)
+{
+    char chars[2] = { ch, 0 };
+    return String_trim_P(str, chars);
+}
+
+size_t String_trim(String &str, char ch)
+{
+    char chars[2] = { ch, 0 };
+    return String_trim(str, chars);
+}
+
+size_t String_ltrim(String &str, char ch)
+{
+    char chars[2] = { ch, 0 };
+    return String_ltrim(str, chars);
+}
+
+size_t String_rtrim(String &str, char ch)
+{
+    char chars[2] = { ch, 0 };
+    return String_rtrim(str, chars);
+}
+
 
 #if 0
 
@@ -826,40 +862,6 @@ void split::split_P(PGM_P str, char sep, callback fun, void *data, int flags, ui
         }
     }
     fun(str + start, stop - start, data, flags);
-}
-
-size_t printDouble(char *buf, size_t size, double value) {
-    if (isnan(value)) {
-        strncpy_P(buf, PSTR("nan"), size);
-        return 4;
-    }
-    else if (isnan(value)) {
-        strncpy_P(buf, PSTR("inf"), size);
-        return 4;
-    }
-    uint8_t precision = std::numeric_limits<double>::digits10;
-    auto number = abs(value);
-    while ((number = (number / 10)) > 1 && precision > 1) {
-        precision--;
-    }
-    size_t len = snprintf_P(buf, size, PSTR("%.*f"), precision, value);
-    char *ptr;
-    if (len < size && (ptr = strchr(buf, '.'))) {
-        ptr++;
-        char *endPtr = ptr + strlen(ptr);
-        while (--endPtr > ptr &&*endPtr == '0') {
-            *endPtr = 0;
-            len--;
-        }
-    }
-    return len;
-}
-
-void printDouble(Print &output, double value)
-{
-    char buf[32];
-    printDouble(buf, sizeof(buf), value);
-    output.print(buf);
 }
 
 // timezone support

@@ -23,10 +23,6 @@ The firmware offers a plugin interface to easily extend its functionality. The p
 
 Send messages to a syslog server via UDP, TCP and TLS
 
-### KFCTimezone
-
-Platform independent timezone implementation with remote API support (Self hosted PHP script or https://timezonedb.com/register)
-
 ### KFCWebBuilder
 
 Framework to build WebUIs with bootstrap and store them mostly compressed in a virtual file system. Combined with server side includes, complex dynamic web pages with a low memory footprint can be created
@@ -101,13 +97,17 @@ Scan GPIO pins for I2C devices
 
 ### Sensor
 
-Plugin for different sensors. Voltage/Battery with charging indicator, BME280, BME680, CCS811, HLW8012, LM75A, DS3231, INA219.
+Plugin for different sensors. Supply Voltage/Battery with charging indicator, BME280, BME680, CCS811, HLW8012, LM75A, DS3231, INA219, DHT11, DHT22, AM2301 and system metrics.
 Support for native WebUI and MQTT.
 
 ### Switch
 
 Plugin for relays and other devices connected to GPIO pins, for example Sonoff basic.
 Support for native WebUI and MQTT.
+
+### Alarm
+
+Plugin for up to 10 different alarms, single alarm or repeated on daily basis.
 
 ### Clock
 

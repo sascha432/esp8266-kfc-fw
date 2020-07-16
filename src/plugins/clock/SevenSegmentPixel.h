@@ -42,7 +42,7 @@ public:
         BOTH = LOWER|UPPER,
     } ColonEnum_t;
 
-    static const uint16_t MAX_BRIGHTNESS = 0xffff;
+    static constexpr uint16_t MAX_BRIGHTNESS = 0xffff;
     typedef std::function<void(uint16_t brightness)> Callback_t;
 
     static constexpr size_t getNumDigits() {

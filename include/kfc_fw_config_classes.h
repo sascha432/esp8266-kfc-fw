@@ -6,7 +6,7 @@
 
 #include <Arduino_compat.h>
 
-#include "push_pack.h"
+#include <push_pack.h>
 
 namespace KFCConfigurationClasses {
 
@@ -420,6 +420,9 @@ namespace KFCConfigurationClasses {
             }
         };
 
+
+        // implementation in src\plugins\weather_station\ws_config.cpp
+
         class WeatherStation
         {
         public:
@@ -437,26 +440,13 @@ namespace KFCConfigurationClasses {
                 float pressure_offset;
                 uint8_t screenTimer[8];
 
-                void reset() {
-                    *this = { 15, 30, 100, 5, 8, false, false, false, 0.0, 0.0, 0.0, { 10, 10, 0, 0, 0, 0, 0, 0 } };
-                }
+                void reset();
+                void validate();
+                uint32_t getPollIntervalMillis();
 
-                void validate() {
-                    if (weather_poll_interval == 0 || api_timeout == 0 || touch_threshold == 0 || released_threshold == 0) {
-                        reset();
-                    }
-                    if (backlight_level < 10) {
-                        backlight_level = 10;
-                    }
-                }
-                uint32_t getPollIntervalMillis() {
-                    return weather_poll_interval * 60000UL;
-                }
             } WeatherStationConfig_t;
 
-            WeatherStation() {
-                config.reset();
-            }
+            WeatherStation();
 
             static void defaults();
             static const char *getApiKey();
@@ -469,14 +459,23 @@ namespace KFCConfigurationClasses {
             WeatherStationConfig_t config;
         };
 
-        #ifndef IOT_ALARM_FORM_MAX_ALERTS
-        #define IOT_ALARM_FORM_MAX_ALERTS               10
+
+        // implementation in src\plugins\alarm\alarm_config.cpp
+
+        #ifndef IOT_ALARM_PLUGIN_MAX_ALERTS
+        #define IOT_ALARM_PLUGIN_MAX_ALERTS                         10
+        #endif
+        #ifndef IOT_ALARM_PLUGIN_DEFAULT_MAX_DURATION
+        #define IOT_ALARM_PLUGIN_DEFAULT_MAX_DURATION               300
         #endif
 
         class Alarm
         {
         public:
-            static constexpr uint8_t MAX_ALARMS = IOT_ALARM_FORM_MAX_ALERTS;
+            static constexpr uint8_t MAX_ALARMS = IOT_ALARM_PLUGIN_MAX_ALERTS;
+            static constexpr uint16_t DEFAULT_MAX_DURATION = IOT_ALARM_PLUGIN_DEFAULT_MAX_DURATION;
+
+            using TimeType = uint32_t;
 
             enum class AlarmModeType : uint8_t {
                 BOTH,       // can be used if silent or buzzer is not available
@@ -512,7 +511,7 @@ namespace KFCConfigurationClasses {
             } WeekDay_t;
 
             typedef struct __attribute__packed__ {
-                uint32_t timestamp;
+                TimeType timestamp;
                 struct __attribute__packed__ {
                     uint8_t hour;
                     uint8_t minute;
@@ -537,15 +536,23 @@ namespace KFCConfigurationClasses {
             Alarm();
 
             // update timestamp for a single alarm
-            // set now to the current time plus a safety margin to let the system install the alarm: for example (time(nullptr) + 90)
+            // set now to the current time plus a safety margin to let the system install the alarm
+            // auto now = time(nullptr) + 30;
+            // auto tm = localtime(&now);
             // - if the alarm is disabled, timestamp is set to 0
             // - if any weekday is selected, the timestamp is set to 0
             // - if none of the weekdays are selected, the timestamp is set to unixtime at hour:minute of today. if hour:minute has
             // passed already, the alarm is set for tomorrow (+1 day) at hour:minute
-            static void updateTimestamp(time_t now, SingleAlarm_t &alarm);
+            static void updateTimestamp(const struct tm *tm, SingleAlarm_t &alarm);
 
             // calls updateTimestamp() for each entry
-            static void updateTimestamps(time_t now, Alarm_t &cfg);
+            static void updateTimestamps(const struct tm *tm, Alarm_t &cfg);
+
+            // return time of the next alarm
+            static TimeType getTime(const struct tm *tm, SingleAlarm_t &alarm);
+
+            static void getWeekDays(Print &output, uint8_t weekdays, char none = 'x');
+            static String getWeekDaysString(uint8_t weekdays, char none = 'x');
 
             static void defaults();
             static void dump(Print &output, Alarm_t &cfg);
@@ -575,4 +582,4 @@ namespace KFCConfigurationClasses {
 
 };
 
-#include "pop_pack.h"
+#include <pop_pack.h>

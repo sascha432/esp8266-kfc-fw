@@ -301,21 +301,21 @@ void NTPPlugin::execConfigTime()
 
 void NTPPlugin::updateNtpCallback()
 {
-    _debug_printf_P(PSTR("new time=%u\n"), (uint32_t)time(nullptr));
+    auto now = time(nullptr);
+    _debug_printf_P(PSTR("new time=%u\n"), (int)now);
 
-    if (IS_TIME_VALID(time(nullptr))) {
+    if (IS_TIME_VALID(now)) {
         NTPPlugin::_ntpRefreshTimeMillis = Config_NTP::getNtpRfresh() * 60 * 1000UL;
         plugin._checkTimer.remove();
     }
 
 #if RTC_SUPPORT
     // update RTC
-    config.setRTC(time(nullptr));
+    config.setRTC(now);
 #endif
 
 #if NTP_LOG_TIME_UPDATE
     char buf[32];
-    auto now = time(nullptr);
     strftime_P(buf, sizeof(buf), SPGM(strftime_date_time_zone), localtime(&now));
     Logger_notice(F("NTP time: %s"), buf);
 #endif

@@ -286,6 +286,9 @@ void ClockPlugin::setup(SetupModeType mode)
     }
 
     LoopFunctions::add(ClockPlugin::loop);
+#if IOT_ALARM_PLUGIN_ENABLED
+    AlarmPlugin::setCallback(alarmCallback);
+#endif
 }
 
 void ClockPlugin::reconfigure(PGM_P source)
@@ -298,6 +301,10 @@ void ClockPlugin::reconfigure(PGM_P source)
 void ClockPlugin::shutdown()
 {
     _debug_println();
+#if IOT_ALARM_PLUGIN_ENABLED
+    AlarmPlugin::setCallback(nullptr);
+    _alarmTimer.remove();
+#endif
     _timer.remove();
 #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
     _autoBrightnessTimer.remove();
@@ -524,10 +531,10 @@ void ClockPlugin::getValues(JsonArray &array)
 
 void ClockPlugin::publishState(MQTTClient *client)
 {
-    _debug_printf_P(PSTR("client=%p\n"), client);
     if (!client) {
         client = MQTTClient::getClient();
     }
+    _debug_printf_P(PSTR("client=%p\n"), client);
     if (client && client->isConnected()) {
         client->publish(MQTTClient::formatTopic(FSPGM(_state)), _qos, true, String(_color ? 1 : 0));
         client->publish(MQTTClient::formatTopic(FSPGM(_brightness_state)), _qos, true, String(_brightness));
@@ -841,6 +848,50 @@ void ClockPlugin::_setBrightness()
         _updateRate = oldUpdateRate;
     });
 }
+
+#if IOT_ALARM_PLUGIN_ENABLED
+
+void ClockPlugin::alarmCallback(Alarm::AlarmModeType mode, uint16_t maxDuration)
+{
+    plugin._alarmCallback(mode, maxDuration);
+}
+
+void ClockPlugin::_alarmCallback(Alarm::AlarmModeType mode, uint16_t maxDuration)
+{
+    if (!_resetAlarm) {
+        auto animation = static_cast<AnimationEnum_t>(_config.animation);
+        auto brightness = _brightness;
+        auto autoBrightness = _autoBrightness;
+        auto color = _color;
+
+        _debug_println(F("storing parameters"));
+        _resetAlarm = [this, animation, brightness, autoBrightness, color](EventScheduler::TimerPtr) {
+            _autoBrightness = autoBrightness;
+            _display.setBrightness(brightness);
+            _color = color;
+            setAnimation(animation);
+            _resetAlarm = nullptr;
+        };
+    }
+
+    // check if an alarm is already active
+    if (!_alarmTimer.active()) {
+        _debug_println(F("set to flashing"));
+        _autoBrightness = -1;
+        _color = Color(0xff, 0, 0);
+        _display.setBrightness(SevenSegmentDisplay::MAX_BRIGHTNESS);
+        setAnimation(AnimationEnum_t::FLASHING);
+    }
+
+    if (maxDuration == 0) {
+        maxDuration = 300; // limit time
+    }
+    // reset time if alarms overlap
+    _debug_printf_P(PSTR("alarm duration %u\n"), maxDuration);
+    _alarmTimer.add(maxDuration * 1000UL, false, _resetAlarm);
+}
+
+#endif
 
 #if AT_MODE_SUPPORTED
 

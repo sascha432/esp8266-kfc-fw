@@ -24,7 +24,7 @@ PROGMEM_STRING_DECL(strftime_date_time_zone);
 
 typedef std::function<void(time_t now)> TimeUpdatedCallback_t;
 
-// gets called if the system time is updated (now = time(nullptr)) or timezone is set (NTP_IS_TIMEZONE_UPDATE(now) == true)
+// gets called if the system time is updated
 void addTimeUpdatedCallback(TimeUpdatedCallback_t callback);
 
 #endif

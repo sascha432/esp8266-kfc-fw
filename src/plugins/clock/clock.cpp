@@ -281,10 +281,7 @@ void ClockPlugin::setup(SetupModeType mode)
     }
     addTimeUpdatedCallback(ntpCallback);
 
-    auto mqttClient = MQTTClient::getClient();
-    if (mqttClient) {
-        mqttClient->registerComponent(this);
-    }
+    MQTTClient::safeRegisterComponent(this);
 
     LoopFunctions::add(ClockPlugin::loop);
 #if IOT_ALARM_PLUGIN_ENABLED
@@ -295,8 +292,13 @@ void ClockPlugin::setup(SetupModeType mode)
 void ClockPlugin::reconfigure(PGM_P source)
 {
     _debug_println();
-    readConfig();
-    _setSevenSegmentDisplay();
+    if (!strcmp_P_P(source, SPGM(mqtt))) {
+        MQTTClient::safeReRegisterComponent(this);
+    }
+    else {
+        readConfig();
+        _setSevenSegmentDisplay();
+    }
 }
 
 void ClockPlugin::shutdown()
@@ -869,6 +871,10 @@ void ClockPlugin::alarmCallback(Alarm::AlarmModeType mode, uint16_t maxDuration)
 
 void ClockPlugin::_alarmCallback(Alarm::AlarmModeType mode, uint16_t maxDuration)
 {
+    if (maxDuration == Alarm::STOP_ALARM) {
+        _resetAlarm();
+        return;
+    }
     if (!_resetAlarmFunc) {
         auto animation = static_cast<AnimationEnum_t>(_config.animation);
         auto brightness = _brightness;
@@ -908,6 +914,7 @@ bool ClockPlugin::_resetAlarm()
 {
     if (_resetAlarmFunc) {
         _resetAlarmFunc(nullptr);
+        AlarmPlugin::resetAlarm();
         return true;
     }
     return false;

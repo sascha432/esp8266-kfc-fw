@@ -78,9 +78,13 @@ public:
     virtual void setup(SetupModeType mode) override;
     virtual void reconfigure(PGM_P source) override;
     virtual void shutdown() override;
-    virtual bool hasReconfigureDependecy(PluginComponent *plugin) const override;
+    virtual bool hasReconfigureDependecy(PluginComponent *plugin) const override {
+        return plugin->nameEquals(FSPGM(http));
+    }
 
-    virtual bool hasStatus() const override;
+    virtual bool hasStatus() const override {
+        return true;
+    }
     virtual void getStatus(Print &output) override;
 
     virtual PGM_P getConfigureForm() const override {

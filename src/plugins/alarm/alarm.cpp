@@ -6,6 +6,7 @@
 #include <PrintHtmlEntitiesString.h>
 #include <ESPAsyncWebServer.h>
 #include <EventTimer.h>
+#include <LoopFunctions.h>
 #include "../include/templates.h"
 #include "../src/plugins/ntp/ntp_plugin.h"
 #include "plugins.h"
@@ -19,7 +20,7 @@
 
 static AlarmPlugin plugin;
 
-AlarmPlugin::AlarmPlugin() : _nextAlarm(0)
+AlarmPlugin::AlarmPlugin() : MQTTComponent(ComponentTypeEnum_t::LIGHT), _nextAlarm(0)
 {
     REGISTER_PLUGIN(this);
 }
@@ -29,18 +30,66 @@ void AlarmPlugin::setup(SetupModeType mode)
     _debug_println();
     _installAlarms();
     addTimeUpdatedCallback(ntpCallback);
+    // MQTT has lower priority, call register component later
+    LoopFunctions::callOnce([this]() {
+        MQTTClient::safeRegisterComponent(this);
+    });
 }
 
 void AlarmPlugin::reconfigure(PGM_P source)
 {
     _debug_println();
-    _removeAlarms();
-    _installAlarms();
+    if (!strcmp_P_P(source, SPGM(mqtt))) {
+        MQTTClient::safeReRegisterComponent(this);
+    }
+    else {
+        _removeAlarms();
+        _installAlarms();
+    }
 }
 
 void AlarmPlugin::shutdown()
 {
+    MQTTClient::safeUnregisterComponent(this);
     _removeAlarms();
+}
+
+AlarmPlugin::MQTTAutoDiscoveryPtr AlarmPlugin::nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num)
+{
+    if (num >= getAutoDiscoveryCount()) {
+        return nullptr;
+    }
+    auto discovery = new MQTTAutoDiscovery();
+    switch(num) {
+        case 0:
+            discovery->create(this, F("alarm"), format);
+            discovery->addStateTopic(MQTTClient::formatTopic(FSPGM(_state)));
+            discovery->addCommandTopic(MQTTClient::formatTopic(FSPGM(_set)));
+            discovery->addPayloadOn(1);
+            discovery->addPayloadOff(0);
+            break;
+    }
+    discovery->finalize();
+    return discovery;
+}
+
+void AlarmPlugin::onConnect(MQTTClient *client)
+{
+    client->subscribe(this, MQTTClient::formatTopic(FSPGM(_set)), MQTTClient::getDefaultQos());
+}
+
+void AlarmPlugin::onMessage(MQTTClient *client, char *topic, char *payload, size_t len)
+{
+    if (_callback) {
+        auto value = (bool)atoi(payload);
+        if (value) {
+            _callback(Alarm::AlarmModeType::BOTH, Alarm::DEFAULT_MAX_DURATION);
+        }
+        else {
+            _callback(Alarm::AlarmModeType::BOTH, Alarm::STOP_ALARM);
+        }
+        client->publish(MQTTClient::formatTopic(FSPGM(_state)), MQTTClient::getDefaultQos(), true, String(value));
+    }
 }
 
 static uint8_t form_get_alarm_num(const String &varName)
@@ -149,6 +198,11 @@ void AlarmPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form
     form.finalize();
 }
 
+void AlarmPlugin::resetAlarm()
+{
+    MQTTClient::safePublish(MQTTClient::formatTopic(FSPGM(_state)), true, String(0));
+}
+
 void AlarmPlugin::setCallback(Callback callback)
 {
     plugin._callback = callback;
@@ -247,6 +301,7 @@ void AlarmPlugin::_timerCallback(EventScheduler::TimerPtr timer)
     _debug_println();
     if (!_alarms.empty()) {
         bool store = false;
+        bool triggered = false;
         auto now = time(nullptr) + 30;
         for(auto &alarm: _alarms) {
             if (alarm._time && static_cast<Alarm::TimeType>(now) >= alarm._time) {
@@ -263,6 +318,7 @@ void AlarmPlugin::_timerCallback(EventScheduler::TimerPtr timer)
                 }
                 Logger_notice(message);
                 if (_callback) {
+                    triggered = true;
                     _callback(alarm._alarm.mode_type, alarm._alarm.max_duration);
                 }
 
@@ -283,6 +339,9 @@ void AlarmPlugin::_timerCallback(EventScheduler::TimerPtr timer)
             config.write();
         }
         _alarms.clear();
+        if (triggered) {
+            MQTTClient::safePublish(MQTTClient::formatTopic(FSPGM(_state)), true, String(1));
+        }
     }
 
     _installAlarms(timer);

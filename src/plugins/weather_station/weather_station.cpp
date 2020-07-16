@@ -79,7 +79,7 @@ void WeatherStationPlugin::_sendScreenCaptureBMP(AsyncWebServerRequest *request)
 
     if (WebServerPlugin::getInstance().isAuthenticated(request) == true) {
         //auto response = new AsyncClonedBitmapStreamResponse(plugin.getCanvas().clone());
-        debug_printf("AsyncBitmapStreamResponse\n");
+        _debug_printf("AsyncBitmapStreamResponse\n");
         auto response = new AsyncBitmapStreamResponse(plugin.getCanvas());
         HttpHeaders httpHeaders;
         httpHeaders.addNoCache();
@@ -302,16 +302,6 @@ void WeatherStationPlugin::shutdown()
     _drawText(F("Rebooting\nDevice"), FONTS_DEFAULT_BIG, COLORS_DEFAULT_TEXT, true);
     LoopFunctions::remove(loop);
     // SerialHandler::getInstance().removeHandler(serialHandler);
-}
-
-bool WeatherStationPlugin::hasReconfigureDependecy(PluginComponent *plugin) const
-{
-    return plugin->nameEquals(FSPGM(http));
-}
-
-bool WeatherStationPlugin::hasStatus() const
-{
-    return true;
 }
 
 void WeatherStationPlugin::getStatus(Print &output)
@@ -860,6 +850,10 @@ void WeatherStationPlugin::alarmCallback(Alarm::AlarmModeType mode, uint16_t max
 
 void WeatherStationPlugin::_alarmCallback(Alarm::AlarmModeType mode, uint16_t maxDuration)
 {
+    if (maxDuration == Alarm::STOP_ALARM) {
+        _resetAlarm();
+        return;
+    }
     if (!_resetAlarmFunc) {
         // auto animation = static_cast<AnimationEnum_t>(_config.animation);
         // auto brightness = _brightness;
@@ -904,6 +898,7 @@ bool WeatherStationPlugin::_resetAlarm()
 {
     if (_resetAlarmFunc) {
         _resetAlarmFunc(nullptr);
+        AlarmPlugin::resetAlarm();
         return true;
     }
     return false;

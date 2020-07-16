@@ -475,6 +475,7 @@ namespace KFCConfigurationClasses {
         public:
             static constexpr uint8_t MAX_ALARMS = IOT_ALARM_PLUGIN_MAX_ALERTS;
             static constexpr uint16_t DEFAULT_MAX_DURATION = IOT_ALARM_PLUGIN_DEFAULT_MAX_DURATION;
+            static constexpr uint16_t STOP_ALARM = std::numeric_limits<uint16_t>::max() - 1;
 
             using TimeType = uint32_t;
 

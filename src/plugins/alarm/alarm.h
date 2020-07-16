@@ -9,6 +9,7 @@
 #include "PluginComponent.h"
 #include "plugins_menu.h"
 #include "kfc_fw_config_classes.h"
+#include "./plugins/mqtt/mqtt_client.h"
 
 #ifndef DEBUG_ALARM_FORM
 #define DEBUG_ALARM_FORM                                0
@@ -28,11 +29,13 @@
 
 class AsyncWebServerRequest;
 
-class AlarmPlugin : public PluginComponent {
+class AlarmPlugin : public PluginComponent, public MQTTComponent {
 public:
     using Alarm = KFCConfigurationClasses::Plugins::Alarm;
     using Callback = std::function<void(Alarm::AlarmModeType mode, uint16_t maxDuration)>;
 
+// PluginComponent
+public:
     AlarmPlugin();
 
     virtual PGM_P getName() const {
@@ -47,6 +50,9 @@ public:
 
     virtual void setup(SetupModeType mode) override;
     virtual void reconfigure(PGM_P source) override;
+    virtual bool hasReconfigureDependecy(PluginComponent *plugin) const {
+        return plugin->nameEquals(SPGM(mqtt));
+    }
     virtual void shutdown() override;
 
     virtual PGM_P getConfigureForm() const override {
@@ -60,7 +66,17 @@ public:
     }
     virtual void getStatus(Print &output) override;
 
+// MQTTComponent
 public:
+    virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num) override;
+    virtual uint8_t getAutoDiscoveryCount() const override {
+        return 1;
+    }
+    virtual void onConnect(MQTTClient *client) override;
+    virtual void onMessage(MQTTClient *client, char *topic, char *payload, size_t len);
+
+public:
+    static void resetAlarm();
     static void setCallback(Callback callback);
     static void ntpCallback(time_t now);
     static void timerCallback(EventScheduler::TimerPtr timer);

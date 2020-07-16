@@ -187,7 +187,9 @@ public:
 
     virtual void setup(SetupModeType mode) override;
     virtual void reconfigure(PGM_P source) override;
-    //virtual bool hasReconfigureDependecy(PluginComponent *plugin) const override;
+    virtual bool hasReconfigureDependecy(PluginComponent *plugin) const {
+        return plugin->nameEquals(SPGM(mqtt));
+    }
     virtual void shutdown() override;
 
     virtual bool hasStatus() const override {

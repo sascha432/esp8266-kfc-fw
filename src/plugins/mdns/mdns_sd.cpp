@@ -23,7 +23,6 @@
 #endif
 
 #include "build.h"
-#include "build_id.h"
 
 #if MDNS_PLUGIN
 
@@ -216,7 +215,7 @@ void MDNSPlugin::begin()
         _running = true;
         if (MDNSService::addService(FSPGM(kfcmdns), FSPGM(udp), 5353)) {
             MDNSService::addServiceTxt(FSPGM(kfcmdns), FSPGM(udp), String('v'), FIRMWARE_VERSION_STR);
-            MDNSService::addServiceTxt(FSPGM(kfcmdns), FSPGM(udp), String('b'), F(__BUILD_NUMBER "." __BUILD_ID));
+            MDNSService::addServiceTxt(FSPGM(kfcmdns), FSPGM(udp), String('b'), F(__BUILD_NUMBER));
             MDNSService::addServiceTxt(FSPGM(kfcmdns), FSPGM(udp), String('t'), config._H_STR(Config().device_title));
         }
     }

@@ -111,14 +111,14 @@ namespace RetrieveSymbols {
         ElementsVector _items;
     };
 
-    #include "../build_id.h"
-
     class RestApi : public KFCRestAPI {
     public:
         typedef std::function<void(JsonReaderResult *result, const String &error)> Callback;
 
         RestApi() {
-            _file = PrintString(F("bid%08x_firmware.elf"), atoi(__BUILD_ID)-1);
+            String hash;
+            KFCConfigurationClasses::System::Firmware::getElfHashHex(hash);
+            _file = PrintString(F("%s.elf"), hash.c_str());
         }
 
         void setAddresses(StringVector &&addresses) {

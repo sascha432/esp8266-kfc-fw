@@ -51,7 +51,8 @@ WeatherStationPlugin::WeatherStationPlugin() :
     _backlightLevel(1023),
     _pollTimer(0),
     _httpClient(nullptr),
-    _toggleScreenTimer(0)
+    _toggleScreenTimer(0),
+    _redrawFlag(false)
 {
 #if DEBUG_IOT_WEATHER_STATION
     _debugDisplayCanvasBorder = false;
@@ -136,9 +137,7 @@ void WeatherStationPlugin::_installWebhooks()
             _setScreen(((uint8_t)reader.get(F("screen")).getValue().toInt()) % NUM_SCREENS);
             json.add(FSPGM(status), 200);
             json.add(FSPGM(message), PrintString(F("Screen set to #%u"), _currentScreen));
-            LoopFunctions::callOnce([this]() {
-                _draw();
-            });
+            _redraw();
         }
         else if (rest.isUriMatch(F("backlight"))) {
             auto levelVar = reader.get(F("level"));
@@ -230,6 +229,32 @@ void WeatherStationPlugin::setup(SetupModeType mode)
     });
 #endif
 #endif
+#if IOT_WEATHER_STATION_HAS_TOUCHPAD
+    _touchpad.addCallback(Mpr121Touchpad::EventType::RELEASED, 2, [this](const Mpr121Touchpad::Event &event) {
+        // _debug_printf_P(PSTR("event %u\n"), event.getType());
+        // if (event.isSwipeLeft() || event.isDoublePress()) {
+        //     _debug_println(F("left"));
+        //     _setScreen((_currentScreen + NUM_SCREENS - 1) % NUM_SCREENS);
+        // }
+        // else if (event.isSwipeRight() || event.isPress()) {
+        //     _debug_println(F("right"));
+        //     _setScreen((_currentScreen + 1) % NUM_SCREENS);
+        // }
+        // else {
+        //     return false;
+        // }
+        _currentScreen = (_currentScreen + 1) % NUM_SCREENS;
+        // check if screen is supposed to change automatically
+        if (_config.screenTimer[_currentScreen]) {
+            _toggleScreenTimer = millis() + 60000;  // leave screen on for 60 seconds
+        }
+        else {
+            _toggleScreenTimer = 0;
+        }
+        _redraw();
+        return true;
+    });
+#endif
 
     auto compensationCallback = [this](Sensor_BME280::SensorData_t &sensor) {
         sensor.humidity += _config.humidity_offset;
@@ -268,7 +293,7 @@ void WeatherStationPlugin::setup(SetupModeType mode)
         if (type == WsClient::ClientCallbackTypeEnum_t::AUTHENTICATED) {
             // draw sends the screen capture to the web socket, do it for each new client
             Scheduler.addTimer(100, false, [this](EventScheduler::TimerPtr timer) {
-                _draw();
+                _redraw();
             });
         }
     });
@@ -538,14 +563,14 @@ bool WeatherStationPlugin::atModeHandler(AtModeArgs &args)
             args.print(F("Updating forecast..."));
             _getWeatherForecast([this, args](bool status) mutable {
                 args.printf_P(SPGM(status__u), status);
-                _draw();
+                _redraw();
             });
         }
         else {
             args.print(F("Updating info..."));
             _getWeatherInfo([this, args](bool status) mutable {
                 args.printf_P(SPGM(status__u), status);
-                _draw();
+                _redraw();
             });
         }
         return true;
@@ -727,7 +752,11 @@ void WeatherStationPlugin::_loop()
         }
     }
 
-    if (_currentScreen == TEXT_CLEAR || _currentScreen == TEXT_UPDATE) {
+    if (_redrawFlag) {
+        _draw();
+        _redrawFlag = false;
+    }
+    else if (_currentScreen == TEXT_CLEAR || _currentScreen == TEXT_UPDATE) {
         _draw();
     }
     else {

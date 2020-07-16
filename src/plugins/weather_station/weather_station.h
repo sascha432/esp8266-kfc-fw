@@ -19,7 +19,7 @@
 #endif
 
 #ifndef DEBUG_IOT_WEATHER_STATION
-#define DEBUG_IOT_WEATHER_STATION               0
+#define DEBUG_IOT_WEATHER_STATION               1
 #endif
 
 #ifndef IOT_WEATHER_STATION_HAS_TOUCHPAD
@@ -143,9 +143,10 @@ private:
     void _fadeBacklight(uint16_t fromLevel, uint16_t toLevel, int8_t step = 16);
     void _fadeStatusLED();
     void _broadcastCanvas(int16_t x, int16_t y, int16_t w, int16_t h);
+
+    // safely redraw in next main loop
     virtual void _redraw() override {
-        _updateCounter = 0;
-        _updateCounter--;
+        _redrawFlag = true;
     }
 
 private:
@@ -173,6 +174,7 @@ private:
     uint8_t _getNextScreen(uint8_t screen);
 
     uint32_t _toggleScreenTimer;
+    bool _redrawFlag;
 
 #if IOT_ALARM_PLUGIN_ENABLED
 public:

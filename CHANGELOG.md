@@ -6,6 +6,7 @@
 - NTP plugin: Check once per minute if the time is valid and call configTime() again if not
 - MQTT metrics: uptime, heap
 - Added Alarm plugin to Clock and Weather Station
+- KFC OTA copies firmware.elf and stores the hash in the device configuration
 
 ## Version 0.0.3
 

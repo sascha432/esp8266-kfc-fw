@@ -544,7 +544,7 @@
         "default": "switch"
     },
     "strftime_date_time_zone": {
-        "use_counter": 6,
+        "use_counter": 4,
         "default": "%FT%T %Z"
     },
     "ping_monitor_response": {
@@ -965,7 +965,7 @@
     },
     "crash_dump_file": {
         "use_counter": 1,
-        "default": "/crash.%03x"
+        "default": "/.dumps/crash.%03x"
     },
     "username": {
         "use_counter": 2,
@@ -1120,15 +1120,15 @@
         "default": "id"
     },
     "mqtt": {
-        "use_counter": 2,
+        "use_counter": 6,
         "default": "mqtt"
     },
     "_set": {
-        "use_counter": 10,
+        "use_counter": 12,
         "default": "/set"
     },
     "_state": {
-        "use_counter": 8,
+        "use_counter": 12,
         "default": "/state"
     },
     "_brightness_set": {

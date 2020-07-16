@@ -65,15 +65,20 @@ namespace SaveCrash {
                 int num = 0;
                 PrintString filename;
                 do {
-                    filename = PrintString(FSPGM(crash_dump_file, "/crash.%03x"), num++);
+                    filename = PrintString(FSPGM(crash_dump_file, "/.dumps/crash.%03x"), num++);
                 } while(SPIFFS.exists(filename));
                 auto file = SPIFFS.open(filename, fs::FileOpenMode::write);
                 if (file) {
+                    String hash;
+                    KFCConfigurationClasses::System::Firmware::getElfHashHex(hash);
+                    if (hash.length()) {
+                        file.printf_P(PSTR("firmware.elf hash %s\n"), hash.c_str());
+                    }
                     espSaveCrash.print(file);
                     if (file) {
                         file.close();
                         espSaveCrash.clear();
-                        debug_printf_P(PSTR("Saved crash dump to %s\n"), filename.c_str());
+                        _debug_printf_P(PSTR("Saved crash dump to %s\n"), filename.c_str());
                         WebUIAlerts_add(PrintString(F("Crash dump saved to: %s"), filename.c_str()), AlertMessage::TypeEnum_t::WARNING);
                     }
                 }

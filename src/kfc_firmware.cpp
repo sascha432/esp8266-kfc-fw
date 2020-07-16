@@ -268,6 +268,7 @@ void setup()
             debug_printf_P(PSTR("rebooting in %u minutes\n"), rebootDelay);
             // restart device if running in safe mode for rebootDelay minutes
             Scheduler.addTimer(rebootDelay * 60000UL, false, [](EventScheduler::TimerPtr timer) {
+                Logger_notice(F("Rebooting device after safe mode timeout"));
                 config.restartDevice();
             });
         }
@@ -280,7 +281,9 @@ void setup()
 
         if (resetDetector.hasCrashDetected()) {
             Logger_error(F("System crash detected: %s\n"), resetDetector.getResetInfo().c_str());
+#if !WEBUI_ALERTS_SEND_TO_LOGGER
             WebUIAlerts_add(PrintString(F("System crash detected.<br>%s"), resetDetector.getResetInfo().c_str()), AlertMessage::TypeEnum_t::DANGER);
+#endif
         }
 
 #if DEBUG

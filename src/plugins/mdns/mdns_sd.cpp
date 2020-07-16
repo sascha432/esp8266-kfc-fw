@@ -9,6 +9,7 @@
 #include <WiFiCallbacks.h>
 #include <LoopFunctions.h>
 #include <misc.h>
+#include <ESP8266NetBIOS.h>
 #include "kfc_fw_config.h"
 #include "kfc_fw_config_classes.h"
 #include "web_server.h"
@@ -149,8 +150,12 @@ void MDNSPlugin::_wifiCallback(uint8_t event, void *payload)
 #else
         _begin();
 #endif
+        auto result = NBNS.begin(config.getDeviceName());
+        _debug_printf_P(PSTR("NetBIOS result=%u\n"), result);
+
     }
     else if (WiFiCallbacks::EventEnum_t::DISCONNECTED) {
+        NBNS.end();
         _end();
     }
 }

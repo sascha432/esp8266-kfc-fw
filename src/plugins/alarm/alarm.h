@@ -11,7 +11,7 @@
 #include "kfc_fw_config_classes.h"
 
 #ifndef DEBUG_ALARM_FORM
-#define DEBUG_ALARM_FORM                                0
+#define DEBUG_ALARM_FORM                                1
 #endif
 
 #if !NTP_HAVE_CALLBACKS
@@ -91,4 +91,5 @@ private:
     EventScheduler::Timer _timer;
     ActiveAlarmVector _alarms;
     Callback _callback;
+    Alarm::TimeType _nextAlarm;
 };

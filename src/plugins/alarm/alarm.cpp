@@ -19,7 +19,7 @@
 
 static AlarmPlugin plugin;
 
-AlarmPlugin::AlarmPlugin()
+AlarmPlugin::AlarmPlugin() : _nextAlarm(0)
 {
     REGISTER_PLUGIN(this);
 }
@@ -99,6 +99,14 @@ void AlarmPlugin::configurationSaved(Form *form)
 void AlarmPlugin::getStatus(Print &output)
 {
     output.printf_P(PSTR("%u alarm(s) set"), _alarms.size());
+
+    if (_nextAlarm) {
+        char buf[32];
+        time_t _now = (time_t)_nextAlarm;
+        strftime_P(buf, sizeof(buf), SPGM(strftime_date_time_zone), localtime(&_now));
+        output.print(F(", next at "));
+        output.print(buf);
+    }
 }
 
 void AlarmPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
@@ -161,6 +169,8 @@ void AlarmPlugin::_installAlarms(EventScheduler::TimerPtr timer)
     _debug_println();
     Alarm::TimeType delay = 300;
     Alarm::TimeType minAlarmTime = std::numeric_limits<Alarm::TimeType>::max();
+    _nextAlarm = 0;
+
     if (!IS_TIME_VALID(time(nullptr))) {
         _debug_printf_P(PSTR("time not valid: %u\n"), (int)time(nullptr));
     }
@@ -177,7 +187,7 @@ void AlarmPlugin::_installAlarms(EventScheduler::TimerPtr timer)
             char buf[32] = { 0 };
             time_t _now = (time_t)alarmTime;
             if (_now) {
-                strftime_P(buf, sizeof(buf), PSTR("(%FT%T %Z)"), localtime(&_now));
+                strftime_P(buf, sizeof(buf), SPGM(strftime_date_time_zone), localtime(&_now));
             }
             _debug_printf_P(PSTR("alarm %u: enabled=%u alarm_time=%u%s time=%02u:%02u duration=%u ts=%u mode=%u weekdays=%s\n"),
                 i, alarm.is_enabled, (int)alarmTime, buf, alarm.time.hour, alarm.time.minute, alarm.max_duration,
@@ -192,6 +202,7 @@ void AlarmPlugin::_installAlarms(EventScheduler::TimerPtr timer)
         }
 
         if (!_alarms.empty()) {
+            _nextAlarm = minAlarmTime;
             delay = minAlarmTime - now;
             if (delay > 360) {
                 delay = 300;
@@ -216,6 +227,7 @@ void AlarmPlugin::_installAlarms(EventScheduler::TimerPtr timer)
 void AlarmPlugin::_removeAlarms()
 {
     _debug_println();
+    _nextAlarm = 0;
     _timer.remove();
     _alarms.clear();
 }

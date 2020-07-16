@@ -25,6 +25,7 @@ function WS_Console(url, sid, auto_reconnect, callback, consoleId) {
     this.auto_reconnect = auto_reconnect;
     this.reconnect_timeout = null;
     this.connect_counter = 0;
+    this.connection_counter = 0;
 }
 
 WS_Console.prototype.setConsoleId = function(id) {
@@ -83,6 +84,10 @@ WS_Console.prototype.send = function(data) {
 
 WS_Console.prototype.connect = function(authenticated_callback) {
     if (window.ws_console_is_debug) console.log("connect", this.url);
+    if (this.connection_counter != 0) {
+        return;
+    }
+    this.connection_counter++;
     if (this.reconnect_timeout != null) {
         window.clearTimeout();
         this.reconnect_timeout = null;
@@ -96,6 +101,7 @@ WS_Console.prototype.connect = function(authenticated_callback) {
     }
     if (this.socket != null) {
         this.socket.close();
+        this.socket = null;
     }
     this.authenticated = false;
     if (window.ws_console_is_debug) console.log("new WebSocket", this.url);
@@ -156,6 +162,7 @@ WS_Console.prototype.connect = function(authenticated_callback) {
 
 WS_Console.prototype.disconnect = function(reconnect) {
     this.authenticated = false;
+    this.connection_counter--;
     if (this.socket != null) {
         if (this.socket != null) {
             this.socket.close();

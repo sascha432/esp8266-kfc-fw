@@ -170,9 +170,9 @@ PROGMEM_STRING_DEF(_html, ".html");
 // src/SaveCrash.cpp:17
 // src/SaveCrash.cpp:21
 // src/SaveCrash.cpp:38
-PROGMEM_STRING_DEF(crash_counter_file, "/.dumps/crash_counter");
+PROGMEM_STRING_DEF(crash_counter_file, "/.pvt/crash_counter");
 // src/SaveCrash.cpp:68
-PROGMEM_STRING_DEF(crash_dump_file, "/.dumps/crash.%03x");
+PROGMEM_STRING_DEF(crash_dump_file, "/.pvt/crash.%03x");
 // src/templates.cpp:134
 // src/templates.cpp:147
 // src/templates.cpp:154

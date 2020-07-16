@@ -93,7 +93,7 @@
     },
     "crash_counter_file": {
         "use_counter": 3,
-        "default": "/.dumps/crash_counter"
+        "default": "/.pvt/crash_counter"
     },
     "Device_is_rebooting": {
         "use_counter": 1,
@@ -393,7 +393,7 @@
     },
     "iot_blinds_control_state_file": {
         "use_counter": 2,
-        "default": "/blinds_ctrl.state"
+        "default": "/.pvt/blinds_ctrl.state"
     },
     "Yes": {
         "use_counter": 2,
@@ -589,7 +589,7 @@
     },
     "iot_switch_states_file": {
         "use_counter": 2,
-        "default": "/switch.states"
+        "default": "/.pvt/switch.states"
     },
     "kfcfw": {
         "use_counter": 1,
@@ -765,7 +765,7 @@
     },
     "login_failure_file": {
         "use_counter": 3,
-        "default": "/login_failures"
+        "default": "/.pvt/login_failures"
     },
     "Form_value_missing_default_message": {
         "use_counter": 1,
@@ -965,7 +965,7 @@
     },
     "crash_dump_file": {
         "use_counter": 1,
-        "default": "/.dumps/crash.%03x"
+        "default": "/.pvt/crash.%03x"
     },
     "username": {
         "use_counter": 2,
@@ -1073,7 +1073,7 @@
     },
     "iot_sensor_hlw80xx_state_file": {
         "use_counter": 2,
-        "default": "/hlw80xx.state"
+        "default": "/.pvt/hlw80xx.state"
     },
     "seconds": {
         "use_counter": 9,

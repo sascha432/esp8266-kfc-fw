@@ -14,6 +14,10 @@
 #include "plugins.h"
 #include "plugins_menu.h"
 #include "WebUIAlerts.h"
+#if IOT_ALARM_PLUGIN_ENABLED
+#include "./plugins/alarm/alarm.h"
+#include "./plugins/ntp/ntp_plugin.h"
+#endif
 
 #if DEBUG_TEMPLATES
 #include <debug_helper_enable.h>
@@ -168,6 +172,20 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         WebUIAlerts_printAsJson(output, 1);
 #endif
     }
+#if IOT_ALARM_PLUGIN_ENABLED
+    else if (String_startsWith(key, PSTR("ALARM_TIMESTAMP_"))) {
+        uint8_t num = atoi(key.c_str() + 16);
+        if (num < KFCConfigurationClasses::Plugins::Alarm::MAX_ALARMS) {
+            auto cfg = KFCConfigurationClasses::Plugins::Alarm::getConfig().alarms[num];
+            if (cfg.is_enabled) {
+                char buf[32];
+                time_t _now = (time_t)cfg.time.timestamp;
+                strftime_P(buf, sizeof(buf), SPGM(strftime_date_time_zone), localtime(&_now));
+                output.print(buf);
+            }
+        }
+    }
+#endif
     else if (_form) {
         auto str = _form->process(key);
         if (str) {

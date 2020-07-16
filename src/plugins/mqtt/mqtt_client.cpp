@@ -299,7 +299,7 @@ String MQTTClient::connectionStatusString()
     message += formatTopic(emptyString);
 #if MQTT_AUTO_DISCOVERY
     if (config._H_GET(Config().flags).mqttAutoDiscoveryEnabled) {
-        message += F(", discovery prefix '");
+        message += F(HTML_S(br) "Auto discovery prefix '");
         message += Config_MQTT::getDiscoveryPrefix();
         message += '\'';
     }

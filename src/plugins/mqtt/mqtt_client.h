@@ -202,7 +202,6 @@ public:
         }
     }
 
-
     static uint8_t getDefaultQos() {
         if (_mqttClient) {
             return _mqttClient->_config.qos;

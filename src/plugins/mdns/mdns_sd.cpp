@@ -150,7 +150,10 @@ void MDNSPlugin::_wifiCallback(uint8_t event, void *payload)
 #else
         _begin();
 #endif
-        auto result = NBNS.begin(config.getDeviceName());
+#if DEBUG_MDNS_SD
+        auto result =
+#endif
+        NBNS.begin(config.getDeviceName());
         _debug_printf_P(PSTR("NetBIOS result=%u\n"), result);
 
     }

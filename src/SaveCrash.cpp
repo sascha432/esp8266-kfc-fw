@@ -35,7 +35,7 @@ namespace SaveCrash {
     {
 #if SPIFFS_SUPPORT
         SPIFFS.begin();
-        auto filename = String(FSPGM(crash_counter_file, "/crash_counter"));
+        auto filename = String(FSPGM(crash_counter_file, "/.dumps/crash_counter"));
         if (SPIFFS.exists(filename)) {
             SPIFFS.remove(filename);
         }

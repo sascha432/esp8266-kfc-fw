@@ -4,6 +4,12 @@
 
 #include "AsyncBitmapStreamResponse.h"
 
+#if 0
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
+#endif
+
 AsyncBitmapStreamResponse::AsyncBitmapStreamResponse(GFXCanvasCompressed& canvas) : AsyncAbstractResponse(nullptr), _stream(canvas) {
 	_code = 200;
 	_contentLength = _stream.size();
@@ -15,7 +21,7 @@ bool AsyncBitmapStreamResponse::_sourceValid() const {
 }
 
 size_t AsyncBitmapStreamResponse::_fillBuffer(uint8_t* buf, size_t maxLen) {
-    debug_printf("_fillBuffer(%p, %u): available %u\n", buf, maxLen, _stream.available());
+    _debug_printf("_fillBuffer(%p, %u): available %u\n", buf, maxLen, _stream.available());
     size_t available = _stream.available();
     if (available > maxLen) {
         available = maxLen;

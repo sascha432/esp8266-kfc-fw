@@ -78,6 +78,15 @@ $(function() {
             update_one_time_alert(items[2]);
         });
 
+        $('.alarm-auto-enable').on('change', function() {
+            var items = $(this).attr('id').split('_');
+            var enable = $('#alarm_' + items[1] + '_enabled');
+            $('#alarm_' + items[1] + '_repeat').find('.time').remove();
+            if (parseInt(enable.val()) == 0) {
+                enable.val(1).trigger('change');
+            }
+        });
+
         $('form').on('submit', function () {
             var i, j;
             // update hidden field from checkboxes

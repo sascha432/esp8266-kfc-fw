@@ -50,7 +50,7 @@ ClockPlugin::ClockPlugin() :
     _colors[0] = 0;
     _colors[1] = 0;
     _colors[2] = 0x7f;
-    setBlinkColon(SOLID);
+    setBlinkColon(BlinkColonEnum_t::SOLID);
 
     _ui_colon = 0;
     _ui_animation = 0;
@@ -68,16 +68,16 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
         if (String_equals(id, PSTR("btn_colon"))) {
             switch(_ui_colon = val) {
                 case 0:
-                    setBlinkColon(SOLID);
+                    setBlinkColon(BlinkColonEnum_t::SOLID);
                     break;
                 case 1:
-                    setBlinkColon(NORMAL);
+                    setBlinkColon(BlinkColonEnum_t::NORMAL);
                     if (_updateRate > 1000) {
                         _updateRate = 1000;
                     }
                     break;
                 case 2:
-                    setBlinkColon(FAST);
+                    setBlinkColon(BlinkColonEnum_t::FAST);
                     if (_updateRate > 500) {
                         _updateRate = 500;
                     }
@@ -87,17 +87,17 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
         else if (String_equals(id, PSTR("btn_animation"))) {
             switch(_ui_animation = val) {
                 case 0:
-                    setAnimation(NONE);
+                    setAnimation(AnimationEnum_t::NONE);
                     break;
                 case 1:
-                    setAnimation(RAINBOW);
+                    setAnimation(AnimationEnum_t::RAINBOW);
                     break;
                 case 2:
-                    setAnimation(FLASHING);
+                    setAnimation(AnimationEnum_t::FLASHING);
                     _updateRate = 250;
                     break;
                 case 3: {
-                        setAnimation(FADE);
+                        setAnimation(AnimationEnum_t::FADE);
                         _animationData.fade.toColor = Color().rnd();
                     }
                     break;
@@ -135,7 +135,7 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
 
 void ClockPlugin::_adjustAutobrightness()
 {
-    if (_autoBrightness != -1) {
+    if (_autoBrightness != AUTO_BRIGHTNESS_OFF) {
         auto adc = analogRead(A0);
         float value = adc / (float)_autoBrightness;
         if (value > 1) {
@@ -162,15 +162,15 @@ void ClockPlugin::_updateLightSensorWebUI()
     auto &events = json.addArray(JJ(events), 1);
     auto &obj = events.addObject(3);
     obj.add(JJ(id), FSPGM(light_sensor, "light_sensor"));
-    obj.add(JJ(value), JsonNumber(_autoBrightness == -1 ? NAN : _autoBrightnessValue * 100, 0));
-    obj.add(JJ(state), _autoBrightness == -1 ? false : true);
+    obj.add(JJ(value), JsonNumber(_autoBrightness == AUTO_BRIGHTNESS_OFF ? NAN : _autoBrightnessValue * 100, 0));
+    obj.add(JJ(state), _autoBrightness == AUTO_BRIGHTNESS_OFF ? false : true);
 
     WsWebUISocket::broadcast(WsWebUISocket::getSender(), json);
 }
 
 uint16_t ClockPlugin::_getBrightness() const
 {
-    if (_autoBrightness == -1) {
+    if (_autoBrightness == AUTO_BRIGHTNESS_OFF) {
         return _brightness;
     }
     return _brightness * _autoBrightnessValue;
@@ -237,7 +237,7 @@ void ClockPlugin::setup(SetupModeType mode)
                         _brightness = SevenSegmentDisplay::MAX_BRIGHTNESS / 5;
                         _display.setBrightness(_brightness);
                         _color = Color(255, 0, 0);
-                        setAnimation(FLASHING);
+                        setAnimation(AnimationEnum_t::FLASHING);
                         _updateRate = 2500;
                         publishState(nullptr);
                     }
@@ -260,7 +260,7 @@ void ClockPlugin::setup(SetupModeType mode)
                         publishState(nullptr);
                     }
                 }
-                else if (temp < _config.temp_75 - 10 && _autoBrightness == -1) {
+                else if (temp < _config.temp_75 - 10 && _autoBrightness == AUTO_BRIGHTNESS_OFF) {
                     // reactivate auto brightness
                     _autoBrightness = _config.auto_brightness;
                     _adjustAutobrightness();
@@ -294,7 +294,7 @@ void ClockPlugin::setup(SetupModeType mode)
 
 void ClockPlugin::reconfigure(PGM_P source)
 {
-    _debug_printf_P(PSTR("source=%p/%s\n"), source, source ? source : emptyString.c_str());
+    _debug_println();
     readConfig();
     _setSevenSegmentDisplay();
 }
@@ -527,8 +527,8 @@ void ClockPlugin::getValues(JsonArray &array)
 #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
     obj = &array.addObject(3);
     obj->add(JJ(id), FSPGM(light_sensor));
-    obj->add(JJ(value), JsonNumber(_autoBrightness == -1 ? NAN : _autoBrightnessValue * 100, 0));
-    obj->add(JJ(state), _autoBrightness == -1 ? false : true);
+    obj->add(JJ(value), JsonNumber(_autoBrightness == AUTO_BRIGHTNESS_OFF ? NAN : _autoBrightnessValue * 100, 0));
+    obj->add(JJ(state), _autoBrightness == AUTO_BRIGHTNESS_OFF ? false : true);
 #endif
 }
 
@@ -543,7 +543,7 @@ void ClockPlugin::publishState(MQTTClient *client)
         client->publish(MQTTClient::formatTopic(FSPGM(_brightness_state)), _qos, true, String(_brightness));
         client->publish(MQTTClient::formatTopic(FSPGM(_color_state)), _qos, true, PrintString(F("%u,%u,%u"), _colors[0], _colors[1], _colors[2]));
 #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
-        client->publish(MQTTClient::formatTopic(FSPGM(light_sensor), nullptr), _qos, true, _autoBrightness == -1 ? String(FSPGM(Off)) : String(_autoBrightnessValue * 100, 0));
+        client->publish(MQTTClient::formatTopic(FSPGM(light_sensor), nullptr), _qos, true, _autoBrightness == AUTO_BRIGHTNESS_OFF ? String(FSPGM(Off)) : String(_autoBrightnessValue * 100, 0));
 #endif
     }
 
@@ -598,19 +598,19 @@ void ClockPlugin::setAnimation(AnimationEnum_t animation)
     _animationData.callback = nullptr;
     _display.setCallback(nullptr);
     switch(animation) {
-        case BLINK_COLON:
-            setBlinkColon(NORMAL);
+        case AnimationEnum_t::BLINK_COLON:
+            setBlinkColon(BlinkColonEnum_t::NORMAL);
             _updateRate = 1000;
             break;
-        case FAST_BLINK_COLON:
-            setBlinkColon(FAST);
+        case AnimationEnum_t::FAST_BLINK_COLON:
+            setBlinkColon(BlinkColonEnum_t::FAST);
             _updateRate = 500;
             break;
-        case SOLID_COLON:
-            setBlinkColon(SOLID);
+        case AnimationEnum_t::SOLID_COLON:
+            setBlinkColon(BlinkColonEnum_t::SOLID);
             _updateRate = 1000;
             break;
-        case RAINBOW:
+        case AnimationEnum_t::RAINBOW:
             _animationData.rainbow.movementSpeed = 30;
             _display.setCallback([this](SevenSegmentDisplay::pixel_address_t addr, SevenSegmentDisplay::color_t color) {
                 float factor1, factor2;
@@ -631,7 +631,7 @@ void ClockPlugin::setAnimation(AnimationEnum_t animation)
             });
             _updateRate = 1000 / 30;
             break;
-        case FADE:
+        case AnimationEnum_t::FADE:
             _animationData.fade.speed = 10;
             _animationData.fade.progress = 0;
             _animationData.fade.fromColor = _color;
@@ -653,16 +653,16 @@ void ClockPlugin::setAnimation(AnimationEnum_t animation)
             };
             _updateRate = 1000 / 50;
             break;
-        case FLASHING:
+        case AnimationEnum_t::FLASHING:
             _animationData.flashing.color = _color;
             _display.setCallback([this](SevenSegmentDisplay::pixel_address_t addr, SevenSegmentDisplay::color_t color) {
                 return (millis() / _updateRate) % 2 == 0 ? _animationData.flashing.color : 0;
             });
             _updateRate = 50;
             break;
-        case NONE:
+        case AnimationEnum_t::NONE:
         default:
-            _updateRate = (BlinkColonEnum_t)_config.blink_colon == FAST ? 500 : 1000;
+            _updateRate = static_cast<BlinkColonEnum_t>(_config.blink_colon) == FAST ? 500 : 1000;
             break;
     }
     _updateTimer = 0;
@@ -675,7 +675,7 @@ void ClockPlugin::readConfig()
     _color = Color(_config.solid_color);
     _brightness = _config.brightness << 8;
     _autoBrightness = _config.auto_brightness;
-    setAnimation((AnimationEnum_t)_config.animation);
+    setAnimation(static_cast<AnimationEnum_t>(_config.animation));
     _display.setBrightness(_brightness);
 }
 
@@ -689,9 +689,9 @@ void ClockPlugin::onButtonHeld(Button& btn, uint16_t duration, uint16_t repeatCo
         plugin._buttonCounter = 0;
     }
     if (repeatCount == 12) {    // start flashing after 2 seconds, hard reset occurs ~2.5s
-        plugin._autoBrightness = -1;
+        plugin._autoBrightness = AUTO_BRIGHTNESS_OFF;
         plugin._display.setBrightness(SevenSegmentDisplay::MAX_BRIGHTNESS);
-        plugin.setAnimation(FLASHING);
+        plugin.setAnimation(AnimationEnum_t::FLASHING);
         plugin._animationData.flashing.color = Color(255, 0, 0);
         plugin._updateRate = 50;
 
@@ -718,22 +718,22 @@ void ClockPlugin::_onButtonReleased(uint16_t duration)
     }
     switch(_buttonCounter) {
         case 0:
-            setAnimation(FAST_BLINK_COLON);
+            setAnimation(AnimationEnum_t::FAST_BLINK_COLON);
             break;
         case 1:
-            setAnimation(BLINK_COLON);
+            setAnimation(AnimationEnum_t::BLINK_COLON);
             break;
         case 2:
-            setAnimation(SOLID_COLON);
+            setAnimation(AnimationEnum_t::SOLID_COLON);
             break;
         case 3:
-            setAnimation(RAINBOW);
+            setAnimation(AnimationEnum_t::RAINBOW);
             break;
         case 4:
-            setAnimation(FLASHING);
+            setAnimation(AnimationEnum_t::FLASHING);
             break;
         case 5:
-            setAnimation(FLASHING);
+            setAnimation(AnimationEnum_t::FLASHING);
             _updateRate = 500;
             _buttonCounter = -1;
             break;
@@ -787,7 +787,7 @@ void ClockPlugin::_loop()
         }
 
         uint32_t color = _color;
-        struct tm *tm = localtime(&now);
+        auto tm = localtime(&now);
         uint8_t hour = tm->tm_hour;
         if (!_config.time_format_24h) {
             hour = ((hour + 23) % 12) + 1;
@@ -802,7 +802,10 @@ void ClockPlugin::_loop()
         _display.setDigit(5, tm->tm_sec % 10, color);
 #endif
 
-        if ((BlinkColonEnum_t)_config.blink_colon != SOLID && (millis() / ((BlinkColonEnum_t)_config.blink_colon == FAST ? 500 : 1000)) % 2 == 0) {
+        if (
+            static_cast<BlinkColonEnum_t>(_config.blink_colon) != BlinkColonEnum_t::SOLID &&
+            ((millis() / (static_cast<BlinkColonEnum_t>(_config.blink_colon) == BlinkColonEnum_t::FAST ? 500 : 1000)) % 2 == 0)
+        ) {
             _display.clearColon(0);
 #if IOT_CLOCK_NUM_COLONS == 2
             _display.clearColon(1);
@@ -874,6 +877,7 @@ void ClockPlugin::_alarmCallback(Alarm::AlarmModeType mode, uint16_t maxDuration
         _debug_println(F("storing parameters"));
         _resetAlarmFunc = [this, animation, brightness, autoBrightness](EventScheduler::TimerPtr) {
             _autoBrightness = autoBrightness;
+            _brightness = brightness;
             _display.setBrightness(brightness);
             setAnimation(animation);
             _alarmTimer.remove(); // make sure the scheduler is not calling a dangling pointer.. not using the TimerPtr in case it is not called from the scheduler
@@ -884,10 +888,12 @@ void ClockPlugin::_alarmCallback(Alarm::AlarmModeType mode, uint16_t maxDuration
     // check if an alarm is already active
     if (!_alarmTimer.active()) {
         _debug_println(F("set to flashing"));
-        _autoBrightness = -1;
-        _display.setBrightness(SevenSegmentDisplay::MAX_BRIGHTNESS);
+        _autoBrightness = AUTO_BRIGHTNESS_OFF;
+        _brightness = SevenSegmentDisplay::MAX_BRIGHTNESS;
+        _display.setBrightness(_brightness);
         setAnimation(AnimationEnum_t::FLASHING);
-        plugin._animationData.flashing.color = Color(255, 0, 0);
+        _animationData.flashing.color = Color(255, 0, 0);
+        _updateRate = 250;
     }
 
     if (maxDuration == 0) {
@@ -963,12 +969,12 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKA))) {
         if (args.isQueryMode()) {
-            args.printf_P(PSTR("%u - blink colon twice per second"), BLINK_COLON);
-            args.printf_P(PSTR("%u - blink colon once per second"), FAST_BLINK_COLON);
-            args.printf_P(PSTR("%u - solid colon"), SOLID_COLON);
-            args.printf_P(PSTR("%u - rainbow animation"), RAINBOW);
-            args.printf_P(PSTR("%u - flashing"), FLASHING);
-            args.printf_P(PSTR("%u - fade to color (+CLOCKA=%u,r,g,b)"), FADE, FADE);
+            args.printf_P(PSTR("%u - blink colon twice per second"), AnimationEnum_t::BLINK_COLON);
+            args.printf_P(PSTR("%u - blink colon once per second"), AnimationEnum_t::FAST_BLINK_COLON);
+            args.printf_P(PSTR("%u - solid colon"), AnimationEnum_t::SOLID_COLON);
+            args.printf_P(PSTR("%u - rainbow animation"), AnimationEnum_t::RAINBOW);
+            args.printf_P(PSTR("%u - flashing"), AnimationEnum_t::FLASHING);
+            args.printf_P(PSTR("%u - fade to color (+CLOCKA=%u,r,g,b)"), AnimationEnum_t::FADE, AnimationEnum_t::FADE);
             args.print(F("1000 = disable clock"));
             args.print(F("1001 = enable clock"));
             args.print(F("1002 = all pixels on"));
@@ -1014,11 +1020,11 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                         _animationData.fade.toColor = ~_color & 0xffffff;
                     }
                 }
-                setAnimation((AnimationEnum_t)value);
+                setAnimation(static_cast<AnimationEnum_t>(value));
             }
         }
         else {
-            setAnimation(SOLID_COLON);
+            setAnimation(AnimationEnum_t::SOLID_COLON);
         }
         return true;
     }

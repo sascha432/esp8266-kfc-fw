@@ -10,10 +10,12 @@
 #include "plugins.h"
 #include "kfc_fw_config.h"
 #include "./plugins/mqtt/mqtt_component.h"
+#if IOT_ALARM_PLUGIN_ENABLED
 #include "./plugins/alarm/alarm.h"
+#endif
 
 #ifndef DEBUG_IOT_CLOCK
-#define DEBUG_IOT_CLOCK                         1
+#define DEBUG_IOT_CLOCK                         0
 #endif
 
 #if SPEED_BOOSTER_ENABLED
@@ -278,6 +280,8 @@ private:
 #endif
 
 private:
+    static constexpr int16_t AUTO_BRIGHTNESS_OFF = -1;
+
     typedef struct {
         union {
             struct {

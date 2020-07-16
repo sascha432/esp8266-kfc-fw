@@ -11,7 +11,7 @@
 #include "kfc_fw_config_classes.h"
 
 #ifndef DEBUG_ALARM_FORM
-#define DEBUG_ALARM_FORM                                1
+#define DEBUG_ALARM_FORM                                0
 #endif
 
 #if !NTP_HAVE_CALLBACKS

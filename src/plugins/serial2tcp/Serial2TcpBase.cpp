@@ -9,6 +9,7 @@
 #include "Serial2TcpBase.h"
 #include "Serial2TcpServer.h"
 #include "Serial2TcpClient.h"
+#include "s2t_nvt.h"
 
 #if DEBUG_SERIAL2TCP
 #include <debug_helper_enable.h>
@@ -17,9 +18,6 @@
 #endif
 
 Serial2TcpBase *Serial2TcpBase::_instance = nullptr;
-#if IOT_DIMMER_MODULE
-bool Serial2TcpBase::_resetAtmega = true;
-#endif
 #if DEBUG
 bool Serial2TcpBase::_debugOutput = false;
 #endif
@@ -109,7 +107,7 @@ Serial2TcpBase *Serial2TcpBase::createInstance(const Serial2TCP::Serial2Tcp_t &c
             }
             DEBUGV("Serial baud=%u\n", cfg.baudrate);
             SerialHandler::getInstance().addHandler(onSerialData, SerialHandler::ANY);
-            // SerialHandler::getInstance().addHandler(onSerialData, SerialHandler::ANY);
+            // SerialHandler::getInstance().addHandler(onSerialData, SerialHandler::RECEIVE|SerialHandler::TRANSMIT);
             break;
     }
 
@@ -169,8 +167,7 @@ void Serial2TcpBase::handleSerialDataLoop()
 void Serial2TcpBase::_processData(Serial2TcpConnection *conn, const char *data, size_t len)
 {
 #if 0
-    _getSerial().write(data, len);
-    // Serial2TcpBase::_serialWrite(conn, data, len);
+    _serialWrite(conn, data, len);
 #else
     auto client = conn->getClient();
     auto &buffer = conn->getNvtBuffer();
@@ -195,80 +192,79 @@ void Serial2TcpBase::_processData(Serial2TcpConnection *conn, const char *data, 
                 // case NVT_DM:
 
                 case NVT_WONT:
-                    DEBUGV("NVT_WONT\n");
+                    DEBUGV_NVT("NVT_WONT\n");
                     buffer.write(*ptr);
                     break;
                 case NVT_WILL:
-                    DEBUGV("NVT_WILL\n");
+                    DEBUGV_NVT("NVT_WILL\n");
                     buffer.write(*ptr);
                     break;
                 case NVT_SB:
-                    DEBUGV("NVT_SB\n");
+                    DEBUGV_NVT("NVT_SB\n");
                     buffer.write(*ptr);
                     break;
                 case NVT_SE:
-                    DEBUGV("NVT_SE\n");
+                    DEBUGV_NVT("NVT_SE\n");
                     buffer.clear();
                     break;
                 case NVT_NOP:
-                    DEBUGV("NVT_NOP\n");
+                    // DEBUGV_NVT("NVT_NOP\n");
                     buffer.clear();
                     break;
                 case NVT_AYT: {
-                        DEBUGV("NVT_AYT\n");
+                        DEBUGV_NVT("NVT_AYT\n");
                         buffer.clear();
                         PrintString str;
                         str.printf_P(PSTR("KFCFW %s\n"), KFCFWConfiguration::getShortFirmwareVersion().c_str());
                         if (client) {
                             client->write(str.c_str(), str.length());
                         }
-
                     }
                     break;
                 case NVT_IP:
-                    DEBUGV("NVT_IP\n");
+                    DEBUGV_NVT("NVT_IP\n");
                     conn->close();
                     return;
                 // case NVT_IAC:
                 //     _serialWrite(conn, NVT_IAC);
                 //     // fallthrough
                 default:
-                    DEBUGV("NVT error %u\n", (int)*ptr);
-                    output.write(NVT_IAC);
-                    output.write(*ptr);
-                    // _serialWrite(conn, NVT_IAC);
-                    // _serialWrite(conn, *ptr);
+                    DEBUGV_NVT("NVT error %u\n", (int)*ptr);
+                    // output.write(NVT_IAC);
+                    // output.write(*ptr);
+                    _serialWrite(conn, NVT_IAC);
+                    _serialWrite(conn, *ptr);
                     buffer.clear();
                     break;
             }
         }
         else if (*ptr == NVT_SB_CPO && buffer.length() == 2) {
-            DEBUGV("NVT_SB_CPO\n");
+            DEBUGV_NVT("NVT_SB_CPO\n");
             buffer.write(NVT_SB_CPO);
         }
         else if (buffer.length() > 2) {
             buffer.write(*ptr);
             if (*ptr == NVT_SE) {
-                DEBUGV("NVT_SE\n");
+                DEBUGV_NVT("NVT_SE\n");
                 if (buffer.charAt(buffer.length() - 2) == NVT_IAC) { // end of sequence
                     auto data = buffer.getChar() + 2;
                     auto dataLen = buffer.length() - 4;
-                    DEBUGV("NVT_IAC dataLen=%d\n", dataLen);
+                    DEBUGV_NVT("NVT_IAC dataLen=%d\n", dataLen);
                     if (*data == NVT_SB_CPO) {
                         dataLen--;
                         data++;
-                        DEBUGV("NVT_SB_CPO dataLen=%d\n", dataLen);
+                        DEBUGV_NVT("NVT_SB_CPO dataLen=%d\n", dataLen);
                         if (*data == NVT_CPO_SET_BAUDRATE) {
                             dataLen--;
-                            DEBUGV("NVT_CPO_SET_BAUDRATE dataLen=%d\n", dataLen);
+                            DEBUGV_NVT("NVT_CPO_SET_BAUDRATE dataLen=%d\n", dataLen);
                             data++;
                             uint32_t baudRate = 0;
                             while(dataLen--) {
-                                DEBUGV("dataLen=%d\n", dataLen);
+                                DEBUGV_NVT("dataLen=%d\n", dataLen);
                                 if (*data == NVT_IAC) {
-                                    DEBUGV("NVT_IAC\n");
+                                    DEBUGV_NVT("NVT_IAC\n");
                                     if (dataLen && *(data + 1) == NVT_IAC) { // skip double NVT_IAC
-                                        DEBUGV("NVT_IAC\n");
+                                        DEBUGV_NVT("NVT_IAC\n");
                                         dataLen--;
                                         data++;
                                     }
@@ -277,28 +273,50 @@ void Serial2TcpBase::_processData(Serial2TcpConnection *conn, const char *data, 
                                 baudRate |= *data;
                                 data++;
                             }
-                            DEBUGV("NVT_CPO_SET_BAUDRATE %u\n", baudRate);
+                            DEBUGV_NVT("NVT_CPO_SET_BAUDRATE %u\n", baudRate);
                             if (baudRate) {
                                 _setBaudRate(baudRate);
                             }
+                            if (client) {
+                                char buf[] = { NVT_IAC, NVT_SB_CPO, NVT_WILL, NVT_CPO_SET_BAUDRATE, NVT_IAC };
+                                // client->write(buf, sizeof(buf));
+                            }
+                        }
+                        else if (*data == NVT_SB_BINARY) {
+                            data++;
+                            dataLen--;
+                            if (*data == NVT_IAC) {
+                                if (client) {
+                                    char buf[] = { NVT_IAC, NVT_SB_CPO, NVT_WONT, NVT_SB_BINARY, NVT_IAC };
+                                    // client->write(buf, sizeof(buf));
+                                }
+                            }
+                        }
+                        else {
+                            data++;
+                            while(dataLen--) {
+                                DEBUGV_NVT("data %02x %d\n", *data, *data);
+                                data++;
+                            }
+
                         }
                     }
                     buffer.clear();
                 }
             }
             if (buffer.length() > 32) {
-                output.write(buffer.getConstChar(), buffer.length());
-                // _serialWrite(conn, buffer.getConstChar(), buffer.length());
+                // output.write(buffer.getConstChar(), buffer.length());
+                _serialWrite(conn, buffer.getConstChar(), buffer.length());
                 buffer.clear();
             }
         }
         else {
             if (buffer.length()) {
-                output.write(buffer.getConstChar(), buffer.length());
-                output.write(*ptr);
-                // buffer.write(*ptr);
-                // _serialWrite(conn, buffer.getConstChar(), buffer.length());
+                // output.write(buffer.getConstChar(), buffer.length());
+                // output.write(*ptr);
+                _serialWrite(conn, buffer.getConstChar(), buffer.length());
                 buffer.clear();
+                _serialWrite(conn, *ptr);
             }
             else {
                 output.write(*ptr);
@@ -307,7 +325,7 @@ void Serial2TcpBase::_processData(Serial2TcpConnection *conn, const char *data, 
         ptr++;
     }
     if (output.length()) {
-        _serialWrite(conn, output.getChar(), output.length());
+        _serialWrite(conn, output.getConstChar(), output.length());
     }
 #endif
 }
@@ -316,38 +334,26 @@ void Serial2TcpBase::_processData(Serial2TcpConnection *conn, const char *data, 
 
 size_t Serial2TcpBase::_serialWrite(Serial2TcpConnection *conn, const char *data, size_t len)
 {
-    // SerialHandler::getInstance().writeToReceive(SerialHandler::RECEIVE, reinterpret_cast<const uint8_t *>(data), len);
-    // return len;
-    return _serial.write(data, len);
+#if 1
+    SerialHandler::getInstance().writeToReceive(SerialHandler::REMOTE_RX, reinterpret_cast<const uint8_t *>(data), len);
+    return len;
+#else
+    auto written = _serial.write(data, len);
+    if (written < len) {
+        ::printf(PSTR("_serialWrite %u/%u\n"), written, len);
+    }
+    return written;
+#endif
 }
 
 size_t Serial2TcpBase::_serialWrite(Serial2TcpConnection *conn, char data)
 {
+#if 1
+    SerialHandler::getInstance().writeToReceive(SerialHandler::REMOTE_RX, reinterpret_cast<const uint8_t *>(&data), sizeof(data));
+    return sizeof(data);
+#else
     return _serial.write(data);
-}
-
-size_t Serial2TcpBase::_serialPrintf_P(Serial2TcpConnection *conn, PGM_P format, ...)
-{
-    va_list arg;
-    va_start(arg, format);
-    char temp[128];
-    char *buffer = temp;
-    size_t len = vsnprintf(temp, sizeof(temp), format, arg);
-    va_end(arg);
-    if (len > sizeof(temp) - 1) {
-        buffer = new char[len + 1];
-        if (!buffer) {
-            return 0;
-        }
-        va_start(arg, format);
-        vsnprintf(buffer, len + 1, format, arg);
-        va_end(arg);
-    }
-    auto written = _serialWrite(conn, buffer, len);
-    if (buffer != temp) {
-        delete[] buffer;
-    }
-    return written;
+#endif
 }
 
 void Serial2TcpBase::end()

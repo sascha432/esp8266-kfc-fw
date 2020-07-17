@@ -4,6 +4,7 @@
 
 #include <Arduino_compat.h>
 #include <StreamString.h>
+#include "serial_handler.h"
 #include <PrintHtmlEntitiesString.h>
 #include "Serial2TcpClient.h"
 
@@ -57,10 +58,27 @@ void Serial2TcpClient::end()
 
 void Serial2TcpClient::_onSerialData(uint8_t type, const uint8_t *buffer, size_t len)
 {
-    DEBUGV("connected=%u conn=%p client=%p type=%u\n", _connected(), _connection, _connection ? _connection->getClient() : nullptr, type);
-    if (_connected()) {
-        // _debug_printf_P(PSTR("Serial2TcpClient::_onData(): type %d, length %u\n"), type, len);
-        _client().write(reinterpret_cast<const char *>(buffer), len);
+    DEBUGV("connected=%u conn=%p client=%p type=%u len=%u\n", _connected(), _connection, _connection ? _connection->getClient() : nullptr, type, len);
+    if (type == SerialHandler::SerialDataType_t::RECEIVE || type == SerialHandler::SerialDataType_t::REMOTE_RX) {
+        _getSerial().write(buffer, len);
+    }
+    if (type == SerialHandler::SerialDataType_t::TRANSMIT || (type == SerialHandler::SerialDataType_t::REMOTE_RX && true/*echo*/)) {
+        if (_connected()) {
+            auto left = len;
+            auto ptr = reinterpret_cast<const char *>(buffer);
+            while (left) {
+                auto written = _client().write(ptr, left);
+                if (written != left) {
+                    //::printf(PSTR("write %d/%d\n"), written,left);
+                    delay(1);
+                }
+                ptr += written;
+                left -= written;
+            }
+        }
+    }
+    else {
+        ::printf("_onSerialData fail connected=%u conn=%p client=%p type=%u len=%u\n", _connected(), _connection, _connection ? _connection->getClient() : nullptr, type, len);
     }
 }
 

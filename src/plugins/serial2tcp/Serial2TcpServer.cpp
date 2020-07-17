@@ -76,7 +76,10 @@ void Serial2TcpServer::_onSerialData(uint8_t type, const uint8_t *buffer, size_t
     if (!_connections.empty()) {
         // _debug_printf_P(PSTR("Serial2TcpServer::_onData(): type %d, length %u\n"), type, len);
         for(auto &&conn: _connections) {
-            conn->getClient()->write(reinterpret_cast<const char *>(buffer), len);
+            auto written = conn->getClient()->write(reinterpret_cast<const char *>(buffer), len);
+            if (written < len) {
+                ::printf(PSTR("_onSerialData %u/%u\n"), written, len);
+            }
         }
     }
 }
@@ -85,13 +88,13 @@ void Serial2TcpServer::_onData(AsyncClient *client, void *data, size_t len)
 {
     // _debug_printf_P(PSTR("Serial2TcpServer::_onData(): length %u\n"), len);
     if (_debugOutput) {
-        for(size_t i = 0; i < len; i++) {
-            char byte = reinterpret_cast<char *>(data)[i];
-            _serialPrintf_P(nullptr, PSTR("%02x "), byte);
-            // _getSerial().printf_P(PSTR("%02x "), byte);
-        }
-        // _getSerial().println();
-        _serialWrite(nullptr, "\n", 1);
+        // for(size_t i = 0; i < len; i++) {
+        //     char byte = reinterpret_cast<char *>(data)[i];
+        //     _serialPrintf_P(nullptr, PSTR("%02x "), byte);
+        //     // _getSerial().printf_P(PSTR("%02x "), byte);
+        // }
+        // // _getSerial().println();
+        // _serialWrite(nullptr, "\n", 1);
     }
 
     auto conn = _getConn(client);
@@ -113,7 +116,12 @@ String Serial2TcpServer::_getClientInfo(Serial2TcpConnection &conn) const
     if (hasAuthentication()) {
         output += getUsername() + '@';
     }
-    output += conn.getClient()->remoteIP().toString().c_str();
+    if (conn.getClient()) {
+        output += conn.getClient()->remoteIP().toString().c_str();
+    }
+    else {
+        output += F("null");
+    }
     return output;
 }
 

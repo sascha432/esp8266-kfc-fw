@@ -19,6 +19,12 @@
 #define DEBUGV(...) ;
 #endif
 
+#if DEBUG_SERIAL2TCP && 1
+#define DEBUGV_NVT(fmt, ...) { ::printf(PSTR("<%s:%u> "), __DEBUG_FUNCTION__, __LINE__); ::printf((PGM_P)PSTR(fmt), ## __VA_ARGS__); }
+#else
+#define DEBUGV_NVT(...) ;
+#endif
+
 class Serial2TcpBase {
 public:
     using Serial2TCP = KFCConfigurationClasses::Plugins::Serial2TCP;
@@ -114,7 +120,6 @@ protected:
 
     virtual size_t _serialWrite(Serial2TcpConnection *conn, const char *data, size_t len);
     size_t _serialWrite(Serial2TcpConnection *conn, char data);
-    size_t _serialPrintf_P(Serial2TcpConnection *conn, PGM_P format, ...);
 
 public:
     virtual void getStatus(Print &output) = 0;

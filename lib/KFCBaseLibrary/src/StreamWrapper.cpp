@@ -94,18 +94,32 @@ size_t StreamWrapper::readBytes(char *buffer, size_t length)
 
 size_t StreamWrapper::write(uint8_t data)
 {
-    size_t maxWritten = 0;
     for(const auto stream: _streams) {
-        maxWritten = std::max(maxWritten, stream->write(data));
+        if (stream->write(data) != sizeof(data)) {
+            delay(1); // 1ms per byte
+            ::printf(PSTR("stream=%p write %u/%u\n"), stream, 0, 1);
+            stream->write(data);
+        }
     }
-    return maxWritten;
+    return sizeof(data);
 }
 
 size_t StreamWrapper::write(const uint8_t *buffer, size_t size)
 {
-    size_t maxWritten = 0;
     for(const auto stream: _streams) {
-        maxWritten = std::max(maxWritten, stream->write(buffer, size));
+        auto len = size;
+        auto ptr = buffer;
+        auto timeout = millis() + 100;
+        do {
+            auto written = stream->write(ptr, len);
+            if (written < len) {
+                ::printf(PSTR("stream=%p write %u/%u\n"), stream, written, len);
+                ptr += written;
+                delay(1);
+            }
+            len -= written;
+        }
+        while (len && millis() < timeout);
     }
-    return maxWritten;
+    return size;
 }

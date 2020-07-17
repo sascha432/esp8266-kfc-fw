@@ -35,7 +35,7 @@ extern "C" void gdbstub_do_break();
 
 // connect to wifi and serial2tcp before booting to see all debug output
 #ifndef DEBUG_PRE_INIT_SERIAL2TCP
-#define DEBUG_PRE_INIT_SERIAL2TCP       1
+#define DEBUG_PRE_INIT_SERIAL2TCP       0
 #endif
 
 #if DEBUG_PRE_INIT_SERIAL2TCP

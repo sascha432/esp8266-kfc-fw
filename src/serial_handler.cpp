@@ -91,9 +91,20 @@ size_t SerialHandler::write(const uint8_t *buffer, size_t size)
 void SerialHandler::_serialLoop()
 {
     auto &serial = *_wrapper.getInput();
-    uint8_t buf[256];
-    int avail;
+    uint8_t buf[64];
 
+#if 0
+    // use if available() returns true instead of the available data
+    auto endPtr = buf + sizeof(buf);
+    while(serial.available()) {
+        auto ptr = buf;
+        while(ptr < endPtr && serial.available()) {
+            *ptr++ = serial.read();
+        }
+        writeToReceive(RECEIVE, buf, ptr - buf);
+    }
+#else
+    int avail;
     while((avail = serial.available()) > 0) {
         if (avail >= (int)sizeof(buf)) {
             avail = sizeof(buf) - 1;
@@ -101,6 +112,7 @@ void SerialHandler::_serialLoop()
         int len = serial.readBytes(buf, avail);
         writeToReceive(RECEIVE, buf, len);
     }
+#endif
 }
 
 void SerialHandler::writeToTransmit(SerialDataType_t type, const uint8_t *buffer, size_t len)

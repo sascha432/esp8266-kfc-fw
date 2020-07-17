@@ -143,4 +143,4 @@ public:
 
 typedef FakeSerial HardwareSerial;
 
-extern HardwareSerial Serial;
+extern Stream &Serial;

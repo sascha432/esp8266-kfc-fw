@@ -398,23 +398,23 @@ DisplayTimer displayTimer;
 static void heap_timer_callback(EventScheduler::TimerPtr timer)
 {
     if (displayTimer._type == DisplayTimer::HEAP) {
-        MySerial.printf_P(PSTR("+HEAP: free=%u cpu=%dMHz"), ESP.getFreeHeap(), ESP.getCpuFreqMHz());
+        Serial.printf_P(PSTR("+HEAP: free=%u cpu=%dMHz"), ESP.getFreeHeap(), ESP.getCpuFreqMHz());
 #if LOAD_STATISTICS
-        MySerial.printf_P(PSTR(" load avg=%.2f %.2f %.2f"), LOOP_COUNTER_LOAD(load_avg[0]), LOOP_COUNTER_LOAD(load_avg[1]), LOOP_COUNTER_LOAD(load_avg[2]));
+        Serial.printf_P(PSTR(" load avg=%.2f %.2f %.2f"), LOOP_COUNTER_LOAD(load_avg[0]), LOOP_COUNTER_LOAD(load_avg[1]), LOOP_COUNTER_LOAD(load_avg[2]));
 #endif
-        MySerial.println();
+        Serial.println();
     }
     else if (displayTimer._type == DisplayTimer::GPIO) {
-        MySerial.printf_P(PSTR("+GPIO: "));
+        Serial.printf_P(PSTR("+GPIO: "));
 #if defined(ESP8266)
         for(uint8_t i = 0; i <= 16; i++) {
             if (i != 1 && i != 3 && !isFlashInterfacePin(i)) { // do not display RX/TX and flash SPI
                 // pinMode(i, INPUT);
-                MySerial.printf_P(PSTR("%u=%u "), i, digitalRead(i));
+                Serial.printf_P(PSTR("%u=%u "), i, digitalRead(i));
             }
         }
         // pinMode(A0, INPUT);
-        MySerial.printf_P(PSTR(" A0=%u\n"), analogRead(A0));
+        Serial.printf_P(PSTR(" A0=%u\n"), analogRead(A0));
 #else
 // #warning not implemented
 #endif
@@ -423,7 +423,7 @@ static void heap_timer_callback(EventScheduler::TimerPtr timer)
         int32_t rssi = WiFi.RSSI();
         displayTimer._rssiMin = std::max(displayTimer._rssiMin, rssi);
         displayTimer._rssiMax = std::min(displayTimer._rssiMax, rssi);
-        MySerial.printf_P(PSTR("+RSSI: %d dBm (min/max %d/%d)\n"), rssi, displayTimer._rssiMin, displayTimer._rssiMax);
+        Serial.printf_P(PSTR("+RSSI: %d dBm (min/max %d/%d)\n"), rssi, displayTimer._rssiMin, displayTimer._rssiMax);
     }
 }
 
@@ -451,9 +451,9 @@ void at_mode_create_heap_timer(float seconds)
 void at_mode_wifi_callback(uint8_t event, void *payload)
 {
     if (event == WiFiCallbacks::EventEnum_t::CONNECTED) {
-        MySerial.printf_P(PSTR("WiFi connected to %s - IP %s\n"), WiFi.SSID().c_str(), WiFi.localIP().toString().c_str());
+        Serial.printf_P(PSTR("WiFi connected to %s - IP %s\n"), WiFi.SSID().c_str(), WiFi.localIP().toString().c_str());
     } else if (event == WiFiCallbacks::EventEnum_t::DISCONNECTED) {
-        MySerial.println(F("WiFi connection lost"));
+        Serial.println(F("WiFi connection lost"));
     }
 }
 
@@ -642,7 +642,7 @@ static std::map<void *, String> at_mode_resolve_map;
 void *resolve_lambda(void *ptr)
 {
     at_mode_resolve(ptr, [](const String &symbol) {
-        MySerial.printf_P(PSTR("lambda: %s\n"), symbol.c_str());
+        Serial.printf_P(PSTR("lambda: %s\n"), symbol.c_str());
     });
     return ptr;
 }
@@ -797,7 +797,7 @@ void at_mode_list_ets_timers(Print &output)
 
 void at_mode_serial_handle_event(String &commandString)
 {
-    auto &output = MySerial;
+    auto &output = Serial;
     char *nextCommand = nullptr;
     AtModeArgs args(output);
 
@@ -1032,7 +1032,7 @@ void at_mode_serial_handle_event(String &commandString)
                 static int channel, value;
                 value = 500;
                 channel = argc == 1 ? atoi(args[0]) : 0;
-                MySerial.printf_P(PSTR("+i2ct=17,82,ff,00,00,00,00,00,00,10\n"));
+                Serial.printf_P(PSTR("+i2ct=17,82,ff,00,00,00,00,00,00,10\n"));
                 Scheduler.removeTimer(timer);
                 Scheduler.addTimer(&timer, 4000, true, [&output](EventScheduler::TimerPtr timer) {
                     value += 50;
@@ -1041,7 +1041,7 @@ void at_mode_serial_handle_event(String &commandString)
                         timer->detach();
                     }
                     output.printf_P(PSTR("VALUE %u\n"), value);
-                    MySerial.printf_P(PSTR("+i2ct=17,82,%02x,%02x,%02x,00,00,00,00,10\n"), channel&0xff, lowByte(value)&0xff, highByte(value)&0xff);
+                    Serial.printf_P(PSTR("+i2ct=17,82,%02x,%02x,%02x,00,00,00,00,10\n"), channel&0xff, lowByte(value)&0xff, highByte(value)&0xff);
                 });
             }
 #endif
@@ -1366,7 +1366,7 @@ void at_mode_serial_handle_event(String &commandString)
                 }
             }
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPRTC))) {
-                RTCMemoryManager::dump(MySerial);
+                RTCMemoryManager::dump(Serial);
             }
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RTCCLR))) {
                 RTCMemoryManager::clear();
@@ -1451,7 +1451,7 @@ void at_mode_serial_input_handler(uint8_t type, const uint8_t *buffer, size_t le
 {
     static String line_buffer;
 
-    Stream *echoStream = (type == SerialHandler::RECEIVE) ? &SerialHandler::getInstance().getSerial() : nullptr;
+    Stream *echoStream = (type == SerialHandler::RECEIVE) ? &SerialHandler::getInstance() : nullptr;
     if (config._H_GET(Config().flags).atModeEnabled) {
         char *ptr = (char *)buffer;
         while(len--) {

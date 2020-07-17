@@ -11,12 +11,14 @@
 #include <Arduino.h>
 #include <functional>
 #include <vector>
+#include <Stream.h>
 #include <StreamWrapper.h>
+#include <NullStream.h>
 #include <Buffer.h>
 #include <EventScheduler.h>
+#include <HardwareSerial.h>
 
 class SerialWrapper : public Stream {
-
 public:
     SerialWrapper();
     SerialWrapper(Stream &serial);
@@ -26,7 +28,7 @@ public:
     inline void setSerial(Stream &serial) {
         _serial = serial;
     }
-    inline Stream &getSerial() const {
+    Stream &getSerial() const {
         return _serial;
     }
 
@@ -43,22 +45,15 @@ public:
     virtual int read() override;
     virtual int peek() override;
 
-    inline int __available() {
-        return _serial.available();
-    }
-    inline int __read() {
-        return _serial.read();
-    }
-    inline int __peek() {
-        return _serial.peek();
-    }
-
 private:
     Stream &_serial;
 };
 
+class SerialHandler;
 
-class SerialHandler {
+extern SerialHandler serialHandler;
+
+class SerialHandler : public Stream {
 public:
     typedef enum {
         RECEIVE     = 0x01,
@@ -96,13 +91,8 @@ public:
 
     typedef std::vector<Callback> HandlersVector;
 
-private:
-    SerialHandler(SerialWrapper &wrapper);
-    // virtual ~SerialHandler() {
-    //     end();
-    // }
-
 public:
+    SerialHandler(StreamWrapper &wrapper);
     void clear();
 
     void begin();
@@ -119,15 +109,33 @@ public:
     void writeToReceive(SerialDataType_t type, SerialHandlerCallback_t callback, const uint8_t *buffer, size_t len);
     void receivedFromRemote(SerialHandlerCallback_t callback, const uint8_t *buffer, size_t len);
 
-    inline Stream &getSerial() const {
-        return _wrapper.getSerial();
+    // Stream &getSerial() const {
+    //     return _wrapper.getSerial();
+    // }
+    // SerialWrapper &getWrapper() const {
+    //     return _wrapper;
+    // }
+    static constexpr SerialHandler &getInstance() {
+        return serialHandler;
     }
-    inline SerialWrapper &getWrapper() const {
-        return _wrapper;
+
+// Stream
+public:
+    virtual int available() override {
+        return 0;
     }
-    inline static SerialHandler &getInstance() {
-        return *SerialHandler::_instance;
+    virtual int read() override {
+        return -1;
     }
+    virtual int peek() override {
+        return -1;
+    }
+
+// Print
+public:
+    virtual size_t write(uint8_t) override;
+    virtual size_t write(const uint8_t *buffer, size_t size) override;
+    virtual void flush() override {}
 
 private:
     void _serialLoop();
@@ -135,31 +143,10 @@ private:
 
 private:
     HandlersVector _handlers;
-    SerialWrapper &_wrapper;
-    static SerialHandler *_instance;
+    StreamWrapper &_wrapper;
 };
 
-// class NulStream : public Stream {
-// public:
-//     NulStream() { }
-//     virtual int available() override { return 0; }
-//     virtual int read() override { return -1; }
-//     virtual int peek() override { return -1; }
-//     virtual size_t read(uint8_t *buffer, size_t length) { return 0; }
-//     size_t read(char *buffer, size_t length) { return 0; }
-//     virtual size_t write(uint8_t) override { return 0; }
-//     virtual size_t write(const uint8_t *buffer, size_t size) override { return 0; }
-//     bool seek(uint32_t pos, SeekMode mode) { return false; }
-// #if defined(ESP32)
-//     virtual void flush() { }
-// #else
-//     virtual void flush() override { }
-//     virtual size_t position() const { return 0; }
-//     virtual size_t size() const { return 0; }
-// #endif
-// };
-
-extern StreamWrapper MySerialWrapper;
-extern Stream &MySerial;
+extern NullStream NullSerial;
+extern HardwareSerial Serial0;
+extern Stream &Serial;
 extern Stream &DebugSerial;
-

@@ -65,21 +65,23 @@ void Serial2TcpBase::_setBaudRate(uint32_t baudrate)
             break;
         case Serial2TCP::SerialPortType::SERIAL0:
         default:
-            if (Serial.baudRate() != (int)baudrate) {
-                Serial.end();
-                Serial.begin(baudrate);
+            if (Serial0.baudRate() != (int)baudrate) {
+                Serial0.end();
+                Serial0.begin(baudrate);
                 DEBUGV("Serial baudrate=%u\n", baudrate);
             }
             break;
     }
 }
 
-Serial2TcpBase *Serial2TcpBase::createInstance(const Serial2TCP::Serial2Tcp_t &cfg)
+Serial2TcpBase *Serial2TcpBase::createInstance(const Serial2TCP::Serial2Tcp_t &cfg, const char *hostname)
 {
     destroyInstance();
 
-    if (!Serial2TCP::isEnabled()) {
-        return nullptr;
+    if (hostname == nullptr) {
+        if (!Serial2TCP::isEnabled()) {
+            return nullptr;
+        }
     }
 
     Stream *serialPort;
@@ -100,13 +102,14 @@ Serial2TcpBase *Serial2TcpBase::createInstance(const Serial2TCP::Serial2Tcp_t &c
             break;
         default:
         case Serial2TCP::SerialPortType::SERIAL0:
-            serialPort = &Serial;
-            if ((int)cfg.baudrate != Serial.baudRate()) {
-                Serial.end();
-                Serial.begin(cfg.baudrate);
+            serialPort = &Serial0;
+            if ((int)cfg.baudrate != Serial0.baudRate()) {
+                Serial0.end();
+                Serial0.begin(cfg.baudrate);
             }
             DEBUGV("Serial baud=%u\n", cfg.baudrate);
             SerialHandler::getInstance().addHandler(onSerialData, SerialHandler::ANY);
+            // SerialHandler::getInstance().addHandler(onSerialData, SerialHandler::ANY);
             break;
     }
 
@@ -115,8 +118,11 @@ Serial2TcpBase *Serial2TcpBase::createInstance(const Serial2TCP::Serial2Tcp_t &c
         DEBUGV("server mode port %u\n", cfg.port);
     }
     else  {
-        _instance = new Serial2TcpClient(*serialPort, Serial2TCP::getHostname(), cfg);
-        DEBUGV("client mode: %s:%u\n", Serial2TCP::getHostname(), cfg.port);
+        if (!hostname) {
+            hostname = Serial2TCP::getHostname();
+        }
+        _instance = new Serial2TcpClient(*serialPort, hostname, cfg);
+        DEBUGV("client mode: %s:%u\n", hostname, cfg.port);
     }
     if (cfg.authentication) {
         _instance->setAuthenticationParameters(Serial2TCP::getUsername(), Serial2TCP::getPassword());
@@ -166,7 +172,6 @@ void Serial2TcpBase::_processData(Serial2TcpConnection *conn, const char *data, 
     _getSerial().write(data, len);
     // Serial2TcpBase::_serialWrite(conn, data, len);
 #else
-    // TODO implement terminal handling
     auto client = conn->getClient();
     auto &buffer = conn->getNvtBuffer();
     auto ptr = data;
@@ -311,19 +316,14 @@ void Serial2TcpBase::_processData(Serial2TcpConnection *conn, const char *data, 
 
 size_t Serial2TcpBase::_serialWrite(Serial2TcpConnection *conn, const char *data, size_t len)
 {
-    SerialHandler::getInstance().writeToReceive(SerialHandler::RECEIVE, reinterpret_cast<const uint8_t *>(data), len);
-    return len;
-
-    auto written = _serial.write(data, len);
-    if (written < len) {
-        // TODO if writing to serial port fails, store data in "conn" tx buffer. conn might be nullptr
-    }
-    return written;
+    // SerialHandler::getInstance().writeToReceive(SerialHandler::RECEIVE, reinterpret_cast<const uint8_t *>(data), len);
+    // return len;
+    return _serial.write(data, len);
 }
 
 size_t Serial2TcpBase::_serialWrite(Serial2TcpConnection *conn, char data)
 {
-    return _serialWrite(conn, &data, sizeof(data));
+    return _serial.write(data);
 }
 
 size_t Serial2TcpBase::_serialPrintf_P(Serial2TcpConnection *conn, PGM_P format, ...)
@@ -355,8 +355,8 @@ void Serial2TcpBase::end()
     if (_config.serial_port == Serial2TCP::SerialPortType::SERIAL0) {
         // reset to default baudrate
         if (_config.baudrate != KFC_SERIAL_RATE) {
-            Serial.end();
-            Serial.begin(KFC_SERIAL_RATE);
+            Serial0.end();
+            Serial0.begin(KFC_SERIAL_RATE);
         }
     }
 }
@@ -377,14 +377,16 @@ void Serial2TcpBase::handleConnect(void *arg, AsyncClient *client)
 
 void Serial2TcpBase::handleData(void *arg, AsyncClient *client, void *data, size_t len)
 {
-#if 0
+#if 1
     DEBUGV("arg=%p client=%p len=%u\n", arg, client, len);
 #else
     PrintString str;
-    DumpBinary d(str);
-    d.setPerLine(128);
-    d.dump(data, std::min((size_t)128, len));
-    str.trim();
+    if (data && len) {
+        DumpBinary d(str);
+        d.setPerLine(128);
+        d.dump(data, std::min((size_t)128, len));
+        str.trim();
+    }
     DEBUGV("arg=%p client=%p len=%u data=%s\n", arg, client, len, str.c_str());
 #endif
     reinterpret_cast<Serial2TcpBase *>(arg)->_onData(client, data, len);

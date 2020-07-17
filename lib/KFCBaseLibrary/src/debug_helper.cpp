@@ -6,6 +6,7 @@
 
 #include <Arduino_compat.h>
 #include <PrintString.h>
+#include <StreamWrapper.h>
 #include "debug_helper.h"
 
 String DebugHelper::__file;
@@ -20,6 +21,23 @@ const char ___debugPrefix[] PROGMEM = "D%08lu (%s:%u<%d> %s): ";
 #else
 const char ___debugPrefix[] PROGMEM = "DBG: ";
 #endif
+
+size_t DebugHelperPrintValue::write(uint8_t ch)
+{
+    if (*this) {
+        return DEBUG_OUTPUT.write(ch);
+    }
+    return 0;
+}
+
+size_t DebugHelperPrintValue::write(const uint8_t* buffer, size_t size)
+ {
+    if (*this) {
+        return DEBUG_OUTPUT.write(buffer, size);
+    }
+    return 0;
+}
+
 
 // void DebugHelper::regPrint(FixedCircularBuffer<Positon_t,100>::iterator it) {
 //     while(it != __pos.end()) {

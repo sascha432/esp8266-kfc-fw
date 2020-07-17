@@ -15,16 +15,6 @@ public:
 
     virtual void printPrefix() = 0;
 
-    virtual size_t write(uint8_t ch) {
-        if (*this) {
-            return DEBUG_OUTPUT.write(ch);
-        }
-        return 0;
-    }
-    virtual size_t write(const uint8_t* buffer, size_t size) override {
-        if (*this) {
-            return DEBUG_OUTPUT.write(buffer, size);
-        }
-        return 0;
-    }
+    virtual size_t write(uint8_t ch) override;
+    virtual size_t write(const uint8_t* buffer, size_t size) override;
 };

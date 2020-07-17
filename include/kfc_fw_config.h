@@ -492,6 +492,7 @@ public:
     void enterDeepSleep(milliseconds time, RFMode mode, uint16_t delayAfterPrepare = 0);
 
 #endif
+    void wifiQuickConnect();
 
     void restartDevice(bool safeMode = false);
 

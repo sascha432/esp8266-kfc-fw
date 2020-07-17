@@ -262,9 +262,9 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(BCME, "BCME", "<channel=0/1>,<direction=0/
 void BlindsControlPlugin::_printTestInfo() {
 
 #if IOT_BLINDS_CTRL_RPM_PIN
-    MySerial.printf_P(PSTR("%umA %u peak %u rpm %u position %u\n"), ADC_TO_CURRENT(_adcIntegral), _adcIntegral, _peakCurrent, _getRpm(), _rpmCounter);
+    Serial.printf_P(PSTR("%umA %u peak %u rpm %u position %u\n"), ADC_TO_CURRENT(_adcIntegral), _adcIntegral, _peakCurrent, _getRpm(), _rpmCounter);
 #else
-    MySerial.printf_P(PSTR("%umA %u peak %u\n"), ADC_TO_CURRENT(_adcIntegral), _adcIntegral, _peakCurrent);
+    Serial.printf_P(PSTR("%umA %u peak %u\n"), ADC_TO_CURRENT(_adcIntegral), _adcIntegral, _peakCurrent);
 #endif
 }
 
@@ -279,7 +279,7 @@ void BlindsControlPlugin::_testLoopMethod()
                 _isTestMode = false;
                 _printTestInfo();
                 _stop();
-                MySerial.println(F("+BCME: Current limit"));
+                Serial.println(F("+BCME: Current limit"));
                 return;
             }
         }
@@ -291,7 +291,7 @@ void BlindsControlPlugin::_testLoopMethod()
             _isTestMode = false;
             _printTestInfo();
             _stop();
-            MySerial.println(F("+BCME: Stalled"));
+            Serial.println(F("+BCME: Stalled"));
             return;
         }
 #endif
@@ -299,7 +299,7 @@ void BlindsControlPlugin::_testLoopMethod()
             _isTestMode = false;
             _printTestInfo();
             _stop();
-            MySerial.println(F("+BCME: Timeout"));
+            Serial.println(F("+BCME: Timeout"));
         }
         else if (_printCurrentTimeout.reached(true)) {
             _printTestInfo();

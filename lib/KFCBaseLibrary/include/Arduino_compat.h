@@ -168,7 +168,6 @@ extern const String emptyString;
 #endif
 
 #include "FileOpenMode.h"
-
 #include "constexpr_tools.h"
 
 #define __CLASS_FROM__(name)             StringConstExpr::StringArray<DebugHelperConstExpr::get_class_name_len(name)>(DebugHelperConstExpr::get_class_name_start(name)).array
@@ -184,12 +183,12 @@ extern const String emptyString;
 #endif
 
 // support nullptr as zero start_length
-size_t constexpr constexpr_strlen(const char *str)
+static size_t constexpr constexpr_strlen(const char *str)
 {
     return StringConstExpr::strlen(str);
 }
 
-size_t constexpr constexpr_strlen_P(const char *str)
+static size_t constexpr constexpr_strlen_P(const char *str)
 {
     return StringConstExpr::strlen(str);
 }

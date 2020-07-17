@@ -884,9 +884,7 @@ void KFCFWConfiguration::write()
     }
 }
 
-#if ENABLE_DEEP_SLEEP
-
-void KFCFWConfiguration::wakeUpFromDeepSleep()
+void KFCFWConfiguration::wifiQuickConnect()
 {
     _debug_println();
 
@@ -948,6 +946,13 @@ void KFCFWConfiguration::wakeUpFromDeepSleep()
         Logger_error(F("Failed to load WiFi configuration"));
     }
 
+}
+
+#if ENABLE_DEEP_SLEEP
+
+void KFCFWConfiguration::wakeUpFromDeepSleep()
+{
+    wifiQuickConnect();
 }
 
 void KFCFWConfiguration::enterDeepSleep(milliseconds time, RFMode mode, uint16_t delayAfterPrepare)
@@ -1475,16 +1480,22 @@ void KFCConfigurationPlugin::setup(SetupModeType mode)
     }
 #endif
 
+    if (WiFi.isConnected()) {
+        debug_println(F("WiFi up, skipping init."));
+        BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::OFF);
+        return;
+    }
+
 #if ENABLE_DEEP_SLEEP
     if (!resetDetector.hasWakeUpDetected())
 #endif
     {
-        config.printInfo(MySerial);
+        config.printInfo(Serial);
 
         if (!config.connectWiFi()) {
-            MySerial.printf_P(PSTR("Configuring WiFi failed: %s\n"), config.getLastError());
+            Serial.printf_P(PSTR("Configuring WiFi failed: %s\n"), config.getLastError());
 #if DEBUG
-            config.dump(MySerial);
+            config.dump(Serial);
 #endif
         }
     }

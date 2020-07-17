@@ -434,17 +434,17 @@ void Mpr121Touchpad::Event::read(ReadBuffer::iterator &iterator)
             _coords[x + kMaxX * y]++;
             static unsigned long xtime = 0;
             if(millis() > xtime) {
-                MySerial.println("--------------------------------");
+                Serial.println("--------------------------------");
                 for(int j = 0; j < kMaxY + 3;j++) {
-                    MySerial.printf("% 2d: ", j);
+                    Serial.printf("% 2d: ", j);
                     for(int i = 0; i < kMaxX + 3; i++) {
-                        MySerial.printf("% 3d ", (int)_coords[j * kMaxX + i]);
+                        Serial.printf("% 3d ", (int)_coords[j * kMaxX + i]);
                     }
-                    MySerial.println();
+                    Serial.println();
                 }
-                MySerial.println("--------------------------------");
+                Serial.println("--------------------------------");
                 for(int i = 0; i <4;i++) {
-                    MySerial.printf("min/max %u: %d %d\n", i, ___min[i], ___max[i]);
+                    Serial.printf("min/max %u: %d %d\n", i, ___min[i], ___max[i]);
                 }
                 // for(auto &m: __map) {
                 //     str.printf("%s = %u\n", m.first.c_str(), m.second);

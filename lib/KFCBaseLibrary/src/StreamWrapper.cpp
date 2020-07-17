@@ -3,101 +3,109 @@
  */
 
 #include <algorithm>
+#include <NullStream.h>
 #include "StreamWrapper.h"
 
-StreamWrapper::StreamWrapper() {
-    setInput(nullptr);
+extern NullStream NullSerial;
+
+StreamWrapper::StreamWrapper(Stream *output, Stream *input) : _input(input)
+{
+    add(output);
 }
 
-StreamWrapper::StreamWrapper(Stream *output, Stream *input) {
+StreamWrapper::StreamWrapper(Stream *output, nullptr_t input) : _input(&NullSerial)
+{
+    add(output);
+}
+
+StreamWrapper::StreamWrapper(Stream *stream) : StreamWrapper(stream, stream)
+{
+}
+
+StreamWrapper::StreamWrapper() : StreamWrapper(&NullSerial)
+{
+}
+
+StreamWrapper::~StreamWrapper()
+{
+    clear();
+}
+
+void StreamWrapper::setInput(Stream *input)
+{
+    _input = input;
+}
+
+void StreamWrapper::setInput(nullptr_t input)
+{
+    _input = &NullSerial;
+}
+
+Stream *StreamWrapper::getInput()
+{
+    return _input;
+}
+
+void StreamWrapper::add(Stream *output)
+{
+    _streams.push_back(output);
+}
+
+void StreamWrapper::remove(Stream *output)
+{
+    _streams.erase(std::remove(_streams.begin(), _streams.end(), output), _streams.end());
+    if (_streams.empty() || _input == output) {
+        setInput(&NullSerial);
+    }
+}
+
+void StreamWrapper::clear()
+{
+    _streams.clear();
+    setInput(&NullSerial);
+}
+
+void StreamWrapper::replace(Stream *output, Stream *input)
+{
+    _streams.clear();
     add(output);
     setInput(input);
 }
 
-StreamWrapper::~StreamWrapper() {
-    clear();
+int StreamWrapper::available()
+{
+    return _input->available();
 }
 
-void StreamWrapper::setInput(Stream *input) {
-    _input = input;
+int StreamWrapper::read()
+{
+    return _input->read();
 }
 
-Stream *StreamWrapper::getInput() {
-    return _input;
+int StreamWrapper::peek()
+{
+    return _input->peek();
 }
 
-void StreamWrapper::add(Stream *output) {
-    _children.push_back(output);
+size_t StreamWrapper::readBytes(char *buffer, size_t length)
+{
+    return _input->readBytes(buffer, length);
 }
 
-void StreamWrapper::remove(Stream *output) {
-    _children.erase(std::remove(_children.begin(), _children.end(), output), _children.end());
-}
-
-void StreamWrapper::clear() {
-    _children.clear();
-}
-
-void StreamWrapper::replace(Stream *output, bool input) {
-    clear();
-    add(output);
-    if (input) {
-        setInput(output);
+size_t StreamWrapper::write(uint8_t data)
+{
+    size_t maxWritten = 0;
+    for(const auto stream: _streams) {
+        maxWritten = std::max(maxWritten, stream->write(data));
     }
+    return maxWritten;
 }
 
-Stream *StreamWrapper::first() {
-    if (_children.size()) {
-        return _children.front();
+size_t StreamWrapper::write(const uint8_t *buffer, size_t size)
+{
+    size_t maxWritten = 0;
+    for(const auto stream: _streams) {
+        maxWritten = std::max(maxWritten, stream->write(buffer, size));
     }
-    return nullptr;
-}
-
-Stream *StreamWrapper::last() {
-    if (_children.size()) {
-        return _children.back();
-    }
-    return nullptr;
-}
-
-size_t StreamWrapper::count() const {
-    return _children.size();
-}
-
-StreamWrapper::StreamWrapperVector &StreamWrapper::getChildren() {
-    return _children;
-}
-
-int StreamWrapper::available() {
-    return _input ? _input->available() : false;
-}
-
-int StreamWrapper::read() {
-    return _input ? _input->read() : -1;
-}
-
-int StreamWrapper::peek() {
-    return _input ? _input->peek() : -1;
-}
-
-size_t StreamWrapper::readBytes(char *buffer, size_t length) {
-    return _input ? _input->readBytes(buffer, length) : 0;
-}
-
-size_t StreamWrapper::write(uint8_t data) {
-    // Serial.printf_P(PSTR("StreamWrapper::write(%u)\n"), data);
-    size_t res = 0;
-    for(auto child: _children) {
-        res = child->write(data);
-    }
-    return res;
-}
-
-size_t StreamWrapper::write(const uint8_t *buffer, size_t size) {
-    // Serial.printf_P(PSTR("StreamWrapper::write(%p, %d)\n"), buffer, size);
-    size_t res = 0;
-    for(auto child: _children) {
-        res = child->write(buffer, size);
-    }
-    return res;
+    return maxWritten;
 }

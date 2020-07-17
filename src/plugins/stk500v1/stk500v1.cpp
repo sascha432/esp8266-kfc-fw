@@ -89,8 +89,8 @@ bool STK500v1Plugin::atModeHandler(AtModeArgs &args) {
                         break;
                     case 0:
                     default:
-                        Serial.setRxBufferSize(512);
-                        serialPort = &Serial;
+                        Serial0.setRxBufferSize(512);
+                        serialPort = &Serial0;
                         portName = PSTR("Serial");
                         break;
                 }

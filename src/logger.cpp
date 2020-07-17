@@ -289,7 +289,7 @@ void Logger::writeLog(LogLevel logLevel, const char *message, va_list arg)
 #if DEBUG
         debug_printf_P(PSTR("%s [%s] %s\n"), temp2, logLevelStr.c_str(), buffer);
 #else
-        MySerial.printf_P(PSTR("+LOGGER: %s [%s] %s\n"), temp2, logLevelStr.c_str(), buffer);
+        Serial.printf_P(PSTR("+LOGGER: %s [%s] %s\n"), temp2, logLevelStr.c_str(), buffer);
 #endif
     }
 #endif

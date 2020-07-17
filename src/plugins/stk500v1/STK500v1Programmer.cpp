@@ -766,7 +766,7 @@ void STK500v1Programmer::_logPrintf_P(PGM_P format, ...)
             Logger_notice(str);
         }
         else if (_logging == LOG_SERIAL) {
-            MySerial.println(str);
+            Serial.println(str);
         }
         else if (_logging == LOG_SERIAL2HTTP) {
             str += '\n';

@@ -206,6 +206,6 @@ void Serial2TcpServer::_onEnd()
 // #if DEBUG
 //         DEBUG_HELPER_INIT();
 // #endif
-//         enable_at_mode(MySerial);
+//         enable_at_mode(Serial);
 //     }
 }

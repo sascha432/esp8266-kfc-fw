@@ -5,7 +5,6 @@
 #pragma once
 
 #include <Arduino_compat.h>
-#include <HardwareSerial.h>
 #include <PrintString.h>
 #include <PrintHtmlEntitiesString.h>
 #include <WebUIComponent.h>

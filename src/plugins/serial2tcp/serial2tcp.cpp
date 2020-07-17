@@ -25,6 +25,9 @@ Serial2TcpPlugin::Serial2TcpPlugin()
 
 void Serial2TcpPlugin::setup(SetupModeType mode)
 {
+    if (Serial2TcpBase::getInstance()) {
+        return;
+    }
     auto instance = Serial2TcpBase::createInstance(Serial2TCP::getConfig());
     if (instance) {
         instance->begin();

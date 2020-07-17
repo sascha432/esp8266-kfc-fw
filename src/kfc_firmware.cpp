@@ -9,6 +9,7 @@
 #include <LoopFunctions.h>
 #include <EventTimer.h>
 #include <WiFiCallbacks.h>
+#include <StreamWrapper.h>
 #include <PrintString.h>
 #include <ListDir.h>
 #include "kfc_fw_config.h"
@@ -30,6 +31,18 @@ extern "C" void gdbstub_do_break();
 #include <debug_helper_enable.h>
 #else
 #include <debug_helper_disable.h>
+#endif
+
+// connect to wifi and serial2tcp before booting to see all debug output
+#ifndef DEBUG_PRE_INIT_SERIAL2TCP
+#define DEBUG_PRE_INIT_SERIAL2TCP       1
+#endif
+
+#if DEBUG_PRE_INIT_SERIAL2TCP
+#include "../src/plugins/serial2tcp/serial2tcp.h"
+#include "../src/plugins/serial2tcp/Serial2TcpBase.h"
+#include "../src/plugins/serial2tcp/Serial2TcpClient.h"
+#include "PluginComponent.h"
 #endif
 
 #if SPIFFS_TMP_FILES_TTL
@@ -71,28 +84,28 @@ void check_flash_size()
     FlashMode_t ideMode = ESP.getFlashChipMode();
 
 #if defined(ESP32)
-    MySerial.printf_P(PSTR("Flash chip rev.: %08X\n"), ESP.getChipRevision());
+    Serial.printf_P(PSTR("Flash chip rev.: %08X\n"), ESP.getChipRevision());
 #endif
 #if defined(ESP8266)
-    MySerial.printf_P(PSTR("Flash real id:   %08X\n"), ESP.getFlashChipId());
-    MySerial.printf_P(PSTR("Flash real size: %u\n"), realSize);
+    Serial.printf_P(PSTR("Flash real id:   %08X\n"), ESP.getFlashChipId());
+    Serial.printf_P(PSTR("Flash real size: %u\n"), realSize);
 #endif
-    MySerial.printf_P(PSTR("Flash ide  size: %u\n"), ideSize);
-    MySerial.printf_P(PSTR("Flash ide speed: %u\n"), ESP.getFlashChipSpeed());
-    MySerial.printf_P(PSTR("Flash ide mode:  %s\n"), (ideMode == FM_QIO ? PSTR("QIO") : ideMode == FM_QOUT ? PSTR("QOUT") : ideMode == FM_DIO ? PSTR("DIO") : ideMode == FM_DOUT ? PSTR("DOUT") : PSTR("UNKNOWN")));
+    Serial.printf_P(PSTR("Flash ide  size: %u\n"), ideSize);
+    Serial.printf_P(PSTR("Flash ide speed: %u\n"), ESP.getFlashChipSpeed());
+    Serial.printf_P(PSTR("Flash ide mode:  %s\n"), (ideMode == FM_QIO ? PSTR("QIO") : ideMode == FM_QOUT ? PSTR("QOUT") : ideMode == FM_DIO ? PSTR("DIO") : ideMode == FM_DOUT ? PSTR("DOUT") : PSTR("UNKNOWN")));
 
 #if defined(ESP8266)
     if (ideSize != realSize) {
-        MySerial.printf_P(PSTR("Flash Chip configuration wrong!\n\n"));
+        Serial.printf_P(PSTR("Flash Chip configuration wrong!\n\n"));
     } else {
-        MySerial.printf_P(PSTR("Flash Chip configuration ok.\n\n"));
+        Serial.printf_P(PSTR("Flash Chip configuration ok.\n\n"));
     }
 #endif
 }
 
 void setup()
 {
-    Serial.begin(KFC_SERIAL_RATE);
+    Serial0.begin(KFC_SERIAL_RATE);
     DEBUG_HELPER_INIT();
 
 #if DEBUG_RESET_DETECTOR
@@ -109,7 +122,27 @@ void setup()
         delay(5000);    // delay boot if too many resets are detected
         resetDetector.armTimer();
     }
-    Serial.println(F("Booting KFC firmware..."));
+
+#if DEBUG_PRE_INIT_SERIAL2TCP
+    #include "../include/retracted/custom_wifi.h"
+    WiFi.setAutoConnect(true);
+    WiFi.setAutoReconnect(true);
+    WiFi.enableSTA(true);
+    Serial.printf_P(PSTR("WiFi.begin=%u\n"), WiFi.begin(CUSTOM_WIFI_SSID, CUSTOM_WIFI_PASSWORD));
+    Serial.printf_P(PSTR("WiFi.reconnect=%u\n"), WiFi.reconnect());
+    Serial.printf_P(PSTR("WiFi.waitForConnectResult=%u\n"), WiFi.waitForConnectResult());
+    Serial.printf_P(PSTR("WiFi.connected=%u\n"), WiFi.isConnected());
+    if (WiFi.isConnected()) {
+        using Serial2TCP = KFCConfigurationClasses::Plugins::Serial2TCP;
+        Serial2TCP::Serial2Tcp_t cfg = CUSTOM_SERIAL2TCP_CFG;
+        auto instance = Serial2TcpBase::createInstance(cfg, CUSTOM_SERIAL2TCP_SERVER);
+        instance->begin();
+        delay(1000);
+    }
+#endif
+
+
+    KFC_SAFE_MODE_SERIAL_PORT.println(F("Booting KFC firmware..."));
 
 #if ENABLE_DEEP_SLEEP
     if (resetDetector.hasWakeUpDetected()) {
@@ -117,7 +150,7 @@ void setup()
         resetDetector.clearCounter();
     }
 #endif
-    Serial.printf_P(PSTR("SAFE MODE %d, reset counter %d, wake up %d\n"), resetDetector.getSafeMode(), resetDetector.getResetCounter(), resetDetector.hasWakeUpDetected());
+    KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("SAFE MODE %d, reset counter %d, wake up %d\n"), resetDetector.getSafeMode(), resetDetector.getResetCounter(), resetDetector.hasWakeUpDetected());
     config.setSafeMode(resetDetector.getSafeMode());
 
     if (resetDetector.hasResetDetected()) {
@@ -243,9 +276,13 @@ void setup()
     if (safe_mode) {
 
         config.setSafeMode(true);
+        extern StreamWrapper streamWrapperSerial;
         WebUIAlerts_add(F("Running in Safe Mode"), AlertMessage::TypeEnum_t::DANGER, AlertMessage::ExpiresEnum_t::REBOOT);
-        MySerialWrapper.replace(&KFC_SAFE_MODE_SERIAL_PORT, true);
-        DebugSerial = MySerialWrapper;
+        streamWrapperSerial.replace(&KFC_SAFE_MODE_SERIAL_PORT);
+#if !DEBUG
+        extern SerialWrapper debugWrapper;
+        debugWrapper.setSerial(streamWrapperSerial);
+#endif
 
         #if AT_MODE_SUPPORTED
             at_mode_setup();

@@ -37,7 +37,7 @@ Http2Serial::Http2Serial() : _outputBufferMaxSize(SERIAL_BUFFER_MAX_LEN), _outpu
 #endif
     _serialHandler = &SerialHandler::getInstance();
 #if AT_MODE_SUPPORTED && HTTP2SERIAL_DISABLE_AT_MODE
-    disable_at_mode(MySerial);
+    disable_at_mode(Serial);
 #endif
     resetOutputBufferTimer();
     _outputBufferEnabled = true;
@@ -56,7 +56,7 @@ Http2Serial::~Http2Serial()
     Serial.begin(KFC_SERIAL_RATE);
 #endif
 #if AT_MODE_SUPPORTED && HTTP2SERIAL_DISABLE_AT_MODE
-    enable_at_mode(MySerial);
+    enable_at_mode(Serial);
 #endif
 }
 
@@ -270,8 +270,8 @@ bool Http2SerialPlugin::atModeHandler(AtModeArgs &args)
         if (args.requireArgs(1, 1)) {
             uint32_t rate = args.toIntMinMax(0, 300, 2500000, KFC_SERIAL_RATE);
             if (rate) {
-                Serial.flush();
-                Serial.begin(rate);
+                Serial0.end();
+                Serial0.begin(rate);
                 args.printf_P(PSTR("Set serial rate to %d"), (unsigned)rate);
             }
         }

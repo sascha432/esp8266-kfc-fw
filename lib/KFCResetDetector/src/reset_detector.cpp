@@ -14,25 +14,23 @@
 
 ResetDetector resetDetector;
 
-extern Stream &MySerial;
-extern Stream &DebugSerial;
-
-
-ResetDetector::ResetDetector() : _timer() {
+ResetDetector::ResetDetector() : _timer()
+{
 #if !DEBUG_RESET_DETECTOR
     // for debugging call _init() in setup() after Serial.begin() and DEBUG_HELPER_INIT()
     _init();
 #endif
 }
 
-void ResetDetector::_init() {
+void ResetDetector::_init()
+{
 #if DEBUG_RESET_DETECTOR
     Serial.begin(KFC_SERIAL_RATE);
     Serial.println(F("ResetDetector::_init()"));
 #endif
     _debug_println(F("ResetDetector::_init()"));
 
-    ResetDetectorData_t data;
+    ResetDetectorData_t data = {};
     auto isValid = false;
 
 #if HAVE_KFC_PLUGINS
@@ -43,7 +41,6 @@ void ResetDetector::_init() {
 
 #else
     uint16_t crc = ~0;
-    memset(&data, 0, sizeof(data));
 
     if (ESP.rtcUserMemoryRead(RESET_DETECTOR_RTC_MEM_ADDRESS, (uint32_t *)&data, sizeof(data))) {
         if (data.magic_word == RESET_DETECTOR_MAGIC_WORD) {
@@ -137,7 +134,8 @@ bool ResetDetector::hasCrashDetected() const {
 #endif
 }
 
-bool ResetDetector::hasResetDetected() const {
+bool ResetDetector::hasResetDetected() const
+{
 #if defined(ESP32)
     return (_resetReason == ESP_RST_UNKNOWN || _resetReason == ESP_RST_EXT || _resetReason == ESP_RST_BROWNOUT || _resetReason == ESP_RST_SDIO);
 #elif defined(ESP8266)
@@ -145,7 +143,8 @@ bool ResetDetector::hasResetDetected() const {
 #endif
 }
 
-bool ResetDetector::hasRebootDetected()  const {
+bool ResetDetector::hasRebootDetected() const
+{
 #if defined(ESP32)
     return (_resetReason == ESP_RST_SW);
 #elif defined(ESP8266)
@@ -153,7 +152,8 @@ bool ResetDetector::hasRebootDetected()  const {
 #endif
 }
 
-bool ResetDetector::hasWakeUpDetected() const {
+bool ResetDetector::hasWakeUpDetected() const
+{
 #if defined(ESP32)
     return (_resetReason == ESP_RST_DEEPSLEEP);
 #elif defined(ESP8266)
@@ -161,7 +161,8 @@ bool ResetDetector::hasWakeUpDetected() const {
 #endif
 }
 
-const String ResetDetector::getResetReason() const {
+const String ResetDetector::getResetReason() const
+{
 #if USE_ESP_GET_RESET_REASON
     return ESP.getResetReason();
 #elif defined(ESP32)
@@ -209,7 +210,8 @@ const String ResetDetector::getResetReason() const {
 #endif
 }
 
-const String ResetDetector::getResetInfo() const {
+const String ResetDetector::getResetInfo() const
+{
 #if defined(ESP32)
     return getResetReason();
 #else
@@ -217,34 +219,38 @@ const String ResetDetector::getResetInfo() const {
 #endif
 }
 
-uint8_t ResetDetector::getResetCounter() const {
+uint8_t ResetDetector::getResetCounter() const
+{
     return _resetCounter;
 }
 
-uint8_t ResetDetector::getInitialResetCounter() const {
+uint8_t ResetDetector::getInitialResetCounter() const
+{
     return _initialResetCounter;
 }
 
-uint8_t ResetDetector::getSafeMode() const {
+uint8_t ResetDetector::getSafeMode() const
+{
     return _safeMode;
 }
 
-void ResetDetector::setSafeMode(uint8_t safeMode) {
+void ResetDetector::setSafeMode(uint8_t safeMode)
+{
     _safeMode = safeMode;
     _writeData();
 }
 
 #if DEBUG
-void ResetDetector::__setResetCounter(uint8_t counter) {
+void ResetDetector::__setResetCounter(uint8_t counter)
+{
     _initialResetCounter = _resetCounter = counter;
     _writeData();
 }
 #endif
 
-void ResetDetector::_writeData() {
-
-    ResetDetectorData_t data;
-    memset((uint8_t *)&data, 0, sizeof(data));
+void ResetDetector::_writeData()
+{
+    ResetDetectorData_t data = {};
 
     data.reset_counter = _resetCounter;
     data.safe_mode = _safeMode;

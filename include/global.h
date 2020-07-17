@@ -196,9 +196,6 @@
 #define KFC_SERIAL_PORT Serial
 #endif
 
-extern class Stream &MySerial;
-extern class Stream &DebugSerial;
-
 #ifndef HTTP2SERIAL_DISABLE_AT_MODE
 #define HTTP2SERIAL_DISABLE_AT_MODE     0
 #endif
@@ -404,3 +401,10 @@ extern class Stream &DebugSerial;
 #ifndef STK500V1
 #define STK500V1 0
 #endif
+
+class Stream;
+class HardwareSerial;
+
+extern Stream &Serial;
+extern Stream &DebugSerial;
+extern HardwareSerial Serial0;

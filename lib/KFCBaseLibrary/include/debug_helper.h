@@ -6,6 +6,7 @@
 
 #include <Arduino_compat.h>
 #include <Print.h>
+#include <StreamWrapper.h>
 #include <vector>
 #include "constexpr_tools.h"
 

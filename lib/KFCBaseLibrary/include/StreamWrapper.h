@@ -20,22 +20,33 @@ public:
     typedef std::vector<Stream *> StreamWrapperVector;
 
     StreamWrapper();
-    StreamWrapper(Stream *output, Stream *input = nullptr);
+    StreamWrapper(Stream *output, Stream *input);
+    StreamWrapper(Stream *output, nullptr_t input);
+    StreamWrapper(Stream *stream);
     ~StreamWrapper();
 
     // set stream used as input
-    void setInput(Stream *input = nullptr);
+    void setInput(Stream *input);
+    void setInput(nullptr_t input = nullptr);
     Stream *getInput();
 
     // manage output streams
     void add(Stream *output);
     void remove(Stream *output);
     void clear();
-    void replace(Stream *output, bool input = false); // replace all
-    Stream *first();
-    Stream *last();
-    size_t count() const;
-    StreamWrapperVector &getChildren();
+    void replace(Stream *output, Stream *input);
+    void replace(Stream *stream) {
+        replace(stream, stream);
+    }
+    size_t size() const {
+        return _streams.size();
+    }
+    size_t empty() const {
+        return _streams.empty();
+    }
+    StreamWrapperVector &getStreams() {
+        return _streams;
+    }
 
     virtual int available();
     virtual int read();
@@ -48,6 +59,6 @@ public:
     virtual void flush() {}
 
 private:
-    StreamWrapperVector _children;
+    StreamWrapperVector _streams;
     Stream *_input;
 };

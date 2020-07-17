@@ -7,6 +7,7 @@
 - MQTT metrics: uptime, heap
 - Added Alarm plugin to Clock and Weather Station
 - KFC OTA copies firmware.elf and stores the hash in the device configuration
+- Rewritten StreamWrapper (Serial, DebugSerial, SerialHandler etc...)
 
 ## Version 0.0.3
 

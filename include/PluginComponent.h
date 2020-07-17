@@ -29,8 +29,8 @@ public:
 
     enum class PriorityType : int8_t {
         RESET_DETECTOR = -127,
-        CONFIG = -126,
-        SERIAL2TCP = -125,
+        CONFIG = -120,
+        SERIAL2TCP = -115,
         BUTTONS = -100,
         MDNS = -90,
         SYSLOG = -80,

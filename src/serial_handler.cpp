@@ -15,23 +15,27 @@
 #include <debug_helper_disable.h>
 #endif
 
-#if !SERIAL_HANDLER
+NullStream NullSerial;
+HardwareSerial Serial0(UART0);
+// stream wrapper allows to intercept send and receive on Serial
+StreamWrapper streamWrapperSerial(&Serial0);
+Stream &Serial = streamWrapperSerial;
 
-StreamWrapper MySerialWrapper(&KFC_SERIAL_PORT, &KFC_SERIAL_PORT);
-
-Stream &MySerial = KFC_SERIAL_PORT;
-Stream &DebugSerial = KFC_SERIAL_PORT;
-
+#if DEBUG
+Stream &DebugSerial = streamWrapperSerial;
 #else
+// we cannot change references
+// using SerialWrapper allows to change to streamWrapperSerial later
+SerialWrapper debugWrapper(NullSerial);
+Stream &DebugSerial = debugWrapper;
+#endif
 
-static SerialWrapper _MySerial(KFC_SERIAL_PORT);
-StreamWrapper MySerialWrapper(&_MySerial, &_MySerial);
-SerialHandler *SerialHandler::_instance = new SerialHandler(_MySerial);
-Stream &MySerial = _MySerial;
-Stream &DebugSerial = _MySerial;
+#if SERIAL_HANDLER
 
+//SerialWrapper serialWrapper();
+SerialHandler serialHandler(streamWrapperSerial);
 
-SerialHandler::SerialHandler(SerialWrapper &wrapper) : _wrapper(wrapper)
+SerialHandler::SerialHandler(StreamWrapper &wrapper) : _wrapper(wrapper)
 {
     begin();
 }
@@ -43,19 +47,20 @@ void SerialHandler::clear()
 
 void SerialHandler::begin()
 {
-    _debug_println(F("SerialHandler::begin()"));
+    _debug_println();
     LoopFunctions::add(SerialHandler::serialLoop);
+    _wrapper.add(this);
 }
 
 void SerialHandler::end()
 {
-    _debug_println(F("SerialHandler::end()"));
+    _debug_println();
+    _wrapper.remove(this);
     LoopFunctions::remove(SerialHandler::serialLoop);
 }
 
 void SerialHandler::addHandler(SerialHandlerCallback_t callback, uint8_t flags)
 {
-
     _debug_printf_P(PSTR("SerialHandler::addHandler(%p, rx %d tx %d remoterx %d localtx %d buffered %d)\n"), callback, (flags & RECEIVE ? 1 : 0), (flags & TRANSMIT ? 1 : 0), (flags & REMOTE_RX ? 1 : 0), (flags & LOCAL_TX ? 1 : 0), 0);
     _handlers.emplace_back(callback, flags);
 }
@@ -64,29 +69,36 @@ void SerialHandler::removeHandler(SerialHandlerCallback_t callback)
 {
     _debug_printf_P(PSTR("SerialHandler::removeHandler(%p)\n"), callback);
     _handlers.erase(std::remove(_handlers.begin(), _handlers.end(), callback), _handlers.end());
-    // _handlers.erase(std::remove_if(_handlers.begin(), _handlers.end(), [&callback](const Callback &handlers) {
-    //     if (handlers.getCallback() == callback) {
-    //         return true;
-    //     }
-    //     return false;
-    // }), _handlers.end());
 }
 
 void SerialHandler::serialLoop()
 {
-    _instance->_serialLoop();
+    serialHandler._serialLoop();
+}
+
+size_t SerialHandler::write(uint8_t data)
+{
+    writeToTransmit(TRANSMIT, nullptr, &data, sizeof(data));
+    return sizeof(data);
+}
+
+size_t SerialHandler::write(const uint8_t *buffer, size_t size)
+{
+    writeToTransmit(TRANSMIT, nullptr, buffer, size);
+    return size;
 }
 
 void SerialHandler::_serialLoop()
 {
-    while(_wrapper.available()) {
-        uint8_t buf[128];
-        uint8_t *ptr = buf;
-        uint8_t len;
-        for(len = 0; len < sizeof(buf) && _wrapper.__available(); len++) {
-            *ptr++ = _wrapper.__read();
+    auto &serial = *_wrapper.getInput();
+    uint8_t buf[256];
+    int avail;
+
+    while((avail = serial.available()) > 0) {
+        if (avail >= (int)sizeof(buf)) {
+            avail = sizeof(buf) - 1;
         }
-        // os_printf("SerialHandler::_serialLoop(): len=%d\n", len);
+        int len = serial.readBytes(buf, avail);
         writeToReceive(RECEIVE, buf, len);
     }
 }
@@ -143,12 +155,12 @@ void SerialHandler::writeToReceive(SerialDataType_t type, SerialHandlerCallback_
     locked = false;
 }
 
-void SerialHandler::receivedFromRemote(SerialHandlerCallback_t callback, const uint8_t *buffer, size_t len) {
+void SerialHandler::receivedFromRemote(SerialHandlerCallback_t callback, const uint8_t *buffer, size_t len)
+{
     // _debug_printf_P(PSTR("SerialHandler::receivedFromRemote(%p, %d)\n"), callback, len);
-    _wrapper.getSerial().write(buffer, len);
+    _wrapper.write(buffer, len);
     writeToReceive(REMOTE_RX, callback, buffer, len);
 }
-
 
 
 SerialWrapper::SerialWrapper(Stream &serial) : _serial(serial)
@@ -175,7 +187,7 @@ size_t SerialWrapper::write(const uint8_t *data, size_t len)
 
 size_t SerialWrapper::write(const char *buffer)
 {
-    return write((const uint8_t *)buffer, strlen(buffer));
+    return write(reinterpret_cast<const uint8_t *>(buffer), strlen(buffer));
 }
 
 void SerialWrapper::flush()

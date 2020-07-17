@@ -130,7 +130,7 @@ private:
     String _password;
 
 public:
-    static Serial2TcpBase *createInstance(const Serial2TCP::Serial2Tcp_t &cfg);
+    static Serial2TcpBase *createInstance(const Serial2TCP::Serial2Tcp_t &cfg, const char *hostname = nullptr);
     static void destroyInstance();
 
     static Serial2TcpBase *getInstance() {

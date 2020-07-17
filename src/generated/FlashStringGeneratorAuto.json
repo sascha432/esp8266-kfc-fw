@@ -1076,11 +1076,11 @@
         "default": "/.pvt/hlw80xx.state"
     },
     "seconds": {
-        "use_counter": 9,
+        "use_counter": 7,
         "default": "seconds"
     },
     "milliseconds": {
-        "use_counter": 6,
+        "use_counter": 2,
         "default": "milliseconds"
     },
     "__s_": {

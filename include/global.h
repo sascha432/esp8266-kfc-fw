@@ -303,7 +303,7 @@ extern class Stream &DebugSerial;
 #endif
 
 #ifndef SERIAL_HANDLER
-#if SERIAL2TCP || HTTP2SERIAL_SUPPORT || AT_MODE_SUPPORTED
+#if SERIAL2TCP_SUPPORT || HTTP2SERIAL_SUPPORT || AT_MODE_SUPPORTED
 #define SERIAL_HANDLER                  1
 #else
 #define SERIAL_HANDLER                  0
@@ -397,8 +397,8 @@ extern class Stream &DebugSerial;
 #define IOT_SENSOR_HAVE_SYSTEM_METRICS 1
 #endif
 
-#ifndef SERIAL2TCP
-#define SERIAL2TCP 0
+#ifndef SERIAL2TCP_SUPPORT
+#define SERIAL2TCP_SUPPORT 0
 #endif
 
 #ifndef STK500V1

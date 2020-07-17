@@ -84,7 +84,7 @@
                 "./Resources/html/hass_edit.html",
                 "./Resources/html/hass_actions.html"
             ],
-            "#if !SERIAL2TCP": [
+            "#if !SERIAL2TCP_SUPPORT": [
                 "./Resources/html/serial2tcp.html",
                 "./Resources/js/forms/serial2tcp.js"
             ],

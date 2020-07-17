@@ -472,6 +472,7 @@ namespace KFCConfigurationClasses {
             static const char *getQueryString();
             static WeatherStationConfig &getWriteableConfig();
             static WeatherStationConfig getConfig();
+            void setConfig(const WeatherStationConfig &params);
 
             char openweather_api_key[65];
             char openweather_api_query[65];
@@ -583,12 +584,59 @@ namespace KFCConfigurationClasses {
             Alarm_t cfg;
         };
 
+        class Serial2TCP {
+        public:
+            enum class ModeType : uint8_t {
+                NONE,
+                SERVER,
+                CLIENT
+            };
+            enum class SerialPortType : uint8_t {
+                SERIAL0,
+                SERIAL1,
+                SOFTWARE
+            };
+
+            typedef struct __attribute__packed__ {
+                uint16_t port;
+                uint32_t baudrate;
+                ModeType mode;
+                SerialPortType serial_port;
+                uint8_t rx_pin;
+                uint8_t tx_pin;
+                bool authentication;
+                bool auto_connect;
+                uint8_t keep_alive;
+                uint8_t auto_reconnect;
+                uint16_t idle_timeout;
+            } Serial2Tcp_t;
+
+        public:
+            static void defaults();
+            static bool isEnabled();
+            static Serial2Tcp_t getConfig();
+            static void setConfig(const Serial2Tcp_t &params);
+            static Serial2Tcp_t &getWriteableConfig();
+            static const char *getHostname();
+            static const char *getUsername();
+            static const char *getPassword();
+            static void setHostname(const char *hostname);
+            static void setUsername(const char *username);
+            static void setPassword(const char *password);
+
+            Serial2Tcp_t cfg;
+            char hostname[65];
+            char username[33];
+            char password[33];
+        };
+
 
         HomeAssistant homeassistant;
         RemoteControl remotecontrol;
         IOTSwitch iotswitch;
         WeatherStation weatherstation;
         Alarm alarm;
+        Serial2TCP serial2tcp;
 
     };
 

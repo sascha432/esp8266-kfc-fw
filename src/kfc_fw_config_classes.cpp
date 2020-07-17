@@ -42,11 +42,9 @@ namespace KFCConfigurationClasses {
 
         _flags.useStaticIPDuringWakeUp = true;
 
-        _flags.serial2TCPMode = SERIAL2TCP_MODE_DISABLED;
+        _flags.serial2TCPEnabled = true;
 
         _flags.syslogProtocol = SYSLOG_PROTOCOL_TCP;
-
-        _flags.serial2TCPMode = SERIAL2TCP_MODE_DISABLED;
 
         _flags.apStandByMode = true;
 

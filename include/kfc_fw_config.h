@@ -73,42 +73,29 @@ enum MQTTMode_t : uint8_t {
     MQTT_MODE_SECURE,
 };
 
-enum Serial2Tcp_Mode_t : uint8_t {
-    SERIAL2TCP_MODE_DISABLED = 0,
-    SERIAL2TCP_MODE_SECURE_SERVER,
-    SERIAL2TCP_MODE_UNSECURE_SERVER,
-    SERIAL2TCP_MODE_SECURE_CLIENT,
-    SERIAL2TCP_MODE_UNSECURE_CLIENT,
-};
-
-enum Serial2Tcp_SerialPort_t : uint8_t {
-    SERIAL2TCP_HARDWARE_SERIAL = 0,
-    SERIAL2TCP_HARDWARE_SERIAL1,
-    SERIAL2TCP_SOFTWARE_CUSTOM,
-};
-
 #define CONFIG_RTC_MEM_ID 2
 
 typedef uint32_t ConfigFlags_t;
 
 struct ConfigFlags {
-    ConfigFlags_t isFactorySettings:1;
-    ConfigFlags_t isDefaultPassword:1; //TODO disable password after 5min if it has not been changed
-    ConfigFlags_t ledMode:1;
-    ConfigFlags_t wifiMode:2;
-    ConfigFlags_t atModeEnabled:1;
-    ConfigFlags_t hiddenSSID:1;
-    ConfigFlags_t softAPDHCPDEnabled:1;
-    ConfigFlags_t stationModeDHCPEnabled:1;
-    ConfigFlags_t webServerMode:2;
-    ConfigFlags_t ntpClientEnabled:1;
-    ConfigFlags_t syslogProtocol:3;
-    ConfigFlags_t mqttMode:2;
-    ConfigFlags_t mqttAutoDiscoveryEnabled:1;
-    ConfigFlags_t restApiEnabled:1;
-    ConfigFlags_t serial2TCPMode:3;
-    ConfigFlags_t useStaticIPDuringWakeUp:1;
-    ConfigFlags_t webServerPerformanceModeEnabled:1;
+    ConfigFlags_t isFactorySettings: 1;
+    ConfigFlags_t isDefaultPassword: 1; //TODO disable password after 5min if it has not been changed
+    ConfigFlags_t ledMode: 1;
+    ConfigFlags_t wifiMode: 2;
+    ConfigFlags_t atModeEnabled: 1;
+    ConfigFlags_t hiddenSSID: 1;
+    ConfigFlags_t softAPDHCPDEnabled: 1;
+    ConfigFlags_t stationModeDHCPEnabled: 1;
+    ConfigFlags_t webServerMode: 2;
+    ConfigFlags_t ntpClientEnabled: 1;
+    ConfigFlags_t syslogProtocol: 3;
+    ConfigFlags_t mqttMode: 2;
+    ConfigFlags_t mqttAutoDiscoveryEnabled: 1;
+    ConfigFlags_t restApiEnabled: 1;
+    ConfigFlags_t serial2TCPEnabled: 1;
+    ConfigFlags_t __reserved:2; // free to use
+    ConfigFlags_t useStaticIPDuringWakeUp: 1;
+    ConfigFlags_t webServerPerformanceModeEnabled: 1;
     ConfigFlags_t apStandByMode: 1;
     ConfigFlags_t disableWebUI: 1;
     ConfigFlags_t disableWebAlerts: 1;
@@ -120,22 +107,6 @@ static_assert(sizeof(ConfigFlags) == sizeof(uint32_t), "32bit exceeded");
 struct HueConfig {
     uint16_t tcp_port;
     char devices[255]; // \n is separator
-};
-
-struct Serial2Tcp {
-    uint16_t port;
-    uint32_t baud_rate;
-    char host[65];
-    char username[33];
-    char password[33];
-    uint8_t rx_pin;
-    uint8_t tx_pin;
-    uint8_t serial_port: 3;
-    uint8_t auth_mode: 1;
-    uint8_t auto_connect: 1;
-    uint8_t auto_reconnect;
-    uint8_t keep_alive;
-    uint16_t idle_timeout;
 };
 
 #include "./plugins/dimmer_module/firmware_protocol.h"
@@ -407,7 +378,6 @@ typedef struct {
     DimmerModule dimmer;
     DimmerModuleButtons dimmer_buttons;
     BlindsController blinds_controller;
-    struct Serial2Tcp serial2tcp;
     struct HueConfig hue;
     Clock clock;
 

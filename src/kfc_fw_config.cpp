@@ -627,20 +627,8 @@ void KFCFWConfiguration::restoreFactorySettings()
 #if PING_MONITOR_SUPPORT
     Config_Ping::defaults();
 #endif
-#if SERIAL2TCP
-    Serial2Tcp serial2tcp;
-    memset(&serial2tcp, 0, sizeof(serial2tcp));
-    serial2tcp.port = 2323;
-    serial2tcp.baud_rate = KFC_SERIAL_RATE;
-    serial2tcp.rx_pin = D7;
-    serial2tcp.tx_pin = D8;
-    serial2tcp.serial_port = SERIAL2TCP_HARDWARE_SERIAL;
-    serial2tcp.auth_mode = true;
-    // serial2tcp.auto_connect = false;
-    serial2tcp.auto_reconnect = 15;
-    serial2tcp.keep_alive = 60;
-    serial2tcp.idle_timeout = 300;
-    _H_SET(Config().serial2tcp, serial2tcp);
+#if SERIAL2TCP_SUPPORT
+    Plugins::Serial2TCP::defaults();
 #endif
 #if IOT_DIMMER_MODULE || IOT_ATOMIC_SUN_V2
     DimmerModule dimmer;

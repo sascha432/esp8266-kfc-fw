@@ -51,16 +51,16 @@ public:
     void close();
 
     bool isAuthenticated() const;
-    void setClient(AsyncClient *client);
+    // void setClient(AsyncClient *client);
     AsyncClient *getClient() const;
     Buffer &getTxBuffer();
     Buffer &getRxBuffer();
     Buffer &getNvtBuffer();
 
 private:
-    uint8_t _isAuthenticated: 1;
     AsyncClient *_client;
     Buffer _txBuffer;
     Buffer _rxBuffer;
     Buffer _nvt;
+    bool _isAuthenticated;
 };

@@ -10,7 +10,7 @@ namespace KFCConfigurationClasses {
 
     void Plugins::Serial2TCP::defaults()
     {
-        Serial2Tcp_t cfg = { 2323, KFC_SERIAL_RATE, ModeType::SERVER, SerialPortType::SERIAL0, 0, 0, false, true, 30, 30, 300 };
+        Serial2Tcp_t cfg = { 2323, KFC_SERIAL_RATE, ModeType::SERVER, SerialPortType::SERIAL0, 0, 0, false, true, 30, 5, 300 };
         setConfig(cfg);
     }
 

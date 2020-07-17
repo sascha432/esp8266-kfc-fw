@@ -74,7 +74,7 @@ void Serial2TcpServer::handleNewClient(void *arg, AsyncClient *client)
 void Serial2TcpServer::_onSerialData(uint8_t type, const uint8_t *buffer, size_t len)
 {
     if (!_connections.empty()) {
-        _debug_printf_P(PSTR("Serial2TcpServer::_onData(): type %d, length %u\n"), type, len);
+        // _debug_printf_P(PSTR("Serial2TcpServer::_onData(): type %d, length %u\n"), type, len);
         for(auto &&conn: _connections) {
             conn->getClient()->write(reinterpret_cast<const char *>(buffer), len);
         }
@@ -100,9 +100,9 @@ void Serial2TcpServer::_onData(AsyncClient *client, void *data, size_t len)
     }
 }
 
-void Serial2TcpServer::_onDisconnect(AsyncClient *client, const __FlashStringHelper *reason)
+void Serial2TcpServer::_onDisconnect(AsyncClient *client, const String &reason)
 {
-    _debug_printf_P(PSTR("Serial2TcpServer::_onDisconnect(): reason: %s\n"), RFPSTR(reason));
+    _debug_printf_P(PSTR("client=%p reason=%s\n"), client, reason.c_str());
     _removeClient(client);
 }
 

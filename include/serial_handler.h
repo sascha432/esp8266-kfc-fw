@@ -65,6 +65,7 @@ public:
         TRANSMIT    = 0x02,
         REMOTE_RX   = 0x04,
         LOCAL_TX    = 0x08,
+        ANY         = 0xff
     } SerialDataType_t;
 
     typedef void (* SerialHandlerCallback_t)(uint8_t type, const uint8_t *buffer, size_t len);

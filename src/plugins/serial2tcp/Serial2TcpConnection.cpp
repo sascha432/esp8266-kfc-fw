@@ -3,6 +3,7 @@
  */
 
 #include "Serial2TcpConnection.h"
+#include "Serial2TcpBase.h"
 
 #if DEBUG_SERIAL2TCP
 #include <debug_helper_enable.h>
@@ -10,16 +11,20 @@
 #include <debug_helper_disable.h>
 #endif
 
-Serial2TcpConnection::Serial2TcpConnection(AsyncClient *client, bool isAuthenticated) : _isAuthenticated(isAuthenticated), _client(client) {
+Serial2TcpConnection::Serial2TcpConnection(AsyncClient *client, bool isAuthenticated) : _client(client), _isAuthenticated(isAuthenticated)
+{
+    // DEBUGV("CONST this=%p client=%p\n", this, _client);
 }
 
-Serial2TcpConnection::~Serial2TcpConnection() {
-    _debug_printf_P(PSTR("Serial2TcpConnection::~Serial2TcpConnection() client %p\n"), _client);
+Serial2TcpConnection::~Serial2TcpConnection()
+{
+    // DEBUGV("DEST this=%p client=%p\n", this, _client);
     close();
 }
 
-void Serial2TcpConnection::close() {
-    _debug_printf_P(PSTR("Serial2TcpConnection::close() client %p\n"), _client);
+void Serial2TcpConnection::close()
+{
+    // DEBUGV("CLOSE this=%p client=%p\n", this, _client);
     if (_client) {
         _client->abort();
         delete _client;
@@ -27,26 +32,34 @@ void Serial2TcpConnection::close() {
     }
 }
 
-bool Serial2TcpConnection::isAuthenticated() const {
+bool Serial2TcpConnection::isAuthenticated() const
+{
     return _isAuthenticated;
 }
 
-void Serial2TcpConnection::setClient(AsyncClient *client) {
-    _client = client;
-}
+// void Serial2TcpConnection::setClient(AsyncClient *client)
+// {
+//     _client = client;
+//     DEBUGV("SETCLIENT=%p this=%p\n", _client, this);
+// }
 
-AsyncClient *Serial2TcpConnection::getClient() const {
+AsyncClient *Serial2TcpConnection::getClient() const
+{
+    // DEBUGV("GETCLIENT=%p this=%p\n", _client, this);
     return _client;
 }
 
-Buffer &Serial2TcpConnection::getTxBuffer() {
+Buffer &Serial2TcpConnection::getTxBuffer()
+{
     return _txBuffer;
 }
 
-Buffer &Serial2TcpConnection::getRxBuffer() {
+Buffer &Serial2TcpConnection::getRxBuffer()
+{
     return _rxBuffer;
 }
 
-Buffer &Serial2TcpConnection::getNvtBuffer() {
+Buffer &Serial2TcpConnection::getNvtBuffer()
+{
     return _nvt;
 }

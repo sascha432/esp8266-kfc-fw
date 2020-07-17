@@ -224,7 +224,7 @@ void WeatherStationPlugin::setup(SetupModeType mode)
     AlarmPlugin::setCallback(alarmCallback);
 #if IOT_WEATHER_STATION_HAS_TOUCHPAD
     // needs to be first callback to stop the event to be passed to other callbacks if the alarm is active
-    _touchpad.addCallback(Mpr121Touchpad::EventType::ANY, 1, [this](const Mpr121Touchpad::Event &) {
+    _touchpad.addCallback(Mpr121Touchpad::EventType::RELEASED, 1, [this](const Mpr121Touchpad::Event &) {
         return _resetAlarm();
     });
 #endif

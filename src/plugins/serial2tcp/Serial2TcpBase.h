@@ -11,6 +11,14 @@
 #include "kfc_fw_config.h"
 #include "Serial2TcpConnection.h"
 
+#if DEBUG_SERIAL2TCP && 0
+#undef DEBUGV
+#define DEBUGV(fmt, ...) { ::printf(PSTR("<%s:%u> "), __DEBUG_FUNCTION__, __LINE__); ::printf((PGM_P)PSTR(fmt), ## __VA_ARGS__); }
+#else
+#undef DEBUGV
+#define DEBUGV(...) ;
+#endif
+
 class Serial2TcpBase {
 public:
     using Serial2TCP = KFCConfigurationClasses::Plugins::Serial2TCP;
@@ -85,6 +93,8 @@ public:
     static void handlePoll(void *arg, AsyncClient *client);
 
 protected:
+    void _setBaudRate(uint32_t baudrate);
+
     Stream &_getSerial() {
         return _serial;
     }
@@ -94,7 +104,7 @@ protected:
     virtual void _onConnect(AsyncClient *client);
     virtual void _onData(AsyncClient *client, void *data, size_t len);
     // void onError(AsyncClient *client, int8_t error);
-    virtual void _onDisconnect(AsyncClient *client, const __FlashStringHelper *reason);
+    virtual void _onDisconnect(AsyncClient *client, const String &reason);
     // void onTimeOut(AsyncClient *client, uint32_t time);
     // virtual void _onAck(AsyncClient *client, size_t len, uint32_t time);
     // virtual void onPoll(AsyncClient *client);

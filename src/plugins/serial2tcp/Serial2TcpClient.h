@@ -24,13 +24,21 @@ public:
     virtual void _onSerialData(uint8_t type, const uint8_t *buffer, size_t len) override;
     virtual void _onData(AsyncClient *client, void *data, size_t len) override;
     // virtual size_t _serialWrite(Serial2TcpConnection *conn, const char *data, size_t len) override;
-    virtual void _onDisconnect(AsyncClient *client, const __FlashStringHelper *reason) override;
+    virtual void _onConnect(AsyncClient *client) override;
+    virtual void _onDisconnect(AsyncClient *client, const String &reason) override;
 
 private:
     void _connect();
     void _disconnect();
 
 private:
-    Serial2TcpConnection *_conn;
+    AsyncClient &_client() {
+        return *_connection->getClient();
+    }
+    bool _connected() const {
+        return _connection && _connection->getClient();
+    }
+
+    Serial2TcpConnection *_connection;
     EventScheduler::Timer _timer;
 };

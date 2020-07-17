@@ -5,33 +5,18 @@
 #pragma once
 
 #include <Arduino_compat.h>
-#include <EventScheduler.h>
 #include "Serial2TcpBase.h"
 
 class Serial2TcpClient : public Serial2TcpBase {
 public:
-    Serial2TcpClient(Stream &serial, uint8_t serialPort);
+    Serial2TcpClient(Stream &serial, const char *hostname, const Serial2TCP::Serial2Tcp_t &config);
     virtual ~Serial2TcpClient();
 
     static Serial2TcpClient *getInstance() {
         return getInstance();
     }
 
-    virtual void getStatus(PrintHtmlEntitiesString &output);
-
-    void setAutoConnect(bool autoConnect) {
-        _autoConnect = autoConnect;
-    }
-    bool getAutoConnect() const {
-        return _autoConnect;
-    }
-
-    void setAutoReconnect(uint8_t autoReconnect) {
-        _autoReconnect = autoReconnect;
-    }
-    uint8_t getAutoReconnect() const {
-        return _autoReconnect;
-    }
+    virtual void getStatus(Print &output);
 
     virtual void begin();
     virtual void end();
@@ -46,8 +31,6 @@ private:
     void _disconnect();
 
 private:
-    uint8_t _autoConnect: 1;
-    uint8_t _autoReconnect;
     Serial2TcpConnection *_conn;
-    EventScheduler::TimerPtr _timer;
+    EventScheduler::Timer _timer;
 };

@@ -4,6 +4,7 @@
 
 #include <Arduino_compat.h>
 #include <StreamString.h>
+#include <PrintHtmlEntitiesString.h>
 #include "Serial2TcpClient.h"
 
 #if DEBUG_SERIAL2TCP
@@ -12,59 +13,59 @@
 #include <debug_helper_disable.h>
 #endif
 
-Serial2TcpClient::Serial2TcpClient(Stream &serial, uint8_t serialPort) : Serial2TcpBase(serial, serialPort), _autoConnect(false), _autoReconnect(0), _conn(nullptr), _timer(nullptr) {
+Serial2TcpClient::Serial2TcpClient(Stream &serial, const char *hostname, const Serial2TCP::Serial2Tcp_t &config) : Serial2TcpBase(serial, config), _conn(nullptr)
+{
+    setHostname(hostname);
 }
 
-Serial2TcpClient::~Serial2TcpClient() {
-    if (_timer) {
-        Scheduler.removeTimer(_timer);
-        _timer = nullptr;
-    }
+Serial2TcpClient::~Serial2TcpClient()
+{
+    _timer.remove();
     end();
 }
 
-void Serial2TcpClient::getStatus(PrintHtmlEntitiesString &output) {
+void Serial2TcpClient::getStatus(Print &output)
+{
     output.print(F(HTML_S(br)));
-    if (getAutoConnect()) {
+    if (hasAutoConnect()) {
         output.print(F("Auto connect enabled, "));
     }
     if (_conn) {
-        output.printf_P(PSTR("%s %s:%u"), _conn->getClient()->connected() ? PSTR("Connected to ") : PSTR("Disconnected from "), getHost().c_str(), getPort());
+        output.printf_P(PSTR("%s %s:%u"), _conn->getClient()->connected() ? PSTR("Connected to ") : PSTR("Disconnected from "), getHostname().c_str(), getPort());
     }
     else {
-        output.printf_P(PSTR("Idle %s:%u"), getHost().c_str(), getPort());
+        output.printf_P(PSTR("Idle %s:%u"), getHostname().c_str(), getPort());
     }
 }
 
-void Serial2TcpClient::begin() {
-    _debug_printf_P(PSTR("Serial2TcpClient::begin()\n"));
-    if (getAutoConnect()) {
+void Serial2TcpClient::begin()
+{
+    _debug_println();
+    Serial2TcpBase::begin();
+    if (hasAutoConnect()) {
         _connect();
     }
 }
 
-void Serial2TcpClient::end() {
-    _debug_printf_P(PSTR("Serial2TcpClient::end()\n"));
+void Serial2TcpClient::end()
+{
+    _debug_println();
 
    _disconnect();
-    if (_getSerialPort() == SERIAL2TCP_HARDWARE_SERIAL) {
-        Serial.begin(KFC_SERIAL_RATE);
-#if DEBUG
-        DEBUG_HELPER_INIT();
-#endif
-        enable_at_mode(MySerial);
-    }
+   Serial2TcpBase::end();
 }
 
 
-void Serial2TcpClient::_onSerialData(uint8_t type, const uint8_t *buffer, size_t len) {
+void Serial2TcpClient::_onSerialData(uint8_t type, const uint8_t *buffer, size_t len)
+{
     if (_conn) {
         _debug_printf_P(PSTR("Serial2TcpClient::_onData(): type %d, length %u\n"), type, len);
         _conn->getClient()->write(reinterpret_cast<const char *>(buffer), len);
     }
 }
 
-void Serial2TcpClient::_onData(AsyncClient *client, void *data, size_t len) {
+void Serial2TcpClient::_onData(AsyncClient *client, void *data, size_t len)
+{
     // _debug_printf_P(PSTR("Serial2TcpClient::_onData(): length %u\n"), len);
 #if 0
     for(size_t i = 0; i < len; i++) {
@@ -88,34 +89,22 @@ void Serial2TcpClient::_onData(AsyncClient *client, void *data, size_t len) {
 //     return written;
 // }
 
-void Serial2TcpClient::_onDisconnect(AsyncClient *client, const __FlashStringHelper *reason) {
+void Serial2TcpClient::_onDisconnect(AsyncClient *client, const __FlashStringHelper *reason)
+{
     _debug_printf_P(PSTR("Serial2TcpClient::_onDisconnect(): reason: %s\n"), RFPSTR(reason));
     end();
 
     auto time = getAutoReconnect();
     if (time) {
-        Scheduler.removeTimer(_timer);
-        Scheduler.addTimer(&_timer, time * 1000, false, [this](EventScheduler::TimerPtr timer) {
-            _timer = nullptr; // connect removes the timer but it already has triggered
+        _timer.add(time * 1000UL, false, [this](EventScheduler::TimerPtr timer) {
             _connect();
         });
     }
 }
 
-void Serial2TcpClient::_connect() {
-
-    if (_timer) {
-        Scheduler.removeTimer(_timer);
-        _timer = nullptr;
-    }
-
-    if (_getSerialPort() == SERIAL2TCP_HARDWARE_SERIAL) {
-#if DEBUG
-        // DEBUG_HELPER_SILENT();
-#endif
-        StreamString nul;
-        disable_at_mode(nul);
-    }
+void Serial2TcpClient::_connect()
+{
+    _timer.remove();
 
     _disconnect();
     _conn = new Serial2TcpConnection(new AsyncClient(), hasAuthentication());
@@ -128,13 +117,14 @@ void Serial2TcpClient::_connect() {
     client->onAck(&handleAck, this);
     client->onPoll(&handlePoll, this);
 
-    _debug_printf_P(PSTR("Serial2TcpClient::_connect(): %s:%u\n"), getHost().c_str(), getPort());
-    if (!client->connect(getHost().c_str(), getPort())) {
+    _debug_printf_P(PSTR("Serial2TcpClient::_connect(): %s:%u\n"), getHostname().c_str(), getPort());
+    if (!client->connect(getHostname().c_str(), getPort())) {
         _disconnect();
     }
 }
 
-void Serial2TcpClient::_disconnect() {
+void Serial2TcpClient::_disconnect()
+{
     _debug_printf_P(PSTR("Serial2TcpClient::_disconnect()\n"));
     if (_conn) {
         _conn->close();

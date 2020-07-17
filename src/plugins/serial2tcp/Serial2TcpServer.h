@@ -12,14 +12,14 @@ public:
     typedef std::unique_ptr<Serial2TcpConnection> Serial2TcpConnectionPtr;
     typedef std::vector<Serial2TcpConnectionPtr> ConnectionsVector;
 
-    Serial2TcpServer(Stream &serial, uint8_t serialPort);
+    Serial2TcpServer(Stream &serial, const Serial2TCP::Serial2Tcp_t &config);
     virtual ~Serial2TcpServer();
 
     static Serial2TcpServer *getInstance() {
         return getInstance();
     }
 
-    virtual void getStatus(PrintHtmlEntitiesString &output);
+    virtual void getStatus(Print &output);
 
     virtual void begin();
     virtual void end();

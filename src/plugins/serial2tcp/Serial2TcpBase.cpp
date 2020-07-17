@@ -9,10 +9,6 @@
 #include "Serial2TcpServer.h"
 #include "Serial2TcpClient.h"
 
-#if IOT_DIMMER_MODULE
-#include "plugins/dimmer_module/dimmer_module.h"
-#endif
-
 #if DEBUG_SERIAL2TCP
 #include <debug_helper_enable.h>
 #else
@@ -310,6 +306,16 @@ size_t Serial2TcpBase::_serialPrintf_P(Serial2TcpConnection *conn, PGM_P format,
     return written;
 }
 
+void Serial2TcpBase::end()
+{
+    if (_config.serial_port == Serial2TCP::SerialPortType::SERIAL0) {
+        // reset to default baudrate
+        if (_config.baudrate != KFC_SERIAL_RATE) {
+            Serial.end();
+            Serial.begin(KFC_SERIAL_RATE);
+        }
+    }
+}
 
 // tcp handlers
 

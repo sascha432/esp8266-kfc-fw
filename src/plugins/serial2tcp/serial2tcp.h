@@ -7,6 +7,7 @@
 #pragma once
 
 #include <Arduino_compat.h>
+#include <kfc_fw_config.h>
 #include "plugins.h"
 
 #ifndef DEBUG_SERIAL2TCP

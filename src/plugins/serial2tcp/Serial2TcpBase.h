@@ -5,7 +5,8 @@
 #pragma once
 
 #include <Arduino_compat.h>
-#include <PrintHtmlEntitiesString.h>
+#include <EventScheduler.h>
+#include <EventTimer.h>
 #include <vector>
 #include "kfc_fw_config.h"
 #include "Serial2TcpConnection.h"
@@ -108,8 +109,8 @@ protected:
 public:
     virtual void getStatus(Print &output) = 0;
 
-    virtual void begin() = 0;
-    virtual void end() = 0;
+    virtual void begin() {}
+    virtual void end();
 
 private:
     Stream &_serial;

@@ -4,6 +4,7 @@
 
 #include <Arduino_compat.h>
 #include <StreamString.h>
+#include <PrintHtmlEntitiesString.h>
 #include "Serial2TcpServer.h"
 #include "serial_handler.h"
 #include "misc.h"
@@ -15,21 +16,26 @@
 #endif
 
 
-Serial2TcpServer::Serial2TcpServer(Stream &serial, uint8_t serialPort) : Serial2TcpBase(serial, serialPort), _server(nullptr) {
+Serial2TcpServer::Serial2TcpServer(Stream &serial, const Serial2TCP::Serial2Tcp_t &config) : Serial2TcpBase(serial, config), _server(nullptr)
+{
 }
 
-Serial2TcpServer::~Serial2TcpServer() {
+Serial2TcpServer::~Serial2TcpServer()
+{
     end();
 }
 
-void Serial2TcpServer::getStatus(PrintHtmlEntitiesString &output) {
+void Serial2TcpServer::getStatus(Print &output)
+{
     if (hasAuthentication()) {
         output.println(F(", Authentication enabled"));
     }
-    output.printf_P(PSTR(HTML_S(br) "%u client%s connected"), _connections.size(), _connections.size() == 1 ? emptyString.c_str() : PSTR("s"));
+    output.printf_P(PSTR(HTML_S(br) "%u client(s) connected"), _connections.size());
 }
 
-void Serial2TcpServer::begin() {
+void Serial2TcpServer::begin()
+{
+    Serial2TcpBase::begin();
 
     end();
     _server = new AsyncServer(getPort());
@@ -47,7 +53,8 @@ void Serial2TcpServer::begin() {
 
 }
 
-void Serial2TcpServer::end() {
+void Serial2TcpServer::end()
+{
     if (_server) {
         for(auto &&conn: _connections) {
             _onDisconnect(conn->getClient(), F("server shutdown"));
@@ -56,32 +63,26 @@ void Serial2TcpServer::end() {
         _server = nullptr;
     }
     _onEnd();
+    Serial2TcpBase::end();
 }
 
-void Serial2TcpServer::handleNewClient(void *arg, AsyncClient *client) {
+void Serial2TcpServer::handleNewClient(void *arg, AsyncClient *client)
+{
     reinterpret_cast<Serial2TcpServer *>(arg)->_handleNewClient(client);
 }
 
-void Serial2TcpServer::_onSerialData(uint8_t type, const uint8_t *buffer, size_t len) {
+void Serial2TcpServer::_onSerialData(uint8_t type, const uint8_t *buffer, size_t len)
+{
     if (!_connections.empty()) {
         _debug_printf_P(PSTR("Serial2TcpServer::_onData(): type %d, length %u\n"), type, len);
         for(auto &&conn: _connections) {
             conn->getClient()->write(reinterpret_cast<const char *>(buffer), len);
         }
-
-        // PrintString str;
-        // auto count = len;
-        // auto ptr = (char *)buffer;
-        // str.print("< ");
-        // while(count--) {
-        //     str.printf_P(PSTR("%02x "), *ptr++);
-        // }
-        // Logger_warning(str);
-
     }
 }
 
-void Serial2TcpServer::_onData(AsyncClient *client, void *data, size_t len) {
+void Serial2TcpServer::_onData(AsyncClient *client, void *data, size_t len)
+{
     // _debug_printf_P(PSTR("Serial2TcpServer::_onData(): length %u\n"), len);
     if (_debugOutput) {
         for(size_t i = 0; i < len; i++) {
@@ -99,14 +100,15 @@ void Serial2TcpServer::_onData(AsyncClient *client, void *data, size_t len) {
     }
 }
 
-void Serial2TcpServer::_onDisconnect(AsyncClient *client, const __FlashStringHelper *reason) {
+void Serial2TcpServer::_onDisconnect(AsyncClient *client, const __FlashStringHelper *reason)
+{
     _debug_printf_P(PSTR("Serial2TcpServer::_onDisconnect(): reason: %s\n"), RFPSTR(reason));
     _removeClient(client);
 }
 
 
-String Serial2TcpServer::_getClientInfo(Serial2TcpConnection &conn) const {
-
+String Serial2TcpServer::_getClientInfo(Serial2TcpConnection &conn) const
+{
     String output;
     if (hasAuthentication()) {
         output += getUsername() + '@';
@@ -115,7 +117,8 @@ String Serial2TcpServer::_getClientInfo(Serial2TcpConnection &conn) const {
     return output;
 }
 
-size_t Serial2TcpServer::_serialWrite(Serial2TcpConnection *conn, const char *data, size_t len)  {
+size_t Serial2TcpServer::_serialWrite(Serial2TcpConnection *conn, const char *data, size_t len)
+{
     size_t written = Serial2TcpBase::_serialWrite(conn, data, len);
     for(auto &&conn2: _connections) {
         if (conn != conn2.get()) {
@@ -125,8 +128,8 @@ size_t Serial2TcpServer::_serialWrite(Serial2TcpConnection *conn, const char *da
     return written;
 }
 
-Serial2TcpConnection *Serial2TcpServer::_getConn(AsyncClient *client) {
-
+Serial2TcpConnection *Serial2TcpServer::_getConn(AsyncClient *client)
+{
     auto iterator = std::find_if(_connections.begin(), _connections.end(), [&client](const Serial2TcpConnectionPtr &conn) {
         return conn->getClient() == client;
     });
@@ -136,23 +139,23 @@ Serial2TcpConnection *Serial2TcpServer::_getConn(AsyncClient *client) {
     return iterator->get();
 }
 
-void Serial2TcpServer::_handleNewClient(AsyncClient *client) {
-
+void Serial2TcpServer::_handleNewClient(AsyncClient *client)
+{
     _debug_printf_P(PSTR("%p: client connected from %s\n"), client, client->remoteIP().toString().c_str());
 
-#if DEBUG
-    if (_getSerialPort() == SERIAL2TCP_HARDWARE_SERIAL) { // disable any debug output
-        DEBUG_HELPER_SILENT();
-    }
-#endif
+// #if DEBUG
+//     if (_getSerialPort() == SERIAL2TCP_HARDWARE_SERIAL) { // disable any debug output
+//         DEBUG_HELPER_SILENT();
+//     }
+// #endif
 
     auto &conn = _addClient(client);
 	Logger_notice(F("[%s] Client has been connected to server"), _getClientInfo(conn).c_str());
 }
 
 
-Serial2TcpConnection &Serial2TcpServer::_addClient(AsyncClient *client) {
-
+Serial2TcpConnection &Serial2TcpServer::_addClient(AsyncClient *client)
+{
     _debug_printf_P(PSTR("Serial2TcpServer::_addClient(%p) IP address %s\n"), client, client->remoteIP().toString().c_str());
     _connections.emplace_back(new Serial2TcpConnection(client, false));
     if (_connections.size() == 1) {
@@ -169,8 +172,8 @@ Serial2TcpConnection &Serial2TcpServer::_addClient(AsyncClient *client) {
     return *_connections.back();
 }
 
-void Serial2TcpServer::_removeClient(AsyncClient *client) {
-
+void Serial2TcpServer::_removeClient(AsyncClient *client)
+{
     _debug_printf_P(PSTR("Serial2TcpServer::_removeClient(%p) IP address %s\n"), client, client->remoteIP().toString().c_str());
 
     client->abort();
@@ -183,24 +186,26 @@ void Serial2TcpServer::_removeClient(AsyncClient *client) {
     }
 }
 
-void Serial2TcpServer::_onStart() {
-    _debug_printf_P(PSTR("Serial2TcpServer::_onStart\n"));
-    if (_getSerialPort() == SERIAL2TCP_HARDWARE_SERIAL) {
-#if DEBUG
-        DEBUG_HELPER_SILENT();
-#endif
-        StreamString nul;
-        disable_at_mode(nul);
-    }
+void Serial2TcpServer::_onStart()
+{
+    _debug_println();
+//     if (_getSerialPort() == SERIAL2TCP_HARDWARE_SERIAL) {
+// #if DEBUG
+//         DEBUG_HELPER_SILENT();
+// #endif
+//         StreamString nul;
+//         disable_at_mode(nul);
+//     }
 }
 
-void Serial2TcpServer::_onEnd() {
-    _debug_printf_P(PSTR("Serial2TcpServer::_onEnd\n"));
-    if (_getSerialPort() == SERIAL2TCP_HARDWARE_SERIAL) {
-        Serial.begin(KFC_SERIAL_RATE);
-#if DEBUG
-        DEBUG_HELPER_INIT();
-#endif
-        enable_at_mode(MySerial);
-    }
+void Serial2TcpServer::_onEnd()
+{
+    _debug_println();
+//     if (_getSerialPort() == SERIAL2TCP_HARDWARE_SERIAL) {
+//         Serial.begin(KFC_SERIAL_RATE);
+// #if DEBUG
+//         DEBUG_HELPER_INIT();
+// #endif
+//         enable_at_mode(MySerial);
+//     }
 }

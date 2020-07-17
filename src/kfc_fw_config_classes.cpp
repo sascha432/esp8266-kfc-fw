@@ -61,6 +61,16 @@ namespace KFCConfigurationClasses {
         return config._H_GET(Config().flags);
     }
 
+    ConfigFlags &System::Flags::getWriteable()
+    {
+        return config._H_W_GET(Config().flags);
+    }
+
+    void System::Flags::set(ConfigFlags flags)
+    {
+        config._H_SET(Config().flags, flags);
+    }
+
     void System::Flags::write()
     {
         config._H_SET(Config().flags, _flags);

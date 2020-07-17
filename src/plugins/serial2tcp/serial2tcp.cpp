@@ -102,7 +102,7 @@ bool Serial2TcpPlugin::atModeHandler(AtModeArgs &args)
             using KFCConfigurationClasses::System;
 
             auto &cfg = Serial2TCP::getWriteableConfig();
-            auto flags = System::Flags::get();
+            auto &flags = System::Flags::getWriteable();
             auto enable = args.toInt(0);
             if (enable) {
                 if (enable == 2) {

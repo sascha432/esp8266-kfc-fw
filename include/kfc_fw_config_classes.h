@@ -22,6 +22,8 @@ namespace KFCConfigurationClasses {
             }
             static Flags read();
             static ConfigFlags get();
+            static ConfigFlags &getWriteable();
+            static void set(ConfigFlags flags);
             void write();
 
             bool isWiFiEnabled() const {

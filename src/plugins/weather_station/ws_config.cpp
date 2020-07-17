@@ -3,8 +3,8 @@
  */
 
 #include <Configuration.h>
-#include "kfc_fw_config.h"
-#include "kfc_fw_config_classes.h"
+#include <kfc_fw_config.h>
+#include <kfc_fw_config_classes.h>
 
 namespace KFCConfigurationClasses {
 
@@ -72,6 +72,11 @@ namespace KFCConfigurationClasses {
     Plugins::WeatherStation::WeatherStationConfig Plugins::WeatherStation::getConfig()
     {
         return ::config._H_GET(MainConfig().plugins.weatherstation.config);
+    }
+
+    void Plugins::WeatherStation::setConfig(const Plugins::WeatherStation::WeatherStationConfig &params)
+    {
+        ::config._H_SET(MainConfig().plugins.weatherstation.config, params);
     }
 
 }

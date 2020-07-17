@@ -183,6 +183,7 @@ void AlarmPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form
 
         form.add<bool>(prefix + String('e'), alarm.is_enabled, form_enabled_callback);
 
+        // TODO check packed struct cannot be accessed as ref/by ptr
         form.add<uint8_t>(prefix + String('h'), &alarm.time.hour);
         form.add<uint8_t>(prefix + String('m'), &alarm.time.minute);
 #if IOT_ALARM_PLUGIN_HAS_BUZZER && IOT_ALARM_PLUGIN_HAS_SILENT

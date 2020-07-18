@@ -62,7 +62,7 @@ var webUIComponent = {
         // type = state, value 0 or 1
         // type = value
 
-        if (window._webui_debug) console.log("publish state", id, value, type, this.lockPublish);//, this.pendingRequests[id]);
+        dbg_console.log("publish state", id, value, type, this.lockPublish);//, this.pendingRequests[id]);
         if (this.lockPublish) {
             return;
         }
@@ -93,7 +93,7 @@ var webUIComponent = {
     },
 
     toggleGroup: function(groupId, value) {
-        if (window._webui_debug) console.log("toggleGroup", groupId, value);
+        dbg_console.log("toggleGroup", groupId, value);
 
         if (this.groups[groupId].switch.value == value) {
             return;
@@ -312,6 +312,7 @@ var webUIComponent = {
     },
 
     updateUI: function(json) {
+        dbg_console.called('updateUI', arguments);
 
         this.lockPublish = true;
 
@@ -396,7 +397,7 @@ var webUIComponent = {
     },
 
     updateEvents: function(events) {
-        if (window._webui_debug) console.log("updateEvents", events);
+        dbg_console.log("updateEvents", events);
         this.lockPublish = true;
         var self = this;
         $(events).each(function() {
@@ -443,11 +444,29 @@ var webUIComponent = {
     },
 
     requestUI: function() {
-        var url = $.getHttpLocation('/webui_get')
+        dbg_console.called('requestUI', arguments);
+        var url = $.getHttpLocation('/webui_get');
         var SID = $.getSessionId();
         var self = this;
+        // $.ajax({
+        //     url: url,
+        //     cache: false,
+        //     complete: function() {
+        //         dbg_console.called('complete', arguments);
+        //         dbg_console.debug(this);
+        //     },
+        //     success: function() {
+        //         dbg_console.called('complete', arguments);
+        //         dbg_console.debug(this);
+        //     },
+        //     error: function() {
+        //         dbg_console.called('complete', arguments);
+        //         dbg_console.debug(this);
+        //     }
+        // });
         $.get(url + '?SID=' + SID, function(data) {
-            if (window._webui_debug) console.log(data);
+            dbg_console.called('get_callback_requestui', arguments);
+            dbg_console.debug('GET /webui_get', data);
             self.updateUI(data.data);
             self.updateEvents(data.values);
         }, 'json');
@@ -457,7 +476,7 @@ var webUIComponent = {
         if (event.data instanceof ArrayBuffer) {
             var packetId = new Uint16Array(event.data, 0, 1);
             if (packetId == 0x0001) {// RGB565_RLE_COMPRESSED_BITMAP
-
+                dbg_console.debug('RGB565_RLE_COMPRESSED_BITMAP', event.data.length);
                 var pos = packetId.byteLength;
                 var len = new Uint8Array(event.data, pos++, 1)[0];
                 var canvasId = new Uint8Array(event.data, pos, len);
@@ -547,7 +566,8 @@ var webUIComponent = {
         }
         else if (event.data) {
             var json = JSON.parse(event.data);
-            if (window._webui_debug) console.log("socket_handler", event, json)
+            dbg_console.debug('event.data', event.data, 'json', json);
+            // dbg_console.log("socket_handler", event, json)
             if (json.type === 'ue') {
                 this.updateEvents(json.events);
             }
@@ -558,6 +578,7 @@ var webUIComponent = {
     },
 
     init: function() {
+        dbg_console.called('init', arguments);
         var url = $.getWebSocketLocation('/webui_ws');
         var SID = $.getSessionId();
         var self = this;
@@ -566,7 +587,7 @@ var webUIComponent = {
             self.socketHandler(event);
         } );
 
-        if (window._webui_debug) {
+        if (dbg_console.vars.enabled) {
             $('body').append('<textarea id="console" style="width:270px;height:70px;font-size:10px;font-family:consolas;z-index:999;position:fixed;right:5px;bottom:5px"></textarea>');
             this.socket.setConsoleId("console");
         }

@@ -7,6 +7,77 @@ $.__prototypes = {
     filemanager_upload_progress: '<p class="text-center">Uploading <span id="upload_percent"></span>...<div class="progress"><div class="progress-bar progress-bar-striped progress-bar-animated text-center" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="10000" style="width:0%;" id="upload_progress"></div></div></p>',
 };
 
+window.dbg_console = {
+    init: function() {
+        window.dbg_console = this;
+        window.debug_on = function() {
+            window.dbg_console.set_debug(true);
+        };
+        window.debug_off = function() {
+            window.dbg_console.set_debug(false);
+        };
+        window.debugon = window.debug_on;
+        window.dbg_on = window.debug_on;
+        window.dbgon = window.debug_on;
+        window.debugoff = window.debug_off;
+        console.debug_on = window.debug_on;
+        console.debug_off = window.debug_off;
+        console.debugon = window.debug_on;
+        console.debugoff = window.debug_off;
+    },
+    ready: function() {
+        try {
+            if (Cookies.get("dbg_console")) {
+                this.set_debug(true);
+            }
+        } catch(e) {
+        }
+    },
+    set_debug: function(enable) {
+        this.vars.enabled = enable;
+        console.log('DEBUGGING ' + (this.vars.enabled ? 'ENABLED' : 'DISABLED'));
+    },
+    log: function() {
+        if (this.vars.enabled) {
+            return console.log.apply(this, arguments);
+        }
+    },
+    error: function() {
+        if (this.vars.enabled) {
+            return console.error.apply(this, arguments);
+        }
+    },
+    warn: function() {
+        if (this.vars.enabled) {
+            return console.warn.apply(this, arguments);
+        }
+    },
+    debug: function() {
+        if (this.vars.enabled) {
+            return console.debug.apply(this, arguments);
+        }
+    },
+    assert: function(args) {
+        if (this.vars.enabled) {
+            return console.assert.apply(this, arguments);
+        }
+    },
+    called: function(name, args) {
+        var a = [ 'function: ' + name + '(), args:' ];
+        for(var i = 0; i < args.length; i++) {
+            a.push(args[i]);
+        }
+        this.debug.apply(this, a);
+    },
+    vars: {
+        enabled: false,
+    },
+};
+window.dbg_console.init();
+$(function() {
+    window.dbg_console.ready();
+});
+
 function config_init(show_ids, update_form) {
     if (update_form === true) {
          $('input,select').addClass('setting-requires-restart');

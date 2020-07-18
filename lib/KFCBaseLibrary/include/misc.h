@@ -158,19 +158,19 @@ size_t String_rtrim(String &str);
 size_t String_ltrim(String &str);
 size_t String_trim(String &str);
 
-size_t String_rtrim(String &str, const char *chars);
+size_t String_rtrim(String &str, const char *chars, uint16_t minLength = ~0);
 size_t String_ltrim(String &str, const char *chars);
 size_t String_trim(String &str, const char *chars);
 
-size_t String_rtrim(String &str, char chars);
+size_t String_rtrim(String &str, char chars, uint16_t minLength = ~0);
 size_t String_ltrim(String &str, char chars);
 size_t String_trim(String &str, char chars);
 
-size_t String_rtrim_P(String &str, const char *chars);
+size_t String_rtrim_P(String &str, const char *chars, uint16_t minLength = ~0);
 size_t String_ltrim_P(String &str, const char *chars);
 size_t String_trim_P(String &str, const char *chars);
 
-size_t String_rtrim_P(String &str, char chars);
+size_t String_rtrim_P(String &str, char chars, uint16_t minLength = ~0);
 size_t String_ltrim_P(String &str, char chars);
 size_t String_trim_P(String &str, char chars);
 

@@ -96,7 +96,7 @@ protected:
     }
     size_t _printTo(Print &output, double value) const {
         auto tmp = PrintString(F("%f"), value);
-        String_rtrim(tmp, '0');
+        String_rtrim(tmp, '0', tmp.indexOf('.') + 2); // min. length dot + 1 char to avoid getting "1." for "1.0000"
         return output.print(tmp);
     }
     size_t _printTo(Print &output, const AbstractJsonValue::JsonVariantVector &value) const {
@@ -144,8 +144,7 @@ protected:
     }
     size_t _length(double value) const {
         auto tmp = PrintString(F("%f"), value);
-        String_rtrim(tmp, '0');
-        return tmp.length();
+        return String_rtrim(tmp, '0', (tmp.indexOf('.') + 2)/* keep one trailing zero */);
     }
     size_t _length(const AbstractJsonValue::JsonVariantVector &value) const {
         size_t length = 2;

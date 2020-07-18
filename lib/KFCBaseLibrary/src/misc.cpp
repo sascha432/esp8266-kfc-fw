@@ -374,7 +374,7 @@ size_t String_trim(String &str)
     return str.length();
 }
 
-size_t String_rtrim(String &str, const char *chars)
+size_t String_rtrim(String &str, const char *chars, uint16_t minLength)
 {
 #if DEBUG_STRING_CHECK_NULLPTR
     if (!chars) {
@@ -383,7 +383,8 @@ size_t String_rtrim(String &str, const char *chars)
     }
 #endif
     size_t len = str.length();
-    while (len && strchr(chars, str.charAt(len - 1))) {
+    minLength = len - minLength;
+    while (minLength-- && len && strchr(chars, str.charAt(len - 1))) {
         len--;
     }
     str.remove(len, -1);
@@ -418,7 +419,7 @@ size_t String_trim(String &str, const char *chars)
     return String_ltrim(str, chars);
 }
 
-size_t String_rtrim_P(String &str, const char *chars)
+size_t String_rtrim_P(String &str, const char *chars, uint16_t minLength)
 {
 #if DEBUG_STRING_CHECK_NULLPTR
     if (!chars) {
@@ -428,7 +429,7 @@ size_t String_rtrim_P(String &str, const char *chars)
 #endif
     auto buf = new char[strlen_P(chars) + 1];
     strcpy_P(buf, chars);
-    auto len = String_rtrim(str, buf);
+    auto len = String_rtrim(str, buf, minLength);
     delete [] buf;
     return len;
 }
@@ -463,10 +464,10 @@ size_t String_trim_P(String &str, const char *chars)
     return len;
 }
 
-size_t String_rtrim_P(String &str, char _chars)
+size_t String_rtrim_P(String &str, char _chars, uint16_t minLength)
 {
     char chars[2] = { _chars, 0 };
-    return String_rtrim_P(str, chars);
+    return String_rtrim_P(str, chars, minLength);
 }
 
 size_t String_ltrim_P(String &str, char ch)
@@ -493,10 +494,10 @@ size_t String_ltrim(String &str, char ch)
     return String_ltrim(str, chars);
 }
 
-size_t String_rtrim(String &str, char ch)
+size_t String_rtrim(String &str, char ch, uint16_t minLength)
 {
     char chars[2] = { ch, 0 };
-    return String_rtrim(str, chars);
+    return String_rtrim(str, chars, minLength);
 }
 
 
@@ -649,7 +650,7 @@ size_t hex2bin(void *buf, size_t length, const char *str)
         if ((hex[0] = *str++) == 0 || (hex[1] = *str++) == 0) {
             break;
         }
-        *ptr++ = (unsigned char)strtoul(hex, nullptr, HEX);
+        *ptr++ = static_cast<uint8_t>(strtoul(hex, nullptr, HEX));
     }
     return ptr - reinterpret_cast<uint8_t *>(buf);
 }

@@ -1,0 +1,9 @@
+#!/bin/bash
+
+STR="$@"
+if [ ${#STR} -lt 3 ] ; then
+        echo "usage: mqtt_show <string to show min. length 4>"
+        exit 1
+fi
+
+mosquitto_sub -t '#' -v -W 1 | grep "$STR"

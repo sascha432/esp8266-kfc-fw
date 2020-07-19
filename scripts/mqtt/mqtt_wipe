@@ -1,0 +1,11 @@
+#!/bin/bash
+
+STR="$@"
+if [ ${#STR} -lt 3 ] ; then
+        echo "usage: mqtt_wipe <string to wipe min. length 4>"
+        exit 1
+fi
+
+echo "Wiping '$STR'..."
+
+mosquitto_sub -t '#' -v -W 1 | grep "$STR" | cut -f 1 -d ' ' | xargs -l mosquitto_pub -n -r -t

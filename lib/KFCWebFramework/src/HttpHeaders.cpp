@@ -29,21 +29,25 @@ PROGMEM_STRING_DEF(private, "private");
 PROGMEM_STRING_DEF(Authorization, "Authorization");
 PROGMEM_STRING_DEF(Bearer_, "Bearer ");
 
-HttpHeaders::HttpHeaders() {
+HttpHeaders::HttpHeaders()
+{
     init();
 }
 
-HttpHeaders::HttpHeaders(bool addDefault) {
+HttpHeaders::HttpHeaders(bool addDefault)
+{
     if (addDefault) {
         init();
     }
 }
 
-HttpHeaders::~HttpHeaders() {
+HttpHeaders::~HttpHeaders()
+{
     clear(-1);
 }
 
-const String  HttpHeaders::getRFC7231Date(const time_t *time) {
+const String  HttpHeaders::getRFC7231Date(const time_t *time)
+{
     char buf[32];
 #if HAS_STRFTIME_P
     strftime_P(buf, sizeof(buf), SPGM(RFC7231_date), gmtime(time));
@@ -58,11 +62,13 @@ const String  HttpHeaders::getRFC7231Date(const time_t *time) {
 }
 
 
-HttpHeader::HttpHeader(const String &name) {
+HttpHeader::HttpHeader(const String &name)
+{
     _name = name;
 }
 
-HttpHeader::~HttpHeader() {
+HttpHeader::~HttpHeader()
+{
 }
 
 // const String HttpHeader::getHeader()
@@ -84,7 +90,8 @@ bool HttpHeader::equals(const HttpHeader &header) const {
     return _name.equalsIgnoreCase(header.getName());
 }
 
-HttpPragmaHeader::HttpPragmaHeader(const String &value) : HttpSimpleHeader(FSPGM(Pragma), value) {
+HttpPragmaHeader::HttpPragmaHeader(const String &value) : HttpSimpleHeader(FSPGM(Pragma), value)
+{
 }
 
 HttpDispositionHeader::HttpDispositionHeader(const String& filename) : HttpSimpleHeader(F("Content-Disposition"))
@@ -95,18 +102,22 @@ HttpDispositionHeader::HttpDispositionHeader(const String& filename) : HttpSimpl
     setHeader(str);
 }
 
-HttpLocationHeader::HttpLocationHeader(const String &location) : HttpSimpleHeader(FSPGM(Location), location) {
+HttpLocationHeader::HttpLocationHeader(const String &location) : HttpSimpleHeader(FSPGM(Location), location)
+{
 }
 
 
-HttpLinkHeader::HttpLinkHeader(const String &location) : HttpSimpleHeader(FSPGM(Link), location) {
+HttpLinkHeader::HttpLinkHeader(const String &location) : HttpSimpleHeader(FSPGM(Link), location)
+{
 }
 
-HttpDateHeader::HttpDateHeader(const String &name, const String &expires) : HttpSimpleHeader(name, expires) {
+HttpDateHeader::HttpDateHeader(const String &name, const String &expires) : HttpSimpleHeader(name, expires)
+{
 }
 
 /* expires in seconds or Unix time */
-HttpDateHeader::HttpDateHeader(const String &name, time_t expires) : HttpSimpleHeader(name) {
+HttpDateHeader::HttpDateHeader(const String &name, time_t expires) : HttpSimpleHeader(name)
+{
 #if NTP_CLIENT || RTC_SUPPORT
     if (expires < 31536000) {
         if (time(nullptr) == 0) {
@@ -121,7 +132,8 @@ HttpDateHeader::HttpDateHeader(const String &name, time_t expires) : HttpSimpleH
     HttpSimpleHeader::setHeader(HttpHeaders::getRFC7231Date(&expires));
 }
 
-const String HttpCacheControlHeader::getValue() const {
+const String HttpCacheControlHeader::getValue() const
+{
     String tmp;
     uint32_t maxAge = _maxAge;
 
@@ -168,7 +180,8 @@ const String HttpCacheControlHeader::getValue() const {
     return tmp;
 }
 
-const String HttpCookieHeader::getValue() const {
+const String HttpCookieHeader::getValue() const
+{
     PrintString header;
     header.print(_cookieName);
     header += '=';
@@ -192,43 +205,67 @@ const String HttpCookieHeader::getValue() const {
 }
 
 #if HAVE_HTTPHEADERS_ASYNCWEBSERVER
-bool  HttpCookieHeader::parseCookie(AsyncWebServerRequest *request, const String &name, String &value) {
-    AsyncWebHeader *cookies;
-    if ((cookies = request->getHeader(FSPGM(Cookie))) == nullptr) {
-        return false;
+
+bool HttpCookieHeader::parseCookie(AsyncWebServerRequest *request, const String &name, String &value)
+{
+    // find all cookie headers
+    for(const auto header: request->_headers) {
+        if (String_equalsIgnoreCase(header->name(), SPGM(Cookie))) {
+            // find name in this cookie collection
+           if (parseCookie(header->value(), name, value)) {
+               return true;
+           }
+        }
     }
-    return parseCookie(cookies->value(), name, value);
+    return false;
 }
+
 #endif
 
-bool HttpCookieHeader::parseCookie(const String &cookies, const String &name, String &value) {
-
-    int start = 0, end = 0;
+bool HttpCookieHeader::parseCookie(const String &cookies, const String &name, String &value)
+{
+    auto cCookies = cookies.c_str();
+    uint8_t nameLength = (uint8_t)name.length();
+    size_t start = 0;
+    int end = 0;
     do {
-        String cookie;
-        int equals;
+        // trim leading whitespace
+        auto ptr = &cCookies[start];
+        while (*ptr && isspace(*ptr)) {
+            ptr++;
+            start++;
+            end++;
+        }
+        if (!*ptr) { // trailing ;
+            break;
+        }
+        // find end of this cookie
         end = cookies.indexOf(';', end + 1);
-        cookie = cookies.substring(start, end == -1 ? cookies.length() : end);
-        equals = cookie.indexOf('=');
-        if (equals != -1) {
-            if (cookie.substring(0, equals) == name) {
-                value = cookies.substring(equals + 1, end);
+        // total length
+        size_t len = (end == -1) ? (cookies.length() - start) : (end - start);
+        if (len > nameLength) {
+            if ((cCookies[start + nameLength] == '=') && !strncmp(name.c_str(), &cCookies[start], nameLength)) {
+#if 1
+                value = cookies.substring(start + (++nameLength), start + len);
+#else
+                // move start to the value after the name and shorten length
+                nameLength++;
+                len -= nameLength;
+                start += nameLength;
+                value = PrintString(reinterpret_cast<const uint8_t *>(&cCookies[start]), len);
+#endif
                 return true;
             }
         }
-        if (end == -1) {
-            break;
-        }
-        while (cookies.charAt(++end) == ' ') {
-        }
-        start = end;
-
-    } while(true);
+    } while ((start = ++end) != 0); // end is -1 for the last cookie
 
     return false;
 }
 
-HttpConnectionHeader::HttpConnectionHeader(ConnectionEnum_t type) : HttpSimpleHeader(FSPGM(Connection), type == CLOSE ? FSPGM(close) : FSPGM(keep_alive)) {
+
+
+HttpConnectionHeader::HttpConnectionHeader(ConnectionEnum_t type) : HttpSimpleHeader(FSPGM(Connection), type == CLOSE ? FSPGM(close) : FSPGM(keep_alive))
+{
 }
 
 void  HttpHeaders::clear(uint8_t reserveItems)
@@ -311,20 +348,23 @@ void HttpHeaders::printTo(Print &output)
 
 #if DEBUG
 
-void HttpHeaders::dump(Print &output) {
+void HttpHeaders::dump(Print &output)
+{
     output.printf_P(PSTR("--- %d\n"), _headers.size());
     printTo(output);
 }
 
 #endif
 
-HttpHeadersCmpFunction HttpHeaders::compareName(const String &name) {
+HttpHeadersCmpFunction HttpHeaders::compareName(const String &name)
+{
     return [&name](const HttpHeaderPtr &_header) {
         return _header->getName().equalsIgnoreCase(name);
     };
 }
 
-HttpHeadersCmpFunction  HttpHeaders::compareHeader(const HttpHeader &header) {
+HttpHeadersCmpFunction  HttpHeaders::compareHeader(const HttpHeader &header)
+{
     return [&header](const HttpHeaderPtr &_header) {
         return _header->equals(header);
     };

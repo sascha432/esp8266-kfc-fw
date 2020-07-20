@@ -292,6 +292,8 @@ public:
 
     virtual const String getValue() const override;
 
+    // NOTE for parseCookie: max. length of name is 255 characters
+    // value is not modified if the function returns false
 #if HAVE_HTTPHEADERS_ASYNCWEBSERVER
     static bool parseCookie(AsyncWebServerRequest *request, const String &name, String &value);
 #endif

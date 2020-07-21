@@ -15,138 +15,145 @@
 #include <StreamWrapper.h>
 #include <NullStream.h>
 #include <Buffer.h>
+#include <LoopFunctions.h>
 #include <EventScheduler.h>
 #include <HardwareSerial.h>
+#include <EnumHelper.h>
+#include <cbuf.h>
 
-class SerialWrapper : public Stream {
-public:
-    SerialWrapper();
-    SerialWrapper(Stream &serial);
-    virtual ~SerialWrapper() {
-    }
 
-    inline void setSerial(Stream &serial) {
-        _serial = serial;
-    }
-    Stream &getSerial() const {
-        return _serial;
-    }
-
-    virtual size_t write(uint8_t data) override;
-    virtual size_t write(const uint8_t *data, size_t len) override;
-    virtual size_t write(const char *buffer);
-#if defined(ESP32)
-    virtual void flush();
-#else
-    virtual void flush() override;
+#ifndef SERIAL_HANDLER_INPUT_BUFFER_MAX
+#define SERIAL_HANDLER_INPUT_BUFFER_MAX                     512
 #endif
 
-    virtual int available() override;
-    virtual int read() override;
-    virtual int peek() override;
+#if  1
+#define DEBUG_SH2(fmt,...)          { ::printf(PSTR("SH2:" fmt "\n"), ##__VA_ARGS__); }
+#else
+#define DEBUG_SH2(...)              ;
+#endif
 
-private:
-    Stream &_serial;
-};
+namespace SerialHandler {
 
-class SerialHandler;
-
-extern SerialHandler serialHandler;
-
-class SerialHandler : public Stream {
-public:
-    typedef enum {
-        RECEIVE     = 0x01,
-        TRANSMIT    = 0x02,
-        REMOTE_RX   = 0x04,
-        LOCAL_TX    = 0x08,
-        ANY         = 0xff
-    } SerialDataType_t;
-
-    typedef void (* SerialHandlerCallback_t)(uint8_t type, const uint8_t *buffer, size_t len);
-
-    class Callback {
-    public:
-        Callback(SerialHandlerCallback_t callback, uint8_t flags) : _callback(callback), _flags(flags) {
-        }
-        inline bool operator ==(SerialHandlerCallback_t callback) const {
-            return _callback == callback;
-        }
-        inline SerialHandlerCallback_t getCallback() const {
-            return _callback;
-        }
-        inline uint8_t getFlags() const {
-            return _flags;
-        }
-        inline bool hasType(SerialDataType_t type) const {
-            return (_flags & type);
-        }
-        inline void invoke(uint8_t type, const uint8_t *buffer, size_t len) const {
-            return _callback(type, buffer, len);
-        }
-    private:
-        SerialHandlerCallback_t _callback;
-        uint8_t _flags;
+    enum class EventType : uint8_t {
+        NONE =          0,
+        WRITE =         0x01,
+        READ =          0x02,
     };
 
-    typedef std::vector<Callback> HandlersVector;
+    class Client;
+    class Wrapper;
 
-public:
-    SerialHandler(StreamWrapper &wrapper);
-    void clear();
+    using Callback = std::function<void(Client &client)>;
 
-    void begin();
-    void end();
+    class Client : public Stream {
+    public:
+        Client(Callback cb, EventType events);
 
-    void addHandler(SerialHandlerCallback_t callback, uint8_t flags);
-    void removeHandler(SerialHandlerCallback_t callback);
+        bool operator==(const Client &cb) {
+            return &cb == this;
+        }
+        bool operator!=(const Client &cb) {
+            return &cb != this;
+        }
 
-    static void serialLoop();
+    private:
+        friend Wrapper;
 
-    void writeToTransmit(SerialDataType_t type, const uint8_t *buffer, size_t len);
-    void writeToTransmit(SerialDataType_t type, SerialHandlerCallback_t callback, const uint8_t *buffer, size_t len);
-    void writeToReceive(SerialDataType_t type, const uint8_t *buffer, size_t len);
-    void writeToReceive(SerialDataType_t type, SerialHandlerCallback_t callback, const uint8_t *buffer, size_t len);
-    void receivedFromRemote(SerialHandlerCallback_t callback, const uint8_t *buffer, size_t len);
+        cbuf &_getRx() {
+            return _rx;
+        }
+        cbuf &_getTx() {
+            return _tx;
+        }
+        EventType _getEvents() const {
+            return _events;
+        }
+        bool _has(EventType event) const {
+            return EnumHelper::Bitset::hasAny(_events, event);
+        }
 
-    // Stream &getSerial() const {
-    //     return _wrapper.getSerial();
-    // }
-    // SerialWrapper &getWrapper() const {
-    //     return _wrapper;
-    // }
-    static constexpr SerialHandler &getInstance() {
-        return serialHandler;
-    }
+    // Stream
+    public:
+        virtual int available();
+        virtual int read();
+        virtual int peek();
 
-// Stream
-public:
-    virtual int available() override {
-        return 0;
-    }
-    virtual int read() override {
-        return -1;
-    }
-    virtual int peek() override {
-        return -1;
-    }
+    // Print
+    public:
+        virtual size_t write(uint8_t);
+        virtual size_t write(const uint8_t *buffer, size_t size);
 
-// Print
-public:
-    virtual size_t write(uint8_t) override;
-    virtual size_t write(const uint8_t *buffer, size_t size) override;
-    virtual void flush() override {}
+    private:
+        Callback _cb;
+        EventType _events;
+        cbuf _rx;
+        cbuf _tx;
+    };
 
-private:
-    void _serialLoop();
-    void _sendRxBuffer(SerialDataType_t type, SerialHandlerCallback_t callback, const uint8_t *buffer, size_t length);
 
-private:
-    HandlersVector _handlers;
-    StreamWrapper &_wrapper;
+    class Wrapper : public StreamWrapper
+    {
+    public:
+        using ClientsVector = std::vector<Client>;
+        static constexpr size_t kMaxBufferSize = 1024;
+        static constexpr size_t kMinBufferSize = 128;
+        static constexpr size_t kAddBufferSize = 128; // if no room, increase buffer size if less than max. size
+
+        Client &addClient(Callback cb, EventType events);
+        void removeClient(const Client &client);
+
+    public:
+        Wrapper(Stream *stream);
+        virtual ~Wrapper();
+
+        void begin();
+        void end();
+
+    public:
+        virtual int available() override {
+            return 0;
+        }
+        virtual int read() override {
+            return -1;
+        }
+        virtual int peek() override {
+            return -1;
+        }
+        virtual size_t readBytes(char *buffer, size_t length) override {
+            return 0;
+        }
+
+    public:
+        // send data to serial port and all clients
+        virtual size_t write(uint8_t data) override;
+        virtual size_t write(const uint8_t *buffer, size_t size) override;
+
+    private:
+        // write data that is received by serial or written to serial
+        void _writeClientsRx(Client *src, const uint8_t *buffer, size_t size, EventType type);
+        // write data to serial and other clients
+        void _writeClientsTx(Client *src, const uint8_t *buffer, size_t size);
+
+        // read serial data
+        void _pollSerial();
+        // invoke clients callbacks to read the rx buffer
+        void _transmitClientsRx();
+        // transmit clients tx buffer to serial and other clients
+        void _transmitClientsTx();
+
+        void _loop();
+
+    private:
+        friend Client;
+
+        ClientsVector _clients;
+        bool _txFlag; // indicator that _clients have _tx with data
+    };
+
 };
 
 extern NullStream NullSerial;
 extern HardwareSerial Serial0;
 extern Stream &Serial;
 extern Stream &DebugSerial;
+extern SerialHandler::Wrapper serialHandler;

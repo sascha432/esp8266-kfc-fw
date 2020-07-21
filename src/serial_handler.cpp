@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <utility>
 #include <vector>
+#include <HardwareSerial.h>
 #include "serial_handler.h"
 
 #if DEBUG_SERIAL_HANDLER
@@ -18,209 +19,190 @@
 NullStream NullSerial;
 HardwareSerial Serial0(UART0);
 // stream wrapper allows to intercept send and receive on Serial
-StreamWrapper streamWrapperSerial(&Serial0);
-Stream &Serial = streamWrapperSerial;
+SerialHandler::Wrapper serialHandler(&Serial0);
+Stream &Serial = serialHandler;
 
 #if DEBUG
-Stream &DebugSerial = streamWrapperSerial;
+#if KFC_DEBUG_USE_SERIAL1
+StreamWrapper debugStreamWrapperSerial(&Serial1);
+Stream &Serial = debugStreamWrapperSerial;
 #else
-// we cannot change references
-// using SerialWrapper allows to change to streamWrapperSerial later
-SerialWrapper debugWrapper(NullSerial);
-Stream &DebugSerial = debugWrapper;
+Stream &DebugSerial = serialHandler;
 #endif
 
-#if SERIAL_HANDLER
-
-//SerialWrapper serialWrapper();
-SerialHandler serialHandler(streamWrapperSerial);
-
-SerialHandler::SerialHandler(StreamWrapper &wrapper) : _wrapper(wrapper)
-{
-    begin();
-}
-
-void SerialHandler::clear()
-{
-    _handlers.clear();
-}
-
-void SerialHandler::begin()
-{
-    _debug_println();
-    LoopFunctions::add(SerialHandler::serialLoop);
-    _wrapper.add(this);
-}
-
-void SerialHandler::end()
-{
-    _debug_println();
-    _wrapper.remove(this);
-    LoopFunctions::remove(SerialHandler::serialLoop);
-}
-
-void SerialHandler::addHandler(SerialHandlerCallback_t callback, uint8_t flags)
-{
-    _debug_printf_P(PSTR("SerialHandler::addHandler(%p, rx %d tx %d remoterx %d localtx %d buffered %d)\n"), callback, (flags & RECEIVE ? 1 : 0), (flags & TRANSMIT ? 1 : 0), (flags & REMOTE_RX ? 1 : 0), (flags & LOCAL_TX ? 1 : 0), 0);
-    _handlers.emplace_back(callback, flags);
-}
-
-void SerialHandler::removeHandler(SerialHandlerCallback_t callback)
-{
-    _debug_printf_P(PSTR("SerialHandler::removeHandler(%p)\n"), callback);
-    _handlers.erase(std::remove(_handlers.begin(), _handlers.end(), callback), _handlers.end());
-}
-
-void SerialHandler::serialLoop()
-{
-    serialHandler._serialLoop();
-}
-
-size_t SerialHandler::write(uint8_t data)
-{
-    writeToTransmit(TRANSMIT, nullptr, &data, sizeof(data));
-    return sizeof(data);
-}
-
-size_t SerialHandler::write(const uint8_t *buffer, size_t size)
-{
-    writeToTransmit(TRANSMIT, nullptr, buffer, size);
-    return size;
-}
-
-void SerialHandler::_serialLoop()
-{
-    auto &serial = *_wrapper.getInput();
-    uint8_t buf[64];
-
-#if 0
-    // use if available() returns true instead of the available data
-    auto endPtr = buf + sizeof(buf);
-    while(serial.available()) {
-        auto ptr = buf;
-        while(ptr < endPtr && serial.available()) {
-            *ptr++ = serial.read();
-        }
-        writeToReceive(RECEIVE, buf, ptr - buf);
-    }
 #else
-    int avail;
-    while((avail = serial.available()) > 0) {
-        if (avail >= (int)sizeof(buf)) {
-            avail = sizeof(buf) - 1;
-        }
-        int len = serial.readBytes(buf, avail);
-        writeToReceive(RECEIVE, buf, len);
-    }
+Stream &DebugSerial = NullSerial;
 #endif
-}
 
-void SerialHandler::writeToTransmit(SerialDataType_t type, const uint8_t *buffer, size_t len)
-{
-    // Serial.printf_P(PSTR("SerialHandler::writeToTransmit(%d, %p, %u)\n"), type, buffer, len);
-    writeToTransmit(type, nullptr, buffer, len);
-}
+namespace SerialHandler {
 
-void SerialHandler::writeToTransmit(SerialDataType_t type, SerialHandlerCallback_t callback, const uint8_t *buffer, size_t len)
-{
-    static bool locked = false;
-    if (locked) {
-        _debug_printf_P(PSTR("SerialHandler::writeToTransmit(%d, %p, len %d, locked %d)\n"), type, callback, len, locked);
-        return;
+    Client::Client(Callback cb, EventType events) : _cb(cb), _events(events), _rx(Wrapper::kMinBufferSize), _tx(Wrapper::kMinBufferSize)
+    {
     }
-    locked = true;
-    // _debug_printf_P(PSTR("SerialHandler::writeToTransmit(%d, %p, len %d, locked %d)\n"), type, callback, len, locked);
-    for(const auto &handler: _handlers) {
-        // _debug_printf_P(PSTR("SerialHandler::writeToTransmit(): Handler %p flags %02x match %d\n"), handler.cb, handler.flags, ((handler.flags & type) && handler.cb != callback));
-        if (handler.hasType(type) && handler.getCallback() != callback) {
-            handler.invoke(type, buffer, len);
+
+    int Client::available()
+    {
+        return _rx.available();
+    }
+
+    int Client::read()
+    {
+        return _rx.read();
+    }
+
+    int Client::peek()
+    {
+        return _rx.peek();
+    }
+
+    size_t Client::write(uint8_t data)
+    {
+        serialHandler._txFlag = true;
+        return _tx.write(data);
+    }
+
+    size_t Client::write(const uint8_t *buffer, size_t size)
+    {
+        serialHandler._txFlag = true;
+        return _tx.write((const char *)buffer, size);
+    }
+
+    Client &Wrapper::addClient(Callback cb, EventType events)
+    {
+        _clients.emplace_back(cb, events);
+        return _clients.back();
+    }
+
+    void Wrapper::removeClient(const Client &client)
+    {
+        _clients.erase(std::remove(_clients.begin(), _clients.end(), client), _clients.end());
+    }
+
+    Wrapper::Wrapper(Stream *stream) : StreamWrapper(stream), _txFlag(false)
+    {
+    }
+
+    Wrapper::~Wrapper()
+    {
+        end();
+    }
+
+    void Wrapper::begin()
+    {
+        end();
+        DEBUG_SH2("begin");
+        LoopFunctions::add([this]() {
+            this->_loop();
+        }, this);
+    }
+
+    void Wrapper::end()
+    {
+        DEBUG_SH2("end");
+        LoopFunctions::remove(loop);
+        _clients.clear();
+    }
+
+    size_t Wrapper::write(uint8_t data)
+    {
+        return write(&data, 1);
+    }
+
+    size_t Wrapper::write(const uint8_t *buffer, size_t size)
+    {
+        if (_txFlag) {
+            _transmitClientsTx(); // check if any other data is queued
         }
+        size_t written = StreamWrapper::write(buffer, size);
+        _writeClientsRx(nullptr, buffer, written, EventType::WRITE);
+        return written;
     }
-    locked = false;
-}
 
-void SerialHandler::writeToReceive(SerialDataType_t type, const uint8_t *buffer, size_t len)
-{
-    writeToReceive(type, nullptr, buffer, len);
-}
-
-// sends to rx callbacks (=receiving data from serial)
-void SerialHandler::writeToReceive(SerialDataType_t type, SerialHandlerCallback_t callback, const uint8_t *buffer, size_t len)
-{
-    static bool locked = false;
-    if (locked) {
-        _debug_printf_P(PSTR("SerialHandler::writeToReceive(%d, %p, len %d, locked %d)\n"), type, callback, len, locked);
-        return;
-    }
-    // _debug_printf_P(PSTR("SerialHandler::writeToReceive(%d, %p, len %d, locked %d)\n"), type, callback, len, locked);
-    locked = true;
-    if (len) {
-        // _debug_printf_P(PSTR("Raw data, len %d, type %s\n"), len, (type == REMOTE_RX ? "remoteRX" : "RX"));
-        for(auto iterator = _handlers.rbegin(); iterator != _handlers.rend(); ++iterator) {
-            const auto &handler = *iterator;
-            // _debug_printf_P(PSTR("SerialHandler::writeToReceive(): Handler %p flags %02x match %d\n"), handler.cb, handler.flags, ((handler.flags & type) && callback != handler.cb));
-            if (handler.hasType(type) && handler.getCallback() != callback) {
-                handler.invoke(type, buffer, len);
+    void Wrapper::_writeClientsRx(Client *src, const uint8_t *buffer, size_t size, EventType type)
+    {
+        for(auto &client: _clients) {
+            if (src != &client) {
+                if (client._has(type)) {
+                    auto &rx = client._getRx();
+                    if (rx.room() < size && rx.size() < kMaxBufferSize) {
+                        rx.resizeAdd(kAddBufferSize);
+                        DEBUG_SH2("rx resize %u", rx.size());
+                    }
+                    rx.write(reinterpret_cast<const char *>(buffer), size);
+                }
             }
         }
     }
-    locked = false;
-}
 
-void SerialHandler::receivedFromRemote(SerialHandlerCallback_t callback, const uint8_t *buffer, size_t len)
-{
-    // _debug_printf_P(PSTR("SerialHandler::receivedFromRemote(%p, %d)\n"), callback, len);
-    _wrapper.write(buffer, len);
-    writeToReceive(REMOTE_RX, callback, buffer, len);
-}
-
-
-SerialWrapper::SerialWrapper(Stream &serial) : _serial(serial)
-{
-}
-
-size_t SerialWrapper::write(uint8_t data)
-{
-    size_t written = _serial.write(data);
-    if (written) {
-        SerialHandler::getInstance().writeToTransmit(SerialHandler::LOCAL_TX, &data, sizeof(data));
+    void Wrapper::_writeClientsTx(Client *src, const uint8_t *buffer, size_t size)
+    {
+        for(auto &client: _clients) {
+            if (src != &client) {
+                if (client._has(EventType::WRITE)) {
+                    auto &tx = client._getTx();
+                    if (tx.room() < size && tx.size() < kMaxBufferSize) {
+                        tx.resizeAdd(kAddBufferSize);
+                        DEBUG_SH2("tx resize %u", tx.size());
+                    }
+                    tx.write(reinterpret_cast<const char *>(buffer), size);
+                    _txFlag = true;
+                }
+            }
+        }
     }
-    return written;
-}
 
-size_t SerialWrapper::write(const uint8_t *data, size_t len)
-{
-    size_t written = _serial.write(data, len);
-    if (written) {
-        SerialHandler::getInstance().writeToTransmit(SerialHandler::LOCAL_TX, data, written);
+    void Wrapper::_pollSerial()
+    {
+        auto &serial = *getInput();
+        while(serial.available()) {
+            uint8_t buf[64];
+            size_t len = 0;
+            auto ptr = buf;
+            while (serial.available() && len < sizeof(buf)) {
+                *ptr++ = serial.read();
+                len++;
+            }
+            _writeClientsRx(nullptr, buf, len, EventType::READ);
+        }
     }
-    return written;
-}
 
-size_t SerialWrapper::write(const char *buffer)
-{
-    return write(reinterpret_cast<const uint8_t *>(buffer), strlen(buffer));
-}
+    void Wrapper::_transmitClientsRx()
+    {
+        for(auto &client: _clients) {
+            auto &rx = client._getRx();
+            if (client._has(EnumHelper::Bitset::all(EventType::READ, EventType::WRITE)) && client._cb && !rx.empty()) {
+                client._cb(client);
+                if (rx.empty() && rx.size() > Wrapper::kMinBufferSize) {
+                    rx.resize(Wrapper::kMinBufferSize);
+                }
+            }
+        }
+    }
 
-void SerialWrapper::flush()
-{
-    _serial.flush();
-    // SerialHandler::_flush();
-}
+    void Wrapper::_transmitClientsTx()
+    {
+        for(auto &client: _clients) {
+            auto &tx = client._getTx();
+            if (tx.available()) {
+                uint8_t buf[64];
+                size_t len;
+                while((len = tx.read(reinterpret_cast<char *>(buf), sizeof(buf))) != 0) {
+                    StreamWrapper::write(buf, len);
+                    _writeClientsRx(&client, buf, len, EventType::READ);
+                }
+            }
+            if (tx.size() > Wrapper::kMinBufferSize) {
+                tx.resize(Wrapper::kMinBufferSize);
+            }
+        }
+        _txFlag = false;
+    }
 
-int SerialWrapper::available()
-{
-    return _serial.available();
-}
+    void Wrapper::_loop()
+    {
+        _pollSerial();
+        _transmitClientsRx();
+        _transmitClientsTx();
+    }
 
-int SerialWrapper::read()
-{
-    return _serial.read();
-}
-
-int SerialWrapper::peek()
-{
-    return _serial.peek();
-}
-
-#endif
+};

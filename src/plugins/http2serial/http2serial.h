@@ -20,25 +20,26 @@ public:
 
     void broadcastOutputBuffer();
 
-    inline void writeOutputBuffer(const String &buffer) {
-        writeOutputBuffer(buffer.c_str(), buffer.length());
-    }
-    inline void writeOutputBuffer(const char *buffer, size_t len) {
-        writeOutputBuffer((const uint8_t *)buffer, len);
-    }
-    void writeOutputBuffer(const uint8_t *buffer, size_t len);
+    // inline void writeOutputBuffer(const String &buffer) {
+    //     writeOutputBuffer(buffer.c_str(), buffer.length());
+    // }
+    // inline void writeOutputBuffer(const char *buffer, size_t len) {
+    //     writeOutputBuffer((const uint8_t *)buffer, len);
+    // }
+    // void writeOutputBuffer(const uint8_t *buffer, size_t len);
+    void writeOutputBuffer(SerialHandler::Client &client);
 
     bool isTimeToSend();
     void resetOutputBufferTimer();
     void clearOutputBuffer();
 
     static void outputLoop();
-    static void onData(uint8_t type, const uint8_t *buffer, size_t len);
+    static void onData(SerialHandler::Client &client);
     static Http2Serial *getInstance();
     static void createInstance();
     static void destroyInstance();
 
-    SerialHandler *getSerialHandler() const;
+    size_t write(const uint8_t *buffer, int length);
 
 public:
     static AsyncWebSocket *getConsoleServer();
@@ -58,7 +59,7 @@ private:
     bool _outputBufferEnabled;
     unsigned long _outputBufferFlushDelay;
     Buffer _outputBuffer;
-    SerialHandler *_serialHandler;
+    SerialHandler::Client &_client;
 
     uint16_t _outputBufferMaxSize;
     uint16_t _outputBufferDelay;

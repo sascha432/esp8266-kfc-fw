@@ -14,6 +14,7 @@
 #include "web_server.h"
 #include "web_socket.h"
 #include "plugins.h"
+#include <PluginComponent.h>
 #include "plugins_menu.h"
 
 #if DEBUG_HTTP2SERIAL
@@ -27,7 +28,10 @@ Http2Serial *Http2Serial::_instance = nullptr;
 WsClientAsyncWebSocket *wsSerialConsole = nullptr;
 
 
-Http2Serial::Http2Serial() : _outputBufferMaxSize(SERIAL_BUFFER_MAX_LEN), _outputBufferDelay(SERIAL_BUFFER_FLUSH_DELAY)
+Http2Serial::Http2Serial() :
+    _client(serialHandler.addClient(onData, EnumHelper::Bitset::all(SerialHandler::EventType::READ, SerialHandler::EventType::WRITE))),
+    _outputBufferMaxSize(SERIAL_BUFFER_MAX_LEN),
+    _outputBufferDelay(SERIAL_BUFFER_FLUSH_DELAY)
 {
     _locked = false;
 #if defined(HTTP2SERIAL_BAUD) && HTTP2SERIAL_BAUD != KFC_SERIAL_RATE
@@ -35,7 +39,6 @@ Http2Serial::Http2Serial() : _outputBufferMaxSize(SERIAL_BUFFER_MAX_LEN), _outpu
     Serial.flush();
     Serial.begin(HTTP2SERIAL_BAUD);
 #endif
-    _serialHandler = &SerialHandler::getInstance();
 #if AT_MODE_SUPPORTED && HTTP2SERIAL_DISABLE_AT_MODE
     disable_at_mode(Serial);
 #endif
@@ -43,14 +46,13 @@ Http2Serial::Http2Serial() : _outputBufferMaxSize(SERIAL_BUFFER_MAX_LEN), _outpu
     _outputBufferEnabled = true;
 
     LoopFunctions::add(Http2Serial::outputLoop);
-    _serialHandler->addHandler(onData, SerialHandler::RECEIVE|SerialHandler::LOCAL_TX); // RECEIVE=data received by Serial, LOCAL_TX=data sent to Serial
 }
 
 
 Http2Serial::~Http2Serial()
 {
     LoopFunctions::remove(Http2Serial::outputLoop);
-    _serialHandler->removeHandler(onData);
+    serialHandler.removeClient(_client);
 #if defined(HTTP2SERIAL_BAUD) && HTTP2SERIAL_BAUD != KFC_SERIAL_RATE
     Serial.flush();
     Serial.begin(KFC_SERIAL_RATE);
@@ -74,36 +76,60 @@ void Http2Serial::broadcastOutputBuffer()
     resetOutputBufferTimer();
 }
 
-void Http2Serial::writeOutputBuffer(const uint8_t *buffer, size_t len)
+void Http2Serial::writeOutputBuffer(SerialHandler::Client &client)
 {
     if (!_outputBufferEnabled) {
+        client.flush();
         return;
     }
     if (_outputBuffer.length() == 0) {
         resetOutputBufferTimer(); // reset timer if it is empty
     }
 
-    auto ptr = buffer;
-    for(;;) {
-        int space = _outputBufferMaxSize - _outputBuffer.length();
-        if (space > 0) {
-            if ((size_t)space >= len) {
-                space = len;
-            }
-            _outputBuffer.write(ptr, space);
-            ptr += space;
-            len -= space;
+    while(client.available()) {
+        if (_outputBuffer.length() < _outputBufferMaxSize) {
+            _outputBuffer.write(client.read());
         }
-        if (len == 0) {
-            break;
+        else {
+            broadcastOutputBuffer();
         }
-        broadcastOutputBuffer();
     }
 
     if (millis() > _outputBufferFlushDelay || !_outputBufferFlushDelay) {
         broadcastOutputBuffer();
     }
 }
+
+// void Http2Serial::writeOutputBuffer(const uint8_t *buffer, size_t len)
+// {
+//     if (!_outputBufferEnabled) {
+//         return;
+//     }
+//     if (_outputBuffer.length() == 0) {
+//         resetOutputBufferTimer(); // reset timer if it is empty
+//     }
+
+//     auto ptr = buffer;
+//     for(;;) {
+//         int space = _outputBufferMaxSize - _outputBuffer.length();
+//         if (space > 0) {
+//             if ((size_t)space >= len) {
+//                 space = len;
+//             }
+//             _outputBuffer.write(ptr, space);
+//             ptr += space;
+//             len -= space;
+//         }
+//         if (len == 0) {
+//             break;
+//         }
+//         broadcastOutputBuffer();
+//     }
+
+//     if (millis() > _outputBufferFlushDelay || !_outputBufferFlushDelay) {
+//         broadcastOutputBuffer();
+//     }
+// }
 
 bool Http2Serial::isTimeToSend()
 {
@@ -126,10 +152,10 @@ void Http2Serial::_outputLoop()
     if (isTimeToSend()) {
         broadcastOutputBuffer();
     }
-    auto handler = getSerialHandler();
-    if (handler != &SerialHandler::getInstance()) {
-        handler->serialLoop();
-    }
+    // auto handler = getSerialHandler();
+    // if (handler != &SerialHandler::getInstance()) {
+    //     handler->serialLoop();
+    // }
 }
 
 void Http2Serial::outputLoop()
@@ -137,15 +163,13 @@ void Http2Serial::outputLoop()
     Http2Serial::_instance->_outputLoop();
 }
 
-void Http2Serial::onData(uint8_t type, const uint8_t *buffer, size_t len)
+void Http2Serial::onData(SerialHandler::Client &client)
 {
-#if 0
-    os_printf("onData(%u, %*.*s)\n", type, len, len, buffer);
-#endif
     // Serial.printf_P(PSTR("Http2Serial::onData(%d, %p, %d): instance %p, locked %d\n"), type, buffer, len, Http2Serial::_instance, Http2Serial::_instance ? Http2Serial::_instance->_locked : -1);
     if (Http2Serial::_instance && !Http2Serial::_instance->_locked) {
         Http2Serial::_instance->_locked = true;
-        Http2Serial::_instance->writeOutputBuffer(buffer, len);  // store data before sending
+        _instance->writeOutputBuffer(client);
+        //Http2Serial::_instance->writeOutputBuffer(reinterpret_cast<const uint8_t *>(buffer), len);  // store data before sending
         Http2Serial::_instance->_locked = false;
     }
 }
@@ -171,10 +195,15 @@ void Http2Serial::destroyInstance()
     }
 }
 
-SerialHandler *Http2Serial::getSerialHandler() const
+size_t Http2Serial::write(const uint8_t *buffer, int length)
 {
-    return _serialHandler;
+    return _client.write(buffer, length);
 }
+
+// SerialHandler *Http2Serial::getSerialHandler() const
+// {
+//     return _serialHandler;
+// }
 
 AsyncWebSocket *Http2Serial::getConsoleServer()
 {
@@ -186,42 +215,51 @@ void http2serial_event_handler(AsyncWebSocket *server, AsyncWebSocketClient *cli
     WsClient::onWsEvent(server, client, type, data, len, arg, WsConsoleClient::getInstance);
 }
 
-class Http2SerialPlugin : public PluginComponent {
+class Http2SerialPlugin : public PluginComponent
+{
 public:
-    Http2SerialPlugin() {
-        REGISTER_PLUGIN(this);
-    }
-    virtual PGM_P getName() const {
-        return PSTR("http2ser");
-    }
-    virtual const __FlashStringHelper *getFriendlyName() const {
-        return F("Http2Serial");
-    }
-    virtual PriorityType getSetupPriority() const override {
-        return PriorityType::HTTP2SERIAL;
-    }
+    Http2SerialPlugin();
+
     virtual void setup(SetupModeType mode) override;
-    virtual void reconfigure(PGM_P source) override;
-    virtual bool hasReconfigureDependecy(PluginComponent *plugin) const override;
+    virtual void reconfigure(const String &source) override;
     virtual void shutdown() override;
 
-    virtual MenuType getMenuType() const override {
-        return MenuType::CUSTOM;
-    }
     virtual void createMenu() override {
         bootstrapMenu.addSubMenu(F("Serial Console"), F("serial_console.html"), navMenu.util);
     }
 
 #if AT_MODE_SUPPORTED
-    virtual bool hasAtMode() const override {
-        return true;
-    }
     virtual void atModeHelpGenerator() override;
     virtual bool atModeHandler(AtModeArgs &args) override;
 #endif
 };
 
 static Http2SerialPlugin plugin;
+
+PROGMEM_DEFINE_PLUGIN_OPTIONS(
+    Http2SerialPlugin,
+    "http2serial",      // name
+    "Http2Serial",      // friendly name
+    "",                 // web_templates
+    "",                 // config_forms
+    "http",             // reconfigure_dependencies
+    PluginComponent::PriorityType::HTTP2SERIAL,
+    PluginComponent::RTCMemoryId::NONE,
+    static_cast<uint8_t>(PluginComponent::MenuType::CUSTOM),
+    false,              // allow_safe_mode
+    false,              // setup_after_deep_sleep
+    false,              // has_get_status
+    false,              // has_config_forms
+    false,              // has_web_ui
+    false,              // has_web_templates
+    true,               // has_at_mode
+    0                   // __reserved
+);
+
+Http2SerialPlugin::Http2SerialPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(Http2SerialPlugin))
+{
+    REGISTER_PLUGIN(this, "Http2SerialPlugin");
+}
 
 void Http2SerialPlugin::setup(SetupModeType mode)
 {
@@ -234,14 +272,12 @@ void Http2SerialPlugin::setup(SetupModeType mode)
     }
 }
 
-void Http2SerialPlugin::reconfigure(PGM_P source)
+void Http2SerialPlugin::reconfigure(const String &source)
 {
-    setup(SetupModeType::DEFAULT);
-}
-
-bool Http2SerialPlugin::hasReconfigureDependecy(PluginComponent *plugin) const
-{
-    return plugin->nameEquals(WebServerPlugin::getFPSTRName());
+    _debug_printf_P(PSTR("source=%s\n"), source.c_str());
+    if (String_equals(source, SPGM(http))) {
+        setup(SetupModeType::DEFAULT);
+    }
 }
 
 void Http2SerialPlugin::shutdown()
@@ -259,9 +295,10 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(H2SBUFDLY, "H2SBUFDLY", "<delay=60>", "Set
 
 void Http2SerialPlugin::atModeHelpGenerator()
 {
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(H2SBD), getName());
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(H2SBUFSZ), getName());
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(H2SBUFDLY), getName());
+    auto name = getName_P();
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(H2SBD), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(H2SBUFSZ), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(H2SBUFDLY), name);
 }
 
 bool Http2SerialPlugin::atModeHandler(AtModeArgs &args)
@@ -270,8 +307,8 @@ bool Http2SerialPlugin::atModeHandler(AtModeArgs &args)
         if (args.requireArgs(1, 1)) {
             uint32_t rate = args.toIntMinMax(0, 300, 2500000, KFC_SERIAL_RATE);
             if (rate) {
-                Serial0.end();
-                Serial0.begin(rate);
+                KFC_SAFE_MODE_SERIAL_PORT.end();
+                KFC_SAFE_MODE_SERIAL_PORT.begin(rate);
                 args.printf_P(PSTR("Set serial rate to %d"), (unsigned)rate);
             }
         }

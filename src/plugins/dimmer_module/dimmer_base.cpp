@@ -40,8 +40,8 @@ void Dimmer_Base::_begin()
     _version = Version();
 
 #if IOT_DIMMER_MODULE_INTERFACE_UART
-    _wire.onReadSerial(SerialHandler::serialLoop);
-    SerialHandler::getInstance().addHandler(onData, SerialHandler::RECEIVE);
+    //_wire.onReadSerial(SerialHandler::Wrapper::pollSerial);
+    _client = &serialHandler.addClient(onData, SerialHandler::EventType::READ);
     #if AT_MODE_SUPPORTED
         // disable_at_mode(Serial);
         #if IOT_DIMMER_MODULE_BAUD_RATE != KFC_SERIAL_RATE
@@ -95,7 +95,7 @@ void Dimmer_Base::_end()
 
 #if IOT_DIMMER_MODULE_INTERFACE_UART
     _wire.onReceive(nullptr);
-    SerialHandler::getInstance().removeHandler(onData);
+    serialHandler.removeClient(*_client);
     #if IOT_DIMMER_MODULE_BAUD_RATE != KFC_SERIAL_RATE
         Serial.flush();
         Serial.begin(KFC_SERIAL_RATE);
@@ -110,12 +110,12 @@ void Dimmer_Base::_end()
 
 #if IOT_DIMMER_MODULE_INTERFACE_UART
 
-void Dimmer_Base::onData(uint8_t type, const uint8_t *buffer, size_t len)
+void Dimmer_Base::onData(Stream &client)
 {
     // _debug_printf_P(PSTR("length=%u\n"), len);
-    while(len--) {
+    while(client.available()) {
         // _debug_printf_P(PSTR("feed=%u '%c'\n"), *buffer, *buffer);
-        dimmer_plugin._wire.feed(*buffer++);
+        dimmer_plugin._wire.feed(client.read());
     }
 }
 

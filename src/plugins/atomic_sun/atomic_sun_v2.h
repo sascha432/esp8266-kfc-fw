@@ -118,12 +118,11 @@ public:
 
 // WebUI
 public:
-    virtual void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState) override;
-    virtual void getValues(JsonArray &array) override;
+    void _setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState);
+    void _getValues(JsonArray &array);
 
 // dimmer
 public:
-
     virtual bool on(uint8_t channel = -1) override;
     virtual bool off(uint8_t channel = -1) override;
     virtual int16_t getChannel(uint8_t channel) const override;
@@ -188,22 +187,19 @@ public:
     AtomicSunPlugin();
 
     virtual void setup(SetupModeType mode) override;
-    virtual void reconfigure(const char *source) override;
+    virtual void reconfigure(const String &source) override;
     virtual void shutdown() override;
-    virtual void createWebUI(WebUI &webUI) override;
     virtual void getStatus(Print &output) override;
-    virtual void createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request) override {
-        if (isCreateFormCallbackType(type)) {
-            readConfig();
-            DimmerModuleForm::_createConfigureForm(type, formName, form, request);
-        }
-    }
+    virtual void createConfigureForm(PluginComponent::FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request);
 
+// WebUI
+public:
+    virtual void createWebUI(WebUI &webUI) override;
     virtual void getValues(JsonArray &array) override {
-        _getValues(array);
+        Driver_4ChDimmer::_getValues(array);
     }
     virtual void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState) override {
-        _setValue(id, value, hasValue, state, hasState);
+        Driver_4ChDimmer::_setValue(id, value, hasValue, state, hasState);
     }
 
 #if AT_MODE_SUPPORTED

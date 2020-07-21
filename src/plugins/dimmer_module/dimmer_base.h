@@ -8,6 +8,7 @@
 #include <PrintHtmlEntitiesString.h>
 #include <WebUIComponent.h>
 #include <EventScheduler.h>
+#include <serial_handler.h>
 #include "../src/plugins/sensor/Sensor_DimmerMetrics.h"
 
 #if IOT_DIMMER_MODULE_INTERFACE_UART
@@ -113,7 +114,7 @@ public:
     Dimmer_Base();
 
 #if IOT_DIMMER_MODULE_INTERFACE_UART
-    static void onData(uint8_t type, const uint8_t *buffer, size_t len);
+    static void onData(Stream &client);
     static void onReceive(int length);
 #else
     static void fetchMetrics(EventScheduler::TimerPtr timer);
@@ -175,6 +176,7 @@ protected:
 
 #if IOT_DIMMER_MODULE_INTERFACE_UART
     DimmerTwoWireEx _wire;
+    SerialHandler::Client *_client;
 
 public:
     virtual void _onReceive(size_t length);

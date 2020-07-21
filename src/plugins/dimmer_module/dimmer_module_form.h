@@ -11,5 +11,5 @@
 
 class DimmerModuleForm {
 protected:
-    void _createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request);
+    void _createConfigureForm(PluginComponent::FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request);
 };

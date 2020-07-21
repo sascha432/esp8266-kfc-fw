@@ -230,7 +230,7 @@ public:
     // calls reconfigure at the end of the main loop() function
     void invokeReconfigure(const String &source);
 
-    bool isCreateFormCallbackType(FormCallbackType type) const {
+    static bool isCreateFormCallbackType(FormCallbackType type) {
         return type == FormCallbackType::CREATE_GET || type == FormCallbackType::CREATE_POST;
     }
 

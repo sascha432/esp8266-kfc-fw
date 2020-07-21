@@ -83,6 +83,15 @@ void AtomicSunPlugin::getStatus(Print &output)
     }
 }
 
+void AtomicSunPlugin::createConfigureForm(PluginComponent::FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request)
+{
+    if (isCreateFormCallbackType(type)) {
+        readConfig();
+        DimmerModuleForm::_createConfigureForm(type, formName, form, request);
+    }
+}
+
+
 MQTTComponent::MQTTAutoDiscoveryPtr Driver_4ChDimmer::nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num)
 {
     if (num >= getAutoDiscoveryCount()) {
@@ -287,7 +296,7 @@ void Driver_4ChDimmer::onMessage(MQTTClient *client, char *topic, char *payload,
 
 }
 
-void Driver_4ChDimmer::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
+void Driver_4ChDimmer::_setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
 {
     _debug_printf_P(PSTR("id=%s value=%s hasValue=%u state=%u hasState=%u\n"), id.c_str(), value.c_str(), hasValue, state, hasState);
 
@@ -332,16 +341,16 @@ void Driver_4ChDimmer::setValue(const String &id, const String &value, bool hasV
             }
         }
         else if (!strncmp_P(ptr, PSTR("channel"), 7)) {
-            Dimmer_Base::setValue(id, value, hasValue, state, hasState);
+            Dimmer_Base::_setValue(id, value, hasValue, state, hasState);
             publishState();
         }
     }
 }
 
-void Driver_4ChDimmer::getValues(JsonArray &array)
+void Driver_4ChDimmer::_getValues(JsonArray &array)
 {
     _debug_println();
-    Dimmer_Base::getValues(array);
+    Dimmer_Base::_getValues(array);
 
     auto obj = &array.addObject(2);
     obj->add(JJ(id), F("dimmer_brightness"));
@@ -656,19 +665,19 @@ void AtomicSunPlugin::setup(SetupModeType mode)
     setupWebServer();
 }
 
-void AtomicSunPlugin::reconfigure(const char *source)
+void AtomicSunPlugin::reconfigure(const String &source)
 {
-    if (!source) {
+    if (String_equals(source, SPGM(http))) {
+        setupWebServer();
+    }
+    else if (String_equals(source, SPGM(mqtt))) {
+        MQTTClient::safeReRegisterComponent(this);
+    }
+    else {
         writeConfig();
         auto dimmer = config._H_GET(Config().dimmer);
         _fadeTime = dimmer.fade_time;
         _onOffFadeTime = dimmer.on_off_fade_time;
-    }
-    else if (!strcmp_P(source, SPGM(http))) {
-        setupWebServer();
-    }
-    else if (!strcmp_P(source, SPGM(mqtt))) {
-        MQTTClient::safeReRegisterComponent(this);
     }
 }
 

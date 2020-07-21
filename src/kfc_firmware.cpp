@@ -208,10 +208,11 @@ void setup()
 
         if (resetDetector.getResetCounter() > KFC_SHOW_BOOT_MENU_RESET_COUNT) {
 
-            KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("Multiple resets detected. Reboot continues in %u seconds...\n"), KFC_BOOT_MENU_TIMEOUT);
-            KFC_SAFE_MODE_SERIAL_PORT.println(F("Press reset again to start in safe mode.\n"));
-            KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("Press reset %ux times to restore factory defaults. A blinking LED indicates success and the normal boot process continues after %u seconds.\n"), KFC_RESTORE_FACTORY_SETTINGS_RESET_COUNT, RESET_DETECTOR_TIMEOUT / 1000U);
-            KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("\nCrashs detected: %u\nReset counter: %u\n\n"), resetDetector.hasCrashDetected(), resetDetector.getResetCounter());
+            KFC_SAFE_MODE_SERIAL_PORT.println();
+            for(uint8_t i = 0; i < 76; i++) {
+                KFC_SAFE_MODE_SERIAL_PORT.print('=');
+            }
+            KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("\nCrashs detected: %u\nReset counter: %u\n"), resetDetector.hasCrashDetected(), resetDetector.getResetCounter());
             KFC_SAFE_MODE_SERIAL_PORT.println(F("\nAvailable keys:\n"));
             KFC_SAFE_MODE_SERIAL_PORT.println(F(
                 "    t: disable boot menu timeout\n"
@@ -219,7 +220,11 @@ void setup()
                 "    r: continue to boot normally\n"
                 "    f: restore factory settings\n"
                 "    c: clear RTC memory\n"
+                "    p: enable AP mode and set passwords to default\n"
             ));
+            KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("Multiple resets detected. Reboot continues in %u seconds...\n"), KFC_BOOT_MENU_TIMEOUT);
+            KFC_SAFE_MODE_SERIAL_PORT.println(F("Press reset again to start in safe mode."));
+            KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("Press reset %ux times to restore factory defaults. A blinking LED indicates success and the normal boot process continues after %u seconds.\n\n"), KFC_RESTORE_FACTORY_SETTINGS_RESET_COUNT, RESET_DETECTOR_TIMEOUT / 1000U);
 
             BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::SOS);
             resetDetector.setSafeMode(1);
@@ -228,9 +233,16 @@ void setup()
             auto endTimeout = millis() + (KFC_BOOT_MENU_TIMEOUT * 1000UL);
 
             while(millis() < endTimeout) {
-                if (Serial.available()) {
-                    auto ch = Serial.read();
+                if (KFC_SAFE_MODE_SERIAL_PORT.available()) {
+                    auto ch = KFC_SAFE_MODE_SERIAL_PORT.read();
                     switch(ch) {
+                        case 'p':
+                            config.read();
+                            config.recoveryMode();
+                            config.write();
+                            KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("AP mode with DHCPD enabled (SSID %s)\nPasswords set to '%s'\nWeb server running on port 80\nPress r to reboot..."), KFCConfigurationClasses::Network::WiFiConfig::getSoftApSSID(), SPGM(defaultPassword));
+                            endTimeout = 0;
+                            break;
                         case 'c':
                             RTCMemoryManager::clear();
                             SaveCrash::removeCrashCounter();
@@ -261,6 +273,10 @@ void setup()
                 // safe_mode should be false
                 increaseCrashCounter = true;
             }
+            delay(100);
+#if defined(ESP8266)
+            ESP.wdtFeed();
+#endif
         }
     }
 #endif
@@ -285,7 +301,7 @@ void setup()
     if (safe_mode) {
 
         WebUIAlerts_add(F("Running in Safe Mode"), AlertMessage::TypeEnum_t::DANGER, AlertMessage::ExpiresEnum_t::REBOOT);
-        serialHandler.replace(&KFC_SAFE_MODE_SERIAL_PORT);
+        serialHandler.replaceFirst(&KFC_SAFE_MODE_SERIAL_PORT);
 
         #if AT_MODE_SUPPORTED
             at_mode_setup();

@@ -20,18 +20,8 @@
 
 class STK500v1Plugin : public PluginComponent {
 public:
-    STK500v1Plugin() {
-        REGISTER_PLUGIN(this, "STK500v1Plugin");
-    }
-    virtual PGM_P getName() const {
-        return PSTR("stk500v1");
-    }
-    virtual const __FlashStringHelper *getFriendlyName() const {
-        return F("STK500v1");
-    }
-    virtual OptionsType getOptions() const override {
-        return EnumHelper::Bitset::all(OptionsType::HAS_AT_MODE);
-    }
+    STK500v1Plugin();
+
     virtual void atModeHelpGenerator() override;
     virtual bool atModeHandler(AtModeArgs &args) override;
 
@@ -40,6 +30,32 @@ private:
 };
 
 static STK500v1Plugin plugin;
+
+PROGMEM_DEFINE_PLUGIN_OPTIONS(
+    STK500v1Plugin,
+    "stk500v1",         // name
+    "STK500v1",         // friendly name
+    "",                 // web_templates
+    "",                 // config_forms
+    "",                 // reconfigure_dependencies
+    PluginComponent::PriorityType::MIN,
+    PluginComponent::RTCMemoryId::NONE,
+    static_cast<uint8_t>(PluginComponent::MenuType::NONE),
+    false,              // allow_safe_mode
+    false,              // setup_after_deep_sleep
+    false,              // has_get_status
+    false,              // has_config_forms
+    false,              // has_web_ui
+    false,              // has_web_templates
+    true,               // has_at_mode
+    0                   // __reserved
+);
+
+STK500v1Plugin::STK500v1Plugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(STK500v1Plugin))
+{
+    REGISTER_PLUGIN(this, "STK500v1Plugin");
+}
+
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(STK500V1F, "STK500V1F", "<filename>,[<0=Serial/1=Serial1>[,<0=disable/1=logger/2=serial/3=serial2http/4=file>]]", "Flash ATmega micro controller");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(STK500V1S, "STK500V1S", "<atmega328p/0x1e1234/...>", "Set signature (/stk500v1/atmega.csv)", "Display signature");

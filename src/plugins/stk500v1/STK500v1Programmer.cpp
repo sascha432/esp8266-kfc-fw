@@ -60,7 +60,7 @@ void STK500v1Programmer::begin(Callback_t cleanup)
         // disable all output and handlers while flashing
         StreamString nul;
         disable_at_mode(nul);
-        LoopFunctions::remove(SerialHandler::serialLoop);
+        LoopFunctions::remove(SerialHandler::Wrapper::pollSerial);
         DEBUG_HELPER_SILENT();
     }
 
@@ -77,7 +77,7 @@ void STK500v1Programmer::end()
 
         if (&_serial == &KFC_SERIAL_PORT) {
             DEBUG_HELPER_INIT();
-            LoopFunctions::add(SerialHandler::serialLoop);
+            LoopFunctions::add(SerialHandler::Wrapper::pollSerial);
             StreamString nul;
             enable_at_mode(nul);
         }

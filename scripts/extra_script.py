@@ -9,7 +9,12 @@ import subprocess
 import shutil
 import os.path
 
+def new_build(source, target, env):
+    env.Execute(env['PYTHONEXE'] + " \"${PROJECT_DIR}/scripts/build_number.py\" -v \"${PROJECT_DIR}/include/build.h\"");
+
 def modify_upload_command(source, target, env, fs = False):
+    if fs==False:
+        new_build(source, target, env)
     if env["UPLOAD_PROTOCOL"]=='espota':
         (login, host) = env["UPLOAD_PORT"].split('@', 2)
         (username, password) = login.split(':', 2)
@@ -21,16 +26,16 @@ def modify_upload_command(source, target, env, fs = False):
         else:
             args.append('upload')
             args.append(host)
-            args.append('--elf')
-            args.append(os.path.realpath(os.path.join(env.subst("$PROJECT_DIR"), 'elf')))
+
+        args.append('--elf')
+        args.append(os.path.realpath(os.path.join(env.subst("$PROJECT_DIR"), 'elf')))
+        args.append('--ini')
+        args.append(env.subst("$PROJECT_CONFIG"))
 
         env.Replace(UPLOAD_FLAGS=' '.join(args))
 
 def modify_upload_command_fs(source, target, env):
     modify_upload_command(source, target, env, True)
-
-def new_build(source, target, env):
-    env.Execute(env['PYTHONEXE'] + " \"${PROJECT_DIR}/scripts/build_number.py\" -v \"${PROJECT_DIR}/include/build.h\"");
 
 def git_get_head():
     p = subprocess.Popen(["%GITEXE%", "rev-parse", "HEAD"], stdout=subprocess.PIPE, text=True)

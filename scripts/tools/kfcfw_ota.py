@@ -115,6 +115,10 @@ def get_status(url, target, sid):
     else:
         error("Invalid response code " + str(resp.status_code), 2)
 
+def copyfile(src, dst):
+    shutil.copyfile(src, dst)
+    verbose('Copied: %s => %s' % (src, dst))
+
 def flash(url, type, target, sid):
 
     if type=="upload":
@@ -131,8 +135,9 @@ def flash(url, type, target, sid):
     filesize = os.fstat(args.image.fileno()).st_size
     verbose("Uploading %u Bytes: %s" % (filesize, args.image.name))
 
-    elf_hash = ''
-    if args.elf and type=='flash':
+    if args.elf:
+        elf_hash = None
+        elf_exception = None
         try:
             elf = args.image.name.replace('.bin', '.elf')
             h = hashlib.sha1()
@@ -143,11 +148,23 @@ def flash(url, type, target, sid):
                         break
                     h.update(data)
             elf_hash = h.hexdigest();
-            elf_out = os.path.join(args.elf, elf_hash + '.elf')
-            shutil.copyfile(elf, elf_out)
-            verbose('Copied %s' % elf_out)
         except Exception as e:
-            error(str(e), 5);
+            elf_exception = e
+
+        try:
+            if type=='flash':
+                if elf_exception:
+                    raise elf_exception
+                copyfile(elf, os.path.join(args.elf, elf_hash + '.elf'))
+                copyfile(args.image.name, os.path.join(args.elf, elf_hash + '.bin'))
+            elif type=='spiffs' and elf_hash:
+                copyfile(args.image.name, os.path.join(args.elf, elf_hash + '.spiffs.bin'))
+
+            if elf_hash and args.ini:
+                copyfile(args.ini, os.path.join(args.elf, elf_hash + '.ini'))
+
+        except Exception as e:
+                error(str(e), 5);
 
     bar = SimpleProgressBar(max_value=filesize, redirect_stdout=True)
     bar.start();
@@ -276,7 +293,6 @@ parser.add_argument("hostname", help="web server hostname")
 parser.add_argument("-u", "--user", help="username", required=True)
 parser.add_argument("-p", "--pw", "--pass", help="password", required=True)
 parser.add_argument("-I", "--image", help="firmware image", type=argparse.FileType("rb"))
-# parser.add_argument("--image-path", help="path to firmware/spiffs image")
 parser.add_argument("-O", "--output", help="export settings output file")
 parser.add_argument("--params", help="parameters to import", nargs='*', default=[])
 parser.add_argument("-P", "--port", help="web server port", type=int, default=80)
@@ -284,7 +300,8 @@ parser.add_argument("-s", "--secure", help="use https to upload", action="store_
 parser.add_argument("-q", "--quiet", help="do not show any output", action="store_true", default=False)
 parser.add_argument("-n", "--no-status", help="do not query status", action="store_true", default=False)
 parser.add_argument("-W", "--no-wait", help="wait after upload until device has been rebooted", action="store_true", default=False)
-parser.add_argument("--elf", help="copy firmware ELF file and store hash in firmware config (flash/upload action)", type=str, default=None)
+parser.add_argument("--elf", help="copy firmware.(elf|bin) or spiffs.bin to directory", type=str, default=None)
+parser.add_argument("--ini", help="copy platform.ini to elf directory", type=str, default=None)
 parser.add_argument("--sha1", help="use sha1 authentication", action="store_true", default=False)
 args = parser.parse_args()
 

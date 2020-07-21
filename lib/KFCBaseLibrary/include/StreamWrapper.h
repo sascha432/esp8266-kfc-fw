@@ -19,10 +19,16 @@ class StreamWrapper : public Stream {
 public:
     typedef std::vector<Stream *> StreamWrapperVector;
 
+    StreamWrapper(const StreamWrapper &) = delete;
+    StreamWrapper(StreamWrapper &&) = default;
+
     StreamWrapper();
     StreamWrapper(Stream *output, Stream *input);
     StreamWrapper(Stream *output, nullptr_t input);
     StreamWrapper(Stream *stream);
+    // used provided streams and do not delete streams object
+    // can be used to clone a stream wrapper, the original object must not be destroyed
+    StreamWrapper(StreamWrapperVector *streams, Stream *input);
     ~StreamWrapper();
 
     // set stream used as input
@@ -40,12 +46,12 @@ public:
         replace(stream, stream);
     }
     size_t size() const {
-        return _streams.size();
+        return _streams->size();
     }
     size_t empty() const {
-        return _streams.empty();
+        return _streams->empty();
     }
-    StreamWrapperVector &getStreams() {
+    StreamWrapperVector *getStreams() {
         return _streams;
     }
 
@@ -60,6 +66,7 @@ public:
     virtual void flush() {}
 
 private:
-    StreamWrapperVector _streams;
+    StreamWrapperVector *_streams;
+    bool _freeStreams;
     Stream *_input;
 };

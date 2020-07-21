@@ -26,7 +26,7 @@
 #define SERIAL_HANDLER_INPUT_BUFFER_MAX                     512
 #endif
 
-#if  1
+#if  0
 #define DEBUG_SH2(fmt,...)          { ::printf(PSTR("SH2:" fmt "\n"), ##__VA_ARGS__); }
 #else
 #define DEBUG_SH2(...)              ;
@@ -51,9 +51,6 @@ namespace SerialHandler {
 
         bool operator==(const Client &cb) {
             return &cb == this;
-        }
-        bool operator!=(const Client &cb) {
-            return &cb != this;
         }
 
     private:
@@ -97,7 +94,7 @@ namespace SerialHandler {
         using ClientsVector = std::vector<Client>;
         static constexpr size_t kMaxBufferSize = 1024;
         static constexpr size_t kMinBufferSize = 128;
-        static constexpr size_t kAddBufferSize = 128; // if no room, increase buffer size if less than max. size
+        static constexpr size_t kAddBufferSize = 128; // if not enough room, increase buffer size if less than max. size
 
         Client &addClient(Callback cb, EventType events);
         void removeClient(const Client &client);

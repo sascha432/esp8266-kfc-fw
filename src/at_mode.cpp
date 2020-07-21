@@ -1457,37 +1457,37 @@ void at_mode_serial_input_handler(SerialHandler::Client &client)
     static String line;
 
     if (config._H_GET(Config().flags).atModeEnabled) {
+        auto serial = StreamWrapper(serialHandler.getStreams(), serialHandler.getInput()); // local output online
         while(client.available()) {
             int ch = client.read();
             switch(ch) {
                 case 9:
                     if (!line.length()) {
                         line = F("AT+");
-                        client.print(line);
+                        serial.print(line);
                     }
                     break;
                 case 8:
                     if (line.length()) {
                         line.remove(line.length() - 1, 1);
-                        client.print(F("\b \b"));
+                        serial.print(F("\b \b"));
                     }
                     break;
                 case '\n':
-                    client.write('\n');
+                    serial.write('\n');
                     at_mode_serial_handle_event(line);
                     line = String();
                     break;
                 case '\r':
-                    client.write('\r');
+                    serial.write('\r');
                     break;
                 default:
                     line += (char)ch;
-                    client.write(ch);
+                    serial.write(ch);
                     if (line.length() >= SERIAL_HANDLER_INPUT_BUFFER_MAX) {
-                        client.write('\n');
+                        serial.write('\n');
                         at_mode_serial_handle_event(line);
                         line = String();
-
                     }
                     break;
             }

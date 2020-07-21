@@ -56,9 +56,6 @@ void WsConsoleClient::onText(uint8_t *data, size_t len)
     auto http2serial = Http2Serial::getInstance();
     if (http2serial) {
         WsClient::broadcast(nullptr, this, reinterpret_cast<const char *>(data), len);
-        // http2serial->broadcast(this, data, len); // send received text to all other clients
-        // http2serial->broadcast(data, len); // send received text to all clients = echo mode
-        // http2serial->getSerialHandler()->receivedFromRemote(nullptr, data, len); // send to serial
         http2serial->write(data, len);
     }
 }

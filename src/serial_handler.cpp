@@ -110,6 +110,7 @@ namespace SerialHandler {
 
     size_t Wrapper::write(const uint8_t *buffer, size_t size)
     {
+        DEBUG_SH2("wrapper write %u", size);
         if (_txFlag) {
             _transmitClientsTx(); // check if any other data is queued
         }
@@ -126,9 +127,19 @@ namespace SerialHandler {
                     auto &rx = client._getRx();
                     if (rx.room() < size && rx.size() < kMaxBufferSize) {
                         rx.resizeAdd(kAddBufferSize);
-                        DEBUG_SH2("rx resize %u", rx.size());
+                        DEBUG_SH2("client %p rx resize %u", &client, rx.size());
                     }
                     rx.write(reinterpret_cast<const char *>(buffer), size);
+                }
+            }
+        }
+        // second loop for the callbacks to keep all clients in sync
+        for(auto &client: _clients) {
+            if (src != &client) {
+                auto &rx = client._getRx();
+                if (client._has(type) && client._cb && !rx.empty()) {
+                    DEBUG_SH2("write rx client %p callback %u", &client, rx.available());
+                    client._cb(client);
                 }
             }
         }
@@ -142,7 +153,7 @@ namespace SerialHandler {
                     auto &tx = client._getTx();
                     if (tx.room() < size && tx.size() < kMaxBufferSize) {
                         tx.resizeAdd(kAddBufferSize);
-                        DEBUG_SH2("tx resize %u", tx.size());
+                        DEBUG_SH2("client %p tx resize %u", &client, tx.size());
                     }
                     tx.write(reinterpret_cast<const char *>(buffer), size);
                     _txFlag = true;
@@ -155,13 +166,14 @@ namespace SerialHandler {
     {
         auto &serial = *getInput();
         while(serial.available()) {
-            uint8_t buf[64];
+            uint8_t buf[Wrapper::kMinBufferSize / 2];
             size_t len = 0;
             auto ptr = buf;
             while (serial.available() && len < sizeof(buf)) {
                 *ptr++ = serial.read();
                 len++;
             }
+            DEBUG_SH2("poll %u", len);
             _writeClientsRx(nullptr, buf, len, EventType::READ);
         }
     }
@@ -171,6 +183,7 @@ namespace SerialHandler {
         for(auto &client: _clients) {
             auto &rx = client._getRx();
             if (client._has(EnumHelper::Bitset::all(EventType::READ, EventType::WRITE)) && client._cb && !rx.empty()) {
+                DEBUG_SH2("transmit rx client %p callback %u", &client, rx.available());
                 client._cb(client);
                 if (rx.empty() && rx.size() > Wrapper::kMinBufferSize) {
                     rx.resize(Wrapper::kMinBufferSize);
@@ -184,10 +197,11 @@ namespace SerialHandler {
         for(auto &client: _clients) {
             auto &tx = client._getTx();
             if (tx.available()) {
-                uint8_t buf[64];
+                uint8_t buf[Wrapper::kMinBufferSize / 2];
                 size_t len;
                 while((len = tx.read(reinterpret_cast<char *>(buf), sizeof(buf))) != 0) {
-                    StreamWrapper::write(buf, len);
+                    DEBUG_SH2("transmit tx client %p size %u", &client, len);
+                    // StreamWrapper::write(buf, len);
                     _writeClientsRx(&client, buf, len, EventType::READ);
                 }
             }

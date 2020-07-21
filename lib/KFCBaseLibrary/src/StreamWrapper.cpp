@@ -8,12 +8,18 @@
 
 extern NullStream NullSerial;
 
-StreamWrapper::StreamWrapper(Stream *output, Stream *input) : _input(input)
+StreamWrapper::StreamWrapper(Stream *output, Stream *input) : _streams(new StreamWrapperVector()), _freeStreams(true), _input(input)
 {
     add(output);
 }
 
-StreamWrapper::StreamWrapper(Stream *output, nullptr_t input) : _input(&NullSerial)
+StreamWrapper::StreamWrapper(StreamWrapperVector *streams, Stream *input) : _streams(streams), _freeStreams(false), _input(input)
+{
+}
+
+// delegated constructors
+
+StreamWrapper::StreamWrapper(Stream *output, nullptr_t input) : StreamWrapper(output, &NullSerial)
 {
     add(output);
 }
@@ -28,7 +34,9 @@ StreamWrapper::StreamWrapper() : StreamWrapper(&NullSerial)
 
 StreamWrapper::~StreamWrapper()
 {
-    clear();
+    if (_freeStreams) {
+        delete _streams;
+    }
 }
 
 void StreamWrapper::setInput(Stream *input)
@@ -48,30 +56,30 @@ Stream *StreamWrapper::getInput()
 
 void StreamWrapper::add(Stream *output)
 {
-    _streams.push_back(output);
+    _streams->push_back(output);
 }
 
 void StreamWrapper::remove(Stream *output)
 {
-    _streams.erase(std::remove(_streams.begin(), _streams.end(), output), _streams.end());
-    if (_streams.empty() || _input == output) {
+    _streams->erase(std::remove(_streams->begin(), _streams->end(), output), _streams->end());
+    if (_streams->empty() || _input == output) {
         setInput(&NullSerial);
     }
 }
 
 void StreamWrapper::clear()
 {
-    _streams.clear();
+    _streams->clear();
     setInput(&NullSerial);
 }
 
 void StreamWrapper::replace(Stream *output, Stream *input)
 {
-    if (_streams.size() > 1) {
-        if (_streams.front() == _input) {
+    if (_streams->size() > 1) {
+        if (_streams->front() == _input) {
             setInput(input);
         }
-        _streams.front() = output;
+        _streams->front() = output;
     }
     else {
         add(output);
@@ -101,7 +109,7 @@ size_t StreamWrapper::readBytes(char *buffer, size_t length)
 
 size_t StreamWrapper::write(uint8_t data)
 {
-    for(const auto stream: _streams) {
+    for(const auto stream: *_streams) {
         if (stream->write(data) != sizeof(data)) {
             delay(1); // 1ms per byte
             ::printf(PSTR("stream=%p write %u/%u\n"), stream, 0, 1);
@@ -113,7 +121,7 @@ size_t StreamWrapper::write(uint8_t data)
 
 size_t StreamWrapper::write(const uint8_t *buffer, size_t size)
 {
-    for(const auto stream: _streams) {
+    for(const auto stream: *_streams) {
         auto len = size;
         auto ptr = buffer;
         auto timeout = millis() + 100;

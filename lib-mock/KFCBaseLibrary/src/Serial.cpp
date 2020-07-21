@@ -6,6 +6,8 @@
 
 #include "Serial.h"
 
-HardwareSerial Serial;
+HardwareSerial fakeSerial;
+HardwareSerial &Serial0 = fakeSerial;
+Stream &Serial = fakeSerial;
 
 #endif

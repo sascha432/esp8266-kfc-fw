@@ -17,7 +17,7 @@ PROGMEM_STRING_DEF(blinds_controller_channel1_sensor, "blinds_channel1_sensor");
 PROGMEM_STRING_DEF(blinds_controller_channel2_sensor, "blinds_channel2_sensor");
 PROGMEM_STRING_DEF(iot_blinds_control_state_file, "/.pvt/blinds_ctrl.state");
 
-BlindsControl::BlindsControl() : MQTTComponent(ComponentTypeEnum_t::SENSOR), WebUIInterface(), _activeChannel(0)
+BlindsControl::BlindsControl() : MQTTComponent(ComponentTypeEnum_t::SENSOR), _activeChannel(0)
 {
     _channels[0].setNumber(0);
     _channels[0].setController(this);

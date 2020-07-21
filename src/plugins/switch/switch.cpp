@@ -25,7 +25,7 @@ SwitchPlugin plugin;
 
 SwitchPlugin::SwitchPlugin() : MQTTComponent(ComponentTypeEnum_t::SWITCH), _states(0), _pins({IOT_SWITCH_CHANNEL_PINS})
 {
-    REGISTER_PLUGIN(this);
+    REGISTER_PLUGIN(this, "SwitchPlugin");
 }
 
 void SwitchPlugin::setup(SetupModeType mode)

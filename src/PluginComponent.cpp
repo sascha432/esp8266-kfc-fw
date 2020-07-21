@@ -22,7 +22,7 @@
 
 PROGMEM_STRING_DEF(__pure_virtual, "pure virtual call: %s\n");
 
-PluginComponent *PluginComponent::findPlugin(const __FlashStringHelper *name)
+PluginComponent *PluginComponent::findPlugin(NameType name)
 {
     for(auto plugin: plugins) {
         if (plugin->nameEquals(name)) {
@@ -32,149 +32,27 @@ PluginComponent *PluginComponent::findPlugin(const __FlashStringHelper *name)
     return nullptr;
 }
 
-const __FlashStringHelper *PluginComponent::getFriendlyName() const
+bool PluginComponent::nameEquals(NameType name) const
 {
-    return FPSTR(getName());
-}
-
-bool PluginComponent::nameEquals(const __FlashStringHelper *name) const
-{
-    return strcmp_P_P(getName(), RFPSTR(name)) == 0;
+    return strcmp_P_P(getName_P(), RFPSTR(name)) == 0;
 }
 
 bool PluginComponent::nameEquals(const char *name) const
 {
-    return strcmp_P(name, getName()) == 0;
+    return strcmp_P_P(name, getName_P()) == 0;
 }
 
 bool PluginComponent::nameEquals(const String &name) const
 {
-    return strcmp_P(name.c_str(), getName()) == 0;
+    return strcmp_P(name.c_str(), getName_P()) == 0;
 }
 
-PluginComponent::PriorityType PluginComponent::getSetupPriority() const
-{
-    return PriorityType::DEFAULT;
-}
-
-uint8_t PluginComponent::getRtcMemoryId() const
-{
-    return 0;
-}
-
-bool PluginComponent::allowSafeMode() const
-{
-    return false;
-}
-
-#if ENABLE_DEEP_SLEEP
-
-bool PluginComponent::autoSetupAfterDeepSleep() const
-{
-    return false;
-}
-
-#endif
-
-
-void PluginComponent::setup(SetupModeType mode) {
-}
-
-void PluginComponent::reconfigure(PGM_P source) {
-}
-
-bool PluginComponent::hasReconfigureDependecy(PluginComponent *plugin) const {
-    return false;
-}
-
-void PluginComponent::invokeReconfigure(PGM_P source)
-{
-    LoopFunctions::callOnce([this, source]() {
-        this->invokeReconfigureNow(source);
-    });
-}
-
-void PluginComponent::invokeReconfigureNow(PGM_P source)
-{
-    reconfigure(source);
-    for(auto plugin: plugins) {
-        if (plugin != this && plugin->hasReconfigureDependecy(plugin)) {
-            plugin->reconfigure(source);
-        }
-    }
-}
-
-
-bool PluginComponent::hasStatus() const
-{
-    return false;
-}
-
-void PluginComponent::getStatus(Print &output)
-{
-    __debugbreak_and_panic_printf_P(SPGM(__pure_virtual), getName());
-}
-
-
-PGM_P PluginComponent::getConfigureForm() const
-{
-    return nullptr;
-}
-
-bool PluginComponent::canHandleForm(const String &formName) const
-{
-    return (getConfigureForm() && strcmp_P(formName.c_str(), getConfigureForm()) == 0);
-}
-
-void PluginComponent::createConfigureForm(AsyncWebServerRequest *request, Form &form)
-{
-    __debugbreak_and_panic_printf_P(SPGM(__pure_virtual), getName());
-}
-
-void PluginComponent::configurationSaved(Form *form)
+void PluginComponent::setup(SetupModeType mode)
 {
 }
 
-void PluginComponent::configurationDiscarded(Form *form)
+void PluginComponent::shutdown()
 {
-}
-
-PluginComponent::MenuType PluginComponent::getMenuType() const
-{
-    return MenuType::AUTO;
-}
-
-void PluginComponent::createMenu()
-{
-    __debugbreak_and_panic_printf_P(SPGM(__pure_virtual), getName());
-}
-
-
-bool PluginComponent::hasWebTemplate(const String &formName) const
-{
-    return false;
-}
-
-WebTemplate *PluginComponent::getWebTemplate(const String &formName)
-{
-    __debugbreak_and_panic_printf_P(SPGM(__pure_virtual), getName());
-    return nullptr;
-}
-
-bool PluginComponent::hasWebUI() const
-{
-    return false;
-}
-
-void PluginComponent::createWebUI(WebUI &webUI)
-{
-    __debugbreak_and_panic_printf_P(SPGM(__pure_virtual), getName());
-}
-
-WebUIInterface *PluginComponent::getWebUIInterface()
-{
-    __debugbreak_and_panic_printf_P(SPGM(__pure_virtual), getName());
-    return nullptr;
 }
 
 #if ENABLE_DEEP_SLEEP
@@ -185,57 +63,106 @@ void PluginComponent::prepareDeepSleep(uint32_t sleepTimeMillis)
 
 #endif
 
-#if AT_MODE_SUPPORTED
-
-bool PluginComponent::hasAtMode() const
+void PluginComponent::reconfigure(const String &source)
 {
-    return false;
 }
 
-void PluginComponent::atModeHelpGenerator() {
+void PluginComponent::invokeReconfigure(const String &source)
+{
+    LoopFunctions::callOnce([this, source]() {
+        invokeReconfigureNow(source);
+    });
+}
+
+void PluginComponent::invokeReconfigureNow(const String &source)
+{
+    reconfigure(source);
+    for(auto plugin: plugins) {
+        if (plugin != this && plugin->hasReconfigureDependecy(source)) {
+            plugin->reconfigure(String(source).c_str());
+        }
+    }
+}
+
+void PluginComponent::getStatus(Print &output)
+{
+    __debugbreak_and_panic_printf_P(SPGM(__pure_virtual), getName_P());
+}
+
+void PluginComponent::createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request)
+{
+    __debugbreak_and_panic_printf_P(SPGM(__pure_virtual), getName_P());
+}
+
+void PluginComponent::createMenu()
+{
+    __debugbreak_and_panic_printf_P(SPGM(__pure_virtual), getName_P());
+}
+
+WebTemplate *PluginComponent::getWebTemplate(const String &formName)
+{
+    __debugbreak_and_panic_printf_P(SPGM(__pure_virtual), getName_P());
+    return nullptr;
+}
+
+void PluginComponent::createWebUI(WebUI &webUI)
+{
+    __debugbreak_and_panic_printf_P(SPGM(__pure_virtual), getName_P());
+}
+
+void PluginComponent::getValues(JsonArray &array)
+{
+    __debugbreak_and_panic_printf_P(SPGM(__pure_virtual), getName_P());
+}
+
+void PluginComponent::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
+{
+    __debugbreak_and_panic_printf_P(SPGM(__pure_virtual), getName_P());
+}
+
+#if AT_MODE_SUPPORTED
+
+void PluginComponent::atModeHelpGenerator()
+{
 }
 
 bool PluginComponent::atModeHandler(AtModeArgs &args)
 {
-    __debugbreak_and_panic_printf_P(SPGM(__pure_virtual), getName());
+    __debugbreak_and_panic_printf_P(SPGM(__pure_virtual), getName_P());
     return false;
 }
 
 #endif
 
-void PluginComponent::shutdown()
-{
-}
-
-PluginComponent *PluginComponent::getForm(const String &formName)
+PluginComponent *PluginComponent::getForm(const String &name)
 {
     for(const auto plugin: plugins) {
-        if (plugin->canHandleForm(formName)) {
-            _debug_printf_P(PSTR("form=%s name=%s\n"), formName.c_str(), plugin->getName());
+        if (plugin->canHandleForm(name)) {
+            _debug_printf_P(PSTR("form=%s plugin=%s\n"), name.c_str(), plugin->getName_P());
             return plugin;
         }
     }
-    _debug_printf_P(PSTR("form=%s result=null\n"), formName.c_str());
+    _debug_printf_P(PSTR("form=%s result=null\n"), name.c_str());
     return nullptr;
 }
 
-PluginComponent *PluginComponent::getTemplate(const String &formName)
+PluginComponent *PluginComponent::getTemplate(const String &name)
 {
     for(const auto plugin: plugins) {
-        if (plugin->hasWebTemplate(formName)) {
-            _debug_printf_P(PSTR("template=%s result=%s\n"), formName.c_str(), plugin->getName());
+        if (plugin->hasWebTemplate(name)) {
+            _debug_printf_P(PSTR("template=%s plugin=%s\n"), name.c_str(), plugin->getName_P());
             return plugin;
         }
     }
-    _debug_printf_P(PSTR("template=%s result=null\n"), formName.c_str());
+    _debug_printf_P(PSTR("template=%s result=null\n"), name.c_str());
     return nullptr;
 }
 
-PluginComponent *PluginComponent::getByName(PGM_P name)
+PluginComponent *PluginComponent::getByName(NameType name)
 {
     for(const auto plugin: plugins) {
-        if (plugin->nameEquals(FPSTR(name))) {
-            _debug_printf_P(PSTR("name=%s result=%s\n"), name, plugin->getName());
+        if (plugin->nameEquals(name)) {
+            _debug_printf_P(PSTR("name=%s plugin=%s\n"), name, plugin->getName_P());
             return plugin;
         }
     }
@@ -243,11 +170,11 @@ PluginComponent *PluginComponent::getByName(PGM_P name)
     return nullptr;
 }
 
-PluginComponent *PluginComponent::getByMemoryId(uint8_t memoryId)
+PluginComponent *PluginComponent::getByMemoryId(RTCMemoryId memoryId)
 {
     for(const auto plugin: plugins) {
-        if (plugin->getRtcMemoryId() == memoryId) {
-            _debug_printf_P(PSTR("id=%u result=%s\n"), memoryId, plugin->getName());
+        if (plugin->getOptions().memory_id == memoryId) {
+            _debug_printf_P(PSTR("id=%u result=%s\n"), memoryId, plugin->getName_P());
             return plugin;
         }
     }

@@ -195,7 +195,7 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     else if (String_endsWith(key, PSTR("_STATUS"))) {
         uint8_t cmp_length = key.length() - 7;
         for(auto plugin: plugins) {
-            if (plugin->hasStatus() && strncasecmp_P(key.c_str(), plugin->getName(), cmp_length) == 0) {
+            if (plugin->hasStatus() && strncasecmp_P(key.c_str(), plugin->getName_P(), cmp_length) == 0) {
                 plugin->getStatus(output);
                 return;
             }
@@ -274,16 +274,6 @@ void ConfigTemplate::process(const String &key, PrintHtmlEntitiesString &output)
             output.print(str);
             return;
         }
-        SettingsForm *form = static_cast<SettingsForm *>(getForm());
-        auto &tokens = form->getTokens();
-        if (tokens.size()) {
-            for(const auto &token: tokens) {
-                if (token.first.equals(key)) {
-                    output.print(token.second);
-                    return;
-                }
-            }
-        }
     }
 
     if (String_equals(key, F("NETWORK_MODE"))) {
@@ -308,7 +298,7 @@ void ConfigTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         }
     }
     else if (String_equals(key, F("SSL_CERT"))) {
-#if SPIFFS_SUPPORT
+#if WEBSERVER_TLS_SUPPORT
         File file = SPIFFS.open(FSPGM(server_crt, "/server.crt"), fs::FileOpenMode::read);
         if (file) {
             output.print(file.readString());
@@ -316,7 +306,7 @@ void ConfigTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 #endif
     }
     else if (String_equals(key, F("SSL_KEY"))) {
-#if SPIFFS_SUPPORT
+#if WEBSERVER_TLS_SUPPORT
         File file = SPIFFS.open(FSPGM(server_key, "/server.key"), fs::FileOpenMode::read);
         if (file) {
             output.print(file.readString());
@@ -417,109 +407,109 @@ void PasswordTemplate::process(const String &key, PrintHtmlEntitiesString &outpu
     }
 }
 
-WifiSettingsForm::WifiSettingsForm(AsyncWebServerRequest *request) : SettingsForm(request)
-{
-    using KFCConfigurationClasses::MainConfig;
+// WifiSettingsForm::WifiSettingsForm(AsyncWebServerRequest *request) : SettingsForm(request)
+// {
+//     using KFCConfigurationClasses::MainConfig;
 
-    add<uint8_t>(F("mode"), _H_FLAGS_VALUE(Config().flags, wifiMode));
-    addValidator(new FormRangeValidator(F("Invalid mode"), WIFI_OFF, WIFI_AP_STA));
+//     add<uint8_t>(F("mode"), _H_FLAGS_VALUE(Config().flags, wifiMode));
+//     addValidator(new FormRangeValidator(F("Invalid mode"), WIFI_OFF, WIFI_AP_STA));
 
-    add(F("wifi_ssid"), _H_STR_VALUE(MainConfig().network.WiFiConfig._ssid));
-    addValidator(new FormLengthValidator(1, sizeof(MainConfig().network.WiFiConfig._ssid) - 1));
+//     add(F("wifi_ssid"), _H_STR_VALUE(MainConfig().network.WiFiConfig._ssid));
+//     addValidator(new FormLengthValidator(1, sizeof(MainConfig().network.WiFiConfig._ssid) - 1));
 
-    add(F("wifi_password"), _H_STR_VALUE(MainConfig().network.WiFiConfig._password));
-    addValidator(new FormLengthValidator(8, sizeof(MainConfig().network.WiFiConfig._password) - 1));
+//     add(F("wifi_password"), _H_STR_VALUE(MainConfig().network.WiFiConfig._password));
+//     addValidator(new FormLengthValidator(8, sizeof(MainConfig().network.WiFiConfig._password) - 1));
 
-    add(F("ap_wifi_ssid"), _H_STR_VALUE(MainConfig().network.WiFiConfig._softApSsid));
-    addValidator(new FormLengthValidator(1, sizeof(MainConfig().network.WiFiConfig._softApSsid) - 1));
+//     add(F("ap_wifi_ssid"), _H_STR_VALUE(MainConfig().network.WiFiConfig._softApSsid));
+//     addValidator(new FormLengthValidator(1, sizeof(MainConfig().network.WiFiConfig._softApSsid) - 1));
 
-    add(F("ap_wifi_password"), _H_STR_VALUE(MainConfig().network.WiFiConfig._softApPassword));
-    addValidator(new FormLengthValidator(8, sizeof(MainConfig().network.WiFiConfig._softApPassword) - 1));
+//     add(F("ap_wifi_password"), _H_STR_VALUE(MainConfig().network.WiFiConfig._softApPassword));
+//     addValidator(new FormLengthValidator(8, sizeof(MainConfig().network.WiFiConfig._softApPassword) - 1));
 
-    add<uint8_t>(F("channel"), _H_STRUCT_VALUE(MainConfig().network.softAp, _channel));
-    addValidator(new FormRangeValidator(1, config.getMaxWiFiChannels()));
+//     add<uint8_t>(F("channel"), _H_STRUCT_VALUE(MainConfig().network.softAp, _channel));
+//     addValidator(new FormRangeValidator(1, config.getMaxWiFiChannels()));
 
-    add<uint8_t>(F("encryption"), _H_STRUCT_VALUE(MainConfig().network.softAp, _encryption));
+//     add<uint8_t>(F("encryption"), _H_STRUCT_VALUE(MainConfig().network.softAp, _encryption));
 
-    addValidator(new FormEnumValidator<uint8_t, WiFiEncryptionTypeArray().size()>(F("Invalid encryption"), WIFI_ENCRYPTION_ARRAY));
+//     addValidator(new FormEnumValidator<uint8_t, WiFiEncryptionTypeArray().size()>(F("Invalid encryption"), createWiFiEncryptionTypeArray()));
 
-    add<bool>(F("ap_hidden"), _H_FLAGS_BOOL_VALUE(Config().flags, hiddenSSID), FormField::InputFieldType::CHECK);
-    add<bool>(F("ap_standby_mode"), _H_FLAGS_BOOL_VALUE(Config().flags, apStandByMode), FormField::InputFieldType::SELECT);
+//     add<bool>(F("ap_hidden"), _H_FLAGS_BOOL_VALUE(Config().flags, hiddenSSID), FormField::InputFieldType::CHECK);
+//     add<bool>(F("ap_standby_mode"), _H_FLAGS_BOOL_VALUE(Config().flags, apStandByMode), FormField::InputFieldType::SELECT);
 
-    finalize();
-}
+//     finalize();
+// }
 
-NetworkSettingsForm::NetworkSettingsForm(AsyncWebServerRequest *request) : SettingsForm(request)
-{
-    using KFCConfigurationClasses::MainConfig;
+// NetworkSettingsForm::NetworkSettingsForm(AsyncWebServerRequest *request) : SettingsForm(request)
+// {
+//     using KFCConfigurationClasses::MainConfig;
 
-    add(F("hostname"), _H_STR_VALUE(Config().device_name));
-    addValidator(new FormLengthValidator(4, sizeof(Config().device_name) - 1));
-    add(FSPGM(title), _H_STR_VALUE(Config().device_title));
-    addValidator(new FormLengthValidator(1, sizeof(Config().device_title) - 1));
+//     add(F("hostname"), _H_STR_VALUE(Config().device_name));
+//     addValidator(new FormLengthValidator(4, sizeof(Config().device_name) - 1));
+//     add(FSPGM(title), _H_STR_VALUE(Config().device_title));
+//     addValidator(new FormLengthValidator(1, sizeof(Config().device_title) - 1));
 
-    add<bool>(F("dhcp_client"), _H_FLAGS_BOOL_VALUE(Config().flags, stationModeDHCPEnabled));
+//     add<bool>(F("dhcp_client"), _H_FLAGS_BOOL_VALUE(Config().flags, stationModeDHCPEnabled));
 
-    add(F("ip_address"), _H_STRUCT_IP_VALUE(MainConfig().network.settings, _localIp));
-    add(F("subnet"), _H_STRUCT_IP_VALUE(MainConfig().network.settings, _subnet));
-    add(F("gateway"), _H_STRUCT_IP_VALUE(MainConfig().network.settings, _gateway));
-    add(F("dns1"), _H_STRUCT_IP_VALUE(MainConfig().network.settings, _dns1));
-    add(F("dns2"), _H_STRUCT_IP_VALUE(MainConfig().network.settings, _dns2));
+//     add(F("ip_address"), _H_STRUCT_IP_VALUE(MainConfig().network.settings, _localIp));
+//     add(F("subnet"), _H_STRUCT_IP_VALUE(MainConfig().network.settings, _subnet));
+//     add(F("gateway"), _H_STRUCT_IP_VALUE(MainConfig().network.settings, _gateway));
+//     add(F("dns1"), _H_STRUCT_IP_VALUE(MainConfig().network.settings, _dns1));
+//     add(F("dns2"), _H_STRUCT_IP_VALUE(MainConfig().network.settings, _dns2));
 
-    add<bool>(F("softap_dhcpd"), _H_FLAGS_BOOL_VALUE(Config().flags, softAPDHCPDEnabled));
+//     add<bool>(F("softap_dhcpd"), _H_FLAGS_BOOL_VALUE(Config().flags, softAPDHCPDEnabled));
 
-    add(F("dhcp_start"), _H_STRUCT_IP_VALUE(MainConfig().network.softAp, _dhcpStart));
-    add(F("dhcp_end"), _H_STRUCT_IP_VALUE(MainConfig().network.softAp, _dhcpEnd));
-    add(F("ap_ip_address"), _H_STRUCT_IP_VALUE(MainConfig().network.softAp, _address));
-    add(F("ap_subnet"), _H_STRUCT_IP_VALUE(MainConfig().network.softAp, _subnet));
+//     add(F("dhcp_start"), _H_STRUCT_IP_VALUE(MainConfig().network.softAp, _dhcpStart));
+//     add(F("dhcp_end"), _H_STRUCT_IP_VALUE(MainConfig().network.softAp, _dhcpEnd));
+//     add(F("ap_ip_address"), _H_STRUCT_IP_VALUE(MainConfig().network.softAp, _address));
+//     add(F("ap_subnet"), _H_STRUCT_IP_VALUE(MainConfig().network.softAp, _subnet));
 
-    finalize();
-}
+//     finalize();
+// }
 
-DeviceSettingsForm::DeviceSettingsForm(AsyncWebServerRequest *request) : SettingsForm(request)
-{
-    using KFCConfigurationClasses::MainConfig;
+// DeviceSettingsForm::DeviceSettingsForm(AsyncWebServerRequest *request) : SettingsForm(request)
+// {
+//     using KFCConfigurationClasses::MainConfig;
 
-    add(FSPGM(title), _H_STR_VALUE(Config().device_title));
-    addValidator(new FormLengthValidator(1, sizeof(Config().device_title) - 1));
+//     add(FSPGM(title), _H_STR_VALUE(Config().device_title));
+//     addValidator(new FormLengthValidator(1, sizeof(Config().device_title) - 1));
 
-    add<uint16_t>(F("safe_mode_reboot_time"), _H_STRUCT_VALUE(MainConfig().system.device.settings, _safeModeRebootTime));
-    addValidator(new FormRangeValidator(5, 1440, true));
+//     add<uint16_t>(F("safe_mode_reboot_time"), _H_STRUCT_VALUE(MainConfig().system.device.settings, _safeModeRebootTime));
+//     addValidator(new FormRangeValidator(5, 1440, true));
 
-    add<bool>(F("enable_mdns"), _H_FLAGS_BOOL_VALUE(Config().flags, enableMDNS));
+//     add<bool>(F("enable_mdns"), _H_FLAGS_BOOL_VALUE(Config().flags, enableMDNS));
 
-    add<uint16_t>(F("webui_keep_logged_in_days"), _H_STRUCT_VALUE(MainConfig().system.device.settings, _webUIKeepLoggedInDays));
-    addValidator(new FormRangeValidator(3, 180, true));
+//     add<uint16_t>(F("webui_keep_logged_in_days"), _H_STRUCT_VALUE(MainConfig().system.device.settings, _webUIKeepLoggedInDays));
+//     addValidator(new FormRangeValidator(3, 180, true));
 
-    add<bool>(F("disable_webalerts"), _H_FLAGS_BOOL_VALUE(Config().flags, disableWebAlerts));
-    add<bool>(F("disable_webui"), _H_FLAGS_BOOL_VALUE(Config().flags, disableWebUI));
-    add<uint8_t>(F("status_led_mode"), _H_STRUCT_VALUE(MainConfig().system.device.settings, _statusLedMode));
+//     add<bool>(F("disable_webalerts"), _H_FLAGS_BOOL_VALUE(Config().flags, disableWebAlerts));
+//     add<bool>(F("disable_webui"), _H_FLAGS_BOOL_VALUE(Config().flags, disableWebUI));
+//     add<uint8_t>(F("status_led_mode"), _H_STRUCT_VALUE(MainConfig().system.device.settings, _statusLedMode));
 
-    finalize();
-}
+//     finalize();
+// }
 
-PasswordSettingsForm::PasswordSettingsForm(AsyncWebServerRequest *request) : SettingsForm(request)
-{
-    add(new FormField(FSPGM(password), config._H_STR(Config().device_pass)));
-    addValidator(new FormMatchValidator(F("The entered password is not correct"), [](FormField &field) {
-        return field.getValue().equals(config._H_STR(Config().device_pass));
-    }));
+// PasswordSettingsForm::PasswordSettingsForm(AsyncWebServerRequest *request) : SettingsForm(request)
+// {
+//     add(new FormField(FSPGM(password), config._H_STR(Config().device_pass)));
+//     addValidator(new FormMatchValidator(F("The entered password is not correct"), [](FormField &field) {
+//         return field.getValue().equals(config._H_STR(Config().device_pass));
+//     }));
 
-    add(F("password2"), _H_STR_VALUE(Config().device_pass))
-        ->setValue(emptyString);
+//     add(F("password2"), _H_STR_VALUE(Config().device_pass))
+//         ->setValue(emptyString);
 
-    addValidator(new FormRangeValidator(F("The password has to be at least %min% characters long"), 6, 0));
-    addValidator(new FormRangeValidator(6, sizeof(Config().device_pass) - 1))
-        ->setValidateIfValid(false);
+//     addValidator(new FormRangeValidator(F("The password has to be at least %min% characters long"), 6, 0));
+//     addValidator(new FormRangeValidator(6, sizeof(Config().device_pass) - 1))
+//         ->setValidateIfValid(false);
 
-    add(F("password3"), emptyString, FormField::InputFieldType::TEXT);
-    addValidator(new FormMatchValidator(F("The password confirmation does not match"), [](FormField &field) {
-            return field.equals(field.getForm().getField(F("password2")));
-        }))
-        ->setValidateIfValid(false);
+//     add(F("password3"), emptyString, FormField::InputFieldType::TEXT);
+//     addValidator(new FormMatchValidator(F("The password confirmation does not match"), [](FormField &field) {
+//             return field.equals(field.getForm().getField(F("password2")));
+//         }))
+//         ->setValidateIfValid(false);
 
-    finalize();
-}
+//     finalize();
+// }
 
 SettingsForm::SettingsForm(AsyncWebServerRequest *request) : Form(&_data), _json(nullptr)
 {

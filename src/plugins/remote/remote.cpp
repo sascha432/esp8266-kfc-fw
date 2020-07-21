@@ -24,7 +24,7 @@ static RemoteControlPlugin plugin;
 
 RemoteControlPlugin::RemoteControlPlugin() : _autoSleepTimeout(0), _buttonsLocked(~0), _longPress(0), _comboButton(-1), _hass(HassPlugin::getInstance())
 {
-    REGISTER_PLUGIN(this);
+    REGISTER_PLUGIN(this, "RemoteControlPlugin");
     _config.autoSleepTime = 15;
     for(auto pin : _buttonPins) {
         pinMode(_buttonPins[pin], INPUT);
@@ -151,7 +151,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(RMNOSLP, "RMNOSLP", "Disable auto sleep");
 
 void RemoteControlPlugin::atModeHelpGenerator()
 {
-    auto name = getName();
+    auto name = getName_P();
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(RMNOSLP), name);
 }
 

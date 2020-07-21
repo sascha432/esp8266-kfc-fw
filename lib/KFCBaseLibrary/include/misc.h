@@ -121,12 +121,6 @@ const char *inet_ntoa_s(char *dst, size_t size, uint32_t ip);
 
 #define inet_ntoa(dst, ip)                      inet_ntoa_s(dst, INET_NTOA_LEN, ip)
 
-#define NIBBLE2HEX_LC                           ('a' - 10)
-#define NIBBLE2HEX_UC                           ('A' - 10)
-
-// 4bit 2 hex
-char nibble2hex(uint8_t nibble, char hex_char = NIBBLE2HEX_LC);
-
 void bin2hex_append(String &str, const void *data, size_t length);
 size_t hex2bin(void *buf, size_t length, const char *str);
 
@@ -136,15 +130,24 @@ size_t hex2bin(void *buf, size_t length, const char *str);
 // bzero variant using sizeof(dst)
 #define BNZERO_S(dst)                           memset(&dst, 0, sizeof(dst));
 
+// NOTE:
+// string functions are nullptr safe
+// only PGM_P is PROGMEM safe
+
 #define STRINGLIST_SEPARATOR                    ','
 #define STRLS                                   ","
 
 // find a string in a list of strings separated by a single characters
 // -1 = not found, otherwise the number of the matching string
-int16_t stringlist_find_P_P(PGM_P list, PGM_P find, char separator = STRINGLIST_SEPARATOR);
+int stringlist_find_P_P(PGM_P list, PGM_P find, char separator = STRINGLIST_SEPARATOR);
 
 // multiple separators
-int16_t stringlist_find_P_P(PGM_P list, PGM_P find, const char *separator);
+int stringlist_find_P_P(PGM_P list, PGM_P find, PGM_P separator);
+
+template<typename Tl, typename Tf, typename Tc>
+inline int stringlist_find_P_P(Tl list, Tf find, Tc separator) {
+    return stringlist_find_P_P(reinterpret_cast<PGM_P>(list), reinterpret_cast<PGM_P>(find), separator);
+}
 
 // compare two PROGMEM strings
 int strcmp_P_P(PGM_P str1, PGM_P str2);
@@ -166,13 +169,19 @@ size_t String_rtrim(String &str, char chars, uint16_t minLength = ~0);
 size_t String_ltrim(String &str, char chars);
 size_t String_trim(String &str, char chars);
 
-size_t String_rtrim_P(String &str, const char *chars, uint16_t minLength = ~0);
-size_t String_ltrim_P(String &str, const char *chars);
-size_t String_trim_P(String &str, const char *chars);
+size_t String_rtrim_P(String &str, PGM_P chars, uint16_t minLength = ~0);
+size_t String_ltrim_P(String &str, PGM_P chars);
+size_t String_trim_P(String &str, PGM_P chars);
 
-size_t String_rtrim_P(String &str, char chars, uint16_t minLength = ~0);
-size_t String_ltrim_P(String &str, char chars);
-size_t String_trim_P(String &str, char chars);
+inline size_t String_rtrim_P(String &str, const __FlashStringHelper *chars, uint16_t minLength = ~0) {
+    return String_rtrim_P(str, reinterpret_cast<PGM_P>(chars), minLength);
+}
+inline size_t String_ltrim_P(String &str, const __FlashStringHelper *chars) {
+    return String_ltrim_P(str, reinterpret_cast<PGM_P>(chars));
+}
+inline size_t String_trim_P(String &str, const __FlashStringHelper *chars) {
+    return String_trim_P(str, reinterpret_cast<PGM_P>(chars));
+}
 
 inline bool String_startsWith(const String &str1, char ch) {
     return str1.charAt(0) == ch;
@@ -206,15 +215,9 @@ inline bool String_endsWith(const String &str1, const __FlashStringHelper *str2)
     return String_endsWith(str1, reinterpret_cast<PGM_P>(str2));
 }
 
-bool __while(uint32_t time_in_ms, std::function<bool()> loop, uint16_t interval_in_ms, std::function<bool()> intervalLoop);
-// call intervalLoop every interval_in_ms for time_in_ms
-bool __while(uint32_t time_in_ms, uint16_t interval_in_ms, std::function<bool()> intervalLoop);
-// call loop every millisecond for time_in_ms
-bool __while(uint32_t time_in_ms, std::function<bool()> loop);
-
 #if ESP8266 || ESP32
 
-const char *strchr_P(const char *str, int c);
+const char *strchr_P(PGM_P str, int c);
 
 #endif
 

@@ -123,14 +123,11 @@ public:
 
     virtual void _onReceive(size_t length) override;
 
-    virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override {
-        readConfig();
-        DimmerModuleForm::createConfigureForm(request, form);
-    }
-
 protected:
     void _begin();
     void _end();
+    void _beginMqtt();
+    void _endMqtt();
     void _beginButtons();
     void _endButtons();
     void _printStatus(Print &out);
@@ -191,36 +188,37 @@ private:
 #endif
 };
 
-class DimmerModulePlugin : public Driver_DimmerModule {
+class DimmerModulePlugin : public PluginComponent, public Driver_DimmerModule {
 public:
-    DimmerModulePlugin() : Driver_DimmerModule() {
-        REGISTER_PLUGIN(this);
-    }
-
-    virtual PGM_P getName() const override;
-    virtual const __FlashStringHelper *getFriendlyName() const {
-        return F("Dimmer");
-    }
-    virtual PriorityType getSetupPriority() const override {
-        return static_cast<PriorityType>(100);
-    }
+    DimmerModulePlugin();
 
     virtual void setup(SetupModeType mode) override;
-    virtual void reconfigure(PGM_P source) override;
-    virtual bool hasReconfigureDependecy(PluginComponent *plugin) const override;
+    virtual void reconfigure(const char *source) override;
     virtual void shutdown() override;
-
-    virtual bool hasStatus() const override;
     virtual void getStatus(Print &output) override;
-
-    virtual bool hasWebUI() const override;
     virtual void createWebUI(WebUI &webUI) override;
-    virtual WebUIInterface *getWebUIInterface() override;
+
+    virtual void createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request) override {
+        if (isCreateFormCallbackType(type)) {
+            readConfig();
+            DimmerModuleForm::_createConfigureForm(type, formName, form, request);
+        }
+    }
+
+    virtual void getValues(JsonArray &array) override {
+        _getValues(array);
+    }
+    virtual void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState) override {
+        _setValue(id, value, hasValue, state, hasState);
+    }
 
 #if AT_MODE_SUPPORTED
-    virtual bool hasAtMode() const override;
-    virtual void atModeHelpGenerator() override;
-    virtual bool atModeHandler(AtModeArgs &args) override;
+    virtual void atModeHelpGenerator() override {
+        _atModeHelpGenerator(getName_P());
+    }
+    virtual bool atModeHandler(AtModeArgs &args) override {
+        return _atModeHandler(args, *this, IOT_DIMMER_MODULE_MAX_BRIGHTNESS);
+    }
 #endif
 };
 

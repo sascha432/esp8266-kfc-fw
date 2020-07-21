@@ -27,6 +27,8 @@ public:
     virtual void _onConnect(AsyncClient *client) override;
     virtual void _onDisconnect(AsyncClient *client, const String &reason) override;
 
+    virtual bool isConnected() const override;
+
 private:
     void _connect();
     void _disconnect();

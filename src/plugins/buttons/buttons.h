@@ -55,7 +55,7 @@ public:
 
 public:
     ButtonsPlugin() {
-        REGISTER_PLUGIN(this);
+        REGISTER_PLUGIN(this, "ButtonsPlugin");
     }
 
     virtual PGM_P getName() const {
@@ -64,12 +64,11 @@ public:
     virtual const __FlashStringHelper *getFriendlyName() const {
         return F("Buttons");
     }
-
     virtual PriorityType getSetupPriority() const {
         return PriorityType::BUTTONS;
     }
-    virtual bool autoSetupAfterDeepSleep() const override {
-        return true;
+    virtual OptionsType getOptions() const override {
+        return EnumHelper::Bitset::all(OptionsType::SETUP_AFTER_DEEP_SLEEP, OptionsType::HAS_CONFIG_FORM);
     }
 
     virtual void setup(SetupModeType mode) override;
@@ -83,9 +82,6 @@ public:
     //     bootstrapMenu.addSubMenu(F("Buttons"), F("buttons.html"), navMenu.config);
     // }
 
-    virtual PGM_P getConfigureForm() const override {
-        return getName();
-    }
     virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
 
 

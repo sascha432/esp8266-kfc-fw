@@ -56,51 +56,25 @@ public:
     typedef std::vector<ServiceInfo> ServiceInfoVector;
 
 public:
-    MDNSPlugin() : _running(false), _enabled(false)
-    {
-        REGISTER_PLUGIN(this);
-    }
-    virtual PGM_P getName() const {
-        return PSTR("mdns");
-    }
-    virtual const __FlashStringHelper *getFriendlyName() const {
-        return F("MDNS");
-    }
-    virtual PriorityType getSetupPriority() const override {
-        return PriorityType::MDNS;
-    }
-    virtual void setup(SetupModeType mode) override;
-    virtual void reconfigure(PGM_P source) override;
-    virtual bool hasReconfigureDependecy(PluginComponent *plugin) const override {
-        return plugin->nameEquals(FSPGM(http));
-    }
-    virtual void shutdown() override;
+    MDNSPlugin();
 
-    virtual bool hasStatus() const override {
-        return true;
-    }
+    virtual void setup(SetupModeType mode) override;
+    virtual void reconfigure(const String &source) override;
+    virtual void shutdown() override;
     virtual void getStatus(Print &output) override;
 
 #if ESP8266
-
-    virtual MenuType getMenuType() const override {
-        return MenuType::CUSTOM;
-    }
     virtual void createMenu() override {
         if (_enabled) {
             bootstrapMenu.addSubMenu(F("MDNS Discovery"), F("mdns_discovery.html"), navMenu.util);
         }
     }
-
     static void mdnsDiscoveryHandler(AsyncWebServerRequest *request);
     void serviceCallback(ServiceInfoVector &services, bool map, MDNSResponder::MDNSServiceInfo &mdnsServiceInfo, MDNSResponder::AnswerType answerType, bool p_bSetContent);
 
 #endif
 
 #if AT_MODE_SUPPORTED
-    virtual bool hasAtMode() const override {
-        return true;
-    }
     virtual void atModeHelpGenerator() override;
     virtual bool atModeHandler(AtModeArgs &args) override;
 #endif

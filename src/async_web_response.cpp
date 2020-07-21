@@ -354,10 +354,8 @@ size_t AsyncDirResponse::_fillBuffer(uint8_t *data, size_t len)
             modified[0] = '0';
             modified[1] = 0;
 
-#if SPIFFS_TMP_FILES_TTL || SPIFFS_CLEANUP_TMP_DURING_BOOT
+#if SPIFFS_TMP_FILES_TTL
             if (path.length() > tmp_dir.length() && path.startsWith(tmp_dir)) { // check if the name matches the location of temporary files, exclude mapped files
-#  if SPIFFS_TMP_FILES_TTL
-
                 ulong ttl = strtoul(path.substring(tmp_dir.length()).c_str(), NULL, HEX);
                 ulong now = (millis() / 1000UL);
                 if (ttl > 0) {
@@ -366,12 +364,6 @@ size_t AsyncDirResponse::_fillBuffer(uint8_t *data, size_t len)
                     } else {
                         strncpy_P(modified, PSTR("\"TTL - scheduled for removal\""), sizeof(modified));
                     }
-                } else
-#  endif
-                {
-#  if SPIFFS_CLEANUP_TMP_DURING_BOOT
-                    strncpy_P(modified, PSTR("\"TTL until next reboot\""), sizeof(modified));
-#  endif
                 }
             }
             else if (_dir.isMapping()) {

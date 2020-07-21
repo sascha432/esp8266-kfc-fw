@@ -162,12 +162,11 @@ public:
     virtual const __FlashStringHelper *getFriendlyName() const {
         return F("Remote Control");
     }
-
     virtual PriorityType getSetupPriority() const override {
         return PriorityType::MAX;
     }
-    virtual bool autoSetupAfterDeepSleep() const override {
-        return true;
+    virtual OptionsType getOptions() const override {
+        return EnumHelper::Bitset::all(OptionsType::SETUP_AFTER_DEEP_SLEEP, OptionsType::HAS_STATUS, OptionsType::HAS_CUSTOM_MENU, OptionsType::HAS_CONFIG_FORM, OptionsType::HAS_AT_MODE);
     }
 
     virtual void setup(SetupModeType mode) override;
@@ -178,25 +177,13 @@ public:
         return plugin->nameEquals(FSPGM(http));
     }
 
-    virtual bool hasStatus() const override {
-        return true;
-    }
     virtual void getStatus(Print &output) override;
 
-    virtual MenuType getMenuType() const override {
-        return MenuType::CUSTOM;
-    }
     virtual void createMenu() override;
 
-    virtual PGM_P getConfigureForm() const override {
-        return getName();
-    }
     virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
 
 #if AT_MODE_SUPPORTED
-    virtual bool hasAtMode() const override {
-        return true;
-    }
     virtual void atModeHelpGenerator() override;
     virtual bool atModeHandler(AtModeArgs &args) override;
 #endif

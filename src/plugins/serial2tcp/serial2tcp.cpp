@@ -7,6 +7,7 @@
 #include "Serial2TcpBase.h"
 #include <LoopFunctions.h>
 #include <Configuration.h>
+#include <KFCForms.h>
 #include <kfc_fw_config.h>
 #include "at_mode.h"
 
@@ -20,7 +21,7 @@ static Serial2TcpPlugin plugin;
 
 Serial2TcpPlugin::Serial2TcpPlugin()
 {
-    REGISTER_PLUGIN(this);
+    REGISTER_PLUGIN(this, "Serial2TcpPlugin");
 }
 
 void Serial2TcpPlugin::setup(SetupModeType mode)
@@ -67,39 +68,56 @@ void Serial2TcpPlugin::getStatus(Print &output)
 }
 
 
-void Serial2TcpPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form) {
-    //TODO
+void Serial2TcpPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
+{
+    using KFCConfigurationClasses::MainConfig;
+    auto &cfg = Serial2TcpPlugin::Serial2TCP::getWriteableConfig();
+    FormUI::ItemsList serialPorts;
+    FormUI::ItemsList modes;
+
+
+    serialPorts.emplace_back(String(static_cast<int>(Serial2TcpPlugin::Serial2TCP::SerialPortType::SERIAL0)), String(F("Serial Port 0")));
+    serialPorts.emplace_back(String(static_cast<int>(Serial2TcpPlugin::Serial2TCP::SerialPortType::SERIAL1)), String(F("Serial Port 1")));
+    serialPorts.emplace_back(String(static_cast<int>(Serial2TcpPlugin::Serial2TCP::SerialPortType::SOFTWARE)), String(F("Software Sewrial")));
+
+    modes.emplace_back(String(static_cast<int>(Serial2TcpPlugin::Serial2TCP::ModeType::SERVER)), String(F("Server")));
+    modes.emplace_back(String(static_cast<int>(Serial2TcpPlugin::Serial2TCP::ModeType::CLIENT)), String(F("Client")));
+
+    form.setFormUI(F("Serial2TCP Settings"));
+
+    form.add<uint8_t>(F("mode"), &cfg.mode_byte)->setFormUI((new FormUI(FormUI::TypeEnum_t::SELECT, F("Mode:")))->addItems(modes));
+
+    form.add<uint8_t>(F("s_port"), &cfg.serial_port_byte)->setFormUI((new FormUI(FormUI::TypeEnum_t::SELECT, F("Serial Port:")))->addItems(serialPorts));
+    form.add<uint32_t>(F("baud"), &cfg.baudrate)->setFormUI((new FormUI(FormUI::TypeEnum_t::TEXT, F("Baud:"))));
+    form.add<uint8_t>(F("rxpin"), &cfg.rx_pin)->setFormUI((new FormUI(FormUI::TypeEnum_t::TEXT, F("Rx Pin:"))));
+    form.add<uint8_t>(F("txpin"), &cfg.tx_pin)->setFormUI((new FormUI(FormUI::TypeEnum_t::TEXT, F("Tx Pin:"))));
+
+    form.add(F("host"), _H_STR_VALUE(MainConfig().plugins.serial2tcp.hostname))->setFormUI((new FormUI(FormUI::TypeEnum_t::TEXT, F("Host:"))));
+    form.add<uint16_t>(F("tcp_port"), &cfg.port)->setFormUI((new FormUI(FormUI::TypeEnum_t::TEXT, F("TCP Port:"))));
+    form.add<bool>(F("auth"), &cfg.authentication)->setFormUI((new FormUI(FormUI::TypeEnum_t::SELECT, F("Authenication:")))->setBoolItems(FSPGM(yes), FSPGM(no)));
+    form.add(F("username"), _H_STR_VALUE(MainConfig().plugins.serial2tcp.username))->setFormUI((new FormUI(FormUI::TypeEnum_t::TEXT, F("Username:"))));
+    form.add(F("password"), _H_STR_VALUE(MainConfig().plugins.serial2tcp.password))->setFormUI((new FormUI(FormUI::TypeEnum_t::PASSWORD, F("Password:"))));
+
+    form.add<bool>(F("autocnn"), &cfg.auto_connect)->setFormUI((new FormUI(FormUI::TypeEnum_t::SELECT, F("Auto Connect:")))->setBoolItems(FSPGM(yes), FSPGM(no)));
+    form.add<uint8_t>(F("autoreconn"), &cfg.auto_reconnect)->setFormUI((new FormUI(FormUI::TypeEnum_t::TEXT, F("Auto Reconnect:")))->setSuffix(F("seconds, 0 = disable")));
+    form.add<uint16_t>(F("idltimeout"), &cfg.idle_timeout)->setFormUI((new FormUI(FormUI::TypeEnum_t::TEXT, F("Idle TImeout:")))->setSuffix(F("seconds, 0 = disable")));
+
+    form.finalize();
 }
 
 #if AT_MODE_SUPPORTED
 
 #include "at_mode.h"
 
-#if DEBUG
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(S2TCPD, "S2TCPD", "<0/1>", "Enable or disable Serial2Tcp debug output");
-#endif
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(S2TCP, "S2TCP", "<0=disable/1=server/2=client>", "Enable or disable Serial2Tcp");
 
 void Serial2TcpPlugin::atModeHelpGenerator()
 {
-#if DEBUG
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(S2TCPD), getName());
-#endif
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(S2TCP), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(S2TCP), getName_P());
 }
 
 bool Serial2TcpPlugin::atModeHandler(AtModeArgs &args)
 {
-#if DEBUG
-    if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(S2TCPD))) {
-        if (args.requireArgs(1, 1)) {
-            Serial2TcpBase::_debugOutput = args.isTrue(0);
-            args.printf_P(PSTR("debug output %s"), Serial2TcpBase::_debugOutput ? SPGM(enabled) : SPGM(disabled));
-        }
-        return true;
-    }
-    else
-#endif
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(S2TCP))) {
         if (args.requireArgs(1, 1)) {
             using KFCConfigurationClasses::System;

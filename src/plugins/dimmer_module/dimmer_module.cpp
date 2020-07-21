@@ -43,7 +43,21 @@ void Driver_DimmerModule::_begin()
 {
     _debug_println();
     Dimmer_Base::_begin();
+    _beginMqtt();
+    _beginButtons();
+    _getChannels();
+}
 
+void Driver_DimmerModule::_end()
+{
+    _debug_println();
+    _endButtons();
+    _endMqtt();
+    Dimmer_Base::_end();
+}
+
+void Driver_DimmerModule::_beginMqtt()
+{
     auto mqttClient = MQTTClient::getClient();
     if (mqttClient) {
         for (uint8_t i = 0; i < _channels.size(); i++) {
@@ -52,18 +66,11 @@ void Driver_DimmerModule::_begin()
         }
         mqttClient->registerComponent(this);
     }
-
-    _beginButtons();
-    _getChannels();
 }
 
-void Driver_DimmerModule::_end()
+void Driver_DimmerModule::_endMqtt()
 {
     _debug_println();
-
-    _endButtons();
-
-    _debug_println(F("removing mqtt client"));
     auto mqttClient = MQTTClient::getClient();
     if (mqttClient) {
         mqttClient->unregisterComponent(this);
@@ -71,8 +78,6 @@ void Driver_DimmerModule::_end()
             mqttClient->unregisterComponent(&_channels[i]);
         }
     }
-
-    Dimmer_Base::_end();
 }
 
 void Driver_DimmerModule::_beginButtons()
@@ -419,10 +424,31 @@ void Driver_DimmerModule::_buttonRepeat(uint8_t channel, bool up, uint16_t repea
 
 DimmerModulePlugin dimmer_plugin;
 
-PGM_P DimmerModulePlugin::getName() const
+PROGMEM_DEFINE_PLUGIN_OPTIONS(
+    DimmerModulePlugin,
+    "dimmer",           // name
+    "Dimmer",           // friendly name
+    "",                 // web_templates
+    "dimmer_cfg",       // config_forms
+    "mqtt,http",        // reconfigure_dependencies
+    PluginComponent::PriorityType::DIMMER_MODULE,
+    PluginComponent::RTCMemoryId::NONE,
+    static_cast<uint8_t>(PluginComponent::MenuType::AUTO),
+    false,              // allow_safe_mode
+    false,              // setup_after_deep_sleep
+    true,               // has_get_status
+    true,               // has_config_forms
+    true,               // has_web_ui
+    false,              // has_web_templates
+    true,               // has_at_mode
+    0                   // __reserved
+);
+
+DimmerModulePlugin::DimmerModulePlugin() : Driver_DimmerModule(PROGMEM_GET_PLUGIN_OPTIONS(DimmerModulePlugin))
 {
-    return PSTR("dimmer");
+    REGISTER_PLUGIN(this, "DimmerModulePlugin");
 }
+
 
 void DimmerModulePlugin::setup(SetupModeType mode)
 {
@@ -430,9 +456,9 @@ void DimmerModulePlugin::setup(SetupModeType mode)
     _begin();
 }
 
-void DimmerModulePlugin::reconfigure(PGM_P source)
+void DimmerModulePlugin::reconfigure(const char *source)
 {
-    if (source == nullptr) {
+    if (!source) {
         writeConfig();
         auto dimmer = config._H_GET(Config().dimmer);
         _fadeTime = dimmer.fade_time;
@@ -441,29 +467,18 @@ void DimmerModulePlugin::reconfigure(PGM_P source)
         _endButtons();
         _beginButtons();
     }
-    else if (!strcmp_P_P(source, SPGM(http))) {
+    else if (!strcmp_P(source, SPGM(http))) {
         setupWebServer();
     }
-}
-
-bool DimmerModulePlugin::hasReconfigureDependecy(PluginComponent *plugin) const
-{
-    return plugin->nameEquals(FSPGM(http));
+    else if (!strcmp_P(source, SPGM(mqtt))) {
+        _endMqtt();
+        _beginMqtt();
+    }
 }
 
 void DimmerModulePlugin::shutdown()
 {
     _end();
-}
-
-bool DimmerModulePlugin::hasWebUI() const
-{
-    return true;
-}
-
-WebUIInterface *DimmerModulePlugin::getWebUIInterface()
-{
-    return this;
 }
 
 void DimmerModulePlugin::createWebUI(WebUI &webUI)
@@ -488,69 +503,3 @@ void DimmerModulePlugin::createWebUI(WebUI &webUI)
     // row->addBadgeSensor(F("dimmer_ntc_temp"), F("Dimmer NTC"), FSPGM(_degreeC));
 }
 
-
-bool DimmerModulePlugin::hasStatus() const
-{
-    return true;
-}
-
-#if AT_MODE_SUPPORTED
-
-#include "at_mode.h"
-
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DIMG, "DIMG", "Get level");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DIMS, "DIMS", "<channel>,<level>[,<time>]", "Set level");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DIMW, "DIMW", "Write EEPROM");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DIMR, "DIMR", "Reset ATmega");
-
-bool DimmerModulePlugin::hasAtMode() const
-{
-    return true;
-}
-
-void DimmerModulePlugin::atModeHelpGenerator()
-{
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DIMG), getName());
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DIMS), getName());
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DIMW), getName());
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DIMR), getName());
-}
-
-bool DimmerModulePlugin::atModeHandler(AtModeArgs &args)
-{
-    if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DIMW))) {
-        writeEEPROM();
-        args.ok();
-        return true;
-    }
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DIMG))) {
-        for(uint8_t i = 0; i < _channels.size(); i++) {
-            args.printf_P(PSTR("%u: %d"), i, getChannel(i));
-        }
-        return true;
-    }
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DIMR))) {
-        args.printf_P(PSTR("Pulling GPIO%u low for 10ms"), STK500V1_RESET_PIN);
-        dimmer_plugin.resetDimmerMCU();
-        args.printf_P(PSTR("GPIO%u set to input"), STK500V1_RESET_PIN);
-        return true;
-    }
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DIMS))) {
-        if (args.requireArgs(2, 2)) {
-            size_t channel = args.toInt(0);
-            if (channel >= 0 && channel < _channels.size()) {
-                int level = args.toIntMinMax(1, 0, IOT_DIMMER_MODULE_MAX_BRIGHTNESS);
-                float time = args.toFloat(2, -1);
-                args.printf_P(PSTR("Set %u: %d (time %.2f)"), channel, level, time);
-                setChannel(channel, level, time);
-            }
-            else {
-                args.print(F("Invalid channel"));
-            }
-        }
-        return true;
-    }
-    return false;
-}
-
-#endif

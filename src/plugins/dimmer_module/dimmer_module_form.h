@@ -9,11 +9,7 @@
 #include "PluginComponent.h"
 #include "../mqtt/mqtt_component.h"
 
-class DimmerModuleForm : public PluginComponent {
-public:
-    virtual PGM_P getConfigureForm() const override {
-        return PSTR("dimmer_cfg");
-    }
-    virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
-    virtual MQTTComponent::MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num) = 0;
+class DimmerModuleForm {
+protected:
+    void _createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request);
 };

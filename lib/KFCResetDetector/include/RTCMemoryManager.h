@@ -9,8 +9,11 @@
 #endif
 
 #include <Arduino_compat.h>
-
 #include <push_pack.h>
+
+#if HAVE_KFC_FIRMWARE_VERSION
+#include <PluginComponent.h>
+#endif
 
 // any data stored in RTC memory is kept during deep sleep and device reboots
 // data integrity is ensured
@@ -18,6 +21,12 @@
 
 class RTCMemoryManager {
 public:
+#if HAVE_KFC_FIRMWARE_VERSION
+    using RTCMemoryId = PluginComponent::RTCMemoryId;
+#else
+    using RTCMemoryId = uint8_t;
+#endif
+
     typedef struct __attribute__packed__ {
         uint16_t length;
         uint16_t crc;
@@ -51,8 +60,8 @@ public:
     static bool _readHeader(Header_t &header, uint32_t &offset, uint16_t &length);
     static uint32_t *_readMemory(uint16_t &length);
 
-    static bool read(uint8_t id, void *, uint8_t maxSize);
-    static bool write(uint8_t id, void *, uint8_t maxSize);
+    static bool read(RTCMemoryId id, void *, uint8_t maxSize);
+    static bool write(RTCMemoryId id, void *, uint8_t maxSize);
     static bool clear();
 
     static inline void freeMemPtr(uint32_t *memPtr) {

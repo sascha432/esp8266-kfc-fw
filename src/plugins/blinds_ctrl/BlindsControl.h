@@ -16,7 +16,7 @@ PROGMEM_STRING_DECL(blinds_controller_channel2);
 PROGMEM_STRING_DECL(blinds_controller_channel1_sensor);
 PROGMEM_STRING_DECL(blinds_controller_channel2_sensor);
 
-class BlindsControl : public MQTTComponent, public WebUIInterface {
+class BlindsControl : public MQTTComponent {
 public:
     typedef enum {
         NONE =          0xff,
@@ -65,8 +65,8 @@ public:
     }
     virtual void onConnect(MQTTClient *client) override;
 
-    virtual void getValues(JsonArray &array);
-    virtual void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState);
+    void getValues(JsonArray &array);
+    void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState);
 
     void setChannel(uint8_t channel, BlindsChannel::StateEnum_t state);
 

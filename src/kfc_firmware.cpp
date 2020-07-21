@@ -49,32 +49,38 @@ extern "C" void gdbstub_do_break();
 
 void cleanup_tmp_dir()
 {
-    static MillisTimer timer(SPIFFS_TMP_CLEAUP_INTERVAL * 1000UL);
-    if (timer.reached()) {
-        ulong now = (millis() / 1000UL);
-        String tmp_dir = sys_get_temp_dir();
-        auto dir = ListDir(tmp_dir);
+    auto now = time(nullptr);
+    if (!IS_TIME_VALID(now)) {
+        return;
+    }
+    String tmp_dir = sys_get_temp_dir();
+    auto dir = ListDir(tmp_dir);
 #if DEBUG
-        int deleted = 0;
+    int deleted = 0;
 #endif
-        while(dir.next()) {
-            String filename = dir.fileName();
-            ulong ttl = strtoul(filename.substring(tmp_dir.length()).c_str(), nullptr, HEX);
-            if (ttl && now > ttl) {
-                if (SPIFFS.remove(dir.fileName())) {
+    while(dir.next()) {
+        String filename = dir.fileName();
+        ulong ttl = strtoul(filename.substring(tmp_dir.length()).c_str(), nullptr, HEX);
+        if (ttl && (ulong)now > ttl) {
+            if (SPIFFS.remove(dir.fileName())) {
 #if DEBUG
-                    deleted++;
+                deleted++;
 #endif
-                }
             }
         }
-        _debug_printf_P(PSTR("Cleanup %s: Removed %d file(s)\n"), tmp_dir.c_str(), deleted);
-
-        timer.restart();
     }
+    _debug_printf_P(PSTR("Cleanup %s: Removed %d file(s)\n"), tmp_dir.c_str(), deleted);
 }
+
+void cleanup_tmp_dir_timer_callback(EventScheduler::TimerPtr)
+{
+    cleanup_tmp_dir();
+}
+
 #endif
 
+
+#if HAVE_KFC_BOOT_CHECK_FLASHSIZE
 void check_flash_size()
 {
 #if defined(ESP8266)
@@ -102,10 +108,17 @@ void check_flash_size()
     }
 #endif
 }
+#endif
+
 
 void setup()
 {
-    Serial0.begin(KFC_SERIAL_RATE);
+    KFC_SAFE_MODE_SERIAL_PORT.begin(KFC_SERIAL_RATE);
+#if KFC_DEBUG_USE_SERIAL1
+    Serial1.begin(KFC_DEBUG_USE_SERIAL1);
+    static_assert(KFC_DEBUG_USE_SERIAL1 >= 300, "must be set to the baud rate");
+#endif
+    serialHandler.begin();
     DEBUG_HELPER_INIT();
 
 #if DEBUG_RESET_DETECTOR
@@ -113,18 +126,18 @@ void setup()
 #endif
     BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::OFF);
 
-#if HAVE_GDBSTUB
-    gdbstub_do_break();
-    disable_at_mode(Serial);
-#endif
-
     if (resetDetector.getResetCounter() >= 20) {
-        delay(5000);    // delay boot if too many resets are detected
+        KFC_SAFE_MODE_SERIAL_PORT.println(F("Reboot continues in 5 seconds..."));
+        // stop timer to avoid resetting counters
+        resetDetector.disarmTimer();
+        // delay boot if too many resets are detected
+        delay(5000);
         resetDetector.armTimer();
     }
 
 #if DEBUG_PRE_INIT_SERIAL2TCP
     #include "../include/retracted/custom_wifi.h"
+    BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::FAST);
     WiFi.setAutoConnect(true);
     WiFi.setAutoReconnect(true);
     WiFi.enableSTA(true);
@@ -138,9 +151,17 @@ void setup()
         auto instance = Serial2TcpBase::createInstance(cfg, CUSTOM_SERIAL2TCP_SERVER);
         instance->begin();
         delay(1000);
+        BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::OFF);
+    }
+    else {
+        BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::SOS);
     }
 #endif
 
+#if HAVE_GDBSTUB
+    gdbstub_do_break();
+    disable_at_mode(Serial);
+#endif
 
     KFC_SAFE_MODE_SERIAL_PORT.println(F("Booting KFC firmware..."));
 
@@ -151,11 +172,11 @@ void setup()
     }
 #endif
     KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("SAFE MODE %d, reset counter %d, wake up %d\n"), resetDetector.getSafeMode(), resetDetector.getResetCounter(), resetDetector.hasWakeUpDetected());
-    config.setSafeMode(resetDetector.getSafeMode());
 
+#if KFC_RESTORE_FACTORY_SETTINGS_RESET_COUNT
     if (resetDetector.hasResetDetected()) {
-        if (resetDetector.getResetCounter() >= 4) {
-            KFC_SAFE_MODE_SERIAL_PORT.println(F("4x reset detected. Restoring factory defaults in a 5 seconds..."));
+        if (resetDetector.getResetCounter() >= KFC_RESTORE_FACTORY_SETTINGS_RESET_COUNT) {
+            KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("%ux reset detected. Restoring factory defaults in a 5 seconds...\n"), KFC_RESTORE_FACTORY_SETTINGS_RESET_COUNT);
             for(uint8_t i = 0; i < (RESET_DETECTOR_TIMEOUT + 500) / (100 + 250); i++) {
                 BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::SOLID);
                 delay(100);
@@ -165,124 +186,106 @@ void setup()
             config.restoreFactorySettings();
             config.write();
             resetDetector.setSafeMode(false);
+            resetDetector.clearCounter();
         }
     }
+#endif
 
     bool safe_mode = false;
-    bool incr_crash_counter = false;
+    bool increaseCrashCounter = false;
     if (resetDetector.getSafeMode()) {
-
-        safe_mode = true;
 
         KFC_SAFE_MODE_SERIAL_PORT.println(F("Starting in safe mode..."));
         delay(2000);
-        resetDetector.clearCounter();
-        resetDetector.setSafeMode(false);
-        config.setSafeMode(true);
+        // normal boot after safe mode
+        resetDetector.setSafeModeAndClearCounter(false);
+        // activate safe mode
+        safe_mode = true;
 
-    } else {
+    }
+#if KFC_SHOW_BOOT_MENU_RESET_COUNT
+    else {
 
-        if (resetDetector.getResetCounter() > 1) {
+        if (resetDetector.getResetCounter() > KFC_SHOW_BOOT_MENU_RESET_COUNT) {
 
-            KFC_SAFE_MODE_SERIAL_PORT.println(F("Multiple resets detected. Reboot continues in 20 seconds..."));
-            KFC_SAFE_MODE_SERIAL_PORT.println(F("Press reset again to start in safe mode."));
-            KFC_SAFE_MODE_SERIAL_PORT.println(F("\nTo restore factory defaults, press reset once a second until the LED starts to flash. After 5 seconds the normal boot process continues. To put the device to deep sleep until next reset, continue to press reset till the LED starts to flicker"));
-
-            KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("\nCrash detected: %d\nReset counter: %d\n\n"), resetDetector.hasCrashDetected(), resetDetector.getResetCounter());
-#if DEBUG
+            KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("Multiple resets detected. Reboot continues in %u seconds...\n"), KFC_BOOT_MENU_TIMEOUT);
+            KFC_SAFE_MODE_SERIAL_PORT.println(F("Press reset again to start in safe mode.\n"));
+            KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("Press reset %ux times to restore factory defaults. A blinking LED indicates success and the normal boot process continues after %u seconds.\n"), KFC_RESTORE_FACTORY_SETTINGS_RESET_COUNT, RESET_DETECTOR_TIMEOUT / 1000U);
+            KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("\nCrashs detected: %u\nReset counter: %u\n\n"), resetDetector.hasCrashDetected(), resetDetector.getResetCounter());
             KFC_SAFE_MODE_SERIAL_PORT.println(F("\nAvailable keys:\n"));
             KFC_SAFE_MODE_SERIAL_PORT.println(F(
-                "    l: Enter wait loop\n"
+                "    t: disable boot menu timeout\n"
                 "    s: reboot in safe mode\n"
-                "    r: reboot in normal mode\n"
+                "    r: continue to boot normally\n"
                 "    f: restore factory settings\n"
                 "    c: clear RTC memory\n"
-                //"    o: reboot in normal mode, start heap timer and block WiFi\n"
             ));
-#endif
 
             BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::SOS);
             resetDetector.setSafeMode(1);
 
-            if (
-#if DEBUG
-            __while(10000, [&safe_mode]() {
+            static_assert(KFC_BOOT_MENU_TIMEOUT >= 3, "timeout should be at least 3 seconds");
+            auto endTimeout = millis() + (KFC_BOOT_MENU_TIMEOUT * 1000UL);
+
+            while(millis() < endTimeout) {
                 if (Serial.available()) {
-                    switch(Serial.read()) {
+                    auto ch = Serial.read();
+                    switch(ch) {
                         case 'c':
                             RTCMemoryManager::clear();
                             SaveCrash::removeCrashCounter();
                             KFC_SAFE_MODE_SERIAL_PORT.println(F("RTC memory cleared"));
                             break;
-                        case 'l':
-                            __while(-1UL, []() {
-                                return (Serial.read() != 'x');
-                            }, 10e3, []() {
-                                KFC_SAFE_MODE_SERIAL_PORT.println(F("Press 'x' to restart the device..."));
-                                return true;
-                            });
-                            config.restartDevice();
+                        case 't':
+                            endTimeout = std::numeric_limits<decltype(endTimeout)>::max();
+                            KFC_SAFE_MODE_SERIAL_PORT.println(F("Boot menu timeout disabled"));
+                            break;
                         case 'f':
                             config.restoreFactorySettings();
-                            // continue switch
+                            config.write();
+                            KFC_SAFE_MODE_SERIAL_PORT.println(F("Factory settings restored"));
+                            // fallthrough
                         case 'r':
-                            resetDetector.setSafeMode(false);
-                            resetDetector.clearCounter();
                             SaveCrash::removeCrashCounter();
-                            safe_mode = false;
-                            config.setSafeMode(false);
-                            return false;
+                            // fallthrough
                         case 's':
-                            resetDetector.setSafeMode(1);
-                            resetDetector.clearCounter();
-                            safe_mode = true;
-                            return false;
+                            resetDetector.setSafeModeAndClearCounter(false);
+                            safe_mode = (ch == 's');
+                            endTimeout = 0;
+                            break;
                     }
                 }
-                return true;
-            }, 1000, []() {
-                KFC_SAFE_MODE_SERIAL_PORT.print('.');
-                return true;
-            })
-#else
-            __while(5000, nullptr, 1000, []() {
-                KFC_SAFE_MODE_SERIAL_PORT.print('.');
-                return true;
-            })
-#endif
-            ) {
-                // timeout occured, disable safe mode
-                resetDetector.setSafeMode(false);
-                incr_crash_counter = true;
             }
-            KFC_SAFE_MODE_SERIAL_PORT.println();
+            if (endTimeout) {
+                // timeout occured, count as crash
+                // safe_mode should be false
+                increaseCrashCounter = true;
+            }
         }
-
     }
+#endif
 
-#if SPIFFS_SUPPORT
+    // start FS, we need it for getCrashCounter()
     SPIFFS.begin();
-    if (resetDetector.hasCrashDetected() || incr_crash_counter) {
+
+#if KFC_AUTO_SAFE_MODE_CRASH_COUNT
+    if (resetDetector.hasCrashDetected() || increaseCrashCounter) {
         uint8_t counter = SaveCrash::getCrashCounter();
-        if (counter >= 3) {  // boot in safe mode if there were 3 crashes within the first minute
-            resetDetector.setSafeMode(1);
+        if (counter >= KFC_AUTO_SAFE_MODE_CRASH_COUNT) {  // boot in safe mode if there were 3 (KFC_AUTO_SAFE_MODE_CRASH_COUNT) crashes within the 5 minutes (KFC_CRASH_RECOVERY_TIME)
+            resetDetector.setSafeModeAndClearCounter(false);
+            safe_mode = true;
         }
     }
 #endif
 
     Scheduler.begin();
 
+    config.setSafeMode(safe_mode);
     config.read();
     if (safe_mode) {
 
-        config.setSafeMode(true);
-        extern StreamWrapper streamWrapperSerial;
         WebUIAlerts_add(F("Running in Safe Mode"), AlertMessage::TypeEnum_t::DANGER, AlertMessage::ExpiresEnum_t::REBOOT);
-        streamWrapperSerial.replace(&KFC_SAFE_MODE_SERIAL_PORT);
-#if !DEBUG
-        extern SerialWrapper debugWrapper;
-        debugWrapper.setSerial(streamWrapperSerial);
-#endif
+        serialHandler.replace(&KFC_SAFE_MODE_SERIAL_PORT);
 
         #if AT_MODE_SUPPORTED
             at_mode_setup();
@@ -302,7 +305,7 @@ void setup()
 
         auto rebootDelay = KFCConfigurationClasses::System::Device::getSafeModeRebootTime();
         if (rebootDelay) {
-            debug_printf_P(PSTR("rebooting in %u minutes\n"), rebootDelay);
+            _debug_printf_P(PSTR("rebooting in %u minutes\n"), rebootDelay);
             // restart device if running in safe mode for rebootDelay minutes
             Scheduler.addTimer(rebootDelay * 60000UL, false, [](EventScheduler::TimerPtr timer) {
                 Logger_notice(F("Rebooting device after safe mode timeout"));
@@ -323,34 +326,21 @@ void setup()
 #endif
         }
 
-#if DEBUG
+#if DEBUG && HAVE_KFC_BOOT_CHECK_FLASHSIZE
 #if ENABLE_DEEP_SLEEP
         if (!resetDetector.hasWakeUpDetected())
 #endif
         {
             check_flash_size();
-            _debug_printf_P(PSTR("Free Sketch Space %u\n"), ESP.getFreeSketchSpace());
+            Serial.printf_P(PSTR("Free Sketch Space %u\n"), ESP.getFreeSketchSpace());
 #if defined(ESP8266)
-            _debug_printf_P(PSTR("CPU frequency %d\n"), system_get_cpu_freq());
+            Serial.printf_P(PSTR("CPU frequency %d\n"), system_get_cpu_freq());
 #endif
         }
 #endif
 
-#if SPIFFS_CLEANUP_TMP_DURING_BOOT
-#if ENABLE_DEEP_SLEEP
-        if (!resetDetector.hasWakeUpDetected())
-#endif
-        {
-            _debug_println(F("Cleaning up /tmp directory"));
-            auto dir = ListDir(sys_get_temp_dir());
-            while(dir.next()) {
-                _IF_DEBUG(bool status =) SPIFFS.remove(dir.fileName());
-                _debug_printf_P(PSTR("remove=%s result=%d\n"), dir.fileName().c_str(), status);
-            }
-        }
-#endif
 #if SPIFFS_TMP_FILES_TTL
-        LoopFunctions::add(cleanup_tmp_dir);
+        Scheduler.addTimer(SPIFFS_TMP_CLEAUP_INTERVAL * 1000LU, true, cleanup_tmp_dir_timer_callback);
 #endif
 
         prepare_plugins();
@@ -380,10 +370,8 @@ void setup()
             }
         });
 
-#if SPIFFS_SUPPORT
-        // reset crash counter after 3min
-        SaveCrash::installRemoveCrashCounter(180);
-#endif
+        // reset crash counter
+        SaveCrash::installRemoveCrashCounter(KFC_CRASH_RECOVERY_TIME);
     }
 
 #if LOAD_STATISTICS

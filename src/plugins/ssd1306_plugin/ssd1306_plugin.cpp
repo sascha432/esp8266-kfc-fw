@@ -243,7 +243,7 @@ void ssd1306_setup() {
     Display.clearDisplay();
     Display.println(F("KFC Firmware"));
     Display.print('v');
-    Display.print(config.getShortFirmwareVersion());
+    Display.print(config.getShortFirmwareVersion_P());
     Display.display();
 
 
@@ -261,7 +261,7 @@ void ssd1306_setup() {
 class SSD1306Plugin : public PluginComponent {
 public:
     SSD1306Plugin() {
-        REGISTER_PLUGIN(this);
+        REGISTER_PLUGIN(this, "SSD1306Plugin");
     }
 
     virtual PGM_P getName() const {
@@ -306,12 +306,13 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(SSDDF, "SSDDF", "<url>", "Download font");
 
 void SSD1306Plugin::atModeHelpGenerator()
 {
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SSDCLR), getName());
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SSDST), getName());
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SSDXY), getName());
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SSDW), getName());
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SSDRF), getName());
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SSDDF), getName());
+    auto name = getName_P();
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SSDCLR), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SSDST), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SSDXY), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SSDW), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SSDRF), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SSDDF), name);
 }
 
 bool SSD1306Plugin::atModeHandler(AtModeArgs &args)

@@ -6,6 +6,8 @@
 
 #include <Arduino_compat.h>
 #include <vector>
+#include <array>
+#include <EnumHelper.h>
 #include "WebUIComponent.h"
 
 #ifdef DEFAULT
@@ -18,18 +20,43 @@ class WebTemplate;
 class Form;
 class AtModeArgs;
 
+/*
+PROGMEM_DEFINE_PLUGIN_OPTIONS(
+    xxxPluginClass,
+    "",   // name
+    "",   // friendly name
+    "",   // web_templates
+    "",   // config_forms
+    "",   // reconfigure_dependencies
+    PluginComponent::PriorityType::XXX,
+    PluginComponent::RTCMemoryId::NONE,
+    static_cast<uint8_t>(PluginComponent::MenuType::NONE),
+    false,              // allow_safe_mode
+    false,              // setup_after_deep_sleep
+    false,              // has_get_status
+    false,              // has_config_forms
+    false,              // has_web_ui
+    false,              // has_web_templates
+    false,              // has_at_mode
+    0                   // __reserved
+);
+
+
+virtual void createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request) override;
+_debug_printf_P(PSTR("source=%s\n"), source.c_str());
+*/
+
+#include <push_pack.h>
+
 class PluginComponent {
 public:
-    enum class SetupModeType : uint8_t {
-        DEFAULT,                        // normal boot
-        SAFE_MODE,                     // safe mode active
-        AUTO_WAKE_UP,                  // wake up from deep sleep
-        DELAYED_AUTO_WAKE_UP,          // called after a delay to initialize services that have been skipped during wake up
-    };
+    using NameType = const __FlashStringHelper *;
 
     enum class PriorityType : int8_t {
-        RESET_DETECTOR = -127,
+        NONE = -127,
+        RESET_DETECTOR = -126,
         CONFIG = -120,
+        SAVECRASH = -117,
         SERIAL2TCP = -115,
         BUTTONS = -100,
         MDNS = -90,
@@ -38,105 +65,216 @@ public:
         HTTP = -60,
         ALARM = -55,
         HASS = -50,
-        MAX = 0,           // highest prio, -127 to -1 is reserved for the system
+        MAX = 0,                                        // highest prio, -127 to -1 is reserved for the system
         HTTP2SERIAL = 10,
         MQTT = 20,
         DEFAULT = 64,
+        ATOMIC_SUN = 100,
+        DIMMER_MODULE = 101,
         SENSOR = 110,
         PING_MONITOR = 126,
         MIN = 127
-    } ;
-
-    enum class MenuType {
-        NONE,
-        AUTO,
-        CUSTOM,
     };
 
-    PluginComponent() : _setupTime(0) {
+    enum class RTCMemoryId : uint8_t {
+        NONE,
+        RESET_DETECTOR,
+        CONFIG,
+        SERIAL2TCP,
+    };
+
+    enum class FormCallbackType {
+        CREATE_GET,     // gets called to create the form and load data for a GET request
+        CREATE_POST,    // gets called to create the form and save data for a POST request before validation of the data
+        SAVE,           // gets called after a form has been validated successfully and before config.write() is called
+        DISCARD         // gets called after a form validation has failed and before config.discard() is called
+    };
+
+    enum class MenuType : uint8_t {
+        AUTO,
+        NONE,
+        CUSTOM,
+        MAX
+    };
+    static_assert((uint8_t)MenuType::MAX <= 0b100, "stored in 2 bits");
+
+    enum class SetupModeType : uint8_t {
+        DEFAULT,                                        // normal boot
+        SAFE_MODE,                                      // safe mode active
+        AUTO_WAKE_UP,                                   // wake up from deep sleep
+        DELAYED_AUTO_WAKE_UP,                           // called after a delay to initialize services that have been skipped during wake up
+    };
+
+    typedef struct __attribute__packed__  {
+        union {
+            struct __attribute__packed__ {
+                PriorityType priority;
+                RTCMemoryId memory_id;
+                uint8_t menu_type: 2;                       // 0-1
+                uint8_t allow_safe_mode: 1;                 // 2
+                uint8_t setup_after_deep_sleep: 1;          // 3
+                uint8_t has_get_status: 1;                  // 4
+                uint8_t has_config_forms: 1;                // 5
+                uint8_t has_web_ui: 1;                      // 6
+                uint8_t has_web_templates: 1;               // 7
+                uint8_t has_at_mode: 1;                     // 0
+                uint8_t __reserved: 7;                      // 1-7
+            };
+            uint32_t __dword;
+        };
+    } Options_t;
+    static_assert(sizeof(Options_t) == sizeof(uint32_t), "change getOptions() to memcpy_P");
+
+    typedef struct {
+        PGM_P name;
+        PGM_P friendly_name;
+        PGM_P web_templates;
+        PGM_P config_forms;
+        PGM_P reconfigure_dependencies;
+        Options_t options;
+    } Config_t;
+    using PGM_Config_t = const Config_t *;
+
+public:
+    PluginComponent(PGM_Config_t config) : _setupTime(0), _config(config) {
     }
 
+// static functions
+public:
     template<class T>
-    static T *getPlugin(const __FlashStringHelper *name) {
+    static T *getPlugin(NameType name) {
         return reinterpret_cast<T *>(findPlugin(name));
     }
-    static PluginComponent *findPlugin(const __FlashStringHelper *name);
+    static PluginComponent *findPlugin(NameType name);
 
-    virtual PGM_P getName() const = 0;
-    virtual const __FlashStringHelper *getFriendlyName() const;
-    bool nameEquals(const __FlashStringHelper *name) const;
+    static PluginComponent *getForm(const String &formName);
+    static PluginComponent *getTemplate(const String &templateName);
+    static PluginComponent *getByName(NameType name);
+    static PluginComponent *getByMemoryId(RTCMemoryId memoryId);
+
+    static PluginComponent *getByMemoryId(uint8_t memoryId) {
+        return getByMemoryId(static_cast<RTCMemoryId>(memoryId));
+    }
+
+// Configuration and options
+public:
+    PGM_P getName_P() const {
+        return reinterpret_cast<PGM_P>(_config->name);
+    }
+    NameType getName() const {
+        return reinterpret_cast<NameType>(_config->name);
+    }
+    NameType getFriendlyName() const {
+        return reinterpret_cast<NameType>(_config->friendly_name);
+    }
+
+    bool nameEquals(NameType name) const;
     bool nameEquals(const char *name) const;
     bool nameEquals(const String &name) const;
 
-    virtual PriorityType getSetupPriority() const;
-    virtual uint8_t getRtcMemoryId() const;
-    virtual bool allowSafeMode() const;
+
+    Options_t getOptions() const {
+        Options_t options;
+        // memcpy_P(&options, &_config->options, sizeof(options));
+        options.__dword = pgm_read_dword(&_config->options);
+        return options;
+    }
+
+    bool allowSafeMode() const {
+        return getOptions().allow_safe_mode;
+    }
 #if ENABLE_DEEP_SLEEP
-    virtual bool autoSetupAfterDeepSleep() const;
+    bool autoSetupAfterDeepSleep() const {
+        return getOptions().setup_after_deep_sleep;
+    }
+#endif
+    bool hasReconfigureDependecy(const String &name) const {
+        return stringlist_find_P_P(reinterpret_cast<PGM_P>(_config->reconfigure_dependencies), name.c_str(), ',') != -1;
+    }
+
+    bool hasStatus() const {
+        return getOptions().has_get_status;
+    }
+
+    MenuType getMenuType() const {
+        return static_cast<MenuType>(getOptions().menu_type);
+    }
+
+    bool hasWebTemplate(const String &name) const {
+        if (!getOptions().has_web_templates) {
+            return false;
+        }
+        return stringlist_find_P_P(reinterpret_cast<PGM_P>(_config->web_templates), name.c_str(), ',') != -1;
+    }
+
+    bool canHandleForm(const String &name) const {
+        if (!getOptions().has_config_forms) {
+            return false;
+        }
+        return stringlist_find_P_P(reinterpret_cast<PGM_P>(_config->config_forms), name.c_str(), ',') != -1;
+    }
+
+    bool hasWebUI() const {
+        return getOptions().has_web_ui;
+    }
+
+#if AT_MODE_SUPPORTED
+    bool hasAtMode() const {
+        return getOptions().has_at_mode;
+    }
 #endif
 
+    // calls reconfigure for all dependencies
+    void invokeReconfigureNow(const String &source);
+
+    // calls reconfigure at the end of the main loop() function
+    void invokeReconfigure(const String &source);
+
+    bool isCreateFormCallbackType(FormCallbackType type) const {
+        return type == FormCallbackType::CREATE_GET || type == FormCallbackType::CREATE_POST;
+    }
+
+// Virtual methods
+public:
     // executed during boot
     virtual void setup(SetupModeType mode);
+
     // executed before a restart
     virtual void shutdown();
-
-    // executed after the configuration has been changed
-protected:
-    virtual void reconfigure(PGM_P source);
-public:
-    virtual bool hasReconfigureDependecy(PluginComponent *plugin) const;
-
-    // calls reconfigure for all dependencies
-    void invokeReconfigureNow(PGM_P source);
-
-    // adds a scheduled function call invokeReconfigureNow() to avoid issues from being called inside interrupts
-    void invokeReconfigure(PGM_P source);
-
-    // executed to get status information
-    virtual bool hasStatus() const;
-    virtual void getStatus(Print &output);
-
-    // name of the form
-    virtual PGM_P getConfigureForm() const;
-    // returns if the form can be handled. only needed for custom forms. the default is comparing the forName with getConfigureForm()
-    virtual bool canHandleForm(const String &formName) const;
-    // executed to get the configure form
-    virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form);
-    // gets called after a form has been validated successfully and *before* config.write() is called
-    virtual void configurationSaved(Form *form);
-    // gets called if a form validation failed and *befor*e config.discard() is called
-    virtual void configurationDiscarded(Form *form);
-
-    // get type of menu entry
-    virtual MenuType getMenuType() const;
-    // create custom menu entries
-    virtual void createMenu();
-
-    // executed to get the template for the web ui
-    virtual bool hasWebTemplate(const String &formName) const;
-    virtual WebTemplate *getWebTemplate(const String &formName);
-
-    virtual bool hasWebUI() const;
-    virtual void createWebUI(WebUI &webUI);
-    virtual WebUIInterface *getWebUIInterface();
 
 #if ENABLE_DEEP_SLEEP
     // executed before entering deep sleep
     virtual void prepareDeepSleep(uint32_t sleepTimeMillis);
 #endif
 
+    // executed after the configuration has been changed. source is the name of the plugin that initiated the reconfigure call
+    // system sources: wifi, network, device, password
+    virtual void reconfigure(const String &source);
+
+    // status.html
+    virtual void getStatus(Print &output);
+
+    // add entries for web interface menu
+    virtual void createMenu();
+
+     // form processing for html files. formName will be wifi for /wifi.html
+    virtual void createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request);
+
+    // template processing for html files. templateName will be home for /home.html
+    virtual WebTemplate *getWebTemplate(const String &templateName);
+
+    // webui.html
+    virtual void createWebUI(WebUI &webUI);
+    virtual void getValues(JsonArray &array);
+    virtual void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState);
+
 #if AT_MODE_SUPPORTED
-    // at mode command handler
-    virtual bool hasAtMode() const;
     virtual void atModeHelpGenerator();
     virtual bool atModeHandler(AtModeArgs &args);
 #endif
 
-    static PluginComponent *getForm(const String &formName);
-    static PluginComponent *getTemplate(const String &formName);
-    static PluginComponent *getByName(PGM_P name);
-    static PluginComponent *getByMemoryId(uint8_t memoryId);
-
+#if DEBUG
+public:
     uint32_t getSetupTime() const {
         return _setupTime;
     }
@@ -146,4 +284,27 @@ public:
 
 private:
     uint32_t _setupTime;
+#endif
+
+private:
+    PGM_Config_t _config;
 };
+
+#define PROGMEM_DEFINE_PLUGIN_OPTIONS(class_name, name, friendly_name, web_templates, config_forms, reconfigure_dependencies, ...) \
+    static const char _plugins_config_progmem_name_##class_name[] PROGMEM = { name }; \
+    static const char _plugins_config_progmem_friendly_name_##class_name[] PROGMEM = { friendly_name }; \
+    static const char _plugins_config_progmem_web_templates_##class_name[] PROGMEM = { web_templates }; \
+    static const char _plugins_config_progmem_config_forms_##class_name[] PROGMEM = { config_forms }; \
+    static const char _plugins_config_progmem_reconfigure_dependencies_##class_name[] PROGMEM = { reconfigure_dependencies }; \
+    static const PluginComponent::Config_t _plugins_config_progmem_config_t_##class_name PROGMEM = { \
+        _plugins_config_progmem_name_##class_name, \
+        _plugins_config_progmem_friendly_name_##class_name, \
+        _plugins_config_progmem_web_templates_##class_name, \
+        _plugins_config_progmem_config_forms_##class_name, \
+        _plugins_config_progmem_reconfigure_dependencies_##class_name, \
+        { __VA_ARGS__ } \
+    };
+
+#define PROGMEM_GET_PLUGIN_OPTIONS(class_name)          &_plugins_config_progmem_config_t_##class_name
+
+#include <pop_pack.h>

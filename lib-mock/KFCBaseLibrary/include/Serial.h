@@ -109,11 +109,11 @@ private:
 };
 
 
-class FakeSerial : public Stdout {
+class HardwareSerial : public Stdout {
 public:
-    FakeSerial(const FakeSerial &fake) = delete;
+    HardwareSerial(const HardwareSerial &fake) = delete;
 
-    FakeSerial() : Stdout() {
+    HardwareSerial() : Stdout() {
     }
     void begin(int baud) {
     }
@@ -141,6 +141,7 @@ public:
     }
 };
 
-typedef FakeSerial HardwareSerial;
+using FakeSerial = HardwareSerial;
 
 extern Stream &Serial;
+extern HardwareSerial &Serial0;

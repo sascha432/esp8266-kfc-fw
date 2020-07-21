@@ -624,13 +624,39 @@ void Driver_4ChDimmer::_getChannels()
 
 AtomicSunPlugin dimmer_plugin;
 
+PROGMEM_DEFINE_PLUGIN_OPTIONS(
+    AtomicSunPlugin,
+    "atomicsun",        // name
+    "Atomic Sun v2",    // friendly name
+    "",                 // web_templates
+    "dimmer_cfg",       // config_forms
+    "mqtt,http",        // reconfigure_dependencies
+    PluginComponent::PriorityType::ATOMIC_SUN,
+    PluginComponent::RTCMemoryId::NONE,
+    static_cast<uint8_t>(PluginComponent::MenuType::AUTO),
+    false,              // allow_safe_mode
+    false,              // setup_after_deep_sleep
+    true,               // has_get_status
+    true,               // has_config_forms
+    true,               // has_web_ui
+    false,              // has_web_templates
+    true,               // has_at_mode
+    0                   // __reserved
+);
+
+AtomicSunPlugin::AtomicSunPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(AtomicSunPlugin)), Driver_4ChDimmer()
+{
+    REGISTER_PLUGIN(this, "AtomicSunPlugin");
+}
+
+
 void AtomicSunPlugin::setup(SetupModeType mode)
 {
     _begin();
     setupWebServer();
 }
 
-void AtomicSunPlugin::reconfigure(PGM_P source)
+void AtomicSunPlugin::reconfigure(const char *source)
 {
     if (!source) {
         writeConfig();
@@ -638,19 +664,17 @@ void AtomicSunPlugin::reconfigure(PGM_P source)
         _fadeTime = dimmer.fade_time;
         _onOffFadeTime = dimmer.on_off_fade_time;
     }
-    else if (!strcmp_P_P(source, SPGM(http))) {
+    else if (!strcmp_P(source, SPGM(http))) {
         setupWebServer();
+    }
+    else if (!strcmp_P(source, SPGM(mqtt))) {
+        MQTTClient::safeReRegisterComponent(this);
     }
 }
 
 void AtomicSunPlugin::shutdown()
 {
     _end();
-}
-
-bool AtomicSunPlugin::hasReconfigureDependecy(PluginComponent *plugin) const
-{
-    return plugin->nameEquals(FSPGM(http));
 }
 
 void AtomicSunPlugin::createWebUI(WebUI &webUI)
@@ -684,64 +708,3 @@ void AtomicSunPlugin::createWebUI(WebUI &webUI)
         row->addSlider(PrintString(F("dimmer_channel%u"), order[j]), PrintString(F("Channel %u"), j + 1), 0, MAX_LEVEL);
     }
 }
-
-#if AT_MODE_SUPPORTED
-
-#include "at_mode.h"
-
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DIMG, "DIMG", "Get level");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DIMS, "DIMS", "<channel>,<level>[,<time>]", "Set level");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DIMW, "DIMW", "Write EEPROM");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DIMR, "DIMR", "Reset ATmega");
-
-bool AtomicSunPlugin::hasAtMode() const
-{
-    return true;
-}
-
-void AtomicSunPlugin::atModeHelpGenerator()
-{
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DIMG), getName());
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DIMS), getName());
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DIMW), getName());
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DIMR), getName());
-}
-
-bool AtomicSunPlugin::atModeHandler(AtModeArgs &args)
-{
-    if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DIMW))) {
-        writeEEPROM();
-        args.ok();
-        return true;
-    }
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DIMG))) {
-        for(uint8_t i = 0; i < MAX_CHANNELS; i++) {
-            args.printf_P(PSTR("%u: %d"), i, getChannel(i));
-        }
-        return true;
-    }
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DIMR))) {
-        args.printf_P(PSTR("Pulling GPIO%u low for 10ms"), STK500V1_RESET_PIN);
-        dimmer_plugin.resetDimmerMCU();
-        args.printf_P(PSTR("GPIO%u set to input"), STK500V1_RESET_PIN);
-        return true;
-    }
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DIMS))) {
-        if (args.requireArgs(2, 2)) {
-            size_t channel = args.toInt(0);
-            if (channel >= 0 && channel < MAX_CHANNELS) {
-                int level = args.toIntMinMax(1, 0, (int)MAX_LEVEL);
-                float time = args.toFloat(2, -1);
-                args.printf_P(PSTR("Set %u: %d (time %.2f)"), channel, level, time);
-                setChannel(channel, level, time);
-            }
-            else {
-                args.print(F("Invalid channel"));
-            }
-        }
-        return true;
-    }
-    return false;
-}
-
-#endif

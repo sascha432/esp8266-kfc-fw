@@ -19,7 +19,7 @@
 #define DEBUGV(...) ;
 #endif
 
-#if DEBUG_SERIAL2TCP && 1
+#if DEBUG_SERIAL2TCP && 0
 #define DEBUGV_NVT(fmt, ...) { ::printf(PSTR("<%s:%u> "), __DEBUG_FUNCTION__, __LINE__); ::printf((PGM_P)PSTR(fmt), ## __VA_ARGS__); }
 #else
 #define DEBUGV_NVT(...) ;
@@ -123,6 +123,7 @@ protected:
 
 public:
     virtual void getStatus(Print &output) = 0;
+    virtual bool isConnected() const = 0;
 
     virtual void begin() {}
     virtual void end();
@@ -144,9 +145,4 @@ public:
 
 private:
     static Serial2TcpBase *_instance;
-
-public:
-#if DEBUG
-    static bool _debugOutput;
-#endif
 };

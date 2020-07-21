@@ -12,7 +12,7 @@
 class PinDebuggerPlugin : public PluginComponent {
 public:
     PinDebuggerPlugin() {
-        REGISTER_PLUGIN(this);
+        REGISTER_PLUGIN(this, "PinDebuggerPlugin");
     }
     PGM_P getName() const {
         return PSTR("pindbg");
@@ -20,22 +20,19 @@ public:
     virtual const __FlashStringHelper *getFriendlyName() const {
         return F("PIN Debugger");
     }
-
     virtual PriorityType getSetupPriority() const override {
         return (PriorityType)-125;
     }
+    virtual OptionsType getOptions() const override {
+        return EnumHelper::Bitset::all(OptionsType::HAS_STATUS, OptionsType::HAS_CUSTOM_MENU, OptionsType::HAS_AT_MODE);
+    }
+
     virtual void setup(SetupModeType mode) override;
     virtual void reconfigure(PGM_P source) override;
     virtual void shutdown() override;
 
-    virtual bool hasStatus() const override {
-        return true;
-    }
     virtual void getStatus(Print &output) override;
 
-    virtual MenuType getMenuType() const override {
-        return MenuType::CUSTOM;
-    }
     virtual void createMenu() override {
         bootstrapMenu.addSubMenu(getFriendlyName(), F("pin_debugger.html"), navMenu.util);
     }
@@ -46,9 +43,6 @@ public:
     // virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
 
 #if AT_MODE_SUPPORTED
-    virtual bool hasAtMode() const override {
-        return true;
-    }
     virtual void atModeHelpGenerator() override;
     virtual bool atModeHandler(AtModeArgs &args) override;
 #endif

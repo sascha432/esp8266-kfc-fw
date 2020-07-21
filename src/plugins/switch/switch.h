@@ -41,7 +41,7 @@
 #error IOT_SWITCH_CHANNEL_PINS not defined
 #endif
 
-class SwitchPlugin : public PluginComponent, public MQTTComponent, public WebUIInterface {
+class SwitchPlugin : public PluginComponent, public MQTTComponent {
 public:
     SwitchPlugin();
 
@@ -56,33 +56,21 @@ public:
     virtual PriorityType getSetupPriority() const override {
         return PriorityType::DEFAULT;
     }
+    virtual OptionsType getOptions() const override {
+        return EnumHelper::Bitset::all(OptionsType::HAS_STATUS, OptionsType::HAS_CONFIG_FORM, OptionsType::HAS_WEB_UI);
+    }
 
     virtual void setup(SetupModeType mode) override;
     virtual void shutdown() override;
     virtual void reconfigure(PGM_P source) override;
-
-    virtual bool hasStatus() const override {
-        return true;
-    }
     virtual void getStatus(Print &output) override;
-
-    virtual PGM_P getConfigureForm() const override {
-        return PSTR("switch");
-    }
     virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
 
-// WebUIInterface
+// WebUI
 public:
-    virtual bool hasWebUI() const override {
-        return true;
-    }
     virtual void createWebUI(WebUI &webUI) override;
-    virtual WebUIInterface *getWebUIInterface() override {
-        return this;
-    }
-
-    virtual void getValues(JsonArray &array);
-    virtual void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState);
+    virtual void getValues(JsonArray &array) override;
+    virtual void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState) override;
 
 // MQTTComponent
 public:

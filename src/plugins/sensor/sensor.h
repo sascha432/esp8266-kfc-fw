@@ -73,50 +73,26 @@
 #endif
 #endif
 
-class SensorPlugin : public PluginComponent, public WebUIInterface {
+class SensorPlugin : public PluginComponent {
 public:
     typedef std::vector<MQTTSensor *> SensorVector;
 
-// WebUIInterface
+// WebUI
 public:
+    virtual void createWebUI(WebUI &webUI) override;
     virtual void getValues(JsonArray &array) override;
     virtual void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState) override;
 
 // PluginComponent
 public:
-    SensorPlugin() {
-        REGISTER_PLUGIN(this);
-    }
-
-    virtual PGM_P getName() const;
-    virtual const __FlashStringHelper *getFriendlyName() const {
-        return F("Sensors");
-    }
-    virtual PriorityType getSetupPriority() const override {
-        return PriorityType::SENSOR;
-    }
-#if ENABLE_DEEP_SLEEP
-    virtual bool autoSetupAfterDeepSleep() const override {
-        return true;
-    }
-#endif
+    SensorPlugin();
 
     virtual void setup(SetupModeType mode) override;
-    virtual void reconfigure(PGM_P source) override;
+    virtual void reconfigure(const String &source) override;
     virtual void shutdown() override;
-
-    virtual bool hasStatus() const override {
-        return true;
-    }
     virtual void getStatus(Print &output) override;
-
-    virtual bool hasWebUI() const override;
-    virtual void createWebUI(WebUI &webUI) override;
-    virtual WebUIInterface *getWebUIInterface() override;
-
-    virtual PGM_P getConfigureForm() const override;
-    virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
-    virtual void configurationSaved(Form *form) override;
+    virtual void createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request) override;
+    virtual void createMenu() override;
 
     static void timerEvent(EventScheduler::TimerPtr timer);
 
@@ -126,9 +102,6 @@ public:
     static SensorPlugin &getInstance();
 
 #if AT_MODE_SUPPORTED
-    virtual bool hasAtMode() const override {
-        return true;
-    }
     virtual void atModeHelpGenerator() override;
     virtual bool atModeHandler(AtModeArgs &args) override;
 #endif

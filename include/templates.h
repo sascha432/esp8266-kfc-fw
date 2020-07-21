@@ -112,10 +112,6 @@ public:
 
     SettingsForm(AsyncWebServerRequest *request);
 
-    inline TokenVector &getTokens() {
-        return _tokens;
-    }
-
     void setJson(JsonUnnamedObject *json) {
         _json = json;
     }
@@ -124,31 +120,30 @@ protected:
     friend WebTemplate;
 
     FormData _data;
-    TokenVector _tokens;
     JsonUnnamedObject *_json;
 };
 
-class WifiSettingsForm : public SettingsForm {
-public:
-    WifiSettingsForm(AsyncWebServerRequest *request);
-};
+// class WifiSettingsForm : public SettingsForm {
+// public:
+//     WifiSettingsForm(AsyncWebServerRequest *request);
+// };
 
-class NetworkSettingsForm : public SettingsForm {
-public:
-    NetworkSettingsForm(AsyncWebServerRequest *request);
-};
+// class NetworkSettingsForm : public SettingsForm {
+// public:
+//     NetworkSettingsForm(AsyncWebServerRequest *request);
+// };
 
-class DeviceSettingsForm : public SettingsForm {
-public:
-    DeviceSettingsForm(AsyncWebServerRequest *request);
-};
+// class DeviceSettingsForm : public SettingsForm {
+// public:
+//     DeviceSettingsForm(AsyncWebServerRequest *request);
+// };
 
-class PasswordSettingsForm : public SettingsForm {
-public:
-    PasswordSettingsForm(AsyncWebServerRequest *request);
-};
+// class PasswordSettingsForm : public SettingsForm {
+// public:
+//     PasswordSettingsForm(AsyncWebServerRequest *request);
+// };
 
-class PinsSettingsForm : public SettingsForm {
-public:
-    PinsSettingsForm(AsyncWebServerRequest *request);
-};
+// class PinsSettingsForm : public SettingsForm {
+// public:
+//     PinsSettingsForm(AsyncWebServerRequest *request);
+// };

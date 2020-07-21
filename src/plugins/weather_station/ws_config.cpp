@@ -4,7 +4,6 @@
 
 #include <Configuration.h>
 #include <kfc_fw_config.h>
-#include <kfc_fw_config_classes.h>
 
 namespace KFCConfigurationClasses {
 

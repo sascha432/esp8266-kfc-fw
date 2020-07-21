@@ -86,14 +86,9 @@
 #include <Bounce2.h>
 #endif
 
-class ClockPlugin : public PluginComponent, public MQTTComponent, public WebUIInterface {
+class ClockPlugin : public PluginComponent, public MQTTComponent {
 public:
     using SevenSegmentDisplay = SevenSegmentPixel<uint8_t, IOT_CLOCK_NUM_DIGITS, IOT_CLOCK_NUM_PIXELS, IOT_CLOCK_NUM_COLONS, IOT_CLOCK_NUM_COLON_PIXELS>;
-
-// WebUIInterface
-public:
-    virtual void getValues(JsonArray &array) override;
-    virtual void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState) override;
 
 private:
     uint8_t _ui_colon;
@@ -175,50 +170,24 @@ public:
 
     ClockPlugin();
 
-    virtual PGM_P getName() const {
-        return PSTR("clock");
-    }
-    virtual const __FlashStringHelper *getFriendlyName() const {
-        return F("Clock");
-    }
-    virtual PriorityType getSetupPriority() const override {
-        return PriorityType::MIN;
-    }
-
     virtual void setup(SetupModeType mode) override;
-    virtual void reconfigure(PGM_P source) override;
-    virtual bool hasReconfigureDependecy(PluginComponent *plugin) const {
-        return plugin->nameEquals(SPGM(mqtt));
-    }
+    virtual void reconfigure(const String &source) override;
     virtual void shutdown() override;
-
-    virtual bool hasStatus() const override {
-        return true;
-    }
     virtual void getStatus(Print &output) override;
-
-    virtual bool hasWebUI() const override {
-        return true;
-    }
-    virtual WebUIInterface *getWebUIInterface() override {
-        return this;
-    }
-    virtual void createWebUI(WebUI &webUI) override;
-
-    virtual PGM_P getConfigureForm() const override {
-        return getName();
-    }
-    virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
+    virtual void createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request) override;
 
 #if AT_MODE_SUPPORTED
-    virtual bool hasAtMode() const override {
-        return true;
-    }
-
     virtual void atModeHelpGenerator() override;
     virtual bool atModeHandler(AtModeArgs &args) override;
 #endif
 
+// WebUI
+public:
+    virtual void createWebUI(WebUI &webUI) override;
+    virtual void getValues(JsonArray &array) override;
+    virtual void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState) override;
+
+// MQTT
 public:
     virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num) override;
     virtual uint8_t getAutoDiscoveryCount() const {

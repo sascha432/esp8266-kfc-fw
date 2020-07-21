@@ -15,7 +15,7 @@
 #define DEBUG_HOME_ASSISTANT                            0
 #endif
 
-class HassPlugin : public PluginComponent, /*public WebUIInterface, */public KFCRestAPI, public MQTTComponent {
+class HassPlugin : public PluginComponent, public KFCRestAPI, public MQTTComponent {
 // PluginComponent
 public:
     using ActionEnum_t = KFCConfigurationClasses::Plugins::HomeAssistant::ActionEnum_t;
@@ -26,7 +26,7 @@ public:
     typedef std::function<void(HassJsonReader::CallService *service, KFCRestAPI::HttpRequest &request, StatusCallback_t statusCallback)> ServiceCallback_t;
 
     HassPlugin() : MQTTComponent(MQTTComponent::ComponentTypeEnum_t::BINARY_SENSOR) {
-        REGISTER_PLUGIN(this);
+        REGISTER_PLUGIN(this, "HassPlugin");
     }
 
     static HassPlugin &getInstance();
@@ -40,19 +40,12 @@ public:
     virtual PriorityType getSetupPriority() const {
         return PriorityType::HASS;
     }
-    virtual bool autoSetupAfterDeepSleep() const override {
-        return true;
+    virtual OptionsType getOptions() const override {
+        return EnumHelper::Bitset::all(OptionsType::SETUP_AFTER_DEEP_SLEEP, OptionsType::HAS_STATUS, OptionsType::HAS_CONFIG_FORM, OptionsType::HAS_AT_MODE);
     }
 
-    virtual bool hasStatus() const override {
-        return true;
-    }
     virtual void getStatus(Print &output) override;
 
-
-    virtual PGM_P getConfigureForm() const override {
-        return getName();
-    }
     virtual bool canHandleForm(const String &formName) const {
         return String_equals(formName, getName()) || String_equals(formName, PSTR("hass_edit")) || String_equals(formName, PSTR("hass_actions"));
     }
@@ -64,12 +57,7 @@ public:
         return plugin->nameEquals(FSPGM(http));
     }
 
-
 #if AT_MODE_SUPPORTED
-    // at mode command handler
-    virtual bool hasAtMode() const override {
-        return true;
-    }
     virtual void atModeHelpGenerator() override;
     virtual bool atModeHandler(AtModeArgs &args) override;
 #endif
@@ -101,16 +89,9 @@ private:
 
     TopicValueVector _topics;
 
-// // WebUIInterface
+// // WebUI
 // public:
-//     virtual bool hasWebUI() const override {
-//         return true;
-//     }
 //     virtual void createWebUI(WebUI &webUI) override;
-//     virtual WebUIInterface *getWebUIInterface() override {
-//         return this;
-//     }
-
 //     virtual void getValues(JsonArray &array);
 //     virtual void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState);
 

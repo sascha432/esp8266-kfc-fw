@@ -33,7 +33,7 @@ size_t DebugHelperPrintValue::write(uint8_t ch)
 size_t DebugHelperPrintValue::write(const uint8_t* buffer, size_t size)
  {
     if (*this) {
-        return DEBUG_OUTPUT.write(buffer, size);
+        return DEBUG_OUTPUT.write((const char *)buffer, size);
     }
     return 0;
 }

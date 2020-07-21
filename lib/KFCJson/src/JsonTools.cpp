@@ -11,19 +11,17 @@
 #include <debug_helper_disable.h>
 #endif
 
-// #if !HAVE_PROGMEM_DATA
-
 PROGMEM_STRING_DEF(true, "true");
 PROGMEM_STRING_DEF(false, "false");
 PROGMEM_STRING_DEF(null, "null");
 
-// #endif
-
-const __FlashStringHelper *JsonTools::boolToString(bool value) {
+const __FlashStringHelper *JsonTools::boolToString(bool value)
+{
     return value ? FSPGM(true) : FSPGM(false);
 }
 
-size_t JsonTools::lengthEscaped(const JsonString & value) {
+size_t JsonTools::lengthEscaped(const JsonString & value)
+{
     if (value.isProgMem()) {
         return lengthEscaped(value.getPtr(), value.length(), true);
     }
@@ -34,7 +32,8 @@ size_t JsonTools::lengthEscaped(const JsonString & value) {
 
 static const char *charatersToEscape = "\b\f\t\r\n\\\"";
 
-size_t JsonTools::lengthEscaped(const char *value, size_t length, bool isProgMem) {
+size_t JsonTools::lengthEscaped(const char *value, size_t length, bool isProgMem)
+{
     if (!length) {
         return 0;
     }
@@ -59,7 +58,8 @@ size_t JsonTools::lengthEscaped(const char *value, size_t length, bool isProgMem
     return length;
 }
 
-size_t JsonTools::printToEscaped(Print & output, const JsonString & value) {
+size_t JsonTools::printToEscaped(Print & output, const JsonString & value)
+{
     if (value.isProgMem()) {
         return printToEscaped(output, value.getPtr(), value.length(), true);
     }
@@ -68,7 +68,8 @@ size_t JsonTools::printToEscaped(Print & output, const JsonString & value) {
     }
 }
 
-size_t JsonTools::printToEscaped(Print &output, const char *value, size_t length, bool isProgMem) {
+size_t JsonTools::printToEscaped(Print &output, const char *value, size_t length, bool isProgMem)
+{
     if (!length) {
         return 0;
     }

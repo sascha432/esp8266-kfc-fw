@@ -34,6 +34,7 @@ public:
     void add(Stream *output);
     void remove(Stream *output);
     void clear();
+    // replace first stream and input if it is the first stream. if there isn't any, add the stream
     void replace(Stream *output, Stream *input);
     void replace(Stream *stream) {
         replace(stream, stream);

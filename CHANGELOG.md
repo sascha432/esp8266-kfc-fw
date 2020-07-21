@@ -9,6 +9,7 @@
 - KFC OTA copies firmware.elf and stores the hash in the device configuration
 - Rewritten StreamWrapper (Serial, DebugSerial, SerialHandler etc...)
 - Rewritten SerialHandler
+- Improved plugin system, ~2kb more free RAM
 
 ## Version 0.0.3
 

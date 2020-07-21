@@ -13,7 +13,6 @@
 #include <WiFiCallbacks.h>
 #include <MicrosTimer.h>
 #include "kfc_fw_config.h"
-#include "kfc_fw_config_classes.h"
 #include "../include/templates.h"
 #include "logger.h"
 #include "plugins.h"
@@ -56,44 +55,15 @@ void addTimeUpdatedCallback(TimeUpdatedCallback_t callback)
 class NTPPlugin : public PluginComponent {
 // PluginComponent
 public:
-    NTPPlugin() {
-        REGISTER_PLUGIN(this);
-    }
-
-    virtual PGM_P getName() const {
-        return PSTR("ntp");
-    }
-    virtual const __FlashStringHelper *getFriendlyName() const {
-        return F("NTP Client");
-    }
-    virtual PriorityType getSetupPriority() const override {
-        return PriorityType::NTP;
-    }
-
-#if ENABLE_DEEP_SLEEP
-    virtual bool autoSetupAfterDeepSleep() const override {
-        return true;
-    }
-#endif
+    NTPPlugin();
 
     virtual void setup(SetupModeType mode) override;
-    virtual void reconfigure(PGM_P source) override;
+    virtual void reconfigure(const String &source) override;
     virtual void shutdown() override;
-
-    virtual bool hasStatus() const override {
-        return true;
-    }
     virtual void getStatus(Print &output) override;
-
-    virtual PGM_P getConfigureForm() const override {
-        return getName();
-    }
-    virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
+    virtual void createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request) override;
 
 #if AT_MODE_SUPPORTED
-    virtual bool hasAtMode() const override {
-        return true;
-    }
     virtual void atModeHelpGenerator() override;
     virtual bool atModeHandler(AtModeArgs &args) override;
 #endif
@@ -116,6 +86,31 @@ uint32_t NTPPlugin::_ntpRefreshTimeMillis = 15000;
 
 static NTPPlugin plugin;
 
+PROGMEM_DEFINE_PLUGIN_OPTIONS(
+    NTPPlugin,
+    "ntp",              // name
+    "NTP Client",       // friendly name
+    "",                 // web_templates
+    "ntp",              // config_forms
+    "",                 // reconfigure_dependencies
+    PluginComponent::PriorityType::NTP,
+    PluginComponent::RTCMemoryId::NONE,
+    static_cast<uint8_t>(PluginComponent::MenuType::AUTO),
+    false,              // allow_safe_mode
+    true,               // setup_after_deep_sleep
+    true,               // has_get_status
+    true,               // has_config_forms
+    false,              // has_web_ui
+    false,              // has_web_templates
+    true,               // has_at_mode
+    0                   // __reserved
+);
+
+NTPPlugin::NTPPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(NTPPlugin))
+{
+    REGISTER_PLUGIN(this, "NTPPlugin");
+}
+
 #if SNTP_STARTUP_DELAY
 
 #ifndef SNTP_STARTUP_DELAY_MAX_TIME
@@ -134,8 +129,12 @@ uint32_t sntp_update_delay_MS_rfc_not_less_than_15000()
     return NTPPlugin::_ntpRefreshTimeMillis;
 }
 
-void NTPPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
+void NTPPlugin::createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request)
 {
+    if (!isCreateFormCallbackType(type)) {
+        return;
+    }
+
     form.add<bool>(F("ntp_enabled"), _H_FLAGS_BOOL_VALUE(Config().flags, ntpClientEnabled));
 
     form.add(F("ntp_server1"), _H_STR_VALUE(Config().ntp.servers[0]));
@@ -170,8 +169,9 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF(TZ, "TZ", "<timezone>", "Set timezone", "Show t
 
 void NTPPlugin::atModeHelpGenerator()
 {
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(NOW), getName());
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(TZ), getName());
+    auto name = getName_P();
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(NOW), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(TZ), name);
 }
 
 bool NTPPlugin::atModeHandler(AtModeArgs &args)
@@ -240,7 +240,7 @@ void NTPPlugin::setup(SetupModeType mode)
     }
 }
 
-void NTPPlugin::reconfigure(PGM_P source)
+void NTPPlugin::reconfigure(const String & source)
 {
     _checkTimer.remove();
     setup(SetupModeType::DEFAULT);

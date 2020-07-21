@@ -117,10 +117,7 @@ void WsWebUISocket::onText(uint8_t *data, size_t len)
             bool state = args[1].toInt() || (strcasecmp_P(args[1].c_str(), PSTR("true")) == 0);
             for(auto plugin: plugins) {
                 if (plugin->hasWebUI()) {
-                    auto interface = plugin->getWebUIInterface();
-                    if (interface) {
-                        interface->setValue(args[0], String(), false, state, true);
-                    }
+                    plugin->setValue(args[0], String(), false, state, true);
                 }
             }
         }
@@ -128,10 +125,7 @@ void WsWebUISocket::onText(uint8_t *data, size_t len)
             _sender = this;
             for(auto plugin: plugins) {
                 if (plugin->hasWebUI()) {
-                    auto interface = plugin->getWebUIInterface();
-                    if (interface) {
-                        interface->setValue(args[0], args[1], true, false, false);
-                    }
+                    plugin->setValue(args[0], args[1], true, false, false);
                 }
             }
             _sender = nullptr;
@@ -146,12 +140,9 @@ void WsWebUISocket::sendValues(AsyncWebSocketClient *client)
     json.add(JJ(type), JJ(ue));
     auto &array = json.addArray(JJ(events));
 
-    for(auto plugin: plugins) {
+    for(const auto plugin: plugins) {
         if (plugin->hasWebUI()) {
-            auto interface = plugin->getWebUIInterface();
-            if (interface) {
-                interface->getValues(array);
-            }
+            plugin->getValues(array);
         }
     }
 
@@ -162,7 +153,7 @@ void WsWebUISocket::createWebUIJSON(JsonUnnamedObject &json)
 {
     WebUI webUI(json);
 
-    for(auto plugin: plugins) {
+    for( const auto plugin: plugins) {
         if (plugin->hasWebUI()) {
             plugin->createWebUI(webUI);
         }

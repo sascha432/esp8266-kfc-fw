@@ -67,9 +67,16 @@ void StreamWrapper::clear()
 
 void StreamWrapper::replace(Stream *output, Stream *input)
 {
-    _streams.clear();
-    add(output);
-    setInput(input);
+    if (_streams.size() > 1) {
+        if (_streams.front() == _input) {
+            setInput(input);
+        }
+        _streams.front() = output;
+    }
+    else {
+        add(output);
+        setInput(input);
+    }
 }
 
 int StreamWrapper::available()

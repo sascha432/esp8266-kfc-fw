@@ -205,23 +205,9 @@ void Config_Button::setButtons(ButtonVector &buttons)
     config.setBinary(_H(Config().buttons), buttons.data(), buttons.size() * sizeof(Button_t));
 }
 
-// for KFCWebFramework/session.cpp
-
-const char *session_get_device_token()
-{
-    using KFCConfigurationClasses::System;
-    return System::Device::getToken();
-}
-
 // KFCFWConfiguration
 
-#if CONFIG_EEPROM_SIZE < 1024
-#error At least 1KB required
-#endif
-
-#if (CONFIG_EEPROM_OFFSET + CONFIG_EEPROM_SIZE) > 4096
-#error max. EEPROM size exceeded
-#endif
+static_assert(CONFIG_EEPROM_SIZE >= 1024 && (CONFIG_EEPROM_OFFSET + CONFIG_EEPROM_SIZE) <= 4096, "invalid EEPROM size");
 
 KFCFWConfiguration::KFCFWConfiguration() :
     Configuration(CONFIG_EEPROM_OFFSET, CONFIG_EEPROM_SIZE),
@@ -253,9 +239,9 @@ void KFCFWConfiguration::_onWiFiConnectCb(const WiFiEventStationModeConnected &e
     if (!_wifiConnected) {
 
 #if ENABLE_DEEP_SLEEP
-        if (resetDetector.hasWakeUpDetected() && _offlineSince == ~0UL) {
+        if (resetDetector.hasWakeUpDetected() && ResetDetectorPlugin::_deepSleepWifiTime == ~0) { // first connection after wakeup
             ResetDetectorPlugin::_deepSleepWifiTime = millis();
-            Logger_notice(F("WiFi connected to %s after %lu ms"), event.ssid.c_str(), ResetDetectorPlugin::_deepSleepWifiTime);
+            Logger_notice(F("WiFi connected to %s after %u ms"), event.ssid.c_str(), ResetDetectorPlugin::_deepSleepWifiTime);
         }
         else
 #endif
@@ -772,22 +758,30 @@ bool KFCFWConfiguration::isConfigDirty() const
     return _dirty;
 }
 
+const char __compile_date__[] PROGMEM = { __DATE__ };
+
 const String KFCFWConfiguration::getFirmwareVersion()
 {
 #if DEBUG
 #if ESP8266
-    return getShortFirmwareVersion() + F("." ARDUINO_ESP8266_RELEASE " " __DATE__);
+    return getShortFirmwareVersion() + F("." ARDUINO_ESP8266_RELEASE " " ) + FPSTR(__compile_date__);
 #else
-    return getShortFirmwareVersion() + F("." __DATE__);
+    return getShortFirmwareVersion() + ' ' + FPSTR(__compile_date__);
 #endif
-#else
-    return getShortFirmwareVersion() + F(" " __DATE__);
+
+#else // #if DEBUG
+    return getShortFirmwareVersion() + ' ' + FPSTR(__compile_date__);
 #endif
+}
+
+const __FlashStringHelper *KFCFWConfiguration::getShortFirmwareVersion_P()
+{
+    return F(FIRMWARE_VERSION_STR " Build " __BUILD_NUMBER);
 }
 
 const String KFCFWConfiguration::getShortFirmwareVersion()
 {
-    return F(FIRMWARE_VERSION_STR " Build " __BUILD_NUMBER);
+    return getShortFirmwareVersion_P();
 }
 
 #if ENABLE_DEEP_SLEEP
@@ -901,7 +895,7 @@ void KFCFWConfiguration::wifiQuickConnect()
         uint8_t *bssidPtr;
         Config_QuickConnect::WiFiQuickConnect_t quickConnect;
 
-        if (RTCMemoryManager::read(CONFIG_RTC_MEM_ID, &quickConnect, sizeof(quickConnect))) {
+        if (RTCMemoryManager::read(PluginComponent::RTCMemoryId::CONFIG, &quickConnect, sizeof(quickConnect))) {
             channel = quickConnect.channel;
             bssidPtr = quickConnect.bssid;
         } else {
@@ -1040,7 +1034,7 @@ void KFCFWConfiguration::restartDevice(bool safeMode)
     // execute in reverse order
     for(auto iterator = plugins.rbegin(); iterator != plugins.rend(); ++iterator) {
         const auto plugin = *iterator;
-        debug_printf("plugin=%s\n", plugin->getName());
+        debug_printf("plugin=%s\n", plugin->getName_P());
         plugin->shutdown();
     }
 
@@ -1316,7 +1310,7 @@ TwoWire &KFCFWConfiguration::initTwoWire(bool reset, Print *output)
         output->printf_P("I2C: SDA=%u, SCL=%u, clock stretch=%u, clock speed=%u, reset=%u\n", KFC_TWOWIRE_SDA, KFC_TWOWIRE_SCL, KFC_TWOWIRE_CLOCK_STRETCH, KFC_TWOWIRE_CLOCK_SPEED, reset);
     }
     if (!_initTwoWire || reset) {
-        debug_printf_P("SDA=%u,SCL=%u,stretch=%u,speed=%u,rst=%u\n", KFC_TWOWIRE_SDA, KFC_TWOWIRE_SCL, KFC_TWOWIRE_CLOCK_STRETCH, KFC_TWOWIRE_CLOCK_SPEED, reset);
+        _debug_printf_P("SDA=%u,SCL=%u,stretch=%u,speed=%u,rst=%u\n", KFC_TWOWIRE_SDA, KFC_TWOWIRE_SCL, KFC_TWOWIRE_CLOCK_STRETCH, KFC_TWOWIRE_CLOCK_SPEED, reset);
         _initTwoWire = true;
         Wire.begin(KFC_TWOWIRE_SDA, KFC_TWOWIRE_SCL);
 #if ESP8266
@@ -1329,7 +1323,7 @@ TwoWire &KFCFWConfiguration::initTwoWire(bool reset, Print *output)
 
 bool KFCFWConfiguration::setRTC(uint32_t unixtime)
 {
-    debug_printf_P(PSTR("time=%u\n"), unixtime);
+    _debug_printf_P(PSTR("time=%u\n"), unixtime);
 #if RTC_SUPPORT
     initTwoWire();
     if (rtc.begin()) {
@@ -1355,15 +1349,15 @@ uint32_t KFCFWConfiguration::getRTC()
     initTwoWire();
     if (rtc.begin()) {
         auto unixtime = rtc.now().unixtime();
-        debug_printf_P(PSTR("time=%u\n"), unixtime);
+        _debug_printf_P(PSTR("time=%u\n"), unixtime);
         if (rtc.lostPower()) {
-            debug_printf_P(PSTR("time=0, lostPower=true\n"));
+            _debug_printf_P(PSTR("time=0, lostPower=true\n"));
             return 0;
         }
         return unixtime;
     }
 #endif
-    debug_printf_P(PSTR("time=error\n"));
+    _debug_printf_P(PSTR("time=error\n"));
     return 0;
 }
 
@@ -1409,12 +1403,14 @@ void KFCFWConfiguration::printRTCStatus(Print &output, bool plain)
 
 const char *KFCFWConfiguration::getDeviceName() const
 {
-    return config._H_STR(Config().device_name);
+    using KFCConfigurationClasses::System;
+    return System::Device::getName();
 }
 
 const char *KFCFWConfiguration::getDeviceTitle() const
 {
-    return config._H_STR(Config().device_title);
+    using KFCConfigurationClasses::System;
+    return System::Device::getTitle();
 }
 
 bool KFCFWConfiguration::callPersistantConfig(ContainerPtr data, PersistantConfigCallback callback)
@@ -1431,33 +1427,43 @@ bool KFCFWConfiguration::callPersistantConfig(ContainerPtr data, PersistantConfi
 
 class KFCConfigurationPlugin : public PluginComponent {
 public:
-    KFCConfigurationPlugin() {
-        REGISTER_PLUGIN(this);
-    }
+    KFCConfigurationPlugin();
 
-    virtual PGM_P getName() const {
-        return PSTR("cfg");
-    }
-
-    virtual PriorityType getSetupPriority() const override {
-        return PriorityType::CONFIG;
-    }
-
-    virtual uint8_t getRtcMemoryId() const override {
-        return CONFIG_RTC_MEM_ID;
-    }
-
-#if ENABLE_DEEP_SLEEP
-    virtual bool autoSetupAfterDeepSleep() const override {
-        return true;
-    }
-#endif
-
-    void setup(SetupModeType mode) override;
-    void reconfigure(PGM_P source) override;
+    virtual void setup(SetupModeType mode) override;
+    virtual void reconfigure(const String &source) override;
+    virtual void createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request) override;
+    virtual WebTemplate *getWebTemplate(const String &templateName) override;
 };
 
 static KFCConfigurationPlugin plugin;
+
+PROGMEM_DEFINE_PLUGIN_OPTIONS(
+    KFCConfigurationPlugin,
+    "cfg",              // name
+    "cfg",              // friendly name
+    // web_templates (class StatusTemplate)
+    "index,status",
+    // config_forms
+    "wifi,network,device,password",
+    // reconfigure_dependencies
+    "wifi,network",
+    PluginComponent::PriorityType::CONFIG,
+    PluginComponent::RTCMemoryId::CONFIG,
+    static_cast<uint8_t>(PluginComponent::MenuType::NONE),
+    true,               // allow_safe_mode
+    true,               // setup_after_deep_sleep
+    false,              // has_get_status
+    true,               // has_config_forms
+    false,              // has_web_ui
+    true,               // has_web_templates
+    false,              // has_at_mode
+    0                   // __reserved
+);
+
+KFCConfigurationPlugin::KFCConfigurationPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(KFCConfigurationPlugin))
+{
+    REGISTER_PLUGIN(this, "KFCConfigurationPlugin");
+}
 
 void KFCConfigurationPlugin::setup(SetupModeType mode)
 {
@@ -1501,7 +1507,125 @@ void KFCConfigurationPlugin::setup(SetupModeType mode)
     }
 }
 
-void KFCConfigurationPlugin::reconfigure(PGM_P source)
+void KFCConfigurationPlugin::reconfigure(const String &source)
 {
     config.reconfigureWiFi();
+}
+
+void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request)
+{
+    using KFCConfigurationClasses::MainConfig;
+    using KFCConfigurationClasses::System;
+
+    if (type == FormCallbackType::SAVE) {
+        if (String_equals(formName, F("password"))) {
+            auto &flags = System::Flags::getWriteable();
+            flags.isDefaultPassword = false;
+        }
+        else if (String_equals(formName, F("device"))) {
+            config.setConfigDirty(true);
+        }
+    }
+    else if (isCreateFormCallbackType(type)) {
+
+        if (String_equals(formName, F("wifi"))) {
+
+            form.add<uint8_t>(F("mode"), _H_FLAGS_VALUE(Config().flags, wifiMode));
+            form.addValidator(new FormRangeValidator(F("Invalid mode"), WIFI_OFF, WIFI_AP_STA));
+
+            form.add(F("wifi_ssid"), _H_STR_VALUE(MainConfig().network.WiFiConfig._ssid));
+            form.addValidator(new FormLengthValidator(1, sizeof(MainConfig().network.WiFiConfig._ssid) - 1));
+
+            form.add(F("wifi_password"), _H_STR_VALUE(MainConfig().network.WiFiConfig._password));
+            form.addValidator(new FormLengthValidator(8, sizeof(MainConfig().network.WiFiConfig._password) - 1));
+
+            form.add(F("ap_wifi_ssid"), _H_STR_VALUE(MainConfig().network.WiFiConfig._softApSsid));
+            form.addValidator(new FormLengthValidator(1, sizeof(MainConfig().network.WiFiConfig._softApSsid) - 1));
+
+            form.add(F("ap_wifi_password"), _H_STR_VALUE(MainConfig().network.WiFiConfig._softApPassword));
+            form.addValidator(new FormLengthValidator(8, sizeof(MainConfig().network.WiFiConfig._softApPassword) - 1));
+
+            form.add<uint8_t>(F("channel"), _H_STRUCT_VALUE(MainConfig().network.softAp, _channel));
+            form.addValidator(new FormRangeValidator(1, config.getMaxWiFiChannels()));
+
+            form.add<uint8_t>(F("encryption"), _H_STRUCT_VALUE(MainConfig().network.softAp, _encryption));
+
+            form.addValidator(new FormEnumValidator<uint8_t, WiFiEncryptionTypeArray().size()>(F("Invalid encryption"), createWiFiEncryptionTypeArray()));
+
+            form.add<bool>(F("ap_hidden"), _H_FLAGS_BOOL_VALUE(Config().flags, hiddenSSID), FormField::InputFieldType::CHECK);
+            form.add<bool>(F("ap_standby_mode"), _H_FLAGS_BOOL_VALUE(Config().flags, apStandByMode), FormField::InputFieldType::SELECT);
+
+        }
+        else if (String_equals(formName, F("network"))) {
+
+            form.add(F("hostname"), _H_STR_VALUE(Config().device_name));
+            form.addValidator(new FormLengthValidator(4, sizeof(Config().device_name) - 1));
+            form.add(FSPGM(title), _H_STR_VALUE(Config().device_title));
+            form.addValidator(new FormLengthValidator(1, sizeof(Config().device_title) - 1));
+
+            form.add<bool>(F("dhcp_client"), _H_FLAGS_BOOL_VALUE(Config().flags, stationModeDHCPEnabled));
+
+            form.add(F("ip_address"), _H_STRUCT_IP_VALUE(MainConfig().network.settings, _localIp));
+            form.add(F("subnet"), _H_STRUCT_IP_VALUE(MainConfig().network.settings, _subnet));
+            form.add(F("gateway"), _H_STRUCT_IP_VALUE(MainConfig().network.settings, _gateway));
+            form.add(F("dns1"), _H_STRUCT_IP_VALUE(MainConfig().network.settings, _dns1));
+            form.add(F("dns2"), _H_STRUCT_IP_VALUE(MainConfig().network.settings, _dns2));
+
+            form.add<bool>(F("softap_dhcpd"), _H_FLAGS_BOOL_VALUE(Config().flags, softAPDHCPDEnabled));
+
+            form.add(F("dhcp_start"), _H_STRUCT_IP_VALUE(MainConfig().network.softAp, _dhcpStart));
+            form.add(F("dhcp_end"), _H_STRUCT_IP_VALUE(MainConfig().network.softAp, _dhcpEnd));
+            form.add(F("ap_ip_address"), _H_STRUCT_IP_VALUE(MainConfig().network.softAp, _address));
+            form.add(F("ap_subnet"), _H_STRUCT_IP_VALUE(MainConfig().network.softAp, _subnet));
+
+        }
+        else if (String_equals(formName, F("device"))) {
+
+            form.add(FSPGM(title), _H_STR_VALUE(Config().device_title));
+            form.addValidator(new FormLengthValidator(1, sizeof(Config().device_title) - 1));
+
+            form.add<uint16_t>(F("safe_mode_reboot_time"), _H_STRUCT_VALUE(MainConfig().system.device.settings, _safeModeRebootTime));
+            form.addValidator(new FormRangeValidator(5, 1440, true));
+
+            form.add<bool>(F("enable_mdns"), _H_FLAGS_BOOL_VALUE(Config().flags, enableMDNS));
+
+            form.add<uint16_t>(F("webui_keep_logged_in_days"), _H_STRUCT_VALUE(MainConfig().system.device.settings, _webUIKeepLoggedInDays));
+            form.addValidator(new FormRangeValidator(3, 180, true));
+
+            form.add<bool>(F("disable_webalerts"), _H_FLAGS_BOOL_VALUE(Config().flags, disableWebAlerts));
+            form.add<bool>(F("disable_webui"), _H_FLAGS_BOOL_VALUE(Config().flags, disableWebUI));
+            form.add<uint8_t>(F("status_led_mode"), _H_STRUCT_VALUE(MainConfig().system.device.settings, _statusLedMode));
+
+        }
+        else if (String_equals(formName, F("password"))) {
+
+            form.add(new FormField(FSPGM(password), System::Device::getPassword()));
+            form.addValidator(new FormMatchValidator(F("The entered password is not correct"), [](FormField &field) {
+                return field.getValue().equals(System::Device::getPassword());
+            }));
+
+            form.add(F("password2"), _H_STR_VALUE(Config().device_pass))
+                ->setValue(emptyString);
+
+            form.addValidator(new FormRangeValidator(F("The password has to be at least %min% characters long"), 6, 0));
+            form.addValidator(new FormRangeValidator(6, sizeof(Config().device_pass) - 1))
+                ->setValidateIfValid(false);
+
+            form.add(F("password3"), emptyString, FormField::InputFieldType::TEXT);
+            form.addValidator(new FormMatchValidator(F("The password confirmation does not match"), [](FormField &field) {
+                    return field.equals(field.getForm().getField(F("password2")));
+                }))
+                ->setValidateIfValid(false);
+
+        }
+        else {
+            return;
+        }
+        form.finalize();
+    }
+}
+
+WebTemplate *KFCConfigurationPlugin::getWebTemplate(const String &name)
+{
+    return new StatusTemplate();
 }

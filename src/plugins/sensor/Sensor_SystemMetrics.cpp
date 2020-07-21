@@ -32,19 +32,23 @@ MQTTComponent::MQTTAutoDiscoveryPtr Sensor_SystemMetrics::nextAutoDiscovery(MQTT
         return nullptr;
     }
     auto discovery = new MQTTAutoDiscovery();
-    String topic = _getTopic();
     switch(num) {
         case 0:
             discovery->create(this, F("uptime"), format);
-            discovery->addStateTopic(topic);
+            discovery->addStateTopic(_getTopic());
             discovery->addUnitOfMeasurement(FSPGM(seconds));
             discovery->addValueTemplate(F("uptime"));
             break;
         case 1:
             discovery->create(this, F("heap"), format);
-            discovery->addStateTopic(topic);
+            discovery->addStateTopic(_getTopic());
             discovery->addUnitOfMeasurement(F("bytes"));
             discovery->addValueTemplate(F("heap"));
+            break;
+        case 2:
+            discovery->create(this, F("version"), format);
+            discovery->addStateTopic(_getTopic());
+            discovery->addValueTemplate(F("version"));
             break;
     }
     discovery->finalize();
@@ -53,14 +57,16 @@ MQTTComponent::MQTTAutoDiscoveryPtr Sensor_SystemMetrics::nextAutoDiscovery(MQTT
 
 uint8_t Sensor_SystemMetrics::getAutoDiscoveryCount() const
 {
-    return 2;
+    return 3;
 }
 
 void Sensor_SystemMetrics::publishState(MQTTClient *client)
 {
     if (client && client->isConnected()) {
         auto _qos = MQTTClient::getDefaultQos();
-        client->publish(_getTopic(), _qos, true, _getMetricsJson());
+        String json;
+        _getMetricsJson(json);
+        client->publish(_getTopic(), _qos, true, json);
     }
 }
 
@@ -69,9 +75,9 @@ String Sensor_SystemMetrics::_getTopic() const
     return MQTTClient::formatTopic(F("sys"));
 }
 
-String Sensor_SystemMetrics::_getMetricsJson() const
+void Sensor_SystemMetrics::_getMetricsJson(String &json) const
 {
-    return PrintString(F("{\"uptime\":%u,\"heap\":%u}"), getSystemUptime(), ESP.getFreeHeap());
+    json = PrintString(F("{\"uptime\":%u,\"heap\":%u,\"version\":\"%s\"}"), getSystemUptime(), ESP.getFreeHeap(), config.getShortFirmwareVersion_P());
 }
 
 #endif

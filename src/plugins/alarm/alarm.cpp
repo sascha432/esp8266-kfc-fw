@@ -20,9 +20,30 @@
 
 static AlarmPlugin plugin;
 
-AlarmPlugin::AlarmPlugin() : MQTTComponent(ComponentTypeEnum_t::LIGHT), _nextAlarm(0)
+PROGMEM_DEFINE_PLUGIN_OPTIONS(
+    AlarmPlugin,
+    "alarm",            // name
+    "Alarm",            // friendly name
+    "",                 // web_templates
+    "alarm",            // config_forms
+    "mqtt",             // reconfigure_dependencies
+    PluginComponent::PriorityType::ALARM,
+    PluginComponent::RTCMemoryId::NONE,
+    static_cast<uint8_t>(PluginComponent::MenuType::AUTO),
+    false,              // allow_safe_mode
+    true,               // setup_after_deep_sleep
+    true,               // has_get_status
+    true,               // has_config_forms
+    false,              // has_web_ui
+    false,              // has_web_templates
+    false,              // has_at_mode
+    0                   // __reserved
+);
+
+
+AlarmPlugin::AlarmPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(AlarmPlugin)), MQTTComponent(ComponentTypeEnum_t::LIGHT), _nextAlarm(0)
 {
-    REGISTER_PLUGIN(this);
+    REGISTER_PLUGIN(this, "AlarmPlugin");
 }
 
 void AlarmPlugin::setup(SetupModeType mode)
@@ -36,10 +57,10 @@ void AlarmPlugin::setup(SetupModeType mode)
     });
 }
 
-void AlarmPlugin::reconfigure(PGM_P source)
+void AlarmPlugin::reconfigure(const String &source)
 {
     _debug_println();
-    if (!strcmp_P_P(source, SPGM(mqtt))) {
+    if (String_equals(source, SPGM(mqtt))) {
         MQTTClient::safeReRegisterComponent(this);
     }
     else {
@@ -134,17 +155,6 @@ static bool form_duration_callback(uint16_t value, FormField &field, bool store)
     return false;
 }
 
-void AlarmPlugin::configurationSaved(Form *form)
-{
-    _debug_println();
-    auto &cfg = Alarm::getWriteableConfig();
-    auto now = time(nullptr) + 30;
-    Alarm::updateTimestamps(localtime(&now), cfg);
-#if DEBUG_ALARM_FORM
-    Alarm::dump(DEBUG_OUTPUT, cfg);
-#endif
-}
-
 void AlarmPlugin::getStatus(Print &output)
 {
     output.printf_P(PSTR("%u alarm(s) set"), _alarms.size());
@@ -158,45 +168,55 @@ void AlarmPlugin::getStatus(Print &output)
     }
 }
 
-void AlarmPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
+void AlarmPlugin::createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request)
 {
-    _debug_printf_P(PSTR("url=%s\n"), request->url().c_str());
-    // example for memory consumption
-    //
-    // before optimizing: 14368
-    // shortening names to less than String::SSOSIZE: -3760 byte (10608)
-    //      String needs 16 byte memory if less than SSO size (ESP8266 = less than 11 characters)
-    //      otherwise it allocates another 16 byte aligned block = 32 byte for strings between 11-15 characters or 48 byte for strings between 16-31 characters
-    // replacing lambdas with static functions: -1200 byte (9408)
-    //      lamdba functions need 16 byte (8 byte without memory alignment) or more if variables are captured
-    // removing 7x checkbox and replacing it with a single field: -5056 byte (4352)
-    //      requires some javascript unserialize/serialize
-    //
-    // the POST request consumes about the same amount of memory as the form itself
-    // large forms can be split into small parts and posted via ajax one by one
-
-    auto &cfg = Alarm::getWriteableConfig();
-
-    for(uint8_t i = 0; i < Alarm::MAX_ALARMS; i++) {
-        String prefix = 'a' + String(i);
-        auto &alarm = cfg.alarms[i];
-
-        form.add<bool>(prefix + String('e'), alarm.is_enabled, form_enabled_callback);
-
-        // TODO check packed struct cannot be accessed as ref/by ptr
-        form.add<uint8_t>(prefix + String('h'), &alarm.time.hour);
-        form.add<uint8_t>(prefix + String('m'), &alarm.time.minute);
-#if IOT_ALARM_PLUGIN_HAS_BUZZER && IOT_ALARM_PLUGIN_HAS_SILENT
-        form.add<uint8_t>(prefix + String('t'), &alarm.mode);
-#else
-        alarm.mode_type = Alarm::AlarmModeType::BOTH;
+    _debug_printf_P(PSTR("type=%u name=%s foprm=%p request=%p\n"), type, formName.c_str(), &form, request);
+    if (type == FormCallbackType::SAVE) {
+        auto &cfg = Alarm::getWriteableConfig();
+        auto now = time(nullptr) + 30;
+        Alarm::updateTimestamps(localtime(&now), cfg);
+#if DEBUG_ALARM_FORM
+        Alarm::dump(DEBUG_OUTPUT, cfg);
 #endif
-        form.add<uint16_t>(prefix + String('d'), alarm.max_duration, form_duration_callback);
-
-        form.add<uint8_t>(prefix + String('w'), alarm.time.week_day.week_days, form_weekday_callback);
     }
+    else if (isCreateFormCallbackType(type)) {
+        // example for memory consumption
+        //
+        // before optimizing: 14368
+        // shortening names to less than String::SSOSIZE: -3760 byte (10608)
+        //      String needs 16 byte memory if less than SSO size (ESP8266 = less than 11 characters)
+        //      otherwise it allocates another 16 byte aligned block = 32 byte for strings between 11-15 characters or 48 byte for strings between 16-31 characters
+        // replacing lambdas with static functions: -1200 byte (9408)
+        //      lamdba functions need 16 byte (8 byte without memory alignment) or more if variables are captured
+        // removing 7x checkbox and replacing it with a single field: -5056 byte (4352)
+        //      requires some javascript unserialize/serialize
+        //
+        // the POST request consumes about the same amount of memory as the form itself
+        // large forms can be split into small parts and posted via ajax one by one
 
-    form.finalize();
+        auto &cfg = Alarm::getWriteableConfig();
+
+        for(uint8_t i = 0; i < Alarm::MAX_ALARMS; i++) {
+            String prefix = 'a' + String(i);
+            auto &alarm = cfg.alarms[i];
+
+            form.add<bool>(prefix + String('e'), alarm.is_enabled, form_enabled_callback);
+
+            // TODO check packed struct cannot be accessed as ref/by ptr
+            form.add<uint8_t>(prefix + String('h'), &alarm.time.hour);
+            form.add<uint8_t>(prefix + String('m'), &alarm.time.minute);
+#if IOT_ALARM_PLUGIN_HAS_BUZZER && IOT_ALARM_PLUGIN_HAS_SILENT
+            form.add<uint8_t>(prefix + String('t'), &alarm.mode);
+#else
+            alarm.mode_type = Alarm::AlarmModeType::BOTH;
+#endif
+            form.add<uint16_t>(prefix + String('d'), alarm.max_duration, form_duration_callback);
+
+            form.add<uint8_t>(prefix + String('w'), alarm.time.week_day.week_days, form_weekday_callback);
+        }
+
+        form.finalize();
+    }
 }
 
 void AlarmPlugin::resetAlarm()

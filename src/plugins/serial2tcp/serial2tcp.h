@@ -18,7 +18,8 @@
 #error SERIAL2TCP_SUPPORT must be set
 #endif
 
-class Serial2TcpPlugin : public PluginComponent {
+class Serial2TcpPlugin : public PluginComponent
+{
 public:
     using Serial2TCP = KFCConfigurationClasses::Plugins::Serial2TCP;
 
@@ -34,25 +35,18 @@ public:
     virtual PriorityType getSetupPriority() const override {
         return PriorityType::SERIAL2TCP;
     }
+    virtual OptionsType getOptions() const override {
+        return EnumHelper::Bitset::all(OptionsType::HAS_STATUS, OptionsType::HAS_AT_MODE, OptionsType::HAS_CONFIG_FORM);
+    }
 
     virtual void setup(SetupModeType mode) override;
     virtual void reconfigure(PGM_P source) override;
     virtual void shutdown() override;
 
-    virtual bool hasStatus() const override {
-        return true;
-    }
     virtual void getStatus(Print &output) override;
-
-    virtual PGM_P getConfigureForm() const {
-        return PSTR("serial2tcp");
-    }
     virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
 
 #if AT_MODE_SUPPORTED
-    virtual bool hasAtMode() const {
-        return true;
-    }
     virtual void atModeHelpGenerator();
     virtual bool atModeHandler(AtModeArgs &args);
 #endif

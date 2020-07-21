@@ -12,7 +12,7 @@ extern "C"{
 // src/plugins/atomic_sun/atomic_sun_v2.cpp:653
 // src/plugins/dimmer_module/dimmer_module.cpp:444
 // src/plugins/dimmer_module/dimmer_module.cpp:451
-// src/plugins/file_manager/file_manager.cpp:482
+// src/plugins/file_manager/file_manager.cpp:481
 // src/plugins/home_assistant/home_assistant.h:64
 // src/plugins/ping_monitor/ping_monitor.cpp:370
 // src/plugins/remote/remote.h:178
@@ -28,12 +28,12 @@ PROGMEM_STRING_DECL(http);
 // src/web_server.cpp:491
 // src/web_server.cpp:787
 // src/plugins/dimmer_module/dimmer_base.cpp:441
-// src/plugins/file_manager/file_manager.cpp:252
-// src/plugins/file_manager/file_manager.cpp:332
-// src/plugins/file_manager/file_manager.cpp:345
-// src/plugins/file_manager/file_manager.cpp:382
-// src/plugins/file_manager/file_manager.cpp:417
-// src/plugins/file_manager/file_manager.cpp:430
+// src/plugins/file_manager/file_manager.cpp:251
+// src/plugins/file_manager/file_manager.cpp:331
+// src/plugins/file_manager/file_manager.cpp:344
+// src/plugins/file_manager/file_manager.cpp:381
+// src/plugins/file_manager/file_manager.cpp:416
+// src/plugins/file_manager/file_manager.cpp:429
 // src/plugins/home_assistant/home_assistant.cpp:771
 PROGMEM_STRING_DECL(mime_text_plain);
 // src/async_web_response.cpp:161
@@ -45,8 +45,8 @@ PROGMEM_STRING_DECL(mime_text_plain);
 PROGMEM_STRING_DECL(mime_application_json);
 // src/AtModeArgs.cpp:214
 // src/plugins/dimmer_module/dimmer_base.cpp:441
-// src/plugins/file_manager/file_manager.cpp:376
-// src/plugins/file_manager/file_manager.cpp:422
+// src/plugins/file_manager/file_manager.cpp:375
+// src/plugins/file_manager/file_manager.cpp:421
 // src/plugins/home_assistant/home_assistant.cpp:768
 PROGMEM_STRING_DECL(OK);
 // include/web_socket.h:149
@@ -73,18 +73,22 @@ PROGMEM_STRING_DECL(off);
 // src/plugins.cpp:81
 // src/web_server.cpp:944
 // src/web_server.cpp:958
+// src/plugins/serial2tcp/serial2tcp.cpp:97
+// src/plugins/serial2tcp/serial2tcp.cpp:101
 PROGMEM_STRING_DECL(yes);
 // src/at_mode.cpp:1080
 // src/plugins.cpp:72
 // src/plugins.cpp:79
 // src/plugins.cpp:80
 // src/plugins.cpp:81
+// src/plugins/serial2tcp/serial2tcp.cpp:97
+// src/plugins/serial2tcp/serial2tcp.cpp:101
 PROGMEM_STRING_DECL(no);
 // src/kfc_fw_config.cpp:595
-// src/kfc_fw_config_classes.cpp:80
+// src/kfc_fw_config_classes.cpp:88
 PROGMEM_STRING_DECL(KFC_Firmware);
-// src/kfc_fw_config.cpp:1298
-// src/kfc_fw_config.cpp:1299
+// src/kfc_fw_config.cpp:1291
+// src/kfc_fw_config.cpp:1292
 // src/templates.cpp:97
 PROGMEM_STRING_DECL(default_password_warning);
 // src/plugins.cpp:76
@@ -333,8 +337,6 @@ PROGMEM_STRING_DECL(https);
 // src/plugins/mqtt/mqtt_client.cpp:807
 // src/plugins/ntp/ntp.cpp:191
 // src/plugins/PinDebugger/PinDebugger.cpp:125
-// src/plugins/serial2tcp/serial2tcp.cpp:91
-// src/plugins/serial2tcp/serial2tcp.cpp:92
 PROGMEM_STRING_DECL(disabled);
 // src/web_server.cpp:1082
 // src/plugins/mqtt/mqtt_client.cpp:724
@@ -365,7 +367,7 @@ PROGMEM_STRING_DECL(status);
 // src/plugins/weather_station/weather_station.cpp:174
 // src/plugins/weather_station/weather_station.cpp:178
 PROGMEM_STRING_DECL(message);
-// src/plugins/alarm/alarm.h:54
+// src/plugins/alarm/alarm.h:65
 // src/plugins/alarm/alarm.cpp:42
 // src/plugins/clock/clock.h:191
 // src/plugins/clock/clock.cpp:295
@@ -374,8 +376,8 @@ PROGMEM_STRING_DECL(message);
 PROGMEM_STRING_DECL(mqtt);
 // src/plugins/alarm/alarm.cpp:66
 // src/plugins/alarm/alarm.cpp:91
-// src/plugins/alarm/alarm.cpp:203
-// src/plugins/alarm/alarm.cpp:343
+// src/plugins/alarm/alarm.cpp:204
+// src/plugins/alarm/alarm.cpp:344
 // src/plugins/atomic_sun/atomic_sun_v2.cpp:145
 // src/plugins/atomic_sun/atomic_sun_v2.cpp:157
 // src/plugins/blinds_ctrl/BlindsChannel.cpp:120
@@ -407,8 +409,6 @@ PROGMEM_STRING_DECL(strftime_date_time_zone);
 // src/plugins/mqtt/mqtt_client.cpp:798
 // src/plugins/ntp/ntp.cpp:191
 // src/plugins/PinDebugger/PinDebugger.cpp:125
-// src/plugins/serial2tcp/serial2tcp.cpp:91
-// src/plugins/serial2tcp/serial2tcp.cpp:92
 PROGMEM_STRING_DECL(enabled);
 // src/plugins/atomic_sun/atomic_sun_v2.cpp:95
 // src/plugins/atomic_sun/atomic_sun_v2.cpp:141
@@ -497,48 +497,48 @@ PROGMEM_STRING_DECL(Off);
 PROGMEM_STRING_DECL(seconds);
 // src/plugins/file_manager/file_manager.cpp:29
 // src/plugins/file_manager/file_manager.cpp:40
-// src/plugins/file_manager/file_manager.cpp:190
+// src/plugins/file_manager/file_manager.cpp:189
 PROGMEM_STRING_DECL(upload);
 // src/plugins/file_manager/file_manager.cpp:39
-// src/plugins/file_manager/file_manager.cpp:43
+// src/plugins/file_manager/file_manager.cpp:42
 PROGMEM_STRING_DECL(file_manager_base_uri);
-// src/plugins/file_manager/file_manager.cpp:213
-// src/plugins/file_manager/file_manager.cpp:223
-// src/plugins/file_manager/file_manager.cpp:393
-PROGMEM_STRING_DECL(dir);
-// src/plugins/file_manager/file_manager.cpp:238
-// src/plugins/file_manager/file_manager.cpp:246
-// src/plugins/file_manager/file_manager.cpp:283
-// src/plugins/file_manager/file_manager.cpp:294
-// src/plugins/file_manager/file_manager.cpp:299
-// src/plugins/file_manager/file_manager.cpp:342
-// src/plugins/file_manager/file_manager.cpp:364
-// src/plugins/file_manager/file_manager.cpp:372
-// src/plugins/file_manager/file_manager.cpp:397
-// src/plugins/file_manager/file_manager.cpp:413
-// src/plugins/file_manager/file_manager.cpp:416
-// src/plugins/file_manager/file_manager.cpp:420
-PROGMEM_STRING_DECL(ERROR_);
-// src/plugins/file_manager/file_manager.cpp:251
-// src/plugins/file_manager/file_manager.cpp:379
-// src/plugins/file_manager/file_manager.cpp:425
-PROGMEM_STRING_DECL(success);
-// src/plugins/file_manager/file_manager.cpp:251
-// src/plugins/file_manager/file_manager.cpp:379
-// src/plugins/file_manager/file_manager.cpp:425
-PROGMEM_STRING_DECL(failure);
-// src/plugins/file_manager/file_manager.cpp:269
-// src/plugins/file_manager/file_manager.cpp:270
-PROGMEM_STRING_DECL(upload_file);
-// src/plugins/file_manager/file_manager.cpp:315
-// src/plugins/file_manager/file_manager.cpp:489
-PROGMEM_STRING_DECL(file_manager_html_uri);
-// src/plugins/file_manager/file_manager.cpp:339
-// src/plugins/file_manager/file_manager.cpp:340
-// src/plugins/file_manager/file_manager.cpp:360
-// src/plugins/file_manager/file_manager.cpp:361
-// src/plugins/file_manager/file_manager.cpp:391
+// src/plugins/file_manager/file_manager.cpp:212
+// src/plugins/file_manager/file_manager.cpp:222
 // src/plugins/file_manager/file_manager.cpp:392
+PROGMEM_STRING_DECL(dir);
+// src/plugins/file_manager/file_manager.cpp:237
+// src/plugins/file_manager/file_manager.cpp:245
+// src/plugins/file_manager/file_manager.cpp:282
+// src/plugins/file_manager/file_manager.cpp:293
+// src/plugins/file_manager/file_manager.cpp:298
+// src/plugins/file_manager/file_manager.cpp:341
+// src/plugins/file_manager/file_manager.cpp:363
+// src/plugins/file_manager/file_manager.cpp:371
+// src/plugins/file_manager/file_manager.cpp:396
+// src/plugins/file_manager/file_manager.cpp:412
+// src/plugins/file_manager/file_manager.cpp:415
+// src/plugins/file_manager/file_manager.cpp:419
+PROGMEM_STRING_DECL(ERROR_);
+// src/plugins/file_manager/file_manager.cpp:250
+// src/plugins/file_manager/file_manager.cpp:378
+// src/plugins/file_manager/file_manager.cpp:424
+PROGMEM_STRING_DECL(success);
+// src/plugins/file_manager/file_manager.cpp:250
+// src/plugins/file_manager/file_manager.cpp:378
+// src/plugins/file_manager/file_manager.cpp:424
+PROGMEM_STRING_DECL(failure);
+// src/plugins/file_manager/file_manager.cpp:268
+// src/plugins/file_manager/file_manager.cpp:269
+PROGMEM_STRING_DECL(upload_file);
+// src/plugins/file_manager/file_manager.cpp:314
+// src/plugins/file_manager/file_manager.cpp:488
+PROGMEM_STRING_DECL(file_manager_html_uri);
+// src/plugins/file_manager/file_manager.cpp:338
+// src/plugins/file_manager/file_manager.cpp:339
+// src/plugins/file_manager/file_manager.cpp:359
+// src/plugins/file_manager/file_manager.cpp:360
+// src/plugins/file_manager/file_manager.cpp:390
+// src/plugins/file_manager/file_manager.cpp:391
 PROGMEM_STRING_DECL(filename);
 // src/plugins/home_assistant/home_assistant.cpp:177
 // src/plugins/home_assistant/home_assistant.cpp:194
@@ -564,7 +564,7 @@ PROGMEM_STRING_DECL(name);
 // src/plugins/mqtt/mqtt_client.cpp:698
 // src/plugins/ntp/ntp.cpp:282
 // src/plugins/ping_monitor/ping_monitor.cpp:423
-// src/plugins/serial2tcp/serial2tcp.cpp:79
+// src/plugins/serial2tcp/serial2tcp.cpp:66
 // src/plugins/syslog/syslog_plugin.cpp:219
 PROGMEM_STRING_DECL(Disabled);
 // src/plugins/remote/remote.cpp:110

@@ -139,12 +139,6 @@ public:
 
 };
 
-class WebUIInterface {
-public:
-    virtual void getValues(JsonArray &array) = 0;
-    virtual void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState) = 0;
-};
-
 class WebUI {
 public:
     WebUI(JsonUnnamedObject &json);

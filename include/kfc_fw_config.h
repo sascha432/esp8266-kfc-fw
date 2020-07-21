@@ -43,66 +43,10 @@ extern float load_avg[3]; // 1min, 5min, 15min
 #define LOOP_COUNTER_LOAD(avg) (avg ? 45900 / avg : NAN)    // this calculates the load compared to safe mode @ 1.0, no wifi and no load, 80MHz
 #endif
 
-#if defined(ESP32)
-#include <esp_wifi_types.h>
-#define WIFI_ENCRYPTION_ARRAY               array_of<uint8_t>(WIFI_AUTH_OPEN, WIFI_AUTH_WEP, WIFI_AUTH_WPA_PSK, WIFI_AUTH_WPA2_PSK, WIFI_AUTH_WPA_WPA2_PSK, WIFI_AUTH_WPA2_ENTERPRISE)
-using WiFiEncryptionTypeArray = std::array<uint8_t, 6>;
-using WiFiEncryptionType = wifi_auth_mode_t;
-static auto const WiFiEncryptionTypeDefault = WIFI_AUTH_WPA2_PSK;
-#elif defined(ESP8266)
-#define WIFI_ENCRYPTION_ARRAY               array_of<uint8_t>(ENC_TYPE_NONE, ENC_TYPE_TKIP, ENC_TYPE_WEP, ENC_TYPE_CCMP, ENC_TYPE_AUTO)
-using WiFiEncryptionTypeArray = std::array<uint8_t, 5>;
-using WiFiEncryptionType = wl_enc_type;
-static auto const WiFiEncryptionTypeDefault = ENC_TYPE_CCMP;
-#else
-#error Platform not supported
-#endif
-
+#include "kfc_fw_config_types.h"
 
 #define HASH_SIZE                   64
 
-enum HttpMode_t : uint8_t {
-    HTTP_MODE_DISABLED = 0,
-    HTTP_MODE_UNSECURE,
-    HTTP_MODE_SECURE,
-};
-
-enum MQTTMode_t : uint8_t {
-    MQTT_MODE_DISABLED = 0,
-    MQTT_MODE_UNSECURE,
-    MQTT_MODE_SECURE,
-};
-
-#define CONFIG_RTC_MEM_ID 2
-
-typedef uint32_t ConfigFlags_t;
-
-struct ConfigFlags {
-    ConfigFlags_t isFactorySettings: 1;
-    ConfigFlags_t isDefaultPassword: 1; //TODO disable password after 5min if it has not been changed
-    ConfigFlags_t ledMode: 1;
-    ConfigFlags_t wifiMode: 2;
-    ConfigFlags_t atModeEnabled: 1;
-    ConfigFlags_t hiddenSSID: 1;
-    ConfigFlags_t softAPDHCPDEnabled: 1;
-    ConfigFlags_t stationModeDHCPEnabled: 1;
-    ConfigFlags_t webServerMode: 2;
-    ConfigFlags_t ntpClientEnabled: 1;
-    ConfigFlags_t syslogProtocol: 3;
-    ConfigFlags_t mqttMode: 2;
-    ConfigFlags_t mqttAutoDiscoveryEnabled: 1;
-    ConfigFlags_t restApiEnabled: 1;
-    ConfigFlags_t serial2TCPEnabled: 1;
-    ConfigFlags_t __reserved:2; // free to use
-    ConfigFlags_t useStaticIPDuringWakeUp: 1;
-    ConfigFlags_t webServerPerformanceModeEnabled: 1;
-    ConfigFlags_t apStandByMode: 1;
-    ConfigFlags_t disableWebUI: 1;
-    ConfigFlags_t disableWebAlerts: 1;
-    ConfigFlags_t enableMDNS: 1;
-};
-
-static_assert(sizeof(ConfigFlags) == sizeof(uint32_t), "32bit exceeded");
 
 struct HueConfig {
     uint16_t tcp_port;
@@ -472,6 +416,7 @@ public:
     void customSettings();
     static const String getFirmwareVersion();
     static const String getShortFirmwareVersion();
+    static const __FlashStringHelper *getShortFirmwareVersion_P();
 
     // flag to tell if the device has to be rebooted to apply all configuration changes
     void setConfigDirty(bool dirty);
@@ -573,7 +518,5 @@ private:
 };
 
 extern KFCFWConfiguration config;
-
-extern const char *session_get_device_token();
 
 #include "kfc_fw_config_classes.h"

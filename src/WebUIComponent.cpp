@@ -219,11 +219,7 @@ void WebUI::addValues()
     auto &array = _json.addArray(F("values"));
     for(auto plugin: plugins) {
         if (plugin->hasWebUI()) {
-            auto interface = plugin->getWebUIInterface();
-            _debug_printf_P(PSTR("plugin=%s interface=%p\n"), plugin->getName(), interface);
-            if (interface) {
-                interface->getValues(array);
-            }
+            plugin->getValues(array);
         }
     }
 }

@@ -9,12 +9,13 @@
 #include <WiFiCallbacks.h>
 #include <LoopFunctions.h>
 #include <misc.h>
-#include <ESP8266NetBIOS.h>
 #include "kfc_fw_config.h"
-#include "kfc_fw_config_classes.h"
 #include "web_server.h"
 #include "async_web_response.h"
 #include "misc.h"
+#if MDNS_NETBIOS_SUPPORT
+#include <ESP8266NetBIOS.h>
+#endif
 
 #if DEBUG_MDNS_SD
 #include <debug_helper_enable.h>
@@ -29,6 +30,31 @@
 PROGMEM_STRING_DEF(kfcmdns, "kfcmdns");
 
 static MDNSPlugin plugin;
+
+PROGMEM_DEFINE_PLUGIN_OPTIONS(
+    MDNSPlugin,
+    "mdns",                 // name
+    "MDNS",                 // friendly name
+    "",                     // web_templates
+    "",                     // config_forms
+    "wifi,network,http",    // reconfigure_dependencies
+    PluginComponent::PriorityType::MDNS,
+    PluginComponent::RTCMemoryId::NONE,
+    static_cast<uint8_t>(PluginComponent::MenuType::CUSTOM),
+    false,              // allow_safe_mode
+    false,              // setup_after_deep_sleep
+    true,               // has_get_status
+    false,              // has_config_forms
+    false,              // has_web_ui
+    false,              // has_web_templates
+    true,               // has_at_mode
+    0                   // __reserved
+);
+
+MDNSPlugin::MDNSPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(MDNSPlugin))
+{
+    REGISTER_PLUGIN(this, "MDNSPlugin");
+}
 
 
 bool MDNSService::addService(const String &service, const String &proto, uint16_t port)
@@ -149,15 +175,19 @@ void MDNSPlugin::_wifiCallback(uint8_t event, void *payload)
 #else
         _begin();
 #endif
+#if MDNS_NETBIOS_SUPPORT
 #if DEBUG_MDNS_SD
         auto result =
 #endif
         NBNS.begin(config.getDeviceName());
         _debug_printf_P(PSTR("NetBIOS result=%u\n"), result);
+#endif
 
     }
     else if (WiFiCallbacks::EventEnum_t::DISCONNECTED) {
+#if MDNS_NETBIOS_SUPPORT
         NBNS.end();
+#endif
         _end();
     }
 }
@@ -181,10 +211,10 @@ void MDNSPlugin::setup(SetupModeType mode)
     }
 }
 
-void MDNSPlugin::reconfigure(PGM_P source)
+void MDNSPlugin::reconfigure(const String &source)
 {
-    _debug_printf_P(PSTR("running=%u source=%s\n"), _running, String(FPSTR(source)).c_str());
-    if (!strcmp_P_P(source, WebServerPlugin::getPSTRName())) {
+    _debug_printf_P(PSTR("running=%u source=%s\n"), _running, source.c_str());
+    if (String_equals(source, SPGM(http))) {
         _installWebServerHooks();
     }
     _end();
@@ -307,9 +337,10 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(MDNSR, "MDNSR", "<stop|start|enable|disabl
 
 void MDNSPlugin::atModeHelpGenerator()
 {
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(MDNSQ), getName());
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(MDNSR), getName());
-    // at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(MDNSBSD), getName());
+    auto name = getName_P();
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(MDNSQ), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(MDNSR), name);
+    // at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(MDNSBSD), name);
 }
 
 #if ESP8266

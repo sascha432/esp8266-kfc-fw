@@ -36,6 +36,7 @@ private:
     virtual void _onData(AsyncClient *client, void *data, size_t len) override;
     virtual void _onDisconnect(AsyncClient *client, const String &reason) override;
     virtual size_t _serialWrite(Serial2TcpConnection *conn, const char *data, size_t len) override;
+    virtual bool isConnected() const override;
 
     Serial2TcpConnection &_addClient(AsyncClient *client);
     void _removeClient(AsyncClient *client);

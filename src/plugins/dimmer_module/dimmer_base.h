@@ -33,6 +33,10 @@ using DimmerTwoWireClass = TwoWire;
 #include "./plugins/sensor/Sensor_HLW80xx.h"
 #endif
 
+#if (!defined(IOT_DIMMER_MODULE) || !IOT_DIMMER_MODULE) && (!defined(IOT_ATOMIC_SUN_V2) || !IOT_ATOMIC_SUN_V2)
+#error requires IOT_ALARM_PLUGIN_ENABLED=1 or IOT_ATOMIC_SUN_V2=1
+#endif
+
 class DimmerTwoWireEx : public DimmerTwoWireClass
 {
 public:
@@ -102,7 +106,7 @@ private:
 class DimmerChannel;
 class AsyncWebServerRequest;
 
-class Dimmer_Base : public WebUIInterface {
+class Dimmer_Base {
 public:
     static const uint32_t METRICS_DEFAULT_UPDATE_RATE = 60e3;
 
@@ -181,9 +185,17 @@ public:
     void _fetchMetrics();
 #endif
 
-public:
-    virtual void getValues(JsonArray &array);
-    virtual void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState);
+// WebUI
+protected:
+    void _getValues(JsonArray &array);
+    void _setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState);
+
+#if AT_MODE_SUPPORTED
+// AT Mode
+protected:
+    void _atModeHelpGenerator(PGM_P name);
+    bool _atModeHandler(AtModeArgs &args, const Dimmer_Base &dimmer, int32_t maxLevel);
+#endif
 
 public:
     static void setupWebServer();

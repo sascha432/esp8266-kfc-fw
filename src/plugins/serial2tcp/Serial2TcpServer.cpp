@@ -86,17 +86,6 @@ void Serial2TcpServer::_onSerialData(uint8_t type, const uint8_t *buffer, size_t
 
 void Serial2TcpServer::_onData(AsyncClient *client, void *data, size_t len)
 {
-    // _debug_printf_P(PSTR("Serial2TcpServer::_onData(): length %u\n"), len);
-    if (_debugOutput) {
-        // for(size_t i = 0; i < len; i++) {
-        //     char byte = reinterpret_cast<char *>(data)[i];
-        //     _serialPrintf_P(nullptr, PSTR("%02x "), byte);
-        //     // _getSerial().printf_P(PSTR("%02x "), byte);
-        // }
-        // // _getSerial().println();
-        // _serialWrite(nullptr, "\n", 1);
-    }
-
     auto conn = _getConn(client);
     if (conn) {
         _processData(conn, reinterpret_cast<const char *>(data), len);
@@ -123,6 +112,11 @@ String Serial2TcpServer::_getClientInfo(Serial2TcpConnection &conn) const
         output += F("null");
     }
     return output;
+}
+
+bool Serial2TcpServer::isConnected() const
+{
+    return _server;
 }
 
 size_t Serial2TcpServer::_serialWrite(Serial2TcpConnection *conn, const char *data, size_t len)

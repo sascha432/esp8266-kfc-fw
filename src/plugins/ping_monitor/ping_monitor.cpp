@@ -350,48 +350,21 @@ void ping_monitor_setup()
 
 class PingMonitorPlugin : public PluginComponent {
 public:
-    PingMonitorPlugin() {
-        REGISTER_PLUGIN(this);
-    }
-    PGM_P getName() const {
-        return PSTR("pingmon");
-    }
-    virtual const __FlashStringHelper *getFriendlyName() const {
-        return F("Ping Monitor");
-    }
+    PingMonitorPlugin();
 
-    virtual PriorityType getSetupPriority() const override {
-        return PriorityType::PING_MONITOR;
-    }
     virtual void setup(SetupModeType mode) override;
-    virtual void reconfigure(PGM_P source) override;
+    virtual void reconfigure(const String &source) override;
     virtual void shutdown() override;
-    virtual bool hasReconfigureDependecy(PluginComponent *plugin) const override {
-        return plugin->nameEquals(FSPGM(http));
-    }
-
-    virtual bool hasStatus() const override {
-        return true;
-    }
     virtual void getStatus(Print &output) override;
 
-    virtual MenuType getMenuType() const override {
-        return MenuType::CUSTOM;
-    }
     virtual void createMenu() override {
         bootstrapMenu.addSubMenu(getFriendlyName(), F("ping_monitor.html"), navMenu.config);
         bootstrapMenu.addSubMenu(F("Ping Remote Host"), F("ping.html"), navMenu.util);
     }
 
-    virtual PGM_P getConfigureForm() const override {
-        return PSTR("ping_monitor");
-    }
-    virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
+    virtual void createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request) override;
 
 #if AT_MODE_SUPPORTED
-    virtual bool hasAtMode() const override {
-        return true;
-    }
     virtual void atModeHelpGenerator() override;
     virtual bool atModeHandler(AtModeArgs &args) override;
 #endif
@@ -399,12 +372,37 @@ public:
 
 static PingMonitorPlugin plugin;
 
+PROGMEM_DEFINE_PLUGIN_OPTIONS(
+    PingMonitorPlugin,
+    "pingmon",          // name
+    "Ping Monitor",     // friendly name
+    "",                 // web_templates
+    "ping_monitor",     // config_forms
+    "http",             // reconfigure_dependencies
+    PluginComponent::PriorityType::PING_MONITOR,
+    PluginComponent::RTCMemoryId::NONE,
+    static_cast<uint8_t>(PluginComponent::MenuType::CUSTOM),
+    false,              // allow_safe_mode
+    false,              // setup_after_deep_sleep
+    true,               // has_get_status
+    true,               // has_config_forms
+    false,              // has_web_ui
+    false,              // has_web_templates
+    true,               // has_at_mode
+    0                   // __reserved
+);
+
+PingMonitorPlugin::PingMonitorPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(PingMonitorPlugin))
+{
+    REGISTER_PLUGIN(this, "PingMonitorPlugin");
+}
+
 void PingMonitorPlugin::setup(SetupModeType mode)
 {
     ping_monitor_setup();
 }
 
-void PingMonitorPlugin::reconfigure(PGM_P source)
+void PingMonitorPlugin::reconfigure(const String &source)
 {
     ping_monitor_setup();
 }
@@ -424,8 +422,13 @@ void PingMonitorPlugin::getStatus(Print &output)
     }
 }
 
-void PingMonitorPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
+void PingMonitorPlugin::createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request)
 {
+    _debug_printf_P(PSTR("type=%u name=%s\n"), type, formName.c_str());
+    if (!isCreateFormCallbackType(type)) {
+        return;
+    }
+
     auto gateway = F("${gateway}");
 
     form.add(F("ping_host1"), _H_STR_VALUE(Config().ping.host1));
@@ -461,7 +464,8 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PING, "PING", "<target[,count=4[,timeout=5
 
 void PingMonitorPlugin::atModeHelpGenerator()
 {
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(PING), getName());
+    auto name = getName_P();
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(PING), name);
 }
 
 bool PingMonitorPlugin::atModeHandler(AtModeArgs &args)

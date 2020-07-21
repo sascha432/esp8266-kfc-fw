@@ -57,7 +57,7 @@ WeatherStationPlugin::WeatherStationPlugin() :
 #if DEBUG_IOT_WEATHER_STATION
     _debugDisplayCanvasBorder = false;
 #endif
-    REGISTER_PLUGIN(this);
+    REGISTER_PLUGIN(this, "WeatherStationPlugin");
 #if IOT_WEATHER_STATION_HAS_TOUCHPAD
     _touchpadDebug = false;
 #endif
@@ -475,7 +475,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WSU, "WSU", "<i/f>", "Update weather info/
 
 void WeatherStationPlugin::atModeHelpGenerator()
 {
-    auto name = getName();
+    auto name = getName_P();
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(WSSET), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(WSBL), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(WSU), name);
@@ -637,7 +637,7 @@ void WeatherStationPlugin::_getWeatherInfo(Callback_t finishedCallback)
 #if DEBUG_IOT_WEATHER_STATION
     auto prev = finishedCallback;
     finishedCallback = [this, prev](bool status) {
-        _weatherApi.dump(DebugSerial);
+        _weatherApi.dump(DEBUG_OUTPUT);
         prev(status);
     };
 
@@ -665,7 +665,7 @@ void WeatherStationPlugin::_getWeatherForecast(Callback_t finishedCallback)
 #if DEBUG_IOT_WEATHER_STATION
     auto prev = finishedCallback;
     finishedCallback = [this, prev](bool status) {
-        _weatherApi.dump(DebugSerial);
+        _weatherApi.dump(DEBUG_OUTPUT);
         prev(status);
     };
 #endif

@@ -26,20 +26,16 @@ namespace SaveCrash {
     void removeCrashCounterAndSafeMode()
     {
         resetDetector.clearCounter();
-#if SPIFFS_SUPPORT
         removeCrashCounter();
-#endif
     }
 
     void removeCrashCounter()
     {
-#if SPIFFS_SUPPORT
         SPIFFS.begin();
         auto filename = String(FSPGM(crash_counter_file, "/.pvt/crash_counter"));
         if (SPIFFS.exists(filename)) {
             SPIFFS.remove(filename);
         }
-#endif
     }
 
     void installRemoveCrashCounter(uint32_t delay_seconds)
@@ -62,24 +58,29 @@ namespace SaveCrash {
     {
         Scheduler.addTimer(delay_seconds * 1000UL, false, [](EventScheduler::TimerPtr timer) {
             if (espSaveCrash.count()) {
-                int num = 0;
+                constexpr uint8_t max_limit = SAVECRASH_MAX_DUMPS;
+                uint8_t num = 0;
+                static_assert(SAVECRASH_MAX_DUMPS < std::numeric_limits<decltype(num)>::max(), "too many");
                 PrintString filename;
+
                 do {
                     filename = PrintString(FSPGM(crash_dump_file, "/.pvt/crash.%03x"), num++);
-                } while(SPIFFS.exists(filename));
-                auto file = SPIFFS.open(filename, fs::FileOpenMode::write);
-                if (file) {
-                    String hash;
-                    KFCConfigurationClasses::System::Firmware::getElfHashHex(hash);
-                    if (hash.length()) {
-                        file.printf_P(PSTR("firmware.elf hash %s\n"), hash.c_str());
-                    }
-                    espSaveCrash.print(file);
+                } while(SPIFFS.exists(filename) && num < max_limit);
+
+                if (num < max_limit) {
+                    auto file = SPIFFS.open(filename, fs::FileOpenMode::write);
                     if (file) {
-                        file.close();
-                        espSaveCrash.clear();
-                        _debug_printf_P(PSTR("Saved crash dump to %s\n"), filename.c_str());
-                        WebUIAlerts_add(PrintString(F("Crash dump saved to: %s"), filename.c_str()), AlertMessage::TypeEnum_t::WARNING);
+                        String hash;
+                        KFCConfigurationClasses::System::Firmware::getElfHashHex(hash);
+                        if (hash.length()) {
+                            file.printf_P(PSTR("firmware.elf hash %s\n"), hash.c_str());
+                        }
+                        espSaveCrash.print(file);
+                        if (file) {
+                            file.close();
+                            espSaveCrash.clear();
+                            WebUIAlerts_add(PrintString(F("Crash dump saved to: %s"), filename.c_str()), AlertMessage::TypeEnum_t::WARNING);
+                        }
                     }
                 }
             }
@@ -100,51 +101,44 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(SAVECRASHP, "SAVECRASHP", "Print saved cra
 class SaveCrashPlugin : public PluginComponent {
 // PluginComponent
 public:
-    SaveCrashPlugin() {
-        REGISTER_PLUGIN(this);
-    }
+    SaveCrashPlugin();
 
-    virtual PGM_P getName() const {
-        return PSTR("savecrash");
-    }
-    virtual const __FlashStringHelper *getFriendlyName() const {
-        return F("EspSaveCrash");
-    }
-    virtual PriorityType getSetupPriority() const override {
-        return PriorityType::MAX;
-    }
-
-#if SPIFFS_SUPPORT
     virtual void setup(SetupModeType mode) {
-        // save and clear crash dump eeprom after
-        SaveCrash::installSafeCrashTimer(10);
+        // no maintenance in safe mode
+        if (mode != SetupModeType::SAFE_MODE) {
+            // save and clear crash dump eeprom
+            SaveCrash::installSafeCrashTimer(mode == SetupModeType::AUTO_WAKE_UP ? 60 : 10);
+        }
     }
-#endif
 
-    virtual bool hasStatus() const override {
-        return true;
-    }
     virtual void getStatus(Print &output) override {
         int counter = espSaveCrash.count();
-#if SPIFFS_SUPPORT
-        ListDir dir(String('/'));
+        String name = FSPGM(crash_dump_file);
+        auto pos = name.indexOf('%');
+        if (pos != -1) {
+            name.remove(pos);
+        }
+        auto path = String('/');
+        if ((pos = name.indexOf('/', 1)) != -1) {
+            path = name.substring(0, pos);
+        }
+        size_t size = 0;
+        ListDir dir(path);
         while(dir.next()) {
-            if (dir.isFile() && dir.fileName().startsWith(F("/crash."))) {
+            if (dir.isFile() && dir.fileName().startsWith(name)) {
                 counter++;
+                size += dir.fileSize();
             }
         }
-#endif
-        output.printf_P(PSTR("Crash reports: %u"), counter);
+        debug_printf_P(PSTR("path=%s name=%s size=%u counter=%u espcounter=%u\n"), path.c_str(), name.c_str(), size, counter, espSaveCrash.count());
+        output.printf_P(PSTR("%u crash report(s), total size "), counter);
+        output.print(formatBytes(size));
     }
 
 public:
 #if AT_MODE_SUPPORTED
-    virtual bool hasAtMode() const override {
-        return true;
-    }
-
     virtual void atModeHelpGenerator() override {
-        auto name = getName();
+        auto name = getName_P();
         at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SAVECRASHC), name);
         at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SAVECRASHP), name);
     }
@@ -166,5 +160,30 @@ public:
 };
 
 static SaveCrashPlugin plugin;
+
+PROGMEM_DEFINE_PLUGIN_OPTIONS(
+    SaveCrashPlugin,
+    "savecrash",        // name
+    "SaveCrash",        // friendly name
+    "",                 // web_templates
+    "",                 // config_forms
+    "",                 // reconfigure_dependencies
+    PluginComponent::PriorityType::SAVECRASH,
+    PluginComponent::RTCMemoryId::NONE,
+    static_cast<uint8_t>(PluginComponent::MenuType::NONE),
+    true,               // allow_safe_mode
+    true,               // setup_after_deep_sleep
+    true,               // has_get_status
+    false,              // has_config_forms
+    false,              // has_web_ui
+    false,              // has_web_templates
+    true,               // has_at_mode
+    0                   // __reserved
+);
+
+SaveCrashPlugin::SaveCrashPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(SaveCrashPlugin))
+{
+    REGISTER_PLUGIN(this, "SaveCrashPlugin");
+}
 
 #endif

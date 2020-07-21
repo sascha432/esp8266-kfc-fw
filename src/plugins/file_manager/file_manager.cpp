@@ -457,36 +457,45 @@ void FileManagerWebHandler::handleRequest(AsyncWebServerRequest *request)
 
 class FileManagerPlugin : public PluginComponent {
 public:
-    FileManagerPlugin() {
-        REGISTER_PLUGIN(this);
-    }
-
-    virtual PGM_P getName() const {
-        return PSTR("filemgr");
-    }
-    virtual const __FlashStringHelper *getFriendlyName() const {
-        return F("File Manager");
-    }
-    virtual PriorityType getSetupPriority() const override {
-        return PriorityType::MAX;
-    }
+    FileManagerPlugin();
 
     virtual void setup(SetupModeType mode) override {
         file_manager_install_web_server_hook();
     }
-    virtual void reconfigure(PGM_P source) override {
-        file_manager_install_web_server_hook();
-    }
-    virtual bool hasReconfigureDependecy(PluginComponent *plugin) const override {
-        return plugin->nameEquals(FSPGM(http));
+    virtual void reconfigure(const String &source) override {
+        if (String_equals(source, SPGM(http))) {
+            file_manager_install_web_server_hook();
+        }
     }
 
-    virtual MenuType getMenuType() const override {
-        return MenuType::CUSTOM;
-    }
     virtual void createMenu() override {
-        bootstrapMenu.addSubMenu(F("File Manager"), FSPGM(file_manager_html_uri), navMenu.util);
+        bootstrapMenu.addSubMenu(getFriendlyName(), FSPGM(file_manager_html_uri), navMenu.util);
     }
 };
 
 static FileManagerPlugin plugin;
+
+PROGMEM_DEFINE_PLUGIN_OPTIONS(
+    FileManagerPlugin,
+    "filemgr",          // name
+    "File Manager",     // friendly name
+    "",                 // web_templates
+    "",                 // config_forms
+    "http",             // reconfigure_dependencies
+    PluginComponent::PriorityType::MAX,
+    PluginComponent::RTCMemoryId::NONE,
+    static_cast<uint8_t>(PluginComponent::MenuType::CUSTOM),
+    false,              // allow_safe_mode
+    false,              // setup_after_deep_sleep
+    false,              // has_get_status
+    false,              // has_config_forms
+    false,              // has_web_ui
+    false,              // has_web_templates
+    false,              // has_at_mode
+    0                   // __reserved
+);
+
+FileManagerPlugin::FileManagerPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(FileManagerPlugin))
+{
+    REGISTER_PLUGIN(this, "FileManagerPlugin");
+}

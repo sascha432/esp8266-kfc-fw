@@ -37,6 +37,11 @@ bool Serial2TcpConnection::isAuthenticated() const
     return _isAuthenticated;
 }
 
+bool Serial2TcpConnection::isConnected() const
+{
+    return _client && _client->connected();
+}
+
 // void Serial2TcpConnection::setClient(AsyncClient *client)
 // {
 //     _client = client;

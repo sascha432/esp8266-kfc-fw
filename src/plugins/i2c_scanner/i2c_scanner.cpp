@@ -148,7 +148,7 @@ void i2cscanner_device_error(Stream &output)
 class I2CScannerPlugin : public PluginComponent {
 public:
     I2CScannerPlugin() {
-        REGISTER_PLUGIN(this);
+        REGISTER_PLUGIN(this, "I2CScannerPlugin");
         _copyPortArray();
 
     }
@@ -158,9 +158,11 @@ public:
     virtual const __FlashStringHelper *getFriendlyName() const {
         return F("I2C Scanner");
     }
-
     virtual PriorityType getSetupPriority() const override {
         return PriorityType::MIN;
+    }
+    virtual OptionsType getOptions() const override {
+        return EnumHelper::Bitset::all(OptionsType::HAS_AT_MODE);
     }
 
     void setup(SetupModeType mode) override {
@@ -168,9 +170,6 @@ public:
     }
 
 #if AT_MODE_SUPPORTED
-    bool hasAtMode() const override {
-        return true;
-    }
     void atModeHelpGenerator() override;
     bool atModeHandler(AtModeArgs &args) override;
 #endif
@@ -191,31 +190,32 @@ static I2CScannerPlugin plugin;
 
 void I2CScannerPlugin::atModeHelpGenerator()
 {
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CSCAN), getName());
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CSCANP), getName());
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CSCAND), getName());
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CSS), getName());
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CST), getName());
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CSR), getName());
+    auto name = getName_P();
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CSCAN), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CSCANP), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CSCAND), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CSS), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CST), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CSR), name);
 #ifdef _LIB_ADAFRUIT_INA219_
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CSINA219), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CSINA219), name);
 #endif
 #ifdef __CCS811_H__
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CSCCS811), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CSCCS811), name);
 #endif
 #ifdef __BME680_H__
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CSBME680), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CSBME680), name);
 #endif
 #ifdef __BME280_H__
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CSBME280), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CSBME280), name);
 #endif
 #if RTC_SUPPORT
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CSRTC), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CSRTC), name);
 #endif
 #if IOT_WEATHER_STATION_HAS_TOUCHPAD
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CSMPR121), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CSMPR121), name);
 #endif
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CSLM75A), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CSLM75A), name);
 }
 
 bool I2CScannerPlugin::atModeHandler(AtModeArgs &args)

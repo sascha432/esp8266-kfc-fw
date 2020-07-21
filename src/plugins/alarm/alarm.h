@@ -8,11 +8,15 @@
 #include "Form.h"
 #include "PluginComponent.h"
 #include "plugins_menu.h"
-#include "kfc_fw_config_classes.h"
+#include "kfc_fw_config.h"
 #include "./plugins/mqtt/mqtt_client.h"
 
 #ifndef DEBUG_ALARM_FORM
 #define DEBUG_ALARM_FORM                                0
+#endif
+
+#if !defined(IOT_ALARM_PLUGIN_ENABLED) || !IOT_ALARM_PLUGIN_ENABLED
+#error requires IOT_ALARM_PLUGIN_ENABLED=1
 #endif
 
 #if !NTP_HAVE_CALLBACKS
@@ -38,32 +42,10 @@ public:
 public:
     AlarmPlugin();
 
-    virtual PGM_P getName() const {
-        return PSTR("alarm");
-    }
-    virtual const __FlashStringHelper *getFriendlyName() const {
-        return F("Alarm");
-    }
-    virtual PriorityType getSetupPriority() const override {
-        return PriorityType::ALARM;
-    }
-
     virtual void setup(SetupModeType mode) override;
-    virtual void reconfigure(PGM_P source) override;
-    virtual bool hasReconfigureDependecy(PluginComponent *plugin) const {
-        return plugin->nameEquals(SPGM(mqtt));
-    }
+    virtual void reconfigure(const String &source) override;
     virtual void shutdown() override;
-
-    virtual PGM_P getConfigureForm() const override {
-        return getName();
-    }
-    virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
-    virtual void configurationSaved(Form *form) override;
-
-    virtual bool hasStatus() const override {
-        return true;
-    }
+    virtual void createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request);
     virtual void getStatus(Print &output) override;
 
 // MQTTComponent

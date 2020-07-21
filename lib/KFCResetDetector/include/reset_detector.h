@@ -33,9 +33,8 @@
 #if HAVE_KFC_PLUGINS
 
 #include <plugins.h>
+#include <PluginComponent.h>
 #include <RTCMemoryManager.h>
-
-#define RESET_DETECTOR_RTC_MEM_ID           1
 
 #else
 
@@ -73,13 +72,22 @@ public:
 
     ResetDetector();
 
+    // returns the number of resets. starts with 1 after the first reset and increases with
+    // each reset that occurs before the device is running longer than RESET_DETECTOR_TIMEOUT
+    // once the timeout has occured, it returns 0
     uint8_t getResetCounter() const;
+    // returns the same value as getResetCounter() but does not reset to 0 after the timeout
     uint8_t getInitialResetCounter() const;
+    // returns the value that was stored in the safe mode field
     uint8_t getSafeMode() const;
+    // store value in safe mode field
     void setSafeMode(uint8_t safeMode);
+    // set counter to 0
+    void clearCounter();
 #if DEBUG
     void __setResetCounter(uint8_t counter);
 #endif
+    void setSafeModeAndClearCounter(uint8_t safeMode);
 
     bool hasCrashDetected() const;
     bool hasResetDetected() const;
@@ -88,11 +96,10 @@ public:
     const String getResetReason() const;
     const String getResetInfo() const;
 
-    ETSTimer *getTimer() ;
+    ETSTimer *getTimer();
     void armTimer();
     void disarmTimer();
     static void _timerCallback(void *arg);
-    void clearCounter();
 
     void _init();
 private:
@@ -109,31 +116,23 @@ private:
 extern ResetDetector resetDetector;
 
 #if HAVE_KFC_PLUGINS
-
 class ResetDetectorPlugin : public PluginComponent {
 public:
-    ResetDetectorPlugin() {
-        REGISTER_PLUGIN(this);
-    }
-    virtual PGM_P getName() const {
-        return PSTR("rd");
-    }
-    virtual PriorityType getSetupPriority() const override {
-        return PriorityType::RESET_DETECTOR;
-    }
-    virtual uint8_t getRtcMemoryId() const override {
-        return RESET_DETECTOR_RTC_MEM_ID;
-    }
+    ResetDetectorPlugin();
+
+#if DEBUG_RESET_DETECTOR
+    virtual void setup(SetupModeType mode) override;
+#endif
 
 #if AT_MODE_SUPPORTED
-    virtual bool hasAtMode() const override {
-        return true;
-    }
     void atModeHelpGenerator() override;
     bool atModeHandler(AtModeArgs &args) override;
 #endif
 
-    static unsigned long _deepSleepWifiTime;
+#if ENABLE_DEEP_SLEEP
+public:
+    static uint32_t _deepSleepWifiTime;
+#endif
 };
 
 #endif

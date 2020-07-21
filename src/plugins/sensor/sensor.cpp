@@ -5,7 +5,8 @@
 #include "sensor.h"
 #include <PrintHtmlEntitiesString.h>
 #include <KFCJson.h>
-#include "WebUISocket.h"
+#include <plugins_menu.h>
+#include <WebUISocket.h>
 
 #if DEBUG_IOT_SENSOR
 #include <debug_helper_enable.h>
@@ -16,6 +17,32 @@
 DEFINE_ENUM(MQTTSensorSensorType);
 
 static SensorPlugin plugin;
+
+PROGMEM_DEFINE_PLUGIN_OPTIONS(
+    SensorPlugin,
+    "sensor",           // name
+    "Sensors",          // friendly name
+    "",                 // web_templates
+    "sensor",           // config_forms
+    "",                 // reconfigure_dependencies
+    PluginComponent::PriorityType::SENSOR,
+    PluginComponent::RTCMemoryId::NONE,
+    static_cast<uint8_t>(PluginComponent::MenuType::CUSTOM),
+    false,              // allow_safe_mode
+    true,               // setup_after_deep_sleep
+    true,               // has_get_status
+    true,               // has_config_forms - the menu is custom and does not add the sensor form link if none of the senors has a form
+    true,               // has_web_ui
+    false,              // has_web_templates
+    true,               // has_at_mode
+    0                   // __reserved
+);
+
+
+SensorPlugin::SensorPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(SensorPlugin))
+{
+    REGISTER_PLUGIN(this, "SensorPlugin");
+}
 
 void SensorPlugin::getValues(JsonArray &array)
 {
@@ -28,12 +55,6 @@ void SensorPlugin::getValues(JsonArray &array)
 void SensorPlugin::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
 {
     _debug_printf_P(PSTR("setValue(%s)\n"), id.c_str());
-}
-
-
-PGM_P SensorPlugin::getName() const
-{
-    return PSTR("sensor");
 }
 
 void SensorPlugin::setup(SetupModeType mode)
@@ -77,10 +98,10 @@ void SensorPlugin::setup(SetupModeType mode)
 #endif
 }
 
-void SensorPlugin::reconfigure(PGM_P source)
+void SensorPlugin::reconfigure(const String &source)
 {
     for(auto sensor: _sensors) {
-        sensor->reconfigure(source);
+        sensor->reconfigure(source.c_str());
     }
 }
 
@@ -129,16 +150,6 @@ void SensorPlugin::shutdown()
     _sensors.clear();
 }
 
-bool SensorPlugin::hasWebUI() const
-{
-    return true;
-}
-
-WebUIInterface *SensorPlugin::getWebUIInterface()
-{
-    return this;
-}
-
 bool SensorPlugin::_hasConfigureForm() const
 {
     for(auto sensor: _sensors) {
@@ -149,13 +160,17 @@ bool SensorPlugin::_hasConfigureForm() const
     return false;
 }
 
-PGM_P SensorPlugin::getConfigureForm() const
+void SensorPlugin::createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request)
 {
-    return _hasConfigureForm() ? PSTR("sensor") : nullptr;
-}
+    if (type == FormCallbackType::SAVE) {
+        for(auto sensor: _sensors) {
+            sensor->configurationSaved(&form);
+        }
+    }
+    else if (!isCreateFormCallbackType(type)) {
+        return;
+    }
 
-void SensorPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
-{
     form.setFormUI(F("Sensor Configuration"));
     for(auto sensor: _sensors) {
         sensor->createConfigureForm(request, form);
@@ -163,10 +178,10 @@ void SensorPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &for
     form.finalize();
 }
 
-void SensorPlugin::configurationSaved(Form *form)
+void SensorPlugin::createMenu()
 {
-    for(auto sensor: _sensors) {
-        sensor->configurationSaved(form);
+    if (_hasConfigureForm()) {
+        bootstrapMenu.addSubMenu(getFriendlyName(), F("sensor.html"), navMenu.config);
     }
 }
 

@@ -7,9 +7,7 @@
 
 #if SECURITY_LOGIN_ATTEMPTS
 
-#ifdef SECURITY_LOGIN_FILE
-PROGMEM_STRING_DEF(login_failure_file, SECURITY_LOGIN_FILE);
-#endif
+PROGMEM_STRING_DEF(login_failure_file, "/.pvt/login_failures");
 
 extern FailureCounterContainer &loginFailures;
 
@@ -74,19 +72,17 @@ void FailureCounter::addFailure()
     }
     _lastFailure = time(nullptr);
     debug_printf_P(PSTR("Failed attempt from %s #%u\n"), _addr.toString().c_str(), _counter);
-#ifdef SECURITY_LOGIN_FILE
     if (IS_TIME_VALID(_lastFailure) && _lastFailure > loginFailures._lastRewrite + SECURITY_LOGIN_REWRITE_INTERVAL) {
         loginFailures._lastRewrite = SECURITY_LOGIN_REWRITE_INTERVAL;
         loginFailures.rewriteSPIFFSFile();
     }
     else {
-        File file = SPIFFS.open(FSPGM(login_failure_file), fs::FileOpenMode::append);
+        auto file = SPIFFS.open(FSPGM(login_failure_file), fs::FileOpenMode::append);
         if (file) {
             write(file);
             file.close();
         }
     }
-#endif
 }
 
 void FailureCounter::write(File &file) const
@@ -137,11 +133,10 @@ String FailureCounter::getFirstFailure() const
 void FailureCounterContainer::readFromSPIFFS()
 {
     _failures.clear();
-#ifdef SECURITY_LOGIN_FILE
-    File file = SPIFFS.open(FSPGM(login_failure_file), fs::FileOpenMode::read);
+    auto file = SPIFFS.open(FSPGM(login_failure_file), fs::FileOpenMode::read);
     if (file) {
 #if DEBUG
-        int count = 0;
+        auto count = 0;
 #endif
         bool isTimeValid = IS_TIME_VALID(time(nullptr));
         while(file.available()) {
@@ -161,10 +156,6 @@ void FailureCounterContainer::readFromSPIFFS()
 
         debug_printf_P(PSTR("%d records read from disk, %d stored in memory\n"), count, _failures.size());
     }
-    else {
-
-    }
-#endif
 }
 
 /**
@@ -172,10 +163,10 @@ void FailureCounterContainer::readFromSPIFFS()
  **/
 void FailureCounterContainer::rewriteSPIFFSFile()
 {
-    File file = SPIFFS.open(FSPGM(login_failure_file), fs::FileOpenMode::write);
+    auto file = SPIFFS.open(FSPGM(login_failure_file), fs::FileOpenMode::write);
     if (file) {
 #if DEBUG
-        int count = _failures.size();
+        auto count = _failures.size();
 #endif
         _removeOldRecords();
         for(auto &failure: _failures) {

@@ -120,15 +120,15 @@
         "default": "log://access"
     },
     "__pure_virtual": {
-        "use_counter": 7,
+        "use_counter": 8,
         "default": "pure virtual call: %s\\n"
     },
     "yes": {
-        "use_counter": 7,
+        "use_counter": 9,
         "default": "yes"
     },
     "no": {
-        "use_counter": 5,
+        "use_counter": 7,
         "default": "no"
     },
     "comma_": {
@@ -364,7 +364,7 @@
         "default": "https"
     },
     "disabled": {
-        "use_counter": 28,
+        "use_counter": 26,
         "default": "disabled"
     },
     "mqtt_color_temp_state_topic": {
@@ -524,7 +524,7 @@
         "default": "Disabled"
     },
     "enabled": {
-        "use_counter": 7,
+        "use_counter": 5,
         "default": "enabled"
     },
     "mqtt_component_light": {
@@ -1178,5 +1178,17 @@
     "light_sensor": {
         "use_counter": 6,
         "default": "light_sensor"
+    },
+    "plugin_name_rd": {
+        "use_counter": 0,
+        "default": "rd"
+    },
+    "alarm": {
+        "use_counter": 0,
+        "auto": "alarm"
+    },
+    "Alarm": {
+        "use_counter": 0,
+        "auto": "Alarm"
     }
 }

@@ -31,24 +31,23 @@ public:
     virtual const __FlashStringHelper *getFriendlyName() const {
         return F("Blinds Controller");
     }
+    virtual OptionsType getOptions() const override {
+        return EnumHelper::Bitset::all(OptionsType::HAS_STATUS, OptionsType::HAS_CONFIG_FORM, OptionsType::HAS_WEB_UI, OptionsType::HAS_AT_MODE, OptionsType::HAS_AT_MODE);
+    }
+
     virtual void setup(SetupModeType mode) override;
     virtual void reconfigure(PGM_P source) override;
-
-    virtual bool hasStatus() const override;
     virtual void getStatus(Print &output) override;
-
-    virtual bool hasWebUI() const override;
-    virtual void createWebUI(WebUI &webUI) override;
-    virtual WebUIInterface *getWebUIInterface() override;
-
-    virtual PGM_P getConfigureForm() const override {
-        return PSTR("blinds");
-    }
     virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
     virtual void configurationSaved() override;
 
+// WebUI
+public:
+    virtual void createWebUI(WebUI &webUI) override;
+    virtual void getValues(JsonArray &array) override;
+    virtual void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState) override;
+
 #if AT_MODE_SUPPORTED
-    virtual bool hasAtMode() const override;
     virtual void atModeHelpGenerator() override;
     virtual bool atModeHandler(AtModeArgs &args) override;
 
@@ -79,7 +78,7 @@ static BlindsControlPlugin plugin;
 
 BlindsControlPlugin::BlindsControlPlugin() : BlindsControl(), _isTestMode(false)
 {
-    REGISTER_PLUGIN(this);
+    REGISTER_PLUGIN(this, "BlindsControlPlugin");
 }
 
 void BlindsControlPlugin::setup(SetupModeType mode)
@@ -90,10 +89,6 @@ void BlindsControlPlugin::setup(SetupModeType mode)
 
 void BlindsControlPlugin::reconfigure(PGM_P source) {
     _readConfig();
-}
-
-bool BlindsControlPlugin::hasStatus() const {
-    return true;
 }
 
 void BlindsControlPlugin::getStatus(Print &output)
@@ -114,14 +109,6 @@ void BlindsControlPlugin::getStatus(Print &output)
             _channel.currentLimitTime
         );
     }
-}
-
-bool BlindsControlPlugin::hasWebUI() const {
-    return true;
-}
-
-WebUIInterface *BlindsControlPlugin::getWebUIInterface() {
-    return this;
 }
 
 void BlindsControlPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form) {
@@ -214,6 +201,17 @@ void BlindsControlPlugin::createWebUI(WebUI &webUI) {
     row = &webUI.addRow();
     row->addSwitch(FSPGM(blinds_controller_channel2), F("Channel 2"));
 }
+
+void BlindsControlPlugin::getValues(JsonArray &array)
+{
+    BlindsControl::getValues(array);
+}
+
+void BlindsControlPlugin::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
+{
+    BlindsControl::setValues(id, value, hasValue, state, hasState);;
+}
+
 
 #if IOT_BLINDS_CTRL_RPM_PIN
 
@@ -317,12 +315,13 @@ bool BlindsControlPlugin::hasAtMode() const
 
 void BlindsControlPlugin::atModeHelpGenerator()
 {
+    auto name = getName_P();
 #if IOT_BLINDS_CTRL_TESTMODE
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(BCME), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(BCME), name);
 #endif
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(BCMS), getName());
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(BCMD), getName());
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(BCMC), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(BCMS), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(BCMD), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(BCMC), name);
 }
 
 bool BlindsControlPlugin::atModeHandler(AtModeArgs &args)

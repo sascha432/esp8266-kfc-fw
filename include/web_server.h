@@ -30,54 +30,15 @@ public:
 
 class WebTemplate;
 
-String network_scan_html(int8_t num_networks);
-
 class WebServerPlugin : public PluginComponent {
 public:
-    static PGM_P getPSTRName() {
-        return SPGM(http);
-    }
-    static const __FlashStringHelper *getFPSTRName() {
-        return FPSTR(getPSTRName());
-    }
-
-public:
-    WebServerPlugin() : _updateFirmwareCallback(nullptr), _server(nullptr) {
-        REGISTER_PLUGIN(this);
-    }
-
-    virtual PGM_P getName() const {
-        return getPSTRName();
-    }
-    virtual const __FlashStringHelper *getFriendlyName() const {
-        return F("Web server");
-    }
-    virtual PriorityType getSetupPriority() const override {
-        return PriorityType::HTTP;
-    }
-    virtual bool allowSafeMode() const override {
-        return true;
-    }
+    WebServerPlugin();
 
     virtual void setup(SetupModeType mode) override;
-    virtual void reconfigure(PGM_P source) override;
+    virtual void reconfigure(const String &source) override;
     virtual void shutdown() override;
-    virtual bool hasReconfigureDependecy(PluginComponent *plugin) const override {
-        return false;
-    }
-
-    virtual bool hasStatus() const override {
-        return true;
-    }
     virtual void getStatus(Print &output) override;
-
-    virtual MenuType getMenuType() const override {
-        return MenuType::NONE;
-    }
-    virtual PGM_P getConfigureForm() const override {
-        return PSTR("remote");
-    }
-    virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
+    virtual void createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request) override;
 
 private:
     void begin();

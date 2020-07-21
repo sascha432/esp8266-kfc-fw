@@ -37,6 +37,10 @@
 #error STK500V1_RESET_PIN not defined
 #endif
 
+#if !defined(IOT_ATOMIC_SUN_V2) || !IOT_ATOMIC_SUN_V2
+#error requires IOT_ATOMIC_SUN_V2=1
+#endif
+
 class ChannelsArray : public std::array<int16_t, 4>
 {
 public:
@@ -105,13 +109,20 @@ public:
 
     virtual void readConfig() override;
 
+// MQTT
+public:
     virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num) override;
     virtual uint8_t getAutoDiscoveryCount() const override;
     virtual void onConnect(MQTTClient *client) override;
     virtual void onMessage(MQTTClient *client, char *topic, char *payload, size_t len) override;
 
+// WebUI
+public:
     virtual void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState) override;
     virtual void getValues(JsonArray &array) override;
+
+// dimmer
+public:
 
     virtual bool on(uint8_t channel = -1) override;
     virtual bool off(uint8_t channel = -1) override;
@@ -123,11 +134,6 @@ public:
     }
 
    void publishState(MQTTClient *client = nullptr);
-
-    virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override {
-        readConfig();
-        DimmerModuleForm::createConfigureForm(request, form);
-    }
 
     virtual void _onReceive(size_t length) override;
 
@@ -177,43 +183,36 @@ public:
     static constexpr int32_t MAX_LEVEL_ALL_CHANNELS = MAX_LEVEL * MAX_CHANNELS;
 };
 
-class AtomicSunPlugin : public Driver_4ChDimmer {
+class AtomicSunPlugin : public PluginComponent, public Driver_4ChDimmer {
 public:
-    AtomicSunPlugin() {
-        REGISTER_PLUGIN(this);
-    }
-    virtual PGM_P getName() const {
-        return PSTR("atomicsun");
-    }
-    virtual const __FlashStringHelper *getFriendlyName() const {
-        return F("Atomic Sun v2");
-    }
-    virtual PriorityType getSetupPriority() const override {
-        return static_cast<PriorityType>(100);
-    }
+    AtomicSunPlugin();
 
     virtual void setup(SetupModeType mode) override;
-    virtual void reconfigure(PGM_P source) override;
+    virtual void reconfigure(const char *source) override;
     virtual void shutdown() override;
-    virtual bool hasReconfigureDependecy(PluginComponent *plugin) const;
-
-    virtual bool hasWebUI() const override {
-        return true;
-    }
     virtual void createWebUI(WebUI &webUI) override;
-    virtual WebUIInterface *getWebUIInterface() override {
-        return this;
+    virtual void getStatus(Print &output) override;
+    virtual void createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request) override {
+        if (isCreateFormCallbackType(type)) {
+            readConfig();
+            DimmerModuleForm::_createConfigureForm(type, formName, form, request);
+        }
     }
 
-    virtual bool hasStatus() const override {
-        return true;
+    virtual void getValues(JsonArray &array) override {
+        _getValues(array);
     }
-    virtual void getStatus(Print &output) override;
+    virtual void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState) override {
+        _setValue(id, value, hasValue, state, hasState);
+    }
 
 #if AT_MODE_SUPPORTED
-    virtual bool hasAtMode() const override;
-    virtual void atModeHelpGenerator() override;
-    virtual bool atModeHandler(AtModeArgs &args) override;
+    virtual void atModeHelpGenerator() override {
+        _atModeHelpGenerator(getName_P());
+    }
+    virtual bool atModeHandler(AtModeArgs &args) override {
+        return _atModeHandler(args, *this, MAX_LEVEL);
+    }
 #endif
 };
 

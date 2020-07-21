@@ -5,6 +5,10 @@
 
 #include <Arduino_compat.h>
 #include "reset_detector.h"
+#if HAVE_KFC_PLUGINS
+#include <LoopFunctions.h>
+#include <PluginComponent.h>
+#endif
 
 #if DEBUG_RESET_DETECTOR
 #include <debug_helper_enable.h>
@@ -17,35 +21,29 @@ ResetDetector resetDetector;
 ResetDetector::ResetDetector() : _timer()
 {
 #if !DEBUG_RESET_DETECTOR
-    // for debugging call _init() in setup() after Serial.begin() and DEBUG_HELPER_INIT()
     _init();
+#else
+    #warning Call _init() manually after the debug output is turned on
 #endif
 }
 
 void ResetDetector::_init()
 {
-#if DEBUG_RESET_DETECTOR
-    Serial.begin(KFC_SERIAL_RATE);
-    Serial.println(F("ResetDetector::_init()"));
-#endif
-    _debug_println(F("ResetDetector::_init()"));
+    _debug_println();
 
     ResetDetectorData_t data = {};
     auto isValid = false;
 
 #if HAVE_KFC_PLUGINS
 
-    if (RTCMemoryManager::read(RESET_DETECTOR_RTC_MEM_ID, &data, sizeof(data))) {
+    if (RTCMemoryManager::read(PluginComponent::RTCMemoryId::RESET_DETECTOR, &data, sizeof(data))) {
         isValid = true;
     }
 
 #else
-    uint16_t crc = ~0;
-
     if (ESP.rtcUserMemoryRead(RESET_DETECTOR_RTC_MEM_ADDRESS, (uint32_t *)&data, sizeof(data))) {
         if (data.magic_word == RESET_DETECTOR_MAGIC_WORD) {
-            crc = crc16_calc((uint8_t *)&data, sizeof(data) - sizeof(data.crc));
-            if (crc == data.crc) {
+            if (crc16_update(&data, sizeof(data) - sizeof(data.crc)) == data.crc) {
                 isValid = true;
             }
         }
@@ -60,10 +58,13 @@ void ResetDetector::_init()
 #endif
 
     if (isValid) {
-        data.reset_counter++;
+        if (data.reset_counter < std::numeric_limits<decltype(data.reset_counter)>::max()) { // stop before overflow
+            data.reset_counter++;
+        }
         _safeMode = data.safe_mode;
         _resetCounter = data.reset_counter;
-    } else {
+    }
+    else {
         _safeMode = 0;
         _resetCounter = 0;
     }
@@ -74,7 +75,7 @@ void ResetDetector::_init()
     _debug_printf_P(PSTR("\n\n\nRD: valid %d, safe mode=%d, reset counter=%d\n"), isValid, data.safe_mode, data.reset_counter);
     _debug_printf_P(PSTR("RD: reset reason: %s (%d), reset info: %s, crash=%d, reset=%d, reboot=%d, wakeup=%d\n"), getResetReason().c_str(), _resetReason, getResetInfo().c_str(), hasCrashDetected(), hasResetDetected(), hasRebootDetected(), hasWakeUpDetected());
 #else
-    _debug_printf_P(PSTR("\n\n\nRD: valid %d, magic word %08x, safe mode=%d, reset counter=%d, crc %04x=%04x\n"), isValid, data.magic_word, data.safe_mode, data.reset_counter, crc, data.crc);
+    _debug_printf_P(PSTR("\n\n\nRD: valid %d, magic word %08x, safe mode=%d, reset counter=%d\n"), isValid, data.magic_word, data.safe_mode, data.reset_counter);
     _debug_printf_P(PSTR("RD: reset reason: %s (%d), reset info: %s, crash=%d, reset=%d, reboot=%d, wakeup=%d\n"), getResetReason().c_str(), _resetReason, getResetInfo().c_str(), hasCrashDetected(), hasResetDetected(), hasRebootDetected(), hasWakeUpDetected());
 #endif
 
@@ -94,27 +95,22 @@ void ResetDetector::armTimer()
     ets_timer_arm_new(&_timer, RESET_DETECTOR_TIMEOUT, false, true);
 }
 
-void ResetDetector::disarmTimer()
+void ICACHE_RAM_ATTR ResetDetector::disarmTimer()
 {
     ets_timer_disarm(&_timer);
     ets_timer_done(&_timer);
 }
 
 
-void ResetDetector::_timerCallback(void *arg)
+void ICACHE_RAM_ATTR ResetDetector::_timerCallback(void *arg)
 {
-    auto &rd = *reinterpret_cast<ResetDetector *>(arg);
-    rd.clearCounter();
-    rd.disarmTimer();
+    auto rd = reinterpret_cast<ResetDetector *>(arg);
+    rd->clearCounter();
+    rd->disarmTimer();
 }
 
-void ResetDetector::clearCounter() {
-    _debug_printf_P(PSTR("RD: set reset counter = 0 (%d)\n"), _resetCounter);
-    _resetCounter = 0;
-    _writeData();
-}
-
-bool ResetDetector::hasCrashDetected() const {
+bool ResetDetector::hasCrashDetected() const
+{
 #if defined(ESP32)
     return (
         _resetReason == ESP_RST_WDT ||
@@ -240,6 +236,13 @@ void ResetDetector::setSafeMode(uint8_t safeMode)
     _writeData();
 }
 
+void ResetDetector::clearCounter()
+{
+    _debug_printf_P(PSTR("RD: reset counter = 0 (%d)\n"), _resetCounter);
+    _resetCounter = 0;
+    _writeData();
+}
+
 #if DEBUG
 void ResetDetector::__setResetCounter(uint8_t counter)
 {
@@ -248,21 +251,26 @@ void ResetDetector::__setResetCounter(uint8_t counter)
 }
 #endif
 
+void ResetDetector::setSafeModeAndClearCounter(uint8_t safeMode)
+{
+    _debug_printf_P(PSTR("RD: reset counter = 0 (%d) and safe_mode=%u\n"), _resetCounter, safeMode);
+    _safeMode = safeMode;
+    _resetCounter = 0;
+    _writeData();
+}
+
 void ResetDetector::_writeData()
 {
-    ResetDetectorData_t data = {};
-
-    data.reset_counter = _resetCounter;
-    data.safe_mode = _safeMode;
+    ResetDetectorData_t data = { _resetCounter, _safeMode };
 
 #if HAVE_KFC_PLUGINS
 
-    RTCMemoryManager::write(RESET_DETECTOR_RTC_MEM_ID, (void *)&data, sizeof(data));
+    RTCMemoryManager::write(PluginComponent::RTCMemoryId::RESET_DETECTOR, &data, sizeof(data));
 
 #else
 
     data.magic_word = RESET_DETECTOR_MAGIC_WORD;
-    data.crc = crc16_calc((uint8_t *)&data, sizeof(data) - sizeof(data.crc));
+    data.crc = crc16_update(&data, sizeof(data) - sizeof(data.crc));
 
     if (!ESP.rtcUserMemoryWrite(RESET_DETECTOR_RTC_MEM_ADDRESS, (uint32_t *)&data, sizeof(data))) {
         _debug_printf_P(PSTR("RD: Failed to write to RTC MEM\n"));
@@ -274,9 +282,46 @@ void ResetDetector::_writeData()
 
 #if HAVE_KFC_PLUGINS
 
-unsigned long ResetDetectorPlugin::_deepSleepWifiTime = ~0;
+#if ENABLE_DEEP_SLEEP
+uint32_t ResetDetectorPlugin::_deepSleepWifiTime = ~0;
+#endif
 
 static ResetDetectorPlugin plugin;
+
+#define ALWAYS_RUN_SETUP   (DEBUG_RESET_DETECTOR ? true : false)
+
+PROGMEM_DEFINE_PLUGIN_OPTIONS(
+    ResetDetectorPlugin,
+    "rd",               // name
+    "rd",               // friendly name
+    "",                 // web_templates
+    "",                 // config_forms
+    "",                 // reconfigure_dependencies
+    PluginComponent::PriorityType::RESET_DETECTOR,
+    PluginComponent::RTCMemoryId::RESET_DETECTOR,
+    static_cast<uint8_t>(PluginComponent::MenuType::NONE),
+    ALWAYS_RUN_SETUP,   // allow_safe_mode
+    ALWAYS_RUN_SETUP,   // setup_after_deep_sleep
+    false,              // has_get_status
+    false,              // has_config_forms
+    false,              // has_web_ui
+    false,              // has_web_templates
+    true,               // has_at_mode
+    0                   // __reserved
+);
+
+ResetDetectorPlugin::ResetDetectorPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(ResetDetectorPlugin))
+{
+    REGISTER_PLUGIN(this, "ResetDetectorPlugin");
+}
+
+#if DEBUG_RESET_DETECTOR
+    void setup(SetupModeType mode)
+    {
+        _init();
+    }
+#endif
+
 
 #if AT_MODE_SUPPORTED
 
@@ -286,7 +331,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPP(RD, "RD", "Reset detector clear counter", 
 
 void ResetDetectorPlugin::atModeHelpGenerator()
 {
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(RD), getName());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(RD), getName_P());
 }
 
 bool ResetDetectorPlugin::atModeHandler(AtModeArgs &args)
@@ -305,6 +350,7 @@ bool ResetDetectorPlugin::atModeHandler(AtModeArgs &args)
         } else {
             resetDetector.clearCounter();
         }
+        return true;
     }
     return false;
 }

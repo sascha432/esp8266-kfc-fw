@@ -61,8 +61,8 @@ size_t PrintHtmlEntities::translate(uint8_t data)
             //     if (data >= 0xa0 && data <= 0xbf) {
             //         uint8_t count = writeRaw('&');
             //         count += writeRaw('#');
-            //         count += writeRaw(nibble2hex((data & 0xf0) >> 4));
-            //         count += writeRaw(nibble2hex(data & 0xf));
+            //         count += writeRaw(xxx((data & 0xf0) >> 4));
+            //         count += writeRaw(xxx(data & 0xf));
             //         return count + writeRaw(';');
             //     }
             //     break;

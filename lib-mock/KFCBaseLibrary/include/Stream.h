@@ -13,16 +13,20 @@ enum SeekMode { SeekSet = SEEK_SET, SeekCur = SEEK_CUR, SeekEnd = SEEK_END };
 /*
 
 Print
-        virtual size_t write(uint8_t) = 0;
-        virtual size_t write(const uint8_t *buffer, size_t size);
-        virtual void flush() {}
+    virtual size_t write(uint8_t) = 0;
+    virtual size_t write(const uint8_t *buffer, size_t size); = calling write(uint8_t)
+    virtual void flush() {}
 
 Stream
-        virtual size_t readBytes(char *buffer, size_t start_length); // read chars from stream into buffer
-        virtual size_t readBytes(uint8_t *buffer, size_t start_length) {
-            return readBytes((char *) buffer, start_length);
-        }
-        virtual String readString();
+    virtual int available() = 0;
+    virtual int read() = 0;
+    virtual int peek() = 0;
+
+    virtual size_t readBytes(char *buffer, size_t start_length); // read chars from stream into buffer
+    virtual size_t readBytes(uint8_t *buffer, size_t start_length) {
+        return readBytes((char *) buffer, start_length);
+    }
+    virtual String readString();
 
 
 
@@ -40,7 +44,6 @@ public:
 
     virtual size_t readBytes(char *buffer, size_t length);
     virtual size_t readBytes(uint8_t *buffer, size_t length);
-    virtual size_t write(uint8_t data) = 0;
     virtual void flush();
     virtual String readString();
 

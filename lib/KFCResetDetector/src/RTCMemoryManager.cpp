@@ -88,7 +88,7 @@ uint32_t *RTCMemoryManager::_readMemory(uint16_t &length) {
     return memPtr;
 }
 
-bool RTCMemoryManager::read(uint8_t id, void *dataPtr, uint8_t maxSize)
+bool RTCMemoryManager::read(RTCMemoryId id, void *dataPtr, uint8_t maxSize)
 {
     memset(dataPtr, 0, maxSize);
     _debug_printf_P(PSTR("plugin_read_rtc_memory(%d, %d)\n"), id, maxSize);
@@ -108,7 +108,7 @@ bool RTCMemoryManager::read(uint8_t id, void *dataPtr, uint8_t maxSize)
             _debug_printf_P(PSTR("RTC memory: entry length exceeds total size. id %d, length %d\n"), entry->mem_id, entry->length);
             break;
         }
-        if (entry->mem_id == id) {
+        if (entry->mem_id == static_cast<decltype(entry->mem_id)>(id)) {
             if (entry->length > maxSize) {
                 entry->length = maxSize;
             }
@@ -123,7 +123,8 @@ bool RTCMemoryManager::read(uint8_t id, void *dataPtr, uint8_t maxSize)
 
 }
 
-bool RTCMemoryManager::write(uint8_t id, void *dataPtr, uint8_t dataLength) {
+bool RTCMemoryManager::write(RTCMemoryId id, void *dataPtr, uint8_t dataLength)
+{
     _debug_printf_P(PSTR("plugin_write_rtc_memory(%d, %d)\n"), id, dataLength);
 
     Buffer newData;
@@ -139,7 +140,7 @@ bool RTCMemoryManager::write(uint8_t id, void *dataPtr, uint8_t dataLength) {
                 break;
             }
             ptr += sizeof(*entry);
-            if (entry->mem_id != id) {
+            if (entry->mem_id != static_cast<decltype(entry->mem_id)>(id)) {
                 newData.write((const uint8_t *)entry, sizeof(*entry) + entry->length);
             }
             ptr += entry->length;
@@ -150,7 +151,7 @@ bool RTCMemoryManager::write(uint8_t id, void *dataPtr, uint8_t dataLength) {
     // append new data
     Entry_t newEntry;
     newData.reserve(newData.length() + sizeof(newEntry) + dataLength);
-    newEntry.mem_id = id;
+    newEntry.mem_id = static_cast<decltype(newEntry.mem_id)>(id);
     newEntry.length = dataLength;
 
     newData.write((const uint8_t *)&newEntry, sizeof(newEntry));
@@ -240,7 +241,7 @@ void RTCMemoryManager::dump(Print &output) {
         }
 #if HAVE_KFC_PLUGINS
         auto plugin = PluginComponent::getByMemoryId(entry->mem_id);
-        output.printf_P(PSTR("id: %d (%s), length %d "), entry->mem_id, plugin ? plugin->getName() : PSTR("<no plugin found>"), entry->length);
+        output.printf_P(PSTR("id: %d (%s), length %d "), entry->mem_id, plugin ? plugin->getName_P() : PSTR("<no plugin found>"), entry->length);
 #else
         output.printf_P(PSTR("id: %d, length %d "), entry->mem_id, entry->length);
 #endif

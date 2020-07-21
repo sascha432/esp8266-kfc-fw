@@ -443,7 +443,7 @@ void Sensor_HLW8012::atModeHelpGenerator()
 {
     Sensor_HLW80xx::atModeHelpGenerator();
 
-    auto name = SensorPlugin::getInstance().getName();
+    auto name = SensorPlugin::getInstance().getName_P();
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(HLWCAL), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(HLWMODE), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(HLWCFG), name);

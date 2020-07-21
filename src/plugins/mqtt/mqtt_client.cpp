@@ -20,15 +20,6 @@
 #include <debug_helper_disable.h>
 #endif
 
-// mosquitto CLI
-//
-// delete all entries that contain KFCAC52DB
-// mosquitto_sub -t '#' -v -W 1 | grep KFCAC52DB | cut -f 1 -d ' ' | xargs -l mosquitto_pub -n -r -t
-//
-// display auto discovery for KFCAC52DB
-// mosquitto_sub -t 'homeassistant/KFCAC52DB/#' -t 'homeassistant/+/KFCAC52DB/#' -v
-
-
 DEFINE_ENUM(MQTTQueueEnum_t);
 
 PROGMEM_STRING_DEF(Anonymous, "Anonymous");
@@ -626,41 +617,15 @@ bool MQTTClient::_isMessageSizeExceeded(size_t len, const char *topic)
 
 class MQTTPlugin : public PluginComponent {
 public:
-    MQTTPlugin() {
-        REGISTER_PLUGIN(this);
-    }
-    virtual PGM_P getName() const {
-        return SPGM(mqtt);
-    }
-    virtual const __FlashStringHelper *getFriendlyName() const {
-        return F("MQTT");
-    }
-    virtual PriorityType getSetupPriority() const override {
-        return PriorityType::MQTT;
-    }
-#if ENABLE_DEEP_SLEEP
-    virtual bool autoSetupAfterDeepSleep() const override {
-        return true;
-    }
-#endif
+    MQTTPlugin();
+
     virtual void setup(SetupModeType mode) override;
-    virtual void reconfigure(PGM_P source) override;
+    virtual void reconfigure(const String &source) override;
     virtual void shutdown() override;
-
-    virtual bool hasStatus() const override {
-        return true;
-    }
     virtual void getStatus(Print &output) override;
-
-    virtual PGM_P getConfigureForm() const override {
-        return getName();
-    }
-    void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
+    virtual void createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request) override;
 
 #if AT_MODE_SUPPORTED
-    virtual bool hasAtMode() const override {
-        return true;
-    }
     virtual void atModeHelpGenerator() override;
     virtual bool atModeHandler(AtModeArgs &args) override;
 #endif
@@ -668,13 +633,39 @@ public:
 
 static MQTTPlugin plugin;
 
+PROGMEM_DEFINE_PLUGIN_OPTIONS(
+    MQTTPlugin,
+    "mqtt",             // name
+    "MQTT",             // friendly name
+    "",                 // web_templates
+    "mqtt",             // config_forms
+    "network",          // reconfigure_dependencies
+    PluginComponent::PriorityType::MQTT,
+    PluginComponent::RTCMemoryId::NONE,
+    static_cast<uint8_t>(PluginComponent::MenuType::AUTO),
+    false,              // allow_safe_mode
+    true,               // setup_after_deep_sleep
+    true,               // has_get_status
+    true,               // has_config_forms
+    false,              // has_web_ui
+    false,              // has_web_templates
+    true,               // has_at_mode
+    0                   // __reserved
+);
+
+MQTTPlugin::MQTTPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(MQTTPlugin))
+{
+    REGISTER_PLUGIN(this, "MQTTPlugin");
+}
+
 void MQTTPlugin::setup(SetupModeType mode)
 {
     MQTTClient::setupInstance();
 }
 
-void MQTTPlugin::reconfigure(PGM_P source)
+void MQTTPlugin::reconfigure(const String &source)
 {
+    _debug_printf_P(PSTR("source=%s\n"), source.c_str());
     MQTTClient::deleteInstance();
     if (config._H_GET(Config().flags).mqttMode != MQTT_MODE_DISABLED) {
         MQTTClient::setupInstance();
@@ -699,8 +690,13 @@ void MQTTPlugin::getStatus(Print &output)
     }
 }
 
-void MQTTPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
+
+void MQTTPlugin::createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request)
 {
+    if (!isCreateFormCallbackType(type)) {
+        return;
+    }
+
     form.add<uint8_t>(F("mqtt_enabled"), _H_FLAGS_VALUE(Config().flags, mqttMode));
     form.addValidator(new FormRangeValidator(MQTT_MODE_DISABLED, MQTT_MODE_SECURE));
 
@@ -753,7 +749,8 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF(MQTT, "MQTT", "<connect|disconnect|force-discon
 
 void MQTTPlugin::atModeHelpGenerator()
 {
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(MQTT), getName());
+    auto name = getName_P();
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(MQTT), name);
 }
 
 bool MQTTPlugin::atModeHandler(AtModeArgs &args)

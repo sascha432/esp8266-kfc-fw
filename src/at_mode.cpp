@@ -546,9 +546,14 @@ static void at_mode_autorun()
     });
 }
 
+SerialHandler::Client *_client;
+
 void at_mode_setup()
 {
-    SerialHandler::getInstance().addHandler(at_mode_serial_input_handler, SerialHandler::RECEIVE|SerialHandler::REMOTE_RX);
+    //SerialHandler::getInstance().addHandler(at_mode_serial_input_handler, SerialHandler::RECEIVE|SerialHandler::REMOTE_RX);
+
+    _client = &serialHandler.addClient(at_mode_serial_input_handler, SerialHandler::EventType::READ);
+
     WiFiCallbacks::add(WiFiCallbacks::EventEnum_t::CONNECTED|WiFiCallbacks::EventEnum_t::DISCONNECTED, at_mode_wifi_callback);
 
     if (!config.isSafeMode()) {
@@ -1359,7 +1364,7 @@ void at_mode_serial_handle_event(String &commandString)
             }
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(WRTC))) {
                 if (args.requireArgs(2, 2)) {
-                    uint8_t rtcMemId = (uint8_t)args.toInt(0);
+                    auto rtcMemId = static_cast<RTCMemoryManager::RTCMemoryId>(args.toInt(0));
                     uint32_t data = (uint32_t)args.toNumber(1);
                     RTCMemoryManager::write(rtcMemId, &data, sizeof(data));
                     args.printf_P(PSTR("id=%u, data=%u (%x)"), rtcMemId, data, data);
@@ -1447,52 +1452,45 @@ void at_mode_serial_handle_event(String &commandString)
 }
 
 
-void at_mode_serial_input_handler(uint8_t type, const uint8_t *buffer, size_t len)
+void at_mode_serial_input_handler(SerialHandler::Client &client)
 {
-    static String line_buffer;
+    static String line;
 
-    Stream *echoStream = (type == SerialHandler::RECEIVE) ? &SerialHandler::getInstance() : nullptr;
     if (config._H_GET(Config().flags).atModeEnabled) {
-        char *ptr = (char *)buffer;
-        while(len--) {
-            if (*ptr == 9) {
-                if (line_buffer.length() == 0) {
-                    line_buffer = F("AT+");
-                    if (echoStream) {
-                        echoStream->print(line_buffer);
+        while(client.available()) {
+            int ch = client.read();
+            switch(ch) {
+                case 9:
+                    if (!line.length()) {
+                        line = F("AT+");
+                        client.print(line);
                     }
-                }
-            } else if (*ptr == 8) {
-                if (line_buffer.length()) {
-                    line_buffer.remove(line_buffer.length() - 1, 1);
-                }
-                if (echoStream) {
-                    echoStream->print(F("\b \b"));
-                }
-            } else if (*ptr == '\n') {
-                if (echoStream) {
-                    echoStream->print('\n');
-                }
-                at_mode_serial_handle_event(line_buffer);
-                line_buffer = String();
-            } else if (*ptr == '\r') {
-                if (echoStream) {
-                    echoStream->print('\r');
-                }
-            } else {
-                line_buffer += (char)*ptr;
-                if (echoStream) {
-                    echoStream->print((char)*ptr);
-                }
-                if (line_buffer.length() >= SERIAL_HANDLER_INPUT_BUFFER_MAX) {
-                    if (echoStream) {
-                        echoStream->print('\n');
+                    break;
+                case 8:
+                    if (line.length()) {
+                        line.remove(line.length() - 1, 1);
+                        client.print(F("\b \b"));
                     }
-                    at_mode_serial_handle_event(line_buffer);
-                    line_buffer = String();
-                }
+                    break;
+                case '\n':
+                    client.write('\n');
+                    at_mode_serial_handle_event(line);
+                    line = String();
+                    break;
+                case '\r':
+                    client.write('\r');
+                    break;
+                default:
+                    line += (char)ch;
+                    client.write(ch);
+                    if (line.length() >= SERIAL_HANDLER_INPUT_BUFFER_MAX) {
+                        client.write('\n');
+                        at_mode_serial_handle_event(line);
+                        line = String();
+
+                    }
+                    break;
             }
-            ptr++;
         }
     }
 }

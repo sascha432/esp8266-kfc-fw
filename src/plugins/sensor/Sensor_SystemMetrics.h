@@ -33,7 +33,7 @@ public:
 
 private:
     String _getTopic() const;
-    String _getMetricsJson() const;
+    void _getMetricsJson(String &json) const;
 };
 
 #endif

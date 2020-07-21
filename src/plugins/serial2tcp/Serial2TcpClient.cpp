@@ -39,6 +39,11 @@ void Serial2TcpClient::getStatus(Print &output)
     }
 }
 
+bool Serial2TcpClient::isConnected() const
+{
+    return _connection && _connection->isConnected();
+}
+
 void Serial2TcpClient::begin()
 {
     DEBUGV("begin\n");
@@ -78,7 +83,7 @@ void Serial2TcpClient::_onSerialData(uint8_t type, const uint8_t *buffer, size_t
         }
     }
     else {
-        ::printf("_onSerialData fail connected=%u conn=%p client=%p type=%u len=%u\n", _connected(), _connection, _connection ? _connection->getClient() : nullptr, type, len);
+        // ::printf("_onSerialData fail connected=%u conn=%p client=%p type=%u len=%u\n", _connected(), _connection, _connection ? _connection->getClient() : nullptr, type, len);
     }
 }
 

@@ -21,7 +21,7 @@
 class STK500v1Plugin : public PluginComponent {
 public:
     STK500v1Plugin() {
-        REGISTER_PLUGIN(this);
+        REGISTER_PLUGIN(this, "STK500v1Plugin");
     }
     virtual PGM_P getName() const {
         return PSTR("stk500v1");
@@ -29,8 +29,8 @@ public:
     virtual const __FlashStringHelper *getFriendlyName() const {
         return F("STK500v1");
     }
-    virtual bool hasAtMode() const override {
-        return true;
+    virtual OptionsType getOptions() const override {
+        return EnumHelper::Bitset::all(OptionsType::HAS_AT_MODE);
     }
     virtual void atModeHelpGenerator() override;
     virtual bool atModeHandler(AtModeArgs &args) override;
@@ -47,9 +47,10 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(STK500V1L, "STK500V1L", "Dump debug log fi
 
 void STK500v1Plugin::atModeHelpGenerator()
 {
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(STK500V1F), getName());
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(STK500V1S), getName());
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(STK500V1L), getName());
+    auto name = getName_P();
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(STK500V1F), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(STK500V1S), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(STK500V1L), name);
 }
 
 bool STK500v1Plugin::atModeHandler(AtModeArgs &args) {

@@ -5,6 +5,9 @@
 #pragma once
 
 #include <Arduino_compat.h>
+#include <session.h>
+#include <buffer.h>
+#include "kfc_fw_config_types.h"
 
 #include <push_pack.h>
 
@@ -65,6 +68,7 @@ namespace KFCConfigurationClasses {
             static const char *getTitle();
             static const char *getPassword();
             static const char *getToken();
+            static constexpr size_t kTokenMinLength = SESSION_DEVICE_TOKEN_MIN_LENGTH;
             static void setName(const String &name);
             static void setTitle(const String &title);
             static void setPassword(const String &password);
@@ -407,13 +411,16 @@ namespace KFCConfigurationClasses {
                 WebUIEnum_t webUI;
             } Switch_t;
 
+            static const uint8_t *getConfig();
+            static void setConfig(const uint8_t *buf, size_t size);
+
             // T = std::array<String, N>, R = std::array<Switch_t, N>
             template <class T, class R>
             static void getConfig(T &names, R &configs) {
                 names = {};
                 configs = {};
                 uint16_t length = 0;
-                auto ptr = config.getBinary(_H(MainConfig().plugins.iotswitch), length);
+                auto ptr = getConfig();
                 if (ptr) {
                     size_t i = 0;
                     auto endPtr = ptr + length;
@@ -436,7 +443,7 @@ namespace KFCConfigurationClasses {
                     buffer.writeObject(configs[i]);
                     buffer.write(names[i]);
                 }
-                config.setBinary(_H(MainConfig().plugins.iotswitch), buffer.begin(), buffer.length());
+                setConfig(buffer.begin(), buffer.length());
             }
         };
 
@@ -602,8 +609,14 @@ namespace KFCConfigurationClasses {
             typedef struct __attribute__packed__ {
                 uint16_t port;
                 uint32_t baudrate;
-                ModeType mode;
-                SerialPortType serial_port;
+                union __attribute__packed__ {
+                    ModeType mode;
+                    uint8_t mode_byte;
+                };
+                union __attribute__packed__ {
+                    SerialPortType serial_port;
+                    uint8_t serial_port_byte;
+                };
                 uint8_t rx_pin;
                 uint8_t tx_pin;
                 bool authentication;

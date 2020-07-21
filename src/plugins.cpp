@@ -7,7 +7,6 @@
 #include <Form.h>
 #include <algorithm>
 #include "kfc_fw_config.h"
-#include "kfc_fw_config_classes.h"
 #include "RTCMemoryManager.h"
 #include "misc.h"
 #ifndef DISABLE_EVENT_SCHEDULER
@@ -32,17 +31,17 @@ static PluginsVector *pluginsPtr = nullptr;
 #if DEBUG_PLUGINS
 void register_plugin(PluginComponent *plugin, const char *name)
 {
-    Serial.begin(KFC_SERIAL_RATE);
-    Serial.printf_P(PSTR("register_plugin(%p): name=%s\n"), plugin, name);
+    KFC_SAFE_MODE_SERIAL_PORT.begin(KFC_SERIAL_RATE);
+    ::printf(PSTR("register_plugin(%p): name=%s\r\n"), plugin, name);
 #else
 void register_plugin(PluginComponent *plugin)
 {
 #endif
     if (plugins.size()) {
-        _debug_printf(PSTR("Registering plugins completed already, skipping %s\n"), plugin->getName());
+        _debug_printf(PSTR("Registering plugins completed already, skipping %s\n"), plugin->getName_P());
         return;
     }
-    _debug_printf_P(PSTR("register_plugin %s priority %d\n"), plugin->getName(), plugin->getSetupPriority());
+    _debug_printf_P(PSTR("register_plugin %s priority %d\n"), plugin->getName_P(), plugin->getOptions().priority);
     if (!pluginsPtr) {
         pluginsPtr = new PluginsVector();
         pluginsPtr->reserve(16);
@@ -66,16 +65,17 @@ void dump_plugin_list(Print &output)
     output.print(FPSTR(header));
     for(const auto plugin : plugins) {
         _debug_printf_P(PSTR("plugin=%p\n"), plugin);
+        auto options = plugin->getOptions();
         output.printf_P(format,
-            plugin->getName(),
-            plugin->getSetupPriority(),
+            plugin->getName_P(),
+            options.priority,
             BOOL_STR(plugin->allowSafeMode()),
 #if ENABLE_DEEP_SLEEP
             BOOL_STR(plugin->autoSetupAfterDeepSleep()),
 #else
             SPGM(n_a, "n/a"),
 #endif
-            plugin->getRtcMemoryId(),
+            options.memory_id,
             BOOL_STR(plugin->hasStatus()),
             BOOL_STR(plugin->hasAtMode()),
             BOOL_STR(plugin->hasWebUI()),
@@ -92,36 +92,11 @@ void prepare_plugins()
     // copy & sort plugins and free temporary data
     plugins.resize(pluginsPtr->size());
     std::partial_sort_copy(pluginsPtr->begin(), pluginsPtr->end(), plugins.begin(), plugins.end(), [](const PluginComponent *a, const PluginComponent *b) {
-         return b->getSetupPriority() >= a->getSetupPriority();
+         return static_cast<int>(b->getOptions().priority) >= static_cast<int>(a->getOptions().priority);
     });
     free(pluginsPtr);
 
     _debug_printf_P(PSTR("counter=%d\n"), plugins.size());
-
-#if DEBUG
-    // check for duplicate RTC memory ids
-    uint8_t i = 0;
-    for(const auto plugin : plugins) {
-#if DEBUG_PLUGINS
-        _debug_printf_P(PSTR("name=%s plugin=%p prio=%d\n"), plugin->getName(), plugin, plugin->getSetupPriority());
-#endif
-
-        if (plugin->getRtcMemoryId() > PLUGIN_RTC_MEM_MAX_ID) {
-            _debug_printf_P(PSTR("WARNING! Plugin %s is using an invalid id %d\n"), plugin->getName(), plugin->getRtcMemoryId());
-        }
-        if (plugin->getRtcMemoryId()) {
-            uint8_t j = 0;
-            for(const auto plugin2 : plugins) {
-                if (i != j && plugin2->getRtcMemoryId() && plugin->getRtcMemoryId() == plugin2->getRtcMemoryId()) {
-                    _debug_printf_P(PSTR("WARNING! Plugin %s and %s use the same id (%d) to identify the RTC memory data\n"), plugin->getName(), plugin2->getName(), plugin->getRtcMemoryId());
-                }
-                j++;
-            }
-        }
-        i++;
-    }
-#endif
-
 }
 
 static void create_menu()
@@ -180,7 +155,7 @@ void setup_plugins(PluginComponent::SetupModeType mode)
             (mode == PluginComponent::SetupModeType::DELAYED_AUTO_WAKE_UP && !plugin->autoSetupAfterDeepSleep())
 #endif
         );
-        _debug_printf_P(PSTR("name=%s prio=%d setup=%d\n"), plugin->getName(), plugin->getSetupPriority(), runSetup);
+        _debug_printf_P(PSTR("name=%s prio=%d setup=%d\n"), plugin->getName_P(), plugin->getOptions().priority, runSetup);
         if (runSetup) {
             plugin->setSetupTime();
             plugin->setup(mode);
@@ -194,13 +169,12 @@ void setup_plugins(PluginComponent::SetupModeType mode)
                 case PluginComponent::MenuType::CUSTOM:
                     plugin->createMenu();
                     break;
-                case PluginComponent::MenuType::AUTO:
-                    if (plugin->getConfigureForm()) {
-                        String uri = FPSTR(plugin->getConfigureForm());
-                        uri += FSPGM(_html);
-                        bootstrapMenu.addSubMenu(plugin->getFriendlyName(), uri, navMenu.config);
-                    }
-                    break;
+                case PluginComponent::MenuType::AUTO: {
+                        String name = plugin->getName();
+                        if (plugin->canHandleForm(name)) {
+                            bootstrapMenu.addSubMenu(plugin->getFriendlyName(), name + FSPGM(_html), navMenu.config);
+                        }
+                    } break;
                 case PluginComponent::MenuType::NONE:
                 default:
                     break;

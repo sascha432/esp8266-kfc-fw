@@ -40,10 +40,8 @@ void Dimmer_Base::_begin()
     _version = Version();
 
 #if IOT_DIMMER_MODULE_INTERFACE_UART
-    #if SERIAL_HANDLER
-        _wire.onReadSerial(SerialHandler::serialLoop);
-        SerialHandler::getInstance().addHandler(onData, SerialHandler::RECEIVE);
-    #endif
+    _wire.onReadSerial(SerialHandler::serialLoop);
+    SerialHandler::getInstance().addHandler(onData, SerialHandler::RECEIVE);
     #if AT_MODE_SUPPORTED
         // disable_at_mode(Serial);
         #if IOT_DIMMER_MODULE_BAUD_RATE != KFC_SERIAL_RATE
@@ -97,9 +95,7 @@ void Dimmer_Base::_end()
 
 #if IOT_DIMMER_MODULE_INTERFACE_UART
     _wire.onReceive(nullptr);
-    #if SERIAL_HANDLER
-        SerialHandler::getInstance().removeHandler(onData);
-    #endif
+    SerialHandler::getInstance().removeHandler(onData);
     #if IOT_DIMMER_MODULE_BAUD_RATE != KFC_SERIAL_RATE
         Serial.flush();
         Serial.begin(KFC_SERIAL_RATE);
@@ -369,7 +365,7 @@ void Dimmer_Base::writeEEPROM(bool noLocking)
 
 
 
-void Dimmer_Base::getValues(JsonArray &array)
+void Dimmer_Base::_getValues(JsonArray &array)
 {
     _debug_println();
     JsonUnnamedObject *obj;
@@ -403,7 +399,7 @@ void Dimmer_Base::getValues(JsonArray &array)
     // obj->add(JJ(value), JsonNumber(_frequency, 2));
 }
 
-void Dimmer_Base::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
+void Dimmer_Base::_setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
 {
     _debug_printf_P(PSTR("id=%s\n"), id.c_str());
 
@@ -454,3 +450,59 @@ void Dimmer_Base::resetDimmerMCU()
     delay(10);
     pinMode(STK500V1_RESET_PIN, INPUT);
 }
+
+#if AT_MODE_SUPPORTED
+
+#include "at_mode.h"
+
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DIMG, "DIMG", "Get level");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DIMS, "DIMS", "<channel>,<level>[,<time>]", "Set level");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DIMW, "DIMW", "Write EEPROM");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DIMR, "DIMR", "Reset ATmega");
+
+void Dimmer_Base::_atModeHelpGenerator(PGM_P name)
+{
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DIMG), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DIMS), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DIMW), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DIMR), name);
+}
+
+bool Dimmer_Base::_atModeHandler(AtModeArgs &args, const Dimmer_Base &dimmer, int32_t maxLevel)
+{
+    if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DIMW))) {
+        writeEEPROM();
+        args.ok();
+        return true;
+    }
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DIMG))) {
+        for(uint8_t i = 0; i < dimmer.getChannelCount(); i++) {
+            args.printf_P(PSTR("%u: %d"), i, getChannel(i));
+        }
+        return true;
+    }
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DIMR))) {
+        args.printf_P(PSTR("Pulling GPIO%u low for 10ms"), STK500V1_RESET_PIN);
+        dimmer.resetDimmerMCU();
+        args.printf_P(PSTR("GPIO%u set to input"), STK500V1_RESET_PIN);
+        return true;
+    }
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DIMS))) {
+        if (args.requireArgs(2, 3)) {
+            uint8_t channel = args.toInt(0);
+            if (channel < dimmer.getChannelCount()) {
+                int level = args.toIntMinMax(1, 0, maxLevel);
+                float time = args.toFloat(2, -1);
+                args.printf_P(PSTR("Set %u: %d (time %.2f)"), channel, level, time);
+                setChannel(channel, level, time);
+            }
+            else {
+                args.print(F("Invalid channel"));
+            }
+        }
+        return true;
+    }
+    return false;
+}
+
+#endif

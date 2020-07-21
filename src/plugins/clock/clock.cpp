@@ -22,7 +22,28 @@
 
 static ClockPlugin plugin;
 
+PROGMEM_DEFINE_PLUGIN_OPTIONS(
+    ClockPlugin,
+    "clock",            // name
+    "Clock",            // friendly name
+    "",                 // web_templates
+    "clock",            // config_forms
+    "mqtt",             // reconfigure_dependencies
+    PluginComponent::PriorityType::MIN,
+    PluginComponent::RTCMemoryId::NONE,
+    static_cast<uint8_t>(PluginComponent::MenuType::NONE),
+    false,              // allow_safe_mode
+    false,              // setup_after_deep_sleep
+    true,               // has_get_status
+    true,               // has_config_forms
+    true,               // has_web_ui
+    false,              // has_web_templates
+    true,               // has_at_mode
+    0                   // __reserved
+);
+
 ClockPlugin::ClockPlugin() :
+    PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(ClockPlugin)),
     MQTTComponent(ComponentTypeEnum_t::LIGHT),
 #if IOT_CLOCK_BUTTON_PIN
     _button(IOT_CLOCK_BUTTON_PIN, PRESSED_WHEN_HIGH),
@@ -56,7 +77,7 @@ ClockPlugin::ClockPlugin() :
     _ui_animation = 0;
     _ui_color = 2;
 
-    REGISTER_PLUGIN(this);
+    REGISTER_PLUGIN(this, "ClockPlugin");
 }
 
 void ClockPlugin::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
@@ -289,10 +310,10 @@ void ClockPlugin::setup(SetupModeType mode)
 #endif
 }
 
-void ClockPlugin::reconfigure(PGM_P source)
+void ClockPlugin::reconfigure(const String &source)
 {
-    _debug_println();
-    if (!strcmp_P_P(source, SPGM(mqtt))) {
+    _debug_printf_P(PSTR("source=%s\n"), source.c_str());
+    if (String_equals(source, SPGM(mqtt))) {
         MQTTClient::safeReRegisterComponent(this);
     }
     else {
@@ -352,9 +373,13 @@ void ClockPlugin::createWebUI(WebUI &webUI)
     sensor.add(JJ(height), height);
 }
 
-void ClockPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
+void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request)
 {
-    _debug_printf_P(PSTR("url=%s\n"), request->url().c_str());
+    _debug_printf_P(PSTR("type=%u name=%s\n"), type, formName.c_str());
+    if (!isCreateFormCallbackType(type)) {
+        return;
+    }
+
     form.setFormUI(F("Clock Configuration"));
 
     form.add<bool>(F("timefmt24h"), _H_STRUCT_VALUE(Config().clock, time_format_24h))
@@ -398,7 +423,7 @@ void ClockPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form
 
 #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
 
-    form.add<uint16_t>(F("auto_br"), _H_STRUCT_VALUE(Config().clock, auto_brightness))
+    form.add<int16_t>(F("auto_br"), _H_STRUCT_VALUE(Config().clock, auto_brightness))
         ->setFormUI((new FormUI(FormUI::TEXT, F("Auto brightness value")))->setSuffix(F("-1 = disable")));
 
 #endif
@@ -938,12 +963,13 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(CLOCKD, "D", "Dump pixel addresses");
 
 void ClockPlugin::atModeHelpGenerator()
 {
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CLOCKPX), getName());
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CLOCKP), getName());
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CLOCKC), getName());
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CLOCKTS), getName());
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CLOCKA), getName());
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CLOCKD), getName());
+    auto name = getName_P();
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CLOCKPX), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CLOCKP), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CLOCKC), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CLOCKTS), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CLOCKA), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CLOCKD), name);
 }
 
 bool ClockPlugin::atModeHandler(AtModeArgs &args)

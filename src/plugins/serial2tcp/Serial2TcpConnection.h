@@ -25,6 +25,8 @@ public:
     void close();
 
     bool isAuthenticated() const;
+    bool isConnected() const;
+
     // void setClient(AsyncClient *client);
     AsyncClient *getClient() const;
     Buffer &getTxBuffer();

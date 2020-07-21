@@ -219,7 +219,7 @@ String String::substring(size_t from) const {
 }
 
 String String::substring(size_t from, size_t to) const {
-    return String(substr(from, to).c_str());
+    return String(substr(from, to- from).c_str());
 }
 
 long String::toInt() const {

@@ -19,9 +19,11 @@
 #include <debug_helper_disable.h>
 #endif
 
-void DimmerModuleForm::createConfigureForm(AsyncWebServerRequest *request, Form &form)
+void DimmerModuleForm::_createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request)
 {
-    _debug_println();
+   if (!isCreateFormCallbackType(type)) {
+        return;
+    }
 
     auto isInvalid = !config._H_GET(Config().dimmer).config_valid;
 
@@ -121,15 +123,4 @@ void DimmerModuleForm::createConfigureForm(AsyncWebServerRequest *request, Form 
 #endif
 
     form.finalize();
-
-    PrintHtmlEntitiesString code;
-    MQTTComponent::MQTTAutoDiscoveryPtr discovery;
-    uint8_t num = 0;
-    while ((discovery = nextAutoDiscovery(MQTTAutoDiscovery::FormatType::YAML, num++)) != nullptr) {
-        const auto &payload = discovery->getPayload();
-        code.write((const uint8_t *)payload.c_str(), payload.length());
-        delete discovery;
-    };
-
-    reinterpret_cast<SettingsForm &>(form).getTokens().push_back(std::make_pair<String, String>(F("HASS_YAML"), code.c_str()));
 }

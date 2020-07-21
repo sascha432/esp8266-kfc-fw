@@ -18,9 +18,6 @@
 #endif
 
 Serial2TcpBase *Serial2TcpBase::_instance = nullptr;
-#if DEBUG
-bool Serial2TcpBase::_debugOutput = false;
-#endif
 
 Serial2TcpBase::Serial2TcpBase(Stream &serial, const Serial2TCP::Serial2Tcp_t &config) : _serial(serial), _config(config)
 {
@@ -215,7 +212,7 @@ void Serial2TcpBase::_processData(Serial2TcpConnection *conn, const char *data, 
                         DEBUGV_NVT("NVT_AYT\n");
                         buffer.clear();
                         PrintString str;
-                        str.printf_P(PSTR("KFCFW %s\n"), KFCFWConfiguration::getShortFirmwareVersion().c_str());
+                        str.printf_P(PSTR("KFCFW %s\n"), KFCFWConfiguration::getShortFirmwareVersion_P());
                         if (client) {
                             client->write(str.c_str(), str.length());
                         }

@@ -19,7 +19,27 @@
 
 static Serial2TcpPlugin plugin;
 
-Serial2TcpPlugin::Serial2TcpPlugin()
+PROGMEM_DEFINE_PLUGIN_OPTIONS(
+    Serial2TcpPlugin,
+    "serial2tcp",       // name
+    "Serial2TCP",       // friendly name
+    "",                 // web_templates
+    "serial2tcp",       // config_forms
+    "network",          // reconfigure_dependencies
+    PluginComponent::PriorityType::SERIAL2TCP,
+    PluginComponent::RTCMemoryId::NONE,
+    static_cast<uint8_t>(PluginComponent::MenuType::AUTO),
+    false,              // allow_safe_mode
+    false,              // setup_after_deep_sleep
+    true,               // has_get_status
+    true,               // has_config_forms
+    false,              // has_web_ui
+    false,              // has_web_templates
+    true,               // has_at_mode
+    0                   // __reserved
+);
+
+Serial2TcpPlugin::Serial2TcpPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(Serial2TcpPlugin))
 {
     REGISTER_PLUGIN(this, "Serial2TcpPlugin");
 }
@@ -35,7 +55,7 @@ void Serial2TcpPlugin::setup(SetupModeType mode)
     }
 }
 
-void Serial2TcpPlugin::reconfigure(PGM_P source)
+void Serial2TcpPlugin::reconfigure(const String &source)
 {
     setup(SetupModeType::DEFAULT);
 }

@@ -25,29 +25,14 @@ public:
 
 public:
     Serial2TcpPlugin();
-
-    virtual PGM_P getName() const {
-        return PSTR("serial2tcp");
-    }
-    virtual const __FlashStringHelper *getFriendlyName() const {
-        return F("Serial2TCP");
-    }
-    virtual PriorityType getSetupPriority() const override {
-        return PriorityType::SERIAL2TCP;
-    }
-    virtual OptionsType getOptions() const override {
-        return EnumHelper::Bitset::all(OptionsType::HAS_STATUS, OptionsType::HAS_AT_MODE, OptionsType::HAS_CONFIG_FORM);
-    }
-
     virtual void setup(SetupModeType mode) override;
-    virtual void reconfigure(PGM_P source) override;
+    virtual void reconfigure(const String &source) override;
     virtual void shutdown() override;
-
     virtual void getStatus(Print &output) override;
-    virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
+    virtual void createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request) override;
 
 #if AT_MODE_SUPPORTED
-    virtual void atModeHelpGenerator();
-    virtual bool atModeHandler(AtModeArgs &args);
+    virtual void atModeHelpGenerator() override;
+    virtual bool atModeHandler(AtModeArgs &args) override;
 #endif
 };

@@ -113,48 +113,6 @@ void AlarmPlugin::onMessage(MQTTClient *client, char *topic, char *payload, size
     }
 }
 
-static uint8_t form_get_alarm_num(const String &varName)
-{
-#if IOT_ALARM_PLUGIN_MAX_ALERTS <= 10
-    return (varName.charAt(1) - '0');
-#else
-    return (uint8_t)atoi(varName.c_str() + 1);
-#endif
-}
-
-static bool form_enabled_callback(bool value, FormField &field, bool store)
-{
-    if (store) {
-        auto alarmNum = form_get_alarm_num(field.getName());
-        // _debug_printf_P(PSTR("name=%s alarm=%u store=%u value=%u\n"), field.getName().c_str(), alarmNum, store, value);
-        auto &cfg = AlarmPlugin::Alarm::getWriteableConfig();
-        cfg.alarms[alarmNum].is_enabled = value;
-    }
-    return false;
-}
-
-static bool form_weekday_callback(uint8_t value, FormField &field, bool store)
-{
-    if (store) {
-        auto alarmNum = form_get_alarm_num(field.getName());
-        // _debug_printf_P(PSTR("name=%s alarm=%u store=%u value=%u\n"), field.getName().c_str(), alarmNum, store, value);
-        auto &cfg = AlarmPlugin::Alarm::getWriteableConfig();
-        cfg.alarms[alarmNum].time.week_day.week_days = value;
-    }
-    return false;
-}
-
-static bool form_duration_callback(uint16_t value, FormField &field, bool store)
-{
-    if (store) {
-        auto alarmNum = form_get_alarm_num(field.getName());
-        // _debug_printf_P(PSTR("name=%s alarm=%u store=%u value=%u\n"), field.getName().c_str(), alarmNum, store, value);
-        auto &cfg = AlarmPlugin::Alarm::getWriteableConfig();
-        cfg.alarms[alarmNum].max_duration = value;
-    }
-    return false;
-}
-
 void AlarmPlugin::getStatus(Print &output)
 {
     output.printf_P(PSTR("%u alarm(s) set"), _alarms.size());
@@ -168,9 +126,24 @@ void AlarmPlugin::getStatus(Print &output)
     }
 }
 
+#define FORM_CREATE_CALLBACK(name, field_name, type) \
+    static bool form_##name##_callback(type value, FormField &field, bool store) { \
+        if (store) { \
+            AlarmPlugin::Alarm::getWriteableConfig().alarms[atoi(field.getName().c_str() + 1)].field_name = value; \
+        } \
+        return false; \
+    }
+
+FORM_CREATE_CALLBACK(hour, time.hour, uint8_t);
+FORM_CREATE_CALLBACK(minute, time.minute, uint8_t);
+FORM_CREATE_CALLBACK(duration, max_duration, uint16_t);
+FORM_CREATE_CALLBACK(weekday, time.week_day.week_days, uint8_t);
+FORM_CREATE_CALLBACK(enabled, is_enabled, bool);
+FORM_CREATE_CALLBACK(mode, mode, uint8_t);
+
 void AlarmPlugin::createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request)
 {
-    _debug_printf_P(PSTR("type=%u name=%s foprm=%p request=%p\n"), type, formName.c_str(), &form, request);
+    _debug_printf_P(PSTR("type=%u name=%s form=%p request=%p\n"), type, formName.c_str(), &form, request);
     if (type == FormCallbackType::SAVE) {
         auto &cfg = Alarm::getWriteableConfig();
         auto now = time(nullptr) + 30;
@@ -202,11 +175,10 @@ void AlarmPlugin::createConfigureForm(FormCallbackType type, const String &formN
 
             form.add<bool>(prefix + String('e'), alarm.is_enabled, form_enabled_callback);
 
-            // TODO check packed struct cannot be accessed as ref/by ptr
-            form.add<uint8_t>(prefix + String('h'), &alarm.time.hour);
-            form.add<uint8_t>(prefix + String('m'), &alarm.time.minute);
+            form.add<uint8_t>(prefix + String('h'), alarm.time.hour, form_hour_callback);
+            form.add<uint8_t>(prefix + String('m'), alarm.time.minute, form_minute_callback);
 #if IOT_ALARM_PLUGIN_HAS_BUZZER && IOT_ALARM_PLUGIN_HAS_SILENT
-            form.add<uint8_t>(prefix + String('t'), &alarm.mode);
+            form.add<uint8_t>(prefix + String('t'), alarm.mode, form_mode_callback);
 #else
             alarm.mode_type = Alarm::AlarmModeType::BOTH;
 #endif

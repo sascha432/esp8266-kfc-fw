@@ -88,29 +88,44 @@ $(function() {
             pop_error($.urlParam('_type', true) || 'danger', $.urlParam('_title', true) || 'ERROR!', message, null, true);
         }
     } catch(e) {
-        console.log(e);
+        dbg_console.error(e);
     }
 
     $('.form-dependency-group').each(function() {
-        var dep = JSON.parse($(this).data('action').replace(/'/g, '"'));
+        // i: '#input', 't': '#target', 's': { '#input_value': 'code to execute', 'm': 'code to execute if value is not found in s', 'e': 'code to always execute before' }
+        // code: $I input, $T target, $V value
+        //
+        // #group-div-class is the target, #my_input_field: value 0 and 1 hide the div, 2 shows it
+        // auto &group = form.addDivGroup(F("group-div-class"), F("{'i':'#my_input_field','s':{'0':'$T.hide()','1':'$T.hide()','2':'$T.show()'}},'m':'alert(\\'Invalid value: \\'+$V)'"));
+        var dep;
+        try {
+            dep = JSON.parse($(this).data('action').replace(/'/g, '"'));
+        } catch(e) {
+            dbg_console.error(e)
+            return;
+        }
         var states = dep.s;
+        var miss = dep.m ? dep.m : '';
+        var always_execute = dep.e ? dep.e : '';
         var $I = $(dep.i);
         var $T = dep.t ? $(dep.t) : $(this);
-        var func = function() {
+        $I.on('change', function() {
+            var $V = $I.val();
+            var code = miss;
+            var vKey = 'NO KEY FOUND';
+            $.each(states, function(key, val) {
+                if ($V == key) {
+                    code = val;
+                    vKey = key;
+                }
+            });
             try {
-                var input_val = $I.val();
-                var code = '';
-                $.each(states, function(key, val) {
-                    if (input_val == key) {
-                        code = val;
-                    }
-                });
-                eval(code);
+                code_x = always_execute + ';;;' + code;
+                eval(code_x);
             } catch(e) {
+                dbg_console.debug(e, {'value': $V, 'key': vKey, 'states': states, 'code': code_x});
             }
-        };
-        $I.on('change', func);
-        func();
+        }).trigger('change');
     });
 
     // all forms
@@ -138,7 +153,6 @@ $(function() {
 
     $.visible_password_options = $.extend({
         disabled: false,
-        always_visible: false,
         protected: 'auto',
         icon_protected: 'oi-eye',
         icon_unprotected: 'oi-shield',
@@ -148,8 +162,11 @@ $(function() {
 
         var options = $.visible_password_options;
         var $wrappedElement = $(this).wrap('<div class="input-group visible-password-group"></div>');
+        var $button;
+        var $span;
+        var auto_protected_state;
 
-        $.each( options, function( key, value ) {
+        $.each(options, function(key, value) {
             var val = $wrappedElement.data(key.replace('_', '-'));
             if (val !== undefined) {
                 options[key] = val;
@@ -160,55 +177,43 @@ $(function() {
             return;
         }
 
-        var $button, $span;
-        function is_password() {
-            return $wrappedElement.attr('type') == 'password';
-        }
-        function is_protected() {
-            return $button.data('protected') != '0';
+        function is_true(value) {
+            return value == 'true' || value == '1' || value == true || value == 1;
         }
         function set_type(type) {
-            $wrappedElement.attr('type', type);
+            $wrappedElement.attr('type', type ? 'password' : 'text');
         }
         function update_icon() {
-            if ((!options.always_visible && is_protected()) || (options.always_visible && is_password())) {
+            if (auto_protected_state) {
+                set_type(true);
                 $span.removeClass(options.icon_unprotected).addClass(options.icon_protected); // protected
             } else {
                 $span.addClass(options.icon_unprotected).removeClass(options.icon_protected); // visible/unprotected
             }
         }
 
-        var $newElement = $('<div class="input-group-append"><button class="btn btn-default btn-visible-password" type="button" data-protected="' + (is_password() || options.protected === true || (options.always_visible && options.protected === 'auto') ? '1' : '0') + '"><span class="oi"></span></button>');
+        auto_protected_state = is_true(options.protected) || ($wrappedElement.attr('type') == 'password');
+        var $newElement = $('<div class="input-group-append"><button class="btn btn-default btn-visible-password" type="button"><span class="oi"></span></button>');
         $button = $newElement.find('button');
         $span = $button.find('span');
-        $wrappedElement
-            .attr('autocomplete', 'new-password')
-            .attr('spellcheck', 'false')
-            .after($newElement)
-
-        if (!options.always_visible || options.protected === true || (options.always_visible && options.protected === 'auto')) {
-            set_type('password');
+        if ($wrappedElement.attr('autocomplete') == '') {
+            $wrappedElement.attr('autocomplete', 'new-password')
         }
+        $wrappedElement.attr('spellcheck', 'false').after($newElement)
         update_icon();
 
         $button.on('click', function(e) {
             e.preventDefault();
-            $button.data('protected', is_protected() ? '0' : '1');
-            if (options.always_visible) {
-                set_type(is_protected() ? 'password' : 'text');
-            }
+            auto_protected_state = !auto_protected_state;
             update_icon();
         });
-        if (!options.always_visible) {
-            $wrappedElement.on('focus', function() {
-                if (!is_protected()) {
-                    set_type('text');
-                }
-            })
-            .on('blur', function() {
-                set_type('password');
-            });
-        }
+        $wrappedElement.on('focus', function() {
+            if (!auto_protected_state) {
+                set_type(false);
+            }
+        }).on('blur', function() {
+            set_type(true);
+        });
 
     });
 

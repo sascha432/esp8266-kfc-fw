@@ -365,6 +365,15 @@ typedef struct {
         return false; \
     }
 
+#define _H_STRUCT_VALUE_TYPE(name, field, type, ...) \
+    config._H_GET(name).field, [__VA_ARGS__](const type &value, FormField &, bool store) { \
+        if (store) { \
+            auto &data = config._H_W_GET(name); \
+            data.field = value; \
+        } \
+        return false; \
+    }
+
 #define _H_W_STRUCT_VALUE(name, field, ...) \
     name.field, [&name, ##__VA_ARGS__](const decltype(name.field) &value, FormField &, bool store) { \
         if (store) { \
@@ -373,11 +382,10 @@ typedef struct {
         return false; \
     }
 
-#define _H_STRUCT_VALUE_TYPE(name, field, type, ...) \
-    config._H_GET(name).field, [__VA_ARGS__](const type &value, FormField &, bool store) { \
+#define _H_W_STRUCT_VALUE_TYPE(name, field, type, ...) \
+    name.field, [&name, ##__VA_ARGS__](const type &value, FormField &, bool store) { \
         if (store) { \
-            auto &data = config._H_W_GET(name); \
-            data.field = value; \
+            name.field = value; \
         } \
         return false; \
     }

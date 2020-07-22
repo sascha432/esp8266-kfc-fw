@@ -135,14 +135,15 @@ void FormUI::html(PrintInterface &output)
                 output.printf_P(PSTR("<input type=\"text\" class=\"form-control\" name=\"%s\" id=\"%s\" value=\"%s\"%s>" FORMUI_CRLF), name, name, _parent->getValue().c_str(), _attributes.c_str());
                 break;
             case PASSWORD:
-                output.printf_P(PSTR("<input type=\"password\" class=\"form-control visible-password\" name=\"%s\" id=\"%s\" spellcheck=\"off\"% data-always-visible=\"false\" data-protected=\"true\"s>" FORMUI_CRLF), name, name, _attributes.c_str());
+                output.printf_P(PSTR("<input type=\"password\" class=\"form-control visible-password\" name=\"%s\" id=\"%s\" autocomplete=\"current-password\" spellcheck=\"false\"%s>" FORMUI_CRLF), name, name, _attributes.c_str());
                 break;
             case NEW_PASSWORD:
-                output.printf_P(PSTR("<input type=\"password\" class=\"form-control visible-password\" name=\"%s\" id=\"%s\" autocomplete=\"new-password\" data-always-visible=\"false\" data-protected=\"true\"%s>" FORMUI_CRLF), name, name, _attributes.c_str());
+                output.printf_P(PSTR("<input type=\"password\" class=\"form-control visible-password\" name=\"%s\" id=\"%s\" autocomplete=\"new-password\" spellcheck=\"false\"%s>" FORMUI_CRLF), name, name, _attributes.c_str());
                 break;
-            case GROUP_START:
-            case GROUP_END:
-            case HIDDEN:
+            default:
+            // case GROUP_START:
+            // case GROUP_END:
+            // case HIDDEN:
                 break;
             }
 

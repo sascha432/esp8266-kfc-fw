@@ -23,10 +23,15 @@ FormUI *FormUI::setLabel(const String &label, bool raw)
     return this;
 }
 
-FormUI *FormUI::setBoolItems(const String &yes, const String &no)
+FormUI *FormUI::setBoolItems()
 {
-    addItems(String('0'), no);
-    addItems(String('1'), yes);
+    return setBoolItems(FSPGM(Enabled), FSPGM(Disabled));
+}
+
+FormUI *FormUI::setBoolItems(const String &enabled, const String &disabled)
+{
+    addItems(String('0'), disabled);
+    addItems(String('1'), enabled);
     return this;
 }
 
@@ -82,60 +87,72 @@ FormUI *FormUI::setReadOnly()
 
 void FormUI::html(PrintInterface &output)
 {
-    if (_type == GROUP_START) {
-        FormGroup &group = reinterpret_cast<FormGroup &>(*_parent);
-        auto id = _parent->getName().c_str();
-        output.printf_P(PSTR("<div class=\"form-group\"><button class=\"btn btn-secondary btn-block\""));
-        output.printf_P(PSTR(" type=\"button\" data-toggle=\"collapse\" data-target=\"#%s\" aria-expanded=\"false\" aria-controls=\"%s\">"), id, id);
-        output.printf_P(PSTR("%s</button></div><div class=\"collapse%s\" id=\"%s\"><div class=\"card card-body mb-3\">" FORMUI_CRLF), _label.c_str(), group.isExpanded() ? F(".show") : F(""), id);
-    }
-    else if (_type == GROUP_END) {
-        output.printf_P(PSTR("</div></div>" FORMUI_CRLF));
-    }
-    else if (_type == HIDDEN) {
-        // TODO check html entities encoding
-        auto name = _parent->getName().c_str();
-        output.printf_P(PSTR("<input type=\"hidden\" name=\"%s\" id=\"%s\" value=\"%s\"%s>" FORMUI_CRLF), name, name, _parent->getValue().c_str(), _attributes.c_str());
-    }
-    else {
-
-        // TODO check html entities encoding
-        auto name = _parent->getName().c_str();
-        output.printf_P(PSTR("<div class=\"form-group\"><label for=\"%s\">%s</label>" FORMUI_CRLF), name, _label.c_str());
-
-        if (_suffix.length()) {
-            output.printf_P(PSTR("<div class=\"input-group\">" FORMUI_CRLF));
-        }
-
-        switch (_type) {
-        case SELECT:
-            output.printf_P(PSTR("<select class=\"form-control\" name=\"%s\" id=\"%s\"%s>" FORMUI_CRLF), name, name, _attributes.c_str());
-            for (auto &item : _items) {
-                PGM_P selected = _compareValue(item.first) ? PSTR(" selected") : PSTR("");
-                output.printf_P(PSTR("<option value=\"%s\"%s>%s</option>" FORMUI_CRLF), item.first.c_str(), selected, item.second.c_str());
+    switch(_type) {
+        case GROUP_START_DIV: {
+            if (_label.length()) {
+                output.printf_P(PSTR("<div id=\"%s\" class=\"form-dependency-group\" data-action=\"%s\">" FORMUI_CRLF), _parent->getName().c_str(), _label.c_str());
+            } else {
+                output.printf_P(PSTR("<div id=\"%s\">" FORMUI_CRLF), _parent->getName().c_str());
             }
-            output.printf_P(PSTR("</select>" FORMUI_CRLF));
-            break;
-        case TEXT:
-            output.printf_P(PSTR("<input type=\"text\" class=\"form-control\" name=\"%s\" id=\"%s\" value=\"%s\"%s>" FORMUI_CRLF), name, name, _parent->getValue().c_str(), _attributes.c_str());
-            break;
-        case PASSWORD:
-            output.printf_P(PSTR("<input type=\"password\" class=\"form-control\" name=\"%s\" id=\"%s\" spellcheck=\"off\"%s>" FORMUI_CRLF), name, name, _attributes.c_str());
-            break;
-        case NEW_PASSWORD:
-            output.printf_P(PSTR("<input type=\"password\" class=\"form-control\" name=\"%s\" id=\"%s\" autocomplete=\"new-password\" data-always-visible=\"false\" data-protected=\"true\"%s>" FORMUI_CRLF), name, name, _attributes.c_str());
-            break;
-        case GROUP_START:
-        case GROUP_END:
-        case HIDDEN:
-            break;
-        }
+        } break;
+        case GROUP_END_DIV: {
+            output.printf_P(PSTR("</div>" FORMUI_CRLF));
+        } break;
+        case GROUP_START: {
+            FormGroup &group = reinterpret_cast<FormGroup &>(*_parent);
+            auto id = _parent->getName().c_str();
+            output.printf_P(PSTR("<div class=\"form-group\"><button class=\"btn btn-secondary btn-block\""));
+            output.printf_P(PSTR(" type=\"button\" data-toggle=\"collapse\" data-target=\"#%s\" aria-expanded=\"false\" aria-controls=\"%s\">"), id, id);
+            output.printf_P(PSTR("%s</button></div><div class=\"collapse%s\" id=\"%s\"><div class=\"card card-body mb-3\">" FORMUI_CRLF), _label.c_str(), group.isExpanded() ? F(".show") : F(""), id);
+        } break;
+        case GROUP_END: {
+            output.printf_P(PSTR("</div></div>" FORMUI_CRLF));
+        } break;
+        case HIDDEN: {
+            // TODO check html entities encoding
+            auto name = _parent->getName().c_str();
+            output.printf_P(PSTR("<input type=\"hidden\" name=\"%s\" id=\"%s\" value=\"%s\"%s>" FORMUI_CRLF), name, name, _parent->getValue().c_str(), _attributes.c_str());
+        } break;
+        default: {
+            // TODO check html entities encoding
+            auto name = _parent->getName().c_str();
+            output.printf_P(PSTR("<div class=\"form-group\"><label for=\"%s\">%s</label>" FORMUI_CRLF), name, _label.c_str());
 
-        if (_suffix.length()) {
-            output.printf_P(PSTR("<div class=\"input-group-append\"><span class=\"input-group-text\">%s</span></div></div>" FORMUI_CRLF), _suffix.c_str());
-        }
+            if (_suffix.length()) {
+                output.printf_P(PSTR("<div class=\"input-group\">" FORMUI_CRLF));
+            }
 
-        output.printf_P(PSTR("</div>" FORMUI_CRLF));
+            switch (_type) {
+            case SELECT:
+                output.printf_P(PSTR("<select class=\"form-control\" name=\"%s\" id=\"%s\"%s>" FORMUI_CRLF), name, name, _attributes.c_str());
+                for (auto &item : _items) {
+                    PGM_P selected = _compareValue(item.first) ? PSTR(" selected") : PSTR("");
+                    output.printf_P(PSTR("<option value=\"%s\"%s>%s</option>" FORMUI_CRLF), item.first.c_str(), selected, item.second.c_str());
+                }
+                output.printf_P(PSTR("</select>" FORMUI_CRLF));
+                break;
+            case TEXT:
+                output.printf_P(PSTR("<input type=\"text\" class=\"form-control\" name=\"%s\" id=\"%s\" value=\"%s\"%s>" FORMUI_CRLF), name, name, _parent->getValue().c_str(), _attributes.c_str());
+                break;
+            case PASSWORD:
+                output.printf_P(PSTR("<input type=\"password\" class=\"form-control visible-password\" name=\"%s\" id=\"%s\" spellcheck=\"off\"% data-always-visible=\"false\" data-protected=\"true\"s>" FORMUI_CRLF), name, name, _attributes.c_str());
+                break;
+            case NEW_PASSWORD:
+                output.printf_P(PSTR("<input type=\"password\" class=\"form-control visible-password\" name=\"%s\" id=\"%s\" autocomplete=\"new-password\" data-always-visible=\"false\" data-protected=\"true\"%s>" FORMUI_CRLF), name, name, _attributes.c_str());
+                break;
+            case GROUP_START:
+            case GROUP_END:
+            case HIDDEN:
+                break;
+            }
+
+            if (_suffix.length()) {
+                output.printf_P(PSTR("<div class=\"input-group-append\"><span class=\"input-group-text\">%s</span></div></div>" FORMUI_CRLF), _suffix.c_str());
+            }
+
+            output.printf_P(PSTR("</div>" FORMUI_CRLF));
+
+        } break;
     }
 }
 

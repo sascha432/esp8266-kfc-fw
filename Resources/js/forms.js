@@ -91,6 +91,28 @@ $(function() {
         console.log(e);
     }
 
+    $('.form-dependency-group').each(function() {
+        var dep = JSON.parse($(this).data('action').replace(/'/g, '"'));
+        var states = dep.s;
+        var $I = $(dep.i);
+        var $T = dep.t ? $(dep.t) : $(this);
+        var func = function() {
+            try {
+                var input_val = $I.val();
+                var code = '';
+                $.each(states, function(key, val) {
+                    if (input_val == key) {
+                        code = val;
+                    }
+                });
+                eval(code);
+            } catch(e) {
+            }
+        };
+        $I.on('change', func);
+        func();
+    });
+
     // all forms
     $('.setting-requires-restart').change(function(e) {
         var $this = $(this);

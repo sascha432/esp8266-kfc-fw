@@ -124,11 +124,11 @@
         "default": "pure virtual call: %s\\n"
     },
     "yes": {
-        "use_counter": 8,
+        "use_counter": 6,
         "default": "yes"
     },
     "no": {
-        "use_counter": 7,
+        "use_counter": 5,
         "default": "no"
     },
     "comma_": {
@@ -520,7 +520,7 @@
         "default": "Anonymous"
     },
     "Disabled": {
-        "use_counter": 5,
+        "use_counter": 7,
         "default": "Disabled"
     },
     "enabled": {
@@ -1056,7 +1056,7 @@
         "default": "update_fw.html"
     },
     "Invalid_port": {
-        "use_counter": 3,
+        "use_counter": 4,
         "default": "Invalid port"
     },
     "_login_html": {
@@ -1192,7 +1192,11 @@
         "auto": "Alarm"
     },
     "defaultPassword": {
-        "use_counter": 2,
+        "use_counter": 6,
         "default": "12345678"
+    },
+    "Enabled": {
+        "use_counter": 2,
+        "default": "Enabled"
     }
 }

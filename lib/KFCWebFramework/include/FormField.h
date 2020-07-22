@@ -103,7 +103,8 @@ public:
     }
     virtual void copyValue() override {
     }
-    void end();
+    void end(FormUI::TypeEnum_t type = FormUI::TypeEnum_t::GROUP_END);
+    void endDiv();
 
     bool isExpanded() const {
         return _expanded;

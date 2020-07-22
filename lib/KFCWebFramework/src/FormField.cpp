@@ -138,7 +138,12 @@ const FormField::ValidatorsVector &FormField::getValidators() const
     return _validators;
 }
 
-void FormGroup::end()
+void FormGroup::end(FormUI::TypeEnum_t type)
 {
-    getForm().addGroup(getName(), String(), false, FormUI::TypeEnum_t::GROUP_END);
+    getForm().addGroup(getName(), String(), false, type);
+}
+
+void FormGroup::endDiv()
+{
+    end(FormUI::TypeEnum_t::GROUP_END_DIV);
 }

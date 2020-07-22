@@ -33,6 +33,9 @@ public:
     void setInvalidMissing(bool invalidMissing);
 
     FormGroup &addGroup(const String &name, const String &label, bool expanded, FormUI::TypeEnum_t type = FormUI::TypeEnum_t::GROUP_START);
+    FormGroup &addDivGroup(const String &id, const String &dependencies = String()) {
+        return addGroup(id, dependencies, false, FormUI::TypeEnum_t::GROUP_START_DIV);
+    }
 
     int add(FormField *field);
     FormField *_add(FormField *field);

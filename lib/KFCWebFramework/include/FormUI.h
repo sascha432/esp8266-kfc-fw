@@ -7,6 +7,7 @@
 #include <Arduino_compat.h>
 #include <vector>
 #include <PrintArgs.h>
+#include "../src/generated/FlashStringGeneratorAuto.h"
 
 #if _MSC_VER
 #define FORMUI_CRLF "\n"
@@ -28,6 +29,8 @@ public:
 		NEW_PASSWORD,
 		GROUP_START,
 		GROUP_END,
+		GROUP_START_DIV,
+		GROUP_END_DIV,
 		HIDDEN,
 	} TypeEnum_t;
 
@@ -39,7 +42,8 @@ public:
 
 	FormUI *setLabel(const String &label, bool raw = true); // raw=false automatically adds ":" if the label doesn't have a trailing colon and isn't empty
 
-	FormUI *setBoolItems(const String &yes, const String &no);
+	FormUI *setBoolItems();
+	FormUI *setBoolItems(const String &enabled, const String &disabled);
 	FormUI *addItems(const String &value, const String &label);
 	FormUI *addItems(const ItemsList &items);
 	FormUI *setSuffix(const String &suffix);

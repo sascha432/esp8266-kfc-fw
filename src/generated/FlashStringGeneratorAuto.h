@@ -35,7 +35,7 @@ PROGMEM_STRING_DECL(mime_application_json);
 // src/plugins/file_manager/file_manager.cpp:421
 // src/plugins/home_assistant/home_assistant.cpp:768
 PROGMEM_STRING_DECL(OK);
-// include/web_socket.h:149
+// include/web_socket.h:151
 PROGMEM_STRING_DECL(Device_is_rebooting);
 // src/at_mode.cpp:1058
 // src/at_mode.cpp:1084
@@ -58,34 +58,34 @@ PROGMEM_STRING_DECL(off);
 // src/plugins.cpp:80
 // src/plugins.cpp:81
 // src/web_server.cpp:875
-// src/plugins/serial2tcp/serial2tcp.cpp:119
-// src/plugins/serial2tcp/serial2tcp.cpp:123
 PROGMEM_STRING_DECL(yes);
 // src/at_mode.cpp:1087
 // src/plugins.cpp:72
 // src/plugins.cpp:79
 // src/plugins.cpp:80
 // src/plugins.cpp:81
-// src/plugins/serial2tcp/serial2tcp.cpp:119
-// src/plugins/serial2tcp/serial2tcp.cpp:123
 PROGMEM_STRING_DECL(no);
-// src/kfc_firmware.cpp:243
-// src/kfc_fw_config.cpp:575
+// src/kfc_firmware.cpp:246
+// src/kfc_fw_config.cpp:548
+// src/kfc_fw_config.cpp:549
+// src/kfc_fw_config.cpp:595
+// src/kfc_fw_config.cpp:598
+// src/kfc_fw_config.cpp:600
 PROGMEM_STRING_DECL(defaultPassword);
-// src/kfc_fw_config.cpp:581
+// src/kfc_fw_config.cpp:594
 // src/kfc_fw_config_classes.cpp:79
 PROGMEM_STRING_DECL(KFC_Firmware);
-// src/kfc_fw_config.cpp:1285
-// src/kfc_fw_config.cpp:1286
+// src/kfc_fw_config.cpp:1298
+// src/kfc_fw_config.cpp:1299
 // src/templates.cpp:97
 PROGMEM_STRING_DECL(default_password_warning);
-// src/kfc_fw_config.cpp:1563
-// src/kfc_fw_config.cpp:1584
+// src/kfc_fw_config.cpp:1576
+// src/kfc_fw_config.cpp:1597
 // src/plugins/atomic_sun/atomic_sun_v2.cpp:692
 // src/plugins/switch/switch.cpp:139
 // src/plugins/weather_station/weather_station.cpp:110
 PROGMEM_STRING_DECL(title);
-// src/kfc_fw_config.cpp:1602
+// src/kfc_fw_config.cpp:1615
 // src/web_server.cpp:798
 // src/web_server.cpp:805
 PROGMEM_STRING_DECL(password);
@@ -252,8 +252,8 @@ PROGMEM_STRING_DECL(image_type);
 // src/plugins/dimmer_module/dimmer_module.cpp:470
 // src/plugins/file_manager/file_manager.cpp:466
 // src/plugins/home_assistant/home_assistant.h:57
-// src/plugins/http2serial/http2serial.cpp:278
-// src/plugins/mdns/mdns_sd.cpp:217
+// src/plugins/http2serial/http2serial.cpp:242
+// src/plugins/mdns/mdns_sd.cpp:216
 // src/plugins/remote/remote.h:177
 // src/plugins/weather_station/weather_station.h:86
 PROGMEM_STRING_DECL(http);
@@ -302,6 +302,7 @@ PROGMEM_STRING_DECL(https);
 PROGMEM_STRING_DECL(disabled);
 // src/web_server.cpp:1001
 // src/plugins/mqtt/mqtt_client.cpp:720
+// src/plugins/serial2tcp/serial2tcp.cpp:125
 // src/plugins/syslog/syslog_plugin.cpp:194
 PROGMEM_STRING_DECL(Invalid_port);
 // src/web_server.cpp:1158
@@ -512,12 +513,12 @@ PROGMEM_STRING_DECL(status__u);
 // src/plugins/home_assistant/home_assistant.cpp:760
 // lib/KFCOpenWeather/src/OpenWeatherForecastJsonReader.cpp:78
 PROGMEM_STRING_DECL(id);
-// src/plugins/mdns/mdns_sd.cpp:150
+// src/plugins/mdns/mdns_sd.cpp:149
+// src/plugins/mdns/mdns_sd.cpp:245
 // src/plugins/mdns/mdns_sd.cpp:246
 // src/plugins/mdns/mdns_sd.cpp:247
 // src/plugins/mdns/mdns_sd.cpp:248
-// src/plugins/mdns/mdns_sd.cpp:249
-// src/plugins/mdns/mdns_sd.cpp:258
+// src/plugins/mdns/mdns_sd.cpp:257
 PROGMEM_STRING_DECL(udp);
 // src/plugins/mqtt/mqtt_auto_discovery.cpp:54
 // src/plugins/weather_station/weather_station.cpp:164
@@ -526,6 +527,8 @@ PROGMEM_STRING_DECL(name);
 // src/plugins/ntp/ntp.cpp:282
 // src/plugins/ping_monitor/ping_monitor.cpp:421
 // src/plugins/serial2tcp/serial2tcp.cpp:86
+// src/plugins/serial2tcp/serial2tcp.cpp:127
+// src/plugins/serial2tcp/serial2tcp.cpp:133
 // src/plugins/syslog/syslog_plugin.cpp:166
 PROGMEM_STRING_DECL(Disabled);
 // src/plugins/remote/remote.cpp:110
@@ -540,6 +543,9 @@ PROGMEM_STRING_DECL(frequency);
 // src/plugins/sensor/Sensor_DimmerMetrics.cpp:51
 // src/plugins/sensor/Sensor_DimmerMetrics.cpp:91
 PROGMEM_STRING_DECL(Hz);
+// src/plugins/serial2tcp/serial2tcp.cpp:127
+// src/plugins/serial2tcp/serial2tcp.cpp:133
+PROGMEM_STRING_DECL(Enabled);
 // src/plugins/switch/switch.cpp:77
 // src/plugins/switch/switch.cpp:89
 PROGMEM_STRING_DECL(On);

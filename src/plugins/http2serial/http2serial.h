@@ -19,22 +19,14 @@ public:
     virtual ~Http2Serial();
 
     void broadcastOutputBuffer();
-
-    // inline void writeOutputBuffer(const String &buffer) {
-    //     writeOutputBuffer(buffer.c_str(), buffer.length());
-    // }
-    // inline void writeOutputBuffer(const char *buffer, size_t len) {
-    //     writeOutputBuffer((const uint8_t *)buffer, len);
-    // }
-    // void writeOutputBuffer(const uint8_t *buffer, size_t len);
-    void writeOutputBuffer(SerialHandler::Client &client);
+    void writeOutputBuffer(Stream &client);
 
     bool isTimeToSend();
     void resetOutputBufferTimer();
     void clearOutputBuffer();
 
     static void outputLoop();
-    static void onData(SerialHandler::Client &client);
+    static void onData(Stream &client);
     static Http2Serial *getInstance();
     static void createInstance();
     static void destroyInstance();
@@ -43,12 +35,6 @@ public:
 
 public:
     static AsyncWebSocket *getConsoleServer();
-    void setOutputBufferMaxSize(uint16_t size) {
-        _outputBufferMaxSize = size;
-    }
-    void setOutputBufferDelay(uint16_t delay) {
-        _outputBufferDelay = delay;
-    }
 
 private:
     void _outputLoop();
@@ -61,6 +47,25 @@ private:
     Buffer _outputBuffer;
     SerialHandler::Client &_client;
 
-    uint16_t _outputBufferMaxSize;
-    uint16_t _outputBufferDelay;
+    // The serial buffer delay is to increase the size of the web socket packets. The delay allows to
+    // collect more data in the buffer before it is sent to the client. There is a certain threshold
+    // where the small packets cause more lagg than having a delay
+    //
+    // (buffer size < kOutputBufferMinSize) OR (kOutputBufferFlushDelay not over) = wait
+    // buffer size >= kOutputBufferMaxSize = send immediately
+
+
+    // delay before sending the first message
+    static constexpr size_t kOutputBufferFlushDelay = HTTP2SERIAL_SERIAL_BUFFER_FLUSH_DELAY;
+    // max. size of the output buffer before sending a message without delay
+    static constexpr size_t kOutputBufferMaxSize = HTTP2SERIAL_SERIAL_BUFFER_MAX_LEN;
+    // min. size before sending a message and the delay is not over
+    static constexpr size_t kOutputBufferMinSize = HTTP2SERIAL_SERIAL_BUFFER_MIN_LEN;
+#if defined(ESP8266)
+    static constexpr size_t kMaxTcpBufferSize = TCP_SND_BUF;
+#else
+    static constexpr size_t kMaxTcpBufferSize = 1024;
+#endif
+
+    static_assert(kOutputBufferMaxSize < (kMaxTcpBufferSize - 128), "might not fit into the TCP buffers of the device");
 };

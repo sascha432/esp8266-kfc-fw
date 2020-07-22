@@ -218,16 +218,43 @@ void WsClient::invokeStartOrEndCallback(WsClient *wsClient, bool isStart)
     }
 }
 
+uint16_t WsClient::getQeueDelay()
+{
+    // calculate delay depending on the queue size
+    auto qCount = AsyncWebSocket::_getQueuedMessageCount();
+    auto qSize = AsyncWebSocket::_getQueuedMessageSize();
+    uint16_t qDelay = 1;
+    if (qCount > 10) {
+        qDelay = 50;
+    }
+    else if (qCount > 5) {
+        qDelay = 10;
+    }
+    else if (qCount > 3) {
+        qDelay = 5;
+    }
+    if (qSize > 8192) {
+        qDelay = std::max(qDelay, (uint16_t)50);
+    } else if (qSize > 4096) {
+        qDelay = std::max(qDelay, (uint16_t)10);
+    } else if (qSize > 1024) {
+        qDelay = std::max(qDelay, (uint16_t)5);
+    }
+    return qDelay;
+}
+
 void WsClient::broadcast(AsyncWebSocket *server, WsClient *sender, AsyncWebSocketMessageBuffer *buffer)
 {
     if (server == nullptr) {
         server = sender->getClient()->server();
     }
     // _debug_printf_P(PSTR("sender=%p, clients=%u, message=%s\n"), sender, server->getClients().length(), buffer->get());
+    auto qDelay = getQeueDelay();
     buffer->lock();
     for(auto socket: server->getClients()) {
         if (socket->status() == WS_CONNECTED && socket->_tempObject && socket->_tempObject != sender && reinterpret_cast<WsClient *>(socket->_tempObject)->isAuthenticated()) {
             socket->text(buffer);
+            delay(qDelay); // let the device work on its tcp buffers
         }
     }
     buffer->unlock();
@@ -260,6 +287,7 @@ void WsClient::safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, co
         if (client == socket && socket->status() == WS_CONNECTED && socket->_tempObject && reinterpret_cast<WsClient *>(socket->_tempObject)->isAuthenticated()) {
             _debug_printf_P(PSTR("server=%p client=%p message=%s\n"), server, client, message.c_str());
             client->text(message);
+            delay(getQeueDelay());
             return;
         }
     }

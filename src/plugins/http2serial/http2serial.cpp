@@ -28,10 +28,7 @@ Http2Serial *Http2Serial::_instance = nullptr;
 WsClientAsyncWebSocket *wsSerialConsole = nullptr;
 
 
-Http2Serial::Http2Serial() :
-    _client(serialHandler.addClient(onData, EnumHelper::Bitset::all(SerialHandler::EventType::READ, SerialHandler::EventType::WRITE))),
-    _outputBufferMaxSize(SERIAL_BUFFER_MAX_LEN),
-    _outputBufferDelay(SERIAL_BUFFER_FLUSH_DELAY)
+Http2Serial::Http2Serial() : _client(serialHandler.addClient(onData, SerialHandler::EventType::RW))
 {
     _locked = false;
 #if defined(HTTP2SERIAL_BAUD) && HTTP2SERIAL_BAUD != KFC_SERIAL_RATE
@@ -67,8 +64,6 @@ Http2Serial::~Http2Serial()
  */
 void Http2Serial::broadcastOutputBuffer()
 {
-    // os_printf("Http2Serial::broadcastOutputBuffer(%d)\n", _outputBuffer.length());
-
     if (_outputBuffer.length()) {
         WsClient::broadcast(wsSerialConsole, nullptr, _outputBuffer.getConstChar(), _outputBuffer.length());
         _outputBuffer.clear();
@@ -76,18 +71,18 @@ void Http2Serial::broadcastOutputBuffer()
     resetOutputBufferTimer();
 }
 
-void Http2Serial::writeOutputBuffer(SerialHandler::Client &client)
+void Http2Serial::writeOutputBuffer(Stream &client)
 {
     if (!_outputBufferEnabled) {
-        client.flush();
+        static_cast<SerialHandler::Client &>(client).flush();
         return;
     }
-    if (_outputBuffer.length() == 0) {
-        resetOutputBufferTimer(); // reset timer if it is empty
+    if (_outputBuffer.length() < kOutputBufferMinSize) {
+        resetOutputBufferTimer(); // reset timer
     }
 
     while(client.available()) {
-        if (_outputBuffer.length() < _outputBufferMaxSize) {
+        if (_outputBuffer.length() < kOutputBufferMaxSize) {
             _outputBuffer.write(client.read());
         }
         else {
@@ -95,50 +90,19 @@ void Http2Serial::writeOutputBuffer(SerialHandler::Client &client)
         }
     }
 
-    if (millis() > _outputBufferFlushDelay || !_outputBufferFlushDelay) {
+    if (kOutputBufferFlushDelay == 0 || ((_outputBuffer.length() >= kOutputBufferMinSize) && (millis() > _outputBufferFlushDelay))) {
         broadcastOutputBuffer();
     }
 }
 
-// void Http2Serial::writeOutputBuffer(const uint8_t *buffer, size_t len)
-// {
-//     if (!_outputBufferEnabled) {
-//         return;
-//     }
-//     if (_outputBuffer.length() == 0) {
-//         resetOutputBufferTimer(); // reset timer if it is empty
-//     }
-
-//     auto ptr = buffer;
-//     for(;;) {
-//         int space = _outputBufferMaxSize - _outputBuffer.length();
-//         if (space > 0) {
-//             if ((size_t)space >= len) {
-//                 space = len;
-//             }
-//             _outputBuffer.write(ptr, space);
-//             ptr += space;
-//             len -= space;
-//         }
-//         if (len == 0) {
-//             break;
-//         }
-//         broadcastOutputBuffer();
-//     }
-
-//     if (millis() > _outputBufferFlushDelay || !_outputBufferFlushDelay) {
-//         broadcastOutputBuffer();
-//     }
-// }
-
 bool Http2Serial::isTimeToSend()
 {
-    return (_outputBuffer.length() != 0) && (millis() > _outputBufferFlushDelay);
+    return (_outputBuffer.length() != 0) && (kOutputBufferFlushDelay == 0 || (millis() > _outputBufferFlushDelay));
 }
 
 void Http2Serial::resetOutputBufferTimer()
 {
-    _outputBufferFlushDelay = millis() + _outputBufferDelay;
+    _outputBufferFlushDelay = millis() + kOutputBufferFlushDelay;
 }
 
 void Http2Serial::clearOutputBuffer()
@@ -149,7 +113,7 @@ void Http2Serial::clearOutputBuffer()
 
 void Http2Serial::_outputLoop()
 {
-    if (isTimeToSend()) {
+    if (kOutputBufferFlushDelay == 0 || isTimeToSend()) {
         broadcastOutputBuffer();
     }
     // auto handler = getSerialHandler();
@@ -163,7 +127,7 @@ void Http2Serial::outputLoop()
     Http2Serial::_instance->_outputLoop();
 }
 
-void Http2Serial::onData(SerialHandler::Client &client)
+void Http2Serial::onData(Stream &client)
 {
     // Serial.printf_P(PSTR("Http2Serial::onData(%d, %p, %d): instance %p, locked %d\n"), type, buffer, len, Http2Serial::_instance, Http2Serial::_instance ? Http2Serial::_instance->_locked : -1);
     if (Http2Serial::_instance && !Http2Serial::_instance->_locked) {
@@ -290,15 +254,11 @@ void Http2SerialPlugin::shutdown()
 #include "at_mode.h"
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(H2SBD, "H2SBD", "<baud>", "Set serial port rate");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(H2SBUFSZ, "H2SBUFSZ", "<size=512>", "Set output buffer size");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(H2SBUFDLY, "H2SBUFDLY", "<delay=60>", "Set output buffer delay");
 
 void Http2SerialPlugin::atModeHelpGenerator()
 {
     auto name = getName_P();
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(H2SBD), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(H2SBUFSZ), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(H2SBUFDLY), name);
 }
 
 bool Http2SerialPlugin::atModeHandler(AtModeArgs &args)
@@ -310,28 +270,6 @@ bool Http2SerialPlugin::atModeHandler(AtModeArgs &args)
                 KFC_SAFE_MODE_SERIAL_PORT.end();
                 KFC_SAFE_MODE_SERIAL_PORT.begin(rate);
                 args.printf_P(PSTR("Set serial rate to %d"), (unsigned)rate);
-            }
-        }
-        return true;
-    }
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(H2SBUFSZ))) {
-        if (args.requireArgs(1, 1)) {
-            auto http2Serial = Http2Serial::getInstance();
-            if (http2Serial) {
-                uint32_t size = args.toIntMinMax(0, 128, 2048, SERIAL_BUFFER_MAX_LEN);
-                http2Serial->setOutputBufferMaxSize(size);
-                args.printf_P(PSTR("Set size to %u ms"), size);
-            }
-        }
-        return true;
-    }
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(H2SBUFDLY))) {
-        if (args.requireArgs(1, 1)) {
-            auto http2Serial = Http2Serial::getInstance();
-            if (http2Serial) {
-                uint32_t delay = args.toIntMinMax(0, 10, 500, SERIAL_BUFFER_FLUSH_DELAY);
-                http2Serial->setOutputBufferDelay(delay);
-                args.printf_P(PSTR("Set delay to %u ms"), delay);
             }
         }
         return true;

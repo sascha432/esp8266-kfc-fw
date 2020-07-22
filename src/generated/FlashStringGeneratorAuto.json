@@ -124,7 +124,7 @@
         "default": "pure virtual call: %s\\n"
     },
     "yes": {
-        "use_counter": 9,
+        "use_counter": 8,
         "default": "yes"
     },
     "no": {
@@ -148,11 +148,11 @@
         "default": " selected"
     },
     "server_crt": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "/server.crt"
     },
     "server_key": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "/server.key"
     },
     "webui_json_type": {
@@ -284,7 +284,7 @@
         "default": "events"
     },
     "http": {
-        "use_counter": 13,
+        "use_counter": 10,
         "default": "http"
     },
     "SID": {
@@ -848,7 +848,7 @@
         "default": "/webui/.listings"
     },
     "_html": {
-        "use_counter": 6,
+        "use_counter": 5,
         "default": ".html"
     },
     "Authorization": {
@@ -860,11 +860,11 @@
         "default": "Bearer "
     },
     "cfg": {
-        "use_counter": 4,
+        "use_counter": 0,
         "default": "cfg"
     },
     "wifi": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "wifi"
     },
     "safe_mode": {
@@ -872,7 +872,7 @@
         "default": "safe_mode"
     },
     "password": {
-        "use_counter": 4,
+        "use_counter": 3,
         "default": "password"
     },
     "status__u": {
@@ -900,7 +900,7 @@
         "default": "Home"
     },
     "index_html": {
-        "use_counter": 7,
+        "use_counter": 4,
         "default": "index.html"
     },
     "Status": {
@@ -908,15 +908,15 @@
         "default": "Status"
     },
     "status_html": {
-        "use_counter": 6,
+        "use_counter": 4,
         "default": "status.html"
     },
     "wifi_html": {
-        "use_counter": 5,
+        "use_counter": 2,
         "default": "wifi.html"
     },
     "network_html": {
-        "use_counter": 5,
+        "use_counter": 2,
         "default": "network.html"
     },
     "Change_Password": {
@@ -924,7 +924,7 @@
         "default": "Change Password"
     },
     "password_html": {
-        "use_counter": 4,
+        "use_counter": 2,
         "default": "password.html"
     },
     "reboot_html": {
@@ -948,7 +948,7 @@
         "default": "Device"
     },
     "device_html": {
-        "use_counter": 4,
+        "use_counter": 1,
         "default": "device.html"
     },
     "remote_html": {
@@ -964,7 +964,7 @@
         "default": "factory.html"
     },
     "crash_dump_file": {
-        "use_counter": 1,
+        "use_counter": 2,
         "default": "/.pvt/crash.%03x"
     },
     "username": {
@@ -972,7 +972,7 @@
         "default": "username"
     },
     "rebooting_html": {
-        "use_counter": 4,
+        "use_counter": 3,
         "default": "rebooting.html"
     },
     "Reboot_Device": {
@@ -988,7 +988,7 @@
         "default": "KFC Firmware"
     },
     "applying_html": {
-        "use_counter": 5,
+        "use_counter": 1,
         "default": "applying.html"
     },
     "hidden": {
@@ -1000,11 +1000,11 @@
         "default": "This fields value must be between %min% and %max% or 0"
     },
     "network": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "network"
     },
     "device": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "device"
     },
     "mime_image_icon": {
@@ -1120,7 +1120,7 @@
         "default": "id"
     },
     "mqtt": {
-        "use_counter": 6,
+        "use_counter": 5,
         "default": "mqtt"
     },
     "_set": {
@@ -1190,5 +1190,9 @@
     "Alarm": {
         "use_counter": 0,
         "auto": "Alarm"
+    },
+    "defaultPassword": {
+        "use_counter": 2,
+        "default": "12345678"
     }
 }

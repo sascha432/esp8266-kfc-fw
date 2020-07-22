@@ -162,14 +162,15 @@
 #define HTTP2SERIAL_SUPPORT                         0
 #endif
 
-// The serial buffer is to increase the size of the web socket packets. The delay allows to collect more in the buffer
-// before it is sent to the client. There is a certain threshold where the small packets cause more lagg than having a
-// delay, but that depends on different factors like wifi link, web browser...
-#if HTTP2SERIAL_SUPPORT
-// delay in milliseconds
-#define SERIAL_BUFFER_FLUSH_DELAY                   60
-// maximum size of output buffer
-#define SERIAL_BUFFER_MAX_LEN                       512
+// check http2serial.h for a description
+#ifndef HTTP2SERIAL_SERIAL_BUFFER_FLUSH_DELAY
+#define HTTP2SERIAL_SERIAL_BUFFER_FLUSH_DELAY       75
+#endif
+#ifndef HTTP2SERIAL_SERIAL_BUFFER_MAX_LEN
+#define HTTP2SERIAL_SERIAL_BUFFER_MAX_LEN           512
+#endif
+#ifndef HTTP2SERIAL_SERIAL_BUFFER_MIN_LEN
+#define HTTP2SERIAL_SERIAL_BUFFER_MIN_LEN           128
 #endif
 
 #ifndef KFC_SERIAL_PORT

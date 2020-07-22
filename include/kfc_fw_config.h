@@ -412,7 +412,11 @@ public:
     void setLastError(const String &error);
     const char *getLastError() const;
 
+    // restores defaults
     void restoreFactorySettings();
+    // enables AP mode and sets passwords to default
+    void recoveryMode();
+
     void customSettings();
     static const String getFirmwareVersion();
     static const String getShortFirmwareVersion();

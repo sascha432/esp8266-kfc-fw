@@ -137,7 +137,7 @@ void at_mode_setup();
 void at_mode_add_help(const ATModeCommandHelp_t *help, PGM_P pluginName);
 void serial_handle_event(String command);
 String at_mode_print_command_string(Stream &output, char separator);
-void at_mode_serial_input_handler(SerialHandler::Client &client);
+void at_mode_serial_input_handler(Stream &client);
 void at_mode_print_invalid_arguments(Stream &output, uint16_t num = 0, uint16_t min = ~0, uint16_t max = ~0);
 void at_mode_print_prefix(Stream &output, const __FlashStringHelper *command);
 void at_mode_print_prefix(Stream &output, const char *command);

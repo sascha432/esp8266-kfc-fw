@@ -109,6 +109,8 @@ protected:
     static void invokeStartOrEndCallback(WsClient *wsClient, bool isStart);
 
 private:
+    static uint16_t getQeueDelay();
+
     bool _authenticated;
     AsyncWebSocketClient *_client;
     static ClientCallbackVector_t _clientCallback;

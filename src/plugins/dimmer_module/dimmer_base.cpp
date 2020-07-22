@@ -40,7 +40,7 @@ void Dimmer_Base::_begin()
     _version = Version();
 
 #if IOT_DIMMER_MODULE_INTERFACE_UART
-    //_wire.onReadSerial(SerialHandler::Wrapper::pollSerial);
+    _wire.onReadSerial(SerialHandler::Wrapper::pollSerial);
     _client = &serialHandler.addClient(onData, SerialHandler::EventType::READ);
     #if AT_MODE_SUPPORTED
         // disable_at_mode(Serial);

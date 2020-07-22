@@ -21,7 +21,7 @@ public:
     virtual void begin();
     virtual void end();
 
-    virtual void _onSerialData(uint8_t type, const uint8_t *buffer, size_t len) override;
+    virtual void _onSerialData(Stream &client) override;
     virtual void _onData(AsyncClient *client, void *data, size_t len) override;
     // virtual size_t _serialWrite(Serial2TcpConnection *conn, const char *data, size_t len) override;
     virtual void _onConnect(AsyncClient *client) override;

@@ -20,6 +20,7 @@ public:
         CONNECTED           = 0x01,     // connect occurs after a successful connection has been established and an IP address has been assigned. It might occur again if a new IP gets assigned, even without disconnect before
         DISCONNECTED        = 0x02,     // disconnect can only occur after connect
         MODE_CHANGE         = 0x04,     // currently not supported
+        CONNECTION          = CONNECTED|DISCONNECTED,
         ANY                 = CONNECTED|DISCONNECTED|MODE_CHANGE,
         MAX
     } EventEnum_t;

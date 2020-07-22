@@ -5,7 +5,7 @@
 #include <SoftwareSerial.h>
 #include <LoopFunctions.h>
 #include <DumpBinary.h>
-#include "serial_handler.h"
+#include <serial_handler.h>
 #include "Serial2TcpBase.h"
 #include "Serial2TcpServer.h"
 #include "Serial2TcpClient.h"
@@ -19,7 +19,7 @@
 
 Serial2TcpBase *Serial2TcpBase::_instance = nullptr;
 
-Serial2TcpBase::Serial2TcpBase(Stream &serial, const Serial2TCP::Serial2Tcp_t &config) : _serial(serial), _config(config)
+Serial2TcpBase::Serial2TcpBase(Stream &serial, const Serial2TCP::Serial2Tcp_t &config) : _client(nullptr), _serial(serial), _config(config)
 {
 }
 
@@ -34,7 +34,9 @@ Serial2TcpBase::~Serial2TcpBase()
             break;
         default:
         case Serial2TCP::SerialPortType::SERIAL0:
-            SerialHandler::getInstance().removeHandler(onSerialData);
+            if (_client) {
+                serialHandler.removeClient(*_client);
+            }
             break;
     }
 }
@@ -80,6 +82,7 @@ Serial2TcpBase *Serial2TcpBase::createInstance(const Serial2TCP::Serial2Tcp_t &c
     }
 
     Stream *serialPort;
+    SerialHandler::Client *client = nullptr;
     switch(cfg.serial_port) {
         case Serial2TCP::SerialPortType::SOFTWARE: {
                 auto softwareSerial = new SoftwareSerial(cfg.rx_pin, cfg.tx_pin);
@@ -103,8 +106,7 @@ Serial2TcpBase *Serial2TcpBase::createInstance(const Serial2TCP::Serial2Tcp_t &c
                 Serial0.begin(cfg.baudrate);
             }
             DEBUGV("Serial baud=%u\n", cfg.baudrate);
-            SerialHandler::getInstance().addHandler(onSerialData, SerialHandler::ANY);
-            // SerialHandler::getInstance().addHandler(onSerialData, SerialHandler::RECEIVE|SerialHandler::TRANSMIT);
+            client = &serialHandler.addClient(onSerialData, SerialHandler::EventType::NONE);
             break;
     }
 
@@ -119,6 +121,7 @@ Serial2TcpBase *Serial2TcpBase::createInstance(const Serial2TCP::Serial2Tcp_t &c
         _instance = new Serial2TcpClient(*serialPort, hostname, cfg);
         DEBUGV("client mode: %s:%u\n", hostname, cfg.port);
     }
+    _instance->_setClient(client);
     if (cfg.authentication) {
         _instance->setAuthenticationParameters(Serial2TCP::getUsername(), Serial2TCP::getPassword());
     }
@@ -135,42 +138,30 @@ void Serial2TcpBase::destroyInstance()
 
 // serial handlers
 
-void Serial2TcpBase::onSerialData(uint8_t type, const uint8_t *buffer, size_t len)
+void Serial2TcpBase::onSerialData(Stream &client)
 {
-    DEBUGV("type=%u len=%u inst=%p\n", type, len, _instance);
+    DEBUGV("client %p available=%u\n", &client, client.available());
     if (_instance) {
-        _instance->_onSerialData(type, buffer, len);
+        _instance->_onSerialData(client);
     }
 }
 
 void Serial2TcpBase::handleSerialDataLoop()
 {
     if (_instance) {
-        auto len = (unsigned int)_instance->_serial.available();
-        DEBUGV("len=%u\n", len);
-        if (len) {
-            uint8_t buffer[128];
-            if (len >= sizeof(buffer)) {
-                len = sizeof(buffer) - 1;
-            }
-            len = _instance->_serial.readBytes(buffer, len);
-            _instance->_onSerialData(SerialHandler::RECEIVE, buffer, len);
-        }
+        _instance->_onSerialData(_instance->_serial);
     }
 }
 
 // network virtual terminal handler
 
-void Serial2TcpBase::_processData(Serial2TcpConnection *conn, const char *data, size_t len)
+void Serial2TcpBase::_processTcpData(Serial2TcpConnection *conn, const char *data, size_t len)
 {
-#if 0
-    _serialWrite(conn, data, len);
-#else
     auto client = conn->getClient();
     auto &buffer = conn->getNvtBuffer();
+    auto &stream = getStream();
     auto ptr = data;
     auto count = len;
-
     Buffer output;
 
     while(count--) {
@@ -229,8 +220,8 @@ void Serial2TcpBase::_processData(Serial2TcpConnection *conn, const char *data, 
                     DEBUGV_NVT("NVT error %u\n", (int)*ptr);
                     // output.write(NVT_IAC);
                     // output.write(*ptr);
-                    _serialWrite(conn, NVT_IAC);
-                    _serialWrite(conn, *ptr);
+                    stream.write(NVT_IAC);
+                    stream.write(*ptr);
                     buffer.clear();
                     break;
             }
@@ -275,7 +266,7 @@ void Serial2TcpBase::_processData(Serial2TcpConnection *conn, const char *data, 
                                 _setBaudRate(baudRate);
                             }
                             if (client) {
-                                char buf[] = { NVT_IAC, NVT_SB_CPO, NVT_WILL, NVT_CPO_SET_BAUDRATE, NVT_IAC };
+                                // char buf[] = { NVT_IAC, NVT_SB_CPO, NVT_WILL, NVT_CPO_SET_BAUDRATE, NVT_IAC };
                                 // client->write(buf, sizeof(buf));
                             }
                         }
@@ -284,7 +275,7 @@ void Serial2TcpBase::_processData(Serial2TcpConnection *conn, const char *data, 
                             dataLen--;
                             if (*data == NVT_IAC) {
                                 if (client) {
-                                    char buf[] = { NVT_IAC, NVT_SB_CPO, NVT_WONT, NVT_SB_BINARY, NVT_IAC };
+                                    // char buf[] = { NVT_IAC, NVT_SB_CPO, NVT_WONT, NVT_SB_BINARY, NVT_IAC };
                                     // client->write(buf, sizeof(buf));
                                 }
                             }
@@ -303,7 +294,7 @@ void Serial2TcpBase::_processData(Serial2TcpConnection *conn, const char *data, 
             }
             if (buffer.length() > 32) {
                 // output.write(buffer.getConstChar(), buffer.length());
-                _serialWrite(conn, buffer.getConstChar(), buffer.length());
+                stream.write(buffer.get(), buffer.length());
                 buffer.clear();
             }
         }
@@ -311,9 +302,9 @@ void Serial2TcpBase::_processData(Serial2TcpConnection *conn, const char *data, 
             if (buffer.length()) {
                 // output.write(buffer.getConstChar(), buffer.length());
                 // output.write(*ptr);
-                _serialWrite(conn, buffer.getConstChar(), buffer.length());
+                stream.write(buffer.get(), buffer.length());
                 buffer.clear();
-                _serialWrite(conn, *ptr);
+                stream.write(*ptr);
             }
             else {
                 output.write(*ptr);
@@ -322,35 +313,8 @@ void Serial2TcpBase::_processData(Serial2TcpConnection *conn, const char *data, 
         ptr++;
     }
     if (output.length()) {
-        _serialWrite(conn, output.getConstChar(), output.length());
+        stream.write(output.get(), output.length());
     }
-#endif
-}
-
-// serial output methods
-
-size_t Serial2TcpBase::_serialWrite(Serial2TcpConnection *conn, const char *data, size_t len)
-{
-#if 1
-    SerialHandler::getInstance().writeToReceive(SerialHandler::REMOTE_RX, reinterpret_cast<const uint8_t *>(data), len);
-    return len;
-#else
-    auto written = _serial.write(data, len);
-    if (written < len) {
-        ::printf(PSTR("_serialWrite %u/%u\n"), written, len);
-    }
-    return written;
-#endif
-}
-
-size_t Serial2TcpBase::_serialWrite(Serial2TcpConnection *conn, char data)
-{
-#if 1
-    SerialHandler::getInstance().writeToReceive(SerialHandler::REMOTE_RX, reinterpret_cast<const uint8_t *>(&data), sizeof(data));
-    return sizeof(data);
-#else
-    return _serial.write(data);
-#endif
 }
 
 void Serial2TcpBase::end()
@@ -417,7 +381,7 @@ void Serial2TcpBase::handlePoll(void *arg, AsyncClient *client)
     // DEBUGV("arg=%p client=%p\n", arg, client);
 }
 
-void Serial2TcpBase::_onSerialData(uint8_t type, const uint8_t *buffer, size_t len)
+void Serial2TcpBase::_onSerialData(Stream &client)
 {
     // DEBUGV("type=%d len=%u\n", type, len);
 }
@@ -435,4 +399,31 @@ void Serial2TcpBase::_onData(AsyncClient *client, void *data, size_t len)
 void Serial2TcpBase::_onDisconnect(AsyncClient *client, const String &reason)
 {
     // DEBUGV("_onDisconnect client=%p reason=%s\n", client, reason.c_str());
+}
+
+void Serial2TcpBase::_setClient(SerialHandler::Client *client)
+{
+    _client = client;
+}
+
+void Serial2TcpBase::_stopClient()
+{
+    DEBUGV("_stopClient client=%p\n", _client);
+    if (_client) {
+        _client->stop();
+    }
+}
+
+void Serial2TcpBase::_startClient()
+{
+    DEBUGV("_startClient client=%p\n", _client);
+    if (_client) {
+        _client->start(SerialHandler::EventType::RW);
+    }
+}
+
+
+Stream &Serial2TcpBase::getStream()
+{
+    return _client ? *_client : _serial;
 }

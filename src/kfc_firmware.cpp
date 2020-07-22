@@ -240,7 +240,11 @@ void setup()
                             config.read();
                             config.recoveryMode();
                             config.write();
-                            KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("AP mode with DHCPD enabled (SSID %s)\nPasswords set to '%s'\nWeb server running on port 80\nPress r to reboot..."), KFCConfigurationClasses::Network::WiFiConfig::getSoftApSSID(), SPGM(defaultPassword));
+                            KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("AP mode with DHCPD enabled (SSID %s)\nUsername '%s', passwords set to '%s'\nWeb server running on port 80\n\nPress r to reboot...\n"),
+                                KFCConfigurationClasses::Network::WiFiConfig::getSoftApSSID(),
+                                KFCConfigurationClasses::System::Device::getName(),
+                                SPGM(defaultPassword)
+                            );
                             endTimeout = 0;
                             break;
                         case 'c':

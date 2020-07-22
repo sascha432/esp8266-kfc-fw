@@ -543,6 +543,20 @@ using KFCConfigurationClasses::Network;
 using KFCConfigurationClasses::System;
 using KFCConfigurationClasses::Plugins;
 
+void KFCFWConfiguration::recoveryMode()
+{
+    System::Device::setPassword(FSPGM(defaultPassword));
+    Network::WiFiConfig::setSoftApPassword(FSPGM(defaultPassword));
+    auto flags = System::Flags();
+    flags->hiddenSSID = false;
+    flags->softAPDHCPDEnabled = true;
+    flags->wifiMode |= WIFI_AP;
+    flags->webServerMode = HTTP_MODE_UNSECURE;
+    flags->apStandByMode = false;
+    config._H_SET(Config().http_port, 80);
+    flags.write();
+}
+
 // TODO add option to keep WiFi SSID, username and password
 
 void KFCFWConfiguration::restoreFactorySettings()
@@ -572,19 +586,18 @@ void KFCFWConfiguration::restoreFactorySettings()
     auto flags = System::Flags();
     flags.write();
 
-    auto defaultPassword = F("12345678");
     uint8_t mac[6];
     WiFi.macAddress(mac);
     auto deviceName = PrintString(F("KFC%02X%02X%02X"), mac[3], mac[4], mac[5]);
     System::Device::defaults();
     System::Device::setName(deviceName);
     System::Device::setTitle(FSPGM(KFC_Firmware, "KFC Firmware"));
-    System::Device::setPassword(defaultPassword);
+    System::Device::setPassword(FSPGM(defaultPassword, "12345678"));
 
     Network::WiFiConfig::setSSID(deviceName);
-    Network::WiFiConfig::setPassword(defaultPassword);
+    Network::WiFiConfig::setPassword(FSPGM(defaultPassword));
     Network::WiFiConfig::setSoftApSSID(deviceName);
-    Network::WiFiConfig::setSoftApPassword(defaultPassword);
+    Network::WiFiConfig::setSoftApPassword(FSPGM(defaultPassword));
     Network::Settings::defaults();
     Network::SoftAP::defaults();
 

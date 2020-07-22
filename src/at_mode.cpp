@@ -216,6 +216,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF(RTC, "RTC", "[<set>]", "Set RTC time", "Display
 #if WEBUI_ALERTS_ENABLED || WEBUI_ALERTS_SEND_TO_LOGGER
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(ALERT, "ALERT", "<message>[,<type|0-3>]", "Add WebUI alert");
 #endif
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DSH, "DSH", "Display serial handler");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(FSM, "FSM", "Display FS mapping");
 #if PIN_MONITOR
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PINM, "PINM", "[<1=start|0=stop>}", "List or monitor PINs");
@@ -289,6 +290,7 @@ void at_mode_help_commands()
 #endif
 
 #if DEBUG
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DSH), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(FSM), name);
 #if PIN_MONITOR
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(PINM), name);
@@ -550,11 +552,9 @@ SerialHandler::Client *_client;
 
 void at_mode_setup()
 {
-    //SerialHandler::getInstance().addHandler(at_mode_serial_input_handler, SerialHandler::RECEIVE|SerialHandler::REMOTE_RX);
-
     _client = &serialHandler.addClient(at_mode_serial_input_handler, SerialHandler::EventType::READ);
 
-    WiFiCallbacks::add(WiFiCallbacks::EventEnum_t::CONNECTED|WiFiCallbacks::EventEnum_t::DISCONNECTED, at_mode_wifi_callback);
+    WiFiCallbacks::add(WiFiCallbacks::EventEnum_t::CONNECTION, at_mode_wifi_callback);
 
     if (!config.isSafeMode()) {
         at_mode_autorun();
@@ -568,6 +568,7 @@ void enable_at_mode(Stream &output)
         output.println(F("Enabling AT MODE."));
         flags.atModeEnabled = true;
         config._H_SET(Config().flags, flags);
+        _client->start(SerialHandler::EventType::READ);
     }
 }
 
@@ -575,6 +576,7 @@ void disable_at_mode(Stream &output)
 {
     auto flags = config._H_GET(Config().flags);
     if (flags.atModeEnabled) {
+        _client->stop();
         output.println(F("Disabling AT MODE."));
 #if DEBUG
         displayTimer.removeTimer();
@@ -1188,6 +1190,18 @@ void at_mode_serial_handle_event(String &commandString)
             }
 #if DEBUG
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(FSM))) {
+                auto &streams = *serialHandler.getStreams();
+                auto &clients = serialHandler.getClients();
+                args.printf_P(PSTR("outputs=%u clients=%u"), streams.size(), clients.size());
+                for(const auto stream: streams) {
+                    args.printf_P(PSTR("output %p"), stream);
+                }
+                args.printf_P(PSTR("input %p"), serialHandler.getInput());
+                for(auto &client: clients) {
+                    args.printf_P(PSTR("client %p: events: %02x"), &client, client.getEvents());
+                }
+            }
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(FSM))) {
                 // Mappings::getInstance().dump(output);
             }
     #if WEBUI_ALERTS_ENABLED || WEBUI_ALERTS_SEND_TO_LOGGER
@@ -1452,7 +1466,7 @@ void at_mode_serial_handle_event(String &commandString)
 }
 
 
-void at_mode_serial_input_handler(SerialHandler::Client &client)
+void at_mode_serial_input_handler(Stream &client)
 {
     static String line;
 

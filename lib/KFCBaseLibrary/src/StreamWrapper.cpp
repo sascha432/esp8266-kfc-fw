@@ -6,6 +6,12 @@
 #include <NullStream.h>
 #include "StreamWrapper.h"
 
+#if 1
+#define __DSW(fmt, ...)             ::printf(PSTR("SW:" fmt "\n"), ##__VA_ARGS__);
+#else
+#define __DSW(...)                  ;
+#endif
+
 extern NullStream NullSerial;
 
 StreamWrapper::StreamWrapper(Stream *output, Stream *input) : _streams(new StreamWrapperVector()), _freeStreams(true), _input(input)
@@ -17,7 +23,7 @@ StreamWrapper::StreamWrapper(StreamWrapperVector *streams, Stream *input) : _str
 {
 }
 
-// delegated constructors
+// delegating constructors
 
 StreamWrapper::StreamWrapper(Stream *output, nullptr_t input) : StreamWrapper(output, &NullSerial)
 {
@@ -56,11 +62,17 @@ Stream *StreamWrapper::getInput()
 
 void StreamWrapper::add(Stream *output)
 {
+    __DSW("add output=%p", output);
+    if (std::find(_streams->begin(), _streams->end(), output) != _streams->end()) {
+        __DSW("IGNORING DUPLICATE STREAM %p", output);
+        return;
+    }
     _streams->push_back(output);
 }
 
 void StreamWrapper::remove(Stream *output)
 {
+    __DSW("remove output=%p", output);
     _streams->erase(std::remove(_streams->begin(), _streams->end(), output), _streams->end());
     if (_streams->empty() || _input == output) {
         setInput(&NullSerial);
@@ -69,12 +81,14 @@ void StreamWrapper::remove(Stream *output)
 
 void StreamWrapper::clear()
 {
+    __DSW("clear");
     _streams->clear();
     setInput(&NullSerial);
 }
 
-void StreamWrapper::replace(Stream *output, Stream *input)
+void StreamWrapper::replaceFirst(Stream *output, Stream *input)
 {
+    __DSW("output=%p size=%u", output, _streams->size());
     if (_streams->size() > 1) {
         if (_streams->front() == _input) {
             setInput(input);
@@ -112,7 +126,7 @@ size_t StreamWrapper::write(uint8_t data)
     for(const auto stream: *_streams) {
         if (stream->write(data) != sizeof(data)) {
             delay(1); // 1ms per byte
-            ::printf(PSTR("stream=%p write %u/%u\n"), stream, 0, 1);
+            __DSW("stream=%p write %u/%u", stream, 0, 1);
             stream->write(data);
         }
     }
@@ -128,7 +142,7 @@ size_t StreamWrapper::write(const uint8_t *buffer, size_t size)
         do {
             auto written = stream->write(ptr, len);
             if (written < len) {
-                ::printf(PSTR("stream=%p write %u/%u\n"), stream, written, len);
+                __DSW("stream=%p write %u/%u", stream, written, len);
                 ptr += written;
                 delay(1);
             }

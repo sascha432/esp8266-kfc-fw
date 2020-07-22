@@ -9,6 +9,7 @@
 #include <EventTimer.h>
 #include <vector>
 #include "kfc_fw_config.h"
+#include "serial_handler.h"
 #include "Serial2TcpConnection.h"
 
 #if DEBUG_SERIAL2TCP && 0
@@ -87,7 +88,7 @@ public:
         return _password;
     }
 
-    static void onSerialData(uint8_t type, const uint8_t *buffer, size_t len);
+    static void onSerialData(Stream &client);
     static void handleSerialDataLoop();
 
     static void handleConnect(void *arg, AsyncClient *client);
@@ -105,7 +106,9 @@ protected:
         return _serial;
     }
 
-    virtual void _onSerialData(uint8_t type, const uint8_t *buffer, size_t len);
+    Stream &getStream();
+
+    virtual void _onSerialData(Stream &client);
 
     virtual void _onConnect(AsyncClient *client);
     virtual void _onData(AsyncClient *client, void *data, size_t len);
@@ -116,10 +119,7 @@ protected:
     // virtual void onPoll(AsyncClient *client);
     void _serialHandlerLoop();
 
-    void _processData(Serial2TcpConnection *conn, const char *data, size_t len);
-
-    virtual size_t _serialWrite(Serial2TcpConnection *conn, const char *data, size_t len);
-    size_t _serialWrite(Serial2TcpConnection *conn, char data);
+    void _processTcpData(Serial2TcpConnection *conn, const char *data, size_t len);
 
 public:
     virtual void getStatus(Print &output) = 0;
@@ -128,7 +128,13 @@ public:
     virtual void begin() {}
     virtual void end();
 
+protected:
+    void _setClient(SerialHandler::Client *client);
+    void _stopClient();
+    void _startClient();
+
 private:
+    SerialHandler::Client *_client;
     Stream &_serial;
     Serial2TCP::Serial2Tcp_t _config;
     String _hostname;

@@ -61,49 +61,32 @@ void Serial2TcpClient::end()
 }
 
 
-void Serial2TcpClient::_onSerialData(uint8_t type, const uint8_t *buffer, size_t len)
+void Serial2TcpClient::_onSerialData(Stream &client)
 {
     DEBUGV("connected=%u conn=%p client=%p type=%u len=%u\n", _connected(), _connection, _connection ? _connection->getClient() : nullptr, type, len);
-    if (type == SerialHandler::SerialDataType_t::RECEIVE || type == SerialHandler::SerialDataType_t::REMOTE_RX) {
-        _getSerial().write(buffer, len);
-    }
-    if (type == SerialHandler::SerialDataType_t::TRANSMIT || (type == SerialHandler::SerialDataType_t::REMOTE_RX && true/*echo*/)) {
-        if (_connected()) {
-            auto left = len;
-            auto ptr = reinterpret_cast<const char *>(buffer);
-            while (left) {
-                auto written = _client().write(ptr, left);
-                if (written != left) {
-                    //::printf(PSTR("write %d/%d\n"), written,left);
-                    delay(1);
-                }
-                ptr += written;
-                left -= written;
+    if (_connected()) {
+        auto endTime = millis() + 100;
+        while (client.available() && millis() < endTime) {
+            char data = client.peek();
+            if (_client().write(&data, sizeof(data)) != sizeof(data)) {
+                delay(1);
+            }
+            else {
+                client.read();
             }
         }
-    }
-    else {
-        // ::printf("_onSerialData fail connected=%u conn=%p client=%p type=%u len=%u\n", _connected(), _connection, _connection ? _connection->getClient() : nullptr, type, len);
     }
 }
 
 void Serial2TcpClient::_onData(AsyncClient *client, void *data, size_t len)
 {
-    _processData(_connection, reinterpret_cast<const char *>(data), len);
+    _processTcpData(_connection, reinterpret_cast<const char *>(data), len);
 }
-
-// size_t Serial2TcpClient::_serialWrite(Serial2TcpConnection *conn, const char *data, size_t len)  {
-//     size_t written = Serial2TcpBase::_serialWrite(conn, data, len);
-//     // no echo
-//     // if (_conn) {
-//     //     _conn->getClient()->write(data, len); // TODO add buffering / implement send() method to connection
-//     // }
-//     return written;
-// }
 
 void Serial2TcpClient::_onConnect(AsyncClient *client)
 {
     DEBUGV("client=%p conn=%p client=%p\n", client, _connection, _connection ? _connection->getClient() : nullptr);
+    _startClient();
 }
 
 void Serial2TcpClient::_onDisconnect(AsyncClient *client, const String &reason)
@@ -162,5 +145,6 @@ void Serial2TcpClient::_disconnect()
         _connection->close();
         delete _connection;
         _connection = nullptr;
+        _stopClient();
     }
 }

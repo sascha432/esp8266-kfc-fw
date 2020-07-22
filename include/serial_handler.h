@@ -5,12 +5,12 @@
 #pragma once
 
 #ifndef DEBUG_SERIAL_HANDLER
-#define DEBUG_SERIAL_HANDLER        0
+#define DEBUG_SERIAL_HANDLER                                0
 #endif
 
 #include <Arduino.h>
 #include <functional>
-#include <vector>
+#include <list>
 #include <Stream.h>
 #include <StreamWrapper.h>
 #include <NullStream.h>
@@ -26,32 +26,37 @@
 #define SERIAL_HANDLER_INPUT_BUFFER_MAX                     512
 #endif
 
-#if  0
-#define DEBUG_SH2(fmt,...)          { ::printf(PSTR("SH2:" fmt "\n"), ##__VA_ARGS__); }
-#else
-#define DEBUG_SH2(...)              ;
-#endif
-
 namespace SerialHandler {
 
     enum class EventType : uint8_t {
         NONE =          0,
         WRITE =         0x01,
         READ =          0x02,
+        RW =            READ|WRITE,
     };
 
     class Client;
     class Wrapper;
 
-    using Callback = std::function<void(Client &client)>;
+    using Callback = std::function<void(Stream &client)>;
 
     class Client : public Stream {
     public:
+        Client(const Client &) = delete;
+
         Client(Callback cb, EventType events);
 
         bool operator==(const Client &cb) {
             return &cb == this;
         }
+        inline EventType getEvents() const {
+            return _getEvents();
+        }
+
+        // set events and allocate buffers
+        void start(EventType events);
+        // remove ends and free buffers
+        void stop();
 
     private:
         friend Wrapper;
@@ -65,9 +70,14 @@ namespace SerialHandler {
         EventType _getEvents() const {
             return _events;
         }
-        bool _has(EventType event) const {
+        bool _hasAny(EventType event) const {
             return EnumHelper::Bitset::hasAny(_events, event);
         }
+
+        void _allocateBuffers();
+        void _freeBuffers();
+        void _checkBufferSize(cbuf &buf, size_t size);
+        void _resizeBufferMinSize(cbuf &buf);
 
     // Stream
     public:
@@ -91,10 +101,15 @@ namespace SerialHandler {
     class Wrapper : public StreamWrapper
     {
     public:
-        using ClientsVector = std::vector<Client>;
-        static constexpr size_t kMaxBufferSize = 1024;
+        using Clients = std::list<Client>;
+        // initial size
         static constexpr size_t kMinBufferSize = 128;
-        static constexpr size_t kAddBufferSize = 128; // if not enough room, increase buffer size if less than max. size
+        // max. size before resizing stops
+        static constexpr size_t kMaxBufferSize = 2048;
+        // if not enough room, increase buffer size if less than kMaxBufferSize
+        static constexpr size_t kAddBufferSize = 256;
+        // max. size it can reach
+        static constexpr size_t kRealMaxBufferSize = ((((kMaxBufferSize - kMinBufferSize) + kAddBufferSize - 1) / kAddBufferSize) * kAddBufferSize) + kMinBufferSize;
 
         Client &addClient(Callback cb, EventType events);
         void removeClient(const Client &client);
@@ -105,6 +120,8 @@ namespace SerialHandler {
 
         void begin();
         void end();
+
+        static void pollSerial();
 
     public:
         virtual int available() override {
@@ -118,6 +135,10 @@ namespace SerialHandler {
         }
         virtual size_t readBytes(char *buffer, size_t length) override {
             return 0;
+        }
+
+        Clients &getClients() {
+            return _clients;
         }
 
     public:
@@ -143,7 +164,7 @@ namespace SerialHandler {
     private:
         friend Client;
 
-        ClientsVector _clients;
+        Clients _clients;
         bool _txFlag; // indicator that _clients have _tx with data
     };
 

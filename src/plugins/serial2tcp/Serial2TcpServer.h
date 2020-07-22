@@ -32,10 +32,9 @@ private:
     Serial2TcpConnection *_getConn(AsyncClient *client);
 
     void _handleNewClient(AsyncClient *client);
-    virtual void _onSerialData(uint8_t type, const uint8_t *buffer, size_t len) override;
+    virtual void _onSerialData(Stream &client) override;
     virtual void _onData(AsyncClient *client, void *data, size_t len) override;
     virtual void _onDisconnect(AsyncClient *client, const String &reason) override;
-    virtual size_t _serialWrite(Serial2TcpConnection *conn, const char *data, size_t len) override;
     virtual bool isConnected() const override;
 
     Serial2TcpConnection &_addClient(AsyncClient *client);

@@ -71,16 +71,16 @@ void Serial2TcpServer::handleNewClient(void *arg, AsyncClient *client)
     reinterpret_cast<Serial2TcpServer *>(arg)->_handleNewClient(client);
 }
 
-void Serial2TcpServer::_onSerialData(uint8_t type, const uint8_t *buffer, size_t len)
+void Serial2TcpServer::_onSerialData(Stream &client)
 {
     if (!_connections.empty()) {
-        // _debug_printf_P(PSTR("Serial2TcpServer::_onData(): type %d, length %u\n"), type, len);
-        for(auto &&conn: _connections) {
-            auto written = conn->getClient()->write(reinterpret_cast<const char *>(buffer), len);
-            if (written < len) {
-                ::printf(PSTR("_onSerialData %u/%u\n"), written, len);
-            }
-        }
+        // // _debug_printf_P(PSTR("Serial2TcpServer::_onData(): type %d, length %u\n"), type, len);
+        // for(auto &&conn: _connections) {
+        //     auto written = conn->getClient()->write(reinterpret_cast<const char *>(buffer), len);
+        //     if (written < len) {
+        //         ::printf(PSTR("_onSerialData %u/%u\n"), written, len);
+        //     }
+        // }
     }
 }
 
@@ -88,7 +88,7 @@ void Serial2TcpServer::_onData(AsyncClient *client, void *data, size_t len)
 {
     auto conn = _getConn(client);
     if (conn) {
-        _processData(conn, reinterpret_cast<const char *>(data), len);
+        _processTcpData(conn, reinterpret_cast<const char *>(data), len);
     }
 }
 
@@ -117,17 +117,6 @@ String Serial2TcpServer::_getClientInfo(Serial2TcpConnection &conn) const
 bool Serial2TcpServer::isConnected() const
 {
     return _server;
-}
-
-size_t Serial2TcpServer::_serialWrite(Serial2TcpConnection *conn, const char *data, size_t len)
-{
-    size_t written = Serial2TcpBase::_serialWrite(conn, data, len);
-    for(auto &&conn2: _connections) {
-        if (conn != conn2.get()) {
-            conn2->getClient()->write(data, len); // TODO add buffering / implement send() method to connection
-        }
-    }
-    return written;
 }
 
 Serial2TcpConnection *Serial2TcpServer::_getConn(AsyncClient *client)

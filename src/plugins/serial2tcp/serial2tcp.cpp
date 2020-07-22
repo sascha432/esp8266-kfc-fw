@@ -87,14 +87,16 @@ void Serial2TcpPlugin::getStatus(Print &output)
     }
 }
 
-
-void Serial2TcpPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
+void Serial2TcpPlugin::createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request)
 {
+    if (!isCreateFormCallbackType(type)) {
+        return;
+    }
+
     using KFCConfigurationClasses::MainConfig;
     auto &cfg = Serial2TcpPlugin::Serial2TCP::getWriteableConfig();
     FormUI::ItemsList serialPorts;
     FormUI::ItemsList modes;
-
 
     serialPorts.emplace_back(String(static_cast<int>(Serial2TcpPlugin::Serial2TCP::SerialPortType::SERIAL0)), String(F("Serial Port 0")));
     serialPorts.emplace_back(String(static_cast<int>(Serial2TcpPlugin::Serial2TCP::SerialPortType::SERIAL1)), String(F("Serial Port 1")));

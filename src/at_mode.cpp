@@ -450,11 +450,11 @@ void at_mode_create_heap_timer(float seconds)
 
 #endif
 
-void at_mode_wifi_callback(uint8_t event, void *payload)
+void at_mode_wifi_callback(WiFiCallbacks::EventType event, void *payload)
 {
-    if (event == WiFiCallbacks::EventEnum_t::CONNECTED) {
+    if (event == WiFiCallbacks::EventType::CONNECTED) {
         Serial.printf_P(PSTR("WiFi connected to %s - IP %s\n"), WiFi.SSID().c_str(), WiFi.localIP().toString().c_str());
-    } else if (event == WiFiCallbacks::EventEnum_t::DISCONNECTED) {
+    } else if (event == WiFiCallbacks::EventType::DISCONNECTED) {
         Serial.println(F("WiFi connection lost"));
     }
 }
@@ -554,7 +554,7 @@ void at_mode_setup()
 {
     _client = &serialHandler.addClient(at_mode_serial_input_handler, SerialHandler::EventType::READ);
 
-    WiFiCallbacks::add(WiFiCallbacks::EventEnum_t::CONNECTION, at_mode_wifi_callback);
+    WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTION, at_mode_wifi_callback);
 
     if (!config.isSafeMode()) {
         at_mode_autorun();

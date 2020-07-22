@@ -5,6 +5,7 @@
 #pragma once
 
 #include <Arduino_compat.h>
+#include <WiFiCallbacks.h>
 #include <EventScheduler.h>
 #include "plugins.h"
 #include "plugins_menu.h"
@@ -80,7 +81,7 @@ public:
 #endif
 
 public:
-    static void wifiCallback(uint8_t event, void *payload);
+    static void wifiCallback(WiFiCallbacks::EventType event, void *payload);
     static void loop();
 
     // ESP8266: begin must be called once early in the program execution
@@ -95,7 +96,7 @@ private:
     bool _MDNS_begin();
     void _begin();
     void _end();
-    void _wifiCallback(uint8_t event, void *payload);
+    void _wifiCallback(WiFiCallbacks::EventType event, void *payload);
     void _loop();
     void _installWebServerHooks();
 

@@ -279,7 +279,7 @@ void KFCFWConfiguration::_onWiFiDisconnectCb(const WiFiEventStationModeDisconnec
         _wifiConnected = false;
         _wifiUp = ~0UL;
         LoopFunctions::callOnce([event]() {
-            WiFiCallbacks::callEvent(WiFiCallbacks::DISCONNECTED, (void *)&event);
+            WiFiCallbacks::callEvent(WiFiCallbacks::EventType::DISCONNECTED, (void *)&event);
         });
 
     }
@@ -329,7 +329,7 @@ void KFCFWConfiguration::_onWiFiGotIPCb(const WiFiEventStationModeGotIP &event)
 #endif
 
     LoopFunctions::callOnce([event]() {
-        WiFiCallbacks::callEvent(WiFiCallbacks::CONNECTED, (void *)&event);
+        WiFiCallbacks::callEvent(WiFiCallbacks::EventType::CONNECTED, (void *)&event);
     });
 }
 
@@ -490,7 +490,7 @@ static void __softAPModeStationDisconnectedCb(const WiFiEventSoftAPModeStationDi
 
 #endif
 
-void KFCFWConfiguration::apStandModehandler(uint8_t event, void *payload)
+void KFCFWConfiguration::apStandModehandler(WiFiCallbacks::EventType event, void *payload)
 {
     config._apStandModehandler(event);
 }
@@ -525,14 +525,14 @@ void KFCFWConfiguration::_setupWiFiCallbacks()
 #endif
 }
 
-void KFCFWConfiguration::_apStandModehandler(uint8_t event)
+void KFCFWConfiguration::_apStandModehandler(WiFiCallbacks::EventType event)
 {
     _debug_printf_P(PSTR("event=%u\n"), event);
-    if (event == WiFiCallbacks::CONNECTED) {
+    if (event == WiFiCallbacks::EventType::CONNECTED) {
         WiFi.enableAP(false);
         Logger_notice(F("AP Mode disabled"));
     }
-    else if (event == WiFiCallbacks::DISCONNECTED) {
+    else if (event == WiFiCallbacks::EventType::DISCONNECTED) {
         WiFi.enableAP(true);
         Logger_notice(F("AP Mode enabled"));
     }
@@ -1244,9 +1244,9 @@ bool KFCFWConfiguration::connectWiFi()
 
         // install hnalder to enable AP mode if station mode goes down
         if (flags.apStandByMode) {
-            WiFiCallbacks::add(WiFiCallbacks::CONNECTED|WiFiCallbacks::DISCONNECTED, KFCFWConfiguration::apStandModehandler);
+            WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTION, KFCFWConfiguration::apStandModehandler);
         } else {
-            WiFiCallbacks::remove(WiFiCallbacks::ANY, KFCFWConfiguration::apStandModehandler);
+            WiFiCallbacks::remove(WiFiCallbacks::EventType::ANY, KFCFWConfiguration::apStandModehandler);
         }
 
     }

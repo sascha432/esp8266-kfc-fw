@@ -168,7 +168,7 @@ public:
     static void setupInstance();
     static void deleteInstance();
 
-    inline static void handleWiFiEvents(uint8_t event, void *payload) {
+    inline static void handleWiFiEvents(WiFiCallbacks::EventType event, void *payload) {
         _mqttClient->_handleWiFiEvents(event, payload);
     }
 
@@ -212,7 +212,7 @@ public:
     String connectionDetailsString();
     String connectionStatusString();
 
-    void _handleWiFiEvents(uint8_t event, void *payload);
+    void _handleWiFiEvents(WiFiCallbacks::EventType event, void *payload);
     void onConnect(bool sessionPresent);
     void onDisconnect(AsyncMqttClientDisconnectReason reason);
     void onMessageRaw(char *topic, char *payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total);

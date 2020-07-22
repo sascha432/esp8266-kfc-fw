@@ -54,7 +54,7 @@ MQTTClient::MQTTClient() : _client(nullptr), _componentsEntityCount(0), _lastWil
     _config = Config_MQTT::getConfig();
 
     _setupClient();
-    WiFiCallbacks::add(WiFiCallbacks::EventEnum_t::ANY, MQTTClient::handleWiFiEvents);
+    WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTION, MQTTClient::handleWiFiEvents);
 
     if (WiFi.isConnected()) {
         connect();
@@ -64,7 +64,7 @@ MQTTClient::MQTTClient() : _client(nullptr), _componentsEntityCount(0), _lastWil
 MQTTClient::~MQTTClient()
 {
     _debug_println();
-    WiFiCallbacks::remove(WiFiCallbacks::EventEnum_t::ANY, MQTTClient::handleWiFiEvents);
+    WiFiCallbacks::remove(WiFiCallbacks::EventType::CONNECTION, MQTTClient::handleWiFiEvents);
     _clearQueue();
     _timer.remove();
 
@@ -535,15 +535,15 @@ const __FlashStringHelper *MQTTClient::_reasonToString(AsyncMqttClientDisconnect
     return F("Unknown");
 }
 
-void MQTTClient::_handleWiFiEvents(uint8_t event, void *payload)
+void MQTTClient::_handleWiFiEvents(WiFiCallbacks::EventType event, void *payload)
 {
     _debug_printf_P(PSTR("event=%d payload=%p connected=%d\n"), event, payload, isConnected());
-    if (event == WiFiCallbacks::EventEnum_t::CONNECTED) {
+    if (event == WiFiCallbacks::EventType::CONNECTED) {
         if (!isConnected()) {
             setAutoReconnect(MQTT_AUTO_RECONNECT_TIMEOUT);
             connect();
         }
-    } else if (event == WiFiCallbacks::EventEnum_t::DISCONNECTED) {
+    } else if (event == WiFiCallbacks::EventType::DISCONNECTED) {
         if (isConnected()) {
             setAutoReconnect(0);
             disconnect(true);

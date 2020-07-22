@@ -14,6 +14,7 @@
 #endif
 
 #include <Arduino_compat.h>
+#include <WiFiCallbacks.h>
 #include <Wire.h>
 #include <vector>
 #include <functional>
@@ -460,11 +461,11 @@ public:
         _safeMode = mode;
     }
 
-    static void apStandModehandler(uint8_t event, void *payload);
+    static void apStandModehandler(WiFiCallbacks::EventType event, void *payload);
 
 private:
     void _setupWiFiCallbacks();
-    void _apStandModehandler(uint8_t event);
+    void _apStandModehandler(WiFiCallbacks::EventType event);
 #if defined(ESP32)
     static void _onWiFiEvent(WiFiEvent_t event, WiFiEventInfo_t info);
 #elif USE_WIFI_SET_EVENT_HANDLER_CB

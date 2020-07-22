@@ -6,7 +6,6 @@
 #include <PrintString.h>
 #include <EventScheduler.h>
 #include <EventTimer.h>
-#include <WiFiCallbacks.h>
 #include <LoopFunctions.h>
 #include <misc.h>
 #include "kfc_fw_config.h"
@@ -163,10 +162,10 @@ void MDNSPlugin::mdnsDiscoveryHandler(AsyncWebServerRequest *request)
 
 #endif
 
-void MDNSPlugin::_wifiCallback(uint8_t event, void *payload)
+void MDNSPlugin::_wifiCallback(WiFiCallbacks::EventType event, void *payload)
 {
     _debug_printf_P(PSTR("event=%u, running=%u\n"), event, _running);
-    if (WiFiCallbacks::EventEnum_t::CONNECTED) {
+    if (event == WiFiCallbacks::EventType::CONNECTED) {
         _end();
 #if MDNS_DELAYED_START_AFTER_WIFI_CONNECT
         _delayedStart.add(MDNS_DELAYED_START_AFTER_WIFI_CONNECT, false, [this](EventScheduler::TimerPtr) {
@@ -184,7 +183,7 @@ void MDNSPlugin::_wifiCallback(uint8_t event, void *payload)
 #endif
 
     }
-    else if (WiFiCallbacks::EventEnum_t::DISCONNECTED) {
+    else if (event == WiFiCallbacks::EventType::DISCONNECTED) {
 #if MDNS_NETBIOS_SUPPORT
         NBNS.end();
 #endif
@@ -202,9 +201,9 @@ void MDNSPlugin::setup(SetupModeType mode)
         LoopFunctions::callOnce([this]() {
             _running = false;
             // add wifi handler after all plugins have been initialized
-            WiFiCallbacks::add(WiFiCallbacks::EventEnum_t::CONNECTED|WiFiCallbacks::EventEnum_t::DISCONNECTED, wifiCallback);
+            WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTION, wifiCallback);
             if (config.isWiFiUp()) {
-                plugin._wifiCallback(WiFiCallbacks::EventEnum_t::CONNECTED, nullptr); // simulate event if already connected
+                plugin._wifiCallback(WiFiCallbacks::EventType::CONNECTED, nullptr); // simulate event if already connected
             }
             _installWebServerHooks();
         });
@@ -227,7 +226,7 @@ void MDNSPlugin::shutdown()
     end();
 }
 
-void MDNSPlugin::wifiCallback(uint8_t event, void *payload)
+void MDNSPlugin::wifiCallback(WiFiCallbacks::EventType event, void *payload)
 {
     plugin._wifiCallback(event, payload);
 }

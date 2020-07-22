@@ -43,7 +43,7 @@ void RemoteControlPlugin::setup(SetupModeType mode)
         button.update();
         _debug_printf_P(PSTR("btn=%d pressed=%d\n"), n, button.isPressed());
     }
-    WiFiCallbacks::add(WiFiCallbacks::CONNECTED, wifiCallback);
+    WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTED, wifiCallback);
     LoopFunctions::add(loop);
 
     _installWebhooks();
@@ -274,7 +274,7 @@ void RemoteControlPlugin::loop()
 
 void RemoteControlPlugin::wifiCallback(uint8_t event, void *payload)
 {
-    if (event == WiFiCallbacks::CONNECTED) {
+    if (event == WiFiCallbacks::EventType::CONNECTED) {
         plugin._wifiConnected();
     }
 }

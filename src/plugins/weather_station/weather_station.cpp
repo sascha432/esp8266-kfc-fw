@@ -275,7 +275,7 @@ void WeatherStationPlugin::setup(SetupModeType mode)
     LoopFunctions::add(loop);
 
 #if IOT_WEATHER_STATION_WS2812_NUM
-    WiFiCallbacks::add(WiFiCallbacks::CONNECTED, [this](uint8_t event, void *payload) {
+    WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTED, [this](uint8_t event, void *payload) {
         _fadeStatusLED();
     }, this);
 

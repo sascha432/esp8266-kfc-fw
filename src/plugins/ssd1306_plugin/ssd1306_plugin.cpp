@@ -255,7 +255,7 @@ void ssd1306_setup() {
     });
 #endif
 
-    WiFiCallbacks::add(WiFiCallbacks::CONNECTED|WiFiCallbacks::DISCONNECTED, ssd1306_wifi_event);
+    WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTED|WiFiCallbacks::EventType::DISCONNECTED, ssd1306_wifi_event);
 }
 
 class SSD1306Plugin : public PluginComponent {

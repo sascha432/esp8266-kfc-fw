@@ -129,7 +129,7 @@ void Serial2TcpPlugin::createConfigureForm(FormCallbackType type, const String &
     form.add(F("host"), _H_STR_VALUE(MainConfig().plugins.serial2tcp.hostname))->setFormUI((new FormUI(FormUI::TypeEnum_t::TEXT, F("Host:"))));
     form.add<uint16_t>(F("tcp_port"), _H_W_STRUCT_VALUE(cfg, port))->setFormUI((new FormUI(FormUI::TypeEnum_t::TEXT, F("TCP Port:"))));
     form.addValidator(new FormRangeValidator(FSPGM(Invalid_port), 1, 65535));
-    form.add<bool>(F("autocnn"), _H_W_STRUCT_VALUE(cfg, auto_connect))->setFormUI((new FormUI(FormUI::TypeEnum_t::SELECT, F("Auto Connect:")))->setBoolItems(FSPGM(Enabled), FSPGM(Disabled)));
+    form.add<bool>(F("autocnn"), _H_W_STRUCT_VALUE(cfg, auto_connect))->setFormUI((new FormUI(FormUI::TypeEnum_t::SELECT, F("Auto Connect:")))->setBoolItems());
     form.add<uint8_t>(F("autoreconn"), _H_W_STRUCT_VALUE(cfg, auto_reconnect))->setFormUI((new FormUI(FormUI::TypeEnum_t::TEXT, F("Auto Reconnect Delay:")))->setSuffix(F("seconds, 0 = disable")));
     form.addValidator(new FormRangeValidator(0, 255));
     connGroup.endDiv();
@@ -140,10 +140,11 @@ void Serial2TcpPlugin::createConfigureForm(FormCallbackType type, const String &
     idleGroup.endDiv();
 
     auto &authDivGroup = form.addDivGroup(F("authdiv"));
-    form.add<bool>(F("auth"), _H_W_STRUCT_VALUE(cfg, authentication))->setFormUI((new FormUI(FormUI::TypeEnum_t::SELECT, F("Authentication:")))->setBoolItems(FSPGM(Enabled), FSPGM(Disabled)));
+    form.add<bool>(F("auth"), _H_W_STRUCT_VALUE(cfg, authentication))->setFormUI((new FormUI(FormUI::TypeEnum_t::SELECT, F("Authentication:")))->setBoolItems());
     auto &authGroup = form.addDivGroup(F("auth_group"), F("{'i':'#auth','s':{'0':'$T.hide()','1':'$T.show()'}}"));
     form.add(F("s2t_user"), _H_STR_VALUE(MainConfig().plugins.serial2tcp.username))->setFormUI((new FormUI(FormUI::TypeEnum_t::TEXT, F("Username:"))));
-    form.add(F("s2t_pass"), _H_STR_VALUE(MainConfig().plugins.serial2tcp.password))->setFormUI((new FormUI(FormUI::TypeEnum_t::PASSWORD, F("Password:"))));
+    auto password = Serial2TcpPlugin::Serial2TCP::getPassword();
+    form.add(F("s2t_pass"), _H_STR_VALUE(MainConfig().plugins.serial2tcp.password))->setFormUI((new FormUI(FormUI::TypeEnum_t::PASSWORD, F("Password:")))->addAttribute(F("value"), password));
     authGroup.endDiv();
     authDivGroup.endDiv();
 

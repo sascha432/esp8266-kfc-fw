@@ -284,10 +284,9 @@ void BlindsControl::_publishState(MQTTClient *client)
     _debug_printf_P(PSTR("BlindsControl::_publishState(): state %s/%s, client %p\n"), _getStateStr(0), _getStateStr(1), client);
 
     if (client) {
-        uint8_t _qos = MQTTClient::getDefaultQos();
         for(size_t i = 0; i < _channels.size(); i++) {
-            client->publish(_getTopic(i), _qos, true, _getStateStr(i));
-            _channels[i]._publishState(client, _qos);
+            client->publish(_getTopic(i), true, _getStateStr(i));
+            _channels[i]._publishState(client);
         }
     }
 

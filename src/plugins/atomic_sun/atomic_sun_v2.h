@@ -160,7 +160,6 @@ protected:
     ChannelsArray _storedChannels;
     ChannelsArray _channels;
     float _ratio[2];
-    uint8_t _qos;
 
 public:
     // channels are displayed in this order in the web ui

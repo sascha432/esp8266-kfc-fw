@@ -82,10 +82,9 @@ void Sensor_Battery::publishState(MQTTClient *client)
 {
     _debug_printf_P(PSTR("client=%p connected=%u\n"), client, client && client->isConnected() ? 1 : 0);
     if (client && client->isConnected()) {
-        auto _qos = MQTTClient::getDefaultQos();
-        client->publish(_getTopic(BatteryType::LEVEL), _qos, true, String(_readSensor(), _config.precision));
+        client->publish(_getTopic(BatteryType::LEVEL), true, String(_readSensor(), _config.precision));
 #if IOT_SENSOR_BATTERY_CHARGE_DETECTION
-        client->publish(_getTopic(BatteryType::CHARGING), _qos, true, String(_isCharging()));
+        client->publish(_getTopic(BatteryType::CHARGING), true, String(_isCharging()));
 #endif
     }
 }

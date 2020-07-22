@@ -444,7 +444,7 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     0                   // __reserved
 );
 
-DimmerModulePlugin::DimmerModulePlugin() : Driver_DimmerModule(PROGMEM_GET_PLUGIN_OPTIONS(DimmerModulePlugin))
+DimmerModulePlugin::DimmerModulePlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(DimmerModulePlugin))
 {
     REGISTER_PLUGIN(this, "DimmerModulePlugin");
 }
@@ -456,9 +456,16 @@ void DimmerModulePlugin::setup(SetupModeType mode)
     _begin();
 }
 
-void DimmerModulePlugin::reconfigure(const char *source)
+void DimmerModulePlugin::reconfigure(const String &source)
 {
-    if (!source) {
+    if (String_equals(source, SPGM(http))) {
+        setupWebServer();
+    }
+    else if (String_equals(source, SPGM(mqtt))) {
+        _endMqtt();
+        _beginMqtt();
+    }
+    else {
         writeConfig();
         auto dimmer = config._H_GET(Config().dimmer);
         _fadeTime = dimmer.fade_time;
@@ -466,13 +473,6 @@ void DimmerModulePlugin::reconfigure(const char *source)
 
         _endButtons();
         _beginButtons();
-    }
-    else if (!strcmp_P(source, SPGM(http))) {
-        setupWebServer();
-    }
-    else if (!strcmp_P(source, SPGM(mqtt))) {
-        _endMqtt();
-        _beginMqtt();
     }
 }
 

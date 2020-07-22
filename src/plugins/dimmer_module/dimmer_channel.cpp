@@ -71,15 +71,13 @@ void DimmerChannel::_createTopics()
 
 void DimmerChannel::onConnect(MQTTClient *client)
 {
-    uint8_t _qos = MQTTClient::getDefaultQos();
-
     _createTopics();
 
     _debug_printf_P(PSTR("DimmerChannel[%u]::subscribe(%s)\n"), _channel, _data.state.set.c_str());
     _debug_printf_P(PSTR("DimmerChannel[%u]::subscribe(%s)\n"), _channel, _data.brightness.set.c_str());
 
-    client->subscribe(this, _data.state.set, _qos);
-    client->subscribe(this, _data.brightness.set, _qos);
+    client->subscribe(this, _data.state.set);
+    client->subscribe(this, _data.brightness.set);
 
     publishState(client);
 }
@@ -161,10 +159,9 @@ void DimmerChannel::publishState(MQTTClient *client)
     }
     if (client && client->isConnected()) {
         _debug_printf_P(PSTR("DimmerChannel[%u]::publishState(): brightness %d, state %u, client %p\n"), _channel, _data.brightness.value, _data.state.value, client);
-        uint8_t _qos = MQTTClient::getDefaultQos();
 
-        client->publish(_data.state.state, _qos, true, String(_data.state.value));
-        client->publish(_data.brightness.state, _qos, true, String(_data.brightness.value));
+        client->publish(_data.state.state, true, String(_data.state.value));
+        client->publish(_data.brightness.state, true, String(_data.brightness.value));
     }
 
     JsonUnnamedObject json(2);

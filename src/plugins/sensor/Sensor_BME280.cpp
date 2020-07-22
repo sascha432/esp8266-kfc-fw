@@ -126,8 +126,7 @@ void Sensor_BME280::publishState(MQTTClient *client)
         json.add(FSPGM(pressure), JsonNumber(sensor.pressure, 2));
         json.printTo(str);
 
-        auto _qos = MQTTClient::getDefaultQos();
-        client->publish(MQTTClient::formatTopic(_getId()), _qos, true, str);
+        client->publish(MQTTClient::formatTopic(_getId()), true, str);
     }
 }
 

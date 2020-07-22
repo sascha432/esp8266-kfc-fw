@@ -206,7 +206,6 @@ private:
     void _setColor();
 
 private:
-    uint8_t _qos;
     uint8_t _colors[3];
     uint16_t _brightness;
 

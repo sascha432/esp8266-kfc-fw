@@ -67,8 +67,7 @@ void Sensor_LM75A::createWebUI(WebUI &webUI, WebUIRow **row)
 void Sensor_LM75A::publishState(MQTTClient *client)
 {
     if (client && client->isConnected()) {
-        auto _qos = MQTTClient::getDefaultQos();
-        client->publish(MQTTClient::formatTopic(_getId()), _qos, true, String(_readSensor(), 2));
+        client->publish(MQTTClient::formatTopic(_getId()), true, String(_readSensor(), 2));
     }
 }
 

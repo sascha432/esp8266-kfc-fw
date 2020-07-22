@@ -38,7 +38,7 @@ MQTTComponent::MQTTAutoDiscoveryPtr BlindsChannel::nextAutoDiscovery(MQTTAutoDis
 
 void BlindsChannel::onConnect(MQTTClient *client)
 {
-    client->subscribe(this, _getTopic(_number, TopicType::SET), MQTTClient::getDefaultQos());
+    client->subscribe(this, _getTopic(_number, TopicType::SET));
 }
 
 void BlindsChannel::onMessage(MQTTClient *client, char *topic, char *payload, size_t len)
@@ -48,9 +48,9 @@ void BlindsChannel::onMessage(MQTTClient *client, char *topic, char *payload, si
     _controller->setChannel(_number, state == 0 ? OPEN : CLOSED);
 }
 
-void BlindsChannel::_publishState(MQTTClient *client, uint8_t qos)
+void BlindsChannel::_publishState(MQTTClient *client)
 {
-    client->publish(_getTopic(_number, TopicType::STATE), qos, true, _state == OPEN ? String(1) : String(0));
+    client->publish(_getTopic(_number, TopicType::STATE), true, _state == OPEN ? String(1) : String(0));
 }
 
 void BlindsChannel::setState(StateEnum_t state)

@@ -73,6 +73,8 @@ public:
     using MQTTComponentPtr = MQTTComponent::Ptr;
     using MQTTComponentVector = MQTTComponent::Vector;
 
+    static constexpr uint8_t QOS_DEFAULT = 0xff;
+
     class MQTTTopic {
     public:
         MQTTTopic(const String &topic, MQTTComponent *component) : _topic(topic), _component(component) {
@@ -151,19 +153,19 @@ private:
     static String _formatTopic(const String &suffix, const __FlashStringHelper *format, va_list arg);
 
 public:
-    void subscribe(MQTTComponentPtr component, const String &topic, uint8_t qos);
+    void subscribe(MQTTComponentPtr component, const String &topic, uint8_t qos = QOS_DEFAULT);
     void unsubscribe(MQTTComponentPtr component, const String &topic);
     void remove(MQTTComponentPtr component);
-    void publish(const String &topic, uint8_t qos, bool retain, const String &payload);
+    void publish(const String &topic, bool retain, const String &payload, uint8_t qos = QOS_DEFAULT);
 
     // return values
     // 0: failed to send
     // -1: success, but nothing was sent (in particular for unsubscribe if another component is still subscribed to the same topic)
     // for qos 1 and 2: >= 1 packet id, confirmation will be received by callbacks once delivered
     // for qos 0: 1 = successfully delivered to tcp stack
-    int subscribeWithId(MQTTComponentPtr component, const String &topic, uint8_t qos);
+    int subscribeWithId(MQTTComponentPtr component, const String &topic, uint8_t qos = QOS_DEFAULT);
     int unsubscribeWithId(MQTTComponentPtr component, const String &topic);
-    int publishWithId(const String &topic, uint8_t qos, bool retain, const String &payload);
+    int publishWithId(const String &topic, bool retain, const String &payload, uint8_t qos = QOS_DEFAULT);
 
     static void setupInstance();
     static void deleteInstance();
@@ -176,9 +178,9 @@ public:
         return _mqttClient;
     }
 
-    static void safePublish(const String &topic, bool retain, const String &value) {
+    static void safePublish(const String &topic, bool retain, const String &payload, uint8_t qos = QOS_DEFAULT) {
         if (_mqttClient && _mqttClient->isConnected()) {
-            _mqttClient->publish(topic, _mqttClient->_config.qos, retain, value);
+            _mqttClient->publish(topic, retain, payload, qos);
         }
     }
 
@@ -202,7 +204,10 @@ public:
         }
     }
 
-    static uint8_t getDefaultQos() {
+    static uint8_t getDefaultQos(uint8_t qos = QOS_DEFAULT) {
+        if (qos != QOS_DEFAULT) {
+            return qos;
+        }
         if (_mqttClient) {
             return _mqttClient->_config.qos;
         }

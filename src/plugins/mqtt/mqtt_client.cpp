@@ -230,7 +230,7 @@ void MQTTClient::disconnect(bool forceDisconnect)
     _debug_printf_P(PSTR("forceDisconnect=%d status=%s connected=%u\n"), forceDisconnect, connectionStatusString().c_str(), _client->connected());
     if (!forceDisconnect) {
         // set offline
-        publish(_lastWillTopic, getDefaultQos(), true, String(0));
+        publish(_lastWillTopic, true, String(0));
     }
     _client->disconnect(forceDisconnect);
 }
@@ -306,7 +306,7 @@ void MQTTClient::onConnect(bool sessionPresent)
     _clearQueue();
 
     // set online
-    publish(_lastWillTopic, getDefaultQos(), true, String(1));
+    publish(_lastWillTopic, true, String(1));
 
     // reset reconnect timer if connection was successful
     setAutoReconnect(MQTT_AUTO_RECONNECT_TIMEOUT);
@@ -342,6 +342,7 @@ void MQTTClient::onDisconnect(AsyncMqttClientDisconnectReason reason)
 
 void MQTTClient::subscribe(MQTTComponentPtr component, const String &topic, uint8_t qos)
 {
+    qos = MQTTClient::getDefaultQos(qos);
     if (!_queue.empty() || subscribeWithId(component, topic, qos) == 0) {
         _addQueue(MQTTQueueType::SUBSCRIBE, component, topic, qos, 0, String());
     }
@@ -349,6 +350,7 @@ void MQTTClient::subscribe(MQTTComponentPtr component, const String &topic, uint
 
 int MQTTClient::subscribeWithId(MQTTComponentPtr component, const String &topic, uint8_t qos)
 {
+    qos = MQTTClient::getDefaultQos(qos);
 #if DEBUG
     if (topic.length() == 0) {
         __debugbreak_and_panic_printf_P(PSTR("subscribeWithId: topic is empty\n"));
@@ -412,15 +414,17 @@ bool MQTTClient::_topicInUse(MQTTComponentPtr component, const String &topic)
     return false;
 }
 
-void MQTTClient::publish(const String &topic, uint8_t qos, bool retain, const String &payload)
+void MQTTClient::publish(const String &topic, bool retain, const String &payload, uint8_t qos)
 {
-    if (publishWithId(topic, qos, retain, payload) == 0) {
+    qos = MQTTClient::getDefaultQos(qos);
+    if (publishWithId(topic, retain, payload, qos) == 0) {
         _addQueue(MQTTQueueType::PUBLISH, nullptr, topic, qos, retain, payload);
     }
 }
 
-int MQTTClient::publishWithId(const String &topic, uint8_t qos, bool retain, const String &payload)
+int MQTTClient::publishWithId(const String &topic, bool retain, const String &payload, uint8_t qos)
 {
+    qos = MQTTClient::getDefaultQos(qos);
     _debug_printf_P(PSTR("topic=%s qos=%u retain=%d payload=%s\n"), topic.c_str(), qos, retain, printable_string(payload.c_str(), payload.length(), DEBUG_MQTT_CLIENT_PAYLOAD_LEN).c_str());
     return _client->publish(topic.c_str(), qos, retain, payload.c_str(), payload.length());
 }
@@ -580,7 +584,7 @@ void MQTTClient::_queueTimerCallback()
                 result = unsubscribeWithId(queue.getComponent(), queue.getTopic());
                 break;
             case MQTTQueueType::PUBLISH:
-                result = publishWithId(queue.getTopic(), queue.getQos(), queue.getRetain(), queue.getPayload());
+                result = publishWithId(queue.getTopic(), queue.getRetain(), queue.getPayload(), queue.getQos());
                 break;
         }
         if (result == 0) {

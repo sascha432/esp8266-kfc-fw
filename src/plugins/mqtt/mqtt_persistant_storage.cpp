@@ -48,7 +48,7 @@ void MQTTPersistantStorageComponent::onMessage(MQTTClient *client, char *topic, 
         _timer.remove();
         PrintString newData;
         storedData.serialize(newData);
-        client->publish(_topic, MQTTClient::getDefaultQos(), true, newData);
+        client->publish(_topic, true, newData);
         _remove();
     }
 }
@@ -59,7 +59,7 @@ bool MQTTPersistantStorageComponent::_begin(MQTTClient *client)
     _debug_printf_P(PSTR("topic=%s\n"), _topic.c_str());
     // if we cannot subscribe, report an error
     for(uint8_t i = 0; i < 3; i++) {
-        if (client->subscribeWithId(this, _topic.c_str(), MQTTClient::getDefaultQos())) {
+        if (client->subscribeWithId(this, _topic.c_str())) {
             _timer.add(MQTT_PERSISTANT_STORAGE_TIMEOUT, false, [this](EventScheduler::TimerPtr) {
                 _debug_printf_P(PSTR("MQTTPersistantStorageComponent data=%u callback=%p\n"), _data->size(), &_callback);
                 if (_callback) {
@@ -71,7 +71,7 @@ bool MQTTPersistantStorageComponent::_begin(MQTTClient *client)
                         _ignoreMessages = true;
                         PrintString newData;
                         _data->serialize(newData);
-                        client->publish(_topic, MQTTClient::getDefaultQos(), true, newData);
+                        client->publish(_topic, true, newData);
                     }
                 }
                 _remove();

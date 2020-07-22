@@ -104,11 +104,10 @@ void Sensor_DimmerMetrics::createWebUI(WebUI &webUI, WebUIRow **row)
 void Sensor_DimmerMetrics::publishState(MQTTClient *client)
 {
     if (client && client->isConnected()) {
-        auto _qos = MQTTClient::getDefaultQos();
-        client->publish(_getMetricsTopics(TopicType::TEMPERATURE2), _qos, true, String(_metrics.getTemp2(), 2));
-        client->publish(_getMetricsTopics(TopicType::TEMPERATURE), _qos, true, String(_metrics.getTemp(), 2));
-        client->publish(_getMetricsTopics(TopicType::VCC), _qos, true, String(_metrics.getVCC(), 3));
-        client->publish(_getMetricsTopics(TopicType::FREQUENCY), _qos, true, String(_metrics.getFrequency(), 2));
+        client->publish(_getMetricsTopics(TopicType::TEMPERATURE2), true, String(_metrics.getTemp2(), 2));
+        client->publish(_getMetricsTopics(TopicType::TEMPERATURE), true, String(_metrics.getTemp(), 2));
+        client->publish(_getMetricsTopics(TopicType::VCC), true, String(_metrics.getVCC(), 3));
+        client->publish(_getMetricsTopics(TopicType::FREQUENCY), true, String(_metrics.getFrequency(), 2));
     }
 }
 

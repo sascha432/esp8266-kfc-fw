@@ -51,7 +51,6 @@ void Driver_4ChDimmer::_begin()
     _channels = ChannelsArray();
     _storedChannels = ChannelsArray();
     MQTTClient::safeRegisterComponent(this);
-    _qos = MQTTClient::getDefaultQos();
     _data.state.value = false;
     _data.brightness.value = 0;
     _data.color.value = 0;
@@ -172,17 +171,15 @@ void Driver_4ChDimmer::_createTopics()
 
 void Driver_4ChDimmer::onConnect(MQTTClient *client)
 {
-    _qos = MQTTClient::getDefaultQos();
-
     _createTopics();
 
-    client->subscribe(this, _data.state.set, _qos);
-    client->subscribe(this, _data.brightness.set, _qos);
-    client->subscribe(this, _data.color.set, _qos);
-    client->subscribe(this, _data.lockChannels.set, _qos);
+    client->subscribe(this, _data.state.set);
+    client->subscribe(this, _data.brightness.set);
+    client->subscribe(this, _data.color.set);
+    client->subscribe(this, _data.lockChannels.set);
     for(uint8_t i = 0; i < _channels.size(); i++) {
-        client->subscribe(this, _data.channels[i].set, _qos);
-        client->subscribe(this, _data.channels[i].brightnessSet, _qos);
+        client->subscribe(this, _data.channels[i].set);
+        client->subscribe(this, _data.channels[i].brightnessSet);
     }
 
     publishState(client);
@@ -374,14 +371,14 @@ void Driver_4ChDimmer::publishState(MQTTClient *client)
         client = MQTTClient::getClient();
     }
     if (client && client->isConnected()) {
-        client->publish(_data.state.state, _qos, 1, String(_data.state.value ? 1 : 0));
-        client->publish(_data.brightness.state, _qos, 1, String(_data.brightness.value));
-        client->publish(_data.color.state, _qos, 1, String((int)(_data.color.value / 100)));
+        client->publish(_data.state.state, true, String(_data.state.value ? 1 : 0));
+        client->publish(_data.brightness.state, true, String(_data.brightness.value));
+        client->publish(_data.color.state, true, String((int)(_data.color.value / 100)));
         for(uint8_t i = 0; i < 4; i++) {
-            client->publish(_data.channels[i].state, _qos, 1, String(_channels[i] ? 1 : 0));
-            client->publish(_data.channels[i].brightnessState, _qos, 1, String(_channels[i]));
+            client->publish(_data.channels[i].state, true, String(_channels[i] ? 1 : 0));
+            client->publish(_data.channels[i].brightnessState, true, String(_channels[i]));
         }
-        client->publish(_data.lockChannels.state, _qos, 1, String(_data.lockChannels.value));
+        client->publish(_data.lockChannels.state, true, String(_data.lockChannels.value));
     }
 
     JsonUnnamedObject json(2);

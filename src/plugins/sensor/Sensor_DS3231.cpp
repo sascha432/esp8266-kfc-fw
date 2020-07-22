@@ -88,10 +88,9 @@ void Sensor_DS3231::createWebUI(WebUI &webUI, WebUIRow **row)
 void Sensor_DS3231::publishState(MQTTClient *client)
 {
     if (client && client->isConnected()) {
-        auto _qos = MQTTClient::getDefaultQos();
-        client->publish(MQTTClient::formatTopic(FSPGM(ds3231_id_temp)), _qos, true, String(_readSensorTemp(), 2));
-        client->publish(MQTTClient::formatTopic(FSPGM(ds3231_id_time)), _qos, true, String((uint32_t)_readSensorTime()));
-        client->publish(MQTTClient::formatTopic(FSPGM(ds3231_id_lost_power)), _qos, true, String(_readSensorLostPower()));
+        client->publish(MQTTClient::formatTopic(FSPGM(ds3231_id_temp)), true, String(_readSensorTemp(), 2));
+        client->publish(MQTTClient::formatTopic(FSPGM(ds3231_id_time)), true, String((uint32_t)_readSensorTime()));
+        client->publish(MQTTClient::formatTopic(FSPGM(ds3231_id_lost_power)), true, String(_readSensorLostPower()));
     }
 }
 

@@ -216,7 +216,7 @@ void HassPlugin::onConnect(MQTTClient *client)
                     if (pos != -1) {
                         topic.remove(pos);
                         _debug_printf_P(PSTR("subscribe %s\n"), topic.c_str());
-                        client->subscribe(this, topic, client->getDefaultQos());
+                        client->subscribe(this, topic);
                     }
                 }
                 break;
@@ -258,7 +258,7 @@ void HassPlugin::_mqttSet(const String &topic, int value)
     auto client = MQTTClient::getClient();
     _debug_printf_P(PSTR("client=%p topic=%s value=%u\n"), client, topic.c_str(), value);
     if (client) {
-        client->publish(topic, client->getDefaultQos(), true, String(value));
+        client->publish(topic, true, String(value));
     }
 }
 

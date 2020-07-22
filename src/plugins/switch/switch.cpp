@@ -211,9 +211,8 @@ void SwitchPlugin::onConnect(MQTTClient *client)
 {
     _debug_println();
     MQTTComponent::onConnect(client);
-    auto qos = client->getDefaultQos();
     for (size_t i = 0; i < _pins.size(); i++) {
-        client->subscribe(this, MQTTClient::formatTopic(PrintString(FSPGM(channel__u), i), FSPGM(_set)), qos);
+        client->subscribe(this, MQTTClient::formatTopic(PrintString(FSPGM(channel__u), i), FSPGM(_set)));
     }
     _publishState(client);
 }
@@ -289,11 +288,10 @@ void SwitchPlugin::_writeStates()
 void SwitchPlugin::_publishState(MQTTClient *client, int8_t channel)
 {
     if (client) {
-        auto qos = client->getDefaultQos();
         for (size_t i = 0; i < _pins.size(); i++) {
             if (channel == -1 || (uint8_t)channel == i) {
                 _debug_printf_P(PSTR("pin=%u state=%u\n"), _pins[i], _getChannel(i));
-                client->publish(MQTTClient::formatTopic(PrintString(FSPGM(channel__u), i), FSPGM(_state)), qos, true, String(_getChannel(i) ? 1 : 0));
+                client->publish(MQTTClient::formatTopic(PrintString(FSPGM(channel__u), i), FSPGM(_state)), true, String(_getChannel(i) ? 1 : 0));
             }
         }
     }

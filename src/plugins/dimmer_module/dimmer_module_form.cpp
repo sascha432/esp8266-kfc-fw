@@ -56,7 +56,7 @@ void DimmerModuleForm::_createConfigureForm(PluginComponent::FormCallbackType ty
     form.add<uint8_t>(F("max_temp"), _H_STRUCT_VALUE(Config().dimmer, cfg.max_temp))->setFormUI((new FormUI(FormUI::TEXT, F("Max. Temperature")))->addConditionalAttribute(isInvalid, FSPGM(disabled), FSPGM(disabled))->setPlaceholder(String(80))->setSuffix(F("&deg;C")));
     form.addValidator(new FormRangeValidator(F("Temperature out of range: %min%-%max%"), 45, 110));
 
-    form.add<uint8_t>(F("metrics_int"), _H_STRUCT_VALUE(Config().dimmer, cfg.report_metrics_max_interval))->setFormUI((new FormUI(FormUI::TEXT, F("Metrics Report Interval")))->addConditionalAttribute(isInvalid, FSPGM(disabled), FSPGM(disabled))->setPlaceholder(String(10))->setSuffix(FSPGM(seconds)));
+    form.add<uint8_t>(F("metricsint"), _H_STRUCT_VALUE(Config().dimmer, cfg.report_metrics_max_interval))->setFormUI((new FormUI(FormUI::TEXT, F("Metrics Report Interval")))->addConditionalAttribute(isInvalid, FSPGM(disabled), FSPGM(disabled))->setPlaceholder(String(10))->setSuffix(FSPGM(seconds)));
     form.addValidator(new FormRangeValidator(5, 255));
 
     form.add<uint8_t>(F("zc_offset"), _H_STRUCT_VALUE(Config().dimmer, cfg.zero_crossing_delay_ticks))->setFormUI((new FormUI(FormUI::TEXT, F("Zero Crossing Offset")))->addConditionalAttribute(isInvalid, FSPGM(disabled), FSPGM(disabled))->setSuffix(F("ticks")));

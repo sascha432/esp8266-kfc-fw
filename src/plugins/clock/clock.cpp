@@ -445,7 +445,6 @@ MQTTComponent::MQTTAutoDiscoveryPtr ClockPlugin::nextAutoDiscovery(MQTTAutoDisco
     MQTTAutoDiscoveryPtr discovery;
     switch(num) {
         case 0: {
-            _qos = MQTTClient::getDefaultQos();
             discovery = new MQTTAutoDiscovery();
             discovery->create(this, F("clock"), format);
             discovery->addStateTopic(MQTTClient::formatTopic(FSPGM(_state)));
@@ -478,16 +477,16 @@ MQTTComponent::MQTTAutoDiscoveryPtr ClockPlugin::nextAutoDiscovery(MQTTAutoDisco
 void ClockPlugin::onConnect(MQTTClient *client)
 {
     _debug_println();
-    client->subscribe(this, MQTTClient::formatTopic(FSPGM(_set)), _qos);
-    client->subscribe(this, MQTTClient::formatTopic(FSPGM(_color_set)), _qos);
-    client->subscribe(this, MQTTClient::formatTopic(FSPGM(_brightness_set)), _qos);
+    client->subscribe(this, MQTTClient::formatTopic(FSPGM(_set)));
+    client->subscribe(this, MQTTClient::formatTopic(FSPGM(_color_set)));
+    client->subscribe(this, MQTTClient::formatTopic(FSPGM(_brightness_set)));
 
     publishState(client);
 }
 
 void ClockPlugin::onMessage(MQTTClient *client, char *topic, char *payload, size_t len)
 {
-    _debug_printf_P(PSTR("topic=%s payload=%*.*s\n"), topic, len, len, payload);
+    debug_printf_P(PSTR("client=%p topic=%s payload=%s\n"), client, topic, payload);
 
     _resetAlarm();
 
@@ -566,11 +565,11 @@ void ClockPlugin::publishState(MQTTClient *client)
     }
     _debug_printf_P(PSTR("client=%p\n"), client);
     if (client && client->isConnected()) {
-        client->publish(MQTTClient::formatTopic(FSPGM(_state)), _qos, true, String(_color ? 1 : 0));
-        client->publish(MQTTClient::formatTopic(FSPGM(_brightness_state)), _qos, true, String(_brightness));
-        client->publish(MQTTClient::formatTopic(FSPGM(_color_state)), _qos, true, PrintString(F("%u,%u,%u"), _colors[0], _colors[1], _colors[2]));
+        client->publish(MQTTClient::formatTopic(FSPGM(_state)), true, String(_color ? 1 : 0));
+        client->publish(MQTTClient::formatTopic(FSPGM(_brightness_state)), true, String(_brightness));
+        client->publish(MQTTClient::formatTopic(FSPGM(_color_state)), true, PrintString(F("%u,%u,%u"), _colors[0], _colors[1], _colors[2]));
 #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
-        client->publish(MQTTClient::formatTopic(FSPGM(light_sensor), nullptr), _qos, true, _autoBrightness == AUTO_BRIGHTNESS_OFF ? String(FSPGM(Off)) : String(_autoBrightnessValue * 100, 0));
+        client->publish(MQTTClient::formatTopic(FSPGM(light_sensor), nullptr), true, _autoBrightness == AUTO_BRIGHTNESS_OFF ? String(FSPGM(Off)) : String(_autoBrightnessValue * 100, 0));
 #endif
     }
 

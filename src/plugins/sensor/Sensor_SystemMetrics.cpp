@@ -63,10 +63,9 @@ uint8_t Sensor_SystemMetrics::getAutoDiscoveryCount() const
 void Sensor_SystemMetrics::publishState(MQTTClient *client)
 {
     if (client && client->isConnected()) {
-        auto _qos = MQTTClient::getDefaultQos();
         String json;
         _getMetricsJson(json);
-        client->publish(_getTopic(), _qos, true, json);
+        client->publish(_getTopic(), true, json);
     }
 }
 

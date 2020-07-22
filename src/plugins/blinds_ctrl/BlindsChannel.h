@@ -30,7 +30,7 @@ public:
     virtual void onConnect(MQTTClient *client) override;
     virtual void onMessage(MQTTClient *client, char *topic, char *payload, size_t len) override;
 
-    void _publishState(MQTTClient *client, uint8_t qos);
+    void _publishState(MQTTClient *client);
 
     void setState(StateEnum_t state);
     StateEnum_t getState() const;

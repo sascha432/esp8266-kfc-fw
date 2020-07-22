@@ -96,11 +96,13 @@ AlarmPlugin::MQTTAutoDiscoveryPtr AlarmPlugin::nextAutoDiscovery(MQTTAutoDiscove
 
 void AlarmPlugin::onConnect(MQTTClient *client)
 {
-    client->subscribe(this, MQTTClient::formatTopic(FSPGM(_set)), MQTTClient::getDefaultQos());
+    client->subscribe(this, MQTTClient::formatTopic(FSPGM(_set)));
 }
 
 void AlarmPlugin::onMessage(MQTTClient *client, char *topic, char *payload, size_t len)
 {
+    debug_printf_P(PSTR("client=%p topic=%s payload=%s\n"), client, topic, payload);
+
     if (_callback) {
         auto value = (bool)atoi(payload);
         if (value) {
@@ -109,7 +111,7 @@ void AlarmPlugin::onMessage(MQTTClient *client, char *topic, char *payload, size
         else {
             _callback(Alarm::AlarmModeType::BOTH, Alarm::STOP_ALARM);
         }
-        client->publish(MQTTClient::formatTopic(FSPGM(_state)), MQTTClient::getDefaultQos(), true, String(value));
+        client->publish(MQTTClient::formatTopic(FSPGM(_state)), true, String(value));
     }
 }
 
@@ -139,7 +141,9 @@ FORM_CREATE_CALLBACK(minute, time.minute, uint8_t);
 FORM_CREATE_CALLBACK(duration, max_duration, uint16_t);
 FORM_CREATE_CALLBACK(weekday, time.week_day.week_days, uint8_t);
 FORM_CREATE_CALLBACK(enabled, is_enabled, bool);
+#if IOT_ALARM_PLUGIN_HAS_BUZZER && IOT_ALARM_PLUGIN_HAS_SILENT
 FORM_CREATE_CALLBACK(mode, mode, uint8_t);
+#endif
 
 void AlarmPlugin::createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request)
 {

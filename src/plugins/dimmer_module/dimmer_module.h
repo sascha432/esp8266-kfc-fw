@@ -193,7 +193,7 @@ public:
     DimmerModulePlugin();
 
     virtual void setup(SetupModeType mode) override;
-    virtual void reconfigure(const char *source) override;
+    virtual void reconfigure(const String &source) override;
     virtual void shutdown() override;
     virtual void getStatus(Print &output) override;
     virtual void createWebUI(WebUI &webUI) override;

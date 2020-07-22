@@ -249,8 +249,7 @@ void Sensor_HLW80xx::publishState(MQTTClient *client)
         auto pf = _getPowerFactor();
         json.add(F("pf"), String(pf, 2));
         json.printTo(str);
-        auto _qos = MQTTClient::getDefaultQos();
-        client->publish(_getTopic(), _qos, 1, str);
+        client->publish(_getTopic(), true, str);
     }
 }
 

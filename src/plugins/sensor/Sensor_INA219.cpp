@@ -117,11 +117,10 @@ void Sensor_INA219::createWebUI(WebUI &webUI, WebUIRow **row)
 void Sensor_INA219::publishState(MQTTClient *client)
 {
     if (client && client->isConnected()) {
-        auto _qos = MQTTClient::getDefaultQos();
-        client->publish(MQTTClient::formatTopic(_getId(VOLTAGE)), _qos, true, String(_mqttData.U(), 2));
-        client->publish(MQTTClient::formatTopic(_getId(CURRENT)), _qos, true, String(_mqttData.I(), 0));
-        client->publish(MQTTClient::formatTopic(_getId(POWER)), _qos, true, String(_mqttData.P(), 0));
-        client->publish(MQTTClient::formatTopic(_getId(PEAK_CURRENT)), _qos, true, String(_Ipeak, 0));
+        client->publish(MQTTClient::formatTopic(_getId(VOLTAGE)), true, String(_mqttData.U(), 2));
+        client->publish(MQTTClient::formatTopic(_getId(CURRENT)), true, String(_mqttData.I(), 0));
+        client->publish(MQTTClient::formatTopic(_getId(POWER)), true, String(_mqttData.P(), 0));
+        client->publish(MQTTClient::formatTopic(_getId(PEAK_CURRENT)), true, String(_Ipeak, 0));
         _mqttData = SensorData();
     }
 }

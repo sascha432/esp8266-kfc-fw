@@ -61,12 +61,19 @@ WeatherStationPlugin::WeatherStationPlugin() :
 #if IOT_WEATHER_STATION_HAS_TOUCHPAD
     _touchpadDebug = false;
 #endif
-    EspSaveCrash::addCallback([this]() {
+
+#if SAVE_CRASH_HAVE_CALLBACKS && false
+    auto nextCallback = EspSaveCrash::getCallback();
+    EspSaveCrash::setCallback([this, nextCallback](const EspSaveCrash::ResetInfo_t &info) {
         if (_canvasPtr) {
             delete _canvasPtr;
             _canvasPtr = nullptr;
         }
+        if (nextCallback) {
+            nextCallback(info);
+        }
     });
+#endif
 }
 
 PGM_P WeatherStationPlugin::getName() const
@@ -884,15 +891,7 @@ void WeatherStationPlugin::_alarmCallback(Alarm::AlarmModeType mode, uint16_t ma
         return;
     }
     if (!_resetAlarmFunc) {
-        // auto animation = static_cast<AnimationEnum_t>(_config.animation);
-        // auto brightness = _brightness;
-        // auto autoBrightness = _autoBrightness;
-
         _resetAlarmFunc = [this](EventScheduler::TimerPtr) {
-        //     _autoBrightness = autoBrightness;
-        //     _brightness = brightness;
-        //     _display.setBrightness(brightness);
-        //     setAnimation(animation);
 #if IOT_WEATHER_STATION_WS2812_NUM
             BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::OFF);
 #endif
@@ -906,13 +905,6 @@ void WeatherStationPlugin::_alarmCallback(Alarm::AlarmModeType mode, uint16_t ma
 #if IOT_WEATHER_STATION_WS2812_NUM
         BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::FAST, 0xff0000);
 #endif
-        // _debug_println(F("set to flashing"));
-        // _autoBrightness = AUTO_BRIGHTNESS_OFF;
-        // _brightness = SevenSegmentDisplay::MAX_BRIGHTNESS;
-        // _display.setBrightness(_brightness);
-        // setAnimation(AnimationEnum_t::FLASHING);
-        // _animationData.flashing.color = Color(255, 0, 0);
-        // _updateRate = 250;
     }
 
     if (maxDuration == 0) {
@@ -925,6 +917,7 @@ void WeatherStationPlugin::_alarmCallback(Alarm::AlarmModeType mode, uint16_t ma
 
 bool WeatherStationPlugin::_resetAlarm()
 {
+    debug_printf_P(PSTR("alarm_func=%u alarm_state=%u"), _resetAlarmFunc ? 1 : 0, AlarmPlugin::getAlarmState());
     if (_resetAlarmFunc) {
         _resetAlarmFunc(nullptr);
         AlarmPlugin::resetAlarm();

@@ -93,8 +93,7 @@ namespace SaveCrash {
 
 #include "at_mode.h"
 
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(SAVECRASHC, "SAVECRASHC", "Clear crash memory");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(SAVECRASHP, "SAVECRASHP", "Print saved crash details");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(SAVECRASH, "SAVECRASH", "<clear|print|alloc>[,<alloc size|print stream>]", "Manage EspSaveCrash");
 
 #endif
 
@@ -130,7 +129,7 @@ public:
                 size += dir.fileSize();
             }
         }
-        debug_printf_P(PSTR("path=%s name=%s size=%u counter=%u espcounter=%u\n"), path.c_str(), name.c_str(), size, counter, espSaveCrash.count());
+        _debug_printf_P(PSTR("path=%s name=%s size=%u counter=%u espcounter=%u\n"), path.c_str(), name.c_str(), size, counter, espSaveCrash.count());
         output.printf_P(PSTR("%u crash report(s), total size "), counter);
         output.print(formatBytes(size));
     }
@@ -139,18 +138,42 @@ public:
 #if AT_MODE_SUPPORTED
     virtual void atModeHelpGenerator() override {
         auto name = getName_P();
-        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SAVECRASHC), name);
-        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SAVECRASHP), name);
+        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SAVECRASH), name);
     }
 
     virtual bool atModeHandler(AtModeArgs &args) override {
-        if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(SAVECRASHC))) {
-            espSaveCrash.clear();
-            args.print(F("Cleared"));
-            return true;
-        }
-        else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(SAVECRASHP))) {
-            espSaveCrash.print(args.getStream());
+        if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(SAVECRASH))) {
+            if (args.toLowerChar(0) == 'c') {
+                espSaveCrash.clear();
+                args.print(F("EEPROM cleared"));
+            }
+            else if (args.toLowerChar(0) == 'p' && args.requireArgs(1, 2)) {
+                //TODO add stream name args.toString(1)
+                // multiStream::create(args.toString(1))
+                // return Serial0/1, create a file, append to file, open tcp connection
+                espSaveCrash.print(args.getStream());
+            }
+            else if (args.toLowerChar(0) == 'a' && args.requireArgs(2, 2)) {
+#if SAVE_CRASH_HAVE_CALLBACKS
+                auto size = args.toIntMinMax(1U, 16U, 5000U);
+                auto ptr = malloc(size);
+                args.printf_P(PSTR("reserved %u byte (%p) for EspSaveCrash"), size, ptr);
+                if (ptr) {
+                    auto nextCallback = EspSaveCrash::getCallback();
+                    EspSaveCrash::setCallback([nextCallback, ptr](const EspSaveCrash::ResetInfo_t &info) {
+                        free(ptr);
+                        if (nextCallback) {
+                            nextCallback(info);
+                        }
+                    });
+                }
+#else
+                args.print(F("EspSaveCrash callbacks not available"));
+#endif
+            }
+            else {
+                args.print(F("invalid argument"));
+            }
             return true;
         }
         return false;

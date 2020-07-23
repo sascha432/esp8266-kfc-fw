@@ -41,7 +41,7 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
 );
 
 
-AlarmPlugin::AlarmPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(AlarmPlugin)), MQTTComponent(ComponentTypeEnum_t::LIGHT), _nextAlarm(0)
+AlarmPlugin::AlarmPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(AlarmPlugin)), MQTTComponent(ComponentTypeEnum_t::SWITCH), _nextAlarm(0), _alarmState(false)
 {
     REGISTER_PLUGIN(this, "AlarmPlugin");
 }
@@ -51,8 +51,7 @@ void AlarmPlugin::setup(SetupModeType mode)
     _debug_println();
     _installAlarms();
     addTimeUpdatedCallback(ntpCallback);
-    // MQTT has lower priority, call register component later
-    LoopFunctions::callOnce([this]() {
+    dependsOn(FSPGM(mqtt), [this](const PluginComponent *plugin) {
         MQTTClient::safeRegisterComponent(this);
     });
 }
@@ -71,7 +70,8 @@ void AlarmPlugin::reconfigure(const String &source)
 
 void AlarmPlugin::shutdown()
 {
-    MQTTClient::safeUnregisterComponent(this);
+   _debug_println();
+     MQTTClient::safeUnregisterComponent(this);
     _removeAlarms();
 }
 
@@ -84,8 +84,8 @@ AlarmPlugin::MQTTAutoDiscoveryPtr AlarmPlugin::nextAutoDiscovery(MQTTAutoDiscove
     switch(num) {
         case 0:
             discovery->create(this, F("alarm"), format);
-            discovery->addStateTopic(MQTTClient::formatTopic(FSPGM(_state)));
-            discovery->addCommandTopic(MQTTClient::formatTopic(FSPGM(_set)));
+            discovery->addStateTopic(_formatTopic(FSPGM(_state)));
+            discovery->addCommandTopic(_formatTopic(FSPGM(_set)));
             discovery->addPayloadOn(1);
             discovery->addPayloadOff(0);
             break;
@@ -96,22 +96,23 @@ AlarmPlugin::MQTTAutoDiscoveryPtr AlarmPlugin::nextAutoDiscovery(MQTTAutoDiscove
 
 void AlarmPlugin::onConnect(MQTTClient *client)
 {
-    client->subscribe(this, MQTTClient::formatTopic(FSPGM(_set)));
+    client->subscribe(this, _formatTopic(FSPGM(_set)));
+    _publishState();
 }
 
 void AlarmPlugin::onMessage(MQTTClient *client, char *topic, char *payload, size_t len)
 {
-    debug_printf_P(PSTR("client=%p topic=%s payload=%s\n"), client, topic, payload);
+    __LDBG_printf("client=%p topic=%s payload=%s alarm_state=%u callback=%u", client, topic, payload, _alarmState, (bool)_callback);
 
     if (_callback) {
-        auto value = (bool)atoi(payload);
-        if (value) {
+        _alarmState = (bool)atoi(payload);
+        if (_alarmState) {
             _callback(Alarm::AlarmModeType::BOTH, Alarm::DEFAULT_MAX_DURATION);
         }
         else {
             _callback(Alarm::AlarmModeType::BOTH, Alarm::STOP_ALARM);
         }
-        client->publish(MQTTClient::formatTopic(FSPGM(_state)), true, String(value));
+        _publishState();
     }
 }
 
@@ -120,11 +121,11 @@ void AlarmPlugin::getStatus(Print &output)
     output.printf_P(PSTR("%u alarm(s) set"), _alarms.size());
 
     if (_nextAlarm) {
-        char buf[32];
-        time_t _now = (time_t)_nextAlarm;
-        strftime_P(buf, sizeof(buf), SPGM(strftime_date_time_zone), localtime(&_now));
-        output.print(F(", next at "));
-        output.print(buf);
+        output.print(F(HTML_S(br) "Next at "));
+        static_cast<PrintString &>(output).strftime(FSPGM(strftime_date_time_zone), _nextAlarm);
+    }
+    if (_alarmState) {
+        output.print(F(HTML_S(br) "Alarm active"));
     }
 }
 
@@ -147,7 +148,7 @@ FORM_CREATE_CALLBACK(mode, mode, uint8_t);
 
 void AlarmPlugin::createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request)
 {
-    _debug_printf_P(PSTR("type=%u name=%s form=%p request=%p\n"), type, formName.c_str(), &form, request);
+    __LDBG_printf("type=%u name=%s form=%p request=%p", type, formName.c_str(), &form, request);
     if (type == FormCallbackType::SAVE) {
         auto &cfg = Alarm::getWriteableConfig();
         auto now = time(nullptr) + 30;
@@ -197,7 +198,9 @@ void AlarmPlugin::createConfigureForm(FormCallbackType type, const String &formN
 
 void AlarmPlugin::resetAlarm()
 {
-    MQTTClient::safePublish(MQTTClient::formatTopic(FSPGM(_state)), true, String(0));
+    __LDBG_printf("state=%u", plugin._alarmState);
+    plugin._alarmState = false;
+    plugin._publishState();
 }
 
 void AlarmPlugin::setCallback(Callback callback)
@@ -205,8 +208,14 @@ void AlarmPlugin::setCallback(Callback callback)
     plugin._callback = callback;
 }
 
+bool AlarmPlugin::getAlarmState()
+{
+    return plugin._alarmState;
+}
+
 void AlarmPlugin::ntpCallback(time_t now)
 {
+    __LDBG_printf("time=%u", (int)now);
     plugin._ntpCallback(now);
 }
 
@@ -223,7 +232,7 @@ void AlarmPlugin::_installAlarms(EventScheduler::TimerPtr timer)
     _nextAlarm = 0;
 
     if (!IS_TIME_VALID(time(nullptr))) {
-        _debug_printf_P(PSTR("time not valid: %u\n"), (int)time(nullptr));
+        __LDBG_printf("time not valid: %u", (int)time(nullptr));
     }
     else {
         auto now = time(nullptr) + 30;
@@ -240,7 +249,7 @@ void AlarmPlugin::_installAlarms(EventScheduler::TimerPtr timer)
             if (_now) {
                 strftime_P(buf, sizeof(buf), SPGM(strftime_date_time_zone), localtime(&_now));
             }
-            _debug_printf_P(PSTR("alarm %u: enabled=%u alarm_time=%u%s time=%02u:%02u duration=%u ts=%u mode=%u weekdays=%s\n"),
+            __LDBG_printf("alarm %u: enabled=%u alarm_time=%u %s time=%02u:%02u duration=%u ts=%u mode=%u weekdays=%s",
                 i, alarm.is_enabled, (int)alarmTime, buf, alarm.time.hour, alarm.time.minute, alarm.max_duration,
                 (int)alarm.time.timestamp, alarm.mode, Alarm::getWeekDaysString(alarm.time.week_day.week_days).c_str()
             );
@@ -266,7 +275,7 @@ void AlarmPlugin::_installAlarms(EventScheduler::TimerPtr timer)
 
     // run timer every 5min. in case time changed and we missed it
     // daylight savings time or any other issue with time changing without a callback
-    _debug_printf_P(PSTR("timer delay=%u min_time=%d alarms=%u\n"), (int)delay, (int)minAlarmTime, _alarms.size());
+    __LDBG_printf("timer delay=%u timer=%s min_time=%d alarms=%u", (int)delay, timer ? PSTR("rearm") : PSTR("add"), (int)minAlarmTime, _alarms.size());
     if (timer) {
         timer->rearm(delay * 1000UL); // rearm timer inside timer callback
     }
@@ -285,7 +294,7 @@ void AlarmPlugin::_removeAlarms()
 
 void AlarmPlugin::_ntpCallback(time_t now)
 {
-    _debug_printf_P(PSTR("time=%u\n"), (int)now);
+    __LDBG_printf("time=%u", (int)now);
     if (IS_TIME_VALID(now)) {
         // reinstall alarms if time changed
         _removeAlarms();
@@ -337,9 +346,21 @@ void AlarmPlugin::_timerCallback(EventScheduler::TimerPtr timer)
         }
         _alarms.clear();
         if (triggered) {
-            MQTTClient::safePublish(MQTTClient::formatTopic(FSPGM(_state)), true, String(1));
+            _alarmState = true;
+            _publishState();
         }
     }
 
     _installAlarms(timer);
+}
+
+void AlarmPlugin::_publishState()
+{
+    __LDBG_printf("publish state=%s", String((int)_alarmState).c_str());
+     MQTTClient::safePublish(_formatTopic(FSPGM(_state)), true, String(_alarmState));
+}
+
+String AlarmPlugin::_formatTopic(const __FlashStringHelper *topic)
+{
+    return MQTTClient::formatTopic(F("alarm"), topic);
 }

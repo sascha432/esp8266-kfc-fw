@@ -348,6 +348,9 @@ public:
     void setCallback(AnimationCallback_t callback) {
         _callback = callback;
     }
+    bool hasCallback() const {
+        return (bool)_callback;
+    }
 
 private:
     color_t _getColor(pixel_address_t addr, color_t color) const {

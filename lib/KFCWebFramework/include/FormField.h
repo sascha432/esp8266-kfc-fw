@@ -44,6 +44,13 @@ public:
 
     const String &getName() const;
 
+    // returns ltrim '#.' of the name
+    const char *getNameForType() const;
+
+    // returns '" id="' if name starts with '#' or ' ' if it starts with '.', and an empty string if the name is empty
+    // use with printf("... class=\"row%s%s\" ...", getNameType(),getNameForType());
+    PGM_P getNameType() const;
+
     /**
     * Returns the value of the initialized field or changes the user submitted
     **/
@@ -74,6 +81,7 @@ public:
     InputFieldType getType() const;
 
     void setFormUI(FormUI *formUI);
+    FormUI::TypeEnum_t getFormType() const;
     void html(PrintInterface &output);
 
     void addValidator(FormValidator *validator);
@@ -103,8 +111,7 @@ public:
     }
     virtual void copyValue() override {
     }
-    void end(FormUI::TypeEnum_t type = FormUI::TypeEnum_t::GROUP_END);
-    void endDiv();
+    void end();
 
     bool isExpanded() const {
         return _expanded;

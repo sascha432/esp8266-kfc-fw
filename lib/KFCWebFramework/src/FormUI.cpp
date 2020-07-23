@@ -88,27 +88,35 @@ FormUI *FormUI::setReadOnly()
 void FormUI::html(PrintInterface &output)
 {
     switch(_type) {
-        case GROUP_START_DIV: {
+        case TypeEnum_t::GROUP_START_HR: {
             if (_label.length()) {
-                output.printf_P(PSTR("<div id=\"%s\" class=\"form-dependency-group\" data-action=\"%s\">" FORMUI_CRLF), _parent->getName().c_str(), _label.c_str());
+                output.printf_P(PSTR("<div class=\"form-row%s%s\"><div class=\"col-lg-12\"><h5>%s</h5></div><div class=\"col-lg-12\"><hr class=\"mt-0\"></div></div><div class=\"form-group\">" FORMUI_CRLF), _parent->getNameType(), _parent->getNameForType(), _label.c_str());
             } else {
-                output.printf_P(PSTR("<div id=\"%s\">" FORMUI_CRLF), _parent->getName().c_str());
+                output.printf_P(PSTR("<div class=\"form-row%s%s\"><div class=\"col-lg-12 mt-3\"><hr></div></div><div class=\"form-group\">" FORMUI_CRLF), _parent->getNameType(), _parent->getNameForType());
             }
         } break;
-        case GROUP_END_DIV: {
+        case TypeEnum_t::GROUP_START_DIV: {
+            if (_label.length()) {
+                output.printf_P(PSTR("<div class=\"form-dependency-group%s%s\" data-action=\"%s\">" FORMUI_CRLF), _parent->getNameType(), _parent->getNameForType(), _label.c_str());
+            } else {
+                output.printf_P(PSTR("<div class=\"form-dependency-group%s%s\">" FORMUI_CRLF), _parent->getNameType(), _parent->getNameForType());
+            }
+        } break;
+        case TypeEnum_t::GROUP_END_HR:
+        case TypeEnum_t::GROUP_END_DIV: {
             output.printf_P(PSTR("</div>" FORMUI_CRLF));
         } break;
-        case GROUP_START: {
+        case TypeEnum_t::GROUP_START: {
             FormGroup &group = reinterpret_cast<FormGroup &>(*_parent);
             auto id = _parent->getName().c_str();
             output.printf_P(PSTR("<div class=\"form-group\"><button class=\"btn btn-secondary btn-block\""));
             output.printf_P(PSTR(" type=\"button\" data-toggle=\"collapse\" data-target=\"#%s\" aria-expanded=\"false\" aria-controls=\"%s\">"), id, id);
             output.printf_P(PSTR("%s</button></div><div class=\"collapse%s\" id=\"%s\"><div class=\"card card-body mb-3\">" FORMUI_CRLF), _label.c_str(), group.isExpanded() ? F(".show") : F(""), id);
         } break;
-        case GROUP_END: {
+        case TypeEnum_t::GROUP_END: {
             output.printf_P(PSTR("</div></div>" FORMUI_CRLF));
         } break;
-        case HIDDEN: {
+        case TypeEnum_t::HIDDEN: {
             // TODO check html entities encoding
             auto name = _parent->getName().c_str();
             output.printf_P(PSTR("<input type=\"hidden\" name=\"%s\" id=\"%s\" value=\"%s\"%s>" FORMUI_CRLF), name, name, _parent->getValue().c_str(), _attributes.c_str());
@@ -141,9 +149,6 @@ void FormUI::html(PrintInterface &output)
                 output.printf_P(PSTR("<input type=\"password\" class=\"form-control visible-password\" name=\"%s\" id=\"%s\" autocomplete=\"new-password\" spellcheck=\"false\"%s>" FORMUI_CRLF), name, name, _attributes.c_str());
                 break;
             default:
-            // case GROUP_START:
-            // case GROUP_END:
-            // case HIDDEN:
                 break;
             }
 

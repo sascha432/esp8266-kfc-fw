@@ -23,6 +23,7 @@ public:
 	using PrintInterface = PrintArgs::PrintInterface;
 
 	typedef enum {
+		NONE,
 		SELECT,
 		TEXT,
 		PASSWORD,
@@ -31,6 +32,8 @@ public:
 		GROUP_END,
 		GROUP_START_DIV,
 		GROUP_END_DIV,
+		GROUP_START_HR,
+		GROUP_END_HR,
 		HIDDEN,
 	} TypeEnum_t;
 
@@ -55,6 +58,10 @@ public:
 	void html(PrintInterface &output);
 
 	void setParent(FormField *field);
+	TypeEnum_t getType() const {
+		return _type;
+	}
+
 
 private:
 	bool _compareValue(const String &value) const;

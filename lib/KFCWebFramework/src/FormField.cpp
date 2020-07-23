@@ -43,6 +43,26 @@ const String &FormField::getName() const
     return _name;
 }
 
+const char *FormField::getNameForType() const
+{
+    auto ptr = _name.c_str();
+    if (*ptr == '.' || *ptr == '#') {
+        ptr++;
+    }
+    return ptr;
+}
+
+PGM_P FormField::getNameType() const
+{
+    if (_name.length() == 0) {
+        return emptyString.c_str();
+    }
+    else if (_name.charAt(0) == '.') {
+        return PSTR(" ");
+    }
+    return PSTR("\" id=\"");
+}
+
 /**
 * Returns the value of the initialized field or changes the user submitted
 **/
@@ -119,6 +139,14 @@ void FormField::setFormUI(FormUI *formUI)
     _formUI->setParent(this);
 }
 
+FormUI::TypeEnum_t FormField::getFormType() const
+{
+    if (_formUI) {
+        return _formUI->getType();
+    }
+    return FormUI::TypeEnum_t::NONE;
+}
+
 void FormField::html(PrintInterface &output)
 {
     _debug_printf_P(PSTR("name=%s formUI=%p\n"), getName().c_str(), _formUI);
@@ -138,12 +166,22 @@ const FormField::ValidatorsVector &FormField::getValidators() const
     return _validators;
 }
 
-void FormGroup::end(FormUI::TypeEnum_t type)
+void FormGroup::end()
 {
-    getForm().addGroup(getName(), String(), false, type);
-}
+    FormUI::TypeEnum_t type;
+    switch(getFormType()) {
+        case FormUI::TypeEnum_t::GROUP_START:
+            type = FormUI::TypeEnum_t::GROUP_END;
+            break;
+        case FormUI::TypeEnum_t::GROUP_START_DIV:
+            type = FormUI::TypeEnum_t::GROUP_END_DIV;
+            break;
+        case FormUI::TypeEnum_t::GROUP_START_HR:
+            type = FormUI::TypeEnum_t::GROUP_END_HR;
+            break;
+        default:
+            return;
 
-void FormGroup::endDiv()
-{
-    end(FormUI::TypeEnum_t::GROUP_END_DIV);
+    }
+    getForm().addGroup(getName(), String(), false, type);
 }

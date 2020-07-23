@@ -32,9 +32,16 @@ public:
     void setFormData(FormData *data);
     void setInvalidMissing(bool invalidMissing);
 
+    // #my-id = set id="my-id"
+    // random-str = set id="random-str"
+    // .my-class = add class="my-class"
+    // empty = no id/no class
     FormGroup &addGroup(const String &name, const String &label, bool expanded, FormUI::TypeEnum_t type = FormUI::TypeEnum_t::GROUP_START);
     FormGroup &addDivGroup(const String &id, const String &dependencies = String()) {
         return addGroup(id, dependencies, false, FormUI::TypeEnum_t::GROUP_START_DIV);
+    }
+    FormGroup &addHrGroup(const String &id, const String &label = String()) {
+        return addGroup(id, label, false, FormUI::TypeEnum_t::GROUP_START_HR);
     }
 
     int add(FormField *field);

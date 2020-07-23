@@ -44,7 +44,7 @@ void WsWebUISocket::setup()
     }
 }
 
-void WsWebUISocket::send(AsyncWebSocketClient *client, JsonUnnamedObject &json)
+void WsWebUISocket::send(AsyncWebSocketClient *client, const JsonUnnamedObject &json)
 {
     auto server = client->server();
     auto buffer = server->makeBuffer(json.length());
@@ -52,7 +52,7 @@ void WsWebUISocket::send(AsyncWebSocketClient *client, JsonUnnamedObject &json)
     client->text(buffer);
 }
 
-void WsWebUISocket::broadcast(WsWebUISocket *sender, JsonUnnamedObject &json)
+void WsWebUISocket::broadcast(WsWebUISocket *sender, const JsonUnnamedObject &json)
 {
     if (wsWebUI) {
         auto buffer = wsWebUI->makeBuffer(json.length());

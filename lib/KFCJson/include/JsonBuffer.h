@@ -109,13 +109,13 @@ private:
         reset();
     }
 public:
-    JsonBuffer(JsonObject &object) : JsonBuffer(reinterpret_cast<AbstractJsonValue &>(object)) {
+    JsonBuffer(const JsonObject &object) : JsonBuffer(reinterpret_cast<AbstractJsonValue &>(const_cast<JsonObject &>(object))) {
     }
-    JsonBuffer(JsonUnnamedObject &object) : JsonBuffer(reinterpret_cast<AbstractJsonValue &>(object)) {
+    JsonBuffer(const JsonUnnamedObject &object) : JsonBuffer(reinterpret_cast<AbstractJsonValue &>(const_cast<JsonUnnamedObject &>(object))) {
     }
-    JsonBuffer(JsonArray &object) : JsonBuffer(reinterpret_cast<AbstractJsonValue &>(object)) {
+    JsonBuffer(const JsonArray &object) : JsonBuffer(reinterpret_cast<AbstractJsonValue &>(const_cast<JsonArray &>(object))) {
     }
-    JsonBuffer(JsonUnnamedArray &object) : JsonBuffer(reinterpret_cast<AbstractJsonValue &>(object)) {
+    JsonBuffer(const JsonUnnamedArray &object) : JsonBuffer(reinterpret_cast<AbstractJsonValue &>(const_cast<JsonUnnamedArray &>(object))) {
     }
 
     void reset();

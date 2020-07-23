@@ -110,6 +110,8 @@ namespace SerialHandler {
         static constexpr size_t kAddBufferSize = 256;
         // max. size it can reach
         static constexpr size_t kRealMaxBufferSize = ((((kMaxBufferSize - kMinBufferSize) + kAddBufferSize - 1) / kAddBufferSize) * kAddBufferSize) + kMinBufferSize;
+        // set buffer to this initial value
+        static constexpr size_t kInitBufferSize = 8;
 
         Client &addClient(Callback cb, EventType events);
         void removeClient(const Client &client);
@@ -175,3 +177,4 @@ extern HardwareSerial Serial0;
 extern Stream &Serial;
 extern Stream &DebugSerial;
 extern SerialHandler::Wrapper serialHandler;
+extern StreamWrapper debugStreamWrapper;

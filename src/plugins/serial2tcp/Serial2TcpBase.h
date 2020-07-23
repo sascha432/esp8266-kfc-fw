@@ -12,18 +12,16 @@
 #include "serial_handler.h"
 #include "Serial2TcpConnection.h"
 
-#if DEBUG_SERIAL2TCP && 0
-#undef DEBUGV
-#define DEBUGV(fmt, ...) { ::printf(PSTR("<%s:%u> "), __DEBUG_FUNCTION__, __LINE__); ::printf((PGM_P)PSTR(fmt), ## __VA_ARGS__); }
+#if DEBUG_SERIAL2TCP && 1
+#define __DBGS2T(fmt, ...) { ::printf(PSTR("<%s:%u> "), __DEBUG_FUNCTION__, __LINE__); ::printf((PGM_P)PSTR(fmt), ## __VA_ARGS__); }
 #else
-#undef DEBUGV
-#define DEBUGV(...) ;
+#define __DBGS2T(...) ;
 #endif
 
-#if DEBUG_SERIAL2TCP && 0
-#define DEBUGV_NVT(fmt, ...) { ::printf(PSTR("<%s:%u> "), __DEBUG_FUNCTION__, __LINE__); ::printf((PGM_P)PSTR(fmt), ## __VA_ARGS__); }
+#if DEBUG_SERIAL2TCP && 1
+#define __DBGS2T_NVT(fmt, ...) { ::printf(PSTR("<%s:%u> "), __DEBUG_FUNCTION__, __LINE__); ::printf((PGM_P)PSTR(fmt), ## __VA_ARGS__); }
 #else
-#define DEBUGV_NVT(...) ;
+#define __DBGS2T_NVT(...) ;
 #endif
 
 class Serial2TcpBase {

@@ -20,8 +20,8 @@ public:
 
     virtual void onText(uint8_t *data, size_t len) override;
 
-    static void send(AsyncWebSocketClient *client, JsonUnnamedObject &json);
-    static void broadcast(WsWebUISocket *sender, JsonUnnamedObject &json);
+    static void send(AsyncWebSocketClient *client, const JsonUnnamedObject &json);
+    static void broadcast(WsWebUISocket *sender, const JsonUnnamedObject &json);
     static void setup();
 
     static void createWebUIJSON(JsonUnnamedObject &json);

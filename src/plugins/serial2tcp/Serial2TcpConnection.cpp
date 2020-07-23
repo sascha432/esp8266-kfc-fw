@@ -13,18 +13,18 @@
 
 Serial2TcpConnection::Serial2TcpConnection(AsyncClient *client, bool isAuthenticated) : _client(client), _isAuthenticated(isAuthenticated)
 {
-    // DEBUGV("CONST this=%p client=%p\n", this, _client);
+    // __DBGS2T("CONST this=%p client=%p\n", this, _client);
 }
 
 Serial2TcpConnection::~Serial2TcpConnection()
 {
-    // DEBUGV("DEST this=%p client=%p\n", this, _client);
+    // __DBGS2T("DEST this=%p client=%p\n", this, _client);
     close();
 }
 
 void Serial2TcpConnection::close()
 {
-    // DEBUGV("CLOSE this=%p client=%p\n", this, _client);
+    // __DBGS2T("CLOSE this=%p client=%p\n", this, _client);
     if (_client) {
         _client->abort();
         delete _client;
@@ -45,12 +45,12 @@ bool Serial2TcpConnection::isConnected() const
 // void Serial2TcpConnection::setClient(AsyncClient *client)
 // {
 //     _client = client;
-//     DEBUGV("SETCLIENT=%p this=%p\n", _client, this);
+//     __DBGS2T("SETCLIENT=%p this=%p\n", _client, this);
 // }
 
 AsyncClient *Serial2TcpConnection::getClient() const
 {
-    // DEBUGV("GETCLIENT=%p this=%p\n", _client, this);
+    // __DBGS2T("GETCLIENT=%p this=%p\n", _client, this);
     return _client;
 }
 

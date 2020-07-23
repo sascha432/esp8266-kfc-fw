@@ -63,7 +63,7 @@ public:
     virtual size_t write(uint8_t) override;
     virtual size_t write(const uint8_t *buffer, size_t size) override;
 
-    virtual void flush() {}
+    virtual void flush();
 
 private:
     StreamWrapperVector *_streams;

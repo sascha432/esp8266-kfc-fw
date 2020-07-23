@@ -49,7 +49,7 @@ void Serial2TcpBase::_setBaudRate(uint32_t baudrate)
                 if (serial.baudRate() != baudrate) {
                     serial.end();
                     serial.begin(baudrate);
-                    DEBUGV("SoftwareSerial baudrate=%u\n", baudrate);
+                    __DBGS2T("SoftwareSerial baudrate=%u\n", baudrate);
                 }
             }
             break;
@@ -57,7 +57,7 @@ void Serial2TcpBase::_setBaudRate(uint32_t baudrate)
             if (Serial1.baudRate() != (int)baudrate) {
                 Serial1.end();
                 Serial1.begin(baudrate);
-                DEBUGV("Serial1 baudrate=%u\n", baudrate);
+                __DBGS2T("Serial1 baudrate=%u\n", baudrate);
             }
             break;
         case Serial2TCP::SerialPortType::SERIAL0:
@@ -65,7 +65,7 @@ void Serial2TcpBase::_setBaudRate(uint32_t baudrate)
             if (Serial0.baudRate() != (int)baudrate) {
                 Serial0.end();
                 Serial0.begin(baudrate);
-                DEBUGV("Serial baudrate=%u\n", baudrate);
+                __DBGS2T("Serial baudrate=%u\n", baudrate);
             }
             break;
     }
@@ -88,14 +88,14 @@ Serial2TcpBase *Serial2TcpBase::createInstance(const Serial2TCP::Serial2Tcp_t &c
                 auto softwareSerial = new SoftwareSerial(cfg.rx_pin, cfg.tx_pin);
                 softwareSerial->begin(cfg.baudrate);
                 serialPort = softwareSerial;
-                DEBUGV("SoftwareSerial: rx=%d tx=%d baud=%d\n", cfg.rx_pin, cfg.tx_pin, cfg.baudrate);
+                __DBGS2T("SoftwareSerial: rx=%d tx=%d baud=%d\n", cfg.rx_pin, cfg.tx_pin, cfg.baudrate);
             }
             LoopFunctions::add(Serial2TcpBase::handleSerialDataLoop);
             break;
         case Serial2TCP::SerialPortType::SERIAL1:
             serialPort = &Serial1;
             Serial1.begin(cfg.baudrate);
-            DEBUGV("Serial1 baud %u\n", cfg.baudrate);
+            __DBGS2T("Serial1 baud %u\n", cfg.baudrate);
             LoopFunctions::add(Serial2TcpBase::handleSerialDataLoop);
             break;
         default:
@@ -105,21 +105,21 @@ Serial2TcpBase *Serial2TcpBase::createInstance(const Serial2TCP::Serial2Tcp_t &c
                 Serial0.end();
                 Serial0.begin(cfg.baudrate);
             }
-            DEBUGV("Serial baud=%u\n", cfg.baudrate);
+            __DBGS2T("Serial baud=%u\n", cfg.baudrate);
             client = &serialHandler.addClient(onSerialData, SerialHandler::EventType::NONE);
             break;
     }
 
     if (cfg.mode == Serial2TCP::ModeType::SERVER) {
         _instance = new Serial2TcpServer(*serialPort, cfg);
-        DEBUGV("server mode port %u\n", cfg.port);
+        __DBGS2T("server mode port %u\n", cfg.port);
     }
     else  {
         if (!hostname) {
             hostname = Serial2TCP::getHostname();
         }
         _instance = new Serial2TcpClient(*serialPort, hostname, cfg);
-        DEBUGV("client mode: %s:%u\n", hostname, cfg.port);
+        __DBGS2T("client mode: %s:%u\n", hostname, cfg.port);
     }
     _instance->_setClient(client);
     if (cfg.authentication) {
@@ -140,7 +140,7 @@ void Serial2TcpBase::destroyInstance()
 
 void Serial2TcpBase::onSerialData(Stream &client)
 {
-    DEBUGV("client %p available=%u\n", &client, client.available());
+    //__DBGS2T("client %p available=%u\n", &client, client.available());
     if (_instance) {
         _instance->_onSerialData(client);
     }
@@ -180,27 +180,27 @@ void Serial2TcpBase::_processTcpData(Serial2TcpConnection *conn, const char *dat
                 // case NVT_DM:
 
                 case NVT_WONT:
-                    DEBUGV_NVT("NVT_WONT\n");
+                    __DBGS2T_NVT("NVT_WONT\n");
                     buffer.write(*ptr);
                     break;
                 case NVT_WILL:
-                    DEBUGV_NVT("NVT_WILL\n");
+                    __DBGS2T_NVT("NVT_WILL\n");
                     buffer.write(*ptr);
                     break;
                 case NVT_SB:
-                    DEBUGV_NVT("NVT_SB\n");
+                    __DBGS2T_NVT("NVT_SB\n");
                     buffer.write(*ptr);
                     break;
                 case NVT_SE:
-                    DEBUGV_NVT("NVT_SE\n");
+                    __DBGS2T_NVT("NVT_SE\n");
                     buffer.clear();
                     break;
                 case NVT_NOP:
-                    // DEBUGV_NVT("NVT_NOP\n");
+                    // __DBGS2T_NVT("NVT_NOP\n");
                     buffer.clear();
                     break;
                 case NVT_AYT: {
-                        DEBUGV_NVT("NVT_AYT\n");
+                        __DBGS2T_NVT("NVT_AYT\n");
                         buffer.clear();
                         PrintString str;
                         str.printf_P(PSTR("KFCFW %s\n"), KFCFWConfiguration::getShortFirmwareVersion_P());
@@ -210,14 +210,14 @@ void Serial2TcpBase::_processTcpData(Serial2TcpConnection *conn, const char *dat
                     }
                     break;
                 case NVT_IP:
-                    DEBUGV_NVT("NVT_IP\n");
+                    __DBGS2T_NVT("NVT_IP\n");
                     conn->close();
                     return;
                 // case NVT_IAC:
                 //     _serialWrite(conn, NVT_IAC);
                 //     // fallthrough
                 default:
-                    DEBUGV_NVT("NVT error %u\n", (int)*ptr);
+                    __DBGS2T_NVT("NVT error %u\n", (int)*ptr);
                     // output.write(NVT_IAC);
                     // output.write(*ptr);
                     stream.write(NVT_IAC);
@@ -227,32 +227,32 @@ void Serial2TcpBase::_processTcpData(Serial2TcpConnection *conn, const char *dat
             }
         }
         else if (*ptr == NVT_SB_CPO && buffer.length() == 2) {
-            DEBUGV_NVT("NVT_SB_CPO\n");
+            __DBGS2T_NVT("NVT_SB_CPO\n");
             buffer.write(NVT_SB_CPO);
         }
         else if (buffer.length() > 2) {
             buffer.write(*ptr);
             if (*ptr == NVT_SE) {
-                DEBUGV_NVT("NVT_SE\n");
+                __DBGS2T_NVT("NVT_SE\n");
                 if (buffer.charAt(buffer.length() - 2) == NVT_IAC) { // end of sequence
                     auto data = buffer.getChar() + 2;
                     auto dataLen = buffer.length() - 4;
-                    DEBUGV_NVT("NVT_IAC dataLen=%d\n", dataLen);
+                    __DBGS2T_NVT("NVT_IAC dataLen=%d\n", dataLen);
                     if (*data == NVT_SB_CPO) {
                         dataLen--;
                         data++;
-                        DEBUGV_NVT("NVT_SB_CPO dataLen=%d\n", dataLen);
+                        __DBGS2T_NVT("NVT_SB_CPO dataLen=%d\n", dataLen);
                         if (*data == NVT_CPO_SET_BAUDRATE) {
                             dataLen--;
-                            DEBUGV_NVT("NVT_CPO_SET_BAUDRATE dataLen=%d\n", dataLen);
+                            __DBGS2T_NVT("NVT_CPO_SET_BAUDRATE dataLen=%d\n", dataLen);
                             data++;
                             uint32_t baudRate = 0;
                             while(dataLen--) {
-                                DEBUGV_NVT("dataLen=%d\n", dataLen);
+                                __DBGS2T_NVT("dataLen=%d\n", dataLen);
                                 if (*data == NVT_IAC) {
-                                    DEBUGV_NVT("NVT_IAC\n");
+                                    __DBGS2T_NVT("NVT_IAC\n");
                                     if (dataLen && *(data + 1) == NVT_IAC) { // skip double NVT_IAC
-                                        DEBUGV_NVT("NVT_IAC\n");
+                                        __DBGS2T_NVT("NVT_IAC\n");
                                         dataLen--;
                                         data++;
                                     }
@@ -261,7 +261,7 @@ void Serial2TcpBase::_processTcpData(Serial2TcpConnection *conn, const char *dat
                                 baudRate |= *data;
                                 data++;
                             }
-                            DEBUGV_NVT("NVT_CPO_SET_BAUDRATE %u\n", baudRate);
+                            __DBGS2T_NVT("NVT_CPO_SET_BAUDRATE %u\n", baudRate);
                             if (baudRate) {
                                 _setBaudRate(baudRate);
                             }
@@ -283,7 +283,7 @@ void Serial2TcpBase::_processTcpData(Serial2TcpConnection *conn, const char *dat
                         else {
                             data++;
                             while(dataLen--) {
-                                DEBUGV_NVT("data %02x %d\n", *data, *data);
+                                __DBGS2T_NVT("data %02x %d\n", *data, *data);
                                 data++;
                             }
 
@@ -332,20 +332,20 @@ void Serial2TcpBase::end()
 
 void Serial2TcpBase::handleError(void *arg, AsyncClient *client, int8_t error)
 {
-    DEBUGV("arg=%p client=%p error=%u\n", arg, client, error);
+    __DBGS2T("arg=%p client=%p error=%u\n", arg, client, error);
     reinterpret_cast<Serial2TcpBase *>(arg)->_onDisconnect(client, PrintString(F("Error #%d"), error));
 }
 
 void Serial2TcpBase::handleConnect(void *arg, AsyncClient *client)
 {
-    DEBUGV("arg=%p client=%p\n", arg, client);
+    __DBGS2T("arg=%p client=%p\n", arg, client);
     reinterpret_cast<Serial2TcpBase *>(arg)->_onConnect(client);
 }
 
 void Serial2TcpBase::handleData(void *arg, AsyncClient *client, void *data, size_t len)
 {
 #if 1
-    DEBUGV("arg=%p client=%p len=%u\n", arg, client, len);
+    __DBGS2T("arg=%p client=%p len=%u\n", arg, client, len);
 #else
     PrintString str;
     if (data && len) {
@@ -354,51 +354,51 @@ void Serial2TcpBase::handleData(void *arg, AsyncClient *client, void *data, size
         d.dump(data, std::min((size_t)128, len));
         str.trim();
     }
-    DEBUGV("arg=%p client=%p len=%u data=%s\n", arg, client, len, str.c_str());
+    __DBGS2T("arg=%p client=%p len=%u data=%s\n", arg, client, len, str.c_str());
 #endif
     reinterpret_cast<Serial2TcpBase *>(arg)->_onData(client, data, len);
 }
 
 void Serial2TcpBase::handleDisconnect(void *arg, AsyncClient *client)
 {
-    DEBUGV("arg=%p client=%p\n", arg, client);
+    __DBGS2T("arg=%p client=%p\n", arg, client);
     reinterpret_cast<Serial2TcpBase *>(arg)->_onDisconnect(client, F("Disconnect"));
 }
 
 void Serial2TcpBase::handleTimeOut(void *arg, AsyncClient *client, uint32_t time)
 {
-    DEBUGV("arg=%p client=%p time=%u\n", arg, client, time);
+    __DBGS2T("arg=%p client=%p time=%u\n", arg, client, time);
     reinterpret_cast<Serial2TcpBase *>(arg)->_onDisconnect(client, PrintString(F("Timeout %u"), time));
 }
 
 void Serial2TcpBase::handleAck(void *arg, AsyncClient *client, size_t len, uint32_t time)
 {
-    // DEBUGV("arg=%p client=%p len=%u time=%u\n", arg, client, len, time);
+    // __DBGS2T("arg=%p client=%p len=%u time=%u\n", arg, client, len, time);
 }
 
 void Serial2TcpBase::handlePoll(void *arg, AsyncClient *client)
 {
-    // DEBUGV("arg=%p client=%p\n", arg, client);
+    // __DBGS2T("arg=%p client=%p\n", arg, client);
 }
 
 void Serial2TcpBase::_onSerialData(Stream &client)
 {
-    // DEBUGV("type=%d len=%u\n", type, len);
+    // __DBGS2T("type=%d len=%u\n", type, len);
 }
 
 void Serial2TcpBase::_onConnect(AsyncClient *client)
 {
-    // DEBUGV("_onConnect client=%p\n", client);
+    // __DBGS2T("_onConnect client=%p\n", client);
 }
 
 void Serial2TcpBase::_onData(AsyncClient *client, void *data, size_t len)
 {
-    // DEBUGV("_onData client=%p len=%u\n", client, len);
+    // __DBGS2T("_onData client=%p len=%u\n", client, len);
 }
 
 void Serial2TcpBase::_onDisconnect(AsyncClient *client, const String &reason)
 {
-    // DEBUGV("_onDisconnect client=%p reason=%s\n", client, reason.c_str());
+    // __DBGS2T("_onDisconnect client=%p reason=%s\n", client, reason.c_str());
 }
 
 void Serial2TcpBase::_setClient(SerialHandler::Client *client)
@@ -408,7 +408,7 @@ void Serial2TcpBase::_setClient(SerialHandler::Client *client)
 
 void Serial2TcpBase::_stopClient()
 {
-    DEBUGV("_stopClient client=%p\n", _client);
+    __DBGS2T("_stopClient client=%p\n", _client);
     if (_client) {
         _client->stop();
     }
@@ -416,7 +416,7 @@ void Serial2TcpBase::_stopClient()
 
 void Serial2TcpBase::_startClient()
 {
-    DEBUGV("_startClient client=%p\n", _client);
+    __DBGS2T("_startClient client=%p\n", _client);
     if (_client) {
         _client->start(SerialHandler::EventType::RW);
     }

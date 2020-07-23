@@ -46,7 +46,7 @@ bool Serial2TcpClient::isConnected() const
 
 void Serial2TcpClient::begin()
 {
-    DEBUGV("begin\n");
+    __DBGS2T("begin\n");
     Serial2TcpBase::begin();
     if (hasAutoConnect()) {
         _connect();
@@ -55,7 +55,7 @@ void Serial2TcpClient::begin()
 
 void Serial2TcpClient::end()
 {
-    DEBUGV("end\n");
+    __DBGS2T("end\n");
    _disconnect();
    Serial2TcpBase::end();
 }
@@ -63,7 +63,7 @@ void Serial2TcpClient::end()
 
 void Serial2TcpClient::_onSerialData(Stream &client)
 {
-    DEBUGV("connected=%u conn=%p client=%p type=%u len=%u\n", _connected(), _connection, _connection ? _connection->getClient() : nullptr, type, len);
+    //__DBGS2T("connected=%u conn=%p client=%p\n", _connected(), _connection, _connection ? _connection->getClient() : nullptr);
     if (_connected()) {
         auto endTime = millis() + 100;
         while (client.available() && millis() < endTime) {
@@ -85,18 +85,17 @@ void Serial2TcpClient::_onData(AsyncClient *client, void *data, size_t len)
 
 void Serial2TcpClient::_onConnect(AsyncClient *client)
 {
-    DEBUGV("client=%p conn=%p client=%p\n", client, _connection, _connection ? _connection->getClient() : nullptr);
-    _startClient();
+    __DBGS2T("client=%p conn=%p client=%p\n", client, _connection, _connection ? _connection->getClient() : nullptr);
 }
 
 void Serial2TcpClient::_onDisconnect(AsyncClient *client, const String &reason)
 {
-    DEBUGV("client=%p reason=%s\n", client, reason.c_str());
+    __DBGS2T("client=%p reason=%s\n", client, reason.c_str());
     end();
 
     auto time = getAutoReconnect();
     // _debug_printf_P(PSTR("auto reconnect=%u\n"), time);
-    DEBUGV("auto reconnect=%u\n", time);
+    __DBGS2T("auto reconnect=%u\n", time);
     if (time) {
         _timer.add(time * 1000UL, false, [this](EventScheduler::TimerPtr timer) {
             _connect();
@@ -110,7 +109,7 @@ void Serial2TcpClient::_connect()
 
     _connection = new Serial2TcpConnection(new AsyncClient(), hasAuthentication());
     auto &client = _client();
-    DEBUGV("connect this=%p conn=%p client=%p\n", this, _connection, _connection->getClient());
+    __DBGS2T("connect this=%p conn=%p client=%p\n", this, _connection, _connection->getClient());
     client.onConnect(handleConnect, this);
 	client.onData(handleData, this);
 	client.onError(handleError, this);
@@ -122,29 +121,31 @@ void Serial2TcpClient::_connect()
     bool result;
     IPAddress address;
     if (address.fromString(getHostname())) {
-        DEBUGV("IP=%s:%u\n", address.toString().c_str(), getPort());
+        __DBGS2T("IP=%s:%u\n", address.toString().c_str(), getPort());
         result = client.connect(address, getPort());
     }
     else {
-        DEBUGV("host=%s:%u\n", getHostname().c_str(), getPort());
+        __DBGS2T("host=%s:%u\n", getHostname().c_str(), getPort());
         result = client.connect(getHostname().c_str(), getPort());
     }
-    DEBUGV("result=%u\n", result);
+    __DBGS2T("result=%u\n", result);
 
-    if (!result) {
+    if (result) {
+        _startClient();
+    } else {
         _onDisconnect(&client, config.isWiFiUp() ? F("Connection failed") : F("Connection failed: WiFi offline"));
     }
-    DEBUGV("connect conn=%p client=%p\n", _connection, _connection ? _connection->getClient() : nullptr);
+    __DBGS2T("connect conn=%p client=%p\n", _connection, _connection ? _connection->getClient() : nullptr);
 }
 
 void Serial2TcpClient::_disconnect()
 {
-    DEBUGV("disconnect conn=%p client=%p\n", _connection, _connection ? _connection->getClient() : nullptr);
+    __DBGS2T("disconnect conn=%p client=%p\n", _connection, _connection ? _connection->getClient() : nullptr);
     _timer.remove();
     if (_connection) {
+        _stopClient();
         _connection->close();
         delete _connection;
         _connection = nullptr;
-        _stopClient();
     }
 }

@@ -152,3 +152,12 @@ size_t StreamWrapper::write(const uint8_t *buffer, size_t size)
     }
     return size;
 }
+
+void StreamWrapper::flush()
+{
+    for(const auto stream: *_streams) {
+        if (stream != &Serial0 && stream != &Serial1) {
+            stream->flush();
+        }
+    }
+}

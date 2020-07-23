@@ -135,6 +135,17 @@ public:
     } Config_t;
     using PGM_Config_t = const Config_t *;
 
+    using DependencyCallback = std::function<void(const PluginComponent *plugin)>;
+
+    class Dependency {
+    public:
+        Dependency(NameType name, DependencyCallback callback) : _name(name), _callback(callback) {}
+        NameType _name;
+        DependencyCallback _callback;
+    };
+
+    using DependencyVector = std::vector<Dependency>;
+
 public:
     PluginComponent(PGM_Config_t config) : _setupTime(0), _config(config) {
     }
@@ -142,10 +153,10 @@ public:
 // static functions
 public:
     template<class T>
-    static T *getPlugin(NameType name) {
-        return reinterpret_cast<T *>(findPlugin(name));
+    static T *getPlugin(NameType name, bool isSetup = true) {
+        return reinterpret_cast<T *>(findPlugin(name, isSetup));
     }
-    static PluginComponent *findPlugin(NameType name);
+    static PluginComponent *findPlugin(NameType name, bool isSetup = true);
 
     static PluginComponent *getForm(const String &formName);
     static PluginComponent *getTemplate(const String &templateName);
@@ -273,21 +284,38 @@ public:
     virtual bool atModeHandler(AtModeArgs &args);
 #endif
 
-#if DEBUG
 public:
+    bool dependsOn(NameType name, DependencyCallback callback);
+    static void checkDependencies();
+    static void createDependencies() {
+        _dependencies = new DependencyVector();
+    }
+    static void deleteDependencies() {
+#if DEBUG
+        for(const auto &dep: *_dependencies) {
+            debug_printf_P(PSTR("unresolved dependency name=%s callback=%p\n"), dep._name, &dep._callback);
+        }
+#endif
+        delete _dependencies;
+    }
+    static DependencyVector &_getDependencies() {
+        return *_dependencies;
+    }
+
     uint32_t getSetupTime() const {
         return _setupTime;
     }
     void setSetupTime() {
         _setupTime = millis();
     }
+    void clearSetupTime() {
+        _setupTime = 0;
+    }
 
 private:
     uint32_t _setupTime;
-#endif
-
-private:
     PGM_Config_t _config;
+    static DependencyVector *_dependencies;
 };
 
 #define PROGMEM_DEFINE_PLUGIN_OPTIONS(class_name, name, friendly_name, web_templates, config_forms, reconfigure_dependencies, ...) \

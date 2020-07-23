@@ -1,4 +1,3 @@
-
 /**
   Author: sascha_lammers@gmx.de
 */
@@ -20,12 +19,14 @@
 #include "at_mode.h"
 #endif
 
+PluginComponent::DependencyVector *PluginComponent::_dependencies;
+
 PROGMEM_STRING_DEF(__pure_virtual, "pure virtual call: %s\n");
 
-PluginComponent *PluginComponent::findPlugin(NameType name)
+PluginComponent *PluginComponent::findPlugin(NameType name, bool isSetup)
 {
-    for(auto plugin: plugins) {
-        if (plugin->nameEquals(name)) {
+    for(const auto plugin: plugins) {
+        if (plugin->nameEquals(name) && (!isSetup || plugin->_setupTime)) {
             return plugin;
         }
     }
@@ -76,6 +77,41 @@ void PluginComponent::invokeReconfigure(const String &source)
 
 void PluginComponent::invokeReconfigureNow(const String &source)
 {
+//     StringVector deps;
+//     deps.push_back(source);
+//     size_t size;
+//     do {
+//         size = deps.size();
+//         __DBG_printf("resolve deps size=%u", size);
+//         for(const auto &name: deps) {
+//             for(const auto plugin: plugins) {
+//                 if (plugin != this && plugin->hasReconfigureDependecy(name)) {
+//                     String name = plugin->getName();
+//                     if (std::find(deps.begin(), deps.end(), name) == deps.end()) {
+//                         deps.emplace_back(std::move(name));
+//                     }
+//                 }
+//             }
+//         }
+//         __DBG_printf("1 deps: %s", implode(',', deps).c_str());
+//         xtra_containers::remove_duplicates(deps);
+//         __DBG_printf("2 deps: %s", implode(',', deps).c_str());
+//     } while(size != deps.size())
+
+//     debug_printf_P(PSTR("resolved deps: %s\n"), implode(',', deps).c_str());
+
+//     for(auto iterator = plugins.rbegin(); iterator != plugins.rend(); ++iterator) {
+//         const auto plugin = *iterator;
+//         if (plugin != this) {
+//             for(const auto &name: deps) {
+//                 if (plugin->hasReconfigureDependecy(name)) {
+//                     //plugin->reconfigure(name);
+//                     __DBG_printf("reconfigure name=%s source=%s", plugin->getName_P(), name.c_str());
+//                 }
+//             }
+//         }
+//     }
+
     reconfigure(source);
     for(auto plugin: plugins) {
         if (plugin != this && plugin->hasReconfigureDependecy(source)) {
@@ -133,6 +169,36 @@ bool PluginComponent::atModeHandler(AtModeArgs &args)
 }
 
 #endif
+
+bool PluginComponent::dependsOn(NameType name, DependencyCallback callback)
+{
+    auto plugin = findPlugin(name, false);
+    if (plugin) {
+        if (plugin->_setupTime) {
+            _debug_printf_P(PSTR("dependecy callback type=call name=%s callback=%p\n"), (PGM_P)name, &callback);
+            callback(plugin);
+        }
+        else {
+            _debug_printf_P(PSTR("dependecy callback type=delayed name=%s callback=%p\n"), (PGM_P)name, &callback);
+            _dependencies->emplace_back(name, callback);
+        }
+        return true;
+    }
+    return false;
+}
+
+void PluginComponent::checkDependencies()
+{
+    _dependencies->erase(std::remove_if(_dependencies->begin(), _dependencies->end(), [](const Dependency &dep) {
+        auto plugin = findPlugin(dep._name, true);
+        if (plugin) {
+            _debug_printf_P(PSTR("dependecy callback type=call_delayed name=%s callback=%p\n"), (PGM_P)dep._name, &dep._callback);
+            dep._callback(plugin);
+            return true;
+        }
+        return false;
+    }), _dependencies->end());
+}
 
 PluginComponent *PluginComponent::getForm(const String &name)
 {

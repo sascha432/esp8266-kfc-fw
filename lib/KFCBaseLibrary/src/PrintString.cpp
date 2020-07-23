@@ -169,6 +169,21 @@ size_t PrintString::print(int64_t value)
     return concat_to_string(*this, value);
 }
 
+size_t PrintString::strftime(const char *format, struct tm *tm)
+{
+    char temp[64];
+    ::strftime(temp, sizeof(temp), format, tm);
+    return print(temp);
+}
+
+size_t PrintString::strftime_P(PGM_P format, struct tm *tm)
+{
+    char temp[64];
+    ::strftime_P(temp, sizeof(temp), format, tm);
+    return print(temp);
+}
+
+
 PrintString &PrintString::operator+=(uint64_t value)
 {
     print(value);

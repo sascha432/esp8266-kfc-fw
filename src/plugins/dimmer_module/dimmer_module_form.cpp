@@ -51,7 +51,7 @@ void DimmerModuleForm::_createConfigureForm(PluginComponent::FormCallbackType ty
     form.addValidator(new FormRangeValidator(channelErrorMsg, 0, 3));
 #endif
 
-    auto &group = form.addGroup(F("advanced"), F("Advanced Firmware Configuration"), false);
+    auto &group = form.addGroup(String(), F("Advanced Firmware Configuration"), false);
 
     form.add<uint8_t>(F("max_temp"), _H_STRUCT_VALUE(Config().dimmer, cfg.max_temp))->setFormUI((new FormUI(FormUI::TEXT, F("Max. Temperature")))->addConditionalAttribute(isInvalid, FSPGM(disabled), FSPGM(disabled))->setPlaceholder(String(80))->setSuffix(F("&deg;C")));
     form.addValidator(new FormRangeValidator(F("Temperature out of range: %min%-%max%"), 45, 110));

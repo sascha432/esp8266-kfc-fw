@@ -253,7 +253,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RTCQCC, "RTCQCC", "<0=channel/bssid|1=stat
 #endif
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WIMO, "WIMO", "<0=off|1=STA|2=AP|3=STA+AP>", "Set WiFi mode, store configuration and reboot");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LOG, "LOG", "<message>", "Send an error to the logger component");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LOGE, "LOGE", "<debug=enable/disable>", "Enable/disable writing to file log://debug");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LOGE, "LOGE", "<logger|debug>,<1|0>", "Enable/disable writing to file log://debug");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(PANIC, "PANIC", "Cause an exception by calling panic()");
 
 #endif
@@ -612,7 +612,7 @@ void at_mode_print_invalid_command(Stream &output)
 
 void at_mode_print_invalid_arguments(Stream &output, uint16_t num, uint16_t min, uint16_t max)
 {
-    static const uint16_t UNSET = ~0;
+    static constexpr uint16_t UNSET = ~0;
     output.print(F("ERROR - "));
     if (min != UNSET) {
         if (min == max || max == UNSET) {
@@ -1166,22 +1166,22 @@ void at_mode_serial_handle_event(String &commandString)
                     auto file = SPIFFSWrapper::open(filename, fs::FileOpenMode::read);
                     if (file) {
                         args.printf_P(PSTR("--- %s ---"), filename);
-                        Scheduler.addTimer(100, true, [&output, &args, file](EventScheduler::TimerPtr timer) mutable {
-                            uint8_t buf[128];
+                        auto loopPtr = reinterpret_cast<void *>(&file);
+                        LoopFunctions::add([&output, &args, file, loopPtr]() mutable {
+                            uint8_t buf[256];
                             if (file.available()) {
                                 auto len = file.readBytes(reinterpret_cast<char *>(buf), sizeof(buf) - 1);
                                 if (len) {
                                     buf[len] = 0;
                                     printable_string(output, buf, len, len, "\n\r");
-                                    output.flush();
                                 }
                             }
                             else {
                                 args.printf_P(PSTR("--- size %u ---"), (unsigned)file.size());
                                 file.close();
-                                timer->detach();
+                                LoopFunctions::remove(loopPtr);
                             }
-                        });
+                        }, ptr);
                     }
                     else {
                         args.printf_P(PSTR("Failed to open: %s"), filename);
@@ -1425,10 +1425,35 @@ void at_mode_serial_handle_event(String &commandString)
                 }
             }
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(LOGE))) {
-                if (args.requireArgs(1)) {
-                    bool enable = args.isTrue(0);
-                    _logger.setLogLevel(enable ? LOGLEVEL_DEBUG : LOGLEVEL_ACCESS);
-                    args.printf_P(PSTR("debug=%u"), enable);
+                if (args.requireArgs(2, 3)) {
+                    if (args.equalsIgnoreCase(0, F("debug"))) {
+                        bool enable = args.isTrue(1);
+                        auto filename = F("/debug.log");
+                        static File debugLog;
+                        if (enable) {
+                            if (!debugLog) {
+                                debugLog = SPIFFS.open(filename, fs::FileOpenMode::append);
+                                if (debugLog) {
+                                    debugStreamWrapper.add(&debugLog);
+                                }
+                            }
+                        }
+                        else {
+                            if (debugLog) {
+                                debugStreamWrapper.remove(&debugLog);
+                                debugLog.close();
+                            }
+                        }
+                        args.printf_P(PSTR("debug output file=%s enabled=%u"), RFPSTR(filename), (bool)debugLog);
+                    }
+                    else if (args.equalsIgnoreCase(0, F("logger"))) {
+                        bool enable = args.isTrue(1);
+                        _logger.setLogLevel(enable ? LOGLEVEL_DEBUG : LOGLEVEL_ACCESS);
+                        args.printf_P(PSTR("logger debug=%u"), enable);
+                    }
+                    else {
+                        args.print(F("argument 1: expected [debug|logger]"));
+                    }
                 }
             }
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(PANIC))) {

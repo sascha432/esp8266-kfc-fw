@@ -145,6 +145,8 @@ void setup_plugins(PluginComponent::SetupModeType mode)
         create_menu();
     }
 
+    PluginComponent::createDependencies();
+
     for(const auto plugin : plugins) {
         bool runSetup = (
             (mode == PluginComponent::SetupModeType::DEFAULT) ||
@@ -159,6 +161,7 @@ void setup_plugins(PluginComponent::SetupModeType mode)
         if (runSetup) {
             plugin->setSetupTime();
             plugin->setup(mode);
+            PluginComponent::checkDependencies();
 
             if (plugin->hasWebUI()) {
                 enableWebUIMenu = true;
@@ -190,6 +193,8 @@ void setup_plugins(PluginComponent::SetupModeType mode)
             bootstrapMenu.addSubMenu(webUi, url, navMenu.home, bootstrapMenu.getId(bootstrapMenu.findMenuByURI(FSPGM(status_html), navMenu.home)));
         }
     }
+
+    PluginComponent::deleteDependencies();
 
 #ifndef DISABLE_EVENT_SCHEDULER
 #if ENABLE_DEEP_SLEEP

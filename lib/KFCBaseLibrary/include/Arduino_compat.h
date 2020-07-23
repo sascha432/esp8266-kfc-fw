@@ -194,16 +194,23 @@ static size_t constexpr constexpr_strlen_P(const char *str)
 }
 
 #ifndef _STRINGIFY
-#define _STRINGIFY(...)                  ___STRINGIFY(__VA_ARGS__)
+#define _STRINGIFY(...)                     ___STRINGIFY(__VA_ARGS__)
 #endif
-#define ___STRINGIFY(...)                #__VA_ARGS__
+#define ___STRINGIFY(...)                   #__VA_ARGS__
 
 // reinterpret_cast FPSTR
 #ifndef RFPSTR
-#define RFPSTR(str)                      reinterpret_cast<PGM_P>(str)
+#define RFPSTR(str)                         reinterpret_cast<PGM_P>(str)
 #endif
 
 // equivalent to __FlashStringHelper/const char *
 // __FlashBufferHelper/const uint8_t *
 class __FlashBufferHelper;
 
+namespace __va_args__
+{
+    template<typename ...Args>
+    constexpr std::size_t va_count(Args &&...) { return sizeof...(Args); }
+}
+
+#define __VA_ARGS_COUNT__(...)              __va_args__::va_count(__VA_ARGS__)

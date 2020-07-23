@@ -229,6 +229,10 @@ public:
     void onUnsubscribe(uint16_t packetId);
 #endif
 
+    MQTTTopicVector &getTopics() {
+        return _topics;
+    }
+
 private:
     void _setupClient();
     void autoReconnect(uint32_t timeout);

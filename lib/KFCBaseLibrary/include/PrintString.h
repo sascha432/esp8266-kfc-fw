@@ -44,6 +44,22 @@ public:
     size_t print(int64_t value);
     using Print::print;
 
+    size_t strftime_P(PGM_P format, struct tm *tm);
+    size_t strftime(const char *format, struct tm *tm);
+    size_t strftime(const __FlashStringHelper *format, struct tm *tm) {
+        return strftime_P(reinterpret_cast<PGM_P>(format), tm);
+    }
+
+    size_t strftime_P(PGM_P format, time_t now) {
+        return strftime_P(format, localtime(&now));
+    }
+    size_t strftime(const char *format, time_t now) {
+        return strftime(format, localtime(&now));
+    }
+    size_t strftime(const __FlashStringHelper *format, time_t now) {
+        return strftime(format, localtime(&now));
+    }
+
     PrintString &operator+=(uint64_t);
     PrintString &operator+=(int64_t);
     using String::operator+=;

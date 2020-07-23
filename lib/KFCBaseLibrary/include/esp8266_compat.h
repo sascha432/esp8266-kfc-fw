@@ -16,6 +16,8 @@
 
 extern "C" {
 
+    bool can_yield();
+
     uint64_t micros64();
 
     void ets_timer_setfn (ETSTimer *ptimer, ETSTimerFunc *pfunction, void *parg);

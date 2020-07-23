@@ -10,6 +10,7 @@
 - Rewritten StreamWrapper (Serial, DebugSerial, SerialHandler etc...)
 - Rewritten SerialHandler
 - Improved plugin system, ~2kb more free RAM
+- Added boot option to set passwords to default, enable AP mode and web server
 
 ## Version 0.0.3
 

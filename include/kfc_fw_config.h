@@ -273,19 +273,40 @@ public:
 
 #include "pop_pack.h"
 
-struct Clock {
-    uint8_t blink_colon;
-    int8_t animation;
-    bool time_format_24h;
-    uint8_t solid_color[3];
+typedef union __attribute__packed__ {
+    uint32_t value: 24;
+    uint8_t rgb[3];
+} ClockColor_t;
+
+typedef struct __attribute__packed__ {
+    ClockColor_t solid_color;
+    int8_t animation: 7;
+    int8_t time_format_24h: 1;
     uint8_t brightness;
-    uint8_t temp_75;
-    uint8_t temp_50;
-    uint8_t temp_prot;
     int16_t auto_brightness;
+    uint16_t blink_colon_speed;
+    uint16_t flashing_speed;
+    struct {
+        uint8_t temperature_50;
+        uint8_t temperature_75;
+        uint8_t max_temperature;
+    } protection;
+    struct {
+        float multiplier;
+        uint16_t speed;
+        ClockColor_t factor;
+    } rainbow;
+    struct {
+        ClockColor_t color;
+        uint16_t speed;
+    } alarm;
+    struct {
+        float speed;
+        uint16_t delay;
+    } fading;
     // int8_t order[8];
     // uint8_t segmentOrder;
-};
+} Clock_t;
 
 namespace Config_QuickConnect
 {
@@ -324,7 +345,7 @@ typedef struct {
     DimmerModuleButtons dimmer_buttons;
     BlindsController blinds_controller;
     struct HueConfig hue;
-    Clock clock;
+    Clock_t clock;
 
     Config_Ping ping;
     Config_Sensor sensor;

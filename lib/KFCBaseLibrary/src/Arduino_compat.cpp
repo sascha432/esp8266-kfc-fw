@@ -20,7 +20,13 @@ const char *fs::FileOpenMode::writeplus = "w+";
 const char *fs::FileOpenMode::appendplus = "a+";
 
 #if _MSC_VER
+
 #include <winternl.h>
+
+extern "C" bool can_yield() {
+    return true;
+}
+
 #endif
 
 void ___debugbreak_and_panic(const char *filename, int line, const char *function) {
@@ -117,14 +123,14 @@ static bool init_micros();
 static MicrosTime_t micros_start_time;
 static bool millis_initialized = init_micros();
 
-static bool init_micros() 
+static bool init_micros()
 {
     GetSystemTimePreciseAsFileTime(&micros_start_time.filetime);
     micros_start_time.micros /= 10;
     return true;
 }
 
-uint64_t micros64() 
+uint64_t micros64()
 {
     MicrosTime_t now;
     GetSystemTimePreciseAsFileTime(&now.filetime);
@@ -132,7 +138,7 @@ uint64_t micros64()
     return now.micros - micros_start_time.micros;
 }
 
-unsigned long millis(void) 
+unsigned long millis(void)
 {
     return (unsigned long)(micros64() / 1000ULL);
 }

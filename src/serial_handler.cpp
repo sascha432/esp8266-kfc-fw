@@ -41,8 +41,11 @@ Stream &Serial = serialHandler;
 
 #if DEBUG
 #if KFC_DEBUG_USE_SERIAL1
-StreamWrapper debugStreamWrapperSerial(&Serial1);
-Stream &Serial = debugStreamWrapperSerial;
+StreamWrapper debugStreamWrapper(&Serial1);
+Stream &Serial = debugStreamWrapper;
+#elif 1
+StreamWrapper debugStreamWrapper(&Serial);
+Stream &DebugSerial = debugStreamWrapper;
 #else
 Stream &DebugSerial = serialHandler;
 #endif
@@ -57,7 +60,7 @@ namespace SerialHandler {
     // Client
     //
 
-    Client::Client(Callback cb, EventType events) : _cb(cb), _events(events), _rx(0), _tx(0)
+    Client::Client(Callback cb, EventType events) : _cb(cb), _events(events), _rx(Wrapper::kInitBufferSize), _tx(Wrapper::kInitBufferSize)
     {
         __DBGSH("create client %p", this);
         _allocateBuffers();
@@ -90,15 +93,15 @@ namespace SerialHandler {
     void Client::_freeBuffers()
     {
         _rx.flush();
-        _rx.resize(0);
+        _rx.resize(Wrapper::kInitBufferSize);
         _tx.flush();
-        _tx.resize(0);
+        _tx.resize(Wrapper::kInitBufferSize);
     }
 
     void Client::_checkBufferSize(cbuf &buf, size_t size)
     {
         __IF_DBGSH(auto txTypeStr = (&_rx == &buf ? PSTR("rx") : PSTR("tx")));
-        if (buf.size() == 0) {
+        if (buf.size() == Wrapper::kInitBufferSize) {
             buf.resize(Wrapper::kMinBufferSize);
             __DBGSH("client %p %s size=%u data=%u old_size=0", this, txTypeStr, buf.size(), size);
         } else if (size > buf.room()) {

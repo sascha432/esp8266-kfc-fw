@@ -365,6 +365,10 @@ inline void explode(const char *str, const char ch, StringVector &container, uin
     split::split(str, ch, split::vector_callback, &container, split::SplitFlagsType::EMPTY, limit);
 }
 
+inline void explode_P(const char *str, const char ch, StringVector &container, uint16_t limit = UINT16_MAX) {
+    split::split_P(str, ch, split::vector_callback, &container, split::SplitFlagsType::EMPTY, limit);
+}
+
 namespace xtra_containers {
 
     template <class T>

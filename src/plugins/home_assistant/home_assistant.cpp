@@ -472,11 +472,8 @@ void HassPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
 void HassPlugin::setup(SetupModeType mode)
 {
     _installWebhooks();
-    LoopFunctions::callOnce([this]() {
-        auto mqttClient = MQTTClient::getClient();
-        if (mqttClient) {
-            mqttClient->registerComponent(this);
-        }
+    dependsOn(FSPGM(mqtt), [this](const PluginComponent *plugin) {
+        MQTTClient::safeRegisterComponent(this);
     });
 }
 

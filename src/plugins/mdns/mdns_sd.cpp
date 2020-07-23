@@ -58,7 +58,7 @@ MDNSPlugin::MDNSPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(MDNSPlugin
 
 bool MDNSService::addService(const String &service, const String &proto, uint16_t port)
 {
-    _debug_printf_P(PSTR("service=%s proto=%s port=%u running=%u\n"), service.c_str(), proto.c_str(), port, plugin._isRunning());
+    __LDBG_printf("service=%s proto=%s port=%u running=%u", service.c_str(), proto.c_str(), port, plugin._isRunning());
     if (!plugin._isRunning()) {
         return false;
     }
@@ -72,7 +72,7 @@ bool MDNSService::addService(const String &service, const String &proto, uint16_
 
 bool MDNSService::addServiceTxt(const String &service, const String &proto, const String &key, const String &value)
 {
-    _debug_printf_P(PSTR("service=%s proto=%s key=%s value=%s running=%u\n"), service.c_str(), proto.c_str(), key.c_str(), value.c_str(), plugin._isRunning());
+    __LDBG_printf("service=%s proto=%s key=%s value=%s running=%u", service.c_str(), proto.c_str(), key.c_str(), value.c_str(), plugin._isRunning());
     if (!plugin._isRunning()) {
         return false;
     }
@@ -86,7 +86,7 @@ bool MDNSService::addServiceTxt(const String &service, const String &proto, cons
 
 bool MDNSService::removeService(const String &service, const String &proto)
 {
-    _debug_printf_P(PSTR("service=%s proto=%s running=%u\n"), service.c_str(), proto.c_str(), plugin._isRunning());
+    __LDBG_printf("service=%s proto=%s running=%u", service.c_str(), proto.c_str(), plugin._isRunning());
     if (!plugin._isRunning()) {
         return false;
     }
@@ -99,7 +99,7 @@ bool MDNSService::removeService(const String &service, const String &proto)
 
 bool MDNSService::removeServiceTxt(const String &service, const String &proto, const String &key)
 {
-    _debug_printf_P(PSTR("service=%s proto=%s key=%s running=%u\n"), service.c_str(), proto.c_str(), key.c_str(), plugin._isRunning());
+    __LDBG_printf("service=%s proto=%s key=%s running=%u", service.c_str(), proto.c_str(), key.c_str(), plugin._isRunning());
     if (!plugin._isRunning()) {
         return false;
     }
@@ -112,7 +112,7 @@ bool MDNSService::removeServiceTxt(const String &service, const String &proto, c
 
 void MDNSService::announce()
 {
-    _debug_printf_P(PSTR("running=%u\n"), plugin._isRunning());
+    __LDBG_printf("running=%u", plugin._isRunning());
 #if ESP8266
     if (plugin._isRunning()) {
         MDNS.announce();
@@ -125,7 +125,7 @@ void MDNSPlugin::_installWebServerHooks()
 #if ESP8266
     auto server = WebServerPlugin::getWebServerObject();
     if (server) {
-        _debug_println();
+        __LDBG_println();
         WebServerPlugin::addHandler(F("/mdns_discovery"), mdnsDiscoveryHandler);
     }
 #endif
@@ -135,7 +135,7 @@ void MDNSPlugin::_installWebServerHooks()
 
 void MDNSPlugin::mdnsDiscoveryHandler(AsyncWebServerRequest *request)
 {
-    debug_printf_P(PSTR("running=%u\n"), plugin._isRunning());
+    __LDBG_printf("running=%u", plugin._isRunning());
     if (plugin._isRunning()) {
         if (WebServerPlugin::getInstance().isAuthenticated(request) == true) {
             auto timeout = request->arg(F("timeout")).toInt();
@@ -164,7 +164,7 @@ void MDNSPlugin::mdnsDiscoveryHandler(AsyncWebServerRequest *request)
 
 void MDNSPlugin::_wifiCallback(WiFiCallbacks::EventType event, void *payload)
 {
-    _debug_printf_P(PSTR("event=%u, running=%u\n"), event, _running);
+    __LDBG_printf("event=%u, running=%u", event, _running);
     if (event == WiFiCallbacks::EventType::CONNECTED) {
         _end();
 #if MDNS_DELAYED_START_AFTER_WIFI_CONNECT
@@ -179,7 +179,7 @@ void MDNSPlugin::_wifiCallback(WiFiCallbacks::EventType event, void *payload)
         auto result =
 #endif
         NBNS.begin(config.getDeviceName());
-        _debug_printf_P(PSTR("NetBIOS result=%u\n"), result);
+        __LDBG_printf("NetBIOS result=%u", result);
 #endif
 
     }
@@ -198,7 +198,7 @@ void MDNSPlugin::setup(SetupModeType mode)
         _enabled = true;
         begin();
 
-        LoopFunctions::callOnce([this]() {
+        dependsOn(FSPGM(http), [this](const PluginComponent *pluginPtr) {
             _running = false;
             // add wifi handler after all plugins have been initialized
             WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTION, wifiCallback);
@@ -212,7 +212,7 @@ void MDNSPlugin::setup(SetupModeType mode)
 
 void MDNSPlugin::reconfigure(const String &source)
 {
-    _debug_printf_P(PSTR("running=%u source=%s\n"), _running, source.c_str());
+    __LDBG_printf("running=%u source=%s", _running, source.c_str());
     if (String_equals(source, SPGM(http))) {
         _installWebServerHooks();
     }
@@ -222,7 +222,7 @@ void MDNSPlugin::reconfigure(const String &source)
 
 void MDNSPlugin::shutdown()
 {
-    debug_println();
+    __LDBG_println();
     end();
 }
 
@@ -238,7 +238,7 @@ void MDNSPlugin::loop()
 
 void MDNSPlugin::begin()
 {
-    _debug_println();
+    __LDBG_println();
 
     if (_MDNS_begin()) {
         _running = true;
@@ -252,7 +252,7 @@ void MDNSPlugin::begin()
 
 void MDNSPlugin::end()
 {
-    _debug_printf_P(PSTR("running=%u\n"), _running);
+    __LDBG_printf("running=%u", _running);
     if (_running) {
         MDNSService::removeService(FSPGM(kfcmdns), FSPGM(udp));
         MDNSService::announce();
@@ -269,17 +269,17 @@ bool MDNSPlugin::_MDNS_begin()
 {
 #if ESP8266
     auto address = config.isWiFiUp() ? WiFi.localIP() : INADDR_ANY;
-    _debug_printf_P(PSTR("hostname=%s address=%s\n"), config.getDeviceName(), address.toString().c_str());
+    __LDBG_printf("hostname=%s address=%s", config.getDeviceName(), address.toString().c_str());
     return _debug_print_result(MDNS.begin(config.getDeviceName(), address));
 #else
-    _debug_printf_P(PSTR("hostname=%s\n"), config.getDeviceName());
+    __LDBG_printf("hostname=%s", config.getDeviceName());
     return _debug_print_result(MDNS.begin(config.getDeviceName()));
 #endif
 }
 
 void MDNSPlugin::_begin()
 {
-    _debug_printf_P(PSTR("running=%u\n"), _running);
+    __LDBG_printf("running=%u", _running);
     if (_MDNS_begin()) {
         _running = true;
         LoopFunctions::add(loop);
@@ -295,8 +295,8 @@ void MDNSPlugin::_end()
 #if MDNS_DELAYED_START_AFTER_WIFI_CONNECT
     _delayedStart.remove();
 #endif
-    _debug_printf_P(PSTR("running=%u\n"), _running);
-    _debug_println();
+    __LDBG_printf("running=%u", _running);
+    __LDBG_println();
     MDNS.end();
     _running = false;
     LoopFunctions::remove(loop);
@@ -346,7 +346,7 @@ void MDNSPlugin::atModeHelpGenerator()
 
 void MDNSPlugin::serviceCallback(ServiceInfoVector &services, bool map, MDNSResponder::MDNSServiceInfo &mdnsServiceInfo, MDNSResponder::AnswerType answerType, bool p_bSetContent)
 {
-    _debug_printf_P(PSTR("answerType=%u p_bSetContent=%u\n"), answerType, p_bSetContent)
+    __LDBG_printf("answerType=%u p_bSetContent=%u", answerType, p_bSetContent)
     PrintString str;
 
     auto iterator = std::find_if(services.begin(), services.end(), [&mdnsServiceInfo](const ServiceInfo &info) {
@@ -362,26 +362,26 @@ void MDNSPlugin::serviceCallback(ServiceInfoVector &services, bool map, MDNSResp
     }
     auto &info = *infoPtr;
     if (mdnsServiceInfo.hostDomainAvailable()) {
-        _debug_printf_P(PSTR("domain=%s\n"), mdnsServiceInfo.hostDomain());
+        __LDBG_printf("domain=%s", mdnsServiceInfo.hostDomain());
         info.domain = mdnsServiceInfo.hostDomain();
     }
     if (mdnsServiceInfo.IP4AddressAvailable()) {
         info.addresses = mdnsServiceInfo.IP4Adresses();
-        _debug_printf_P(PSTR("addresses=%s\n"), implode_cb(',', info.addresses, [](const IPAddress &addr) { return addr.toString(); }).c_str());
+        __LDBG_printf("addresses=%s", implode_cb(',', info.addresses, [](const IPAddress &addr) { return addr.toString(); }).c_str());
     }
     if (mdnsServiceInfo.hostPortAvailable()) {
-        _debug_printf_P(PSTR("port=%u\n"), mdnsServiceInfo.hostPort());
+        __LDBG_printf("port=%u", mdnsServiceInfo.hostPort());
         info.port = mdnsServiceInfo.hostPort();
     }
     if (mdnsServiceInfo.txtAvailable()) {
         if (map) {
             for(const auto &item: mdnsServiceInfo.keyValues()) {
-                _debug_printf_P(PSTR("txt=%s=%s\n"), item.first, item.second);
+                __LDBG_printf("txt=%s=%s", item.first, item.second);
                 info.map[item.first] = item.second;
             }
         }
         else {
-            _debug_printf_P(PSTR("txt=%s\n"), mdnsServiceInfo.strKeyValue());
+            __LDBG_printf("txt=%s", mdnsServiceInfo.strKeyValue());
             info.txts = mdnsServiceInfo.strKeyValue();
         }
     }
@@ -409,7 +409,7 @@ bool MDNSPlugin::atModeHandler(AtModeArgs &args)
 
             Scheduler.addTimer(timeout, false, [args, serviceQuery, services, this](EventScheduler::TimerPtr) mutable {
                 _IF_DEBUG(auto result = ) MDNS.removeServiceQuery(serviceQuery);
-                _debug_printf_P(PSTR("removeServiceQuery=%u\n"), result);
+                __LDBG_printf("removeServiceQuery=%u", result);
                 if (services->empty()) {
                     args.print(F("No response"));
                 }

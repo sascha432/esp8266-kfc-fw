@@ -170,7 +170,8 @@ public:
 // #define __debug_prefix(out)                 out.printf_P(___debugPrefix, millis(), __BASENAME_FILE__, __LINE__, ESP.getFreeHeap(), __DEBUG_FUNCTION__ );
 
 #if DEBUG_INCLUDE_SOURCE_INFO
-    #define __debug_prefix(out)                 out.printf_P(___debugPrefix, millis(), __BASENAME_FILE__, __LINE__, ESP.getFreeHeap(), __DEBUG_FUNCTION__ );
+extern "C" bool can_yield();
+    #define __debug_prefix(out)                 out.printf_P(___debugPrefix, millis(), __BASENAME_FILE__, __LINE__, ESP.getFreeHeap(), can_yield(), __DEBUG_FUNCTION__ );
     // #define __debug_prefix(out)                 out.printf_P(___debugPrefix, millis(), __BASENAME_FILE__, __LINE__, ESP.getFreeHeap(), __DEBUG_FUNCTION__ );
 #else
     #define __debug_prefix(out)                 out.print(FPSTR(___debugPrefix));
@@ -179,12 +180,17 @@ public:
 
 #define debug_println_notempty(msg)             CHECK_MEMORY(); if (DebugHelper::__state == DEBUG_HELPER_STATE_ACTIVE && msg.length()) { debug_prefix();  DEBUG_OUTPUT.println(msg); }
 #define debug_print(msg)                        CHECK_MEMORY(); if (DebugHelper::__state == DEBUG_HELPER_STATE_ACTIVE) { DEBUG_OUTPUT.print(msg); }
-#define debug_println(...)                      CHECK_MEMORY(); if (DebugHelper::__state == DEBUG_HELPER_STATE_ACTIVE) { debug_prefix(); DEBUG_OUTPUT.println(__VA_ARGS__); }
-#define debug_printf(fmt, ...)                  CHECK_MEMORY(); if (DebugHelper::__state == DEBUG_HELPER_STATE_ACTIVE) { debug_prefix(); DEBUG_OUTPUT.printf(fmt, ## __VA_ARGS__); }
-#define debug_printf_P(fmt, ...)                CHECK_MEMORY(); if (DebugHelper::__state == DEBUG_HELPER_STATE_ACTIVE) { debug_prefix(); DEBUG_OUTPUT.printf_P(fmt, ## __VA_ARGS__); }
+#define debug_println(...)                      CHECK_MEMORY(); if (DebugHelper::__state == DEBUG_HELPER_STATE_ACTIVE) { debug_prefix(); DEBUG_OUTPUT.println(__VA_ARGS__); DEBUG_OUTPUT.flush(); }
+#define debug_printf(fmt, ...)                  CHECK_MEMORY(); if (DebugHelper::__state == DEBUG_HELPER_STATE_ACTIVE) { debug_prefix(); DEBUG_OUTPUT.printf(fmt, ## __VA_ARGS__); DEBUG_OUTPUT.flush(); }
+#define debug_printf_P(fmt, ...)                CHECK_MEMORY(); if (DebugHelper::__state == DEBUG_HELPER_STATE_ACTIVE) { debug_prefix(); DEBUG_OUTPUT.printf_P(fmt, ## __VA_ARGS__); DEBUG_OUTPUT.flush(); }
 #define debug_dump_args(...)                    CHECK_MEMORY(); if (DebugHelper::__state == DEBUG_HELPER_STATE_ACTIVE) { debug_prefix(); DebugDumper(DEBUG_OUTPUT).dumpArgs(DEBUG_DUMPER_ARGS(__VA_ARGS__)); }
 
 #define debug_print_result(result)              DebugHelperPosition(__BASENAME_FILE__, __LINE__, __DEBUG_FUNCTION__).printResult(result)
+
+#define __DBG_printf(fmt, ...)                  debug_printf(PSTR(fmt "\n"), ##__VA_ARGS__)
+#define __LDBG_printf(fmt, ...)                 _debug_printf(PSTR(fmt "\n"), ##__VA_ARGS__)
+#define __DBG_println()                         debug_println()
+#define __LDBG_println()                        _debug_println()
 
 // templkate <class T>
 // T debug_print_result(T )

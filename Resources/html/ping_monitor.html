@@ -26,37 +26,41 @@
     <!--NAV%%-->
     <div class="container">
         <h1>Ping Configuration</h1>
-        <form method="POST" action="ping_monitor.html">
-            <span id="ping_settings">
-                <div class="form-group">
-                    <label for="ping_host1">Host 1:</label>
-                    <input type="text" class="form-control" name="ping_host1" id="ping_host1" value="%PING_HOST1%" size="64">
-                </div>
-                <div class="form-group">
-                    <label for="ping_host2">Host 2:</label>
-                    <input type="text" class="form-control" name="ping_host2" id="ping_host2" value="%PING_HOST2%" size="64">
-                </div>
-                <div class="form-group">
-                    <label for="ping_host3">Host 3:</label>
-                    <input type="text" class="form-control" name="ping_host3" id="ping_host3" value="%PING_HOST3%" size="64">
-                </div>
-                <div class="form-group">
-                    <label for="ping_host4">Host 4:</label>
-                    <input type="text" class="form-control" name="ping_host4" id="ping_host4" value="%PING_HOST4%" size="64">
-                </div>
-                <div class="form-group">
-                    <label for="ping_interval">Interval in seconds:</label>
+        <form method="POST" action="ping_monitor.html" id="ping_settings">
+            <div class="form-group">
+                <label for="ping_host1">Host 1:</label>
+                <input type="text" class="form-control" name="ping_host1" id="ping_host1" value="%PING_HOST1%" size="64">
+            </div>
+            <div class="form-group">
+                <label for="ping_host2">Host 2:</label>
+                <input type="text" class="form-control" name="ping_host2" id="ping_host2" value="%PING_HOST2%" size="64">
+            </div>
+            <div class="form-group">
+                <label for="ping_host3">Host 3:</label>
+                <input type="text" class="form-control" name="ping_host3" id="ping_host3" value="%PING_HOST3%" size="64">
+            </div>
+            <div class="form-group">
+                <label for="ping_host4">Host 4:</label>
+                <input type="text" class="form-control" name="ping_host4" id="ping_host4" value="%PING_HOST4%" size="64">
+            </div>
+            <div class="form-group">
+                <label for="ping_interval">Interval:</label>
+                <div class="input-group">
                     <input type="text" class="form-control" name="ping_interval" id="ping_interval" value="%PING_INTERVAL%">
+                    <div class="input-group-append"><span class="input-group-text">seconds</span></div>
                 </div>
-                <div class="form-group">
-                    <label for="ping_count">Ping Count:</label>
-                    <input type="text" class="form-control" name="ping_count" id="ping_count" value="%PING_COUNT%">
-                </div>
-                <div class="form-group">
-                    <label for="ping_timeout">Timeout in milliseconds:</label>
+            </div>
+            <div class="form-group">
+                <label for="ping_count">Ping Count:</label>
+                <input type="text" class="form-control" name="ping_count" id="ping_count" value="%PING_COUNT%">
+            </div>
+            <div class="form-group">
+                <label for="ping_timeout">Timeout:</label>
+                <div class="input-group">
                     <input type="text" class="form-control" name="ping_timeout" id="ping_timeout" value="%PING_TIMEOUT%">
+                    <div class="input-group-append"><span class="input-group-text">milliseconds</span></div>
                 </div>
-            </span>
+            </div>
             <div class="form-group">
                 <button type="submit" class="btn btn-primary">Save Changes...</button>
             </div>

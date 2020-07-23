@@ -220,10 +220,14 @@ KFCFWConfiguration::KFCFWConfiguration() :
     _offlineSince(~0UL)
 {
     _setupWiFiCallbacks();
-#if DEBUG_HAVE_SAVECRASH
-    EspSaveCrash::addCallback([this]() {
+#if SAVE_CRASH_HAVE_CALLBACKS
+    auto nextCallback = EspSaveCrash::getCallback();
+    EspSaveCrash::setCallback([this, nextCallback](const EspSaveCrash::ResetInfo_t &info) {
         // release all memory in the event of a crash
         discard();
+        if (nextCallback) {
+            nextCallback(info);
+        }
     });
 #endif
 }
@@ -714,17 +718,18 @@ void KFCFWConfiguration::restoreFactorySettings()
 #if IOT_CLOCK
     {
         auto cfg = _H_GET(Config().clock);
-        cfg.animation = -1;
-        cfg.blink_colon = 0;
+        cfg = {};
+        cfg.animation = 0;
         cfg.time_format_24h = 1;
-        cfg.solid_color[0] = 0;
-        cfg.solid_color[1] = 0;
-        cfg.solid_color[2] = 0xff;
-        cfg.brightness = 45;
-        cfg.temp_75 = 50;
-        cfg.temp_50 = 60;
-        cfg.temp_prot = 70;
-        cfg.auto_brightness = 1023;
+        cfg.solid_color.value = 0x0000ff;
+        cfg.auto_brightness = -1;
+        cfg.brightness = 128;
+        cfg.protection = { 55, 65, 75 };
+        cfg.rainbow = { 1.23, 30, 0xffffff };
+        cfg.alarm = { 0xff0000, 250 };
+        cfg.blink_colon_speed = 1000;
+        cfg.flashing_speed = 50;
+        cfg.fading = { 7.5, 10 };
         // cfg.segmentOrder = 0;
         // static const int8_t order[8] PROGMEM = { 0, 1, -1, 2, 3, -2, 4, 5 }; // <1st digit> <2nd digit> <1st colon> <3rd digit> <4th digit> <2nd colon> <5th digit> <6th digit>
         // memcpy_P(cfg.order, order, sizeof(cfg.order));
@@ -1049,6 +1054,7 @@ void KFCFWConfiguration::restartDevice(bool safeMode)
         const auto plugin = *iterator;
         debug_printf("plugin=%s\n", plugin->getName_P());
         plugin->shutdown();
+        plugin->clearSetupTime();
     }
 
     _debug_printf_P(PSTR("After plugins: Scheduled tasks %u, WiFi callbacks %u, Loop Functions %u\n"), Scheduler.size(), WiFiCallbacks::getVector().size(), LoopFunctions::size());

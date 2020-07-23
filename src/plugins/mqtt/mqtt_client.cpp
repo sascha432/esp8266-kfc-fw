@@ -749,7 +749,7 @@ void MQTTPlugin::createConfigureForm(FormCallbackType type, const String &formNa
 
 #include "at_mode.h"
 
-PROGMEM_AT_MODE_HELP_COMMAND_DEF(MQTT, "MQTT", "<connect|disconnect|force-disconnect|secure|unsecure|disable>", "Connect or disconnect from server", "Display MQTT status");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF(MQTT, "MQTT", "<connect|disconnect|force-disconnect|secure|unsecure|disable|topics>", "Connect or disconnect from server", "Display MQTT status");
 
 void MQTTPlugin::atModeHelpGenerator()
 {
@@ -770,7 +770,12 @@ bool MQTTPlugin::atModeHandler(AtModeArgs &args)
             }
         } else if (client && args.requireArgs(1, 1)) {
             auto &client = *MQTTClient::getClient();
-            if (args.isAnyMatchIgnoreCase(0, F("connect,con"))) {
+            if (args.isAnyMatchIgnoreCase(0, F("topc,topic,topics"))) {
+                for(const auto &topic: client.getTopics()) {
+                    args.printf_P(PSTR("topic=%s component=%p name=%s"), topic.getTopic().c_str(), topic.getComponent(), topic.getComponent()->getComponentName());
+                }
+            }
+            else if (args.isAnyMatchIgnoreCase(0, F("connect,con"))) {
                 args.printf_P(PSTR("connect: %s"), client.connectionStatusString().c_str());
                 client.setAutoReconnect(MQTT_AUTO_RECONNECT_TIMEOUT);
                 client.connect();

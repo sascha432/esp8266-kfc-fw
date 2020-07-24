@@ -37,28 +37,25 @@ class ClockPlugin : public PluginComponent, public MQTTComponent {
 public:
     using SevenSegmentDisplay = Clock::SevenSegmentDisplay;
     using Color = Clock::Color;
+    using AnimationType = Clock::AnimationType;
 
     static constexpr uint16_t kDefaultUpdateRate = 1000;
     static constexpr uint16_t kMinBlinkColonSpeed = 50;
     static constexpr uint16_t kMinFlashingSpeed = 50;
     static constexpr uint16_t kMinRainbowSpeed = 1;
 
-private:
-    uint8_t _ui_colon;
-    uint8_t _ui_animation;
-    uint8_t _ui_color;
+    static constexpr uint8_t kUpdateAutobrightnessInterval = 2;
+    static constexpr uint8_t kCheckTemperatureInterval = 10;
+    static constexpr uint8_t kUpdateMQTTInterval = 30;
+
+    // restore brightness if temperature is kTemperatureRestoreDifference below any threshold
+    static constexpr uint8_t kTemperatureThresholdDifference = 10;
+    static constexpr uint8_t kMinimumTemperatureThreshold = 45;
+
+    static constexpr int16_t kAutoBrightnessOff = -1;
 
 // PluginComponent
 public:
-    typedef std::function<void()> UpdateCallback_t;
-
-    typedef enum : uint8_t {
-        NONE = 0,
-        RAINBOW,
-        FLASHING,
-        FADE,
-        MAX
-    } AnimationEnum_t;
 
     ClockPlugin();
 
@@ -92,14 +89,11 @@ public:
     virtual void onConnect(MQTTClient *client);
     virtual void onMessage(MQTTClient *client, char *topic, char *payload, size_t len);
 
-    void publishState(MQTTClient *client = nullptr);
+    void _publishState(MQTTClient *client = nullptr);
 
 private:
+    // set color and reset timer for instant update
     void _setColor(Color color);
-
-private:
-    uint8_t _colors[3];
-    uint16_t _brightness;
 
 public:
 #if IOT_CLOCK_BUTTON_PIN
@@ -128,7 +122,7 @@ public:
     void enable(bool enable);
     void setSyncing(bool sync);
     void setBlinkColon(uint16_t value);
-    void setAnimation(AnimationEnum_t animation);
+    void setAnimation(AnimationType animation);
     void readConfig();
 
 private:
@@ -137,13 +131,15 @@ private:
     void _setBrightness();
     uint16_t _getBrightness() const;
 #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
+    void _installWebHandlers();
     void _adjustAutobrightness();
+    String _getLightSensorWebUIValue();
     void _updateLightSensorWebUI();
+public:
+    static void handleWebServer(AsyncWebServerRequest *request);
 #endif
 
 private:
-    static constexpr int16_t AUTO_BRIGHTNESS_OFF = -1;
-
 #if IOT_CLOCK_BUTTON_PIN
     PushButton _button;
     uint8_t _buttonCounter;
@@ -152,12 +148,14 @@ private:
     SevenSegmentDisplay _display;
     std::array<SevenSegmentDisplay::pixel_address_t, IOT_CLOCK_PIXEL_ORDER_LEN * IOT_CLOCK_NUM_DIGITS> _pixelOrder;
 
+    uint16_t _brightness;
     Color _color;
     Color _savedColor;
     uint32_t _updateTimer;
     time_t _time;
     uint16_t _updateRate;
-    uint8_t _isSyncing;
+    uint8_t _isSyncing : 1;
+    uint8_t _schedulePublishState : 1;
 #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
     int16_t _autoBrightness;
     float _autoBrightnessValue;
@@ -167,6 +165,10 @@ private:
     Clock_t _config;
     EventScheduler::Timer _timer;
     uint32_t _timerCounter;
+
+private:
+    bool _isTemperatureBelowThresholds(float temp) const;
+
     bool _tempProtection;
 private:
     friend Clock::Animation;

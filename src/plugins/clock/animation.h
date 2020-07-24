@@ -76,6 +76,14 @@ namespace Clock {
     using AnimationCallback = SevenSegmentDisplay::AnimationCallback_t;
     using LoopCallback = std::function<void(time_t now)>;
 
+    enum class AnimationType : uint8_t {
+        NONE = 0,
+        RAINBOW,
+        FLASHING,
+        FADING,
+        MAX
+    };
+
     class Color {
     public:
         Color();
@@ -87,6 +95,7 @@ namespace Clock {
         static uint32_t get(uint8_t red, uint8_t green, uint8_t blue);
 
         String toString() const;
+        String implode(char sep) const;
 
         Color &operator =(uint32_t value);
         operator int();
@@ -105,7 +114,7 @@ namespace Clock {
 
     class Animation {
     public:
-        Animation(ClockPlugin &clock) : _finished(false), _clock(clock) {
+        Animation(ClockPlugin &clock) : _clock(clock), _finished(false), _blinkColon(true) {
         }
         virtual ~Animation() {
             if (!_finished) {
@@ -127,11 +136,15 @@ namespace Clock {
         bool finished() const {
             return _finished;
         }
+        bool doBlinkColon() const {
+            return _blinkColon;
+        }
 
     protected:
-        bool _finished;
         LoopCallback _callback;
         ClockPlugin &_clock;
+        uint8_t _finished : 1;
+        uint8_t _blinkColon : 1;
     };
 
     class FadingAnimation : public Animation {

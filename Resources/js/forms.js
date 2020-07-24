@@ -23,18 +23,16 @@ $.formValidator = {
         }
         for(var i = 0; i < $.formValidator.errors.length; i++) {
             var e = $.formValidator.errors[i];
-            $(e.target).removeClass('is-valid').addClass('is-invalid');
-            var parent = $(e.target).closest('.input-group');
-            if (parent.length == 0) {
-                parent = $(e.target).closest('.form-group');
+            var $t = $(e.target);
+            if ($t.parent().hasClass('form-enable-slider')) {
+                $t = $t.parent();
+                console.log($t);
             }
+            $t.removeClass('is-valid').addClass('is-invalid');
+            var parent = $t.closest('.input-group,.form-group');
+            var error = '<div class="invalid-feedback" style="display:block">' + e.error + '</div>';
             var field = parent.children().last();
-            if (field.length) {
-                field.after('<div class="invalid-feedback">' + e.error + '</div>')
-            }
-            else {
-                alert('Form error: ' + e.error); // TODO add to top of the form, usually an error in the form code itself
-            }
+            field.after(error)
         }
     },
     addErrors: function(errors, target) {
@@ -47,6 +45,8 @@ $.formValidator = {
         $.formValidator.validate();
     }
 };
+// $.formValidator.addErrors([{'target':'#colon_sp','error':'This fields value must be between 50 and 65535 or 0'}]);
+// $.formValidator.addErrors([{'target':'#brightness','error':'This fields value must be between 50 and 65535 or 0'}]);
 
 $.urlParam = function(name, remove) {
     var results = new RegExp('([\?&])' + name + '=([^&#]*)([&#]?)').exec(window.location.href);
@@ -90,6 +90,9 @@ $(function() {
     } catch(e) {
         dbg_console.error(e);
     }
+    $('.form-enable-slider input[type="range"]').rangeslider({
+        polyfill : false
+    });
 
     $('.form-dependency-group').each(function() {
         // i: '#input', 't': '#target', 's': { '#input_value': 'code to execute', 'm': 'code to execute if value is not found in s', 'e': 'code to always execute before' }

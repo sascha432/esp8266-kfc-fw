@@ -12,6 +12,9 @@
 #include <debug_helper_disable.h>
 #endif
 
+// ------------------------------------------------------------------------
+// Color Class
+
 Clock::Color::Color()
 {
 }
@@ -48,6 +51,13 @@ String Clock::Color::toString() const
 {
     char buf[8];
     snprintf_P(buf, sizeof(buf), PSTR("#%02X%02X%02X"), _red, _green, _blue);
+    return buf;
+}
+
+String Clock::Color::implode(char sep) const
+{
+    char buf[16];
+    snprintf_P(buf, sizeof(buf), PSTR("%u%c%u%c%u"), _red, sep, _green, sep, _blue);
     return buf;
 }
 
@@ -97,6 +107,8 @@ uint8_t Clock::Color::blue() const
     return _blue;
 }
 
+// ------------------------------------------------------------------------
+// Base Class Animation
 
 void Clock::Animation::loop(time_t now)
 {
@@ -104,6 +116,9 @@ void Clock::Animation::loop(time_t now)
         _callback(now);
     }
 }
+
+// ------------------------------------------------------------------------
+// Fading Animation
 
 Clock::FadingAnimation::FadingAnimation(ClockPlugin &clock, Color from, Color to, float speed, uint16_t time) : Animation(clock), _from(from), _to(to), _time(time), _speed(_secondsToSpeed(speed))
 {
@@ -167,6 +182,8 @@ void Clock::FadingAnimation::callback(time_t now)
     }
 }
 
+// ------------------------------------------------------------------------
+// Rainbow Animation
 
 Clock::RainbowAnimation::RainbowAnimation(ClockPlugin &clock, uint16_t speed, float multiplier, Color factor) :
     Animation(clock),
@@ -210,6 +227,9 @@ void Clock::RainbowAnimation::end()
     __LDBG_printf("end rate=%u", _clock._updateRate);
 }
 
+// ------------------------------------------------------------------------
+// Flashing Animation
+
 Clock::FlashingAnimation::FlashingAnimation(ClockPlugin &clock, Color color, uint16_t time) : Animation(clock), _color(color), _time(time)
 {
     __LDBG_printf("color=%s time=%u", _color.toString().c_str(), _time);
@@ -218,6 +238,7 @@ Clock::FlashingAnimation::FlashingAnimation(ClockPlugin &clock, Color color, uin
 void Clock::FlashingAnimation::begin()
 {
     __LDBG_printf("begin color=%s time=%u", _color.toString().c_str(), _time);
+    _blinkColon = false;
     _clock._display.setCallback([this](PixelAddressType addr, ColorType color) {
         return (millis() / _clock._updateRate) % 2 == 0 ? (uint32_t)_color : 0U;
     });

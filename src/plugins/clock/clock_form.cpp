@@ -27,19 +27,13 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
     form.add<bool>(F("timef"), _H_W_STRUCT_VALUE(cfg, time_format_24h))
         ->setFormUI((new FormUI(FormUI::SELECT, F("Time Format")))->setBoolItems(F("24h"), F("12h")));
 
-    form.add<float>(FSPGM(brightness), ((int)(cfg.brightness * (1000.0 / 255.0)) + 0.5f) / 10.0f, [](float value, FormField &, bool store) {
-        if (store) {
-            config._H_W_GET(Config().clock).brightness = value * (255.0 / 100.0);
-        }
-        return false;
-
-    })->setFormUI((new FormUI(FormUI::TEXT, F("Brightness")))->setSuffix(F("&percnt;")));
-    form.addValidator(new FormRangeValidator(0.0f, 100.0f));
+    form.add<uint8_t>(FSPGM(brightness), _H_W_STRUCT_VALUE(cfg, brightness))->setFormUI((new FormUI(FormUI::RANGE_SLIDER, F("Brightness")))->setMinMax(String(0), String(255)));
 
 #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
 
     form.add<int16_t>(F("auto_br"), _H_W_STRUCT_VALUE(cfg, auto_brightness))
-        ->setFormUI((new FormUI(FormUI::TEXT, F("Auto Brightness Value")))->setSuffix(F("-1 = disable")));
+        ->setFormUI((new FormUI(FormUI::TEXT, F("Auto Brightness Value")))->setSuffix(F("<span class=\"input-group-text\">0-1023<span id=\"abr_sv\"></span></span><button class=\"btn btn-default\" type=\"button\" id=\"dis_auto_br\">Disable</button>")));
+    form.addValidator(new FormRangeValidator(-1, 1023));
 
 #endif
 
@@ -48,12 +42,12 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
 
     form.add<int8_t>(F("ani"), _H_W_STRUCT_VALUE(cfg, animation))->setFormUI(
         (new FormUI(FormUI::SELECT, F("Type")))
-            ->addItems(String(AnimationEnum_t::NONE), F("Solid"))
-            ->addItems(String(AnimationEnum_t::RAINBOW), F("Rainbow"))
-            ->addItems(String(AnimationEnum_t::FLASHING), F("Flashing"))
-            ->addItems(String(AnimationEnum_t::FADE), F("Fading"))
+            ->addItems(String((int)AnimationType::NONE), F("Solid Color"))
+            ->addItems(String((int)AnimationType::RAINBOW), F("Rainbow"))
+            ->addItems(String((int)AnimationType::FLASHING), F("Flashing"))
+            ->addItems(String((int)AnimationType::FADING), F("Fading"))
     );
-    form.addValidator(new FormRangeValidator(AnimationEnum_t::NONE, (int)AnimationEnum_t::MAX - 1));
+    form.addValidator(new FormRangeValidator((int)AnimationType::NONE, (int)AnimationType::MAX - 1));
 
     form.add(F("col"), Color(config._H_GET(Config().clock).solid_color.value).toString(), [](const String &value, FormField &field, bool store) {
         if (store) {
@@ -89,12 +83,12 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
     rainbowGroup.end();
 
     // --------------------------------------------------------------------
-    auto &fadingGroup = form.addHrGroup(String(), F("Fading"));
+    auto &fadingGroup = form.addHrGroup(String(), F("Random Color Fading"));
 
     form.add<float>(F("fade_sp"), _H_W_STRUCT_VALUE(cfg, fading.speed))->setFormUI((new FormUI(FormUI::TEXT, F("Time Between Fading Colors")))->setSuffix(F("seconds")));
     form.addValidator(new FormRangeValidator(Clock::FadingAnimation::kMinSeconds, Clock::FadingAnimation::kMaxSeconds));
 
-    form.add<uint16_t>(F("fade_dy"), _H_W_STRUCT_VALUE(cfg, fading.delay))->setFormUI((new FormUI(FormUI::TEXT, F("Delay Before Next Color Change")))->setSuffix(F("seconds")));
+    form.add<uint16_t>(F("fade_dy"), _H_W_STRUCT_VALUE(cfg, fading.delay))->setFormUI((new FormUI(FormUI::TEXT, F("Delay Before Start Fading To Next Random Color")))->setSuffix(F("seconds")));
     form.addValidator(new FormRangeValidator(0, Clock::FadingAnimation::kMaxDelay));
 
     fadingGroup.end();
@@ -123,12 +117,15 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
 
     form.add<uint8_t>(F("temp_75"), _H_W_STRUCT_VALUE(cfg, protection.temperature_75))
         ->setFormUI((new FormUI(FormUI::TEXT, F("Temperature to reduce brightness to 75%")))->setSuffix(FSPGM(_degreeC)));
+    form.addValidator(new FormRangeValidator(kMinimumTemperatureThreshold, 90));
 
     form.add<uint8_t>(F("temp_50"), _H_W_STRUCT_VALUE(cfg, protection.temperature_50))
         ->setFormUI((new FormUI(FormUI::TEXT, F("Temperature to reduce brightness to 50%")))->setSuffix(FSPGM(_degreeC)));
+    form.addValidator(new FormRangeValidator(kMinimumTemperatureThreshold, 90));
 
     form.add<uint8_t>(F("max_temp"), _H_W_STRUCT_VALUE(cfg, protection.max_temperature))
         ->setFormUI((new FormUI(FormUI::TEXT, F("Over temperature protection")))->setSuffix(FSPGM(_degreeC)));
+    form.addValidator(new FormRangeValidator(kMinimumTemperatureThreshold, 105));
 
     protectionGroup.end();
 

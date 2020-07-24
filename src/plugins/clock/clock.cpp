@@ -28,7 +28,11 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     "Clock",            // friendly name
     "",                 // web_templates
     "clock",            // config_forms
+#if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
+    "http,mqtt",        // reconfigure_dependencies
+#else
     "mqtt",             // reconfigure_dependencies
+#endif
     PluginComponent::PriorityType::MIN,
     PluginComponent::RTCMemoryId::NONE,
     static_cast<uint8_t>(PluginComponent::MenuType::AUTO),
@@ -49,7 +53,7 @@ ClockPlugin::ClockPlugin() :
     _button(IOT_CLOCK_BUTTON_PIN, PRESSED_WHEN_HIGH),
     _buttonCounter(0),
 #endif
-    _color(0, 0, 0xff), _updateTimer(0), _time(0), _updateRate(1000), _isSyncing(1),
+    _color(0, 0, 0xff), _updateTimer(0), _time(0), _updateRate(1000), _isSyncing(true), _schedulePublishState(false),
 #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
     _autoBrightness(1023), _autoBrightnessValue(0), _autoBrightnessLastValue(0),
 #endif
@@ -68,12 +72,6 @@ ClockPlugin::ClockPlugin() :
         ptr += IOT_CLOCK_PIXEL_ORDER_LEN;
     }
 
-    setBlinkColon(0);
-
-    _ui_colon = 0;
-    _ui_animation = 0;
-    _ui_color = 2;
-
     REGISTER_PLUGIN(this, "ClockPlugin");
 }
 
@@ -84,7 +82,7 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
         _resetAlarm();
         auto val = (uint8_t)value.toInt();
         if (String_equals(id, PSTR("btn_colon"))) {
-            switch(_ui_colon = val) {
+            switch(val) {
                 case 0:
                     setBlinkColon(0);
                     break;
@@ -97,48 +95,31 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
             }
         }
         else if (String_equals(id, PSTR("btn_animation"))) {
-            switch(_ui_animation = val) {
-                case 0:
-                    setAnimation(AnimationEnum_t::NONE);
-                    break;
-                case 1:
-                    setAnimation(AnimationEnum_t::RAINBOW);
-                    break;
-                case 2:
-                    setAnimation(AnimationEnum_t::FLASHING);
-                    _updateRate = 250;
-                    break;
-                case 3: {
-                        setAnimation(AnimationEnum_t::FADE);
-                    }
-                    break;
-            }
+            setAnimation(static_cast<AnimationType>(val));
         }
         else if (String_equals(id, PSTR("btn_color"))) {
-            switch(_ui_color = val) {
+            Color color;
+            switch(val) {
                 case 0:
-                    _color = Color(255, 0, 0);
+                    color = Color(255, 0, 0);
                     break;
                 case 1:
-                    _color = Color(0, 255, 0);
+                    color = Color(0, 255, 0);
                     break;
                 case 2:
-                    _color = Color(0, 0, 255);
+                    color = Color(0, 0, 255);
                     break;
                 case 3:
-                    _color.rnd();
+                default:
+                    color.rnd();
                     break;
             }
-            // if (_ui_animation == 2) {
-            //     _animationData.flashing.color = _color;
-            // }
-            _updateTimer = 0;
+            _setColor(color);
         }
         else if (String_equals(id, SPGM(brightness))) {
             _brightness = value.toInt();
             _setBrightness();
         }
-        publishState();
     }
 }
 
@@ -146,7 +127,7 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
 
 void ClockPlugin::_adjustAutobrightness()
 {
-    if (_autoBrightness != AUTO_BRIGHTNESS_OFF) {
+    if (_autoBrightness != kAutoBrightnessOff) {
         auto adc = analogRead(A0);
         float value = adc / (float)_autoBrightness;
         if (value > 1) {
@@ -166,6 +147,14 @@ void ClockPlugin::_adjustAutobrightness()
     }
 }
 
+String ClockPlugin::_getLightSensorWebUIValue()
+{
+    if (_autoBrightness == kAutoBrightnessOff) {
+        return PrintString(F("<strong>OFF</strong><br> <span class=\".light-sensor-value\">Sensor value %u</span>"), analogRead(A0));
+    }
+    return PrintString(F("%.0f &#37;"), _autoBrightnessValue * 100.0);
+}
+
 void ClockPlugin::_updateLightSensorWebUI()
 {
     JsonUnnamedObject json(2);
@@ -173,15 +162,15 @@ void ClockPlugin::_updateLightSensorWebUI()
     auto &events = json.addArray(JJ(events), 1);
     auto &obj = events.addObject(3);
     obj.add(JJ(id), FSPGM(light_sensor, "light_sensor"));
-    obj.add(JJ(value), JsonNumber(_autoBrightness == AUTO_BRIGHTNESS_OFF ? NAN : _autoBrightnessValue * 100, 0));
-    obj.add(JJ(state), _autoBrightness == AUTO_BRIGHTNESS_OFF ? false : true);
+    obj.add(JJ(value), _getLightSensorWebUIValue());
+    obj.add(JJ(state), true);
 
     WsWebUISocket::broadcast(WsWebUISocket::getSender(), json);
 }
 
 uint16_t ClockPlugin::_getBrightness() const
 {
-    if (_autoBrightness == AUTO_BRIGHTNESS_OFF) {
+    if (_autoBrightness == kAutoBrightnessOff) {
         return _brightness;
     }
     return _brightness * _autoBrightnessValue;
@@ -195,6 +184,12 @@ uint16_t ClockPlugin::_getBrightness() const
 }
 
 #endif
+
+bool ClockPlugin::_isTemperatureBelowThresholds(float temp) const
+{
+    float minThreshold = std::min(std::min(_config.protection.max_temperature, _config.protection.temperature_50), _config.protection.temperature_75) - kTemperatureThresholdDifference;
+    return temp < minThreshold;
+}
 
 void ClockPlugin::setup(SetupModeType mode)
 {
@@ -215,85 +210,100 @@ void ClockPlugin::setup(SetupModeType mode)
     });
     _adjustAutobrightness();
 
+    _installWebHandlers();
+
 #endif
 
     _timer.add(1000, true, [this](EventScheduler::TimerPtr) {
         _timerCounter++;
 #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
-        // update auto brightness timer
-        if (_timerCounter % 2 == 0) {
+        // update light sensor webui
+        if (_timerCounter % kUpdateAutobrightnessInterval == 0) {
             uint8_t tmp = _autoBrightnessValue * 100;
             if (tmp != _autoBrightnessLastValue) {
                 __LDBG_printf("auto brightness %f", _autoBrightnessValue);
                 _autoBrightnessLastValue = tmp;
-                _updateLightSensorWebUI();
+                // check if we will publiush the state in this loop
+                if (!_schedulePublishState) {
+                    _updateLightSensorWebUI();
+                }
             }
         }
 #endif
-        // temperature protection timer
-        if (_timerCounter % 10 == 0) {
+        // temperature protection
+        if (_timerCounter % kCheckTemperatureInterval == 0) {
             SensorPlugin::for_each<Sensor_LM75A>(nullptr, [](MQTTSensor &sensor, Sensor_LM75A &) {
                 return (sensor.getType() == MQTTSensor::SensorType::LM75A);
             }, [this](Sensor_LM75A &sensor) {
                 auto temp = sensor.readSensor();
-// #if DEBUG_IOT_CLOCK
-//                 if (!isnan(temp)) {
-//                     __LDBG_printf("temp timer %f", temp);
-//                 }
-// #endif
+                auto message1_P = PSTR("Over temperature protection activated: %.1f > %u°C");
+                auto message2_P = PSTR("Temperature exceeded threshold, reducing brightness to %u%%: %.1f > %u°C");
+                auto message3_P = PSTR("Temperature %u°C below thresholds, restoring brightness");
+                PrintString message;
+
                 if (temp > _config.protection.max_temperature) {
                     // over temp. protection, reduce brightness to 20% and flash red
                     if (_brightness > SevenSegmentDisplay::MAX_BRIGHTNESS  / 5) {
-                        __LDBG_printf("over temperature protection %.1f > %u", temp, _config.protection.max_temperature);
-                        _tempProtection = true;
+                        message.printf_P(message1_P, temp, _config.protection.max_temperature);
+                        Logger_error(message);
+                        __LDBG_print(message);
+                        _tempProtection = false; // do not recover from this state
+                        _autoBrightness = kAutoBrightnessOff;
                         _brightness = SevenSegmentDisplay::MAX_BRIGHTNESS / 5;
                         _display.setBrightness(_brightness);
-                        _color = Color(255, 0, 0);
-                        setAnimation(AnimationEnum_t::FLASHING);
-                        _updateRate = 2500;
-                        publishState();
+                        _setAnimation(new Clock::FlashingAnimation(*this, Color(255, 0, 0), 2500));
                     }
                 }
                 else if (temp > _config.protection.temperature_50) {
                     // temp. too high, reduce to 50% brightness
                     if (_brightness > SevenSegmentDisplay::MAX_BRIGHTNESS / 2) {
-                        __LDBG_printf("temperature %.1f > %uC, reducing brightness to 50%%", temp, _config.protection.temperature_50);
-                        _tempProtection = true;
+                        message.printf_P(message2_P, 50, temp, _config.protection.temperature_50);
+                        Logger_warning(message);
+                        __LDBG_print(message);
+                        _tempProtection = true; // enable recovery
+                        _autoBrightness = kAutoBrightnessOff;
                         _brightness = SevenSegmentDisplay::MAX_BRIGHTNESS / 2;
                         _setBrightness();
-                        publishState();
                     }
                 }
                 else if (temp > _config.protection.temperature_75) {
                     // temp. too high, reduce to 75% brightness
                     if (_brightness > SevenSegmentDisplay::MAX_BRIGHTNESS / 1.3333) {
-                        __LDBG_printf("temperature %.1f > %uC, reducing brightness to 75%%", temp, _config.protection.temperature_75);
-                        _tempProtection = false;
+                        message.printf_P(message2_P, 75, temp, _config.protection.temperature_75);
+                        Logger_warning(message);
+                        __LDBG_print(message);
+                        _tempProtection = true; // enable recovery
+                        _autoBrightness = kAutoBrightnessOff;
                         _brightness = SevenSegmentDisplay::MAX_BRIGHTNESS / 1.3333;
                         _setBrightness();
-                        publishState();
                     }
                 }
-                else if (_tempProtection && temp < (_config.protection.temperature_75 - 10) && _autoBrightness == AUTO_BRIGHTNESS_OFF) {
-                    __LDBG_printf("recover");
+                else if (_tempProtection && _isTemperatureBelowThresholds(temp)) {
+                    message.printf_P(message3_P, kTemperatureThresholdDifference);
+                    Logger_notice(message);
+                    __LDBG_print(message);
                     _tempProtection = false;
-                    // reactivate auto brightness
+                    // restore settings
                     _autoBrightness = _config.auto_brightness;
-                    _adjustAutobrightness();
-                    publishState();
+                    _brightness = _config.brightness;
+                    _setBrightness();
+                }
+                if (message.length()) {
+                    _schedulePublishState = true;
                 }
             });
         }
-        // mqtt update timer
-        if (_timerCounter % 60 == 0) {
-            publishState();
+        // mqtt update / webui update
+        if (_schedulePublishState || (_timerCounter % kUpdateMQTTInterval == 0)) {
+            _schedulePublishState = false;
+            _publishState();
         }
     });
 
-    if (!IS_TIME_VALID(time(nullptr))) {
-        setSyncing(true);
+    if (IS_TIME_VALID(time(nullptr))) {
+        _isSyncing = false;
     } else {
-        _isSyncing = 0;
+        setSyncing(true);
     }
     addTimeUpdatedCallback(ntpCallback);
 
@@ -311,9 +321,15 @@ void ClockPlugin::reconfigure(const String &source)
     if (String_equals(source, SPGM(mqtt))) {
         MQTTClient::safeReRegisterComponent(this);
     }
+#if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
+    else if (String_equals(source, SPGM(http))) {
+        _installWebHandlers();
+    }
+#endif
     else {
         readConfig();
         _setSevenSegmentDisplay();
+        _schedulePublishState = true;
     }
 }
 
@@ -364,7 +380,7 @@ void ClockPlugin::createWebUI(WebUI &webUI)
     row->addButtonGroup(F("btn_colon"), F("Colon"), F("Solid,Blink slowly,Blink fast"), height);
     row->addButtonGroup(F("btn_animation"), F("Animation"), F("Solid,Rainbow,Flashing,Fading"), height);
     row->addButtonGroup(F("btn_color"), F("Color"), F("Red,Green,Blue,Random"), height);
-    auto &sensor = row->addSensor(FSPGM(light_sensor), F("Ambient light sensor"), F("&#37;<br><img src=\"http://simpleicon.com/wp-content/uploads/light.svg\" width=\"80\" height=\"80\" style=\"margin-top:10px\">"));
+    auto &sensor = row->addSensor(FSPGM(light_sensor), F("Ambient Light Sensor"), F("<br><img src=\"/images/light.svg\" width=\"80\" height=\"80\" style=\"margin-top:10px\">"));
     sensor.add(JJ(height), height);
 }
 
@@ -404,11 +420,11 @@ MQTTComponent::MQTTAutoDiscoveryPtr ClockPlugin::nextAutoDiscovery(MQTTAutoDisco
 
 void ClockPlugin::onConnect(MQTTClient *client)
 {
-    _debug_println();
+    __LDBG_println();
     client->subscribe(this, MQTTClient::formatTopic(FSPGM(_set)));
     client->subscribe(this, MQTTClient::formatTopic(FSPGM(_color_set)));
     client->subscribe(this, MQTTClient::formatTopic(FSPGM(_brightness_set)));
-    publishState(client);
+    _publishState(client);
 }
 
 void ClockPlugin::onMessage(MQTTClient *client, char *topic, char *payload, size_t len)
@@ -431,6 +447,7 @@ void ClockPlugin::onMessage(MQTTClient *client, char *topic, char *payload, size
                 b = strtok(nullptr, comma);
                 if (b) {
                     _setColor(Color(atoi(r), atoi(g), atoi(b)));
+                    _schedulePublishState = true;
                 }
             }
         }
@@ -450,6 +467,7 @@ void ClockPlugin::onMessage(MQTTClient *client, char *topic, char *payload, size
             _setAnimation(new Clock::FadingAnimation(*this, _color, Color(0U), 5.0));
             _color = 0;
         }
+        _schedulePublishState = true;
     }
 }
 
@@ -457,6 +475,7 @@ void ClockPlugin::_setColor(Color color)
 {
     _color = color;
     _updateTimer = 0;
+    _schedulePublishState = true;
 }
 
 void ClockPlugin::getValues(JsonArray &array)
@@ -464,17 +483,17 @@ void ClockPlugin::getValues(JsonArray &array)
     auto obj = &array.addObject(3);
     obj->add(JJ(id), F("btn_colon"));
     obj->add(JJ(state), true);
-    obj->add(JJ(value), _ui_colon);
+    obj->add(JJ(value), (_config.blink_colon_speed < kMinBlinkColonSpeed) ? 0 : (_config.blink_colon_speed < 750 ? 2 : 1));
 
     obj = &array.addObject(3);
     obj->add(JJ(id), F("btn_animation"));
     obj->add(JJ(state), true);
-    obj->add(JJ(value), _ui_animation);
+    obj->add(JJ(value), static_cast<uint8_t>(_config.animation));
 
     obj = &array.addObject(3);
     obj->add(JJ(id), F("btn_color"));
     obj->add(JJ(state), true);
-    obj->add(JJ(value), _ui_color);
+    obj->add(JJ(value), _color.get());
 
     obj = &array.addObject(3);
     obj->add(JJ(id), FSPGM(brightness));
@@ -484,23 +503,23 @@ void ClockPlugin::getValues(JsonArray &array)
 #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
     obj = &array.addObject(3);
     obj->add(JJ(id), FSPGM(light_sensor));
-    obj->add(JJ(value), JsonNumber(_autoBrightness == AUTO_BRIGHTNESS_OFF ? NAN : _autoBrightnessValue * 100, 0));
-    obj->add(JJ(state), _autoBrightness == AUTO_BRIGHTNESS_OFF ? false : true);
+    obj->add(JJ(value), _getLightSensorWebUIValue());
+    obj->add(JJ(state), true);
 #endif
 }
 
-void ClockPlugin::publishState(MQTTClient *client)
+void ClockPlugin::_publishState(MQTTClient *client)
 {
     if (!client) {
         client = MQTTClient::getClient();
     }
-    __LDBG_printf("client=%p color=%06x brightness=%u auto_brightness=%d", client, (int)Color(_colors), _brightness, _autoBrightness);
+    __LDBG_printf("client=%p color=%s brightness=%u auto_brightness=%d", client, _color.implode(',').c_str(), _brightness, _autoBrightness);
     if (client && client->isConnected()) {
         client->publish(MQTTClient::formatTopic(FSPGM(_state)), true, String(_color ? 1 : 0));
         client->publish(MQTTClient::formatTopic(FSPGM(_brightness_state)), true, String(_brightness));
-        client->publish(MQTTClient::formatTopic(FSPGM(_color_state)), true, PrintString(F("%u,%u,%u"), _colors[0], _colors[1], _colors[2]));
+        client->publish(MQTTClient::formatTopic(FSPGM(_color_state)), true, _color.implode(','));
 #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
-        client->publish(MQTTClient::formatTopic(FSPGM(light_sensor)), true, _autoBrightness == AUTO_BRIGHTNESS_OFF ? String(FSPGM(Off)) : String(_autoBrightnessValue * 100, 0));
+        client->publish(MQTTClient::formatTopic(FSPGM(light_sensor)), true, String(_autoBrightnessValue * 100, 0));
 #endif
     }
 
@@ -535,11 +554,13 @@ void ClockPlugin::enable(bool enable)
 
 void ClockPlugin::setSyncing(bool sync)
 {
-    __LDBG_printf("sync=%u syncing=%u", sync, _isSyncing);
-    if (sync != (bool)_isSyncing) {
-        _isSyncing = sync ? 1 : 0;
+    __LDBG_printf("sync=%u", sync);
+    if (sync != _isSyncing) {
+        _isSyncing = sync;
         _time = 0;
         _display.clear();
+        _updateRate = 100;
+        _updateTimer = 0;
     }
 }
 
@@ -562,29 +583,30 @@ void ClockPlugin::setBlinkColon(uint16_t value)
         }
     }
     _config.blink_colon_speed = value;
+    _schedulePublishState = true;
 }
 
-void ClockPlugin::setAnimation(AnimationEnum_t animation)
+void ClockPlugin::setAnimation(AnimationType animation)
 {
     __LDBG_printf("animation=%d", animation);
-    _config.animation = animation;
-    _display.setCallback(nullptr);
+    _config.animation = static_cast<uint8_t>(animation);
     switch(animation) {
-        case AnimationEnum_t::FADE:
+        case AnimationType::FADING:
             _setAnimation(new Clock::FadingAnimation(*this, _color, Color().rnd(), _config.fading.speed, _config.fading.delay));
             break;
-        case AnimationEnum_t::RAINBOW:
+        case AnimationType::RAINBOW:
             _setAnimation(new Clock::RainbowAnimation(*this, _config.rainbow.speed, _config.rainbow.multiplier, _config.rainbow.factor.value));
             break;
-        case AnimationEnum_t::FLASHING:
+        case AnimationType::FLASHING:
             _setAnimation(new Clock::FlashingAnimation(*this, _color, _config.flashing_speed));
             break;
-        case AnimationEnum_t::NONE:
+        case AnimationType::NONE:
         default:
-            _config.animation = AnimationEnum_t::NONE;
+            _config.animation = static_cast<uint8_t>(AnimationType::NONE);
             setUpdateRate((_config.blink_colon_speed < kMinBlinkColonSpeed) ? kDefaultUpdateRate : _config.blink_colon_speed);
             break;
     }
+    _schedulePublishState = true;
 }
 
 void ClockPlugin::readConfig()
@@ -594,11 +616,15 @@ void ClockPlugin::readConfig()
         _config.rainbow.multiplier = 1.23;
     }
 
+    _config.protection.max_temperature = std::max(kMinimumTemperatureThreshold, _config.protection.max_temperature);
+    _config.protection.temperature_50 = std::max(kMinimumTemperatureThreshold, _config.protection.temperature_50);
+    _config.protection.temperature_75 = std::max(kMinimumTemperatureThreshold, _config.protection.temperature_75);
+
     _color = Color(_config.solid_color.value);
     _brightness = _config.brightness << 8;
     _autoBrightness = _config.auto_brightness;
-    setAnimation(static_cast<AnimationEnum_t>(_config.animation));
-    _display.setBrightness(_brightness);
+    _setBrightness();
+    setAnimation(static_cast<AnimationType>(_config.animation));
 }
 
 #if IOT_CLOCK_BUTTON_PIN
@@ -611,13 +637,11 @@ void ClockPlugin::onButtonHeld(Button& btn, uint16_t duration, uint16_t repeatCo
         plugin._buttonCounter = 0;
     }
     if (repeatCount == 12) {    // start flashing after 2 seconds, hard reset occurs ~2.5s
-        plugin._autoBrightness = AUTO_BRIGHTNESS_OFF;
+        plugin._autoBrightness = kAutoBrightnessOff;
         plugin._display.setBrightness(SevenSegmentDisplay::MAX_BRIGHTNESS);
-        plugin.setAnimation(AnimationEnum_t::FLASHING);
-        plugin._animationData.flashing.color = Color(255, 0, 0);
-        plugin._updateRate = 50;
+        plugin._setAnimation(new Clock::FlashingAnimation(*this, Color(255, 0, 0), 150));
 
-        Scheduler.addTimer(1000, false, [](EventScheduler::TimerPtr) {   // call restart if no reset occured
+        Scheduler.addTimer(2000, false, [](EventScheduler::TimerPtr) {   // call restart if no reset occured
             __LDBG_printf("restarting device\n"));
             config.restartDevice();
         });
@@ -634,30 +658,23 @@ void ClockPlugin::onButtonReleased(Button& btn, uint16_t duration)
 
 void ClockPlugin::_onButtonReleased(uint16_t duration)
 {
-    __LDBG_printf("press=%u", _buttonCounter);
+    __LDBG_printf("press=%u", _buttonCounter % 4);
     if (_resetAlarm()) {
         return;
     }
-    switch(_buttonCounter) {
+    switch(_buttonCounter % 4) {
         case 0:
-            setAnimation(AnimationEnum_t::FAST_BLINK_COLON);
+            setAnimation(AnimationType::RAINBOW);
             break;
         case 1:
-            setAnimation(AnimationEnum_t::BLINK_COLON);
+            setAnimation(AnimationType::FLASHING);
             break;
         case 2:
-            setAnimation(AnimationEnum_t::SOLID_COLON);
+            setAnimation(AnimationType::FADING);
             break;
         case 3:
-            setAnimation(AnimationEnum_t::RAINBOW);
-            break;
-        case 4:
-            setAnimation(AnimationEnum_t::FLASHING);
-            break;
-        case 5:
-            setAnimation(AnimationEnum_t::FLASHING);
-            _updateRate = 500;
-            _buttonCounter = -1;
+        default:
+            setAnimation(AnimationType::NONE);
             break;
     }
     _buttonCounter++;
@@ -671,6 +688,7 @@ void ClockPlugin::_setAnimation(Clock::Animation *animation)
     _deleteAnimaton();
     _animation = animation;
     _animation->begin();
+    _schedulePublishState = true;
 }
 
 void ClockPlugin::_setNextAnimation(Clock::Animation *nextAnimation)
@@ -696,42 +714,88 @@ void ClockPlugin::_deleteAnimaton()
         _animation->begin();
     }
     if (!_animation) {
-        setAnimation(AnimationEnum_t::NONE);
+        setAnimation(AnimationType::NONE);
     }
 }
+
+#if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
+
+void ClockPlugin::handleWebServer(AsyncWebServerRequest *request)
+{
+    if (WebServerPlugin::getInstance().isAuthenticated(request) == true) {
+        HttpHeaders httpHeaders(false);
+        httpHeaders.addNoCache();
+        auto response = request->beginResponse(200, FSPGM(mime_text_plain), String(analogRead(A0)));
+        httpHeaders.setAsyncWebServerResponseHeaders(response);
+        request->send(response);
+    } else {
+        request->send(403);
+    }
+}
+
+void ClockPlugin::_installWebHandlers()
+{
+    __LDBG_printf("server=%p", WebServerPlugin::getWebServerObject());
+    WebServerPlugin::addHandler(F("/ambient_light_sensor"), handleWebServer);
+}
+
+#endif
 
 void ClockPlugin::_loop()
 {
 #if IOT_CLOCK_BUTTON_PIN
     _button.update();
 #endif
-    if (_isSyncing) {
-        if (get_time_diff(_updateTimer, millis()) >= 100) {
+//     if (_isSyncing) {
+//         if (get_time_diff(_updateTimer, millis()) >= 100) {
+//             _updateTimer = millis();
+
+// #if IOT_CLOCK_PIXEL_SYNC_ANIMATION
+//             #error crashing
+
+//             // show syncing animation until the time is valid
+//             if (_pixelOrder) {
+//                 if (++_isSyncing > IOT_CLOCK_PIXEL_ORDER_LEN) {
+//                     _isSyncing = 1;
+//                 }
+//                 for(uint8_t i = 0; i < SevenSegmentDisplay::getNumDigits(); i++) {
+//                     _display.rotate(i, _isSyncing - 1, _color, _pixelOrder.data(), _pixelOrder.size());
+//                 }
+//             }
+//             else {
+//                 if (++_isSyncing > SevenSegmentPixel_DIGITS_NUM_PIXELS) {
+//                     _isSyncing = 1;
+//                 }
+//                 for(uint8_t i = 0; i < _display->numDigits(); i++) {
+//                     _display->rotate(i, _isSyncing - 1, _color, nullptr, 0);
+//                 }
+//             }
+// #endif
+//             _display.show();
+//         }
+//         return;
+//     }
+
+
+    if (_isSyncing) { // show 88:88:88 instead of the syncing animation
+        if (get_time_diff(_updateTimer, millis()) >= _updateRate) {
             _updateTimer = millis();
-
-#if IOT_CLOCK_PIXEL_SYNC_ANIMATION
-            #error crashing
-
-            // show syncing animation until the time is valid
-            if (_pixelOrder) {
-                if (++_isSyncing > IOT_CLOCK_PIXEL_ORDER_LEN) {
-                    _isSyncing = 1;
-                }
-                for(uint8_t i = 0; i < SevenSegmentDisplay::getNumDigits(); i++) {
-                    _display.rotate(i, _isSyncing - 1, _color, _pixelOrder.data(), _pixelOrder.size());
-                }
-            }
-            else {
-                if (++_isSyncing > SevenSegmentPixel_DIGITS_NUM_PIXELS) {
-                    _isSyncing = 1;
-                }
-                for(uint8_t i = 0; i < _display->numDigits(); i++) {
-                    _display->rotate(i, _isSyncing - 1, _color, nullptr, 0);
-                }
-            }
-#endif
-            _display.show();
         }
+
+        uint32_t color = _color;
+        _display.setDigit(0, 8, color);
+        _display.setDigit(1, 8, color);
+        _display.setDigit(2, 8, color);
+        _display.setDigit(3, 8, color);
+#if IOT_CLOCK_NUM_DIGITS == 6
+        _display.setDigit(4, 8, color);
+        _display.setDigit(5, 8, color);
+#endif
+        _display.setColon(0, SevenSegmentDisplay::BOTH, color);
+#if IOT_CLOCK_NUM_COLONS == 2
+        _display.setColon(1, SevenSegmentDisplay::BOTH, color);
+#endif
+        _display.show();
         return;
     }
 
@@ -746,10 +810,17 @@ void ClockPlugin::_loop()
                 _deleteAnimaton();
             }
         }
-        now = 0; // update display
+        _time = 0; // update display
     }
     if (_time != now) {
-        uint8_t isColon = _config.blink_colon_speed >= kMinBlinkColonSpeed && ((_updateTimer / _config.blink_colon_speed) % 2 == 0);
+        _time = now;
+
+        uint8_t displayColon = true;
+        // does the animation allow blinking and is it set?
+        if ((!_animation || _animation->doBlinkColon()) && (_config.blink_colon_speed >= kMinBlinkColonSpeed)) {
+            // set on/off depending on the update rate
+            displayColon = ((_updateTimer / _config.blink_colon_speed) % 2 == 0);
+        }
 
         uint32_t color = _color;
         auto tm = localtime(&now);
@@ -767,18 +838,13 @@ void ClockPlugin::_loop()
         _display.setDigit(5, tm->tm_sec % 10, color);
 #endif
 
-        if (isColon) {
-            _display.clearColon(0);
-#if IOT_CLOCK_NUM_COLONS == 2
-            _display.clearColon(1);
-#endif
+        if (!displayColon) {
+            color = 0;
         }
-        else {
-            _display.setColon(0, SevenSegmentDisplay::BOTH, color);
+        _display.setColon(0, SevenSegmentDisplay::BOTH, color);
 #if IOT_CLOCK_NUM_COLONS == 2
-            _display.setColon(1, SevenSegmentDisplay::BOTH, color);
+        _display.setColon(1, SevenSegmentDisplay::BOTH, color);
 #endif
-        }
 
         _display.show();
     }
@@ -815,10 +881,12 @@ void ClockPlugin::_setSevenSegmentDisplay()
 
 void ClockPlugin::_setBrightness()
 {
+    // smooth brightness change
     auto oldUpdateRate = _updateRate;
     _updateRate = 25;
     _display.setBrightness(_getBrightness(), 2.5, [this, oldUpdateRate](uint16_t) {
         _updateRate = oldUpdateRate;
+        _schedulePublishState = true;
     });
 }
 
@@ -836,18 +904,19 @@ void ClockPlugin::_alarmCallback(Alarm::AlarmModeType mode, uint16_t maxDuration
         return;
     }
 
+    // alarm reset function already set?
     if (!_resetAlarmFunc) {
-        auto animation = static_cast<AnimationEnum_t>(_config.animation);
+        auto animation = static_cast<AnimationType>(_config.animation);
         auto brightness = _brightness;
         auto autoBrightness = _autoBrightness;
 
-        __LDBG_printf("storing parameters brightness=%u auto_brightness=%d color=%06x animation=%u", _brightness, _autoBrightness, (int)_color, animation);
+        __LDBG_printf("storing parameters brightness=%u auto_brightness=%d color=#%06x animation=%u", _brightness, _autoBrightness, _color.get(), animation);
         _resetAlarmFunc = [this, animation, brightness, autoBrightness](EventScheduler::TimerPtr timer) {
             _autoBrightness = autoBrightness;
             _brightness = brightness;
             _display.setBrightness(brightness);
             setAnimation(animation);
-            __LDBG_printf("restored parameters brightness=%u auto_brightness=%d color=%06x animation=%u timer=%u", _brightness, _autoBrightness, (int)_color, animation, (bool)timer);
+            __LDBG_printf("restored parameters brightness=%u auto_brightness=%d color=#%06x animation=%u timer=%u", _brightness, _autoBrightness, _color.get(), animation, (bool)timer);
             if (timer) {
                 timer->detach();
             }
@@ -860,8 +929,8 @@ void ClockPlugin::_alarmCallback(Alarm::AlarmModeType mode, uint16_t maxDuration
 
     // check if an alarm is already active
     if (!_alarmTimer.active()) {
-        __LDBG_printf("alarm brightness=%u auto_brightness=%d color=%06x", _brightness, _autoBrightness, (int)_color);
-        _autoBrightness = AUTO_BRIGHTNESS_OFF;
+        __LDBG_printf("alarm brightness=%u auto_brightness=%d color=#%06x", _brightness, _autoBrightness, _color.get());
+        _autoBrightness = kAutoBrightnessOff;
         _brightness = SevenSegmentDisplay::MAX_BRIGHTNESS;
         _display.setBrightness(_brightness);
         _setAnimation(new Clock::FlashingAnimation(*this, _config.alarm.color.value, _config.alarm.speed));
@@ -879,8 +948,10 @@ bool ClockPlugin::_resetAlarm()
 {
     __LDBG_printf("alarm_func=%u alarm_state=%u", _resetAlarmFunc ? 1 : 0, AlarmPlugin::getAlarmState());
     if (_resetAlarmFunc) {
+        // reset prior clock settings
         _resetAlarmFunc(nullptr);
         AlarmPlugin::resetAlarm();
+        _schedulePublishState = true;
         return true;
     }
     return false;
@@ -943,10 +1014,10 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKA))) {
         if (args.isQueryMode()) {
-            args.printf_P(PSTR("%u - rainbow animation (+CLOCKA=%u,<speed>,<multiplier>,<single>)"), AnimationEnum_t::RAINBOW, AnimationEnum_t::RAINBOW);
-            args.printf_P(PSTR("%u - flashing"), AnimationEnum_t::FLASHING);
-            args.printf_P(PSTR("%u - fade to color (+CLOCKA=%u,<r>,<g>,<b>)"), AnimationEnum_t::FADE, AnimationEnum_t::FADE);
-            args.printf_P(PSTR("%u - blink colon speed"), (int)AnimationEnum_t::MAX);
+            args.printf_P(PSTR("%u - rainbow animation (+CLOCKA=%u,<speed>,<multiplier>,<single>)"), AnimationType::RAINBOW, AnimationType::RAINBOW);
+            args.printf_P(PSTR("%u - flashing"), AnimationType::FLASHING);
+            args.printf_P(PSTR("%u - fade to color (+CLOCKA=%u,<r>,<g>,<b>)"), AnimationType::FADING, AnimationType::FADING);
+            args.printf_P(PSTR("%u - blink colon speed"), (int)AnimationType::MAX);
             args.print(F("1000 = disable clock"));
             args.print(F("1001 = enable clock"));
             args.print(F("1002 = all pixels on"));
@@ -954,7 +1025,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
         }
         else if (args.size() >= 1) {
             int value = args.toInt(0);
-            if (value == (int)AnimationEnum_t::MAX) {
+            if (value == (int)AnimationType::MAX) {
                 setBlinkColon(args.toIntMinMax(1, 50U, 0xffffU, 1000U));
             }
             else if (value == 1000) {
@@ -986,9 +1057,9 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                     }
                 });
             }
-            else if (value >= 0 && value < (int)AnimationEnum_t::MAX) {
-                switch(static_cast<AnimationEnum_t>(value)) {
-                    case AnimationEnum_t::RAINBOW:
+            else if (value >= 0 && value < (int)AnimationType::MAX) {
+                switch(static_cast<AnimationType>(value)) {
+                    case AnimationType::RAINBOW:
                         _setAnimation(new Clock::RainbowAnimation(*this,
                             args.toIntMinMax(1, ClockPlugin::kMinRainbowSpeed, (uint16_t)0xfffe, _config.rainbow.speed),
                             args.toFloatMinMax(2, 0.1f, 100.0f, _config.rainbow.multiplier),
@@ -996,10 +1067,10 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                         ));
                         break;
                     default:
-                        setAnimation(static_cast<AnimationEnum_t>(value));
+                        setAnimation(static_cast<AnimationType>(value));
                         break;
                 }
-                // if (value == AnimationEnum_t::FADE) {
+                // if (value == AnimationType::FADE) {
                 //     _animationData.fade.speed = args.toIntMinMax(1, 5U, 1000U, 10U);
                 //     if (args.size() >= 5) {
                 //         _animationData.fade.toColor = Color(args.toInt(2, rand()), args.toInt(3, rand()), args.toInt(4, rand()));
@@ -1008,7 +1079,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                 //         _animationData.fade.toColor = ~_color & 0xffffff;
                 //     }
                 // }
-                // else if (value == AnimationEnum_t::RAINBOW) {
+                // else if (value == AnimationType::RAINBOW) {
                 //     if (args.size() >= 2) {
                 //         _config.rainbow.multiplier = args.toFloatMinMax(1, 0.01f, 100.0f);
                 //         if (args.size() >= 3) {
@@ -1016,9 +1087,9 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                 //         }
                 //     }
                 // }
-                // else if (value == AnimationEnum_t::FLASHING) {
+                // else if (value == AnimationType::FLASHING) {
                 // }
-                // setAnimation(static_cast<AnimationEnum_t>(value));
+                // setAnimation(static_cast<AnimationType>(value));
             }
         }
         else {

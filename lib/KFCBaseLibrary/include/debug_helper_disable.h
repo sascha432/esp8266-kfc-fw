@@ -24,3 +24,8 @@
 #define _debug_print_result(result)					result
 #define _IF_DEBUG(...)
 #define _debug_resolve_lambda(ptr)                  ptr
+
+#ifdef __LDBG_panic
+#undef __LDBG_panic
+#endif
+#define __LDBG_panic(...)                           __DBG_panic(__VA_ARGS__)

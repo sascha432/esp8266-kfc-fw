@@ -187,10 +187,17 @@ extern "C" bool can_yield();
 
 #define debug_print_result(result)              DebugHelperPosition(__BASENAME_FILE__, __LINE__, __DEBUG_FUNCTION__).printResult(result)
 
+// regular debug functions
+#define __DBG_print(arg)                        debug_println(arg)
 #define __DBG_printf(fmt, ...)                  debug_printf(PSTR(fmt "\n"), ##__VA_ARGS__)
-#define __LDBG_printf(fmt, ...)                 _debug_printf(PSTR(fmt "\n"), ##__VA_ARGS__)
 #define __DBG_println()                         debug_println()
+#define __DBG_panic(fmt, ...)                   __debugbreak_and_panic_printf_P(PSTR(fmt "\n"), ##__VA_ARGS__)
+// local debug functions that need to be activated by including debug_helper_enable.h at the beginning of the .h or .cpp file
+// if included in a header, disable it at the end by including debug_helper_disable.h
+#define __LDBG_print(arg)                       _debug_println(arg)
 #define __LDBG_println()                        _debug_println()
+#define __LDBG_printf(fmt, ...)                 _debug_printf(PSTR(fmt "\n"), ##__VA_ARGS__)
+#define __LDBG_panic(...)                       __DBG_panic(__VA_ARGS__)
 
 // templkate <class T>
 // T debug_print_result(T )
@@ -244,6 +251,15 @@ extern "C" bool can_yield();
 
 #define DEBUG_ASSERT(...)           ;
 #define HAVE_DEBUG_ASSERT           0
+
+#define __DBG_print(...)                        ;
+#define __DBG_printf(...)                       ;
+#define __DBG_println()                         ;
+#define __DBG_panic(...)                        ;
+#define __LDBG_print(...)                       ;
+#define __LDBG_println()                        ;
+#define __LDBG_printf(...)                      ;
+#define __LDBG_panic(...)                       ;
 
 #endif
 

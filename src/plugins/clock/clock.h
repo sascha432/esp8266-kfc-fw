@@ -135,6 +135,7 @@ private:
     void _adjustAutobrightness();
     String _getLightSensorWebUIValue();
     void _updateLightSensorWebUI();
+    uint16_t _readLightSensor() const;
 public:
     static void handleWebServer(AsyncWebServerRequest *request);
 #endif
@@ -156,6 +157,7 @@ private:
     uint16_t _updateRate;
     uint8_t _isSyncing : 1;
     uint8_t _schedulePublishState : 1;
+    uint8_t _displaySensorValue : 1;
 #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
     int16_t _autoBrightness;
     float _autoBrightnessValue;

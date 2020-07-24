@@ -32,7 +32,7 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
 #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
 
     form.add<int16_t>(F("auto_br"), _H_W_STRUCT_VALUE(cfg, auto_brightness))
-        ->setFormUI((new FormUI(FormUI::TEXT, F("Auto Brightness Value")))->setSuffix(F("<span class=\"input-group-text\">0-1023<span id=\"abr_sv\"></span></span><button class=\"btn btn-default\" type=\"button\" id=\"dis_auto_br\">Disable</button>")));
+        ->setFormUI((new FormUI(FormUI::TEXT, F("Auto Brightness Value")))->setSuffix(F("<span class=\"input-group-text\">0-1023</span><span id=\"abr_sv\" class=\"input-group-text\"></span><button class=\"btn btn-secondary\" type=\"button\" id=\"dis_auto_br\">Disable</button>")));
     form.addValidator(new FormRangeValidator(-1, 1023));
 
 #endif

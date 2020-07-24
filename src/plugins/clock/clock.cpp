@@ -53,7 +53,7 @@ ClockPlugin::ClockPlugin() :
     _button(IOT_CLOCK_BUTTON_PIN, PRESSED_WHEN_HIGH),
     _buttonCounter(0),
 #endif
-    _color(0, 0, 0xff), _updateTimer(0), _time(0), _updateRate(1000), _isSyncing(true), _schedulePublishState(false),
+    _color(0, 0, 0xff), _updateTimer(0), _time(0), _updateRate(1000), _isSyncing(true), _schedulePublishState(false), _displaySensorValue(false),
 #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
     _autoBrightness(1023), _autoBrightnessValue(0), _autoBrightnessLastValue(0),
 #endif
@@ -128,7 +128,7 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
 void ClockPlugin::_adjustAutobrightness()
 {
     if (_autoBrightness != kAutoBrightnessOff) {
-        auto adc = analogRead(A0);
+        auto adc = _readLightSensor();
         float value = adc / (float)_autoBrightness;
         if (value > 1) {
             value = 1;
@@ -150,7 +150,7 @@ void ClockPlugin::_adjustAutobrightness()
 String ClockPlugin::_getLightSensorWebUIValue()
 {
     if (_autoBrightness == kAutoBrightnessOff) {
-        return PrintString(F("<strong>OFF</strong><br> <span class=\".light-sensor-value\">Sensor value %u</span>"), analogRead(A0));
+        return PrintString(F("<strong>OFF</strong><br> <span class=\"light-sensor-value\">Sensor value %u</span>"), _readLightSensor());
     }
     return PrintString(F("%.0f &#37;"), _autoBrightnessValue * 100.0);
 }
@@ -166,6 +166,11 @@ void ClockPlugin::_updateLightSensorWebUI()
     obj.add(JJ(state), true);
 
     WsWebUISocket::broadcast(WsWebUISocket::getSender(), json);
+}
+
+uint16_t ClockPlugin::_readLightSensor() const
+{
+    return analogRead(A0);
 }
 
 uint16_t ClockPlugin::_getBrightness() const
@@ -560,30 +565,27 @@ void ClockPlugin::setSyncing(bool sync)
         _time = 0;
         _display.clear();
         _updateRate = 100;
+        __LDBG_printf("update_rate=%u", _updateRate);
         _updateTimer = 0;
     }
 }
 
 void ClockPlugin::setBlinkColon(uint16_t value)
 {
+    uint16_t updateRate = value;
     if (value < kMinBlinkColonSpeed) {
+        updateRate = kDefaultUpdateRate;
         value = 0;
     }
-    __LDBG_printf("blinkcolon=%u", value);
     if (_animation) {
-        if (value && _updateRate > value) {
-            _updateRate = value;
-        }
+        _updateRate = std::min(updateRate, _updateRate);
     }
     else {
-        if (value) {
-            _updateRate = value;
-        } else {
-            _updateRate = kDefaultUpdateRate;
-        }
+        _updateRate = updateRate;
     }
     _config.blink_colon_speed = value;
     _schedulePublishState = true;
+    __LDBG_printf("blinkcolon=%u update_rate=%u", value, _updateRate);
 }
 
 void ClockPlugin::setAnimation(AnimationType animation)
@@ -600,8 +602,9 @@ void ClockPlugin::setAnimation(AnimationType animation)
         case AnimationType::FLASHING:
             _setAnimation(new Clock::FlashingAnimation(*this, _color, _config.flashing_speed));
             break;
-        case AnimationType::NONE:
         default:
+            __LDBG_printf("invalid animation value=%u", animation);
+        case AnimationType::NONE:
             _config.animation = static_cast<uint8_t>(AnimationType::NONE);
             setUpdateRate((_config.blink_colon_speed < kMinBlinkColonSpeed) ? kDefaultUpdateRate : _config.blink_colon_speed);
             break;
@@ -725,7 +728,7 @@ void ClockPlugin::handleWebServer(AsyncWebServerRequest *request)
     if (WebServerPlugin::getInstance().isAuthenticated(request) == true) {
         HttpHeaders httpHeaders(false);
         httpHeaders.addNoCache();
-        auto response = request->beginResponse(200, FSPGM(mime_text_plain), String(analogRead(A0)));
+        auto response = request->beginResponse(200, FSPGM(mime_text_plain), String(plugin._readLightSensor()));
         httpHeaders.setAsyncWebServerResponseHeaders(response);
         request->send(response);
     } else {
@@ -798,6 +801,18 @@ void ClockPlugin::_loop()
         _display.show();
         return;
     }
+#if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
+    else if (_displaySensorValue) {
+        if (get_time_diff(_updateTimer, millis()) >= _updateRate) {
+            _updateTimer = millis();
+
+            char buf[16];
+            snprintf_P(buf, sizeof(buf), PSTR("% 4u"), _readLightSensor());
+            _display.print(buf, Color(0, 0xff, 0));
+        }
+        return;
+    }
+#endif
 
     auto now = time(nullptr);
     if (get_time_diff(_updateTimer, millis()) >= _updateRate) {
@@ -810,7 +825,7 @@ void ClockPlugin::_loop()
                 _deleteAnimaton();
             }
         }
-        _time = 0; // update display
+        _time = -1; // update display
     }
     if (_time != now) {
         _time = now;
@@ -882,11 +897,11 @@ void ClockPlugin::_setSevenSegmentDisplay()
 void ClockPlugin::_setBrightness()
 {
     // smooth brightness change
-    auto oldUpdateRate = _updateRate;
-    _updateRate = 25;
-    _display.setBrightness(_getBrightness(), 2.5, [this, oldUpdateRate](uint16_t) {
-        _updateRate = oldUpdateRate;
+    _display.setBrightness(_getBrightness(), 2.5, [this](uint16_t) {
+        __LDBG_printf("restored_update_rate=%u", _updateRate);
         _schedulePublishState = true;
+    }, [this](uint16_t) {
+        _updateTimer = 0;
     });
 }
 
@@ -1014,31 +1029,32 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKA))) {
         if (args.isQueryMode()) {
-            args.printf_P(PSTR("%u - rainbow animation (+CLOCKA=%u,<speed>,<multiplier>,<single>)"), AnimationType::RAINBOW, AnimationType::RAINBOW);
+            args.printf_P(PSTR("%u - rainbow animation (+CLOCKA=%u,<speed>,<multiplier>,<r>,<g>,<b-factor>)"), AnimationType::RAINBOW, AnimationType::RAINBOW);
             args.printf_P(PSTR("%u - flashing"), AnimationType::FLASHING);
             args.printf_P(PSTR("%u - fade to color (+CLOCKA=%u,<r>,<g>,<b>)"), AnimationType::FADING, AnimationType::FADING);
             args.printf_P(PSTR("%u - blink colon speed"), (int)AnimationType::MAX);
-            args.print(F("1000 = disable clock"));
-            args.print(F("1001 = enable clock"));
-            args.print(F("1002 = all pixels on"));
-            args.print(F("1003 = test pixel animation order"));
+            args.print(F("100 = disable clock"));
+            args.print(F("101 = enable clock"));
+            args.print(F("102 = all pixels on"));
+            args.print(F("103 = test pixel animation order"));
+            args.print(F("200 = display ambient light sensor value (+CLOCKA=200,<0|1>)"));
         }
         else if (args.size() >= 1) {
             int value = args.toInt(0);
             if (value == (int)AnimationType::MAX) {
                 setBlinkColon(args.toIntMinMax(1, 50U, 0xffffU, 1000U));
             }
-            else if (value == 1000) {
+            else if (value == 100) {
                 enable(false);
             }
-            else if (value == 1001) {
+            else if (value == 101) {
                 enable(true);
             }
-            else if (value == 1002) {
+            else if (value == 102) {
                 enable(false);
                 _display.setColor(0xffffff);
             }
-            else if (value == 1003) {
+            else if (value == 103) {
                 int interval = args.toInt(1, 500);
                 enable(false);
                 size_t num = 0;
@@ -1056,6 +1072,27 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                         _display.setColor(_pixelOrder[num++], 0x22);
                     }
                 });
+            }
+            else if (value == 200) {
+#if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
+                if (args.isTrue(1)) {
+                    _autoBrightness = kAutoBrightnessOff;
+                    setAnimation(AnimationType::NONE);
+                    _updateRate = 250;
+                    _displaySensorValue = true;
+                    _display.clear();
+                    _display.show();
+                    args.print(F("displaying sensor value"));
+                }
+                else {
+                    _displaySensorValue = false;
+                    _autoBrightness = _config.auto_brightness;
+                    setAnimation(static_cast<AnimationType>(_config.animation));
+                    args.print(F("displaying time"));
+                }
+#else
+                args.print(F("sensor not supported"));
+#endif
             }
             else if (value >= 0 && value < (int)AnimationType::MAX) {
                 switch(static_cast<AnimationType>(value)) {

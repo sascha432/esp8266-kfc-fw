@@ -267,7 +267,7 @@ public:
         _brightness = brightness;
     }
 
-    void setBrightness(uint16_t brightness, float fadeTime, Callback_t callback = nullptr) {
+    void setBrightness(uint16_t brightness, float fadeTime, Callback_t callback = nullptr, Callback_t refreshCallback = nullptr) {
         _targetBrightness = brightness;
         if (!_brightnessTimer.active()) {
             uint16_t steps = (uint16_t)(MAX_BRIGHTNESS / (fadeTime * (1000 / 25.0)));      // 0-100%, 3 seconds fade time
@@ -275,7 +275,7 @@ public:
                 steps = 1;
             }
             _debug_printf_P(PSTR("to=%u steps=%u time=%f\n"), _brightness, steps, fadeTime);
-            _brightnessTimer.add(25, true, [this, steps, callback](EventScheduler::TimerPtr timer) {
+            _brightnessTimer.add(25, true, [this, steps, callback, refreshCallback](EventScheduler::TimerPtr timer) {
                 int32_t tmp = _brightness;
                 if (tmp < _targetBrightness) {
                     tmp += steps;
@@ -296,6 +296,10 @@ public:
                     if (callback) {
                         callback(_brightness);
                     }
+                    return;
+                }
+                if (refreshCallback) {
+                    refreshCallback(_brightness);
                 }
 
             }, EventScheduler::PRIO_HIGH);

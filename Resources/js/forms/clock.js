@@ -12,7 +12,7 @@ $(function() {
             $.get('/ambient_light_sensor?SID=' + SID + '&id=' + random_str(), function (value) {
                 value = parseInt(value);
                 if (value > 0) {
-                    $('#abr_sv').html(' - <strong>Current Reading ' + value + '</strong>');
+                    $('#abr_sv').html('Sensor&nbsp;<strong>' + value + '</strong>');
                 }
                 window.setTimeout(load_sensor_value, 5000);
             });

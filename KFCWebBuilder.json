@@ -68,6 +68,7 @@
             ],
             "#if !IOT_CLOCK": [
                 "./Resources/html/clock.html",
+                "./Resources/js/forms/clock.js",
                 "./Resources/images/light.svg"
             ],
             "#if !IOT_ALARM_PLUGIN_ENABLED": [

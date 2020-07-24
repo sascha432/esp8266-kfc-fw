@@ -220,6 +220,10 @@
 	margin-left: 4px;
 }
 
+.form-enable-slider.is-invalid >.rangeslider {
+    background-color: #dc3545;
+}
+
 .rangeslider,
 .rangeslider__fill {
   display: block;
@@ -370,4 +374,8 @@
 
 .alarm-spinner {
     padding-top: 100px;
+}
+
+.light-sensor-value {
+    font-size: 1rem;
 }

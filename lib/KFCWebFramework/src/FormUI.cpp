@@ -59,6 +59,13 @@ FormUI *FormUI::setPlaceholder(const String &placeholder)
     return this;
 }
 
+FormUI *FormUI::setMinMax(const String &min, const String &max)
+{
+    addAttribute(F("min"), min);
+    addAttribute(F("max"), max);
+    return this;
+}
+
 FormUI *FormUI::addAttribute(const String &name, const String &value)
 {
     _attributes += ' ';
@@ -148,12 +155,22 @@ void FormUI::html(PrintInterface &output)
             case NEW_PASSWORD:
                 output.printf_P(PSTR("<input type=\"password\" class=\"form-control visible-password\" name=\"%s\" id=\"%s\" autocomplete=\"new-password\" spellcheck=\"false\"%s>" FORMUI_CRLF), name, name, _attributes.c_str());
                 break;
+            case RANGE:
+                output.printf_P(PSTR("<input type=\"range\" class=\"custom-range\" value=\"%s\" name=\"%s\" id=\"%s\"%s>"), _parent->getValue().c_str(), name, name, _attributes.c_str());
+                break;
+            case RANGE_SLIDER:
+                output.printf_P(PSTR("<div class=\"form-enable-slider\"><input type=\"range\" value=\"%s\" name=\"%s\" id=\"%s\"%s></div>"), _parent->getValue().c_str(), name, name, _attributes.c_str());
+                break;
             default:
                 break;
             }
 
             if (_suffix.length()) {
-                output.printf_P(PSTR("<div class=\"input-group-append\"><span class=\"input-group-text\">%s</span></div></div>" FORMUI_CRLF), _suffix.c_str());
+                if (_suffix.charAt(0) == '<') {
+                    output.printf_P(PSTR("<div class=\"input-group-append\">%s</div></div>" FORMUI_CRLF), _suffix.c_str());
+                } else {
+                    output.printf_P(PSTR("<div class=\"input-group-append\"><span class=\"input-group-text\">%s</span></div></div>" FORMUI_CRLF), _suffix.c_str());
+                }
             }
 
             output.printf_P(PSTR("</div>" FORMUI_CRLF));

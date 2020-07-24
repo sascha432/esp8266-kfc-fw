@@ -26,6 +26,8 @@ public:
 		NONE,
 		SELECT,
 		TEXT,
+		RANGE,
+		RANGE_SLIDER,
 		PASSWORD,
 		NEW_PASSWORD,
 		GROUP_START,
@@ -45,12 +47,17 @@ public:
 
 	FormUI *setLabel(const String &label, bool raw = true); // raw=false automatically adds ":" if the label doesn't have a trailing colon and isn't empty
 
+	// defaults Enabled/Disabled
 	FormUI *setBoolItems();
+	// custom text
 	FormUI *setBoolItems(const String &enabled, const String &disabled);
 	FormUI *addItems(const String &value, const String &label);
 	FormUI *addItems(const ItemsList &items);
+	// add input-append-group text or html if the string starts with <
 	FormUI *setSuffix(const String &suffix);
 	FormUI *setPlaceholder(const String &placeholder);
+	// add min and max attribute
+	FormUI *setMinMax(const String &min, const String &max);
 	FormUI *addAttribute(const String &name, const String &value);
 	FormUI *addConditionalAttribute(bool cond, const String &name, const String &value);
 	FormUI *setReadOnly();

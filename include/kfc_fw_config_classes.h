@@ -11,9 +11,14 @@
 
 #include <push_pack.h>
 
+#undef DEFAULT
+
 namespace KFCConfigurationClasses {
 
     struct System {
+
+        // --------------------------------------------------------------------
+        // Flags
 
         class Flags {
         public:
@@ -47,10 +52,19 @@ namespace KFCConfigurationClasses {
             void setMDNSEnabled(bool state) {
                 _flags.enableMDNS = state;
             }
+            bool isMQTTEnabled() const {
+                return _flags.mqttEnabled;
+            }
+            void setMQTTEnabled(bool state) {
+                _flags.mqttEnabled = state;
+            }
 
         private:
             ConfigFlags _flags;
         };
+
+        // --------------------------------------------------------------------
+        // Device
 
         class Device {
         public:
@@ -76,8 +90,8 @@ namespace KFCConfigurationClasses {
 
             static void setSafeModeRebootTime(uint16_t minutes);
             static uint16_t getSafeModeRebootTime();
-            static void setWebUIKeepLoggedInDays(uint8_t days);
-            static uint8_t getWebUIKeepLoggedInDays();
+            static void setWebUIKeepLoggedInDays(uint16_t days);
+            static uint16_t getWebUIKeepLoggedInDays();
             static uint32_t getWebUIKeepLoggedInSeconds();
             static void setStatusLedMode(StatusLEDModeEnum mode);
             static StatusLEDModeEnum getStatusLedMode();
@@ -85,12 +99,15 @@ namespace KFCConfigurationClasses {
         public:
             typedef struct __attribute__packed__ {
                 uint16_t _safeModeRebootTime;
-                uint8_t _webUIKeepLoggedInDays;
-                uint8_t _statusLedMode: 1;
+                uint16_t _webUIKeepLoggedInDays: 15;
+                uint16_t _statusLedMode: 1;
             } DeviceSettings_t;
 
             DeviceSettings_t settings;
         };
+
+        // --------------------------------------------------------------------
+        // Firmware
 
         class Firmware {
         public:
@@ -115,7 +132,13 @@ namespace KFCConfigurationClasses {
 
     };
 
+    // --------------------------------------------------------------------
+    // Network
+
     struct Network {
+
+        // --------------------------------------------------------------------
+        // Settings
 
         class Settings {
         public:
@@ -148,6 +171,9 @@ namespace KFCConfigurationClasses {
                 uint32_t _dns2;
             };
         };
+
+        // --------------------------------------------------------------------
+        // SoftAP
 
         class SoftAP {
         public:
@@ -191,6 +217,9 @@ namespace KFCConfigurationClasses {
             };
         };
 
+        // --------------------------------------------------------------------
+        // WiFi
+
         class WiFiConfig {
         public:
             static const char *getSSID();
@@ -214,7 +243,13 @@ namespace KFCConfigurationClasses {
         WiFiConfig WiFiConfig;
     };
 
+    // --------------------------------------------------------------------
+    // Plugins
+
     struct Plugins {
+
+        // --------------------------------------------------------------------
+        // Home Assistant
 
         class HomeAssistant {
         public:
@@ -325,6 +360,7 @@ namespace KFCConfigurationClasses {
             HomeAssistant() {
             }
 
+            static void defaults();
             static void setApiEndpoint(const String &endpoint, uint8_t apiId = 0);
             static void setApiToken(const String &token, uint8_t apiId = 0);
             static const char *getApiEndpoint(uint8_t apiId = 0);
@@ -344,6 +380,9 @@ namespace KFCConfigurationClasses {
             char token3[250];
             uint8_t *actions;
         };
+
+        // --------------------------------------------------------------------
+        // Remote
 
         #ifndef IOT_REMOTE_CONTROL_BUTTON_COUNT
         #define IOT_REMOTE_CONTROL_BUTTON_COUNT 4
@@ -392,6 +431,9 @@ namespace KFCConfigurationClasses {
             static void defaults();
             static RemoteControl get();
         };
+
+        // --------------------------------------------------------------------
+        // IOT Switch
 
         class IOTSwitch {
         public:
@@ -447,8 +489,8 @@ namespace KFCConfigurationClasses {
             }
         };
 
-
-        // implementation in src\plugins\weather_station\ws_config.cpp
+        // --------------------------------------------------------------------
+        // Weather Station
 
         class WeatherStation
         {
@@ -489,7 +531,8 @@ namespace KFCConfigurationClasses {
         };
 
 
-        // implementation in src\plugins\alarm\alarm_config.cpp
+        // --------------------------------------------------------------------
+        // Alarm
 
         #ifndef IOT_ALARM_PLUGIN_MAX_ALERTS
         #define IOT_ALARM_PLUGIN_MAX_ALERTS                         10
@@ -593,6 +636,9 @@ namespace KFCConfigurationClasses {
             Alarm_t cfg;
         };
 
+        // --------------------------------------------------------------------
+        // Serial2TCP
+
         class Serial2TCP {
         public:
             enum class ModeType : uint8_t {
@@ -645,6 +691,86 @@ namespace KFCConfigurationClasses {
             char password[33];
         };
 
+        // --------------------------------------------------------------------
+        // MQTTClient
+
+        class MQTTClient {
+        public:
+            enum class ModeType : uint8_t {
+                MIN = 0,
+                DISABLED = MIN,
+                AUTO,
+                UNSECURE,
+                SECURE,
+                MAX
+            };
+
+            enum class QosType : uint8_t {
+                MIN = 0,
+                AT_MODE_ONCE = 0,
+                AT_LEAST_ONCE = 1,
+                EXACTLY_ONCE = 2,
+                MAX,
+                DEFAULT = 0xff,
+            };
+
+            typedef struct __attribute__packed__ {
+                uint16_t port;
+                uint8_t keepalive;
+                union __attribute__packed__ {
+                    // uint8_t mode: 5;
+                    // ModeType mode_enum: 5;
+                    uint8_t mode;
+                    ModeType mode_enum;
+                    //TODO suppress warning
+                };
+                union __attribute__packed__ {
+                    uint8_t qos;
+                    QosType qos_enum;
+                    //TODO suppress warning for  TTClient::<anonymous struct>::<anonymous union>::qos_enum' is too small to hold all v
+                    // uint8_t qos: 2;
+                    // QosType qos_enum: 2;
+                };
+                uint8_t auto_discovery: 1;
+            } MqttConfig_t;
+
+        public:
+            static void defaults();
+            static bool isEnabled();
+            static MqttConfig_t getConfig();
+            static void setConfig(const MqttConfig_t &params);
+            static MqttConfig_t &getWriteableConfig();
+            static const char *getHostname();
+            static const char *getUsername();
+            static const char *getPassword();
+            static const uint8_t *getFingerPrint(uint16_t &size);
+            static const char *getTopic();
+            static const char *getAutoDiscoveryPrefix();
+            static void setHostname(const char *hostname);
+            static void setUsername(const char *username);
+            static void setPassword(const char *password);
+            static void setFingerPrint(const uint8_t *fingerprint, uint16_t size);
+            static void setTopic(const char *topic);
+            static void setAutoDiscoveryPrefix(const char *discovery);
+
+            static constexpr size_t kHostnameMaxSize = 160;
+            static constexpr size_t kUsernameMaxSize = 32;
+            static constexpr size_t kPasswordMaxSize = 32;
+            static constexpr size_t kTopicMaxSize = 128;
+            static constexpr size_t kDiscoveryPrefixMaxSize = 32;
+            static constexpr size_t kFingerprintMaxSize = 20;
+
+            MqttConfig_t cfg;
+            char hostname[kHostnameMaxSize + 1];
+            char username[kUsernameMaxSize + 1];
+            char password[kPasswordMaxSize + 1];
+            char topic[kTopicMaxSize + 1];
+            char discovery_prefix[kDiscoveryPrefixMaxSize + 1];
+            uint8_t fingerprint[kFingerprintMaxSize];
+        };
+
+        // --------------------------------------------------------------------
+        // Plugin Structure
 
         HomeAssistant homeassistant;
         RemoteControl remotecontrol;
@@ -652,15 +778,18 @@ namespace KFCConfigurationClasses {
         WeatherStation weatherstation;
         Alarm alarm;
         Serial2TCP serial2tcp;
+        MQTTClient mqtt;
 
     };
+
+    // --------------------------------------------------------------------
+    // Main Config Structure
 
     struct MainConfig {
 
         System system;
         Network network;
         Plugins plugins;
-
     };
 
 };

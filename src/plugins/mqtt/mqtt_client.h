@@ -72,8 +72,13 @@ public:
     using MQTTQueueType = MQTTQueueEnum_t;
     using MQTTComponentPtr = MQTTComponent::Ptr;
     using MQTTComponentVector = MQTTComponent::Vector;
+    using MQTTConfigType = KFCConfigurationClasses::Plugins::MQTTClient::MqttConfig_t;
+    using ModeType = KFCConfigurationClasses::Plugins::MQTTClient::ModeType;
+    using QosType = KFCConfigurationClasses::Plugins::MQTTClient::QosType;
+    using ClientConfig = KFCConfigurationClasses::Plugins::MQTTClient;
+    using Flags = KFCConfigurationClasses::System::Flags;
 
-    static constexpr uint8_t QOS_DEFAULT = 0xff;
+    static constexpr uint8_t QOS_DEFAULT = static_cast<uint8_t>(QosType::DEFAULT);
 
     class MQTTTopic {
     public:
@@ -204,15 +209,7 @@ public:
         }
     }
 
-    static uint8_t getDefaultQos(uint8_t qos = QOS_DEFAULT) {
-        if (qos != QOS_DEFAULT) {
-            return qos;
-        }
-        if (_mqttClient) {
-            return _mqttClient->_config.qos;
-        }
-        return config._H_GET(Config().mqtt.config).qos;
-    }
+    static uint8_t getDefaultQos(uint8_t qos = QOS_DEFAULT);
 
     String connectionDetailsString();
     String connectionStatusString();
@@ -234,6 +231,7 @@ public:
     }
 
 private:
+    void _zeroConfCallback(const String &hostname, const IPAddress &address, uint16_t port, bool isFallback);
     void _setupClient();
     void autoReconnect(uint32_t timeout);
 
@@ -266,10 +264,11 @@ private:
     size_t getClientSpace() const;
     static bool _isMessageSizeExceeded(size_t len, const char *topic);
 
-    String _host;
+    String _hostname;
+    IPAddress _address;
     String _username;
     String _password;
-    Config_MQTT::config_t _config;
+    MQTTConfigType _config;
     AsyncMqttClient *_client;
     EventScheduler::Timer _timer;
     uint32_t _autoReconnectTimeout;

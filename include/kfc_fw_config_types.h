@@ -43,12 +43,6 @@ enum HttpMode_t : uint8_t {
     HTTP_MODE_SECURE,
 };
 
-enum MQTTMode_t : uint8_t {
-    MQTT_MODE_DISABLED = 0,
-    MQTT_MODE_UNSECURE,
-    MQTT_MODE_SECURE,
-};
-
 typedef uint32_t ConfigFlags_t;
 
 struct ConfigFlags {
@@ -63,11 +57,11 @@ struct ConfigFlags {
     ConfigFlags_t webServerMode: 2;
     ConfigFlags_t ntpClientEnabled: 1;
     ConfigFlags_t syslogProtocol: 3;
-    ConfigFlags_t mqttMode: 2;
-    ConfigFlags_t mqttAutoDiscoveryEnabled: 1;
+    ConfigFlags_t mqttEnabled: 1;
+    ConfigFlags_t __reserved1:2; // free to use
     ConfigFlags_t restApiEnabled: 1;
     ConfigFlags_t serial2TCPEnabled: 1;
-    ConfigFlags_t __reserved:2; // free to use
+    ConfigFlags_t __reserved2:2; // free to use
     ConfigFlags_t useStaticIPDuringWakeUp: 1;
     ConfigFlags_t webServerPerformanceModeEnabled: 1;
     ConfigFlags_t apStandByMode: 1;

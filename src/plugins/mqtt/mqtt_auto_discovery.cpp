@@ -33,7 +33,7 @@ void MQTTAutoDiscovery::_create(MQTTComponent *component, const String &name, MQ
     String uniqueId;
 
     _format = format;
-    _topic = Config_MQTT::getDiscoveryPrefix();
+    _topic = MQTTClient::ClientConfig::getAutoDiscoveryPrefix();
     _topic += '/';
     _topic += component->getComponentName();
     _topic += '/';
@@ -227,7 +227,7 @@ bool MQTTAutoDiscovery::isEnabled()
 #if ENABLE_DEEP_SLEEP
         !resetDetector.hasWakeUpDetected() &&
 #endif
-        config._H_GET(Config().flags).mqttAutoDiscoveryEnabled;
+        MQTTClient::Flags::get().mqttEnabled;
 #else
     return false;
 #endif

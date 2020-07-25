@@ -25,66 +25,8 @@
     </nav>
     <!--NAV%%-->
     <div class="container">
-        <form method="POST" action="mqtt.html">
-            <h1>MQTT Client Configuration</h1>
-            <div class="form-group">
-                <label for="mqtt_enabled">MQTT Client:</label>
-                <select class="form-control" name="mqtt_enabled" id="mqtt_enabled">
-                    <option value="0" %MQTT_ENABLED_0%>Disabled</option>
-                    <option value="1" %MQTT_ENABLED_1%>Enabled</option>
-                    <!--#if ASYNC_TCP_SSL_ENABLED-->
-                    <option value="2" %MQTT_ENABLED_2%>TLS/Secure MQTT</option>
-                    <!--#endif-->
-                </select>
-            </div>
-            <span id="mqtt_settings">
-                <div class="form-group">
-                    <label for="mqtt_host">Hostname:</label>
-                    <input type="text" class="form-control" name="mqtt_host" id="mqtt_host" value="%MQTT_HOST%">
-                </div>
-                <div class="form-group">
-                    <label for="led_pin">Port:</label>
-                    <input type="text" class="form-control" name="mqtt_port" id="mqtt_port" value="%MQTT_PORT%" placeholder="1883">
-                </div>
-                <div class="form-group">
-                    <label for="mqtt_username">Username:</label>
-                    <input type="text" class="form-control" name="mqtt_username" id="mqtt_username" value="%MQTT_USERNAME%" placeholder="Anonymous">
-                </div>
-                <div class="form-group">
-                    <label for="mqtt_password">Password:</label>
-                    <input type="password" class="form-control visible-password" name="mqtt_password" id="mqtt_password" value="%MQTT_PASSWORD%" data-always-visible="false" data-protected="true">
-                </div>
-                <div class="form-group">
-                    <label for="mqtt_topic">Topic:</label>
-                    <input type="text" class="form-control" name="mqtt_topic" id="mqtt_topic" value="%MQTT_TOPIC%">
-                </div>
-                <div class="form-group">
-                    <label for="mqtt_qos">Quality of Service:</label>
-                    <select class="form-control" name="mqtt_qos" id="mqtt_qos">
-                        <option value="0" %MQTT_QOS_0%>At most once (0)</option>
-                        <option value="1" %MQTT_QOS_1%>At least once (1)</option>
-                        <option value="2" %MQTT_QOS_2%>Exactly once (2)</option>
-                    </select>
-                </div>
-                <!--#if MQTT_AUTO_DISCOVERY-->
-                <div class="form-group">
-                    <label for="mqtt_auto_discovery">Home Assistant Auto Discovery:</label>
-                    <select class="form-control" name="mqtt_auto_discovery" id="mqtt_auto_discovery">
-                        <option value="0" %MQTT_AUTO_DISCOVERY_0%>Disabled</option>
-                        <option value="1" %MQTT_AUTO_DISCOVERY_1%>Enabled</option>
-                    </select>
-                </div>
-                <span id="mqtt_discovery" class="hidden">
-                    <div class="form-group">
-                        <label for="mqtt_discovery_prefix">Auto Discovery Prefix:</label>
-                        <input type="text" class="form-control" name="mqtt_discovery_prefix" id="mqtt_discovery_prefix" value="%MQTT_DISCOVERY_PREFIX%">
-                    </div>
-                </span>
-                <!--#endif-->
-            </span>
-            <div class="form-group">
-                <button type="submit" class="btn btn-primary">Save Changes...</button>
-            </div>
+        <form method="POST" action="mqtt.html" id="mqtt_settings">
+            %FORM_HTML%
         </form>
         <!--%%FOOT-->
         <div class="row">

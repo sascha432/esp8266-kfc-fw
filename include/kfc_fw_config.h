@@ -136,47 +136,6 @@ public:
     }
 };
 
-class Config_MQTT
-{
-public:
-    typedef struct {
-        uint32_t port: 16;
-        uint32_t keepalive: 16;
-        uint32_t qos: 8;
-    } config_t;
-    config_t config;
-
-    Config_MQTT();
-
-    uint16_t getPort() const {
-        return config.port;
-    }
-    uint16_t getKeepAlive() const {
-        return config.keepalive;
-    }
-    uint8_t getQos() const {
-        return config.qos;
-    }
-
-    static void defaults();
-
-    static Config_MQTT::config_t getConfig();
-    static MQTTMode_t getMode();
-    static const char *getHost();
-    static const char *getUsername();
-    static const char *getPassword();
-    static const char *getTopic();
-    static const char *getDiscoveryPrefix();
-    static const uint8_t *getFingerprint();
-
-    char host[65];
-    char username[33];
-    char password[33];
-    char topic[128];
-    char fingerprint[20];
-    char discovery_prefix[32];
-};
-
 class Config_Ping
 {
 public:
@@ -339,7 +298,6 @@ typedef struct {
 
     Config_HTTP http;
     Config_Syslog syslog;
-    Config_MQTT mqtt;
     Config_NTP ntp;
 
     uint16_t http_port;
@@ -371,6 +329,14 @@ typedef struct {
     String(config._H_STR(name)), [__VA_ARGS__](const String &str, FormField &, bool store) { \
         if (store) { \
             config._H_SET_STR(name, str); \
+        } \
+        return false; \
+    }
+
+#define _H_STR_FUNC(getter, setter, ...) \
+    getter(), [__VA_ARGS__](const String &str, FormField &, bool store) { \
+        if (store) { \
+            setter(str.c_str()); \
         } \
         return false; \
     }
@@ -476,6 +442,18 @@ public:
     bool connectWiFi();
     void read();
     void write();
+
+    // support for zeroconf
+    // ${zeroconf:<service>.<proto>:<address|value[:port value]>|<fallback[:port]>}
+
+    // if IPAddress is valid, hostname is set to address.toString()
+    using ResolvedCallback = std::function<void(const String &hostname, const IPAddress &address, uint16_t port, bool isFallback)>;
+
+    // resolve zeroconf, optional port to use as default or 0
+    void resolveZeroConf(const String &hostname, uint16_t port, ResolvedCallback callback) const;
+
+    // check if the hostname contains zeroconf
+    bool hasZeroConf(const String &hostname) const;
 
 #if ENABLE_DEEP_SLEEP
 

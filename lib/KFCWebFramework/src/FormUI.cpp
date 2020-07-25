@@ -138,7 +138,7 @@ void FormUI::html(PrintInterface &output)
             }
 
             switch (_type) {
-            case SELECT:
+            case TypeEnum_t::SELECT:
                 output.printf_P(PSTR("<select class=\"form-control\" name=\"%s\" id=\"%s\"%s>" FORMUI_CRLF), name, name, _attributes.c_str());
                 for (auto &item : _items) {
                     PGM_P selected = _compareValue(item.first) ? PSTR(" selected") : PSTR("");
@@ -146,19 +146,22 @@ void FormUI::html(PrintInterface &output)
                 }
                 output.printf_P(PSTR("</select>" FORMUI_CRLF));
                 break;
-            case TEXT:
+            case TypeEnum_t::TEXT:
+            case TypeEnum_t::NUMBER:
+            case TypeEnum_t::INTEGER:
+            case TypeEnum_t::FLOAT:
                 output.printf_P(PSTR("<input type=\"text\" class=\"form-control\" name=\"%s\" id=\"%s\" value=\"%s\"%s>" FORMUI_CRLF), name, name, _parent->getValue().c_str(), _attributes.c_str());
                 break;
-            case PASSWORD:
+            case TypeEnum_t::PASSWORD:
                 output.printf_P(PSTR("<input type=\"password\" class=\"form-control visible-password\" name=\"%s\" id=\"%s\" autocomplete=\"current-password\" spellcheck=\"false\"%s>" FORMUI_CRLF), name, name, _attributes.c_str());
                 break;
-            case NEW_PASSWORD:
+            case TypeEnum_t::NEW_PASSWORD:
                 output.printf_P(PSTR("<input type=\"password\" class=\"form-control visible-password\" name=\"%s\" id=\"%s\" autocomplete=\"new-password\" spellcheck=\"false\"%s>" FORMUI_CRLF), name, name, _attributes.c_str());
                 break;
-            case RANGE:
+            case TypeEnum_t::RANGE:
                 output.printf_P(PSTR("<input type=\"range\" class=\"custom-range\" value=\"%s\" name=\"%s\" id=\"%s\"%s>"), _parent->getValue().c_str(), name, name, _attributes.c_str());
                 break;
-            case RANGE_SLIDER:
+            case TypeEnum_t::RANGE_SLIDER:
                 output.printf_P(PSTR("<div class=\"form-enable-slider\"><input type=\"range\" value=\"%s\" name=\"%s\" id=\"%s\"%s></div>"), _parent->getValue().c_str(), name, name, _attributes.c_str());
                 break;
             default:

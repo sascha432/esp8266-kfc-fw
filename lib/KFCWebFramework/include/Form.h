@@ -37,6 +37,9 @@ public:
     // .my-class = add class="my-class"
     // empty = no id/no class
     FormGroup &addGroup(const String &name, const String &label, bool expanded, FormUI::TypeEnum_t type = FormUI::TypeEnum_t::GROUP_START);
+    // dependencies
+    //
+    // auto &myGroup = form.addDivGroup(F("#my_id"), F("{'i':'#my_input','m':'$T.hide()','s':{'0':'$T.show()','1':'$T.show()','5':'$T.show()'}}"));
     FormGroup &addDivGroup(const String &id, const String &dependencies = String()) {
         return addGroup(id, dependencies, false, FormUI::TypeEnum_t::GROUP_START_DIV);
     }

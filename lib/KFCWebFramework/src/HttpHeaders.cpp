@@ -8,26 +8,7 @@
 #if HAVE_HTTPHEADERS_ASYNCWEBSERVER
 #include <ESPAsyncWebServer.h>
 #endif
-
-PROGMEM_STRING_DEF(Pragma, "Pragma");
-PROGMEM_STRING_DEF(Link, "Link");
-PROGMEM_STRING_DEF(Location, "Location");
-PROGMEM_STRING_DEF(RFC7231_date, "%a, %d %b %Y %H:%M:%S GMT");
-PROGMEM_STRING_DEF(Cache_Control, "Cache-Control");
-PROGMEM_STRING_DEF(Content_Length, "Content-Length");
-PROGMEM_STRING_DEF(Content_Encoding, "Content-Encoding");
-PROGMEM_STRING_DEF(Connection, "Connection");
-PROGMEM_STRING_DEF(Cookie, "Cookie");
-PROGMEM_STRING_DEF(Set_Cookie, "Set-Cookie");
-PROGMEM_STRING_DEF(Last_Modified, "Last-Modified");
-PROGMEM_STRING_DEF(Expires, "Expires");
-PROGMEM_STRING_DEF(no_cache, "no-cache");
-PROGMEM_STRING_DEF(close, "close");
-PROGMEM_STRING_DEF(keep_alive, "keep-alive");
-PROGMEM_STRING_DEF(public, "public");
-PROGMEM_STRING_DEF(private, "private");
-PROGMEM_STRING_DEF(Authorization, "Authorization");
-PROGMEM_STRING_DEF(Bearer_, "Bearer ");
+#include "../src/generated/FlashStringGeneratorAuto.h"
 
 HttpHeaders::HttpHeaders()
 {

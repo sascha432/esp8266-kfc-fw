@@ -114,7 +114,7 @@ void WsWebUISocket::onText(uint8_t *data, size_t len)
             sendValues(client);
         }
         else if (strcasecmp_P(command.c_str(), PSTR("+set_state")) == 0) {
-            bool state = args[1].toInt() || (strcasecmp_P(args[1].c_str(), PSTR("true")) == 0);
+            bool state = args[1].toInt() || (strcasecmp_P(args[1].c_str(), SPGM(true)) == 0);
             for(auto plugin: plugins) {
                 if (plugin->hasWebUI()) {
                     plugin->setValue(args[0], String(), false, state, true);

@@ -354,24 +354,11 @@ size_t AsyncDirResponse::_fillBuffer(uint8_t *data, size_t len)
             modified[0] = '0';
             modified[1] = 0;
 
-#if SPIFFS_TMP_FILES_TTL
-            if (path.length() > tmp_dir.length() && path.startsWith(tmp_dir)) { // check if the name matches the location of temporary files, exclude mapped files
-                ulong ttl = strtoul(path.substring(tmp_dir.length()).c_str(), NULL, HEX);
-                ulong now = (millis() / 1000UL);
-                if (ttl > 0) {
-                    if (now < ttl) {
-                        snprintf_P(modified, sizeof(modified), PSTR("\"TTL %s\""), formatTime(ttl - now, true).c_str());
-                    } else {
-                        strncpy_P(modified, PSTR("\"TTL - scheduled for removal\""), sizeof(modified));
-                    }
-                }
-            }
-            else if (_dir.isMapping()) {
+            if (_dir.isMapping()) {
                 time_t time = _dir.fileTime();
                 auto tm = localtime(&time);
                 strftime_P(modified, sizeof(modified), PSTR("\"%Y-%m-%d %H:%M\""), tm);
             }
-#endif
 
             // _debug_printf_P(PSTR("%s: %d %d\n"), path.c_str(), _dir.isDir(), _dir.isFile());
 

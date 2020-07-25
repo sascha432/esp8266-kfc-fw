@@ -213,9 +213,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF(RTC, "RTC", "[<set>]", "Set RTC time", "Display
 
 #if DEBUG
 
-#if WEBUI_ALERTS_ENABLED || WEBUI_ALERTS_SEND_TO_LOGGER
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(ALERT, "ALERT", "<message>[,<type|0-3>]", "Add WebUI alert");
-#endif
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DSH, "DSH", "Display serial handler");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(FSM, "FSM", "Display FS mapping");
 #if PIN_MONITOR
@@ -1204,13 +1202,13 @@ void at_mode_serial_handle_event(String &commandString)
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(FSM))) {
                 // Mappings::getInstance().dump(output);
             }
-    #if WEBUI_ALERTS_ENABLED || WEBUI_ALERTS_SEND_TO_LOGGER
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(ALERT))) {
                 if (args.size() > 0) {
-                    WebUIAlerts_add(args.get(0), static_cast<AlertMessage::TypeEnum_t>(args.toInt(1, 0)));
+                    WebUIAlerts_add(args.toString(0), static_cast<AlertMessage::Type>(args.toInt(1, 0)));
                     args.print(F("Alert added"));
                 }
                 #if WEBUI_ALERTS_ENABLED
+                args.print(F("--- Alerts ---"));
                 for(auto &alert: config.getAlerts()) {
                     String str;
                     KFCFWConfiguration::AlertMessage::toString(str, alert);
@@ -1219,7 +1217,6 @@ void at_mode_serial_handle_event(String &commandString)
                 }
                 #endif
             }
-    #endif
     #if PIN_MONITOR
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(PINM))) {
                 if (!PinMonitor::getInstance()) {

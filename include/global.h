@@ -43,20 +43,6 @@
 #define ASYNC_TCP_SSL_ENABLED                       0
 #endif
 
-#if DEBUG
-#ifndef SPIFFS_TMP_FILES_TTL
-#define SPIFFS_TMP_FILES_TTL                        3600            // Default TTL for temporary files
-#endif
-#endif
-#if SPIFFS_TMP_FILES_TTL
-#ifndef SPIFFS_TMP_CLEAUP_INTERVAL
-#define SPIFFS_TMP_CLEAUP_INTERVAL                  300             // Cleanup interval for temporary files
-#endif
-#else
-#define SPIFFS_TMP_FILES_TTL                        0
-#define SPIFFS_TMP_CLEAUP_INTERVAL                  0
-#endif
-
 #ifndef KFC_SERIAL_PORT
 #define KFC_SERIAL_PORT                             Serial
 #endif
@@ -321,7 +307,7 @@
 
 // NETBIOS support for MDNS plugin
 #ifndef MDNS_NETBIOS_SUPPORT
-#define MDNS_NETBIOS_SUPPORT                                1
+#define MDNS_NETBIOS_SUPPORT                                0
 #endif
 
 #if !MDNS_PLUGIN && MDNS_NETBIOS_SUPPORT

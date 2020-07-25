@@ -275,7 +275,12 @@ public:
 
 typedef union __attribute__packed__ {
     uint32_t value: 24;
-    uint8_t rgb[3];
+    uint8_t bgr[3];
+    struct __attribute__packed__ {
+        uint8_t blue;
+        uint8_t green;
+        uint8_t red;
+    };
 } ClockColor_t;
 
 typedef struct __attribute__packed__ {
@@ -295,6 +300,7 @@ typedef struct __attribute__packed__ {
         float multiplier;
         uint16_t speed;
         ClockColor_t factor;
+        ClockColor_t minimum;
     } rainbow;
     struct {
         ClockColor_t color;
@@ -303,6 +309,7 @@ typedef struct __attribute__packed__ {
     struct {
         float speed;
         uint16_t delay;
+        ClockColor_t factor;
     } fading;
     // int8_t order[8];
     // uint8_t segmentOrder;

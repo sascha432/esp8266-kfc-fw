@@ -4,20 +4,14 @@
 
 #pragma once
 
-#if WEBUI_ALERTS_ENABLED
-#define WEBUI_ALERTS_SEND_TO_LOGGER                 0
-#else
-#define WEBUI_ALERTS_SEND_TO_LOGGER                 1
-#endif
-
 class AlertMessage {
 public:
-    typedef enum {
+    enum class Type : uint8_t {
         SUCCESS,
         DANGER,
         WARNING,
         INFO,
-    } TypeEnum_t;
+    };
 
 #if WEBUI_ALERTS_ENABLED
 
@@ -26,12 +20,13 @@ public:
             REBOOT = -1,
             PERSISTENT = 0,
             NEVER = PERSISTENT,
-        } ExpiresEnum_t;
-        AlertMessage() : _id(0), _expires(ExpiresEnum_t::EXPIRED) {
+        } ExpiresType;
+
+        AlertMessage() : _id(0), _expires(ExpiresType::EXPIRED) {
         }
-        AlertMessage(uint32_t id) : _id(id), _expires(ExpiresEnum_t::EXPIRED) {
+        AlertMessage(uint32_t id) : _id(id), _expires(ExpiresType::EXPIRED) {
         }
-        AlertMessage(uint32_t id, const String &message, TypeEnum_t type, int32_t expires = ExpiresEnum_t::NEVER, bool dismissable = true) : _id(id), _counter(1), _message(message), _type(type), _dismissable(dismissable), _expires(expires), _time(time(nullptr)) {
+        AlertMessage(uint32_t id, const String &message, Type type, int32_t expires = ExpiresType::NEVER, bool dismissable = true) : _id(id), _counter(1), _message(message), _type(type), _dismissable(dismissable), _expires(expires), _time(time(nullptr)) {
         }
         uint32_t getId() const {
             return _id;
@@ -52,18 +47,18 @@ public:
         bool isDismissable() const {
             return _dismissable;
         }
-        TypeEnum_t getType() const {
+        Type getType() const {
             return _type;
         }
         const __FlashStringHelper *getTypeStr() const {
             switch(_type) {
-                case TypeEnum_t::SUCCESS:
+                case Type::SUCCESS:
                     return F("success");
-                case TypeEnum_t::WARNING:
+                case Type::WARNING:
                     return F("warning");
-                case TypeEnum_t::INFO:
+                case Type::INFO:
                     return F("info");
-                case TypeEnum_t::DANGER:
+                case Type::DANGER:
                 default:
                     return F("danger");
             }
@@ -77,7 +72,7 @@ public:
             }
             return 0;
         }
-        void setExpires(int32_t expires = ExpiresEnum_t::EXPIRED) {
+        void setExpires(int32_t expires = ExpiresType::EXPIRED) {
             _expires = expires;
         }
         int32_t getExpires() const {
@@ -85,10 +80,10 @@ public:
         }
         bool isExpired() const {
             switch(_expires) {
-                case ExpiresEnum_t::EXPIRED:
+                case ExpiresType::EXPIRED:
                     return true;
-                case ExpiresEnum_t::NEVER:
-                case ExpiresEnum_t::REBOOT:
+                case ExpiresType::NEVER:
+                case ExpiresType::REBOOT:
                     return false;
                 default:
                     break;
@@ -100,7 +95,7 @@ public:
             return (IS_TIME_VALID(now) && (now > _time + _expires));
         }
         bool isPersistent() const {
-            return _expires >= ExpiresEnum_t::NEVER;
+            return _expires >= ExpiresType::NEVER;
         }
         void remove();
         static bool fromString(AlertMessage &alert, const String &line);
@@ -110,14 +105,14 @@ public:
         uint32_t _id;
         uint32_t _counter;
         String _message;
-        TypeEnum_t _type;
+        Type _type;
         bool _dismissable;
         int32_t _expires;
         time_t _time;
     };
     typedef std::vector<AlertMessage> AlertVector;
 
-    uint32_t addAlert(const String &message, AlertMessage::TypeEnum_t type, int32_t expires = AlertMessage::ExpiresEnum_t::NEVER, bool dismissable = true);
+    uint32_t addAlert(const String &message, AlertMessage::Type type, int32_t expires = AlertMessage::ExpiresType::NEVER, bool dismissable = true);
     void dismissAlert(uint32_t id);
     AlertVector &getAlerts() {
         return _alerts;
@@ -136,20 +131,24 @@ private:
     AlertVector _alerts;
     uint32_t _alertId;
 
-#elif WEBUI_ALERTS_SEND_TO_LOGGER && !WEBUI_ALERTS_ENABLED
+#elif !WEBUI_ALERTS_ENABLED
 
-    static void logger(const String &message, AlertMessage::TypeEnum_t type) {
+    static void logger(const String &message, AlertMessage::Type type) {
         auto str = String(F("WebUI Alert: "));
         //TODO remove html
         str += message;
+        str.replace(F("<br>"), String('\n'));
+        str.replace(F("<small>"), emptyString);
+        str.replace(F("</small>"), emptyString);
         switch(type) {
-            case TypeEnum_t::DANGER:
+            case Type::DANGER:
                 Logger_error(str);
                 break;
-            case TypeEnum_t::WARNING:
+            case Type::WARNING:
                 Logger_warning(str);
-            case TypeEnum_t::SUCCESS:
-            case TypeEnum_t::INFO:
+                break;
+            case Type::SUCCESS:
+            case Type::INFO:
             default:
                 Logger_notice(str);
                 break;
@@ -184,6 +183,9 @@ PROGMEM_STRING_DECL(alerts_storage_filename);
 #define WEBUI_ALERTS_MAX_HEIGHT                     "200px"
 #endif
 
+#define WebUIAlerts_error(message, ...)
+#define WebUIAlerts_warning(message, ...)
+#define WebUIAlerts_notice(message, ...)
 #define WebUIAlerts_add(message, ...)
 #define WebUIAlerts_remove(alertId)
 #define WebUIAlerts_printAsJson(output, minAlertId)
@@ -194,11 +196,11 @@ PROGMEM_STRING_DECL(alerts_storage_filename);
 
 #else
 
-#if WEBUI_ALERTS_SEND_TO_LOGGER
 #define WebUIAlerts_add(message, type, ...)             AlertMessage::logger(message, type);
-#else
-#define WebUIAlerts_add(message, type, ...)             ;
-#endif
+#define WebUIAlerts_danger(message, ...)                AlertMessage::logger(message, AlertMessage::Type::DANGER);
+#define WebUIAlerts_error(message, ...)                 AlertMessage::logger(message, AlertMessage::Type::DANGER);
+#define WebUIAlerts_warning(message, ...)               AlertMessage::logger(message, AlertMessage::Type::WARNING);
+#define WebUIAlerts_notice(message, ...)                AlertMessage::logger(message, AlertMessage::Type::INFO);
 #define WebUIAlerts_remove(alertId)                     ;
 #define WebUIAlerts_printAsJson(output, minAlertId)     ;
 #define WebUIAlerts_getCount()                          0

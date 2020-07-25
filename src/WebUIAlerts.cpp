@@ -37,7 +37,7 @@ bool KFCFWConfiguration::AlertMessage::fromString(AlertMessage &alert, const Str
             else {
                 auto message = items[6];
                 String_rtrim_P(message, PSTR("\r\n"));
-                alert = AlertMessage(id, message, static_cast<AlertMessage::TypeEnum_t>(items[3].toInt()), expires, items[4].toInt());
+                alert = AlertMessage(id, message, static_cast<AlertMessage::Type>(items[3].toInt()), expires, items[4].toInt());
             }
     //#if DEBUG_KFC_CONFIG
     #if DEBUG
@@ -60,12 +60,12 @@ void KFCFWConfiguration::AlertMessage::toString(String &line, const AlertMessage
 
 void KFCFWConfiguration::AlertMessage::toString(String &line, uint32_t alertId)
 {
-    line = PrintString(F("%u,%d\n"), alertId, ExpiresEnum_t::EXPIRED);
+    line = PrintString(F("%u,%d\n"), alertId, ExpiresType::EXPIRED);
     debug_printf_P(PSTR("str=%s\n"), line.c_str());
 }
 
 
-uint32_t KFCFWConfiguration::addAlert(const String &message, AlertMessage::TypeEnum_t type, int32_t expires, bool dismissable)
+uint32_t KFCFWConfiguration::addAlert(const String &message, AlertMessage::Type type, int32_t expires, bool dismissable)
 {
     for(auto &alert: _alerts) {
         if (!alert.isExpired() && alert.getMessage().equals(message)) {

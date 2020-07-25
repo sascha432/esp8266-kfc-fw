@@ -87,11 +87,7 @@ void append_slash(String &dir);
 void remove_trailing_slash(String &dir);
 
 String sys_get_temp_dir();
-#if SPIFFS_TMP_FILES_TTL
-File tmpfile(const String &dir, const String &prefix, long ttl = SPIFFS_TMP_FILES_TTL);
-#else
 File tmpfile(const String &dir, const String &prefix);
-#endif
 
 String WiFi_disconnect_reason(WiFiDisconnectReason reason);
 
@@ -156,24 +152,30 @@ int strcmp_P_P(PGM_P str1, PGM_P str2);
 int strcasecmp_P_P(PGM_P str1, PGM_P str2);
 
 int strcmp_end_P(const char *str1, size_t len1, PGM_P str2, size_t len2);
+inline int strcmp_end_P(const char *str1, size_t len1, PGM_P str2) {
+    return strcmp_end_P(str1, len1, str2, strlen_P(str2));
+}
+inline int strcmp_end_P(const char *str1, PGM_P str2) {
+    return strcmp_end_P(str1, strlen(str1), str2, strlen_P(str2));
+}
 
 size_t String_rtrim(String &str);
 size_t String_ltrim(String &str);
 size_t String_trim(String &str);
 
-size_t String_rtrim(String &str, const char *chars, uint16_t minLength = ~0);
+size_t String_rtrim(String &str, const char *chars, size_t minLength = ~0);
 size_t String_ltrim(String &str, const char *chars);
 size_t String_trim(String &str, const char *chars);
 
-size_t String_rtrim(String &str, char chars, uint16_t minLength = ~0);
+size_t String_rtrim(String &str, char chars, size_t minLength = ~0);
 size_t String_ltrim(String &str, char chars);
 size_t String_trim(String &str, char chars);
 
-size_t String_rtrim_P(String &str, PGM_P chars, uint16_t minLength = ~0);
+size_t String_rtrim_P(String &str, PGM_P chars, size_t minLength = ~0);
 size_t String_ltrim_P(String &str, PGM_P chars);
 size_t String_trim_P(String &str, PGM_P chars);
 
-inline size_t String_rtrim_P(String &str, const __FlashStringHelper *chars, uint16_t minLength = ~0) {
+inline size_t String_rtrim_P(String &str, const __FlashStringHelper *chars, size_t minLength = ~0) {
     return String_rtrim_P(str, reinterpret_cast<PGM_P>(chars), minLength);
 }
 inline size_t String_ltrim_P(String &str, const __FlashStringHelper *chars) {

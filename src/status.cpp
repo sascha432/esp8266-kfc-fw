@@ -143,14 +143,14 @@ void WiFi_get_status(Print &out)
     }
 
     if (mode & WIFI_AP_STA) {
-        out.print(F(HTML_S(br) HTML_S(br)));
+        out.print(F(HTML_S(br)));
     }
 
 #if defined(ESP8266)
     if (mode & WIFI_AP) {
         ip_info if_cfg;
 
-        out.print(F(HTML_S(strong) "Access point:" HTML_E(strong) HTML_S(br)));
+        out.print(F(HTML_S(br) HTML_S(strong) "Access point:" HTML_E(strong) HTML_S(br)));
 
         softap_config config;
         if (!wifi_softap_get_config(&config)) {

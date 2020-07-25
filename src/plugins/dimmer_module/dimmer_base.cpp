@@ -138,9 +138,8 @@ void Dimmer_Base::_onReceive(size_t length)
     else if (type == DIMMER_TEMPERATURE_ALERT && length == 3) {
         uint8_t temperature = _wire.read();
         uint8_t max_temperature = _wire.read();
-        PrintString message(F("Dimmer temperature alarm triggered: %u > %u"), temperature, max_temperature);
-        Logger_error(message);
-        WebUIAlerts_add(message, AlertMessage::TypeEnum_t::DANGER);
+        PrintString message(F("Dimmer temperature alarm triggered: %u°C > %u°C"), temperature, max_temperature);
+        WebUIAlerts_error(message);
     }
 }
 
@@ -211,7 +210,7 @@ void Dimmer_Base::readConfig()
         delay(50);
     }
     _debug_println(F("read failed"));
-    WebUIAlerts_add(F("Reading firmware configuration failed"), AlertMessage::TypeEnum_t::DANGER, AlertMessage::ExpiresEnum_t::REBOOT);
+    WebUIAlerts_error(F("Reading firmware configuration failed"), AlertMessage::ExpiresType::REBOOT);
 }
 
 void Dimmer_Base::writeConfig()
@@ -220,7 +219,7 @@ void Dimmer_Base::writeConfig()
 
     if (!dimmer.config_valid) { // readConfig() was not successful
         _debug_println(F("invalid config"));
-        WebUIAlerts_add(F("Cannot write firmware configuration"), AlertMessage::TypeEnum_t::DANGER, AlertMessage::ExpiresEnum_t::REBOOT);
+        WebUIAlerts_error(F("Cannot write firmware configuration"), AlertMessage::ExpiresType::REBOOT);
         return;
     }
 
@@ -246,7 +245,7 @@ void Dimmer_Base::writeConfig()
         delay(50);
     }
     _debug_println(F("write failed"));
-    WebUIAlerts_add(F("Writing firmware configuration failed"), AlertMessage::TypeEnum_t::DANGER, AlertMessage::ExpiresEnum_t::REBOOT);
+    WebUIAlerts_error(F("Writing firmware configuration failed"), AlertMessage::ExpiresType::REBOOT);
 }
 
 void Dimmer_Base::_printStatus(Print &output)

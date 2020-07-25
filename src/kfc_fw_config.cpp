@@ -721,15 +721,15 @@ void KFCFWConfiguration::restoreFactorySettings()
         cfg = {};
         cfg.animation = 0;
         cfg.time_format_24h = 1;
-        cfg.solid_color.value = 0x0000ff;
+        cfg.solid_color.value = 0x00ff00;
         cfg.auto_brightness = -1;
         cfg.brightness = 128;
-        cfg.protection = { 55, 65, 75 };
-        cfg.rainbow = { 1.23, 30, 0xffffff };
+        cfg.protection = { 65, 55, 75 };
+        cfg.rainbow = { 5.23, 30, 0xffffff, 0 };
         cfg.alarm = { 0xff0000, 250 };
         cfg.blink_colon_speed = 1000;
-        cfg.flashing_speed = 50;
-        cfg.fading = { 7.5, 10 };
+        cfg.flashing_speed = 150;
+        cfg.fading = { 7.5, 2, 0xffffff };
         // cfg.segmentOrder = 0;
         // static const int8_t order[8] PROGMEM = { 0, 1, -1, 2, 3, -2, 4, 5 }; // <1st digit> <2nd digit> <1st colon> <3rd digit> <4th digit> <2nd colon> <5th digit> <6th digit>
         // memcpy_P(cfg.order, order, sizeof(cfg.order));
@@ -740,7 +740,7 @@ void KFCFWConfiguration::restoreFactorySettings()
 #if CUSTOM_CONFIG_PRESET
     customSettings();
 #endif
-    WebUIAlerts_add(F("Factory settings restored"), AlertMessage::TypeEnum_t::INFO);
+    WebUIAlerts_notice(F("Factory settings restored"));
 }
 
 #if CUSTOM_CONFIG_PRESET

@@ -229,6 +229,12 @@ public:
 
     ArgumentPtr get(uint16_t num) const;
     long toInt(uint16_t num, long defaultValue = 0) const;
+
+    template<typename T>
+    T toIntT(uint16_t num, T defaultValue = 0) const {
+        return static_cast<T>(toInt(num, static_cast<long>(defaultValue)));
+    }
+
     long toNumber(uint16_t num, long defaultValue = 0) const; // auto detect octal, hex and decimal
     long long toLongLong(uint16_t num, long long defaultValue = 0) const;
 

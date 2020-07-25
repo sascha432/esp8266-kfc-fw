@@ -92,22 +92,10 @@ String sys_get_temp_dir()
     return F("/tmp/");
 }
 
-#if SPIFFS_TMP_FILES_TTL
-File tmpfile(const String &dir, const String &prefix, long ttl)
-{
-    String tmp = dir;
-    append_slash(tmp);
-    tmp += String((millis() / 1000UL) + ttl, HEX);
-    if (isxdigit(prefix.charAt(0))) {
-        tmp += '_'; // add separator if next character is a hex digit
-    }
-    tmp += prefix;
-#else
 File tmpfile(const String &dir, const String &prefix) {
     String tmp = dir;
     append_slash(tmp);
     tmp += prefix;
-#endif
     do {
         char ch = rand() % (26 + 26 + 10); // add random characters, [a-zA-Z0-9]
         if (ch < 26) {
@@ -374,7 +362,7 @@ size_t String_trim(String &str)
     return str.length();
 }
 
-size_t String_rtrim(String &str, const char *chars, uint16_t minLength)
+size_t String_rtrim(String &str, const char *chars, size_t minLength)
 {
     if (!chars) {
 #if DEBUG_STRING_CHECK_NULLPTR
@@ -413,7 +401,7 @@ size_t String_trim(String &str, const char *chars)
     return String_ltrim(str, chars);
 }
 
-size_t String_rtrim_P(String &str, PGM_P chars, uint16_t minLength)
+size_t String_rtrim_P(String &str, PGM_P chars, size_t minLength)
 {
     if (!chars) {
 #if DEBUG_STRING_CHECK_NULLPTR
@@ -470,7 +458,7 @@ size_t String_ltrim(String &str, char ch)
     return String_ltrim(str, chars);
 }
 
-size_t String_rtrim(String &str, char ch, uint16_t minLength)
+size_t String_rtrim(String &str, char ch, size_t minLength)
 {
     char chars[2] = { ch, 0 };
     return String_rtrim(str, chars, minLength);

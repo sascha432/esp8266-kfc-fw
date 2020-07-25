@@ -12,20 +12,28 @@
 #ifndef _DEBUG
 #error _DEBUG required
 #endif
+
 #if ARDUINO <= 100
 #error ARDUINO>100 required
 #endif
+
 #if !UNICODE || !_UNICODE
 #error UNICODE and _UNICODE required
 #endif
+
 #if !_CRT_SECURE_NO_WARNINGS
 #error _CRT_SECURE_NO_WARNINGS required
 #endif
-#if !_CRTDBG_MAP_ALLOC
-#error _CRTDBG_MAP_ALLOC required
-#endif
+
+#if _CRTDBG_MAP_ALLOC
 #define new                                             new( _NORMAL_BLOCK , __FILE__ , __LINE__ )
 #define CHECK_MEMORY(...)                               if (_CrtCheckMemory() == false) { __debugbreak(); }
+#else
+#define CHECK_MEMORY(...)                               ;
+//#warning _CRTDBG_MAP_ALLOC=0
+#endif
+
+
 #else
 #define CHECK_MEMORY(...)                               ;
 #endif

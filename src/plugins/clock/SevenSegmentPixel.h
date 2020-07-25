@@ -18,11 +18,15 @@
 
 static constexpr char _digits2SegmentsTable[]  = { 0x3f, 0x06, 0x5b, 0x4f, 0x66, 0x6d, 0x7d, 0x07, 0x7f, 0x6f, 0x77, 0x7c, 0x39, 0x5e, 0x79, 0x71 };  // 0-F
 
-template<typename PIXEL_ADDR_T, size_t NUM_DIGITS, size_t NUM_DIGIT_PIXELS, size_t NUM_COLONS, size_t NUM_COLON_PIXELS>
+template<typename PIXEL_TYPE, size_t NUM_DIGITS, size_t NUM_DIGIT_PIXELS, size_t NUM_COLONS, size_t NUM_COLON_PIXELS>
 class SevenSegmentPixel {
 public:
-    typedef PIXEL_ADDR_T pixel_address_t;
-    typedef uint32_t color_t;
+    using PixelAddressType = PIXEL_TYPE;
+    using ColorType = uint32_t;
+    using BrightnessType = uint16_t;
+    using FadingRefreshCallback = std::function<void(BrightnessType brightness)>;
+    using FadingFinishedCallback = FadingRefreshCallback;
+    using AnimationCallback = std::function<ColorType(PixelAddressType addr, ColorType color, uint32_t millis)>;
 
     typedef enum {
         A = 0,
@@ -42,8 +46,8 @@ public:
         BOTH = LOWER|UPPER,
     } ColonEnum_t;
 
-    static constexpr uint16_t MAX_BRIGHTNESS = 0xffff;
-    typedef std::function<void(uint16_t brightness)> Callback_t;
+    static constexpr BrightnessType kMaxBrightness = std::numeric_limits<BrightnessType>::max();
+    static constexpr size_t kTotalPixelCount = (NUM_DIGITS * NUM_DIGIT_PIXELS * SevenSegmentPixel::SegmentEnum_t::NUM) + (NUM_COLONS * NUM_COLON_PIXELS * 2);
 
     static constexpr size_t getNumDigits() {
         return NUM_DIGITS;
@@ -54,7 +58,7 @@ public:
     }
 
     static constexpr size_t getTotalPixels() {
-        return (NUM_DIGITS * NUM_DIGIT_PIXELS * SevenSegmentPixel::SegmentEnum_t::NUM) + (NUM_COLONS * NUM_COLON_PIXELS * 2);
+        return kTotalPixelCount;
     }
 
     static constexpr size_t getDigitsPixels() {
@@ -65,11 +69,11 @@ public:
         return (NUM_COLONS * NUM_COLON_PIXELS * 2);
     }
 
-    static constexpr color_t getSegmentColor(uint32_t color, uint8_t segment, uint8_t number) {
+    static constexpr ColorType getSegmentColor(uint32_t color, uint8_t segment, uint8_t number) {
         return (_digits2SegmentsTable[number & 0xf] & (1 << segment)) ? color : 0;
     }
 
-    static constexpr pixel_address_t getPixelAddress(uint8_t digit, uint8_t pixel, uint8_t segment) {
+    static constexpr PixelAddressType getPixelAddress(uint8_t digit, uint8_t pixel, uint8_t segment) {
         return (digit * NUM_DIGIT_PIXELS * SegmentEnum_t::NUM) + (segment * NUM_DIGIT_PIXELS) + pixel;
     }
 
@@ -81,7 +85,7 @@ public:
 #else
         _controller( FastLED.addLeds<IOT_CLOCK_FASTLED_CHIPSET, IOT_CLOCK_LED_PIN>(_pixels.data(), getTotalPixels()) ),
 #endif
-        _callback(nullptr), _brightness(MAX_BRIGHTNESS)
+        _brightness(kMaxBrightness)
     {
 #if IOT_CLOCK_NEOPIXEL
         _pixels.begin();
@@ -92,7 +96,7 @@ public:
         _brightnessTimer.remove();
     }
 
-    pixel_address_t setSegments(uint8_t digit, pixel_address_t offset, PGM_P order) {
+    PixelAddressType setSegments(uint8_t digit, PixelAddressType offset, PGM_P order) {
         if (digit < NUM_DIGITS) {
             for(size_t i = 0; i < NUM_DIGIT_PIXELS; i++) {
                 auto ptr = order;
@@ -108,7 +112,7 @@ public:
         return offset + (SegmentEnum_t::NUM * NUM_DIGIT_PIXELS);
     }
 
-    pixel_address_t setColons(uint8_t num, pixel_address_t lowerAddress, pixel_address_t upperAddress) {
+    PixelAddressType setColons(uint8_t num, PixelAddressType lowerAddress, PixelAddressType upperAddress) {
         if (num < NUM_COLONS) {
             _colonPixelAddress[num++] = lowerAddress;
             _colonPixelAddress[num++] = upperAddress;
@@ -116,8 +120,13 @@ public:
         return num;
     }
 
+    // set millis for the AnimationCallback
+    // can be any value
+    void setMillis(uint32_t millis) {
+        _millis = millis;
+    }
 
-    inline void show() {
+    void show() {
 #if IOT_CLOCK_NEOPIXEL
         _pixels.show();
 #else
@@ -125,27 +134,27 @@ public:
 #endif
     }
 
-    inline void clear() {
+    void clear() {
         setColor(0);
     }
 
-    void setColor(color_t color) {
-        for(pixel_address_t i = 0; i < getTotalPixels(); i++) {
+    void setColor(ColorType color) {
+        for(PixelAddressType i = 0; i < getTotalPixels(); i++) {
             setPixelColor(i, color);
         }
         show();
     }
 
-    void setColor(pixel_address_t num, color_t color) {
+    void setColor(PixelAddressType num, ColorType color) {
         setPixelColor(num, color);
         show();
     }
 
-    void setDigit(uint8_t digit, uint8_t number, color_t color) {
+    void setDigit(uint8_t digit, uint8_t number, ColorType color) {
         for(uint8_t j = SegmentEnum_t::A; j < SegmentEnum_t::NUM; j++) {
-            color_t segmentColor = getSegmentColor(color, j, number);
-            for(size_t i = 0; i < NUM_DIGIT_PIXELS; i++) {
-                pixel_address_t addr = _pixelAddress[getPixelAddress(digit, i, j)];
+            ColorType segmentColor = getSegmentColor(color, j, number);
+            for(uint16_t i = 0; i < NUM_DIGIT_PIXELS; i++) {
+                PixelAddressType addr = _pixelAddress[getPixelAddress(digit, i, j)];
                 setPixelColor(addr, _getColor(addr, segmentColor));
             }
         }
@@ -155,8 +164,8 @@ public:
         setDigit(digit, 0xff, 0);
     }
 
-    void setColon(uint8_t num, ColonEnum_t type, color_t color) {
-        pixel_address_t addr;
+    void setColon(uint8_t num, ColonEnum_t type, ColorType color) {
+        PixelAddressType addr;
         if (type & ColonEnum_t::LOWER) {
             addr = _colonPixelAddress[num];
             for(uint8_t i = 0; i < NUM_COLON_PIXELS; i++) {
@@ -177,17 +186,17 @@ public:
         setColon(num, BOTH, 0);
     }
 
-    void rotate(uint8_t digit, uint8_t position, color_t color, pixel_address_t *order, size_t orderSize) {
+    void rotate(uint8_t digit, uint8_t position, ColorType color, PixelAddressType *order, size_t orderSize) {
         clearDigit(digit);
         auto addr = order ? order[digit * orderSize + position] : _pixelAddress[getPixelAddress(digit, position % IOT_CLOCK_NUM_PIXELS, position / IOT_CLOCK_NUM_PIXELS)];
         setPixelColor(addr, _getColor(addr, color));
     }
 
-    void setSegment(uint8_t digit, SegmentEnum_t segment, color_t color) {
+    void setSegment(uint8_t digit, SegmentEnum_t segment, ColorType color) {
         setSegment(digit, (int)segment, color);
     }
 
-    void setSegment(uint8_t digit, int segment, color_t color) {
+    void setSegment(uint8_t digit, int segment, ColorType color) {
         segment = ((uint8_t)segment) % SegmentEnum_t::NUM;
         for(uint8_t i = 0; i < NUM_DIGIT_PIXELS; i++) {
             auto addr = getPixelAddress(digit, i, segment);
@@ -195,7 +204,7 @@ public:
         }
     }
 
-    inline color_t getPixelColor(uint16_t n) const {
+    ColorType getPixelColor(PixelAddressType n) const {
 #if IOT_CLOCK_NEOPIXEL
         return _pixels.getPixelColor(n);
 #else
@@ -203,7 +212,7 @@ public:
 #endif
     }
 
-    inline void setPixelColor(uint16_t n, uint32_t c) {
+    void setPixelColor(PixelAddressType n, ColorType c) {
 #if IOT_CLOCK_NEOPIXEL
         _pixels.setPixelColor(n, c);
 #else
@@ -220,12 +229,12 @@ public:
      * "12:00"="12:00", "#1.1#""=" 1.1 ", "## 00"="   00", ...
      *
      * */
-    void print(const String &text, color_t color) {
+    void print(const String &text, ColorType color) {
         print(text.c_str(), color);
     }
 
-    void print(const char *text, color_t color) {
-        if (!text || !*text){
+    void print(const char *text, ColorType color) {
+        if (!text || !*text) {
             clear();
         }
         uint8_t digit = 0;
@@ -263,19 +272,21 @@ public:
         }
     }
 
-    void setBrightness(uint16_t brightness) {
+    void setBrightness(BrightnessType brightness) {
         _brightness = brightness;
     }
 
-    void setBrightness(uint16_t brightness, float fadeTime, Callback_t callback = nullptr, Callback_t refreshCallback = nullptr) {
+    // finishedCallback and refreshCallback are called from inside an ISR
+    // make sure they are in RAM or have ICACHE_RAM_ATTR
+    void setBrightness(BrightnessType brightness, float fadeTime, FadingFinishedCallback finishedCallback = nullptr, FadingRefreshCallback refreshCallback = nullptr) {
         _targetBrightness = brightness;
         if (!_brightnessTimer.active()) {
-            uint16_t steps = (uint16_t)(MAX_BRIGHTNESS / (fadeTime * (1000 / 25.0)));      // 0-100%, 3 seconds fade time
+            auto steps = (BrightnessType)(kMaxBrightness / (fadeTime * (1000 / 20.0))); // 20ms/50Hz refresh rate
             if (!steps) {
                 steps = 1;
             }
-            _debug_printf_P(PSTR("to=%u steps=%u time=%f\n"), _brightness, steps, fadeTime);
-            _brightnessTimer.add(25, true, [this, steps, callback, refreshCallback](EventScheduler::TimerPtr timer) {
+            //_debug_printf_P(PSTR("to=%u steps=%u time=%f\n"), _brightness, steps, fadeTime);
+            _brightnessTimer.add(20, true, [this, steps, finishedCallback, refreshCallback](EventScheduler::TimerPtr timer) {
                 int32_t tmp = _brightness;
                 if (tmp < _targetBrightness) {
                     tmp += steps;
@@ -293,8 +304,8 @@ public:
                 }
                 else {
                     timer->detach();
-                    if (callback) {
-                        callback(_brightness);
+                    if (finishedCallback) {
+                        finishedCallback(_brightness);
                     }
                     return;
                 }
@@ -310,7 +321,7 @@ public:
         return 'a' + (segment % SegmentEnum_t::NUM);
     }
 
-    inline char getSegmentChar(SegmentEnum_t segment) {
+    char getSegmentChar(SegmentEnum_t segment) {
         return getSegmentChar((int)segment);
     }
 
@@ -347,17 +358,18 @@ public:
 
 
 public:
-    typedef std::function<color_t(pixel_address_t addr, color_t color)> AnimationCallback_t;
-
-    void setCallback(AnimationCallback_t callback) {
+    void setCallback(AnimationCallback callback) {
         _callback = callback;
     }
     bool hasCallback() const {
         return (bool)_callback;
     }
+    AnimationCallback &getCallback() {
+        return _callback;
+    }
 
 private:
-    color_t _getColor(pixel_address_t addr, color_t color) const {
+    ColorType _getColor(PixelAddressType addr, ColorType color) const {
         if (!color) {
             return 0;
         }
@@ -365,16 +377,16 @@ private:
             // if (_pixelOrder) {
             //     return _adjustBrightness(_callback(_pixelOrder[addr], color));
             // }
-            return _adjustBrightness(_callback(addr, color));
+            return _adjustBrightness(_callback(addr, color, _millis));
         }
         return _adjustBrightness(color);
     }
 
-    color_t _adjustBrightness(color_t color) const {
+    ColorType _adjustBrightness(ColorType color) const {
         return (
-            ((color & 0xff) * _brightness / MAX_BRIGHTNESS) |
-            ((((color >> 8) & 0xff) * _brightness / MAX_BRIGHTNESS) << 8) |
-            ((((color >> 16) & 0xff) * _brightness / MAX_BRIGHTNESS) << 16)
+            ((color & 0xff) * _brightness / kMaxBrightness) |
+            ((((color >> 8) & 0xff) * _brightness / kMaxBrightness) << 8) |
+            ((((color >> 16) & 0xff) * _brightness / kMaxBrightness) << 16)
         );
     }
 
@@ -385,12 +397,13 @@ private:
     std::array<CRGB, getTotalPixels()> _pixels;
     CLEDController &_controller;
 #endif
-    std::array<pixel_address_t, getDigitsPixels()> _pixelAddress;
-    std::array<pixel_address_t, getColonsPixels()> _colonPixelAddress;
-    // std::array<pixel_address_t, getTotalPixels()> _pixelOrder;
+    std::array<PixelAddressType, getDigitsPixels()> _pixelAddress;
+    std::array<PixelAddressType, getColonsPixels()> _colonPixelAddress;
+    // std::array<PixelAddressType, getTotalPixels()> _pixelOrder;
 
-    AnimationCallback_t _callback;
-    uint16_t _brightness;
-    uint16_t _targetBrightness;
+    AnimationCallback _callback;
+    BrightnessType _brightness;
+    BrightnessType _targetBrightness;
     EventScheduler::Timer _brightnessTimer;
+    uint32_t _millis;
 };

@@ -45,41 +45,6 @@ extern "C" void gdbstub_do_break();
 #include "PluginComponent.h"
 #endif
 
-#if SPIFFS_TMP_FILES_TTL
-
-void cleanup_tmp_dir()
-{
-    auto now = time(nullptr);
-    if (!IS_TIME_VALID(now)) {
-        return;
-    }
-    String tmp_dir = sys_get_temp_dir();
-    auto dir = ListDir(tmp_dir);
-#if DEBUG
-    int deleted = 0;
-#endif
-    while(dir.next()) {
-        String filename = dir.fileName();
-        ulong ttl = strtoul(filename.substring(tmp_dir.length()).c_str(), nullptr, HEX);
-        if (ttl && (ulong)now > ttl) {
-            if (SPIFFS.remove(dir.fileName())) {
-#if DEBUG
-                deleted++;
-#endif
-            }
-        }
-    }
-    _debug_printf_P(PSTR("Cleanup %s: Removed %d file(s)\n"), tmp_dir.c_str(), deleted);
-}
-
-void cleanup_tmp_dir_timer_callback(EventScheduler::TimerPtr)
-{
-    cleanup_tmp_dir();
-}
-
-#endif
-
-
 #if HAVE_KFC_BOOT_CHECK_FLASHSIZE
 void check_flash_size()
 {
@@ -304,7 +269,7 @@ void setup()
     config.read();
     if (safe_mode) {
 
-        WebUIAlerts_add(F("Running in Safe Mode"), AlertMessage::TypeEnum_t::DANGER, AlertMessage::ExpiresEnum_t::REBOOT);
+        WebUIAlerts_danger(F("Running in Safe Mode"), AlertMessage::ExpiresType::REBOOT);
         serialHandler.replaceFirst(&KFC_SAFE_MODE_SERIAL_PORT);
 
         #if AT_MODE_SUPPORTED
@@ -340,10 +305,7 @@ void setup()
         #endif
 
         if (resetDetector.hasCrashDetected()) {
-            Logger_error(F("System crash detected: %s\n"), resetDetector.getResetInfo().c_str());
-#if !WEBUI_ALERTS_SEND_TO_LOGGER
-            WebUIAlerts_add(PrintString(F("System crash detected.<br>%s"), resetDetector.getResetInfo().c_str()), AlertMessage::TypeEnum_t::DANGER);
-#endif
+            WebUIAlerts_error(PrintString(F("System crash detected.<br>%s"), resetDetector.getResetInfo().c_str()));
         }
 
 #if DEBUG && HAVE_KFC_BOOT_CHECK_FLASHSIZE
@@ -357,10 +319,6 @@ void setup()
             Serial.printf_P(PSTR("CPU frequency %d\n"), system_get_cpu_freq());
 #endif
         }
-#endif
-
-#if SPIFFS_TMP_FILES_TTL
-        Scheduler.addTimer(SPIFFS_TMP_CLEAUP_INTERVAL * 1000LU, true, cleanup_tmp_dir_timer_callback);
 #endif
 
         prepare_plugins();

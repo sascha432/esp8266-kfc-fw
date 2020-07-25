@@ -79,7 +79,7 @@ namespace SaveCrash {
                         if (file) {
                             file.close();
                             espSaveCrash.clear();
-                            WebUIAlerts_add(PrintString(F("Crash dump saved to: %s"), filename.c_str()), AlertMessage::TypeEnum_t::WARNING);
+                            WebUIAlerts_warning(PrintString(F("Crash dump saved to: %s"), filename.c_str()));
                         }
                     }
                 }

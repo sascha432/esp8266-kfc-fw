@@ -5,6 +5,9 @@
 #pragma once
 
 #include <Arduino_compat.h>
+#if defined(HAVE_FLASH_STRING_GENERATOR) && HAVE_FLASH_STRING_GENERATOR
+#include "../src/generated/FlashStringGeneratorAuto.h"
+#endif
 #include <algorithm>
 #include <array>
 #include <vector>
@@ -422,3 +425,8 @@ uint32_t getSystemUptime();
 
 // milliseconds
 uint64_t getSystemUptimeMillis();
+
+template<typename T>
+String enumToString(T value) {
+    return String(static_cast<typename std::underlying_type<T>::type>(value));
+}

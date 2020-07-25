@@ -98,13 +98,16 @@ void Serial2TcpPlugin::createConfigureForm(FormCallbackType type, const String &
     FormUI::ItemsList serialPorts;
     FormUI::ItemsList modes;
 
-    serialPorts.emplace_back(String(static_cast<int>(Serial2TcpPlugin::Serial2TCP::SerialPortType::SERIAL0)), String(F("Serial Port 0")));
-    serialPorts.emplace_back(String(static_cast<int>(Serial2TcpPlugin::Serial2TCP::SerialPortType::SERIAL1)), String(F("Serial Port 1")));
-    serialPorts.emplace_back(String(static_cast<int>(Serial2TcpPlugin::Serial2TCP::SerialPortType::SOFTWARE)), String(F("Software Serial")));
+    using SerialPortType = Serial2TcpPlugin::Serial2TCP::SerialPortType;
+    using ModeType = Serial2TcpPlugin::Serial2TCP::ModeType;
 
-    modes.emplace_back(String(static_cast<int>(Serial2TcpPlugin::Serial2TCP::ModeType::NONE)), String(FSPGM(Disabled)));
-    modes.emplace_back(String(static_cast<int>(Serial2TcpPlugin::Serial2TCP::ModeType::SERVER)), String(F("Server")));
-    modes.emplace_back(String(static_cast<int>(Serial2TcpPlugin::Serial2TCP::ModeType::CLIENT)), String(F("Client")));
+    serialPorts.emplace_back(enumToString(SerialPortType::SERIAL0), String(F("Serial Port 0")));
+    serialPorts.emplace_back(enumToString(SerialPortType::SERIAL1), String(F("Serial Port 1")));
+    serialPorts.emplace_back(enumToString(SerialPortType::SOFTWARE), String(FSPGM(Software_Serial, "Software Serial")));
+
+    modes.emplace_back(enumToString(ModeType::NONE), String(FSPGM(Disabled)));
+    modes.emplace_back(enumToString(ModeType::SERVER), String(FSPGM(Server)));
+    modes.emplace_back(enumToString(ModeType::CLIENT), String(FSPGM(Client)));
 
     #ifndef NUM_DIGITAL_PINS
     #define NUM_DIGITAL_PINS 256
@@ -112,11 +115,11 @@ void Serial2TcpPlugin::createConfigureForm(FormCallbackType type, const String &
 
     form.setFormUI(F("Serial2TCP Settings"));
 
-    form.add<uint8_t>(F("mode"), _H_W_STRUCT_VALUE(cfg, mode_byte))->setFormUI((new FormUI(FormUI::TypeEnum_t::SELECT, F("Mode:")))->addItems(modes));
+    form.add<uint8_t>(FSPGM(mode), _H_W_STRUCT_VALUE(cfg, mode_byte))->setFormUI((new FormUI(FormUI::TypeEnum_t::SELECT, FSPGM(Mode)))->addItems(modes));
 
     auto &allGroup = form.addDivGroup(F("allset"), F("{'i':'#mode','e':'var A=$(\\'#authdiv,#idle_group\\');var C=$(\\'#conn_group\\')','s':{'0':'$T.hide()','1':'C.hide();A.show();$T.show()','2':'C.show();A.hide();$T.show()'}}"));
     form.add<uint8_t>(F("s_port"), _H_W_STRUCT_VALUE(cfg, serial_port_byte))->setFormUI((new FormUI(FormUI::TypeEnum_t::SELECT, F("Serial Port:")))->addItems(serialPorts));
-    form.add<uint32_t>(F("baud"), _H_W_STRUCT_VALUE(cfg, baudrate))->setFormUI((new FormUI(FormUI::TypeEnum_t::TEXT, F("Baud:")))->setPlaceholder(F("Default")));
+    form.add<uint32_t>(F("baud"), _H_W_STRUCT_VALUE(cfg, baudrate))->setFormUI((new FormUI(FormUI::TypeEnum_t::TEXT, F("Baud:")))->setPlaceholder(FSPGM(Default)));
 
     auto &customGroup = form.addDivGroup(F("scustom"), F("{'i':'#s_port','m':'$T.hide()','s':{'2':'$T.show()'}}"));
     form.add<uint8_t>(F("rxpin"), _H_W_STRUCT_VALUE(cfg, rx_pin))->setFormUI((new FormUI(FormUI::TypeEnum_t::TEXT, F("Rx Pin:"))));
@@ -126,25 +129,25 @@ void Serial2TcpPlugin::createConfigureForm(FormCallbackType type, const String &
     customGroup.end();
 
     auto &connGroup = form.addDivGroup(F("conn_group"));
-    form.add(F("host"), _H_STR_VALUE(MainConfig().plugins.serial2tcp.hostname))->setFormUI((new FormUI(FormUI::TypeEnum_t::TEXT, F("Host:"))));
-    form.add<uint16_t>(F("tcp_port"), _H_W_STRUCT_VALUE(cfg, port))->setFormUI((new FormUI(FormUI::TypeEnum_t::TEXT, F("TCP Port:"))));
+    form.add(FSPGM(host), _H_STR_VALUE(MainConfig().plugins.serial2tcp.hostname))->setFormUI((new FormUI(FormUI::TypeEnum_t::TEXT, FSPGM(Hostname))));
+    form.add<uint16_t>(FSPGM(port), _H_W_STRUCT_VALUE(cfg, port))->setFormUI((new FormUI(FormUI::TypeEnum_t::TEXT, FSPGM(Port))));
     form.addValidator(new FormRangeValidator(FSPGM(Invalid_port), 1, 65535));
-    form.add<bool>(F("autocnn"), _H_W_STRUCT_VALUE(cfg, auto_connect))->setFormUI((new FormUI(FormUI::TypeEnum_t::SELECT, F("Auto Connect:")))->setBoolItems());
-    form.add<uint8_t>(F("autoreconn"), _H_W_STRUCT_VALUE(cfg, auto_reconnect))->setFormUI((new FormUI(FormUI::TypeEnum_t::TEXT, F("Auto Reconnect Delay:")))->setSuffix(F("seconds, 0 = disable")));
+    form.add<bool>(F("autocnn"), _H_W_STRUCT_VALUE(cfg, auto_connect))->setFormUI((new FormUI(FormUI::TypeEnum_t::SELECT, F("Auto Connect")))->setBoolItems());
+    form.add<uint8_t>(F("autoreconn"), _H_W_STRUCT_VALUE(cfg, auto_reconnect))->setFormUI((new FormUI(FormUI::TypeEnum_t::TEXT, F("Auto Reconnect Delay")))->setSuffix(F("seconds, 0 = disable")));
     form.addValidator(new FormRangeValidator(0, 255));
     connGroup.end();
 
     auto &idleGroup = form.addDivGroup(F("idle_group"));
-    form.add<uint16_t>(F("idltimeout"), _H_W_STRUCT_VALUE(cfg, idle_timeout))->setFormUI((new FormUI(FormUI::TypeEnum_t::TEXT, F("Idle Timeout:")))->setSuffix(F("seconds, 0 = disable")));
+    form.add<uint16_t>(F("idltimeout"), _H_W_STRUCT_VALUE(cfg, idle_timeout))->setFormUI((new FormUI(FormUI::TypeEnum_t::TEXT, F("Idle Timeout")))->setSuffix(F("seconds, 0 = disable")));
     form.addValidator(new FormRangeValidator(0, 65535));
     idleGroup.end();
 
     auto &authDivGroup = form.addDivGroup(F("authdiv"));
-    form.add<bool>(F("auth"), _H_W_STRUCT_VALUE(cfg, authentication))->setFormUI((new FormUI(FormUI::TypeEnum_t::SELECT, F("Authentication:")))->setBoolItems());
+    form.add<bool>(FSPGM(auth), _H_W_STRUCT_VALUE(cfg, authentication))->setFormUI((new FormUI(FormUI::TypeEnum_t::SELECT, FSPGM(Authentication)))->setBoolItems());
     auto &authGroup = form.addDivGroup(F("auth_group"), F("{'i':'#auth','s':{'0':'$T.hide()','1':'$T.show()'}}"));
-    form.add(F("s2t_user"), _H_STR_VALUE(MainConfig().plugins.serial2tcp.username))->setFormUI((new FormUI(FormUI::TypeEnum_t::TEXT, F("Username:"))));
+    form.add(F("s2t_user"), _H_STR_VALUE(MainConfig().plugins.serial2tcp.username))->setFormUI((new FormUI(FormUI::TypeEnum_t::TEXT, FSPGM(Username))));
     auto password = Serial2TcpPlugin::Serial2TCP::getPassword();
-    form.add(F("s2t_pass"), _H_STR_VALUE(MainConfig().plugins.serial2tcp.password))->setFormUI((new FormUI(FormUI::TypeEnum_t::PASSWORD, F("Password:")))->addAttribute(F("value"), password));
+    form.add(F("s2t_pass"), _H_STR_VALUE(MainConfig().plugins.serial2tcp.password))->setFormUI((new FormUI(FormUI::TypeEnum_t::PASSWORD, FSPGM(Password)))->addAttribute(FSPGM(value), password));
     authGroup.end();
     authDivGroup.end();
 

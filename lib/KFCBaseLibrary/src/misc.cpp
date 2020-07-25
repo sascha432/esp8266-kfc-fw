@@ -5,6 +5,7 @@
 #include <functional>
 #include <PrintString.h>
 #include "misc.h"
+#include "../src/generated/FlashStringGeneratorAuto.h"
 
 String formatBytes(size_t bytes)
 {
@@ -591,7 +592,7 @@ const char *mac2char_s(char *dst, size_t size, const uint8_t *mac, char separato
 {
     constexpr uint8_t len = 6;
     if (!mac) {
-        strncpy_P(dst, PSTR("null"), size);
+        strncpy_P(dst, SPGM(null), size);
         return dst;
     }
     int8_t count = len;

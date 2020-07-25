@@ -306,9 +306,18 @@ public:
 
     const uint8_t *getBinary(Handle_t handle, uint16_t &length);
 
-    void setString(Handle_t handle, const char *string);
-    void setString(Handle_t handle, const String &string);
-    void setString(Handle_t handle, const __FlashStringHelper *string);
+    // PROGMEM safe
+    void setString(Handle_t handle, const char *str, uint16_t length);
+    void setString(Handle_t handle, const char *str) {
+        setString(handle, str, (uint16_t)strlen_P(str));
+    }
+    void setString(Handle_t handle, const __FlashStringHelper *fstr) {
+        setString(handle, reinterpret_cast<PGM_P>(fstr));
+    }
+    void setString(Handle_t handle, const String &str) {
+        setString(handle, str.c_str(), (uint16_t)str.length());
+    }
+    // PROGMEM safe
     void setBinary(Handle_t handle, const void *data, uint16_t length);
 
     bool getBool(Handle_t handle) {

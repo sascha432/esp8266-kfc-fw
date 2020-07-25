@@ -290,25 +290,11 @@ const uint8_t *Configuration::getBinary(Handle_t handle, uint16_t &length)
     return param->getBinary(this, length, offset);
 }
 
-void Configuration::setString(Handle_t handle, const char *string)
+void Configuration::setString(Handle_t handle, const char *string, uint16_t length)
 {
     uint16_t offset;
     auto &param = _getOrCreateParam(ConfigurationParameter::STRING, handle, offset);
-    param.setData(this, (const uint8_t *)string, (uint16_t)strlen(string));
-}
-
-void Configuration::setString(Handle_t handle, const String &string)
-{
-    uint16_t offset;
-    auto &param = _getOrCreateParam(ConfigurationParameter::STRING, handle, offset);
-    param.setData(this, (const uint8_t *)string.c_str(), (uint16_t)string.length());
-}
-
-void Configuration::setString(Handle_t handle, const __FlashStringHelper *string)
-{
-    uint16_t offset;
-    auto &param = _getOrCreateParam(ConfigurationParameter::STRING, handle, offset);
-    param.setData(this, string, (uint16_t)strlen_P(RFPSTR(string)));
+    param.setData(this, (const uint8_t *)string, length);
 }
 
 void Configuration::setBinary(Handle_t handle, const void *data, uint16_t length)

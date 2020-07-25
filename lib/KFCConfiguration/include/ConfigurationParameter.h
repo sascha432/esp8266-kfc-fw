@@ -97,8 +97,8 @@ public:
     //void setType(TypeEnum_t type);
     static uint8_t getDefaultSize(TypeEnum_t type);
 
+    // PROGMEM safe
     void setData(Configuration *conf, const uint8_t *data, uint16_t size);
-    void setData(Configuration *conf, const __FlashStringHelper *data, uint16_t size);
     void updateStringLength();
 
     const char *getString(Configuration *conf, uint16_t offset);
@@ -144,8 +144,8 @@ private:
     bool _readData(Configuration *conf, uint16_t offset);
     void _makeWriteable(Configuration *conf, uint16_t size);
 
+    // PROGMEM safe
     bool _compareData(const uint8_t *data, uint16_t size) const;
-    bool _compareData(const __FlashStringHelper *data, uint16_t size) const;
 
 protected:
     Info_t _info;

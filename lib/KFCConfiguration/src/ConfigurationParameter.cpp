@@ -109,11 +109,6 @@ uint8_t ConfigurationParameter::getDefaultSize(TypeEnum_t type)
 
 bool ConfigurationParameter::_compareData(const uint8_t *data, uint16_t size) const
 {
-    return _info.data && _info.size >= size && _param.length == size && memcmp(_info.data, data, size) == 0;
-}
-
-bool ConfigurationParameter::_compareData(const __FlashStringHelper *data, uint16_t size) const
-{
     return _info.data && _info.size >= size && _param.length == size && memcmp_P(_info.data, data, size) == 0;
 }
 
@@ -125,21 +120,7 @@ void ConfigurationParameter::setData(Configuration *conf, const uint8_t * data, 
         return;
     }
     _makeWriteable(conf, size);
-    memcpy(_info.data, data, size);
-    if (_param.isString()) {
-        _info.data[size] = 0;
-    }
-}
-
-void ConfigurationParameter::setData(Configuration *conf, const __FlashStringHelper * data, uint16_t size)
-{
-    _debug_printf_P(PSTR("%s set_size=%u %s\n"), toString().c_str(), size, Configuration::__debugDumper(*this, data, size).c_str());
-    if (_compareData(data, size)) {
-        _debug_printf_P(PSTR("compareData=true\n"));
-        return;
-    }
-    _makeWriteable(conf, size);
-    memcpy_P(_info.data, (data), size);
+    memcpy_P(_info.data, data, size);
     if (_param.isString()) {
         _info.data[size] = 0;
     }
@@ -293,7 +274,7 @@ void ConfigurationParameter::dump(Print &output)
 void ConfigurationParameter::exportAsJson(Print& output)
 {
     if (!hasData()) {
-        output.println(F("null"));
+        output.println(FSPGM(null));
     }
     else {
         switch (_param.type) {
@@ -338,7 +319,7 @@ void ConfigurationParameter::exportAsJson(Print& output)
             output.printf_P(PSTR("%f"), value);
         } break;
         default:
-            output.println(F("null"));
+            output.println(FSPGM(null));
             break;
         }
     }

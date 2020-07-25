@@ -37,10 +37,6 @@ extern std::vector<String> __debug_json_string_list;
 
 #endif
 
-PROGMEM_STRING_DECL(true);
-PROGMEM_STRING_DECL(false);
-PROGMEM_STRING_DECL(null);
-
 class JsonTools {
 public:
     static const __FlashStringHelper *boolToString(bool value);

@@ -4,8 +4,6 @@
 
 #include "JsonConfigReader.h"
 
-PROGMEM_STRING_DEF(config_object_name, "config");
-
 JsonConfigReader::JsonConfigReader(Stream* stream, Configuration &config, Configuration::Handle_t *handles) : JsonBaseReader(stream), _config(config), _handles(handles), _handle(INVALID_HANDLE), _isConfigObject(false) {
 }
 
@@ -23,7 +21,7 @@ bool JsonConfigReader::beginObject(bool isArray)
             //Serial.printf("key %s\n", getKey().c_str());
         }
     }
-    else if (!isArray && getLevel() == 2 && !strcmp_P(getKey().c_str(), SPGM(config_object_name))) {
+    else if (!isArray && getLevel() == 2 && !strcmp_P(getKey().c_str(), SPGM(config))) {
         _isConfigObject = true;
     }
     return true;

@@ -109,7 +109,7 @@ String Serial2TcpServer::_getClientInfo(Serial2TcpConnection &conn) const
         output += conn.getClient()->remoteIP().toString().c_str();
     }
     else {
-        output += F("null");
+        output += FSPGM(null);
     }
     return output;
 }

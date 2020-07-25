@@ -12,8 +12,6 @@
 
 #include <push_pack.h>
 
-PROGMEM_STRING_DECL(login_failure_file);
-
 typedef struct __attribute__packed__ FailureCounterFileRecordStruct  {
     uint32_t addr;
     uint16_t counter;

@@ -11,10 +11,6 @@
 #include <debug_helper_disable.h>
 #endif
 
-PROGMEM_STRING_DEF(true, "true");
-PROGMEM_STRING_DEF(false, "false");
-PROGMEM_STRING_DEF(null, "null");
-
 const __FlashStringHelper *JsonTools::boolToString(bool value)
 {
     return value ? FSPGM(true) : FSPGM(false);

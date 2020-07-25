@@ -4,10 +4,11 @@
 
 #include <global.h>
 #include "failure_counter.h"
+#if defined(HAVE_FLASH_STRING_GENERATOR) && HAVE_FLASH_STRING_GENERATOR
+#include "../src/generated/FlashStringGeneratorAuto.h"
+#endif
 
 #if SECURITY_LOGIN_ATTEMPTS
-
-PROGMEM_STRING_DEF(login_failure_file, "/.pvt/login_failures");
 
 extern FailureCounterContainer &loginFailures;
 

@@ -6,6 +6,7 @@
 #include "JsonBaseReader.h"
 #include "JsonVar.h"
 #include "JsonTools.h"
+#include "../src/generated/FlashStringGeneratorAuto.h"
 
 #if DEBUG_KFC_JSON
 #include <debug_helper_enable.h>
@@ -97,15 +98,15 @@ String JsonBaseReader::jsonType2String(JsonType_t type)
 {
 	switch (type) {
 	case JSON_TYPE_BOOLEAN:
-		return F("boolean");
+		return FSPGM(boolean);
 	case JSON_TYPE_FLOAT:
-		return F("float");
+		return FSPGM(float);
 	case JSON_TYPE_INT:
-		return F("int");
+		return FSPGM(int);
 	case JSON_TYPE_STRING:
-		return F("string");
+		return FSPGM(string);
 	case JSON_TYPE_NULL:
-		return F("null");
+		return FSPGM(null);
 	default:
 		break;
 	}
@@ -161,11 +162,11 @@ bool JsonBaseReader::_prepareElement()
 		    //size_t fake_pos = max(0, (int)(position - _valueStr.length() - 1));
 		    _valueStr.trim();
             if (strcasecmp_P(_valueStr.c_str(), SPGM(true)) == 0 || strcasecmp_P(_valueStr.c_str(), SPGM(false)) == 0) {
-		    //if (_valueStr.equalsIgnoreCase(FSPGM(true)) || _valueStr.equalsIgnoreCase(F("false"))) {
+		    //if (_valueStr.equalsIgnoreCase(FSPGM(true)) || _valueStr.equalsIgnoreCase(FSPGM(false))) {
 			    _type = JSON_TYPE_BOOLEAN;
 		    }
             else if (strcasecmp_P(_valueStr.c_str(), SPGM(null)) == 0) {
-            //else if (_valueStr.equalsIgnoreCase(F("null"))) {
+            //else if (_valueStr.equalsIgnoreCase(FSPGM(null))) {
                 _type = JSON_TYPE_NULL;
 		    }
             else if (_isValidNumber(_valueStr, _type)) {

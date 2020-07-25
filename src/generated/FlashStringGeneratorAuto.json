@@ -1,14 +1,14 @@
 {
     "Content_Length": {
-        "use_counter": 1,
+        "use_counter": 2,
         "default": "Content-Length"
     },
     "Cache_Control": {
-        "use_counter": 1,
+        "use_counter": 2,
         "default": "Cache-Control"
     },
     "Set_Cookie": {
-        "use_counter": 1,
+        "use_counter": 2,
         "default": "Set-Cookie"
     },
     "mime_text_plain": {
@@ -16,31 +16,31 @@
         "default": "text/plain"
     },
     "null": {
-        "use_counter": 4,
+        "use_counter": 10,
         "default": "null"
     },
     "FormLengthValidator_default_message": {
-        "use_counter": 1,
+        "use_counter": 2,
         "default": "This field must be between %min% and %max% characters"
     },
     "FormValidator_min_macro": {
-        "use_counter": 3,
+        "use_counter": 4,
         "default": "%min%"
     },
     "FormValidator_max_macro": {
-        "use_counter": 3,
+        "use_counter": 4,
         "default": "%max%"
     },
     "FormEnumValidator_default_message": {
-        "use_counter": 1,
+        "use_counter": 2,
         "default": "Invalid value: %allowed%"
     },
     "FormValidator_allowed_macro": {
-        "use_counter": 2,
+        "use_counter": 3,
         "default": "%allowed%"
     },
     "FormValidHostOrIpValidator_default_message": {
-        "use_counter": 1,
+        "use_counter": 2,
         "default": "Invalid hostname or IP address"
     },
     "webui_json_id": {
@@ -344,15 +344,15 @@
         "default": "application/x-gzip"
     },
     "Expires": {
-        "use_counter": 3,
+        "use_counter": 4,
         "default": "Expires"
     },
     "Last_Modified": {
-        "use_counter": 2,
+        "use_counter": 3,
         "default": "Last-Modified"
     },
     "Content_Encoding": {
-        "use_counter": 1,
+        "use_counter": 2,
         "default": "Content-Encoding"
     },
     "login_html": {
@@ -516,11 +516,11 @@
         "default": "val_tpl"
     },
     "Anonymous": {
-        "use_counter": 1,
+        "use_counter": 2,
         "default": "Anonymous"
     },
     "Disabled": {
-        "use_counter": 7,
+        "use_counter": 8,
         "default": "Disabled"
     },
     "enabled": {
@@ -636,15 +636,15 @@
         "default": "/tmp/"
     },
     "config_object_name": {
-        "use_counter": 2,
+        "use_counter": 1,
         "default": "config"
     },
     "true": {
-        "use_counter": 6,
+        "use_counter": 8,
         "default": "true"
     },
     "false": {
-        "use_counter": 6,
+        "use_counter": 7,
         "default": "false"
     },
     "openweathermap_api_url": {
@@ -760,63 +760,63 @@
         "default": "debug"
     },
     "fs_mapping_dir": {
-        "use_counter": 4,
+        "use_counter": 5,
         "default": "/webui/"
     },
     "login_failure_file": {
-        "use_counter": 3,
+        "use_counter": 4,
         "default": "/.pvt/login_failures"
     },
     "Form_value_missing_default_message": {
-        "use_counter": 1,
+        "use_counter": 2,
         "default": "This field is missing"
     },
     "FormRangeValidator_default_message": {
-        "use_counter": 2,
+        "use_counter": 3,
         "default": "This fields value must be between %min% and %max%"
     },
     "RFC7231_date": {
-        "use_counter": 1,
+        "use_counter": 2,
         "default": "%a, %d %b %Y %H:%M:%S GMT"
     },
     "Pragma": {
-        "use_counter": 1,
+        "use_counter": 2,
         "default": "Pragma"
     },
     "Location": {
-        "use_counter": 1,
+        "use_counter": 2,
         "default": "Location"
     },
     "Link": {
-        "use_counter": 1,
+        "use_counter": 2,
         "default": "Link"
     },
     "no_cache": {
-        "use_counter": 2,
+        "use_counter": 3,
         "default": "no-cache"
     },
     "private": {
-        "use_counter": 1,
+        "use_counter": 2,
         "default": "private"
     },
     "public": {
-        "use_counter": 1,
+        "use_counter": 2,
         "default": "public"
     },
     "Cookie": {
-        "use_counter": 1,
+        "use_counter": 2,
         "default": "Cookie"
     },
     "Connection": {
-        "use_counter": 1,
+        "use_counter": 2,
         "default": "Connection"
     },
     "close": {
-        "use_counter": 1,
+        "use_counter": 2,
         "default": "close"
     },
     "keep_alive": {
-        "use_counter": 1,
+        "use_counter": 2,
         "default": "keep-alive"
     },
     "status": {
@@ -844,7 +844,7 @@
         "default": "head"
     },
     "fs_mapping_listings": {
-        "use_counter": 2,
+        "use_counter": 3,
         "default": "/webui/.listings"
     },
     "_html": {
@@ -852,11 +852,11 @@
         "default": ".html"
     },
     "Authorization": {
-        "use_counter": 3,
+        "use_counter": 4,
         "default": "Authorization"
     },
     "Bearer_": {
-        "use_counter": 2,
+        "use_counter": 3,
         "default": "Bearer "
     },
     "cfg": {
@@ -872,7 +872,7 @@
         "default": "safe_mode"
     },
     "password": {
-        "use_counter": 3,
+        "use_counter": 5,
         "default": "password"
     },
     "status__u": {
@@ -996,7 +996,7 @@
         "default": "hidden"
     },
     "FormRangeValidator_default_message_zero_allowed": {
-        "use_counter": 2,
+        "use_counter": 3,
         "default": "This fields value must be between %min% and %max% or 0"
     },
     "network": {
@@ -1044,7 +1044,7 @@
         "default": "deflate"
     },
     "config": {
-        "use_counter": 1,
+        "use_counter": 2,
         "default": "config"
     },
     "Success": {
@@ -1076,7 +1076,7 @@
         "default": "/.pvt/hlw80xx.state"
     },
     "seconds": {
-        "use_counter": 7,
+        "use_counter": 8,
         "default": "seconds"
     },
     "milliseconds": {
@@ -1185,18 +1185,18 @@
     },
     "alarm": {
         "use_counter": 0,
-        "auto": "alarm"
+        "default": "alarm"
     },
     "Alarm": {
         "use_counter": 0,
-        "auto": "Alarm"
+        "default": "Alarm"
     },
     "defaultPassword": {
         "use_counter": 6,
         "default": "12345678"
     },
     "Enabled": {
-        "use_counter": 1,
+        "use_counter": 2,
         "default": "Enabled"
     },
     "Invalid_time": {
@@ -1206,5 +1206,101 @@
     "Invalid_brightness": {
         "use_counter": 0,
         "default": "Invalid brightness"
+    },
+    "mode": {
+        "use_counter": 3,
+        "default": "mode"
+    },
+    "Mode": {
+        "use_counter": 2,
+        "default": "Mode"
+    },
+    "host": {
+        "use_counter": 2,
+        "default": "host"
+    },
+    "Hostname": {
+        "use_counter": 2,
+        "default": "Hostname"
+    },
+    "port": {
+        "use_counter": 2,
+        "default": "port"
+    },
+    "Port": {
+        "use_counter": 2,
+        "default": "Port"
+    },
+    "Username": {
+        "use_counter": 2,
+        "default": "Username"
+    },
+    "Password": {
+        "use_counter": 2,
+        "default": "Password"
+    },
+    "topic": {
+        "use_counter": 1,
+        "default": "topic"
+    },
+    "Topic": {
+        "use_counter": 1,
+        "default": "Topic"
+    },
+    "keepalive": {
+        "use_counter": 1,
+        "default": "keepalive"
+    },
+    "Keep_Alive": {
+        "use_counter": 1,
+        "default": "Keep Alive"
+    },
+    "prefix": {
+        "use_counter": 1,
+        "default": "prefix"
+    },
+    "Software_Serial": {
+        "use_counter": 1,
+        "default": "Software Serial"
+    },
+    "Server": {
+        "use_counter": 1,
+        "default": "Server"
+    },
+    "Client": {
+        "use_counter": 1,
+        "default": "Client"
+    },
+    "Default": {
+        "use_counter": 1,
+        "default": "Default"
+    },
+    "auth": {
+        "use_counter": 1,
+        "default": "auth"
+    },
+    "Authentication": {
+        "use_counter": 1,
+        "default": "Authentication"
+    },
+    "value": {
+        "use_counter": 1,
+        "default": "value"
+    },
+    "boolean": {
+        "use_counter": 1,
+        "default": "boolean"
+    },
+    "float": {
+        "use_counter": 1,
+        "default": "float"
+    },
+    "int": {
+        "use_counter": 1,
+        "default": "int"
+    },
+    "string": {
+        "use_counter": 1,
+        "default": "string"
     }
 }

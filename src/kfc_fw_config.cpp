@@ -99,67 +99,6 @@ void Config_NTP::defaults()
     ::config._H_SET_STR(Config().ntp.servers[2], F("time.windows.com"));
 }
 
-// Config_MQTT
-
-Config_MQTT::Config_MQTT()
-{
-    using KFCConfigurationClasses::System;
-
-    config.port = (System::Flags::read()->mqttMode == MQTT_MODE_SECURE) ? 8883 : 1883;
-    config.keepalive = 15;
-    config.qos = 2;
-}
-
-void Config_MQTT::defaults()
-{
-    ::config._H_SET(Config().mqtt.config, Config_MQTT().config);
-    ::config._H_SET_STR(Config().mqtt.username, emptyString);
-    ::config._H_SET_STR(Config().mqtt.password, emptyString);
-    ::config._H_SET_STR(Config().mqtt.topic, F("home/${device_name}"));
-    ::config._H_SET_STR(Config().mqtt.discovery_prefix, F("homeassistant"));
-}
-
-Config_MQTT::config_t Config_MQTT::getConfig()
-{
-    return ::config._H_GET(Config().mqtt.config);
-}
-
-MQTTMode_t Config_MQTT::getMode()
-{
-    return static_cast<MQTTMode_t>(::config._H_GET(Config().flags).mqttMode);
-}
-
-const char *Config_MQTT::getHost()
-{
-    return ::config._H_STR(Config().mqtt.host);
-}
-
-const char *Config_MQTT::getUsername()
-{
-    return ::config._H_STR(Config().mqtt.username);
-}
-
-const char *Config_MQTT::Config_MQTT::getPassword()
-{
-    return ::config._H_STR(Config().mqtt.password);
-}
-
-const char *Config_MQTT::getTopic()
-{
-    return ::config._H_STR(Config().mqtt.topic);
-}
-
-const char *Config_MQTT::getDiscoveryPrefix()
-{
-    return ::config._H_STR(Config().mqtt.discovery_prefix);
-}
-
-const uint8_t *Config_MQTT::getFingerprint()
-{
-    return reinterpret_cast<const uint8_t *>(::config._H_STR(Config().mqtt.fingerprint));
-}
-
-
 // Config_Ping
 
 const char *Config_Ping::getHost(uint8_t num)
@@ -605,6 +544,20 @@ void KFCFWConfiguration::restoreFactorySettings()
     Network::Settings::defaults();
     Network::SoftAP::defaults();
 
+#if MQTT_SUPPORT
+    Plugins::MQTTClient::defaults();
+#endif
+#if HOME_ASSISTANT_INTEGRATION
+    Plugins::HomeAssistant::defaults();
+#endif
+#if IOT_REMOTE_CONTROL
+    Plugins::RemoteControl::defaults();
+#endif
+#if SERIAL2TCP_SUPPORT
+    Plugins::Serial2TCP::defaults();
+#endif
+
+
 #if WEBSERVER_TLS_SUPPORT
     _H_SET(Config().http_port, flags.webServerMode == HTTP_MODE_SECURE ? 443 : 80);
 #elif WEBSERVER_SUPPORT
@@ -613,25 +566,13 @@ void KFCFWConfiguration::restoreFactorySettings()
 #if NTP_CLIENT
     Config_NTP::defaults();
 #endif
-#if MQTT_SUPPORT
-    Config_MQTT::defaults();
-#endif
 #if SYSLOG_SUPPORT
     _H_SET(Config().syslog_port, 514);
 #endif
 
-#if HOME_ASSISTANT_INTEGRATION
-    Plugins::HomeAssistant::setApiEndpoint(F("http://<CHANGE_ME>:8123/api/"));
-#endif
-#if IOT_REMOTE_CONTROL
-    Plugins::RemoteControl::defaults();
-#endif
 
 #if PING_MONITOR_SUPPORT
     Config_Ping::defaults();
-#endif
-#if SERIAL2TCP_SUPPORT
-    Plugins::Serial2TCP::defaults();
 #endif
 #if IOT_DIMMER_MODULE || IOT_ATOMIC_SUN_V2
     DimmerModule dimmer;
@@ -894,6 +835,21 @@ void KFCFWConfiguration::write()
     if (!Configuration::write()) {
         Logger_error(F("Failure to write settings to EEPROM"));
     }
+}
+
+void KFCFWConfiguration::resolveZeroConf(const String &hostname, uint16_t port, ResolvedCallback callback) const
+{
+    __DBG_printf("resolveZeroConf=%s port=%u result=%d", hostname.c_str(), port);
+}
+
+bool KFCFWConfiguration::hasZeroConf(const String &hostname) const
+{
+    auto pos = hostname.indexOf(F("${zeroconf:"));
+    if (pos != -1) {
+        pos = hostname.indexOf('}', pos + 7);
+    }
+    __DBG_printf("has_zero_conf=%s result=%d", hostname.c_str(), pos);
+    return pos != -1;
 }
 
 void KFCFWConfiguration::wifiQuickConnect()
@@ -1537,7 +1493,7 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
     using KFCConfigurationClasses::System;
 
     if (type == FormCallbackType::SAVE) {
-        if (String_equals(formName, F("password"))) {
+        if (String_equals(formName, SPGM(password))) {
             auto &flags = System::Flags::getWriteable();
             flags.isDefaultPassword = false;
         }
@@ -1549,7 +1505,7 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
 
         if (String_equals(formName, F("wifi"))) {
 
-            form.add<uint8_t>(F("mode"), _H_FLAGS_VALUE(Config().flags, wifiMode));
+            form.add<uint8_t>(FSPGM(mode), _H_FLAGS_VALUE(Config().flags, wifiMode));
             form.addValidator(new FormRangeValidator(F("Invalid mode"), WIFI_OFF, WIFI_AP_STA));
 
             form.add(F("wifi_ssid"), _H_STR_VALUE(MainConfig().network.WiFiConfig._ssid));
@@ -1616,7 +1572,7 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
             form.add<uint8_t>(F("status_led_mode"), _H_STRUCT_VALUE(MainConfig().system.device.settings, _statusLedMode));
 
         }
-        else if (String_equals(formName, F("password"))) {
+        else if (String_equals(formName, SPGM(password))) {
 
             form.add(new FormField(FSPGM(password), System::Device::getPassword()));
             form.addValidator(new FormMatchValidator(F("The entered password is not correct"), [](FormField &field) {

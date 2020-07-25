@@ -7,6 +7,9 @@
 
 namespace KFCConfigurationClasses {
 
+    // --------------------------------------------------------------------
+    // Flags
+
     System::Flags::Flags() : _flags()
     {
         _flags.isFactorySettings = true;
@@ -17,8 +20,7 @@ namespace KFCConfigurationClasses {
         _flags.stationModeDHCPEnabled = true;
         _flags.softAPDHCPDEnabled = true;
 
-        _flags.mqttAutoDiscoveryEnabled = true;
-        _flags.mqttMode = MQTT_MODE_DISABLED;
+        _flags.mqttEnabled = true;
 
         _flags.ntpClientEnabled = true;
 
@@ -66,6 +68,9 @@ namespace KFCConfigurationClasses {
     {
         config._H_SET(Config().flags, _flags);
     }
+
+    // --------------------------------------------------------------------
+    // Device
 
     void System::Device::defaults()
     {
@@ -131,17 +136,17 @@ namespace KFCConfigurationClasses {
         return config._H_GET(MainConfig().system.device.settings)._safeModeRebootTime;
     }
 
-    uint8_t System::Device::getWebUIKeepLoggedInDays()
+    uint16_t System::Device::getWebUIKeepLoggedInDays()
     {
         return config._H_GET(MainConfig().system.device.settings)._webUIKeepLoggedInDays;
     }
 
     uint32_t System::Device::getWebUIKeepLoggedInSeconds()
     {
-        return getWebUIKeepLoggedInDays() * 86400;
+        return getWebUIKeepLoggedInDays() * 86400U;
     }
 
-    void System::Device::setWebUIKeepLoggedInDays(uint8_t days)
+    void System::Device::setWebUIKeepLoggedInDays(uint16_t days)
     {
         auto settings = config._H_GET(MainConfig().system.device.settings);
         settings._webUIKeepLoggedInDays = days;
@@ -160,6 +165,8 @@ namespace KFCConfigurationClasses {
         return static_cast<StatusLEDModeEnum>(config._H_GET(MainConfig().system.device.settings)._statusLedMode);
     }
 
+    // --------------------------------------------------------------------
+    // Firmare
 
     const uint8_t *System::Firmware::getElfHash(uint16_t &length)
     {
@@ -194,6 +201,8 @@ namespace KFCConfigurationClasses {
         }
     }
 
+    // --------------------------------------------------------------------
+    // Network
 
     Network::Settings::Settings()
     {

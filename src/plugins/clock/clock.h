@@ -33,6 +33,12 @@
 #include <Bounce2.h>
 #endif
 
+#if DEBUG_IOT_CLOCK
+#define IOT_CLOCK_MIN_TEMPERATURE_THRESHOLD     20
+#else
+#define IOT_CLOCK_MIN_TEMPERATURE_THRESHOLD     45
+#endif
+
 class ClockPlugin : public PluginComponent, public MQTTComponent {
 public:
     using SevenSegmentDisplay = Clock::SevenSegmentDisplay;
@@ -50,9 +56,17 @@ public:
 
     // restore brightness if temperature is kTemperatureRestoreDifference below any threshold
     static constexpr uint8_t kTemperatureThresholdDifference = 10;
-    static constexpr uint8_t kMinimumTemperatureThreshold = 45;
+    static constexpr uint8_t kMinimumTemperatureThreshold = IOT_CLOCK_MIN_TEMPERATURE_THRESHOLD;
 
     static constexpr int16_t kAutoBrightnessOff = -1;
+
+    enum ProtectionType {
+        OFF,
+        B75,
+        B50,
+        MAX
+    };
+    static_assert(ProtectionType::MAX <= 3, "stored _tempProtection / 2 bit");
 
 // PluginComponent
 public:
@@ -79,21 +93,11 @@ public:
 // MQTT
 public:
     virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num) override;
-    virtual uint8_t getAutoDiscoveryCount() const {
-#if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
-        return 2;
-#else
-        return 1;
-#endif
-    }
+    virtual uint8_t getAutoDiscoveryCount() const;
     virtual void onConnect(MQTTClient *client);
     virtual void onMessage(MQTTClient *client, char *topic, char *payload, size_t len);
 
     void _publishState(MQTTClient *client = nullptr);
-
-private:
-    // set color and reset timer for instant update
-    void _setColor(Color color);
 
 public:
 #if IOT_CLOCK_BUTTON_PIN
@@ -122,6 +126,10 @@ public:
     void enable(bool enable);
     void setSyncing(bool sync);
     void setBlinkColon(uint16_t value);
+    void setColorAndRefresh(Color color);
+    void setBrightness(uint16_t brightness);
+    // use NONE to remove all animations
+    // use NEXT to remove the current animation and start the next one. if next animation isnt set, animation is set to NONE
     void setAnimation(AnimationType animation);
     void readConfig();
 
@@ -129,6 +137,7 @@ private:
     void _loop();
     void _setSevenSegmentDisplay();
     void _setBrightness();
+    void _setBrightness(uint16_t brightness);
     uint16_t _getBrightness() const;
 #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
     void _installWebHandlers();
@@ -136,6 +145,8 @@ private:
     String _getLightSensorWebUIValue();
     void _updateLightSensorWebUI();
     uint16_t _readLightSensor() const;
+    uint16_t _readLightSensor(uint8_t num, uint8_t delayMillis) const;
+    void _broadcastWebUI();
 public:
     static void handleWebServer(AsyncWebServerRequest *request);
 #endif
@@ -147,17 +158,19 @@ private:
 #endif
 
     SevenSegmentDisplay _display;
-    std::array<SevenSegmentDisplay::pixel_address_t, IOT_CLOCK_PIXEL_ORDER_LEN * IOT_CLOCK_NUM_DIGITS> _pixelOrder;
+    std::array<SevenSegmentDisplay::PixelAddressType, IOT_CLOCK_PIXEL_ORDER_LEN * IOT_CLOCK_NUM_DIGITS> _pixelOrder;
 
     uint16_t _brightness;
+    uint16_t _savedBrightness;
     Color _color;
-    Color _savedColor;
     uint32_t _updateTimer;
     time_t _time;
     uint16_t _updateRate;
     uint8_t _isSyncing : 1;
     uint8_t _schedulePublishState : 1;
     uint8_t _displaySensorValue : 1;
+    uint8_t _forceUpdate: 1;
+    uint8_t _tempProtection : 2;
 #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
     int16_t _autoBrightness;
     float _autoBrightnessValue;
@@ -170,27 +183,19 @@ private:
 
 private:
     bool _isTemperatureBelowThresholds(float temp) const;
+    void _startTempProtectionAnimation();
 
-    bool _tempProtection;
+public:
+    void setAnimationCallback(Clock::AnimationCallback callback);
+    void setUpdateRate(uint16_t updateRate);
+    uint16_t getUpdateRate() const;
+    void setColor(Color color);
+    Color getColor() const;
+
 private:
-    friend Clock::Animation;
-    friend Clock::FadingAnimation;
-    friend Clock::RainbowAnimation;
-    friend Clock::FlashingAnimation;
-
-    void setUpdateRate(uint16_t updateRate) {
-        _updateRate = updateRate;
-        _updateTimer = 0;
-    }
-    void setColor(Color color) {
-        _color = color;
-    }
-    Color getColor() const {
-        return _color;
-    }
     void _setAnimation(Clock::Animation *animation);
     void _setNextAnimation(Clock::Animation *animation);
-    void _deleteAnimaton();
+    void _deleteAnimaton(bool startNext);
 private:
     Clock::Animation *_animation;
     Clock::Animation *_nextAnimation;

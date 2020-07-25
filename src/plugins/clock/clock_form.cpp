@@ -56,7 +56,7 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
         return false;
     }, FormField::InputFieldType::TEXT)->setFormUI(new FormUI(FormUI::TEXT, F("Solid Color")));
 
-    form.add<float>(F("colon_sp"), _H_W_STRUCT_VALUE(cfg, blink_colon_speed))->setFormUI((new FormUI(FormUI::TEXT, F("Blink Colon Speed")))->setSuffix(F("milliseconds, 0 = solid")));
+    form.add<float>(F("colon_sp"), _H_W_STRUCT_VALUE(cfg, blink_colon_speed))->setFormUI((new FormUI(FormUI::TEXT, F("Colon Blink Speed")))->setSuffix(F("milliseconds, 0 = solid")));
     form.addValidator(new FormRangeValidator(kMinBlinkColonSpeed, 0xffff, true));
 
     form.add<uint16_t>(F("flash_sp"), _H_W_STRUCT_VALUE(cfg, flashing_speed))->setFormUI((new FormUI(FormUI::TEXT, F("Flashing Speed")))->setSuffix(F("milliseconds")));
@@ -73,12 +73,19 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
     form.add<uint16_t>(F("rb_sp"), _H_W_STRUCT_VALUE(cfg, rainbow.speed))->setFormUI((new FormUI(FormUI::TEXT, F("Speed"))));
     form.addValidator(new FormRangeValidator(kMinRainbowSpeed, 0xffff));
 
-    form.add(F("rb_fac"), Color(config._H_GET(Config().clock).rainbow.factor.value).toString(), [](const String &value, FormField &field, bool store) {
+    form.add(F("rb_cf"), Color(config._H_GET(Config().clock).rainbow.factor.value).toString(), [](const String &value, FormField &field, bool store) {
         if (store) {
             config._H_W_GET(Config().clock).rainbow.factor.value = Color::fromString(value);
         }
         return false;
     }, FormField::InputFieldType::TEXT)->setFormUI(new FormUI(FormUI::TEXT, F("Color Factor")));
+
+    form.add(F("rb_mv"), Color(config._H_GET(Config().clock).rainbow.minimum.value).toString(), [](const String &value, FormField &field, bool store) {
+        if (store) {
+            config._H_W_GET(Config().clock).rainbow.minimum.value = Color::fromString(value);
+        }
+        return false;
+    }, FormField::InputFieldType::TEXT)->setFormUI(new FormUI(FormUI::TEXT, F("Minimum Color Value")));
 
     rainbowGroup.end();
 
@@ -90,6 +97,13 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
 
     form.add<uint16_t>(F("fade_dy"), _H_W_STRUCT_VALUE(cfg, fading.delay))->setFormUI((new FormUI(FormUI::TEXT, F("Delay Before Start Fading To Next Random Color")))->setSuffix(F("seconds")));
     form.addValidator(new FormRangeValidator(0, Clock::FadingAnimation::kMaxDelay));
+
+    form.add(F("fade_cf"), Color(config._H_GET(Config().clock).fading.factor.value).toString(), [](const String &value, FormField &field, bool store) {
+        if (store) {
+            config._H_W_GET(Config().clock).fading.factor.value = Color::fromString(value);
+        }
+        return false;
+    }, FormField::InputFieldType::TEXT)->setFormUI(new FormUI(FormUI::TEXT, F("Random Color Factor")));
 
     fadingGroup.end();
 

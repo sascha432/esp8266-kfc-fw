@@ -71,78 +71,141 @@ class ClockPlugin;
 namespace Clock {
 
     using SevenSegmentDisplay = SevenSegmentPixel<uint8_t, IOT_CLOCK_NUM_DIGITS, IOT_CLOCK_NUM_PIXELS, IOT_CLOCK_NUM_COLONS, IOT_CLOCK_NUM_COLON_PIXELS>;
-    using PixelAddressType = SevenSegmentDisplay::pixel_address_t;
-    using ColorType = SevenSegmentDisplay::color_t;
-    using AnimationCallback = SevenSegmentDisplay::AnimationCallback_t;
+    using PixelAddressType = SevenSegmentDisplay::PixelAddressType;
+    using ColorType = SevenSegmentDisplay::ColorType;
+    using AnimationCallback = SevenSegmentDisplay::AnimationCallback;
     using LoopCallback = std::function<void(time_t now)>;
+
+    static constexpr auto kTotalPixelCount = SevenSegmentDisplay::kTotalPixelCount;
+    static constexpr uint16_t kMaxBrightness = SevenSegmentDisplay::kMaxBrightness;
+    static constexpr uint16_t kBrightness75 = kMaxBrightness * 0.75;
+    static constexpr uint16_t kBrightness50 = kMaxBrightness * 0.5;
+    static constexpr uint16_t kBrightnessTempProtection = kMaxBrightness * 0.25;
 
     enum class AnimationType : uint8_t {
         NONE = 0,
         RAINBOW,
         FLASHING,
         FADING,
-        MAX
+        MAX,
+        NEXT,
     };
 
     class Color {
     public:
+        // possible pairs
+        // (4, 85), (6, 51), (16, 17), (18, 15), (52, 5), (86, 3)
+        static constexpr uint8_t kRndMod = 6;
+        static constexpr uint8_t kRndMul = 51;
+        static constexpr uint8_t kRndAnyAbove = 127;
+        static_assert((kRndMod - 1) * kRndMul == 255, "invalid mod or mul");
+
+    public:
         Color();
         Color(uint8_t *values);
         Color(uint8_t red, uint8_t green, uint8_t blue);
-        Color (uint32_t value, bool bgr = false);
+        Color(uint32_t value);
 
         static Color fromString(const String &value);
-        static uint32_t get(uint8_t red, uint8_t green, uint8_t blue);
+        static Color fromBGR(uint32_t value);
 
         String toString() const;
         String implode(char sep) const;
 
-        Color &operator =(uint32_t value);
-        operator int();
+        Color &operator=(uint32_t value);
+        operator bool() const;
+        operator int() const;
+        operator uint32_t() const;
+        bool operator==(int value) const;
+        bool operator!=(int value) const;
+        bool operator==(uint32_t value) const;
+        bool operator!=(uint32_t value) const;
 
-        uint32_t rnd();
-        uint32_t get();
+        // set random color
+        uint32_t rnd(uint8_t minValue = kRndAnyAbove);
+        // uint32_t rnd(Color factor, uint8_t minValue = kRndAnyAbove);
 
+        uint32_t get() const;
         uint8_t red() const;
         uint8_t green() const;
         uint8_t blue() const;
+
     private:
-        uint8_t _red;
-        uint8_t _green;
-        uint8_t _blue;
+        uint8_t _getRand(uint8_t mod, uint8_t mul, uint8_t factor = 255);
+
+        union __attribute__packed__ {
+            struct __attribute__packed__ {
+                uint8_t _blue;
+                uint8_t _green;
+                uint8_t _red;
+            };
+            uint32_t _value: 24;
+        };
+
     };
 
     class Animation {
     public:
-        Animation(ClockPlugin &clock) : _clock(clock), _finished(false), _blinkColon(true) {
-        }
-        virtual ~Animation() {
-            if (!_finished) {
-                end();
-            }
-        }
+        static constexpr uint16_t kDefaultUpdateRate = 100;
 
-        virtual void begin() {
-            __LDBG_printf("begin");
-            _finished = true;
-        }
-        virtual void end() {
-            __LDBG_printf("end");
-            _finished = true;
-        }
+    public:
+        Animation(ClockPlugin &clock);
+        virtual ~Animation();
 
+        // call to start and end the animation. begin might be called after end again...
+        virtual void begin();
+        virtual void end();
+
+        // loop function
+        // can be overriden otherwise it calls _callback @ _updateRate milliseconds
         virtual void loop(time_t now);
 
-        bool finished() const {
-            return _finished;
-        }
-        bool doBlinkColon() const {
-            return _blinkColon;
-        }
+        // animation has finsihed
+        // can be restarted with begin
+        bool finished() const;
+        // does the animation want the colons to blink, if that is enabled
+        bool doBlinkColon() const;
+        // get update rate set for this animation
+        uint16_t getUpdateRate() const;
 
     protected:
-        LoopCallback _callback;
+        // set update rate for animation and clock
+        void setUpdateRate(uint16_t updateRate);
+        // get update rate for the clock
+        uint16_t getClockUpdateRate() const;
+
+        // set current color
+        void setColor(Color color);
+        // get current color
+        Color getColor() const;
+
+        // set pixel animation callback
+        //
+        // this callback is used during the refresh of the display, and the callback is invoked for
+        // every single pixel. the pixel address, color and milliseconds are passed as arguments and the
+        // return value is the color that will be set. make sure that calling this function kTotalPixelCount
+        // times fits into the update rate interval. millis is usally set once before the rendering starts
+        //
+        // _display.setMillis(millis());
+        // _display.setDigit(0, 8, color);
+        // _display.setDigit(1, 8, color);
+        // ...
+        // _display.show();
+        //
+        // std::function<ColorType(PixelAddressType address, ColorType color, uint32_t millis)>
+        void setAnimationCallback(AnimationCallback callback);
+        void removeAnimationCallback();
+
+        // set loop callback
+        // it is invoked at the current update rate
+        void setLoopCallback(LoopCallback callback);
+        void removeLoopCallback();
+
+    private:
         ClockPlugin &_clock;
+    protected:
+        LoopCallback _callback;
+        uint16_t _updateRate;
         uint8_t _finished : 1;
         uint8_t _blinkColon : 1;
     };
@@ -157,7 +220,7 @@ namespace Clock {
         static constexpr uint16_t kUpdateRate = 1000 / kUpdateRateHz;
         static constexpr float kProgressPerSecond = kFloatMaxProgress / kUpdateRateHz;
         static constexpr float kMaxSeconds = kProgressPerSecond;
-        static constexpr float kMinSeconds = kProgressPerSecond / kFloatMaxProgress + 0.000001;
+        static constexpr float kMinSeconds = kProgressPerSecond / kFloatMaxProgress + 0.00001;
 
         static constexpr float kSpeedToSeconds(uint16_t speed) {
             return kProgressPerSecond / speed;
@@ -167,7 +230,7 @@ namespace Clock {
         }
 
     public:
-        FadingAnimation(ClockPlugin &clock, Color from, Color to, float speed, uint16_t time = kNoColorChange);
+        FadingAnimation(ClockPlugin &clock, Color from, Color to, float speed, uint16_t time = kNoColorChange, Color factor = 0xffffffU);
 
         virtual void begin() override;
 
@@ -181,19 +244,23 @@ namespace Clock {
         uint16_t _time;
         uint16_t _speed;
         uint16_t _progress;
+        Color _factor;
     };
 
     class RainbowAnimation : public Animation {
     public:
-        RainbowAnimation(ClockPlugin &clock, uint16_t speed, float multiplier, Color factor = Color(255, 255, 255));
+        RainbowAnimation(ClockPlugin &clock, uint16_t speed, float multiplier, Color factor = 0xffffffU, Color minimum = 0U);
 
         virtual void begin() override;
         virtual void end() override;
         virtual void loop(time_t now) {}
 
     private:
+        Color _color(uint8_t red, uint8_t green, uint8_t blue) const;
+
         uint16_t _speed;
         Color _factor;
+        Color _minimum;
         float _multiplier;
         static constexpr uint8_t _mod = 120;
         static constexpr uint8_t _divMul = 40;
@@ -201,7 +268,7 @@ namespace Clock {
 
     class FlashingAnimation : public Animation {
     public:
-        FlashingAnimation(ClockPlugin &clock, Color color, uint16_t time);
+        FlashingAnimation(ClockPlugin &clock, Color color, uint16_t time, uint8_t mod = 2);
 
         virtual void begin() override;
         virtual void end() override;
@@ -210,6 +277,21 @@ namespace Clock {
     private:
         Color _color;
         uint16_t _time;
+        uint8_t _mod;
+    };
+
+    class CallbackAnimation : public Animation {
+    public:
+        CallbackAnimation(ClockPlugin &clock, AnimationCallback callback, uint16_t updateRate = 20, bool blinkColon = true);
+
+        virtual void begin() override;
+        virtual void end() override;
+        virtual void loop(time_t now) {}
+
+    private:
+        AnimationCallback _callback;
+        uint16_t _updateRate;
+        bool _blinkColon;
     };
 
 }

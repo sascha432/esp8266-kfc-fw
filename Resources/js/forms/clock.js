@@ -14,7 +14,7 @@ $(function() {
                 if (value > 0) {
                     $('#abr_sv').html('Sensor&nbsp;<strong>' + value + '</strong>');
                 }
-                window.setTimeout(load_sensor_value, 5000);
+                window.setTimeout(load_sensor_value, 15000);
             });
         }
         window.setTimeout(load_sensor_value, 1000);

@@ -15,27 +15,20 @@
 // ------------------------------------------------------------------------
 // Color Class
 
-Clock::Color::Color()
+Clock::Color::Color() : _value(0)
 {
 }
 
-Clock::Color::Color(uint8_t *values) : _red(values[0]), _green(values[1]), _blue(values[2])
+Clock::Color::Color(uint8_t *values) : _blue(values[0]), _green(values[1]), _red(values[2])
 {
 }
 
-Clock::Color::Color(uint8_t red, uint8_t green, uint8_t blue) : _red(red), _green(green), _blue(blue)
+Clock::Color::Color(uint8_t red, uint8_t green, uint8_t blue) : _blue(blue), _green(green), _red(red)
 {
 }
 
-Clock::Color::Color(uint32_t value, bool bgr)
+Clock::Color::Color(uint32_t value) : _value(value)
 {
-    if (bgr) {
-        _blue = value >> 16;
-        _green = value >> 8;
-        _red = value;
-    } else {
-        *this = value;
-    }
 }
 
 Clock::Color Clock::Color::fromString(const String &value)
@@ -44,13 +37,19 @@ Clock::Color Clock::Color::fromString(const String &value)
     while(isspace(*ptr) || *ptr == '#') {
         ptr++;
     }
-    return Color(static_cast<uint32_t>(strtol(ptr, nullptr, 16) & 0xffffff));
+    return static_cast<uint32_t>(strtol(ptr, nullptr, 16) & 0xffffff);
+}
+
+Clock::Color Clock::Color::fromBGR(uint32_t value)
+{
+    return Color(value, value >> 8, value >> 16);
 }
 
 String Clock::Color::toString() const
 {
     char buf[8];
-    snprintf_P(buf, sizeof(buf), PSTR("#%02X%02X%02X"), _red, _green, _blue);
+    //snprintf_P(buf, sizeof(buf), PSTR("#%02X%02X%02X"), _red, _green, _blue);
+    snprintf_P(buf, sizeof(buf), PSTR("#%06X"), static_cast<int>(_value));
     return buf;
 }
 
@@ -61,35 +60,101 @@ String Clock::Color::implode(char sep) const
     return buf;
 }
 
-uint32_t Clock::Color::rnd()
+uint8_t Clock::Color::_getRand(uint8_t mod, uint8_t mul, uint8_t factor)
+{
+    return rand() % mod * mul;
+    // uint8_t rnd = rand() % mod;
+    // if (factor == 255) {
+    //     return rnd * mul;
+    // }
+    // return (rnd * mul * factor) / 255;
+}
+
+uint32_t Clock::Color::rnd(uint8_t minValue)
 {
     do {
-        *this = Color((rand() % 4) * (255 / 4), (rand() % 4) * (255 / 4), (rand() % 4) * (255 / 4));
-    } while(_red == 0 && _green == 0 && _blue == 0);
-    return get();
+        _red = _getRand(kRndMod, kRndMul);
+        _green = _getRand(kRndMod, kRndMul);
+        _blue = _getRand(kRndMod, kRndMul);
+    } while (!_value && !(_red >= minValue || _green >= minValue || _blue >= minValue));
+
+    return _value;
 }
 
-uint32_t Clock::Color::get()
+// uint32_t Clock::Color::rnd(Color factor, uint8_t minValue)
+// {
+//     uint8_t minRed = red() * minValue / 255;
+//     uint8_t count = 0;
+//     do {
+//         _red = _getRand(kRndMod, kRndMul, red());
+//         if (++count == 0) {
+//             _red = minValue;
+//         }
+//     } while (_red < minRed);
+//     count = 0;
+//     uint8_t minGreen = green() * minValue / 255;
+//     do {
+//         _green = _getRand(kRndMod, kRndMul, green());
+//         if (++count == 0) {
+//             _green = minValue;
+//         }
+//     } while (_green < minGreen);
+//     count = 0;
+//     uint8_t minBlue = blue() * minValue / 255;
+//     do {
+//         _blue = _getRand(kRndMod, kRndMul, blue());
+//         if (++count == 0) {
+//             _blue = minValue;
+//         }
+//     } while (_blue < minBlue);
+
+//     return _value;
+// }
+
+uint32_t Clock::Color::get() const
 {
-    return ((uint32_t)_red << 16) | ((uint32_t)_green <<  8) | _blue;
+    return _value;
 }
 
-Clock::Color &Clock::Color::operator =(uint32_t value)
+Clock::Color &Clock::Color::operator=(uint32_t value)
 {
-    _red = value >> 16;
-    _green = value >> 8;
-    _blue = value;
+    _value = value;
     return *this;
 }
 
-Clock::Color::operator int()
+Clock::Color::operator bool() const
 {
-    return get();
+    return _value != 0;
 }
 
-uint32_t Clock::Color::get(uint8_t red, uint8_t green, uint8_t blue)
+Clock::Color::operator int() const
 {
-    return ((uint32_t)red << 16) | ((uint32_t)green <<  8) | blue;
+    return _value;
+}
+
+Clock::Color::operator uint32_t() const
+{
+    return _value;
+}
+
+bool Clock::Color::operator==(uint32_t value) const
+{
+    return _value == value;
+}
+
+bool Clock::Color::operator!=(uint32_t value) const
+{
+    return _value != value;
+}
+
+bool Clock::Color::operator==(int value) const
+{
+    return _value == value;
+}
+
+bool Clock::Color::operator!=(int value) const
+{
+    return _value != value;
 }
 
 uint8_t Clock::Color::red() const
@@ -110,6 +175,48 @@ uint8_t Clock::Color::blue() const
 // ------------------------------------------------------------------------
 // Base Class Animation
 
+Clock::Animation::Animation(ClockPlugin &clock) : _clock(clock), _updateRate(_clock.getUpdateRate()), _finished(false), _blinkColon(true)
+{
+}
+
+Clock::Animation::~Animation()
+{
+    if (!_finished) {
+        end();
+    }
+    removeAnimationCallback();
+}
+
+
+void Clock::Animation::begin()
+{
+    __LDBG_printf("begin");
+    _finished = true;
+}
+void Clock::Animation::end()
+{
+    __LDBG_printf("end");
+    _finished = true;
+    _blinkColon = true;
+    setUpdateRate(kDefaultUpdateRate);
+    removeAnimationCallback();
+}
+
+bool Clock::Animation::finished() const
+{
+    return _finished;
+}
+
+bool Clock::Animation::doBlinkColon() const
+{
+    return _blinkColon;
+}
+
+uint16_t Clock::Animation::getUpdateRate() const
+{
+    return _updateRate;
+}
+
 void Clock::Animation::loop(time_t now)
 {
     if (_callback) {
@@ -117,24 +224,69 @@ void Clock::Animation::loop(time_t now)
     }
 }
 
+void Clock::Animation::setUpdateRate(uint16_t updateRate)
+{
+    _updateRate = updateRate;
+    _clock.setUpdateRate(_updateRate);
+}
+
+uint16_t Clock::Animation::getClockUpdateRate() const
+{
+    return _clock.getUpdateRate();
+}
+
+
+void Clock::Animation::setColor(Color color)
+{
+    _clock.setColor(color);
+}
+
+Clock::Color Clock::Animation::getColor() const
+{
+    return _clock.getColor();
+}
+
+
+void Clock::Animation::setAnimationCallback(AnimationCallback callback)
+{
+    _clock.setAnimationCallback(callback);
+}
+
+void Clock::Animation::removeAnimationCallback()
+{
+    _clock.setAnimationCallback(nullptr);
+}
+
+void Clock::Animation::setLoopCallback(LoopCallback callback)
+{
+    _callback = callback;
+}
+
+void Clock::Animation::removeLoopCallback()
+{
+    _callback = nullptr;
+}
+
+
 // ------------------------------------------------------------------------
 // Fading Animation
 
-Clock::FadingAnimation::FadingAnimation(ClockPlugin &clock, Color from, Color to, float speed, uint16_t time) : Animation(clock), _from(from), _to(to), _time(time), _speed(_secondsToSpeed(speed))
+Clock::FadingAnimation::FadingAnimation(ClockPlugin &clock, Color from, Color to, float speed, uint16_t time, Color factor) : Animation(clock), _from(from), _to(to), _time(time), _speed(_secondsToSpeed(speed)), _factor(factor)
 {
-    __LDBG_printf("from=%s to=%s time=%u speed=%u (%f)", _from.toString().c_str(), _to.toString().c_str(), _time, _speed, speed);
+    __LDBG_printf("from=%s to=%s time=%u speed=%u (%f) factor=%s", _from.toString().c_str(), _to.toString().c_str(), _time, _speed, speed, _factor.toString().c_str());
 }
 
 void Clock::FadingAnimation::begin()
 {
     _finished = false;
     _progress = 0;
-    _clock.setUpdateRate(kUpdateRate);
-    __LDBG_printf("begin from=%s to=%s time=%u speed=%u update_rate=%u", _from.toString().c_str(), _to.toString().c_str(), _time, _speed, _clock._updateRate);
+    setUpdateRate(kUpdateRate);
+    __LDBG_printf("begin from=%s to=%s time=%u speed=%u update_rate=%u", _from.toString().c_str(), _to.toString().c_str(), _time, _speed, getUpdateRate());
 
-    _callback = [this](time_t now) {
+    setLoopCallback([this](time_t now) {
         this->callback(now);
-    };
+        // no code here, the lambda function might be destroyed already
+    });
 }
 
 uint16_t Clock::FadingAnimation::_secondsToSpeed(float seconds) const
@@ -149,22 +301,24 @@ void Clock::FadingAnimation::callback(time_t now)
         float stepRed = (_to.red() - _from.red()) / kFloatMaxProgress;
         float stepGreen = (_to.green() - _from.green()) / kFloatMaxProgress;
         float stepBlue = (_to.blue() - _from.blue()) / kFloatMaxProgress;
-        _clock.setColor(Color(
-            (uint8_t)(_from.red() + (stepRed * (float)_progress)),
-            (uint8_t)(_from.green() + (stepGreen * (float)_progress)),
-            (uint8_t)(_from.blue() + (stepBlue * (float)_progress))
+        setColor(Color(
+            _from.red() + static_cast<uint8_t>(stepRed * _progress),
+            _from.green() + static_cast<uint8_t>(stepGreen * _progress),
+            _from.blue() + static_cast<uint8_t>(stepBlue * _progress)
         ));
         if (_progress >= kMaxProgress) {
+            setColor(_to);
             if (_time == kNoColorChange) {
                 _finished = true;
-                _callback = nullptr;
                 __LDBG_printf("end no color change");
+                removeLoopCallback();
+                return; // make sure to return after destroying the lambda function
             }
             else if (_time == 0) {
                 _from = _to;
                 _to.rnd();
                 _progress = 0;
-                __LDBG_printf("next from=%s to=%s time=%u speed=%u update_rate=%u", _from.toString().c_str(), _to.toString().c_str(), _time, _speed, _clock._updateRate);
+                __LDBG_printf("next from=%s to=%s time=%u speed=%u update_rate=%u", _from.toString().c_str(), _to.toString().c_str(), _time, _speed, getUpdateRate());
             } else {
                 // wait for _time seconds
                 uint32_t endTime = now + _time;
@@ -172,7 +326,7 @@ void Clock::FadingAnimation::callback(time_t now)
                 _callback = [this, endTime](time_t now) {
                     if ((uint32_t)now > endTime) {
                         // get current color and a random new color
-                        _from = _clock.getColor();
+                        _from = getColor();
                         _to.rnd();
                         begin();
                     }
@@ -185,21 +339,31 @@ void Clock::FadingAnimation::callback(time_t now)
 // ------------------------------------------------------------------------
 // Rainbow Animation
 
-Clock::RainbowAnimation::RainbowAnimation(ClockPlugin &clock, uint16_t speed, float multiplier, Color factor) :
+Clock::RainbowAnimation::RainbowAnimation(ClockPlugin &clock, uint16_t speed, float multiplier, Color factor, Color minimum) :
     Animation(clock),
     _speed(speed),
     _factor(factor),
-    _multiplier(multiplier * SevenSegmentDisplay::getTotalPixels())
+    _minimum(minimum),
+    _multiplier(multiplier * kTotalPixelCount)
 {
-    __LDBG_printf("speed=%u _multiplier=%f multiplier=%f factors=%u,%u,%u", _speed, _multiplier, multiplier, factor.red(), factor.green(), factor.blue());
+    __LDBG_printf("speed=%u _multiplier=%f multiplier=%f factor=%s mins=%s", _speed, _multiplier, multiplier, _factor.toString().c_str(), _minimum.toString().c_str());
+}
+
+Clock::Color Clock::RainbowAnimation::_color(uint8_t red, uint8_t green, uint8_t blue) const
+{
+    return Color(
+        std::max(red, _minimum.red()),
+        std::max(green, _minimum.green()),
+        std::max(blue, _minimum.blue())
+    );
 }
 
 void Clock::RainbowAnimation::begin()
 {
     _finished = false;
-    _clock._display.setCallback([this](PixelAddressType address, ColorType color) {
+    setAnimationCallback([this](PixelAddressType address, ColorType color, uint32_t millis) -> ColorType {
 
-        uint32_t ind = (address * _multiplier) + (millis() / _speed);
+        uint32_t ind = (address * _multiplier) + (millis / _speed);
         uint8_t indMod = (ind % _mod);
         uint8_t idx = (indMod / _divMul);
         float factor1 = 1.0 - ((float)(indMod - (idx * _divMul)) / _divMul);
@@ -207,30 +371,28 @@ void Clock::RainbowAnimation::begin()
 
         switch(idx) {
             case 0:
-                return Color::get(_factor.red() * factor1, _factor.green() * factor2, 0);
+                return _color(_factor.red() * factor1, _factor.green() * factor2, 0);
             case 1:
-                return Color::get(0, _factor.green() * factor1, _factor.blue() * factor2);
+                return _color(0, _factor.green() * factor1, _factor.blue() * factor2);
             case 2:
-                return Color::get(_factor.red() * factor2, 0, _factor.blue() * factor1);
+                return _color(_factor.red() * factor2, 0, _factor.blue() * factor1);
         }
         return color;
     });
-    _clock.setUpdateRate(1000 / _speed);
-    __LDBG_printf("begin rate=%u", _clock._updateRate);
+    setUpdateRate(20);
+    __LDBG_printf("begin rate=%u", getUpdateRate());
 }
 
 void Clock::RainbowAnimation::end()
 {
-    _clock._display.setCallback(nullptr);
-    _clock.setUpdateRate(100);
-    _finished = true;
-    __LDBG_printf("end rate=%u", _clock._updateRate);
+    __LDBG_printf("end rate=%u", getUpdateRate());
+    Animation::end();
 }
 
 // ------------------------------------------------------------------------
 // Flashing Animation
 
-Clock::FlashingAnimation::FlashingAnimation(ClockPlugin &clock, Color color, uint16_t time) : Animation(clock), _color(color), _time(time)
+Clock::FlashingAnimation::FlashingAnimation(ClockPlugin &clock, Color color, uint16_t time, uint8_t mod) : Animation(clock), _color(color), _time(time), _mod(mod)
 {
     __LDBG_printf("color=%s time=%u", _color.toString().c_str(), _time);
 }
@@ -238,16 +400,40 @@ Clock::FlashingAnimation::FlashingAnimation(ClockPlugin &clock, Color color, uin
 void Clock::FlashingAnimation::begin()
 {
     __LDBG_printf("begin color=%s time=%u", _color.toString().c_str(), _time);
+    _finished = false;
     _blinkColon = false;
-    _clock._display.setCallback([this](PixelAddressType addr, ColorType color) {
-        return (millis() / _clock._updateRate) % 2 == 0 ? (uint32_t)_color : 0U;
+    setAnimationCallback([this](PixelAddressType address, ColorType color, uint32_t millis) -> ColorType {
+        return (millis / _time) % _mod == 0 ? _color.get() : 0;
     });
-    _clock.setUpdateRate(std::max(ClockPlugin::kMinFlashingSpeed, _time));
+    setUpdateRate(std::max((uint16_t)(ClockPlugin::kMinFlashingSpeed / _mod), (uint16_t)(_time / _mod)));
 }
 
 void Clock::FlashingAnimation::end()
 {
     __LDBG_printf("end color=%s time=%u", _color.toString().c_str(), _time);
-    _clock._display.setCallback(nullptr);
-    _clock.setUpdateRate(100);
+    Animation::end();
+}
+
+// ------------------------------------------------------------------------
+// Flashing Animation
+
+Clock::CallbackAnimation::CallbackAnimation(ClockPlugin &clock, AnimationCallback callback, uint16_t updateRate, bool blinkColon) :
+    Animation(clock), _callback(callback), _updateRate(updateRate), _blinkColon(blinkColon)
+{
+    __LDBG_printf("callback=%p/%u update_rate=%u blink_colon=%u", &_callback, (bool)_callback, _updateRate, _blinkColon);
+}
+
+void Clock::CallbackAnimation::begin()
+{
+    __LDBG_printf("begin");
+    _finished = false;
+    Animation::_blinkColon = _blinkColon;
+    setUpdateRate(_updateRate);
+    setAnimationCallback(_callback);
+}
+
+void Clock::CallbackAnimation::end()
+{
+    __LDBG_printf("end");
+    Animation::end();
 }

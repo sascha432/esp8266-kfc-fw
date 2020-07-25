@@ -36,3 +36,18 @@ private:
     bool _allowZero;
 };
 
+template<class T>
+class FormRangeValidatorEnum : public FormRangeValidator
+{
+public:
+    FormRangeValidatorEnum() : FormRangeValidator(static_cast<long>(T::MIN), static_cast<long>(T::MAX) - 1) {}
+    FormRangeValidatorEnum(const String &message) : FormRangeValidator(message, static_cast<long>(T::MIN), static_cast<long>(T::MAX) - 1) {}
+};
+
+template<class T>
+class FormRangeValidatorType : public FormRangeValidator
+{
+public:
+    FormRangeValidatorType() : FormRangeValidator(std::numeric_limits<T>::min(), std::numeric_limits<T>::max()) {}
+    FormRangeValidatorType(const String &message) : FormRangeValidator(message, std::numeric_limits<T>::min(), std::numeric_limits<T>::max()) {}
+};

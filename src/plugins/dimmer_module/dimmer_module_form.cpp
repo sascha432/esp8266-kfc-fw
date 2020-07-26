@@ -53,7 +53,7 @@ void DimmerModuleForm::_createConfigureForm(PluginComponent::FormCallbackType ty
 
     auto &group = form.addGroup(String(), F("Advanced Firmware Configuration"), false);
 
-    form.add<uint8_t>(F("max_temp"), _H_STRUCT_VALUE(Config().dimmer, cfg.max_temp))->setFormUI((new FormUI(FormUI::TEXT, F("Max. Temperature")))->addConditionalAttribute(isInvalid, FSPGM(disabled), FSPGM(disabled))->setPlaceholder(String(80))->setSuffix(F("&deg;C")));
+    form.add<uint8_t>(F("max_temp"), _H_STRUCT_VALUE(Config().dimmer, cfg.max_temp))->setFormUI((new FormUI(FormUI::TEXT, F("Max. Temperature")))->addConditionalAttribute(isInvalid, FSPGM(disabled), FSPGM(disabled))->setPlaceholder(String(80))->setSuffix(FSPGM(_degreeC)));
     form.addValidator(new FormRangeValidator(F("Temperature out of range: %min%-%max%"), 45, 110));
 
     form.add<uint8_t>(F("metricsint"), _H_STRUCT_VALUE(Config().dimmer, cfg.report_metrics_max_interval))->setFormUI((new FormUI(FormUI::TEXT, F("Metrics Report Interval")))->addConditionalAttribute(isInvalid, FSPGM(disabled), FSPGM(disabled))->setPlaceholder(String(10))->setSuffix(FSPGM(seconds)));
@@ -68,20 +68,20 @@ void DimmerModuleForm::_createConfigureForm(PluginComponent::FormCallbackType ty
     form.add<uint16_t>(F("min_off"), _H_STRUCT_VALUE(Config().dimmer, cfg.adjust_halfwave_time_ticks))->setFormUI((new FormUI(FormUI::TEXT, F("Minimum Off-time")))->addConditionalAttribute(isInvalid, FSPGM(disabled), FSPGM(disabled))->setSuffix(F("ticks")));
     form.addValidator(new FormRangeValidator(1, 65535));
 
-    form.add<float>(F("vref11"), _H_STRUCT_VALUE(Config().dimmer, cfg.internal_1_1v_ref))->setFormUI((new FormUI(FormUI::TEXT, F("ATmega 1.1V Reference Calibration")))->addConditionalAttribute(isInvalid, FSPGM(disabled), FSPGM(disabled))->setPlaceholder(String(1.1, 1))->setSuffix(F("V")));
+    form.add<float>(F("vref11"), _H_STRUCT_VALUE(Config().dimmer, cfg.internal_1_1v_ref))->setFormUI((new FormUI(FormUI::TEXT, F("ATmega 1.1V Reference Calibration")))->addConditionalAttribute(isInvalid, FSPGM(disabled), FSPGM(disabled))->setPlaceholder(String(1.1, 1))->setSuffix(String('V')));
     form.addValidator(new FormRangeValidatorDouble(0.9, 1.3, 1));
 
     form.add<float>(F("temp_ofs"), (config._H_GET(Config().dimmer).cfg.ntc_temp_offset / DIMMER_TEMP_OFFSET_DIVIDER), [](const float &value, FormField &, bool) {
         auto &cfg = config._H_W_GET(Config().dimmer).cfg;
         cfg.ntc_temp_offset = value * DIMMER_TEMP_OFFSET_DIVIDER;
         return false;
-    })->setFormUI((new FormUI(FormUI::TEXT, F("Temperature Offset (NTC)")))->addConditionalAttribute(isInvalid, FSPGM(disabled), FSPGM(disabled))->setPlaceholder(String(0))->setSuffix(F("&deg;C")));
+    })->setFormUI((new FormUI(FormUI::TEXT, F("Temperature Offset (NTC)")))->addConditionalAttribute(isInvalid, FSPGM(disabled), FSPGM(disabled))->setPlaceholder(String(0))->setSuffix(FSPGM(_degreeC)));
 
     form.add<float>(F("temp2_ofs"), (config._H_GET(Config().dimmer).cfg.int_temp_offset / DIMMER_TEMP_OFFSET_DIVIDER), [](const float &value, FormField &, bool) {
         auto &cfg = config._H_W_GET(Config().dimmer).cfg;
         cfg.int_temp_offset = value * DIMMER_TEMP_OFFSET_DIVIDER;
         return false;
-    })->setFormUI((new FormUI(FormUI::TEXT, F("Temperature Offset 2 (ATmega)")))->addConditionalAttribute(isInvalid, FSPGM(disabled), FSPGM(disabled))->setPlaceholder(String(0))->setSuffix(F("&deg;C")));
+    })->setFormUI((new FormUI(FormUI::TEXT, F("Temperature Offset 2 (ATmega)")))->addConditionalAttribute(isInvalid, FSPGM(disabled), FSPGM(disabled))->setPlaceholder(String(0))->setSuffix(FSPGM(_degreeC)));
 
     group.end();
 
@@ -97,19 +97,19 @@ void DimmerModuleForm::_createConfigureForm(PluginComponent::FormCallbackType ty
     form.add<uint16_t>(F("rtime"), _H_STRUCT_VALUE(Config().dimmer_buttons, repeat_time))->setFormUI((new FormUI(FormUI::TEXT, F("Hold/Repeat Time")))->setPlaceholder(String(150))->setSuffix(FSPGM(milliseconds)));
     form.addValidator(new FormRangeValidator(FSPGM(Invalid_time), 50, 500));
 
-    form.add<uint8_t>(F("sstep"), _H_STRUCT_VALUE(Config().dimmer_buttons, shortpress_step))->setFormUI((new FormUI(FormUI::TEXT, F("Brightness Steps")))->setPlaceholder(String(5))->setSuffix(F("&#37;")));
+    form.add<uint8_t>(F("sstep"), _H_STRUCT_VALUE(Config().dimmer_buttons, shortpress_step))->setFormUI((new FormUI(FormUI::TEXT, F("Brightness Steps")))->setPlaceholder(String(5))->setSuffix(String('%')));
     form.addValidator(new FormRangeValidator(F("Invalid level"), 1, 100));
 
     form.add<uint16_t>(F("snrt"), _H_STRUCT_VALUE(Config().dimmer_buttons, shortpress_no_repeat_time))->setFormUI((new FormUI(FormUI::TEXT, F("Short Press Down = Off/No Repeat Time")))->setPlaceholder(String(800))->setSuffix(FSPGM(milliseconds)));
     form.addValidator(new FormRangeValidator(FSPGM(Invalid_time), 250, 2500));
 
-    form.add<uint8_t>(F("minbr"), _H_STRUCT_VALUE(Config().dimmer_buttons, min_brightness))->setFormUI((new FormUI(FormUI::TEXT, F("Min. Brightness")))->setPlaceholder(String(15))->setSuffix(F("&#37;")));
+    form.add<uint8_t>(F("minbr"), _H_STRUCT_VALUE(Config().dimmer_buttons, min_brightness))->setFormUI((new FormUI(FormUI::TEXT, F("Min. Brightness")))->setPlaceholder(String(15))->setSuffix(String('%')));
     form.addValidator(new FormRangeValidator(FSPGM(Invalid_brightness, "Invalid brightness"), 0, 100));
 
-    form.add<uint8_t>(F("lpmaxb"), _H_STRUCT_VALUE(Config().dimmer_buttons, longpress_max_brightness))->setFormUI((new FormUI(FormUI::TEXT, F("Long Press Up/Max. Brightness")))->setPlaceholder(String(100))->setSuffix(F("&#37;")));
+    form.add<uint8_t>(F("lpmaxb"), _H_STRUCT_VALUE(Config().dimmer_buttons, longpress_max_brightness))->setFormUI((new FormUI(FormUI::TEXT, F("Long Press Up/Max. Brightness")))->setPlaceholder(String(100))->setSuffix('%'));
     form.addValidator(new FormRangeValidator(FSPGM(Invalid_brightness), 0, 100));
 
-    form.add<uint8_t>(F("lpminb"), _H_STRUCT_VALUE(Config().dimmer_buttons, longpress_min_brightness))->setFormUI((new FormUI(FormUI::TEXT, F("Long Press Down/Min. Brightness")))->setPlaceholder(String(33))->setSuffix(F("&#37;")));
+    form.add<uint8_t>(F("lpminb"), _H_STRUCT_VALUE(Config().dimmer_buttons, longpress_min_brightness))->setFormUI((new FormUI(FormUI::TEXT, F("Long Press Down/Min. Brightness")))->setPlaceholder(String(33))->setSuffix('%'));
     form.addValidator(new FormRangeValidator(FSPGM(Invalid_brightness), 0, 100));
 
     form.add<float>(F("spft"), _H_STRUCT_VALUE(Config().dimmer_buttons, shortpress_fadetime))->setFormUI((new FormUI(FormUI::TEXT, F("Short Press Fade Time")))->setPlaceholder(String(1.0, 1))->setSuffix(FSPGM(seconds)));

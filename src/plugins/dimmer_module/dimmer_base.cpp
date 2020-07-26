@@ -253,13 +253,13 @@ void Dimmer_Base::_printStatus(Print &output)
     PrintHtmlEntitiesString out;
     auto length = out.length();
     if (_metrics.hasTemp2()) {
-        out.printf_P(PSTR("Internal temperature %.2f" HTML_DEG "C"), _metrics.getTemp2());
+        out.printf_P(PSTR("Internal temperature %.2f" PRINTHTMLENTITIES_DEGREE "C"), _metrics.getTemp2());
     }
     if (_metrics.hasTemp()) {
         if (length != out.length()) {
             out.print(F(", "));
         }
-        out.printf_P(PSTR("NTC %.2f" HTML_DEG "C"), _metrics.getTemp());
+        out.printf_P(PSTR("NTC %.2f" PRINTHTMLENTITIES_DEGREE "C"), _metrics.getTemp());
     }
     if (_metrics.hasVCC()) {
         if (length != out.length()) {
@@ -280,9 +280,7 @@ void Dimmer_Base::_printStatus(Print &output)
         out.printf_P(PSTR("Firmware Version %u.%u.%u"), DIMMER_VERSION_SPLIT(_version));
     }
 #endif
-    static_cast<PrintHtmlEntitiesString &>(output).setRawOutput(true);
     output.print(out);
-    static_cast<PrintHtmlEntitiesString &>(output).setRawOutput(false);
 }
 
 void Dimmer_Base::_updateMetrics(const dimmer_metrics_t &metrics)

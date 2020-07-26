@@ -73,7 +73,7 @@ void Sensor_DHTxx::createWebUI(WebUI &webUI, WebUIRow **row)
     (*row)->addSensor(_getId(FSPGM(humidity)), _name + F(" Humidity"), '%');
 }
 
-void Sensor_DHTxx::getStatus(PrintHtmlEntitiesString &output)
+void Sensor_DHTxx::getStatus(Print &output)
 {
     output.printf_P(PSTR(IOT_SENSOR_NAMES_DHTxx " @ pin %d" HTML_S(br)), _pin);
 }

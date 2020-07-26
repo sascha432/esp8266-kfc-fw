@@ -75,7 +75,7 @@ public:
     virtual void getValues(JsonArray &json, bool timer) = 0;
 
     virtual void createWebUI(WebUI &webUI, WebUIRow **row) = 0;
-    virtual void getStatus(PrintHtmlEntitiesString &output) = 0;
+    virtual void getStatus(Print &output) = 0;
 
     virtual SensorType getType() const {
         return SensorType::UNKNOWN;

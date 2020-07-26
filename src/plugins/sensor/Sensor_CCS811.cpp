@@ -86,7 +86,7 @@ void Sensor_CCS811::createWebUI(WebUI &webUI, WebUIRow **row)
     (*row)->addSensor(_getId(F("tvoc")), _name + F(" TVOC"), F("ppb"));
 }
 
-void Sensor_CCS811::getStatus(PrintHtmlEntitiesString &output)
+void Sensor_CCS811::getStatus(Print &output)
 {
     output.printf_P(PSTR("CCS811 @ I2C address 0x%02x" HTML_S(br)), _address);
 }

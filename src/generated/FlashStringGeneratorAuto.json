@@ -1160,7 +1160,7 @@
         "default": "brightness"
     },
     "_degreeC": {
-        "use_counter": 7,
+        "use_counter": 12,
         "default": "\\u00b0C"
     },
     "vcc": {
@@ -1302,5 +1302,77 @@
     "string": {
         "use_counter": 1,
         "default": "string"
+    },
+    "htmlentities_quot": {
+        "use_counter": 1,
+        "default": "&quot;"
+    },
+    "htmlentities_lt": {
+        "use_counter": 1,
+        "default": "&lt;"
+    },
+    "htmlentities_gt": {
+        "use_counter": 1,
+        "default": "&gt;"
+    },
+    "htmlentities_num": {
+        "use_counter": 1,
+        "default": "&num;"
+    },
+    "htmlentities_amp": {
+        "use_counter": 1,
+        "default": "&amp;"
+    },
+    "htmlentities_percnt": {
+        "use_counter": 1,
+        "default": "&percnt;"
+    },
+    "htmlentities_equals": {
+        "use_counter": 1,
+        "default": "&equals;"
+    },
+    "htmlentities_quest": {
+        "use_counter": 1,
+        "default": "&quest;"
+    },
+    "htmlentities_deg": {
+        "use_counter": 1,
+        "default": "&deg;"
+    },
+    "htmlentities_copy": {
+        "use_counter": 1,
+        "default": "&copy;"
+    },
+    "htmlentities_micro": {
+        "use_counter": 1,
+        "default": "&micro;"
+    },
+    "htmlentities_acute": {
+        "use_counter": 1,
+        "default": "&acute;"
+    },
+    "placeholder": {
+        "use_counter": 1,
+        "default": "placeholder"
+    },
+    "min": {
+        "use_counter": 1,
+        "default": "min"
+    },
+    "max": {
+        "use_counter": 1,
+        "default": "max"
+    },
+    "readonly": {
+        "use_counter": 1,
+        "default": "readonly"
+    },
+    "htmlentities_plusmn": {
+        "use_counter": 1,
+        "default": "&plusmn;"
+    },
+    "htmlentities_apos": {
+        "use_counter": 1,
+        "default": "&apos;"
     }
 }

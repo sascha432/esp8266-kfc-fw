@@ -89,7 +89,7 @@ void Sensor_Battery::publishState(MQTTClient *client)
     }
 }
 
-void Sensor_Battery::getStatus(PrintHtmlEntitiesString &output)
+void Sensor_Battery::getStatus(Print &output)
 {
     output.printf_P(PSTR("Supply Voltage Indicator"));
 #if IOT_SENSOR_BATTERY_CHARGE_DETECTION

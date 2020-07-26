@@ -573,10 +573,10 @@ void WSDraw::_statsEnd(const __FlashStringHelper *name)
 String WSDraw::_getTemperature(float value, bool kelvin)
 {
     if (_config.is_metric) {
-        return String(kelvin ? OpenWeatherMapAPI::kelvinToC(value) : value, 1) + F("\xb0""C");
+        return String(kelvin ? OpenWeatherMapAPI::kelvinToC(value) : value, 1) + FSPGM(_degreeC);
     }
     else {
-        return String(kelvin ? OpenWeatherMapAPI::kelvinToF(value) : (value * 1.8f + 32.0f), 1) + F("\xb0""F");
+        return String(kelvin ? OpenWeatherMapAPI::kelvinToF(value) : (value * 1.8f + 32.0f), 1) + FSPGM(_degreeC);
     }
 }
 

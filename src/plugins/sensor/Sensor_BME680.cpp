@@ -99,7 +99,7 @@ void Sensor_BME680::createWebUI(WebUI &webUI, WebUIRow **row)
     (*row)->addSensor(_getId(F("gas")), _name + F(" Gas"), emptyString);
 }
 
-void Sensor_BME680::getStatus(PrintHtmlEntitiesString &output)
+void Sensor_BME680::getStatus(Print &output)
 {
     output.printf_P(PSTR("BME680 @ I2C address 0x%02x" HTML_S(br)), _address);
 }

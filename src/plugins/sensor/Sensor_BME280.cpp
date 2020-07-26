@@ -93,7 +93,7 @@ void Sensor_BME280::createWebUI(WebUI &webUI, WebUIRow **row)
     (*row)->addSensor(_getId(FSPGM(pressure)), _name + F(" Pressure"), FSPGM(hPa));
 }
 
-void Sensor_BME280::getStatus(PrintHtmlEntitiesString &output)
+void Sensor_BME280::getStatus(Print &output)
 {
     output.printf_P(PSTR("BME280 @ I2C address 0x%02x" HTML_S(br)), _address);
 }

@@ -131,7 +131,7 @@ public:
     Sensor_HLW8012(const String &name, uint8_t pinSel, uint8_t pinCF, uint8_t pinCF1);
     virtual ~Sensor_HLW8012();
 
-    void getStatus(PrintHtmlEntitiesString &output) override;
+    void getStatus(Print &output) override;
     virtual MQTTSensorSensorType getType() const override;
     virtual String _getId(const __FlashStringHelper *type = nullptr);
 

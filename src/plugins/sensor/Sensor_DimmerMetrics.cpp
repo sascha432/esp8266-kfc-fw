@@ -111,7 +111,7 @@ void Sensor_DimmerMetrics::publishState(MQTTClient *client)
     }
 }
 
-void Sensor_DimmerMetrics::getStatus(PrintHtmlEntitiesString &output)
+void Sensor_DimmerMetrics::getStatus(Print &output)
 {
 }
 

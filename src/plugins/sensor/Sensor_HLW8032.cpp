@@ -51,15 +51,18 @@ Sensor_HLW8032::~Sensor_HLW8032()
 }
 
 
-void Sensor_HLW8032::getStatus(PrintHtmlEntitiesString &output) {
+void Sensor_HLW8032::getStatus(Print &output)
+{
     output.printf_P(PSTR("Power Monitor HLW8032" HTML_S(br)));
 }
 
-MQTTSensorSensorType Sensor_HLW8032::getType() const {
+MQTTSensorSensorType Sensor_HLW8032::getType() const
+{
     return MQTTSensorSensorType::HLW8032;
 }
 
-String Sensor_HLW8032::_getId(const __FlashStringHelper *type) {
+String Sensor_HLW8032::_getId(const __FlashStringHelper *type)
+{
     PrintString id(F("hlw8032_0x%02x"), _pinPF);
     if (type) {
         id.write('_');
@@ -68,8 +71,8 @@ String Sensor_HLW8032::_getId(const __FlashStringHelper *type) {
     return id;
 }
 
-void Sensor_HLW8032::_onReceive(int available) {
-
+void Sensor_HLW8032::_onReceive(int available)
+{
     if (_buffer.length()) {
         auto last = get_time_diff(_lastData, millis());
         if (last > IOT_SENSOR_HLW8032_SERIAL_INTERVAL / 2) { // discard old data

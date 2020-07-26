@@ -125,7 +125,7 @@ void Sensor_INA219::publishState(MQTTClient *client)
     }
 }
 
-void Sensor_INA219::getStatus(PrintHtmlEntitiesString &output)
+void Sensor_INA219::getStatus(Print &output)
 {
     output.printf_P(PSTR("INA219 @ I2C address 0x%02x" HTML_S(br)), _address);
 }

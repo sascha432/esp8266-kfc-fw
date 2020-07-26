@@ -94,7 +94,7 @@ void Sensor_DS3231::publishState(MQTTClient *client)
     }
 }
 
-void Sensor_DS3231::getStatus(PrintHtmlEntitiesString &output)
+void Sensor_DS3231::getStatus(Print &output)
 {
     output.printf_P(PSTR("DS3231 @ I2C address 0x68" HTML_S(br)));
 }

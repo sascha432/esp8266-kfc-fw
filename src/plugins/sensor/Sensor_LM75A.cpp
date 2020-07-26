@@ -71,7 +71,7 @@ void Sensor_LM75A::publishState(MQTTClient *client)
     }
 }
 
-void Sensor_LM75A::getStatus(PrintHtmlEntitiesString &output)
+void Sensor_LM75A::getStatus(Print &output)
 {
     output.printf_P(PSTR("LM75A @ I2C address 0x%02x" HTML_S(br)), _address);
 }

@@ -208,12 +208,11 @@ void SensorPlugin::getStatus(Print &output)
     }
     else {
         PrintHtmlEntitiesString str;
+        str.setMode(PrintHtmlEntities::Mode::RAW);
         for(auto sensor: _sensors) {
-            sensor->getStatus(str);
+            sensor->getStatus(output);
         }
-        static_cast<PrintHtmlEntitiesString &>(output).setRawOutput(true);
         output.print(str);
-        static_cast<PrintHtmlEntitiesString &>(output).setRawOutput(false);
     }
 }
 

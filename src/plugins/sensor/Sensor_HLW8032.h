@@ -78,7 +78,7 @@ public:
     Sensor_HLW8032(const String &name, uint8_t pinRx, uint8_t pinTx, uint8_t pinPF);
     virtual ~Sensor_HLW8032();
 
-    void getStatus(PrintHtmlEntitiesString &output) override;
+    void getStatus(Print &output) override;
     virtual MQTTSensorSensorType getType() const override;
 
     static void loop();

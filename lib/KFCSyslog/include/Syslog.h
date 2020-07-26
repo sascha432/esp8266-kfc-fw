@@ -30,12 +30,14 @@
 
 class Syslog;
 
-typedef enum {
-    SYSLOG_PROTOCOL_NONE = 0,
+typedef enum : uint8_t {
+    MIN = 0,
+    SYSLOG_PROTOCOL_NONE = MIN,
     SYSLOG_PROTOCOL_UDP,
     SYSLOG_PROTOCOL_TCP,
     SYSLOG_PROTOCOL_TCP_TLS,
     SYSLOG_PROTOCOL_FILE,
+    MAX
 } SyslogProtocol;
 
 class SyslogFilterItem {

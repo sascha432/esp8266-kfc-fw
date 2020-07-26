@@ -2,6 +2,7 @@
  * Author: sascha_lammers@gmx.de
  */
 
+#include <time.h>
 #include "PrintString.h"
 
 PrintString::PrintString(const char *format, ...)
@@ -168,7 +169,7 @@ size_t PrintString::print(int64_t value)
 {
     return concat_to_string(*this, value);
 }
-
+ 
 size_t PrintString::strftime(const char *format, struct tm *tm)
 {
     char temp[64];

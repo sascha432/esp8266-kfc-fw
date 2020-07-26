@@ -3,10 +3,10 @@
 */
 
 #include <memory>
+#include <misc.h>
 #include "JsonBaseReader.h"
 #include "JsonVar.h"
 #include "JsonTools.h"
-#include "../src/generated/FlashStringGeneratorAuto.h"
 
 #if DEBUG_KFC_JSON
 #include <debug_helper_enable.h>

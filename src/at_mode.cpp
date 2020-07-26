@@ -1260,6 +1260,9 @@ void at_mode_serial_handle_event(String &commandString)
                         }
                         else {
                             args.printf_P(PSTR("Calling %s.setup()"), name.c_str());
+                            if (plugin->getSetupTime() == 0) {
+                                plugin->setSetupTime();
+                            }
                             plugin->setup(PluginComponent::SetupModeType::DEFAULT);
                         }
                     }

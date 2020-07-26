@@ -84,7 +84,9 @@ int PrintHtmlEntities::getTranslatedSize(const char *str, bool attribute)
 }
 
 #include "PrintString.h"//TODO remove
+#ifndef _MSC_VER
 #warning TODO remove
+#endif
 
 bool PrintHtmlEntities::translateTo(const char *cStr, String &target, bool attribute, int requiredSize)
 {

@@ -556,6 +556,9 @@ void KFCFWConfiguration::restoreFactorySettings()
 #if SERIAL2TCP_SUPPORT
     Plugins::Serial2TCP::defaults();
 #endif
+#if SYSLOG_SUPPORT
+    Plugins::SyslogClient::defaults();
+#endif
 
 
 #if WEBSERVER_TLS_SUPPORT
@@ -565,9 +568,6 @@ void KFCFWConfiguration::restoreFactorySettings()
 #endif
 #if NTP_CLIENT
     Config_NTP::defaults();
-#endif
-#if SYSLOG_SUPPORT
-    _H_SET(Config().syslog_port, 514);
 #endif
 
 

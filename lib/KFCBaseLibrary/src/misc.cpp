@@ -5,7 +5,6 @@
 #include <functional>
 #include <PrintString.h>
 #include "misc.h"
-#include "../src/generated/FlashStringGeneratorAuto.h"
 
 String formatBytes(size_t bytes)
 {

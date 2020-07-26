@@ -45,7 +45,7 @@ void MQTTPlugin::createConfigureForm(FormCallbackType type, const String &formNa
     qosItems.emplace_back(enumToString(ClientConfig::QosType::EXACTLY_ONCE), F("Exactly once (2)"));
 
     if (!MQTTClient::Flags::get().mqttEnabled) {
-        cfg.mode_enum = ClientConfig::ModeType::DISABLED; // set to disabled before adding value
+        cfg.mode_enum = ClientConfig::ModeType::DISABLED; // set to disabled before adding value to form
     }
 
     form.add<uint8_t>(FSPGM(mode), _H_W_STRUCT_VALUE(cfg, mode))->setFormUI((new FormUI(FormUI::TypeEnum_t::SELECT, FSPGM(Mode)))->addItems(modeItems));
@@ -91,7 +91,7 @@ void MQTTPlugin::createConfigureForm(FormCallbackType type, const String &formNa
     auto &autoDiscoveryGroup = form.addDivGroup(F("adp"), F("{'i':'#aden','m':'$T.hide()','s':{'1':'$T.show()'}}"));
 
     form.add(FSPGM(prefix), _H_CHAR_PTR_FUNC(ClientConfig::getAutoDiscoveryPrefix, ClientConfig::setAutoDiscoveryPrefix))->setFormUI((new FormUI(FormUI::TypeEnum_t::TEXT, F("Auto Discovery Prefix"))));
-    form.addValidator(new FormLengthValidator(0, ClientConfig::kDiscoveryPrefixMaxSize));
+    form.addValidator(new FormLengthValidator(0, ClientConfig::kAutoDiscoveryPrefixMaxSize));
 
     autoDiscoveryGroup.end();
 #endif

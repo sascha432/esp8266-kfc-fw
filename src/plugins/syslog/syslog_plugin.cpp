@@ -17,6 +17,8 @@
 #define SYSLOG_PLUGIN_QUEUE_SIZE        512
 #endif
 
+using SyslogClient = KFCConfigurationClasses::Plugins::SyslogClient;
+
 SyslogStream *syslog = nullptr;
 static EventScheduler::Timer syslogTimer;
 
@@ -62,7 +64,10 @@ static void syslog_setup()
         __debugbreak_and_panic_printf_P(PSTR("syslog_setup() called twice\n"));
     }
 #endif
-    if (config._H_GET(Config().flags).syslogProtocol != SYSLOG_PROTOCOL_NONE) {
+
+    if (SyslogClient::isEnabled()) {
+
+        auto cfg = SyslogClient::getConfig();
 
         // SyslogParameter parameter;
         // parameter.setHostname(config.getDeviceName());
@@ -75,7 +80,7 @@ static void syslog_setup()
         parameter.setFacility(SYSLOG_FACILITY_KERN);
         parameter.setSeverity(SYSLOG_NOTICE);
 
-        filter->addFilter(F("*.*"), SyslogFactory::create(parameter, (SyslogProtocol)config._H_GET(Config().flags).syslogProtocol, config._H_STR(Config().syslog_host), config._H_GET(Config().syslog_port)));
+        filter->addFilter(F("*.*"), SyslogFactory::create(parameter, static_cast<SyslogProtocol>(cfg.protocol), SyslogClient::getHostname(), cfg.port));
 
         syslog = new SyslogStream(filter, new SyslogMemoryQueue(SYSLOG_PLUGIN_QUEUE_SIZE));
 
@@ -152,15 +157,17 @@ void SyslogPlugin::shutdown()
 void SyslogPlugin::getStatus(Print &output)
 {
 #if SYSLOG_SUPPORT
-    switch(config._H_GET(Config().flags).syslogProtocol) {
-        case SYSLOG_PROTOCOL_UDP:
-            output.printf_P(PSTR("UDP @ %s:%u"), config._H_STR(Config().syslog_host), config._H_GET(Config().syslog_port));
+    auto cfg = SyslogClient::getConfig();
+    auto hostname = SyslogClient::getHostname();
+    switch(cfg.protocol_enum) {
+        case SyslogClient::SyslogProtocolType::UDP:
+            output.printf_P(PSTR("UDP @ %s:%u"), hostname, cfg.port);
             break;
-        case SYSLOG_PROTOCOL_TCP:
-            output.printf_P(PSTR("TCP @ %s:%u"), config._H_STR(Config().syslog_host), config._H_GET(Config().syslog_port));
+        case SyslogClient::SyslogProtocolType::TCP:
+            output.printf_P(PSTR("TCP @ %s:%u"), hostname, cfg.port);
             break;
-        case SYSLOG_PROTOCOL_TCP_TLS:
-            output.printf_P(PSTR("TCP TLS @ %s:%u"), config._H_STR(Config().syslog_host), config._H_GET(Config().syslog_port));
+        case SyslogClient::SyslogProtocolType::TCP_TLS:
+            output.printf_P(PSTR("TCP TLS @ %s:%u"), hostname, cfg.port);
             break;
         default:
             output.print(FSPGM(Disabled));
@@ -173,25 +180,31 @@ void SyslogPlugin::getStatus(Print &output)
 
 void SyslogPlugin::createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request)
 {
-    if (!isCreateFormCallbackType(type)) {
+    using KFCConfigurationClasses::System;
+
+    if (type == FormCallbackType::SAVE) {
+
+        auto &cfg = SyslogClient::getWriteableConfig();
+        if (cfg.port == 0) {
+            cfg.port = 514;
+        }
+        System::Flags::getWriteable().syslogEnabled = SyslogClient::isEnabled(cfg.protocol_enum);
+        return;
+
+    } else if (!isCreateFormCallbackType(type)) {
         return;
     }
 
-    form.add<uint8_t>(F("syslog_enabled"), _H_FLAGS_VALUE(Config().flags, syslogProtocol));
-    form.addValidator(new FormRangeValidator(SYSLOG_PROTOCOL_NONE, SYSLOG_PROTOCOL_FILE));
+    auto &cfg = SyslogClient::getWriteableConfig();
 
-    form.add<sizeof Config().syslog_host>(F("syslog_host"), config._H_W_STR(Config().syslog_host));
-    form.addValidator(new FormValidHostOrIpValidator(true));
+    form.add<uint8_t>(F("syslog_enabled"), _H_W_STRUCT_VALUE(cfg, protocol));
+    form.addValidator(new FormRangeValidatorEnum<SyslogClient::SyslogProtocolType>());
 
-    form.add<uint16_t>(F("syslog_port"), &config._H_W_GET(Config().syslog_port));
-    form.addValidator(new FormTCallbackValidator<uint16_t>([](uint16_t value, FormField &field) {
-        if (value == 0) {
-            value = 514;
-            field.setValue(String(value));
-        }
-        return true;
-    }));
-    form.addValidator(new FormRangeValidator(FSPGM(Invalid_port), 1, 65535));
+    form.add(F("syslog_host"), _H_CHAR_PTR_FUNC(SyslogClient::getHostname, SyslogClient::setHostname));
+    form.addValidator(new FormValidHostOrIpValidator(FormValidHostOrIpValidator::ALLOW_ZEROCONF|FormValidHostOrIpValidator::ALLOW_EMPTY));
+
+    form.add<uint16_t>(F("syslog_port"), _H_W_STRUCT_VALUE(cfg, port));
+    form.addValidator(new FormRangeValidator(FSPGM(Invalid_port), 1, 65535, true));
 
     form.finalize();
 }

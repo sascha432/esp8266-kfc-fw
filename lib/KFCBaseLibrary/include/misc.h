@@ -8,6 +8,9 @@
 #if defined(HAVE_FLASH_STRING_GENERATOR) && HAVE_FLASH_STRING_GENERATOR
 #include "../src/generated/FlashStringGeneratorAuto.h"
 #endif
+#if _MSC_VER
+#include "../../../src/generated/FlashStringGeneratorAuto.h"
+#endif
 #include <algorithm>
 #include <array>
 #include <vector>

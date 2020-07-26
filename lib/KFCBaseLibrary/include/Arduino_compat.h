@@ -196,6 +196,11 @@ static size_t constexpr constexpr_strlen(const char *str)
     return StringConstExpr::strlen(str);
 }
 
+static size_t constexpr constexpr_strlen(const uint8_t *str)
+{
+    return StringConstExpr::strlen(str);
+}
+
 static size_t constexpr constexpr_strlen_P(const char *str)
 {
     return StringConstExpr::strlen(str);

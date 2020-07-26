@@ -7,6 +7,31 @@
 
 namespace KFCConfigurationClasses {
 
+    const void *loadBinaryConfig(HandleType handle, uint16_t length)
+    {
+        return config.getBinaryV(handle, length);
+    }
+
+    void *loadWriteableBinaryConfig(HandleType handle, uint16_t length)
+    {
+        return config.getWriteableBinary(handle, length);
+    }
+
+    void storeBinaryConfig(HandleType handle, const void *data, uint16_t length)
+    {
+        config.setBinary(handle, data, length);
+    }
+
+    const char *loadStringConfig(HandleType handle)
+    {
+        return config.getString(handle);
+    }
+
+    void storeStringConfig(HandleType handle, const char *str)
+    {
+        config.setString(handle, str);
+    }
+
     // --------------------------------------------------------------------
     // Flags
 
@@ -37,7 +62,7 @@ namespace KFCConfigurationClasses {
 
         _flags.serial2TCPEnabled = true;
 
-        _flags.syslogProtocol = SYSLOG_PROTOCOL_TCP;
+        _flags.syslogEnabled = false;
 
         _flags.apStandByMode = true;
 
@@ -68,6 +93,36 @@ namespace KFCConfigurationClasses {
     {
         config._H_SET(Config().flags, _flags);
     }
+
+    bool System::Flags::isMQTTEnabled() const
+    {
+        if (_flags.mqttEnabled) {
+            if (Plugins::MQTTClient::getConfig().mode_enum != Plugins::MQTTClient::ModeType::DISABLED) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    void System::Flags::setMQTTEnabled(bool state)
+    {
+        _flags.mqttEnabled = state;
+        if (Plugins::MQTTClient::getConfig().mode_enum == Plugins::MQTTClient::ModeType::DISABLED) {
+            auto &cfg = Plugins::MQTTClient::getWriteableConfig();
+            cfg.mode_enum = (cfg.port == 8883) ? Plugins::MQTTClient::ModeType::SECURE : Plugins::MQTTClient::ModeType::UNSECURE;
+        }
+    }
+
+    bool System::Flags::isSyslogEnabled() const
+    {
+        return _flags.syslogEnabled;
+    }
+
+    void System::Flags::setSyslogEnabled(bool state)
+    {
+        _flags.syslogEnabled = state;
+    }
+
 
     // --------------------------------------------------------------------
     // Device

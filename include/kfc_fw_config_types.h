@@ -56,7 +56,8 @@ struct ConfigFlags {
     ConfigFlags_t stationModeDHCPEnabled: 1;
     ConfigFlags_t webServerMode: 2;
     ConfigFlags_t ntpClientEnabled: 1;
-    ConfigFlags_t syslogProtocol: 3;
+    ConfigFlags_t syslogEnabled: 1;
+    ConfigFlags_t __reserved3:2; // free to use
     ConfigFlags_t mqttEnabled: 1;
     ConfigFlags_t __reserved1:2; // free to use
     ConfigFlags_t restApiEnabled: 1;

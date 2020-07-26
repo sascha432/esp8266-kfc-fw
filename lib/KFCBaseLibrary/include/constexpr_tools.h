@@ -103,6 +103,10 @@ namespace StringConstExpr {
             return str ? (pos == -1 ? strlen(str, limit, 0) : (limit != 0 && *(str + pos) ? strlen(str, limit - 1, pos + 1) : pos)) : 0;
         }
 
+        constexpr int strlen(const uint8_t *str, int limit = -1, int pos = -1) {
+            return str ? (pos == -1 ? strlen(str, limit, 0) : (limit != 0 && *(str + pos) ? strlen(str, limit - 1, pos + 1) : pos)) : 0;
+        }
+
         // return first occurrence of ch in str before limit characters
         constexpr const char* strchr(const char* str, int ch, int limit = -1, const char* ptr = nullptr) {
             return str ? (ptr ? ((ptr < str + strlen(str, limit) ? (*ptr == ch ? ptr : strchr(str, ch, limit, ptr + 1)) : nullptr)) : strchr(str, ch, limit, str)) : nullptr;
@@ -122,6 +126,9 @@ namespace StringConstExpr {
 #if __GNUC__
     constexpr int strlen(const char* str, int limit = -1, int pos = -1) {
         return (limit == -1 && pos == - 1) ? __builtin_strlen(str) : SlowStrFuncs::strlen(str, limit, pos);
+    }
+    constexpr int strlen(const uint8_t* str) {
+        return SlowStrFuncs::strlen(str);
     }
     constexpr const char* strchr(const char* str, int ch, int limit = -1, const char* ptr = nullptr) {
         return limit == -1 ? __builtin_strchr(str, ch) : SlowStrFuncs::strchr(str, ch, limit, ptr);

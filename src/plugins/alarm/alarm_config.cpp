@@ -125,20 +125,4 @@ namespace KFCConfigurationClasses {
         }
     }
 
-
-    Plugins::Alarm::Alarm_t &Plugins::Alarm::getWriteableConfig()
-    {
-        return config._H_W_GET(MainConfig().plugins.alarm.cfg);
-    }
-
-    Plugins::Alarm::Alarm_t Plugins::Alarm::getConfig()
-    {
-        return config._H_GET(MainConfig().plugins.alarm.cfg);
-    }
-
-    void Plugins::Alarm::setConfig(Alarm_t &alarm)
-    {
-        config._H_SET(MainConfig().plugins.alarm.cfg, alarm);
-    }
-
 }

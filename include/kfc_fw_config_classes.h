@@ -7,13 +7,78 @@
 #include <Arduino_compat.h>
 #include <session.h>
 #include <buffer.h>
+#include <crc16.h>
 #include "kfc_fw_config_types.h"
 
 #include <push_pack.h>
 
+#if 0
+#define __CDBG_printf(...)                                                  __DBG_printf(__VA_ARGS__)
+#define __CDBG_dump(class_name, cfg)                                        cfg.dump<class_name>();
+#define __CDBG_dumpString(name)                                             DEBUG_OUTPUT.printf_P(PSTR("%s [%04X]=%s\n"), _STRINGIFY(name), k##name##ConfigHandle, get##name());
+#define CONFIG_DUMP_STRUCT_INFO(type)                                       DEBUG_OUTPUT.printf_P(PSTR("--- config struct handle=%04x\n"), type::kConfigStructHandle);
+#define CONFIG_DUMP_STRUCT_VAR(name)                                        { DEBUG_OUTPUT.print(_STRINGIFY(name)); DEBUG_OUTPUT.print("="); DEBUG_OUTPUT.println(this->name); }
+#else
+#define __CDBG_printf(...)
+#define __CDBG_dump(class_name, cfg)
+#define __CDBG_dumpString(name)
+#define CONFIG_DUMP_STRUCT_INFO(type)
+#define CONFIG_DUMP_STRUCT_VAR(name)
+#endif
+
 #undef DEFAULT
 
+#define CREATE_ZERO_CONF_DEFAULT(service, proto, variable, default_value)   "${zeroconf:_" service "._" proto "," variable "|" default_value "}"
+#define CREATE_ZERO_CONF_NO_DEFAULT(service, proto, variable)               "${zeroconf:_" service "._" proto "," variable "}"
+
+
+#ifndef _H
+#define _H_DEFINED_KFCCONFIGURATIONCLASSES                                  1
+#define _H(name)                                                            constexpr_crc16_update(_STRINGIFY(name), constexpr_strlen(_STRINGIFY(name)))
+#define CONFIG_GET_HANDLE_STR(name)                                         constexpr_crc16_update(name, constexpr_strlen(name))
+#endif
+
+#define CREATE_STRING_GETTER_SETTER(class_name, name, len) \
+    static constexpr size_t k##name##MaxSize = len; \
+    static constexpr HandleType k##name##ConfigHandle = CONFIG_GET_HANDLE_STR(_STRINGIFY(class_name) "." _STRINGIFY(name)); \
+    static const char *get##name() { return loadStringConfig(k##name##ConfigHandle); } \
+    static void set##name(const char *str) { storeStringConfig(k##name##ConfigHandle, str); }
+
+
 namespace KFCConfigurationClasses {
+
+    using HandleType = uint16_t;
+
+    const void *loadBinaryConfig(HandleType handle, uint16_t length);
+    void *loadWriteableBinaryConfig(HandleType handle, uint16_t length);
+    void storeBinaryConfig(HandleType handle, const void *data, uint16_t length);
+    const char *loadStringConfig(HandleType handle);
+    void storeStringConfig(HandleType handle, const char *);
+
+    template<typename ConfigType, HandleType handleArg>
+    class ConfigGetterSetter {
+    public:
+        static constexpr uint16_t kConfigStructHandle = handleArg;
+        using ConfigStructType = ConfigType;
+
+        static ConfigType getConfig()
+        {
+            __CDBG_printf("getConfig=%04x size=%u", kConfigStructHandle, sizeof(ConfigType));
+            return *reinterpret_cast<const ConfigType *>(loadBinaryConfig(kConfigStructHandle, sizeof(ConfigType)));
+        }
+
+        static void setConfig(const ConfigType &params)
+        {
+            __CDBG_printf("setConfig=%04x size=%u", kConfigStructHandle, sizeof(ConfigType));
+            storeBinaryConfig(kConfigStructHandle, &params, sizeof(params));
+        }
+
+        static ConfigType &getWriteableConfig()
+        {
+            __CDBG_printf("getWriteableConfig=%04x size=%u", kConfigStructHandle, sizeof(ConfigType));
+            return *reinterpret_cast<ConfigType *>(loadWriteableBinaryConfig(kConfigStructHandle, sizeof(ConfigType)));
+        }
+    };
 
     struct System {
 
@@ -52,12 +117,10 @@ namespace KFCConfigurationClasses {
             void setMDNSEnabled(bool state) {
                 _flags.enableMDNS = state;
             }
-            bool isMQTTEnabled() const {
-                return _flags.mqttEnabled;
-            }
-            void setMQTTEnabled(bool state) {
-                _flags.mqttEnabled = state;
-            }
+            bool isMQTTEnabled() const;
+            void setMQTTEnabled(bool state);
+            bool isSyslogEnabled() const;
+            void setSyslogEnabled(bool state);
 
         private:
             ConfigFlags _flags;
@@ -541,7 +604,7 @@ namespace KFCConfigurationClasses {
         #define IOT_ALARM_PLUGIN_DEFAULT_MAX_DURATION               300
         #endif
 
-        class Alarm
+        class AlarmConfig
         {
         public:
             static constexpr uint8_t MAX_ALARMS = IOT_ALARM_PLUGIN_MAX_ALERTS;
@@ -605,6 +668,10 @@ namespace KFCConfigurationClasses {
             typedef struct __attribute__packed__ {
                 SingleAlarm_t alarms[MAX_ALARMS];
             } Alarm_t;
+        };
+
+        class Alarm : public AlarmConfig, public ConfigGetterSetter<AlarmConfig::Alarm_t, _H(MainConfig().plugins.alarm.cfg)> {
+        public:
 
             Alarm();
 
@@ -629,9 +696,6 @@ namespace KFCConfigurationClasses {
 
             static void defaults();
             static void dump(Print &output, Alarm_t &cfg);
-            static Alarm_t &getWriteableConfig();
-            static Alarm_t getConfig();
-            static void setConfig(Alarm_t &alarm);
 
             Alarm_t cfg;
         };
@@ -639,7 +703,7 @@ namespace KFCConfigurationClasses {
         // --------------------------------------------------------------------
         // Serial2TCP
 
-        class Serial2TCP {
+        class Serial2TCPConfig {
         public:
             enum class ModeType : uint8_t {
                 NONE,
@@ -652,7 +716,7 @@ namespace KFCConfigurationClasses {
                 SOFTWARE
             };
 
-            typedef struct __attribute__packed__ {
+            typedef struct __attribute__packed__ Serial2Tcp_t {
                 uint16_t port;
                 uint32_t baudrate;
                 union __attribute__packed__ {
@@ -670,31 +734,27 @@ namespace KFCConfigurationClasses {
                 uint8_t keep_alive;
                 uint8_t auto_reconnect;
                 uint16_t idle_timeout;
-            } Serial2Tcp_t;
 
+                Serial2Tcp_t() : port(2323), baudrate(KFC_SERIAL_RATE), mode(ModeType::SERVER), serial_port(SerialPortType::SERIAL0), rx_pin(0), tx_pin(0), authentication(false), auto_connect(false), keep_alive(30), auto_reconnect(5), idle_timeout(300) {}
+
+            } Serial2Tcp_t;
+        };
+
+        class Serial2TCP : public Serial2TCPConfig, ConfigGetterSetter<Serial2TCPConfig::Serial2Tcp_t, _H(MainConfig().plugins.serial2tcp.cfg)> {
         public:
+
             static void defaults();
             static bool isEnabled();
-            static Serial2Tcp_t getConfig();
-            static void setConfig(const Serial2Tcp_t &params);
-            static Serial2Tcp_t &getWriteableConfig();
-            static const char *getHostname();
-            static const char *getUsername();
-            static const char *getPassword();
-            static void setHostname(const char *hostname);
-            static void setUsername(const char *username);
-            static void setPassword(const char *password);
 
-            Serial2Tcp_t cfg;
-            char hostname[65];
-            char username[33];
-            char password[33];
+            CREATE_STRING_GETTER_SETTER(MainConfig().plugins.serial2tcp, Hostname, 64);
+            CREATE_STRING_GETTER_SETTER(MainConfig().plugins.serial2tcp, Username, 32);
+            CREATE_STRING_GETTER_SETTER(MainConfig().plugins.serial2tcp, Password, 32);
         };
 
         // --------------------------------------------------------------------
         // MQTTClient
 
-        class MQTTClient {
+        class MQTTClientConfig {
         public:
             enum class ModeType : uint8_t {
                 MIN = 0,
@@ -713,59 +773,92 @@ namespace KFCConfigurationClasses {
                 DEFAULT = 0xff,
             };
 
-            typedef struct __attribute__packed__ {
+            typedef struct __attribute__packed__ MqttConfig_t {
                 uint16_t port;
                 uint8_t keepalive;
                 union __attribute__packed__ {
-                    // uint8_t mode: 5;
-                    // ModeType mode_enum: 5;
-                    uint8_t mode;
                     ModeType mode_enum;
-                    //TODO suppress warning
+                    uint8_t mode;
                 };
                 union __attribute__packed__ {
-                    uint8_t qos;
                     QosType qos_enum;
-                    //TODO suppress warning for  TTClient::<anonymous struct>::<anonymous union>::qos_enum' is too small to hold all v
-                    // uint8_t qos: 2;
-                    // QosType qos_enum: 2;
+                    uint8_t qos;
                 };
                 uint8_t auto_discovery: 1;
-            } MqttConfig_t;
 
+                template<class T>
+                void dump() {
+                    CONFIG_DUMP_STRUCT_INFO(T);
+                    CONFIG_DUMP_STRUCT_VAR(port);
+                    CONFIG_DUMP_STRUCT_VAR(keepalive);
+                    CONFIG_DUMP_STRUCT_VAR(mode);
+                    CONFIG_DUMP_STRUCT_VAR(qos);
+                    CONFIG_DUMP_STRUCT_VAR(auto_discovery);
+                }
+
+                MqttConfig_t() : port(1883), keepalive(15), mode_enum(ModeType::UNSECURE), qos_enum(QosType::EXACTLY_ONCE), auto_discovery(true) {}
+
+            } MqttConfig_t;
+        };
+
+        class MQTTClient : public MQTTClientConfig, public ConfigGetterSetter<MQTTClientConfig::MqttConfig_t, _H(MainConfig().plugins.mqtt.cfg)> {
         public:
             static void defaults();
             static bool isEnabled();
-            static MqttConfig_t getConfig();
-            static void setConfig(const MqttConfig_t &params);
-            static MqttConfig_t &getWriteableConfig();
-            static const char *getHostname();
-            static const char *getUsername();
-            static const char *getPassword();
+
+            CREATE_STRING_GETTER_SETTER(MainConfig().plugins.mqtt, Hostname, 128);
+            CREATE_STRING_GETTER_SETTER(MainConfig().plugins.mqtt, Username, 32);
+            CREATE_STRING_GETTER_SETTER(MainConfig().plugins.mqtt, Password, 32);
+            CREATE_STRING_GETTER_SETTER(MainConfig().plugins.mqtt, Topic, 32);
+            CREATE_STRING_GETTER_SETTER(MainConfig().plugins.mqtt, AutoDiscoveryPrefix, 32);
+
             static const uint8_t *getFingerPrint(uint16_t &size);
-            static const char *getTopic();
-            static const char *getAutoDiscoveryPrefix();
-            static void setHostname(const char *hostname);
-            static void setUsername(const char *username);
-            static void setPassword(const char *password);
             static void setFingerPrint(const uint8_t *fingerprint, uint16_t size);
-            static void setTopic(const char *topic);
-            static void setAutoDiscoveryPrefix(const char *discovery);
-
-            static constexpr size_t kHostnameMaxSize = 160;
-            static constexpr size_t kUsernameMaxSize = 32;
-            static constexpr size_t kPasswordMaxSize = 32;
-            static constexpr size_t kTopicMaxSize = 128;
-            static constexpr size_t kDiscoveryPrefixMaxSize = 32;
             static constexpr size_t kFingerprintMaxSize = 20;
+        };
 
-            MqttConfig_t cfg;
-            char hostname[kHostnameMaxSize + 1];
-            char username[kUsernameMaxSize + 1];
-            char password[kPasswordMaxSize + 1];
-            char topic[kTopicMaxSize + 1];
-            char discovery_prefix[kDiscoveryPrefixMaxSize + 1];
-            uint8_t fingerprint[kFingerprintMaxSize];
+        // --------------------------------------------------------------------
+        // Syslog
+        class SyslogClientConfig {
+        public:
+            enum class SyslogProtocolType : uint8_t {
+                MIN = 0,
+                NONE = MIN,
+                UDP,
+                TCP,
+                TCP_TLS,
+                FILE,
+                MAX
+            };
+            typedef struct __attribute__packed__ SyslogConfig_t {
+                uint16_t port;
+                union __attribute__packed__ {
+                    SyslogProtocolType protocol_enum;
+                    uint8_t protocol;
+                };
+
+                template<class T>
+                void dump() {
+                    CONFIG_DUMP_STRUCT_INFO(T);
+                    CONFIG_DUMP_STRUCT_VAR(port);
+                    CONFIG_DUMP_STRUCT_VAR(protocol);
+                }
+
+                SyslogConfig_t() : port(514), protocol_enum(SyslogProtocolType::TCP) {}
+
+            } SyslogConfig_t;
+        };
+
+        class SyslogClient : public SyslogClientConfig, public ConfigGetterSetter<SyslogClientConfig::SyslogConfig_t, _H(MainConfig().plugins.syslog)>
+        {
+        public:
+            SyslogClient() {}
+
+            static void defaults();
+            static bool isEnabled();
+            static bool isEnabled(SyslogProtocolType protocol);
+
+            CREATE_STRING_GETTER_SETTER(MainConfig().plugins.syslog, Hostname, 128);
         };
 
         // --------------------------------------------------------------------
@@ -778,6 +871,7 @@ namespace KFCConfigurationClasses {
         Alarm alarm;
         Serial2TCP serial2tcp;
         MQTTClient mqtt;
+        SyslogClient syslog;
 
     };
 
@@ -794,3 +888,9 @@ namespace KFCConfigurationClasses {
 };
 
 #include <pop_pack.h>
+
+#ifdef _H_DEFINED_KFCCONFIGURATIONCLASSES
+#undef CONFIG_GET_HANDLE_STR
+#undef _H
+#undef _H_DEFINED_KFCCONFIGURATIONCLASSES
+#endif

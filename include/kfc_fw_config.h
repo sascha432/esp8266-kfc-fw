@@ -123,19 +123,6 @@ public:
     }
 };
 
-class Config_Syslog
-{
-public:
-    typedef struct{
-        uint16_t port;
-    } config_t;
-    config_t config;
-
-    Config_Syslog() : config({514}) {
-        //TODO
-    }
-};
-
 class Config_Ping
 {
 public:
@@ -297,14 +284,10 @@ typedef struct {
     char device_token[128];
 
     Config_HTTP http;
-    Config_Syslog syslog;
     Config_NTP ntp;
 
     uint16_t http_port;
     char cert_passphrase[33];
-
-    char syslog_host[65];
-    uint16_t syslog_port;
 
     DimmerModule dimmer;
     DimmerModuleButtons dimmer_buttons;

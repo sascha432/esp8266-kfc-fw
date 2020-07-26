@@ -24,15 +24,24 @@ $.formValidator = {
         for(var i = 0; i < $.formValidator.errors.length; i++) {
             var e = $.formValidator.errors[i];
             var $t = $(e.target);
+            if ($t.length == 0) {
+                dbg_console.error('target invalid', $t);
+            }
             if ($t.parent().hasClass('form-enable-slider')) {
                 $t = $t.parent();
-                console.log($t);
+                dbg_console.debug('slider', $t);
             }
             $t.removeClass('is-valid').addClass('is-invalid');
             var parent = $t.closest('.input-group,.form-group');
+            if (parent.length == 0) {
+                dbg_console.error('parent group not found', $t);
+            }
             var error = '<div class="invalid-feedback" style="display:block">' + e.error + '</div>';
             var field = parent.children().last();
-            field.after(error)
+            var added = field.after(error);
+            if (!$(added).is(":visible") || $(added).is(":hidden")) {
+                dbg_console.error('error is hodden', $(added));
+            }
         }
     },
     addErrors: function(errors, target) {
@@ -95,16 +104,21 @@ $(function() {
     });
 
     $('.form-dependency-group').each(function() {
-        // i: '#input', 't': '#target', 's': { '#input_value': 'code to execute', 'm': 'code to execute if value is not found in s', 'e': 'code to always execute before' }
-        // code: $I input, $T target, $V value
-        //
-        // #group-div-class is the target, #my_input_field: value 0 and 1 hide the div, 2 shows it
-        // auto &group = form.addDivGroup(F("group-div-class"), F("{'i':'#my_input_field','s':{'0':'$T.hide()','1':'$T.hide()','2':'$T.show()'}},'m':'alert(\\'Invalid value: \\'+$V)'"));
         var dep;
+        var actionStr;
         try {
-            dep = JSON.parse($(this).data('action').replace(/'/g, '"'));
+            actionStr = $(this).data('action');
+            var str = actionStr.replace(/'/g, '"');
+            str = str.replace(/&quot;/g, '\\"');
+            str = str.replace(/&apos;/g, "'");
+            try {
+                dep = JSON.parse(str);
+            } catch(e) {
+                dbg_console.error(e, $(this).data('action'), 'raw', actionStr, 'replaced', str, 'json', dep);
+                return;
+            }
         } catch(e) {
-            dbg_console.error(e)
+            dbg_console.error(e, $(this).data('action'));
             return;
         }
         var states = dep.s;
@@ -114,19 +128,22 @@ $(function() {
         var $T = dep.t ? $(dep.t) : $(this);
         $I.on('change', function() {
             var $V = $I.val();
+            // var $Vint = parseInt($V);
             var code = miss;
             var vKey = 'NO KEY FOUND';
             $.each(states, function(key, val) {
                 if ($V == key) {
+                // if ($V === key || parseInt(key) === $Vint) {
                     code = val;
                     vKey = key;
                 }
             });
             try {
                 code_x = always_execute + ';;;' + code;
+                // dbg_console.debug('onChange', 'V', $V, $Vint, 'I', $I, 'T', $T, 'key', vKey, 'code', code_x);
                 eval(code_x);
             } catch(e) {
-                dbg_console.debug(e, {'value': $V, 'key': vKey, 'states': states, 'code': code_x});
+                dbg_console.error(e, {'value': $V, 'target': $T, 'input': $I, 'key': vKey, 'states': states, 'code': code_x});
             }
         }).trigger('change');
     });

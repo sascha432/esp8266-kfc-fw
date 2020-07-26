@@ -411,7 +411,7 @@ void HassPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
                 break;
             case ActionEnum_t::CHANGE_BRIGHTNESS:
                 form.add(F("values[0]"), String(action.getValue(0)), FormField::InputFieldType::TEXT)
-                    ->setFormUI((new FormUI(FormUI::TEXT, F("Brightness")))->setSuffix(F("&#177;")));
+                    ->setFormUI((new FormUI(FormUI::TEXT, F("Brightness")))->setSuffix(String(PRINTHTMLENTITIES_PLUSM[0])));
                 form.add(F("values[1]"), String(action.getValue(1)), FormField::InputFieldType::TEXT)
                     ->setFormUI(new FormUI(FormUI::TEXT, F("Min. Brightness")));
                 form.add(F("values[2]"), String(action.getValue(2)), FormField::InputFieldType::TEXT)
@@ -437,7 +437,7 @@ void HassPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
                 break;
             case ActionEnum_t::VOLUME_SET:
                 form.add(F("values[0]"), String(action.getValue(0)), FormField::InputFieldType::TEXT)
-                    ->setFormUI((new FormUI(FormUI::TEXT, F("Volume")))->setSuffix(F("&#37;")));
+                    ->setFormUI((new FormUI(FormUI::TEXT, F("Volume")))->setSuffix(String('%')));
                 break;
             case ActionEnum_t::MQTT_SET:
                 form.add(F("values[0]"), String(action.getValue(0)), FormField::InputFieldType::TEXT)

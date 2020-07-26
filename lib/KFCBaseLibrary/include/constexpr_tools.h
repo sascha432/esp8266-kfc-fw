@@ -113,6 +113,10 @@ namespace StringConstExpr {
             return str ? (ptr ? ((ptr >= str ? (*ptr == ch ? ptr : (ptr == str ? nullptr : strrchr(str, ch, limit, ptr - 1))) : nullptr)) : strrchr(str, ch, limit, str + strlen(str, limit) - 1)) : nullptr;
         }
 
+        constexpr bool strings_equal(char const * a, char const * b) {
+            return (uint8_t)*a == (uint8_t)*b && (*a == 0 || strings_equal(a + 1, b + 1));
+        }
+
     };
 
 #if __GNUC__
@@ -125,11 +129,17 @@ namespace StringConstExpr {
     constexpr const char* strrchr(const char* str, int ch, int limit = -1, const char* ptr = nullptr) {
         return limit == -1 ? __builtin_strrchr(str, ch) : SlowStrFuncs::strrchr(str, ch, limit, ptr);
     }
+    // constexpr int strcmp(const char *str1, const char *str2) {
+    //     return __builtin_strcmp(str1, str2);
+    // }
 #else
     using SlowStrFuncs::strlen;
     using SlowStrFuncs::strchr;
     using SlowStrFuncs::strrchr;
 #endif
+    constexpr int strcmp(const char *str1, const char *str2) {
+        return SlowStrFuncs::strings_equal(str1, str2) == true ? 1 : 0;
+    }
 
     // returns strlen() if endptr is null or the start_length of the string with endptr being the NUL character
     constexpr int strlen_endptr(const char* str, const char* ptr = nullptr) {

@@ -83,6 +83,7 @@ void writeHandles()
 
 uint16_t getHandle(const char *name)
 {
+    Serial.printf("name=%s\n",name);
     ConfigurationParameter::Handle_t crc = constexpr_crc16_update(name, constexpr_strlen(name));
     auto iterator = std::find(handles.begin(), handles.end(), crc);
     if (iterator == handles.end()) {
@@ -288,6 +289,12 @@ const uint8_t *Configuration::getBinary(Handle_t handle, uint16_t &length)
         return nullptr;
     }
     return param->getBinary(this, length, offset);
+}
+
+void *Configuration::getWriteableBinary(Handle_t handle, uint16_t length)
+{
+    auto &param = getWritableParameter<void *>(handle, length);
+    return reinterpret_cast<void *>(param._info.data);
 }
 
 void Configuration::setString(Handle_t handle, const char *string, uint16_t length)

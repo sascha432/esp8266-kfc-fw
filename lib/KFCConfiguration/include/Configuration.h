@@ -68,8 +68,10 @@ extern EEPROMClass EEPROM;
 #define CONFIG_MAGIC_DWORD              0xfef31214
 #endif
 
-#define CONFIG_GET_HANDLE(name)         getHandle(_STRINGIFY(name))
+#define CONFIG_GET_HANDLE(name)         __get_constexpr_getHandle(_STRINGIFY(name))
+#define CONFIG_GET_HANDLE_STR(name)     __get_constexpr_getHandle(name)
 #define _H(name)                        CONFIG_GET_HANDLE(name)
+#define _HS(name)                       __get_constexpr_getHandle(name)
 
 #define _H_GET(name)                    get<decltype(name)>(_H(name))
 #define _H_W_GET(name)                  getWriteable<decltype(name)>(_H(name))
@@ -81,7 +83,7 @@ extern EEPROMClass EEPROM;
 #define _H_W_GET_IP(name)               getWriteable<uint32_t>(_H(name))
 #define _H_SET_IP(name, value)          set<uint32_t>(_H(name), (uint32_t)value)
 
-#if DEBUG && DEBUG_CONFIGURATION
+#if DEBUG && DEBUG_CONFIGURATION && 0
 // store all configuration handle names for debugging. needs a lot RAM
 #define DEBUG_GETHANDLE 1
 #define CONSTEXPR_CONFIG_HANDLE_T ConfigurationParameter::Handle_t
@@ -90,9 +92,7 @@ const char *getHandleName(ConfigurationParameter::Handle_t crc);
 #else
 #define DEBUG_GETHANDLE 0
 #define CONSTEXPR_CONFIG_HANDLE_T constexpr ConfigurationParameter::Handle_t
-ConfigurationParameter::Handle_t constexpr getHandle(const char *name) {
-    return constexpr_crc16_update((const uint8_t *)name, constexpr_strlen(name));
-}
+#define __get_constexpr_getHandle(name) constexpr_crc16_update(name, constexpr_strlen(name))
 const char *getHandleName(ConfigurationParameter::Handle_t crc);
 #endif
 
@@ -304,7 +304,12 @@ public:
     const char *getString(Handle_t handle);
     char *getWriteableString(Handle_t handle, uint16_t maxLength);
 
+    // uint8_t for compatibility
     const uint8_t *getBinary(Handle_t handle, uint16_t &length);
+    const void *getBinaryV(Handle_t handle, uint16_t &length) {
+        return reinterpret_cast<const void *>(getBinary(handle, length));
+    }
+    void *getWriteableBinary(Handle_t handle, uint16_t length);
 
     // PROGMEM safe
     void setString(Handle_t handle, const char *str, uint16_t length);

@@ -83,15 +83,17 @@ public:
 
     template <typename T>
     static TypeEnum_t constexpr getType() {
-        return std::is_same<T, char *>::value ? STRING :
-            (std::is_same<T, float>::value ? FLOAT :
-                (std::is_same<T, double>::value ? DOUBLE :
-                    ((std::is_same<T, char>::value || std::is_same<T, signed char>::value || std::is_same<T, unsigned char>::value) ? BYTE :
-                        ((std::is_same<T, int16_t>::value || std::is_same<T, uint16_t>::value) ? WORD :
-                            ((std::is_same<T, int32_t>::value || std::is_same<T, uint32_t>::value) ? DWORD :
-                                ((std::is_same<T, int64_t>::value || std::is_same<T, uint64_t>::value) ? QWORD :
-                                    BINARY
-        ))))));
+        return
+            (std::is_same<T, char *>::value ? STRING :
+                ((std::is_same<T, uint8_t *>::value || std::is_same<T, void *>::value) ? BINARY :
+                    (std::is_same<T, float>::value ? FLOAT :
+                        (std::is_same<T, double>::value ? DOUBLE :
+                            ((std::is_same<T, char>::value || std::is_same<T, signed char>::value || std::is_same<T, unsigned char>::value) ? BYTE :
+                                ((std::is_same<T, int16_t>::value || std::is_same<T, uint16_t>::value) ? WORD :
+                                    ((std::is_same<T, int32_t>::value || std::is_same<T, uint32_t>::value) ? DWORD :
+                                        ((std::is_same<T, int64_t>::value || std::is_same<T, uint64_t>::value) ? QWORD :
+                                            BINARY
+            ))))))));
     }
 
     //void setType(TypeEnum_t type);

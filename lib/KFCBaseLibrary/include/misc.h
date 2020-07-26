@@ -188,6 +188,11 @@ inline size_t String_trim_P(String &str, const __FlashStringHelper *chars) {
     return String_trim_P(str, reinterpret_cast<PGM_P>(chars));
 }
 
+// trim trailing zeros
+// return length of the string
+// output can be nullptr to get the length
+size_t printTrimmedDouble(Print *output, double value, int digits = 6);
+
 inline bool String_startsWith(const String &str1, char ch) {
     return str1.charAt(0) == ch;
 }

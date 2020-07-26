@@ -465,6 +465,15 @@ size_t String_rtrim(String &str, char ch, size_t minLength)
     return String_rtrim(str, chars, minLength);
 }
 
+size_t printTrimmedDouble(Print *output, double value, int digits)
+{
+    auto str = PrintString(F("%.*f"), digits, value);
+    size_t size = String_rtrim(str, '0', str.indexOf('.') + 2); // min. length dot + 1 char to avoid getting "1." for "1.0000"
+    if (output) {
+        return output->print(str);
+    }
+    return size;
+}
 
 #if 0
 

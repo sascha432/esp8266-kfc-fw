@@ -99,9 +99,7 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     }
 #if RTC_SUPPORT
     else if (String_equals(key, PSTR("RTC_STATUS"))) {
-        output.setRawOutput(true); // disable html entities translation
         config.printRTCStatus(output, false);
-        output.setRawOutput(false);
     }
 #endif
 #if NTP_CLIENT || RTC_SUPPORT
@@ -220,7 +218,7 @@ void UpgradeTemplate::process(const String &key, PrintHtmlEntitiesString &output
     if (String_equals(key, F("FIRMWARE_UPGRADE_FAILURE_CLASS"))) {
     }
     else if (String_equals(key, F("FIRMWARE_UPGRADE_FAILURE"))) {
-        output.setRawOutput(true);
+        output.setMode(PrintHtmlEntities::Mode::RAW);
         output.print(_errorMessage);
     }
     else {

@@ -699,7 +699,6 @@ namespace KFCConfigurationClasses {
             enum class ModeType : uint8_t {
                 MIN = 0,
                 DISABLED = MIN,
-                AUTO,
                 UNSECURE,
                 SECURE,
                 MAX

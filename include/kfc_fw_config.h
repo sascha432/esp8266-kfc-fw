@@ -333,8 +333,8 @@ typedef struct {
         return false; \
     }
 
-#define _H_STR_FUNC(getter, setter, ...) \
-    getter(), [__VA_ARGS__](const String &str, FormField &, bool store) { \
+#define _H_CHAR_PTR_FUNC(getter, setter, ...) \
+    String(getter()), [__VA_ARGS__](const String &str, FormField &, bool store) { \
         if (store) { \
             setter(str.c_str()); \
         } \

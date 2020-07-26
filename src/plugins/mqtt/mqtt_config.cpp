@@ -11,7 +11,7 @@ namespace KFCConfigurationClasses {
     {
         MqttConfig_t cfg;
         System::Flags::getWriteable().mqttEnabled = true;
-        cfg.mode_enum = ModeType::AUTO;
+        cfg.mode_enum = ModeType::UNSECURE;
         cfg.qos_enum = QosType::EXACTLY_ONCE;
         cfg.keepalive = 15;
         cfg.auto_discovery = true;
@@ -76,16 +76,28 @@ namespace KFCConfigurationClasses {
 
     void Plugins::MQTTClient::setHostname(const char *hostname)
     {
+        // TODO extract function
         const char *ptr;
         if ((ptr = strchr_P(hostname, ':')) != nullptr) {
             String tmp = FPSTR(hostname);
+            String_rtrim(tmp);
+            uint16_t port = 0;
             int pos = tmp.indexOf(':');
-            config._H_SET_STR(MainConfig().plugins.mqtt.hostname, tmp.substring(0, pos - 1));
-            getWriteableConfig().port = (uint16_t)atoi(tmp.c_str() + pos + 1);
+            if (pos != -1 && tmp.length() - pos <= 6) {
+                char *end = nullptr;
+                port = (uint16_t)strtoul(tmp.c_str() + pos + 1, &end, 10);
+                if (end && *end) {
+                    // invalid value
+                    port = 0;
+                }
+            }
+            if (port) {
+                config._H_SET_STR(MainConfig().plugins.mqtt.hostname, tmp.substring(0, pos - 1));
+                getWriteableConfig().port = (uint16_t)atoi(tmp.c_str() + pos + 1);
+                return;
+            }
         }
-        else {
-            config._H_SET_STR(MainConfig().plugins.mqtt.hostname, hostname);
-        }
+        config._H_SET_STR(MainConfig().plugins.mqtt.hostname, hostname);
     }
 
     void Plugins::MQTTClient::setUsername(const char *username)

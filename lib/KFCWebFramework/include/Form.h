@@ -40,7 +40,7 @@ public:
     // empty = no id/no class
     FormGroup &addGroup(const String &name, const String &label, bool expanded, FormUI::TypeEnum_t type = FormUI::TypeEnum_t::GROUP_START);
     // dependencies field:
-    // the string must contain a valid JSON object. " is replaced with \\" and ' with " to avoid too much escaping
+    // the string must contain a valid JSON object. ' is replaced with " to avoid too much escaping. use \\' for javascript strings (becomes ")
     //
     // i: '#input', 't': '#target', 's': { '#input_value': 'code to execute', 'm': 'code to execute if value is not found in s', 'e': 'code to always execute before' }
     // code: $I input, $T target, $V value

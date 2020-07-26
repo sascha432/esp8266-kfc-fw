@@ -7,6 +7,7 @@
 #include "FormData.h"
 #include "FormError.h"
 #include "FormValidator.h"
+#include <JsonTools.h>
 
 #if DEBUG_KFC_FORMS
 #include <debug_helper_enable.h>
@@ -245,17 +246,29 @@ const char *Form::process(const String &name) const
     return nullptr;
 }
 
-void Form::createJavascript(PrintInterface &out) const
+const char *Form::_jsonEncodeString(const String &str, PrintInterface &output)
+{
+    if (JsonTools::lengthEscaped(str) == str.length()) {
+        return str.c_str();
+    }
+    else {
+        PrintString encoded;
+        // encodes the name and attached it to the PrintInterface
+        JsonTools::printToEscaped(encoded, str);
+        return output.attachString(std::move(encoded));
+    }
+}
+
+void Form::createJavascript(PrintInterface &output) const
 {
     if (!isValid()) {
-        _debug_printf_P(PSTR("Form::createJavascript(): errors=%d\n"), _errors.size());
-        out.printf_P(PSTR("<script>\n$.formValidator.addErrors(["));
-        auto comma = PSTR(",");
-        uint8_t idx = 0;
+        __LDBG_printf(PSTR("errors=%d"), _errors.size());
+        output.printf_P(PSTR("<script>" FORMUI_CRLF "$.formValidator.addErrors("));
+        uint16_t idx = 0;
         for (auto &error: _errors) {
-            out.printf_P(PSTR("%s{'target':'#%s','error':'%s'}"), idx++ ? comma : emptyString.c_str(), error.getName().c_str(), error.getMessage().c_str()); //TODO escape quotes etc
+            output.printf_P(PSTR("%c{'target':'#%s','error':'%s'}"), idx++ ? ',' : '[', _jsonEncodeString(error.getName(), output), _jsonEncodeString(error.getMessage(), output));
         }
-        out.printf_P(PSTR("]);\n</script>"));
+        output.printf_P(PSTR("]);" FORMUI_CRLF "</script>"));
     }
 }
 

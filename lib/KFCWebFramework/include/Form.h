@@ -7,6 +7,7 @@
 #include <Arduino_compat.h>
 #include <functional>
 #include <vector>
+#include <PrintHtmlEntities.h>
 #include "FormField.h"
 #include "FormValue.h"
 #include "FormObject.h"
@@ -32,14 +33,20 @@ public:
     void setFormData(FormData *data);
     void setInvalidMissing(bool invalidMissing);
 
-    // #my-id = set id="my-id"
+    // name field:
+    // #my-id = set id="my-id"1
     // random-str = set id="random-str"
     // .my-class = add class="my-class"
     // empty = no id/no class
     FormGroup &addGroup(const String &name, const String &label, bool expanded, FormUI::TypeEnum_t type = FormUI::TypeEnum_t::GROUP_START);
-    // dependencies
+    // dependencies field:
+    // the string must contain a valid JSON object. " is replaced with \\" and ' with " to avoid too much escaping
     //
-    // auto &myGroup = form.addDivGroup(F("#my_id"), F("{'i':'#my_input','m':'$T.hide()','s':{'0':'$T.show()','1':'$T.show()','5':'$T.show()'}}"));
+    // i: '#input', 't': '#target', 's': { '#input_value': 'code to execute', 'm': 'code to execute if value is not found in s', 'e': 'code to always execute before' }
+    // code: $I input, $T target, $V value
+    //
+    // #group-div-class is the target, #my_input_field: value 0 and 1 hide the div, 2 shows it
+    // auto &group = form.addDivGroup(F("group-div-class"), F("{'i':'#my_input_field','s':{'0':'$T.hide()','1':'$T.hide()','2':'$T.show()'}},'m':'alert(\\'Invalid value: \\'+$V)'"));
     FormGroup &addDivGroup(const String &id, const String &dependencies = String()) {
         return addGroup(id, dependencies, false, FormUI::TypeEnum_t::GROUP_START_DIV);
     }
@@ -137,6 +144,8 @@ public:
     // }
 
 private:
+    static const char *_jsonEncodeString(const String &str, PrintInterface &out);
+
     FormData *_data;
     FieldsVector _fields;
     ErrorsVector _errors;

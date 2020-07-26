@@ -4,12 +4,14 @@
 
 #include "FormUI.h"
 #include "FormField.h"
+#include <PrintHtmlEntities.h>
+#include <misc.h>
 
-FormUI::FormUI(TypeEnum_t type) : _parent(nullptr), _type(type)
+FormUI::FormUI(Type type) : _parent(nullptr), _type(type)
 {
 }
 
-FormUI::FormUI(TypeEnum_t type, const String &label) : FormUI(type)
+FormUI::FormUI(Type type, const String &label) : FormUI(type)
 {
     setLabel(label, false);
 }
@@ -17,7 +19,7 @@ FormUI::FormUI(TypeEnum_t type, const String &label) : FormUI(type)
 FormUI *FormUI::setLabel(const String &label, bool raw)
 {
     _label = label;
-    if (!raw && _label.length() && _label.charAt(_label.length() - 1) != ':') {
+    if (!raw && !String_endsWith(label, ':')) {
         _label += ':';
     }
     return this;
@@ -55,14 +57,14 @@ FormUI *FormUI::setSuffix(const String &suffix)
 
 FormUI *FormUI::setPlaceholder(const String &placeholder)
 {
-    addAttribute(F("placeholder"), placeholder);
+    addAttribute(FSPGM(placeholder), placeholder);
     return this;
 }
 
 FormUI *FormUI::setMinMax(const String &min, const String &max)
 {
-    addAttribute(F("min"), min);
-    addAttribute(F("max"), max);
+    addAttribute(FSPGM(min), min);
+    addAttribute(FSPGM(max), max);
     return this;
 }
 
@@ -73,7 +75,9 @@ FormUI *FormUI::addAttribute(const String &name, const String &value)
     if (value.length()) {
         _attributes += '=';
         _attributes += '"';
-        _attributes += value; // TODO encode
+         if (!PrintHtmlEntities::translateTo(value.c_str(), _attributes, true)) {
+             _attributes += value;
+         }
         _attributes += '"';
     }
     return this;
@@ -89,80 +93,131 @@ FormUI *FormUI::addConditionalAttribute(bool cond, const String &name, const Str
 
 FormUI *FormUI::setReadOnly()
 {
-    return addAttribute(F("readonly"), String());
+    return addAttribute(FSPGM(readonly), String());
 }
+
+const char *FormUI::_encodeHtmlEntities(const char *cStr, bool attribute, PrintInterface &output)
+{
+    const char *attachedStr;
+    if ((attachedStr = output.getAttachedString(cStr)) != nullptr) {
+        return attachedStr;
+    }
+    int size;
+    if ((size = PrintHtmlEntities::getTranslatedSize(cStr, attribute)) == -1) {
+        return cStr;
+    }
+    String target;
+    if (PrintHtmlEntities::translateTo(cStr, target, size)) {
+        if ((attachedStr = output.getAttachedString(target.c_str())) != nullptr) { // check if we have this string already
+            return attachedStr;
+        }
+        return output.attachString(std::move(target));
+    }
+    return cStr;
+}
+
+// void FormUI::_encodeHtmlEntitiesString(String &str)
+// {
+//     int size = PrintHtmlEntities::getTranslatedSize(str.c_str());
+//     if (size != PrintHtmlEntities::kNoTranslationRequired) {
+//         String tmp;
+//         if (PrintHtmlEntities::translateTo(str.c_str(), tmp, size)) {
+//             str = std::move(tmp);
+//         }
+//     }
+// }
+
+// void FormUI::_encodeHtmlEntitiesToString(const String &from, bool attribute, String &target)
+// {
+//     int size = PrintHtmlEntities::getTranslatedSize(from.c_str(), attribute);
+//     if (size != PrintHtmlEntities::kNoTranslationRequired) {
+//         target = String();
+//         if (PrintHtmlEntities::translateTo(from.c_str(), target, attribute, size)) {
+//             return;
+//         }
+//     }
+//     target = from;
+// }
 
 void FormUI::html(PrintInterface &output)
 {
+    const char *name = nullptr;
     switch(_type) {
-        case TypeEnum_t::GROUP_START_HR: {
+        case Type::GROUP_START_HR:
+        case Type::GROUP_START_DIV:
+        case Type::GROUP_END_HR:
+        case Type::GROUP_END_DIV:
+        case Type::GROUP_END:
+            break;
+        default:
+            name = _encodeHtmlEntities(_parent->getName(), true, output);
+            break;
+    }
+    switch(_type) {
+        case Type::GROUP_START_HR: {
             if (_label.length()) {
-                output.printf_P(PSTR("<div class=\"form-row%s%s\"><div class=\"col-lg-12\"><h5>%s</h5></div><div class=\"col-lg-12\"><hr class=\"mt-0\"></div></div><div class=\"form-group\">" FORMUI_CRLF), _parent->getNameType(), _parent->getNameForType(), _label.c_str());
+                output.printf_P(PSTR("<div class=\"form-row%s%s\"><div class=\"col-lg-12\"><h5>%s</h5></div><div class=\"col-lg-12\"><hr class=\"mt-0\"></div></div><div class=\"form-group\">" FORMUI_CRLF), _parent->getNameType(), _parent->getNameForType(), _encodeHtmlEntities(_label, true, output));
             } else {
                 output.printf_P(PSTR("<div class=\"form-row%s%s\"><div class=\"col-lg-12 mt-3\"><hr></div></div><div class=\"form-group\">" FORMUI_CRLF), _parent->getNameType(), _parent->getNameForType());
             }
         } break;
-        case TypeEnum_t::GROUP_START_DIV: {
+        case Type::GROUP_START_DIV: {
             if (_label.length()) {
-                output.printf_P(PSTR("<div class=\"form-dependency-group%s%s\" data-action=\"%s\">" FORMUI_CRLF), _parent->getNameType(), _parent->getNameForType(), _label.c_str());
+                output.printf_P(PSTR("<div class=\"form-dependency-group%s%s\" data-action=\"%s\">" FORMUI_CRLF), _parent->getNameType(), _parent->getNameForType(), _encodeHtmlEntities(_label, true, output));
             } else {
                 output.printf_P(PSTR("<div class=\"form-dependency-group%s%s\">" FORMUI_CRLF), _parent->getNameType(), _parent->getNameForType());
             }
         } break;
-        case TypeEnum_t::GROUP_END_HR:
-        case TypeEnum_t::GROUP_END_DIV: {
+        case Type::GROUP_END_HR:
+        case Type::GROUP_END_DIV: {
             output.printf_P(PSTR("</div>" FORMUI_CRLF));
         } break;
-        case TypeEnum_t::GROUP_START: {
+        case Type::GROUP_START: {
             FormGroup &group = reinterpret_cast<FormGroup &>(*_parent);
-            auto id = _parent->getName().c_str();
             output.printf_P(PSTR("<div class=\"form-group\"><button class=\"btn btn-secondary btn-block\""));
-            output.printf_P(PSTR(" type=\"button\" data-toggle=\"collapse\" data-target=\"#%s\" aria-expanded=\"false\" aria-controls=\"%s\">"), id, id);
-            output.printf_P(PSTR("%s</button></div><div class=\"collapse%s\" id=\"%s\"><div class=\"card card-body mb-3\">" FORMUI_CRLF), _label.c_str(), group.isExpanded() ? F(".show") : F(""), id);
+            output.printf_P(PSTR(" type=\"button\" data-toggle=\"collapse\" data-target=\"#%s\" aria-expanded=\"false\" aria-controls=\"%s\">"), name, name);
+            output.printf_P(PSTR("%s</button></div><div class=\"collapse%s\" id=\"%s\"><div class=\"card card-body mb-3\">" FORMUI_CRLF), _encodeHtmlEntities(_label, false, output), group.isExpanded() ? F(".show") : FPSTR(emptyString.c_str()), name);
         } break;
-        case TypeEnum_t::GROUP_END: {
+        case Type::GROUP_END: {
             output.printf_P(PSTR("</div></div>" FORMUI_CRLF));
         } break;
-        case TypeEnum_t::HIDDEN: {
-            // TODO check html entities encoding
-            auto name = _parent->getName().c_str();
-            output.printf_P(PSTR("<input type=\"hidden\" name=\"%s\" id=\"%s\" value=\"%s\"%s>" FORMUI_CRLF), name, name, _parent->getValue().c_str(), _attributes.c_str());
+        case Type::HIDDEN: {
+            output.printf_P(PSTR("<input type=\"hidden\" name=\"%s\" id=\"%s\" value=\"%s\"%s>" FORMUI_CRLF), name, name, _encodeHtmlEntities(_parent->getValue(), true, output), _attributes.c_str());
         } break;
         default: {
-            // TODO check html entities encoding
-            auto name = _parent->getName().c_str();
-            output.printf_P(PSTR("<div class=\"form-group\"><label for=\"%s\">%s</label>" FORMUI_CRLF), name, _label.c_str());
+            output.printf_P(PSTR("<div class=\"form-group\"><label for=\"%s\">%s</label>" FORMUI_CRLF), name, _encodeHtmlEntities(_label, false, output));
 
             if (_suffix.length()) {
                 output.printf_P(PSTR("<div class=\"input-group\">" FORMUI_CRLF));
             }
 
             switch (_type) {
-            case TypeEnum_t::SELECT:
+            case Type::SELECT:
                 output.printf_P(PSTR("<select class=\"form-control\" name=\"%s\" id=\"%s\"%s>" FORMUI_CRLF), name, name, _attributes.c_str());
                 for (auto &item : _items) {
-                    PGM_P selected = _compareValue(item.first) ? PSTR(" selected") : PSTR("");
-                    output.printf_P(PSTR("<option value=\"%s\"%s>%s</option>" FORMUI_CRLF), item.first.c_str(), selected, item.second.c_str());
+                    // we cannot translate item.first when adding it or we cannot compare its value anymore
+                    PGM_P selected = _compareValue(item.first) ? PSTR(" selected") : emptyString.c_str();
+                    output.printf_P(PSTR("<option value=\"%s\"%s>%s</option>" FORMUI_CRLF), _encodeHtmlEntities(item.first, true, output), selected, _encodeHtmlEntities(item.second, false, output));
                 }
                 output.printf_P(PSTR("</select>" FORMUI_CRLF));
                 break;
-            case TypeEnum_t::TEXT:
-            case TypeEnum_t::NUMBER:
-            case TypeEnum_t::INTEGER:
-            case TypeEnum_t::FLOAT:
-                output.printf_P(PSTR("<input type=\"text\" class=\"form-control\" name=\"%s\" id=\"%s\" value=\"%s\"%s>" FORMUI_CRLF), name, name, _parent->getValue().c_str(), _attributes.c_str());
+            case Type::TEXT:
+            case Type::NUMBER:
+            case Type::INTEGER:
+            case Type::FLOAT:
+                output.printf_P(PSTR("<input type=\"text\" class=\"form-control\" name=\"%s\" id=\"%s\" value=\"%s\"%s>" FORMUI_CRLF), name, name, _encodeHtmlEntities(_parent->getValue(), true, output), _attributes.c_str());
                 break;
-            case TypeEnum_t::PASSWORD:
+            case Type::PASSWORD:
                 output.printf_P(PSTR("<input type=\"password\" class=\"form-control visible-password\" name=\"%s\" id=\"%s\" autocomplete=\"current-password\" spellcheck=\"false\"%s>" FORMUI_CRLF), name, name, _attributes.c_str());
                 break;
-            case TypeEnum_t::NEW_PASSWORD:
+            case Type::NEW_PASSWORD:
                 output.printf_P(PSTR("<input type=\"password\" class=\"form-control visible-password\" name=\"%s\" id=\"%s\" autocomplete=\"new-password\" spellcheck=\"false\"%s>" FORMUI_CRLF), name, name, _attributes.c_str());
                 break;
-            case TypeEnum_t::RANGE:
-                output.printf_P(PSTR("<input type=\"range\" class=\"custom-range\" value=\"%s\" name=\"%s\" id=\"%s\"%s>"), _parent->getValue().c_str(), name, name, _attributes.c_str());
+            case Type::RANGE:
+                output.printf_P(PSTR("<input type=\"range\" class=\"custom-range\" value=\"%s\" name=\"%s\" id=\"%s\"%s>"), _encodeHtmlEntities(_parent->getValue(), true, output), name, name, _attributes.c_str());
                 break;
-            case TypeEnum_t::RANGE_SLIDER:
-                output.printf_P(PSTR("<div class=\"form-enable-slider\"><input type=\"range\" value=\"%s\" name=\"%s\" id=\"%s\"%s></div>"), _parent->getValue().c_str(), name, name, _attributes.c_str());
+            case Type::RANGE_SLIDER:
+                output.printf_P(PSTR("<div class=\"form-enable-slider\"><input type=\"range\" value=\"%s\" name=\"%s\" id=\"%s\"%s></div>"), _encodeHtmlEntities(_parent->getValue(), true, output), name, name, _attributes.c_str());
                 break;
             default:
                 break;
@@ -170,9 +225,9 @@ void FormUI::html(PrintInterface &output)
 
             if (_suffix.length()) {
                 if (_suffix.charAt(0) == '<') {
-                    output.printf_P(PSTR("<div class=\"input-group-append\">%s</div></div>" FORMUI_CRLF), _suffix.c_str());
+                    output.printf_P(PSTR("<div class=\"input-group-append\">%s</div></div>" FORMUI_CRLF), _encodeHtmlEntities(_suffix, false, output));
                 } else {
-                    output.printf_P(PSTR("<div class=\"input-group-append\"><span class=\"input-group-text\">%s</span></div></div>" FORMUI_CRLF), _suffix.c_str());
+                    output.printf_P(PSTR("<div class=\"input-group-append\"><span class=\"input-group-text\">%s</span></div></div>" FORMUI_CRLF), _encodeHtmlEntities(_suffix, false, output));
                 }
             }
 

@@ -231,7 +231,7 @@ public:
     }
 
 private:
-    void _zeroConfCallback(const String &hostname, const IPAddress &address, uint16_t port, bool isFallback);
+    void _zeroConfCallback(const String &hostname, const IPAddress &address, uint16_t port, MDNSResolver::ResponseType type);
     void _setupClient();
     void autoReconnect(uint32_t timeout);
 
@@ -266,6 +266,7 @@ private:
 
     String _hostname;
     IPAddress _address;
+    uint16_t _port;
     String _username;
     String _password;
     MQTTConfigType _config;

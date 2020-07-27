@@ -8,6 +8,7 @@
 #include <LoopFunctions.h>
 #include <Form.h>
 #include <misc.h>
+#include "kfc_fw_config_classes.h"
 
 #if DEBUG_PLUGINS
 #include "debug_helper_enable.h"
@@ -247,3 +248,80 @@ PluginComponent *PluginComponent::getByMemoryId(RTCMemoryId memoryId)
     _debug_printf_P(PSTR("id=%u result=null\n"), memoryId);
     return nullptr;
 }
+
+
+uint32_t PluginComponent::getSetupTime() const
+{
+    return _setupTime;
+}
+
+void PluginComponent::setSetupTime()
+{
+    _setupTime = millis();
+}
+
+void PluginComponent::clearSetupTime()
+{
+    _setupTime = 0;
+}
+
+using Firmware = KFCConfigurationClasses::System::Firmware;
+
+bool PluginComponent::addToBlacklist(const String &name)
+{
+    String _blacklist = getBlacklist();
+    if (_blacklist.length()) {
+        if (stringlist_find_P_P(_blacklist.c_str(), name.c_str(), ',') != -1) {
+            // already on the list
+            return false;
+        }
+        // we already have items on the list
+        _blacklist += ',';
+    }
+    _blacklist += name;
+    Firmware::setPluginBlacklist(_blacklist.c_str());
+    return true;
+}
+
+bool PluginComponent::removeFromBlacklist(const String &name)
+{
+    String _blacklist = getBlacklist();
+    auto len = _blacklist.length();
+    if (len < name.length() || stringlist_find_P_P(_blacklist.c_str(), name.c_str(), ',') == -1) {
+        return false;
+    }
+    if (_blacklist.equals(name)) {
+        _blacklist = String();
+    }
+    else if (_blacklist.length() > name.length()) {
+        // first item
+        if (_blacklist.charAt(name.length()) == ',' && _blacklist.startsWith(name)) {
+            _blacklist.remove(0, name.length() + 1);
+        }
+        else {
+            String tmp = String(',');
+            tmp += name;
+            // last item
+            if (_blacklist.endsWith(tmp)) {
+                _blacklist.remove(_blacklist.length() - tmp.length());
+            }
+            else {
+                // somewhere in the middle
+                tmp += ',';
+                _blacklist.replace(tmp, String(','));
+                String_trim(_blacklist, ',');
+            }
+        }
+    }
+    auto result = _blacklist.length() != len;
+    if (result) {
+        Firmware::setPluginBlacklist(_blacklist.c_str());
+    }
+    return result;
+}
+
+const char *PluginComponent::getBlacklist()
+{
+    return Firmware::getPluginBlacklist();
+}
+

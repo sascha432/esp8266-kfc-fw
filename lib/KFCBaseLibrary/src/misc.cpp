@@ -371,11 +371,13 @@ size_t String_rtrim(String &str, const char *chars, size_t minLength)
         return str.length();
     }
     size_t len = str.length();
-    minLength = len - minLength;
-    while (minLength-- && len && strchr(chars, str.charAt(len - 1))) {
-        len--;
+    if (len) {
+        minLength = len - minLength;
+        while (minLength-- && len && strchr(chars, str.charAt(len - 1))) {
+            len--;
+        }
+        str.remove(len);
     }
-    str.remove(len, -1);
     return len;
 }
 
@@ -387,11 +389,13 @@ size_t String_ltrim(String &str, const char *chars)
 #endif
         return str.length();
     }
-    size_t remove = 0;
-    while (strchr(chars, str.charAt(remove))) {
-        remove++;
-    }
-    str.remove(0, remove);
+   if (str.length()) {
+       size_t remove = 0;
+       while (strchr(chars, str.charAt(remove))) {
+           remove++;
+       }
+       str.remove(0, remove);
+   }
     return str.length();
 }
 
@@ -943,3 +947,12 @@ uint64_t getSystemUptimeMillis()
 }
 
 #endif
+
+IPAddress convertToIPAddress(const char *hostname)
+{
+    IPAddress addr;
+    if (addr.fromString(hostname)) {
+        return addr;
+    }
+    return IPAddress();
+}

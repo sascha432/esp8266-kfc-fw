@@ -336,6 +336,14 @@ public:
         return arg[0] == ch && arg[1] == 0;
     }
 
+    bool startsWith(uint16_t num, const __FlashStringHelper *str) {
+        ArgumentPtr arg;
+        if (nullptr == (arg = get(num))) {
+            return false;
+        }
+        return strncmp_P(arg, RFPSTR(str), strlen_P(RFPSTR(str))) == 0;
+    }
+
     bool isAnyMatchIgnoreCase(uint16_t num, const __FlashStringHelper *strings, char sep = STRINGLIST_SEPARATOR) const {
         ArgumentPtr arg;
         if (nullptr == (arg = get(num))) {

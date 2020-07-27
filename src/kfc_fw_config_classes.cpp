@@ -69,7 +69,7 @@ namespace KFCConfigurationClasses {
         _flags.enableMDNS = true;
     }
 
-    System::Flags System::Flags::read()
+    System::Flags System::Flags::getFlags()
     {
         return Flags(config._H_GET(Config().flags));
     }

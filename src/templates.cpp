@@ -25,6 +25,8 @@
 #include <debug_helper_disable.h>
 #endif
 
+using KFCConfigurationClasses::System;
+
 String WebTemplate::_aliveRedirection;
 
 WebTemplate::WebTemplate() : _form(nullptr), _json(nullptr)
@@ -93,7 +95,7 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     else if (String_equals(key, PSTR("SOFTWARE"))) {
         output.print(F("KFC FW "));
         output.print(config.getFirmwareVersion());
-        if (config._H_GET(Config().flags).isDefaultPassword) {
+        if (System::Flags::get().isDefaultPassword) {
             output.printf_P(PSTR(HTML_S(br) HTML_S(strong) "%s" HTML_E(strong)), SPGM(default_password_warning));
         }
     }
@@ -121,7 +123,7 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         output.print(formatTime((long)(millis() / 1000)));
     }
     else if (String_equals(key, PSTR("WIFI_UPTIME"))) {
-        output.print(config._H_GET(Config().flags).wifiMode & WIFI_STA ? (!KFCFWConfiguration::isWiFiUp() ? F("Offline") : formatTime((millis() - KFCFWConfiguration::getWiFiUp()) / 1000)) : F("Client mode disabled"));
+        output.print(System::Flags(true).isStationEnabled() ? (!KFCFWConfiguration::isWiFiUp() ? F("Offline") : formatTime((millis() - KFCFWConfiguration::getWiFiUp()) / 1000)) : F("Client mode disabled"));
     }
     else if (String_equals(key, PSTR("IP_ADDRESS"))) {
         WiFi_get_address(output);
@@ -154,7 +156,7 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     }
     else if (String_equals(key, PSTR("WEBUI_ALERTS_STATUS"))) {
 #if WEBUI_ALERTS_ENABLED
-        if (config._H_GET(Config().flags).disableWebAlerts) {
+        if (System::Flags::get().disableWebAlerts) {
             output.print(F("Disabled"));
         } else {
             output.printf_P(PSTR("Storage %s, rewrite size %d, poll interval %.2fs, WebUI max. height %s"), SPGM(alerts_storage_filename), WEBUI_ALERTS_REWRITE_SIZE, WEBUI_ALERTS_POLL_INTERVAL / 1000.0, WEBUI_ALERTS_MAX_HEIGHT);
@@ -274,11 +276,12 @@ void ConfigTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 
     if (String_equals(key, F("NETWORK_MODE"))) {
         bool m = false;
-        if (config._H_GET(Config().flags).wifiMode & WIFI_AP) {
+        auto flags = System::Flags(true);
+        if (flags.isSoftAPEnabled()) {
             output.print(F("#ap_mode"));
             m = true;
         }
-        if (config._H_GET(Config().flags).wifiMode & WIFI_STA) {
+        if (flags.isStationEnabled()) {
             if (m) {
                 output.print(',');
             }
@@ -289,7 +292,7 @@ void ConfigTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         output.print(config.getMaxWiFiChannels());
     }
     else if (String_startsWith(key, F("MODE_"))) {
-        if (config._H_GET(Config().flags).wifiMode == key.substring(5).toInt()) {
+        if (System::Flags::get().wifiMode == key.substring(5).toInt()) {
             output.print(FSPGM(_selected, " selected"));
         }
     }
@@ -341,8 +344,8 @@ void StatusTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         switch (WiFi.getMode()) {
             case WIFI_STA: {
                     output.print(F("Station mode"));
-                    auto flags = KFCConfigurationClasses::System::Flags::read();
-                    if ((flags->wifiMode & WIFI_AP) && flags->apStandByMode) {
+                    auto flags = System::Flags(true);
+                    if (flags.isSoftApStandByModeEnabled()) {
                         output.print(F(" (Access Point in stand-by mode)"));
                     }
                 } break;

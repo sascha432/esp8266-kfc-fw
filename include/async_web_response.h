@@ -21,7 +21,7 @@
 #include <SSIProxyStream.h>
 #include "web_server.h"
 #include "../include/templates.h"
-#include "./plugins/mdns/mdns_sd.h"
+#include "./plugins/mdns/mdns_plugin.h"
 #include "bitmap_header.h"
 
 class HttpHeaders;

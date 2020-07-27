@@ -438,3 +438,11 @@ template<typename T>
 String enumToString(T value) {
     return String(static_cast<typename std::underlying_type<T>::type>(value));
 }
+
+// auto address = convertToIPAddress("192.168.0.1");
+// if (address.isSet()) { //we can use the address }
+IPAddress convertToIPAddress(const char *hostname);
+
+inline IPAddress convertToIPAddress(const String &hostname) {
+    return convertToIPAddress(hostname.c_str());
+}

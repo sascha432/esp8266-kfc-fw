@@ -211,6 +211,8 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LED, "LED", "<slow,fast,flicker,off,solid,
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(RTC, "RTC", "[<set>]", "Set RTC time", "Display RTC time");
 #endif
 
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PLG, "PLG", "<list|start|end|add-blacklist|remove>", "Plugin management");
+
 #if DEBUG
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(ALERT, "ALERT", "<message>[,<type|0-3>]", "Add WebUI alert");
@@ -219,8 +221,6 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(FSM, "FSM", "Display FS mapping");
 #if PIN_MONITOR
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PINM, "PINM", "[<1=start|0=stop>}", "List or monitor PINs");
 #endif
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(PLUGINS, "PLUGINS", "List plugins");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PLGI, "PLGI", "<name>[,1=end]", "Init or end plugin");
 #if LOAD_STATISTICS
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HEAP, "HEAP", "[interval in seconds|0=disable]", "Display free heap and system load");
 #else
@@ -293,8 +293,7 @@ void at_mode_help_commands()
 #if PIN_MONITOR
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(PINM), name);
 #endif
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(PLUGINS), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(PLGI), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(PLG), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(HEAP), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(RSSI), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(GPIO), name);
@@ -1186,6 +1185,58 @@ void at_mode_serial_handle_event(String &commandString)
                     }
                 }
             }
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(PLG))) {
+                bool flag = false;
+                if (args.startsWith(0, F("li"))) {
+                    dump_plugin_list(output);
+                }
+                else if ((flag = args.startsWith(0, F("st")) || args.startsWith(0, F("en"))) && args.requireArgs(2, 2)) {
+                    auto name = args.toString(1);
+                    PluginComponent *plugin = PluginComponent::findPlugin(FPSTR(name.c_str()), false);
+                    if (plugin) {
+                        if (flag) {
+                            if (plugin->getSetupTime() == 0) {
+                                plugin->setSetupTime();
+                            }
+                            else {
+                                args.printf_P(PSTR("Plugin has been started before @ %u (now=%u)"), plugin->getSetupTime(), (uint32_t)millis());
+                            }
+                            args.printf_P(PSTR("Calling %s.setup()"), name.c_str());
+                            plugin->setup(PluginComponent::SetupModeType::DEFAULT);
+                        }
+                        else {
+                            args.printf_P(PSTR("Calling %s.shutdown()"), name.c_str());
+                            plugin->shutdown();
+                        }
+                    }
+                    else {
+                        args.printf_P(PSTR("Cannot find plugin '%s'"), name.c_str());
+                    }
+                }
+                else if ((flag = args.startsWith(0, F("ad")) || args.startsWith(0, F("re"))) && args.requireArgs(2, 2)) {
+                    auto name = args.toString(1);
+                    PluginComponent *plugin = PluginComponent::findPlugin(FPSTR(name.c_str()), false);
+                    if (plugin) {
+                        if (flag) {
+                            flag = PluginComponent::addToBlacklist(name);
+                        }
+                        else {
+                            flag = PluginComponent::removeFromBlacklist(name);
+                        }
+                        if (flag) {
+                            config.write();
+                        }
+                        args.printf_P("Blacklist=%s action=%s", PluginComponent::getBlacklist(), flag ? SPGM(success) : SPGM(failure));
+                    }
+                    else {
+                        args.printf_P(PSTR("Cannot find plugin '%s'"), name.c_str());
+                    }
+                }
+                else if (args.startsWith(0, F("bl"))) {
+                    args.printf_P("Blacklist=%s", PluginComponent::getBlacklist());
+                }
+
+            }
 #if DEBUG
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(FSM))) {
                 auto &streams = *serialHandler.getStreams();
@@ -1239,39 +1290,6 @@ void at_mode_serial_handle_event(String &commandString)
                 }
             }
     #endif
-            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(PLUGINS))) {
-                dump_plugin_list(output);
-            }
-            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(PLGI))) {
-                if (args.requireArgs(1, 2)) {
-                    auto name = args.toString(0);
-                    auto end = args.isTrue(1);
-                    PluginComponent *plugin = nullptr;
-                    for(const auto plugin2 : plugins) {
-                        if (name.equalsIgnoreCase(FPSTR(plugin2->getName()))) {
-                            plugin = plugin2;
-                            break;
-                        }
-                    }
-                    if (plugin) {
-                        if (end) {
-                            args.printf_P(PSTR("Calling %s.shutdown()"), name.c_str());
-                            plugin->shutdown();
-                        }
-                        else {
-                            args.printf_P(PSTR("Calling %s.setup()"), name.c_str());
-                            if (plugin->getSetupTime() == 0) {
-                                plugin->setSetupTime();
-                            }
-                            plugin->setup(PluginComponent::SetupModeType::DEFAULT);
-                        }
-                    }
-                    else {
-                        args.printf_P(PSTR("Cannot find plugin '%s'"), name.c_str());
-                    }
-
-                }
-            }
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RSSI)) || args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(HEAP)) || args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(GPIO))) {
                 if (args.requireArgs(1, 1)) {
                     auto interval = args.toMillis(0, 500, ~0, 0, String('s'));

@@ -24,6 +24,11 @@
 #include "../src/plugins/mqtt/mqtt_client.h"
 #include "../src/plugins/mqtt/mqtt_persistant_storage.h"
 #endif
+#if MDNS_PLUGIN
+#include "../src/plugins/mdns/mdns_plugin.h"
+#include "../src/plugins/mdns/mdns_resolver.h"
+#endif
+
 
 #if defined(ESP8266)
 #include <sntp.h>
@@ -837,9 +842,64 @@ void KFCFWConfiguration::write()
     }
 }
 
-void KFCFWConfiguration::resolveZeroConf(const String &hostname, uint16_t port, ResolvedCallback callback) const
+bool KFCFWConfiguration::resolveZeroConf(const String &hostname, uint16_t port, MDNSResolver::ResolvedCallback callback) const
 {
-    __DBG_printf("resolveZeroConf=%s port=%u result=%d", hostname.c_str(), port);
+    auto mdns = PluginComponent::getPlugin<MDNSPlugin>(F("mdns"), true);
+    if (!mdns) {
+        Logger_error(F("Cannot resolve ZeroConf, MDNS plugin not loaded: %s"), hostname.c_str());
+        return false;
+    }
+
+    __DBG_printf("resolveZeroConf=%s port=%u", hostname.c_str(), port);
+    auto start = hostname.indexOf(F("${zeroconf:"));
+    if (start != -1) {
+        start += 11;
+        auto end = hostname.indexOf('}', start);
+        if (end != -1) {
+            auto serviceEnd = hostname.indexOf('.');
+            auto protoEnd = hostname.indexOf(',');
+            auto valuesEnd = hostname.indexOf('|');
+            __DBG_printf("start=%d end=%d service_end=%d proto_end=%d name_end=%d", start, end, serviceEnd, protoEnd, valuesEnd);
+            if (serviceEnd != -1 && protoEnd != -1 && serviceEnd < protoEnd && (valuesEnd == -1 || protoEnd < valuesEnd)) {
+                auto service = hostname.substring(start, serviceEnd);
+                auto proto = hostname.substring(serviceEnd + 1, protoEnd);
+                String addressValue;
+                String portValue;
+                String defaultValue;
+                int portPos;
+                if (valuesEnd == -1) {
+                    addressValue = hostname.substring(protoEnd + 1, end);
+                }
+                else {
+                    addressValue = hostname.substring(protoEnd + 1, valuesEnd);
+                    defaultValue = hostname.substring(valuesEnd + 1, end);
+                    if ((portPos = defaultValue.indexOf(':')) != -1) {
+                        port = defaultValue.substring(portPos + 1).toInt();
+                        defaultValue.remove(portPos);
+                    }
+                }
+                if ((portPos = addressValue.indexOf(':')) != -1) {
+                    portValue = addressValue.substring(portPos + 1);
+                    addressValue.remove(portPos);
+                }
+                else {
+                    portValue = FSPGM(port);
+                }
+                if (service.charAt(0) != '_') {
+                    service = String('_') + service;
+                }
+                if (proto.charAt(0) != '_') {
+                    proto = String('_') + proto;
+                }
+
+                __DBG_printf("service=%s proto=%s values=%s:%s default=%s port=%d", service.c_str(), proto.c_str(), addressValue.c_str(), portValue.c_str(), defaultValue.c_str(), port);
+
+                mdns->resolveZeroConf(new MDNSResolver::Query(service, proto, addressValue, portValue, defaultValue, port, callback));
+
+            }
+        }
+    }
+    return false;
 }
 
 bool KFCFWConfiguration::hasZeroConf(const String &hostname) const

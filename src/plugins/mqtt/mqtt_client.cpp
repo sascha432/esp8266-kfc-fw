@@ -47,18 +47,17 @@ MQTTClient::MQTTClient() : _client(nullptr), _componentsEntityCount(0), _lastWil
     _username = ClientConfig::getUsername();
     _password = ClientConfig::getPassword();
     _config = ClientConfig::getConfig();
+    _port = _config.port;
 
-    __LDBG_printf("hostname=%s port=%u", _hostname.c_str(), _config.port);
+    __LDBG_printf("hostname=%s port=%u", _hostname.c_str(), _port);
 
     if (config.hasZeroConf(_hostname)) {
-        config.resolveZeroConf(_hostname, _config.port, [this](const String &hostname, const IPAddress &address, uint16_t port, bool isFallback) {
-            this->_zeroConfCallback(hostname, address, port, isFallback);
+        config.resolveZeroConf(_hostname, _port, [this](const String &hostname, const IPAddress &address, uint16_t port, MDNSResolver::ResponseType type) {
+            this->_zeroConfCallback(hostname, address, port, type);
         });
     }
     else {
-        IPAddress address;
-        address.fromString(_hostname);
-        _zeroConfCallback(_hostname, address, _config.port, true);
+        _zeroConfCallback(_hostname, convertToIPAddress(_hostname), _port, MDNSResolver::ResponseType::NONE);
     }
 }
 
@@ -77,9 +76,12 @@ MQTTClient::~MQTTClient()
     delete _client;
 }
 
-void MQTTClient::_zeroConfCallback(const String &hostname, const IPAddress &address, uint16_t port, bool isFallback)
+void MQTTClient::_zeroConfCallback(const String &hostname, const IPAddress &address, uint16_t port, MDNSResolver::ResponseType type)
 {
-
+    _address = address;
+    _hostname = hostname;
+    _port = port;
+    __DBG_printf("zeroconf address=%s hostname=%s port=%u type=%u", _address.toString().c_str(), _hostname.c_str(), _port, type);
 
     _setupClient();
     WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTION, MQTTClient::handleWiFiEvents);
@@ -100,10 +102,10 @@ void MQTTClient::_setupClient()
     _autoReconnectTimeout = MQTT_AUTO_RECONNECT_TIMEOUT;
 
     if (_address.isSet()) {
-        _client->setServer(_address, _config.port);
+        _client->setServer(_address, _port);
     }
     else {
-        _client->setServer(_hostname.c_str(), _config.port);
+        _client->setServer(_hostname.c_str(), _port);
     }
 #if ASYNC_TCP_SSL_ENABLED
     if (Config_MQTT::getMode() == MQTT_MODE_SECURE) {
@@ -292,7 +294,7 @@ uint8_t MQTTClient::getDefaultQos(uint8_t qos)
 
 String MQTTClient::connectionDetailsString()
 {
-    auto message = PrintString(F("%s@%s:%u"), _username.length() ? _username.c_str() : SPGM(Anonymous), _hostname.c_str(), _config.port);
+    auto message = PrintString(F("%s@%s:%u"), _username.length() ? _username.c_str() : SPGM(Anonymous), _hostname.c_str(), _port);
 #if ASYNC_TCP_SSL_ENABLED
     if (Config_MQTT::getMode() == MQTT_MODE_SECURE) {
         message += F(", Secure MQTT");

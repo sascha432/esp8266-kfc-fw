@@ -647,6 +647,7 @@ uint16_t Configuration::calculateOffset(Handle_t handle) const
 String Configuration::__debugDumper(ConfigurationParameter &param, const uint8_t *data, size_t len, bool progmem)
 {
     PrintString str = F("data");
+progmem=true;// treat everything as PROGMEM
     if (param._param.isString()) {
         str.printf_P(PSTR("[%u]='"), len);
         if (progmem) {

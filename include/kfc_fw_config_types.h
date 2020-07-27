@@ -37,6 +37,17 @@ inline WiFiEncryptionTypeArray createWiFiEncryptionTypeArray() {
 
 #endif
 
+enum class SyslogProtocolType : uint8_t {
+    MIN = 0,
+    NONE = MIN,
+    UDP,
+    TCP,
+    TCP_TLS,
+    FILE,
+    MAX
+};
+
+
 enum HttpMode_t : uint8_t {
     HTTP_MODE_DISABLED = 0,
     HTTP_MODE_UNSECURE,

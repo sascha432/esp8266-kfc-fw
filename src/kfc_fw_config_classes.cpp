@@ -7,7 +7,7 @@
 
 namespace KFCConfigurationClasses {
 
-    const void *loadBinaryConfig(HandleType handle, uint16_t length)
+    const void *loadBinaryConfig(HandleType handle, uint16_t &length)
     {
         return config.getBinaryV(handle, length);
     }
@@ -129,99 +129,99 @@ namespace KFCConfigurationClasses {
 
     void System::Device::defaults()
     {
-        DeviceSettings_t settings;
-        settings._safeModeRebootTime = 0;
-        settings._webUIKeepLoggedInDays = 30;
-        settings._statusLedMode = static_cast<uint8_t>(StatusLEDModeEnum::SOLID_WHEN_CONNECTED);
-        config._H_SET(MainConfig().system.device.settings, settings);
-
-        setSafeModeRebootTime(0);
-        setTitle(FSPGM(KFC_Firmware));
+        DeviceConfig_t cfg = {};
+        setConfig(cfg);
+        setTitle(SPGM(KFC_Firmware));
     }
 
-    const char *System::Device::getName()
-    {
-        return config._H_STR(Config().device_name);
-    }
+    // const char *System::Device::getName()
+    // {
+    //     return config._H_STR(Config().device_name);
+    // }
 
-    const char *System::Device::getTitle()
-    {
-        return config._H_STR(Config().device_title);
-    }
+    // const char *System::Device::getTitle()
+    // {
+    //     return config._H_STR(Config().device_title);
+    // }
 
-    const char *System::Device::getPassword()
-    {
-        return config._H_STR(Config().device_pass);
-    }
+    // const char *System::Device::getPassword()
+    // {
+    //     return config._H_STR(Config().device_pass);
+    // }
 
-    const char *System::Device::getToken()
-    {
-        return config._H_STR(Config().device_token);
-    }
+    // const char *System::Device::getToken()
+    // {
+    //     return config._H_STR(Config().device_token);
+    // }
 
-    void System::Device::setName(const String &name)
-    {
-        config._H_SET_STR(Config().device_name, name);
-    }
+    // void System::Device::setName(const String &name)
+    // {
+    //     config._H_SET_STR(Config().device_name, name);
+    // }
 
-    void System::Device::setTitle(const String &title)
-    {
-        config._H_SET_STR(Config().device_title, title);
-    }
+    // void System::Device::setTitle(const String &title)
+    // {
+    //     config._H_SET_STR(Config().device_title, title);
+    // }
 
-    void System::Device::setPassword(const String &password)
-    {
-        config._H_SET_STR(Config().device_pass, password);
-    }
+    // void System::Device::setPassword(const String &password)
+    // {
+    //     config._H_SET_STR(Config().device_pass, password);
+    // }
 
-    void System::Device::setToken(const String &token)
-    {
-        config._H_SET_STR(Config().device_token, token);
-    }
+    // void System::Device::setToken(const String &token)
+    // {
+    //     config._H_SET_STR(Config().device_token, token);
+    // }
 
-    void System::Device::setSafeModeRebootTime(uint16_t minutes)
-    {
-        auto settings = config._H_GET(MainConfig().system.device.settings);
-        settings._safeModeRebootTime = minutes;
-        config._H_SET(MainConfig().system.device.settings, settings);
-    }
+    // void System::Device::setSafeModeRebootTime(uint16_t minutes)
+    // {
+    //     auto settings = config._H_GET(MainConfig().system.device.settings);
+    //     settings._safeModeRebootTime = minutes;
+    //     config._H_SET(MainConfig().system.device.settings, settings);
+    // }
 
-    uint16_t System::Device::getSafeModeRebootTime()
-    {
-        return config._H_GET(MainConfig().system.device.settings)._safeModeRebootTime;
-    }
+    // uint16_t System::Device::getSafeModeRebootTime()
+    // {
+    //     return config._H_GET(MainConfig().system.device.settings)._safeModeRebootTime;
+    // }
 
-    uint16_t System::Device::getWebUIKeepLoggedInDays()
-    {
-        return config._H_GET(MainConfig().system.device.settings)._webUIKeepLoggedInDays;
-    }
+    // uint16_t System::Device::getWebUIKeepLoggedInDays()
+    // {
+    //     return config._H_GET(MainConfig().system.device.settings)._webUIKeepLoggedInDays;
+    // }
 
-    uint32_t System::Device::getWebUIKeepLoggedInSeconds()
-    {
-        return getWebUIKeepLoggedInDays() * 86400U;
-    }
+    // uint32_t System::Device::getWebUIKeepLoggedInSeconds()
+    // {
+    //     return getWebUIKeepLoggedInDays() * 86400U;
+    // }
 
-    void System::Device::setWebUIKeepLoggedInDays(uint16_t days)
-    {
-        auto settings = config._H_GET(MainConfig().system.device.settings);
-        settings._webUIKeepLoggedInDays = days;
-        config._H_SET(MainConfig().system.device.settings, settings);
-    }
+    // void System::Device::setWebUIKeepLoggedInDays(uint16_t days)
+    // {
+    //     auto settings = config._H_GET(MainConfig().system.device.settings);
+    //     settings._webUIKeepLoggedInDays = days;
+    //     config._H_SET(MainConfig().system.device.settings, settings);
+    // }
 
-    void System::Device::setStatusLedMode(StatusLEDModeEnum mode)
-    {
-        auto settings = config._H_GET(MainConfig().system.device.settings);
-        settings._statusLedMode = static_cast<uint8_t>(mode);
-        config._H_SET(MainConfig().system.device.settings, settings);
-    }
+    // void System::Device::setStatusLedMode(StatusLEDModeEnum mode)
+    // {
+    //     auto settings = config._H_GET(MainConfig().system.device.settings);
+    //     settings._statusLedMode = static_cast<uint8_t>(mode);
+    //     config._H_SET(MainConfig().system.device.settings, settings);
+    // }
 
-    System::Device::StatusLEDModeEnum System::Device::getStatusLedMode()
-    {
-        return static_cast<StatusLEDModeEnum>(config._H_GET(MainConfig().system.device.settings)._statusLedMode);
-    }
+    // System::Device::StatusLEDModeEnum System::Device::getStatusLedMode()
+    // {
+    //     return static_cast<StatusLEDModeEnum>(config._H_GET(MainConfig().system.device.settings)._statusLedMode);
+    // }
 
     // --------------------------------------------------------------------
     // Firmare
+
+    void System::Firmware::defaults()
+    {
+        setPluginBlacklist(emptyString);
+    }
 
     const uint8_t *System::Firmware::getElfHash(uint16_t &length)
     {
@@ -259,31 +259,31 @@ namespace KFCConfigurationClasses {
     // --------------------------------------------------------------------
     // Network
 
-    Network::Settings::Settings()
-    {
-        uint8_t mac[6];
-        WiFi.macAddress(mac);
-        _localIp = IPAddress(192, 168, 4, mac[5] <= 1 || mac[5] >= 253 ? (mac[4] <= 1 || mac[4] >= 253 ? (mac[3] <= 1 || mac[3] >= 253 ? mac[3] : rand() % 98 + 1) : mac[4]) : mac[5]);
-        _gateway = IPAddress(192, 168, 4, 1);
-        _subnet = IPAddress(255, 255, 255, 0);
-        _dns1 = IPAddress(8, 8, 8, 8);
-        _dns2 = IPAddress(8, 8, 4, 4);
-    }
+    // Network::Settings::Settings()
+    // {
+    //     uint8_t mac[6];
+    //     WiFi.macAddress(mac);
+    //     _localIp = IPAddress(192, 168, 4, mac[5] <= 1 || mac[5] >= 253 ? (mac[4] <= 1 || mac[4] >= 253 ? (mac[3] <= 1 || mac[3] >= 253 ? mac[3] : rand() % 98 + 1) : mac[4]) : mac[5]);
+    //     _gateway = IPAddress(192, 168, 4, 1);
+    //     _subnet = IPAddress(255, 255, 255, 0);
+    //     _dns1 = IPAddress(8, 8, 8, 8);
+    //     _dns2 = IPAddress(8, 8, 4, 4);
+    // }
 
-    void Network::Settings::write()
-    {
-        config._H_SET(MainConfig().network.settings, *this);
-    }
+    // void Network::Settings::write()
+    // {
+    //     config._H_SET(MainConfig().network.settings, *this);
+    // }
 
-    Network::Settings Network::Settings::read()
-    {
-        return config._H_GET(MainConfig().network.settings);
-    }
+    // Network::Settings Network::Settings::read()
+    // {
+    //     return config._H_GET(MainConfig().network.settings);
+    // }
 
     void Network::Settings::defaults()
     {
-        auto settings = Settings();
-        settings.write();
+        SettingsConfig_t cfg = {};
+        setConfig(cfg);
 
         auto flags = System::Flags();
         flags->wifiMode = WIFI_AP;

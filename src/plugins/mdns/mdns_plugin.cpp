@@ -225,6 +225,7 @@ void MDNSPlugin::resolveZeroConf(MDNSResolver::Query *query)
         __LDBG_printf("MDNS disabled, calling begin");
         MDNS.begin(config.getDeviceName());
         query->begin();
+        LoopFunctions::add(loop);
     }
     else if (_isRunning()) {
         query->begin();
@@ -247,6 +248,7 @@ void MDNSPlugin::_removeQuery(MDNSResolver::Query *query)
     if (!Flags(true).isMDNSEnabled() && _queries.empty()) {
         __LDBG_printf("MDNS disabled, calling end");
         MDNS.end();
+        LoopFunctions::remove(loop);
     }
 }
 

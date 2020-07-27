@@ -277,12 +277,7 @@ namespace Config_QuickConnect
 };
 
 typedef struct {
-    uint32_t version;
     ConfigFlags flags;
-    char device_name[17];
-    char device_title[33];
-    char device_pass[33];
-    char device_token[128];
 
     Config_HTTP http;
     Config_NTP ntp;
@@ -317,10 +312,21 @@ typedef struct {
         return false; \
     }
 
-#define _H_CHAR_PTR_FUNC(getter, setter, ...) \
+#define _H_CSTR_FUNC(getter, setter, ...) \
     String(getter()), [__VA_ARGS__](const String &str, FormField &, bool store) { \
         if (store) { \
             setter(str.c_str()); \
+        } \
+        return false; \
+    }
+
+#define _H_FUNC(getter, setter, ...) \
+    _H_FUNC_TYPE(getter, setter, decltype(getter()), ##__VA_ARGS__)
+
+#define _H_FUNC_TYPE(getter, setter, type, ...) \
+    getter(), [__VA_ARGS__](const type value, FormField &, bool store) { \
+        if (store) { \
+            setter(value); \
         } \
         return false; \
     }
@@ -385,6 +391,16 @@ typedef struct {
         } \
         return false; \
     }
+
+#define addWriteableStruct(struct, member) \
+    add<decltype(struct.member)>(Form::normalizeName(F(_STRINGIFY(member))), _H_W_STRUCT_VALUE(struct, member))
+
+#define addCStrGetterSetter(getter, setter) \
+    add(Form::normalizeName(F(_STRINGIFY(member))), _H_CSTR_FUNC(getter, setter))
+
+#define addGetterSetter(getter, setter) \
+    add(Form::normalizeName(F(_STRINGIFY(member))), _H_FUNC(getter, setter))
+
 
 // NOTE using the new handlers (USE_WIFI_SET_EVENT_HANDLER_CB=0) costs 896 byte RAM with 5 handlers
 #ifndef USE_WIFI_SET_EVENT_HANDLER_CB

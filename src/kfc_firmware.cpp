@@ -45,6 +45,9 @@ extern "C" void gdbstub_do_break();
 #include "PluginComponent.h"
 #endif
 
+using KFCConfigurationClasses::System;
+using KFCConfigurationClasses::Network;
+
 #if HAVE_KFC_BOOT_CHECK_FLASHSIZE
 void check_flash_size()
 {
@@ -206,8 +209,8 @@ void setup()
                             config.recoveryMode();
                             config.write();
                             KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("AP mode with DHCPD enabled (SSID %s)\nUsername '%s', passwords set to '%s'\nWeb server running on port 80\n\nPress r to reboot...\n"),
-                                KFCConfigurationClasses::Network::WiFiConfig::getSoftApSSID(),
-                                KFCConfigurationClasses::System::Device::getName(),
+                                Network::WiFiConfig::getSoftApSSID(),
+                                System::Device::getName(),
                                 SPGM(defaultPassword)
                             );
                             endTimeout = 0;
@@ -288,11 +291,11 @@ void setup()
             }
         });
 
-        auto rebootDelay = KFCConfigurationClasses::System::Device::getSafeModeRebootTime();
+        auto rebootDelay = System::Device::getConfig().getSafeModeRebootTimeout();
         if (rebootDelay) {
             _debug_printf_P(PSTR("rebooting in %u minutes\n"), rebootDelay);
             // restart device if running in safe mode for rebootDelay minutes
-            Scheduler.addTimer(rebootDelay * 60000UL, false, [](EventScheduler::TimerPtr timer) {
+            Scheduler.addTimer(rebootDelay * 60000U, false, [](EventScheduler::TimerPtr timer) {
                 Logger_notice(F("Rebooting device after safe mode timeout"));
                 config.restartDevice();
             });

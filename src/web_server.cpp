@@ -811,7 +811,7 @@ bool WebServerPlugin::_handleFileRead(String path, bool client_accepts_gzip, Asy
                     auto now = time(nullptr);
                     keepTime = (keepTime == 1 && IS_TIME_VALID(now)) ? now : keepTime; // check if the time was provied, otherwise use system time
                     if (IS_TIME_VALID(keepTime)) {
-                        cookie->setExpires(keepTime + System::Device::getWebUIKeepLoggedInSeconds());
+                        cookie->setExpires(keepTime + System::Device::getConfig().getWebUICookieLifetimeInSeconds());
                     }
                 }
                 __SID(debug_printf_P(PSTR("new SID cookie=%s\n"), cookie->getValue().c_str()));
@@ -1006,9 +1006,9 @@ void WebServerPlugin::createConfigureForm(PluginComponent::FormCallbackType type
     form.add(new FormObject<File2String>(F("ssl_key"), File2String(FSPGM(server_key)), nullptr));
 
 #endif
-
-    form.add(F("device_token"), _H_STR_VALUE(Config().device_token));
-    form.addValidator(new FormLengthValidator(SESSION_DEVICE_TOKEN_MIN_LENGTH, sizeof(Config().device_token) - 1));
+    form.addCStrGetterSetter(System::Device::getToken, System::Device::setToken);
+    //form.add(F("device_token"), _H_STR_VALUE(Config().device_token));
+    form.addValidator(new FormLengthValidator(System::Device::kTokenMinSize, System::Device::kTokenMaxSize));
 
     form.finalize();
 }
@@ -1079,7 +1079,7 @@ WebServerPlugin::AuthType WebServerPlugin::isAuthenticated(AsyncWebServerRequest
             auto token = value.c_str() + 7;
             const auto len = value.length() - 7;
             __SID(debug_printf_P(PSTR("token=%s device_token=%s len=%u\n"), token, System::Device::getToken(), len));
-            if (len >= System::Device::kTokenMinLength && !strcmp(token, System::Device::getToken())) {
+            if (len >= System::Device::kTokenMinSize && !strcmp(token, System::Device::getToken())) {
                 __SID(debug_println(F("valid BEARER token")));
                 return AuthType::BEARER;
             }

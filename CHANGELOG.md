@@ -11,6 +11,8 @@
 - Rewritten SerialHandler
 - Improved plugin system, ~2kb more free RAM
 - Added boot option to set passwords to default, enable AP mode and web server
+- Support for zeroconf (`${zeroconf:<service>.<proto>:<address|value[:port value]>|<fallback[:port]>}` as hostname)
+- Blacklist to prevent plugins being loaded at start-up
 
 ## Version 0.0.3
 

@@ -74,12 +74,15 @@ namespace StringConstExpr {
         operator const __FlashStringHelper* () const {
             return reinterpret_cast<const __FlashStringHelper*>(&array[0]);
         }
+        operator const char *() const {
+            return reinterpret_cast<const char *>(&array[0]);
+        }
     };
 
     template<std::size_t index, std::size_t len>
     class SubStringArray : public StringArrayHelper<len> {
     public:
-        SubStringArray(const char* str) : StringArrayHelper<len>(ArrayAccess<const char, len>(str + index).elements) {
+        constexpr SubStringArray(const char* str) : StringArrayHelper<len>(ArrayAccess<const char, len>(str + index).elements) {
         }
     };
 

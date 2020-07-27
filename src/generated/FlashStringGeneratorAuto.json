@@ -424,11 +424,11 @@
         "default": "ERROR:"
     },
     "success": {
-        "use_counter": 3,
+        "use_counter": 4,
         "default": "success"
     },
     "failure": {
-        "use_counter": 3,
+        "use_counter": 4,
         "default": "failure"
     },
     "upload_file": {
@@ -1224,7 +1224,7 @@
         "default": "Hostname"
     },
     "port": {
-        "use_counter": 2,
+        "use_counter": 4,
         "default": "port"
     },
     "Port": {
@@ -1374,5 +1374,13 @@
     "htmlentities_apos": {
         "use_counter": 1,
         "default": "&apos;"
+    },
+    "address": {
+        "use_counter": 1,
+        "default": "address"
+    },
+    "domain": {
+        "use_counter": 1,
+        "default": "domain"
     }
 }

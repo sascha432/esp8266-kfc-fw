@@ -2,116 +2,11 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#include <Arduino_compat.h>
-#include <Buffer.h>
-#include <KFCSyslog.h>
-#include <PrintHtmlEntitiesString.h>
-#include <LoopFunctions.h>
-#include "kfc_fw_config.h"
-#include "../include/templates.h"
-#include "plugins.h"
-
-#if defined(ESP32)
-#define SYSLOG_PLUGIN_QUEUE_SIZE        4096
-#elif defined(ESP8266)
-#define SYSLOG_PLUGIN_QUEUE_SIZE        512
-#endif
+#include "syslog_plugin.h"
 
 using SyslogClient = KFCConfigurationClasses::Plugins::SyslogClient;
 
-SyslogStream *syslog = nullptr;
-static EventScheduler::Timer syslogTimer;
-
-static void syslog_end()
-{
-    if (syslog) {
-        syslogTimer.remove();
-        _logger.setSyslog(nullptr);
-        delete syslog;
-        syslog = nullptr;
-    }
-}
-
-static void syslog_kill(uint16_t timeout)
-{
-    if (syslog) {
-        syslogTimer.remove();
-        auto endTime = millis() + timeout;
-        while(syslog->hasQueuedMessages() && millis() < endTime) {
-            syslog->deliverQueue();
-            delay(1);
-        }
-        syslog->getQueue()->kill();
-    }
-}
-
-static void syslog_timer_callback(EventScheduler::TimerPtr)
-{
-#if DEBUG
-    if (!syslog) {
-        __debugbreak_and_panic_printf_P(PSTR("syslog_timer_callback() syslog=nullptr\n"));
-    }
-#endif
-    if (syslog->hasQueuedMessages()) {
-        syslog->deliverQueue();
-    }
-}
-
-static void syslog_setup()
-{
-#if DEBUG
-    if (syslog) {
-        __debugbreak_and_panic_printf_P(PSTR("syslog_setup() called twice\n"));
-    }
-#endif
-
-    if (SyslogClient::isEnabled()) {
-
-        auto cfg = SyslogClient::getConfig();
-
-        // SyslogParameter parameter;
-        // parameter.setHostname(config.getDeviceName());
-        // parameter.setAppName(FSPGM(kfcfw));
-        // parameter.setFacility(SYSLOG_FACILITY_KERN);
-        // parameter.setSeverity(SYSLOG_NOTICE);
-
-        SyslogFilter *filter = new SyslogFilter(config.getDeviceName(), FSPGM(kfcfw));
-        auto &parameter = filter->getParameter();
-        parameter.setFacility(SYSLOG_FACILITY_KERN);
-        parameter.setSeverity(SYSLOG_NOTICE);
-
-        filter->addFilter(F("*.*"), SyslogFactory::create(parameter, static_cast<SyslogProtocol>(cfg.protocol), SyslogClient::getHostname(), cfg.port));
-
-        syslog = new SyslogStream(filter, new SyslogMemoryQueue(SYSLOG_PLUGIN_QUEUE_SIZE));
-
-        _logger.setSyslog(syslog);
-        syslogTimer.add(100, true, syslog_timer_callback);
-    }
-}
-
-class SyslogPlugin : public PluginComponent {
-public:
-    SyslogPlugin();
-
-    virtual void setup(SetupModeType mode) override;
-    virtual void reconfigure(const String &source) override;
-    virtual void shutdown() override;
-
-    virtual void getStatus(Print &output) override;
-    virtual void createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request) override;
-
-#if ENABLE_DEEP_SLEEP
-    void prepareDeepSleep(uint32_t sleepTimeMillis) override;
-#endif
-
-#if AT_MODE_SUPPORTED
-    void atModeHelpGenerator() override;
-    bool atModeHandler(AtModeArgs &args) override;
-#endif
-};
-
 static SyslogPlugin plugin;
-
 
 PROGMEM_DEFINE_PLUGIN_OPTIONS(
     SyslogPlugin,
@@ -133,41 +28,126 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     0                   // __reserved
 );
 
-SyslogPlugin::SyslogPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(SyslogPlugin))
+SyslogPlugin::SyslogPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(SyslogPlugin)), syslog(nullptr)
 {
     REGISTER_PLUGIN(this, "SyslogPlugin");
 }
 
 void SyslogPlugin::setup(SetupModeType mode)
 {
-    syslog_setup();
+    begin();
 }
 
-void SyslogPlugin::reconfigure(const String & source)
+void SyslogPlugin::reconfigure(const String &source)
 {
-    syslog_end();
-    syslog_setup();
+    end();
+    begin();
 }
 
 void SyslogPlugin::shutdown()
 {
-    syslog_kill(250);
+    kill(250);
+}
+
+void SyslogPlugin::timerCallback(EventScheduler::TimerPtr timer)
+{
+    plugin._timerCallback(timer);
+}
+
+void SyslogPlugin::_timerCallback(EventScheduler::TimerPtr timer)
+{
+#if DEBUG
+    if (!syslog) {
+        __debugbreak_and_panic_printf_P(PSTR("_timerCallback() syslog=nullptr\n"));
+    }
+#endif
+    if (syslog->hasQueuedMessages()) {
+        syslog->deliverQueue();
+    }
+}
+
+void SyslogPlugin::begin()
+{
+#if DEBUG
+    if (syslog) {
+        __debugbreak_and_panic_printf_P(PSTR("begin() called twice\n"));
+    }
+#endif
+
+    if (SyslogClient::isEnabled()) {
+
+        auto cfg = SyslogClient::getConfig();
+        _hostname = SyslogClient::getHostname();
+        _port = cfg.port;
+
+        if (config.hasZeroConf(_hostname)) {
+            config.resolveZeroConf(_hostname, _port, [this](const String &hostname, const IPAddress &address, uint16_t port, MDNSResolver::ResponseType type) {
+                this->_zeroConfCallback(hostname, address, port, type);
+            });
+        }
+        else {
+            _zeroConfCallback(_hostname, convertToIPAddress(_hostname), _port, MDNSResolver::ResponseType::NONE);
+        }
+    }
+}
+
+void SyslogPlugin::_zeroConfCallback(const String &hostname, const IPAddress &address, uint16_t port, MDNSResolver::ResponseType type)
+{
+    auto cfg = SyslogClient::getConfig();
+    // SyslogParameter parameter;
+    // parameter.setHostname(config.getDeviceName());
+    // parameter.setAppName(FSPGM(kfcfw));
+    // parameter.setFacility(SYSLOG_FACILITY_KERN);
+    // parameter.setSeverity(SYSLOG_NOTICE);
+
+    SyslogFilter *filter = new SyslogFilter(config.getDeviceName(), FSPGM(kfcfw));
+    auto &parameter = filter->getParameter();
+    parameter.setFacility(SYSLOG_FACILITY_KERN);
+    parameter.setSeverity(SYSLOG_NOTICE);
+
+    filter->addFilter(F("*.*"), SyslogFactory::create(parameter, cfg.protocol_enum, _hostname, _port));
+
+    syslog = new SyslogStream(filter, new SyslogMemoryQueue(SYSLOG_PLUGIN_QUEUE_SIZE));
+
+    _logger.setSyslog(syslog);
+    syslogTimer.add(100, true, timerCallback);
+}
+
+void SyslogPlugin::end()
+{
+    if (syslog) {
+        syslogTimer.remove();
+        _logger.setSyslog(nullptr);
+        delete syslog;
+        syslog = nullptr;
+    }
+}
+
+void SyslogPlugin::kill(uint16_t timeout)
+{
+    if (syslog) {
+        syslogTimer.remove();
+        auto endTime = millis() + timeout;
+        while(syslog->hasQueuedMessages() && millis() < endTime) {
+            syslog->deliverQueue();
+            delay(1);
+        }
+        syslog->getQueue()->kill();
+    }
 }
 
 void SyslogPlugin::getStatus(Print &output)
 {
 #if SYSLOG_SUPPORT
-    auto cfg = SyslogClient::getConfig();
-    auto hostname = SyslogClient::getHostname();
-    switch(cfg.protocol_enum) {
+    switch(SyslogClient::getConfig().protocol_enum) {
         case SyslogClient::SyslogProtocolType::UDP:
-            output.printf_P(PSTR("UDP @ %s:%u"), hostname, cfg.port);
+            output.printf_P(PSTR("UDP @ %s:%u"), _hostname.c_str(), _port);
             break;
         case SyslogClient::SyslogProtocolType::TCP:
-            output.printf_P(PSTR("TCP @ %s:%u"), hostname, cfg.port);
+            output.printf_P(PSTR("TCP @ %s:%u"), _hostname.c_str(), _port);
             break;
         case SyslogClient::SyslogProtocolType::TCP_TLS:
-            output.printf_P(PSTR("TCP TLS @ %s:%u"), hostname, cfg.port);
+            output.printf_P(PSTR("TCP TLS @ %s:%u"), _hostname.c_str(), _port);
             break;
         default:
             output.print(FSPGM(Disabled));
@@ -176,37 +156,6 @@ void SyslogPlugin::getStatus(Print &output)
 #else
     output.print(FSPGM(Not_supported));
 #endif
-}
-
-void SyslogPlugin::createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request)
-{
-    using KFCConfigurationClasses::System;
-
-    if (type == FormCallbackType::SAVE) {
-
-        auto &cfg = SyslogClient::getWriteableConfig();
-        if (cfg.port == 0) {
-            cfg.port = 514;
-        }
-        System::Flags::getWriteable().syslogEnabled = SyslogClient::isEnabled(cfg.protocol_enum);
-        return;
-
-    } else if (!isCreateFormCallbackType(type)) {
-        return;
-    }
-
-    auto &cfg = SyslogClient::getWriteableConfig();
-
-    form.add<uint8_t>(F("syslog_enabled"), _H_W_STRUCT_VALUE(cfg, protocol));
-    form.addValidator(new FormRangeValidatorEnum<SyslogClient::SyslogProtocolType>());
-
-    form.add(F("syslog_host"), _H_CHAR_PTR_FUNC(SyslogClient::getHostname, SyslogClient::setHostname));
-    form.addValidator(new FormValidHostOrIpValidator(FormValidHostOrIpValidator::ALLOW_ZEROCONF|FormValidHostOrIpValidator::ALLOW_EMPTY));
-
-    form.add<uint16_t>(F("syslog_port"), _H_W_STRUCT_VALUE(cfg, port));
-    form.addValidator(new FormRangeValidator(FSPGM(Invalid_port), 1, 65535, true));
-
-    form.finalize();
 }
 
 #if ENABLE_DEEP_SLEEP
@@ -218,7 +167,7 @@ void SyslogPlugin::prepareDeepSleep(uint32_t sleepTimeMillis)
         defaultWaitTime *= 4;
     }
 
-    syslog_kill(defaultWaitTime);
+    kill(defaultWaitTime);
 }
 
 #endif

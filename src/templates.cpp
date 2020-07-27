@@ -173,8 +173,8 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 #if IOT_ALARM_PLUGIN_ENABLED
     else if (String_startsWith(key, PSTR("ALARM_TIMESTAMP_"))) {
         uint8_t num = atoi(key.c_str() + 16);
-        if (num < KFCConfigurationClasses::Plugins::Alarm::MAX_ALARMS) {
-            auto cfg = KFCConfigurationClasses::Plugins::Alarm::getConfig().alarms[num];
+        if (num < Plugins::Alarm::MAX_ALARMS) {
+            auto cfg = Plugins::Alarm::getConfig().alarms[num];
             if (cfg.is_enabled) {
                 char buf[32];
                 time_t _now = (time_t)cfg.time.timestamp;
@@ -252,7 +252,7 @@ void LoginTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         }
     }
     else if (String_equals(key, F("LOGIN_KEEP_DAYS"))) {
-        output.print(KFCConfigurationClasses::System::Device::getWebUIKeepLoggedInDays());
+        output.print(System::Device::getConfig().getWebUICookieLifetime());
     }
     else {
         WebTemplate::process(key, output);

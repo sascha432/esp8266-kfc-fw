@@ -112,7 +112,7 @@ bool ConfigurationParameter::_compareData(const uint8_t *data, uint16_t size) co
     return _info.data && _info.size >= size && _param.length == size && memcmp_P(_info.data, data, size) == 0;
 }
 
-void ConfigurationParameter::setData(Configuration *conf, const uint8_t * data, uint16_t size)
+void ConfigurationParameter::setData(Configuration *conf, const uint8_t *data, uint16_t size)
 {
     _debug_printf_P(PSTR("%s set_size=%u %s\n"), toString().c_str(), size, Configuration::__debugDumper(*this, data, size).c_str());
     if (_compareData(data, size)) {

@@ -55,7 +55,7 @@ bool verify_session_id(const char *sessionId, const char *username, const char *
 #if HAVE_SESSION_DEVICE_TOKEN
 
     auto token = System::Device::getToken();
-    if (token && strlen(token) >= System::Device::kTokenMinLength && !strcmp(sessionId, token)) {
+    if (token && strlen(token) >= System::Device::kTokenMinSize && !strcmp(sessionId, token)) {
         return true;
     }
 

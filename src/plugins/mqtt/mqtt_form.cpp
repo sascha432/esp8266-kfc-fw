@@ -53,7 +53,7 @@ void MQTTPlugin::createConfigureForm(FormCallbackType type, const String &formNa
 
     auto &cfgGroup = form.addDivGroup(F("mqttcfg"), F("{'i':'#mode','e':'var $P=function(v){$(\\'#port\\').attr(\\'placeholder\\',v);}','s':{'0':'$T.hide()','1':'$T.show();$P(\\'\\')','2':'$T.show();$P(1883)','3':'$T.show();$P(8883)'}}"));
 
-    form.add(FSPGM(host), _H_CHAR_PTR_FUNC(ClientConfig::getHostname, ClientConfig::setHostname))->setFormUI((new FormUI(FormUI::TypeEnum_t::TEXT, FSPGM(Hostname))));
+    form.add(FSPGM(host), _H_CSTR_FUNC(ClientConfig::getHostname, ClientConfig::setHostname))->setFormUI((new FormUI(FormUI::TypeEnum_t::TEXT, FSPGM(Hostname))));
     form.addValidator(new FormValidHostOrIpValidator(FormValidHostOrIpValidator::ALLOW_ZEROCONF));
     form.addValidator(new FormLengthValidator(3, ClientConfig::kHostnameMaxSize));
 
@@ -70,13 +70,13 @@ void MQTTPlugin::createConfigureForm(FormCallbackType type, const String &formNa
     })->setFormUI((new FormUI(FormUI::TypeEnum_t::INTEGER, FSPGM(Port)))->setPlaceholder(String(1883)));
     form.addValidator(new FormRangeValidator(FSPGM(Invalid_port), 1, 65535, true));
 
-    form.add(F("mqttuser"), _H_CHAR_PTR_FUNC(ClientConfig::getUsername, ClientConfig::setUsername))->setFormUI((new FormUI(FormUI::TypeEnum_t::TEXT, FSPGM(Username)))->setPlaceholder(FSPGM(Anonymous)));
+    form.add(F("mqttuser"), _H_CSTR_FUNC(ClientConfig::getUsername, ClientConfig::setUsername))->setFormUI((new FormUI(FormUI::TypeEnum_t::TEXT, FSPGM(Username)))->setPlaceholder(FSPGM(Anonymous)));
     form.addValidator(new FormLengthValidator(0, ClientConfig::kUsernameMaxSize));
 
-    form.add(F("mqttpass"), _H_CHAR_PTR_FUNC(ClientConfig::getPassword, ClientConfig::setPassword))->setFormUI((new FormUI(FormUI::TypeEnum_t::PASSWORD, FSPGM(Password))));
+    form.add(F("mqttpass"), _H_CSTR_FUNC(ClientConfig::getPassword, ClientConfig::setPassword))->setFormUI((new FormUI(FormUI::TypeEnum_t::PASSWORD, FSPGM(Password))));
     form.addValidator(new FormLengthValidator(0, ClientConfig::kPasswordMaxSize));
 
-    form.add(FSPGM(topic), _H_CHAR_PTR_FUNC(ClientConfig::getTopic, ClientConfig::setTopic))->setFormUI((new FormUI(FormUI::TypeEnum_t::TEXT, FSPGM(Topic))));
+    form.add(FSPGM(topic), _H_CSTR_FUNC(ClientConfig::getTopic, ClientConfig::setTopic))->setFormUI((new FormUI(FormUI::TypeEnum_t::TEXT, FSPGM(Topic))));
     form.addValidator(new FormLengthValidator(3, ClientConfig::kTopicMaxSize));
 
     form.add<uint8_t>(F("qos"), _H_W_STRUCT_VALUE(cfg, qos))->setFormUI((new FormUI(FormUI::TypeEnum_t::SELECT, F("Quality Of Service")))->addItems(qosItems));
@@ -90,7 +90,7 @@ void MQTTPlugin::createConfigureForm(FormCallbackType type, const String &formNa
 
     auto &autoDiscoveryGroup = form.addDivGroup(F("adp"), F("{'i':'#aden','m':'$T.hide()','s':{'1':'$T.show()'}}"));
 
-    form.add(FSPGM(prefix), _H_CHAR_PTR_FUNC(ClientConfig::getAutoDiscoveryPrefix, ClientConfig::setAutoDiscoveryPrefix))->setFormUI((new FormUI(FormUI::TypeEnum_t::TEXT, F("Auto Discovery Prefix"))));
+    form.add(FSPGM(prefix), _H_CSTR_FUNC(ClientConfig::getAutoDiscoveryPrefix, ClientConfig::setAutoDiscoveryPrefix))->setFormUI((new FormUI(FormUI::TypeEnum_t::TEXT, F("Auto Discovery Prefix"))));
     form.addValidator(new FormLengthValidator(0, ClientConfig::kAutoDiscoveryPrefixMaxSize));
 
     autoDiscoveryGroup.end();

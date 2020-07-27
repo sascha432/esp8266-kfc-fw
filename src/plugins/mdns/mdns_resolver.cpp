@@ -64,9 +64,9 @@ MDNSResolver::Query::Query(const String &service, const String &proto, const Str
     _timeout(timeout),
     _serviceQuery(nullptr),
     _resolved(false),
-    _isAddress(String_equals(addressValue, PSTR("address"))),
-    _isDomain(String_equals(addressValue, PSTR("domain"))),
-    _isPort(String_equals(portValue, PSTR("port")))
+    _isAddress(String_equals(addressValue, SPGM(address))),
+    _isDomain(String_equals(addressValue, SPGM(domain))),
+    _isPort(String_equals(portValue, SPGM(port)))
 {
 }
 
@@ -122,6 +122,7 @@ void MDNSResolver::Query::end()
             }
 
             if (_resolved) {
+                Logger_notice(F("Zeroconf response "));
                 _callback(_hostname, _address, _port, ResponseType::RESOLVED);
             }
             else {

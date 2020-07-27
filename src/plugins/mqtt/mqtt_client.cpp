@@ -294,7 +294,7 @@ uint8_t MQTTClient::getDefaultQos(uint8_t qos)
 
 String MQTTClient::connectionDetailsString()
 {
-    auto message = PrintString(F("%s@%s:%u"), _username.length() ? _username.c_str() : SPGM(Anonymous), _hostname.c_str(), _port);
+    auto message = PrintString(F("%s@%s:%u"), _username.length() ? _username.c_str() : SPGM(Anonymous), (_address.isSet() ? _address.toString().c_str() : _hostname.c_str()), _port);
 #if ASYNC_TCP_SSL_ENABLED
     if (Config_MQTT::getMode() == MQTT_MODE_SECURE) {
         message += F(", Secure MQTT");

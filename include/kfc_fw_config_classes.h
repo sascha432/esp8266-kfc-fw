@@ -28,8 +28,8 @@
 
 #undef DEFAULT
 
-#define CREATE_ZERO_CONF_DEFAULT(service, proto, variable, default_value)   "${zeroconf:_" service "._" proto "," variable "|" default_value "}"
-#define CREATE_ZERO_CONF_NO_DEFAULT(service, proto, variable)               "${zeroconf:_" service "._" proto "," variable "}"
+#define CREATE_ZERO_CONF_DEFAULT(service, proto, variable, default_value)   "${zeroconf:" service "." proto "," variable "|" default_value "}"
+#define CREATE_ZERO_CONF_NO_DEFAULT(service, proto, variable)               "${zeroconf:" service "." proto "," variable "}"
 
 
 #ifndef _H
@@ -49,14 +49,16 @@
     static constexpr size_t k##name##MaxSize = len; \
     static constexpr HandleType k##name##ConfigHandle = CONFIG_GET_HANDLE_STR(_STRINGIFY(class_name) "." _STRINGIFY(name)); \
     static const char *get##name() { return loadStringConfig(k##name##ConfigHandle); } \
-    static void set##name(const char *str) { storeStringConfig(k##name##ConfigHandle, str); }
+    static void set##name(const char *str) { storeStringConfig(k##name##ConfigHandle, str); } \
+    static void set##name(const __FlashStringHelper *str) { set##name(reinterpret_cast<PGM_P>(str)); } \
+    static void set##name(const String &str) { set##name(str.c_str()); }
 
 
 namespace KFCConfigurationClasses {
 
     using HandleType = uint16_t;
 
-    const void *loadBinaryConfig(HandleType handle, uint16_t length);
+    const void *loadBinaryConfig(HandleType handle, uint16_t &length);
     void *loadWriteableBinaryConfig(HandleType handle, uint16_t length);
     void storeBinaryConfig(HandleType handle, const void *data, uint16_t length);
     const char *loadStringConfig(HandleType handle);
@@ -71,7 +73,15 @@ namespace KFCConfigurationClasses {
         static ConfigType getConfig()
         {
             __CDBG_printf("getConfig=%04x size=%u", kConfigStructHandle, sizeof(ConfigType));
-            return *reinterpret_cast<const ConfigType *>(loadBinaryConfig(kConfigStructHandle, sizeof(ConfigType)));
+            uint16_t length = sizeof(ConfigType);
+            auto ptr = loadBinaryConfig(kConfigStructHandle, length);
+            if (!ptr || length != sizeof(ConfigType)) {
+                __DBG_printf("binary handle=%04x stored_size=%u mismatch. setting default values size=%u", kConfigStructHandle, length, sizeof(ConfigType));
+                ConfigType cfg = {};
+                void *newPtr = loadWriteableBinaryConfig(kConfigStructHandle, sizeof(ConfigType));
+                ptr = memcpy(newPtr, &cfg, sizeof(ConfigType));
+            }
+            return *reinterpret_cast<const ConfigType *>(ptr);
         }
 
         static void setConfig(const ConfigType &params)
@@ -148,44 +158,70 @@ namespace KFCConfigurationClasses {
         // --------------------------------------------------------------------
         // Device
 
-        class Device {
+        class DeviceConfig {
         public:
-            enum class StatusLEDModeEnum : uint8_t {
+            enum class StatusLEDModeType : uint8_t {
                 OFF_WHEN_CONNECTED = 0,
                 SOLID_WHEN_CONNECTED = 1,
             };
 
+            typedef struct __attribute__packed__ DeviceConfig_t {
+                uint32_t config_version;
+                uint16_t safe_mode_reboot_timeout_minutes;
+                uint16_t webui_cookie_lifetime_days;
+                uint16_t zeroconf_timeout;
+                union __attribute__packed__ {
+                    StatusLEDModeType status_led_mode_enum;
+                    uint8_t status_led_mode;
+                };
+
+                uint16_t getSafeModeRebootTimeout() const {
+                    return safe_mode_reboot_timeout_minutes;
+                }
+                uint16_t getWebUICookieLifetime() const {
+                    return webui_cookie_lifetime_days;
+                }
+                uint32_t getWebUICookieLifetimeInSeconds() const {
+                    return webui_cookie_lifetime_days * 86400U;
+                }
+                StatusLEDModeType getStatusLedMode() const {
+                    return status_led_mode_enum;
+                }
+
+                DeviceConfig_t() : config_version(FIRMWARE_VERSION), safe_mode_reboot_timeout_minutes(0), webui_cookie_lifetime_days(30), zeroconf_timeout(5000), status_led_mode_enum(StatusLEDModeType::SOLID_WHEN_CONNECTED) {}
+
+            } DeviceConfig_t;
+        };
+
+        class Device : public DeviceConfig, public ConfigGetterSetter<DeviceConfig::DeviceConfig_t, _H(MainConfig().system.device.cfg)> {
         public:
             Device() {
             }
             static void defaults();
 
-            static const char *getName();
-            static const char *getTitle();
-            static const char *getPassword();
-            static const char *getToken();
-            static constexpr size_t kTokenMinLength = SESSION_DEVICE_TOKEN_MIN_LENGTH;
-            static void setName(const String &name);
-            static void setTitle(const String &title);
-            static void setPassword(const String &password);
-            static void setToken(const String &token);
+            CREATE_STRING_GETTER_SETTER(MainConfig().system.device, Name, 16);
+            CREATE_STRING_GETTER_SETTER(MainConfig().system.device, Title, 32);
 
-            static void setSafeModeRebootTime(uint16_t minutes);
-            static uint16_t getSafeModeRebootTime();
-            static void setWebUIKeepLoggedInDays(uint16_t days);
-            static uint16_t getWebUIKeepLoggedInDays();
-            static uint32_t getWebUIKeepLoggedInSeconds();
-            static void setStatusLedMode(StatusLEDModeEnum mode);
-            static StatusLEDModeEnum getStatusLedMode();
+            static constexpr size_t kPasswordMinSize = 6;
+            CREATE_STRING_GETTER_SETTER(MainConfig().system.device, Password, 64);
+            static constexpr size_t kTokenMinSize = SESSION_DEVICE_TOKEN_MIN_LENGTH;
+            CREATE_STRING_GETTER_SETTER(MainConfig().system.device, Token, 255);
+
+            static constexpr uint16_t kZeroConfMinTimeout = 1000;
+            static constexpr uint16_t kZeroConfMaxTimeout = 60000;
+
+            static constexpr uint16_t kWebUICookieMinLifetime = 3;
+            static constexpr uint16_t kWebUICookieMaxLifetime = 360;
+
+            // static void setSafeModeRebootTime(uint16_t minutes);
+            // static uint16_t getSafeModeRebootTime();
+            // static void setWebUIKeepLoggedInDays(uint16_t days);
+            // static uint16_t getWebUIKeepLoggedInDays();
+            // static uint32_t getWebUIKeepLoggedInSeconds();
+            // static void setStatusLedMode(StatusLEDModeEnum mode);
+            // static StatusLEDModeEnum getStatusLedMode();
 
         public:
-            typedef struct __attribute__packed__ {
-                uint16_t _safeModeRebootTime;
-                uint16_t _webUIKeepLoggedInDays: 15;
-                uint16_t _statusLedMode: 1;
-            } DeviceSettings_t;
-
-            DeviceSettings_t settings;
         };
 
         // --------------------------------------------------------------------
@@ -193,6 +229,8 @@ namespace KFCConfigurationClasses {
 
         class Firmware {
         public:
+            static void defaults();
+
             // sha1 of the firmware.elf file
             static const uint8_t *getElfHash(uint16_t &length);     // length getElfHashSize byte
             static uint8_t getElfHashHex(String &str);
@@ -221,39 +259,54 @@ namespace KFCConfigurationClasses {
 
     struct Network {
 
+        static constexpr uint32_t createIPAddress(uint32_t a, uint32_t b, uint32_t c, uint32_t d) {
+            return a | (b << 8U) | (c << 16U) | (d << 24U);
+        }
+
         // --------------------------------------------------------------------
         // Settings
-
-        class Settings {
+        class SettingsConfig {
         public:
-            Settings();
-            static Settings read();
-            static void defaults();
-            void write();
-
-            IPAddress localIp() const {
-                return _localIp;
-            }
-            IPAddress subnet() const {
-                return _subnet;
-            }
-            IPAddress gateway() const {
-                return _gateway;
-            }
-            IPAddress dns1() const {
-                return _dns1;
-            }
-            IPAddress dns2() const {
-                return _dns2;
-            }
-
-            struct __attribute__packed__ {
+            typedef struct __attribute__packed__ SettingsConfig_t {
                 uint32_t _localIp;
                 uint32_t _subnet;
                 uint32_t _gateway;
                 uint32_t _dns1;
                 uint32_t _dns2;
-            };
+
+                SettingsConfig_t() :
+                    _subnet(createIPAddress(255, 255, 255, 0)),
+                    _gateway(createIPAddress(192, 168, 4, 1)),
+                    _dns1(createIPAddress(8, 8, 8, 8)),
+                    _dns2(createIPAddress(8, 8, 4, 4))
+                {
+                    uint8_t mac[6];
+                    WiFi.macAddress(mac);
+                    _localIp = IPAddress(192, 168, 4, mac[5] <= 1 || mac[5] >= 253 ? (mac[4] <= 1 || mac[4] >= 253 ? (mac[3] <= 1 || mac[3] >= 253 ? mac[3] : rand() % 98 + 1) : mac[4]) : mac[5]);
+                }
+
+            } SettingsConfig_t;
+        };
+
+        class Settings : public SettingsConfig, public ConfigGetterSetter<SettingsConfig::SettingsConfig_t, _H(MainConfig().network.settings)> {
+        public:
+            static void defaults();
+
+            IPAddress localIp() const {
+                return getConfig()._localIp;
+            }
+            IPAddress subnet() const {
+                return getConfig()._subnet;
+            }
+            IPAddress gateway() const {
+                return getConfig()._gateway;
+            }
+            IPAddress dns1() const {
+                return getConfig()._dns1;
+            }
+            IPAddress dns2() const {
+                return getConfig()._dns2;
+            }
         };
 
         // --------------------------------------------------------------------
@@ -842,15 +895,7 @@ namespace KFCConfigurationClasses {
         // Syslog
         class SyslogClientConfig {
         public:
-            enum class SyslogProtocolType : uint8_t {
-                MIN = 0,
-                NONE = MIN,
-                UDP,
-                TCP,
-                TCP_TLS,
-                FILE,
-                MAX
-            };
+            using SyslogProtocolType = ::SyslogProtocolType;
             typedef struct __attribute__packed__ SyslogConfig_t {
                 uint16_t port;
                 union __attribute__packed__ {
@@ -870,7 +915,7 @@ namespace KFCConfigurationClasses {
             } SyslogConfig_t;
         };
 
-        class SyslogClient : public SyslogClientConfig, public ConfigGetterSetter<SyslogClientConfig::SyslogConfig_t, _H(MainConfig().plugins.syslog)>
+        class SyslogClient : public SyslogClientConfig, public ConfigGetterSetter<SyslogClientConfig::SyslogConfig_t, _H(MainConfig().plugins.syslog.cfg)>
         {
         public:
             SyslogClient() {}

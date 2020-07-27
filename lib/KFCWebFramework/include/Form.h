@@ -143,6 +143,8 @@ public:
     //     return _fields;
     // }
 
+    static String normalizeName(const __FlashStringHelper *str);
+
 private:
     static const char *_jsonEncodeString(const String &str, PrintInterface &out);
 

@@ -334,3 +334,38 @@ void Form::dump(Print &out, const String &prefix) const {
         out.println('\'');
     }
 }
+
+String Form::normalizeName(const __FlashStringHelper *str)
+{
+    String name;
+    auto ptr = RFPSTR(str);
+    if (ptr) {
+        char ch;
+        while ((ch = pgm_read_byte(ptr++)) != 0) {
+            if (ch == '_' && name.length() == 0) {
+                // remove _ at the beginning of the string
+            }
+            else if (isupper(ch)) {
+                // multiple uppercase characters in a row are allowed
+                if (isupper(pgm_read_byte(ptr))) {
+                    name += (char)ch;
+                }
+                else {
+                    // change single uppercase characters to lowercase + _
+                    if (name.length() != 0) {
+                        name += '_';
+                    }
+                    name += (char)tolower(ch);
+                }
+            }
+            else {
+                // remove double _ and _ at the end of the string
+                if (!(ch == '_' && (pgm_read_byte(ptr) == '_' || pgm_read_byte(ptr) == 0))) {
+                    name += ch;
+                }
+            }
+        }
+    }
+    __DBG_printf("normalize=%s new=%s", str, name.c_str());
+    return name;
+}

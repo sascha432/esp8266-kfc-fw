@@ -19,6 +19,7 @@ class AsyncWebServerRequest;
 class WebTemplate;
 class Form;
 class AtModeArgs;
+class KFCFWConfiguration;
 
 /*
 PROGMEM_DEFINE_PLUGIN_OPTIONS(
@@ -302,17 +303,17 @@ public:
         return *_dependencies;
     }
 
-    uint32_t getSetupTime() const {
-        return _setupTime;
-    }
-    void setSetupTime() {
-        _setupTime = millis();
-    }
-    void clearSetupTime() {
-        _setupTime = 0;
-    }
+    uint32_t getSetupTime() const;
+    void setSetupTime();
+    void clearSetupTime();
+
+    static bool addToBlacklist(const String &name);
+    static bool removeFromBlacklist(const String &name);
+    static const char *getBlacklist();
 
 private:
+    friend KFCFWConfiguration;
+
     uint32_t _setupTime;
     PGM_Config_t _config;
     static DependencyVector *_dependencies;

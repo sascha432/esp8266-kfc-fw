@@ -38,6 +38,13 @@
 #define CONFIG_GET_HANDLE_STR(name)                                         constexpr_crc16_update(name, constexpr_strlen(name))
 #endif
 
+#define CREATE_STRING_GETTER_SETTER_BINARY(class_name, name, len) \
+    static constexpr size_t k##name##MaxSize = len; \
+    static constexpr HandleType k##name##ConfigHandle = CONFIG_GET_HANDLE_STR(_STRINGIFY(class_name) "." _STRINGIFY(name)); \
+    static size_t get##name##Size() { return k##name##MaxSize; } \
+    static const uint8_t *get##name() { return loadBinaryConfig(k##name##ConfigHandle, k##name##MaxSize); } \
+    static void set##name(const uint8_t *data) { storeBinaryConfig(k##name##ConfigHandle, data, k##name##MaxSize); }
+
 #define CREATE_STRING_GETTER_SETTER(class_name, name, len) \
     static constexpr size_t k##name##MaxSize = len; \
     static constexpr HandleType k##name##ConfigHandle = CONFIG_GET_HANDLE_STR(_STRINGIFY(class_name) "." _STRINGIFY(name)); \
@@ -88,12 +95,15 @@ namespace KFCConfigurationClasses {
         class Flags {
         public:
             Flags();
+            Flags(bool load) {
+                *this = load ? getFlags() : Flags();
+            }
             Flags(ConfigFlags flags) : _flags(flags) {
             }
             ConfigFlags *operator->() {
                 return &_flags;
             }
-            static Flags read();
+            static Flags getFlags();
             static ConfigFlags get();
             static ConfigFlags &getWriteable();
             static void set(ConfigFlags flags);
@@ -108,14 +118,23 @@ namespace KFCConfigurationClasses {
             bool isStationEnabled() const {
                 return _flags.wifiMode & WIFI_STA;
             }
+            WiFiMode getWiFiMode() const {
+                return static_cast<WiFiMode>(_flags.wifiMode);
+            }
             bool isSoftApStandByModeEnabled() const {
-                return _flags.apStandByMode;
+                if (isSoftAPEnabled()) {
+                    return _flags.apStandByMode;
+                }
+                return false;
             }
             bool isMDNSEnabled() const {
                 return _flags.enableMDNS;
             }
             void setMDNSEnabled(bool state) {
                 _flags.enableMDNS = state;
+            }
+            bool isWebUIEnabled() const {
+                return !_flags.disableWebUI;
             }
             bool isMQTTEnabled() const;
             void setMQTTEnabled(bool state);
@@ -185,6 +204,8 @@ namespace KFCConfigurationClasses {
             static constexpr uint8_t getElfHashHexSize() {
                 return static_cast<uint8_t>(sizeof(elf_sha1)) * 2;
             }
+
+            CREATE_STRING_GETTER_SETTER(MainConfig().system.firmware, PluginBlacklist, 255);
 
             uint8_t elf_sha1[20];
         };

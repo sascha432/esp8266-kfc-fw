@@ -24,6 +24,7 @@
 #if SYSLOG_SUPPORT
 #include <KFCSyslog.h>
 #endif
+#include "../src/plugins/mdns/mdns_resolver.h"
 #include <SaveCrash.h>
 #include <StringKeyValueStore.h>
 #include "../src/generated/FlashStringGeneratorAuto.h"
@@ -429,11 +430,8 @@ public:
     // support for zeroconf
     // ${zeroconf:<service>.<proto>:<address|value[:port value]>|<fallback[:port]>}
 
-    // if IPAddress is valid, hostname is set to address.toString()
-    using ResolvedCallback = std::function<void(const String &hostname, const IPAddress &address, uint16_t port, bool isFallback)>;
-
     // resolve zeroconf, optional port to use as default or 0
-    void resolveZeroConf(const String &hostname, uint16_t port, ResolvedCallback callback) const;
+    bool resolveZeroConf(const String &hostname, uint16_t port, MDNSResolver::ResolvedCallback callback) const;
 
     // check if the hostname contains zeroconf
     bool hasZeroConf(const String &hostname) const;

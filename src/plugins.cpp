@@ -21,6 +21,8 @@
 #include "debug_helper_disable.h"
 #endif
 
+using KFCConfigurationClasses::System;
+
 PluginsVector plugins;
 BootstrapMenu bootstrapMenu;
 NavMenu_t navMenu;
@@ -145,9 +147,15 @@ void setup_plugins(PluginComponent::SetupModeType mode)
         create_menu();
     }
 
+    auto blacklist = System::Firmware::getPluginBlacklist();
+
     PluginComponent::createDependencies();
 
     for(const auto plugin : plugins) {
+        if (stringlist_find_P_P(blacklist, plugin->getName_P()) != -1) {
+            __DBG_printf("plugin=%s blacklist=%s", plugin->getName_P(), blacklist);
+            continue;
+        }
         bool runSetup = (
             (mode == PluginComponent::SetupModeType::DEFAULT) ||
             (mode == PluginComponent::SetupModeType::SAFE_MODE && plugin->allowSafeMode())
@@ -185,7 +193,7 @@ void setup_plugins(PluginComponent::SetupModeType mode)
         }
     }
 
-    if (enableWebUIMenu && !KFCConfigurationClasses::System::Flags::read()->disableWebUI) {
+    if (enableWebUIMenu && System::Flags(true).isWebUIEnabled()) {
         auto url = F("webui.html");
         if (!bootstrapMenu.isValid(bootstrapMenu.findMenuByURI(url, navMenu.device))) {
             auto webUi = F("Web UI");

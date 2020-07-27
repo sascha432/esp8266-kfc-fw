@@ -10,10 +10,10 @@ typedef std::vector<SyslogFileFilterItem> SyslogFiltersVector;
 
 typedef std::vector<std::pair<const String, Syslog *>> SyslogObjectsVector;
 
-#define SYSLOG_FILTER_STOP nullptr
-
 class SyslogFilter {
 public:
+	static constexpr nullptr_t kFilterStop = nullptr;
+
 	SyslogFilter(const SyslogParameter &parameter);
 	SyslogFilter(const String &hostname, const String &appName);
 

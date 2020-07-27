@@ -12,14 +12,13 @@
 #include <AsyncTCP.h>
 #endif
 
-#define SYSLOG_PORT_TCP                 514
-#define SYSLOG_PORT_TCP_TLS             6514
-
-// Idle time before closing the socket
-#define SYSLOG_TCP_MAX_IDLE             15
 
 class SyslogTCP : public Syslog {
 public:
+    static constexpr uint16_t kDefaultPort = 514;
+    static constexpr uint16_t kDefaultPortTLS = 6514;
+    static constexpr uint16_t kMaxIdleSeconds = 15;
+
     typedef struct {
         Buffer message;                 // data to write
         uint16_t written;               // bytes written
@@ -30,7 +29,7 @@ public:
         Callback_t callback;
     } Queue_t;
 
-    SyslogTCP(SyslogParameter &parameter, const String &host, uint16_t port = SYSLOG_PORT_TCP, bool useTLS = false);
+    SyslogTCP(SyslogParameter &parameter, const String &host, uint16_t port = kDefaultPort, bool useTLS = false);
     ~SyslogTCP();
 
 	void transmit(const String &message, Callback_t callback) override;

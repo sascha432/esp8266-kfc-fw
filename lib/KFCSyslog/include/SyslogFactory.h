@@ -4,9 +4,9 @@
 
 #pragma once
 
-#define SYSLOG_DEFAULT_PORT -1
-
 class SyslogFactory {
 public:
-	static Syslog *create(SyslogParameter &parameter, SyslogProtocol protocol, const String &host, uint16_t port = SYSLOG_DEFAULT_PORT);
+	static constexpr uint16_t kDefaultPort = ~0;
+
+	static Syslog *create(SyslogParameter &parameter, SyslogProtocol protocol, const String &host, uint16_t port = kDefaultPort);
 };

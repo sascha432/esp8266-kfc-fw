@@ -32,7 +32,7 @@
 
 class SyslogStream : public Stream {
 public:
-	SyslogStream(SyslogParameter &parameter, SyslogProtocol protocol, const String &host, uint16_t port = SYSLOG_DEFAULT_PORT, uint16_t queueSize = 1024);
+	SyslogStream(SyslogParameter &parameter, SyslogProtocol protocol, const String &host, uint16_t port = SyslogFactory::kDefaultPort, uint16_t queueSize = 1024);
     SyslogStream(SyslogFilter *filter, SyslogQueue *queue);
     virtual ~SyslogStream();
 

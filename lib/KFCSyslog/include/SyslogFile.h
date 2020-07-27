@@ -4,12 +4,13 @@
 
 #pragma once
 
-#define SYSLOG_FILE_MAX_SIZE        0xffff
-#define SYSLOG_FILE_MAX_ROTATE      10
-
 class SyslogFile : public Syslog {
 public:
-    SyslogFile(SyslogParameter &parameter, const String &filename, size_t maxSize = SYSLOG_FILE_MAX_SIZE, uint16_t maxRotate = SYSLOG_FILE_MAX_ROTATE);
+    static constexpr size_t kMaxFileSize = 0xffff;
+    static constexpr uint16_t kKeepRotatedFilesLimit = 10;
+
+public:
+    SyslogFile(SyslogParameter &parameter, const String &filename, size_t maxSize = kMaxFileSize, uint16_t maxRotate = kKeepRotatedFilesLimit);
 
     void addHeader(String &buffer) override;
     void transmit(const String &message, Callback_t callback) override;

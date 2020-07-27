@@ -88,7 +88,7 @@ SyslogFileFilterItem::SyslogFileFilterItem(const String &filter, Syslog *syslog)
 
 bool SyslogFileFilterItem::isStop() const
 {
-	return _syslog == SYSLOG_FILTER_STOP;
+	return _syslog == SyslogFilter::kFilterStop;
 }
 
 bool SyslogFileFilterItem::isMatch(SyslogFacility _facility, SyslogSeverity _severity)

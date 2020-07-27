@@ -30,15 +30,26 @@
 
 class Syslog;
 
-typedef enum : uint8_t {
+#if defined(HAVE_KFC_FIRMWARE_VERSION) && HAVE_KFC_FIRMWARE_VERSION
+
+#include "kfc_fw_config_types.h"
+
+using SyslogProtocol = SyslogProtocolType;
+
+#else
+
+enum class SyslogProtocol {
     MIN = 0,
-    SYSLOG_PROTOCOL_NONE = MIN,
-    SYSLOG_PROTOCOL_UDP,
-    SYSLOG_PROTOCOL_TCP,
-    SYSLOG_PROTOCOL_TCP_TLS,
-    SYSLOG_PROTOCOL_FILE,
+    NONE = MIN,
+    UDP,
+    TCP,
+    TCP_TLS,
+    FILE,
     MAX
-} SyslogProtocol;
+};
+
+#endif
+
 
 class SyslogFilterItem {
 public:

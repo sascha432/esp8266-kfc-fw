@@ -43,7 +43,8 @@ SyslogTCP::~SyslogTCP()
     _client.abort();
 }
 
-void SyslogTCP::__onPoll(AsyncClient *client) {
+void SyslogTCP::__onPoll(AsyncClient *client)
+{
     if (_queue.isSending) {
         if (client->canSend()) {
             auto space = client->space(); // there is at least one byte space
@@ -79,7 +80,8 @@ void SyslogTCP::__onPoll(AsyncClient *client) {
     }
 }
 
-void SyslogTCP::__onAck(AsyncClient *client, size_t len, uint32_t time) {
+void SyslogTCP::__onAck(AsyncClient *client, size_t len, uint32_t time)
+{
     _debug_printf_P(PSTR("SyslogTCP::__onAck(): len=%u,time=%u,queue:sending=%d,written=%u,sentAck=%u,left=%u\n"), len, time, _queue.isSending, _queue.written, _queue.sentAck, _queue.message.length());
     if (_queue.isSending) {
         _queue.sentAck += len;
@@ -96,30 +98,36 @@ void SyslogTCP::__onAck(AsyncClient *client, size_t len, uint32_t time) {
     }
 }
 
-void SyslogTCP::_onDisconnect(void *arg, AsyncClient *client) {
+void SyslogTCP::_onDisconnect(void *arg, AsyncClient *client)
+{
     // not an error, calling _queueWriteError just verfies the state
     reinterpret_cast<SyslogTCP *>(arg)->_queueWriteError(IF_DEBUG("onDisconnect"));
 }
 
-void SyslogTCP::_onError(void *arg, AsyncClient *client, int8_t error) {
+void SyslogTCP::_onError(void *arg, AsyncClient *client, int8_t error)
+{
     reinterpret_cast<SyslogTCP *>(arg)->_queueWriteError(IF_DEBUG("onError"));
 }
 
 // default timeout is 5s for sending
-void SyslogTCP::_onTimeout(void *arg, AsyncClient *client, uint32_t time) {
+void SyslogTCP::_onTimeout(void *arg, AsyncClient *client, uint32_t time)
+{
     reinterpret_cast<SyslogTCP *>(arg)->_queueWriteError(IF_DEBUG("onTimeout"));
 }
 
-void SyslogTCP::_onAck(void *arg, AsyncClient *client, size_t len, uint32_t time) {
+void SyslogTCP::_onAck(void *arg, AsyncClient *client, size_t len, uint32_t time)
+{
     reinterpret_cast<SyslogTCP *>(arg)->__onAck(client, len, time);
 }
 
 // gets called once per second
-void SyslogTCP::_onPoll(void *arg, AsyncClient *client) {
+void SyslogTCP::_onPoll(void *arg, AsyncClient *client)
+{
     reinterpret_cast<SyslogTCP *>(arg)->__onPoll(client);
 }
 
-void SyslogTCP::transmit(const String &message, Callback_t callback) {
+void SyslogTCP::transmit(const String &message, Callback_t callback)
+{
     if (_queue.isSending) {
         __debugbreak_and_panic_printf_P(PSTR("FATAL: Transmit called while sending\n"));
     }
@@ -166,7 +174,7 @@ void SyslogTCP::_queueWritten(bool ack) {
         _queue.isSending = false;
         _queue.message.clear();
         _queue.isDisconnecting = false;
-        _queue.idleTimeout = millis() + (SYSLOG_TCP_MAX_IDLE * 1000UL);
+        _queue.idleTimeout = millis() + (kMaxIdleSeconds * 1000UL);
         _queue.callback(true);
     }
 }

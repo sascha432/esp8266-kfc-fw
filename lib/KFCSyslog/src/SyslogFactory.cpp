@@ -15,16 +15,18 @@
 #include <debug_helper_disable.h>
 #endif
 
-Syslog *SyslogFactory::create(SyslogParameter &parameter, SyslogProtocol protocol, const String &host, uint16_t port) {
-	switch (protocol) {
-		case SYSLOG_PROTOCOL_UDP:
-			return new SyslogUDP(parameter, host, port == SYSLOG_DEFAULT_PORT ? SYSLOG_PORT_UDP : port);
-		case SYSLOG_PROTOCOL_TCP:
-			return new SyslogTCP(parameter, host, port == SYSLOG_DEFAULT_PORT ? SYSLOG_PORT_TCP : port, false);
-		case SYSLOG_PROTOCOL_TCP_TLS:
-			return new SyslogTCP(parameter, host, port == SYSLOG_DEFAULT_PORT ? SYSLOG_PORT_TCP_TLS : port, true);
-		case SYSLOG_PROTOCOL_NONE:
-		case SYSLOG_PROTOCOL_FILE:
+Syslog *SyslogFactory::create(SyslogParameter &parameter, SyslogProtocol protocol, const String &host, uint16_t port)
+{
+	switch(protocol) {
+		case SyslogProtocol::UDP:
+			return new SyslogUDP(parameter, host, port == kDefaultPort ? SyslogUDP::kDefaultPort : port);
+		case SyslogProtocol::TCP:
+			return new SyslogTCP(parameter, host, port == kDefaultPort ? SyslogTCP::kDefaultPort : port, false);
+		case SyslogProtocol::TCP_TLS:
+			return new SyslogTCP(parameter, host, port == kDefaultPort ? SyslogTCP::kDefaultPortTLS : port, true);
+		case SyslogProtocol::NONE:
+		case SyslogProtocol::FILE:
+		default:
 			break;
 	}
 	return nullptr;

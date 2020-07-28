@@ -128,24 +128,6 @@ public:
     char host4[65];
 };
 
-class Config_NTP {
-public:
-    Config_NTP();
-
-    static const char *getTimezone();
-    static const char *getPosixTZ();
-    static const char *getServers(uint8_t num);
-    static const char *getUrl();
-    static uint16_t getNtpRfresh();
-
-    static void defaults();
-
-    char timezone[33];
-    char servers[3][65];
-    char posix_tz[33];
-    uint16_t ntpRefresh;
-};
-
 class Config_Sensor {
 public:
 #if IOT_SENSOR_HAVE_BATTERY
@@ -259,8 +241,6 @@ namespace Config_QuickConnect
 
 typedef struct {
     ConfigFlags flags;
-
-    Config_NTP ntp;
 
     uint16_t http_port;
     char cert_passphrase[33];
@@ -386,13 +366,13 @@ typedef struct {
     add(Form::normalizeName(F(_STRINGIFY(member))), _H_W_STRUCT_IP_VALUE(struct, member, ##__VA_ARGS__)
 
 #define addCStrGetterSetter(getter, setter, ...) \
-    add(Form::normalizeName(F(_STRINGIFY(member))), _H_CSTR_FUNC(getter, setter, ##__VA_ARGS__)
+    add(Form::normalizeName(F(_STRINGIFY(getter))), _H_CSTR_FUNC(getter, setter, ##__VA_ARGS__)
 
 #define addGetterSetter(getter, setter, ...) \
-    add(Form::normalizeName(F(_STRINGIFY(member))), _H_FUNC(getter, setter, ##__VA_ARGS__)
+    add(Form::normalizeName(F(_STRINGIFY(getter))), _H_FUNC(getter, setter, ##__VA_ARGS__)
 
 #define addGetterSetterType(getter, setter, type, ...) \
-    add(Form::normalizeName(F(_STRINGIFY(member))), _H_FUNC_TYPE(getter, setter, type, ##__VA_ARGS__)
+    add(Form::normalizeName(F(_STRINGIFY(getter))), _H_FUNC_TYPE(getter, setter, type, ##__VA_ARGS__)
 
 
 // NOTE using the new handlers (USE_WIFI_SET_EVENT_HANDLER_CB=0) costs 896 byte RAM with 5 handlers

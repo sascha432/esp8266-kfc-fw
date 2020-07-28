@@ -68,6 +68,7 @@ extern const char *handleNameAlarm_t;
 extern const char *handleNameSerial2TCPConfig_t;
 extern const char *handleNameMqttConfig_t;
 extern const char *handleNameSyslogConfig_t;
+extern const char *handleNameNtpClientConfig_t;
 
 #define CIF_DEBUG(...) __VA_ARGS__
 
@@ -999,6 +1000,40 @@ namespace KFCConfigurationClasses {
         };
 
         // --------------------------------------------------------------------
+        // NTP CLient
+
+        class NTPClientConfig {
+        public:
+            typedef struct __attribute__packed__ NtpClientConfig_t {
+                // minutes
+                uint16_t refreshInterval;
+                static constexpr uint16_t kRefreshIntervalMin = 60;
+                static constexpr uint16_t kRefreshIntervalMax = 720 * 60;
+                static constexpr uint16_t kRefreshIntervalDefault = 15 * 60;
+
+                NtpClientConfig_t() : refreshInterval(kRefreshIntervalDefault) {}
+
+            } NtpClientConfig_t;
+        };
+
+        class NTPClient : public NTPClientConfig, public ConfigGetterSetter<NTPClientConfig::NtpClientConfig_t, _H(MainConfig().plugins.ntpclient.cfg) CIF_DEBUG(, &handleNameNtpClientConfig_t)>
+        {
+        public:
+            static void defaults();
+            static bool isEnabled();
+
+            CREATE_STRING_GETTER_SETTER(MainConfig().plugins.ntpclient, Server1, 64);
+            CREATE_STRING_GETTER_SETTER(MainConfig().plugins.ntpclient, Server2, 64);
+            CREATE_STRING_GETTER_SETTER(MainConfig().plugins.ntpclient, Server3, 64);
+            CREATE_STRING_GETTER_SETTER(MainConfig().plugins.ntpclient, TimezoneName, 64);
+            CREATE_STRING_GETTER_SETTER(MainConfig().plugins.ntpclient, PosixTimezone, 64);
+
+            static const char *getServer(uint8_t num);
+            static constexpr uint8_t kServersMax = 3;
+
+        };
+
+        // --------------------------------------------------------------------
         // Plugin Structure
 
         HomeAssistant homeassistant;
@@ -1009,6 +1044,7 @@ namespace KFCConfigurationClasses {
         Serial2TCP serial2tcp;
         MQTTClient mqtt;
         SyslogClient syslog;
+        NTPClient ntpclient;
 
     };
 

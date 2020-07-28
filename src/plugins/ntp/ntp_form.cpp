@@ -3,6 +3,7 @@
  */
 
 #include <Arduino_compat.h>
+#include <ESPAsyncWebServer.h>
 #include <KFCForms.h>
 #include "PluginComponent.h"
 #include "ntp_plugin_class.h"
@@ -16,6 +17,7 @@
 #endif
 
 using KFCConfigurationClasses::System;
+using KFCConfigurationClasses::Plugins;
 
 void NTPPlugin::createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request)
 {
@@ -24,30 +26,30 @@ void NTPPlugin::createConfigureForm(FormCallbackType type, const String &formNam
     }
 
     auto &cfg = System::Flags::getWriteable();
+    auto &ntp = Plugins::NTPClient::getWriteableConfig();
 
-    // form.setFormUI(FSPGM(NTP_Client_Configuration, "NTP Client Configuration"));
+    form.setFormUI(FSPGM(NTP_Client_Configuration, "NTP Client Configuration"));
 
-    form.addWriteableStruct(cfg, is_ntp_client_enabled));
+    form.addWriteableStruct(cfg, is_ntp_client_enabled))->setFormUI((new FormUI(FormUI::Type::SELECT, FSPGM(NTP_Client, "NTP Client")))->setBoolItems());
 
-    form.add(F("ntp_server1"), _H_STR_VALUE(Config().ntp.servers[0]));
+    auto &group = form.addDivGroup(F("ntpcfg"), F("{'i':'#ntp_CL_EN','s':{'0':'$T.hide()','1':'$T.show()'}}"));
+
+    form.addCStrGetterSetter(Plugins::NTPClient::getPosixTimezone, Plugins::NTPClient::setPosixTimezone))->setFormUI((new FormUI(FormUI::Type::SELECT, FSPGM(Timezone, "Timezone"))));
+    form.addCStrGetterSetter(Plugins::NTPClient::getTimezoneName, Plugins::NTPClient::setTimezoneName))->setFormUI((new FormUI(FormUI::Type::HIDDEN)));
+
+    form.addCStrGetterSetter(Plugins::NTPClient::getServer1, Plugins::NTPClient::setServer1))->setFormUI((new FormUI(FormUI::Type::TEXT, PrintString(FSPGM(NTP_Server___, "NTP Server %u"), 1))));
     form.addValidator(new FormValidHostOrIpValidator(true));
 
-    form.add(F("ntp_server2"), _H_STR_VALUE(Config().ntp.servers[1]));
+    form.addCStrGetterSetter(Plugins::NTPClient::getServer2, Plugins::NTPClient::setServer2))->setFormUI((new FormUI(FormUI::Type::TEXT, PrintString(FSPGM(NTP_Server___, "NTP Server %u"), 2))));
     form.addValidator(new FormValidHostOrIpValidator(true));
 
-    form.add(F("ntp_server3"), _H_STR_VALUE(Config().ntp.servers[2]));
+    form.addCStrGetterSetter(Plugins::NTPClient::getServer3, Plugins::NTPClient::setServer3))->setFormUI((new FormUI(FormUI::Type::TEXT, PrintString(FSPGM(NTP_Server___, "NTP Server %u"), 3))));
     form.addValidator(new FormValidHostOrIpValidator(true));
 
-    form.add(F("ntp_timezone"), _H_STR_VALUE(Config().ntp.timezone));
-    form.add(F("ntp_posix_tz"), _H_STR_VALUE(Config().ntp.posix_tz));
+    form.addWriteableStruct(ntp, refreshInterval))->setFormUI((new FormUI(FormUI::Type::INTEGER, FSPGM(Refresh_Interval, "Refresh Interval")))->setSuffix(FSPGM(minutes__, "minutes \u00b1")));
+    form.addValidator(new FormRangeValidator(F("Invalid refresh interval: %min%-%max% minutes"), ntp.kRefreshIntervalMin, ntp.kRefreshIntervalMax));
 
-    form.add<uint16_t>(F("ntp_refresh"), config._H_GET(Config().ntp.ntpRefresh), [](uint16_t value, FormField &, bool) {
-        config._H_SET(Config().ntp.ntpRefresh, value);
-        return false;
-    });
-    form.addValidator(new FormRangeValidator(F("Invalid refresh interval: %min%-%max% minutes"), 60, 43200));
-
-    debug_printf_P(PSTR("ntp_timezone=%s ntp_posix_tz=%s\n"), config._H_STR(Config().ntp.timezone), config._H_STR(Config().ntp.posix_tz));
+    group.end();
 
     form.finalize();
 }

@@ -25,56 +25,20 @@
     </nav>
     <!--NAV%%-->
     <div class="container">
-        <h1>NTP Client Configuration</h1>
-        <form method="POST" action="ntp.html">
-            <div class="form-group">
-                <label for="ntp_enabled">NTP Client:</label>
-                <select class="form-control" name="ntp_enabled" id="ntp_enabled">
-                    <option value="0" %NTP_ENABLED_0%>Disabled</option>
-                    <option value="1" %NTP_ENABLED_1%>Enabled</option>
-                </select>
-            </div>
-            <span id="ntp_settings">
-                <div class="form-group">
-                    <label for="ntp_posix_tz">Timezone:</label>
-                    <select class="form-control" name="ntp_posix_tz" id="ntp_posix_tz">
-<script>(function(){var timezone_list =
+        <form method="POST" action="ntp.html" id="ntp_settings">
+            %FORM_HTML%
+<script>
+(function(){var timezone_list =
 /*--%%TIMEZONE_LIST_JS--*/{};
 /*--TIMEZONE_LIST_JS%%--*/
     var s = '';
     for (let key in timezone_list) {
         var val = timezone_list[key];
-        s += '<option value="' + val + '"' + ('%NTP_TIMEZONE%' == key ? ' selected' : '') + '>' + key + '</option>';
+        s += '<option value="' + val + '"' + ('%TZ_NAME%' == key ? ' selected' : '') + '>' + key + '</option>';
     }
-    document.getElementById('ntp_posix_tz').innerHTML = s;
+    document.getElementById('posix_TZ').innerHTML = s;
 })();
 </script>
-</select>
-<input type="hidden" name="ntp_timezone" id="ntp_timezone" value="%NTP_TIMEZONE%">
-                </div>
-                <div class="form-group">
-                    <label for="ntp_server1">NTP Server 1:</label>
-                    <input type="text" class="form-control" name="ntp_server1" id="ntp_server1" value="%NTP_SERVER1%" size="64">
-                </div>
-                <div class="form-group">
-                    <label for="ntp_server1">NTP Server 2:</label>
-                    <input type="text" class="form-control" name="ntp_server2" id="ntp_server2" value="%NTP_SERVER2%" size="64">
-                </div>
-                <div class="form-group">
-                    <label for="ntp_server1">NTP Server 3:</label>
-                    <input type="text" class="form-control" name="ntp_server3" id="ntp_server3" value="%NTP_SERVER3%" size="64">
-                </div>
-                <div class="form-group">
-                    <label for="ntp_refresh">Refresh Time:</label>
-                    <div class="input-group">
-                        <input type="text" class="form-control" name="ntp_refresh" id="ntp_refresh" value="%NTP_REFRESH%" size="5">
-                        <div class="input-group-append"><span class="input-group-text">minutes &#177;5&#37;</span></div>
-                    </div>
-                </div>
-            </span>
-            <div class="form-group">
-                <button type="submit" class="btn btn-primary">Save Changes...</button>
-            </div>
         </form>
         <!--%%FOOT-->
         <div class="row">
@@ -84,7 +48,6 @@
     </div>
     <!--%%JAVASCRIPT-->
 	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/jquery-3.3.1.min.js"></script>
-	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/popper.min.js"></script>
 	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/popper.min.js"></script>
 	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/bootstrap.min.js"></script>
 	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/js.cookie.min.js"></script>

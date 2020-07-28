@@ -340,6 +340,10 @@ String Form::normalizeName(const __FlashStringHelper *str)
     String name;
     auto ptr = RFPSTR(str);
     if (ptr) {
+        auto colon = strrchr_P(ptr, ':'); // remove name spaces
+        if (colon) {
+            ptr = colon + 1;
+        }
         char ch;
         while ((ch = pgm_read_byte(ptr++)) != 0) {
             if (ch == '_' && name.length() == 0) {
@@ -366,11 +370,20 @@ String Form::normalizeName(const __FlashStringHelper *str)
             }
         }
     }
-    name.replace(FSPGM(is_), emptyString);
+    if (name.startsWith(FSPGM(is_, "is_"))) {
+        name.remove(0, 3);
+    }
+    if (name.startsWith(FSPGM(set_, "set_"))) {
+        name.remove(0, 4);
+    }
+    if (name.startsWith(FSPGM(get_, "get_"))) {
+        name.remove(0, 4);
+    }
     name.replace(FSPGM(hidden), F("HI"));
     name.replace(FSPGM(enabled), FSPGM(EN));
-    name.replace(FSPGM(safe_mode), F("SM"));
+    name.replace(FSPGM(safe_mode, "safe_mode"), F("SM"));
     name.replace(FSPGM(reboot), F("RB"));
+    name.replace(FSPGM(client), F("CL"));
     name.replace(FSPGM(timeout), F("TO"));
     name.replace(FSPGM(lifetime), F("LT"));
     name.replace(FSPGM(cookie), F("CK"));
@@ -379,15 +392,18 @@ String Form::normalizeName(const __FlashStringHelper *str)
     name.replace(FSPGM(webui), F("WUI"));
     name.replace(FSPGM(webserver), F("WSV"));
     name.replace(FSPGM(server), FSPGM(SRV));
-    name.replace(FSPGM(performance_mode), F("PFM"));
+    name.replace(FSPGM(performance_mode, "performance_mode"), F("PFM"));
     name.replace(FSPGM(performance), F("PF"));
     name.replace(FSPGM(encryption), F("ENC"));
-    name.replace(FSPGM(standby_mode), F("SBM"));
+    name.replace(FSPGM(standby_mode, "standby_mode"), F("SBM"));
     name.replace(FSPGM(standby), F("SB"));
     name.replace(FSPGM(mode), F("MO"));
-    name.replace(F("softap_"), FSPGM(AP));
+    name.replace(FSPGM(timezone), F("TZ"));
+    name.replace(FSPGM(interval), F("IV"));
+    name.replace(FSPGM(refresh), F("RFH"));
+    name.replace(FSPGM(softap_, "softap_"), FSPGM(AP));
     name.replace(FSPGM(softap), FSPGM(AP));
-    name.replace(FSPGM(station_mode), FSPGM(STA));
+    name.replace(FSPGM(station_mode, "station_mode"), FSPGM(STA));
 
     __DBG_printf("normalize=%s new=%s len=%u", str, name.c_str(), name.length());
     return name;

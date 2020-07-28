@@ -7,13 +7,14 @@
 
 #if DEBUG
 
-const char *handleNameDeviceConfig_t = "MainConfig().system.device.cfg";
+const char *handleNameDeviceConfig_t PROGMEM = "MainConfig().system.device.cfg";
 const char *handleNameWebServerConfig_t = "MainConfig().system.webserver";
 const char *handleNameSettingsConfig_t = "MainConfig().system.settings";
 const char *handleNameAlarm_t = "MainConfig().plugins.alarm.cfg";
 const char *handleNameSerial2TCPConfig_t = "MainConfig().plugins.serial2tcp.cfg";
 const char *handleNameMqttConfig_t = "MainConfig().plugins.mqtt.cfg";
 const char *handleNameSyslogConfig_t = "MainConfig().plugins.syslog.cfg";
+const char *handleNameNtpClientConfig_t = "MainConfig().plugins.ntpclient.cfg";
 
 #endif
 

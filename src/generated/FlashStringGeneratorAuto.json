@@ -1566,5 +1566,57 @@
     "STA": {
         "use_counter": 1,
         "default": "STA"
+    },
+    "NTP_Client_Configuration": {
+        "use_counter": 1,
+        "default": "NTP Client Configuration"
+    },
+    "NTP_Client": {
+        "use_counter": 1,
+        "default": "NTP Client"
+    },
+    "Timezone": {
+        "use_counter": 1,
+        "default": "Timezone"
+    },
+    "NTP_Server___": {
+        "use_counter": 3,
+        "default": "NTP Server %u"
+    },
+    "Refresh_Interval": {
+        "use_counter": 1,
+        "default": "Refresh Interval"
+    },
+    "minutes__": {
+        "use_counter": 1,
+        "default": "minutes \\u00b1"
+    },
+    "set_": {
+        "use_counter": 1,
+        "default": "set_"
+    },
+    "softap_": {
+        "use_counter": 1,
+        "default": "softap_"
+    },
+    "get_": {
+        "use_counter": 1,
+        "default": "get_"
+    },
+    "client": {
+        "use_counter": 1,
+        "auto": "client"
+    },
+    "timezone": {
+        "use_counter": 1,
+        "auto": "timezone"
+    },
+    "interval": {
+        "use_counter": 1,
+        "auto": "interval"
+    },
+    "refresh": {
+        "use_counter": 1,
+        "auto": "refresh"
     }
 }

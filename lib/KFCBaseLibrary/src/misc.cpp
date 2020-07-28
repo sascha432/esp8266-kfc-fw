@@ -574,6 +574,27 @@ const char *strchr_P(const char *str, int c)
     return nullptr;
 }
 
+const char *strrchr_P(const char *str, int c)
+{
+    const char *last = nullptr;
+    if (str) {
+        char ch;
+        // we dont know the length, just start from the beginning...
+        while(0 != (ch = pgm_read_byte(str))) {
+            if (ch == c) {
+                last = str;
+            }
+            str++;
+        }
+    }
+#if DEBUG_STRING_CHECK_NULLPTR
+    else {
+        debug_printf_P(PSTR("str=%p int=%u\n"), str, c);
+    }
+#endif
+    return last;
+}
+
 #endif
 
 void bin2hex_append(String &str, const void *data, size_t length)

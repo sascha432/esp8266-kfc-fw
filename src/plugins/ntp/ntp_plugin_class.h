@@ -10,6 +10,7 @@
 #include "plugins.h"
 
 class AtModeArgs;
+class AsyncWebServerRequest;
 
 class NTPPlugin : public PluginComponent {
 public:

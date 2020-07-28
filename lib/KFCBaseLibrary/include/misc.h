@@ -231,6 +231,7 @@ inline bool String_endsWith(const String &str1, const __FlashStringHelper *str2)
 #if ESP8266 || ESP32
 
 const char *strchr_P(PGM_P str, int c);
+const char *strrchr_P(PGM_P str, int c);
 
 #endif
 

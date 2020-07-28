@@ -31,6 +31,7 @@
 #endif
 
 using KFCConfigurationClasses::System;
+using KFCConfigurationClasses::Plugins;
 
 #if ESP8266
 static char *_GMT = _tzname[0]; // copy pointer, points to static char gmt[] = "GMT";
@@ -128,11 +129,11 @@ void NTPPlugin::getStatus(Print &output)
         auto now = time(nullptr);
         auto tm = localtime(&now);
         strftime_P(buf, sizeof(buf), PSTR("%z %Z"), tm);
-        output.printf_P(PSTR("Timezone %s, %s"), Config_NTP::getTimezone(), buf);
+        output.printf_P(PSTR("Timezone %s, %s"), Plugins::NTPClient::getTimezoneName(), buf);
 
         auto firstServer = true;
         const char *server;
-        for (int i = 0; (server = Config_NTP::getServers(i)) != nullptr; i++) {
+        for (uint8_t i = 0; (server = Plugins::NTPClient::getServer(i)) != nullptr; i++) {
             String serverStr = server;
             serverStr.trim();
             if (serverStr.length()) {
@@ -158,8 +159,8 @@ void NTPPlugin::execConfigTime()
      // set refresh time to a minimum for the update. calling configTime() seems to ignore this value. once
      // the time is valid, it is reset to the regular NTP refresh interval
     _ntpRefreshTimeMillis = 15000;
-    _debug_printf_P(PSTR("server1=%s,server2=%s,server3=%s, refresh in %u seconds\n"), Config_NTP::getServers(0), Config_NTP::getServers(1), Config_NTP::getServers(2), (unsigned)(_ntpRefreshTimeMillis / 1000));
-    configTime(Config_NTP::getPosixTZ(), Config_NTP::getServers(0), Config_NTP::getServers(1), Config_NTP::getServers(2));
+    _debug_printf_P(PSTR("server1=%s,server2=%s,server3=%s, refresh in %u seconds\n"), Plugins::NTPClient::getServer1(), Plugins::NTPClient::getServer2(), Plugins::NTPClient::getServer3(), (unsigned)(_ntpRefreshTimeMillis / 1000));
+    configTime(Plugins::NTPClient::getPosixTimezone(), Plugins::NTPClient::getServer1(), Plugins::NTPClient::getServer2(), Plugins::NTPClient::getServer3());
 
     // check time every minute
     // for some reason, NTP does not always update the time even with _ntpRefreshTimeMillis = 15seconds
@@ -172,7 +173,7 @@ void NTPPlugin::updateNtpCallback()
     _debug_printf_P(PSTR("new time=%u\n"), (int)now);
 
     if (IS_TIME_VALID(now)) {
-        NTPPlugin::_ntpRefreshTimeMillis = Config_NTP::getNtpRfresh() * 60 * 1000UL;
+        NTPPlugin::_ntpRefreshTimeMillis = Plugins::NTPClient::getConfig().refreshInterval * 60 * 1000UL;
         plugin._checkTimer.remove();
     }
 

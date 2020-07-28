@@ -58,53 +58,6 @@ using KFCConfigurationClasses::Plugins;
 
 KFCFWConfiguration config;
 
-// Config_NTP
-
-Config_NTP::Config_NTP() {
-}
-
-const char *Config_NTP::getTimezone()
-{
-    return config._H_STR(Config().ntp.timezone);
-}
-
-const char *Config_NTP::getPosixTZ()
-{
-    return config._H_STR(Config().ntp.posix_tz);
-}
-
-const char *Config_NTP::getServers(uint8_t num)
-{
-    switch(num) {
-        case 0:
-            return config._H_STR(Config().ntp.servers[0]);
-        case 1:
-            return config._H_STR(Config().ntp.servers[1]);
-        case 2:
-            return config._H_STR(Config().ntp.servers[2]);
-    }
-    return nullptr;
-}
-
-const char *Config_NTP::getUrl()
-{
-    return config._H_STR(Config().ntp.remote_tz_dst_ofs_url);
-}
-
-uint16_t Config_NTP::getNtpRfresh()
-{
-    return config._H_GET(Config().ntp.ntpRefresh);
-}
-
-void Config_NTP::defaults()
-{
-    ::config._H_SET(Config().ntp.ntpRefresh, 12 * 60);
-    ::config._H_SET_STR(Config().ntp.timezone, F("Etc/Universal"));
-    ::config._H_SET_STR(Config().ntp.posix_tz, F("UTC0"));
-    ::config._H_SET_STR(Config().ntp.servers[0], F("pool.ntp.org"));
-    ::config._H_SET_STR(Config().ntp.servers[1], F("time.nist.gov"));
-    ::config._H_SET_STR(Config().ntp.servers[2], F("time.windows.com"));
-}
 
 // Config_Ping
 
@@ -561,15 +514,21 @@ void KFCFWConfiguration::restoreFactorySettings()
 #if SYSLOG_SUPPORT
     Plugins::SyslogClient::defaults();
 #endif
+#if NTP_CLIENT
+    Plugins::NTPClient::defaults();
+#endif
+#if IOT_ALARM_PLUGIN_ENABLED
+    Plugins::Alarm::defaults();
+#endif
+#if IOT_WEATHER_STATION
+    Plugins::WeatherStation::defaults();
+#endif
 
 
 #if WEBSERVER_TLS_SUPPORT
     _H_SET(Config().http_port, flags.webServerMode == HTTP_MODE_SECURE ? 443 : 80);
 #elif WEBSERVER_SUPPORT
     _H_SET(Config().http_port, 80);
-#endif
-#if NTP_CLIENT
-    Config_NTP::defaults();
 #endif
 
 
@@ -635,14 +594,6 @@ void KFCFWConfiguration::restoreFactorySettings()
     blinds.channels[1].openTime = 7500;
     blinds.channels[1].closeTime = 7500;
     _H_SET(Config().blinds_controller, blinds);
-#endif
-
-#if IOT_ALARM_PLUGIN_ENABLED
-    Plugins::Alarm::defaults();
-#endif
-
-#if IOT_WEATHER_STATION
-    Plugins::WeatherStation::defaults();
 #endif
 
 #if defined(IOT_SENSOR_HLW8012_U)

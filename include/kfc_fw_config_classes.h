@@ -53,6 +53,11 @@
     static void set##name(const __FlashStringHelper *str) { set##name(reinterpret_cast<PGM_P>(str)); } \
     static void set##name(const String &str) { set##name(str.c_str()); }
 
+#define CREATE_GETTER_SETTER_IP(class_name, name) \
+    static constexpr HandleType k##name##ConfigHandle = CONFIG_GET_HANDLE_STR(_STRINGIFY(class_name) "." _STRINGIFY(name)); \
+    static const IPAddress get##name() { return IPAddress(*(uint32_t *)loadBinaryConfig(k##name##ConfigHandle, sizeof(uint32_t))); } \
+    static void set##name(const IPAddress &address) { storeBinaryConfig(k##name##ConfigHandle, &static_cast<uint32_t>(address), sizeof(uint32_t)); }
+
 
 #if DEBUG
 
@@ -389,6 +394,9 @@ namespace KFCConfigurationClasses {
             SoftAP();
             static SoftAP read();
             static SoftAP &getWriteable();
+            static SoftAP &getWriteableConfig() {
+                return getWriteable();
+            }
             static void defaults();
             void write();
 

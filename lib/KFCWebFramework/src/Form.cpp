@@ -291,7 +291,7 @@ void Form::createHtml(PrintInterface &output)
     for (auto field : _fields) {
         field->html(output);
     }
-    PGM_P label = _formSubmit.length() ? _formSubmit.c_str() : PSTR("Save Changes");
+    PGM_P label = _formSubmit.length() ? _formSubmit.c_str() : SPGM(Save_Changes, "Save Changes");
     output.printf_P(PSTR("<button type=\"submit\" class=\"btn btn-primary\">%s...</button>" FORMUI_CRLF), label);
 }
 
@@ -301,7 +301,7 @@ void Form::dump(Print &out, const String &prefix) const {
     out.println(F("Errors:"));
     if (_errors.empty()) {
         out.print(prefix);
-        out.println(F("None"));
+        out.println(FSPGM(None, "None"));
     }
     else {
         for (auto &error : _errors) {
@@ -366,6 +366,29 @@ String Form::normalizeName(const __FlashStringHelper *str)
             }
         }
     }
-    __DBG_printf("normalize=%s new=%s", str, name.c_str());
+    name.replace(FSPGM(is_), emptyString);
+    name.replace(FSPGM(hidden), F("HI"));
+    name.replace(FSPGM(enabled), FSPGM(EN));
+    name.replace(FSPGM(safe_mode), F("SM"));
+    name.replace(FSPGM(reboot), F("RB"));
+    name.replace(FSPGM(timeout), F("TO"));
+    name.replace(FSPGM(lifetime), F("LT"));
+    name.replace(FSPGM(cookie), F("CK"));
+    name.replace(FSPGM(minutes), F("MN"));
+    name.replace(FSPGM(status), F("ST"));
+    name.replace(FSPGM(webui), F("WUI"));
+    name.replace(FSPGM(webserver), F("WSV"));
+    name.replace(FSPGM(server), FSPGM(SRV));
+    name.replace(FSPGM(performance_mode), F("PFM"));
+    name.replace(FSPGM(performance), F("PF"));
+    name.replace(FSPGM(encryption), F("ENC"));
+    name.replace(FSPGM(standby_mode), F("SBM"));
+    name.replace(FSPGM(standby), F("SB"));
+    name.replace(FSPGM(mode), F("MO"));
+    name.replace(F("softap_"), FSPGM(AP));
+    name.replace(FSPGM(softap), FSPGM(AP));
+    name.replace(FSPGM(station_mode), FSPGM(STA));
+
+    __DBG_printf("normalize=%s new=%s len=%u", str, name.c_str(), name.length());
     return name;
 }

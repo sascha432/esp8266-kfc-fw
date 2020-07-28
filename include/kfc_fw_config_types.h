@@ -71,7 +71,8 @@ typedef struct __attribute__packed__ {
     ConfigFlags_t is_serial2tcp_enabled: 1;
     ConfigFlags_t is_webui_enabled: 1;
     ConfigFlags_t is_webalerts_enabled: 1;
-    ConfigFlags_t __reserved: 11;
+    ConfigFlags_t is_ssdp_enabled: 1;
+    ConfigFlags_t __reserved: 10;
 
     uint8_t getWifiMode() const {
         return (is_station_mode_enabled ? WIFI_STA : 0) | (is_softap_enabled ? WIFI_AP : 0);

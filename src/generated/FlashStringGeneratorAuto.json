@@ -520,11 +520,11 @@
         "default": "Anonymous"
     },
     "Disabled": {
-        "use_counter": 8,
+        "use_counter": 9,
         "default": "Disabled"
     },
     "enabled": {
-        "use_counter": 5,
+        "use_counter": 6,
         "default": "enabled"
     },
     "mqtt_component_light": {
@@ -820,7 +820,7 @@
         "default": "keep-alive"
     },
     "status": {
-        "use_counter": 11,
+        "use_counter": 12,
         "default": "status"
     },
     "message": {
@@ -864,11 +864,11 @@
         "default": "cfg"
     },
     "wifi": {
-        "use_counter": 0,
+        "use_counter": 1,
         "default": "wifi"
     },
     "safe_mode": {
-        "use_counter": 1,
+        "use_counter": 2,
         "default": "safe_mode"
     },
     "password": {
@@ -920,7 +920,7 @@
         "default": "network.html"
     },
     "Change_Password": {
-        "use_counter": 2,
+        "use_counter": 3,
         "default": "Change Password"
     },
     "password_html": {
@@ -992,7 +992,7 @@
         "default": "applying.html"
     },
     "hidden": {
-        "use_counter": 1,
+        "use_counter": 2,
         "default": "hidden"
     },
     "FormRangeValidator_default_message_zero_allowed": {
@@ -1000,11 +1000,11 @@
         "default": "This fields value must be between %min% and %max% or 0"
     },
     "network": {
-        "use_counter": 0,
+        "use_counter": 1,
         "default": "network"
     },
     "device": {
-        "use_counter": 0,
+        "use_counter": 2,
         "default": "device"
     },
     "mime_image_icon": {
@@ -1196,7 +1196,7 @@
         "default": "12345678"
     },
     "Enabled": {
-        "use_counter": 2,
+        "use_counter": 3,
         "default": "Enabled"
     },
     "Invalid_time": {
@@ -1220,7 +1220,7 @@
         "default": "host"
     },
     "Hostname": {
-        "use_counter": 2,
+        "use_counter": 3,
         "default": "Hostname"
     },
     "port": {
@@ -1228,7 +1228,7 @@
         "default": "port"
     },
     "Port": {
-        "use_counter": 2,
+        "use_counter": 3,
         "default": "Port"
     },
     "Username": {
@@ -1394,5 +1394,177 @@
     "_serial_console_html": {
         "use_counter": 2,
         "default": "/serial_console.html"
+    },
+    "description_xml": {
+        "use_counter": 3,
+        "default": "description.xml"
+    },
+    "KFCLabs": {
+        "use_counter": 2,
+        "default": "KFCLabs"
+    },
+    "Title": {
+        "use_counter": 1,
+        "default": "Title"
+    },
+    "minutes": {
+        "use_counter": 3,
+        "default": "minutes"
+    },
+    "days": {
+        "use_counter": 1,
+        "default": "days"
+    },
+    "Device_Configuration": {
+        "use_counter": 1,
+        "default": "Device Configuration"
+    },
+    "Zeroconf_Timeout": {
+        "use_counter": 1,
+        "default": "Zeroconf Timeout"
+    },
+    "Web_Alerts": {
+        "use_counter": 1,
+        "default": "Web Alerts"
+    },
+    "WebUI": {
+        "use_counter": 1,
+        "default": "Web UI"
+    },
+    "Status_LED_Mode": {
+        "use_counter": 1,
+        "default": "Status LED Mode"
+    },
+    "Network_Configuration": {
+        "use_counter": 1,
+        "default": "Network Configuration"
+    },
+    "SSDP_Discovery": {
+        "use_counter": 1,
+        "default": "SSDP Discovery"
+    },
+    "DHCP": {
+        "use_counter": 1,
+        "default": "DHCP"
+    },
+    "IP_Address": {
+        "use_counter": 1,
+        "default": "IP Address"
+    },
+    "Subnet": {
+        "use_counter": 1,
+        "default": "Subnet"
+    },
+    "Gateway": {
+        "use_counter": 1,
+        "default": "Gateway"
+    },
+    "DNS_1": {
+        "use_counter": 1,
+        "default": "DNS 1"
+    },
+    "DNS_2": {
+        "use_counter": 1,
+        "default": "DNS 2"
+    },
+    "HTTP_Server": {
+        "use_counter": 1,
+        "default": "HTTP Server"
+    },
+    "Save_Changes": {
+        "use_counter": 1,
+        "default": "Save Changes"
+    },
+    "Your_session_has_expired": {
+        "use_counter": 1,
+        "default": "Your session has expired"
+    },
+    "keep": {
+        "use_counter": 1,
+        "default": "keep"
+    },
+    "Invalid_username_or_password": {
+        "use_counter": 1,
+        "default": "Invalid username or password"
+    },
+    "None": {
+        "use_counter": 1,
+        "default": "None"
+    },
+    "is_": {
+        "use_counter": 1,
+        "default": "is_"
+    },
+    "EN": {
+        "use_counter": 1,
+        "default": "EN"
+    },
+    "reboot": {
+        "use_counter": 1,
+        "default": "reboot"
+    },
+    "timeout": {
+        "use_counter": 1,
+        "default": "timeout"
+    },
+    "lifetime": {
+        "use_counter": 1,
+        "default": "lifetime"
+    },
+    "cookie": {
+        "use_counter": 1,
+        "default": "cookie"
+    },
+    "webui": {
+        "use_counter": 1,
+        "default": "webui"
+    },
+    "webserver": {
+        "use_counter": 1,
+        "default": "webserver"
+    },
+    "server": {
+        "use_counter": 1,
+        "default": "server"
+    },
+    "SRV": {
+        "use_counter": 1,
+        "default": "SRV"
+    },
+    "performance_mode": {
+        "use_counter": 1,
+        "default": "performance_mode"
+    },
+    "performance": {
+        "use_counter": 1,
+        "default": "performance"
+    },
+    "encryption": {
+        "use_counter": 1,
+        "default": "encryption"
+    },
+    "standby_mode": {
+        "use_counter": 1,
+        "default": "standby_mode"
+    },
+    "standby": {
+        "use_counter": 1,
+        "default": "standby"
+    },
+    "AP": {
+        "use_counter": 2,
+        "default": "AP"
+    },
+    "softap": {
+        "use_counter": 1,
+        "default": "softap"
+    },
+    "station_mode": {
+        "use_counter": 1,
+        "default": "station_mode"
+    },
+    "STA": {
+        "use_counter": 1,
+        "default": "STA"
     }
 }

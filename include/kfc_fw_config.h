@@ -319,6 +319,14 @@ typedef struct {
         return false; \
     }
 
+#define _H_W_STRUCT_IP_VALUE(name, field, ...) \
+    IPAddress(name.field), [&name, ##__VA_ARGS__](const IPAddress &value, FormField &, bool store) { \
+        if (store) { \
+            name.field = value; \
+        } \
+        return false; \
+    }
+
 #define _H_STRUCT_VALUE(name, field, ...) \
     config._H_GET(name).field, [__VA_ARGS__](const decltype(name.field) &value, FormField &, bool store) { \
         if (store) { \
@@ -371,14 +379,20 @@ typedef struct {
         return false; \
     }
 
-#define addWriteableStruct(struct, member) \
-    add<decltype(struct.member)>(Form::normalizeName(F(_STRINGIFY(member))), _H_W_STRUCT_VALUE(struct, member))
+#define addWriteableStruct(struct, member, ...) \
+    add<decltype(struct.member)>(Form::normalizeName(F(_STRINGIFY(member))), _H_W_STRUCT_VALUE(struct, member, ##__VA_ARGS__)
 
-#define addCStrGetterSetter(getter, setter) \
-    add(Form::normalizeName(F(_STRINGIFY(member))), _H_CSTR_FUNC(getter, setter))
+#define addWriteableStructIPAddress(struct, member, ...) \
+    add(Form::normalizeName(F(_STRINGIFY(member))), _H_W_STRUCT_IP_VALUE(struct, member, ##__VA_ARGS__)
 
-#define addGetterSetter(getter, setter) \
-    add(Form::normalizeName(F(_STRINGIFY(member))), _H_FUNC(getter, setter))
+#define addCStrGetterSetter(getter, setter, ...) \
+    add(Form::normalizeName(F(_STRINGIFY(member))), _H_CSTR_FUNC(getter, setter, ##__VA_ARGS__)
+
+#define addGetterSetter(getter, setter, ...) \
+    add(Form::normalizeName(F(_STRINGIFY(member))), _H_FUNC(getter, setter, ##__VA_ARGS__)
+
+#define addGetterSetterType(getter, setter, type, ...) \
+    add(Form::normalizeName(F(_STRINGIFY(member))), _H_FUNC_TYPE(getter, setter, type, ##__VA_ARGS__)
 
 
 // NOTE using the new handlers (USE_WIFI_SET_EVENT_HANDLER_CB=0) costs 896 byte RAM with 5 handlers

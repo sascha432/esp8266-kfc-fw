@@ -98,6 +98,9 @@ FormUI *FormUI::setReadOnly()
 
 const char *FormUI::_encodeHtmlEntities(const char *cStr, bool attribute, PrintInterface &output)
 {
+    if (pgm_read_byte(cStr) == 0xff) { // FORM_UI_RAW
+        return cStr + 1;
+    }
     const char *attachedStr;
     if ((attachedStr = output.getAttachedString(cStr)) != nullptr) {
         return attachedStr;

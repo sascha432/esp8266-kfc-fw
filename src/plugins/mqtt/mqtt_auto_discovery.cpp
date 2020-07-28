@@ -81,7 +81,9 @@ void MQTTAutoDiscovery::_create(MQTTComponent *component, const String &name, MQ
         _discovery.print(System::Device::getName());
         _discovery.print(F(JSON_NEXT_KEY_START MQTT_DEVICE_REG_SW_VERSION JSON_VALUE_START "KFC FW "));
         _discovery.print(KFCFWConfiguration::getFirmwareVersion());
-        _discovery.print(F(JSON_NEXT_KEY_START MQTT_DEVICE_REG_MANUFACTURER JSON_VALUE_START "KFCLabs\"},"));
+        _discovery.print(F(JSON_NEXT_KEY_START MQTT_DEVICE_REG_MANUFACTURER JSON_VALUE_START));
+        _discovery.print(FSPGM(KFCLabs));
+        _discovery.print(F("\"},"));
     }
 
     _debug_printf_P(PSTR("MQTT auto discovery topic '%s', name %s, number %d\n"), _topic.c_str(), component->getComponentName(), component->getNumber());

@@ -15,6 +15,8 @@
 #include "FormString.h"
 #include "FormStringObject.h"
 
+#define FORMUI_RAW_HTML "\xff"
+
 class FormError;
 class FormData;
 
@@ -143,6 +145,7 @@ public:
     //     return _fields;
     // }
 
+    // normalize and shorten variable name
     static String normalizeName(const __FlashStringHelper *str);
 
 private:

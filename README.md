@@ -63,6 +63,14 @@ Configure and control the device with AT commands via serial interface or WebUI
 
 MQTT Client with API to easily add components that work with Home Assistant, as well as auto discovery
 
+### SSDP auto discovery
+
+Shows up as device and links to the WebUI
+
+## MDNS auto disovery with zeroconf support
+
+MDNS discovery and zeroconf support for MQTT, Syslog and Home Assistant
+
 ### Http2Serial
 
 Serial console access over the WebUI using web sockets

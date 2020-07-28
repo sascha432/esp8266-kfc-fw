@@ -45,7 +45,6 @@ public:
         add(nullptr, callbackPtr);
     }
     static bool callOnce(Callback_t callback) {
-        _debug_resolve_lambda(lambda_target(callback));
         return schedule_function(callback);
     }
     static void remove(CallbackPtr_t callbackPtr);
@@ -54,7 +53,7 @@ public:
         add(callback, reinterpret_cast<CallbackPtr_t>(callbackPtr));
     }
     inline static void remove(void *callbackPtr) {
-        remove(reinterpret_cast<CallbackPtr_t>(_debug_resolve_lambda(callbackPtr)));
+        remove(reinterpret_cast<CallbackPtr_t>(callbackPtr));
     }
 
     static FunctionsVector &getVector();

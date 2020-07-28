@@ -49,13 +49,7 @@ extern float load_avg[3]; // 1min, 5min, 15min
 
 #define HASH_SIZE                   64
 
-
-struct HueConfig {
-    uint16_t tcp_port;
-    char devices[255]; // \n is separator
-};
-
-#include "./plugins/dimmer_module/firmware_protocol.h"
+#include "../src/plugins/dimmer_module/firmware_protocol.h"
 
 struct DimmerModule {
     register_mem_cfg_t cfg;
@@ -110,19 +104,6 @@ struct BlindsController {
 // NOTE: any member of an packed structure (__attribute__packed__ ) cannot be passed to forms as reference, otherwise it might cause an unaligned exception
 // marking integers as bitset prevents using it as reference, i.e. uint8_t value: 8;
 // use _H_STRUCT_VALUE() or suitable macro
-
-class Config_HTTP
-{
-public:
-    typedef struct{
-        uint16_t port;
-    } config_t;
-    config_t config;
-
-    Config_HTTP() : config({80}) {
-        //TODO
-    }
-};
 
 class Config_Ping
 {
@@ -279,7 +260,6 @@ namespace Config_QuickConnect
 typedef struct {
     ConfigFlags flags;
 
-    Config_HTTP http;
     Config_NTP ntp;
 
     uint16_t http_port;
@@ -288,7 +268,6 @@ typedef struct {
     DimmerModule dimmer;
     DimmerModuleButtons dimmer_buttons;
     BlindsController blinds_controller;
-    struct HueConfig hue;
     Clock_t clock;
 
     Config_Ping ping;
@@ -324,9 +303,9 @@ typedef struct {
     _H_FUNC_TYPE(getter, setter, decltype(getter()), ##__VA_ARGS__)
 
 #define _H_FUNC_TYPE(getter, setter, type, ...) \
-    getter(), [__VA_ARGS__](const type value, FormField &, bool store) { \
+    static_cast<type>(getter()), [__VA_ARGS__](const type value, FormField &, bool store) { \
         if (store) { \
-            setter(value); \
+            setter(static_cast<decltype(getter())>(value)); \
         } \
         return false; \
     }
@@ -447,7 +426,7 @@ public:
     // ${zeroconf:<service>.<proto>:<address|value[:port value]>|<fallback[:port]>}
 
     // resolve zeroconf, optional port to use as default or 0
-    bool resolveZeroConf(const String &hostname, uint16_t port, MDNSResolver::ResolvedCallback callback) const;
+    bool resolveZeroConf(const String &name, const String &hostname, uint16_t port, MDNSResolver::ResolvedCallback callback) const;
 
     // check if the hostname contains zeroconf
     bool hasZeroConf(const String &hostname) const;
@@ -508,9 +487,6 @@ public:
     float getRTCTemperature();
     bool rtcLostPower() ;
     void printRTCStatus(Print &output, bool plain = true);
-
-    const char *getDeviceName() const;
-    const char *getDeviceTitle() const;
 
 public:
     using Container = KeyValueStorage::Container;

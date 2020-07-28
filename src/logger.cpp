@@ -24,6 +24,8 @@ PROGMEM_STRING_DEF(log_file_access, "log://access");
 PROGMEM_STRING_DEF(log_file_debug, "log://debug");
 #endif
 
+using KFCConfigurationClasses::System;
+
 Logger _logger;
 
 Logger::Logger()
@@ -283,7 +285,7 @@ void Logger::writeLog(LogLevel logLevel, const char *message, va_list arg)
     }
 
 #if LOGGER_SERIAL_OUTPUT
-    if (config._H_GET(Config().flags).atModeEnabled) {
+    if (System::Flags::get().is_at_mode_enabled) {
         char temp2[32];
         strftime_P(temp2, sizeof(temp2), PSTR("%FT%TZ"), tm);
 #if DEBUG

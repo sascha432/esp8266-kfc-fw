@@ -155,7 +155,7 @@ size_t PrintHtmlEntities::translate(const uint8_t * buffer, size_t size)
     size_t written = 0;
     while (size--) {
         if (*buffer == 0xc2 && size >= 1) { // UTF8 encoded character
-            auto i = __getKeyIndex_P(*(buffer + 1), _mode == Mode::HTML ? __keys_html_P : __keys_attribute_P);
+            auto i = __getKeyIndex_P(*(buffer + 1), __keys_utf8_P);
             if (i != -1) { // we support only a few entities
                 written += _writeRawString(FPSTR(__values_P[i]));
                 buffer += 2;

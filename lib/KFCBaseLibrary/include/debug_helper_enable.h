@@ -14,7 +14,8 @@
 #undef _debug_print_result
 #undef _debug_dump_args
 #undef _IF_DEBUG
-#undef _debug_resolve_lambda
+#undef __SLDBG_printf
+#undef __SLDBG_panic
 #endif
 #define _debug_println_notempty(...)                debug_println_notempty(__VA_ARGS__)
 #define _debug_print(...)                           debug_print(__VA_ARGS__)
@@ -23,7 +24,8 @@
 #define _debug_printf_P(...)                        debug_printf_P(__VA_ARGS__)
 #define _debug_print_result(result)					debug_print_result(result)
 #define _IF_DEBUG(...)                              IF_DEBUG(__VA_ARGS__)
-#define _debug_resolve_lambda(ptr)                  resolve_lambda(ptr)
+#define __SLDBG_printf(...)                         __SDBG_printf(__VA_ARGS__)
+#define __SLDBG_panic(...)                          __SDBG_printf(__VA_ARGS__); panic();
 
 #ifdef __LDBG_panic
 #undef __LDBG_panic

@@ -18,6 +18,7 @@
 
 class Buffer;
 class Configuration;
+class ConfigurationParameterBase;
 
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -66,7 +67,8 @@ public:
         uint8_t *data;                                  // pointer to data
         uint16_t size : 12;                             // max. size of data
         uint16_t dirty : 1;                             // data has been changed
-        uint16_t ___reserved : 3;
+        uint16_t base: 1;                               // can be converted to ConfigurationParameterBase
+        uint16_t ___reserved : 2;
     } Info_t;
 
     ConfigurationParameter(const ConfigurationParameter &) = delete;
@@ -139,6 +141,9 @@ public:
     }
 
     static const __FlashStringHelper *getTypeString(TypeEnum_t type);
+    static PGM_P getTypeString_P(TypeEnum_t type) {
+        return reinterpret_cast<PGM_P>(getTypeString(type));
+    }
 
 private:
     friend Configuration;
@@ -150,6 +155,8 @@ private:
     bool _compareData(const uint8_t *data, uint16_t size) const;
 
 protected:
+    friend ConfigurationParameterBase;
+
     Info_t _info;
     Param_t _param;
 };
@@ -190,6 +197,27 @@ public:
     }
     void set(const String &value) {
         strncpy(reinterpret_cast<char *>(_info.data), value.c_str(), _param.length)[_param.length] = 0;
+    }
+};
+
+class ConfigurationParameterBase
+{
+public:
+    // called before storing
+    virtual void beforeWrite(const ConfigurationParameter &param) {
+        __DBG_printf("handle=%04x size=%u type=%s", param.getHandle(), param.getSize(), param.getTypeString(param._param.getType()));
+    }
+    // called before discarding changes
+    virtual void beforeDiscard(const ConfigurationParameter &param) {
+        __DBG_printf("handle=%04x size=%u type=%s", param.getHandle(), param.getSize(), param.getTypeString(param._param.getType()));
+    }
+    // called before being resize
+    virtual void beforeResize(const ConfigurationParameter &param, uint16_t newSize) const {
+        __DBG_printf("handle=%04x size=%u new_size=%u type=%s", param.getHandle(), param.getSize(), newSize, param.getTypeString(param._param.getType()));
+    }
+    // called after data has been read
+    virtual void afterRead(const ConfigurationParameter &param) {
+        __DBG_printf("handle=%04x size=%u type=%s", param.getHandle(), param.getSize(), param.getTypeString(param._param.getType()));
     }
 };
 

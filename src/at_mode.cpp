@@ -39,6 +39,10 @@
 #include <debug_helper_disable.h>
 #endif
 
+using KFCConfigurationClasses::System;
+using KFCConfigurationClasses::Network;
+using KFCConfigurationClasses::MainConfig;
+
 typedef std::vector<ATModeCommandHelp> ATModeHelpVector;
 
 static ATModeHelpVector at_mode_help;
@@ -237,7 +241,6 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF(CPU, "CPU", "<80|160>", "Set CPU speed", "Displ
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PSTORE, "PSTORE", "[<clear|remove|add>[,<key>[,<value>]]]", "Display/modify persistant storage");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(METRICS, "METRICS", "Display system metrics");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMP, "DUMP", "[<dirty|config.name>]", "Display settings");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPR, "DUMPR", "<pointer>", "Print symbol");
 #if DEBUG && ESP8266
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DUMPT, "DUMPT", "Dump timers");
 #endif
@@ -305,7 +308,6 @@ void at_mode_help_commands()
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(PSTORE), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(METRICS), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DUMP), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DUMPR), name);
 #if DEBUG && ESP8266
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DUMPT), name);
 #endif
@@ -549,6 +551,8 @@ SerialHandler::Client *_client;
 
 void at_mode_setup()
 {
+    __DBG_printf("AT_MODE_ENABLED=%u", System::Flags::get().is_at_mode_enabled);
+
     _client = &serialHandler.addClient(at_mode_serial_input_handler, SerialHandler::EventType::READ);
 
     WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTION, at_mode_wifi_callback);
@@ -560,26 +564,22 @@ void at_mode_setup()
 
 void enable_at_mode(Stream &output)
 {
-    auto flags = config._H_GET(Config().flags);
-    if (!flags.atModeEnabled) {
+    if (!System::Flags::get().is_at_mode_enabled) {
         output.println(F("Enabling AT MODE."));
-        flags.atModeEnabled = true;
-        config._H_SET(Config().flags, flags);
+        System::Flags::getWriteable().is_at_mode_enabled = true;
         _client->start(SerialHandler::EventType::READ);
     }
 }
 
 void disable_at_mode(Stream &output)
 {
-    auto flags = config._H_GET(Config().flags);
-    if (flags.atModeEnabled) {
+    if (System::Flags::get().is_at_mode_enabled) {
         _client->stop();
         output.println(F("Disabling AT MODE."));
 #if DEBUG
         displayTimer.removeTimer();
 #endif
-        flags.atModeEnabled = false;
-        config._H_SET(Config().flags, flags);
+        System::Flags::getWriteable().is_at_mode_enabled = false;
     }
 }
 
@@ -636,165 +636,33 @@ void at_mode_print_prefix(Stream &output, const char *command)
     output.printf_P(PSTR("+%s: "), command);
 }
 
-#if DEBUG
-
-#include <map>
-#include "RestApi/RetrieveSymbols.h"
-
-static std::map<void *, String> at_mode_resolve_map;
-
-void *resolve_lambda(void *ptr)
-{
-    at_mode_resolve(ptr, [](const String &symbol) {
-        Serial.printf_P(PSTR("lambda: %s\n"), symbol.c_str());
-    });
-    return ptr;
-}
-
-#endif
-
-void at_mode_resolve(void *ptr, AtModeResolveACallback resolve_callback)
-{
-#if 0
-    auto iterator = at_mode_resolve_map.find(ptr);
-    if (iterator != at_mode_resolve_map.end()) {
-        resolve_callback(iterator->second);
-    }
-    else {
-        if (ptr) {
-            StringVector addresses;
-            addresses.push_back(PrintString(F("0x%x"), ptr));
-            auto rs = new RetrieveSymbols::RestApi();
-            rs->setAddresses(std::move(addresses));
-            int retries = 0;
-            rs->call([rs, resolve_callback, ptr, retries](RetrieveSymbols::JsonReaderResult *result, const String &error) mutable {
-                rs->setAutoDelete(true);
-                if (result) {
-                    PrintString str;
-                    int num = 1;
-                    for (const auto &item : result->getItems()) {
-                        if (str.length()) {
-                            str.println();
-                        }
-                        str.printf_P(PSTR("%u 0x%08x 0x%08x:0x%04x %s"), num++, item.getSrcAddress(), item.getAddress(), item.getSize(), item.getName().c_str());
-                    }
-                    at_mode_resolve_map[ptr] = str;
-                }
-                else {
-                    if (++retries <= 3 && false) {
-                        debug_printf_P(PSTR("retries=%d\n"), retries);
-                        rs->setAutoDelete(false);
-                        Scheduler.addTimer(5000, false, [rs](EventScheduler::TimerPtr) {
-                            rs->call(rs->_callback);
-                        });
-                    }
-                    at_mode_resolve_map[ptr] = PrintString(F("%p - %s"), ptr, error.c_str());
-                }
-                resolve_callback(at_mode_resolve_map[ptr]);
-            });
-
-        }
-        else {
-            at_mode_resolve_map[ptr] = SPGM(null);
-            resolve_callback(at_mode_resolve_map[ptr]);
-        }
-    }
-#endif
-}
-
 #if DEBUG && ESP8266
 
 extern ETSTimer *timer_list;
 
 void at_mode_list_ets_timers(Print &output)
 {
-    StringVector addresses;
     ETSTimer *cur = timer_list;
     while(cur) {
+        void *callback = nullptr;
         for(const auto &timer: Scheduler._timers) {
             if (&timer->_etsTimer == cur) {
-                addresses.push_back(PrintString(F("0x%x"), lambda_target(timer->_loopCallback)));
-                addresses.push_back(PrintString(F("0x%x"), (uint32_t)cur->timer_func));
-                addresses.push_back(PrintString(F("0x%x"), (uint32_t)cur->timer_arg));
+                callback = lambda_target(timer->_loopCallback);
                 break;
             }
         }
-        // float period_in_s = cur->timer_period / 312500.0;
-        // output.printf_P(PSTR("ETSTimer=%p func=%p arg=%p period=%u (%.3fs) exp=%u callback=%p\n"), cur, cur->timer_func, cur->timer_arg, cur->timer_period, period_in_s, cur->timer_expire, callback);
+        float period_in_s = cur->timer_period / 312500.0;
+        output.printf_P(PSTR("ETSTimer=%p func=%p arg=%p period=%u (%.3fs) exp=%u callback=%p\n"),
+            cur,
+            cur->timer_func,
+            cur->timer_arg,
+            cur->timer_period,
+            period_in_s,
+            cur->timer_expire,
+            callback);
+
         cur = cur->timer_next;
     }
-
-    output.println(F("Waiting for symbols..."));
-    xtra_containers::remove_duplicates(addresses);
-    auto rs = new RetrieveSymbols::RestApi();
-    rs->setAutoDelete(true);
-    rs->setAddresses(std::move(addresses));
-    rs->call([&output](RetrieveSymbols::JsonReaderResult *result, const String &error) {
-        if (result) {
-            auto &items = result->getItems();
-            auto getAddr = [&items](uint32_t addr) {
-                auto it = std::find(items.begin(), items.end(), addr);
-                if (it == items.end()) {
-                    return String('-');
-                }
-                auto name = it->getName();
-                if (name.length() > 64) {
-                    name.remove(60, -1);
-                    name += F("...#");
-                    name += String(std::distance(items.begin(), it));
-                }
-                return name;
-            };
-            ETSTimer *cur = timer_list;
-            while(cur) {
-                void *callback = nullptr;
-                for(const auto &timer: Scheduler._timers) {
-                    if (&timer->_etsTimer == cur) {
-                        callback = lambda_target(timer->_loopCallback);
-                        break;
-                    }
-                }
-                float period_in_s = cur->timer_period / 312500.0;
-                output.printf_P(PSTR("ETSTimer=%p func=%p[%s] arg=%p[%s] period=%u (%.3fs) exp=%u callback=%p[%s]\n"),
-                    cur,
-                    cur->timer_func, getAddr((uint32_t)cur->timer_func).c_str(),
-                    cur->timer_arg, getAddr((uint32_t)cur->timer_arg).c_str(),
-                    cur->timer_period,
-                    period_in_s,
-                    cur->timer_expire,
-                    callback, getAddr((uint32_t)callback).c_str());
-                cur = cur->timer_next;
-            }
-            size_t num = 0;
-            for (auto item : result->getItems()) {
-                output.printf_P(PSTR("#% 2u 0x%08x 0x%08x:0x%04x %s\n"), num++, item.getSrcAddress(), item.getAddress(), (uint32_t)item.getSize(), item.getName().c_str());
-            }
-        }
-        else {
-            output.println(error);
-            ETSTimer *cur = timer_list;
-            while(cur) {
-                void *callback = nullptr;
-                for(const auto &timer: Scheduler._timers) {
-                    if (&timer->_etsTimer == cur) {
-                        callback = lambda_target(timer->_loopCallback);
-                        break;
-                    }
-                }
-                float period_in_s = cur->timer_period / 312500.0;
-                output.printf_P(PSTR("ETSTimer=%p func=%p arg=%p period=%u (%.3fs) exp=%u callback=%p\n"),
-                    cur,
-                    cur->timer_func,
-                    cur->timer_arg,
-                    cur->timer_period,
-                    period_in_s,
-                    cur->timer_expire,
-                    callback);
-                cur = cur->timer_next;
-            }
-
-        }
-    });
 }
 
 #endif
@@ -869,7 +737,7 @@ void at_mode_serial_handle_event(String &commandString)
                 at_mode_generate_help(output, &findItems);
             }
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(METRICS))) {
-                args.printf_P(PSTR("Device name: %s"), config.getDeviceName());
+                args.printf_P(PSTR("Device name: %s"), System::Device::getName());
                 args.printf_P(PSTR("Uptime: %u seconds / %s"), getSystemUptime(), formatTime(getSystemUptime(), true).c_str());
                 args.printf_P(PSTR("Free heap/fragmentation: %u / %u"), ESP.getFreeHeap(), ESP.getHeapFragmentation());
                 args.printf_P(PSTR("CPU frequency: %uMHz"), ESP.getCpuFreqMHz());
@@ -877,7 +745,7 @@ void at_mode_serial_handle_event(String &commandString)
                 args.printf_P(PSTR("Firmware size: %s"), formatBytes(ESP.getSketchSize()).c_str());
 #if DEBUG
                 String hash;
-                if (KFCConfigurationClasses::System::Firmware::getElfHashHex(hash)) {
+                if (System::Firmware::getElfHashHex(hash)) {
                     args.printf_P(PSTR("Firmware ELF hash: %s"), hash.c_str());
                 }
 #endif
@@ -1073,23 +941,21 @@ void at_mode_serial_handle_event(String &commandString)
                         config.reconfigureWiFi();
                     }
                 }
-
-                using KFCConfigurationClasses::MainConfig;
-
-                auto flags = config._H_GET(Config().flags);
+#
+                auto flags = System::Flags::get();
                 args.printf_P("station mode %s, DHCP %s, SSID %s, connected %s, IP %s",
                     (WiFi.getMode() & WIFI_STA) ? SPGM(on) : SPGM(off),
-                    flags.stationModeDHCPEnabled ? SPGM(on) : SPGM(off),
-                    config._H_STR(MainConfig().network.WiFiConfig._ssid),
+                    flags.is_station_mode_dhcp_enabled ? SPGM(on) : SPGM(off),
+                    Network::WiFiConfig::getSSID(),
                     WiFi.isConnected() ? SPGM(yes) : SPGM(no),
                     WiFi.localIP().toString().c_str()
                 );
                 args.printf_P("AP mode %s, DHCP %s, SSID %s, clients connected %u, IP %s",
-                    (flags.wifiMode & WIFI_AP) ? ((flags.apStandByMode) ? ((WiFi.getMode() & WIFI_AP) ? SPGM(on) : PSTR("stand-by")) : SPGM(on)) : SPGM(off),
-                    flags.softAPDHCPDEnabled ? SPGM(on) : SPGM(off),
-                    config._H_STR(MainConfig().network.WiFiConfig._softApSsid),
+                    (flags.is_softap_enabled) ? ((flags.is_softap_standby_mode_enabled) ? ((WiFi.getMode() & WIFI_AP) ? SPGM(on) : PSTR("stand-by")) : SPGM(on)) : SPGM(off),
+                    flags.is_softap_dhcpd_enabled ? SPGM(on) : SPGM(off),
+                    Network::WiFiConfig::getSoftApSSID(),
                     WiFi.softAPgetStationNum(),
-                    config._H_GET(MainConfig().network.softAp).address().toString().c_str()
+                    Network::SoftAP::read().address().toString().c_str()
                 );
             }
 #if RTC_SUPPORT
@@ -1373,14 +1239,6 @@ void at_mode_serial_handle_event(String &commandString)
                     config.dump(output);
                 }
             }
-            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPR))) {
-                if (args.requireArgs(1, 1)) {
-                    output.println(F("Waiting for symbols..."));
-                    at_mode_resolve((void *)args.toNumber(0), [args](const String &symbol) mutable {
-                        args.printf_P(PSTR("%s"), symbol.c_str());
-                    });
-                }
-            }
 #if DEBUG && ESP8266
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPT))) {
                 at_mode_list_ets_timers(output);
@@ -1430,9 +1288,7 @@ void at_mode_serial_handle_event(String &commandString)
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(WIMO))) {
                 if (args.requireArgs(1, 1)) {
                     args.print(F("Setting WiFi mode and restarting device..."));
-                    auto flags = config._H_GET(Config().flags);
-                    flags.wifiMode = args.toInt(0);
-                    config._H_SET(Config().flags, flags);
+                    System::Flags::getWriteable().setWifiMode(args.toInt(0));
                     config.write();
                     config.restartDevice();
                 }
@@ -1513,7 +1369,7 @@ void at_mode_serial_input_handler(Stream &client)
 {
     static String line;
 
-    if (config._H_GET(Config().flags).atModeEnabled) {
+    if (System::Flags::get().is_at_mode_enabled) {
         auto serial = StreamWrapper(serialHandler.getStreams(), serialHandler.getInput()); // local output online
         while(client.available()) {
             int ch = client.read();
@@ -1550,12 +1406,6 @@ void at_mode_serial_input_handler(Stream &client)
             }
         }
     }
-}
-
-#else
-
-void *resolve_lambda(void *ptr) {
-    return ptr;
 }
 
 #endif

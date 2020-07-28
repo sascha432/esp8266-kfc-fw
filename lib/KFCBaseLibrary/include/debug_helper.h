@@ -42,7 +42,6 @@
 #endif
 
 void ___debugbreak_and_panic(const char* filename, int line, const char* function);
-void *resolve_lambda(void *ptr);
 
 extern const char ___debugPrefix[] PROGMEM;
 
@@ -198,6 +197,7 @@ extern "C" bool can_yield();
 #define __LDBG_println()                        _debug_println()
 #define __LDBG_printf(fmt, ...)                 _debug_printf(PSTR(fmt "\n"), ##__VA_ARGS__)
 #define __LDBG_panic(...)                       __DBG_panic(__VA_ARGS__)
+#define __SDBG_printf(fmt, ...)                 ::printf(PSTR(fmt "\n"), ##__VA_ARGS__);
 
 // templkate <class T>
 // T debug_print_result(T )
@@ -225,8 +225,6 @@ extern "C" bool can_yield();
 
 #define __debugbreak_and_panic()                        panic();
 #define __debugbreak_and_panic_printf_P(fmt, ...)       Serial.printf_P(fmt, ## __VA_ARGS__); panic();
-
-#define resolve_lambda(ptr)         (ptr)
 
 #define debug_println_notempty(msg) ;
 #define debug_print(...)            ;

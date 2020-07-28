@@ -97,7 +97,7 @@ struct UploadStatus_t {
 
 WebServerSetCPUSpeedHelper::WebServerSetCPUSpeedHelper() : SpeedBooster(
 #if defined(ESP8266)
-    config._H_GET(Config().flags).webServerPerformanceModeEnabled
+    System::Flags::get().is_webserver_performance_mode_enabled
 #endif
 ) {
 }
@@ -395,7 +395,7 @@ void WebServerPlugin::handlerExportSettings(AsyncWebServerRequest *request)
         HttpHeaders httpHeaders(false);
         httpHeaders.addNoCache();
 
-        auto hostname = config.getDeviceName();
+        auto hostname = System::Device::getName();
 
         char timeStr[32];
         auto now = time(nullptr);
@@ -632,24 +632,22 @@ void WebServerPlugin::end()
 
 void WebServerPlugin::begin()
 {
-    auto flags = System::Flags::get();
-    if (flags.webServerMode == HTTP_MODE_DISABLED) {
+    auto mode = System::WebServer::getMode();
+    if (mode == System::WebServer::ModeType::DISABLED) {
         MDNSService::announce();
         return;
     }
 
-    auto port = config._H_GET(Config().http_port);
-    if (flags.webServerMode != HTTP_MODE_DISABLED) {
-        String service = FSPGM(http);
-        if (flags.webServerMode == HTTP_MODE_SECURE) {
-            service += 's';
-        }
-        MDNSService::addService(service, FSPGM(tcp, "tcp"), port);
+    auto cfg = System::WebServer::getConfig();
+    String service = FSPGM(http);
+    if (cfg.is_https) {
+        service += 's';
     }
+    MDNSService::addService(service, FSPGM(tcp, "tcp"), cfg.port);
     MDNSService::announce();
 
 
-    _server = new AsyncWebServer(port);
+    _server = new AsyncWebServer(cfg.port);
     // server->addHandler(&events);
 
     _loginFailures.readFromSPIFFS();
@@ -674,7 +672,7 @@ void WebServerPlugin::begin()
 
     _server->onNotFound(handlerNotFound);
 
-    if (!flags.disableWebUI) {
+    if (System::Flags::get().is_webui_enabled) {
         WsWebUISocket::setup();
         WebServerPlugin::addHandler(F("/webui_get"), handlerWebUI);
     }
@@ -688,7 +686,7 @@ void WebServerPlugin::begin()
     WebServerPlugin::addHandler(F("/speedtest.zip"), handlerSpeedTestZip);
     WebServerPlugin::addHandler(F("/speedtest.bmp"), handlerSpeedTestImage);
 #if WEBUI_ALERTS_ENABLED
-    if (!flags->disableWebAlerts) {
+    if (System::Flags::get().is_webalerts_enabled) {
         WebServerPlugin::addHandler(F("/alerts"), handlerAlerts);
     }
 #endif
@@ -934,13 +932,14 @@ void WebServerPlugin::shutdown()
 
 void WebServerPlugin::getStatus(Print &output)
 {
-    auto flags = config._H_GET(Config().flags);
+    auto mode = System::WebServer::getMode();
     output.print(F("Web server "));
-    if (flags.webServerMode != HTTP_MODE_DISABLED) {
-        output.printf_P(PSTR("running on port %u"), config._H_GET(Config().http_port));
+    if (mode != System::WebServer::ModeType::DISABLED) {
+        auto cfg = System::WebServer::getConfig();
+        output.printf_P(PSTR("running on port %u"), cfg.port);
 #if WEBSERVER_TLS_SUPPORT
         output.print(F(", TLS "));
-        if (flags.webServerMode == HTTP_MODE_SECURE) {
+        if (cfg.is_https) {
             output.print(FSPGM(enabled));
         } else {
             output.print(FSPGM(disabled));
@@ -968,8 +967,8 @@ void WebServerPlugin::createConfigureForm(PluginComponent::FormCallbackType type
         return;
     }
 
-    form.add<uint8_t>(F("http_enabled"), _H_FLAGS_VALUE(Config().flags, webServerMode));
-    form.addValidator(new FormRangeValidator(0, HTTP_MODE_SECURE));
+    form.add<uint8_t>(F("http_enabled"), _H_FUNC_TYPE(System::WebServer::getMode, System::WebServer::setMode, uint8_t));
+    form.addValidator(new FormRangeValidatorEnum<System::WebServer::ModeType>());
 
 #if WEBSERVER_TLS_SUPPORT
     form.addValidator(new FormMatchValidator(F("There is not enough free RAM for TLS support"), [](FormField &field) {
@@ -977,14 +976,18 @@ void WebServerPlugin::createConfigureForm(PluginComponent::FormCallbackType type
     }));
 #endif
 
+    auto &flags = System::Flags::getWriteable();
+    auto &cfg = System::WebServer::getWriteableConfig();
+
+
 #if defined(ESP8266)
-    form.add<bool>(F("http_perf"), _H_FLAGS_BOOL_VALUE(Config().flags, webServerPerformanceModeEnabled));
+    form.add<bool>(F("http_perf"), _H_W_STRUCT_VALUE(flags, is_webserver_performance_mode_enabled));
 #endif
 
-    form.add<uint16_t>(F("http_port"), &config._H_W_GET(Config().http_port));
+    form.add<uint16_t>(F("http_port"), _H_W_STRUCT_VALUE(cfg, port));
     form.addValidator(new FormTCallbackValidator<uint16_t>([](uint16_t port, FormField &field) {
 #if WEBSERVER_TLS_SUPPORT
-        if (field.getForm().getField(F("http_enabled"))->getValue().toInt() == HTTP_MODE_SECURE) {
+        if (field.getForm().getField(F("http_enabled"))->getValue().toInt() == (int)System::WebServer::ModeType::SECURE) {
             if (port == 0) {
                 port = 443;
             }
@@ -1007,7 +1010,6 @@ void WebServerPlugin::createConfigureForm(PluginComponent::FormCallbackType type
 
 #endif
     form.addCStrGetterSetter(System::Device::getToken, System::Device::setToken);
-    //form.add(F("device_token"), _H_STR_VALUE(Config().device_token));
     form.addValidator(new FormLengthValidator(System::Device::kTokenMinSize, System::Device::kTokenMaxSize));
 
     form.finalize();

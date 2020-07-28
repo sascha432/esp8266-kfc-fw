@@ -54,7 +54,26 @@
     static void set##name(const String &str) { set##name(str.c_str()); }
 
 
+#if DEBUG
+
+extern const char *handleNameDeviceConfig_t;
+extern const char *handleNameWebServerConfig_t;
+extern const char *handleNameSettingsConfig_t;
+extern const char *handleNameAlarm_t;
+extern const char *handleNameSerial2TCPConfig_t;
+extern const char *handleNameMqttConfig_t;
+extern const char *handleNameSyslogConfig_t;
+
+#define CIF_DEBUG(...) __VA_ARGS__
+
+#else
+
+#define CIF_DEBUG(...)
+
+#endif
+
 namespace KFCConfigurationClasses {
+
 
     using HandleType = uint16_t;
 
@@ -64,7 +83,7 @@ namespace KFCConfigurationClasses {
     const char *loadStringConfig(HandleType handle);
     void storeStringConfig(HandleType handle, const char *);
 
-    template<typename ConfigType, HandleType handleArg>
+    template<typename ConfigType, HandleType handleArg CIF_DEBUG(, const char **handleName)>
     class ConfigGetterSetter {
     public:
         static constexpr uint16_t kConfigStructHandle = handleArg;
@@ -72,11 +91,11 @@ namespace KFCConfigurationClasses {
 
         static ConfigType getConfig()
         {
-            __CDBG_printf("getConfig=%04x size=%u", kConfigStructHandle, sizeof(ConfigType));
+            __CDBG_printf("getConfig=%04x size=%u name=%s", kConfigStructHandle, sizeof(ConfigType), *handleName);
             uint16_t length = sizeof(ConfigType);
             auto ptr = loadBinaryConfig(kConfigStructHandle, length);
             if (!ptr || length != sizeof(ConfigType)) {
-                __DBG_printf("binary handle=%04x stored_size=%u mismatch. setting default values size=%u", kConfigStructHandle, length, sizeof(ConfigType));
+                __DBG_printf("binary handle=%04x name=%s stored_size=%u mismatch. setting default values size=%u", kConfigStructHandle, *handleName, length, sizeof(ConfigType));
                 ConfigType cfg = {};
                 void *newPtr = loadWriteableBinaryConfig(kConfigStructHandle, sizeof(ConfigType));
                 ptr = memcpy(newPtr, &cfg, sizeof(ConfigType));
@@ -86,13 +105,13 @@ namespace KFCConfigurationClasses {
 
         static void setConfig(const ConfigType &params)
         {
-            __CDBG_printf("setConfig=%04x size=%u", kConfigStructHandle, sizeof(ConfigType));
+            __CDBG_printf("setConfig=%04x size=%u name=%s", kConfigStructHandle, sizeof(ConfigType), *handleName);
             storeBinaryConfig(kConfigStructHandle, &params, sizeof(params));
         }
 
         static ConfigType &getWriteableConfig()
         {
-            __CDBG_printf("getWriteableConfig=%04x size=%u", kConfigStructHandle, sizeof(ConfigType));
+            __CDBG_printf("getWriteableConfig=%04x name=%s size=%u", kConfigStructHandle, *handleName, sizeof(ConfigType));
             return *reinterpret_cast<ConfigType *>(loadWriteableBinaryConfig(kConfigStructHandle, sizeof(ConfigType)));
         }
     };
@@ -109,6 +128,30 @@ namespace KFCConfigurationClasses {
                 *this = load ? getFlags() : Flags();
             }
             Flags(ConfigFlags flags) : _flags(flags) {
+#if 0
+                __DBG_printf("wifi_mode=%u", _flags.getWifiMode());
+                __DBG_printf("is_factory_settings=%u", _flags.is_factory_settings);
+                __DBG_printf("is_default_password=%u", _flags.is_default_password);
+                __DBG_printf("use_static_ip_during_wakeup=%u", _flags.use_static_ip_during_wakeup);
+                __DBG_printf("is_at_mode_enabled=%u", _flags.is_at_mode_enabled);
+                __DBG_printf("is_softap_ssid_hidden=%u", _flags.is_softap_ssid_hidden);
+                __DBG_printf("is_softap_dhcpd_enabled=%u", _flags.is_softap_dhcpd_enabled);
+                __DBG_printf("is_station_mode_enabled=%u", _flags.is_station_mode_enabled);
+                __DBG_printf("is_softap_enabled=%u", _flags.is_softap_enabled);
+                __DBG_printf("is_softap_standby_mode_enabled=%u", _flags.is_softap_standby_mode_enabled);
+                __DBG_printf("is_station_mode_dhcp_enabled=%u", _flags.is_station_mode_dhcp_enabled);
+                __DBG_printf("is_led_on_when_connected=%u", _flags.is_led_on_when_connected);
+                __DBG_printf("is_mdns_enabled=%u", _flags.is_mdns_enabled);
+                __DBG_printf("is_ntp_client_enabled=%u", _flags.is_ntp_client_enabled);
+                __DBG_printf("is_syslog_enabled=%u", _flags.is_syslog_enabled);
+                __DBG_printf("is_web_server_enabled=%u", _flags.is_web_server_enabled);
+                __DBG_printf("is_webserver_performance_mode_enabled=%u", _flags.is_webserver_performance_mode_enabled);
+                __DBG_printf("is_mqtt_enabled=%u", _flags.is_mqtt_enabled);
+                __DBG_printf("is_rest_api_enabled=%u", _flags.is_rest_api_enabled);
+                __DBG_printf("is_serial2tcp_enabled=%u", _flags.is_serial2tcp_enabled);
+                __DBG_printf("is_webui_enabled=%u", _flags.is_webui_enabled);
+                __DBG_printf("is_webalerts_enabled=%u", _flags.is_webalerts_enabled);
+#endif
             }
             ConfigFlags *operator->() {
                 return &_flags;
@@ -120,31 +163,31 @@ namespace KFCConfigurationClasses {
             void write();
 
             bool isWiFiEnabled() const {
-                return _flags.wifiMode & WIFI_AP_STA;
+                return _flags.getWifiMode() & WIFI_AP_STA;
             }
             bool isSoftAPEnabled() const {
-                return _flags.wifiMode & WIFI_AP;
+                return _flags.getWifiMode() & WIFI_AP;
             }
             bool isStationEnabled() const {
-                return _flags.wifiMode & WIFI_STA;
+                return _flags.getWifiMode() & WIFI_STA;
             }
             WiFiMode getWiFiMode() const {
-                return static_cast<WiFiMode>(_flags.wifiMode);
+                return static_cast<WiFiMode>(_flags.getWifiMode());
             }
             bool isSoftApStandByModeEnabled() const {
                 if (isSoftAPEnabled()) {
-                    return _flags.apStandByMode;
+                    return _flags.is_softap_standby_mode_enabled;
                 }
                 return false;
             }
             bool isMDNSEnabled() const {
-                return _flags.enableMDNS;
+                return _flags.is_mdns_enabled;
             }
             void setMDNSEnabled(bool state) {
-                _flags.enableMDNS = state;
+                _flags.is_mdns_enabled = state;
             }
             bool isWebUIEnabled() const {
-                return !_flags.disableWebUI;
+                return _flags.is_webui_enabled;
             }
             bool isMQTTEnabled() const;
             void setMQTTEnabled(bool state);
@@ -193,7 +236,7 @@ namespace KFCConfigurationClasses {
             } DeviceConfig_t;
         };
 
-        class Device : public DeviceConfig, public ConfigGetterSetter<DeviceConfig::DeviceConfig_t, _H(MainConfig().system.device.cfg)> {
+        class Device : public DeviceConfig, public ConfigGetterSetter<DeviceConfig::DeviceConfig_t, _H(MainConfig().system.device.cfg) CIF_DEBUG(, &handleNameDeviceConfig_t)> {
         public:
             Device() {
             }
@@ -248,9 +291,36 @@ namespace KFCConfigurationClasses {
             uint8_t elf_sha1[20];
         };
 
+        class WebServerConfig {
+        public:
+            enum class ModeType : uint8_t {
+                MIN = 0,
+                DISABLED = 0,
+                UNSECURE,
+                SECURE,
+                MAX
+            };
+
+            typedef struct __attribute__packed__ WebServerConfig_t {
+                uint16_t port;
+                uint8_t is_https: 1;
+
+                WebServerConfig_t() : port(80), is_https(false) {}
+
+            } WebServerConfig_t;
+        };
+
+        class WebServer : public WebServerConfig, public ConfigGetterSetter<WebServerConfig::WebServerConfig_t, _H(MainConfig().system.webserver) CIF_DEBUG(, &handleNameWebServerConfig_t)> {
+        public:
+            static void defaults();
+            static ModeType getMode();
+            static void setMode(ModeType mode);
+        };
+
         Flags flags;
         Device device;
         Firmware firmware;
+        WebServer webserver;
 
     };
 
@@ -288,7 +358,7 @@ namespace KFCConfigurationClasses {
             } SettingsConfig_t;
         };
 
-        class Settings : public SettingsConfig, public ConfigGetterSetter<SettingsConfig::SettingsConfig_t, _H(MainConfig().network.settings)> {
+        class Settings : public SettingsConfig, public ConfigGetterSetter<SettingsConfig::SettingsConfig_t, _H(MainConfig().network.settings) CIF_DEBUG(, &handleNameSettingsConfig_t)> {
         public:
             static void defaults();
 
@@ -318,6 +388,7 @@ namespace KFCConfigurationClasses {
 
             SoftAP();
             static SoftAP read();
+            static SoftAP &getWriteable();
             static void defaults();
             void write();
 
@@ -359,20 +430,12 @@ namespace KFCConfigurationClasses {
 
         class WiFiConfig {
         public:
-            static const char *getSSID();
-            static const char *getPassword();
-            static void setSSID(const String &ssid);
-            static void setPassword(const String &password);
-
-            static const char *getSoftApSSID();
-            static const char *getSoftApPassword();
-            static void setSoftApSSID(const String &ssid);
-            static void setSoftApPassword(const String &password);
-
-            char _ssid[33];
-            char _password[33];
-            char _softApSsid[33];
-            char _softApPassword[33];
+            CREATE_STRING_GETTER_SETTER(MainConfig().network.WiFiConfig, SSID, 32);
+            static constexpr size_t kPasswordMinSize = 8;
+            CREATE_STRING_GETTER_SETTER(MainConfig().network.WiFiConfig, Password, 32);
+            CREATE_STRING_GETTER_SETTER(MainConfig().network.WiFiConfig, SoftApSSID, 32);
+            static constexpr size_t kSoftApPasswordMinSize = 8;
+            CREATE_STRING_GETTER_SETTER(MainConfig().network.WiFiConfig, SoftApPassword, 32);
         };
 
         Settings settings;
@@ -744,7 +807,7 @@ namespace KFCConfigurationClasses {
             } Alarm_t;
         };
 
-        class Alarm : public AlarmConfig, public ConfigGetterSetter<AlarmConfig::Alarm_t, _H(MainConfig().plugins.alarm.cfg)> {
+        class Alarm : public AlarmConfig, public ConfigGetterSetter<AlarmConfig::Alarm_t, _H(MainConfig().plugins.alarm.cfg) CIF_DEBUG(, &handleNameAlarm_t)> {
         public:
 
             Alarm();
@@ -814,7 +877,7 @@ namespace KFCConfigurationClasses {
             } Serial2Tcp_t;
         };
 
-        class Serial2TCP : public Serial2TCPConfig, ConfigGetterSetter<Serial2TCPConfig::Serial2Tcp_t, _H(MainConfig().plugins.serial2tcp.cfg)> {
+        class Serial2TCP : public Serial2TCPConfig, ConfigGetterSetter<Serial2TCPConfig::Serial2Tcp_t, _H(MainConfig().plugins.serial2tcp.cfg) CIF_DEBUG(, &handleNameSerial2TCPConfig_t)> {
         public:
 
             static void defaults();
@@ -875,7 +938,7 @@ namespace KFCConfigurationClasses {
             } MqttConfig_t;
         };
 
-        class MQTTClient : public MQTTClientConfig, public ConfigGetterSetter<MQTTClientConfig::MqttConfig_t, _H(MainConfig().plugins.mqtt.cfg)> {
+        class MQTTClient : public MQTTClientConfig, public ConfigGetterSetter<MQTTClientConfig::MqttConfig_t, _H(MainConfig().plugins.mqtt.cfg) CIF_DEBUG(, &handleNameMqttConfig_t)> {
         public:
             static void defaults();
             static bool isEnabled();
@@ -915,7 +978,7 @@ namespace KFCConfigurationClasses {
             } SyslogConfig_t;
         };
 
-        class SyslogClient : public SyslogClientConfig, public ConfigGetterSetter<SyslogClientConfig::SyslogConfig_t, _H(MainConfig().plugins.syslog.cfg)>
+        class SyslogClient : public SyslogClientConfig, public ConfigGetterSetter<SyslogClientConfig::SyslogConfig_t, _H(MainConfig().plugins.syslog.cfg) CIF_DEBUG(, &handleNameSyslogConfig_t)>
         {
         public:
             SyslogClient() {}

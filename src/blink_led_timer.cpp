@@ -5,6 +5,8 @@
 #include "blink_led_timer.h"
 #include "kfc_fw_config.h"
 
+using KFCConfigurationClasses::System;
+
 #if 0
 #include "debug_helper_enable.h"
 #endif
@@ -121,8 +123,7 @@ void BlinkLEDTimer::setPattern(int8_t pin, int delay, dynamic_bitset &&pattern)
 
 void BlinkLEDTimer::setBlink(int8_t pin, uint16_t delay, int32_t color)
 {
-    auto flags = config._H_GET(Config().flags);
-    if (!flags.ledMode) {
+    if (!System::Flags::get().is_led_on_when_connected) {
         return;
     }
 

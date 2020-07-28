@@ -14,13 +14,15 @@
 #include <debug_helper_disable.h>
 #endif
 
+using KFCConfigurationClasses::System;
+
 void MQTTPlugin::createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request)
 {
     using ClientConfig = MQTTClient::ClientConfig;
 
     if (type == FormCallbackType::SAVE) {
         // update flags
-        MQTTClient::Flags::getWriteable().mqttEnabled = (ClientConfig::getWriteableConfig().mode_enum != ClientConfig::ModeType::DISABLED);
+        System::Flags::getWriteable().is_mqtt_enabled = (ClientConfig::getWriteableConfig().mode_enum != ClientConfig::ModeType::DISABLED);
         return;
     }
     else if (!isCreateFormCallbackType(type)) {
@@ -44,7 +46,7 @@ void MQTTPlugin::createConfigureForm(FormCallbackType type, const String &formNa
     qosItems.emplace_back(enumToString(ClientConfig::QosType::AT_LEAST_ONCE), F("At least once (1)"));
     qosItems.emplace_back(enumToString(ClientConfig::QosType::EXACTLY_ONCE), F("Exactly once (2)"));
 
-    if (!MQTTClient::Flags::get().mqttEnabled) {
+    if (!System::Flags::get().is_mqtt_enabled) {
         cfg.mode_enum = ClientConfig::ModeType::DISABLED; // set to disabled before adding value to form
     }
 

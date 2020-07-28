@@ -264,18 +264,27 @@ public:
     ConfigurationParameter &getWritableParameter(Handle_t handle, uint16_t maxLength = 0) {
         uint16_t offset;
         auto &param = _getOrCreateParam(ConfigurationParameter::getType<T>(), handle, offset);
+        param._info.base = std::is_convertible<T*, ConfigurationParameterBase*>::value;
         if (param._param.isString()) {
             param.getString(this, offset);
         }
         else {
             uint16_t length;
             auto ptr = param.getBinary(this, length, offset);
-            if (ptr && length != sizeof(T)) {
-                debug_printf_P(PSTR("resizing binary blob: %u to %u\n"), length, sizeof(T));
-                maxLength = sizeof(T);
-                // __debugbreak_and_panic_printf_P(PSTR("%s size does not match len=%u size=%u\n"), param.toString().c_str(), length, sizeof(T));
-                //__release(ptr);
-                //ptr = nullptr;
+            if (ptr) {
+                if (length != sizeof(T)) {
+                    if (ptr && param._info.base) {
+                        reinterpret_cast<const ConfigurationParameterBase *>(ptr)->beforeResize(param, sizeof(T));
+                    }
+                    debug_printf_P(PSTR("resizing binary blob: %u to %u\n"), length, sizeof(T));
+                    maxLength = sizeof(T);
+                    // __debugbreak_and_panic_printf_P(PSTR("%s size does not match len=%u size=%u\n"), param.toString().c_str(), length, sizeof(T));
+                    //__release(ptr);
+                    //ptr = nullptr;
+                }
+                else if (param._info.base) {
+                    reinterpret_cast<ConfigurationParameterBase *>(param._info.data)->afterRead(param);
+                }
             }
         }
         makeWriteable(param, maxLength);
@@ -289,13 +298,20 @@ public:
         if (iterator == _params.end()) {
             return nullptr;
         }
-        return &(*iterator);
+        auto &param = *iterator;
+        if ((param._info.base = std::is_convertible<T*, ConfigurationParameterBase*>::value)) {
+            reinterpret_cast<ConfigurationParameterBase *>(param._info.data)->afterRead(param);
+        }
+        return &param;
     }
 
     template <typename T>
     ConfigurationParameterT<T> &getParameterT(Handle_t handle) {
         uint16_t offset;
         auto &param = _getOrCreateParam(ConfigurationParameter::getType<T>(), handle, offset);
+        if ((param._info.base = std::is_convertible<T*, ConfigurationParameterBase*>::value)) {
+            reinterpret_cast<ConfigurationParameterBase *>(param._info.data)->afterRead(param);
+        }
         return static_cast<ConfigurationParameterT<T> &>(param);
     }
 
@@ -356,6 +372,10 @@ public:
 #endif
             return T();
         }
+
+        if ((param->_info.base = std::is_convertible<T*, ConfigurationParameterBase*>::value)) {
+            reinterpret_cast<ConfigurationParameterBase *>(param->_info.data)->afterRead(*param);
+        }
         return *ptr;
     }
 
@@ -370,6 +390,7 @@ public:
         uint16_t offset;
         auto &param = _getOrCreateParam(ConfigurationParameter::getType<T>(), handle, offset);
         param.setData(this, (const uint8_t *)&data, sizeof(T));
+        param._info.base = std::is_convertible<T*, ConfigurationParameterBase*>::value;
         return data;
     }
 

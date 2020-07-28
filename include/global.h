@@ -121,19 +121,6 @@
 #endif
 #endif
 
-#ifndef SYSLOG_SUPPORT
-#define SYSLOG_SUPPORT                              1
-#endif
-#ifndef SYSLOG_SPIFF_QUEUE_SIZE
-#define SYSLOG_SPIFF_QUEUE_SIZE                     (1024 * 32)
-#endif
-#ifndef SYSLOG_RETRANSMIT_RETRY_DELAY
-#define SYSLOG_RETRANSMIT_RETRY_DELAY               5000           // Retry to retransmit syslog messages in case of a failure
-#endif
-#ifndef SYSLOG_QUEUE_DELAY
-#define SYSLOG_QUEUE_DELAY                          10000             // Delay before sending a queued message or transmitting the next one
-#endif
-
 #ifndef AT_MODE_SUPPORTED
 #define AT_MODE_SUPPORTED                           1               // AT commands over serial
 #endif

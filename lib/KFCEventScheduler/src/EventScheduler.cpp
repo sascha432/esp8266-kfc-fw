@@ -65,12 +65,12 @@ void EventScheduler::Timer::add(int64_t delayMillis, RepeatType repeat, Callback
         }
         _timer = nullptr;
     });
-    _debug_printf_P(PSTR("timer=%p hasTimer=%u\n"), _timer, Scheduler.hasTimer(_timer));
+    __SLDBG_printf("timer=%p hasTimer=%u", _timer, Scheduler.hasTimer(_timer));
 }
 
 bool EventScheduler::Timer::remove()
 {
-    _debug_printf_P(PSTR("timer=%p hasTimer=%u\n"), _timer, Scheduler.hasTimer(_timer));
+    __SLDBG_printf("timer=%p hasTimer=%u", _timer, Scheduler.hasTimer(_timer));
     if (_timer) {
         _timer->_remove();
         _timer = nullptr;
@@ -82,7 +82,7 @@ bool EventScheduler::Timer::remove()
 EventTimer *EventScheduler::Timer::operator->() const
 {
     if (!_timer || !Scheduler.hasTimer(_timer)) {
-        __debugbreak_and_panic_printf_P(PSTR("_timer=%p hasTimer=%u\n"), _timer, Scheduler.hasTimer(_timer));
+        __SLDBG_panic("_timer=%p hasTimer=%u", _timer, Scheduler.hasTimer(_timer));
     }
     return _timer;
 }
@@ -99,7 +99,7 @@ EventTimer *EventScheduler::Timer::operator->() const
 
 EventTimer *EventScheduler::addTimer(int64_t delay, RepeatType repeat, Callback callback, Priority_t priority, DeleterCallback deleter)
 {
-    _debug_printf_P(PSTR("delay=%.0f repeat=%d prio=%u callback=%u deleter=%u\n"), delay / 1.0, repeat._maxRepeat, priority, callback ? 1 : 0, deleter ? 1 : 0);
+    __SLDBG_printf("delay=%.0f repeat=%d prio=%u callback=%u deleter=%u", delay / 1.0, repeat._maxRepeat, priority, callback ? 1 : 0, deleter ? 1 : 0);
     auto timer = new EventTimer(callback, delay, repeat, priority);
     _timers.push_back(deleter ? TimerPtr(timer, deleter) : TimerPtr(timer));
 #if DEBUG_EVENT_SCHEDULER
@@ -123,7 +123,7 @@ bool ICACHE_RAM_ATTR EventScheduler::hasTimer(EventTimer *timer) const
 
 bool EventScheduler::removeTimer(EventTimer *timer)
 {
-    _debug_printf_P(PSTR("t=%p r=%d\n"), timer, hasTimer(timer));
+    __SLDBG_printf("t=%p r=%d", timer, hasTimer(timer));
     if (!hasTimer(timer)) {
         return false;
     }
@@ -133,7 +133,7 @@ bool EventScheduler::removeTimer(EventTimer *timer)
 
 void ICACHE_RAM_ATTR EventScheduler::_removeTimer(EventTimer *timer)
 {
-    _debug_printf_P(PSTR("t=%p et=%p\n"), timer, timer ? timer->_etsTimer.timer_func : nullptr);
+    __SLDBG_printf("t=%p et=%p", timer, timer ? timer->_etsTimer.timer_func : nullptr);
 
     timer->detach();
 
@@ -196,7 +196,7 @@ void EventScheduler::_loop()
                 timer->_callbackScheduled = false;
                 timer->_invokeCallback();
                 if ((runtime = millis() - start) > _runtimeLimit) {
-                    _debug_printf_P(PSTR("timer=%p runtime limit %d/%d reached, exiting loop\n"), timer, runtime, _runtimeLimit);
+                    __SLDBG_printf("timer=%p runtime limit %d/%d reached, exiting loop", timer, runtime, _runtimeLimit);
                     break;
                 }
             }
@@ -211,7 +211,7 @@ void EventScheduler::_loop()
         }
 
         if (left) {
-            _debug_printf_P(PSTR("%d callbacks still need to be scheduled after this loop\n"), left);
+            __SLDBG_printf("%d callbacks still need to be scheduled after this loop", left);
         }
 #endif
     }
@@ -222,16 +222,16 @@ void EventScheduler::_loop()
 void EventScheduler::_list()
 {
     if (_timers.empty()) {
-        _debug_printf_P(PSTR("no timers left\n"));
+        __SLDBG_printf("no timers left");
     } else {
         int scheduled = 0;
         for(const auto &timer: _timers) {
-            _debug_printf_P(PSTR("%p: delay %.3f repeat %d/%d, scheduled %d\n"), timer.get(), timer->_delay / 1000.0, timer->_repeat._counter, timer->_repeat._maxRepeat, timer->_callbackScheduled);
+            __SLDBG_printf("%p: delay %.3f repeat %d/%d, scheduled %d", timer.get(), timer->_delay / 1000.0, timer->_repeat._counter, timer->_repeat._maxRepeat, timer->_callbackScheduled);
             if (timer->_callbackScheduled) {
                 scheduled++;
             }
         }
-        _debug_printf_P(PSTR("timers %d, scheduled %d\n"), _timers.size(), scheduled);
+        __SLDBG_printf("timers %d, scheduled %d", _timers.size(), scheduled);
     }
 }
 

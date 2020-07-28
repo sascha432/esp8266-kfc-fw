@@ -23,6 +23,8 @@
 #include <debug_helper_disable.h>
 #endif
 
+using KFCConfigurationClasses::System;
+
 PROGMEM_STRING_DEF(webui_socket_uri, "/webui_ws");
 
 WsClientAsyncWebSocket *wsWebUI = nullptr;
@@ -40,7 +42,7 @@ void WsWebUISocket::setup()
         auto ws = new WsClientAsyncWebSocket(FSPGM(webui_socket_uri), &wsWebUI);
         ws->onEvent(webui_socket_event_handler);
         server->addHandler(ws);
-        _debug_printf_P(PSTR("Web socket for UI running on port %u\n"), config._H_GET(Config().http_port));
+        _debug_printf_P(PSTR("Web socket for UI running on port %u\n"), System::WebServer::getConfig().port);
     }
 }
 

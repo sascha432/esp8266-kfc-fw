@@ -19,7 +19,7 @@ OSTimer::OSTimer() : _etsTimer()
 
 OSTimer::~OSTimer()
 {
-    _debug_printf_P(PSTR("_etsTimer.timer_arg=%p\n"), _etsTimer.timer_arg);
+    __SLDBG_printf("_etsTimer.timer_arg=%p", _etsTimer.timer_arg);
     detach();
 }
 
@@ -30,13 +30,13 @@ static void ICACHE_RAM_ATTR _callback(void *arg)
 
 void OSTimer::startTimer(uint32_t delay, bool repeat)
 {
-    _debug_printf_P(PSTR("delay=%u repeat=%u\n"), delay, repeat);
+    __SLDBG_printf("delay=%u repeat=%u", delay, repeat);
     if (delay < EventTimer::kMinDelay) {
-        __debugbreak_and_panic_printf_P(PSTR("delay %u < %u is not supported\n"), delay, EventTimer::kMinDelay);
+        __SLDBG_panic("delay %u < %u is not supported", delay, EventTimer::kMinDelay);
         delay = EventTimer::kMinDelay;
     }
     else if (delay > EventTimer::kMaxDelay) {
-        __debugbreak_and_panic_printf_P(PSTR("delay %u > %u is not supported\n"), delay, EventTimer::kMaxDelay);
+        __SLDBG_panic("delay %u > %u is not supported", delay, EventTimer::kMaxDelay);
         delay = EventTimer::kMaxDelay;
     }
     ets_timer_disarm(&_etsTimer);
@@ -46,7 +46,7 @@ void OSTimer::startTimer(uint32_t delay, bool repeat)
 
 void OSTimer::detach()
 {
-    _debug_printf_P(PSTR("_etsTimer.timer_arg=%p\n"), _etsTimer.timer_arg);
+    __SLDBG_printf("_etsTimer.timer_arg=%p", _etsTimer.timer_arg);
     if (_etsTimer.timer_arg == this) {
         ets_timer_disarm(&_etsTimer);
         ets_timer_done(&_etsTimer);

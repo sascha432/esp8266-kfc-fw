@@ -27,6 +27,8 @@
 #include <debug_helper_disable.h>
 #endif
 
+using KFCConfigurationClasses::System;
+
  WsClient::ClientCallbackVector_t  WsClient::_clientCallback;
  WsClient::AsyncWebSocketVector WsClient::_webSockets;
 
@@ -140,7 +142,7 @@
             }
             char *ptr = buffer.getChar();
             strncpy(ptr, dataPtr, len)[len] = 0;
-            if (verify_session_id(ptr, config.getDeviceName(), config._H_STR(Config().device_pass))) {
+            if (verify_session_id(ptr, System::Device::getName(), System::Device::getPassword())) {
 
                 wsClient->setAuthenticated(true);
                 WsClient::invokeStartOrEndCallback(wsClient, true);
@@ -243,42 +245,55 @@ uint16_t WsClient::getQeueDelay()
     return qDelay;
 }
 
+static bool __get_server(AsyncWebSocket **server,  WsClient *sender)
+{
+    if (*server == nullptr) {
+        if (!sender) {
+            __DBG_printf("sender=%p", sender);
+            return false;
+        }
+        if (!sender->getClient()) {
+            __DBG_printf("sender=%p getClient=%p", sender, sender->getClient());
+            return false;
+        }
+        *server = sender->getClient()->server();
+    }
+    return true;
+}
+
 void WsClient::broadcast(AsyncWebSocket *server, WsClient *sender, AsyncWebSocketMessageBuffer *buffer)
 {
-    if (server == nullptr) {
-        server = sender->getClient()->server();
-    }
-    // _debug_printf_P(PSTR("sender=%p, clients=%u, message=%s\n"), sender, server->getClients().length(), buffer->get());
-    auto qDelay = getQeueDelay();
-    buffer->lock();
-    for(auto socket: server->getClients()) {
-        if (socket->status() == WS_CONNECTED && socket->_tempObject && socket->_tempObject != sender && reinterpret_cast<WsClient *>(socket->_tempObject)->isAuthenticated()) {
-            socket->text(buffer);
-            delay(qDelay); // let the device work on its tcp buffers
+    if (__get_server(&server, sender)) {
+        // _debug_printf_P(PSTR("sender=%p, clients=%u, message=%s\n"), sender, server->getClients().length(), buffer->get());
+        auto qDelay = getQeueDelay();
+        buffer->lock();
+        for(auto socket: server->getClients()) {
+            if (socket->status() == WS_CONNECTED && socket->_tempObject && socket->_tempObject != sender && reinterpret_cast<WsClient *>(socket->_tempObject)->isAuthenticated()) {
+                socket->text(buffer);
+                delay(qDelay); // let the device work on its tcp buffers
+            }
         }
+        buffer->unlock();
+        server->_cleanBuffers();
     }
-    buffer->unlock();
-    server->_cleanBuffers();
 }
 
 void WsClient::broadcast(AsyncWebSocket *server, WsClient *sender, const char *str, size_t length)
 {
-    if (server == nullptr) {
-        server = sender->getClient()->server();
+    if (__get_server(&server, sender)) {
+        auto buffer = server->makeBuffer(length);
+        memcpy(buffer->get(), str, length);
+        broadcast(server, sender, buffer);
     }
-    auto buffer = server->makeBuffer(length);
-    memcpy(buffer->get(), str, length);
-    broadcast(server, sender, buffer);
 }
 
 void WsClient::broadcast(AsyncWebSocket *server, WsClient *sender, const __FlashStringHelper *str, size_t length)
 {
-    if (server == nullptr) {
-        server = sender->getClient()->server();
+    if (__get_server(&server, sender)) {
+        auto buffer = server->makeBuffer(length);
+        memcpy_P(buffer->get(), str, length);
+        broadcast(server, sender, buffer);
     }
-    auto buffer = server->makeBuffer(length);
-    memcpy_P(buffer->get(), str, length);
-    broadcast(server, sender, buffer);
 }
 
 void WsClient::safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, const String &message)

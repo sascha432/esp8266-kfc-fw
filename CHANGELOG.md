@@ -13,6 +13,8 @@
 - Added boot option to set passwords to default, enable AP mode and web server
 - Support for zeroconf (`${zeroconf:<service>.<proto>:<address|value[:port value]>|<fallback[:port]>}` as hostname)
 - Blacklist to prevent plugins being loaded at start-up
+- Debug print functions for ICACHE_RAM_ATTR that do not pull the entire SerialWrapper code into IRAM
+- Templates for configuration getters/setters
 
 ## Version 0.0.3
 

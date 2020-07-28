@@ -21,6 +21,8 @@
 #include <debug_helper_disable.h>
 #endif
 
+using KFCConfigurationClasses::System;
+
 PingMonitorTask::PingMonitorTaskPtr pingMonitorTask;
 WsClientAsyncWebSocket *wsPing = nullptr;
 
@@ -36,7 +38,7 @@ void ping_monitor_install_web_server_hook()
         auto ws = new WsClientAsyncWebSocket(F("/ping"), &wsPing);
         ws->onEvent(ping_monitor_event_handler);
         server->addHandler(ws);
-        _debug_printf_P(PSTR("Web socket for ping running on port %u\n"), config._H_GET(Config().http_port));
+        _debug_printf_P(PSTR("Web socket for ping running on port %u\n"), System::WebServer::getConfig().port);
     }
 }
 

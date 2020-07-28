@@ -33,6 +33,8 @@
 
 #include <push_pack.h>
 
+using KFCConfigurationClasses::System;
+
 #if ESP8266
 static char *_GMT = _tzname[0]; // copy pointer, points to static char gmt[] = "GMT";
 #else
@@ -135,7 +137,9 @@ void NTPPlugin::createConfigureForm(FormCallbackType type, const String &formNam
         return;
     }
 
-    form.add<bool>(F("ntp_enabled"), _H_FLAGS_BOOL_VALUE(Config().flags, ntpClientEnabled));
+    auto &cfg = System::Flags::getWriteable();
+
+    form.addWriteableStruct(cfg, is_ntp_client_enabled);
 
     form.add(F("ntp_server1"), _H_STR_VALUE(Config().ntp.servers[0]));
     form.addValidator(new FormValidHostOrIpValidator(true));
@@ -188,7 +192,7 @@ bool NTPPlugin::atModeHandler(AtModeArgs &args)
         time_t now = time(nullptr);
         char timestamp[64];
         if (!IS_TIME_VALID(now)) {
-            args.printf_P(PSTR("Time is currently not set (%lu). NTP is %s"), now, (config._H_GET(Config().flags).ntpClientEnabled ? FSPGM(enabled) : FSPGM(disabled)));
+            args.printf_P(PSTR("Time is currently not set (%lu). NTP is %s"), now, (System::Flags::get().is_ntp_client_enabled ? FSPGM(enabled) : FSPGM(disabled)));
         }
         else {
             strftime_P(timestamp, sizeof(timestamp), SPGM(strftime_date_time_zone), gmtime(&now));
@@ -232,7 +236,7 @@ bool NTPPlugin::atModeHandler(AtModeArgs &args)
 
 void NTPPlugin::setup(SetupModeType mode)
 {
-    if (config._H_GET(Config().flags).ntpClientEnabled) {
+    if (System::Flags::get().is_ntp_client_enabled) {
         execConfigTime();
     } else {
 		auto str = emptyString.c_str();
@@ -254,7 +258,7 @@ void NTPPlugin::shutdown()
 
 void NTPPlugin::getStatus(Print &output)
 {
-    if (config._H_GET(Config().flags).ntpClientEnabled) {
+    if (System::Flags::get().is_ntp_client_enabled) {
 
         char buf[16];
         auto now = time(nullptr);

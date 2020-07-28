@@ -336,8 +336,7 @@ void setup()
 
         // check if wifi is up
         Scheduler.addTimer(60000, true, [](EventScheduler::TimerPtr timer) {
-            auto flags = config._H_GET(Config().flags);
-            if (flags.wifiMode & WIFI_STA) {
+            if (System::Flags::get().is_station_mode_enabled) {
                 if (!WiFi.isConnected()) {
                     // WiFi is down, wait 30 seconds if it reconnects automatically
                     Scheduler.addTimer(30000, false, [](EventScheduler::TimerPtr timer) {

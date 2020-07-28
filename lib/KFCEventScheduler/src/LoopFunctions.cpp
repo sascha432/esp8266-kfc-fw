@@ -43,10 +43,10 @@ static LoopFunctions::FunctionsVector _functions;
 
 void LoopFunctions::add(LoopFunctions::Callback_t callback, CallbackPtr_t callbackPtr)
 {
-    _debug_printf_P(PSTR("callbackPtr=%p\n"), resolve_lambda((void *)callbackPtr));
+    __SLDBG_printf("callbackPtr=%p callback=%p", callbackPtr, lambda_target(callback));
     for(auto &entry: _functions) {
         if (entry.callbackPtr == callbackPtr) {
-            _debug_printf_P(PSTR("callbackPtr=%p already exists, deleted state %d\n"), callbackPtr, entry.deleteCallback);
+            __SLDBG_printf("callbackPtr=%p already exists, deleted state %d", callbackPtr, entry.deleteCallback);
             entry.deleteCallback = false; // restore if deleted
             return;
         }
@@ -56,14 +56,14 @@ void LoopFunctions::add(LoopFunctions::Callback_t callback, CallbackPtr_t callba
 
 void LoopFunctions::remove(CallbackPtr_t callbackPtr)
 {
-    _debug_printf_P(PSTR("callbackPtr=%p\n"), resolve_lambda((void *)callbackPtr));
+    __SLDBG_printf("callbackPtr=%p", callbackPtr);
     for(auto &entry: _functions) {
         if (entry.callbackPtr == callbackPtr) {
             entry.deleteCallback = true;
             return;
         }
     }
-    _debug_printf_P(PSTR("cannot find callbackPtr=%p\n"), callbackPtr);
+    __SLDBG_printf("cannot find callbackPtr=%p", callbackPtr);
 }
 
 LoopFunctions::FunctionsVector &LoopFunctions::getVector()

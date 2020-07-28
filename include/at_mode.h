@@ -145,7 +145,6 @@ inline void at_mode_print_prefix(Stream &output, const String &command) {
     at_mode_print_prefix(output, (const char *)command.c_str());
 }
 typedef std::function<void(const String &name)> AtModeResolveACallback;
-void at_mode_resolve(void *ptr, AtModeResolveACallback resolve_callback);
 void enable_at_mode(Stream &output);
 void disable_at_mode(Stream &output);
 

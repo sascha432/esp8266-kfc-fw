@@ -16,29 +16,29 @@ bool WiFiCallbacks::_locked = false;
 
 WiFiCallbacks::EventType WiFiCallbacks::add(EventType events, Callback callback, CallbackPtr_t callbackPtr)
 {
-    _debug_printf_P(PSTR("events=%u, callbackPtr=%p callback=%p\n"), events, resolve_lambda((void *)callbackPtr), resolve_lambda(lambda_target(callback)));
+    __SLDBG_printf("events=%u callbackPtr=%p callback=%p", events, callbackPtr, lambda_target(callback));
 
     events = EnumHelper::Bitset::getAnd(events, EventType::ANY);
 
     for (auto &callback : _callbacks) {
         if (callbackPtr == callback.callbackPtr) {
-            _debug_printf_P(PSTR("callbackPtr=%p, changed events from %u to %u\n"), callbackPtr, callback.events, events);
+            __SLDBG_printf("callbackPtr=%p, changed events from %u to %u", callbackPtr, callback.events, events);
             // callback.events |= events;
             callback.events = EnumHelper::Bitset::getOr(callback.events, events);
             return callback.events;
         }
     }
-    _debug_printf_P(PSTR("callbackPtr=%p new entry, events %d\n"), callbackPtr,  events);
+    __SLDBG_printf("callbackPtr=%p new entry events %d", callbackPtr, events);
     _callbacks.push_back(CallbackEntry_t({events, callback, callbackPtr}));
     return events;
 }
 
 WiFiCallbacks::EventType WiFiCallbacks::remove(EventType events, CallbackPtr_t callbackPtr)
 {
-    _debug_printf_P(PSTR("events=%u, callbackPtr=%p\n"), events, resolve_lambda((void *)callbackPtr));
+    __SLDBG_printf("events=%u callbackPtr=%p", events, callbackPtr);
     for (auto iterator = _callbacks.begin(); iterator != _callbacks.end(); ++iterator) {
         if (callbackPtr == iterator->callbackPtr) {
-            _debug_printf_P(PSTR("callbackPtr=%p changed events from %u to %u\n"), callbackPtr, iterator->events, iterator->events & ~events);
+            __SLDBG_printf("callbackPtr=%p changed events from %u to %u", callbackPtr, iterator->events, iterator->events & ~events);
             // iterator->events &= ~events;
             iterator->events = EnumHelper::Bitset::getAnd(iterator->events, EnumHelper::Bitset::getInverted(events));
             if (iterator->events == EventType::NONE) {
@@ -55,15 +55,15 @@ WiFiCallbacks::EventType WiFiCallbacks::remove(EventType events, CallbackPtr_t c
 
 void WiFiCallbacks::callEvent(EventType event, void *payload)
 {
-    _debug_printf_P(PSTR("event=%u payload=%p\n"), event, payload);
+    __SLDBG_printf("event=%u payload=%p", event, payload);
     _locked = true;
     for (const auto &entry : _callbacks) {
         if (EnumHelper::Bitset::hasAny(entry.events, event)) {
             if (entry.callback) {
-                _debug_printf_P(PSTR("callback=%p\n"), resolve_lambda(lambda_target(entry.callback)));
+                __SLDBG_printf("callback=%p", lambda_target(entry.callback));
                 entry.callback(event, payload);
             } else {
-                _debug_printf_P(PSTR("callbackPtr=%p\n"), resolve_lambda((void *)entry.callbackPtr));
+                __SLDBG_printf("callbackPtr=%p", entry.callbackPtr);
                 entry.callbackPtr(event, payload);
             }
         }

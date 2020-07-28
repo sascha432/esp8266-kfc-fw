@@ -47,39 +47,42 @@ enum class SyslogProtocolType : uint8_t {
     MAX
 };
 
-
-enum HttpMode_t : uint8_t {
-    HTTP_MODE_DISABLED = 0,
-    HTTP_MODE_UNSECURE,
-    HTTP_MODE_SECURE,
-};
-
 typedef uint32_t ConfigFlags_t;
 
-struct ConfigFlags {
-    ConfigFlags_t isFactorySettings: 1;
-    ConfigFlags_t isDefaultPassword: 1; //TODO disable password after 5min if it has not been changed
-    ConfigFlags_t ledMode: 1;
-    ConfigFlags_t wifiMode: 2;
-    ConfigFlags_t atModeEnabled: 1;
-    ConfigFlags_t hiddenSSID: 1;
-    ConfigFlags_t softAPDHCPDEnabled: 1;
-    ConfigFlags_t stationModeDHCPEnabled: 1;
-    ConfigFlags_t webServerMode: 2;
-    ConfigFlags_t ntpClientEnabled: 1;
-    ConfigFlags_t syslogEnabled: 1;
-    ConfigFlags_t __reserved3:2; // free to use
-    ConfigFlags_t mqttEnabled: 1;
-    ConfigFlags_t __reserved1:2; // free to use
-    ConfigFlags_t restApiEnabled: 1;
-    ConfigFlags_t serial2TCPEnabled: 1;
-    ConfigFlags_t __reserved2:2; // free to use
-    ConfigFlags_t useStaticIPDuringWakeUp: 1;
-    ConfigFlags_t webServerPerformanceModeEnabled: 1;
-    ConfigFlags_t apStandByMode: 1;
-    ConfigFlags_t disableWebUI: 1;
-    ConfigFlags_t disableWebAlerts: 1;
-    ConfigFlags_t enableMDNS: 1;
-};
+typedef struct __attribute__packed__ {
+    ConfigFlags_t is_factory_settings: 1;
+    ConfigFlags_t is_default_password: 1;
+    ConfigFlags_t is_softap_enabled: 1;
+    ConfigFlags_t is_softap_ssid_hidden: 1;
+    ConfigFlags_t is_softap_standby_mode_enabled: 1;
+    ConfigFlags_t is_softap_dhcpd_enabled: 1;
+    ConfigFlags_t is_station_mode_enabled: 1;
+    ConfigFlags_t is_station_mode_dhcp_enabled: 1;
+    ConfigFlags_t use_static_ip_during_wakeup: 1;
+    ConfigFlags_t is_led_on_when_connected: 1;
+    ConfigFlags_t is_at_mode_enabled: 1;
+    ConfigFlags_t is_mdns_enabled: 1;
+    ConfigFlags_t is_ntp_client_enabled: 1;
+    ConfigFlags_t is_syslog_enabled: 1;
+    ConfigFlags_t is_web_server_enabled: 1;
+    ConfigFlags_t is_webserver_performance_mode_enabled: 1;
+    ConfigFlags_t is_mqtt_enabled: 1;
+    ConfigFlags_t is_rest_api_enabled: 1;
+    ConfigFlags_t is_serial2tcp_enabled: 1;
+    ConfigFlags_t is_webui_enabled: 1;
+    ConfigFlags_t is_webalerts_enabled: 1;
+    ConfigFlags_t __reserved: 11;
 
-static_assert(sizeof(ConfigFlags) == sizeof(uint32_t), "size exceeded");
+    uint8_t getWifiMode() const {
+        return (is_station_mode_enabled ? WIFI_STA : 0) | (is_softap_enabled ? WIFI_AP : 0);
+    }
+    void setWifiMode(uint8_t mode) {
+        is_station_mode_enabled = (mode & WIFI_STA);
+        is_softap_enabled = (mode & WIFI_AP);
+    }
+
+} ConfigFlags;
+
+static constexpr size_t ConfigFlagsSize = sizeof(ConfigFlags);
+
+static_assert(ConfigFlagsSize == sizeof(uint32_t), "size exceeded");

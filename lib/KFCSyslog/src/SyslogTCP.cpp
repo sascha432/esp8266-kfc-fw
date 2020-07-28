@@ -148,13 +148,22 @@ bool SyslogTCP::isSending() {
 }
 
 // connect to remote host if connection is not established
-void SyslogTCP::_connect() {
+void SyslogTCP::_connect()
+{
     _debug_printf_P(PSTR("SyslogTCP::_connect(): connected=%d,connecting=%d,disconnecting=%d\n"), _client.connected(), _client.connecting(), _client.disconnecting());
     if (!_client.connected() && !_client.connecting()) {
 #if ASYNC_TCP_SSL_ENABLED
         if (!_client.connect(_host.c_str(), _port, _useTLS)) {
 #else
-        if (!_client.connect(_host.c_str(), _port)) {
+        bool result;
+        IPAddress address = convertToIPAddress(_host);
+        if (address.isSet()) {
+            result = _client.connect(address, _port);
+        }
+        else {
+            result = _client.connect(_host.c_str(), _port);
+        }
+        if (!result) {
 #endif
             _debug_printf_P(PSTR("SyslogTCP::_connect(): _client.connect() failed\n"));
             _queueWriteError(IF_DEBUG("connect() failed"));
@@ -163,12 +172,14 @@ void SyslogTCP::_connect() {
 }
 
 // disconnect or terminate connection
-void SyslogTCP::_disconnect(bool now) {
+void SyslogTCP::_disconnect(bool now)
+{
     _debug_printf_P(PSTR("SyslogTCP::_disconnect(now=%d): connected=%d,connecting=%d,disconnecting=%d\n"), now, _client.connected(), _client.connecting(), _client.disconnecting());
     _client.close(now);
 }
 
-void SyslogTCP::_queueWritten(bool ack) {
+void SyslogTCP::_queueWritten(bool ack)
+{
     _debug_printf_P(PSTR("SyslogTCP::_queueWritten(%d): written=%u,left=0,sentAck=%u\n"), ack, _queue.written, _queue.sentAck);
     if (ack) {
         _queue.isSending = false;

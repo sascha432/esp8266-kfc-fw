@@ -75,10 +75,10 @@ void WebTemplate::printSystemTime(time_t now, PrintHtmlEntitiesString &output)
 void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 {
     if (String_equals(key, PSTR("HOSTNAME"))) {
-        output.print(config.getDeviceName());
+        output.print(System::Device::getName());
     }
     else if (String_equals(key, F("TITLE"))) {
-        output.print(config._H_STR(Config().device_title));
+        output.print(System::Device::getTitle());
     }
     else if (String_equals(key, PSTR("HARDWARE"))) {
 #if defined(ESP8266)
@@ -95,7 +95,7 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     else if (String_equals(key, PSTR("SOFTWARE"))) {
         output.print(F("KFC FW "));
         output.print(config.getFirmwareVersion());
-        if (System::Flags::get().isDefaultPassword) {
+        if (System::Flags::get().is_default_password) {
             output.printf_P(PSTR(HTML_S(br) HTML_S(strong) "%s" HTML_E(strong)), SPGM(default_password_warning));
         }
     }
@@ -292,7 +292,7 @@ void ConfigTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         output.print(config.getMaxWiFiChannels());
     }
     else if (String_startsWith(key, F("MODE_"))) {
-        if (System::Flags::get().wifiMode == key.substring(5).toInt()) {
+        if (System::Flags::get().getWifiMode() == key.substring(5).toInt()) {
             output.print(FSPGM(_selected, " selected"));
         }
     }

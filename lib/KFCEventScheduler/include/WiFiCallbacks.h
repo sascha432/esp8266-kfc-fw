@@ -42,15 +42,9 @@ public:
 
     static EventType add(EventType events, Callback callback, CallbackPtr_t callbackPtr);
     static EventType add(EventType events, Callback callback, void *callbackPtr) {
-#if DEBUG_WIFICALLBACKS
-        _debug_resolve_lambda(lambda_target(callback));
-#endif
         return add(events, callback, reinterpret_cast<CallbackPtr_t>(callbackPtr));
     }
     static EventType add(EventType events, CallbackPtr_t callbackPtr) {
-#if DEBUG_WIFICALLBACKS
-        _debug_resolve_lambda((void *)callbackPtr);
-#endif
         return add(events, nullptr, callbackPtr);
     }
     // returns -1 if not found, 0 if the callback has been removed or EventType of callbacks left for this pointer

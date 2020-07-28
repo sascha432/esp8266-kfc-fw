@@ -1542,108 +1542,102 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
             auto &flags = System::Flags::getWriteable();
             flags.is_default_password = false;
         }
-        else if (String_equals(formName, F("device"))) {
+        else if (String_equals(formName, SPGM(device))) {
             config.setConfigDirty(true);
         }
     }
     else if (isCreateFormCallbackType(type)) {
 
-        if (String_equals(formName, F("wifi"))) {
+        if (String_equals(formName, SPGM(wifi))) {
 
             auto &flags = System::Flags::getWriteable();
             auto &softAp = Network::SoftAP::getWriteable();
 
-            form.add<uint8_t>(FSPGM(mode), _H_FUNC(flags.getWifiMode, flags.setWifiMode, &flags));
+            form.addGetterSetter(flags.getWifiMode, flags.setWifiMode, &flags));
             form.addValidator(new FormRangeValidator(F("Invalid mode"), WIFI_OFF, WIFI_AP_STA));
 
-            form.add(F("wifi_ssid"), _H_CSTR_FUNC(Network::WiFiConfig::getSSID, Network::WiFiConfig::setSSID));
+            form.addCStrGetterSetter(Network::WiFiConfig::getSSID, Network::WiFiConfig::setSSID));
             form.addValidator(new FormLengthValidator(1, Network::WiFiConfig::kSSIDMaxSize));
 
-            form.add(F("wifi_password"), _H_CSTR_FUNC(Network::WiFiConfig::getPassword, Network::WiFiConfig::setPassword));
+            form.addCStrGetterSetter(Network::WiFiConfig::getPassword, Network::WiFiConfig::setPassword));
             form.addValidator(new FormLengthValidator(Network::WiFiConfig::kPasswordMinSize, Network::WiFiConfig::kPasswordMaxSize));
 
-            form.add(F("ap_wifi_ssid"), _H_CSTR_FUNC(Network::WiFiConfig::getSoftApSSID, Network::WiFiConfig::setSoftApSSID));
+            form.addCStrGetterSetter(Network::WiFiConfig::getSoftApSSID, Network::WiFiConfig::setSoftApSSID));
             form.addValidator(new FormLengthValidator(1, Network::WiFiConfig::kSoftApSSIDMaxSize));
 
-            form.add(F("ap_wifi_password"), _H_CSTR_FUNC(Network::WiFiConfig::getSoftApPassword, Network::WiFiConfig::setSoftApPassword));
+            form.addCStrGetterSetter(Network::WiFiConfig::getSoftApPassword, Network::WiFiConfig::setSoftApPassword));
             form.addValidator(new FormLengthValidator(Network::WiFiConfig::kSoftApPasswordMinSize, Network::WiFiConfig::kSoftApPasswordMaxSize));
 
-            form.add<uint8_t>(F("channel"), _H_W_STRUCT_VALUE(softAp, _channel));
+            form.addWriteableStruct(softAp, _channel));
             form.addValidator(new FormRangeValidator(1, config.getMaxWiFiChannels()));
 
-            form.add<uint8_t>(F("encryption"), _H_W_STRUCT_VALUE(softAp, _encryption));
+            form.addWriteableStruct(softAp, _encryption));
             form.addValidator(new FormEnumValidator<uint8_t, WiFiEncryptionTypeArray().size()>(F("Invalid encryption"), createWiFiEncryptionTypeArray()));
 
-            form.add<bool>(F("ap_hidden"), _H_W_STRUCT_VALUE(flags, is_softap_ssid_hidden), FormField::InputFieldType::CHECK);
+            form.addWriteableStruct(flags, is_softap_ssid_hidden), FormField::InputFieldType::CHECK);
 
-            form.add<bool>(F("ap_standby_mode"), _H_W_STRUCT_VALUE(flags, is_softap_standby_mode_enabled), FormField::InputFieldType::SELECT);
+            form.addWriteableStruct(flags, is_softap_standby_mode_enabled), FormField::InputFieldType::SELECT);
 
         }
-        else if (String_equals(formName, F("network"))) {
+        else if (String_equals(formName, SPGM(network, "network"))) {
 
             auto &network = Network::Settings::getWriteableConfig();
+            auto &softAp = Network::SoftAP::getWriteableConfig();
             auto &flags = System::Flags::getWriteable();
 
-            form.addCStrGetterSetter(System::Device::getName, System::Device::setName);
-            // form.add(F("hostname"), _H_STR_VALUE(Config().device_name));
+            form.setFormUI(FSPGM(Network_Configuration, "Network Configuration"));
+
+            form.addCStrGetterSetter(System::Device::getName, System::Device::setName))->setFormUI((new FormUI(FormUI::TEXT, FSPGM(Hostname, "Hostname"))));
             form.addValidator(new FormLengthValidator(4, System::Device::kNameMaxSize));
 
-            form.addCStrGetterSetter(System::Device::getTitle, System::Device::setTitle);
-            // form.add(FSPGM(title), _H_STR_VALUE(Config().device_title));
-            form.addValidator(new FormLengthValidator(1, System::Device::kTitleMaxSize));
+            form.addWriteableStruct(flags, is_station_mode_dhcp_enabled))->setFormUI((new FormUI(FormUI::SELECT, FSPGM(DHCP, "DHCP")))->setBoolItems());
 
-            form.addWriteableStruct(flags, is_station_mode_dhcp_enabled);
-            //form.add<bool>(F("dhcp_client"), _H_FLAGS_BOOL_VALUE(Config().flags, stationModeDHCPEnabled));
+            form.addWriteableStructIPAddress(network, _localIp))->setFormUI((new FormUI(FormUI::TEXT, FSPGM(IP_Address, "IP Address"))));
+            form.addWriteableStructIPAddress(network, _subnet))->setFormUI((new FormUI(FormUI::TEXT, FSPGM(Subnet, "Subnet"))));
+            form.addWriteableStructIPAddress(network, _gateway))->setFormUI((new FormUI(FormUI::TEXT, FSPGM(Gateway, "Gateway"))));
+            form.addWriteableStructIPAddress(network, _dns1))->setFormUI((new FormUI(FormUI::TEXT, FSPGM(DNS_1, "DNS 1"))));
+            form.addWriteableStructIPAddress(network, _dns2))->setFormUI((new FormUI(FormUI::TEXT, FSPGM(DNS_2, "DNS 2"))));
 
-            form.addWriteableStruct(network, _localIp);
-            form.addWriteableStruct(network, _subnet);
-            form.addWriteableStruct(network, _gateway);
-            form.addWriteableStruct(network, _dns1);
-            form.addWriteableStruct(network, _dns2);
+            form.addWriteableStruct(flags, is_softap_dhcpd_enabled));
 
-            // form.add(F("ip_address"), _H_STRUCT_IP_VALUE(MainConfig().network.settings, _localIp));
-            // form.add(F("subnet"), _H_STRUCT_IP_VALUE(MainConfig().network.settings, _subnet));
-            // form.add(F("gateway"), _H_STRUCT_IP_VALUE(MainConfig().network.settings, _gateway));
-            // form.add(F("dns1"), _H_STRUCT_IP_VALUE(MainConfig().network.settings, _dns1));
-            // form.add(F("dns2"), _H_STRUCT_IP_VALUE(MainConfig().network.settings, _dns2));
-
-            form.addWriteableStruct(flags, is_softap_dhcpd_enabled);
-            //form.add<bool>(F("softap_dhcpd"), _H_FLAGS_BOOL_VALUE(Config().flags, softAPDHCPDEnabled));
-
-            form.add(F("dhcp_start"), _H_STRUCT_IP_VALUE(MainConfig().network.softAp, _dhcpStart));
-            form.add(F("dhcp_end"), _H_STRUCT_IP_VALUE(MainConfig().network.softAp, _dhcpEnd));
-            form.add(F("ap_ip_address"), _H_STRUCT_IP_VALUE(MainConfig().network.softAp, _address));
-            form.add(F("ap_subnet"), _H_STRUCT_IP_VALUE(MainConfig().network.softAp, _subnet));
+            form.addWriteableStructIPAddress(softAp, _dhcpStart));
+            form.addWriteableStructIPAddress(softAp, _dhcpEnd));
+            form.addWriteableStructIPAddress(softAp, _address));
+            form.addWriteableStructIPAddress(softAp, _subnet));
 
         }
-        else if (String_equals(formName, F("device"))) {
+        else if (String_equals(formName, SPGM(device, "device"))) {
 
             auto &cfg = System::Device::getWriteableConfig();
             auto &flags = System::Flags::getWriteable();
 
-            form.addCStrGetterSetter(System::Device::getTitle, System::Device::setTitle);
+            form.setFormUI(FSPGM(Device_Configuration, "Device Configuration"));
+
+            form.addCStrGetterSetter(System::Device::getTitle, System::Device::setTitle))->setFormUI((new FormUI(FormUI::TEXT, FSPGM(Title))));
             form.addValidator(new FormLengthValidator(1, System::Device::kTitleMaxSize));
 
-            form.addWriteableStruct(cfg, safe_mode_reboot_timeout_minutes);
-            form.addValidator(new FormRangeValidator(5, 1440, true));
+            form.addWriteableStruct(cfg, safe_mode_reboot_timeout_minutes))->setFormUI((new FormUI(FormUI::INTEGER, F("Reboot Delay Running In Safe Mode")))->setSuffix(FSPGM(minutes)));
+            form.addValidator(new FormRangeValidator(5, 3600, true));
 
-            //form.addGetterSetter(System::Flags(true).isMDNSEnabled, System::Flags(true).setMDNSEnabled);
-            form.addWriteableStruct(flags, is_mdns_enabled);
+            form.addWriteableStruct(flags, is_mdns_enabled))->setFormUI((new FormUI(FormUI::SELECT, F("mDNS Announcements")))->setBoolItems(FSPGM(Enabled), F("Disabled (Zeroconf is still available)")));
 
-            form.addWriteableStruct(cfg, zeroconf_timeout);
+            form.addWriteableStruct(cfg, zeroconf_timeout))->setFormUI((new FormUI(FormUI::INTEGER, FSPGM(Zeroconf_Timeout, "Zeroconf Timeout")))->setSuffix(FSPGM(minutes)));
             form.addValidator(new FormRangeValidator(System::Device::kZeroConfMinTimeout, System::Device::kZeroConfMaxTimeout));
 
-            form.addWriteableStruct(cfg, webui_cookie_lifetime_days);
+            form.addWriteableStruct(flags, is_ssdp_enabled))->setFormUI((new FormUI(FormUI::SELECT, FSPGM(SSDP_Discovery, "SSDP Discovery")))->setBoolItems());
+
+            form.addWriteableStruct(cfg, webui_cookie_lifetime_days))->setFormUI((new FormUI(FormUI::INTEGER, F(FORMUI_RAW_HTML "Allow to store credentials in a cookie to login automatically:<br><span class=\"oi oi-shield p-2\"></span><small>If the cookie is stolen, it is not going to expire and changing the password is the only options to invalidate it.</small>")))->setSuffix(FSPGM(days)));
             form.addValidator(new FormRangeValidator(System::Device::kWebUICookieMinLifetime, System::Device::kWebUICookieMaxLifetime, true));
 
-            form.addWriteableStruct(flags, is_webalerts_enabled);
-            form.addWriteableStruct(flags, is_webui_enabled);
-            form.addWriteableStruct(cfg, status_led_mode);
-            form.addWriteableStruct(cfg, status_led_mode);
+            form.addWriteableStruct(flags, is_webalerts_enabled))->setFormUI((new FormUI(FormUI::SELECT, FSPGM(Web_Alerts, "Web Alerts")))->setBoolItems());
+            form.addWriteableStruct(flags, is_webui_enabled))->setFormUI((new FormUI(FormUI::SELECT, FSPGM(WebUI, "Web UI")))->setBoolItems());
 
+            form.addWriteableStruct(cfg, status_led_mode))->setFormUI((new FormUI(FormUI::SELECT, FSPGM(Status_LED_Mode, "Status LED Mode")))->setBoolItems(F("Solid when connected to WiFi"), F("Turn off when connected to WiFi")));
 
         }
         else if (String_equals(formName, SPGM(password))) {
+
+            form.setFormUI(FSPGM(Change_Password, "Change Password"));
 
             auto password = String(System::Device::getPassword());
             form.add(new FormField(FSPGM(password), password));

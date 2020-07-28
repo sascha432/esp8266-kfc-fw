@@ -181,7 +181,7 @@ bool WebServerPlugin::_isPublic(const String &pathString) const
         return false;
     } else if (*path++ == '/') {
         return (
-            !strcmp_P(path, PSTR("description.xml")) ||
+            !strcmp_P(path, SPGM(description_xml)) ||
             !strncmp_P(path, PSTR("css/"), 4) ||
             !strncmp_P(path, PSTR("js/"), 3) ||
             !strncmp_P(path, PSTR("images/"), 7) ||
@@ -784,7 +784,7 @@ bool WebServerPlugin::_handleFileRead(String path, bool client_accepts_gzip, Asy
     HttpHeaders httpHeaders;
 
     if (!_isPublic(path) && !isAuthenticated) {
-        auto loginError = F("Your session has expired.");
+        auto loginError = FSPGM(Your_session_has_expired, "Your session has expired");
 
         if (request->hasArg(FSPGM(SID))) { // just report failures if the cookie is invalid
             __SID(debug_printf_P(PSTR("invalid SID=%s\n"), request->arg(FSPGM(SID)).c_str()));
@@ -805,7 +805,7 @@ bool WebServerPlugin::_handleFileRead(String path, bool client_accepts_gzip, Asy
 
                 auto cookie = new HttpCookieHeader(FSPGM(SID), generate_session_id(username, password, nullptr), String('/'));
                 authType = AuthType::PASSWORD;
-                time_t keepTime = request->arg(F("keep")).toInt();
+                time_t keepTime = request->arg(FSPGM(keep, "keep")).toInt();
                 if (keepTime) {
                     auto now = time(nullptr);
                     keepTime = (keepTime == 1 && IS_TIME_VALID(now)) ? now : keepTime; // check if the time was provied, otherwise use system time
@@ -821,7 +821,7 @@ bool WebServerPlugin::_handleFileRead(String path, bool client_accepts_gzip, Asy
                 Logger_security(F("Login successful from %s (%s)"), remote_addr.toString().c_str(), getAuthTypeStr(authType));
             }
             else {
-                loginError = F("Invalid username or password.");
+                loginError = FSPGM(Invalid_username_or_password, "Invalid username or password");
                 const FailureCounter &failure = _loginFailures.addFailure(remote_addr);
                 Logger_security(F("Login from %s failed %d times since %s (%s)"), remote_addr.toString().c_str(), failure.getCounter(), failure.getFirstFailure().c_str(), getAuthTypeStr(authType));
                 return _sendFile(FSPGM(_login_html, "/login.html"), httpHeaders, client_accepts_gzip, request, new LoginTemplate(loginError));
@@ -968,7 +968,9 @@ void WebServerPlugin::createConfigureForm(PluginComponent::FormCallbackType type
         return;
     }
 
-    form.add<uint8_t>(F("http_enabled"), _H_FUNC_TYPE(System::WebServer::getMode, System::WebServer::setMode, uint8_t));
+    form.setFormUI(F("Remote Access Configuration"));
+
+    form.addGetterSetterType(System::WebServer::getMode, System::WebServer::setMode, uint8_t))->setFormUI((new FormUI(FormUI::Type::SELECT, FSPGM(HTTP_Server, "HTTP Server")))->setBoolItems());
     form.addValidator(new FormRangeValidatorEnum<System::WebServer::ModeType>());
 
 #if WEBSERVER_TLS_SUPPORT
@@ -982,10 +984,10 @@ void WebServerPlugin::createConfigureForm(PluginComponent::FormCallbackType type
 
 
 #if defined(ESP8266)
-    form.add<bool>(F("http_perf"), _H_W_STRUCT_VALUE(flags, is_webserver_performance_mode_enabled));
+    form.addWriteableStruct(flags, is_webserver_performance_mode_enabled));
 #endif
 
-    form.add<uint16_t>(F("http_port"), _H_W_STRUCT_VALUE(cfg, port));
+    form.addWriteableStruct(cfg, port))->setFormUI((new FormUI(FormUI::Type::INTEGER, FSPGM(Port, "Port"))));
     form.addValidator(new FormTCallbackValidator<uint16_t>([](uint16_t port, FormField &field) {
 #if WEBSERVER_TLS_SUPPORT
         if (field.getForm().getField(F("http_enabled"))->getValue().toInt() == (int)System::WebServer::ModeType::SECURE) {
@@ -1010,7 +1012,7 @@ void WebServerPlugin::createConfigureForm(PluginComponent::FormCallbackType type
     form.add(new FormObject<File2String>(F("ssl_key"), File2String(FSPGM(server_key)), nullptr));
 
 #endif
-    form.addCStrGetterSetter(System::Device::getToken, System::Device::setToken);
+    form.addCStrGetterSetter(System::Device::getToken, System::Device::setToken))->setFormUI((new FormUI(FormUI::Type::TEXT, F("Token for Web Server, Web Sockets and Tcp2Serial"))));
     form.addValidator(new FormLengthValidator(System::Device::kTokenMinSize, System::Device::kTokenMaxSize));
 
     form.finalize();
@@ -1097,7 +1099,7 @@ WebServerPlugin::AuthType WebServerPlugin::isAuthenticated(AsyncWebServerRequest
                 return AuthType::NONE;
             }
             if (verify_session_id(SID.c_str(), System::Device::getName(), System::Device::getPassword())) {
-                __SID(debug_printf_P(PSTR("valid SID=%s type=%s\n"), SID.c_str(), isRequestSID ? request->methodToString() : F("cookie")));
+                __SID(debug_printf_P(PSTR("valid SID=%s type=%s\n"), SID.c_str(), isRequestSID ? request->methodToString() : FSPGM(cookie, "cookie")));
                 return isRequestSID ? AuthType::SID : AuthType::SID_COOKIE;
             }
             __SID(debug_printf_P(PSTR("invalid SID=%s\n"), SID.c_str()));

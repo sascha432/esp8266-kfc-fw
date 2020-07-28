@@ -49,7 +49,7 @@ static void wifiCallback(WiFiCallbacks::EventType event, void *payload)
 void SSDPPlugin::_begin()
 {
     PrintString tmp;
-    SSDP.setSchemaURL("description.xml");
+    SSDP.setSchemaURL(FSPGM(description_xml));
     SSDP.setHTTPPort(System::WebServer::getConfig().port);
     SSDP.setDeviceType(F("upnp:rootdevice"));
     SSDP.setName(System::Device::getName());
@@ -64,7 +64,7 @@ void SSDPPlugin::_begin()
     tmp = PrintString();
     WebTemplate::printWebInterfaceUrl(tmp);
     SSDP.setModelURL(tmp);
-    SSDP.setManufacturer(F("KFCLabs"));
+    SSDP.setManufacturer(FSPGM(KFCLabs, "KFCLabs"));
     SSDP.setManufacturerURL(F("https://github.com/sascha432"));
     SSDP.setURL(String('/'));
     _running = SSDP.begin();
@@ -79,7 +79,9 @@ void SSDPPlugin::_end()
 
 void SSDPPlugin::setup(SetupModeType mode)
 {
-    WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTION, wifiCallback);
+    if (System::Flags::get().is_ssdp_enabled) {
+        WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTION, wifiCallback);
+    }
 }
 
 void SSDPPlugin::reconfigure(const String &source)
@@ -96,11 +98,11 @@ void SSDPPlugin::shutdown()
 
 void SSDPPlugin::getStatus(Print &output)
 {
-    if (_running) {
+    if (System::Flags::get().is_ssdp_enabled && _running) {
         WebTemplate::printWebInterfaceUrl(output);
-        output.print(F("description.xml" HTML_S(br)));
+        output.print(FSPGM(description_xml, "description.xml"));
+        output.print(HTML_S(br));
         WebTemplate::printSSDPUUID(output);
-        SSDP.schema(output);
     }
     else {
         output.print(FSPGM(Disabled));

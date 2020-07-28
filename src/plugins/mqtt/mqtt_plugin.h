@@ -21,4 +21,6 @@ public:
     virtual void atModeHelpGenerator() override;
     virtual bool atModeHandler(AtModeArgs &args) override;
 #endif
+
+    static MQTTPlugin &getPlugin();
 };

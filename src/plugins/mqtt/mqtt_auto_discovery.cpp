@@ -18,9 +18,11 @@
 #include <debug_helper_disable.h>
 #endif
 
+using KFCConfigurationClasses::System;
+
 void MQTTAutoDiscovery::create(MQTTComponent *component, const String &componentName, MQTTAutoDiscovery::FormatType format)
 {
-    String suffix = config.getDeviceName();
+    String suffix = System::Device::getName();
     if (componentName.length()) {
         suffix += '/';
         suffix += componentName;
@@ -100,7 +102,7 @@ void MQTTAutoDiscovery::_create(MQTTComponent *component, const String &name, MQ
         _discovery.print(F("\"]],\"" MQTT_DEVICE_REG_MODEL JSON_VALUE_START));
         _discovery.print(model);
         _discovery.print(F(JSON_NEXT_KEY_START MQTT_DEVICE_REG_NAME JSON_VALUE_START));
-        _discovery.print(config.getDeviceName());
+        _discovery.print(System::Device::getName());
         _discovery.print(F(JSON_NEXT_KEY_START MQTT_DEVICE_REG_SW_VERSION JSON_VALUE_START "KFC FW "));
         _discovery.print(KFCFWConfiguration::getFirmwareVersion());
         _discovery.print(F(JSON_NEXT_KEY_START MQTT_DEVICE_REG_MANUFACTURER JSON_VALUE_START "KFCLabs\"},"));
@@ -227,7 +229,7 @@ bool MQTTAutoDiscovery::isEnabled()
 #if ENABLE_DEEP_SLEEP
         !resetDetector.hasWakeUpDetected() &&
 #endif
-        MQTTClient::Flags::get().mqttEnabled;
+        System::Flags::get().is_mqtt_enabled;
 #else
     return false;
 #endif

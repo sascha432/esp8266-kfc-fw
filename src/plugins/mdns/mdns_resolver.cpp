@@ -8,6 +8,10 @@
 #include "mdns_plugin.h"
 #include "mdns_resolver.h"
 
+extern "C" {
+    #include "lwip/dns.h"
+}
+
 #if DEBUG_MDNS_SD
 #include <debug_helper_enable.h>
 #else
@@ -50,7 +54,8 @@ char *MDNSResolver::MDNSServiceInfo::findTxtValue(const String &key)
 
 
 
-MDNSResolver::Query::Query(const String &service, const String &proto, const String &addressValue, const String &portValue, const String &fallback, uint16_t port, ResolvedCallback callback, uint16_t timeout) :
+MDNSResolver::Query::Query(const String &name, const String &service, const String &proto, const String &addressValue, const String &portValue, const String &fallback, uint16_t port, ResolvedCallback callback, uint16_t timeout) :
+    _name(name),
     _endTime(END_TIME_NOT_STARTED),
     _dataCollected(DATA_COLLECTED_NONE),
     _service(service),
@@ -65,7 +70,6 @@ MDNSResolver::Query::Query(const String &service, const String &proto, const Str
     _serviceQuery(nullptr),
     _resolved(false),
     _isAddress(String_equals(addressValue, SPGM(address))),
-    _isDomain(String_equals(addressValue, SPGM(domain))),
     _isPort(String_equals(portValue, SPGM(port)))
 {
 }
@@ -122,10 +126,11 @@ void MDNSResolver::Query::end()
             }
 
             if (_resolved) {
-                Logger_notice(F("Zeroconf response "));
+                Logger_notice(F("%s: Zeroconf response %s:%u"), _name.c_str(), _address.isSet() ? _address.toString().c_str() : _hostname.c_str(), _port);
                 _callback(_hostname, _address, _port, ResponseType::RESOLVED);
             }
             else {
+                Logger_notice(F("%s: Zeroconf fallback %s:%u"), _name.c_str(), _fallback.c_str(), _port);
                 _callback(_fallback, convertToIPAddress(_fallback), _fallbackPort, ResponseType::TIMEOUT);
             }
             MDNSPlugin::removeQuery(this);
@@ -174,6 +179,17 @@ String MDNSResolver::Query::createZeroConfString() const
     return str;
 }
 
+void MDNSResolver::Query::dnsFoundCallback(const char *name, const ip_addr *ipaddr, void *arg)
+{
+    __LDBG_printf("dnsFoundCallback=%p query=%p address=%s", arg, MDNSPlugin::getPlugin().findQuery(arg), ipaddr ? IPAddress(ipaddr->addr).toString().c_str() : SPGM(null));
+    if (ipaddr && MDNSPlugin::getPlugin().findQuery(arg)) { // verify that the query has not been deleted yet
+        auto &query = *reinterpret_cast<MDNSResolver::Query *>(arg);
+        query._hostname = IPAddress(ipaddr->addr).toString();
+        query._dataCollected |= DATA_COLLECTED_HOSTNAME;
+        __LDBG_printf("resolved=%s", query._hostname.c_str());
+    }
+}
+
 void MDNSResolver::Query::serviceCallback(bool map, MDNSResolver::MDNSServiceInfo &mdnsServiceInfo, MDNSResponder::AnswerType answerType, bool p_bSetContent)
 {
     __LDBG_printf("answerType=%u p_bSetContent=%u", answerType, p_bSetContent)
@@ -181,10 +197,18 @@ void MDNSResolver::Query::serviceCallback(bool map, MDNSResolver::MDNSServiceInf
 
     mdnsServiceInfo.serviceDomain();
 
-    if (mdnsServiceInfo.hostDomainAvailable() && _isDomain) {
+    if (mdnsServiceInfo.hostDomainAvailable() && _isAddress) {
         __LDBG_printf("domain=%s", mdnsServiceInfo.hostDomain());
-        _hostname = mdnsServiceInfo.hostDomain();
-        _dataCollected |= DATA_COLLECTED_HOSTNAME;
+        ip_addr_t addr;
+        auto result = dns_gethostbyname(mdnsServiceInfo.hostDomain(), &addr, (dns_found_callback)&dnsFoundCallback, this); // try to resolve before marking as collected
+        if (result == ERR_OK) {
+            _hostname = IPAddress(addr.addr).toString();
+            _dataCollected |= DATA_COLLECTED_HOSTNAME;
+        }
+        else if (result == ERR_INPROGRESS) {
+            // waiting for callback
+        }
+        __LDBG_printf("dns_gethostbyname=%d this=%p", result, this);
     }
     if (mdnsServiceInfo.IP4AddressAvailable() && _isAddress) {
         _address = mdnsServiceInfo.findIP4Address(WiFi.localIP());
@@ -196,7 +220,7 @@ void MDNSResolver::Query::serviceCallback(bool map, MDNSResolver::MDNSServiceInf
         _dataCollected |= DATA_COLLECTED_PORT;
     }
     if (mdnsServiceInfo.txtAvailable()) {
-        if (!_isAddress && !_isDomain) {
+        if (!_isAddress) {
             auto value = mdnsServiceInfo.findTxtValue(_addressValue);
             if (value) {
                 if ((_address = convertToIPAddress(value)).isSet()) {

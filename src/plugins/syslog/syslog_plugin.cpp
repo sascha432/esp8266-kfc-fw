@@ -4,7 +4,14 @@
 
 #include "syslog_plugin.h"
 
+#if DEBUG_SYSLOG
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
+#endif
+
 using SyslogClient = KFCConfigurationClasses::Plugins::SyslogClient;
+using KFCConfigurationClasses::System;
 
 static SyslogPlugin plugin;
 
@@ -28,25 +35,25 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     0                   // __reserved
 );
 
-SyslogPlugin::SyslogPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(SyslogPlugin)), syslog(nullptr)
+SyslogPlugin::SyslogPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(SyslogPlugin)), _stream(nullptr)
 {
     REGISTER_PLUGIN(this, "SyslogPlugin");
 }
 
 void SyslogPlugin::setup(SetupModeType mode)
 {
-    begin();
+    _begin();
 }
 
 void SyslogPlugin::reconfigure(const String &source)
 {
-    end();
-    begin();
+    _end();
+    _begin();
 }
 
 void SyslogPlugin::shutdown()
 {
-    kill(250);
+    _kill(250);
 }
 
 void SyslogPlugin::timerCallback(EventScheduler::TimerPtr timer)
@@ -57,19 +64,19 @@ void SyslogPlugin::timerCallback(EventScheduler::TimerPtr timer)
 void SyslogPlugin::_timerCallback(EventScheduler::TimerPtr timer)
 {
 #if DEBUG
-    if (!syslog) {
+    if (!_stream) {
         __debugbreak_and_panic_printf_P(PSTR("_timerCallback() syslog=nullptr\n"));
     }
 #endif
-    if (syslog->hasQueuedMessages()) {
-        syslog->deliverQueue();
+    if (_stream->hasQueuedMessages()) {
+        _stream->deliverQueue();
     }
 }
 
-void SyslogPlugin::begin()
+void SyslogPlugin::_begin()
 {
 #if DEBUG
-    if (syslog) {
+    if (_stream) {
         __debugbreak_and_panic_printf_P(PSTR("begin() called twice\n"));
     }
 #endif
@@ -81,58 +88,61 @@ void SyslogPlugin::begin()
         _port = cfg.port;
 
         if (config.hasZeroConf(_hostname)) {
-            config.resolveZeroConf(_hostname, _port, [this](const String &hostname, const IPAddress &address, uint16_t port, MDNSResolver::ResponseType type) {
-                this->_zeroConfCallback(hostname, address, port, type);
+            config.resolveZeroConf(getFriendlyName(), _hostname, _port, [](const String &hostname, const IPAddress &address, uint16_t port, MDNSResolver::ResponseType type) {
+                plugin._zeroConfCallback(hostname, address, port, type);
             });
         }
         else {
-            _zeroConfCallback(_hostname, convertToIPAddress(_hostname), _port, MDNSResolver::ResponseType::NONE);
+            _zeroConfCallback(_hostname, IPAddress(), _port, MDNSResolver::ResponseType::NONE);
         }
     }
 }
 
 void SyslogPlugin::_zeroConfCallback(const String &hostname, const IPAddress &address, uint16_t port, MDNSResolver::ResponseType type)
 {
+    _hostname = address.isSet() ? address.toString() : hostname;
+    _port = port;
     auto cfg = SyslogClient::getConfig();
+
     // SyslogParameter parameter;
-    // parameter.setHostname(config.getDeviceName());
+    // parameter.setHostname(System::Device::getName());
     // parameter.setAppName(FSPGM(kfcfw));
     // parameter.setFacility(SYSLOG_FACILITY_KERN);
     // parameter.setSeverity(SYSLOG_NOTICE);
 
-    SyslogFilter *filter = new SyslogFilter(config.getDeviceName(), FSPGM(kfcfw));
+    SyslogFilter *filter = new SyslogFilter(System::Device::getName(), FSPGM(kfcfw));
     auto &parameter = filter->getParameter();
     parameter.setFacility(SYSLOG_FACILITY_KERN);
     parameter.setSeverity(SYSLOG_NOTICE);
 
     filter->addFilter(F("*.*"), SyslogFactory::create(parameter, cfg.protocol_enum, _hostname, _port));
 
-    syslog = new SyslogStream(filter, new SyslogMemoryQueue(SYSLOG_PLUGIN_QUEUE_SIZE));
+    _stream = new SyslogStream(filter, new SyslogMemoryQueue(SYSLOG_PLUGIN_QUEUE_SIZE));
 
-    _logger.setSyslog(syslog);
-    syslogTimer.add(100, true, timerCallback);
+    _logger.setSyslog(_stream);
+    _timer.add(100, true, timerCallback);
 }
 
-void SyslogPlugin::end()
+void SyslogPlugin::_end()
 {
-    if (syslog) {
-        syslogTimer.remove();
+    if (_stream) {
+        _timer.remove();
         _logger.setSyslog(nullptr);
-        delete syslog;
-        syslog = nullptr;
+        delete _stream;
+        _stream = nullptr;
     }
 }
 
-void SyslogPlugin::kill(uint16_t timeout)
+void SyslogPlugin::_kill(uint16_t timeout)
 {
-    if (syslog) {
-        syslogTimer.remove();
+    if (_stream) {
+        _timer.remove();
         auto endTime = millis() + timeout;
-        while(syslog->hasQueuedMessages() && millis() < endTime) {
-            syslog->deliverQueue();
+        while(_stream->hasQueuedMessages() && millis() < endTime) {
+            _stream->deliverQueue();
             delay(1);
         }
-        syslog->getQueue()->kill();
+        _stream->getQueue()->kill();
     }
 }
 
@@ -186,14 +196,14 @@ void SyslogPlugin::atModeHelpGenerator()
 bool SyslogPlugin::atModeHandler(AtModeArgs &args)
 {
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(SQ))) {
-        if (syslog) {
-            auto ch = args.toLowerChar(0);
-            if (ch == 'c') {
-                syslog->getQueue()->clear();
+        if (_stream) {
+            int cmd = stringlist_find_P_P(PSTR("clear|info|queue"), args.get(0), '|');
+            if (cmd == 0) {
+                _stream->getQueue()->clear();
                 args.print(F("Queue cleared"));
             }
-            else if (ch == 'q') {
-                auto queue = syslog->getQueue();
+            else if (cmd == 2) {
+                auto queue = _stream->getQueue();
                 size_t index = 0;
                 args.printf_P(PSTR("Messages in queue %d"), queue->size());
                 while(index < queue->size()) {
@@ -204,7 +214,7 @@ bool SyslogPlugin::atModeHandler(AtModeArgs &args)
                 }
             }
             else {
-                args.printf_P(PSTR("%d"), syslog->getQueue()->size());
+                args.printf_P(PSTR("%d"), _stream->getQueue()->size());
             }
         }
         else {

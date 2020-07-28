@@ -13,6 +13,8 @@
 #include <debug_helper_disable.h>
 #endif
 
+using KFCConfigurationClasses::System;
+
 static MQTTPlugin plugin;
 
 PROGMEM_DEFINE_PLUGIN_OPTIONS(
@@ -99,7 +101,7 @@ bool MQTTPlugin::atModeHandler(AtModeArgs &args)
         } else if (client && args.requireArgs(1, 1)) {
             auto &client = *MQTTClient::getClient();
             if (args.isTrue(0)) {
-                MQTTClient::Flags::getWriteable().mqttEnabled = true;
+                System::Flags::getWriteable().is_mqtt_enabled = true;
                 MQTTClient::ClientConfig::getWriteableConfig().mode_enum = MQTTClient::ModeType::UNSECURE;
                 config.write();
                 args.printf_P(PSTR("MQTT unsecure %s"), FSPGM(enabled));
@@ -124,13 +126,13 @@ bool MQTTPlugin::atModeHandler(AtModeArgs &args)
                 client.disconnect(true);
             }
             else if (args.toLowerChar(0) == 's') {
-                MQTTClient::Flags::getWriteable().mqttEnabled = true;
+                System::Flags::getWriteable().is_mqtt_enabled = true;
                 MQTTClient::ClientConfig::getWriteableConfig().mode_enum = MQTTClient::ModeType::SECURE;
                 config.write();
                 args.printf_P(PSTR("MQTT secure %s"), FSPGM(enabled));
             }
             else if (args.isFalse(0)) {
-                MQTTClient::Flags::getWriteable().mqttEnabled = false;
+                System::Flags::getWriteable().is_mqtt_enabled = false;
                 MQTTClient::ClientConfig::getWriteableConfig().mode_enum = MQTTClient::ModeType::DISABLED;
                 config.write();
                 client.setAutoReconnect(0);
@@ -144,3 +146,7 @@ bool MQTTPlugin::atModeHandler(AtModeArgs &args)
 }
 
 #endif
+
+MQTTPlugin &MQTTPlugin::getPlugin() {
+    return plugin;
+}

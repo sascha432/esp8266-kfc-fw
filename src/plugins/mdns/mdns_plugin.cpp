@@ -27,7 +27,7 @@
 
 #include "build.h"
 
-using Flags = KFCConfigurationClasses::System::Flags;
+using KFCConfigurationClasses::System;
 
 static MDNSPlugin plugin;
 
@@ -124,11 +124,12 @@ void MDNSPlugin::_wifiCallback(WiFiCallbacks::EventType event, void *payload)
 #if DEBUG_MDNS_SD
         auto result =
 #endif
-        NBNS.begin(config.getDeviceName());
+        NBNS.begin(System::Device::getName());
         __LDBG_printf("NetBIOS result=%u", result);
 #endif
 
         // start all queries in the queue
+        __LDBG_printf("zerconf queries=%u", _queries.size());
         for(const auto &query: _queries) {
             if (query->getState() == MDNSResolver::Query::StateType::NONE) {
                query->begin();
@@ -146,7 +147,7 @@ void MDNSPlugin::_wifiCallback(WiFiCallbacks::EventType event, void *payload)
 
 void MDNSPlugin::setup(SetupModeType mode)
 {
-    auto flags = Flags(true);
+    auto flags = System::Flags(true);
     if (flags.isMDNSEnabled() && flags.isStationEnabled()) {
         _enabled = true;
         begin();
@@ -221,11 +222,14 @@ void MDNSPlugin::resolveZeroConf(MDNSResolver::Query *query)
     __LDBG_printf("query=%p running=%u queries=%u", query, _isRunning(), _queries.size());
 
     _queries.emplace_back(query);
-    if (!Flags(true).isMDNSEnabled() && wasEmpty) {
-        __LDBG_printf("MDNS disabled, calling begin");
-        MDNS.begin(config.getDeviceName());
+    if (!System::Flags(true).isMDNSEnabled()) {
+        //TODO this might fail if wifi is down
+        if (wasEmpty) {
+            __LDBG_printf("MDNS disabled, calling begin");
+            MDNS.begin(System::Device::getName());
+            LoopFunctions::add(loop);
+        }
         query->begin();
-        LoopFunctions::add(loop);
     }
     else if (_isRunning()) {
         query->begin();
@@ -237,6 +241,17 @@ void MDNSPlugin::removeQuery(MDNSResolver::Query *query)
     plugin._removeQuery(query);
 }
 
+MDNSResolver::Query *MDNSPlugin::findQuery(void *query) const
+{
+    auto iterator = std::find_if(_queries.begin(), _queries.end(), [query](const MDNSResolver::QueryPtr queryPtr) {
+        return (queryPtr.get() == query);
+    });
+    if (iterator != _queries.end()) {
+        return reinterpret_cast<MDNSResolver::Query *>(query);
+    }
+    return nullptr;
+}
+
 void MDNSPlugin::_removeQuery(MDNSResolver::Query *query)
 {
     __LDBG_printf("remove=%p size=%u", query, _queries.size());
@@ -245,8 +260,8 @@ void MDNSPlugin::_removeQuery(MDNSResolver::Query *query)
     }), _queries.end());
     __LDBG_printf("size=%u", _queries.size());
 
-    if (!Flags(true).isMDNSEnabled() && _queries.empty()) {
-        __LDBG_printf("MDNS disabled, calling end");
+    if (!System::Flags(true).isMDNSEnabled() && _queries.empty()) {
+        __LDBG_printf("MDNS disabled, zeroconf done, calling end");
         MDNS.end();
         LoopFunctions::remove(loop);
     }
@@ -261,13 +276,13 @@ bool MDNSPlugin::_MDNS_begin()
 {
 #if ESP8266
     auto address = config.isWiFiUp() ? WiFi.localIP() : INADDR_ANY;
-    __LDBG_printf("hostname=%s address=%s", config.getDeviceName(), address.toString().c_str());
-    auto result = MDNS.begin(config.getDeviceName(), address);
+    __LDBG_printf("hostname=%s address=%s", System::Device::getName(), address.toString().c_str());
+    auto result = MDNS.begin(System::Device::getName(), address);
     __LDBG_printf("result=%u", result);
     return result;
 #else
-    __LDBG_printf("hostname=%s", config.getDeviceName());
-    return _debug_print_result(MDNS.begin(config.getDeviceName()));
+    __LDBG_printf("hostname=%s", System::Device::getName());
+    return _debug_print_result(MDNS.begin(System::Device::getName()));
 #endif
 }
 
@@ -295,7 +310,6 @@ void MDNSPlugin::_end()
     _delayedStart.remove();
 #endif
     __LDBG_printf("running=%u", _running);
-    __LDBG_println();
     MDNS.end();
     _running = false;
     LoopFunctions::remove(loop);
@@ -303,14 +317,6 @@ void MDNSPlugin::_end()
 
 void MDNSPlugin::_loop()
 {
-// #if DEBUG_MDNS_SD
-//     static unsigned long _update_timer = 0;
-//     if (millis() < _update_timer) {
-//         return;
-//     }
-//     _update_timer = millis() + 1000;
-//     _debug_println(F("MDNS.update()"));
-// #endif
 #if ESP8266
     MDNS.update();
 #endif
@@ -323,7 +329,7 @@ void MDNSPlugin::_loop()
 
 void MDNSPlugin::getStatus(Print &output)
 {
-    output.printf_P(PSTR("Service for hostname %s "), config.getDeviceName());
+    output.printf_P(PSTR("Service for hostname %s "), System::Device::getName());
     if (!_running) {
         output.print(F("not "));
     }

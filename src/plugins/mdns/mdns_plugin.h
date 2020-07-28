@@ -21,7 +21,7 @@
 #endif
 
 #ifndef DEBUG_MDNS_SD
-#define DEBUG_MDNS_SD                                       1
+#define DEBUG_MDNS_SD                                       0
 #endif
 
 #ifndef MDNS_DELAYED_START_AFTER_WIFI_CONNECT
@@ -86,13 +86,15 @@ public:
     void resolveZeroConf(MDNSResolver::Query *query);
     static void removeQuery(MDNSResolver::Query *query);
 
+    static MDNSPlugin &getPlugin();
+    MDNSResolver::Query *findQuery(void *query) const;
+
 private:
     MDNSResolver::Queries _queries;
 
 private:
     friend class MDNSService;
 
-    static MDNSPlugin &getPlugin();
     void _removeQuery(MDNSResolver::Query *query);
 
     bool _isRunning() const;

@@ -144,7 +144,7 @@ bool MDNSPlugin::atModeHandler(AtModeArgs &args)
                 case 4:
                     if (args.requireArgs(2, 2)) { // zeroconf
                         auto conf = args.toString(1);
-                        auto result = config.resolveZeroConf(conf, 0, [args](const String &hostname, const IPAddress &address, uint16_t port, MDNSResolver::ResponseType type) mutable {
+                        auto result = config.resolveZeroConf(getFriendlyName(), conf, 0, [args](const String &hostname, const IPAddress &address, uint16_t port, MDNSResolver::ResponseType type) mutable {
                             args.printf_P(PSTR("ZeroConf response: host=%s ip=%s port=%u type=%u"), hostname.c_str(), address.toString().c_str(), port, type);
                         });
                         if (result) {

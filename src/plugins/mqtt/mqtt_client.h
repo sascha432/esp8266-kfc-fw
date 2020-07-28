@@ -76,7 +76,6 @@ public:
     using ModeType = KFCConfigurationClasses::Plugins::MQTTClient::ModeType;
     using QosType = KFCConfigurationClasses::Plugins::MQTTClient::QosType;
     using ClientConfig = KFCConfigurationClasses::Plugins::MQTTClient;
-    using Flags = KFCConfigurationClasses::System::Flags;
 
     static constexpr uint8_t QOS_DEFAULT = static_cast<uint8_t>(QosType::DEFAULT);
 

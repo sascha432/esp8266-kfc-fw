@@ -7,6 +7,12 @@
 #include "kfc_fw_config.h"
 #include "syslog_plugin.h"
 
+#if DEBUG_SYSLOG
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
+#endif
+
 using SyslogClient = KFCConfigurationClasses::Plugins::SyslogClient;
 
 void SyslogPlugin::createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request)
@@ -19,7 +25,7 @@ void SyslogPlugin::createConfigureForm(FormCallbackType type, const String &form
         if (cfg.port == 0) {
             cfg.port = 514;
         }
-        System::Flags::getWriteable().syslogEnabled = SyslogClient::isEnabled(cfg.protocol_enum);
+        System::Flags::getWriteable().is_syslog_enabled = SyslogClient::isEnabled(cfg.protocol_enum);
         return;
 
     } else if (!isCreateFormCallbackType(type)) {

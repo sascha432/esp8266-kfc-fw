@@ -12,6 +12,7 @@
 #include "mqtt_client.h"
 #include "logger.h"
 #include "plugins.h"
+#include "mqtt_plugin.h"
 
 #if DEBUG_MQTT_CLIENT
 #include <debug_helper_enable.h>
@@ -19,15 +20,17 @@
 #include <debug_helper_disable.h>
 #endif
 
+using KFCConfigurationClasses::System;
+
 DEFINE_ENUM(MQTTQueueEnum_t);
 
 MQTTClient *MQTTClient::_mqttClient = nullptr;
 
 void MQTTClient::setupInstance()
 {
-    __LDBG_printf("enabled=%u", Flags::get().mqttEnabled);
+    __LDBG_printf("enabled=%u", System::Flags::get().is_mqtt_enabled);
     deleteInstance();
-    if (Flags::get().mqttEnabled) {
+    if (System::Flags::get().is_mqtt_enabled) {
         _mqttClient = new MQTTClient();
     }
 }
@@ -41,7 +44,7 @@ void MQTTClient::deleteInstance()
     }
 }
 
-MQTTClient::MQTTClient() : _client(nullptr), _componentsEntityCount(0), _lastWillPayload('0')
+MQTTClient::MQTTClient() : _client(new AsyncMqttClient()), _componentsEntityCount(0), _lastWillPayload('0')
 {
     _hostname = ClientConfig::getHostname();
     _username = ClientConfig::getUsername();
@@ -52,7 +55,7 @@ MQTTClient::MQTTClient() : _client(nullptr), _componentsEntityCount(0), _lastWil
     __LDBG_printf("hostname=%s port=%u", _hostname.c_str(), _port);
 
     if (config.hasZeroConf(_hostname)) {
-        config.resolveZeroConf(_hostname, _port, [this](const String &hostname, const IPAddress &address, uint16_t port, MDNSResolver::ResponseType type) {
+        config.resolveZeroConf(MQTTPlugin::getPlugin().getFriendlyName(), _hostname, _port, [this](const String &hostname, const IPAddress &address, uint16_t port, MDNSResolver::ResponseType type) {
             this->_zeroConfCallback(hostname, address, port, type);
         });
     }
@@ -96,8 +99,6 @@ void MQTTClient::_setupClient()
 {
     _debug_println();
     _clearQueue();
-
-    _client = new AsyncMqttClient();
 
     _autoReconnectTimeout = MQTT_AUTO_RECONNECT_TIMEOUT;
 
@@ -194,7 +195,7 @@ String MQTTClient::_formatTopic(const String &suffix, const __FlashStringHelper 
 {
     PrintString topic;
     topic = ClientConfig::getTopic();
-    topic.replace(F("${device_name}"), config.getDeviceName());
+    topic.replace(F("${device_name}"), System::Device::getName());
     topic.print(suffix);
     if (format) {
         auto format_P = RFPSTR(format);

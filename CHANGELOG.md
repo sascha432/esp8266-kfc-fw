@@ -15,6 +15,7 @@
 - Blacklist to prevent plugins being loaded at start-up
 - Debug print functions for ICACHE_RAM_ATTR that do not pull the entire SerialWrapper code into IRAM
 - Templates for configuration getters/setters
+- Added SSDP plugin
 
 ## Version 0.0.3
 

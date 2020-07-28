@@ -284,7 +284,7 @@
         "default": "events"
     },
     "http": {
-        "use_counter": 12,
+        "use_counter": 13,
         "default": "http"
     },
     "SID": {
@@ -360,7 +360,7 @@
         "default": "/login.html"
     },
     "https": {
-        "use_counter": 1,
+        "use_counter": 2,
         "default": "https"
     },
     "disabled": {
@@ -592,7 +592,7 @@
         "default": "/.pvt/switch.states"
     },
     "kfcfw": {
-        "use_counter": 1,
+        "use_counter": 3,
         "default": "kfcfw"
     },
     "moon_phase_0": {
@@ -980,7 +980,7 @@
         "default": "Reboot Device"
     },
     "title": {
-        "use_counter": 5,
+        "use_counter": 3,
         "default": "title"
     },
     "KFC_Firmware": {
@@ -1380,7 +1380,19 @@
         "default": "address"
     },
     "domain": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "domain"
+    },
+    "_xml": {
+        "use_counter": 2,
+        "default": ".xml"
+    },
+    "size": {
+        "use_counter": 1,
+        "default": "size"
+    },
+    "_serial_console_html": {
+        "use_counter": 2,
+        "default": "/serial_console.html"
     }
 }

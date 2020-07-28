@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<root xmlns="urn:schemas-upnp-org:device-1-0">
+<specVersion>
+<major>1</major>
+<minor>0</minor>
+</specVersion>
+<URLBase>%WEB_INTERFACE_URL%</URLBase>
+<device>
+<deviceType>upnp:rootdevice</deviceType>
+<friendlyName>%HOSTNAME% (%WIFI_IP_ADDRESS%) %TITLE%</friendlyName>
+<manufacturer>KFCLabs</manufacturer>
+<manufacturerURL>https://github.com/sascha432</manufacturerURL>
+<modelDescription>%VERSION%</modelDescription>
+<modelName>%MODEL%</modelName>
+<modelNumber>%MODEL%</modelNumber>
+<modelURL>https://github.com/sascha432/esp8266-kfc-fw</modelURL>
+<serialNumber>%UNIQUE_ID%</serialNumber>
+<UDN>%SSDP_UUID%</UDN>
+<presentationURL>index.html</presentationURL>
+</device>
+</root>

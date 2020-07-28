@@ -35,6 +35,11 @@ public:
     virtual void process(const String &key, PrintHtmlEntitiesString &output);
 
     static void printSystemTime(time_t now, PrintHtmlEntitiesString &output);
+    static void printUniqueId(Print &output, const String &name, int8_t dashPos = -1);
+    static void printVersion(Print &output);
+    static void printWebInterfaceUrl(Print &output);
+    static void printModel(Print &output);
+    static void printSSDPUUID(Print &output);
 
 public:
     static String _aliveRedirection;

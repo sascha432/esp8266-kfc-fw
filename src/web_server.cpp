@@ -148,7 +148,7 @@ const __FlashStringHelper *getContentType(const String &path)
     else if (String_endsWith(path, PSTR(".ttf"))) {
         return FSPGM(mime_font_ttf, "font/ttf");
     }
-    else if (String_endsWith(path, PSTR(".xml"))) {
+    else if (String_endsWith(path, SPGM(_xml, ".xml"))) {
         return FSPGM(mime_text_xml, "text/xml");
     }
     else if (String_endsWith(path, PSTR(".pdf"))) {
@@ -181,6 +181,7 @@ bool WebServerPlugin::_isPublic(const String &pathString) const
         return false;
     } else if (*path++ == '/') {
         return (
+            !strcmp_P(path, PSTR("description.xml")) ||
             !strncmp_P(path, PSTR("css/"), 4) ||
             !strncmp_P(path, PSTR("js/"), 3) ||
             !strncmp_P(path, PSTR("images/"), 7) ||
@@ -320,7 +321,7 @@ void WebServerPlugin::handlerSpeedTest(AsyncWebServerRequest *request, bool zip)
         httpHeaders.addNoCache();
 
         AsyncSpeedTestResponse *response;
-        auto size = std::max(1024 * 64, (int)request->arg(F("size")).toInt());
+        auto size = std::max(1024 * 64, (int)request->arg(FSPGM(size, "size")).toInt());
         if (zip) {
             response = new AsyncSpeedTestResponse(FSPGM(mime_application_zip), size);
             httpHeaders.add(new HttpDispositionHeader(F("speedtest.zip")));
@@ -443,7 +444,7 @@ void WebServerPlugin::handlerUpdate(AsyncWebServerRequest *request)
 
                 response = request->beginResponse(302);
                 HttpHeaders httpHeaders(false);
-                httpHeaders.add(new HttpLocationHeader(F("/serial_console.html")));
+                httpHeaders.add(new HttpLocationHeader(FSPGM(_serial_console_html, "/serial_console.html")));
                 httpHeaders.replace(new HttpConnectionHeader(HttpConnectionHeader::CLOSE));
                 httpHeaders.setAsyncWebServerResponseHeaders(response);
                 request->send(response);
@@ -721,7 +722,7 @@ bool WebServerPlugin::_sendFile(const FileMapping &mapping, HttpHeaders &httpHea
             }
         }
     }
-    if (isHtml && webTemplate == nullptr) {
+    if ((isHtml || String_endsWith(path, SPGM(_xml, ".xml"))) && webTemplate == nullptr) {
         webTemplate = new WebTemplate(); // default for all .html files
     }
 

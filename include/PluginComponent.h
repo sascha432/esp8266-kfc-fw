@@ -61,6 +61,7 @@ public:
         SERIAL2TCP = -115,
         BUTTONS = -100,
         MDNS = -90,
+        SSDP = -85,
         SYSLOG = -80,
         NTP = -70,
         HTTP = -60,

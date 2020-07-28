@@ -84,7 +84,7 @@ void MQTTClient::_zeroConfCallback(const String &hostname, const IPAddress &addr
     _address = address;
     _hostname = hostname;
     _port = port;
-    __DBG_printf("zeroconf address=%s hostname=%s port=%u type=%u", _address.toString().c_str(), _hostname.c_str(), _port, type);
+    __LDBG_printf("zeroconf address=%s hostname=%s port=%u type=%u", _address.toString().c_str(), _hostname.c_str(), _port, type);
 
     _setupClient();
     WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTION, MQTTClient::handleWiFiEvents);

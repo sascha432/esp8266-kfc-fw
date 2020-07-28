@@ -190,7 +190,7 @@ public:
     virtual void shutdown() override;
 
     virtual void createMenu() override {
-        bootstrapMenu.addSubMenu(F("Serial Console"), F("serial_console.html"), navMenu.util);
+        bootstrapMenu.addSubMenu(F("Serial Console"), FSPGM(_serial_console_html), navMenu.util);
     }
 
 #if AT_MODE_SUPPORTED

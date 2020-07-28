@@ -129,6 +129,10 @@
 #define HTTP2SERIAL_SUPPORT                         1               // HTTP2Serial bridge (requires ATMODE support)
 #endif
 
+#ifndef IOT_SSDP_SUPPORT
+#define IOT_SSDP_SUPPORT                            1
+#endif
+
 #if HTTP2SERIAL_SUPPORT && !WEBSERVER_SUPPORT
 #pragma message("HTTP2SERIAL_SUPPORT requires WEBSERVER_SUPPORT. Automatically disabled!")
 #undef HTTP2SERIAL_SUPPORT

@@ -11,6 +11,7 @@
 #include "mqtt_auto_discovery.h"
 #include "mqtt_component.h"
 #include "mqtt_client.h"
+#include "templates.h"
 
 #if DEBUG_MQTT_CLIENT
 #include <debug_helper_enable.h>
@@ -64,33 +65,8 @@ void MQTTAutoDiscovery::_create(MQTTComponent *component, const String &name, MQ
     addParameter(FSPGM(mqtt_payload_not_available), 0);
 
     if (_format == FormatType::JSON) {
-        String model;
-#if defined(MQTT_AUTO_DISCOVERY_MODEL)
-        model = F(MQTT_AUTO_DISCOVERY_MODEL);
-#elif IOT_SWITCH
-    #if IOT_SWITCH_CHANNEL_NUM>1
-        model = F(_STRINGIFY(IOT_SWITCH_CHANNEL_NUM) " Channel Switch");
-    #else
-        model = F("Switch");
-    #endif
-#elif IOT_DIMMER_MODULE
-    #if IOT_DIMMER_MODULE_CHANNELS > 1
-        model = F(_STRINGIFY(IOT_DIMMER_MODULE_CHANNELS) " Channel MOSFET Dimmer");
-    #else
-        model = F("MOSFET Dimmer");
-    #endif
-#else
-        model = F("Generic");
-#endif
-#if defined(ESP8266)
-        model += F("/ESP8266");
-#elif defined(ESP32)
-        model += F("/ESP32");
-#elif defined(__AVR__) || defined(__avr__)
-        model += F("/AVR");
-#else
-        model += F("/Unknown");
-#endif
+        PrintString model;
+        WebTemplate::printModel(model);
 
         #define JSON_VALUE_START            "\":\""
         #define JSON_NEXT_KEY_START         "\",\""
@@ -237,49 +213,7 @@ bool MQTTAutoDiscovery::isEnabled()
 
 const String MQTTAutoDiscovery::_getUnqiueId(const String &name)
 {
-    uint16_t crc[4];
-
-#if defined(ESP8266)
-
-    typedef struct __attribute__packed__ {
-        uint32_t chip_id;
-        uint32_t flash_chip_id;
-        uint8_t mac[2 * 6];
-    } unique_device_info_t;
-    unique_device_info_t info = { system_get_chip_id(), ESP.getFlashChipId()/* cached version of spi_flash_get_id() */ };
-    wifi_get_macaddr(STATION_IF, info.mac);
-    wifi_get_macaddr(SOFTAP_IF, info.mac + 6);
-
-#elif defined(ESP32)
-
-    typedef struct __attribute__packed__ {
-        esp_chip_info_t chip_id;
-        uint32_t flash_chip_id;
-        uint8_t mac[4 * 6];
-    } unique_device_info_t;
-    unique_device_info_t info;
-
-    esp_chip_info(&info.chip_id);
-    info.flash_chip_id = ESP.getFlashChipSize();
-    esp_read_mac(info.mac, ESP_MAC_WIFI_STA);
-    esp_read_mac(info.mac + 6, ESP_MAC_WIFI_SOFTAP);
-    esp_read_mac(info.mac + 12, ESP_MAC_BT);
-    esp_read_mac(info.mac + 18, ESP_MAC_ETH);
-
-#else
-#error Platform not supported
-#endif
-
-    crc[0] = crc16_update(~0, &info, sizeof(info));
-    crc[1] = crc16_update(crc[0], &info.chip_id, sizeof(info.chip_id));
-    crc[1] = crc16_update(crc[1], &info.flash_chip_id, sizeof(info.flash_chip_id));
-    crc[2] = crc16_update(crc[1], info.mac, sizeof(info.mac));
-    crc[3] = crc16_update(~0, name.c_str(), name.length());
-
-    PrintString uniqueId;
-    for(uint8_t i = 0; i < 4; i++) {
-        uniqueId.printf_P(PSTR("%04x"), crc[i]);
-    }
-
-    return uniqueId;
+    PrintString tmp;
+    WebTemplate::printUniqueId(tmp, name);
+    return tmp;
 }

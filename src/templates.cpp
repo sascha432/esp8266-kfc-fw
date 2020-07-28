@@ -25,6 +25,8 @@
 #include <debug_helper_disable.h>
 #endif
 
+#include "../src/plugins/ssdp/ssdp.h"
+
 using KFCConfigurationClasses::System;
 
 String WebTemplate::_aliveRedirection;
@@ -72,6 +74,106 @@ void WebTemplate::printSystemTime(time_t now, PrintHtmlEntitiesString &output)
     output.printf_P(PSTR(HTML_SA(span, HTML_A("id", "system_date") HTML_A("format", "%s")) "%s" HTML_E(span)), PrintHtmlEntitiesString(FPSTR(format)).c_str(), buf);
 }
 
+void WebTemplate::printUniqueId(Print &output, const String &name, int8_t dashPos)
+{
+    uint16_t crc[4];
+
+#if defined(ESP8266)
+
+    typedef struct __attribute__packed__ {
+        uint32_t chip_id;
+        uint32_t flash_chip_id;
+        uint8_t mac[2 * 6];
+    } unique_device_info_t;
+    unique_device_info_t info = { system_get_chip_id(), ESP.getFlashChipId()/* cached version of spi_flash_get_id() */ };
+    wifi_get_macaddr(STATION_IF, info.mac);
+    wifi_get_macaddr(SOFTAP_IF, info.mac + 6);
+
+#elif defined(ESP32)
+
+    typedef struct __attribute__packed__ {
+        esp_chip_info_t chip_id;
+        uint32_t flash_chip_id;
+        uint8_t mac[4 * 6];
+    } unique_device_info_t;
+    unique_device_info_t info;
+
+    esp_chip_info(&info.chip_id);
+    info.flash_chip_id = ESP.getFlashChipSize();
+    esp_read_mac(info.mac, ESP_MAC_WIFI_STA);
+    esp_read_mac(info.mac + 6, ESP_MAC_WIFI_SOFTAP);
+    esp_read_mac(info.mac + 12, ESP_MAC_BT);
+    esp_read_mac(info.mac + 18, ESP_MAC_ETH);
+
+#else
+#error Platform not supported
+#endif
+
+    crc[0] = crc16_update(~0, &info, sizeof(info));
+    crc[1] = crc16_update(crc[0], &info.chip_id, sizeof(info.chip_id));
+    crc[1] = crc16_update(crc[1], &info.flash_chip_id, sizeof(info.flash_chip_id));
+    crc[2] = crc16_update(crc[1], info.mac, sizeof(info.mac));
+    crc[3] = crc16_update(~0, name.c_str(), name.length());
+
+    for(int8_t i = 0; i < 4; i++) {
+        if (i == dashPos) {
+            output.print('-');
+        }
+        output.printf_P(PSTR("%04x"), crc[i]);
+    }
+}
+
+void WebTemplate::printVersion(Print &output)
+{
+    output.print(F("KFC FW "));
+    output.print(config.getFirmwareVersion());
+}
+
+void WebTemplate::printWebInterfaceUrl(Print &output)
+{
+    auto cfg = System::WebServer::getConfig();
+    output.print(cfg.is_https ? FSPGM(https) : FSPGM(http));
+    output.print(F("://"));
+    WiFi.localIP().printTo(output);
+    output.printf_P(PSTR(":%u/"), cfg.port);
+}
+
+void WebTemplate::printModel(Print &output)
+{
+#if defined(MQTT_AUTO_DISCOVERY_MODEL)
+        output.print(F(MQTT_AUTO_DISCOVERY_MODEL));
+#elif IOT_SWITCH
+    #if IOT_SWITCH_CHANNEL_NUM>1
+        output.print(F(_STRINGIFY(IOT_SWITCH_CHANNEL_NUM) " Channel Switch"));
+    #else
+        output.print(F("Switch"));
+    #endif
+#elif IOT_DIMMER_MODULE
+    #if IOT_DIMMER_MODULE_CHANNELS > 1
+        output.print(F(_STRINGIFY(IOT_DIMMER_MODULE_CHANNELS) " Channel MOSFET Dimmer"));
+    #else
+        output.print(F("MOSFET Dimmer"));
+    #endif
+#else
+        output.print(F("Generic"));
+#endif
+#if defined(ESP8266)
+        output.print(F("/ESP8266"));
+#elif defined(ESP32)
+        output.print(F("/ESP32"));
+#elif defined(__AVR__) || defined(__avr__)
+        output.print(F("/AVR"));
+#else
+        output.print(F("/Unknown"));
+#endif
+}
+
+void WebTemplate::printSSDPUUID(Print &output)
+{
+    auto &ssdp = static_cast<SSDPClassEx &>(SSDP);
+    output.print(ssdp.getUUID());
+}
+
 void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 {
     if (String_equals(key, PSTR("HOSTNAME"))) {
@@ -92,9 +194,11 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         output.printf_P(PSTR(HTML_S(br) "Load Average %.2f %.2f %.2f"), LOOP_COUNTER_LOAD(load_avg[0]), LOOP_COUNTER_LOAD(load_avg[1]), LOOP_COUNTER_LOAD(load_avg[2]));
 #endif
     }
+    else if (String_equals(key, PSTR("VERSION"))) {
+        printVersion(output);
+    }
     else if (String_equals(key, PSTR("SOFTWARE"))) {
-        output.print(F("KFC FW "));
-        output.print(config.getFirmwareVersion());
+        printVersion(output);
         if (System::Flags::get().is_default_password) {
             output.printf_P(PSTR(HTML_S(br) HTML_S(strong) "%s" HTML_E(strong)), SPGM(default_password_warning));
         }
@@ -128,6 +232,21 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     else if (String_equals(key, PSTR("IP_ADDRESS"))) {
         WiFi_get_address(output);
     }
+    else if (String_equals(key, PSTR("WIFI_IP_ADDRESS"))) {
+        WiFi.localIP().printTo(output);
+    }
+    else if (String_equals(key, PSTR("WEB_INTERFACE_URL"))) {
+        WebTemplate::printWebInterfaceUrl(output);
+    }
+    else if (String_equals(key, PSTR("MODEL"))) {
+        WebTemplate::printModel(output);
+    }
+    else if (String_equals(key, PSTR("UNIQUE_ID"))) {
+        WebTemplate::printUniqueId(output, FSPGM(kfcfw), -1);
+    }
+    else if (String_equals(key, PSTR("SSDP_UUID"))) {
+        WebTemplate::printSSDPUUID(output);
+    }
     else if (String_equals(key, PSTR("FIRMWARE_UPGRADE_FAILURE"))) {
     }
     else if (String_equals(key, PSTR("FIRMWARE_UPGRADE_FAILURE_CLASS"))) {
@@ -140,7 +259,6 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         else {
             output.print(FSPGM(index_html));
         }
-
     }
     else if (String_equals(key, PSTR("IS_CONFIG_DIRTY"))) {
         if (!config.isConfigDirty()) {

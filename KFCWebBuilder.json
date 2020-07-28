@@ -75,6 +75,9 @@
                 "./Resources/html/alarm.html",
                 "./Resources/js/forms/alarm.js"
             ],
+            "#if !IOT_SSDP_SUPPORT": [
+                "./Resources/html/description.xml"
+            ],
             "#if !IOT_BLINDS_CTRL": "./Resources/html/blinds.html",
             "#if !IOT_SENSOR": "./Resources/html/sensor.html",
             "#if !IOT_WEATHER_STATION": "./Resources/html/weather.html",
@@ -177,7 +180,7 @@
             "html" : {
                 "target_dirs": {
                     "./data/webui": {
-                            "./Resources/html": "/\\.html$/"
+                            "./Resources/html": "/\\.(html|xml)$/"
                         }
                     },
                     "processors": {

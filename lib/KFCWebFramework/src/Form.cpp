@@ -54,21 +54,6 @@ FormField &Form::_add(FormField *field)
     return *field;
 }
 
-FormValidator &Form::addValidator(int index, FormValidator &&validator)
-{
-    return _fields.at(index)->addValidator(std::move(validator));
-}
-
-FormValidator &Form::addValidator(FormValidator &&validator)
-{
-    return _fields.back()->addValidator(std::move(validator));
-}
-
-FormValidator &Form::addValidator(FormField &field, FormValidator &&validator)
-{
-    return field.addValidator(std::move(validator));
-}
-
 FormUI::UI &Form::addFormUI(FormUI::UI &&formUI)
 {
     return addFormUI(new FormUI::UI(std::move(formUI)));

@@ -50,9 +50,17 @@ public:
     //
     // addValidator adds the validator to the last FormField that was added
 
-    FormValidator &addValidator(int index, FormValidator &&validator);
-    FormValidator &addValidator(FormValidator &&validator);
-    FormValidator &addValidator(FormField &field, FormValidator &&validator);
+    template<typename T>
+    T &addValidator(T &&validator)
+    {
+        return _fields.back()->addValidator<T>(std::move(validator));
+    }
+
+    template<typename T>
+    T &addValidator(FormField &field, T &&validator)
+    {
+        return field.addValidator<T>(std::move(validator));
+    }
 
     // --------------------------------------------------------------------
     // FormUI

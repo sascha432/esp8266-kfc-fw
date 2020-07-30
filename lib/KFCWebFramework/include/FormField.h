@@ -98,7 +98,14 @@ public:
     FormUI::Type getFormType() const;
     void html(PrintInterface &output);
 
-    FormValidator &addValidator(FormValidator &&validator);
+    template<typename T>
+    T &addValidator(T &&validator) {
+        _validators.emplace_back(new T(std::move(validator)));
+        auto &val = reinterpret_cast<T &>(*_validators.back());
+        val.setField(this);
+        return val;
+    }
+
     ValidatorsVector &getValidators();
 
 private:

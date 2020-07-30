@@ -16,8 +16,10 @@ namespace FormUI {
 
     UI *UI::setBoolItems(const String &enabled, const String &disabled)
     {
-        addItems(String('0'), disabled);
-        addItems(String('1'), enabled);
+        _items.clear();
+        _items.reserve(2);
+        _items.emplace_back(std::move(String(0)), disabled);
+        _items.emplace_back(std::move(String(1)), enabled);
         return this;
     }
 
@@ -59,8 +61,9 @@ namespace FormUI {
         if (value.length()) {
             _attributes += '=';
             _attributes += '"';
+            // append translated value to _attributes
             if (!PrintHtmlEntities::translateTo(value.c_str(), _attributes, true)) {
-                _attributes += value;
+                _attributes += value; // no translation required, just append value
             }
             _attributes += '"';
         }

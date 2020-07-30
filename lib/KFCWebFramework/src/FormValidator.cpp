@@ -14,10 +14,6 @@ FormValidator::FormValidator(const String &message) : _field(nullptr), _enabled(
 {
 }
 
-FormValidator::~FormValidator() 
-{
-}
-
 void FormValidator::setField(FormField * field) 
 {
     _field = field;
@@ -35,7 +31,12 @@ String FormValidator::getMessage()
 
 bool FormValidator::validate() 
 {
-    return (_enabled && !_field->getForm().isValid());
+    if (_enabled) {
+        if (_field->getForm().isValid()) {
+            return true;
+        }
+    }
+    return false;
 }
 
 void FormValidator::setEnabled(bool value)

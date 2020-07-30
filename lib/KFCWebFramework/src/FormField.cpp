@@ -152,15 +152,6 @@ void FormField::html(PrintInterface &output)
     }
 }
 
-FormValidator &FormField::addValidator(FormValidator &&validator)
-{
-    _validators.emplace_back(std::move(FormValidatorPtr(new FormValidator(std::move(validator)))));
-    auto &newValidator = _validators.back();
-    newValidator->setField(this);
-    __LDBG_printf("name=%s message=%s", newValidator->getField().getName().c_str(), newValidator->getMessage().c_str());
-    return *newValidator;
-}
-
 FormField::ValidatorsVector &FormField::getValidators()
 {
     return _validators;

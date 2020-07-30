@@ -9,8 +9,6 @@
 
 class FormHostValidator : public FormValidator {
 public:
-    typedef std::vector<String> StringVector;
-
     enum class AllowedType : uint8_t {
         ALLOW_HOST_OR_IP =             0x00,
         ALLOW_EMPTY =                  0x01,
@@ -23,40 +21,35 @@ public:
     FormHostValidator(const String &message, AllowedType allowedTypes = AllowedType::ALLOW_HOST_OR_IP) : FormValidator(message), _allowedTypes(allowedTypes) {
     }
 
-    FormHostValidator *addAllowString(const String &str) {
-        _allowStrings.push_back(str);
-        return this;
-    }
-
     virtual bool validate() override {
         if (FormValidator::validate()) {
-            const char *ptr = getField().getValue().c_str();
+            auto tmpStr = getField().getValue();
+            tmpStr.trim();
+            getField().setValue(tmpStr);
+            const char *str = tmpStr.c_str();
             if (EnumHelper::Bitset::has(_allowedTypes, AllowedType::ALLOW_ZEROCONF)) {
-                if (strstr_P(ptr, PSTR("${zeroconf"))) { //TODO parse and validate zeroconf
+                if (strstr_P(str, PSTR("${zeroconf"))) { //TODO parse and validate zeroconf
                     return true;
                 }
             }
-            if (EnumHelper::Bitset::has(_allowedTypes, AllowedType::ALLOW_EMPTY)) {
-                const char *trimmed = ptr;
-                while (isspace(*trimmed)) {
-                    trimmed++;
-                }
-                if (!*trimmed) {
-                    return true;
-                }
-            }
-            for(const auto &str: _allowStrings) {
-                if (str.equals(ptr)) {
-                    return true;
-                }
+            if (EnumHelper::Bitset::has(_allowedTypes, AllowedType::ALLOW_EMPTY) && tmpStr.length() == 0) {
+                return true;
+                //const char *tmp = str;
+                //while (isspace(*tmp)) {
+                //    tmp++;
+                //}
+                //if (!*tmp) {
+                //    return true;
+                //}
             }
             IPAddress addr;
-            if (!addr.fromString(getField().getValue())) {
-                while(*ptr) {
-                    if (!(isalnum(*ptr) || *ptr == '_' || *ptr == '-' || *ptr == '.')) {
+            // check if we can create an IP address from the value
+            if (!addr.fromString(tmpStr)) {
+                while(*str) {
+                    if (!(isalnum(*str) || *str == '_' || *str == '-' || *str == '.')) {
                         return false;
                     }
-                    ptr++;
+                    str++;
                 }
             }
             return true;
@@ -66,5 +59,38 @@ public:
 
 private:
     AllowedType _allowedTypes;
+    
+};
+
+class FormHostValidatorEx : public FormHostValidator {
+public:
+    using StringVector = std::vector<String>;
+    using FormHostValidator::FormHostValidator;
+
+    FormHostValidatorEx &push_back(const String &str) {
+        _allowStrings.push_back(str);
+        return *this;
+    }
+
+    FormHostValidatorEx &emplace_back(String &&str) {
+        _allowStrings.emplace_back(std::move(str));
+        return *this;
+    }
+
+    virtual bool validate() override {
+        auto result = FormHostValidator::validate();
+        if (result) {
+            return true;
+        }
+        const auto &tmpStr = getField().getValue();
+        for (const auto &str : _allowStrings) {
+            if (tmpStr == str) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+public:
     StringVector _allowStrings;
 };

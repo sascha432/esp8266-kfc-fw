@@ -12,7 +12,6 @@ class FormValidator {
 public:
     FormValidator();
     FormValidator(const String &message);
-    virtual ~FormValidator();
 
     void setField(FormField *field);
     FormField &getField();

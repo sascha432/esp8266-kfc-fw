@@ -107,6 +107,15 @@ namespace ConfigurationHelper {
     static const IPAddress get##name() { REGISTER_HANDLE_NAME(_STRINGIFY(class_name) "." _STRINGIFY(name), __DBG__TYPE_GET); return IPAddress(*(uint32_t *)loadBinaryConfig(k##name##ConfigHandle, sizeof(uint32_t))); } \
     static void set##name(const IPAddress &address) { REGISTER_HANDLE_NAME(_STRINGIFY(class_name) "." _STRINGIFY(name), __DBG__TYPE_SET); storeBinaryConfig(k##name##ConfigHandle, &static_cast<uint32_t>(address), sizeof(uint32_t)); }
 
+#define CREATE_IPV4_ADDRESS(name) \
+    uint32_t name; \
+    static void set_ipv4_##name(Type &obj, const IPAddress &addr) { \
+        obj.name = static_cast<uint32_t>(addr); \
+    } \
+    static IPAddress get_ipv4_##name(const Type &obj) { \
+        return obj.name; \
+    }
+
 #define AUTO_DEFAULT_PORT_CONST(auto, default_port) \
     static constexpr uint16_t kPortAuto = auto; \
     static constexpr uint16_t kPortDefault = default_port; \
@@ -453,25 +462,27 @@ namespace KFCConfigurationClasses {
         class SettingsConfig {
         public:
             typedef struct __attribute__packed__ SettingsConfig_t {
-                uint32_t _localIp;
-                uint32_t _subnet;
-                uint32_t _gateway;
-                uint32_t _dns1;
-                uint32_t _dns2;
+                using Type = SettingsConfig_t;
+                CREATE_IPV4_ADDRESS(local_ip);
+                CREATE_IPV4_ADDRESS(subnet);
+                CREATE_IPV4_ADDRESS(gateway);
+                CREATE_IPV4_ADDRESS(dns1);
+                CREATE_IPV4_ADDRESS(dns2);
+
                 IPAddress getLocalIp() const {
-                    return _localIp;
+                    return local_ip;
                 }
                 IPAddress getSubnet() const {
-                    return _subnet;
+                    return subnet;
                 }
                 IPAddress getGateway() const {
-                    return _gateway;
+                    return gateway;
                 }
                 IPAddress getDns1() const {
-                    return _dns1;
+                    return dns1;
                 }
                 IPAddress getDns2() const {
-                    return _dns2;
+                    return dns2;
                 }
                 SettingsConfig_t();
             } SettingsConfig_t;
@@ -479,23 +490,9 @@ namespace KFCConfigurationClasses {
 
         class Settings : public SettingsConfig, public ConfigGetterSetter<SettingsConfig::SettingsConfig_t, _H(MainConfig().network.settings.cfg) CIF_DEBUG(, &handleNameSettingsConfig_t)> {
         public:
+
             static void defaults();
 
-            IPAddress localIp() const {
-                return getConfig()._localIp;
-            }
-            IPAddress subnet() const {
-                return getConfig()._subnet;
-            }
-            IPAddress gateway() const {
-                return getConfig()._gateway;
-            }
-            IPAddress dns1() const {
-                return getConfig()._dns1;
-            }
-            IPAddress dns2() const {
-                return getConfig()._dns2;
-            }
         };
 
         // --------------------------------------------------------------------
@@ -506,11 +503,12 @@ namespace KFCConfigurationClasses {
             using EncryptionType = WiFiEncryptionType;
 
             typedef struct __attribute__packed__ SoftAPConfig_t {
-                uint32_t address;
-                uint32_t subnet;
-                uint32_t gateway;
-                uint32_t dhcpStart;
-                uint32_t dhcpEnd;
+                using Type = SoftAPConfig_t;
+                CREATE_IPV4_ADDRESS(address);
+                CREATE_IPV4_ADDRESS(subnet);
+                CREATE_IPV4_ADDRESS(gateway);
+                CREATE_IPV4_ADDRESS(dhcp_start);
+                CREATE_IPV4_ADDRESS(dhcp_end);
                 uint8_t channel;
                 union __attribute__packed__ {
                     EncryptionType encryption_enum;
@@ -528,10 +526,10 @@ namespace KFCConfigurationClasses {
                     return gateway;
                 }
                 IPAddress getDhcpStart() const {
-                    return dhcpStart;
+                    return dhcp_start;
                 }
                 IPAddress getDhcpEnd() const {
-                    return dhcpEnd;
+                    return dhcp_end;
                 }
                 uint8_t getChannel() const {
                     return channel;
@@ -545,37 +543,7 @@ namespace KFCConfigurationClasses {
         class SoftAP : public SoftAPConfig, public ConfigGetterSetter<SoftAPConfig::SoftAPConfig_t, _H(MainConfig().network.softap.cfg) CIF_DEBUG(, &handleNameSoftAPConfig_t)> {
         public:
 
-
-            // SoftAP();
-            // static SoftAP read();
-            // static SoftAP &getWriteable();
-            // static SoftAP &getWriteableConfig() {
-            //     return getWriteable();
-            // }
             static void defaults();
-            // void write();
-
-            // IPAddress address() const {
-            //     return _address;
-            // }
-            // IPAddress subnet() const {
-            //     return _subnet;
-            // }
-            // IPAddress gateway() const {
-            //     return _gateway;
-            // }
-            // IPAddress dhcpStart() const {
-            //     return _dhcpStart;
-            // }
-            // IPAddress dhcpEnd() const {
-            //     return _dhcpEnd;
-            // }
-            // uint8_t channel() const {
-            //     return _channel;
-            // }
-            // EncryptionType encryption() const {
-            //     return static_cast<EncryptionType>(_encryption);
-            // }
 
         };
 

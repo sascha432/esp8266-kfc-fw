@@ -15,13 +15,8 @@
 #include <debug_helper_disable.h>
 #endif
 
-Form::Form(FormData *data) : _data(data), _invalidMissing(true), _hasChanged(false)
+Form::Form(FormData *data) : _data(data), _invalidMissing(true), _hasChanged(false), _uiConfig(nullptr)
 {
-}
-
-Form::~Form()
-{
-    clearForm();
 }
 
 void Form::clearForm()
@@ -51,7 +46,7 @@ FormField &Form::_add(FormField *field)
 {
     field->setForm(this);
     _fields.emplace_back(field);
-    return *field;
+    return *_fields.back();
 }
 
 FormUI::UI &Form::addFormUI(FormUI::UI &&formUI)
@@ -65,7 +60,7 @@ FormUI::UI &Form::addFormUI(FormUI::UI *formUI)
     return *formUI;
 }
 
-FormField *Form::getField(const String &name) const 
+FormField *Form::getField(const String &name) const
 {
     auto iterator = std::find_if(_fields.begin(), _fields.end(), [&name](const FormFieldPtr &ptr) {
         return *ptr == name;
@@ -233,27 +228,47 @@ void Form::createJavascript(PrintInterface &output) const
     }
 }
 
-void Form::setFormUI(const String &title, const String &submit)
-{
-    _formTitle = title;
-    _formSubmit = submit;
-}
-
-void Form::setFormUI(const String &title)
-{
-    _formTitle = title;
-}
-
 void Form::createHtml(PrintInterface &output)
 {
-    if (_formTitle.length()) {
-        output.printf_P(PSTR("<h1>%s</h1>" FORMUI_CRLF), _formTitle.c_str());
+    auto &ui = getFormUIConfig();
+
+    switch(ui.getStyle()) {
+        case FormUI::StyleType::ACCORDION: {
+            output.printf_P(PSTR("<div class=\"accordion pt-3\" id=\"%s\"><div class=\"card mb-0\"><div class=\"card-header\" id=\"main-header\"><h3 class=\"mb-0 p-1\">%s</h3></div></div>" FORMUI_CRLF),
+                ui.getContainerId().c_str(),
+                FormUI::UI::_encodeHtmlEntities(ui.getTitle(), false, output)
+            );
+        }
+        break;
+        default: {
+            if (ui.hasTitle()) {
+                output.printf_P(PSTR("<h1>%s</h1>" FORMUI_CRLF), FormUI::UI::_encodeHtmlEntities(ui.getTitle(), false, output));
+            }
+        }
+        break;
     }
     for (const auto &field : _fields) {
         field->html(output);
     }
-    PGM_P label = _formSubmit.length() ? _formSubmit.c_str() : SPGM(Save_Changes, "Save Changes");
-    output.printf_P(PSTR("<button type=\"submit\" class=\"btn btn-primary\">%s...</button>" FORMUI_CRLF), label);
+
+    switch(ui.getStyle()) {
+        case FormUI::StyleType::ACCORDION: {
+            if (ui.hasButtonLabel()) {
+                output.printf_P(PSTR("</div>" FORMUI_CRLF "<div class=\"form-group pt-3\"><button type=\"submit\" class=\"btn btn-primary\">%s</button>" FORMUI_CRLF),
+                    FormUI::UI::_encodeHtmlEntities(ui.getButtonLabel(), false, output)
+                );
+            }
+            output.printf_P(PSTR("</div>" FORMUI_CRLF));
+        }
+        break;
+        default: {
+            if (ui.hasButtonLabel()) {
+                output.printf_P(PSTR("<button type=\"submit\" class=\"btn btn-primary\">%s...</button>" FORMUI_CRLF), FormUI::UI::_encodeHtmlEntities(ui.getButtonLabel(), false, output));
+            }
+        }
+        break;
+    }
+
 }
 
 void Form::dump(Print &out, const String &prefix) const {
@@ -296,12 +311,12 @@ void Form::dump(Print &out, const String &prefix) const {
     }
 }
 
-FormData *Form::getFormData() const 
+FormData *Form::getFormData() const
 {
     return _data;
 }
 
-void Form::setValidateCallback(ValidateCallback validateCallback) 
+void Form::setValidateCallback(ValidateCallback validateCallback)
 {
     _validateCallback = validateCallback;
 }

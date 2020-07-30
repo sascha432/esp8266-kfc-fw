@@ -54,43 +54,66 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
             form.addWriteableStruct("apsm", flags, is_softap_standby_mode_enabled), FormField::Type::SELECT);
 
         }
-        else if (String_equals(formName, SPGM(network, "network"))) {
+        else if (String_equals(formName, SPGM(network))) {
 
             auto &network = Network::Settings::getWriteableConfig();
             auto &softAp = Network::SoftAP::getWriteableConfig();
 
-            form.setFormUI(FSPGM(Network_Configuration, "Network Configuration"));
+            auto &ui = form.getFormUIConfig();
+            ui.setStyle(FormUI::StyleType::ACCORDION);
+            ui.setTitle(FSPGM(Network_Configuration));
+            ui.setContainerId(F("network_settings"));
 
-            form.addCStrGetterSetter("dhost", System::Device::getName, System::Device::setName));
-            form.addFormUI(FSPGM(Hostname, "Hostname"));
+            auto &deviceGroup = form.addCardGroup(FSPGM(device), FSPGM(Device), true);
+
+            form.addCStringGetterSetter("dev_host", System::Device::getName, System::Device::setNameCStr);
+            form.addFormUI(FSPGM(Hostname));
             form.addValidator(FormLengthValidator(4, System::Device::kNameMaxSize));
 
-            form.addWriteableStruct("stdhcp", flags, is_station_mode_dhcp_enabled));
-            form.addFormUI(FSPGM(DHCP, "DHCP"), FormUI::BoolItems());
+            form.addCStringGetterSetter("dev_title", System::Device::getTitle, System::Device::setTitleCStr);
+            form.addFormUI(FSPGM(Title));
+            form.addValidator(FormLengthValidator(4, System::Device::kNameMaxSize));
 
-            form.addWriteableStructIPAddress("lip", network, _localIp));
-            form.addFormUI(FSPGM(IP_Address, "IP Address"));
-            form.addWriteableStructIPAddress("lsn", network, _subnet));
-            form.addFormUI(FSPGM(Subnet, "Subnet"));
-            form.addWriteableStructIPAddress("lgw", network, _gateway));
-            form.addFormUI(FSPGM(Gateway, "Gateway"));
-            form.addWriteableStructIPAddress("dns1", network, _dns1));
-            form.addFormUI(FSPGM(DNS_1, "DNS 1"));
-            form.addWriteableStructIPAddress("dns2", network, _dns2));
-            form.addFormUI(FSPGM(DNS_2, "DNS 2"));
+            deviceGroup.end();
+            auto &stationGroup = form.addCardGroup(F("station"), FSPGM(Station_Mode));
 
-            form.addWriteableStruct("apdhcp", flags, is_softap_dhcpd_enabled));
+            form.addObjectGetterSetter(F("st_dhcp"), flags, flags.get_bit_is_station_mode_dhcp_enabled, flags.set_bit_is_station_mode_dhcp_enabled);
+            form.addFormUI(FSPGM(DHCP_Client), FormUI::BoolItems());
 
-            form.addWriteableStructIPAddress("dstart", softAp, dhcpStart));
-            form.addWriteableStructIPAddress("dend", softAp, dhcpEnd));
-            form.addWriteableStructIPAddress("daddr", softAp, address));
-            form.addWriteableStructIPAddress("dsn", softAp, subnet));
+            form.addIPGetterSetter(F("st_ip"), network, network.get_ipv4_local_ip, network.set_ipv4_local_ip);
+            form.addFormUI(FSPGM(IP_Address));
+            form.addIPGetterSetter(F("st_subnet"), network, network.get_ipv4_subnet, network.set_ipv4_subnet);
+            form.addFormUI(FSPGM(Subnet));
+            form.addIPGetterSetter(F("st_gw"), network, network.get_ipv4_gateway, network.set_ipv4_gateway);
+            form.addFormUI(FSPGM(Gateway));
+            form.addIPGetterSetter(F("st_dns1"), network, network.get_ipv4_dns1, network.set_ipv4_dns1);
+            form.addFormUI(FSPGM(DNS_1));
+            form.addIPGetterSetter(F("st_dns2"), network, network.get_ipv4_dns2, network.set_ipv4_dns2);
+            form.addFormUI(FSPGM(DNS_2));
+
+            stationGroup.end();
+            auto &apGroup = form.addCardGroup(F("apmode"), FSPGM(Access_Point));
+
+            form.addObjectGetterSetter(F("ap_dhcpd"), flags, flags.get_bit_is_softap_dhcpd_enabled, flags.set_bit_is_softap_dhcpd_enabled);
+            form.addFormUI(FSPGM(DHCP_Server), FormUI::BoolItems());
+
+            form.addIPGetterSetter(F("ap_ip"), softAp, softAp.get_ipv4_address, softAp.set_ipv4_address);
+            form.addFormUI(FSPGM(IP_Address));
+            form.addIPGetterSetter(F("ap_subnet"), softAp, softAp.get_ipv4_subnet, softAp.set_ipv4_subnet);
+            form.addFormUI(FSPGM(Subnet));
+            form.addIPGetterSetter(F("ap_dhcpds"), softAp, softAp.get_ipv4_dhcp_start, softAp.set_ipv4_dhcp_start);
+            form.addFormUI(F("DHCP Start IP"));
+            form.addIPGetterSetter(F("ap_dhcpde"), softAp, softAp.get_ipv4_dhcp_end, softAp.set_ipv4_dhcp_end);
+            form.addFormUI(F("DHCP End IP"));
+
+            apGroup.end();
+
         }
         else if (String_equals(formName, SPGM(device, "device"))) {
 
             auto &cfg = System::Device::getWriteableConfig();
 
-            form.setFormUI(FSPGM(Device_Configuration, "Device Configuration"));
+            form.setFormUI(FSPGM(Device_Configuration));
 
             form.addCStrGetterSetter("dtitle", System::Device::getTitle, System::Device::setTitle));
             form.addFormUI(FSPGM(Title));
@@ -104,31 +127,31 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
             form.addFormUI(F("mDNS Announcements"), FormUI::BoolItems(FSPGM(Enabled), F("Disabled (Zeroconf is still available)")));
 
             form.addWriteableStruct("zcto", cfg, zeroconf_timeout));
-            form.addFormUI(FormUI::Type::INTEGER, FSPGM(Zeroconf_Timeout, "Zeroconf Timeout"), FormUI::Suffix(FSPGM(milliseconds)));
+            form.addFormUI(FormUI::Type::INTEGER, FSPGM(Zeroconf_Timeout), FormUI::Suffix(FSPGM(milliseconds)));
             form.addValidator(FormRangeValidator(System::Device::kZeroConfMinTimeout, System::Device::kZeroConfMaxTimeout));
 
             form.addWriteableStruct("zclg", cfg, zeroconf_logging));
-            form.addFormUI(FSPGM(Zeroconf_Logging, "Zeroconf Logging"), FormUI::BoolItems());
+            form.addFormUI(FSPGM(Zeroconf_Logging), FormUI::BoolItems());
 
             form.addWriteableStruct("ssdpen", flags, is_ssdp_enabled));
-            form.addFormUI(FSPGM(SSDP_Discovery, "SSDP Discovery"), FormUI::BoolItems());
+            form.addFormUI(FSPGM(SSDP_Discovery), FormUI::BoolItems());
 
             form.addWriteableStruct("wuclt", cfg, webui_cookie_lifetime_days));
             form.addFormUI(FormUI::Type::INTEGER, FormUI::Label(F("Allow to store credentials in a cookie to login automatically:<br><span class=\"oi oi-shield p-2\"></span><small>If the cookie is stolen, it is not going to expire and changing the password is the only options to invalidate it.</small>"), true), FormUI::Suffix(FSPGM(days)));
             form.addValidator(FormRangeValidator(System::Device::kWebUICookieMinLifetime, System::Device::kWebUICookieMaxLifetime, true));
 
             form.addWriteableStruct("waen", flags, is_webalerts_enabled));
-            form.addFormUI(FSPGM(Web_Alerts, "Web Alerts"), FormUI::BoolItems());
+            form.addFormUI(FSPGM(Web_Alerts), FormUI::BoolItems());
             form.addWriteableStruct("wuen", flags, is_webui_enabled));
-            form.addFormUI(FSPGM(WebUI, "Web UI"), FormUI::BoolItems());
+            form.addFormUI(FSPGM(WebUI), FormUI::BoolItems());
 
             form.addWriteableStruct("stled", cfg, status_led_mode));
-            form.addFormUI(FSPGM(Status_LED_Mode, "Status LED Mode"), FormUI::BoolItems(F("Solid when connected to WiFi"), F("Turn off when connected to WiFi")));
+            form.addFormUI(FSPGM(Status_LED_Mode), FormUI::BoolItems(F("Solid when connected to WiFi"), F("Turn off when connected to WiFi")));
 
         }
         else if (String_equals(formName, SPGM(password))) {
 
-            form.setFormUI(FSPGM(Change_Password, "Change Password"));
+            form.setFormUI(FSPGM(Change_Password));
 
             auto password = String(System::Device::getPassword());
             form.add(FSPGM(password), password, FormField::Type::TEXT);

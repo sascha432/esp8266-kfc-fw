@@ -14,6 +14,7 @@
 #define FORMUI_CRLF ""
 #endif
 
+#undef DEFAULT
 #undef min
 #undef max
 #undef _min
@@ -26,6 +27,34 @@ namespace FormUI {
 
 	using ItemPair = std::pair<String, String>;
 	using ItemsListVector = std::vector<ItemPair>;
+
+	enum class Type {
+		NONE,
+		SELECT,
+		TEXT,
+		NUMBER,
+		INTEGER,
+		FLOAT,
+		RANGE,
+		RANGE_SLIDER,
+		PASSWORD,
+		NEW_PASSWORD,
+		GROUP_START,
+		GROUP_END,
+		GROUP_START_DIV,
+		GROUP_END_DIV,
+		GROUP_START_HR,
+		GROUP_END_HR,
+		GROUP_START_CARD,
+		GROUP_END_CARD,
+		HIDDEN,
+	};
+
+    enum class StyleType {
+        DEFAULT = 0,
+        ACCORDION,
+        MAX
+    };
 
 	class ItemsList : public ItemsListVector {
 	public:
@@ -90,31 +119,14 @@ namespace FormUI {
 
 	};
 
-	enum class Type {
-		NONE,
-		SELECT,
-		TEXT,
-		NUMBER,
-		INTEGER,
-		FLOAT,
-		RANGE,
-		RANGE_SLIDER,
-		PASSWORD,
-		NEW_PASSWORD,
-		GROUP_START,
-		GROUP_END,
-		GROUP_START_DIV,
-		GROUP_END_DIV,
-		GROUP_START_HR,
-		GROUP_END_HR,
-		HIDDEN,
-	};
 
 	class UI;
 
 	class Label : public String
 	{
 	public:
+		Label() : String() {}
+
 		// adds ":" at the end if not found and encodes html entities
 		Label(const String &label) : Label(label, false) {}
 
@@ -320,6 +332,8 @@ namespace FormUI {
 	private:
 		bool _compareValue(const String &value) const;
 
+		friend Form;
+
 		// creates an encoded string that is attached to output
 		static const char *_encodeHtmlEntities(const char *str, bool attribute, PrintInterface &output);
 		static const char *_encodeHtmlEntities(const String &str, bool attribute, PrintInterface &output) {
@@ -327,8 +341,6 @@ namespace FormUI {
 		}
 
 	private:
-		friend Form;
-
 		FormField *_parent;
 		Type _type;
 		String _label;
@@ -337,4 +349,7 @@ namespace FormUI {
 		ItemsList _items;
 	};
 
+
 };
+
+#include "FormUIConfig.h"

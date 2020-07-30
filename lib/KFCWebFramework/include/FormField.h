@@ -35,6 +35,7 @@ public:
 
     void setForm(Form *form);
     Form &getForm() const;
+    FormUI::Config &getFormUIConfig();
 
     bool operator==(const String &name) const {
         return _name.equals(name);

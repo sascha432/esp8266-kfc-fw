@@ -1162,8 +1162,8 @@ bool KFCFWConfiguration::connectWiFi()
             struct dhcps_lease dhcp_lease;
             wifi_softap_dhcps_stop();
             dhcp_lease.enable = flags.is_softap_dhcpd_enabled;
-            dhcp_lease.start_ip.addr = softAp.dhcpStart;
-            dhcp_lease.end_ip.addr = softAp.dhcpEnd;
+            dhcp_lease.start_ip.addr = softAp.dhcp_start;
+            dhcp_lease.end_ip.addr = softAp.dhcp_end;
             if (!wifi_softap_set_dhcps_lease(&dhcp_lease)) {
                 String message = F("Failed to configure DHCP server");
                 setLastError(message);

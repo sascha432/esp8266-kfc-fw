@@ -21,6 +21,10 @@
 #include <debug_helper_disable.h>
 #endif
 
+#ifdef DEFAULT
+#undef DEFAULT
+#endif
+
 class FormError;
 class FormData;
 
@@ -35,7 +39,6 @@ public:
     using CStringSetter = std::function<void(const char *)>;
 
     Form(FormData *data = nullptr);
-    virtual ~Form();
 
     void clearForm();
     void setFormData(FormData *data);
@@ -65,6 +68,24 @@ public:
     // --------------------------------------------------------------------
     // FormUI
     //
+
+    FormUI::Config &getFormUIConfig() {
+        if (!_uiConfig) {
+            _uiConfig.reset(new FormUI::Config());
+        }
+        return *_uiConfig;
+    }
+
+    void setFormUI(const String &title, const String &submit) __attribute__ ((deprecated)) {
+        auto &cfg = getFormUIConfig();
+        cfg.setTitle(title);
+        cfg.setSaveButtonLabel(submit);
+    }
+    void setFormUI(const String &title) __attribute__ ((deprecated)) {
+        getFormUIConfig().setTitle(title);
+    }
+
+
     // addFormUI adds the FormUI object or elements to the last FormField that was added
     // Arguments for addFormUI(...)
     //
@@ -100,11 +121,6 @@ public:
     // call when all fields have been added
     void finalize() const;
 
-    // add form title and submit button
-    void setFormUI(const String &title, const String &submit);
-    // add form title and default submit button
-    void setFormUI(const String &title);
-
     void createHtml(PrintInterface &out);
     const char *process(const String &name) const;
     void createJavascript(PrintInterface &out) const;
@@ -137,13 +153,25 @@ public:
     // getter and setters for enum, bitfields etc...
     // obj must exist until the form object has been deleted
     template<typename ObjType, typename VarType>
-    FormField &addObjectGetterSetter(const String &name, ObjType &obj, std::function<VarType(const ObjType &obj)> getter, std::function<void(ObjType &obj, VarType value)> setter, FormField::Type type = FormField::Type::TEXT) {
+    FormField &addObjectGetterSetter(const String &name, ObjType &obj, VarType(*getter)(const ObjType &obj), void(*setter)(ObjType &obj, VarType), FormField::Type type = FormField::Type::TEXT) {
         __LDBG_printf("name=%s value=%s obj=%p", name.c_str(), String(getter(obj)).c_str(), &obj);
-        return add(name, getter(obj), [&obj, setter _IF_DEBUG(, getter)](VarType &value, FormField &field, bool store) {
+        return add(name, getter(obj), [&obj, setter _IF_DEBUG(, getter)](const VarType &value, FormField &field, bool store) {
             if (store) {
                 setter(obj, value);
             }
             __LDBG_printf("name=%s value=%s obj=%p new_value=%s store=%u", field.getName().c_str(), String(value).c_str(), &obj, String(getter(obj)).c_str(), store);
+            return false;
+        }, type);
+    }
+
+    template<typename ObjType>
+    FormField &addIPGetterSetter(const String &name, ObjType &obj, IPAddress(*getter)(const ObjType &obj), void(*setter)(ObjType &obj, const IPAddress &value), FormField::Type type = FormField::Type::TEXT) {
+        __LDBG_printf("name=%s value=%s obj=%p", name.c_str(), getter(obj).toString().c_str(), &obj);
+        return add(name, getter(obj), [&obj, setter _IF_DEBUG(, getter)](const IPAddress &value, FormField &field, bool store) {
+            if (store) {
+                setter(obj, value);
+            }
+            __LDBG_printf("name=%s value=%s obj=%p new_value=%s store=%u", field.getName().c_str(), value.toString().c_str(), &obj, getter(obj).toString().c_str(), store);
             return false;
         }, type);
     }
@@ -228,6 +256,10 @@ public:
         return addGroup(id, FormUI::Label(dependencies, true), false, FormUI::Type::GROUP_START_DIV);
     }
 
+    FormGroup &addCardGroup(const String &id, const FormUI::Label &label, bool expanded = false) {
+        return addGroup(id, label, expanded, FormUI::Type::GROUP_START_CARD);
+    }
+
 private:
     FormField &_add(FormField *field);
     FormGroup &_add(FormGroup *field) {
@@ -241,8 +273,8 @@ private:
     ErrorsVector _errors;
     bool _invalidMissing;
     bool _hasChanged;
-    String _formTitle;
-    String _formSubmit;
+
+    FormUI::ConfigPtr _uiConfig;
     ValidateCallback _validateCallback;
 };
 

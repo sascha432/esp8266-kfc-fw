@@ -219,15 +219,15 @@ namespace KFCConfigurationClasses {
     // Settings
 
     Network::Settings::SettingsConfig_t::SettingsConfig_t() :
-        _subnet(kCreateIPv4Address(255, 255, 255, 0)),
-        _gateway(kCreateIPv4Address(192, 168, 4, 1)),
-        _dns1(kCreateIPv4Address(8, 8, 8, 8)),
-        _dns2(kCreateIPv4Address(8, 8, 4, 4))
+        subnet(kCreateIPv4Address(255, 255, 255, 0)),
+        gateway(kCreateIPv4Address(192, 168, 4, 1)),
+        dns1(kCreateIPv4Address(8, 8, 8, 8)),
+        dns2(kCreateIPv4Address(8, 8, 4, 4))
     {
         uint8_t mac[6];
         ::WiFi.macAddress(mac);
         uint8_t tmp = (mac[5] <= 1 || mac[5] >= 253 ? (mac[4] <= 1 || mac[4] >= 253 ? (mac[3] <= 1 || mac[3] >= 253 ? mac[3] : rand() % 98 + 1) : mac[4]) : mac[5]);
-        _localIp = kCreateIPv4Address(192, 168, 4, 0) | (tmp << 24U);
+        local_ip = kCreateIPv4Address(192, 168, 4, 0) | (tmp << 24U);
     }
 
     void Network::Settings::defaults()
@@ -248,8 +248,8 @@ namespace KFCConfigurationClasses {
         address(kCreateIPv4Address(192, 168, 4, 1)),
         subnet(kCreateIPv4Address(255, 255, 255, 0)),
         gateway(kCreateIPv4Address(192, 168, 4, 1)),
-        dhcpStart(kCreateIPv4Address(192, 168, 4, 2)),
-        dhcpEnd(kCreateIPv4Address(192, 168, 4, 100)),
+        dhcp_start(kCreateIPv4Address(192, 168, 4, 2)),
+        dhcp_end(kCreateIPv4Address(192, 168, 4, 100)),
         channel(7),
         encryption_enum(kWiFiEncryptionTypeDefault)
     {

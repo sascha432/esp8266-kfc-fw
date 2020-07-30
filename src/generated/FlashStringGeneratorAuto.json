@@ -944,7 +944,7 @@
         "default": "Network"
     },
     "Device": {
-        "use_counter": 2,
+        "use_counter": 3,
         "default": "Device"
     },
     "device_html": {
@@ -1004,7 +1004,7 @@
         "default": "network"
     },
     "device": {
-        "use_counter": 2,
+        "use_counter": 3,
         "default": "device"
     },
     "mime_image_icon": {
@@ -1404,7 +1404,7 @@
         "default": "KFCLabs"
     },
     "Title": {
-        "use_counter": 1,
+        "use_counter": 2,
         "default": "Title"
     },
     "minutes": {
@@ -1444,15 +1444,15 @@
         "default": "SSDP Discovery"
     },
     "DHCP": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "DHCP"
     },
     "IP_Address": {
-        "use_counter": 1,
+        "use_counter": 2,
         "default": "IP Address"
     },
     "Subnet": {
-        "use_counter": 1,
+        "use_counter": 2,
         "default": "Subnet"
     },
     "Gateway": {
@@ -1472,7 +1472,7 @@
         "default": "HTTP Server"
     },
     "Save_Changes": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "Save Changes"
     },
     "Your_session_has_expired": {
@@ -1648,11 +1648,19 @@
         "default": "Offline"
     },
     "Station_Mode": {
-        "use_counter": 2,
+        "use_counter": 3,
         "default": "Station Mode"
     },
     "Access_Point": {
-        "use_counter": 4,
+        "use_counter": 5,
         "default": "Access Point"
+    },
+    "DHCP_Client": {
+        "use_counter": 1,
+        "default": "DHCP Client"
+    },
+    "DHCP_Server": {
+        "use_counter": 1,
+        "default": "DHCP Server"
     }
 }

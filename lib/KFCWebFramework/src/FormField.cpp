@@ -34,6 +34,11 @@ Form &FormField::getForm() const
     return *_form;
 }
 
+FormUI::Config &FormField::getFormUIConfig()
+{
+    return _form->getFormUIConfig();
+}
+
 const String &FormField::getName() const
 {
     return _name;
@@ -161,6 +166,9 @@ void FormGroup::end()
 {
     FormUI::Type type;
     switch(getFormType()) {
+        case FormUI::Type::GROUP_START_CARD:
+            type = FormUI::Type::GROUP_END_CARD;
+            break;
         case FormUI::Type::GROUP_START:
             type = FormUI::Type::GROUP_END;
             break;

@@ -70,9 +70,9 @@ String ConfigurationParameter::toString() const
     //auto dataPtr = (uint8_t *)((((uint32_t)&_info) + 3) & ~3);
     //auto dataOfs = (intptr_t)dataPtr - (intptr_t)&_info;
     //ptrdiff_t dataLen = sizeof(_info) - dataOfs;
-#if DEBUG_GETHANDLE
-    //return PrintString(F("handle=%s[%04x] size=%u len=%u data=%p type=%s dirty=%u (%p:%p %u %u)"), getHandleName(_param.handle), _param.handle, _info.size, _param.length, _info.data, getTypeString(_param.getType()), _info.dirty, dataPtr, _info.data, dataOfs, dataLen);
-    return PrintString(F("handle=%s[%04x] size=%u len=%u data=%p type=%s dirty=%u"), getHandleName(_param.handle), _param.handle, _info.size, _param.length, _info.data, getTypeString(_param.getType()), _info.dirty);
+#if DEBUG_CONFIGURATION_GETHANDLE
+    //return PrintString(F("handle=%s[%04x] size=%u len=%u data=%p type=%s dirty=%u (%p:%p %u %u)"), ConfigurationHelper::getHandleName(_param.handle), _param.handle, _info.size, _param.length, _info.data, getTypeString(_param.getType()), _info.dirty, dataPtr, _info.data, dataOfs, dataLen);
+    return PrintString(F("handle=%s[%04x] size=%u len=%u data=%p type=%s dirty=%u"), ConfigurationHelper::getHandleName(_param.handle), _param.handle, _info.size, _param.length, _info.data, getTypeString(_param.getType()), _info.dirty);
 #else
     return PrintString(F("handle=%04x size=%u len=%u data=%p type=%s dirty=%u"), _param.handle, _info.size, _param.length, _info.data, getTypeString(_param.getType()), _info.dirty);
 #endif
@@ -325,28 +325,103 @@ void ConfigurationParameter::exportAsJson(Print& output)
     }
 }
 
+bool ConfigurationParameter::hasDataChanged(Configuration *conf) const
+{
+    if (!isDirty()) {
+        return false;
+    }
+    if (!hasData()) {
+        __DBG_printf("%s not data", toString().c_str());
+        return false;
+    }
+    if (_param.length == 0) {
+        return true;
+    }
+    uint16_t offset;
+    auto iterator = conf->_findParam(ConfigurationParameter::TypeEnum_t::_ANY, _param.handle, offset);
+    if (iterator == conf->_params.end()) { // not found
+        __DBG_printf("%s not found", toString().c_str());
+        return true;
+    }
+    if (static_cast<const void *>(&(*iterator)) != static_cast<const void *>(this)) {
+        __DBG_printf("%s parameter mismatch", toString().c_str());
+        return true;
+    }
+    auto size = _param.getSize();
+    auto alignedSize = Configuration::Pool::align(size);
+    // get original size and allocate aligned blocked
+    auto tmp = conf->_allocate(_param.getSize());
+    // auto tmp = reinterpret_cast<uint8_t *>(calloc(alignedSize, 1));
+    if (!tmp) {
+        __DBG_printf("%s allocate failed", toString().c_str());
+        return true;
+    }
+    if (!_readDataTo(conf, offset, tmp, alignedSize)) {
+        return false;
+    }
+    auto result = (memcmp(tmp, _info.data, size) != 0);
+#if DEBUG_CONFIGURATION || 0
+    if (result)
+    {
+        __DBG_printf("%s result=%u", toString().c_str(), result);
+        DumpBinary dump(DEBUG_OUTPUT);
+        dump.setPerLine(size);
+        dump.dump(tmp, size);
+        dump.dump(_info.data, size);
+    }
+#endif
+    // free(tmp);
+
+    conf->__release(tmp);
+    return result;
+}
+
+bool ConfigurationParameter::_readDataTo(Configuration *conf, uint16_t offset, uint8_t *ptr, uint16_t size) const
+{
+    if (_param.length) {
+
+#if DEBUG_CONFIGURATION || 1
+        auto address = *reinterpret_cast<uint32_t *>(&ptr[0]);
+        if (address % 4) {
+            __DBG_panic("%s ptr=%p address=%u offset=%u not aligned", toString().c_str(), ptr, address, address % 4);
+        }
+#endif
+
+#if DEBUG_CONFIGURATION_GETHANDLE
+        auto readSize =
+#endif
+        conf->_eeprom.read(ptr, offset, _param.length, ConfigurationHelper::Pool::align(size));
+        __DBG__addFlashReadSize(_param.handle, readSize);
+    }
+
+#if DEBUG_CONFIGURATION || 1
+    if (_param.isString()) {
+        if (ptr[_param.length] != 0) {
+            __DBG_panic("%s last byte not NUL", toString().c_str()); // TODO change to __DBG_printf
+        }
+        ptr[_param.length] = 0;
+    }
+#else
+    if (_param.isString()) {
+        if (ptr[_param.length] != 0) {
+            __DBG_printf("%s last byte not NUL", toString().c_str()); // TODO change to __DBG_printf
+        }
+       ptr[_param.length] = 0;
+    }
+#endif
+    return true;
+}
+
 bool ConfigurationParameter::_readData(Configuration *conf, uint16_t offset)
 {
-    uint8_t *ptr = _allocate(conf);
+    auto ptr = _allocate(conf);
     if (conf->_storage.size() > GARBAGE_COLLECTOR_MIN_POOL) {
         conf->setLastReadAccess();
     }
 
-    if (_param.length) {
-        conf->_eeprom.read(ptr, offset, _param.length, ConfigurationHelper::Pool::align(_info.size));
+    if (!_readDataTo(conf, offset, ptr, ConfigurationHelper::Pool::align(_info.size))) {
+        return false;
     }
-
-    if (_param.isString()) {
-       ptr[_param.length] = 0;
-    }
-
-#if DEBUG_CONFIGURATION
-    if (_param.isString()) {
-        if (ptr[_param.length] != 0) {
-            __debugbreak_and_panic_printf_P(PSTR("%s last byte not NUL\n"), toString().c_str());
-        }
-    }
-#endif
 
 #if DEBUG_CONFIGURATION
     if (_info.size != getSize()) {

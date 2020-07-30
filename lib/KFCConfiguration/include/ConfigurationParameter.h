@@ -140,15 +140,20 @@ public:
         return _info.dirty;
     }
 
+    // compare data with EEPROM content if isDirty()
+    bool hasDataChanged(Configuration *conf) const;
+
     static const __FlashStringHelper *getTypeString(TypeEnum_t type);
     static PGM_P getTypeString_P(TypeEnum_t type) {
         return reinterpret_cast<PGM_P>(getTypeString(type));
     }
 
+
 private:
     friend Configuration;
 
     bool _readData(Configuration *conf, uint16_t offset);
+    bool _readDataTo(Configuration *conf, uint16_t offset, uint8_t *ptr, uint16_t size) const;
     void _makeWriteable(Configuration *conf, uint16_t size);
 
     // PROGMEM safe

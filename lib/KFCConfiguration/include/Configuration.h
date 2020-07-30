@@ -65,36 +65,62 @@ extern EEPROMClass EEPROM;
 #endif
 
 #ifndef CONFIG_MAGIC_DWORD
-#define CONFIG_MAGIC_DWORD              0xfef31214
+#define CONFIG_MAGIC_DWORD                                          0xfef31214
 #endif
 
-#define CONFIG_GET_HANDLE(name)         __get_constexpr_getHandle(_STRINGIFY(name))
-#define CONFIG_GET_HANDLE_STR(name)     __get_constexpr_getHandle(name)
-#define _H(name)                        CONFIG_GET_HANDLE(name)
-#define _HS(name)                       __get_constexpr_getHandle(name)
+#define CONFIG_GET_HANDLE(name)                                     __get_constexpr_getHandle(_STRINGIFY(name))
+#define CONFIG_GET_HANDLE_STR(name)                                 __get_constexpr_getHandle(name)
+#define _H(name)                                                    CONFIG_GET_HANDLE(name)
+#define _HS(name)                                                   __get_constexpr_getHandle(name)
 
-#define _H_GET(name)                    get<decltype(name)>(_H(name))
-#define _H_W_GET(name)                  getWriteable<decltype(name)>(_H(name))
-#define _H_SET(name, value)             set<decltype(name)>(_H(name), value)
-#define _H_STR(name)                    getString(_H(name))
-#define _H_W_STR(name)                  getWriteableString(_H(name), sizeof name)
-#define _H_SET_STR(name, value)         setString(_H(name), value)
-#define _H_GET_IP(name)                 get<uint32_t>(_H(name))
-#define _H_W_GET_IP(name)               getWriteable<uint32_t>(_H(name))
-#define _H_SET_IP(name, value)          set<uint32_t>(_H(name), (uint32_t)value)
+#if DEBUG_CONFIGURATION_GETHANDLE
 
-#if DEBUG && DEBUG_CONFIGURATION && 0
-// store all configuration handle names for debugging. needs a lot RAM
-#define DEBUG_GETHANDLE 1
-#define CONSTEXPR_CONFIG_HANDLE_T ConfigurationParameter::Handle_t
-ConfigurationParameter::Handle_t getHandle(const char *name);
-const char *getHandleName(ConfigurationParameter::Handle_t crc);
+#define _H_GET(name)                                                get<decltype(name)>(__DBG__registerHandleName(PSTR(_STRINGIFY(name)), __DBG__TYPE_GET))
+#define _H_W_GET(name)                                              getWriteable<decltype(name)>(__DBG__registerHandleName(PSTR(_STRINGIFY(name)), __DBG__TYPE_W_GET))
+#define _H_SET(name, value)                                         set<decltype(name)>(__DBG__registerHandleName(PSTR(_STRINGIFY(name)), __DBG__TYPE_SET), value)
+#define _H_STR(name)                                                getString(__DBG__registerHandleName(PSTR(_STRINGIFY(name)), __DBG__TYPE_GET))
+#define _H_W_STR(name)                                              getWriteableString(__DBG__registerHandleName(PSTR(_STRINGIFY(name)), __DBG__TYPE_W_GET), max_len)
+#define _H_SET_STR(name, value, max_len)                            setString(__DBG__registerHandleName(PSTR(_STRINGIFY(name)), __DBG__TYPE_SET), value)
+#define _H_GET_IP(name)                                             get<uint32_t>(__DBG__registerHandleName(PSTR(_STRINGIFY(name)), __DBG__TYPE_GET))
+#define _H_W_GET_IP(name)                                           getWriteable<uint32_t>(__DBG__registerHandleName(PSTR(_STRINGIFY(name)), __DBG__TYPE_W_GET))
+#define _H_SET_IP(name, value)                                      set<uint32_t>(__DBG__registerHandleName(PSTR(_STRINGIFY(name)), __DBG__TYPE_SET), (uint32_t)value)
+
 #else
-#define DEBUG_GETHANDLE 0
-#define CONSTEXPR_CONFIG_HANDLE_T constexpr ConfigurationParameter::Handle_t
-#define __get_constexpr_getHandle(name) constexpr_crc16_update(name, constexpr_strlen(name))
-const char *getHandleName(ConfigurationParameter::Handle_t crc);
+
+#define _H_GET(name)                                                get<decltype(name)>(_H(name))
+#define _H_W_GET(name)                                              getWriteable<decltype(name)>(_H(name))
+#define _H_SET(name, value)                                         set<decltype(name)>(_H(name), value)
+#define _H_STR(name)                                                getString(_H(name))
+#define _H_W_STR(name)                                              getWriteableString(_H(name), max_len)
+#define _H_SET_STR(name, value, max_len)                            setString(_H(name), value)
+#define _H_GET_IP(name)                                             get<uint32_t>(_H(name))
+#define _H_W_GET_IP(name)                                           getWriteable<uint32_t>(_H(name))
+#define _H_SET_IP(name, value)                                      set<uint32_t>(_H(name), (uint32_t)value)
+
 #endif
+
+#if DEBUG_CONFIGURATION_GETHANDLE
+
+// log usage to file, 0 = disable
+#ifndef DEBUG_CONFIGURATION_GETHANDLE_LOG_INTERVAL
+#define DEBUG_CONFIGURATION_GETHANDLE_LOG_INTERVAL                  5   // minutes
+#endif
+
+// store all configuration handle names for debugging. needs a lot RAM
+#define __DBG__registerHandleName(name, type)                       ConfigurationHelper::registerHandleName(name, type)
+#define __DBG__checkIfHandleExists(type, handle)                    if (!registerHandleExists(handle)) { __DBG_printf("handle=%04x no name registered, type=%s", handle, PSTR(type)); }
+#define __DBG__addFlashReadSize(handle, size)                       ConfigurationHelper::addFlashUsage(handle, size, 0)
+#define __DBG__addFlashWriteSize(handle, size)                      ConfigurationHelper::addFlashUsage(handle, 0, size)
+
+#else
+
+#define __DBG__registerHandleName(...)
+#define __DBG__checkIfHandleExists(...)
+#define __DBG__addFlashReadSize(...)
+#define __DBG__addFlashWriteSize(...)
+
+#endif
+#define __get_constexpr_getHandle(name)                             constexpr_crc16_update(name, constexpr_strlen(name))
 
 #include <push_pack.h>
 
@@ -104,6 +130,41 @@ const char *getHandleName(ConfigurationParameter::Handle_t crc);
 #endif
 
 namespace ConfigurationHelper {
+
+    using HandleType = ConfigurationParameter::Handle_t;
+
+    class EEPROMClassEx : public EEPROMClass {
+    public:
+        using EEPROMClass::EEPROMClass;
+
+        size_t getWriteSize() const {
+            if (!_size || !_dirty || !_data) {
+                return 0;
+            }
+            return _size;
+        }
+        bool getDirty() const {
+            return _dirty;
+        }
+        void clearAndEnd() {
+            _dirty = false;
+            end();
+        }
+    };
+
+
+#if DEBUG_CONFIGURATION_GETHANDLE
+    const HandleType registerHandleName(const char *name, uint8_t type);
+    const HandleType registerHandleName(const __FlashStringHelper *name, uint8_t type);
+    bool registerHandleExists(HandleType handle);
+    void setPanicMode(bool value);
+    void addFlashUsage(HandleType handle, size_t readSize, size_t writeSize);
+
+    void readHandles();
+    void writeHandles(bool clear = false);
+    void dumpHandles(Print &output, bool log);
+#endif
+    const char *getHandleName(HandleType crc);
 
     // memory pool for configuration data
     class Pool {
@@ -167,7 +228,7 @@ namespace ConfigurationHelper {
         void end();
         void commit();
 
-        void read(uint8_t *dst, uint16_t offset, uint16_t length, uint16_t size);
+        uint16_t read(uint8_t *dst, uint16_t offset, uint16_t length, uint16_t size);
         void dump(Print &output, bool asByteArray = true, uint16_t offset = 0, uint16_t length = 0);
 
         uint8_t *getDataPtr() {
@@ -261,7 +322,7 @@ public:
     bool write();
 
     template <typename T>
-    ConfigurationParameter &getWritableParameter(Handle_t handle, uint16_t maxLength = 0) {
+    ConfigurationParameter &getWritableParameter(Handle_t handle, uint16_t maxLength = sizeof(T)) {
         uint16_t offset;
         auto &param = _getOrCreateParam(ConfigurationParameter::getType<T>(), handle, offset);
         param._info.base = std::is_convertible<T*, ConfigurationParameterBase*>::value;
@@ -272,12 +333,11 @@ public:
             uint16_t length;
             auto ptr = param.getBinary(this, length, offset);
             if (ptr) {
-                if (length != sizeof(T)) {
+                if (length != maxLength) {
                     if (ptr && param._info.base) {
-                        reinterpret_cast<const ConfigurationParameterBase *>(ptr)->beforeResize(param, sizeof(T));
+                        reinterpret_cast<const ConfigurationParameterBase *>(ptr)->beforeResize(param, maxLength);
                     }
-                    debug_printf_P(PSTR("resizing binary blob: %u to %u\n"), length, sizeof(T));
-                    maxLength = sizeof(T);
+                    debug_printf_P(PSTR("%04x: resizing binary blob=%u to %u maxLength=%u type=%u\n"), handle, length, sizeof(T), maxLength, ConfigurationParameter::getType<T>());
                     // __debugbreak_and_panic_printf_P(PSTR("%s size does not match len=%u size=%u\n"), param.toString().c_str(), length, sizeof(T));
                     //__release(ptr);
                     //ptr = nullptr;
@@ -330,10 +390,16 @@ public:
     // PROGMEM safe
     void setString(Handle_t handle, const char *str, uint16_t length);
     void setString(Handle_t handle, const char *str) {
-        setString(handle, str, (uint16_t)strlen_P(str));
+        if (!str) {
+            __DBG_printf("%04x: data=nullptr", handle);
+            setString(handle, emptyString.c_str(), 0);
+        }
+        else {
+            setString(handle, str, (uint16_t)strlen_P(str));
+        }
     }
     void setString(Handle_t handle, const __FlashStringHelper *fstr) {
-        setString(handle, reinterpret_cast<PGM_P>(fstr));
+        setString(handle, RFPSTR(fstr));
     }
     void setString(Handle_t handle, const String &str) {
         setString(handle, str.c_str(), (uint16_t)str.length());
@@ -367,7 +433,7 @@ public:
         if (!ptr || length != sizeof(T)) {
 #if DEBUG_CONFIGURATION
             if (ptr && length != sizeof(T)) {
-                _debug_printf_P(PSTR("size does not match, type=%s handle %04x (%s)\n"), (const char *)ConfigurationParameter::getTypeString(param->_param.getType()), handle, getHandleName(handle));
+                _debug_printf_P(PSTR("size does not match, type=%s handle %04x (%s)\n"), (const char *)ConfigurationParameter::getTypeString(param->_param.getType()), handle, ConfigurationHelper::getHandleName(handle));
             }
 #endif
             return T();
@@ -408,6 +474,9 @@ public:
     void exportAsJson(Print& output, const String &version);
     bool importJson(Stream& stream, uint16_t *handles = nullptr);
 
+    // release memory
+    void __crashCallback();
+
 // ------------------------------------------------------------------------
 // Memory management
 
@@ -432,6 +501,7 @@ private:
     Pool *_getPool(const void *ptr);
     Pool *_findPool(uint16_t length, PoolVector *poolVector) const;
     void _shrinkStorage();
+    void _freeAll();
 
 private:
     // find a parameter, type can be _ANY or a specific type
@@ -443,6 +513,8 @@ private:
     uint16_t _readHeader(uint16_t offset, HeaderAligned_t &header);
 
 private:
+    static constexpr uint16_t kInvalidOffset = ~0;
+
     uint16_t _offset;
     uint16_t _dataOffset;
     uint16_t _size;

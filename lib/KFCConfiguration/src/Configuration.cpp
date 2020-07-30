@@ -15,98 +15,373 @@
 #include <debug_helper_disable.h>
 #endif
 
-#if DEBUG_GETHANDLE
+#if DEBUG_CONFIGURATION_GETHANDLE
 
-class DebugHandle_t
+#include <EventScheduler.h>
+
+#ifndef __DBG__TYPE_NONE
+#define __DBG__TYPE_NONE                                            0
+#define __DBG__TYPE_GET                                             1
+#define __DBG__TYPE_SET                                             2
+#define __DBG__TYPE_W_GET                                           3
+#define __DBG__TYPE_CONST                                           4
+#define __DBG__TYPE_DEFINE_PROGMEM                                  5
+#endif
+
+class DebugHandle;
+
+class DebugHandle
 {
 public:
-    DebugHandle_t() = default;
+    using HandleType = ConfigurationHelper::HandleType;
+    using DebugHandleVector = std::vector<DebugHandle>;
 
-    DebugHandle_t(const String& name, const ConfigurationParameter::Handle_t handle) : _handle(handle), _name(name) {
+    DebugHandle(const DebugHandle &) = delete;
+    DebugHandle(DebugHandle &&handle) {
+        *this = std::move(handle);
     }
 
-    bool operator==(const ConfigurationParameter::Handle_t handle) const {
-        return _handle == handle;
-    }
-    bool operator!=(const ConfigurationParameter::Handle_t handle) const {
-        return !(*this == handle);
-    }
-
-    bool operator==(const char* name) const {
-        return _name.equals(name);
-    }
-    bool operator!=(const char* name) const {
-        return !(*this == name);
-    }
-
-    const char* getName() const {
-        return _name.c_str();
+    DebugHandle &operator=(const DebugHandle &) = delete;
+    DebugHandle &operator=(DebugHandle &&handle) {
+        _name = handle._name;
+        handle._name = nullptr;
+        _handle = handle._handle;
+        _get = handle._get;
+        _set = handle._set;
+        _writeGet = handle._writeGet;
+        _flashRead = handle._flashRead;
+        _flashReadSize = handle._flashReadSize;
+        _flashWrite = handle._flashWrite;
+        return *this;
     }
 
-private:
-    friend void readHandles();
-    friend void writeHandles();
+    DebugHandle() : _name((char *)emptyString.c_str()), _get(0), _handle(~0), _set(0), _writeGet(0), _flashRead(0), _flashReadSize(0), _flashWrite(0) {}
 
-    ConfigurationParameter::Handle_t _handle;
-    String _name;
+    DebugHandle(const char *name, const HandleType handle) :  _name(nullptr), _get(0), _handle(handle), _set(0), _writeGet(0), _flashRead(0), _flashReadSize(0), _flashWrite(0) {
+        if (isProgmem(name)) {
+            // we can just store the pointer if inside PROGMEM
+            _name = (char *)name;
+        }
+        else {
+            _name = (char *)malloc(strlen_P(name) + 1);
+            if (_name) {
+                strcpy_P(_name, name);
+            }
+            else {
+                _name = (char *)PSTR("out of memory");
+            }
+        }
+    }
+
+    ~DebugHandle() {
+        if (_name && _name != emptyString.c_str() && !isProgmem(_name)) {
+            __DBG_printf("free=%p", _name);
+            free(_name);
+        }
+    }
+
+#if defined(ESP8266)
+    static bool isProgmem(const char *str) {
+        return (uint32_t)str >= 0x40200000U;
+    }
+#else
+    static bool isProgmem(const char *str) {
+        return false;
+    }
+#endif
+
+    operator HandleType() const {
+        return _handle;
+    }
+
+    // bool operator==(const HandleType handle) const {
+    //     return _handle == handle;
+    // }
+    // bool operator!=(const HandleType handle) const {
+    //     return _handle != handle;
+    // }
+
+    bool operator==(const char *name) const {
+        return strcmp_P_P(_name, name) == 0;
+    }
+    bool operator!=(const char *name) const {
+        return strcmp_P_P(_name, name) != 0;
+    }
+
+    const char *getName() const {
+        return _name;
+    }
+
+    const HandleType getHandle() const {
+        return _handle;
+    }
+
+    bool equals(const char *name) const {
+        return strcmp_P_P(_name, name) == 0;
+    }
+
+    void print(Print &output) const {
+        output.printf_P(PSTR("%04x: [get=%u,set=%u,write_get=%u,flash:read=#%u/%u,write=#%u/%u]: %s\n"), _handle, _get, _set, _writeGet, _flashRead, _flashReadSize, _writeGet, _writeGet * 4096, _name);
+    }
+
+    static DebugHandle *find(const char *name);
+    static DebugHandle *find(HandleType handle);
+    static void add(const char *name, HandleType handle);
+    static void init();
+    static void clear();
+    static void logUsage();
+    static void printAll(Print &output);
+    static DebugHandleVector &getHandles();
+
+public:
+    struct __attribute__packed__ {
+        char *_name;
+        uint32_t _get;
+        HandleType _handle;
+        uint16_t _set;
+        uint16_t _writeGet;
+        uint16_t _flashRead;
+        uint32_t _flashReadSize;
+        uint16_t _flashWrite;
+    };
+    static DebugHandleVector *_handles;
 };
 
-static std::vector<DebugHandle_t> handles;
+DebugHandle::DebugHandleVector *DebugHandle::_handles = nullptr;
 
 
-void readHandles()
+void DebugHandle::init()
 {
-    File file = SPIFFS.open(F("config_debug"), fs::FileOpenMode::read);
+    if (!_handles) {
+        _handles = new DebugHandleVector();
+        _handles->emplace_back(PSTR("<EEPROM>"), 0);
+        _handles->emplace_back(PSTR("<INVALID>"), ~0);
+#if DEBUG_CONFIGURATION_GETHANDLE_LOG_INTERVAL
+        Scheduler.addTimer(DEBUG_CONFIGURATION_GETHANDLE_LOG_INTERVAL * 60000UL, true, [](EventScheduler::TimerPtr) {
+            DebugHandle::logUsage();
+        });
+#endif
+    }
+}
+
+DebugHandle::DebugHandleVector &DebugHandle::getHandles()
+{
+    init();
+    return *_handles;
+}
+
+void DebugHandle::clear()
+{
+    if (_handles) {
+        delete _handles;
+        _handles = nullptr;
+        init();
+    }
+}
+
+DebugHandle *DebugHandle::find(const char *name)
+{
+    if (_handles) {
+        auto iterator = std::find(_handles->begin(), _handles->end(), name);
+        if (iterator != _handles->end()) {
+            return &(*iterator);
+        }
+    }
+    return nullptr;
+}
+
+DebugHandle *DebugHandle::find(HandleType handle)
+{
+    if (_handles) {
+        auto iterator = std::find(_handles->begin(), _handles->end(), handle);
+        if (iterator != _handles->end()) {
+            return &(*iterator);
+        }
+    }
+    return nullptr;
+}
+
+void DebugHandle::add(const char *name, HandleType handle)
+{
+    init();
+    __LDBG_printf("adding handle=%04x name=%s", handle, name);
+    _handles->emplace_back(name, handle);
+}
+
+const ConfigurationHelper::HandleType ConfigurationHelper::registerHandleName(const char *name, uint8_t type)
+{
+    auto debugHandle = DebugHandle::find(name);
+    if (debugHandle) {
+        // found the name, just return handle
+        if (type == __DBG__TYPE_GET) {
+            debugHandle->_get++;
+        }
+        else if (type == __DBG__TYPE_SET) {
+            debugHandle->_set++;
+        }
+        else if (type == __DBG__TYPE_W_GET) {
+            debugHandle->_writeGet++;
+        }
+        return debugHandle->getHandle();
+    }
+    else {
+        // get handle for name
+        auto handle = crc16_update_P(name, strlen_P(name));
+        // check if this handle exists already
+        debugHandle = DebugHandle::find(handle);
+        if (debugHandle) {
+            __DBG_printf("handle name=%s handle=%04x matches name=%s", name, handle, debugHandle->getName());
+            ::printf(PSTR("handle name=%s handle=%04x matches name=%s"), name, handle, debugHandle->getName());
+        }
+        DebugHandle::add(name, handle);
+        return handle;
+    }
+}
+
+static bool _panicMode = false;
+
+void ConfigurationHelper::setPanicMode(bool value)
+{
+    _panicMode = value;
+}
+
+void ConfigurationHelper::addFlashUsage(HandleType handle, size_t readSize, size_t writeSize)
+{
+    DebugHandle::init();
+    auto debugHandle = DebugHandle::find(handle);
+    if (!debugHandle) {
+        if (_panicMode) {
+            writeHandles();
+            DebugHandle::printAll(DEBUG_OUTPUT);
+            __DBG_panic("handle=%04x not found read=%u write=%u size=%u", handle, readSize, writeSize, DebugHandle::getHandles().size());
+        }
+        else {
+            __DBG_printf("handle=%04x not found read=%u write=%u size=%u", handle, readSize, writeSize, DebugHandle::getHandles().size());
+        }
+        debugHandle = DebugHandle::find(~0);
+    }
+    if (debugHandle) {
+        if (readSize) {
+            debugHandle->_flashRead++;
+            debugHandle->_flashReadSize += readSize;
+        }
+        else if (writeSize) {
+            debugHandle->_flashWrite++;
+        }
+    }
+}
+
+const ConfigurationHelper::HandleType ConfigurationHelper::registerHandleName(const __FlashStringHelper *name, uint8_t type)
+{
+    return registerHandleName(RFPSTR(name), type);
+}
+
+bool registerHandleExists(ConfigurationHelper::HandleType crc)
+{
+    return DebugHandle::find(crc) != nullptr;
+}
+
+static const char __DBG_config_handle_storage[] PROGMEM = { "/.pvt/cfg_handles" };
+static const char __DBG_config_handle_log_file[] PROGMEM = { "/.pvt/cfg_handles.log" };
+
+void DebugHandle::logUsage()
+{
+    auto uptime = getSystemUptime();
+    __DBG_printf("writing usage to log uptime=%u file=%s", uptime, __DBG_config_handle_log_file);
+    auto file = SPIFFS.open(FPSTR(__DBG_config_handle_log_file), fs::FileOpenMode::append);
     if (file) {
+        PrintString str;
+        str.strftime_P(SPGM(strftime_date_time_zone), time(nullptr));
+
+        file.print(F("--- "));
+        file.print(str);
+        file.print(F(" uptime "));
+        file.println(formatTime(uptime));
+        printAll(file);
+    }
+}
+
+void DebugHandle::printAll(Print &output)
+{
+    for(const auto &handle: getHandles()) {
+        handle.print(output);
+    }
+}
+
+void ConfigurationHelper::readHandles()
+{
+    SPIFFS.begin();
+    auto file = SPIFFS.open(FPSTR(__DBG_config_handle_storage), fs::FileOpenMode::read);
+    if (file) {
+        uint32_t count = 0;
         while (file.available()) {
             auto line = file.readStringUntil('\n');
             if (String_rtrim(line)) {
-                getHandle(line.c_str());
+                ConfigurationHelper::registerHandleName(line.c_str(), __DBG__TYPE_NONE);
+                count++;
             }
-
         }
         file.close();
+        __DBG_printf("read %u handles from=%s", count, __DBG_config_handle_storage);
     }
 }
 
 
-void writeHandles()
+void ConfigurationHelper::writeHandles(bool clear)
 {
-    File file = SPIFFS.open(F("config_debug"), fs::FileOpenMode::write);
+    if (clear) {
+        DebugHandle::clear();
+    }
+    __DBG_printf("storing %u handles file=%s", DebugHandle::getHandles().size(), __DBG_config_handle_storage);
+    auto file = SPIFFS.open(FPSTR(__DBG_config_handle_storage), fs::FileOpenMode::write);
     if (file) {
-        for (auto &handle : handles) {
-            file.println(handle._name);
+        for (const auto &handle : DebugHandle::getHandles()) {
+            file.printf_P(PSTR("%s\n"), handle.getName());
         }
         file.close();
     }
+    DebugHandle::logUsage();
 }
 
-uint16_t getHandle(const char *name)
+// uint16_t getHandle(const char *name)
+// {
+//     Serial.printf("name=%s\n",name);
+//     ConfigurationParameter::Handle_t crc = constexpr_crc16_update(name, constexpr_strlen(name));
+//     auto iterator = std::find(handles->begin(), handles->end(), crc);
+//     if (iterator == handles->end()) {
+//         handles->emplace_back(name, crc);
+//     }
+//     else if (*iterator != name) {
+//         __debugbreak_and_panic_printf_P(PSTR("getHandle(%s): CRC not unique: %x, %s\n"), name, crc, iterator->getName());
+//     }
+//     return crc;
+// }
+
+const char *ConfigurationHelper::getHandleName(ConfigurationParameter::Handle_t crc)
 {
-    Serial.printf("name=%s\n",name);
-    ConfigurationParameter::Handle_t crc = constexpr_crc16_update(name, constexpr_strlen(name));
-    auto iterator = std::find(handles.begin(), handles.end(), crc);
-    if (iterator == handles.end()) {
-        handles.emplace_back(name, crc);
+    auto debugHandle = DebugHandle::find(crc);
+    if (debugHandle) {
+        return debugHandle->getName();
     }
-    else if (*iterator != name) {
-        __debugbreak_and_panic_printf_P(PSTR("getHandle(%s): CRC not unique: %x, %s\n"), name, crc, iterator->getName());
-    }
-    return crc;
+    return "<Unknown>";
 }
 
-const char *getHandleName(ConfigurationParameter::Handle_t crc)
+void ConfigurationHelper::dumpHandles(Print &output, bool log)
 {
-    auto iterator = std::find(handles.begin(), handles.end(), crc);
-    if (iterator == handles.end()) {
-        return "<Unknown>";
+    DebugHandle::printAll(output);
+    if (log) {
+        writeHandles();
     }
-    return iterator->getName();
 }
+
+
 #else
-const char *getHandleName(ConfigurationParameter::Handle_t crc) {
+
+const char *ConfigurationHelper::getHandleName(ConfigurationParameter::Handle_t crc)
+{
     return "N/A";
 }
+
 #endif
 
 #ifdef _MSC_VER
@@ -125,14 +400,22 @@ Configuration::~Configuration()
 
 void Configuration::clear()
 {
-    _debug_printf_P(PSTR("params=%u\n"), _params.size());
+    if (_offset == kInvalidOffset) {
+        __LDBG_printf("invalid offset");
+        return;
+    }
+    __LDBG_printf("params=%u", _params.size());
     discard();
     _params.clear();
 }
 
 void Configuration::discard()
 {
-    _debug_printf_P(PSTR("params=%u\n"), _params.size());
+    if (_offset == kInvalidOffset) {
+        __LDBG_printf("invalid offset");
+        return;
+    }
+    __LDBG_printf("params=%u", _params.size());
     for (auto &parameter : _params) {
         if (parameter.isDirty()) {
             free(parameter._info.data);
@@ -150,6 +433,10 @@ void Configuration::discard()
 
 void Configuration::release()
 {
+    if (_offset == kInvalidOffset) {
+        __LDBG_printf("invalid offset");
+        return;
+    }
     _dumpPool(_storage);
     _debug_printf_P(PSTR("params=%u last_read=%d dirty=%d\n"), _params.size(), (int)(_readAccess == 0 ? -1 : millis() - _readAccess), isDirty());
     for (auto &parameter : _params) {
@@ -164,9 +451,13 @@ void Configuration::release()
 
 bool Configuration::read()
 {
+    if (_offset == kInvalidOffset) {
+        __LDBG_printf("invalid offset");
+        return false;
+    }
     clear();
-#if DEBUG_GETHANDLE
-    readHandles();
+#if DEBUG_CONFIGURATION_GETHANDLE
+    ConfigurationHelper::readHandles();
 #endif
     auto result = _readParams();
     if (!result) {
@@ -178,12 +469,32 @@ bool Configuration::read()
 
 bool Configuration::write()
 {
-    _debug_printf_P(PSTR("params=%u\n"), _params.size());
+    if (_offset == kInvalidOffset) {
+        __LDBG_printf("invalid offset");
+        return false;
+    }
+    __LDBG_printf("params=%u", _params.size());
+
+    _eeprom.begin();
+
+    bool dirty = false;
+    for (auto &parameter : _params) {
+        //if (parameter.isDirty()) {
+            if (parameter.hasDataChanged(this)) {
+                __DBG_printf("%s dirty", parameter.toString().c_str())
+                dirty = true;
+                //break;
+            }
+        //}
+    }
+    if (dirty == false) {
+        __LDBG_printf("configuration did not change");
+        return read();
+    }
 
     Buffer buffer; // storage for parameter information and data
 
     _storage.clear();
-    _eeprom.begin();
 
     // store current data offset
     uint16_t dataOffset = _dataOffset;
@@ -251,8 +562,8 @@ bool Configuration::write()
 
     _eeprom.commit();
 
-#if DEBUG_GETHANDLE
-    writeHandles();
+#if DEBUG_CONFIGURATION_GETHANDLE
+    ConfigurationHelper::writeHandles();
 #endif
 
     // _eeprom.dump(Serial, false, _offset, 160);
@@ -313,6 +624,10 @@ void Configuration::setBinary(Handle_t handle, const void *data, uint16_t length
 
 void Configuration::dump(Print &output, bool dirty, const String &name)
 {
+    if (_offset == kInvalidOffset) {
+        __LDBG_printf("invalid offset");
+        return;
+    }
     output.printf_P(PSTR("Configuration:\nofs=%d base_ofs=%d eeprom_size=%d params=%d len=%d\n"), _dataOffset, _offset, _eeprom.getSize(), _params.size(), _eeprom.getSize() - _offset);
     output.printf_P(PSTR("min_mem_usage=%d header_size=%d Param_t::size=%d, ConfigurationParameter::size=%d, Configuration::size=%d\n"), sizeof(Configuration) + _params.size() * sizeof(ConfigurationParameter), sizeof(Configuration::Header_t), sizeof(ConfigurationParameter::Param_t), sizeof(ConfigurationParameter), sizeof(Configuration));
 
@@ -322,7 +637,7 @@ void Configuration::dump(Print &output, bool dirty, const String &name)
         auto display = true;
         auto &param = parameter._param;
         if (name.length()) {
-            if (!name.equals(getHandleName(param.handle))) {
+            if (!name.equals(ConfigurationHelper::getHandleName(param.handle))) {
                 display = false;
             }
         }
@@ -334,8 +649,8 @@ void Configuration::dump(Print &output, bool dirty, const String &name)
         auto length = parameter.read(this, offset);
         DEBUG_HELPER_INIT();
         if (display) {
-#if DEBUG_GETHANDLE
-            output.printf_P(PSTR("%s[%04x]: "), getHandleName(param.handle), param.handle);
+#if DEBUG_CONFIGURATION_GETHANDLE
+            output.printf_P(PSTR("%s[%04x]: "), ConfigurationHelper::getHandleName(param.handle), param.handle);
 #else
             output.printf_P(PSTR("%04x: "), param.handle);
 #endif
@@ -433,7 +748,6 @@ void Configuration::_shrinkStorage()
     _dumpPool(_storage);
 }
 
-
 #if DEBUG_CONFIGURATION
 
 void Configuration::_dumpPool(PoolVector &poolVector)
@@ -476,9 +790,9 @@ void Configuration::exportAsJson(Print &output, const String &version)
         }
 
         output.printf_P(PSTR("\t\t\"%#04x\": {\n"), param.handle);
-#if DEBUG_GETHANDLE
+#if DEBUG_CONFIGURATION_GETHANDLE
         output.print(F("\t\t\t\"name\": \""));
-        auto name = getHandleName(param.handle);
+        auto name = ConfigurationHelper::getHandleName(param.handle);
         JsonTools::printToEscaped(output, name, strlen(name), false);
         output.print(F("\",\n"));
 #endif
@@ -505,6 +819,16 @@ bool Configuration::importJson(Stream &stream, uint16_t *handles)
     return reader.parseStream();
 }
 
+void Configuration::__crashCallback()
+{
+    __LDBG_printf("clearing memory");
+    _offset = kInvalidOffset;
+    static_cast<ConfigurationHelper::EEPROMClassEx &>(EEPROM).clearAndEnd();
+    _params.clear();
+    _storage.clear();
+    __LDBG_printf("done");
+}
+
 Configuration::ParameterList::iterator Configuration::_findParam(ConfigurationParameter::TypeEnum_t type, Handle_t handle, uint16_t &offset)
 {
     offset = _dataOffset;
@@ -526,7 +850,7 @@ Configuration::ParameterList::iterator Configuration::_findParam(ConfigurationPa
             offset += it->_param.length;
         }
     }
-    _debug_printf_P(PSTR("handle=%s[%04x] type=%s = NOT FOUND\n"), getHandleName(handle), handle, (const char *)ConfigurationParameter::getTypeString(type));
+    _debug_printf_P(PSTR("handle=%s[%04x] type=%s = NOT FOUND\n"), ConfigurationHelper::getHandleName(handle), handle, (const char *)ConfigurationParameter::getTypeString(type));
     return _params.end();
 }
 
@@ -536,11 +860,13 @@ ConfigurationParameter &Configuration::_getOrCreateParam(ConfigurationParameter:
     if (iterator == _params.end()) {
         _params.emplace_back(handle, type);
         _debug_printf_P(PSTR("new param %s\n"), _params.back().toString().c_str());
+        __DBG__checkIfHandleExists("create", handle);
         return _params.back();
     }
     else if (type != iterator->_param.getType()) {
-        __debugbreak_and_panic_printf_P(PSTR("%s: new_type=%s type=%s different\n"), getHandleName(iterator->_param.handle), iterator->toString().c_str(), (const char *)ConfigurationParameter::getTypeString(type));
+        __debugbreak_and_panic_printf_P(PSTR("%s: new_type=%s type=%s different\n"), ConfigurationHelper::getHandleName(iterator->_param.handle), iterator->toString().c_str(), (const char *)ConfigurationParameter::getTypeString(type));
     }
+    __DBG__checkIfHandleExists("find", iterator->_param.handle);
     return *iterator;
 }
 
@@ -560,6 +886,10 @@ uint16_t Configuration::_readHeader(uint16_t offset, HeaderAligned_t &hdr)
 
 bool Configuration::_readParams()
 {
+    if (_offset == kInvalidOffset) {
+        __LDBG_printf("invalid offset");
+        return false;
+    }
     uint16_t offset = _offset;
     HeaderAligned_t hdr;
 

@@ -110,6 +110,7 @@ uint8_t *ConfigurationHelper::Pool::allocate(uint16_t length)
     auto endPtr = _ptr + _length;
     _length += length;
     _count++;
+    memset(endPtr, 0, length);
     return endPtr;
 }
 
@@ -141,7 +142,6 @@ void *ConfigurationHelper::Pool::getPtr() const
     return _ptr;
 }
 
-
 #if DEBUG_CONFIGURATION && DEBUG_EEPROM_ENABLE
 #include <debug_helper_enable.h>
 #else
@@ -161,13 +161,24 @@ void ConfigurationHelper::EEPROMAccess::begin(uint16_t size)
         _isInitialized = true;
         _debug_printf_P(PSTR("size=%u\n"), _size);
         EEPROM.begin(_size);
+        __DBG__addFlashReadSize(0, _size);
     }
 }
 
 void ConfigurationHelper::EEPROMAccess::end()
 {
     if (_isInitialized) {
-        _debug_printf_P(PSTR("size=%u\n"), _size);
+        __LDBG_printf("size=%u", _size);
+#if DEBUG_CONFIGURATION_GETHANDLE
+        bool dirty = static_cast<EEPROMClassEx &>(EEPROM).getDirty();
+        auto writeSize = static_cast<EEPROMClassEx &>(EEPROM).getWriteSize();
+        bool result = false;
+        if (writeSize && (result = EEPROM.commit())) {
+            __DBG_printf("EEPROM CHANGED EEPROM CHANGED EEPROM CHANGED EEPROM CHANGED EEPROM CHANGED");
+            __DBG__addFlashWriteSize(0, writeSize);
+        }
+        __DBG_printf("end write_size=%u commit=%u dirty_before/after=%u/%u", writeSize, result, dirty, static_cast<EEPROMClassEx &>(EEPROM).getDirty());
+#endif
         EEPROM.end();
         _isInitialized = false;
     }
@@ -177,7 +188,19 @@ void ConfigurationHelper::EEPROMAccess::commit()
 {
     if (_isInitialized) {
         _debug_printf_P(PSTR("size=%u\n"), _size);
+#if DEBUG_CONFIGURATION_GETHANDLE
+        bool dirty = static_cast<EEPROMClassEx &>(EEPROM).getDirty();
+        auto writeSize = static_cast<EEPROMClassEx &>(EEPROM).getWriteSize();
+        bool result;
+        if ((result = EEPROM.commit())) {
+            __DBG_printf("EEPROM CHANGED EEPROM CHANGED EEPROM CHANGED EEPROM CHANGED EEPROM CHANGED");
+            __DBG__addFlashWriteSize(0, writeSize);
+        }
+        __DBG_printf("commit write_size=%u commit=%u dirty_before/after=%u/%u", writeSize, result, dirty, static_cast<EEPROMClassEx &>(EEPROM).getDirty());
+#else
         EEPROM.commit();
+#endif
+
         _isInitialized = false;
     }
     else {
@@ -185,13 +208,13 @@ void ConfigurationHelper::EEPROMAccess::commit()
     }
 }
 
-void ConfigurationHelper::EEPROMAccess::read(uint8_t *dst, uint16_t offset, uint16_t length, uint16_t size)
+uint16_t ConfigurationHelper::EEPROMAccess::read(uint8_t *dst, uint16_t offset, uint16_t length, uint16_t size)
 {
 #if defined(ESP8266)
     // if the EEPROM is not intialized, copy data from flash directly
     if (_isInitialized) {
         memcpy(dst, EEPROM.getConstDataPtr() + offset, length); // data is already in RAM
-        return;
+        return 0;
     }
 
     auto eeprom_start_address = ((uint32_t)&_EEPROM_start - EEPROM_ADDR) + offset;
@@ -300,6 +323,7 @@ void ConfigurationHelper::EEPROMAccess::read(uint8_t *dst, uint16_t offset, uint
 #if DEBUG_CONFIGURATION && 0
     _debug_printf_P(PSTR("ofs=%u len=%u size=%u data=%s"), offset, length, size, Configuration::__debugDumper(dst, length).c_str());
 #endif
+    return readSize;
 }
 
 void ConfigurationHelper::EEPROMAccess::dump(Print &output, bool asByteArray, uint16_t offset, uint16_t length)

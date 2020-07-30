@@ -11,5 +11,5 @@
 #include "FormCallbackValidator.h"
 #include "FormLengthValidator.h"
 #include "FormEnumValidator.h"
-#include "FormValidHostOrIpValidator.h"
+#include "FormHostValidator.h"
 #include "FormMatchValidator.h"

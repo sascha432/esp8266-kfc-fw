@@ -8,9 +8,9 @@
 
 class FormMatchValidator : public FormValidator {
 public:
-    typedef std::function<bool(FormField &field)> Callback_t;
+    typedef std::function<bool(FormField &field)> Callback;
 
-    FormMatchValidator(const String &message, Callback_t callback) : FormValidator(message) {
+    FormMatchValidator(const String &message, Callback callback) : FormValidator(message) {
         _callback = callback;
     }
 
@@ -19,5 +19,5 @@ public:
     }
 
 private:
-    Callback_t _callback;
+    Callback _callback;
 };

@@ -6,32 +6,17 @@
 
 #include <Arduino_compat.h>
 
-#if defined(FORM_DATA_CLASS_OVERRIDE)
+#ifdef HAVE_KFC_FIRMWARE_VERSION
 
-// alternative storage class
+#include <ESPAsyncWebServer.h>
 
-typedef std::function<const String(const String &name)> FormDataArgCallback_t;
-typedef std::function<bool(const String &name)> FormDataHasArgCallback_t;
-
-class FormData {
+class FormData : public AsyncWebServerRequest {
 public:
-    void setCallbacks(FormDataArgCallback_t arg, FormDataHasArgCallback_t hasArg) {
-        _arg = arg;
-        _hasArg = hasArg;
-    }
-
-    const String arg(const String &name) const {
-        return _arg(name);
-    }
+    using AsyncWebServerRequest::AsyncWebServerRequest;
     bool hasArg(const String &name) const {
-        return _hasArg(name);
+       return AsyncWebServerRequest::hasArg(name.c_str());
     }
-
-private:
-    FormDataArgCallback_t _arg;
-    FormDataHasArgCallback_t _hasArg;
 };
-
 
 #else
 

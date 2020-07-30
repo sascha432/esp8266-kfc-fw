@@ -7,25 +7,25 @@
 #include <Arduino_compat.h>
 #include "FormField.h"
 
-template <class C>
+template <typename ObjType>
 class FormObject : public FormField {
 public:
-    typedef std::function<bool(const C &value, FormField &field, bool store)> SetterCallback_t;
+    typedef std::function<bool(const ObjType &value, FormField &field, bool store)> Callback;
 
-    FormObject(const String &name, C obj, SetterCallback_t setter = nullptr, FormField::InputFieldType type = FormField::InputFieldType::TEXT) : FormField(name, obj.toString(), type), _obj(obj), _setter(setter) {
+    FormObject(const String &name, ObjType obj, Callback callback = nullptr, Type type = Type::TEXT) : FormField(name, obj.toString(), type), _object(obj), _callback(callback) {
     }
-    FormObject(const String &name, C obj, FormField::InputFieldType type = FormField::InputFieldType::TEXT) : FormField(name, obj.toString(), type), _obj(obj), _setter(nullptr) {
+    FormObject(const String &name, ObjType obj, Type type = Type::TEXT) : FormField(name, obj.toString(), type), _object(obj), _callback(nullptr) {
     }
 
     virtual void copyValue() {
-        _obj.fromString(getValue());
-        if (_setter) {
-            _setter(_obj, *this, true);
+        _object.fromString(getValue());
+        if (_callback) {
+            _callback(_object, *this, true);
         }
     }
 
 private:
-    C _obj;
-    SetterCallback_t _setter;
+    ObjType _object;
+    Callback _callback;
 };
 

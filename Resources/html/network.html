@@ -25,86 +25,8 @@
     </nav>
     <!--NAV%%-->
     <div class="container">
-        <h1>Network Configuration</h1>
         <form method="POST" action="network.html" id="network_settings">
-            <div class="form-group">
-                <label for="hostname">Hostname:</label>
-                <input type="text" class="form-control" name="hostname" id="hostname" value="%HOSTNAME%">
-            </div>
-            <div class="form-group">
-                <label for="title">Title:</label>
-                <input type="text" class="form-control" name="title" id="title" value="%TITLE%">
-            </div>
-            <span id="station_mode">
-                <div class="form-group">
-                    <h2>Station</h2>
-                </div>
-                <div class="form-group">
-                    <label for="dhcp_client">DHCP</label>
-                    <select class="form-control" name="dhcp_client" id="dhcp_client">
-                        <option value="0" %DHCP_CLIENT_0%>Disabled</option>
-                        <option value="1" %DHCP_CLIENT_1%>Enabled</option>
-                    </select>
-                </div>
-                <span id="static_address">
-                    <div class="form-group">
-                        <label for="address">IP Address:</label>
-                        <input type="text" class="form-control" name="ip_address" id="ip_address" value="%IP_ADDRESS%">
-                    </div>
-                    <div class="form-group">
-                        <label for="subnet">Subnet:</label>
-                        <input type="text" class="form-control" name="subnet" id="subnet" value="%SUBNET%">
-                    </div>
-                    <div class="form-group">
-                        <label for="gateway">Gateway:</label>
-                        <input type="text" class="form-control" name="gateway" id="gateway" value="%GATEWAY%">
-                    </div>
-                </span>
-                <div class="form-group">
-                    <label for="dns1">DNS 1:</label>
-                    <input type="text" class="form-control" name="dns1" id="dns1" value="%DNS1%">
-                </div>
-                <div class="form-group">
-                    <label for="dns1">DNS 2:</label>
-                    <input type="text" class="form-control" name="dns2" id="dns2" value="%DNS2%">
-                </div>
-            </span>
-
-            <span id="ap_mode">
-                <div class="form-group">
-                    <h2>Access Point</h2>
-                </div>
-                <div class="form-group">
-                    <label for="softap_dhcpd">DHCP Server:</label>
-                    <select class="form-control" name="softap_dhcpd" id="softap_dhcpd">
-                        <option value="0" %SOFTAP_DHCPD_0%>Disabled</option>
-                        <option value="1" %SOFTAP_DHCPD_1%>Enabled</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="address">IP Address:</label>
-                    <input type="text" class="form-control" name="ap_ip_address" id="ap_ip_address"
-                        value="%AP_IP_ADDRESS%">
-                </div>
-                <div class="form-group">
-                    <label for="subnet">Subnet:</label>
-                    <input type="text" class="form-control" name="ap_subnet" id="ap_subnet" value="%AP_SUBNET%">
-                </div>
-                <span id="soft_ap_dhcpd">
-                    <div class="form-group">
-                        <label for="dhcp_start">DHCP Start IP:</label>
-                        <input type="text" class="form-control" name="dhcp_start" id="dhcp_start" value="%DHCP_START%">
-                    </div>
-                    <div class="form-group">
-                        <label for="dhcp_end">DHCP End IP:</label>
-                        <input type="text" class="form-control" name="dhcp_end" id="dhcp_end" value="%DHCP_END%">
-                    </div>
-                </span>
-            </span>
-
-            <div class="form-group">
-                <button type="submit" class="btn btn-primary">Save Changes...</button>
-            </div>
+            %FORM_HTML%
         </form>
         <!--%%FOOT-->
         <div class="row">

@@ -5,20 +5,25 @@
 #pragma once
 
 #include <Arduino_compat.h>
+#include <EnumHelper.h>
 
-class FormValidHostOrIpValidator : public FormValidator {
+class FormHostValidator : public FormValidator {
 public:
     typedef std::vector<String> StringVector;
-    static constexpr uint8_t ALLOW_HOST_IP = 0x00;
-    static constexpr uint8_t ALLOW_EMPTY = 0x01;
-    static constexpr uint8_t ALLOW_ZEROCONF = 0x02;
 
-    FormValidHostOrIpValidator(uint8_t allowedTypes = ALLOW_HOST_IP) : FormValidHostOrIpValidator(FSPGM(FormValidHostOrIpValidator_default_message), allowedTypes) {
+    enum class AllowedType : uint8_t {
+        ALLOW_HOST_OR_IP =             0x00,
+        ALLOW_EMPTY =                  0x01,
+        ALLOW_ZEROCONF =               0x02,
+        ALLOW_EMPTY_AND_ZEROCONF =     ALLOW_EMPTY|ALLOW_ZEROCONF
+    };
+
+    FormHostValidator(AllowedType allowedTypes = AllowedType::ALLOW_HOST_OR_IP) : FormHostValidator(FSPGM(FormHostValidator_default_message), allowedTypes) {
     }
-    FormValidHostOrIpValidator(const String &message, uint8_t allowedTypes = ALLOW_HOST_IP) : FormValidator(message), _allowedTypes(allowedTypes) {
+    FormHostValidator(const String &message, AllowedType allowedTypes = AllowedType::ALLOW_HOST_OR_IP) : FormValidator(message), _allowedTypes(allowedTypes) {
     }
 
-    FormValidHostOrIpValidator *addAllowString(const String &str) {
+    FormHostValidator *addAllowString(const String &str) {
         _allowStrings.push_back(str);
         return this;
     }
@@ -26,12 +31,12 @@ public:
     virtual bool validate() override {
         if (FormValidator::validate()) {
             const char *ptr = getField().getValue().c_str();
-            if (_allowedTypes & ALLOW_ZEROCONF) {
+            if (EnumHelper::Bitset::has(_allowedTypes, AllowedType::ALLOW_ZEROCONF)) {
                 if (strstr_P(ptr, PSTR("${zeroconf"))) { //TODO parse and validate zeroconf
                     return true;
                 }
             }
-            if (_allowedTypes & ALLOW_EMPTY) {
+            if (EnumHelper::Bitset::has(_allowedTypes, AllowedType::ALLOW_EMPTY)) {
                 const char *trimmed = ptr;
                 while (isspace(*trimmed)) {
                     trimmed++;
@@ -48,7 +53,7 @@ public:
             IPAddress addr;
             if (!addr.fromString(getField().getValue())) {
                 while(*ptr) {
-                    if (!((*ptr >= 'A' && *ptr <= 'Z') || (*ptr >= 'a' && *ptr <= 'z') || (*ptr >= '0' && *ptr <= '9') || *ptr == '_' || *ptr == '-' || *ptr == '.')) {
+                    if (!(isalnum(*ptr) || *ptr == '_' || *ptr == '-' || *ptr == '.')) {
                         return false;
                     }
                     ptr++;
@@ -60,6 +65,6 @@ public:
     }
 
 private:
-    uint8_t _allowedTypes;
+    AllowedType _allowedTypes;
     StringVector _allowStrings;
 };

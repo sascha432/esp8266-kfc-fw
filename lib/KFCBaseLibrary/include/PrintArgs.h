@@ -91,7 +91,9 @@ public:
     }
     const char *attachConstString(const __FlashStringHelper *fstr) {
 #if DEBUG_CHECK_DUPES
-        auto iterator = std::find(_attached.begin(), _attached.end(), fstr);
+        auto iterator = std::find_if(_attached.begin(), _attached.end(), [fstr](const String &str) {
+            return String_equals(str, fstr);
+        });
         if (iterator != _attached.end()) {
             __DBG_printf("duplicate string='%s'", iterator->c_str());
         }

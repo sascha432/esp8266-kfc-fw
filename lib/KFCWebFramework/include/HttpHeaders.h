@@ -5,7 +5,6 @@
 #pragma once
 
 #include <Arduino_compat.h>
-#include "../src/generated/FlashStringGeneratorAuto.h"
 #include <time.h>
 #include <functional>
 #include <memory>

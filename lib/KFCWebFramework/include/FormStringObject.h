@@ -9,16 +9,16 @@
 
 class FormStringObject : public FormField {
 public:
-    typedef std::function<bool(const String &strValue, FormField &field, bool store)> SetterCallback_t;
+    typedef std::function<bool(const String &strValue, FormField &field, bool store)> Callback;
 
-    FormStringObject(const String &name, const String &str, SetterCallback_t setter = nullptr, FormField::InputFieldType type = FormField::InputFieldType::TEXT) : FormField(name, str, type), _setter(setter), _str(nullptr) {
+    FormStringObject(const String &name, const String &str, Callback callback = nullptr, FormField::Type type = FormField::Type::TEXT) : FormField(name, str, type), _callback(callback), _str(nullptr) {
     }
-    FormStringObject(const String &name, String *str, FormField::InputFieldType type = FormField::InputFieldType::TEXT) : FormField(name, *str, type), _setter(nullptr), _str(str) {
+    FormStringObject(const String &name, String &str, FormField::Type type = FormField::Type::TEXT) : FormField(name, str, type), _callback(nullptr), _str(&str) {
     }
 
     virtual void copyValue() {
-        if (_setter) {
-            _setter(getValue(), *this, true);
+        if (_callback) {
+            _callback(getValue(), *this, true);
         }
         else if (_str) {
             *_str = getValue();
@@ -26,7 +26,7 @@ public:
     }
 
 private:
-    SetterCallback_t _setter;
+    Callback _callback;
     String *_str;
 };
 

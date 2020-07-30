@@ -16,7 +16,7 @@ public:
 
     const String &getName() const;
     const String &getMessage() const;
-    const bool is(FormField *field) const;
+    const bool is(FormField &field) const;
 
 private:
     FormField *_field;

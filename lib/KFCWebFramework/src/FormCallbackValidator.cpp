@@ -6,10 +6,10 @@
 #include "FormField.h"
 #include "FormBase.h"
 
-FormCallbackValidator::FormCallbackValidator(Callback_t callback) : FormCallbackValidator(String(), callback) {
+FormCallbackValidator::FormCallbackValidator(Callback callback) : FormCallbackValidator(String(), callback) {
 }
 
-FormCallbackValidator::FormCallbackValidator(const String & message, Callback_t callback) : FormValidator(message) {
+FormCallbackValidator::FormCallbackValidator(const String & message, Callback callback) : FormValidator(message) {
     _callback = callback;
 }
 

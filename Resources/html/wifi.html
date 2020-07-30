@@ -28,11 +28,11 @@
         <h1>WiFi Configuration</h1>
         <form method="POST" action="wifi.html" id="wifi_settings">
             <div class="form-group">
-                <label for="mode">Mode:</label>
-                <select class="form-control" name="mode" id="mode">
-                    <option value="1" %MODE_1%>Station Mode</option>
-                    <option value="2" %MODE_2%>Access Point</option>
-                    <option value="3" %MODE_3%>Access Point and Station Mode</option>
+                <label for="wmode">Mode:</label>
+                <select class="form-control" name="wmode" id="wmode">
+                    <option value="1" %WMODE_1%>Station MODE</option>
+                    <option value="2" %WMODE_2%>Access Point</option>
+                    <option value="3" %WMODE_3%>Access Point and Station Mode</option>
                 </select>
             </div>
             <span id="station_mode">
@@ -42,17 +42,17 @@
                 <div class="form-group">
                 </div>
                 <div class="form-group">
-                    <label for="ssid">SSID:</label>
+                    <label for="wssid">SSID:</label>
                     <div class="input-group">
-                        <input type="text" class="form-control" name="wifi_ssid" id="wifi_ssid" value="%WIFI_SSID%" />
+                        <input type="text" class="form-control" name="wssid" id="wssid" value="%WSSID%" />
                         <div class="input-group-append">
                             <button class="btn btn-default" type="button" id="wifi_scan_button" data-toggle="modal" data-target="#network_dialog">Scan...</button>
                         </div>
                     </div>
                 </div>
                 <div class="form-group">
-                    <label for="password">Passphrase:</label>
-                    <input type="password" class="form-control visible-password" name="wifi_password" id="wifi_password" value="%WIFI_PASSWORD%" data-always-visible="false" data-protected="true">
+                    <label for="wpwd">Passphrase:</label>
+                    <input type="password" class="form-control visible-password" name="wpwd" id="wpwd" value="%WPWD%" data-always-visible="false" data-protected="true">
                 </div>
             </span>
             <span id="ap_mode">
@@ -60,32 +60,32 @@
                     <h2>Access Point</h2>
                 </div>
                 <div class="form-group">
-                    <label for="ap_standby_mode">AP Mode:</label>
-                    <select class="form-control" name="ap_standby_mode" id="ap_standby_mode">
-                        <option value="0" %AP_STANDBY_MODE_0%>Enable AP Mode permanently</option>
-                        <option value="1" %AP_STANDBY_MODE_1%>Enable AP Mode if station is disconnected</option>
+                    <label for="apsm">AP Mode:</label>
+                    <select class="form-control" name="apsm" id="apsm">
+                        <option value="0" %APSM_0%>Enable AP Mode permanently</option>
+                        <option value="1" %APSM_1%>Enable AP Mode if station is disconnected</option>
                     </select>
                 </div>
                     <div class="form-group">
-                    <label for="ap_ssid">SSID:</label>
+                    <label for="apssid">SSID:</label>
                     <div class="input-group">
-                        <input type="text" class="form-control" name="ap_wifi_ssid" id="ap_wifi_ssid" value="%AP_WIFI_SSID%">
+                        <input type="text" class="form-control" name="apssid" id="apssid" value="%APSSID%">
                         <div class="input-group-append">
                             <span class="button-checkbox" data-on-icon="oi oi-task" data-off-icon="oi oi-ban">
                                 <button type="button" class="btn" data-color="primary">HIDDEN</button>
-                                <input type="checkbox" class="hidden" name="_ap_hidden" id="_ap_hidden" value="1" %AP_HIDDEN% data-label="HIDDEN">
-                                    <input type="hidden" name="ap_hidden" id="ap_hidden">
+                                <input type="checkbox" class="hidden" name="_aphs" id="_aphs" value="1" %APHS% data-label="HIDDEN">
+                                    <input type="hidden" name="aphs" id="aphs">
                             </span>
                         </div>
                     </div>
                 </div>
                 <div class="form-group">
-                    <label for="ap_password">Passphrase:</label>
-                    <input type="password" class="form-control visible-password" name="ap_wifi_password" id="ap_wifi_password" value="%AP_WIFI_PASSWORD%" data-always-visible="false" data-protected="true">
+                    <label for="appwd">Passphrase:</label>
+                    <input type="password" class="form-control visible-password" name="appwd" id="appwd" value="%APPWD%" data-always-visible="false" data-protected="true">
                 </div>
                 <div class="form-group">
-                    <label for="channel">Channel</label>
-                    <select class="form-control" name="channel" id="channel" data-max-channels="%MAX_CHANNELS%">
+                    <label for="apch">Channel</label>
+                    <select class="form-control" name="apch" id="apch" data-max-channels="%MAX_CHANNELS%">
                         <option value="0" %CHANNEL_0%>Auto</option>
                         <option value="1" %CHANNEL_1%>1</option>
                         <option value="2" %CHANNEL_2%>2</option>
@@ -104,21 +104,21 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="encryption">Encryption</label>
-                    <select class="form-control" name="encryption" id="encryption">
+                    <label for="apenc">Encryption</label>
+                    <select class="form-control" name="apenc" id="apenc">
                         <!--#if defined(ESP32) && ESP32-->
-                        <option value="0" %ENCRYPTION_0%>Open</option>
-                        <option value="1" %ENCRYPTION_1%>WEP</option>
-                        <option value="2" %ENCRYPTION_2%>WPA/PSK</option>
-                        <option value="3" %ENCRYPTION_3%>WPA2/PSK</option>
-                        <option value="4" %ENCRYPTION_4%>WPA/WPA2/PSK</option>
-                        <option value="5" %ENCRYPTION_5%>WPA2 Enterprise</option>
+                        <option value="0" %APENC_0%>Open</option>
+                        <option value="1" %APENC_1%>WEP</option>
+                        <option value="2" %APENC_2%>WPA/PSK</option>
+                        <option value="3" %APENC_3%>WPA2/PSK</option>
+                        <option value="4" %APENC_4%>WPA/WPA2/PSK</option>
+                        <option value="5" %APENC_5%>WPA2 Enterprise</option>
                         <!--#else-->
-                        <option value="7" %ENCRYPTION_7%>Open</option>
-                        <option value="5" %ENCRYPTION_5%>WEP</option>
-                        <option value="2" %ENCRYPTION_2%>WPA TKIP</option>
-                        <option value="4" %ENCRYPTION_4%>WPA CCMP</option>
-                        <option value="8" %ENCRYPTION_8%>Auto</option>
+                        <option value="7" %APENC_7%>Open</option>
+                        <option value="5" %APENC_5%>WEP</option>
+                        <option value="2" %APENC_2%>WPA TKIP</option>
+                        <option value="4" %APENC_4%>WPA CCMP</option>
+                        <option value="8" %APENC_8%>Auto</option>
                         <!--#endif-->
                     </select>
                 </div>

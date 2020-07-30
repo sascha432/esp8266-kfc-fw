@@ -22,8 +22,10 @@ FormRangeValidator::FormRangeValidator(const String & message, long min, long ma
 
 bool FormRangeValidator::validate()
 {
+    __DBG_printf("name=%s", getField().getName().c_str());
     if (FormValidator::validate()) {
         long value = getField().getValue().toInt();
+        __DBG_printf("value=%ld min=%ld max=%ld allo_zero=%u", value, _min, _max, _allowZero);
         return (_allowZero && value == 0) || (value >= _min && value <= _max);
     }
     return false;
@@ -35,6 +37,10 @@ String FormRangeValidator::getMessage()
     message.replace(FSPGM(FormValidator_min_macro), String(_min));
     message.replace(FSPGM(FormValidator_max_macro), String(_max));
     return message;
+}
+
+FormNetworkPortValidator::FormNetworkPortValidator(long min, long max, bool allowZero) : FormRangeValidator((min == kPortMin && max == kPortMax) ? FSPGM(FormRangeValidator_invalid_port, "Invalid Port") : FSPGM(FormRangeValidator_invalid_port_range, "Invalid Port (%min%-%max%)"), min, max, allowZero)
+{
 }
 
 

@@ -20,11 +20,10 @@ public:
     virtual String getMessage();
 
     virtual bool validate();
-    void setValidateIfValid(bool validateIfValid);
+    void setEnabled(bool value);
 
 private:
     FormField *_field;
+    bool _enabled;
     String _message;
-    bool _validateIfValid;
 };
-

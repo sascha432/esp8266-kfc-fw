@@ -7,145 +7,121 @@
 #include <PrintHtmlEntities.h>
 #include <misc.h>
 
-FormUI::FormUI(Type type) : _parent(nullptr), _type(type)
-{
-}
+namespace FormUI {
 
-FormUI::FormUI(Type type, const String &label) : FormUI(type)
-{
-    setLabel(label, false);
-}
-
-FormUI *FormUI::setLabel(const String &label, bool raw)
-{
-    _label = label;
-    if (!raw && !String_endsWith(label, ':')) {
-        _label += ':';
+    UI *UI::setBoolItems()
+    {
+        return setBoolItems(FSPGM(Enabled), FSPGM(Disabled));
     }
-    return this;
-}
 
-FormUI *FormUI::setBoolItems()
-{
-    return setBoolItems(FSPGM(Enabled), FSPGM(Disabled));
-}
-
-FormUI *FormUI::setBoolItems(const String &enabled, const String &disabled)
-{
-    addItems(String('0'), disabled);
-    addItems(String('1'), enabled);
-    return this;
-}
-
-FormUI *FormUI::addItems(const String &value, const String &label)
-{
-    _items.push_back(std::make_pair(value, label));
-    return this;
-}
-
-FormUI *FormUI::addItems(const ItemsList &items)
-{
-    _items = items;
-    return this;
-}
-
-FormUI *FormUI::setSuffix(const String &suffix)
-{
-    _suffix = suffix;
-    return this;
-}
-
-FormUI *FormUI::setPlaceholder(const String &placeholder)
-{
-    addAttribute(FSPGM(placeholder), placeholder);
-    return this;
-}
-
-FormUI *FormUI::setMinMax(const String &min, const String &max)
-{
-    addAttribute(FSPGM(min), min);
-    addAttribute(FSPGM(max), max);
-    return this;
-}
-
-FormUI *FormUI::addAttribute(const String &name, const String &value)
-{
-    _attributes += ' ';
-    _attributes += name;
-    if (value.length()) {
-        _attributes += '=';
-        _attributes += '"';
-         if (!PrintHtmlEntities::translateTo(value.c_str(), _attributes, true)) {
-             _attributes += value;
-         }
-        _attributes += '"';
+    UI *UI::setBoolItems(const String &enabled, const String &disabled)
+    {
+        addItems(String('0'), disabled);
+        addItems(String('1'), enabled);
+        return this;
     }
-    return this;
-}
 
-FormUI *FormUI::addConditionalAttribute(bool cond, const String &name, const String &value)
-{
-    if (cond) {
-        return addAttribute(name, value);
+    UI *UI::addItems(const String &value, const String &label)
+    {
+        _items.push_back(value, label);
+        return this;
     }
-    return this;
-}
 
-FormUI *FormUI::setReadOnly()
-{
-    return addAttribute(FSPGM(readonly), String());
-}
+    UI *UI::addItems(const ItemsList &items)
+    {
+        _items = items;
+        return this;
+    }
 
-const char *FormUI::_encodeHtmlEntities(const char *cStr, bool attribute, PrintInterface &output)
-{
-    if (pgm_read_byte(cStr) == 0xff) { // FORM_UI_RAW
-        return cStr + 1;
+    UI *UI::setSuffix(const String &suffix)
+    {
+        _suffix = suffix;
+        return this;
     }
-    const char *attachedStr;
-    if ((attachedStr = output.getAttachedString(cStr)) != nullptr) {
-        return attachedStr;
+
+    UI *UI::setPlaceholder(const String &placeholder)
+    {
+        addAttribute(FSPGM(placeholder), placeholder);
+        return this;
     }
-    int size;
-    if ((size = PrintHtmlEntities::getTranslatedSize(cStr, attribute)) == -1) {
-        return cStr;
+
+    UI *UI::setMinMax(const String &min, const String &max)
+    {
+        addAttribute(FSPGM(min), min);
+        addAttribute(FSPGM(max), max);
+        return this;
     }
-    String target;
-    if (PrintHtmlEntities::translateTo(cStr, target, size)) {
-        if ((attachedStr = output.getAttachedString(target.c_str())) != nullptr) { // check if we have this string already
+
+    UI *UI::addAttribute(const String &name, const String &value)
+    {
+        _attributes += ' ';
+        _attributes += name;
+        if (value.length()) {
+            _attributes += '=';
+            _attributes += '"';
+            if (!PrintHtmlEntities::translateTo(value.c_str(), _attributes, true)) {
+                _attributes += value;
+            }
+            _attributes += '"';
+        }
+        return this;
+    }
+
+    UI *UI::addAttribute(const __FlashStringHelper *name, const String &value)
+    {
+        _attributes += ' ';
+        _attributes += name;
+        if (value.length()) {
+            _attributes += '=';
+            _attributes += '"';
+            if (!PrintHtmlEntities::translateTo(value.c_str(), _attributes, true)) {
+                _attributes += value;
+            }
+            _attributes += '"';
+        }
+        return this;
+    }
+
+    UI *UI::addConditionalAttribute(bool cond, const String &name, const String &value)
+    {
+        if (cond) {
+            return addAttribute(name, value);
+        }
+        return this;
+    }
+
+    UI *UI::setReadOnly()
+    {
+        return addAttribute(FSPGM(readonly), String());
+    }
+
+    const char *UI::_encodeHtmlEntities(const char *cStr, bool attribute, PrintInterface &output)
+    {
+        if (pgm_read_byte(cStr) == 0xff) {
+            return ++cStr;
+        }
+        const char *attachedStr;
+        if ((attachedStr = output.getAttachedString(cStr)) != nullptr) {
             return attachedStr;
         }
-        return output.attachString(std::move(target));
+        int size;
+        if ((size = PrintHtmlEntities::getTranslatedSize(cStr, attribute)) == -1) {
+            return cStr;
+        }
+        String target;
+        if (PrintHtmlEntities::translateTo(cStr, target, size)) {
+            if ((attachedStr = output.getAttachedString(target.c_str())) != nullptr) { // check if we have this string already
+                return attachedStr;
+            }
+            return output.attachString(std::move(target));
+        }
+        return cStr;
     }
-    return cStr;
-}
 
-// void FormUI::_encodeHtmlEntitiesString(String &str)
-// {
-//     int size = PrintHtmlEntities::getTranslatedSize(str.c_str());
-//     if (size != PrintHtmlEntities::kNoTranslationRequired) {
-//         String tmp;
-//         if (PrintHtmlEntities::translateTo(str.c_str(), tmp, size)) {
-//             str = std::move(tmp);
-//         }
-//     }
-// }
-
-// void FormUI::_encodeHtmlEntitiesToString(const String &from, bool attribute, String &target)
-// {
-//     int size = PrintHtmlEntities::getTranslatedSize(from.c_str(), attribute);
-//     if (size != PrintHtmlEntities::kNoTranslationRequired) {
-//         target = String();
-//         if (PrintHtmlEntities::translateTo(from.c_str(), target, attribute, size)) {
-//             return;
-//         }
-//     }
-//     target = from;
-// }
-
-void FormUI::html(PrintInterface &output)
-{
-    const char *name = nullptr;
-    switch(_type) {
+    void UI::html(PrintInterface &output)
+    {
+        const char *name = nullptr;
+        switch (_type) {
         case Type::GROUP_START_HR:
         case Type::GROUP_START_DIV:
         case Type::GROUP_END_HR:
@@ -155,19 +131,22 @@ void FormUI::html(PrintInterface &output)
         default:
             name = _encodeHtmlEntities(_parent->getName(), true, output);
             break;
-    }
-    switch(_type) {
+        }
+        // TODO change GROUP to Accordion example https://getbootstrap.com/docs/4.3/components/collapse/#accordion-example
+        switch (_type) {
         case Type::GROUP_START_HR: {
             if (_label.length()) {
                 output.printf_P(PSTR("<div class=\"form-row%s%s\"><div class=\"col-lg-12\"><h5>%s</h5></div><div class=\"col-lg-12\"><hr class=\"mt-0\"></div></div><div class=\"form-group\">" FORMUI_CRLF), _parent->getNameType(), _parent->getNameForType(), _encodeHtmlEntities(_label, true, output));
-            } else {
+            }
+            else {
                 output.printf_P(PSTR("<div class=\"form-row%s%s\"><div class=\"col-lg-12 mt-3\"><hr></div></div><div class=\"form-group\">" FORMUI_CRLF), _parent->getNameType(), _parent->getNameForType());
             }
         } break;
         case Type::GROUP_START_DIV: {
             if (_label.length()) {
                 output.printf_P(PSTR("<div class=\"form-dependency-group%s%s\" data-action=\"%s\">" FORMUI_CRLF), _parent->getNameType(), _parent->getNameForType(), _encodeHtmlEntities(_label, true, output));
-            } else {
+            }
+            else {
                 output.printf_P(PSTR("<div class=\"form-dependency-group%s%s\">" FORMUI_CRLF), _parent->getNameType(), _parent->getNameForType());
             }
         } break;
@@ -229,7 +208,8 @@ void FormUI::html(PrintInterface &output)
             if (_suffix.length()) {
                 if (_suffix.charAt(0) == '<') {
                     output.printf_P(PSTR("<div class=\"input-group-append\">%s</div></div>" FORMUI_CRLF), _encodeHtmlEntities(_suffix, false, output));
-                } else {
+                }
+                else {
                     output.printf_P(PSTR("<div class=\"input-group-append\"><span class=\"input-group-text\">%s</span></div></div>" FORMUI_CRLF), _encodeHtmlEntities(_suffix, false, output));
                 }
             }
@@ -237,20 +217,22 @@ void FormUI::html(PrintInterface &output)
             output.printf_P(PSTR("</div>" FORMUI_CRLF));
 
         } break;
+        }
     }
-}
 
-void FormUI::setParent(FormField *field)
-{
-    _parent = field;
-}
+    void UI::setParent(FormField *field)
+    {
+        _parent = field;
+    }
 
-bool FormUI::_compareValue(const String &value) const
-{
-    if (_parent->getType() == FormField::InputFieldType::TEXT) {
-        return value.equals(_parent->getValue());
+    bool UI::_compareValue(const String &value) const
+    {
+        if (_parent->getType() == FormField::Type::TEXT) {
+            return value.equals(_parent->getValue());
+        }
+        else {
+            return value.toInt() == _parent->getValue().toInt();
+        }
     }
-    else {
-        return value.toInt() == _parent->getValue().toInt();
-    }
+
 }

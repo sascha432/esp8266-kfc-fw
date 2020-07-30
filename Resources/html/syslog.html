@@ -28,24 +28,24 @@
         <h1>Syslog Client</h1>
         <form method="POST" action="syslog.html">
             <div class="form-group">
-                <label for="syslog_enabled">Syslog Client:</label>
-                <select class="form-control" name="syslog_enabled" id="syslog_enabled">
-                    <option value="0" %SYSLOG_ENABLED_0%>Disabled</option>
-                    <option value="1" %SYSLOG_ENABLED_1%>UDP</option>
-                    <option value="2" %SYSLOG_ENABLED_2%>TCP</option>
+                <label for="sl_proto">Syslog Client:</label>
+                <select class="form-control" name="sl_proto" id="sl_proto">
+                    <option value="0" %SL_PROTO_0%>Disabled</option>
+                    <option value="1" %SL_PROTO_1%>UDP</option>
+                    <option value="2" %SL_PROTO_2%>TCP</option>
                     <!--#if ASYNC_TCP_SSL_ENABLED-->
-                    <option value="3" %SYSLOG_ENABLED_3%>TCP with TLS</option>
+                    <option value="3" %SL_PROTO_3%>TCP with TLS</option>
                     <!--#endif-->
                 </select>
             </div>
             <span id="syslog_settings">
                 <div class="form-group">
-                    <label for="syslog_host">Syslog Host:</label>
-                    <input type="text" class="form-control" name="syslog_host" id="syslog_host" value="%SYSLOG_HOST%">
+                    <label for="sl_host">Syslog Host:</label>
+                    <input type="text" class="form-control" name="sl_host" id="sl_host" value="%SL_HOST%">
                 </div>
                 <div class="form-group">
-                    <label for="syslog_port">Syslog Port:</label>
-                    <input type="text" class="form-control" name="syslog_port" id="syslog_port" value="%SYSLOG_PORT%" placeholder="514">
+                    <label for="sl_port">Syslog Port:</label>
+                    <input type="text" class="form-control" name="sl_port" id="sl_port" value="%SL_PORT%" placeholder="514">
                 </div>
             </span>
             <div class="form-group">
@@ -60,7 +60,6 @@
     </div>
     <!--%%JAVASCRIPT-->
 	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/jquery-3.3.1.min.js"></script>
-	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/popper.min.js"></script>
 	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/popper.min.js"></script>
 	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/bootstrap.min.js"></script>
 	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/js.cookie.min.js"></script>

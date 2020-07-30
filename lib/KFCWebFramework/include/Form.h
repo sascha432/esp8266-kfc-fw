@@ -15,18 +15,24 @@
 #include "FormString.h"
 #include "FormStringObject.h"
 
-#define FORMUI_RAW_HTML "\xff"
+#if DEBUG_KFC_FORMS
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
+#endif
 
 class FormError;
 class FormData;
 
 class Form {
 public:
-    typedef std::vector<FormField *> FieldsVector;
-    typedef std::vector<FormError> ErrorsVector;
-    typedef std::function<bool(Form &form)> ValidateCallback_t;
-
     using PrintInterface = FormField::PrintInterface;
+    using FormFieldPtr = std::unique_ptr<FormField>;
+    using FieldsVector = std::vector<FormFieldPtr>;
+    using ErrorsVector = std::vector<FormError> ;
+    using ValidateCallback = std::function<bool(Form &form)> ;
+    using CStringGetter = std::function<const char *()>;
+    using CStringSetter = std::function<void(const char *)>;
 
     Form(FormData *data = nullptr);
     virtual ~Form();
@@ -35,12 +41,173 @@ public:
     void setFormData(FormData *data);
     void setInvalidMissing(bool invalidMissing);
 
+    FormField *getField(const String &name) const;
+    FormField &getField(int index) const;
+    size_t hasFields() const;
+
+    // --------------------------------------------------------------------
+    // Validators
+    //
+    // addValidator adds the validator to the last FormField that was added
+
+    FormValidator &addValidator(int index, FormValidator &&validator);
+    FormValidator &addValidator(FormValidator &&validator);
+    FormValidator &addValidator(FormField &field, FormValidator &&validator);
+
+    // --------------------------------------------------------------------
+    // FormUI
+    //
+    // addFormUI adds the FormUI object or elements to the last FormField that was added
+    // Arguments for addFormUI(...)
+    //
+    // FormUI:Label
+    // FormUI:PlaceHolder
+    // FormUI:Suffix
+    // FormUI:ItemList					type will be set to SELECT
+    // FormUI:BoolItems					type will be set to SELECT
+    // FormUI:*
+    // const __FlashStringHelper		converted to FormUI:Label
+    // FormUI::Type:*                   default = TEXT
+
+    template <typename... Args>
+    FormUI::UI &addFormUI(Args &&... args) {
+        return addFormUI(new FormUI::UI(std::forward<Args>(args)...));
+    }
+
+    FormUI::UI &addFormUI(FormUI::UI &&formUI);
+    FormUI::UI &addFormUI(FormUI::UI *formUI);
+
+    // --------------------------------------------------------------------
+    // Form data handling
+    //
+    void clearErrors();
+    bool validate();
+    bool validateOnly();
+    bool isValid() const;
+    bool hasChanged() const;
+    bool hasError(FormField &field) const;
+    void copyValidatedData();
+    const ErrorsVector &getErrors() const;
+
+    // call when all fields have been added
+    void finalize() const;
+
+    // add form title and submit button
+    void setFormUI(const String &title, const String &submit);
+    // add form title and default submit button
+    void setFormUI(const String &title);
+
+    void createHtml(PrintInterface &out);
+    const char *process(const String &name) const;
+    void createJavascript(PrintInterface &out) const;
+
+    void dump(Print &out, const String &prefix) const;
+
+    FormData *getFormData() const;
+    void setValidateCallback(ValidateCallback validateCallback);
+
+    // --------------------------------------------------------------------
+    // Methods for adding fields
+    //
+    // NOTES:
+    // - variable names that fit into the String's SSOSIZE saves a lot memory (ESP8266 length <= 10)
+    // - lambda functions as callback requires memory. use a static function whenever possible
+    // - ESP8266/32 accessing packed structures that have been passed as reference or pointer might
+    //   cause an exception cause of unaligend reads/writes. use getter and setters
+    //
+
+    // getter and setter for const char *
+    FormField &addCStringGetterSetter(const String &name, CStringGetter getter, CStringSetter setter, FormField::Type type = FormField::Type::TEXT) {
+        return add(name, String(getter()), [setter](const String &str, FormField &, bool store) {
+            if (store) {
+                setter(str.c_str());
+            }
+            return false;
+        }, type);
+    }
+
+    // getter and setters for enum, bitfields etc...
+    // obj must exist until the form object has been deleted
+    template<typename ObjType, typename VarType>
+    FormField &addObjectGetterSetter(const String &name, ObjType &obj, std::function<VarType(const ObjType &obj)> getter, std::function<void(ObjType &obj, VarType value)> setter, FormField::Type type = FormField::Type::TEXT) {
+        __LDBG_printf("name=%s value=%s obj=%p", name.c_str(), String(getter(obj)).c_str(), &obj);
+        return add(name, getter(obj), [&obj, setter _IF_DEBUG(, getter)](VarType &value, FormField &field, bool store) {
+            if (store) {
+                setter(obj, value);
+            }
+            __LDBG_printf("name=%s value=%s obj=%p new_value=%s store=%u", field.getName().c_str(), String(value).c_str(), &obj, String(getter(obj)).c_str(), store);
+            return false;
+        }, type);
+    }
+
+    // ESP8266 support for accessing unaligned member variables
+    // obj must exist until the form object has been deleted
+    template<typename ObjType, typename VarType, typename CastVarType = VarType>
+    FormField &addMemberVariable(const String &name, ObjType &obj, VarType ObjType::*memberPtr, FormField::Type type = FormField::Type::TEXT) {
+        __LDBG_printf("name=%s value=%s obj=%p ptr=%p", name.c_str(), String(static_cast<VarType>(obj.*memberPtr)).c_str(), &obj, memberPtr);
+        return add<VarType>(name, static_cast<VarType>(obj.*memberPtr), [&obj, memberPtr](const VarType &value, FormField &field, bool store) {
+            if (store) {
+                obj.*memberPtr = static_cast<CastVarType>(value);
+            }
+            __LDBG_printf("name=%s value=%s obj=%p ptr=%p cast=%s new_value=%s store=%u", field.getName().c_str(), String(static_cast<VarType>(value)).c_str(), &obj, memberPtr, String(static_cast<CastVarType>(value)).c_str(), String(static_cast<VarType>(obj.*memberPtr)).c_str(), store);
+            return false;
+        }, type);
+    }
+
+    FormField &add(const String &name, const String &value, FormField::Type type = FormField::Type::TEXT) {
+        return _add(new FormField(name, value, type));
+    }
+
+    FormField &add(const String &name, const String &value, FormStringObject::Callback callback = nullptr, FormField::Type type = FormField::Type::TEXT) {
+        return _add(new FormStringObject(name, value, callback, type));
+    }
+
+    FormField &add(const String &name, String &value, FormField::Type type = FormField::Type::TEXT) {
+        return _add(new FormStringObject(name, value, type));
+    }
+
+    FormField &add(const String &name, const IPAddress &value, typename FormObject<IPAddress>::Callback callback = nullptr, FormField::Type type = FormField::Type::TEXT) {
+        return _add(new FormObject<IPAddress>(name, value, callback, type));
+    }
+
+    template <typename VarType>
+    FormField &add(const String &name, VarType value, typename FormValue<VarType>::Callback callback = nullptr, FormField::Type type = FormField::Type::SELECT) {
+        return _add(new FormValue<VarType>(name, value, callback, type));
+    }
+
+    template <typename ArrayElementType, size_t kArraySize>
+    FormField &add(const String &name, ArrayElementType *value, std::array<ArrayElementType, kArraySize> bitmask, FormField::Type type = FormField::Type::SELECT) {
+        return _add(new FormBitValue<ArrayElementType, kArraySize>(name, value, bitmask, type));
+    }
+
+    template <size_t kMaxSize>
+    FormField &add(const String &name, char *value, FormField::Type type = FormField::Type::TEXT) {
+        return _add(new FormCString(name, value, kMaxSize, type));
+    }
+
+    // --------------------------------------------------------------------
+    // Methods for adding groups
+    //
+    // auto &grp = form.addGroup(...);
+    // ...fields inside the group...
+    // grp.end();
+
+    // expandable group
+    //
     // name field:
-    // #my-id = set id="my-id"1
+    // #my-id = set id="my-id"
+    // .my-class = add to class="my-class"
     // random-str = set id="random-str"
-    // .my-class = add class="my-class"
     // empty = no id/no class
-    FormGroup &addGroup(const String &name, const String &label, bool expanded, FormUI::TypeEnum_t type = FormUI::TypeEnum_t::GROUP_START);
+    FormGroup &addGroup(const String &name, const FormUI::Label &label, bool expanded, FormUI::Type type = FormUI::Type::GROUP_START);
+
+    // title and separator
+    FormGroup &addHrGroup(const String &id, const FormUI::Label &label = String()) {
+        return addGroup(id, label, false, FormUI::Type::GROUP_START_HR);
+    }
+
+    // no disible attributes
+    //
     // dependencies field:
     // the string must contain a valid JSON object. ' is replaced with " to avoid too much escaping. use \\' for javascript strings (becomes ")
     //
@@ -50,105 +217,15 @@ public:
     // #group-div-class is the target, #my_input_field: value 0 and 1 hide the div, 2 shows it
     // auto &group = form.addDivGroup(F("group-div-class"), F("{'i':'#my_input_field','s':{'0':'$T.hide()','1':'$T.hide()','2':'$T.show()'}},'m':'alert(\\'Invalid value: \\'+$V)'"));
     FormGroup &addDivGroup(const String &id, const String &dependencies = String()) {
-        return addGroup(id, dependencies, false, FormUI::TypeEnum_t::GROUP_START_DIV);
+        return addGroup(id, FormUI::Label(dependencies, true), false, FormUI::Type::GROUP_START_DIV);
     }
-    FormGroup &addHrGroup(const String &id, const String &label = String()) {
-        return addGroup(id, label, false, FormUI::TypeEnum_t::GROUP_START_HR);
-    }
-
-    int add(FormField *field);
-    FormField *_add(FormField *field);
-
-    //
-    // NOTE: variable names that fit into the String's SSOSIZE saves a lot memory (ESP8266 length < 11)
-    //
-
-    FormField *add(const String &name, const String &value, FormField::InputFieldType type = FormField::InputFieldType::TEXT);
-
-    //
-    // NOTE: lambda functions as callbacks requires memory. use a static function whenever possible
-    //
-
-    FormField *add(const String &name, const String &value, FormStringObject::SetterCallback_t setter = nullptr, FormField::InputFieldType type = FormField::InputFieldType::TEXT);
-    FormField *add(const String &name, String *value, FormField::InputFieldType type = FormField::InputFieldType::TEXT);
-
-    FormField *add(const String &name, const IPAddress &value, typename FormObject<IPAddress>::SetterCallback_t setter = nullptr, FormField::InputFieldType type = FormField::InputFieldType::TEXT) {
-        return _add(new FormObject<IPAddress>(name, value, setter, type));
-    }
-
-    template <class T>
-    FormField *add(const String &name, T value, typename FormValue<T>::GetterSetterCallback_t callback = nullptr, FormField::InputFieldType type = FormField::InputFieldType::SELECT) {
-        return _add(new FormValue<T>(name, value, callback, type));
-    }
-
-    template <class T>
-    FormField *add(const String &name, T *value, typename FormValue<T>::GetterSetterCallback_t callback, FormField::InputFieldType type = FormField::InputFieldType::SELECT) {
-        return _add(new FormValue<T>(name, value, callback, type));
-    }
-
-    template <class T, size_t N>
-    FormField *add(const String &name, T *value, std::array<T, N> bitmask, FormField::InputFieldType type = FormField::InputFieldType::SELECT) {
-        return _add(new FormBitValue<T, N>(name, value, bitmask, type));
-    }
-
-    template <class T>
-    FormField *add(const String &name, T *value, FormField::InputFieldType type = FormField::InputFieldType::SELECT) {
-        return _add(new FormValue<T>(name, value, type));
-    }
-
-    template <size_t size>
-    FormField *add(const String &name, char *value, FormField::InputFieldType type = FormField::InputFieldType::TEXT) {
-        return _add(new FormString<size>(name, value, type));
-    }
-
-    // template <class C, bool isObject>
-    // FormField *add(const String &name, C *object, FormField::InputFieldType type = FormField::InputFieldType::TEXT) {
-    //     return _add(new FormObject<C>(name, object, type));
-    // }
-
-    FormValidator *addValidator(int index, FormValidator *validator);
-    FormValidator *addValidator(FormValidator *validator);
-    FormValidator *addValidator(const String &name, FormValidator *validator);
-
-    FormField *getField(const String &name) const;
-    FormField &getField(int index) const;
-    size_t hasFields() const;
-
-    void clearErrors();
-    bool validate();
-    bool validateOnly();
-    bool isValid() const;
-    bool hasChanged() const;
-    bool hasError(FormField *field) const;
-    void copyValidatedData();
-    const ErrorsVector &getErrors() const;
-    void finalize() const;
-
-    const char *process(const String &name) const;
-    void createJavascript(PrintInterface &out) const;
-
-    void setFormUI(const String &title, const String &submit);
-    void setFormUI(const String &title);
-    void createHtml(PrintInterface &out);
-
-    void dump(Print &out, const String &prefix) const;
-
-    FormData *getFormData() const {
-        return _data;
-    }
-
-    void setValidateCallback(ValidateCallback_t validateCallback) {
-        _validateCallback = validateCallback;
-    }
-
-    // FieldsVector &getFields() {
-    //     return _fields;
-    // }
-
-    // normalize and shorten variable name
-    static String normalizeName(const __FlashStringHelper *str);
 
 private:
+    FormField &_add(FormField *field);
+    FormGroup &_add(FormGroup *field) {
+        return reinterpret_cast<FormGroup &>(_add(reinterpret_cast<FormField *>(field)));
+    }
+
     static const char *_jsonEncodeString(const String &str, PrintInterface &out);
 
     FormData *_data;
@@ -158,5 +235,9 @@ private:
     bool _hasChanged;
     String _formTitle;
     String _formSubmit;
-    ValidateCallback_t _validateCallback;
+    ValidateCallback _validateCallback;
 };
+
+#if DEBUG_KFC_FORMS
+#include <debug_helper_disable.h>
+#endif

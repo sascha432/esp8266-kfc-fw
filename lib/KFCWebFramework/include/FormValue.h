@@ -8,21 +8,21 @@
 #include <type_traits>
 #include <limits>
 
-template <typename T>
+template <typename VarType>
 class FormValue : public FormField {
 public:
     // isSetter indicates to translate the variable to user format. return false if the getter callback is not supported
-    typedef std::function<bool(T &value, FormField &field, bool store)> GetterSetterCallback_t;
+    typedef std::function<bool(VarType &value, FormField &field, bool store)> Callback;
 
-    FormValue(const String& name, T value, GetterSetterCallback_t callback = nullptr, FormField::InputFieldType type = FormField::InputFieldType::SELECT) : FormField(name), _value(nullptr), _callback(callback) {
+    FormValue(const String& name, VarType value, Callback callback = nullptr, Type type = Type::SELECT) : FormField(name), _value(nullptr), _callback(callback) {
         setType(type);
         _initValue(value);
     }
-    FormValue(const String& name, T *value, GetterSetterCallback_t callback = nullptr, FormField::InputFieldType type = FormField::InputFieldType::SELECT) : FormField(name), _value(value), _callback(callback) {
+    FormValue(const String& name, VarType *value, Callback callback = nullptr, Type type = Type::SELECT) : FormField(name), _value(value), _callback(callback) {
         setType(type);
         _initValue(value);
     }
-    FormValue(const String &name, T *value, FormField::InputFieldType type = FormField::InputFieldType::SELECT) : FormField(name), _value(value), _callback(nullptr) {
+    FormValue(const String &name, VarType *value, Type type = Type::SELECT) : FormField(name), _value(value), _callback(nullptr) {
         setType(type);
         _initValue(value);
     }
@@ -30,8 +30,11 @@ public:
     virtual void copyValue() {
         if (_callback) {
             if (_value) {
-                *_value = (T)getValue(); // convert to T, the callback can use field.getValue() to read the actual string
-                _callback((T &)*_value, *this, true);
+#if !_MSC_VER
+                *_value = (VarType)getValue(); // convert to VarType, the callback can use field.getValue() to read the actual string
+#endif
+                _callback((VarType &)*_value, *this, true);
+                //static_cast<VarType>(_value)
             }
             else {
                 auto tmp = getValue();
@@ -39,36 +42,38 @@ public:
             }
         }
         else if (_value) {
-            *_value = (T)getValue();
+#if !_MSC_VER
+            *_value = (VarType)getValue();
+#endif
         }
     }
 
     virtual bool setValue(const String &value) override {
         if (_callback) {
-            auto tmp = (T)_stringToValue(value, (T)0);
+            auto tmp = (VarType)(_stringToValue(value, static_cast<VarType>(0)));
             if (_callback(tmp, *this, true) && _callback(tmp, *this, false)) { // convert from user input and back to compare values
                 return FormField::setValue(_valueToString(tmp));
             }
         }
-        return FormField::setValue(_valueToString(_stringToValue(value, (T)0)));
+        return FormField::setValue(_valueToString(_stringToValue(value, static_cast<VarType>(0))));
     }
 
-    T getValue() {
-        return (T)_stringToValue(FormField::getValue(), (T)0);
+    VarType getValue() {
+        return (VarType)(_stringToValue(FormField::getValue(), static_cast<VarType>(0)));
     }
 
     // these modify the value that was passed to FormValue, not the value of the form
-    void _setValue(T value) {
+    void _setValue(VarType value) {
         *_value = value;
     }
-    T _getValue() {
+    VarType _getValue() {
         return *_value;
     }
 
 private:
-    void _initValue(T value) {
+    void _initValue(VarType value) {
         if (_callback) {
-            T newValue = value;
+            VarType newValue = value;
             if (_callback(newValue, *this, false)) { // we have a callback, check if it supports getting the value
                 initValue(_valueToString(newValue));
                 return;
@@ -77,7 +82,7 @@ private:
         initValue(_valueToString(value));
     }
 
-    void _initValue(T *value) {
+    void _initValue(VarType *value) {
         _initValue(*value);
     }
 
@@ -154,6 +159,6 @@ private:
     }
 
 private:
-    T *_value;
-    GetterSetterCallback_t _callback;
+    VarType *_value;
+    Callback _callback;
 };

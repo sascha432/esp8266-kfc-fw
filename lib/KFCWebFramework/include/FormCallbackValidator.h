@@ -10,25 +10,25 @@
 
 class FormCallbackValidator : public FormValidator {
 public:
-    typedef std::function<bool(String, FormField &)> Callback_t;
+    using Callback = std::function<bool(String, FormField &)>;
 
-    FormCallbackValidator(Callback_t callback);
-    FormCallbackValidator(const String &message, Callback_t callback);
+    FormCallbackValidator(Callback callback);
+    FormCallbackValidator(const String &message, Callback callback);
 
     bool validate();
 
 private:
-    Callback_t _callback;
+    Callback _callback;
 };
 
 template <typename T>
 class FormTCallbackValidator : public FormValidator {
 public:
-    typedef std::function<bool(T, FormField &)> Callback_t;
+    using Callback = std::function<bool(T, FormField &)>;
 
-    FormTCallbackValidator(Callback_t callback) : FormTCallbackValidator(String(), callback) {
+    FormTCallbackValidator(Callback callback) : FormTCallbackValidator(String(), callback) {
     }
-    FormTCallbackValidator(const String &message, Callback_t callback) {
+    FormTCallbackValidator(const String &message, Callback callback) {
         _callback = callback;
     }
 
@@ -42,5 +42,5 @@ public:
     }
 
 private:
-    Callback_t _callback;
+    Callback _callback;
 };

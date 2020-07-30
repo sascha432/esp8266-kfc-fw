@@ -26,9 +26,6 @@ Form::~Form()
 
 void Form::clearForm()
 {
-    for (auto field : _fields) {
-        delete field;
-    }
     _fields.clear();
     _errors.clear();
 }
@@ -43,74 +40,53 @@ void Form::setInvalidMissing(bool invalidMissing)
     _invalidMissing = invalidMissing;
 }
 
-FormGroup &Form::addGroup(const String &name, const String &label, bool expanded, FormUI::TypeEnum_t type)
+FormGroup &Form::addGroup(const String &name, const FormUI::Label &label, bool expanded, FormUI::Type type)
 {
-    auto group = _add(new FormGroup(name, expanded));
-    auto ui = new FormUI(type);
-    ui->setLabel(label);
-    group->setFormUI(ui);
-    return reinterpret_cast<FormGroup &>(*group);
+    auto &group = _add(new FormGroup(name, expanded));
+    group.setFormUI(type, label);
+    return group;
 }
 
-int Form::add(FormField *field)
+FormField &Form::_add(FormField *field)
 {
     field->setForm(this);
-    _fields.push_back(field);
-    return _fields.size() - 1;
+    _fields.emplace_back(field);
+    return *field;
 }
 
-FormField *Form::_add(FormField *field)
+FormValidator &Form::addValidator(int index, FormValidator &&validator)
 {
-    add(field);
-    return field;
+    return _fields.at(index)->addValidator(std::move(validator));
 }
 
-FormField *Form::add(const String &name, const String &value, FormField::InputFieldType type)
+FormValidator &Form::addValidator(FormValidator &&validator)
 {
-    return _add(new FormField(name, value, type));
+    return _fields.back()->addValidator(std::move(validator));
 }
 
-FormField *Form::add(const String &name, const String &value, FormStringObject::SetterCallback_t setter, FormField::InputFieldType type)
+FormValidator &Form::addValidator(FormField &field, FormValidator &&validator)
 {
-    return _add(new FormStringObject(name, value, setter, type));
+    return field.addValidator(std::move(validator));
 }
 
-FormField *Form::add(const String &name, String *value, FormField::InputFieldType type)
+FormUI::UI &Form::addFormUI(FormUI::UI &&formUI)
 {
-    return _add(new FormStringObject(name, value, type));
+    return addFormUI(new FormUI::UI(std::move(formUI)));
 }
 
-FormValidator *Form::addValidator(int index, FormValidator *validator)
+FormUI::UI &Form::addFormUI(FormUI::UI *formUI)
 {
-    _fields.at(index)->addValidator(validator);
-    return validator;
+    _fields.back()->setFormUI(formUI);
+    return *formUI;
 }
 
-FormValidator *Form::addValidator(FormValidator *validator)
+FormField *Form::getField(const String &name) const 
 {
-    _fields.back()->addValidator(validator);
-    return validator;
-}
-
-FormValidator *Form::addValidator(const String &name, FormValidator *validator)
-{
-    auto field = getField(name);
-    if (field) {
-        field->addValidator(validator);
-        return validator;
-    }
-    else {
-        delete validator;
-    }
-    return nullptr;
-}
-
-FormField *Form::getField(const String &name) const
-{
-    for (auto field : _fields) {
-        if (field->getName().equals(name)) {
-            return field;
-        }
+    auto iterator = std::find_if(_fields.begin(), _fields.end(), [&name](const FormFieldPtr &ptr) {
+        return *ptr == name;
+    });
+    if (iterator != _fields.end()) {
+        return iterator->get();
     }
     return nullptr;
 }
@@ -146,21 +122,21 @@ bool Form::validateOnly()
 {
     _hasChanged = false;
     _errors.clear();
-    for (auto field: _fields) {
-        if (field->getType() != FormField::InputFieldType::GROUP) {
+    for (const auto &field: _fields) {
+        if (field->getType() != FormField::Type::GROUP) {
             if (_data->hasArg(field->getName())) {
                 _debug_printf_P(PSTR("Form::validateOnly() Set value %s = %s\n"), field->getName().c_str(), _data->arg(field->getName()).c_str());
                 if (field->setValue(_data->arg(field->getName()))) {
                     _hasChanged = true;
                 }
-                for (auto validator : field->getValidators()) {
+                for (const auto &validator: field->getValidators()) {
                     if (!validator->validate()) {
-                        _errors.push_back(FormError(field, validator->getMessage()));
+                        _errors.emplace_back(field.get(), validator->getMessage());
                     }
                 }
             }
             else if (_invalidMissing) {
-                _errors.push_back(FormError(field, FSPGM(Form_value_missing_default_message)));
+                _errors.emplace_back(field.get(), FSPGM(Form_value_missing_default_message));
             }
         }
     }
@@ -180,9 +156,9 @@ bool Form::hasChanged() const
     return _hasChanged;
 }
 
-bool Form::hasError(FormField *field) const
+bool Form::hasError(FormField &field) const
 {
-    for (auto &error: _errors) {
+    for (const auto &error: _errors) {
         if (error.is(field)) {
             return true;
         }
@@ -193,7 +169,7 @@ bool Form::hasError(FormField *field) const
 void Form::copyValidatedData()
 {
     if (isValid()) {
-        for (auto field : _fields) {
+        for (const auto &field : _fields) {
             field->copyValue();
         }
     }
@@ -214,17 +190,17 @@ void Form::finalize() const
 const char *Form::process(const String &name) const
 {
     // TODO check html entities encoding
-    for (auto field : _fields) {
+    for (const auto &field : _fields) {
         uint8_t len = (uint8_t)field->getName().length();
-        if (field->getType() == FormField::InputFieldType::TEXT && name.equalsIgnoreCase(field->getName())) {
+        if (field->getType() == FormField::Type::TEXT && name.equalsIgnoreCase(field->getName())) {
             _debug_printf_P(PSTR("Form::process(%s) INPUT_TEXT = %s\n"), name.c_str(), field->getValue().c_str());
             return field->getValue().c_str();
         }
-        else if (field->getType() == FormField::InputFieldType::CHECK && name.equalsIgnoreCase(field->getName())) {
+        else if (field->getType() == FormField::Type::CHECK && name.equalsIgnoreCase(field->getName())) {
             _debug_printf_P(PSTR("Form::process(%s) INPUT_CHECK = %d\n"), name.c_str(), field->getValue().toInt());
             return field->getValue().toInt() ? " checked" : "";
         }
-        else if (field->getType() == FormField::InputFieldType::SELECT && strncasecmp(field->getName().c_str(), name.c_str(), len) == 0) {
+        else if (field->getType() == FormField::Type::SELECT && strncasecmp(field->getName().c_str(), name.c_str(), len) == 0) {
             if (name.length() == len) {
                 _debug_printf_P(PSTR("Form::process(%s) INPUT_SELECT = %s\n"), name.c_str(), field->getValue().c_str());
                 return field->getValue().c_str();
@@ -288,7 +264,7 @@ void Form::createHtml(PrintInterface &output)
     if (_formTitle.length()) {
         output.printf_P(PSTR("<h1>%s</h1>" FORMUI_CRLF), _formTitle.c_str());
     }
-    for (auto field : _fields) {
+    for (const auto &field : _fields) {
         field->html(output);
     }
     PGM_P label = _formSubmit.length() ? _formSubmit.c_str() : SPGM(Save_Changes, "Save Changes");
@@ -320,13 +296,13 @@ void Form::dump(Print &out, const String &prefix) const {
     }
     out.print(prefix);
     out.println(F("Form data:"));
-    for (auto field : _fields) {
+    for (const auto &field : _fields) {
         out.print(prefix);
         out.print(field->getName());
         if (field->hasChanged()) {
             out.print('*');
         }
-        if (hasError(field)) {
+        if (hasError(*field)) {
             out.print('#');
         }
         out.print(F(": '"));
@@ -335,76 +311,12 @@ void Form::dump(Print &out, const String &prefix) const {
     }
 }
 
-String Form::normalizeName(const __FlashStringHelper *str)
+FormData *Form::getFormData() const 
 {
-    String name;
-    auto ptr = RFPSTR(str);
-    if (ptr) {
-        auto colon = strrchr_P(ptr, ':'); // remove name spaces
-        if (colon) {
-            ptr = colon + 1;
-        }
-        char ch;
-        while ((ch = pgm_read_byte(ptr++)) != 0) {
-            if (ch == '_' && name.length() == 0) {
-                // remove _ at the beginning of the string
-            }
-            else if (isupper(ch)) {
-                // multiple uppercase characters in a row are allowed
-                if (isupper(pgm_read_byte(ptr))) {
-                    name += (char)ch;
-                }
-                else {
-                    // change single uppercase characters to lowercase + _
-                    if (name.length() != 0) {
-                        name += '_';
-                    }
-                    name += (char)tolower(ch);
-                }
-            }
-            else {
-                // remove double _ and _ at the end of the string
-                if (!(ch == '_' && (pgm_read_byte(ptr) == '_' || pgm_read_byte(ptr) == 0))) {
-                    name += ch;
-                }
-            }
-        }
-    }
-    if (name.startsWith(FSPGM(is_, "is_"))) {
-        name.remove(0, 3);
-    }
-    if (name.startsWith(FSPGM(set_, "set_"))) {
-        name.remove(0, 4);
-    }
-    if (name.startsWith(FSPGM(get_, "get_"))) {
-        name.remove(0, 4);
-    }
-    name.replace(FSPGM(hidden), F("HI"));
-    name.replace(FSPGM(enabled), FSPGM(EN));
-    name.replace(FSPGM(safe_mode, "safe_mode"), F("SM"));
-    name.replace(FSPGM(reboot), F("RB"));
-    name.replace(FSPGM(client), F("CL"));
-    name.replace(FSPGM(timeout), F("TO"));
-    name.replace(FSPGM(lifetime), F("LT"));
-    name.replace(FSPGM(cookie), F("CK"));
-    name.replace(FSPGM(minutes), F("MN"));
-    name.replace(FSPGM(status), F("ST"));
-    name.replace(FSPGM(webui), F("WUI"));
-    name.replace(FSPGM(webserver), F("WSV"));
-    name.replace(FSPGM(server), FSPGM(SRV));
-    name.replace(FSPGM(performance_mode, "performance_mode"), F("PFM"));
-    name.replace(FSPGM(performance), F("PF"));
-    name.replace(FSPGM(encryption), F("ENC"));
-    name.replace(FSPGM(standby_mode, "standby_mode"), F("SBM"));
-    name.replace(FSPGM(standby), F("SB"));
-    name.replace(FSPGM(mode), F("MO"));
-    name.replace(FSPGM(timezone), F("TZ"));
-    name.replace(FSPGM(interval), F("IV"));
-    name.replace(FSPGM(refresh), F("RFH"));
-    name.replace(FSPGM(softap_, "softap_"), FSPGM(AP));
-    name.replace(FSPGM(softap), FSPGM(AP));
-    name.replace(FSPGM(station_mode, "station_mode"), FSPGM(STA));
+    return _data;
+}
 
-    __DBG_printf("normalize=%s new=%s len=%u", str, name.c_str(), name.length());
-    return name;
+void Form::setValidateCallback(ValidateCallback validateCallback) 
+{
+    _validateCallback = validateCallback;
 }

@@ -6,7 +6,7 @@
 #include "FormValidator.h"
 #include "Form.h"
 
-FormField::FormField(const String &name, const String &value, InputFieldType type) : _name(name), _value(value), _type(type), _formUI(nullptr), _form(nullptr), _hasChanged(false)
+FormField::FormField(const String &name, const String &value, Type type) : _name(name), _value(value), _type(type), _formUI(nullptr), _form(nullptr), _hasChanged(false)
 {
 #if DEBUG_KFC_FORMS && defined(ESP8266)
     if (name.length() >= PrintString::getSSOSIZE()) {
@@ -19,10 +19,6 @@ FormField::FormField(const String &name, const String &value, InputFieldType typ
 
 FormField::~FormField()
 {
-    for (auto validator : _validators) {
-        delete validator;
-    }
-    _validators.clear();
     if (_formUI) {
         delete _formUI;
     }
@@ -121,67 +117,70 @@ void FormField::setChanged(bool hasChanged)
     _hasChanged = hasChanged;
 }
 
-void FormField::setType(InputFieldType type) {
+void FormField::setType(Type type) {
     _type = type;
 }
 
-FormField::InputFieldType FormField::getType() const
+FormField::Type FormField::getType() const
 {
     return _type;
 }
 
-void FormField::setFormUI(FormUI *formUI)
+FormUI::UI &FormField::setFormUI(FormUI::UI *formUI)
 {
     if (_formUI) {
         delete _formUI;
     }
     _formUI = formUI;
     _formUI->setParent(this);
+    return *_formUI;
 }
 
-FormUI::TypeEnum_t FormField::getFormType() const
+FormUI::Type FormField::getFormType() const
 {
     if (_formUI) {
         return _formUI->getType();
     }
-    return FormUI::TypeEnum_t::NONE;
+    return FormUI::Type::NONE;
 }
 
 void FormField::html(PrintInterface &output)
 {
-    _debug_printf_P(PSTR("name=%s formUI=%p\n"), getName().c_str(), _formUI);
+    __LDBG_printf("name=%s formUI=%p", getName().c_str(), _formUI);
     if (_formUI) {
         _formUI->html(output);
     }
 }
 
-void FormField::addValidator(FormValidator *validator)
+FormValidator &FormField::addValidator(FormValidator &&validator)
 {
-    _validators.push_back(validator);
-    _validators.back()->setField(this);
+    _validators.emplace_back(std::move(FormValidatorPtr(new FormValidator(std::move(validator)))));
+    auto &newValidator = _validators.back();
+    newValidator->setField(this);
+    __LDBG_printf("name=%s message=%s", newValidator->getField().getName().c_str(), newValidator->getMessage().c_str());
+    return *newValidator;
 }
 
-const FormField::ValidatorsVector &FormField::getValidators() const
+FormField::ValidatorsVector &FormField::getValidators()
 {
     return _validators;
 }
 
 void FormGroup::end()
 {
-    FormUI::TypeEnum_t type;
+    FormUI::Type type;
     switch(getFormType()) {
-        case FormUI::TypeEnum_t::GROUP_START:
-            type = FormUI::TypeEnum_t::GROUP_END;
+        case FormUI::Type::GROUP_START:
+            type = FormUI::Type::GROUP_END;
             break;
-        case FormUI::TypeEnum_t::GROUP_START_DIV:
-            type = FormUI::TypeEnum_t::GROUP_END_DIV;
+        case FormUI::Type::GROUP_START_DIV:
+            type = FormUI::Type::GROUP_END_DIV;
             break;
-        case FormUI::TypeEnum_t::GROUP_START_HR:
-            type = FormUI::TypeEnum_t::GROUP_END_HR;
+        case FormUI::Type::GROUP_START_HR:
+            type = FormUI::Type::GROUP_END_HR;
             break;
         default:
             return;
-
     }
     getForm().addGroup(getName(), String(), false, type);
 }

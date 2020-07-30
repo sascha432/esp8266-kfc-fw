@@ -25,21 +25,25 @@
     </nav>
     <!--NAV%%-->
     <div class="container">
+        <script>
+            (function() {
+                var timezone_list =
+                /*--%%TIMEZONE_LIST_JS--*/{};
+                /*--TIMEZONE_LIST_JS%%--*/
+                var s = '';
+                for (let key in timezone_list) {
+                    var val = timezone_list[key];
+                    s += '<option value="' + val + '"' + ('%TZ_NAME%' == key ? ' selected' : '') + '>' + key + '</option>';
+                }
+                window.posix_timezone_list_options = s;
+            })();
+        </script>
         <form method="POST" action="ntp.html" id="ntp_settings">
             %FORM_HTML%
-<script>
-(function(){var timezone_list =
-/*--%%TIMEZONE_LIST_JS--*/{};
-/*--TIMEZONE_LIST_JS%%--*/
-    var s = '';
-    for (let key in timezone_list) {
-        var val = timezone_list[key];
-        s += '<option value="' + val + '"' + ('%TZ_NAME%' == key ? ' selected' : '') + '>' + key + '</option>';
-    }
-    document.getElementById('posix_TZ').innerHTML = s;
-})();
-</script>
         </form>
+        <script>
+            document.getElementById('posix_tz').innerHTML = window.posix_timezone_list_options;
+        </script>
         <!--%%FOOT-->
         <div class="row">
             <div class="col footer">&nbsp;</div>

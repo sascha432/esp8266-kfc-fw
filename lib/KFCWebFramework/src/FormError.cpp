@@ -35,7 +35,7 @@ const String & FormError::getMessage() const
     return _message;
 }
 
-const bool FormError::is(FormField *field) const
+const bool FormError::is(FormField &field) const
 {
-    return field == _field;
+    return &field == _field;
 }

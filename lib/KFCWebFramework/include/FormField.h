@@ -14,11 +14,12 @@ class FormValidator;
 
 class FormField {
 public:
-    typedef std::vector <FormValidator *> ValidatorsVector;
-
     using PrintInterface = PrintArgs::PrintInterface;
 
-    enum class InputFieldType {
+    using FormValidatorPtr = std::unique_ptr<FormValidator>;
+    using ValidatorsVector = std::vector<FormValidatorPtr>;
+
+    enum class Type {
         NONE = 0,
         CHECK,
         SELECT,
@@ -26,7 +27,7 @@ public:
         GROUP,
     };
 
-    FormField(const String &name, const String &value = String(), InputFieldType type = FormField::InputFieldType::NONE);
+    FormField(const String &name, const String &value = String(), Type type = Type::NONE);
     // FormField(const String &name, const String &value, bool optional) : FormField(name, value) {
     //     _optional = optional;
     // }
@@ -34,6 +35,13 @@ public:
 
     void setForm(Form *form);
     Form &getForm() const;
+
+    bool operator==(const String &name) const {
+        return _name.equals(name);
+    }
+    bool operator==(const __FlashStringHelper *name) const {
+        return String_equals(_name, name);
+    }
 
     // void setOptional(bool optional) {
     //     _optional = optional;
@@ -77,15 +85,21 @@ public:
     bool hasChanged() const;
     void setChanged(bool hasChanged);
 
-    void setType(InputFieldType type);
-    InputFieldType getType() const;
+    void setType(Type type);
+    Type getType() const;
 
-    void setFormUI(FormUI *formUI);
-    FormUI::TypeEnum_t getFormType() const;
+    template <typename... Args>
+    FormUI::UI &setFormUI(Args &&... args) {
+        return setFormUI(new FormUI::UI(std::forward<Args>(args)...));
+    }
+
+    FormUI::UI &setFormUI(FormUI::UI *formUI);
+
+    FormUI::Type getFormType() const;
     void html(PrintInterface &output);
 
-    void addValidator(FormValidator *validator);
-    const ValidatorsVector &getValidators() const;
+    FormValidator &addValidator(FormValidator &&validator);
+    ValidatorsVector &getValidators();
 
 private:
     friend Form;
@@ -93,8 +107,8 @@ private:
     String _name;
     String _value;
     ValidatorsVector _validators;
-    InputFieldType _type;
-    FormUI *_formUI;
+    Type _type;
+    FormUI::UI *_formUI;
     Form *_form;
     bool _hasChanged;
     // bool _optional;
@@ -104,7 +118,7 @@ private:
 class FormGroup : public FormField {
 public:
     FormGroup(const FormGroup &group) = delete;
-    FormGroup(const String &name, bool expanded) : FormField(name, String(), FormField::InputFieldType::GROUP), _expanded(expanded) {
+    FormGroup(const String &name, bool expanded) : FormField(name, String(), Type::GROUP), _expanded(expanded) {
     }
     virtual bool setValue(const String &value) override {
         return false;

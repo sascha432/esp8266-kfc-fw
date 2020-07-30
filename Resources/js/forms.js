@@ -126,6 +126,12 @@ $(function() {
         var always_execute = dep.e ? dep.e : '';
         var $I = $(dep.i);
         var $T = dep.t ? $(dep.t) : $(this);
+        if ($I.length == 0) {
+            dbg_console.error('$I not found', dep.i);
+        }
+        if ($T.length == 0) {
+            dbg_console.error('$T not found', dep.t);
+        }
         $I.on('change', function() {
             var $V = $I.val();
             // var $Vint = parseInt($V);
@@ -133,7 +139,7 @@ $(function() {
             var vKey = 'NO KEY FOUND';
             $.each(states, function(key, val) {
                 if ($V == key) {
-                // if ($V === key || parseInt(key) === $Vint) {
+                //if ($V === key || parseInt(key) === $Vint) {
                     code = val;
                     vKey = key;
                 }

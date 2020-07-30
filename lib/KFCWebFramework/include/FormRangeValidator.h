@@ -21,6 +21,16 @@ private:
     bool _allowZero;
 };
 
+class FormNetworkPortValidator : public FormRangeValidator
+{
+public:
+    static constexpr long kPortMin = 1;
+    static constexpr long kPortMax = 65535;
+
+    FormNetworkPortValidator(long min, long max, bool allowZero = false);
+    FormNetworkPortValidator(bool allowZero = false) : FormNetworkPortValidator(kPortMin, kPortMax, allowZero) {}
+};
+
 class FormRangeValidatorDouble : public FormValidator {
 public:
     FormRangeValidatorDouble(double min, double max, uint8_t digits = 2, bool allowZero = false);

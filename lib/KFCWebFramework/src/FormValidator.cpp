@@ -6,38 +6,39 @@
 #include "FormField.h"
 #include "Form.h"
 
-FormValidator::FormValidator() {
-    _validateIfValid = false;
+FormValidator::FormValidator() : _field(nullptr), _enabled(true) 
+{
 }
 
-FormValidator::FormValidator(const String & message) : FormValidator() {
-    _message = message;
+FormValidator::FormValidator(const String &message) : _field(nullptr), _enabled(true), _message(message)
+{
 }
 
-FormValidator::~FormValidator() {
+FormValidator::~FormValidator() 
+{
 }
 
-void FormValidator::setField(FormField * field) {
+void FormValidator::setField(FormField * field) 
+{
     _field = field;
 }
 
-FormField & FormValidator::getField() {
+FormField &FormValidator::getField() 
+{
     return *_field;
 }
 
-String FormValidator::getMessage() {
+String FormValidator::getMessage() 
+{
     return _message;
 }
 
-bool FormValidator::validate() {
-    if (_validateIfValid) {
-        if (!_field->getForm().isValid()) {
-            return false;
-        }
-    }
-    return true;
+bool FormValidator::validate() 
+{
+    return (_enabled && !_field->getForm().isValid());
 }
 
-void FormValidator::setValidateIfValid(bool validateIfValid) {
-    _validateIfValid = validateIfValid;
+void FormValidator::setEnabled(bool value)
+{
+    _enabled = value;
 }

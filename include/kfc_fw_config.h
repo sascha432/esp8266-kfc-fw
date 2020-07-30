@@ -27,7 +27,6 @@
 #include "../src/plugins/mdns/mdns_resolver.h"
 #include <SaveCrash.h>
 #include <StringKeyValueStore.h>
-#include "../src/generated/FlashStringGeneratorAuto.h"
 #include "logger.h"
 #include "misc.h"
 #include "at_mode.h"
@@ -45,13 +44,13 @@ extern float load_avg[3]; // 1min, 5min, 15min
 #define LOOP_COUNTER_LOAD(avg) (avg ? 45900 / avg : NAN)    // this calculates the load compared to safe mode @ 1.0, no wifi and no load, 80MHz
 #endif
 
-#include "kfc_fw_config_types.h"
+#include <kfc_fw_config_types.h>
 
 #define HASH_SIZE                   64
 
 #include "../src/plugins/dimmer_module/firmware_protocol.h"
 
-struct DimmerModule {
+typedef struct __attribute__packed__ DimmerModule {
     register_mem_cfg_t cfg;
     float on_off_fade_time;
     float fade_time;
@@ -66,7 +65,8 @@ struct DimmerModule {
 #if IOT_ATOMIC_SUN_V2
     int8_t channel_mapping[4];
 #endif
-};
+    DimmerModule();
+} DimmerModule;
 
 struct DimmerModuleButtons {
     uint16_t shortpress_time;
@@ -126,36 +126,6 @@ public:
     char host2[65];
     char host3[65];
     char host4[65];
-};
-
-class Config_Sensor {
-public:
-#if IOT_SENSOR_HAVE_BATTERY
-    typedef struct __attribute__packed__ {
-        float calibration;
-        uint8_t precision: 8;
-        float offset;
-    } battery_t;
-    battery_t battery;
-#endif
-#if (IOT_SENSOR_HAVE_HLW8012 || IOT_SENSOR_HAVE_HLW8032)
-    typedef struct __attribute__packed__ {
-        float calibrationU;
-        float calibrationI;
-        float calibrationP;
-        uint64_t energyCounter;
-        uint8_t extraDigits: 8;
-    } hlw80xx_t;
-    hlw80xx_t hlw80xx;
-#endif
-    Config_Sensor() {
-#if IOT_SENSOR_HAVE_BATTERY
-        battery = battery_t({ 1.0f, 2, 0.0f });
-#endif
-#if (IOT_SENSOR_HAVE_HLW8012 || IOT_SENSOR_HAVE_HLW8032)
-        hlw80xx = hlw80xx_t({ 1.0f, 1.0f, 1.0f, 0, 0 });
-#endif
-    }
 };
 
 class Config_Button {
@@ -240,8 +210,6 @@ namespace Config_QuickConnect
 };
 
 typedef struct {
-    ConfigFlags flags;
-
     uint16_t http_port;
     char cert_passphrase[33];
 
@@ -251,7 +219,6 @@ typedef struct {
     Clock_t clock;
 
     Config_Ping ping;
-    Config_Sensor sensor;
     Config_Button buttons;
 } Config;
 
@@ -359,20 +326,23 @@ typedef struct {
         return false; \
     }
 
-#define addWriteableStruct(struct, member, ...) \
-    add<decltype(struct.member)>(Form::normalizeName(F(_STRINGIFY(member))), _H_W_STRUCT_VALUE(struct, member, ##__VA_ARGS__)
+#define addWriteableStruct(form_name, struct, member, ...) \
+    add<decltype(struct.member)>(F(form_name), _H_W_STRUCT_VALUE(struct, member, ##__VA_ARGS__)
 
-#define addWriteableStructIPAddress(struct, member, ...) \
-    add(Form::normalizeName(F(_STRINGIFY(member))), _H_W_STRUCT_IP_VALUE(struct, member, ##__VA_ARGS__)
+#define addWriteableStructIPAddress(form_name, struct, member, ...) \
+    add(F(form_name), _H_W_STRUCT_IP_VALUE(struct, member, ##__VA_ARGS__)
 
-#define addCStrGetterSetter(getter, setter, ...) \
-    add(Form::normalizeName(F(_STRINGIFY(getter))), _H_CSTR_FUNC(getter, setter, ##__VA_ARGS__)
+#define addCStrGetterSetter(form_name, getter, setter, ...) \
+    add(F(form_name), _H_CSTR_FUNC(getter, setter, ##__VA_ARGS__)
 
-#define addGetterSetter(getter, setter, ...) \
-    add(Form::normalizeName(F(_STRINGIFY(getter))), _H_FUNC(getter, setter, ##__VA_ARGS__)
+#define addGetterSetter(form_name, getter, setter, ...) \
+    add(F(form_name), _H_FUNC(getter, setter, ##__VA_ARGS__)
 
-#define addGetterSetterType(getter, setter, type, ...) \
-    add(Form::normalizeName(F(_STRINGIFY(getter))), _H_FUNC_TYPE(getter, setter, type, ##__VA_ARGS__)
+#define addGetterSetterType(form_name, getter, setter, type, ...) \
+    add(F(form_name), _H_FUNC_TYPE(getter, setter, type, ##__VA_ARGS__)
+
+#define addGetterSetterType_P(form_name, getter, setter, type, ...) \
+    add(FPSTR(form_name), _H_FUNC_TYPE(getter, setter, type, ##__VA_ARGS__)
 
 
 // NOTE using the new handlers (USE_WIFI_SET_EVENT_HANDLER_CB=0) costs 896 byte RAM with 5 handlers
@@ -384,6 +354,8 @@ typedef struct {
 #error ESP32 requires USE_WIFI_SET_EVENT_HANDLER_CB=1
 #endif
 #endif
+
+#include <kfc_fw_config_classes.h>
 
 class KFCFWConfiguration : public Configuration {
 public:
@@ -513,4 +485,3 @@ private:
 
 extern KFCFWConfiguration config;
 
-#include "kfc_fw_config_classes.h"

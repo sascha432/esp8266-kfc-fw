@@ -19,9 +19,11 @@
 #include <debug_helper_disable.h>
 #endif
 
+using KFCConfigurationClasses::Plugins;
+
 PROGMEM_STRING_DEF(iot_sensor_hlw80xx_state_file, "/.pvt/hlw80xx.state");
 
-Sensor_HLW80xx::Sensor_HLW80xx(const String &name) : MQTTSensor(), _name(name)
+Sensor_HLW80xx::Sensor_HLW80xx(const String &name) : MQTTSensor(), _name(name), _power(NAN), _voltage(NAN), _current(NAN)
 {
 #if DEBUG_MQTT_CLIENT
     debug_printf_P(PSTR("Sensor_HLW80xx(): component=%p\n"), this);
@@ -29,15 +31,11 @@ Sensor_HLW80xx::Sensor_HLW80xx(const String &name) : MQTTSensor(), _name(name)
 #if IOT_SENSOR_HLW80xx_ADJUST_CURRENT
     _dimmingLevel = -1;
 #endif
+    reconfigure(nullptr); // read config
     _loadEnergyCounter();
-    _power = NAN;
-    _voltage = NAN;
-    _current = NAN;
-    _calibrationI = 1;
-    _calibrationP = 1;
-    _calibrationU = 1;
-    _extraDigits = 0;
-    reconfigure(nullptr);
+    // _power = NAN;
+    // _voltage = NAN;
+    // _current = NAN;
 
     setUpdateRate(IOT_SENSOR_HLW80xx_UPDATE_RATE);
     setMqttUpdateRate(IOT_SENSOR_HLW80xx_UPDATE_RATE_MQTT);
@@ -160,18 +158,13 @@ void Sensor_HLW80xx::createWebUI(WebUI &webUI, WebUIRow **row)
 
 void Sensor_HLW80xx::reconfigure(PGM_P source)
 {
-    auto sensor = config._H_GET(Config().sensor).hlw80xx;
-    if (sensor.calibrationU) {
-        _calibrationU = sensor.calibrationU;
-    }
-    if (sensor.calibrationI) {
-        _calibrationI = sensor.calibrationI;
-    }
-    if (sensor.calibrationP) {
-        _calibrationP = sensor.calibrationP;
-    }
+    auto sensor = Plugins::Sensor::getConfig().hlw80xx;
+    _calibrationU = sensor.calibrationU;
+    _calibrationI = sensor.calibrationI;
+    _calibrationP = sensor.calibrationP;
     _extraDigits = sensor.extraDigits;
-    _debug_printf_P(PSTR("Sensor_HLW80xx::Sensor_HLW80xx(): calibration U=%f, I=%f, P=%f\n"), _calibrationU, _calibrationI, _calibrationP);
+    _energyCounter[0] = sensor.energyCounter;
+    __DBG_printf("Sensor_HLW80xx::Sensor_HLW80xx(): calibration U=%f I=%f P=%f x_digits=%u energy=%.0f", _calibrationU, _calibrationI, _calibrationP, _extraDigits, (double)_energyCounter[0]);
 }
 
 void Sensor_HLW80xx::shutdown()
@@ -179,39 +172,43 @@ void Sensor_HLW80xx::shutdown()
     _saveEnergyCounter();
 
     // update energy counter in EEPROM
-    auto &sensor = config._H_W_GET(Config().sensor).hlw80xx;
-    sensor.energyCounter = _energyCounter[0];
+    auto &cfg = Plugins::Sensor::getWriteableConfig();
+    cfg.hlw80xx.energyCounter = _energyCounter[0];
     config.write();
 }
 
 void Sensor_HLW80xx::createConfigureForm(AsyncWebServerRequest *request, Form &form)
 {
-    auto &sensor = config._H_W_GET(Config().sensor);
-    auto kWh = String(F("kWh"));
+    auto &cfg = Plugins::Sensor::getWriteableConfig();
 
-    form.add<float>(F("hlw80xx_calibrationU"), _H_STRUCT_VALUE(Config().sensor, hlw80xx.calibrationU))->setFormUI(new FormUI(FormUI::TEXT, F("HLW8012 Voltage Calibration")));
-    form.add<float>(F("hlw80xx_calibrationI"), _H_STRUCT_VALUE(Config().sensor, hlw80xx.calibrationI))->setFormUI(new FormUI(FormUI::TEXT, F("HLW8012 Current Calibration")));
-    form.add<float>(F("hlw80xx_calibrationP"), _H_STRUCT_VALUE(Config().sensor, hlw80xx.calibrationP))->setFormUI(new FormUI(FormUI::TEXT, F("HLW8012 Power Calibration")));
-    form.add<uint8_t>(F("hlw80xx_extra_digits"), _H_STRUCT_VALUE(Config().sensor, hlw80xx.extraDigits))->setFormUI(new FormUI(FormUI::TEXT, F("HLW8012 Extra Digits/Precision")));
-    form.addValidator(new FormRangeValidator(F("Enter 0 to 4 for extra digits"), 0, 4));
+    form.add<float>(F("hlw80xx_calibrationU"), _H_W_STRUCT_VALUE(cfg, hlw80xx.calibrationU));
+    form.addFormUI(F("HLW8012 Voltage Calibration"));
+    form.add<float>(F("hlw80xx_calibrationI"), _H_W_STRUCT_VALUE(cfg, hlw80xx.calibrationI));
+    form.addFormUI(F("HLW8012 Current Calibration"));
+    form.add<float>(F("hlw80xx_calibrationP"), _H_W_STRUCT_VALUE(cfg, hlw80xx.calibrationP));
+    form.addFormUI(F("HLW8012 Power Calibration"));
+    form.add<uint8_t>(F("hlw80xx_extra_digits"), _H_W_STRUCT_VALUE(cfg, hlw80xx.extraDigits));
+    form.addFormUI(F("HLW8012 Extra Digits/Precision"));
+    form.addValidator(FormRangeValidator(F("Enter 0 to 4 for extra digits"), 0, 4));
 
-    form.add(F("energyCounterPrimary"), String(), FormField::InputFieldType::TEXT)
-        ->setFormUI((new FormUI(FormUI::TEXT, F("HLW8012 Total Energy")))->setSuffix(kWh)->setPlaceholder(String(IOT_SENSOR_HLW80xx_PULSE_TO_KWH(getEnergyPrimaryCounter()), 3)));
+    auto kWh = F("kWh");
 
-    form.addValidator(new FormCallbackValidator([&sensor, this](String value, FormField &field) {
+    form.add(F("energyCounterPrimary"), String(), FormField::Type::TEXT);
+    form.addFormUI(F("HLW8012 Total Energy"), FormUI::Suffix(kWh), FormUI::PlaceHolder(IOT_SENSOR_HLW80xx_PULSE_TO_KWH(getEnergyPrimaryCounter()), 3));
+
+    form.addValidator(FormCallbackValidator([&cfg, this](String value, FormField &field) {
         if (value.length()) {
             // gets copied to getEnergyPrimaryCounter() in configurationSaved()
-            sensor.hlw80xx.energyCounter = IOT_SENSOR_HLW80xx_KWH_TO_PULSE(value.toFloat());
+            cfg.hlw80xx.energyCounter = IOT_SENSOR_HLW80xx_KWH_TO_PULSE(value.toFloat());
         }
         return true;
     }));
-    form.add(F("energyCounterSecondary"), String(), FormField::InputFieldType::TEXT)
-        ->setFormUI((new FormUI(FormUI::TEXT, F("HLW8012 Energy")))->setSuffix(kWh)->setPlaceholder(String(IOT_SENSOR_HLW80xx_PULSE_TO_KWH(getEnergySecondaryCounter()), 3)));
+    form.add(F("energyCounterSecondary"), String(), FormField::Type::TEXT);
+    form.addFormUI(F("HLW8012 Energy"), FormUI::Label(kWh), FormUI::PlaceHolder(IOT_SENSOR_HLW80xx_PULSE_TO_KWH(getEnergySecondaryCounter()), 3));
 
-    form.addValidator(new FormCallbackValidator([this](String value, FormField &field) {
+    form.addValidator(FormCallbackValidator([this](String value, FormField &field) {
         if (value.length()) {
             getEnergySecondaryCounter() = IOT_SENSOR_HLW80xx_KWH_TO_PULSE(value.toFloat());
-
         }
         return true;
     }));
@@ -224,13 +221,13 @@ void Sensor_HLW80xx::configurationSaved(Form *form)
     using KeyValueStorage::ContainerPtr;
     using KeyValueStorage::Item;
 
-    auto &sensor = config._H_W_GET(Config().sensor);
-    getEnergyPrimaryCounter() = sensor.hlw80xx.energyCounter;
+    auto &cfg = Plugins::Sensor::getWriteableConfig();
+    getEnergyPrimaryCounter() = cfg.hlw80xx.energyCounter;
 
     auto container = ContainerPtr(new Container());
-    container->add(Item::create(F("hlw80xx_u"), sensor.hlw80xx.calibrationU));
-    container->add(Item::create(F("hlw80xx_i"), sensor.hlw80xx.calibrationI));
-    container->add(Item::create(F("hlw80xx_p"), sensor.hlw80xx.calibrationP));
+    container->add(Item::create(F("hlw80xx_u"), cfg.hlw80xx.calibrationU));
+    container->add(Item::create(F("hlw80xx_i"), cfg.hlw80xx.calibrationI));
+    container->add(Item::create(F("hlw80xx_p"), cfg.hlw80xx.calibrationP));
     container->add(Item::create(F("hlw80xx_e1"), getEnergyPrimaryCounter()));
     container->add(Item::create(F("hlw80xx_e2"), getEnergySecondaryCounter()));
     config.callPersistantConfig(container);
@@ -297,7 +294,7 @@ void Sensor_HLW80xx::_loadEnergyCounter()
     auto file = SPIFFS.open(FSPGM(iot_sensor_hlw80xx_state_file), fs::FileOpenMode::read);
     if (!file || file.read(reinterpret_cast<uint8_t *>(_energyCounter.data()), sizeof(_energyCounter)) != sizeof(_energyCounter)) {
         resetEnergyCounter();
-        _energyCounter[0] = config._H_GET(Config().sensor).hlw80xx.energyCounter; // restore data from EEPROM in case SPIFFS was updated
+        _energyCounter[0] = Plugins::Sensor::getConfig().hlw80xx.energyCounter; // restore data from EEPROM in case SPIFFS was updated
     }
     _saveEnergyCounterTimeout = millis() + IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT;
 #else
@@ -368,6 +365,12 @@ void Sensor_HLW80xx::dump(Print &output)
         _getPowerFactor()
     );
 }
+
+void Sensor_HLW80xx::setExtraDigits(uint8_t digits)
+{
+    Plugins::Sensor::getWriteableConfig().hlw80xx.extraDigits = std::min((uint8_t)6, digits);
+}
+
 
 #if IOT_SENSOR_HLW80xx_DATA_PLOT
 

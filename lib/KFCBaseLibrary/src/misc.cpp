@@ -23,11 +23,11 @@ String formatBytes(size_t bytes)
     return buf;
 }
 
-String formatTime(unsigned long seconds, bool days_if_not_zero)
+String formatTime(unsigned long seconds, bool printDaysIfZero)
 {
     PrintString out;
     unsigned int days = (unsigned int)(seconds / 86400);
-    if (!days_if_not_zero || days) {
+    if (printDaysIfZero || days) {
         out.printf_P(PSTR("%u days "), days);
     }
     out.printf_P(PSTR("%02uh:%02um:%02us"), (unsigned)((seconds / 3600) % 24), (unsigned)((seconds / 60) % 60), (unsigned)(seconds % 60));
@@ -49,21 +49,31 @@ String url_encode(const String &str)
     return out_str;
 }
 
-String printable_string(const uint8_t *buffer, size_t length, size_t maxLength)
+String printable_string(const uint8_t *buffer, size_t length, size_t maxLength, const char *extra, bool crlfAsText)
 {
     PrintString str;
-    printable_string(str, buffer, length, maxLength);
+    printable_string(str, buffer, length, maxLength, extra, crlfAsText);
     return str;
 }
 
-void printable_string(Print &output, const uint8_t *buffer, size_t length, size_t maxLength, const char *extra)
+void printable_string(Print &output, const uint8_t *buffer, size_t length, size_t maxLength, const char *extra, bool crlfAsText)
 {
     if (maxLength) {
         length = std::min(maxLength, length);
     }
     auto ptr = buffer;
     while(length--) {
-        if (isprint(*ptr) || (extra && strchr(extra, *ptr))) {
+        if (crlfAsText && (*ptr == '\n' || *ptr == '\r')) {
+            switch(*ptr) {
+                case '\r':
+                    output.print(F("<CR>"));
+                    break;
+                case '\n':
+                    output.println(F("<LF>"));
+                    break;
+            }
+        }
+        else if (isprint(*ptr) || (extra && strchr_P(extra, *ptr))) {
             output.print((char)*ptr);
         } else {
             output.printf_P(PSTR("\\x%02X"), (int)(*ptr & 0xff));
@@ -976,4 +986,36 @@ IPAddress convertToIPAddress(const char *hostname)
         return addr;
     }
     return IPAddress();
+}
+
+
+
+size_t _printfSafeCStrLen(const char *str)
+{
+    return str ? strlen_P(str) : 0;
+}
+
+size_t _printfSafeCStrLen(const __FlashStringHelper *str)
+{
+    return str ? strlen_P(RFPSTR(str)) : 0;
+}
+
+size_t _printfSafeCStrLen(const String &str)
+{
+    return str.length();
+}
+
+const char *_printfSafeCStr(const char *str)
+{
+    return (str ? str : SPGM(null));
+}
+
+const char *_printfSafeCStr(const __FlashStringHelper *str)
+{
+    return str ? RFPSTR(str) : SPGM(null);
+}
+
+const char *_printfSafeCStr(const String &str)
+{
+    return str.c_str();
 }

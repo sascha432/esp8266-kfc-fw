@@ -124,7 +124,8 @@ void WiFi_get_status(Print &out)
                         break;
                 }
             }
-            if (config._H_GET(Config().flags).stationModeDHCPEnabled) {
+
+            if (System::Flags::getConfig().is_softap_dhcpd_enabled) {
                 out.print(F(HTML_S(br) "DHCP client running"));
             }
 #else

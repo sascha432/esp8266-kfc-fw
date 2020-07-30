@@ -192,7 +192,7 @@ PROGMEM_STRING_DECL(alerts_storage_filename);
 #define WebUIAlerts_getCount()                          0
 #define WebUIAlerts_readStorage()
 
-#define WebUIAlerts_disabled()                          (KFCConfigurationClasses::System::Flags::get().disableWebAlerts)
+#define WebUIAlerts_disabled()                          (KFCConfigurationClasses::System::Flags::getConfig().disableWebAlerts)
 
 #else
 
@@ -206,6 +206,6 @@ PROGMEM_STRING_DECL(alerts_storage_filename);
 #define WebUIAlerts_getCount()                          0
 #define WebUIAlerts_readStorage()                       ;
 
-#define WebUIAlerts_disabled()                          (KFCConfigurationClasses::System::Flags::get().disableWebAlerts)
+#define WebUIAlerts_disabled()                          (KFCConfigurationClasses::System::Flags::getConfig().disableWebAlerts)
 
 #endif

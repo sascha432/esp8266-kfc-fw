@@ -9,12 +9,12 @@ namespace KFCConfigurationClasses {
 
     void Plugins::MQTTClient::defaults()
     {
-        System::Flags::getWriteable().is_mqtt_enabled = true;
+        System::Flags::getWriteableConfig().is_mqtt_enabled = true;
         MqttConfig_t cfg = {};
         setConfig(cfg);
-        setHostname(PSTR(CREATE_ZERO_CONF_DEFAULT("mqtt", "tcp", "address", "192.168.4.1")));
-        setTopic(PSTR("home/${device_name}"));
-        setAutoDiscoveryPrefix(PSTR("homeassistant"));
+        setHostname(CREATE_ZERO_CONF(F("mqtt"), FSPGM(tcp), FSPGM(address), F("192.168.4.1")));
+        setTopic(F("home/${device_name}"));
+        setAutoDiscoveryPrefix(F("homeassistant"));
         __CDBG_dump(MQTTClient, cfg);
         __CDBG_dumpString(Hostname);
         __CDBG_dumpString(Username);
@@ -25,7 +25,7 @@ namespace KFCConfigurationClasses {
 
     bool Plugins::MQTTClient::isEnabled()
     {
-        return System::Flags(true).isMQTTEnabled();
+        return ::KFCConfigurationClasses::System::Flags::getConfig().is_mqtt_enabled && (ConfigStructType::get_enum_mode(getConfig()) != ModeType::DISABLED);
     }
 
     const uint8_t *Plugins::MQTTClient::getFingerPrint(uint16_t &size)

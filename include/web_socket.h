@@ -12,7 +12,6 @@
 #include <algorithm>
 #include <vector>
 #include <ESPAsyncWebServer.h>
-#include "../src/generated/FlashStringGeneratorAuto.h"
 
 #define WS_PREFIX "ws[%s][%u] "
 #define WS_PREFIX_ARGS server->url(), client->id()

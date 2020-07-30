@@ -16,7 +16,7 @@ namespace KFCConfigurationClasses {
     bool Plugins::Serial2TCP::isEnabled()
     {
         using KFCConfigurationClasses::System;
-        return System::Flags::get().serial2TCPEnabled;
+        return System::Flags::getConfig().serial2TCPEnabled;
     }
 
 }

@@ -38,7 +38,7 @@ Driver_4ChDimmer::Driver_4ChDimmer() :
 void Driver_4ChDimmer::readConfig()
 {
     Dimmer_Base::readConfig();
-    auto &dimmer = config._H_GET(Config().dimmer);
+    auto dimmer = config._H_GET(Config().dimmer);
     channel_ww1 = dimmer.channel_mapping[0];
     channel_ww2 = dimmer.channel_mapping[1];
     channel_cw1 = dimmer.channel_mapping[2];

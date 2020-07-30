@@ -25,29 +25,36 @@ void NTPPlugin::createConfigureForm(FormCallbackType type, const String &formNam
         return;
     }
 
-    auto &cfg = System::Flags::getWriteable();
+    auto &cfg = System::Flags::getWriteableConfig();
     auto &ntp = Plugins::NTPClient::getWriteableConfig();
 
     form.setFormUI(FSPGM(NTP_Client_Configuration, "NTP Client Configuration"));
 
-    form.addWriteableStruct(cfg, is_ntp_client_enabled))->setFormUI((new FormUI(FormUI::Type::SELECT, FSPGM(NTP_Client, "NTP Client")))->setBoolItems());
+    form.addObjectGetterSetter<System::Flags::ConfigStructType, bool>(F("ntp_en"), cfg, System::Flags::ConfigStructType::get_bit_is_ntp_client_enabled, System::Flags::ConfigStructType::set_bit_is_ntp_client_enabled);
+    form.addFormUI(FSPGM(NTP_Client, "NTP Client"), FormUI::BoolItems());
 
-    auto &group = form.addDivGroup(F("ntpcfg"), F("{'i':'#ntp_CL_EN','s':{'0':'$T.hide()','1':'$T.show()'}}"));
+    auto &group = form.addDivGroup(F("ntpcfg"), F("{'i':'#ntp_en','s':{'0':'$T.hide()','1':'$T.show()'}}"));
 
-    form.addCStrGetterSetter(Plugins::NTPClient::getPosixTimezone, Plugins::NTPClient::setPosixTimezone))->setFormUI((new FormUI(FormUI::Type::SELECT, FSPGM(Timezone, "Timezone"))));
-    form.addCStrGetterSetter(Plugins::NTPClient::getTimezoneName, Plugins::NTPClient::setTimezoneName))->setFormUI((new FormUI(FormUI::Type::HIDDEN)));
+    form.addCStringGetterSetter(F("posix_tz"), Plugins::NTPClient::getPosixTimezone, Plugins::NTPClient::setPosixTimezoneCStr);
+    form.addFormUI(FormUI::Type::SELECT, FSPGM(Timezone, "Timezone"));
+    form.addCStringGetterSetter(F("tz_name"), Plugins::NTPClient::getTimezoneName, Plugins::NTPClient::setTimezoneNameCStr);
+    form.addFormUI(FormUI::Type::HIDDEN);
 
-    form.addCStrGetterSetter(Plugins::NTPClient::getServer1, Plugins::NTPClient::setServer1))->setFormUI((new FormUI(FormUI::Type::TEXT, PrintString(FSPGM(NTP_Server___, "NTP Server %u"), 1))));
-    form.addValidator(new FormValidHostOrIpValidator(true));
+    form.addCStringGetterSetter(F("ntpsvr1"), Plugins::NTPClient::getServer1, Plugins::NTPClient::setServer1CStr);
+    form.addFormUI(FormUI::Label(PrintString(FSPGM(NTP_Server___, "NTP Server %u"), 1)));
+    form.addValidator(FormHostValidator(FormHostValidator::AllowedType::ALLOW_EMPTY));
 
-    form.addCStrGetterSetter(Plugins::NTPClient::getServer2, Plugins::NTPClient::setServer2))->setFormUI((new FormUI(FormUI::Type::TEXT, PrintString(FSPGM(NTP_Server___, "NTP Server %u"), 2))));
-    form.addValidator(new FormValidHostOrIpValidator(true));
+    form.addCStringGetterSetter(F("ntpsvr2"), Plugins::NTPClient::getServer2, Plugins::NTPClient::setServer2CStr);
+    form.addFormUI(FormUI::Label(PrintString(FSPGM(NTP_Server___), 2)));
+    form.addValidator(FormHostValidator(FormHostValidator::AllowedType::ALLOW_EMPTY));
 
-    form.addCStrGetterSetter(Plugins::NTPClient::getServer3, Plugins::NTPClient::setServer3))->setFormUI((new FormUI(FormUI::Type::TEXT, PrintString(FSPGM(NTP_Server___, "NTP Server %u"), 3))));
-    form.addValidator(new FormValidHostOrIpValidator(true));
+    form.addCStringGetterSetter(F("ntpsvr3"), Plugins::NTPClient::getServer3, Plugins::NTPClient::setServer3CStr);
+    form.addFormUI(FormUI::Label(PrintString(FSPGM(NTP_Server___), 3)));
+    form.addValidator(FormHostValidator(FormHostValidator::AllowedType::ALLOW_EMPTY));
 
-    form.addWriteableStruct(ntp, refreshInterval))->setFormUI((new FormUI(FormUI::Type::INTEGER, FSPGM(Refresh_Interval, "Refresh Interval")))->setSuffix(FSPGM(minutes__, "minutes \u00b1")));
-    form.addValidator(new FormRangeValidator(F("Invalid refresh interval: %min%-%max% minutes"), ntp.kRefreshIntervalMin, ntp.kRefreshIntervalMax));
+    form.addMemberVariable(F("ntpri"), ntp, &Plugins::NTPClient::ConfigStructType::refreshInterval);
+    form.addFormUI(FormUI::Type::INTEGER, FSPGM(Refresh_Interval, "Refresh Interval"), FormUI::Suffix(FSPGM(minutes__5_, "minutes \u00b15%")));
+    form.addValidator(FormRangeValidator(F("Invalid refresh interval: %min%-%max% minutes"), ntp.kRefreshIntervalMin, ntp.kRefreshIntervalMax));
 
     group.end();
 

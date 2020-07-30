@@ -9,7 +9,7 @@ namespace KFCConfigurationClasses {
 
     void Plugins::HomeAssistant::defaults()
     {
-        setApiEndpoint(F("${zeroconf:_home-assistant._tcp,base_url}/api/"), 0);
+        setApiEndpoint(CREATE_ZERO_CONF(F("home-assistant"), FSPGM(tcp), F("base_url"), F("http://localhost:8123")) + F("/api/"), 0);
     }
 
     void Plugins::HomeAssistant::setApiEndpoint(const String &endpoint, uint8_t apiId)

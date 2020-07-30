@@ -8,11 +8,20 @@
 #include <session.h>
 #include <buffer.h>
 #include <crc16.h>
-#include "kfc_fw_config_types.h"
 
 #include <push_pack.h>
 
-#if 0
+#include <kfc_fw_config_types.h>
+
+#ifndef DEBUG_CONFIG_CLASS
+#define DEBUG_CONFIG_CLASS                                                  0
+#endif
+
+#if DEBUG_CONFIGURATION_GETHANDLE && !DEBUG_CONFIG_CLASS
+#error DEBUG_CONFIG_CLASS=1 required for DEBUG_CONFIGURATION_GETHANDLE=1
+#endif
+
+#if DEBUG_CONFIG_CLASS && 0
 #define __CDBG_printf(...)                                                  __DBG_printf(__VA_ARGS__)
 #define __CDBG_dump(class_name, cfg)                                        cfg.dump<class_name>();
 #define __CDBG_dumpString(name)                                             DEBUG_OUTPUT.printf_P(PSTR("%s [%04X]=%s\n"), _STRINGIFY(name), k##name##ConfigHandle, get##name());
@@ -28,47 +37,147 @@
 
 #undef DEFAULT
 
-#define CREATE_ZERO_CONF_DEFAULT(service, proto, variable, default_value)   "${zeroconf:" service "." proto "," variable "|" default_value "}"
-#define CREATE_ZERO_CONF_NO_DEFAULT(service, proto, variable)               "${zeroconf:" service "." proto "," variable "}"
+#define CREATE_ZERO_CONF(service, proto, ...)                               KFCConfigurationClasses::createZeroConf(service, proto, ##__VA_ARGS__)
 
+#if !DEBUG_CONFIG_CLASS
 
-#ifndef _H
-#define _H_DEFINED_KFCCONFIGURATIONCLASSES                                  1
-#define _H(name)                                                            constexpr_crc16_update(_STRINGIFY(name), constexpr_strlen(_STRINGIFY(name)))
-#define CONFIG_GET_HANDLE_STR(name)                                         constexpr_crc16_update(name, constexpr_strlen(name))
+#define REGISTER_CONFIG_GET_HANDLE(...)
+#define REGISTER_CONFIG_GET_HANDLE_STR(...)
+#define DECLARE_CONFIG_HANDLE_PROGMEM_STR(...)
+#define DEFINE_CONFIG_HANDLE_PROGMEM_STR(...)
+#define REGISTER_HANDLE_NAME(...)
+
+#elif DEBUG_CONFIGURATION_GETHANDLE
+
+namespace ConfigurationHelper {
+    const uint16_t registerHandleName(const char *name, uint8_t type);
+    const uint16_t registerHandleName(const __FlashStringHelper *name, uint8_t type);
+}
+#define REGISTER_CONFIG_GET_HANDLE(name)                                    const uint16_t __UNIQUE_NAME(__DBGconfigHandle_) = ConfigurationHelper::registerHandleName(_STRINGIFY(name), __DBG__TYPE_CONST)
+#define REGISTER_CONFIG_GET_HANDLE_STR(str)                                 const uint16_t __UNIQUE_NAME(__DBGconfigHandle_) = ConfigurationHelper::registerHandleName(str, __DBG__TYPE_CONST)
+#define DECLARE_CONFIG_HANDLE_PROGMEM_STR(name)                             extern const char *name PROGMEM;
+#define DEFINE_CONFIG_HANDLE_PROGMEM_STR(name, str) \
+    const char *name PROGMEM = str; \
+    REGISTER_CONFIG_GET_HANDLE_STR(name);
+
+#define __DBG__TYPE_NONE                                                    0
+#define __DBG__TYPE_GET                                                     1
+#define __DBG__TYPE_SET                                                     2
+#define __DBG__TYPE_W_GET                                                   3
+#define __DBG__TYPE_CONST                                                   4
+#define __DBG__TYPE_DEFINE_PROGMEM                                          5
+
+#define REGISTER_HANDLE_NAME(name, type)                                    ConfigurationHelper::registerHandleName(name, type)
+
+#else
+
+#define REGISTER_CONFIG_GET_HANDLE(...)
+#define REGISTER_CONFIG_GET_HANDLE_STR(...)
+#define DECLARE_CONFIG_HANDLE_PROGMEM_STR(name)                             extern const char *name PROGMEM;
+#define DEFINE_CONFIG_HANDLE_PROGMEM_STR(name, str)                         const char *name PROGMEM = str;
+#define REGISTER_HANDLE_NAME(...)
+
 #endif
+
+// #ifndef _H
+// #warning _H_DEFINED_KFCCONFIGURATIONCLASSES                                  1
+// #define _H_DEFINED_KFCCONFIGURATIONCLASSES                                  1
+// #define _H(name)                                                            constexpr_crc16_update(_STRINGIFY(name), constexpr_strlen(_STRINGIFY(name)))
+// #define CONFIG_GET_HANDLE_STR(name)                                         constexpr_crc16_update(name, constexpr_strlen(name))
+// #endif
 
 #define CREATE_STRING_GETTER_SETTER_BINARY(class_name, name, len) \
     static constexpr size_t k##name##MaxSize = len; \
     static constexpr HandleType k##name##ConfigHandle = CONFIG_GET_HANDLE_STR(_STRINGIFY(class_name) "." _STRINGIFY(name)); \
     static size_t get##name##Size() { return k##name##MaxSize; } \
-    static const uint8_t *get##name() { return loadBinaryConfig(k##name##ConfigHandle, k##name##MaxSize); } \
-    static void set##name(const uint8_t *data) { storeBinaryConfig(k##name##ConfigHandle, data, k##name##MaxSize); }
+    static const uint8_t *get##name() { REGISTER_HANDLE_NAME(_STRINGIFY(class_name) "." _STRINGIFY(name), __DBG__TYPE_GET); return loadBinaryConfig(k##name##ConfigHandle, k##name##MaxSize); } \
+    static void set##name(const uint8_t *data) { REGISTER_HANDLE_NAME(_STRINGIFY(class_name) "." _STRINGIFY(name), __DBG__TYPE_SET); storeBinaryConfig(k##name##ConfigHandle, data, k##name##MaxSize); }
 
 #define CREATE_STRING_GETTER_SETTER(class_name, name, len) \
     static constexpr size_t k##name##MaxSize = len; \
     static constexpr HandleType k##name##ConfigHandle = CONFIG_GET_HANDLE_STR(_STRINGIFY(class_name) "." _STRINGIFY(name)); \
-    static const char *get##name() { return loadStringConfig(k##name##ConfigHandle); } \
-    static void set##name(const char *str) { storeStringConfig(k##name##ConfigHandle, str); } \
-    static void set##name(const __FlashStringHelper *str) { set##name(reinterpret_cast<PGM_P>(str)); } \
-    static void set##name(const String &str) { set##name(str.c_str()); }
+    static const char *get##name() { REGISTER_HANDLE_NAME(_STRINGIFY(class_name) "." _STRINGIFY(name), __DBG__TYPE_GET); return loadStringConfig(k##name##ConfigHandle); } \
+    static void set##name(const char *str) { REGISTER_HANDLE_NAME(_STRINGIFY(class_name) "." _STRINGIFY(name), __DBG__TYPE_SET); storeStringConfig(k##name##ConfigHandle, str); } \
+    static void set##name##CStr(const char *str) { set##name(str); } \
+    static void set##name(const __FlashStringHelper *str) { REGISTER_HANDLE_NAME(_STRINGIFY(class_name) "." _STRINGIFY(name), __DBG__TYPE_SET); storeStringConfig(k##name##ConfigHandle, str); } \
+    static void set##name(const String &str) { REGISTER_HANDLE_NAME(_STRINGIFY(class_name) "." _STRINGIFY(name), __DBG__TYPE_SET); storeStringConfig(k##name##ConfigHandle, str); }
 
 #define CREATE_GETTER_SETTER_IP(class_name, name) \
     static constexpr HandleType k##name##ConfigHandle = CONFIG_GET_HANDLE_STR(_STRINGIFY(class_name) "." _STRINGIFY(name)); \
-    static const IPAddress get##name() { return IPAddress(*(uint32_t *)loadBinaryConfig(k##name##ConfigHandle, sizeof(uint32_t))); } \
-    static void set##name(const IPAddress &address) { storeBinaryConfig(k##name##ConfigHandle, &static_cast<uint32_t>(address), sizeof(uint32_t)); }
+    static const IPAddress get##name() { REGISTER_HANDLE_NAME(_STRINGIFY(class_name) "." _STRINGIFY(name), __DBG__TYPE_GET); return IPAddress(*(uint32_t *)loadBinaryConfig(k##name##ConfigHandle, sizeof(uint32_t))); } \
+    static void set##name(const IPAddress &address) { REGISTER_HANDLE_NAME(_STRINGIFY(class_name) "." _STRINGIFY(name), __DBG__TYPE_SET); storeBinaryConfig(k##name##ConfigHandle, &static_cast<uint32_t>(address), sizeof(uint32_t)); }
+
+#define AUTO_DEFAULT_PORT_CONST(auto, default_port) \
+    static constexpr uint16_t kPortAuto = auto; \
+    static constexpr uint16_t kPortDefault = default_port; \
+
+#define AUTO_DEFAULT_PORT_CONST_SECURE(auto, unsecure, secure) \
+    static constexpr uint16_t kPortAuto = auto; \
+    static constexpr uint16_t kPortDefault = unsecure; \
+    static constexpr uint16_t kPortDefaultSecure = secure;
+
+#define AUTO_DEFAULT_PORT_GETTER_SETTER(port_name) \
+    uint16_t port_name; \
+    bool isPortAuto() const { \
+        return (port_name == kPortAuto); \
+    } \
+    uint16_t getPort() const { \
+        return isPortAuto() ? kPortDefault : kPortDefault; \
+    } \
+    String getPortAsString() const { \
+        return isPortAuto() ? String() : String(port_name); \
+    } \
+    void setPort(int port) { \
+        auto tmp = static_cast<uint16_t>(port); \
+        if (tmp == kPortDefault) { \
+            port_name = kPortAuto; \
+        } \
+        else { \
+            port_name =tmp; \
+        } \
+    }
+
+#define AUTO_DEFAULT_PORT_GETTER_SETTER_SECURE(port_name, is_secure) \
+    uint16_t port_name; \
+    bool isSecure() const { \
+        return (is_secure); \
+    } \
+    bool isPortAuto() const { \
+        return (port_name == kPortAuto || (port_name == kPortDefault && !isSecure()) || (port_name == kPortDefaultSecure && isSecure())); \
+    } \
+    uint16_t getPort() const { \
+        return isPortAuto() ? (isSecure() ? kPortDefaultSecure : kPortDefault) : kPortDefault; \
+    } \
+    String getPortAsString() const { \
+        return isPortAuto() ? String() : String(port_name); \
+    } \
+    void setPort(int port, bool secure) { \
+        auto tmp = static_cast<uint16_t>(port); \
+        if (tmp == kPortDefault && !secure) { \
+            port_name = kPortAuto; \
+        } \
+        else if (tmp == kPortDefaultSecure && secure) { \
+            port_name = kPortAuto; \
+        } \
+        else { \
+            port_name = tmp; \
+        } \
+    }
 
 
-#if DEBUG
+#if DEBUG_CONFIG_CLASS
 
-extern const char *handleNameDeviceConfig_t;
-extern const char *handleNameWebServerConfig_t;
-extern const char *handleNameSettingsConfig_t;
-extern const char *handleNameAlarm_t;
-extern const char *handleNameSerial2TCPConfig_t;
-extern const char *handleNameMqttConfig_t;
-extern const char *handleNameSyslogConfig_t;
-extern const char *handleNameNtpClientConfig_t;
+DECLARE_CONFIG_HANDLE_PROGMEM_STR(handleNameDeviceConfig_t);
+DECLARE_CONFIG_HANDLE_PROGMEM_STR(handleNameWebServerConfig_t);
+DECLARE_CONFIG_HANDLE_PROGMEM_STR(handleNameSettingsConfig_t);
+DECLARE_CONFIG_HANDLE_PROGMEM_STR(handleNameAlarm_t);
+DECLARE_CONFIG_HANDLE_PROGMEM_STR(handleNameSerial2TCPConfig_t);
+DECLARE_CONFIG_HANDLE_PROGMEM_STR(handleNameMqttConfig_t);
+DECLARE_CONFIG_HANDLE_PROGMEM_STR(handleNameSyslogConfig_t);
+DECLARE_CONFIG_HANDLE_PROGMEM_STR(handleNameNtpClientConfig_t);
+DECLARE_CONFIG_HANDLE_PROGMEM_STR(handleNameSensorConfig_t);
+DECLARE_CONFIG_HANDLE_PROGMEM_STR(handleNameFlagsConfig_t);
+DECLARE_CONFIG_HANDLE_PROGMEM_STR(handleNameSoftAPConfig_t);
 
 #define CIF_DEBUG(...) __VA_ARGS__
 
@@ -80,14 +189,16 @@ extern const char *handleNameNtpClientConfig_t;
 
 namespace KFCConfigurationClasses {
 
-
     using HandleType = uint16_t;
 
+    String createZeroConf(const __FlashStringHelper *service, const __FlashStringHelper *proto, const __FlashStringHelper *varName, const __FlashStringHelper *defaultValue = nullptr);
     const void *loadBinaryConfig(HandleType handle, uint16_t &length);
     void *loadWriteableBinaryConfig(HandleType handle, uint16_t length);
     void storeBinaryConfig(HandleType handle, const void *data, uint16_t length);
     const char *loadStringConfig(HandleType handle);
-    void storeStringConfig(HandleType handle, const char *);
+    void storeStringConfig(HandleType handle, const char *str);
+    void storeStringConfig(HandleType handle, const __FlashStringHelper *str);
+    void storeStringConfig(HandleType handle, const String &str);
 
     template<typename ConfigType, HandleType handleArg CIF_DEBUG(, const char **handleName)>
     class ConfigGetterSetter {
@@ -98,10 +209,11 @@ namespace KFCConfigurationClasses {
         static ConfigType getConfig()
         {
             __CDBG_printf("getConfig=%04x size=%u name=%s", kConfigStructHandle, sizeof(ConfigType), *handleName);
+            REGISTER_HANDLE_NAME(*handleName, __DBG__TYPE_GET);
             uint16_t length = sizeof(ConfigType);
             auto ptr = loadBinaryConfig(kConfigStructHandle, length);
             if (!ptr || length != sizeof(ConfigType)) {
-                __DBG_printf("binary handle=%04x name=%s stored_size=%u mismatch. setting default values size=%u", kConfigStructHandle, *handleName, length, sizeof(ConfigType));
+                // __CDBG_printf("binary handle=%04x name=%s stored_size=%u mismatch. setting default values size=%u", kConfigStructHandle, *handleName, length, sizeof(ConfigType));
                 ConfigType cfg = {};
                 void *newPtr = loadWriteableBinaryConfig(kConfigStructHandle, sizeof(ConfigType));
                 ptr = memcpy(newPtr, &cfg, sizeof(ConfigType));
@@ -112,12 +224,14 @@ namespace KFCConfigurationClasses {
         static void setConfig(const ConfigType &params)
         {
             __CDBG_printf("setConfig=%04x size=%u name=%s", kConfigStructHandle, sizeof(ConfigType), *handleName);
-            storeBinaryConfig(kConfigStructHandle, &params, sizeof(params));
+            REGISTER_HANDLE_NAME(*handleName, __DBG__TYPE_SET);
+            storeBinaryConfig(kConfigStructHandle, &params, sizeof(ConfigType));
         }
 
         static ConfigType &getWriteableConfig()
         {
             __CDBG_printf("getWriteableConfig=%04x name=%s size=%u", kConfigStructHandle, *handleName, sizeof(ConfigType));
+            REGISTER_HANDLE_NAME(*handleName, __DBG__TYPE_W_GET);
             return *reinterpret_cast<ConfigType *>(loadWriteableBinaryConfig(kConfigStructHandle, sizeof(ConfigType)));
         }
     };
@@ -127,81 +241,78 @@ namespace KFCConfigurationClasses {
         // --------------------------------------------------------------------
         // Flags
 
-        class Flags {
+        class FlagsConfig {
         public:
-            Flags();
-            Flags(bool load) {
-                *this = load ? getFlags() : Flags();
-            }
-            Flags(ConfigFlags flags) : _flags(flags) {
-#if 0
-                __DBG_printf("wifi_mode=%u", _flags.getWifiMode());
-                __DBG_printf("is_factory_settings=%u", _flags.is_factory_settings);
-                __DBG_printf("is_default_password=%u", _flags.is_default_password);
-                __DBG_printf("use_static_ip_during_wakeup=%u", _flags.use_static_ip_during_wakeup);
-                __DBG_printf("is_at_mode_enabled=%u", _flags.is_at_mode_enabled);
-                __DBG_printf("is_softap_ssid_hidden=%u", _flags.is_softap_ssid_hidden);
-                __DBG_printf("is_softap_dhcpd_enabled=%u", _flags.is_softap_dhcpd_enabled);
-                __DBG_printf("is_station_mode_enabled=%u", _flags.is_station_mode_enabled);
-                __DBG_printf("is_softap_enabled=%u", _flags.is_softap_enabled);
-                __DBG_printf("is_softap_standby_mode_enabled=%u", _flags.is_softap_standby_mode_enabled);
-                __DBG_printf("is_station_mode_dhcp_enabled=%u", _flags.is_station_mode_dhcp_enabled);
-                __DBG_printf("is_led_on_when_connected=%u", _flags.is_led_on_when_connected);
-                __DBG_printf("is_mdns_enabled=%u", _flags.is_mdns_enabled);
-                __DBG_printf("is_ntp_client_enabled=%u", _flags.is_ntp_client_enabled);
-                __DBG_printf("is_syslog_enabled=%u", _flags.is_syslog_enabled);
-                __DBG_printf("is_web_server_enabled=%u", _flags.is_web_server_enabled);
-                __DBG_printf("is_webserver_performance_mode_enabled=%u", _flags.is_webserver_performance_mode_enabled);
-                __DBG_printf("is_mqtt_enabled=%u", _flags.is_mqtt_enabled);
-                __DBG_printf("is_rest_api_enabled=%u", _flags.is_rest_api_enabled);
-                __DBG_printf("is_serial2tcp_enabled=%u", _flags.is_serial2tcp_enabled);
-                __DBG_printf("is_webui_enabled=%u", _flags.is_webui_enabled);
-                __DBG_printf("is_webalerts_enabled=%u", _flags.is_webalerts_enabled);
-#endif
-            }
-            ConfigFlags *operator->() {
-                return &_flags;
-            }
-            static Flags getFlags();
-            static ConfigFlags get();
-            static ConfigFlags &getWriteable();
-            static void set(ConfigFlags flags);
-            void write();
+            typedef struct __attribute__packed__ ConfigFlags_t {
+                using Type = ConfigFlags_t;
+                CREATE_BOOL_BITFIELD(is_factory_settings);
+                CREATE_BOOL_BITFIELD(is_default_password);
+                CREATE_BOOL_BITFIELD(is_softap_enabled);
+                CREATE_BOOL_BITFIELD(is_softap_ssid_hidden);
+                CREATE_BOOL_BITFIELD(is_softap_standby_mode_enabled);
+                CREATE_BOOL_BITFIELD(is_softap_dhcpd_enabled);
+                CREATE_BOOL_BITFIELD(is_station_mode_enabled);
+                CREATE_BOOL_BITFIELD(is_station_mode_dhcp_enabled);
 
-            bool isWiFiEnabled() const {
-                return _flags.getWifiMode() & WIFI_AP_STA;
-            }
-            bool isSoftAPEnabled() const {
-                return _flags.getWifiMode() & WIFI_AP;
-            }
-            bool isStationEnabled() const {
-                return _flags.getWifiMode() & WIFI_STA;
-            }
-            WiFiMode getWiFiMode() const {
-                return static_cast<WiFiMode>(_flags.getWifiMode());
-            }
-            bool isSoftApStandByModeEnabled() const {
-                if (isSoftAPEnabled()) {
-                    return _flags.is_softap_standby_mode_enabled;
+                CREATE_BOOL_BITFIELD(use_static_ip_during_wakeup);
+                CREATE_BOOL_BITFIELD(is_led_on_when_connected);
+                CREATE_BOOL_BITFIELD(is_at_mode_enabled);
+                CREATE_BOOL_BITFIELD(is_mdns_enabled);
+                CREATE_BOOL_BITFIELD(is_ntp_client_enabled);
+                CREATE_BOOL_BITFIELD(is_syslog_enabled);
+                CREATE_BOOL_BITFIELD(is_web_server_enabled);
+                CREATE_BOOL_BITFIELD(is_webserver_performance_mode_enabled);
+
+                CREATE_BOOL_BITFIELD(is_mqtt_enabled);
+                CREATE_BOOL_BITFIELD(is_rest_api_enabled);
+                CREATE_BOOL_BITFIELD(is_serial2tcp_enabled);
+                CREATE_BOOL_BITFIELD(is_webui_enabled);
+                CREATE_BOOL_BITFIELD(is_webalerts_enabled);
+                CREATE_BOOL_BITFIELD(is_ssdp_enabled);
+                CREATE_UINT8_BITFIELD(__reserved, 2);
+
+                uint8_t __reserved2;
+
+                uint8_t getWifiMode() const;
+                void setWifiMode(uint8_t mode);
+
+                template<class T>
+                void dump() {
+                    CONFIG_DUMP_STRUCT_INFO(T);
+                    CONFIG_DUMP_STRUCT_VAR(is_factory_settings);
+                    CONFIG_DUMP_STRUCT_VAR(is_default_password);
+                    CONFIG_DUMP_STRUCT_VAR(is_softap_enabled);
+                    CONFIG_DUMP_STRUCT_VAR(is_softap_ssid_hidden);
+                    CONFIG_DUMP_STRUCT_VAR(is_softap_standby_mode_enabled);
+                    CONFIG_DUMP_STRUCT_VAR(is_softap_dhcpd_enabled);
+                    CONFIG_DUMP_STRUCT_VAR(is_station_mode_enabled);
+                    CONFIG_DUMP_STRUCT_VAR(is_station_mode_dhcp_enabled);
+
+                    CONFIG_DUMP_STRUCT_VAR(use_static_ip_during_wakeup);
+                    CONFIG_DUMP_STRUCT_VAR(is_led_on_when_connected);
+                    CONFIG_DUMP_STRUCT_VAR(is_at_mode_enabled);
+                    CONFIG_DUMP_STRUCT_VAR(is_mdns_enabled);
+                    CONFIG_DUMP_STRUCT_VAR(is_ntp_client_enabled);
+                    CONFIG_DUMP_STRUCT_VAR(is_syslog_enabled);
+                    CONFIG_DUMP_STRUCT_VAR(is_web_server_enabled);
+                    CONFIG_DUMP_STRUCT_VAR(is_webserver_performance_mode_enabled);
+
+                    CONFIG_DUMP_STRUCT_VAR(is_mqtt_enabled);
+                    CONFIG_DUMP_STRUCT_VAR(is_rest_api_enabled);
+                    CONFIG_DUMP_STRUCT_VAR(is_serial2tcp_enabled);
+                    CONFIG_DUMP_STRUCT_VAR(is_webui_enabled);
+                    CONFIG_DUMP_STRUCT_VAR(is_webalerts_enabled);
+                    CONFIG_DUMP_STRUCT_VAR(is_ssdp_enabled);
                 }
-                return false;
-            }
-            bool isMDNSEnabled() const {
-                return _flags.is_mdns_enabled;
-            }
-            void setMDNSEnabled(bool state) {
-                _flags.is_mdns_enabled = state;
-            }
-            bool isWebUIEnabled() const {
-                return _flags.is_webui_enabled;
-            }
-            bool isMQTTEnabled() const;
-            void setMQTTEnabled(bool state);
-            bool isSyslogEnabled() const;
-            void setSyslogEnabled(bool state);
 
-        private:
-            ConfigFlags _flags;
+                ConfigFlags_t();
+
+            } ConfigFlags_t;
+        };
+
+        class Flags : public FlagsConfig, public ConfigGetterSetter<FlagsConfig::ConfigFlags_t, _H(MainConfig().system.flags.cfg) CIF_DEBUG(, &handleNameFlagsConfig_t)> {
+        public:
+            static void defaults();
         };
 
         // --------------------------------------------------------------------
@@ -212,17 +323,18 @@ namespace KFCConfigurationClasses {
             enum class StatusLEDModeType : uint8_t {
                 OFF_WHEN_CONNECTED = 0,
                 SOLID_WHEN_CONNECTED = 1,
+                MAX
             };
 
             typedef struct __attribute__packed__ DeviceConfig_t {
+                using Type = DeviceConfig_t;
+
                 uint32_t config_version;
                 uint16_t safe_mode_reboot_timeout_minutes;
                 uint16_t webui_cookie_lifetime_days;
-                uint16_t zeroconf_timeout;
-                union __attribute__packed__ {
-                    StatusLEDModeType status_led_mode_enum;
-                    uint8_t status_led_mode;
-                };
+                CREATE_UINT16_BITFIELD(zeroconf_timeout, 15);
+                CREATE_UINT16_BITFIELD(zeroconf_logging, 1);
+                CREATE_ENUM_BITFIELD(status_led_mode, StatusLEDModeType);
 
                 uint16_t getSafeModeRebootTimeout() const {
                     return safe_mode_reboot_timeout_minutes;
@@ -234,10 +346,16 @@ namespace KFCConfigurationClasses {
                     return webui_cookie_lifetime_days * 86400U;
                 }
                 StatusLEDModeType getStatusLedMode() const {
-                    return status_led_mode_enum;
+                    return get_enum_status_led_mode(*this);
                 }
 
-                DeviceConfig_t() : config_version(FIRMWARE_VERSION), safe_mode_reboot_timeout_minutes(0), webui_cookie_lifetime_days(30), zeroconf_timeout(5000), status_led_mode_enum(StatusLEDModeType::SOLID_WHEN_CONNECTED) {}
+                DeviceConfig_t() :
+                    config_version(FIRMWARE_VERSION),
+                    safe_mode_reboot_timeout_minutes(0),
+                    webui_cookie_lifetime_days(90),
+                    zeroconf_timeout(5000),
+                    zeroconf_logging(false),
+                    status_led_mode(cast_int_status_led_mode(StatusLEDModeType::SOLID_WHEN_CONNECTED)) {}
 
             } DeviceConfig_t;
         };
@@ -261,14 +379,6 @@ namespace KFCConfigurationClasses {
 
             static constexpr uint16_t kWebUICookieMinLifetime = 3;
             static constexpr uint16_t kWebUICookieMaxLifetime = 360;
-
-            // static void setSafeModeRebootTime(uint16_t minutes);
-            // static uint16_t getSafeModeRebootTime();
-            // static void setWebUIKeepLoggedInDays(uint16_t days);
-            // static uint16_t getWebUIKeepLoggedInDays();
-            // static uint32_t getWebUIKeepLoggedInSeconds();
-            // static void setStatusLedMode(StatusLEDModeEnum mode);
-            // static StatusLEDModeEnum getStatusLedMode();
 
         public:
         };
@@ -307,16 +417,19 @@ namespace KFCConfigurationClasses {
                 MAX
             };
 
-            typedef struct __attribute__packed__ WebServerConfig_t {
-                uint16_t port;
-                uint8_t is_https: 1;
+            AUTO_DEFAULT_PORT_CONST_SECURE(0, 80, 443);
 
-                WebServerConfig_t() : port(80), is_https(false) {}
+            typedef struct __attribute__packed__ WebServerConfig_t {
+                uint8_t is_https: 1;
+                uint8_t __reserved: 7;
+                AUTO_DEFAULT_PORT_GETTER_SETTER_SECURE(__port, is_https);
+
+                WebServerConfig_t() : is_https(false), __port(kPortAuto) {}
 
             } WebServerConfig_t;
         };
 
-        class WebServer : public WebServerConfig, public ConfigGetterSetter<WebServerConfig::WebServerConfig_t, _H(MainConfig().system.webserver) CIF_DEBUG(, &handleNameWebServerConfig_t)> {
+        class WebServer : public WebServerConfig, public ConfigGetterSetter<WebServerConfig::WebServerConfig_t, _H(MainConfig().system.webserver.cfg) CIF_DEBUG(, &handleNameWebServerConfig_t)> {
         public:
             static void defaults();
             static ModeType getMode();
@@ -335,10 +448,6 @@ namespace KFCConfigurationClasses {
 
     struct Network {
 
-        static constexpr uint32_t createIPAddress(uint32_t a, uint32_t b, uint32_t c, uint32_t d) {
-            return a | (b << 8U) | (c << 16U) | (d << 24U);
-        }
-
         // --------------------------------------------------------------------
         // Settings
         class SettingsConfig {
@@ -349,22 +458,26 @@ namespace KFCConfigurationClasses {
                 uint32_t _gateway;
                 uint32_t _dns1;
                 uint32_t _dns2;
-
-                SettingsConfig_t() :
-                    _subnet(createIPAddress(255, 255, 255, 0)),
-                    _gateway(createIPAddress(192, 168, 4, 1)),
-                    _dns1(createIPAddress(8, 8, 8, 8)),
-                    _dns2(createIPAddress(8, 8, 4, 4))
-                {
-                    uint8_t mac[6];
-                    WiFi.macAddress(mac);
-                    _localIp = IPAddress(192, 168, 4, mac[5] <= 1 || mac[5] >= 253 ? (mac[4] <= 1 || mac[4] >= 253 ? (mac[3] <= 1 || mac[3] >= 253 ? mac[3] : rand() % 98 + 1) : mac[4]) : mac[5]);
+                IPAddress getLocalIp() const {
+                    return _localIp;
                 }
-
+                IPAddress getSubnet() const {
+                    return _subnet;
+                }
+                IPAddress getGateway() const {
+                    return _gateway;
+                }
+                IPAddress getDns1() const {
+                    return _dns1;
+                }
+                IPAddress getDns2() const {
+                    return _dns2;
+                }
+                SettingsConfig_t();
             } SettingsConfig_t;
         };
 
-        class Settings : public SettingsConfig, public ConfigGetterSetter<SettingsConfig::SettingsConfig_t, _H(MainConfig().network.settings) CIF_DEBUG(, &handleNameSettingsConfig_t)> {
+        class Settings : public SettingsConfig, public ConfigGetterSetter<SettingsConfig::SettingsConfig_t, _H(MainConfig().network.settings.cfg) CIF_DEBUG(, &handleNameSettingsConfig_t)> {
         public:
             static void defaults();
 
@@ -388,68 +501,100 @@ namespace KFCConfigurationClasses {
         // --------------------------------------------------------------------
         // SoftAP
 
-        class SoftAP {
+        class SoftAPConfig {
         public:
             using EncryptionType = WiFiEncryptionType;
 
-            SoftAP();
-            static SoftAP read();
-            static SoftAP &getWriteable();
-            static SoftAP &getWriteableConfig() {
-                return getWriteable();
-            }
+            typedef struct __attribute__packed__ SoftAPConfig_t {
+                uint32_t address;
+                uint32_t subnet;
+                uint32_t gateway;
+                uint32_t dhcpStart;
+                uint32_t dhcpEnd;
+                uint8_t channel;
+                union __attribute__packed__ {
+                    EncryptionType encryption_enum;
+                    uint8_t encryption;
+                };
+                SoftAPConfig_t();
+
+                IPAddress getAddress() const {
+                    return address;
+                }
+                IPAddress getSubnet() const {
+                    return subnet;
+                }
+                IPAddress getGateway() const {
+                    return gateway;
+                }
+                IPAddress getDhcpStart() const {
+                    return dhcpStart;
+                }
+                IPAddress getDhcpEnd() const {
+                    return dhcpEnd;
+                }
+                uint8_t getChannel() const {
+                    return channel;
+                }
+                EncryptionType getEncryption() const {
+                    return encryption_enum;
+                }
+            } SoftAPConfig_t;
+        };
+
+        class SoftAP : public SoftAPConfig, public ConfigGetterSetter<SoftAPConfig::SoftAPConfig_t, _H(MainConfig().network.softap.cfg) CIF_DEBUG(, &handleNameSoftAPConfig_t)> {
+        public:
+
+
+            // SoftAP();
+            // static SoftAP read();
+            // static SoftAP &getWriteable();
+            // static SoftAP &getWriteableConfig() {
+            //     return getWriteable();
+            // }
             static void defaults();
-            void write();
+            // void write();
 
-            IPAddress address() const {
-                return _address;
-            }
-            IPAddress subnet() const {
-                return _subnet;
-            }
-            IPAddress gateway() const {
-                return _gateway;
-            }
-            IPAddress dhcpStart() const {
-                return _dhcpStart;
-            }
-            IPAddress dhcpEnd() const {
-                return _dhcpEnd;
-            }
-            uint8_t channel() const {
-                return _channel;
-            }
-            EncryptionType encryption() const {
-                return static_cast<EncryptionType>(_encryption);
-            }
+            // IPAddress address() const {
+            //     return _address;
+            // }
+            // IPAddress subnet() const {
+            //     return _subnet;
+            // }
+            // IPAddress gateway() const {
+            //     return _gateway;
+            // }
+            // IPAddress dhcpStart() const {
+            //     return _dhcpStart;
+            // }
+            // IPAddress dhcpEnd() const {
+            //     return _dhcpEnd;
+            // }
+            // uint8_t channel() const {
+            //     return _channel;
+            // }
+            // EncryptionType encryption() const {
+            //     return static_cast<EncryptionType>(_encryption);
+            // }
 
-            struct __attribute__packed__ {
-                uint32_t _address;
-                uint32_t _subnet;
-                uint32_t _gateway;
-                uint32_t _dhcpStart;
-                uint32_t _dhcpEnd;
-                uint8_t _channel;
-                uint8_t _encryption;
-            };
         };
 
         // --------------------------------------------------------------------
         // WiFi
 
-        class WiFiConfig {
+        class WiFi {
         public:
-            CREATE_STRING_GETTER_SETTER(MainConfig().network.WiFiConfig, SSID, 32);
+            CREATE_STRING_GETTER_SETTER(MainConfig().network.wifi, SSID, 32);
             static constexpr size_t kPasswordMinSize = 8;
-            CREATE_STRING_GETTER_SETTER(MainConfig().network.WiFiConfig, Password, 32);
-            CREATE_STRING_GETTER_SETTER(MainConfig().network.WiFiConfig, SoftApSSID, 32);
+            CREATE_STRING_GETTER_SETTER(MainConfig().network.wifi, Password, 32);
+            CREATE_STRING_GETTER_SETTER(MainConfig().network.wifi, SoftApSSID, 32);
             static constexpr size_t kSoftApPasswordMinSize = 8;
-            CREATE_STRING_GETTER_SETTER(MainConfig().network.WiFiConfig, SoftApPassword, 32);
+            CREATE_STRING_GETTER_SETTER(MainConfig().network.wifi, SoftApPassword, 32);
         };
 
         Settings settings;
-        SoftAP softAp;
-        WiFiConfig WiFiConfig;
+        SoftAP softap;
+        WiFi wifi;
     };
 
     // --------------------------------------------------------------------
@@ -762,7 +907,8 @@ namespace KFCConfigurationClasses {
             enum class AlarmModeType : uint8_t {
                 BOTH,       // can be used if silent or buzzer is not available
                 SILENT,
-                BUZZER
+                BUZZER,
+                MAX
             };
 
             enum class WeekDaysType : uint8_t {
@@ -794,21 +940,17 @@ namespace KFCConfigurationClasses {
 
             typedef struct __attribute__packed__ {
                 TimeType timestamp;
-                struct __attribute__packed__ {
-                    uint8_t hour;
-                    uint8_t minute;
-                };
+                uint8_t hour;
+                uint8_t minute;
                 WeekDay_t week_day;
             } AlarmTime_t;
 
-            typedef struct __attribute__packed__ {
+            typedef struct __attribute__packed__ SingleAlarm_t {
+                using Type = SingleAlarm_t;
                 AlarmTime_t time;
-                union {
-                    AlarmModeType mode_type;
-                    uint8_t mode;
-                };
-                uint16_t max_duration: 15;       // limit in seconds, 0 = unlimited
-                uint16_t is_enabled: 1;
+                uint16_t max_duration;       // limit in seconds, 0 = unlimited
+                CREATE_ENUM_BITFIELD(mode, AlarmModeType);
+                CREATE_UINT8_BITFIELD(is_enabled, 1);
             } SingleAlarm_t;
 
             typedef struct __attribute__packed__ {
@@ -854,34 +996,31 @@ namespace KFCConfigurationClasses {
             enum class ModeType : uint8_t {
                 NONE,
                 SERVER,
-                CLIENT
+                CLIENT,
+                MAX
             };
             enum class SerialPortType : uint8_t {
                 SERIAL0,
                 SERIAL1,
-                SOFTWARE
+                SOFTWARE,
+                MAX
             };
 
             typedef struct __attribute__packed__ Serial2Tcp_t {
+                using Type = Serial2Tcp_t;
                 uint16_t port;
                 uint32_t baudrate;
-                union __attribute__packed__ {
-                    ModeType mode;
-                    uint8_t mode_byte;
-                };
-                union __attribute__packed__ {
-                    SerialPortType serial_port;
-                    uint8_t serial_port_byte;
-                };
+                CREATE_ENUM_BITFIELD(mode, ModeType);
+                CREATE_ENUM_BITFIELD(serial_port, SerialPortType);
+                CREATE_UINT8_BITFIELD(authentication, 1);
+                CREATE_UINT8_BITFIELD(auto_connect, 1);
                 uint8_t rx_pin;
                 uint8_t tx_pin;
-                bool authentication;
-                bool auto_connect;
                 uint8_t keep_alive;
                 uint8_t auto_reconnect;
                 uint16_t idle_timeout;
 
-                Serial2Tcp_t() : port(2323), baudrate(KFC_SERIAL_RATE), mode(ModeType::SERVER), serial_port(SerialPortType::SERIAL0), rx_pin(0), tx_pin(0), authentication(false), auto_connect(false), keep_alive(30), auto_reconnect(5), idle_timeout(300) {}
+                Serial2Tcp_t() : port(2323), baudrate(KFC_SERIAL_RATE), mode(cast_int_mode(ModeType::SERVER)), serial_port(cast_int_serial_port(SerialPortType::SERIAL0)), authentication(false), auto_connect(false), rx_pin(0), tx_pin(0), keep_alive(30), auto_reconnect(5), idle_timeout(300) {}
 
             } Serial2Tcp_t;
         };
@@ -919,30 +1058,27 @@ namespace KFCConfigurationClasses {
                 DEFAULT = 0xff,
             };
 
+            AUTO_DEFAULT_PORT_CONST_SECURE(0, 1883, 8883);
+
             typedef struct __attribute__packed__ MqttConfig_t {
-                uint16_t port;
-                uint8_t keepalive;
-                union __attribute__packed__ {
-                    ModeType mode_enum;
-                    uint8_t mode;
-                };
-                union __attribute__packed__ {
-                    QosType qos_enum;
-                    uint8_t qos;
-                };
+                using Type = MqttConfig_t;
+                CREATE_ENUM_BITFIELD(mode, ModeType);
+                CREATE_ENUM_BITFIELD(qos, QosType);
                 uint8_t auto_discovery: 1;
+                uint8_t keepalive;
+                AUTO_DEFAULT_PORT_GETTER_SETTER_SECURE(__port, get_enum_mode(*this) == ModeType::SECURE);
 
                 template<class T>
                 void dump() {
                     CONFIG_DUMP_STRUCT_INFO(T);
-                    CONFIG_DUMP_STRUCT_VAR(port);
+                    CONFIG_DUMP_STRUCT_VAR(__port);
                     CONFIG_DUMP_STRUCT_VAR(keepalive);
                     CONFIG_DUMP_STRUCT_VAR(mode);
                     CONFIG_DUMP_STRUCT_VAR(qos);
                     CONFIG_DUMP_STRUCT_VAR(auto_discovery);
                 }
 
-                MqttConfig_t() : port(1883), keepalive(15), mode_enum(ModeType::UNSECURE), qos_enum(QosType::EXACTLY_ONCE), auto_discovery(true) {}
+                MqttConfig_t() : mode(cast_int_mode(ModeType::UNSECURE)), qos(cast_int_qos(QosType::EXACTLY_ONCE)), auto_discovery(true), keepalive(15), __port(kPortAuto) {}
 
             } MqttConfig_t;
         };
@@ -965,24 +1101,28 @@ namespace KFCConfigurationClasses {
 
         // --------------------------------------------------------------------
         // Syslog
+
         class SyslogClientConfig {
         public:
             using SyslogProtocolType = ::SyslogProtocolType;
+
+            AUTO_DEFAULT_PORT_CONST_SECURE(0, 514, 6514);
+
             typedef struct __attribute__packed__ SyslogConfig_t {
-                uint16_t port;
                 union __attribute__packed__ {
                     SyslogProtocolType protocol_enum;
                     uint8_t protocol;
                 };
+                AUTO_DEFAULT_PORT_GETTER_SETTER_SECURE(__port, protocol_enum == SyslogProtocolType::TCP_TLS);
 
                 template<class T>
                 void dump() {
                     CONFIG_DUMP_STRUCT_INFO(T);
-                    CONFIG_DUMP_STRUCT_VAR(port);
                     CONFIG_DUMP_STRUCT_VAR(protocol);
+                    CONFIG_DUMP_STRUCT_VAR(__port);
                 }
 
-                SyslogConfig_t() : port(514), protocol_enum(SyslogProtocolType::TCP) {}
+                SyslogConfig_t() : protocol_enum(SyslogProtocolType::TCP), __port(kPortDefault) {}
 
             } SyslogConfig_t;
         };
@@ -990,8 +1130,6 @@ namespace KFCConfigurationClasses {
         class SyslogClient : public SyslogClientConfig, public ConfigGetterSetter<SyslogClientConfig::SyslogConfig_t, _H(MainConfig().plugins.syslog.cfg) CIF_DEBUG(, &handleNameSyslogConfig_t)>
         {
         public:
-            SyslogClient() {}
-
             static void defaults();
             static bool isEnabled();
             static bool isEnabled(SyslogProtocolType protocol);
@@ -1007,9 +1145,12 @@ namespace KFCConfigurationClasses {
             typedef struct __attribute__packed__ NtpClientConfig_t {
                 // minutes
                 uint16_t refreshInterval;
-                static constexpr uint16_t kRefreshIntervalMin = 60;
+                uint32_t getRefreshIntervalMillis() const {
+                    return refreshInterval * 60U * 1000U;
+                }
+                static constexpr uint16_t kRefreshIntervalMin = 5;
                 static constexpr uint16_t kRefreshIntervalMax = 720 * 60;
-                static constexpr uint16_t kRefreshIntervalDefault = 15 * 60;
+                static constexpr uint16_t kRefreshIntervalDefault = 15;
 
                 NtpClientConfig_t() : refreshInterval(kRefreshIntervalDefault) {}
 
@@ -1034,6 +1175,51 @@ namespace KFCConfigurationClasses {
         };
 
         // --------------------------------------------------------------------
+        // Sensor
+
+        class SensorConfig {
+        public:
+            typedef struct __attribute__packed__ SensorConfig_t {
+#if IOT_SENSOR_HAVE_BATTERY
+                typedef struct __attribute__packed__ battery_t {
+                    float calibration;
+                    uint8_t precision;
+                    float offset;
+
+                    battery_t() : calibration(1), precision(1), offset(0) {}
+
+                } battery_t;
+                battery_t battery;
+#endif
+#if (IOT_SENSOR_HAVE_HLW8012 || IOT_SENSOR_HAVE_HLW8032)
+                typedef struct __attribute__packed__ hlw80xx_t {
+                    float calibrationU;
+                    float calibrationI;
+                    float calibrationP;
+                    uint64_t energyCounter;
+                    uint8_t extraDigits;
+
+                    hlw80xx_t();
+
+                } hlw80xx_t;
+                hlw80xx_t hlw80xx;
+#endif
+                SensorConfig_t() = default;
+            } SensorConfig_t;
+        };
+
+        class Sensor : public SensorConfig, public ConfigGetterSetter<SensorConfig::SensorConfig_t, _H(MainConfig().plugins.sensor.cfg) CIF_DEBUG(, &handleNameSensorConfig_t)> {
+        public:
+            static void defaults();
+        };
+
+        class MDNS
+        {
+            public:
+
+        };
+
+        // --------------------------------------------------------------------
         // Plugin Structure
 
         HomeAssistant homeassistant;
@@ -1045,6 +1231,8 @@ namespace KFCConfigurationClasses {
         MQTTClient mqtt;
         SyslogClient syslog;
         NTPClient ntpclient;
+        Sensor sensor;
+        MDNS mdns;
 
     };
 
@@ -1060,10 +1248,13 @@ namespace KFCConfigurationClasses {
 
 };
 
+static constexpr size_t ConfigFlagsSize = sizeof(KFCConfigurationClasses::System::Flags::ConfigFlags_t);
+static_assert(ConfigFlagsSize == sizeof(uint32_t), "size exceeded");
+
 #include <pop_pack.h>
 
-#ifdef _H_DEFINED_KFCCONFIGURATIONCLASSES
-#undef CONFIG_GET_HANDLE_STR
-#undef _H
-#undef _H_DEFINED_KFCCONFIGURATIONCLASSES
-#endif
+// #ifdef _H_DEFINED_KFCCONFIGURATIONCLASSES
+// #undef CONFIG_GET_HANDLE_STR
+// #undef _H
+// #undef _H_DEFINED_KFCCONFIGURATIONCLASSES
+// #endif

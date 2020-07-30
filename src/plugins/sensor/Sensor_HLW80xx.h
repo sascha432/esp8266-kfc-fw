@@ -176,6 +176,9 @@ class Sensor_HLW8032;
 
 class Sensor_HLW80xx : public MQTTSensor {
 public:
+    using EnergyCounterArray = std::array<uint64_t, IOT_SENSOR_HLW80xx_NUM_ENERGY_COUNTERS>;
+    
+public:
     Sensor_HLW80xx(const String &name);
 
     virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num) override;
@@ -202,8 +205,6 @@ public:
     virtual void atModeHelpGenerator() override;
     virtual bool atModeHandler(AtModeArgs &args) override;
 #endif
-
-    using EnergyCounterArray = std::array<uint64_t, IOT_SENSOR_HLW80xx_NUM_ENERGY_COUNTERS>;
 
     void resetEnergyCounter();
     EnergyCounterArray &getEnergyCounters() {
@@ -257,10 +258,7 @@ protected:
 public:
     EventScheduler::Timer _dumpTimer;
 
-    void setExtraDigits(int8_t digits) {
-        _extraDigits = std::max((int8_t)0, std::min((int8_t)6, digits));
-        config._H_W_GET(Config().sensor).hlw80xx.extraDigits = _extraDigits;
-    }
+    static void setExtraDigits(uint8_t digits);
     EnergyCounterArray _energyCounter;
 
 #if IOT_SENSOR_HLW80xx_ADJUST_CURRENT

@@ -25,6 +25,10 @@
 #include <debug_helper_disable.h>
 #endif
 
+DimmerModule::DimmerModule() : cfg({}), config_valid(false) {
+}
+
+
 Dimmer_Base::Dimmer_Base() :
 #if IOT_DIMMER_MODULE_INTERFACE_UART
     _wire(Serial)
@@ -359,8 +363,6 @@ void Dimmer_Base::writeEEPROM(bool noLocking)
         }
     }
 }
-
-
 
 void Dimmer_Base::_getValues(JsonArray &array)
 {

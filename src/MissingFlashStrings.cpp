@@ -14,7 +14,7 @@ void dummy() {
     Serial.print(FSPGM(FormRangeValidator_default_message_zero_allowed));//, "This fields value must be between %min% and %max% or 0"));
     Serial.print(FSPGM(FormLengthValidator_default_message));//, "This field must be between %min% and %max% characters"));
     Serial.print(FSPGM(FormEnumValidator_default_message));//, "Invalid value: %allowed%"));
-    Serial.print(FSPGM(FormValidHostOrIpValidator_default_message));//, "Invalid hostname or IP address"));
+    Serial.print(FSPGM(FormHostValidator_default_message));//, "Invalid hostname or IP address"));
     Serial.print(FSPGM(Form_value_missing_default_message));//, "This field is missing"));
     Serial.print(FSPGM(FormValidator_allowed_macro, "%allowed%"));
     Serial.print(FSPGM(FormValidator_min_macro, "%min%"));

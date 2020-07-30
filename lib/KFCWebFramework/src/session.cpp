@@ -5,9 +5,6 @@
 #include <Arduino_compat.h>
 #include "session.h"
 #include "misc.h"
-#include "kfc_fw_config_classes.h"
-
-using KFCConfigurationClasses::System;
 
 RNGClass rng;
 
@@ -50,12 +47,15 @@ String generate_session_id(const char *username, const char *password, const uin
     return sid;
 }
 
+extern const char *session_get_token();
+extern size_t session_get_token_min_size();
+
 bool verify_session_id(const char *sessionId, const char *username, const char *password)
 {
 #if HAVE_SESSION_DEVICE_TOKEN
 
-    auto token = System::Device::getToken();
-    if (token && strlen(token) >= System::Device::kTokenMinSize && !strcmp(sessionId, token)) {
+    auto token = session_get_token();
+    if (token && strlen(token) >= session_get_token_min_size() && !strcmp(sessionId, token)) {
         return true;
     }
 

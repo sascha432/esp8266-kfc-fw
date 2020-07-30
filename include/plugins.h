@@ -7,7 +7,6 @@
 #include <Arduino_compat.h>
 #include <vector>
 #include "PluginComponent.h"
-#include "../src/generated/FlashStringGeneratorAuto.h"
 
 #ifndef DEBUG_PLUGINS
 #define DEBUG_PLUGINS                                 0

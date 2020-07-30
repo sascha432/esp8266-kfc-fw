@@ -97,7 +97,7 @@ struct UploadStatus_t {
 
 WebServerSetCPUSpeedHelper::WebServerSetCPUSpeedHelper() : SpeedBooster(
 #if defined(ESP8266)
-    System::Flags::get().is_webserver_performance_mode_enabled
+    System::Flags::getConfig().is_webserver_performance_mode_enabled
 #endif
 ) {
 }
@@ -644,11 +644,11 @@ void WebServerPlugin::begin()
     if (cfg.is_https) {
         service += 's';
     }
-    MDNSService::addService(service, FSPGM(tcp, "tcp"), cfg.port);
+    MDNSService::addService(service, FSPGM(tcp, "tcp"), cfg.getPort());
     MDNSService::announce();
 
 
-    _server = new AsyncWebServer(cfg.port);
+    _server = new AsyncWebServer(cfg.getPort());
     // server->addHandler(&events);
 
     _loginFailures.readFromSPIFFS();
@@ -673,7 +673,7 @@ void WebServerPlugin::begin()
 
     _server->onNotFound(handlerNotFound);
 
-    if (System::Flags::get().is_webui_enabled) {
+    if (System::Flags::getConfig().is_webui_enabled) {
         WsWebUISocket::setup();
         WebServerPlugin::addHandler(F("/webui_get"), handlerWebUI);
     }
@@ -687,7 +687,7 @@ void WebServerPlugin::begin()
     WebServerPlugin::addHandler(F("/speedtest.zip"), handlerSpeedTestZip);
     WebServerPlugin::addHandler(F("/speedtest.bmp"), handlerSpeedTestImage);
 #if WEBUI_ALERTS_ENABLED
-    if (System::Flags::get().is_webalerts_enabled) {
+    if (System::Flags::getConfig().is_webalerts_enabled) {
         WebServerPlugin::addHandler(F("/alerts"), handlerAlerts);
     }
 #endif
@@ -937,7 +937,7 @@ void WebServerPlugin::getStatus(Print &output)
     output.print(F("Web server "));
     if (mode != System::WebServer::ModeType::DISABLED) {
         auto cfg = System::WebServer::getConfig();
-        output.printf_P(PSTR("running on port %u"), cfg.port);
+        output.printf_P(PSTR("running on port %u"), cfg.getPort());
 #if WEBSERVER_TLS_SUPPORT
         output.print(F(", TLS "));
         if (cfg.is_https) {
@@ -964,56 +964,49 @@ void WebServerPlugin::getStatus(Print &output)
 
 void WebServerPlugin::createConfigureForm(PluginComponent::FormCallbackType type, const String &name, Form &form, AsyncWebServerRequest *request)
 {
-    if (!isCreateFormCallbackType(type)) {
+    if (type == PluginComponent::FormCallbackType::SAVE) {
+        config.setConfigDirty(true);
+        return;
+    }
+    else if (!isCreateFormCallbackType(type)) {
         return;
     }
 
-    form.setFormUI(F("Remote Access Configuration"));
+    // form.setFormUI(F("Remote Access Configuration"));
 
-    form.addGetterSetterType(System::WebServer::getMode, System::WebServer::setMode, uint8_t))->setFormUI((new FormUI(FormUI::Type::SELECT, FSPGM(HTTP_Server, "HTTP Server")))->setBoolItems());
-    form.addValidator(new FormRangeValidatorEnum<System::WebServer::ModeType>());
+    form.addGetterSetterType_P(SPGM(httpmode, "httpmode"), System::WebServer::getMode, System::WebServer::setMode, uint8_t)); //->setFormUI(new FormUI::UI(FormUI::Type::SELECT, FSPGM(HTTP_Server, "HTTP Server")))->setBoolItems());
+    form.addValidator(FormRangeValidatorEnum<System::WebServer::ModeType>());
 
 #if WEBSERVER_TLS_SUPPORT
-    form.addValidator(new FormMatchValidator(F("There is not enough free RAM for TLS support"), [](FormField &field) {
+    form.addValidator(FormMatchValidator(F("There is not enough free RAM for TLS support"), [](FormField &field) {
         return (field.getValue().toInt() != HTTP_MODE_SECURE) || (ESP.getFreeHeap() > 24000);
     }));
 #endif
 
-    auto &flags = System::Flags::getWriteable();
+    auto &flags = System::Flags::getWriteableConfig();
     auto &cfg = System::WebServer::getWriteableConfig();
 
-
 #if defined(ESP8266)
-    form.addWriteableStruct(flags, is_webserver_performance_mode_enabled));
+    form.addWriteableStruct("httperf", flags, is_webserver_performance_mode_enabled));
 #endif
 
-    form.addWriteableStruct(cfg, port))->setFormUI((new FormUI(FormUI::Type::INTEGER, FSPGM(Port, "Port"))));
-    form.addValidator(new FormTCallbackValidator<uint16_t>([](uint16_t port, FormField &field) {
-#if WEBSERVER_TLS_SUPPORT
-        if (field.getForm().getField(F("http_enabled"))->getValue().toInt() == (int)System::WebServer::ModeType::SECURE) {
-            if (port == 0) {
-                port = 443;
-            }
-        } else
-#endif
-        {
-            if (port == 0) {
-                port = 80;
-            }
+    form.add(F("httport"), cfg.getPortAsString(), [&cfg](const String &value, FormField &field, bool store) {
+        if (store) {
+            cfg.setPort(value.toInt(), cfg.isSecure()); // setMode() is executed already and cfg.is_https set
+            field.setValue(cfg.getPortAsString());
         }
-        field.setValue(String(port));
-        return true;
-    }));
-    form.addValidator(new FormRangeValidator(FSPGM(Invalid_port, "Invalid port"), 1, 65535));
+        return false;
+    }); //->setFormUI(new FormUI::UI(FormUI::Type::INTEGER, FSPGM(Port, "Port"))));
+    form.addValidator(FormNetworkPortValidator(true));
 
 #if WEBSERVER_TLS_SUPPORT
 
-    form.add(new FormObject<File2String>(F("ssl_certificate"), File2String(FSPGM(server_crt)), nullptr));
+    form.add(new FormObject<File2String>(F("ssl_cert"), File2String(FSPGM(server_crt)), nullptr));
     form.add(new FormObject<File2String>(F("ssl_key"), File2String(FSPGM(server_key)), nullptr));
 
 #endif
-    form.addCStrGetterSetter(System::Device::getToken, System::Device::setToken))->setFormUI((new FormUI(FormUI::Type::TEXT, F("Token for Web Server, Web Sockets and Tcp2Serial"))));
-    form.addValidator(new FormLengthValidator(System::Device::kTokenMinSize, System::Device::kTokenMaxSize));
+    form.addCStrGetterSetter("btok", System::Device::getToken, System::Device::setToken)); //->setFormUI(new FormUI::UI(FormUI::Type::TEXT, F("Token for Web Server, Web Sockets and Tcp2Serial"))));
+    form.addValidator(FormLengthValidator(System::Device::kTokenMinSize, System::Device::kTokenMaxSize));
 
     form.finalize();
 }

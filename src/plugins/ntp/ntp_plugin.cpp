@@ -101,7 +101,7 @@ uint32_t sntp_update_delay_MS_rfc_not_less_than_15000()
 
 void NTPPlugin::setup(SetupModeType mode)
 {
-    if (System::Flags::get().is_ntp_client_enabled) {
+    if (System::Flags::getConfig().is_ntp_client_enabled) {
         execConfigTime();
     } else {
 		auto str = emptyString.c_str();
@@ -123,13 +123,10 @@ void NTPPlugin::shutdown()
 
 void NTPPlugin::getStatus(Print &output)
 {
-    if (System::Flags::get().is_ntp_client_enabled) {
+    if (System::Flags::getConfig().is_ntp_client_enabled) {
 
-        char buf[16];
-        auto now = time(nullptr);
-        auto tm = localtime(&now);
-        strftime_P(buf, sizeof(buf), PSTR("%z %Z"), tm);
-        output.printf_P(PSTR("Timezone %s, %s"), Plugins::NTPClient::getTimezoneName(), buf);
+        output.printf_P(PSTR("Timezone %s, "), Plugins::NTPClient::getTimezoneName());
+        static_cast<PrintString &>(output).strftime_P(PSTR("%z %Z"), time(nullptr));
 
         auto firstServer = true;
         const char *server;
@@ -173,7 +170,7 @@ void NTPPlugin::updateNtpCallback()
     _debug_printf_P(PSTR("new time=%u\n"), (int)now);
 
     if (IS_TIME_VALID(now)) {
-        NTPPlugin::_ntpRefreshTimeMillis = Plugins::NTPClient::getConfig().refreshInterval * 60 * 1000UL;
+        NTPPlugin::_ntpRefreshTimeMillis = Plugins::NTPClient::getConfig().getRefreshIntervalMillis();
         plugin._checkTimer.remove();
     }
 

@@ -85,7 +85,7 @@ void SyslogPlugin::_begin()
 
         auto cfg = SyslogClient::getConfig();
         _hostname = SyslogClient::getHostname();
-        _port = cfg.port;
+        _port = cfg.getPort();
 
         if (config.hasZeroConf(_hostname)) {
             config.resolveZeroConf(getFriendlyName(), _hostname, _port, [](const String &hostname, const IPAddress &address, uint16_t port, MDNSResolver::ResponseType type) {

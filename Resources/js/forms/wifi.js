@@ -5,14 +5,14 @@
 $(function () {
     // wifi.html
     if ($('#wifi_settings').length) {
-        var max_channels = parseInt($('#channel').data('max-channels'));
+        var max_channels = parseInt($('#apch').data('max-channels'));
         $('#channel option').each(function () {
             if (parseInt($(this).val()) > max_channels) {
                 $(this).remove();
             }
         });
         function mode_change() {
-            var mode = parseInt($('#mode').val());
+            var mode = parseInt($('#wssid').val());
             $('#station_mode').hide();
             $('#ap_mode').hide();
             if (mode == 1 || mode == 3) {
@@ -22,17 +22,17 @@ $(function () {
                 $('#ap_mode').show();
             }
         }
-        $('#mode').change(mode_change);
+        $('#wssid').change(mode_change);
         mode_change();
         $('form').on('submit', function () {
-            $('#ap_hidden').val($('#_ap_hidden').prop('checked') ? '1' : '0');
+            $('#aphs').val($('#_aphs').prop('checked') ? '1' : '0');
         });
         $('#network_dialog').on('show.bs.modal', function (event) {
             console.log("show.bs.modal");
             var SID = $.getSessionId();
             var modal = $(this)
             var reload_timer = null;
-            var selected_network = $('#ssid').val();
+            var selected_network = $('#wssid').val();
             modal.find('.btn-primary').prop('disabled', true);
             modal.find('.modal-body .networks').hide();
             modal.find('.modal-body .scanning').show();
@@ -47,7 +47,7 @@ $(function () {
             }
             function check_scan() {
                 $.get('/scan_wifi?SID=' + SID + '&id=' + random_str(), function (data) {
-                    console.log(data);
+                    dbg_console.log(data);
                     if (data.pending) {
                         window.setTimeout(check_scan, 1000);
                     } else {
@@ -114,10 +114,10 @@ $(function () {
                                     window.clearTimeout(reload_timer);
                                     reload_timer = null;
                                     if (selected_network) {
-                                        $('#ssid').val(selected_network);
-                                        $('#password').focus().select();
+                                        $('#wssid').val(selected_network);
+                                        $('#wpwd').focus().select();
                                     }
-                                    selected_network = $('#ssid').val();
+                                    selected_network = $('#wssid').val();
                                 });
                                 modal.modal('hide');
                             });

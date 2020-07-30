@@ -110,9 +110,10 @@ bool Sensor_Battery::getSensorData(String &name, StringVector &values)
 
 void Sensor_Battery::createConfigureForm(AsyncWebServerRequest *request, Form &form)
 {
-    form.add<float>(F("battery_calibration"), _H_STRUCT_VALUE(Config().sensor, battery.calibration))->setFormUI(new FormUI(FormUI::TEXT, F("Supply Voltage Calibration")));
-    form.add<float>(F("battery_offset"), _H_STRUCT_VALUE(Config().sensor, battery.offset))->setFormUI(new FormUI(FormUI::TEXT, F("Supply Voltage Offset")));
-    form.add<uint8_t>(F("battery_precision"), _H_STRUCT_VALUE(Config().sensor, battery.precision))->setFormUI(new FormUI(FormUI::TEXT, F("Supply Voltage Precision")));
+    auto &cfg = config._H_W_GET(Config().sensor);
+    form.add<float>(F("battery_calibration"), _H_W_STRUCT_VALUE(cfg, battery.calibration))->setFormUInew FormUI::UI(FormUI::Type::TEXT, F("Supply Voltage Calibration")));
+    form.add<float>(F("battery_offset"), _H_W_STRUCT_VALUE(cfg, battery.offset))->setFormUInew FormUI::UI(FormUI::Type::TEXT, F("Supply Voltage Offset")));
+    form.add<uint8_t>(F("battery_precision"), _H_W_STRUCT_VALUE(cfg, battery.precision))->setFormUInew FormUI::UI(FormUI::Type::TEXT, F("Supply Voltage Precision")));
 }
 
 void Sensor_Battery::configurationSaved(Form *form)

@@ -104,17 +104,17 @@ void SwitchPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &for
         form.add(PrintString(F("name[%u]"), i), _names[i], [this, i](const String &name, FormField &, bool) {
             _names[i] = name;
             return false;
-        }, FormField::InputFieldType::TEXT)->setFormUI(new FormUI(FormUI::TEXT, F("Name")));
+        }, FormField::Type::TEXT)->setFormUInew FormUI::UI(FormUI::Type::TEXT, F("Name")));
 
         form.add<SwitchStateEnum>(PrintString(F("state[%u]"), i), _configs[i].state, [this, i](SwitchStateEnum state, FormField &, bool) {
             _configs[i].state = state;
             return false;
-        }, FormField::InputFieldType::SELECT)->setFormUI((new FormUI(FormUI::SELECT, F("Default State")))->addItems(states));
+        }, FormField::Type::SELECT)->setFormUI(new FormUI::UI(FormUI::Type::SELECT, F("Default State")))->addItems(states));
 
         form.add<WebUIEnum>(PrintString(F("webui[%u]"), i), _configs[i].webUI, [this, i](WebUIEnum webUI, FormField &, bool) {
             _configs[i].webUI = webUI;
             return false;
-        }, FormField::InputFieldType::SELECT)->setFormUI((new FormUI(FormUI::SELECT, F("WebUI")))->addItems(webUI));
+        }, FormField::Type::SELECT)->setFormUI(new FormUI::UI(FormUI::Type::SELECT, F("WebUI")))->addItems(webUI));
 
         if (group) {
             group->end();

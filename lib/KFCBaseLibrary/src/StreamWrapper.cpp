@@ -6,7 +6,7 @@
 #include <NullStream.h>
 #include "StreamWrapper.h"
 
-#if 1
+#if DEBUG_SERIAL_HANDLER
 #define __DSW(fmt, ...)             ::printf(PSTR("SW:" fmt "\n"), ##__VA_ARGS__);
 #else
 #define __DSW(...)                  ;

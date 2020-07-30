@@ -28,6 +28,7 @@
 #include "build.h"
 
 using KFCConfigurationClasses::System;
+using KFCConfigurationClasses::Plugins;
 
 static MDNSPlugin plugin;
 
@@ -145,10 +146,16 @@ void MDNSPlugin::_wifiCallback(WiFiCallbacks::EventType event, void *payload)
     }
 }
 
+bool MDNSPlugin::isEnabled()
+{
+    auto flags = System::Flags::getConfig();
+    return flags.is_mdns_enabled && flags.is_station_mode_enabled;
+}
+
 void MDNSPlugin::setup(SetupModeType mode)
 {
-    auto flags = System::Flags(true);
-    if (flags.isMDNSEnabled() && flags.isStationEnabled()) {
+
+    if (isEnabled()) {
         _enabled = true;
         begin();
 
@@ -201,7 +208,7 @@ void MDNSPlugin::begin()
         if (MDNSService::addService(FSPGM(kfcmdns), FSPGM(udp), 5353)) {
             MDNSService::addServiceTxt(FSPGM(kfcmdns), FSPGM(udp), String('v'), FIRMWARE_VERSION_STR);
             MDNSService::addServiceTxt(FSPGM(kfcmdns), FSPGM(udp), String('b'), F(__BUILD_NUMBER));
-            MDNSService::addServiceTxt(FSPGM(kfcmdns), FSPGM(udp), String('t'), config._H_STR(Config().device_title));
+            MDNSService::addServiceTxt(FSPGM(kfcmdns), FSPGM(udp), String('t'), System::Device::getTitle());
         }
     }
 }
@@ -222,7 +229,7 @@ void MDNSPlugin::resolveZeroConf(MDNSResolver::Query *query)
     __LDBG_printf("query=%p running=%u queries=%u", query, _isRunning(), _queries.size());
 
     _queries.emplace_back(query);
-    if (!System::Flags(true).isMDNSEnabled()) {
+    if (!isEnabled()) {
         //TODO this might fail if wifi is down
         if (wasEmpty) {
             __LDBG_printf("MDNS disabled, calling begin");
@@ -260,7 +267,7 @@ void MDNSPlugin::_removeQuery(MDNSResolver::Query *query)
     }), _queries.end());
     __LDBG_printf("size=%u", _queries.size());
 
-    if (!System::Flags(true).isMDNSEnabled() && _queries.empty()) {
+    if (!isEnabled() && _queries.empty()) {
         __LDBG_printf("MDNS disabled, zeroconf done, calling end");
         MDNS.end();
         LoopFunctions::remove(loop);

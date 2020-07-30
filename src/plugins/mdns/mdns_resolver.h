@@ -9,7 +9,6 @@
 #include <Arduino_compat.h>
 #include <ESP8266mDNS.h>
 #include <memory>
-#include "kfc_fw_config.h"
 
 namespace MDNSResolver {
 

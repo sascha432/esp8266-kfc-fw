@@ -16,7 +16,7 @@
 #include <debug_helper_disable.h>
 #endif
 
-using Flags = KFCConfigurationClasses::System::Flags;
+using KFCConfigurationClasses::System;
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(MDNSQ, "MDNSQ", "<service>,<proto>,[<wait=2000ms>]", "Query MDNS");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(MDNSR, "MDNSR", "<stop|start|enable|disable|zeroconf>", "Configure MDNS");
@@ -129,16 +129,16 @@ bool MDNSPlugin::atModeHandler(AtModeArgs &args)
                 } break;
                 case 2: { // enable
                     args.print(F("MDNS enabled. Requires restart..."));
-                    auto flags = Flags(true);
-                    flags.setMDNSEnabled(true);
-                    flags.write();
+                    auto &flags = System::Flags::getWriteableConfig();
+                    // flags.setMDNSEnabled(true);
+                    flags.is_mdns_enabled = true;
                     config.write();
                 } break;
                 case 3: { // disable
                     args.print(F("MDNS disabled. Requires restart..."));
-                    auto flags = Flags(true);
-                    flags.setMDNSEnabled(false);
-                    flags.write();
+                    auto &flags = System::Flags::getWriteableConfig();
+                    //flags.setMDNSEnabled(false);
+                    flags.is_mdns_enabled = false;
                     config.write();
                 } break;
                 case 4:

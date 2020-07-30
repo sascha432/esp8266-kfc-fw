@@ -5,7 +5,6 @@
 #include <global.h>
 #include "failure_counter.h"
 #if defined(HAVE_FLASH_STRING_GENERATOR) && HAVE_FLASH_STRING_GENERATOR
-#include "../src/generated/FlashStringGeneratorAuto.h"
 #endif
 
 #if SECURITY_LOGIN_ATTEMPTS

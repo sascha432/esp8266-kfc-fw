@@ -102,14 +102,14 @@ void RemoteControlPlugin::createConfigureForm(AsyncWebServerRequest *request, Fo
     form.setFormUI(F("Remote Control Configuration"));
 
     form.add<uint8_t>(F("auto_sleep_time"), _H_STRUCT_VALUE(MainConfig().plugins.remotecontrol, autoSleepTime))
-        ->setFormUI((new FormUI(FormUI::TEXT, F("Auto Sleep Time")))->setSuffix(FSPGM(seconds, "seconds")));
+        ->setFormUI(new FormUI::UI(FormUI::Type::TEXT, F("Auto Sleep Time")))->setSuffix(FSPGM(seconds, "seconds")));
     form.add<uint16_t>(F("deep_sleep_time"), _H_STRUCT_VALUE(MainConfig().plugins.remotecontrol, deepSleepTime))
-        ->setFormUI((new FormUI(FormUI::TEXT, F("Deep Sleep Time")))->setSuffix(F("seconds (0 = indefinitely)")));
+        ->setFormUI(new FormUI::UI(FormUI::Type::TEXT, F("Deep Sleep Time")))->setSuffix(F("seconds (0 = indefinitely)")));
 
     form.add<uint16_t>(F("long_press_time"), _H_STRUCT_VALUE(MainConfig().plugins.remotecontrol, longpressTime))
-        ->setFormUI((new FormUI(FormUI::TEXT, F("Long Press Time")))->setSuffix(FSPGM(milliseconds, "milliseconds")));
+        ->setFormUI(new FormUI::UI(FormUI::Type::TEXT, F("Long Press Time")))->setSuffix(FSPGM(milliseconds, "milliseconds")));
     form.add<uint16_t>(F("repeat_time"), _H_STRUCT_VALUE(MainConfig().plugins.remotecontrol, repeatTime))
-        ->setFormUI((new FormUI(FormUI::TEXT, F("Repeat Time")))->setSuffix(FSPGM(milliseconds)));
+        ->setFormUI(new FormUI::UI(FormUI::Type::TEXT, F("Repeat Time")))->setSuffix(FSPGM(milliseconds)));
 
     FormUI::ItemsList actions;
     Plugins::HomeAssistant::ActionVector vector;
@@ -131,13 +131,13 @@ void RemoteControlPlugin::createConfigureForm(AsyncWebServerRequest *request, Fo
         );
 
         form.add<uint16_t>(PrintString(F("shortpress_action_%u"), i), _H_STRUCT_VALUE(MainConfig().plugins.remotecontrol, actions[i].shortpress, i))
-            ->setFormUI((new FormUI(FormUI::SELECT, F("Short Press")))->addItems(actions));
+            ->setFormUI(new FormUI::UI(FormUI::Type::SELECT, F("Short Press")))->addItems(actions));
 
         form.add<uint16_t>(PrintString(F("longpress_action_%u"), i), _H_STRUCT_VALUE(MainConfig().plugins.remotecontrol, actions[i].longpress, i))
-            ->setFormUI((new FormUI(FormUI::SELECT, F("Long Press")))->addItems(actions));
+            ->setFormUI(new FormUI::UI(FormUI::Type::SELECT, F("Long Press")))->addItems(actions));
 
         form.add<uint16_t>(PrintString(F("repeat_action_%u"), i), _H_STRUCT_VALUE(MainConfig().plugins.remotecontrol, actions[i].repeat, i))
-            ->setFormUI((new FormUI(FormUI::SELECT, F("Repeat")))->addItems(actions));
+            ->setFormUI(new FormUI::UI(FormUI::Type::SELECT, F("Repeat")))->addItems(actions));
 
         group.end();
     }

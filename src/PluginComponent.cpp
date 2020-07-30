@@ -8,7 +8,7 @@
 #include <LoopFunctions.h>
 #include <Form.h>
 #include <misc.h>
-#include "kfc_fw_config_classes.h"
+#include <kfc_fw_config.h>
 
 #if DEBUG_PLUGINS
 #include "debug_helper_enable.h"

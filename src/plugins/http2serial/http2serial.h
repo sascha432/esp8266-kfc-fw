@@ -10,6 +10,7 @@
 
 #include <Arduino_compat.h>
 #include <Buffer.h>
+#include <kfc_fw_config.h>
 #include "ws_console_client.h"
 #include "serial_handler.h"
 

@@ -9,6 +9,7 @@
 #include <WebUIComponent.h>
 #include <EventScheduler.h>
 #include <serial_handler.h>
+#include <kfc_fw_config.h>
 #include "../src/plugins/sensor/Sensor_DimmerMetrics.h"
 
 #if IOT_DIMMER_MODULE_INTERFACE_UART

@@ -5,124 +5,136 @@
 #include <Configuration.h>
 #include "kfc_fw_config.h"
 
-#if DEBUG
-
-const char *handleNameDeviceConfig_t PROGMEM = "MainConfig().system.device.cfg";
-const char *handleNameWebServerConfig_t = "MainConfig().system.webserver";
-const char *handleNameSettingsConfig_t = "MainConfig().system.settings";
-const char *handleNameAlarm_t = "MainConfig().plugins.alarm.cfg";
-const char *handleNameSerial2TCPConfig_t = "MainConfig().plugins.serial2tcp.cfg";
-const char *handleNameMqttConfig_t = "MainConfig().plugins.mqtt.cfg";
-const char *handleNameSyslogConfig_t = "MainConfig().plugins.syslog.cfg";
-const char *handleNameNtpClientConfig_t = "MainConfig().plugins.ntpclient.cfg";
-
+#if DEBUG_CONFIG_CLASS
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
 #endif
+
+DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNameDeviceConfig_t, "MainConfig().system.device.cfg");
+DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNameWebServerConfig_t, "MainConfig().system.webserver.cfg");
+DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNameSettingsConfig_t, "MainConfig().network.settings.cfg");
+DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNameAlarm_t, "MainConfig().plugins.alarm.cfg");
+DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNameSerial2TCPConfig_t, "MainConfig().plugins.serial2tcp.cfg");
+DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNameMqttConfig_t, "MainConfig().plugins.mqtt.cfg");
+DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNameSyslogConfig_t, "MainConfig().plugins.syslog.cfg");
+DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNameNtpClientConfig_t, "MainConfig().plugins.ntpclient.cfg");
+DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNameSensorConfig_t, "MainConfig().plugins.sensor.cfg");
+DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNameFlagsConfig_t, "MainConfig().system.flags.cfg");
+DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNameSoftAPConfig_t, "MainConfig().network.softap.cfg");
+
 
 namespace KFCConfigurationClasses {
 
+    uint8_t System::Flags::ConfigFlags_t::getWifiMode() const
+    {
+        //return wifi_mode;
+        return (is_station_mode_enabled && is_softap_enabled) ? WIFI_AP_STA : (is_station_mode_enabled ? WIFI_STA : (is_softap_enabled ? WIFI_AP : 0));
+    }
+
+    void System::Flags::ConfigFlags_t::setWifiMode(uint8_t mode)
+    {
+        // wifi_mode = mode;
+        is_station_mode_enabled = (mode & WIFI_STA) == WIFI_STA;
+        is_softap_enabled = (mode & WIFI_AP) == WIFI_AP;
+    }
+
+    System::Flags::ConfigFlags_t::ConfigFlags_t() :
+        is_factory_settings(true),
+        is_default_password(true),
+        is_softap_enabled(true),
+        is_softap_ssid_hidden(false),
+        is_softap_standby_mode_enabled(true),
+        is_softap_dhcpd_enabled(true),
+        is_station_mode_enabled(false),
+        is_station_mode_dhcp_enabled(true),
+        use_static_ip_during_wakeup(false),
+        is_led_on_when_connected(true),
+        is_at_mode_enabled(true),
+        is_mdns_enabled(true),
+        is_ntp_client_enabled(true),
+        is_syslog_enabled(false),
+        is_web_server_enabled(true),
+        is_webserver_performance_mode_enabled(true),
+        is_mqtt_enabled(false),
+        is_rest_api_enabled(),
+        is_serial2tcp_enabled(true),
+        is_webui_enabled(true),
+        is_webalerts_enabled(),
+        is_ssdp_enabled(true),
+        __reserved(0),
+        __reserved2(0)
+    {
+    }
+
+    // "${zeroconf:" service "." proto "," variable "|" default_value "}"
+    String createZeroConf(const __FlashStringHelper *service, const __FlashStringHelper *proto, const __FlashStringHelper *varName, const __FlashStringHelper *defaultValue)
+    {
+        auto str = PrintString(F("${zeroconf:%s.%s,%s"), service, proto, varName);
+        if (defaultValue && pgm_read_byte(defaultValue)) {
+            str.print('|');
+            str.print(defaultValue);
+        }
+        str.print('}');
+        return str;
+    }
+
+
     const void *loadBinaryConfig(HandleType handle, uint16_t &length)
     {
-        return config.getBinaryV(handle, length);
+        auto data = config.getBinaryV(handle, length);
+        // __CDBG_printf("handle=%04x data=%p len=%u", handle, data, length);
+        return data;
     }
 
     void *loadWriteableBinaryConfig(HandleType handle, uint16_t length)
     {
-        return config.getWriteableBinary(handle, length);
+        auto data = config.getWriteableBinary(handle, length);
+        __CDBG_printf("handle=%04x data=%p len=%u", handle, data, length);
+        return data;
     }
 
     void storeBinaryConfig(HandleType handle, const void *data, uint16_t length)
     {
+        __CDBG_printf("handle=%04x data=%p len=%u", handle, data, length);
         config.setBinary(handle, data, length);
+
     }
+
 
     const char *loadStringConfig(HandleType handle)
     {
-        return config.getString(handle);
+        auto str = config.getString(handle);
+        // __CDBG_printf("handle=%04x str=%s len=%u", handle, _S_STR(str), _S_STRLEN(str));
+        return str;
     }
 
     void storeStringConfig(HandleType handle, const char *str)
     {
+        __CDBG_printf("handle=%04x str=%s len=%u", handle, _S_STR(str), _S_STRLEN(str));
+        config.setString(handle, str);
+    }
+
+    void storeStringConfig(HandleType handle, const __FlashStringHelper *str)
+    {
+        __CDBG_printf("handle=%04x str=%s len=%u", handle, _S_STR(str), _S_STRLEN(str));
+        config.setString(handle, str);
+    }
+
+    void storeStringConfig(HandleType handle, const String &str)
+    {
+        __CDBG_printf("handle=%04x str=%s len=%u", handle, _S_STR(str), _S_STRLEN(str));
         config.setString(handle, str);
     }
 
     // --------------------------------------------------------------------
     // Flags
 
-    System::Flags::Flags() : _flags()
+    void System::Flags::defaults()
     {
-        _flags.is_factory_settings = true;
-        _flags.is_default_password = true;
-        _flags.is_at_mode_enabled = true;
-        _flags.setWifiMode(WIFI_AP_STA);
-        _flags.is_station_mode_dhcp_enabled = true;
-        _flags.is_softap_dhcpd_enabled = true;
-        _flags.is_softap_standby_mode_enabled = true;
-        _flags.is_mdns_enabled = true;
-        _flags.is_ntp_client_enabled = true;
-        _flags.is_web_server_enabled = true;
-        _flags.is_webserver_performance_mode_enabled = true;
-        _flags.is_led_on_when_connected = true;
-        _flags.use_static_ip_during_wakeup = true;
-        _flags.is_serial2tcp_enabled = true;
-        _flags.is_syslog_enabled = false;
-        _flags.is_mdns_enabled = true;
-        _flags.is_webui_enabled = true;
+        ConfigFlags_t tmp = {};
+        setConfig(tmp);
     }
-
-    System::Flags System::Flags::getFlags()
-    {
-        return Flags(config._H_GET(Config().flags));
-    }
-
-    ConfigFlags System::Flags::get()
-    {
-        return config._H_GET(Config().flags);
-    }
-
-    ConfigFlags &System::Flags::getWriteable()
-    {
-        return config._H_W_GET(Config().flags);
-    }
-
-    void System::Flags::set(ConfigFlags flags)
-    {
-        config._H_SET(Config().flags, flags);
-    }
-
-    void System::Flags::write()
-    {
-        config._H_SET(Config().flags, _flags);
-    }
-
-    bool System::Flags::isMQTTEnabled() const
-    {
-        if (_flags.is_mqtt_enabled) {
-            if (Plugins::MQTTClient::getConfig().mode_enum != Plugins::MQTTClient::ModeType::DISABLED) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    void System::Flags::setMQTTEnabled(bool state)
-    {
-        _flags.is_mqtt_enabled = state;
-        if (Plugins::MQTTClient::getConfig().mode_enum == Plugins::MQTTClient::ModeType::DISABLED) {
-            auto &cfg = Plugins::MQTTClient::getWriteableConfig();
-            cfg.mode_enum = (cfg.port == 8883) ? Plugins::MQTTClient::ModeType::SECURE : Plugins::MQTTClient::ModeType::UNSECURE;
-        }
-    }
-
-    bool System::Flags::isSyslogEnabled() const
-    {
-        return _flags.is_syslog_enabled;
-    }
-
-    void System::Flags::setSyslogEnabled(bool state)
-    {
-        _flags.is_syslog_enabled = state;
-    }
-
     // --------------------------------------------------------------------
     // WebServer
 
@@ -130,21 +142,21 @@ namespace KFCConfigurationClasses {
     {
         WebServerConfig_t cfg = {};
         setConfig(cfg);
-        System::Flags::getWriteable().is_web_server_enabled = true;
+        System::Flags::getWriteableConfig().is_web_server_enabled = true;
     }
 
     System::WebServer::ModeType System::WebServer::getMode()
     {
-        return !System::Flags::get().is_web_server_enabled ? ModeType::DISABLED : (getConfig().is_https ? ModeType::SECURE : ModeType::UNSECURE);
+        return !System::Flags::getConfig().is_web_server_enabled ? ModeType::DISABLED : (getConfig().is_https ? ModeType::SECURE : ModeType::UNSECURE);
     }
 
     void System::WebServer::setMode(ModeType mode)
     {
         if (mode == ModeType::DISABLED) {
-            System::Flags::getWriteable().is_web_server_enabled = false;
+            System::Flags::getWriteableConfig().is_web_server_enabled = false;
         }
         else {
-            System::Flags::getWriteable().is_web_server_enabled = true;
+            System::Flags::getWriteableConfig().is_web_server_enabled = true;
             getWriteableConfig().is_https = (mode == ModeType::SECURE);
         }
     }
@@ -203,52 +215,50 @@ namespace KFCConfigurationClasses {
     // --------------------------------------------------------------------
     // Network
 
+    // --------------------------------------------------------------------
+    // Settings
+
+    Network::Settings::SettingsConfig_t::SettingsConfig_t() :
+        _subnet(kCreateIPv4Address(255, 255, 255, 0)),
+        _gateway(kCreateIPv4Address(192, 168, 4, 1)),
+        _dns1(kCreateIPv4Address(8, 8, 8, 8)),
+        _dns2(kCreateIPv4Address(8, 8, 4, 4))
+    {
+        uint8_t mac[6];
+        ::WiFi.macAddress(mac);
+        uint8_t tmp = (mac[5] <= 1 || mac[5] >= 253 ? (mac[4] <= 1 || mac[4] >= 253 ? (mac[3] <= 1 || mac[3] >= 253 ? mac[3] : rand() % 98 + 1) : mac[4]) : mac[5]);
+        _localIp = kCreateIPv4Address(192, 168, 4, 0) | (tmp << 24U);
+    }
+
     void Network::Settings::defaults()
     {
         SettingsConfig_t cfg = {};
         setConfig(cfg);
-
-        auto flags = System::Flags();
-        flags->setWifiMode(WIFI_AP);
-        flags->is_softap_standby_mode_enabled = true;
-        flags->is_station_mode_dhcp_enabled = true;
-        flags.write();
+        // auto flags = System::Flags::getConfig();
+        // flags.setWifiMode(WIFI_AP);
+        // flags.is_softap_standby_mode_enabled = true;
+        // flags.is_station_mode_dhcp_enabled = true;
+        // System::Flags::setConfig(flags);
     }
 
-    Network::SoftAP::SoftAP()
-    {
-        _address = IPAddress(192, 168, 4, 1);
-        _subnet = IPAddress(255, 255, 255, 0);
-        _gateway = IPAddress(192, 168, 4, 1);
-        _dhcpStart = IPAddress(192, 168, 4, 2);
-        _dhcpEnd = IPAddress(192, 168, 4, 100);
-        _encryption = kWiFiEncryptionTypeDefault;
-        _channel = 7;
-    }
+    // --------------------------------------------------------------------
+    // SoftAP
 
-    Network::SoftAP Network::SoftAP::read()
+    Network::SoftAP::SoftAPConfig_t::SoftAPConfig_t() :
+        address(kCreateIPv4Address(192, 168, 4, 1)),
+        subnet(kCreateIPv4Address(255, 255, 255, 0)),
+        gateway(kCreateIPv4Address(192, 168, 4, 1)),
+        dhcpStart(kCreateIPv4Address(192, 168, 4, 2)),
+        dhcpEnd(kCreateIPv4Address(192, 168, 4, 100)),
+        channel(7),
+        encryption_enum(kWiFiEncryptionTypeDefault)
     {
-        return config._H_GET(MainConfig().network.softAp);
-    }
-
-    Network::SoftAP &Network::SoftAP::getWriteable()
-    {
-        return config._H_W_GET(MainConfig().network.softAp);
     }
 
     void Network::SoftAP::defaults()
     {
-        auto softAp = SoftAP();
-        softAp.write();
-
-        auto flags = System::Flags();
-        flags->is_softap_dhcpd_enabled = true;
-        flags.write();
-    }
-
-    void Network::SoftAP::write()
-    {
-        config._H_SET(MainConfig().network.softAp, *this);
+        SoftAPConfig_t cfg = {};
+        setConfig(cfg);
     }
 
 }

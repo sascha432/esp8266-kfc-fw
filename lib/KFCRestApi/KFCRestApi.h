@@ -9,7 +9,6 @@
 #include <KFCJson.h>
 #include <HttpHeaders.h>
 #include <HeapStream.h>
-#include "../src/generated/FlashStringGeneratorAuto.h"
 
 #ifndef DEBUG_KFC_REST_API
 #define DEBUG_KFC_REST_API                                  0

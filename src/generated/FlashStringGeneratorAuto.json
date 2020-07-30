@@ -16,7 +16,7 @@
         "default": "text/plain"
     },
     "null": {
-        "use_counter": 10,
+        "use_counter": 12,
         "default": "null"
     },
     "FormLengthValidator_default_message": {
@@ -39,7 +39,7 @@
         "use_counter": 3,
         "default": "%allowed%"
     },
-    "FormValidHostOrIpValidator_default_message": {
+    "FormHostValidator_default_message": {
         "use_counter": 2,
         "default": "Invalid hostname or IP address"
     },
@@ -312,7 +312,7 @@
         "default": "image/bmp"
     },
     "tcp": {
-        "use_counter": 3,
+        "use_counter": 8,
         "default": "tcp"
     },
     "mime_text_css": {
@@ -520,11 +520,11 @@
         "default": "Anonymous"
     },
     "Disabled": {
-        "use_counter": 9,
+        "use_counter": 10,
         "default": "Disabled"
     },
     "enabled": {
-        "use_counter": 6,
+        "use_counter": 5,
         "default": "enabled"
     },
     "mqtt_component_light": {
@@ -576,7 +576,7 @@
         "default": "On"
     },
     "Off": {
-        "use_counter": 2,
+        "use_counter": 3,
         "default": "Off"
     },
     "mqtt_switch_state": {
@@ -820,7 +820,7 @@
         "default": "keep-alive"
     },
     "status": {
-        "use_counter": 12,
+        "use_counter": 11,
         "default": "status"
     },
     "message": {
@@ -868,7 +868,7 @@
         "default": "wifi"
     },
     "safe_mode": {
-        "use_counter": 2,
+        "use_counter": 1,
         "default": "safe_mode"
     },
     "password": {
@@ -992,12 +992,12 @@
         "default": "applying.html"
     },
     "hidden": {
-        "use_counter": 2,
+        "use_counter": 1,
         "default": "hidden"
     },
     "FormRangeValidator_default_message_zero_allowed": {
         "use_counter": 3,
-        "default": "This fields value must be between %min% and %max% or 0"
+        "default": "This fields value must be 0 or between %min% and %max%"
     },
     "network": {
         "use_counter": 1,
@@ -1056,7 +1056,7 @@
         "default": "update_fw.html"
     },
     "Invalid_port": {
-        "use_counter": 4,
+        "use_counter": 0,
         "default": "Invalid port"
     },
     "_login_html": {
@@ -1080,7 +1080,7 @@
         "default": "seconds"
     },
     "milliseconds": {
-        "use_counter": 2,
+        "use_counter": 3,
         "default": "milliseconds"
     },
     "__s_": {
@@ -1196,7 +1196,7 @@
         "default": "12345678"
     },
     "Enabled": {
-        "use_counter": 3,
+        "use_counter": 4,
         "default": "Enabled"
     },
     "Invalid_time": {
@@ -1208,7 +1208,7 @@
         "default": "Invalid brightness"
     },
     "mode": {
-        "use_counter": 3,
+        "use_counter": 2,
         "default": "mode"
     },
     "Mode": {
@@ -1228,7 +1228,7 @@
         "default": "port"
     },
     "Port": {
-        "use_counter": 3,
+        "use_counter": 2,
         "default": "Port"
     },
     "Username": {
@@ -1352,19 +1352,19 @@
         "default": "&acute;"
     },
     "placeholder": {
-        "use_counter": 1,
+        "use_counter": 2,
         "default": "placeholder"
     },
     "min": {
-        "use_counter": 1,
+        "use_counter": 2,
         "default": "min"
     },
     "max": {
-        "use_counter": 1,
+        "use_counter": 2,
         "default": "max"
     },
     "readonly": {
-        "use_counter": 1,
+        "use_counter": 2,
         "default": "readonly"
     },
     "htmlentities_plusmn": {
@@ -1376,7 +1376,7 @@
         "default": "&apos;"
     },
     "address": {
-        "use_counter": 1,
+        "use_counter": 5,
         "default": "address"
     },
     "domain": {
@@ -1408,7 +1408,7 @@
         "default": "Title"
     },
     "minutes": {
-        "use_counter": 3,
+        "use_counter": 1,
         "default": "minutes"
     },
     "days": {
@@ -1468,7 +1468,7 @@
         "default": "DNS 2"
     },
     "HTTP_Server": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "HTTP Server"
     },
     "Save_Changes": {
@@ -1492,79 +1492,79 @@
         "default": "None"
     },
     "is_": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "is_"
     },
     "EN": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "EN"
     },
     "reboot": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "reboot"
     },
     "timeout": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "timeout"
     },
     "lifetime": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "lifetime"
     },
     "cookie": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "cookie"
     },
     "webui": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "webui"
     },
     "webserver": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "webserver"
     },
     "server": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "server"
     },
     "SRV": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "SRV"
     },
     "performance_mode": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "performance_mode"
     },
     "performance": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "performance"
     },
     "encryption": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "encryption"
     },
     "standby_mode": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "standby_mode"
     },
     "standby": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "standby"
     },
     "AP": {
-        "use_counter": 2,
+        "use_counter": 0,
         "default": "AP"
     },
     "softap": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "softap"
     },
     "station_mode": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "station_mode"
     },
     "STA": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "STA"
     },
     "NTP_Client_Configuration": {
@@ -1588,35 +1588,71 @@
         "default": "Refresh Interval"
     },
     "minutes__": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "minutes \\u00b1"
     },
     "set_": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "set_"
     },
     "softap_": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "softap_"
     },
     "get_": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "get_"
     },
     "client": {
-        "use_counter": 1,
-        "auto": "client"
+        "use_counter": 0,
+        "default": "client"
     },
     "timezone": {
-        "use_counter": 1,
-        "auto": "timezone"
+        "use_counter": 0,
+        "default": "timezone"
     },
     "interval": {
-        "use_counter": 1,
-        "auto": "interval"
+        "use_counter": 0,
+        "default": "interval"
     },
     "refresh": {
+        "use_counter": 0,
+        "default": "refresh"
+    },
+    "Zeroconf_Logging": {
         "use_counter": 1,
-        "auto": "refresh"
+        "default": "Zeroconf Logging"
+    },
+    "httpmode": {
+        "use_counter": 1,
+        "default": "httpmode"
+    },
+    "FormRangeValidator_invalid_port": {
+        "use_counter": 1,
+        "default": "Invalid Port"
+    },
+    "FormRangeValidator_invalid_port_range": {
+        "use_counter": 1,
+        "default": "Invalid Port (%min%-%max%)"
+    },
+    "minutes__5_": {
+        "use_counter": 1,
+        "default": "minutes \\u00b15%"
+    },
+    "ticks": {
+        "use_counter": 3,
+        "default": "ticks"
+    },
+    "Offline": {
+        "use_counter": 1,
+        "default": "Offline"
+    },
+    "Station_Mode": {
+        "use_counter": 2,
+        "default": "Station Mode"
+    },
+    "Access_Point": {
+        "use_counter": 4,
+        "default": "Access Point"
     }
 }

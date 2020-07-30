@@ -50,11 +50,6 @@ protected:
     PrintArgs _printArgs;
 };
 
-// class EmptyTemplate : public WebTemplate {
-// public:
-//     virtual void process(const String &key, PrintHtmlEntitiesString &output) override;
-// };
-
 class ConfigTemplate : public WebTemplate {
 public:
     ConfigTemplate() {
@@ -113,42 +108,16 @@ private:
 
 class SettingsForm : public Form {
 public:
-    typedef std::vector<std::pair<String, String>> TokenVector;
+    // typedef std::vector<std::pair<String, String>> TokenVector;
 
     SettingsForm(AsyncWebServerRequest *request);
 
-    void setJson(JsonUnnamedObject *json) {
-        _json = json;
-    }
+    // void setJson(JsonUnnamedObject *json) {
+    //     _json = json;
+    // }
 
-protected:
-    friend WebTemplate;
+// protected:
+//     friend WebTemplate;
 
-    FormData _data;
-    JsonUnnamedObject *_json;
+//     JsonUnnamedObject *_json;
 };
-
-// class WifiSettingsForm : public SettingsForm {
-// public:
-//     WifiSettingsForm(AsyncWebServerRequest *request);
-// };
-
-// class NetworkSettingsForm : public SettingsForm {
-// public:
-//     NetworkSettingsForm(AsyncWebServerRequest *request);
-// };
-
-// class DeviceSettingsForm : public SettingsForm {
-// public:
-//     DeviceSettingsForm(AsyncWebServerRequest *request);
-// };
-
-// class PasswordSettingsForm : public SettingsForm {
-// public:
-//     PasswordSettingsForm(AsyncWebServerRequest *request);
-// };
-
-// class PinsSettingsForm : public SettingsForm {
-// public:
-//     PinsSettingsForm(AsyncWebServerRequest *request);
-// };

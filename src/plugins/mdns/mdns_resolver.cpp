@@ -18,6 +18,8 @@ extern "C" {
 #include <debug_helper_disable.h>
 #endif
 
+using KFCConfigurationClasses::System;
+
 IPAddress MDNSResolver::MDNSServiceInfo::findIP4Address(const IPAddress &myAddress)
 {
     IPAddress address;
@@ -51,8 +53,6 @@ char *MDNSResolver::MDNSServiceInfo::findTxtValue(const String &key)
     }
     return nullptr;
 }
-
-
 
 MDNSResolver::Query::Query(const String &name, const String &service, const String &proto, const String &addressValue, const String &portValue, const String &fallback, uint16_t port, ResolvedCallback callback, uint16_t timeout) :
     _name(name),
@@ -125,12 +125,17 @@ void MDNSResolver::Query::end()
                 _serviceQuery = nullptr;
             }
 
+            bool logging = System::Device::getConfig().zeroconf_logging;
             if (_resolved) {
-                Logger_notice(F("%s: Zeroconf response %s:%u"), _name.c_str(), _address.isSet() ? _address.toString().c_str() : _hostname.c_str(), _port);
+                if (logging) {
+                    Logger_notice(F("%s: Zeroconf response %s:%u"), _name.c_str(), _address.isSet() ? _address.toString().c_str() : _hostname.c_str(), _port);
+                }
                 _callback(_hostname, _address, _port, ResponseType::RESOLVED);
             }
             else {
-                Logger_notice(F("%s: Zeroconf fallback %s:%u"), _name.c_str(), _fallback.c_str(), _port);
+                if (logging) {
+                    Logger_notice(F("%s: Zeroconf fallback %s:%u"), _name.c_str(), _fallback.c_str(), _port);
+                }
                 _callback(_fallback, convertToIPAddress(_fallback), _fallbackPort, ResponseType::TIMEOUT);
             }
             MDNSPlugin::removeQuery(this);

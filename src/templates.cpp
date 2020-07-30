@@ -47,7 +47,7 @@ WebTemplate::~WebTemplate()
 
 void WebTemplate::setForm(Form *form)
 {
-    _json = static_cast<SettingsForm *>(form)->_json;
+    _json = nullptr; //static_cast<SettingsForm *>(form)->_json;
     _form = form;
 }
 
@@ -58,6 +58,7 @@ Form *WebTemplate::getForm()
 
 JsonUnnamedObject *WebTemplate::getJson()
 {
+    __DBG_printf("called");
     return _json;
 }
 
@@ -135,7 +136,7 @@ void WebTemplate::printWebInterfaceUrl(Print &output)
     output.print(cfg.is_https ? FSPGM(https) : FSPGM(http));
     output.print(F("://"));
     WiFi.localIP().printTo(output);
-    output.printf_P(PSTR(":%u/"), cfg.port);
+    output.printf_P(PSTR(":%u/"), cfg.getPort());
 }
 
 void WebTemplate::printModel(Print &output)
@@ -199,7 +200,7 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     }
     else if (String_equals(key, PSTR("SOFTWARE"))) {
         printVersion(output);
-        if (System::Flags::get().is_default_password) {
+        if (System::Flags::getConfig().is_default_password) {
             output.printf_P(PSTR(HTML_S(br) HTML_S(strong) "%s" HTML_E(strong)), SPGM(default_password_warning));
         }
     }
@@ -227,7 +228,7 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         output.print(formatTime((long)(millis() / 1000)));
     }
     else if (String_equals(key, PSTR("WIFI_UPTIME"))) {
-        output.print(System::Flags(true).isStationEnabled() ? (!KFCFWConfiguration::isWiFiUp() ? F("Offline") : formatTime((millis() - KFCFWConfiguration::getWiFiUp()) / 1000)) : F("Client mode disabled"));
+        output.print(System::Flags::getConfig().is_station_mode_enabled ? (!KFCFWConfiguration::isWiFiUp() ? FSPGM(Offline, "Offline") : formatTime((millis() - KFCFWConfiguration::getWiFiUp()) / 1000)) : F("Client mode disabled"));
     }
     else if (String_equals(key, PSTR("IP_ADDRESS"))) {
         WiFi_get_address(output);
@@ -274,7 +275,7 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     }
     else if (String_equals(key, PSTR("WEBUI_ALERTS_STATUS"))) {
 #if WEBUI_ALERTS_ENABLED
-        if (System::Flags::get().disableWebAlerts) {
+        if (System::Flags::getConfig().disableWebAlerts) {
             output.print(F("Disabled"));
         } else {
             output.printf_P(PSTR("Storage %s, rewrite size %d, poll interval %.2fs, WebUI max. height %s"), SPGM(alerts_storage_filename), WEBUI_ALERTS_REWRITE_SIZE, WEBUI_ALERTS_POLL_INTERVAL / 1000.0, WEBUI_ALERTS_MAX_HEIGHT);
@@ -394,12 +395,12 @@ void ConfigTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 
     if (String_equals(key, F("NETWORK_MODE"))) {
         bool m = false;
-        auto flags = System::Flags(true);
-        if (flags.isSoftAPEnabled()) {
+        auto flags = System::Flags::getConfig();
+        if (flags.is_softap_enabled) {
             output.print(F("#ap_mode"));
             m = true;
         }
-        if (flags.isStationEnabled()) {
+        if (flags.is_station_mode_enabled) {
             if (m) {
                 output.print(',');
             }
@@ -410,7 +411,7 @@ void ConfigTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         output.print(config.getMaxWiFiChannels());
     }
     else if (String_startsWith(key, F("MODE_"))) {
-        if (System::Flags::get().getWifiMode() == key.substring(5).toInt()) {
+        if (System::Flags::getConfig().getWifiMode() == key.substring(5).toInt()) {
             output.print(FSPGM(_selected, " selected"));
         }
     }
@@ -450,7 +451,7 @@ void StatusTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     else if (String_equals(key, F("SSL_STATUS"))) {
         #if ASYNC_TCP_SSL_ENABLED
             #if WEBSERVER_TLS_SUPPORT
-                output.printf_P(PSTR("TLS enabled, HTTPS %s"), _Config.getOptions().isHttpServerTLS() ? F("enabled") : FSPGM(Disabled));
+                output.printf_P(PSTR("TLS enabled, HTTPS %s"), _Config.getOptions().isHttpServerTLS() ? SPGM(enabled, "enabled") : SPGM(Disabled));
             #else
                 output.printf_P(PSTR("TLS enabled, HTTPS not supported"));
             #endif
@@ -461,20 +462,19 @@ void StatusTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     else if (String_equals(key, F("WIFI_MODE"))) {
         switch (WiFi.getMode()) {
             case WIFI_STA: {
-                    output.print(F("Station mode"));
-                    auto flags = System::Flags(true);
-                    if (flags.isSoftApStandByModeEnabled()) {
-                        output.print(F(" (Access Point in stand-by mode)"));
+                    output.print(FSPGM(Station_Mode, "Station Mode"));
+                    if (System::Flags::getConfig().is_softap_standby_mode_enabled) {
+                        output.printf_P(PSTR(" (%s in stand-by mode)"), SPGM(Access_Point));
                     }
                 } break;
             case WIFI_AP:
-                output.print(F("Access Point"));
+                output.print(FSPGM(Access_Point, "Access Point"));
                 break;
             case WIFI_AP_STA:
-                output.print(F("Access Point and Station Mode"));
+                output.printf_P(PSTR("%s and %s"), SPGM(Access_Point), SPGM(Station_Mode));
                 break;
             case WIFI_OFF:
-                output.print(F("Off"));
+                output.print(FSPGM(Off, "Off"));
                 break;
             default:
                 output.printf_P(PSTR("Invalid mode %d"), WiFi.getMode());
@@ -485,7 +485,7 @@ void StatusTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         if (WiFi.getMode() == WIFI_AP_STA) {
             output.print(F("Station connected to " HTML_S(strong)));
             WiFi_Station_SSID(output);
-            output.print(F(HTML_E(strong) HTML_S(br) "Access Point " HTML_S(strong)));
+            output.printf(PSTR(HTML_E(strong) HTML_S(br) "%s " HTML_S(strong)), SPGM(Access_Point));
             WiFi_SoftAP_SSID(output);
             output.print(F(HTML_E(strong)));
         }
@@ -524,22 +524,8 @@ void PasswordTemplate::process(const String &key, PrintHtmlEntitiesString &outpu
     }
 }
 
-SettingsForm::SettingsForm(AsyncWebServerRequest *request) : Form(&_data), _json(nullptr)
+SettingsForm::SettingsForm(AsyncWebServerRequest *request) : Form(static_cast<FormData *>(request)) //, _json(nullptr)
 {
-    _data.setCallbacks(
-        [request](const String &name) {
-            if (!request) {
-                return String();
-            }
-            return request->arg(name);
-        },
-        [request](const String &name) {
-            if (!request) {
-                return false;
-            }
-            return request->hasArg(name.c_str());
-        }
-    );
 }
 
 

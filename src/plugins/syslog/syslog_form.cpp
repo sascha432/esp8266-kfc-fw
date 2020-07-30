@@ -22,10 +22,7 @@ void SyslogPlugin::createConfigureForm(FormCallbackType type, const String &form
     if (type == FormCallbackType::SAVE) {
 
         auto &cfg = SyslogClient::getWriteableConfig();
-        if (cfg.port == 0) {
-            cfg.port = 514;
-        }
-        System::Flags::getWriteable().is_syslog_enabled = SyslogClient::isEnabled(cfg.protocol_enum);
+        System::Flags::getWriteableConfig().is_syslog_enabled = SyslogClient::isEnabled(cfg.protocol_enum);
         return;
 
     } else if (!isCreateFormCallbackType(type)) {
@@ -34,14 +31,20 @@ void SyslogPlugin::createConfigureForm(FormCallbackType type, const String &form
 
     auto &cfg = SyslogClient::getWriteableConfig();
 
-    form.add<uint8_t>(F("syslog_enabled"), _H_W_STRUCT_VALUE(cfg, protocol));
-    form.addValidator(new FormRangeValidatorEnum<SyslogClient::SyslogProtocolType>());
+    form.addMemberVariable(F("sl_proto"), cfg, &SyslogClient::ConfigStructType::protocol, FormField::Type::SELECT);
+    form.addValidator(FormRangeValidatorEnum<SyslogClient::SyslogProtocolType>());
 
-    form.add(F("syslog_host"), _H_CSTR_FUNC(SyslogClient::getHostname, SyslogClient::setHostname));
-    form.addValidator(new FormValidHostOrIpValidator(FormValidHostOrIpValidator::ALLOW_ZEROCONF|FormValidHostOrIpValidator::ALLOW_EMPTY));
+    form.addCStringGetterSetter("sl_host", SyslogClient::getHostname, SyslogClient::setHostnameCStr);
+    form.addValidator(FormHostValidator(FormHostValidator::AllowedType::ALLOW_EMPTY_AND_ZEROCONF));
 
-    form.add<uint16_t>(F("syslog_port"), _H_W_STRUCT_VALUE(cfg, port));
-    form.addValidator(new FormRangeValidator(FSPGM(Invalid_port), 1, 65535, true));
+    form.add(F("sl_port"), cfg.getPortAsString(), [&cfg](const String &value, FormField &field, bool store) {
+        if (store) {
+            cfg.setPort(value.toInt(), cfg.isSecure());
+            field.setValue(cfg.getPortAsString());
+        }
+        return false;
+    });
+    form.addValidator(FormNetworkPortValidator(true));
 
     form.finalize();
 }

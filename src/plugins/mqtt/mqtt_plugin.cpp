@@ -101,8 +101,8 @@ bool MQTTPlugin::atModeHandler(AtModeArgs &args)
         } else if (client && args.requireArgs(1, 1)) {
             auto &client = *MQTTClient::getClient();
             if (args.isTrue(0)) {
-                System::Flags::getWriteable().is_mqtt_enabled = true;
-                MQTTClient::ClientConfig::getWriteableConfig().mode_enum = MQTTClient::ModeType::UNSECURE;
+                System::Flags::getWriteableConfig().is_mqtt_enabled = true;
+                MQTTClient::ClientConfig::ConfigStructType::set_enum_mode(MQTTClient::ClientConfig::getWriteableConfig(), MQTTClient::ModeType::UNSECURE);
                 config.write();
                 args.printf_P(PSTR("MQTT unsecure %s"), FSPGM(enabled));
             }
@@ -126,14 +126,14 @@ bool MQTTPlugin::atModeHandler(AtModeArgs &args)
                 client.disconnect(true);
             }
             else if (args.toLowerChar(0) == 's') {
-                System::Flags::getWriteable().is_mqtt_enabled = true;
-                MQTTClient::ClientConfig::getWriteableConfig().mode_enum = MQTTClient::ModeType::SECURE;
+                System::Flags::getWriteableConfig().is_mqtt_enabled = true;
+                MQTTClient::ClientConfig::ConfigStructType::set_enum_mode(MQTTClient::ClientConfig::getWriteableConfig(), MQTTClient::ModeType::SECURE);
                 config.write();
                 args.printf_P(PSTR("MQTT secure %s"), FSPGM(enabled));
             }
             else if (args.isFalse(0)) {
-                System::Flags::getWriteable().is_mqtt_enabled = false;
-                MQTTClient::ClientConfig::getWriteableConfig().mode_enum = MQTTClient::ModeType::DISABLED;
+                System::Flags::getWriteableConfig().is_mqtt_enabled = false;
+                MQTTClient::ClientConfig::ConfigStructType::set_enum_mode(MQTTClient::ClientConfig::getWriteableConfig(), MQTTClient::ModeType::DISABLED);
                 config.write();
                 client.setAutoReconnect(0);
                 client.disconnect(true);

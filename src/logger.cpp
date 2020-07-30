@@ -285,7 +285,7 @@ void Logger::writeLog(LogLevel logLevel, const char *message, va_list arg)
     }
 
 #if LOGGER_SERIAL_OUTPUT
-    if (System::Flags::get().is_at_mode_enabled) {
+    if (System::Flags::getConfig().is_at_mode_enabled) {
         char temp2[32];
         strftime_P(temp2, sizeof(temp2), PSTR("%FT%TZ"), tm);
 #if DEBUG

@@ -207,7 +207,7 @@ bool MQTTAutoDiscovery::isEnabled()
 #if ENABLE_DEEP_SLEEP
         !resetDetector.hasWakeUpDetected() &&
 #endif
-        System::Flags::get().is_mqtt_enabled;
+        System::Flags::getConfig().is_mqtt_enabled;
 #else
     return false;
 #endif

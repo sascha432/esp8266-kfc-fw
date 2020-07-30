@@ -5,23 +5,23 @@
 $(function() {
     // remote.html
     if ($('#remote_settings').length) {
-        function http_enabled_changed() {
-            var port = parseInt($('#http_port').val());
-            var type = parseInt($('#http_enabled').val());
+        function httpmode_changed() {
+            var port = parseInt($('#httport').val());
+            var type = parseInt($('#httpmode').val());
             if (type == 1) {
-                $('#http_port').attr('placeholder', '80');
+                $('#httport').attr('placeholder', '80');
                 if (port == 443 || port == 80) {
-                    $('#http_port').val('');
+                    $('#httport').val('');
                 }
             } else if (type == 2) {
-                $('#http_port').attr('placeholder', '443');
+                $('#httport').attr('placeholder', '443');
                 if (port == 80 || port == 443) {
-                    $('#http_port').val('');
+                    $('#httport').val('');
                 }
             }
         }
-        $('#http_enabled').change(http_enabled_changed);
-        $('#http_port').change(http_enabled_changed);
-        http_enabled_changed();
+        $('#httpmode').change(httpmode_changed);
+        $('#httport').change(httpmode_changed);
+        httpmode_changed();
     }
 });

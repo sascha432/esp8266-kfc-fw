@@ -19,7 +19,7 @@ namespace KFCConfigurationClasses {
     }
 
     bool Plugins::NTPClient::isEnabled() {
-        return System::Flags::get().is_ntp_client_enabled;
+        return System::Flags::getConfig().is_ntp_client_enabled;
     }
 
     const char *Plugins::NTPClient::getServer(uint8_t num) {

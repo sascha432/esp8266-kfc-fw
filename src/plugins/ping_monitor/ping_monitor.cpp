@@ -434,26 +434,26 @@ void PingMonitorPlugin::createConfigureForm(FormCallbackType type, const String 
     auto gateway = F("${gateway}");
 
     form.add(F("ping_host1"), _H_STR_VALUE(Config().ping.host1));
-    form.addValidator((new FormValidHostOrIpValidator(true))->addAllowString(gateway));
+    form.addValidator((new FormHostValidator(FormHostValidator::AllowedType::ALLOW_EMPTY))->addAllowString(gateway));
 
     form.add(F("ping_host2"), _H_STR_VALUE(Config().ping.host2));
-    form.addValidator((new FormValidHostOrIpValidator(true))->addAllowString(gateway));
+    form.addValidator((new FormHostValidator(FormHostValidator::AllowedType::ALLOW_EMPTY))->addAllowString(gateway));
 
     form.add(F("ping_host3"), _H_STR_VALUE(Config().ping.host3));
-    form.addValidator((new FormValidHostOrIpValidator(true))->addAllowString(gateway));
+    form.addValidator((new FormHostValidator(FormHostValidator::AllowedType::ALLOW_EMPTY))->addAllowString(gateway));
 
     form.add(F("ping_host4"), _H_STR_VALUE(Config().ping.host4));
-    form.addValidator((new FormValidHostOrIpValidator(true))->addAllowString(gateway));
+    form.addValidator((new FormHostValidator(FormHostValidator::AllowedType::ALLOW_EMPTY))->addAllowString(gateway));
 
 
     form.add<uint16_t>(F("ping_interval"), _H_STRUCT_VALUE(Config().ping.config, interval));
-    form.addValidator(new FormRangeValidator(0, 65535));
+    form.addValidator(FormRangeValidator(0, 65535));
 
     form.add<uint8_t>(F("ping_count"), _H_STRUCT_VALUE(Config().ping.config, count));
-    form.addValidator(new FormRangeValidator(0, 255));
+    form.addValidator(FormRangeValidator(0, 255));
 
     form.add<uint16_t>(F("ping_timeout"), _H_STRUCT_VALUE(Config().ping.config, timeout));
-    form.addValidator(new FormRangeValidator(0, 65535));
+    form.addValidator(FormRangeValidator(0, 65535));
 
     form.finalize();
 }

@@ -2,7 +2,8 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#include "kfc_fw_config.h"
+#include <kfc_fw_config.h>
+#include <kfc_fw_config_plugin.h>
 #include <EEPROM.h>
 #include <PrintString.h>
 #include <LoopFunctions.h>
@@ -51,13 +52,12 @@ RTC_DS3231 rtc;
 #include <debug_helper_disable.h>
 #endif
 
+KFCFWConfiguration config;
+
 using KFCConfigurationClasses::MainConfig;
 using KFCConfigurationClasses::Network;
 using KFCConfigurationClasses::System;
 using KFCConfigurationClasses::Plugins;
-
-KFCFWConfiguration config;
-
 
 // Config_Ping
 
@@ -81,9 +81,9 @@ const char *Config_Ping::getHost(uint8_t num)
 void Config_Ping::defaults()
 {
     ::config._H_SET(Config().ping.config, Config_Ping().config);
-    ::config._H_SET_STR(Config().ping.host1, F("${gateway}"));
-    ::config._H_SET_STR(Config().ping.host2, F("8.8.8.8"));
-    ::config._H_SET_STR(Config().ping.host3, F("www.google.com"));
+    ::config._H_SET_STR(Config().ping.host1, F("${gateway}"), 64);
+    ::config._H_SET_STR(Config().ping.host2, F("8.8.8.8"), 64);
+    ::config._H_SET_STR(Config().ping.host3, F("www.google.com"), 64);
 }
 
 // Config_Button
@@ -123,7 +123,7 @@ KFCFWConfiguration::KFCFWConfiguration() :
     auto nextCallback = EspSaveCrash::getCallback();
     EspSaveCrash::setCallback([this, nextCallback](const EspSaveCrash::ResetInfo_t &info) {
         // release all memory in the event of a crash
-        discard();
+        __crashCallback();
         if (nextCallback) {
             nextCallback(info);
         }
@@ -221,7 +221,7 @@ void KFCFWConfiguration::_onWiFiGotIPCb(const WiFiEventStationModeGotIP &event)
     auto dns2 = WiFi.dnsIP(1).toString();
     _debug_printf_P(PSTR("KFCFWConfiguration::_onWiFiGotIPCb(%s, %s, %s DNS %s, %s)\n"), ip.c_str(), mask.c_str(), gw.c_str(), dns1.c_str(), dns2.c_str());
 
-    Logger_notice(F("%s: IP/Net %s/%s GW %s DNS: %s, %s"), System::Flags::get().is_station_mode_dhcp_enabled ? PSTR("DHCP") : PSTR("Static configuration"), ip.c_str(), mask.c_str(), gw.c_str(), dns1.c_str(), dns2.c_str());
+    Logger_notice(F("%s: IP/Net %s/%s GW %s DNS: %s, %s"), System::Flags::getConfig().is_station_mode_dhcp_enabled ? PSTR("DHCP") : PSTR("Static configuration"), ip.c_str(), mask.c_str(), gw.c_str(), dns1.c_str(), dns2.c_str());
 
     using Device = KFCConfigurationClasses::System::Device;
 
@@ -444,15 +444,13 @@ void KFCFWConfiguration::_apStandModehandler(WiFiCallbacks::EventType event)
 void KFCFWConfiguration::recoveryMode()
 {
     System::Device::setPassword(SPGM(defaultPassword));
-    Network::WiFiConfig::setSoftApPassword(FSPGM(defaultPassword));
-    auto flags = System::Flags();
-    flags->is_softap_ssid_hidden = false;
-    flags->is_softap_dhcpd_enabled = true;
-    flags->is_softap_standby_mode_enabled = false;
-    flags->is_softap_enabled = true;
-    flags->is_web_server_enabled = true;
-    config._H_SET(Config().http_port, 80);
-    flags.write();
+    Network::WiFi::setSoftApPassword(FSPGM(defaultPassword));
+    auto &flags = System::Flags::getWriteableConfig();
+    flags.is_softap_ssid_hidden = false;
+    flags.is_softap_dhcpd_enabled = true;
+    flags.is_softap_standby_mode_enabled = false;
+    flags.is_softap_enabled = true;
+    flags.is_web_server_enabled = true;
 }
 
 // TODO add option to keep WiFi SSID, username and password
@@ -474,28 +472,28 @@ void KFCFWConfiguration::restoreFactorySettings()
 #endif
 
     clear();
+
 #if DEBUG
     if (length) {
         System::Firmware::setElfHash(hashCopy);
     }
 #endif
 
-    auto flags = System::Flags();
-    flags.write();
-
     uint8_t mac[6];
     WiFi.macAddress(mac);
     auto deviceName = PrintString(F("KFC%02X%02X%02X"), mac[3], mac[4], mac[5]);
+
+    System::Flags::defaults();
     System::Firmware::defaults();
     System::Device::defaults();
     System::Device::setName(deviceName);
     System::Device::setTitle(FSPGM(KFC_Firmware, "KFC Firmware"));
     System::Device::setPassword(FSPGM(defaultPassword, "12345678"));
     System::WebServer::defaults();
-    Network::WiFiConfig::setSSID(deviceName);
-    Network::WiFiConfig::setPassword(FSPGM(defaultPassword));
-    Network::WiFiConfig::setSoftApSSID(deviceName);
-    Network::WiFiConfig::setSoftApPassword(FSPGM(defaultPassword));
+    Network::WiFi::setSSID(deviceName);
+    Network::WiFi::setPassword(FSPGM(defaultPassword));
+    Network::WiFi::setSoftApSSID(deviceName);
+    Network::WiFi::setSoftApPassword(FSPGM(defaultPassword));
     Network::Settings::defaults();
     Network::SoftAP::defaults();
 
@@ -523,12 +521,8 @@ void KFCFWConfiguration::restoreFactorySettings()
 #if IOT_WEATHER_STATION
     Plugins::WeatherStation::defaults();
 #endif
-
-
-#if WEBSERVER_TLS_SUPPORT
-    _H_SET(Config().http_port, flags.webServerMode == HTTP_MODE_SECURE ? 443 : 80);
-#elif WEBSERVER_SUPPORT
-    _H_SET(Config().http_port, 80);
+#if IOT_SENSOR
+    Plugins::Sensor::defaults();
 #endif
 
 
@@ -553,7 +547,8 @@ void KFCFWConfiguration::restoreFactorySettings()
     dimmer.channel_mapping[3] = 3;
 #endif
 #endif
-    _H_SET(Config().dimmer, dimmer);
+    _H_SET(Config().dimmer, DimmerModule());
+
 #if IOT_DIMMER_MODULE_HAS_BUTTONS
     DimmerModuleButtons dimmer_buttons;
     dimmer_buttons.shortpress_time = 250;
@@ -594,19 +589,6 @@ void KFCFWConfiguration::restoreFactorySettings()
     blinds.channels[1].openTime = 7500;
     blinds.channels[1].closeTime = 7500;
     _H_SET(Config().blinds_controller, blinds);
-#endif
-
-#if defined(IOT_SENSOR_HLW8012_U)
-    {
-        auto sensor = Config_Sensor();
-        sensor.hlw80xx.calibrationU = IOT_SENSOR_HLW8012_U;
-        sensor.hlw80xx.calibrationI = IOT_SENSOR_HLW8012_I;
-        sensor.hlw80xx.calibrationP = IOT_SENSOR_HLW8012_P;
-        config._H_SET(Config().sensor, sensor);
-
-    }
-#elif IOT_SENSOR
-    _H_SET(Config().sensor, Config_Sensor());
 #endif
 
 #if IOT_CLOCK
@@ -725,7 +707,7 @@ void KFCFWConfiguration::storeStationConfig(uint32_t ip, uint32_t netmask, uint3
         quickConnect.gateway = gateway;
         quickConnect.dns1 = (uint32_t)WiFi.dnsIP();
         quickConnect.dns2 = (uint32_t)WiFi.dnsIP(1);
-        auto flags = System::Flags::get();
+        auto flags = System::Flags::getConfig();
         quickConnect.use_static_ip = flags.useStaticIPDuringWakeUp || !flags.stationModeDHCPEnabled;
         RTCMemoryManager::write(CONFIG_RTC_MEM_ID, &quickConnect, sizeof(quickConnect));
     } else {
@@ -779,11 +761,7 @@ void KFCFWConfiguration::write()
 {
     _debug_println(F("KFCFWConfiguration::write()"));
 
-    auto flags = System::Flags(true);
-    if (flags->is_factory_settings) {
-        flags->is_factory_settings = false;
-        flags.write();
-    }
+    System::Flags::getWriteableConfig().is_factory_settings = false;
 
     if (!Configuration::write()) {
         Logger_error(F("Failure to write settings to EEPROM"));
@@ -840,9 +818,9 @@ bool KFCFWConfiguration::resolveZeroConf(const String &name, const String &hostn
                     proto = String('_') + proto;
                 }
 
-                __DBG_printf("service=%s proto=%s values=%s:%s default=%s port=%d", service.c_str(), proto.c_str(), addressValue.c_str(), portValue.c_str(), defaultValue.c_str(), port);
+                __LDBG_printf("service=%s proto=%s values=%s:%s default=%s port=%d", service.c_str(), proto.c_str(), addressValue.c_str(), portValue.c_str(), defaultValue.c_str(), port);
 
-                mdns->resolveZeroConf(new MDNSResolver::Query(name, service, proto, addressValue, portValue, defaultValue, port, callback));
+                mdns->resolveZeroConf(new MDNSResolver::Query(name, service, proto, addressValue, portValue, defaultValue, port, callback, System::Device::getConfig().zeroconf_timeout));
 
             }
         }
@@ -1102,24 +1080,25 @@ bool KFCFWConfiguration::reconfigureWiFi()
 
 bool KFCFWConfiguration::connectWiFi()
 {
+    __LDBG_println();
     setLastError(String());
 
     bool station_mode_success = false;
     bool ap_mode_success = false;
 
-    auto flags = System::Flags::get();
+    auto flags = System::Flags::getConfig();
     if (flags.is_station_mode_enabled) {
         _debug_println(F("init station mode"));
         WiFi.setAutoConnect(false); // WiFi callbacks have to be installed first during boot
         WiFi.setAutoReconnect(true);
 
-        auto network = config._H_GET(MainConfig().network.settings);
+        auto network = Network::Settings::getConfig();
 
         bool result;
         if (flags.is_station_mode_dhcp_enabled) {
             result = WiFi.config((uint32_t)0, (uint32_t)0, (uint32_t)0, (uint32_t)0, (uint32_t)0);
         } else {
-            result = WiFi.config(network.localIp(), network.gateway(), network.subnet(), network.dns1(), network.dns2());
+            result = WiFi.config(network.getLocalIp(), network.getGateway(), network.getSubnet(), network.getDns1(), network.getDns2());
         }
         if (!result) {
             PrintString message;
@@ -1128,12 +1107,12 @@ bool KFCFWConfiguration::connectWiFi()
             Logger_error(message);
         } else {
 
-            if (WiFi.begin(Network::WiFiConfig::getSSID(), Network::WiFiConfig::getPassword()) == WL_CONNECT_FAILED) {
+            if (WiFi.begin(Network::WiFi::getSSID(), Network::WiFi::getPassword()) == WL_CONNECT_FAILED) {
                 String message = F("Failed to start Station Mode");
                 setLastError(message);
                 Logger_error(message);
             } else {
-                _debug_printf_P(PSTR("Station Mode SSID %s\n"), Network::WiFiConfig::getSSID());
+                _debug_printf_P(PSTR("Station Mode SSID %s\n"), Network::WiFi::getSSID());
                 station_mode_success = true;
             }
         }
@@ -1147,9 +1126,9 @@ bool KFCFWConfiguration::connectWiFi()
     if (flags.is_softap_enabled) {
         _debug_println(F("init AP mode"));
 
-        auto softAp = Network::SoftAP::read();
+        auto softAp = Network::SoftAP::getConfig();
 
-        if (!WiFi.softAPConfig(softAp.address(), softAp.gateway(), softAp.subnet())) {
+        if (!WiFi.softAPConfig(softAp.getAddress(), softAp.getGateway(), softAp.getSubnet())) {
             String message = F("Cannot configure AP mode");
             setLastError(message);
             Logger_error(message);
@@ -1183,8 +1162,8 @@ bool KFCFWConfiguration::connectWiFi()
             struct dhcps_lease dhcp_lease;
             wifi_softap_dhcps_stop();
             dhcp_lease.enable = flags.is_softap_dhcpd_enabled;
-            dhcp_lease.start_ip.addr = softAp._dhcpStart;
-            dhcp_lease.end_ip.addr = softAp._dhcpEnd;
+            dhcp_lease.start_ip.addr = softAp.dhcpStart;
+            dhcp_lease.end_ip.addr = softAp.dhcpEnd;
             if (!wifi_softap_set_dhcps_lease(&dhcp_lease)) {
                 String message = F("Failed to configure DHCP server");
                 setLastError(message);
@@ -1201,7 +1180,7 @@ bool KFCFWConfiguration::connectWiFi()
 
 #endif
 
-            if (!WiFi.softAP(Network::WiFiConfig::getSoftApSSID(), Network::WiFiConfig::getSoftApPassword(), softAp.channel(), flags.is_softap_ssid_hidden)) {
+            if (!WiFi.softAP(Network::WiFi::getSoftApSSID(), Network::WiFi::getSoftApPassword(), softAp.getChannel(), flags.is_softap_ssid_hidden)) {
                 String message = F("Cannot start AP mode");
                 setLastError(message);
                 Logger_error(message);
@@ -1253,12 +1232,12 @@ void KFCFWConfiguration::printInfo(Print &output)
 {
     printVersion(output);
 
-    auto flags = System::Flags::get();
+    auto flags = System::Flags::getConfig();
     if (flags.is_softap_enabled) {
-        output.printf_P(PSTR("AP Mode SSID %s\n"), Network::WiFiConfig::getSoftApSSID());
+        output.printf_P(PSTR("AP Mode SSID %s\n"), Network::WiFi::getSoftApSSID());
     }
     if (flags.is_station_mode_enabled) {
-        output.printf_P(PSTR("Station Mode SSID %s\n"), Network::WiFiConfig::getSSID());
+        output.printf_P(PSTR("Station Mode SSID %s\n"), Network::WiFi::getSSID());
     }
     if (flags.is_factory_settings) {
         output.println(F("Running on factory settings"));
@@ -1395,16 +1374,6 @@ bool KFCFWConfiguration::callPersistantConfig(ContainerPtr data, PersistantConfi
     return _debug_print_result(result);
 }
 
-class KFCConfigurationPlugin : public PluginComponent {
-public:
-    KFCConfigurationPlugin();
-
-    virtual void setup(SetupModeType mode) override;
-    virtual void reconfigure(const String &source) override;
-    virtual void createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request) override;
-    virtual WebTemplate *getWebTemplate(const String &templateName) override;
-};
-
 static KFCConfigurationPlugin plugin;
 
 PROGMEM_DEFINE_PLUGIN_OPTIONS(
@@ -1437,7 +1406,7 @@ KFCConfigurationPlugin::KFCConfigurationPlugin() : PluginComponent(PROGMEM_GET_P
 
 void KFCConfigurationPlugin::setup(SetupModeType mode)
 {
-    _debug_printf_P(PSTR("safe mode %d, wake up %d\n"), (mode == SetupModeType::SAFE_MODE), resetDetector.hasWakeUpDetected());
+    __DBG_printf("safe mode %d, wake up %d", (mode == SetupModeType::SAFE_MODE), resetDetector.hasWakeUpDetected());
 
     config.setup();
 
@@ -1457,7 +1426,7 @@ void KFCConfigurationPlugin::setup(SetupModeType mode)
 #endif
 
     if (WiFi.isConnected()) {
-        debug_println(F("WiFi up, skipping init."));
+        __DBG_print(F("WiFi up, skipping init."));
         BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::OFF);
         return;
     }
@@ -1482,142 +1451,20 @@ void KFCConfigurationPlugin::reconfigure(const String &source)
     config.reconfigureWiFi();
 }
 
-void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request)
-{
-    using KFCConfigurationClasses::MainConfig;
-    using KFCConfigurationClasses::System;
-    using KFCConfigurationClasses::Network;
-
-    if (type == FormCallbackType::SAVE) {
-        if (String_equals(formName, SPGM(password))) {
-            auto &flags = System::Flags::getWriteable();
-            flags.is_default_password = false;
-        }
-        else if (String_equals(formName, SPGM(device))) {
-            config.setConfigDirty(true);
-        }
-    }
-    else if (isCreateFormCallbackType(type)) {
-
-        if (String_equals(formName, SPGM(wifi))) {
-
-            auto &flags = System::Flags::getWriteable();
-            auto &softAp = Network::SoftAP::getWriteable();
-
-            form.addGetterSetter(flags.getWifiMode, flags.setWifiMode, &flags));
-            form.addValidator(new FormRangeValidator(F("Invalid mode"), WIFI_OFF, WIFI_AP_STA));
-
-            form.addCStrGetterSetter(Network::WiFiConfig::getSSID, Network::WiFiConfig::setSSID));
-            form.addValidator(new FormLengthValidator(1, Network::WiFiConfig::kSSIDMaxSize));
-
-            form.addCStrGetterSetter(Network::WiFiConfig::getPassword, Network::WiFiConfig::setPassword));
-            form.addValidator(new FormLengthValidator(Network::WiFiConfig::kPasswordMinSize, Network::WiFiConfig::kPasswordMaxSize));
-
-            form.addCStrGetterSetter(Network::WiFiConfig::getSoftApSSID, Network::WiFiConfig::setSoftApSSID));
-            form.addValidator(new FormLengthValidator(1, Network::WiFiConfig::kSoftApSSIDMaxSize));
-
-            form.addCStrGetterSetter(Network::WiFiConfig::getSoftApPassword, Network::WiFiConfig::setSoftApPassword));
-            form.addValidator(new FormLengthValidator(Network::WiFiConfig::kSoftApPasswordMinSize, Network::WiFiConfig::kSoftApPasswordMaxSize));
-
-            form.addWriteableStruct(softAp, _channel));
-            form.addValidator(new FormRangeValidator(1, config.getMaxWiFiChannels()));
-
-            form.addWriteableStruct(softAp, _encryption));
-            form.addValidator(new FormEnumValidator<uint8_t, WiFiEncryptionTypeArray().size()>(F("Invalid encryption"), createWiFiEncryptionTypeArray()));
-
-            form.addWriteableStruct(flags, is_softap_ssid_hidden), FormField::InputFieldType::CHECK);
-
-            form.addWriteableStruct(flags, is_softap_standby_mode_enabled), FormField::InputFieldType::SELECT);
-
-        }
-        else if (String_equals(formName, SPGM(network, "network"))) {
-
-            auto &network = Network::Settings::getWriteableConfig();
-            auto &softAp = Network::SoftAP::getWriteableConfig();
-            auto &flags = System::Flags::getWriteable();
-
-            form.setFormUI(FSPGM(Network_Configuration, "Network Configuration"));
-
-            form.addCStrGetterSetter(System::Device::getName, System::Device::setName))->setFormUI((new FormUI(FormUI::TEXT, FSPGM(Hostname, "Hostname"))));
-            form.addValidator(new FormLengthValidator(4, System::Device::kNameMaxSize));
-
-            form.addWriteableStruct(flags, is_station_mode_dhcp_enabled))->setFormUI((new FormUI(FormUI::SELECT, FSPGM(DHCP, "DHCP")))->setBoolItems());
-
-            form.addWriteableStructIPAddress(network, _localIp))->setFormUI((new FormUI(FormUI::TEXT, FSPGM(IP_Address, "IP Address"))));
-            form.addWriteableStructIPAddress(network, _subnet))->setFormUI((new FormUI(FormUI::TEXT, FSPGM(Subnet, "Subnet"))));
-            form.addWriteableStructIPAddress(network, _gateway))->setFormUI((new FormUI(FormUI::TEXT, FSPGM(Gateway, "Gateway"))));
-            form.addWriteableStructIPAddress(network, _dns1))->setFormUI((new FormUI(FormUI::TEXT, FSPGM(DNS_1, "DNS 1"))));
-            form.addWriteableStructIPAddress(network, _dns2))->setFormUI((new FormUI(FormUI::TEXT, FSPGM(DNS_2, "DNS 2"))));
-
-            form.addWriteableStruct(flags, is_softap_dhcpd_enabled));
-
-            form.addWriteableStructIPAddress(softAp, _dhcpStart));
-            form.addWriteableStructIPAddress(softAp, _dhcpEnd));
-            form.addWriteableStructIPAddress(softAp, _address));
-            form.addWriteableStructIPAddress(softAp, _subnet));
-
-        }
-        else if (String_equals(formName, SPGM(device, "device"))) {
-
-            auto &cfg = System::Device::getWriteableConfig();
-            auto &flags = System::Flags::getWriteable();
-
-            form.setFormUI(FSPGM(Device_Configuration, "Device Configuration"));
-
-            form.addCStrGetterSetter(System::Device::getTitle, System::Device::setTitle))->setFormUI((new FormUI(FormUI::TEXT, FSPGM(Title))));
-            form.addValidator(new FormLengthValidator(1, System::Device::kTitleMaxSize));
-
-            form.addWriteableStruct(cfg, safe_mode_reboot_timeout_minutes))->setFormUI((new FormUI(FormUI::INTEGER, F("Reboot Delay Running In Safe Mode")))->setSuffix(FSPGM(minutes)));
-            form.addValidator(new FormRangeValidator(5, 3600, true));
-
-            form.addWriteableStruct(flags, is_mdns_enabled))->setFormUI((new FormUI(FormUI::SELECT, F("mDNS Announcements")))->setBoolItems(FSPGM(Enabled), F("Disabled (Zeroconf is still available)")));
-
-            form.addWriteableStruct(cfg, zeroconf_timeout))->setFormUI((new FormUI(FormUI::INTEGER, FSPGM(Zeroconf_Timeout, "Zeroconf Timeout")))->setSuffix(FSPGM(minutes)));
-            form.addValidator(new FormRangeValidator(System::Device::kZeroConfMinTimeout, System::Device::kZeroConfMaxTimeout));
-
-            form.addWriteableStruct(flags, is_ssdp_enabled))->setFormUI((new FormUI(FormUI::SELECT, FSPGM(SSDP_Discovery, "SSDP Discovery")))->setBoolItems());
-
-            form.addWriteableStruct(cfg, webui_cookie_lifetime_days))->setFormUI((new FormUI(FormUI::INTEGER, F(FORMUI_RAW_HTML "Allow to store credentials in a cookie to login automatically:<br><span class=\"oi oi-shield p-2\"></span><small>If the cookie is stolen, it is not going to expire and changing the password is the only options to invalidate it.</small>")))->setSuffix(FSPGM(days)));
-            form.addValidator(new FormRangeValidator(System::Device::kWebUICookieMinLifetime, System::Device::kWebUICookieMaxLifetime, true));
-
-            form.addWriteableStruct(flags, is_webalerts_enabled))->setFormUI((new FormUI(FormUI::SELECT, FSPGM(Web_Alerts, "Web Alerts")))->setBoolItems());
-            form.addWriteableStruct(flags, is_webui_enabled))->setFormUI((new FormUI(FormUI::SELECT, FSPGM(WebUI, "Web UI")))->setBoolItems());
-
-            form.addWriteableStruct(cfg, status_led_mode))->setFormUI((new FormUI(FormUI::SELECT, FSPGM(Status_LED_Mode, "Status LED Mode")))->setBoolItems(F("Solid when connected to WiFi"), F("Turn off when connected to WiFi")));
-
-        }
-        else if (String_equals(formName, SPGM(password))) {
-
-            form.setFormUI(FSPGM(Change_Password, "Change Password"));
-
-            auto password = String(System::Device::getPassword());
-            form.add(new FormField(FSPGM(password), password));
-            form.addValidator(new FormMatchValidator(F("The entered password is not correct"), [](FormField &field) {
-                return field.getValue().equals(System::Device::getPassword());
-            }));
-
-            form.add(F("password2"), password, FormField::InputFieldType::TEXT)
-                ->setValue(emptyString);
-
-            form.addValidator(new FormRangeValidator(F("The password has to be at least %min% characters long"), System::Device::kPasswordMinSize, 0));
-            form.addValidator(new FormRangeValidator(System::Device::kPasswordMinSize, System::Device::kPasswordMaxSize))
-                ->setValidateIfValid(false);
-
-            form.add(F("password3"), emptyString, FormField::InputFieldType::TEXT);
-            form.addValidator(new FormMatchValidator(F("The password confirmation does not match"), [](FormField &field) {
-                    return field.equals(field.getForm().getField(F("password2")));
-                }))
-                ->setValidateIfValid(false);
-
-        }
-        else {
-            return;
-        }
-        form.finalize();
-    }
-}
-
 WebTemplate *KFCConfigurationPlugin::getWebTemplate(const String &name)
 {
     return new StatusTemplate();
+}
+
+extern const char *session_get_token();
+extern size_t session_get_token_min_size();
+
+const char *session_get_token()
+{
+    return System::Device::getToken();
+}
+
+size_t session_get_token_min_size()
+{
+    return System::Device::kTokenMinSize;
 }

@@ -28,9 +28,9 @@ MQTTClient *MQTTClient::_mqttClient = nullptr;
 
 void MQTTClient::setupInstance()
 {
-    __LDBG_printf("enabled=%u", System::Flags::get().is_mqtt_enabled);
+    __LDBG_printf("enabled=%u", System::Flags::getConfig().is_mqtt_enabled);
     deleteInstance();
-    if (System::Flags::get().is_mqtt_enabled) {
+    if (System::Flags::getConfig().is_mqtt_enabled) {
         _mqttClient = new MQTTClient();
     }
 }
@@ -50,7 +50,7 @@ MQTTClient::MQTTClient() : _client(new AsyncMqttClient()), _componentsEntityCoun
     _username = ClientConfig::getUsername();
     _password = ClientConfig::getPassword();
     _config = ClientConfig::getConfig();
-    _port = _config.port;
+    _port = _config.getPort();
 
     __LDBG_printf("hostname=%s port=%u", _hostname.c_str(), _port);
 
@@ -112,7 +112,7 @@ void MQTTClient::_setupClient()
     if (Config_MQTT::getMode() == MQTT_MODE_SECURE) {
         _client->setSecure(true);
         auto fingerPrint = Config_MQTT::getFingerprint();
-        if (*fingerPrint) {
+        if (fingerPrint && *fingerPrint) {
             _client->addServerFingerprint(fingerPrint); // addServerFingerprint supports multiple fingerprints
         }
     }

@@ -209,7 +209,7 @@ void setup()
                             config.recoveryMode();
                             config.write();
                             KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("AP mode with DHCPD enabled (SSID %s)\nUsername '%s', passwords set to '%s'\nWeb server running on port 80\n\nPress r to reboot...\n"),
-                                Network::WiFiConfig::getSoftApSSID(),
+                                Network::WiFi::getSoftApSSID(),
                                 System::Device::getName(),
                                 SPGM(defaultPassword)
                             );
@@ -336,7 +336,7 @@ void setup()
 
         // check if wifi is up
         Scheduler.addTimer(60000, true, [](EventScheduler::TimerPtr timer) {
-            if (System::Flags::get().is_station_mode_enabled) {
+            if (System::Flags::getConfig().is_station_mode_enabled) {
                 if (!WiFi.isConnected()) {
                     // WiFi is down, wait 30 seconds if it reconnects automatically
                     Scheduler.addTimer(30000, false, [](EventScheduler::TimerPtr timer) {

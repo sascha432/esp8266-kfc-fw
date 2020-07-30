@@ -5,12 +5,6 @@
 #pragma once
 
 #include <Arduino_compat.h>
-#if defined(HAVE_FLASH_STRING_GENERATOR) && HAVE_FLASH_STRING_GENERATOR
-#include "../src/generated/FlashStringGeneratorAuto.h"
-#endif
-#if _MSC_VER
-#include "../../../src/generated/FlashStringGeneratorAuto.h"
-#endif
 #include <algorithm>
 #include <array>
 #include <vector>
@@ -80,13 +74,13 @@ typedef std::vector<String> StringVector;
 
 // pretty format for bytes and unix time
 String formatBytes(size_t bytes);
-String formatTime(unsigned long seconds, bool days_if_not_zero = false);
+String formatTime(unsigned long seconds, bool printDaysIfZero = false);
 
 String url_encode(const String &str);
-void printable_string(Print &output, const uint8_t *buffer, size_t length, size_t maxLength = 0, const char *extra = nullptr);
-String printable_string(const uint8_t *buffer, size_t length, size_t maxLength = 0);
-inline String printable_string(const char *buffer, size_t length, size_t maxLength = 0) {
-    return printable_string(reinterpret_cast<const uint8_t *>(buffer), length, maxLength);
+void printable_string(Print &output, const uint8_t *buffer, size_t length, size_t maxLength = 0, PGM_P extra = nullptr, bool crlfAsText = false);
+String printable_string(const uint8_t *buffer, size_t length, size_t maxLength = 0, PGM_P extra = nullptr, bool crlfAsText = false);
+inline String printable_string(const char *buffer, size_t length, size_t maxLength = 0, PGM_P extra = nullptr, bool crlfAsText = false) {
+    return printable_string(reinterpret_cast<const uint8_t *>(buffer), length, maxLength, extra, crlfAsText);
 }
 
 void append_slash(String &dir);
@@ -435,6 +429,7 @@ uint32_t getSystemUptime();
 // milliseconds
 uint64_t getSystemUptimeMillis();
 
+// use signed char to get an integer
 template<typename T>
 String enumToString(T value) {
     return String(static_cast<typename std::underlying_type<T>::type>(value));
@@ -447,3 +442,75 @@ IPAddress convertToIPAddress(const char *hostname);
 inline IPAddress convertToIPAddress(const String &hostname) {
     return convertToIPAddress(hostname.c_str());
 }
+
+#define __PP_CAT(a, b)                  __PP_CAT_I(a, b)
+#define __PP_CAT_I(a, b)                __PP_CAT_II(~, a ## b)
+#define __PP_CAT_II(p, res)             res
+#define __UNIQUE_NAME(base)             __PP_CAT(__PP_CAT(__PP_CAT(base, __COUNTER__), _), __LINE__)
+
+// convert const char * or String to a safe value for printf
+
+#define _S_STRLEN(str) (str && std::is_base_of<String, decltype(str)>::value ? ((String *)(&str))->length() : _printfSafeCStrLen(str))
+#define _S_STR(str) (str && std::is_base_of<String, decltype(str)>::value ? ((String *)(&str))->c_str() : _printfSafeCStr(str))
+
+size_t _printfSafeCStrLen(const char *str);
+size_t _printfSafeCStrLen(const __FlashStringHelper *str);
+size_t _printfSafeCStrLen(const String &str);
+const char *_printfSafeCStr(const char *str);
+const char *_printfSafeCStr(const __FlashStringHelper *str);
+const char *_printfSafeCStr(const String &str);
+
+constexpr size_t kNumBitsRequired(int value, int n = 0) {
+	return value ? kNumBitsRequired(value >> 1, n + 1) : n;
+}
+
+constexpr uint32_t kCreateIPv4Address(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
+	return a | (b << 8U) | (c << 16U) | (d << 24U);
+}
+
+inline uint32_t createIPv4Address(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
+    return a | (b << 8U) | (c << 16U) | (d << 24U);
+}
+
+#define CREATE_ENUM_BITFIELD_SIZE(name, size, enum_type, underlying_type, underlying_type_name) \
+    underlying_type name: size; \
+    static void set_enum_##name(Type &obj, enum_type value) { \
+        obj.name = static_cast<underlying_type>(value); \
+    } \
+    static enum_type get_enum_##name(const Type &obj) { \
+        return static_cast<enum_type>(obj.name); \
+    } \
+    static void set_##underlying_type_name##_##name(Type &obj, underlying_type value) { \
+        obj.name = value; \
+    } \
+    static underlying_type get_##underlying_type_name##_##name(const Type &obj) { \
+        return obj.name; \
+    } \
+    static underlying_type cast_##underlying_type_name##_##name(enum_type value) { \
+        return static_cast<underlying_type>(value); \
+    } \
+    static enum_type cast_enum_##name(underlying_type value) { \
+        return static_cast<enum_type>(value); \
+    }
+
+#define CREATE_BITFIELD_TYPE(name, size, type, prefix) \
+    type name: size; \
+    static void set_##prefix##_##name(Type &obj, type value) { \
+        obj.name = value; \
+    } \
+    static type get_##prefix##_##name(const Type &obj) { \
+        return obj.name; \
+    }
+
+// Type must be defined inside the struct/class
+// using Type = MyStructure_t;
+
+// requires last value MAX to be defined: enum class uint8_t { NONE, VAL1, VAL2, MAX };
+#define CREATE_ENUM_BITFIELD(name, enum_type)               CREATE_ENUM_BITFIELD_SIZE(name, kNumBitsRequired((int)enum_type::MAX - 1), enum_type, std::underlying_type<enum_type>::type, int)
+#define CREATE_ENUM_N_BITFIELD(name, size, enum_type)       CREATE_ENUM_BITFIELD_SIZE(name, size, enum_type, std::underlying_type<enum_type>::type, int)
+
+#define CREATE_BOOL_BITFIELD(name)                          CREATE_BITFIELD_TYPE(name, 1, bool, bit)
+
+#define CREATE_UINT8_BITFIELD(name, size)                   CREATE_BITFIELD_TYPE(name, size, uint8_t, bits)
+#define CREATE_UINT16_BITFIELD(name, size)                  CREATE_BITFIELD_TYPE(name, size, uint16_t, bits)
+#define CREATE_UINT32_BITFIELD(name, size)                  CREATE_BITFIELD_TYPE(name, size, uint32_t, bits)

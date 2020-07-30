@@ -123,7 +123,7 @@ void BlinkLEDTimer::setPattern(int8_t pin, int delay, dynamic_bitset &&pattern)
 
 void BlinkLEDTimer::setBlink(int8_t pin, uint16_t delay, int32_t color)
 {
-    if (!System::Flags::get().is_led_on_when_connected) {
+    if (!System::Flags::getConfig().is_led_on_when_connected) {
         return;
     }
 

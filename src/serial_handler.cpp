@@ -13,7 +13,7 @@
 #define DEBUG_SERIAL_HANDLER_BASE           1
 #define DEBUG_SERIAL_HANDLER_IO             1
 #else
-#define DEBUG_SERIAL_HANDLER_BASE           1
+#define DEBUG_SERIAL_HANDLER_BASE           0
 #define DEBUG_SERIAL_HANDLER_IO             0
 #endif
 

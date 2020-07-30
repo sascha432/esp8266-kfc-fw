@@ -17,6 +17,8 @@
 #include <debug_helper_disable.h>
 #endif
 
+using KFCConfigurationClasses::Plugins;
+
 // ------------------------------------------------------------------------
 // Low level interrupt handling
 // ------------------------------------------------------------------------
@@ -474,7 +476,7 @@ bool Sensor_HLW8012::atModeHandler(AtModeArgs &args)
                     _dumpTimer.remove();
 
                     float value = (args.toFloat(2) * args.toFloat(3, 1.0f)) / args.toFloat(1);
-                    auto &sensor = config._H_W_GET(Config().sensor).hlw80xx;
+                    auto &sensor = Plugins::Sensor::getWriteableConfig().hlw80xx;
                     if (ch == 'u') {
                         _calibrationU = value;
                         sensor.calibrationU = _calibrationU;
@@ -512,7 +514,7 @@ bool Sensor_HLW8012::atModeHandler(AtModeArgs &args)
                             if (_voltage) {
                                 if (data.max-- == 0) {
                                     timer->detach();
-                                    _calibrationU = config._H_GET(Config().sensor).hlw80xx.calibrationU;
+                                    _calibrationU = Plugins::Sensor::getConfig().hlw80xx.calibrationU;
                                 }
                                 data.sum += _voltage;
                                 data.count++;
@@ -534,7 +536,7 @@ bool Sensor_HLW8012::atModeHandler(AtModeArgs &args)
                             if (_current) {
                                 if (data.max-- == 0) {
                                     timer->detach();
-                                    _calibrationI = config._H_GET(Config().sensor).hlw80xx.calibrationI;
+                                    _calibrationI = Plugins::Sensor::getConfig().hlw80xx.calibrationI;
 #if IOT_SENSOR_HLW80xx_ADJUST_CURRENT
                                     _dimmingLevel = dimmingLevel;
 #endif
@@ -554,7 +556,7 @@ bool Sensor_HLW8012::atModeHandler(AtModeArgs &args)
                             if (_power) {
                                 if (data.max-- == 0) {
                                     timer->detach();
-                                    _calibrationP = config._H_GET(Config().sensor).hlw80xx.calibrationP;
+                                    _calibrationP = Plugins::Sensor::getConfig().hlw80xx.calibrationP;
                                 }
                                 data.sum += _power;
                                 data.count++;

@@ -12,6 +12,7 @@
 #include <LoopFunctions.h>
 #include <WiFiCallbacks.h>
 #include <StreamString.h>
+#include <Cat.h>
 #include <vector>
 #include <JsonTools.h>
 #include <ListDir.h>
@@ -46,17 +47,6 @@ using KFCConfigurationClasses::MainConfig;
 typedef std::vector<ATModeCommandHelp> ATModeHelpVector;
 
 static ATModeHelpVector at_mode_help;
-
-// class CatFile {
-// public:
-//     CatFile(const String &filename, Stream &output) : _output(output) {
-//         _file = SPIFFS.open(filename, fs::FileOpenMode::read);
-//     }
-// private:
-//     Stream &_output;
-//     File _file;
-//     EventScheduler _timer;
-// };
 
 void at_mode_add_help(const ATModeCommandHelp_t *help, PGM_P pluginName)
 {
@@ -244,6 +234,9 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMP, "DUMP", "[<dirty|config.name>]", "Di
 #if DEBUG && ESP8266
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DUMPT, "DUMPT", "Dump timers");
 #endif
+#if DEBUG_CONFIGURATION_GETHANDLE
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPH, "DUMPH", "[<log|panic|clear>]", "Dump configuration handles");
+#endif
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DUMPFS, "DUMPFS", "Display file system information");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPEE, "DUMPEE", "[<offset>[,<length>]", "Dump EEPROM");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WRTC, "WRTC", "<id,data>", "Write uint32 to RTC memory");
@@ -313,8 +306,11 @@ void at_mode_help_commands()
 #endif
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DUMPFS), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DUMPEE), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(WRTC), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DUMPRTC), name);
+#if DEBUG_CONFIGURATION_GETHANDLE
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DUMPH), name);
+#endif
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(WRTC), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(RTCCLR), name);
 #if ENABLE_DEEP_SLEEP
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(RTCQCC), name);
@@ -551,7 +547,7 @@ SerialHandler::Client *_client;
 
 void at_mode_setup()
 {
-    __DBG_printf("AT_MODE_ENABLED=%u", System::Flags::get().is_at_mode_enabled);
+    __DBG_printf("AT_MODE_ENABLED=%u", System::Flags::getConfig().is_at_mode_enabled);
 
     _client = &serialHandler.addClient(at_mode_serial_input_handler, SerialHandler::EventType::READ);
 
@@ -564,22 +560,22 @@ void at_mode_setup()
 
 void enable_at_mode(Stream &output)
 {
-    if (!System::Flags::get().is_at_mode_enabled) {
+    if (!System::Flags::getConfig().is_at_mode_enabled) {
         output.println(F("Enabling AT MODE."));
-        System::Flags::getWriteable().is_at_mode_enabled = true;
+        System::Flags::getWriteableConfig().is_at_mode_enabled = true;
         _client->start(SerialHandler::EventType::READ);
     }
 }
 
 void disable_at_mode(Stream &output)
 {
-    if (System::Flags::get().is_at_mode_enabled) {
+    if (System::Flags::getConfig().is_at_mode_enabled) {
         _client->stop();
         output.println(F("Disabling AT MODE."));
 #if DEBUG
         displayTimer.removeTimer();
 #endif
-        System::Flags::getWriteable().is_at_mode_enabled = false;
+        System::Flags::getWriteableConfig().is_at_mode_enabled = false;
     }
 }
 
@@ -941,21 +937,21 @@ void at_mode_serial_handle_event(String &commandString)
                         config.reconfigureWiFi();
                     }
                 }
-#
-                auto flags = System::Flags::get();
+
+                auto flags = System::Flags::getConfig();
                 args.printf_P("station mode %s, DHCP %s, SSID %s, connected %s, IP %s",
                     (WiFi.getMode() & WIFI_STA) ? SPGM(on) : SPGM(off),
                     flags.is_station_mode_dhcp_enabled ? SPGM(on) : SPGM(off),
-                    Network::WiFiConfig::getSSID(),
+                    Network::WiFi::getSSID(),
                     WiFi.isConnected() ? SPGM(yes) : SPGM(no),
                     WiFi.localIP().toString().c_str()
                 );
                 args.printf_P("AP mode %s, DHCP %s, SSID %s, clients connected %u, IP %s",
                     (flags.is_softap_enabled) ? ((flags.is_softap_standby_mode_enabled) ? ((WiFi.getMode() & WIFI_AP) ? SPGM(on) : PSTR("stand-by")) : SPGM(on)) : SPGM(off),
                     flags.is_softap_dhcpd_enabled ? SPGM(on) : SPGM(off),
-                    Network::WiFiConfig::getSoftApSSID(),
+                    Network::WiFi::getSoftApSSID(),
                     WiFi.softAPgetStationNum(),
-                    Network::SoftAP::read().address().toString().c_str()
+                    Network::SoftAP::getConfig().getAddress().toString().c_str()
                 );
             }
 #if RTC_SUPPORT
@@ -1025,30 +1021,7 @@ void at_mode_serial_handle_event(String &commandString)
 #endif
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CAT))) {
                 if (args.requireArgs(1, 1)) {
-                    auto filename = args.get(0);
-                    auto file = SPIFFSWrapper::open(filename, fs::FileOpenMode::read);
-                    if (file) {
-                        args.printf_P(PSTR("--- %s ---"), filename);
-                        auto loopPtr = reinterpret_cast<void *>(&file);
-                        LoopFunctions::add([&output, &args, file, loopPtr]() mutable {
-                            uint8_t buf[256];
-                            if (file.available()) {
-                                auto len = file.readBytes(reinterpret_cast<char *>(buf), sizeof(buf) - 1);
-                                if (len) {
-                                    buf[len] = 0;
-                                    printable_string(output, buf, len, len, "\n\r");
-                                }
-                            }
-                            else {
-                                args.printf_P(PSTR("--- size %u ---"), (unsigned)file.size());
-                                file.close();
-                                LoopFunctions::remove(loopPtr);
-                            }
-                        }, ptr);
-                    }
-                    else {
-                        args.printf_P(PSTR("Failed to open: %s"), filename);
-                    }
+                    StreamOutput::Cat::dump(args.toString(0), output, StreamOutput::Cat::kPrintInfo|StreamOutput::Cat::kPrintCrLfAsText);
                 }
             }
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(PLG))) {
@@ -1244,6 +1217,19 @@ void at_mode_serial_handle_event(String &commandString)
                 at_mode_list_ets_timers(output);
             }
 #endif
+#if DEBUG_CONFIGURATION_GETHANDLE
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPH))) {
+                if (args.toLowerChar(0) == 'c') {
+                    ConfigurationHelper::writeHandles(true);
+                }
+                else if (args.toLowerChar(0) == 'p') {
+                    ConfigurationHelper::setPanicMode(true);
+                }
+                else {
+                    ConfigurationHelper::dumpHandles(output, args.toLowerChar(0) == 'l');
+                }
+            }
+#endif
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPFS))) {
                 at_mode_dump_fs_info(output);
             }
@@ -1288,7 +1274,7 @@ void at_mode_serial_handle_event(String &commandString)
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(WIMO))) {
                 if (args.requireArgs(1, 1)) {
                     args.print(F("Setting WiFi mode and restarting device..."));
-                    System::Flags::getWriteable().setWifiMode(args.toInt(0));
+                    System::Flags::getWriteableConfig().setWifiMode(args.toInt(0));
                     config.write();
                     config.restartDevice();
                 }
@@ -1369,7 +1355,7 @@ void at_mode_serial_input_handler(Stream &client)
 {
     static String line;
 
-    if (System::Flags::get().is_at_mode_enabled) {
+    if (System::Flags::getConfig().is_at_mode_enabled) {
         auto serial = StreamWrapper(serialHandler.getStreams(), serialHandler.getInput()); // local output online
         while(client.available()) {
             int ch = client.read();

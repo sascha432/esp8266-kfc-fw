@@ -18,14 +18,15 @@ namespace KFCConfigurationClasses {
         __CDBG_printf("Plugins::SyslogClient::defaults handle=%04x", kConfigStructHandle);
         SyslogConfig_t cfg = {};
         setConfig(cfg);
-        System::Flags::getWriteable().is_syslog_enabled = false;
+        setHostname(CREATE_ZERO_CONF(F("syslog"), FSPGM(tcp), FSPGM(address)));
+        System::Flags::getWriteableConfig().is_syslog_enabled = false;
         __CDBG_dump(SyslogClient, cfg);
         __CDBG_dumpString(Hostname);
     }
 
     bool Plugins::SyslogClient::isEnabled()
     {
-        return System::Flags::get().is_syslog_enabled && isEnabled(getConfig().protocol_enum);
+        return System::Flags::getConfig().is_syslog_enabled && isEnabled(getConfig().protocol_enum);
     }
 
     bool Plugins::SyslogClient::isEnabled(SyslogProtocolType protocol)

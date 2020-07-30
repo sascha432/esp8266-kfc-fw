@@ -227,3 +227,9 @@ namespace __va_args__
 }
 
 #define __VA_ARGS_COUNT__(...)              __va_args__::va_count(__VA_ARGS__)
+
+#if _MSC_VER
+#include "../../../src/generated/FlashStringGeneratorAuto.h"
+#elif defined(HAVE_FLASH_STRING_GENERATOR) && HAVE_FLASH_STRING_GENERATOR
+#include "../src/generated/FlashStringGeneratorAuto.h"
+#endif

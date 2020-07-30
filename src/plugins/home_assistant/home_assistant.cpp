@@ -292,28 +292,28 @@ void HassPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
         using KFCConfigurationClasses::MainConfig;
 
         form.add(F("api_endpoint"), _H_STR_VALUE(MainConfig().plugins.homeassistant.api_endpoint));
-        form.addValidator(new FormLengthValidator(1, sizeof(MainConfig().plugins.homeassistant.api_endpoint) - 1));
+        form.addValidator(FormLengthValidator(1, sizeof(MainConfig().plugins.homeassistant.api_endpoint) - 1));
 
         form.add(F("token"), _H_STR_VALUE(MainConfig().plugins.homeassistant.token));
-        form.addValidator(new FormLengthValidator(1, sizeof(MainConfig().plugins.homeassistant.token) - 1));
+        form.addValidator(FormLengthValidator(1, sizeof(MainConfig().plugins.homeassistant.token) - 1));
 
         form.add(F("api_endpoint1"), _H_STR_VALUE(MainConfig().plugins.homeassistant.api_endpoint1));
-        form.addValidator(new FormLengthValidator(1, sizeof(MainConfig().plugins.homeassistant.api_endpoint1) - 1));
+        form.addValidator(FormLengthValidator(1, sizeof(MainConfig().plugins.homeassistant.api_endpoint1) - 1));
 
         form.add(F("token1"), _H_STR_VALUE(MainConfig().plugins.homeassistant.token1));
-        form.addValidator(new FormLengthValidator(1, sizeof(MainConfig().plugins.homeassistant.token1) - 1));
+        form.addValidator(FormLengthValidator(1, sizeof(MainConfig().plugins.homeassistant.token1) - 1));
 
         form.add(F("api_endpoint2"), _H_STR_VALUE(MainConfig().plugins.homeassistant.api_endpoint2));
-        form.addValidator(new FormLengthValidator(1, sizeof(MainConfig().plugins.homeassistant.api_endpoint2) - 1));
+        form.addValidator(FormLengthValidator(1, sizeof(MainConfig().plugins.homeassistant.api_endpoint2) - 1));
 
         form.add(F("token2"), _H_STR_VALUE(MainConfig().plugins.homeassistant.token2));
-        form.addValidator(new FormLengthValidator(1, sizeof(MainConfig().plugins.homeassistant.token2) - 1));
+        form.addValidator(FormLengthValidator(1, sizeof(MainConfig().plugins.homeassistant.token2) - 1));
 
         form.add(F("api_endpoint3"), _H_STR_VALUE(MainConfig().plugins.homeassistant.api_endpoint3));
-        form.addValidator(new FormLengthValidator(1, sizeof(MainConfig().plugins.homeassistant.api_endpoint3) - 1));
+        form.addValidator(FormLengthValidator(1, sizeof(MainConfig().plugins.homeassistant.api_endpoint3) - 1));
 
         form.add(F("token3"), _H_STR_VALUE(MainConfig().plugins.homeassistant.token3));
-        form.addValidator(new FormLengthValidator(1, sizeof(MainConfig().plugins.homeassistant.token3) - 1));
+        form.addValidator(FormLengthValidator(1, sizeof(MainConfig().plugins.homeassistant.token3) - 1));
 
     }
     else if (request->url().endsWith(F("actions.html"))) {
@@ -383,83 +383,83 @@ void HassPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
             Plugins::HomeAssistant::setActions(actions);
         }
 
-        form.add(FSPGM(id), String(action.getId()), FormField::InputFieldType::TEXT)
-            ->setFormUI(new FormUI(FormUI::HIDDEN, emptyString));
+        form.add(FSPGM(id), String(action.getId()), FormField::Type::TEXT)
+            ->setFormUInew FormUI::UI(FormUI::HIDDEN, emptyString));
 
-        form.add(F("action"), String(action.getAction()), FormField::InputFieldType::TEXT)
-            ->setFormUI(new FormUI(FormUI::HIDDEN, emptyString));
+        form.add(F("action"), String(action.getAction()), FormField::Type::TEXT)
+            ->setFormUInew FormUI::UI(FormUI::HIDDEN, emptyString));
 
-        form.add(F("action_str"), String(action.getActionFStr()), FormField::InputFieldType::TEXT)
-            ->setFormUI((new FormUI(FormUI::TEXT, F("Action")))->setReadOnly());
+        form.add(F("action_str"), String(action.getActionFStr()), FormField::Type::TEXT)
+            ->setFormUI(new FormUI::UI(FormUI::Type::TEXT, F("Action")))->setReadOnly());
 
         if (action.getAction() >= ActionEnum_t::MQTT_SET) {
-            form.add(F("entity_id"), action.getEntityId(), FormField::InputFieldType::TEXT)
-                ->setFormUI(new FormUI(FormUI::TEXT, F("MQTT Topic")));
+            form.add(F("entity_id"), action.getEntityId(), FormField::Type::TEXT)
+                ->setFormUInew FormUI::UI(FormUI::Type::TEXT, F("MQTT Topic")));
         }
         else {
-            form.add(F("entity_id"), action.getEntityId(), FormField::InputFieldType::TEXT)
-                ->setFormUI(new FormUI(FormUI::TEXT, F("Entity Id")));
+            form.add(F("entity_id"), action.getEntityId(), FormField::Type::TEXT)
+                ->setFormUInew FormUI::UI(FormUI::Type::TEXT, F("Entity Id")));
 
-            form.add(F("api_id"), String(action.getApiId()), FormField::InputFieldType::TEXT)
-                ->setFormUI(new FormUI(FormUI::TEXT, F("Api Id")));
+            form.add(F("api_id"), String(action.getApiId()), FormField::Type::TEXT)
+                ->setFormUInew FormUI::UI(FormUI::Type::TEXT, F("Api Id")));
         }
 
         switch(action.getAction()) {
             case ActionEnum_t::SET_BRIGHTNESS:
-                form.add(F("values[0]"), String(action.getValue(0)), FormField::InputFieldType::TEXT)
-                    ->setFormUI(new FormUI(FormUI::TEXT, F("Brightness")));
+                form.add(F("values[0]"), String(action.getValue(0)), FormField::Type::TEXT)
+                    ->setFormUInew FormUI::UI(FormUI::Type::TEXT, F("Brightness")));
                 break;
             case ActionEnum_t::CHANGE_BRIGHTNESS:
-                form.add(F("values[0]"), String(action.getValue(0)), FormField::InputFieldType::TEXT)
-                    ->setFormUI((new FormUI(FormUI::TEXT, F("Brightness")))->setSuffix(String(PRINTHTMLENTITIES_PLUSM[0])));
-                form.add(F("values[1]"), String(action.getValue(1)), FormField::InputFieldType::TEXT)
-                    ->setFormUI(new FormUI(FormUI::TEXT, F("Min. Brightness")));
-                form.add(F("values[2]"), String(action.getValue(2)), FormField::InputFieldType::TEXT)
-                    ->setFormUI(new FormUI(FormUI::TEXT, F("Max. Brightness")));
-                form.add(F("values[3]"), String(action.getValue(3)), FormField::InputFieldType::SELECT)
-                    ->setFormUI((new FormUI(FormUI::SELECT, F("Below Min. Brightness")))->setBoolItems(F("Turn Off"), F("Min. Brightness")));
+                form.add(F("values[0]"), String(action.getValue(0)), FormField::Type::TEXT)
+                    ->setFormUI(new FormUI::UI(FormUI::Type::TEXT, F("Brightness")))->setSuffix(String(PRINTHTMLENTITIES_PLUSM[0])));
+                form.add(F("values[1]"), String(action.getValue(1)), FormField::Type::TEXT)
+                    ->setFormUInew FormUI::UI(FormUI::Type::TEXT, F("Min. Brightness")));
+                form.add(F("values[2]"), String(action.getValue(2)), FormField::Type::TEXT)
+                    ->setFormUInew FormUI::UI(FormUI::Type::TEXT, F("Max. Brightness")));
+                form.add(F("values[3]"), String(action.getValue(3)), FormField::Type::SELECT)
+                    ->setFormUI(new FormUI::UI(FormUI::Type::SELECT, F("Below Min. Brightness")))->setBoolItems(F("Turn Off"), F("Min. Brightness")));
                 break;
             case ActionEnum_t::SET_KELVIN:
-                form.add(F("values[0]"), String(action.getValue(0)), FormField::InputFieldType::TEXT)
-                    ->setFormUI(new FormUI(FormUI::TEXT, F("Kelvin")));
+                form.add(F("values[0]"), String(action.getValue(0)), FormField::Type::TEXT)
+                    ->setFormUInew FormUI::UI(FormUI::Type::TEXT, F("Kelvin")));
                 break;
             case ActionEnum_t::SET_MIREDS:
-                form.add(F("values[0]"), String(action.getValue(0)), FormField::InputFieldType::TEXT)
-                    ->setFormUI(new FormUI(FormUI::TEXT, F("Mireds")));
+                form.add(F("values[0]"), String(action.getValue(0)), FormField::Type::TEXT)
+                    ->setFormUInew FormUI::UI(FormUI::Type::TEXT, F("Mireds")));
                 break;
             case ActionEnum_t::SET_RGB_COLOR:
-                form.add(F("values[0]"), String(action.getValue(0)), FormField::InputFieldType::TEXT)
-                    ->setFormUI(new FormUI(FormUI::TEXT, F("Red")));
-                form.add(F("values[1]"), String(action.getValue(1)), FormField::InputFieldType::TEXT)
-                    ->setFormUI(new FormUI(FormUI::TEXT, F("Green")));
-                form.add(F("values[2]"), String(action.getValue(2)), FormField::InputFieldType::TEXT)
-                    ->setFormUI(new FormUI(FormUI::TEXT, F("Blue")));
+                form.add(F("values[0]"), String(action.getValue(0)), FormField::Type::TEXT)
+                    ->setFormUInew FormUI::UI(FormUI::Type::TEXT, F("Red")));
+                form.add(F("values[1]"), String(action.getValue(1)), FormField::Type::TEXT)
+                    ->setFormUInew FormUI::UI(FormUI::Type::TEXT, F("Green")));
+                form.add(F("values[2]"), String(action.getValue(2)), FormField::Type::TEXT)
+                    ->setFormUInew FormUI::UI(FormUI::Type::TEXT, F("Blue")));
                 break;
             case ActionEnum_t::VOLUME_SET:
-                form.add(F("values[0]"), String(action.getValue(0)), FormField::InputFieldType::TEXT)
-                    ->setFormUI((new FormUI(FormUI::TEXT, F("Volume")))->setSuffix(String('%')));
+                form.add(F("values[0]"), String(action.getValue(0)), FormField::Type::TEXT)
+                    ->setFormUI(new FormUI::UI(FormUI::Type::TEXT, F("Volume")))->setSuffix(String('%')));
                 break;
             case ActionEnum_t::MQTT_SET:
-                form.add(F("values[0]"), String(action.getValue(0)), FormField::InputFieldType::TEXT)
-                    ->setFormUI(new FormUI(FormUI::TEXT, F("Value")));
+                form.add(F("values[0]"), String(action.getValue(0)), FormField::Type::TEXT)
+                    ->setFormUInew FormUI::UI(FormUI::Type::TEXT, F("Value")));
                 break;
             case ActionEnum_t::MQTT_TOGGLE:
-                form.add(F("values[0]"), String(action.getValue(0)), FormField::InputFieldType::TEXT)
-                    ->setFormUI(new FormUI(FormUI::TEXT, F("On Value")));
-                form.add(F("values[1]"), String(action.getValue(1)), FormField::InputFieldType::TEXT)
-                    ->setFormUI(new FormUI(FormUI::TEXT, F("Off Value")));
+                form.add(F("values[0]"), String(action.getValue(0)), FormField::Type::TEXT)
+                    ->setFormUInew FormUI::UI(FormUI::Type::TEXT, F("On Value")));
+                form.add(F("values[1]"), String(action.getValue(1)), FormField::Type::TEXT)
+                    ->setFormUInew FormUI::UI(FormUI::Type::TEXT, F("Off Value")));
                 break;
             case ActionEnum_t::MQTT_INCR:
-                form.add(F("values[0]"), String(action.getValue(0)), FormField::InputFieldType::TEXT)
-                    ->setFormUI(new FormUI(FormUI::TEXT, F("Value")));
-                form.add(F("values[1]"), String(action.getValue(1)), FormField::InputFieldType::TEXT)
-                    ->setFormUI(new FormUI(FormUI::TEXT, F("Max. Value")));
+                form.add(F("values[0]"), String(action.getValue(0)), FormField::Type::TEXT)
+                    ->setFormUInew FormUI::UI(FormUI::Type::TEXT, F("Value")));
+                form.add(F("values[1]"), String(action.getValue(1)), FormField::Type::TEXT)
+                    ->setFormUInew FormUI::UI(FormUI::Type::TEXT, F("Max. Value")));
                 break;
             case ActionEnum_t::MQTT_DECR:
-                form.add(F("values[0]"), String(action.getValue(0)), FormField::InputFieldType::TEXT)
-                    ->setFormUI(new FormUI(FormUI::TEXT, F("Value")));
-                form.add(F("values[1]"), String(action.getValue(1)), FormField::InputFieldType::TEXT)
-                    ->setFormUI(new FormUI(FormUI::TEXT, F("Min. Value")));
+                form.add(F("values[0]"), String(action.getValue(0)), FormField::Type::TEXT)
+                    ->setFormUInew FormUI::UI(FormUI::Type::TEXT, F("Value")));
+                form.add(F("values[1]"), String(action.getValue(1)), FormField::Type::TEXT)
+                    ->setFormUInew FormUI::UI(FormUI::Type::TEXT, F("Min. Value")));
                 break;
             default:
                 break;

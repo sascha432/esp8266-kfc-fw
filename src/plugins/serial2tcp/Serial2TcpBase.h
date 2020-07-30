@@ -74,6 +74,7 @@ public:
     const String &getHostname() const {
         return _hostname;
     }
+
     void setHostname(const String &hostname) {
         _hostname = hostname;
     }

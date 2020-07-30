@@ -3,7 +3,6 @@
 */
 
 #include "OpenWeatherForecastJsonReader.h"
-#include "../src/generated/FlashStringGeneratorAuto.h"
 
 OpenWeatherForecastJsonReader::OpenWeatherForecastJsonReader(Stream * stream, OpenWeatherMapAPI::WeatherForecast & forecast) : JsonBaseReader(stream), _forecast(forecast) {
 }

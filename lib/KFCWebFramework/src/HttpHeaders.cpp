@@ -8,7 +8,6 @@
 #if HAVE_HTTPHEADERS_ASYNCWEBSERVER
 #include <ESPAsyncWebServer.h>
 #endif
-#include "../src/generated/FlashStringGeneratorAuto.h"
 
 HttpHeaders::HttpHeaders()
 {

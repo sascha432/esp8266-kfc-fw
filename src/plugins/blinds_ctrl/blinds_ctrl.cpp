@@ -129,15 +129,15 @@ void BlindsControlPlugin::createConfigureForm(AsyncWebServerRequest *request, Fo
 
     form.setFormUI(F("Blinds Controller"));
 
-    form.add<bool>(F("channel0_dir"), &blinds->channel0_dir)->setFormUI((new FormUI(FormUI::SELECT, F("Channel 0 Direction")))->setBoolItems(reverse, forward));
-    form.add<bool>(F("channel1_dir"), &blinds->channel1_dir)->setFormUI((new FormUI(FormUI::SELECT, F("Channel 1 Direction")))->setBoolItems(reverse, forward));
-    form.add<bool>(F("swap_channels"), &blinds->swap_channels)->setFormUI((new FormUI(FormUI::SELECT, F("Swap Channels")))->setBoolItems(FSPGM(Yes), FSPGM(No)));
+    form.add<bool>(F("channel0_dir"), &blinds->channel0_dir)->setFormUI(new FormUI::UI(FormUI::Type::SELECT, F("Channel 0 Direction")))->setBoolItems(reverse, forward));
+    form.add<bool>(F("channel1_dir"), &blinds->channel1_dir)->setFormUI(new FormUI::UI(FormUI::Type::SELECT, F("Channel 1 Direction")))->setBoolItems(reverse, forward));
+    form.add<bool>(F("swap_channels"), &blinds->swap_channels)->setFormUI(new FormUI::UI(FormUI::Type::SELECT, F("Swap Channels")))->setBoolItems(FSPGM(Yes), FSPGM(No)));
 
     for (uint8_t i = 0; i < _channels.size(); i++) {
         form.add<uint16_t>(PrintString(F("channel%u_close_time"), i), &blinds->channels[i].closeTime)
-            ->setFormUI((new FormUI(FormUI::TEXT, PrintString(F("Channel %u Open Time Limit"), i)))->setSuffix(ms));
+            ->setFormUI(new FormUI::UI(FormUI::Type::TEXT, PrintString(F("Channel %u Open Time Limit"), i)))->setSuffix(ms));
         form.add<uint16_t>(PrintString(F("channel%u_open_time"), i), &blinds->channels[i].openTime)
-            ->setFormUI((new FormUI(FormUI::TEXT, PrintString(F("Channel %u Close Time Limit"), i)))->setSuffix(ms));
+            ->setFormUI(new FormUI::UI(FormUI::Type::TEXT, PrintString(F("Channel %u Close Time Limit"), i)))->setSuffix(ms));
         form.add<uint16_t>(PrintString(F("channel%u_current_limit"), i), &blinds->channels[i].currentLimit, [](uint16_t &value, FormField &field, bool isSetter){
                 if (isSetter) {
                     value = CURRENT_TO_ADC(value);
@@ -147,14 +147,14 @@ void BlindsControlPlugin::createConfigureForm(AsyncWebServerRequest *request, Fo
                 }
                 return true;
             })
-            ->setFormUI((new FormUI(FormUI::TEXT, PrintString(F("Channel %u Current Limit"), i)))->setSuffix(mA));
-        form.addValidator(new FormRangeValidator(ADC_TO_CURRENT(0), ADC_TO_CURRENT(1023)));
+            ->setFormUI(new FormUI::UI(FormUI::Type::TEXT, PrintString(F("Channel %u Current Limit"), i)))->setSuffix(mA));
+        form.addValidator(FormRangeValidator(ADC_TO_CURRENT(0), ADC_TO_CURRENT(1023)));
 
         form.add<uint16_t>(PrintString(F("channel%u_current_limit_time"), i), &blinds->channels[i].currentLimitTime)
-            ->setFormUI((new FormUI(FormUI::SELECT, PrintString(F("Channel %u Current Limit Trigger Time"), i)))->addItems(currentLimitItems));
+            ->setFormUI(new FormUI::UI(FormUI::Type::SELECT, PrintString(F("Channel %u Current Limit Trigger Time"), i)))->addItems(currentLimitItems));
         form.add<uint16_t>(PrintString(F("channel%u_pwm_value"), i), &blinds->channels[i].pwmValue)
-            ->setFormUI((new FormUI(FormUI::TEXT, PrintString(F("Channel %u Motor PWM"), i)))->setSuffix(motorSpeed));
-        form.addValidator(new FormRangeValidator(0, 1023));
+            ->setFormUI(new FormUI::UI(FormUI::Type::TEXT, PrintString(F("Channel %u Motor PWM"), i)))->setSuffix(motorSpeed));
+        form.addValidator(FormRangeValidator(0, 1023));
 
     }
 

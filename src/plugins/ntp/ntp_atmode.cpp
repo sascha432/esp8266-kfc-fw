@@ -41,7 +41,7 @@ bool NTPPlugin::atModeHandler(AtModeArgs &args)
         time_t now = time(nullptr);
         char timestamp[64];
         if (!IS_TIME_VALID(now)) {
-            args.printf_P(PSTR("Time is currently not set (%lu). NTP is %s"), now, (System::Flags::get().is_ntp_client_enabled ? FSPGM(enabled) : FSPGM(disabled)));
+            args.printf_P(PSTR("Time is currently not set (%lu). NTP is %s"), now, (System::Flags::getConfig().is_ntp_client_enabled ? FSPGM(enabled) : FSPGM(disabled)));
         }
         else {
             strftime_P(timestamp, sizeof(timestamp), SPGM(strftime_date_time_zone), gmtime(&now));

@@ -193,7 +193,7 @@ void setup_plugins(PluginComponent::SetupModeType mode)
         }
     }
 
-    if (enableWebUIMenu && System::Flags(true).isWebUIEnabled()) {
+    if (enableWebUIMenu && System::Flags::getConfig().is_webui_enabled) {
         auto url = F("webui.html");
         if (!bootstrapMenu.isValid(bootstrapMenu.findMenuByURI(url, navMenu.device))) {
             auto webUi = F("Web UI");

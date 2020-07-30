@@ -81,30 +81,41 @@ struct ConfigFlags {
     int counter;
 };
 
+typedef struct {
+    uint16_t a;
+    uint16_t b;
+    uint16_t c;
+} sval_t;
+
 // structure is used for code completion only
 typedef struct {
 
     char string1[100];
-    char blob[10];
-    int32_t int32;
     uint8_t val1;
+    char string2[5];
+    sval_t sval;
     uint16_t val2;
+    char string3[12];
     uint32_t val3;
+    char string4[32];
     uint64_t val4;
-    uint32_t val5;
-    IPAddress ip;
-    struct {
-        char string1[100];
-        char string2[100];
-    } sub1;
-    ConfigSub2_t sub2;
-    blob_t blob2;
-    ConfigFlags flags;
+    char string5[16];
+    float val5;
+    //IPAddress ip;
+    //struct {
+    //    char string1[100];
+    //    char string2[100];
+    //} sub1;
+    //ConfigSub2_t sub2;
+    //blob_t blob2;
+    //ConfigFlags flags;
     
 } Configuration_t;
 
 
 #include <assert.h>
+
+#if 0
 
 #include "push_pack.h"
 
@@ -176,6 +187,9 @@ void spi_flash_write(size_t ofs, uint32_t *buf, size_t len) {
     memcpy(flash + ofs, buf, len);
 }
 
+#endif
+
+#if 0
 
 namespace EspSaveCrash {
 
@@ -188,10 +202,156 @@ namespace EspSaveCrash {
 
 FlashEEPROM EE;
 
+#endif
+
+
+
+
+static constexpr uint16_t test1 = constexpr_crc16_update("test", constexpr_strlen("test"));
+#define _HHHH(name) constexpr_crc16_update(name, constexpr_strlen(name))
+static constexpr uint16_t test2 = _HHHH("test");
+
+#define _H_PTR(name) ({static const uint16_t handle = 100; &handle;})
+
+const char *loadStringConfig(uint16_t handle) {
+    return nullptr;
+}
+void storeStringConfig(uint16_t handle, const char *) {}
+
+
+#undef _H
+#undef CONFIG_GET_HANDLE_STR
+#define _H_DEFINED_KFCCONFIGURATIONCLASSES                  1
+#define _H(name)                                            constexpr_crc16_update(_STRINGIFY(name), constexpr_strlen(_STRINGIFY(name)))
+#define CONFIG_GET_HANDLE_STR(name)                         constexpr_crc16_update(name, constexpr_strlen(name))
+
+#define CREATE_STRING_GETTER_SETTER(class_name, name, len) \
+    static constexpr size_t k##name##MaxLength = len; \
+    static constexpr uint16_t k##name##ConfigHandle = CONFIG_GET_HANDLE_STR(_STRINGIFY(class_name) "." _STRINGIFY(name)); \
+    static const char *get##name() { return loadStringConfig(k##name##ConfigHandle); } \
+    static void set##name(const char *str) { storeStringConfig(k##name##ConfigHandle, str); } 
+
+enum class ModeType : uint8_t {
+    MIN = 0,
+    DISABLED = MIN,
+    UNSECURE,
+    SECURE,
+    MAX
+};
+
+#define DUMP_STRUCT_VAR(name) { output.print(_STRINGIFY(name)); output.print("="); output.println(this->name); }
+
+enum class QosType : uint8_t {
+    MIN = 0,
+    AT_MODE_ONCE = 0,
+    AT_LEAST_ONCE = 1,
+    EXACTLY_ONCE = 2,
+    MAX,
+    DEFAULT = 0xff,
+};
+typedef struct __attribute__packed__ {
+    uint16_t port{ 1883 };
+    uint8_t keepalive{ 15 };
+    union __attribute__packed__ {
+        // uint8_t mode: 5;
+        // ModeType mode_enum: 5;
+        uint8_t mode;
+        ModeType mode_enum{ ModeType::UNSECURE };
+        //TODO suppress warning
+    };
+    union __attribute__packed__ {
+        uint8_t qos;
+        QosType qos_enum{ QosType::EXACTLY_ONCE };
+        //TODO suppress warning for  TTClient::<anonymous struct>::<anonymous union>::qos_enum' is too small to hold all v
+        // uint8_t qos: 2;
+        // QosType qos_enum: 2;
+    };
+    union __attribute__packed__ {
+        uint8_t flags{ 0b00000101 };
+        struct __attribute__packed__ {
+            uint8_t auto_discovery : 1;
+            uint8_t auto_discoveryx : 1;
+            uint8_t auto_discoveryy : 1;
+        };
+    };
+
+    template<class T>
+    void dump(Print &output) {
+        output.printf_P(PSTR("config handle=%04x\n"), T::kConfigStructHandle);
+        DUMP_STRUCT_VAR(port);
+        DUMP_STRUCT_VAR(keepalive);
+        DUMP_STRUCT_VAR(qos);
+        DUMP_STRUCT_VAR(auto_discovery);
+    }
+
+} MqttConfig_t;
+
+template<typename T, const uint16_t _handle>
+class ConfigBla {
+public:
+    static constexpr uint16_t handle = _handle;
+    void printHandle() {
+        Serial.printf("%04x\n", handle);
+    }
+
+};
+
+namespace Sy {
+
+    struct Dev {
+        typedef struct {
+            int a;
+        } Config_t;
+    };
+
+}
+
+class ConfigBlaX : public ConfigBla<Sy::Dev::Config_t, _H(Sy::Dev::Config_t)>
+{
+public:
+
+    CREATE_STRING_GETTER_SETTER(ConfigBlaX, Hostname, 128);
+};
+
+String prettyname(const char *s) {
+    String tmp;
+    tmp = "CONFIG_HANDLE_";
+    tmp += s;
+    tmp.toUpperCase();
+    tmp.replace('.', '_');
+    tmp.replace('(', '_');
+    tmp.replace(')', '_');
+    while (tmp.indexOf("__") != -1) {
+        tmp.replace("__", "_");
+    }
+    return tmp;
+}
+
+#define CREATE_HANDLE(name) Serial.printf("#define %- 64.64s 0x%04x // _H(%s)\n", prettyname(name).c_str(), _H(name), name);
+
+
 int main() {
 
     ESP._enableMSVCMemdebug();
     DebugHelper::activate();
+
+#if 1
+
+    CREATE_HANDLE("MainConfig().plugins.mqtt.cfg");
+    CREATE_HANDLE("MainConfig().plugins.syslog.cfg");
+
+    MqttConfig_t test2 = {};
+
+    test2.dump(Serial);
+
+
+    auto test = ConfigBlaX::getHostname();
+
+    return 0;
+
+#endif 
+
+#if 0
 
     memset(flash, 0, sizeof(flash));
     EEPROM.clear();
@@ -231,8 +391,11 @@ int main() {
     EE.end();
     EEPROM.end();
 
-    return 0;
 
+    return 0;
+#endif
+
+#if 0
     xxxxx::AuthType test111 = xxxxx::AuthType::SID;
 
     Serial.printf("%u\n", (test111 == true));
@@ -270,6 +433,7 @@ int main() {
     //}, 0));
 
     return 0;
+#endif
 
 #if 0
     File file = SPIFFS.open("C:\\Users\\sascha\\Documents\\PlatformIO\\Projects\\kfc_fw\\data\\webui\\1a22101e.lnk", "r");
@@ -684,54 +848,87 @@ int main() {
     EEPROM.begin();
     //EEPROM.clear();
 
-    Configuration config(512, 2048);
+    //EEPROM.addAccessProtection(EEPROMFile::AccessProtection::RW, 0, 512);
+    //EEPROM.addAccessProtection(EEPROMFile::AccessProtection::RW, 512 + 1024, 1024);
+
+    Configuration config(0, 1024);
     if (!config.read()) {
-        printf("Failed to read configuration\n");
+        Serial.println("Read error, settings defaults");
+        config._H_SET_STR(Configuration_t().string1, "test1");
+        config._H_SET(Configuration_t().val1, 100);
+        config._H_SET(Configuration_t().sval, sval_t({0x8877, 0x5544}));
+        config._H_SET_STR(Configuration_t().string2, "test2");
+        config._H_SET(Configuration_t().val2, 10000);
+        config._H_SET_STR(Configuration_t().string3, "test3");
+        config._H_SET(Configuration_t().val3, 100000000);
+        config._H_SET_STR(Configuration_t().string4, "test4");
+        config._H_SET(Configuration_t().val4, 10000000000000000);
+        config._H_SET_STR(Configuration_t().string5, "test5");
+        config._H_SET(Configuration_t().val5, -12345.678f);
+        config.write();
     }
     config.dump(Serial);
 
-    auto flags = config._H_GET(Configuration_t().flags);
-    //flags = ConfigFlags();
-  /*  flags.counter++;
-    flags.atModeEnabled = true;
-    flags.isDefaultPassword = true;
-    flags.stationModeDHCPEnabled = true;
-    flags.wifiMode = 3;
-    flags.webServerMode = 1;*/
+    config._H_SET(Configuration_t().sval, sval_t({ 0x1122, 0x3344 }));
+
+    //auto str = config._H_STR(Configuration_t().string1);
+
+    config._H_SET_STR(Configuration_t().string1, "testlonger1");
+    config._H_SET_STR(Configuration_t().string1, "short");
+    config._H_SET_STR(Configuration_t().string1, "testlonger1testlonger1");
+    config.dump(Serial);
+
+    config.write();
+
+    config.dump(Serial);
+
+    return 0;
+
+#if 0
+
+  //  auto flags = config._H_GET(Configuration_t().flags);
+  //  //flags = ConfigFlags();
+  ///*  flags.counter++;
+  //  flags.atModeEnabled = true;
+  //  flags.isDefaultPassword = true;
+  //  flags.stationModeDHCPEnabled = true;
+  //  flags.wifiMode = 3;
+  //  flags.webServerMode = 1;*/
 
 
-    //"2702C001"
-    //"3F03C001"
-    //"BF03C001"
-    //"BF0B C001"
-    //"BF8B C201"
+  //  //"2702C001"
+  //  //"3F03C001"
+  //  //"BF03C001"
+  //  //"BF0B C001"
+  //  //"BF8B C201"
 
-    flags.counter++;
-    config._H_SET(Configuration_t().flags, flags);
+  //  flags.counter++;
+  //  config._H_SET(Configuration_t().flags, flags);
 
-    flags = config._H_GET(Configuration_t().flags);
+  //  flags = config._H_GET(Configuration_t().flags);
 
-    flags.counter++;
-    config._H_SET(Configuration_t().flags, flags);
+  //  flags.counter++;
+  //  config._H_SET(Configuration_t().flags, flags);
 
-    flags = config._H_GET(Configuration_t().flags);
+  //  flags = config._H_GET(Configuration_t().flags);
 
-    flags.counter++;
-    config._H_SET(Configuration_t().flags, flags);
+  //  flags.counter++;
+  //  config._H_SET(Configuration_t().flags, flags);
 
-    //auto mzstring = config._H_STR(Configuration_t().string1);
+  //  //auto mzstring = config._H_STR(Configuration_t().string1);
 
 
-    //config._H_SET_STR(Configuration_t().string1, emptyString);
+  //  //config._H_SET_STR(Configuration_t().string1, emptyString);
 
-    char data[200] = {};
+  //  char data[200] = {};
 
-    config.setBinary(_H(binary), data, 0);
-    config.setBinary(_H(binary), data, 0);
+  //  config.setBinary(_H(binary), data, 0);
+  //  config.setBinary(_H(binary), data, 0);
 
     config.write();
 
     return 0;
+#endif
 
 #if 0
     {
@@ -770,6 +967,7 @@ int main() {
     config.setString(_H(str1), str.c_str());
 #endif
 
+#if 0
     config.setString(_H(str1new), "");
 
     //config.setString(_H(str2), "str2_long");
@@ -777,7 +975,6 @@ int main() {
     config.write();
 
 
-#if 1
     return 0;
 #endif
 
@@ -796,7 +993,7 @@ int main() {
     return 0;
 #endif
 
-
+#if 0
     auto ptr = config._H_STR(Configuration_t().string1);
     printf("%s\n", ptr);
     if (config.exists<ConfigSub2_t>(_H(Configuration_t().sub2))) {
@@ -873,6 +1070,6 @@ int main() {
     config.dump(Serial);
 
     config.clear();
-
     return 0;
+#endif
 }

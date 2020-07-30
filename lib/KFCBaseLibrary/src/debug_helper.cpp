@@ -17,7 +17,7 @@ DebugHelperFilterVector DebugHelper::__filters;
 // FixedCircularBuffer<DebugHelper::Positon_t,100> DebugHelper::__pos;
 
 #if DEBUG_INCLUDE_SOURCE_INFO
-const char ___debugPrefix[] PROGMEM = "D%08lu (%s:%u<%d:%u> %s): ";
+const char ___debugPrefix[] PROGMEM = "D%08lu (%s:%u <%d:%u> %s): ";
 #else
 const char ___debugPrefix[] PROGMEM = "DBG: ";
 #endif

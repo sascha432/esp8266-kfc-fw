@@ -50,7 +50,7 @@ void SSDPPlugin::_begin()
 {
     PrintString tmp;
     SSDP.setSchemaURL(FSPGM(description_xml));
-    SSDP.setHTTPPort(System::WebServer::getConfig().port);
+    SSDP.setHTTPPort(System::WebServer::getConfig().getPort());
     SSDP.setDeviceType(F("upnp:rootdevice"));
     SSDP.setName(System::Device::getName());
     WebTemplate::printUniqueId(tmp, FSPGM(kfcfw));
@@ -79,7 +79,7 @@ void SSDPPlugin::_end()
 
 void SSDPPlugin::setup(SetupModeType mode)
 {
-    if (System::Flags::get().is_ssdp_enabled) {
+    if (System::Flags::getConfig().is_ssdp_enabled) {
         WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTION, wifiCallback);
     }
 }
@@ -98,7 +98,7 @@ void SSDPPlugin::shutdown()
 
 void SSDPPlugin::getStatus(Print &output)
 {
-    if (System::Flags::get().is_ssdp_enabled && _running) {
+    if (System::Flags::getConfig().is_ssdp_enabled && _running) {
         WebTemplate::printWebInterfaceUrl(output);
         output.print(FSPGM(description_xml, "description.xml"));
         output.print(HTML_S(br));

@@ -7,13 +7,17 @@
 #include <Arduino_compat.h>
 #include <functional>
 #include <vector>
-#include <PrintHtmlEntities.h>
+#include <PrintHtmlEntitiesString.h>
 #include "FormField.h"
 #include "FormValue.h"
 #include "FormObject.h"
 #include "FormBitValue.h"
 #include "FormString.h"
 #include "FormStringObject.h"
+
+#ifndef DEBUG_KFC_FORMS
+#define DEBUG_KFC_FORMS         0
+#endif
 
 #if DEBUG_KFC_FORMS
 #include <debug_helper_enable.h>
@@ -122,7 +126,7 @@ public:
     void finalize() const;
 
     void createHtml(PrintInterface &out);
-    const char *process(const String &name) const;
+    bool process(const String &name, Print &output) const;
     void createJavascript(PrintInterface &out) const;
 
     void dump(Print &out, const String &prefix) const;
@@ -256,6 +260,10 @@ public:
         return addGroup(id, FormUI::Label(dependencies, true), false, FormUI::Type::GROUP_START_DIV);
     }
 
+    // form/field.getFormUIConfig() provides the container id
+    // id is "header-<id>" for the card header and "collapse-<id>" for the card body
+    // if label is empty, the card header is not created and the card body cannot be collapsed
+    // expanded is the intial state of the cardd body either show=true or hide=false
     FormGroup &addCardGroup(const String &id, const FormUI::Label &label, bool expanded = false) {
         return addGroup(id, label, expanded, FormUI::Type::GROUP_START_CARD);
     }
@@ -271,9 +279,8 @@ private:
     FormData *_data;
     FieldsVector _fields;
     ErrorsVector _errors;
-    bool _invalidMissing;
-    bool _hasChanged;
-
+    bool _invalidMissing: 1;
+    bool _hasChanged: 1;
     FormUI::ConfigPtr _uiConfig;
     ValidateCallback _validateCallback;
 };

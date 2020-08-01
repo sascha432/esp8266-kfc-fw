@@ -6,8 +6,6 @@
 
 #include <Arduino_compat.h>
 
-// NOTE: any string should be UTF-8
-// check the encoding of your files that contain any strings
 // it is recommended to use PRINTHTMLENTITIES_* for supported entities
 
 #define HTML_TAG_S  "\x01"
@@ -31,6 +29,8 @@
 #define PRINTHTMLENTITIES_ACUTE     "\xb4"  // 0xb4 = 180 = ´
 #define PRINTHTMLENTITIES_MICRO     "\xb5"  // 0xb5 = 181 = µ
 
+class PrintHtmlEntitiesString;
+
 class PrintHtmlEntities {
 public:
     enum class Mode {
@@ -45,7 +45,6 @@ public:
     // translate HTML_* and use writeRaw() to output it
     size_t translate(uint8_t data);
     // translate entire buffer
-    // following utf8 characters are translated to html entities: ©°±´µ
     size_t translate(const uint8_t *buffer, size_t size);
 
     // write data and encode entities and html escape characters
@@ -55,7 +54,7 @@ public:
     // Mode::RAW = do not encode anything
     // Mode::HTML = encode html entities for html output
     // Mode::ATTRIBUTE = encode string for the use as attribute value
-    virtual void setMode(Mode mode);
+    virtual Mode setMode(Mode mode); // returns previous mode
     virtual Mode getMode() const;
 
     // methods to encode existing strings
@@ -64,21 +63,33 @@ public:
     static constexpr int kInvalidSize = -2;
 
     // returns the length of the new string or -1 if it does not require any translation
-    static int getTranslatedSize(const char *str, bool attribute);
-    // the translated string is appended to target unless the function returns false, which means
-    // the string does not require any translation (or allocating the memory failed)
+    static int getTranslatedSize_P(PGM_P str, bool attribute);
+    // append the translated string to target unless there isn't any translation
+    // required or the memory allocation failed
     // if getTranslatedSize() was used before, the value should be passed as requiredSize
-    // attribute=true encodes as value for html attributes, false encodes for html
+    //
+    // attribute=true encode as value for html attributes
+    // attributes=false encode as html
+    //
+    // NOTES:     
+    //  - return value false means that target was not modified
+    //  - str is PROGMEM safe
     static bool translateTo(const char *str, String &target, bool attribute, int requiredSize = kInvalidSize);
+
+    // returns pointer to allocated str or nullptr if no translation was required
+    static char *translateTo(const char *str, bool attribute, int requiredSize = kInvalidSize);
+
+    // prints the string to output
+    // NOTE: str is PROGMEM safe
+    static size_t printTo(Mode mode, const char *str, Print &output);
+
+    static size_t printTo(Mode mode, const char *str, PrintHtmlEntitiesString &output);
+    static size_t printTo(Mode mode, const __FlashStringHelper *str, PrintHtmlEntitiesString &output);
+
     // returns string, avoid using it with huge strings
     static String getTranslatedTo(const String &str, bool attribute);
 
-    // access to the transaction table
-    static const __FlashBufferHelper *getAttributeKeys();
-    static const __FlashBufferHelper *getHtmlKeys();
-    static const __FlashBufferHelper **getTranslationTable();
-
-private:
+protected:
     size_t _writeRawString(const __FlashStringHelper *str);
 
     Mode _mode;

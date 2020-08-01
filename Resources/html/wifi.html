@@ -25,107 +25,8 @@
     </nav>
     <!--NAV%%-->
     <div class="container">
-        <h1>WiFi Configuration</h1>
-        <form method="POST" action="wifi.html" id="wifi_settings">
-            <div class="form-group">
-                <label for="wmode">Mode:</label>
-                <select class="form-control" name="wmode" id="wmode">
-                    <option value="1" %WMODE_1%>Station Mode</option>
-                    <option value="2" %WMODE_2%>Access Point</option>
-                    <option value="3" %WMODE_3%>Access Point and Station Mode</option>
-                </select>
-            </div>
-            <span id="station_mode">
-                <div class="form-group">
-                    <h2>Station</h2>
-                </div>
-                <div class="form-group">
-                </div>
-                <div class="form-group">
-                    <label for="wssid">SSID:</label>
-                    <div class="input-group">
-                        <input type="text" class="form-control" name="wssid" id="wssid" value="%WSSID%" />
-                        <div class="input-group-append">
-                            <button class="btn btn-default" type="button" id="wifi_scan_button" data-toggle="modal" data-target="#network_dialog">Scan...</button>
-                        </div>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label for="wpwd">Passphrase:</label>
-                    <input type="password" class="form-control visible-password" name="wpwd" id="wpwd" value="%WPWD%" data-always-visible="false" data-protected="true">
-                </div>
-            </span>
-            <span id="ap_mode">
-                <div class="form-group">
-                    <h2>Access Point</h2>
-                </div>
-                <div class="form-group">
-                    <label for="apsm">AP Mode:</label>
-                    <select class="form-control" name="apsm" id="apsm">
-                        <option value="0" %APSM_0%>Enable AP Mode permanently</option>
-                        <option value="1" %APSM_1%>Enable AP Mode if station is disconnected</option>
-                    </select>
-                </div>
-                    <div class="form-group">
-                    <label for="apssid">SSID:</label>
-                    <div class="input-group">
-                        <input type="text" class="form-control" name="apssid" id="apssid" value="%APSSID%">
-                        <div class="input-group-append">
-                            <span class="button-checkbox" data-on-icon="oi oi-task" data-off-icon="oi oi-ban">
-                                <button type="button" class="btn" data-color="primary">HIDDEN</button>
-                                <input type="checkbox" class="hidden" name="_aphs" id="_aphs" value="1" %APHS% data-label="HIDDEN">
-                                    <input type="hidden" name="aphs" id="aphs">
-                            </span>
-                        </div>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label for="appwd">Passphrase:</label>
-                    <input type="password" class="form-control visible-password" name="appwd" id="appwd" value="%APPWD%" data-always-visible="false" data-protected="true">
-                </div>
-                <div class="form-group">
-                    <label for="apch">Channel</label>
-                    <select class="form-control" name="apch" id="apch" data-max-channels="%MAX_CHANNELS%">
-                        <option value="0" %CHANNEL_0%>Auto</option>
-                        <option value="1" %CHANNEL_1%>1</option>
-                        <option value="2" %CHANNEL_2%>2</option>
-                        <option value="3" %CHANNEL_3%>3</option>
-                        <option value="4" %CHANNEL_4%>4</option>
-                        <option value="5" %CHANNEL_5%>5</option>
-                        <option value="6" %CHANNEL_6%>6</option>
-                        <option value="7" %CHANNEL_7%>7</option>
-                        <option value="8" %CHANNEL_8%>8</option>
-                        <option value="9" %CHANNEL_9%>9</option>
-                        <option value="10" %CHANNEL_10%>10</option>
-                        <option value="11" %CHANNEL_11%>11</option>
-                        <option value="12" %CHANNEL_12%>12</option>
-                        <option value="13" %CHANNEL_13%>13</option>
-                        <option value="14" %CHANNEL_14%>14</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="apenc">Encryption</label>
-                    <select class="form-control" name="apenc" id="apenc">
-                        <!--#if defined(ESP32) && ESP32-->
-                        <option value="0" %APENC_0%>Open</option>
-                        <option value="1" %APENC_1%>WEP</option>
-                        <option value="2" %APENC_2%>WPA/PSK</option>
-                        <option value="3" %APENC_3%>WPA2/PSK</option>
-                        <option value="4" %APENC_4%>WPA/WPA2/PSK</option>
-                        <option value="5" %APENC_5%>WPA2 Enterprise</option>
-                        <!--#else-->
-                        <option value="7" %APENC_7%>Open</option>
-                        <option value="5" %APENC_5%>WEP</option>
-                        <option value="2" %APENC_2%>WPA TKIP</option>
-                        <option value="4" %APENC_4%>WPA CCMP</option>
-                        <option value="8" %APENC_8%>Auto</option>
-                        <!--#endif-->
-                    </select>
-                </div>
-            </span>
-            <div class="form-group">
-                <button type="submit" class="btn btn-primary">Save Changes...</button>
-            </div>
+        <form method="POST" action="wifi.html">
+            %FORM_HTML%
         </form>
 
         <div class="modal" tabindex="-1" role="dialog" id="network_dialog">
@@ -152,6 +53,7 @@
                 </div>
             </div>
         </div>
+
         <!--%%FOOT-->
         <div class="row">
             <div class="col footer">&nbsp;</div>

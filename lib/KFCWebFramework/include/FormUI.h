@@ -28,7 +28,7 @@ namespace FormUI {
 	using ItemPair = std::pair<String, String>;
 	using ItemsListVector = std::vector<ItemPair>;
 
-	enum class Type {
+	enum class Type : uint8_t {
 		NONE,
 		SELECT,
 		TEXT,
@@ -39,6 +39,7 @@ namespace FormUI {
 		RANGE_SLIDER,
 		PASSWORD,
 		NEW_PASSWORD,
+		// VISIBLE_PASSWORD,
 		GROUP_START,
 		GROUP_END,
 		GROUP_START_DIV,
@@ -50,7 +51,7 @@ namespace FormUI {
 		HIDDEN,
 	};
 
-    enum class StyleType {
+    enum class StyleType : uint8_t {
         DEFAULT = 0,
         ACCORDION,
         MAX
@@ -133,16 +134,12 @@ namespace FormUI {
 		Label(const __FlashStringHelper *label, bool raw = false) : Label(String(label), raw) {}
 
 		// if raw is set to true, the output is not modified
-		Label(const String &label, bool raw) : String() {
+		Label(const String &label, bool raw) : String(raw ? String('\xff') : label) {
 			if (raw) {
-				*this += String('\xff');
 				*this += label;
 			}
-			else {
-				*this += String(label);
-				if (!String_endsWith(*this, ':')) {
-					*this += ':';
-				}
+			if (String_endsWith(*this, ':')) {
+				__DBG_printf("Label '%s' ends with ':'", label.c_str());
 			}
 		}
 
@@ -160,6 +157,19 @@ namespace FormUI {
 		PlaceHolder(double placeholder, uint8_t digits) : String(placeholder, digits) {}
 		PlaceHolder(const String &placeholder) : String(placeholder) {}
 	};
+
+	// class InputGroupAppend {
+	// public:
+	// 	enum class Type {
+	// 		BUTTON_CHECKBOX,
+	// 	};
+
+	// 	InputGroupAppend(Type type, const String &onIcon, const String off) : _type(type) {
+	// 	}
+
+	// private:
+	// 	Type _type;
+	// };
 
 	class MinMax
 	{
@@ -195,10 +205,8 @@ namespace FormUI {
 	class BoolItems
 	{
 	public:
-		BoolItems() : _items(0, FSPGM(Disabled), 1, FSPGM(Enabled)) {
-		}
-		BoolItems(const String &_true, const String &_false) : _items(0, _false, 1, _true) {
-		}
+		BoolItems() : _items(0, FSPGM(Disabled), 1, FSPGM(Enabled)) {}
+		BoolItems(const String &_true, const String &_false) : _items(0, _false, 1, _true) {}
 
 	private:
 		friend UI;
@@ -208,25 +216,25 @@ namespace FormUI {
 	template<class T>
 	class Conditional {
 	public:
-		Conditional(bool condition, const T &value) : _condition(condition), _value(value) {}
+		Conditional(bool condition, const T &value) : _value(value), _condition(condition) {}
 
 	private:
 		friend UI;
 
-		bool _condition;
 		T _value;
+		bool _condition: 1;
 	};
 
 	class ConditionalAttribute : public Conditional<Attribute> {
 	public:
-		ConditionalAttribute(bool condition, const String &key, const String &value) : Conditional<Attribute>(condition, Attribute(key, value)) {
-		}
+		ConditionalAttribute(bool condition, const String &key, const String &value) : Conditional<Attribute>(condition, Attribute(key, value)) {}
 	};
 
 	class UI {
 	public:
 		using PrintInterface = PrintArgs::PrintInterface;
 		using Type = ::FormUI::Type;
+		// using InputGroupAppendVector = std::vector<InputGroupAppend>;
 
 		// arguments see Form::addFormUI()
 
@@ -237,10 +245,10 @@ namespace FormUI {
 
 		// DEPRECATED METHODS
 
-		UI *setLabel(const String &label, bool raw = true) {
+		UI *setLabel(const String &label, bool raw = true) __attribute__ ((deprecated)) {
 			return setLabel(Label(label, raw));
 		}
-		UI *setLabel(const Label &label) {
+		UI *setLabel(const Label &label) __attribute__ ((deprecated)) {
 			_label = label;
 			return this;
 		}
@@ -347,6 +355,7 @@ namespace FormUI {
 		String _suffix;
 		String _attributes;
 		ItemsList _items;
+		// InputGroupAppendVector _inputGroupAppend;
 	};
 
 

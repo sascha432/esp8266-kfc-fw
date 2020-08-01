@@ -27,7 +27,7 @@ size_t PrintArgs::fillBuffer(uint8_t *data, size_t sizeIn)
 {
     int size = sizeIn;
 
-    void *args[8];
+    void *args[kMaximumPrintfArguments + 1];
     if (!_bufferPtr) {
         _bufferPtr = _buffer.begin();
         _position = 0;
@@ -52,17 +52,17 @@ size_t PrintArgs::fillBuffer(uint8_t *data, size_t sizeIn)
             return data - dataStart;
         }
         uint8_t numArgs = *_bufferPtr;
-        if (++numArgs >= (sizeof(args) / sizeof(*args))) {
+        if (++numArgs >= (sizeof(args) / sizeof(uintptr_t))) {
             clear();
             return 0;
         }
-        size_t advance = sizeof(size_t) * numArgs;
+        size_t advance = sizeof(uintptr_t) * numArgs;
         memset(args, 0, sizeof(args));
         memcpy(args, _bufferPtr + 1, advance++);
 
         // sprintf starts at position 0
         if (_position == 0) {
-            _strLength = _printf(data, size, args);
+            _strLength = _snprintf_P(data, size, args, numArgs);
             if (_strLength < size) {
                 // fits into buffer, advance all pointers to the next string
                 size -= _strLength;
@@ -84,7 +84,7 @@ size_t PrintArgs::fillBuffer(uint8_t *data, size_t sizeIn)
             int left = _strLength - _position;
             // does the entire string fit?
             if (size - _position >= _strLength + 1) {
-                /*_strLength = */_printf(data, _strLength + 1, args);
+                /*_strLength = */_snprintf_P(data, _strLength + 1, args, numArgs);
                 memmove(data, data + _position, left);
                 data += left;
                 size -= left;
@@ -95,7 +95,7 @@ size_t PrintArgs::fillBuffer(uint8_t *data, size_t sizeIn)
             // we need extra space
             int maxTmpLen = std::min(_strLength, size + _position) + 1;
             uint8_t *tmp = (uint8_t *)malloc(maxTmpLen);
-            /*_strLength = */_printf(tmp, maxTmpLen, args);
+            /*_strLength = */_snprintf_P(tmp, maxTmpLen, args, numArgs);
             if (left <= size) {
                 memcpy(data, tmp + _position, left);
                 free(tmp);
@@ -117,17 +117,38 @@ size_t PrintArgs::fillBuffer(uint8_t *data, size_t sizeIn)
     } while (true);
 }
 
-int PrintArgs::_printf(uint8_t *buffer, size_t size, void **args)
+void PrintArgs::vprintf_P(const char *format, uintptr_t **args, size_t numArgs)
 {
-    //debug_printf_P(PSTR("fmt='%s' args=%p,%p,%p,%p,%p,%p,%p\n"), args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7]);
-
-    return snprintf_P(reinterpret_cast<char *>(buffer), size, (PGM_P)args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7]);
-    //return snprintf_P(reinterpret_cast<char *>(buffer), size, (PGM_P)args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], args[10], args[11], args[12], args[13], args[14], args[15]);
+    _buffer.write((uint8_t)(numArgs + 1));
+    _buffer.write(reinterpret_cast<const uint8_t *>(&format), sizeof(const char *));
+    _buffer.write(reinterpret_cast<const uint8_t *>(&args), sizeof(void *) * numArgs);
 }
 
-void PrintArgs::_store(size_t data)
+
+int PrintArgs::_snprintf_P(uint8_t *buffer, size_t size, void **args, uint8_t numArgs)
 {
-    _buffer.write(reinterpret_cast<const uint8_t *>(&data), sizeof(size_t));
+#if DEBUG_PRINT_ARGS
+    String fmt = F("format='%s' args[");
+    fmt += String((numArgs - 1));
+    fmt += "]={";
+    for(uint8_t i = 1; i < numArgs; i++) {
+        fmt += F("%08x, ");
+    }
+    String_rtrim_P(fmt, F(", "));
+    fmt += F("}\n");
+    debug_printf(fmt.c_str(), (PGM_P)args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], args[10], args[11], args[12], args[13], args[14], args[15]);
+#endif
+
+#if defined(_MSC_VER)
+    // push all arguments to the stack at once
+    typedef struct {
+        void *args[kMaximumPrintfArguments + 1];
+    } Args_t;
+    typedef int(* snprintf_P_stack)(char *str, size_t strSize, Args_t args);
+    return ((snprintf_P_stack)(snprintf_P))(reinterpret_cast<char *>(buffer), size, *(Args_t *)(&args[0]));
+#else
+    return snprintf_P(reinterpret_cast<char *>(buffer), size, (PGM_P)args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], args[10], args[11], args[12], args[13], args[14], args[15]);
+#endif
 }
 
 // void PrintArgs::dump(Print &output)
@@ -144,8 +165,8 @@ void PrintArgs::_store(size_t data)
 //             break;
 //         }
 //         memset(args, 0, sizeof(args));
-//         memcpy(args, ptr, num * sizeof(size_t));
-//         ptr += num * sizeof(size_t);
+//         memcpy(args, ptr, num * sizeof(ArgPtr));
+//         ptr += num * sizeof(ArgPtr);
 //         argCount += num;
 //         calls++;
 //         output.print('|');

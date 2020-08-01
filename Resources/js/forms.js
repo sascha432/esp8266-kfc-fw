@@ -259,10 +259,16 @@ $(function() {
                     icon: $(this).data('off-icon')
                 }
             };
+        var id = $checkbox.attr('id');
+        var hiddenInput = $('#' + id.substr(1));
+        if (hiddenInput.length == 0) {
+            dbg_console.error("cannot find hidden input field for ", id, '#' + id.substr(1))
+        }
 
         // Event Handlers
         $checkbox.on('change', function () {
             updateDisplay();
+            hiddenInput.val($checkbox.is(':checked') ? 1 : 0);
         });
         $button.on('click', function () {
             $checkbox.prop('checked', !$checkbox.is(':checked'));
@@ -295,14 +301,13 @@ $(function() {
             }
         }
 
-        // Initialization
-        function init() {
-            updateDisplay();
-            // Inject the icon if applicable
-            if ($button.find('.state-icon').length == 0 && settings[$button.data('state')].icon) {
-                $button.prepend('<i class="state-icon ' + settings[$button.data('state')].icon + '"></i> ');
-            }
+        var state = parseInt(hiddenInput.val()) != 0;
+        $checkbox.prop('checked', state);
+        updateDisplay();
+        // Inject the icon if applicable
+        if ($button.find('.state-icon').length == 0 && settings[$button.data('state')].icon) {
+            $button.prepend('<i class="state-icon ' + settings[$button.data('state')].icon + '"></i> ');
         }
-        init();
+
     });
 });

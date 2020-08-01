@@ -78,11 +78,11 @@ void MQTTPlugin::createConfigureForm(FormCallbackType type, const String &formNa
 
     form.add(F("mqttpass"), _H_CSTR_FUNC(ClientConfig::getPassword, ClientConfig::setPassword));
     form.addFormUI(FormUI::Type::PASSWORD, FSPGM(Password));
-    form.addValidator(FormLengthValidator(0, ClientConfig::kPasswordMaxSize));
+    ClientConfig::addPasswordLengthValidator(form, String(), true);
 
     form.add(FSPGM(topic), _H_CSTR_FUNC(ClientConfig::getTopic, ClientConfig::setTopic));
+    ClientConfig::addTopicLengthValidator(form);
     form.addFormUI(FSPGM(Topic));
-    form.addValidator(FormLengthValidator(3, ClientConfig::kTopicMaxSize));
 
     form.add<uint8_t>(F("qos"), _H_W_STRUCT_VALUE(cfg, qos));
     form.addFormUI(F("Quality Of Service"), qosItems);

@@ -5,7 +5,7 @@
 #pragma once
 
 #include <Arduino_compat.h>
-#include "FormBase.h"
+#include "Form.h"
 
 template <typename T, size_t N>
 class FormEnumValidator : public FormValidator {

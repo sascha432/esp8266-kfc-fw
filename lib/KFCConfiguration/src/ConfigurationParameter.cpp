@@ -67,7 +67,7 @@ void ConfigurationParameter::_free()
 
 String ConfigurationParameter::toString() const
 {
-    //auto dataPtr = (uint8_t *)((((uint32_t)&_info) + 3) & ~3);
+    //auto dataPtr = (uint8_t *)((((uintptr_t)&_info) + 3) & ~3);
     //auto dataOfs = (intptr_t)dataPtr - (intptr_t)&_info;
     //ptrdiff_t dataLen = sizeof(_info) - dataOfs;
 #if DEBUG_CONFIGURATION_GETHANDLE
@@ -380,8 +380,8 @@ bool ConfigurationParameter::_readDataTo(Configuration *conf, uint16_t offset, u
 {
     if (_param.length) {
 
-#if DEBUG_CONFIGURATION || 1
-        auto address = *reinterpret_cast<uint32_t *>(&ptr[0]);
+#if DEBUG_CONFIGURATION || 0
+        auto address = (const uintptr_t)ptr;
         if (address % 4) {
             __DBG_panic("%s ptr=%p address=%u offset=%u not aligned", toString().c_str(), ptr, address, address % 4);
         }

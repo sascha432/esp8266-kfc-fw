@@ -17,4 +17,17 @@ public:
     virtual size_t write(uint8_t data) override;
     virtual size_t writeRaw(uint8_t data) override;
     virtual size_t write(const uint8_t *buffer, size_t size) override;
+
+    size_t printRaw(const String &str) {
+        return printRaw(FPSTR(str.c_str()));
+    }
+    size_t printRaw(const char *str) {
+        return printRaw(FPSTR(str));
+    }
+    size_t printRaw(const __FlashStringHelper *str) {
+        if (str) {
+            return _writeRawString(str);
+        }
+        return 0;
+    }
 };

@@ -6,7 +6,7 @@
 #include "FormValidator.h"
 #include "Form.h"
 
-FormField::FormField(const String &name, const String &value, Type type) : _name(name), _value(value), _type(type), _formUI(nullptr), _form(nullptr), _hasChanged(false)
+FormField::FormField(const String &name, const String &value, Type type) : _name(name), _value(value), _validators(nullptr), _formUI(nullptr), _form(nullptr), _type(type), _hasChanged(false)
 {
 #if DEBUG_KFC_FORMS && defined(ESP8266)
     if (name.length() >= PrintString::getSSOSIZE()) {
@@ -21,6 +21,9 @@ FormField::~FormField()
 {
     if (_formUI) {
         delete _formUI;
+    }
+    if (_validators) {
+        delete _validators;
     }
 }
 
@@ -159,10 +162,10 @@ void FormField::html(PrintInterface &output)
 
 FormField::ValidatorsVector &FormField::getValidators()
 {
-    return _validators;
+    return _getValidators();
 }
 
-void FormGroup::end()
+Form &FormGroup::end()
 {
     FormUI::Type type;
     switch(getFormType()) {
@@ -179,7 +182,8 @@ void FormGroup::end()
             type = FormUI::Type::GROUP_END_HR;
             break;
         default:
-            return;
+            return getForm();
     }
     getForm().addGroup(getName(), String(), false, type);
+    return getForm();
 }

@@ -8,6 +8,7 @@
 #include <vector>
 #include "FormUI.h"
 
+#include <push_pack.h>
 
 class Form;
 class FormValidator;
@@ -19,18 +20,27 @@ public:
     using FormValidatorPtr = std::unique_ptr<FormValidator>;
     using ValidatorsVector = std::vector<FormValidatorPtr>;
 
-    enum class Type {
+    enum class Type : uint8_t {
         NONE = 0,
         CHECK,
         SELECT,
         TEXT,
         GROUP,
+        TEXTAREA,
+        MAX
+    };
+
+    enum class ValueType : uint8_t {
+        NONE = 0,
+        BOOLEAN,
+        INTEGRAL,
+        FLOATING_POINT,
+        STRING,
+        MAX
     };
 
     FormField(const String &name, const String &value = String(), Type type = Type::NONE);
-    // FormField(const String &name, const String &value, bool optional) : FormField(name, value) {
-    //     _optional = optional;
-    // }
+    FormField(const String &name, Type type = Type::NONE) : FormField(name, String(), type) {}
     virtual ~FormField();
 
     void setForm(Form *form);
@@ -101,31 +111,48 @@ public:
 
     template<typename T>
     T &addValidator(T &&validator) {
-        _validators.emplace_back(new T(std::move(validator)));
-        auto &val = reinterpret_cast<T &>(*_validators.back());
+        _getValidators().emplace_back(new T(std::move(validator)));
+        auto &val = reinterpret_cast<T &>(*_validators->back());
         val.setField(this);
         return val;
     }
 
+    bool hasValidators() const {
+        return _validators != nullptr;
+    }
     ValidatorsVector &getValidators();
+
+    //ValueType getValueType() const {
+    //    return _valueType;
+    //}
+    //void setValueType(ValueType valueType) {
+    //    _valueType = valueType;
+    //}
 
 private:
     friend Form;
 
+    ValidatorsVector &_getValidators() {
+        if (!_validators) {
+            _validators = new ValidatorsVector();
+        }
+        return *_validators;
+    }
+
     String _name;
     String _value;
-    ValidatorsVector _validators;
-    Type _type;
+    ValidatorsVector *_validators;
     FormUI::UI *_formUI;
     Form *_form;
-    bool _hasChanged;
-    // bool _optional;
-    // bool _notSet;
+    Type _type;
+    bool _hasChanged : 1;
 };
 
 class FormGroup : public FormField {
 public:
     FormGroup(const FormGroup &group) = delete;
+    FormGroup &operator=(const FormGroup &group) = delete;
+
     FormGroup(const String &name, bool expanded) : FormField(name, String(), Type::GROUP), _expanded(expanded) {
     }
     virtual bool setValue(const String &value) override {
@@ -133,11 +160,16 @@ public:
     }
     virtual void copyValue() override {
     }
-    void end();
+    Form &end();
 
     bool isExpanded() const {
         return _expanded;
     }
+    void setExpanded(bool expanded) {
+        _expanded = expanded;
+    }
 private:
-    bool _expanded;
+    bool _expanded: 1;
 };
+
+#include <pop_pack.h>

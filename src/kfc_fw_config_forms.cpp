@@ -9,6 +9,12 @@ using KFCConfigurationClasses::MainConfig;
 using KFCConfigurationClasses::System;
 using KFCConfigurationClasses::Network;
 
+static void createWifiModes(FormUI::ItemsList &items)
+{
+    items = FormUI::ItemsList(WIFI_OFF, FSPGM(Disabled), WIFI_STA, FSPGM(Station_Mode), WIFI_AP, FSPGM(Access_Point), WIFI_AP_STA, PrintString(F("%s and %s"), SPGM(Access_Point), SPGM(Station_Mode)));
+}
+
+
 void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request)
 {
     if (type == FormCallbackType::SAVE) {
@@ -27,31 +33,83 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
         if (String_equals(formName, SPGM(wifi))) {
 
             auto &softAp = Network::SoftAP::getWriteableConfig();
+            FormUI::ItemsList wifiModes;
+            createWifiModes(wifiModes) ;
 
-            form.addGetterSetter("wmode", flags.getWifiMode, flags.setWifiMode, &flags));
+            auto channelItems = FormUI::ItemsList(0, F("Auto"));
+            for(uint8_t i = 1; i <= config.getMaxWiFiChannels(); i++) {
+                channelItems.emplace_back(std::move(String(i)), std::move(String(i)));
+            }
+
+            auto encryptionItems = FormUI::ItemsList(
+                ENC_TYPE_NONE, F("Open / No encryption"),
+                ENC_TYPE_WEP, F("WEP"),
+                ENC_TYPE_TKIP, F("WPA TKIP"),
+                ENC_TYPE_CCMP, F("WPA CCMP"),
+                ENC_TYPE_AUTO, F("Auto")
+            );
+//ESP32
+// <option value="0" %APENC_0%>Open</option>
+// <option value="1" %APENC_1%>WEP</option>
+// <option value="2" %APENC_2%>WPA/PSK</option>
+// <option value="3" %APENC_3%>WPA2/PSK</option>
+// <option value="4" %APENC_4%>WPA/WPA2/PSK</option>
+// <option value="5" %APENC_5%>WPA2 Enterprise</option>
+
+
+            auto &ui = form.getFormUIConfig();
+            ui.setStyle(FormUI::StyleType::ACCORDION);
+            ui.setTitle(F("WiFi Configuration"));
+            ui.setContainerId(F("wifi_settings"));
+
+            auto &modeGroup = form.addCardGroup(F("mode"), emptyString, true);
+
+            form.addObjectGetterSetter(F("wifi_mode"), flags, flags.get_wifi_mode, flags.set_wifi_mode);
             form.addValidator(FormRangeValidator(F("Invalid mode"), WIFI_OFF, WIFI_AP_STA));
+            form.addFormUI(F("WiFi Mode"), wifiModes);
 
-            form.addCStrGetterSetter("wssid", Network::WiFi::getSSID, Network::WiFi::setSSID));
-            form.addValidator(FormLengthValidator(1, Network::WiFi::kSSIDMaxSize));
+            auto &stationGroup = modeGroup.end().addCardGroup(F("station"), FSPGM(Station_Mode), true);
 
-            form.addCStrGetterSetter("wpwd", Network::WiFi::getPassword, Network::WiFi::setPassword));
-            form.addValidator(FormLengthValidator(Network::WiFi::kPasswordMinSize, Network::WiFi::kPasswordMaxSize));
+            form.addCStringGetterSetter(F("st_ssid"), Network::WiFi::getSSID, Network::WiFi::setSSIDCStr);
+            Network::WiFi::addSSIDLengthValidator(form);
+            form.addFormUI(F("SSID"));
 
-            form.addCStrGetterSetter("apssid", Network::WiFi::getSoftApSSID, Network::WiFi::setSoftApSSID));
-            form.addValidator(FormLengthValidator(1, Network::WiFi::kSoftApSSIDMaxSize));
+            form.addCStringGetterSetter(F("st_pass"), Network::WiFi::getPassword, Network::WiFi::setPasswordCStr);
+            Network::WiFi::addPasswordLengthValidator(form);
+            form.addFormUI(FormUI::Type::PASSWORD, F("Passphrase"));
 
-            form.addCStrGetterSetter("appwd", Network::WiFi::getSoftApPassword, Network::WiFi::setSoftApPassword));
-            form.addValidator(FormLengthValidator(Network::WiFi::kSoftApPasswordMinSize, Network::WiFi::kSoftApPasswordMaxSize));
+            auto &apModeGroup = stationGroup.end().addCardGroup(F("softap"), FSPGM(Access_Point), true);
 
-            form.addWriteableStruct("apch", softAp, channel));
-            form.addValidator(FormRangeValidator(1, config.getMaxWiFiChannels()));
+            form.addObjectGetterSetter(F("ap_standby"), flags, flags.get_bit_is_softap_standby_mode_enabled, flags.set_bit_is_softap_standby_mode_enabled);
+            form.addFormUI(F("AP Mode"), FormUI::BoolItems(F("Enable AP Mode if station is disconnected"), F("Enable AP Mode permanently")));
 
-            form.addWriteableStruct("apenc", softAp, encryption));
+            auto &ssidHidden = form.addObjectGetterSetter(F("ap_hid"), flags, flags.get_bit_is_softap_ssid_hidden, flags.set_bit_is_softap_ssid_hidden);
+            form.addFormUI(FormUI::Type::HIDDEN);
+
+            ;
+
+            form.addCStringGetterSetter(F("ap_ssid"), Network::WiFi::getSoftApSSID, Network::WiFi::setSoftApSSIDCStr);
+            Network::WiFi::addSoftApSSIDLengthValidator(form);
+            form.addFormUI(F("SSID"), FormUI::Suffix(
+                PrintString(F("<span class=\"button-checkbox\" data-on-icon=\"oi oi-task\" data-off-icon=\"oi oi-ban\"><button type=\"button\" class=\"btn\" data-color=\"primary\">HIDDEN</button><input type=\"checkbox\" class=\"hidden\" name=\"_%s\" id=\"_%s\" value=\"1\" data-label=\"HIDDEN\"></span>"),
+                    ssidHidden.getName().c_str(), ssidHidden.getName().c_str() //, flags.is_softap_ssid_hidden ? PSTR(" checked") : emptyString.c_str()
+                ))
+            );
+
+            form.addCStringGetterSetter(F("ap_pass"), Network::WiFi::getSoftApPassword, Network::WiFi::setSoftApPasswordCStr);
+            Network::WiFi::addSoftApPasswordLengthValidator(form);
+            form.addFormUI(FormUI::Type::PASSWORD, F("Passphrase"));
+
+            form.addMemberVariable(F("ap_ch"), softAp, &Network::SoftAP::ConfigStructType::channel);
+            form.addValidator(FormRangeValidator(1, config.getMaxWiFiChannels(), true));
+            form.addFormUI(F("Channel"), channelItems);
+
+            form.addMemberVariable("ap_enc", softAp, &Network::SoftAP::ConfigStructType::encryption);
             form.addValidator(FormEnumValidator<uint8_t, WiFiEncryptionTypeArray().size()>(F("Invalid encryption"), createWiFiEncryptionTypeArray()));
+            form.addFormUI(F("Encryption"), encryptionItems);
 
-            form.addWriteableStruct("aphs", flags, is_softap_ssid_hidden), FormField::Type::CHECK);
 
-            form.addWriteableStruct("apsm", flags, is_softap_standby_mode_enabled), FormField::Type::SELECT);
+            apModeGroup.end();
 
         }
         else if (String_equals(formName, SPGM(network))) {

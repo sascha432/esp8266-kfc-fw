@@ -12,6 +12,7 @@ class FormValidator {
 public:
     FormValidator();
     FormValidator(const String &message);
+    FormValidator(const String &message, const __FlashStringHelper *defaultMessage);
 
     void setField(FormField *field);
     FormField &getField();
@@ -23,6 +24,6 @@ public:
 
 private:
     FormField *_field;
-    bool _enabled;
     String _message;
+    bool _enabled: 1;
 };

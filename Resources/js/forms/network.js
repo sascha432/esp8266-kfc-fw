@@ -5,29 +5,28 @@
 $(function() {
     // network.html
     if ($('#network_settings').length) {
-        function dhcp_change() {
-            if ($('#dhcp_client').val() == "1") {
-                $('#static_address').hide();
-            } else {
-                $('#static_address').show();
-            }
+        function set_items(root, ex_id, state) {
+            root.each(function() {
+                var id = $(this).attr('id');
+                if (id != ex_id) {
+                    var element = $('#' + id);
+                    if (state) {
+                        element.attr('disabled', 'disabled');
+                        element.prop('disabled', true);
+                    } else {
+                        element.removeAttr('disabled');
+                        element.prop('disabled', false);
+                      }
+                }
+            });
         }
-        $('#dhcp_client').change(dhcp_change);
-        function dhcpd_change() {
-            if ($('#softap_dhcpd').val() == "1") {
-                $('#soft_ap_dhcpd').show();
-            } else {
-                $('#soft_ap_dhcpd').hide();
-            }
-        }
-        $('#softap_dhcpd').change(dhcpd_change);
-        dhcp_change();
-        dhcpd_change();
-        $('#safe_mode_reboot_time').on('blur', function() {
-            var value = parseInt($(this).val());
-            if (value == 0) {
-                $(this).val('');
-            }
-        });
+        $('#ap_dhcpd').on('change', function() {
+            var group = $(this).closest('.card-body');
+            set_items(group.find('input,select,button'), $(this).attr('id'), parseInt($(this).val()) == 0);
+        }).trigger('change');
+        $('#st_dhcp').on('change', function() {
+            var group = $(this).closest('.card-body');
+            set_items(group.find('input,select,button'), $(this).attr('id'), parseInt($(this).val()) == 0);
+        }).trigger('change');
     }
 });

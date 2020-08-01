@@ -120,8 +120,12 @@ namespace StringConstExpr {
             return str ? (ptr ? ((ptr >= str ? (*ptr == ch ? ptr : (ptr == str ? nullptr : strrchr(str, ch, limit, ptr - 1))) : nullptr)) : strrchr(str, ch, limit, str + strlen(str, limit) - 1)) : nullptr;
         }
 
-        constexpr bool strings_equal(char const * a, char const * b) {
+        constexpr bool strings_equal(char const *a, char const *b) {
             return (uint8_t)*a == (uint8_t)*b && (*a == 0 || strings_equal(a + 1, b + 1));
+        }
+
+        constexpr bool strncmp(char const *a, char const *b, int n) {
+            return (n == 0) || (((uint8_t)*a == (uint8_t)*b) && (*a == 0 || SlowStrFuncs::strncmp(a + 1, b + 1, n - 1)));
         }
 
     };
@@ -146,6 +150,7 @@ namespace StringConstExpr {
     using SlowStrFuncs::strlen;
     using SlowStrFuncs::strchr;
     using SlowStrFuncs::strrchr;
+    using SlowStrFuncs::strncmp;
 #endif
     constexpr int strcmp(const char *str1, const char *str2) {
         return SlowStrFuncs::strings_equal(str1, str2) == true ? 1 : 0;

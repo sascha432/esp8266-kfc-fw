@@ -12,18 +12,15 @@ template <typename VarType>
 class FormValue : public FormField {
 public:
     // isSetter indicates to translate the variable to user format. return false if the getter callback is not supported
-    typedef std::function<bool(VarType &value, FormField &field, bool store)> Callback;
+    using Callback = std::function<bool(VarType &value, FormField &field, bool store)>;
 
-    FormValue(const String& name, VarType value, Callback callback = nullptr, Type type = Type::SELECT) : FormField(name), _value(nullptr), _callback(callback) {
-        setType(type);
+    FormValue(const String& name, VarType value, Callback callback = nullptr, Type type = Type::SELECT) : FormField(name, type), _value(nullptr), _callback(callback) {
         _initValue(value);
     }
-    FormValue(const String& name, VarType *value, Callback callback = nullptr, Type type = Type::SELECT) : FormField(name), _value(value), _callback(callback) {
-        setType(type);
+    FormValue(const String& name, VarType *value, Callback callback = nullptr, Type type = Type::SELECT) : FormField(name, type), _value(value), _callback(callback) {
         _initValue(value);
     }
-    FormValue(const String &name, VarType *value, Type type = Type::SELECT) : FormField(name), _value(value), _callback(nullptr) {
-        setType(type);
+    FormValue(const String &name, VarType *value, Type type = Type::SELECT) : FormField(name, type), _value(value), _callback(nullptr) {
         _initValue(value);
     }
 

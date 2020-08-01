@@ -739,6 +739,12 @@ void at_mode_serial_handle_event(String &commandString)
                 args.printf_P(PSTR("CPU frequency: %uMHz"), ESP.getCpuFreqMHz());
                 args.printf_P(PSTR("Flash size: %s"), formatBytes(ESP.getFlashChipRealSize()).c_str());
                 args.printf_P(PSTR("Firmware size: %s"), formatBytes(ESP.getSketchSize()).c_str());
+                args.printf_P(PSTR("sizeof(String): %u"), sizeof(String));
+                args.printf_P(PSTR("sizeof(std::vector<int>): %u"), sizeof(std::vector<int>));
+                args.printf_P(PSTR("sizeof(std::vector<double>): %u"), sizeof(std::vector<double>));
+                args.printf_P(PSTR("sizeof(std::list<int>): %u"), sizeof(std::list<int>));
+                args.printf_P(PSTR("sizeof(FormField): %u"), sizeof(FormField));
+                args.printf_P(PSTR("sizeof(FormUI:UI): %u"), sizeof(FormUI::UI));
 #if DEBUG
                 String hash;
                 if (System::Firmware::getElfHashHex(hash)) {

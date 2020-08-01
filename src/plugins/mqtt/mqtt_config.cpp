@@ -15,12 +15,7 @@ namespace KFCConfigurationClasses {
         setHostname(CREATE_ZERO_CONF(F("mqtt"), FSPGM(tcp), FSPGM(address), F("192.168.4.1")));
         setTopic(F("home/${device_name}"));
         setAutoDiscoveryPrefix(F("homeassistant"));
-        __CDBG_dump(MQTTClient, cfg);
-        __CDBG_dumpString(Hostname);
-        __CDBG_dumpString(Username);
-        __CDBG_dumpString(Password);
-        __CDBG_dumpString(Topic);
-        __CDBG_dumpString(AutoDiscoveryPrefix);
+        setSharedTopic(F("home/kfcfw/shared"));
     }
 
     bool Plugins::MQTTClient::isEnabled()

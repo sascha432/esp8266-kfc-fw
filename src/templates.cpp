@@ -69,10 +69,12 @@ PrintArgs &WebTemplate::getPrintArgs()
 
 void WebTemplate::printSystemTime(time_t now, PrintHtmlEntitiesString &output)
 {
-    char buf[80];
+    //char buf[80];
     auto format = PSTR("%a, %d %b %Y " HTML_SA(span, HTML_A("id", "system_time")) "%H:%M:%S" HTML_E(span) " %Z");
-    strftime_P(buf, sizeof(buf), format, localtime(&now));
-    output.printf_P(PSTR(HTML_SA(span, HTML_A("id", "system_date") HTML_A("format", "%s")) "%s" HTML_E(span)), PrintHtmlEntitiesString(FPSTR(format)).c_str(), buf);
+//    strftime_P(buf, sizeof(buf), format, );
+    output.printf_P(PSTR(HTML_SA(span, HTML_A("id", "system_date") HTML_A("format", "%s"))), PrintHtmlEntitiesString(FPSTR(format)).c_str());
+    output.strftime_P(format, localtime(&now));
+    output.print(F(HTML_E(span)));
 }
 
 void WebTemplate::printUniqueId(Print &output, const String &name, int8_t dashPos)
@@ -304,10 +306,7 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     }
 #endif
     else if (_form) {
-        auto str = _form->process(key);
-        if (str) {
-            output.print(str);
-        }
+        _form->process(key, output);
     }
     else if (String_endsWith(key, PSTR("_STATUS"))) {
         uint8_t cmp_length = key.length() - 7;
@@ -339,8 +338,7 @@ void UpgradeTemplate::process(const String &key, PrintHtmlEntitiesString &output
     if (String_equals(key, F("FIRMWARE_UPGRADE_FAILURE_CLASS"))) {
     }
     else if (String_equals(key, F("FIRMWARE_UPGRADE_FAILURE"))) {
-        output.setMode(PrintHtmlEntities::Mode::RAW);
-        output.print(_errorMessage);
+        output.printRaw(_errorMessage);
     }
     else {
         WebTemplate::process(key, output);
@@ -386,9 +384,7 @@ void LoginTemplate::setErrorMessage(const String &errorMessage)
 void ConfigTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 {
     if (_form) {
-        const char *str = getForm()->process(key);
-        if (str) {
-            output.print(str);
+        if (getForm()->process(key, output)) {
             return;
         }
     }

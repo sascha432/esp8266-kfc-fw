@@ -318,14 +318,20 @@ int strcmp_P_P(PGM_P str1, PGM_P str2)
 #endif
         return -1;
     }
-    uint8_t ch;
+    uint8_t ch1, ch2;
     do {
-        ch = pgm_read_byte(str1++);
-        if (ch != pgm_read_byte(str2++)) {
+        ch1 = pgm_read_byte(str1++);
+        ch2 = pgm_read_byte(str2++);
+        if (ch1 < ch2) {
             return -1;
         }
-    } while (ch);
-    return 0;
+        else if (ch1 > ch2) {
+            return 1;
+        }
+        else if (ch1 == 0) {
+            return 0;
+        }
+    } while (true);
 }
 
 int strcasecmp_P_P(PGM_P str1, PGM_P str2)
@@ -336,14 +342,20 @@ int strcasecmp_P_P(PGM_P str1, PGM_P str2)
 #endif
         return -1;
     }
-    uint8_t ch;
+    uint8_t ch1, ch2;
     do {
-        ch = pgm_read_byte(str1++);
-        if (tolower(ch) != tolower(pgm_read_byte(str2++))) {
+        ch1 = tolower(pgm_read_byte(str1++));
+        ch2 = tolower(pgm_read_byte(str2++));
+        if (ch1 < ch2) {
             return -1;
         }
-    } while (ch);
-    return 0;
+        else if (ch1 > ch2) {
+            return 1;
+        }
+        else if (ch1 == 0) {
+            return 0;
+        }
+    } while (true);
 }
 
 size_t String_rtrim(String &str)
@@ -567,42 +579,58 @@ int strcmp_end_P(const char *str1, size_t len1, PGM_P str2, size_t len2)
 
 const char *strchr_P(const char *str, int c)
 {
-    if (str) {
-        char ch;
-        while(0 != (ch = pgm_read_byte(str))) {
-            if (ch == c) {
-                return str;
-            }
-            str++;
-        }
-    }
+    if (!str) {
 #if DEBUG_STRING_CHECK_NULLPTR
-    else {
-        debug_printf_P(PSTR("str=%p int=%u\n"), str, c);
-    }
+        __DBG_printf("str=%p", str);
 #endif
+        return nullptr;
+    }
+    char ch;
+    while(0 != (ch = pgm_read_byte(str))) {
+        if (ch == c) {
+            return str;
+        }
+        str++;
+    }
     return nullptr;
 }
 
 const char *strrchr_P(const char *str, int c)
 {
-    const char *last = nullptr;
-    if (str) {
-        char ch;
-        // we dont know the length, just start from the beginning...
-        while(0 != (ch = pgm_read_byte(str))) {
-            if (ch == c) {
-                last = str;
-            }
-            str++;
-        }
-    }
+    if (!str) {
 #if DEBUG_STRING_CHECK_NULLPTR
-    else {
-        debug_printf_P(PSTR("str=%p int=%u\n"), str, c);
-    }
+        __DBG_printf("str=%p", str);
 #endif
+        return nullptr;
+    }
+    const char *last = nullptr;
+    char ch;
+    // we dont know the length, just start from the beginning...
+    while (0 != (ch = pgm_read_byte(str))) {
+        if (ch == c) {
+            last = str;
+        }
+        str++;
+    }
     return last;
+}
+
+char *strdup_P(PGM_P src)
+{
+    if (!src) {
+#if DEBUG_STRING_CHECK_NULLPTR
+        __DBG_printf("src=%p", src);
+#endif
+        return nullptr;
+    }
+    char *dst = reinterpret_cast<char *>(malloc(strlen_P(src) + 1));
+    if (!dst) {
+#if DEBUG_STRING_CHECK_NULLPTR
+        __DBG_printf("src=%p dst=%p", src, dst);
+#endif
+        return nullptr;
+    }
+    return strcpy_P(dst, src);
 }
 
 #endif

@@ -26,19 +26,6 @@ DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNameSoftAPConfig_t, "MainConfig().network
 
 namespace KFCConfigurationClasses {
 
-    uint8_t System::Flags::ConfigFlags_t::getWifiMode() const
-    {
-        //return wifi_mode;
-        return (is_station_mode_enabled && is_softap_enabled) ? WIFI_AP_STA : (is_station_mode_enabled ? WIFI_STA : (is_softap_enabled ? WIFI_AP : 0));
-    }
-
-    void System::Flags::ConfigFlags_t::setWifiMode(uint8_t mode)
-    {
-        // wifi_mode = mode;
-        is_station_mode_enabled = (mode & WIFI_STA) == WIFI_STA;
-        is_softap_enabled = (mode & WIFI_AP) == WIFI_AP;
-    }
-
     System::Flags::ConfigFlags_t::ConfigFlags_t() :
         is_factory_settings(true),
         is_default_password(true),

@@ -74,21 +74,11 @@ public:
     }
 
     ~DebugHandle() {
-        if (_name && _name != emptyString.c_str() && !isProgmem(_name)) {
+        if (_name && _name != emptyString.c_str() && !is_PGM_P(_name)) {
             __DBG_printf("free=%p", _name);
             free(_name);
         }
     }
-
-#if defined(ESP8266)
-    static bool isProgmem(const char *str) {
-        return (uint32_t)str >= 0x40200000U;
-    }
-#else
-    static bool isProgmem(const char *str) {
-        return false;
-    }
-#endif
 
     operator HandleType() const {
         return _handle;

@@ -3,14 +3,51 @@
  */
 
 #include "PrintHtmlEntities.h"
+#include "PrintHtmlEntitiesString.h"
+
+// copy src string into dst memcpy_strlen_P without terminating NUL byte and return copied bytes
+
+//1600000: 361285 micros
+static inline size_t memcpy_strlen_P(char *dst, PGM_P src)
+{
+    return strlen(strcpy_P(dst, src));
+
+}
+
+#if 0
+
+//1600000: 640013 micros
+static size_t memcpy_strlen_P_v2(char *dst, PGM_P src) {
+    uint16_t count = 0;
+    char ch;
+    while ((ch = pgm_read_byte(src++)) != 0) {
+        *dst++ = ch;
+        count++;
+    }
+    return count;
+}
+
+//1600000: 621269 micros
+static size_t memcpy_strlen_P_v3(char *dst, PGM_P src) {
+    auto ptr = dst;
+    char ch;
+    while ((ch = pgm_read_byte(src++)) != 0) {
+        *ptr++ = ch;
+    }
+    return (ptr - dst);
+}
+
+#endif
 
 PrintHtmlEntities::PrintHtmlEntities() : _mode(Mode::HTML)
 {
 }
 
-void PrintHtmlEntities::setMode(Mode mode)
+PrintHtmlEntities::Mode PrintHtmlEntities::setMode(Mode mode)
 {
+    Mode lastMode = _mode;
     _mode = mode;
+    return lastMode;
 }
 
 PrintHtmlEntities::Mode PrintHtmlEntities::getMode() const
@@ -18,18 +55,22 @@ PrintHtmlEntities::Mode PrintHtmlEntities::getMode() const
     return _mode;
 }
 
+// index of the character must match the index of string in the values array
+static const char __keys_attribute_all_P[] PROGMEM = { "'\"<>&" };
 
-// index of the character must match index of string in array
-static const char __keys_attribute_all[] PROGMEM = { "'\"<>&" };
 #if 1
 // do not translate ' inside html attributes
-static constexpr const char *__keys_attribute_P = &__keys_attribute_all[1];
+static constexpr size_t kAttributeOffset = 1;
 #else
-static constexpr const char *__keys_attribute_P = &__keys_attribute_all[0];
+static constexpr size_t kAttributeOffset = 0;
 #endif
 
+// index of the character must match the index of string in the values array
 static const char __keys_html_P[] PROGMEM =  { "'\"<>&%=?#" PRINTHTMLENTITIES_COPY PRINTHTMLENTITIES_DEGREE PRINTHTMLENTITIES_PLUSM PRINTHTMLENTITIES_ACUTE PRINTHTMLENTITIES_MICRO };
-static const char *__keys_utf8_P = StringConstExpr::strchr(__keys_html_P, PRINTHTMLENTITIES_COPY[0]);
+
+#ifndef _MSC_VER
+static_assert(strncmp(__keys_attribute_all_P, __keys_html_P, strlen(__keys_attribute_all_P)) == 0, "invalid order");
+#endif
 
 // https://en.wikipedia.org/wiki/Windows-1252
 static const char *__values_P[] PROGMEM = {
@@ -64,18 +105,36 @@ static int8_t __getKeyIndex_P(char find, PGM_P keys)
     return -1;
 }
 
-int PrintHtmlEntities::getTranslatedSize(const char *str, bool attribute)
+static void __getKeysAndValues(PGM_P *keys, PGM_P **values, bool attribute)
 {
-    auto keys = attribute ? __keys_attribute_P : __keys_html_P;
+    if (attribute) {
+        *keys = &__keys_attribute_all_P[kAttributeOffset];
+        *values = &__values_P[kAttributeOffset];
+    }
+    else {
+        *keys = __keys_attribute_all_P;
+        *values = __values_P;
+    }
+}
+
+int PrintHtmlEntities::getTranslatedSize_P(PGM_P str, bool attribute)
+{
+    if (!str) {
+        return kNoTranslationRequired;
+    }
+    PGM_P keys;
+    PGM_P *values;
+    __getKeysAndValues(&keys, &values, attribute);
     int requiredSize = 0;
     int len = 0;
     int8_t i;
-    while(*str) {
-        if ((i = __getKeyIndex_P(*str, keys)) == -1) {
+    char ch;
+    while((ch = pgm_read_byte(str)) != 0) {
+        if ((i = __getKeyIndex_P(ch, keys)) == -1) {
             requiredSize++;
         }
         else {
-            requiredSize += strlen_P(__values_P[i]);
+            requiredSize += strlen_P(values[i]);
         }
         len++;
         str++;
@@ -83,50 +142,137 @@ int PrintHtmlEntities::getTranslatedSize(const char *str, bool attribute)
     return (len == requiredSize) ? kNoTranslationRequired : requiredSize;
 }
 
-#include "PrintString.h"//TODO remove
-#ifndef _MSC_VER
-#warning TODO remove
-#endif
-
-bool PrintHtmlEntities::translateTo(const char *cStr, String &target, bool attribute, int requiredSize)
+bool PrintHtmlEntities::translateTo(const char *str, String &target, bool attribute, int requiredSize)
 {
+    if (!str) {
+        return false;
+    }
     if (requiredSize == kInvalidSize) {
-        requiredSize = getTranslatedSize(cStr, attribute);
+        requiredSize = getTranslatedSize_P(str, attribute);
     }
     if (requiredSize != kNoTranslationRequired) {
         if (target.reserve(requiredSize + target.length())) {
-            auto keys = attribute ? __keys_attribute_P : __keys_html_P;
-            auto tmp = PrintString(F("in='%s' target='%s'"), cStr, target.c_str());//TODO remove
-            while(*cStr) {
-                auto i = __getKeyIndex_P(*cStr, keys);
+            PGM_P keys;
+            PGM_P *values;
+            __getKeysAndValues(&keys, &values, attribute);
+            char ch;
+            while((ch = pgm_read_byte(str++)) != 0) {
+                auto i = __getKeyIndex_P(ch, keys);
                 if (i == -1) {
-                    target += *cStr;
+                    target += ch;
                 }
                 else {
-                    target += FPSTR(__values_P[i]);
+                    target += FPSTR(values[i]);
                 }
-                cStr++;
             }
-            __DBG_printf("%s output='%s'", tmp.c_str(), target.c_str());//TODO remove
             return true;
         }
     }
     return false;
 }
 
+char *PrintHtmlEntities::translateTo(const char *str, bool attribute, int requiredSize)
+{
+    char *target = nullptr;
+    if (str) {
+        if (requiredSize == kInvalidSize) {
+            requiredSize = getTranslatedSize_P(str, attribute);
+        }
+        if (requiredSize != kNoTranslationRequired) {
+            target = reinterpret_cast<char *>(malloc(requiredSize + 1));
+            if (target) {
+                auto ptr = target;
+                PGM_P keys;
+                PGM_P *values;
+                __getKeysAndValues(&keys, &values, attribute);
+                char ch;
+                while ((ch = pgm_read_byte(str++)) != 0) {
+                    auto i = __getKeyIndex_P(ch, keys);
+                    if (i == -1) {
+                        *ptr++ = ch;
+                    }
+                    else {
+                        ptr += memcpy_strlen_P(ptr, values[i]);
+                    }
+                }
+                *ptr = 0;
+            }
+        }
+    }
+    return target;
+}
+
+size_t PrintHtmlEntities::printTo(Mode mode, const char *str, Print &output)
+{
+    if (!str) {
+        return 0;
+    }
+    if (mode == Mode::RAW) {
+        return output.print(FPSTR(str));
+    }
+    auto attribute = (mode == Mode::ATTRIBUTE);
+    auto requiredSize = getTranslatedSize_P(str, attribute);
+    if (requiredSize == kNoTranslationRequired) {
+        return output.print(FPSTR(str));
+    }
+    size_t written = 0;
+    PGM_P keys;
+    PGM_P *values;
+    __getKeysAndValues(&keys, &values, attribute);
+    char ch;
+    while((ch = pgm_read_byte(str)) != 0) {
+        auto i = __getKeyIndex_P(ch, keys);
+        if (i == -1) {
+            written += output.print(ch);
+        }
+        else {
+            written += output.print(FPSTR(values[i]));
+        }
+        str++;
+    }
+    return written;
+}
+
+size_t PrintHtmlEntities::printTo(Mode mode, const char *str, PrintHtmlEntitiesString &output)
+{
+    if (mode == Mode::RAW) {
+        return output.printRaw(str);
+    }
+    auto prevMode = output.setMode(mode);
+    size_t written = output.print(str);
+    output.setMode(prevMode);
+    return written;
+}
+
+size_t PrintHtmlEntities::printTo(Mode mode, const __FlashStringHelper *str, PrintHtmlEntitiesString &output)
+{
+    if (mode == Mode::RAW) {
+        return output.printRaw(str);
+    }
+    auto prevMode = output.setMode(mode);
+    size_t written = output.print(str);
+    output.setMode(prevMode);
+    return written;
+}
+
 String PrintHtmlEntities::getTranslatedTo(const String &str, bool attribute)
 {
     String tmp;
-    translateTo(str.c_str(), tmp, attribute);
-    return tmp;
+    if (translateTo(str.c_str(), tmp, attribute)) {
+        return tmp;
+    }
+    return str;
 }
 
 size_t PrintHtmlEntities::translate(uint8_t data)
 {
     if (_mode != Mode::RAW) {
-        auto i = __getKeyIndex_P((char)data, _mode == Mode::HTML ? __keys_html_P : __keys_attribute_P);
+        PGM_P keys;
+        PGM_P *values;
+        __getKeysAndValues(&keys, &values, _mode == Mode::ATTRIBUTE);
+        auto i = __getKeyIndex_P((char)data, keys);
         if (i != -1) {
-            return _writeRawString(FPSTR(__values_P[i]));
+            return _writeRawString(FPSTR(values[i]));
         }
         else {
             switch (data) {
@@ -150,26 +296,11 @@ size_t PrintHtmlEntities::translate(uint8_t data)
     return writeRaw(data);
 }
 
-size_t PrintHtmlEntities::translate(const uint8_t * buffer, size_t size)
+size_t PrintHtmlEntities::translate(const uint8_t *buffer, size_t size)
 {
     size_t written = 0;
     while (size--) {
-        if (*buffer == 0xc2 && size >= 1) { // UTF8 encoded character
-            auto i = __getKeyIndex_P(*(buffer + 1), __keys_utf8_P);
-            if (i != -1) { // we support only a few entities
-                written += _writeRawString(FPSTR(__values_P[i]));
-                buffer += 2;
-            }
-            else {
-                // output as UTF-8, html charset is utf-8
-                written += writeRaw(*buffer++);
-                written += writeRaw(*buffer++);
-            }
-            size--;
-        }
-        else {
-            written += translate(*buffer++);
-        }
+        written += translate(*buffer++);
     }
     return written;
 }
@@ -183,20 +314,4 @@ size_t PrintHtmlEntities::_writeRawString(const __FlashStringHelper *str)
         written += writeRaw(ch);
     }
     return written;
-}
-
-
-const __FlashBufferHelper *PrintHtmlEntities::getAttributeKeys()
-{
-    return reinterpret_cast<const __FlashBufferHelper *>(__keys_attribute_P);
-}
-
-const __FlashBufferHelper *PrintHtmlEntities::getHtmlKeys()
-{
-    return reinterpret_cast<const __FlashBufferHelper *>(__keys_html_P);
-}
-
-const __FlashBufferHelper **PrintHtmlEntities::getTranslationTable()
-{
-    return reinterpret_cast<const __FlashBufferHelper **>(__values_P);
 }

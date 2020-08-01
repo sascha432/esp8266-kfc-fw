@@ -8,6 +8,7 @@
 #include <session.h>
 #include <buffer.h>
 #include <crc16.h>
+#include <KFCForms.h>
 
 #include <push_pack.h>
 
@@ -101,6 +102,13 @@ namespace ConfigurationHelper {
     static void set##name##CStr(const char *str) { set##name(str); } \
     static void set##name(const __FlashStringHelper *str) { REGISTER_HANDLE_NAME(_STRINGIFY(class_name) "." _STRINGIFY(name), __DBG__TYPE_SET); storeStringConfig(k##name##ConfigHandle, str); } \
     static void set##name(const String &str) { REGISTER_HANDLE_NAME(_STRINGIFY(class_name) "." _STRINGIFY(name), __DBG__TYPE_SET); storeStringConfig(k##name##ConfigHandle, str); }
+
+#define CREATE_STRING_GETTER_SETTER_MIN_MAX(class_name, name, mins, maxs) \
+    static FormLengthValidator &add##name##LengthValidator(Form &form, const String &message = String(), bool allowEmpty = false) { \
+        return form.addValidator(FormLengthValidator(message, k##name##MinSize, k##name##MaxSize, allowEmpty)); \
+    } \
+    static constexpr size_t k##name##MinSize = mins; \
+    CREATE_STRING_GETTER_SETTER(class_name, name, maxs)
 
 #define CREATE_GETTER_SETTER_IP(class_name, name) \
     static constexpr HandleType k##name##ConfigHandle = CONFIG_GET_HANDLE_STR(_STRINGIFY(class_name) "." _STRINGIFY(name)); \
@@ -282,8 +290,20 @@ namespace KFCConfigurationClasses {
 
                 uint8_t __reserved2;
 
-                uint8_t getWifiMode() const;
-                void setWifiMode(uint8_t mode);
+                uint8_t getWifiMode() const {
+                    return get_wifi_mode(*this);
+                }
+                void setWifiMode(uint8_t mode) {
+                    set_wifi_mode(*this, mode);
+                }
+
+                static uint8_t get_wifi_mode(const Type &obj) {
+                    return (obj.is_station_mode_enabled && obj.is_softap_enabled) ? WIFI_AP_STA : (obj.is_station_mode_enabled ? WIFI_STA : (obj.is_softap_enabled ? WIFI_AP : 0));
+                }
+                static void set_wifi_mode(Type &obj, uint8_t mode) {
+                    obj.is_station_mode_enabled = (mode & WIFI_STA) == WIFI_STA;
+                    obj.is_softap_enabled = (mode & WIFI_AP) == WIFI_AP;
+                }
 
                 template<class T>
                 void dump() {
@@ -375,13 +395,11 @@ namespace KFCConfigurationClasses {
             }
             static void defaults();
 
-            CREATE_STRING_GETTER_SETTER(MainConfig().system.device, Name, 16);
-            CREATE_STRING_GETTER_SETTER(MainConfig().system.device, Title, 32);
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().system.device, Name, 3, 16);
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().system.device, Title, 3, 32);
 
-            static constexpr size_t kPasswordMinSize = 6;
-            CREATE_STRING_GETTER_SETTER(MainConfig().system.device, Password, 64);
-            static constexpr size_t kTokenMinSize = SESSION_DEVICE_TOKEN_MIN_LENGTH;
-            CREATE_STRING_GETTER_SETTER(MainConfig().system.device, Token, 255);
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().system.device, Password, 6, 64);
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().system.device, Token, SESSION_DEVICE_TOKEN_MIN_LENGTH, 255);
 
             static constexpr uint16_t kZeroConfMinTimeout = 1000;
             static constexpr uint16_t kZeroConfMaxTimeout = 60000;
@@ -552,12 +570,10 @@ namespace KFCConfigurationClasses {
 
         class WiFi {
         public:
-            CREATE_STRING_GETTER_SETTER(MainConfig().network.wifi, SSID, 32);
-            static constexpr size_t kPasswordMinSize = 8;
-            CREATE_STRING_GETTER_SETTER(MainConfig().network.wifi, Password, 32);
-            CREATE_STRING_GETTER_SETTER(MainConfig().network.wifi, SoftApSSID, 32);
-            static constexpr size_t kSoftApPasswordMinSize = 8;
-            CREATE_STRING_GETTER_SETTER(MainConfig().network.wifi, SoftApPassword, 32);
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().network.wifi, SSID, 1, 32);
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().network.wifi, Password, 8, 32);
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().network.wifi, SoftApSSID, 1, 32);
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().network.wifi, SoftApPassword, 8, 32);
         };
 
         Settings settings;
@@ -999,9 +1015,9 @@ namespace KFCConfigurationClasses {
             static void defaults();
             static bool isEnabled();
 
-            CREATE_STRING_GETTER_SETTER(MainConfig().plugins.serial2tcp, Hostname, 64);
-            CREATE_STRING_GETTER_SETTER(MainConfig().plugins.serial2tcp, Username, 32);
-            CREATE_STRING_GETTER_SETTER(MainConfig().plugins.serial2tcp, Password, 32);
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.serial2tcp, Hostname, 1, 64);
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.serial2tcp, Username, 3, 32);
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.serial2tcp, Password, 6, 32);
         };
 
         // --------------------------------------------------------------------
@@ -1032,21 +1048,16 @@ namespace KFCConfigurationClasses {
                 using Type = MqttConfig_t;
                 CREATE_ENUM_BITFIELD(mode, ModeType);
                 CREATE_ENUM_BITFIELD(qos, QosType);
-                uint8_t auto_discovery: 1;
+                CREATE_UINT8_BITFIELD(auto_discovery, 1);
+                CREATE_UINT8_BITFIELD(enable_shared_topic, 1);
                 uint8_t keepalive;
+                uint16_t auto_discovery_rebroadcast_interval; // minutes
                 AUTO_DEFAULT_PORT_GETTER_SETTER_SECURE(__port, get_enum_mode(*this) == ModeType::SECURE);
 
-                template<class T>
-                void dump() {
-                    CONFIG_DUMP_STRUCT_INFO(T);
-                    CONFIG_DUMP_STRUCT_VAR(__port);
-                    CONFIG_DUMP_STRUCT_VAR(keepalive);
-                    CONFIG_DUMP_STRUCT_VAR(mode);
-                    CONFIG_DUMP_STRUCT_VAR(qos);
-                    CONFIG_DUMP_STRUCT_VAR(auto_discovery);
-                }
+                static constexpr uint8_t kKeepAliveDefault = 15;
+                static constexpr uint16_t kAutoDiscoveryRebroadcastDefault = 24 * 60;
 
-                MqttConfig_t() : mode(cast_int_mode(ModeType::UNSECURE)), qos(cast_int_qos(QosType::EXACTLY_ONCE)), auto_discovery(true), keepalive(15), __port(kPortAuto) {}
+                MqttConfig_t() : mode(cast_int_mode(ModeType::UNSECURE)), qos(cast_int_qos(QosType::EXACTLY_ONCE)), auto_discovery(true), enable_shared_topic(true), keepalive(kKeepAliveDefault), auto_discovery_rebroadcast_interval(kAutoDiscoveryRebroadcastDefault), __port(kPortAuto) {}
 
             } MqttConfig_t;
         };
@@ -1056,11 +1067,12 @@ namespace KFCConfigurationClasses {
             static void defaults();
             static bool isEnabled();
 
-            CREATE_STRING_GETTER_SETTER(MainConfig().plugins.mqtt, Hostname, 128);
-            CREATE_STRING_GETTER_SETTER(MainConfig().plugins.mqtt, Username, 32);
-            CREATE_STRING_GETTER_SETTER(MainConfig().plugins.mqtt, Password, 32);
-            CREATE_STRING_GETTER_SETTER(MainConfig().plugins.mqtt, Topic, 32);
-            CREATE_STRING_GETTER_SETTER(MainConfig().plugins.mqtt, AutoDiscoveryPrefix, 32);
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.mqtt, Hostname, 1, 128);
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.mqtt, Username, 0, 32);
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.mqtt, Password, 6, 32);
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.mqtt, Topic, 4, 64);
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.mqtt, AutoDiscoveryPrefix, 1, 32);
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.mqtt, SharedTopic, 4, 128);
 
             static const uint8_t *getFingerPrint(uint16_t &size);
             static void setFingerPrint(const uint8_t *fingerprint, uint16_t size);
@@ -1102,7 +1114,7 @@ namespace KFCConfigurationClasses {
             static bool isEnabled();
             static bool isEnabled(SyslogProtocolType protocol);
 
-            CREATE_STRING_GETTER_SETTER(MainConfig().plugins.syslog, Hostname, 128);
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.syslog, Hostname, 1, 128);
         };
 
         // --------------------------------------------------------------------
@@ -1131,9 +1143,9 @@ namespace KFCConfigurationClasses {
             static void defaults();
             static bool isEnabled();
 
-            CREATE_STRING_GETTER_SETTER(MainConfig().plugins.ntpclient, Server1, 64);
-            CREATE_STRING_GETTER_SETTER(MainConfig().plugins.ntpclient, Server2, 64);
-            CREATE_STRING_GETTER_SETTER(MainConfig().plugins.ntpclient, Server3, 64);
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.ntpclient, Server1, 0, 64);
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.ntpclient, Server2, 0, 64);
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.ntpclient, Server3, 0, 64);
             CREATE_STRING_GETTER_SETTER(MainConfig().plugins.ntpclient, TimezoneName, 64);
             CREATE_STRING_GETTER_SETTER(MainConfig().plugins.ntpclient, PosixTimezone, 64);
 

@@ -11,6 +11,8 @@ namespace FormUI {
 
 	class Config {
 	public:
+		Config(const Config &) = delete;
+
 		Config() : _style(StyleType::DEFAULT), _saveButtonLabel(F("Save Changes...")) {}
 
 		void setStyle(StyleType style) {
@@ -42,7 +44,7 @@ namespace FormUI {
 			return _saveButtonLabel.length() != 0;
 		}
 		const String &getButtonLabel() const {
-			return _title;
+			return _saveButtonLabel;
 		}
 
 	private:

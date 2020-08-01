@@ -222,10 +222,66 @@ inline bool String_endsWith(const String &str1, const __FlashStringHelper *str2)
     return String_endsWith(str1, reinterpret_cast<PGM_P>(str2));
 }
 
-#if ESP8266 || ESP32
+#if defined(ESP8266)
 
-const char *strchr_P(PGM_P str, int c);
-const char *strrchr_P(PGM_P str, int c);
+inline bool is_PGM_P(const void *ptr) {
+    //return (const uintptr_t)ptr >= 0x40000000U;
+    return (const uintptr_t)ptr >> 30;
+}
+
+inline bool is_aligned_PGM_P(const void * ptr)
+{
+    return (((const uintptr_t)ptr & 3) == 0);
+}
+
+inline bool is_not_PGM_P_or_aligned(const void * ptr)
+{
+    auto tmp = (const uintptr_t)ptr;
+    return ((tmp >> 30) == 0) || ((tmp & 3) == 0);
+}
+
+
+#else
+
+
+inline bool is_PGM_P(const void * ptr)
+{
+    return true;
+}
+
+inline bool is_aligned_PGM_P(const void * ptr)
+{
+    return (((const uintptr_t)ptr & 3) == 0);
+}
+
+inline bool is_not_PGM_P_or_aligned(const void * ptr)
+{
+    return is_aligned_PGM_P(ptr);
+}
+
+#endif
+
+#if defined(ESP8266) || defined(ESP32)
+
+
+PGM_P strchr_P(PGM_P str, int c);
+PGM_P strrchr_P(PGM_P str, int c);
+char *strdup_P(PGM_P src);
+
+#else
+
+inline PGM_P strchr_P(PGM_P src, int c) {
+    return strchr(src, c);
+}
+
+inline PGM_P strrchr_P(PGM_P src, int c) {
+    return strrchr(src, c);
+}
+
+inline char *strdup_P(PGM_P src) {
+    return strdup(src);
+}
+
 
 #endif
 
@@ -395,7 +451,7 @@ template <class T>
 void *lambda_target(T callback) {
     if (callback) {
         auto addr = *(void **)((uint8_t *)(&callback) + 0); // if this points to flash it is a static function otherwise a mem function
-        if ((uint32_t)addr <= 0x40000000) {
+        if ((const uintptr_t)addr <= 0x40000000) {
             return *(void **)((uint8_t *)(&callback) + 12); // this is the entry point of the mem function
         }
         return addr;
@@ -460,8 +516,19 @@ const char *_printfSafeCStr(const char *str);
 const char *_printfSafeCStr(const __FlashStringHelper *str);
 const char *_printfSafeCStr(const String &str);
 
+
 constexpr size_t kNumBitsRequired(int value, int n = 0) {
 	return value ? kNumBitsRequired(value >> 1, n + 1) : n;
+}
+
+template<typename T>
+constexpr size_t kNumBitsRequired(T value) {
+    return kNumBitsRequired((int)value, 0);
+}
+
+template<typename T>
+constexpr size_t kNumBitsRequired() {
+    return kNumBitsRequired((int)T::MAX - 1, 0);
 }
 
 constexpr uint32_t kCreateIPv4Address(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {

@@ -46,7 +46,7 @@ extern "C" uint32_t _SPIFFS_end;
 // #define EEPROM_ADDR 0x40202000           // 4MB
 // #define EEPROM_ADDR 0x40203000           // 4MB
 #endif
-EEPROMClass EEPROM((((uint32_t)&_EEPROM_start - EEPROM_ADDR) / SPI_FLASH_SEC_SIZE));
+EEPROMClass EEPROM((((uintptr_t)&_EEPROM_start - EEPROM_ADDR) / SPI_FLASH_SEC_SIZE));
 #else
 #define EEPROM_ADDR 0x40200000           // sector of the configuration for direct access
 #endif
@@ -217,9 +217,9 @@ uint16_t ConfigurationHelper::EEPROMAccess::read(uint8_t *dst, uint16_t offset, 
         return 0;
     }
 
-    auto eeprom_start_address = ((uint32_t)&_EEPROM_start - EEPROM_ADDR) + offset;
+    auto eeprom_start_address = ((uintptr_t)&_EEPROM_start - EEPROM_ADDR) + offset;
 
-    uint8_t alignment = eeprom_start_address % 4;
+    uint8_t alignment = eeprom_start_address & 3;
     uint16_t readSize = (length + alignment + 3) & ~3; // align read length and add alignment
     eeprom_start_address -= alignment; // align start address
 

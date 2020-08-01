@@ -98,7 +98,7 @@ public:
     }
 
     bool isProgMem() const {
-        return (((uint32_t)_ptr) >= 0x40200000);
+        return is_PGM_P(_ptr);
     }
 
 private:

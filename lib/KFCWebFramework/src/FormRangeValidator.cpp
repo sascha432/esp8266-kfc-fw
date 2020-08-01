@@ -4,7 +4,7 @@
 
 #include "FormRangeValidator.h"
 #include "FormField.h"
-#include "FormBase.h"
+#include "Form.h"
 
 #ifdef _max
 #undef _max

@@ -5,7 +5,7 @@
 #pragma once
 
 #include <Arduino_compat.h>
-#include "FormBase.h"
+#include "Form.h"
 
 #define FormBitValue_UNSET_ALL 0    // static const T FormBitValue<T, N>::UNSET_ALL = 0;
 

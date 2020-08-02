@@ -6,6 +6,10 @@
 #include <PrintString.h>
 #include "misc.h"
 
+extern "C" {
+    PROGMEM_STRING_DEF(0x_08x, "0x%08x");
+}
+
 String formatBytes(size_t bytes)
 {
     char buf[16];
@@ -26,9 +30,15 @@ String formatBytes(size_t bytes)
 String formatTime(unsigned long seconds, bool printDaysIfZero)
 {
     PrintString out;
-    unsigned int days = (unsigned int)(seconds / 86400);
+    auto days = (uint32_t)(seconds / 86400U);
     if (printDaysIfZero || days) {
-        out.printf_P(PSTR("%u days "), days);
+        out.printf_P(PSTR("%u "), days);
+        if (days != 1) {
+            out.print(FSPGM(days, "days"));
+        } else {
+            out.print(FSPGM(day, "day"));
+        }
+        out.print(' ');
     }
     out.printf_P(PSTR("%02uh:%02um:%02us"), (unsigned)((seconds / 3600) % 24), (unsigned)((seconds / 60) % 60), (unsigned)(seconds % 60));
     return out;
@@ -640,7 +650,7 @@ void bin2hex_append(String &str, const void *data, size_t length)
     char hex[3];
     auto ptr = reinterpret_cast<const uint8_t *>(data);
     while (length--) {
-        snprintf(hex, sizeof(hex), "%02x", *ptr++);
+        snprintf_P(hex, sizeof(hex), SPGM(_02x, "%02x"), *ptr++);
         str += hex;
     }
 }
@@ -843,53 +853,32 @@ uint16_t tokenizer(char *str, TokenizerArgs &args, bool hasCommand, char **nextC
     return argc;
 }
 
-// void explode(char *str, const char *separator, std::vector<char*>& vector, const char *trim)
-// {
-//     char *nextCommand;
-//     TokenizerArgsVector<char *> args(vector);
-//     tokenizer(str, args, false, &nextCommand, [separator, trim](char ch, int type) {
-//         return ((type == 5 && strchr(separator, ch)) || ((trim && (type == 7 || type == 8)) && strchr(trim, ch)));
-//     });
-// }
-
-void split::vector_callback(const char *sptr, size_t len, void *ptr, int flags)
-{
-    StringVector &container = *reinterpret_cast<StringVector *>(ptr);
-    String str = (flags & SplitFlagsType::_PROGMEM) ? PrintString(reinterpret_cast<const __FlashBufferHelper *>(sptr), len) : PrintString(reinterpret_cast<const uint8_t *>(sptr), len);
-    if (flags & SplitFlagsType::TRIM) {
-        str.trim();
-    }
-    if ((flags & SplitFlagsType::EMPTY) || str.length()) {
-        std::back_inserter(container) = str;
-    }
-}
-
-void split::split(const char *str, char sep, callback fun, void *data, int flags, uint16_t limit)
+void split::split(const char *str, const char *sep, AddItemCallback callback, int flags, uint16_t limit)
 {
     unsigned int start = 0, stop;
     for (stop = 0; str[stop]; stop++) {
-        if (limit > 0 && str[stop] == sep) {
+        if (limit > 0 && strchr(sep, str[stop])) {
             limit--;
-            fun(str + start, stop - start, data, flags);
+            callback(str + start, stop - start, flags);
             start = stop + 1;
         }
     }
-    fun(str + start, stop - start, data, flags);
+    callback(str + start, stop - start, flags);
 }
 
-void split::split_P(PGM_P str, char sep, callback fun, void *data, int flags, uint16_t limit)
+void split::split_P(const FPStr &str, const FPStr &sep, AddItemCallback callback, int flags, uint16_t limit)
 {
     unsigned int start = 0, stop;
     char ch;
     flags |= SplitFlagsType::_PROGMEM;
-    for (stop = 0; (ch = pgm_read_byte(&str[stop])); stop++) {
-        if (limit > 0 && ch == sep) {
+    for (stop = 0; (ch = str[stop]); stop++) {
+        if (limit > 0 && strchr_P(sep.c_str(), ch)) {
             limit--;
-            fun(str + start, stop - start, data, flags);
+            callback(str.c_str() + start, stop - start, flags);
             start = stop + 1;
         }
     }
-    fun(str + start, stop - start, data, flags);
+    callback(str.c_str() + start, stop - start, flags);
 }
 
 // timezone support
@@ -1014,36 +1003,4 @@ IPAddress convertToIPAddress(const char *hostname)
         return addr;
     }
     return IPAddress();
-}
-
-
-
-size_t _printfSafeCStrLen(const char *str)
-{
-    return str ? strlen_P(str) : 0;
-}
-
-size_t _printfSafeCStrLen(const __FlashStringHelper *str)
-{
-    return str ? strlen_P(RFPSTR(str)) : 0;
-}
-
-size_t _printfSafeCStrLen(const String &str)
-{
-    return str.length();
-}
-
-const char *_printfSafeCStr(const char *str)
-{
-    return (str ? str : SPGM(null));
-}
-
-const char *_printfSafeCStr(const __FlashStringHelper *str)
-{
-    return str ? RFPSTR(str) : SPGM(null);
-}
-
-const char *_printfSafeCStr(const String &str)
-{
-    return str.c_str();
 }

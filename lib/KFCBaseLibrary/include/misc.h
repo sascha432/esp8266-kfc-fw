@@ -5,6 +5,7 @@
 #pragma once
 
 #include <Arduino_compat.h>
+#include <pgmspace.h>
 #include <algorithm>
 #include <array>
 #include <vector>
@@ -381,6 +382,80 @@ private:
     T _object;
 };
 
+// storage for PROGMEM strings
+// auto cast to const __FlashStringHelper *
+// read characters with charAt or operator []
+// get pointer to __FlashStringHelper with fp_str() or fp_str(index)
+
+class FPStr {
+public:
+    FPStr(PGM_P str) : _str(str) {}
+    FPStr(const __FlashStringHelper *str) : _str(str) {}
+    // the String object must still exist if the string is accessed
+    FPStr(const String &str) : _str(str.c_str()) {}
+
+    explicit operator const char *() const {
+        return reinterpret_cast<PGM_P>(_str);
+    }
+    operator const __FlashStringHelper *() const {
+        return reinterpret_cast<const __FlashStringHelper *>(_str);
+    }
+
+    char charAt(int index) const {
+        return (char)pgm_read_byte(c_str() + index);
+    }
+
+    char operator[](int index) const {
+        return charAt(index);
+    }
+
+    PGM_P c_str() const {
+        return reinterpret_cast<PGM_P>(_str);
+    }
+
+    const __FlashStringHelper *fp_str() const {
+        return reinterpret_cast<const __FlashStringHelper *>(_str);
+    }
+
+    const __FlashStringHelper *fp_str(int index) const {
+        return reinterpret_cast<const __FlashStringHelper *>(&c_str()[index]);
+    }
+
+private:
+    const void *_str;
+};
+
+class StringFromBuffer : public String
+{
+public:
+    StringFromBuffer(const char *str, size_t size) : String() {
+        concat(str, size);
+    }
+    StringFromBuffer(const uint8_t *str, size_t size) : String() {
+        concat(str, size);
+    }
+    StringFromBuffer(const __FlashStringHelper *str, size_t size) : String() {
+        concat(str, size);
+    }
+
+    unsigned char concat(const void *str, size_t size) {
+#if _MSC_VER
+        return concat((const char *)str, size);
+#else
+        auto len = length();
+        if (reserve(len + size)) {
+            auto buf = begin();
+            memmove_P(buf + len, str, size);
+            len += size;
+            setLen(len);
+            buf[len] = 0;
+            return 1;
+        }
+        return 0;
+#endif
+    }
+};
+
 namespace split {
 
     typedef enum {
@@ -390,11 +465,22 @@ namespace split {
         _PROGMEM =      0x04,
     } SplitFlagsType;
 
-    typedef void(*callback)(const char *str, size_t len, void *data, int flags);
+    using AddItemCallback = std::function<void(const char *str, size_t len, int flags)>;
 
-    void vector_callback(const char *sptr, size_t len, void *ptr, int flags);
-    void split(const char *str, char sep, callback fun, void *data, int flags = SplitFlagsType::EMPTY, uint16_t limit = UINT16_MAX);
-    void split_P(PGM_P str, char sep, callback fun, void *data, int flags = SplitFlagsType::EMPTY, uint16_t limit = UINT16_MAX);
+    template<typename T>
+    void vector_callback(T strPtr, size_t len, int flags, StringVector &container)
+    {
+        String str = StringFromBuffer(strPtr, len);
+        if (flags & SplitFlagsType::TRIM) {
+            str.trim();
+        }
+        if ((flags & SplitFlagsType::EMPTY) || str.length()) {
+            std::back_inserter(container) = std::move(str);
+        }
+    }
+
+    void split(const char *str, const char *sep, AddItemCallback callback, int flags = SplitFlagsType::EMPTY, uint16_t limit = UINT16_MAX);
+    void split_P(const FPStr &str, const FPStr &sep, AddItemCallback callback, int flags = SplitFlagsType::EMPTY, uint16_t limit = UINT16_MAX);
 };
 
 template<class G, class C>
@@ -425,12 +511,26 @@ String implode_cb(G glue, const C &pieces, CB toString, uint32_t max = (uint32_t
     return tmp;
 }
 
-inline void explode(const char *str, const char ch, StringVector &container, uint16_t limit = UINT16_MAX) {
-    split::split(str, ch, split::vector_callback, &container, split::SplitFlagsType::EMPTY, limit);
+inline void explode(const char *str, const char *sep, StringVector &container, uint16_t limit = UINT16_MAX) {
+    split::split(str, sep, [&container](const char *str, size_t size, int flags) {
+        split::vector_callback(str, size, flags, container);
+    }, split::SplitFlagsType::EMPTY, limit);
 }
 
-inline void explode_P(const char *str, const char ch, StringVector &container, uint16_t limit = UINT16_MAX) {
-    split::split_P(str, ch, split::vector_callback, &container, split::SplitFlagsType::EMPTY, limit);
+inline void explode_P(PGM_P str, PGM_P sep, StringVector &container, uint16_t limit = UINT16_MAX) {
+    split::split_P(str, sep, [&container](const char *str, size_t size, int flags) {
+        split::vector_callback(FPSTR(str), size, flags, container);
+    }, split::SplitFlagsType::EMPTY, limit);
+}
+
+inline void explode(const char *str, char sep, StringVector &container, uint16_t limit = UINT16_MAX) {
+    char buf[2] = { sep, 0 };
+    explode(str, buf, container, limit);
+}
+
+inline void explode_P(PGM_P str, char sep, StringVector &container, uint16_t limit = UINT16_MAX) {
+    char buf[2] = { sep, 0 };
+    explode_P(str, buf, container, limit);
 }
 
 namespace xtra_containers {
@@ -504,17 +604,63 @@ inline IPAddress convertToIPAddress(const String &hostname) {
 #define __PP_CAT_II(p, res)             res
 #define __UNIQUE_NAME(base)             __PP_CAT(__PP_CAT(__PP_CAT(base, __COUNTER__), _), __LINE__)
 
-// convert const char * or String to a safe value for printf
 
-#define _S_STRLEN(str) (str && std::is_base_of<String, decltype(str)>::value ? ((String *)(&str))->length() : _printfSafeCStrLen(str))
-#define _S_STR(str) (str && std::is_base_of<String, decltype(str)>::value ? ((String *)(&str))->c_str() : _printfSafeCStr(str))
+// __S(str) for printf_P("%s") or any function requires const char * arguments
+//
+// const char *str                       __S(str) = str
+// const __FlashStringHelper *str        __S(str) = (const char *)str
+// String test;                         __S(test) = test.c_str()
+// on the stack inside the a function call. the object gets destroyed when the function returns
+//                                      __S(String()) = String().c_str()
+// IPAddress addr;                       __S(addr) = addr.toString().c_str()
+//                                      __S(IPAddress()) = IPAddress().toString().c_str()
+// nullptr_t or any nullptr             __S((const char *)0) = "null"
+// const void *                         __S(const void *)1767708) = String().printf("0x%08x", 0xff).c_str() = 0x001af91c
 
-size_t _printfSafeCStrLen(const char *str);
-size_t _printfSafeCStrLen(const __FlashStringHelper *str);
-size_t _printfSafeCStrLen(const String &str);
-const char *_printfSafeCStr(const char *str);
-const char *_printfSafeCStr(const __FlashStringHelper *str);
-const char *_printfSafeCStr(const String &str);
+#define _S_STRLEN(str)                  (str ? strlen_P(__S(str)) : 0)
+#define _S_STR(str)                     __S(str)
+#define __S(str)                        __safeCString(str).c_str()
+
+extern "C" const char SPGM_null[] PROGMEM;
+extern "C" const char SPGM_0x_08x[] PROGMEM;
+
+class SafeStringWrapper {
+public:
+    constexpr SafeStringWrapper() : _str(SPGM(null)) {}
+    constexpr SafeStringWrapper(const char *str) : _str(str ? str : SPGM(null)) {}
+    constexpr SafeStringWrapper(const __FlashStringHelper *str) : _str(str ? (PGM_P)str : SPGM(null)) {}
+    constexpr const char *c_str() const {
+        return _str;
+    }
+public:
+    const char *_str;
+};
+
+inline const String __safeCString(const IPAddress &addr) {
+    return addr.toString();
+}
+
+inline const String __safeCString(const void *ptr) {
+    char buf[16];
+    snprintf_P(buf, sizeof(buf), SPGM(0x_08x), ptr);
+    return buf;
+}
+
+constexpr const String &__safeCString(const String &str) {
+    return str;
+}
+
+constexpr const SafeStringWrapper __safeCString(const __FlashStringHelper *str) {
+    return SafeStringWrapper(str);
+}
+
+constexpr const SafeStringWrapper __safeCString(const char *str) {
+    return SafeStringWrapper(str);
+}
+
+constexpr const SafeStringWrapper __safeCString(nullptr_t ptr) {
+    return SafeStringWrapper();
+}
 
 
 constexpr size_t kNumBitsRequired(int value, int n = 0) {

@@ -144,7 +144,7 @@
         "default": "Not supported"
     },
     "_selected": {
-        "use_counter": 2,
+        "use_counter": 3,
         "default": " selected"
     },
     "server_crt": {
@@ -1208,7 +1208,7 @@
         "default": "Invalid brightness"
     },
     "mode": {
-        "use_counter": 2,
+        "use_counter": 3,
         "default": "mode"
     },
     "Mode": {
@@ -1666,5 +1666,61 @@
     "_checked": {
         "use_counter": 1,
         "default": " checked"
+    },
+    "WiFi_Configuration": {
+        "use_counter": 1,
+        "default": "WiFi Configuration"
+    },
+    "wifi_mode": {
+        "use_counter": 1,
+        "default": "wifi_mode"
+    },
+    "Invalid_mode": {
+        "use_counter": 1,
+        "default": "Invalid mode"
+    },
+    "WiFi_Mode": {
+        "use_counter": 1,
+        "default": "WiFi Mode"
+    },
+    "station": {
+        "use_counter": 2,
+        "default": "station"
+    },
+    "SSID": {
+        "use_counter": 2,
+        "default": "SSID"
+    },
+    "Passphrase": {
+        "use_counter": 2,
+        "default": "Passphrase"
+    },
+    "HIDDEN": {
+        "use_counter": 1,
+        "default": "HIDDEN"
+    },
+    "network_settings": {
+        "use_counter": 1,
+        "default": "network_settings"
+    },
+    "dev_title": {
+        "use_counter": 2,
+        "default": "dev_title"
+    },
+    "ap_mode": {
+        "use_counter": 1,
+        "default": "ap_mode"
+    },
+    "password2": {
+        "use_counter": 2,
+        "default": "password2"
+    },
+    "wifi_settings": {
+        "use_counter": 1,
+        "default": "wifi_settings"
+    },
+    "dev_hostn": {
+        "use_counter": 1,
+        "default": "dev_hostn"
     }
 }

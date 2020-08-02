@@ -265,46 +265,33 @@ $(function() {
             dbg_console.error("cannot find hidden input field for ", id, '#' + id.substr(1))
         }
 
+        // Actions
+        function update_button() {
+            var isChecked = $checkbox.is(':checked');
+            $button.data('state', (isChecked) ? "on" : "off");
+            $button.find('.state-icon').attr('class', 'state-icon ' + settings[$button.data('state')].icon);
+            if (isChecked) {
+                $button.removeClass('btn-default').addClass('btn-' + color + ' active');
+            }
+            else {
+                $button.removeClass('btn-' + color + ' active').addClass('btn-default');
+            }
+        }
+
         // Event Handlers
         $checkbox.on('change', function () {
-            updateDisplay();
+            update_button();
             hiddenInput.val($checkbox.is(':checked') ? 1 : 0);
         });
         $button.on('click', function () {
             $checkbox.prop('checked', !$checkbox.is(':checked'));
             $checkbox.triggerHandler('change');
-            //updateDisplay();
         });
-
-        // Actions
-        function updateDisplay() {
-            var isChecked = $checkbox.is(':checked');
-
-            // Set the button's state
-            $button.data('state', (isChecked) ? "on" : "off");
-
-            // Set the button's icon
-            $button.find('.state-icon')
-                .removeClass()
-                .addClass('state-icon ' + settings[$button.data('state')].icon);
-
-            // Update the button's color
-            if (isChecked) {
-                $button
-                    .removeClass('btn-default')
-                    .addClass('btn-' + color + ' active');
-            }
-            else {
-                $button
-                    .removeClass('btn-' + color + ' active')
-                    .addClass('btn-default');
-            }
-        }
 
         var state = parseInt(hiddenInput.val()) != 0;
         $checkbox.prop('checked', state);
-        updateDisplay();
-        // Inject the icon if applicable
+        update_button();
+
         if ($button.find('.state-icon').length == 0 && settings[$button.data('state')].icon) {
             $button.prepend('<i class="state-icon ' + settings[$button.data('state')].icon + '"></i> ');
         }

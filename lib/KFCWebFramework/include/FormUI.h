@@ -243,6 +243,18 @@ namespace FormUI {
 			_addAll(args...);
 		}
 
+		// move vector instead of copying
+		UI &emplaceItems(ItemsList &&items) {
+			_items = std::move(items);
+			_type = Type::SELECT;
+			return *this;
+		}
+
+		const __FlashStringHelper *kIconsNone = FPSTR(emptyString.c_str());
+		static constexpr __FlashStringHelper *kIconsDefault = nullptr;
+
+		UI &addInputGroupAppendCheckBoxButton(FormField &hiddenField, const String &label, const __FlashStringHelper *onIcons = nullptr, const __FlashStringHelper *offIcons = nullptr);
+
 		// DEPRECATED METHODS
 
 		UI *setLabel(const String &label, bool raw = true) __attribute__ ((deprecated)) {
@@ -253,20 +265,20 @@ namespace FormUI {
 			return this;
 		}
 		// defaults Enabled/Disabled
-		UI *setBoolItems();
+		UI *setBoolItems()  __attribute__ ((deprecated)) ;
 		// custom text
-		UI *setBoolItems(const String &enabled, const String &disabled);
-		UI *addItems(const String &value, const String &label);
-		UI *addItems(const ItemsList &items);
+		UI *setBoolItems(const String &enabled, const String &disabled)  __attribute__ ((deprecated)) ;
+		UI *addItems(const String &value, const String &label)  __attribute__ ((deprecated)) ;
+		UI *addItems(const ItemsList &items)  __attribute__ ((deprecated)) ;
 		// add input-append-group text or html if the string starts with <
-		UI *setSuffix(const String &suffix);
-		UI *setPlaceholder(const String &placeholder);
+		UI *setSuffix(const String &suffix)  __attribute__ ((deprecated)) ;
+		UI *setPlaceholder(const String &placeholder)  __attribute__ ((deprecated)) ;
 		// add min and max attribute
-		UI *setMinMax(const String &min, const String &max);
-		UI *addAttribute(const String &name, const String &value);
-		UI *addAttribute(const __FlashStringHelper *name, const String &value);
-		UI *addConditionalAttribute(bool cond, const String &name, const String &value);
-		UI *setReadOnly();
+		UI *setMinMax(const String &min, const String &max)  __attribute__ ((deprecated)) ;
+		UI *addAttribute(const String &name, const String &value)  __attribute__ ((deprecated)) ;
+		UI *addAttribute(const __FlashStringHelper *name, const String &value)  __attribute__ ((deprecated)) ;
+		UI *addConditionalAttribute(bool cond, const String &name, const String &value)  __attribute__ ((deprecated)) ;
+		UI *setReadOnly()  __attribute__ ((deprecated)) ;
 
 		void html(PrintInterface &output);
 

@@ -1,4 +1,3 @@
-boot
 {
     "name": "KFC firmware webui builder",
     "platformio_ini": "./platformio.ini",

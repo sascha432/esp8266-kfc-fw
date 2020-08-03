@@ -289,22 +289,22 @@ void ConfigurationParameter::exportAsJson(Print& output)
             auto size = _info.size;
             output.print('"');
             while (size--) {
-                output.printf_P(PSTR("%02x"), *ptr & 0xff);
+                output.printf_P(SPGM(_02x, "%02x"), *ptr & 0xff);
                 ptr++;
             }
             output.print('"');
         } break;
         case BYTE: {
             auto value = *(uint8_t *)_info.data;
-            output.printf_P(PSTR("%u"), value);
+            output.print((uint32_t)value);
         } break;
         case WORD: {
             auto value = *(uint16_t *)_info.data;
-            output.printf_P(PSTR("%u"), value);
+            output.print((uint32_t)value);
         } break;
         case DWORD: {
             auto value = *(uint32_t *)_info.data;
-            output.printf_P(PSTR("%u"), value);
+            output.print(value);
         } break;
         case QWORD: {
             auto value = *(uint64_t *)_info.data;
@@ -312,11 +312,11 @@ void ConfigurationParameter::exportAsJson(Print& output)
         } break;
         case FLOAT: {
             auto value = *(float *)_info.data;
-            output.printf_P(PSTR("%f"), value);
+            output.print(value, 6);
         } break;
         case DOUBLE: {
             auto value = *(double *)_info.data;
-            output.printf_P(PSTR("%f"), value);
+            output.print(value, 6);
         } break;
         default:
             output.println(FSPGM(null));

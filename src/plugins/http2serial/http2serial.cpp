@@ -259,7 +259,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(H2SBD, "H2SBD", "<baud>", "Set serial port
 void Http2SerialPlugin::atModeHelpGenerator()
 {
     auto name = getName_P();
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(H2SBD), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(H2SBD), name);
 }
 
 bool Http2SerialPlugin::atModeHandler(AtModeArgs &args)

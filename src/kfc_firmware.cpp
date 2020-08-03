@@ -78,7 +78,6 @@ void check_flash_size()
 }
 #endif
 
-
 void setup()
 {
     KFC_SAFE_MODE_SERIAL_PORT.begin(KFC_SERIAL_RATE);

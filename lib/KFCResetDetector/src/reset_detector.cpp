@@ -331,7 +331,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPP(RD, "RD", "Reset detector clear counter", 
 
 void ResetDetectorPlugin::atModeHelpGenerator()
 {
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(RD), getName_P());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(RD), getName_P());
 }
 
 bool ResetDetectorPlugin::atModeHandler(AtModeArgs &args)

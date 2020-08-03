@@ -164,7 +164,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(S2TCP, "S2TCP", "<0=disable/1=server/2=cli
 
 void Serial2TcpPlugin::atModeHelpGenerator()
 {
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(S2TCP), getName_P());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(S2TCP), getName_P());
 }
 
 bool Serial2TcpPlugin::atModeHandler(AtModeArgs &args)

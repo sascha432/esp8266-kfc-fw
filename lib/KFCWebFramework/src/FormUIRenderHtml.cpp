@@ -14,12 +14,12 @@ namespace FormUI {
         //auto output = static_cast<PrintString &>(_suffix);
 
         _suffix += F("<span class=\"button-checkbox\"");
-        if (!onIcons || pgm_read_byte(onIcons)) {
+        if (!onIcons || pgm_read_byte(RFPSTR(onIcons))) {
             _suffix += F(" data-on-icon=\"");
             _suffix += onIcons ? onIcons : F("oi oi-task");
             _suffix += F("\"");
         }
-        if (!offIcons || pgm_read_byte(offIcons)) {
+        if (!offIcons || pgm_read_byte(RFPSTR(offIcons))) {
             _suffix += F(" data-off-icon=\"");
             _suffix += offIcons ? offIcons : F("oi oi-ban");
             _suffix += F("\"");
@@ -29,6 +29,8 @@ namespace FormUI {
         _suffix += F("</button><input type=\"checkbox\" class=\"hidden\" id=\"_");
         _suffix += hiddenField.getName();
         _suffix += F("\" value=\"1\"></span>");
+
+        return *this;
     }
 
 

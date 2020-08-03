@@ -20,6 +20,7 @@ class WebTemplate;
 class Form;
 class AtModeArgs;
 class KFCFWConfiguration;
+using ATModeCommandHelpArray = const struct ATModeCommandHelp_t *;
 
 /*
 PROGMEM_DEFINE_PLUGIN_OPTIONS(
@@ -282,6 +283,9 @@ public:
     virtual void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState);
 
 #if AT_MODE_SUPPORTED
+    // returns array ATModeCommandHelp_t[size] or nullptr for no help
+    virtual ATModeCommandHelpArray atModeCommandHelp(size_t &size) const;
+    // do not override if atModeCommandHelp exists
     virtual void atModeHelpGenerator();
     virtual bool atModeHandler(AtModeArgs &args);
 #endif
@@ -307,6 +311,9 @@ public:
     uint32_t getSetupTime() const;
     void setSetupTime();
     void clearSetupTime();
+    bool isEnabled() const {
+        return _setupTime != 0;
+    }
 
     static bool addToBlacklist(const String &name);
     static bool removeFromBlacklist(const String &name);

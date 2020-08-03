@@ -445,9 +445,9 @@ void Sensor_HLW8012::atModeHelpGenerator()
     Sensor_HLW80xx::atModeHelpGenerator();
 
     auto name = SensorPlugin::getInstance().getName_P();
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(HLWCAL), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(HLWMODE), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(HLWCFG), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(HLWCAL), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(HLWMODE), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(HLWCFG), name);
 }
 
 static void print_sensor_input_settings(Stream &serial, Sensor_HLW8012::SensorInput &input, bool newLine)

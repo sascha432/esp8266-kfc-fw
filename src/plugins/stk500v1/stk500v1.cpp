@@ -64,9 +64,9 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(STK500V1L, "STK500V1L", "Dump debug log fi
 void STK500v1Plugin::atModeHelpGenerator()
 {
     auto name = getName_P();
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(STK500V1F), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(STK500V1S), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(STK500V1L), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(STK500V1F), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(STK500V1S), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(STK500V1L), name);
 }
 
 bool STK500v1Plugin::atModeHandler(AtModeArgs &args) {

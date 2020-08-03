@@ -191,31 +191,31 @@ static I2CScannerPlugin plugin;
 void I2CScannerPlugin::atModeHelpGenerator()
 {
     auto name = getName_P();
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CSCAN), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CSCANP), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CSCAND), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CSS), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CST), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CSR), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(I2CSCAN), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(I2CSCANP), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(I2CSCAND), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(I2CSS), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(I2CST), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(I2CSR), name);
 #ifdef _LIB_ADAFRUIT_INA219_
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CSINA219), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(I2CSINA219), name);
 #endif
 #ifdef __CCS811_H__
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CSCCS811), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(I2CSCCS811), name);
 #endif
 #ifdef __BME680_H__
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CSBME680), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(I2CSBME680), name);
 #endif
 #ifdef __BME280_H__
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CSBME280), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(I2CSBME280), name);
 #endif
 #if RTC_SUPPORT
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CSRTC), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(I2CSRTC), name);
 #endif
 #if IOT_WEATHER_STATION_HAS_TOUCHPAD
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CSMPR121), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(I2CSMPR121), name);
 #endif
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(I2CSLM75A), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(I2CSLM75A), name);
 }
 
 bool I2CScannerPlugin::atModeHandler(AtModeArgs &args)

@@ -138,7 +138,7 @@ public:
 #if AT_MODE_SUPPORTED
     virtual void atModeHelpGenerator() override {
         auto name = getName_P();
-        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SAVECRASH), name);
+        at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(SAVECRASH), name);
     }
 
     virtual bool atModeHandler(AtModeArgs &args) override {

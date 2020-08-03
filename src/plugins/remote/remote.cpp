@@ -152,7 +152,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(RMNOSLP, "RMNOSLP", "Disable auto sleep");
 void RemoteControlPlugin::atModeHelpGenerator()
 {
     auto name = getName_P();
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(RMNOSLP), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(RMNOSLP), name);
 }
 
 bool RemoteControlPlugin::atModeHandler(AtModeArgs &args)

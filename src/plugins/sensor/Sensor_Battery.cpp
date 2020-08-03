@@ -188,7 +188,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(SENSORPBV, "SENSORPBV", "<interval in ms>"
 
 void Sensor_Battery::atModeHelpGenerator()
 {
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SENSORPBV), SensorPlugin::getInstance().getName_P());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(SENSORPBV), SensorPlugin::getInstance().getName_P());
 }
 
 bool Sensor_Battery::atModeHandler(AtModeArgs &args)

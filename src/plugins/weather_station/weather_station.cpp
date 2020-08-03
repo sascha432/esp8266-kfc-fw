@@ -483,9 +483,9 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WSU, "WSU", "<i/f>", "Update weather info/
 void WeatherStationPlugin::atModeHelpGenerator()
 {
     auto name = getName_P();
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(WSSET), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(WSBL), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(WSU), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(WSSET), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(WSBL), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(WSU), name);
 }
 
 bool WeatherStationPlugin::atModeHandler(AtModeArgs &args)

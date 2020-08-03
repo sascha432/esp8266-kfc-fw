@@ -23,8 +23,8 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF(TZ, "TZ", "<timezone>", "Set timezone", "Show t
 void NTPPlugin::atModeHelpGenerator()
 {
     auto name = getName_P();
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(NOW), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(TZ), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(NOW), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(TZ), name);
 }
 
 bool NTPPlugin::atModeHandler(AtModeArgs &args)

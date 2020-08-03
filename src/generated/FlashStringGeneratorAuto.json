@@ -364,7 +364,7 @@
         "default": "https"
     },
     "disabled": {
-        "use_counter": 26,
+        "use_counter": 25,
         "default": "disabled"
     },
     "mqtt_color_temp_state_topic": {
@@ -524,7 +524,7 @@
         "default": "Disabled"
     },
     "enabled": {
-        "use_counter": 5,
+        "use_counter": 3,
         "default": "enabled"
     },
     "mqtt_component_light": {
@@ -1356,7 +1356,7 @@
         "default": "placeholder"
     },
     "min": {
-        "use_counter": 2,
+        "use_counter": 3,
         "default": "min"
     },
     "max": {
@@ -1412,7 +1412,7 @@
         "default": "minutes"
     },
     "days": {
-        "use_counter": 1,
+        "use_counter": 2,
         "default": "days"
     },
     "Device_Configuration": {
@@ -1722,5 +1722,21 @@
     "dev_hostn": {
         "use_counter": 1,
         "default": "dev_hostn"
+    },
+    "hour": {
+        "use_counter": 1,
+        "default": "hour"
+    },
+    "day": {
+        "use_counter": 2,
+        "default": "day"
+    },
+    "sec": {
+        "use_counter": 1,
+        "default": "sec"
+    },
+    "_02x": {
+        "use_counter": 1,
+        "default": "%02x"
     }
 }

@@ -179,7 +179,7 @@ uint8_t TwoWire::endTransmission(void)
 
 size_t TwoWire::write(uint8_t data)
 {
-    _buffer += PrintString(F("%02x"), data);
+    _buffer += PrintString(F("%02x"), data & 0xff);
     return 1;
 }
 

@@ -1,6 +1,5 @@
 
 #include <Arduino_compat.h>
-#include <FS.h>
 #include <array>
 #include <assert.h>
 #include <misc.h>

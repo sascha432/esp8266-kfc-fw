@@ -55,8 +55,8 @@
 //
 #define PROGMEM_STRING_ID(name)                         SPGM_##name
 
-#define PROGMEM_STRING_DECL(name)                       extern const char PROGMEM_STRING_ID(name)[] PROGMEM;
-#define PROGMEM_STRING_DEF(name, value)                 const char PROGMEM_STRING_ID(name)[] PROGMEM = { value };
+#define PROGMEM_STRING_DECL(name)                       extern const char PROGMEM_STRING_ID(name)[] __attribute__((__aligned__(PSTR_ALIGN))) PROGMEM;
+#define PROGMEM_STRING_DEF(name, value)                 const char PROGMEM_STRING_ID(name)[] __attribute__((__aligned__(PSTR_ALIGN))) PROGMEM = { value };
 
 #if defined(ESP32)
 
@@ -72,6 +72,12 @@ class __FlashStringHelper;
 #define SPGM(name, ...)                                 PROGMEM_STRING_ID(name)
 #define FSPGM(name, ...)                                reinterpret_cast<const __FlashStringHelper *>(SPGM(name))
 #define PSPGM(name, ...)                                (PGM_P)(SPGM(name))
+
+#ifndef __attribute__packed__
+#define __attribute__packed__                           __attribute__((packed))
+#define __attribute__unaligned__                        __attribute__((__aligned__(1)))
+#define PSTR1(str)                                      PSTRN(str, 1)
+#endif
 
 #include "debug_helper.h"
 #include "misc.h"
@@ -90,6 +96,12 @@ class __FlashStringHelper;
 #define SPGM(name, ...)                                 PROGMEM_STRING_ID(name)
 #define FSPGM(name, ...)                                FPSTR(SPGM(name))
 #define PSPGM(name, ...)                                (PGM_P)(SPGM(name))
+
+#ifndef __attribute__packed__
+#define __attribute__packed__                           __attribute__((packed))
+#define __attribute__unaligned__                        __attribute__((__aligned__(1)))
+#define PSTR1(str)                                      PSTRN(str, 1)
+#endif
 
 #include "debug_helper.h"
 #include "misc.h"

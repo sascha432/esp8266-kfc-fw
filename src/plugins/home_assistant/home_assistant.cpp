@@ -61,9 +61,9 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HASSCS, "CS", "<service>,<domain.entity_id
 void HassPlugin::atModeHelpGenerator()
 {
     auto name = getName_P();
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(HASSAC), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(HASSGS), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(HASSCS), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(HASSAC), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(HASSGS), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(HASSCS), name);
 }
 
 bool HassPlugin::atModeHandler(AtModeArgs &args)

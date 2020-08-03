@@ -406,9 +406,9 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HLWPLOT, "HLWPLOT", "<ClientID>,<U/I/P/0=d
 void Sensor_HLW80xx::atModeHelpGenerator()
 {
     auto name = SensorPlugin::getInstance().getName_P();
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(HLWXD), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(HLWDUMP), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(HLWPLOT), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(HLWXD), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(HLWDUMP), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(HLWPLOT), name);
 }
 
 bool Sensor_HLW80xx::atModeHandler(AtModeArgs &args)

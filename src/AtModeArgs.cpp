@@ -105,7 +105,13 @@ long AtModeArgs::toNumber(uint16_t num, long defaultValue) const
     if (nullptr != (arg = get(num))) {
         char *endPtr = nullptr;
         auto value = strtol(arg, &endPtr, 0); // auto detect base
-        if (!endPtr || *endPtr) { // null or does not point to the end of the string = parse error
+        if (!endPtr) {
+            return defaultValue;
+        }
+        while(isspace(*endPtr)) {
+            endPtr++;
+        }
+        if (*endPtr) { // characters after the integer
             return defaultValue;
         }
         return value;
@@ -139,6 +145,7 @@ uint32_t AtModeArgs::toMillis(uint16_t num, uint32_t minTime, uint32_t maxTime, 
         _debug_printf_P(PSTR("toMillis(): arg=%u does not exist\n"), num);
         return defaultValue;
     }
+
     char *endPtr = nullptr;
     auto value = strtod(arg, &endPtr);
     String suffix(endPtr);
@@ -149,22 +156,17 @@ uint32_t AtModeArgs::toMillis(uint16_t num, uint32_t minTime, uint32_t maxTime, 
     suffix.toLowerCase();
 
     uint32_t result;
-/*
-    if (String_equals(suffix, F("ms")) || String_startsWith(suffix, F("milli"))) {
-        result = (uint32_t)value;
-    }
-    else
-*/
-    if (suffix.equals(String('m')) || String_startsWith(suffix, F("min"))) {
+    char suffixChar = suffix.length() == 1 ? suffix[0] : 0;
+    if (suffixChar == 'm' || String_startsWith(suffix, SPGM(min, "min"))) {
         result =  (uint32_t)(value * 1000.0 * 60);
     }
-    else if (suffix.equals(String('h')) || String_startsWith(suffix, F("hour"))) {
+    else if (suffixChar == 'h' || String_startsWith(suffix, SPGM(hour, "hour"))) {
         result =  (uint32_t)(value * 1000.0 * 60 * 60);
     }
-    else if (suffix.equals(String('d')) || String_startsWith(suffix, F("day"))) {
+    else if (suffixChar == 'd' || String_startsWith(suffix, SPGM(day, "day"))) {
         result =  (uint32_t)(value * 1000.0 * 60 * 60 * 24);
     }
-    else if (suffix.equals(String('s')) || String_startsWith(suffix, F("sec"))) {
+    else if (suffixChar == 's' || String_startsWith(suffix, SPGM(sec, "sec"))) {
         result = (uint32_t)(value * 1000.0);
     }
     else {
@@ -213,6 +215,34 @@ void AtModeArgs::ok()
     else {
         _output.println(FSPGM(OK, "OK"));
     }
+}
+
+void AtModeArgs::help()
+{
+    _output.printf_P(PSTR("try +HELP=%s\n"), _command.c_str());
+}
+
+void AtModeArgs::invalidArgument(uint16_t num, const __FlashStringHelper *expected, char makeList)
+{
+    print();
+    auto arg = get(num++);
+    if (arg) {
+        _output.printf_P(PSTR("Invalid argument %u: %s"), num, arg);
+
+    } else {
+        _output.printf_P(PSTR("Argument %u missing"), num);
+    }
+    if (expected) {
+        if (makeList) {
+            String str = String('[');
+            str += expected;
+            str.replace(String(makeList), F(", "));
+            str += ']';
+        }
+        _output.printf_P(PSTR(": expected: %s"), expected);
+    }
+    _output.println();
+    help();
 }
 
 #endif

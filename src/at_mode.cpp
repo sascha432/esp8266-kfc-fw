@@ -46,11 +46,57 @@ using KFCConfigurationClasses::MainConfig;
 
 typedef std::vector<ATModeCommandHelp> ATModeHelpVector;
 
-static ATModeHelpVector at_mode_help;
+static ATModeHelpVector *atModeCommandHelp = nullptr;
+
+
+ATModeCommandHelp::ATModeCommandHelp(const ATModeCommandHelp_t *data, PGM_P pluginName) : _data(data), _name(pluginName)
+{
+}
+
+PGM_P ATModeCommandHelp::command() const
+{
+    return _data->command;
+}
+
+PGM_P ATModeCommandHelp::commandPrefix() const
+{
+    return _data->commandPrefix;
+}
+
+PGM_P ATModeCommandHelp::arguments() const
+{
+    return _data->arguments;
+}
+
+PGM_P ATModeCommandHelp::help() const
+{
+    return _data->help;
+}
+
+PGM_P ATModeCommandHelp::helpQueryMode() const
+{
+    return _data->helpQueryMode;
+}
+
+PGM_P ATModeCommandHelp::pluginName() const
+{
+    return _name;
+}
+
+void ATModeCommandHelp::setPluginName(const __FlashStringHelper *name)
+{
+    _name = RFPSTR(name);
+}
+
+void ATModeCommandHelp::setPluginName(PGM_P name)
+{
+    _name = name;
+}
+
 
 void at_mode_add_help(const ATModeCommandHelp_t *help, PGM_P pluginName)
 {
-    at_mode_help.emplace_back(help, pluginName);
+    atModeCommandHelp->emplace_back(help, pluginName);
 }
 
 void at_mode_display_help_indent(Stream &output, PGM_P text)
@@ -101,30 +147,30 @@ static void _appendHelpString(String &output, PGM_P str)
 void at_mode_display_help(Stream &output, StringVector *findText = nullptr)
 {
 #if DEBUG_AT_MODE
-    _debug_printf_P(PSTR("size=%d, find=%s\n"), at_mode_help.size(), findText ? (findText->empty() ? PSTR("count=0") : implode(',', *findText).c_str()) : PSTR("nullptr"));
+    _debug_printf_P(PSTR("size=%d, find=%s\n"), atModeCommandHelp->size(), findText ? (findText->empty() ? PSTR("count=0") : implode(',', *findText).c_str()) : SPGM(null));
 #endif
     if (findText && findText->empty()) {
         findText = nullptr;
     }
-    for(const auto commandHelp: at_mode_help) {
+    for(const auto &commandHelp: *atModeCommandHelp) {
 
         if (findText) {
             bool result = false;
             String tmp; // create single line text blob
 
-            if (commandHelp.pluginName) {
+            if (commandHelp.pluginName()) {
                 tmp += F("plugin "); // allows to search for "plugin sensor"
-                _appendHelpString(tmp, commandHelp.pluginName);
+                _appendHelpString(tmp, commandHelp.pluginName());
             }
-            if (commandHelp.commandPrefix && commandHelp.command) {
-                String str(FPSTR(commandHelp.commandPrefix));
+            if (commandHelp.commandPrefix() && commandHelp.command()) {
+                String str(commandHelp.getFPCommandPrefix());
                 str.toLowerCase();
                 tmp += str;
             }
-            _appendHelpString(tmp, commandHelp.command);
-            _appendHelpString(tmp, commandHelp.arguments);
-            _appendHelpString(tmp, commandHelp.help);
-            _appendHelpString(tmp, commandHelp.helpQueryMode);
+            _appendHelpString(tmp, commandHelp.command());
+            _appendHelpString(tmp, commandHelp.arguments());
+            _appendHelpString(tmp, commandHelp.help());
+            _appendHelpString(tmp, commandHelp.helpQueryMode());
 
             _debug_printf_P(PSTR("find in %u: '%s'\n"), tmp.length(), tmp.c_str());
             for(auto str: *findText) {
@@ -138,29 +184,29 @@ void at_mode_display_help(Stream &output, StringVector *findText = nullptr)
             }
         }
 
-        if (commandHelp.helpQueryMode) {
+        if (commandHelp.helpQueryMode()) {
             output.print(F(" AT"));
-            if (commandHelp.command) {
+            if (commandHelp.command()) {
                 output.print('+');
-                if (commandHelp.commandPrefix) {
-                    output.print(FPSTR(commandHelp.commandPrefix));
+                if (commandHelp.commandPrefix()) {
+                    output.print(commandHelp.getFPCommandPrefix());
                 }
-                output.print(FPSTR(commandHelp.command));
+                output.print(commandHelp.getFPCommand());
             }
             output.println('?');
-            at_mode_display_help_indent(output, commandHelp.helpQueryMode);
+            at_mode_display_help_indent(output, commandHelp.helpQueryMode());
         }
 
         output.print(F(" AT"));
-        if (commandHelp.command) {
+        if (commandHelp.command()) {
             output.print('+');
-            if (commandHelp.commandPrefix) {
-                output.print(FPSTR(commandHelp.commandPrefix));
+            if (commandHelp.commandPrefix()) {
+                output.print(commandHelp.getFPCommandPrefix());
             }
-            output.print(FPSTR(commandHelp.command));
+            output.print(commandHelp.getFPCommand());
         }
-        if (commandHelp.arguments) {
-            PGM_P arguments = commandHelp.arguments;
+        if (commandHelp.arguments()) {
+            PGM_P arguments = commandHelp.arguments();
             auto ch = pgm_read_byte(arguments);
             if (ch == '[') {
                 output.print('[');
@@ -173,12 +219,12 @@ void at_mode_display_help(Stream &output, StringVector *findText = nullptr)
         }
         output.println();
 
-        at_mode_display_help_indent(output, commandHelp.help);
+        at_mode_display_help_indent(output, commandHelp.help());
     }
 }
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_NNPP(AT, "Print OK", "Show help");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HLP, "HLP", "[single][,word][,or entire phrase]", "Search help");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HELP, "HELP", "[single][,word][,or entire phrase]", "Search help");
 #if ENABLE_DEEP_SLEEP
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DSLP, "DSLP", "[<milliseconds>[,<mode>]]", "Enter deep sleep");
 #endif
@@ -255,84 +301,100 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(PANIC, "PANIC", "Cause an exception by cal
 void at_mode_help_commands()
 {
     auto name = PSTR("at_mode");
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(AT), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(HLP), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(AT), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(HELP), name);
 #if ENABLE_DEEP_SLEEP
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DSLP), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DSLP), name);
 #endif
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(RST), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CMDS), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(LOAD), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(IMPORT), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(STORE), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(FACTORY), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(FSR), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(ATMODE), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DLY), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CAT), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(RM), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(RN), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(LS), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(RST), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(CMDS), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(LOAD), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(IMPORT), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(STORE), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(FACTORY), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(FSR), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(ATMODE), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DLY), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(CAT), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(RM), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(RN), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(LS), name);
 #if ESP8266
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(LSR), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(LSR), name);
 #endif
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(WIFI), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(LED), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(REM), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(WIFI), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(LED), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(REM), name);
 #if RTC_SUPPORT
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(RTC), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(RTC), name);
 #endif
 
 #if DEBUG
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DSH), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(FSM), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DSH), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(FSM), name);
 #if PIN_MONITOR
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(PINM), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(PINM), name);
 #endif
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(PLG), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(HEAP), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(RSSI), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(GPIO), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(PWM), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(ADC), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(PLG), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(HEAP), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(RSSI), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(GPIO), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(PWM), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(ADC), name);
 #if defined(ESP8266)
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CPU), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(CPU), name);
 #endif
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(PSTORE), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(METRICS), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DUMP), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(PSTORE), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(METRICS), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMP), name);
 #if DEBUG && ESP8266
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DUMPT), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMPT), name);
 #endif
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DUMPFS), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DUMPEE), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DUMPRTC), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMPFS), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMPEE), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMPRTC), name);
 #if DEBUG_CONFIGURATION_GETHANDLE
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DUMPH), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMPH), name);
 #endif
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(WRTC), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(RTCCLR), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(WRTC), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(RTCCLR), name);
 #if ENABLE_DEEP_SLEEP
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(RTCQCC), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(RTCQCC), name);
 #endif
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(WIMO), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(LOG), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(LOGE), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(PANIC), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(WIMO), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(LOG), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(LOGE), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(PANIC), name);
 #endif
 
+}
+
+static void new_ATModeHelpVector_atModeCommandHelp()
+{
+#if DEBUG
+    if (atModeCommandHelp) {
+        __DBG_panic("atModeCommandHelp=%p", atModeCommandHelp);
+    }
+#endif
+    atModeCommandHelp = new ATModeHelpVector();
 }
 
 void at_mode_generate_help(Stream &output, StringVector *findText = nullptr)
 {
     _debug_printf_P(PSTR("find=%s\n"), findText ? implode(',', *findText).c_str() : PSTR("nullptr"));
+
+    new_ATModeHelpVector_atModeCommandHelp();
+
     // call handler to gather help for all commands
     at_mode_help_commands();
     for(auto plugin: plugins) {
         plugin->atModeHelpGenerator();
     }
     at_mode_display_help(output, findText);
-    at_mode_help.clear();
+
+    delete atModeCommandHelp;
+    atModeCommandHelp = nullptr;
+
     if (config.isSafeMode()) {
         output.printf_P(PSTR("\nSAFE MODE ENABLED\n\n"));
     }
@@ -343,6 +405,8 @@ String at_mode_print_command_string(Stream &output, char separator)
     String commands;
     StreamString nullStream;
 
+    new_ATModeHelpVector_atModeCommandHelp();
+
     // call handler to gather help for all commands
     at_mode_help_commands();
     for(auto plugin : plugins) {
@@ -350,19 +414,20 @@ String at_mode_print_command_string(Stream &output, char separator)
     }
 
     uint16_t count = 0;
-    for(const auto commandHelp: at_mode_help) {
-        if (commandHelp.command) {
+    for(const auto commandHelp: *atModeCommandHelp) {
+        if (commandHelp.command()) {
             if (count++ != 0) {
                 output.print(separator);
             }
-            if (commandHelp.commandPrefix) {
-                output.print(FPSTR(commandHelp.commandPrefix));
+            if (commandHelp.commandPrefix()) {
+                output.print(commandHelp.getFPCommandPrefix());
             }
-            output.print(FPSTR(commandHelp.command));
+            output.print(commandHelp.getFPCommand());
         }
     }
 
-    at_mode_help.clear();
+    delete atModeCommandHelp;
+    atModeCommandHelp = nullptr;
 
     return commands;
 }
@@ -380,8 +445,8 @@ public:
     DisplayTimer() : _type(HEAP) {
     }
 
-    void removeTimer() {
-        _timer.remove();
+    bool removeTimer() {
+        return _timer.remove();
     }
 
 public:
@@ -392,10 +457,15 @@ public:
 
 DisplayTimer displayTimer;
 
+static void print_heap()
+{
+    Serial.printf_P(PSTR("+HEAP: free=%u cpu=%dMHz"), ESP.getFreeHeap(), ESP.getCpuFreqMHz());
+}
+
 static void heap_timer_callback(EventScheduler::TimerPtr timer)
 {
     if (displayTimer._type == DisplayTimer::HEAP) {
-        Serial.printf_P(PSTR("+HEAP: free=%u cpu=%dMHz"), ESP.getFreeHeap(), ESP.getCpuFreqMHz());
+        print_heap();
 #if LOAD_STATISTICS
         Serial.printf_P(PSTR(" load avg=%.2f %.2f %.2f"), LOOP_COUNTER_LOAD(load_avg[0]), LOOP_COUNTER_LOAD(load_avg[1]), LOOP_COUNTER_LOAD(load_avg[2]));
 #endif
@@ -708,7 +778,7 @@ void at_mode_serial_handle_event(String &commandString)
                 args.setQueryMode(false);
                 tokenizer(command, args, true, &nextCommand);
             }
-            _debug_printf_P(PSTR("cmd=%s,argc=%d,args='%s',next_cmd='%s'\n"), command, args.size(), implode(F("','"), args.getArgs()).c_str(), nextCommand ? nextCommand : SPGM(0, "0"));
+            _debug_printf_P(PSTR("cmd=%s,argc=%d,args='%s',next_cmd='%s'\n"), command, args.size(), implode(F("','"), args.getArgs()).c_str(), nextCommand ? nextCommand : String(0).c_str());
 
             args.setCommand(command);
 
@@ -721,7 +791,7 @@ void at_mode_serial_handle_event(String &commandString)
             }
             else
 #endif
-            if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(HLP))) {
+            if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(HELP))) {
                 String plugin;
                 StringVector findItems;
                 for(auto strPtr: args.getArgs()) {
@@ -1136,7 +1206,7 @@ void at_mode_serial_handle_event(String &commandString)
             }
     #endif
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RSSI)) || args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(HEAP)) || args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(GPIO))) {
-                if (args.requireArgs(1, 1)) {
+                if (args.requireArgs(0, 1)) {
                     auto interval = args.toMillis(0, 500, ~0, 0, String('s'));
                     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RSSI))) {
                         displayTimer._type = DisplayTimer::RSSI;
@@ -1150,8 +1220,13 @@ void at_mode_serial_handle_event(String &commandString)
                     displayTimer._rssiMin = -10000;
                     displayTimer._rssiMax = 0;
                     if (interval == 0) {
-                        displayTimer.removeTimer();
-                        args.print(F("Interval disabled"));
+                        if (displayTimer.removeTimer()) {
+                            args.print(F("Interval disabled"));
+                        }
+                        else {
+                            print_heap();
+                            Serial.println();
+                        }
                     } else {
                         float fInterval = interval / 1000.0;
                         args.printf_P(PSTR("Interval set to %.3f seconds"), fInterval);
@@ -1164,6 +1239,7 @@ void at_mode_serial_handle_event(String &commandString)
                     auto pin = (uint8_t)args.toInt(0);
                     if (args.equalsIgnoreCase(1, F("off"))) {
                         pinMode(pin, INPUT);
+                        digitalWrite(pin, 0);
                         args.printf_P(PSTR("set pin=%u to INPUT"), pin);
                     }
                     else {
@@ -1182,12 +1258,12 @@ void at_mode_serial_handle_event(String &commandString)
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(ADC))) {
                 static EventScheduler::Timer adcTimer;
                 if (args.requireArgs(1)) {
-                    if (args.equalsIgnoreCase(1, F("off"))) {
+                    if (args.equalsIgnoreCase(1, FSPGM(off))) {
                         args.print(F("ADC display off"));
                         adcTimer.remove();
                     }
                     else {
-                        auto interval = (uint16_t)args.toMillis(0, 100, ~0, 1000, String('s'));
+                        auto interval = args.toMillis(0, 100, ~0, 1000, String('s'));
                         args.printf_P(PSTR("ADC interval %ums"), interval);
                         auto &stream = args.getStream();
                         adcTimer.add(interval, true, [&stream](EventScheduler::TimerPtr) {

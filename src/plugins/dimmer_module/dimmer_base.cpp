@@ -461,10 +461,10 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DIMR, "DIMR", "Reset ATmega");
 
 void Dimmer_Base::_atModeHelpGenerator(PGM_P name)
 {
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DIMG), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DIMS), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DIMW), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(DIMR), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DIMG), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DIMS), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DIMW), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DIMR), name);
 }
 
 bool Dimmer_Base::_atModeHandler(AtModeArgs &args, const Dimmer_Base &dimmer, int32_t maxLevel)

@@ -317,11 +317,11 @@ void BlindsControlPlugin::atModeHelpGenerator()
 {
     auto name = getName_P();
 #if IOT_BLINDS_CTRL_TESTMODE
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(BCME), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(BCME), name);
 #endif
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(BCMS), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(BCMD), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(BCMC), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(BCMS), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(BCMD), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(BCMC), name);
 }
 
 bool BlindsControlPlugin::atModeHandler(AtModeArgs &args)

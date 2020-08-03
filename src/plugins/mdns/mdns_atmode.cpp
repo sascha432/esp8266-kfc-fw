@@ -24,9 +24,9 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(MDNSR, "MDNSR", "<stop|start|enable|disabl
 void MDNSPlugin::atModeHelpGenerator()
 {
     auto name = getName_P();
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(MDNSQ), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(MDNSR), name);
-    // at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(MDNSBSD), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(MDNSQ), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(MDNSR), name);
+    // at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(MDNSBSD), name);
 }
 
 #if ESP8266

@@ -974,12 +974,12 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(CLOCKD, "D", "Dump pixel addresses and oth
 void ClockPlugin::atModeHelpGenerator()
 {
     auto name = getName_P();
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CLOCKPX), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CLOCKP), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CLOCKC), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CLOCKTS), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CLOCKA), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(CLOCKD), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKPX), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKP), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKC), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKTS), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKA), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKD), name);
 }
 
 bool ClockPlugin::atModeHandler(AtModeArgs &args)

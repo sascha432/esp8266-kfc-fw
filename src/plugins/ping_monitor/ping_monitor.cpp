@@ -467,7 +467,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PING, "PING", "<target[,count=4[,timeout=5
 void PingMonitorPlugin::atModeHelpGenerator()
 {
     auto name = getName_P();
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(PING), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(PING), name);
 }
 
 bool PingMonitorPlugin::atModeHandler(AtModeArgs &args)

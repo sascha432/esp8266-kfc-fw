@@ -63,13 +63,13 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PDBGM, "M", "<pin>,<mode=in|out|int>", "Se
 void PinDebuggerPlugin::atModeHelpGenerator()
 {
     auto name = getName();
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(PDBGLS), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(PDBGSET), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(PDBGS), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(PDBGSQ), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(PDBGR), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(PDBGW), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(PDBGM), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(PDBGLS), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(PDBGSET), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(PDBGS), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(PDBGSQ), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(PDBGR), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(PDBGW), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(PDBGM), name);
 }
 
 static VirtualPinDebug &getPin(AtModeArgs &args, uint8_t pin, bool &exists)

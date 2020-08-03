@@ -2,6 +2,10 @@
   Author: sascha_lammers@gmx.de
 */
 
+#if AT_MODE_SUPPORTED
+#include "at_mode.h"
+#endif
+
 #include "PluginComponent.h"
 #include "plugins.h"
 #include <ESPAsyncWebServer.h>
@@ -16,9 +20,6 @@
 #include "debug_helper_disable.h"
 #endif
 
-#if AT_MODE_SUPPORTED
-#include "at_mode.h"
-#endif
 
 PluginComponent::DependencyVector *PluginComponent::_dependencies;
 
@@ -159,8 +160,23 @@ void PluginComponent::setValue(const String &id, const String &value, bool hasVa
 
 #if AT_MODE_SUPPORTED
 
+ATModeCommandHelpArray PluginComponent::atModeCommandHelp(size_t &size) const
+{
+    size = 0;
+    return nullptr;
+}
+
 void PluginComponent::atModeHelpGenerator()
 {
+    if (isEnabled()) {
+        size_t size;
+        auto help = atModeCommandHelp(size);
+        if (help) {
+            for(size_t i = 0; i < size; i++) {
+                at_mode_add_help(&help[i], getName_P());
+            }
+        }
+    }
 }
 
 bool PluginComponent::atModeHandler(AtModeArgs &args)

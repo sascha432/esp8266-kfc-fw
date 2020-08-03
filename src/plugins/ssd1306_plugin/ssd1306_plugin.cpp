@@ -307,12 +307,12 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(SSDDF, "SSDDF", "<url>", "Download font");
 void SSD1306Plugin::atModeHelpGenerator()
 {
     auto name = getName_P();
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SSDCLR), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SSDST), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SSDXY), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SSDW), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SSDRF), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SSDDF), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(SSDCLR), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(SSDST), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(SSDXY), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(SSDW), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(SSDRF), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(SSDDF), name);
 }
 
 bool SSD1306Plugin::atModeHandler(AtModeArgs &args)

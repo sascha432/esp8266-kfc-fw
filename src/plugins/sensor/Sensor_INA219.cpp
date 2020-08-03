@@ -164,7 +164,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(SENSORINA219, "SENSORINA219", "<interval i
 
 void Sensor_INA219::atModeHelpGenerator()
 {
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SENSORINA219), SensorPlugin::getInstance().getName_P());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(SENSORINA219), SensorPlugin::getInstance().getName_P());
 }
 
 bool Sensor_INA219::atModeHandler(AtModeArgs &args)

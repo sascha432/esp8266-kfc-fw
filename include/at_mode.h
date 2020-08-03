@@ -13,7 +13,7 @@
 #define PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPP(name, str1, str3, str4)       ;
 
 #define PROGMEM_AT_MODE_HELP_COMMAND(name)                                  nullptr
-#define PROGMEM_AT_MODE_HELP_COMMAND_T(name)                                nullptr
+#define PROGMEM_AT_MODE_HELP_COMMAND(name)                                nullptr
 
 #else
 
@@ -36,7 +36,7 @@
 #define AT_MODE_MAX_ARGUMENTS                   16
 #endif
 
-typedef struct {
+typedef struct ATModeCommandHelp_t {
     PGM_P command;
     PGM_P arguments;
     PGM_P help;
@@ -44,27 +44,41 @@ typedef struct {
     PGM_P commandPrefix;
 } ATModeCommandHelp_t;
 
+class ATModeCommandHelpData {
+public:
+    ATModeCommandHelpData(PGM_P command, PGM_P arguments, PGM_P help) : _data({command, arguments, help, nullptr, nullptr})  {}
+    ATModeCommandHelpData(PGM_P command, PGM_P arguments, PGM_P help, PGM_P helpQueryMode) : _data({command, arguments, help, helpQueryMode, nullptr})  {}
+    ATModeCommandHelpData(PGM_P command, PGM_P arguments, PGM_P help, PGM_P helpQueryMode, PGM_P commandPrefix) : _data({command, arguments, help, helpQueryMode, commandPrefix})  {}
+    const struct ATModeCommandHelp_t _data;
+};
+
 class ATModeCommandHelp {
 public:
-    ATModeCommandHelp(const ATModeCommandHelp_t *data, PGM_P newPluginName) {
-        command = data->command;
-        commandPrefix = data->commandPrefix;
-        arguments = data->arguments;
-        help = data->help;
-        helpQueryMode = data->helpQueryMode;
-        pluginName = newPluginName;
-    }
+    ATModeCommandHelp(const ATModeCommandHelp_t *data, PGM_P pluginName = nullptr);
+    ATModeCommandHelp(const ATModeCommandHelp_t *data, const __FlashStringHelper *pluginName = nullptr) : ATModeCommandHelp(data, RFPSTR(pluginName)) {}
 
-    PGM_P command;
-    PGM_P commandPrefix;
-    PGM_P arguments;
-    PGM_P help;
-    PGM_P helpQueryMode;
-    PGM_P pluginName;
+    PGM_P command() const;
+    const __FlashStringHelper *getFPCommand() const {
+        return FPSTR(command());
+    }
+    PGM_P commandPrefix() const;
+    const __FlashStringHelper *getFPCommandPrefix() const {
+        return FPSTR(commandPrefix());
+    }
+    PGM_P arguments() const;
+    PGM_P help() const;
+    PGM_P helpQueryMode() const;
+    PGM_P pluginName() const;
+
+    void setPluginName(const __FlashStringHelper *name);
+    void setPluginName(PGM_P name);
+private:
+    const ATModeCommandHelp_t *_data;
+    PGM_P _name;
 };
 
 #define PROGMEM_AT_MODE_HELP_COMMAND(name)          &_at_mode_progmem_command_help_t_##name
-#define PROGMEM_AT_MODE_HELP_COMMAND_T(name)        &_at_mode_progmem_command_help_t_##name
+#define PROGMEM_AT_MODE_HELP_ARGS(name)             _at_mode_progmem_command_help_arguments_##name##[1]
 
 #undef PROGMEM_AT_MODE_HELP_COMMAND_PREFIX
 #define PROGMEM_AT_MODE_HELP_COMMAND_PREFIX         ""
@@ -134,6 +148,7 @@ public:
     };
 
 void at_mode_setup();
+void at_mode_add_help(const ATModeCommandHelp *help);
 void at_mode_add_help(const ATModeCommandHelp_t *help, PGM_P pluginName);
 void serial_handle_event(String command);
 String at_mode_print_command_string(Stream &output, char separator);
@@ -343,12 +358,12 @@ public:
         return strncmp_P(arg, RFPSTR(str), strlen_P(RFPSTR(str))) == 0;
     }
 
-    bool isAnyMatchIgnoreCase(uint16_t num, const __FlashStringHelper *strings, char sep = STRINGLIST_SEPARATOR) const {
+    bool isAnyMatchIgnoreCase(uint16_t num, const __FlashStringHelper *strings) const {
         ArgumentPtr arg;
         if (nullptr == (arg = get(num))) {
             return false;
         }
-        return _isAnyMatchIgnoreCase(arg, strings, sep);
+        return _isAnyMatchIgnoreCase(arg, strings);
     }
 
     // return true for "", "*", "any", "all"
@@ -357,36 +372,36 @@ public:
         if (nullptr == (arg = get(num))) {
             return false;
         }
-        if (_isAnyMatchIgnoreCase(arg, F("" STRLS "*" STRLS "*.*" STRLS "any" STRLS "all"))) {
+        if (_isAnyMatchIgnoreCase(arg, F("|*|*.*|any|all"))) {
             return true;
         }
         return false;
 
     }
 
-    // return true for "yes", "Y", "true", "start", "on", "enable" and any integer != 0
-    // arguments out of range return false
-    bool isTrue(uint16_t num) const {
+    // return true for "yes", "Y", "true", "start", "on", "enable", "en" and any integer != 0
+    // missing argument returns bDefault
+    bool isTrue(uint16_t num, bool bDefault = false) const {
         ArgumentPtr arg;
         if (nullptr == (arg = get(num)) || *arg == 0) {
-            return false;
+            return bDefault;
         }
         int result = 0;
-        if ((_isValidInt(arg, result) && result != 0) || (_isAnyMatchIgnoreCase(arg, F("start" STRLS "yes" STRLS "y" STRLS "true" STRLS "on" STRLS "enable")))) {
+        if ((_isValidInt(arg, result) && result != 0) || (_isAnyMatchIgnoreCase(arg, F("start|yes|y|true|on|enable|en")))) {
             return true;
         }
         return false;
     }
 
-    // return true for "", "stop", "no", "N", "false", "off", "disable" and any integer == 0
-    // arguments out of range return false
-    bool isFalse(uint16_t num) const {
+    // return true for "", "stop", "no", "N", "false", "off", "disable", "dis" and any integer == 0
+    // missing argument returns bDefault
+    bool isFalse(uint16_t num, bool bDefault = false) const {
         ArgumentPtr arg;
         if (nullptr == (arg = get(num))) {
-            return false;
+            return bDefault;
         }
         int result;
-        if (*arg == 0 || (_isValidInt(arg, result) && result == 0) || (_isAnyMatchIgnoreCase(arg, F("stop" STRLS "no" STRLS "n" STRLS "false" STRLS "off" STRLS "disable")))) {
+        if ((_isValidInt(arg, result) && result == 0) || (_isAnyMatchIgnoreCase(arg, F("|stop|no|n|false|off|disable|dis|null")))) {
             return true;
         }
         return false;
@@ -439,6 +454,9 @@ public:
     }
     void print();
     void ok();
+    void help();
+    // makeList = '|' converts expected from "a|b|c" to "[a, b, c]"
+    void invalidArgument(uint16_t num, const __FlashStringHelper *expected = nullptr, char makeList = 0);
 
 private:
     template <class T>
@@ -455,17 +473,17 @@ private:
         }
         // end of string, return value
         if (*endPtr == 0) {
-            result = (T)value;
+            result = value;
             return true;
         }
         // some more text or numbers
         return false;
     }
 
-    bool _isAnyMatchIgnoreCase(String str, const __FlashStringHelper *strings, char sep = STRINGLIST_SEPARATOR) const {
+    bool _isAnyMatchIgnoreCase(String str, const __FlashStringHelper *strings) const {
         str.trim();
         str.toLowerCase();
-        return (stringlist_find_P_P(RFPSTR(strings), str.c_str(), sep) != -1);
+        return (stringlist_find_P_P(RFPSTR(strings), str.c_str(), '|') != -1);
     }
 
 private:

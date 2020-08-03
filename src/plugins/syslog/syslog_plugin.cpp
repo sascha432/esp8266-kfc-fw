@@ -190,7 +190,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(SQ, "SQ", "<clear|info|queue>", "Syslog qu
 
 void SyslogPlugin::atModeHelpGenerator()
 {
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(SQ), getName_P());
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(SQ), getName_P());
 }
 
 bool SyslogPlugin::atModeHandler(AtModeArgs &args)

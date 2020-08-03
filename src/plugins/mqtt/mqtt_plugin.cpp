@@ -14,6 +14,7 @@
 #endif
 
 using KFCConfigurationClasses::System;
+using KFCConfigurationClasses::Plugins;
 
 static MQTTPlugin plugin;
 
@@ -79,66 +80,89 @@ void MQTTPlugin::getStatus(Print &output)
 
 #include "at_mode.h"
 
-PROGMEM_AT_MODE_HELP_COMMAND_DEF(MQTT, "MQTT", "<connect|disconnect|force-disconnect|secure|unsecure|disable|topics>", "Connect or disconnect from server", "Display MQTT status");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF(MQTT, "MQTT", "<connect|disconnect|set|topics|autodiscovery>", "Manage MQTT\n"
+    "\n"
+    "    connect or con                              Connect to server\n"
+    "    disconnect or dis[,<true|false>]            Disconnect from server and enalbe/disable auto reconnect\n"
+    "    set,<enable,disable>                        Enable or disable MQTT\n"
+    "    topics or top                               List subscribed topics\n"
+    "    autodiscovery or auto                       Publish auto discovery\n"
+    "\n",
+    "Display MQTT status"
+);
 
-void MQTTPlugin::atModeHelpGenerator()
+ATModeCommandHelpArray MQTTPlugin::atModeCommandHelp(size_t &size) const
 {
-    auto name = getName_P();
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND_T(MQTT), name);
+    size = 1;
+    return { PROGMEM_AT_MODE_HELP_COMMAND(MQTT) };
 }
 
 bool MQTTPlugin::atModeHandler(AtModeArgs &args)
 {
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(MQTT))) {
-        auto client = MQTTClient::getClient();
-        auto &serial = args.getStream();
-        if (args.isQueryMode()) {
-            if (client) {
-                args.printf_P(PSTR("status: %s"), client->connectionStatusString().c_str());
-            } else {
-                serial.println(FSPGM(disabled));
+        auto clientPtr = MQTTClient::getClient();
+        if (!clientPtr) {
+            args.print(FSPGM(disabled));
+        }
+        else if (args.isQueryMode()) {
+            args.printf_P(PSTR("status: %s"), clientPtr->connectionStatusString().c_str());
+        }
+        else if (args.requireArgs(1, 2)) {
+            auto &client = *clientPtr;
+            auto actionsStr = PSTR("connect|con|disconnect|dis|set|topics|top|autodiscovery|auto");
+            auto action = stringlist_find_P_P(actionsStr, args.get(0), '|');
+            switch(action) {
+                case 0: // connext
+                case 1: // con
+                    if (Plugins::MQTTClient::isEnabled()) {
+                        args.printf_P(PSTR("connecting to %s"), client.connectionStatusString().c_str());
+                        client.setAutoReconnect(MQTT_AUTO_RECONNECT_TIMEOUT);
+                        client.connect();
+                    }
+                    else {
+                        args.print(F("disabled or not configured"));
+                    }
+                    break;
+                case 2: // disconnect
+                case 3: // dis
+                    client.setAutoReconnect(args.isTrue(1) ? MQTT_AUTO_RECONNECT_TIMEOUT : 0);
+                    client.disconnect(false);
+                    args.print(F("disconnectd"));
+                    break;
+                case 4: // set
+                    if  (args.isTrue(1)) {
+                        System::Flags::getWriteableConfig().is_mqtt_enabled = true;
+                        config.write();
+                        args.print(F("enabled"));
+                    }
+                    else {
+                        client.setAutoReconnect(0);
+                        client.disconnect(true);
+                        System::Flags::getWriteableConfig().is_mqtt_enabled = false;
+                        config.write();
+                        args.print(F("disconnected and disabled"));
+                    }
+                    break;
+                case 5: // topics
+                case 6: // top
+                    for(const auto &topic: client.getTopics()) {
+                        args.printf_P(PSTR("topic=%s component=%p name=%s"), topic.getTopic().c_str(), topic.getComponent(), topic.getComponent()->getComponentName());
+                    }
+                    break;
+                case 7: // autodiscovery
+                case 8: // auto
+                    if (client.isConnected() && client.publishAutoDiscovery()) {
+                        args.print(F("auto discovery started"));
+                    }
+                    else {
+                        args.print(F("not connected, auto discovery running or not available"));
+                    }
+                    break;
+                default:
+                    args.invalidArgument(0, FPSTR(actionsStr), '|');
+                    break;
             }
-        } else if (client && args.requireArgs(1, 1)) {
-            auto &client = *MQTTClient::getClient();
-            if (args.isTrue(0)) {
-                System::Flags::getWriteableConfig().is_mqtt_enabled = true;
-                MQTTClient::ClientConfig::ConfigStructType::set_enum_mode(MQTTClient::ClientConfig::getWriteableConfig(), MQTTClient::ModeType::UNSECURE);
-                config.write();
-                args.printf_P(PSTR("MQTT unsecure %s"), FSPGM(enabled));
-            }
-            else if (args.toLowerChar(0) == 't') {
-                for(const auto &topic: client.getTopics()) {
-                    args.printf_P(PSTR("topic=%s component=%p name=%s"), topic.getTopic().c_str(), topic.getComponent(), topic.getComponent()->getComponentName());
-                }
-            }
-            else if (args.toLowerChar(0) == 'c') {
-                args.printf_P(PSTR("connect: %s"), client.connectionStatusString().c_str());
-                client.setAutoReconnect(MQTT_AUTO_RECONNECT_TIMEOUT);
-                client.connect();
-            }
-            else if (args.toLowerChar(0) == 'd') {
-                args.print(F("disconnect"));
-                client.disconnect(false);
-            }
-            else if (args.toLowerChar(0) == 'f') {
-                args.print(F("force disconnect"));
-                client.setAutoReconnect(0);
-                client.disconnect(true);
-            }
-            else if (args.toLowerChar(0) == 's') {
-                System::Flags::getWriteableConfig().is_mqtt_enabled = true;
-                MQTTClient::ClientConfig::ConfigStructType::set_enum_mode(MQTTClient::ClientConfig::getWriteableConfig(), MQTTClient::ModeType::SECURE);
-                config.write();
-                args.printf_P(PSTR("MQTT secure %s"), FSPGM(enabled));
-            }
-            else if (args.isFalse(0)) {
-                System::Flags::getWriteableConfig().is_mqtt_enabled = false;
-                MQTTClient::ClientConfig::ConfigStructType::set_enum_mode(MQTTClient::ClientConfig::getWriteableConfig(), MQTTClient::ModeType::DISABLED);
-                config.write();
-                client.setAutoReconnect(0);
-                client.disconnect(true);
-                args.printf_P(PSTR("MQTT %s"), FSPGM(disabled));
-            }
+
         }
         return true;
     }
@@ -147,6 +171,7 @@ bool MQTTPlugin::atModeHandler(AtModeArgs &args)
 
 #endif
 
-MQTTPlugin &MQTTPlugin::getPlugin() {
+MQTTPlugin &MQTTPlugin::getPlugin()
+{
     return plugin;
 }

@@ -341,12 +341,7 @@ void MQTTClient::onConnect(bool sessionPresent)
     for(const auto &component: _components) {
         component->onConnect(this);
     }
-#if MQTT_AUTO_DISCOVERY
-    if (MQTTAutoDiscovery::isEnabled() && !_components.empty()) {
-        _autoDiscoveryQueue.reset(new MQTTAutoDiscoveryQueue(*this));
-        _autoDiscoveryQueue->publish();
-    }
-#endif
+    publishAutoDiscovery();
 }
 
 void MQTTClient::onDisconnect(AsyncMqttClientDisconnectReason reason)
@@ -446,6 +441,32 @@ void MQTTClient::publish(const String &topic, bool retain, const String &payload
     qos = MQTTClient::getDefaultQos(qos);
     if (publishWithId(topic, retain, payload, qos) == 0) {
         _addQueue(MQTTQueueType::PUBLISH, nullptr, topic, qos, retain, payload);
+    }
+}
+
+bool MQTTClient::publishAutoDiscovery()
+{
+#if MQTT_AUTO_DISCOVERY
+    _autoDiscoveryRebroadcast.remove();
+
+    if (MQTTAutoDiscovery::isEnabled() && !_components.empty()) {
+        if (_autoDiscoveryQueue) {
+            __DBG_printf("auto discovery running count=%u size=%u", _autoDiscoveryQueue->_discoveryCount, _autoDiscoveryQueue->_size);
+        }
+        else {
+            _autoDiscoveryQueue.reset(new MQTTAutoDiscoveryQueue(*this));
+            _autoDiscoveryQueue->publish();
+            return true;
+        }
+    }
+#endif
+    return false;
+}
+
+void MQTTClient::publishAutoDiscoveryCallback(EventScheduler::TimerPtr timer)
+{
+    if (_mqttClient) {
+        _mqttClient->publishAutoDiscovery();
     }
 }
 
@@ -627,6 +648,7 @@ void MQTTClient::_queueTimerCallback()
 void MQTTClient::_clearQueue()
 {
     _autoDiscoveryQueue.reset();
+    _autoDiscoveryRebroadcast.remove();
     _queueTimer.remove();
     _queue.clear();
 }

@@ -43,6 +43,8 @@ private:
     void _publishDone();
 
 private:
+    friend MQTTClient;
+
     MQTTClient &_client;
     EventScheduler::Timer _timer;
     MQTTComponent::Vector::iterator _next;

@@ -162,6 +162,10 @@ public:
     void remove(MQTTComponentPtr component);
     void publish(const String &topic, bool retain, const String &payload, uint8_t qos = QOS_DEFAULT);
 
+    // returns false if running
+    bool publishAutoDiscovery();
+    static void publishAutoDiscoveryCallback(EventScheduler::TimerPtr timer);
+
     // return values
     // 0: failed to send
     // -1: success, but nothing was sent (in particular for unsubscribe if another component is still subscribed to the same topic)
@@ -280,6 +284,7 @@ private:
     String _lastWillTopic;
     String _lastWillPayload;
     std::unique_ptr<MQTTAutoDiscoveryQueue> _autoDiscoveryQueue;
+    EventScheduler::Timer _autoDiscoveryRebroadcast;
 
     static MQTTClient *_mqttClient;
 };

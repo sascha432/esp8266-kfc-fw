@@ -13,6 +13,8 @@
 #include <debug_helper_disable.h>
 #endif
 
+using KFCConfigurationClasses::Plugins;
+
 MQTTAutoDiscoveryQueue::MQTTAutoDiscoveryQueue(MQTTClient &client) : _client(client)
 {
 }
@@ -133,6 +135,19 @@ void MQTTAutoDiscoveryQueue::_publishDone()
     auto dur = get_time_diff(_start, millis());
     _debug_printf_P(PSTR("done components=%u discovery=%u size=%u time=%.4fs max_queue=%u queue_skip=%u iterations=%u\n"), _client._components.size(), _discoveryCount, _size, dur / 1000.0, _maxQueue, _maxQueueSkipCounter, _counter);
 #endif
-    Logger_notice(F("MQTT auto discovery published [components=%u, size=%s]"), _discoveryCount, formatBytes(_size).c_str());
+    uint32_t delay;
+    if ((delay = Plugins::MQTTClient::getConfig().auto_discovery_rebroadcast_interval) != 0) {
+        _client._autoDiscoveryRebroadcast.add(delay * 60000U, false, MQTTClient::publishAutoDiscoveryCallback);
+    }
+
+    auto message = PrintString(F("MQTT auto discovery published [components=%u, size="), _discoveryCount);
+    message.print(formatBytes(_size));
+    if (delay) {
+        message.printf_P(PSTR(", rebroadcast in %s"), formatTime(delay * 60U).c_str());
+    }
+    message.print(']');
+
+    Logger_notice(message);
     _client._autoDiscoveryQueue.reset();
+
 }

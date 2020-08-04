@@ -29,8 +29,6 @@ void MQTTPlugin::createConfigureForm(FormCallbackType type, const String &formNa
         return;
     }
 
-    form.setFormUI(F("MQTT Client Configuration"));
-
     auto &cfg = ClientConfig::getWriteableConfig();
 
     auto modeItems = FormUI::ItemsList(
@@ -50,17 +48,26 @@ void MQTTPlugin::createConfigureForm(FormCallbackType type, const String &formNa
         ClientConfig::ConfigStructType::set_enum_mode(cfg, ClientConfig::ModeType::DISABLED); // set to disabled before adding value to form
     }
 
+    auto &ui = form.getFormUIConfig();
+    ui.setTitle(F("MQTT Client Configuration"));
+    ui.setContainerId(F("mqtt_setttings"));
+    ui.setStyle(FormUI::StyleType::ACCORDION);
+
+    auto &cfgGroup = form.addDivGroup(String(), F("{'i':'#mode','e':'var $T=$(\\'#mode\\').closest(\\'.card\\').nextAll().not(\\':last\\');var $P=function(v){$(\\'#port\\').attr(\\'placeholder\\',v);}','s':{'0':'$T.hide()','1':'$T.show();$P(1883)','2':'$T.show();$P(8883)'}}"));
+    cfgGroup.end();
+
+    auto &commonGroup = form.addCardGroup(FSPGM(config), String());
+
     form.add<uint8_t>(FSPGM(mode), _H_W_STRUCT_VALUE(cfg, mode));
     form.addFormUI(FSPGM(Mode), modeItems);
     form.addValidator(FormRangeValidatorEnum<ClientConfig::ModeType>());
 
-    auto &cfgGroup = form.addDivGroup(F("mqttcfg"), F("{'i':'#mode','e':'var $P=function(v){$(\\'#port\\').attr(\\'placeholder\\',v);}','s':{'0':'$T.hide()','1':'$T.show();$P(1883)','2':'$T.show();$P(8883)'}}"));
+    auto &connGroup = commonGroup.end().addCardGroup(F("conn"), FSPGM(Connection), true);
 
-    form.add(FSPGM(host), _H_CSTR_FUNC(ClientConfig::getHostname, ClientConfig::setHostname));
+    form.addCStringGetterSetter(FSPGM(host), ClientConfig::getHostname, ClientConfig::setHostnameCStr);
     form.addFormUI(FSPGM(Hostname));
     form.addValidator(FormHostValidator(FormHostValidator::AllowedType::ALLOW_ZEROCONF));
     form.addValidator(FormLengthValidator(3, ClientConfig::kHostnameMaxSize));
-
 
     form.add(FSPGM(port), cfg.getPortAsString(), [&cfg](const String &value, FormField &field, bool store) {
         if (store) {
@@ -71,6 +78,12 @@ void MQTTPlugin::createConfigureForm(FormCallbackType type, const String &formNa
     });
     form.addFormUI(FormUI::Type::INTEGER, FSPGM(Port), FormUI::PlaceHolder(1883));
     form.addValidator(FormNetworkPortValidator(true));
+
+    form.add<uint8_t>(FSPGM(keepalive), _H_W_STRUCT_VALUE(cfg, keepalive));
+    form.addFormUI(FSPGM(Keep_Alive), FormUI::Suffix(FSPGM(seconds)));
+    form.addValidator(FormRangeValidatorType<decltype(cfg.keepalive)>());
+
+    auto &serverGroup = connGroup.end().addCardGroup(FSPGM(mqtt), F("Server Settings"), true);
 
     form.add(F("mqttuser"), _H_CSTR_FUNC(ClientConfig::getUsername, ClientConfig::setUsername));
     form.addFormUI(FSPGM(Username), FormUI::PlaceHolder(FSPGM(Anonymous)));
@@ -88,13 +101,13 @@ void MQTTPlugin::createConfigureForm(FormCallbackType type, const String &formNa
     form.addFormUI(F("Quality Of Service"), qosItems);
     form.addValidator(FormRangeValidatorEnum<ClientConfig::QosType>(F("Invalid value for QoS")));
 
-    form.add<uint8_t>(FSPGM(keepalive), _H_W_STRUCT_VALUE(cfg, keepalive));
-    form.addFormUI(FSPGM(Keep_Alive, "Keep Alive"), FormUI::Suffix(FSPGM(seconds)));
-    form.addValidator(FormRangeValidatorType<decltype(cfg.keepalive)>());
+    serverGroup.end();
 
 #if MQTT_AUTO_DISCOVERY
+    auto &hassGroup = form.addCardGroup(F("adp"), F("Home Assistant"), true);
+
     form.addWriteableStruct("aden", cfg, auto_discovery));
-    form.addFormUI(FormUI::Type::SELECT, F("Home Assistant Auto Discovery"));
+    form.addFormUI(F("Auto Discovery"), FormUI::BoolItems());
 
     auto &autoDiscoveryGroup = form.addDivGroup(F("adp"), F("{'i':'#aden','m':'$T.hide()','s':{'1':'$T.show()'}}"));
 
@@ -102,10 +115,14 @@ void MQTTPlugin::createConfigureForm(FormCallbackType type, const String &formNa
     form.addFormUI(F("Auto Discovery Prefix"));
     form.addValidator(FormLengthValidator(0, ClientConfig::kAutoDiscoveryPrefixMaxSize));
 
-    autoDiscoveryGroup.end();
-#endif
+    form.add(F("adrb"), _H_W_STRUCT_VALUE(cfg, auto_discovery_rebroadcast_interval));
+    form.addFormUI(F("Auto Discovery Rebroadcast"), FormUI::Suffix(FSPGM(minutes)));
+    form.addValidator(FormRangeValidator(15, std::numeric_limits<decltype(cfg.auto_discovery_rebroadcast_interval)>::max()));
 
-    cfgGroup.end();
+
+    autoDiscoveryGroup.end();
+    hassGroup.end();
+#endif
 
     form.finalize();
 }

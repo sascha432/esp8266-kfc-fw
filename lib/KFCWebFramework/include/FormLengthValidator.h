@@ -13,7 +13,7 @@ class FormLengthValidator : public FormValidator {
 public:
     FormLengthValidator(size_t min, size_t max, bool allowEmpty = false) : FormValidator(FSPGM(FormLengthValidator_default_message)), _min(min), _max(max), _allowEmpty(allowEmpty) {
     }
-    FormLengthValidator(const String &message, size_t min, size_t max, bool allowEmpty = false) : FormValidator(message), _min(min), _max(max), _allowEmpty(allowEmpty) {
+    FormLengthValidator(const String &message, size_t min, size_t max, bool allowEmpty = false) : FormValidator(message.length() == 0 ? String(FSPGM(FormLengthValidator_default_message)) : message), _min(min), _max(max), _allowEmpty(allowEmpty) {
     }
 
     virtual bool validate() override {

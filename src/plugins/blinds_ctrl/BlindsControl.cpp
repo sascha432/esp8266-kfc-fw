@@ -4,6 +4,8 @@
 
 #include "WebUISocket.h"
 #include "BlindsControl.h"
+#include "blinds_ctrl.h"
+#include "../src/plugins/mqtt/mqtt_client.h"
 
 #if DEBUG_IOT_BLINDS_CTRL
 #include <debug_helper_enable.h>
@@ -11,23 +13,23 @@
 #include <debug_helper_disable.h>
 #endif
 
-PROGMEM_STRING_DEF(blinds_controller_channel1, "blinds_channel1");
-PROGMEM_STRING_DEF(blinds_controller_channel2, "blinds_channel2");
-PROGMEM_STRING_DEF(blinds_controller_channel1_sensor, "blinds_channel1_sensor");
-PROGMEM_STRING_DEF(blinds_controller_channel2_sensor, "blinds_channel2_sensor");
+extern int8_t operator *(const BlindsControl::ChannelType type);
+
+int8_t operator *(const BlindsControl::ChannelType type) {
+    return static_cast<int8_t>(type);
+}
+
+const std::array<uint8_t, BlindsControl::kChannelCount * 2> BlindsControl::_pins = { IOT_BLINDS_CTRL_M1_PIN, IOT_BLINDS_CTRL_M2_PIN, IOT_BLINDS_CTRL_M3_PIN, IOT_BLINDS_CTRL_M4_PIN };
+
 PROGMEM_STRING_DEF(iot_blinds_control_state_file, "/.pvt/blinds_ctrl.state");
 
-BlindsControl::BlindsControl() : MQTTComponent(ComponentTypeEnum_t::SENSOR), _activeChannel(0)
+BlindsControl::BlindsControl() : MQTTComponent(ComponentTypeEnum_t::SENSOR), _activeChannel(ChannelType::NONE)
 {
-    _channels[0].setNumber(0);
-    _channels[0].setController(this);
-    _channels[1].setNumber(1);
-    _channels[1].setController(this);
 }
 
 void BlindsControl::_setup()
 {
-    _debug_println();
+    __LDBG_println();
     _readConfig();
 
     digitalWrite(IOT_BLINDS_CTRL_M1_PIN, LOW);
@@ -47,13 +49,6 @@ void BlindsControl::_setup()
     attachScheduledInterrupt(digitalPinToInterrupt(IOT_BLINDS_CTRL_RPM_PIN), BlindsControl::rpmIntCallback, RISING);
     pinMode(IOT_BLINDS_CTRL_RPM_PIN, INPUT);
 #endif
-
-    auto client = MQTTClient::getClient();
-    if (client) {
-        client->registerComponent(&_channels[0]);
-        client->registerComponent(&_channels[1]);
-        client->registerComponent(this);
-    }
 }
 
 MQTTComponent::MQTTAutoDiscoveryPtr BlindsControl::nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num)
@@ -62,12 +57,17 @@ MQTTComponent::MQTTAutoDiscoveryPtr BlindsControl::nextAutoDiscovery(MQTTAutoDis
         return nullptr;
     }
     auto discovery = new MQTTAutoDiscovery();
-    switch(num) {
-        case 0:
-        case 1:
-            discovery->create(this, PrintString(F("metrics_%u"), num), format);
-            discovery->addStateTopic(_getTopic(num));
-            break;
+    if (num < kChannelCount) {
+        ChannelType channel = (ChannelType)(num - 3);
+        discovery->create(this, PrintString(FSPGM(channel__u, "channel_%u"), channel), format);
+        discovery->addStateTopic(_getTopic(channel, TopicType::STATE));
+        discovery->addCommandTopic(_getTopic(channel, TopicType::SET));
+        discovery->addPayloadOn(1);
+        discovery->addPayloadOff(0);
+    }
+    else {
+        discovery->create(MQTTComponent::ComponentType::SENSOR, FSPGM(state), format);
+        discovery->addStateTopic(_getTopic(ChannelType::NONE, TopicType::METRICS));
     }
     discovery->finalize();
     return discovery;
@@ -77,49 +77,49 @@ void BlindsControl::getValues(JsonArray &array)
 {
     JsonUnnamedObject *obj;
 
-    obj = &array.addObject(3);
-    obj->add(JJ(id), FSPGM(blinds_controller_channel1_sensor));
-    obj->add(JJ(value), _getStateStr(0));
-    obj->add(JJ(state), true);
+    for(const auto channel: _states.channels()) {
 
-    obj = &array.addObject(3);
-    obj->add(JJ(id), FSPGM(blinds_controller_channel1));
-    obj->add(JJ(value), _channels[0].isOpen() ? 1 : 0);
-    obj->add(JJ(state), true);
+        String prefix = PrintString(FSPGM(channel__u), channel);
 
-    obj = &array.addObject(3);
-    obj->add(JJ(id), FSPGM(blinds_controller_channel2_sensor));
-    obj->add(JJ(value), _getStateStr(1));
-    obj->add(JJ(state), true);
+        obj = &array.addObject(3);
+        obj->add(JJ(id), prefix + F("_state"));
+        obj->add(JJ(value), _getStateStr(channel));
+        obj->add(JJ(state), true);
 
-    obj = &array.addObject(3);
-    obj->add(JJ(id), FSPGM(blinds_controller_channel2));
-    obj->add(JJ(value), _channels[1].isOpen() ? 1 : 0);
-    obj->add(JJ(state), true);
+        obj = &array.addObject(3);
+        obj->add(JJ(id), prefix + F("_set"));
+        obj->add(JJ(value), _states[channel].isOpen() ? 1 : 0);
+        obj->add(JJ(state), true);
+
+    }
+
 }
 
 void BlindsControl::onConnect(MQTTClient *client)
 {
-    _debug_printf_P(PSTR("client=%p\n"), client);
-    _readConfig();
+    __LDBG_printf("client=%p", client);
     _publishState(client);
+    for(const auto channel: _states.channels()) {
+        client->subscribe(this, _getTopic(channel, TopicType::SET));
+    }
 }
 
 void BlindsControl::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
 {
-    auto name = PSTR("blinds_channel");
-    _debug_printf_P(PSTR("id=%s hasValue=%u value=%s hasState=%u state=%u\n"), id.c_str(), hasValue, value.c_str(), hasState, state);
+    __LDBG_printf("id=%s hasValue=%u value=%s hasState=%u state=%u", id.c_str(), hasValue, value.c_str(), hasState, state);
     if (hasValue) {
-        if (String_startsWith(id, name)) {
-            uint8_t channel = (id.charAt(strlen_P(name)) - '1') % 2;
-            setChannel(channel, value.toInt() ? BlindsChannel::CLOSED : BlindsChannel::OPEN);
+        if (String_endsWith(id, PSTR("_set"))) {
+            size_t channel = atoi(id.c_str() + id.indexOf('_') + 1);
+            if (channel < _states.size()) {
+                _states[channel] = value.toInt() ? StateType::CLOSED : StateType::OPEN;
+            }
         }
     }
 }
 
-void BlindsControl::setChannel(uint8_t channel, BlindsChannel::StateEnum_t state)
+void BlindsControl::setChannel(ChannelType channel, StateType state)
 {
-    _debug_printf_P(PSTR("channel=%u state=%u\n"), channel, state);
+    __LDBG_printf("channel=%u state=%u", channel, state);
     // perform action in _loopMethod
     _action.set(state, channel);
 }
@@ -132,7 +132,7 @@ void BlindsControl::_loopMethod()
             if (_activeChannel == channel) {
                 _action.clear();
                 _stop();
-                _channels[channel].setState(BlindsChannel::STOPPED);
+                _states[channel] = StateType::STOPPED;
                 _publishState();
             }
         }
@@ -141,21 +141,21 @@ void BlindsControl::_loopMethod()
             _action.clear();
             _stop();
             _activeChannel = channel;
-            auto &_channel = _channels[channel].getChannel();
-            _setMotorSpeed(channel, _channel.pwmValue, state == BlindsChannel::OPEN);
-            _channels[channel].setState(state == BlindsChannel::OPEN ? BlindsChannel::CLOSED : BlindsChannel::OPEN);
-            _motorTimeout.set(state == BlindsChannel::CLOSED ? _channel.openTime : _channel.closeTime);
+            auto &_channel = _config.channels[*channel];
+            _setMotorSpeed(channel, _channel.pwm_value, state == StateType::OPEN);
+            _states[channel].setToggleOpenClosed(state);
+            _motorTimeout.set(state == StateType::CLOSED ? _channel.open_time : _channel.close_time);
             _publishState();
             _clearAdc();
         }
     }
     if (_motorTimeout.isActive()) {
         _updateAdc();
-        auto &_channel = _channels[_activeChannel].getChannel();
-        auto currentLimit = _channel.currentLimit;
+        auto &_channel = _config.channels[*_activeChannel];
+        auto currentLimit = _channel.current_limit;
         if (_adcIntegral > currentLimit && millis() % 2 == _currentLimitCounter % 2) { // assuming this loop runs at least once per millisecond. measured ~250-270µs, should be save...
-            if (++_currentLimitCounter > _channel.currentLimitTime) {
-                _debug_println(F("BlindsControl::_loopMethod(): Current limit"));
+            if (++_currentLimitCounter > _channel.current_limit_time) {
+                __LDBG_printf("current limit");
                 _stop();
                 _publishState();
                 return;
@@ -167,14 +167,14 @@ void BlindsControl::_loopMethod()
 
 #if IOT_BLINDS_CTRL_RPM_PIN
         if (_hasStalled()) {
-            _debug_println(F("BlindsControl::_loopMethod(): Stalled"));
+            __LDBG_printf("stalled");
             _stop();
             return;
         }
 #endif
 
         if (_motorTimeout.reached()) {
-            _debug_println(F("BlindsControl::_loopMethod(): Timeout"));
+            __LDBG_printf("timeout");
             _stop();
             _publishState();
         }
@@ -182,24 +182,35 @@ void BlindsControl::_loopMethod()
 }
 
 
-const __FlashStringHelper *BlindsControl::_getStateStr(uint8_t channel) const
+bool BlindsControl::isBusy(ChannelType channel) const
 {
-    if (_motorTimeout.isActive() && _activeChannel == channel) {
-        return F("Busy");
+    return (_motorTimeout.isActive() && _activeChannel == channel);
+}
+
+bool BlindsControl::isBusyOrError(ChannelType channel) const
+{
+    auto state = _states[channel];
+    return (!state.isOpen() && !state.isClosed()) || isBusy(channel);
+}
+
+BlindsControl::NameType BlindsControl::_getStateStr(ChannelType channel) const
+{
+    if (isBusy(channel)) {
+        return FSPGM(Busy);
     }
-    return BlindsChannel::_stateStr(_channels[channel].getState());
+    return _states[channel]._getFPStr();
 }
 
 void BlindsControl::_clearAdc()
 {
-    uint8_t channel = _activeChannel;
-    if (_swapChannels) {
+    auto channel = *_activeChannel;
+    if (_config.swap_channels) {
         channel++;
-        _debug_printf_P(PSTR("BlindsControl::_clearAdc(): channels swapped\n"));
+        __LDBG_printf("channels swapped");
     }
-    channel %= _channels.size();
+    channel %= kChannelCount;
 
-    _debug_printf_P(PSTR("BlindsControl::_clearAdc(): rssel=%u\n"), channel == 0 ? HIGH : LOW);
+    __LDBG_printf("rssel=%u", channel == 0 ? HIGH : LOW);
 
     // select shunt
     digitalWrite(IOT_BLINDS_CTRL_RSSEL_PIN, channel == 0 ? HIGH : LOW);
@@ -221,48 +232,31 @@ void BlindsControl::_updateAdc()
     _adcIntegral = ((_adcIntegral * count) + analogRead(A0)) / (count + 1);
 }
 
-void BlindsControl::_setMotorSpeed(uint8_t channel, uint16_t speed, bool direction)
+void BlindsControl::_setMotorSpeed(ChannelType channelType, uint16_t speed, bool direction)
 {
-    uint8_t pin1, pin2;
+    auto channel = *channelType;
 
-    if (_swapChannels) {
+    if (_config.swap_channels) {
         channel++;
-        _debug_printf_P(PSTR("BlindsControl::_setMotorSpeed(): channels swapped\n"));
     }
-    channel %= _channels.size();
+    channel %= kChannelCount;
 
-    if (channel == 0 && _channel0Dir) {
-        _debug_printf_P(PSTR("BlindsControl::_setMotorSpeed(): direction inverted\n"));
-        direction = !direction;
-    }
-    if (channel == 1 && _channel1Dir) {
-        _debug_printf_P(PSTR("BlindsControl::_setMotorSpeed(): direction inverted\n"));
+    if (Plugins::Blinds::getChannelDirection(_config, channel)) {
         direction = !direction;
     }
 
-    if (channel == 0) {
-        pin1 = IOT_BLINDS_CTRL_M1_PIN;
-        pin2 = IOT_BLINDS_CTRL_M2_PIN;
-    }
-    else {
-        pin1 = IOT_BLINDS_CTRL_M3_PIN;
-        pin2 = IOT_BLINDS_CTRL_M4_PIN;
-    }
-    _debug_printf_P(PSTR("BlindsControl::_setMotorSpeed(%u, %u, %u): pins %u, %u\n"), channel, speed, direction, pin1, pin2);
+    uint8_t pin1 = _pins[(channel * kChannelCount) + (direction ? 0 : 1)];
+    uint8_t pin2 = _pins[(channel * kChannelCount) + (direction ? 1 : 0)];
 
-    if (direction) {
-        analogWrite(pin1, speed);
-        analogWrite(pin2, 0);
-    }
-    else {
-        analogWrite(pin1, 0);
-        analogWrite(pin2, speed);
-    }
+    __LDBG_printf("channel=%u speed=%u dir=%u swapped=%u inverted=%u pins=%u,%u", channel, speed, _config.swap_channels, Plugins::Blinds::getChannelDirection(_config, channel), pin1, pin2);
+
+    analogWrite(pin1, speed);
+    analogWrite(pin2, 0);
 }
 
 void BlindsControl::_stop()
 {
-    _debug_println(F("BlindsControl::_stop()"));
+    __LDBG_println();
 
     _motorTimeout.disable();
     analogWrite(IOT_BLINDS_CTRL_M1_PIN, 0);
@@ -271,9 +265,22 @@ void BlindsControl::_stop()
     analogWrite(IOT_BLINDS_CTRL_M4_PIN, 0);
 }
 
-String BlindsControl::_getTopic(uint8_t channel) const
+String BlindsControl::_getTopic(ChannelType channel, TopicType type)
 {
-    return MQTTClient::formatTopic(PrintString(FSPGM(channel__u, "channel_%u"), channel), F("/metrics"));
+    if (type == TopicType::METRICS) {
+        return MQTTClient::formatTopic(FSPGM(state));
+    }
+    const __FlashStringHelper *str;
+    switch(type) {
+        case TopicType::SET:
+            str = FSPGM(_set);
+            break;
+        case TopicType::STATE:
+        default:
+            str = FSPGM(_state);
+            break;
+    }
+    return MQTTClient::formatTopic(PrintString(FSPGM(channel__u), channel), str);
 }
 
 void BlindsControl::_publishState(MQTTClient *client)
@@ -281,20 +288,36 @@ void BlindsControl::_publishState(MQTTClient *client)
     if (!client) {
         client = MQTTClient::getClient();
     }
-    _debug_printf_P(PSTR("BlindsControl::_publishState(): state %s/%s, client %p\n"), _getStateStr(0), _getStateStr(1), client);
+    __LDBG_printf("state %s/%s, client %p", _getStateStr(ChannelType::CHANNEL0), _getStateStr(ChannelType::CHANNEL1), client);
 
     if (client) {
-        for(size_t i = 0; i < _channels.size(); i++) {
-            client->publish(_getTopic(i), true, _getStateStr(i));
-            _channels[i]._publishState(client);
+        JsonUnnamedObject metrics(kChannelCount + 2);
+        String binaryState = F("0b");
+        std::array<NameType, kChannelCount> states_str;
+        auto &states = metrics.addArray(FSPGM(channels), kChannelCount);
+        bool busyOrError = false;
+
+        for(const auto channel: _states.channels()) {
+            auto &state = _states[channel];
+            auto isOpen = state.getCharState();
+            if (isBusyOrError(channel)) {
+                busyOrError = true;
+            }
+            binaryState += isOpen;
+            client->publish(_getTopic(channel, TopicType::STATE), true, String(isOpen));
+            states_str[*channel] = _states[channel]._getFPStr();
+            states.add(states_str[*channel]);
+
         }
+        metrics.add(FSPGM(states), implode(',', states_str));
+        metrics.add(FSPGM(binary), binaryState);
+        metrics.add(F("busy_or_error"), busyOrError);
     }
 
-    JsonUnnamedObject object(2);
-    object.add(JJ(type), JJ(ue));
-    auto &events = object.addArray(JJ(events), 4);
-    getValues(events);
-    WsWebUISocket::broadcast(WsWebUISocket::getSender(), object);
+    JsonUnnamedObject webUI(2);
+    webUI.add(JJ(type), JJ(ue));
+    getValues(webUI.addArray(JJ(events), kChannelCount * 2));
+    WsWebUISocket::broadcast(WsWebUISocket::getSender(), webUI);
 
     _saveState();
 }
@@ -302,43 +325,28 @@ void BlindsControl::_publishState(MQTTClient *client)
 void BlindsControl::_loadState()
 {
 #if IOT_BLINDS_CTRL_SAVE_STATE
-    BlindsChannel::StateEnum_t state[_channels.size()];
-    memset(&state, 0, sizeof(state));
     auto file = SPIFFS.open(FSPGM(iot_blinds_control_state_file), fs::FileOpenMode::read);
     if (file) {
-        file.read(reinterpret_cast<uint8_t *>(&state), sizeof(state));
-        for(size_t i = 0; i < _channels.size(); i++) {
-            _channels[i].setState(state[i]);
-        }
+        file.read(reinterpret_cast<uint8_t *>(_states.data()), _states.size() * sizeof(*_states.data()));
     }
-    _debug_printf_P(PSTR("file=%u state=%u,%u\n"), (bool)file, state[0], state[1]);
+    __LDBG_printf("file=%u state=%u,%u", (bool)file, _states[0], _states[1]);
 #endif
 }
 
 void BlindsControl::_saveState()
 {
 #if IOT_BLINDS_CTRL_SAVE_STATE
-    BlindsChannel::StateEnum_t state[_channels.size()];
-    for(size_t i = 0; i < _channels.size(); i++) {
-        state[i] = _channels[i].getState();
-    }
     auto file = SPIFFS.open(FSPGM(iot_blinds_control_state_file), fs::FileOpenMode::write);
     if (file) {
-        file.write(reinterpret_cast<const uint8_t *>(&state), sizeof(state));
+        file.write(reinterpret_cast<const uint8_t *>(_states.data()), _states.size() * sizeof(*_states.data()));
     }
-    _debug_printf_P(PSTR("file=%u state=%u,%u\n"), (bool)file, state[0], state[1]);
+    __LDBG_printf("file=%u state=%u,%u", (bool)file, _states[0], _states[1]);
 #endif
 }
 
 void BlindsControl::_readConfig()
 {
-    auto cfg = config._H_GET(Config().blinds_controller);
-    for(size_t i = 0; i < _channels.size(); i++) {
-        _channels[i].setChannel(cfg.channels[i]);
-    }
-    _swapChannels = cfg.swap_channels;
-    _channel0Dir = cfg.channel0_dir;
-    _channel1Dir = cfg.channel1_dir;
+    _config = Plugins::Blinds::getConfig();
     _loadState();
 }
 

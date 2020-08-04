@@ -22,6 +22,7 @@ DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNameNtpClientConfig_t, "MainConfig().plug
 DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNameSensorConfig_t, "MainConfig().plugins.sensor.cfg");
 DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNameFlagsConfig_t, "MainConfig().system.flags.cfg");
 DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNameSoftAPConfig_t, "MainConfig().network.softap.cfg");
+DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNameBlindsConfig_t, "MainConfig().plugins.blinds.cfg");
 
 
 namespace KFCConfigurationClasses {
@@ -94,6 +95,11 @@ namespace KFCConfigurationClasses {
         auto str = config.getString(handle);
         // __CDBG_printf("handle=%04x str=%s len=%u", handle, _S_STR(str), _S_STRLEN(str));
         return str;
+    }
+
+    char *loadWriteableStringConfig(HandleType handle, uint16_t size)
+    {
+        return config.getWriteableString(handle, size);
     }
 
     void storeStringConfig(HandleType handle, const char *str)

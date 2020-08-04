@@ -20,12 +20,15 @@ public:
         STORAGE,
     } ComponentTypeEnum_t;
 
+    using ComponentType = ComponentTypeEnum_t;
+
     enum class FormatType : uint8_t {
         JSON,
         YAML,
     };
 
     void create(MQTTComponent *component, const String &componentName, FormatType format);
+    void create(ComponentTypeEnum_t componentType, const String &componentName, FormatType format);
 
 public:
     void addParameter(const __FlashStringHelper *name, const String &value);
@@ -77,7 +80,7 @@ public:
     static bool isEnabled();
 
 private:
-    void _create(MQTTComponent *component, const String &name, FormatType format);
+    void _create(ComponentTypeEnum_t componentType, const String &name, FormatType format);
     const String _getUnqiueId(const String &name);
 
     FormatType _format;

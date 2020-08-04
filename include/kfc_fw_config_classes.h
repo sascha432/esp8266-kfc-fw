@@ -9,6 +9,7 @@
 #include <buffer.h>
 #include <crc16.h>
 #include <KFCForms.h>
+#include <KFCSerialization.h>
 
 #include <push_pack.h>
 
@@ -98,13 +99,14 @@ namespace ConfigurationHelper {
     static constexpr size_t k##name##MaxSize = len; \
     static constexpr HandleType k##name##ConfigHandle = CONFIG_GET_HANDLE_STR(_STRINGIFY(class_name) "." _STRINGIFY(name)); \
     static const char *get##name() { REGISTER_HANDLE_NAME(_STRINGIFY(class_name) "." _STRINGIFY(name), __DBG__TYPE_GET); return loadStringConfig(k##name##ConfigHandle); } \
+    static char *getWriteable##name() { REGISTER_HANDLE_NAME(_STRINGIFY(class_name) "." _STRINGIFY(name), __DBG__TYPE_GET); return loadWriteableStringConfig(k##name##ConfigHandle, k##name##MaxSize); } \
     static void set##name(const char *str) { REGISTER_HANDLE_NAME(_STRINGIFY(class_name) "." _STRINGIFY(name), __DBG__TYPE_SET); storeStringConfig(k##name##ConfigHandle, str); } \
     static void set##name##CStr(const char *str) { set##name(str); } \
     static void set##name(const __FlashStringHelper *str) { REGISTER_HANDLE_NAME(_STRINGIFY(class_name) "." _STRINGIFY(name), __DBG__TYPE_SET); storeStringConfig(k##name##ConfigHandle, str); } \
     static void set##name(const String &str) { REGISTER_HANDLE_NAME(_STRINGIFY(class_name) "." _STRINGIFY(name), __DBG__TYPE_SET); storeStringConfig(k##name##ConfigHandle, str); }
 
 #define CREATE_STRING_GETTER_SETTER_MIN_MAX(class_name, name, mins, maxs) \
-    static FormLengthValidator &add##name##LengthValidator(Form &form, const String &message = String(), bool allowEmpty = false) { \
+    static FormLengthValidator &add##name##LengthValidator(Form &form, bool allowEmpty = false, const String &message = String()) { \
         return form.addValidator(FormLengthValidator(message, k##name##MinSize, k##name##MaxSize, allowEmpty)); \
     } \
     static constexpr size_t k##name##MinSize = mins; \
@@ -195,6 +197,7 @@ DECLARE_CONFIG_HANDLE_PROGMEM_STR(handleNameNtpClientConfig_t);
 DECLARE_CONFIG_HANDLE_PROGMEM_STR(handleNameSensorConfig_t);
 DECLARE_CONFIG_HANDLE_PROGMEM_STR(handleNameFlagsConfig_t);
 DECLARE_CONFIG_HANDLE_PROGMEM_STR(handleNameSoftAPConfig_t);
+DECLARE_CONFIG_HANDLE_PROGMEM_STR(handleNameBlindsConfig_t);
 
 #define CIF_DEBUG(...) __VA_ARGS__
 
@@ -213,6 +216,7 @@ namespace KFCConfigurationClasses {
     void *loadWriteableBinaryConfig(HandleType handle, uint16_t length);
     void storeBinaryConfig(HandleType handle, const void *data, uint16_t length);
     const char *loadStringConfig(HandleType handle);
+    char *loadWriteableStringConfig(HandleType handle, uint16_t size);
     void storeStringConfig(HandleType handle, const char *str);
     void storeStringConfig(HandleType handle, const __FlashStringHelper *str);
     void storeStringConfig(HandleType handle, const String &str);
@@ -1193,11 +1197,132 @@ namespace KFCConfigurationClasses {
             static void defaults();
         };
 
+        // --------------------------------------------------------------------
+        // BlindsController
+
+        class BlindsConfig {
+        public:
+            enum class BlindsStateType : uint8_t {
+                NONE = 0,
+                OPEN,
+                CLOSED,
+                MAX
+            };
+
+            typedef struct __attribute__packed__ BlindsConfigOperation_t {
+                using Type = BlindsConfigOperation_t;
+
+                uint16_t open_delay;                                        // delay in seconds after this channel has opened and the other channel opens
+                uint16_t close_delay;                                       // delay in seconds after this channel has closed and the other channel closes
+                CREATE_ENUM_BITFIELD(open_state, BlindsStateType);          // required state for this channel when the other channel opens
+                CREATE_ENUM_BITFIELD(close_state, BlindsStateType);         // required state for this channel when the other channel closes
+
+                BlindsConfigOperation_t() : open_delay(0), close_delay(0), open_state(0), close_state(0) {}
+
+                template<typename Archive>
+                void serialize(Archive & ar, kfc::serialization::version version){
+                    ar & KFC_SERIALIZATION_NVP(open_delay);
+                    ar & KFC_SERIALIZATION_NVP(close_delay);
+                    ar & KFC_SERIALIZATION_NVP(open_state);
+                    ar & KFC_SERIALIZATION_NVP(close_state);
+                }
+
+            } BlindsConfigOperation_t;
+
+            typedef struct __attribute__packed__ BlindsConfigChannel_t {
+                uint16_t pwm_value;
+                uint16_t current_limit;
+                uint16_t current_limit_time;
+                uint16_t open_time;
+                uint16_t close_time;
+                BlindsConfigOperation_t operation;
+
+                BlindsConfigChannel_t() : pwm_value(600), current_limit(100), current_limit_time(50), open_time(5000), close_time(5500) {}
+
+                template<typename Archive>
+                void serialize(Archive & ar, kfc::serialization::version version){
+                    ar & KFC_SERIALIZATION_NVP(pwm_value);
+                    ar & KFC_SERIALIZATION_NVP(current_limit);
+                    ar & KFC_SERIALIZATION_NVP(current_limit_time);
+                    ar & KFC_SERIALIZATION_NVP(open_time);
+                    ar & KFC_SERIALIZATION_NVP(close_time);
+                    ar & KFC_SERIALIZATION_NVP(operation);
+                }
+
+            } BlindsConfigChannel_t;
+
+            typedef struct __attribute__packed__ BlindsConfig_t {
+                using Type = BlindsConfig_t;
+
+                BlindsConfigChannel_t channels[2];
+
+                CREATE_BOOL_BITFIELD(swap_channels);
+                CREATE_BOOL_BITFIELD(channel0_dir);
+                CREATE_BOOL_BITFIELD(channel1_dir);
+
+                template<typename Archive>
+                void serialize(Archive & ar, kfc::serialization::version version) {
+                    ar & KFC_SERIALIZATION_NVP(channels);
+                    ar & KFC_SERIALIZATION_NVP(swap_channels);
+                    ar & KFC_SERIALIZATION_NVP(channel0_dir);
+                    ar & KFC_SERIALIZATION_NVP(channel1_dir);
+                }
+
+                BlindsConfig_t() : channels(), swap_channels(false), channel0_dir(false), channel1_dir(false) {}
+            } SensorConfig_t;
+        };
+
+        class Blinds : public BlindsConfig, public ConfigGetterSetter<BlindsConfig::BlindsConfig_t, _H(MainConfig().plugins.blinds.cfg) CIF_DEBUG(, &handleNameBlindsConfig_t)> {
+        public:
+            static void defaults();
+
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.blinds, Channel0Name, 2, 64);
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.blinds, Channel1Name, 2, 64);
+
+            static const char *getChannelName(size_t num) {
+                switch(num) {
+                    case 0:
+                        return getChannel0Name();
+                    case 1:
+                    default:
+                        return getChannel1Name();
+                }
+            }
+
+            static bool getChannelDirection(const BlindsConfig_t &cfg, size_t num) {
+                switch(num) {
+                    case 0:
+                        return cfg.channel0_dir;
+                    case 1:
+                    default:
+                        return cfg.channel1_dir;
+                }
+            }
+
+            template<typename Archive>
+            void load(Archive & ar, kfc::serialization::version version) const {
+                ar & getConfig();
+                ar & getChannel0Name();
+                ar & getChannel1Name();
+            }
+
+            template<typename Archive>
+            void save(Archive & ar, kfc::serialization::version version) {
+                ar & getWriteableConfig();
+                ar & getWriteableChannel0Name();
+                ar & getWriteableChannel1Name();
+            }
+        };
+
+        // --------------------------------------------------------------------
+        // MDNS
+
         class MDNS
         {
-            public:
+        public:
 
         };
+
 
         // --------------------------------------------------------------------
         // Plugin Structure
@@ -1212,6 +1337,7 @@ namespace KFCConfigurationClasses {
         SyslogClient syslog;
         NTPClient ntpclient;
         Sensor sensor;
+        Blinds blinds;
         MDNS mdns;
 
     };

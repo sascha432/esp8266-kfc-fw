@@ -12,15 +12,15 @@
         "default": "Set-Cookie"
     },
     "mime_text_plain": {
-        "use_counter": 18,
+        "use_counter": 17,
         "default": "text/plain"
     },
     "null": {
-        "use_counter": 12,
+        "use_counter": 13,
         "default": "null"
     },
     "FormLengthValidator_default_message": {
-        "use_counter": 2,
+        "use_counter": 3,
         "default": "This field must be between %min% and %max% characters"
     },
     "FormValidator_min_macro": {
@@ -44,7 +44,7 @@
         "default": "Invalid hostname or IP address"
     },
     "webui_json_id": {
-        "use_counter": 33,
+        "use_counter": 21,
         "default": "id"
     },
     "webui_json_name": {
@@ -64,11 +64,11 @@
         "default": "offset"
     },
     "webui_json_value": {
-        "use_counter": 33,
+        "use_counter": 21,
         "default": "value"
     },
     "webui_json_state": {
-        "use_counter": 26,
+        "use_counter": 14,
         "default": "state"
     },
     "mime_application_json": {
@@ -88,7 +88,7 @@
         "default": "on"
     },
     "off": {
-        "use_counter": 6,
+        "use_counter": 7,
         "default": "off"
     },
     "crash_counter_file": {
@@ -376,19 +376,19 @@
         "default": "clr_temp_cmd_t"
     },
     "blinds_controller_channel1_sensor": {
-        "use_counter": 2,
+        "use_counter": 0,
         "default": "blinds_channel1_sensor"
     },
     "blinds_controller_channel1": {
-        "use_counter": 2,
+        "use_counter": 0,
         "default": "blinds_channel1"
     },
     "blinds_controller_channel2_sensor": {
-        "use_counter": 2,
+        "use_counter": 0,
         "default": "blinds_channel2_sensor"
     },
     "blinds_controller_channel2": {
-        "use_counter": 2,
+        "use_counter": 0,
         "default": "blinds_channel2"
     },
     "iot_blinds_control_state_file": {
@@ -564,7 +564,7 @@
         "default": "Detected eth address %s"
     },
     "stk500v1_log_file": {
-        "use_counter": 5,
+        "use_counter": 4,
         "default": "/stk500v1/debug.log"
     },
     "stk500v1_sig_file": {
@@ -1044,7 +1044,7 @@
         "default": "deflate"
     },
     "config": {
-        "use_counter": 2,
+        "use_counter": 3,
         "default": "config"
     },
     "Success": {
@@ -1068,11 +1068,11 @@
         "default": "n/a"
     },
     "stk500v1_tmp_file": {
-        "use_counter": 2,
+        "use_counter": 0,
         "default": "/stk500v1/firmware_tmp.hex"
     },
     "iot_sensor_hlw80xx_state_file": {
-        "use_counter": 2,
+        "use_counter": 0,
         "default": "/.pvt/hlw80xx.state"
     },
     "seconds": {
@@ -1092,7 +1092,7 @@
         "default": "hPa"
     },
     "channel__u": {
-        "use_counter": 14,
+        "use_counter": 16,
         "default": "channel_%u"
     },
     "temperature": {
@@ -1112,7 +1112,7 @@
         "default": "storage"
     },
     "image_type": {
-        "use_counter": 3,
+        "use_counter": 2,
         "default": "image_type"
     },
     "id": {
@@ -1120,7 +1120,7 @@
         "default": "id"
     },
     "mqtt": {
-        "use_counter": 7,
+        "use_counter": 8,
         "default": "mqtt"
     },
     "_set": {
@@ -1160,19 +1160,19 @@
         "default": "brightness"
     },
     "_degreeC": {
-        "use_counter": 12,
+        "use_counter": 8,
         "default": "\\u00b0C"
     },
     "vcc": {
-        "use_counter": 2,
+        "use_counter": 0,
         "default": "vcc"
     },
     "frequency": {
-        "use_counter": 2,
+        "use_counter": 0,
         "default": "frequency"
     },
     "Hz": {
-        "use_counter": 2,
+        "use_counter": 0,
         "default": "Hz"
     },
     "light_sensor": {
@@ -1392,7 +1392,7 @@
         "default": "size"
     },
     "_serial_console_html": {
-        "use_counter": 2,
+        "use_counter": 1,
         "default": "/serial_console.html"
     },
     "description_xml": {
@@ -1736,7 +1736,71 @@
         "default": "sec"
     },
     "_02x": {
-        "use_counter": 1,
+        "use_counter": 3,
         "default": "%02x"
+    },
+    "0x_08x": {
+        "use_counter": 1,
+        "default": "0x%08x"
+    },
+    "Forward": {
+        "use_counter": 2,
+        "default": "Forward"
+    },
+    "ms": {
+        "use_counter": 2,
+        "default": "ms"
+    },
+    "mA": {
+        "use_counter": 1,
+        "default": "mA"
+    },
+    "Open": {
+        "use_counter": 1,
+        "default": "Open"
+    },
+    "Closed": {
+        "use_counter": 1,
+        "default": "Closed"
+    },
+    "Stopped": {
+        "use_counter": 1,
+        "default": "Stopped"
+    },
+    "state": {
+        "use_counter": 2,
+        "default": "state"
+    },
+    "_is_open": {
+        "use_counter": 0,
+        "default": "_is_open"
+    },
+    "Busy": {
+        "use_counter": 1,
+        "default": "Busy"
+    },
+    "metrics": {
+        "use_counter": 0,
+        "default": "metrics"
+    },
+    "channels": {
+        "use_counter": 1,
+        "default": "channels"
+    },
+    "states": {
+        "use_counter": 1,
+        "default": "states"
+    },
+    "binary": {
+        "use_counter": 1,
+        "default": "binary"
+    },
+    "Turn": {
+        "use_counter": 1,
+        "default": "Turn"
+    },
+    "Move": {
+        "use_counter": 1,
+        "default": "Move"
     }
 }

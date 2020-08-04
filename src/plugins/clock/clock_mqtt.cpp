@@ -15,10 +15,12 @@
 
 MQTTComponent::MQTTAutoDiscoveryPtr ClockPlugin::nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num)
 {
-    MQTTAutoDiscoveryPtr discovery;
+    if (num >= getAutoDiscoveryCount()) {
+        return;
+    }
+    auto discovery = MQTTAutoDiscoveryPtr(new MQTTAutoDiscovery());
     switch(num) {
         case 0: {
-            discovery = new MQTTAutoDiscovery();
             discovery->create(this, F("clock"), format);
             discovery->addStateTopic(MQTTClient::formatTopic(FSPGM(_state)));
             discovery->addCommandTopic(MQTTClient::formatTopic(FSPGM(_set)));
@@ -33,15 +35,12 @@ MQTTComponent::MQTTAutoDiscoveryPtr ClockPlugin::nextAutoDiscovery(MQTTAutoDisco
         break;
 #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
         case 1: {
-            MQTTComponentHelper component(MQTTComponent::ComponentTypeEnum_t::SENSOR);
-            discovery = component.createAutoDiscovery(FSPGM(light_sensor), format);
+            discovery->create(MQTTComponent::ComponentType::SENSOR, FSPGM(light_sensor), format);
             discovery->addStateTopic(MQTTClient::formatTopic(FSPGM(light_sensor)));
             discovery->addUnitOfMeasurement(String('%'));
         }
         break;
 #endif
-        default:
-            return nullptr;
     }
     discovery->finalize();
     return discovery;

@@ -6,12 +6,12 @@
 #include <LoopFunctions.h>
 #include <MicrosTimer.h>
 #include <KFCForms.h>
+#include <kfc_fw_config.h>
+#include <PluginComponent.h>
 #include <PrintHtmlEntitiesString.h>
-#include <StringKeyValueStore.h>
-#include "plugins.h"
 #include "blinds_ctrl.h"
 #include "BlindsControl.h"
-#include "BlindsChannel.h"
+#include "../src/plugins/mqtt/mqtt_client.h"
 
 #if DEBUG_IOT_BLINDS_CTRL
 #include <debug_helper_enable.h>
@@ -21,62 +21,31 @@
 
 // Plugin
 
-class BlindsControlPlugin : public PluginComponent, public BlindsControl {
-public:
-    BlindsControlPlugin();
-
-    virtual PGM_P getName() const {
-        return PSTR("blindsctrl");
-    }
-    virtual const __FlashStringHelper *getFriendlyName() const {
-        return F("Blinds Controller");
-    }
-    virtual OptionsType getOptions() const override {
-        return EnumHelper::Bitset::all(OptionsType::HAS_STATUS, OptionsType::HAS_CONFIG_FORM, OptionsType::HAS_WEB_UI, OptionsType::HAS_AT_MODE, OptionsType::HAS_AT_MODE);
-    }
-
-    virtual void setup(SetupModeType mode) override;
-    virtual void reconfigure(PGM_P source) override;
-    virtual void getStatus(Print &output) override;
-    virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
-    virtual void configurationSaved() override;
-
-// WebUI
-public:
-    virtual void createWebUI(WebUI &webUI) override;
-    virtual void getValues(JsonArray &array) override;
-    virtual void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState) override;
-
-#if AT_MODE_SUPPORTED
-    virtual void atModeHelpGenerator() override;
-    virtual bool atModeHandler(AtModeArgs &args) override;
-
-#if IOT_BLINDS_CTRL_TESTMODE
-private:
-    void _printTestInfo();
-    void _testLoopMethod();
-
-    MillisTimer _printCurrentTimeout;
-    uint16_t _currentLimit;
-    uint16_t _currentLimitMinCount;
-    uint16_t _peakCurrent;
-    bool _isTestMode;
-#endif
-
-#endif
-
-public:
-    static void loopMethod();
-
-#if IOT_BLINDS_CTRL_RPM_PIN
-    static void rpmIntCallback(InterruptInfo info);
-#endif
-};
-
+extern int8_t operator *(const BlindsControl::ChannelType type);
 
 static BlindsControlPlugin plugin;
 
-BlindsControlPlugin::BlindsControlPlugin() : BlindsControl(), _isTestMode(false)
+PROGMEM_DEFINE_PLUGIN_OPTIONS(
+    BlindsControlPlugin,
+    "blindsctrl",       // name
+    "Blinds Controller",// friendly name
+    "",                 // web_templates
+    "blinds",           // config_forms
+    "mqtt",             // reconfigure_dependencies
+    PluginComponent::PriorityType::BLINDS,
+    PluginComponent::RTCMemoryId::NONE,
+    static_cast<uint8_t>(PluginComponent::MenuType::AUTO),
+    false,              // allow_safe_mode
+    false,              // setup_after_deep_sleep
+    true,               // has_get_status
+    true,               // has_config_forms
+    true,               // has_web_ui
+    false,              // has_web_templates
+    true,               // has_at_mode
+    0                   // __reserved
+);
+
+BlindsControlPlugin::BlindsControlPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(BlindsControlPlugin)), BlindsControl(), _isTestMode(false)
 {
     REGISTER_PLUGIN(this, "BlindsControlPlugin");
 }
@@ -84,11 +53,24 @@ BlindsControlPlugin::BlindsControlPlugin() : BlindsControl(), _isTestMode(false)
 void BlindsControlPlugin::setup(SetupModeType mode)
 {
     _setup();
+    MQTTClient::safeRegisterComponent(this);
     LoopFunctions::add(loopMethod);
 }
 
-void BlindsControlPlugin::reconfigure(PGM_P source) {
-    _readConfig();
+void BlindsControlPlugin::reconfigure(const String &source)
+{
+    if (String_equals(source, FSPGM(mqtt))) {
+        MQTTClient::safeReRegisterComponent(this);
+    }
+    else {
+        _readConfig();
+    }
+}
+
+void BlindsControlPlugin::shutdown()
+{
+    LoopFunctions::add(loopMethod);
+    MQTTClient::safeUnregisterComponent(this);
 }
 
 void BlindsControlPlugin::getStatus(Print &output)
@@ -98,90 +80,19 @@ void BlindsControlPlugin::getStatus(Print &output)
     output.print(F("Position sensing and stall protection" HTML_S(br)));
 #endif
 
-    for(uint8_t i = 0; i < _channels.size(); i++) {
-        auto &_channel = _channels[i].getChannel();
-        output.printf_P(PSTR("Channel %u, state %s, open %ums, close %ums, current limit %umA/%ums" HTML_S(br)),
-            (i + 1),
-            BlindsChannel::_stateStr(_channels[i].getState()),
-            _channel.openTime,
-            _channel.closeTime,
-            (unsigned)ADC_TO_CURRENT(_channel.currentLimit),
-            _channel.currentLimitTime
-        );
+    for(const auto channel: _states.channels()) {
+        //TODO
+        // if (_config.channels[*channel])
+        // output.printf_P(PSTR("Channel %u, state %s, open %ums, close %ums, current limit %umA/%ums" HTML_S(br)),
+        //     *channel,
+        //     _states[channel]._getFPStr(),
+        //     _channel.openTime,
+        //     _channel.closeTime,
+        //     (unsigned)ADC_TO_CURRENT(_channel.currentLimit),
+        //     _channel.currentLimitTime
+        // );
     }
 }
-
-void BlindsControlPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form) {
-
-    auto *blinds = &config._H_W_GET(Config().blinds_controller); // must be a pointer
-    auto forward = F("Forward");
-    auto reverse = F("Reverse (Open/close time is reversed as well)");
-    auto mA = F("mA");
-    auto ms = F("ms");
-    auto motorSpeed = F("0-1023");
-    FormUI::ItemsList currentLimitItems;
-
-    currentLimitItems.emplace_back(String(5), F("Extra Fast (5ms)"));
-    currentLimitItems.emplace_back(String(20), F("Fast (20ms)"));
-    currentLimitItems.emplace_back(String(50), F("Medium (50ms)"));
-    currentLimitItems.emplace_back(String(150), F("Slow (150ms)"));
-    currentLimitItems.emplace_back(String(250), F("Extra Slow (250ms)"));
-
-    form.setFormUI(F("Blinds Controller"));
-
-    form.add<bool>(F("channel0_dir"), &blinds->channel0_dir)->setFormUI(new FormUI::UI(FormUI::Type::SELECT, F("Channel 0 Direction")))->setBoolItems(reverse, forward));
-    form.add<bool>(F("channel1_dir"), &blinds->channel1_dir)->setFormUI(new FormUI::UI(FormUI::Type::SELECT, F("Channel 1 Direction")))->setBoolItems(reverse, forward));
-    form.add<bool>(F("swap_channels"), &blinds->swap_channels)->setFormUI(new FormUI::UI(FormUI::Type::SELECT, F("Swap Channels")))->setBoolItems(FSPGM(Yes), FSPGM(No)));
-
-    for (uint8_t i = 0; i < _channels.size(); i++) {
-        form.add<uint16_t>(PrintString(F("channel%u_close_time"), i), &blinds->channels[i].closeTime)
-            ->setFormUI(new FormUI::UI(FormUI::Type::TEXT, PrintString(F("Channel %u Open Time Limit"), i)))->setSuffix(ms));
-        form.add<uint16_t>(PrintString(F("channel%u_open_time"), i), &blinds->channels[i].openTime)
-            ->setFormUI(new FormUI::UI(FormUI::Type::TEXT, PrintString(F("Channel %u Close Time Limit"), i)))->setSuffix(ms));
-        form.add<uint16_t>(PrintString(F("channel%u_current_limit"), i), &blinds->channels[i].currentLimit, [](uint16_t &value, FormField &field, bool isSetter){
-                if (isSetter) {
-                    value = CURRENT_TO_ADC(value);
-                }
-                else {
-                    value = ADC_TO_CURRENT(value);
-                }
-                return true;
-            })
-            ->setFormUI(new FormUI::UI(FormUI::Type::TEXT, PrintString(F("Channel %u Current Limit"), i)))->setSuffix(mA));
-        form.addValidator(FormRangeValidator(ADC_TO_CURRENT(0), ADC_TO_CURRENT(1023)));
-
-        form.add<uint16_t>(PrintString(F("channel%u_current_limit_time"), i), &blinds->channels[i].currentLimitTime)
-            ->setFormUI(new FormUI::UI(FormUI::Type::SELECT, PrintString(F("Channel %u Current Limit Trigger Time"), i)))->addItems(currentLimitItems));
-        form.add<uint16_t>(PrintString(F("channel%u_pwm_value"), i), &blinds->channels[i].pwmValue)
-            ->setFormUI(new FormUI::UI(FormUI::Type::TEXT, PrintString(F("Channel %u Motor PWM"), i)))->setSuffix(motorSpeed));
-        form.addValidator(FormRangeValidator(0, 1023));
-
-    }
-
-    form.finalize();
-}
-
-void BlindsControlPlugin::configurationSaved()
-{
-    using KeyValueStorage::Container;
-    using KeyValueStorage::ContainerPtr;
-    using KeyValueStorage::Item;
-
-    auto blinds = config._H_GET(Config().blinds_controller);
-    bool dir[2] = { blinds.channel0_dir, blinds.channel1_dir };
-    auto container = ContainerPtr(new Container());
-    container->add(Item::create(F("blinds_swap_ch"), blinds.swap_channels));
-    for(uint8_t i = 0; i < 2; i++) {
-        container->add(Item::create(PrintString(F("blinds[%u]dir"), i), dir[i]));
-        container->add(Item::create(PrintString(F("blinds[%u]close_time"), i), blinds.channels[i].closeTime));
-        container->add(Item::create(PrintString(F("blinds[%u]I_limit"), i), blinds.channels[i].currentLimit));
-        container->add(Item::create(PrintString(F("blinds[%u]I_limit_time"), i), blinds.channels[i].currentLimitTime));
-        container->add(Item::create(PrintString(F("blinds[%u]open_time"), i), blinds.channels[i].openTime));
-        container->add(Item::create(PrintString(F("blinds[%u]pwm"), i), blinds.channels[i].pwmValue));
-    }
-    config.callPersistantConfig(container);
-}
-
 
 void BlindsControlPlugin::createWebUI(WebUI &webUI) {
 
@@ -189,17 +100,16 @@ void BlindsControlPlugin::createWebUI(WebUI &webUI) {
     row->setExtraClass(JJ(title));
     row->addGroup(F("Blinds"), false);
 
-    row = &webUI.addRow();
-    row->addBadgeSensor(FSPGM(blinds_controller_channel1_sensor), F("Turn"), JsonString());
+    for(const auto channel: _states.channels()) {
+        String prefix = PrintString(FSPGM(channel__u), channel);
 
-    row = &webUI.addRow();
-    row->addSwitch(FSPGM(blinds_controller_channel1), F("Channel 1"));
+        row = &webUI.addRow();
+        row->addBadgeSensor(prefix + F("_state"), Plugins::Blinds::getChannelName(*channel), JsonString());
 
-    row = &webUI.addRow();
-    row->addBadgeSensor(FSPGM(blinds_controller_channel2_sensor), F("Move"), JsonString());
+        row = &webUI.addRow();
+        row->addSwitch(prefix + F("_set"), String(F("Channel ")) + String(*channel));
 
-    row = &webUI.addRow();
-    row->addSwitch(FSPGM(blinds_controller_channel2), F("Channel 2"));
+    }
 }
 
 void BlindsControlPlugin::getValues(JsonArray &array)
@@ -209,7 +119,7 @@ void BlindsControlPlugin::getValues(JsonArray &array)
 
 void BlindsControlPlugin::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
 {
-    BlindsControl::setValues(id, value, hasValue, state, hasState);;
+    BlindsControl::setValue(id, value, hasValue, state, hasState);
 }
 
 
@@ -239,21 +149,16 @@ void BlindsControlPlugin::loopMethod()
 
 #else
 
-void BlindsControlPlugin::loopMethod() {
+void BlindsControlPlugin::loopMethod()
+{
     plugin._loopMethod();
 }
 
 #endif
 
-#if AT_MODE_SUPPORTED
+#if AT_MODE_SUPPORTED && IOT_BLINDS_CTRL_TESTMODE
 
 #include "at_mode.h"
-
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(BCMS, "BCMS", "<channel=0/1>,<0=closed/1=open>", "Set channel state");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF(BCMD, "BCMD", "<0=swap channels/1=channel0/2=channel2>,<0/1>", "Set swap channel/channel 0/1 direction", "Display settings");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF(BCMC, "BCMC", "<channel=0/1>,<level=0-1023>,<open-time/ms>,<close-time/ms>,<current-limit=0-1023>,<limit-time/ms>", "Configure channel", "Display settings");
-
-#if IOT_BLINDS_CTRL_TESTMODE
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(BCME, "BCME", "<channel=0/1>,<direction=0/1>,<max-time/ms>,<level=0-1023>,<limit=0-1023>,<limit-time>", "Enable motor # for max-time milliseconds");
 
@@ -306,132 +211,58 @@ void BlindsControlPlugin::_testLoopMethod()
     }
 }
 
-#endif
-
-bool BlindsControlPlugin::hasAtMode() const
+ATModeCommandHelpArrayPtr BlindsControlPlugin::atModeCommandHelp(size_t &size) const
 {
-    return true;
-}
-
-void BlindsControlPlugin::atModeHelpGenerator()
-{
-    auto name = getName_P();
-#if IOT_BLINDS_CTRL_TESTMODE
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(BCME), name);
-#endif
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(BCMS), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(BCMD), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(BCMC), name);
+    static ATModeCommandHelpArray tmp PROGMEM = {
+        PROGMEM_AT_MODE_HELP_COMMAND(BCME),
+    };
+    size = sizeof(tmp) / sizeof(tmp[0]);
+    return tmp;
 }
 
 bool BlindsControlPlugin::atModeHandler(AtModeArgs &args)
 {
-    if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(BCMS))) {
-        if (args.requireArgs(2, 2)) {
-            uint8_t channel = args.toInt(0) % _channels.size();
-            _channels[channel].setState(args.isFalse(1) ? BlindsChannel::CLOSED : BlindsChannel::OPEN);
-            _saveState();
-            args.printf_P(PSTR("channel %u state %s"), channel, BlindsChannel::_stateStr(_channels[channel].getState()));
-        }
+    if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(BCME))) {
+        //TODO
+        // if (args.requireArgs(6, 6)) {
+        //     uint8_t pins[] = { IOT_BLINDS_CTRL_M1_PIN, IOT_BLINDS_CTRL_M2_PIN, IOT_BLINDS_CTRL_M3_PIN, IOT_BLINDS_CTRL_M4_PIN };
+        //     uint8_t channel = args.toInt(0);
+        //     uint8_t direction = args.toInt(1) % 2;
+        //     uint32_t time = args.toInt(2);
+        //     uint16_t pwmLevel = args.toInt(3);
+
+        //     if (_config.swap_channels) {
+        //         channel++;
+        //     }
+        //     channel %= _channels.size();
+        //     if (channel == 0 && cfg.channel0_dir) {
+        //         direction++;
+        //     }
+        //     if (channel == 1 && cfg.channel1_dir) {
+        //         direction++;
+        //     }
+        //     direction %= 2;
+
+        //     _currentLimit = args.toInt(4);
+        //     _currentLimitMinCount = args.toInt(5);
+        //     _activeChannel = channel;
+
+        //     analogWriteFreq(IOT_BLINDS_CTRL_PWM_FREQ);
+        //     for(uint i = 0; i < 4; i++) {
+        //         analogWrite(pins[i], LOW);
+        //     }
+        //     analogWrite(pins[(channel << 1) | direction], pwmLevel);
+        //     args.printf_P(PSTR("level %u current limit/%u %u frequency %.2fkHz"), pwmLevel, _currentLimit, _currentLimitMinCount, IOT_BLINDS_CTRL_PWM_FREQ / 1000.0);
+        //     args.printf_P(PSTR("channel %u direction %u time %u"), channel, direction, time);
+
+        //     _peakCurrent = 0;
+        //     _printCurrentTimeout.set(500);
+        //     _motorTimeout.set(time);
+        //     _isTestMode = true;
+        //     _clearAdc();
+        // }
         return true;
     }
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(BCMC))) {
-        if (args.isQueryMode() || args.requireArgs(6, 6)) {
-            auto &cfg = config._H_W_GET(Config().blinds_controller);
-            uint8_t channel = 0xff;
-            if (args.size() == 6) {
-                channel = args.toInt(0) % 2;
-                cfg.channels[channel].pwmValue = (uint16_t)args.toInt(1);
-                cfg.channels[channel].openTime = (uint16_t)args.toInt(2);
-                cfg.channels[channel].closeTime = (uint16_t)args.toInt(3);
-                cfg.channels[channel].currentLimit = (uint16_t)args.toInt(4);
-                cfg.channels[channel].currentLimitTime = (uint16_t)args.toInt(5);
-                _readConfig();
-            }
-            for(uint8_t i = 0; i < 2; i++) {
-                if (channel == i || channel == 0xff) {
-                    args.printf_P(PSTR("channel=%u,level=%u,open=%ums,close=%ums,current limit=%u (%umA)/%ums"),
-                        i,
-                        cfg.channels[i].pwmValue,
-                        cfg.channels[i].openTime,
-                        cfg.channels[i].closeTime,
-                        cfg.channels[i].currentLimit,
-                        ADC_TO_CURRENT(cfg.channels[i].currentLimit),
-                        cfg.channels[i].currentLimitTime
-                    );
-                }
-            }
-        }
-        return true;
-    }
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(BCMD))) {
-        if (args.isQueryMode() || args.requireArgs(2, 2)) {
-            auto &cfg = config._H_W_GET(Config().blinds_controller);
-            if (args.size() == 2) {
-                uint8_t item = args.toInt(0) % 3;
-                uint8_t value = args.toInt(1) % 2;
-                switch(item) {
-                    case 0:
-                        cfg.swap_channels = value;
-                        break;
-                    case 1:
-                        cfg.channel0_dir = value;
-                        break;
-                    case 2:
-                        cfg.channel1_dir = value;
-                        break;
-                }
-                _readConfig();
-            }
-            args.printf_P(PSTR("swap channels=%u"), cfg.swap_channels);
-            args.printf_P(PSTR("channel 0 direction=%u"), cfg.channel0_dir);
-            args.printf_P(PSTR("channel 1 direction=%u"), cfg.channel1_dir);
-        }
-        return true;
-    }
-#if IOT_BLINDS_CTRL_TESTMODE
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(BCME))) {
-        if (args.requireArgs(6, 6)) {
-            uint8_t pins[] = { IOT_BLINDS_CTRL_M1_PIN, IOT_BLINDS_CTRL_M2_PIN, IOT_BLINDS_CTRL_M3_PIN, IOT_BLINDS_CTRL_M4_PIN };
-            uint8_t channel = args.toInt(0);
-            uint8_t direction = args.toInt(1) % 2;
-            uint32_t time = args.toInt(2);
-            uint16_t pwmLevel = args.toInt(3);
-
-            auto cfg = config._H_GET(Config().blinds_controller);
-            if (cfg.swap_channels) {
-                channel++;
-            }
-            channel %= _channels.size();
-            if (channel == 0 && cfg.channel0_dir) {
-                direction++;
-            }
-            if (channel == 1 && cfg.channel1_dir) {
-                direction++;
-            }
-            direction %= 2;
-
-            _currentLimit = args.toInt(4);
-            _currentLimitMinCount = args.toInt(5);
-            _activeChannel = channel;
-
-            analogWriteFreq(IOT_BLINDS_CTRL_PWM_FREQ);
-            for(uint i = 0; i < 4; i++) {
-                analogWrite(pins[i], LOW);
-            }
-            analogWrite(pins[(channel << 1) | direction], pwmLevel);
-            args.printf_P(PSTR("level %u current limit/%u %u frequency %.2fkHz"), pwmLevel, _currentLimit, _currentLimitMinCount, IOT_BLINDS_CTRL_PWM_FREQ / 1000.0);
-            args.printf_P(PSTR("channel %u direction %u time %u"), channel, direction, time);
-
-            _peakCurrent = 0;
-            _printCurrentTimeout.set(500);
-            _motorTimeout.set(time);
-            _isTestMode = true;
-            _clearAdc();
-        }
-        return true;
-    }
-#endif
     return false;
 }
 

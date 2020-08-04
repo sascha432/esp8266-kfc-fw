@@ -21,24 +21,29 @@
 
 using KFCConfigurationClasses::System;
 
-void MQTTAutoDiscovery::create(MQTTComponent *component, const String &componentName, MQTTAutoDiscovery::FormatType format)
+void MQTTAutoDiscovery::create(MQTTComponent *component, const String &componentName, FormatType format)
+{
+    create(component->getType(), componentName, format);
+}
+
+void MQTTAutoDiscovery::create(ComponentType componentType, const String &componentName, FormatType format)
 {
     String suffix = System::Device::getName();
     if (componentName.length()) {
         suffix += '/';
         suffix += componentName;
     }
-    _create(component, suffix, format);
+    _create(componentType, suffix, format);
 }
 
-void MQTTAutoDiscovery::_create(MQTTComponent *component, const String &name, MQTTAutoDiscovery::FormatType format)
+void MQTTAutoDiscovery::_create(ComponentType componentType, const String &name, FormatType format)
 {
     String uniqueId;
 
     _format = format;
     _topic = MQTTClient::ClientConfig::getAutoDiscoveryPrefix();
     _topic += '/';
-    _topic += component->getComponentName();
+    _topic += MQTTComponent::getNameByType(componentType);
     _topic += '/';
     _topic += name;
     _topic += F("/config");
@@ -51,7 +56,7 @@ void MQTTAutoDiscovery::_create(MQTTComponent *component, const String &name, MQ
         addParameter(F("~"), _baseTopic);
 #endif
     } else {
-        _discovery += component->getComponentName();
+        _discovery += MQTTComponent::getNameByType(componentType);
         _discovery += F(":\n  - ");
     }
     addParameter(FSPGM(name), name);

@@ -20,7 +20,8 @@ class WebTemplate;
 class Form;
 class AtModeArgs;
 class KFCFWConfiguration;
-using ATModeCommandHelpArray = const struct ATModeCommandHelp_t *;
+using ATModeCommandHelpArray = const struct ATModeCommandHelp_t *[];
+using ATModeCommandHelpArrayPtr = const struct ATModeCommandHelp_t **;
 
 /*
 PROGMEM_DEFINE_PLUGIN_OPTIONS(
@@ -55,28 +56,34 @@ public:
     using NameType = const __FlashStringHelper *;
 
     enum class PriorityType : int8_t {
-        NONE = -127,
-        RESET_DETECTOR = -126,
-        CONFIG = -120,
-        SAVECRASH = -117,
-        SERIAL2TCP = -115,
-        BUTTONS = -100,
-        MDNS = -90,
-        SSDP = -85,
-        SYSLOG = -80,
-        NTP = -70,
-        HTTP = -60,
-        ALARM = -55,
-        HASS = -50,
-        MAX = 0,                                        // highest prio, -127 to -1 is reserved for the system
-        HTTP2SERIAL = 10,
-        MQTT = 20,
-        DEFAULT = 64,
-        ATOMIC_SUN = 100,
-        DIMMER_MODULE = 101,
-        SENSOR = 110,
-        PING_MONITOR = 126,
-        MIN = 127
+        NONE = std::numeric_limits<int8_t>::min(),
+        // System
+        RESET_DETECTOR,
+        CONFIG,
+        SAVECRASH,
+        SERIAL2TCP,
+        BUTTONS,
+        MDNS,
+        SSDP,
+        SYSLOG,
+        NTP,
+        HTTP,
+        ALARM,
+        // Plugins
+        // highest priority for plugins
+        MAX = 0,
+        HASS,
+        HTTP2SERIAL,
+        MQTT,
+        // default
+        DEFAULT = std::numeric_limits<int8_t>::max() / 2,
+        ATOMIC_SUN,
+        DIMMER_MODULE,
+        BLINDS,
+        SENSOR,
+        PING_MONITOR,
+        // lowest priority for plugins
+        MIN = std::numeric_limits<int8_t>::max()
     };
 
     enum class RTCMemoryId : uint8_t {
@@ -284,7 +291,7 @@ public:
 
 #if AT_MODE_SUPPORTED
     // returns array ATModeCommandHelp_t[size] or nullptr for no help
-    virtual ATModeCommandHelpArray atModeCommandHelp(size_t &size) const;
+    virtual ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const;
     // do not override if atModeCommandHelp exists
     virtual void atModeHelpGenerator();
     virtual bool atModeHandler(AtModeArgs &args);

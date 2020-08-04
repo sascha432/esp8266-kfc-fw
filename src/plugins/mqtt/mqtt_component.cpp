@@ -287,40 +287,19 @@ uint8_t MQTTComponent::getAutoDiscoveryNumber()
 
 #endif
 
-const __FlashStringHelper *MQTTComponent::getComponentName() const
+MQTTComponent::NameType MQTTComponent::getNameByType(ComponentType type)
 {
-    switch(_type) {
-        case ComponentTypeEnum_t::LIGHT:
+    switch(type) {
+        case ComponentType::LIGHT:
             return FSPGM(mqtt_component_light);
-        case ComponentTypeEnum_t::SENSOR:
+        case ComponentType::SENSOR:
             return FSPGM(mqtt_component_sensor);
-        case ComponentTypeEnum_t::BINARY_SENSOR:
+        case ComponentType::BINARY_SENSOR:
             return FSPGM(mqtt_component_binary_sensor);
-        case ComponentTypeEnum_t::STORAGE:
+        case ComponentType::STORAGE:
             return FSPGM(mqtt_component_storage);
-        case ComponentTypeEnum_t::SWITCH:
+        case ComponentType::SWITCH:
         default:
             return FSPGM(mqtt_component_switch);
     }
-}
-
-MQTTComponentHelper::MQTTComponentHelper(ComponentTypeEnum_t type) : MQTTComponent(type)
-{
-}
-
-MQTTComponent::MQTTAutoDiscoveryPtr MQTTComponentHelper::nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num)
-{
-    return nullptr;
-}
-
-uint8_t MQTTComponentHelper::getAutoDiscoveryCount() const
-{
-    return 0;
-}
-
-MQTTAutoDiscovery *MQTTComponentHelper::createAutoDiscovery(const String &componentName, MQTTAutoDiscovery::FormatType format)
-{
-    auto discovery = new MQTTAutoDiscovery();
-    discovery->create(this, componentName, format);
-    return discovery;
 }

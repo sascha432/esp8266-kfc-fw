@@ -160,7 +160,7 @@ void PluginComponent::setValue(const String &id, const String &value, bool hasVa
 
 #if AT_MODE_SUPPORTED
 
-ATModeCommandHelpArray PluginComponent::atModeCommandHelp(size_t &size) const
+ATModeCommandHelpArrayPtr PluginComponent::atModeCommandHelp(size_t &size) const
 {
     size = 0;
     return nullptr;
@@ -173,7 +173,7 @@ void PluginComponent::atModeHelpGenerator()
         auto help = atModeCommandHelp(size);
         if (help) {
             for(size_t i = 0; i < size; i++) {
-                at_mode_add_help(&help[i], getName_P());
+                at_mode_add_help(help[i], getName_P());
             }
         }
     }

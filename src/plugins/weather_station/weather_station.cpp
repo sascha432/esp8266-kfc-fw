@@ -503,7 +503,7 @@ bool WeatherStationPlugin::atModeHandler(AtModeArgs &args)
                 _draw();
                 args.printf_P(PSTR("time format 24h=%u"), state);
             }
-            else if (args.equalsIgnoreCase(0, F("metrics"))) {
+            else if (args.equalsIgnoreCase(0, FSPGM(metrics))) {
                 _config.is_metric = state;
                 _draw();
                 args.printf_P(PSTR("metrics=%u"), state);

@@ -56,40 +56,40 @@ MQTTComponent::MQTTAutoDiscoveryPtr Sensor_HLW80xx::nextAutoDiscovery(MQTTAutoDi
     auto discovery = new MQTTAutoDiscovery();
     switch(num) {
         case 0:
-            discovery->create(this, F("power"), format);
+            discovery->create(this, FSPGM(power), format);
             discovery->addStateTopic(topic);
             discovery->addUnitOfMeasurement('W');
-            discovery->addValueTemplate(F("power"));
+            discovery->addValueTemplate(FSPGM(power));
             break;
         case 1:
-            discovery->create(this, F("energy_total"), format);
+            discovery->create(this, FSPGM(energy_total), format);
             discovery->addStateTopic(topic);
-            discovery->addUnitOfMeasurement(F("kWh"));
-            discovery->addValueTemplate(F("energy_total"));
+            discovery->addUnitOfMeasurement(FSGM(kWh));
+            discovery->addValueTemplate(FSPGM(energy_total));
             break;
         case 2:
-            discovery->create(this, F("energy"), format);
+            discovery->create(this, FSPGM(energy), format);
             discovery->addStateTopic(topic);
-            discovery->addUnitOfMeasurement(F("kWh"));
-            discovery->addValueTemplate(F("energy"));
+            discovery->addUnitOfMeasurement(FSPGM(kWh));
+            discovery->addValueTemplate(FSPGM(energy));
             break;
         case 3:
-            discovery->create(this, F("voltage"), format);
+            discovery->create(this, FSPGM(voltage), format);
             discovery->addStateTopic(topic);
             discovery->addUnitOfMeasurement('V');
-            discovery->addValueTemplate(F("voltage"));
+            discovery->addValueTemplate(FSPGM(voltage));
             break;
         case 4:
-            discovery->create(this, F("current"), format);
+            discovery->create(this, FSPGM(current), format);
             discovery->addStateTopic(topic);
             discovery->addUnitOfMeasurement('A');
-            discovery->addValueTemplate(F("current"));
+            discovery->addValueTemplate(FSPGM(current));
             break;
         case 5:
-            discovery->create(this, F("pf"), format);
+            discovery->create(this, FSPGM(pf), format);
             discovery->addStateTopic(topic);
-            discovery->addUnitOfMeasurement(emptyString);
-            discovery->addValueTemplate(F("pf"));
+            discovery->addUnitOfMeasurement('%');
+            discovery->addValueTemplate(FSPGM(pf));
             discovery->finalize();
             break;
     }
@@ -107,34 +107,34 @@ void Sensor_HLW80xx::getValues(JsonArray &array, bool timer)
     _debug_printf_P(PSTR("Sensor_HLW8012::getValues()\n"));
 
     auto obj = &array.addObject(3);
-    obj->add(JJ(id), _getId(F("power")));
+    obj->add(JJ(id), _getId(FSPGM(power)));
     obj->add(JJ(state), !isnan(_power));
     obj->add(JJ(value), _powerToNumber(_power));
 
     obj = &array.addObject(3);
-    obj->add(JJ(id), _getId(F("energy_total")));
+    obj->add(JJ(id), _getId(FSPGM(energy_total)));
     auto energy = _getEnergy(0);
     obj->add(JJ(state), !isnan(energy));
     obj->add(JJ(value), _energyToNumber(energy));
 
     obj = &array.addObject(3);
-    obj->add(JJ(id), _getId(F("energy")));
+    obj->add(JJ(id), _getId(FSPGM(energy)));
     energy = _getEnergy(1);
     obj->add(JJ(state), !isnan(energy));
     obj->add(JJ(value), _energyToNumber(energy));
 
     obj = &array.addObject(3);
-    obj->add(JJ(id), _getId(F("voltage")));
+    obj->add(JJ(id), _getId(FSPGM(voltage)));
     obj->add(JJ(state), !isnan(_voltage));
     obj->add(JJ(value), JsonNumber(_voltage, 1 + _extraDigits));
 
     obj = &array.addObject(3);
-    obj->add(JJ(id), _getId(F("current")));
+    obj->add(JJ(id), _getId(FSPGM(current)));
     obj->add(JJ(state), !isnan(_current));
     obj->add(JJ(value), _currentToNumber(_current));
 
     obj = &array.addObject(3);
-    obj->add(JJ(id), _getId(F("pf")));
+    obj->add(JJ(id), _getId(FSPGM(pf)));
     auto pf = _getPowerFactor();
     obj->add(JJ(state), !isnan(pf));
     obj->add(JJ(value), String(pf, 2));
@@ -148,12 +148,12 @@ void Sensor_HLW80xx::createWebUI(WebUI &webUI, WebUIRow **row)
     //     *row = &webUI.addRow();
     // }
 
-    (*row)->addSensor(_getId(F("power")), _name + F(" Power"), 'W');
-    (*row)->addSensor(_getId(F("energy_total")), _name + F(" Energy Total"), F("kWh"));
-    (*row)->addSensor(_getId(F("energy")), _name + F(" Energy"), F("kWh"));
-    (*row)->addSensor(_getId(F("voltage")), _name + F(" Voltage"), 'V');
-    (*row)->addSensor(_getId(F("current")), _name + F(" Current"), 'A');
-    (*row)->addSensor(_getId(F("pf")), _name + F(" Power Factor"), JsonString());
+    (*row)->addSensor(_getId(FSPGM(power)), _name + F(" Power"), 'W');
+    (*row)->addSensor(_getId(FSPGM(energy_total)), _name + F(" Energy Total"), FSPGM(kWh));
+    (*row)->addSensor(_getId(FSPGM(energy)), _name + F(" Energy"), FSPGM(kWh));
+    (*row)->addSensor(_getId(FSPGM(voltage)), _name + F(" Voltage"), 'V');
+    (*row)->addSensor(_getId(FSPGM(current)), _name + F(" Current"), 'A');
+    (*row)->addSensor(_getId(FSPGM(pf)), _name + F(" Power Factor"), JsonString());
 }
 
 void Sensor_HLW80xx::reconfigure(PGM_P source)
@@ -191,10 +191,8 @@ void Sensor_HLW80xx::createConfigureForm(AsyncWebServerRequest *request, Form &f
     form.addFormUI(F("HLW8012 Extra Digits/Precision"));
     form.addValidator(FormRangeValidator(F("Enter 0 to 4 for extra digits"), 0, 4));
 
-    auto kWh = F("kWh");
-
     form.add(F("energyCounterPrimary"), String(), FormField::Type::TEXT);
-    form.addFormUI(F("HLW8012 Total Energy"), FormUI::Suffix(kWh), FormUI::PlaceHolder(IOT_SENSOR_HLW80xx_PULSE_TO_KWH(getEnergyPrimaryCounter()), 3));
+    form.addFormUI(F("HLW8012 Total Energy"), FormUI::Suffix(FSPGM(kWh)), FormUI::PlaceHolder(IOT_SENSOR_HLW80xx_PULSE_TO_KWH(getEnergyPrimaryCounter()), 3));
 
     form.addValidator(FormCallbackValidator([&cfg, this](String value, FormField &field) {
         if (value.length()) {
@@ -204,7 +202,7 @@ void Sensor_HLW80xx::createConfigureForm(AsyncWebServerRequest *request, Form &f
         return true;
     }));
     form.add(F("energyCounterSecondary"), String(), FormField::Type::TEXT);
-    form.addFormUI(F("HLW8012 Energy"), FormUI::Label(kWh), FormUI::PlaceHolder(IOT_SENSOR_HLW80xx_PULSE_TO_KWH(getEnergySecondaryCounter()), 3));
+    form.addFormUI(F("HLW8012 Energy"), FormUI::Label(FSPGM(kWh)), FormUI::PlaceHolder(IOT_SENSOR_HLW80xx_PULSE_TO_KWH(getEnergySecondaryCounter()), 3));
 
     form.addValidator(FormCallbackValidator([this](String value, FormField &field) {
         if (value.length()) {
@@ -238,13 +236,13 @@ void Sensor_HLW80xx::publishState(MQTTClient *client)
     if (client && client->isConnected()) {
         PrintString str;
         JsonUnnamedObject json;
-        json.add(F("power"), _powerToNumber(_power));
-        json.add(F("energy_total"), _energyToNumber(_getEnergy(0)));
-        json.add(F("energy"), _energyToNumber(_getEnergy(1)));
-        json.add(F("voltage"), JsonNumber(_voltage, 1));
-        json.add(F("current"), _currentToNumber(_current));
+        json.add(FSPGM(power), _powerToNumber(_power));
+        json.add(FSPGM(energy_total), _energyToNumber(_getEnergy(0)));
+        json.add(FSPGM(energy), _energyToNumber(_getEnergy(1)));
+        json.add(FSPGM(voltage), JsonNumber(_voltage, 1));
+        json.add(FSPGM(current), _currentToNumber(_current));
         auto pf = _getPowerFactor();
-        json.add(F("pf"), String(pf, 2));
+        json.add(FSPGM(pf), String(pf, 2));
         json.printTo(str);
         client->publish(_getTopic(), true, str);
     }

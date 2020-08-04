@@ -146,7 +146,7 @@ void MQTTClient::registerComponent(MQTTComponentPtr component)
 {
     _debug_printf_P(PSTR("component=%p\n"), component);
     if (unregisterComponent(component)) {
-        debug_printf_P(PSTR("component registered multiple times: name=%s component=%p\n"), component->getComponentName(), component);
+        debug_printf_P(PSTR("component registered multiple times: name=%s component=%p\n"), component->getName(), component);
     }
     _components.emplace_back(component);
     _componentsEntityCount += component->getAutoDiscoveryCount();

@@ -62,15 +62,18 @@ PROGMEM_STRING_DECL(mqtt_value_template);
 #endif
 
 class MQTTClient;
+class MQTTAutoDiscoveryQueue;
 
 class MQTTComponent {
 public:
     using MQTTAutoDiscoveryPtr = MQTTAutoDiscovery *;
     using ComponentTypeEnum_t = MQTTAutoDiscovery::ComponentTypeEnum_t;
+    using ComponentType = MQTTAutoDiscovery::ComponentType;
     using Ptr = MQTTComponent *;
     using Vector = std::vector<Ptr>;
+    using NameType = const __FlashStringHelper *;
 
-    MQTTComponent(ComponentTypeEnum_t type);
+    MQTTComponent(ComponentType type);
     virtual ~MQTTComponent();
 
 #if MQTT_AUTO_DISCOVERY
@@ -85,23 +88,19 @@ public:
     virtual void onDisconnect(MQTTClient *client, AsyncMqttClientDisconnectReason reason);
     virtual void onMessage(MQTTClient *client, char *topic, char *payload, size_t len);
 
-    const __FlashStringHelper *getComponentName() const;
+    NameType getName() const {
+        return getNameByType(_type);
+    }
+    ComponentType getType() const {
+        return _type;
+    }
+
+    static NameType getNameByType(ComponentType type);
 
 private:
-    ComponentTypeEnum_t _type;
+    ComponentType _type;
 #if MQTT_AUTO_DISCOVERY
-    friend class MQTTAutoDiscoveryQueue;
+    friend MQTTAutoDiscoveryQueue;
     uint8_t _autoDiscoveryNum;
 #endif
-};
-
-// for creating auto discovery without an actual component
-class MQTTComponentHelper : public MQTTComponent {
-public:
-    MQTTComponentHelper(ComponentTypeEnum_t type);
-
-    virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num) override;
-    virtual uint8_t getAutoDiscoveryCount() const override;
-
-    MQTTAutoDiscovery *createAutoDiscovery(const String &componentName, MQTTAutoDiscovery::FormatType format);
 };

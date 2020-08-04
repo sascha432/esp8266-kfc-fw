@@ -91,10 +91,11 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF(MQTT, "MQTT", "<connect|disconnect|set|topics|a
     "Display MQTT status"
 );
 
-ATModeCommandHelpArray MQTTPlugin::atModeCommandHelp(size_t &size) const
+ATModeCommandHelpArrayPtr MQTTPlugin::atModeCommandHelp(size_t &size) const
 {
-    size = 1;
-    return { PROGMEM_AT_MODE_HELP_COMMAND(MQTT) };
+    static ATModeCommandHelpArray tmp PROGMEM = { PROGMEM_AT_MODE_HELP_COMMAND(MQTT), PROGMEM_AT_MODE_HELP_COMMAND(MQTT) };
+    size = sizeof(tmp) / sizeof(tmp[0]);
+    return tmp;
 }
 
 bool MQTTPlugin::atModeHandler(AtModeArgs &args)
@@ -146,7 +147,7 @@ bool MQTTPlugin::atModeHandler(AtModeArgs &args)
                 case 5: // topics
                 case 6: // top
                     for(const auto &topic: client.getTopics()) {
-                        args.printf_P(PSTR("topic=%s component=%p name=%s"), topic.getTopic().c_str(), topic.getComponent(), topic.getComponent()->getComponentName());
+                        args.printf_P(PSTR("topic=%s component=%p name=%s"), topic.getTopic().c_str(), topic.getComponent(), topic.getComponent()->getName());
                     }
                     break;
                 case 7: // autodiscovery

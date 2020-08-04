@@ -78,7 +78,7 @@ void MQTTPlugin::createConfigureForm(FormCallbackType type, const String &formNa
 
     form.add(F("mqttpass"), _H_CSTR_FUNC(ClientConfig::getPassword, ClientConfig::setPassword));
     form.addFormUI(FormUI::Type::PASSWORD, FSPGM(Password));
-    ClientConfig::addPasswordLengthValidator(form, String(), true);
+    ClientConfig::addPasswordLengthValidator(form, true);
 
     form.add(FSPGM(topic), _H_CSTR_FUNC(ClientConfig::getTopic, ClientConfig::setTopic));
     ClientConfig::addTopicLengthValidator(form);

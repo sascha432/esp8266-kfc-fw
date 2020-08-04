@@ -121,14 +121,13 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
 
             form.addCStringGetterSetter(FSPGM(dev_hostn), System::Device::getName, System::Device::setNameCStr);
             form.addFormUI(FSPGM(Hostname));
-            form.addValidator(FormLengthValidator(4, System::Device::kNameMaxSize));
+            System::Device::addNameLengthValidator(form);
 
             form.addCStringGetterSetter(FSPGM(dev_title), System::Device::getTitle, System::Device::setTitleCStr);
             form.addFormUI(FSPGM(Title));
-            form.addValidator(FormLengthValidator(4, System::Device::kNameMaxSize));
+            System::Device::addTitleLengthValidator(form);
 
-            deviceGroup.end();
-            auto &stationGroup = form.addCardGroup(FSPGM(station), FSPGM(Station_Mode));
+            auto &stationGroup = deviceGroup.end().addCardGroup(FSPGM(station), FSPGM(Station_Mode));
 
             form.addObjectGetterSetter(F("st_dhcp"), flags, flags.get_bit_is_station_mode_dhcp_enabled, flags.set_bit_is_station_mode_dhcp_enabled);
             form.addFormUI(FSPGM(DHCP_Client), FormUI::BoolItems());
@@ -144,8 +143,7 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
             form.addIPGetterSetter(F("st_dns2"), network, network.get_ipv4_dns2, network.set_ipv4_dns2);
             form.addFormUI(FSPGM(DNS_2));
 
-            stationGroup.end();
-            auto &apGroup = form.addCardGroup(FSPGM(ap_mode), FSPGM(Access_Point));
+            auto &apGroup = stationGroup.end().addCardGroup(FSPGM(ap_mode), FSPGM(Access_Point));
 
             form.addObjectGetterSetter(F("ap_dhcpd"), flags, flags.get_bit_is_softap_dhcpd_enabled, flags.set_bit_is_softap_dhcpd_enabled);
             form.addFormUI(FSPGM(DHCP_Server), FormUI::BoolItems());
@@ -170,7 +168,7 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
 
             form.addCStringGetterSetter(FSPGM(dev_title), System::Device::getTitle, System::Device::setTitleCStr);
             form.addFormUI(FSPGM(Title));
-            form.addValidator(FormLengthValidator(1, System::Device::kTitleMaxSize));
+            System::Device::addTitleLengthValidator(form);
 
             form.addWriteableStruct("safem_to", cfg, safe_mode_reboot_timeout_minutes));
             form.addFormUI(FormUI::Type::INTEGER, F("Reboot Delay Running In Safe Mode"), FormUI::Suffix(FSPGM(minutes)));
@@ -215,8 +213,8 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
             form.add(FSPGM(password2), password, FormField::Type::TEXT).
                 setValue(emptyString);
 
-            // form.addValidator(FormRangeValidator(F("The password has to be at least %min% characters long"), System::Device::kPasswordMinSize, 0));
-            form.addValidator(FormRangeValidator(System::Device::kPasswordMinSize, System::Device::kPasswordMaxSize));
+            // form.addValidator(FormLengthValidator(F("The password has to be at least %min% characters long"), System::Device::kPasswordMinSize, 0));
+            form.addValidator(FormLengthValidator(System::Device::kPasswordMinSize, System::Device::kPasswordMaxSize));
 
             form.add(F("password3"), emptyString, FormField::Type::TEXT);
             form.addValidator(FormMatchValidator(F("The password confirmation does not match"), [](FormField &field) {

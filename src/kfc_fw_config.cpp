@@ -524,6 +524,9 @@ void KFCFWConfiguration::restoreFactorySettings()
 #if IOT_SENSOR
     Plugins::Sensor::defaults();
 #endif
+#if IOT_BLINDS_CTRL
+    Plugins::Blinds::defaults();
+#endif
 
 
 #if PING_MONITOR_SUPPORT
@@ -571,24 +574,6 @@ void KFCFWConfiguration::restoreFactorySettings()
 #endif
     _H_SET(Config().dimmer_buttons, dimmer_buttons);
 #endif
-#endif
-
-#if IOT_BLINDS_CTRL
-    BlindsController blinds;
-    blinds.swap_channels = 1;
-    blinds.channel0_dir = 0;
-    blinds.channel1_dir = 0;
-    blinds.channels[0].pwmValue = 600;
-    blinds.channels[0].currentLimit = 110;
-    blinds.channels[0].currentLimitTime = 50;
-    blinds.channels[0].openTime = 2000;
-    blinds.channels[0].closeTime = 3100;
-    blinds.channels[1].pwmValue = 900;
-    blinds.channels[1].currentLimit = 140;
-    blinds.channels[1].currentLimitTime = 50;
-    blinds.channels[1].openTime = 7500;
-    blinds.channels[1].closeTime = 7500;
-    _H_SET(Config().blinds_controller, blinds);
 #endif
 
 #if IOT_CLOCK

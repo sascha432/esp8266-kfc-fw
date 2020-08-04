@@ -84,21 +84,6 @@ struct DimmerModuleButtons {
 #endif
 };
 
-struct BlindsControllerChannel {
-    uint16_t pwmValue;
-    uint16_t currentLimit;
-    uint16_t currentLimitTime;
-    uint16_t openTime;
-    uint16_t closeTime;
-};
-
-struct BlindsController {
-    struct BlindsControllerChannel channels[2];
-    bool swap_channels;
-    bool channel0_dir;
-    bool channel1_dir;
-};
-
 #include "push_pack.h"
 
 // NOTE: any member of an packed structure (__attribute__packed__ ) cannot be passed to forms as reference, otherwise it might cause an unaligned exception
@@ -215,7 +200,6 @@ typedef struct {
 
     DimmerModule dimmer;
     DimmerModuleButtons dimmer_buttons;
-    BlindsController blinds_controller;
     Clock_t clock;
 
     Config_Ping ping;

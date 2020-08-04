@@ -7,7 +7,7 @@
 #include <kfc_fw_config.h>
 #include <PrintHtmlEntitiesString.h>
 #include <StringKeyValueStore.h>
-#include "blinds_ctrl.h"
+#include "blinds_plugin.h"
 
 #if DEBUG_IOT_BLINDS_CTRL
 #include <debug_helper_enable.h>
@@ -49,8 +49,6 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
 
 
     auto &cfg = Plugins::Blinds::getWriteableConfig();
-    auto reverse = F("Reverse (Open/close time is reversed as well)");
-    auto motorSpeed = F("0-1023");
 
     FormUI::ItemsList currentLimitItems(
         5, F("Extra Fast (5ms)"),
@@ -60,87 +58,87 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
         250, F("Extra Slow (250ms)")
     );
 
+    FormUI::ItemsList stateTypeItems(
+        Plugins::Blinds::BlindsStateType::NONE, FSPGM(None),
+        Plugins::Blinds::BlindsStateType::OPEN, FSPGM(Open),
+        Plugins::Blinds::BlindsStateType::CLOSED, FSPGM(Closed)
+    );
+
     auto &ui = form.getFormUIConfig();
     ui.setTitle(F("Blinds Controller"));
     ui.setContainerId(F("blinds_setttings"));
     ui.setStyle(FormUI::StyleType::ACCORDION);
 
-    auto &commonGroup = form.addCardGroup(FSPGM(config), F("Channel Setup"), true);
-
-    form.addObjectGetterSetter(F("ch0_dir"), cfg, Plugins::Blinds::ConfigStructType::get_bit_channel0_dir, Plugins::Blinds::ConfigStructType::set_bit_channel0_dir);
-    form.addFormUI(F("Channel 0 Direction"), FormUI::BoolItems(reverse, FSPGM(Forward)));
-
-    form.addObjectGetterSetter(F("ch1_dir"), cfg, Plugins::Blinds::ConfigStructType::get_bit_channel1_dir, Plugins::Blinds::ConfigStructType::set_bit_channel1_dir);
-    form.addFormUI(F("Channel 1 Direction"), FormUI::BoolItems(reverse, FSPGM(Forward)));
-
-    form.addObjectGetterSetter(F("swap_ch"), cfg, Plugins::Blinds::ConfigStructType::get_bit_swap_channels, Plugins::Blinds::ConfigStructType::set_bit_swap_channels);
-    form.addFormUI(F("Swap Channels"), FormUI::BoolItems(FSPGM(Yes), FSPGM(No)));
-
-    commonGroup.end();
-
-
-    // form.add<bool>(F("channel0_dir"), &blinds->channel0_dir)->setFormUI(new FormUI::UI(FormUI::Type::SELECT, F("Channel 0 Direction")))->setBoolItems(reverse, forward));
-    // form.add<bool>(F("channel1_dir"), &blinds->channel1_dir)->setFormUI(new FormUI::UI(FormUI::Type::SELECT, F("Channel 1 Direction")))->setBoolItems(reverse, forward));
-    // form.add<bool>(F("swap_channels"), &blinds->swap_channels)->setFormUI(new FormUI::UI(FormUI::Type::SELECT, F("Swap Channels")))->setBoolItems(FSPGM(Yes), FSPGM(No)));
-
     for (uint8_t i = 0; i < kChannelCount; i++) {
         String prefix = PrintString(F("ch%u_"), i);
         String name = PrintString(F("Channel %u"), i);
 
-        auto &channelGroup = form.addCardGroup(prefix + F("grp"), name, true);
+        auto &channelGroup = form.addCardGroup(prefix + F("grp"), name, i == 0);
 
-        form.addCStringGetterSetter(prefix + F("name"), Plugins::Blinds::getChannel0Name, Plugins::Blinds::setChannel0NameCStr);
-        form.addFormUI(F("Name"), FormUI::PlaceHolder(name));
-        Plugins::Blinds::addChannel0NameLengthValidator(form, true);
+        switch(i) {
+            case 0:
+                form.addCStringGetterSetter(prefix + FSPGM(name), Plugins::Blinds::getChannel0Name, Plugins::Blinds::setChannel0NameCStr);
+                Plugins::Blinds::addChannel0NameLengthValidator(form);
+                break;
+            case 1:
+                form.addCStringGetterSetter(prefix + FSPGM(name), Plugins::Blinds::getChannel1Name, Plugins::Blinds::setChannel1NameCStr);
+                Plugins::Blinds::addChannel1NameLengthValidator(form);
+                break;
+        }
+        form.addFormUI(FSPGM(Name), FormUI::PlaceHolder(name));
 
-        form.addMemberVariable(prefix + F("ot"), cfg.channels[i], &Plugins::BlindsConfig::BlindsConfigChannel_t::open_time);
+        form.add(prefix + F("ot"), _H_W_STRUCT_VALUE(cfg, channels[i].open_time, i));
         form.addFormUI(F("Open Time Limit"), FormUI::Suffix(FSPGM(ms)));
 
-        form.addMemberVariable(prefix + F("ct"), cfg.channels[i], &Plugins::BlindsConfig::BlindsConfigChannel_t::close_time);
+        form.add(prefix + F("ct"), _H_W_STRUCT_VALUE(cfg, channels[i].close_time, i));
         form.addFormUI(F("Close Time Limit"), FormUI::Suffix(FSPGM(ms)));
 
-        form.add(prefix + F("il"), (uint16_t)(ADC_TO_CURRENT(cfg.channels[i].current_limit)), [&cfg, i](uint16_t value, FormField &, bool store) {
-            if (store) {
-                cfg.channels[i].current_limit = CURRENT_TO_ADC(value);
-            }
-            return false;
-        });
+        form.add(prefix + F("il"), _H_W_STRUCT_VALUE(cfg, channels[i].current_limit, i));
         form.addFormUI(F("Current Limit"), FormUI::Suffix(FSPGM(mA)));
-        form.addValidator(FormRangeValidator(ADC_TO_CURRENT(0), ADC_TO_CURRENT(1023)));
+        form.addValidator(FormRangeValidator(BlindsControllerConversion::kMinCurrent, BlindsControllerConversion::kMaxCurrent));
 
-        form.addMemberVariable(prefix + F("ilt"), cfg.channels[i], &Plugins::BlindsConfig::BlindsConfigChannel_t::current_limit_time);
+        form.add(prefix + F("ilt"), _H_W_STRUCT_VALUE(cfg, channels[i].current_limit_time, i));
         form.addFormUI(F("Current Limit Trigger Time"), currentLimitItems);
 
-        form.addMemberVariable(prefix + F("pwm"), cfg.channels[i], &Plugins::BlindsConfig::BlindsConfigChannel_t::current_limit_time);
-        form.addFormUI(F("Motor PWM"), FormUI::Suffix(motorSpeed));
-        form.addValidator(FormRangeValidator(0, 1023));
+        form.add(prefix + FSPGM(pwm), _H_W_STRUCT_VALUE(cfg, channels[i].pwm_value, i));
+        form.addFormUI(F("Motor PWM"), FormUI::Suffix(String(0) + '-' + String(PWMRANGE)));
+        form.addValidator(FormRangeValidator(0, PWMRANGE));
 
-        channelGroup.end();
+        auto &autoCloseGroup = channelGroup.end().addCardGroup(prefix + FSPGM(config), PrintString(F("Automation Channel %u"), i), false);
 
+        form.add(prefix + F("ood"), _H_W_STRUCT_VALUE(cfg, channels[i].operation.open_delay, i));
+        form.addFormUI(FormUI::Label(F("Open Delay:<br><small>Delay opening after the other channel has opened</small>"), true), FormUI::Suffix(FSPGM(seconds)));
+        form.addValidator(FormRangeValidator(0, 255));
 
-        // form.add<uint16_t>(PrintString(F("channel%u_close_time"), i), &blinds->channels[i].closeTime)
-        //     ->setFormUI(new FormUI::UI(FormUI::Type::TEXT, PrintString(F("Channel %u Open Time Limit"), i)))->setSuffix(ms));
-        // form.add<uint16_t>(PrintString(F("channel%u_open_time"), i), &blinds->channels[i].openTime)
-        //     ->setFormUI(new FormUI::UI(FormUI::Type::TEXT, PrintString(F("Channel %u Close Time Limit"), i)))->setSuffix(ms));
-        // form.add<uint16_t>(PrintString(F("channel%u_current_limit"), i), &blinds->channels[i].currentLimit, [](uint16_t &value, FormField &field, bool isSetter){
-        //         if (isSetter) {
-        //             value = CURRENT_TO_ADC(value);
-        //         }
-        //         else {
-        //             value = ADC_TO_CURRENT(value);
-        //         }
-        //         return true;
-        //     })
-        //     ->setFormUI(new FormUI::UI(FormUI::Type::TEXT, PrintString(F("Channel %u Current Limit"), i)))->setSuffix(mA));
-        // form.addValidator(FormRangeValidator(ADC_TO_CURRENT(0), ADC_TO_CURRENT(1023)));
+        form.add(prefix + F("ocd"), _H_W_STRUCT_VALUE(cfg, channels[i].operation.close_delay, i));
+        form.addFormUI(FormUI::Label(F("Close Delay:<br><small>Delay closing after the other channel has closed</small>"), true), FormUI::Suffix(FSPGM(seconds)));
+        form.addValidator(FormRangeValidator(0, 255));
 
-        // form.add<uint16_t>(PrintString(F("channel%u_current_limit_time"), i), &blinds->channels[i].currentLimitTime)
-        //     ->setFormUI(new FormUI::UI(FormUI::Type::SELECT, PrintString(F("Channel %u Current Limit Trigger Time"), i)))->addItems(currentLimitItems));
-        // form.add<uint16_t>(PrintString(F("channel%u_pwm_value"), i), &blinds->channels[i].pwmValue)
-        //     ->setFormUI(new FormUI::UI(FormUI::Type::TEXT, PrintString(F("Channel %u Motor PWM"), i)))->setSuffix(motorSpeed));
-        // form.addValidator(FormRangeValidator(0, 1023));
+        form.add(prefix + F("oos"), _H_W_STRUCT_VALUE(cfg, channels[i].operation.open_state, i));
+        form.addFormUI(FormUI::Label(F("Required Open State:<br><small>Required state of the other channel, when this channel opens</small>"), true), stateTypeItems);
+
+        form.add(prefix + F("ocs"), _H_W_STRUCT_VALUE(cfg, channels[i].operation.close_state, i));
+        form.addFormUI(FormUI::Label(F("Required Close State:<br><small>Required state of the other channel, when this channel closes</small>"), true), stateTypeItems);
+
+        autoCloseGroup.end();
 
     }
+
+    auto &pinsGroup = form.addCardGroup(FSPGM(config), F("Motor Pins"), false);
+
+    form.add(F("pin0"), _H_W_STRUCT_VALUE_TYPE(cfg, pins[0], uint8_t));
+    form.addFormUI(F("Channel 0 Pin 1"), FormUI::Type::INTEGER, FormUI::PlaceHolder(IOT_BLINDS_CTRL_M1_PIN));
+
+    form.add(F("pin1"), _H_W_STRUCT_VALUE_TYPE(cfg, pins[1], uint8_t));
+    form.addFormUI(F("Channel 0 Pin 2"), FormUI::Type::INTEGER, FormUI::PlaceHolder(IOT_BLINDS_CTRL_M2_PIN));
+
+    form.add(F("pin2"), _H_W_STRUCT_VALUE_TYPE(cfg, pins[2], uint8_t));
+    form.addFormUI(F("Channel 1 Pin 1"), FormUI::Type::INTEGER, FormUI::PlaceHolder(IOT_BLINDS_CTRL_M3_PIN));
+
+    form.add(F("pin3"), _H_W_STRUCT_VALUE_TYPE(cfg, pins[3], uint8_t));
+    form.addFormUI(F("Channel 1 Pin 2"), FormUI::Type::INTEGER, FormUI::PlaceHolder(IOT_BLINDS_CTRL_M4_PIN));
+
+    pinsGroup.end();
 
     form.finalize();
 

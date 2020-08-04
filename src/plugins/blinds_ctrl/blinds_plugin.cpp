@@ -9,7 +9,8 @@
 #include <kfc_fw_config.h>
 #include <PluginComponent.h>
 #include <PrintHtmlEntitiesString.h>
-#include "blinds_ctrl.h"
+#include "blinds_plugin.h"
+#include "blinds_defines.h"
 #include "BlindsControl.h"
 #include "../src/plugins/mqtt/mqtt_client.h"
 
@@ -27,7 +28,7 @@ static BlindsControlPlugin plugin;
 
 PROGMEM_DEFINE_PLUGIN_OPTIONS(
     BlindsControlPlugin,
-    "blindsctrl",       // name
+    "blinds",           // name
     "Blinds Controller",// friendly name
     "",                 // web_templates
     "blinds",           // config_forms
@@ -81,16 +82,15 @@ void BlindsControlPlugin::getStatus(Print &output)
 #endif
 
     for(const auto channel: _states.channels()) {
-        //TODO
-        // if (_config.channels[*channel])
-        // output.printf_P(PSTR("Channel %u, state %s, open %ums, close %ums, current limit %umA/%ums" HTML_S(br)),
-        //     *channel,
-        //     _states[channel]._getFPStr(),
-        //     _channel.openTime,
-        //     _channel.closeTime,
-        //     (unsigned)ADC_TO_CURRENT(_channel.currentLimit),
-        //     _channel.currentLimitTime
-        // );
+        auto &channelConfig = BlindsControl::_config.channels[*channel];
+        output.printf_P(PSTR("Channel %s, state %s, open/close time limit  %ums / %ums, current limit %umA/%ums" HTML_S(br)),
+            Plugins::Blinds::getChannelName(*channel),
+            _states[channel]._getFPStr(),
+            channelConfig.open_time,
+            channelConfig.close_time,
+            channelConfig.current_limit,
+            channelConfig.current_limit_time
+        );
     }
 }
 
@@ -160,14 +160,14 @@ void BlindsControlPlugin::loopMethod()
 
 #include "at_mode.h"
 
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(BCME, "BCME", "<channel=0/1>,<direction=0/1>,<max-time/ms>,<level=0-1023>,<limit=0-1023>,<limit-time>", "Enable motor # for max-time milliseconds");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(BCME, "BCME", "<channel=0/1>,<direction=0/1>,<max.time/ms>,<level=0-1023>,<limit/mA>,<max.time over limit/ms>", "Enable motor for a specific time");
 
 void BlindsControlPlugin::_printTestInfo() {
 
 #if IOT_BLINDS_CTRL_RPM_PIN
-    Serial.printf_P(PSTR("%umA %u peak %u rpm %u position %u\n"), ADC_TO_CURRENT(_adcIntegral), _adcIntegral, _peakCurrent, _getRpm(), _rpmCounter);
+    Serial.printf_P(PSTR("%umA %u peak %u rpm %u position %u\n"), (unsigned)(_adcIntegral * BlindsControllerConversion::kConvertADCValueToCurrentMulitplier), _adcIntegral, _peakCurrent, _getRpm(), _rpmCounter);
 #else
-    Serial.printf_P(PSTR("%umA %u peak %u\n"), ADC_TO_CURRENT(_adcIntegral), _adcIntegral, _peakCurrent);
+    Serial.printf_P(PSTR("%umA %u peak %u\n"), (unsigned)(_adcIntegral * BlindsControllerConversion::kConvertADCValueToCurrentMulitplier), _adcIntegral, _peakCurrent);
 #endif
 }
 
@@ -223,44 +223,32 @@ ATModeCommandHelpArrayPtr BlindsControlPlugin::atModeCommandHelp(size_t &size) c
 bool BlindsControlPlugin::atModeHandler(AtModeArgs &args)
 {
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(BCME))) {
-        //TODO
-        // if (args.requireArgs(6, 6)) {
-        //     uint8_t pins[] = { IOT_BLINDS_CTRL_M1_PIN, IOT_BLINDS_CTRL_M2_PIN, IOT_BLINDS_CTRL_M3_PIN, IOT_BLINDS_CTRL_M4_PIN };
-        //     uint8_t channel = args.toInt(0);
-        //     uint8_t direction = args.toInt(1) % 2;
-        //     uint32_t time = args.toInt(2);
-        //     uint16_t pwmLevel = args.toInt(3);
+        if (args.requireArgs(6, 6)) {
+            uint8_t channel = args.toInt(0);
+            bool direction = args.toInt(1);
+            uint32_t time = args.toInt(2);
+            uint16_t pwmLevel = args.toInt(3);
 
-        //     if (_config.swap_channels) {
-        //         channel++;
-        //     }
-        //     channel %= _channels.size();
-        //     if (channel == 0 && cfg.channel0_dir) {
-        //         direction++;
-        //     }
-        //     if (channel == 1 && cfg.channel1_dir) {
-        //         direction++;
-        //     }
-        //     direction %= 2;
+            channel %= kChannelCount;
 
-        //     _currentLimit = args.toInt(4);
-        //     _currentLimitMinCount = args.toInt(5);
-        //     _activeChannel = channel;
+            _currentLimit = args.toInt(4) * BlindsControllerConversion::kConvertCurrentToADCValueMulitplier;
+            _currentLimitMinCount = args.toInt(5);
+            _activeChannel = static_cast<ChannelType>(channel);
 
-        //     analogWriteFreq(IOT_BLINDS_CTRL_PWM_FREQ);
-        //     for(uint i = 0; i < 4; i++) {
-        //         analogWrite(pins[i], LOW);
-        //     }
-        //     analogWrite(pins[(channel << 1) | direction], pwmLevel);
-        //     args.printf_P(PSTR("level %u current limit/%u %u frequency %.2fkHz"), pwmLevel, _currentLimit, _currentLimitMinCount, IOT_BLINDS_CTRL_PWM_FREQ / 1000.0);
-        //     args.printf_P(PSTR("channel %u direction %u time %u"), channel, direction, time);
+            analogWriteFreq(IOT_BLINDS_CTRL_PWM_FREQ);
+            for(uint i = 0; i < 4; i++) {
+                analogWrite(BlindsControl::_config.pins[i], LOW);
+            }
+            analogWrite(BlindsControl::_config.pins[(channel * kChannelCount) + direction], pwmLevel);
+            args.printf_P(PSTR("level %u current limit/%u %u frequency %.2fkHz"), pwmLevel, _currentLimit, _currentLimitMinCount, IOT_BLINDS_CTRL_PWM_FREQ / 1000.0);
+            args.printf_P(PSTR("channel %u direction %u time %u"), channel, direction, time);
 
-        //     _peakCurrent = 0;
-        //     _printCurrentTimeout.set(500);
-        //     _motorTimeout.set(time);
-        //     _isTestMode = true;
-        //     _clearAdc();
-        // }
+            _peakCurrent = 0;
+            _printCurrentTimeout.set(500);
+            _motorTimeout.set(time);
+            _isTestMode = true;
+            _clearAdc();
+        }
         return true;
     }
     return false;

@@ -1212,10 +1212,11 @@ namespace KFCConfigurationClasses {
             typedef struct __attribute__packed__ BlindsConfigOperation_t {
                 using Type = BlindsConfigOperation_t;
 
-                uint16_t open_delay;                                        // delay in seconds after this channel has opened and the other channel opens
-                uint16_t close_delay;                                       // delay in seconds after this channel has closed and the other channel closes
-                CREATE_ENUM_BITFIELD(open_state, BlindsStateType);          // required state for this channel when the other channel opens
-                CREATE_ENUM_BITFIELD(close_state, BlindsStateType);         // required state for this channel when the other channel closes
+                // description at blinds_form.cpp
+                uint16_t open_delay;
+                uint16_t close_delay;
+                CREATE_ENUM_BITFIELD(open_state, BlindsStateType);
+                CREATE_ENUM_BITFIELD(close_state, BlindsStateType);
 
                 BlindsConfigOperation_t() : open_delay(0), close_delay(0), open_state(0), close_state(0) {}
 
@@ -1230,14 +1231,14 @@ namespace KFCConfigurationClasses {
             } BlindsConfigOperation_t;
 
             typedef struct __attribute__packed__ BlindsConfigChannel_t {
-                uint16_t pwm_value;
-                uint16_t current_limit;
-                uint16_t current_limit_time;
-                uint16_t open_time;
-                uint16_t close_time;
+                uint16_t pwm_value;                 // 0-1023
+                uint16_t current_limit;             // mA
+                uint16_t current_limit_time;        // ms
+                uint16_t open_time;                 // ms
+                uint16_t close_time;                // ms
                 BlindsConfigOperation_t operation;
 
-                BlindsConfigChannel_t() : pwm_value(600), current_limit(100), current_limit_time(50), open_time(5000), close_time(5500) {}
+                BlindsConfigChannel_t() : pwm_value(600), current_limit(1500), current_limit_time(50), open_time(5000), close_time(5500) {}
 
                 template<typename Archive>
                 void serialize(Archive & ar, kfc::serialization::version version){
@@ -1255,20 +1256,16 @@ namespace KFCConfigurationClasses {
                 using Type = BlindsConfig_t;
 
                 BlindsConfigChannel_t channels[2];
-
-                CREATE_BOOL_BITFIELD(swap_channels);
-                CREATE_BOOL_BITFIELD(channel0_dir);
-                CREATE_BOOL_BITFIELD(channel1_dir);
+                uint8_t pins[4];
 
                 template<typename Archive>
                 void serialize(Archive & ar, kfc::serialization::version version) {
                     ar & KFC_SERIALIZATION_NVP(channels);
-                    ar & KFC_SERIALIZATION_NVP(swap_channels);
-                    ar & KFC_SERIALIZATION_NVP(channel0_dir);
-                    ar & KFC_SERIALIZATION_NVP(channel1_dir);
+                    ar & KFC_SERIALIZATION_NVP(pins);
                 }
 
-                BlindsConfig_t() : channels(), swap_channels(false), channel0_dir(false), channel1_dir(false) {}
+                BlindsConfig_t();
+
             } SensorConfig_t;
         };
 
@@ -1286,16 +1283,6 @@ namespace KFCConfigurationClasses {
                     case 1:
                     default:
                         return getChannel1Name();
-                }
-            }
-
-            static bool getChannelDirection(const BlindsConfig_t &cfg, size_t num) {
-                switch(num) {
-                    case 0:
-                        return cfg.channel0_dir;
-                    case 1:
-                    default:
-                        return cfg.channel1_dir;
                 }
             }
 

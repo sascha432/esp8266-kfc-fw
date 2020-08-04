@@ -471,7 +471,7 @@ bool Configuration::write()
     for (auto &parameter : _params) {
         //if (parameter.isDirty()) {
             if (parameter.hasDataChanged(this)) {
-                __DBG_printf("%s dirty", parameter.toString().c_str())
+                __LDBG_printf("%s dirty", parameter.toString().c_str())
                 dirty = true;
                 //break;
             }

@@ -200,7 +200,6 @@ protected:
 
     Plugins::Blinds::ConfigStructType _config;
 
-    static const std::array<uint8_t, kChannelCount * 2> _pins;
     ChannelStateArray<kChannelCount> _states;
     ChannelType _activeChannel;
     ChannelAction _action;

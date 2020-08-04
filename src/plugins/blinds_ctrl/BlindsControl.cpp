@@ -4,7 +4,7 @@
 
 #include "WebUISocket.h"
 #include "BlindsControl.h"
-#include "blinds_ctrl.h"
+#include "blinds_plugin.h"
 #include "../src/plugins/mqtt/mqtt_client.h"
 
 #if DEBUG_IOT_BLINDS_CTRL
@@ -18,8 +18,6 @@ extern int8_t operator *(const BlindsControl::ChannelType type);
 int8_t operator *(const BlindsControl::ChannelType type) {
     return static_cast<int8_t>(type);
 }
-
-const std::array<uint8_t, BlindsControl::kChannelCount * 2> BlindsControl::_pins = { IOT_BLINDS_CTRL_M1_PIN, IOT_BLINDS_CTRL_M2_PIN, IOT_BLINDS_CTRL_M3_PIN, IOT_BLINDS_CTRL_M4_PIN };
 
 PROGMEM_STRING_DEF(iot_blinds_control_state_file, "/.pvt/blinds_ctrl.state");
 
@@ -152,8 +150,11 @@ void BlindsControl::_loopMethod()
     if (_motorTimeout.isActive()) {
         _updateAdc();
         auto &_channel = _config.channels[*_activeChannel];
-        auto currentLimit = _channel.current_limit;
-        if (_adcIntegral > currentLimit && millis() % 2 == _currentLimitCounter % 2) { // assuming this loop runs at least once per millisecond. measured ~250-270µs, should be save...
+        uint16_t currentLimit = _channel.current_limit * BlindsControllerConversion::kConvertCurrentToADCValueMulitplier;
+        // assuming this loop runs at least once per millisecond
+        // we can use millis() and a counter to determine the time
+        // measured ~250-270µs @ 80MHz
+        if (_adcIntegral > currentLimit && millis() % 2 == _currentLimitCounter % 2) {
             if (++_currentLimitCounter > _channel.current_limit_time) {
                 __LDBG_printf("current limit");
                 _stop();
@@ -161,7 +162,7 @@ void BlindsControl::_loopMethod()
                 return;
             }
         }
-        else if (_adcIntegral < currentLimit * 0.8) {   // reset current limit counter if it drops below 80%
+        else if (_adcIntegral < currentLimit * 0.8) {   // reset current limit counter if current drops below 80%
             _currentLimitCounter = 0;
         }
 
@@ -204,12 +205,6 @@ BlindsControl::NameType BlindsControl::_getStateStr(ChannelType channel) const
 void BlindsControl::_clearAdc()
 {
     auto channel = *_activeChannel;
-    if (_config.swap_channels) {
-        channel++;
-        __LDBG_printf("channels swapped");
-    }
-    channel %= kChannelCount;
-
     __LDBG_printf("rssel=%u", channel == 0 ? HIGH : LOW);
 
     // select shunt
@@ -235,20 +230,10 @@ void BlindsControl::_updateAdc()
 void BlindsControl::_setMotorSpeed(ChannelType channelType, uint16_t speed, bool direction)
 {
     auto channel = *channelType;
+    uint8_t pin1 = _config.pins[(channel * kChannelCount)];
+    uint8_t pin2 = _config.pins[(channel * kChannelCount)];
 
-    if (_config.swap_channels) {
-        channel++;
-    }
-    channel %= kChannelCount;
-
-    if (Plugins::Blinds::getChannelDirection(_config, channel)) {
-        direction = !direction;
-    }
-
-    uint8_t pin1 = _pins[(channel * kChannelCount) + (direction ? 0 : 1)];
-    uint8_t pin2 = _pins[(channel * kChannelCount) + (direction ? 1 : 0)];
-
-    __LDBG_printf("channel=%u speed=%u dir=%u swapped=%u inverted=%u pins=%u,%u", channel, speed, _config.swap_channels, Plugins::Blinds::getChannelDirection(_config, channel), pin1, pin2);
+    __LDBG_printf("channel=%u speed=%u dir=%u pins=%u,%u", channel, speed, pin1, pin2);
 
     analogWrite(pin1, speed);
     analogWrite(pin2, 0);

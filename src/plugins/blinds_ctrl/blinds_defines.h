@@ -87,8 +87,29 @@
 
 // ADC=(1024*I*RS)/V
 // ADC=(1024*(mA/1000)*(IOT_BLINDS_CTRL_SHUNT/1000))/(IOT_BLINDS_CTRL_ADCV/1000)
-#define CURRENT_TO_ADC(value)               (uint32_t)round((128UL * IOT_BLINDS_CTRL_SHUNT * value) / (double)(125UL * IOT_BLINDS_CTRL_ADCV))
+//#define CURRENT_TO_ADC(value)               (uint32_t)round((128UL * IOT_BLINDS_CTRL_SHUNT * value) / (double)(125UL * IOT_BLINDS_CTRL_ADCV))
 
 // I=(ADC/1024)*V/RS
 // mA=((value/1024)*(IOT_BLINDS_CTRL_ADCV/1000)/(IOT_BLINDS_CTRL_SHUNT/1000))*1000
-#define ADC_TO_CURRENT(value)               (uint32_t)round((IOT_BLINDS_CTRL_ADCV * value * 1000UL) / (double)(IOT_BLINDS_CTRL_SHUNT * 1024UL))
+//#define ADC_TO_CURRENT(value)               (uint32_t)round((IOT_BLINDS_CTRL_ADCV * value * 1000UL) / (double)(IOT_BLINDS_CTRL_SHUNT * 1024UL))
+
+namespace BlindsControllerConversion {
+
+    static constexpr double kShuntValue = IOT_BLINDS_CTRL_SHUNT / 1000.0; // Ohm
+
+    static constexpr int kADCMaxValue = 1023;
+    static constexpr double kADCMaxVoltage = IOT_BLINDS_CTRL_ADCV / 1000.0;
+
+    // ADC value = (kADCMaxValue * I * Rs) / kADCMaxVoltage
+    static constexpr double kConvertCurrentToADCValueMulitplierAmps = ((kADCMaxValue + 1) * kShuntValue) / kADCMaxVoltage;
+
+    static constexpr float kConvertCurrentToADCValueMulitplier = kConvertCurrentToADCValueMulitplierAmps / 1000.0; // mA
+    static constexpr float kConvertADCValueToCurrentMulitplier = 1000.0 / kConvertCurrentToADCValueMulitplierAmps;
+    static constexpr uint16_t kMinCurrent = (0 * kConvertADCValueToCurrentMulitplier);
+    static constexpr uint32_t __kMaxCurrent = (1023 * kConvertADCValueToCurrentMulitplier);
+    static constexpr uint16_t kMaxCurrent = __kMaxCurrent;
+
+    static_assert(__kMaxCurrent == kMaxCurrent, "max. current cannot be stored in uint16_t");
+    static_assert((__kMaxCurrent / 1000.0) < 10.0, "the ADC range is over 10A and a presicion will suffer");
+
+}

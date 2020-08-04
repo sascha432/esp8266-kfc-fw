@@ -40,7 +40,7 @@
         "default": "%allowed%"
     },
     "FormHostValidator_default_message": {
-        "use_counter": 2,
+        "use_counter": 3,
         "default": "Invalid hostname or IP address"
     },
     "webui_json_id": {
@@ -375,32 +375,16 @@
         "use_counter": 1,
         "default": "clr_temp_cmd_t"
     },
-    "blinds_controller_channel1_sensor": {
-        "use_counter": 0,
-        "default": "blinds_channel1_sensor"
-    },
-    "blinds_controller_channel1": {
-        "use_counter": 0,
-        "default": "blinds_channel1"
-    },
-    "blinds_controller_channel2_sensor": {
-        "use_counter": 0,
-        "default": "blinds_channel2_sensor"
-    },
-    "blinds_controller_channel2": {
-        "use_counter": 0,
-        "default": "blinds_channel2"
-    },
     "iot_blinds_control_state_file": {
         "use_counter": 2,
         "default": "/.pvt/blinds_ctrl.state"
     },
     "Yes": {
-        "use_counter": 2,
+        "use_counter": 1,
         "default": "Yes"
     },
     "No": {
-        "use_counter": 2,
+        "use_counter": 1,
         "default": "No"
     },
     "webui_json_title": {
@@ -808,7 +792,7 @@
         "default": "Cookie"
     },
     "Connection": {
-        "use_counter": 2,
+        "use_counter": 3,
         "default": "Connection"
     },
     "close": {
@@ -888,7 +872,7 @@
         "default": "sensors"
     },
     "name": {
-        "use_counter": 2,
+        "use_counter": 4,
         "default": "name"
     },
     "values": {
@@ -1044,7 +1028,7 @@
         "default": "deflate"
     },
     "config": {
-        "use_counter": 3,
+        "use_counter": 4,
         "default": "config"
     },
     "Success": {
@@ -1092,7 +1076,7 @@
         "default": "hPa"
     },
     "channel__u": {
-        "use_counter": 16,
+        "use_counter": 15,
         "default": "channel_%u"
     },
     "temperature": {
@@ -1120,7 +1104,7 @@
         "default": "id"
     },
     "mqtt": {
-        "use_counter": 8,
+        "use_counter": 9,
         "default": "mqtt"
     },
     "_set": {
@@ -1780,7 +1764,7 @@
         "default": "Busy"
     },
     "metrics": {
-        "use_counter": 0,
+        "use_counter": 1,
         "default": "metrics"
     },
     "channels": {
@@ -1802,5 +1786,13 @@
     "Move": {
         "use_counter": 1,
         "default": "Move"
+    },
+    "Name": {
+        "use_counter": 1,
+        "default": "Name"
+    },
+    "pwm": {
+        "use_counter": 1,
+        "default": "pwm"
     }
 }

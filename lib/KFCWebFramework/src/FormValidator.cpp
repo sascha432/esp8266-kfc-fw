@@ -6,11 +6,11 @@
 #include "FormField.h"
 #include "Form.h"
 
-FormValidator::FormValidator() : _field(nullptr), _enabled(true)
+FormValidator::FormValidator() : _field(nullptr)
 {
 }
 
-FormValidator::FormValidator(const String &message) : _field(nullptr), _message(message), _enabled(true)
+FormValidator::FormValidator(const String &message) : _field(nullptr), _message(message)
 {
 }
 
@@ -18,7 +18,7 @@ FormValidator::FormValidator(const String &message, const __FlashStringHelper *d
 {
 }
 
-void FormValidator::setField(FormField * field)
+void FormValidator::setField(FormField *field)
 {
     _field = field;
 }
@@ -35,15 +35,5 @@ String FormValidator::getMessage()
 
 bool FormValidator::validate()
 {
-    if (_enabled) {
-        if (_field->getForm().isValid()) {
-            return true;
-        }
-    }
-    return false;
-}
-
-void FormValidator::setEnabled(bool value)
-{
-    _enabled = value;
+    return true;
 }

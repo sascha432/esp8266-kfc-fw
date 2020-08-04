@@ -18,7 +18,7 @@ public:
 
     FormHostValidator(AllowedType allowedTypes = AllowedType::ALLOW_HOST_OR_IP) : FormHostValidator(FSPGM(FormHostValidator_default_message), allowedTypes) {
     }
-    FormHostValidator(const String &message, AllowedType allowedTypes = AllowedType::ALLOW_HOST_OR_IP) : FormValidator(message), _allowedTypes(allowedTypes) {
+    FormHostValidator(const String &message, AllowedType allowedTypes = AllowedType::ALLOW_HOST_OR_IP) : FormValidator(message.length() == 0 ? String(FSPGM(FormHostValidator_default_message)) : message), _allowedTypes(allowedTypes) {
     }
 
     virtual bool validate() override {
@@ -59,7 +59,7 @@ public:
 
 private:
     AllowedType _allowedTypes;
-    
+
 };
 
 class FormHostValidatorEx : public FormHostValidator {

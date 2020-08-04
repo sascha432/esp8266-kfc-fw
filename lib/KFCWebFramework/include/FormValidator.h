@@ -20,10 +20,8 @@ public:
     virtual String getMessage();
 
     virtual bool validate();
-    void setEnabled(bool value);
 
 private:
     FormField *_field;
     String _message;
-    bool _enabled: 1;
 };

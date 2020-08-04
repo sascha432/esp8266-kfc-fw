@@ -156,7 +156,11 @@ namespace FormUI {
         } break;
 
         default: {
-            output.printf_P(PSTR("<div class=\"form-group\"><label for=\"%s\">%s:</label>" FORMUI_CRLF),
+            // append colon if label is not marked as raw output
+            if (_label.charAt(0) != 0xff && !String_endsWith(_label, ':')) {
+                _label += ':';
+            }
+            output.printf_P(PSTR("<div class=\"form-group\"><label for=\"%s\">%s</label>" FORMUI_CRLF),
                 name,
                 _encodeHtmlEntities(_label, false, output)
             );

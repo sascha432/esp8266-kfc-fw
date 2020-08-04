@@ -15,7 +15,10 @@ public:
     }
 
     virtual bool validate() override {
-        return FormValidator::validate() && _callback(getField());
+        if (FormValidator::validate()) {
+            return _callback(getField());
+        }
+        return false;
     }
 
 private:

@@ -11,22 +11,27 @@
 #undef _min
 #endif
 
-FormRangeValidator::FormRangeValidator(long min, long max, bool allowZero) :
-    FormRangeValidator(allowZero ? FSPGM(FormRangeValidator_default_message_zero_allowed) : FSPGM(FormRangeValidator_default_message), min, max, allowZero)
+static const __FlashStringHelper *getDefaultMessage(bool allowZero) {
+    return allowZero ? FSPGM(FormRangeValidator_default_message_zero_allowed) : FSPGM(FormRangeValidator_default_message);
+}
+
+FormRangeValidator::FormRangeValidator(long min, long max, bool allowZero) : FormRangeValidator(getDefaultMessage(allowZero), min, max, allowZero)
 {
 }
 
-FormRangeValidator::FormRangeValidator(const String & message, long min, long max, bool allowZero) : FormValidator(message), _min(min), _max(max), _allowZero(allowZero)
+FormRangeValidator::FormRangeValidator(const String &message, long min, long max, bool allowZero) : FormValidator(message.length() == 0 ? String(getDefaultMessage(allowZero)) : message), _min(min), _max(max), _allowZero(allowZero)
 {
 }
 
 bool FormRangeValidator::validate()
 {
-    __DBG_printf("name=%s", getField().getName().c_str());
     if (FormValidator::validate()) {
         long value = getField().getValue().toInt();
-        __DBG_printf("value=%ld min=%ld max=%ld allo_zero=%u", value, _min, _max, _allowZero);
-        return (_allowZero && value == 0) || (value >= _min && value <= _max);
+        __LDBG_printf("name=%s", getField().getName().c_str());
+        __LDBG_printf("value=%ld min=%ld max=%ld allo_zero=%u", value, _min, _max, _allowZero);
+        if (FormValidator::validate()) {
+            return (_allowZero && value == 0) || (value >= _min && value <= _max);
+        }
     }
     return false;
 }

@@ -44,7 +44,7 @@
         "default": "Invalid hostname or IP address"
     },
     "webui_json_id": {
-        "use_counter": 21,
+        "use_counter": 22,
         "default": "id"
     },
     "webui_json_name": {
@@ -64,11 +64,11 @@
         "default": "offset"
     },
     "webui_json_value": {
-        "use_counter": 21,
+        "use_counter": 22,
         "default": "value"
     },
     "webui_json_state": {
-        "use_counter": 14,
+        "use_counter": 15,
         "default": "state"
     },
     "mime_application_json": {
@@ -1060,7 +1060,7 @@
         "default": "/.pvt/hlw80xx.state"
     },
     "seconds": {
-        "use_counter": 8,
+        "use_counter": 12,
         "default": "seconds"
     },
     "milliseconds": {
@@ -1076,7 +1076,7 @@
         "default": "hPa"
     },
     "channel__u": {
-        "use_counter": 15,
+        "use_counter": 18,
         "default": "channel_%u"
     },
     "temperature": {
@@ -1392,7 +1392,7 @@
         "default": "Title"
     },
     "minutes": {
-        "use_counter": 1,
+        "use_counter": 2,
         "default": "minutes"
     },
     "days": {
@@ -1472,7 +1472,7 @@
         "default": "Invalid username or password"
     },
     "None": {
-        "use_counter": 1,
+        "use_counter": 2,
         "default": "None"
     },
     "is_": {
@@ -1727,10 +1727,6 @@
         "use_counter": 1,
         "default": "0x%08x"
     },
-    "Forward": {
-        "use_counter": 2,
-        "default": "Forward"
-    },
     "ms": {
         "use_counter": 2,
         "default": "ms"
@@ -1752,12 +1748,8 @@
         "default": "Stopped"
     },
     "state": {
-        "use_counter": 2,
+        "use_counter": 1,
         "default": "state"
-    },
-    "_is_open": {
-        "use_counter": 0,
-        "default": "_is_open"
     },
     "Busy": {
         "use_counter": 1,
@@ -1768,15 +1760,15 @@
         "default": "metrics"
     },
     "channels": {
-        "use_counter": 1,
+        "use_counter": 2,
         "default": "channels"
     },
     "states": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "states"
     },
     "binary": {
-        "use_counter": 1,
+        "use_counter": 3,
         "default": "binary"
     },
     "Turn": {
@@ -1794,5 +1786,17 @@
     "pwm": {
         "use_counter": 1,
         "default": "pwm"
+    },
+    "busy": {
+        "use_counter": 3,
+        "default": "busy"
+    },
+    "set_all": {
+        "use_counter": 2,
+        "default": "set_all"
+    },
+    "Running": {
+        "use_counter": 1,
+        "default": "Running"
     }
 }

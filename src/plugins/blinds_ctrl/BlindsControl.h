@@ -12,21 +12,31 @@
 #include <kfc_fw_config.h>
 #include "blinds_defines.h"
 
+#if DEBUG_IOT_BLINDS_CTRL
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
+#endif
+
 using KFCConfigurationClasses::Plugins;
 
 class BlindsControl : public MQTTComponent {
 public:
     using NameType = const __FlashStringHelper *;
+    using ActionType = Plugins::Blinds::OperationType;
+    using Actions = Plugins::Blinds::BlindsConfigOperation_t;
 
     enum class TopicType : uint8_t {
         SET,
         STATE,
-        METRICS
+        METRICS,
+        CHANNELS,
     };
     enum class ChannelType : int8_t {
         NONE = -1,
         CHANNEL0,
         CHANNEL1,
+        ALL,
         MAX,
     };
     enum class StateType : uint8_t {
@@ -34,6 +44,15 @@ public:
         OPEN,
         CLOSED,
         STOPPED,
+        DELAY,
+        MAX
+    };
+
+    enum class ActionStateType : uint8_t {
+        NONE = 0,
+        WAIT_FOR_MOTOR,
+        DELAY,
+        REMOVE,
         MAX
     };
 
@@ -50,9 +69,9 @@ protected:
             return *this;
         }
 
-        void setToggleOpenClosed(StateType state) {
-            _state = (state == StateType::OPEN ? StateType::CLOSED : StateType::OPEN);
-        }
+        // void setToggleOpenClosed(StateType state) {
+        //     _state = (state == StateType::OPEN ? StateType::CLOSED : StateType::OPEN);
+        // }
 
         StateType getState() const {
             return _state;
@@ -71,7 +90,11 @@ protected:
         }
 
         NameType _getFPStr() const {
-            switch(_state) {
+            return __getFPStr(_state);
+        }
+
+        static NameType __getFPStr(StateType state) {
+            switch(state) {
                 case StateType::OPEN:
                     return FSPGM(Open);
                 case StateType::CLOSED:
@@ -131,78 +154,134 @@ protected:
 
     class ChannelAction {
     public:
-        ChannelAction() : _state(StateType::UNKNOWN), _channel(ChannelType::NONE) {
+        ChannelAction() : _state(ActionStateType::NONE), _action(ActionType::NONE), _channel(ChannelType::NONE), _delay(0) {
         }
-
-        void set(StateType state, ChannelType channel) {
-            _state = state;
-            _channel = channel;
-        }
-
-        bool isSet() const {
-            return _channel != ChannelType::NONE;
+        ChannelAction(ActionType state, ChannelType channel, uint16_t delay) : _state(ActionStateType::NONE), _action(state), _channel(channel), _delay(delay * 1000U) {
         }
 
         ChannelType getChannel() const {
             return _channel;
         }
 
-        StateType getState() const {
+        ActionType getAction() const {
+            return _action;
+        }
+
+        ActionStateType getState() const {
             return _state;
         }
 
-        void clear() {
-            _channel = ChannelType::NONE;
+        void monitorDelay() {
+            if (_state == ActionStateType::DELAY && millis() >= _delay) {
+                __LDBG_printf("delay=%u finished", _delay);
+                next();
+            }
+        }
+
+        void begin() {
+            __LDBG_printf("begin=%u", _state);
+            if (_state == ActionStateType::NONE) {
+                _state = ActionStateType::WAIT_FOR_MOTOR;
+            }
+        }
+
+        void next() {
+            __LDBG_printf("next=%u", _state);
+            if (_state == ActionStateType::NONE) {
+                end(); // remove, begin was never called
+            }
+            else if (_state == ActionStateType::WAIT_FOR_MOTOR) {
+                if (_delay) {
+                    _state = ActionStateType::DELAY; // after running start delay if set
+                    _delay += millis();
+                }
+                else {
+                    end();
+                }
+            }
+            else if (_state == ActionStateType::DELAY) {
+                end(); // delay finished
+            }
+        }
+
+        void end() {
+            __LDBG_printf("end=%u", _state);
+            _delay = 0;
+            _state = ActionStateType::REMOVE;
         }
 
     private:
-        StateType _state;
+        ActionStateType _state;
+        ActionType _action;
         ChannelType _channel;
+        uint32_t _delay;
     };
 
 public:
     BlindsControl();
 
     virtual MQTTAutoDiscoveryPtr nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num) override;
-    virtual uint8_t getAutoDiscoveryCount() const override {
-        return kChannelCount + 1;
-    }
+    virtual uint8_t getAutoDiscoveryCount() const override;
     virtual void onConnect(MQTTClient *client) override;
+    virtual void onMessage(MQTTClient *client, char *topic, char *payload, size_t len) override;
 
     void getValues(JsonArray &array);
     void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState);
 
-    void setChannel(ChannelType channel, StateType state);
+    // void setChannel(ChannelType channel, StateType state);
 
 protected:
     void _loopMethod();
 
 protected:
-    bool isBusy(ChannelType channel) const;
-    bool isBusyOrError(ChannelType channel) const;
     NameType _getStateStr(ChannelType channel) const;
 
+    void _readConfig();
     void _setup();
+
+    void _publishState(MQTTClient *client = nullptr);
+    void _executeAction(ChannelType channel, bool open);
+    void _startMotor(ChannelType channel, bool open);
+    void _monitorMotor(ChannelAction &action);
 
     void _clearAdc();
     void _updateAdc();
-
-    void _setMotorSpeed(ChannelType channel, uint16_t speed, bool direction);
+    void _setMotorSpeed(ChannelType channel, uint16_t speed, bool open);
     void _stop();
 
-    void _publishState(MQTTClient *client = nullptr);
     void _loadState();
     void _saveState();
-    void _readConfig();
 
 protected:
+    class ChannelQueue : public std::vector<ChannelAction>
+    {
+    public:
+        using Type = std::vector<ChannelAction>;
+
+        ChannelQueue(BlindsControl &control) : Type(), _control(control) {}
+
+        ChannelAction &getAction() {
+            return front();
+        }
+
+        void removeAction(const ChannelAction &action) {
+            __LDBG_printf("remove action=%p", &action);
+            erase(std::remove_if(begin(), end(), [&action](const ChannelAction &_action) {
+                return &action == &_action;
+            }), end());
+        }
+
+    private:
+        BlindsControl &_control;
+    };
+
     static String _getTopic(ChannelType channel, TopicType topic);
 
     Plugins::Blinds::ConfigStructType _config;
 
     ChannelStateArray<kChannelCount> _states;
+    ChannelQueue _queue;
     ChannelType _activeChannel;
-    ChannelAction _action;
 
     MillisTimer _motorTimeout;
 
@@ -225,3 +304,4 @@ protected:
 #endif
 };
 
+#include <debug_helper_disable.h>

@@ -1202,30 +1202,37 @@ namespace KFCConfigurationClasses {
 
         class BlindsConfig {
         public:
-            enum class BlindsStateType : uint8_t {
+            enum class OperationType : uint8_t {
                 NONE = 0,
-                OPEN,
-                CLOSED,
+                OPEN_CHANNEL0,
+                OPEN_CHANNEL0_FOR_CHANNEL1,
+                OPEN_CHANNEL1,
+                OPEN_CHANNEL1_FOR_CHANNEL0,
+                CLOSE_CHANNEL0,
+                CLOSE_CHANNEL0_FOR_CHANNEL1,
+                CLOSE_CHANNEL1,
+                CLOSE_CHANNEL1_FOR_CHANNEL0,
+                MAX
+            };
+
+            enum class MultiplexerType : uint8_t {
+                LOW_FOR_CHANNEL0 = 0,
+                HIGH_FOR_CHANNEL0 = 1,
                 MAX
             };
 
             typedef struct __attribute__packed__ BlindsConfigOperation_t {
                 using Type = BlindsConfigOperation_t;
 
-                // description at blinds_form.cpp
-                uint16_t open_delay;
-                uint16_t close_delay;
-                CREATE_ENUM_BITFIELD(open_state, BlindsStateType);
-                CREATE_ENUM_BITFIELD(close_state, BlindsStateType);
+                CREATE_ENUM_BITFIELD(type, OperationType);
+                uint16_t delay;
 
-                BlindsConfigOperation_t() : open_delay(0), close_delay(0), open_state(0), close_state(0) {}
+                BlindsConfigOperation_t() : type(0), delay(0) {}
 
                 template<typename Archive>
                 void serialize(Archive & ar, kfc::serialization::version version){
-                    ar & KFC_SERIALIZATION_NVP(open_delay);
-                    ar & KFC_SERIALIZATION_NVP(close_delay);
-                    ar & KFC_SERIALIZATION_NVP(open_state);
-                    ar & KFC_SERIALIZATION_NVP(close_state);
+                    ar & KFC_SERIALIZATION_NVP(type);
+                    ar & KFC_SERIALIZATION_NVP(delay);
                 }
 
             } BlindsConfigOperation_t;
@@ -1236,7 +1243,6 @@ namespace KFCConfigurationClasses {
                 uint16_t current_limit_time;        // ms
                 uint16_t open_time;                 // ms
                 uint16_t close_time;                // ms
-                BlindsConfigOperation_t operation;
 
                 BlindsConfigChannel_t() : pwm_value(600), current_limit(1500), current_limit_time(50), open_time(5000), close_time(5500) {}
 
@@ -1247,7 +1253,6 @@ namespace KFCConfigurationClasses {
                     ar & KFC_SERIALIZATION_NVP(current_limit_time);
                     ar & KFC_SERIALIZATION_NVP(open_time);
                     ar & KFC_SERIALIZATION_NVP(close_time);
-                    ar & KFC_SERIALIZATION_NVP(operation);
                 }
 
             } BlindsConfigChannel_t;
@@ -1256,12 +1261,18 @@ namespace KFCConfigurationClasses {
                 using Type = BlindsConfig_t;
 
                 BlindsConfigChannel_t channels[2];
-                uint8_t pins[4];
+                BlindsConfigOperation_t open[4];
+                BlindsConfigOperation_t close[4];
+                uint8_t pins[5];
+                CREATE_ENUM_BITFIELD(multiplexer, MultiplexerType);
 
                 template<typename Archive>
                 void serialize(Archive & ar, kfc::serialization::version version) {
                     ar & KFC_SERIALIZATION_NVP(channels);
+                    ar & KFC_SERIALIZATION_NVP(open);
+                    ar & KFC_SERIALIZATION_NVP(close);
                     ar & KFC_SERIALIZATION_NVP(pins);
+                    ar & KFC_SERIALIZATION_NVP(multiplexer);
                 }
 
                 BlindsConfig_t();

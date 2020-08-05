@@ -58,10 +58,16 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
         250, F("Extra Slow (250ms)")
     );
 
-    FormUI::ItemsList stateTypeItems(
-        Plugins::Blinds::BlindsStateType::NONE, FSPGM(None),
-        Plugins::Blinds::BlindsStateType::OPEN, FSPGM(Open),
-        Plugins::Blinds::BlindsStateType::CLOSED, FSPGM(Closed)
+    FormUI::ItemsList operationTypeItems(
+        Plugins::Blinds::OperationType::NONE, FSPGM(None),
+        Plugins::Blinds::OperationType::OPEN_CHANNEL0, F("Open Channel 0"),
+        Plugins::Blinds::OperationType::OPEN_CHANNEL1, F("Open Channel 1"),
+        Plugins::Blinds::OperationType::CLOSE_CHANNEL0, F("Close Channel 0"),
+        Plugins::Blinds::OperationType::CLOSE_CHANNEL1, F("Close Channel 1"),
+        Plugins::Blinds::OperationType::OPEN_CHANNEL0_FOR_CHANNEL1, F("Open Channel 0 For Channel 1"),
+        Plugins::Blinds::OperationType::OPEN_CHANNEL1_FOR_CHANNEL0, F("Open Channel 1 For Channel 0"),
+        Plugins::Blinds::OperationType::CLOSE_CHANNEL0_FOR_CHANNEL1, F("Close Channel 0 For Channel 1"),
+        Plugins::Blinds::OperationType::CLOSE_CHANNEL1_FOR_CHANNEL0, F("Close Channel 1 For Channel 0")
     );
 
     auto &ui = form.getFormUIConfig();
@@ -104,39 +110,63 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
         form.addFormUI(F("Motor PWM"), FormUI::Suffix(String(0) + '-' + String(PWMRANGE)));
         form.addValidator(FormRangeValidator(0, PWMRANGE));
 
-        auto &autoCloseGroup = channelGroup.end().addCardGroup(prefix + FSPGM(config), PrintString(F("Automation Channel %u"), i), false);
-
-        form.add(prefix + F("ood"), _H_W_STRUCT_VALUE(cfg, channels[i].operation.open_delay, i));
-        form.addFormUI(FormUI::Label(F("Open Delay:<br><small>Delay opening after the other channel has opened</small>"), true), FormUI::Suffix(FSPGM(seconds)));
-        form.addValidator(FormRangeValidator(0, 255));
-
-        form.add(prefix + F("ocd"), _H_W_STRUCT_VALUE(cfg, channels[i].operation.close_delay, i));
-        form.addFormUI(FormUI::Label(F("Close Delay:<br><small>Delay closing after the other channel has closed</small>"), true), FormUI::Suffix(FSPGM(seconds)));
-        form.addValidator(FormRangeValidator(0, 255));
-
-        form.add(prefix + F("oos"), _H_W_STRUCT_VALUE(cfg, channels[i].operation.open_state, i));
-        form.addFormUI(FormUI::Label(F("Required Open State:<br><small>Required state of the other channel, when this channel opens</small>"), true), stateTypeItems);
-
-        form.add(prefix + F("ocs"), _H_W_STRUCT_VALUE(cfg, channels[i].operation.close_state, i));
-        form.addFormUI(FormUI::Label(F("Required Close State:<br><small>Required state of the other channel, when this channel closes</small>"), true), stateTypeItems);
-
-        autoCloseGroup.end();
+        channelGroup.end();
 
     }
 
-    auto &pinsGroup = form.addCardGroup(FSPGM(config), F("Motor Pins"), false);
+    auto &autoGroup = form.addCardGroup(F("open"), PrintString(F("Open Automation")), false);
+
+    for(size_t i = 0; i < 4; i++) {
+        String prefix = PrintString(F("oq%u_"), i);
+        form.add(prefix + String('t'), _H_W_STRUCT_VALUE(cfg, open[i].type, i));
+        form.addFormUI(F("Action"), operationTypeItems);
+
+        form.add(prefix + String('d'), _H_W_STRUCT_VALUE(cfg, open[i].delay, i));
+        if (i == 0) {
+            form.addFormUI(FormUI::Label(F("Delay:<br><small>The delay is skipped if the action is not executed</small>"), true), FormUI::Suffix(FSPGM(seconds)));
+        }
+        else {
+            form.addFormUI(F("Delay"), FormUI::Suffix(FSPGM(seconds)));
+        }
+        form.addValidator(FormRangeValidator(0, 3600));
+    }
+
+    auto &closeGroup = autoGroup.end().addCardGroup(F("close"), PrintString(F("Close Automation")), false);
+
+    for(size_t i = 0; i < 4; i++) {
+        String prefix = PrintString(F("cq%u_"), i);
+        form.add(prefix + String('t'), _H_W_STRUCT_VALUE(cfg, close[i].type, i));
+        form.addFormUI(F("Action"), operationTypeItems);
+
+        form.add(prefix + String('d'), _H_W_STRUCT_VALUE(cfg, close[i].delay, i));
+        if (i == 0) {
+            form.addFormUI(FormUI::Label(F("Delay:<br><small>The delay is skipped if the action is not executed</small>"), true), FormUI::Suffix(FSPGM(seconds)));
+        }
+        else {
+            form.addFormUI(F("Delay"), FormUI::Suffix(FSPGM(seconds)));
+        }
+        form.addValidator(FormRangeValidator(0, 3600));
+    }
+
+    auto &pinsGroup = closeGroup.end().addCardGroup(FSPGM(config), F("Pin Configuration"), false);
 
     form.add(F("pin0"), _H_W_STRUCT_VALUE_TYPE(cfg, pins[0], uint8_t));
-    form.addFormUI(F("Channel 0 Pin 1"), FormUI::Type::INTEGER, FormUI::PlaceHolder(IOT_BLINDS_CTRL_M1_PIN));
+    form.addFormUI(F("Channel 0 Open Pin"), FormUI::Type::INTEGER, FormUI::PlaceHolder(IOT_BLINDS_CTRL_M1_PIN));
 
     form.add(F("pin1"), _H_W_STRUCT_VALUE_TYPE(cfg, pins[1], uint8_t));
-    form.addFormUI(F("Channel 0 Pin 2"), FormUI::Type::INTEGER, FormUI::PlaceHolder(IOT_BLINDS_CTRL_M2_PIN));
+    form.addFormUI(F("Channel 0 Close Pin"), FormUI::Type::INTEGER, FormUI::PlaceHolder(IOT_BLINDS_CTRL_M2_PIN));
 
     form.add(F("pin2"), _H_W_STRUCT_VALUE_TYPE(cfg, pins[2], uint8_t));
-    form.addFormUI(F("Channel 1 Pin 1"), FormUI::Type::INTEGER, FormUI::PlaceHolder(IOT_BLINDS_CTRL_M3_PIN));
+    form.addFormUI(F("Channel 1 Open Pin"), FormUI::Type::INTEGER, FormUI::PlaceHolder(IOT_BLINDS_CTRL_M3_PIN));
 
     form.add(F("pin3"), _H_W_STRUCT_VALUE_TYPE(cfg, pins[3], uint8_t));
-    form.addFormUI(F("Channel 1 Pin 2"), FormUI::Type::INTEGER, FormUI::PlaceHolder(IOT_BLINDS_CTRL_M4_PIN));
+    form.addFormUI(F("Channel 1 Close Pin"), FormUI::Type::INTEGER, FormUI::PlaceHolder(IOT_BLINDS_CTRL_M4_PIN));
+
+    auto &multiplexer = form.addObjectGetterSetter(F("shmp"), cfg, cfg.get_int_multiplexer, cfg.set_int_multiplexer);
+    form.addFormUI(FormUI::Type::HIDDEN);
+
+    form.add(F("pin4"), _H_W_STRUCT_VALUE_TYPE(cfg, pins[4], uint8_t));
+    form.addFormUI(F("Shunt Multiplexer Pin"), FormUI::Type::INTEGER, FormUI::PlaceHolder(IOT_BLINDS_CTRL_RSSEL_PIN)).addInputGroupAppendCheckBoxButton(multiplexer, F("HIGH State For Channel 0"));
 
     pinsGroup.end();
 

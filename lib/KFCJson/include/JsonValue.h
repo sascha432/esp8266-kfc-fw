@@ -37,6 +37,7 @@ public:
 
     String toString() const {
         PrintString str;
+        str.reserve(length());
         printTo(str);
         return str;
     }

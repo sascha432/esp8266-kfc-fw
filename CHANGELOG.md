@@ -16,6 +16,10 @@
 - Debug print functions for ICACHE_RAM_ATTR that do not pull the entire SerialWrapper code into IRAM
 - Templates for configuration getters/setters
 - Added SSDP plugin
+- Improved HTML form generator
+- Added missing html enitities encoding to forms
+- Open/close automation for the Blinds Plugin
+- MQTT auto discovery rebroadcast interval
 
 ## Version 0.0.3
 

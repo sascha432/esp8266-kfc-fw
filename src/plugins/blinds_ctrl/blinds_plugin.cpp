@@ -64,12 +64,18 @@ void BlindsControlPlugin::reconfigure(const String &source)
         MQTTClient::safeReRegisterComponent(this);
     }
     else {
+        _stop();
         _readConfig();
+        for(auto pin : BlindsControl::_config.pins) {
+            digitalWrite(pin, LOW);
+            pinMode(pin, OUTPUT);
+        }
     }
 }
 
 void BlindsControlPlugin::shutdown()
 {
+    _stop();
     LoopFunctions::add(loopMethod);
     MQTTClient::safeUnregisterComponent(this);
 }
@@ -100,11 +106,15 @@ void BlindsControlPlugin::createWebUI(WebUI &webUI) {
     row->setExtraClass(JJ(title));
     row->addGroup(F("Blinds"), false);
 
+    row = &webUI.addRow();
+    row->addSwitch(FSPGM(set_all), String(F("Both Channels")));
+
     for(const auto channel: _states.channels()) {
+
         String prefix = PrintString(FSPGM(channel__u), channel);
 
         row = &webUI.addRow();
-        row->addBadgeSensor(prefix + F("_state"), Plugins::Blinds::getChannelName(*channel), JsonString());
+        row->addBadgeSensor(prefix + F("_state"), Plugins::Blinds::getChannelName(*channel), JsonString()).add(JJ(head), F("h5"));
 
         row = &webUI.addRow();
         row->addSwitch(prefix + F("_set"), String(F("Channel ")) + String(*channel));
@@ -235,10 +245,10 @@ bool BlindsControlPlugin::atModeHandler(AtModeArgs &args)
             _currentLimitMinCount = args.toInt(5);
             _activeChannel = static_cast<ChannelType>(channel);
 
-            analogWriteFreq(IOT_BLINDS_CTRL_PWM_FREQ);
-            for(uint i = 0; i < 4; i++) {
-                analogWrite(BlindsControl::_config.pins[i], LOW);
-            }
+            _stop();
+            digitalWrite(BlindsControl::_config.pins[4], BlindsControl::_config.multiplexer == 1 && channel == 0);
+            delay(IOT_BLINDS_CTRL_RSSEL_WAIT);
+
             analogWrite(BlindsControl::_config.pins[(channel * kChannelCount) + direction], pwmLevel);
             args.printf_P(PSTR("level %u current limit/%u %u frequency %.2fkHz"), pwmLevel, _currentLimit, _currentLimitMinCount, IOT_BLINDS_CTRL_PWM_FREQ / 1000.0);
             args.printf_P(PSTR("channel %u direction %u time %u"), channel, direction, time);

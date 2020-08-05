@@ -761,7 +761,7 @@ bool KFCFWConfiguration::resolveZeroConf(const String &name, const String &hostn
         return false;
     }
 
-    __DBG_printf("resolveZeroConf=%s port=%u", hostname.c_str(), port);
+    __LDBG_printf("resolveZeroConf=%s port=%u", hostname.c_str(), port);
     auto start = hostname.indexOf(F("${zeroconf:"));
     if (start != -1) {
         start += 11;
@@ -770,7 +770,7 @@ bool KFCFWConfiguration::resolveZeroConf(const String &name, const String &hostn
             auto serviceEnd = hostname.indexOf('.');
             auto protoEnd = hostname.indexOf(',');
             auto valuesEnd = hostname.indexOf('|');
-            __DBG_printf("start=%d end=%d service_end=%d proto_end=%d name_end=%d", start, end, serviceEnd, protoEnd, valuesEnd);
+            __LDBG_printf("start=%d end=%d service_end=%d proto_end=%d name_end=%d", start, end, serviceEnd, protoEnd, valuesEnd);
             if (serviceEnd != -1 && protoEnd != -1 && serviceEnd < protoEnd && (valuesEnd == -1 || protoEnd < valuesEnd)) {
                 auto service = hostname.substring(start, serviceEnd);
                 auto proto = hostname.substring(serviceEnd + 1, protoEnd);
@@ -819,7 +819,7 @@ bool KFCFWConfiguration::hasZeroConf(const String &hostname) const
     if (pos != -1) {
         pos = hostname.indexOf('}', pos + 11);
     }
-    __DBG_printf("has_zero_conf=%s result=%d", hostname.c_str(), pos);
+    __LDBG_printf("has_zero_conf=%s result=%d", hostname.c_str(), pos);
     return pos != -1;
 }
 

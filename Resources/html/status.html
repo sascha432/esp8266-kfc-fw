@@ -25,128 +25,133 @@
     </nav>
     <!--NAV%%-->
     <div class="container">
-        <div class="status-table">
-            <h1>%TITLE%</h1>
-            <h5>%HOSTNAME%%SAFEMODE% - %IP_ADDRESS%</h5>
-                <div class="row">
-                <div class="col">
-                    <h4>System overview</h4>
-                </div>
+        <div class="card mt-3">
+            <div class="card-header bg-primary text-white">
+                <h1 class="card-title mb-1">%TITLE%</h1>
             </div>
-            <div class="row">
-                <div class="col-lg-3 col-lg-auto">
-                    Hardware
-                </div>
-                <div class="col">
-                    %HARDWARE%
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-lg-3 col-lg-auto">
-                    Software
-                </div>
-                <div class="col">
-                    %SOFTWARE%
-                </div>
-            </div>
+            <div class="card-body">
+                <div class="status-table">
+                    <h5 class="card-title mb-3 mt-0">%HOSTNAME%%SAFEMODE% - %IP_ADDRESS%</h5>
+                    <div class="row">
+                        <div class="col">
+                            <h4>System overview</h4>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-lg-3 col-lg-auto">
+                            Hardware
+                        </div>
+                        <div class="col">
+                            %HARDWARE%
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-lg-3 col-lg-auto">
+                            Software
+                        </div>
+                        <div class="col">
+                            %SOFTWARE%
+                        </div>
+                    </div>
 
-            <!--#if (defined(NTP_CLIENT) && NTP_CLIENT) || (defined(RTC_SUPPORT) && RTC_SUPPORT)-->
-            <div class="row">
-                <div class="col-lg-3 col-lg-auto">
-                    System time
-                </div>
-                <div class="col">
-                    %TIME%
-                </div>
-            </div>
-            <!--#endif-->
+                    <!--#if (defined(NTP_CLIENT) && NTP_CLIENT) || (defined(RTC_SUPPORT) && RTC_SUPPORT)-->
+                    <div class="row">
+                        <div class="col-lg-3 col-lg-auto">
+                            System time
+                        </div>
+                        <div class="col">
+                            %TIME%
+                        </div>
+                    </div>
+                    <!--#endif-->
 
-            <div class="row">
-                <div class="col-lg-3 col-lg-auto">
-                    System up time
-                </div>
-                <div class="col">
-                    %UPTIME%
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-lg-3 col-lg-auto">
-                    WiFi up time
-                </div>
-                <div class="col">
-                    %WIFI_UPTIME%
-                </div>
-            </div>
+                    <div class="row">
+                        <div class="col-lg-3 col-lg-auto">
+                            System up time
+                        </div>
+                        <div class="col">
+                            %UPTIME%
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-lg-3 col-lg-auto">
+                            WiFi up time
+                        </div>
+                        <div class="col">
+                            %WIFI_UPTIME%
+                        </div>
+                    </div>
 
-            <div class="row">
-                <div class="col">
-                    <h4>Network overview</h4>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-lg-3 col-lg-auto">
-                    IP Address / Gateway
-                </div>
-                <div class="col">
-                    %IP_ADDRESS% / %GATEWAY%
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-lg-3 col-lg-auto">
-                    DNS
-                </div>
-                <div class="col">
-                    %DNS%
-                </div>
-            </div>
+                    <div class="row">
+                        <div class="col">
+                            <h4>Network overview</h4>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-lg-3 col-lg-auto">
+                            IP Address / Gateway
+                        </div>
+                        <div class="col">
+                            %IP_ADDRESS% / %GATEWAY%
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-lg-3 col-lg-auto">
+                            DNS
+                        </div>
+                        <div class="col">
+                            %DNS%
+                        </div>
+                    </div>
 
-            <div class="row">
-                <div class="col">
-                    <h4>WiFi overview</h4>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-lg-3 col-lg-auto">
-                    SSID
-                </div>
-                <div class="col">
-                    %WIFI_SSID%
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-lg-3 col-lg-auto">
-                    Mode
-                </div>
-                <div class="col">
-                    %WIFI_MODE%
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-lg-3 col-lg-auto">
-                    Status
-                </div>
-                <div class="col">
-                    %WIFI_STATUS%
-                </div>
-            </div>
+                    <div class="row">
+                        <div class="col">
+                            <h4>WiFi overview</h4>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-lg-3 col-lg-auto">
+                            SSID
+                        </div>
+                        <div class="col">
+                            %WIFI_SSID%
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-lg-3 col-lg-auto">
+                            Mode
+                        </div>
+                        <div class="col">
+                            %WIFI_MODE%
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-lg-3 col-lg-auto">
+                            Status
+                        </div>
+                        <div class="col">
+                            %WIFI_STATUS%
+                        </div>
+                    </div>
 
-            <div class="row">
-                <div class="col">
-                    <h4>Plugins</h4>
+                    <div class="row">
+                        <div class="col">
+                            <h4>Plugins</h4>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-lg-3 col-lg-auto">
+                            WebUI Alerts
+                        </div>
+                        <div class="col">
+                            %WEBUI_ALERTS_STATUS%
+                        </div>
+                    </div>
+
+                    %PLUGIN_STATUS%
                 </div>
             </div>
-
-            <div class="row">
-                <div class="col-lg-3 col-lg-auto">
-                    WebUI Alerts
-                </div>
-                <div class="col">
-                    %WEBUI_ALERTS_STATUS%
-                </div>
-            </div>
-
-            %PLUGIN_STATUS%
-
         </div>
         <!--%%FOOT-->
         <div class="row">

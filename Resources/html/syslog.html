@@ -25,31 +25,41 @@
     </nav>
     <!--NAV%%-->
     <div class="container">
-        <h1>Syslog Client</h1>
         <form method="POST" action="syslog.html">
-            <div class="form-group">
-                <label for="sl_proto">Syslog Client:</label>
-                <select class="form-control" name="sl_proto" id="sl_proto">
-                    <option value="0" %SL_PROTO_0%>Disabled</option>
-                    <option value="1" %SL_PROTO_1%>UDP</option>
-                    <option value="2" %SL_PROTO_2%>TCP</option>
-                    <!--#if ASYNC_TCP_SSL_ENABLED-->
-                    <option value="3" %SL_PROTO_3%>TCP with TLS</option>
-                    <!--#endif-->
-                </select>
-            </div>
-            <span id="syslog_settings">
-                <div class="form-group">
-                    <label for="sl_host">Syslog Host:</label>
-                    <input type="text" class="form-control" name="sl_host" id="sl_host" value="%SL_HOST%">
+            <div class="accordion pt-3" id="ntp_settings">
+                <div class="card bg-primary text-white mb-0">
+                    <div class="card-header" id="main-header">
+                        <h3 class="mb-0 p-1">Syslog Client</h3>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="sl_port">Syslog Port:</label>
-                    <input type="text" class="form-control" name="sl_port" id="sl_port" value="%SL_PORT%" placeholder="514">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label for="sl_proto">Syslog Client:</label>
+                            <select class="form-control" name="sl_proto" id="sl_proto">
+                                <option value="0" %SL_PROTO_0%>Disabled</option>
+                                <option value="1" %SL_PROTO_1%>UDP</option>
+                                <option value="2" %SL_PROTO_2%>TCP</option>
+                                <!--#if ASYNC_TCP_SSL_ENABLED-->
+                                <option value="3" %SL_PROTO_3%>TCP with TLS</option>
+                                <!--#endif-->
+                            </select>
+                        </div>
+                        <span id="syslog_settings">
+                            <div class="form-group">
+                                <label for="sl_host">Syslog Host:</label>
+                                <input type="text" class="form-control" name="sl_host" id="sl_host" value="%SL_HOST%">
+                            </div>
+                            <div class="form-group">
+                                <label for="sl_port">Syslog Port:</label>
+                                <input type="text" class="form-control" name="sl_port" id="sl_port" value="%SL_PORT%" placeholder="514">
+                            </div>
+                        </span>
+                    </div>
                 </div>
-            </span>
-            <div class="form-group">
-                <button type="submit" class="btn btn-primary">Save Changes...</button>
+                <div class="card">
+                    <div class="card-body"><button type="submit" class="btn btn-primary">Save Changes...</button></div>
+                </div>
             </div>
         </form>
         <!--%%FOOT-->

@@ -25,57 +25,66 @@
     </nav>
     <!--NAV%%-->
     <div class="container">
-        <h1>Remote Access Configuration</h1>
-        <form method="POST" action="remote.html" id="remote_settings">
-            <div class="form-group">
-                <label for="httpmode">HTTP Server:</label>
-                <select class="form-control setting-requires-restart" name="httpmode" id="httpmode">
-                    <option value="0" %HTTPMODE_0%>Disabled</option>
-                    <option value="1" %HTTPMODE_1%>Enabled</option>
-                    <!--#if defined(WEBSERVER_TLS_SUPPORT) && WEBSERVER_TLS_SUPPORT-->
-                    <option value="2" %HTTPMODE_2%>Enabled with TLS</option>
-                    <!--#endif-->
-                </select>
-            </div>
-            <span id="http_settings">
-                <!--#if defined(ESP8266) && defined(SPEED_BOOSTER_ENABLED) && SPEED_BOOSTER_ENABLED-->
-                <div class="form-group">
-                    <label for="httpperf">Performance:</label>
-                    <select class="form-control" name="httpperf" id="httpperf">
-                        <option value="0" %HTTPPERF_0%>80Mhz</option>
-                        <option value="1" %HTTPPERF_1%>160Mhz (Recommended for TLS)</option>
-                    </select>
-                </div>
-                <!--#endif-->
-                <div class="form-group">
-                    <label for="httport">HTTP Port:</label>
-                    <input type="text" class="form-control setting-requires-restart" name="httport" id="httport" value="%HTTPORT%" placeholder="80">
-                </div>
-            </span>
-            <!--#if defined(WEBSERVER_TLS_SUPPORT) && WEBSERVER_TLS_SUPPORT-->
-            <span id="ssl_settings">
-                <div class="form-group">
-                    <label for="ssl_cert">SSL Certificate:</label>
-                    <textarea class="form-control setting-requires-restart" id="ssl_cert" name="ssl_cert"
-                        rows="3">%SSL_CERT%</textarea>
-                </div>
-                <div class="form-group">
-                    <label for="ssl_key setting-requires-restart">SSL Key:</label>
-                    <textarea class="form-control" id="ssl_key" name="ssl_key" rows="3">%SSL_KEY%</textarea>
-                </div>
-            </span>
-            <!--#endif-->
-            <div class="form-group">
-                <label for="btok">Token for Web Server, Web Sockets and Tcp2Serial:</label>
-                <div class="input-group">
-                    <input type="text" class="form-control" name="btok" id="btok" value="%BTOK%">
-                    <div class="input-group-append">
-                        <button type="button" class="btn btn-default" data-color="primary" id="generate-bearer-token" data-for="#btok" data-len="56">Generate</button>
+        <form method="POST" action="remote.html">
+            <div class="accordion pt-3" id="remote_settings">
+                <div class="card bg-primary text-white mb-0">
+                    <div class="card-header" id="main-header">
+                        <h3 class="mb-0 p-1">Remote Access Configuration</h3>
                     </div>
                 </div>
-            </div>
-            <div class="form-group">
-                <button type="submit" class="btn btn-primary">Save Changes...</button>
+                <div class="card">
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label for="httpmode">HTTP Server:</label>
+                            <select class="form-control setting-requires-restart" name="httpmode" id="httpmode">
+                                <option value="0" %HTTPMODE_0%>Disabled</option>
+                                <option value="1" %HTTPMODE_1%>Enabled</option>
+                                <!--#if defined(WEBSERVER_TLS_SUPPORT) && WEBSERVER_TLS_SUPPORT-->
+                                <option value="2" %HTTPMODE_2%>Enabled with TLS</option>
+                                <!--#endif-->
+                            </select>
+                        </div>
+                        <span id="http_settings">
+                            <!--#if defined(ESP8266) && defined(SPEED_BOOSTER_ENABLED) && SPEED_BOOSTER_ENABLED-->
+                            <div class="form-group">
+                                <label for="httpperf">Performance:</label>
+                                <select class="form-control" name="httpperf" id="httpperf">
+                                    <option value="0" %HTTPPERF_0%>80Mhz</option>
+                                    <option value="1" %HTTPPERF_1%>160Mhz (Recommended for TLS)</option>
+                                </select>
+                            </div>
+                            <!--#endif-->
+                            <div class="form-group">
+                                <label for="httport">HTTP Port:</label>
+                                <input type="text" class="form-control setting-requires-restart" name="httport" id="httport" value="%HTTPORT%" placeholder="80">
+                            </div>
+                            <!--#if defined(WEBSERVER_TLS_SUPPORT) && WEBSERVER_TLS_SUPPORT-->
+                            <span id="ssl_settings">
+                                <div class="form-group">
+                                    <label for="ssl_cert">SSL Certificate:</label>
+                                    <textarea class="form-control setting-requires-restart" id="ssl_cert" name="ssl_cert" rows="3">%SSL_CERT%</textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label for="ssl_key setting-requires-restart">SSL Key:</label>
+                                    <textarea class="form-control" id="ssl_key" name="ssl_key" rows="3">%SSL_KEY%</textarea>
+                                </div>
+                            </span>
+                        </span>
+                        <!--#endif-->
+                        <div class="form-group">
+                            <label for="btok">Token for Web Server, Web Sockets and Tcp2Serial:</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" name="btok" id="btok" value="%BTOK%">
+                                <div class="input-group-append">
+                                    <button type="button" class="btn btn-default" data-color="primary" id="generate-bearer-token" data-for="#btok" data-len="56">Generate</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-body"><button type="submit" class="btn btn-primary">Save Changes...</button></div>
+                </div>
             </div>
         </form>
         <!--%%FOOT-->

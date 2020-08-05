@@ -28,7 +28,12 @@ void NTPPlugin::createConfigureForm(FormCallbackType type, const String &formNam
     auto &cfg = System::Flags::getWriteableConfig();
     auto &ntp = Plugins::NTPClient::getWriteableConfig();
 
-    form.setFormUI(FSPGM(NTP_Client_Configuration, "NTP Client Configuration"));
+    auto &ui = form.getFormUIConfig();
+    ui.setTitle(FSPGM(NTP_Client_Configuration, "NTP Client Configuration"));
+    ui.setContainerId(F("ntp_settings"));
+    ui.setStyle(FormUI::StyleType::ACCORDION);
+
+    auto &mainGroup = form.addCardGroup(FSPGM(config), String(), true);
 
     form.addObjectGetterSetter<System::Flags::ConfigStructType, bool>(F("ntp_en"), cfg, System::Flags::ConfigStructType::get_bit_is_ntp_client_enabled, System::Flags::ConfigStructType::set_bit_is_ntp_client_enabled);
     form.addFormUI(FSPGM(NTP_Client, "NTP Client"), FormUI::BoolItems());
@@ -57,6 +62,7 @@ void NTPPlugin::createConfigureForm(FormCallbackType type, const String &formNam
     form.addValidator(FormRangeValidator(F("Invalid refresh interval: %min%-%max% minutes"), ntp.kRefreshIntervalMin, ntp.kRefreshIntervalMax));
 
     group.end();
+    mainGroup.end();
 
     form.finalize();
 }

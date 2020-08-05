@@ -96,7 +96,6 @@ void BlindsControl::getValues(JsonArray &array)
     obj->add(JJ(state), true);
 
     for(const auto channel: _states.channels()) {
-
         String prefix = PrintString(FSPGM(channel__u), channel);
 
         obj = &array.addObject(3);
@@ -108,9 +107,51 @@ void BlindsControl::getValues(JsonArray &array)
         obj->add(JJ(id), prefix + F("_set"));
         obj->add(JJ(value), _states[channel].isOpen() ? 1 : 0);
         obj->add(JJ(state), true);
+    }
+}
 
+void BlindsControl::_publishState(MQTTClient *client)
+{
+    if (!client) {
+        client = MQTTClient::getClient();
+    }
+    __LDBG_printf("state %s/%s, client %p", _getStateStr(ChannelType::CHANNEL0), _getStateStr(ChannelType::CHANNEL1), client);
+
+    if (client) {
+        JsonUnnamedObject metrics(2);
+        JsonUnnamedObject channels(kChannelCount);
+        String binaryState = String('b');
+
+        if (_queue.empty()) {
+            client->publish(_getTopic(ChannelType::ALL, TopicType::STATE), true, String(_states[0].isOpen() || _states[1].isOpen() ? 1 : 0));
+        }
+
+        for(const auto channel: _states.channels()) {
+            auto &state = _states[channel];
+            auto isOpen = state.getCharState();
+            binaryState += isOpen;
+            client->publish(_getTopic(channel, TopicType::STATE), true, String(isOpen));
+            channels.add(PrintString(FSPGM(channel__u), channel), _getStateStr(channel));
+        }
+        metrics.add(FSPGM(binary), binaryState);
+        metrics.add(FSPGM(busy), !_queue.empty());
+
+        PrintString buffer;
+        buffer.reserve(metrics.length());
+        metrics.printTo(buffer);
+
+        client->publish(_getTopic(ChannelType::NONE, TopicType::METRICS), true, buffer);
+
+        buffer = PrintString();
+        buffer.reserve(channels.length());
+        channels.printTo(buffer);
+        client->publish(_getTopic(ChannelType::NONE, TopicType::CHANNELS), true, buffer);
     }
 
+    JsonUnnamedObject webUI(2);
+    webUI.add(JJ(type), JJ(ue));
+    getValues(webUI.addArray(JJ(events), kChannelCount * 2));
+    WsWebUISocket::broadcast(WsWebUISocket::getSender(), webUI);
 }
 
 void BlindsControl::onConnect(MQTTClient *client)
@@ -122,7 +163,6 @@ void BlindsControl::onConnect(MQTTClient *client)
         client->subscribe(this, _getTopic(channel, TopicType::SET));
     }
 }
-
 
 void BlindsControl::onMessage(MQTTClient *client, char *topic, char *payload, size_t len)
 {
@@ -136,7 +176,6 @@ void BlindsControl::onMessage(MQTTClient *client, char *topic, char *payload, si
     else {
         channel = ChannelType::ALL;
     }
-
     auto state = atoi(payload); // payload is NUL terminated
     __LDBG_printf("topic=%s state=%u payload=%s", topic, state, payload);
     _executeAction(channel, state);
@@ -267,11 +306,11 @@ void BlindsControl::_loopMethod()
             case ActionStateType::NONE:
                 switch(action.getAction()) { // translate action into which channel to check and which to open/close
                     case ActionType::OPEN_CHANNEL0:
-                        forChannel = ChannelType::CHANNEL0;
+                        forChannel = channel == ChannelType::ALL ? ChannelType::ALL : ChannelType::CHANNEL0;
                         openChannel = ChannelType::CHANNEL0;
                         break;
                     case ActionType::OPEN_CHANNEL1:
-                        forChannel = ChannelType::CHANNEL1;
+                        forChannel = channel == ChannelType::ALL ? ChannelType::ALL : ChannelType::CHANNEL1;
                         openChannel = ChannelType::CHANNEL1;
                         break;
                     case ActionType::OPEN_CHANNEL0_FOR_CHANNEL1:
@@ -283,11 +322,11 @@ void BlindsControl::_loopMethod()
                         openChannel = ChannelType::CHANNEL1;
                         break;
                     case ActionType::CLOSE_CHANNEL0:
-                        forChannel = ChannelType::CHANNEL0;
+                        forChannel = channel == ChannelType::ALL ? ChannelType::ALL : ChannelType::CHANNEL0;
                         closeChannel = ChannelType::CHANNEL0;
                         break;
                     case ActionType::CLOSE_CHANNEL1:
-                        forChannel = ChannelType::CHANNEL1;
+                        forChannel = channel == ChannelType::ALL ? ChannelType::ALL : ChannelType::CHANNEL1;
                         closeChannel = ChannelType::CHANNEL1;
                         break;
                     case ActionType::CLOSE_CHANNEL0_FOR_CHANNEL1:
@@ -301,15 +340,13 @@ void BlindsControl::_loopMethod()
                     default:
                         break;
                 }
-                __LDBG_printf("action=%d for=%d open=%d close=%d", action.getAction(), forChannel, openChannel, closeChannel);
-                if (channel == forChannel || channel == ChannelType::ALL) {
+                __LDBG_printf("action=%d channel=%u for=%d open=%d close=%d channel0=%s channel1=%s", action.getAction(), channel, forChannel, openChannel, closeChannel, _states[0]._getFPStr(), _states[1]._getFPStr());
+                if (channel == forChannel) {
                     if (openChannel != ChannelType::NONE && !_states[openChannel].isOpen()) {
-                        action.begin();
-                        _startMotor(openChannel, true);
+                        action.begin(openChannel, true);
                     }
                     else if (closeChannel != ChannelType::NONE && !_states[closeChannel].isClosed()) {
-                        action.begin();
-                        _startMotor(closeChannel, false);
+                        action.begin(closeChannel, false);
                     }
                     else {
                         action.end();
@@ -318,6 +355,10 @@ void BlindsControl::_loopMethod()
                 else {
                     action.end();
                 }
+                break;
+            case ActionStateType::START_MOTOR:
+                _startMotor(channel, action.getOpen());
+                action.next();
                 break;
             case ActionStateType::WAIT_FOR_MOTOR:
                 _monitorMotor(action);
@@ -337,6 +378,11 @@ void BlindsControl::_loopMethod()
                 break;
         }
     }
+}
+
+bool BlindsControl::_isOpenOrClosed(ChannelType channel) const
+{
+    return ((_states[channel].isOpen() || _states[channel].isClosed()) && (_queue.empty() || (_activeChannel != channel)));
 }
 
 BlindsControl::NameType BlindsControl::_getStateStr(ChannelType channel) const
@@ -404,7 +450,7 @@ void BlindsControl::_stop()
 String BlindsControl::_getTopic(ChannelType channel, TopicType type)
 {
     if (type == TopicType::METRICS) {
-        return MQTTClient::formatTopic(FSPGM(state));
+        return MQTTClient::formatTopic(FSPGM(metrics));
     }
     else if (type == TopicType::CHANNELS) {
         return MQTTClient::formatTopic(FSPGM(channels));
@@ -423,46 +469,6 @@ String BlindsControl::_getTopic(ChannelType channel, TopicType type)
         return MQTTClient::formatTopic(str);
     }
     return MQTTClient::formatTopic(PrintString(FSPGM(channel__u), channel), str);
-}
-
-void BlindsControl::_publishState(MQTTClient *client)
-{
-    if (!client) {
-        client = MQTTClient::getClient();
-    }
-    __LDBG_printf("state %s/%s, client %p", _getStateStr(ChannelType::CHANNEL0), _getStateStr(ChannelType::CHANNEL1), client);
-
-    if (client) {
-        JsonUnnamedObject metrics(2);
-        JsonUnnamedObject channels(kChannelCount);
-        String binaryState = String('b');
-
-        for(const auto channel: _states.channels()) {
-            auto &state = _states[channel];
-            auto isOpen = state.getCharState();
-            binaryState += isOpen;
-            client->publish(_getTopic(channel, TopicType::STATE), true, String(isOpen));
-            channels.add(PrintString(FSPGM(channel__u), channel), _getStateStr(channel));
-        }
-        metrics.add(FSPGM(binary), binaryState);
-        metrics.add(FSPGM(busy), !_queue.empty());
-
-        PrintString buffer;
-        buffer.reserve(metrics.length());
-        metrics.printTo(buffer);
-
-        client->publish(_getTopic(ChannelType::NONE, TopicType::METRICS), true, buffer);
-
-        buffer = PrintString();
-        buffer.reserve(channels.length());
-        channels.printTo(buffer);
-        client->publish(_getTopic(ChannelType::NONE, TopicType::CHANNELS), true, buffer);
-    }
-
-    JsonUnnamedObject webUI(2);
-    webUI.add(JJ(type), JJ(ue));
-    getValues(webUI.addArray(JJ(events), kChannelCount * 2));
-    WsWebUISocket::broadcast(WsWebUISocket::getSender(), webUI);
 }
 
 void BlindsControl::_loadState()

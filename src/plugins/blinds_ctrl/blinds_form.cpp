@@ -111,39 +111,38 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
         form.addValidator(FormRangeValidator(0, PWMRANGE));
 
         channelGroup.end();
-
     }
 
-    auto &autoGroup = form.addCardGroup(F("open"), PrintString(F("Open Automation")), false);
+    auto &autoGroup = form.addCardGroup(FSPGM(open, "open"), PrintString(F("Open Automation")), false);
 
     for(size_t i = 0; i < 4; i++) {
         String prefix = PrintString(F("oq%u_"), i);
         form.add(prefix + String('t'), _H_W_STRUCT_VALUE(cfg, open[i].type, i));
-        form.addFormUI(F("Action"), operationTypeItems);
+        form.addFormUI(FSPGM(Action, "Action"), operationTypeItems);
 
         form.add(prefix + String('d'), _H_W_STRUCT_VALUE(cfg, open[i].delay, i));
         if (i == 0) {
-            form.addFormUI(FormUI::Label(F("Delay:<br><small>The delay is skipped if the action is not executed</small>"), true), FormUI::Suffix(FSPGM(seconds)));
+            form.addFormUI(FormUI::Label(FSPGM(Delay_After_Execution_br_explanation, "Delay After Execution:<br><small>The delay is skipped if the action is not executed</small>"), true), FormUI::Suffix(FSPGM(seconds)));
         }
         else {
-            form.addFormUI(F("Delay"), FormUI::Suffix(FSPGM(seconds)));
+            form.addFormUI(FSPGM(Delay, "Delay"), FormUI::Suffix(FSPGM(seconds)));
         }
         form.addValidator(FormRangeValidator(0, 3600));
     }
 
-    auto &closeGroup = autoGroup.end().addCardGroup(F("close"), PrintString(F("Close Automation")), false);
+    auto &closeGroup = autoGroup.end().addCardGroup(FSPGM(close), PrintString(F("Close Automation")), false);
 
     for(size_t i = 0; i < 4; i++) {
         String prefix = PrintString(F("cq%u_"), i);
         form.add(prefix + String('t'), _H_W_STRUCT_VALUE(cfg, close[i].type, i));
-        form.addFormUI(F("Action"), operationTypeItems);
+        form.addFormUI(FSPGM(Action), operationTypeItems);
 
         form.add(prefix + String('d'), _H_W_STRUCT_VALUE(cfg, close[i].delay, i));
         if (i == 0) {
-            form.addFormUI(FormUI::Label(F("Delay:<br><small>The delay is skipped if the action is not executed</small>"), true), FormUI::Suffix(FSPGM(seconds)));
+            form.addFormUI(FormUI::Label(FSPGM(Delay_After_Execution_br_explanation), true), FormUI::Suffix(FSPGM(seconds)));
         }
         else {
-            form.addFormUI(F("Delay"), FormUI::Suffix(FSPGM(seconds)));
+            form.addFormUI(FSPGM(Delay), FormUI::Suffix(FSPGM(seconds)));
         }
         form.addValidator(FormRangeValidator(0, 3600));
     }

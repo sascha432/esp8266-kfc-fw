@@ -400,6 +400,7 @@ PROGMEM_STRING_DECL(Expires);
 // lib/KFCWebFramework/src/HttpHeaders.cpp:285
 PROGMEM_STRING_DECL(no_cache);
 // src/MissingFlashStrings.cpp:40
+// src/plugins/blinds_ctrl/blinds_form.cpp:133
 // lib/KFCWebFramework/src/HttpHeaders.cpp:247
 PROGMEM_STRING_DECL(close);
 // src/MissingFlashStrings.cpp:41
@@ -422,7 +423,7 @@ PROGMEM_STRING_DECL(fs_mapping_dir);
 // lib/KFCWebBuilder/src/ListDir.cpp:157
 PROGMEM_STRING_DECL(fs_mapping_listings);
 // src/plugins.cpp:78
-// src/plugins/blinds_ctrl/BlindsControl.h:106
+// src/plugins/blinds_ctrl/BlindsControl.h:108
 PROGMEM_STRING_DECL(n_a);
 // src/plugins.cpp:106
 // src/plugins.cpp:110
@@ -599,7 +600,7 @@ PROGMEM_STRING_DECL(size);
 // src/web_server.cpp:329
 PROGMEM_STRING_DECL(mime_image_bmp);
 // src/web_server.cpp:362
-// src/plugins/blinds_ctrl/blinds_form.cpp:151
+// src/plugins/blinds_ctrl/blinds_form.cpp:150
 // src/plugins/mqtt/mqtt_form.cpp:59
 // lib/KFCConfiguration/src/JsonConfigReader.cpp:24
 PROGMEM_STRING_DECL(config);
@@ -695,7 +696,7 @@ PROGMEM_STRING_DECL(mqtt);
 // src/plugins/alarm/alarm.cpp:360
 // src/plugins/atomic_sun/atomic_sun_v2.cpp:153
 // src/plugins/atomic_sun/atomic_sun_v2.cpp:165
-// src/plugins/blinds_ctrl/BlindsControl.cpp:394
+// src/plugins/blinds_ctrl/BlindsControl.cpp:465
 // src/plugins/clock/clock_mqtt.cpp:25
 // src/plugins/clock/clock_mqtt.cpp:115
 // src/plugins/dimmer_module/dimmer_channel.cpp:67
@@ -706,7 +707,7 @@ PROGMEM_STRING_DECL(_state);
 // src/plugins/alarm/alarm.cpp:99
 // src/plugins/atomic_sun/atomic_sun_v2.cpp:152
 // src/plugins/atomic_sun/atomic_sun_v2.cpp:164
-// src/plugins/blinds_ctrl/BlindsControl.cpp:390
+// src/plugins/blinds_ctrl/BlindsControl.cpp:461
 // src/plugins/clock/clock_mqtt.cpp:26
 // src/plugins/clock/clock_mqtt.cpp:61
 // src/plugins/clock/clock_mqtt.cpp:90
@@ -734,9 +735,9 @@ PROGMEM_STRING_DECL(lock_channels);
 // src/plugins/blinds_ctrl/BlindsControl.cpp:51
 // src/plugins/blinds_ctrl/BlindsControl.cpp:76
 // src/plugins/blinds_ctrl/BlindsControl.cpp:78
-// src/plugins/blinds_ctrl/BlindsControl.cpp:100
-// src/plugins/blinds_ctrl/BlindsControl.cpp:400
-// src/plugins/blinds_ctrl/BlindsControl.cpp:420
+// src/plugins/blinds_ctrl/BlindsControl.cpp:99
+// src/plugins/blinds_ctrl/BlindsControl.cpp:134
+// src/plugins/blinds_ctrl/BlindsControl.cpp:471
 // src/plugins/blinds_ctrl/blinds_plugin.cpp:114
 // src/plugins/dimmer_module/dimmer_channel.cpp:38
 // src/plugins/switch/switch.cpp:101
@@ -783,38 +784,40 @@ PROGMEM_STRING_DECL(brightness);
 // src/plugins/switch/switch.cpp:139
 // src/plugins/weather_station/weather_station.cpp:117
 PROGMEM_STRING_DECL(title);
-// src/plugins/blinds_ctrl/BlindsControl.h:98
-PROGMEM_STRING_DECL(Open);
 // src/plugins/blinds_ctrl/BlindsControl.h:100
-PROGMEM_STRING_DECL(Closed);
+PROGMEM_STRING_DECL(Open);
 // src/plugins/blinds_ctrl/BlindsControl.h:102
+PROGMEM_STRING_DECL(Closed);
+// src/plugins/blinds_ctrl/BlindsControl.h:104
 PROGMEM_STRING_DECL(Stopped);
 // src/plugins/blinds_ctrl/BlindsControl.cpp:58
-// src/plugins/blinds_ctrl/BlindsControl.cpp:385
+// src/plugins/blinds_ctrl/BlindsControl.cpp:456
 PROGMEM_STRING_DECL(channels);
 // src/plugins/blinds_ctrl/BlindsControl.cpp:65
 // src/plugins/blinds_ctrl/BlindsControl.cpp:67
-// src/plugins/blinds_ctrl/BlindsControl.cpp:422
+// src/plugins/blinds_ctrl/BlindsControl.cpp:136
 PROGMEM_STRING_DECL(binary);
 // src/plugins/blinds_ctrl/BlindsControl.cpp:70
 // src/plugins/blinds_ctrl/BlindsControl.cpp:72
-// src/plugins/blinds_ctrl/BlindsControl.cpp:423
+// src/plugins/blinds_ctrl/BlindsControl.cpp:137
 PROGMEM_STRING_DECL(busy);
 // src/plugins/blinds_ctrl/BlindsControl.cpp:94
-// src/plugins/blinds_ctrl/BlindsControl.cpp:161
+// src/plugins/blinds_ctrl/BlindsControl.cpp:196
+// src/plugins/blinds_ctrl/blinds_plugin.cpp:110
 PROGMEM_STRING_DECL(set_all);
-// src/plugins/blinds_ctrl/BlindsControl.cpp:326
+// src/plugins/blinds_ctrl/BlindsControl.cpp:394
 PROGMEM_STRING_DECL(Running);
-// src/plugins/blinds_ctrl/BlindsControl.cpp:328
+// src/plugins/blinds_ctrl/BlindsControl.cpp:399
 PROGMEM_STRING_DECL(Busy);
-// src/plugins/blinds_ctrl/BlindsControl.cpp:382
-PROGMEM_STRING_DECL(state);
-// src/plugins/blinds_ctrl/BlindsControl.cpp:448
-// src/plugins/blinds_ctrl/BlindsControl.cpp:459
+// src/plugins/blinds_ctrl/BlindsControl.cpp:453
+// src/plugins/weather_station/weather_station.cpp:506
+PROGMEM_STRING_DECL(metrics);
+// src/plugins/blinds_ctrl/BlindsControl.cpp:477
+// src/plugins/blinds_ctrl/BlindsControl.cpp:488
 PROGMEM_STRING_DECL(iot_blinds_control_state_file);
-// src/plugins/blinds_ctrl/blinds_config.cpp:29
-PROGMEM_STRING_DECL(Turn);
 // src/plugins/blinds_ctrl/blinds_config.cpp:30
+PROGMEM_STRING_DECL(Turn);
+// src/plugins/blinds_ctrl/blinds_config.cpp:31
 PROGMEM_STRING_DECL(Move);
 // src/plugins/blinds_ctrl/blinds_form.cpp:62
 // lib/KFCWebFramework/src/Form.cpp:288
@@ -833,10 +836,18 @@ PROGMEM_STRING_DECL(ms);
 PROGMEM_STRING_DECL(mA);
 // src/plugins/blinds_ctrl/blinds_form.cpp:109
 PROGMEM_STRING_DECL(pwm);
-// src/plugins/blinds_ctrl/blinds_form.cpp:126
-// src/plugins/blinds_ctrl/blinds_form.cpp:129
-// src/plugins/blinds_ctrl/blinds_form.cpp:143
-// src/plugins/blinds_ctrl/blinds_form.cpp:146
+// src/plugins/blinds_ctrl/blinds_form.cpp:116
+PROGMEM_STRING_DECL(open);
+// src/plugins/blinds_ctrl/blinds_form.cpp:121
+// src/plugins/blinds_ctrl/blinds_form.cpp:138
+PROGMEM_STRING_DECL(Action);
+// src/plugins/blinds_ctrl/blinds_form.cpp:125
+// src/plugins/blinds_ctrl/blinds_form.cpp:142
+PROGMEM_STRING_DECL(Delay_After_Execution_br_explanation);
+// src/plugins/blinds_ctrl/blinds_form.cpp:125
+// src/plugins/blinds_ctrl/blinds_form.cpp:128
+// src/plugins/blinds_ctrl/blinds_form.cpp:142
+// src/plugins/blinds_ctrl/blinds_form.cpp:145
 // src/plugins/dimmer_module/dimmer_module_form.cpp:33
 // src/plugins/dimmer_module/dimmer_module_form.cpp:36
 // src/plugins/dimmer_module/dimmer_module_form.cpp:69
@@ -846,6 +857,9 @@ PROGMEM_STRING_DECL(pwm);
 // src/plugins/weather_station/weather_station.cpp:363
 // src/plugins/weather_station/weather_station.cpp:381
 PROGMEM_STRING_DECL(seconds);
+// src/plugins/blinds_ctrl/blinds_form.cpp:128
+// src/plugins/blinds_ctrl/blinds_form.cpp:145
+PROGMEM_STRING_DECL(Delay);
 // src/plugins/clock/clock.cpp:149
 // src/plugins/clock/clock_mqtt.cpp:38
 // src/plugins/clock/clock_mqtt.cpp:39
@@ -1005,8 +1019,6 @@ PROGMEM_STRING_DECL(hPa);
 PROGMEM_STRING_DECL(Yes);
 // src/plugins/weather_station/weather_station.cpp:385
 PROGMEM_STRING_DECL(No);
-// src/plugins/weather_station/weather_station.cpp:506
-PROGMEM_STRING_DECL(metrics);
 // lib/KFCBaseLibrary/src/DumpBinary.cpp:65
 // lib/KFCBaseLibrary/src/misc.cpp:653
 // lib/KFCConfiguration/src/ConfigurationParameter.cpp:292

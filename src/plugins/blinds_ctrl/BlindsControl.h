@@ -50,8 +50,9 @@ public:
 
     enum class ActionStateType : uint8_t {
         NONE = 0,
-        WAIT_FOR_MOTOR,
         DELAY,
+        START_MOTOR,
+        WAIT_FOR_MOTOR,
         REMOVE,
         MAX
     };
@@ -154,9 +155,9 @@ protected:
 
     class ChannelAction {
     public:
-        ChannelAction() : _state(ActionStateType::NONE), _action(ActionType::NONE), _channel(ChannelType::NONE), _delay(0) {
+        ChannelAction() : _state(ActionStateType::NONE), _action(ActionType::NONE), _channel(ChannelType::NONE), _delay(0), _open(false) {
         }
-        ChannelAction(ActionType state, ChannelType channel, uint16_t delay) : _state(ActionStateType::NONE), _action(state), _channel(channel), _delay(delay * 1000U) {
+        ChannelAction(ActionType state, ChannelType channel, uint16_t delay) : _state(ActionStateType::NONE), _action(state), _channel(channel), _delay(delay * 1000U), _open(false) {
         }
 
         ChannelType getChannel() const {
@@ -171,6 +172,10 @@ protected:
             return _state;
         }
 
+        bool getOpen() const {
+            return _open;
+        }
+
         void monitorDelay() {
             if (_state == ActionStateType::DELAY && millis() >= _delay) {
                 __LDBG_printf("delay=%u finished", _delay);
@@ -178,29 +183,33 @@ protected:
             }
         }
 
-        void begin() {
-            __LDBG_printf("begin=%u", _state);
-            if (_state == ActionStateType::NONE) {
-                _state = ActionStateType::WAIT_FOR_MOTOR;
-            }
+        void begin(ChannelType channel, bool open) {
+            __LDBG_printf("begin=%u channel=%u open=%u", _state, channel, open);
+            // update channel to change and the state
+            _open = open;
+            _channel = channel;
+            next();
         }
 
         void next() {
             __LDBG_printf("next=%u", _state);
-            if (_state == ActionStateType::NONE) {
-                end(); // remove, begin was never called
-            }
-            else if (_state == ActionStateType::WAIT_FOR_MOTOR) {
-                if (_delay) {
-                    _state = ActionStateType::DELAY; // after running start delay if set
-                    _delay += millis();
-                }
-                else {
+            switch (_state) {
+                case ActionStateType::NONE:
+                    _state = ActionStateType::START_MOTOR;
+                    break;
+                case ActionStateType::START_MOTOR:
+                    _state = ActionStateType::WAIT_FOR_MOTOR;
+                    break;
+                case ActionStateType::WAIT_FOR_MOTOR:
+                    if (_delay) {
+                        _state = ActionStateType::DELAY;
+                        _delay += millis();
+                        break;
+                    }
+                    // fallthrough
+                default:
                     end();
-                }
-            }
-            else if (_state == ActionStateType::DELAY) {
-                end(); // delay finished
+                    break;
             }
         }
 
@@ -215,6 +224,7 @@ protected:
         ActionType _action;
         ChannelType _channel;
         uint32_t _delay;
+        bool _open;
     };
 
 public:
@@ -234,6 +244,7 @@ protected:
     void _loopMethod();
 
 protected:
+    bool _isOpenOrClosed(ChannelType channel) const;
     NameType _getStateStr(ChannelType channel) const;
 
     void _readConfig();

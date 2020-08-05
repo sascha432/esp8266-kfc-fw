@@ -1204,8 +1204,8 @@ namespace KFCConfigurationClasses {
         public:
             enum class OperationType : uint8_t {
                 NONE = 0,
-                OPEN_CHANNEL0,
-                OPEN_CHANNEL0_FOR_CHANNEL1,
+                OPEN_CHANNEL0,                    // _FOR_CHANNEL0_AND_ALL
+                OPEN_CHANNEL0_FOR_CHANNEL1,       // _ONLY
                 OPEN_CHANNEL1,
                 OPEN_CHANNEL1_FOR_CHANNEL0,
                 CLOSE_CHANNEL0,
@@ -1224,10 +1224,10 @@ namespace KFCConfigurationClasses {
             typedef struct __attribute__packed__ BlindsConfigOperation_t {
                 using Type = BlindsConfigOperation_t;
 
-                CREATE_ENUM_BITFIELD(type, OperationType);
-                uint16_t delay;
+                uint16_t delay;                                     // delay before execution in seconds
+                CREATE_ENUM_BITFIELD(type, OperationType);          // action
 
-                BlindsConfigOperation_t() : type(0), delay(0) {}
+                BlindsConfigOperation_t() : delay(0), type(0) {}
 
                 template<typename Archive>
                 void serialize(Archive & ar, kfc::serialization::version version){

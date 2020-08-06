@@ -251,7 +251,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LED, "LED", "<slow,fast,flicker,off,solid,
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(RTC, "RTC", "[<set>]", "Set RTC time", "Display RTC time");
 #endif
 
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PLG, "PLG", "<list|start|end|add-blacklist|remove>", "Plugin management");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PLG, "PLG", "<list|start|stop|add-blacklist|add|remove>", "Plugin management");
 
 #if DEBUG
 
@@ -1101,56 +1101,65 @@ void at_mode_serial_handle_event(String &commandString)
                 }
             }
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(PLG))) {
-                bool flag = false;
-                if (args.startsWith(0, F("li"))) {
-                    dump_plugin_list(output);
-                }
-                else if ((flag = args.startsWith(0, F("st")) || args.startsWith(0, F("en"))) && args.requireArgs(2, 2)) {
-                    auto name = args.toString(1);
-                    PluginComponent *plugin = PluginComponent::findPlugin(FPSTR(name.c_str()), false);
-                    if (plugin) {
-                        if (flag) {
-                            if (plugin->getSetupTime() == 0) {
-                                plugin->setSetupTime();
-                            }
-                            else {
-                                args.printf_P(PSTR("Plugin has been started before @ %u (now=%u)"), plugin->getSetupTime(), (uint32_t)millis());
-                            }
-                            args.printf_P(PSTR("Calling %s.setup()"), name.c_str());
-                            plugin->setup(PluginComponent::SetupModeType::DEFAULT);
-                        }
-                        else {
-                            args.printf_P(PSTR("Calling %s.shutdown()"), name.c_str());
-                            plugin->shutdown();
-                        }
-                    }
-                    else {
-                        args.printf_P(PSTR("Cannot find plugin '%s'"), name.c_str());
-                    }
-                }
-                else if ((flag = args.startsWith(0, F("ad")) || args.startsWith(0, F("re"))) && args.requireArgs(2, 2)) {
-                    auto name = args.toString(1);
-                    PluginComponent *plugin = PluginComponent::findPlugin(FPSTR(name.c_str()), false);
-                    if (plugin) {
-                        if (flag) {
-                            flag = PluginComponent::addToBlacklist(name);
-                        }
-                        else {
-                            flag = PluginComponent::removeFromBlacklist(name);
-                        }
-                        if (flag) {
-                            config.write();
-                        }
-                        args.printf_P("Blacklist=%s action=%s", PluginComponent::getBlacklist(), flag ? SPGM(success) : SPGM(failure));
-                    }
-                    else {
-                        args.printf_P(PSTR("Cannot find plugin '%s'"), name.c_str());
-                    }
-                }
-                else if (args.startsWith(0, F("bl"))) {
-                    args.printf_P("Blacklist=%s", PluginComponent::getBlacklist());
-                }
 
+                if (args.requireArgs(1, 2)) {
+                    auto cmds = PSTR("list|start|stop|add-blacklist|add|remove");
+                    int cmd = stringlist_find_P_P(args.get(0), cmds, '|');
+                    if (cmd == 0) {
+                        dump_plugin_list(output);
+                        args.printf_P("Blacklist=%s", PluginComponent::getBlacklist());
+                    }
+                    else if (args.requireArgs(2, 2)) {
+                        PluginComponent *plugin = nullptr;
+                        plugin = PluginComponent::findPlugin(FPSTR(args.get(1)), false);
+                        if (!plugin) {
+                            args.printf_P(PSTR("Cannot find plugin '%s'"), args.get(1));
+                        }
+                        else {
+                            switch(cmd) {
+                                case 1: // start
+                                    if (plugin->getSetupTime() == 0) {
+                                        args.printf_P(PSTR("Calling %s.setup()"), plugin->getName_P());
+                                        plugin->setSetupTime();
+                                        plugin->setup(PluginComponent::SetupModeType::DEFAULT);
+                                    }
+                                    else {
+                                        args.printf_P(PSTR("%s already running"), plugin->getName_P());
+                                    }
+                                    break;
+                                case 2: // stop
+                                    if (plugin->getSetupTime() != 0) {
+                                        args.printf_P(PSTR("Calling %s.shutdown()"), plugin->getName_P());
+                                        plugin->shutdown();
+                                        plugin->clearSetupTime();
+                                    }
+                                    else {
+                                        args.printf_P(PSTR("%s not running"), plugin->getName_P());
+                                    }
+                                    break;
+                                case 3:     // add-blacklist
+                                case 4:     // add
+                                case 5:     // remove
+                                    {
+                                        bool flag;
+                                        if (cmd == 5) {
+                                            flag = PluginComponent::removeFromBlacklist(plugin->getName_P());
+                                        }
+                                        else {
+                                            flag = PluginComponent::addToBlacklist(plugin->getName_P());
+                                        }
+                                        if (flag) {
+                                            config.write();
+                                        }
+                                        args.printf_P("Blacklist=%s action=%s", PluginComponent::getBlacklist(), flag ? SPGM(success) : SPGM(failure));
+                                    } break;
+                                default:
+                                    args.printf_P(PSTR("expected <%s>"), cmds);
+                                    break;
+                            }
+                        }
+                    }
+                }
             }
 #if DEBUG
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(FSM))) {

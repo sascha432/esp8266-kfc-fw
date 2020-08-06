@@ -4,70 +4,72 @@
 
 #include "MillisTimer.h"
 
-MillisTimer::MillisTimer(long delay) {
-    set(delay);
+MillisTimer::MillisTimer(uint32_t delay)
+{
+    set(_delay);
 }
 
-MillisTimer::MillisTimer() {
-      _data.active = false;
-  }
+MillisTimer::MillisTimer() : _active(false)
+{
+}
 
-void MillisTimer::set(long delay) {
-    unsigned long _millis = millis();
-    _data.time = _millis + delay;
-    _data.overflow = _millis > _data.time;
-    if (_data.overflow) {
-        _data.time += 0x7fffffff;
+void MillisTimer::set(uint32_t delay)
+{
+    uint32_t ms = millis();
+    _endTime = ms + delay;
+    _overflow = ms > _endTime;
+    if (_overflow) {
+        _endTime += 0x7fffffffU;
     }
-    _data.active = true;
-    _data.delay = delay;
+    _active = true;
+    _delay = delay;
 }
 
-long MillisTimer::get() const {
-    if (!_data.active) {
+int32_t MillisTimer::get() const
+{
+    if (!_active) {
         return -1;
     }
-    if (_data.overflow) {
-        return _data.time - (millis() + 0x7fffffff);
-    } else {
-        if (millis() > _data.time) {
-            return 0;
-        } else {
-            return _data.time - millis();
+    uint32_t ms = millis();
+    if (_overflow) {
+        ms + 0x7fffffffU;
+    }
+    if (ms < _endTime) {
+        return _endTime - ms;
+    }
+    return 0;
+}
+
+bool MillisTimer::isActive() const
+{
+    return _active;
+}
+
+void MillisTimer::disable()
+{
+    _active = false;
+}
+
+bool MillisTimer::reached(bool reset)
+{
+    if (_active)  {
+        uint32_t ms = millis();
+        if (_overflow) {
+            ms += 0x7fffffffU;
+        }
+        if (ms >= _endTime) {
+            if (reset) {
+                set(_delay);
+            } else {
+                _active = false;
+            }
+            return true;
         }
     }
+    return false;
 }
 
-bool MillisTimer::isActive() const {
-    return _data.active;
-}
-
-void MillisTimer::disable() {
-    _data.active = false;
-}
-
-bool MillisTimer::reached(bool reset) {
-    bool result;
-    if (!_data.active)  {
-        return false;
-    }
-    if (_data.overflow) {
-        unsigned long _millis = millis();
-        _millis += 0x7fffffff;
-        result = _millis > _data.time;
-    } else {
-        result = millis() > _data.time;
-    }
-    if (result) {
-        if (reset) {
-            set(_data.delay);
-        } else {
-            _data.active = false;
-        }
-    }
-    return result;
-}
-
-void MillisTimer::restart() {
-    set(_data.delay);
+void MillisTimer::restart()
+{
+    set(_delay);
 }

@@ -9,27 +9,32 @@
 #include <push_pack.h>
 
 // provides a timer based on millis that doesn't suffer from unsigned long overflow and doesn't use 64bit counters
+
 class MillisTimer {
 public:
-    typedef struct __attribute__packed__ {
-        unsigned long time;
-        unsigned long delay;
-        uint8_t active: 1;
-        uint8_t overflow: 1;
-    } timer_t;
-
-    MillisTimer(long delay);
+    // max. 1 billion milliseconds
+    MillisTimer(uint32_t delay);
     MillisTimer();
 
-    void set(long delay);
-    long get() const; // does not change the state, reached() or disable() must be called
+    void set(uint32_t delay);
+    int32_t get() const; // does not change the state, reached() or disable() must be called
     void disable();
     bool isActive() const; // does not change the state, reached() or disable() must be called
     bool reached(bool reset = false);
     void restart();
+    uint32_t getDelay() const {
+        return _delay;
+    }
 
 private:
-    timer_t _data;
+    struct __attribute__packed__ {
+        uint32_t _endTime;
+        uint32_t _delay: 30;
+        uint32_t _active: 1;
+        uint32_t _overflow: 1;
+    };
 };
+
+static_assert(sizeof(MillisTimer) == sizeof(uint64_t), "something went wrong");
 
 #include <pop_pack.h>

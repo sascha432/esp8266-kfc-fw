@@ -19,8 +19,12 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
 {
     if (type == FormCallbackType::SAVE) {
         if (String_equals(formName, SPGM(password))) {
-            auto &flags = System::Flags::getWriteableConfig();
-            flags.is_default_password = false;
+            auto field = form.getField(FSPGM(npwd));
+            if (field) {
+                auto &flags = System::Flags::getWriteableConfig();
+                flags.is_default_password = field->getValue() != FSPGM(defaultPassword);
+                System::Device::setPassword(field->getValue());
+            }
         }
         else if (String_equals(formName, SPGM(device))) {
             config.setConfigDirty(true);
@@ -36,7 +40,7 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
             FormUI::ItemsList wifiModes;
             createWifiModes(wifiModes) ;
 
-            auto channelItems = FormUI::ItemsList(0, F("Auto"));
+            auto channelItems = FormUI::ItemsList(0, FSPGM(Auto));
             for(uint8_t i = 1; i <= config.getMaxWiFiChannels(); i++) {
                 channelItems.emplace_back(std::move(String(i)), std::move(String(i)));
             }
@@ -46,7 +50,7 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
                 ENC_TYPE_WEP, F("WEP"),
                 ENC_TYPE_TKIP, F("WPA TKIP"),
                 ENC_TYPE_CCMP, F("WPA CCMP"),
-                ENC_TYPE_AUTO, F("Auto")
+                ENC_TYPE_AUTO, FSPGM(Auto)
             );
 //ESP32
 // <option value="0" %APENC_0%>Open</option>
@@ -164,62 +168,80 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
 
             auto &cfg = System::Device::getWriteableConfig();
 
-            form.setFormUI(FSPGM(Device_Configuration));
+            auto &ui = form.getFormUIConfig();
+            ui.setStyle(FormUI::StyleType::ACCORDION);
+            ui.setTitle(FSPGM(Device_Configuration));
+            ui.setContainerId(F("device_settings"));
+
+            auto &deviceGroup = form.addCardGroup(FSPGM(device), FSPGM(Device), true);
 
             form.addCStringGetterSetter(FSPGM(dev_title), System::Device::getTitle, System::Device::setTitleCStr);
             form.addFormUI(FSPGM(Title));
             System::Device::addTitleLengthValidator(form);
 
-            form.addWriteableStruct("safem_to", cfg, safe_mode_reboot_timeout_minutes));
+            form.addMemberVariable(F("safem_to"), cfg, &System::Device::ConfigStructType::safe_mode_reboot_timeout_minutes);
             form.addFormUI(FormUI::Type::INTEGER, F("Reboot Delay Running In Safe Mode"), FormUI::Suffix(FSPGM(minutes)));
             form.addValidator(FormRangeValidator(5, 3600, true));
 
-            form.addWriteableStruct("mdns_en", flags, is_mdns_enabled));
+            form.addObjectGetterSetter(F("mdns_en"), flags, System::Flags::ConfigStructType::get_bit_is_mdns_enabled, System::Flags::ConfigStructType::set_bit_is_mdns_enabled);
             form.addFormUI(F("mDNS Announcements"), FormUI::BoolItems(FSPGM(Enabled), F("Disabled (Zeroconf is still available)")));
 
-            form.addWriteableStruct("zconf_to", cfg, zeroconf_timeout));
+            form.addMemberVariable(F("zconf_to"), cfg, &System::Device::ConfigStructType::zeroconf_timeout);
             form.addFormUI(FormUI::Type::INTEGER, FSPGM(Zeroconf_Timeout), FormUI::Suffix(FSPGM(milliseconds)));
             form.addValidator(FormRangeValidator(System::Device::kZeroConfMinTimeout, System::Device::kZeroConfMaxTimeout));
 
-            form.addWriteableStruct("zconf_log", cfg, zeroconf_logging));
+            form.addObjectGetterSetter(F("zconf_log"), cfg, System::Device::ConfigStructType::get_bits_zeroconf_logging, System::Device::ConfigStructType::set_bits_zeroconf_logging);
             form.addFormUI(FSPGM(Zeroconf_Logging), FormUI::BoolItems());
 
-            form.addWriteableStruct("ssdp_en", flags, is_ssdp_enabled));
+            form.addObjectGetterSetter(F("ssdp_en"), flags, System::Flags::ConfigStructType::get_bit_is_ssdp_enabled, System::Flags::ConfigStructType::set_bit_is_ssdp_enabled);
             form.addFormUI(FSPGM(SSDP_Discovery), FormUI::BoolItems());
 
-            form.addWriteableStruct("scookie_lt", cfg, webui_cookie_lifetime_days));
+            form.addObjectGetterSetter(F("led_mode"), cfg, System::Device::ConfigStructType::get_int_status_led_mode, System::Device::ConfigStructType::set_int_status_led_mode);
+            form.addFormUI(FSPGM(Status_LED_Mode), FormUI::BoolItems(F("Solid when connected to WiFi"), F("Turn off when connected to WiFi")));
+
+            auto &webUIGroup = deviceGroup.end().addCardGroup(F("webui"), FSPGM(WebUI), true);
+
+            form.addObjectGetterSetter(F("wui_en"), flags, System::Flags::ConfigStructType::get_bit_is_webui_enabled, System::Flags::ConfigStructType::set_bit_is_webui_enabled);
+            form.addFormUI(FSPGM(WebUI), FormUI::BoolItems());
+
+            form.addObjectGetterSetter(F("scookie_lt"), cfg, System::Device::ConfigStructType::get_bits_webui_cookie_lifetime_days, System::Device::ConfigStructType::set_bits_webui_cookie_lifetime_days);
             form.addFormUI(FormUI::Type::INTEGER, FormUI::Label(F("Allow to store credentials in a cookie to login automatically:<br><span class=\"oi oi-shield p-2\"></span><small>If the cookie is stolen, it is not going to expire and changing the password is the only options to invalidate it.</small>"), true), FormUI::Suffix(FSPGM(days)));
             form.addValidator(FormRangeValidator(System::Device::kWebUICookieMinLifetime, System::Device::kWebUICookieMaxLifetime, true));
 
-            form.addWriteableStruct("walert_en", flags, is_webalerts_enabled));
+            form.addObjectGetterSetter(F("walert_en"), flags, System::Flags::ConfigStructType::get_bit_is_webalerts_enabled, System::Flags::ConfigStructType::set_bit_is_webalerts_enabled);
             form.addFormUI(FSPGM(Web_Alerts), FormUI::BoolItems());
-            form.addWriteableStruct("wui_en", flags, is_webui_enabled));
-            form.addFormUI(FSPGM(WebUI), FormUI::BoolItems());
 
-            form.addWriteableStruct("led_mode", cfg, status_led_mode));
-            form.addFormUI(FSPGM(Status_LED_Mode), FormUI::BoolItems(F("Solid when connected to WiFi"), F("Turn off when connected to WiFi")));
+            webUIGroup.end();
 
         }
         else if (String_equals(formName, SPGM(password))) {
 
-            form.setFormUI(FSPGM(Change_Password));
+            auto &ui = form.getFormUIConfig();
+            ui.setStyle(FormUI::StyleType::ACCORDION);
+            ui.setTitle(FSPGM(Change_Password));
+            ui.setContainerId(F("password_settings"));
+
+            auto &group = form.addCardGroup(FSPGM(config), emptyString);
 
             auto password = String(System::Device::getPassword());
-            form.add(FSPGM(password), password, FormField::Type::TEXT);
+
+            form.add(FSPGM(password), emptyString, FormField::Type::TEXT);
+            form.addFormUI(FormUI::Type::PASSWORD, F("Current Password"));
             form.addValidator(FormMatchValidator(F("The entered password is not correct"), [](FormField &field) {
                 return field.getValue().equals(System::Device::getPassword());
             }));
 
-            form.add(FSPGM(password2), password, FormField::Type::TEXT).
-                setValue(emptyString);
-
-            // form.addValidator(FormLengthValidator(F("The password has to be at least %min% characters long"), System::Device::kPasswordMinSize, 0));
+            form.add(FSPGM(npwd), emptyString, FormField::Type::TEXT);
+            form.addFormUI(FormUI::Type::NEW_PASSWORD, F("New Password"));
             form.addValidator(FormLengthValidator(System::Device::kPasswordMinSize, System::Device::kPasswordMaxSize));
 
-            form.add(F("password3"), emptyString, FormField::Type::TEXT);
+            form.add(F("cpwd"), emptyString, FormField::Type::TEXT);
+            form.addFormUI(FormUI::Type::NEW_PASSWORD, F("Confirm New Password"));
             form.addValidator(FormMatchValidator(F("The password confirmation does not match"), [](FormField &field) {
-                return field.equals(field.getForm().getField(FSPGM(password2)));
+                return field.equals(field.getForm().getField(FSPGM(npwd)));
             }));
+
+            group.end();
 
         }
         else {

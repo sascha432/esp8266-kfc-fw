@@ -87,7 +87,7 @@ PROGMEM_STRING_DECL(readonly);
 // lib/KFCWebFramework/src/FormUI.cpp:14
 PROGMEM_STRING_DECL(Disabled);
 // lib/KFCWebFramework/include/FormUI.h:208
-// src/kfc_fw_config_forms.cpp:178
+// src/kfc_fw_config_forms.cpp:187
 // src/plugins/mqtt/mqtt_form.cpp:36
 // lib/KFCWebFramework/src/FormUI.cpp:14
 PROGMEM_STRING_DECL(Enabled);
@@ -191,12 +191,24 @@ PROGMEM_STRING_DECL(failure);
 // src/kfc_fw_config.cpp:491
 // src/kfc_fw_config.cpp:494
 // src/kfc_fw_config.cpp:496
+// src/kfc_fw_config_forms.cpp:25
 PROGMEM_STRING_DECL(defaultPassword);
 // include/web_socket.h:150
 PROGMEM_STRING_DECL(Device_is_rebooting);
 // src/kfc_fw_config.cpp:490
 // src/kfc_fw_config_classes.cpp:164
 PROGMEM_STRING_DECL(KFC_Firmware);
+// include/retracted/custom_config.h:49
+// src/plugins/alarm/alarm.cpp:54
+// src/plugins/alarm/alarm.cpp:62
+// src/plugins/atomic_sun/atomic_sun_v2.cpp:670
+// src/plugins/blinds_ctrl/blinds_plugin.cpp:63
+// src/plugins/clock/clock.cpp:343
+// src/plugins/dimmer_module/dimmer_module.cpp:464
+// src/plugins/home_assistant/home_assistant.cpp:475
+// src/plugins/mqtt/mqtt_auto_discovery.cpp:63
+// src/plugins/mqtt/mqtt_form.cpp:86
+PROGMEM_STRING_DECL(mqtt);
 // include/retracted/custom_config.h:49
 // include/retracted/custom_config.h:89
 // src/web_server.cpp:647
@@ -226,128 +238,142 @@ PROGMEM_STRING_DECL(safe_mode_enabled);
 PROGMEM_STRING_DECL(default_password_warning);
 // src/kfc_fw_config_forms.cpp:14
 // src/kfc_fw_config_forms.cpp:14
-// src/kfc_fw_config_forms.cpp:71
-// src/kfc_fw_config_forms.cpp:130
+// src/kfc_fw_config_forms.cpp:75
+// src/kfc_fw_config_forms.cpp:134
 // src/templates.cpp:461
 // src/templates.cpp:470
 PROGMEM_STRING_DECL(Station_Mode);
 // src/kfc_fw_config_forms.cpp:14
 // src/kfc_fw_config_forms.cpp:14
-// src/kfc_fw_config_forms.cpp:81
-// src/kfc_fw_config_forms.cpp:146
+// src/kfc_fw_config_forms.cpp:85
+// src/kfc_fw_config_forms.cpp:150
 // src/templates.cpp:463
 // src/templates.cpp:467
 // src/templates.cpp:470
 // src/templates.cpp:484
 PROGMEM_STRING_DECL(Access_Point);
 // src/kfc_fw_config_forms.cpp:21
-// src/kfc_fw_config_forms.cpp:203
-// src/kfc_fw_config_forms.cpp:208
+// src/kfc_fw_config_forms.cpp:217
+// src/kfc_fw_config_forms.cpp:228
 // src/web_server.cpp:797
 // src/web_server.cpp:804
 PROGMEM_STRING_DECL(password);
-// src/kfc_fw_config_forms.cpp:25
-// src/kfc_fw_config_forms.cpp:120
-// src/kfc_fw_config_forms.cpp:163
+// src/kfc_fw_config_forms.cpp:22
+// src/kfc_fw_config_forms.cpp:234
+// src/kfc_fw_config_forms.cpp:241
+PROGMEM_STRING_DECL(npwd);
+// src/kfc_fw_config_forms.cpp:29
+// src/kfc_fw_config_forms.cpp:124
+// src/kfc_fw_config_forms.cpp:167
+// src/kfc_fw_config_forms.cpp:176
 PROGMEM_STRING_DECL(device);
-// src/kfc_fw_config_forms.cpp:33
+// src/kfc_fw_config_forms.cpp:37
 PROGMEM_STRING_DECL(wifi);
-// src/kfc_fw_config_forms.cpp:62
+// src/kfc_fw_config_forms.cpp:43
+// src/kfc_fw_config_forms.cpp:53
+PROGMEM_STRING_DECL(Auto);
+// src/kfc_fw_config_forms.cpp:66
 PROGMEM_STRING_DECL(WiFi_Configuration);
-// src/kfc_fw_config_forms.cpp:63
+// src/kfc_fw_config_forms.cpp:67
 PROGMEM_STRING_DECL(wifi_settings);
-// src/kfc_fw_config_forms.cpp:65
+// src/kfc_fw_config_forms.cpp:69
 // src/plugins/mqtt/mqtt_form.cpp:61
 // src/plugins/serial2tcp/serial2tcp.cpp:118
 PROGMEM_STRING_DECL(mode);
-// src/kfc_fw_config_forms.cpp:67
-PROGMEM_STRING_DECL(wifi_mode);
-// src/kfc_fw_config_forms.cpp:68
-PROGMEM_STRING_DECL(Invalid_mode);
-// src/kfc_fw_config_forms.cpp:69
-PROGMEM_STRING_DECL(WiFi_Mode);
 // src/kfc_fw_config_forms.cpp:71
-// src/kfc_fw_config_forms.cpp:130
-PROGMEM_STRING_DECL(station);
+PROGMEM_STRING_DECL(wifi_mode);
+// src/kfc_fw_config_forms.cpp:72
+PROGMEM_STRING_DECL(Invalid_mode);
+// src/kfc_fw_config_forms.cpp:73
+PROGMEM_STRING_DECL(WiFi_Mode);
 // src/kfc_fw_config_forms.cpp:75
-// src/kfc_fw_config_forms.cpp:92
-PROGMEM_STRING_DECL(SSID);
+// src/kfc_fw_config_forms.cpp:134
+PROGMEM_STRING_DECL(station);
 // src/kfc_fw_config_forms.cpp:79
 // src/kfc_fw_config_forms.cpp:96
+PROGMEM_STRING_DECL(SSID);
+// src/kfc_fw_config_forms.cpp:83
+// src/kfc_fw_config_forms.cpp:100
 PROGMEM_STRING_DECL(Passphrase);
-// src/kfc_fw_config_forms.cpp:92
+// src/kfc_fw_config_forms.cpp:96
 PROGMEM_STRING_DECL(HIDDEN);
-// src/kfc_fw_config_forms.cpp:110
+// src/kfc_fw_config_forms.cpp:114
 PROGMEM_STRING_DECL(network);
-// src/kfc_fw_config_forms.cpp:117
+// src/kfc_fw_config_forms.cpp:121
 PROGMEM_STRING_DECL(Network_Configuration);
-// src/kfc_fw_config_forms.cpp:118
+// src/kfc_fw_config_forms.cpp:122
 PROGMEM_STRING_DECL(network_settings);
-// src/kfc_fw_config_forms.cpp:120
+// src/kfc_fw_config_forms.cpp:124
+// src/kfc_fw_config_forms.cpp:176
 // src/plugins.cpp:124
 // src/plugins.cpp:127
 PROGMEM_STRING_DECL(Device);
-// src/kfc_fw_config_forms.cpp:122
+// src/kfc_fw_config_forms.cpp:126
 PROGMEM_STRING_DECL(dev_hostn);
-// src/kfc_fw_config_forms.cpp:123
+// src/kfc_fw_config_forms.cpp:127
 // src/plugins/mqtt/mqtt_form.cpp:68
 // src/plugins/serial2tcp/serial2tcp.cpp:132
 PROGMEM_STRING_DECL(Hostname);
-// src/kfc_fw_config_forms.cpp:126
-// src/kfc_fw_config_forms.cpp:169
+// src/kfc_fw_config_forms.cpp:130
+// src/kfc_fw_config_forms.cpp:178
 PROGMEM_STRING_DECL(dev_title);
-// src/kfc_fw_config_forms.cpp:127
-// src/kfc_fw_config_forms.cpp:170
+// src/kfc_fw_config_forms.cpp:131
+// src/kfc_fw_config_forms.cpp:179
 PROGMEM_STRING_DECL(Title);
-// src/kfc_fw_config_forms.cpp:133
+// src/kfc_fw_config_forms.cpp:137
 PROGMEM_STRING_DECL(DHCP_Client);
-// src/kfc_fw_config_forms.cpp:136
-// src/kfc_fw_config_forms.cpp:152
-PROGMEM_STRING_DECL(IP_Address);
-// src/kfc_fw_config_forms.cpp:138
-// src/kfc_fw_config_forms.cpp:154
-PROGMEM_STRING_DECL(Subnet);
 // src/kfc_fw_config_forms.cpp:140
-PROGMEM_STRING_DECL(Gateway);
+// src/kfc_fw_config_forms.cpp:156
+PROGMEM_STRING_DECL(IP_Address);
 // src/kfc_fw_config_forms.cpp:142
-PROGMEM_STRING_DECL(DNS_1);
+// src/kfc_fw_config_forms.cpp:158
+PROGMEM_STRING_DECL(Subnet);
 // src/kfc_fw_config_forms.cpp:144
-PROGMEM_STRING_DECL(DNS_2);
+PROGMEM_STRING_DECL(Gateway);
 // src/kfc_fw_config_forms.cpp:146
+PROGMEM_STRING_DECL(DNS_1);
+// src/kfc_fw_config_forms.cpp:148
+PROGMEM_STRING_DECL(DNS_2);
+// src/kfc_fw_config_forms.cpp:150
 PROGMEM_STRING_DECL(ap_mode);
-// src/kfc_fw_config_forms.cpp:149
+// src/kfc_fw_config_forms.cpp:153
 PROGMEM_STRING_DECL(DHCP_Server);
-// src/kfc_fw_config_forms.cpp:167
+// src/kfc_fw_config_forms.cpp:173
 PROGMEM_STRING_DECL(Device_Configuration);
-// src/kfc_fw_config_forms.cpp:174
+// src/kfc_fw_config_forms.cpp:183
 // src/plugins/mqtt/mqtt_form.cpp:119
 PROGMEM_STRING_DECL(minutes);
-// src/kfc_fw_config_forms.cpp:181
+// src/kfc_fw_config_forms.cpp:190
 PROGMEM_STRING_DECL(Zeroconf_Timeout);
-// src/kfc_fw_config_forms.cpp:181
+// src/kfc_fw_config_forms.cpp:190
 // src/plugins/remote/remote.cpp:110
 // src/plugins/remote/remote.cpp:112
 PROGMEM_STRING_DECL(milliseconds);
-// src/kfc_fw_config_forms.cpp:185
+// src/kfc_fw_config_forms.cpp:194
 PROGMEM_STRING_DECL(Zeroconf_Logging);
-// src/kfc_fw_config_forms.cpp:188
-PROGMEM_STRING_DECL(SSDP_Discovery);
-// src/kfc_fw_config_forms.cpp:191
-// lib/KFCBaseLibrary/src/misc.cpp:37
-PROGMEM_STRING_DECL(days);
-// src/kfc_fw_config_forms.cpp:195
-PROGMEM_STRING_DECL(Web_Alerts);
 // src/kfc_fw_config_forms.cpp:197
-PROGMEM_STRING_DECL(WebUI);
+PROGMEM_STRING_DECL(SSDP_Discovery);
 // src/kfc_fw_config_forms.cpp:200
 PROGMEM_STRING_DECL(Status_LED_Mode);
+// src/kfc_fw_config_forms.cpp:202
 // src/kfc_fw_config_forms.cpp:205
+PROGMEM_STRING_DECL(WebUI);
+// src/kfc_fw_config_forms.cpp:208
+// lib/KFCBaseLibrary/src/misc.cpp:37
+PROGMEM_STRING_DECL(days);
+// src/kfc_fw_config_forms.cpp:212
+PROGMEM_STRING_DECL(Web_Alerts);
+// src/kfc_fw_config_forms.cpp:221
 // src/plugins.cpp:114
 // src/plugins.cpp:130
 PROGMEM_STRING_DECL(Change_Password);
-// src/kfc_fw_config_forms.cpp:213
-// src/kfc_fw_config_forms.cpp:221
-PROGMEM_STRING_DECL(password2);
+// src/kfc_fw_config_forms.cpp:224
+// src/web_server.cpp:362
+// src/plugins/blinds_ctrl/blinds_form.cpp:150
+// src/plugins/mqtt/mqtt_form.cpp:59
+// src/plugins/ntp/ntp_form.cpp:36
+// lib/KFCConfiguration/src/JsonConfigReader.cpp:24
+PROGMEM_STRING_DECL(config);
 // src/MissingFlashStrings.cpp:13
 // lib/KFCWebFramework/src/FormRangeValidator.cpp:15
 // lib/KFCWebFramework/src/FormRangeValidator.cpp:52
@@ -599,11 +625,6 @@ PROGMEM_STRING_DECL(hidden);
 PROGMEM_STRING_DECL(size);
 // src/web_server.cpp:329
 PROGMEM_STRING_DECL(mime_image_bmp);
-// src/web_server.cpp:362
-// src/plugins/blinds_ctrl/blinds_form.cpp:150
-// src/plugins/mqtt/mqtt_form.cpp:59
-// lib/KFCConfiguration/src/JsonConfigReader.cpp:24
-PROGMEM_STRING_DECL(config);
 // src/web_server.cpp:375
 PROGMEM_STRING_DECL(Success);
 // src/web_server.cpp:476
@@ -682,16 +703,6 @@ PROGMEM_STRING_DECL(status);
 // src/plugins/weather_station/weather_station.cpp:181
 // src/plugins/weather_station/weather_station.cpp:185
 PROGMEM_STRING_DECL(message);
-// src/plugins/alarm/alarm.cpp:54
-// src/plugins/alarm/alarm.cpp:62
-// src/plugins/atomic_sun/atomic_sun_v2.cpp:670
-// src/plugins/blinds_ctrl/blinds_plugin.cpp:63
-// src/plugins/clock/clock.cpp:343
-// src/plugins/dimmer_module/dimmer_module.cpp:464
-// src/plugins/home_assistant/home_assistant.cpp:475
-// src/plugins/mqtt/mqtt_auto_discovery.cpp:63
-// src/plugins/mqtt/mqtt_form.cpp:86
-PROGMEM_STRING_DECL(mqtt);
 // src/plugins/alarm/alarm.cpp:87
 // src/plugins/alarm/alarm.cpp:360
 // src/plugins/atomic_sun/atomic_sun_v2.cpp:153
@@ -815,9 +826,9 @@ PROGMEM_STRING_DECL(metrics);
 // src/plugins/blinds_ctrl/BlindsControl.cpp:477
 // src/plugins/blinds_ctrl/BlindsControl.cpp:488
 PROGMEM_STRING_DECL(iot_blinds_control_state_file);
-// src/plugins/blinds_ctrl/blinds_config.cpp:30
-PROGMEM_STRING_DECL(Turn);
 // src/plugins/blinds_ctrl/blinds_config.cpp:31
+PROGMEM_STRING_DECL(Turn);
+// src/plugins/blinds_ctrl/blinds_config.cpp:32
 PROGMEM_STRING_DECL(Move);
 // src/plugins/blinds_ctrl/blinds_form.cpp:62
 // lib/KFCWebFramework/src/Form.cpp:288
@@ -975,19 +986,19 @@ PROGMEM_STRING_DECL(topic);
 PROGMEM_STRING_DECL(Topic);
 // src/plugins/mqtt/mqtt_form.cpp:114
 PROGMEM_STRING_DECL(prefix);
-// src/plugins/ntp/ntp_form.cpp:31
+// src/plugins/ntp/ntp_form.cpp:32
 PROGMEM_STRING_DECL(NTP_Client_Configuration);
-// src/plugins/ntp/ntp_form.cpp:34
-PROGMEM_STRING_DECL(NTP_Client);
 // src/plugins/ntp/ntp_form.cpp:39
-PROGMEM_STRING_DECL(Timezone);
+PROGMEM_STRING_DECL(NTP_Client);
 // src/plugins/ntp/ntp_form.cpp:44
-// src/plugins/ntp/ntp_form.cpp:48
-// src/plugins/ntp/ntp_form.cpp:52
+PROGMEM_STRING_DECL(Timezone);
+// src/plugins/ntp/ntp_form.cpp:49
+// src/plugins/ntp/ntp_form.cpp:53
+// src/plugins/ntp/ntp_form.cpp:57
 PROGMEM_STRING_DECL(NTP_Server___);
-// src/plugins/ntp/ntp_form.cpp:56
+// src/plugins/ntp/ntp_form.cpp:61
 PROGMEM_STRING_DECL(Refresh_Interval);
-// src/plugins/ntp/ntp_form.cpp:56
+// src/plugins/ntp/ntp_form.cpp:61
 PROGMEM_STRING_DECL(minutes__5_);
 // src/plugins/serial2tcp/serial2tcp.cpp:106
 PROGMEM_STRING_DECL(Software_Serial);

@@ -1433,7 +1433,9 @@ void KFCConfigurationPlugin::setup(SetupModeType mode)
 
 void KFCConfigurationPlugin::reconfigure(const String &source)
 {
-    config.reconfigureWiFi();
+    if (String_equals(source, SPGM(network)) || String_equals(source, SPGM(wifi))) {
+        config.reconfigureWiFi();
+    }
 }
 
 WebTemplate *KFCConfigurationPlugin::getWebTemplate(const String &name)

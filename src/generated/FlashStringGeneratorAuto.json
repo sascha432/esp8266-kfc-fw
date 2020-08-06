@@ -928,7 +928,7 @@
         "default": "Network"
     },
     "Device": {
-        "use_counter": 3,
+        "use_counter": 4,
         "default": "Device"
     },
     "device_html": {
@@ -988,7 +988,7 @@
         "default": "network"
     },
     "device": {
-        "use_counter": 3,
+        "use_counter": 4,
         "default": "device"
     },
     "mime_image_icon": {
@@ -1028,7 +1028,7 @@
         "default": "deflate"
     },
     "config": {
-        "use_counter": 4,
+        "use_counter": 6,
         "default": "config"
     },
     "Success": {
@@ -1104,7 +1104,7 @@
         "default": "id"
     },
     "mqtt": {
-        "use_counter": 9,
+        "use_counter": 10,
         "default": "mqtt"
     },
     "_set": {
@@ -1176,7 +1176,7 @@
         "default": "Alarm"
     },
     "defaultPassword": {
-        "use_counter": 6,
+        "use_counter": 7,
         "default": "12345678"
     },
     "Enabled": {
@@ -1412,7 +1412,7 @@
         "default": "Web Alerts"
     },
     "WebUI": {
-        "use_counter": 1,
+        "use_counter": 2,
         "default": "Web UI"
     },
     "Status_LED_Mode": {
@@ -1696,7 +1696,7 @@
         "default": "ap_mode"
     },
     "password2": {
-        "use_counter": 2,
+        "use_counter": 0,
         "default": "password2"
     },
     "wifi_settings": {
@@ -1814,5 +1814,13 @@
     "Delay": {
         "use_counter": 2,
         "default": "Delay"
+    },
+    "npwd": {
+        "use_counter": 3,
+        "auto": "npwd"
+    },
+    "Auto": {
+        "use_counter": 2,
+        "auto": "Auto"
     }
 }

@@ -32,7 +32,7 @@ int32_t MillisTimer::get() const
     }
     uint32_t ms = millis();
     if (_overflow) {
-        ms + 0x7fffffffU;
+        ms += 0x7fffffffU;
     }
     if (ms < _endTime) {
         return _endTime - ms;

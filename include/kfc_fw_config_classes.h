@@ -15,6 +15,9 @@
 
 #include <kfc_fw_config_types.h>
 
+class Form;
+class FormLengthValidator;
+
 #ifndef DEBUG_CONFIG_CLASS
 #define DEBUG_CONFIG_CLASS                                                  0
 #endif
@@ -106,7 +109,10 @@ namespace ConfigurationHelper {
     static void set##name(const String &str) { REGISTER_HANDLE_NAME(_STRINGIFY(class_name) "." _STRINGIFY(name), __DBG__TYPE_SET); storeStringConfig(k##name##ConfigHandle, str); }
 
 #define CREATE_STRING_GETTER_SETTER_MIN_MAX(class_name, name, mins, maxs) \
-    static FormLengthValidator &add##name##LengthValidator(Form &form, bool allowEmpty = false, const String &message = String()) { \
+    static FormLengthValidator &add##name##LengthValidator(Form &form, bool allowEmpty = false) { \
+        return form.addValidator(FormLengthValidator(k##name##MinSize, k##name##MaxSize, allowEmpty)); \
+    } \
+    static FormLengthValidator &add##name##LengthValidator(const String &message, Form &form, bool allowEmpty = false) { \
         return form.addValidator(FormLengthValidator(message, k##name##MinSize, k##name##MaxSize, allowEmpty)); \
     } \
     static constexpr size_t k##name##MinSize = mins; \
@@ -364,8 +370,8 @@ namespace KFCConfigurationClasses {
 
                 uint32_t config_version;
                 uint16_t safe_mode_reboot_timeout_minutes;
-                uint16_t webui_cookie_lifetime_days;
-                CREATE_UINT16_BITFIELD(zeroconf_timeout, 15);
+                uint16_t zeroconf_timeout;
+                CREATE_UINT16_BITFIELD(webui_cookie_lifetime_days, 10);
                 CREATE_UINT16_BITFIELD(zeroconf_logging, 1);
                 CREATE_ENUM_BITFIELD(status_led_mode, StatusLEDModeType);
 
@@ -385,8 +391,8 @@ namespace KFCConfigurationClasses {
                 DeviceConfig_t() :
                     config_version(FIRMWARE_VERSION),
                     safe_mode_reboot_timeout_minutes(0),
-                    webui_cookie_lifetime_days(90),
                     zeroconf_timeout(5000),
+                    webui_cookie_lifetime_days(90),
                     zeroconf_logging(false),
                     status_led_mode(cast_int_status_led_mode(StatusLEDModeType::SOLID_WHEN_CONNECTED)) {}
 
@@ -409,9 +415,7 @@ namespace KFCConfigurationClasses {
             static constexpr uint16_t kZeroConfMaxTimeout = 60000;
 
             static constexpr uint16_t kWebUICookieMinLifetime = 3;
-            static constexpr uint16_t kWebUICookieMaxLifetime = 360;
-
-        public:
+            static constexpr uint16_t kWebUICookieMaxLifetime = 720;
         };
 
         // --------------------------------------------------------------------

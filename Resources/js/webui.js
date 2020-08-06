@@ -25,6 +25,21 @@ var webUIComponent = {
     groups: [],
     pendingRequests: [],
     lockPublish: false,
+    disconnectedIcon: false,
+
+    setDisconnectedIcon: function(add) {
+        var icons = this.container.find('.webui-disconnected-icon');
+        if (icons.length) {
+            if (!add) {
+                icons.remove();
+            }
+        }
+        else if (add) {
+            // add icon to the first title
+            this.container.find('.webuicomponent.title:first .col').prepend('<span class="oi oi-bolt webui-disconnected-icon"></span>');
+        }
+        this.disconnectedIcon = add;
+    },
 
     prepareOptions: function(options) {
         // apply default settings to all columns and calculate number of columns
@@ -469,11 +484,15 @@ var webUIComponent = {
             dbg_console.debug('GET /webui_get', data);
             self.updateUI(data.data);
             self.updateEvents(data.values);
+            self.setDisconnectedIcon(self.disconnectedIcon);
         }, 'json');
     },
 
     socketHandler: function(event) {
-        if (event.data instanceof ArrayBuffer) {
+        if (event.type == 'close' || event.type == 'error') {
+            this.setDisconnectedIcon(true);
+        }
+        else if (event.data instanceof ArrayBuffer) {
             var packetId = new Uint16Array(event.data, 0, 1);
             if (packetId == 0x0001) {// RGB565_RLE_COMPRESSED_BITMAP
                 dbg_console.debug('RGB565_RLE_COMPRESSED_BITMAP', event.data.length);
@@ -571,9 +590,16 @@ var webUIComponent = {
             if (json.type === 'ue') {
                 this.updateEvents(json.events);
             }
-        } else if (event.type == 'auth') {
+        }
+        else if (event.type == 'auth') {
             //event.socket.send('+GET_VALUES');
             this.requestUI();
+
+            // show the icon for at least 2 more seconds in case reconnecting is really quick
+            var self = this;
+            window.setTimeout(function() {
+                self.setDisconnectedIcon(false);
+            }, 2000);
         }
     },
 
@@ -588,7 +614,7 @@ var webUIComponent = {
         } );
 
         if (dbg_console.vars.enabled) {
-            $('body').append('<textarea id="console" style="width:270px;height:70px;font-size:10px;font-family:consolas;z-index:999;position:fixed;right:5px;bottom:5px"></textarea>');
+            $('body').append('<textarea id="console" style="width:350px;height:150px;font-size:10px;font-family:consolas;z-index:999;position:fixed;right:5px;bottom:5px"></textarea>');
             this.socket.setConsoleId("console");
         }
 

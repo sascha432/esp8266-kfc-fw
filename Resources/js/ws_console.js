@@ -10,7 +10,7 @@
 // callback({type: 'error', socket: ws_console, event: e, connect_counter: int, was_authenticated: bool });
 // callback({type: 'data', socket: ws_console, data: "message received from socket"});
 // callback({type: 'binary', socket: ws_console, data: ArrayBuffer/blob});
-
+// auto_reconnect: time in seconds or 0 to disable
 function WS_Console(url, sid, auto_reconnect, callback, consoleId) {
     dbg_console.called('new WS_Console', arguments);
     this.url = url;
@@ -85,8 +85,8 @@ WS_Console.prototype.connect = function(authenticated_callback) {
 
     dbg_console.debug('connect_counter', this.connect_counter, 'connection_counter', this.connection_counter, 'reconnect_timeout', this.reconnect_timeout);
     dbg_console.debug(this);
-    if (this.reconnect_timeout != null) {
-        window.clearTimeout();
+    if (this.reconnect_timeout) {
+        window.clearTimeout(this.reconnect_timeout);
         this.reconnect_timeout = null;
     }
     if (this.connect_counter++ == 0) {
@@ -143,7 +143,7 @@ WS_Console.prototype.connect = function(authenticated_callback) {
         ws_console.callback({type: 'close', socket: ws_console, event: e, connect_counter: ws_console.connect_counter, was_authenticated: ws_console.authenticated });
         if (ws_console.connect_counter == 0 && ws_console.authenticated) {
             ws_console.authenticated = false;
-            ws_console.console_log("Connection closed...");
+            ws_console.console_log("Connection closed... (code=" + e.code + " reason=" + e.reason + " clean=" + e.wasClean + ")");
         }
         ws_console.disconnect(!e.wasClean);
     }
@@ -174,6 +174,7 @@ WS_Console.prototype.disconnect = function(reconnect) {
     }
     if (reconnect) {
         if (this.reconnect_timeout == null && this.auto_reconnect) {
+            dbg_console.debug('reconnecting in ' + this.auto_reconnect + ' seconds')
             var ws_console = this;
             ws_console.reconnect_timeout = window.setTimeout(function() {
                 dbg_console.called('WS_Console.reconnect_timeout', arguments);

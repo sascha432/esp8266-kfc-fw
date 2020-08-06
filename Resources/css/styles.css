@@ -226,6 +226,21 @@
 	margin-left: 4px;
 }
 
+.webui-disconnected-icon
+{
+    float: right;
+    font-size: 32px;
+    display: block;
+    padding: 8px;
+    animation: webui-disconnected-icon 0.5s linear infinite;
+}
+
+@keyframes webui-disconnected-icon {
+    50% {
+        opacity: 0;
+    }
+}
+
 .form-enable-slider.is-invalid >.rangeslider {
     background-color: #dc3545;
 }

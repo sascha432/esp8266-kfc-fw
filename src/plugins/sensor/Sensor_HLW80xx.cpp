@@ -64,7 +64,7 @@ MQTTComponent::MQTTAutoDiscoveryPtr Sensor_HLW80xx::nextAutoDiscovery(MQTTAutoDi
         case 1:
             discovery->create(this, FSPGM(energy_total), format);
             discovery->addStateTopic(topic);
-            discovery->addUnitOfMeasurement(FSGM(kWh));
+            discovery->addUnitOfMeasurement(FSPGM(kWh));
             discovery->addValueTemplate(FSPGM(energy_total));
             break;
         case 2:

@@ -5,7 +5,7 @@
 #pragma once
 
 #ifndef DEBUG_SSDP
-#define DEBUG_SSDP                      1
+#define DEBUG_SSDP                          0
 #endif
 
 #if IOT_SSDP_SUPPORT

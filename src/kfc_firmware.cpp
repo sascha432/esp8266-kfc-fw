@@ -292,7 +292,7 @@ void setup()
 
         auto rebootDelay = System::Device::getConfig().getSafeModeRebootTimeout();
         if (rebootDelay) {
-            _debug_printf_P(PSTR("rebooting in %u minutes\n"), rebootDelay);
+            __LDBG_printf("rebooting in %u minutes", rebootDelay);
             // restart device if running in safe mode for rebootDelay minutes
             Scheduler.addTimer(rebootDelay * 60000U, false, [](EventScheduler::TimerPtr timer) {
                 Logger_notice(F("Rebooting device after safe mode timeout"));

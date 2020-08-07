@@ -428,7 +428,7 @@ void Configuration::release()
         return;
     }
     _dumpPool(_storage);
-    _debug_printf_P(PSTR("params=%u last_read=%d dirty=%d\n"), _params.size(), (int)(_readAccess == 0 ? -1 : millis() - _readAccess), isDirty());
+    __LDBG_printf("params=%u last_read=%d dirty=%d", _params.size(), (int)(_readAccess == 0 ? -1 : millis() - _readAccess), isDirty());
     for (auto &parameter : _params) {
         if (!parameter.isDirty()) {
             parameter.__release(this);
@@ -451,7 +451,7 @@ bool Configuration::read()
 #endif
     auto result = _readParams();
     if (!result) {
-        _debug_printf_P(PSTR("readParams()=false\n"));
+        __LDBG_printf("readParams()=false");
         clear();
     }
     return result;
@@ -505,7 +505,7 @@ bool Configuration::write()
         }
 
         // write parameter headers
-        _debug_printf_P(PSTR("write_header: %s ofs=%d prev_data_offset=%u\n"), parameter.toString().c_str(), (int)(buffer.length() + _offset + sizeof(Header_t)), dataOffset);
+        __LDBG_printf("write_header: %s ofs=%d prev_data_offset=%u", parameter.toString().c_str(), (int)(buffer.length() + _offset + sizeof(Header_t)), dataOffset);
         buffer.write(reinterpret_cast<const uint8_t *>(&parameter._param), sizeof(parameter._param));
         dataOffset += length;
     }
@@ -522,7 +522,7 @@ bool Configuration::write()
 
     // write data
     for (auto &parameter : _params) {
-        _debug_printf_P(PSTR("write_data: %s ofs=%d %s\n"), parameter.toString().c_str(), (int)(buffer.length() + _offset + sizeof(Header_t)), __debugDumper(parameter, parameter._info.data, parameter._param.length).c_str());
+        __LDBG_printf("write_data: %s ofs=%d %s", parameter.toString().c_str(), (int)(buffer.length() + _offset + sizeof(Header_t)), __debugDumper(parameter, parameter._info.data, parameter._param.length).c_str());
         buffer.write(parameter._info.data, parameter._param.length);
         if (parameter.isDirty()) {
             parameter._free();
@@ -548,7 +548,7 @@ bool Configuration::write()
     // update parameter info and data
     memcpy(headerPtr + sizeof(header), buffer.get(), len);
 
-    _debug_printf_P(PSTR("CRC %04x, length %d\n"), header.crc, len);
+    __LDBG_printf("CRC %04x, length %d", header.crc, len);
 
     _eeprom.commit();
 
@@ -666,7 +666,7 @@ void Configuration::_writeAllocate(ConfigurationParameter &param, uint16_t size)
     //param._param.length = size;
     param._info.size = param._param.getSize(size);
     param._info.data = reinterpret_cast<uint8_t*>(calloc(param._info.size, 1));
-    _debug_printf_P(PSTR("calloc %s\n"), param.toString().c_str());
+    __LDBG_printf("calloc %s", param.toString().c_str());
 }
 
 uint8_t *Configuration::_allocate(uint16_t size, PoolVector *poolVector)
@@ -825,7 +825,7 @@ Configuration::ParameterList::iterator Configuration::_findParam(ConfigurationPa
     if (type == ConfigurationParameter::_ANY) {
         for (auto it = _params.begin(); it != _params.end(); ++it) {
             if (*it == handle) {
-                //_debug_printf_P(PSTR("%s FOUND\n"), it->toString().c_str());
+                //__LDBG_printf("%s FOUND", it->toString().c_str());
                 return it;
             }
             offset += it->_param.length;
@@ -834,13 +834,13 @@ Configuration::ParameterList::iterator Configuration::_findParam(ConfigurationPa
     else {
         for (auto it = _params.begin(); it != _params.end(); ++it) {
             if (*it == handle && it->_param.type == type) {
-                //_debug_printf_P(PSTR("%s FOUND\n"), it->toString().c_str());
+                //__LDBG_printf("%s FOUND", it->toString().c_str());
                 return it;
             }
             offset += it->_param.length;
         }
     }
-    _debug_printf_P(PSTR("handle=%s[%04x] type=%s = NOT FOUND\n"), ConfigurationHelper::getHandleName(handle), handle, (const char *)ConfigurationParameter::getTypeString(type));
+    __LDBG_printf("handle=%s[%04x] type=%s = NOT FOUND", ConfigurationHelper::getHandleName(handle), handle, (const char *)ConfigurationParameter::getTypeString(type));
     return _params.end();
 }
 
@@ -849,7 +849,7 @@ ConfigurationParameter &Configuration::_getOrCreateParam(ConfigurationParameter:
     auto iterator = _findParam(ConfigurationParameter::_ANY, handle, offset);
     if (iterator == _params.end()) {
         _params.emplace_back(handle, type);
-        _debug_printf_P(PSTR("new param %s\n"), _params.back().toString().c_str());
+        __LDBG_printf("new param %s", _params.back().toString().c_str());
         __DBG__checkIfHandleExists("create", handle);
         return _params.back();
     }
@@ -894,18 +894,18 @@ bool Configuration::_readParams()
     for (;;) {
 
         if (hdr.header.magic != CONFIG_MAGIC_DWORD) {
-            _debug_printf_P(PSTR("invalid magic %08x\n"), hdr.header.magic);
+            __LDBG_printf("invalid magic %08x", hdr.header.magic);
 #if DEBUG_CONFIGURATION
             _eeprom.dump(Serial, false, _offset, 160);
 #endif
             break;
         }
         else if (hdr.header.crc == -1) {
-            _debug_printf_P(PSTR("invalid CRC %04x\n"), hdr.header.crc);
+            __LDBG_printf("invalid CRC %04x", hdr.header.crc);
             break;
         }
         else if (hdr.header.length == 0 || hdr.header.length > _size - sizeof(hdr.header)) {
-            _debug_printf_P(PSTR("invalid length %d\n"), hdr.header.length);
+            __LDBG_printf("invalid length %d", hdr.header.length);
             break;
         }
 
@@ -914,7 +914,7 @@ bool Configuration::_readParams()
 
         uint16_t crc = crc16_update(_eeprom.getConstDataPtr() + _offset + sizeof(hdr.header), hdr.header.length);
         if (hdr.header.crc != crc) {
-            _debug_printf_P(PSTR("CRC mismatch %04x != %04x\n"), crc, hdr.header.crc);
+            __LDBG_printf("CRC mismatch %04x != %04x", crc, hdr.header.crc);
             break;
         }
 
@@ -927,7 +927,7 @@ bool Configuration::_readParams()
             param.type = ConfigurationParameter::_INVALID;
             _eeprom.get(offset, param);
             if (param.type == ConfigurationParameter::_INVALID) {
-                _debug_printf_P(PSTR("invalid type\n"));
+                __LDBG_printf("invalid type");
                 break;
             }
             offset += sizeof(param);
@@ -940,7 +940,7 @@ bool Configuration::_readParams()
                 return true;
             }
         }
-        _debug_printf_P(PSTR("failure before reading all parameters %d/%d\n"), _params.size(), hdr.header.params);
+        __LDBG_printf("failure before reading all parameters %d/%d", _params.size(), hdr.header.params);
         break;
 
     }

@@ -2,6 +2,9 @@
 * Author: sascha_lammers@gmx.de
 */
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+
 #include "FormUI.h"
 #include "FormField.h"
 #include <PrintHtmlEntities.h>
@@ -147,3 +150,5 @@ namespace FormUI {
     }
 
 }
+
+#pragma GCC diagnostic pop

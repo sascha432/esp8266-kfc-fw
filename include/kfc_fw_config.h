@@ -48,70 +48,11 @@ extern float load_avg[3]; // 1min, 5min, 15min
 
 #define HASH_SIZE                   64
 
-#include "../src/plugins/dimmer_module/firmware_protocol.h"
-
-typedef struct __attribute__packed__ DimmerModule {
-    register_mem_cfg_t cfg;
-    float on_off_fade_time;
-    float fade_time;
-    bool config_valid;
-    // float fade_time;
-    // float on_fade_time;
-    // float linear_correction;
-    // uint8_t max_temperature;
-    // uint8_t metrics_int;
-    // uint8_t report_temp;
-    // uint8_t restore_level;
-#if IOT_ATOMIC_SUN_V2
-    int8_t channel_mapping[4];
-#endif
-    DimmerModule();
-} DimmerModule;
-
-struct DimmerModuleButtons {
-    uint16_t shortpress_time;
-    uint16_t longpress_time;
-    uint16_t repeat_time;
-    uint16_t shortpress_no_repeat_time;
-    uint8_t min_brightness;
-    uint8_t shortpress_step;
-    uint8_t longpress_max_brightness;
-    uint8_t longpress_min_brightness;
-    float shortpress_fadetime;
-    float longpress_fadetime;
-#if IOT_DIMMER_MODULE_CHANNELS
-    uint8_t pins[IOT_DIMMER_MODULE_CHANNELS * 2];
-#endif
-};
-
 #include "push_pack.h"
 
 // NOTE: any member of an packed structure (__attribute__packed__ ) cannot be passed to forms as reference, otherwise it might cause an unaligned exception
 // marking integers as bitset prevents using it as reference, i.e. uint8_t value: 8;
 // use _H_STRUCT_VALUE() or suitable macro
-
-class Config_Ping
-{
-public:
-    typedef struct __attribute__packed__ {
-        uint8_t count: 8;
-        uint16_t interval;
-        uint16_t timeout;
-    } config_t;
-    config_t config;
-
-    Config_Ping() {
-        config = { 5, 60, 5000 };
-    }
-
-    static const char *getHost(uint8_t num);
-    static void defaults();
-
-    char host1[65];
-    char host2[65];
-    char host3[65];
-    char host4[65];
-};
 
 class Config_Button {
 public:
@@ -138,48 +79,6 @@ public:
 
 #include "pop_pack.h"
 
-typedef union __attribute__packed__ {
-    uint32_t value: 24;
-    uint8_t bgr[3];
-    struct __attribute__packed__ {
-        uint8_t blue;
-        uint8_t green;
-        uint8_t red;
-    };
-} ClockColor_t;
-
-typedef struct __attribute__packed__ {
-    ClockColor_t solid_color;
-    int8_t animation: 7;
-    int8_t time_format_24h: 1;
-    uint8_t brightness;
-    int16_t auto_brightness;
-    uint16_t blink_colon_speed;
-    uint16_t flashing_speed;
-    struct {
-        uint8_t temperature_50;
-        uint8_t temperature_75;
-        uint8_t max_temperature;
-    } protection;
-    struct {
-        float multiplier;
-        uint16_t speed;
-        ClockColor_t factor;
-        ClockColor_t minimum;
-    } rainbow;
-    struct {
-        ClockColor_t color;
-        uint16_t speed;
-    } alarm;
-    struct {
-        float speed;
-        uint16_t delay;
-        ClockColor_t factor;
-    } fading;
-    // int8_t order[8];
-    // uint8_t segmentOrder;
-} Clock_t;
-
 namespace Config_QuickConnect
 {
     typedef struct  {
@@ -196,14 +95,6 @@ namespace Config_QuickConnect
 
 typedef struct {
     uint16_t http_port;
-    char cert_passphrase[33];
-
-    DimmerModule dimmer;
-    DimmerModuleButtons dimmer_buttons;
-    Clock_t clock;
-
-    Config_Ping ping;
-    Config_Button buttons;
 } Config;
 
 #define _H_IP_VALUE(name, ...) \

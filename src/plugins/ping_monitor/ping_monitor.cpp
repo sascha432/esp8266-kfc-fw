@@ -38,7 +38,7 @@ void ping_monitor_install_web_server_hook()
         auto ws = new WsClientAsyncWebSocket(F("/ping"), &wsPing);
         ws->onEvent(ping_monitor_event_handler);
         server->addHandler(ws);
-        _debug_printf_P(PSTR("Web socket for ping running on port %u\n"), System::WebServer::getConfig().port);
+        __LDBG_printf("Web socket for ping running on port %u", System::WebServer::getConfig().port);
     }
 }
 
@@ -50,7 +50,7 @@ bool ping_monitor_resolve_host(const String &host, IPAddress &addr, PrintString 
     }
 
     if (addr.fromString(host) || WiFi.hostByName(host.c_str(), addr)) {
-        _debug_printf_P(PSTR("ping_monitor_resolve_host: resolved host %s = %s\n"), host.c_str(), addr.toString().c_str());
+        __LDBG_printf("ping_monitor_resolve_host: resolved host %s = %s", host.c_str(), addr.toString().c_str());
         return true;
     }
     errorMessage.printf_P(PSTR("ping: %s: Name or service not known"), host.c_str());
@@ -65,7 +65,7 @@ void ping_monitor_begin(const AsyncPingPtr &ping, const String &host, IPAddress 
     if (timeout < 1) {
         timeout = 5000;
     }
-    _debug_printf_P(PSTR("addr=%s count=%d timeout=%d\n"), addr.toString().c_str(), count, timeout);
+    __LDBG_printf("addr=%s count=%d timeout=%d", addr.toString().c_str(), count, timeout);
     message.printf_P(PSTR("PING %s (%s) 56(84) bytes of data."), host.c_str(), addr.toString().c_str());
     ping->begin(addr, count, timeout);
 }
@@ -91,7 +91,7 @@ WsClient *WsPingClient::getInstance(AsyncWebSocketClient *socket)
 
 void WsPingClient::onText(uint8_t *data, size_t len)
 {
-    _debug_printf_P(PSTR("data=%p len=%d\n"), data, len);
+    __LDBG_printf("data=%p len=%d", data, len);
     auto client = getClient();
     if (isAuthenticated()) {
         Buffer buffer;
@@ -101,7 +101,7 @@ void WsPingClient::onText(uint8_t *data, size_t len)
             StringVector items;
             explode(buffer.c_str(), ' ', items);
 
-            _debug_printf_P(PSTR("data=%s strlen=%d\n"), buffer.c_str(), buffer.length());
+            __LDBG_printf("data=%s strlen=%d", buffer.c_str(), buffer.length());
 
             if (items.size() == 3) {
                 auto count = items[1].toInt();
@@ -114,7 +114,7 @@ void WsPingClient::onText(uint8_t *data, size_t len)
 
                 LoopFunctions::callOnce([this, client, host, count, timeout]() {
 
-                    _debug_printf_P(PSTR("Ping host %s count %d timeout %d\n"), host.c_str(), count, timeout);
+                    __LDBG_printf("Ping host %s count %d timeout %d", host.c_str(), count, timeout);
                     IPAddress addr;
                     PrintString message;
                     if (ping_monitor_resolve_host(host.c_str(), addr, message)) {
@@ -169,7 +169,7 @@ void WsPingClient::onError(WsErrorType type, uint8_t *data, size_t len)
 
 void WsPingClient::_cancelPing()
 {
-    _debug_printf_P(PSTR("ping=%p\n"), _ping.get());
+    __LDBG_printf("ping=%p", _ping.get());
     if (_ping) {
 #if DEBUG_PING_MONITOR
         _ping->on(true, [](const AsyncPingResponse &response) {
@@ -246,7 +246,7 @@ void PingMonitorTask::clearHosts()
 
 void PingMonitorTask::addHost(String host)
 {
-    _debug_printf_P(PSTR("host=%s\n"), host.c_str());
+    __LDBG_printf("host=%s", host.c_str());
     host.trim();
     if (host.length()) {
         _pingHosts.emplace_back(std::move(host));
@@ -255,7 +255,7 @@ void PingMonitorTask::addHost(String host)
 
 void PingMonitorTask::addAnswer(bool answer)
 {
-    _debug_printf_P(PSTR("answer=%d server=%d\n"), answer, _currentServer);
+    __LDBG_printf("answer=%d server=%d", answer, _currentServer);
     auto &host = _pingHosts.at(_currentServer);
     if (answer) {
         host.success++;
@@ -269,16 +269,16 @@ void PingMonitorTask::next()
     _currentServer++;
     _currentServer = _currentServer % _pingHosts.size();
     _nextHost = millis() + (_interval * 1000UL);
-    _debug_printf_P(PSTR("server=%d, time=%lu\n"), _currentServer, _nextHost);
+    __LDBG_printf("server=%d, time=%lu", _currentServer, _nextHost);
 }
 
 void PingMonitorTask::begin()
 {
     _nextHost = 0;
     String host = ping_monitor_get_translated_host(_pingHosts[_currentServer].host);
-    _debug_printf_P(PSTR("host=%s\n"), host.c_str());
+    __LDBG_printf("host=%s", host.c_str());
     if (host.length() == 0 || !_ping->begin(host.c_str(), _count, _timeout)) {
-        _debug_printf_P(PSTR("error: %s\n"), host.c_str());
+        __LDBG_printf("error: %s", host.c_str());
         next();
     }
 }
@@ -302,23 +302,23 @@ void PingMonitorTask::start()
         _ping->on(true, ping_monitor_response_handler);
         _ping->on(false, ping_monitor_end_handler);
         _nextHost = millis() + (_interval * 1000UL);
-        _debug_printf_P(PSTR("next=%lu\n"), _nextHost);
+        __LDBG_printf("next=%lu", _nextHost);
         LoopFunctions::add(ping_monitor_loop_function);
     } else {
-        _debug_printf_P(PSTR("no hosts\n"));
+        __LDBG_printf("no hosts");
     }
 }
 
 void PingMonitorTask::stop()
 {
-    _debug_printf_P(PSTR("PingMonitorTask::stop()\n"));
+    __LDBG_printf("PingMonitorTask::stop()");
     _cancelPing();
     clearHosts();
 }
 
 void PingMonitorTask::_cancelPing()
 {
-    _debug_printf_P(PSTR("ping=%p\n"), _ping.get());
+    __LDBG_printf("ping=%p", _ping.get());
     if (_ping) {
         LoopFunctions::remove(ping_monitor_loop_function);
         _ping->cancel();
@@ -335,7 +335,7 @@ void ping_monitor_setup()
 
     if (config.interval && config.count) {
 
-        _debug_printf_P(PSTR("setting up PingMonitorTask interval=%u count=%d timeout=%d\n"), config.interval, config.count, config.timeout);
+        __LDBG_printf("setting up PingMonitorTask interval=%u count=%d timeout=%d", config.interval, config.count, config.timeout);
 
         pingMonitorTask.reset(new PingMonitorTask());
         pingMonitorTask->setInterval(config.interval);
@@ -426,7 +426,7 @@ void PingMonitorPlugin::getStatus(Print &output)
 
 void PingMonitorPlugin::createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request)
 {
-    _debug_printf_P(PSTR("type=%u name=%s\n"), type, formName.c_str());
+    __LDBG_printf("type=%u name=%s", type, formName.c_str());
     if (!isCreateFormCallbackType(type)) {
         return;
     }

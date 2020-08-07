@@ -152,14 +152,14 @@ void ConfigurationHelper::EEPROMAccess::begin(uint16_t size)
 {
     if (size) {
         if (size > _size && _isInitialized) {
-            _debug_printf_P(PSTR("resize=%u size=%u\n"), size, _size);
+            __LDBG_printf("resize=%u size=%u", size, _size);
             end();
         }
         _size = size;
     }
     if (!_isInitialized) {
         _isInitialized = true;
-        _debug_printf_P(PSTR("size=%u\n"), _size);
+        __LDBG_printf("size=%u", _size);
         EEPROM.begin(_size);
         __DBG__addFlashReadSize(0, _size);
     }
@@ -187,7 +187,7 @@ void ConfigurationHelper::EEPROMAccess::end()
 void ConfigurationHelper::EEPROMAccess::commit()
 {
     if (_isInitialized) {
-        _debug_printf_P(PSTR("size=%u\n"), _size);
+        __LDBG_printf("size=%u", _size);
 #if DEBUG_CONFIGURATION_GETHANDLE
         bool dirty = static_cast<EEPROMClassEx &>(EEPROM).getDirty();
         auto writeSize = static_cast<EEPROMClassEx &>(EEPROM).getWriteSize();
@@ -223,9 +223,9 @@ uint16_t ConfigurationHelper::EEPROMAccess::read(uint8_t *dst, uint16_t offset, 
     uint16_t readSize = (length + alignment + 3) & ~3; // align read length and add alignment
     eeprom_start_address -= alignment; // align start address
 
-    _debug_printf_P(PSTR("dst=%p ofs=%d len=%d align=%u read_size=%u\n"), dst, offset, length, alignment, readSize);
+    __LDBG_printf("dst=%p ofs=%d len=%d align=%u read_size=%u", dst, offset, length, alignment, readSize);
 
-    // _debug_printf_P(PSTR("flash: %08X:%08X (%d) aligned: %08X:%08X (%d)\n"),
+    // __LDBG_printf("flash: %08X:%08X (%d) aligned: %08X:%08X (%d)",
     //     eeprom_start_address + alignment, eeprom_start_address + length + alignment, length,
     //     eeprom_start_address, eeprom_start_address + readSize, readSize
     // );
@@ -244,7 +244,7 @@ uint16_t ConfigurationHelper::EEPROMAccess::read(uint8_t *dst, uint16_t offset, 
         else {
             auto ptr = reinterpret_cast<uint8_t *>(malloc(readSize));
             // large read operation should have an aligned address or enough extra space to avoid memory allocations
-            _debug_printf_P(PSTR("allocating read buffer read_size=%d len=%d size=%u ptr=%p\n"), readSize, length, size, ptr);
+            __LDBG_printf("allocating read buffer read_size=%d len=%d size=%u ptr=%p", readSize, length, size, ptr);
             if (ptr) {
                 noInterrupts();
                 result = spi_flash_read(eeprom_start_address, reinterpret_cast<uint32_t *>(ptr), readSize);
@@ -268,7 +268,7 @@ uint16_t ConfigurationHelper::EEPROMAccess::read(uint8_t *dst, uint16_t offset, 
     if (result != SPI_FLASH_RESULT_OK) {
         memset(dst, 0, length);
     }
-    _debug_printf_P(PSTR("spi_flash_read(%08x, %d) = %d, offset %u\n"), eeprom_start_address, readSize, result, offset);
+    __LDBG_printf("spi_flash_read(%08x, %d) = %d, offset %u", eeprom_start_address, readSize, result, offset);
 
 #if DEBUG_CONFIGURATION_VERIFY_DIRECT_EEPROM_READ
     auto hasBeenInitialized = _isInitialized;
@@ -307,7 +307,7 @@ uint16_t ConfigurationHelper::EEPROMAccess::read(uint8_t *dst, uint16_t offset, 
         if (!_partition) {
             _partition = esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_ANY, SPGM(EEPROM_partition_name));
         }
-        _debug_printf_P(PSTR("ofs= %d, len=%d: using esp_partition_read(%p)\n"), offset, length, _partition);
+        __LDBG_printf("ofs= %d, len=%d: using esp_partition_read(%p)", offset, length, _partition);
         if (esp_partition_read(_partition, offset, (void *)dst, length) != ESP_OK) {
             memset(dst, 0, length);
         }

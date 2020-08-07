@@ -14,6 +14,7 @@
 #include <push_pack.h>
 
 #include <kfc_fw_config_types.h>
+#include "../src/plugins/dimmer_module/firmware_protocol.h"
 
 class Form;
 class FormLengthValidator;
@@ -204,6 +205,9 @@ DECLARE_CONFIG_HANDLE_PROGMEM_STR(handleNameSensorConfig_t);
 DECLARE_CONFIG_HANDLE_PROGMEM_STR(handleNameFlagsConfig_t);
 DECLARE_CONFIG_HANDLE_PROGMEM_STR(handleNameSoftAPConfig_t);
 DECLARE_CONFIG_HANDLE_PROGMEM_STR(handleNameBlindsConfig_t);
+DECLARE_CONFIG_HANDLE_PROGMEM_STR(handleNameDimmerConfig_t);
+DECLARE_CONFIG_HANDLE_PROGMEM_STR(handleNameClockConfig_t);
+DECLARE_CONFIG_HANDLE_PROGMEM_STR(handleNamePingConfig_t);
 
 #define CIF_DEBUG(...) __VA_ARGS__
 
@@ -1323,6 +1327,129 @@ namespace KFCConfigurationClasses {
         };
 
         // --------------------------------------------------------------------
+        // Dimmer
+
+        class DimmerConfig {
+        public:
+            typedef struct __attribute__packed__ DimmerConfig_t {
+                register_mem_cfg_t fw;
+                float on_off_fade_time;
+                float fade_time;
+                bool config_valid;
+            #if IOT_ATOMIC_SUN_V2
+                int8_t channel_mapping[4];
+            #endif
+
+            #if IOT_DIMMER_MODULE_HAS_BUTTONS
+                uint16_t shortpress_time;
+                uint16_t longpress_time;
+                uint16_t repeat_time;
+                uint16_t shortpress_no_repeat_time;
+                uint8_t min_brightness;
+                uint8_t shortpress_step;
+                uint8_t longpress_max_brightness;
+                uint8_t longpress_min_brightness;
+                float shortpress_fadetime;
+                float longpress_fadetime;
+            #if IOT_DIMMER_MODULE_CHANNELS
+                uint8_t pins[IOT_DIMMER_MODULE_CHANNELS * 2];
+            #endif
+            #endif
+
+                DimmerConfig_t();
+
+            } DimmerConfig_t;
+        };
+
+        class Dimmer : public DimmerConfig, public ConfigGetterSetter<DimmerConfig::DimmerConfig_t, _H(MainConfig().plugins.dimmer.cfg) CIF_DEBUG(, &handleNameDimmerConfig_t)>
+        {
+        public:
+            static void defaults();
+        };
+
+        // --------------------------------------------------------------------
+        // Clock
+
+        class ClockConfig {
+        public:
+            typedef union __attribute__packed__ {
+                uint32_t value: 24;
+                uint8_t bgr[3];
+                struct __attribute__packed__ {
+                    uint8_t blue;
+                    uint8_t green;
+                    uint8_t red;
+                };
+            } ClockColor_t;
+
+            typedef struct __attribute__packed__ ClockConfig_t {
+                using Type = ClockConfig_t;
+
+                ClockColor_t solid_color;
+                CREATE_UINT8_BITFIELD(animation, 7);
+                CREATE_UINT8_BITFIELD(time_format_24h, 1);
+                uint8_t brightness;
+                int16_t auto_brightness;
+                uint16_t blink_colon_speed;
+                uint16_t flashing_speed;
+                uint8_t protection_temperature_75;
+                uint8_t protection_temperature_50;
+                uint8_t protection_max_temperature;
+                float rainbow_multiplier;
+                uint16_t rainbow_speed;
+                ClockColor_t rainbow_factor;
+                ClockColor_t rainbow_minimum;
+                ClockColor_t alarm_color;
+                uint16_t alarm_speed;
+                float fading_speed;
+                uint16_t fading_delay;
+                ClockColor_t fading_factor;
+
+                ClockConfig_t();
+
+            } ClockConfig_t;
+        };
+
+        class Clock : public ClockConfig, public ConfigGetterSetter<ClockConfig::ClockConfig_t, _H(MainConfig().plugins.clock.cfg) CIF_DEBUG(, &handleNameClockConfig_t)>
+        {
+        public:
+            static void defaults();
+        };
+
+        // --------------------------------------------------------------------
+        // Ping
+
+        class PingConfig {
+        public:
+            typedef struct __attribute__packed__ PingConfig_t {
+                uint8_t count;                  // number of pings
+                uint16_t interval;              // seconds
+                uint16_t timeout;               // ms
+
+                static constexpr uint16_t kIntervalDefault = 60;
+                static constexpr uint16_t kTimeoutDefault = 5000;
+
+                PingConfig_t() : count(5), interval(kIntervalDefault), timeout(kTimeoutDefault) {}
+
+            } PingConfig_t;
+        };
+
+        class Ping : public PingConfig, public ConfigGetterSetter<PingConfig::PingConfig_t, _H(MainConfig().plugins.ping.cfg) CIF_DEBUG(, &handleNamePingConfig_t)>
+        {
+        public:
+            static void defaults();
+
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.ping, Host1, 0, 64);
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.ping, Host2, 0, 64);
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.ping, Host3, 0, 64);
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.ping, Host4, 0, 64);
+
+            static const char *getHost(uint8_t num);
+            static constexpr uint8_t kHostsMax = 4;
+
+        };
+
+        // --------------------------------------------------------------------
         // MDNS
 
         class MDNS
@@ -1346,6 +1473,9 @@ namespace KFCConfigurationClasses {
         NTPClient ntpclient;
         Sensor sensor;
         Blinds blinds;
+        Dimmer dimmer;
+        Clock clock;
+        Ping ping;
         MDNS mdns;
 
     };

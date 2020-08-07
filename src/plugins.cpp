@@ -40,10 +40,10 @@ void register_plugin(PluginComponent *plugin)
 {
 #endif
     if (plugins.size()) {
-        _debug_printf(PSTR("Registering plugins completed already, skipping %s\n"), plugin->getName_P());
+        __LDBG_printf("Registering plugins completed already, skipping %s", plugin->getName_P());
         return;
     }
-    _debug_printf_P(PSTR("register_plugin %s priority %d\n"), plugin->getName_P(), plugin->getOptions().priority);
+    __LDBG_printf("register_plugin %s priority %d", plugin->getName_P(), plugin->getOptions().priority);
     if (!pluginsPtr) {
         pluginsPtr = new PluginsVector();
         pluginsPtr->reserve(16);
@@ -66,7 +66,7 @@ void dump_plugin_list(Print &output)
     output.printf_P(titles);
     output.print(FPSTR(header));
     for(const auto plugin : plugins) {
-        _debug_printf_P(PSTR("plugin=%p\n"), plugin);
+        __LDBG_printf("plugin=%p", plugin);
         auto options = plugin->getOptions();
         output.printf_P(format,
             plugin->getName_P(),
@@ -98,7 +98,7 @@ void prepare_plugins()
     });
     free(pluginsPtr);
 
-    _debug_printf_P(PSTR("counter=%d\n"), plugins.size());
+    __LDBG_printf("counter=%d", plugins.size());
 }
 
 static void create_menu()
@@ -141,7 +141,7 @@ static bool enableWebUIMenu = false;
 
 void setup_plugins(PluginComponent::SetupModeType mode)
 {
-    _debug_printf_P(PSTR("mode=%d counter=%d\n"), mode, plugins.size());
+    __LDBG_printf("mode=%d counter=%d", mode, plugins.size());
 
     if (mode != PluginComponent::SetupModeType::DELAYED_AUTO_WAKE_UP) {
         create_menu();
@@ -165,7 +165,7 @@ void setup_plugins(PluginComponent::SetupModeType mode)
             (mode == PluginComponent::SetupModeType::DELAYED_AUTO_WAKE_UP && !plugin->autoSetupAfterDeepSleep())
 #endif
         );
-        _debug_printf_P(PSTR("name=%s prio=%d setup=%d\n"), plugin->getName_P(), plugin->getOptions().priority, runSetup);
+        __LDBG_printf("name=%s prio=%d setup=%d mode=%u menu=%u add_menu=%u", plugin->getName_P(), plugin->getOptions().priority, runSetup, mode, plugin->getMenuType(), (mode != PluginComponent::SetupModeType::DELAYED_AUTO_WAKE_UP));
         if (runSetup) {
             plugin->setSetupTime();
             plugin->setup(mode);
@@ -178,16 +178,20 @@ void setup_plugins(PluginComponent::SetupModeType mode)
         if (mode != PluginComponent::SetupModeType::DELAYED_AUTO_WAKE_UP) {
             switch(plugin->getMenuType()) {
                 case PluginComponent::MenuType::CUSTOM:
+                    __LDBG_printf("menu=custom plugin=%s", plugin->getName_P());
                     plugin->createMenu();
                     break;
                 case PluginComponent::MenuType::AUTO: {
+                        __LDBG_printf("menu=auto plugin=%s", plugin->getName_P());
                         String name = plugin->getName();
                         if (plugin->canHandleForm(name)) {
+                            __LDBG_printf("menu=auto plugin=%s can_handle=true", plugin->getName_P());
                             bootstrapMenu.addSubMenu(plugin->getFriendlyName(), name + FSPGM(_html), navMenu.config);
                         }
                     } break;
                 case PluginComponent::MenuType::NONE:
                 default:
+                    __LDBG_printf("menu=none plugin=%s", plugin->getName_P());
                     break;
             }
         }
@@ -196,7 +200,7 @@ void setup_plugins(PluginComponent::SetupModeType mode)
     if (enableWebUIMenu && System::Flags::getConfig().is_webui_enabled) {
         auto url = F("webui.html");
         if (!bootstrapMenu.isValid(bootstrapMenu.findMenuByURI(url, navMenu.device))) {
-            auto webUi = F("Web UI");
+            auto webUi = FSPGM(WebUI);
             bootstrapMenu.addSubMenu(webUi, url, navMenu.device);
             bootstrapMenu.addSubMenu(webUi, url, navMenu.home, bootstrapMenu.getId(bootstrapMenu.findMenuByURI(FSPGM(status_html), navMenu.home)));
         }

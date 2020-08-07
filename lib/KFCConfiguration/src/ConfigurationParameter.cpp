@@ -35,7 +35,7 @@ uint8_t *ConfigurationParameter::_allocate(Configuration *conf)
         __debugbreak_and_panic_printf_P(PSTR("%s allocate called on dirty parameter\n"), toString().c_str());
     }
     if (_info.data && _info.size == _param.getSize()) { // can we reuse the pointer?
-        _debug_printf_P(PSTR("%s pointer reused\n"), toString().c_str());
+        __LDBG_printf("%s pointer reused", toString().c_str());
         memset(_info.data, 0, _info.size);
         return _info.data;
     }
@@ -114,9 +114,9 @@ bool ConfigurationParameter::_compareData(const uint8_t *data, uint16_t size) co
 
 void ConfigurationParameter::setData(Configuration *conf, const uint8_t *data, uint16_t size)
 {
-    _debug_printf_P(PSTR("%s set_size=%u %s\n"), toString().c_str(), size, Configuration::__debugDumper(*this, data, size).c_str());
+    __LDBG_printf("%s set_size=%u %s", toString().c_str(), size, Configuration::__debugDumper(*this, data, size).c_str());
     if (_compareData(data, size)) {
-        _debug_printf_P(PSTR("compareData=true\n"));
+        __LDBG_printf("compareData=true");
         return;
     }
     _makeWriteable(conf, size);
@@ -138,7 +138,7 @@ const char *ConfigurationParameter::getString(Configuration* conf, uint16_t offs
     if (!_info.data && !_readData(conf, offset)) {
         return nullptr;
     }
-    //_debug_printf_P(PSTR("%s %s\n"), toString().c_str(), Configuration::__debugDumper(*this, _info.data, _info.size).c_str());
+    //__LDBG_printf("%s %s", toString().c_str(), Configuration::__debugDumper(*this, _info.data, _info.size).c_str());
     return reinterpret_cast<const char *>(_info.data);
 }
 
@@ -148,7 +148,7 @@ const uint8_t *ConfigurationParameter::getBinary(Configuration *conf, uint16_t &
         return nullptr;
     }
     length = _info.size;
-    //_debug_printf_P(PSTR("%s %s\n"), toString().c_str(), Configuration::__debugDumper(*this, _info.data, _info.size).c_str());
+    //__LDBG_printf("%s %s", toString().c_str(), Configuration::__debugDumper(*this, _info.data, _info.size).c_str());
     return _info.data;
 }
 
@@ -425,7 +425,7 @@ bool ConfigurationParameter::_readData(Configuration *conf, uint16_t offset)
 
 #if DEBUG_CONFIGURATION
     if (_info.size != getSize()) {
-        _debug_printf_P(PSTR("ERROR: %s size mismatch\n"), toString().c_str());
+        __LDBG_printf("ERROR: %s size mismatch", toString().c_str());
         //__debugbreak_and_panic_printf_P(PSTR("%s size mismatch\n"), toString().c_str());
     }
 #endif

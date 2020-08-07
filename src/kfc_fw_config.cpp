@@ -59,33 +59,6 @@ using KFCConfigurationClasses::Network;
 using KFCConfigurationClasses::System;
 using KFCConfigurationClasses::Plugins;
 
-// Config_Ping
-
-const char *Config_Ping::getHost(uint8_t num)
-{
-    switch(num) {
-        case 0:
-            return ::config._H_STR(Config().ping.host1);
-        case 1:
-            return ::config._H_STR(Config().ping.host2);
-        case 2:
-            return ::config._H_STR(Config().ping.host3);
-        case 3:
-            return ::config._H_STR(Config().ping.host4);
-        default:
-            break;
-    }
-    return nullptr;
-}
-
-void Config_Ping::defaults()
-{
-    ::config._H_SET(Config().ping.config, Config_Ping().config);
-    ::config._H_SET_STR(Config().ping.host1, F("${gateway}"), 64);
-    ::config._H_SET_STR(Config().ping.host2, F("8.8.8.8"), 64);
-    ::config._H_SET_STR(Config().ping.host3, F("www.google.com"), 64);
-}
-
 // Config_Button
 
 void Config_Button::getButtons(ButtonVector &buttons)
@@ -527,75 +500,14 @@ void KFCFWConfiguration::restoreFactorySettings()
 #if IOT_BLINDS_CTRL
     Plugins::Blinds::defaults();
 #endif
-
-
 #if PING_MONITOR_SUPPORT
-    Config_Ping::defaults();
+    Plugins::Ping::defaults();
 #endif
 #if IOT_DIMMER_MODULE || IOT_ATOMIC_SUN_V2
-    DimmerModule dimmer;
-    dimmer.config_valid = false;
-    dimmer.on_off_fade_time = 7.5;
-    dimmer.fade_time = 5.0;
-#if IOT_ATOMIC_SUN_V2
-#ifdef IOT_ATOMIC_SUN_CHANNEL_WW1
-    dimmer.channel_mapping[0] = IOT_ATOMIC_SUN_CHANNEL_WW1;
-    dimmer.channel_mapping[1] = IOT_ATOMIC_SUN_CHANNEL_WW2;
-    dimmer.channel_mapping[2] = IOT_ATOMIC_SUN_CHANNEL_CW1;
-    dimmer.channel_mapping[3] = IOT_ATOMIC_SUN_CHANNEL_CW2;
-#else
-    dimmer.channel_mapping[0] = 0;
-    dimmer.channel_mapping[1] = 1;
-    dimmer.channel_mapping[2] = 2;
-    dimmer.channel_mapping[3] = 3;
+    Plugins::Dimmer::defaults();
 #endif
-#endif
-    _H_SET(Config().dimmer, DimmerModule());
-
-#if IOT_DIMMER_MODULE_HAS_BUTTONS
-    DimmerModuleButtons dimmer_buttons;
-    dimmer_buttons.shortpress_time = 250;
-    dimmer_buttons.longpress_time = 600;
-    dimmer_buttons.repeat_time = 75;
-    dimmer_buttons.shortpress_no_repeat_time = 650;
-    dimmer_buttons.min_brightness = 25;
-    dimmer_buttons.shortpress_step = 2;
-    dimmer_buttons.longpress_max_brightness = 100;
-    dimmer_buttons.longpress_min_brightness = 45;
-    dimmer_buttons.shortpress_fadetime = 3.0;
-    dimmer_buttons.longpress_fadetime = 4.5;
-    memset(&dimmer_buttons.pins, 0, sizeof(dimmer_buttons.pins));
-#if IOT_SENSOR_HAVE_HLW8012
-    dimmer_buttons.pins[0] = D2;
-    dimmer_buttons.pins[1] = D7;
-#else
-    dimmer_buttons.pins[0] = D6;
-    dimmer_buttons.pins[1] = D7;
-#endif
-    _H_SET(Config().dimmer_buttons, dimmer_buttons);
-#endif
-#endif
-
 #if IOT_CLOCK
-    {
-        auto cfg = _H_GET(Config().clock);
-        cfg = {};
-        cfg.animation = 0;
-        cfg.time_format_24h = 1;
-        cfg.solid_color.value = 0x00ff00;
-        cfg.auto_brightness = -1;
-        cfg.brightness = 128;
-        cfg.protection = { 65, 55, 75 };
-        cfg.rainbow = { 5.23, 30, 0xffffff, 0 };
-        cfg.alarm = { 0xff0000, 250 };
-        cfg.blink_colon_speed = 1000;
-        cfg.flashing_speed = 150;
-        cfg.fading = { 7.5, 2, 0xffffff };
-        // cfg.segmentOrder = 0;
-        // static const int8_t order[8] PROGMEM = { 0, 1, -1, 2, 3, -2, 4, 5 }; // <1st digit> <2nd digit> <1st colon> <3rd digit> <4th digit> <2nd colon> <5th digit> <6th digit>
-        // memcpy_P(cfg.order, order, sizeof(cfg.order));
-        _H_SET(Config().clock, cfg);
-    }
+    Plugins::Clock::defaults();
 #endif
 
 #if CUSTOM_CONFIG_PRESET

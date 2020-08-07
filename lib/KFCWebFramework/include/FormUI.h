@@ -4,6 +4,9 @@
 
 #pragma once
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+
 #include <Arduino_compat.h>
 #include <vector>
 #include <PrintArgs.h>
@@ -374,3 +377,5 @@ namespace FormUI {
 };
 
 #include "FormUIConfig.h"
+
+#pragma GCC diagnostic pop

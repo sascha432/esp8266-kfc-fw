@@ -23,7 +23,9 @@ DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNameSensorConfig_t, "MainConfig().plugins
 DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNameFlagsConfig_t, "MainConfig().system.flags.cfg");
 DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNameSoftAPConfig_t, "MainConfig().network.softap.cfg");
 DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNameBlindsConfig_t, "MainConfig().plugins.blinds.cfg");
-
+DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNameDimmerConfig_t, "MainConfig().plugins.dimmer.cfg");
+DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNameClockConfig_t, "MainConfig().plugins.clock.cfg");
+DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNamePingConfig_t, "MainConfig().plugins.ping.cfg");
 
 namespace KFCConfigurationClasses {
 

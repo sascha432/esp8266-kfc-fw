@@ -23,7 +23,7 @@ Sensor_INA219::Sensor_INA219(const JsonString &name, TwoWire &wire, uint8_t addr
     _ina219.begin(&config.initTwoWire());
     _ina219.setCalibration(IOT_SENSOR_INA219_BUS_URANGE, IOT_SENSOR_INA219_GAIN, IOT_SENSOR_INA219_SHUNT_ADC_RES, IOT_SENSOR_INA219_R_SHUNT * 4);
 
-    _debug_printf_P(PSTR("Sensor_INA219::Sensor_INA219(): address=%x, voltage range=%x, gain=%x, shunt ADC resolution=%x\n"), _address, IOT_SENSOR_INA219_BUS_URANGE, IOT_SENSOR_INA219_GAIN, IOT_SENSOR_INA219_SHUNT_ADC_RES);
+    __LDBG_printf("Sensor_INA219::Sensor_INA219(): address=%x, voltage range=%x, gain=%x, shunt ADC resolution=%x", _address, IOT_SENSOR_INA219_BUS_URANGE, IOT_SENSOR_INA219_GAIN, IOT_SENSOR_INA219_SHUNT_ADC_RES);
 
     setUpdateRate(IN219_WEBUI_UPDATE_RATE);
     LoopFunctions::add([this]() {
@@ -76,7 +76,7 @@ uint8_t Sensor_INA219::getAutoDiscoveryCount() const
 
 void Sensor_INA219::getValues(JsonArray &array, bool timer)
 {
-    _debug_printf_P(PSTR("Sensor_INA219::getValues()\n"));
+    __LDBG_printf("Sensor_INA219::getValues()");
     auto *obj = &array.addObject(3);
     obj->add(JJ(id), _getId(VOLTAGE));
     auto U = _data.U();
@@ -107,7 +107,7 @@ void Sensor_INA219::getValues(JsonArray &array, bool timer)
 
 void Sensor_INA219::createWebUI(WebUI &webUI, WebUIRow **row)
 {
-    _debug_printf_P(PSTR("Sensor_INA219::createWebUI()\n"));
+    __LDBG_printf("Sensor_INA219::createWebUI()");
     (*row)->addSensor(_getId(VOLTAGE), _name, 'V');
     (*row)->addSensor(_getId(CURRENT), F("Current"), F("mA"));
     (*row)->addSensor(_getId(POWER), F("Power"), F("mW"));

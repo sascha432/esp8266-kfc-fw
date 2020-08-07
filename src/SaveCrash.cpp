@@ -129,7 +129,7 @@ public:
                 size += dir.fileSize();
             }
         }
-        _debug_printf_P(PSTR("path=%s name=%s size=%u counter=%u espcounter=%u\n"), path.c_str(), name.c_str(), size, counter, espSaveCrash.count());
+        __LDBG_printf("path=%s name=%s size=%u counter=%u espcounter=%u", path.c_str(), name.c_str(), size, counter, espSaveCrash.count());
         output.printf_P(PSTR("%u crash report(s), total size "), counter);
         output.print(formatBytes(size));
     }

@@ -66,7 +66,7 @@ uint8_t Sensor_BME680::getAutoDiscoveryCount() const {
 }
 
 void Sensor_BME680::getValues(JsonArray &array, bool timer) {
-    _debug_printf_P(PSTR("Sensor_BME680::getValues()\n"));
+    __LDBG_printf("Sensor_BME680::getValues()");
 
     auto sensor = _readSensor();
 
@@ -90,7 +90,7 @@ void Sensor_BME680::getValues(JsonArray &array, bool timer) {
 
 void Sensor_BME680::createWebUI(WebUI &webUI, WebUIRow **row)
 {
-    _debug_printf_P(PSTR("Sensor_BME680::createWebUI()\n"));
+    __LDBG_printf("Sensor_BME680::createWebUI()");
 
     *row = &webUI.addRow();
     (*row)->addSensor(_getId(FSPGM(temperature)), _name + F(" Temperature"), FSPGM(_degreeC));
@@ -135,7 +135,7 @@ Sensor_BME680::SensorData_t Sensor_BME680::_readSensor()
     sensor.pressure = _bme680.readPressure() / 100.0;
     sensor.gas = _bme680.readGas();
 
-    _debug_printf_P(PSTR("Sensor_BME680::_readSensor(): address 0x%02x: %.2f °C, %.2f%%, %.2f hPa, gas %u\n"), _address, sensor.temperature, sensor.humidity, sensor.pressure, sensor.gas);
+    __LDBG_printf("Sensor_BME680::_readSensor(): address 0x%02x: %.2f °C, %.2f%%, %.2f hPa, gas %u", _address, sensor.temperature, sensor.humidity, sensor.pressure, sensor.gas);
 
     return sensor;
 }

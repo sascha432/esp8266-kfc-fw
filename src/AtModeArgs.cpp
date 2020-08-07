@@ -142,7 +142,7 @@ uint32_t AtModeArgs::toMillis(uint16_t num, uint32_t minTime, uint32_t maxTime, 
 {
     auto arg = get(num);
     if (!arg) {
-        _debug_printf_P(PSTR("toMillis(): arg=%u does not exist\n"), num);
+        __LDBG_printf("toMillis(): arg=%u does not exist", num);
         return defaultValue;
     }
 
@@ -174,10 +174,10 @@ uint32_t AtModeArgs::toMillis(uint16_t num, uint32_t minTime, uint32_t maxTime, 
     }
     result = std::min(maxTime, result);
     if (result < minTime) {
-        _debug_printf_P(PSTR("toMillis(): arg=%s < minTime=%u\n"), arg, minTime);
+        __LDBG_printf("toMillis(): arg=%s < minTime=%u", arg, minTime);
         return defaultValue;
     }
-    _debug_printf_P(PSTR("toMillis(): arg=%s converted to %u\n"), arg, result);
+    __LDBG_printf("toMillis(): arg=%s converted to %u", arg, result);
     return result;
 }
 

@@ -66,7 +66,7 @@ FileManager::FileManager(AsyncWebServerRequest *request, bool isAuthenticated, c
 
 void FileManager::_sendResponse(uint16_t httpStatusCode)
 {
-    _debug_printf_P(PSTR("_sendResponse(%d)\n"), httpStatusCode);
+    __LDBG_printf("_sendResponse(%d)", httpStatusCode);
     if (httpStatusCode == 0) {
         httpStatusCode = _isValidData() ? 500 : 200;
     }
@@ -75,13 +75,13 @@ void FileManager::_sendResponse(uint16_t httpStatusCode)
     }
     _headers.setAsyncWebServerResponseHeaders(_response);
     _response->setCode(httpStatusCode);
-    _debug_printf_P(PSTR("filemanager:%s response %d\n"), _uri.c_str(), httpStatusCode);
+    __LDBG_printf("filemanager:%s response %d", _uri.c_str(), httpStatusCode);
     _request->send(_response);
 }
 
 bool FileManager::_isValidData()
 {
-    _debug_printf_P(PSTR("isValidData() = %d (%d)\n"), _errors == 0, _errors);
+    __LDBG_printf("isValidData() = %d (%d)", _errors == 0, _errors);
     return _errors == 0;
 }
 
@@ -90,7 +90,7 @@ bool FileManager::_requireAuthentication()
     if (!_isAuthenticated) {
         _errors++;
     }
-    _debug_printf_P(PSTR("requireAuthentication() = %d (%d)\n"), _isAuthenticated, _errors);
+    __LDBG_printf("requireAuthentication() = %d (%d)", _isAuthenticated, _errors);
     return _isAuthenticated;
 }
 
@@ -98,14 +98,14 @@ String FileManager::_requireDir(const String &name)
 {
     if (!_request->hasArg(name.c_str())) {
         _errors++;
-        _debug_printf_P(PSTR("%s is not set\n"), name.c_str());
+        __LDBG_printf("%s is not set", name.c_str());
     }
     String path = _request->arg(name);
     if (!path.length()) {
         _errors++;
-        _debug_printf_P(PSTR("%s is empty\n"), name.c_str());
+        __LDBG_printf("%s is empty", name.c_str());
     }
-    _debug_printf_P(PSTR("requireDir(%s) = %s (%d)\n"), name.c_str(), path.c_str(), _errors);
+    __LDBG_printf("requireDir(%s) = %s (%d)", name.c_str(), path.c_str(), _errors);
     return path;
 }
 
@@ -118,7 +118,7 @@ ListDir FileManager::_getDir(const String &path)
     // auto dir = ListDir(path, true);
     // if (!dir.next()) {
     //     _errors++;
-    //     _debug_printf_P(PSTR("Directory %s does not exist or empty\n"), path.c_str());
+    //     __LDBG_printf("Directory %s does not exist or empty", path.c_str());
     // }
     // return dir;
 }
@@ -127,19 +127,19 @@ String FileManager::_requireFile(const String &name, bool mustExists)
 {
     if (!_request->hasArg(name.c_str())) {
         _errors++;
-        _debug_printf_P(PSTR("%s is not set\n"), name.c_str());
+        __LDBG_printf("%s is not set", name.c_str());
     }
     String path = _request->arg(name);
     if (!path.length()) {
         _errors++;
-        _debug_printf_P(PSTR("%s is empty\n"), name.c_str());
+        __LDBG_printf("%s is empty", name.c_str());
     }
     else if (!SPIFFSWrapper::exists(path)) {
         _errors++;
-        _debug_printf_P(PSTR("File %s not found\n"), path.c_str());
+        __LDBG_printf("File %s not found", path.c_str());
         path = String();
     }
-    _debug_printf_P(PSTR("requireFile(%s) = %s (%d)\n"), name.c_str(), path.c_str(), _errors);
+    __LDBG_printf("requireFile(%s) = %s (%d)", name.c_str(), path.c_str(), _errors);
     return path;
 }
 
@@ -156,12 +156,12 @@ String FileManager::_requireArgument(const String &name)
 {
     if (!_request->hasArg(name.c_str())) {
         _errors++;
-        _debug_printf_P(PSTR("%s is not set\n"), name.c_str());
+        __LDBG_printf("%s is not set", name.c_str());
     }
     String value = _request->arg(name);
     if (!value.length()) {
         _errors++;
-        _debug_printf_P(PSTR("%s is empty\n"), name.c_str());
+        __LDBG_printf("%s is empty", name.c_str());
     }
     return value;
 }
@@ -175,7 +175,7 @@ void FileManager::handleRequest()
 {
     _headers.addNoCache(true);
 
-    _debug_printf_P(PSTR("is authenticated %d request uri %s\n"), _isAuthenticated, _uri.c_str());
+    __LDBG_printf("is authenticated %d request uri %s", _isAuthenticated, _uri.c_str());
 
     if (!_isAuthenticated) {
         _sendResponse(403);
@@ -208,7 +208,7 @@ void FileManager::handleRequest()
 
 uint16_t FileManager::list()
 {
-    _debug_printf_P(PSTR("FileManager::list()\n"));
+    __LDBG_printf("FileManager::list()");
     auto dirName = _requireDir(FSPGM(dir));
     if (_isValidData()) {
         _response = new AsyncDirResponse(_getDir(dirName), dirName);
@@ -260,7 +260,7 @@ uint16_t FileManager::upload()
     auto uploadDir = _requireDir(F("upload_current_dir"));
     auto filename = _request->arg(F("upload_filename"));
     if (!_request->_tempObject) {
-        _debug_printf_P(PSTR("_tempObject is null\n"));
+        __LDBG_printf("_tempObject is null");
         return httpCode;
     }
 
@@ -284,7 +284,7 @@ uint16_t FileManager::upload()
 
         } else if (SPIFFSWrapper::rename((char *)_request->_tempObject, filename)) {
 
-            _debug_printf_P(PSTR("Renamed upload %s to %s\n"), (char *)_request->_tempObject, filename.c_str());
+            __LDBG_printf("Renamed upload %s to %s", (char *)_request->_tempObject, filename.c_str());
             AsyncFileUploadWebHandler::markTemporaryFileAsProcessed(_request);
 
             success = true;
@@ -299,10 +299,10 @@ uint16_t FileManager::upload()
         message += F("Upload file parameter missing");
     }
 
-    _debug_printf_P(PSTR("message %s http code %d\n"), message.c_str(), httpCode);
+    __LDBG_printf("message %s http code %d", message.c_str(), httpCode);
 
     uint8_t ajax_request = _request->arg(F("ajax_upload")).toInt();
-    _debug_printf_P(PSTR("File upload status %d, message %s, ajax %d\n"), httpCode, message.c_str(), ajax_request);
+    __LDBG_printf("File upload status %d, message %s, ajax %d", httpCode, message.c_str(), ajax_request);
 
     if (success) {
         Logger_notice(F("File upload successful. Filename %s, size %d"), filename.c_str(), SPIFFSWrapper::open(filename, fs::FileOpenMode::read).size());
@@ -345,7 +345,7 @@ uint16_t FileManager::view(bool isDownload)
         _debug_println(message);
     } else {
         String filename = file.name();
-        _debug_printf_P(PSTR("%s %s (request %s)\n"), isDownload ? PSTR("Downloading") : PSTR("Viewing"), filename.c_str(), requestFilename.c_str());
+        __LDBG_printf("%s %s (request %s)", isDownload ? PSTR("Downloading") : PSTR("Viewing"), filename.c_str(), requestFilename.c_str());
         _response = _request->beginResponse(file, filename, String(), isDownload);
     }
     return httpCode;
@@ -450,7 +450,7 @@ bool FileManagerWebHandler::canHandle(AsyncWebServerRequest *request)
 void FileManagerWebHandler::handleRequest(AsyncWebServerRequest *request)
 {
     auto uri = request->url().substring(strlen_P(RFPSTR(_uri)));
-    _debug_printf_P(PSTR("file manager %s (%s)\n"), uri.c_str(), request->url().c_str())
+    __LDBG_printf("file manager %s (%s)", uri.c_str(), request->url().c_str())
     FileManager fm(request, WebServerPlugin::getInstance().isAuthenticated(request) == true, uri);
     fm.handleRequest();
 }

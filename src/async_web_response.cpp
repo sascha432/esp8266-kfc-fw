@@ -293,14 +293,14 @@ AsyncDirResponse::AsyncDirResponse(const ListDir &dir, const String &dirName) : 
     _contentType = FSPGM(mime_application_json);
     _chunked = true;
     append_slash(_dirName);
-    _debug_printf_P(PSTR("AsyncDirResponse::AsyncDirResponse(%s)\n"), _dirName.c_str());
+    __LDBG_printf("AsyncDirResponse::AsyncDirResponse(%s)", _dirName.c_str());
 
     // if (!_next) {
     //     _code = 404;
     //     _sendContentLength = true;
     //     _chunked = false;
     //     _state = 2;
-    //     _debug_printf_P(PSTR("listing %s isValid()==true, next state 2, sending 404\n"), _dirName.c_str());
+    //     __LDBG_printf("listing %s isValid()==true, next state 2, sending 404", _dirName.c_str());
     // }
 }
 
@@ -311,7 +311,7 @@ bool AsyncDirResponse::_sourceValid() const
 
 size_t AsyncDirResponse::_fillBuffer(uint8_t *data, size_t len)
 {
-    _debug_printf_P(PSTR("AsyncDirResponse::_fillBuffer(%p, %d)\n"), data, len);
+    __LDBG_printf("AsyncDirResponse::_fillBuffer(%p, %d)", data, len);
     char *ptr = reinterpret_cast<char *>(data);
     char *sptr = ptr;
     int16_t space = (int16_t)(len - 2); // reserve 2 byte
@@ -330,7 +330,7 @@ size_t AsyncDirResponse::_fillBuffer(uint8_t *data, size_t len)
                 (float)info.usedBytes / (float)info.totalBytes * 100.0,
                 _dirName.c_str())) >= space)
         { // buffer too small, abort response
-            _debug_printf_P(PSTR("buffer too small %d\n"), space);
+            __LDBG_printf("buffer too small %d", space);
             _state = 2;
             return 0;
         }
@@ -340,13 +340,13 @@ size_t AsyncDirResponse::_fillBuffer(uint8_t *data, size_t len)
 
         _state = 1;
         //_next = _dir.next();
-        _debug_printf_P(PSTR("init list %s next=%d\n"), _dirName.c_str(), _next);
+        __LDBG_printf("init list %s next=%d", _dirName.c_str(), _next);
     }
     if (_state == 1) {
         String tmp_dir = sys_get_temp_dir();
         char modified[32];
 
-        _debug_printf_P(PSTR("load list %s, tmp_dir %s\n"), _dirName.c_str(), tmp_dir.c_str());
+        __LDBG_printf("load list %s, tmp_dir %s", _dirName.c_str(), tmp_dir.c_str());
 
         String path;
         while (_next) {
@@ -360,7 +360,7 @@ size_t AsyncDirResponse::_fillBuffer(uint8_t *data, size_t len)
                 strftime_P(modified, sizeof(modified), PSTR("\"%Y-%m-%d %H:%M\""), tm);
             }
 
-            // _debug_printf_P(PSTR("%s: %d %d\n"), path.c_str(), _dir.isDir(), _dir.isFile());
+            // __LDBG_printf("%s: %d %d", path.c_str(), _dir.isDir(), _dir.isFile());
 
             String name = path.substring(_dirName.length());
             String location = url_encode(path).c_str();
@@ -398,7 +398,7 @@ size_t AsyncDirResponse::_fillBuffer(uint8_t *data, size_t len)
             }
 #if DEBUG_ASYNC_WEB_RESPONSE
             else {
-                _debug_printf_P(PSTR("path %s invalid type\n"), path.c_str());
+                __LDBG_printf("path %s invalid type", path.c_str());
             }
 #endif
             _next = _dir.next();
@@ -418,10 +418,10 @@ size_t AsyncDirResponse::_fillBuffer(uint8_t *data, size_t len)
         }
         result = (sptr - reinterpret_cast<char *>(data));
     } else if (_state == 2) {
-        _debug_printf_P(PSTR("end list %s, EOF\n"), _dirName.c_str());
+        __LDBG_printf("end list %s, EOF", _dirName.c_str());
         result = 0;
     }
-    // _debug_printf_P(PSTR("chunk %d state %d next %d '%-*.*s'\n"), result, _state, _next, result, result, data);
+    // __LDBG_printf("chunk %d state %d next %d '%-*.*s'", result, _state, _next, result, result, data);
     return result;
 }
 
@@ -555,7 +555,7 @@ size_t AsyncNetworkScanResponse::_fillBuffer(uint8_t *data, size_t len)
             _position = -1;
         }
         // int ll = (sptr - (char *)data);
-        // _debug_printf_P(PSTR("chunk %d %-*.*s\n"), ll, ll, ll, data);
+        // __LDBG_printf("chunk %d %-*.*s", ll, ll, ll, data);
         return (sptr - reinterpret_cast<char *>(data));
     }
 }

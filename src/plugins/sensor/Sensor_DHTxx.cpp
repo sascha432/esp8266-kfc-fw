@@ -129,7 +129,7 @@ void Sensor_DHTxx::_readSensor(SensorData_t &sensor)
     //     sensor.temperature = NAN;
     //     sensor.humidity = NAN;
     // }
-    _debug_printf_P(PSTR("pin %d: %.2f °C, %.2f%%, %.2f hPa\n"), _pin, sensor.temperature, sensor.humidity);
+    __LDBG_printf("pin %d: %.2f °C, %.2f%%, %.2f hPa", _pin, sensor.temperature, sensor.humidity);
 }
 
 String Sensor_DHTxx::_getId(const __FlashStringHelper *type)

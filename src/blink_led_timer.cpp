@@ -129,11 +129,11 @@ void BlinkLEDTimer::setBlink(int8_t pin, uint16_t delay, int32_t color)
 
 #if __LED_BUILTIN == -3
     if (pin == -3) {
-        _debug_printf_P(PSTR("WS2812 pin=%u, num=%u, delay=%u\n"), __LED_BUILTIN_WS2812_PIN, __LED_BUILTIN_WS2812_NUM_LEDS, delay);
+        __LDBG_printf("WS2812 pin=%u, num=%u, delay=%u", __LED_BUILTIN_WS2812_PIN, __LED_BUILTIN_WS2812_NUM_LEDS, delay);
     } else
 #endif
     {
-        _debug_printf_P(PSTR("PIN %d, blink %d\n"), pin, delay);
+        __LDBG_printf("PIN %d, blink %d", pin, delay);
     }
 
 

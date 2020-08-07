@@ -215,7 +215,7 @@ void HassPlugin::onConnect(MQTTClient *client)
                     auto pos = topic.indexOf(';');
                     if (pos != -1) {
                         topic.remove(pos);
-                        _debug_printf_P(PSTR("subscribe %s\n"), topic.c_str());
+                        __LDBG_printf("subscribe %s", topic.c_str());
                         client->subscribe(this, topic);
                     }
                 }
@@ -232,11 +232,11 @@ void HassPlugin::onMessage(MQTTClient *client, char *topic, char *payload, size_
         return tv.topic == topic;
     });
     if (iterator == _topics.end()) {
-        _debug_printf_P(PSTR("add=%s value=%u\n"), topic, atoi(payload));
+        __LDBG_printf("add=%s value=%u", topic, atoi(payload));
         _topics.push_back({ topic, atoi(payload) });
     }
     else {
-        _debug_printf_P(PSTR("change=%s value=%u\n"), topic, atoi(payload));
+        __LDBG_printf("change=%s value=%u", topic, atoi(payload));
         iterator->value = atoi(payload);
     }
 }
@@ -247,7 +247,7 @@ bool HassPlugin::_mqttSplitTopics(String &state, String &set)
     if (pos != -1) {
         set = state.substring(pos + 1);
         state.remove(pos);
-        _debug_printf_P(PSTR("state=%s set=%s\n"), state.c_str(), set.c_str());
+        __LDBG_printf("state=%s set=%s", state.c_str(), set.c_str());
         return true;
     }
     return false;
@@ -256,7 +256,7 @@ bool HassPlugin::_mqttSplitTopics(String &state, String &set)
 void HassPlugin::_mqttSet(const String &topic, int value)
 {
     auto client = MQTTClient::getClient();
-    _debug_printf_P(PSTR("client=%p topic=%s value=%u\n"), client, topic.c_str(), value);
+    __LDBG_printf("client=%p topic=%s value=%u", client, topic.c_str(), value);
     if (client) {
         client->publish(topic, true, String(value));
     }
@@ -274,10 +274,10 @@ void HassPlugin::_mqttGet(const String &topic, std::function<void(bool, int)> ca
             auto iterator = std::find_if(_topics.begin(), _topics.end(), [topic](const TopicValue_t &tv){
                 return tv.topic == topic;
             });
-            _debug_printf_P(PSTR("topic=%s i=%u found=%u\n"), topic.c_str(), counter, iterator != _topics.end());
+            __LDBG_printf("topic=%s i=%u found=%u", topic.c_str(), counter, iterator != _topics.end());
             if (iterator != _topics.end()) {
                 timer->detach();
-                _debug_printf_P(PSTR("value=%u\n"), iterator->value);
+                __LDBG_printf("value=%u", iterator->value);
                 callback(true, iterator->value);
             }
         }
@@ -286,7 +286,7 @@ void HassPlugin::_mqttGet(const String &topic, std::function<void(bool, int)> ca
 
 void HassPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
 {
-    _debug_printf_P(PSTR("url=%s method=%s\n"), request->url().c_str(), request->methodToString());
+    __LDBG_printf("url=%s method=%s", request->url().c_str(), request->methodToString());
     if (request->url().endsWith(F("hass.html"))) {
 
         using KFCConfigurationClasses::MainConfig;
@@ -379,7 +379,7 @@ void HassPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
             else {
                 actions.push_back(action);
             }
-            _debug_printf_P(PSTR("storing actions, updated id=%u\n"), actionId);
+            __LDBG_printf("storing actions, updated id=%u", actionId);
             Plugins::HomeAssistant::setActions(actions);
         }
 
@@ -507,20 +507,20 @@ void HassPlugin::setValue(const String &id, const String &value, bool hasValue, 
 void HassPlugin::getRestUrl(String &url) const
 {
     url = Plugins::HomeAssistant::getApiEndpoint(_apiId);
-    _debug_printf_P(PSTR("url=%s api_id=%u\n"), url.c_str(), _apiId);
+    __LDBG_printf("url=%s api_id=%u", url.c_str(), _apiId);
 }
 
 void HassPlugin::getBearerToken(String &token) const
 {
     token = Plugins::HomeAssistant::getApiToken(_apiId);
-    _debug_printf_P(PSTR("token=%s api_id=%u\n"), token.c_str(), _apiId);
+    __LDBG_printf("token=%s api_id=%u", token.c_str(), _apiId);
 }
 
 void HassPlugin::executeAction(const Action &action, StatusCallback_t statusCallback)
 {
     JsonUnnamedObject json;
     json.add(F("entity_id"), action.getEntityId());
-    _debug_printf_P(PSTR("id=%u action=%s values=%s entity_id=%s\n"), action.getId(), action.getActionFStr(), action.getValuesStr().c_str(), action.getEntityId().c_str());
+    __LDBG_printf("id=%u action=%s values=%s entity_id=%s", action.getId(), action.getActionFStr(), action.getValuesStr().c_str(), action.getEntityId().c_str());
     switch(action.getAction()) {
         case ActionEnum_t::TURN_ON:
             callService(_getDomain(action.getEntityId()) + F("/turn_on"), action.getApiId(), json, _serviceCallback, statusCallback);
@@ -534,17 +534,17 @@ void HassPlugin::executeAction(const Action &action, StatusCallback_t statusCall
             break;
         case ActionEnum_t::CHANGE_BRIGHTNESS:
             getState(action.getEntityId(), action.getApiId(), [this, action](HassJsonReader::GetState *state, KFCRestAPI::HttpRequest &request, StatusCallback_t statusCallback) {
-                _debug_printf_P(PSTR("state=%p http=%u\n"), state, request.getCode());
+                __LDBG_printf("state=%p http=%u", state, request.getCode());
                 JsonUnnamedObject json;
                 json.add(F("entity_id"), action.getEntityId());
                 if (state) {
                     int brightness = state->getBrightness();
                     if (brightness == 0 && action.getValue(0) > 0) {
-                        _debug_printf_P(PSTR("brightness=0, calling turn on\n"), brightness);
+                        __LDBG_printf("brightness=0, calling turn on", brightness);
                         callService(_getDomain(action.getEntityId()) + F("/turn_on"), action.getApiId(), json, _serviceCallback, statusCallback);
                         return;
                     } else if (action.getValue(3) && brightness <= action.getValue(0)) {
-                        _debug_printf_P(PSTR("brightness %u <= value %u, calling turn off\n"), brightness, action.getValue(0));
+                        __LDBG_printf("brightness %u <= value %u, calling turn off", brightness, action.getValue(0));
                         callService(_getDomain(action.getEntityId()) + F("/turn_off"), action.getApiId(), json, _serviceCallback, statusCallback);
                         return;
                     }
@@ -558,7 +558,7 @@ void HassPlugin::executeAction(const Action &action, StatusCallback_t statusCall
                         }
                     }
                     json.add(FSPGM(brightness), brightness);
-                    _debug_printf_P(PSTR("new brightness=%u\n"), brightness);
+                    __LDBG_printf("new brightness=%u", brightness);
                     callService(_getDomain(action.getEntityId()) + F("/turn_on"), action.getApiId(), json, _serviceCallback, statusCallback);
                 }
                 else {
@@ -693,14 +693,14 @@ void HassPlugin::executeAction(const Action &action, StatusCallback_t statusCall
 
 void HassPlugin::getState(const String &entityId, uint8_t apiId, GetStateCallback_t callback, StatusCallback_t statusCallback)
 {
-    _debug_printf_P(PSTR("entity=%s\n"), entityId.c_str());
+    __LDBG_printf("entity=%s", entityId.c_str());
     auto jsonReader = new JsonVariableReader::Reader();
     auto groups = jsonReader->getElementGroups();
     groups->emplace_back(JsonString());
     HassJsonReader::GetState::apply(groups->back());
     _apiId = apiId;
     _createRestApiCall(String(F("states/")) + entityId, String(), jsonReader, [callback, statusCallback](int16_t code, KFCRestAPI::HttpRequest &request) {
-        _debug_printf_P(PSTR("code=%d msg=%s\n"), code, request.getMessage().c_str());
+        __LDBG_printf("code=%d msg=%s", code, request.getMessage().c_str());
         if (code == 200) {
             auto &results = request.getElementsGroup()->front().getResults<HassJsonReader::GetState>();
             if (results.size()) {
@@ -714,14 +714,14 @@ void HassPlugin::getState(const String &entityId, uint8_t apiId, GetStateCallbac
 
 void HassPlugin::callService(const String &service, uint8_t apiId, const JsonUnnamedObject &payload, ServiceCallback_t callback, StatusCallback_t statusCallback)
 {
-    _debug_printf_P(PSTR("service=%s payload=%s\n"), service.c_str(), payload.toString().c_str());
+    __LDBG_printf("service=%s payload=%s", service.c_str(), payload.toString().c_str());
     auto jsonReader = new JsonVariableReader::Reader();
     auto groups = jsonReader->getElementGroups();
     groups->emplace_back(JsonString());
     HassJsonReader::CallService::apply(groups->back());
     _apiId = apiId;
     _createRestApiCall(String(F("services/")) + service, payload.toString(), jsonReader, [callback, statusCallback](int16_t code, KFCRestAPI::HttpRequest &request) {
-        _debug_printf_P(PSTR("code=%d msg=%s\n"), code, request.getMessage().c_str());
+        __LDBG_printf("code=%d msg=%s", code, request.getMessage().c_str());
         if (code == 200) {
             auto &results = request.getElementsGroup()->front().getResults<HassJsonReader::CallService>();
             if (results.size()) {
@@ -735,7 +735,7 @@ void HassPlugin::callService(const String &service, uint8_t apiId, const JsonUnn
 
 void HassPlugin::_serviceCallback(HassJsonReader::CallService *service, HassPlugin::KFCRestAPI::HttpRequest &request, StatusCallback_t statusCallback)
 {
-    _debug_printf_P(PSTR("service=%p http=%d\n"), service, request.getCode());
+    __LDBG_printf("service=%p http=%d", service, request.getCode());
     statusCallback(service != nullptr);
 }
 
@@ -750,7 +750,7 @@ String HassPlugin::_getDomain(const String &entityId)
 
 void HassPlugin::removeAction(AsyncWebServerRequest *request)
 {
-    _debug_printf_P(PSTR("is_authenticated=%u\n"), WebServerPlugin::getInstance().isAuthenticated(request) == true);
+    __LDBG_printf("is_authenticated=%u", WebServerPlugin::getInstance().isAuthenticated(request) == true);
     if (WebServerPlugin::getInstance().isAuthenticated(request) == true) {
 
         auto msg = String(0);
@@ -778,6 +778,6 @@ void HassPlugin::removeAction(AsyncWebServerRequest *request)
 
 void HassPlugin::_installWebhooks()
 {
-    _debug_printf_P(PSTR("server=%p\n"), WebServerPlugin::getWebServerObject());
+    __LDBG_printf("server=%p", WebServerPlugin::getWebServerObject());
     WebServerPlugin::addHandler(F("/hass_remove.html"), removeAction);
 }

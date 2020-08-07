@@ -219,11 +219,11 @@ private:
         return _buttonsLocked & (1 << button);
     }
     void _lockButton(uint8_t button) {
-        _debug_printf_P(PSTR("btn %u locked\n"), button);
+        __LDBG_printf("btn %u locked", button);
         _buttonsLocked |= (1 << button);
     }
     void _unlockButton(uint8_t button) {
-        _debug_printf_P(PSTR("btn %u unlocked\n"), button);
+        __LDBG_printf("btn %u unlocked", button);
         _buttonsLocked &= ~(1 << button);
     }
 

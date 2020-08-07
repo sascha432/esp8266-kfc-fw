@@ -147,7 +147,7 @@ static void _appendHelpString(String &output, PGM_P str)
 void at_mode_display_help(Stream &output, StringVector *findText = nullptr)
 {
 #if DEBUG_AT_MODE
-    _debug_printf_P(PSTR("size=%d, find=%s\n"), atModeCommandHelp->size(), findText ? (findText->empty() ? PSTR("count=0") : implode(',', *findText).c_str()) : SPGM(null));
+    __LDBG_printf("size=%d, find=%s", atModeCommandHelp->size(), findText ? (findText->empty() ? PSTR("count=0") : implode(',', *findText).c_str()) : SPGM(null));
 #endif
     if (findText && findText->empty()) {
         findText = nullptr;
@@ -172,7 +172,7 @@ void at_mode_display_help(Stream &output, StringVector *findText = nullptr)
             _appendHelpString(tmp, commandHelp.help());
             _appendHelpString(tmp, commandHelp.helpQueryMode());
 
-            _debug_printf_P(PSTR("find in %u: '%s'\n"), tmp.length(), tmp.c_str());
+            __LDBG_printf("find in %u: '%s'", tmp.length(), tmp.c_str());
             for(auto str: *findText) {
                 if (tmp.indexOf(str) != -1) {
                     result = true;
@@ -381,7 +381,7 @@ static void new_ATModeHelpVector_atModeCommandHelp()
 
 void at_mode_generate_help(Stream &output, StringVector *findText = nullptr)
 {
-    _debug_printf_P(PSTR("find=%s\n"), findText ? implode(',', *findText).c_str() : PSTR("nullptr"));
+    __LDBG_printf("find=%s", findText ? implode(',', *findText).c_str() : PSTR("nullptr"));
 
     new_ATModeHelpVector_atModeCommandHelp();
 
@@ -531,7 +531,7 @@ static void at_mode_autorun()
 {
     LoopFunctions::callOnce([]() {
         File file = SPIFFS.open(FSPGM(atmode_file_autorun), FileOpenMode::read);
-        _debug_printf_P(PSTR("autorun=%s size=%u\n"), SPGM(atmode_file_autorun), file.size());
+        __LDBG_printf("autorun=%s size=%u", SPGM(atmode_file_autorun), file.size());
         if (file) {
             class CmdAt {
             public:
@@ -774,11 +774,11 @@ void at_mode_serial_handle_event(String &commandString)
                 *ptr = 0;
                 args.setQueryMode(true);
             } else {
-                _debug_printf_P(PSTR("tokenizer('%s')\n"), command);
+                __LDBG_printf("tokenizer('%s')", command);
                 args.setQueryMode(false);
                 tokenizer(command, args, true, &nextCommand);
             }
-            _debug_printf_P(PSTR("cmd=%s,argc=%d,args='%s',next_cmd='%s'\n"), command, args.size(), implode(F("','"), args.getArgs()).c_str(), nextCommand ? nextCommand : String(0).c_str());
+            __LDBG_printf("cmd=%s,argc=%d,args='%s',next_cmd='%s'", command, args.size(), implode(F("','"), args.getArgs()).c_str(), nextCommand ? nextCommand : String(0).c_str());
 
             args.setCommand(command);
 

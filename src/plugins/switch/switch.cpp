@@ -172,7 +172,7 @@ void SwitchPlugin::getValues(JsonArray &array)
 
 void SwitchPlugin::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
 {
-    _debug_printf_P(PSTR("id=%s value=%s hasValue=%u state=%u hasState=%u\n"), id.c_str(), value.c_str(), hasValue, state, hasState);
+    __LDBG_printf("id=%s value=%s hasValue=%u state=%u hasState=%u", id.c_str(), value.c_str(), hasValue, state, hasState);
 
     auto ptr = id.c_str();
     if (!strncmp_P(ptr, PSTR("channel_"), 8) && hasValue) {
@@ -219,7 +219,7 @@ void SwitchPlugin::onConnect(MQTTClient *client)
 
 void SwitchPlugin::onMessage(MQTTClient *client, char *topic, char *payload, size_t len)
 {
-    _debug_printf_P(PSTR("topic=%s payload=%s\n"), topic, payload);
+    __LDBG_printf("topic=%s payload=%s", topic, payload);
     for (size_t i = 0; i < _pins.size(); i++) {
         if (MQTTClient::formatTopic(PrintString(FSPGM(channel__u), i), FSPGM(_set)).equals(topic)) {
             bool state = atoi(payload);
@@ -231,7 +231,7 @@ void SwitchPlugin::onMessage(MQTTClient *client, char *topic, char *payload, siz
 
 void SwitchPlugin::_setChannel(uint8_t channel, bool state)
 {
-    _debug_printf_P(PSTR("channel=%u state=%u\n"), channel, state);
+    __LDBG_printf("channel=%u state=%u", channel, state);
     digitalWrite(_pins[channel], state ? IOT_SWITCH_ON_STATE : !IOT_SWITCH_ON_STATE);
     if (state) {
         _states |= (1 << channel);
@@ -267,16 +267,16 @@ void SwitchPlugin::_readStates()
         }
     }
 #endif
-    _debug_printf_P(PSTR("states=%s\n"), String(_states, 2).c_str());
+    __LDBG_printf("states=%s", String(_states, 2).c_str());
 }
 
 void SwitchPlugin::_writeStates()
 {
-    _debug_printf_P(PSTR("states=%s\n"), String(_states, 2).c_str());
+    __LDBG_printf("states=%s", String(_states, 2).c_str());
 #if IOT_SWITCH_STORE_STATES
     _delayedWrite.remove();
     _delayedWrite.add(IOT_SWITCH_STORE_STATES_WRITE_DELAY, false, [this](EventScheduler::TimerPtr) {
-        _debug_printf_P(PSTR("SwitchPlugin::_writeStates(): delayed write states=%s\n"), String(_states, 2).c_str());
+        __LDBG_printf("SwitchPlugin::_writeStates(): delayed write states=%s", String(_states, 2).c_str());
         File file = SPIFFS.open(FSPGM(iot_switch_states_file), fs::FileOpenMode::write);
         if (file) {
             file.write(reinterpret_cast<const uint8_t *>(&_states), sizeof(_states));
@@ -290,7 +290,7 @@ void SwitchPlugin::_publishState(MQTTClient *client, int8_t channel)
     if (client) {
         for (size_t i = 0; i < _pins.size(); i++) {
             if (channel == -1 || (uint8_t)channel == i) {
-                _debug_printf_P(PSTR("pin=%u state=%u\n"), _pins[i], _getChannel(i));
+                __LDBG_printf("pin=%u state=%u", _pins[i], _getChannel(i));
                 client->publish(MQTTClient::formatTopic(PrintString(FSPGM(channel__u), i), FSPGM(_state)), true, String(_getChannel(i) ? 1 : 0));
             }
         }

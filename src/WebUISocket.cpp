@@ -42,7 +42,7 @@ void WsWebUISocket::setup()
         auto ws = new WsClientAsyncWebSocket(FSPGM(webui_socket_uri), &wsWebUI);
         ws->onEvent(webui_socket_event_handler);
         server->addHandler(ws);
-        _debug_printf_P(PSTR("Web socket for UI running on port %u\n"), System::WebServer::getConfig().port);
+        __LDBG_printf("Web socket for UI running on port %u", System::WebServer::getConfig().port);
     }
 }
 
@@ -59,7 +59,7 @@ void WsWebUISocket::broadcast(WsWebUISocket *sender, const JsonUnnamedObject &js
     if (wsWebUI) {
         auto buffer = wsWebUI->makeBuffer(json.length());
         assert(JsonBuffer(json).fillBuffer(buffer->get(), buffer->length()) == buffer->length());
-        _debug_printf_P(PSTR("buffer=%s\n"), buffer->get());
+        __LDBG_printf("buffer=%s", buffer->get());
         WsClient::broadcast(wsWebUI, sender, buffer);
     }
 }
@@ -82,7 +82,7 @@ WsClient *WsWebUISocket::getInstance(AsyncWebSocketClient *socket)
 
 void WsWebUISocket::onText(uint8_t *data, size_t len)
 {
-    _debug_printf_P(PSTR("data=%p len=%d\n"), data, len);
+    __LDBG_printf("data=%p len=%d", data, len);
     if (isAuthenticated()) {
         auto client = getClient();
         String command;
@@ -110,7 +110,7 @@ void WsWebUISocket::onText(uint8_t *data, size_t len)
             }
         }
 
-        _debug_printf_P(PSTR("command=%s args=%s\n"), command.c_str(), implode(',', args, argc).c_str());
+        __LDBG_printf("command=%s args=%s", command.c_str(), implode(',', args, argc).c_str());
 
         if (strcasecmp_P(command.c_str(), PSTR("+get_values")) == 0) {
             sendValues(client);

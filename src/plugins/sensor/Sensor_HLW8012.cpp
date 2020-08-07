@@ -80,7 +80,7 @@ Sensor_HLW8012::Sensor_HLW8012(const String &name, uint8_t pinSel, uint8_t pinCF
     pinMode(_pinCF, INPUT);
     pinMode(_pinCF1, INPUT);
 
-    _debug_printf_P(PSTR("pin sel=%u cf=%u cf1=%u\n"), _pinSel, _pinCF, _pinCF1);
+    __LDBG_printf("pin sel=%u cf=%u cf1=%u", _pinSel, _pinCF, _pinCF1);
 
     _inputCF1 = &_inputCFI;
     _toggleOutputMode();
@@ -160,7 +160,7 @@ void Sensor_HLW8012::_loop()
     }
     // toggle between voltage/current
     if (millis() > _inputCF1->toggleTimer) {
-        _debug_printf_P(PSTR("toggleTimer=%c counter=%u\n"), _getOutputMode(_inputCF1), _inputCF1->counter);
+        __LDBG_printf("toggleTimer=%c counter=%u", _getOutputMode(_inputCF1), _inputCF1->counter);
         if (_inputCF1->counter == 0) {
             _inputCF1->setTarget(NAN);
         }
@@ -387,7 +387,7 @@ String Sensor_HLW8012::_getId(const __FlashStringHelper *type)
 
 void Sensor_HLW8012::_setOutputMode(OutputTypeEnum_t outputMode, int delay)
 {
-    _debug_printf_P(PSTR("mode=%u\n"), outputMode);
+    __LDBG_printf("mode=%u", outputMode);
     if (outputMode == VOLTAGE) {
         _inputCF1 = &_inputCFI;
     }

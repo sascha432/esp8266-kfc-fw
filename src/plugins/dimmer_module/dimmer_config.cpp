@@ -7,7 +7,7 @@
 
 namespace KFCConfigurationClasses {
 
-    Plugins::DimmerConfig::DimmerConfig_t::DimmerConfig_t() : fw(), on_off_fade_time(7.5), fade_time(5), config_valid(false),
+    Plugins::DimmerConfig::DimmerConfig_t::DimmerConfig_t() : fw(), on_off_fade_time(7.5), fade_time(5), config_valid(false)
         #if IOT_ATOMIC_SUN_V2
         ,
         #ifdef IOT_ATOMIC_SUN_CHANNEL_WW1

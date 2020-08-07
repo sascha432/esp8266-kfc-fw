@@ -285,7 +285,7 @@ public:
             if (!steps) {
                 steps = 1;
             }
-            //_debug_printf_P(PSTR("to=%u steps=%u time=%f\n"), _brightness, steps, fadeTime);
+            //__LDBG_printf("to=%u steps=%u time=%f", _brightness, steps, fadeTime);
             _brightnessTimer.add(20, true, [this, steps, finishedCallback, refreshCallback](EventScheduler::TimerPtr timer) {
                 int32_t tmp = _brightness;
                 if (tmp < _targetBrightness) {

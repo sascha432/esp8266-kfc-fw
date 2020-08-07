@@ -192,11 +192,11 @@ bool PluginComponent::dependsOn(NameType name, DependencyCallback callback)
     auto plugin = findPlugin(name, false);
     if (plugin) {
         if (plugin->_setupTime) {
-            _debug_printf_P(PSTR("dependecy callback type=call name=%s callback=%p\n"), (PGM_P)name, &callback);
+            __LDBG_printf("dependecy callback type=call name=%s callback=%p", (PGM_P)name, &callback);
             callback(plugin);
         }
         else {
-            _debug_printf_P(PSTR("dependecy callback type=delayed name=%s callback=%p\n"), (PGM_P)name, &callback);
+            __LDBG_printf("dependecy callback type=delayed name=%s callback=%p", (PGM_P)name, &callback);
             _dependencies->emplace_back(name, callback);
         }
         return true;
@@ -209,7 +209,7 @@ void PluginComponent::checkDependencies()
     _dependencies->erase(std::remove_if(_dependencies->begin(), _dependencies->end(), [](const Dependency &dep) {
         auto plugin = findPlugin(dep._name, true);
         if (plugin) {
-            _debug_printf_P(PSTR("dependecy callback type=call_delayed name=%s callback=%p\n"), (PGM_P)dep._name, &dep._callback);
+            __LDBG_printf("dependecy callback type=call_delayed name=%s callback=%p", (PGM_P)dep._name, &dep._callback);
             dep._callback(plugin);
             return true;
         }
@@ -221,11 +221,11 @@ PluginComponent *PluginComponent::getForm(const String &name)
 {
     for(const auto plugin: plugins) {
         if (plugin->canHandleForm(name)) {
-            _debug_printf_P(PSTR("form=%s plugin=%s\n"), name.c_str(), plugin->getName_P());
+            __LDBG_printf("form=%s plugin=%s", name.c_str(), plugin->getName_P());
             return plugin;
         }
     }
-    _debug_printf_P(PSTR("form=%s result=null\n"), name.c_str());
+    __LDBG_printf("form=%s result=null", name.c_str());
     return nullptr;
 }
 
@@ -233,11 +233,11 @@ PluginComponent *PluginComponent::getTemplate(const String &name)
 {
     for(const auto plugin: plugins) {
         if (plugin->hasWebTemplate(name)) {
-            _debug_printf_P(PSTR("template=%s plugin=%s\n"), name.c_str(), plugin->getName_P());
+            __LDBG_printf("template=%s plugin=%s", name.c_str(), plugin->getName_P());
             return plugin;
         }
     }
-    _debug_printf_P(PSTR("template=%s result=null\n"), name.c_str());
+    __LDBG_printf("template=%s result=null", name.c_str());
     return nullptr;
 }
 
@@ -245,11 +245,11 @@ PluginComponent *PluginComponent::getByName(NameType name)
 {
     for(const auto plugin: plugins) {
         if (plugin->nameEquals(name)) {
-            _debug_printf_P(PSTR("name=%s plugin=%s\n"), name, plugin->getName_P());
+            __LDBG_printf("name=%s plugin=%s", name, plugin->getName_P());
             return plugin;
         }
     }
-    _debug_printf_P(PSTR("name=%s result=null\n"), name);
+    __LDBG_printf("name=%s result=null", name);
     return nullptr;
 }
 
@@ -257,11 +257,11 @@ PluginComponent *PluginComponent::getByMemoryId(RTCMemoryId memoryId)
 {
     for(const auto plugin: plugins) {
         if (plugin->getOptions().memory_id == memoryId) {
-            _debug_printf_P(PSTR("id=%u result=%s\n"), memoryId, plugin->getName_P());
+            __LDBG_printf("id=%u result=%s", memoryId, plugin->getName_P());
             return plugin;
         }
     }
-    _debug_printf_P(PSTR("id=%u result=null\n"), memoryId);
+    __LDBG_printf("id=%u result=null", memoryId);
     return nullptr;
 }
 

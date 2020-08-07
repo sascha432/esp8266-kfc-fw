@@ -136,11 +136,11 @@ void Sensor_BME280::_readSensor(SensorData_t &sensor)
     sensor.humidity = _bme280.readHumidity();
     sensor.pressure = _bme280.readPressure() / 100.0;
 
-    _debug_printf_P(PSTR("address 0x%02x: %.2f °C, %.2f%%, %.2f hPa\n"), _address, sensor.temperature, sensor.humidity, sensor.pressure);
+    __LDBG_printf("address 0x%02x: %.2f °C, %.2f%%, %.2f hPa", _address, sensor.temperature, sensor.humidity, sensor.pressure);
 
     if (_callback != nullptr) {
         _callback(sensor);
-        _debug_printf_P(PSTR("compensated %.2f °C, %.2f%%\n"), sensor.temperature, sensor.humidity);
+        __LDBG_printf("compensated %.2f °C, %.2f%%", sensor.temperature, sensor.humidity);
     }
 }
 

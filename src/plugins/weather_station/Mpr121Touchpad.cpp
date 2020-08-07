@@ -197,7 +197,7 @@ void Mpr121Touchpad::Event::broadcastData(const Movement &movement)
 
 void Mpr121Touchpad::Event::touched()
 {
-    _debug_printf_P(PSTR("last_tap=%u last_press=%u counter=%u\n"), _lastTap, _lastPress, _counter);
+    __LDBG_printf("last_tap=%u last_press=%u counter=%u", _lastTap, _lastPress, _counter);
     if (_lastTap) {
         if (!within(_lastTap, 50, 1000, _curEvent.time)) {
             _lastTap = 0;
@@ -608,7 +608,7 @@ void Mpr121Touchpad::processEvents()
         } while(++iterator != buffer.end());
 
         // event_counter += n;
-        // _debug_printf_P(PSTR("read %u (%u) events, dur %lu, size %u, max. lag %d\n"), n, event_counter, millis() - start, buffer.size(), lagg);
+        // __LDBG_printf("read %u (%u) events, dur %lu, size %u, max. lag %d", n, event_counter, millis() - start, buffer.size(), lagg);
 
         noInterrupts();
         buffer.shrink(iterator, buffer.end()); // <1µs
@@ -628,7 +628,7 @@ void Mpr121Touchpad::_fireEvent()
     if (_event._type) {// && _event._bubble) {
         for(const auto &callback: _callbacks) {
             if ((callback.events & _event.getType()) != 0) {
-                _debug_printf_P(PSTR("callback=%p\n"), &callback.callback);
+                __LDBG_printf("callback=%p", &callback.callback);
                 if (callback.callback(_event)) {
                     break;
                 }

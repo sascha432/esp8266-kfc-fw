@@ -465,7 +465,7 @@ void WebServerPlugin::handlerUpdate(AsyncWebServerRequest *request)
                 case U_FLASH: {
 #if DEBUG
                     auto hash = request->arg(F("elf_hash"));
-                    _debug_printf_P(PSTR("hash %u %s\n"), hash.length(), hash.c_str());
+                    __LDBG_printf("hash %u %s", hash.length(), hash.c_str());
                     if (hash.length() == System::Firmware::getElfHashHexSize()) {
                         System::Firmware::setElfHashHex(hash.c_str());
                         config.write();
@@ -562,7 +562,7 @@ void WebServerPlugin::handlerUploadUpdate(AsyncWebServerRequest *request, String
             if (imageType == 3) {
                 status->command = U_ATMEGA;
                 firmwareTempFile = SPIFFS.open(FSPGM(stk500v1_tmp_file), fs::FileOpenMode::write);
-                _debug_printf_P(PSTR("ATmega fw temp file %u, filename %s\n"), (bool)firmwareTempFile, String(FSPGM(stk500v1_tmp_file)).c_str());
+                __LDBG_printf("ATmega fw temp file %u, filename %s", (bool)firmwareTempFile, String(FSPGM(stk500v1_tmp_file)).c_str());
             } else
 #endif
             {
@@ -595,7 +595,7 @@ void WebServerPlugin::handlerUploadUpdate(AsyncWebServerRequest *request, String
         if (status->command == U_ATMEGA) {
             firmwareTempFile.write(data, len);
             if (final) {
-                _debug_printf_P(PSTR("Upload Success: %uB\n"), firmwareTempFile.size());
+                __LDBG_printf("Upload Success: %uB", firmwareTempFile.size());
                 firmwareTempFile.close();
             }
         } else
@@ -608,7 +608,7 @@ void WebServerPlugin::handlerUploadUpdate(AsyncWebServerRequest *request, String
             }
             if (final) {
                 if (Update.end(true)) {
-                    _debug_printf_P(PSTR("Update Success: %uB\n"), index + len);
+                    __LDBG_printf("Update Success: %uB", index + len);
                 } else {
                     error = true;
                 }
@@ -694,13 +694,13 @@ void WebServerPlugin::begin()
     _server->on(String(F("/update")).c_str(), HTTP_POST, handlerUpdate, handlerUploadUpdate);
 
     _server->begin();
-    _debug_printf_P(PSTR("HTTP running on port %u\n"), port);
+    __LDBG_printf("HTTP running on port %u", port);
 }
 
 bool WebServerPlugin::_sendFile(const FileMapping &mapping, HttpHeaders &httpHeaders, bool client_accepts_gzip, AsyncWebServerRequest *request, WebTemplate *webTemplate)
 {
     WebServerSetCPUSpeedHelper setCPUSpeed;
-    _debug_printf_P(PSTR("mapping=%s exists=%u gz=%u request=%p web_template=%p\n"), mapping.getFilename(), mapping.exists(), client_accepts_gzip, request, webTemplate);
+    __LDBG_printf("mapping=%s exists=%u gz=%u request=%p web_template=%p", mapping.getFilename(), mapping.exists(), client_accepts_gzip, request, webTemplate);
 
     if (!mapping.exists()) {
         return false;
@@ -760,7 +760,7 @@ void WebServerPlugin::setUpdateFirmwareCallback(UpdateFirmwareCallback_t callbac
 
 bool WebServerPlugin::_handleFileRead(String path, bool client_accepts_gzip, AsyncWebServerRequest *request)
 {
-    _debug_printf_P(PSTR("path=%s gz=%u request=%p\n"), path.c_str(), client_accepts_gzip, request);
+    __LDBG_printf("path=%s gz=%u request=%p", path.c_str(), client_accepts_gzip, request);
     WebServerSetCPUSpeedHelper setCPUSpeed;
 
     if (String_endsWith(path, '/')) {
@@ -769,11 +769,11 @@ bool WebServerPlugin::_handleFileRead(String path, bool client_accepts_gzip, Asy
 
     auto mapping = FileMapping(path.c_str());
     if (!mapping.exists()) {
-        _debug_printf_P(PSTR("not found=%s\n"), path.c_str());
+        __LDBG_printf("not found=%s", path.c_str());
         return false;
     }
     if (mapping.isGz() && !client_accepts_gzip) {
-        _debug_printf_P(PSTR("gzip not supported=%s\n"), path.c_str());
+        __LDBG_printf("gzip not supported=%s", path.c_str());
         request->send_P(503, FSPGM(mime_text_plain), PSTR("503: Client does not support gzip Content Encoding"));
         return true;
     }
@@ -816,7 +816,7 @@ bool WebServerPlugin::_handleFileRead(String path, bool client_accepts_gzip, Asy
                 __SID(debug_printf_P(PSTR("new SID cookie=%s\n"), cookie->getValue().c_str()));
                 httpHeaders.add(cookie);
 
-                _debug_printf_P(PSTR("Login successful: type=%u cookie=%s\n"), getAuthTypeStr(authType), cookie->getValue().c_str());
+                __LDBG_printf("Login successful: type=%u cookie=%s", getAuthTypeStr(authType), cookie->getValue().c_str());
                 isAuthenticated = true;
                 Logger_security(F("Login successful from %s (%s)"), remote_addr.toString().c_str(), getAuthTypeStr(authType));
             }
@@ -841,7 +841,7 @@ bool WebServerPlugin::_handleFileRead(String path, bool client_accepts_gzip, Asy
 
     if (isAuthenticated && request->method() == HTTP_POST) {  // http POST processing
 
-        _debug_printf_P(PSTR("HTTP post %s\n"), path.c_str());
+        __LDBG_printf("HTTP post %s", path.c_str());
 
         httpHeaders.addNoCache(true);
 
@@ -1027,7 +1027,7 @@ bool WebServerPlugin::addHandler(AsyncWebHandler *handler)
         return false;
     }
     plugin._server->addHandler(handler);
-    _debug_printf_P(PSTR("handler=%p\n"), handler);
+    __LDBG_printf("handler=%p", handler);
     return true;
 }
 
@@ -1037,7 +1037,7 @@ AsyncCallbackWebHandler *WebServerPlugin::addHandler(const String &uri, ArReques
         return nullptr;
     }
     auto handler = new AsyncCallbackWebHandler();
-    _debug_printf_P(PSTR("handler=%p uri=%s\n"), handler, uri.c_str());
+    __LDBG_printf("handler=%p uri=%s", handler, uri.c_str());
     handler->setUri(uri);
     handler->onRequest(onRequest);
     plugin._server->addHandler(handler);
@@ -1047,15 +1047,15 @@ AsyncCallbackWebHandler *WebServerPlugin::addHandler(const String &uri, ArReques
 WebServerPlugin::AsyncRestWebHandler *WebServerPlugin::addRestHandler(RestHandler &&handler)
 {
     AsyncRestWebHandler *restHandler = nullptr;
-    _debug_printf_P(PSTR("uri=%s\n"), handler.getURL());
+    __LDBG_printf("uri=%s", handler.getURL());
     if (!plugin._server) {
         return restHandler;
     }
     if (plugin._restCallbacks.empty()) {
-        _debug_printf_P(PSTR("installing REST handler\n"));
+        __LDBG_printf("installing REST handler");
         restHandler = new AsyncRestWebHandler();
         plugin._server->addHandler(restHandler);
-        _debug_printf_P(PSTR("handler=%p\n"), restHandler);
+        __LDBG_printf("handler=%p", restHandler);
     }
     plugin._restCallbacks.emplace_back(handler);
     return restHandler;
@@ -1178,7 +1178,7 @@ void WebServerPlugin::RestRequest::writeBody(uint8_t *data, size_t len)
     if (!_readerError) {
         _stream.setData(data, len);
         if (!_reader.parseStream()) {
-            _debug_printf_P(PSTR("json parser: %s\n"), _reader.getLastErrorMessage().c_str());
+            __LDBG_printf("json parser: %s", _reader.getLastErrorMessage().c_str());
             _readerError = true;
         }
     }
@@ -1221,7 +1221,7 @@ WebServerPlugin::AsyncRestWebHandler::AsyncRestWebHandler() : AsyncWebHandler()
 
 bool WebServerPlugin::AsyncRestWebHandler::canHandle(AsyncWebServerRequest *request)
 {
-    _debug_printf_P(PSTR("url=%s auth=%d\n"), request->url().c_str(), WebServerPlugin::getInstance().isAuthenticated(request));
+    __LDBG_printf("url=%s auth=%d", request->url().c_str(), WebServerPlugin::getInstance().isAuthenticated(request));
     for(const auto &handler: plugin._restCallbacks) {
         auto url = request->url().c_str();
         auto handlerUrl = reinterpret_cast<PGM_P>(handler.getURL());
@@ -1242,7 +1242,7 @@ bool WebServerPlugin::AsyncRestWebHandler::canHandle(AsyncWebServerRequest *requ
 
 void WebServerPlugin::AsyncRestWebHandler::handleBody(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
 {
-    _debug_printf_P(PSTR("url=%s data='%*.*s' idx=%u len=%u total=%u\n"), request->url().c_str(), len, len, data, index, len, total);
+    __LDBG_printf("url=%s data='%*.*s' idx=%u len=%u total=%u", request->url().c_str(), len, len, data, index, len, total);
     auto &rest = *reinterpret_cast<WebServerPlugin::RestRequest *>(request->_tempObject);
     if (rest.getAuth() == true) {
         rest.writeBody(data, len);
@@ -1251,7 +1251,7 @@ void WebServerPlugin::AsyncRestWebHandler::handleBody(AsyncWebServerRequest *req
 
 void WebServerPlugin::AsyncRestWebHandler::handleRequest(AsyncWebServerRequest *request)
 {
-    _debug_printf_P(PSTR("url=%s json data=\n"), request->url().c_str());
+    __LDBG_printf("url=%s json data=", request->url().c_str());
     auto &rest = *reinterpret_cast<WebServerPlugin::RestRequest *>(request->_tempObject);
 #if DEBUG_WEB_SERVER
     rest.getJsonReader().dump(DEBUG_OUTPUT);

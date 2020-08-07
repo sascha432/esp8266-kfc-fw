@@ -61,7 +61,7 @@ uint8_t Sensor_CCS811::getAutoDiscoveryCount() const
 
 void Sensor_CCS811::getValues(JsonArray &array, bool timer)
 {
-    _debug_printf_P(PSTR("Sensor_CCS811::getValues()\n"));
+    __LDBG_printf("Sensor_CCS811::getValues()");
 
     auto &sensor = _readSensor();
     auto obj = &array.addObject(3);
@@ -76,7 +76,7 @@ void Sensor_CCS811::getValues(JsonArray &array, bool timer)
 
 void Sensor_CCS811::createWebUI(WebUI &webUI, WebUIRow **row)
 {
-    _debug_printf_P(PSTR("Sensor_CCS811::createWebUI()\n"));
+    __LDBG_printf("Sensor_CCS811::createWebUI()");
 
     if ((*row)->size() > 2) {
         // *row = &webUI.addRow();
@@ -121,19 +121,19 @@ Sensor_CCS811::SensorData_t &Sensor_CCS811::_readSensor()
 #if IOT_SENSOR_HAVE_BME280
         if (sensor->getType() == BME280) {
             auto data = reinterpret_cast<Sensor_BME280 *>(sensor)->_readSensor();
-            _debug_printf_P(PSTR("Sensor_CCS811::_readSensor(): setEnvironmentalData(): BME280: humidity %u, temperature %.3f\n"), (uint8_t)data.humidity, data.temperature);
+            __LDBG_printf("Sensor_CCS811::_readSensor(): setEnvironmentalData(): BME280: humidity %u, temperature %.3f", (uint8_t)data.humidity, data.temperature);
             _ccs811.setEnvironmentalData(data.humidity, data.temperature);
         }
 #elif IOT_SENSOR_HAVE_BME680
         if (sensor->getType() == BME680) {
             auto data = reinterpret_cast<Sensor_BME680 *>(sensor)->_readSensor();
-            _debug_printf_P(PSTR("Sensor_CCS811::_readSensor(): setEnvironmentalData(): BME680: humidity %u, temperature %.3f\n"), (uint8_t)data.humidity, data.temperature);
+            __LDBG_printf("Sensor_CCS811::_readSensor(): setEnvironmentalData(): BME680: humidity %u, temperature %.3f", (uint8_t)data.humidity, data.temperature);
             _ccs811.setEnvironmentalData(data.humidity, data.temperature);
         }
 #elif IOT_SENSOR_HAVE_LM75A
         if (sensor->getType() == LM75A) {
             auto temperature = reinterpret_cast<Sensor_BME680 *>(sensor)->_readSensor();
-            _debug_printf_P(PSTR("Sensor_CCS811::_readSensor(): setEnvironmentalData(): LM75A: humidity 55, temperature %.3f\n"), temperature);
+            __LDBG_printf("Sensor_CCS811::_readSensor(): setEnvironmentalData(): LM75A: humidity 55, temperature %.3f", temperature);
             _ccs811.setEnvironmentalData(55, temperature);
         }
 #endif
@@ -142,7 +142,7 @@ Sensor_CCS811::SensorData_t &Sensor_CCS811::_readSensor()
 
     bool available = _ccs811.available() && (_ccs811.readData() == 0);
     if (!available) {
-        _debug_printf_P(PSTR("Sensor_CCS811::_readSensor(): address 0x%02x: available=0\n"), _address, available);
+        __LDBG_printf("Sensor_CCS811::_readSensor(): address 0x%02x: available=0", _address, available);
         return _sensor;
     }
 
@@ -163,7 +163,7 @@ Sensor_CCS811::SensorData_t &Sensor_CCS811::_readSensor()
         _sensor.TVOC = 0;
     }
 
-    _debug_printf_P(PSTR("Sensor_CCS811::_readSensor(): address 0x%02x: available=%u, eCO2 %uppm, TVOC %uppb, error=%u\n"),
+    __LDBG_printf("Sensor_CCS811::_readSensor(): address 0x%02x: available=%u, eCO2 %uppm, TVOC %uppb, error=%u",
         _address, _sensor.available, _sensor.eCO2, _sensor.TVOC, _ccs811.checkError()
     );
 

@@ -247,7 +247,7 @@ void Logger::getLogs(StringVector &logs)
         logs.emplace_back(FSPGM(log_file_debug));
     }
 #endif
-    _debug_printf_P(PSTR("Logger::getLogs(): %s\n"), implode(',', logs).c_str());
+    __LDBG_printf("Logger::getLogs(): %s", implode(',', logs).c_str());
 }
 
 void Logger::writeLog(LogLevel logLevel, const char *message, va_list arg)
@@ -269,7 +269,7 @@ void Logger::writeLog(LogLevel logLevel, const char *message, va_list arg)
     if (isOpen) {
         _file.write((const uint8_t *)temp, strlen(temp));
     } else {
-        _debug_printf_P(PSTR("Cannot append to log file %s\n"), _getLogFilename(logLevel).c_str());
+        __LDBG_printf("Cannot append to log file %s", _getLogFilename(logLevel).c_str());
     }
 
     size_t len;

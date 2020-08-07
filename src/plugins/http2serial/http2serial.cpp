@@ -33,7 +33,7 @@ Http2Serial::Http2Serial() : _client(serialHandler.addClient(onData, SerialHandl
 {
     _locked = false;
 #if defined(HTTP2SERIAL_BAUD) && HTTP2SERIAL_BAUD != KFC_SERIAL_RATE
-    _debug_printf_P(PSTR("Reconfiguring serial port to %d baud\n"), HTTP2SERIAL_BAUD);
+    __LDBG_printf("Reconfiguring serial port to %d baud", HTTP2SERIAL_BAUD);
     Serial.flush();
     Serial.begin(HTTP2SERIAL_BAUD);
 #endif
@@ -233,13 +233,13 @@ void Http2SerialPlugin::setup(SetupModeType mode)
         auto ws = new WsClientAsyncWebSocket(F("/serial_console"), &wsSerialConsole);
         ws->onEvent(http2serial_event_handler);
         server->addHandler(ws);
-        _debug_printf_P(PSTR("Web socket for http2serial running on port %u\n"), System::WebServer::getConfig().port);
+        __LDBG_printf("Web socket for http2serial running on port %u", System::WebServer::getConfig().port);
     }
 }
 
 void Http2SerialPlugin::reconfigure(const String &source)
 {
-    _debug_printf_P(PSTR("source=%s\n"), source.c_str());
+    __LDBG_printf("source=%s", source.c_str());
     if (String_equals(source, SPGM(http))) {
         setup(SetupModeType::DEFAULT);
     }

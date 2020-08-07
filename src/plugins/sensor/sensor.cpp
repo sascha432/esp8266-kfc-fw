@@ -54,7 +54,7 @@ void SensorPlugin::getValues(JsonArray &array)
 
 void SensorPlugin::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
 {
-    _debug_printf_P(PSTR("setValue(%s)\n"), id.c_str());
+    __LDBG_printf("setValue(%s)", id.c_str());
 }
 
 void SensorPlugin::setup(SetupModeType mode)
@@ -143,7 +143,7 @@ void SensorPlugin::shutdown()
 {
     _timer.remove();
     for(auto sensor: _sensors) {
-        _debug_printf_P(PSTR("type=%u\n"), sensor->getType());
+        __LDBG_printf("type=%u", sensor->getType());
         sensor->shutdown();
         delete sensor;
     }
@@ -207,7 +207,7 @@ void SensorPlugin::createWebUI(WebUI &webUI)
 
 void SensorPlugin::getStatus(Print &output)
 {
-    _debug_printf_P(PSTR("sensor count %d\n"), _sensors.size());
+    __LDBG_printf("sensor count %d", _sensors.size());
     if (_sensors.empty()) {
         output.print(F("All sensors disabled"));
     }

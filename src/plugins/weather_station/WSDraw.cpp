@@ -105,7 +105,7 @@ WSDraw::~WSDraw()
 
 void WSDraw::_drawTime()
 {
-    // _debug_printf_P(PSTR("WSDraw::_drawTime()\n"));
+    // __LDBG_printf("WSDraw::_drawTime()");
 
     _offsetY = 0;
 
@@ -302,7 +302,7 @@ void WSDraw::_updateWeatherIndoor()
 
 void WSDraw::_drawSunAndMoon()
 {
-    // _debug_printf_P(PSTR("WSDraw::_drawSunAndMoon()\n"));
+    // __LDBG_printf("WSDraw::_drawSunAndMoon()");
 
     _offsetY = Y_START_POSITION_SUN_MOON;
 
@@ -384,7 +384,7 @@ void WSDraw::_doScroll()
 void WSDraw::_scrollTimer(WSDraw &draw)
 {
     if (_scrollCanvas) {
-        // _debug_printf_P(PSTR("WSDraw::_scrollTimer(): _scrollPosition=%u\n"), _scrollPosition);
+        // __LDBG_printf("WSDraw::_scrollTimer(): _scrollPosition=%u", _scrollPosition);
         if (_scrollPosition < TFT_WIDTH) {
             SpeedBooster speedBooster;
             static const uint8_t numScroll = 8;

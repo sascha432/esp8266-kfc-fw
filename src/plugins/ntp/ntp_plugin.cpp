@@ -46,7 +46,7 @@ static std::vector<TimeUpdatedCallback_t> _callbacks;
 
 void addTimeUpdatedCallback(TimeUpdatedCallback_t callback)
 {
-    _debug_printf_P(PSTR("func=%p\n"), &callback);
+    __LDBG_printf("func=%p", &callback);
     _callbacks.push_back(callback);
 }
 
@@ -156,7 +156,7 @@ void NTPPlugin::execConfigTime()
      // set refresh time to a minimum for the update. calling configTime() seems to ignore this value. once
      // the time is valid, it is reset to the regular NTP refresh interval
     _ntpRefreshTimeMillis = 15000;
-    _debug_printf_P(PSTR("server1=%s,server2=%s,server3=%s, refresh in %u seconds\n"), Plugins::NTPClient::getServer1(), Plugins::NTPClient::getServer2(), Plugins::NTPClient::getServer3(), (unsigned)(_ntpRefreshTimeMillis / 1000));
+    __LDBG_printf("server1=%s,server2=%s,server3=%s, refresh in %u seconds", Plugins::NTPClient::getServer1(), Plugins::NTPClient::getServer2(), Plugins::NTPClient::getServer3(), (unsigned)(_ntpRefreshTimeMillis / 1000));
     configTime(Plugins::NTPClient::getPosixTimezone(), Plugins::NTPClient::getServer1(), Plugins::NTPClient::getServer2(), Plugins::NTPClient::getServer3());
 
     // check time every minute
@@ -167,7 +167,7 @@ void NTPPlugin::execConfigTime()
 void NTPPlugin::updateNtpCallback()
 {
     auto now = time(nullptr);
-    _debug_printf_P(PSTR("new time=%u\n"), (int)now);
+    __LDBG_printf("new time=%u", (int)now);
 
     if (IS_TIME_VALID(now)) {
         NTPPlugin::_ntpRefreshTimeMillis = Plugins::NTPClient::getConfig().getRefreshIntervalMillis();
@@ -195,11 +195,11 @@ void NTPPlugin::updateNtpCallback()
 void NTPPlugin::_checkTimerCallback(EventScheduler::TimerPtr timer)
 {
     if (IS_TIME_VALID(time(nullptr))) {
-        _debug_printf_P(PSTR("detaching NTP check timer\n"));
+        __LDBG_printf("detaching NTP check timer");
         timer->detach();
     }
     else {
-        _debug_printf_P(PSTR("NTP did not update, calling configTime() again, delay=%u\n"), timer->getDelayUInt32());
+        __LDBG_printf("NTP did not update, calling configTime() again, delay=%u", timer->getDelayUInt32());
         execConfigTime();
         if (timer->getDelayUInt32() < 60000U) { // change to 60 seconds after first attempt
             timer->rearm(60000);

@@ -15,7 +15,7 @@ void ButtonsPlugin::setup(SetupModeType mode)
     for(auto &button: _buttons) {
         auto pin = monitor.addPin(button.getPin(), pinCallback, this, button.getPinMode());
         if (pin) {
-            _debug_printf_P(PSTR("pin=%u added\n"), button.getPin());
+            __LDBG_printf("pin=%u added", button.getPin());
             PushButton &pushButton = button.getButton();
             pushButton.onPress(onButtonPressed);
             pushButton.onHoldRepeat(button.getConfig().longpress.time, button.getConfig().repeat.time, onButtonHeld);
@@ -23,7 +23,7 @@ void ButtonsPlugin::setup(SetupModeType mode)
 
         }
         else {
-            _debug_printf_P(PSTR("failed to add pin=%u\n"), button.getPin());
+            __LDBG_printf("failed to add pin=%u", button.getPin());
             monitor.removePin(button.getPin(), this);
         }
     }
@@ -68,10 +68,10 @@ void ButtonsPlugin::_readConfig()
     Config_Button::ButtonVector buttons;
     Config_Button::getButtons(buttons);
     for(auto &button: buttons) {
-        _debug_printf_P(PSTR("pin=%u\n"), button.pin);
+        __LDBG_printf("pin=%u", button.pin);
         _buttons.emplace_back(button);
     }
-    _debug_printf_P(PSTR("size=%u\n"), _buttons.size());
+    __LDBG_printf("size=%u", _buttons.size());
 }
 
 void ButtonsPlugin::pinCallback(void *arg)

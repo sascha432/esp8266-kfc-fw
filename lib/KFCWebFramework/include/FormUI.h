@@ -141,7 +141,7 @@ namespace FormUI {
 			if (raw) {
 				*this += label;
 			}
-			if (String_endsWith(*this, ':')) {
+			if (!raw && String_endsWith(*this, ':')) {
 				__DBG_printf("Label '%s' ends with ':'", label.c_str());
 			}
 		}

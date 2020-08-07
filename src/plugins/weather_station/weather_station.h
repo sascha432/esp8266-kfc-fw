@@ -67,29 +67,13 @@ public:
 public:
     WeatherStationPlugin();
 
-    virtual PGM_P getName() const;
-    virtual const __FlashStringHelper *getFriendlyName() const {
-        return F("Weather Station");
-    }
-    virtual PriorityType getSetupPriority() const override {
-        return static_cast<PriorityType>(120);
-    }
-    virtual OptionsType getOptions() const override {
-        return EnumHelper::Bitset::all(OptionsType::HAS_STATUS, OptionsType::HAS_CONFIG_FORM, OptionsType::HAS_WEB_UI, OptionsType::HAS_AT_MODE);
-    }
-
     virtual void setup(SetupModeType mode) override;
-    virtual void reconfigure(PGM_P source) override;
+    virtual void reconfigure(const String &source) override;
     virtual void shutdown() override;
-
-    virtual bool hasReconfigureDependecy(v *plugin) const override {
-        return plugin->nameEquals(FSPGM(http));
-    }
 
     virtual void getStatus(Print &output) override;
 
-    virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
-    virtual void configurationSaved(Form *form) override;
+    virtual void createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request) override;
 
 // WebUI
 public:
@@ -103,7 +87,7 @@ public:
 
 public:
 #if AT_MODE_SUPPORTED
-    virtual void atModeHelpGenerator() override;
+    virtual ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const override;
     virtual bool atModeHandler(AtModeArgs &args) override;
 #endif
 

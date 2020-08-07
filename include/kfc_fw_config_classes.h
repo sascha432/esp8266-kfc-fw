@@ -208,6 +208,7 @@ DECLARE_CONFIG_HANDLE_PROGMEM_STR(handleNameBlindsConfig_t);
 DECLARE_CONFIG_HANDLE_PROGMEM_STR(handleNameDimmerConfig_t);
 DECLARE_CONFIG_HANDLE_PROGMEM_STR(handleNameClockConfig_t);
 DECLARE_CONFIG_HANDLE_PROGMEM_STR(handleNamePingConfig_t);
+DECLARE_CONFIG_HANDLE_PROGMEM_STR(handleNameWeatherStationConfig_t);
 
 #define CIF_DEBUG(...) __VA_ARGS__
 
@@ -847,45 +848,38 @@ namespace KFCConfigurationClasses {
 
         // --------------------------------------------------------------------
         // Weather Station
-
-        class WeatherStation
-        {
+        class WeatherStationConfig {
         public:
-            class WeatherStationConfig {
-            public:
-                WeatherStationConfig();
-                void validate();
-                uint32_t getPollIntervalMillis();
-                struct __attribute__packed__ {
-                    uint16_t weather_poll_interval;
-                    uint16_t api_timeout;
-                    uint8_t backlight_level;
-                    uint8_t touch_threshold;
-                    uint8_t released_threshold;
-                    uint8_t is_metric: 1;
-                    uint8_t time_format_24h: 1;
-                    uint8_t show_webui: 1;
-                    float temp_offset;
-                    float humidity_offset;
-                    float pressure_offset;
-                    uint8_t screenTimer[8];
-                };
-            };
+            typedef struct __attribute__packed__ Config_t {
+                using Type = Config_t;
 
-            WeatherStation();
+                uint8_t weather_poll_interval;
+                uint16_t api_timeout;
+                uint8_t backlight_level;
+                uint8_t touch_threshold;
+                uint8_t released_threshold;
+                CREATE_UINT8_BITFIELD(is_metric, 1);
+                CREATE_UINT8_BITFIELD(time_format_24h, 1);
+                CREATE_UINT8_BITFIELD(show_webui, 1);
+                float temp_offset;
+                float humidity_offset;
+                float pressure_offset;
+                uint8_t screenTimer[8];
 
-            static void defaults();
-            static const char *getApiKey();
-            static const char *getQueryString();
-            static WeatherStationConfig &getWriteableConfig();
-            static WeatherStationConfig getConfig();
-            void setConfig(const WeatherStationConfig &params);
+                uint32_t getPollIntervalMillis() const;
 
-            char openweather_api_key[65];
-            char openweather_api_query[65];
-            WeatherStationConfig config;
+                Config_t();
+            } Config_t;
         };
 
+        class WeatherStation : public WeatherStationConfig, public ConfigGetterSetter<WeatherStationConfig::Config_t, _H(MainConfig().plugins.weatherstation.cfg) CIF_DEBUG(, &handleNameWeatherStationConfig_t)> {
+        public:
+            static void defaults();
+
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.weatherstation, ApiKey, 0, 64);
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.weatherstation, ApiQuery, 0, 64);
+
+        };
 
         // --------------------------------------------------------------------
         // Alarm
@@ -1179,28 +1173,24 @@ namespace KFCConfigurationClasses {
         public:
             typedef struct __attribute__packed__ SensorConfig_t {
 #if IOT_SENSOR_HAVE_BATTERY
-                typedef struct __attribute__packed__ battery_t {
+                typedef struct __attribute__packed__ BatteryConfig_t {
                     float calibration;
                     uint8_t precision;
                     float offset;
-
-                    battery_t() : calibration(1), precision(1), offset(0) {}
-
-                } battery_t;
-                battery_t battery;
+                    BatteryConfig_t();
+                } BatteryConfig_t;
+                BatteryConfig_t battery;
 #endif
 #if (IOT_SENSOR_HAVE_HLW8012 || IOT_SENSOR_HAVE_HLW8032)
-                typedef struct __attribute__packed__ hlw80xx_t {
+                typedef struct __attribute__packed__ HLW80xxConfig_t {
                     float calibrationU;
                     float calibrationI;
                     float calibrationP;
                     uint64_t energyCounter;
                     uint8_t extraDigits;
-
-                    hlw80xx_t();
-
-                } hlw80xx_t;
-                hlw80xx_t hlw80xx;
+                    HLW80xxConfig_t();
+                } HLW80xxConfig_t;
+                HLW80xxConfig_t hlw80xx;
 #endif
                 SensorConfig_t() = default;
             } SensorConfig_t;

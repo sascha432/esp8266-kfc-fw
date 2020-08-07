@@ -28,13 +28,13 @@ MQTTAutoDiscoveryQueue::~MQTTAutoDiscoveryQueue()
 
 void MQTTAutoDiscoveryQueue::clear()
 {
-   _debug_printf_P(PSTR("clear size=%u left=%u\n"), _client._components.size(), std::distance(_next, _client._components.end()));
+   __LDBG_printf("clear size=%u left=%u", _client._components.size(), std::distance(_next, _client._components.end()));
     _timer.remove();
 }
 
 void MQTTAutoDiscoveryQueue::publish()
 {
-    _debug_printf_P(PSTR("components=%u delay=%u\n"), _client._components.size(), MQTT_AUTO_DISCOVERY_QUEUE_INITIAL_DELAY);
+    __LDBG_printf("components=%u delay=%u", _client._components.size(), MQTT_AUTO_DISCOVERY_QUEUE_INITIAL_DELAY);
     if (!_client._components.empty()) {
 #if DEBUG_MQTT_AUTO_DISCOVERY_QUEUE
         _maxQueue = 0;
@@ -59,7 +59,7 @@ void MQTTAutoDiscoveryQueue::_timerCallback(EventScheduler::TimerPtr timer)
 #if MQTT_AUTO_DISCOVERY_QUEUE_INITIAL_DELAY != MQTT_AUTO_DISCOVERY_QUEUE_DELAY
     // rearm timer if the first call
     if (_counter++ == 0 && _next == _client._components.begin()) {
-        _debug_printf_P(PSTR("rearm %u\n"), MQTT_AUTO_DISCOVERY_QUEUE_DELAY);
+        __LDBG_printf("rearm %u", MQTT_AUTO_DISCOVERY_QUEUE_DELAY);
         timer->rearm(MQTT_AUTO_DISCOVERY_QUEUE_DELAY, true);
     }
 #endif
@@ -71,13 +71,13 @@ void MQTTAutoDiscoveryQueue::_timerCallback(EventScheduler::TimerPtr timer)
     // check client's queue
     if (!_client._queue.empty()) {
 #if DEBUG_MQTT_AUTO_DISCOVERY_QUEUE
-        _debug_printf_P(PSTR("client queue %u, skipping\n"), _client._queue.size());
+        __LDBG_printf("client queue %u, skipping", _client._queue.size());
         _maxQueueSkipCounter++;
 #endif
         return;
     }
 
-    _debug_printf_P(PSTR("component #%u count=%u queue=%u counter=%u\n"), std::distance(_client._components.begin(), _next), (*_next)->getAutoDiscoveryCount() + 1, _client._queue.size(), _counter);
+    __LDBG_printf("component #%u count=%u queue=%u counter=%u", std::distance(_client._components.begin(), _next), (*_next)->getAutoDiscoveryCount() + 1, _client._queue.size(), _counter);
 
     // skip components without auto discovery
     if ((*_next)->getAutoDiscoveryCount() == 0) {
@@ -87,7 +87,7 @@ void MQTTAutoDiscoveryQueue::_timerCallback(EventScheduler::TimerPtr timer)
                 timer->detach();
                 return;
             }
-            _debug_printf_P(PSTR("component #%u count=%u\n"), std::distance(_client._components.begin(), _next), (*_next)->getAutoDiscoveryCount());
+            __LDBG_printf("component #%u count=%u", std::distance(_client._components.begin(), _next), (*_next)->getAutoDiscoveryCount());
         }
         while((*_next)->rewindAutoDiscovery() == false);
     }
@@ -99,7 +99,7 @@ void MQTTAutoDiscoveryQueue::_timerCallback(EventScheduler::TimerPtr timer)
         auto msgSize = discovery->getMessageSize();
         if (msgSize < _client.getClientSpace()) {
 #if DEBUG_MQTT_AUTO_DISCOVERY_QUEUE
-            _debug_printf_P(PSTR("topic=%s size=%u/%u\n"), discovery->getTopic().c_str(), msgSize, _client.getClientSpace());
+            __LDBG_printf("topic=%s size=%u/%u", discovery->getTopic().c_str(), msgSize, _client.getClientSpace());
             _debug_println(printable_string(discovery->getPayload().c_str(), discovery->getPayload().length(), DEBUG_MQTT_CLIENT_PAYLOAD_LEN));
 #endif
             _discoveryCount++;
@@ -109,7 +109,7 @@ void MQTTAutoDiscoveryQueue::_timerCallback(EventScheduler::TimerPtr timer)
         } else {
 #if DEBUG_MQTT_AUTO_DISCOVERY_QUEUE
             _maxQueueSkipCounter++;
-            _debug_printf_P(PSTR("tcp buffer full: %u > %u\n"), msgSize, _client.getClientSpace());
+            __LDBG_printf("tcp buffer full: %u > %u", msgSize, _client.getClientSpace());
 #endif
             if (!MQTTClient::_isMessageSizeExceeded(msgSize, discovery->getTopic().c_str())) {
                 // retry if size not exceeded
@@ -133,7 +133,7 @@ void MQTTAutoDiscoveryQueue::_publishDone()
 {
 #if DEBUG_MQTT_AUTO_DISCOVERY_QUEUE
     auto dur = get_time_diff(_start, millis());
-    _debug_printf_P(PSTR("done components=%u discovery=%u size=%u time=%.4fs max_queue=%u queue_skip=%u iterations=%u\n"), _client._components.size(), _discoveryCount, _size, dur / 1000.0, _maxQueue, _maxQueueSkipCounter, _counter);
+    __LDBG_printf("done components=%u discovery=%u size=%u time=%.4fs max_queue=%u queue_skip=%u iterations=%u", _client._components.size(), _discoveryCount, _size, dur / 1000.0, _maxQueue, _maxQueueSkipCounter, _counter);
 #endif
     uint32_t delay;
     if ((delay = Plugins::MQTTClient::getConfig().auto_discovery_rebroadcast_interval) != 0) {

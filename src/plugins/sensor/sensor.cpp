@@ -171,10 +171,15 @@ void SensorPlugin::createConfigureForm(FormCallbackType type, const String &form
         return;
     }
 
-    form.setFormUI(F("Sensor Configuration"));
+    auto &ui = form.getFormUIConfig();
+    ui.setTitle(F("Sensor Configuration"));
+    ui.setContainerId(F("sensor_settings"));
+    ui.setStyle(FormUI::StyleType::ACCORDION);
+
     for(auto sensor: _sensors) {
         sensor->createConfigureForm(request, form);
     }
+
     form.finalize();
 }
 

@@ -80,7 +80,7 @@ void Sensor_Battery::createWebUI(WebUI &webUI, WebUIRow **row)
 
 void Sensor_Battery::publishState(MQTTClient *client)
 {
-    _debug_printf_P(PSTR("client=%p connected=%u\n"), client, client && client->isConnected() ? 1 : 0);
+    __LDBG_printf("client=%p connected=%u", client, client && client->isConnected() ? 1 : 0);
     if (client && client->isConnected()) {
         client->publish(_getTopic(BatteryType::LEVEL), true, String(_readSensor(), _config.precision));
 #if IOT_SENSOR_BATTERY_CHARGE_DETECTION
@@ -110,10 +110,24 @@ bool Sensor_Battery::getSensorData(String &name, StringVector &values)
 
 void Sensor_Battery::createConfigureForm(AsyncWebServerRequest *request, Form &form)
 {
-    auto &cfg = config._H_W_GET(Config().sensor);
-    form.add<float>(F("battery_calibration"), _H_W_STRUCT_VALUE(cfg, battery.calibration))->setFormUInew FormUI::UI(FormUI::Type::TEXT, F("Supply Voltage Calibration")));
-    form.add<float>(F("battery_offset"), _H_W_STRUCT_VALUE(cfg, battery.offset))->setFormUInew FormUI::UI(FormUI::Type::TEXT, F("Supply Voltage Offset")));
-    form.add<uint8_t>(F("battery_precision"), _H_W_STRUCT_VALUE(cfg, battery.precision))->setFormUInew FormUI::UI(FormUI::Type::TEXT, F("Supply Voltage Precision")));
+    auto &cfg = Plugins::Sensor::getWriteableConfig();
+#if IOT_SENSOR_BATTERY_CHARGE_DETECTION
+    String name = F("Battery Voltage");
+#else
+    String name = F("Supply Voltage");
+#endif
+    auto &group = form.addCardGroup(F("spcfg"), name, true);
+
+    form.add(F("sp_uc"), _H_W_STRUCT_VALUE(cfg, battery.calibration));
+    form.addFormUI(F("Calibration"));
+
+    form.add(F("sp_ofs"), _H_W_STRUCT_VALUE(cfg, battery.offset));
+    form.addFormUI(F("Offset"));
+
+    form.add(F("sp_pr"), _H_W_STRUCT_VALUE(cfg, battery.precision));
+    form.addFormUI(F("Display Precision"));
+
+    group.end();
 }
 
 void Sensor_Battery::configurationSaved(Form *form)
@@ -122,20 +136,19 @@ void Sensor_Battery::configurationSaved(Form *form)
     using KeyValueStorage::ContainerPtr;
     using KeyValueStorage::Item;
 
-    auto sensor = config._H_GET(Config().sensor);
+    _config = Plugins::Sensor::getWriteableConfig().battery;
     auto container = ContainerPtr(new Container());
-    container->add(Item::create(F("battery_cal"), sensor.battery.calibration));
-    container->add(Item::create(F("battery_ofs"), sensor.battery.offset));
-    container->add(Item::create(F("battery_prec"), sensor.battery.precision));
+    container->add(Item::create(F("battery_cal"), _config.calibration));
+    container->add(Item::create(F("battery_ofs"), _config.offset));
+    container->add(Item::create(F("battery_prec"), _config.precision));
     config.callPersistantConfig(container);
 }
 
 void Sensor_Battery::reconfigure(PGM_P source)
 {
-    _config = config._H_GET(Config().sensor).battery;
-    _debug_printf_P(PSTR("calibration=%f, precision=%u\n"), _config.calibration, _config.precision);
+    _config = Plugins::Sensor::getConfig().battery;
+    __LDBG_printf("calibration=%f, precision=%u", _config.calibration, _config.precision);
 }
-
 
 float Sensor_Battery::readSensor()
 {
@@ -147,7 +160,7 @@ float Sensor_Battery::readSensor()
 float Sensor_Battery::_readSensor()
 {
     double adcVoltage = _adc.read() / 1024.0;
-    _debug_printf_P(PSTR("raw = %f\n"), (((IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R2 + IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1)) / IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1) * adcVoltage)
+    __LDBG_printf("raw = %f", (((IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R2 + IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1)) / IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1) * adcVoltage)
     return ((((IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R2 + IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1)) / IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1) * adcVoltage * _config.calibration) + _config.offset;
 }
 
@@ -197,12 +210,12 @@ bool Sensor_Battery::atModeHandler(AtModeArgs &args)
         _timer.remove();
 
         auto serial = &args.getStream();
-        auto printVoltage = [serial](EventScheduler::TimerPtr timer) {
+        auto printVoltage = [serial, this](EventScheduler::TimerPtr timer) {
             auto value = Sensor_Battery::readSensor();
             serial->printf_P(PSTR("+SENSORPBV: %.4fV (calibration %f, offset=%f)\n"),
                 value,
-                config._H_GET(Config().sensor).battery.calibration,
-                config._H_GET(Config().sensor).battery.offset
+                _config.calibration,
+                _config.offset
             );
         };
         printVoltage(nullptr);

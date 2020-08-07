@@ -109,10 +109,11 @@ void MQTTClient::_setupClient()
         _client->setServer(_hostname.c_str(), _port);
     }
 #if ASYNC_TCP_SSL_ENABLED
-    if (Config_MQTT::getMode() == MQTT_MODE_SECURE) {
+    if (MQTTConfigType::cast_enum_mode(_config.mode) == ModeType::SECURE) {
         _client->setSecure(true);
-        auto fingerPrint = Config_MQTT::getFingerprint();
-        if (fingerPrint && *fingerPrint) {
+        uint16_t size = ClientConfig::kFingerprintMaxSize;
+        auto fingerPrint = ClientConfig::getFingerPrint(size);
+        if (fingerPrint && size == ClientConfig::kFingerprintMaxSize) {
             _client->addServerFingerprint(fingerPrint); // addServerFingerprint supports multiple fingerprints
         }
     }
@@ -144,18 +145,18 @@ void MQTTClient::_setupClient()
 
 void MQTTClient::registerComponent(MQTTComponentPtr component)
 {
-    _debug_printf_P(PSTR("component=%p\n"), component);
+    __LDBG_printf("component=%p", component);
     if (unregisterComponent(component)) {
         debug_printf_P(PSTR("component registered multiple times: name=%s component=%p\n"), component->getName(), component);
     }
     _components.emplace_back(component);
     _componentsEntityCount += component->getAutoDiscoveryCount();
-    _debug_printf_P(PSTR("components=%u entities=%u\n"), _components.size(), _componentsEntityCount);
+    __LDBG_printf("components=%u entities=%u", _components.size(), _componentsEntityCount);
 }
 
 bool MQTTClient::unregisterComponent(MQTTComponentPtr component)
 {
-    _debug_printf_P(PSTR("component=%p components=%u entities=%u\n"), component, _components.size(), _componentsEntityCount);
+    __LDBG_printf("component=%p components=%u entities=%u", component, _components.size(), _componentsEntityCount);
     bool removed = false;
     if (_components.size()) {
         remove(component);
@@ -166,7 +167,7 @@ bool MQTTClient::unregisterComponent(MQTTComponentPtr component)
             removed = true;
         }
     }
-    _debug_printf_P(PSTR("components=%u entities=%u removed=%u\n"), _components.size(), _componentsEntityCount, removed);
+    __LDBG_printf("components=%u entities=%u removed=%u", _components.size(), _componentsEntityCount, removed);
     return removed;
 }
 
@@ -204,7 +205,7 @@ String MQTTClient::_formatTopic(const String &suffix, const __FlashStringHelper 
         // }
         topic.vprintf_P(format_P, arg);
     }
-    _debug_printf_P(PSTR("topic=%s\n"), topic.c_str());
+    __LDBG_printf("topic=%s", topic.c_str());
     return topic;
 }
 
@@ -215,13 +216,13 @@ bool MQTTClient::isConnected() const
 
 void MQTTClient::setAutoReconnect(uint32_t timeout)
 {
-    _debug_printf_P(PSTR("timeout=%d\n"), timeout);
+    __LDBG_printf("timeout=%d", timeout);
     _autoReconnectTimeout = timeout;
 }
 
 void MQTTClient::connect()
 {
-    _debug_printf_P(PSTR("status=%s connected=%u\n"), connectionStatusString().c_str(), _client->connected());
+    __LDBG_printf("status=%s connected=%u", connectionStatusString().c_str(), _client->connected());
 
     // remove reconnect timer if running and force disconnect
     auto timeout = _autoReconnectTimeout;
@@ -243,7 +244,7 @@ void MQTTClient::connect()
 
 void MQTTClient::disconnect(bool forceDisconnect)
 {
-    _debug_printf_P(PSTR("forceDisconnect=%d status=%s connected=%u\n"), forceDisconnect, connectionStatusString().c_str(), _client->connected());
+    __LDBG_printf("forceDisconnect=%d status=%s connected=%u", forceDisconnect, connectionStatusString().c_str(), _client->connected());
     if (!forceDisconnect) {
         // set offline
         publish(_lastWillTopic, true, String(0));
@@ -260,7 +261,7 @@ void MQTTClient::setLastWill(char value)
     }
 
     _lastWillTopic = formatTopic(FSPGM(mqtt_status_topic));
-    _debug_printf_P(PSTR("topic=%s value=%s\n"), _lastWillTopic.c_str(), _lastWillPayload.c_str());
+    __LDBG_printf("topic=%s value=%s", _lastWillTopic.c_str(), _lastWillPayload.c_str());
 #if MQTT_SET_LAST_WILL
     _client->setWill(_lastWillTopic.c_str(), getDefaultQos(), true, _lastWillPayload.c_str(), _lastWillPayload.length());
 #endif
@@ -268,10 +269,10 @@ void MQTTClient::setLastWill(char value)
 
 void MQTTClient::autoReconnect(uint32_t timeout)
 {
-    _debug_printf_P(PSTR("timeout=%u\n"), timeout);
+    __LDBG_printf("timeout=%u", timeout);
     if (timeout) {
         _timer.add(timeout, false, [this](EventScheduler::TimerPtr timer) {
-            _debug_printf_P(PSTR("isConnected=%d\n"), this->isConnected());
+            __LDBG_printf("isConnected=%d", this->isConnected());
             if (!this->isConnected()) {
                 this->connect();
             }
@@ -297,7 +298,7 @@ String MQTTClient::connectionDetailsString()
 {
     auto message = PrintString(F("%s@%s:%u"), _username.length() ? _username.c_str() : SPGM(Anonymous), (_address.isSet() ? _address.toString().c_str() : _hostname.c_str()), _port);
 #if ASYNC_TCP_SSL_ENABLED
-    if (Config_MQTT::getMode() == MQTT_MODE_SECURE) {
+    if (MQTTConfigType::cast_enum_mode(_config.mode) == ModeType::SECURE) {
         message += F(", Secure MQTT");
     }
 #endif
@@ -327,7 +328,7 @@ String MQTTClient::connectionStatusString()
 
 void MQTTClient::onConnect(bool sessionPresent)
 {
-    _debug_printf_P(PSTR("session=%d\n"), sessionPresent);
+    __LDBG_printf("session=%d", sessionPresent);
     Logger_notice(F("Connected to MQTT server %s"), connectionDetailsString().c_str());
 
     _clearQueue();
@@ -346,7 +347,7 @@ void MQTTClient::onConnect(bool sessionPresent)
 
 void MQTTClient::onDisconnect(AsyncMqttClientDisconnectReason reason)
 {
-    _debug_printf_P(PSTR("reason=%d auto_reconnect=%d\n"), (int)reason, _autoReconnectTimeout);
+    __LDBG_printf("reason=%d auto_reconnect=%d", (int)reason, _autoReconnectTimeout);
     PrintString str;
     if (_autoReconnectTimeout) {
         str.printf_P(PSTR(", reconnecting in %d ms"), _autoReconnectTimeout);
@@ -378,7 +379,7 @@ int MQTTClient::subscribeWithId(MQTTComponentPtr component, const String &topic,
         __debugbreak_and_panic_printf_P(PSTR("subscribeWithId: topic is empty\n"));
     }
 #endif
-    _debug_printf_P(PSTR("component=%p topic=%s qos=%u\n"), component, topic.c_str(), qos);
+    __LDBG_printf("component=%p topic=%s qos=%u", component, topic.c_str(), qos);
     auto result = _client->subscribe(topic.c_str(), qos);
     if (result && component) {
         _topics.emplace_back(topic, component);
@@ -396,7 +397,7 @@ void MQTTClient::unsubscribe(MQTTComponentPtr component, const String &topic)
 int MQTTClient::unsubscribeWithId(MQTTComponentPtr component, const String &topic)
 {
     int result = -1;
-    _debug_printf_P(PSTR("component=%p topic=%s in_use=%d\n"), component, topic.c_str(), _topicInUse(component, topic));
+    __LDBG_printf("component=%p topic=%s in_use=%d", component, topic.c_str(), _topicInUse(component, topic));
     if (!_topicInUse(component, topic)) {
         result = _client->unsubscribe(topic.c_str());
     }
@@ -413,10 +414,10 @@ int MQTTClient::unsubscribeWithId(MQTTComponentPtr component, const String &topi
 
 void MQTTClient::remove(MQTTComponentPtr component)
 {
-    _debug_printf_P(PSTR("component=%p topics=%u\n"), component, _topics.size());
+    __LDBG_printf("component=%p topics=%u", component, _topics.size());
     _topics.erase(std::remove_if(_topics.begin(), _topics.end(), [this, component](const MQTTTopic &mqttTopic) {
         if (mqttTopic.getComponent() == component) {
-            _debug_printf_P(PSTR("topic=%s in_use=%d\n"), mqttTopic.getTopic().c_str(), _topicInUse(component, mqttTopic.getTopic()));
+            __LDBG_printf("topic=%s in_use=%d", mqttTopic.getTopic().c_str(), _topicInUse(component, mqttTopic.getTopic()));
             if (!_topicInUse(component, mqttTopic.getTopic())) {
                 unsubscribe(nullptr, mqttTopic.getTopic().c_str());
             }
@@ -473,13 +474,13 @@ void MQTTClient::publishAutoDiscoveryCallback(EventScheduler::TimerPtr timer)
 int MQTTClient::publishWithId(const String &topic, bool retain, const String &payload, uint8_t qos)
 {
     qos = MQTTClient::getDefaultQos(qos);
-    _debug_printf_P(PSTR("topic=%s qos=%u retain=%d payload=%s\n"), topic.c_str(), qos, retain, printable_string(payload.c_str(), payload.length(), DEBUG_MQTT_CLIENT_PAYLOAD_LEN).c_str());
+    __LDBG_printf("topic=%s qos=%u retain=%d payload=%s", topic.c_str(), qos, retain, printable_string(payload.c_str(), payload.length(), DEBUG_MQTT_CLIENT_PAYLOAD_LEN).c_str());
     return _client->publish(topic.c_str(), qos, retain, payload.c_str(), payload.length());
 }
 
 void MQTTClient::onMessageRaw(char *topic, char *payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total)
 {
-    _debug_printf_P(PSTR("topic=%s payload=%s idx:len:total=%d:%d:%d qos=%u dup=%d retain=%d\n"), topic, printable_string(payload, len, DEBUG_MQTT_CLIENT_PAYLOAD_LEN).c_str(), index, len, total, properties.qos, properties.dup, properties.retain);
+    __LDBG_printf("topic=%s payload=%s idx:len:total=%d:%d:%d qos=%u dup=%d retain=%d", topic, printable_string(payload, len, DEBUG_MQTT_CLIENT_PAYLOAD_LEN).c_str(), index, len, total, properties.qos, properties.dup, properties.retain);
     if (total > MQTT_RECV_MAX_MESSAGE_SIZE) {
         _debug_printf(PSTR("discarding message, size exceeded %d/%d\n"), (unsigned)total, MQTT_RECV_MAX_MESSAGE_SIZE);
         return;
@@ -506,7 +507,7 @@ void MQTTClient::onMessageRaw(char *topic, char *payload, AsyncMqttClientMessage
 
 void MQTTClient::onMessage(char *topic, char *payload, AsyncMqttClientMessageProperties properties, size_t len)
 {
-    _debug_printf_P(PSTR("topic=%s payload=%s len=%d qos=%u dup=%d retain=%d\n"), topic, printable_string(payload, len, DEBUG_MQTT_CLIENT_PAYLOAD_LEN).c_str(), len, properties.qos, properties.dup, properties.retain);
+    __LDBG_printf("topic=%s payload=%s len=%d qos=%u dup=%d retain=%d", topic, printable_string(payload, len, DEBUG_MQTT_CLIENT_PAYLOAD_LEN).c_str(), len, properties.qos, properties.dup, properties.retain);
     for(const auto &mqttTopic : _topics) {
         if (_isTopicMatch(topic, mqttTopic.getTopic().c_str())) {
             mqttTopic.getComponent()->onMessage(this, topic, payload, len);
@@ -518,17 +519,17 @@ void MQTTClient::onMessage(char *topic, char *payload, AsyncMqttClientMessagePro
 
 void MQTTClient::onPublish(uint16_t packetId)
 {
-    _debug_printf_P(PSTR("MQTTClient::onPublish(%u)\n"), packetId);
+    __LDBG_printf("MQTTClient::onPublish(%u)", packetId);
 }
 
 void MQTTClient::onSubscribe(uint16_t packetId, uint8_t qos)
 {
-    _debug_printf_P(PSTR("MQTTClient::onSubscribe(%u, %u)\n"), packetId, qos);
+    __LDBG_printf("MQTTClient::onSubscribe(%u, %u)", packetId, qos);
 }
 
 void MQTTClient::onUnsubscribe(uint16_t packetId)
 {
-    _debug_printf_P(PSTR("MQTTClient::onUnsubscribe(%u)\n"), packetId);
+    __LDBG_printf("MQTTClient::onUnsubscribe(%u)", packetId);
 }
 
 #endif
@@ -589,7 +590,7 @@ const __FlashStringHelper *MQTTClient::_reasonToString(AsyncMqttClientDisconnect
 
 void MQTTClient::_handleWiFiEvents(WiFiCallbacks::EventType event, void *payload)
 {
-    _debug_printf_P(PSTR("event=%d payload=%p connected=%d\n"), event, payload, isConnected());
+    __LDBG_printf("event=%d payload=%p connected=%d", event, payload, isConnected());
     if (event == WiFiCallbacks::EventType::CONNECTED) {
         if (!isConnected()) {
             setAutoReconnect(MQTT_AUTO_RECONNECT_TIMEOUT);
@@ -605,7 +606,7 @@ void MQTTClient::_handleWiFiEvents(WiFiCallbacks::EventType event, void *payload
 
 void MQTTClient::_addQueue(MQTTQueueEnum_t type, MQTTComponent *component, const String &topic, uint8_t qos, uint8_t retain, const String &payload)
 {
-    _debug_printf_P(PSTR("type=%s topic=%s\n"), type.toString().c_str(), topic.c_str());
+    __LDBG_printf("type=%s topic=%s", type.toString().c_str(), topic.c_str());
 
     if (MQTTClient::_isMessageSizeExceeded(topic.length() + payload.length(), topic.c_str())) {
         return;
@@ -623,7 +624,7 @@ void MQTTClient::_queueTimerCallback()
     while(_queue.size()) {
         int result = -1;
         auto queue = _queue.front();
-        _debug_printf_P(PSTR("queue=%u topic=%s space=%u\n"), _queue.size(), queue.getTopic().c_str(), getClientSpace());
+        __LDBG_printf("queue=%u topic=%s space=%u", _queue.size(), queue.getTopic().c_str(), getClientSpace());
         switch(queue.getType()) {
             case MQTTQueueType::SUBSCRIBE:
                 result = subscribeWithId(queue.getComponent(), queue.getTopic(), queue.getQos());

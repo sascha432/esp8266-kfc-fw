@@ -362,5 +362,5 @@ void AlarmPlugin::_publishState()
 
 String AlarmPlugin::_formatTopic(const __FlashStringHelper *topic)
 {
-    return MQTTClient::formatTopic(FSPM(alarm), topic);
+    return MQTTClient::formatTopic(FSPGM(alarm), topic);
 }

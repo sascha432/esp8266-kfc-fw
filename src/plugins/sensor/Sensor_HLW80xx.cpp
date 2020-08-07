@@ -49,7 +49,7 @@ Sensor_HLW80xx::Sensor_HLW80xx(const String &name) : MQTTSensor(), _name(name), 
 
 MQTTComponent::MQTTAutoDiscoveryPtr Sensor_HLW80xx::nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num)
 {
-    if (num > 5) {
+    if (num >= getAutoDiscoveryCount()) {
         return nullptr;
     }
     String topic = _getTopic();
@@ -104,7 +104,7 @@ uint8_t Sensor_HLW80xx::getAutoDiscoveryCount() const
 
 void Sensor_HLW80xx::getValues(JsonArray &array, bool timer)
 {
-    _debug_printf_P(PSTR("Sensor_HLW8012::getValues()\n"));
+    __LDBG_println();
 
     auto obj = &array.addObject(3);
     obj->add(JJ(id), _getId(FSPGM(power)));
@@ -142,7 +142,7 @@ void Sensor_HLW80xx::getValues(JsonArray &array, bool timer)
 
 void Sensor_HLW80xx::createWebUI(WebUI &webUI, WebUIRow **row)
 {
-    _debug_printf_P(PSTR("Sensor_HLW8012::createWebUI()\n"));
+    __LDBG_println();
 
     // if ((*row)->size() > 1) {
     //     *row = &webUI.addRow();
@@ -164,7 +164,7 @@ void Sensor_HLW80xx::reconfigure(PGM_P source)
     _calibrationP = sensor.calibrationP;
     _extraDigits = sensor.extraDigits;
     _energyCounter[0] = sensor.energyCounter;
-    __DBG_printf("Sensor_HLW80xx::Sensor_HLW80xx(): calibration U=%f I=%f P=%f x_digits=%u energy=%.0f", _calibrationU, _calibrationI, _calibrationP, _extraDigits, (double)_energyCounter[0]);
+    __DBG_printf("calibration U=%f I=%f P=%f x_digits=%u energy=%.0f", _calibrationU, _calibrationI, _calibrationP, _extraDigits, (double)_energyCounter[0]);
 }
 
 void Sensor_HLW80xx::shutdown()
@@ -181,18 +181,23 @@ void Sensor_HLW80xx::createConfigureForm(AsyncWebServerRequest *request, Form &f
 {
     auto &cfg = Plugins::Sensor::getWriteableConfig();
 
-    form.add<float>(F("hlw80xx_calibrationU"), _H_W_STRUCT_VALUE(cfg, hlw80xx.calibrationU));
-    form.addFormUI(F("HLW8012 Voltage Calibration"));
-    form.add<float>(F("hlw80xx_calibrationI"), _H_W_STRUCT_VALUE(cfg, hlw80xx.calibrationI));
-    form.addFormUI(F("HLW8012 Current Calibration"));
-    form.add<float>(F("hlw80xx_calibrationP"), _H_W_STRUCT_VALUE(cfg, hlw80xx.calibrationP));
-    form.addFormUI(F("HLW8012 Power Calibration"));
-    form.add<uint8_t>(F("hlw80xx_extra_digits"), _H_W_STRUCT_VALUE(cfg, hlw80xx.extraDigits));
-    form.addFormUI(F("HLW8012 Extra Digits/Precision"));
-    form.addValidator(FormRangeValidator(F("Enter 0 to 4 for extra digits"), 0, 4));
+    auto &group = form.addCardGroup(F("hlw80xx_cf"), F("HLW8012"), true);
 
-    form.add(F("energyCounterPrimary"), String(), FormField::Type::TEXT);
-    form.addFormUI(F("HLW8012 Total Energy"), FormUI::Suffix(FSPGM(kWh)), FormUI::PlaceHolder(IOT_SENSOR_HLW80xx_PULSE_TO_KWH(getEnergyPrimaryCounter()), 3));
+    form.add<float>(F("hlw80xx_u"), _H_W_STRUCT_VALUE(cfg, hlw80xx.calibrationU));
+    form.addFormUI(F("Voltage Calibration"));
+
+    form.add<float>(F("hlw80xx_i"), _H_W_STRUCT_VALUE(cfg, hlw80xx.calibrationI));
+    form.addFormUI(F("Current Calibration"));
+
+    form.add<float>(F("hlw80xx_p"), _H_W_STRUCT_VALUE(cfg, hlw80xx.calibrationP));
+    form.addFormUI(F("Power Calibration"));
+
+    form.add<uint8_t>(F("hlw80xx_xd"), _H_W_STRUCT_VALUE(cfg, hlw80xx.extraDigits));
+    form.addFormUI(F("Extra Digits/Precision"));
+    form.addValidator(FormRangeValidator(0, 4));
+
+    form.add(F("hlw80xx_e1"), String(), FormField::Type::TEXT);
+    form.addFormUI(F("Total Energy"), FormUI::Suffix(FSPGM(kWh)), FormUI::PlaceHolder(IOT_SENSOR_HLW80xx_PULSE_TO_KWH(getEnergyPrimaryCounter()), 3));
 
     form.addValidator(FormCallbackValidator([&cfg, this](String value, FormField &field) {
         if (value.length()) {
@@ -201,8 +206,8 @@ void Sensor_HLW80xx::createConfigureForm(AsyncWebServerRequest *request, Form &f
         }
         return true;
     }));
-    form.add(F("energyCounterSecondary"), String(), FormField::Type::TEXT);
-    form.addFormUI(F("HLW8012 Energy"), FormUI::Label(FSPGM(kWh)), FormUI::PlaceHolder(IOT_SENSOR_HLW80xx_PULSE_TO_KWH(getEnergySecondaryCounter()), 3));
+    form.add(F("hlw80xx_2"), String(), FormField::Type::TEXT);
+    form.addFormUI(F("Energy"), FormUI::Label(FSPGM(kWh)), FormUI::PlaceHolder(IOT_SENSOR_HLW80xx_PULSE_TO_KWH(getEnergySecondaryCounter()), 3));
 
     form.addValidator(FormCallbackValidator([this](String value, FormField &field) {
         if (value.length()) {
@@ -210,6 +215,8 @@ void Sensor_HLW80xx::createConfigureForm(AsyncWebServerRequest *request, Form &f
         }
         return true;
     }));
+
+    group.end();
 
 }
 
@@ -263,7 +270,8 @@ void Sensor_HLW80xx::_incrEnergyCounters(uint32_t count)
 
 void Sensor_HLW80xx::_saveEnergyCounter()
 {
-    _debug_printf_P(PSTR("Sensor_HLW80xx::_saveEnergyCounter()\n"));
+    __LDBG_println();
+
 #if IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT
     auto file = SPIFFS.open(FSPGM(iot_sensor_hlw80xx_state_file), fs::FileOpenMode::write);
     if (file) {
@@ -287,7 +295,8 @@ void Sensor_HLW80xx::_saveEnergyCounter()
 
 void Sensor_HLW80xx::_loadEnergyCounter()
 {
-    _debug_printf_P(PSTR("Sensor_HLW80xx::_loadEnergyCounter()\n"));
+    __LDBG_println();
+
 #if IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT
     auto file = SPIFFS.open(FSPGM(iot_sensor_hlw80xx_state_file), fs::FileOpenMode::read);
     if (!file || file.read(reinterpret_cast<uint8_t *>(_energyCounter.data()), sizeof(_energyCounter)) != sizeof(_energyCounter)) {

@@ -27,6 +27,8 @@
 #endif
 #include "kfc_fw_config.h"
 
+using KFCConfigurationClasses::Plugins;
+
 // web accesss for screen capture
 //
 // screen capture
@@ -44,7 +46,33 @@ PROGMEM_STRING_DEF(weather_station_webui_id, "weather_station");
 
 static WeatherStationPlugin plugin;
 
+PROGMEM_DEFINE_PLUGIN_OPTIONS(
+    WeatherStationPlugin,
+    // name
+    "weather",
+    // friendly name
+    "Weather Station",
+    // web_templates
+    "",
+    // config_forms
+    "weather",
+    // reconfigure_dependencies
+    "http",
+    PluginComponent::PriorityType::WEATHER_STATION,
+    PluginComponent::RTCMemoryId::NONE,
+    static_cast<uint8_t>(PluginComponent::MenuType::AUTO),
+    false,              // allow_safe_mode
+    false,              // setup_after_deep_sleep
+    true,               // has_get_status
+    true,               // has_config_forms
+    true,               // has_web_ui
+    false,              // has_web_templates
+    true,               // has_at_mode
+    0                   // __reserved
+);
+
 WeatherStationPlugin::WeatherStationPlugin() :
+    PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(WeatherStationPlugin)),
     WSDraw(),
     // _updateTimer(0),
     _updateCounter(0),
@@ -76,14 +104,9 @@ WeatherStationPlugin::WeatherStationPlugin() :
 #endif
 }
 
-PGM_P WeatherStationPlugin::getName() const
-{
-    return PSTR("weather");
-}
-
 void WeatherStationPlugin::_sendScreenCaptureBMP(AsyncWebServerRequest *request)
 {
-    // _debug_printf_P(PSTR("WeatherStationPlugin::_sendScreenCapture(): is_authenticated=%u\n"), WebServerPlugin::getInstance().isAuthenticated(request) == true);
+    // __LDBG_printf("WeatherStationPlugin::_sendScreenCapture(): is_authenticated=%u", WebServerPlugin::getInstance().isAuthenticated(request) == true);
 
     if (WebServerPlugin::getInstance().isAuthenticated(request) == true) {
         //auto response = new AsyncClonedBitmapStreamResponse(plugin.getCanvas().clone());
@@ -101,7 +124,7 @@ void WeatherStationPlugin::_sendScreenCaptureBMP(AsyncWebServerRequest *request)
 
 void WeatherStationPlugin::_installWebhooks()
 {
-    _debug_printf_P(PSTR("server=%p\n"), WebServerPlugin::getWebServerObject());
+    __LDBG_printf("server=%p", WebServerPlugin::getWebServerObject());
     WebServerPlugin::addHandler(F("/images/screen_capture.bmp"), _sendScreenCaptureBMP);
 
     WebServerPlugin::addRestHandler(WebServerPlugin::RestHandler(F(KFC_RESTAPI_ENDPOINT "ws"), [this](AsyncWebServerRequest *request, WebServerPlugin::RestRequest &rest) -> AsyncWebServerResponse * {
@@ -191,7 +214,7 @@ void WeatherStationPlugin::_installWebhooks()
 
 void WeatherStationPlugin::_readConfig()
 {
-    _config = WeatherStation::getConfig();
+    _config = Plugins::WeatherStation::getConfig();
     _backlightLevel = std::min(1024 * _config.backlight_level / 100, 1023);
 }
 
@@ -201,7 +224,7 @@ void WeatherStationPlugin::setup(SetupModeType mode)
     _init();
 
     _weatherApi.setAPIKey(WeatherStation::getApiKey());
-    _weatherApi.setQuery(WeatherStation::getQueryString());
+    _weatherApi.setQuery(WeatherStation::getApiQuery());
 
     _setScreen(MAIN); // TODO add config options for initial screen
     _draw();
@@ -238,7 +261,7 @@ void WeatherStationPlugin::setup(SetupModeType mode)
 #endif
 #if IOT_WEATHER_STATION_HAS_TOUCHPAD
     _touchpad.addCallback(Mpr121Touchpad::EventType::RELEASED, 2, [this](const Mpr121Touchpad::Event &event) {
-        // _debug_printf_P(PSTR("event %u\n"), event.getType());
+        // __LDBG_printf("event %u", event.getType());
         // if (event.isSwipeLeft() || event.isDoublePress()) {
         //     _debug_println(F("left"));
         //     _setScreen((_currentScreen + NUM_SCREENS - 1) % NUM_SCREENS);
@@ -282,7 +305,7 @@ void WeatherStationPlugin::setup(SetupModeType mode)
     LoopFunctions::add(loop);
 
 #if IOT_WEATHER_STATION_WS2812_NUM
-    WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTED, [this](uint8_t event, void *payload) {
+    WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTED, [this](WiFiCallbacks::EventType event, void *payload) {
         _fadeStatusLED();
     }, this);
 
@@ -307,15 +330,20 @@ void WeatherStationPlugin::setup(SetupModeType mode)
     */
 }
 
-void WeatherStationPlugin::reconfigure(PGM_P source)
+void WeatherStationPlugin::reconfigure(const String &source)
 {
-    auto oldLevel = _backlightLevel;
-    _readConfig();
-    _installWebhooks();
+    if (String_equals(source, SPGM(http))) {
+        _installWebhooks();
+    }
+    else {
+        auto oldLevel = _backlightLevel;
+        _readConfig();
+
 #if IOT_WEATHER_STATION_HAS_TOUCHPAD
-    _touchpad.getMPR121().setThresholds(_config.touch_threshold, _config.released_threshold);
+        _touchpad.getMPR121().setThresholds(_config.touch_threshold, _config.released_threshold);
 #endif
-    _fadeBacklight(oldLevel, _backlightLevel);
+        _fadeBacklight(oldLevel, _backlightLevel);
+    }
 }
 
 void WeatherStationPlugin::shutdown()
@@ -347,58 +375,85 @@ void WeatherStationPlugin::getStatus(Print &output)
 #endif
 }
 
-
-void WeatherStationPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
+void WeatherStationPlugin::createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request)
 {
-    using KFCConfigurationClasses::Plugins;
+    if (type == FormCallbackType::SAVE) {
 
-    //auto cfg = Plugins::WeatherStation::getConfig();
+        using KeyValueStorage::Container;
+        using KeyValueStorage::ContainerPtr;
+        using KeyValueStorage::Item;
 
-    form.setFormUI(F("Weather Station Configuration"));
+        auto &cfg = Plugins::WeatherStation::getWriteableConfig();
+        auto container = ContainerPtr(new Container());
+        container->add(Item::create(F("wst_humidity_ofs"), cfg.humidity_offset));
+        container->add(Item::create(F("wst_pressure_ofs"), cfg.pressure_offset));
+        container->add(Item::create(F("wst_temp_ofs"), cfg.temp_offset));
+        config.callPersistantConfig(container);
 
-    form.add<uint8_t>(F("time_format_24h"), _H_FLAGS_VALUE(MainConfig().plugins.weatherstation.config, time_format_24h))->setFormUI(new FormUI::UI(FormUI::Type::SELECT, F("Time Format")))->setBoolItems(F("24h"), F("12h")));
-    form.add<uint8_t>(F("is_metric"), _H_FLAGS_VALUE(MainConfig().plugins.weatherstation.config, is_metric))->setFormUI(new FormUI::UI(FormUI::Type::SELECT, F("Units")))->setBoolItems(F("Metric"), F("Imperial")));
+    }
+    else if (!isCreateFormCallbackType(type)) {
+        return;
+    }
 
-    form.add<uint16_t>(F("weather_poll_interval"), _H_STRUCT_VALUE(MainConfig().plugins.weatherstation.config, weather_poll_interval))->setFormUI(new FormUI::UI(FormUI::Type::TEXT, F("Weather Poll Interval")))->setSuffix(F("minutes")));
-    form.add<uint16_t>(F("api_timeout"), _H_STRUCT_VALUE(MainConfig().plugins.weatherstation.config, api_timeout))->setFormUI(new FormUI::UI(FormUI::Type::TEXT, F("API Timeout")))->setSuffix(FSPGM(seconds)));
+    auto &cfg = Plugins::WeatherStation::getWriteableConfig();
 
-    form.add<uint8_t>(F("backlight_level"), _H_STRUCT_VALUE(MainConfig().plugins.weatherstation.config, backlight_level))->setFormUI(new FormUI::UI(FormUI::Type::TEXT, F("Backlight Level")))->setSuffix('%'));
-    form.add<uint8_t>(F("touch_threshold"), _H_STRUCT_VALUE(MainConfig().plugins.weatherstation.config, touch_threshold))->setFormUInew FormUI::UI(FormUI::Type::TEXT, F("Touch Threshold")));
-    form.add<uint8_t>(F("released_threshold"), _H_STRUCT_VALUE(MainConfig().plugins.weatherstation.config, released_threshold))->setFormUInew FormUI::UI(FormUI::Type::TEXT, F("Release Threshold")));
+    auto &ui = form.getFormUIConfig();
+    ui.setTitle(F("Weather Station Configuration"));
+    ui.setContainerId(F("dimmer_settings"));
+    ui.setStyle(FormUI::StyleType::ACCORDION);
 
-    form.add<float>(F("temp_offset"), _H_STRUCT_VALUE(MainConfig().plugins.weatherstation.config, temp_offset))->setFormUI(new FormUI::UI(FormUI::Type::TEXT, F("BMP280 Temperature Offset")))->setSuffix('%'));
-    form.add<float>(F("humidity_offset"), _H_STRUCT_VALUE(MainConfig().plugins.weatherstation.config, humidity_offset))->setFormUI(new FormUI::UI(FormUI::Type::TEXT, F("Humidity Offset")))->setSuffix('%'));
-    form.add<float>(F("pressure_offset"), _H_STRUCT_VALUE(MainConfig().plugins.weatherstation.config, pressure_offset))->setFormUI(new FormUI::UI(FormUI::Type::TEXT, F("Pressure Offset")))->setSuffix(FSPGM(hPa)));
+    auto &mainGroup = form.addCardGroup(FSPGM(config), String());
+
+    form.add(F("tf"), _H_W_STRUCT_VALUE(cfg, time_format_24h));
+    form.addFormUI(F("Time Format"), FormUI::BoolItems(F("24h"), F("12h")));
+
+    form.add(F("im"), _H_W_STRUCT_VALUE(cfg, is_metric));
+    form.addFormUI(F("Units"), FormUI::BoolItems(F("Metric"), F("Imperial")));
+
+    form.add(F("api"), _H_W_STRUCT_VALUE(cfg, weather_poll_interval));
+    form.addFormUI(F("Weather Poll Interval"), FormUI::Suffix(FSPGM(minutes)));
+    form.addValidator(FormRangeValidator(5, 240));
+
+    form.add(F("ato"), _H_W_STRUCT_VALUE(cfg, api_timeout));
+    form.addFormUI(F("API Timeout"), FormUI::Suffix(FSPGM(seconds)));
+    form.addValidator(FormRangeValidator(30, 900));
+
+    form.add(F("bll"), _H_W_STRUCT_VALUE(cfg, backlight_level));
+    form.addFormUI(F("Backlight Level"), FormUI::Suffix('%'));
+    form.addValidator(FormRangeValidator(0, 100));
+
+    form.add(F("tth"), _H_W_STRUCT_VALUE(cfg, touch_threshold));
+    form.addFormUI(F("Touch Threshold"));
+
+    form.add(F("trt"), _H_W_STRUCT_VALUE(cfg, released_threshold));
+    form.addFormUI(F("Release Threshold"));
+
+    form.add(F("t_ofs"), _H_W_STRUCT_VALUE(cfg, temp_offset));
+    form.addFormUI(F("BMP280 Temperature Offset"), FormUI::Suffix('%'));
+
+    form.add(F("h_ofs"), _H_W_STRUCT_VALUE(cfg, humidity_offset));
+    form.addFormUI(F("Humidity Offset"), FormUI::Suffix('%'));
+
+    form.add(F("p_ofs"), _H_W_STRUCT_VALUE(cfg, pressure_offset));
+    form.addFormUI(F("Pressure Offset"), FormUI::Suffix(FSPGM(hPa)));
 
     for(uint8_t i = 0; i < WeatherStationPlugin::ScreenEnum_t::NUM_SCREENS; i++) {
         PrintString str;
         if (i == 0) {
             str = F("Display screen for the specified time and switch to next one.<br>");
         }
-        str.printf_P(PSTR("Screen #%u, %s"), i + 1, WeatherStationPlugin::getScreenName(i));
+        str.printf_P(PSTR("Screen #%u, %s:"), i + 1, WeatherStationPlugin::getScreenName(i));
 
-        form.add<uint8_t>(PrintString(F("screen_timer[%u]"), i), _H_STRUCT_VALUE_TYPE(MainConfig().plugins.weatherstation.config, screenTimer[i], uint8_t, i))
-            ->setFormUI(new FormUI::UI(FormUI::Type::TEXT, str))->setSuffix(FSPGM(seconds)));
-        // form.add<uint16_t>(WeatherStationPlugin::getScreenName(i), config._H_GET(MainConfig().plugins.weatherstation.config).screenTimer[i],
+        form.add(PrintString(F("st_%u"), i), _H_W_STRUCT_VALUE_TYPE(cfg, screenTimer[i], uint8_t, i));
+        form.addFormUI(FormUI::Label(str, true), FormUI::Suffix(FSPGM(seconds)));
     }
 
-    form.add<uint8_t>(F("show_webui"), _H_FLAGS_VALUE(MainConfig().plugins.weatherstation.config, show_webui))->setFormUI(new FormUI::UI(FormUI::Type::SELECT, F("Show TFT contents in WebUI")))->setBoolItems(FSPGM(Yes), FSPGM(No)));
+    form.add(F("stft"), _H_W_STRUCT_VALUE(cfg, show_webui));
+    form.addFormUI(F("Show TFT Contents In WebUI"), FormUI::BoolItems(FSPGM(Yes), FSPGM(No)));
+
+    mainGroup.end();
 
     form.finalize();
-}
-
-void WeatherStationPlugin::configurationSaved(Form *form)
-{
-    using KeyValueStorage::Container;
-    using KeyValueStorage::ContainerPtr;
-    using KeyValueStorage::Item;
-
-    auto cfg = config._H_GET(MainConfig().plugins.weatherstation.config);
-    auto container = ContainerPtr(new Container());
-    container->add(Item::create(F("wst_humidity_ofs"), cfg.humidity_offset));
-    container->add(Item::create(F("wst_pressure_ofs"), cfg.pressure_offset));
-    container->add(Item::create(F("wst_temp_ofs"), cfg.temp_offset));
-    config.callPersistantConfig(container);
 }
 
 void WeatherStationPlugin::loop()
@@ -410,7 +465,7 @@ void WeatherStationPlugin::_init()
 {
     pinMode(TFT_PIN_LED, OUTPUT);
     digitalWrite(TFT_PIN_LED, LOW);
-    _debug_printf_P(PSTR("tft: cs=%d, dc=%d, rst=%d\n"), TFT_PIN_CS, TFT_PIN_DC, TFT_PIN_RST);
+    __LDBG_printf("tft: cs=%d, dc=%d, rst=%d", TFT_PIN_CS, TFT_PIN_DC, TFT_PIN_RST);
     _tft.initR(INITR_BLACKTAB);
     _tft.fillScreen(0);
     _tft.setRotation(0);
@@ -437,7 +492,6 @@ void WeatherStationPlugin::createWebUI(WebUI &webUI)
    }
 }
 
-
 // void WeatherStationPlugin::serialHandler(uint8_t type, const uint8_t *buffer, size_t len)
 // {
 //     plugin._serialHandler(buffer, len);
@@ -445,7 +499,7 @@ void WeatherStationPlugin::createWebUI(WebUI &webUI)
 
 void WeatherStationPlugin::getValues(JsonArray &array)
 {
-    _debug_printf_P(PSTR("WeatherStationPlugin::getValues()\n"));
+    __LDBG_println();
 
     auto obj = &array.addObject(2);
     obj->add(JJ(id), F("bl_brightness"));
@@ -461,9 +515,9 @@ void WeatherStationPlugin::getValues(JsonArray &array)
 
 void WeatherStationPlugin::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
 {
-    _debug_printf_P(PSTR("WeatherStationPlugin::setValue()\n"));
+    __LDBG_println();
 
-    if (String_equals(id, F("bl_brightness"))) {
+    if (String_equals(id, PSTR("bl_brightness"))) {
         if (hasValue) {
             int level =  value.toInt();
             _fadeBacklight(_backlightLevel, level);
@@ -480,12 +534,15 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WSSET, "WSSET", "<touchpad/timeformat24h/m
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WSBL, "WSBL", "<level=0-1023>", "Set backlight level");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WSU, "WSU", "<i/f>", "Update weather info/forecast");
 
-void WeatherStationPlugin::atModeHelpGenerator()
+ATModeCommandHelpArrayPtr WeatherStationPlugin::atModeCommandHelp(size_t &size) const
 {
-    auto name = getName_P();
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(WSSET), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(WSBL), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(WSU), name);
+    static ATModeCommandHelpArray PROGMEM tmp = {
+        PROGMEM_AT_MODE_HELP_COMMAND(WSSET),
+        PROGMEM_AT_MODE_HELP_COMMAND(WSBL),
+        PROGMEM_AT_MODE_HELP_COMMAND(WSU)
+    };
+    size = sizeof(tmp) / sizeof(tmp[0]);
+    return tmp;
 }
 
 bool WeatherStationPlugin::atModeHandler(AtModeArgs &args)
@@ -589,7 +646,7 @@ bool WeatherStationPlugin::atModeHandler(AtModeArgs &args)
 
 void WeatherStationPlugin::_drawEnvironmentalSensor(GFXCanvasCompressed& canvas, uint8_t top)
 {
-    // _debug_printf_P(PSTR("WSDraw::_drawEnvironmentalSensor()\n"));
+    // __LDBG_printf("WSDraw::_drawEnvironmentalSensor()");
     _offsetY = top;
 
     Sensor_BME280::SensorData_t values = { NAN, NAN, NAN };
@@ -627,7 +684,7 @@ void WeatherStationPlugin::_httpRequest(const String &url, int timeout, JsonBase
     auto rest = new ::WeatherStation::RestAPI(url);
     rest->setAutoDelete(true);
     rest->call(jsonReader, std::max(15, timeout), [this, url, finishedCallback](bool status, const String &error) {
-        _debug_printf_P(PSTR("status=%u error=%s url=%s\n"), status, error.c_str(), url.c_str());
+        __LDBG_printf("status=%u error=%s url=%s", status, error.c_str(), url.c_str());
         if (!status) {
             Logger_notice(F("Failed to load %s, error %s"), url.c_str(), error.c_str());
             _weatherError = F("Failed to load data");
@@ -773,7 +830,7 @@ void WeatherStationPlugin::_loop()
         }
 
         if (_toggleScreenTimer && millis() > _toggleScreenTimer) {
-            // _debug_printf_P(PSTR("_toggleScreenTimer %lu\n"), _toggleScreenTimer);
+            // __LDBG_printf("_toggleScreenTimer %lu", _toggleScreenTimer);
             _setScreen((_currentScreen + 1) % NUM_SCREENS);
             _draw();
             return;
@@ -816,7 +873,7 @@ void WeatherStationPlugin::_broadcastCanvas(int16_t x, int16_t y, int16_t w, int
         return;
     }
     auto webSocketUI = WsWebUISocket::getWsWebUI();
-    //_debug_printf_P(PSTR("x=%d y=%d w=%d h=%d ws=%p empty=%u\n"), x, y, w, h, webSocketUI, webSocketUI->getClients().isEmpty());
+    //__LDBG_printf("x=%d y=%d w=%d h=%d ws=%p empty=%u", x, y, w, h, webSocketUI, webSocketUI->getClients().isEmpty());
     if (webSocketUI && !webSocketUI->getClients().isEmpty()) {
         Buffer buffer;
 
@@ -833,7 +890,7 @@ void WeatherStationPlugin::_broadcastCanvas(int16_t x, int16_t y, int16_t w, int
         }
 
         auto wsBuffer = webSocketUI->makeBuffer(buffer.get(), buffer.length());
-        // _debug_printf_P(PSTR("buf=%p len=%u\n"), wsBuffer, buffer.length());
+        // __LDBG_printf("buf=%p len=%u", wsBuffer, buffer.length());
         if (wsBuffer) {
             wsBuffer->lock();
             for(auto socket: webSocketUI->getClients()) {
@@ -852,7 +909,7 @@ void WeatherStationPlugin::_setScreen(uint8_t screen)
     if (screen < NUM_SCREENS) {
         auto time = _config.screenTimer[screen];
         auto next = _getNextScreen(screen);
-        _debug_printf_P(PSTR("set screen=%u time=%u next=%u\n"), screen, time, next);
+        __LDBG_printf("set screen=%u time=%u next=%u", screen, time, next);
         if (time && next != screen) {
             _currentScreen = screen;
             _toggleScreenTimer = millis() + (time * 1000UL);
@@ -862,7 +919,7 @@ void WeatherStationPlugin::_setScreen(uint8_t screen)
     }
     // else ... no screen active
 
-    _debug_printf_P(PSTR("timer removed screen=%u current=%u\n"), screen, _currentScreen);
+    __LDBG_printf("timer removed screen=%u current=%u", screen, _currentScreen);
     _currentScreen = screen;
     _toggleScreenTimer = 0;
 }
@@ -911,7 +968,7 @@ void WeatherStationPlugin::_alarmCallback(Alarm::AlarmModeType mode, uint16_t ma
         maxDuration = 300; // limit time
     }
     // reset time if alarms overlap
-    _debug_printf_P(PSTR("alarm duration %u\n"), maxDuration);
+    __LDBG_printf("alarm duration %u", maxDuration);
     _alarmTimer.add(maxDuration * 1000UL, false, _resetAlarmFunc);
 }
 

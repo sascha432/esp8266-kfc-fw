@@ -16,25 +16,25 @@ bool MQTTPersistantStorageComponent::_active = false;
 
 MQTTPersistantStorageComponent::MQTTPersistantStorageComponent(ContainerPtr data, Callback callback) : MQTTComponent(ComponentTypeEnum_t::STORAGE), _data(data), _callback(callback), _ignoreMessages(false)
 {
-    _debug_println();
+    __LDBG_println();
     _active = true;
 }
 
 MQTTPersistantStorageComponent::~MQTTPersistantStorageComponent()
 {
-    _debug_println();
+    __LDBG_println();
     _active = false;
 }
 
 void MQTTPersistantStorageComponent::onDisconnect(MQTTClient *client, AsyncMqttClientDisconnectReason reason)
 {
-    _debug_println();
+    __LDBG_println();
     _remove();
 }
 
 void MQTTPersistantStorageComponent::onMessage(MQTTClient *client, char *topic, char *payload, size_t len)
 {
-    _debug_printf_P(PSTR("topic=%s payload=%s len=%u ignore=%u\n"), topic, payload, len, _ignoreMessages);
+    __LDBG_printf("topic=%s payload=%s len=%u ignore=%u", topic, payload, len, _ignoreMessages);
     if (!_ignoreMessages) {
         KeyValueStorage::Container storedData;
         storedData.unserialize(payload);
@@ -56,12 +56,12 @@ void MQTTPersistantStorageComponent::onMessage(MQTTClient *client, char *topic, 
 bool MQTTPersistantStorageComponent::_begin(MQTTClient *client)
 {
     _topic = MQTTClient::formatTopic(F("/persistant_storage"));
-    _debug_printf_P(PSTR("topic=%s\n"), _topic.c_str());
+    __LDBG_printf("topic=%s", _topic.c_str());
     // if we cannot subscribe, report an error
     for(uint8_t i = 0; i < 3; i++) {
         if (client->subscribeWithId(this, _topic.c_str())) {
             _timer.add(MQTT_PERSISTANT_STORAGE_TIMEOUT, false, [this](EventScheduler::TimerPtr) {
-                _debug_printf_P(PSTR("MQTTPersistantStorageComponent data=%u callback=%p\n"), _data->size(), &_callback);
+                __LDBG_printf("MQTTPersistantStorageComponent data=%u callback=%p", _data->size(), &_callback);
                 if (_callback) {
                     _callback(*_data);
                 }
@@ -85,7 +85,7 @@ bool MQTTPersistantStorageComponent::_begin(MQTTClient *client)
 
 void MQTTPersistantStorageComponent::_end(MQTTClient *client)
 {
-    _debug_printf_P(PSTR("client=%p\n"), client);
+    __LDBG_printf("client=%p", client);
     if (client && _topic.length()) {
         client->unsubscribe(nullptr, _topic);
     }
@@ -102,7 +102,7 @@ void MQTTPersistantStorageComponent::_remove()
 
 bool MQTTPersistantStorageComponent::create(MQTTClient *client, ContainerPtr data, Callback callback)
 {
-    _debug_printf_P(PSTR("client=%p active=%u\n"), client, isActive());
+    __LDBG_printf("client=%p active=%u", client, isActive());
     if (isActive()) {
         return false;
     }
@@ -118,7 +118,7 @@ bool MQTTPersistantStorageComponent::create(MQTTClient *client, ContainerPtr dat
 void MQTTPersistantStorageComponent::remove(MQTTPersistantStorageComponent *component)
 {
     auto client = MQTTClient::getClient();
-    _debug_printf_P(PSTR("client=%p\n"), client);
+    __LDBG_printf("client=%p", client);
     if (client) {
         component->_end(client);
         client->unregisterComponent(component);

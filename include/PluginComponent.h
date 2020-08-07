@@ -81,6 +81,7 @@ public:
         DIMMER_MODULE,
         BLINDS,
         SENSOR,
+        WEATHER_STATION,
         PING_MONITOR,
         // lowest priority for plugins
         MIN = std::numeric_limits<int8_t>::max()
@@ -157,7 +158,7 @@ public:
     using DependencyVector = std::vector<Dependency>;
 
 public:
-    PluginComponent(PGM_Config_t config) : _setupTime(0), _config(config) {
+    PluginComponent(PGM_Config_t config) : _setupTime(0), _pluginConfig(config) {
     }
 
 // static functions
@@ -180,13 +181,13 @@ public:
 // Configuration and options
 public:
     PGM_P getName_P() const {
-        return reinterpret_cast<PGM_P>(_config->name);
+        return reinterpret_cast<PGM_P>(_pluginConfig->name);
     }
     NameType getName() const {
-        return reinterpret_cast<NameType>(_config->name);
+        return reinterpret_cast<NameType>(_pluginConfig->name);
     }
     NameType getFriendlyName() const {
-        return reinterpret_cast<NameType>(_config->friendly_name);
+        return reinterpret_cast<NameType>(_pluginConfig->friendly_name);
     }
 
     bool nameEquals(NameType name) const;
@@ -196,8 +197,8 @@ public:
 
     Options_t getOptions() const {
         Options_t options;
-        // memcpy_P(&options, &_config->options, sizeof(options));
-        options.__dword = pgm_read_dword(&_config->options);
+        // memcpy_P(&options, &_pluginConfig->options, sizeof(options));
+        options.__dword = pgm_read_dword(&_pluginConfig->options);
         return options;
     }
 
@@ -210,7 +211,7 @@ public:
     }
 #endif
     bool hasReconfigureDependecy(const String &name) const {
-        return stringlist_find_P_P(reinterpret_cast<PGM_P>(_config->reconfigure_dependencies), name.c_str(), ',') != -1;
+        return stringlist_find_P_P(reinterpret_cast<PGM_P>(_pluginConfig->reconfigure_dependencies), name.c_str(), ',') != -1;
     }
 
     bool hasStatus() const {
@@ -225,18 +226,18 @@ public:
         if (!getOptions().has_web_templates) {
             return false;
         }
-        return stringlist_find_P_P(reinterpret_cast<PGM_P>(_config->web_templates), name.c_str(), ',') != -1;
+        return stringlist_find_P_P(reinterpret_cast<PGM_P>(_pluginConfig->web_templates), name.c_str(), ',') != -1;
     }
 
     bool canHandleForm(const String &name) const {
         if (!getOptions().has_config_forms) {
             return false;
         }
-        return stringlist_find_P_P(reinterpret_cast<PGM_P>(_config->config_forms), name.c_str(), ',') != -1;
+        return stringlist_find_P_P(reinterpret_cast<PGM_P>(_pluginConfig->config_forms), name.c_str(), ',') != -1;
     }
 
     PGM_P getConfigForms() const {
-        return _config->config_forms;
+        return _pluginConfig->config_forms;
     }
 
     bool hasWebUI() const {
@@ -334,7 +335,7 @@ private:
     friend KFCFWConfiguration;
 
     uint32_t _setupTime;
-    PGM_Config_t _config;
+    PGM_Config_t _pluginConfig;
     static DependencyVector *_dependencies;
 };
 

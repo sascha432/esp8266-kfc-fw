@@ -91,7 +91,7 @@ void MQTTAutoDiscovery::_create(ComponentType componentType, const String &name,
         _discovery.print(F("\"},"));
     }
 
-    _debug_printf_P(PSTR("MQTT auto discovery topic '%s', name %s, number %d\n"), _topic.c_str(), component->getComponentName(), component->getNumber());
+    __LDBG_printf("MQTT auto discovery topic '%s', name %s, number %d", _topic.c_str(), component->getComponentName(), component->getNumber());
 }
 
 void MQTTAutoDiscovery::addParameter(const __FlashStringHelper *name, const String &value)
@@ -187,7 +187,7 @@ void MQTTAutoDiscovery::finalize()
     } else {
         _discovery.remove(_discovery.length() - 4);
     }
-    _debug_printf_P(PSTR("MQTT auto discovery payload '%s'\n"), printable_string(_discovery.c_str(), _discovery.length(), DEBUG_MQTT_CLIENT_PAYLOAD_LEN).c_str());
+    __LDBG_printf("MQTT auto discovery payload '%s'", printable_string(_discovery.c_str(), _discovery.length(), DEBUG_MQTT_CLIENT_PAYLOAD_LEN).c_str());
 }
 
 PrintString &MQTTAutoDiscovery::getPayload()

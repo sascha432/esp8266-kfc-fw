@@ -14,6 +14,8 @@
 #include "plugins.h"
 #include "MQTTSensor.h"
 
+using KFCConfigurationClasses::Plugins;
+
 // convert ADC value to voltage
 #ifndef IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1
 #define IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1           68.0
@@ -78,7 +80,7 @@ private:
 
     JsonString _name;
     String _topic;
-    Config_Sensor::battery_t _config;
+    Plugins::Sensor::ConfigStructType::BatteryConfig_t _config;
     EventScheduler::Timer _timer;
     ReadADC _adc;
 };

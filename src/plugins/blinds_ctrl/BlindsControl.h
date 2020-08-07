@@ -203,6 +203,7 @@ protected:
                 case ActionStateType::WAIT_FOR_MOTOR:
                     if (_delay) {
                         _state = ActionStateType::DELAY;
+                        __LDBG_printf("delay=%u start=%lu", _delay, millis());
                         _delay += millis();
                         break;
                     }
@@ -244,7 +245,6 @@ protected:
     void _loopMethod();
 
 protected:
-    bool _isOpenOrClosed(ChannelType channel) const;
     NameType _getStateStr(ChannelType channel) const;
 
     void _readConfig();
@@ -289,6 +289,25 @@ protected:
     private:
         BlindsControl &_control;
     };
+
+    class ActionToChannel {
+    public:
+        ActionToChannel() : _for(ChannelType::NONE), _open(ChannelType::NONE), _close(ChannelType::NONE) {}
+        ActionToChannel(ActionType action, ChannelType channel);
+
+        bool isOpenValid() const {
+            return _open != ChannelType::NONE;
+        }
+        bool isCloseValid() const {
+            return _close != ChannelType::NONE;
+        }
+
+        ChannelType _for;
+        ChannelType _open;
+        ChannelType _close;
+    };
+
+    bool _cleanQueue();
 
     static String _getTopic(ChannelType channel, TopicType topic);
 

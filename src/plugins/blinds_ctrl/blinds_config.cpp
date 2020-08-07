@@ -23,9 +23,11 @@ namespace KFCConfigurationClasses {
 
         cfg.close[0].type = BlindsConfigOperation_t::cast_int_type(OperationType::OPEN_CHANNEL0);
         cfg.close[1].type = BlindsConfigOperation_t::cast_int_type(OperationType::OPEN_CHANNEL0_FOR_CHANNEL1);
-        cfg.close[2].type = BlindsConfigOperation_t::cast_int_type(OperationType::CLOSE_CHANNEL1);
+        cfg.close[2].type = BlindsConfigOperation_t::cast_int_type(OperationType::CLOSE_CHANNEL1_FOR_CHANNEL0);
         cfg.close[2].delay = 60;
-        cfg.close[3].type = BlindsConfigOperation_t::cast_int_type(OperationType::CLOSE_CHANNEL0);
+        cfg.close[3].type = BlindsConfigOperation_t::cast_int_type(OperationType::CLOSE_CHANNEL1);
+        cfg.close[3].delay = 60;
+        cfg.close[4].type = BlindsConfigOperation_t::cast_int_type(OperationType::CLOSE_CHANNEL0);
 
         setConfig(cfg);
         setChannel0Name(FSPGM(Turn));

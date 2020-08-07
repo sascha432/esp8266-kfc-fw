@@ -1271,8 +1271,8 @@ namespace KFCConfigurationClasses {
                 using Type = BlindsConfig_t;
 
                 BlindsConfigChannel_t channels[2];
-                BlindsConfigOperation_t open[4];
-                BlindsConfigOperation_t close[4];
+                BlindsConfigOperation_t open[6];
+                BlindsConfigOperation_t close[6];
                 uint8_t pins[5];
                 CREATE_ENUM_BITFIELD(multiplexer, MultiplexerType);
 

@@ -115,7 +115,7 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
 
     auto &autoGroup = form.addCardGroup(FSPGM(open, "open"), PrintString(F("Open Automation")), false);
 
-    for(size_t i = 0; i < 4; i++) {
+    for(size_t i = 0; i < sizeof(cfg.open) / sizeof(cfg.open[0]); i++) {
         String prefix = PrintString(F("oq%u_"), i);
         form.add(prefix + String('t'), _H_W_STRUCT_VALUE(cfg, open[i].type, i));
         form.addFormUI(FSPGM(Action, "Action"), operationTypeItems);
@@ -132,7 +132,7 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
 
     auto &closeGroup = autoGroup.end().addCardGroup(FSPGM(close), PrintString(F("Close Automation")), false);
 
-    for(size_t i = 0; i < 4; i++) {
+    for(size_t i = 0; i < sizeof(cfg.close) / sizeof(cfg.close[0]); i++) {
         String prefix = PrintString(F("cq%u_"), i);
         form.add(prefix + String('t'), _H_W_STRUCT_VALUE(cfg, close[i].type, i));
         form.addFormUI(FSPGM(Action), operationTypeItems);

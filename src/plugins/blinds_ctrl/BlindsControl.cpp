@@ -122,9 +122,7 @@ void BlindsControl::_publishState(MQTTClient *client)
         JsonUnnamedObject channels(kChannelCount);
         String binaryState = String('b');
 
-        if (_queue.empty()) {
-            client->publish(_getTopic(ChannelType::ALL, TopicType::STATE), true, String(_states[0].isOpen() || _states[1].isOpen() ? 1 : 0));
-        }
+        client->publish(_getTopic(ChannelType::ALL, TopicType::STATE), true, String(_states[0].isOpen() || _states[1].isOpen() ? 1 : 0));
 
         for(const auto channel: _states.channels()) {
             auto &state = _states[channel];
@@ -257,6 +255,9 @@ void BlindsControl::_startMotor(ChannelType channel, bool open)
 
 void BlindsControl::_monitorMotor(ChannelAction &action)
 {
+    if (!_motorTimeout.isActive()) {
+        __DBG_panic("motor timeout inactive");
+    }
     bool finished = false;
 
     _updateAdc();
@@ -290,76 +291,103 @@ void BlindsControl::_monitorMotor(ChannelAction &action)
     if (finished) {
         action.next();
         _stop();
+        if (_cleanQueue()) {
+            _saveState();
+        }
+        _publishState();
     }
+}
+
+BlindsControl::ActionToChannel::ActionToChannel(ActionType action, ChannelType channel) : ActionToChannel()
+{
+    switch(action) { // translate action into which channel to check and which to open/close
+        case ActionType::OPEN_CHANNEL0:
+            _for = channel == ChannelType::ALL ? ChannelType::ALL : ChannelType::CHANNEL0;
+            _open = ChannelType::CHANNEL0;
+            break;
+        case ActionType::OPEN_CHANNEL1:
+            _for = channel == ChannelType::ALL ? ChannelType::ALL : ChannelType::CHANNEL1;
+            _open = ChannelType::CHANNEL1;
+            break;
+        case ActionType::OPEN_CHANNEL0_FOR_CHANNEL1:
+            _for = ChannelType::CHANNEL1;
+            _open = ChannelType::CHANNEL0;
+            break;
+        case ActionType::OPEN_CHANNEL1_FOR_CHANNEL0:
+            _for = ChannelType::CHANNEL0;
+            _open = ChannelType::CHANNEL1;
+            break;
+        case ActionType::CLOSE_CHANNEL0:
+            _for = channel == ChannelType::ALL ? ChannelType::ALL : ChannelType::CHANNEL0;
+            _close = ChannelType::CHANNEL0;
+            break;
+        case ActionType::CLOSE_CHANNEL1:
+            _for = channel == ChannelType::ALL ? ChannelType::ALL : ChannelType::CHANNEL1;
+            _close = ChannelType::CHANNEL1;
+            break;
+        case ActionType::CLOSE_CHANNEL0_FOR_CHANNEL1:
+            _for = ChannelType::CHANNEL1;
+            _close = ChannelType::CHANNEL0;
+            break;
+        case ActionType::CLOSE_CHANNEL1_FOR_CHANNEL0:
+            _for = ChannelType::CHANNEL0;
+            _close = ChannelType::CHANNEL1;
+            break;
+        default:
+            break;
+    }
+}
+
+bool BlindsControl::_cleanQueue()
+{
+    // check queue for any actions left otherwise clear it
+    for(auto &action: _queue) {
+        switch(action.getState()) {
+            case ActionStateType::NONE: {
+                auto channel = action.getChannel();
+                ActionToChannel channels(action.getAction(), channel);
+                __LDBG_printf("action=%d channel=%u for=%d open=%d close=%d channel0=%s channel1=%s", action.getAction(), channel, channels._for, channels._open, channels._close, _states[0]._getFPStr(), _states[1]._getFPStr());
+                if (channel == channels._for) {
+                    if (channels.isOpenValid() && !_states[channels._open].isOpen()) {
+                        return false;
+                    }
+                    else if (channels.isCloseValid() && !_states[channels._close].isClosed()) {
+                        return false;
+                    }
+                }
+            } break;
+            case ActionStateType::START_MOTOR:
+            case ActionStateType::WAIT_FOR_MOTOR:
+                return false;
+            case ActionStateType::DELAY:
+            case ActionStateType::REMOVE:
+                // remove finished actions and delays
+                break;
+            default:
+                __LDBG_panic("state=%u", action.getState());
+                break;
+        }
+    }
+    __DBG_printf("clear queue size=%u", _queue.size());
+    _queue.clear();
+    return true;
 }
 
 void BlindsControl::_loopMethod()
 {
-#if 0
-    if (_motorTimeout.isActive()) {
-#if 1
-        if (_queue.empty()) {
-            __DBG_panic("active motor and queue empty");
-        }
-        if (_queue.getAction().getState() != ActionStateType::WAIT_FOR_MOTOR) {
-            __DBG_panic("state=%u", _queue.getAction().getState());
-        }
-#endif
-        _monitorMotor(_queue.getAction());
-        return;
-    }
-#endif
     if (!_queue.empty()) {
-        ChannelType forChannel = ChannelType::NONE;
-        ChannelType openChannel = ChannelType::NONE;
-        ChannelType closeChannel = ChannelType::NONE;
         auto &action = _queue.getAction();
         auto channel = action.getChannel();
         switch(action.getState()) {
-            case ActionStateType::NONE:
-                switch(action.getAction()) { // translate action into which channel to check and which to open/close
-                    case ActionType::OPEN_CHANNEL0:
-                        forChannel = channel == ChannelType::ALL ? ChannelType::ALL : ChannelType::CHANNEL0;
-                        openChannel = ChannelType::CHANNEL0;
-                        break;
-                    case ActionType::OPEN_CHANNEL1:
-                        forChannel = channel == ChannelType::ALL ? ChannelType::ALL : ChannelType::CHANNEL1;
-                        openChannel = ChannelType::CHANNEL1;
-                        break;
-                    case ActionType::OPEN_CHANNEL0_FOR_CHANNEL1:
-                        forChannel = ChannelType::CHANNEL1;
-                        openChannel = ChannelType::CHANNEL0;
-                        break;
-                    case ActionType::OPEN_CHANNEL1_FOR_CHANNEL0:
-                        forChannel = ChannelType::CHANNEL0;
-                        openChannel = ChannelType::CHANNEL1;
-                        break;
-                    case ActionType::CLOSE_CHANNEL0:
-                        forChannel = channel == ChannelType::ALL ? ChannelType::ALL : ChannelType::CHANNEL0;
-                        closeChannel = ChannelType::CHANNEL0;
-                        break;
-                    case ActionType::CLOSE_CHANNEL1:
-                        forChannel = channel == ChannelType::ALL ? ChannelType::ALL : ChannelType::CHANNEL1;
-                        closeChannel = ChannelType::CHANNEL1;
-                        break;
-                    case ActionType::CLOSE_CHANNEL0_FOR_CHANNEL1:
-                        forChannel = ChannelType::CHANNEL1;
-                        closeChannel = ChannelType::CHANNEL0;
-                        break;
-                    case ActionType::CLOSE_CHANNEL1_FOR_CHANNEL0:
-                        forChannel = ChannelType::CHANNEL0;
-                        closeChannel = ChannelType::CHANNEL1;
-                        break;
-                    default:
-                        break;
-                }
-                __LDBG_printf("action=%d channel=%u for=%d open=%d close=%d channel0=%s channel1=%s", action.getAction(), channel, forChannel, openChannel, closeChannel, _states[0]._getFPStr(), _states[1]._getFPStr());
-                if (channel == forChannel) {
-                    if (openChannel != ChannelType::NONE && !_states[openChannel].isOpen()) {
-                        action.begin(openChannel, true);
+            case ActionStateType::NONE: {
+                ActionToChannel channels(action.getAction(), channel);
+                __LDBG_printf("action=%d channel=%u for=%d open=%d close=%d channel0=%s channel1=%s", action.getAction(), channel, channels._for, channels._open, channels._close, _states[0]._getFPStr(), _states[1]._getFPStr());
+                if (channel == channels._for) {
+                    if (channels.isOpenValid() && !_states[channels._open].isOpen()) {
+                        action.begin(channels._open, true);
                     }
-                    else if (closeChannel != ChannelType::NONE && !_states[closeChannel].isClosed()) {
-                        action.begin(closeChannel, false);
+                    else if (channels.isCloseValid() && !_states[channels._close].isClosed()) {
+                        action.begin(channels._close, false);
                     }
                     else {
                         action.end();
@@ -368,22 +396,20 @@ void BlindsControl::_loopMethod()
                 else {
                     action.end();
                 }
-                break;
+            } break;
             case ActionStateType::START_MOTOR:
                 _startMotor(channel, action.getOpen());
                 action.next();
                 break;
             case ActionStateType::WAIT_FOR_MOTOR:
-                if (_motorTimeout.isActive()) {
-                    _monitorMotor(action);
-                }
+                _monitorMotor(action);
                 break;
             case ActionStateType::DELAY:
                 action.monitorDelay();
                 break;
             case ActionStateType::REMOVE:
                 _queue.removeAction(action);
-                if (_queue.empty()) {
+                if (_cleanQueue()) {
                     _publishState();
                     _saveState();
                 }
@@ -393,11 +419,6 @@ void BlindsControl::_loopMethod()
                 break;
         }
     }
-}
-
-bool BlindsControl::_isOpenOrClosed(ChannelType channel) const
-{
-    return ((_states[channel].isOpen() || _states[channel].isClosed()) && (_queue.empty() || (_activeChannel != channel)));
 }
 
 BlindsControl::NameType BlindsControl::_getStateStr(ChannelType channel) const

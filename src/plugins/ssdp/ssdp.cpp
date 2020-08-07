@@ -6,6 +6,12 @@
 #include "templates.h"
 #include "WiFiCallbacks.h"
 
+#if DEBUG_SSDP
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
+#endif
+
 using KFCConfigurationClasses::System;
 
 static SSDPPlugin plugin;
@@ -68,7 +74,7 @@ void SSDPPlugin::_begin()
     SSDP.setManufacturerURL(F("https://github.com/sascha432"));
     SSDP.setURL(String('/'));
     _running = SSDP.begin();
-    __DBG_printf("SSDP=%u", _running);
+    __LDBG_printf("SSDP=%u", _running);
 }
 
 void SSDPPlugin::_end()

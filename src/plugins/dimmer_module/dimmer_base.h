@@ -39,6 +39,8 @@ using DimmerTwoWireClass = TwoWire;
 #error requires IOT_ALARM_PLUGIN_ENABLED=1 or IOT_ATOMIC_SUN_V2=1
 #endif
 
+using KFCConfigurationClasses::Plugins;
+
 class DimmerTwoWireEx : public DimmerTwoWireClass
 {
 public:
@@ -152,10 +154,10 @@ protected:
     Sensor_DimmerMetrics *getMetricsSensor() const;
 
     inline float getFadeTime() {
-        return _fadeTime;
+        return _config.fade_time;
     }
     inline float getOnOffFadeTime() {
-        return _onOffFadeTime;
+        return _config.on_off_fade_time;
     }
 
 protected:
@@ -172,8 +174,7 @@ protected:
 
     Version _version;
     DimmerMetrics _metrics;
-    float _fadeTime;
-    float _onOffFadeTime;
+    Plugins::DimmerConfig::DimmerConfig_t _config;
 
 #if IOT_DIMMER_MODULE_INTERFACE_UART
     DimmerTwoWireEx _wire;

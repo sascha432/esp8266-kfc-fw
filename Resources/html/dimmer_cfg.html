@@ -25,19 +25,10 @@
     </nav>
     <!--NAV%%-->
     <div class="container">
-        <form method="POST" action="dimmer_cfg.html" id="dimmer_settings">
+        <form method="POST" action="dimmer_cfg.html">
 			%FORM_HTML%
 		</form>
-		<br><br><br>
-        <div class="form-group">
-            <textarea id="hass_yaml" style="width:100%%;height:40px" class="form-control" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"># Home Assistant YAML Code
-
-%HASS_YAML%</textarea>
-		</div>
-		<div class="form-group">
-			<button type="button" class="btn btn-primary" id="reset_firmware">Reset Firmware...</button>
-		</div>
-	<!--%%FOOT-->
+		<!--%%FOOT-->
         <div class="row">
             <div class="col footer">&nbsp;</div>
         </div>
@@ -53,6 +44,7 @@
 	<!--JAVASCRIPT%%-->
 	<script>
 		$(function() {
+			$('#dimmer_settings').find('button[type=submit]').parent().append('<button type="button" class="btn btn-secondary ml-3" id="reset_firmware">Reset Firmware...</button>');
 			$('#reset_firmware').on('click', function(event) {
 				event.preventDefault();
 				$.get('/dimmer_rstfw.html', function(data) {

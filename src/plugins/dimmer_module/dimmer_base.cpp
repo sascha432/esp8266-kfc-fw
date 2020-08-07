@@ -5,6 +5,7 @@
 #include "dimmer_base.h"
 #include <KFCJson.h>
 #include <ESPAsyncWebServer.h>
+#include <kfc_fw_config.h>
 #include "WebUISocket.h"
 #include "WebUIAlerts.h"
 #include "../mqtt/mqtt_client.h"
@@ -24,10 +25,6 @@
 #else
 #include <debug_helper_disable.h>
 #endif
-
-DimmerModule::DimmerModule() : cfg({}), config_valid(false) {
-}
-
 
 Dimmer_Base::Dimmer_Base() :
 #if IOT_DIMMER_MODULE_INTERFACE_UART
@@ -72,9 +69,6 @@ void Dimmer_Base::_begin()
 #endif
 
     readConfig();
-    auto dimmer = config._H_GET(Config().dimmer);
-    _fadeTime = dimmer.fade_time;
-    _onOffFadeTime = dimmer.on_off_fade_time;
 
     if (_wire.lock()) {
         _wire.beginTransmission(DIMMER_I2C_ADDRESS);
@@ -116,23 +110,23 @@ void Dimmer_Base::_end()
 
 void Dimmer_Base::onData(Stream &client)
 {
-    // _debug_printf_P(PSTR("length=%u\n"), len);
+    // __LDBG_printf("length=%u", len);
     while(client.available()) {
-        // _debug_printf_P(PSTR("feed=%u '%c'\n"), *buffer, *buffer);
+        // __LDBG_printf("feed=%u '%c'", *buffer, *buffer);
         dimmer_plugin._wire.feed(client.read());
     }
 }
 
 void Dimmer_Base::onReceive(int length)
 {
-    // _debug_printf_P(PSTR("length=%u\n"), length);
+    // __LDBG_printf("length=%u", length);
     dimmer_plugin._onReceive(length);
 }
 
 void Dimmer_Base::_onReceive(size_t length)
 {
     auto type = _wire.read();
-    _debug_printf_P(PSTR("length=%u type=%02x\n"), length, type);
+    __LDBG_printf("length=%u type=%02x", length, type);
 
     if (type == DIMMER_METRICS_REPORT && length >= sizeof(dimmer_metrics_t) + 1) {
         dimmer_metrics_t metrics;
@@ -181,12 +175,12 @@ void Dimmer_Base::_fetchMetrics()
 
 void Dimmer_Base::readConfig()
 {
-    auto &dimmer = config._H_W_GET(Config().dimmer);
-    dimmer.config_valid = false;
+    _config = Plugins::Dimmer::getConfig();
+    _config.config_valid = false;
 
     for(uint8_t i = 0; i < 3; i++) {
 
-        _debug_printf_P(PSTR("attempt=%u\n"), i);
+        __LDBG_printf("attempt=%u", i);
 
         if (_wire.lock()) {
             register_mem_cfg_t cfg;
@@ -199,17 +193,21 @@ void Dimmer_Base::readConfig()
                 (_wire.requestFrom(DIMMER_I2C_ADDRESS, DIMMER_REGISTER_CONFIG_SZ) == sizeof(cfg)) &&
                 (_wire.read(cfg) == sizeof(cfg))
             ) {
-                dimmer.config_valid = true;
-                dimmer.cfg = cfg;
+                _config.config_valid = true;
+                _config.fw = cfg;
                 _wire.unlock();
                 _debug_println(F("read success"));
                 return;
             }
             else {
-                dimmer.cfg = {};
+                _config.fw = {};
             }
         }
         _wire.unlock();
+
+        if (!can_yield()) {
+            break;
+        }
 
         delay(50);
     }
@@ -219,36 +217,38 @@ void Dimmer_Base::readConfig()
 
 void Dimmer_Base::writeConfig()
 {
-    auto dimmer = config._H_GET(Config().dimmer);
-
-    if (!dimmer.config_valid) { // readConfig() was not successful
-        _debug_println(F("invalid config"));
+    if (!_config.config_valid) { // readConfig() was not successful
+        __LDBG_print("invalid config");
         WebUIAlerts_error(F("Cannot write firmware configuration"), AlertMessage::ExpiresType::REBOOT);
         return;
     }
 
-    dimmer.cfg.fade_in_time = dimmer.fade_time;
+    _config.fw.fade_in_time = _config.fade_time;
 
     for(uint8_t i = 0; i < 3; i++) {
 
-        _debug_printf_P(PSTR("attempt=%u\n"), i);
+        __LDBG_printf("attempt=%u", i);
 
         if (_wire.lock()) {
             _wire.beginTransmission(DIMMER_I2C_ADDRESS);
             _wire.write(DIMMER_REGISTER_CONFIG_OFS);
-            _wire.write(dimmer.cfg);
+            _wire.write(_config.fw);
             if (_wire.endTransmission() == 0) {
                 writeEEPROM(true);
                 _wire.unlock();
-                _debug_println(F("write success"));
+                __LDBG_print("write success");
                 return;
             }
         }
         _wire.unlock();
 
+        if (!can_yield()) {
+            break;
+        }
+
         delay(50);
     }
-    _debug_println(F("write failed"));
+    __LDBG_print("write failed");
     WebUIAlerts_error(F("Writing firmware configuration failed"), AlertMessage::ExpiresType::REBOOT);
 }
 
@@ -297,7 +297,7 @@ void Dimmer_Base::_updateMetrics(const dimmer_metrics_t &metrics)
 
 void Dimmer_Base::_fade(uint8_t channel, int16_t toLevel, float fadeTime)
 {
-    _debug_printf_P(PSTR("channel=%u toLevel=%u fadeTime=%f\n"), channel, toLevel, fadeTime);
+    __LDBG_printf("channel=%u toLevel=%u fadeTime=%f", channel, toLevel, fadeTime);
 
     if (_wire.lock()) {
         _wire.beginTransmission(DIMMER_I2C_ADDRESS);
@@ -352,7 +352,7 @@ Sensor_DimmerMetrics *Dimmer_Base::getMetricsSensor() const
 
 void Dimmer_Base::writeEEPROM(bool noLocking)
 {
-    _debug_printf_P(PSTR("noLocking=%d\n"), noLocking);
+    __LDBG_printf("noLocking=%d", noLocking);
     if (noLocking || _wire.lock()) {
         _wire.beginTransmission(DIMMER_I2C_ADDRESS);
         _wire.write(DIMMER_REGISTER_COMMAND);
@@ -400,11 +400,11 @@ void Dimmer_Base::_getValues(JsonArray &array)
 
 void Dimmer_Base::_setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
 {
-    _debug_printf_P(PSTR("id=%s\n"), id.c_str());
+    __LDBG_printf("id=%s", id.c_str());
 
     if (String_startsWith(id, PSTR("dimmer_channel"))) {
         uint8_t channel = id[14] - '0';
-        _debug_printf_P(PSTR("channel=%d hasValue=%d value=%d hasState=%d state=%d\n"), channel, hasValue, value.toInt(), hasState, state);
+        __LDBG_printf("channel=%d hasValue=%d value=%d hasState=%d state=%d", channel, hasValue, value.toInt(), hasState, state);
 
         if (channel < getChannelCount()) {
             if (hasState) {
@@ -423,7 +423,7 @@ void Dimmer_Base::_setValue(const String &id, const String &value, bool hasValue
 
 void Dimmer_Base::setupWebServer()
 {
-    _debug_printf_P(PSTR("server=%p\n"), WebServerPlugin::getWebServerObject());
+    __LDBG_printf("server=%p", WebServerPlugin::getWebServerObject());
     WebServerPlugin::addHandler(F("/dimmer_rstfw.html"), Dimmer_Base::handleWebServer);
 }
 

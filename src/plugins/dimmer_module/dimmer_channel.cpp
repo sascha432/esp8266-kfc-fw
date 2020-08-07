@@ -73,8 +73,8 @@ void DimmerChannel::onConnect(MQTTClient *client)
 {
     _createTopics();
 
-    _debug_printf_P(PSTR("DimmerChannel[%u]::subscribe(%s)\n"), _channel, _data.state.set.c_str());
-    _debug_printf_P(PSTR("DimmerChannel[%u]::subscribe(%s)\n"), _channel, _data.brightness.set.c_str());
+    __LDBG_printf("DimmerChannel[%u]::subscribe(%s)", _channel, _data.state.set.c_str());
+    __LDBG_printf("DimmerChannel[%u]::subscribe(%s)", _channel, _data.brightness.set.c_str());
 
     client->subscribe(this, _data.state.set);
     client->subscribe(this, _data.brightness.set);
@@ -84,7 +84,7 @@ void DimmerChannel::onConnect(MQTTClient *client)
 
 void DimmerChannel::onMessage(MQTTClient *client, char *topic, char *payload, size_t len)
 {
-    _debug_printf_P(PSTR("DimmerChannel[%u]::onMessage(%s)\n"), _channel, topic);
+    __LDBG_printf("DimmerChannel[%u]::onMessage(%s)", _channel, topic);
 
     int value = atoi(payload);
     if (_data.state.set.equals(topic)) {
@@ -158,7 +158,7 @@ void DimmerChannel::publishState(MQTTClient *client)
         client = MQTTClient::getClient();
     }
     if (client && client->isConnected()) {
-        _debug_printf_P(PSTR("DimmerChannel[%u]::publishState(): brightness %d, state %u, client %p\n"), _channel, _data.brightness.value, _data.state.value, client);
+        __LDBG_printf("DimmerChannel[%u]::publishState(): brightness %d, state %u, client %p", _channel, _data.brightness.value, _data.state.value, client);
 
         client->publish(_data.state.state, true, String(_data.state.value));
         client->publish(_data.brightness.state, true, String(_data.brightness.value));

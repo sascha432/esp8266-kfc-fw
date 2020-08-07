@@ -189,7 +189,8 @@ public:
     virtual void reconfigure(const String &source) override;
     virtual void shutdown() override;
     virtual void getStatus(Print &output) override;
-    virtual void createConfigureForm(PluginComponent::FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request);
+    virtual void createMenu() override;
+    virtual void createConfigureForm(PluginComponent::FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request) override;
 
 // WebUI
 public:

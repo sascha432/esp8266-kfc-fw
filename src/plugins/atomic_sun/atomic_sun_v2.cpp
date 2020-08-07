@@ -9,6 +9,7 @@
 #include "../include/templates.h"
 #include "LoopFunctions.h"
 #include "plugins.h"
+#include "plugins_menu.h"
 #include "atomic_sun_v2.h"
 #include "../dimmer_module/dimmer_module_form.h"
 #include "SerialTwoWire.h"
@@ -38,11 +39,10 @@ Driver_4ChDimmer::Driver_4ChDimmer() :
 void Driver_4ChDimmer::readConfig()
 {
     Dimmer_Base::readConfig();
-    auto dimmer = config._H_GET(Config().dimmer);
-    channel_ww1 = dimmer.channel_mapping[0];
-    channel_ww2 = dimmer.channel_mapping[1];
-    channel_cw1 = dimmer.channel_mapping[2];
-    channel_cw2 = dimmer.channel_mapping[3];
+    channel_ww1 = _config.channel_mapping[0];
+    channel_ww2 = _config.channel_mapping[1];
+    channel_cw1 = _config.channel_mapping[2];
+    channel_cw2 = _config.channel_mapping[3];
 }
 
 void Driver_4ChDimmer::_begin()
@@ -188,7 +188,7 @@ void Driver_4ChDimmer::onConnect(MQTTClient *client)
 void Driver_4ChDimmer::onMessage(MQTTClient *client, char *topic, char *payload, size_t len)
 {
     int value = atoi(payload);
-    _debug_printf_P(PSTR("topic=%s value=%d\n"), topic, value);
+    __LDBG_printf("topic=%s value=%d", topic, value);
 
     if (_data.state.set.equals(topic)) {
 
@@ -295,7 +295,7 @@ void Driver_4ChDimmer::onMessage(MQTTClient *client, char *topic, char *payload,
 
 void Driver_4ChDimmer::_setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
 {
-    _debug_printf_P(PSTR("id=%s value=%s hasValue=%u state=%u hasState=%u\n"), id.c_str(), value.c_str(), hasValue, state, hasState);
+    __LDBG_printf("id=%s value=%s hasValue=%u state=%u hasState=%u", id.c_str(), value.c_str(), hasValue, state, hasState);
 
     auto ptr = id.c_str();
     if (!strncmp_P(ptr, PSTR("dimmer_"), 7)) {
@@ -502,7 +502,7 @@ void Driver_4ChDimmer::_channelsToBrightness()
         _data.state.value = false;
     }
     _calcRatios();
-    _debug_printf_P(PSTR("ww=%u,%u cw=%u,%u = brightness=%u color=%f ratio=%f,%f\n"),
+    __LDBG_printf("ww=%u,%u cw=%u,%u = brightness=%u color=%f ratio=%f,%f",
         _channels[channel_ww1],
         _channels[channel_ww2],
         _channels[channel_cw1],
@@ -524,7 +524,7 @@ void Driver_4ChDimmer::_brightnessToChannels()
     _channels[channel_ww1] = ww - _channels[channel_ww2];
     _channels[channel_cw2] = cw / _ratio[1];
     _channels[channel_cw1] = cw - _channels[channel_cw2];
-    _debug_printf_P(PSTR("brightness=%u color=%f(%f) = ww=%u,%u cw=%u,%u, ratio=%f,%f\n"),
+    __LDBG_printf("brightness=%u color=%f(%f) = ww=%u,%u cw=%u,%u, ratio=%f,%f",
         _data.brightness.value,
         _data.color.value,
         color,
@@ -550,7 +550,7 @@ void Driver_4ChDimmer::_calcRatios()
 {
     _ratio[0] = _channels[channel_ww2] ? ((_channels[channel_ww1] + _channels[channel_ww2]) / (float)_channels[channel_ww2]) : (_channels[channel_ww1] ? INFINITY : 2);
     _ratio[1] = _channels[channel_cw2] ? ((_channels[channel_cw1] + _channels[channel_cw2]) / (float)_channels[channel_cw2]) : (_channels[channel_cw1] ? INFINITY : 2);
-    _debug_printf_P(PSTR("ratio=%f ratio=%f\n"), _ratio[0], _ratio[1]);
+    __LDBG_printf("ratio=%f ratio=%f", _ratio[0], _ratio[1]);
 }
 
 int16_t Driver_4ChDimmer::getChannel(uint8_t channel) const
@@ -565,7 +565,7 @@ bool Driver_4ChDimmer::getChannelState(uint8_t channel) const
 
 void Driver_4ChDimmer::setChannel(uint8_t channel, int16_t level, float time)
 {
-    _debug_printf_P(PSTR("channel=%u level=%u time=%f locked=%u\n"), channel, level, time, _data.lockChannels.value);
+    __LDBG_printf("channel=%u level=%u time=%f locked=%u", channel, level, time, _data.lockChannels.value);
     _channels[channel] = level;
     if (_data.lockChannels.value) {
         if (channel == channel_ww1) {
@@ -593,7 +593,7 @@ void Driver_4ChDimmer::_setChannels(float fadetime)
         fadetime = getFadeTime();
     }
 
-    _debug_printf_P(PSTR("channels=%s state=%u\n"), implode(',', _channels).c_str(), _data.state.value);
+    __LDBG_printf("channels=%s state=%u", implode(',', _channels).c_str(), _data.state.value);
     for(uint8_t i = 0; i < MAX_CHANNELS; i++) {
         if (_channels[i] > MIN_LEVEL) {
             _storedChannels[i] = _channels[i];
@@ -615,7 +615,7 @@ void Driver_4ChDimmer::_getChannels()
         if (_wire.endTransmission() == 0) {
             if (_wire.requestFrom(DIMMER_I2C_ADDRESS, sizeof(_channels)) == sizeof(_channels)) {
                 _wire.read(_channels);
-                _debug_printf_P(PSTR("channels=%s\n"), implode(',', _channels).c_str());
+                __LDBG_printf("channels=%s", implode(',', _channels).c_str());
             }
         }
         _wire.unlock();
@@ -639,7 +639,7 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     "mqtt,http",        // reconfigure_dependencies
     PluginComponent::PriorityType::ATOMIC_SUN,
     PluginComponent::RTCMemoryId::NONE,
-    static_cast<uint8_t>(PluginComponent::MenuType::AUTO),
+    static_cast<uint8_t>(PluginComponent::MenuType::CUSTOM),
     false,              // allow_safe_mode
     false,              // setup_after_deep_sleep
     true,               // has_get_status
@@ -672,15 +672,17 @@ void AtomicSunPlugin::reconfigure(const String &source)
     }
     else {
         writeConfig();
-        auto dimmer = config._H_GET(Config().dimmer);
-        _fadeTime = dimmer.fade_time;
-        _onOffFadeTime = dimmer.on_off_fade_time;
     }
 }
 
 void AtomicSunPlugin::shutdown()
 {
     _end();
+}
+
+void AtomicSunPlugin::createMenu()
+{
+    bootstrapMenu.addSubMenu(getFriendlyName(), F("dimmer_cfg.html"), navMenu.config);
 }
 
 void AtomicSunPlugin::createWebUI(WebUI &webUI)

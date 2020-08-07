@@ -12,7 +12,7 @@
         "default": "Set-Cookie"
     },
     "mime_text_plain": {
-        "use_counter": 17,
+        "use_counter": 18,
         "default": "text/plain"
     },
     "null": {
@@ -44,7 +44,7 @@
         "default": "Invalid hostname or IP address"
     },
     "webui_json_id": {
-        "use_counter": 22,
+        "use_counter": 32,
         "default": "id"
     },
     "webui_json_name": {
@@ -64,11 +64,11 @@
         "default": "offset"
     },
     "webui_json_value": {
-        "use_counter": 22,
+        "use_counter": 32,
         "default": "value"
     },
     "webui_json_state": {
-        "use_counter": 15,
+        "use_counter": 25,
         "default": "state"
     },
     "mime_application_json": {
@@ -548,7 +548,7 @@
         "default": "Detected eth address %s"
     },
     "stk500v1_log_file": {
-        "use_counter": 4,
+        "use_counter": 5,
         "default": "/stk500v1/debug.log"
     },
     "stk500v1_sig_file": {
@@ -848,7 +848,7 @@
         "default": "cfg"
     },
     "wifi": {
-        "use_counter": 1,
+        "use_counter": 2,
         "default": "wifi"
     },
     "safe_mode": {
@@ -984,7 +984,7 @@
         "default": "This fields value must be 0 or between %min% and %max%"
     },
     "network": {
-        "use_counter": 1,
+        "use_counter": 2,
         "default": "network"
     },
     "device": {
@@ -1052,11 +1052,11 @@
         "default": "n/a"
     },
     "stk500v1_tmp_file": {
-        "use_counter": 0,
+        "use_counter": 2,
         "default": "/stk500v1/firmware_tmp.hex"
     },
     "iot_sensor_hlw80xx_state_file": {
-        "use_counter": 0,
+        "use_counter": 2,
         "default": "/.pvt/hlw80xx.state"
     },
     "seconds": {
@@ -1096,7 +1096,7 @@
         "default": "storage"
     },
     "image_type": {
-        "use_counter": 2,
+        "use_counter": 3,
         "default": "image_type"
     },
     "id": {
@@ -1144,19 +1144,19 @@
         "default": "brightness"
     },
     "_degreeC": {
-        "use_counter": 8,
+        "use_counter": 12,
         "default": "\\u00b0C"
     },
     "vcc": {
-        "use_counter": 0,
+        "use_counter": 2,
         "default": "vcc"
     },
     "frequency": {
-        "use_counter": 0,
+        "use_counter": 2,
         "default": "frequency"
     },
     "Hz": {
-        "use_counter": 0,
+        "use_counter": 2,
         "default": "Hz"
     },
     "light_sensor": {
@@ -1376,7 +1376,7 @@
         "default": "size"
     },
     "_serial_console_html": {
-        "use_counter": 1,
+        "use_counter": 2,
         "default": "/serial_console.html"
     },
     "description_xml": {
@@ -1822,5 +1822,33 @@
     "Auto": {
         "use_counter": 2,
         "default": "Auto"
+    },
+    "power": {
+        "use_counter": 5,
+        "default": "power"
+    },
+    "energy_total": {
+        "use_counter": 5,
+        "default": "energy_total"
+    },
+    "energy": {
+        "use_counter": 5,
+        "default": "energy"
+    },
+    "kWh": {
+        "use_counter": 5,
+        "default": "kWh"
+    },
+    "voltage": {
+        "use_counter": 5,
+        "default": "voltage"
+    },
+    "current": {
+        "use_counter": 5,
+        "default": "current"
+    },
+    "pf": {
+        "use_counter": 5,
+        "default": "pf"
     }
 }

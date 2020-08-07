@@ -17,7 +17,7 @@
 #include <PrintHtmlEntitiesString.h>
 #include <WebUIComponent.h>
 #include <array>
-#include "kfc_fw_config.h"
+#include <kfc_fw_config.h>
 #include "./plugins/mqtt/mqtt_client.h"
 #include "serial_handler.h"
 #include "dimmer_module_form.h"

@@ -31,7 +31,7 @@ void DimmerModuleForm::_createConfigureForm(PluginComponent::FormCallbackType ty
 
     auto &ui = form.getFormUIConfig();
     ui.setTitle(F("Dimmer Configuration"));
-    ui.setContainerId(F("dimmer_setttings"));
+    ui.setContainerId(F("dimmer_settings"));
     ui.setStyle(FormUI::StyleType::ACCORDION);
 
     auto &mainGroup = form.addCardGroup(FSPGM(config), String());
@@ -50,23 +50,85 @@ void DimmerModuleForm::_createConfigureForm(PluginComponent::FormCallbackType ty
     form.add<bool>(F("restore"), _H_W_STRUCT_VALUE(cfg, fw.bits.restore_level));
     form.addFormUI(F("After Power Failure"), FormUI::ConditionalAttribute(cfg.config_valid, FSPGM(disabled), FSPGM(disabled)), FormUI::BoolItems(F("Restore last brightness level"), F("Do not turn on")));
 
+    mainGroup.end();
+
 #if IOT_ATOMIC_SUN_V2
-    auto channelErrorMsg = String(F("Channel out of range: %min%-%max%"));
+
+    auto &channelsGroup = form.addCardGroup(FSPGM(channels), F("Channels"), false);
+
     form.add<int8_t>(F("channel0"), _H_W_STRUCT_VALUE_TYPE(cfg, channel_mapping[0], int8_t));
     form.addFormUI(F("Channel Warm White 1"), FormUI::PlaceHolder(IOT_ATOMIC_SUN_CHANNEL_WW1));
-    form.addValidator(FormRangeValidator(channelErrorMsg, 0, 3));
+    form.addValidator(FormRangeValidator(0, 3));
+
     form.add<int8_t>(F("channel1"), _H_W_STRUCT_VALUE_TYPE(cfg, channel_mapping[1], int8_t));
     form.addFormUI(F("Channel Warm White 2"), FormUI::PlaceHolder(IOT_ATOMIC_SUN_CHANNEL_WW2));
-    form.addValidator(FormRangeValidator(channelErrorMsg, 0, 3));
+    form.addValidator(FormRangeValidator(0, 3));
+
     form.add<int8_t>(F("channel2"), _H_W_STRUCT_VALUE_TYPE(cfg, channel_mapping[2], int8_t));
     form.addFormUI(F("Channel Cold White 1"), FormUI::PlaceHolder(IOT_ATOMIC_SUN_CHANNEL_CW1));
-    form.addValidator(FormRangeValidator(channelErrorMsg, 0, 3));
+
+    form.addValidator(FormRangeValidator(0, 3));
     form.add<int8_t>(F("channel3"), _H_W_STRUCT_VALUE_TYPE(cfg, channel_mapping[3], int8_t));
     form.addFormUI(F("Channel Cold White 2"), FormUI::PlaceHolder(IOT_ATOMIC_SUN_CHANNEL_CW2));
-    form.addValidator(FormRangeValidator(channelErrorMsg, 0, 3));
+    form.addValidator(FormRangeValidator(0, 3));
+
+    channelsGroup.end();
+
 #endif
 
-    auto &fwGroup = mainGroup.end().addCardGroup(F("fwcfg"), F("Advanced Firmware Configuration"), false);
+#if IOT_DIMMER_MODULE_HAS_BUTTONS
+
+    auto &buttonGroup = form.addCardGroup(F("btncfg"), F("Buttons"), false);
+
+    form.add<uint16_t>(F("sptime"), _H_W_STRUCT_VALUE(cfg, shortpress_time));
+    form.addFormUI(F("Short Press Time"), FormUI::Suffix(FSPGM(milliseconds)), FormUI::PlaceHolder(250));
+    form.addValidator(FormRangeValidator(50, 1000));
+
+    form.add<uint16_t>(F("lptime"), _H_W_STRUCT_VALUE(cfg, longpress_time));
+    form.addFormUI(F("Long Press Time"), FormUI::Suffix(FSPGM(milliseconds)), FormUI::PlaceHolder(600));
+    form.addValidator(FormRangeValidator(250, 2000));
+
+    form.add<uint16_t>(F("rtime"), _H_W_STRUCT_VALUE(cfg, repeat_time));
+    form.addFormUI(F("Hold/Repeat Time"), FormUI::Suffix(FSPGM(milliseconds)), FormUI::PlaceHolder(150));
+    form.addValidator(FormRangeValidator(50, 500));
+
+    form.add<uint8_t>(F("sstep"), _H_W_STRUCT_VALUE(cfg, shortpress_step));
+    form.addFormUI(F("Brightness Steps"), FormUI::Suffix('%'), FormUI::PlaceHolder(5));
+    form.addValidator(FormRangeValidator(1, 100));
+
+    form.add<uint16_t>(F("snrt"), _H_W_STRUCT_VALUE(cfg, shortpress_no_repeat_time));
+    form.addFormUI(F("Short Press Down = Off/No Repeat Time"), FormUI::Suffix(FSPGM(milliseconds)), FormUI::PlaceHolder(800));
+    form.addValidator(FormRangeValidator(250, 2500));
+
+    form.add<uint8_t>(F("minbr"), _H_W_STRUCT_VALUE(cfg, min_brightness));
+    form.addFormUI(F("Min. Brightness"), FormUI::Suffix('%'), FormUI::PlaceHolder(15));
+    form.addValidator(FormRangeValidator(0, 100));
+
+    form.add<uint8_t>(F("lpmaxb"), _H_W_STRUCT_VALUE(cfg, longpress_max_brightness));
+    form.addFormUI(F("Long Press Up/Max. Brightness"), FormUI::Suffix('%'), FormUI::PlaceHolder(100));
+    form.addValidator(FormRangeValidator(0, 100));
+
+    form.add<uint8_t>(F("lpminb"), _H_W_STRUCT_VALUE(cfg, longpress_min_brightness));
+    form.addFormUI(F("Long Press Down/Min. Brightness"), FormUI::Suffix('%'), FormUI::PlaceHolder(33));
+    form.addValidator(FormRangeValidator(0, 100));
+
+    form.add<float>(F("spft"), _H_W_STRUCT_VALUE(cfg, shortpress_fadetime));
+    form.addFormUI(F("Short Press Fade Time"), FormUI::Suffix(FSPGM(seconds)), FormUI::PlaceHolder(1.0, 1));
+
+    form.add<float>(F("lpfd"), _H_W_STRUCT_VALUE(cfg, longpress_fadetime));
+    form.addFormUI(F("Long Press Fade Time"), FormUI::Suffix(FSPGM(seconds)), FormUI::PlaceHolder(5.0, 1));
+
+    form.add<uint8_t>(F("pin0"), _H_W_STRUCT_VALUE_TYPE(cfg, pins[0], uint8_t));
+    form.addFormUI(F("Button Up Pin #"));
+
+    form.add<uint8_t>(F("pin1"), _H_W_STRUCT_VALUE_TYPE(cfg, pins[1], uint8_t));
+    form.addFormUI(F("Button Down Pin #"));
+
+    buttonGroup.end();
+
+#endif
+
+    auto &fwGroup = form.addCardGroup(F("fwcfg"), F("Advanced Firmware Configuration"), false);
 
     form.add<uint8_t>(F("max_temp"), _H_W_STRUCT_VALUE(cfg, fw.max_temp));
     form.addFormUI(F("Max. Temperature"), FormUI::ConditionalAttribute(cfg.config_valid, FSPGM(disabled), FSPGM(disabled)), FormUI::PlaceHolder(80), FormUI::Suffix(FSPGM(_degreeC)));
@@ -105,53 +167,6 @@ void DimmerModuleForm::_createConfigureForm(PluginComponent::FormCallbackType ty
     form.addFormUI(F("Temperature Offset 2 (ATmega)"), FormUI::ConditionalAttribute(cfg.config_valid, FSPGM(disabled), FSPGM(disabled)), FormUI::PlaceHolder(0), FormUI::Suffix(FSPGM(_degreeC)));
 
     fwGroup.end();
-
-#if IOT_DIMMER_MODULE_HAS_BUTTONS
-
-    auto &buttonGroup = form.addCardGroup(F("btncfg"), F("Buttons"), false);
-
-    form.add<uint16_t>(F("sptime"), _H_STRUCT_VALUE(Config().dimmer_buttons, shortpress_time))->setFormUI(new FormUI::UI(FormUI::Type::TEXT, F("Short Press Time")))->setPlaceholder(String(250))->setSuffix(FSPGM(milliseconds)));
-    form.addValidator(FormRangeValidator(FSPGM(Invalid_time, "Invalid time"), 50, 1000));
-
-    form.add<uint16_t>(F("lptime"), _H_STRUCT_VALUE(Config().dimmer_buttons, longpress_time))->setFormUI(new FormUI::UI(FormUI::Type::TEXT, F("Long Press Time")))->setPlaceholder(String(600))->setSuffix(FSPGM(milliseconds)));
-    form.addValidator(FormRangeValidator(FSPGM(Invalid_time), 250, 2000));
-
-    form.add<uint16_t>(F("rtime"), _H_STRUCT_VALUE(Config().dimmer_buttons, repeat_time))->setFormUI(new FormUI::UI(FormUI::Type::TEXT, F("Hold/Repeat Time")))->setPlaceholder(String(150))->setSuffix(FSPGM(milliseconds)));
-    form.addValidator(FormRangeValidator(FSPGM(Invalid_time), 50, 500));
-
-    form.add<uint8_t>(F("sstep"), _H_STRUCT_VALUE(Config().dimmer_buttons, shortpress_step))->setFormUI(new FormUI::UI(FormUI::Type::TEXT, F("Brightness Steps")))->setPlaceholder(String(5))->setSuffix(String('%')));
-    form.addValidator(FormRangeValidator(F("Invalid level"), 1, 100));
-
-    form.add<uint16_t>(F("snrt"), _H_STRUCT_VALUE(Config().dimmer_buttons, shortpress_no_repeat_time))->setFormUI(new FormUI::UI(FormUI::Type::TEXT, F("Short Press Down = Off/No Repeat Time")))->setPlaceholder(String(800))->setSuffix(FSPGM(milliseconds)));
-    form.addValidator(FormRangeValidator(FSPGM(Invalid_time), 250, 2500));
-
-    form.add<uint8_t>(F("minbr"), _H_STRUCT_VALUE(Config().dimmer_buttons, min_brightness))->setFormUI(new FormUI::UI(FormUI::Type::TEXT, F("Min. Brightness")))->setPlaceholder(String(15))->setSuffix(String('%')));
-    form.addValidator(FormRangeValidator(FSPGM(Invalid_brightness, "Invalid brightness"), 0, 100));
-
-    form.add<uint8_t>(F("lpmaxb"), _H_STRUCT_VALUE(Config().dimmer_buttons, longpress_max_brightness))->setFormUI(new FormUI::UI(FormUI::Type::TEXT, F("Long Press Up/Max. Brightness")))->setPlaceholder(String(100))->setSuffix('%'));
-    form.addValidator(FormRangeValidator(FSPGM(Invalid_brightness), 0, 100));
-
-    form.add<uint8_t>(F("lpminb"), _H_STRUCT_VALUE(Config().dimmer_buttons, longpress_min_brightness))->setFormUI(new FormUI::UI(FormUI::Type::TEXT, F("Long Press Down/Min. Brightness")))->setPlaceholder(String(33))->setSuffix('%'));
-    form.addValidator(FormRangeValidator(FSPGM(Invalid_brightness), 0, 100));
-
-    form.add<float>(F("spft"), _H_STRUCT_VALUE(Config().dimmer_buttons, shortpress_fadetime))->setFormUI(new FormUI::UI(FormUI::Type::TEXT, F("Short Press Fade Time")))->setPlaceholder(String(1.0, 1))->setSuffix(FSPGM(seconds)));
-
-    form.add<float>(F("lpfd"), _H_STRUCT_VALUE(Config().dimmer_buttons, longpress_fadetime))->setFormUI(new FormUI::UI(FormUI::Type::TEXT, F("Long Press Fade Time")))->setPlaceholder(String(5.0, 1))->setSuffix(FSPGM(seconds)));
-
-    form.add<uint8_t>(F("pin0"), _H_STRUCT_VALUE_TYPE(Config().dimmer_buttons, pins[0], uint8_t))->setFormUI(new FormUI::UI(FormUI::Type::TEXT, F("Button Up Pin #"))));
-
-    form.add<uint8_t>(F("pin1"), _H_STRUCT_VALUE_TYPE(Config().dimmer_buttons, pins[1], uint8_t))->setFormUI(new FormUI::UI(FormUI::Type::TEXT, F("Button Down Pin #"))));
-
-    buttonGroup.end();
-
-#endif
-
-    // auto &saveGroup = form.addCardGroup(String(), String());
-
-    // form.addFormUI(F("Save Changes"), FormUI::Type::SUBMIT);
-    // form.addFormUI(F("Save Changes"), FormUI::Type::BUTTON);
-
-    // saveGroup.end();
 
     form.finalize();
 }

@@ -83,7 +83,7 @@ AlarmPlugin::MQTTAutoDiscoveryPtr AlarmPlugin::nextAutoDiscovery(MQTTAutoDiscove
     auto discovery = new MQTTAutoDiscovery();
     switch(num) {
         case 0:
-            discovery->create(this, F("alarm"), format);
+            discovery->create(this, FSPGM(alarm), format);
             discovery->addStateTopic(_formatTopic(FSPGM(_state)));
             discovery->addCommandTopic(_formatTopic(FSPGM(_set)));
             discovery->addPayloadOn(1);
@@ -185,7 +185,7 @@ void AlarmPlugin::createConfigureForm(FormCallbackType type, const String &formN
 #if IOT_ALARM_PLUGIN_HAS_BUZZER && IOT_ALARM_PLUGIN_HAS_SILENT
             form.add<uint8_t>(prefix + String('t'), alarm.mode, form_mode_callback);
 #else
-            alarm.mode_type = Alarm::AlarmModeType::BOTH;
+            alarm.mode = Alarm::AlarmConfig::SingleAlarm_t::cast_int_mode(Alarm::AlarmModeType::BOTH);
 #endif
             form.add<uint16_t>(prefix + String('d'), alarm.max_duration, form_duration_callback);
 
@@ -316,16 +316,16 @@ void AlarmPlugin::_timerCallback(EventScheduler::TimerPtr timer)
                 if (ts) {
                     message.print(F(", one time"));
                 }
-                if (alarm._alarm.mode_type == Alarm::AlarmModeType::SILENT) {
+                if (Alarm::AlarmConfig::SingleAlarm_t::cast_enum_mode(alarm._alarm.mode) == Alarm::AlarmModeType::SILENT) {
                     message.print(F(", silent"));
                 }
-                else if (alarm._alarm.mode_type == Alarm::AlarmModeType::BUZZER) {
+                else if (Alarm::AlarmConfig::SingleAlarm_t::cast_enum_mode(alarm._alarm.mode) == Alarm::AlarmModeType::BUZZER) {
                     message.print(F(", buzzer"));
                 }
                 Logger_notice(message);
                 if (_callback) {
                     triggered = true;
-                    _callback(alarm._alarm.mode_type, alarm._alarm.max_duration);
+                    _callback(Alarm::AlarmConfig::SingleAlarm_t::cast_enum_mode(alarm._alarm.mode), alarm._alarm.max_duration);
                 }
 
                 if (ts) { // remove one time alarms
@@ -362,5 +362,5 @@ void AlarmPlugin::_publishState()
 
 String AlarmPlugin::_formatTopic(const __FlashStringHelper *topic)
 {
-    return MQTTClient::formatTopic(F("alarm"), topic);
+    return MQTTClient::formatTopic(FSPM(alarm), topic);
 }

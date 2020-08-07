@@ -310,7 +310,7 @@ void ClockPlugin::setup(SetupModeType mode)
                     _setBrightness(_config.brightness);
                 }
                 if (message.length()) {
-                    __LDBG_print(message);
+                    __LDBG_printf("%s", message.c_str());
                     _schedulePublishState = true;
                 }
             });
@@ -535,7 +535,7 @@ ClockPlugin::Color ClockPlugin::getColor() const
 
 void ClockPlugin::readConfig()
 {
-    _config = config._H_GET(Config().clock);
+    _config = Plugins::Clock::getConfig();
     if (!std::isnormal(_config.rainbow.multiplier) || _config.rainbow.multiplier == 0) {
         _config.rainbow.multiplier = 1.23;
     }

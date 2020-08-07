@@ -15,8 +15,8 @@
 #include "plugins_menu.h"
 #include "WebUIAlerts.h"
 #if IOT_ALARM_PLUGIN_ENABLED
-#include "./plugins/alarm/alarm.h"
-#include "./plugins/ntp/ntp_plugin.h"
+#include "../src/plugins/alarm/alarm.h"
+#include "../src/plugins/ntp/ntp_plugin.h"
 #endif
 
 #if DEBUG_TEMPLATES
@@ -28,6 +28,7 @@
 #include "../src/plugins/ssdp/ssdp.h"
 
 using KFCConfigurationClasses::System;
+using KFCConfigurationClasses::Plugins;
 
 String WebTemplate::_aliveRedirection;
 
@@ -58,7 +59,7 @@ Form *WebTemplate::getForm()
 
 JsonUnnamedObject *WebTemplate::getJson()
 {
-    __DBG_printf("called");
+    __DBG_print("called");
     return _json;
 }
 

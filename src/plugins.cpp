@@ -182,11 +182,17 @@ void setup_plugins(PluginComponent::SetupModeType mode)
                     plugin->createMenu();
                     break;
                 case PluginComponent::MenuType::AUTO: {
-                        __LDBG_printf("menu=auto plugin=%s", plugin->getName_P());
-                        String name = plugin->getName();
-                        if (plugin->canHandleForm(name)) {
-                            __LDBG_printf("menu=auto plugin=%s can_handle=true", plugin->getName_P());
-                            bootstrapMenu.addSubMenu(plugin->getFriendlyName(), name + FSPGM(_html), navMenu.config);
+                        StringVector list;
+                        explode_P(plugin->getConfigForms(), ',', list);
+                        if (std::find(list.begin(), list.end(), plugin->getName()) == list.end()) {
+                            list.emplace_back(plugin->getName());
+                        }
+                        __LDBG_printf("menu=auto plugin=%s forms=%s", plugin->getName_P(), implode(',', list).c_str());
+                        for(const auto &str: list) {
+                            if (plugin->canHandleForm(str)) {
+                                __LDBG_printf("menu=auto form=%s can_handle=true", str.c_str());
+                                bootstrapMenu.addSubMenu(plugin->getFriendlyName(), str + FSPGM(_html), navMenu.config);
+                            }
                         }
                     } break;
                 case PluginComponent::MenuType::NONE:

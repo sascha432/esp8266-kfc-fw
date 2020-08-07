@@ -160,10 +160,6 @@ private:
     bool _findButton(Button &btn, uint8_t &pressed, uint8_t &channel, bool &buttonUp);
 
 private:
-    inline DimmerModuleButtons getButtonConfig() {
-        return config._H_GET(Config().dimmer_buttons);
-    }
-
     class DimmerButton {
     public:
         DimmerButton(uint8_t pin) : _pin(pin), _button(pin, IOT_SWITCH_ACTIVE_STATE) {

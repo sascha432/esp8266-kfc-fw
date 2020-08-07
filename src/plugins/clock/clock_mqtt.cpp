@@ -16,7 +16,7 @@
 MQTTComponent::MQTTAutoDiscoveryPtr ClockPlugin::nextAutoDiscovery(MQTTAutoDiscovery::FormatType format, uint8_t num)
 {
     if (num >= getAutoDiscoveryCount()) {
-        return;
+        return nullptr;
     }
     auto discovery = MQTTAutoDiscoveryPtr(new MQTTAutoDiscovery());
     switch(num) {

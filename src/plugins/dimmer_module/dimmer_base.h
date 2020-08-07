@@ -176,6 +176,11 @@ protected:
     DimmerMetrics _metrics;
     Plugins::DimmerConfig::DimmerConfig_t _config;
 
+    Plugins::DimmerConfig::DimmerConfig_t &_getConfig() {
+        return _config;
+    }
+
+protected:
 #if IOT_DIMMER_MODULE_INTERFACE_UART
     DimmerTwoWireEx _wire;
     SerialHandler::Client *_client;

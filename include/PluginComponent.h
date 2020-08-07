@@ -235,6 +235,10 @@ public:
         return stringlist_find_P_P(reinterpret_cast<PGM_P>(_config->config_forms), name.c_str(), ',') != -1;
     }
 
+    PGM_P getConfigForms() const {
+        return _config->config_forms;
+    }
+
     bool hasWebUI() const {
         return getOptions().has_web_ui;
     }

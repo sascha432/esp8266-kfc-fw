@@ -39,6 +39,8 @@
 #define IOT_CLOCK_MIN_TEMPERATURE_THRESHOLD     45
 #endif
 
+using KFCConfigurationClasses::Plugins;
+
 class ClockPlugin : public PluginComponent, public MQTTComponent {
 public:
     using SevenSegmentDisplay = Clock::SevenSegmentDisplay;
@@ -110,7 +112,7 @@ public:
 
 #if IOT_ALARM_PLUGIN_ENABLED
 public:
-    using Alarm = KFCConfigurationClasses::Plugins::Alarm;
+    using Alarm = Plugins::Alarm;
 
     static void alarmCallback(Alarm::AlarmModeType mode, uint16_t maxDuration);
 
@@ -177,7 +179,7 @@ private:
     uint8_t _autoBrightnessLastValue;
     EventScheduler::Timer _autoBrightnessTimer;
 #endif
-    Clock_t _config;
+    Plugins::Clock::ConfigStructType _config;
     EventScheduler::Timer _timer;
     uint32_t _timerCounter;
 

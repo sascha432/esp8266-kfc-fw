@@ -680,11 +680,6 @@ void AtomicSunPlugin::shutdown()
     _end();
 }
 
-void AtomicSunPlugin::createMenu()
-{
-    bootstrapMenu.addSubMenu(getFriendlyName(), F("dimmer_cfg.html"), navMenu.config);
-}
-
 void AtomicSunPlugin::createWebUI(WebUI &webUI)
 {
     auto row = &webUI.addRow();

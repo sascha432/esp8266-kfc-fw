@@ -83,6 +83,7 @@ namespace Clock {
     static constexpr uint16_t kBrightnessTempProtection = kMaxBrightness * 0.25;
 
     enum class AnimationType : uint8_t {
+        MIN = 0,
         NONE = 0,
         RAINBOW,
         FLASHING,

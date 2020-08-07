@@ -1392,18 +1392,26 @@ namespace KFCConfigurationClasses {
                 int16_t auto_brightness;
                 uint16_t blink_colon_speed;
                 uint16_t flashing_speed;
-                uint8_t protection_temperature_75;
-                uint8_t protection_temperature_50;
-                uint8_t protection_max_temperature;
-                float rainbow_multiplier;
-                uint16_t rainbow_speed;
-                ClockColor_t rainbow_factor;
-                ClockColor_t rainbow_minimum;
-                ClockColor_t alarm_color;
-                uint16_t alarm_speed;
-                float fading_speed;
-                uint16_t fading_delay;
-                ClockColor_t fading_factor;
+                struct __attribute__packed__ {
+                    uint8_t temperature_75;
+                    uint8_t temperature_50;
+                    uint8_t max_temperature;
+                } protection;
+                struct __attribute__packed__ {
+                    float multiplier;
+                    uint16_t speed;
+                    ClockColor_t factor;
+                    ClockColor_t minimum;
+                } rainbow;
+                struct __attribute__packed__ {
+                    ClockColor_t color;
+                    uint16_t speed;
+                } alarm;
+                struct __attribute__packed__ {
+                    float speed;
+                    uint16_t delay;
+                    ClockColor_t factor;
+                } fading;
 
                 ClockConfig_t();
 

@@ -1028,7 +1028,7 @@
         "default": "deflate"
     },
     "config": {
-        "use_counter": 6,
+        "use_counter": 8,
         "default": "config"
     },
     "Success": {
@@ -1060,11 +1060,11 @@
         "default": "/.pvt/hlw80xx.state"
     },
     "seconds": {
-        "use_counter": 12,
+        "use_counter": 16,
         "default": "seconds"
     },
     "milliseconds": {
-        "use_counter": 3,
+        "use_counter": 8,
         "default": "milliseconds"
     },
     "__s_": {
@@ -1168,7 +1168,7 @@
         "default": "rd"
     },
     "alarm": {
-        "use_counter": 0,
+        "use_counter": 1,
         "default": "alarm"
     },
     "Alarm": {
@@ -1412,7 +1412,7 @@
         "default": "Web Alerts"
     },
     "WebUI": {
-        "use_counter": 2,
+        "use_counter": 3,
         "default": "Web UI"
     },
     "Status_LED_Mode": {
@@ -1836,7 +1836,7 @@
         "default": "energy"
     },
     "kWh": {
-        "use_counter": 5,
+        "use_counter": 6,
         "default": "kWh"
     },
     "voltage": {
@@ -1850,5 +1850,49 @@
     "pf": {
         "use_counter": 5,
         "default": "pf"
+    },
+    "Brightness": {
+        "use_counter": 1,
+        "default": "Brightness"
+    },
+    "Animation": {
+        "use_counter": 1,
+        "default": "Animation"
+    },
+    "Type": {
+        "use_counter": 1,
+        "default": "Type"
+    },
+    "Solid_Color": {
+        "use_counter": 2,
+        "default": "Solid Color"
+    },
+    "Rainbow": {
+        "use_counter": 1,
+        "default": "Rainbow"
+    },
+    "Flashing": {
+        "use_counter": 1,
+        "default": "Flashing"
+    },
+    "Fading": {
+        "use_counter": 1,
+        "default": "Fading"
+    },
+    "Multiplier": {
+        "use_counter": 1,
+        "default": "Multiplier"
+    },
+    "Speed": {
+        "use_counter": 1,
+        "default": "Speed"
+    },
+    "Color": {
+        "use_counter": 0,
+        "default": "Color"
+    },
+    "Protection": {
+        "use_counter": 1,
+        "default": "Protection"
     }
 }

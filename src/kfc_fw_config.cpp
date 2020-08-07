@@ -1247,7 +1247,7 @@ void KFCFWConfiguration::printRTCStatus(Print &output, bool plain)
             output.print(F("Timestamp: "));
             output.print(now.timestamp());
 #if RTC_DEVICE_DS3231
-            output.printf_P(PSTR(", temperature: %.2f\xb0C, lost power: %s"), rtc.getTemperature(), rtc.lostPower() ? SPGM(yes, "yes") : SPGM(no, "no"));
+            output.printf_P(PSTR(", temperature: %.2f" "\xb0" "C, lost power: %s"), rtc.getTemperature(), rtc.lostPower() ? SPGM(yes, "yes") : SPGM(no, "no"));
 #endif
         }
     }

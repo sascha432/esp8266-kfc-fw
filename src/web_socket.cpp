@@ -45,6 +45,49 @@ bool generate_session_for_username(const String &username, String &password)
     return true;
 }
 
+WsClientAsyncWebSocket::WsClientAsyncWebSocket(const String &url, WsClientAsyncWebSocket **ptr) : AsyncWebSocket(url), _ptr(ptr)
+{
+    // __LDBG_printf("WsClientAsyncWebSocket(): new=%p", this);
+    WsClient::_webSockets.push_back(this);
+    if (_ptr) {
+        if (*_ptr) {
+            __LDBG_printf("_instance already set %p", *_ptr);
+        }
+        *_ptr = this;
+    }
+    // the web socket is sharing the password with the web site
+    // _enableAuthentication();
+}
+
+WsClientAsyncWebSocket::~WsClientAsyncWebSocket()
+{
+    // __LDBG_printf("~WsClientAsyncWebSocket(): delete=%p, clients=%u, connected=%u", this, getClients().length(), count());
+    disableSocket();
+    if (_ptr) {
+        if (!*_ptr) {
+            __LDBG_printf("_instance already set to %p", *_ptr);
+        }
+        *_ptr = nullptr;
+    }
+}
+
+void WsClientAsyncWebSocket::shutdown()
+{
+    closeAll(503, FSPGM(Device_is_rebooting, "Device is rebooting...\n"));
+    disableSocket();
+}
+
+void WsClientAsyncWebSocket::disableSocket()
+{
+    WsClient::_webSockets.erase(std::remove(WsClient::_webSockets.begin(), WsClient::_webSockets.end(), this), WsClient::_webSockets.end());
+}
+
+void WsClientAsyncWebSocket::addWebSocketPtr(WsClientAsyncWebSocket **ptr)
+{
+    _ptr = ptr;
+    *_ptr = this;
+}
+
 void WsClientAsyncWebSocket::_enableAuthentication()
 {
     uint8_t buf[32];
@@ -59,6 +102,7 @@ void WsClientAsyncWebSocket::_enableAuthentication()
     }
     setAuthentication(String('\xff'), password);
 }
+
 
 WsClient::WsClient(AsyncWebSocketClient *client) : _authenticated(false), _client(client)
 {
@@ -110,7 +154,7 @@ void WsClient::onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, i
         Logger_notice(F(WS_PREFIX "%s: Client connected"), WS_PREFIX_ARGS, client->remoteIP().toString().c_str());
         client->text(F("+REQ_AUTH"));
         client->keepAlivePeriod(60);
-        client->client()->setAckTimeout(10000); // added for bad WiFi connections
+        client->client()->setAckTimeout(30000); // TODO added for bad WiFi connections
 
         wsClient->onConnect(data, len);
 

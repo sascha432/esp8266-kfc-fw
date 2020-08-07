@@ -133,43 +133,12 @@ private:
 
 class WsClientAsyncWebSocket : public AsyncWebSocket {
 public:
-    WsClientAsyncWebSocket(const String &url, WsClientAsyncWebSocket **ptr = nullptr) : AsyncWebSocket(url), _ptr(ptr) {
-        // debug_printf("WsClientAsyncWebSocket(): new=%p\n", this);
-        WsClient::_webSockets.push_back(this);
-        if (_ptr) {
-            if (*_ptr) {
-                debug_printf_P(PSTR("_instance already set %p\n"), *_ptr);
-            }
-            *_ptr = this;
-        }
-        // the web socket is sharing the password with the web site
-        // _enableAuthentication();
-    }
-    ~WsClientAsyncWebSocket() {
-        // debug_printf("~WsClientAsyncWebSocket(): delete=%p, clients=%u, connected=%u\n", this, getClients().length(), count());
-        disableSocket();
-        if (_ptr) {
-            if (!*_ptr) {
-                debug_printf_P(PSTR("_instance already set to %p\n"), *_ptr);
-            }
-            *_ptr = nullptr;
-        }
-    }
+    WsClientAsyncWebSocket(const String &url, WsClientAsyncWebSocket **ptr = nullptr);
+    virtual ~WsClientAsyncWebSocket();
 
-    void shutdown() {
-        closeAll(503, FSPGM(Device_is_rebooting, "Device is rebooting...\n"));
-        disableSocket();
-    }
-
-    void disableSocket() {
-        WsClient::_webSockets.erase(std::remove(WsClient::_webSockets.begin(), WsClient::_webSockets.end(), this), WsClient::_webSockets.end());
-    }
-
-public:
-    void addWebSocketPtr(WsClientAsyncWebSocket **ptr) {
-        _ptr = ptr;
-        *_ptr = this;
-    }
+    void shutdown();
+    void disableSocket();
+    void addWebSocketPtr(WsClientAsyncWebSocket **ptr);
 
 private:
     void _enableAuthentication();

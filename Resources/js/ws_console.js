@@ -101,7 +101,13 @@ WS_Console.prototype.connect = function(authenticated_callback) {
         this.socket = null;
     }
     this.authenticated = false;
+
+    // var sid = this.get_sid();
+    // var tmpUrl = this.url.replace(/^ws{1,2}:\/\//, '$&' + sid.substring(0, 16) + ':' + sid.substring(16) + '@');
+    // this.socket = new WebSocket(tmpUrl);
+
     this.socket = new WebSocket(this.url);
+
     dbg_console.debug('WebSocket:', this.url);
     dbg_console.debug(this);
     this.socket.binaryType = 'arraybuffer';
@@ -167,10 +173,8 @@ WS_Console.prototype.disconnect = function(reconnect) {
     this.authenticated = false;
     this.connection_counter--;
     if (this.socket != null) {
-        if (this.socket != null) {
-            this.socket.close();
-            this.socket = null;
-        }
+        this.socket.close();
+        this.socket = null;
     }
     if (reconnect) {
         if (this.reconnect_timeout == null && this.auto_reconnect) {

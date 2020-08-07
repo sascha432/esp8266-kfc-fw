@@ -25,7 +25,11 @@ var webUIComponent = {
     groups: [],
     pendingRequests: [],
     lockPublish: false,
-    disconnectedIcon: false,
+    disconnectedIconTimeout: null,
+
+    hasDisconnectedIcon: function() {
+        return this.container.find('.webui-disconnected-icon').length != 0;
+    },
 
     setDisconnectedIcon: function(add) {
         var icons = this.container.find('.webui-disconnected-icon');
@@ -38,7 +42,6 @@ var webUIComponent = {
             // add icon to the first title
             this.container.find('.webuicomponent.title:first .col').prepend('<span class="oi oi-bolt webui-disconnected-icon"></span>');
         }
-        this.disconnectedIcon = add;
     },
 
     prepareOptions: function(options) {
@@ -482,9 +485,24 @@ var webUIComponent = {
         $.get(url + '?SID=' + SID, function(data) {
             dbg_console.called('get_callback_requestui', arguments);
             dbg_console.debug('GET /webui_get', data);
+            var hasIcon = self.hasDisconnectedIcon();
+
             self.updateUI(data.data);
             self.updateEvents(data.values);
-            self.setDisconnectedIcon(self.disconnectedIcon);
+
+            if (self.disconnectedIconTimeout) {
+                window.clearTimeout(self.disconnectedIconTimeout);
+                self.disconnectedIconTimeout = null;
+            }
+            if (hasIcon) {
+                self.setDisconnectedIcon(true);
+                // remove icon after 10 seconds
+                self.disconnectedIconTimeout = window.setTimeout(function() {
+                    self.setDisconnectedIcon(false);
+                    self.disconnectedIconTimeout = null;
+                }, 10000);
+            }
+
         }, 'json');
     },
 
@@ -594,12 +612,6 @@ var webUIComponent = {
         else if (event.type == 'auth') {
             //event.socket.send('+GET_VALUES');
             this.requestUI();
-
-            // show the icon for at least 2 more seconds in case reconnecting is really quick
-            var self = this;
-            window.setTimeout(function() {
-                self.setDisconnectedIcon(false);
-            }, 2000);
         }
     },
 

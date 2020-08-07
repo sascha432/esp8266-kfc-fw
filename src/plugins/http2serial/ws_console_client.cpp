@@ -9,7 +9,7 @@
 #include "at_mode.h"
 #include "reset_detector.h"
 
-#if DEBUG_HTTP2SERIAL
+#if DEBUG_WS_CONSOLE_CLIENT
 #include <debug_helper_enable.h>
 #else
 #include <debug_helper_disable.h>
@@ -22,7 +22,7 @@ WsClient *WsConsoleClient::getInstance(AsyncWebSocketClient *socket)
 
 void WsConsoleClient::onAuthenticated(uint8_t *data, size_t len)
 {
-    _debug_printf_P(PSTR("data=%s len=%d\n"), printable_string(data, len, 32).c_str(), len);
+    __LDBG_printf("data=%s len=%d", printable_string(data, len, 32).c_str(), len);
 #if AT_MODE_SUPPORTED
     StreamString commands;
     commands.print(F("+ATMODE_CMDS_HTTP2SERIAL="));
@@ -30,26 +30,10 @@ void WsConsoleClient::onAuthenticated(uint8_t *data, size_t len)
     getClient()->text(commands);
 #endif
     if (resetDetector.hasCrashDetected()) {
-        PrintString message;
-        message.printf_P(PSTR("+REM System crash detected: %s\n"), resetDetector.getResetInfo().c_str());
-        getClient()->text(message);
+        getClient()->text(PrintString(F("+REM System crash detected: %s\n"), resetDetector.getResetInfo().c_str()));
     }
     getClient()->text(PrintString(F("+CLIENT_ID=%p\n"), getClient()));
 }
-
-#if DEBUG
-
-void WsConsoleClient::onDisconnect(uint8_t *data, size_t len)
-{
-    _debug_printf_P(PSTR("data=%s len=%d\n"), printable_string(data, len, 32).c_str(), len);
-}
-
-void WsConsoleClient::onError(WsConsoleClient::WsErrorType type, uint8_t *data, size_t len)
-{
-    _debug_printf_P(PSTR("type=%d data=%s len=%d\n"), type, printable_string(data, len, 32).c_str(), len);
-}
-
-#endif
 
 void WsConsoleClient::onText(uint8_t *data, size_t len)
 {
@@ -60,15 +44,14 @@ void WsConsoleClient::onText(uint8_t *data, size_t len)
     }
 }
 
-
 void WsConsoleClient::onStart()
 {
-    _debug_printf_P(PSTR("first client has been authenticated, Http2Serial instance %p\n"), Http2Serial::getInstance());
+    __LDBG_printf("first client has been authenticated, Http2Serial instance %p", Http2Serial::getInstance());
     Http2Serial::createInstance();
 }
 
 void WsConsoleClient::onEnd()
 {
-    _debug_printf_P(PSTR("no authenticated clients connected, Http2Serial instance %p\n"), Http2Serial::getInstance());
+    __LDBG_printf("no authenticated clients connected, Http2Serial instance %p", Http2Serial::getInstance());
     Http2Serial::destroyInstance();
 }

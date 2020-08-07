@@ -408,6 +408,12 @@ namespace KFCConfigurationClasses {
             CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().system.device, Name, 3, 16);
             CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().system.device, Title, 3, 32);
 
+            // username is device name
+            // in case this changes one day, this function will return the username
+            static const char *getUsername() {
+                return getName();
+            }
+
             CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().system.device, Password, 6, 64);
             CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().system.device, Token, SESSION_DEVICE_TOKEN_MIN_LENGTH, 255);
 

@@ -796,7 +796,7 @@ bool WebServerPlugin::_handleFileRead(String path, bool client_accepts_gzip, Asy
         // no_cache_headers();
         if (request->method() == HTTP_POST && request->hasArg(FSPGM(username)) && request->hasArg(FSPGM(password))) {
             IPAddress remote_addr = request->client()->remoteIP();
-            auto username = System::Device::getName();
+            auto username = System::Device::getUsername();
             auto password = System::Device::getPassword();
 
             __SID(debug_printf_P(PSTR("blocked=%u username=%s match:user=%u pass=%u\n"), _loginFailures.isAddressBlocked(remote_addr), request->arg(FSPGM(username)).c_str(), (request->arg(FSPGM(username)) == username), (request->arg(FSPGM(password)) == password)));
@@ -1091,7 +1091,7 @@ WebServerPlugin::AuthType WebServerPlugin::isAuthenticated(AsyncWebServerRequest
             if (SID.length() == 0) {
                 return AuthType::NONE;
             }
-            if (verify_session_id(SID.c_str(), System::Device::getName(), System::Device::getPassword())) {
+            if (verify_session_id(SID.c_str(), System::Device::getUsername(), System::Device::getPassword())) {
                 __SID(debug_printf_P(PSTR("valid SID=%s type=%s\n"), SID.c_str(), isRequestSID ? request->methodToString() : FSPGM(cookie, "cookie")));
                 return isRequestSID ? AuthType::SID : AuthType::SID_COOKIE;
             }

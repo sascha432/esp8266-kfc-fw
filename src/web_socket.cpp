@@ -29,35 +29,65 @@
 
 using KFCConfigurationClasses::System;
 
- WsClient::ClientCallbackVector_t  WsClient::_clientCallback;
+ WsClient::ClientCallbackVector_t WsClient::_clientCallback;
  WsClient::AsyncWebSocketVector WsClient::_webSockets;
 
- WsClient::WsClient(AsyncWebSocketClient * client) : _authenticated(false), _client(client)
- {
- }
+extern bool generate_session_for_username(const String &username, String &password);
 
- WsClient::~WsClient()
- {
- }
+bool generate_session_for_username(const String &username, String &password)
+{
+    SessionHash::SaltBuffer salt;
+    if (username.length() != sizeof(salt) * 2) {
+        return false;
+    }
+    hex2bin(salt, sizeof(salt), username.c_str());
+    password = generate_session_id(System::Device::getUsername(), System::Device::getPassword(), salt).c_str() + username.length();
+    return true;
+}
 
- void WsClient::setAuthenticated(bool authenticated)
- {
-     _authenticated = authenticated;
- }
+void WsClientAsyncWebSocket::_enableAuthentication()
+{
+    uint8_t buf[32];
+    String password = String('\xff');
+    rng.rand(buf, sizeof(buf));
+    const char *ptr = (const char *)buf;
+    for(uint8_t i = 0; i < (uint8_t)sizeof(buf); i++) {
+        if (*ptr) {
+            password += *ptr;
+        }
+        ptr++;
+    }
+    setAuthentication(String('\xff'), password);
+}
 
- bool WsClient::isAuthenticated() const
- {
-     return _authenticated;
- }
+WsClient::WsClient(AsyncWebSocketClient *client) : _authenticated(false), _client(client)
+{
+}
 
- void WsClient::onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, int type, uint8_t *data, size_t len, void *arg, WsGetInstance getInstance)
- {
-     if (WsClient::_webSockets.empty()) {
-         return;
-     }
+WsClient::~WsClient()
+{
+}
+
+void WsClient::setAuthenticated(bool authenticated)
+{
+    _authenticated = authenticated;
+}
+
+bool WsClient::isAuthenticated() const
+{
+    return _authenticated;
+}
+
+void WsClient::onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, int type, uint8_t *data, size_t len, void *arg, WsGetInstance getInstance)
+{
+    if (WsClient::_webSockets.empty()) {
+        return;
+    }
     auto result = std::find(WsClient::_webSockets.begin(), WsClient::_webSockets.end(), server);
     if (result == WsClient::_webSockets.end()) {
-        __debugbreak_and_panic_printf_P(PSTR("websocket %p has been removed, event type %u\n"), server, type);
+#if DEBUG_WEB_SOCKETS
+        __DBG_panic("websocket %p has been removed, event type %u", server, type);
+#endif
         return;
     }
 
@@ -70,16 +100,17 @@ using KFCConfigurationClasses::System;
          wsClient = reinterpret_cast<WsClient *>(client->_tempObject);
      }
 
-    _debug_printf_P(PSTR("event=%d wsClient=%p\n"), type, wsClient);
+    __LDBG_printf("event=%d wsClient=%p", type, wsClient);
     if (!wsClient) {
-        __debugbreak_and_panic_printf_P(PSTR("getInstance() returned nullptr\n"));
+        __DBG_panic("getInstance() returned nullptr");
     }
 
     if (type == WS_EVT_CONNECT) {
-        client->ping();
 
         Logger_notice(F(WS_PREFIX "%s: Client connected"), WS_PREFIX_ARGS, client->remoteIP().toString().c_str());
         client->text(F("+REQ_AUTH"));
+        client->keepAlivePeriod(60);
+        client->client()->setAckTimeout(10000); // added for bad WiFi connections
 
         wsClient->onConnect(data, len);
 
@@ -104,20 +135,17 @@ using KFCConfigurationClasses::System;
 
     } else if (type == WS_EVT_ERROR) {
 
-        _debug_printf_P(PSTR("WS_EVT_ERROR wsClient %p\n"), wsClient);
+        __LDBG_printf("WS_EVT_ERROR wsClient %p", wsClient);
 
-        PrintString str;
-        DumpBinary dumper(str);
-        dumper.dump(data, len);
+        auto str = printable_string(data, len, 128);
+        str.trim();
 
-        str.replace(String('\n'), String(' '));
-
-        Logger_notice(F(WS_PREFIX "Error(%u): data='%s', length=%d"), WS_PREFIX_ARGS, *reinterpret_cast<uint16_t *>(arg), str.c_str(), len);
+        Logger_notice(F(WS_PREFIX "Error(%u): data=%s"), WS_PREFIX_ARGS, *reinterpret_cast<uint16_t *>(arg), str.c_str());
         wsClient->onError(WsClient::ERROR_FROM_SERVER, data, len);
 
     } else if (type == WS_EVT_PONG) {
 
-        _debug_printf_P(PSTR("WS_EVT_PONG wsClient %p\n"), wsClient);
+        __LDBG_printf("WS_EVT_PONG wsClient %p", wsClient);
         wsClient->onPong(data, len);
 
     } else if (type == WS_EVT_DATA) {
@@ -137,7 +165,7 @@ using KFCConfigurationClasses::System;
             dataPtr += 5;
             len -= 5;
             if (!buffer.reserve(len + 1)) {
-                _debug_printf_P(PSTR("allocation failed=%d\n"), len + 1);
+                __LDBG_printf("allocation failed=%d", len + 1);
                 return;
             }
             char *ptr = buffer.getChar();
@@ -169,7 +197,7 @@ using KFCConfigurationClasses::System;
  **/
 void WsClient::onStart()
 {
-    _debug_println();
+    __LDBG_println();
 }
 /**
  * gets called once all authenticated clients have been disconnected. onStart() will be called
@@ -177,7 +205,7 @@ void WsClient::onStart()
  **/
 void WsClient::onEnd()
 {
-    _debug_println();
+    __LDBG_println();
 }
 
 void WsClient::onData(AwsFrameType type, uint8_t *data, size_t len)
@@ -187,7 +215,7 @@ void WsClient::onData(AwsFrameType type, uint8_t *data, size_t len)
     } else if (type == WS_BINARY) {
         onBinary(data, len);
     } else {
-        _debug_printf_P(PSTR("type=%d\n"), (int)type);
+        __LDBG_printf("type=%d", (int)type);
     }
 }
 
@@ -205,16 +233,16 @@ void WsClient::invokeStartOrEndCallback(WsClient *wsClient, bool isStart)
             authenticatedClients++;
         }
     }
-    _debug_printf_P(PSTR("client=%p isStart=%u authenticatedClients=%u\n"), wsClient, isStart, authenticatedClients);
+    __LDBG_printf("client=%p isStart=%u authenticatedClients=%u", wsClient, isStart, authenticatedClients);
     if (isStart) {
         if (authenticatedClients == 1) { // first client has been authenticated
-            _debug_println(F("invoking onStart()"));
+            __LDBG_print("invoking onStart()");
             wsClient->onStart();
         }
     }
     else {
         if (authenticatedClients == 0) { // last client disconnected
-            _debug_println(F("invoking onEnd()"));
+            __LDBG_print("invoking onEnd()");
             wsClient->onEnd();
         }
     }
@@ -264,7 +292,7 @@ static bool __get_server(AsyncWebSocket **server,  WsClient *sender)
 void WsClient::broadcast(AsyncWebSocket *server, WsClient *sender, AsyncWebSocketMessageBuffer *buffer)
 {
     if (__get_server(&server, sender)) {
-        // _debug_printf_P(PSTR("sender=%p, clients=%u, message=%s\n"), sender, server->getClients().length(), buffer->get());
+        // __LDBG_printf("sender=%p, clients=%u, message=%s", sender, server->getClients().length(), buffer->get());
         auto qDelay = getQeueDelay();
         buffer->lock();
         for(auto socket: server->getClients()) {
@@ -300,11 +328,11 @@ void WsClient::safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, co
 {
     for(auto socket: server->getClients()) {
         if (client == socket && socket->status() == WS_CONNECTED && socket->_tempObject && reinterpret_cast<WsClient *>(socket->_tempObject)->isAuthenticated()) {
-            _debug_printf_P(PSTR("server=%p client=%p message=%s\n"), server, client, message.c_str());
+            __LDBG_printf("server=%p client=%p message=%s", server, client, message.c_str());
             client->text(message);
             delay(getQeueDelay());
             return;
         }
     }
-    _debug_printf_P(PSTR("server=%p client NOT found=%p message=%s\n"), server, client, message.c_str());
+    __LDBG_printf("server=%p client NOT found=%p message=%s", server, client, message.c_str());
 }

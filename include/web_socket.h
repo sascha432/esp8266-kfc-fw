@@ -5,7 +5,7 @@
 #pragma once
 
 #ifndef DEBUG_WEB_SOCKETS
-#define DEBUG_WEB_SOCKETS 0
+#define DEBUG_WEB_SOCKETS               0
 #endif
 
 #include <Arduino_compat.h>
@@ -13,10 +13,18 @@
 #include <vector>
 #include <ESPAsyncWebServer.h>
 
+#if DEBUG_WEB_SOCKETS
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
+#endif
+
 #define WS_PREFIX "ws[%s][%u] "
 #define WS_PREFIX_ARGS server->url(), client->id()
 
 class WsClient;
+class WsClientAsyncWebSocket;
+class WebServerPlugin;
 
 //typedef std::function<WsClient *(WsClient *wsSClient, WsAwsEventType type, AsyncWebSocket *server, AsyncWebSocketClient *client, uint8_t *data, size_t len, void *arg)> WsEventHandlerCallback;
 typedef std::function<WsClient *(AsyncWebSocketClient *client)> WsGetInstance;
@@ -24,6 +32,7 @@ typedef std::function<WsClient *(AsyncWebSocketClient *client)> WsGetInstance;
 typedef enum : uint16_t {
     RGB565_RLE_COMPRESSED_BITMAP            = 0x0001,
 } WebSocketBinaryPacketUnqiueId_t;
+
 
 class WsClient {
 public:
@@ -60,7 +69,7 @@ public:
         // debug_println("WebSocket::onError()");
     }
     virtual void onPong(uint8_t *data, size_t len) {
-        // debug_println("WebSocket::onPong()");
+        __LDBG_printf("data=%s", printable_string(data, len, 32).c_str());
     }
     virtual void onText(uint8_t *data, size_t len) {
         // debug_println("WebSocket::onText()");
@@ -99,7 +108,6 @@ public:
     } ClientCallbackTypeEnum_t;
 
     typedef std::function<void(ClientCallbackTypeEnum_t type, WsClient *client)> ClientCallback_t;
-
     typedef std::vector<ClientCallback_t> ClientCallbackVector_t;
 
     static void addClientCallback(ClientCallback_t callback);
@@ -114,11 +122,11 @@ private:
     AsyncWebSocketClient *_client;
     static ClientCallbackVector_t _clientCallback;
 
-// private:
-public:
-    friend class WsClientAsyncWebSocket;
+private:
+    friend WsClientAsyncWebSocket;
+    friend WebServerPlugin;
 
-    typedef std::vector<AsyncWebSocket *> AsyncWebSocketVector;
+    using AsyncWebSocketVector = std::vector<AsyncWebSocket *>;
 
     static AsyncWebSocketVector _webSockets;
 };
@@ -134,6 +142,8 @@ public:
             }
             *_ptr = this;
         }
+        // the web socket is sharing the password with the web site
+        // _enableAuthentication();
     }
     ~WsClientAsyncWebSocket() {
         // debug_printf("~WsClientAsyncWebSocket(): delete=%p, clients=%u, connected=%u\n", this, getClients().length(), count());
@@ -147,7 +157,7 @@ public:
     }
 
     void shutdown() {
-        closeAll(503, String(FSPGM(Device_is_rebooting, "Device is rebooting...\n")).c_str());
+        closeAll(503, FSPGM(Device_is_rebooting, "Device is rebooting...\n"));
         disableSocket();
     }
 
@@ -162,5 +172,9 @@ public:
     }
 
 private:
+    void _enableAuthentication();
+
     WsClientAsyncWebSocket **_ptr;
 };
+
+#include <debug_helper_disable.h>

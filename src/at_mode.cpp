@@ -251,7 +251,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LED, "LED", "<slow,fast,flicker,off,solid,
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(RTC, "RTC", "[<set>]", "Set RTC time", "Display RTC time");
 #endif
 
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PLG, "PLG", "<list|start|stop|add-blacklist|add|remove>", "Plugin management");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PLG, "PLG", "<list|start|stop|add-blacklist|add|remove>[,<name>]", "Plugin management");
 
 #if DEBUG
 
@@ -1104,7 +1104,7 @@ void at_mode_serial_handle_event(String &commandString)
 
                 if (args.requireArgs(1, 2)) {
                     auto cmds = PSTR("list|start|stop|add-blacklist|add|remove");
-                    int cmd = stringlist_find_P_P(args.get(0), cmds, '|');
+                    int cmd = stringlist_find_P_P(cmds, args.get(0), '|');
                     if (cmd == 0) {
                         dump_plugin_list(output);
                         args.printf_P("Blacklist=%s", PluginComponent::getBlacklist());
@@ -1143,10 +1143,10 @@ void at_mode_serial_handle_event(String &commandString)
                                     {
                                         bool flag;
                                         if (cmd == 5) {
-                                            flag = PluginComponent::removeFromBlacklist(plugin->getName_P());
+                                            flag = PluginComponent::removeFromBlacklist(plugin->getName());
                                         }
                                         else {
-                                            flag = PluginComponent::addToBlacklist(plugin->getName_P());
+                                            flag = PluginComponent::addToBlacklist(plugin->getName());
                                         }
                                         if (flag) {
                                             config.write();

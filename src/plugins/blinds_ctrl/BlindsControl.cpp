@@ -241,61 +241,74 @@ void BlindsControl::_startMotor(ChannelType channel, bool open)
     _activeChannel = channel;
 
     auto &cfg = _config.channels[*channel];
+    _currentLimit = cfg.current_limit * BlindsControllerConversion::kConvertCurrentToADCValueMulitplier;
+
     _setMotorSpeed(channel, cfg.pwm_value, open);
     _states[channel] = open ? StateType::OPEN : StateType::CLOSED;
 
     _publishState();
 
     _motorTimeout.set(open ? cfg.open_time : cfg.close_time);
+    _currentLimitTimer.set(cfg.current_limit_time);
+    _currentLimitTimer.disable();
     // clear ADC last
     _clearAdc();
 }
 
 void BlindsControl::_monitorMotor(ChannelAction &action)
 {
-    if (_motorTimeout.isActive()) {
-        bool finished = false;
+    bool finished = false;
 
-        _updateAdc();
+    _updateAdc();
 
-        auto &_channel = _config.channels[*_activeChannel];
-        uint16_t currentLimit = _channel.current_limit * BlindsControllerConversion::kConvertCurrentToADCValueMulitplier;
-        // assuming this loop runs at least once per millisecond
-        // we can use millis() and a counter to determine the time
-        // measured ~250-270µs @ 80MHz
-        if (_adcIntegral > currentLimit && millis() % 2 == _currentLimitCounter % 2) {
-            if (++_currentLimitCounter > _channel.current_limit_time) {
-                __LDBG_printf("current limit time=%u", _currentLimitCounter);
-                finished = true;
-            }
+    if (_adcIntegral > _currentLimit) {
+        if (_currentLimitTimer.reached()) {
+            __LDBG_printf("current limit time=%u", _currentLimitTimer.getDelay());
+            finished = true;
         }
-        else if (_currentLimitCounter && _adcIntegral < currentLimit * 0.8) {   // reset current limit counter if current drops below 80%
-            __LDBG_printf("current limit timer reset=%ums", _currentLimitCounter);
-            _currentLimitCounter = 0;
+        else if (!_currentLimitTimer.isActive()) {
+            _currentLimitTimer.restart();
         }
+    }
+    else if (_currentLimitTimer.isActive() && _adcIntegral < _currentLimit * 0.8) {   // reset current limit counter if current drops below 80%
+        __LDBG_printf("current limit timer reset=%dms", _currentLimitTimer.get());
+        _currentLimitTimer.disable();
+    }
 
 #if IOT_BLINDS_CTRL_RPM_PIN
-        if (_hasStalled()) {
-            __LDBG_printf("stalled");
-            finished = true;
-        }
+    if (_hasStalled()) {
+        __LDBG_printf("stalled");
+        finished = true;
+    }
 #endif
 
-        if (_motorTimeout.reached()) {
-            __LDBG_printf("timeout");
-            finished = true;
-        }
+    if (_motorTimeout.reached()) {
+        __LDBG_printf("timeout");
+        finished = true;
+    }
 
-        if (finished) {
-            action.next();
-            _stop();
-            _publishState();
-        }
+    if (finished) {
+        action.next();
+        _stop();
     }
 }
 
 void BlindsControl::_loopMethod()
 {
+#if 0
+    if (_motorTimeout.isActive()) {
+#if 1
+        if (_queue.empty()) {
+            __DBG_panic("active motor and queue empty");
+        }
+        if (_queue.getAction().getState() != ActionStateType::WAIT_FOR_MOTOR) {
+            __DBG_panic("state=%u", _queue.getAction().getState());
+        }
+#endif
+        _monitorMotor(_queue.getAction());
+        return;
+    }
+#endif
     if (!_queue.empty()) {
         ChannelType forChannel = ChannelType::NONE;
         ChannelType openChannel = ChannelType::NONE;
@@ -361,7 +374,9 @@ void BlindsControl::_loopMethod()
                 action.next();
                 break;
             case ActionStateType::WAIT_FOR_MOTOR:
-                _monitorMotor(action);
+                if (_motorTimeout.isActive()) {
+                    _monitorMotor(action);
+                }
                 break;
             case ActionStateType::DELAY:
                 action.monitorDelay();
@@ -393,7 +408,7 @@ BlindsControl::NameType BlindsControl::_getStateStr(ChannelType channel) const
     else if (_activeChannel == channel) {
         return FSPGM(Running, "Running");
     }
-    else if (!_queue.empty() && _queue.front().getState() == ActionStateType::DELAY) {
+    else if (!_queue.empty() && _queue.getAction().getState() == ActionStateType::DELAY) {
         return F("Waiting");
     }
     return FSPGM(Busy);
@@ -409,7 +424,7 @@ void BlindsControl::_clearAdc()
     delay(IOT_BLINDS_CTRL_RSSEL_WAIT);
 
     _adcIntegral = 0;
-    _currentLimitCounter = 0;
+    _currentLimitTimer.disable();
     _currentTimer.start();
 
 #if IOT_BLINDS_CTRL_RPM_PIN

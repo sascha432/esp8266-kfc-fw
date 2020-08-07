@@ -275,6 +275,10 @@ protected:
             return front();
         }
 
+        const ChannelAction &getAction() const {
+            return front();
+        }
+
         void removeAction(const ChannelAction &action) {
             __LDBG_printf("remove action=%p", &action);
             erase(std::remove_if(begin(), end(), [&action](const ChannelAction &_action) {
@@ -295,9 +299,10 @@ protected:
     ChannelType _activeChannel;
 
     MillisTimer _motorTimeout;
+    MillisTimer _currentLimitTimer;
+    uint16_t _currentLimit;
 
     uint32_t _adcIntegral;
-    uint16_t _currentLimitCounter;
     MicrosTimer _currentTimer;
 
 #if IOT_BLINDS_CTRL_RPM_PIN

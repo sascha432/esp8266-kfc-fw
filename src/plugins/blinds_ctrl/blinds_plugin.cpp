@@ -46,7 +46,7 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     0                   // __reserved
 );
 
-BlindsControlPlugin::BlindsControlPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(BlindsControlPlugin)), BlindsControl(), _isTestMode(false)
+BlindsControlPlugin::BlindsControlPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(BlindsControlPlugin)), BlindsControl()
 {
     REGISTER_PLUGIN(this, "BlindsControlPlugin");
 }
@@ -147,24 +147,18 @@ void BlindsControl::rpmIntCallback(InterruptInfo info) {
 #error Test mode requires AT_MODE_SUPPORTED=1
 #endif
 
-void BlindsControlPlugin::loopMethod()
+void BlindsControlPlugin::testLoopMethod()
 {
-    if (plugin._isTestMode) {
-        plugin._testLoopMethod();
-    }
-    else {
-        plugin._loopMethod();
-    }
+    plugin._testLoopMethod();
 }
 
-#else
+#endif
 
 void BlindsControlPlugin::loopMethod()
 {
     plugin._loopMethod();
 }
 
-#endif
 
 #if AT_MODE_SUPPORTED && IOT_BLINDS_CTRL_TESTMODE
 
@@ -181,43 +175,55 @@ void BlindsControlPlugin::_printTestInfo() {
 #endif
 }
 
+void BlindsControlPlugin::_resetTestMode()
+{
+    _stop();
+    LoopFunctions::add(loopMethod);
+    LoopFunctions::remove(testLoopMethod);
+}
+
 void BlindsControlPlugin::_testLoopMethod()
 {
     if (_motorTimeout.isActive()) {
         _updateAdc();
 
-        _peakCurrent = std::max((uint16_t)_adcIntegral, _peakCurrent);
-        if (_adcIntegral > _currentLimit && millis() % 2 == _currentLimitCounter % 2) {
-            if (++_currentLimitCounter > _currentLimitMinCount) {
-                _isTestMode = false;
+        if (_adcIntegral > _currentLimit) {
+            if (_currentLimitTimer.reached()) {
+                _resetTestMode();
                 _printTestInfo();
-                _stop();
-                Serial.println(F("+BCME: Current limit"));
+                Serial.printf_P(PSTR("+BCME: Current limit time=%dms\n"), _currentLimitTimer.getDelay());
                 return;
             }
+            else if (!_currentLimitTimer.isActive()) {
+                _currentLimitTimer.restart();
+            }
         }
-        else if (_adcIntegral < _currentLimit * 0.8) {
-            _currentLimitCounter = 0;
+        else if (_currentLimitTimer.isActive() && _adcIntegral < _currentLimit * 0.8) {   // reset current limit counter if current drops below 80%
+            Serial.printf_P(PSTR("+BCME: Current limit <80%, reset time=%dms\n"), _currentLimitTimer.get());
+            _currentLimitTimer.disable();
         }
+
 #if IOT_BLINDS_CTRL_RPM_PIN
         if (_hasStalled()) {
-            _isTestMode = false;
+            _resetTestMode();
             _printTestInfo();
-            _stop();
             Serial.println(F("+BCME: Stalled"));
             return;
         }
 #endif
         if (_motorTimeout.reached()) {
-            _isTestMode = false;
+            _resetTestMode();
             _printTestInfo();
-            _stop();
             Serial.println(F("+BCME: Timeout"));
         }
         else if (_printCurrentTimeout.reached(true)) {
             _printTestInfo();
             _peakCurrent = 0;
         }
+    }
+    else {
+        _resetTestMode();
+        Serial.println(F("+BCME: Motor inactive"));
     }
 }
 
@@ -242,21 +248,24 @@ bool BlindsControlPlugin::atModeHandler(AtModeArgs &args)
             channel %= kChannelCount;
 
             _currentLimit = args.toInt(4) * BlindsControllerConversion::kConvertCurrentToADCValueMulitplier;
-            _currentLimitMinCount = args.toInt(5);
+            _currentLimitTimer.set(args.toInt(5));
+            _currentLimitTimer.disable();
             _activeChannel = static_cast<ChannelType>(channel);
 
             _stop();
+            LoopFunctions::remove(loopMethod);
+            LoopFunctions::add(testLoopMethod);
+
             digitalWrite(BlindsControl::_config.pins[4], BlindsControl::_config.multiplexer == 1 && channel == 0);
             delay(IOT_BLINDS_CTRL_RSSEL_WAIT);
 
             analogWrite(BlindsControl::_config.pins[(channel * kChannelCount) + direction], pwmLevel);
-            args.printf_P(PSTR("level %u current limit/%u %u frequency %.2fkHz"), pwmLevel, _currentLimit, _currentLimitMinCount, IOT_BLINDS_CTRL_PWM_FREQ / 1000.0);
-            args.printf_P(PSTR("channel %u direction %u time %u"), channel, direction, time);
+            args.printf_P(PSTR("level=%u current limit=%u time=%dms frequency=%.2fkHz"), pwmLevel, _currentLimit, _currentLimitTimer.getDelay(), IOT_BLINDS_CTRL_PWM_FREQ / 1000.0);
+            args.printf_P(PSTR("channel=%u direction=%u time=%u"), channel, direction, time);
 
             _peakCurrent = 0;
             _printCurrentTimeout.set(500);
             _motorTimeout.set(time);
-            _isTestMode = true;
             _clearAdc();
         }
         return true;

@@ -1817,10 +1817,10 @@
     },
     "npwd": {
         "use_counter": 3,
-        "auto": "npwd"
+        "default": "npwd"
     },
     "Auto": {
         "use_counter": 2,
-        "auto": "Auto"
+        "default": "Auto"
     }
 }

@@ -40,15 +40,15 @@ public:
     virtual ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const override;
     virtual bool atModeHandler(AtModeArgs &args) override;
 
+    static void testLoopMethod();
+
 private:
     void _printTestInfo();
     void _testLoopMethod();
+    void _resetTestMode();
 
     MillisTimer _printCurrentTimeout;
-    uint16_t _currentLimit;
-    uint16_t _currentLimitMinCount;
     uint16_t _peakCurrent;
-    bool _isTestMode;
 
 #endif
 

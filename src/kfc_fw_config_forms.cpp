@@ -74,9 +74,9 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
 
             auto &stationGroup = modeGroup.end().addCardGroup(FSPGM(station), FSPGM(Station_Mode), true);
 
-            form.addCStringGetterSetter(F("st_ssid"), Network::WiFi::getSSID, Network::WiFi::setSSIDCStr);
+            form.addCStringGetterSetter(F("wssid"), Network::WiFi::getSSID, Network::WiFi::setSSIDCStr);
             Network::WiFi::addSSIDLengthValidator(form);
-            form.addFormUI(FSPGM(SSID));
+            form.addFormUI(FSPGM(SSID), FormUI::Suffix(F("<button class=\"btn btn-default\" type=\"button\" id=\"wifi_scan_button\" data-toggle=\"modal\" data-target=\"#network_dialog\">Scan...</button>")));
 
             form.addCStringGetterSetter(F("st_pass"), Network::WiFi::getPassword, Network::WiFi::setPasswordCStr);
             Network::WiFi::addPasswordLengthValidator(form);
@@ -89,7 +89,6 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
 
             auto &ssidHidden = form.addObjectGetterSetter(F("ap_hid"), flags, flags.get_bit_is_softap_ssid_hidden, flags.set_bit_is_softap_ssid_hidden);
             form.addFormUI(FormUI::Type::HIDDEN);
-
 
             form.addCStringGetterSetter(F("ap_ssid"), Network::WiFi::getSoftApSSID, Network::WiFi::setSoftApSSIDCStr);
             Network::WiFi::addSoftApSSIDLengthValidator(form);

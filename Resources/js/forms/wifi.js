@@ -5,41 +5,37 @@
 $(function () {
     // wifi.html
     if ($('#wifi_settings').length) {
-        var max_channels = parseInt($('#apch').data('max-channels'));
-        $('#channel option').each(function () {
-            if (parseInt($(this).val()) > max_channels) {
-                $(this).remove();
+
+        $('#wifi_mode').on('change', function() {
+            var mode = parseInt($(this).val());
+            if (mode == 0) {
+                $('#heading-station').closest('.card').hide();
+                $('#heading-softap').closest('.card').hide();
+            } else if (mode == 1) { // station
+                $('#heading-station').closest('.card').show();
+                $('#heading-softap').closest('.card').hide();
+            } else if (mode == 2) { // soft_ap
+                $('#heading-station').closest('.card').hide();
+                $('#heading-softap').closest('.card').show();
+            } else if (mode == 3) { // station+soft_ap
+                $('#heading-station').closest('.card').show();
+                $('#heading-softap').closest('.card').show();
             }
-        });
-        function mode_change() {
-            var mode = parseInt($('#wssid').val());
-            $('#station_mode').hide();
-            $('#ap_mode').hide();
-            if (mode == 1 || mode == 3) {
-                $('#station_mode').show();
-            }
-            if (mode == 2 || mode == 3) {
-                $('#ap_mode').show();
-            }
-        }
-        $('#wssid').change(mode_change);
-        mode_change();
-        $('form').on('submit', function () {
-            $('#aphs').val($('#_aphs').prop('checked') ? '1' : '0');
-        });
-        $('#network_dialog').on('show.bs.modal', function (event) {
-            console.log("show.bs.modal");
+        }).trigger('change');
+
+        $('#network_dialog').on('show.bs.modal', function () {
             var SID = $.getSessionId();
             var modal = $(this)
             var reload_timer = null;
             var selected_network = $('#wssid').val();
+            var mbody = modal.find('.modal-body');
             modal.find('.btn-primary').prop('disabled', true);
-            modal.find('.modal-body .networks').hide();
-            modal.find('.modal-body .scanning').show();
+            mbody.find('.networks').hide();
+            mbody.find('.scanning').show();
             function scan_failed(jqXHR, textStatus, error) {
                 modal.find('.btn-primary').prop('disabled', true);
-                modal.find('.modal-body .scanning').hide();
-                modal.find('.modal-body .networks').html("An error occured!<br>" + error).show();
+                mbody.find('.scanning').hide();
+                mbody.find('.networks').html("An error occured!<br>" + error).show();
             }
             function auto_reload() {
                 $('#wifi_networks_title').html('<img src="images/spinner.gif" width="24" height="24" border="0">');
@@ -92,8 +88,8 @@ $(function () {
                             }
                         }
                         html += footer;
-                        modal.find('.modal-body .scanning').hide();
-                        modal.find('.modal-body .networks').html(html).show();
+                        mbody.find('.scanning').hide();
+                        mbody.find('.networks').html(html).show();
                         modal.find('.network-name').each(function () {
                             if (selected_network != '' && selected_network == $(this).html()) {
                                 $(this).closest('tr').addClass('bg-primary').find('td').addClass('text-white');

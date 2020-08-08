@@ -4,8 +4,10 @@
 
 #pragma once
 
+#if !_MSC_VER
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
 
 #include <Arduino_compat.h>
 #include <vector>
@@ -64,6 +66,20 @@ namespace FormUI {
 	public:
 		ItemsList() : ItemsListVector() {}
 
+		ItemsList &operator=(const ItemsList &items) {
+			clear();
+			reserve(items.size());
+			for (const auto &item : items) {
+				ItemsListVector::push_back(item);
+			}
+			return *this;
+		}
+
+		ItemsList &operator=(ItemsList &&items) noexcept {
+			ItemsListVector::swap(items);
+			return *this;
+		}
+
 		// pass key value pairs as arguments
 		// everything that can be converted to String() including enum class
 		template <typename... Args>
@@ -81,6 +97,14 @@ namespace FormUI {
 		template <typename Ta, typename Tb>
 		void emplace_back(Ta &&key, Tb &&val) {
 			ItemsListVector::emplace_back(std::move(_enumConverter(key)), std::move(_enumConverter(val)));
+		}
+
+		void emplace_back_pair(const String &key, const String &val) {
+			ItemsListVector::emplace_back(key, val);
+		}
+
+		void emplace_back_pair(int key, int val) {
+			ItemsListVector::emplace_back(std::move(String(key)), std::move(String(val)));
 		}
 
 		void dump(Print &output) {
@@ -230,6 +254,12 @@ namespace FormUI {
 	private:
 		friend UI;
 
+		FormField *_parent;
+		Type _type;
+		String _label;
+		String _suffix;
+		String _attributes;
+		ItemsList *_items;
 		T _value;
 		bool _condition: 1;
 	};
@@ -248,13 +278,32 @@ namespace FormUI {
 		// arguments see Form::addFormUI()
 
 		template <typename... Args>
-		UI(Args &&... args) : _parent(nullptr), _type(Type::TEXT) {
+		UI(Args &&... args) : _parent(nullptr), _type(Type::TEXT), _items(nullptr) {
 			_addAll(args...);
+		}
+		UI(UI &&ui) {
+			*this = std::move(ui);
+		}
+		~UI() {
+			if (_items) {
+				delete _items;
+			}
+		}
+
+		UI &operator=(UI &&ui) {
+			_parent = ui._parent;
+			_type = ui._type;
+			_label = std::move(ui._label);
+			_suffix = std::move(ui._suffix);
+			_attributes = std::move(ui._attributes);
+			_items = ui._items;
+			ui._items = nullptr;
+			return *this;
 		}
 
 		// move vector instead of copying
 		UI &emplaceItems(ItemsList &&items) {
-			_items = std::move(items);
+			_setItems(std::move(items));
 			_type = Type::SELECT;
 			return *this;
 		}
@@ -328,12 +377,12 @@ namespace FormUI {
 		}
 
 		void _addItem(const ItemsList &items) {
-			_items = items;
+			_setItems(items);
 			_type = Type::SELECT;
 		}
 
 		void _addItem(const BoolItems &boolItems) {
-			_items = boolItems._items;
+			_setItems(boolItems._items);
 			_type = Type::SELECT;
 		}
 
@@ -361,6 +410,18 @@ namespace FormUI {
 
 	private:
 		bool _compareValue(const String &value) const;
+		void _setItems(const ItemsList &items) {
+			if (!_items) {
+				_items = new ItemsList();
+			}
+			*_items = items;
+		}
+		void _setItems(ItemsList &&items) {
+			if (!_items) {
+				_items = new ItemsList();
+			}
+			*_items = std::move(items);
+		}
 
 		friend Form;
 
@@ -376,8 +437,7 @@ namespace FormUI {
 		String _label;
 		String _suffix;
 		String _attributes;
-		ItemsList _items;
-		// InputGroupAppendVector _inputGroupAppend;
+		ItemsList *_items;
 	};
 
 
@@ -385,4 +445,7 @@ namespace FormUI {
 
 #include "FormUIConfig.h"
 
+#if !_MSC_VER
 #pragma GCC diagnostic pop
+#endif
+

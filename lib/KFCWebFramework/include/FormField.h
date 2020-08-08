@@ -146,6 +146,9 @@ private:
     Form *_form;
     Type _type;
     bool _hasChanged : 1;
+// FormGroup
+protected:
+    bool _expanded: 1;
 };
 
 class FormGroup : public FormField {
@@ -153,7 +156,8 @@ public:
     FormGroup(const FormGroup &group) = delete;
     FormGroup &operator=(const FormGroup &group) = delete;
 
-    FormGroup(const String &name, bool expanded) : FormField(name, String(), Type::GROUP), _expanded(expanded) {
+    FormGroup(const String &name, bool expanded) : FormField(name, String(), Type::GROUP) {
+        _expanded = expanded;
     }
     virtual bool setValue(const String &value) override {
         return false;
@@ -168,8 +172,6 @@ public:
     void setExpanded(bool expanded) {
         _expanded = expanded;
     }
-private:
-    bool _expanded: 1;
 };
 
 #include <pop_pack.h>

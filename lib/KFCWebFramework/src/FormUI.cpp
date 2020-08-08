@@ -2,8 +2,10 @@
 * Author: sascha_lammers@gmx.de
 */
 
+#if !_MSC_VER
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
 
 #include "FormUI.h"
 #include "FormField.h"
@@ -19,22 +21,24 @@ namespace FormUI {
 
     UI *UI::setBoolItems(const String &enabled, const String &disabled)
     {
-        _items.clear();
-        _items.reserve(2);
-        _items.emplace_back(std::move(String(0)), disabled);
-        _items.emplace_back(std::move(String(1)), enabled);
+        _setItems(std::move(ItemsList(0, disabled, 1, enabled)));
         return this;
     }
 
     UI *UI::addItems(const String &value, const String &label)
     {
-        _items.push_back(value, label);
+        if (!_items) {
+            _items = new ItemsList(value, label);
+        }
+        else {
+            _items->emplace_back_pair(value, label);
+        }
         return this;
     }
 
     UI *UI::addItems(const ItemsList &items)
     {
-        _items = items;
+        _setItems(items);
         return this;
     }
 
@@ -59,6 +63,7 @@ namespace FormUI {
 
     UI *UI::addAttribute(const String &name, const String &value)
     {
+        _attributes.reserve(_attributes.length() + name.length() + value.length() + 5);
         _attributes += ' ';
         _attributes += name;
         if (value.length()) {
@@ -77,6 +82,7 @@ namespace FormUI {
     {
         _attributes += ' ';
         _attributes += name;
+        _attributes.reserve(_attributes.length() + value.length() + 4);
         if (value.length()) {
             _attributes += '=';
             _attributes += '"';
@@ -151,4 +157,7 @@ namespace FormUI {
 
 }
 
+#if !_MSC_VER
 #pragma GCC diagnostic pop
+#endif
+

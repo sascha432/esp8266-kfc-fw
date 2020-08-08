@@ -40,12 +40,12 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
             FormUI::ItemsList wifiModes;
             createWifiModes(wifiModes) ;
 
-            auto channelItems = FormUI::ItemsList(0, FSPGM(Auto));
+            FormUI::ItemsList channelItems(0, FSPGM(Auto));
             for(uint8_t i = 1; i <= config.getMaxWiFiChannels(); i++) {
                 channelItems.push_back(i, i);
             }
 
-            auto encryptionItems = FormUI::ItemsList(
+            FormUI::ItemsList encryptionItems(
                 ENC_TYPE_NONE, F("Open / No encryption"),
                 ENC_TYPE_WEP, F("WEP"),
                 ENC_TYPE_TKIP, F("WPA TKIP"),

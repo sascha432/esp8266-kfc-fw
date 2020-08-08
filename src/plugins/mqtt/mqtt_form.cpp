@@ -31,11 +31,11 @@ void MQTTPlugin::createConfigureForm(FormCallbackType type, const String &formNa
 
     auto &cfg = ClientConfig::getWriteableConfig();
 
-    auto modeItems = FormUI::ItemsList(
+    FormUI::ItemsList modeItems(
         ClientConfig::ModeType::DISABLED, FSPGM(Disabled),
         ClientConfig::ModeType::UNSECURE, FSPGM(Enabled)
     );
-    auto qosItems = FormUI::ItemsList(
+    FormUI::ItemsList qosItems(
         ClientConfig::QosType::AT_MODE_ONCE, F("At most once (0)"),
         ClientConfig::QosType::AT_LEAST_ONCE, F("At least once (1)"),
         ClientConfig::QosType::EXACTLY_ONCE, F("Exactly once (2)")

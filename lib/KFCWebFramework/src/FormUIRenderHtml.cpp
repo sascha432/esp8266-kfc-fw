@@ -175,18 +175,20 @@ namespace FormUI {
             switch (_type) {
             case Type::SELECT:
                 output.printf_P(PSTR("<select class=\"form-control\" name=\"%s\" id=\"%s\"%s>" FORMUI_CRLF), name, name, _attributes.c_str());
-                for (auto &item : _items) {
-                    // we cannot translate item.first when adding it or we cannot compare its value anymore
-                    PGM_P selected = _compareValue(item.first) ? SPGM(_selected) : emptyString.c_str();
+                if (_items) {
+                    for (auto &item : *_items) {
+                        // we cannot translate item.first when adding it or we cannot compare its value anymore
+                        PGM_P selected = _compareValue(item.first) ? SPGM(_selected) : emptyString.c_str();
 
-                    auto val = _encodeHtmlEntities(item.second, false, output);
-                    auto key = _encodeHtmlEntities(item.first, true, output);
+                        auto val = _encodeHtmlEntities(item.second, false, output);
+                        auto key = _encodeHtmlEntities(item.first, true, output);
 
-                    output.printf_P(PSTR("<option value=\"%s\"%s>%s</option>" FORMUI_CRLF),
-                        key,
-                        selected,
-                        val
-                    );
+                        output.printf_P(PSTR("<option value=\"%s\"%s>%s</option>" FORMUI_CRLF),
+                            key,
+                            selected,
+                            val
+                        );
+                    }
                 }
                 output.printf_P(PSTR("</select>" FORMUI_CRLF));
                 break;

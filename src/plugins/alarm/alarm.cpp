@@ -178,18 +178,18 @@ void AlarmPlugin::createConfigureForm(FormCallbackType type, const String &formN
             String prefix = 'a' + String(i);
             auto &alarm = cfg.alarms[i];
 
-            form.add<bool>(prefix + String('e'), alarm.is_enabled, form_enabled_callback);
+            form.add<bool>(prefix + 'e', alarm.is_enabled, form_enabled_callback);
 
-            form.add<uint8_t>(prefix + String('h'), alarm.time.hour, form_hour_callback);
-            form.add<uint8_t>(prefix + String('m'), alarm.time.minute, form_minute_callback);
+            form.add<uint8_t>(prefix + 'h', alarm.time.hour, form_hour_callback);
+            form.add<uint8_t>(prefix + 'm', alarm.time.minute, form_minute_callback);
 #if IOT_ALARM_PLUGIN_HAS_BUZZER && IOT_ALARM_PLUGIN_HAS_SILENT
             form.add<uint8_t>(prefix + String('t'), alarm.mode, form_mode_callback);
 #else
             alarm.mode = Alarm::AlarmConfig::SingleAlarm_t::cast_int_mode(Alarm::AlarmModeType::BOTH);
 #endif
-            form.add<uint16_t>(prefix + String('d'), alarm.max_duration, form_duration_callback);
+            form.add<uint16_t>(prefix + 'd', alarm.max_duration, form_duration_callback);
 
-            form.add<uint8_t>(prefix + String('w'), alarm.time.week_day.week_days, form_weekday_callback);
+            form.add<uint8_t>(prefix + 'w', alarm.time.week_day.week_days, form_weekday_callback);
         }
 
         form.finalize();

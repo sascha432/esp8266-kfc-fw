@@ -280,57 +280,49 @@ $(function() {
 
     });
 
-    // https://bootsnipp.com/snippets/featured/jquery-checkbox-buttons
     $('.button-checkbox').each(function () {
 
-        // Settings
-        var $widget = $(this),
-            $button = $widget.find('button'),
-            $checkbox = $widget.find('input:checkbox'),
-            color = $button.data('color'),
-            settings = {
-                on: {
-                    icon: $(this).data('on-icon')
-                },
-                off: {
-                    icon: $(this).data('off-icon')
-                }
-            };
-        var id = $checkbox.attr('id');
-        var hiddenInput = $('#' + id.substr(1));
+        var widget = $(this);
+        var button = widget.find('button');
+        var color = button.data('color'); // btn-<color> class
+        var on_icon = button.data('on-icon');
+        var off_icon = button.data('off-icon');
+        if (!color) {
+            color = 'primary';
+        }
+        var on_class = 'btn-' + color;
+        if (on_icon !== undefined) {
+            on_icon = 'oi oi-task';
+        }
+        if (off_icon !== undefined) {
+            off_icon = 'oi oi-ban';
+        }
+        var icons = [off_icon, on_icon];
+
+        var id = '#' + button.attr('id').substr(1); // id of hidden field = _<id>
+        var hiddenInput = $(id);
         if (hiddenInput.length == 0) {
-            dbg_console.error("cannot find hidden input field for ", id, '#' + id.substr(1))
+            dbg_console.error('cannot find hidden input field', id);
+            return;
         }
 
-        // Actions
-        function update_button() {
-            var isChecked = $checkbox.is(':checked');
-            $button.data('state', (isChecked) ? "on" : "off");
-            $button.find('.state-icon').attr('class', 'state-icon ' + settings[$button.data('state')].icon);
-            if (isChecked) {
-                $button.removeClass('btn-default').addClass('btn-' + color + ' active');
-            }
-            else {
-                $button.removeClass('btn-' + color + ' active').addClass('btn-default');
-            }
-        }
+        // get inverted initial state from input field
+        var value = parseInt(hiddenInput.val()) ? 0 : 1;
 
-        // Event Handlers
-        $checkbox.on('change', function () {
-            update_button();
-            hiddenInput.val($checkbox.is(':checked') ? 1 : 0);
-        });
-        $button.on('click', function () {
-            $checkbox.prop('checked', !$checkbox.is(':checked'));
-            $checkbox.triggerHandler('change');
+        button.on('click', function() {
+            value = value ? 0 : 1;
+            button.removeClass('btn-default ' + on_class).addClass(value ? on_class : 'btn-default');
+            button.find('.state-icon').attr('class', 'state-icon ' + icons[value]);
+            hiddenInput.val(value);
         });
 
-        $checkbox.prop('checked', parseInt(hiddenInput.val()) != 0);
-        update_button();
-
-        if ($button.find('.state-icon').length == 0 && settings[$button.data('state')].icon) {
-            $button.prepend('<i class="state-icon ' + settings[$button.data('state')].icon + '"></i> ');
+        // prepend icon
+        if (widget.find('.state-icon').length == 0) {
+            button.prepend('<i class="state-icon"></i> ');
         }
+
+        // update button
+        button.trigger('click');
 
     });
 });

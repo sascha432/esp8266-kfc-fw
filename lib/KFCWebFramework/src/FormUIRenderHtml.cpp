@@ -65,7 +65,7 @@ namespace FormUI {
                     _encodeHtmlEntities(_label, true, output)
                 );
 
-                output.printf_P(PSTR("<div id=\"collapse-%s\" class=\"collapse%s\" aria-labelledby=\"heading-%s\" data-parent=\"#%s\"><div class=\"card-body\">" FORMUI_CRLF),
+                output.printf_P(PSTR("<div id=\"collapse-%s\" class=\"collapse%s\" aria-labelledby=\"heading-%s\" data-cookie=\"#%s\"><div class=\"card-body\">" FORMUI_CRLF),
                     name,
                     (group.isExpanded() ? PSTR(" show") : emptyString.c_str()),
                     name,

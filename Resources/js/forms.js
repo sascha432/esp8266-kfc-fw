@@ -168,6 +168,45 @@ $(function() {
         }).trigger('change');
     });
 
+    (function() {
+        var cookies = {}; // cookie cache
+        $('.card .collapse').each(function() {
+            var card = $(this);
+            var parent = $(card.data('cookie'));
+            if (parent.length) {
+                var name = card.attr('id').split('-', 2);
+                if (name.length == 2) {
+                    var cookie_name = 'card_state_' + parent.attr('id');
+                    if (cookies[cookie_name] === undefined) {
+                        try {
+                            cookies[cookie_name] = JSON.parse(Cookies.get(cookie_name));
+                        } catch(e) {
+                            cookies[cookie_name] = {};
+                        }
+                    }
+                    name = name[1];
+                    if (cookies[cookie_name][name] === undefined) {
+                        cookies[cookie_name][name] = card.hasClass('show');
+                    } else {
+                        (cookies[cookie_name][name]) ? card.addClass('show') : card.removeClass('show');
+                    }
+
+                    function save() {
+                        // dbg_console.debug('set_cookie', cookie_name, JSON.stringify(cookies[cookie_name]));
+                        Cookies.set(cookie_name, JSON.stringify(cookies[cookie_name]));
+                    }
+                    card.on('hide.bs.collapse', function() {
+                        cookies[cookie_name][name] = false;
+                        save();
+                    }).on('show.bs.collapse', function() {
+                        cookies[cookie_name][name] = true;
+                        save();
+                    });
+                }
+            }
+        });
+    })();
+
     $('.resolve-zerconf-button').on('click', function() {
         var button = $(this);
         var target = $(button.data('target'));
@@ -291,10 +330,10 @@ $(function() {
             color = 'primary';
         }
         var on_class = 'btn-' + color;
-        if (on_icon !== undefined) {
+        if (on_icon === undefined) {
             on_icon = 'oi oi-task';
         }
-        if (off_icon !== undefined) {
+        if (off_icon === undefined) {
             off_icon = 'oi oi-ban';
         }
         var icons = [off_icon, on_icon];
@@ -308,17 +347,19 @@ $(function() {
 
         // get inverted initial state from input field
         var value = parseInt(hiddenInput.val()) ? 0 : 1;
+        var icon = widget.find('.state-icon');
 
         button.on('click', function() {
             value = value ? 0 : 1;
             button.removeClass('btn-default ' + on_class).addClass(value ? on_class : 'btn-default');
-            button.find('.state-icon').attr('class', 'state-icon ' + icons[value]);
+            icon.attr('class', 'state-icon ' + icons[value]);
             hiddenInput.val(value);
         });
 
         // prepend icon
-        if (widget.find('.state-icon').length == 0) {
+        if (icon.length == 0) {
             button.prepend('<i class="state-icon"></i> ');
+            icon = widget.find('.state-icon');
         }
 
         // update button

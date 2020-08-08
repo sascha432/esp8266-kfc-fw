@@ -54,7 +54,7 @@ char *MDNSResolver::MDNSServiceInfo::findTxtValue(const String &key)
     return nullptr;
 }
 
-MDNSResolver::Query::Query(const String &name, const String &service, const String &proto, const String &addressValue, const String &portValue, const String &fallback, uint16_t port, ResolvedCallback callback, uint16_t timeout) :
+MDNSResolver::Query::Query(const String &name, const String &service, const String &proto, const String &addressValue, const String &portValue, const String &fallback, uint16_t port, const String &prefix, const String &suffix, ResolvedCallback callback, uint16_t timeout) :
     _name(name),
     _endTime(END_TIME_NOT_STARTED),
     _dataCollected(DATA_COLLECTED_NONE),
@@ -65,6 +65,8 @@ MDNSResolver::Query::Query(const String &name, const String &service, const Stri
     _fallback(fallback),
     _fallbackPort(port),
     _port(port),
+    _prefix(prefix),
+    _suffix(suffix),
     _callback(callback),
     _timeout(timeout),
     _serviceQuery(nullptr),
@@ -125,18 +127,22 @@ void MDNSResolver::Query::end()
                 _serviceQuery = nullptr;
             }
 
-            bool logging = System::Device::getConfig().zeroconf_logging;
+            bool logging = _name.length() && System::Device::getConfig().zeroconf_logging;
             if (_resolved) {
                 if (logging) {
                     Logger_notice(F("%s: Zeroconf response %s:%u"), _name.c_str(), _address.isSet() ? _address.toString().c_str() : _hostname.c_str(), _port);
                 }
-                _callback(_hostname, _address, _port, ResponseType::RESOLVED);
+                _prefix += _address.isSet() ? _address.toString() : _hostname;
+                _prefix += _suffix;
+                _callback(_hostname, _address, _port, _prefix, ResponseType::RESOLVED);
             }
             else {
                 if (logging) {
                     Logger_notice(F("%s: Zeroconf fallback %s:%u"), _name.c_str(), _fallback.c_str(), _port);
                 }
-                _callback(_fallback, convertToIPAddress(_fallback), _fallbackPort, ResponseType::TIMEOUT);
+                _prefix += _fallback;
+                _prefix += _suffix;
+                _callback(_fallback, convertToIPAddress(_fallback), _fallbackPort, _prefix, ResponseType::TIMEOUT);
             }
             MDNSPlugin::removeQuery(this);
         });

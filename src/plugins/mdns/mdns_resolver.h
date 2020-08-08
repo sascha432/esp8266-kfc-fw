@@ -20,7 +20,7 @@ namespace MDNSResolver {
         RESOLVED,
     };
 
-    using ResolvedCallback = std::function<void(const String &hostname, const IPAddress &address, uint16_t port, ResponseType type)>;
+    using ResolvedCallback = std::function<void(const String &hostname, const IPAddress &address, uint16_t port, const String &resolved, ResponseType type)>;
 
     using QueryPtr = std::shared_ptr<Query>;
     using Queries = std::list<QueryPtr>;
@@ -41,7 +41,7 @@ namespace MDNSResolver {
             FINISHED,
         };
     public:
-        Query(const String &name, const String &service, const String &proto, const String &addressValue, const String &portValue, const String &fallback, uint16_t port, ResolvedCallback callback, uint16_t timeout = 5000);
+        Query(const String &name, const String &service, const String &proto, const String &addressValue, const String &portValue, const String &fallback, uint16_t port, const String &prefix, const String &suffix, ResolvedCallback callback, uint16_t timeout = 5000);
         ~Query();
 
         void begin();
@@ -78,6 +78,8 @@ namespace MDNSResolver {
         String _hostname;
         IPAddress _address;
         uint16_t _port;
+        String _prefix;
+        String _suffix;
         ResolvedCallback _callback;
         uint16_t _timeout;
         MDNSResponder::hMDNSServiceQuery _serviceQuery;

@@ -55,7 +55,7 @@ MQTTClient::MQTTClient() : _client(new AsyncMqttClient()), _componentsEntityCoun
     __LDBG_printf("hostname=%s port=%u", _hostname.c_str(), _port);
 
     if (config.hasZeroConf(_hostname)) {
-        config.resolveZeroConf(MQTTPlugin::getPlugin().getFriendlyName(), _hostname, _port, [this](const String &hostname, const IPAddress &address, uint16_t port, MDNSResolver::ResponseType type) {
+        config.resolveZeroConf(MQTTPlugin::getPlugin().getFriendlyName(), _hostname, _port, [this](const String &hostname, const IPAddress &address, uint16_t port, const String &resolved, MDNSResolver::ResponseType type) {
             this->_zeroConfCallback(hostname, address, port, type);
         });
     }
@@ -84,7 +84,7 @@ void MQTTClient::_zeroConfCallback(const String &hostname, const IPAddress &addr
     _address = address;
     _hostname = hostname;
     _port = port;
-    __LDBG_printf("zeroconf address=%s hostname=%s port=%u type=%u", _address.toString().c_str(), _hostname.c_str(), _port, type);
+    __LDBG_printf("zeroconf address=%s hostname=%s port=%u type=%u resolved=%s", _address.toString().c_str(), _hostname.c_str(), _port, type, resolved.c_str());
 
     _setupClient();
     WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTION, MQTTClient::handleWiFiEvents);

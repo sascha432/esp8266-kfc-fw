@@ -291,6 +291,8 @@ void HassPlugin::createConfigureForm(AsyncWebServerRequest *request, Form &form)
 
         using KFCConfigurationClasses::MainConfig;
 
+        //FormUI::ZeroconfSuffix()
+
         form.add(F("api_endpoint"), _H_STR_VALUE(MainConfig().plugins.homeassistant.api_endpoint));
         form.addValidator(FormLengthValidator(1, sizeof(MainConfig().plugins.homeassistant.api_endpoint) - 1));
 

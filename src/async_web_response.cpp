@@ -5,8 +5,10 @@
 #include "async_web_response.h"
 #include <ProgmemStream.h>
 #include <PrintHtmlEntitiesString.h>
+#include <MicrosTimer.h>
 #include "fs_mapping.h"
 #include "web_server.h"
+#include "../src/plugins/mdns/mdns_resolver.h"
 
 #if DEBUG_ASYNC_WEB_RESPONSE
 #include <debug_helper_enable.h>
@@ -658,4 +660,85 @@ size_t AsyncSpeedTestResponse::_fillBuffer(uint8_t *buf, size_t maxLen)
     memset(buf, 0xff, available);
     _size -= available;
     return available;
+}
+
+AsyncResolveZeroconfResponse::AsyncResolveZeroconfResponse(const String &value) : AsyncBaseResponse(true), _finished(false), _async(new bool())
+{
+    _code = 200;
+    _contentLength = 0;
+    _sendContentLength = false;
+    _contentType = FSPGM(mime_text_html);
+    _chunked = true;
+
+    auto async = _async;
+    *async = true;
+    uint32_t start = millis();
+    if (!config.resolveZeroConf(String(), value, 0, [this, async, value, start](const String &hostname, const IPAddress &address, uint16_t port, const String &resolved, MDNSResolver::ResponseType type) {
+        if (*async) { // indicator that "this" still exists
+            _async = nullptr;
+            _finished = true;
+            PrintHtmlEntitiesString str;
+            switch(type) {
+                case MDNSResolver::ResponseType::RESOLVED:
+                    str.print(F("Result for "));
+                    break;
+                default:
+                case MDNSResolver::ResponseType::TIMEOUT:
+                    str.print(F("Timeout resolving "));
+                    break;
+            }
+            str.print(value);
+            String result;
+            PGM_P resultType;
+            if (address.isSet()) {
+                result = address.toString();
+                resultType = SPGM(Address);
+
+            } else {
+                result = hostname;
+                resultType = SPGM(Hostname);
+            }
+            str.printf_P(PSTR(HTML_S(br) HTML_S(br) "%s: %s" HTML_S(br) "Port: %u"), resultType, result.c_str(), port);
+            if (result != resolved) {
+                str.printf_P(PSTR(HTML_S(br) "Resolved: %s"), resolved.c_str());
+            }
+            str.printf_P(PSTR(HTML_S(br) "Timeout: %u / %ums"), get_time_diff(start, millis()), KFCConfigurationClasses::System::Device::getConfig().zeroconf_timeout);
+            _response = std::move(str);
+        }
+        delete async;
+    })) {
+        delete async;
+        async = nullptr;
+        _response = PrintHtmlEntitiesString(F("Required Format:" HTML_S(br) "${zeroconf:<service>.<proto>:<address|value[:port value]>|<fallback[:port]>}"));
+        _finished = true;
+    }
+}
+
+AsyncResolveZeroconfResponse::~AsyncResolveZeroconfResponse()
+{
+    if (_async) {
+        *_async = false;
+    }
+}
+
+bool AsyncResolveZeroconfResponse::_sourceValid() const
+{
+    return true;
+}
+
+size_t AsyncResolveZeroconfResponse::_fillBuffer(uint8_t *data, size_t len)
+{
+    if (_finished) {
+        if (len > _response.length()) {
+            len = _response.length();
+        }
+        if (len) {
+            memcpy(data, _response.c_str(), len);
+            _response.remove(0, len);
+        }
+        return len;
+    }
+    else {
+        return RESPONSE_TRY_AGAIN;
+    }
 }

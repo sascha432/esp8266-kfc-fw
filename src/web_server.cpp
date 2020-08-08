@@ -211,10 +211,25 @@ void WebServerPlugin::handlerNotFound(AsyncWebServerRequest *request)
 
 void WebServerPlugin::handlerScanWiFi(AsyncWebServerRequest *request)
 {
+    WebServerSetCPUSpeedHelper setCPUSpeed;
     if (plugin.isAuthenticated(request) == true) {
         HttpHeaders httpHeaders(false);
         httpHeaders.addNoCache();
         auto response = new AsyncNetworkScanResponse(request->arg(FSPGM(hidden, "hidden")).toInt());
+        httpHeaders.setAsyncBaseResponseHeaders(response);
+        request->send(response);
+    } else {
+        request->send(403);
+    }
+}
+
+void WebServerPlugin::handlerZeroconf(AsyncWebServerRequest *request)
+{
+    WebServerSetCPUSpeedHelper setCPUSpeed;
+    if (plugin.isAuthenticated(request) == true) {
+        HttpHeaders httpHeaders(false);
+        httpHeaders.addNoCache();
+        auto response = new AsyncResolveZeroconfResponse(request->arg(FSPGM(value)));
         httpHeaders.setAsyncBaseResponseHeaders(response);
         request->send(response);
     } else {
@@ -679,6 +694,7 @@ void WebServerPlugin::begin()
     }
 
     WebServerPlugin::addHandler(F("/scan_wifi"), handlerScanWiFi);
+    WebServerPlugin::addHandler(F("/zeroconf"), handlerZeroconf);
     WebServerPlugin::addHandler(F("/logout"), handlerLogout);
     WebServerPlugin::addHandler(F("/is_alive"), handlerAlive);
     WebServerPlugin::addHandler(F("/sync_time"), handlerSyncTime);

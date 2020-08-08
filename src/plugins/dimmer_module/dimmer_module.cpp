@@ -320,7 +320,7 @@ bool Driver_DimmerModule::_findButton(Button &btn, uint8_t &pressed, uint8_t &ch
         }
         num++;
     }
-    __LDBG_printf("pressed=%u channel=%u button=%s", pressed, channel, channel == 0xff ? F("N/A") : (buttonUp ? F("up") : F("down")));
+    __LDBG_printf("pressed=%u channel=%u button=%s", pressed, channel, channel == 0xff ? PSTR("N/A") : (buttonUp ? PSTR("up") : PSTR("down")));
 
     return channel != 0xff;
 }
@@ -348,7 +348,7 @@ void Driver_DimmerModule::_loop()
 
 void Driver_DimmerModule::_buttonShortPress(uint8_t channel, bool up)
 {
-    __LDBG_printf("channel=%d dir=%s repeat=%u", channel, up ? F("up") : F("down"), _turnOffTimerRepeat[channel]);
+    __LDBG_printf("channel=%d dir=%s repeat=%u", channel, up ? PSTR("up") : PSTR("down"), _turnOffTimerRepeat[channel]);
     if (getChannelState(channel)) {
         // single short press, start timer
         // _turnOffTimerRepeat[channel] will be 0 for a single button down press
@@ -387,7 +387,7 @@ void Driver_DimmerModule::_buttonShortPress(uint8_t channel, bool up)
 
 void Driver_DimmerModule::_buttonLongPress(uint8_t channel, bool up)
 {
-    __LDBG_printf("channel=%d dir=%s", channel, up ? F("up") : F("down"));
+    __LDBG_printf("channel=%d dir=%s", channel, up ? PSTR("up") : PSTR("down"));
     //if (getChannelState(channel))
     {
         if (up) {
@@ -410,7 +410,7 @@ void Driver_DimmerModule::_buttonRepeat(uint8_t channel, bool up, uint16_t repea
     }
     int16_t newLevel = max(IOT_DIMMER_MODULE_MAX_BRIGHTNESS * _config.min_brightness / 100, min(IOT_DIMMER_MODULE_MAX_BRIGHTNESS, level + change));
     if (level != newLevel) {
-        __LDBG_printf("channel=%d dir=%s repeat=%d change=%d new_level=%d", channel, up ? F("up") : F("down"), repeatCount, change, newLevel);
+        __LDBG_printf("channel=%d dir=%s repeat=%d change=%d new_level=%d", channel, up ? PSTR("up") : PSTR("down"), repeatCount, change, newLevel);
         setChannel(channel, newLevel, _config.shortpress_fadetime);
     }
 }

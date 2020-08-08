@@ -128,6 +128,7 @@ public:
 public:
     static void handlerNotFound(AsyncWebServerRequest *request);
     static void handlerScanWiFi(AsyncWebServerRequest *request);
+    static void handlerZeroconf(AsyncWebServerRequest *request);
     static void handlerLogout(AsyncWebServerRequest *request);
     static void handlerAlive(AsyncWebServerRequest *request);
     static void handlerSyncTime(AsyncWebServerRequest *request);

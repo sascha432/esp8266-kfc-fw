@@ -196,7 +196,7 @@ void Dimmer_Base::readConfig()
                 _config.config_valid = true;
                 _config.fw = cfg;
                 _wire.unlock();
-                _debug_println(F("read success"));
+                __LDBG_print("read success");
                 return;
             }
             else {
@@ -211,7 +211,7 @@ void Dimmer_Base::readConfig()
 
         delay(50);
     }
-    _debug_println(F("read failed"));
+    __LDBG_print("read failed");
     WebUIAlerts_error(F("Reading firmware configuration failed"), AlertMessage::ExpiresType::REBOOT);
 }
 

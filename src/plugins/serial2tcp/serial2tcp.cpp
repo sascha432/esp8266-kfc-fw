@@ -130,6 +130,7 @@ void Serial2TcpPlugin::createConfigureForm(FormCallbackType type, const String &
 
     auto &connGroup = form.addDivGroup(F("conn_group"));
     form.add(FSPGM(host), _H_STR_VALUE(MainConfig().plugins.serial2tcp.hostname))->setFormUI(new FormUI::UI(FormUI::Type::TEXT, FSPGM(Hostname))));
+    // FormUI::ZeroconfSuffix()
     form.add<uint16_t>(FSPGM(port), _H_W_STRUCT_VALUE(cfg, port))->setFormUI(new FormUI::UI(FormUI::Type::TEXT, FSPGM(Port))));
     form.addValidator(FormNetworkPortValidator());
     form.add<bool>(F("autocnn"), _H_W_STRUCT_VALUE(cfg, auto_connect))->setFormUI(new FormUI::UI(FormUI::Type::SELECT, F("Auto Connect")))->setBoolItems());

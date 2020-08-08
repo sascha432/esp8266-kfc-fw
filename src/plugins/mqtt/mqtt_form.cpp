@@ -65,7 +65,7 @@ void MQTTPlugin::createConfigureForm(FormCallbackType type, const String &formNa
     auto &connGroup = commonGroup.end().addCardGroup(F("conn"), FSPGM(Connection), true);
 
     form.addCStringGetterSetter(FSPGM(host), ClientConfig::getHostname, ClientConfig::setHostnameCStr);
-    form.addFormUI(FSPGM(Hostname));
+    form.addFormUI(FSPGM(Hostname), FormUI::ZeroconfSuffix());
     form.addValidator(FormHostValidator(FormHostValidator::AllowedType::ALLOW_ZEROCONF));
     form.addValidator(FormLengthValidator(3, ClientConfig::kHostnameMaxSize));
 

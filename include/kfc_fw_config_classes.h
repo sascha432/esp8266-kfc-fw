@@ -396,7 +396,7 @@ namespace KFCConfigurationClasses {
                 DeviceConfig_t() :
                     config_version(FIRMWARE_VERSION),
                     safe_mode_reboot_timeout_minutes(0),
-                    zeroconf_timeout(5000),
+                    zeroconf_timeout(15000),
                     webui_cookie_lifetime_days(90),
                     zeroconf_logging(false),
                     status_led_mode(cast_int_status_led_mode(StatusLEDModeType::SOLID_WHEN_CONNECTED)) {}
@@ -406,8 +406,6 @@ namespace KFCConfigurationClasses {
 
         class Device : public DeviceConfig, public ConfigGetterSetter<DeviceConfig::DeviceConfig_t, _H(MainConfig().system.device.cfg) CIF_DEBUG(, &handleNameDeviceConfig_t)> {
         public:
-            Device() {
-            }
             static void defaults();
 
             CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().system.device, Name, 3, 16);

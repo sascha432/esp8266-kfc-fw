@@ -152,6 +152,12 @@ namespace FormUI {
 	public:
 		Suffix(char suffix) : String(suffix) {}
 		Suffix(const String &suffix) : String(suffix) {}
+		Suffix(const __FlashStringHelper *suffix) : String(suffix) {}
+	};
+
+	class ZeroconfSuffix : public Suffix {
+	public:
+		ZeroconfSuffix() : Suffix(F("<button type=\"button\" class=\"btn btn-default resolve-zerconf-button\" data-color=\"primary\">Resolve Zeroconf</button>")) {}
 	};
 
 	class PlaceHolder : public String {
@@ -333,6 +339,7 @@ namespace FormUI {
 
 		template<typename T>
 		void _addItem(const Conditional<T> &conditional) {
+			__DBG_printf("condition %u", conditional._condition);
 			if (conditional._condition) {
 				_addItem(conditional._value);
 			}

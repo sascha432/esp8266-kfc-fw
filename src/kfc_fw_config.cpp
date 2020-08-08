@@ -669,11 +669,12 @@ bool KFCFWConfiguration::resolveZeroConf(const String &name, const String &hostn
 {
     auto mdns = PluginComponent::getPlugin<MDNSPlugin>(F("mdns"), true);
     if (!mdns) {
-        Logger_error(F("Cannot resolve ZeroConf, MDNS plugin not loaded: %s"), hostname.c_str());
+        Logger_error(F("Cannot resolve Zeroconf, MDNS plugin not loaded: %s"), hostname.c_str());
         return false;
     }
 
     __LDBG_printf("resolveZeroConf=%s port=%u", hostname.c_str(), port);
+    String prefix, suffix;
     auto start = hostname.indexOf(F("${zeroconf:"));
     if (start != -1) {
         start += 11;
@@ -686,6 +687,8 @@ bool KFCFWConfiguration::resolveZeroConf(const String &name, const String &hostn
             if (serviceEnd != -1 && protoEnd != -1 && serviceEnd < protoEnd && (valuesEnd == -1 || protoEnd < valuesEnd)) {
                 auto service = hostname.substring(start, serviceEnd);
                 auto proto = hostname.substring(serviceEnd + 1, protoEnd);
+                prefix = hostname.substring(0, start - 11);
+                suffix = hostname.substring(end + 1);
                 String addressValue;
                 String portValue;
                 String defaultValue;
@@ -717,7 +720,8 @@ bool KFCFWConfiguration::resolveZeroConf(const String &name, const String &hostn
 
                 __LDBG_printf("service=%s proto=%s values=%s:%s default=%s port=%d", service.c_str(), proto.c_str(), addressValue.c_str(), portValue.c_str(), defaultValue.c_str(), port);
 
-                mdns->resolveZeroConf(new MDNSResolver::Query(name, service, proto, addressValue, portValue, defaultValue, port, callback, System::Device::getConfig().zeroconf_timeout));
+                mdns->resolveZeroConf(new MDNSResolver::Query(name, service, proto, addressValue, portValue, defaultValue, port, prefix, suffix, callback, System::Device::getConfig().zeroconf_timeout));
+                return true;
 
             }
         }

@@ -12,7 +12,7 @@
         "default": "Set-Cookie"
     },
     "mime_text_plain": {
-        "use_counter": 18,
+        "use_counter": 17,
         "default": "text/plain"
     },
     "null": {
@@ -44,7 +44,7 @@
         "default": "Invalid hostname or IP address"
     },
     "webui_json_id": {
-        "use_counter": 26,
+        "use_counter": 29,
         "default": "id"
     },
     "webui_json_name": {
@@ -64,11 +64,11 @@
         "default": "offset"
     },
     "webui_json_value": {
-        "use_counter": 26,
+        "use_counter": 29,
         "default": "value"
     },
     "webui_json_state": {
-        "use_counter": 19,
+        "use_counter": 22,
         "default": "state"
     },
     "mime_application_json": {
@@ -124,11 +124,11 @@
         "default": "pure virtual call: %s\\n"
     },
     "yes": {
-        "use_counter": 6,
+        "use_counter": 7,
         "default": "yes"
     },
     "no": {
-        "use_counter": 5,
+        "use_counter": 6,
         "default": "no"
     },
     "comma_": {
@@ -300,7 +300,7 @@
         "default": "/"
     },
     "mime_text_html": {
-        "use_counter": 2,
+        "use_counter": 3,
         "default": "text/html"
     },
     "mime_application_zip": {
@@ -380,11 +380,11 @@
         "default": "/.pvt/blinds_ctrl.state"
     },
     "Yes": {
-        "use_counter": 1,
+        "use_counter": 3,
         "default": "Yes"
     },
     "No": {
-        "use_counter": 1,
+        "use_counter": 3,
         "default": "No"
     },
     "webui_json_title": {
@@ -528,7 +528,7 @@
         "default": "switch"
     },
     "strftime_date_time_zone": {
-        "use_counter": 3,
+        "use_counter": 4,
         "default": "%FT%T %Z"
     },
     "ping_monitor_response": {
@@ -548,7 +548,7 @@
         "default": "Detected eth address %s"
     },
     "stk500v1_log_file": {
-        "use_counter": 5,
+        "use_counter": 4,
         "default": "/stk500v1/debug.log"
     },
     "stk500v1_sig_file": {
@@ -812,19 +812,19 @@
         "default": "message"
     },
     "ds3231_id_temp": {
-        "use_counter": 0,
+        "use_counter": 5,
         "default": "ds3231_temp"
     },
     "ds3231_id_time": {
-        "use_counter": 0,
+        "use_counter": 5,
         "default": "ds3231_time"
     },
     "ds3231_id_lost_power": {
-        "use_counter": 0,
+        "use_counter": 3,
         "default": "ds3231_lost_power"
     },
     "webui_json_head": {
-        "use_counter": 1,
+        "use_counter": 2,
         "default": "head"
     },
     "fs_mapping_listings": {
@@ -1052,7 +1052,7 @@
         "default": "n/a"
     },
     "stk500v1_tmp_file": {
-        "use_counter": 2,
+        "use_counter": 0,
         "default": "/stk500v1/firmware_tmp.hex"
     },
     "iot_sensor_hlw80xx_state_file": {
@@ -1060,11 +1060,11 @@
         "default": "/.pvt/hlw80xx.state"
     },
     "seconds": {
-        "use_counter": 16,
+        "use_counter": 14,
         "default": "seconds"
     },
     "milliseconds": {
-        "use_counter": 8,
+        "use_counter": 5,
         "default": "milliseconds"
     },
     "__s_": {
@@ -1096,7 +1096,7 @@
         "default": "storage"
     },
     "image_type": {
-        "use_counter": 3,
+        "use_counter": 2,
         "default": "image_type"
     },
     "id": {
@@ -1148,15 +1148,15 @@
         "default": "\\u00b0C"
     },
     "vcc": {
-        "use_counter": 2,
+        "use_counter": 0,
         "default": "vcc"
     },
     "frequency": {
-        "use_counter": 2,
+        "use_counter": 0,
         "default": "frequency"
     },
     "Hz": {
-        "use_counter": 2,
+        "use_counter": 0,
         "default": "Hz"
     },
     "light_sensor": {
@@ -1168,11 +1168,11 @@
         "default": "rd"
     },
     "alarm": {
-        "use_counter": 2,
+        "use_counter": 3,
         "default": "alarm"
     },
     "Alarm": {
-        "use_counter": 0,
+        "use_counter": 1,
         "default": "Alarm"
     },
     "defaultPassword": {
@@ -1204,7 +1204,7 @@
         "default": "host"
     },
     "Hostname": {
-        "use_counter": 3,
+        "use_counter": 4,
         "default": "Hostname"
     },
     "port": {
@@ -1268,7 +1268,7 @@
         "default": "Authentication"
     },
     "value": {
-        "use_counter": 1,
+        "use_counter": 2,
         "default": "value"
     },
     "boolean": {
@@ -1376,7 +1376,7 @@
         "default": "size"
     },
     "_serial_console_html": {
-        "use_counter": 2,
+        "use_counter": 1,
         "default": "/serial_console.html"
     },
     "description_xml": {
@@ -1888,11 +1888,23 @@
         "default": "Speed"
     },
     "Color": {
-        "use_counter": 0,
+        "use_counter": 1,
         "default": "Color"
     },
     "Protection": {
         "use_counter": 1,
         "default": "Protection"
+    },
+    "Channel": {
+        "use_counter": 1,
+        "auto": "Channel"
+    },
+    "Encryption": {
+        "use_counter": 1,
+        "auto": "Encryption"
+    },
+    "Address": {
+        "use_counter": 1,
+        "auto": "Address"
     }
 }

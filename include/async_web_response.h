@@ -195,3 +195,17 @@ private:
     bool _done;
     static bool _locked;
 };
+
+class AsyncResolveZeroconfResponse : public AsyncBaseResponse {
+public:
+    AsyncResolveZeroconfResponse(const String &value);
+    virtual ~AsyncResolveZeroconfResponse();
+
+    bool _sourceValid() const;
+    virtual size_t _fillBuffer(uint8_t *data, size_t len) override;
+
+private:
+    String _response;
+    bool _finished;
+    bool *_async;
+};

@@ -42,7 +42,7 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
 
             auto channelItems = FormUI::ItemsList(0, FSPGM(Auto));
             for(uint8_t i = 1; i <= config.getMaxWiFiChannels(); i++) {
-                channelItems.emplace_back(std::move(String(i)), std::move(String(i)));
+                channelItems.push_back(i, i);
             }
 
             auto encryptionItems = FormUI::ItemsList(
@@ -100,11 +100,11 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
 
             form.addMemberVariable(F("ap_ch"), softAp, &Network::SoftAP::ConfigStructType::channel);
             form.addValidator(FormRangeValidator(1, config.getMaxWiFiChannels(), true));
-            form.addFormUI(F("Channel")).emplaceItems(std::move(channelItems));
+            form.addFormUI(FSPGM(Channel)).emplaceItems(std::move(channelItems));
 
             form.addMemberVariable("ap_enc", softAp, &Network::SoftAP::ConfigStructType::encryption);
             form.addValidator(FormEnumValidator<uint8_t, WiFiEncryptionTypeArray().size()>(F("Invalid encryption"), createWiFiEncryptionTypeArray()));
-            form.addFormUI(F("Encryption")).emplaceItems(std::move(encryptionItems));
+            form.addFormUI(FSPGM(Encryption)).emplaceItems(std::move(encryptionItems));
 
 
             apModeGroup.end();

@@ -44,11 +44,11 @@ void DimmerModuleForm::_createConfigureForm(PluginComponent::FormCallbackType ty
 
 #if DIMMER_FIRMWARE_VERSION < 0x030000
     form.add(F("lcf"), _H_W_STRUCT_VALUE(cfg, fw.linear_correction_factor));
-    form.addFormUI(F("Linear Correction Factor"), FormUI::ConditionalAttribute(cfg.config_valid, FSPGM(disabled), FSPGM(disabled)), FormUI::PlaceHolder(1.0, 1));
+    form.addFormUI(F("Linear Correction Factor"), FormUI::ConditionalAttribute(!cfg.config_valid, FSPGM(disabled), FSPGM(disabled)), FormUI::PlaceHolder(1.0, 1));
 #endif
 
     form.add<bool>(F("restore"), _H_W_STRUCT_VALUE(cfg, fw.bits.restore_level));
-    form.addFormUI(F("After Power Failure"), FormUI::ConditionalAttribute(cfg.config_valid, FSPGM(disabled), FSPGM(disabled)), FormUI::BoolItems(F("Restore last brightness level"), F("Do not turn on")));
+    form.addFormUI(F("After Power Failure"), FormUI::ConditionalAttribute(!cfg.config_valid, FSPGM(disabled), FSPGM(disabled)), FormUI::BoolItems(F("Restore last brightness level"), F("Do not turn on")));
 
     mainGroup.end();
 
@@ -131,40 +131,40 @@ void DimmerModuleForm::_createConfigureForm(PluginComponent::FormCallbackType ty
     auto &fwGroup = form.addCardGroup(F("fwcfg"), F("Advanced Firmware Configuration"), false);
 
     form.add<uint8_t>(F("max_temp"), _H_W_STRUCT_VALUE(cfg, fw.max_temp));
-    form.addFormUI(F("Max. Temperature"), FormUI::ConditionalAttribute(cfg.config_valid, FSPGM(disabled), FSPGM(disabled)), FormUI::PlaceHolder(80), FormUI::Suffix(FSPGM(_degreeC)));
+    form.addFormUI(F("Max. Temperature"), FormUI::ConditionalAttribute(!cfg.config_valid, FSPGM(disabled), FSPGM(disabled)), FormUI::PlaceHolder(80), FormUI::Suffix(FSPGM(_degreeC)));
     form.addValidator(FormRangeValidator(F("Temperature out of range: %min%-%max%"), 45, 110));
 
     form.add<uint8_t>(F("metricsint"), _H_W_STRUCT_VALUE(cfg, fw.report_metrics_max_interval));
-    form.addFormUI(F("Metrics Report Interval"), FormUI::ConditionalAttribute(cfg.config_valid, FSPGM(disabled), FSPGM(disabled)), FormUI::PlaceHolder(10), FormUI::Suffix(FSPGM(seconds)));
+    form.addFormUI(F("Metrics Report Interval"), FormUI::ConditionalAttribute(!cfg.config_valid, FSPGM(disabled), FSPGM(disabled)), FormUI::PlaceHolder(10), FormUI::Suffix(FSPGM(seconds)));
     form.addValidator(FormRangeValidator(5, 255));
 
     form.add<uint8_t>(F("zc_offset"), _H_W_STRUCT_VALUE(cfg, fw.zero_crossing_delay_ticks));
-    form.addFormUI(F("Zero Crossing Offset"), FormUI::ConditionalAttribute(cfg.config_valid, FSPGM(disabled), FSPGM(disabled)), FormUI::Suffix(FSPGM(ticks, "ticks")));
+    form.addFormUI(F("Zero Crossing Offset"), FormUI::ConditionalAttribute(!cfg.config_valid, FSPGM(disabled), FSPGM(disabled)), FormUI::Suffix(FSPGM(ticks, "ticks")));
     form.addValidator(FormRangeValidator(0, 255));
 
     form.add<uint16_t>(F("min_on"), _H_W_STRUCT_VALUE(cfg, fw.minimum_on_time_ticks));
-    form.addFormUI(F("Minimum On-time"), FormUI::ConditionalAttribute(cfg.config_valid, FSPGM(disabled), FSPGM(disabled)), FormUI::Suffix(FSPGM(ticks)));
+    form.addFormUI(F("Minimum On-time"), FormUI::ConditionalAttribute(!cfg.config_valid, FSPGM(disabled), FSPGM(disabled)), FormUI::Suffix(FSPGM(ticks)));
     form.addValidator(FormRangeValidator(1, 65535));
 
     form.add<uint16_t>(F("min_off"), _H_W_STRUCT_VALUE(cfg, fw.adjust_halfwave_time_ticks));
-    form.addFormUI(F("Minimum Off-time"), FormUI::ConditionalAttribute(cfg.config_valid, FSPGM(disabled), FSPGM(disabled)), FormUI::Suffix(FSPGM(ticks)));
+    form.addFormUI(F("Minimum Off-time"), FormUI::ConditionalAttribute(!cfg.config_valid, FSPGM(disabled), FSPGM(disabled)), FormUI::Suffix(FSPGM(ticks)));
     form.addValidator(FormRangeValidator(1, 65535));
 
     form.add<float>(F("vref11"), _H_W_STRUCT_VALUE(cfg, fw.internal_1_1v_ref));
-    form.addFormUI(F("ATmega 1.1V Reference Calibration"), FormUI::ConditionalAttribute(cfg.config_valid, FSPGM(disabled), FSPGM(disabled)), FormUI::PlaceHolder(1.1, 1), FormUI::Suffix('V'));
+    form.addFormUI(F("ATmega 1.1V Reference Calibration"), FormUI::ConditionalAttribute(!cfg.config_valid, FSPGM(disabled), FSPGM(disabled)), FormUI::PlaceHolder(1.1, 1), FormUI::Suffix('V'));
     form.addValidator(FormRangeValidatorDouble(0.9, 1.3, 1));
 
     form.add<float>(F("temp_ofs"), (cfg.fw.ntc_temp_offset / DIMMER_TEMP_OFFSET_DIVIDER), [&cfg](const float &value, FormField &, bool) {
         cfg.fw.ntc_temp_offset = value * DIMMER_TEMP_OFFSET_DIVIDER;
         return false;
     });
-    form.addFormUI(F("Temperature Offset (NTC)"), FormUI::ConditionalAttribute(cfg.config_valid, FSPGM(disabled), FSPGM(disabled)), FormUI::PlaceHolder(0), FormUI::Suffix(FSPGM(_degreeC)));
+    form.addFormUI(F("Temperature Offset (NTC)"), FormUI::ConditionalAttribute(!cfg.config_valid, FSPGM(disabled), FSPGM(disabled)), FormUI::PlaceHolder(0), FormUI::Suffix(FSPGM(_degreeC)));
 
     form.add<float>(F("temp2_ofs"), (cfg.fw.int_temp_offset / DIMMER_TEMP_OFFSET_DIVIDER), [&cfg](const float &value, FormField &, bool) {
         cfg.fw.int_temp_offset = value * DIMMER_TEMP_OFFSET_DIVIDER;
         return false;
     });
-    form.addFormUI(F("Temperature Offset 2 (ATmega)"), FormUI::ConditionalAttribute(cfg.config_valid, FSPGM(disabled), FSPGM(disabled)), FormUI::PlaceHolder(0), FormUI::Suffix(FSPGM(_degreeC)));
+    form.addFormUI(F("Temperature Offset 2 (ATmega)"), FormUI::ConditionalAttribute(!cfg.config_valid, FSPGM(disabled), FSPGM(disabled)), FormUI::PlaceHolder(0), FormUI::Suffix(FSPGM(_degreeC)));
 
     fwGroup.end();
 

@@ -93,10 +93,6 @@ namespace Config_QuickConnect
     } WiFiQuickConnect_t;
 };
 
-typedef struct {
-    uint16_t http_port;
-} Config;
-
 #define _H_IP_VALUE(name, ...) \
     IPAddress(config._H_GET_IP(name)), [__VA_ARGS__](const IPAddress &addr, FormField &, bool store) { \
         if (store) { \

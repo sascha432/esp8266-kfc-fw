@@ -48,7 +48,12 @@
                         <span id="syslog_settings">
                             <div class="form-group">
                                 <label for="sl_host">Syslog Host:</label>
-                                <input type="text" class="form-control" name="sl_host" id="sl_host" value="%SL_HOST%">
+                                <div class="input-group">
+                                    <input type="text" class="form-control" name="sl_host" id="sl_host" value="%SL_HOST%">
+                                    <div class="input-group-append">
+                                        <button type="button" class="btn btn-default resolve-zerconf-button" data-color="primary" data-target="#sl_host">Resolve Zeroconf</button>
+                                    </div>
+                                </div>
                             </div>
                             <div class="form-group">
                                 <label for="sl_port">Syslog Port:</label>

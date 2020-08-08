@@ -20,6 +20,7 @@
 - Added missing html enitities encoding to forms
 - Open/close automation for the Blinds Plugin
 - MQTT auto discovery rebroadcast interval
+- Zeroconf resolve button for forms
 
 ## Version 0.0.3
 

@@ -57,6 +57,20 @@ $.formValidator = {
 // $.formValidator.addErrors([{'target':'#colon_sp','error':'This fields value must be between 50 and 65535 or 0'}]);
 // $.formValidator.addErrors([{'target':'#brightness','error':'This fields value must be between 50 and 65535 or 0'}]);
 
+$.addModalDialog = function(id, title, body, onremove) {
+    $('#' + id).remove();
+    $('body').append('<div class="modal" tabindex="-1" role="dialog" id="' + id + '"><div class="modal-dialog modal-lg" role="document"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">' + title +  '</h5><button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button></div><div class="modal-body">' + body + '</div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button></div></div></div></div>');
+    var dialog = $('#' + id);
+    dialog.on('hidden.bs.modal', function () {
+        dialog.remove();
+        if (onremove) {
+            onremove();
+        }
+    });
+    dialog.modal('show');
+    return dialog;
+};
+
 $.urlParam = function(name, remove) {
     var results = new RegExp('([\?&])' + name + '=([^&#]*)([&#]?)').exec(window.location.href);
     if (results == null) {
@@ -153,6 +167,29 @@ $(function() {
             }
         }).trigger('change');
     });
+
+    $('.resolve-zerconf-button').on('click', function() {
+        var button = $(this);
+        var target = $(button.data('target'));
+        if (target.length == 0) {
+            target = button.closest('.input-group').find('input[type=text]');
+        }
+        var value = $(target).val();
+        var dlg_id = 'resolve_zeroconf_dialog';
+        var dlg_title = 'Zeroconf Resolver';
+        var dlg = function(body) {
+            $.addModalDialog(dlg_id, dlg_title, body, function() {
+                button.prop('disabled', false);
+            });
+        };
+        button.prop('disabled', true);
+        $.get('/zeroconf?SID=' + $.getSessionId() + '&value=' + value, function (data) {
+            dlg(data);
+        }).fail(function(jqXHR, textStatus, error) {
+            dlg('An error occured loading results:<br>' + error);
+        });
+    });
+
 
     // all forms
     $('.setting-requires-restart').change(function(e) {

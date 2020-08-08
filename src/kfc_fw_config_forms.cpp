@@ -11,7 +11,7 @@ using KFCConfigurationClasses::Network;
 
 static void createWifiModes(FormUI::ItemsList &items)
 {
-    items = FormUI::ItemsList(WIFI_OFF, FSPGM(Disabled), WIFI_STA, FSPGM(Station_Mode), WIFI_AP, FSPGM(Access_Point), WIFI_AP_STA, PrintString(F("%s and %s"), SPGM(Access_Point), SPGM(Station_Mode)));
+    items = std::move(FormUI::ItemsList(WIFI_OFF, FSPGM(Disabled), WIFI_STA, FSPGM(Station_Mode), WIFI_AP, FSPGM(Access_Point), WIFI_AP_STA, PrintString(F("%s and %s"), SPGM(Access_Point), SPGM(Station_Mode))));
 }
 
 
@@ -38,7 +38,7 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
 
             auto &softAp = Network::SoftAP::getWriteableConfig();
             FormUI::ItemsList wifiModes;
-            createWifiModes(wifiModes) ;
+            createWifiModes(wifiModes);
 
             FormUI::ItemsList channelItems(0, FSPGM(Auto));
             for(uint8_t i = 1; i <= config.getMaxWiFiChannels(); i++) {

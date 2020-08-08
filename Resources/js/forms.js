@@ -253,74 +253,59 @@ $(function() {
         }
     });
 
+    // global presets
+    // override with data-protected="true", data-icon-protected="oi-xyz" ...
+    // if disabled=false, the input is type password until focused
     $.visible_password_options = $.extend({
-        disabled: false,
-        protected: 'auto',
-        icon_protected: 'oi-eye',
-        icon_unprotected: 'oi-shield',
+        protected: 'auto',              // auto: type=input type, false: type=text, true: type=password
+        disabled: false,                // disabled=true sets protected state and does not add a toggle button
+        type: 'password',               // set to input type while focused
+        iconProtected: 'oi oi-eye',
+        iconUnprotected: 'oi oi-shield',
     }, $.visible_password_options);
 
     $('.visible-password').each(function() {
+        var input = $(this);
+        var options = $.extend({}, $.visible_password_options);
+        var wrapper = input.wrap('<div class="input-group visible-password-group"></div>').closest('.visible-password-group');
 
-        var options = $.visible_password_options;
-        var $wrappedElement = $(this).wrap('<div class="input-group visible-password-group"></div>');
-        var $button;
-        var $span;
-        var auto_protected_state;
+        $.extend(options, input.data());
+        if (input.attr('autocomplete') == '') {
+            input.attr('autocomplete', 'new-password')
+        }
+        input.attr('spellcheck', 'false');
 
-        $.each(options, function(key, value) {
-            var val = $wrappedElement.data(key.replace('_', '-'));
-            if (val !== undefined) {
-                options[key] = val;
-            }
-        });
-
+        // set initial input type
+        options.type = options.protected === true ? 'password' : (options.protected === false ? 'text' : input.attr('type'));
         if (options.disabled) {
+            input.attr('type', options.type); // static
             return;
         }
 
-        function is_true(value) {
-            return value == 'true' || value == '1' || value == true || value == 1;
+        // toggle button
+        input.attr('type', 'password');
+        input.after('<div class="input-group-append"><button class="btn btn-default btn-visible-password" type="button"><span></span></button>');
+        var button = wrapper.find('button');
+        var icon = button.find('span');
+        function add_icon() {
+            icon.addClass((options.type == 'text') ? options.iconProtected : options.iconUnprotected);
         }
-        function set_type(type) {
-            $wrappedElement.attr('type', type ? 'password' : 'text');
-        }
-        function update_icon() {
-            if (auto_protected_state) {
-                set_type(true);
-                $span.removeClass(options.icon_unprotected).addClass(options.icon_protected); // protected
-            } else {
-                $span.addClass(options.icon_unprotected).removeClass(options.icon_protected); // visible/unprotected
-            }
-        }
-
-        auto_protected_state = is_true(options.protected) || ($wrappedElement.attr('type') == 'password');
-        var $newElement = $('<div class="input-group-append"><button class="btn btn-default btn-visible-password" type="button"><span class="oi"></span></button>');
-        $button = $newElement.find('button');
-        $span = $button.find('span');
-        if ($wrappedElement.attr('autocomplete') == '') {
-            $wrappedElement.attr('autocomplete', 'new-password')
-        }
-        $wrappedElement.attr('spellcheck', 'false').after($newElement)
-        update_icon();
-
-        $button.on('click', function(e) {
-            e.preventDefault();
-            auto_protected_state = !auto_protected_state;
-            update_icon();
+        add_icon();
+        // toggle focused type
+        button.on('click', function() {
+            options.type = options.type == 'password' ? 'text' : 'password';
+            icon.removeClass(options.iconProtected + ' ' + options.iconUnprotected);
+            add_icon();
         });
-        $wrappedElement.on('focus', function() {
-            if (!auto_protected_state) {
-                set_type(false);
-            }
+        // change type onfocs/blur
+        input.on('focus', function() {
+            input.attr('type', options.type);
         }).on('blur', function() {
-            set_type(true);
+            input.attr('type', 'password')
         });
-
     });
 
     $('.button-checkbox').each(function () {
-
         var widget = $(this);
         var button = widget.find('button');
         var color = button.data('color'); // btn-<color> class

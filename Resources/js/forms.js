@@ -325,8 +325,7 @@ $(function() {
             $checkbox.triggerHandler('change');
         });
 
-        var state = parseInt(hiddenInput.val()) != 0;
-        $checkbox.prop('checked', state);
+        $checkbox.prop('checked', parseInt(hiddenInput.val()) != 0);
         update_button();
 
         if ($button.find('.state-icon').length == 0 && settings[$button.data('state')].icon) {

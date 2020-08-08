@@ -8,109 +8,111 @@ $(function() {
 
         var max_alerts = 10;
         var last_enabled = 2; // show at least 3 alarms
+        var prefix = 'alarm_';
+        var id_prefix = '#' + prefix;
 
-        function check_days(num) {
-            var count = 0;
-            for (j = 0; j < 7; j++) {
-                var checkbox_id = '#_alarm_' + num + '_weekday_' + j;
-                if ($(checkbox_id).is(':checked')) {
-                    count++;
-                }
+        var prototype = $(id_prefix + 'prototype').html();
+        $(id_prefix + 'prototype').remove();
+        var container = $(id_prefix + 'container');
+
+        var i;
+        var hours = '';
+        var minutes = '';
+        for(i = 0; i < 60; i++) {
+            var s = i;
+            if (s < 10) {
+                s = '0' + s;
             }
-            return count;
+            if (i < 24) {
+                hours += '<option value="' + i + '">' + s + '</option>';
+            }
+            minutes += '<option value="' + i + '">' + s + '</option>';
         }
 
-        function update_one_time_alert(num, init) {
-            // check if any days are checked and the alarm is enabled
-            var count = check_days(num);
-            var enabled = parseInt($('#alarm_' + num + '_enabled').val());
-            // if not, display one time alert
-            var element = $('#alarm_' + num + '_repeat');
-            if (count == 0 && enabled == 1) {
-                element.show();
-                if (!init) {
-                    element.find('.time').remove();
-                }
-            }
-            else {
-                element.hide();
-            }
-        }
-
-        var i, j;
         for(i = 0; i < max_alerts; i++) {
-            // update checkboxes from hidden field
-            var var_id = '#alarm_' + i + '_weekdays';
-            var value = parseInt($(var_id).val());
-            for (j = 0; j < 7; j++) {
-                var checkbox_id = '#_alarm_' + i + '_weekday_' + j;
-                if (value & (1 << j)) {
-                    // check box and trigger change handler for button-checkbox
-                    $(checkbox_id).prop('checked', true).triggerHandler('change');
+            var tmp = prototype.replace('$$H$$', hours).replace('$$M$$', minutes).replace(/\$\$/g, i);
+            var tmp = container.append('<div id="' + prefix + i + '_container">' + tmp + '</div>').find(id_prefix + i + '_container');
+            var data = window.alarm_values_array[i];
+            // store local variables
+            (function() {
+                var id_prefix_num = id_prefix + i;
+                var repeat = $(id_prefix_num + '_repeat');
+                var time = repeat.find('.time');
+                var once = repeat.find('.once');
+                var enabled_input = $(id_prefix_num + '_enabled')
+                var enabled = parseInt(data.e) ? 1 : 0;
+                var weekdays = parseInt(data.w) || 0;
+                function auto_enable() {
+                    enabled_input.val(1).trigger('change');
                 }
-            }
-            if (i > last_enabled && parseInt($('#alarm_' + i + '_enabled').val())) {
-                last_enabled = i;
-            }
-            update_one_time_alert(i, true);
+                function update_repeat() {
+                    time.remove();
+                    if (weekdays || !enabled) {
+                        once.hide();
+                    } else {
+                        once.show();
+                    }
+                }
+                // weekdays check box buttons with single hidden input field
+                var input = id_prefix_num + '_weekdays';
+                $(input).val(weekdays);
+                tmp.find('.alarm-week-day-button').each(function(n) {
+                    var mask = (1 << n);
+                    var btn = $(this);
+                    btn.on('click', function() {
+                        weekdays = weekdays ^ mask;
+                        $(input).val(weekdays);
+                        btn.removeClass('btn-primary btn-default').addClass('btn-' + (weekdays & mask ? 'primary' : 'default'));
+                        update_repeat();
+                        auto_enable();
+                    })
+                    btn.addClass('btn-' + (weekdays & mask ? 'primary' : 'default'));
+                });
+                // other fields
+                $(id_prefix_num + '_hour').val(data.h);
+                $(id_prefix_num + '_minute').val(data.m);
+                $(id_prefix_num + '_duration').val(data.d);
+                if (enabled && weekdays == 0) {
+                    repeat.find('.time').html(' ' + data.ts).show();
+                } else {
+                    time.remove();
+                }
+                enabled_input.val(enabled).rangeslider({
+                    polyfill : false
+                }).on('change', function() {
+                    enabled = $(this).val() == 1;
+                    update_repeat();
+                });
+                // add auto enable
+                tmp.find('.alarm-auto-enable').on('change', auto_enable);
+                // find last enabled alarm
+                if (i > last_enabled && enabled) {
+                    last_enabled = i;
+                }
+            })();
         }
 
-        // hide all disabled alarms
+        // hide all disabled alarms after the last enabled one
         last_enabled++;
         for(i = last_enabled; i < max_alerts; i++) {
-            $('#alarm_' + i + '_container').hide();
+            $(id_prefix + i + '_container').hide();
         }
 
+        // add button to add more of the disabled alarms
         if (last_enabled < max_alerts) {
             $('#add_alarm_btn').show().on('click', function() {
-                $('#alarm_' + last_enabled + '_container').show();
+                $(id_prefix + 'container').find('.row').show();
+                $(id_prefix + last_enabled + '_container').show().find('.row:visible:last').hide();
                 if (last_enabled < max_alerts) {
-                    last_enabled++;
-                    if (last_enabled == max_alerts) {
-                        $(this).hide();
+                    if (++last_enabled == max_alerts) {
+                        $(this).hide(); // hide button if none left
                     }
                 }
             });
         }
 
-        $('.button-checkbox input').on('change', function() {
-            var items = $(this).attr('id').split('_');
-            update_one_time_alert(items[2]);
-        });
-
-        $('.alarm-auto-enable').on('change', function() {
-            var items = $(this).attr('id').split('_');
-            var enable = $('#alarm_' + items[1] + '_enabled');
-            $('#alarm_' + items[1] + '_repeat').find('.time').remove();
-            if (parseInt(enable.val()) == 0) {
-                enable.val(1).trigger('change');
-            }
-        });
-
-        $('form').on('submit', function () {
-            var i, j;
-            // update hidden field from checkboxes
-            for(i = 0; i < max_alerts; i++) {
-                var value = 0;
-                for (j = 0; j < 7; j++) {
-                    var checkbox_id = '#_alarm_' + i + '_weekday_' + j;
-                    value |= $(checkbox_id).prop('checked') ? (1 << j) : 0;
-                }
-                var var_id = '#alarm_' + i + '_weekdays';
-                $(var_id).val(value);
-            }
-        });
-
-        $('.alarm-enable-slider input').rangeslider({
-            polyfill : false
-        }).on('change', function() {
-            var items = $(this).attr('id').split('_');
-            update_one_time_alert(items[1]);
-        });
-
         // wait for form to load before showing its contents
         $('#spinner_container').hide();
-        $('#alarm_container').show();
-
+        container.show().find('.row:visible:last').hide();
     }
 });

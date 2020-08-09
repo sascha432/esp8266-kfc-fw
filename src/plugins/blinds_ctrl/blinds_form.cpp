@@ -6,7 +6,6 @@
 #include <KFCForms.h>
 #include <kfc_fw_config.h>
 #include <PrintHtmlEntitiesString.h>
-#include <StringKeyValueStore.h>
 #include "blinds_plugin.h"
 
 #if DEBUG_IOT_BLINDS_CTRL
@@ -20,33 +19,9 @@ using KFCConfigurationClasses::Plugins;
 
 void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request)
 {
-    if (type == FormCallbackType::SAVE) {
-
-        // using KeyValueStorage::Container;
-        // using KeyValueStorage::ContainerPtr;
-        // using KeyValueStorage::Item;
-
-        // auto &cfg = Plugins::Blinds::getWriteableConfig();
-
-        // auto blinds = config._H_GET(Config().blinds_controller);
-        // bool dir[2] = { blinds.channel0_dir, blinds.channel1_dir };
-        // auto container = ContainerPtr(new Container());
-        // container->add(Item::create(F("blinds_swap_ch"), blinds.swap_channels));
-        // for(uint8_t i = 0; i < 2; i++) {
-        //     container->add(Item::create(PrintString(F("blinds[%u]dir"), i), dir[i]));
-        //     container->add(Item::create(PrintString(F("blinds[%u]close_time"), i), blinds.channels[i].closeTime));
-        //     container->add(Item::create(PrintString(F("blinds[%u]I_limit"), i), blinds.channels[i].currentLimit));
-        //     container->add(Item::create(PrintString(F("blinds[%u]I_limit_time"), i), blinds.channels[i].currentLimitTime));
-        //     container->add(Item::create(PrintString(F("blinds[%u]open_time"), i), blinds.channels[i].openTime));
-        //     container->add(Item::create(PrintString(F("blinds[%u]pwm"), i), blinds.channels[i].pwmValue));
-        // }
-        // config.callPersistantConfig(container);
-
-        return;
-    } else if (!isCreateFormCallbackType(type)) {
+    if (!isCreateFormCallbackType(type)) {
         return;
     }
-
 
     auto &cfg = Plugins::Blinds::getWriteableConfig();
 
@@ -111,6 +86,7 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
         form.addValidator(FormRangeValidator(0, PWMRANGE));
 
         channelGroup.end();
+
     }
 
     auto &autoGroup = form.addCardGroup(FSPGM(open, "open"), PrintString(F("Open Automation")), false);
@@ -128,6 +104,7 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
             form.addFormUI(FSPGM(Delay, "Delay"), FormUI::Suffix(FSPGM(seconds)));
         }
         form.addValidator(FormRangeValidator(0, 3600));
+
     }
 
     auto &closeGroup = autoGroup.end().addCardGroup(FSPGM(close), PrintString(F("Close Automation")), false);
@@ -145,6 +122,7 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
             form.addFormUI(FSPGM(Delay), FormUI::Suffix(FSPGM(seconds)));
         }
         form.addValidator(FormRangeValidator(0, 3600));
+
     }
 
     auto &pinsGroup = closeGroup.end().addCardGroup(FSPGM(config), F("Pin Configuration"), false);
@@ -165,7 +143,11 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
     form.addFormUI(FormUI::Type::HIDDEN);
 
     form.add(F("pin4"), _H_W_STRUCT_VALUE_TYPE(cfg, pins[4], uint8_t));
-    form.addFormUI(F("Shunt Multiplexer Pin"), FormUI::Type::INTEGER, FormUI::PlaceHolder(IOT_BLINDS_CTRL_RSSEL_PIN)).addInputGroupAppendCheckBoxButton(multiplexer, F("HIGH State For Channel 0"));
+    form.addFormUI(F("Shunt Multiplexer Pin"), FormUI::Type::INTEGER, FormUI::PlaceHolder(IOT_BLINDS_CTRL_RSSEL_PIN), FormUI::UI::createCheckBoxButton(multiplexer, F("HIGH State For Channel 0")));
+
+    form.add(F("adca"), _H_W_STRUCT_VALUE(cfg, adc_divider));
+    form.addFormUI(F("ADC Averaging"), FormUI::Type::INTEGER, FormUI::PlaceHolder(40), FormUI::Suffix(F("microseconds")));
+    form.addValidator(FormRangeValidator(10, 1000));
 
     pinsGroup.end();
 

@@ -90,12 +90,17 @@ namespace FormUI {
         return Suffix(std::move(_suffix));
     }
 
+    Type UI::getType() const
+    {
+        return _type;
+    }
+
 
     void UI::html(PrintInterface &output)
     {
         auto &ui = _parent->getFormUIConfig();
+
         const char *name = nullptr;
-        char ch;
         switch (_type) {
         case Type::GROUP_START_HR:
         case Type::GROUP_START_DIV:
@@ -109,17 +114,26 @@ namespace FormUI {
             break;
         }
 
+        char ch;
         switch (_type) {
         // ---------------------------------------------------------------
         // Card Group
         case Type::GROUP_START_CARD: {
             FormGroup &group = reinterpret_cast<FormGroup &>(*_parent);
 
-            if (_label && pgm_read_byte(_label)) {
+            if (_hasLabel()) {
 
                 output.printf_P(PSTR(
-                        "<div class=\"card\"><div class=\"card-header p-1\" id=\"heading-%s\"><h2 class=\"mb-1\"><button class=\"btn btn-link btn-lg collapsed\" type=\"button\" data-toggle=\"collapse\" data-target=\"#collapse-%s\" aria-expanded=\"false\" aria-controls=\"collapse-%s\"><strong>%s</strong></button></h2></div>" FORMUI_CRLF
-                        "<div id=\"collapse-%s\" class=\"collapse%s\" aria-labelledby=\"heading-%s\" data-cookie=\"#%s\"><div class=\"card-body\">" FORMUI_CRLF
+                        "<div class=\"card\">"
+                            "<div class=\"card-header p-1\" id=\"heading-%s\">"
+                                "<h2 class=\"mb-1\">"
+                                    "<button class=\"btn btn-link btn-lg collapsed\" type=\"button\" data-toggle=\"collapse\" data-target=\"#collapse-%s\" aria-expanded=\"false\" aria-controls=\"collapse-%s\">"
+                                        "<strong>%s</strong>"
+                                    "</button>"
+                                "</h2>"
+                            "</div>" FORMUI_CRLF
+                        "<div id=\"collapse-%s\" class=\"collapse%s\" aria-labelledby=\"heading-%s\" data-cookie=\"#%s\">"
+                            "<div class=\"card-body\">" FORMUI_CRLF
                     ),
                     name,
                     name,
@@ -134,30 +148,46 @@ namespace FormUI {
 
             }
             else {
-
-                output.printf_P(PSTR("<div class=\"card\"><div><div class=\"card-body\">"));
-
+                output.printf_P(PSTR(
+                    "<div class=\"card\">"
+                        "<div><div class=\"card-body\">"
+                ));
             }
 
         }
         break;
         case Type::GROUP_END_CARD: {
-            output.printf_P(PSTR("</div></div></div>" FORMUI_CRLF));
+            output.printf_P(PSTR(
+                        "</div>"
+                    "</div>"
+                "</div>" FORMUI_CRLF
+            ));
         }
         break;
 
         // ---------------------------------------------------------------
         // HR Group
         case Type::GROUP_START_HR: {
-            if (_label && pgm_read_byte(_label)) {
-                output.printf_P(PSTR("<div class=\"form-row%s%s\"><div class=\"col-lg-12\"><h5>%s</h5></div><div class=\"col-lg-12\"><hr class=\"mt-0\"></div></div>" FORMUI_CRLF "<div class=\"form-group\">" FORMUI_CRLF),
+            if (_hasLabel()) {
+                output.printf_P(PSTR(
+                        "<div class=\"form-row%s%s\">"
+                            "<div class=\"col-lg-12\"><h5>%s</h5></div>"
+                            "<div class=\"col-lg-12\"><hr class=\"mt-0\"></div>"
+                        "</div>" FORMUI_CRLF
+                        "<div class=\"form-group\">" FORMUI_CRLF
+                    ),
                     _parent->getNameType(),
                     _parent->getNameForType(),
                     ui.encodeHtmlEntities(_label, true)
                 );
             }
             else {
-                output.printf_P(PSTR("<div class=\"form-row%s%s\"><div class=\"col-lg-12 mt-3\"><hr></div></div><div class=\"form-group\">" FORMUI_CRLF),
+                output.printf_P(PSTR(
+                        "<div class=\"form-row%s%s\">"
+                            "<div class=\"col-lg-12 mt-3\"><hr></div>"
+                        "</div>"
+                        "<div class=\"form-group\">" FORMUI_CRLF
+                    ),
                     _parent->getNameType(),
                     _parent->getNameForType()
                 );
@@ -167,7 +197,7 @@ namespace FormUI {
         // ---------------------------------------------------------------
         // Div Group
         case Type::GROUP_START_DIV: {
-            if (_label && pgm_read_byte(_label)) {
+            if (_hasLabel()) {
                 output.printf_P(PSTR("<div class=\"form-dependency-group%s%s\" data-action=\"%s\">" FORMUI_CRLF),
                     _parent->getNameType(),
                     _parent->getNameForType(),
@@ -190,34 +220,46 @@ namespace FormUI {
         // Default Group
         case Type::GROUP_START: {
             FormGroup &group = reinterpret_cast<FormGroup &>(*_parent);
-            output.printf_P(PSTR("<div class=\"form-group\"><button class=\"btn btn-secondary btn-block\""));
-            output.printf_P(PSTR(" type=\"button\" data-toggle=\"collapse\" data-target=\"#%s\" aria-expanded=\"false\" aria-controls=\"%s\">"),
+            output.printf_P(PSTR(
+                    "<div class=\"form-group\">"
+                        "<button class=\"btn btn-secondary btn-block\" type=\"button\" data-toggle=\"collapse\" data-target=\"#%s\" aria-expanded=\"false\" aria-controls=\"%s\">"
+                ),
                 name,
                 name
             );
-            output.printf_P(PSTR("%s</button></div><div class=\"collapse%s\" id=\"%s\"><div class=\"card card-body mb-3\">" FORMUI_CRLF),
+            output.printf_P(PSTR(
+                        "%s</button>"
+                    "</div>"
+                    "<div class=\"collapse%s\" id=\"%s\">"
+                        "<div class=\"card card-body mb-3\">" FORMUI_CRLF
+                ),
                 ui.encodeHtmlEntities(_label, false),
                 group.isExpanded() ? PSTR(" show") : emptyString.c_str(),
                 name
             );
         } break;
         case Type::GROUP_END: {
-            output.printf_P(PSTR("</div></div>" FORMUI_CRLF));
+            output.printf_P(PSTR(
+                    "</div>"
+                "</div>" FORMUI_CRLF
+            ));
         } break;
 
         case Type::HIDDEN: {
-            output.printf_P(PSTR("<input type=\"hidden\" name=\"%s\" id=\"%s\" value=\"%s\"%s>" FORMUI_CRLF),
+            output.printf_P(PSTR(
+                    "<input type=\"hidden\" name=\"%s\" id=\"%s\" value=\"%s\"%s>" FORMUI_CRLF
+                ),
                 name,
                 name,
                 ui.encodeHtmlEntities(_parent->getValue(), true),
-                _attributes.c_str()
+                _getAttributes()
             );
         } break;
 
         default: {
             output.printf_P(PSTR("<div class=\"form-group\">" FORMUI_CRLF));
             bool addColon = false;
-            if (_label && (ch = pgm_read_byte(_label)) != 0) {
+            if ((ch = _hasLabel()) != 0) {
                 // append colon if label is not marked as raw output
                 if (ch != 0xff) {
                     size_t len = strlen_P(_label);
@@ -244,7 +286,7 @@ namespace FormUI {
 
             switch (_type) {
             case Type::SELECT:
-                output.printf_P(PSTR("<select class=\"form-control\" name=\"%s\" id=\"%s\"%s>" FORMUI_CRLF), name, name, _attributes.c_str());
+                output.printf_P(PSTR("<select class=\"form-control\" name=\"%s\" id=\"%s\"%s>" FORMUI_CRLF), name, name, _getAttributes());
                 if (_items) {
                     for (auto &item : *_items) {
                         if (_compareValue(item.first)) {
@@ -267,26 +309,32 @@ namespace FormUI {
             case Type::NUMBER:
             case Type::INTEGER:
             case Type::FLOAT:
-                output.printf_P(PSTR("<input type=\"text\" class=\"form-control\" name=\"%s\" id=\"%s\" value=\"%s\"%s>" FORMUI_CRLF),
+                output.printf_P(PSTR(
+                        "<input type=\"text\" class=\"form-control\" name=\"%s\" id=\"%s\" value=\"%s\"%s>" FORMUI_CRLF
+                    ),
                     name,
                     name,
                     ui.encodeHtmlEntities(_parent->getValue(), true),
-                    _attributes.c_str()
+                    _getAttributes()
                 );
                 break;
             case Type::PASSWORD:
-                output.printf_P(PSTR("<input type=\"password\" class=\"form-control visible-password\" name=\"%s\" id=\"%s\" value=\"%s\" autocomplete=\"current-password\" spellcheck=\"false\"%s>" FORMUI_CRLF),
+                output.printf_P(PSTR(
+                        "<input type=\"password\" class=\"form-control visible-password\" name=\"%s\" id=\"%s\" value=\"%s\" autocomplete=\"current-password\" spellcheck=\"false\"%s>" FORMUI_CRLF
+                    ),
                     name,
                     name,
                     ui.encodeHtmlEntities(_parent->getValue(), true),
-                    _attributes.c_str()
+                    _getAttributes()
                 );
                 break;
             case Type::NEW_PASSWORD:
-                output.printf_P(PSTR("<input type=\"password\" class=\"form-control visible-password\" name=\"%s\" id=\"%s\" autocomplete=\"new-password\" spellcheck=\"false\"%s>" FORMUI_CRLF),
+                output.printf_P(PSTR(
+                        "<input type=\"password\" class=\"form-control visible-password\" name=\"%s\" id=\"%s\" autocomplete=\"new-password\" spellcheck=\"false\"%s>" FORMUI_CRLF
+                    ),
                     name,
                     name,
-                    _attributes.c_str()
+                    _getAttributes()
                 );
                 break;
             case Type::RANGE:
@@ -294,29 +342,40 @@ namespace FormUI {
                     ui.encodeHtmlEntities(_parent->getValue(), true),
                     name,
                     name,
-                    _attributes.c_str()
+                    _getAttributes()
                 );
                 break;
             case Type::RANGE_SLIDER:
-                output.printf_P(PSTR("<div class=\"form-enable-slider\"><input type=\"range\" value=\"%s\" name=\"%s\" id=\"%s\"%s></div>" FORMUI_CRLF),
+                output.printf_P(PSTR(
+                        "<div class=\"form-enable-slider\"><input type=\"range\" value=\"%s\" name=\"%s\" id=\"%s\"%s>"
+                        "</div>" FORMUI_CRLF
+                    ),
                     ui.encodeHtmlEntities(_parent->getValue(), true),
                     name,
                     name,
-                    _attributes.c_str()
+                    _getAttributes()
                 );
                 break;
             default:
                 break;
             }
 
-            if (_suffix && (ch = pgm_read_byte(_suffix)) != 0) {
+            if ((ch = _hasSuffix()) != 0) {
                 if (ch == '<') {
-                    output.printf_P(PSTR("<div class=\"input-group-append\">%s</div></div>" FORMUI_CRLF),
+                    output.printf_P(PSTR(
+                                "<div class=\"input-group-append\">%s</div>"
+                            "</div>" FORMUI_CRLF
+                        ),
                         _suffix
                     );
                 }
                 else {
-                    output.printf_P(PSTR("<div class=\"input-group-append\"><span class=\"input-group-text\">%s</span></div></div>" FORMUI_CRLF),
+                    output.printf_P(PSTR(
+                                "<div class=\"input-group-append\">"
+                                    "<span class=\"input-group-text\">%s</span>"
+                                "</div>"
+                            "</div>" FORMUI_CRLF
+                        ),
                         ui.encodeHtmlEntities(_suffix, false)
                     );
                 }
@@ -340,13 +399,18 @@ namespace FormUI {
 
 	void UI::_addItem(const Label &label)
     {
-		_label = _parent->getFormUIConfig().strings().attachString(label);;
+		_label = _parent->getFormUIConfig().strings().attachString(label);
 	}
 
 	void UI::_addItem(const Suffix &suffix)
     {
-		_suffix = _parent->getFormUIConfig().strings().attachString(suffix);;
+		_suffix = _parent->getFormUIConfig().strings().attachString(suffix);
 	}
+
+    void UI::_addItem(const FPSuffix &suffix)
+    {
+        _suffix = _parent->getFormUIConfig().strings().attachString(suffix._str);
+    }
 
 	void UI::_addItem(const PlaceHolder &placeholder)
     {

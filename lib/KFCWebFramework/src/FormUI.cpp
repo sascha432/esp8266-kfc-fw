@@ -16,9 +16,7 @@ namespace FormUI {
 
     const char *Config::encodeHtmlEntities(const char *cStr, bool attribute)
     {
-        // __DBG_printf("ptr=%p %s attribute=%u", cStr, cStr, attribute);
         if (pgm_read_byte(cStr) == 0xff) {
-            // __DBG_printf("raw=%s", cStr + 1);
             return strings().attachString(cStr) + 1;
         }
 
@@ -29,7 +27,6 @@ namespace FormUI {
                 return strings().attachString(target);
             }
         }
-        // __DBG_printf("nochange=%p %s", cStr, cStr);
         return strings().attachString(cStr);
     }
 
@@ -50,7 +47,6 @@ namespace FormUI {
     UI *UI::setBoolItems(const String &enabled, const String &disabled)
     {
         _setItems(ItemsList(0, disabled, 1, enabled));
-        //_setItems(std::move(ItemsList(0, disabled, 1, enabled)));
         return this;
     }
 
@@ -104,11 +100,6 @@ namespace FormUI {
         return this;
     }
 
-    UI *UI::setReadOnly()
-    {
-        return addAttribute(FSPGM(readonly), String());
-    }
-
     bool UI::_compareValue(const String &value) const
     {
         if (_parent->getType() == FormField::Type::TEXT) {
@@ -119,11 +110,34 @@ namespace FormUI {
         }
     }
 
-    void UI::_setItems(const ItemsList &items) {
+    void UI::_setItems(const ItemsList &items)
+    {
         if (_items) {
             delete _items;
         }
         _items = new StringPairList(_parent->getFormUIConfig(), items);
+    }
+
+    const char *UI::_getAttributes()
+    {
+        auto str = _parent->getFormUIConfig().strings().attachString(_attributes);
+        return str;
+    }
+
+    char UI::_hasLabel() const
+    {
+        if (!_label) {
+            return 0;
+        }
+        return pgm_read_byte(_label);
+    }
+
+    char UI::_hasSuffix() const
+    {
+        if (!_suffix) {
+            return 0;
+        }
+        return pgm_read_byte(_suffix);
     }
 
 }

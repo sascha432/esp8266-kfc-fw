@@ -155,9 +155,19 @@ namespace FormUI {
 		Suffix(const __FlashStringHelper *suffix) : String(suffix) {}
 	};
 
-	class ZeroconfSuffix : public Suffix {
+	class FPSuffix {
 	public:
-		ZeroconfSuffix() : Suffix(F("<button type=\"button\" class=\"btn btn-default resolve-zerconf-button\" data-color=\"primary\">Resolve Zeroconf</button>")) {}
+		FPSuffix(const __FlashStringHelper *str) : _str(str) {}
+
+	private:
+		friend UI;
+
+		const __FlashStringHelper *_str;
+	};
+
+	class ZeroconfSuffix : public FPSuffix {
+	public:
+		ZeroconfSuffix() : FPSuffix(F("<button type=\"button\" class=\"btn btn-default resolve-zerconf-button\" data-color=\"primary\">Resolve Zeroconf</button>")) {}
 	};
 
 	class PlaceHolder : public String {
@@ -166,19 +176,6 @@ namespace FormUI {
 		PlaceHolder(double placeholder, uint8_t digits) : String(placeholder, digits) {}
 		PlaceHolder(const String &placeholder) : String(placeholder) {}
 	};
-
-	// class InputGroupAppend {
-	// public:
-	// 	enum class Type {
-	// 		BUTTON_CHECKBOX,
-	// 	};
-
-	// 	InputGroupAppend(Type type, const String &onIcon, const String off) : _type(type) {
-	// 	}
-
-	// private:
-	// 	Type _type;
-	// };
 
 	class MinMax
 	{
@@ -231,12 +228,6 @@ namespace FormUI {
 	private:
 		friend UI;
 
-		FormField *_parent;
-		Type _type;
-		String _label;
-		String _suffix;
-		String _attributes;
-		ItemsList *_items;
 		T _value;
 		bool _condition: 1;
 	};
@@ -250,18 +241,18 @@ namespace FormUI {
 	public:
 		using PrintInterface = PrintArgs::PrintInterface;
 		using Type = ::FormUI::Type;
-		// using InputGroupAppendVector = std::vector<InputGroupAppend>;
-
-		// arguments see Form::addFormUI()
 
 		template <typename... Args>
-		UI(FormField *parent, Args &&... args) : _parent(parent), _type(Type::TEXT), _label(nullptr), _suffix(nullptr), _items(nullptr) {
+		UI(FormField *parent, Args &&... args) : _parent(parent), _type(Type::TEXT), _label(nullptr), _suffix(nullptr), _items(nullptr)
+		{
 			_addAll(args...);
 		}
-		UI(UI &&ui) noexcept {
+		UI(UI &&ui) noexcept
+		{
 			*this = std::move(ui);
 		}
-		~UI() {
+		~UI()
+		{
 			if (_items) {
 				delete _items;
 			}
@@ -278,13 +269,6 @@ namespace FormUI {
 			return *this;
 		}
 
-		//// move vector instead of copying
-		//UI &emplaceItems(ItemsList &&items) {
-		//	_setItems(std::move(items));
-		//	_type = Type::SELECT;
-		//	return *this;
-		//}
-
 		const __FlashStringHelper *kIconsNone = FPSTR(emptyString.c_str());
 		static constexpr __FlashStringHelper *kIconsDefault = nullptr;
 
@@ -292,14 +276,6 @@ namespace FormUI {
 
 		// DEPRECATED METHODS
 
-		//UI *setLabel(const String &label, bool raw = true) __attribute__ ((deprecated)) {
-		//	return setLabel(Label(label, raw));
-		//}
-		//UI *setLabel(const Label &label) __attribute__ ((deprecated)) {
-		//	_label = label;
-		//	return this;
-		//}
-		// defaults Enabled/Disabled
 		UI *setBoolItems()  __attribute__ ((deprecated)) ;
 		// custom text
 		UI *setBoolItems(const String &enabled, const String &disabled)  __attribute__ ((deprecated)) ;
@@ -312,21 +288,17 @@ namespace FormUI {
 		UI *setMinMax(const String &min, const String &max)  __attribute__ ((deprecated)) ;
 		UI *addAttribute(const __FlashStringHelper *name, const String &value);
 		UI *addConditionalAttribute(bool cond, const __FlashStringHelper *name, const String &value)  __attribute__ ((deprecated)) ;
-		UI *setReadOnly()  __attribute__ ((deprecated)) ;
 
 		void html(PrintInterface &output);
 
-		//void setParent(FormField *field);
-		Type getType() const {
-			return _type;
-		}
+		Type getType() const;
 
 	private:
-
 		void _addItem(Type type);
 		void _addItem(const __FlashStringHelper *label);
 		void _addItem(const Label &label);
 		void _addItem(const Suffix &suffix);
+		void _addItem(const FPSuffix &suffix);
 		void _addItem(const PlaceHolder &placeholder);
 		void _addItem(const MinMax &minMax);
 		void _addItem(const Attribute &attribute);
@@ -335,7 +307,6 @@ namespace FormUI {
 
 		template<typename T>
 		void _addItem(const Conditional<T> &conditional) {
-			__DBG_printf("condition %u", conditional._condition);
 			if (conditional._condition) {
 				_addItem(conditional._value);
 			}
@@ -356,24 +327,13 @@ namespace FormUI {
 		}
 
 	private:
+		friend Form;
+
 		bool _compareValue(const String &value) const;
 		void _setItems(const ItemsList &items);
-		//	if (_items) {
-		//		delete _items;
-		//	}
-		//	auto &x = _parent->getFormUIConfig().strings();
-		//	_items = new StringPairList(x, items);
-		//	//if (!_items) {
-		//	//	_items = new ItemsList(_strings, items);
-		//	//}
-		//	//*_items = items;
-		//}
-		//void _setItems(ItemsList &&items) {
-		//	if (!_items) {
-		//		_items = new ItemsList();
-		//	}
-		//	*_items = std::move(items);
-		//}
+		const char *_getAttributes();
+		char _hasLabel() const;
+		char _hasSuffix() const;
 
 	private:
 		FormField *_parent;
@@ -382,7 +342,6 @@ namespace FormUI {
 		const char *_suffix;
 		String _attributes;
 		StringPairList *_items;
-		//ItemsList *_items;
 	};
 
 

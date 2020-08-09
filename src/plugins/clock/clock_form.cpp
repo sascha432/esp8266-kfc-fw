@@ -38,7 +38,7 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
 #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
 
     form.add<int16_t>(F("auto_br"), _H_W_STRUCT_VALUE(cfg, auto_brightness));
-    form.addFormUI(F("Auto Brightness Value"), FormUI::Suffix(F("<span class=\"input-group-text\">0-1023</span><span id=\"abr_sv\" class=\"input-group-text\"></span><button class=\"btn btn-secondary\" type=\"button\" id=\"dis_auto_br\">Disable</button>")));
+    form.addFormUI(F("Auto Brightness Value"), FormUI::FPSuffix(F("<span class=\"input-group-text\">0-1023</span><span id=\"abr_sv\" class=\"input-group-text\"></span><button class=\"btn btn-secondary\" type=\"button\" id=\"dis_auto_br\">Disable</button>")));
     form.addValidator(FormRangeValidator(-1, 1023));
 
 #endif
@@ -66,11 +66,11 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
     form.addFormUI(FSPGM(Solid_Color));
 
     form.add<float>(F("colon_sp"), _H_W_STRUCT_VALUE(cfg, blink_colon_speed));
-    form.addFormUI(F("Colon Blink Speed"), FormUI::Suffix(F("milliseconds, 0 = solid")));
+    form.addFormUI(F("Colon Blink Speed"), FormUI::FPSuffix(F("milliseconds, 0 = solid")));
     form.addValidator(FormRangeValidator(kMinBlinkColonSpeed, 0xffff, true));
 
     form.add<uint16_t>(F("flash_sp"), _H_W_STRUCT_VALUE(cfg, flashing_speed));
-    form.addFormUI(F("Flashing Speed"), FormUI::Suffix(FSPGM(milliseconds)));
+    form.addFormUI(F("Flashing Speed"), FormUI::FPSuffix(FSPGM(milliseconds)));
     form.addValidator(FormRangeValidator(kMinFlashingSpeed, 0xffff));
 
     animationGroup.end();
@@ -108,11 +108,11 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
     auto &fadingGroup = form.addCardGroup(F("fading"), F("Random Color Fading"), true);
 
     form.add<float>(F("fade_sp"), _H_W_STRUCT_VALUE(cfg, fading.speed));
-    form.addFormUI(F("Time Between Fading Colors"), FormUI::Suffix(FSPGM(seconds)));
+    form.addFormUI(F("Time Between Fading Colors"), FormUI::FPSuffix(FSPGM(seconds)));
     form.addValidator(FormRangeValidator(Clock::FadingAnimation::kMinSeconds, Clock::FadingAnimation::kMaxSeconds));
 
     form.add<uint16_t>(F("fade_dy"), _H_W_STRUCT_VALUE(cfg, fading.delay));
-    form.addFormUI(F("Delay Before Start Fading To Next Random Color"), FormUI::Suffix(FSPGM(seconds)));
+    form.addFormUI(F("Delay Before Start Fading To Next Random Color"), FormUI::FPSuffix(FSPGM(seconds)));
     form.addValidator(FormRangeValidator(0, Clock::FadingAnimation::kMaxDelay));
 
     form.add(F("fade_cf"), Color(cfg.fading.factor.value).toString(), [&cfg](const String &value, FormField &field, bool store) {
@@ -139,7 +139,7 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
     form.addFormUI(FSPGM(Color));
 
     form.add<uint16_t>(F("alrm_sp"), _H_W_STRUCT_VALUE(cfg, alarm.speed));
-    form.addFormUI(F("Flashing Speed"), FormUI::Suffix(FSPGM(milliseconds)));
+    form.addFormUI(F("Flashing Speed"), FormUI::FPSuffix(FSPGM(milliseconds)));
     form.addValidator(FormRangeValidator(50, 0xffff));
 
     alarmGroup.end();
@@ -150,15 +150,15 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
     auto &protectionGroup = form.addCardGroup(F("prot"), FSPGM(Protection), true);
 
     form.add<uint8_t>(F("temp_75"), _H_W_STRUCT_VALUE(cfg, protection.temperature_75));
-    form.addFormUI(F("Temperature To Reduce Brightness To 75%"), FormUI::Suffix(FSPGM(_degreeC)));
+    form.addFormUI(F("Temperature To Reduce Brightness To 75%"), FormUI::FPSuffix(FSPGM(_degreeC)));
     form.addValidator(FormRangeValidator(kMinimumTemperatureThreshold, 90));
 
     form.add<uint8_t>(F("temp_50"), _H_W_STRUCT_VALUE(cfg, protection.temperature_50));
-    form.addFormUI(F("Temperature To Reduce Brightness To 50%"), FormUI::Suffix(FSPGM(_degreeC)));
+    form.addFormUI(F("Temperature To Reduce Brightness To 50%"), FormUI::FPSuffix(FSPGM(_degreeC)));
     form.addValidator(FormRangeValidator(kMinimumTemperatureThreshold, 90));
 
     form.add<uint8_t>(F("max_temp"), _H_W_STRUCT_VALUE(cfg, protection.max_temperature));
-    form.addFormUI(F("Over Temperature Protection"), FormUI::Suffix(FSPGM(_degreeC)));
+    form.addFormUI(F("Over Temperature Protection"), FormUI::FPSuffix(FSPGM(_degreeC)));
     form.addValidator(FormRangeValidator(kMinimumTemperatureThreshold, 105));
 
     protectionGroup.end();

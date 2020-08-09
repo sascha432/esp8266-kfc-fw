@@ -109,7 +109,7 @@ void WeatherStationPlugin::_sendScreenCaptureBMP(AsyncWebServerRequest *request)
 
     if (WebServerPlugin::getInstance().isAuthenticated(request) == true) {
         //auto response = new AsyncClonedBitmapStreamResponse(plugin.getCanvas().clone());
-        _debug_printf("AsyncBitmapStreamResponse\n");
+        __LDBG_print("AsyncBitmapStreamResponse");
         auto response = new AsyncBitmapStreamResponse(plugin.getCanvas());
         HttpHeaders httpHeaders;
         httpHeaders.addNoCache();
@@ -396,11 +396,11 @@ void WeatherStationPlugin::createConfigureForm(FormCallbackType type, const Stri
     form.addFormUI(F("Units"), FormUI::BoolItems(F("Metric"), F("Imperial")));
 
     form.add(F("api"), _H_W_STRUCT_VALUE(cfg, weather_poll_interval));
-    form.addFormUI(F("Weather Poll Interval"), FormUI::Suffix(FSPGM(minutes)));
+    form.addFormUI(F("Weather Poll Interval"), FormUI::FPSuffix(FSPGM(minutes)));
     form.addValidator(FormRangeValidator(5, 240));
 
     form.add(F("ato"), _H_W_STRUCT_VALUE(cfg, api_timeout));
-    form.addFormUI(F("API Timeout"), FormUI::Suffix(FSPGM(seconds)));
+    form.addFormUI(F("API Timeout"), FormUI::FPSuffix(FSPGM(seconds)));
     form.addValidator(FormRangeValidator(30, 900));
 
     form.add(F("bll"), _H_W_STRUCT_VALUE(cfg, backlight_level));
@@ -420,7 +420,7 @@ void WeatherStationPlugin::createConfigureForm(FormCallbackType type, const Stri
     form.addFormUI(F("Humidity Offset"), FormUI::Suffix('%'));
 
     form.add(F("p_ofs"), _H_W_STRUCT_VALUE(cfg, pressure_offset));
-    form.addFormUI(F("Pressure Offset"), FormUI::Suffix(FSPGM(hPa)));
+    form.addFormUI(F("Pressure Offset"), FormUI::FPSuffix(FSPGM(hPa)));
 
     for(uint8_t i = 0; i < WeatherStationPlugin::ScreenEnum_t::NUM_SCREENS; i++) {
         PrintString str;
@@ -430,7 +430,7 @@ void WeatherStationPlugin::createConfigureForm(FormCallbackType type, const Stri
         str.printf_P(PSTR("Screen #%u, %s:"), i + 1, WeatherStationPlugin::getScreenName(i));
 
         form.add(PrintString(F("st_%u"), i), _H_W_STRUCT_VALUE_TYPE(cfg, screenTimer[i], uint8_t, i));
-        form.addFormUI(FormUI::Label(str, true), FormUI::Suffix(FSPGM(seconds)));
+        form.addFormUI(FormUI::Label(str, true), FormUI::FPSuffix(FSPGM(seconds)));
     }
 
     form.add(F("stft"), _H_W_STRUCT_VALUE(cfg, show_webui));

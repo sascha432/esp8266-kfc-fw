@@ -60,7 +60,6 @@ public:
         return true;
     }
     virtual void createConfigureForm(AsyncWebServerRequest *request, Form &form) override;
-    virtual void configurationSaved(Form *form) override;
 
     virtual void reconfigure(PGM_P source) override;
 

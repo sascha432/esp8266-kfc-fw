@@ -104,7 +104,7 @@ void MQTTAutoDiscoveryQueue::_timerCallback(EventScheduler::TimerPtr timer)
 #endif
             _discoveryCount++;
             _size += msgSize;
-            _client.publish(discovery->getTopic(), true, discovery->getPayload());
+            _client.publish(discovery->getTopic(), true, discovery->getPayload(), kAutoDiscoveryQoS);
 
         } else {
 #if DEBUG_MQTT_AUTO_DISCOVERY_QUEUE

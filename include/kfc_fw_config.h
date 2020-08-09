@@ -26,7 +26,6 @@
 #endif
 #include "../src/plugins/mdns/mdns_resolver.h"
 #include <SaveCrash.h>
-#include <StringKeyValueStore.h>
 #include "logger.h"
 #include "misc.h"
 #include "at_mode.h"
@@ -239,10 +238,12 @@ public:
     void setLastError(const String &error);
     const char *getLastError() const;
 
+    // get default device name based on its MAC address
+    static String defaultDeviceName();
     // restores defaults
     void restoreFactorySettings();
     // enables AP mode and sets passwords to default
-    void recoveryMode();
+    void recoveryMode(bool resetPasswords = true);
 
     void customSettings();
     static const String getFirmwareVersion();
@@ -326,11 +327,47 @@ public:
     void printRTCStatus(Print &output, bool plain = true);
 
 public:
-    using Container = KeyValueStorage::Container;
-    using ContainerPtr = KeyValueStorage::ContainerPtr;
-    using PersistantConfigCallback = std::function<void(Container &data)>;
+    enum class FlashAreaType {
+        SKETCH,
+        FS,
+        KFCFW,
+        SAVECRASH,
+        EEPROM,
+    };
+    class FlashRangeType {
+    public:
+        static constexpr uintptr_t kFlashStartOfs = 0x40200000;
+        static constexpr size_t kFlashSectorSize = 4096;
 
-    bool callPersistantConfig(ContainerPtr data, PersistantConfigCallback callback = nullptr);
+        FlashRangeType() : _start(kFlashStartOfs), _end(_start + kFlashSectorSize) {}
+        FlashRangeType(uintptr_t start, uintptr_t end) : _start(start), _end(end) {}
+        FlashRangeType(uintptr_t start) : _start(start), _end(start + kFlashSectorSize) {}
+
+        uintptr_t getStart() const {
+            return _start;
+        }
+        uintptr_t getEnd() const {
+            return _end;
+        }
+        uintptr_t getOffset() const {
+            return _start - kFlashStartOfs;
+        }
+        uintptr_t getStartSector() const {
+            return getOffset() / kFlashSectorSize;
+        }
+        size_t getLength() const {
+            return _end - _start + kFlashSectorSize - 1;
+        }
+        size_t getNumSectors() const {
+            return getLength() / kFlashSectorSize;
+        }
+
+    private:
+        uintptr_t _start;
+        uintptr_t _end;
+    };
+
+    static FlashRangeType getFlashAddress(FlashAreaType type);
 
 private:
     friend class KFCConfigurationPlugin;

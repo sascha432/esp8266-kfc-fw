@@ -445,6 +445,29 @@ void MQTTClient::publish(const String &topic, bool retain, const String &payload
     }
 }
 
+void MQTTClient::publishPersistantStorage(StorageFrequencyType type, const String &name, const String &data)
+{
+    time_t now = time(nullptr);
+    if (!IS_TIME_VALID(now)) {
+        return;
+    }
+    PrintString str = F("persistant_storage/");
+    str += name;
+    str += '/';
+    switch(type) {
+        case StorageFrequencyType::DAILY:
+            str.strftime_P(PSTR("%Y%m%d"), now);
+            break;
+        case StorageFrequencyType::WEEKLY:
+            str.strftime_P(PSTR("%Y%m-%W"), now);
+            break;
+        case StorageFrequencyType::MONTHLY:
+            str.strftime_P(PSTR("%Y%m"), now);
+            break;
+    }
+    publish(formatTopic(str), true, data, kPersistantStorageQoS);
+}
+
 bool MQTTClient::publishAutoDiscovery()
 {
 #if MQTT_AUTO_DISCOVERY

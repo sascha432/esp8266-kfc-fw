@@ -77,7 +77,15 @@ public:
     using QosType = KFCConfigurationClasses::Plugins::MQTTClient::QosType;
     using ClientConfig = KFCConfigurationClasses::Plugins::MQTTClient;
 
+    enum class StorageFrequencyType {
+        DAILY,
+        WEEKLY,
+        MONTHLY,
+    };
+
     static constexpr uint8_t QOS_DEFAULT = static_cast<uint8_t>(QosType::DEFAULT);
+    static constexpr uint8_t kDefaultQoS = QOS_DEFAULT;
+    static constexpr uint8_t kPersistantStorageQoS = 1;
 
     class MQTTTopic {
     public:
@@ -161,6 +169,7 @@ public:
     void unsubscribe(MQTTComponentPtr component, const String &topic);
     void remove(MQTTComponentPtr component);
     void publish(const String &topic, bool retain, const String &payload, uint8_t qos = QOS_DEFAULT);
+    void publishPersistantStorage(StorageFrequencyType type, const String &name, const String &data);
 
     // returns false if running
     bool publishAutoDiscovery();
@@ -209,6 +218,12 @@ public:
         if (_mqttClient) {
             _mqttClient->unregisterComponent(component);
             _mqttClient->registerComponent(component);
+        }
+    }
+
+    static void safePersistantStorage(StorageFrequencyType type, const String &name, const String &data) {
+        if (_mqttClient) {
+            _mqttClient->publishPersistantStorage(type, name, data);
         }
     }
 

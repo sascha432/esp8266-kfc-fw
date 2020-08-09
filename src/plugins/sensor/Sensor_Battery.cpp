@@ -4,7 +4,6 @@
 
 #if IOT_SENSOR_HAVE_BATTERY
 
-#include <StringKeyValueStore.h>
 #include "Sensor_Battery.h"
 #include "sensor.h"
 
@@ -128,20 +127,6 @@ void Sensor_Battery::createConfigureForm(AsyncWebServerRequest *request, Form &f
     form.addFormUI(F("Display Precision"));
 
     group.end();
-}
-
-void Sensor_Battery::configurationSaved(Form *form)
-{
-    using KeyValueStorage::Container;
-    using KeyValueStorage::ContainerPtr;
-    using KeyValueStorage::Item;
-
-    _config = Plugins::Sensor::getWriteableConfig().battery;
-    auto container = ContainerPtr(new Container());
-    container->add(Item::create(F("battery_cal"), _config.calibration));
-    container->add(Item::create(F("battery_ofs"), _config.offset));
-    container->add(Item::create(F("battery_prec"), _config.precision));
-    config.callPersistantConfig(container);
 }
 
 void Sensor_Battery::reconfigure(PGM_P source)

@@ -12,6 +12,7 @@
 #include <EventTimer.h>
 #include <session.h>
 #include <misc.h>
+#include "SaveCrash.h"
 #include "blink_led_timer.h"
 #include "fs_mapping.h"
 #include "WebUISocket.h"
@@ -23,7 +24,6 @@
 #endif
 #if MQTT_SUPPORT
 #include "../src/plugins/mqtt/mqtt_client.h"
-#include "../src/plugins/mqtt/mqtt_persistant_storage.h"
 #endif
 #if MDNS_PLUGIN
 #include "../src/plugins/mdns/mdns_plugin.h"
@@ -414,24 +414,43 @@ void KFCFWConfiguration::_apStandModehandler(WiFiCallbacks::EventType event)
     }
 }
 
-void KFCFWConfiguration::recoveryMode()
+void KFCFWConfiguration::recoveryMode(bool resetPasswords)
 {
-    System::Device::setPassword(SPGM(defaultPassword));
-    Network::WiFi::setSoftApPassword(FSPGM(defaultPassword));
+    if (resetPasswords) {
+        System::Device::setPassword(SPGM(defaultPassword));
+        Network::WiFi::setSoftApPassword(SPGM(defaultPassword));
+    }
+    if (!System::Device::getPassword() || !*System::Device::getPassword()) {
+        System::Device::setPassword(SPGM(defaultPassword));
+    }
+    if (!Network::WiFi::getSoftApPassword() || !*Network::WiFi::getSoftApPassword()) {
+        Network::WiFi::setSoftApPassword(SPGM(defaultPassword));
+    }
+    Network::WiFi::setSoftApSSID(defaultDeviceName());
     auto &flags = System::Flags::getWriteableConfig();
     flags.is_softap_ssid_hidden = false;
     flags.is_softap_dhcpd_enabled = true;
     flags.is_softap_standby_mode_enabled = false;
     flags.is_softap_enabled = true;
     flags.is_web_server_enabled = true;
+    KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("Recovery mode SSID %s\n"), Network::WiFi::getSoftApSSID());
+}
+
+String KFCFWConfiguration::defaultDeviceName()
+{
+    uint8_t mac[6];
+    WiFi.macAddress(mac);
+    return PrintString(F("KFC%02X%02X%02X"), mac[3], mac[4], mac[5]);
 }
 
 // TODO add option to keep WiFi SSID, username and password
 
 void KFCFWConfiguration::restoreFactorySettings()
 {
-    _debug_println();
+    __LDBG_println();
     PrintString str;
+
+    SaveCrash::clearEEPROM();
 
 #if DEBUG
     uint16_t length = 0;
@@ -452,9 +471,7 @@ void KFCFWConfiguration::restoreFactorySettings()
     }
 #endif
 
-    uint8_t mac[6];
-    WiFi.macAddress(mac);
-    auto deviceName = PrintString(F("KFC%02X%02X%02X"), mac[3], mac[4], mac[5]);
+    auto deviceName = defaultDeviceName();
 
     System::Flags::defaults();
     System::Firmware::defaults();
@@ -636,9 +653,11 @@ void KFCFWConfiguration::setup()
     LoopFunctions::add(KFCFWConfiguration::loop);
 }
 
+#include "build.h"
+
 void KFCFWConfiguration::read()
 {
-    _debug_println();
+    __LDBG_println();
 
     if (!Configuration::read()) {
         Logger_error(F("Failed to read configuration, restoring factory settings"));
@@ -646,17 +665,21 @@ void KFCFWConfiguration::read()
         Configuration::write();
     } else {
         auto version = System::Device::getConfig().config_version;
-        if (FIRMWARE_VERSION > version) {
-            Logger_warning(F("Upgrading EEPROM settings from %d.%d.%d to " FIRMWARE_VERSION_STR), (version >> 16), (version >> 8) & 0xff, (version & 0xff));
-            System::Device::getWriteableConfig().config_version = FIRMWARE_VERSION;
-            Configuration::write();
+        uint32_t currentVersion = (FIRMWARE_VERSION << 16) | (uint16_t)String(F(__BUILD_NUMBER)).toInt();
+        if (currentVersion != version) {
+            uint16_t build = version;
+            version >>= 16;
+            Logger_warning(F("Upgrading EEPROM settings from %d.%d.%d.%u to " FIRMWARE_VERSION_STR "." __BUILD_NUMBER), (version >> 16), (version >> 8) & 0xff, (version & 0xff), build);
+            System::Device::getWriteableConfig().config_version = currentVersion;
+            config.recoveryMode(false);
+            //Configuration::write();
         }
     }
 }
 
 void KFCFWConfiguration::write()
 {
-    _debug_println(F("KFCFWConfiguration::write()"));
+    __LDBG_println();
 
     System::Flags::getWriteableConfig().is_factory_settings = false;
 
@@ -1263,16 +1286,32 @@ void KFCFWConfiguration::printRTCStatus(Print &output, bool plain)
 #endif
 }
 
-bool KFCFWConfiguration::callPersistantConfig(ContainerPtr data, PersistantConfigCallback callback)
+extern "C" {
+
+extern uintptr_t *_FS_start;
+extern uintptr_t *_FS_end;
+extern uintptr_t *_KFCFW_start;
+extern uintptr_t *_KFCFW_end;
+extern uintptr_t *_ESPSAVECRASH_start;
+extern uintptr_t *_EEPROM_start;
+
+};
+
+KFCFWConfiguration::FlashRangeType KFCFWConfiguration::getFlashAddress(FlashAreaType type)
 {
-#if MQTT_SUPPORT
-    bool result = false;
-    auto client = MQTTClient::getClient();
-    if (client && client->isConnected()) {
-        result = MQTTPersistantStorageComponent::create(client, data, callback);
+    switch(type) {
+        case FlashAreaType::FS:
+            return FlashRangeType((uintptr_t)&_FS_start, (uintptr_t)&_FS_end);
+        case FlashAreaType::EEPROM:
+            return FlashRangeType((uintptr_t)&_EEPROM_start);
+        case FlashAreaType::SAVECRASH:
+            return FlashRangeType((uintptr_t)&_ESPSAVECRASH_start);
+        case FlashAreaType::KFCFW:
+            return FlashRangeType((uintptr_t)&_KFCFW_start, (uintptr_t)&_KFCFW_end);
+        default:
+        case FlashAreaType::SKETCH:
+            return FlashRangeType(FlashRangeType::kFlashStartOfs, (uintptr_t)&_FS_start - FlashRangeType::kFlashSectorSize);
     }
-#endif
-    return _debug_print_result(result);
 }
 
 static KFCConfigurationPlugin plugin;

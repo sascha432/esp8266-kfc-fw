@@ -11,18 +11,13 @@
 #include "debug_helper_disable.h"
 #endif
 
-#define CHECK_DATA_INT() \
-    _debug_printf_P(PSTR("len=%u size=%u ptr=%p this=%p\n"), _length, _size, _buffer, this); \
-    if (_length || _size || _buffer) { \
-        __debugbreak_and_panic_printf_P(PSTR("len=%u size=%u ptr=%p this=%p\n"), _length, _size, _buffer, this); \
-    }
-
-
-MoveStringHelper::MoveStringHelper() {
+MoveStringHelper::MoveStringHelper()
+{
 }
 
-void MoveStringHelper::move(Buffer &buf) {
-    _debug_println();
+void MoveStringHelper::move(Buffer &buf)
+{
+    __LDBG_println();
 #if ESP8266
     if (length()) {
 #if ARDUINO_ESP8266_VERSION_COMBINED >= 0x020603
@@ -47,48 +42,46 @@ void MoveStringHelper::move(Buffer &buf) {
 #endif
 }
 
-Buffer::Buffer(Buffer &&buffer) noexcept
+Buffer::Buffer() : _buffer(nullptr), _length(0), _size(0)
 {
-    CHECK_DATA_INT();
+}
+
+Buffer::Buffer(Buffer &&buffer) noexcept : Buffer()
+{
     *this = std::move(buffer);
 }
 
-Buffer::Buffer(size_t size) : _buffer(), _length(), _size()
+Buffer::Buffer(size_t size) : Buffer()
 {
-    CHECK_DATA_INT();
     _changeBuffer(size);
 }
 
 Buffer::~Buffer()
 {
-    _debug_printf("len=%u size=%u ptr=%p this=%p\n", _length, _size, _buffer, this);
+    __LDBG_printf("len=%u size=%u ptr=%p this=%p", _length, _size, _buffer, this);
     if (_buffer) {
         free(_buffer);
     }
     CHECK_MEMORY();
 }
 
-Buffer::Buffer(const __FlashStringHelper *str)
+Buffer::Buffer(const __FlashStringHelper *str) : Buffer()
 {
-    CHECK_DATA_INT();
     write(str, strlen_P(reinterpret_cast<PGM_P>(str)));
 }
 
-Buffer::Buffer(String &&str)
+Buffer::Buffer(String &&str) : Buffer()
 {
-    CHECK_DATA_INT();
     *this = std::move(str);
 }
 
-Buffer::Buffer(const String &str): Buffer()
+Buffer::Buffer(const String &str) : Buffer()
 {
-    CHECK_DATA_INT();
     write(str);
 }
 
 Buffer &Buffer::operator =(Buffer &&buffer) noexcept
 {
-    _debug_printf("len=%u size=%u ptr=%p\n", _length, _size, _buffer);
     if (_buffer) {
         free(_buffer);
     }
@@ -103,7 +96,6 @@ Buffer &Buffer::operator =(Buffer &&buffer) noexcept
 
 Buffer &Buffer::operator =(const Buffer &buffer)
 {
-    _debug_printf("len=%u size=%u ptr=%p\n", _length, _size, _buffer);
     _length = buffer._length;
     if (_changeBuffer(buffer._size)) {
         memcpy(_buffer, buffer._buffer, _length);
@@ -116,7 +108,7 @@ Buffer &Buffer::operator =(const Buffer &buffer)
 
 Buffer &Buffer::operator=(String &&str)
 {
-    _debug_printf("len=%u size=%u ptr=%p\n", _length, _size, _buffer);
+    __LDBG_printf("len=%u size=%u ptr=%p", _length, _size, _buffer);
     clear();
     static_cast<MoveStringHelper &&>(str).move(*this);
     return *this;
@@ -124,7 +116,7 @@ Buffer &Buffer::operator=(String &&str)
 
 Buffer &Buffer::operator=(const String &str)
 {
-    _debug_printf("len=%u size=%u ptr=%p\n", _length, _size, _buffer);
+    __LDBG_printf("len=%u size=%u ptr=%p", _length, _size, _buffer);
     _length = 0;
     write(str);
     return *this;
@@ -140,7 +132,7 @@ bool Buffer::equals(const Buffer &buffer) const
 
 void Buffer::clear()
 {
-    // _debug_printf("len=%u size=%u ptr=%p\n", _length, _size, _buffer);
+    // __LDBG_printf("len=%u size=%u ptr=%p", _length, _size, _buffer);
     if (_buffer) {
         free(_buffer);
         _buffer = nullptr;
@@ -212,7 +204,7 @@ String Buffer::toString() const
 
 size_t Buffer::write(const uint8_t *data, size_t len)
 {
-    // _debug_printf_P(PSTR("len=%d\n"), len);
+    // __LDBG_printf("len=%d", len);
     if (!reserve(_length + len)) {
         return 0;
     }
@@ -223,7 +215,7 @@ size_t Buffer::write(const uint8_t *data, size_t len)
 
 size_t Buffer::write_P(PGM_P data, size_t len)
 {
-    // _debug_printf_P(PSTR("len=%d\n"), len);
+    // __LDBG_printf("len=%d", len);
     if (!reserve(_length + len)) {
         return 0;
     }
@@ -234,7 +226,7 @@ size_t Buffer::write_P(PGM_P data, size_t len)
 
 void Buffer::remove(size_t index, size_t count)
 {
-    // _debug_printf_P(PSTR("index=%d count=%d\n"), index, count);
+    // __LDBG_printf("index=%d count=%d", index, count);
     if(index >= _length) {
         return;
     }
@@ -287,7 +279,7 @@ bool Buffer::_changeBuffer(size_t newSize)
 {
     if (_alignSize(newSize) != _size) {
         _size = _alignSize(newSize);
-        // _debug_printf_P(PSTR("size=%d\n"), _size);
+        // __LDBG_printf("size=%d", _size);
         if (_size == 0) {
             if (_buffer) {
                 free(_buffer);
@@ -302,7 +294,7 @@ bool Buffer::_changeBuffer(size_t newSize)
                 _buffer = (uint8_t *)realloc(_buffer, _size);
             }
             if (_buffer == nullptr) {
-                _debug_printf_P(PSTR("alloc failed\n"));
+                __LDBG_printf("alloc failed");
                 _size = 0;
                 _length = 0;
                 return false;
@@ -312,7 +304,7 @@ bool Buffer::_changeBuffer(size_t newSize)
     if (_length > _size) {
         _length = _size;
     }
-    // _debug_printf_P(PSTR("length=%d size=%d\n"), _length, _size);
+    // __LDBG_printf("length=%d size=%d", _length, _size);
     return true;
 }
 

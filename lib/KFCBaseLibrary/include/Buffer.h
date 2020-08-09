@@ -16,8 +16,9 @@ public:
 
 class Buffer {
 public:
+    Buffer();
     Buffer(Buffer &&buffer) noexcept;
-    Buffer(size_t size = 0);
+    Buffer(size_t size);
     virtual ~Buffer();
 
     Buffer(const __FlashStringHelper *str);
@@ -91,6 +92,20 @@ public:
     }
     uint8_t *end() const {
         return _buffer + _length;
+    }
+
+    const uint8_t *cbegin() const {
+        return _buffer;
+    }
+    const uint8_t *cend() const {
+        return _buffer + _length;
+    }
+
+    const char *cstr_begin() const {
+        return reinterpret_cast<const char *>(_buffer);
+    }
+    const char *cstr_end() const {
+        return reinterpret_cast<const char *>(_buffer + _length);
     }
 
     bool reserve(size_t newSize);

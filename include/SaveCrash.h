@@ -9,6 +9,7 @@
 
 namespace SaveCrash {
 
+    void clearEEPROM();
     uint8_t getCrashCounter();
     void removeCrashCounterAndSafeMode();
     void removeCrashCounter(); // calling SPIFFS.begin()

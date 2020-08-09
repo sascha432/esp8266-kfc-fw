@@ -37,7 +37,7 @@ void Form::setInvalidMissing(bool invalidMissing)
 FormGroup &Form::addGroup(const String &name, const FormUI::Label &label, bool expanded, FormUI::Type type)
 {
     auto &group = _add(new FormGroup(name, expanded));
-    group.setFormUI(type, label);
+    group.setFormUI(&group, type, label);
     return group;
 }
 
@@ -46,11 +46,6 @@ FormField &Form::_add(FormField *field)
     field->setForm(this);
     _fields.emplace_back(field);
     return *_fields.back();
-}
-
-FormUI::UI &Form::addFormUI(FormUI::UI &&formUI)
-{
-    return addFormUI(new FormUI::UI(std::move(formUI)));
 }
 
 FormUI::UI &Form::addFormUI(FormUI::UI *formUI)
@@ -105,7 +100,7 @@ bool Form::validateOnly()
     for (const auto &field: _fields) {
         if (field->getType() != FormField::Type::GROUP) {
             if (_data->hasArg(field->getName())) {
-                _debug_printf_P(PSTR("Form::validateOnly() Set value %s = %s\n"), field->getName().c_str(), _data->arg(field->getName()).c_str());
+                __LDBG_printf("Form::validateOnly() Set value %s = %s", field->getName().c_str(), _data->arg(field->getName()).c_str());
                 if (field->setValue(_data->arg(field->getName()))) {
                     _hasChanged = true;
                 }
@@ -174,17 +169,17 @@ bool Form::process(const String &name, Print &output) const
     for (const auto &field : _fields) {
         uint8_t len = (uint8_t)field->getName().length();
         if (field->getType() == FormField::Type::TEXT && name.equalsIgnoreCase(field->getName())) {
-            _debug_printf_P(PSTR("Form::process(%s) INPUT_TEXT = %s\n"), name.c_str(), field->getValue().c_str());
+            __LDBG_printf("Form::process(%s) INPUT_TEXT = %s", name.c_str(), field->getValue().c_str());
             PrintHtmlEntities::printTo(PrintHtmlEntities::Mode::ATTRIBUTE, field->getValue().c_str(), output);
             return true;
         }
         else if (field->getType() == FormField::Type::TEXTAREA && name.equalsIgnoreCase(field->getName())) {
-            _debug_printf_P(PSTR("Form::process(%s) TEXTAREA = %s\n"), name.c_str(), field->getValue().c_str());
+            __LDBG_printf("Form::process(%s) TEXTAREA = %s", name.c_str(), field->getValue().c_str());
             PrintHtmlEntities::printTo(PrintHtmlEntities::Mode::HTML, field->getValue().c_str(), output);
             return true;
         }
         else if (field->getType() == FormField::Type::CHECK && name.equalsIgnoreCase(field->getName())) {
-            _debug_printf_P(PSTR("Form::process(%s) INPUT_CHECK = %d\n"), name.c_str(), field->getValue().toInt());
+            __LDBG_printf("Form::process(%s) INPUT_CHECK = %d", name.c_str(), field->getValue().toInt());
             if (field->getValue().toInt()) {
                 output.print(FSPGM(_checked, " checked"));
             }
@@ -192,13 +187,13 @@ bool Form::process(const String &name, Print &output) const
         }
         else if (field->getType() == FormField::Type::SELECT && strncasecmp(field->getName().c_str(), name.c_str(), len) == 0) {
             if (name.length() == len) {
-                _debug_printf_P(PSTR("Form::process(%s) INPUT_SELECT = %s\n"), name.c_str(), field->getValue().c_str());
+                __LDBG_printf("Form::process(%s) INPUT_SELECT = %s", name.c_str(), field->getValue().c_str());
                 PrintHtmlEntities::printTo(PrintHtmlEntities::Mode::ATTRIBUTE, field->getValue().c_str(), output);
                 return true;
             }
             else if (name.charAt(len) == '_') {
                 auto value = name.substring(len + 1).toInt();
-                _debug_printf_P(PSTR("Form::process(%s) INPUT_SELECT %d =?= %d\n"), name.c_str(), value, (int)field->getValue().toInt());
+                __LDBG_printf("Form::process(%s) INPUT_SELECT %d =?= %d", name.c_str(), value, (int)field->getValue().toInt());
                 if (value == field->getValue().toInt()) {
                     output.print(FSPGM(_selected));
                 }
@@ -206,20 +201,22 @@ bool Form::process(const String &name, Print &output) const
             }
         }
     }
-    _debug_printf_P(PSTR("Form::process(%s) not found\n"), name.c_str());
+    __LDBG_printf("Form::process(%s) not found", name.c_str());
     return false;
 }
 
 const char *Form::_jsonEncodeString(const String &str, PrintInterface &output)
 {
-    if (JsonTools::lengthEscaped(str) == str.length()) {
-        return str.c_str();
+    size_t jsonLen = JsonTools::lengthEscaped(str);
+    if (jsonLen == str.length()) {
+        return output.strings().attachString(str.c_str());
     }
     else {
         PrintString encoded;
+        encoded.reserve(jsonLen);
         // encodes the name and attached it to the PrintInterface
         JsonTools::printToEscaped(encoded, str);
-        return output.attachString(std::move(encoded));
+        return output.strings().attachString(encoded);
     }
 }
 
@@ -234,49 +231,6 @@ void Form::createJavascript(PrintInterface &output) const
         }
         output.printf_P(PSTR("]);" FORMUI_CRLF "</script>"));
     }
-}
-
-void Form::createHtml(PrintInterface &output)
-{
-    auto &ui = getFormUIConfig();
-
-    switch(ui.getStyle()) {
-        case FormUI::StyleType::ACCORDION: {
-            output.printf_P(PSTR("<div class=\"accordion pt-3\" id=\"%s\"><div class=\"card bg-primary text-white mb-0\"><div class=\"card-header\" id=\"main-header\"><h3 class=\"mb-0 p-1\">%s</h3></div></div>" FORMUI_CRLF),
-                ui.getContainerId().c_str(),
-                FormUI::UI::_encodeHtmlEntities(ui.getTitle(), false, output)
-            );
-        }
-        break;
-        default: {
-            if (ui.hasTitle()) {
-                output.printf_P(PSTR("<h1>%s</h1>" FORMUI_CRLF), FormUI::UI::_encodeHtmlEntities(ui.getTitle(), false, output));
-            }
-        }
-        break;
-    }
-    for (const auto &field : _fields) {
-        field->html(output);
-    }
-
-    switch(ui.getStyle()) {
-        case FormUI::StyleType::ACCORDION: {
-            if (ui.hasButtonLabel()) {
-                output.printf_P(PSTR("<div class=\"card\"><div class=\"card-body\"><button type=\"submit\" class=\"btn btn-primary\">%s</button></div></div>" FORMUI_CRLF),
-                    FormUI::UI::_encodeHtmlEntities(ui.getButtonLabel(), false, output)
-                );
-            }
-            output.printf_P(PSTR("</div>" FORMUI_CRLF));
-        }
-        break;
-        default: {
-            if (ui.hasButtonLabel()) {
-                output.printf_P(PSTR("<button type=\"submit\" class=\"btn btn-primary\">%s...</button>" FORMUI_CRLF), FormUI::UI::_encodeHtmlEntities(ui.getButtonLabel(), false, output));
-            }
-        }
-        break;
-    }
-
 }
 
 void Form::dump(Print &out, const String &prefix) const {

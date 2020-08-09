@@ -12,18 +12,13 @@
 #include <Arduino_compat.h>
 #include <vector>
 #include <PrintArgs.h>
+#include "FormUIConfig.h"
 
 #if _MSC_VER
 #define FORMUI_CRLF "\n"
 #else
 #define FORMUI_CRLF ""
 #endif
-
-#undef DEFAULT
-#undef min
-#undef max
-#undef _min
-#undef _max
 
 class Form;
 class FormField;
@@ -32,35 +27,6 @@ namespace FormUI {
 
 	using ItemPair = std::pair<String, String>;
 	using ItemsListVector = std::vector<ItemPair>;
-
-	enum class Type : uint8_t {
-		NONE,
-		SELECT,
-		TEXT,
-		NUMBER,
-		INTEGER,
-		FLOAT,
-		RANGE,
-		RANGE_SLIDER,
-		PASSWORD,
-		NEW_PASSWORD,
-		// VISIBLE_PASSWORD,
-		GROUP_START,
-		GROUP_END,
-		GROUP_START_DIV,
-		GROUP_END_DIV,
-		GROUP_START_HR,
-		GROUP_END_HR,
-		GROUP_START_CARD,
-		GROUP_END_CARD,
-		HIDDEN,
-	};
-
-    enum class StyleType : uint8_t {
-        DEFAULT = 0,
-        ACCORDION,
-        MAX
-    };
 
 	class ItemsList : public ItemsListVector {
 	public:
@@ -147,6 +113,15 @@ namespace FormUI {
 
 	};
 
+	using StringPairListVector = std::vector<std::pair<const char *, const char *>>;
+
+	class StringPairList : public StringPairListVector
+	{
+	public:
+		using StringPairListVector::StringPairListVector;
+
+		StringPairList(Config &ui, const ItemsList &items);
+	};
 
 	class UI;
 
@@ -176,6 +151,7 @@ namespace FormUI {
 	public:
 		Suffix(char suffix) : String(suffix) {}
 		Suffix(const String &suffix) : String(suffix) {}
+		Suffix(String &&suffix) : String(std::move(suffix)) {}
 		Suffix(const __FlashStringHelper *suffix) : String(suffix) {}
 	};
 
@@ -220,12 +196,12 @@ namespace FormUI {
 	class Attribute
 	{
 	public:
-		Attribute(const String &key, const String &value) : _key(key), _value(value) {}
+		Attribute(const __FlashStringHelper *key, const String &value) : _key(key), _value(value) {}
 
 	private:
 		friend UI;
 
-		String _key;
+		const __FlashStringHelper *_key;
 		String _value;
 	};
 
@@ -238,12 +214,13 @@ namespace FormUI {
 	class BoolItems
 	{
 	public:
-		BoolItems() : _items(0, FSPGM(Disabled), 1, FSPGM(Enabled)) {}
-		BoolItems(const String &_true, const String &_false) : _items(0, _false, 1, _true) {}
+		BoolItems() : _false(FSPGM(Disabled)), _true(FSPGM(Enabled)) {}
+		BoolItems(const String &pTrue, const String &pFalse) : _false(pFalse), _true(pTrue) {}
 
 	private:
 		friend UI;
-		ItemsList _items;
+		String _false;
+		String _true;
 	};
 
 	template<class T>
@@ -266,7 +243,7 @@ namespace FormUI {
 
 	class ConditionalAttribute : public Conditional<Attribute> {
 	public:
-		ConditionalAttribute(bool condition, const String &key, const String &value) : Conditional<Attribute>(condition, Attribute(key, value)) {}
+		ConditionalAttribute(bool condition, const __FlashStringHelper *key, const String &value) : Conditional<Attribute>(condition, Attribute(key, value)) {}
 	};
 
 	class UI {
@@ -278,10 +255,10 @@ namespace FormUI {
 		// arguments see Form::addFormUI()
 
 		template <typename... Args>
-		UI(Args &&... args) : _parent(nullptr), _type(Type::TEXT), _items(nullptr) {
+		UI(FormField *parent, Args &&... args) : _parent(parent), _type(Type::TEXT), _label(nullptr), _suffix(nullptr), _items(nullptr) {
 			_addAll(args...);
 		}
-		UI(UI &&ui) {
+		UI(UI &&ui) noexcept {
 			*this = std::move(ui);
 		}
 		~UI() {
@@ -290,101 +267,71 @@ namespace FormUI {
 			}
 		}
 
-		UI &operator=(UI &&ui) {
+		UI &operator=(UI &&ui) noexcept {
 			_parent = ui._parent;
 			_type = ui._type;
-			_label = std::move(ui._label);
-			_suffix = std::move(ui._suffix);
+			_label = ui._label;
+			_suffix = ui._suffix;
 			_attributes = std::move(ui._attributes);
 			_items = ui._items;
 			ui._items = nullptr;
 			return *this;
 		}
 
-		// move vector instead of copying
-		UI &emplaceItems(ItemsList &&items) {
-			_setItems(std::move(items));
-			_type = Type::SELECT;
-			return *this;
-		}
+		//// move vector instead of copying
+		//UI &emplaceItems(ItemsList &&items) {
+		//	_setItems(std::move(items));
+		//	_type = Type::SELECT;
+		//	return *this;
+		//}
 
 		const __FlashStringHelper *kIconsNone = FPSTR(emptyString.c_str());
 		static constexpr __FlashStringHelper *kIconsDefault = nullptr;
 
-		UI &addInputGroupAppendCheckBoxButton(FormField &hiddenField, const String &label, const __FlashStringHelper *onIcons = nullptr, const __FlashStringHelper *offIcons = nullptr);
+		static Suffix createCheckBoxButton(FormField &hiddenField, const String &label, const __FlashStringHelper *onIcons = nullptr, const __FlashStringHelper *offIcons = nullptr);
 
 		// DEPRECATED METHODS
 
-		UI *setLabel(const String &label, bool raw = true) __attribute__ ((deprecated)) {
-			return setLabel(Label(label, raw));
-		}
-		UI *setLabel(const Label &label) __attribute__ ((deprecated)) {
-			_label = label;
-			return this;
-		}
+		//UI *setLabel(const String &label, bool raw = true) __attribute__ ((deprecated)) {
+		//	return setLabel(Label(label, raw));
+		//}
+		//UI *setLabel(const Label &label) __attribute__ ((deprecated)) {
+		//	_label = label;
+		//	return this;
+		//}
 		// defaults Enabled/Disabled
 		UI *setBoolItems()  __attribute__ ((deprecated)) ;
 		// custom text
 		UI *setBoolItems(const String &enabled, const String &disabled)  __attribute__ ((deprecated)) ;
-		UI *addItems(const String &value, const String &label)  __attribute__ ((deprecated)) ;
+		//UI *addItems(const String &value, const String &label)  __attribute__ ((deprecated)) ;
 		UI *addItems(const ItemsList &items)  __attribute__ ((deprecated)) ;
 		// add input-append-group text or html if the string starts with <
 		UI *setSuffix(const String &suffix)  __attribute__ ((deprecated)) ;
 		UI *setPlaceholder(const String &placeholder)  __attribute__ ((deprecated)) ;
 		// add min and max attribute
 		UI *setMinMax(const String &min, const String &max)  __attribute__ ((deprecated)) ;
-		UI *addAttribute(const String &name, const String &value)  __attribute__ ((deprecated)) ;
-		UI *addAttribute(const __FlashStringHelper *name, const String &value)  __attribute__ ((deprecated)) ;
-		UI *addConditionalAttribute(bool cond, const String &name, const String &value)  __attribute__ ((deprecated)) ;
+		UI *addAttribute(const __FlashStringHelper *name, const String &value);
+		UI *addConditionalAttribute(bool cond, const __FlashStringHelper *name, const String &value)  __attribute__ ((deprecated)) ;
 		UI *setReadOnly()  __attribute__ ((deprecated)) ;
 
 		void html(PrintInterface &output);
 
-		void setParent(FormField *field);
+		//void setParent(FormField *field);
 		Type getType() const {
 			return _type;
 		}
 
 	private:
 
-		void _addItem(Type type) {
-			_type = type;
-		}
-
-		void _addItem(const __FlashStringHelper *label) {
-			_label = Label(label);
-		}
-
-		void _addItem(const Label &label) {
-			_label = label;
-		}
-
-		void _addItem(const Suffix &suffix) {
-			_suffix = suffix;
-		}
-
-		void _addItem(const PlaceHolder &placeholder) {
-			addAttribute(FSPGM(placeholder), placeholder);
-		}
-
-		void _addItem(const MinMax &minMax) {
-			addAttribute(FSPGM(min), minMax._min);
-			addAttribute(FSPGM(max), minMax._max);
-		}
-
-		void _addItem(const Attribute &attribute) {
-			addAttribute(attribute._key, attribute._value);
-		}
-
-		void _addItem(const ItemsList &items) {
-			_setItems(items);
-			_type = Type::SELECT;
-		}
-
-		void _addItem(const BoolItems &boolItems) {
-			_setItems(boolItems._items);
-			_type = Type::SELECT;
-		}
+		void _addItem(Type type);
+		void _addItem(const __FlashStringHelper *label);
+		void _addItem(const Label &label);
+		void _addItem(const Suffix &suffix);
+		void _addItem(const PlaceHolder &placeholder);
+		void _addItem(const MinMax &minMax);
+		void _addItem(const Attribute &attribute);
+		void _addItem(const ItemsList &items);
+		void _addItem(const BoolItems &boolItems);
 
 		template<typename T>
 		void _addItem(const Conditional<T> &conditional) {
@@ -410,34 +357,32 @@ namespace FormUI {
 
 	private:
 		bool _compareValue(const String &value) const;
-		void _setItems(const ItemsList &items) {
-			if (!_items) {
-				_items = new ItemsList();
-			}
-			*_items = items;
-		}
-		void _setItems(ItemsList &&items) {
-			if (!_items) {
-				_items = new ItemsList();
-			}
-			*_items = std::move(items);
-		}
-
-		friend Form;
-
-		// creates an encoded string that is attached to output
-		static const char *_encodeHtmlEntities(const char *str, bool attribute, PrintInterface &output);
-		static const char *_encodeHtmlEntities(const String &str, bool attribute, PrintInterface &output) {
-			return _encodeHtmlEntities(str.c_str(), attribute, output);
-		}
+		void _setItems(const ItemsList &items);
+		//	if (_items) {
+		//		delete _items;
+		//	}
+		//	auto &x = _parent->getFormUIConfig().strings();
+		//	_items = new StringPairList(x, items);
+		//	//if (!_items) {
+		//	//	_items = new ItemsList(_strings, items);
+		//	//}
+		//	//*_items = items;
+		//}
+		//void _setItems(ItemsList &&items) {
+		//	if (!_items) {
+		//		_items = new ItemsList();
+		//	}
+		//	*_items = std::move(items);
+		//}
 
 	private:
 		FormField *_parent;
 		Type _type;
-		String _label;
-		String _suffix;
+		const char *_label;
+		const char *_suffix;
 		String _attributes;
-		ItemsList *_items;
+		StringPairList *_items;
+		//ItemsList *_items;
 	};
 
 

@@ -9,17 +9,16 @@
 #include <BufferStream.h>
 #include <PrintString.h>
 #include <list>
+#include <StringDepulicator.h>
 
 #ifndef DEBUG_PRINT_ARGS
-#define DEBUG_PRINT_ARGS                    0
+#define DEBUG_PRINT_ARGS                    1
 #endif
 
 #if DEBUG_PRINT_ARGS
 #include "debug_helper_enable.h"
-#define DEBUG_CHECK_DUPES                   1
 #else
 #include "debug_helper_disable.h"
-#define DEBUG_CHECK_DUPES                   1
 #endif
 
 // adds streaming capabilities to Print objects
@@ -37,80 +36,35 @@ public:
 
     using PrintInterface = PrintArgs;
 
-    class CharPtrContainer {
-    public:
-        //CharPtrContainer() : _str(nullptr), _free(false) {}
+//     class CharPtrContainer {
+//     public:
+//         CharPtrContainer(const CharPtrContainer &) = delete;
+//         CharPtrContainer operator=(const CharPtrContainer &) = delete;
 
-        CharPtrContainer(const CharPtrContainer &) = delete;
-        CharPtrContainer operator=(const CharPtrContainer &) = delete;
+//         CharPtrContainer(CharPtrContainer &&str) noexcept;
+//         CharPtrContainer &operator=(CharPtrContainer &&str) noexcept;
 
-        CharPtrContainer(CharPtrContainer &&str) noexcept {
-            *this = std::move(str);
-        }
-        CharPtrContainer &operator=(CharPtrContainer &&str) noexcept  {
-            _str = str._str;
-            str._str = nullptr;
-#if !defined(ESP8266)
-            _free = str._free;
-            str._free = false;
-#endif
-            return *this;
-        }
+//         CharPtrContainer(char *str, bool free);
+//         CharPtrContainer(const __FlashStringHelper *str);
 
-#if defined(ESP8266)
-        CharPtrContainer(char *str, bool) : _str(str) {}
-        CharPtrContainer(const __FlashStringHelper *str) : _str(reinterpret_cast<char *>(const_cast<__FlashStringHelper *>(str))) {}
-#else
-        CharPtrContainer(char *str, bool free) : _str(str), _free(free) {}
-        CharPtrContainer(const __FlashStringHelper *str) : _str(reinterpret_cast<char *>(const_cast<__FlashStringHelper *>(str))), _free(false) {}
-#endif
+//         operator const char *() const;
+//         const char *c_str() const;
 
-        operator const char *() const {
-            return _str;
-        }
+//         bool operator==(const char *str) const;
+//         bool operator!=(const char *str) const;
+//         ~CharPtrContainer();
 
-        bool operator==(const char *str) const {
-            return strcmp_P_P(_str, str) == 0; // function is nullptr sdafe
-        }
-        bool operator!=(const char *str) const {
-            return strcmp_P_P(_str, str);
-        }
-        ~CharPtrContainer() {
-#if defined(ESP8266)
-            // detect if string is allocated
-            if (_str && !is_PGM_P(_str)) {
-                free(_str);
-            }
-#else
-            if (_free) {
-                free(_str);
-            }
-#endif
-        }
-
-    private:
-        char *_str;
-#if !defined(ESP8266)
-        bool _free : 1;
-#endif
-    };
+//     private:
+//         char *_str;
+// #if !defined(ESP8266)
+//         bool _free : 1;
+// #endif
+//     };
 
     PrintArgs(const PrintArgs &print) = delete;
 
-    PrintArgs() : _bufferPtr(nullptr), _position(0), _strLength(0) {
-#if DEBUG_PRINT_ARGS
-        _outputSize = 0;
-#endif
-    }
-    ~PrintArgs() {
-#if DEBUG_PRINT_ARGS
-        __DBG_print("--attached---");
-        for(const auto &str: _attached) {
-            __DBG_print(str);
-        }
-        __DBG_print("--end---");
-#endif
-    }
+    PrintArgs();
+    ~PrintArgs();
 
     void clear();
     size_t fillBuffer(uint8_t *data, size_t size);
@@ -121,10 +75,16 @@ public:
 
     template <typename... Args>
     void printf_P(const char *format, const Args &... args) {
+#if DEBUG_PRINT_ARGS
+        _printfCalls++;
+#endif
         if (_position == PrintObject) {
             reinterpret_cast<Print *>(_bufferPtr)->printf_P(format, std::forward<const Args &>(args)...);
         }
         else {
+#if DEBUG_PRINT_ARGS
+            _printfArgs += sizeof...(args);
+#endif
             // add counter for arguments and store position in buffer
             size_t counterLen = _buffer.length();
             _buffer.write(0);
@@ -142,37 +102,6 @@ public:
         printf_P(RFPSTR(format), std::forward<const Args &>(args)...);
     }
 
-public:
-    // returns nullptr if the string is not attach
-    // otherwise it returns the string or a string with the same content
-    const char *getAttachedString(const char *str) const {
-        auto iterator = std::find(_attached.begin(), _attached.end(), str);
-        if (iterator != _attached.end()) {
-            return *iterator;
-        }
-        return nullptr;
-    }
-
-    // attach a temporary string to the output object
-    const char *attachString(char *str, bool free) {
-#if DEBUG_CHECK_DUPES
-        auto iterator = std::find(_attached.begin(), _attached.end(), str);
-        if (iterator != _attached.end()) {
-            __DBG_printf("duplicate string='%s'", (const char *)*iterator);
-        }
-#endif
-        _attached.emplace_back(str, free);
-        return str;
-    }
-
-    const char *attachString(const __FlashStringHelper *str) {
-        return attachString(reinterpret_cast<char *>(const_cast<__FlashStringHelper *>(str)), false);
-    }
-
-    const char *attachString(const String &str) {
-        return attachString(const_cast<char *>(str.c_str()), false);
-    }
-
 private:
     int _snprintf_P(uint8_t *buffer, size_t size, void **args, uint8_t numArgs);
 
@@ -185,20 +114,13 @@ private:
     }
 
     // float needs to be converted to double
-    void _copy(float value) {
-        _copy((double)value);
-    }
-
+    void _copy(float value);
     // signed integers need to be converted
-    void _copy(int8_t value8) {
-        int32_t value = value8;
-        _buffer.write(reinterpret_cast<const uint8_t *>(&value), sizeof(value));
-    }
-
-    void _copy(int16_t value16) {
-        int32_t value = value16;
-        _buffer.write(reinterpret_cast<const uint8_t *>(&value), sizeof(value));
-    }
+    void _copy(int8_t value8);
+    void _copy(int16_t value16);
+    // string de-duplication
+    void _copy(const __FlashStringHelper *fpstr);
+    void _copy(const char *str);
 
      // just copy dwords and add padding if required
     template<typename T>
@@ -235,17 +157,24 @@ private:
 // public:
 //     void dump(Print &output);
 
+public:
+    StringDeduplicator &strings() {
+        return _strings;
+    }
+
 protected:
     static const int PrintObject = -1;
 
-    std::vector<CharPtrContainer> _attached;
     uint8_t *_bufferPtr;
     int _position;
 private:
     Buffer _buffer;
     int _strLength;
+    StringDeduplicator _strings;
 #if DEBUG_PRINT_ARGS
-    int _outputSize;
+    size_t _outputSize;
+    size_t _printfCalls;
+    size_t _printfArgs;
 #endif
 };
 

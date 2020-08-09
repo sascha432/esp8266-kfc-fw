@@ -104,10 +104,10 @@ public:
 
     template <typename... Args>
     FormUI::UI &addFormUI(Args &&... args) {
-        return addFormUI(new FormUI::UI(std::forward<Args>(args)...));
+        auto parent = _fields.back().get();
+        return addFormUI(new FormUI::UI(parent, std::forward<Args>(args)...));
     }
 
-    FormUI::UI &addFormUI(FormUI::UI &&formUI);
     FormUI::UI &addFormUI(FormUI::UI *formUI);
 
     // --------------------------------------------------------------------
@@ -275,6 +275,16 @@ private:
     }
 
     static const char *_jsonEncodeString(const String &str, PrintInterface &out);
+
+    // const char *jsonEncodeString(const String &str);
+
+    // // creates an encoded string that is attached to output
+    // const char *encodeHtmlEntities(const char *str, bool attribute);
+
+    // const char *encodeHtmlEntities(const String &str, bool attribute) {
+    //     return encodeHtmlEntities(str.c_str(), attribute);
+    // }
+
 
     FormData *_data;
     FieldsVector _fields;

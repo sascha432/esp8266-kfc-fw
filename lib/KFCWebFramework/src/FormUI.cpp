@@ -14,6 +14,34 @@
 
 namespace FormUI {
 
+    const char *Config::encodeHtmlEntities(const char *cStr, bool attribute)
+    {
+        // __DBG_printf("ptr=%p %s attribute=%u", cStr, cStr, attribute);
+        if (pgm_read_byte(cStr) == 0xff) {
+            // __DBG_printf("raw=%s", cStr + 1);
+            return strings().attachString(cStr) + 1;
+        }
+
+        int size;
+        if ((size = PrintHtmlEntities::getTranslatedSize_P(cStr, attribute)) != PrintHtmlEntities::kNoTranslationRequired) {
+            String target;
+            if (PrintHtmlEntities::translateTo(cStr, target, attribute, size)) {
+                return strings().attachString(target);
+            }
+        }
+        // __DBG_printf("nochange=%p %s", cStr, cStr);
+        return strings().attachString(cStr);
+    }
+
+    StringPairList::StringPairList(Config &ui, const ItemsList &items)
+    {
+        reserve(items.size());
+		for(const auto &item : items) {
+            emplace_back(ui.strings().attachString(item.first), ui.encodeHtmlEntities(item.second, false));
+        }
+    }
+
+
     UI *UI::setBoolItems()
     {
         return setBoolItems(FSPGM(Enabled), FSPGM(Disabled));
@@ -21,18 +49,8 @@ namespace FormUI {
 
     UI *UI::setBoolItems(const String &enabled, const String &disabled)
     {
-        _setItems(std::move(ItemsList(0, disabled, 1, enabled)));
-        return this;
-    }
-
-    UI *UI::addItems(const String &value, const String &label)
-    {
-        if (!_items) {
-            _items = new ItemsList(value, label);
-        }
-        else {
-            _items->emplace_back_pair(value, label);
-        }
+        _setItems(ItemsList(0, disabled, 1, enabled));
+        //_setItems(std::move(ItemsList(0, disabled, 1, enabled)));
         return this;
     }
 
@@ -44,7 +62,7 @@ namespace FormUI {
 
     UI *UI::setSuffix(const String &suffix)
     {
-        _suffix = suffix;
+        _suffix = _parent->getFormUIConfig().strings().attachString(suffix);
         return this;
     }
 
@@ -61,11 +79,11 @@ namespace FormUI {
         return this;
     }
 
-    UI *UI::addAttribute(const String &name, const String &value)
+    UI *UI::addAttribute(const __FlashStringHelper *name, const String &value)
     {
-        _attributes.reserve(_attributes.length() + name.length() + value.length() + 5);
         _attributes += ' ';
         _attributes += name;
+        _attributes.reserve(_attributes.length() + value.length() + 4);
         if (value.length()) {
             _attributes += '=';
             _attributes += '"';
@@ -78,23 +96,7 @@ namespace FormUI {
         return this;
     }
 
-    UI *UI::addAttribute(const __FlashStringHelper *name, const String &value)
-    {
-        _attributes += ' ';
-        _attributes += name;
-        _attributes.reserve(_attributes.length() + value.length() + 4);
-        if (value.length()) {
-            _attributes += '=';
-            _attributes += '"';
-            if (!PrintHtmlEntities::translateTo(value.c_str(), _attributes, true)) {
-                _attributes += value;
-            }
-            _attributes += '"';
-        }
-        return this;
-    }
-
-    UI *UI::addConditionalAttribute(bool cond, const String &name, const String &value)
+    UI *UI::addConditionalAttribute(bool cond, const __FlashStringHelper *name, const String &value)
     {
         if (cond) {
             return addAttribute(name, value);
@@ -107,44 +109,6 @@ namespace FormUI {
         return addAttribute(FSPGM(readonly), String());
     }
 
-    const char *UI::_encodeHtmlEntities(const char *cStr, bool attribute, PrintInterface &output)
-    {
-        // __DBG_printf("ptr=%p %s attribute=%u", cStr, cStr, attribute);
-        if (pgm_read_byte(cStr) == 0xff) {
-            // __DBG_printf("raw=%s", cStr + 1);
-            return ++cStr;
-        }
-        const char *attachedStr;
-        if ((attachedStr = output.getAttachedString(cStr)) != nullptr) {
-            // __DBG_printf("attached=%p %s", attachedStr, attachedStr);
-            return attachedStr;
-        }
-        int size;
-        if ((size = PrintHtmlEntities::getTranslatedSize_P(cStr, attribute)) == PrintHtmlEntities::kNoTranslationRequired) {
-            // __DBG_printf("no translation=%p %s", cStr, cStr);
-            return cStr;
-        }
-        char *target;
-        if ((target = PrintHtmlEntities::translateTo(cStr, attribute, size)) != nullptr) {
-            // __DBG_printf("from=%s to=%s", cStr, target);
-            if ((attachedStr = output.getAttachedString(target)) != nullptr) { // check if we have this string already
-                // __DBG_printf("attached_after=%p %s", attachedStr, attachedStr);
-                free(target);
-                return attachedStr;
-            }
-            auto result = output.attachString(target, true);
-            // __DBG_printf("attachstring=%p %s", result, result);
-            return result;
-        }
-        // __DBG_printf("nochange=%p %s", cStr, cStr);
-        return cStr;
-    }
-
-    void UI::setParent(FormField *field)
-    {
-        _parent = field;
-    }
-
     bool UI::_compareValue(const String &value) const
     {
         if (_parent->getType() == FormField::Type::TEXT) {
@@ -153,6 +117,13 @@ namespace FormUI {
         else {
             return value.toInt() == _parent->getValue().toInt();
         }
+    }
+
+    void UI::_setItems(const ItemsList &items) {
+        if (_items) {
+            delete _items;
+        }
+        _items = new StringPairList(_parent->getFormUIConfig(), items);
     }
 
 }

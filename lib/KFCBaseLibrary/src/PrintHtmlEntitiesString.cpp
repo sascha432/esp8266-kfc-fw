@@ -4,23 +4,34 @@
 
 #include "PrintHtmlEntitiesString.h"
 
-PrintHtmlEntitiesString::PrintHtmlEntitiesString(const String &str) : PrintString(), PrintHtmlEntities()
+PrintHtmlEntitiesString::PrintHtmlEntitiesString(const String &str)
 {
     PrintString::print(str);
 }
 
-PrintHtmlEntitiesString::PrintHtmlEntitiesString(const __FlashStringHelper *str) : PrintString(), PrintHtmlEntities()
+PrintHtmlEntitiesString::PrintHtmlEntitiesString(const __FlashStringHelper *str)
 {
     PrintString::print(str);
 }
 
-PrintHtmlEntitiesString::PrintHtmlEntitiesString(const char *str) : PrintString(), PrintHtmlEntities()
+PrintHtmlEntitiesString::PrintHtmlEntitiesString(const char *str)
 {
     PrintString::print(str);
 }
 
-PrintHtmlEntitiesString::PrintHtmlEntitiesString() : PrintString(), PrintHtmlEntities()
+PrintHtmlEntitiesString::PrintHtmlEntitiesString(Mode mode, const String &str) : PrintHtmlEntities(mode)
 {
+    PrintString::print(str);
+}
+
+PrintHtmlEntitiesString::PrintHtmlEntitiesString(Mode mode, const __FlashStringHelper *str) : PrintHtmlEntities(mode)
+{
+    PrintString::print(str);
+}
+
+PrintHtmlEntitiesString::PrintHtmlEntitiesString(Mode mode, const char *str) : PrintHtmlEntities(mode)
+{
+    PrintString::print(str);
 }
 
 size_t PrintHtmlEntitiesString::write(uint8_t data)

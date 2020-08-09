@@ -43,6 +43,10 @@ PrintHtmlEntities::PrintHtmlEntities() : _mode(Mode::HTML)
 {
 }
 
+PrintHtmlEntities::PrintHtmlEntities(Mode mode) : _mode(mode)
+{
+}
+
 PrintHtmlEntities::Mode PrintHtmlEntities::setMode(Mode mode)
 {
     Mode lastMode = _mode;

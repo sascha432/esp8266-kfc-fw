@@ -10,15 +10,111 @@
 #include "debug_helper_disable.h"
 #endif
 
+
+// PrintArgs::CharPtrContainer::CharPtrContainer(CharPtrContainer &&str) noexcept
+// {
+//     *this = std::move(str);
+// }
+
+// PrintArgs::CharPtrContainer &PrintArgs::CharPtrContainer::operator=(CharPtrContainer &&str) noexcept
+// {
+//     _str = str._str;
+//     str._str = nullptr;
+// #if !defined(ESP8266)
+//     _free = str._free;
+//     str._free = false;
+// #endif
+//     return *this;
+// }
+
+// #if defined(ESP8266)
+
+// PrintArgs::CharPtrContainer::CharPtrContainer(char *str, bool) : _str(str)
+// {
+// }
+
+// PrintArgs::CharPtrContainer::CharPtrContainer(const __FlashStringHelper *str) : _str(reinterpret_cast<char *>(const_cast<__FlashStringHelper *>(str)))
+// {
+// }
+
+// #else
+
+// PrintArgs::CharPtrContainer::CharPtrContainer(char *str, bool free) : _str(str), _free(free)
+// {
+// }
+
+// PrintArgs::CharPtrContainer::CharPtrContainer(const __FlashStringHelper *str) : _str(reinterpret_cast<char *>(const_cast<__FlashStringHelper *>(str))), _free(false)
+// {
+// }
+
+// #endif
+
+// PrintArgs::CharPtrContainer::operator const char *() const
+// {
+//     return _str;
+// }
+
+// const char *PrintArgs::CharPtrContainer::c_str() const
+// {
+//     return _str;
+// }
+
+// bool PrintArgs::CharPtrContainer::operator==(const char *str) const
+// {
+//     return strcmp_P_P(_str, str) == 0; // function is nullptr sdafe
+// }
+
+// bool PrintArgs::CharPtrContainer::operator!=(const char *str) const
+// {
+//     return strcmp_P_P(_str, str);
+// }
+
+// PrintArgs::CharPtrContainer::~CharPtrContainer()
+// {
+// #if defined(ESP8266)
+//     // detect if string is allocated
+//     if (_str && !is_PGM_P(_str)) {
+//         free(_str);
+//     }
+// #else
+//     if (_free) {
+//         free(_str);
+//     }
+// #endif
+// }
+
+
+PrintArgs::PrintArgs() : _bufferPtr(nullptr), _position(0), _strLength(0), _strings(0)
+{
+#if DEBUG_PRINT_ARGS
+    _outputSize = 0;
+    _printfCalls = 0;
+    _printfArgs = 0;
+#endif
+}
+
+PrintArgs::~PrintArgs()
+{
+#if DEBUG_PRINT_ARGS
+    // __DBG_print("--attached---");
+    // for(const auto &str: _attached) {
+    //     __DBG_printf("%p=%u %s", str.c_str(), is_PGM_P(str.c_str()), str.c_str());
+    // }
+    // __DBG_print("--end---");
+#endif
+}
+
 void PrintArgs::clear()
 {
 #if DEBUG_PRINT_ARGS
     if (_outputSize) {
-        _debug_printf_P(PSTR("out size=%d, buf size=%d\n"), _outputSize, _buffer.size());
+        __LDBG_printf("out=%d buffer=%d calls=%u args=%u", _outputSize, _buffer.size(), _printfCalls, _printfArgs);
         _outputSize = 0;
     }
 #endif
-    _debug_printf_P(PSTR("this=%p buffer=%d\n"), this, _buffer.size());
+    // __LDBG_printf("this=%p buffer=%d attached=%u/%u", this, _buffer.size(), _strings.size(), _strings.count());
+    __LDBG_printf("this=%p buffer=%d", this, _buffer.size());
+    // _strings.clear();
     _buffer.clear();
     _bufferPtr = nullptr;
 }
@@ -119,6 +215,10 @@ size_t PrintArgs::fillBuffer(uint8_t *data, size_t sizeIn)
 
 void PrintArgs::vprintf_P(const char *format, uintptr_t **args, size_t numArgs)
 {
+#if DEBUG_PRINT_ARGS
+    _printfCalls++;
+    _printfArgs += numArgs;
+#endif
     _buffer.write((uint8_t)(numArgs + 1));
     _buffer.write(reinterpret_cast<const uint8_t *>(&format), sizeof(const char *));
     _buffer.write(reinterpret_cast<const uint8_t *>(&args), sizeof(void *) * numArgs);
@@ -127,7 +227,7 @@ void PrintArgs::vprintf_P(const char *format, uintptr_t **args, size_t numArgs)
 
 int PrintArgs::_snprintf_P(uint8_t *buffer, size_t size, void **args, uint8_t numArgs)
 {
-#if DEBUG_PRINT_ARGS
+#if DEBUG_PRINT_ARGS && 0
     String fmt = F("format='%s' args[");
     fmt += String((numArgs - 1));
     fmt += "]={";
@@ -148,6 +248,44 @@ int PrintArgs::_snprintf_P(uint8_t *buffer, size_t size, void **args, uint8_t nu
     return ((snprintf_P_stack)(snprintf_P))(reinterpret_cast<char *>(buffer), size, *(Args_t *)(&args[0]));
 #else
     return snprintf_P(reinterpret_cast<char *>(buffer), size, (PGM_P)args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], args[10], args[11], args[12], args[13], args[14], args[15]);
+#endif
+}
+
+void PrintArgs::_copy(float value)
+{
+    _copy((double)value);
+}
+
+// signed integers need to be converted
+void PrintArgs::_copy(int8_t value8)
+{
+    int32_t value = value8;
+    _buffer.write(reinterpret_cast<const uint8_t *>(&value), sizeof(value));
+}
+
+void PrintArgs::_copy(int16_t value16)
+{
+    int32_t value = value16;
+    _buffer.write(reinterpret_cast<const uint8_t *>(&value), sizeof(value));
+}
+
+void PrintArgs::_copy(const __FlashStringHelper *fpstr)
+{
+    _buffer.write(reinterpret_cast<const uint8_t *>(&fpstr), sizeof(const char *));
+}
+
+void PrintArgs::_copy(const char *str)
+{
+#if defined(ESP8266) && 0
+    if (is_PGM_P(str))
+        _buffer.write(reinterpret_cast<const uint8_t *>(&str), sizeof(const char *));
+    }
+    else {
+        auto copy = _strings.attachString(str);
+        _buffer.write(reinterpret_cast<const uint8_t *>(&copy), sizeof(const char *));
+    }
+#else
+    _buffer.write(reinterpret_cast<const uint8_t *>(&str), sizeof(const char *));
 #endif
 }
 

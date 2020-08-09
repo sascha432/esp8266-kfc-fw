@@ -182,6 +182,7 @@
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\PrintHtmlEntitiesString.cpp" />
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\PrintString.cpp" />
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\SSIProxyStream.cpp" />
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\StringDepulicator.cpp" />
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\TypeName.cpp" />
     <ClCompile Include="..\..\..\..\KFCJson\src\JsonString.cpp" />
     <ClCompile Include="..\..\..\..\KFCJson\src\JsonTools.cpp" />

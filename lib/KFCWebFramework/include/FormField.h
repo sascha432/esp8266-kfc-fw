@@ -100,8 +100,8 @@ public:
     Type getType() const;
 
     template <typename... Args>
-    FormUI::UI &setFormUI(Args &&... args) {
-        return setFormUI(new FormUI::UI(std::forward<Args>(args)...));
+    FormUI::UI &setFormUI(FormField *parent, Args &&... args) {
+        return setFormUI(new FormUI::UI(parent, std::forward<Args>(args)...));
     }
 
     FormUI::UI &setFormUI(FormUI::UI *formUI);

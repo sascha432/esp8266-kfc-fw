@@ -138,7 +138,7 @@ FormUI::UI &FormField::setFormUI(FormUI::UI *formUI)
         delete _formUI;
     }
     _formUI = formUI;
-    _formUI->setParent(this);
+    //_formUI->setParent(this);
     return *_formUI;
 }
 

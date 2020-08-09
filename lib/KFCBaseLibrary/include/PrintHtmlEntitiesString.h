@@ -9,10 +9,13 @@
 
 class PrintHtmlEntitiesString : public PrintString, public PrintHtmlEntities {
 public:
+    PrintHtmlEntitiesString() {}
     PrintHtmlEntitiesString(const String &str);
     PrintHtmlEntitiesString(const __FlashStringHelper *str);
     PrintHtmlEntitiesString(const char *str);
-    PrintHtmlEntitiesString();
+    PrintHtmlEntitiesString(Mode mode, const String &str);
+    PrintHtmlEntitiesString(Mode mode, const __FlashStringHelper *str);
+    PrintHtmlEntitiesString(Mode mode, const char *str);
 
     virtual size_t write(uint8_t data) override;
     virtual size_t writeRaw(uint8_t data) override;

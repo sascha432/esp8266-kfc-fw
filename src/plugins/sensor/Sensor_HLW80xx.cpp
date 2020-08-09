@@ -5,7 +5,6 @@
 #if IOT_SENSOR_HAVE_HLW8012 || IOT_SENSOR_HAVE_HLW8032
 
 #include <EventTimer.h>
-#include <StringKeyValueStore.h>
 #include "Sensor_HLW80xx.h"
 #include "sensor.h"
 #include "MicrosTimer.h"
@@ -222,10 +221,6 @@ void Sensor_HLW80xx::createConfigureForm(AsyncWebServerRequest *request, Form &f
 
 void Sensor_HLW80xx::configurationSaved(Form *form)
 {
-    using KeyValueStorage::Container;
-    using KeyValueStorage::ContainerPtr;
-    using KeyValueStorage::Item;
-
     auto &cfg = Plugins::Sensor::getWriteableConfig();
     getEnergyPrimaryCounter() = cfg.hlw80xx.energyCounter;
 
@@ -279,10 +274,6 @@ void Sensor_HLW80xx::_saveEnergyCounter()
         file.close();
     }
     _saveEnergyCounterTimeout = millis() + IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT;
-
-    using KeyValueStorage::Container;
-    using KeyValueStorage::ContainerPtr;
-    using KeyValueStorage::Item;
 
     config.callPersistantConfig(ContainerPtr(new Container()), [this](Container &data) {
         data.replace(Item::create(F("hlw80xx_e1_a"), getEnergyPrimaryCounter()));

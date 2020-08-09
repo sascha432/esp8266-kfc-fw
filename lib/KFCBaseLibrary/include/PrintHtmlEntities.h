@@ -41,6 +41,7 @@ public:
 
 public:
     PrintHtmlEntities();
+    PrintHtmlEntities(Mode mode);
 
     // translate HTML_* and use writeRaw() to output it
     size_t translate(uint8_t data);
@@ -71,7 +72,7 @@ public:
     // attribute=true encode as value for html attributes
     // attributes=false encode as html
     //
-    // NOTES:     
+    // NOTES:
     //  - return value false means that target was not modified
     //  - str is PROGMEM safe
     static bool translateTo(const char *str, String &target, bool attribute, int requiredSize = kInvalidSize);

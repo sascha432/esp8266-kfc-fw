@@ -12,19 +12,22 @@
 #include "debug_helper_disable.h"
 #endif
 
-SSIProxyStream::SSIProxyStream(File &file, DataProviderInterface &provider) : _template({ *this, 0, -1, nullptr, 0, String() }), _file(file), _position(0), _length(0), _provider(provider) {
+SSIProxyStream::SSIProxyStream(File &file, DataProviderInterface &provider) : _template({ *this, 0, -1, nullptr, 0, String() }), _file(file), _position(0), _length(0), _provider(provider)
+{
 #if DEBUG_SSI_PROXY_STREAM
     _ramUsage = ESP.getFreeHeap();
 #endif
 }
 
-SSIProxyStream::~SSIProxyStream() {
+SSIProxyStream::~SSIProxyStream()
+{
 #if DEBUG_SSI_PROXY_STREAM
     debug_printf(PSTR("ram=%u\n"), _ramUsage);
 #endif
 }
 
-inline int SSIProxyStream::available() {
+inline int SSIProxyStream::available()
+{
     if (!_file) {
         return false;
     }
@@ -79,7 +82,7 @@ size_t SSIProxyStream::_copy(uint8_t *buffer, size_t length)
 
 size_t SSIProxyStream::read(uint8_t *buffer, size_t length)
 {
-    //_debug_printf_P(PSTR("read_len=%d pos=%d length=%d size=%d\n"), length, _position, _buffer.length(), _buffer.size());
+    //__LDBG_printf("read_len=%d pos=%d length=%d size=%d", length, _position, _buffer.length(), _buffer.size());
     auto ptr = buffer;
     while (length && _available()) {
         auto copied = _copy(ptr, length);
@@ -99,14 +102,14 @@ size_t SSIProxyStream::_available()
 
 size_t SSIProxyStream::_readBuffer(bool templateCheck)
 {
-    // _debug_printf_P(PSTR("templateCheck=%u\n"), templateCheck);
+    // __LDBG_printf("templateCheck=%u", templateCheck);
     uint8_t buf[128];
     size_t len = 0;
     if (_provider) {
         len = _provider.fillBuffer(buf, sizeof(buf));
         if (len <= 0) {
             _provider.end();
-            _debug_printf_P(PSTR("template %c%s%c end @ %d length=%d\n"), _template.delim, _template.template_name(), _template.delim, _length, _template.template_length());
+            __LDBG_printf("template %c%s%c end @ %d length=%d", _template.delim, _template.template_name(), _template.delim, _length, _template.template_length());
 
             DEBUG_ASSERT(_template.marker == -1);
             _template.position = _buffer.end();
@@ -118,7 +121,7 @@ size_t SSIProxyStream::_readBuffer(bool templateCheck)
     if (len == 0 && _file && _file.available()) {
         len = _file.readBytes((char *)buf, sizeof(buf));
         if (len <= 0) {
-            _debug_printf_P(PSTR("stream reached EOF @ %d, result=%d\n"), _length, len);
+            __LDBG_printf("stream reached EOF @ %d, result=%d", _length, len);
             close();
             return 0;
         }
@@ -208,7 +211,7 @@ size_t SSIProxyStream::_readBuffer(bool templateCheck)
                         // check if data provider can resolve the name
                         if (_provider.begin(_template.name)) {
                             _template.start_length = _length;
-                            _debug_printf_P(PSTR("template %c%s%c started @ %d\n"), _template.delim, _template.template_name(), _template.delim, _template.start_length);
+                            __LDBG_printf("template %c%s%c started @ %d", _template.delim, _template.template_name(), _template.delim, _template.start_length);
 
                             // remove buffer after template name starts
                             size_t templateStartOfs = name.begin - _buffer.begin() - 1;
@@ -224,7 +227,7 @@ size_t SSIProxyStream::_readBuffer(bool templateCheck)
                         }
                         else {
                             // skip name
-                            _debug_printf_P(PSTR("template %c%s%c skipped\n"), _template.delim, _template.template_name(), _template.delim);
+                            __LDBG_printf("template %c%s%c skipped", _template.delim, _template.template_name(), _template.delim);
                             _template.name = String();
                             _template.position = name.end + 1;
                         }

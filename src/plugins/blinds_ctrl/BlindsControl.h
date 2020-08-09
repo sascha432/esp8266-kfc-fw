@@ -321,8 +321,37 @@ protected:
     MillisTimer _currentLimitTimer;
     uint16_t _currentLimit;
 
-    uint32_t _adcIntegral;
+    float _adcIntegral;
+    float _adcIntegralMultiplier;
     MicrosTimer _currentTimer;
+
+#if IOT_BLINDS_CTRL_TESTMODE
+    class CurrentValueType {
+    public:
+        CurrentValueType(uint16_t time, uint16_t value, int32_t timer) : _time(time), _value(value), _timer(timer) {
+        }
+        uint32_t getTime() const {
+            return _time;
+        }
+        uint32_t getCurrent() const {
+            return _value * BlindsControllerConversion::kConvertADCValueToCurrentMulitplier;
+        }
+        int32_t getTimer() const {
+            return _timer;
+        }
+        private:
+        struct __attribute__packed__ {
+            uint16_t _time;
+            uint16_t _value;
+            int16_t _timer;
+        };
+    };
+    using CurrentValueVector = std::vector<CurrentValueType>;
+
+    uint32_t _startCurrentValues;
+    CurrentValueVector _currentValues;
+    bool _storeValues;
+#endif
 
 #if IOT_BLINDS_CTRL_RPM_PIN
 protected:

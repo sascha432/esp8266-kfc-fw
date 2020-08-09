@@ -19,7 +19,14 @@ int8_t operator *(const BlindsControl::ChannelType type) {
     return static_cast<int8_t>(type);
 }
 
-BlindsControl::BlindsControl() : MQTTComponent(ComponentTypeEnum_t::SWITCH), _queue(*this), _activeChannel(ChannelType::NONE)
+BlindsControl::BlindsControl() :
+    MQTTComponent(ComponentTypeEnum_t::SWITCH), _queue(*this),
+    _activeChannel(ChannelType::NONE),
+    _adcIntegralMultiplier(1.0 / (1000.0 / 40.0))
+#if IOT_BLINDS_CTRL_TESTMODE
+    ,
+    _storeValues(false)
+#endif
 {
 }
 
@@ -272,7 +279,9 @@ void BlindsControl::_monitorMotor(ChannelAction &action)
         }
     }
     else if (_currentLimitTimer.isActive() && _adcIntegral < _currentLimit * 0.8) {   // reset current limit counter if current drops below 80%
-        __LDBG_printf("current limit timer reset=%dms", _currentLimitTimer.get());
+        if (!_storeValues) {
+            __LDBG_printf("current limit timer reset=%dm", _currentLimitTimer.get());
+        }
         _currentLimitTimer.disable();
     }
 
@@ -444,6 +453,11 @@ void BlindsControl::_clearAdc()
     digitalWrite(_config.pins[4], channel == 0 && Plugins::Blinds::ConfigStructType::get_enum_multiplexer(_config) == Plugins::Blinds::MultiplexerType::HIGH_FOR_CHANNEL0 ? HIGH : LOW);
     delay(IOT_BLINDS_CTRL_RSSEL_WAIT);
 
+#if IOT_BLINDS_CTRL_TESTMODE
+    _currentValues.clear();
+    _startCurrentValues = millis();
+#endif
+
     _adcIntegral = 0;
     _currentLimitTimer.disable();
     _currentTimer.start();
@@ -455,9 +469,21 @@ void BlindsControl::_clearAdc()
 
 void BlindsControl::_updateAdc()
 {
-    uint16_t count = (_currentTimer.getTime() / IOT_BLINDS_CTRL_INT_TDIV);
+    auto micros = _currentTimer.getTime();
+    float count = micros * _adcIntegralMultiplier;
     _currentTimer.start();
-    _adcIntegral = ((_adcIntegral * count) + analogRead(A0)) / (count + 1);
+    auto reading = analogRead(A0);
+    _adcIntegral = ((count * _adcIntegral) + reading) / (count + 1.0f);
+#if IOT_BLINDS_CTRL_TESTMODE
+    // store value every 5ms
+    uint32_t ms = millis();
+    if (_storeValues && (ms / 5) % 2 == _currentValues.size() % 2) {
+        if (_currentValues.size() + 1 >= _currentValues.capacity()) {
+            _currentValues.reserve(_currentValues.size() + 32);
+        }
+        _currentValues.emplace_back(ms - _startCurrentValues, _adcIntegral, _currentLimitTimer.get());
+    }
+#endif
 }
 
 void BlindsControl::_setMotorSpeed(ChannelType channelType, uint16_t speed, bool open)
@@ -481,6 +507,20 @@ void BlindsControl::_stop()
     for(auto pin : _config.pins) {
         digitalWrite(pin, LOW);
     }
+
+#if IOT_BLINDS_CTRL_TESTMODE
+    if (_currentValues.size()) {
+        String currentFile = F("/.pvt/current.log");
+        auto file = SPIFFS.open(currentFile, fs::FileOpenMode::write);
+        if (file) {
+            for(const auto value: _currentValues) {
+                file.printf_P(PSTR("%u %u %d\n"), value.getTime(), value.getCurrent(), value.getTimer());
+            }
+            __LDBG_printf("stored %u values in %s", _currentValues.size(), currentFile.c_str());
+        }
+        _currentValues.clear();
+    }
+#endif
 }
 
 String BlindsControl::_getTopic(ChannelType channel, TopicType type)
@@ -532,6 +572,7 @@ void BlindsControl::_saveState()
 void BlindsControl::_readConfig()
 {
     _config = Plugins::Blinds::getConfig();
+    _adcIntegralMultiplier = 1.0 / (1000.0 / _config.adc_divider);
     _loadState();
 }
 

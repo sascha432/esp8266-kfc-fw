@@ -1246,7 +1246,7 @@ namespace KFCConfigurationClasses {
                 uint16_t open_time;                 // ms
                 uint16_t close_time;                // ms
 
-                BlindsConfigChannel_t() : pwm_value(600), current_limit(1500), current_limit_time(50), open_time(5000), close_time(5500) {}
+                BlindsConfigChannel_t();
 
                 template<typename Archive>
                 void serialize(Archive & ar, kfc::serialization::version version){
@@ -1267,6 +1267,7 @@ namespace KFCConfigurationClasses {
                 BlindsConfigOperation_t close[6];
                 uint8_t pins[5];
                 CREATE_ENUM_BITFIELD(multiplexer, MultiplexerType);
+                uint16_t adc_divider;
 
                 template<typename Archive>
                 void serialize(Archive & ar, kfc::serialization::version version) {

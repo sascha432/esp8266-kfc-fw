@@ -18,6 +18,9 @@
 #ifndef IOT_BLINDS_CTRL_CHANNEL_COUNT
 #define IOT_BLINDS_CTRL_CHANNEL_COUNT       2
 #endif
+#if IOT_BLINDS_CTRL_CHANNEL_COUNT != 2
+#error 2 channels supported only
+#endif
 
 // enable RPM sensing, 0 = disable
 #ifndef IOT_BLINDS_CTRL_RPM_PIN
@@ -36,19 +39,19 @@
 
 // motor pins
 #ifndef IOT_BLINDS_CTRL_M1_PIN
-#define IOT_BLINDS_CTRL_M1_PIN              D2
+#define IOT_BLINDS_CTRL_M1_PIN              D1
 #endif
 
 #ifndef IOT_BLINDS_CTRL_M2_PIN
-#define IOT_BLINDS_CTRL_M2_PIN              D1
+#define IOT_BLINDS_CTRL_M2_PIN              D2
 #endif
 
 #ifndef IOT_BLINDS_CTRL_M3_PIN
-#define IOT_BLINDS_CTRL_M3_PIN              D7
+#define IOT_BLINDS_CTRL_M3_PIN              D6
 #endif
 
 #ifndef IOT_BLINDS_CTRL_M4_PIN
-#define IOT_BLINDS_CTRL_M4_PIN              D6
+#define IOT_BLINDS_CTRL_M4_PIN              D7
 #endif
 
 // PWM frequency in Hz
@@ -69,12 +72,6 @@
 // shunt resistance in milliohm
 #ifndef IOT_BLINDS_CTRL_SHUNT
 #define IOT_BLINDS_CTRL_SHUNT               125UL
-#endif
-
-// time divider for the ADC integration to get a stable current reading
-// depends on the PWM freqency and capacitor on the control board
-#ifndef IOT_BLINDS_CTRL_INT_TDIV
-#define IOT_BLINDS_CTRL_INT_TDIV            25
 #endif
 
 // max. ADC voltage in millivolt

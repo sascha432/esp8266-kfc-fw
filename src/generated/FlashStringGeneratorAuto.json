@@ -140,11 +140,11 @@
         "default": " hidden"
     },
     "Not_supported": {
-        "use_counter": 2,
+        "use_counter": 1,
         "default": "Not supported"
     },
     "_selected": {
-        "use_counter": 3,
+        "use_counter": 2,
         "default": " selected"
     },
     "server_crt": {
@@ -1072,7 +1072,7 @@
         "default": "/%s/"
     },
     "hPa": {
-        "use_counter": 1,
+        "use_counter": 3,
         "default": "hPa"
     },
     "channel__u": {
@@ -1080,15 +1080,15 @@
         "default": "channel_%u"
     },
     "temperature": {
-        "use_counter": 0,
+        "use_counter": 5,
         "default": "temperature"
     },
     "humidity": {
-        "use_counter": 0,
+        "use_counter": 5,
         "default": "humidity"
     },
     "pressure": {
-        "use_counter": 0,
+        "use_counter": 5,
         "default": "pressure"
     },
     "mqtt_component_storage": {
@@ -1144,7 +1144,7 @@
         "default": "brightness"
     },
     "_degreeC": {
-        "use_counter": 12,
+        "use_counter": 14,
         "default": "\\u00b0C"
     },
     "vcc": {
@@ -1176,7 +1176,7 @@
         "default": "Alarm"
     },
     "defaultPassword": {
-        "use_counter": 7,
+        "use_counter": 10,
         "default": "12345678"
     },
     "Enabled": {

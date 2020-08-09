@@ -92,7 +92,7 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
 
             form.addCStringGetterSetter(F("ap_ssid"), Network::WiFi::getSoftApSSID, Network::WiFi::setSoftApSSIDCStr);
             Network::WiFi::addSoftApSSIDLengthValidator(form);
-            form.addFormUI(FSPGM(SSID, "SSID")).addInputGroupAppendCheckBoxButton(ssidHidden, FSPGM(HIDDEN, "HIDDEN"));
+            form.addFormUI(FSPGM(SSID, "SSID"), FormUI::UI::createCheckBoxButton(ssidHidden, FSPGM(HIDDEN, "HIDDEN")));
 
             form.addCStringGetterSetter(F("ap_pass"), Network::WiFi::getSoftApPassword, Network::WiFi::setSoftApPasswordCStr);
             Network::WiFi::addSoftApPasswordLengthValidator(form);
@@ -100,11 +100,11 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
 
             form.addMemberVariable(F("ap_ch"), softAp, &Network::SoftAP::ConfigStructType::channel);
             form.addValidator(FormRangeValidator(1, config.getMaxWiFiChannels(), true));
-            form.addFormUI(FSPGM(Channel)).emplaceItems(std::move(channelItems));
+            form.addFormUI(FSPGM(Channel), channelItems);
 
             form.addMemberVariable("ap_enc", softAp, &Network::SoftAP::ConfigStructType::encryption);
             form.addValidator(FormEnumValidator<uint8_t, WiFiEncryptionTypeArray().size()>(F("Invalid encryption"), createWiFiEncryptionTypeArray()));
-            form.addFormUI(FSPGM(Encryption)).emplaceItems(std::move(encryptionItems));
+            form.addFormUI(FSPGM(Encryption), channelItems);
 
 
             apModeGroup.end();

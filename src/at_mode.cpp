@@ -16,7 +16,6 @@
 #include <vector>
 #include <JsonTools.h>
 #include <ListDir.h>
-#include <StringKeyValueStore.h>
 #include "at_mode.h"
 #include "kfc_fw_config.h"
 #include "fs_mapping.h"
@@ -283,6 +282,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DUMPT, "DUMPT", "Dump timers");
 #if DEBUG_CONFIGURATION_GETHANDLE
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPH, "DUMPH", "[<log|panic|clear>]", "Dump configuration handles");
 #endif
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPM, "DUMPM", "<start>,<length>", "Dump memory");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DUMPFS, "DUMPFS", "Display file system information");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPEE, "DUMPEE", "[<offset>[,<length>]", "Dump EEPROM");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WRTC, "WRTC", "<id,data>", "Write uint32 to RTC memory");
@@ -350,6 +350,7 @@ void at_mode_help_commands()
 #if DEBUG && ESP8266
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMPT), name);
 #endif
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMPM), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMPFS), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMPEE), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMPRTC), name);
@@ -809,6 +810,10 @@ void at_mode_serial_handle_event(String &commandString)
                 args.printf_P(PSTR("CPU frequency: %uMHz"), ESP.getCpuFreqMHz());
                 args.printf_P(PSTR("Flash size: %s"), formatBytes(ESP.getFlashChipRealSize()).c_str());
                 args.printf_P(PSTR("Firmware size: %s"), formatBytes(ESP.getSketchSize()).c_str());
+                args.printf_P(PSTR("EEPROM: 0x%x"), config.getFlashAddress(KFCFWConfiguration::FlashAreaType::EEPROM).getStart());
+                args.printf_P(PSTR("EspSaveCrash: 0x%x"), config.getFlashAddress(KFCFWConfiguration::FlashAreaType::SAVECRASH).getStart());
+                args.printf_P(PSTR("KFCFW: 0x%x %u"), config.getFlashAddress(KFCFWConfiguration::FlashAreaType::KFCFW).getStart(), config.getFlashAddress(KFCFWConfiguration::FlashAreaType::KFCFW).getLength());
+
                 args.printf_P(PSTR("sizeof(String): %u"), sizeof(String));
                 args.printf_P(PSTR("sizeof(std::vector<int>): %u"), sizeof(std::vector<int>));
                 args.printf_P(PSTR("sizeof(std::vector<double>): %u"), sizeof(std::vector<double>));
@@ -821,41 +826,6 @@ void at_mode_serial_handle_event(String &commandString)
                     args.printf_P(PSTR("Firmware ELF hash: %s"), hash.c_str());
                 }
 #endif
-            }
-            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(PSTORE))) {
-                using KeyValueStorage::Container;
-                using KeyValueStorage::ContainerPtr;
-
-                if (args.equalsIgnoreCase(0, F("add"))) {
-                    if (args.requireArgs(3, 3)) {
-                        //TODO
-                    }
-                }
-                else if (args.equalsIgnoreCase(0, F("remove"))) {
-                    if (args.requireArgs(2, 2)) {
-                        args.print(F("Sending remove request..."));
-                        config.callPersistantConfig(ContainerPtr(new Container()), [args](Container &data) mutable {
-                            auto item = args.get(1);
-                            args.printf_P(PSTR("Item '%s' removed=%u"), item, data.remove(item));
-                        });
-                    }
-                }
-                else if (args.equalsIgnoreCase(0, F("clear"))) {
-                    args.print(F("Sending clear request..."));
-                    config.callPersistantConfig(ContainerPtr(new Container()), [args](Container &data) mutable {
-                        data.clear();
-                        args.print(F("Cleared"));
-                    });
-                }
-                else {
-                    args.print(F("Requesting data..."));
-                    config.callPersistantConfig(ContainerPtr(new Container()), [args](Container &data) mutable {
-                        args.printf_P(PSTR("Stored items: %u"), data.size());
-                        for(const auto &item: data) {
-                            args.printf_P(PSTR("key='%s' value='%s'"), item->getName().c_str(), item->getValue().c_str());
-                        }
-                    });
-                }
             }
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RST))) {
                 bool safeMode = false;
@@ -1321,6 +1291,53 @@ void at_mode_serial_handle_event(String &commandString)
                 }
             }
 #endif
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPM))) {
+                if (args.requireArgs(2, 3)) {
+                    uint32_t start = args.toNumber(0);
+                    uint32_t len = args.toNumber(1);
+                    if (!start || !len) {
+                        args.print(F("start or length missing"));
+                    }
+                    else {
+                        uint8_t *startPtr = (uint8_t *)(start & ~0x3);
+                        uint8_t *endPtr = (uint8_t *)((start + len + 3) & ~0x03);
+
+                        args.printf_P(PSTR("start=0x%08x end=0x%08x"), startPtr, endPtr);
+                        if (args.isTrue(2)) {
+
+                            auto &stream = args.getStream();
+
+                            constexpr size_t kPerColumn = 4;
+                            uint32_t data[kPerColumn];
+                            uint32_t *dword = &data[0];
+                            size_t col = 0;
+                            stream.printf_P("\n%08x: ", (uintptr_t)startPtr);
+                            while(startPtr < endPtr) {
+                                if ((uintptr_t)startPtr < 0x40200000) {
+                                    *dword = pgm_read_dword(startPtr);
+                                }
+                                else if (!ESP.flashRead((uintptr_t)startPtr - 0x40200000, dword, sizeof(*dword))) {
+                                    *dword = ~0;
+                                }
+                                startPtr += sizeof(*dword);
+                                stream.printf_P(PSTR("%08x "), *dword);
+                                dword++;
+
+                                if (++col % kPerColumn == 0) {
+                                    dword = &data[0];
+                                    stream.print('[');
+                                    printable_string(stream, (const uint8_t *)data, sizeof(data));
+                                    if (startPtr < endPtr) {
+                                        stream.printf_P("]\n%08x: ", (uintptr_t)startPtr);
+                                    }
+                                }
+                            }
+                            stream.println();
+                        }
+
+                    }
+                }
+            }
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPFS))) {
                 at_mode_dump_fs_info(output);
             }

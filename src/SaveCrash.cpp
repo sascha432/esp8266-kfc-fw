@@ -46,6 +46,10 @@ namespace SaveCrash {
         });
     }
 
+#if !DEBUG_HAVE_SAVECRASH
+    void clearEEPROM() {}
+#endif
+
 }
 
 #if DEBUG_HAVE_SAVECRASH
@@ -53,6 +57,11 @@ namespace SaveCrash {
 EspSaveCrash espSaveCrash;
 
 namespace SaveCrash {
+
+    void clearEEPROM()
+    {
+        espSaveCrash.clear();
+    }
 
     void installSafeCrashTimer(uint32_t delay_seconds)
     {

@@ -209,7 +209,7 @@ void setup()
                             config.write();
                             KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("AP mode with DHCPD enabled (SSID %s)\nUsername '%s', passwords set to '%s'\nWeb server running on port 80\n\nPress r to reboot...\n"),
                                 Network::WiFi::getSoftApSSID(),
-                                System::Device::getName(),
+                                System::Device::getUsername(),
                                 SPGM(defaultPassword)
                             );
                             endTimeout = 0;
@@ -297,6 +297,16 @@ void setup()
             Scheduler.addTimer(rebootDelay * 60000U, false, [](EventScheduler::TimerPtr timer) {
                 Logger_notice(F("Rebooting device after safe mode timeout"));
                 config.restartDevice();
+            });
+        }
+
+        auto flags = System::Flags::getConfig();
+        if ((flags.is_softap_enabled || flags.is_softap_standby_mode_enabled) && !strcmp(Network::WiFi::getSoftApPassword(), SPGM(defaultPassword))) {
+            Logger_warning(F("SoftAP is using default password and will be disabled in 15 minutes..."));
+            Scheduler.addTimer(15U * 60U * 1000U, false, [](EventScheduler::TimerPtr timer) {
+                if (WiFi.getMode() & WIFI_AP) {
+                    WiFi.enableAP(false);
+                }
             });
         }
 

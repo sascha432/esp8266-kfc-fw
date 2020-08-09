@@ -84,7 +84,7 @@
 // }
 
 
-PrintArgs::PrintArgs() : _bufferPtr(nullptr), _position(0), _strLength(0), _strings(0)
+PrintArgs::PrintArgs() : _bufferPtr(nullptr), _position(0), _strLength(0)
 {
 #if DEBUG_PRINT_ARGS
     _outputSize = 0;
@@ -95,13 +95,6 @@ PrintArgs::PrintArgs() : _bufferPtr(nullptr), _position(0), _strLength(0), _stri
 
 PrintArgs::~PrintArgs()
 {
-#if DEBUG_PRINT_ARGS
-    // __DBG_print("--attached---");
-    // for(const auto &str: _attached) {
-    //     __DBG_printf("%p=%u %s", str.c_str(), is_PGM_P(str.c_str()), str.c_str());
-    // }
-    // __DBG_print("--end---");
-#endif
 }
 
 void PrintArgs::clear()
@@ -112,10 +105,10 @@ void PrintArgs::clear()
         _outputSize = 0;
     }
 #endif
-    // __LDBG_printf("this=%p buffer=%d attached=%u/%u", this, _buffer.size(), _strings.size(), _strings.count());
-    __LDBG_printf("this=%p buffer=%d", this, _buffer.size());
-    // _strings.clear();
-    _buffer.clear();
+    if (_buffer.size()) {
+        __LDBG_printf("this=%p buffer=%d", this, _buffer.size());
+        _buffer.clear();
+    }
     _bufferPtr = nullptr;
 }
 

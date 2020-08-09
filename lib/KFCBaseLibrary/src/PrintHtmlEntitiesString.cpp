@@ -4,6 +4,13 @@
 
 #include "PrintHtmlEntitiesString.h"
 
+PrintHtmlEntitiesString::PrintHtmlEntitiesString()
+{
+}
+
+PrintHtmlEntitiesString::PrintHtmlEntitiesString(Mode mode) {
+}
+
 PrintHtmlEntitiesString::PrintHtmlEntitiesString(const String &str)
 {
     PrintString::print(str);

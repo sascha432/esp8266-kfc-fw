@@ -9,7 +9,8 @@
 
 class PrintHtmlEntitiesString : public PrintString, public PrintHtmlEntities {
 public:
-    PrintHtmlEntitiesString() {}
+    PrintHtmlEntitiesString();
+    PrintHtmlEntitiesString(Mode mode);
     PrintHtmlEntitiesString(const String &str);
     PrintHtmlEntitiesString(const __FlashStringHelper *str);
     PrintHtmlEntitiesString(const char *str);

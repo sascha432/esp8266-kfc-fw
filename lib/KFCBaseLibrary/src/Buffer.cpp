@@ -46,9 +46,8 @@ Buffer::Buffer() : _buffer(nullptr), _length(0), _size(0)
 {
 }
 
-Buffer::Buffer(Buffer &&buffer) noexcept : Buffer()
+Buffer::Buffer(Buffer &&buffer) noexcept : _buffer(std::exchange(buffer._buffer, nullptr)), _length(std::exchange(buffer._length, 0)), _size(std::exchange(buffer._size, 0))
 {
-    *this = std::move(buffer);
 }
 
 Buffer::Buffer(size_t size) : Buffer()

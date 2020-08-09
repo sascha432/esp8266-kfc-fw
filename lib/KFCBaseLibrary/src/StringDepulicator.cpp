@@ -2,143 +2,260 @@
 * Author: sascha_lammers@gmx.de
 */
 
+#include <PrintString.h>
+#include <misc.h>
 #include "StringDepulicator.h"
 
-StringDeduplicator::StringDeduplicator() : StringDeduplicator(512)
+#if DEBUG_STRING_DEDUPLICATOR
+#include "debug_helper_enable.h"
+#else
+#include "debug_helper_disable.h"
+#endif
+
+
+#if defined(ESP8266)
+#define safe_strcmp(a, b) strcmp(a, b)
+#else
+#define safe_strcmp(a, b) strcmp_P(a, b)
+#endif
+
+
+size_t StringBuffer::count() const
+{
+    size_t count = 0;
+    auto begin = Buffer::begin();
+    auto end = Buffer::end();
+    while(begin < end) {
+        if (!*begin++) {
+            count++;
+        }
+    }
+    return count;
+}
+
+size_t StringBuffer::space() const
+{
+    return size() - length();
+}
+
+const char *StringBuffer::findStr(const char *str, size_t len) const
+{
+    auto begin = cstr_begin();
+    auto end = cstr_end();
+    while(begin + len < end) {
+        if  (!safe_strcmp(begin, str)) {
+            return begin;
+        }
+        begin += strlen(begin) + 1;
+    }
+    return nullptr;
+}
+
+const char *StringBuffer::addString(const char *str, size_t len)
+{
+    if (len + 1 > size()) {
+        return nullptr;
+    }
+    auto ptr = cstr_end();
+    write_P(str, len);
+    write(0);
+    return ptr;
+}
+
+StringBufferPool::StringBufferPool() : _pool()
 {
 }
 
-StringDeduplicator::StringDeduplicator(size_t bufferSize) : _buffer(bufferSize)
+void StringBufferPool::clear()
+{
 #if DEBUG_STRING_DEDUPLICATOR
-    , _count(0)
+    if (_pool.size()) {
+        StringVector list;
+        for(const auto &buffer: _pool) {
+            list.push_back(PrintString(F("%u:%u:%u"), buffer.length(), buffer.space(), buffer.count()));
+        }
+        __DBG_printf("pool=%p [%s]", this, implode(F(", "), list).c_str());
+    }
+#endif
+    _pool.clear();
+}
+
+size_t StringBufferPool::count() const
+{
+    size_t count = 0;
+    for(const auto &buffer: _pool) {
+        count += buffer.count();
+    }
+    return count;
+}
+
+size_t StringBufferPool::space() const
+{
+    return size() - length();
+}
+
+size_t StringBufferPool::length() const
+{
+    size_t length = 0;
+    for(const auto &buffer: _pool) {
+        length += buffer.length();
+    }
+    return length;
+}
+
+size_t StringBufferPool::size() const
+{
+    size_t size = 0;
+    for(const auto &buffer: _pool) {
+        size += buffer.size();
+    }
+    return size;
+}
+
+const char *StringBufferPool::findStr(const char *str, size_t len) const
+{
+    if (len == 0) {
+        return emptyString.c_str();
+    }
+    for(const auto &buffer: _pool) {
+        if (str >= buffer.cstr_begin() && str < buffer.cstr_end()) { // str belongs to this buffer
+            return buffer.findStr(str, len);
+        }
+    }
+    for(const auto &buffer: _pool) { // search all buffers
+        const char *ptr = buffer.findStr(str, len);
+        if (ptr) {
+            return ptr;
+        }
+    }
+    return nullptr;
+}
+
+const char *StringBufferPool::addString(const char *str, size_t len)
+{
+    if (len == 0) {
+        return emptyString.c_str();
+    }
+
+    if (_pool.empty()) {
+        _pool.emplace_back(128);
+    }
+
+    StringBuffer *target = nullptr;
+    for(auto &buffer: _pool) {
+        // find best match
+        size_t spaceNeeded = buffer.length() + len + 1;
+        if (spaceNeeded == buffer.size()) {
+            target = &buffer;
+            break;
+        }
+        else if (!target && spaceNeeded < buffer.size()) {
+            target = &buffer;
+        }
+    }
+    if (!target) {
+        // add new pool
+        size_t newSize = _pool.size() == 1 ? 256 : 128;
+        if (len + 64 > newSize) { // this string required extra space
+            newSize = len + 64;
+        }
+        newSize = (newSize + 7) & ~7; // align to memory block size
+        __LDBG_printf("pools=%u new=%u", _pool.size(), newSize);
+        _pool.emplace_back(newSize);
+        target = &_pool.back();
+    }
+#if DEBUG_STRING_DEDUPLICATOR && 0
+    auto ptr = target->addString(str, len);
+    DEBUG_OUTPUT.printf_P(PSTR("add %p[%d] %-20.20s... %-20.20s...\n"), str, len, str, ptr);
+    return ptr;
+#else
+    return target->addString(str, len);
+#endif
+}
+
+
+StringDeduplicator::StringDeduplicator()
+#if DEBUG_STRING_DEDUPLICATOR
+    : _dupesCount(0), _fpDupesCount(0), _fpStrCount(0)
 #endif
 {
-    __DBG_printf("sd=%p buffer=%u", this, _buffer.size());
 }
 
 StringDeduplicator::~StringDeduplicator()
 {
-#if DEBUG_STRING_DEDUPLICATOR
     clear();
-#else
-    __DBG_printf("sd=%p buffer=%u list=%u", this, _buffer.length(), _strings.size());
-    for(const auto ptr: _strings) {
-        free(ptr);
-    }
-#endif
-    _buffer.clear();
-    __DBG_printf("sd=%p buffer size=%u", this, _buffer.size());
 }
 
 const char *StringDeduplicator::isAttached(const char *str, size_t len)
 {
 #if defined(ESP8266)
     if (is_PGM_P(str)) {
+#if DEBUG_STRING_DEDUPLICATOR
+        _fpStrCount++;
+        auto iterator = std::find(_fpStrings.begin(), _fpStrings.end(), str);
+        if (iterator == _fpStrings.end()) {
+            _fpStrings.push_back(str);
+        }
+#endif
         return str;
     }
 #endif
-    auto ptr = (const char *)_buffer.begin();
-    auto endPtr = (const char *)_buffer.end();
-    if (!(str >= ptr && str < endPtr)) { // inside buffer?
-        auto iterator = std::find(_strings.begin(), _strings.end(), (char *)str);
-        if (iterator != _strings.end()) {
+
 #if DEBUG_STRING_DEDUPLICATOR
-                _count++;
-#endif
-            return *iterator;
-        }
-        for(const auto str2: _strings) {
-#if defined(ESP8266)
-            if (!strcmp(str2, str)) {
-#else
-            if (!strcmp_P(str2, str)) {
-#endif
-#if DEBUG_STRING_DEDUPLICATOR
-                _count++;
-#endif
-                return str2;
-            }
-        }
+    auto ptr = _strings.findStr(str, len);
+    if (ptr) {
+        _dupesCount++;
     }
-    while(ptr + len < endPtr) {
-#if defined(ESP8266)
-        if (!strcmp(ptr, str)) {
+    return ptr;
 #else
-        if (!strcmp_P(ptr, str)) {
+    return _strings.findStr(str, len);
 #endif
-#if DEBUG_STRING_DEDUPLICATOR
-            _count++;
-#endif
-            return ptr;
-        }
-        ptr += strlen(ptr) + 1;
-    }
-    return nullptr;
 }
 
-// attach a temporary string to the output object
 const char *StringDeduplicator::attachString(const char *str)
 {
     size_t len = strlen_P(str);
-    const char *hasStr = isAttached(str, len);
-    if (hasStr) {
-        return hasStr;
-    }
-    if (len >= 15 || !_buffer.size() || _buffer.length() + len + 1 >= _buffer.size()) {
-        char *ptr = (char *)malloc(len + 1);
-        memcpy_P(ptr, str, len + 1);
-        ptr[len] = 0;
-        _strings.push_back(ptr);
+    const char *ptr = isAttached(str, len);
+    if (ptr) {
         return ptr;
     }
-    auto result = _buffer.end();
-    _buffer.write_P(str, len + 1);
-    return reinterpret_cast<const char *>(result);
+
+#if DEBUG_STRING_DEDUPLICATOR
+    for(const auto str2: _fpStrings) {
+        if (strcmp_P_P(str, str2) == 0) {
+            _fpDupesCount++;
+        }
+    }
+#endif
+
+    return _strings.addString(str, len);
 }
 
 void StringDeduplicator::clear()
 {
 #if DEBUG_STRING_DEDUPLICATOR
-    __DBG_printf("dupes=%u count=%u size=%u list=%u", _count, count(), size(), _strings.size());
-    for(auto *str: _strings) {
-        DEBUG_OUTPUT.printf_P(PSTR("%p[%d] %-80.80s\n"), str, strlen_P(str), str);
-    }
-    auto ptr = (const char *)_buffer.begin();
-    auto endPtr = (const char *)_buffer.end();
-    while(ptr < endPtr) {
-        size_t len = strlen(ptr);
-        DEBUG_OUTPUT.printf_P(PSTR("b[%d] %s\n"), len, ptr);
-        ptr += len + 1;
-    }
-    _count = 0;
-#else
-    __DBG_printf("sd=%p buffer=%u list=%u", this, _buffer.length(), _strings.size());
+    size_t heap = 0;
+    if (_strings.size()) {
+        heap = ESP.getFreeHeap();
+        __DBG_printf("clear=%p len=%u size=%u count=%u space=%u", this, _strings.length(), _strings.size(), _strings.count(), _strings.space());
+#if DEBUG_STRING_DEDUPLICATOR
+        __DBG_printf("dupes=%u fpdupes=%u fpcnt=%u fpsize=%u", _dupesCount, _fpDupesCount, _fpStrCount, _fpStrings.size());
 #endif
-    for(const auto ptr: _strings) {
-        free(ptr);
     }
+#if DEBUG_STRING_DEDUPLICATOR
+    _fpStrings.clear();
+    _fpDupesCount = 0;
+    _dupesCount = 0;
+    _fpStrCount = 0;
+#endif
     _strings.clear();
-    _buffer.setLength(0);
+    if (heap) {
+        __DBG_printf("this=%p free'd=%u", this, ESP.getFreeHeap() - heap);
+    }
+
+#else
+    _strings.clear();
+#endif
 }
 
-size_t StringDeduplicator::size() const
-{
-    size_t size = 0;
-    for(const auto ptr: _strings) {
-        size += strlen(ptr);
-    }
-    return size + _buffer.length();
-}
 
-size_t StringDeduplicator::count() const
-{
-    size_t count = _strings.size();
-    auto ptr = (const char *)_buffer.begin();
-    auto endPtr = (const char *)_buffer.end();
-    while(ptr < endPtr) {
-        if (!*ptr++) {
-            count++;
-        }
-    }
-    return count;
-}

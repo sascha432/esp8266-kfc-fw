@@ -21,6 +21,13 @@
 - Open/close automation for the Blinds Plugin
 - MQTT auto discovery rebroadcast interval
 - Zeroconf resolve button for forms
+- Javascript updates and fixes
+- Enable recovery mode after version change (AP mode enabled, default SSID, broadcast SSID, enable web server, reset passwords IF empty)
+- Disable AP mode after 15min. if default password is used (does not apply to AP mode in standby)
+- Blinds plugin improved test mode
+- AT mode command DUMPM for dumping memory or flash contents
+- 64KB flash storage (R/W) dedicated for the firmware
+- Clearing EspSaveCrash EEPROM during factory reset
 
 ## Version 0.0.3
 

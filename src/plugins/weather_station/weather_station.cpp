@@ -14,7 +14,6 @@
 #include <WebUISocket.h>
 #include <AsyncBitmapStreamResponse.h>
 #include <GFXCanvasRLEStream.h>
-#include <StringKeyValueStore.h>
 #include <EspSaveCrash.h>
 #include "RestAPI.h"
 #include "web_server.h"
@@ -377,21 +376,7 @@ void WeatherStationPlugin::getStatus(Print &output)
 
 void WeatherStationPlugin::createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request)
 {
-    if (type == FormCallbackType::SAVE) {
-
-        using KeyValueStorage::Container;
-        using KeyValueStorage::ContainerPtr;
-        using KeyValueStorage::Item;
-
-        auto &cfg = Plugins::WeatherStation::getWriteableConfig();
-        auto container = ContainerPtr(new Container());
-        container->add(Item::create(F("wst_humidity_ofs"), cfg.humidity_offset));
-        container->add(Item::create(F("wst_pressure_ofs"), cfg.pressure_offset));
-        container->add(Item::create(F("wst_temp_ofs"), cfg.temp_offset));
-        config.callPersistantConfig(container);
-
-    }
-    else if (!isCreateFormCallbackType(type)) {
+    if (!isCreateFormCallbackType(type)) {
         return;
     }
 

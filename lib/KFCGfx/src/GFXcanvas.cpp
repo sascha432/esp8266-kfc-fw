@@ -37,10 +37,11 @@ void Stats::dump(Print &output) const {
 
 // Cache
 
-Cache::Cache(Cache &&cache)
+Cache::Cache(Cache &&cache) : _buffer(std::exchange(cache._buffer, nullptr)), _y(cache._y), _width(std::exchange(cache._width, 0)), _read(cache._read), _write(cache._write)
 {
-    *this = std::move(cache);
+    cache.setY(INVALID);
 }
+
 
 Cache::Cache(coord_x_t width, scoord_y_t y) : _buffer(nullptr), _y(y), _width(width), _read(0), _write(0)
 {
@@ -60,12 +61,16 @@ Cache::~Cache()
 
 Cache &Cache::operator =(Cache &&cache)
 {
+    if (_buffer) {
+        free(_buffer);
+    }
     _buffer = cache._buffer;
-    _read = cache._read;
-    _write = cache._write;
     _y = cache._y;
     _width = cache._width;
+    _read = cache._read;
+    _write = cache._write;
     cache._buffer = nullptr;
+    cache._width = 0;
     cache.setY(INVALID);
     return *this;
 }
@@ -76,11 +81,17 @@ void GFXCanvas::Cache::allocBuffer()
 {
     if (!_buffer) {
         size_t size = _width * sizeof(*_buffer);
-        _buffer = (color_t *)malloc(size);
-        if (!_buffer) {
-            debug_printf("Cache(): malloc %u failed\n", size);
-            __debugbreak_and_panic();
+#if DEBUG
+        if (!_width) {
+            __DBG_panic("_width zero");
         }
+#endif
+        _buffer = (color_t *)malloc(size);
+#if DEBUG
+        if (!_buffer) {
+            __DBG_panic("malloc %u failed", size);
+        }
+#endif
     }
 }
 

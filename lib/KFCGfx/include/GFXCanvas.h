@@ -75,6 +75,8 @@ namespace GFXCanvas {
 
         ByteBuffer(const ByteBuffer &) = delete;
         ByteBuffer(ByteBuffer &&) = delete;
+        ByteBuffer &operator=(const ByteBuffer &) = delete;
+        ByteBuffer &operator=(ByteBuffer &&) = delete;
 
         ByteBuffer() : _buffer(nullptr), _length(0), _size(0) {
         }
@@ -278,8 +280,8 @@ namespace GFXCanvas {
 
         inline __attribute__((always_inline)) void setPixel(scoord_x_t x, color_t color) {
 #if DEBUG_GFXCANVASCOMPRESSED_BOUNDS_CHECK
-            if (!(x >= 0 && x < _width)) {
-                __debugbreak_and_panic();
+            if ((coord_x_t)x >= _width) {
+                __DBG_panic("out of bounds %d>=%d", x, _width);
             }
 #endif
             _buffer[x] = color;
@@ -296,6 +298,11 @@ namespace GFXCanvas {
 
     class LineBuffer {
     public:
+        LineBuffer(LineBuffer &&) = delete;
+        LineBuffer(const LineBuffer &) = delete;
+        LineBuffer &operator=(LineBuffer &&) = delete;
+        LineBuffer &operator=(const LineBuffer &) = delete;
+
         LineBuffer();
 
         inline __attribute__((always_inline)) void clear(color_t fillColor)
@@ -304,7 +311,6 @@ namespace GFXCanvas {
             if (_buffer.length()) {
                 _buffer.clear();
             }
-
         }
 
         inline __attribute__((always_inline)) coord_x_t getLength() const

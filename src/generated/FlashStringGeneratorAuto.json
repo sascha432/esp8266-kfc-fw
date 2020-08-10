@@ -1144,7 +1144,7 @@
         "default": "brightness"
     },
     "_degreeC": {
-        "use_counter": 14,
+        "use_counter": 12,
         "default": "\\u00b0C"
     },
     "vcc": {
@@ -1348,7 +1348,7 @@
         "default": "max"
     },
     "readonly": {
-        "use_counter": 2,
+        "use_counter": 1,
         "default": "readonly"
     },
     "htmlentities_plusmn": {

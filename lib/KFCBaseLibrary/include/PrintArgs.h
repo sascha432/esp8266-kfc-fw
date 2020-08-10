@@ -12,7 +12,7 @@
 #include <StringDepulicator.h>
 
 #ifndef DEBUG_PRINT_ARGS
-#define DEBUG_PRINT_ARGS                    1
+#define DEBUG_PRINT_ARGS                    DEBUG_STRING_DEDUPLICATOR
 #endif
 
 #if DEBUG_PRINT_ARGS
@@ -85,15 +85,29 @@ public:
 #if DEBUG_PRINT_ARGS
             _printfArgs += sizeof...(args);
 #endif
-            // add counter for arguments and store position in buffer
+
             size_t counterLen = _buffer.length();
             _buffer.write(0);
+            _writeFormat(format);
 
-            _buffer.write(reinterpret_cast<const uint8_t *>(&format), sizeof(const char *));
+            //_buffer.write(reinterpret_cast<const uint8_t *>(&format), sizeof(const char *));
             _collect(args...);
 
             // update argument counter
             _buffer[counterLen] = (uint8_t)((_buffer.length() - counterLen - (sizeof(const char *) + sizeof(uint8_t))) / sizeof(uint32_t));
+
+            // // add counter for arguments and store position in buffer
+            // auto counter = _buffer.end();
+            // //size_t counterLen = _buffer.length();
+            // _buffer.write(1);
+            // _writeFormat(format);
+            // if (sizeof...(args)) {
+            //     size_t startLen = _buffer.length();
+            //     _collect(args...);
+
+            //     // update argument counter
+            //     *counter += (uint8_t)((_buffer.length() - startLen) / sizeof(uint32_t));
+            // }
         }
     }
 
@@ -154,13 +168,8 @@ private:
         _collect(args...);
     }
 
-// public:
-//     void dump(Print &output);
-
-public:
-    StringDeduplicator &strings() {
-        return _strings;
-    }
+private:
+    void _writeFormat(const void *format);
 
 protected:
     static const int PrintObject = -1;
@@ -170,7 +179,6 @@ protected:
 private:
     Buffer _buffer;
     int _strLength;
-    StringDeduplicator _strings;
 #if DEBUG_PRINT_ARGS
     size_t _outputSize;
     size_t _printfCalls;

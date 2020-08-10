@@ -75,7 +75,7 @@ public:
 
     FormUI::Config &getFormUIConfig() {
         if (!_uiConfig) {
-            _uiConfig.reset(new FormUI::Config());
+            _uiConfig.reset(new FormUI::Config(_strings));
         }
         return *_uiConfig;
     }
@@ -126,8 +126,8 @@ public:
     void finalize() const;
 
     void createHtml(PrintInterface &out);
-    bool process(const String &name, Print &output) const;
-    void createJavascript(PrintInterface &out) const;
+    bool process(const String &name, Print &output);
+    void createJavascript(PrintInterface &out);
 
     void dump(Print &out, const String &prefix) const;
 
@@ -274,7 +274,7 @@ private:
         return reinterpret_cast<FormGroup &>(_add(reinterpret_cast<FormField *>(field)));
     }
 
-    static const char *_jsonEncodeString(const String &str, PrintInterface &out);
+    const char *jsonEncodeString(const String &str, PrintInterface &out);
 
     // const char *jsonEncodeString(const String &str);
 
@@ -293,6 +293,7 @@ private:
     bool _hasChanged: 1;
     FormUI::ConfigPtr _uiConfig;
     ValidateCallback _validateCallback;
+    StringDeduplicator _strings;
 };
 
 #if DEBUG_KFC_FORMS

@@ -32,6 +32,7 @@
 #if IOT_DIMMER_MODULE || IOT_ATOMIC_SUN_V2
 #include "plugins/dimmer_module/dimmer_base.h"
 #endif
+#include "umm_malloc/umm_malloc_cfg.h"
 
 #if DEBUG_AT_MODE
 #include <debug_helper_enable.h>
@@ -807,6 +808,7 @@ void at_mode_serial_handle_event(String &commandString)
                 args.printf_P(PSTR("Device name: %s"), System::Device::getName());
                 args.printf_P(PSTR("Uptime: %u seconds / %s"), getSystemUptime(), formatTime(getSystemUptime(), true).c_str());
                 args.printf_P(PSTR("Free heap/fragmentation: %u / %u"), ESP.getFreeHeap(), ESP.getHeapFragmentation());
+                args.printf_P(PSTR("Heap start/size: 0x%x/%u"), UMM_MALLOC_CFG_HEAP_ADDR, UMM_MALLOC_CFG_HEAP_SIZE);
                 args.printf_P(PSTR("CPU frequency: %uMHz"), ESP.getCpuFreqMHz());
                 args.printf_P(PSTR("Flash size: %s"), formatBytes(ESP.getFlashChipRealSize()).c_str());
                 args.printf_P(PSTR("Firmware size: %s"), formatBytes(ESP.getSketchSize()).c_str());

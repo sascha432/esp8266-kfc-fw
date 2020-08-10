@@ -52,7 +52,7 @@ namespace FormUI {
 	public:
 		Config(const Config &) = delete;
 
-		Config() : _style(StyleType::DEFAULT), _saveButtonLabel(F("Save Changes...")), _strings() {}
+		Config(StringDeduplicator &strings) : _style(StyleType::DEFAULT), _saveButtonLabel(F("Save Changes...")), _strings(strings) {}
 
 		void setStyle(StyleType style) {
 			_style = style;
@@ -100,7 +100,7 @@ namespace FormUI {
 		String _containerId;
 		String _title;
 		String _saveButtonLabel;
-		StringDeduplicator _strings;
+		StringDeduplicator &_strings;
 	};
 
 }

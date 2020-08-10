@@ -71,10 +71,9 @@ PROGMEM_STRING_DECL(false);
 // src/plugins/file_manager/file_manager.cpp:429
 // src/plugins/home_assistant/home_assistant.cpp:770
 PROGMEM_STRING_DECL(mime_text_plain);
-// lib/KFCWebFramework/include/FormUI.h:211
-// lib/KFCWebFramework/src/FormUI.cpp:109
+// lib/KFCWebFramework/include/FormUI.h:208
 PROGMEM_STRING_DECL(readonly);
-// lib/KFCWebFramework/include/FormUI.h:217
+// lib/KFCWebFramework/include/FormUI.h:214
 // src/kfc_fw_config_forms.cpp:14
 // src/plugins/mqtt/mqtt_form.cpp:35
 // src/plugins/mqtt/mqtt_plugin.cpp:74
@@ -84,12 +83,12 @@ PROGMEM_STRING_DECL(readonly);
 // src/plugins/serial2tcp/serial2tcp.cpp:108
 // src/plugins/ssdp/ssdp.cpp:114
 // src/plugins/syslog/syslog_plugin.cpp:163
-// lib/KFCWebFramework/src/FormUI.cpp:47
+// lib/KFCWebFramework/src/FormUI.cpp:44
 PROGMEM_STRING_DECL(Disabled);
-// lib/KFCWebFramework/include/FormUI.h:217
+// lib/KFCWebFramework/include/FormUI.h:214
 // src/kfc_fw_config_forms.cpp:186
 // src/plugins/mqtt/mqtt_form.cpp:36
-// lib/KFCWebFramework/src/FormUI.cpp:47
+// lib/KFCWebFramework/src/FormUI.cpp:44
 PROGMEM_STRING_DECL(Enabled);
 // lib/KFCWebFramework/include/FormLengthValidator.h:14
 // lib/KFCWebFramework/include/FormLengthValidator.h:16
@@ -135,8 +134,8 @@ PROGMEM_STRING_DECL(Address);
 // src/plugins/serial2tcp/serial2tcp.cpp:132
 PROGMEM_STRING_DECL(Hostname);
 // src/AtModeArgs.cpp:160
-// lib/KFCWebFramework/src/FormUI.cpp:77
-// lib/KFCWebFramework/src/FormUIRenderHtml.cpp:358
+// lib/KFCWebFramework/src/FormUI.cpp:73
+// lib/KFCWebFramework/src/FormUIRenderHtml.cpp:422
 PROGMEM_STRING_DECL(min);
 // src/AtModeArgs.cpp:163
 PROGMEM_STRING_DECL(hour);
@@ -151,62 +150,62 @@ PROGMEM_STRING_DECL(sec);
 // src/plugins/file_manager/file_manager.cpp:421
 // src/plugins/home_assistant/home_assistant.cpp:767
 PROGMEM_STRING_DECL(OK);
+// src/at_mode.cpp:965
+// src/at_mode.cpp:989
+// src/at_mode.cpp:990
+// src/at_mode.cpp:996
+// src/at_mode.cpp:996
 // src/at_mode.cpp:997
-// src/at_mode.cpp:1021
-// src/at_mode.cpp:1022
-// src/at_mode.cpp:1028
-// src/at_mode.cpp:1028
-// src/at_mode.cpp:1029
 // src/plugins/atomic_sun/atomic_sun_v2.cpp:421
 PROGMEM_STRING_DECL(on);
-// src/at_mode.cpp:1002
-// src/at_mode.cpp:1021
-// src/at_mode.cpp:1022
-// src/at_mode.cpp:1028
-// src/at_mode.cpp:1029
-// src/at_mode.cpp:1272
+// src/at_mode.cpp:970
+// src/at_mode.cpp:989
+// src/at_mode.cpp:990
+// src/at_mode.cpp:996
+// src/at_mode.cpp:997
+// src/at_mode.cpp:1240
 // src/plugins/atomic_sun/atomic_sun_v2.cpp:423
 PROGMEM_STRING_DECL(off);
-// src/at_mode.cpp:1024
-// src/kfc_fw_config.cpp:1278
+// src/at_mode.cpp:992
+// src/kfc_fw_config.cpp:1277
 // src/plugins.cpp:74
 // src/plugins.cpp:81
 // src/plugins.cpp:82
 // src/plugins.cpp:83
 // src/web_server.cpp:890
 PROGMEM_STRING_DECL(yes);
-// src/at_mode.cpp:1024
-// src/kfc_fw_config.cpp:1278
+// src/at_mode.cpp:992
+// src/kfc_fw_config.cpp:1277
 // src/plugins.cpp:74
 // src/plugins.cpp:81
 // src/plugins.cpp:82
 // src/plugins.cpp:83
 PROGMEM_STRING_DECL(no);
-// src/at_mode.cpp:1156
+// src/at_mode.cpp:1124
 // src/plugins/file_manager/file_manager.cpp:250
 // src/plugins/file_manager/file_manager.cpp:378
 // src/plugins/file_manager/file_manager.cpp:424
 PROGMEM_STRING_DECL(success);
-// src/at_mode.cpp:1156
+// src/at_mode.cpp:1124
 // src/plugins/file_manager/file_manager.cpp:250
 // src/plugins/file_manager/file_manager.cpp:378
 // src/plugins/file_manager/file_manager.cpp:424
 PROGMEM_STRING_DECL(failure);
 // src/kfc_firmware.cpp:213
 // src/kfc_firmware.cpp:304
+// src/kfc_fw_config.cpp:420
 // src/kfc_fw_config.cpp:421
-// src/kfc_fw_config.cpp:422
-// src/kfc_fw_config.cpp:425
-// src/kfc_fw_config.cpp:428
-// src/kfc_fw_config.cpp:482
-// src/kfc_fw_config.cpp:485
-// src/kfc_fw_config.cpp:487
+// src/kfc_fw_config.cpp:424
+// src/kfc_fw_config.cpp:427
+// src/kfc_fw_config.cpp:481
+// src/kfc_fw_config.cpp:484
+// src/kfc_fw_config.cpp:486
 // src/kfc_fw_config_forms.cpp:25
 PROGMEM_STRING_DECL(defaultPassword);
-// src/kfc_fw_config.cpp:481
+// src/kfc_fw_config.cpp:480
 // src/kfc_fw_config_classes.cpp:167
 PROGMEM_STRING_DECL(KFC_Firmware);
-// include/retracted/custom_config.h:111
+// include/retracted/custom_config.h:173
 // src/plugins/alarm/alarm.cpp:54
 // src/plugins/alarm/alarm.cpp:62
 // src/plugins/atomic_sun/atomic_sun_v2.cpp:670
@@ -217,8 +216,8 @@ PROGMEM_STRING_DECL(KFC_Firmware);
 // src/plugins/mqtt/mqtt_auto_discovery.cpp:63
 // src/plugins/mqtt/mqtt_form.cpp:86
 PROGMEM_STRING_DECL(mqtt);
-// include/retracted/custom_config.h:111
-// include/retracted/custom_config.h:150
+// include/retracted/custom_config.h:173
+// include/retracted/custom_config.h:212
 // src/web_server.cpp:662
 // src/web_server.cpp:935
 // src/web_server.cpp:936
@@ -226,28 +225,28 @@ PROGMEM_STRING_DECL(mqtt);
 // src/plugins/mqtt/mqtt_config.cpp:15
 // src/plugins/syslog/syslog_config.cpp:21
 PROGMEM_STRING_DECL(tcp);
-// include/retracted/custom_config.h:111
-// include/retracted/custom_config.h:150
+// include/retracted/custom_config.h:173
+// include/retracted/custom_config.h:212
 // src/plugins/mdns/mdns_resolver.cpp:74
 // src/plugins/mqtt/mqtt_config.cpp:15
 // src/plugins/syslog/syslog_config.cpp:21
 PROGMEM_STRING_DECL(address);
-// src/kfc_fw_config.cpp:736
+// src/kfc_fw_config.cpp:735
 // src/plugins/mdns/mdns_resolver.cpp:75
 // src/plugins/mqtt/mqtt_form.cpp:72
 // src/plugins/serial2tcp/serial2tcp.cpp:134
 PROGMEM_STRING_DECL(port);
+// src/kfc_fw_config.cpp:1150
 // src/kfc_fw_config.cpp:1151
-// src/kfc_fw_config.cpp:1152
 PROGMEM_STRING_DECL(safe_mode_enabled);
+// src/kfc_fw_config.cpp:1170
 // src/kfc_fw_config.cpp:1171
-// src/kfc_fw_config.cpp:1172
 // src/templates.cpp:207
 PROGMEM_STRING_DECL(default_password_warning);
-// src/kfc_fw_config.cpp:1376
+// src/kfc_fw_config.cpp:1391
 // src/kfc_fw_config_forms.cpp:113
 PROGMEM_STRING_DECL(network);
-// src/kfc_fw_config.cpp:1376
+// src/kfc_fw_config.cpp:1391
 // src/kfc_fw_config_forms.cpp:37
 PROGMEM_STRING_DECL(wifi);
 // src/kfc_fw_config_forms.cpp:14
@@ -352,7 +351,7 @@ PROGMEM_STRING_DECL(DHCP_Server);
 PROGMEM_STRING_DECL(Device_Configuration);
 // src/kfc_fw_config_forms.cpp:182
 // src/plugins/mqtt/mqtt_form.cpp:119
-// src/plugins/weather_station/weather_station.cpp:414
+// src/plugins/weather_station/weather_station.cpp:399
 PROGMEM_STRING_DECL(minutes);
 // src/kfc_fw_config_forms.cpp:189
 PROGMEM_STRING_DECL(Zeroconf_Timeout);
@@ -383,12 +382,12 @@ PROGMEM_STRING_DECL(Web_Alerts);
 PROGMEM_STRING_DECL(Change_Password);
 // src/kfc_fw_config_forms.cpp:223
 // src/web_server.cpp:377
-// src/plugins/blinds_ctrl/blinds_form.cpp:153
+// src/plugins/blinds_ctrl/blinds_form.cpp:128
 // src/plugins/clock/clock_form.cpp:30
 // src/plugins/dimmer_module/dimmer_module_form.cpp:37
 // src/plugins/mqtt/mqtt_form.cpp:59
 // src/plugins/ntp/ntp_form.cpp:36
-// src/plugins/weather_station/weather_station.cpp:405
+// src/plugins/weather_station/weather_station.cpp:390
 // lib/KFCConfiguration/src/JsonConfigReader.cpp:24
 PROGMEM_STRING_DECL(config);
 // src/MissingFlashStrings.cpp:13
@@ -443,7 +442,7 @@ PROGMEM_STRING_DECL(Expires);
 // lib/KFCWebFramework/src/HttpHeaders.cpp:285
 PROGMEM_STRING_DECL(no_cache);
 // src/MissingFlashStrings.cpp:40
-// src/plugins/blinds_ctrl/blinds_form.cpp:135
+// src/plugins/blinds_ctrl/blinds_form.cpp:110
 // lib/KFCWebFramework/src/HttpHeaders.cpp:247
 PROGMEM_STRING_DECL(close);
 // src/MissingFlashStrings.cpp:41
@@ -548,7 +547,7 @@ PROGMEM_STRING_DECL(https);
 // src/plugins/mdns/mdns_plugin.cpp:162
 // src/plugins/mdns/mdns_plugin.cpp:177
 // src/plugins/remote/remote.h:177
-// src/plugins/weather_station/weather_station.cpp:335
+// src/plugins/weather_station/weather_station.cpp:334
 PROGMEM_STRING_DECL(http);
 // src/templates.cpp:234
 PROGMEM_STRING_DECL(Offline);
@@ -700,28 +699,28 @@ PROGMEM_STRING_DECL(disabled);
 PROGMEM_STRING_DECL(httpmode);
 // src/web_server.cpp:1172
 // src/web_server.cpp:1176
+// src/plugins/weather_station/weather_station.cpp:135
+// src/plugins/weather_station/weather_station.cpp:154
+// src/plugins/weather_station/weather_station.cpp:158
+// src/plugins/weather_station/weather_station.cpp:167
+// src/plugins/weather_station/weather_station.cpp:175
+// src/plugins/weather_station/weather_station.cpp:179
+// src/plugins/weather_station/weather_station.cpp:186
+// src/plugins/weather_station/weather_station.cpp:202
+// src/plugins/weather_station/weather_station.cpp:206
+PROGMEM_STRING_DECL(status);
+// src/web_server.cpp:1173
+// src/web_server.cpp:1177
 // src/plugins/weather_station/weather_station.cpp:136
+// src/plugins/weather_station/weather_station.cpp:138
+// src/plugins/weather_station/weather_station.cpp:140
 // src/plugins/weather_station/weather_station.cpp:155
 // src/plugins/weather_station/weather_station.cpp:159
 // src/plugins/weather_station/weather_station.cpp:168
 // src/plugins/weather_station/weather_station.cpp:176
 // src/plugins/weather_station/weather_station.cpp:180
-// src/plugins/weather_station/weather_station.cpp:187
 // src/plugins/weather_station/weather_station.cpp:203
 // src/plugins/weather_station/weather_station.cpp:207
-PROGMEM_STRING_DECL(status);
-// src/web_server.cpp:1173
-// src/web_server.cpp:1177
-// src/plugins/weather_station/weather_station.cpp:137
-// src/plugins/weather_station/weather_station.cpp:139
-// src/plugins/weather_station/weather_station.cpp:141
-// src/plugins/weather_station/weather_station.cpp:156
-// src/plugins/weather_station/weather_station.cpp:160
-// src/plugins/weather_station/weather_station.cpp:169
-// src/plugins/weather_station/weather_station.cpp:177
-// src/plugins/weather_station/weather_station.cpp:181
-// src/plugins/weather_station/weather_station.cpp:204
-// src/plugins/weather_station/weather_station.cpp:208
 PROGMEM_STRING_DECL(message);
 // src/web_socket.cpp:76
 PROGMEM_STRING_DECL(Device_is_rebooting);
@@ -815,7 +814,7 @@ PROGMEM_STRING_DECL(_color_state);
 PROGMEM_STRING_DECL(brightness);
 // src/plugins/atomic_sun/atomic_sun_v2.cpp:686
 // src/plugins/switch/switch.cpp:139
-// src/plugins/weather_station/weather_station.cpp:140
+// src/plugins/weather_station/weather_station.cpp:139
 PROGMEM_STRING_DECL(title);
 // src/plugins/blinds_ctrl/BlindsControl.h:100
 PROGMEM_STRING_DECL(Open);
@@ -843,7 +842,7 @@ PROGMEM_STRING_DECL(Running);
 // src/plugins/blinds_ctrl/BlindsControl.cpp:444
 PROGMEM_STRING_DECL(Busy);
 // src/plugins/blinds_ctrl/BlindsControl.cpp:529
-// src/plugins/weather_station/weather_station.cpp:563
+// src/plugins/weather_station/weather_station.cpp:548
 PROGMEM_STRING_DECL(metrics);
 // src/plugins/blinds_ctrl/BlindsControl.cpp:553
 // src/plugins/blinds_ctrl/BlindsControl.cpp:564
@@ -852,35 +851,35 @@ PROGMEM_STRING_DECL(iot_blinds_control_state_file);
 PROGMEM_STRING_DECL(Turn);
 // src/plugins/blinds_ctrl/blinds_config.cpp:37
 PROGMEM_STRING_DECL(Move);
-// src/plugins/blinds_ctrl/blinds_form.cpp:62
+// src/plugins/blinds_ctrl/blinds_form.cpp:37
 // lib/KFCWebFramework/src/Form.cpp:242
 PROGMEM_STRING_DECL(None);
-// src/plugins/blinds_ctrl/blinds_form.cpp:86
-// src/plugins/blinds_ctrl/blinds_form.cpp:90
+// src/plugins/blinds_ctrl/blinds_form.cpp:61
+// src/plugins/blinds_ctrl/blinds_form.cpp:65
 // src/plugins/mqtt/mqtt_auto_discovery.cpp:62
-// src/plugins/weather_station/weather_station.cpp:194
+// src/plugins/weather_station/weather_station.cpp:193
 PROGMEM_STRING_DECL(name);
-// src/plugins/blinds_ctrl/blinds_form.cpp:94
+// src/plugins/blinds_ctrl/blinds_form.cpp:69
 PROGMEM_STRING_DECL(Name);
-// src/plugins/blinds_ctrl/blinds_form.cpp:97
-// src/plugins/blinds_ctrl/blinds_form.cpp:100
+// src/plugins/blinds_ctrl/blinds_form.cpp:72
+// src/plugins/blinds_ctrl/blinds_form.cpp:75
 PROGMEM_STRING_DECL(ms);
-// src/plugins/blinds_ctrl/blinds_form.cpp:103
+// src/plugins/blinds_ctrl/blinds_form.cpp:78
 PROGMEM_STRING_DECL(mA);
-// src/plugins/blinds_ctrl/blinds_form.cpp:109
+// src/plugins/blinds_ctrl/blinds_form.cpp:84
 PROGMEM_STRING_DECL(pwm);
-// src/plugins/blinds_ctrl/blinds_form.cpp:117
+// src/plugins/blinds_ctrl/blinds_form.cpp:92
 PROGMEM_STRING_DECL(open);
-// src/plugins/blinds_ctrl/blinds_form.cpp:122
-// src/plugins/blinds_ctrl/blinds_form.cpp:140
+// src/plugins/blinds_ctrl/blinds_form.cpp:97
+// src/plugins/blinds_ctrl/blinds_form.cpp:115
 PROGMEM_STRING_DECL(Action);
-// src/plugins/blinds_ctrl/blinds_form.cpp:126
-// src/plugins/blinds_ctrl/blinds_form.cpp:144
+// src/plugins/blinds_ctrl/blinds_form.cpp:101
+// src/plugins/blinds_ctrl/blinds_form.cpp:119
 PROGMEM_STRING_DECL(Delay_After_Execution_br_explanation);
-// src/plugins/blinds_ctrl/blinds_form.cpp:126
-// src/plugins/blinds_ctrl/blinds_form.cpp:129
-// src/plugins/blinds_ctrl/blinds_form.cpp:144
-// src/plugins/blinds_ctrl/blinds_form.cpp:147
+// src/plugins/blinds_ctrl/blinds_form.cpp:101
+// src/plugins/blinds_ctrl/blinds_form.cpp:104
+// src/plugins/blinds_ctrl/blinds_form.cpp:119
+// src/plugins/blinds_ctrl/blinds_form.cpp:122
 // src/plugins/clock/clock_form.cpp:111
 // src/plugins/clock/clock_form.cpp:115
 // src/plugins/dimmer_module/dimmer_module_form.cpp:40
@@ -889,11 +888,11 @@ PROGMEM_STRING_DECL(Delay_After_Execution_br_explanation);
 // src/plugins/mqtt/mqtt_form.cpp:83
 // src/plugins/remote/remote.cpp:105
 // src/plugins/sensor/Sensor_SystemMetrics.cpp:39
-// src/plugins/weather_station/weather_station.cpp:418
-// src/plugins/weather_station/weather_station.cpp:448
+// src/plugins/weather_station/weather_station.cpp:403
+// src/plugins/weather_station/weather_station.cpp:433
 PROGMEM_STRING_DECL(seconds);
-// src/plugins/blinds_ctrl/blinds_form.cpp:129
-// src/plugins/blinds_ctrl/blinds_form.cpp:147
+// src/plugins/blinds_ctrl/blinds_form.cpp:104
+// src/plugins/blinds_ctrl/blinds_form.cpp:122
 PROGMEM_STRING_DECL(Delay);
 // src/plugins/clock/clock.cpp:149
 // src/plugins/clock/clock_mqtt.cpp:38
@@ -939,8 +938,6 @@ PROGMEM_STRING_DECL(Protection);
 // src/plugins/sensor/Sensor_DS3231.cpp:83
 // src/plugins/sensor/Sensor_LM75A.cpp:36
 // src/plugins/sensor/Sensor_LM75A.cpp:64
-// src/plugins/weather_station/WSDraw.cpp:576
-// src/plugins/weather_station/WSDraw.cpp:579
 PROGMEM_STRING_DECL(_degreeC);
 // src/plugins/dimmer_module/dimmer_module_form.cpp:142
 // src/plugins/dimmer_module/dimmer_module_form.cpp:146
@@ -985,8 +982,8 @@ PROGMEM_STRING_DECL(file_manager_html_uri);
 PROGMEM_STRING_DECL(filename);
 // src/plugins/home_assistant/home_assistant.cpp:177
 // src/plugins/home_assistant/home_assistant.cpp:194
-// src/plugins/weather_station/weather_station.cpp:629
-// src/plugins/weather_station/weather_station.cpp:636
+// src/plugins/weather_station/weather_station.cpp:614
+// src/plugins/weather_station/weather_station.cpp:621
 PROGMEM_STRING_DECL(status__u);
 // src/plugins/home_assistant/home_assistant.cpp:335
 // src/plugins/home_assistant/home_assistant.cpp:346
@@ -1075,15 +1072,15 @@ PROGMEM_STRING_DECL(humidity);
 PROGMEM_STRING_DECL(pressure);
 // src/plugins/sensor/Sensor_BME280.cpp:51
 // src/plugins/sensor/Sensor_BME280.cpp:93
-// src/plugins/weather_station/weather_station.cpp:438
+// src/plugins/weather_station/weather_station.cpp:423
 PROGMEM_STRING_DECL(hPa);
 // src/plugins/sensor/Sensor_DS3231.cpp:119
 // src/plugins/sensor/Sensor_DS3231.cpp:164
-// src/plugins/weather_station/weather_station.cpp:452
+// src/plugins/weather_station/weather_station.cpp:437
 PROGMEM_STRING_DECL(Yes);
 // src/plugins/sensor/Sensor_DS3231.cpp:119
 // src/plugins/sensor/Sensor_DS3231.cpp:164
-// src/plugins/weather_station/weather_station.cpp:452
+// src/plugins/weather_station/weather_station.cpp:437
 PROGMEM_STRING_DECL(No);
 // src/plugins/serial2tcp/serial2tcp.cpp:106
 PROGMEM_STRING_DECL(Software_Serial);
@@ -1100,12 +1097,12 @@ PROGMEM_STRING_DECL(Authentication);
 // src/plugins/switch/switch.cpp:77
 // src/plugins/switch/switch.cpp:89
 PROGMEM_STRING_DECL(On);
-// src/plugins/weather_station/weather_station.cpp:166
+// src/plugins/weather_station/weather_station.cpp:165
 PROGMEM_STRING_DECL(display);
-// src/plugins/weather_station/weather_station.cpp:186
-// src/plugins/weather_station/weather_station.cpp:188
+// src/plugins/weather_station/weather_station.cpp:185
+// src/plugins/weather_station/weather_station.cpp:187
 PROGMEM_STRING_DECL(sensors);
-// src/plugins/weather_station/weather_station.cpp:195
+// src/plugins/weather_station/weather_station.cpp:194
 PROGMEM_STRING_DECL(values);
 // lib/KFCBaseLibrary/src/DumpBinary.cpp:67
 // lib/KFCBaseLibrary/src/misc.cpp:653
@@ -1155,11 +1152,11 @@ PROGMEM_STRING_DECL(_checked);
 PROGMEM_STRING_DECL(FormRangeValidator_invalid_port);
 // lib/KFCWebFramework/src/FormRangeValidator.cpp:47
 PROGMEM_STRING_DECL(FormRangeValidator_invalid_port_range);
-// lib/KFCWebFramework/src/FormUI.cpp:71
-// lib/KFCWebFramework/src/FormUIRenderHtml.cpp:353
+// lib/KFCWebFramework/src/FormUI.cpp:67
+// lib/KFCWebFramework/src/FormUIRenderHtml.cpp:417
 PROGMEM_STRING_DECL(placeholder);
-// lib/KFCWebFramework/src/FormUI.cpp:78
-// lib/KFCWebFramework/src/FormUIRenderHtml.cpp:359
+// lib/KFCWebFramework/src/FormUI.cpp:74
+// lib/KFCWebFramework/src/FormUIRenderHtml.cpp:423
 PROGMEM_STRING_DECL(max);
 #ifdef __cplusplus
 } // extern "C"

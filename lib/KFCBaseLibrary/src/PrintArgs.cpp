@@ -11,6 +11,11 @@
 #endif
 
 
+#if defined(ESP8266)
+#include "umm_malloc/umm_malloc_cfg.h"
+#endif
+
+
 // PrintArgs::CharPtrContainer::CharPtrContainer(CharPtrContainer &&str) noexcept
 // {
 //     *this = std::move(str);
@@ -213,8 +218,8 @@ void PrintArgs::vprintf_P(const char *format, uintptr_t **args, size_t numArgs)
     _printfArgs += numArgs;
 #endif
     _buffer.write((uint8_t)(numArgs + 1));
-    _buffer.write(reinterpret_cast<const uint8_t *>(&format), sizeof(const char *));
-    _buffer.write(reinterpret_cast<const uint8_t *>(&args), sizeof(void *) * numArgs);
+    _writeFormat(format);
+    _buffer.write(reinterpret_cast<const uint8_t *>(&args), sizeof(uintptr_t) * numArgs);
 }
 
 
@@ -264,23 +269,36 @@ void PrintArgs::_copy(int16_t value16)
 
 void PrintArgs::_copy(const __FlashStringHelper *fpstr)
 {
-    _buffer.write(reinterpret_cast<const uint8_t *>(&fpstr), sizeof(const char *));
+    _writeFormat(fpstr);
+    //_buffer.write(reinterpret_cast<const uint8_t *>(&fpstr), sizeof(const char *));
 }
 
 void PrintArgs::_copy(const char *str)
 {
+    _writeFormat(str);
+// #if defined(ESP8266) && 0
+//     if (is_PGM_P(str))
+//         _buffer.write(reinterpret_cast<const uint8_t *>(&str), sizeof(const char *));
+//     }
+//     else {
+//         auto copy = _strings.attachString(str);
+//         _buffer.write(reinterpret_cast<const uint8_t *>(&copy), sizeof(const char *));
+//     }
+// #else
+//     _buffer.write(reinterpret_cast<const uint8_t *>(&str), sizeof(const char *));
+// #endif
+}
+
+void PrintArgs::_writeFormat(const void *format)
+{
 #if defined(ESP8266) && 0
-    if (is_PGM_P(str))
-        _buffer.write(reinterpret_cast<const uint8_t *>(&str), sizeof(const char *));
-    }
-    else {
-        auto copy = _strings.attachString(str);
-        _buffer.write(reinterpret_cast<const uint8_t *>(&copy), sizeof(const char *));
-    }
+    uint16_t value = (uintptr_t)format - UMM_MALLOC_CFG_HEAP_ADDR;
+    _buffer.write(reinterpret_cast<const uint8_t *>(&value), sizeof(value));
 #else
-    _buffer.write(reinterpret_cast<const uint8_t *>(&str), sizeof(const char *));
+    _buffer.write(reinterpret_cast<const uint8_t *>(&format), sizeof(const char *));
 #endif
 }
+
 
 // void PrintArgs::dump(Print &output)
 // {

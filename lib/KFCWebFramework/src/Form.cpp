@@ -164,22 +164,22 @@ void Form::finalize() const
 #endif
 }
 
-bool Form::process(const String &name, Print &output) const
+bool Form::process(const String &name, Print &output)
 {
     for (const auto &field : _fields) {
-        uint8_t len = (uint8_t)field->getName().length();
+        auto len = field->getName().length();
         if (field->getType() == FormField::Type::TEXT && name.equalsIgnoreCase(field->getName())) {
-            __LDBG_printf("Form::process(%s) INPUT_TEXT = %s", name.c_str(), field->getValue().c_str());
+            __LDBG_printf("name=%s text=%s", name.c_str(), field->getValue().c_str());
             PrintHtmlEntities::printTo(PrintHtmlEntities::Mode::ATTRIBUTE, field->getValue().c_str(), output);
             return true;
         }
         else if (field->getType() == FormField::Type::TEXTAREA && name.equalsIgnoreCase(field->getName())) {
-            __LDBG_printf("Form::process(%s) TEXTAREA = %s", name.c_str(), field->getValue().c_str());
+            __LDBG_printf("name=%s textarea=%s", name.c_str(), field->getValue().c_str());
             PrintHtmlEntities::printTo(PrintHtmlEntities::Mode::HTML, field->getValue().c_str(), output);
             return true;
         }
         else if (field->getType() == FormField::Type::CHECK && name.equalsIgnoreCase(field->getName())) {
-            __LDBG_printf("Form::process(%s) INPUT_CHECK = %d", name.c_str(), field->getValue().toInt());
+            __LDBG_printf("name=%s checkbox=%d", name.c_str(), field->getValue().toInt());
             if (field->getValue().toInt()) {
                 output.print(FSPGM(_checked, " checked"));
             }
@@ -187,13 +187,13 @@ bool Form::process(const String &name, Print &output) const
         }
         else if (field->getType() == FormField::Type::SELECT && strncasecmp(field->getName().c_str(), name.c_str(), len) == 0) {
             if (name.length() == len) {
-                __LDBG_printf("Form::process(%s) INPUT_SELECT = %s", name.c_str(), field->getValue().c_str());
+                __LDBG_printf("name=%s select=%s", name.c_str(), field->getValue().c_str());
                 PrintHtmlEntities::printTo(PrintHtmlEntities::Mode::ATTRIBUTE, field->getValue().c_str(), output);
                 return true;
             }
             else if (name.charAt(len) == '_') {
                 auto value = name.substring(len + 1).toInt();
-                __LDBG_printf("Form::process(%s) INPUT_SELECT %d =?= %d", name.c_str(), value, (int)field->getValue().toInt());
+                __LDBG_printf("name=%s select=%d ? %d", name.c_str(), value, (int)field->getValue().toInt());
                 if (value == field->getValue().toInt()) {
                     output.print(FSPGM(_selected));
                 }
@@ -201,33 +201,33 @@ bool Form::process(const String &name, Print &output) const
             }
         }
     }
-    __LDBG_printf("Form::process(%s) not found", name.c_str());
+    __LDBG_printf("name=%s not found", name.c_str());
     return false;
 }
 
-const char *Form::_jsonEncodeString(const String &str, PrintInterface &output)
+const char *Form::jsonEncodeString(const String &str, PrintInterface &output)
 {
     size_t jsonLen = JsonTools::lengthEscaped(str);
     if (jsonLen == str.length()) {
-        return output.strings().attachString(str.c_str());
+        return _strings.attachString(str.c_str());
     }
     else {
         PrintString encoded;
         encoded.reserve(jsonLen);
         // encodes the name and attached it to the PrintInterface
         JsonTools::printToEscaped(encoded, str);
-        return output.strings().attachString(encoded);
+        return _strings.attachString(encoded);
     }
 }
 
-void Form::createJavascript(PrintInterface &output) const
+void Form::createJavascript(PrintInterface &output)
 {
     if (!isValid()) {
         __LDBG_printf(PSTR("errors=%d"), _errors.size());
         output.printf_P(PSTR("<script>" FORMUI_CRLF "$.formValidator.addErrors("));
         uint16_t idx = 0;
         for (auto &error: _errors) {
-            output.printf_P(PSTR("%c{'target':'#%s','error':'%s'}"), idx++ ? ',' : '[', _jsonEncodeString(error.getName(), output), _jsonEncodeString(error.getMessage(), output));
+            output.printf_P(PSTR("%c{'target':'#%s','error':'%s'}"), idx++ ? ',' : '[', jsonEncodeString(error.getName(), output), jsonEncodeString(error.getMessage(), output));
         }
         output.printf_P(PSTR("]);" FORMUI_CRLF "</script>"));
     }

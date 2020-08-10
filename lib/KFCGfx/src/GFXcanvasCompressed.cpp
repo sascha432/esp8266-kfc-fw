@@ -96,7 +96,8 @@ void GFXCanvasCompressed::fillScreenPartial(int16_t y, int16_t height, uint16_t 
     }
 }
 
-void GFXCanvasCompressed::fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color) {
+void GFXCanvasCompressed::fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color)
+{
     if (x <= 0 && x + w >= _width) {
         // use faster method fillscreen
         fillScreenPartial(y, h, color);
@@ -119,7 +120,8 @@ void GFXCanvasCompressed::fillRect(int16_t x, int16_t y, int16_t w, int16_t h, u
     }
 }
 
-void GFXCanvasCompressed::drawFastHLine(int16_t x, int16_t y, int16_t w, color_t color) {
+void GFXCanvasCompressed::drawFastHLine(int16_t x, int16_t y, int16_t w, color_t color)
+{
     if ((uint16_t)y < (uint16_t)_height) {
         if (x <= 0 && x + w >= _width) {
             auto &cache = _getCache(y);

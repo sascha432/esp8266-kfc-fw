@@ -127,7 +127,7 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
             System::Device::addNameLengthValidator(form);
 
             form.addCStringGetterSetter(FSPGM(dev_title), System::Device::getTitle, System::Device::setTitleCStr);
-            form.addFormUI(FSPGM(Title));
+            form.addFormUI(FormUI::Label(String(FSPGM(Title)) + F(":<br><small>Set friendly name for the WebUI, MQTT auto discovery and SSDP</small>"), true));
             System::Device::addTitleLengthValidator(form);
 
             auto &stationGroup = deviceGroup.end().addCardGroup(FSPGM(station), FSPGM(Station_Mode));

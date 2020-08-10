@@ -76,6 +76,11 @@ void MQTTAutoDiscovery::_create(ComponentType componentType, const String &name,
         #define JSON_VALUE_START            "\":\""
         #define JSON_NEXT_KEY_START         "\",\""
 
+        auto namePtr = System::Device::getTitle();
+        if (strcmp_P(namePtr, SPGM(KFC_Firmware)) == 0) {
+            namePtr = System::Device::getName();
+        }
+
         _discovery.print(F("\"device\":{\"" MQTT_DEVICE_REG_IDENTIFIERS "\":[\""));
         _discovery.print(uniqueId);
         _discovery.print(F("\"],\"" MQTT_DEVICE_REG_CONNECTIONS "\":[[\"mac" JSON_NEXT_KEY_START));
@@ -83,7 +88,7 @@ void MQTTAutoDiscovery::_create(ComponentType componentType, const String &name,
         _discovery.print(F("\"]],\"" MQTT_DEVICE_REG_MODEL JSON_VALUE_START));
         _discovery.print(model);
         _discovery.print(F(JSON_NEXT_KEY_START MQTT_DEVICE_REG_NAME JSON_VALUE_START));
-        _discovery.print(System::Device::getName());
+        _discovery.print(namePtr);
         _discovery.print(F(JSON_NEXT_KEY_START MQTT_DEVICE_REG_SW_VERSION JSON_VALUE_START "KFC FW "));
         _discovery.print(KFCFWConfiguration::getFirmwareVersion());
         _discovery.print(F(JSON_NEXT_KEY_START MQTT_DEVICE_REG_MANUFACTURER JSON_VALUE_START));

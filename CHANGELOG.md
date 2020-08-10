@@ -28,6 +28,7 @@
 - AT mode command DUMPM for dumping memory or flash contents
 - 64KB flash storage (R/W) dedicated for the firmware
 - Clearing EspSaveCrash EEPROM during factory reset
+- Device title is being used as name for MQTT auto discovery
 
 ## Version 0.0.3
 

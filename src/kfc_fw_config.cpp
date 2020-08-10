@@ -672,7 +672,8 @@ void KFCFWConfiguration::read()
             Logger_warning(F("Upgrading EEPROM settings from %d.%d.%d.%u to " FIRMWARE_VERSION_STR "." __BUILD_NUMBER), (version >> 16), (version >> 8) & 0xff, (version & 0xff), build);
             System::Device::getWriteableConfig().config_version = currentVersion;
             config.recoveryMode(false);
-            //Configuration::write();
+            Configuration::write();
+            SaveCrash::clearEEPROM();
         }
     }
 }

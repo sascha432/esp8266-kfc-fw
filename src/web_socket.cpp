@@ -51,7 +51,7 @@ WsClientAsyncWebSocket::WsClientAsyncWebSocket(const String &url, WsClientAsyncW
     WsClient::_webSockets.push_back(this);
     if (_ptr) {
         if (*_ptr) {
-            __LDBG_printf("_instance already set %p", *_ptr);
+            __DBG_panic("_instance already set ptr=%p this=%p", *_ptr, this);
         }
         *_ptr = this;
     }
@@ -64,8 +64,8 @@ WsClientAsyncWebSocket::~WsClientAsyncWebSocket()
     // __LDBG_printf("~WsClientAsyncWebSocket(): delete=%p, clients=%u, connected=%u", this, getClients().length(), count());
     disableSocket();
     if (_ptr) {
-        if (!*_ptr) {
-            __LDBG_printf("_instance already set to %p", *_ptr);
+        if (*_ptr != this) {
+            __DBG_panic("_instance not set to this=%p ptr=%p", this, *_ptr);
         }
         *_ptr = nullptr;
     }

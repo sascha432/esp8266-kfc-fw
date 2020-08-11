@@ -1172,14 +1172,14 @@ void at_mode_serial_handle_event(String &commandString)
                 else if (args.size() == 1) {
                     static EventScheduler::Timer timer;
                     if (args.isTrue(0) && !timer.active()) {
-                        args.print(F("Started"));
+                        args.print(FSPGM(started));
                         timer.add(1000, true, [&output](EventScheduler::TimerPtr timer) {
                             PinMonitor::getInstance()->dumpPins(output);
                         });
                     }
                     else if (args.isFalse(0) && timer.active()) {
                         timer.remove();
-                        args.print(F("Stopped"));
+                        args.print(FSPGM(stopped));
                     }
                 } else {
                     PinMonitor::getInstance()->dumpPins(output);

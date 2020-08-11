@@ -4,7 +4,6 @@
 // lib/KFCBaseLibrary/include/misc.h:630
 // lib/KFCBaseLibrary/include/misc.h:631
 // lib/KFCJson/include/JsonVariant.h:89
-// src/MissingFlashStrings.cpp:54
 // src/plugins/serial2tcp/Serial2TcpServer.cpp:112
 // lib/KFCBaseLibrary/src/misc.cpp:676
 // lib/KFCConfiguration/src/ConfigurationParameter.cpp:277
@@ -15,25 +14,24 @@
 // lib/KFCJson/src/JsonVar.cpp:55
 PROGMEM_STRING_DEF(null, "null");
 // lib/KFCWebFramework/include/HttpHeaders.h:112
-// src/MissingFlashStrings.cpp:32
+// src/MissingFlashStrings.cpp:40
 PROGMEM_STRING_DEF(Content_Length, "Content-Length");
 // lib/KFCWebFramework/include/HttpHeaders.h:137
-// src/MissingFlashStrings.cpp:31
+// src/MissingFlashStrings.cpp:39
 PROGMEM_STRING_DEF(Cache_Control, "Cache-Control");
 // lib/KFCWebFramework/include/HttpHeaders.h:198
-// src/MissingFlashStrings.cpp:36
+// src/MissingFlashStrings.cpp:44
 PROGMEM_STRING_DEF(Set_Cookie, "Set-Cookie");
 // lib/KFCWebFramework/include/HttpHeaders.h:300
-// src/MissingFlashStrings.cpp:44
+// src/MissingFlashStrings.cpp:52
 // src/web_server.cpp:1088
 // src/web_server.cpp:1247
 PROGMEM_STRING_DEF(Authorization, "Authorization");
 // lib/KFCWebFramework/include/HttpHeaders.h:308
-// src/MissingFlashStrings.cpp:45
+// src/MissingFlashStrings.cpp:53
 // src/web_server.cpp:1092
 PROGMEM_STRING_DEF(Bearer_, "Bearer ");
 // lib/KFCJson/include/JsonVariant.h:86
-// src/MissingFlashStrings.cpp:52
 // src/WebUISocket.cpp:119
 // lib/KFCJson/src/JsonBaseReader.cpp:164
 // lib/KFCJson/src/JsonTools.cpp:16
@@ -42,7 +40,6 @@ PROGMEM_STRING_DEF(Bearer_, "Bearer ");
 // lib/KFCJson/src/JsonVar.cpp:65
 PROGMEM_STRING_DEF(true, "true");
 // lib/KFCJson/include/JsonVariant.h:86
-// src/MissingFlashStrings.cpp:53
 // lib/KFCJson/src/JsonBaseReader.cpp:164
 // lib/KFCJson/src/JsonTools.cpp:16
 // lib/KFCJson/src/JsonVar.cpp:41
@@ -74,7 +71,7 @@ PROGMEM_STRING_DEF(readonly, "readonly");
 // src/plugins/mqtt/mqtt_form.cpp:35
 // src/plugins/mqtt/mqtt_plugin.cpp:74
 // src/plugins/ntp/ntp_plugin.cpp:148
-// src/plugins/ping_monitor/ping_monitor.cpp:423
+// src/plugins/ping_monitor/ping_monitor.cpp:247
 // src/plugins/serial2tcp/serial2tcp.cpp:86
 // src/plugins/serial2tcp/serial2tcp.cpp:108
 // src/plugins/ssdp/ssdp.cpp:114
@@ -88,29 +85,35 @@ PROGMEM_STRING_DEF(Disabled, "Disabled");
 PROGMEM_STRING_DEF(Enabled, "Enabled");
 // lib/KFCWebFramework/include/FormLengthValidator.h:14
 // lib/KFCWebFramework/include/FormLengthValidator.h:16
-// src/MissingFlashStrings.cpp:15
+// src/MissingFlashStrings.cpp:26
 PROGMEM_STRING_DEF(FormLengthValidator_default_message, "This field must be between %min% and %max% characters");
 // lib/KFCWebFramework/include/FormLengthValidator.h:38
-// src/MissingFlashStrings.cpp:20
+// src/MissingFlashStrings.cpp:31
 // lib/KFCWebFramework/src/FormRangeValidator.cpp:42
 // lib/KFCWebFramework/src/FormRangeValidator.cpp:72
 PROGMEM_STRING_DEF(FormValidator_min_macro, "%min%");
 // lib/KFCWebFramework/include/FormLengthValidator.h:39
-// src/MissingFlashStrings.cpp:21
+// src/MissingFlashStrings.cpp:32
 // lib/KFCWebFramework/src/FormRangeValidator.cpp:43
 // lib/KFCWebFramework/src/FormRangeValidator.cpp:73
 PROGMEM_STRING_DEF(FormValidator_max_macro, "%max%");
 // lib/KFCWebFramework/include/FormEnumValidator.h:15
-// src/MissingFlashStrings.cpp:16
+// src/MissingFlashStrings.cpp:27
 PROGMEM_STRING_DEF(FormEnumValidator_default_message, "Invalid value: %allowed%");
 // lib/KFCWebFramework/include/FormEnumValidator.h:35
 // lib/KFCWebFramework/include/FormEnumValidator.h:44
-// src/MissingFlashStrings.cpp:19
+// src/MissingFlashStrings.cpp:30
 PROGMEM_STRING_DEF(FormValidator_allowed_macro, "%allowed%");
 // lib/KFCWebFramework/include/FormHostValidator.h:19
 // lib/KFCWebFramework/include/FormHostValidator.h:21
-// src/MissingFlashStrings.cpp:17
+// src/MissingFlashStrings.cpp:28
 PROGMEM_STRING_DEF(FormHostValidator_default_message, "Invalid hostname or IP address");
+// lib/KFCWebFramework/include/FormHostValidator.h:31
+// src/async_web_response.cpp:713
+// src/kfc_fw_config.cpp:702
+// src/kfc_fw_config.cpp:758
+// src/kfc_fw_config_classes.cpp:64
+PROGMEM_STRING_DEF(_var_zeroconf, "${zeroconf:");
 // src/async_web_response.cpp:163
 // src/async_web_response.cpp:295
 // src/async_web_response.cpp:437
@@ -146,43 +149,41 @@ PROGMEM_STRING_DEF(sec, "sec");
 // src/plugins/file_manager/file_manager.cpp:421
 // src/plugins/home_assistant/home_assistant.cpp:767
 PROGMEM_STRING_DEF(OK, "OK");
-// src/at_mode.cpp:965
-// src/at_mode.cpp:989
-// src/at_mode.cpp:990
-// src/at_mode.cpp:996
-// src/at_mode.cpp:996
-// src/at_mode.cpp:997
+// src/at_mode.cpp:967
+// src/at_mode.cpp:991
+// src/at_mode.cpp:992
+// src/at_mode.cpp:998
+// src/at_mode.cpp:998
+// src/at_mode.cpp:999
 // src/plugins/atomic_sun/atomic_sun_v2.cpp:421
 PROGMEM_STRING_DEF(on, "on");
-// src/at_mode.cpp:970
-// src/at_mode.cpp:989
-// src/at_mode.cpp:990
-// src/at_mode.cpp:996
-// src/at_mode.cpp:997
-// src/at_mode.cpp:1240
+// src/at_mode.cpp:972
+// src/at_mode.cpp:991
+// src/at_mode.cpp:992
+// src/at_mode.cpp:998
+// src/at_mode.cpp:999
+// src/at_mode.cpp:1242
 // src/plugins/atomic_sun/atomic_sun_v2.cpp:423
 PROGMEM_STRING_DEF(off, "off");
-// src/at_mode.cpp:992
-// src/kfc_fw_config.cpp:1277
+// src/at_mode.cpp:994
 // src/plugins.cpp:74
 // src/plugins.cpp:81
 // src/plugins.cpp:82
 // src/plugins.cpp:83
 // src/web_server.cpp:890
 PROGMEM_STRING_DEF(yes, "yes");
-// src/at_mode.cpp:992
-// src/kfc_fw_config.cpp:1277
+// src/at_mode.cpp:994
 // src/plugins.cpp:74
 // src/plugins.cpp:81
 // src/plugins.cpp:82
 // src/plugins.cpp:83
 PROGMEM_STRING_DEF(no, "no");
-// src/at_mode.cpp:1124
+// src/at_mode.cpp:1126
 // src/plugins/file_manager/file_manager.cpp:250
 // src/plugins/file_manager/file_manager.cpp:378
 // src/plugins/file_manager/file_manager.cpp:424
 PROGMEM_STRING_DEF(success, "success");
-// src/at_mode.cpp:1124
+// src/at_mode.cpp:1126
 // src/plugins/file_manager/file_manager.cpp:250
 // src/plugins/file_manager/file_manager.cpp:378
 // src/plugins/file_manager/file_manager.cpp:424
@@ -200,8 +201,9 @@ PROGMEM_STRING_DEF(failure, "failure");
 PROGMEM_STRING_DEF(defaultPassword, "12345678");
 // src/kfc_fw_config.cpp:480
 // src/kfc_fw_config_classes.cpp:167
+// src/plugins/mqtt/mqtt_auto_discovery.cpp:80
 PROGMEM_STRING_DEF(KFC_Firmware, "KFC Firmware");
-// include/retracted/custom_config.h:173
+// include/retracted/custom_config.h:209
 // src/plugins/alarm/alarm.cpp:54
 // src/plugins/alarm/alarm.cpp:62
 // src/plugins/atomic_sun/atomic_sun_v2.cpp:670
@@ -212,8 +214,8 @@ PROGMEM_STRING_DEF(KFC_Firmware, "KFC Firmware");
 // src/plugins/mqtt/mqtt_auto_discovery.cpp:63
 // src/plugins/mqtt/mqtt_form.cpp:86
 PROGMEM_STRING_DEF(mqtt, "mqtt");
-// include/retracted/custom_config.h:173
-// include/retracted/custom_config.h:212
+// include/retracted/custom_config.h:209
+// include/retracted/custom_config.h:248
 // src/web_server.cpp:662
 // src/web_server.cpp:935
 // src/web_server.cpp:936
@@ -221,28 +223,28 @@ PROGMEM_STRING_DEF(mqtt, "mqtt");
 // src/plugins/mqtt/mqtt_config.cpp:15
 // src/plugins/syslog/syslog_config.cpp:21
 PROGMEM_STRING_DEF(tcp, "tcp");
-// include/retracted/custom_config.h:173
-// include/retracted/custom_config.h:212
+// include/retracted/custom_config.h:209
+// include/retracted/custom_config.h:248
 // src/plugins/mdns/mdns_resolver.cpp:74
 // src/plugins/mqtt/mqtt_config.cpp:15
 // src/plugins/syslog/syslog_config.cpp:21
 PROGMEM_STRING_DEF(address, "address");
-// src/kfc_fw_config.cpp:735
+// src/kfc_fw_config.cpp:736
 // src/plugins/mdns/mdns_resolver.cpp:75
 // src/plugins/mqtt/mqtt_form.cpp:72
 // src/plugins/serial2tcp/serial2tcp.cpp:134
 PROGMEM_STRING_DEF(port, "port");
-// src/kfc_fw_config.cpp:1150
 // src/kfc_fw_config.cpp:1151
+// src/kfc_fw_config.cpp:1152
 PROGMEM_STRING_DEF(safe_mode_enabled, "Device started in SAFE MODE");
-// src/kfc_fw_config.cpp:1170
 // src/kfc_fw_config.cpp:1171
+// src/kfc_fw_config.cpp:1172
 // src/templates.cpp:207
 PROGMEM_STRING_DEF(default_password_warning, "WARNING! Default password has not been changed");
-// src/kfc_fw_config.cpp:1391
+// src/kfc_fw_config.cpp:1392
 // src/kfc_fw_config_forms.cpp:113
 PROGMEM_STRING_DEF(network, "network");
-// src/kfc_fw_config.cpp:1391
+// src/kfc_fw_config.cpp:1392
 // src/kfc_fw_config_forms.cpp:37
 PROGMEM_STRING_DEF(wifi, "wifi");
 // src/kfc_fw_config_forms.cpp:14
@@ -347,13 +349,14 @@ PROGMEM_STRING_DEF(DHCP_Server, "DHCP Server");
 PROGMEM_STRING_DEF(Device_Configuration, "Device Configuration");
 // src/kfc_fw_config_forms.cpp:182
 // src/plugins/mqtt/mqtt_form.cpp:119
+// src/plugins/ping_monitor/ping_monitor.cpp:321
 // src/plugins/weather_station/weather_station.cpp:399
 PROGMEM_STRING_DEF(minutes, "minutes");
 // src/kfc_fw_config_forms.cpp:189
 PROGMEM_STRING_DEF(Zeroconf_Timeout, "Zeroconf Timeout");
 // src/kfc_fw_config_forms.cpp:189
 // src/plugins/clock/clock_form.cpp:73
-// src/plugins/clock/clock_form.cpp:142
+// src/plugins/ping_monitor/ping_monitor.cpp:304
 // src/plugins/remote/remote.cpp:110
 // src/plugins/remote/remote.cpp:112
 PROGMEM_STRING_DEF(milliseconds, "milliseconds");
@@ -383,85 +386,72 @@ PROGMEM_STRING_DEF(Change_Password, "Change Password");
 // src/plugins/dimmer_module/dimmer_module_form.cpp:37
 // src/plugins/mqtt/mqtt_form.cpp:59
 // src/plugins/ntp/ntp_form.cpp:36
+// src/plugins/ping_monitor/ping_monitor.cpp:291
 // src/plugins/weather_station/weather_station.cpp:390
 // lib/KFCConfiguration/src/JsonConfigReader.cpp:24
 PROGMEM_STRING_DEF(config, "config");
-// src/MissingFlashStrings.cpp:13
+// src/MissingFlashStrings.cpp:24
 // lib/KFCWebFramework/src/FormRangeValidator.cpp:15
 // lib/KFCWebFramework/src/FormRangeValidator.cpp:52
 PROGMEM_STRING_DEF(FormRangeValidator_default_message, "This fields value must be between %min% and %max%");
-// src/MissingFlashStrings.cpp:14
+// src/MissingFlashStrings.cpp:25
 // lib/KFCWebFramework/src/FormRangeValidator.cpp:15
 // lib/KFCWebFramework/src/FormRangeValidator.cpp:52
 PROGMEM_STRING_DEF(FormRangeValidator_default_message_zero_allowed, "This fields value must be 0 or between %min% and %max%");
-// src/MissingFlashStrings.cpp:18
+// src/MissingFlashStrings.cpp:29
 // lib/KFCWebFramework/src/Form.cpp:116
 PROGMEM_STRING_DEF(Form_value_missing_default_message, "This field is missing");
-// src/MissingFlashStrings.cpp:24
-// lib/KFCWebFramework/src/failure_counter.cpp:80
-// lib/KFCWebFramework/src/failure_counter.cpp:136
-// lib/KFCWebFramework/src/failure_counter.cpp:166
-PROGMEM_STRING_DEF(login_failure_file, "/.pvt/login_failures");
-// src/MissingFlashStrings.cpp:27
+// src/MissingFlashStrings.cpp:35
 // lib/KFCWebFramework/src/HttpHeaders.cpp:73
 PROGMEM_STRING_DEF(Pragma, "Pragma");
-// src/MissingFlashStrings.cpp:28
+// src/MissingFlashStrings.cpp:36
 // lib/KFCWebFramework/src/HttpHeaders.cpp:90
 PROGMEM_STRING_DEF(Link, "Link");
-// src/MissingFlashStrings.cpp:29
+// src/MissingFlashStrings.cpp:37
 // lib/KFCWebFramework/src/HttpHeaders.cpp:85
 PROGMEM_STRING_DEF(Location, "Location");
-// src/MissingFlashStrings.cpp:30
+// src/MissingFlashStrings.cpp:38
 // lib/KFCWebFramework/src/HttpHeaders.cpp:33
 PROGMEM_STRING_DEF(RFC7231_date, "%a, %d %b %Y %H:%M:%S GMT");
-// src/MissingFlashStrings.cpp:33
+// src/MissingFlashStrings.cpp:41
 // src/web_server.cpp:763
 PROGMEM_STRING_DEF(Content_Encoding, "Content-Encoding");
-// src/MissingFlashStrings.cpp:34
+// src/MissingFlashStrings.cpp:42
 // src/plugins/mqtt/mqtt_form.cpp:65
 // lib/KFCWebFramework/src/HttpHeaders.cpp:247
 PROGMEM_STRING_DEF(Connection, "Connection");
-// src/MissingFlashStrings.cpp:35
+// src/MissingFlashStrings.cpp:43
 // lib/KFCWebFramework/src/HttpHeaders.cpp:193
 PROGMEM_STRING_DEF(Cookie, "Cookie");
-// src/MissingFlashStrings.cpp:37
+// src/MissingFlashStrings.cpp:45
 // src/web_server.cpp:757
 // lib/KFCWebFramework/src/HttpHeaders.cpp:288
 PROGMEM_STRING_DEF(Last_Modified, "Last-Modified");
-// src/MissingFlashStrings.cpp:38
+// src/MissingFlashStrings.cpp:46
 // src/web_server.cpp:756
 // lib/KFCWebFramework/src/HttpHeaders.cpp:287
 // lib/KFCWebFramework/src/HttpHeaders.cpp:296
 PROGMEM_STRING_DEF(Expires, "Expires");
-// src/MissingFlashStrings.cpp:39
+// src/MissingFlashStrings.cpp:47
 // lib/KFCWebFramework/src/HttpHeaders.cpp:125
 // lib/KFCWebFramework/src/HttpHeaders.cpp:285
 PROGMEM_STRING_DEF(no_cache, "no-cache");
-// src/MissingFlashStrings.cpp:40
+// src/MissingFlashStrings.cpp:48
 // src/plugins/blinds_ctrl/blinds_form.cpp:110
 // lib/KFCWebFramework/src/HttpHeaders.cpp:247
 PROGMEM_STRING_DEF(close, "close");
-// src/MissingFlashStrings.cpp:41
+// src/MissingFlashStrings.cpp:49
 // lib/KFCWebFramework/src/HttpHeaders.cpp:247
 PROGMEM_STRING_DEF(keep_alive, "keep-alive");
-// src/MissingFlashStrings.cpp:42
+// src/MissingFlashStrings.cpp:50
 // lib/KFCWebFramework/src/HttpHeaders.cpp:149
 PROGMEM_STRING_DEF(public, "public");
-// src/MissingFlashStrings.cpp:43
+// src/MissingFlashStrings.cpp:51
 // lib/KFCWebFramework/src/HttpHeaders.cpp:143
 PROGMEM_STRING_DEF(private, "private");
-// src/MissingFlashStrings.cpp:48
-// lib/KFCWebBuilder/src/fs_mapping.cpp:65
-// lib/KFCWebBuilder/src/fs_mapping.cpp:84
-// lib/KFCWebBuilder/src/ListDir.cpp:148
-// lib/KFCWebBuilder/src/ListDir.cpp:148
-PROGMEM_STRING_DEF(fs_mapping_dir, "/webui/");
-// src/MissingFlashStrings.cpp:49
-// lib/KFCWebBuilder/src/ListDir.cpp:14
-// lib/KFCWebBuilder/src/ListDir.cpp:157
-PROGMEM_STRING_DEF(fs_mapping_listings, "/webui/.listings");
 // src/plugins.cpp:78
 // src/plugins/blinds_ctrl/BlindsControl.h:108
+// src/plugins/ping_monitor/ping_task.cpp:127
 PROGMEM_STRING_DEF(n_a, "n/a");
 // src/plugins.cpp:106
 // src/plugins.cpp:110
@@ -542,6 +532,7 @@ PROGMEM_STRING_DEF(https, "https");
 // src/plugins/http2serial/http2serial.cpp:243
 // src/plugins/mdns/mdns_plugin.cpp:162
 // src/plugins/mdns/mdns_plugin.cpp:177
+// src/plugins/ping_monitor/ping_monitor.cpp:226
 // src/plugins/remote/remote.h:177
 // src/plugins/weather_station/weather_station.cpp:334
 PROGMEM_STRING_DEF(http, "http");
@@ -557,12 +548,8 @@ PROGMEM_STRING_DEF(kfcfw, "kfcfw");
 // src/templates.cpp:369
 // src/templates.cpp:516
 PROGMEM_STRING_DEF(_hidden, " hidden");
-// src/templates.cpp:303
-// src/plugins/alarm/alarm.cpp:125
-// src/plugins/ntp/ntp_atmode.cpp:47
-// src/plugins/ntp/ntp_atmode.cpp:50
-PROGMEM_STRING_DEF(strftime_date_time_zone, "%FT%T %Z");
 // src/templates.cpp:320
+// src/templates.cpp:456
 PROGMEM_STRING_DEF(Not_supported, "Not supported");
 // src/templates.cpp:412
 // lib/KFCWebFramework/src/Form.cpp:198
@@ -722,7 +709,6 @@ PROGMEM_STRING_DEF(message, "message");
 PROGMEM_STRING_DEF(Device_is_rebooting, "Device is rebooting...\n");
 // src/plugins/alarm/alarm.cpp:86
 // src/plugins/alarm/alarm.cpp:365
-// src/plugins/clock/clock_form.cpp:131
 PROGMEM_STRING_DEF(alarm, "alarm");
 // src/plugins/alarm/alarm.cpp:87
 // src/plugins/alarm/alarm.cpp:360
@@ -748,6 +734,10 @@ PROGMEM_STRING_DEF(_state, "/state");
 // src/plugins/switch/switch.cpp:215
 // src/plugins/switch/switch.cpp:224
 PROGMEM_STRING_DEF(_set, "/set");
+// src/plugins/alarm/alarm.cpp:125
+// src/plugins/ntp/ntp_atmode.cpp:47
+// src/plugins/ntp/ntp_atmode.cpp:50
+PROGMEM_STRING_DEF(strftime_date_time_zone, "%FT%T %Z");
 // src/plugins/atomic_sun/atomic_sun_v2.cpp:72
 // src/plugins/ntp/ntp_atmode.cpp:44
 // src/plugins/PinDebugger/PinDebugger.cpp:125
@@ -883,7 +873,7 @@ PROGMEM_STRING_DEF(Delay_After_Execution_br_explanation, "Delay After Execution:
 // src/plugins/dimmer_module/dimmer_module_form.cpp:138
 // src/plugins/mqtt/mqtt_form.cpp:83
 // src/plugins/remote/remote.cpp:105
-// src/plugins/sensor/Sensor_SystemMetrics.cpp:39
+// src/plugins/sensor/Sensor_SystemMetrics.cpp:51
 // src/plugins/weather_station/weather_station.cpp:403
 // src/plugins/weather_station/weather_station.cpp:433
 PROGMEM_STRING_DEF(seconds, "seconds");
@@ -916,10 +906,6 @@ PROGMEM_STRING_DEF(Fading, "Fading");
 PROGMEM_STRING_DEF(Multiplier, "Multiplier");
 // src/plugins/clock/clock_form.cpp:86
 PROGMEM_STRING_DEF(Speed, "Speed");
-// src/plugins/clock/clock_form.cpp:131
-PROGMEM_STRING_DEF(Alarm, "Alarm");
-// src/plugins/clock/clock_form.cpp:139
-PROGMEM_STRING_DEF(Color, "Color");
 // src/plugins/clock/clock_form.cpp:150
 PROGMEM_STRING_DEF(Protection, "Protection");
 // src/plugins/clock/clock_form.cpp:153
@@ -930,10 +916,6 @@ PROGMEM_STRING_DEF(Protection, "Protection");
 // src/plugins/dimmer_module/dimmer_module_form.cpp:167
 // src/plugins/sensor/Sensor_BME280.cpp:39
 // src/plugins/sensor/Sensor_BME280.cpp:91
-// src/plugins/sensor/Sensor_DS3231.cpp:43
-// src/plugins/sensor/Sensor_DS3231.cpp:83
-// src/plugins/sensor/Sensor_LM75A.cpp:36
-// src/plugins/sensor/Sensor_LM75A.cpp:64
 PROGMEM_STRING_DEF(_degreeC, "\u00b0C");
 // src/plugins/dimmer_module/dimmer_module_form.cpp:142
 // src/plugins/dimmer_module/dimmer_module_form.cpp:146
@@ -1003,7 +985,7 @@ PROGMEM_STRING_DEF(kfcmdns, "kfcmdns");
 // src/plugins/mdns/mdns_plugin.cpp:211
 // src/plugins/mdns/mdns_plugin.cpp:220
 PROGMEM_STRING_DEF(udp, "udp");
-// src/plugins/mqtt/mqtt_auto_discovery.cpp:90
+// src/plugins/mqtt/mqtt_auto_discovery.cpp:95
 // src/plugins/ssdp/ssdp.cpp:73
 PROGMEM_STRING_DEF(KFCLabs, "KFCLabs");
 // src/plugins/mqtt/mqtt_client.cpp:299
@@ -1048,6 +1030,45 @@ PROGMEM_STRING_DEF(NTP_Server___, "NTP Server %u");
 PROGMEM_STRING_DEF(Refresh_Interval, "Refresh Interval");
 // src/plugins/ntp/ntp_form.cpp:61
 PROGMEM_STRING_DEF(minutes__5_, "minutes \u00b15%");
+// src/plugins/ping_monitor/ping_config.cpp:18
+// src/plugins/ping_monitor/ping_monitor.cpp:72
+// src/plugins/ping_monitor/ping_monitor.cpp:315
+PROGMEM_STRING_DEF(_var_gateway, "${gateway}");
+// src/plugins/ping_monitor/ping_config.cpp:19
+PROGMEM_STRING_DEF(ip_8_8_8_8, "8.8.8.8");
+// src/plugins/ping_monitor/ping_config.cpp:20
+PROGMEM_STRING_DEF(www_google_com, "www.google.com");
+// src/plugins/ping_monitor/ping_monitor.cpp:94
+PROGMEM_STRING_DEF(ping_monitor_unknown_service, "ping: %s: Name or service not known");
+// src/plugins/ping_monitor/ping_monitor.cpp:304
+PROGMEM_STRING_DEF(Timeout, "Timeout");
+// src/plugins/ping_monitor/ping_monitor.cpp:321
+PROGMEM_STRING_DEF(Interval, "Interval");
+// src/plugins/ping_monitor/ping_monitor.cpp:368
+// src/plugins/ping_monitor/ping_wsclient.cpp:105
+PROGMEM_STRING_DEF(ping_monitor_response, "%d bytes from %s: icmp_seq=%d ttl=%d time=%ld ms");
+// src/plugins/ping_monitor/ping_monitor.cpp:371
+// src/plugins/ping_monitor/ping_wsclient.cpp:107
+PROGMEM_STRING_DEF(ping_monitor_request_timeout, "Request timed out.");
+// src/plugins/ping_monitor/ping_monitor.cpp:376
+// src/plugins/ping_monitor/ping_wsclient.cpp:122
+PROGMEM_STRING_DEF(ping_monitor_end_response, "Total answer from %s sent %d recevied %d time %ld ms");
+// src/plugins/ping_monitor/ping_monitor.cpp:379
+// src/plugins/ping_monitor/ping_wsclient.cpp:124
+PROGMEM_STRING_DEF(ping_monitor_ethernet_detected, "Detected eth address %s");
+// src/plugins/ping_monitor/ping_task.cpp:205
+PROGMEM_STRING_DEF(ping_monitor_ping_for_hostname_failed, "Pinging %s failed");
+// src/plugins/ping_monitor/ping_task.cpp:245
+// src/plugins/sensor/Sensor_SystemMetrics.cpp:67
+// src/plugins/sensor/Sensor_SystemMetrics.cpp:69
+PROGMEM_STRING_DEF(ping_monitor, "ping_monitor");
+// src/plugins/ping_monitor/ping_task.cpp:286
+// src/plugins/ping_monitor/ping_task.cpp:297
+PROGMEM_STRING_DEF(ping_monitor_service_status, "Ping monitor service has been %s");
+// src/plugins/ping_monitor/ping_task.cpp:286
+PROGMEM_STRING_DEF(started, "started");
+// src/plugins/ping_monitor/ping_task.cpp:297
+PROGMEM_STRING_DEF(stopped, "stopped");
 // src/plugins/sensor/Sensor_BME280.cpp:37
 // src/plugins/sensor/Sensor_BME280.cpp:40
 // src/plugins/sensor/Sensor_BME280.cpp:72
@@ -1070,14 +1091,22 @@ PROGMEM_STRING_DEF(pressure, "pressure");
 // src/plugins/sensor/Sensor_BME280.cpp:93
 // src/plugins/weather_station/weather_station.cpp:423
 PROGMEM_STRING_DEF(hPa, "hPa");
-// src/plugins/sensor/Sensor_DS3231.cpp:119
-// src/plugins/sensor/Sensor_DS3231.cpp:164
-// src/plugins/weather_station/weather_station.cpp:437
-PROGMEM_STRING_DEF(Yes, "Yes");
-// src/plugins/sensor/Sensor_DS3231.cpp:119
-// src/plugins/sensor/Sensor_DS3231.cpp:164
-// src/plugins/weather_station/weather_station.cpp:437
-PROGMEM_STRING_DEF(No, "No");
+// src/plugins/sensor/Sensor_SystemMetrics.cpp:49
+// src/plugins/sensor/Sensor_SystemMetrics.cpp:52
+// src/plugins/sensor/Sensor_SystemMetrics.cpp:104
+PROGMEM_STRING_DEF(uptime, "uptime");
+// src/plugins/sensor/Sensor_SystemMetrics.cpp:55
+// src/plugins/sensor/Sensor_SystemMetrics.cpp:58
+// src/plugins/sensor/Sensor_SystemMetrics.cpp:105
+PROGMEM_STRING_DEF(heap, "heap");
+// src/plugins/sensor/Sensor_SystemMetrics.cpp:57
+PROGMEM_STRING_DEF(bytes, "bytes");
+// src/plugins/sensor/Sensor_SystemMetrics.cpp:61
+// src/plugins/sensor/Sensor_SystemMetrics.cpp:63
+// src/plugins/sensor/Sensor_SystemMetrics.cpp:106
+PROGMEM_STRING_DEF(version, "version");
+// src/plugins/sensor/Sensor_SystemMetrics.cpp:97
+PROGMEM_STRING_DEF(sys, "sys");
 // src/plugins/serial2tcp/serial2tcp.cpp:106
 PROGMEM_STRING_DEF(Software_Serial, "Software Serial");
 // src/plugins/serial2tcp/serial2tcp.cpp:109
@@ -1100,6 +1129,10 @@ PROGMEM_STRING_DEF(display, "display");
 PROGMEM_STRING_DEF(sensors, "sensors");
 // src/plugins/weather_station/weather_station.cpp:194
 PROGMEM_STRING_DEF(values, "values");
+// src/plugins/weather_station/weather_station.cpp:437
+PROGMEM_STRING_DEF(Yes, "Yes");
+// src/plugins/weather_station/weather_station.cpp:437
+PROGMEM_STRING_DEF(No, "No");
 // lib/KFCBaseLibrary/src/DumpBinary.cpp:67
 // lib/KFCBaseLibrary/src/misc.cpp:653
 // lib/KFCConfiguration/src/ConfigurationParameter.cpp:292
@@ -1142,6 +1175,18 @@ PROGMEM_STRING_DEF(float, "float");
 PROGMEM_STRING_DEF(int, "int");
 // lib/KFCJson/src/JsonBaseReader.cpp:107
 PROGMEM_STRING_DEF(string, "string");
+// lib/KFCWebBuilder/src/fs_mapping.cpp:65
+// lib/KFCWebBuilder/src/fs_mapping.cpp:84
+// lib/KFCWebBuilder/src/ListDir.cpp:148
+// lib/KFCWebBuilder/src/ListDir.cpp:148
+PROGMEM_STRING_DEF(fs_mapping_dir, "/webui/");
+// lib/KFCWebBuilder/src/ListDir.cpp:14
+// lib/KFCWebBuilder/src/ListDir.cpp:157
+PROGMEM_STRING_DEF(fs_mapping_listings, "/webui/.listings");
+// lib/KFCWebFramework/src/failure_counter.cpp:80
+// lib/KFCWebFramework/src/failure_counter.cpp:136
+// lib/KFCWebFramework/src/failure_counter.cpp:166
+PROGMEM_STRING_DEF(login_failure_file, "/.pvt/login_failures");
 // lib/KFCWebFramework/src/Form.cpp:184
 PROGMEM_STRING_DEF(_checked, " checked");
 // lib/KFCWebFramework/src/FormRangeValidator.cpp:47

@@ -192,7 +192,8 @@ void WiFi_get_status(Print &out)
                 out.print(F(HTML_S(span style\5\4width: 150px; float: left\4)));
                 IPAddress(info->ip.addr).printTo(out);
                 out.print(F(HTML_E(span) HTML_S(span style\5\4width: 170px; float: left\4)));
-                out.printf_P(PSTR("%s" HTML_E(span) HTML_S(br)), mac2String(info->bssid).c_str());
+                printMacAddress(info->bssid, out);
+                out.print(F(HTML_E(span) HTML_S(br)));
 
                 info = STAILQ_NEXT(info, next);
             }

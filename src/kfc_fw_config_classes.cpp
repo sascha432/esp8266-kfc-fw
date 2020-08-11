@@ -61,7 +61,7 @@ namespace KFCConfigurationClasses {
     // "${zeroconf:" service "." proto "," variable "|" default_value "}"
     String createZeroConf(const __FlashStringHelper *service, const __FlashStringHelper *proto, const __FlashStringHelper *varName, const __FlashStringHelper *defaultValue)
     {
-        auto str = PrintString(F("${zeroconf:%s.%s,%s"), service, proto, varName);
+        auto str = PrintString(F("%s%s.%s,%s"), SPGM(_var_zeroconf), service, proto, varName);
         if (defaultValue && pgm_read_byte(defaultValue)) {
             str.print('|');
             str.print(defaultValue);

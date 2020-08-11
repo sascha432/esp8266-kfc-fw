@@ -709,7 +709,9 @@ AsyncResolveZeroconfResponse::AsyncResolveZeroconfResponse(const String &value) 
     })) {
         delete async;
         async = nullptr;
-        _response = PrintHtmlEntitiesString(F("Required Format:" HTML_S(br) "${zeroconf:<service>.<proto>:<address|value[:port value]>|<fallback[:port]>}"));
+        PrintHtmlEntitiesString str;
+        str.printf_P(PSTR("Required Format:" HTML_S(br) "%s<service>.<proto>:<address|value[:port value]>|<fallback[:port]>}"), SPGM(_var_zeroconf));
+        _response = std::move(str);
         _finished = true;
     }
 }

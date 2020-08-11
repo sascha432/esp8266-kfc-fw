@@ -52,7 +52,10 @@ $(function() {
 
         function ping(host, count, timeout) {
             clear_close_timer();
-            wsc.console_log('');
+            var ta = ping_console.val();
+            if (ta.length <= 4 && ta.trim().length) {
+                wsc.console_log('');
+            }
             wsc.console_log('Pinging ' + host + ' ' + count + ' time(s) with a timeout of ' + timeout + 'ms');
             wsc.socket.send('+PING ' + count + ' ' + timeout + ' ' + host);
         }

@@ -84,7 +84,9 @@ void MQTTAutoDiscovery::_create(ComponentType componentType, const String &name,
         _discovery.print(F("\"device\":{\"" MQTT_DEVICE_REG_IDENTIFIERS "\":[\""));
         _discovery.print(uniqueId);
         _discovery.print(F("\"],\"" MQTT_DEVICE_REG_CONNECTIONS "\":[[\"mac" JSON_NEXT_KEY_START));
-        _discovery.print(WiFi.macAddress());
+        uint8_t mac[WL_MAC_ADDR_LENGTH];
+        WiFi.macAddress(mac);
+        printMacAddress(mac, _discovery);
         _discovery.print(F("\"]],\"" MQTT_DEVICE_REG_MODEL JSON_VALUE_START));
         _discovery.print(model);
         _discovery.print(F(JSON_NEXT_KEY_START MQTT_DEVICE_REG_NAME JSON_VALUE_START));

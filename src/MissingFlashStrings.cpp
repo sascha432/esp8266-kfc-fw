@@ -4,6 +4,17 @@
 
 // strings that are used but not scanned by FlashStringGenerator
 
+#include <Arduino_compat.h>
+
+FLASH_STRING_GENERATOR_AUTO_INIT(
+    AUTO_STRING_DEF(login_failure_file, "/.pvt/login_failures")
+    AUTO_STRING_DEF(fs_mapping_dir, "/webui/")
+    AUTO_STRING_DEF(fs_mapping_listings, "/webui/.listings")
+    AUTO_STRING_DEF(true, "true")
+    AUTO_STRING_DEF(false, "false")
+    AUTO_STRING_DEF(null, "null")
+);
+
 #if defined(MISSING_FLASH_STRINGS_ENABLED) && MISSING_FLASH_STRINGS_ENABLED
 
 #include <Arduino_compat.h>
@@ -19,9 +30,6 @@ void dummy() {
     Serial.print(FSPGM(FormValidator_allowed_macro, "%allowed%"));
     Serial.print(FSPGM(FormValidator_min_macro, "%min%"));
     Serial.print(FSPGM(FormValidator_max_macro, "%max%"));
-
-    // Login Failure Counter
-    Serial.print(FSPGM(login_failure_file));//, "/.pvt/login_failures"));
 
     // HttpHeaders
     Serial.print(FSPGM(Pragma, "Pragma"));
@@ -43,18 +51,6 @@ void dummy() {
     Serial.print(FSPGM(private, "private"));
     Serial.print(FSPGM(Authorization, "Authorization"));
     Serial.print(FSPGM(Bearer_, "Bearer "));
-
-    // FSMapping
-    Serial.print(FSPGM(fs_mapping_dir));//, "/webui/"));
-    Serial.print(FSPGM(fs_mapping_listings));//, "/webui/.listings"));
-
-    // JsonTools
-    Serial.print(FSPGM(true, "true"));
-    Serial.print(FSPGM(false, "false"));
-    Serial.print(FSPGM(null, "null"));
-
-
-    // Serial.print(FSPGM());
 }
 
 

@@ -699,7 +699,7 @@ bool KFCFWConfiguration::resolveZeroConf(const String &name, const String &hostn
 
     __LDBG_printf("resolveZeroConf=%s port=%u", hostname.c_str(), port);
     String prefix, suffix;
-    auto start = hostname.indexOf(F("${zeroconf:"));
+    auto start = hostname.indexOf(FSPGM(_var_zeroconf));
     if (start != -1) {
         start += 11;
         auto end = hostname.indexOf('}', start);
@@ -755,7 +755,7 @@ bool KFCFWConfiguration::resolveZeroConf(const String &name, const String &hostn
 
 bool KFCFWConfiguration::hasZeroConf(const String &hostname) const
 {
-    auto pos = hostname.indexOf(F("${zeroconf:"));
+    auto pos = hostname.indexOf(FSPGM(_var_zeroconf));
     if (pos != -1) {
         pos = hostname.indexOf('}', pos + 11);
     }

@@ -187,7 +187,7 @@ extern const String emptyString;
 
 #endif
 
-#if __cplusplus < 201402L
+#if __cplusplus < 201402L && !defined(_MSC_VER)
 
 namespace std {
 
@@ -254,7 +254,22 @@ namespace __va_args__
     constexpr std::size_t va_count(Args &&...) { return sizeof...(Args); }
 }
 
-#define __VA_ARGS_COUNT__(...)              __va_args__::va_count(__VA_ARGS__)
+#define __VA_ARGS_COUNT__(...)                          __va_args__::va_count(__VA_ARGS__)
+
+#if FLASH_STRINGS_AUTO_INIT
+#define AUTO_STRING_DEF(name, value)                    AUTO_INIT_SPGM(name, value),
+#define FLASH_STRING_GENERATOR_AUTO_INIT(...) \
+    static bool __flash_string_generator_auto_init_var = []() { \
+        SPGM_P strings[] = { \
+            __VA_ARGS__ nullptr \
+        };
+        return true; \
+    }
+#else
+
+#define AUTO_STRING_DEF(name, value)
+#define FLASH_STRING_GENERATOR_AUTO_INIT(...)           __VA_ARGS__
+#endif
 
 #if _MSC_VER
 #include "../../../src/generated/FlashStringGeneratorAuto.h"

@@ -28,7 +28,7 @@ public:
             getField().setValue(tmpStr);
             const char *str = tmpStr.c_str();
             if (EnumHelper::Bitset::has(_allowedTypes, AllowedType::ALLOW_ZEROCONF)) {
-                if (strstr_P(str, PSTR("${zeroconf"))) { //TODO parse and validate zeroconf
+                if (strstr_P(str, SPGM(_var_zeroconf))) { //TODO parse and validate zeroconf
                     return true;
                 }
             }

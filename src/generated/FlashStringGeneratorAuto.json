@@ -16,7 +16,7 @@
         "default": "text/plain"
     },
     "null": {
-        "use_counter": 13,
+        "use_counter": 12,
         "default": "null"
     },
     "FormLengthValidator_default_message": {
@@ -44,7 +44,7 @@
         "default": "Invalid hostname or IP address"
     },
     "webui_json_id": {
-        "use_counter": 29,
+        "use_counter": 25,
         "default": "id"
     },
     "webui_json_name": {
@@ -64,11 +64,11 @@
         "default": "offset"
     },
     "webui_json_value": {
-        "use_counter": 29,
+        "use_counter": 25,
         "default": "value"
     },
     "webui_json_state": {
-        "use_counter": 22,
+        "use_counter": 18,
         "default": "state"
     },
     "mime_application_json": {
@@ -124,11 +124,11 @@
         "default": "pure virtual call: %s\\n"
     },
     "yes": {
-        "use_counter": 7,
+        "use_counter": 6,
         "default": "yes"
     },
     "no": {
-        "use_counter": 6,
+        "use_counter": 5,
         "default": "no"
     },
     "comma_": {
@@ -140,7 +140,7 @@
         "default": " hidden"
     },
     "Not_supported": {
-        "use_counter": 1,
+        "use_counter": 2,
         "default": "Not supported"
     },
     "_selected": {
@@ -284,7 +284,7 @@
         "default": "events"
     },
     "http": {
-        "use_counter": 13,
+        "use_counter": 14,
         "default": "http"
     },
     "SID": {
@@ -380,11 +380,11 @@
         "default": "/.pvt/blinds_ctrl.state"
     },
     "Yes": {
-        "use_counter": 3,
+        "use_counter": 1,
         "default": "Yes"
     },
     "No": {
-        "use_counter": 3,
+        "use_counter": 1,
         "default": "No"
     },
     "webui_json_title": {
@@ -528,7 +528,7 @@
         "default": "switch"
     },
     "strftime_date_time_zone": {
-        "use_counter": 4,
+        "use_counter": 3,
         "default": "%FT%T %Z"
     },
     "ping_monitor_response": {
@@ -624,11 +624,11 @@
         "default": "config"
     },
     "true": {
-        "use_counter": 8,
+        "use_counter": 7,
         "default": "true"
     },
     "false": {
-        "use_counter": 7,
+        "use_counter": 6,
         "default": "false"
     },
     "openweathermap_api_url": {
@@ -744,11 +744,11 @@
         "default": "debug"
     },
     "fs_mapping_dir": {
-        "use_counter": 5,
+        "use_counter": 4,
         "default": "/webui/"
     },
     "login_failure_file": {
-        "use_counter": 4,
+        "use_counter": 3,
         "default": "/.pvt/login_failures"
     },
     "Form_value_missing_default_message": {
@@ -812,23 +812,23 @@
         "default": "message"
     },
     "ds3231_id_temp": {
-        "use_counter": 5,
+        "use_counter": 0,
         "default": "ds3231_temp"
     },
     "ds3231_id_time": {
-        "use_counter": 5,
+        "use_counter": 0,
         "default": "ds3231_time"
     },
     "ds3231_id_lost_power": {
-        "use_counter": 3,
+        "use_counter": 0,
         "default": "ds3231_lost_power"
     },
     "webui_json_head": {
-        "use_counter": 2,
+        "use_counter": 1,
         "default": "head"
     },
     "fs_mapping_listings": {
-        "use_counter": 3,
+        "use_counter": 2,
         "default": "/webui/.listings"
     },
     "_html": {
@@ -968,7 +968,7 @@
         "default": "title"
     },
     "KFC_Firmware": {
-        "use_counter": 2,
+        "use_counter": 3,
         "default": "KFC Firmware"
     },
     "applying_html": {
@@ -1028,7 +1028,7 @@
         "default": "deflate"
     },
     "config": {
-        "use_counter": 9,
+        "use_counter": 10,
         "default": "config"
     },
     "Success": {
@@ -1048,7 +1048,7 @@
         "default": "/login.html"
     },
     "n_a": {
-        "use_counter": 2,
+        "use_counter": 3,
         "default": "n/a"
     },
     "stk500v1_tmp_file": {
@@ -1144,7 +1144,7 @@
         "default": "brightness"
     },
     "_degreeC": {
-        "use_counter": 12,
+        "use_counter": 8,
         "default": "\\u00b0C"
     },
     "vcc": {
@@ -1168,11 +1168,11 @@
         "default": "rd"
     },
     "alarm": {
-        "use_counter": 3,
+        "use_counter": 2,
         "default": "alarm"
     },
     "Alarm": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "Alarm"
     },
     "defaultPassword": {
@@ -1392,7 +1392,7 @@
         "default": "Title"
     },
     "minutes": {
-        "use_counter": 3,
+        "use_counter": 4,
         "default": "minutes"
     },
     "days": {
@@ -1888,7 +1888,7 @@
         "default": "Speed"
     },
     "Color": {
-        "use_counter": 1,
+        "use_counter": 0,
         "default": "Color"
     },
     "Protection": {
@@ -1897,14 +1897,86 @@
     },
     "Channel": {
         "use_counter": 1,
-        "auto": "Channel"
+        "default": "Channel"
     },
     "Encryption": {
         "use_counter": 1,
-        "auto": "Encryption"
+        "default": "Encryption"
     },
     "Address": {
         "use_counter": 1,
-        "auto": "Address"
+        "default": "Address"
+    },
+    "_var_gateway": {
+        "use_counter": 3,
+        "default": "${gateway}"
+    },
+    "_var_zeroconf": {
+        "use_counter": 5,
+        "default": "${zeroconf:"
+    },
+    "Interval": {
+        "use_counter": 1,
+        "default": "Interval"
+    },
+    "Timeout": {
+        "use_counter": 1,
+        "default": "Timeout"
+    },
+    "ip_8_8_8_8": {
+        "use_counter": 1,
+        "default": "8.8.8.8"
+    },
+    "www_google_com": {
+        "use_counter": 1,
+        "default": "www.google.com"
+    },
+    "stopped": {
+        "use_counter": 1,
+        "default": "stopped"
+    },
+    "started": {
+        "use_counter": 1,
+        "default": "started"
+    },
+    "ping_monitor_service_status": {
+        "use_counter": 2,
+        "default": "Ping monitor service has been %s"
+    },
+    "ping_monitor_ping_for_hostname_failed": {
+        "use_counter": 1,
+        "default": "Pinging %s failed"
+    },
+    "sys": {
+        "use_counter": 1,
+        "default": "sys"
+    },
+    "uptime": {
+        "use_counter": 3,
+        "default": "uptime"
+    },
+    "heap": {
+        "use_counter": 3,
+        "default": "heap"
+    },
+    "version": {
+        "use_counter": 3,
+        "default": "version"
+    },
+    "ping_monitor_unknown_service": {
+        "use_counter": 1,
+        "default": "ping: %s: Name or service not known"
+    },
+    "bytes": {
+        "use_counter": 1,
+        "default": "bytes"
+    },
+    "ping_monitor": {
+        "use_counter": 3,
+        "default": "ping_monitor"
+    },
+    "ping_monitor_cancelled": {
+        "use_counter": 2,
+        "default": "Ping cancelled"
     }
 }

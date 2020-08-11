@@ -130,6 +130,10 @@ public:
         return InvalidMenuId;
     }
 
+    void remove(ItemsVectorIterator iterator) {
+        _items.erase(iterator);
+    }
+
     menu_item_parent_id_t addMenu(StaticString &&label, menu_item_id_t afterId = menu_item_id_t());
     menu_item_id_t addSubMenu(StaticString &&label, StaticString &&uri, menu_item_parent_id_t parentMenuId, menu_item_id_t afterId = menu_item_id_t());
 

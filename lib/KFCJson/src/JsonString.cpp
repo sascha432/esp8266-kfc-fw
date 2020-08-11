@@ -71,7 +71,7 @@ JsonString::JsonString(const __FlashStringHelper *str)
     }
 }
 
-JsonString::JsonString(const __FlashStringHelper * str, bool forceFlash)
+JsonString::JsonString(const __FlashStringHelper *str, bool forceFlash)
 {
     _setType(FLASH);
     _setPtr(reinterpret_cast<const char *>(str));

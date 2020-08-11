@@ -29,12 +29,12 @@
         height: 100%;
     }
     </style>
-    <div class="container-fluid serial-console">
+    <div class="container-fluid serial-console pt-3">
         <div class="form-row">
             <div class="form-group col-lg-12">
                 <div class="input-group">
                     <input class="form-control single-select input_field" id="command-input" autocomplete="off" spellcheck="off">
-                    <div class="input-group-append" id="button-addon3">
+                    <div class="input-group-append">
                         <button class="btn btn-outline-secondary" type="button" data-toggle="modal" data-target="#console-filter">Filter</button>
                         <button class="btn btn-outline-secondary" type="button" id="sendbutton">Send</button>
                     </div>
@@ -62,7 +62,7 @@
         </div>
         <div class="form-row serial-console">
             <div class="form-group col-lg-12 serial-console-inner">
-                <textarea id="rxConsole" readonly>
+                <textarea id="serial_console" readonly>
 Available commands: /disconnect /reconnect /clear
 -----------------------------------------------------------------------------
 </textarea>

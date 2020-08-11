@@ -28,29 +28,37 @@
 html, body {
     height: 100%;
 }
+.input-group-append .btn {
+    margin-left: 1px !important;
+}
+#count {
+    max-width: 140px;
+}
+#timeout {
+    max-width: 155px;
+}
 </style>
-    <div class="container ping-console">
+    <div class="container ping-console pt-3">
         <div class="form-row">
             <div class="form-group col-lg-12">
-                <label for="host">Host:</label>
                 <div class="input-group">
-                        <input class="form-control" id="host" autocomplete="off" spellcheck="off" value="8.8.8.8">
-                        <input class="form-control" id="count" autocomplete="off" spellcheck="off" placeholder="Ping count 4" style="max-width:140px">
-                        <input class="form-control" id="timeout" autocomplete="off" spellcheck="off" placeholder="Timeout 5000ms" style="max-width:155px">
-                        <div class="input-group-append" id="button-addon3">
-                            <button class="btn btn-outline-primary" type="button" id="start_button">Start</button>
-                            <button class="btn btn-outline-secondary" type="button" id="stop_button">Stop</button>
-                            <button class="btn btn-outline-secondary" type="button" id="clear_button">Clear</button>
-                        </div>
+                    <input class="form-control" id="host" autocomplete="off" spellcheck="off" value="8.8.8.8">
+                    <input class="form-control" id="count" autocomplete="off" spellcheck="off" placeholder="Ping count 4">
+                    <input class="form-control" id="timeout" autocomplete="off" spellcheck="off" placeholder="Timeout 5000ms">
+                    <div class="input-group-append">
+                        <button class="btn btn-primary" type="button" id="start_button">Start</button>
+                        <button class="btn btn-secondary" type="button" id="stop_button">Stop</button>
+                        <button class="btn btn-secondary" type="button" id="clear_button">Clear</button>
+                    </div>
                 </div>
             </div>
         </div>
-
         <div class="form-row ping-console">
             <div class="form-group col-lg-12 ping-console">
-                <textarea id="rxConsole" readonly></textarea>
+                <textarea id="ping_console" readonly></textarea>
             </div>
         </div>
+
         <!--%%FOOT-->
         <div class="row">
             <div class="col footer">&nbsp;</div>
@@ -59,7 +67,6 @@ html, body {
     </div>
     <!--%%JAVASCRIPT-->
 	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/jquery-3.3.1.min.js"></script>
-	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/popper.min.js"></script>
 	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/popper.min.js"></script>
 	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/bootstrap.min.js"></script>
 	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/js.cookie.min.js"></script>

@@ -4,7 +4,7 @@
 
 var http2serialPlugin = {
 
-    console: $("#rxConsole"),
+    console: $("#serial_console"),
     input: $("#command-input"),
     sendButton: $('#sendbutton'),
 

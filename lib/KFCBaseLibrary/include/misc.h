@@ -101,14 +101,19 @@ String WiFi_disconnect_reason(WiFiDisconnectReason reason);
         dst = buffer; \
     }
 
-#define MAC2STRING_LEN                          18
+size_t _printMacAddress(const uint8_t *mac, Print &output, char separator = ':');
 
-// not using printf
-String mac2String(const uint8_t *mac, char separator = ':');
+// nullptr safe
+inline size_t printMacAddress(const void *mac, Print &output, char separator = ':') {
+    return _printMacAddress(reinterpret_cast<const uint8_t *>(mac), output, separator);
+}
 
-// size >= 18 or >= 13 if separator = 0
-// returns "null" if mac is nullptr
-const char *mac2char_s(char *dst, size_t size, const uint8_t *mac, char separator = ':');
+// nullptr safe
+String _mac2String(const uint8_t *mac, char separator = ':');
+
+inline String mac2String(const void *mac, char separator = ':') {
+    return _mac2String(reinterpret_cast<const uint8_t *>(mac), separator);
+}
 
 #define INET_NTOA_LEN                           16
 
@@ -687,6 +692,7 @@ inline uint32_t createIPv4Address(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
 
 #define CREATE_ENUM_BITFIELD_SIZE(name, size, enum_type, underlying_type, underlying_type_name) \
     underlying_type name: size; \
+    static constexpr size_t kBitCountFor_##name = size; \
     static void set_enum_##name(Type &obj, enum_type value) { \
         obj.name = static_cast<underlying_type>(value); \
     } \
@@ -708,6 +714,7 @@ inline uint32_t createIPv4Address(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
 
 #define CREATE_BITFIELD_TYPE(name, size, type, prefix) \
     type name: size; \
+    static constexpr size_t kBitCountFor_##name = size; \
     static void set_##prefix##_##name(Type &obj, type value) { \
         obj.name = value; \
     } \

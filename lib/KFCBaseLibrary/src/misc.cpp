@@ -669,31 +669,19 @@ size_t hex2bin(void *buf, size_t length, const char *str)
     return ptr - reinterpret_cast<uint8_t *>(buf);
 }
 
-const char *mac2char_s(char *dst, size_t size, const uint8_t *mac, char separator)
+size_t _printMacAddress(const uint8_t *mac, Print &output, char separator)
 {
-    constexpr uint8_t len = 6;
     if (!mac) {
-        strncpy_P(dst, SPGM(null), size);
-        return dst;
+        return 0;
     }
-    int8_t count = len;
-    char *ptr = dst;
-    while(count-- && size > 1) {
-        snprintf_P(ptr, 3, PSTR("%02x"), *mac);
-        size -= 2;
-        if (count && separator && size--) {
-            *ptr++ = separator;
-        }
-        mac++;
-    }
-    *ptr = 0;
-    return dst;
+    return output.printf_P(PSTR("%02x%c%02x%c%02x%c%02x%c%02x%c%02x"), mac[0], separator, mac[1], separator, mac[2], separator, mac[3], separator, mac[4], separator, mac[5]);
 }
 
-String mac2String(const uint8_t *mac, char separator)
+String _mac2String(const uint8_t *mac, char separator)
 {
-    char buf[MAC2STRING_LEN];
-    return mac2char_s(buf, sizeof(buf), mac, separator);
+    PrintString str;
+    printMacAddress(mac, str, separator);
+    return str;
 }
 
 String inet_ntoString(uint32_t ip)

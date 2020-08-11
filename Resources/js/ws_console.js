@@ -37,13 +37,16 @@ WS_Console.prototype.console_log = function(message, prefix) {
     dbg_console.called('console_log', arguments);
     if (this.consoleId) {
         var consolePanel = document.getElementById(this.consoleId);
+        var scrollPos = consolePanel.scrollHeight - consolePanel.scrollTop - $(consolePanel).innerHeight();
 
-        var pos;
-        while (pos = message.indexOf('\033[2J') != -1) {
-            message = message.substr(pos, 4);
-            consolePanel.value = "";
+        if (message.indexOf('\033') != -1) {
+            var pos;
+            while (pos = message.indexOf('\033[2J') != -1) {
+                message = message.substr(pos, 4);
+                consolePanel.value = "";
+            }
+            message.replace(/\\033\[\d(;\d)?H/g, '');
         }
-        message.replace(/\\033\[\d(;\d)?H/g, '');
 
         if (prefix) {
             if (consolePanel.value.endsWith(message + "\n") && (pos = consolePanel.value.lastIndexOf("\n", consolePanel.value.length - message.length)) != -1) {
@@ -55,14 +58,17 @@ WS_Console.prototype.console_log = function(message, prefix) {
         } else {
             consolePanel.value += message + "\n";
         }
-        consolePanel.scrollTop = consolePanel.scrollHeight;
+        // disable auto scroll if the user scrolled 50 pixel up or more
+        if (scrollPos <= 50) {
+            consolePanel.scrollTop = consolePanel.scrollHeight;
+        }
     }
 }
 
 WS_Console.prototype.console_clear = function() {
     if (this.consoleId) {
         var consolePanel = document.getElementById(this.consoleId);
-        consolePanel.value = "";
+        consolePanel.value = '';
     }
 }
 

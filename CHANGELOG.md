@@ -29,6 +29,7 @@
 - 64KB flash storage (R/W) dedicated for the firmware
 - Clearing EspSaveCrash EEPROM during factory reset
 - Device title is being used as name for MQTT auto discovery
+- Ping monitor improvements
 
 ## Version 0.0.3
 

@@ -59,6 +59,7 @@ $(function() {
 
         function start_ping(host) {
             clear_close_timer();
+            ping_console.scrollTop(ping_console[0].scrollHeight);
             var host = $('#host').val().trim();
             var count = $('#count').val() * 1;
             var timeout = $('#timeout').val() * 1;

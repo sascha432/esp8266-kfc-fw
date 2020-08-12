@@ -14,52 +14,15 @@
 #include <debug_helper_disable.h>
 #endif
 
-AtModeArgs::AtModeArgs(Stream &output) : _output(output) //, _argsArray(nullptr)
+AtModeArgs::AtModeArgs(Stream &output) : _output(output)
 {
     clear();
 }
-
-// void AtModeArgs::_createArgs()
-// {
-//     uint16_t numItems = _args.size() + 1;
-// #if AT_MODE_MAX_ARGUMENTS
-//     if (AT_MODE_MAX_ARGUMENTS > numItems) {
-//         numItems = AT_MODE_MAX_ARGUMENTS;
-//     }
-// #endif
-//     uint8_t argc = 0;
-//     _argsArray = (char **)calloc(numItems, sizeof(char *));
-//     if (_argsArray) {
-//         for(auto arg: _args) {
-// #if 0
-//             _argsArray[argc++] = strdup((const char *)arg);
-// #else
-//             _argsArray[argc++] = (char *)arg;
-// #endif
-//         }
-//     }
-// }
-
-// void AtModeArgs::_freeArgs()
-// {
-//     if (_argsArray) {
-// #if 0
-//         auto ptr = _argsArray;
-//         while(*ptr) {
-//             free((void *)(*ptr));
-//             ptr++;
-//         }
-// #endif
-//         free(_argsArray);
-//         _argsArray = nullptr;
-//     }
-// }
 
 void AtModeArgs::clear()
 {
     _queryMode = false;
     _args.clear();
-    // _freeArgs();
 }
 
 void AtModeArgs::setQueryMode(bool mode)
@@ -143,7 +106,7 @@ uint32_t AtModeArgs::toMillis(uint16_t num, uint32_t minTime, uint32_t maxTime, 
     auto arg = get(num);
     if (!arg) {
         __LDBG_printf("toMillis(): arg=%u does not exist", num);
-        return defaultValue;
+        return std::max(minTime, std::min(maxTime, defaultValue));
     }
 
     char *endPtr = nullptr;
@@ -175,7 +138,7 @@ uint32_t AtModeArgs::toMillis(uint16_t num, uint32_t minTime, uint32_t maxTime, 
     result = std::min(maxTime, result);
     if (result < minTime) {
         __LDBG_printf("toMillis(): arg=%s < minTime=%u", arg, minTime);
-        return defaultValue;
+        return std::max(minTime, std::min(maxTime, defaultValue));
     }
     __LDBG_printf("toMillis(): arg=%s converted to %u", arg, result);
     return result;

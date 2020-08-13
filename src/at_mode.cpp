@@ -7,10 +7,12 @@
 #include <Arduino_compat.h>
 #include <KFCSyslog.h>
 #include <ProgmemStream.h>
+#include <ReadADC.h>
 #include <EventScheduler.h>
 #include <EventTimer.h>
 #include <LoopFunctions.h>
 #include <WiFiCallbacks.h>
+#include <MicrosTimer.h>
 #include <StreamString.h>
 #include <Cat.h>
 #include <vector>
@@ -38,6 +40,58 @@
 #include <debug_helper_enable.h>
 #else
 #include <debug_helper_disable.h>
+#endif
+
+#if defined(ESP8266) && 0
+
+typedef struct {
+  uint32_t nextServiceCycle;   // ESP cycle timer when a transition required
+  uint32_t expiryCycle;        // For time-limited waveform, the cycle when this waveform must stop
+  uint32_t nextTimeHighCycles; // Copy over low->high to keep smooth waveform
+  uint32_t nextTimeLowCycles;  // Copy over high->low to keep smooth waveform
+} Waveform;
+
+extern volatile uint32_t *__waveForm_states[4];
+// volatile uint32_t *__waveForm_states[4] = { &waveformState, &waveformEnabled, &waveformToEnable, &waveformToDisable };
+
+extern const Waveform (&__waveForm_waveform)[17];
+// const Waveform (&__waveForm_waveform)[17] = waveform;
+
+extern bool &__waveForm_timerRunning;
+// bool &__waveForm_timerRunning = timerRunning;
+
+
+String bitStr(uint32_t value, int bits)
+{
+    String tmp(value, 2);
+    int diff = bits - (int)tmp.length();
+    if (diff) {
+        if (diff < 0) {
+            tmp.remove(0, -diff);
+        }
+        else {
+            char buf[diff + 1];
+            memset(buf, '0', diff);
+            buf[diff] = 0;
+            tmp.reserve(bits);
+            tmp = buf + tmp;
+        }
+    }
+    return tmp;
+}
+
+void print_wave_form(Print &output)
+{
+    output.printf_P(PSTR("waveForm timerRunning=%u\n"), __waveForm_timerRunning);
+    output.printf_P(PSTR("waveformState=%s waveformEnabled=%s waveformToEnable=%s waveformToDisable=%s\n"),
+        bitStr(*__waveForm_states[0], 17).c_str(), bitStr(*__waveForm_states[1], 17).c_str(), bitStr(*__waveForm_states[2], 17).c_str(), bitStr(*__waveForm_states[3], 17).c_str()
+    );
+    for(int i = 0; i < 17; i++) {
+        auto &wf = __waveForm_waveform[i];
+        output.printf_P(PSTR("%02u: nextServiceCycle=%u expiryCycle=%u nextTimeHighCycles=%u nextTimeLowCycles=%u\n"), i, wf.nextServiceCycle, wf.expiryCycle, wf.nextTimeHighCycles, wf.nextTimeLowCycles);
+    }
+}
+
 #endif
 
 using KFCConfigurationClasses::System;
@@ -268,8 +322,8 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HEAP, "HEAP", "[interval in seconds|0=disa
 #endif
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RSSI, "RSSI", "[interval in seconds|0=disable]", "Display WiFi RSSI");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(GPIO, "GPIO", "[interval in seconds|0=disable]", "Display GPIO states");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PWM, "PWM", "<pin>,<level=0-1023/off>[,<frequency=1000Hz>]", "PWM output on PIN");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(ADC, "ADC", "[interval in seconds|0=disable]", "Display ADC voltage");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PWM, "PWM", "<pin>,<input|level=0-" __STRINGIFY(PWMRANGE) ">[,<frequency=100-40000Hz>[,<duration/ms>]]", "PWM output on PIN, min./max. level set it to LOW/HIGH");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(ADC, "ADC", "<off|display interval=1s>[,<period=1s>,<multiplier=1.0>,<unit=mV>,<read delay=5000us>]", "Read the ADC and display values");
 #if defined(ESP8266)
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(CPU, "CPU", "<80|160>", "Set CPU speed", "Display CPU speed");
 #endif
@@ -666,13 +720,18 @@ void at_mode_dump_fs_info(Stream &output)
     );
 }
 
+void at_mode_print_help(Stream &output)
+{
+    output.println("AT? or AT+HELP=<command|text to find> for help");
+}
+
 void at_mode_print_invalid_command(Stream &output)
 {
     output.print(F("ERROR - Invalid command. "));
     if (config.isSafeMode()) {
         output.print(F(""));
     }
-    output.println(F("AT? for help"));
+    at_mode_print_help(output);
 }
 
 void at_mode_print_invalid_arguments(Stream &output, uint16_t num, uint16_t min, uint16_t max)
@@ -681,15 +740,16 @@ void at_mode_print_invalid_arguments(Stream &output, uint16_t num, uint16_t min,
     output.print(F("ERROR - "));
     if (min != UNSET) {
         if (min == max || max == UNSET) {
-            output.printf_P(PSTR("Expected %u argument(s), got %u. AT? for help\n"), min, num);
+            output.printf_P(PSTR("Expected %u argument(s), got %u\n"), min, num);
         }
         else {
-            output.printf_P(PSTR("Expected %u to %u argument(s), got %u. AT? for help\n"), min, max, num);
+            output.printf_P(PSTR("Expected %u to %u argument(s), got %u\n"), min, max, num);
         }
     }
     else {
-        output.println(F("Invalid arguments. AT? for help"));
+        output.println(F("Invalid arguments"));
     }
+    at_mode_print_help(output);
 }
 
 void at_mode_print_prefix(Stream &output, const __FlashStringHelper *command)
@@ -734,6 +794,107 @@ void at_mode_list_ets_timers(Print &output)
 }
 
 #endif
+
+void at_mode_adc_loop();
+
+class AtModeADC {
+public:
+    AtModeADC() : _adcIntegralMultiplier(0),  _adc(ADCManager::getInstance()) {
+    }
+    ~AtModeADC() {
+        _displayTimer.remove();
+        if (_adcIntegralMultiplier) {
+            LoopFunctions::remove(at_mode_adc_loop);
+        }
+    }
+
+    // useable values for integrating the average value is 1-100 (averagePeriodMillis)
+    bool init(uint16_t averagePeriodMillis, float convertMultiplier, const String &unit, uint16_t readDelay = 5000) {
+        _displayTimer.remove();
+        if (!averagePeriodMillis) {
+            return false;
+        }
+        _unit = unit;
+        _convMultiplier = convertMultiplier;
+        _adcIntegralMultiplier = 1.0 / (1000.0 / averagePeriodMillis);
+        _adcIntegral = 0;
+        _adcIntegral2 = 0;
+        _timerSum = 0;
+        _timerCount = 0;
+        _lastUpdate = 0;
+        _readDelay = readDelay;
+        LoopFunctions::add(at_mode_adc_loop);
+        _timer.start();
+        return true;
+    }
+
+    String getConvertedString() const {
+        int prec = 0;
+        prec = (_convMultiplier >= 10) ? 0 : ((_convMultiplier < 0.1) ? 6 : (_convMultiplier < 1) ? 3 : 1);
+        return PrintString(F("%.*f%s"), prec, _adcIntegral * _convMultiplier, _unit.c_str());
+    }
+
+    uint16_t getValue() const {
+        return round(_adcIntegral);
+    }
+
+    void printInfo(Print &output) {
+        output.printf_P("value=%.1f value2=%.1f time=%uus (avg) samples=%u multiplier=%.6f\n", _adcIntegral, _adcIntegral2, _timerSum / _timerCount, _timerCount, _adcIntegralMultiplier);
+        _adcIntegral2 = 0;
+        _timerSum = 0;
+        _timerCount = 0;
+    }
+
+    void loop() {
+        auto micros = _timer.getTime();
+        if (micros <= _readDelay) {
+            return; // wait for the next loop
+        }
+        uint32_t tmp;
+        auto reading = _adc.readValue(tmp);
+        if (tmp == _lastUpdate) {
+            return;
+        }
+        _lastUpdate = tmp;
+
+        _timer.start();
+        float count = micros * _adcIntegralMultiplier;
+        _adcIntegral = ((count * _adcIntegral) + (double)reading) / (count + 1.0);
+        _adcIntegral2 = ((1.0 * _adcIntegral2) + (double)reading) / 2.0;
+        _timerSum += micros;
+        _timerCount++;
+        if (_timerSum > 30 * 1000 * 1000) {
+            _timerSum /= 2;
+            _timerCount /= 2;
+        }
+    }
+
+    EventScheduler::Timer &getTimer() {
+        return _displayTimer;
+    }
+
+private:
+    String _unit;
+    float _convMultiplier;
+    float _adcIntegralMultiplier;
+    float _adcIntegral;
+    float _adcIntegral2;
+    MicrosTimer _timer;
+    uint32_t _timerSum;
+    uint32_t _timerCount;
+    uint32_t _lastUpdate;
+    uint16_t _readDelay;
+    EventScheduler::Timer _displayTimer;
+    ADCManager &_adc;
+};
+
+AtModeADC *atModeADC = nullptr;
+
+void at_mode_adc_loop() {
+    if (atModeADC) {
+        atModeADC->loop();
+    }
+}
 
 void at_mode_serial_handle_event(String &commandString)
 {
@@ -1216,41 +1377,101 @@ void at_mode_serial_handle_event(String &commandString)
                 }
             }
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(PWM))) {
+/*
+                if (args.isQueryMode()) {
+                    print_wave_form(Serial);
+                }
+                else
+*/
                 if (args.requireArgs(2, 3)) {
                     auto pin = (uint8_t)args.toInt(0);
-                    if (args.equalsIgnoreCase(1, F("off"))) {
+                    if (args.equalsIgnoreCase(1, F("input"))) {
+                        digitalWrite(pin, LOW);
                         pinMode(pin, INPUT);
-                        digitalWrite(pin, 0);
                         args.printf_P(PSTR("set pin=%u to INPUT"), pin);
                     }
                     else {
-                        auto level = (uint16_t)args.toInt(1, 0);
-                        auto freq = (uint16_t)args.toInt(2, 1000);
+                        auto level = (uint16_t)args.toIntMinMax(1, 0, PWMRANGE, 0);
+                        if (level == 0) {
+                            if (args.isAnyMatchIgnoreCase(1, F("h|hi|high"))) {
+                                level = PWMRANGE;
+                            }
+                            else if (args.isAnyMatchIgnoreCase(1, F("l|lo|low"))) {
+                                level = 0;
+                            }
+                        }
+                        auto freq = (uint16_t)args.toIntMinMax(2, 100, 40000, 1000);
+                        auto duration = (uint16_t)args.toMillis(3);
+                        if (duration > 0 && duration < 10) {
+                            duration = 10;
+                        }
                         pinMode(pin, OUTPUT);
-#if ESP266
+#if defined(ESP8266)
                         analogWriteFreq(freq);
+                        analogWriteRange(PWMRANGE);
+#else
+                        freq = 0;
 #endif
-                        analogWrite(pin, level * 1.02); // this might be different, just tested with a single ESP12F
-                        double dc = (1000000 / (double)freq) * (level / 1024.0);
-                        args.printf_P(PSTR("set pin=%u to OUTPUT, level=%u (%.2fµs), f=%uHz"), pin, level, dc, freq);
+                        auto type = PSTR("digitalWrite");
+                        if (level == 0)  {
+                            digitalWrite(pin, LOW);
+                            freq = 0;
+                        }
+                        else if (level >= PWMRANGE - 1) {
+                            digitalWrite(pin, HIGH);
+                            level = 1;
+                            freq = 0;
+                        }
+                        else {
+                            type = PSTR("analogWrite");
+                            analogWrite(pin, level);
+                        }
+                        float period = (1000000 / (float)freq);
+                        float dc = period * (level / (float)PWMRANGE);
+                        args.printf_P(PSTR("%s(%u, %u) (%.2f/%.2fµs), f=%uHz"), type, pin, level, dc, period, freq);
+                        if (duration) {
+                            args.printf_P(PSTR("setting pin %u to low in %ums"), pin, duration);
+                            Scheduler.addTimer(duration, false, [pin](EventScheduler::TimerPtr) {
+                                digitalWrite(pin, LOW);
+                            });
+                        }
                     }
                 }
             }
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(ADC))) {
-                static EventScheduler::Timer adcTimer;
                 if (args.requireArgs(1)) {
-                    if (args.equalsIgnoreCase(1, FSPGM(off))) {
+                    if (args.isAnyMatchIgnoreCase(0, F("0|off|stop"))) {
                         args.print(F("ADC display off"));
-                        adcTimer.remove();
+                        if (atModeADC) {
+                            delete atModeADC;
+                            atModeADC = nullptr;
+                        }
                     }
                     else {
                         auto interval = args.toMillis(0, 100, ~0, 1000, String('s'));
-                        args.printf_P(PSTR("ADC interval %ums"), interval);
-                        auto &stream = args.getStream();
-                        adcTimer.add(interval, true, [&stream](EventScheduler::TimerPtr) {
-                            auto value = analogRead(A0);
-                            stream.printf_P(PSTR("+ADC: %u - %.3fV\n"), value, value / 1024.0);
-                        });
+                        auto period = args.toIntMinMax(1, 1, 1000, 10);
+                        auto multiplier = args.toFloatMinMax(2, 0.1f, 100000.0f, 1000.0f);
+                        auto unit = args.toString(3, String('V'));
+                        auto readDelay = args.toIntMinMax(4, 0U, ~0U, 1250U);
+
+                        if (!atModeADC) {
+                            atModeADC = new AtModeADC();
+                        }
+                        if (atModeADC->init(period, multiplier, unit, readDelay)) {
+
+                            args.printf_P(PSTR("ADC display interval %ums"), interval);
+                            auto &stream = args.getStream();
+                            atModeADC->getTimer().add(interval, true, [&stream](EventScheduler::TimerPtr) {
+                                stream.printf_P(PSTR("+ADC: %u (%umV) converted=%s "), atModeADC->getValue(), atModeADC->getValue(), atModeADC->getConvertedString().c_str());
+                                atModeADC->printInfo(stream);
+                            });
+                        }
+                        else {
+                            args.print(F("Failed to initialize ADC"));
+                            delete atModeADC;
+                            atModeADC = nullptr;
+                        }
+
                     }
                 }
             }

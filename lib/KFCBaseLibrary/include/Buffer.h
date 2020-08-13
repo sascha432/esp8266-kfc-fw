@@ -152,7 +152,7 @@ public:
 
     void remove(size_t index, size_t count);
     // reduce size if more than minFree bytes are available
-    void removeAndShrink(size_t index, size_t count, size_t minFree = 64);
+    void removeAndShrink(size_t index, size_t count, size_t minFree = 32);
 
     inline Buffer &operator+=(char data) {
         write(data);

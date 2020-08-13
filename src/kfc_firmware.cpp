@@ -301,7 +301,7 @@ void setup()
         }
 
         auto flags = System::Flags::getConfig();
-        if ((flags.is_softap_enabled || flags.is_softap_standby_mode_enabled) && !strcmp(Network::WiFi::getSoftApPassword(), SPGM(defaultPassword))) {
+        if ((flags.is_softap_enabled || flags.is_softap_standby_mode_enabled) && !strcmp_P(Network::WiFi::getSoftApPassword(), SPGM(defaultPassword))) {
             Logger_warning(F("SoftAP is using default password and will be disabled in 15 minutes..."));
             Scheduler.addTimer(15U * 60U * 1000U, false, [](EventScheduler::TimerPtr timer) {
                 if (WiFi.getMode() & WIFI_AP) {

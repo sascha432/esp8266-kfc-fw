@@ -146,8 +146,12 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
     form.addFormUI(F("Shunt Multiplexer Pin"), FormUI::Type::INTEGER, FormUI::PlaceHolder(IOT_BLINDS_CTRL_RSSEL_PIN), FormUI::UI::createCheckBoxButton(multiplexer, F("HIGH State For Channel 0")));
 
     form.add(F("adca"), _H_W_STRUCT_VALUE(cfg, adc_divider));
-    form.addFormUI(F("ADC Averaging"), FormUI::Type::INTEGER, FormUI::PlaceHolder(40), FormUI::FPSuffix(F("microseconds")));
-    form.addValidator(FormRangeValidator(10, 1000));
+    form.addFormUI(F("ADC Averaging"), FormUI::Type::INTEGER, FormUI::PlaceHolder(40), FormUI::FPSuffix(F("period in milliseconds")));
+    form.addValidator(FormRangeValidator(1, 1000));
+
+    form.add(F("pwm"), _H_W_STRUCT_VALUE(cfg, pwm_frequency));
+    form.addFormUI(F("PWM Frequency"), FormUI::Type::INTEGER, FormUI::PlaceHolder(17500), FormUI::FPSuffix(F("Hz")));
+    form.addValidator(FormRangeValidator(1000, 40000));
 
     pinsGroup.end();
 

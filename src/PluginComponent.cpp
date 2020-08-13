@@ -13,6 +13,7 @@
 #include <Form.h>
 #include <misc.h>
 #include <kfc_fw_config.h>
+#include <ReadADC.h>
 
 #if DEBUG_PLUGINS
 #include "debug_helper_enable.h"
@@ -113,6 +114,8 @@ void PluginComponent::invokeReconfigureNow(const String &source)
 //             }
 //         }
 //     }
+
+    ADCManager::terminate(true);
 
     reconfigure(source);
     for(auto plugin: plugins) {

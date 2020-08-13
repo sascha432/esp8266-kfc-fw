@@ -1268,6 +1268,7 @@ namespace KFCConfigurationClasses {
                 uint8_t pins[5];
                 CREATE_ENUM_BITFIELD(multiplexer, MultiplexerType);
                 uint16_t adc_divider;
+                uint16_t pwm_frequency;
 
                 template<typename Archive>
                 void serialize(Archive & ar, kfc::serialization::version version) {

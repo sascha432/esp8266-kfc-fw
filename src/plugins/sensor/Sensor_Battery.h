@@ -81,7 +81,6 @@ private:
     String _topic;
     Plugins::Sensor::ConfigStructType::BatteryConfig_t _config;
     EventScheduler::Timer _timer;
-    ReadADC _adc;
 };
 
 #endif

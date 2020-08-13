@@ -72,7 +72,6 @@ public:
         __LDBG_printf("data=%s", printable_string(data, len, 32).c_str());
     }
     virtual void onText(uint8_t *data, size_t len) {
-        // debug_println("WebSocket::onText()");
     }
     virtual void onBinary(uint8_t *data, size_t len) {
         // debug_println("WebSocket::onBinary()");

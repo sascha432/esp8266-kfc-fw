@@ -368,6 +368,38 @@ int strcasecmp_P_P(PGM_P str1, PGM_P str2)
     } while (true);
 }
 
+size_t str_replace(char *src, int from, int to, size_t maxLen)
+{
+    size_t counter = 0;
+    if (src) {
+        while(maxLen-- && *src) {
+            if (*src == from) {
+                *src = to;
+                counter++;
+            }
+            src++;
+        }
+    }
+    return counter;
+}
+
+size_t str_case_replace(char *src, int from, int to, size_t maxLen)
+{
+    size_t counter = 0;
+    if (src) {
+        from = tolower(from);
+        while(maxLen-- && *src) {
+            if (tolower(*src) == from) {
+                *src = to;
+                counter++;
+            }
+            src++;
+        }
+    }
+    return counter;
+}
+
+
 size_t String_rtrim(String &str)
 {
     size_t len = str.length();

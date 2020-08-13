@@ -313,6 +313,7 @@ void HttpHeaders::setHeadersCallback(SetCallback_t callback, bool doClear)
 void HttpHeaders::setAsyncWebServerResponseHeaders(AsyncWebServerResponse *response)
 {
     setHeadersCallback([response](const String &name, const String &header) {
+        // __DBG_printf("name=%s value=%s", __S(name), __S(header));
         response->addHeader(name, header);
     }, true);
 }

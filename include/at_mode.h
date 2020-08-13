@@ -255,7 +255,7 @@ public:
     template<class T>
     T toIntMinMax(uint16_t num, T min, T max, T defaultValue = 0) {
         if (!exists(num)) {
-            return min;
+            return std::max(min, std::min(max, defaultValue));
         }
         return std::max(min, std::min(max, (T)toLongLong(num, (long long)defaultValue)));
     }
@@ -268,7 +268,7 @@ public:
     template<class T>
     T toFloatMinMax(uint16_t num, T min, T max, T defaultValue = 0) {
         if (!exists(num)) {
-            return min;
+            return std::max(min, std::min(max, defaultValue));
         }
         return std::max(min, std::min(max, (T)toDouble(num, defaultValue)));
     }
@@ -302,10 +302,10 @@ public:
         return tolower(toChar(num, defaultValue));
     }
 
-    inline String toString(uint16_t num) const {
+    inline String toString(uint16_t num, const String &defaultStr = String()) const {
         auto str = get(num);
         if (!str) {
-            return String();
+            return defaultStr;
         }
         return str;
     }

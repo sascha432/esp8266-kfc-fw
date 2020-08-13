@@ -5,11 +5,13 @@
 #include <Arduino_compat.h>
 #include "clock.h"
 #include <MicrosTimer.h>
+#include <ReadADC.h>
 #include <LoopFunctions.h>
 #include <EventTimer.h>
 #include <KFCForms.h>
 #include <WebUISocket.h>
 #include <WebUIAlerts.h>
+#include <async_web_response.h>
 #include "blink_led_timer.h"
 #include "./plugins/mqtt/mqtt_client.h"
 #include "./plugins/ntp/ntp_plugin.h"
@@ -21,21 +23,12 @@
 #include <debug_helper_disable.h>
 #endif
 
-// number of measurements. 0=disable
-#ifndef IOT_CLOCK_DEBUG_ANIMATION_TIME
-#define IOT_CLOCK_DEBUG_ANIMATION_TIME                  50
-#endif
-
-#if IOT_CLOCK_DEBUG_ANIMATION_TIME
-#define __DBGTM(...) __VA_ARGS__
-#include <FixedCircularBuffer.h>
-static FixedCircularBuffer<uint16_t, IOT_CLOCK_DEBUG_ANIMATION_TIME> _anmationTime;
-static FixedCircularBuffer<uint16_t, IOT_CLOCK_DEBUG_ANIMATION_TIME> _animationRenderTime;
-static FixedCircularBuffer<uint16_t, IOT_CLOCK_DEBUG_ANIMATION_TIME> _displayTime;
-static FixedCircularBuffer<uint16_t, IOT_CLOCK_DEBUG_ANIMATION_TIME> _timerDiff;
-#else
-#define __DBGTM(...)
-#endif
+__DBGTM(
+    FixedCircularBuffer<uint16_t, IOT_CLOCK_DEBUG_ANIMATION_TIME> _anmationTime;
+    FixedCircularBuffer<uint16_t, IOT_CLOCK_DEBUG_ANIMATION_TIME> _animationRenderTime;
+    FixedCircularBuffer<uint16_t, IOT_CLOCK_DEBUG_ANIMATION_TIME> _displayTime;
+    FixedCircularBuffer<uint16_t, IOT_CLOCK_DEBUG_ANIMATION_TIME> _timerDiff;
+);
 
 #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
 #define IF_LIGHT_SENSOR(...) __VA_ARGS__
@@ -75,14 +68,14 @@ ClockPlugin::ClockPlugin() :
 #endif
     _savedBrightness(0),
     _color(0, 0, 0xff),
-    _updateTimer(0),
+    _lastUpdateTime(0),
     _time(0),
     _updateRate(1000),
     _isSyncing(true),
-    _schedulePublishState(false),
-    _displaySensorValue(false),
-    _forceUpdate(false),
+    _displaySensorValue(0),
     _tempProtection(ProtectionType::OFF),
+    _schedulePublishState(false),
+    _forceUpdate(false),
     IF_LIGHT_SENSOR(
         _autoBrightness(1023),
         _autoBrightnessValue(0),
@@ -92,7 +85,6 @@ ClockPlugin::ClockPlugin() :
     _animation(nullptr),
     _nextAnimation(nullptr)
 {
-
     size_t ofs = 0;
     auto ptr = _pixelOrder.data();
     static const char pixel_order[] PROGMEM = IOT_CLOCK_PIXEL_ORDER;
@@ -113,8 +105,7 @@ ClockPlugin::ClockPlugin() :
 void ClockPlugin::_adjustAutobrightness()
 {
     if (_autoBrightness != kAutoBrightnessOff) {
-        auto adc = _readLightSensor();
-        float value = adc / (float)_autoBrightness;
+        float value = _readLightSensor() / (float)_autoBrightness;
         if (value > 1) {
             value = 1;
         }
@@ -155,17 +146,7 @@ void ClockPlugin::_updateLightSensorWebUI()
 
 uint16_t ClockPlugin::_readLightSensor() const
 {
-    return analogRead(A0);
-}
-
-uint16_t ClockPlugin::_readLightSensor(uint8_t num, uint8_t delayMillis) const
-{
-    uint32_t value = analogRead(A0);
-    for(uint8_t i = 1; i < num; i++) {
-        delay(delayMillis);
-        value += analogRead(A0);
-    }
-    return value / num;
+    return ADCManager::getInstance().readValue();
 }
 
 uint16_t ClockPlugin::_getBrightness() const
@@ -261,7 +242,7 @@ void ClockPlugin::setup(SetupModeType mode)
                         message.printf_P(message1_P, temp, _config.protection.max_temperature);
                         WebUIAlerts_error(message);
                         _isSyncing = false;
-                        _displaySensorValue = false;
+                        _displaySensorValue = 0;
                         _startTempProtectionAnimation();
                         _tempProtection = ProtectionType::MAX;
                     }
@@ -540,9 +521,9 @@ void ClockPlugin::readConfig()
         _config.rainbow.multiplier = 1.23;
     }
 
-    _config.protection.max_temperature = std::max(kMinimumTemperatureThreshold, _config.protection.max_temperature);
-    _config.protection.temperature_50 = std::max(kMinimumTemperatureThreshold, _config.protection.temperature_50);
-    _config.protection.temperature_75 = std::max(kMinimumTemperatureThreshold, _config.protection.temperature_75);
+    _config.protection.max_temperature = std::max((uint8_t)kMinimumTemperatureThreshold, _config.protection.max_temperature);
+    _config.protection.temperature_50 = std::max((uint8_t)kMinimumTemperatureThreshold, _config.protection.temperature_50);
+    _config.protection.temperature_75 = std::max((uint8_t)kMinimumTemperatureThreshold, _config.protection.temperature_75);
 
     _tempProtection = ProtectionType::OFF;
     _color = Color(_config.solid_color.value);
@@ -659,8 +640,21 @@ void ClockPlugin::handleWebServer(AsyncWebServerRequest *request)
 {
     if (WebServerPlugin::getInstance().isAuthenticated(request) == true) {
         HttpHeaders httpHeaders(false);
+        auto response = new AsyncFillBufferCallbackResponse([](bool *async, bool fillBuffer, AsyncFillBufferCallbackResponse *response) {
+            if (*async && !fillBuffer) {
+                response->setContentType(FSPGM(mime_text_plain));
+                if (!ADCManager::getInstance().requestAverage(10, 25, [async, response](const ADCManager::ADCResult &result) {
+                    char buffer[16];
+                    snprintf_P(buffer, sizeof(buffer), PSTR("%u"), result.getValue());
+                    response->getBuffer().write(buffer);
+                    AsyncFillBufferCallbackResponse::finished(async, response);
+                })) {
+                    response->setCode(500);
+                    AsyncFillBufferCallbackResponse::finished(async, response);
+                }
+            }
+        });
         httpHeaders.addNoCache();
-        auto response = request->beginResponse(200, FSPGM(mime_text_plain), String(plugin._readLightSensor()));
         httpHeaders.setAsyncWebServerResponseHeaders(response);
         request->send(response);
     } else {
@@ -675,155 +669,6 @@ void ClockPlugin::_installWebHandlers()
 }
 
 #endif
-
-void ClockPlugin::_loop()
-{
-#if IOT_CLOCK_BUTTON_PIN
-    _button.update();
-#endif
-//     if (_isSyncing) {
-//         if (get_time_diff(_updateTimer, millis()) >= 100) {
-//             _updateTimer = millis();
-
-// #if IOT_CLOCK_PIXEL_SYNC_ANIMATION
-//             #error crashing
-
-//             // show syncing animation until the time is valid
-//             if (_pixelOrder) {
-//                 if (++_isSyncing > IOT_CLOCK_PIXEL_ORDER_LEN) {
-//                     _isSyncing = 1;
-//                 }
-//                 for(uint8_t i = 0; i < SevenSegmentDisplay::getNumDigits(); i++) {
-//                     _display.rotate(i, _isSyncing - 1, _color, _pixelOrder.data(), _pixelOrder.size());
-//                 }
-//             }
-//             else {
-//                 if (++_isSyncing > SevenSegmentPixel_DIGITS_NUM_PIXELS) {
-//                     _isSyncing = 1;
-//                 }
-//                 for(uint8_t i = 0; i < _display->numDigits(); i++) {
-//                     _display->rotate(i, _isSyncing - 1, _color, nullptr, 0);
-//                 }
-//             }
-// #endif
-//             _display.show();
-//         }
-//         return;
-//     }
-
-
-    if (_isSyncing) { // show 88:88:88 instead of the syncing animation
-        uint32_t ms = millis();
-        if (get_time_diff(_updateTimer, ms) >= _updateRate) {
-            _updateTimer = ms;
-        }
-
-        uint32_t color = _color;
-        _display.setMillis(ms);
-        _display.setDigit(0, 8, color);
-        _display.setDigit(1, 8, color);
-        _display.setDigit(2, 8, color);
-        _display.setDigit(3, 8, color);
-#if IOT_CLOCK_NUM_DIGITS == 6
-        _display.setDigit(4, 8, color);
-        _display.setDigit(5, 8, color);
-#endif
-        _display.setColon(0, SevenSegmentDisplay::BOTH, color);
-#if IOT_CLOCK_NUM_COLONS == 2
-        _display.setColon(1, SevenSegmentDisplay::BOTH, color);
-#endif
-        _display.show();
-        return;
-    }
-#if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
-    if (_displaySensorValue) {
-        uint32_t ms = millis();
-        if (get_time_diff(_updateTimer, ms) >= _updateRate) {
-            _updateTimer = ms;
-            _forceUpdate = false;
-
-            auto str = PrintString(F("%u"), _readLightSensor(10, 25)); // read 10x with a 25ms delay = 250ms
-            while(str.length() < IOT_CLOCK_NUM_DIGITS) { // right align
-                str = '#' + str;
-            }
-            // disable any animation, set color to green and brightness to 50%
-            SevenSegmentDisplay::AnimationCallback callback;
-            std::swap(callback, _display.getCallback());
-            _display.setCallback(nullptr);
-            _display.setBrightness(SevenSegmentDisplay::kMaxBrightness / 2);
-            _display.print(str, Color(0, 0xff, 0));
-            _display.show();
-            _display.setBrightness(_brightness);
-            std::swap(callback, _display.getCallback());
-        }
-        return;
-    }
-#endif
-
-    __DBGTM(
-        MicrosTimer mt;
-        uint32_t diff;
-    );
-    auto now = time(nullptr);
-    if ((__DBGTM(diff = )get_time_diff(_updateTimer, millis())) >= _updateRate) {
-        _updateTimer = millis();
-
-        __DBGTM(_timerDiff.push_back(diff));
-
-        if (_animation) {
-            __DBGTM(mt.start());
-            _animation->loop(now);
-            __DBGTM(_anmationTime.push_back(mt.getTime()));
-            if (_animation->finished()) {
-                __LDBG_printf("animation loop has finished");
-                setAnimation(AnimationType::NEXT);
-            }
-        }
-        _forceUpdate = true;
-    }
-    if (_forceUpdate || _time != now) {
-        _time = now;
-        _forceUpdate = false;
-
-        uint8_t displayColon = true;
-        // does the animation allow blinking and is it set?
-        if ((!_animation || _animation->doBlinkColon()) && (_config.blink_colon_speed >= kMinBlinkColonSpeed)) {
-            // set on/off depending on the update rate
-            displayColon = ((_updateTimer / _config.blink_colon_speed) % 2 == 0);
-        }
-
-        uint32_t color = _color;
-        auto tm = localtime(&now);
-        uint8_t hour = tm->tm_hour;
-        if (!_config.time_format_24h) {
-            hour = ((hour + 23) % 12) + 1;
-        }
-
-        __DBGTM(mt.start());
-        _display.setMillis(millis());
-        _display.setDigit(0, hour / 10, color);
-        _display.setDigit(1, hour % 10, color);
-        _display.setDigit(2, tm->tm_min / 10, color);
-        _display.setDigit(3, tm->tm_min % 10, color);
-#if IOT_CLOCK_NUM_DIGITS == 6
-        _display.setDigit(4, tm->tm_sec / 10, color);
-        _display.setDigit(5, tm->tm_sec % 10, color);
-#endif
-
-        if (!displayColon) {
-            color = 0;
-        }
-        _display.setColon(0, SevenSegmentDisplay::BOTH, color);
-#if IOT_CLOCK_NUM_COLONS == 2
-        _display.setColon(1, SevenSegmentDisplay::BOTH, color);
-#endif
-        __DBGTM(_animationRenderTime.push_back(mt.getTime()));
-
-        __DBGTM(mt.start());
-        _display.show();
-        __DBGTM(_displayTime.push_back(mt.getTime()));
-    }
-}
 
 static const char pgm_digit_order[] PROGMEM = IOT_CLOCK_DIGIT_ORDER;
 static const char pgm_segment_order[] PROGMEM = IOT_CLOCK_SEGMENT_ORDER;
@@ -957,266 +802,3 @@ bool ClockPlugin::_resetAlarm()
 
 #endif
 
-#if AT_MODE_SUPPORTED
-
-#include "at_mode.h"
-
-#undef PROGMEM_AT_MODE_HELP_COMMAND_PREFIX
-#define PROGMEM_AT_MODE_HELP_COMMAND_PREFIX "CLOCK"
-
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKPX, "PX", "<led>,<r>,<g>,<b>", "Set level of a single pixel");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKP, "P", "<00[:.]00[:.]00>", "Display strings");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKC, "C", "<r>,<g>,<b>", "Set color");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CLOCKTS, "TS", "<num>,<segment>", "Set segment for digit <num>");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF(CLOCKA, "A", "<num>[,<arguments>,...]", "Set animation", "Display available animations");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(CLOCKD, "D", "Dump pixel addresses and other information");
-
-void ClockPlugin::atModeHelpGenerator()
-{
-    auto name = getName_P();
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKPX), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKP), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKC), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKTS), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKA), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKD), name);
-}
-
-bool ClockPlugin::atModeHandler(AtModeArgs &args)
-{
-    if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKTS))) {
-        if (args.size() == 2) {
-            enable(false);
-            uint8_t digit = args.toInt(0);
-            uint8_t segment = args.toInt(1);
-            args.printf_P(PSTR("digit=%u segment=%c color=#%06x"), digit, _display.getSegmentChar(segment), _color.get());
-            _display.setSegment(digit, segment, _color);
-            _display.show();
-        }
-        return true;
-    }
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKP))) {
-        enable(false);
-        if (args.size() < 1) {
-            args.print(F("clear"));
-            _display.clear();
-            _display.show();
-        }
-        else {
-            auto text = args.get(0);
-            args.printf_P(PSTR("'%s'"), text);
-            _display.print(text, _color);
-            _display.show();
-        }
-        return true;
-    }
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKA))) {
-        if (args.isQueryMode()) {
-            args.printf_P(PSTR("%u - rainbow animation (+CLOCKA=%u,<speed>,<multiplier>,<r>,<g>,<b-factor>)"), AnimationType::RAINBOW, AnimationType::RAINBOW);
-            args.printf_P(PSTR("%u - flashing"), AnimationType::FLASHING);
-            args.printf_P(PSTR("%u - fade to color (+CLOCKA=%u,<r>,<g>,<b>)"), AnimationType::FADING, AnimationType::FADING);
-            args.printf_P(PSTR("%u - blink colon speed"), (int)AnimationType::MAX);
-            args.print(F("100 = disable clock"));
-            args.print(F("101 = enable clock"));
-            args.print(F("102 = all pixels on"));
-            args.print(F("103 = test pixel animation order"));
-            args.print(F("200 = display ambient light sensor value (+CLOCKA=200,<0|1>)"));
-            args.print(F("300 = temperature protection animation"));
-        }
-        else if (args.size() >= 1) {
-            int value = args.toInt(0);
-            if (value == (int)AnimationType::MAX) {
-                setBlinkColon(args.toIntMinMax(1, 50U, 0xffffU, 1000U));
-            }
-            else if (value == 100) {
-                enable(false);
-            }
-            else if (value == 101) {
-                enable(true);
-            }
-            else if (value == 102) {
-                enable(false);
-                _display.setColor(0xffffff);
-            }
-            else if (value == 103) {
-                int interval = args.toInt(1, 500);
-                enable(false);
-                size_t num = 0;
-                Scheduler.addTimer(interval, true, [num, this](EventScheduler::TimerPtr timer) mutable {
-                    __LDBG_printf("pixel=%u", num);
-                    if (num == _pixelOrder.size()) {
-                        _display.clear();
-                        _display.show();
-                        timer->detach();
-                    }
-                    else {
-                        if (num) {
-                            _display.setPixelColor(_pixelOrder[num - 1], 0);
-                        }
-                        _display.setColor(_pixelOrder[num++], 0x22);
-                    }
-                });
-            }
-            else if (value == 200) {
-#if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
-                if (args.isTrue(1)) {
-                    _autoBrightness = kAutoBrightnessOff;
-                    _displaySensorValue = true;
-                    _display.clear();
-                    _display.show();
-                    setUpdateRate(500);
-                    args.print(F("displaying sensor value"));
-                }
-                else {
-                    _displaySensorValue = false;
-                    _autoBrightness = _config.auto_brightness;
-                    if (_animation) {
-                        setUpdateRate(_animation->getUpdateRate());
-                    }
-                    else {
-                        setAnimation(AnimationType::NONE);
-                    }
-                    args.print(F("displaying time"));
-                }
-#else
-                args.print(F("sensor not supported"));
-#endif
-            }
-            else if (value == 300) {
-                _startTempProtectionAnimation();
-            }
-            else if (value == 400) {
-                _updateRate = args.toInt(1);
-            }
-            else if (value >= 0 && value < (int)AnimationType::MAX) {
-                switch(static_cast<AnimationType>(value)) {
-                    case AnimationType::RAINBOW:
-                        _setAnimation(new Clock::RainbowAnimation(*this,
-                            args.toIntMinMax(1, ClockPlugin::kMinRainbowSpeed, (uint16_t)0xfffe, _config.rainbow.speed),
-                            args.toFloatMinMax(2, 0.1f, 100.0f, _config.rainbow.multiplier),
-                            Color((uint8_t)args.toInt(3, _config.rainbow.factor.red), (uint8_t)args.toInt(4, _config.rainbow.factor.green), (uint8_t)args.toInt(5, _config.rainbow.factor.blue))
-                        ));
-                        break;
-                    default:
-                        setAnimation(static_cast<AnimationType>(value));
-                        break;
-                }
-                // if (value == AnimationType::FADE) {
-                //     _animationData.fade.speed = args.toIntMinMax(1, 5U, 1000U, 10U);
-                //     if (args.size() >= 5) {
-                //         _animationData.fade.toColor = Color(args.toInt(2, rand()), args.toInt(3, rand()), args.toInt(4, rand()));
-                //     }
-                //     else {
-                //         _animationData.fade.toColor = ~_color & 0xffffff;
-                //     }
-                // }
-                // else if (value == AnimationType::RAINBOW) {
-                //     if (args.size() >= 2) {
-                //         _config.rainbow.multiplier = args.toFloatMinMax(1, 0.01f, 100.0f);
-                //         if (args.size() >= 3) {
-                //             _config.rainbow.speed = args.toIntMinMax(2, 5, 255);
-                //         }
-                //     }
-                // }
-                // else if (value == AnimationType::FLASHING) {
-                // }
-                // setAnimation(static_cast<AnimationType>(value));
-            }
-        }
-        else {
-            setBlinkColon(0);
-        }
-        return true;
-    }
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKC))) {
-        if (args.size() == 1) {
-            _color = Color::fromBGR(args.toNumber(0, 0xff0000));
-        }
-        else if (args.requireArgs(3, 3)) {
-            _color = Color(args.toNumber(0, 0), args.toNumber(1, 0), args.toNumber(2, 0x80));
-        }
-        args.printf_P(PSTR("color=#%06x"), _color.get());
-        for(size_t i = 0; i  < SevenSegmentDisplay::getTotalPixels(); i++) {
-            if (_display.getPixelColor(i)) {
-                _display.setPixelColor(i, _color);
-            }
-        }
-        _display.show();
-        return true;
-    }
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKPX))) {
-        if (args.requireArgs(4, 4)) {
-            enable(false);
-
-            int num = args.toInt(0);
-            Color color(args.toIntT<uint8_t>(1), args.toIntT<uint8_t>(2), args.toIntT<uint8_t>(3));
-            if (num < 0) {
-                args.printf_P(PSTR("pixel=0-%u, color=#%06x"), _display.getTotalPixels(), color.get());
-                _display.setColor(color);
-            }
-            else {
-                args.printf_P(PSTR("pixel=%u, color=#%06x"), num, color.get());
-                _display.setColor(num, color);
-            }
-        }
-        return true;
-    }
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKD))) {
-        _display.dump(args.getStream());
-#if IOT_CLOCK_DEBUG_ANIMATION_TIME
-        args.print(F("animation loop times (microseconds):"));
-        PrintString str;
-        uint8_t n = 0;
-        for(const auto time: _anmationTime) {
-            str.printf_P(PSTR("%05u "), time);
-            if (++n % 5 == 0) {
-                str.print('\n');
-            }
-        }
-        str.rtrim();
-        args.print(str);
-
-        args.print(F("animation render times (microseconds):"));
-        str = PrintString();
-        n = 0;
-        for(const auto time: _animationRenderTime) {
-            str.printf_P(PSTR("%05u "), time);
-            if (++n % 5 == 0) {
-                str.print('\n');
-            }
-        }
-        str.rtrim();
-        args.print(str);
-
-        args.print(F("display times (microseconds):"));
-        str = PrintString();
-        n = 0;
-        for(const auto time: _displayTime) {
-
-            str.printf_P(PSTR("%05u "), time);
-            if (++n % 5 == 0) {
-                str.print('\n');
-            }
-        }
-        str.rtrim();
-        args.print(str);
-
-        args.printf_P(PSTR("timer update rate %u (milliseconds):"), _updateRate);
-        str = PrintString();
-        n = 0;
-        for(const auto time: _timerDiff) {
-            str.printf_P(PSTR("%05u "), time);
-            if (++n % 5 == 0) {
-                str.print('\n');
-            }
-        }
-        str.rtrim();
-        args.print(str);
-
-#endif
-        return true;
-    }
-    return false;
-}
-
-#endif

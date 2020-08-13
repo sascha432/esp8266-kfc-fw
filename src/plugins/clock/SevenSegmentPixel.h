@@ -5,15 +5,35 @@
 #pragma once
 
 #if IOT_CLOCK_NEOPIXEL
+
 #include <Adafruit_NeoPixel.h>
+
 #else
+
+#if defined(ESP8266)
+#ifndef FASTLED_ESP8266_RAW_PIN_ORDER
+#define FASTLED_ESP8266_RAW_PIN_ORDER                           1
+#endif
+#endif
+// #ifndef FASTLED_ALLOW_INTERRUPTS
+// #define FASTLED_ALLOW_INTERRUPTS                                0
+// #endif
+// #ifndef FASTLED_INTERRUPT_RETRY_COUNT
+// #define FASTLED_INTERRUPT_RETRY_COUNT                           1
+// #endif
+#define FASTLED_INTERNAL
 #include <FastLED.h>
+
 #endif
 #include <EventTimer.h>
 #include <avr/pgmspace.h>
 
 #ifndef IOT_CLOCK_LED_PIN
-#define IOT_CLOCK_LED_PIN                                       12
+#define IOT_CLOCK_LED_PIN                                           12
+#endif
+
+#ifndef IOT_CLOCK_USE_FAST_LED_BRIGHTNESS
+#define IOT_CLOCK_USE_FAST_LED_BRIGHTNESS                           0
 #endif
 
 static constexpr char _digits2SegmentsTable[]  = { 0x3f, 0x06, 0x5b, 0x4f, 0x66, 0x6d, 0x7d, 0x07, 0x7f, 0x6f, 0x77, 0x7c, 0x39, 0x5e, 0x79, 0x71 };  // 0-F
@@ -26,7 +46,14 @@ public:
     using BrightnessType = uint16_t;
     using FadingRefreshCallback = std::function<void(BrightnessType brightness)>;
     using FadingFinishedCallback = FadingRefreshCallback;
-    using AnimationCallback = std::function<ColorType(PixelAddressType addr, ColorType color, uint32_t millis)>;
+
+    typedef struct {
+        uint32_t millis;
+        BrightnessType brightness;
+    } Params_t;
+
+    using GetColorCallback = std::function<ColorType(PixelAddressType addr, ColorType color, const Params_t &params)>;
+    using AnimationCallback = GetColorCallback;
 
     typedef enum {
         A = 0,
@@ -69,13 +96,17 @@ public:
         return (NUM_COLONS * NUM_COLON_PIXELS * 2);
     }
 
-    static constexpr ColorType getSegmentColor(uint32_t color, uint8_t segment, uint8_t number) {
-        return (_digits2SegmentsTable[number & 0xf] & (1 << segment)) ? color : 0;
+    static constexpr uint8_t getSegmentNumberBits(uint8_t number) {
+        return (uint8_t)_digits2SegmentsTable[number & 0xf];
     }
 
-    static constexpr PixelAddressType getPixelAddress(uint8_t digit, uint8_t pixel, uint8_t segment) {
-        return (digit * NUM_DIGIT_PIXELS * SegmentEnum_t::NUM) + (segment * NUM_DIGIT_PIXELS) + pixel;
-    }
+    // static constexpr ColorType getSegmentColor(uint32_t color, uint8_t segment, uint8_t number) {
+    //     return (_digits2SegmentsTable[number & 0xf] & (1 << segment)) ? color : 0;
+    // }
+
+    // static constexpr PixelAddressType getPixelAddress(uint8_t digit, uint8_t pixel, uint8_t segment) {
+    //     return (digit * NUM_DIGIT_PIXELS * SegmentEnum_t::NUM) + (segment * NUM_DIGIT_PIXELS) + pixel;
+    // }
 
 public:
 
@@ -83,9 +114,9 @@ public:
 #if IOT_CLOCK_NEOPIXEL
         _pixels(getTotalPixels(), IOT_CLOCK_LED_PIN, NEO_GRB|NEO_KHZ800),
 #else
-        _controller( FastLED.addLeds<IOT_CLOCK_FASTLED_CHIPSET, IOT_CLOCK_LED_PIN>(_pixels.data(), getTotalPixels()) ),
+        _controller( FastLED.addLeds<IOT_CLOCK_FASTLED_CHIPSET, IOT_CLOCK_LED_PIN>(_pixels.data(), _pixels.size()) ),
 #endif
-        _brightness(kMaxBrightness)
+        _params({0, kMaxBrightness / 3})
     {
 #if IOT_CLOCK_NEOPIXEL
         _pixels.begin();
@@ -98,15 +129,12 @@ public:
 
     PixelAddressType setSegments(uint8_t digit, PixelAddressType offset, PGM_P order) {
         if (digit < NUM_DIGITS) {
+            auto &tmp = _pixelAddress[digit];
             for(size_t i = 0; i < NUM_DIGIT_PIXELS; i++) {
                 auto ptr = order;
-                _pixelAddress[getPixelAddress(digit, i, SegmentEnum_t::A)] = offset + i + (NUM_DIGIT_PIXELS * pgm_read_byte(ptr++));
-                _pixelAddress[getPixelAddress(digit, i, SegmentEnum_t::B)] = offset + i + (NUM_DIGIT_PIXELS * pgm_read_byte(ptr++));
-                _pixelAddress[getPixelAddress(digit, i, SegmentEnum_t::C)] = offset + i + (NUM_DIGIT_PIXELS * pgm_read_byte(ptr++));
-                _pixelAddress[getPixelAddress(digit, i, SegmentEnum_t::D)] = offset + i + (NUM_DIGIT_PIXELS * pgm_read_byte(ptr++));
-                _pixelAddress[getPixelAddress(digit, i, SegmentEnum_t::E)] = offset + i + (NUM_DIGIT_PIXELS * pgm_read_byte(ptr++));
-                _pixelAddress[getPixelAddress(digit, i, SegmentEnum_t::F)] = offset + i + (NUM_DIGIT_PIXELS * pgm_read_byte(ptr++));
-                _pixelAddress[getPixelAddress(digit, i, SegmentEnum_t::G)] = offset + i + (NUM_DIGIT_PIXELS * pgm_read_byte(ptr));
+                for(size_t j = 0; j < SegmentEnum_t::NUM; j++) {
+                    tmp[j][i] = offset + i + (NUM_DIGIT_PIXELS * pgm_read_byte(ptr++));
+                }
             }
         }
         return offset + (SegmentEnum_t::NUM * NUM_DIGIT_PIXELS);
@@ -122,46 +150,66 @@ public:
 
     // set millis for the AnimationCallback
     // can be any value
-    void setMillis(uint32_t millis) {
-        _millis = millis;
+    inline void setMillis(uint32_t millis) {
+        _params.millis = millis;
     }
 
-    void show() {
+    inline void show() {
 #if IOT_CLOCK_NEOPIXEL
         _pixels.show();
 #else
+    #if IOT_CLOCK_USE_FAST_LED_BRIGHTNESS
+        FastLED.setBrightness(_params.brightness >> 8);
+    #endif
         FastLED.show();
 #endif
     }
 
-    void clear() {
-        setColor(0);
+    inline void clear() {
+        _pixels.fill(0);
     }
 
-    void setColor(ColorType color) {
-        for(PixelAddressType i = 0; i < getTotalPixels(); i++) {
-            setPixelColor(i, color);
-        }
+    inline void setColor(ColorType color) {
+        // for(PixelAddressType i = 0; i < getTotalPixels(); i++) {
+        //     _pixels[i] = color;
+        // }
+        _pixels.fill(color);
         show();
     }
 
-    void setColor(PixelAddressType num, ColorType color) {
-        setPixelColor(num, color);
-        show();
-    }
+    // void setColor(PixelAddressType num, ColorType color) {
+    //     _pixels[num] = color;
+    //     show();
+    // }
 
-    void setDigit(uint8_t digit, uint8_t number, ColorType color) {
-        for(uint8_t j = SegmentEnum_t::A; j < SegmentEnum_t::NUM; j++) {
-            ColorType segmentColor = getSegmentColor(color, j, number);
-            for(uint16_t i = 0; i < NUM_DIGIT_PIXELS; i++) {
-                PixelAddressType addr = _pixelAddress[getPixelAddress(digit, i, j)];
-                setPixelColor(addr, _getColor(addr, segmentColor));
+    void clearDigit(uint8_t digit) {
+        for(const auto &segments: _pixelAddress[digit]) {
+            for(const auto addr: segments) {
+                _pixels[addr]  = 0;
             }
         }
     }
 
-    void clearDigit(uint8_t digit) {
-        setDigit(digit, 0xff, 0);
+    void setDigit(uint8_t digit, uint8_t number, ColorType color) {
+        if (color == 0) {
+            clearDigit(digit);
+        }
+        else {
+            uint8_t numberBits = getSegmentNumberBits(number);
+            for(const auto &segments: _pixelAddress[digit]) {
+                if (numberBits & 0x01) {
+                    for(const auto addr: segments) {
+                        _pixels[addr]  = _getColorAlways(addr, color, _params);
+                    }
+                }
+                else {
+                    for(const auto addr: segments) {
+                        _pixels[addr]  = 0;
+                    }
+                }
+                numberBits >>= 1;
+            }
+        }
     }
 
     void setColon(uint8_t num, ColonEnum_t type, ColorType color) {
@@ -169,14 +217,14 @@ public:
         if (type & ColonEnum_t::LOWER) {
             addr = _colonPixelAddress[num];
             for(uint8_t i = 0; i < NUM_COLON_PIXELS; i++) {
-                setPixelColor(addr, _getColor(addr, color));
+                _pixels[addr] = _getColor(addr, color, _params);
                 addr++;
             }
         }
         if (type & ColonEnum_t::UPPER) {
             addr = _colonPixelAddress[num + 1];
             for(uint8_t i = 0; i < NUM_COLON_PIXELS; i++) {
-                setPixelColor(addr, _getColor(addr, color));
+                _pixels[addr] = _getColor(addr, color, _params);
                 addr++;
             }
         }
@@ -186,39 +234,27 @@ public:
         setColon(num, BOTH, 0);
     }
 
-    void rotate(uint8_t digit, uint8_t position, ColorType color, PixelAddressType *order, size_t orderSize) {
-        clearDigit(digit);
-        auto addr = order ? order[digit * orderSize + position] : _pixelAddress[getPixelAddress(digit, position % IOT_CLOCK_NUM_PIXELS, position / IOT_CLOCK_NUM_PIXELS)];
-        setPixelColor(addr, _getColor(addr, color));
-    }
+    // void rotate(uint8_t digit, uint8_t position, ColorType color, PixelAddressType *order, size_t orderSize) {
+    //     clearDigit(digit);
+    //     auto addr = order ?
+    //         order[digit * orderSize + position] :
+    //         _pixelAddress2[digit][position / IOT_CLOCK_NUM_PIXELS][position % IOT_CLOCK_NUM_PIXELS]
+    //         /*_pixelAddress[getPixelAddress(digit, position % IOT_CLOCK_NUM_PIXELS, position / IOT_CLOCK_NUM_PIXELS)]*/
+    //     ;
+    //     setPixelColor(addr, _getColor(addr, color, _params));
+    // }
 
-    void setSegment(uint8_t digit, SegmentEnum_t segment, ColorType color) {
-        setSegment(digit, (int)segment, color);
-    }
+    // void setSegment(uint8_t digit, SegmentEnum_t segment, ColorType color) {
+    //     setSegment(digit, (int)segment, color);
+    // }
 
-    void setSegment(uint8_t digit, int segment, ColorType color) {
-        segment = ((uint8_t)segment) % SegmentEnum_t::NUM;
-        for(uint8_t i = 0; i < NUM_DIGIT_PIXELS; i++) {
-            auto addr = getPixelAddress(digit, i, segment);
-            setPixelColor(addr, _getColor(addr, color));
-        }
-    }
-
-    ColorType getPixelColor(PixelAddressType n) const {
-#if IOT_CLOCK_NEOPIXEL
-        return _pixels.getPixelColor(n);
-#else
-        return _pixels[n];
-#endif
-    }
-
-    void setPixelColor(PixelAddressType n, ColorType c) {
-#if IOT_CLOCK_NEOPIXEL
-        _pixels.setPixelColor(n, c);
-#else
-        _pixels[n] = c;
-#endif
-    }
+    // void setSegment(uint8_t digit, int segment, ColorType color) {
+    //     segment = ((uint8_t)segment) % SegmentEnum_t::NUM;
+    //     for(uint8_t i = 0; i < NUM_DIGIT_PIXELS; i++) {
+    //         auto addr = getPixelAddress(digit, i, segment);
+    //         setPixelColor(addr, _getColor(addr, color, _params));
+    //     }
+    // }
 
     /**
      * Format: 12:34.56
@@ -273,7 +309,7 @@ public:
     }
 
     void setBrightness(BrightnessType brightness) {
-        _brightness = brightness;
+        _params.brightness = brightness;
     }
 
     // finishedCallback and refreshCallback are called from inside an ISR
@@ -287,30 +323,30 @@ public:
             }
             //__LDBG_printf("to=%u steps=%u time=%f", _brightness, steps, fadeTime);
             _brightnessTimer.add(20, true, [this, steps, finishedCallback, refreshCallback](EventScheduler::TimerPtr timer) {
-                int32_t tmp = _brightness;
+                int32_t tmp = _params.brightness;
                 if (tmp < _targetBrightness) {
                     tmp += steps;
                     if (tmp > _targetBrightness) {
                         tmp = _targetBrightness;
                     }
-                    _brightness = tmp;
+                    _params.brightness = tmp;
                 }
                 else if (tmp > _targetBrightness) {
                     tmp -= steps;
                     if (tmp < _targetBrightness) {
                         tmp = _targetBrightness;
                     }
-                    _brightness = tmp;
+                    _params.brightness = tmp;
                 }
                 else {
                     timer->detach();
                     if (finishedCallback) {
-                        finishedCallback(_brightness);
+                        finishedCallback(_params.brightness);
                     }
                     return;
                 }
                 if (refreshCallback) {
-                    refreshCallback(_brightness);
+                    refreshCallback(_params.brightness);
                 }
 
             }, EventScheduler::PRIO_HIGH);
@@ -331,7 +367,8 @@ public:
             for(uint8_t s = 0; s < SegmentEnum_t::NUM; s++) {
                 output.printf_P(PSTR("segment: digit=%u, segment=%c, addresses="), d, getSegmentChar(s));
                 for(size_t p = 0; p < NUM_DIGIT_PIXELS; p++) {
-                    output.print(_pixelAddress[getPixelAddress(d, p, s)]);
+                    output.print(_pixelAddress[d][s][p]);
+                    // output.print(_pixelAddress[getPixelAddress(d, p, s)]);
                     if (p != NUM_DIGIT_PIXELS - 1) {
                         output.print(F(", "));
                     }
@@ -369,41 +406,84 @@ public:
     }
 
 private:
-    ColorType _getColor(PixelAddressType addr, ColorType color) const {
-        if (!color) {
-            return 0;
+
+    GetColorCallback _callback;
+
+    inline ColorType _getColor(PixelAddressType addr, ColorType color, const Params_t &params)
+    {
+        if (color) {
+            if (_callback) {
+                return _callback(addr, color, params);
+            }
+            else {
+                return _adjustBrightnessAlways(color, params.brightness);
+            }
         }
-        if (_callback) {
-            // if (_pixelOrder) {
-            //     return _adjustBrightness(_callback(_pixelOrder[addr], color));
-            // }
-            return _adjustBrightness(_callback(addr, color, _millis));
-        }
-        return _adjustBrightness(color);
+        return color;
     }
 
-    ColorType _adjustBrightness(ColorType color) const {
-        return (
-            ((color & 0xff) * _brightness / kMaxBrightness) |
-            ((((color >> 8) & 0xff) * _brightness / kMaxBrightness) << 8) |
-            ((((color >> 16) & 0xff) * _brightness / kMaxBrightness) << 16)
-        );
+    inline ColorType _getColorAlways(PixelAddressType addr, ColorType color, const Params_t &params)
+    {
+        if (_callback) {
+            return _callback(addr, color, params);
+        }
+        else {
+            return _adjustBrightnessAlways(color, params.brightness);
+        }
     }
+
+public:
+
+#if IOT_CLOCK_USE_FAST_LED_BRIGHTNESS
+
+    static inline ColorType _adjustBrightness(ColorType color, BrightnessType brightness) {
+        return color;
+    }
+
+    static inline ColorType _adjustBrightnessAlways(ColorType color, BrightnessType brightness) {
+        return color;
+    }
+
+#else
+
+    static inline ColorType _adjustBrightness(ColorType color, BrightnessType brightness) {
+        if (color) {
+            return _adjustBrightnessAlways(color, brightness);
+        }
+        return color;
+    }
+
+    static inline ColorType _adjustBrightnessAlways(ColorType color, BrightnessType brightness) {
+        auto ptr = reinterpret_cast<uint8_t *>(&color);
+        *ptr = *ptr * brightness / kMaxBrightness; ptr++;
+        *ptr = *ptr * brightness / kMaxBrightness; ptr++;
+        *ptr = *ptr * brightness / kMaxBrightness;
+        return color;
+    }
+
+#endif
 
 private:
+    friend class ClockPlugin;
+
 #if IOT_CLOCK_NEOPIXEL
     Adafruit_NeoPixel _pixels;
+    #error TODO add [] operator to Adafruit_NeoPixel
 #else
     std::array<CRGB, getTotalPixels()> _pixels;
     CLEDController &_controller;
 #endif
-    std::array<PixelAddressType, getDigitsPixels()> _pixelAddress;
+    // std::array<PixelAddressType, getDigitsPixels()> _pixelAddress;
     std::array<PixelAddressType, getColonsPixels()> _colonPixelAddress;
     // std::array<PixelAddressType, getTotalPixels()> _pixelOrder;
 
-    AnimationCallback _callback;
-    BrightnessType _brightness;
+    using PixelAddressArray = std::array<PixelAddressType, NUM_DIGIT_PIXELS>;
+    using SegmentArray = std::array<PixelAddressArray, SevenSegmentPixel::SegmentEnum_t::NUM>;
+    using DigitsArray = std::array<SegmentArray, NUM_DIGIT_PIXELS>;
+
+    DigitsArray _pixelAddress;
+
     BrightnessType _targetBrightness;
     EventScheduler::Timer _brightnessTimer;
-    uint32_t _millis;
+    Params_t _params;
 };

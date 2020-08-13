@@ -342,7 +342,7 @@ uint16_t FileManager::view(bool isDownload)
         message += F("Cannot open ");
         message += requestFilename;
         _response = _request->beginResponse(httpCode, FSPGM(mime_text_plain), message);
-        _debug_println(message);
+        __LDBG_print(message);
     } else {
         String filename = file.name();
         __LDBG_printf("%s %s (request %s)", isDownload ? PSTR("Downloading") : PSTR("Viewing"), filename.c_str(), requestFilename.c_str());

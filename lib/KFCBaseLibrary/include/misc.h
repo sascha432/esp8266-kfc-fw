@@ -165,6 +165,20 @@ inline int strcmp_end_P(const char *str1, PGM_P str2) {
     return strcmp_end_P(str1, strlen(str1), str2, strlen_P(str2));
 }
 
+// ends at maxLen characters or the first NUL byte
+size_t str_replace(char *src, int from, int to, size_t maxLen = ~0);
+
+// case insensitive comparision of from
+size_t str_case_replace(char *src, int from, int to, size_t maxLen = ~0);
+
+inline size_t String_replace(String &str, int from, int to) {
+    return str_replace(str.begin(), from, to, str.length());
+}
+
+inline size_t String_replaceIgnoreCase(String &str, int from, int to) {
+    return str_case_replace(str.begin(), from, to, str.length());
+}
+
 size_t String_rtrim(String &str);
 size_t String_ltrim(String &str);
 size_t String_trim(String &str);

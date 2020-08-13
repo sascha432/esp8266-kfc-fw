@@ -25,8 +25,9 @@ BlindsControl::BlindsControl() :
     _adcIntegralMultiplier(1.0 / (1000.0 / 40.0))
 #if IOT_BLINDS_CTRL_TESTMODE
     ,
-    _storeValues(false)
+    _storeValues(false),
 #endif
+    _adc(ADCManager::getInstance())
 {
 }
 
@@ -38,8 +39,6 @@ void BlindsControl::_setup()
         digitalWrite(pin, LOW);
         pinMode(pin, OUTPUT);
     }
-
-    analogWriteFreq(IOT_BLINDS_CTRL_PWM_FREQ);
 
 #if IOT_BLINDS_CTRL_RPM_PIN
     attachScheduledInterrupt(digitalPinToInterrupt(IOT_BLINDS_CTRL_RPM_PIN), BlindsControl::rpmIntCallback, RISING);
@@ -449,15 +448,34 @@ void BlindsControl::_clearAdc()
     auto channel = *_activeChannel;
     __LDBG_printf("rssel=%u", channel == 0 && Plugins::Blinds::ConfigStructType::get_enum_multiplexer(_config) == Plugins::Blinds::MultiplexerType::HIGH_FOR_CHANNEL0 ? HIGH : LOW);
 
-    // select shunt
     digitalWrite(_config.pins[4], channel == 0 && Plugins::Blinds::ConfigStructType::get_enum_multiplexer(_config) == Plugins::Blinds::MultiplexerType::HIGH_FOR_CHANNEL0 ? HIGH : LOW);
-    delay(IOT_BLINDS_CTRL_RSSEL_WAIT);
 
 #if IOT_BLINDS_CTRL_TESTMODE
+    uint16_t maxADC = 0;
+#endif
+    uint16_t reading = ~0;
+    uint32_t endTime = millis() + IOT_BLINDS_CTRL_RSSEL_WAIT;
+    while(millis() < endTime && reading > (100 * BlindsControllerConversion::kConvertCurrentToADCValueMulitplier)) {
+        delay(1);
+        reading = _adc.readValue();
+#if IOT_BLINDS_CTRL_TESTMODE
+        maxADC = std::max(maxADC, reading);
+#endif
+    }
+#if IOT_BLINDS_CTRL_TESTMODE
+
+    __LDBG_printf("ADC max=%u/%.0fmA ADC now=%u/%.0fmA time=%d",
+        maxADC, maxADC * BlindsControllerConversion::kConvertADCValueToCurrentMulitplier,
+        reading, reading * BlindsControllerConversion::kConvertADCValueToCurrentMulitplier,
+        IOT_BLINDS_CTRL_RSSEL_WAIT - (endTime - millis())
+    );
+
     _currentValues.clear();
+    _currentValues.reserve(768);
     _startCurrentValues = millis();
 #endif
 
+    _adcLastUpdate = 0;
     _adcIntegral = 0;
     _currentLimitTimer.disable();
     _currentTimer.start();
@@ -470,20 +488,69 @@ void BlindsControl::_clearAdc()
 void BlindsControl::_updateAdc()
 {
     auto micros = _currentTimer.getTime();
-    float count = micros * _adcIntegralMultiplier;
+    if (micros < ADCManager::kMinDelayMicros) {
+        return;
+    }
+    uint32_t tmp;
+    auto reading = _adc.readValue(tmp);
+    if (tmp == _adcLastUpdate) {
+        return;
+    }
+    _adcLastUpdate = tmp;
+
     _currentTimer.start();
-    auto reading = analogRead(A0);
-    _adcIntegral = ((count * _adcIntegral) + reading) / (count + 1.0f);
+    float count = micros * _adcIntegralMultiplier;
+    _adcIntegral = ((count * _adcIntegral) + reading) / (float)(count + 1);
 #if IOT_BLINDS_CTRL_TESTMODE
-    // store value every 5ms
-    uint32_t ms = millis();
-    if (_storeValues && (ms / 5) % 2 == _currentValues.size() % 2) {
-        if (_currentValues.size() + 1 >= _currentValues.capacity()) {
-            _currentValues.reserve(_currentValues.size() + 32);
+    if (_currentValues.size() < 760) {
+        uint32_t ms = millis();
+        uint8_t storeIntervalMillis;
+        // adjust storage frequency by memory usage
+        if (_currentValues.size() > 400) {
+            storeIntervalMillis = 50;
         }
-        _currentValues.emplace_back(ms - _startCurrentValues, _adcIntegral, _currentLimitTimer.get());
+        else if (_currentValues.size() > 225) {
+            storeIntervalMillis = 15;
+        }
+        // record more data during startup .....
+        else if (_currentValues.size() > 175) {
+            storeIntervalMillis = 5;
+        }
+        else if (_currentValues.size() > 100) {
+            storeIntervalMillis = 2;
+        }
+        else {
+            storeIntervalMillis = 1;
+        }
+        // .... and if the current limit has been triggered
+        if (_currentLimitTimer.get() != -1 && storeIntervalMillis > 5) {
+            storeIntervalMillis = 5;
+        }
+        if (_storeValues && (ms / storeIntervalMillis) % 2 == _currentValues.size() % 2) {
+            if (_currentValues.size() + 1 >= _currentValues.capacity()) {
+                _currentValues.reserve(_currentValues.size() + 32);
+            }
+            _currentValues.emplace_back(ms - _startCurrentValues, _adcIntegral, _currentLimitTimer.get());
+        }
     }
 #endif
+}
+
+void BlindsControl::_setMotorBrake(ChannelType channel)
+{
+    // shorts motor wires and brakes in slow decay mode
+    // both pins low leave motor wires floating -> _setMotorSpeed(channel, 0, ...)
+
+    __LDBG_printf("channel=%u braking pins=%u,%u", channel, *(&_config.pins[(*channel * kChannelCount)]), *(&_config.pins[(*channel * kChannelCount)] + 1));
+
+    // make sure both pins are set to high at exactly the same time
+    ets_intr_lock();
+    noInterrupts();
+    auto ptr = &_config.pins[(*channel * kChannelCount)];
+    digitalWrite(*ptr++, HIGH);
+    digitalWrite(*ptr, HIGH);
+    interrupts();
+    ets_intr_unlock();
 }
 
 void BlindsControl::_setMotorSpeed(ChannelType channelType, uint16_t speed, bool open)
@@ -494,27 +561,54 @@ void BlindsControl::_setMotorSpeed(ChannelType channelType, uint16_t speed, bool
 
     __LDBG_printf("channel=%u speed=%u open=%u pins=%u,%u", channel, speed, open, pin1, pin2);
 
-    analogWrite(pin1, speed);
-    analogWrite(pin2, 0);
+    analogWriteFreq(_config.pwm_frequency);
+    analogWriteRange(PWMRANGE);
+
+    if (speed == 0) {
+        digitalWrite(pin1, LOW);
+    }
+    else if (speed >= PWMRANGE) {
+        digitalWrite(pin1, HIGH);
+    }
+    else {
+        analogWrite(pin1, speed);
+    }
+    digitalWrite(pin2, LOW);
 }
 
 void BlindsControl::_stop()
 {
     __LDBG_println();
 
+#if IOT_BLINDS_CTRL_TESTMODE
+    PrintString info;
+    info.printf_P(PSTR("channel=%u pwm=%u multiplexer=%u timeout=%u I-limit=%u"),
+        _activeChannel, _config.channels[*_activeChannel].pwm_value, digitalRead(_config.pins[4]), _motorTimeout.reached(), _currentLimitTimer.reached()
+    );
+#endif
+
     _motorTimeout.disable();
     _activeChannel = ChannelType::NONE;
+    // do not allow interrupts when changing a pin pair from high/high to low/low and vice versa
+    ets_intr_lock();
+    noInterrupts();
     for(auto pin : _config.pins) {
         digitalWrite(pin, LOW);
     }
+    interrupts();
+    ets_intr_unlock();
 
 #if IOT_BLINDS_CTRL_TESTMODE
     if (_currentValues.size()) {
         String currentFile = F("/.pvt/current.log");
         auto file = SPIFFS.open(currentFile, fs::FileOpenMode::write);
         if (file) {
+            file.println(info);
+            file.println(F("---"));
+            file.println(F("millis I(mA) ADC(avg) I(l)timer"));
+            file.println(F("---"));
             for(const auto value: _currentValues) {
-                file.printf_P(PSTR("%u %u %d\n"), value.getTime(), value.getCurrent(), value.getTimer());
+                file.printf_P(PSTR("%u %u %d %d\n"), value.getTime(), value.getCurrent(), value.getValue(), value.getTimer());
             }
             __LDBG_printf("stored %u values in %s", _currentValues.size(), currentFile.c_str());
         }

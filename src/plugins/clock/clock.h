@@ -4,6 +4,7 @@
 
 #include <Arduino_compat.h>
 #include <EventScheduler.h>
+#include <MicrosTimer.h>
 #include <vector>
 #include "animation.h"
 #include "WebUIComponent.h"
@@ -23,7 +24,7 @@
 #endif
 
 #ifndef IOT_CLOCK_BUTTON_PIN
-#define IOT_CLOCK_BUTTON_PIN                    14
+#define IOT_CLOCK_BUTTON_PIN                            14
 #endif
 
 #if IOT_CLOCK_BUTTON_PIN
@@ -34,9 +35,26 @@
 #endif
 
 #if DEBUG_IOT_CLOCK
-#define IOT_CLOCK_MIN_TEMPERATURE_THRESHOLD     20
+#define IOT_CLOCK_MIN_TEMPERATURE_THRESHOLD             20
 #else
-#define IOT_CLOCK_MIN_TEMPERATURE_THRESHOLD     45
+#define IOT_CLOCK_MIN_TEMPERATURE_THRESHOLD             45
+#endif
+
+// number of measurements. 0=disable
+#ifndef IOT_CLOCK_DEBUG_ANIMATION_TIME
+// #define IOT_CLOCK_DEBUG_ANIMATION_TIME                  0
+#define IOT_CLOCK_DEBUG_ANIMATION_TIME                  50
+#endif
+
+#if IOT_CLOCK_DEBUG_ANIMATION_TIME
+#define __DBGTM(...) __VA_ARGS__
+#include <FixedCircularBuffer.h>
+extern FixedCircularBuffer<uint16_t, IOT_CLOCK_DEBUG_ANIMATION_TIME> _anmationTime;
+extern FixedCircularBuffer<uint16_t, IOT_CLOCK_DEBUG_ANIMATION_TIME> _animationRenderTime;
+extern FixedCircularBuffer<uint16_t, IOT_CLOCK_DEBUG_ANIMATION_TIME> _displayTime;
+extern FixedCircularBuffer<uint16_t, IOT_CLOCK_DEBUG_ANIMATION_TIME> _timerDiff;
+#else
+#define __DBGTM(...)
 #endif
 
 using KFCConfigurationClasses::Plugins;
@@ -82,7 +100,7 @@ public:
     virtual void createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request) override;
 
 #if AT_MODE_SUPPORTED
-    virtual void atModeHelpGenerator() override;
+    virtual ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const override;
     virtual bool atModeHandler(AtModeArgs &args) override;
 #endif
 
@@ -135,8 +153,64 @@ public:
     void setAnimation(AnimationType animation);
     void readConfig();
 
+protected:
+    using ConfigStructType = Plugins::Clock::ConfigStructType;
+
+    class LoopOptionsType
+    {
+    public:
+        struct tm24 : tm {
+            using tm::tm;
+            int tm_hour_format() const {
+                return tm_format_24h ? tm_hour : ((tm_hour + 23) % 12) + 1;
+            }
+            void set_format_24h(bool format_24h) {
+                tm_format_24h = format_24h;
+            }
+            bool tm_format_24h{true};
+            tm24 &operator=(struct tm *_tm) {
+                static_cast<struct tm &>(*this) = *_tm;
+                return *this;
+            }
+            tm24 &operator=(const struct tm &_tm) {
+                static_cast<struct tm &>(*this) = _tm;
+                return *this;
+            }
+        } tm24;
+
+    public:
+        LoopOptionsType(ClockPlugin &plugin);
+
+        // time since the display was updated
+        uint32_t getTimeSinceLastUpdate() const;
+        // returns the value of millis() when the object was created
+        uint32_t getMillis() const;
+        // returns the value of time(nullptr) when the object was created
+        time_t getNow() const;
+        // return localtime struct tm which provides tm_hour_format() returning the hour in 12 or 24h format
+        struct tm24 &getLocalTime(time_t *nowPtr = nullptr);
+        // returns true if _updateRate milliseconds have been passed since last update
+        bool doUpdate() const;
+        // time has changed by one second since last update
+        bool hasTimeChanged() const;
+        // returns true that the display needs to be redrawn
+        // call once per object instance/loop, a second call returns false
+        bool doRedraw();
+
+    private:
+        ClockPlugin &_plugin;
+        uint32_t _millis;
+        uint32_t _millisSinceLastUpdate;
+        time_t _now;
+        struct tm24 _tm;
+    };
+
 private:
+    bool _loopUpdateButtons(LoopOptionsType &options);
+    bool _loopSyncingAnimation(LoopOptionsType &options);
+    bool _loopDisplayLightSensor(LoopOptionsType &options);
     void _loop();
+
     void _setSevenSegmentDisplay();
     void _setBrightness();
     void _setBrightness(uint16_t brightness);
@@ -147,13 +221,15 @@ private:
     String _getLightSensorWebUIValue();
     void _updateLightSensorWebUI();
     uint16_t _readLightSensor() const;
-    uint16_t _readLightSensor(uint8_t num, uint8_t delayMillis) const;
+    // uint16_t _readLightSensor(uint8_t num, uint8_t delayMillis) const;
     void _broadcastWebUI();
 public:
     static void handleWebServer(AsyncWebServerRequest *request);
 #endif
 
 private:
+
+
 #if IOT_CLOCK_BUTTON_PIN
     PushButton _button;
     uint8_t _buttonCounter;
@@ -165,14 +241,15 @@ private:
     uint16_t _brightness;
     uint16_t _savedBrightness;
     Color _color;
-    uint32_t _updateTimer;
+    uint32_t _lastUpdateTime;
     time_t _time;
     uint16_t _updateRate;
     uint8_t _isSyncing : 1;
-    uint8_t _schedulePublishState : 1;
-    uint8_t _displaySensorValue : 1;
-    uint8_t _forceUpdate: 1;
+    uint8_t _displaySensorValue : 2;
     uint8_t _tempProtection : 2;
+    // keep aligned and 32bit to avoid locking interrupts when reading/writing
+    volatile bool _schedulePublishState;
+    volatile bool _forceUpdate;
 #if IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL
     int16_t _autoBrightness;
     float _autoBrightnessValue;

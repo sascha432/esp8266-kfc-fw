@@ -10,7 +10,7 @@
 namespace KFCConfigurationClasses {
 
     Plugins::Blinds::BlindsConfig_t::BlindsConfig_t() :
-        channels(), pins{IOT_BLINDS_CTRL_M1_PIN, IOT_BLINDS_CTRL_M2_PIN, IOT_BLINDS_CTRL_M3_PIN, IOT_BLINDS_CTRL_M4_PIN, IOT_BLINDS_CTRL_RSSEL_PIN}, multiplexer(1), adc_divider(40)
+        channels(), pins{IOT_BLINDS_CTRL_M1_PIN, IOT_BLINDS_CTRL_M2_PIN, IOT_BLINDS_CTRL_M3_PIN, IOT_BLINDS_CTRL_M4_PIN, IOT_BLINDS_CTRL_RSSEL_PIN}, multiplexer(1), adc_divider(40), pwm_frequency(17500)
     {
     }
 

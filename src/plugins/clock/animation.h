@@ -145,6 +145,8 @@ namespace Clock {
 
     };
 
+    static_assert(sizeof(Color) == 3, "Invalid size");
+
     class Animation {
     public:
         static constexpr uint16_t kDefaultUpdateRate = 100;

@@ -662,21 +662,78 @@ size_t AsyncSpeedTestResponse::_fillBuffer(uint8_t *buf, size_t maxLen)
     return available;
 }
 
-AsyncResolveZeroconfResponse::AsyncResolveZeroconfResponse(const String &value) : AsyncBaseResponse(true), _finished(false), _async(new bool())
+
+AsyncFillBufferCallbackResponse::AsyncFillBufferCallbackResponse(Callback callback) : AsyncBaseResponse(true), _callback(callback), _finished(false), _async(new bool())
 {
     _code = 200;
     _contentLength = 0;
     _sendContentLength = false;
     _contentType = FSPGM(mime_text_html);
     _chunked = true;
+    *_async = true; // mark this as alive
+    _callback(_async, false, this);
+}
 
-    auto async = _async;
-    *async = true;
+AsyncFillBufferCallbackResponse::~AsyncFillBufferCallbackResponse()
+{
+    if (_async) {
+        *_async = false; // mark this as dead
+    }
+}
+
+void AsyncFillBufferCallbackResponse::finished(bool *async, AsyncFillBufferCallbackResponse *response)
+{
+    if (*async) {
+        response->_async = nullptr;
+        response->_finished = true;
+    }
+    delete async;
+}
+
+bool AsyncFillBufferCallbackResponse::_sourceValid() const
+{
+    return true;
+}
+
+size_t AsyncFillBufferCallbackResponse::_fillBuffer(uint8_t *data, size_t len)
+{
+    if (_finished || _buffer.length()) { // finished or any new data?
+        if (len > _buffer.length()) {
+            len = _buffer.length();
+        }
+        if (len) {
+            memcpy(data, _buffer.begin(), len);
+            _buffer.remove(0, len);
+            if (_async) {
+                _callback(_async, true, this);
+            }
+        }
+        return len;
+    }
+    else {
+        if (_async) {
+            _callback(_async, true, this);
+        }
+        return RESPONSE_TRY_AGAIN;
+    }
+}
+
+
+AsyncResolveZeroconfResponse::AsyncResolveZeroconfResponse(const String &value) : AsyncFillBufferCallbackResponse([value](bool *async, bool fillBuffer, AsyncFillBufferCallbackResponse *response) {
+    if (*async) { // indicator that "response" still exists
+        if (!fillBuffer) { // we don't do refills
+            reinterpret_cast<AsyncResolveZeroconfResponse *>(response)->_doStuff(async, value);
+        }
+    }
+})
+{
+}
+
+void AsyncResolveZeroconfResponse::_doStuff(bool *async, const String &value)
+{
     uint32_t start = millis();
     if (!config.resolveZeroConf(String(), value, 0, [this, async, value, start](const String &hostname, const IPAddress &address, uint16_t port, const String &resolved, MDNSResolver::ResponseType type) {
-        if (*async) { // indicator that "this" still exists
-            _async = nullptr;
-            _finished = true;
+        if (*async) {
             PrintHtmlEntitiesString str;
             switch(type) {
                 case MDNSResolver::ResponseType::RESOLVED:
@@ -703,44 +760,16 @@ AsyncResolveZeroconfResponse::AsyncResolveZeroconfResponse(const String &value) 
                 str.printf_P(PSTR(HTML_S(br) "Resolved: %s"), resolved.c_str());
             }
             str.printf_P(PSTR(HTML_S(br) "Timeout: %u / %ums"), get_time_diff(start, millis()), KFCConfigurationClasses::System::Device::getConfig().zeroconf_timeout);
-            _response = std::move(str);
+
+            _buffer = std::move(str);
         }
-        delete async;
+        finished(async, this);
     })) {
-        delete async;
-        async = nullptr;
-        PrintHtmlEntitiesString str;
-        str.printf_P(PSTR("Required Format:" HTML_S(br) "%s<service>.<proto>:<address|value[:port value]>|<fallback[:port]>}"), SPGM(_var_zeroconf));
-        _response = std::move(str);
-        _finished = true;
-    }
-}
-
-AsyncResolveZeroconfResponse::~AsyncResolveZeroconfResponse()
-{
-    if (_async) {
-        *_async = false;
-    }
-}
-
-bool AsyncResolveZeroconfResponse::_sourceValid() const
-{
-    return true;
-}
-
-size_t AsyncResolveZeroconfResponse::_fillBuffer(uint8_t *data, size_t len)
-{
-    if (_finished) {
-        if (len > _response.length()) {
-            len = _response.length();
+        if (*async) {
+            PrintHtmlEntitiesString str;
+            str.printf_P(PSTR("Required Format:" HTML_S(br) "%s<service>.<proto>:<address|value[:port value]>|<fallback[:port]>}"), SPGM(_var_zeroconf));
+            _buffer = std::move(str);
         }
-        if (len) {
-            memcpy(data, _response.c_str(), len);
-            _response.remove(0, len);
-        }
-        return len;
-    }
-    else {
-        return RESPONSE_TRY_AGAIN;
+        finished(async, this);
     }
 }

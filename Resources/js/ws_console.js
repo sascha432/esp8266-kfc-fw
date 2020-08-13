@@ -23,6 +23,7 @@ function WS_Console(url, sid, auto_reconnect, callback, consoleId) {
     this.reconnect_timeout = null;
     this.connect_counter = 0;
     this.connection_counter = 0;
+    this.ping_interval = null;
 }
 
 WS_Console.prototype.setConsoleId = function(id) {
@@ -31,6 +32,14 @@ WS_Console.prototype.setConsoleId = function(id) {
 
 WS_Console.prototype.get_sid = function() {
     return this.sid;
+}
+
+WS_Console.prototype.keep_alive = function() {
+    dbg_console.debug('iPing', this.is_connected(), this.is_authenticated());
+    if (this.is_connected()) {
+        var d = new Date();
+        this.socket.send('+iPING ' + (d.getTime() + d.getMilliseconds() / 1000.0));
+    }
 }
 
 WS_Console.prototype.console_log = function(message, prefix) {
@@ -122,7 +131,10 @@ WS_Console.prototype.connect = function(authenticated_callback) {
     this.socket.onmessage = function(e) {
         dbg_console.called('WS_Console.socket.onmessage', arguments);
         dbg_console.debug(ws_console);
-        if (e.data == "+REQ_AUTH") {
+        if (e.data.match(/^\+iPONG /)) {
+            // ignore
+        }
+        else if (e.data == "+REQ_AUTH") {
             ws_console.authenticated = false;
             ws_console.send("+SID " + ws_console.get_sid());
         } else if (e.data == "+AUTH_OK") {
@@ -147,6 +159,12 @@ WS_Console.prototype.connect = function(authenticated_callback) {
         ws_console.console_log("Connection has been established...");
         ws_console.connect_counter = 0;
         ws_console.callback({type: 'open', event: e});
+        if (ws_console.ping_interval) {
+            window.clearInterval(ws_console.ping_interval);
+        }
+        ws_console.ping_interval = window.setInterval(function() {
+            ws_console.keep_alive();
+        }, 5000);
     }
 
     this.socket.onclose = function(e) {
@@ -176,6 +194,12 @@ WS_Console.prototype.connect = function(authenticated_callback) {
 WS_Console.prototype.disconnect = function(reconnect) {
     dbg_console.called('WS_Console.disconnect', arguments);
     dbg_console.debug(this);
+
+    if (this.ping_interval) {
+        window.clearInterval(this.ping_interval);
+        this.ping_interval = null;
+    }
+
     this.authenticated = false;
     this.connection_counter--;
     if (this.socket != null) {

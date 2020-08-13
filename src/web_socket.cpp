@@ -154,7 +154,8 @@ void WsClient::onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, i
         Logger_notice(F(WS_PREFIX "%s: Client connected"), WS_PREFIX_ARGS, client->remoteIP().toString().c_str());
         client->text(F("+REQ_AUTH"));
         client->keepAlivePeriod(60);
-        client->client()->setAckTimeout(30000); // TODO added for bad WiFi connections
+        // was acutally caused by reading the ADC too fast... analogRead(A0) every 150-200us
+        // client->client()->setAckTimeout(30000); // added for bad WiFi connections
 
         wsClient->onConnect(data, len);
 
@@ -194,20 +195,35 @@ void WsClient::onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, i
 
     } else if (type == WS_EVT_DATA) {
 
+
         // #if DEBUG_WEB_SOCKETS
         //     wsClient->_displayData(wsClient, (AwsFrameInfo*)arg, data, len);
         // #endif
 
-        if (wsClient->isAuthenticated()) {
+        constexpr size_t pingLen = constexpr_strlen("+iPING ");
+        constexpr size_t sidLen = constexpr_strlen("+SID ");
+
+        if (len > pingLen && strncmp_P((const char *)data, PSTR("+iPING "), pingLen) == 0) {
+            char buffer[32];
+            float response = NAN;
+            size_t size = std::min(len - pingLen, sizeof(buffer) - 1);
+            if (size) {
+                memcpy(buffer, data + pingLen, size);
+                buffer[size] = 0;
+                response = atof(buffer);
+            }
+            client->text(PrintString(F("+iPONG %.3f"), response));
+        }
+        else if (wsClient->isAuthenticated()) {
 
             wsClient->onData(static_cast<AwsFrameType>(reinterpret_cast<AwsFrameInfo *>(arg)->opcode), data, len);
 
-        } else if (len > 10 && strncmp_P((const char *)data, PSTR("+SID "), 5) == 0) {          // client sent authentication
+        } else if (len > 10 && strncmp_P((const char *)data, PSTR("+SID "), sidLen) == 0) {          // client sent authentication
 
             Buffer buffer = Buffer();
             auto dataPtr = reinterpret_cast<const char *>(data);
-            dataPtr += 5;
-            len -= 5;
+            dataPtr += sidLen;
+            len -= sidLen;
             if (!buffer.reserve(len + 1)) {
                 __LDBG_printf("allocation failed=%d", len + 1);
                 return;

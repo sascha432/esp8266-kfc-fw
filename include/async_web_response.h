@@ -196,16 +196,39 @@ private:
     static bool _locked;
 };
 
-class AsyncResolveZeroconfResponse : public AsyncBaseResponse {
+class AsyncFillBufferCallbackResponse : public AsyncBaseResponse {
 public:
-    AsyncResolveZeroconfResponse(const String &value);
-    virtual ~AsyncResolveZeroconfResponse();
+    // the destructor writes false into *async when executed
+    // (*async) ? "ALIVE do Stuff" : "AsyncCallbackResponse has been destroyed... that's it we can go home"
+    // the callback is responsible to deal with the async object. when done adding data to the buffer, call
+    // AsyncCallbackResponse::finished(async, response). it updates the response and deletes the async object
+    using Callback = std::function<void(bool *async, bool fillBuffer, AsyncFillBufferCallbackResponse *response)>;
+
+public:
+    AsyncFillBufferCallbackResponse(Callback callback);
+    virtual ~AsyncFillBufferCallbackResponse();
 
     bool _sourceValid() const;
     virtual size_t _fillBuffer(uint8_t *data, size_t len) override;
 
-private:
-    String _response;
+    Buffer &getBuffer() {
+        return _buffer;
+    }
+    static void finished(bool *async, AsyncFillBufferCallbackResponse *response);
+
+protected:
+    Buffer _buffer;
+    Callback _callback;
     bool _finished;
     bool *_async;
 };
+
+
+class AsyncResolveZeroconfResponse : public AsyncFillBufferCallbackResponse {
+public:
+    AsyncResolveZeroconfResponse(const String &value);
+
+private:
+    void _doStuff(bool *async, const String &value);
+};
+

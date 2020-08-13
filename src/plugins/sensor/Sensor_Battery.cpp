@@ -13,7 +13,7 @@
 #include <debug_helper_disable.h>
 #endif
 
-Sensor_Battery::Sensor_Battery(const JsonString &name) : MQTTSensor(), _name(name), _adc(A0, 20, 1)
+Sensor_Battery::Sensor_Battery(const JsonString &name) : MQTTSensor(), _name(name)
 {
     REGISTER_SENSOR_CLIENT(this);
     reconfigure(nullptr);

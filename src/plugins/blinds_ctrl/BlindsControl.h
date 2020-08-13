@@ -7,6 +7,7 @@
 #include <Arduino_compat.h>
 #include <WebUIComponent.h>
 #include <MicrosTimer.h>
+#include <ReadADC.h>
 #include <FunctionalInterrupt.h>
 #include "../src/plugins/mqtt/mqtt_component.h"
 #include <kfc_fw_config.h>
@@ -258,6 +259,7 @@ protected:
     void _clearAdc();
     void _updateAdc();
     void _setMotorSpeed(ChannelType channel, uint16_t speed, bool open);
+    void _setMotorBrake(ChannelType channel);
     void _stop();
 
     void _loadState();
@@ -321,6 +323,7 @@ protected:
     MillisTimer _currentLimitTimer;
     uint16_t _currentLimit;
 
+    uint32_t _adcLastUpdate;
     float _adcIntegral;
     float _adcIntegralMultiplier;
     MicrosTimer _currentTimer;
@@ -336,6 +339,9 @@ protected:
         uint32_t getCurrent() const {
             return _value * BlindsControllerConversion::kConvertADCValueToCurrentMulitplier;
         }
+        uint32_t getValue() const {
+            return _value;
+        }
         int32_t getTimer() const {
             return _timer;
         }
@@ -343,10 +349,11 @@ protected:
         struct __attribute__packed__ {
             uint16_t _time;
             uint16_t _value;
-            int16_t _timer;
+            int8_t _timer;
         };
     };
     using CurrentValueVector = std::vector<CurrentValueType>;
+    static constexpr size_t kCurrentValueTypeSize = sizeof(CurrentValueType);
 
     uint32_t _startCurrentValues;
     CurrentValueVector _currentValues;
@@ -366,6 +373,9 @@ protected:
     uint32_t _rpmTimeIntegral;
     uint32_t _rpmCounter;
 #endif
+
+private:
+    ADCManager &_adc;
 };
 
 #include <debug_helper_disable.h>

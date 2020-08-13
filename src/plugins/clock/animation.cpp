@@ -361,25 +361,28 @@ Clock::Color Clock::RainbowAnimation::_color(uint8_t red, uint8_t green, uint8_t
 void Clock::RainbowAnimation::begin()
 {
     _finished = false;
-    setAnimationCallback([this](PixelAddressType address, ColorType color, uint32_t millis) -> ColorType {
+    setAnimationCallback([this](PixelAddressType address, ColorType color, const SevenSegmentDisplay::Params_t &params) -> ColorType {
 
-        uint32_t ind = (address * _multiplier) + (millis / _speed);
+        uint32_t ind = (address * _multiplier) + (params.millis / _speed);
         uint8_t indMod = (ind % _mod);
         uint8_t idx = (indMod / _divMul);
-        float factor1 = 1.0 - ((float)(indMod - (idx * _divMul)) / _divMul);
+        float factor1 = 1.0f - ((float)(indMod - (idx * _divMul)) / _divMul);
         float factor2 = (float)((int)(ind - (idx * _divMul)) % _mod) / _divMul;
 
         switch(idx) {
             case 0:
-                return _color(_factor.red() * factor1, _factor.green() * factor2, 0);
+                color = _color(_factor.red() * factor1, _factor.green() * factor2, 0);
+                break;
             case 1:
-                return _color(0, _factor.green() * factor1, _factor.blue() * factor2);
+                color = _color(0, _factor.green() * factor1, _factor.blue() * factor2);
+                break;
             case 2:
-                return _color(_factor.red() * factor2, 0, _factor.blue() * factor1);
+                color = _color(_factor.red() * factor2, 0, _factor.blue() * factor1);
+                break;
         }
-        return color;
+        return SevenSegmentDisplay::_adjustBrightnessAlways(color, params.brightness);
     });
-    setUpdateRate(20);
+    setUpdateRate(25);
     __LDBG_printf("begin rate=%u", getUpdateRate());
 }
 
@@ -402,8 +405,8 @@ void Clock::FlashingAnimation::begin()
     __LDBG_printf("begin color=%s time=%u", _color.toString().c_str(), _time);
     _finished = false;
     _blinkColon = false;
-    setAnimationCallback([this](PixelAddressType address, ColorType color, uint32_t millis) -> ColorType {
-        return (millis / _time) % _mod == 0 ? _color.get() : 0;
+    setAnimationCallback([this](PixelAddressType address, ColorType color, const SevenSegmentDisplay::Params_t &params) -> ColorType {
+        return (params.millis / _time) % _mod == 0 ? SevenSegmentDisplay::_adjustBrightnessAlways(_color, params.brightness) : 0;
     });
     setUpdateRate(std::max((uint16_t)(ClockPlugin::kMinFlashingSpeed / _mod), (uint16_t)(_time / _mod)));
 }

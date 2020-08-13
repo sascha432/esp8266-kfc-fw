@@ -5,6 +5,7 @@
 #include <kfc_fw_config.h>
 #include <kfc_fw_config_plugin.h>
 #include <EEPROM.h>
+#include <ReadADC.h>
 #include <PrintString.h>
 #include <LoopFunctions.h>
 #include <WiFiCallbacks.h>
@@ -907,6 +908,9 @@ void KFCFWConfiguration::restartDevice(bool safeMode)
     if (_safeMode) {
         invoke_ESP_restart();
     }
+
+    // clear queue silently
+    ADCManager::terminate(false);
 
     __LDBG_printf("Scheduled tasks %u, WiFi callbacks %u, Loop Functions %u", Scheduler.size(), WiFiCallbacks::getVector().size(), LoopFunctions::size());
 

@@ -103,10 +103,14 @@ double AtModeArgs::toDouble(uint16_t num, double defaultValue) const
 
 uint32_t AtModeArgs::toMillis(uint16_t num, uint32_t minTime, uint32_t maxTime, uint32_t defaultValue, const String &defaultSuffix) const
 {
+    if (defaultValue == kNoDefaultValue) {
+        defaultValue = minTime;
+    }
+
     auto arg = get(num);
     if (!arg) {
         __LDBG_printf("toMillis(): arg=%u does not exist", num);
-        return std::max(minTime, std::min(maxTime, defaultValue));
+        return defaultValue;
     }
 
     char *endPtr = nullptr;
@@ -138,7 +142,7 @@ uint32_t AtModeArgs::toMillis(uint16_t num, uint32_t minTime, uint32_t maxTime, 
     result = std::min(maxTime, result);
     if (result < minTime) {
         __LDBG_printf("toMillis(): arg=%s < minTime=%u", arg, minTime);
-        return std::max(minTime, std::min(maxTime, defaultValue));
+        return defaultValue;
     }
     __LDBG_printf("toMillis(): arg=%s converted to %u", arg, result);
     return result;

@@ -160,7 +160,7 @@ void DebugContext::pause(uint32_t timeout)
     while (Serial.available()) {
         Serial.read();
     }
-    if (timeout != ~0) {
+    if (timeout != ~0U) {
         timeout += millis();
     }
     DEBUG_OUTPUT.println(F("\n\nProgram execution paused, press # to continue...\n"));

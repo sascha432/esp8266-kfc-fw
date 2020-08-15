@@ -13,67 +13,67 @@
 
 #ifdef _MSC_VER
 #ifndef DEBUG_INCLUDE_SOURCE_INFO
-#define DEBUG_INCLUDE_SOURCE_INFO                       1
+#define DEBUG_INCLUDE_SOURCE_INFO                           1
 #endif
 extern unsigned long millis(void);
-#define ____DEBUG_FUNCTION__                            __FUNCSIG__
+#define ____DEBUG_FUNCTION__                                __FUNCSIG__
 #else
-#define ____DEBUG_FUNCTION__                            __FUNCTION__
+#define ____DEBUG_FUNCTION__                                __FUNCTION__
 #endif
 
 #if 1
-#define __BASENAME_FILE__                               StringConstExpr::basename(__FILE__)
+#define __BASENAME_FILE__                                   StringConstExpr::basename(__FILE__)
 #else
-#define __BASENAME_FILE__                               __FILE__
+#define __BASENAME_FILE__                                   __FILE__
 #endif
 
 #if 1
-#define __DEBUG_FUNCTION__                              DebugContext::pretty_function(____DEBUG_FUNCTION__)
+#define __DEBUG_FUNCTION__                                  DebugContext::pretty_function(____DEBUG_FUNCTION__)
 #else
-#define __DEBUG_FUNCTION__                              ____DEBUG_FUNCTION__
+#define __DEBUG_FUNCTION__                                  ____DEBUG_FUNCTION__
 #endif
 
 
-#define __NDBG_new(name, ...)                           new name(__VA_ARGS__)
-#define __NDBG_delete(ptr)                              delete ptr
-#define __NDBG_new_array(num, name, ...)                new name[num](__VA_ARGS__)
-#define __NDBG_delete_array(ptr)                        delete[] ptr
-#define __NDBG_malloc(size)                             malloc(size)
-#define __NDBG_realloc(ptr, size)                       realloc(ptr, size)
-#define __NDBG_calloc(num, size)                        calloc(num, size)
-#define __NDBG_free(ptr)                                free(ptr)
-#define __NDBG_malloc_str(size)                         reinterpret_cast<char *>(__NDBG_malloc(size))
-#define __NDBG_malloc_buf(size)                         reinterpret_cast<uint8_t *>(__NDBG_malloc(size))
-#define __NDBG_strdup(str)                              strdup(str)
-#define __NDBG_strdup_P(str)                            strdup_P(str)
+#define __NDBG_new(name, ...)                               new name(__VA_ARGS__)
+#define __NDBG_delete(ptr)                                  delete ptr
+#define __NDBG_new_array(num, name, ...)                    new name[num](__VA_ARGS__)
+#define __NDBG_delete_array(ptr)                            delete[] ptr
+#define __NDBG_malloc(size)                                 malloc(size)
+#define __NDBG_realloc(ptr, size)                           realloc(ptr, size)
+#define __NDBG_calloc(num, size)                            calloc(num, size)
+#define __NDBG_free(ptr)                                    free(ptr)
+#define __NDBG_malloc_str(size)                             reinterpret_cast<char *>(__NDBG_malloc(size))
+#define __NDBG_malloc_buf(size)                             reinterpret_cast<uint8_t *>(__NDBG_malloc(size))
+#define __NDBG_strdup(str)                                  strdup(str)
+#define __NDBG_strdup_P(str)                                strdup_P(str)
 
 extern "C" bool can_yield();
 
 // invokes panic() on ESP8266/32, calls __debugbreak() with visual studio to intercept and debug the error
 extern int ___debugbreak_and_panic(const char *filename, int line, const char *function);
 
-#define __debugbreak_and_panic()                        ___debugbreak_and_panic(__BASENAME_FILE__, __LINE__, __DEBUG_FUNCTION__)
+#define __debugbreak_and_panic()                            ___debugbreak_and_panic(__BASENAME_FILE__, __LINE__, __DEBUG_FUNCTION__)
 
 #if DEBUG
 
 extern const char ___debugPrefix[] PROGMEM;
 
 // call in setup, after initializing the output stream
-#define DEBUG_HELPER_INIT()                             DebugContext::__state = DEBUG_HELPER_STATE_DEFAULT;
-#define DEBUG_HELPER_SILENT()                           DebugContext::__state = DEBUG_HELPER_STATE_DISABLED;
+#define DEBUG_HELPER_INIT()                                 DebugContext::__state = DEBUG_HELPER_STATE_DEFAULT;
+#define DEBUG_HELPER_SILENT()                               DebugContext::__state = DEBUG_HELPER_STATE_DISABLED;
 
 #ifndef DEBUG_HELPER_STATE_DEFAULT
-#define DEBUG_HELPER_STATE_DEFAULT                      DEBUG_HELPER_STATE_ACTIVE
+#define DEBUG_HELPER_STATE_DEFAULT                          DEBUG_HELPER_STATE_ACTIVE
 #endif
 
-#define DEBUG_HELPER_STATE_ACTIVE                       0
-#define DEBUG_HELPER_STATE_FILTERED                     1
-#define DEBUG_HELPER_STATE_DISABLED                     2
+#define DEBUG_HELPER_STATE_ACTIVE                           0
+#define DEBUG_HELPER_STATE_FILTERED                         1
+#define DEBUG_HELPER_STATE_DISABLED                         2
 
 #if DEBUG_INCLUDE_SOURCE_INFO
-#define DEBUG_HELPER_POSITION                           DebugContext(__BASENAME_FILE__, __LINE__, __DEBUG_FUNCTION__)
+#define DEBUG_HELPER_POSITION                               DebugContext(__BASENAME_FILE__, __LINE__, __DEBUG_FUNCTION__)
 #else
-#define DEBUG_HELPER_POSITION                           DebugContext()
+#define DEBUG_HELPER_POSITION                               DebugContext()
 #endif
 
 class DebugContext {
@@ -208,17 +208,17 @@ public:
 
 #if _MSC_VER
 
-#define ___IsValidHeapPointer(ptr)                  _CrtIsValidHeapPointer(ptr)
-#define ___IsValidPROGMEMPointer(ptr)               _CrtIsValidHeapPointer(ptr)
-#define ___IsValidPointer(ptr)                      _CrtIsValidHeapPointer(ptr)
-#define ___isValidPointerAlignment(ptr)             true
+#define ___IsValidHeapPointer(ptr)                          _CrtIsValidHeapPointer(ptr)
+#define ___IsValidPROGMEMPointer(ptr)                       _CrtIsValidHeapPointer(ptr)
+#define ___IsValidPointer(ptr)                              _CrtIsValidHeapPointer(ptr)
+#define ___isValidPointerAlignment(ptr)                     true
 
 #elif defined(ESP8266)
 
-#define ___IsValidHeapPointer(ptr)                  ((uint32_t)ptr >= SECTION_HEAP_START_ADDRESS && (uint32_t)ptr < SECTION_HEAP_END_ADDRESS)
-#define ___IsValidPROGMEMPointer(ptr)               ((uint32_t)ptr >= SECTION_IROM0_TEXT_START_ADDRESS && (uint32_t)ptr < SECTION_IROM0_TEXT_END_ADDRESS)
-#define ___IsValidPointer(ptr)                      (___IsValidHeapPointer(ptr) || ___IsValidPROGMEMPointer(ptr))
-#define ___isValidPointerAlignment(ptr)             (((uint32_t)ptr & 0x03) == 0)
+#define ___IsValidHeapPointer(ptr)                          ((uint32_t)ptr >= SECTION_HEAP_START_ADDRESS && (uint32_t)ptr < SECTION_HEAP_END_ADDRESS)
+#define ___IsValidPROGMEMPointer(ptr)                       ((uint32_t)ptr >= SECTION_IROM0_TEXT_START_ADDRESS && (uint32_t)ptr < SECTION_IROM0_TEXT_END_ADDRESS)
+#define ___IsValidPointer(ptr)                              (___IsValidHeapPointer(ptr) || ___IsValidPROGMEMPointer(ptr))
+#define ___isValidPointerAlignment(ptr)                     (((uint32_t)ptr & 0x03) == 0)
 
 #else
 
@@ -226,49 +226,46 @@ public:
 
 #endif
 
-#define __DBG_check_alloc(ptr, allow_null)          __DBG_assert_printf((allow_null && ptr == nullptr) || (!allow_null && ptr != nullptr && ___IsValidHeapPointer(ptr)), "alloc=%08x", ptr)
-#define __DBG_check_alloc_no_null(ptr)              __DBG_check_alloc(ptr, false)
-#define __DBG_check_alloc_null(ptr)                 __DBG_check_alloc(ptr, true)
-#define __DBG_check_alloc_aligned(ptr)              __DBG_assert_printf((ptr != nullptr) && ___isValidPointerAlignment(ptr), "not aligned=%08x", ptr);
+#define __DBG_check_alloc(ptr, allow_null)                  __DBG_assert_printf((allow_null && ptr == nullptr) || (!allow_null && ptr != nullptr && ___IsValidHeapPointer(ptr)), "alloc=%08x", ptr)
+#define __DBG_check_alloc_no_null(ptr)                      __DBG_check_alloc(ptr, false)
+#define __DBG_check_alloc_null(ptr)                         __DBG_check_alloc(ptr, true)
+#define __DBG_check_alloc_aligned(ptr)                      __DBG_assert_printf((ptr != nullptr) && ___isValidPointerAlignment(ptr), "not aligned=%08x", ptr)
 
 // validate pointers to RAM or PROGMEM
 
-#define __DBG_check_ptr_no_null(ptr)                __DBG_assert_printf((ptr != nullptr) && ___IsValidPointer(ptr), "pointer=%08x", ptr)
-#define __DBG_check_ptr_null(ptr)                   __DBG_assert_printf((ptr == nullptr) || ___IsValidPointer(ptr), "pointer=%08x", ptr)
-#define __DBG_check_ptr(ptr, allow_null)            __DBG_assert_printf((allow_null && ptr == nullptr) || (!allow_null && ptr != nullptr && ___IsValidPointer(ptr)), "pointer=%08x", ptr)
+#define __DBG_check_ptr_no_null(ptr)                        __DBG_assert_printf((ptr != nullptr) && ___IsValidPointer(ptr), "pointer=%08x", ptr)
+#define __DBG_check_ptr_null(ptr)                           __DBG_assert_printf((ptr == nullptr) || ___IsValidPointer(ptr), "pointer=%08x", ptr)
+#define __DBG_check_ptr(ptr, allow_null)                    __DBG_assert_printf((allow_null && ptr == nullptr) || (!allow_null && ptr != nullptr && ___IsValidPointer(ptr)), "pointer=%08x", ptr)
 
 // local functions that need to be activated by including debug_helper_[enable|disable].h
 #define __LDBG_IF(...)
-#define __LDBG_N_IF(...)                            __VA_ARGS__
-#define __LDBG_S_IF(a, b)                           __LDBG_IF(a) __LDBG_N_IF(b)
-#define __LDBG_panic(...)                           __LDBG_IF(__DBG_panic(__VA_ARGS__))
-#define __LDBG_printf(...)                          __LDBG_IF(__DBG_printf(__VA_ARGS__))
-#define __LDBG_print(...)                           __LDBG_IF(__DBG_print(__VA_ARGS__))
-#define __LDBG_println(...)                         __LDBG_IF(__DBG_println(__VA_ARGS__))
-#define __LDBG_assert(...)                          __LDBG_IF(__DBG_assert(__VA_ARGS__))
-#define __LDBG_assert_printf(...)                   __LDBG_IF(__DBG_assert_printf(__VA_ARGS__))
-#define __LDBG_assert_panic(...)                    __LDBG_IF(__DBG_assert_panic(__VA_ARGS__))
-#define __LDBG_print_result(result, ...)            __LDBG_S_IF(__DBG_print_result(result, __VA__ARGS), result)
+#define __LDBG_N_IF(...)                                    __VA_ARGS__
+#define __LDBG_S_IF(a, b)                                   __LDBG_IF(a) __LDBG_N_IF(b)
+#define __LDBG_panic(...)                                   __LDBG_IF(__DBG_panic(__VA_ARGS__))
+#define __LDBG_printf(...)                                  __LDBG_IF(__DBG_printf(__VA_ARGS__))
+#define __LDBG_print(...)                                   __LDBG_IF(__DBG_print(__VA_ARGS__))
+#define __LDBG_println(...)                                 __LDBG_IF(__DBG_println(__VA_ARGS__))
+#define __LDBG_assert(...)                                  __LDBG_IF(__DBG_assert(__VA_ARGS__))
+#define __LDBG_assert_printf(...)                           __LDBG_IF(__DBG_assert_printf(__VA_ARGS__))
+#define __LDBG_assert_panic(...)                            __LDBG_IF(__DBG_assert_panic(__VA_ARGS__))
+#define __LDBG_print_result(result, ...)                    __LDBG_S_IF(__DBG_print_result(result, __VA__ARGS), result)
 
-#define __LDBG_check_alloc(...)                     __LDBG_IF(__DBG_check_alloc(__VA_ARGS__))
-#define __LDBG_check_alloc_no_null(...)             __LDBG_IF(__DBG_check_alloc_no_null(__VA_ARGS__))
-#define __LDBG_check_alloc_null(...)                __LDBG_IF(__DBG_check_alloc_null(__VA_ARGS__))
-#define __LDBG_check_alloc_aligned(...)             __LDBG_IF(__DBG_check_alloc_aligned(__VA_ARGS__))
-#define __LDBG_check_ptr(...)                       __LDBG_IF(__DBG_check_ptr(__VA_ARGS__))
-#define __LDBG_check_ptr_no_null(...)               __LDBG_IF(__DBG_check_ptr_no_null(__VA_ARGS__))
-#define __LDBG_check_ptr_null(...)                  __LDBG_IF(__DBG_check_ptr_null(__VA_ARGS__))
+#define __LDBG_check_alloc(...)                             __LDBG_IF(__DBG_check_alloc(__VA_ARGS__))
+#define __LDBG_check_alloc_no_null(...)                     __LDBG_IF(__DBG_check_alloc_no_null(__VA_ARGS__))
+#define __LDBG_check_alloc_null(...)                        __LDBG_IF(__DBG_check_alloc_null(__VA_ARGS__))
+#define __LDBG_check_alloc_aligned(...)                     __LDBG_IF(__DBG_check_alloc_aligned(__VA_ARGS__))
+#define __LDBG_check_ptr(...)                               __LDBG_IF(__DBG_check_ptr(__VA_ARGS__))
+#define __LDBG_check_ptr_no_null(...)                       __LDBG_IF(__DBG_check_ptr_no_null(__VA_ARGS__))
+#define __LDBG_check_ptr_null(...)                          __LDBG_IF(__DBG_check_ptr_null(__VA_ARGS__))
 
 // depricated functions below
 
-// #define __debug_prefix(out)                 out.printf_P(___debugPrefix, millis(), __BASENAME_FILE__, __LINE__, ESP.getFreeHeap(), __DEBUG_FUNCTION__ );
-
 #if DEBUG_INCLUDE_SOURCE_INFO
-    #define __debug_prefix(out)                     out.printf_P(___debugPrefix, millis(), __BASENAME_FILE__, __LINE__, ESP.getFreeHeap(), can_yield(), __DEBUG_FUNCTION__ )
-// #define __debug_prefix(out)                 out.printf_P(___debugPrefix, millis(), __BASENAME_FILE__, __LINE__, ESP.getFreeHeap(), __DEBUG_FUNCTION__ )
+#   define                                                  __debug_prefix(stream) stream.printf_P(___debugPrefix, millis(), __BASENAME_FILE__, __LINE__, ESP.getFreeHeap(), can_yield(), __DEBUG_FUNCTION__)
 #else
-    #define __debug_prefix(out)                     out.print(FPSTR(___debugPrefix))
+#   define                                                  __debug_prefix(stream) stream.print(FPSTR(___debugPrefix))
 #endif
-#define debug_prefix()                              __debug_prefix(DEBUG_OUTPUT)
+#define debug_prefix()                                      __debug_prefix(DEBUG_OUTPUT)
 
 
 //int DEBUG_OUTPUT_flush();
@@ -278,37 +275,36 @@ static inline int DEBUG_OUTPUT_flush() {
     return 1;
 }
 
-
-#define debug_print(msg)                            ((DebugContext::__state == DEBUG_HELPER_STATE_ACTIVE) ? (DEBUG_OUTPUT.print(msg) && 1) : -1)
-#define debug_println(...)                          ((DebugContext::__state == DEBUG_HELPER_STATE_ACTIVE) ? (debug_prefix() && DEBUG_OUTPUT.println(__VA_ARGS__) && DEBUG_OUTPUT_flush()) : -1)
-#define debug_printf(fmt, ...)                      ((DebugContext::__state == DEBUG_HELPER_STATE_ACTIVE) ? (debug_prefix() && DEBUG_OUTPUT.printf(fmt, ## __VA_ARGS__) && DEBUG_OUTPUT_flush()) : -1)
-#define debug_printf_P(fmt, ...)                    ((DebugContext::__state == DEBUG_HELPER_STATE_ACTIVE) ? (debug_prefix() && DEBUG_OUTPUT.printf_P(fmt, ## __VA_ARGS__) && DEBUG_OUTPUT_flush()) : -1)
+#define debug_print(msg)                                    ((DebugContext::__state == DEBUG_HELPER_STATE_ACTIVE) ? (DEBUG_OUTPUT.print(msg) && 1) : -1)
+#define debug_println(...)                                  ((DebugContext::__state == DEBUG_HELPER_STATE_ACTIVE) ? (debug_prefix() && DEBUG_OUTPUT.println(__VA_ARGS__) && DEBUG_OUTPUT_flush()) : -1)
+#define debug_printf(fmt, ...)                              ((DebugContext::__state == DEBUG_HELPER_STATE_ACTIVE) ? (debug_prefix() && DEBUG_OUTPUT.printf(fmt, ##__VA_ARGS__) && DEBUG_OUTPUT_flush()) : -1)
+#define debug_printf_P(fmt, ...)                            ((DebugContext::__state == DEBUG_HELPER_STATE_ACTIVE) ? (debug_prefix() && DEBUG_OUTPUT.printf_P(fmt, ##__VA_ARGS__) && DEBUG_OUTPUT_flush()) : -1)
 
 // Print::println(result) must be possible
-#define debug_print_result(result)                  DebugContext(__BASENAME_FILE__, __LINE__, __DEBUG_FUNCTION__).printResult(result)
+#define debug_print_result(result)                          DebugContext(__BASENAME_FILE__, __LINE__, __DEBUG_FUNCTION__).printResult(result)
 // to_string needs to convert result to a value that can be passed to (const String &) ...
-#define debug_prints_result(result, to_string)      DebugContext(__BASENAME_FILE__, __LINE__, __DEBUG_FUNCTION__).printsResult(result, to_string(result))
-#define debug_printf_result(result, fmt, ...)       DebugContext(__BASENAME_FILE__, __LINE__, __DEBUG_FUNCTION__).printfResult(result, fmt, #__VA_ARGS__)
+#define debug_prints_result(result, to_string)              DebugContext(__BASENAME_FILE__, __LINE__, __DEBUG_FUNCTION__).printsResult(result, to_string(result))
+#define debug_printf_result(result, fmt, ...)               DebugContext(__BASENAME_FILE__, __LINE__, __DEBUG_FUNCTION__).printfResult(result, fmt, #__VA_ARGS__)
 
-#define __SDBG_printf(fmt, ...)                     ::printf(PSTR(fmt "\n"), ##__VA_ARGS__);
+#define __SDBG_printf(fmt, ...)                             ::printf(PSTR(fmt "\n"), ##__VA_ARGS__);
 
-#define IF_DEBUG(...)                               __DBG_IF(__VA_ARGS__)
-#define _IF_DEBUG(...)                              __LDBG_IF(__VA_ARGS__)
+#define IF_DEBUG(...)                                       __DBG_IF(__VA_ARGS__)
+#define _IF_DEBUG(...)                                      __LDBG_IF(__VA_ARGS__)
 
-#define _debug_print(...)                           _IF_DEBUG(debug_print(__VA_ARGS__))
-#define _debug_println(...)                         _IF_DEBUG(debug_println(__VA_ARGS__))
-#define _debug_printf(...)                          _IF_DEBUG(debug_printf(__VA_ARGS__))
-#define _debug_printf_P(...)                        _IF_DEBUG(debug_printf_P(__VA_ARGS__))
-#define _debug_print_result(result)					_IF_DEBUG(debug_print_result(result))
-#define __SLDBG_printf(...)                         _IF_DEBUG(__SDBG_printf(__VA_ARGS__))
-#define __SLDBG_panic(...)                          _IF_DEBUG(__SDBG_printf(__VA_ARGS__); panic();)
+#define _debug_print(...)                                   _IF_DEBUG(debug_print(__VA_ARGS__))
+#define _debug_println(...)                                 _IF_DEBUG(debug_println(__VA_ARGS__))
+#define _debug_printf(...)                                  _IF_DEBUG(debug_printf(__VA_ARGS__))
+#define _debug_printf_P(...)                                _IF_DEBUG(debug_printf_P(__VA_ARGS__))
+#define _debug_print_result(result)                         _IF_DEBUG(debug_print_result(result))
+#define __SLDBG_printf(...)                                 _IF_DEBUG(__SDBG_printf(__VA_ARGS__))
+#define __SLDBG_panic(...)                                  _IF_DEBUG(__SDBG_printf(__VA_ARGS__); panic();)
 
 #if DEBUG_INCLUDE_SOURCE_INFO
-#define DEBUG_SOURCE_ARGS                           const char *_debug_filename, int _debug_lineno, const char *_debug_function,
-#define DEBUG_SOURCE_ADD_ARGS                       __BASENAME_FILE__, __LINE__, __DEBUG_FUNCTION__ ,
-#define DEBUG_SOURCE_PASS_ARGS                      _debug_filename, _debug_lineno, _debug_function,
-#define DEBUG_SOURCE_APPEND_ARGS                    , _debug_filename, _debug_lineno, _debug_function
-#define DEBUG_SOURCE_FORMAT                         " (%s:%u@%s)"
+#define DEBUG_SOURCE_ARGS                                   const char *_debug_filename, int _debug_lineno, const char *_debug_function,
+#define DEBUG_SOURCE_ADD_ARGS                               __BASENAME_FILE__, __LINE__, __DEBUG_FUNCTION__,
+#define DEBUG_SOURCE_PASS_ARGS                              _debug_filename, _debug_lineno, _debug_function,
+#define DEBUG_SOURCE_APPEND_ARGS                            , _debug_filename, _debug_lineno, _debug_function
+#define DEBUG_SOURCE_FORMAT                                 " (%s:%u@%s)"
 #else
 #define DEBUG_SOURCE_ARGS
 #define DEBUG_SOURCE_ADD_ARGS
@@ -321,44 +317,34 @@ static inline int DEBUG_OUTPUT_flush() {
 
 // deprecated
 
-#define DEBUG_HELPER_INIT()         ;
-#define DEBUG_HELPER_SILENT()       ;
-
-#define debug_print(...)                ;
-#define debug_println(...)              ;
-#define debug_printf(...)               ;
-#define debug_printf_P(...)             ;
-#define debug_wifi_diag()               ;
-#define debug_prefix(...)               ;
-
-#define debug_print_result(result)      result
-
-#define debug_helper_set_src()          ;
-
+#define DEBUG_HELPER_INIT()                                 ;
+#define DEBUG_HELPER_SILENT()                               ;
+#define debug_print(...)                                    ;
+#define debug_println(...)                                  ;
+#define debug_printf(...)                                   ;
+#define debug_printf_P(...)                                 ;
+#define debug_wifi_diag()                                   ;
+#define debug_prefix(...)                                   ;
+#define debug_print_result(result)                          result
 #define IF_DEBUG(...)
 #define _IF_DEBUG(...)
-
-#define _debug_print_result(result)	    result
-
+#define _debug_print_result(result)                         result
 #define DEBUG_SOURCE_ARGS
 #define DEBUG_SOURCE_ADD_ARGS
 #define DEBUG_SOURCE_PASS_ARGS
 #define DEBUG_SOURCE_APPEND_ARGS
 #define DEBUG_SOURCE_FORMAT
 
-#define DEBUG_ASSERT(...)               ;
-#define HAVE_DEBUG_ASSERT               0
-
 // new functions
 
-#define __DBG_print(...)                        ;
-#define __DBG_printf(...)                       ;
-#define __DBG_println()                         ;
-#define __DBG_panic(...)                        ;
-#define __DBG_assert(...)                       ;
-#define __DBG_assert_printf(...)                ;
-#define __DBG_assert_panic(...)                 :
-#define __DBG_print_result(result, ...)         result
+#define __DBG_print(...)                                    ;
+#define __DBG_printf(...)                                   ;
+#define __DBG_println()                                     ;
+#define __DBG_panic(...)                                    ;
+#define __DBG_assert(...)                                   ;
+#define __DBG_assert_printf(...)                            ;
+#define __DBG_assert_panic(...)                             ;
+#define __DBG_print_result(result, ...)                     result
 #define __DBG_IF(...)
 
 // memory management

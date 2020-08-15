@@ -194,6 +194,8 @@ public:
         ARG_TEN = 9,
     } ArgumentEnum_t;
 
+    static constexpr uint32_t kNoDefaultValue = ~0;
+
 public:
     AtModeArgs() = delete;
     // AtModeArgs(const AtModeArgs &) = delete;
@@ -253,11 +255,16 @@ public:
     long long toLongLong(uint16_t num, long long defaultValue = 0) const;
 
     template<class T>
-    T toIntMinMax(uint16_t num, T min, T max, T defaultValue = 0) {
+    T toIntMinMax(uint16_t num, T min, T max, T defaultValue) {
         if (!exists(num)) {
-            return std::max(min, std::min(max, defaultValue));
+            return defaultValue;
         }
-        return std::max(min, std::min(max, (T)toLongLong(num, (long long)defaultValue)));
+        return defaultValue;
+    }
+
+    template<class T>
+    T toIntMinMax(uint16_t num, T min, T max) {
+        return toIntMinMax(num, min, max, min);
     }
 
     double toDouble(uint16_t num, double defaultValue = 0) const;
@@ -266,11 +273,16 @@ public:
     }
 
     template<class T>
-    T toFloatMinMax(uint16_t num, T min, T max, T defaultValue = 0) {
+    T toFloatMinMax(uint16_t num, T min, T max, T defaultValue) {
         if (!exists(num)) {
-            return std::max(min, std::min(max, defaultValue));
+            return defaultValue;
         }
-        return std::max(min, std::min(max, (T)toDouble(num, defaultValue)));
+        return defaultValue;
+    }
+
+    template<class T>
+    T toFloatMinMax(uint16_t num, T min, T max) {
+        return toFloatMinMax(num, min, max, min);
     }
 
     // convert time to milliseconds
@@ -294,7 +306,7 @@ public:
     // "0.7days" = 60480000
     //
     // returns defaultValue if the time is lower than minTime or if the argument does not exist
-    uint32_t toMillis(uint16_t num, uint32_t minTime = 0, uint32_t maxTime = ~0, uint32_t defaultValue = 0, const String &defaultSuffix = String()) const;
+    uint32_t toMillis(uint16_t num, uint32_t minTime = 0, uint32_t maxTime = ~0, uint32_t defaultValue = kNoDefaultValue, const String &defaultSuffix = String()) const;
 
     int toChar(uint16_t num, int defaultValue = -1) const;
 

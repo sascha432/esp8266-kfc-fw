@@ -29,7 +29,7 @@ extern "C" bool can_yield() {
 
 #endif
 
-void ___debugbreak_and_panic(const char *filename, int line, const char *function) {
+int ___debugbreak_and_panic(const char *filename, int line, const char *function) {
 #if DEBUG
     DEBUG_OUTPUT.printf_P(PSTR("___debugbreak_and_panic() called in %s:%u - %s\n"), filename, line, function);
 #endif
@@ -47,6 +47,7 @@ void ___debugbreak_and_panic(const char *filename, int line, const char *functio
 #else
     panic();
 #endif
+    return 1;
 }
 
 #if _MSC_VER

@@ -78,42 +78,37 @@ void Cache::release()
 
 void Cache::fill(ColorType color)
 {
-    #undef __DBG_DEFAULT_ACTION
-    #define __DBG_DEFAULT_ACTION return;
-    __DBG_check_alloc_aligned(_buffer);
+    __DBG_BOUNDS_RETURN(__DBG_check_alloc_aligned(_buffer));
     std::fill(_buffer, &_buffer[_width], color);
-    // auto begin = _buffer;
-    // auto end = &_buffer[_width];
-    // while(begin < end) {
-    //     *begin++ = color;
-    // }
 }
 
 void Cache::fill(ColorType color, uWidthType startX, uWidthType endX)
 {
-    #undef __DBG_DEFAULT_ACTION
-    #define __DBG_DEFAULT_ACTION return;
-    __DBG_check_sx(startX, _width);
-    __DBG_check_ex(endX, startX, _width);
-    __DBG_check_alloc_aligned(_buffer);
-    __DBG_check_buffer(&_buffer[startX], _buffer, &_buffer[_width]);
-    __DBG_check_buffer(&_buffer[endX - 1], _buffer, &_buffer[_width]);
+    __DBG_BOUNDS_sx(startX, _width);
+    __DBG_BOUNDS_ex(endX, startX, _width);
+    if (startX < 0) {
+        startX = 0;
+    }
+    if (endX <= startX) {
+        return;
+    }
+    else if (endX >= _width) {
+        endX = _width - 1;
+    }
+    __DBG_BOUNDS_RETURN(
+        __DBG_check_alloc_aligned(_buffer) ||
+        __DBG_BOUNDS_buffer(&_buffer[startX], _buffer, &_buffer[_width]) ||
+        __DBG_BOUNDS_buffer(&_buffer[endX - 1], _buffer, &_buffer[_width])
+    );
     std::fill(&_buffer[startX], &_buffer[endX], color);
-    // auto begin = &_buffer[startX];
-    // auto end = &_buffer[endX];
-    // while(begin < end) {
-    //     *begin++ = color;
-    // }
 }
 
 void Cache::setPixel(sXType x, ColorType color)
 {
-    #undef __DBG_DEFAULT_ACTION
-    #define __DBG_DEFAULT_ACTION return;
-    __DBG_check_sx(x, _width);
-    __DBG_check_alloc_aligned(_buffer);
-    #undef __DBG_DEFAULT_ACTION
-    #define __DBG_DEFAULT_ACTION ;
+    __DBG_BOUNDS_RETURN(
+        __DBG_BOUNDS_sx(x, _width) ||
+        __DBG_check_alloc_aligned(_buffer)
+    );
     _buffer[x] = color;
 }
 
@@ -124,7 +119,7 @@ SingleLineCache::SingleLineCache(uWidthType width, uHeightType height, size_t) :
 void SingleLineCache::flush(GFXCanvasCompressed &canvas)
 {
     if (hasWriteFlag()) {
-        __DBG_check_alloc_aligned(_buffer);
+        __DBG_BOUNDS_RETURN(__DBG_check_alloc_aligned(_buffer));
         canvas._encodeLine(*this);
     }
 }
@@ -134,7 +129,7 @@ Cache &SingleLineCache::get(GFXCanvasCompressed &canvas, sYType y)
     if (!_buffer) {
         allocate();
     }
-    __DBG_check_alloc_aligned(_buffer);
+    __DBG_BOUNDS_ACTION(__DBG_check_alloc_aligned(_buffer), return *this);
     if (!isY(y)) {
         flush(canvas);
         setY(y);
@@ -149,7 +144,6 @@ void SingleLineCache::invalidateRange(sYType startY, sYType endY)
 
 void SingleLineCache::free(GFXCanvasCompressed &canvas)
 {
-    // __LDBG_printf("buffer=%p", _buffer);
     flush(canvas);
     release();
 }

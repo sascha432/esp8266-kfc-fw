@@ -28,7 +28,7 @@ namespace GFXCanvas {
 
 class GFXCanvasCompressed : public AdafruitGFXExtension {
 public:
-    typedef std::function<void(uXType x, uYType y, uWidthType width, color_t *pcolors)> DrawLineCallback_t;
+    typedef std::function<void(uXType x, uYType y, uWidthType width, ColorType *pcolors)> DrawLineCallback_t;
 
     static constexpr size_t kCachedLinesMax = GFXCANVAS_MAX_CACHED_LINES;
 
@@ -118,13 +118,12 @@ private:
     void _encodeLine(Cache &cache);
 
 protected:
-    virtual void _RLEdecode(ByteBuffer &buffer, color_t *output);
-    virtual void _RLEencode(color_t *data, ByteBuffer &buffer);
+    virtual void _RLEdecode(ByteBuffer &buffer, ColorType *output);
+    virtual void _RLEencode(ColorType *data, ByteBuffer &buffer);
 
     // colors are translated only inside the decode/encode methods
-    virtual color_t getColor(color_t color, bool addIfNotExists = true);
-    virtual ColorPalette *getPalette();
-    virtual void setPalette(ColorType *palette, uint8_t count);
+    virtual ColorType getPaletteColor(ColorType color) const;
+    virtual const ColorPalette *getPalette() const;
 
 protected:
     Lines _lines;

@@ -97,7 +97,7 @@ namespace GFXCanvas {
         b = ((color & 0x1f) * 527 + 23) >> 6;
     }
 
-    inline RGBColorType convertToRGB(color_t color)
+    inline RGBColorType convertToRGB(ColorType color)
     {
         uint8_t r, g, b;
         convertToRGB(color, r, g, b);
@@ -123,9 +123,9 @@ namespace GFXCanvas {
         ColorPalette();
 
         ColorType &at(int index);
-        ColorType at(int index) const;
+        ColorType at(ColorType index) const;
         ColorType &operator[](int index);
-        ColorType operator[](int index) const;
+        ColorType operator[](ColorType index) const;
 
         bool empty() const;
         size_t length() const;
@@ -137,7 +137,7 @@ namespace GFXCanvas {
         const ColorType *end() const;
 
         // returns index or -1
-        int getColorIndex(ColorType color);
+        int getColorIndex(ColorType color) const;
         // add color if it does not exist and return index
         // returns index of existing color
         // returns -1 if there is no space to add more

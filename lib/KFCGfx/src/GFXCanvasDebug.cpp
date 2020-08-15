@@ -2,8 +2,9 @@
 * Author: sascha_lammers@gmx.de
 */
 
-
 #include <Arduino_compat.h>
+#include <PrintString.h>
+#include <logger.h>
 #include "GFXCanvasConfig.h"
 
 #include <push_optimize.h>
@@ -11,10 +12,28 @@
 #include <debug_helper_enable.h>
 #else
 #include <debug_helper_disable.h>
-#pragma GCC optimize ("O3")
 #endif
 
 using namespace GFXCanvas;
 
+#if DEBUG_GFXCANVAS_BOUNDS
 
-#include <pop_optimize.h>
+bool __debug_GFXCanvasBounds_printf(const DebugContext &p, const char *format, ...)
+{
+    PrintString message;
+
+    DEBUG_OUTPUT.println(FPSTR(format));
+
+    va_list arg;
+    va_start(arg, format);
+    message.vprintf_P(format, arg);
+    va_end(arg);
+    if (p.isActive()) {
+        p.prefix();
+        p.getOutput().println(message);
+    }
+    Logger_error(message);
+    return true;
+}
+
+#endif

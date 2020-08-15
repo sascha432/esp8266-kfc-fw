@@ -506,112 +506,143 @@ var webUIComponent = {
         }, 'json');
     },
 
+    handleRLECompressedBitmap: function(data, pos) {
+
+        function rgb565_to_888(color) {
+            var b5 = (color & 0x1f);
+            var g6 = (color >> 5) & 0x3f;
+            var r5 = (color >> 11);
+            return [(r5 * 527 + 23) >> 6, (g6 * 259 + 33) >> 6, (b5 * 527 + 23) >> 6];
+        }
+
+        var len = new Uint8Array(data, pos++, 1)[0];
+        // var debug = true;
+        // if (debug) console.log('len', len);
+        var canvasId = new Uint8Array(data, pos, len);
+        pos += canvasId.byteLength;
+        // if (debug) console.log('pos', pos);
+        var canvasIdStr = new TextDecoder("utf-8").decode(canvasId);
+        // if (debug) console.log('canvasIdStr', canvasIdStr);
+        var canvas = $('#'+canvasIdStr);
+        // if (debug) console.log('canvas', canvas);
+        if (canvas.length == 0) {
+            dbg_console.error('cannot find canvas for', canvasIdStr);
+            return;
+        }
+        var ctx = canvas[0].getContext('2d');
+        // if (debug) console.log('ctx', ctx);
+        if (!ctx) {
+            dbg_console.error('cannot get 2d context for', canvas);
+            return;
+        }
+        if (pos % 2) {
+            pos++;
+        }
+        // if (debug) console.log('pos', pos);
+        var dim = new Uint16Array(data, pos, 5);
+        // if (debug) console.log('dim', dim);
+        pos += dim.byteLength;
+        var x = dim[0];
+        var y = dim[1];
+        var width = dim[2];
+        var height = dim[3];
+        var paletteCount = dim[4];
+        var palette = [];
+        if (paletteCount) {
+            palettergb565 = new Uint16Array(data, pos, paletteCount);
+            pos += palettergb565.byteLength;
+            for (var i = 0; i < palettergb565.length; i++) {
+                palette.push(rgb565_to_888(palettergb565[i]));
+            }
+        }
+        // if (debug) console.log('x', x, 'y', y, 'w', width, 'h', height, 'palette', paletteCount, palette, 'pos', pos);
+        var image = ctx.createImageData(width, height);
+        // if (debug) console.log('image',image);
+        var writePos = 0;
+
+        function copy_rle_color(color) {
+            do {
+                image.data[writePos++] = color[0];
+                image.data[writePos++] = color[1];
+                image.data[writePos++] = color[2];
+                image.data[writePos++] = 0xff;
+            } while(rle--);
+        }
+
+
+        if (paletteCount) {
+            while(pos < data.byteLength) {
+                // if (debug) console.log('pos', pos, 'len', data.byteLength, 'writePos', writePos);
+                var tmp = new Uint8Array(data, pos++, 1)[0];
+                // if (debug) console.log('tmp', tmp);
+                var index = (tmp >> 4); // palette index
+                var rle = tmp & 0xf;
+                if (rle == 0xf) {
+                    // if (debug) console.log('pos', pos);
+                    rle = new Uint8Array(data, pos++, 1)[0];
+                    // if (debug) console.log('rle:8', rle);
+                } else {
+                    // if (debug) console.log('rle:4', rle);
+                }
+                // if (debug) console.log('color', palette[index], 'index', index, 'palette', palette);
+                copy_rle_color(palette[index]);
+            }
+        }
+        else {
+            while(pos < data.byteLength) {
+                var tmp = new Uint8Array(data, pos, 3);
+                pos += tmp.byteLength;
+                var rle = tmp[0];
+                copy_rle_color(rgb565_to_888((tmp[2] << 8) | tmp[1]));
+                // var b5 = (color & 0x1f);
+                // var g6 = (color >> 5) & 0x3f;
+                // var r5 = (color >> 11); // & 0x1f;
+                // var r8 = ( r5 * 527 + 23 ) >> 6;
+                // var g8 = ( g6 * 259 + 33 ) >> 6;
+                // var b8 = ( b5 * 527 + 23 ) >> 6;
+                // console.log("rle",rle,d"color",r8,g8,b8,"writePos",writePos,"color",color);
+                // do {
+                //     image.data[writePos++] = color[0];
+                //     image.data[writePos++] = color[1];
+                //     image.data[writePos++] = color[2];
+                //     image.data[writePos++] = 0xff;
+                // } while(rle--);
+            }
+        }
+        // console.log("pixel", writePos/4, "height", writePos/4/width, "left over x", (writePos/4)%width);
+        ctx.putImageData(image, x, y);
+    },
+
     socketHandler: function(event) {
         if (event.type == 'close' || event.type == 'error') {
             this.setDisconnectedIcon(true);
         }
-        else if (event.data instanceof ArrayBuffer) {
-            var packetId = new Uint16Array(event.data, 0, 1);
-            if (packetId == 0x0001) {// RGB565_RLE_COMPRESSED_BITMAP
-                dbg_console.debug('RGB565_RLE_COMPRESSED_BITMAP', event.data.length);
-                var pos = packetId.byteLength;
-                var len = new Uint8Array(event.data, pos++, 1)[0];
-                var canvasId = new Uint8Array(event.data, pos, len);
-                pos += canvasId.byteLength;
-                var canvasIdStr = new TextDecoder("utf-8").decode(canvasId);
-                var canvas = document.getElementById(canvasIdStr);
-                if (!canvas) {
-                    return;
-                }
-                var ctx = canvas.getContext("2d");
-                if (!ctx) {
-                    return;
-                }
-
-                var dim = new Uint16Array(event.data, pos, 5);
-                pos += dim.byteLength;
-                var x = dim[0];
-                var y = dim[1];
-                var width = dim[2];
-                var height = dim[3];
-                var paletteCount = dim[4];
-                var palette = [];
-                if (paletteCount) {
-                    palettergb565 = new Uint16Array(event.data, pos, paletteCount);
-                    pos += palettergb565.byteLength;
-                    for (var i = 0; i < palettergb565.length; i++) {
-                        var color = palettergb565[i];
-                        var b5 = (color & 0x1f);
-                        var g6 = (color >> 5) & 0x3f;
-                        var r5 = (color >> 11);
-                        var r8 = ( r5 * 527 + 23 ) >> 6;
-                        var g8 = ( g6 * 259 + 33 ) >> 6;
-                        var b8 = ( b5 * 527 + 23 ) >> 6;
-                        palette.push([r8, g8, b8]);
-                    }
-                }
-
-                // console.log("x",x,"y",y,"w",width,"h", height, "palette", paletteCount, "pos", pos);
-
-                var image = ctx.createImageData(width, height);
-                var writePos = 0;
-                if (paletteCount) {
-                    while(pos < event.data.byteLength) {
-                        var tmp = new Uint8Array(event.data, pos, 1)[0];
-                        pos++;
-                        var index = (tmp >> 4);
-                        var rle = tmp & 0xf;
-                        if (rle == 0xf) {
-                            rle = new Uint8Array(event.data, pos, 1)[0];
-                            pos++;
-                        }
-                        var color = palette[index]
-                        do {
-                            image.data[writePos++] = color[0];
-                            image.data[writePos++] = color[1];
-                            image.data[writePos++] = color[2];
-                            image.data[writePos++] = 0xff;
-                        } while(rle--);
-                    }
-                }
-                else {
-                    while(pos < event.data.byteLength) {
-                        var tmp = new Uint8Array(event.data, pos, 3);
-                        pos += tmp.byteLength;
-                        var rle = tmp[0];
-                        var color = (tmp[2] << 8) | tmp[1];
-                        var b5 = (color & 0x1f);
-                        var g6 = (color >> 5) & 0x3f;
-                        var r5 = (color >> 11); // & 0x1f;
-                        var r8 = ( r5 * 527 + 23 ) >> 6;
-                        var g8 = ( g6 * 259 + 33 ) >> 6;
-                        var b8 = ( b5 * 527 + 23 ) >> 6;
-                        // console.log("rle",rle,d"color",r8,g8,b8,"writePos",writePos,"color",color);
-                        do {
-                            image.data[writePos++] = r8;
-                            image.data[writePos++] = g8;
-                            image.data[writePos++] = b8;
-                            image.data[writePos++] = 0xff;
-                        } while(rle--);
-                    }
-                }
-                // console.log("pixel", writePos/4, "height", writePos/4/width, "left over x", (writePos/4)%width);
-                ctx.putImageData(image, x, y);
-
-            }
-
-        }
-        else if (event.data) {
-            var json = JSON.parse(event.data);
-            dbg_console.debug('event.data', event.data, 'json', json);
-            // dbg_console.log("socket_handler", event, json)
-            if (json.type === 'ue') {
-                this.updateEvents(json.events);
-            }
-        }
         else if (event.type == 'auth') {
             //event.socket.send('+GET_VALUES');
             this.requestUI();
+        }
+        else if (event.data instanceof ArrayBuffer) {
+            var packetId = new Uint16Array(event.data, 0, 1);
+            if (packetId == 0x0001) {// RGB565_RLE_COMPRESSED_BITMAP
+                this.handleRLECompressedBitmap(event.data, packetId.byteLength);
+            } else {
+                dbg_console.log('unknown packet id: ' + packetId)
+            }
+        }
+        else if (event.type == 'data') {
+            try {
+                var json = JSON.parse(event.data);
+                if (json.type === 'ue') {
+                    this.updateEvents(json.events);
+                }
+            } catch(e) {
+                dbg_console.error('failed to parse json string', e, 'event.data', event)
+            }
+        }
+        else if (event.type == 'object') {
+            if (event.data.type === 'ue') {
+                this.updateEvents(event.data.events);
+            }
         }
     },
 

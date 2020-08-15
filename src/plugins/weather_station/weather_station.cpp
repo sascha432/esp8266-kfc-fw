@@ -42,7 +42,7 @@ using KFCConfigurationClasses::Plugins;
 #include <debug_helper_disable.h>
 #endif
 
-PROGMEM_STRING_DEF(weather_station_webui_id, "weather_station");
+PROGMEM_STRING_DEF(weather_station_webui_id, "ws_tft");
 
 static WeatherStationPlugin plugin;
 
@@ -481,15 +481,17 @@ void WeatherStationPlugin::createWebUI(WebUI &webUI)
 
 void WeatherStationPlugin::getValues(JsonArray &array)
 {
-    __LDBG_println();
+    __DBG_printf("show tft=%u", _config.show_webui);
 
     auto obj = &array.addObject(2);
     obj->add(JJ(id), F("bl_brightness"));
     obj->add(JJ(value), _backlightLevel);
 
     if (_config.show_webui) {
+        __DBG_printf("adding callOnce this=%p", this);
         // broadcast entire screen for each new client that connects
         LoopFunctions::callOnce([this]() {
+            __DBG_printf("calling _broadcastCanvas this=%p", this);
             _broadcastCanvas(0, 0, TFT_WIDTH, TFT_HEIGHT);
         });
     }
@@ -855,23 +857,35 @@ void WeatherStationPlugin::_broadcastCanvas(int16_t x, int16_t y, int16_t w, int
         return;
     }
     auto webSocketUI = WsWebUISocket::getWsWebUI();
-    //__LDBG_printf("x=%d y=%d w=%d h=%d ws=%p empty=%u", x, y, w, h, webSocketUI, webSocketUI->getClients().isEmpty());
+    // __DBG_printf("x=%d y=%d w=%d h=%d ws=%p empty=%u", x, y, w, h, webSocketUI, webSocketUI->getClients().isEmpty());
     if (webSocketUI && !webSocketUI->getClients().isEmpty()) {
         Buffer buffer;
 
         WebSocketBinaryPacketUnqiueId_t packetIdentifier = RGB565_RLE_COMPRESSED_BITMAP;
         buffer.write(reinterpret_cast<uint8_t *>(&packetIdentifier), sizeof(packetIdentifier));
 
-        const uint8_t len = strlen_P(SPGM(weather_station_webui_id));
+        auto str = SPGM(weather_station_webui_id);
+        size_t len = strlen_P(str);
         buffer.write(len);
-        buffer.write_P(SPGM(weather_station_webui_id), len);
-
-        GFXCanvasRLEStream stream(getCanvas(), x, y, w, h);
-        while(stream.available()) {
-            buffer.write(stream.read());
+        buffer.write_P(str, len);
+        if (buffer.length() & 0x01) { // the next part needs to be word aligned
+            buffer.write(0);
         }
 
-        auto wsBuffer = webSocketUI->makeBuffer(buffer.get(), buffer.length());
+        GFXCanvasRLEStream stream(getCanvas(), x, y, w, h);
+        //char buf[64];
+        while(stream.available()) {
+            //buffer.write(buf, stream.readBytes(buf, sizeof(buf)));
+            buffer.write(stream.read());
+        }
+        //__DBG_printf("buffer=%u", buffer.length());
+        buffer.write(0);
+
+        uint8_t *ptr;
+        len = buffer.length();
+        buffer.move(&ptr);
+
+        auto wsBuffer = webSocketUI->makeBuffer(ptr, len, false);
         // __LDBG_printf("buf=%p len=%u", wsBuffer, buffer.length());
         if (wsBuffer) {
             wsBuffer->lock();

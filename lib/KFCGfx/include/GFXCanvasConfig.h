@@ -19,13 +19,8 @@
 #define DEBUG_GFXCANVAS_BOUNDS                      1
 #endif
 
-#ifndef DEBUG_GFXCANVAS_BOUNDS_TYPE
-#define DEBUG_GFXCANVAS_BOUNDS_TYPE                 __DBG_printf
-// #define DEBUG_GFXCANVAS_BOUNDS_TYPE                 __DBG_panic
-#endif
-
-#define DEBUG_GFXCANVASCOMPRESSED_STATS             1
-#define DEBUG_GFXCANVASCOMPRESSED_STATS_DETAILS     1
+// #define DEBUG_GFXCANVASCOMPRESSED_STATS             1
+// #define DEBUG_GFXCANVASCOMPRESSED_STATS_DETAILS     1
 
 #if _MSC_VER
 #define DEBUG_GFXCANVASCOMPRESSED_BOUNDS_CHECK      1
@@ -69,12 +64,6 @@ namespace GFXCanvas {
         uWidthType w;
         uHeightType h;
     } uDimensionType;
-
-    using coord_x_t = uint16_t;
-    using coord_y_t = uint16_t;
-    using scoord_x_t = int16_t;
-    using scoord_y_t = int16_t;
-    using color_t = uint16_t;
 
     typedef struct __attribute__packed__ {
         uint16_t x;

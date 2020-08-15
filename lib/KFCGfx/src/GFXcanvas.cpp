@@ -24,17 +24,20 @@ ColorPalette::ColorPalette() : _count(0), _palette{}
 
 ColorType &ColorPalette::at(int index)
 {
-    __DBG_check_palette_index(index, *this);
+    __DBG_BOUNDS_ACTION(__DBG_BOUNDS_assert((unsigned)index < (unsigned)_count), return _palette[0]);
     index = (unsigned)index % _count;
-    __DBG_check_palette_index(index, *this);
+    __DBG_BOUNDS_ACTION(__DBG_BOUNDS_assert((unsigned)index < (unsigned)_count), return _palette[0]);
     return _palette[index];
 }
 
-ColorType ColorPalette::at(int index) const
+ColorType ColorPalette::at(ColorType index) const
 {
-    __DBG_check_palette_index(index, *this);
+    __DBG_BOUNDS_ACTION(__DBG_BOUNDS_assert((unsigned)index < (unsigned)_count), return _palette[0]);
+    if (_count == 0) {
+        return 0;
+    }
     index = (unsigned)index % _count;
-    __DBG_check_palette_index(index, *this);
+    __DBG_BOUNDS_ACTION(__DBG_BOUNDS_assert((unsigned)index < (unsigned)_count), return _palette[0]);
     return _palette[index];
 }
 
@@ -43,7 +46,7 @@ ColorType &ColorPalette::operator[](int index)
     return at(index);
 }
 
-ColorType ColorPalette::operator[](int index) const
+ColorType ColorPalette::operator[](ColorType index) const
 {
     return at(index);
 }
@@ -90,12 +93,12 @@ const ColorType *ColorPalette::end() const
     return &_palette[_count];
 }
 
-int ColorPalette::getColorIndex(ColorType findColor)
+int ColorPalette::getColorIndex(ColorType findColor) const
 {
     uint8_t i = 0;
     for(const auto &color: *this) {
         if (findColor == color) {
-            __DBG_BOUNDS_ACTION(__DBG_check_assert(&color - begin() == i), return -1);
+            __DBG_BOUNDS_ACTION(__DBG_BOUNDS_assert(&color - begin() == i), return -1);
             return i;
         }
         i++;
@@ -108,7 +111,7 @@ int ColorPalette::addColor(ColorType color)
     auto index = getColorIndex(color);
     if (index == -1 && _count < size()) { // not found and space available?
         index = _count;
-        __DBG_BOUNDS_ACTION(__DBG_check_assert(_count < kColorsMax), return -1);
+        __DBG_BOUNDS_ACTION(__DBG_BOUNDS_assert(_count < kColorsMax), return -1);
         _palette[_count++] = color;
     }
     return index;

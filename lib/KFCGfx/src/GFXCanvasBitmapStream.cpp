@@ -52,8 +52,8 @@ int GFXCanvasBitmapStream::read()
             uint16_t y = (imagePos / perLine) + _y;
             uint16_t x = ((imagePos % perLine) / 2) + _x;
 
-            __DBG_BOUNDS_ACTION(__DBG_check_sy(y, _canvas.height()), return 0);
-            __DBG_BOUNDS_ACTION(__DBG_check_sx(x, _canvas.width()), return 0);
+            __DBG_BOUNDS_ACTION(__DBG_BOUNDS_sy(y, _canvas.height()), return 0);
+            __DBG_BOUNDS_ACTION(__DBG_BOUNDS_sx(x, _canvas.width()), return 0);
 
             if (!_cache.isY(y)) {
                 _cache.setY(y);

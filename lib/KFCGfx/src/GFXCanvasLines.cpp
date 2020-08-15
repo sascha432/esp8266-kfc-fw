@@ -57,7 +57,7 @@ Lines &Lines::operator=(const Lines &lines)
     _height = lines.height();
     _lines = __DBG_new_array(_height, LineBuffer);
     for(uYType i = 0; i < _height; i++) {
-        __DBG_BOUNDS_ACTION(__DBG_check_sy(i, _height), break);
+        __DBG_BOUNDS_ACTION(__DBG_BOUNDS_sy(i, _height), break);
         _lines[i] = lines.getLine(i);
     }
     return *this;
@@ -71,7 +71,7 @@ void Lines::clear(ColorType color)
 void Lines::fill(ColorType color, uYType start, uYType end)
 {
     for(uYType i = start; i < end; i++) {
-        __DBG_BOUNDS_RETURN(__DBG_check_sy(i, _height));
+        __DBG_BOUNDS_RETURN(__DBG_BOUNDS_sy(i, _height));
         _lines[i].clear(color);
     }
 }
@@ -103,13 +103,13 @@ const ByteBuffer &Lines::getBuffer(sYType y) const
 
 LineBuffer &Lines::getLine(sYType y)
 {
-    __DBG_BOUNDS_ACTION(__DBG_check_sy(y, _height), y = 0);
+    __DBG_BOUNDS_ACTION(__DBG_BOUNDS_sy(y, _height), y = 0);
     return _lines[y];
 }
 
 const LineBuffer &Lines::getLine(sYType y) const
 {
-    __DBG_BOUNDS_ACTION(__DBG_check_sy(y, _height), y = 0);
+    __DBG_BOUNDS_ACTION(__DBG_BOUNDS_sy(y, _height), y = 0);
     return _lines[y];
 }
 

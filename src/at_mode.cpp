@@ -98,10 +98,24 @@ using KFCConfigurationClasses::System;
 using KFCConfigurationClasses::Network;
 using KFCConfigurationClasses::MainConfig;
 
+#include <AsyncWebSocket.h>
+
+extern void __kfcfw_queue_monitor(AsyncWebSocketMessage *dataMessage, AsyncClient *_client, AsyncWebSocket *_server);
+
+void __kfcfw_queue_monitor(AsyncWebSocketMessage *dataMessage, AsyncClient *_client, AsyncWebSocket *_server)
+{
+#if 0
+    Serial.printf_P(PSTR("+WSQ: count=%u size=%u [%u:%u]"), _server->_getQueuedMessageCount(), _server->_getQueuedMessageSize(), WS_MAX_QUEUED_MESSAGES, WS_MAX_QUEUED_MESSAGES_SIZE);
+#if WS_MAX_QUEUED_MESSAGES_MIN_HEAP
+    Serial.printf_P(PSTR(" heap %u/%u [%u:%u]"), ESP.getFreeHeap(), WS_MAX_QUEUED_MESSAGES_MIN_HEAP, WS_MIN_QUEUED_MESSAGES, WS_MIN_QUEUED_MESSAGES_SIZE);
+#endif
+    Serial.println();
+#endif
+}
+
 typedef std::vector<ATModeCommandHelp> ATModeHelpVector;
 
 static ATModeHelpVector *atModeCommandHelp = nullptr;
-
 
 ATModeCommandHelp::ATModeCommandHelp(const ATModeCommandHelp_t *data, PGM_P pluginName) : _data(data), _name(pluginName)
 {

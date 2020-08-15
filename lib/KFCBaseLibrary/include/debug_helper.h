@@ -76,81 +76,14 @@ extern const char ___debugPrefix[] PROGMEM;
 #define DEBUG_HELPER_POSITION                               DebugContext()
 #endif
 
-class DebugContext {
-public:
-#if DEBUG_INCLUDE_SOURCE_INFO
-    DebugContext(const char* file, int line, const char* functionName) : _file(file), _line(line), _functionName(functionName) {}
-    void prefix() const {
-        DEBUG_OUTPUT.printf_P(___debugPrefix, millis(), _file, _line, ESP.getFreeHeap(), _functionName);
-    }
-    const char* _file;
-    int _line;
-    const char* _functionName;
-#else
-    void prefix() const {
-        DEBUG_OUTPUT.print(FPSTR(___debugPrefix));
-    }
-#endif
-
-    template<typename T>
-    inline T printResult(T result) const {
-        if (isActive) {
-            prefix();
-            getOutput().print(F("result="));
-            getOutput().println(result);
-        }
-        return result;
-    }
-
-    template<typename T>
-    inline T printsResult(T result, const String &resultStr) const {
-        if (isActive) {
-            prefix();
-            getOutput().print(F("result="));
-            getOutput().println(resultStr);
-        }
-        return result;
-    }
-
-    template<typename T>
-    inline T printfResult(T result, const char *format, ...) const {
-        if (isActive()) {
-            prefix();
-            va_list arg;
-            va_start(arg, format);
-            vprintf(format, arg);
-            va_end(arg);
-        }
-        return result;
-    }
-
-    void vprintf(const char *format, va_list arg) const;
-
-    static void pause(uint32_t timeout = ~0);
-
-    static bool isActive() {
-        return __state == DEBUG_HELPER_STATE_ACTIVE;
-    }
-    static Print &getOutput() {
-        return DEBUG_OUTPUT;
-    }
-
-    static uint8_t __state;
-    static const char* pretty_function(const char* name);
-    static void activate(bool state = true) {
-        __state = state ? DEBUG_HELPER_STATE_ACTIVE : DEBUG_HELPER_STATE_DISABLED;
-    }
-};
-
-
 // regular debug functions
 #define __DBG_print(arg)                                    debug_println(F(arg))
 #define __DBG_printf(fmt, ...)                              debug_printf(PSTR(fmt "\n"), ##__VA_ARGS__)
 #define __DBG_println()                                     debug_println()
 #define __DBG_panic(fmt, ...)                               (DEBUG_OUTPUT.printf_P(PSTR(fmt "\n"), ## __VA_ARGS__) && __debugbreak_and_panic())
-#define __DBG_assert(cond)                                  (!(cond) ? (__DBG_print("assert( " _STRINGIFY(cond) ") ") && true) : false)
-#define __DBG_assert_printf(cond, fmt, ...)                 (!(cond) ? (__DBG_print("assert( " _STRINGIFY(cond) ") ") && __DBG_printf(fmt, ##__VA_ARGS__) && true) : false)
-#define __DBG_assert_panic(cond, fmt, ...)                  (!(cond) ? (__DBG_print("assert( " _STRINGIFY(cond) ") ") && __DBG_panic(fmt, ##__VA_ARGS__) && true) : false)
+#define __DBG_assert(cond)                                  (!(cond) ? (__DBG_print("assert( " _STRINGIFY(cond) ")") && true) : false)
+#define __DBG_assert_printf(cond, fmt, ...)                 (!(cond) ? (__DBG_print("assert( " _STRINGIFY(cond) ")") && __DBG_printf(fmt, ##__VA_ARGS__)) : false)
+#define __DBG_assert_panic(cond, fmt, ...)                  (!(cond) ? (__DBG_print("assert( " _STRINGIFY(cond) ")") && __DBG_panic(fmt, ##__VA_ARGS__)) : false)
 #define __DBG_print_result(result)                          debug_print_result(result)
 #define __DBG_printf_result(result, fmt, ...)               debug_printf_result(result, PSTR(fmt "\n"), ##__VA_ARGS__)
 #define __DBG_prints_result(result, to_string)              debug_prints_result(result, to_string)
@@ -159,6 +92,8 @@ public:
 #define __DBG_S_IF(a, b)                                    __DBG_IF(a) __DBG_N_IF(b)
 
 // memory management
+
+#include "DebugContext.h"
 
 // debug
 #if HAVE_MEM_DEBUG
@@ -248,7 +183,7 @@ public:
 #define __LDBG_assert(...)                                  __LDBG_IF(__DBG_assert(__VA_ARGS__))
 #define __LDBG_assert_printf(...)                           __LDBG_IF(__DBG_assert_printf(__VA_ARGS__))
 #define __LDBG_assert_panic(...)                            __LDBG_IF(__DBG_assert_panic(__VA_ARGS__))
-#define __LDBG_print_result(result, ...)                    __LDBG_S_IF(__DBG_print_result(result, __VA__ARGS), result)
+#define __LDBG_print_result(result, ...)                    __LDBG_S_IF(__DBG_print_result(result, #__VA_ARGS__), result)
 
 #define __LDBG_check_alloc(...)                             __LDBG_IF(__DBG_check_alloc(__VA_ARGS__))
 #define __LDBG_check_alloc_no_null(...)                     __LDBG_IF(__DBG_check_alloc_no_null(__VA_ARGS__))
@@ -268,17 +203,16 @@ public:
 #define debug_prefix()                                      __debug_prefix(DEBUG_OUTPUT)
 
 
-//int DEBUG_OUTPUT_flush();
-
 static inline int DEBUG_OUTPUT_flush() {
     DEBUG_OUTPUT.flush();
     return 1;
 }
 
-#define debug_print(msg)                                    ((DebugContext::__state == DEBUG_HELPER_STATE_ACTIVE) ? (DEBUG_OUTPUT.print(msg) && 1) : -1)
-#define debug_println(...)                                  ((DebugContext::__state == DEBUG_HELPER_STATE_ACTIVE) ? (debug_prefix() && DEBUG_OUTPUT.println(__VA_ARGS__) && DEBUG_OUTPUT_flush()) : -1)
-#define debug_printf(fmt, ...)                              ((DebugContext::__state == DEBUG_HELPER_STATE_ACTIVE) ? (debug_prefix() && DEBUG_OUTPUT.printf(fmt, ##__VA_ARGS__) && DEBUG_OUTPUT_flush()) : -1)
-#define debug_printf_P(fmt, ...)                            ((DebugContext::__state == DEBUG_HELPER_STATE_ACTIVE) ? (debug_prefix() && DEBUG_OUTPUT.printf_P(fmt, ##__VA_ARGS__) && DEBUG_OUTPUT_flush()) : -1)
+// debug_print* macros return 0 if debugging is disabled or >=1, basically the length of the data that was sent + 1
+#define debug_print(msg)                                    ((DebugContext::__state == DEBUG_HELPER_STATE_ACTIVE) ? (DEBUG_OUTPUT.print(msg) + DEBUG_OUTPUT_flush()) : 0)
+#define debug_println(...)                                  ((DebugContext::__state == DEBUG_HELPER_STATE_ACTIVE) ? (debug_prefix() + DEBUG_OUTPUT.println(__VA_ARGS__) + DEBUG_OUTPUT_flush()) : 0)
+#define debug_printf(fmt, ...)                              ((DebugContext::__state == DEBUG_HELPER_STATE_ACTIVE) ? (debug_prefix() + DEBUG_OUTPUT.printf(fmt, ##__VA_ARGS__) + DEBUG_OUTPUT_flush()) : 0)
+#define debug_printf_P(fmt, ...)                            ((DebugContext::__state == DEBUG_HELPER_STATE_ACTIVE) ? (debug_prefix() + DEBUG_OUTPUT.printf_P(fmt, ##__VA_ARGS__) + DEBUG_OUTPUT_flush()) : 0)
 
 // Print::println(result) must be possible
 #define debug_print_result(result)                          DebugContext(__BASENAME_FILE__, __LINE__, __DEBUG_FUNCTION__).printResult(result)

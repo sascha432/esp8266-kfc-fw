@@ -8,6 +8,7 @@ except ImportError:
 import subprocess
 import shutil
 import os.path
+import sys
 
 def new_build(source, target, env):
     env.Execute(env['PYTHONEXE'] + " \"${PROJECT_DIR}/scripts/build_number.py\" -v \"${PROJECT_DIR}/include/build.h\"");
@@ -61,6 +62,40 @@ def git_get_head():
 #     copy_file(str(target[0]))
 #     # copy_file(str(target[0]).replace(".elf", ".bin"))
 #     copy_file("platformio.ini")
+
+# # remove all duplicates from CPPDEFINES
+# # last define is left over
+# dupes = {}
+# values = {}
+# n = 0
+# cppdefines = env.get("CPPDEFINES", [])
+# for item in cppdefines:
+#     if isinstance(item, tuple):
+#         key = item[0]
+#         val = item[1]
+#     else:
+#         key = item
+#         val = 1
+#     if key in dupes:
+#         dupes[key].append(n)
+#         values[key].append(val)
+#     else:
+#         dupes[key] = [n]
+#         values[key] = [val]
+#     n += 1
+
+# for key in dupes:
+#     if len(dupes[key])>1:
+#         # n = 0
+#         # for index in dupes[key]:
+#         #     print('key=%s num=%u/%u value=%s index=%u' % (key, n, len(dupes[key]), values[key][n], index))
+#         #     print(dupes[key][0:-1], dupes[key])
+#         #     n =+ 1
+
+#         for index in dupes[key][0:-1]:
+#             del cppdefines[index]
+
+# env.Replace(CPPDEFINES=cppdefines);
 
 def copy_spiffs(source, target, env):
     copy_file(str(target[0]))

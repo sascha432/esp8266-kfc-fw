@@ -81,8 +81,6 @@ FailureCounterContainer &loginFailures = plugin._loginFailures;
 #define U_ATMEGA 254
 
 #if ARDUINO_ESP8266_VERSION_COMBINED >= 0x020603
-extern "C" uint32_t _FS_start;
-extern "C" uint32_t _FS_end;
 #ifndef U_SPIFFS
 #define U_SPIFFS U_FS
 #endif

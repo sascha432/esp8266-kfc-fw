@@ -48,11 +48,12 @@ String url_encode(const String &str)
 {
     PrintString out_str;
     const char *ptr = str.c_str();
-    while(*ptr) {
-        if (isalnum(*ptr)) {
-            out_str += *ptr;
+    char ch;
+    while((ch = *ptr) != 0) {
+        if (isalnum(ch)) {
+            out_str += ch;
         } else {
-            out_str.printf_P(PSTR("%%%02X"), (int)(*ptr & 0xff));
+            out_str.printf_P(PSTR("%%%02X"), ch);
         }
         ptr++;
     }

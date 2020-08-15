@@ -292,7 +292,7 @@ void PrintArgs::_copy(const char *str)
 void PrintArgs::_writeFormat(const void *format)
 {
 #if defined(ESP8266) && 0
-    uint16_t value = (uintptr_t)format - UMM_MALLOC_CFG_HEAP_ADDR;
+    uint16_t value = (uintptr_t)format - SECTION_HEAP_START_ADDRESSS;
     _buffer.write(reinterpret_cast<const uint8_t *>(&value), sizeof(value));
 #else
     _buffer.write(reinterpret_cast<const uint8_t *>(&format), sizeof(const char *));

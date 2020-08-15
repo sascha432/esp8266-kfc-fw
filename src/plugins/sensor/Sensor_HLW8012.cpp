@@ -55,7 +55,7 @@ Sensor_HLW8012::Sensor_HLW8012(const String &name, uint8_t pinSel, uint8_t pinCF
     REGISTER_SENSOR_CLIENT(this);
 
     if (sensor) {
-        __debugbreak_and_panic_printf_P(PSTR("Only one instance of Sensor_HLW8012 supported\n"));
+        __DBG_panic("Only one instance of Sensor_HLW8012 supported");
     }
 
     _inputCF.setCallback([this](double pulseWidth) {

@@ -21,10 +21,13 @@
 #include "debug_helper_disable.h"
 #endif
 
-
 PluginComponent::DependencyVector *PluginComponent::_dependencies;
 
 PROGMEM_STRING_DEF(__pure_virtual, "pure virtual call: %s\n");
+
+#define __DBG_panic_pure_virtual() \
+    DEBUG_OUTPUT.printf_P(SPGM(__pure_virtual), getName_P()); \
+    __debugbreak_and_panic()
 
 PluginComponent *PluginComponent::findPlugin(NameType name, bool isSetup)
 {
@@ -127,38 +130,37 @@ void PluginComponent::invokeReconfigureNow(const String &source)
 
 void PluginComponent::getStatus(Print &output)
 {
-    __debugbreak_and_panic_printf_P(SPGM(__pure_virtual), getName_P());
 }
 
 void PluginComponent::createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request)
 {
-    __debugbreak_and_panic_printf_P(SPGM(__pure_virtual), getName_P());
+    __DBG_panic_pure_virtual();
 }
 
 void PluginComponent::createMenu()
 {
-    __debugbreak_and_panic_printf_P(SPGM(__pure_virtual), getName_P());
+    __DBG_panic_pure_virtual();
 }
 
 WebTemplate *PluginComponent::getWebTemplate(const String &formName)
 {
-    __debugbreak_and_panic_printf_P(SPGM(__pure_virtual), getName_P());
+    __DBG_panic_pure_virtual();
     return nullptr;
 }
 
 void PluginComponent::createWebUI(WebUI &webUI)
 {
-    __debugbreak_and_panic_printf_P(SPGM(__pure_virtual), getName_P());
+    __DBG_panic_pure_virtual();
 }
 
 void PluginComponent::getValues(JsonArray &array)
 {
-    __debugbreak_and_panic_printf_P(SPGM(__pure_virtual), getName_P());
+    __DBG_panic_pure_virtual();
 }
 
 void PluginComponent::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
 {
-    __debugbreak_and_panic_printf_P(SPGM(__pure_virtual), getName_P());
+    __DBG_panic_pure_virtual();
 }
 
 #if AT_MODE_SUPPORTED
@@ -184,7 +186,7 @@ void PluginComponent::atModeHelpGenerator()
 
 bool PluginComponent::atModeHandler(AtModeArgs &args)
 {
-    __debugbreak_and_panic_printf_P(SPGM(__pure_virtual), getName_P());
+    __DBG_panic_pure_virtual();
     return false;
 }
 

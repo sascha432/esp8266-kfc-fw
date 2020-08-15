@@ -129,7 +129,7 @@ void SyslogTCP::_onPoll(void *arg, AsyncClient *client)
 void SyslogTCP::transmit(const String &message, Callback_t callback)
 {
     if (_queue.isSending) {
-        __debugbreak_and_panic_printf_P(PSTR("FATAL: Transmit called while sending\n"));
+        __DBG_panic("FATAL: Transmit called while sending");
     }
     _queue.isSending = true;
     _queue.idleTimeout = 0;

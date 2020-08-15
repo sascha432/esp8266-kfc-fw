@@ -342,7 +342,7 @@ void ConfigurationHelper::writeHandles(bool clear)
 //         handles->emplace_back(name, crc);
 //     }
 //     else if (*iterator != name) {
-//         __debugbreak_and_panic_printf_P(PSTR("getHandle(%s): CRC not unique: %x, %s\n"), name, crc, iterator->getName());
+//         __DBG_panic("getHandle(%s): CRC not unique: %x, %s", name, crc, iterator->getName());
 //     }
 //     return crc;
 // }
@@ -515,7 +515,7 @@ bool Configuration::write()
 #if DEBUG_CONFIGURATION
     auto calcOfs = _offset + (sizeof(ConfigurationParameter::Param_t) * _params.size()) + sizeof(Header_t);
     if (_dataOffset != calcOfs) {
-        __debugbreak_and_panic_printf_P(PSTR("real_ofs=%u ofs=%u\n"), _dataOffset, calcOfs);
+        __DBG_panic("real_ofs=%u ofs=%u", _dataOffset, calcOfs);
 
     }
 #endif
@@ -533,7 +533,7 @@ bool Configuration::write()
     }
 
     if (buffer.length() > _size) {
-        __debugbreak_and_panic_printf_P(PSTR("size exceeded: %u > %u\n"), buffer.length(), _size);
+        __DBG_panic("size exceeded: %u > %u", buffer.length(), _size);
     }
 
     auto len = (uint16_t)buffer.length();
@@ -854,7 +854,7 @@ ConfigurationParameter &Configuration::_getOrCreateParam(ConfigurationParameter:
         return _params.back();
     }
     else if (type != iterator->_param.getType()) {
-        __debugbreak_and_panic_printf_P(PSTR("%s: new_type=%s type=%s different\n"), ConfigurationHelper::getHandleName(iterator->_param.handle), iterator->toString().c_str(), (const char *)ConfigurationParameter::getTypeString(type));
+        __DBG_panic("%s: new_type=%s type=%s different", ConfigurationHelper::getHandleName(iterator->_param.handle), iterator->toString().c_str(), (const char *)ConfigurationParameter::getTypeString(type));
     }
     __DBG__checkIfHandleExists("find", iterator->_param.handle);
     return *iterator;

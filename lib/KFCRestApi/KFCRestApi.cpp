@@ -25,7 +25,7 @@
 KFCRestAPI::HttpRequest::HttpRequest(KFCRestAPI &api, JsonBaseReader *json, Callback_t callback) : _json(json), _callback(callback), _message(F("None")), _code(0), _api(api)
 {
     _json->initParser();
-    _request = new HttpClient();
+    _request = __DBG_new(HttpClient);
 
     String token;
     _api.getBearerToken(token);
@@ -38,8 +38,8 @@ KFCRestAPI::HttpRequest::HttpRequest(KFCRestAPI &api, JsonBaseReader *json, Call
 KFCRestAPI::HttpRequest::~HttpRequest()
 {
     _debug_printf_P(PSTR("httpRequestPtr=%p\n"), this);
-    delete _request;
-    delete _json;
+    __DBG_delete(_request);
+    __DBG_delete(_json);
 }
 
 const String &KFCRestAPI::HttpRequest::getMessage() const
@@ -156,18 +156,18 @@ void KFCRestAPI::_removeHttpRequest(KFCRestAPI::HttpRequest *httpRequestPtr)
 
     auto &api = httpRequestPtr->getApi();
     api._requests.erase(std::remove(api._requests.begin(), api._requests.end(), httpRequestPtr), api._requests.end());
-    delete httpRequestPtr;
+    __DBG_delete(httpRequestPtr);
 
     if (api._autoDelete && api._requests.empty()) {
         _debug_printf_P(PSTR("auto delete\n"));
-        delete &api;
+        __DBG_delete(&api);
     }
 }
 
 void KFCRestAPI::_createRestApiCall(const String &endPointUri, const String &body, JsonBaseReader *json, HttpRequest::Callback_t callback)
 {
     _debug_printf_P(PSTR("endpoint=%s payload=%s timeout=%u\n"), endPointUri.c_str(), body.c_str(), _timeout);
-    auto httpRequestPtr = new HttpRequest(*this, json, callback);
+    auto httpRequestPtr = __DBG_new(HttpRequest, *this, json, callback);
     _debug_printf_P(PSTR("httpRequestPtr=%p\n"), httpRequestPtr);
 
     auto &httpRequest = *httpRequestPtr;

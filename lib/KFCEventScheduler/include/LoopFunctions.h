@@ -4,10 +4,10 @@
 
 #pragma once
 
-#ifndef DEBUG_LOOP_FUNCTIONS
-#define DEBUG_LOOP_FUNCTIONS            0
-#include <debug_helper_enable.h>
-#endif
+// #ifndef DEBUG_LOOP_FUNCTIONS
+// #define DEBUG_LOOP_FUNCTIONS            0
+// #include <debug_helper_enable.h>
+// #endif
 
 #include <Arduino_compat.h>
 #if ESP8266
@@ -25,35 +25,38 @@ void run_scheduled_functions();
 
 class LoopFunctions {
 public:
-    typedef std::function<void(void)> Callback_t;
-    typedef void(*CallbackPtr_t)();
+    using Callback = std::function<void(void)>;
+    typedef void(*CallbackPtr)();
 
-    typedef struct  {
-        Callback_t callback;
-        CallbackPtr_t callbackPtr;
+    class Entry {
+    public:
+        Entry(Callback pCallback, CallbackPtr pCallbackPtr, bool pDeleteCallback) : callback(pCallback), callbackPtr(pCallbackPtr), deleteCallback(pDeleteCallback) {}
+
+        Callback callback;
+        CallbackPtr callbackPtr;
         bool deleteCallback;
-    } FunctionEntry_t;
+    };
 
-    typedef std::vector<FunctionEntry_t> FunctionsVector;
+    using FunctionsVector = std::vector<Entry> ;
 
     static void clear() {
         getVector().clear();
     }
 
-    static void add(Callback_t callback, CallbackPtr_t callbackPtr);  // for lambda functions, use any unique pointer as callbackPtr
-    static void add(CallbackPtr_t callbackPtr) {
+    static void add(Callback callback, CallbackPtr callbackPtr);  // for lambda functions, use any unique pointer as callbackPtr
+    static void add(CallbackPtr callbackPtr) {
         add(nullptr, callbackPtr);
     }
-    static bool callOnce(Callback_t callback) {
+    static bool callOnce(Callback callback) {
         return schedule_function(callback);
     }
-    static void remove(CallbackPtr_t callbackPtr);
+    static void remove(CallbackPtr callbackPtr);
 
-    inline static void add(Callback_t callback, void *callbackPtr) {
-        add(callback, reinterpret_cast<CallbackPtr_t>(callbackPtr));
+    inline static void add(Callback callback, void *callbackPtr) {
+        add(callback, reinterpret_cast<CallbackPtr>(callbackPtr));
     }
     inline static void remove(void *callbackPtr) {
-        remove(reinterpret_cast<CallbackPtr_t>(callbackPtr));
+        remove(reinterpret_cast<CallbackPtr>(callbackPtr));
     }
 
     static FunctionsVector &getVector();

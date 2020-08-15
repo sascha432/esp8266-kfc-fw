@@ -32,6 +32,7 @@ using KFCConfigurationClasses::Plugins;
 //
 // screen capture
 // http://192.168.0.95/images/screen_capture.bmp
+// http://192.168.0.56/images/screen_capture.bmp
 //
 //
 
@@ -92,10 +93,6 @@ WeatherStationPlugin::WeatherStationPlugin() :
 #if SAVE_CRASH_HAVE_CALLBACKS && false
     auto nextCallback = EspSaveCrash::getCallback();
     EspSaveCrash::setCallback([this, nextCallback](const EspSaveCrash::ResetInfo_t &info) {
-        if (_canvasPtr) {
-            delete _canvasPtr;
-            _canvasPtr = nullptr;
-        }
         if (nextCallback) {
             nextCallback(info);
         }
@@ -666,7 +663,7 @@ void WeatherStationPlugin::_getIndoorValues(float *data)
 
 void WeatherStationPlugin::_httpRequest(const String &url, int timeout, JsonBaseReader *jsonReader, Callback_t finishedCallback)
 {
-    auto rest = new ::WeatherStation::RestAPI(url);
+    auto rest = __DBG_new(::WeatherStation::RestAPI, url);
     rest->setAutoDelete(true);
     rest->call(jsonReader, std::max(15, timeout), [this, url, finishedCallback](bool status, const String &error) {
         __LDBG_printf("status=%u error=%s url=%s", status, error.c_str(), url.c_str());

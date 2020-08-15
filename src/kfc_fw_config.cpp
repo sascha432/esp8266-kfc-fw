@@ -1291,34 +1291,6 @@ void KFCFWConfiguration::printRTCStatus(Print &output, bool plain)
 #endif
 }
 
-extern "C" {
-
-extern uintptr_t *_FS_start;
-extern uintptr_t *_FS_end;
-extern uintptr_t *_KFCFW_start;
-extern uintptr_t *_KFCFW_end;
-extern uintptr_t *_ESPSAVECRASH_start;
-extern uintptr_t *_EEPROM_start;
-
-};
-
-KFCFWConfiguration::FlashRangeType KFCFWConfiguration::getFlashAddress(FlashAreaType type)
-{
-    switch(type) {
-        case FlashAreaType::FS:
-            return FlashRangeType((uintptr_t)&_FS_start, (uintptr_t)&_FS_end);
-        case FlashAreaType::EEPROM:
-            return FlashRangeType((uintptr_t)&_EEPROM_start);
-        case FlashAreaType::SAVECRASH:
-            return FlashRangeType((uintptr_t)&_ESPSAVECRASH_start);
-        case FlashAreaType::KFCFW:
-            return FlashRangeType((uintptr_t)&_KFCFW_start, (uintptr_t)&_KFCFW_end);
-        default:
-        case FlashAreaType::SKETCH:
-            return FlashRangeType(FlashRangeType::kFlashStartOfs, (uintptr_t)&_FS_start - FlashRangeType::kFlashSectorSize);
-    }
-}
-
 static KFCConfigurationPlugin plugin;
 
 PROGMEM_DEFINE_PLUGIN_OPTIONS(

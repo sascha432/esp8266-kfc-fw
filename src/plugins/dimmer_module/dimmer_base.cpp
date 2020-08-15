@@ -77,7 +77,7 @@ void Dimmer_Base::_begin()
             if (_wire.requestFrom(DIMMER_I2C_ADDRESS, _version.size()) == _version.size()) {
                 _version.read(_wire);
                 if (_version.getMajor() != 2) {
-                    __debugbreak_and_panic_printf_P(PSTR("version %u.%u.%u not supported"), DIMMER_VERSION_SPLIT(_version));
+                    __DBG_printf("version %u.%u.%u not supported", DIMMER_VERSION_SPLIT(_version));
                 }
             }
         }

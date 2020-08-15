@@ -4,6 +4,7 @@
 
 #if IOT_SENSOR_HAVE_BATTERY
 
+#include <ReadADC.h>
 #include "Sensor_Battery.h"
 #include "sensor.h"
 
@@ -144,7 +145,14 @@ float Sensor_Battery::readSensor()
 
 float Sensor_Battery::_readSensor()
 {
-    double adcVoltage = _adc.read() / 1024.0;
+    auto &adc = ADCManager::getInstance();
+    uint32_t sum = adc.readValueWait(10000U, 1000U);
+    delay(2);
+    sum += adc.readValueWait(10000U, 1000U);
+    delay(2);
+    sum += adc.readValueWait(10000U, 1000U);
+
+    double adcVoltage = sum / (3 * 1024.0);
     __LDBG_printf("raw = %f", (((IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R2 + IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1)) / IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1) * adcVoltage)
     return ((((IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R2 + IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1)) / IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_R1) * adcVoltage * _config.calibration) + _config.offset;
 }

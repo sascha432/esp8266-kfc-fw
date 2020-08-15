@@ -158,6 +158,8 @@
 
 #endif
 
+using WeatherStationCanvas = GFXCanvasCompressedPalette;
+
 class WSDraw {
 public:
     WSDraw();
@@ -200,7 +202,7 @@ public:
         return _tft;
     }
 
-    GFXCanvasCompressed& getCanvas() {
+    GFXCanvasCompressed &getCanvas() {
         return _canvas;
     }
 
@@ -215,6 +217,9 @@ public:
     class ScrollCanvas {
     public:
         ScrollCanvas(WSDraw &draw, uint16_t width, uint16_t height) : _draw(draw), _canvas(width, height)  {
+            if (_draw._scrollCanvas) {
+                __DBG_panic("scroll canvas set ptr=%p this=%p", _draw._scrollCanvas, this);
+            }
             _draw._scrollCanvas = this;
         }
         ~ScrollCanvas() {
@@ -222,24 +227,25 @@ public:
             _draw._scrollCanvas = nullptr;
         }
 
-        GFXCanvasCompressedPalette &getCanvas() {
+        WeatherStationCanvas &getCanvas() {
             return _canvas;
         }
 
         static void create(WSDraw *draw, uint16_t width, int16_t height) {
             destroy(draw);
-            draw->_scrollCanvas = new ScrollCanvas(*draw, width, height);
+            draw->_scrollCanvas = __DBG_new(ScrollCanvas, *draw, width, height);
         }
 
         static void destroy(WSDraw *draw) {
             if (draw->_scrollCanvas) {
-                delete draw->_scrollCanvas;
+                __DBG_delete(draw->_scrollCanvas);
+                draw->_scrollCanvas = nullptr;
             }
         }
 
     private:
         WSDraw &_draw;
-        GFXCanvasCompressedPalette _canvas;
+        WeatherStationCanvas _canvas;
         EventScheduler::Timer _timer;
     };
 
@@ -283,8 +289,7 @@ protected:
     virtual void _getIndoorValues(float *data);
 
     Adafruit_ST7735 _tft;
-    GFXCanvasCompressedPalette *_canvasPtr;
-    GFXCanvasCompressedPalette &_canvas;
+    WeatherStationCanvas &_canvas;
     ScrollCanvas *_scrollCanvas;
     uint8_t _scrollPosition;
     OpenWeatherMapAPI _weatherApi;

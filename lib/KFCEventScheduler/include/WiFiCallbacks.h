@@ -4,14 +4,14 @@
 
 #pragma once
 
+#include <Arduino_compat.h>
+#include <functional>
+#include <vector>
+
 #ifndef DEBUG_WIFICALLBACKS
 #define DEBUG_WIFICALLBACKS                         0
 #include <debug_helper_enable.h>
 #endif
-
-#include <Arduino_compat.h>
-#include <functional>
-#include <vector>
 
 class WiFiCallbacks {
 public:
@@ -26,32 +26,33 @@ public:
     };
 
     using Callback = std::function<void(EventType event, void *payload)>;
-    typedef void(* CallbackPtr_t)(EventType event, void *payload);
+    typedef void(* CallbackPtr)(EventType event, void *payload);
 
-    typedef struct {
+    class Entry {
+    public:
+        Entry(EventType pEvents, Callback pCallback, CallbackPtr pCallbackPtr) : events(pEvents), callback(pCallback), callbackPtr(pCallbackPtr) {}
+
+        bool operator==(EventType type) {
+            return events == type;
+        }
+
         EventType events;
         Callback callback;
-        CallbackPtr_t callbackPtr;
-    } CallbackEntry_t;
+        CallbackPtr callbackPtr;
+    };
 
-    typedef std::vector<CallbackEntry_t> CallbackVector;
+    typedef std::vector<Entry> CallbackVector;
 
     static void clear() {
         getVector().clear();
     }
 
-    static EventType add(EventType events, Callback callback, CallbackPtr_t callbackPtr);
-    static EventType add(EventType events, Callback callback, void *callbackPtr) {
-        return add(events, callback, reinterpret_cast<CallbackPtr_t>(callbackPtr));
-    }
-    static EventType add(EventType events, CallbackPtr_t callbackPtr) {
-        return add(events, nullptr, callbackPtr);
-    }
+    static EventType add(EventType events, Callback callback, CallbackPtr callbackPtr);
+    static EventType add(EventType events, Callback callback, void *callbackPtr);
+    static EventType add(EventType events, CallbackPtr callbackPtr);
     // returns -1 if not found, 0 if the callback has been removed or EventType of callbacks left for this pointer
-    static EventType remove(EventType events, CallbackPtr_t callbackPtr);
-    static EventType remove(EventType events, void *callbackPtr) {
-        return remove(events, reinterpret_cast<CallbackPtr_t>(callbackPtr));
-    }
+    static EventType remove(EventType events, CallbackPtr callbackPtr);
+    static EventType remove(EventType events, void *callbackPtr);
 
     static void callEvent(EventType event, void *payload);
     static CallbackVector &getVector();

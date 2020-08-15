@@ -14,7 +14,7 @@ Author: sascha_lammers@gmx.de
 WiFiCallbacks::CallbackVector WiFiCallbacks::_callbacks;
 bool WiFiCallbacks::_locked = false;
 
-WiFiCallbacks::EventType WiFiCallbacks::add(EventType events, Callback callback, CallbackPtr_t callbackPtr)
+WiFiCallbacks::EventType WiFiCallbacks::add(EventType events, Callback callback, CallbackPtr callbackPtr)
 {
     __SLDBG_printf("events=%u callbackPtr=%p callback=%p", events, callbackPtr, lambda_target(callback));
 
@@ -29,11 +29,21 @@ WiFiCallbacks::EventType WiFiCallbacks::add(EventType events, Callback callback,
         }
     }
     __SLDBG_printf("callbackPtr=%p new entry events %d", callbackPtr, events);
-    _callbacks.push_back(CallbackEntry_t({events, callback, callbackPtr}));
+    _callbacks.emplace_back(events, callback, callbackPtr);
     return events;
 }
 
-WiFiCallbacks::EventType WiFiCallbacks::remove(EventType events, CallbackPtr_t callbackPtr)
+WiFiCallbacks::EventType WiFiCallbacks::add(EventType events, Callback callback, void *callbackPtr)
+{
+    return WiFiCallbacks::add(events, callback, reinterpret_cast<CallbackPtr>(callbackPtr));
+}
+
+WiFiCallbacks::EventType WiFiCallbacks::add(EventType events, CallbackPtr callbackPtr)
+{
+    return add(events, nullptr, callbackPtr);
+}
+
+WiFiCallbacks::EventType WiFiCallbacks::remove(EventType events, CallbackPtr callbackPtr)
 {
     __SLDBG_printf("events=%u callbackPtr=%p", events, callbackPtr);
     for (auto iterator = _callbacks.begin(); iterator != _callbacks.end(); ++iterator) {
@@ -53,6 +63,11 @@ WiFiCallbacks::EventType WiFiCallbacks::remove(EventType events, CallbackPtr_t c
     return EventType::CALLBACK_NOT_FOUND;
 }
 
+WiFiCallbacks::EventType WiFiCallbacks::remove(EventType events, void *callbackPtr)
+{
+    return remove(events, reinterpret_cast<CallbackPtr>(callbackPtr));
+}
+
 void WiFiCallbacks::callEvent(EventType event, void *payload)
 {
     __SLDBG_printf("event=%u payload=%p", event, payload);
@@ -68,9 +83,7 @@ void WiFiCallbacks::callEvent(EventType event, void *payload)
             }
         }
     }
-    _callbacks.erase(std::remove_if(_callbacks.begin(), _callbacks.end(), [](const CallbackEntry_t &wc) {
-        return wc.events == EventType::NONE;
-    }), _callbacks.end());
+    _callbacks.erase(std::remove(_callbacks.begin(), _callbacks.end(), EventType::NONE), _callbacks.end());
     _locked = false;
 }
 

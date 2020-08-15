@@ -376,7 +376,7 @@ int MQTTClient::subscribeWithId(MQTTComponentPtr component, const String &topic,
     qos = MQTTClient::getDefaultQos(qos);
 #if DEBUG
     if (topic.length() == 0) {
-        __debugbreak_and_panic_printf_P(PSTR("subscribeWithId: topic is empty\n"));
+        __DBG_panic("subscribeWithId: topic is empty");
     }
 #endif
     __LDBG_printf("component=%p topic=%s qos=%u", component, topic.c_str(), qos);

@@ -338,6 +338,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DUMPT, "DUMPT", "Dump timers");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPH, "DUMPH", "[<log|panic|clear>]", "Dump configuration handles");
 #endif
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPM, "DUMPM", "<start>,<length>", "Dump memory");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPA, "DUMPA", "<reset|mark|leak|freed>", "Memory allocation statistics");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DUMPFS, "DUMPFS", "Display file system information");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPEE, "DUMPEE", "[<offset>[,<length>]", "Dump EEPROM");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WRTC, "WRTC", "<id,data>", "Write uint32 to RTC memory");
@@ -406,6 +407,7 @@ void at_mode_help_commands()
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMPT), name);
 #endif
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMPM), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMPA), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMPFS), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMPEE), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMPRTC), name);
@@ -969,13 +971,16 @@ void at_mode_serial_handle_event(String &commandString)
                 args.printf_P(PSTR("Device name: %s"), System::Device::getName());
                 args.printf_P(PSTR("Uptime: %u seconds / %s"), getSystemUptime(), formatTime(getSystemUptime(), true).c_str());
                 args.printf_P(PSTR("Free heap/fragmentation: %u / %u"), ESP.getFreeHeap(), ESP.getHeapFragmentation());
-                args.printf_P(PSTR("Heap start/size: 0x%x/%u"), UMM_MALLOC_CFG_HEAP_ADDR, UMM_MALLOC_CFG_HEAP_SIZE);
+                args.printf_P(PSTR("Heap start/size: 0x%x/%u"), SECTION_HEAP_START_ADDRESS, SECTION_HEAP_END_ADDRESS - SECTION_HEAP_START_ADDRESS);
+                args.printf_P(PSTR("irom0.text: 0x%08x-0x%08x"), SECTION_IROM0_TEXT_START_ADDRESS, SECTION_IROM0_TEXT_END_ADDRESS);
                 args.printf_P(PSTR("CPU frequency: %uMHz"), ESP.getCpuFreqMHz());
                 args.printf_P(PSTR("Flash size: %s"), formatBytes(ESP.getFlashChipRealSize()).c_str());
                 args.printf_P(PSTR("Firmware size: %s"), formatBytes(ESP.getSketchSize()).c_str());
-                args.printf_P(PSTR("EEPROM: 0x%x"), config.getFlashAddress(KFCFWConfiguration::FlashAreaType::EEPROM).getStart());
-                args.printf_P(PSTR("EspSaveCrash: 0x%x"), config.getFlashAddress(KFCFWConfiguration::FlashAreaType::SAVECRASH).getStart());
-                args.printf_P(PSTR("KFCFW: 0x%x %u"), config.getFlashAddress(KFCFWConfiguration::FlashAreaType::KFCFW).getStart(), config.getFlashAddress(KFCFWConfiguration::FlashAreaType::KFCFW).getLength());
+                args.printf_P(PSTR("EEPROM: 0x%x"), SECTION_EEPROM_START_ADDRESS);
+                args.printf_P(PSTR("EspSaveCrash: 0x%x"), SECTION_ESPSAVECRASH_START_ADDRESS);
+                args.printf_P(PSTR("KFCFW: 0x%x/%u"), SECTION_KFCFW_START_ADDRESS, SECTION_KFCFW_END_ADDRESS - SECTION_KFCFW_START_ADDRESS);
+                args.printf_P(PSTR("WiFiCallbacks: size=%u count=%u"), sizeof(WiFiCallbacks::Entry), WiFiCallbacks::getVector().size());
+                args.printf_P(PSTR("LoopFunctions: size=%u count=%u"), sizeof(LoopFunctions::Entry), LoopFunctions::getVector().size());
 
                 args.printf_P(PSTR("sizeof(String): %u"), sizeof(String));
                 args.printf_P(PSTR("sizeof(std::vector<int>): %u"), sizeof(std::vector<int>));
@@ -1536,10 +1541,10 @@ void at_mode_serial_handle_event(String &commandString)
                             size_t col = 0;
                             stream.printf_P("\n%08x: ", (uintptr_t)startPtr);
                             while(startPtr < endPtr) {
-                                if ((uintptr_t)startPtr < 0x40200000) {
+                                if ((uintptr_t)startPtr < SECTION_FLASH_START_ADDRESS) {
                                     *dword = pgm_read_dword(startPtr);
                                 }
-                                else if (!ESP.flashRead((uintptr_t)startPtr - 0x40200000, dword, sizeof(*dword))) {
+                                else if (!ESP.flashRead((uintptr_t)startPtr - SECTION_FLASH_START_ADDRESS, dword, sizeof(*dword))) {
                                     *dword = ~0;
                                 }
                                 startPtr += sizeof(*dword);
@@ -1561,6 +1566,38 @@ void at_mode_serial_handle_event(String &commandString)
                     }
                 }
             }
+#if HAVE_MEM_DEBUG
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPA))) {
+                KFCMemoryDebugging::AllocType type = KFCMemoryDebugging::AllocType::ALL;
+                int cmd = -1;
+                if (args.size() >= 1) {
+                    cmd = stringlist_find_P_P(PSTR("reset|mark|leak|freed"), args.get(0), '|');
+                    switch(cmd) {
+                        case 0: // reset
+                            args.print(F("stats reset"));
+                            KFCMemoryDebugging::reset();
+                            cmd = 0;
+                            break;
+                        case 1: // mark
+                            args.print(F("all blocks marked as no leak"));
+                            KFCMemoryDebugging::markAllNoLeak();
+                            cmd = 0;
+                            break;
+                        case 2: // leak
+                            type = KFCMemoryDebugging::AllocType::LEAK;
+                            break;
+                        case 3: // freed
+                            type = KFCMemoryDebugging::AllocType::FREED;
+                            break;
+                        default:
+                            break;
+                    }
+                }
+                if (cmd) {
+                    KFCMemoryDebugging::dump(Serial, type);
+                }
+            }
+#endif
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPFS))) {
                 at_mode_dump_fs_info(output);
             }

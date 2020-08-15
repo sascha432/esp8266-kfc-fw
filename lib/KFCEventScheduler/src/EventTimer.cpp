@@ -31,7 +31,7 @@ EventTimer::~EventTimer()
     auto hasTimer = Scheduler.hasTimer(this);
     if (hasTimer || _etsTimer.timer_func || !_disarmed)  {
         __SLDBG_printf("timer=%p timer_func=%p callback=%p hasTimer=%u disarmed=%d object deleted while active", this, _etsTimer.timer_func, lambda_target(_loopCallback), hasTimer, _disarmed);
-        // __debugbreak_and_panic_printf_P(PSTR("timer=%p timer_func=%p callback=%p hasTimer=%u disarmed=%d object deleted while active\n"), this, _etsTimer.timer_func, lambda_target(_loopCallback), hasTimer, _disarmed);
+        // __DBG_panic("timer=%p timer_func=%p callback=%p hasTimer=%u disarmed=%d object deleted while active", this, _etsTimer.timer_func, lambda_target(_loopCallback), hasTimer, _disarmed);
     }
     // detach();
     ets_timer_done(&_etsTimer);

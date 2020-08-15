@@ -24,7 +24,7 @@ HANDLE get_com_handle() {
     }
     hComm = CreateFileA("\\\\.\\" DEVICE_NAME, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
     if (hComm == INVALID_HANDLE_VALUE) {
-        __debugbreak_and_panic_printf_P(PSTR("Cannot open " DEVICE_NAME "\n"));
+        __DBG_panic("Cannot open " DEVICE_NAME);
     }
 
     DCB dcbSerialParams = { 0 };
@@ -39,11 +39,11 @@ HANDLE get_com_handle() {
 
     COMMTIMEOUTS timeouts = { MAXDWORD, 0, 0, 50, 10 };
     if (!SetCommTimeouts(hComm, &timeouts)) {
-        __debugbreak_and_panic_printf_P(PSTR("Cannot open " DEVICE_NAME "\n"));
+        __DBG_panic("Cannot open " DEVICE_NAME);
     }
 
     if (!SetCommMask(hComm, EV_RXCHAR)) {
-        __debugbreak_and_panic_printf_P(PSTR("Cannot open " DEVICE_NAME "\n"));
+        __DBG_panic(PSTR("Cannot open " DEVICE_NAME "\n"));
     }
     return hComm;
 #else
@@ -82,7 +82,7 @@ String serial_read_byte(HANDLE hComm) {
 int serial_write(HANDLE hComm, const char *buffer, DWORD length) {
     DWORD written = 0;
     if (!WriteFile(hComm, buffer, length, &written, NULL)) {
-        __debugbreak_and_panic_printf_P(PSTR(DEVICE_NAME " write error"));
+        __DBG_panic(DEVICE_NAME " write error");
     }
 #if DEBUG_SERIAL_ECHO
     Serial.print(F("serial_write: "));

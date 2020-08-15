@@ -65,7 +65,7 @@ int SSIProxyStream::peek()
 
 size_t SSIProxyStream::_copy(uint8_t *buffer, size_t length)
 {
-    DEBUG_ASSERT(_template.marker == -1);
+    __LDBG_assert(_template.marker == -1);
 
     if (length > _available()) {
         length = _available();
@@ -76,7 +76,7 @@ size_t SSIProxyStream::_copy(uint8_t *buffer, size_t length)
     if (_template.position >= _buffer.begin() + _position) {
         _template.position -= length;
     }
-    DEBUG_ASSERT(_template.position == _buffer.end() || _template.in_buffer(_template.position));
+    __LDBG_assert(_template.position == _buffer.end() || _template.in_buffer(_template.position));
     return length;
 }
 
@@ -111,7 +111,7 @@ size_t SSIProxyStream::_readBuffer(bool templateCheck)
             _provider.end();
             __LDBG_printf("template %c%s%c end @ %d length=%d", _template.delim, _template.template_name(), _template.delim, _length, _template.template_length());
 
-            DEBUG_ASSERT(_template.marker == -1);
+            __LDBG_assert(_template.marker == -1);
             _template.position = _buffer.end();
         }
         else {
@@ -138,13 +138,13 @@ size_t SSIProxyStream::_readBuffer(bool templateCheck)
         _buffer.write(buf, len);
 
         _template.position = _template.from_offset(posOffset); // get new pointer from offset
-        DEBUG_ASSERT(_template.in_buffer(_template.position));
+        __LDBG_assert(_template.in_buffer(_template.position));
 
         if (templateCheck) {
             do {
                 uint8_t *ptr = _template.start();
                 uint8_t *end = _buffer.end();
-                DEBUG_ASSERT(_template.in_buffer(ptr));
+                __LDBG_assert(_template.in_buffer(ptr));
                 while(ptr < end) {
                     if (*ptr == '%' || *ptr == '$') {
                         _template.delim = *ptr;
@@ -189,8 +189,8 @@ size_t SSIProxyStream::_readBuffer(bool templateCheck)
                     } while (true);
 
                     if (name.len()) { // we found the end delimiter
-                        DEBUG_ASSERT(name.begin  && *(name.begin - 1) == _template.delim);
-                        DEBUG_ASSERT(name.end && *(name.end + 0) == _template.delim);
+                        __LDBG_assert(name.begin  && *(name.begin - 1) == _template.delim);
+                        __LDBG_assert(name.end && *(name.end + 0) == _template.delim);
 
                         _template.position = name.end + 1;
                         _template.name = name.toString();
@@ -204,7 +204,7 @@ size_t SSIProxyStream::_readBuffer(bool templateCheck)
                             _file.seek(filePos - name.len() - 1, SeekSet);
                             uint8_t tmp[128];
                             auto len = _file.readBytes(tmp, sizeof(tmp));
-                            DEBUG_ASSERT(memcmp(tmp, name.begin, name.len()) == 0);
+                            __LDBG_assert(memcmp(tmp, name.begin, name.len()) == 0);
                             _file.seek(savePos, SeekSet);
                         }
 #endif
@@ -215,8 +215,8 @@ size_t SSIProxyStream::_readBuffer(bool templateCheck)
 
                             // remove buffer after template name starts
                             size_t templateStartOfs = name.begin - _buffer.begin() - 1;
-                            DEBUG_ASSERT(_buffer[templateStartOfs] == _template.delim);
-                            DEBUG_ASSERT(_position <= templateStartOfs);
+                            __LDBG_assert(_buffer[templateStartOfs] == _template.delim);
+                            __LDBG_assert(_position <= templateStartOfs);
                             _buffer.remove(templateStartOfs, -1);
 
                             // continue adding data
@@ -242,7 +242,7 @@ size_t SSIProxyStream::_readBuffer(bool templateCheck)
 
             } while (_template.position < _buffer.end());
 
-            DEBUG_ASSERT(_template.marker == -1);
+            __LDBG_assert(_template.marker == -1);
         }
     }
 #if DEBUG_SSI_PROXY_STREAM

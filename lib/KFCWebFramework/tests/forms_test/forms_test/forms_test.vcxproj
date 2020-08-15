@@ -84,7 +84,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32;DEBUG_KFC_FORMS=1;DEBUG=1;_DEBUG=1;_CRTDBG_MAP_ALLOC;ARDUINO=101;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32;DEBUG_KFC_FORMS=1;DEBUG=1;_DEBUG=1;_CRTDBG_MAP_ALLOC;ARDUINO=101;HAVE_MEM_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib-mock\KFCBaseLibrary\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCBaseLibrary\tests\enum_test\pattern_test;C:\Users\sascha\Documents\PlatformIO\Projects\libcrc16\src;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCJson\include;C:\Users\sascha\Documents\PlatformIO\Projects\kfc_fw\lib\KFCWebFramework\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -170,6 +170,7 @@
     <ClCompile Include="..\..\..\..\..\lib-mock\KFCBaseLibrary\src\Wire.cpp" />
     <ClCompile Include="..\..\..\..\..\lib-mock\KFCBaseLibrary\src\WString.cpp" />
     <ClCompile Include="..\..\..\..\..\src\generated\FlashStringGeneratorAuto.cpp" />
+    <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\AllocPointerList.cpp" />
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\Arduino_compat.cpp" />
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\Buffer.cpp" />
     <ClCompile Include="..\..\..\..\KFCBaseLibrary\src\BufferStream.cpp" />
@@ -199,6 +200,8 @@
     <ClCompile Include="test1.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\..\..\KFCBaseLibrary\include\AllocPointerList.h" />
+    <ClInclude Include="..\..\..\..\KFCBaseLibrary\include\DebugMemoryHelper.h" />
     <ClInclude Include="..\..\..\include\BootstrapMenu.h" />
     <ClInclude Include="..\..\..\include\failure_counter.h" />
     <ClInclude Include="..\..\..\include\Form.h" />

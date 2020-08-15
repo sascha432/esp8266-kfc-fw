@@ -53,7 +53,7 @@ DumpBinary &DumpBinary::dump(const uint8_t *data, size_t length, ptrdiff_t offse
                 _output.print('.');
             }
         }
-        if (perLine == 0xff) {
+        if (perLine == kPerLineDisabled) {
             _output.print(' ');
         }
         else {
@@ -65,16 +65,16 @@ DumpBinary &DumpBinary::dump(const uint8_t *data, size_t length, ptrdiff_t offse
         for (; pos < end && j < perLine; pos++, j++) {
             int ch = pgm_read_byte(data + pos);
             _output.printf_P(SPGM(_02x, "%02x"), ch);
-            if (j % _groupBytes == 1) {
+            if ((pos < end - 1) && ((j % _groupBytes) == 1)) {
                 _output.print(' ');
             }
         }
-        if (_perLine != 0xff) {
+        if (_perLine != kPerLineDisabled) {
             _output.println();
         }
-#if ESP8266
-        delay(1);
-#endif
     }
+#if ESP8266
+    delay(1);
+#endif
     return *this;
 }

@@ -15,8 +15,8 @@
 #pragma warning(disable : 26812)
 
 #define SPI_FLASH_SEC_SIZE 4096
-#ifndef EEPROM_ADDR
-#define EEPROM_ADDR 0x40200000
+#ifndef SECTION_EEPROM_START_ADDRESS
+#define SECTION_EEPROM_START_ADDRESS 0x40200000
 #endif
 
 typedef enum {
@@ -45,7 +45,7 @@ inline uint32_t spi_flash_get_id(void) {
 }
 
 inline SpiFlashOpResult spi_flash_erase_sector(uint16_t sec) {
-	if (sec == (((uintptr_t)&_EEPROM_start - EEPROM_ADDR) / SPI_FLASH_SEC_SIZE)) {
+	if (sec == (((uintptr_t)&_EEPROM_start - SECTION_EEPROM_START_ADDRESS) / SPI_FLASH_SEC_SIZE)) {
 		if (EEPROM.begin()) {
 			memset(EEPROM_getDataPtr(), 0, SPI_FLASH_SEC_SIZE);
 			EEPROM.commit();
@@ -56,7 +56,7 @@ inline SpiFlashOpResult spi_flash_erase_sector(uint16_t sec) {
 }
 
 inline SpiFlashOpResult spi_flash_write(uint32_t des_addr, uint32_t *src_addr, uint32_t size) {
-	auto eeprom_start_address = ((uintptr_t)&_EEPROM_start - EEPROM_ADDR);
+	auto eeprom_start_address = ((uintptr_t)&_EEPROM_start - SECTION_EEPROM_START_ADDRESS);
 	auto eeprom_ofs = (uintptr_t)(src_addr - eeprom_start_address);
 	if (eeprom_ofs + size <= SPI_FLASH_SEC_SIZE && (size & 0b111 == 0) && (((uintptr_t)&des_addr) & 0b111 == 0)) {
 		if (EEPROM.begin()) {
@@ -70,7 +70,7 @@ inline SpiFlashOpResult spi_flash_write(uint32_t des_addr, uint32_t *src_addr, u
 
 inline SpiFlashOpResult spi_flash_read(uint32_t src_addr, uint32_t *des_addr, uint32_t size)
 {
-	auto eeprom_start_address = ((uintptr_t)&_EEPROM_start - EEPROM_ADDR);
+	auto eeprom_start_address = ((uintptr_t)&_EEPROM_start - SECTION_EEPROM_START_ADDRESS);
 	auto eeprom_ofs = (uintptr_t)(src_addr - eeprom_start_address);
 	if (eeprom_ofs + size <= SPI_FLASH_SEC_SIZE && (size & 0b111 == 0) && (((uintptr_t)&des_addr) & 0b111 == 0)) {
 		if (EEPROM.begin()) {

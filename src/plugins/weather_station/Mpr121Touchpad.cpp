@@ -287,8 +287,6 @@ void Mpr121Touchpad::Event::gestures()
         }
     }
 
-    // debug_println_notempty(__toString());
-
     if (type & EventType::RELEASED) {
         if (_swipe.x  || _swipe.y) {
             type |= EventType::SWIPE;
@@ -624,7 +622,12 @@ void Mpr121Touchpad::_loop()
 
 void Mpr121Touchpad::_fireEvent()
 {
-    debug_println_notempty(_event.__toString());
+    __LDBG_IF(
+        auto str = _event.__toString();
+        if (str.length()) {
+            __LDBG_printf("%s\n", str.c_str());
+        }
+    );
     if (_event._type) {// && _event._bubble) {
         for(const auto &callback: _callbacks) {
             if ((callback.events & _event.getType()) != 0) {

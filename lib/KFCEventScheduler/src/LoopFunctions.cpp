@@ -15,7 +15,7 @@
 
 #define SCHEDULED_FN_MAX_COUNT 32
 
-static std::vector<LoopFunctions::Callback_t> scheduled_functions;
+static std::vector<LoopFunctions::Callback> scheduled_functions;
 
 
 bool ICACHE_RAM_ATTR schedule_function (const std::function<void(void)>& fn)
@@ -41,7 +41,7 @@ void run_scheduled_functions()
 
 static LoopFunctions::FunctionsVector _functions;
 
-void LoopFunctions::add(LoopFunctions::Callback_t callback, CallbackPtr_t callbackPtr)
+void LoopFunctions::add(Callback callback, CallbackPtr callbackPtr)
 {
     __SLDBG_printf("callbackPtr=%p callback=%p", callbackPtr, lambda_target(callback));
     for(auto &entry: _functions) {
@@ -51,10 +51,10 @@ void LoopFunctions::add(LoopFunctions::Callback_t callback, CallbackPtr_t callba
             return;
         }
     }
-    _functions.push_back(FunctionEntry_t({callback, callbackPtr, false}));
+    _functions.emplace_back(callback, callbackPtr, false);
 }
 
-void LoopFunctions::remove(CallbackPtr_t callbackPtr)
+void LoopFunctions::remove(CallbackPtr callbackPtr)
 {
     __SLDBG_printf("callbackPtr=%p", callbackPtr);
     for(auto &entry: _functions) {

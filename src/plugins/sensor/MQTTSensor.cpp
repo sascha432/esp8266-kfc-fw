@@ -22,7 +22,7 @@ MQTTSensor::~MQTTSensor()
 #if DEBUG
     auto client = MQTTClient::getClient();
     if (client && client->isComponentRegistered(this)) {
-        __debugbreak_and_panic_printf_P(PSTR("component=%p type=%d is still registered\n"), this, (int)getType());
+        __DBG_panic("component=%p type=%d is still registered", this, (int)getType());
     }
 #endif
 }

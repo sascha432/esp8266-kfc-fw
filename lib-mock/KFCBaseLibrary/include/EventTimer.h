@@ -20,11 +20,6 @@ public:
     EventTimer(EventScheduler::Callback loopCallback, int64_t delay, EventScheduler::RepeatType repeat, EventScheduler::Priority_t priority);
     ~EventTimer();
 
-    operator bool() const {
-        __debugbreak_and_panic_printf_P(PSTR("operator bool was used to check if a timer is active, use active()"));
-        return false;
-    }
-
     inline void initTimer() {
         _disarmed = false;
     }

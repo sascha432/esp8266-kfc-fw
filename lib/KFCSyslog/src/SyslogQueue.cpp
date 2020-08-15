@@ -61,7 +61,7 @@ SyslogQueueId_t SyslogMemoryQueue::add(const String &message, Syslog *syslog) {
 
 void SyslogMemoryQueue::remove(SyslogQueue::SyslogQueueItemPtr &removeItem, bool success) {
     if (!removeItem) {
-        __debugbreak_and_panic_printf_P(PSTR("SyslogMemoryQueue::remove(): invalid pointer\n"));
+        __DBG_print("invalid pointer");
     }
     _debug_printf_P(PSTR("SyslogMemoryQueue::remove(): id=%d,success=%d,queue_size=%u,mem_size=%u,message='%s'\n"), removeItem->getId(), success, _items.size(), _curSize, removeItem->getMessage().c_str());
     _items.erase(std::remove_if(_items.begin(), _items.end(), [this, &removeItem](const SyslogQueueItemPtr &item) {

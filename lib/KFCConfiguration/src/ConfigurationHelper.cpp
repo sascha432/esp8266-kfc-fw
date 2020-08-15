@@ -24,32 +24,11 @@
 // #endif
 
 #if defined(ESP8266)
-extern "C" {
 #include "spi_flash.h"
-}
-
-#if ARDUINO_ESP8266_VERSION_COMBINED >= 0x020603
-extern "C" uint32_t _EEPROM_start;
-#elif defined(ARDUINO_ESP8266_RELEASE_2_5_2)
-extern "C" uint32_t _SPIFFS_end;
-#define _EEPROM_start _SPIFFS_end
-#else
-#error Check if eeprom start is correct
 #endif
-
 
 #ifdef NO_GLOBAL_EEPROM
-// allows to use a different sector in flash memory
-#ifndef EEPROM_ADDR
-// #define EEPROM_ADDR 0x40200000           // default
-#define EEPROM_ADDR 0x40201000           // 1MB/4MB flash size
-// #define EEPROM_ADDR 0x40202000           // 4MB
-// #define EEPROM_ADDR 0x40203000           // 4MB
-#endif
-EEPROMClass EEPROM((((uintptr_t)&_EEPROM_start - EEPROM_ADDR) / SPI_FLASH_SEC_SIZE));
-#else
-#define EEPROM_ADDR 0x40200000           // sector of the configuration for direct access
-#endif
+EEPROMClass EEPROM((SECTION_EEPROM_START_ADDRESS) / SPI_FLASH_SEC_SIZE);
 #endif
 
 ConfigurationHelper::Pool::Pool(uint16_t size) : _ptr(nullptr), _length(0), _size((size + 0xf) & ~0xf), _count(0)
@@ -123,7 +102,7 @@ void ConfigurationHelper::Pool::release(const void *ptr)
 {
 #if DEBUG_CONFIGURATION
     if (!hasPtr(ptr)) {
-        __debugbreak_and_panic_printf_P(PSTR("ptr=%p not in pool\n"), ptr);
+        __DBG_panic("ptr=%p not in pool", ptr);
     }
 #endif
     _count--;
@@ -204,7 +183,7 @@ void ConfigurationHelper::EEPROMAccess::commit()
         _isInitialized = false;
     }
     else {
-        __debugbreak_and_panic_printf_P(PSTR("EEPROM is not initialized\n"));
+        __DBG_panic("EEPROM is not initialized");
     }
 }
 
@@ -217,7 +196,7 @@ uint16_t ConfigurationHelper::EEPROMAccess::read(uint8_t *dst, uint16_t offset, 
         return 0;
     }
 
-    auto eeprom_start_address = ((uintptr_t)&_EEPROM_start - EEPROM_ADDR) + offset;
+    auto eeprom_start_address = (SECTION_EEPROM_START_ADDRESS - SECTION_FLASH_START_ADDRESS) + offset;
 
     uint8_t alignment = eeprom_start_address & 3;
     uint16_t readSize = (length + alignment + 3) & ~3; // align read length and add alignment
@@ -275,11 +254,11 @@ uint16_t ConfigurationHelper::EEPROMAccess::read(uint8_t *dst, uint16_t offset, 
     begin();
     auto cmpResult = memcmp(dst, getConstDataPtr() + offset, length);
     if (cmpResult) {
-        __debugbreak_and_panic_printf_P(PSTR("res=%d dst=%p ofs=%d size=%u len=%d align=%u read_size=%u memcpy() failed=%d\n"), result, dst, offset, size, length, alignment, readSize, cmpResult);
+        __DBG_panic("res=%d dst=%p ofs=%d size=%u len=%d align=%u read_size=%u memcpy() failed=%d", result, dst, offset, size, length, alignment, readSize, cmpResult);
     }
     // for (uint16_t i = length; i < size; i++) {
     //     if (dst[i] != 0) {
-    //         __debugbreak_and_panic_printf_P(PSTR("res=%d dst=%p ofs=%d size=%u len=%d align=%u read_size=%u not zero @dst[%u]\n"), result, dst, offset, size, length, alignment, readSize, i);
+    //         __DBG_panic("res=%d dst=%p ofs=%d size=%u len=%d align=%u read_size=%u not zero @dst[%u]", result, dst, offset, size, length, alignment, readSize, i);
     //     }
     // }
 

@@ -65,7 +65,7 @@ void SyslogPlugin::_timerCallback(EventScheduler::TimerPtr timer)
 {
 #if DEBUG
     if (!_stream) {
-        __debugbreak_and_panic_printf_P(PSTR("_timerCallback() syslog=nullptr\n"));
+        __DBG_panic("_timerCallback() syslog=nullptr");
     }
 #endif
     if (_stream->hasQueuedMessages()) {
@@ -77,7 +77,7 @@ void SyslogPlugin::_begin()
 {
 #if DEBUG
     if (_stream) {
-        __debugbreak_and_panic_printf_P(PSTR("begin() called twice\n"));
+        __DBG_panic("begin() called twice");
     }
 #endif
 

@@ -32,7 +32,7 @@ ConfigurationParameter::ConfigurationParameter(Handle_t handle, TypeEnum_t type)
 uint8_t *ConfigurationParameter::_allocate(Configuration *conf)
 {
     if (_info.dirty) {
-        __debugbreak_and_panic_printf_P(PSTR("%s allocate called on dirty parameter\n"), toString().c_str());
+        __DBG_panic("%s allocate called on dirty parameter", toString().c_str());
     }
     if (_info.data && _info.size == _param.getSize()) { // can we reuse the pointer?
         __LDBG_printf("%s pointer reused", toString().c_str());
@@ -48,7 +48,7 @@ uint8_t *ConfigurationParameter::_allocate(Configuration *conf)
 void ConfigurationParameter::__release(Configuration *conf)
 {
     if (_info.dirty) {
-        __debugbreak_and_panic_printf_P(PSTR("%s release called on dirty parameter\n"), toString().c_str());
+        __DBG_panic("%s release called on dirty parameter", toString().c_str());
     }
     conf->__release(_info.data);
     _info = Info_t();
@@ -57,7 +57,7 @@ void ConfigurationParameter::__release(Configuration *conf)
 void ConfigurationParameter::_free()
 {
     if (!_info.dirty) {
-        __debugbreak_and_panic_printf_P(PSTR("%s free called on parameter without heap allocation\n"), toString().c_str());
+        __DBG_panic("%s free called on parameter without heap allocation", toString().c_str());
     }
     if (_info.data) {
         free(_info.data);
@@ -426,7 +426,7 @@ bool ConfigurationParameter::_readData(Configuration *conf, uint16_t offset)
 #if DEBUG_CONFIGURATION
     if (_info.size != getSize()) {
         __LDBG_printf("ERROR: %s size mismatch", toString().c_str());
-        //__debugbreak_and_panic_printf_P(PSTR("%s size mismatch\n"), toString().c_str());
+        //__DBG_panic("%s size mismatch", toString().c_str());
     }
 #endif
 

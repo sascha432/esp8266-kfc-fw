@@ -67,7 +67,7 @@ namespace JsonVariableReader {
 
     ElementGroup::ResultPtr ElementGroup::getLastResult()
     {
-        DEBUG_ASSERT(_results.size() != 0); // initResultType() must be used when creating the object
+        __LDBG_assert(_results.size() != 0); // initResultType() must be used when creating the object
         return _results.back();
     }
 

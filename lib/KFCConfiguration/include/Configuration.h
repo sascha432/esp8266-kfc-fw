@@ -234,7 +234,7 @@ namespace ConfigurationHelper {
         uint8_t *getDataPtr() {
 #if DEBUG_CONFIGURATION
             if (!_isInitialized) {
-                __debugbreak_and_panic_printf_P(PSTR("EEPROM is not initialized\n"));
+                __DBG_panic("EEPROM is not initialized");
             }
 #endif
 #if _MSC_VER
@@ -247,7 +247,7 @@ namespace ConfigurationHelper {
         const uint8_t *getConstDataPtr() const {
 #if DEBUG_CONFIGURATION
             if (!_isInitialized) {
-                __debugbreak_and_panic_printf_P(PSTR("EEPROM is not initialized\n"));
+                __DBG_panic("EEPROM is not initialized");
             }
 #endif
 #if defined(ESP32)
@@ -261,10 +261,10 @@ namespace ConfigurationHelper {
         inline T &get(int const address, T &t) {
 #if DEBUG_CONFIGURATION
             if (!_isInitialized) {
-                __debugbreak_and_panic_printf_P(PSTR("EEPROM is not initialized\n"));
+                __DBG_panic("EEPROM is not initialized");
             }
             if (address + sizeof(T) > _size) {
-                __debugbreak_and_panic_printf_P(PSTR("address=%u size=%u eeprom_size=%u\n"), address, sizeof(T), _size);
+                __DBG_panic("address=%u size=%u eeprom_size=%u", address, sizeof(T), _size);
             }
 #endif
             return EEPROM.get(address, t);
@@ -338,7 +338,7 @@ public:
                         reinterpret_cast<const ConfigurationParameterBase *>(ptr)->beforeResize(param, maxLength);
                     }
                     debug_printf_P(PSTR("%04x: resizing binary blob=%u to %u maxLength=%u type=%u\n"), handle, length, sizeof(T), maxLength, ConfigurationParameter::getType<T>());
-                    // __debugbreak_and_panic_printf_P(PSTR("%s size does not match len=%u size=%u\n"), param.toString().c_str(), length, sizeof(T));
+                    // __DBG_panic("%s size does not match len=%u size=%u", param.toString().c_str(), length, sizeof(T));
                     //__release(ptr);
                     //ptr = nullptr;
                 }

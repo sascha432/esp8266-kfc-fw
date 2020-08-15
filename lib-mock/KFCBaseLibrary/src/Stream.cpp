@@ -123,8 +123,8 @@ int Stream::_fp_read(uint8_t *buffer, size_t len) {
     if (!_fp) {
         return 0;
     }
-    DEBUG_ASSERT(buffer);
-    DEBUG_ASSERT(len <= INTPTR_MAX);
+    //DEBUG_ASSERT(buffer);
+    //DEBUG_ASSERT(len <= INTPTR_MAX);
     auto res = fread(buffer, 1, len, _fp);
     if (ferror(_fp)) {
         perror("read");

@@ -3,6 +3,7 @@
  */
 
 #include <LoopFunctions.h>
+#include <GFXCanvasConfig.h>
 #include "WSDraw.h"
 
 #if 1
@@ -71,8 +72,7 @@ const unsigned char icon_house[] PROGMEM = {
 
 WSDraw::WSDraw() :
     _tft(TFT_PIN_CS, TFT_PIN_DC, TFT_PIN_RST),
-    _canvasPtr(new GFXCanvasCompressedPalette(_tft.width(), _tft.height())),
-    _canvas(*_canvasPtr),
+    _canvas(*new WeatherStationCanvas(_tft.width(), _tft.height())),
     _scrollCanvas(nullptr),
     _scrollPosition(0),
     _weatherError(F("No data available")),
@@ -100,6 +100,7 @@ WSDraw::~WSDraw()
 {
     _displayMessageTimer.remove();
     ScrollCanvas::destroy(this);
+    delete (WeatherStationCanvas *)&_canvas;
 }
 
 
@@ -293,7 +294,7 @@ void WSDraw::_updateWeatherIndoor()
 
     int height = _canvas.getFontHeight(FONTS_WEATHER_INDOOR);
 
-    _canvas.fillScreenPartial(Y_START_POSITION_WEATHER + Y_POSITION_WEATHER_INDOOR_TEMP, height, COLORS_BACKGROUND);
+    _canvas.fillScreenPartial(Y_START_POSITION_WEATHER, height, COLORS_BACKGROUND);
     _drawWeatherIndoor(_canvas, Y_START_POSITION_WEATHER);
     _displayScreen(0, Y_POSITION_WEATHER_INDOOR_TEMP, TFT_WIDTH, height);
 
@@ -547,9 +548,7 @@ void WSDraw::_broadcastCanvas(int16_t x, int16_t y, int16_t w, int16_t h)
 
 void WSDraw::_statsBegin()
 {
-#if DEBUG_GFXCANVASCOMPRESSED_STATS
-    _canvas.clearStats();
-#endif
+    __DBG_STATS(_canvas.clearStats());
     _statsTimer.start();
 }
 

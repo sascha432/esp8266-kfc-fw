@@ -28,7 +28,7 @@ namespace KFCConfigurationClasses {
                 config._H_SET_STR(MainConfig().plugins.homeassistant.api_endpoint3, endpoint);
                 break;
             default:
-                __debugbreak_and_panic_printf_P(PSTR("invalid api_id=%u\n"), apiId);
+                __DBG_panic("invalid api_id=%u", apiId);
         }
     }
 
@@ -48,7 +48,7 @@ namespace KFCConfigurationClasses {
                 config._H_SET_STR(MainConfig().plugins.homeassistant.token3, token);
                 break;
             default:
-                __debugbreak_and_panic_printf_P(PSTR("invalid api_id=%u\n"), apiId);
+                __DBG_panic("invalid api_id=%u", apiId);
         }
     }
 
@@ -65,7 +65,7 @@ namespace KFCConfigurationClasses {
                 return config._H_STR(MainConfig().plugins.homeassistant.api_endpoint3);
 
         }
-        __debugbreak_and_panic_printf_P(PSTR("invalid api_id=%u\n"), apiId);
+        __DBG_panic("invalid api_id=%u", apiId);
         return nullptr;
     }
 
@@ -82,7 +82,7 @@ namespace KFCConfigurationClasses {
                 return config._H_STR(MainConfig().plugins.homeassistant.token3);
 
         }
-        __debugbreak_and_panic_printf_P(PSTR("invalid api_id=%u\n"), apiId);
+        __DBG_panic("invalid api_id=%u", apiId);
         return nullptr;
     }
 

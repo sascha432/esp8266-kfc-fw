@@ -201,7 +201,7 @@ namespace StringConstExpr {
 
 };
 
-namespace DebugHelperConstExpr {
+namespace DebugContextConstExpr {
 
     constexpr const char* get_class_name_end(const char* str) {
         return StringConstExpr::strchr(str, '<') ? StringConstExpr::strchr(str, '<') : StringConstExpr::strchr(str, ':');

@@ -206,7 +206,7 @@ namespace std {
 #include "FileOpenMode.h"
 #include "constexpr_tools.h"
 
-#define __CLASS_FROM__(name)             StringConstExpr::StringArray<DebugHelperConstExpr::get_class_name_len(name)>(DebugHelperConstExpr::get_class_name_start(name)).array
+#define __CLASS_FROM__(name)             StringConstExpr::StringArray<DebugContextConstExpr::get_class_name_len(name)>(DebugContextConstExpr::get_class_name_start(name)).array
 
 #ifndef __CLASS__
 #ifdef _MSC_VER

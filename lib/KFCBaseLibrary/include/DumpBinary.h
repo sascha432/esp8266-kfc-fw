@@ -8,11 +8,16 @@
 
 class DumpBinary {
 public:
+    static constexpr uint8_t kPerLineDisabled = 0xff;
+public:
     DumpBinary(Print &output);
     DumpBinary(const String &title, Print &output);
 
     // bytes per line
     DumpBinary &setPerLine(uint8_t perLine);
+    DumpBinary &disablePerLine() {
+        return setPerLine(kPerLineDisabled);
+    }
 
     // space between group of bytes
     DumpBinary &setGroupBytes(uint8_t groupBytes);

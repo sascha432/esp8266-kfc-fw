@@ -52,7 +52,7 @@ class Adafruit_SPITFT : public GDI_GFX {
             drawRGBBitmap(_writeWindowX, _writeWindowY++, colors, len, 1);
         }
         else {
-            __debugbreak_and_panic_printf_P(PSTR("writePixels outside screen"));
+            __DBG_print("writePixels outside screen");
         }
     }
     void         writeColor(uint16_t color, uint32_t len) {}
@@ -177,7 +177,7 @@ class Adafruit_SPITFT : public GDI_GFX {
 #else
             volatile uint8_t* writePort; ///< PORT register for DATA WRITE
             volatile uint8_t* readPort;  ///< PORT (PIN) register for DATA READ
-#endif      
+#endif
 #if defined(HAS_PORT_SET_CLR)
         // Port direction register pointers are always 8-bit regardless of
         // PORTreg_t -- even if 32-bit port, we modify a byte-aligned 8 bits.
@@ -187,7 +187,7 @@ class Adafruit_SPITFT : public GDI_GFX {
 #else
             volatile uint8_t* dirSet;  ///< PORT byte data direction SET
             volatile uint8_t* dirClr;  ///< PORT byte data direction CLEAR
-#endif      
+#endif
             PORTreg_t wrPortSet;       ///< PORT register for write strobe SET
             PORTreg_t wrPortClr;       ///< PORT register for write strobe CLEAR
             PORTreg_t rdPortSet;       ///< PORT register for read strobe SET

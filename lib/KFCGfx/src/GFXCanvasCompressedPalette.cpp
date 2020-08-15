@@ -1,178 +1,136 @@
 /**
- * Author: sascha_lammers@gmx.de
- */
+* Author: sascha_lammers@gmx.de
+*/
+
+
+#include <Arduino_compat.h>
+#include "GFXCanvasConfig.h"
 
 #include <push_optimize.h>
-#pragma GCC optimize ("O3")
-
-#include "GFXCanvasCompressedPalette.h"
-
 #if DEBUG_GFXCANVAS
 #include <debug_helper_enable.h>
 #else
 #include <debug_helper_disable.h>
+#pragma GCC optimize ("O3")
 #endif
 
+#include "GFXCanvasCompressedPalette.h"
 
-GFXCanvasCompressedPalette::GFXCanvasCompressedPalette(coord_x_t width, coord_y_t height) : GFXCanvasCompressed(width, height), _palette(), _paletteCount(0)
+using namespace GFXCanvas;
+
+GFXCanvasCompressedPalette::GFXCanvasCompressedPalette(uWidthType width, uHeightType height) : GFXCanvasCompressed(width, height)
+{
+}
+
+GFXCanvasCompressedPalette::GFXCanvasCompressedPalette(const GFXCanvasCompressedPalette &canvas) : GFXCanvasCompressed(canvas.width(), canvas._lines), _palette(canvas._palette)
 {
 }
 
 GFXCanvasCompressed* GFXCanvasCompressedPalette::clone()
 {
-    GFXCanvasCompressedPalette* target = new GFXCanvasCompressedPalette(width(), height());
-    for (coord_y_t y = 0; y < _height; y++) {
-        target->_lineBuffer[y].clone(_lineBuffer[y]);
-    }
-    memcpy(target->_palette, _palette, sizeof(target->_palette));
-    target->_paletteCount = _paletteCount;
-
-    return target;
+    return __DBG_new(GFXCanvasCompressedPalette, *this);
 }
 
-void GFXCanvasCompressedPalette::fillScreen(color_t color)
+void GFXCanvasCompressedPalette::fillScreen(ColorType color)
 {
-    _paletteCount = 0;
+    _palette.clear();
     GFXCanvasCompressed::fillScreen(color);
 }
 
-void GFXCanvasCompressedPalette::_RLEdecode(ByteBuffer &buffer, color_t *output)
+#include "DumpBinary.h"
+
+void GFXCanvasCompressedPalette::_RLEdecode(ByteBuffer &buffer, ColorType *output)
 {
-#if DEBUG_GFXCANVASCOMPRESSED_BOUNDS_CHECK
-    auto outputEndPtr = &output[_width];
-    int count = 0;
-#endif
-    auto data = buffer.get();
-    auto endPtr = &data[buffer.length()];
-    while(data < endPtr) {
-        auto rle = *data++;
-        uint8_t index = rle >> 4;
+    __DBG_BOUNDS(int count = 0);
+    auto begin = buffer.begin();
+    auto end = buffer.end();
+    while(begin < end) {
+        auto rle = *begin++;
+        uint8_t index = (rle >> 4);
         if ((rle & 0xf) == 0) {
-#if DEBUG_GFXCANVASCOMPRESSED_BOUNDS_CHECK
-            assert(data < endPtr);
-#endif
-            rle = *data++;
+            __DBG_BOUNDS_RETURN(__DBG_check_buffer_end(begin, end));
+            rle = *begin++;
         }
         else {
             rle &= 0x0f;
         }
-#if DEBUG_GFXCANVASCOMPRESSED_BOUNDS_CHECK
-        if (!(&output[rle] <= outputEndPtr)) {
-            __debugbreak_and_panic();
-        }
-        count += rle;
-#endif
-        while(rle--) {
-#if DEBUG_GFXCANVASCOMPRESSED_BOUNDS_CHECK
-            if (index >= _paletteCount) {
-                __debugbreak_and_panic();
-            }
-#endif
-            *output++ = _palette[index];
-        }
+        __DBG_BOUNDS(count += rle);
+        __DBG_BOUNDS_RETURN(__DBG_check_buffer_end(&output[rle - 1], &output[_width]));
+        output = std::fill_n(output, rle, _palette[index]);
     }
-#if DEBUG_GFXCANVASCOMPRESSED_BOUNDS_CHECK
-    if (count != _width) {
-        __debugbreak_and_panic();
-    }
-#endif
+    __DBG_check_assert(count == _width);
 }
 
-void GFXCanvasCompressedPalette::_RLEencode(color_t *data, ByteBuffer &buffer)
+void GFXCanvasCompressedPalette::_RLEencode(ColorType *data, ByteBuffer &buffer)
 {
     // 4 bit: length, 0 indicates additional 8 bit
     // 4 bit: palette index
     // if length = 0: extra byte for length
 
-    // _debug_printf("_encodeLine(%u): %p %p %u\n", y, ptr, endPtr, _width);
+    // _debug_printf("_encodeLine(%u): %p %p %u\n", y, ptr, end, _width);
 
     uint8_t rle = 0;
-    auto endPtr = &data[_width];
+    auto begin = data;
+    auto end = &data[_width];
     auto lastColor = *data;
-#if DEBUG_GFXCANVASCOMPRESSED_BOUNDS_CHECK
-    int count = 0;
-#endif
+    __DBG_BOUNDS(int count = 0);
 
-    while(data < endPtr) {
-        auto color = *data++;
+    while(begin < end) {
+        auto color = *begin++;
         if (color == lastColor && rle != 0xff) {
             rle++;
         }
         else {
-#if DEBUG_GFXCANVASCOMPRESSED_BOUNDS_CHECK
-            count += rle;
-#endif
-            auto index = getColor(lastColor);
+            __DBG_BOUNDS(count += rle);
+            auto index = _palette.addColor(lastColor);
+            __DBG_BOUNDS_RETURN(__DBG_check_assert(index != -1));
             if (rle > 0xf) {
-                buffer.write(index << 4, rle);
-                //buffer.write(rle);
+                buffer.push2(index << 4, rle);
             }
             else {
-                buffer.write(rle | (index << 4));
+                buffer.push(rle | (index << 4));
             }
             lastColor = color;
             rle = 1;
         }
     }
-    if (data == endPtr) {
-#if DEBUG_GFXCANVASCOMPRESSED_BOUNDS_CHECK
-        count += rle;
-#endif
-        auto index = getColor(lastColor);
+    if (begin == end) {
+        __DBG_BOUNDS(count += rle);
+        auto index = _palette.addColor(lastColor);
+        __DBG_BOUNDS_RETURN(__DBG_check_assert(index != -1));
         if (rle > 0xf) {
-            buffer.write(index << 4, rle);
-            //buffer.write(rle);
+            buffer.push2(index << 4, rle);
         }
         else {
-            buffer.write(rle | (index << 4));
+            buffer.push(rle | (index << 4));
         }
     }
-#if DEBUG_GFXCANVASCOMPRESSED_BOUNDS_CHECK
-    if (count != _width) {
-        __debugbreak_and_panic();
-    }
-#endif
+    __DBG_check_assert(count == _width);
 }
 
-uint16_t GFXCanvasCompressedPalette::getColor(color_t color, bool addIfNotExists)
-{
-    for (uint8_t i = 0; i < _paletteCount; i++) {
-        if (_palette[i] == color) {
-            return i;
-        }
-    }
-    if (addIfNotExists) {
-        if (_paletteCount >= 15) {
-#if DEBUG_GFXCANVASCOMPRESSED_BOUNDS_CHECK
-            __debugbreak_and_panic();
-#endif
-            return INVALID_COLOR;
-        }
-        _palette[_paletteCount] = color;
-        return _paletteCount++;
-    }
-    return INVALID_COLOR;
-}
-
-uint16_t *GFXCanvasCompressedPalette::getPalette(uint8_t &count)
-{
-    count = _paletteCount;
-    return _palette;
-}
-
-void GFXCanvasCompressedPalette::setPalette(color_t *palette, uint8_t count)
-{
-    memcpy(_palette, palette, count * sizeof(color_t));
-}
+// uint16_t GFXCanvasCompressedPalette::getColor(ColorType color, bool addIfNotExists)
+// {
+//     if (addIfNotExists) {
+//         return _palette.addColor(color);
+//     }
+//     else {
+//         return _palette.getColorIndex(color);
+//     }
+// }
 
 String GFXCanvasCompressedPalette::getDetails() const
 {
     PrintString str = GFXCanvasCompressed::getDetails();
-    str.printf_P(PSTR("palette %u - "), _paletteCount);
+    str.printf_P(PSTR("palette %u - "), _palette.length());
 
-    for (uint8_t i = 0; i < _paletteCount; i++) {
-        str.printf("[%u]%06x,", i, GFXCanvas::convertToRGB(_palette[i]));
+    uint8_t i = 0;
+    for(const auto color: _palette) {
+        str.printf("[%u]%06x,", i++, GFXCanvas::convertToRGB(color));
     }
+
+    // for (uint8_t i = 0; i < _paletteCount; i++) {
+    //     str.printf("[%u]%06x,", i, GFXCanvas::convertToRGB(_palette[i]));
+    // }
     str.remove(str.length() - 1);
     str.write('\n');
     return str;

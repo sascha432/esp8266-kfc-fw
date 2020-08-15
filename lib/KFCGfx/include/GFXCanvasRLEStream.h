@@ -6,19 +6,10 @@
 
 #include <Arduino_compat.h>
 #include <Buffer.h>
-#include "GFXCanvas.h"
+#include "GFXCanvasConfig.h"
+#include "GFXCanvasCache.h"
 
-#include "push_pack.h"
-
-typedef struct {
-    uint16_t x;
-    uint16_t y;
-    uint16_t width;
-    uint16_t height;
-    uint16_t paletteCount;
-} GFXCanvasRLEStreamHeader_t;
-
-#include "pop_pack.h"
+using namespace GFXCanvas;
 
 class GFXCanvasCompressed;
 
@@ -51,5 +42,5 @@ private:
     GFXCanvasRLEStreamHeader_t _header;
     Buffer _buffer;
     int32_t _position;
-    uint16_t _lastColor;
+    ColorType _lastColor;
 };

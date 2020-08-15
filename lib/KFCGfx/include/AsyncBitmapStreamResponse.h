@@ -6,6 +6,7 @@
 
 #include <Arduino_compat.h>
 #include <ESPAsyncWebServer.h>
+#include "GFXCanvasConfig.h"
 #include "GFXCanvasCompressed.h"
 
 class AsyncBitmapStreamResponse : public AsyncAbstractResponse {

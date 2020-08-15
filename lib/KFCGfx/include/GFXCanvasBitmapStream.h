@@ -6,7 +6,8 @@
 
 #include <Arduino_compat.h>
 #include <bitmap_header.h>
-#include "GFXCanvas.h"
+#include "GFXCanvasConfig.h"
+#include "GFXCanvasCache.h"
 
 class GFXCanvasCompressed;
 

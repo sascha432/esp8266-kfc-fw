@@ -7,341 +7,152 @@
 #include <Arduino_compat.h>
 #include <assert.h>
 #include <MicrosTimer.h>
+#include "GFXCanvasConfig.h"
 
 #include <push_pack.h>
 
-#ifndef DEBUG_GFXCANVAS
-#define DEBUG_GFXCANVAS                             1
-#endif
-
-#if _MSC_VER
-#define DEBUG_GFXCANVASCOMPRESSED_BOUNDS_CHECK      1
-#define DEBUG_GFXCANVASCOMPRESSED_STATS             1
-#define DEBUG_GFXCANVASCOMPRESSED_STATS_DETAILS     1
-#define GFXCANVAS_MAX_CACHED_LINES                  16
-#endif
-
-// max. number of cached lines
-#ifndef GFXCANVAS_MAX_CACHED_LINES
-#define GFXCANVAS_MAX_CACHED_LINES                  1
-#endif
-
-// enable for debugging only
-#ifndef DEBUG_GFXCANVASCOMPRESSED_BOUNDS_CHECK
-#define DEBUG_GFXCANVASCOMPRESSED_BOUNDS_CHECK      1
-#endif
-
-#ifndef DEBUG_GFXCANVASCOMPRESSED_STATS
-#define DEBUG_GFXCANVASCOMPRESSED_STATS             1
-#endif
-
-#ifndef DEBUG_GFXCANVASCOMPRESSED_STATS_DETAILS
-#define DEBUG_GFXCANVASCOMPRESSED_STATS_DETAILS     0
-#endif
-
 namespace GFXCanvas {
 
-    using coord_x_t = uint16_t;
-    using coord_y_t = uint16_t;
-    using scoord_x_t = int16_t;
-    using scoord_y_t = int16_t;
-    using color_t = uint16_t;
+    inline uXType getClippedX(sXType x, uWidthType maxWidth)
+    {
+        if (x < 0) {
+            return 0;
+        }
+        else if (x >= (sWidthType)maxWidth) {
+            return maxWidth - 1;
+        }
+        return x;
+    }
 
-#if DEBUG_GFXCANVASCOMPRESSED_STATS
-    class Stats {
+    inline uXType getClippedX(sXType x, uWidthType minWidth, uWidthType maxWidth)
+    {
+        if (x < (sWidthType)minWidth) {
+            x = minWidth;
+        }
+        if (x >= (sWidthType)maxWidth) {
+            return (uXType)(maxWidth - 1);
+        }
+        return (uXType)x;
+    }
+
+    inline uYType getClippedY(sXType y, uHeightType maxHeight)
+    {
+        if (y < 0) {
+            return 0;
+        }
+        else if (y >= (sHeightType)maxHeight) {
+            return (uYType)(maxHeight - 1);
+        }
+        return (uYType)y;
+    }
+
+    inline uYType getClippedY(sXType y, uHeightType minHeight, uHeightType maxHeight)
+    {
+        if (y < (sHeightType)minHeight) {
+            y = minHeight;
+        }
+        if (y >= (sHeightType)maxHeight) {
+            return (uYType)(maxHeight - 1);
+        }
+        return (uYType)y;
+    }
+
+    inline uPositionType getClippedXY(sXType x, sYType y, uWidthType maxWidth,uHeightType maxHeight)
+    {
+        return uPositionType({ getClippedX(x, maxWidth), getClippedY(y, maxHeight) });
+    }
+
+    inline uPositionType getClippedXY(sXType x, sYType y, uWidthType minWidth, uWidthType maxWidth, uHeightType minHeight, uHeightType maxHeight)
+    {
+        return uPositionType({ getClippedX(x, minWidth, maxWidth), getClippedY(y, minHeight, maxHeight) });
+    }
+
+    inline bool isValidX(sXType x, uWidthType width) {
+        return ((uXType)x < width);
+    }
+    inline bool isValidX(sXType x, sXType startX, sXType endX) {
+        return (x >= startX) && (x < endX);
+    }
+
+    inline bool isValidY(sYType y, uHeightType height) {
+        return ((uYType)y < height);
+    }
+    inline bool isValidY(sYType y, sYType startY, sYType endY) {
+        return (y >= startY) && (y < endY);
+    }
+
+    inline bool isValidXY(sXType x, sXType y, uWidthType width, uHeightType height) {
+        return isValidX(x, width) && isValidY(y, height);
+    }
+
+    inline bool isFullLine(sXType startX, sXType endX, uWidthType width) {
+        return startX <= 0 && endX >= width;
+    }
+
+
+    inline void convertToRGB(ColorType color, uint8_t& r, uint8_t& g, uint8_t& b)
+    {
+        r = ((color >> 11) * 527 + 23) >> 6;
+        g = (((color >> 5) & 0x3f) * 259 + 33) >> 6;
+        b = ((color & 0x1f) * 527 + 23) >> 6;
+    }
+
+    inline RGBColorType convertToRGB(color_t color)
+    {
+        uint8_t r, g, b;
+        convertToRGB(color, r, g, b);
+        return (r << 16) | (g << 8) | b;
+    }
+
+    inline ColorType convertRGBtoRGB565(uint8_t r, uint8_t g, uint8_t b)
+    {
+        return ((b >> 3) & 0x1f) | (((g >> 2) & 0x3f) << 5) | (((r >> 3) & 0x1f) << 11);
+    }
+
+    inline ColorType convertRGBtoRGB565(RGBColorType rgb)
+    {
+        return convertRGBtoRGB565(rgb, rgb >> 8, rgb >> 16);
+    }
+
+    class ColorPalette
+    {
     public:
-        Stats() = default;
-        void dump(Print &output) const;
+        static constexpr size_t kColorsMax = 15;
+        static constexpr ColorType kInvalid = ~0;
 
-        int decode_count;
-        int encode_count;
-        double decode_time;
-        double encode_time;
-        int decode_invalid;
-        int encode_invalid;
-        int cache_read;
-        int cache_flush;
-        int cache_drop;
-        int cache_max;
-        uint32_t drawInto;
-        int malloc;
-        int modified_skipped;
-    };
-#endif
+        ColorPalette();
 
-    class ByteBuffer {
-    public:
-        using size_t = uint16_t;
+        ColorType &at(int index);
+        ColorType at(int index) const;
+        ColorType &operator[](int index);
+        ColorType operator[](int index) const;
 
-        ByteBuffer(const ByteBuffer &) = delete;
-        ByteBuffer(ByteBuffer &&) = delete;
-        ByteBuffer &operator=(const ByteBuffer &) = delete;
-        ByteBuffer &operator=(ByteBuffer &&) = delete;
+        bool empty() const;
+        size_t length() const;
 
-        ByteBuffer() : _buffer(nullptr), _length(0), _size(0) {
-        }
-        ~ByteBuffer() {
-            if (_buffer) {
-                free(_buffer);
-            }
-        }
+        void clear();
+        ColorType *begin();
+        ColorType *end();
+        const ColorType *begin() const;
+        const ColorType *end() const;
 
-        inline __attribute__((always_inline)) uint8_t *get() const {
-            return _buffer;
-        }
+        // returns index or -1
+        int getColorIndex(ColorType color);
+        // add color if it does not exist and return index
+        // returns index of existing color
+        // returns -1 if there is no space to add more
+        int addColor(ColorType color);
 
-        inline __attribute__((always_inline)) size_t length() const {
-            return _length;
-        }
-
-        inline __attribute__((always_inline)) size_t size() const {
-            return _size;
-        }
-
-        void clear() {
-            if (_buffer) {
-                // debug_printf_P(PSTR("free %p this %p\n"), _buffer, this);
-                free(_buffer);
-                _buffer = nullptr;
-            }
-            _size = 0;
-            _length = 0;
-        }
-
-        void write(const uint8_t *data, size_t len) {
-            if (reserve(_length + len)) {
-                memcpy(_buffer + _length, data, len);
-                _length += len;
-            }
-        }
-
-        inline __attribute__((always_inline)) void write(uint8_t data) {
-            if (reserve(_length + 1)) {
-                _buffer[_length++] = data;
-            }
-        }
-
-        inline __attribute__((always_inline)) void write(uint8_t data1, uint8_t data2)
-        {
-            if (reserve(_length + 2)) {
-                _buffer[_length++] = data1;
-                _buffer[_length++] = data2;
-                //auto ptr = _buffer + _length;
-                //*ptr++ = data1;
-                //*ptr++ = data2;
-                //_length += 2;
-            }
-        }
-
-        inline __attribute__((always_inline)) void writeWord(uint16_t data)
-        {
-            if (reserve(_length + 2)) {
-                auto ptr = _buffer + _length;
-                *reinterpret_cast<uint16_t *>(ptr) = data;
-                _length += 2;
-            }
-        }
-
-        inline __attribute__((always_inline)) void writeByteWord(uint8_t data1, uint16_t data2)
-        {
-            if (reserve(_length + 3)) {
-                auto ptr = _buffer + _length;
-                *ptr++ = data1;
-                *reinterpret_cast<uint16_t *>(ptr) = data2;
-                _length += 3;
-            }
-        }
-
-        bool shrink(size_t newSize)
-        {
-            if (newSize == 0) {
-                newSize = _length;
-            }
-            if (_changeBuffer(newSize)) {
-                return true;
-            }
-            clear();
-            return false;
-        }
-
-        inline __attribute__((always_inline)) bool reserve(size_t size)
-        {
-            if (size > _size) {
-                if (!_changeBuffer(size)) {
-                    return false;
-                }
-            }
-            return true;
-        }
-
-        bool _changeBuffer(size_t newSize)
-        {
-            if (_alignSize(newSize) != _size) {
-                _size = _alignSize(newSize);
-                if (_size == 0) {
-                    if (_buffer) {
-                        free(_buffer);
-                        _buffer = nullptr;
-                    }
-                }
-                else {
-                    if (_buffer == nullptr) {
-                        _buffer = (uint8_t *)malloc(_size);
-                    }
-                    else {
-                        _buffer = (uint8_t *)realloc(_buffer, _size);
-                    }
-                    // debug_printf_P(PSTR("alloc %p this %p\n"), _buffer, this);
-                    if (_buffer == nullptr) {
-                        _size = 0;
-                        _length = 0;
-                        return false;
-                    }
-                }
-            }
-            if (_length > _size) {
-                _length = _size;
-            }
-            return true;
-        }
-
-        inline __attribute__((always_inline)) void removeContent() {
-            _length = 0;
-        }
-
-        inline __attribute__((always_inline)) uint16_t _alignSize(size_t size) const {
-            return (size + 7) & ~7;
-        }
+        const uint8_t *getBytes() const;
+        size_t getBytesLength() const;
 
     private:
-        uint8_t *_buffer;
-        size_t _length;
-        size_t _size;
-    };
-
-
-    class Cache {
-    public:
-        static const scoord_y_t INVALID = -1;
-
-        Cache() = delete;
-        Cache(const Cache& cache) = delete;
-
-        Cache(Cache &&cache);
-        Cache(coord_x_t width, scoord_y_t y = 0);
-        ~Cache();
-
-        Cache &operator =(const Cache &cache) = delete;
-        Cache &operator =(Cache &&cache);
-
-#if GFXCANVAS_MAX_CACHED_LINES > 1
-        void allocBuffer();
-        void freeBuffer();
-#endif
-
-        inline __attribute__((always_inline)) bool isY(scoord_y_t y) const {
-            return _y == y;
-        }
-
-        inline __attribute__((always_inline)) scoord_y_t getY() const {
-            return _y;
-        }
-
-        inline __attribute__((always_inline)) void setY(scoord_y_t y) {
-            _read = 0;
-            _write = 0;
-            _y = y;
-        }
-        // if the y position is changed, flags are cleared. in case the write flag is set, the cache must be written before
-        inline __attribute__((always_inline)) bool isValid() const {
-            return _y != INVALID;
-        }
-
-        inline __attribute__((always_inline)) bool hasWriteFlag() const {
-            return _write;
-        }
-        // indicates that the cache has not been written
-        inline __attribute__((always_inline))  void setWriteFlag(bool value) {
-            _write = value;
-        }
-
-        inline __attribute__((always_inline)) bool hasReadFlag() const {
-            return _read;
-        }
-        // indicates that the cache contains a copy
-        inline __attribute__((always_inline)) void setReadFlag(bool value) {
-            _read = value;
-        }
-
-        inline __attribute__((always_inline)) color_t *getBuffer() const
-        {
-            return _buffer;
-        }
-
-        inline __attribute__((always_inline)) void setPixel(scoord_x_t x, color_t color) {
-#if DEBUG_GFXCANVASCOMPRESSED_BOUNDS_CHECK
-            if ((coord_x_t)x >= _width) {
-                __DBG_panic("out of bounds %d>=%d", x, _width);
-            }
-#endif
-            _buffer[x] = color;
-        }
-
+        size_t size() const;
 
     private:
-        color_t *_buffer;
-        scoord_y_t _y;
-        coord_x_t _width;
-        uint8_t _read: 1;
-        uint8_t _write: 1;
+        uint16_t _count;
+        ColorType _palette[kColorsMax];
     };
-
-    class LineBuffer {
-    public:
-        LineBuffer(LineBuffer &&) = delete;
-        LineBuffer(const LineBuffer &) = delete;
-        LineBuffer &operator=(LineBuffer &&) = delete;
-        LineBuffer &operator=(const LineBuffer &) = delete;
-
-        LineBuffer();
-
-        inline __attribute__((always_inline)) void clear(color_t fillColor)
-        {
-            _fillColor = fillColor;
-            if (_buffer.length()) {
-                _buffer.clear();
-            }
-        }
-
-        inline __attribute__((always_inline)) coord_x_t getLength() const
-        {
-            return (coord_x_t)_buffer.length();
-        }
-
-        inline __attribute__((always_inline)) ByteBuffer &getBuffer()
-        {
-            return _buffer;
-        }
-
-        inline __attribute__((always_inline)) void setFillColor(color_t fillColor) {
-            _fillColor = fillColor;
-        }
-
-        inline __attribute__((always_inline)) color_t getFillColor() const {
-            return _fillColor;
-        }
-
-        void clone(LineBuffer& source);
-
-    private:
-        ByteBuffer _buffer;
-        color_t _fillColor;
-    };
-
-    void convertToRGB(color_t color, uint8_t& r, uint8_t& g, uint8_t& b);
-    uint32_t convertToRGB(color_t color);
-    color_t convertRGBtoRGB565(uint8_t r, uint8_t g, uint8_t b);
-    color_t convertRGBtoRGB565(uint32_t rgb);
 
 };
 

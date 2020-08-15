@@ -2,146 +2,126 @@
 * Author: sascha_lammers@gmx.de
 */
 
+
+#include <Arduino_compat.h>
+#include "GFXCanvasConfig.h"
+
 #include <push_optimize.h>
-#pragma GCC optimize ("O3")
-
-#include "GFXcanvas.h"
-
 #if DEBUG_GFXCANVAS
 #include <debug_helper_enable.h>
 #else
 #include <debug_helper_disable.h>
+#pragma GCC optimize ("O3")
 #endif
+
+#include "GFXCanvas.h"
 
 using namespace GFXCanvas;
 
-// Stats
-
-#if DEBUG_GFXCANVASCOMPRESSED_STATS
-
-void Stats::dump(Print &output) const {
-#if !DEBUG_GFXCANVASCOMPRESSED_STATS_DETAILS
-    output.printf_P(PSTR("drawInto %.3fms\n"),
-        drawInto / 1000.0
-    );
-#else
-    output.printf_P(PSTR("de/encode %u/%.2fms %u/%.2fms mops %u cacheR %u F %u D %u max %ub drawInto %.3fms\n"),
-        decode_count, decode_time, encode_count, encode_time,
-        malloc,
-        cache_read, cache_flush, cache_drop, cache_max, drawInto / 1000.0
-    );
-#endif
+ColorPalette::ColorPalette() : _count(0), _palette{}
+{
 }
 
-#endif
-
-// Cache
-
-Cache::Cache(Cache &&cache) : _buffer(std::exchange(cache._buffer, nullptr)), _y(cache._y), _width(std::exchange(cache._width, 0)), _read(cache._read), _write(cache._write)
+ColorType &ColorPalette::at(int index)
 {
-    cache.setY(INVALID);
+    __DBG_check_palette_index(index, *this);
+    index = (unsigned)index % _count;
+    __DBG_check_palette_index(index, *this);
+    return _palette[index];
 }
 
-
-Cache::Cache(coord_x_t width, scoord_y_t y) : _buffer(nullptr), _y(y), _width(width), _read(0), _write(0)
+ColorType ColorPalette::at(int index) const
 {
-#if GFXCANVAS_MAX_CACHED_LINES > 1
-    allocBuffer();
-#else
-    _buffer = (color_t *)malloc(_width * sizeof(*_buffer));
-#endif
+    __DBG_check_palette_index(index, *this);
+    index = (unsigned)index % _count;
+    __DBG_check_palette_index(index, *this);
+    return _palette[index];
 }
 
-Cache::~Cache()
+ColorType &ColorPalette::operator[](int index)
 {
-    if (_buffer) {
-        free(_buffer);
-    }
+    return at(index);
 }
 
-Cache &Cache::operator =(Cache &&cache)
+ColorType ColorPalette::operator[](int index) const
 {
-    if (_buffer) {
-        free(_buffer);
-    }
-    _buffer = cache._buffer;
-    _y = cache._y;
-    _width = cache._width;
-    _read = cache._read;
-    _write = cache._write;
-    cache._buffer = nullptr;
-    cache._width = 0;
-    cache.setY(INVALID);
-    return *this;
+    return at(index);
 }
 
-#if GFXCANVAS_MAX_CACHED_LINES > 1
-
-void GFXCanvas::Cache::allocBuffer()
+bool ColorPalette::empty() const
 {
-    if (!_buffer) {
-        size_t size = _width * sizeof(*_buffer);
-#if DEBUG
-        if (!_width) {
-            __DBG_panic("_width zero");
+    return _count == 0;
+}
+
+size_t ColorPalette::length() const
+{
+    return _count;
+}
+
+size_t ColorPalette::size() const
+{
+    return kColorsMax;
+}
+
+void ColorPalette::clear()
+{
+    // set _count to 0 as well
+    _count = 0;
+    std::fill(_palette, &_palette[kColorsMax], 0);
+}
+
+ColorType *ColorPalette::begin()
+{
+    return &_palette[0];
+}
+
+ColorType *ColorPalette::end()
+{
+    return &_palette[_count];
+}
+
+const ColorType *ColorPalette::begin() const
+{
+    return &_palette[0];
+}
+
+const ColorType *ColorPalette::end() const
+{
+    return &_palette[_count];
+}
+
+int ColorPalette::getColorIndex(ColorType findColor)
+{
+    uint8_t i = 0;
+    for(const auto &color: *this) {
+        if (findColor == color) {
+            __DBG_BOUNDS_ACTION(__DBG_check_assert(&color - begin() == i), return -1);
+            return i;
         }
-#endif
-        _buffer = (color_t *)malloc(size);
-#if DEBUG
-        if (!_buffer) {
-            __DBG_panic("malloc %u failed", size);
-        }
-#endif
+        i++;
     }
+    return -1;
 }
 
-void GFXCanvas::Cache::freeBuffer()
+int ColorPalette::addColor(ColorType color)
 {
-    setY(Cache::INVALID);
-    if (_buffer) {
-        free(_buffer);
-        _buffer = nullptr;
+    auto index = getColorIndex(color);
+    if (index == -1 && _count < size()) { // not found and space available?
+        index = _count;
+        __DBG_BOUNDS_ACTION(__DBG_check_assert(_count < kColorsMax), return -1);
+        _palette[_count++] = color;
     }
+    return index;
 }
 
-#endif
-
-// LineBuffer
-
-LineBuffer::LineBuffer() : _fillColor(0)
+const uint8_t *ColorPalette::getBytes() const
 {
+    return reinterpret_cast<const uint8_t *>(&_palette[0]);
 }
 
-void GFXCanvas::LineBuffer::clone(LineBuffer &source)
+size_t ColorPalette::getBytesLength() const
 {
-    _buffer.write(source._buffer.get(), source._buffer.length());
-    _fillColor = source._fillColor;
-}
-
-// functions
-
-void GFXCanvas::convertToRGB(color_t color, uint8_t& r, uint8_t& g, uint8_t& b)
-{
-    r = ((color >> 11) * 527 + 23) >> 6;
-    g = (((color >> 5) & 0x3f) * 259 + 33) >> 6;
-    b = ((color & 0x1f) * 527 + 23) >> 6;
-}
-
-uint32_t GFXCanvas::convertToRGB(color_t color)
-{
-    uint8_t r, g, b;
-    convertToRGB(color, r, g, b);
-    return (r << 16) | (g << 8) | b;
-}
-
-color_t GFXCanvas::convertRGBtoRGB565(uint8_t r, uint8_t g, uint8_t b)
-{
-    return ((b >> 3) & 0x1f) | (((g >> 2) & 0x3f) << 5) | (((r >> 3) & 0x1f) << 11);
-}
-
-color_t GFXCanvas::convertRGBtoRGB565(uint32_t rgb)
-{
-    return convertRGBtoRGB565(rgb, rgb >> 8, rgb >> 16);
+    return sizeof(_palette[0]) * _count;
 }
 
 #include <pop_optimize.h>

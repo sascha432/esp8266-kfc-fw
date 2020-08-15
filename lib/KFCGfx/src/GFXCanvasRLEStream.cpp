@@ -1,18 +1,31 @@
 /**
- * Author: sascha_lammers@gmx.de
- */
+* Author: sascha_lammers@gmx.de
+*/
+
+
+#include <Arduino_compat.h>
+#include "GFXCanvasConfig.h"
 
 #include <push_optimize.h>
+#if DEBUG_GFXCANVAS
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
 #pragma GCC optimize ("O3")
+#endif
 
 #include "GFXCanvasRLEStream.h"
 #include "GFXCanvasCompressed.h"
+#include "GFXCanvas.h"
+
+using namespace GFXCanvas;
+
 
 GFXCanvasRLEStream::GFXCanvasRLEStream(GFXCanvasCompressed& canvas) : GFXCanvasRLEStream(canvas, 0, 0, canvas.width(), canvas.height())
 {
 }
 
-GFXCanvasRLEStream::GFXCanvasRLEStream(GFXCanvasCompressed& canvas, uint16_t x, uint16_t y, uint16_t w, uint16_t h) : _canvas(canvas), _cache(w, Cache::INVALID), _position(0), _lastColor(-1)
+GFXCanvasRLEStream::GFXCanvasRLEStream(GFXCanvasCompressed& canvas, uint16_t x, uint16_t y, uint16_t w, uint16_t h) : _canvas(canvas), _cache(w, Cache::kYInvalid), _position(0), _lastColor(-1)
 {
     _header.x = x;
     _header.y = y;
@@ -20,13 +33,12 @@ GFXCanvasRLEStream::GFXCanvasRLEStream(GFXCanvasCompressed& canvas, uint16_t x, 
     _header.height = h;
     _header.paletteCount = 0;
 
-    uint8_t count;
-    if (canvas.getPalette(count) != nullptr) {
-        _canvas.flushLineCache(); // flush cache to get the palette filled
-        auto palette = canvas.getPalette(count);
-        _header.paletteCount = count;
-        _buffer.write((uint8_t*)&_header, sizeof(_header));
-        _buffer.write((uint8_t*)palette, count * sizeof(*palette));
+    auto palette = _canvas.getPalette();
+    if (palette) {
+        _canvas.flushCache();
+        _header.paletteCount = palette->length();
+        _buffer.write((uint8_t *)&_header, sizeof(_header));
+        _buffer.write(palette->getBytes(), palette->getBytesLength());
     }
     else {
         _buffer.write((uint8_t*)&_header, sizeof(_header));
@@ -53,6 +65,8 @@ int GFXCanvasRLEStream::read()
             uint16_t x = (_position % _header.width) + _header.x;
             uint16_t y = (_position / _header.width) + _header.y;
 
+            __DBG_BOUNDS_ACTION(__DBG_check_sy(y, _canvas.height()), return 0);
+            __DBG_BOUNDS_ACTION(__DBG_check_sx(x, _canvas.width()), return 0);
             if (!_cache.isY(y)) {
                 _cache.setY(y);
                 _canvas._decodeLine(_cache);
@@ -89,6 +103,8 @@ int GFXCanvasRLEStream::read()
                 x = (_position % _header.width) + _header.x;
                 y = (_position / _header.width) + _header.y;
 
+                __DBG_BOUNDS_ACTION(__DBG_check_sy(y, _canvas.height()), return 0);
+                __DBG_BOUNDS_ACTION(__DBG_check_sx(x, _canvas.width()), return 0);
                 if (!_cache.isY(y)) {
                     _cache.setY(y);
                     _canvas._decodeLine(_cache);

@@ -1,18 +1,29 @@
 /**
- * Author: sascha_lammers@gmx.de
- */
+* Author: sascha_lammers@gmx.de
+*/
+
+
+#include <Arduino_compat.h>
+#include "GFXCanvasConfig.h"
 
 #include <push_optimize.h>
+#if DEBUG_GFXCANVAS
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
 #pragma GCC optimize ("O3")
+#endif
 
 #include "GFXCanvasBitmapStream.h"
 #include "GFXCanvasCompressed.h"
+
+using namespace GFXCanvas;
 
 GFXCanvasBitmapStream::GFXCanvasBitmapStream(GFXCanvasCompressed& canvas) : GFXCanvasBitmapStream(canvas, 0, 0, canvas.width(), canvas.height())
 {
 }
 
-GFXCanvasBitmapStream::GFXCanvasBitmapStream(GFXCanvasCompressed& canvas, uint16_t x, uint16_t y, uint16_t w, uint16_t h) : _canvas(canvas), _cache(canvas.width(), Cache::INVALID)
+GFXCanvasBitmapStream::GFXCanvasBitmapStream(GFXCanvasCompressed& canvas, uint16_t x, uint16_t y, uint16_t w, uint16_t h) : _canvas(canvas), _cache(canvas.width(), Cache::kYInvalid)
 {
     _x = x;
     _y = y;
@@ -40,6 +51,9 @@ int GFXCanvasBitmapStream::read()
             uint16_t perLine = _width * 2;
             uint16_t y = (imagePos / perLine) + _y;
             uint16_t x = ((imagePos % perLine) / 2) + _x;
+
+            __DBG_BOUNDS_ACTION(__DBG_check_sy(y, _canvas.height()), return 0);
+            __DBG_BOUNDS_ACTION(__DBG_check_sx(x, _canvas.width()), return 0);
 
             if (!_cache.isY(y)) {
                 _cache.setY(y);

@@ -25,6 +25,8 @@ public:
     WebTemplate();
     virtual ~WebTemplate();
 
+    void setSelfUri(const String &selfUri);
+
     void setForm(Form *form);
     Form *getForm();
 
@@ -46,6 +48,7 @@ public:
 
 protected:
     Form *_form;
+    String _selfUri;
     JsonUnnamedObject *_json;
     PrintArgs _printArgs;
 };

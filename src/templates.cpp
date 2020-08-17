@@ -46,6 +46,11 @@ WebTemplate::~WebTemplate()
     }
 }
 
+void WebTemplate::setSelfUri(const String &selfUri)
+{
+    _selfUri = selfUri;
+}
+
 void WebTemplate::setForm(Form *form)
 {
     _json = nullptr; //static_cast<SettingsForm *>(form)->_json;
@@ -222,6 +227,9 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         }
     }
 #endif
+    else if (String_equals(key, PSTR("SELF_URI"))) {
+        output.print(_selfUri);
+    }
     else if (String_equals(key, PSTR("SAFEMODE"))) {
         if (config.isSafeMode()) {
             output.print(F(" - Running in SAFE MODE"));
@@ -414,7 +422,7 @@ void ConfigTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     }
     else if (String_equals(key, F("SSL_CERT"))) {
 #if WEBSERVER_TLS_SUPPORT
-        File file = SPIFFS.open(FSPGM(server_crt, "/server.crt"), fs::FileOpenMode::read);
+        File file = SPIFFS.open(FSPGM(server_crt, "/.pvt/server.crt"), fs::FileOpenMode::read);
         if (file) {
             output.print(file.readString());
         }
@@ -422,7 +430,7 @@ void ConfigTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     }
     else if (String_equals(key, F("SSL_KEY"))) {
 #if WEBSERVER_TLS_SUPPORT
-        File file = SPIFFS.open(FSPGM(server_key, "/server.key"), fs::FileOpenMode::read);
+        File file = SPIFFS.open(FSPGM(server_key, "/.pvt/server.key"), fs::FileOpenMode::read);
         if (file) {
             output.print(file.readString());
         }

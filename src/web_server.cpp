@@ -515,7 +515,7 @@ void WebServerPlugin::handlerUpdate(AsyncWebServerRequest *request)
 
             HttpHeaders httpHeaders(false);
             httpHeaders.addNoCache();
-            if (!plugin._sendFile(String('/') + FSPGM(update_fw_html), httpHeaders, plugin._clientAcceptsGzip(request), request, new UpgradeTemplate(message))) {
+            if (!plugin._sendFile(String('/') + FSPGM(update_fw_html), String(), httpHeaders, plugin._clientAcceptsGzip(request), request, new UpgradeTemplate(message))) {
                 message += F("<br><a href=\"/\">Home</a>");
                 request->send(200, FSPGM(mime_text_plain), message);
             }
@@ -711,10 +711,10 @@ void WebServerPlugin::begin()
     __LDBG_printf("HTTP running on port %u", port);
 }
 
-bool WebServerPlugin::_sendFile(const FileMapping &mapping, HttpHeaders &httpHeaders, bool client_accepts_gzip, AsyncWebServerRequest *request, WebTemplate *webTemplate)
+bool WebServerPlugin::_sendFile(const FileMapping &mapping, const String &formName, HttpHeaders &httpHeaders, bool client_accepts_gzip, AsyncWebServerRequest *request, WebTemplate *webTemplate)
 {
     WebServerSetCPUSpeedHelper setCPUSpeed;
-    __LDBG_printf("mapping=%s exists=%u gz=%u request=%p web_template=%p", mapping.getFilename(), mapping.exists(), client_accepts_gzip, request, webTemplate);
+    __LDBG_printf("mapping=%s exists=%u form=%s gz=%u request=%p web_template=%p", mapping.getFilename(), mapping.exists(), formName.c_str(), client_accepts_gzip, request, webTemplate);
 
     if (!mapping.exists()) {
         return false;
@@ -723,15 +723,14 @@ bool WebServerPlugin::_sendFile(const FileMapping &mapping, HttpHeaders &httpHea
     auto &path = mapping.getFilenameString();
     bool isHtml = String_endsWith(path, SPGM(_html));
     if (webTemplate == nullptr) {
-        if (path.charAt(0) == '/' && isHtml) {
-            auto name = path.substring(1, path.length() - 5);
-            auto plugin = PluginComponent::getTemplate(name);
+        if (path.charAt(0) == '/' && formName.length()) {
+            auto plugin = PluginComponent::getTemplate(formName);
             if (plugin) {
-                webTemplate = plugin->getWebTemplate(name);
+                webTemplate = plugin->getWebTemplate(formName);
             }
-            else if (nullptr != (plugin = PluginComponent::getForm(name))) {
+            else if (nullptr != (plugin = PluginComponent::getForm(formName))) {
                 Form *form = new SettingsForm(nullptr);
-                plugin->createConfigureForm(PluginComponent::FormCallbackType::CREATE_GET, name, *form, request);
+                plugin->createConfigureForm(PluginComponent::FormCallbackType::CREATE_GET, formName, *form, request);
                 webTemplate = new ConfigTemplate(form);
             }
         }
@@ -742,6 +741,7 @@ bool WebServerPlugin::_sendFile(const FileMapping &mapping, HttpHeaders &httpHea
 
     AsyncBaseResponse *response;
     if (webTemplate != nullptr) {
+        webTemplate->setSelfUri(request->url());
         // process with template
         response = new AsyncTemplateResponse(FPSTR(getContentType(path)), mapping.open(FileOpenMode::read), webTemplate, [webTemplate](const String& name, DataProviderInterface &provider) {
             return TemplateDataProvider::callback(name, provider, *webTemplate);
@@ -781,7 +781,21 @@ bool WebServerPlugin::_handleFileRead(String path, bool client_accepts_gzip, Asy
         path += FSPGM(index_html);
     }
 
+    String formName;
     auto mapping = FileMapping(path.c_str());
+    if (path.charAt(0) == '/') {
+        int pos;
+        if (!mapping.exists() && (pos = path.indexOf('/', 3)) != -1 && String_endsWith(path, SPGM(_html))) {
+            formName = path.substring(pos + 1, path.length() - 5);
+            String path2 = path.substring(0, pos) + FSPGM(_html);
+            mapping = FileMapping(path2.c_str());
+            __DBG_printf("path=%s path2=%s form=%s mapping=%u name=%s", path.c_str(), path2.c_str(), formName.c_str(), mapping.exists(), mapping.getFilenameString().c_str());
+        }
+        else {
+            formName = path.substring(1, path.length() - 5);
+        }
+    }
+
     if (!mapping.exists()) {
         __LDBG_printf("not found=%s", path.c_str());
         return false;
@@ -838,13 +852,13 @@ bool WebServerPlugin::_handleFileRead(String path, bool client_accepts_gzip, Asy
                 loginError = FSPGM(Invalid_username_or_password, "Invalid username or password");
                 const FailureCounter &failure = _loginFailures.addFailure(remote_addr);
                 Logger_security(F("Login from %s failed %d times since %s (%s)"), remote_addr.toString().c_str(), failure.getCounter(), failure.getFirstFailure().c_str(), getAuthTypeStr(authType));
-                return _sendFile(FSPGM(_login_html, "/login.html"), httpHeaders, client_accepts_gzip, request, new LoginTemplate(loginError));
+                return _sendFile(FSPGM(_login_html, "/login.html"), String(), httpHeaders, client_accepts_gzip, request, new LoginTemplate(loginError));
             }
         }
         else {
             if (String_endsWith(path, SPGM(_html))) {
                 httpHeaders.add(createRemoveSessionIdCookie());
-                return _sendFile(FSPGM(_login_html), httpHeaders, client_accepts_gzip, request, new LoginTemplate(loginError));
+                return _sendFile(FSPGM(_login_html), String(), httpHeaders, client_accepts_gzip, request, new LoginTemplate(loginError));
             }
             else {
                 request->send(403);
@@ -860,23 +874,23 @@ bool WebServerPlugin::_handleFileRead(String path, bool client_accepts_gzip, Asy
         httpHeaders.addNoCache(true);
 
         if (path.charAt(0) == '/' && String_endsWith(path, SPGM(_html))) {
-            auto name = path.substring(1, path.length() - 5);
-            auto plugin = PluginComponent::getForm(name);
+            // auto name = path.substring(1, path.length() - 5);
+            auto plugin = PluginComponent::getForm(formName);
             if (plugin) {
                 Form *form = new SettingsForm(request);
-                plugin->createConfigureForm(PluginComponent::FormCallbackType::CREATE_POST, name, *form, request);
+                plugin->createConfigureForm(PluginComponent::FormCallbackType::CREATE_POST, formName, *form, request);
                 webTemplate = new ConfigTemplate(form);
                 if (form->validate()) {
-                    plugin->createConfigureForm(PluginComponent::FormCallbackType::SAVE, name, *form, request);
+                    plugin->createConfigureForm(PluginComponent::FormCallbackType::SAVE, formName, *form, request);
                     config.write();
-                    executeDelayed(request, [plugin, name]() {
-                        plugin->invokeReconfigure(name);
+                    executeDelayed(request, [plugin, formName]() {
+                        plugin->invokeReconfigure(formName);
                     });
                     WebTemplate::_aliveRedirection = path.substring(1);
                     mapping = FileMapping(FSPGM(applying_html), true);
                 }
                 else {
-                    plugin->createConfigureForm(PluginComponent::FormCallbackType::DISCARD, name, *form, request);
+                    plugin->createConfigureForm(PluginComponent::FormCallbackType::DISCARD, formName, *form, request);
                     config.discard();
                 }
             }
@@ -909,7 +923,7 @@ bool WebServerPlugin::_handleFileRead(String path, bool client_accepts_gzip, Asy
         }
     }
 
-    return _sendFile(mapping, httpHeaders, client_accepts_gzip, request, webTemplate);
+    return _sendFile(mapping, formName, httpHeaders, client_accepts_gzip, request, webTemplate);
 }
 
 WebServerPlugin::WebServerPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(WebServerPlugin)), _updateFirmwareCallback(nullptr), _server(nullptr)

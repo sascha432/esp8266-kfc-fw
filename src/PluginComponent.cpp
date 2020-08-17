@@ -23,10 +23,8 @@
 
 PluginComponent::DependencyVector *PluginComponent::_dependencies;
 
-PROGMEM_STRING_DEF(__pure_virtual, "pure virtual call: %s\n");
-
 #define __DBG_panic_pure_virtual() \
-    DEBUG_OUTPUT.printf_P(SPGM(__pure_virtual), getName_P()); \
+    DEBUG_OUTPUT.printf_P(SPGM(__pure_virtual, "pure virtual call: %s\n"), getName_P()); \
     __debugbreak_and_panic()
 
 PluginComponent *PluginComponent::findPlugin(NameType name, bool isSetup)
@@ -224,6 +222,9 @@ void PluginComponent::checkDependencies()
 
 PluginComponent *PluginComponent::getForm(const String &name)
 {
+    if (name.length() == 0) {
+        return nullptr;
+    }
     for(const auto plugin: plugins) {
         if (plugin->canHandleForm(name)) {
             __LDBG_printf("form=%s plugin=%s", name.c_str(), plugin->getName_P());

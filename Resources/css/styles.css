@@ -74,6 +74,9 @@
 .oi-disabled {
     color: #808080;
 }
+.breadcrumb .oi-disabled {
+    color: #6c757d !important;
+}
 
 .btn-default {
     color: #212529;

@@ -1,10 +1,10 @@
 <nav class="navbar navbar-expand-lg navbar-light bg-light">
-    <a class="navbar-brand" href="index.html">KFC FW</a>
+    <a class="navbar-brand" href="/index.html">KFC FW</a>
     <span class="navbar-text" id="navbarMainToggler">
     <!--#if (defined(WEBUI_ALERTS_ENABLED) && WEBUI_ALERTS_ENABLED)-->
         <a href="#" class="navbar-toggler alerts-icon alerts-icon-sm alerts-icon-count text-white bg-danger hidden-override mr-1">0</a>
     <!--#endif-->
-        <a href="reboot.html" class="navbar-toggler bg-danger alerts-icon alerts-icon-sm hidden-override mr-2"><span class="oi oi-reload text-white"></span></a>
+        <a href="/reboot.html" class="navbar-toggler bg-danger alerts-icon alerts-icon-sm hidden-override mr-2"><span class="oi oi-reload text-white"></span></a>
         <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarMain" aria-controls="navbarMain" aria-expanded="false" aria-label="Toggle navigation">
             <span class="oi oi-menu" aria-hidden="true"></span>
         </button>
@@ -15,7 +15,7 @@
         </ul>
         <!--#if (defined(WEBUI_ALERTS_ENABLED) && WEBUI_ALERTS_ENABLED)-->
         <span class="navbar-text alerts-icon alerts-icon-lg hidden-override">
-            <a href="reboot.html" class="alerts-icon alerts-icon-lg hidden-override"></a><button class="btn btn-danger"><span class="oi oi-reload"></span></button></a>
+            <a href="/reboot.html" class="alerts-icon alerts-icon-lg hidden-override"></a><button class="btn btn-danger"><span class="oi oi-reload"></span></button></a>
             <button type="button" class="btn btn-danger">
                 Alerts <span class="alerts-icon-count badge badge-light">0</span>
             </button>
@@ -28,7 +28,7 @@
 </nav>
 <div class="container-fluid p-3%IS_CONFIG_DIRTY%" id="alert_container">
     <div class="alert alert-dismissible alert-danger pb-2%IS_CONFIG_DIRTY_CLASS%" role="alert">
-        <span class="alert-content"><a href="reboot.html"><button class="btn btn-danger reload-button"><span class="oi oi-reload"></span></button></a>The Configuration has been changed, reboot the device to apply all settings</span>
+        <span class="alert-content"><a href="/reboot.html"><button class="btn btn-danger reload-button"><span class="oi oi-reload"></span></button></a>The Configuration has been changed, reboot the device to apply all settings</span>
         <button type="button" class="close" data-dismiss="alert" aria-label="Close">
           <span aria-hidden="true">&times;</span>
         </button>

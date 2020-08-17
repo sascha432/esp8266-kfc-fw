@@ -42,8 +42,6 @@ using KFCConfigurationClasses::Plugins;
 #include <debug_helper_disable.h>
 #endif
 
-PROGMEM_STRING_DEF(weather_station_webui_id, "ws_tft");
-
 static WeatherStationPlugin plugin;
 
 PROGMEM_DEFINE_PLUGIN_OPTIONS(
@@ -107,7 +105,7 @@ void WeatherStationPlugin::_sendScreenCaptureBMP(AsyncWebServerRequest *request)
     if (WebServerPlugin::getInstance().isAuthenticated(request) == true) {
         //auto response = new AsyncClonedBitmapStreamResponse(plugin.getCanvas().clone());
         __LDBG_print("AsyncBitmapStreamResponse");
-        auto response = new AsyncBitmapStreamResponse(plugin.getCanvas());
+        auto response = __DBG_new(AsyncBitmapStreamResponse, plugin.getCanvas());
         HttpHeaders httpHeaders;
         httpHeaders.addNoCache();
         httpHeaders.setAsyncWebServerResponseHeaders(response);
@@ -124,7 +122,7 @@ void WeatherStationPlugin::_installWebhooks()
     WebServerPlugin::addHandler(F("/images/screen_capture.bmp"), _sendScreenCaptureBMP);
 
     WebServerPlugin::addRestHandler(WebServerPlugin::RestHandler(F(KFC_RESTAPI_ENDPOINT "ws"), [this](AsyncWebServerRequest *request, WebServerPlugin::RestRequest &rest) -> AsyncWebServerResponse * {
-        auto response = new AsyncJsonResponse();
+        auto response = __DBG_new(AsyncJsonResponse);
         auto &json = response->getJsonObject();
         auto &reader = rest.getJsonReader();
 
@@ -470,7 +468,7 @@ void WeatherStationPlugin::createWebUI(WebUI &webUI)
 
     if (_config.show_webui) {
         row = &webUI.addRow();
-        row->addScreen(FSPGM(weather_station_webui_id), _canvas.width(), _canvas.height());
+        row->addScreen(FSPGM(weather_station_webui_id, "ws_tft"), _canvas.width(), _canvas.height());
    }
 }
 
@@ -666,7 +664,6 @@ void WeatherStationPlugin::_getIndoorValues(float *data)
 void WeatherStationPlugin::_httpRequest(const String &url, int timeout, JsonBaseReader *jsonReader, Callback_t finishedCallback)
 {
     auto rest = __DBG_new(::WeatherStation::RestAPI, url);
-    rest->setAutoDelete(true);
     rest->call(jsonReader, std::max(15, timeout), [this, url, finishedCallback](bool status, const String &error) {
         __LDBG_printf("status=%u error=%s url=%s", status, error.c_str(), url.c_str());
         if (!status) {
@@ -864,10 +861,9 @@ void WeatherStationPlugin::_broadcastCanvas(int16_t x, int16_t y, int16_t w, int
         WebSocketBinaryPacketUnqiueId_t packetIdentifier = RGB565_RLE_COMPRESSED_BITMAP;
         buffer.write(reinterpret_cast<uint8_t *>(&packetIdentifier), sizeof(packetIdentifier));
 
-        auto str = SPGM(weather_station_webui_id);
-        size_t len = strlen_P(str);
+        size_t len = strlen_P(SPGM(weather_station_webui_id));
         buffer.write(len);
-        buffer.write_P(str, len);
+        buffer.write_P(SPGM(weather_station_webui_id), len);
         if (buffer.length() & 0x01) { // the next part needs to be word aligned
             buffer.write(0);
         }
@@ -905,7 +901,7 @@ void WeatherStationPlugin::_setScreen(uint8_t screen)
     if (screen < NUM_SCREENS) {
         auto time = _config.screenTimer[screen];
         auto next = _getNextScreen(screen);
-        __LDBG_printf("set screen=%u time=%u next=%u", screen, time, next);
+        // __LDBG_printf("set screen=%u time=%u next=%u", screen, time, next);
         if (time && next != screen) {
             _currentScreen = screen;
             _toggleScreenTimer = millis() + (time * 1000UL);

@@ -101,21 +101,22 @@ public:
     virtual void getBearerToken(String &token) const {}
 
 public:
-    KFCRestAPI() : _headers(false), _autoDelete(false), _timeout(15) {
+    using HttpRequestVector = std::vector<HttpRequest *>;
+
+public:
+    KFCRestAPI() : _headers(false), _timeout(15) {
     }
     virtual ~KFCRestAPI() {
     }
 
-    typedef std::vector<HttpRequest *> HttpRequestVector;
+    virtual void autoDelete(void *restApiPtr) {
+        __DBG_printf("auto delete ignored api=%p", restApiPtr);
+        // auto delete disabled by default
+    }
 
     static void _onData(void *ptr, HttpClient *request, size_t available);
     static void _onReadyStateChange(void *ptr, HttpClient *request, int readyState);
     static void _removeHttpRequest(HttpRequest *httpRequestPtr);
-
-    // delete this after all requests have been processed
-    void setAutoDelete(bool autoDelete) {
-        _autoDelete = autoDelete;
-    }
 
 protected:
     void _createRestApiCall(const String &endPointUri, const String &body, JsonBaseReader *json, HttpRequest::Callback_t callback);
@@ -123,7 +124,6 @@ protected:
 protected:
     HttpRequestVector _requests;
     HttpHeaders _headers;
-    bool _autoDelete;
     uint16_t _timeout;
 };
 

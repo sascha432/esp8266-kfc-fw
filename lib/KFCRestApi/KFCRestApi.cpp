@@ -158,9 +158,9 @@ void KFCRestAPI::_removeHttpRequest(KFCRestAPI::HttpRequest *httpRequestPtr)
     api._requests.erase(std::remove(api._requests.begin(), api._requests.end(), httpRequestPtr), api._requests.end());
     __DBG_delete(httpRequestPtr);
 
-    if (api._autoDelete && api._requests.empty()) {
-        _debug_printf_P(PSTR("auto delete\n"));
-        __DBG_delete(&api);
+    if (api._requests.empty()) {
+        __DBG_printf("calling auto delete api=%p", &api);
+        api.autoDelete(&api);
     }
 }
 

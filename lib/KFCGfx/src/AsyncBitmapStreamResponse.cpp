@@ -17,6 +17,11 @@ AsyncBitmapStreamResponse::AsyncBitmapStreamResponse(GFXCanvasCompressed& canvas
 	_contentType = F("image/bmp");
 }
 
+AsyncBitmapStreamResponse::~AsyncBitmapStreamResponse()
+{
+    __DBG_delete_remove(this);
+}
+
 bool AsyncBitmapStreamResponse::_sourceValid() const
 {
 	return !!_stream;
@@ -42,5 +47,5 @@ AsyncClonedBitmapStreamResponse::AsyncClonedBitmapStreamResponse(GFXCanvasCompre
 
 AsyncClonedBitmapStreamResponse::~AsyncClonedBitmapStreamResponse()
 {
-    delete _canvasPtr;
+    __DBG_delete(_canvasPtr);
 }

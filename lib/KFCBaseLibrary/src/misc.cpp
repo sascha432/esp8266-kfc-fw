@@ -108,7 +108,7 @@ void remove_trailing_slash(String &dir)
     }
 }
 
-String sys_get_temp_dir()
+const __FlashStringHelper *sys_get_temp_dir()
 {
     return F("/tmp/");
 }

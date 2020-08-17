@@ -72,7 +72,7 @@ const unsigned char icon_house[] PROGMEM = {
 
 WSDraw::WSDraw() :
     _tft(TFT_PIN_CS, TFT_PIN_DC, TFT_PIN_RST),
-    _canvas(*new WeatherStationCanvas(_tft.width(), _tft.height())),
+    _canvas(*__DBG_new(WeatherStationCanvas, _tft.width(), _tft.height())),
     _scrollCanvas(nullptr),
     _scrollPosition(0),
     _weatherError(F("No data available")),
@@ -100,7 +100,7 @@ WSDraw::~WSDraw()
 {
     _displayMessageTimer.remove();
     ScrollCanvas::destroy(this);
-    delete (WeatherStationCanvas *)&_canvas;
+    __DBG_delete((WeatherStationCanvas *)&_canvas);
 }
 
 

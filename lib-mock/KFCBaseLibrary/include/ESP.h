@@ -57,6 +57,8 @@ public:
         return resetInfo;
     }
 
+    void wdtFeed() {}
+
 #if _DEBUG && _MSC_VER // MSVC memory debug
     void _enableMSVCMemdebug() {
         // Get current flag

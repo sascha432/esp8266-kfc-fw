@@ -12,6 +12,7 @@
 class AsyncBitmapStreamResponse : public AsyncAbstractResponse {
 public:
     AsyncBitmapStreamResponse(GFXCanvasCompressed& canvas);
+    virtual ~AsyncBitmapStreamResponse();
     bool _sourceValid() const;
     virtual size_t _fillBuffer(uint8_t* buf, size_t maxLen) override;
 
@@ -23,7 +24,7 @@ private:
 class AsyncClonedBitmapStreamResponse : public AsyncBitmapStreamResponse {
 public:
     AsyncClonedBitmapStreamResponse(GFXCanvasCompressed *canvas);
-    ~AsyncClonedBitmapStreamResponse();
+    virtual ~AsyncClonedBitmapStreamResponse();
 
 private:
     GFXCanvasCompressed *_canvasPtr;

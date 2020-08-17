@@ -18,6 +18,11 @@ namespace WeatherStation {
             url = _url;
         }
 
+        virtual void autoDelete(void *restApiPtr) override {
+            __DBG_printf("executing auto delete api=%p", restApiPtr);
+            __DBG_delete((RestAPI *)restApiPtr);
+        }
+
         void call(JsonBaseReader *reader, int timeout, Callback callback) {
             debug_printf_P(PSTR("timeout=%u\n"), timeout);
 

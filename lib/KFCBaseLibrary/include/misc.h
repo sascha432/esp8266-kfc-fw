@@ -87,7 +87,7 @@ inline String printable_string(const char *buffer, size_t length, size_t maxLeng
 void append_slash(String &dir);
 void remove_trailing_slash(String &dir);
 
-String sys_get_temp_dir();
+const __FlashStringHelper *sys_get_temp_dir();
 File tmpfile(const String &dir, const String &prefix);
 
 String WiFi_disconnect_reason(WiFiDisconnectReason reason);

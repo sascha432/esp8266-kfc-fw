@@ -110,14 +110,14 @@ void SyslogPlugin::_zeroConfCallback(const String &hostname, const IPAddress &ad
     // parameter.setFacility(SYSLOG_FACILITY_KERN);
     // parameter.setSeverity(SYSLOG_NOTICE);
 
-    SyslogFilter *filter = new SyslogFilter(System::Device::getName(), FSPGM(kfcfw));
+    SyslogFilter *filter = __DBG_new(SyslogFilter, System::Device::getName(), FSPGM(kfcfw));
     auto &parameter = filter->getParameter();
     parameter.setFacility(SYSLOG_FACILITY_KERN);
     parameter.setSeverity(SYSLOG_NOTICE);
 
     filter->addFilter(F("*.*"), SyslogFactory::create(parameter, cfg.protocol_enum, _hostname, _port));
 
-    _stream = new SyslogStream(filter, new SyslogMemoryQueue(SYSLOG_PLUGIN_QUEUE_SIZE));
+    _stream = __LDBG_new(SyslogStream, filter, __LDBG_new(SyslogMemoryQueue, SYSLOG_PLUGIN_QUEUE_SIZE));
 
     _logger.setSyslog(_stream);
     _timer.add(100, true, timerCallback);
@@ -128,7 +128,7 @@ void SyslogPlugin::_end()
     if (_stream) {
         _timer.remove();
         _logger.setSyslog(nullptr);
-        delete _stream;
+        __LDBG_delete(_stream);
         _stream = nullptr;
     }
 }

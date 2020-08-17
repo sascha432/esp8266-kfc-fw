@@ -40,7 +40,7 @@ GFXCanvasCompressed::~GFXCanvasCompressed()
 
 GFXCanvasCompressed *GFXCanvasCompressed::clone()
 {
-    return new GFXCanvasCompressed(width(), _lines);
+    return __DBG_new(GFXCanvasCompressed, width(), _lines);
 }
 
 void GFXCanvasCompressed::setRotation(uint8_t r)

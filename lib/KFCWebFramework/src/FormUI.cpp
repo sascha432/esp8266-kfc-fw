@@ -9,7 +9,9 @@
 
 #include "FormUI.h"
 #include "FormField.h"
+#include "Form.h"
 #include <PrintHtmlEntities.h>
+#include <PrintHtmlEntitiesString.h>
 #include <misc.h>
 
 namespace FormUI {
@@ -75,20 +77,39 @@ namespace FormUI {
         return this;
     }
 
+    void UI::_printAttributeTo(PrintInterface &output) const
+    {
+        if (_attributesVector.empty()) {
+            output.printf_P(PSTR(">"));
+        }
+        else {
+            auto iterator = _attributesVector.begin();
+            auto end = _attributesVector.end() - 1;
+            for(; iterator != end; ++iterator) {
+                output.printf_P(PSTR(" %s=\"%s\""), iterator->first, iterator->second);
+            }
+            output.printf_P(PSTR(" %s=\"%s\">"), iterator->first, iterator->second);
+        }
+    }
+
     UI *UI::addAttribute(const __FlashStringHelper *name, const String &value)
     {
-        _attributes += ' ';
-        _attributes += name;
-        _attributes.reserve(_attributes.length() + value.length() + 4);
-        if (value.length()) {
-            _attributes += '=';
-            _attributes += '"';
-            // append translated value to _attributes
-            if (!PrintHtmlEntities::translateTo(value.c_str(), _attributes, true)) {
-                _attributes += value; // no translation required, just append value
-            }
-            _attributes += '"';
-        }
+        PrintHtmlEntitiesString tmp(PrintHtmlEntities::Mode::ATTRIBUTE, value);
+        _attributesVector.emplace_back(name, _parent->getFormUIConfig().strings().attachString(tmp));
+
+
+        // _attributes += ' ';
+        // _attributes += name;
+        // _attributes.reserve(_attributes.length() + value.length() + 4);
+        // if (value.length()) {
+        //     _attributes += '=';
+        //     _attributes += '"';
+        //     // append translated value to _attributes
+        //     if (!PrintHtmlEntities::translateTo(value.c_str(), _attributes, true)) {
+        //         _attributes += value; // no translation required, just append value
+        //     }
+        //     _attributes += '"';
+        // }
         return this;
     }
 
@@ -118,11 +139,11 @@ namespace FormUI {
         _items = new StringPairList(_parent->getFormUIConfig(), items);
     }
 
-    const char *UI::_getAttributes()
-    {
-        auto str = _parent->getFormUIConfig().strings().attachString(_attributes);
-        return str;
-    }
+    // const char *UI::_getAttributes()
+    // {
+    //     auto str = _parent->getFormUIConfig().strings().attachString(_attributes);
+    //     return str;
+    // }
 
     char UI::_hasLabel() const
     {

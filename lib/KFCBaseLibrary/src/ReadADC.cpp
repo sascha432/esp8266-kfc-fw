@@ -107,7 +107,7 @@ void ADCManager::ResultQueue::invokeCallback()
 
 static ADCManager *adc = nullptr;
 
-ADCManager::ADCManager() : _value(__system_adc_read()), _nextDelay(kMinDelayMicros), _lastUpdated(micros64()), _lastMaxDelay(_lastUpdated)
+ADCManager::ADCManager() : _value(__system_adc_read()), _nextDelay(kMinDelayMicros), _lastUpdated(micros64()), _lastMaxDelay(_lastUpdated), _minDelayMicros(kMinDelayMicros), _maxDelayMicros(kMaxDelayMicros), _repeatMaxDelayPerSecond(kRepeatMaxDelayPerSecond), _maxDelayYieldTimeMicros(kMaxDelayYieldTimeMicros)
 {
 }
 
@@ -197,22 +197,22 @@ bool ADCManager::canRead() const
 void ADCManager::_updateTimestamp()
 {
     auto tmp = micros64();
-    if (_nextDelay == kMaxDelayMicros) {
-        _nextDelay = kMinDelayMicros;
+    if (_nextDelay == _maxDelayMicros) {
+        _nextDelay = _minDelayMicros;
         _lastMaxDelay = tmp;
         _lastUpdated = tmp;
     }
     else {
-        if (tmp - _lastUpdated > (1000000 / kRepeatMaxDelayPerSecond)) {
+        if (tmp - _lastUpdated > (1000000 / _repeatMaxDelayPerSecond)) {
             _lastMaxDelay = tmp;
-            _nextDelay = kMinDelayMicros;
+            _nextDelay = _minDelayMicros;
         }
         else {
-            if (tmp - _lastMaxDelay > (1000000 / kRepeatMaxDelayPerSecond)) {
-                _nextDelay = kMaxDelayMicros;
-                if (kMaxDelayYieldTimeMicros) {
+            if (tmp - _lastMaxDelay > (1000000 / _repeatMaxDelayPerSecond)) {
+                _nextDelay = _maxDelayMicros;
+                if (_maxDelayYieldTimeMicros) {
                     if (can_yield()) {
-                        delayMicroseconds(kMaxDelayYieldTimeMicros);
+                        delayMicroseconds(_maxDelayYieldTimeMicros);
                     }
                 }
             }
@@ -278,4 +278,24 @@ bool ADCManager::requestAverage(uint8_t numSamples, uint16_t delayMillis, Callba
     }
     _queue.emplace_back(numSamples, delayMillis, callback);
     return true;
+}
+
+void ADCManager::setMinDelayMicros(uint16_t minDelayMicros)
+{
+    _minDelayMicros = std::min(20000, std::max(500, (int)minDelayMicros));
+}
+
+void ADCManager::setMaxDelayMicros(uint16_t maxDelayMicros)
+{
+    _maxDelayMicros = std::min(50000, std::max(2000, (int)maxDelayMicros));
+}
+
+void ADCManager::setRepeatMaxDelayPerSecond(uint8_t repeatMaxDelayPerSecond)
+{
+    _repeatMaxDelayPerSecond = std::min(20, std::max(1, (int)repeatMaxDelayPerSecond));
+}
+
+void ADCManager::setMaxDelayYieldTimeMicros(uint16_t maxDelayYieldTimeMicros)
+{
+    _maxDelayYieldTimeMicros = std::min(ADCManager::kMaxDelayYieldTimeMicros * 2, std::max(ADCManager::kMaxDelayYieldTimeMicros, (int)maxDelayYieldTimeMicros));
 }

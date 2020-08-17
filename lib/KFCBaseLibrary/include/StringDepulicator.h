@@ -7,7 +7,7 @@
 #include "Buffer.h"
 
 #ifndef DEBUG_STRING_DEDUPLICATOR
-#define DEBUG_STRING_DEDUPLICATOR               0
+#define DEBUG_STRING_DEDUPLICATOR               1
 #endif
 
 // object to store and manage strings with deduplication and PROGMEM detection
@@ -29,6 +29,10 @@ public:
     // add a string
     // returns nullptr if there is no space left
     const char *addString(const char *str, size_t len);
+
+#if DEBUG_STRING_DEDUPLICATOR
+    void dump(Print &output) const;
+#endif
 };
 
 class StringBufferPool {

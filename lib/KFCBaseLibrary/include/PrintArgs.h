@@ -71,7 +71,13 @@ public:
 
     // no type conversion: float, double and uint64_t need 2 arguments
     // uint8_t, uint16_t need to be zero padded
-    void vprintf_P(const char *format, uintptr_t **args, size_t numArgs);
+    void vprintf_P(const char *format, const uintptr_t **args, size_t numArgs);
+    void vprintf_P(const char *format, const char **args, size_t numArgs) {
+        vprintf_P(format, (const uintptr_t **)args, numArgs);
+    }
+    void vprintf_P(const char *format, const void **args, size_t numArgs) {
+        vprintf_P(format, (const uintptr_t **)args, numArgs);
+    }
 
     template <typename... Args>
     void printf_P(const char *format, const Args &... args) {
@@ -108,6 +114,7 @@ public:
             //     // update argument counter
             //     *counter += (uint8_t)((_buffer.length() - startLen) / sizeof(uint32_t));
             // }
+            
         }
     }
 

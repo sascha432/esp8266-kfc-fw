@@ -1269,6 +1269,15 @@ namespace KFCConfigurationClasses {
                 CREATE_ENUM_BITFIELD(multiplexer, MultiplexerType);
                 uint16_t adc_divider;
                 uint16_t pwm_frequency;
+                uint16_t adc_read_interval;                 // microseconds
+                uint16_t adc_recovery_time;                 // microseconds
+                uint8_t adc_recoveries_per_second;
+
+                static constexpr uint16_t kAdcDividerDefault = 25;
+                static constexpr uint16_t kPwmFrequencyDefault = 27500;
+                static constexpr uint16_t kAdcReadIntervalDefault = 750;
+                static constexpr uint16_t kAdcRecoveryTimeDefault = 10000;
+                static constexpr uint8_t kAdcRecoveriesPerSecDefault = 5;
 
                 template<typename Archive>
                 void serialize(Archive & ar, kfc::serialization::version version) {

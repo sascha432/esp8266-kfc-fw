@@ -20,7 +20,7 @@
 
 using KFCConfigurationClasses::Plugins;
 
-PROGMEM_STRING_DEF(iot_sensor_hlw80xx_state_file, "/.pvt/hlw80xx.state");
+PROGMEM_STRING_DEF(iot_sensor_hlw80xx_state_file, );
 
 Sensor_HLW80xx::Sensor_HLW80xx(const String &name) : MQTTSensor(), _name(name), _power(NAN), _voltage(NAN), _current(NAN)
 {
@@ -241,7 +241,7 @@ void Sensor_HLW80xx::publishState(MQTTClient *client)
         json.add(FSPGM(power), _powerToNumber(_power));
         json.add(FSPGM(energy_total), _energyToNumber(_getEnergy(0)));
         json.add(FSPGM(energy), _energyToNumber(_getEnergy(1)));
-        json.add(FSPGM(voltage), JsonNumber(_voltage, 1));
+        json.add(FSPGM(voltage), JsonNumber(_voltage, 1 + _extraDigits));
         json.add(FSPGM(current), _currentToNumber(_current));
         auto pf = _getPowerFactor();
         json.add(FSPGM(pf), String(pf, 2));
@@ -268,7 +268,7 @@ void Sensor_HLW80xx::_saveEnergyCounter()
     __LDBG_println();
 
 #if IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT
-    auto file = SPIFFS.open(FSPGM(iot_sensor_hlw80xx_state_file), fs::FileOpenMode::write);
+    auto file = SPIFFS.open(FSPGM(iot_sensor_hlw80xx_state_file, "/.pvt/hlw80xx.state"), fs::FileOpenMode::write);
     if (file) {
         file.write(reinterpret_cast<const uint8_t *>(_energyCounter.data()), sizeof(_energyCounter));
         file.close();

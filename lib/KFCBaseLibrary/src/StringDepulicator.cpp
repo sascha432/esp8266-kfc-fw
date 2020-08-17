@@ -2,6 +2,7 @@
 * Author: sascha_lammers@gmx.de
 */
 
+#include <Arduino_compat.h>
 #include <PrintString.h>
 #include <misc.h>
 #include "StringDepulicator.h"
@@ -37,6 +38,7 @@ size_t StringBuffer::space() const
 {
     return size() - length();
 }
+PROGMEM_STRING_DECL(__pure_virtual);
 
 const char *StringBuffer::findStr(const char *str, size_t len) const
 {
@@ -46,8 +48,29 @@ const char *StringBuffer::findStr(const char *str, size_t len) const
         if  (!safe_strcmp(begin, str)) {
             return begin;
         }
+#if 1
         begin += strlen(begin) + 1;
+#else
+        // partial string deduplication
+        // finds 1-2% more duplicates but mostly short ones
+        begin++;
+#endif
     }
+#if 0
+    auto pbegin = (const char *)0x4029638d;
+    auto pend = (const char *)SECTION_IROM0_TEXT_END_ADDRESS;
+    auto start = micros();
+    while(pbegin < pend) {
+        if  (!strcmp_P_P(pbegin, str)) {
+            auto dur=micros()-start;
+            __DBG_printf("%u: found %p for %p(%s)", dur, pbegin, str, str);
+            return pbegin;
+        }
+        pbegin++;
+    }
+    auto dur=micros()-start;
+    __DBG_printf("%u: not found %s", dur, str);
+#endif
     return nullptr;
 }
 
@@ -62,6 +85,23 @@ const char *StringBuffer::addString(const char *str, size_t len)
     return ptr;
 }
 
+void StringBuffer::dump(Print &output) const
+{
+#if 1
+    auto begin = cstr_begin();
+    auto end = cstr_end();
+    while(begin < end) {
+        size_t len = strlen(begin);
+        size_t n = len;
+        if (n > 40) {
+            n = 40;
+        }
+        output.printf_P(PSTR("%08x(%u): %-*.*s\n"), begin, len, n, n, begin);
+        begin += len + 1;
+    }
+#endif
+}
+
 StringBufferPool::StringBufferPool() : _pool()
 {
 }
@@ -73,6 +113,7 @@ void StringBufferPool::clear()
         StringVector list;
         for(const auto &buffer: _pool) {
             list.push_back(PrintString(F("%u:%u:%u"), buffer.length(), buffer.space(), buffer.count()));
+            buffer.dump(DEBUG_OUTPUT);
         }
         __DBG_printf("pool=%p [%s]", this, implode(F(", "), list).c_str());
     }

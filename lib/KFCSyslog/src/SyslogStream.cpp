@@ -18,8 +18,8 @@
 
 SyslogStream::SyslogStream(SyslogParameter &parameter, SyslogProtocol protocol, const String &host, uint16_t port, uint16_t queueSize) : _parameter(parameter)
 {
-	_filter = new SyslogFilter(parameter);
-	_queue = new SyslogMemoryQueue(queueSize);
+	_filter = __LDBG_new(SyslogFilter, parameter);
+	_queue = __LDBG_new(SyslogMemoryQueue, queueSize);
 	_filter->addFilter(F("*.*"), SyslogFactory::create(_parameter, protocol, host, port));
 }
 
@@ -29,11 +29,11 @@ SyslogStream::SyslogStream(SyslogFilter* filter, SyslogQueue* queue) : _paramete
 
 SyslogStream::~SyslogStream() {
     if (_queue) {
-        delete _queue;
+        __LDBG_delete(_queue);
         _queue = nullptr;
     }
     if (_filter) {
-        delete _filter;
+        __LDBG_delete(_filter);
     }
 }
 

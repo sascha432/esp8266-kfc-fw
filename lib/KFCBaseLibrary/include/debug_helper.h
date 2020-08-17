@@ -36,6 +36,7 @@ extern unsigned long millis(void);
 
 #define __NDBG_new(name, ...)                               new name(__VA_ARGS__)
 #define __NDBG_delete(ptr)                                  delete ptr
+#define __NDBG_delete_remove(ptr)                           ;
 #define __NDBG_new_array(num, name, ...)                    new name[num](__VA_ARGS__)
 #define __NDBG_delete_array(ptr)                            delete[] ptr
 #define __NDBG_malloc(size)                                 malloc(size)
@@ -95,11 +96,16 @@ extern const char ___debugPrefix[] PROGMEM;
 
 #include "DebugContext.h"
 
+#ifndef HAVE_MEM_DEBUG
+#define HAVE_MEM_DEBUG                                      0
+#endif
+
 // debug
 #if HAVE_MEM_DEBUG
 #include "DebugMemoryHelper.h"
 #define __DBG_new(name, ...)                                KFCMemoryDebugging::_new(DEBUG_HELPER_POSITION, sizeof(name), new name(__VA_ARGS__))
 #define __DBG_delete(ptr)                                   delete KFCMemoryDebugging::_delete(DEBUG_HELPER_POSITION, ptr)
+#define __DBG_delete_remove(ptr)                            KFCMemoryDebugging::_delete(DEBUG_HELPER_POSITION, ptr)
 #define __DBG_new_array(num, name, ...)                     KFCMemoryDebugging::_new(DEBUG_HELPER_POSITION, num * sizeof(name), new name[num](__VA_ARGS__))
 #define __DBG_delete_array(ptr)                             delete[] KFCMemoryDebugging::_delete(DEBUG_HELPER_POSITION, ptr)
 #define __DBG_malloc(size)                                  KFCMemoryDebugging::_alloc(DEBUG_HELPER_POSITION, size, malloc(size))
@@ -113,6 +119,7 @@ extern const char ___debugPrefix[] PROGMEM;
 #else
 #define __DBG_new(...)                                      __NDBG_new(__VA_ARGS__)
 #define __DBG_delete(...)                                   __NDBG_delete(__VA_ARGS__)
+#define __DBG_delete_remove(...)                            __NDBG_delete_remove(__VA_ARGS__)
 #define __DBG_new_array(...)                                __NDBG_new_array(__VA_ARGS__)
 #define __DBG_delete_array(...)                             __NDBG_delete_array(__VA_ARGS__)
 #define __DBG_malloc(...)                                   __NDBG_malloc(__VA_ARGS__)
@@ -128,6 +135,7 @@ extern const char ___debugPrefix[] PROGMEM;
 // debug if local and memory debugging is enabled
 #define __LDBG_new(...)                                     __LDBG_S_IF(__DBG_new(__VA_ARGS__), __NDBG_new(__VA_ARGS__))
 #define __LDBG_delete(...)                                  __LDBG_S_IF(__DBG_delete(__VA_ARGS__), __NDBG_delete(__VA_ARGS__))
+#define __LDBG_delete_remove(...)                           __LDBG_S_IF(__DBG_delete_remove(__VA_ARGS__), __NDBG_delete_remove(__VA_ARGS__))
 #define __LDBG_new_array(...)                               __LDBG_S_IF(__DBG_new_array(__VA_ARGS__), __NDBG_new_array(__VA_ARGS__))
 #define __LDBG_delete_array(...)                            __LDBG_S_IF(__DBG_delete_array(__VA_ARGS__), __NDBG_delete_array(__VA_ARGS__))
 #define __LDBG_malloc(...)                                  __LDBG_S_IF(__DBG_malloc(__VA_ARGS__), __NDBG_malloc(__VA_ARGS__))
@@ -285,6 +293,7 @@ static inline int DEBUG_OUTPUT_flush() {
 
 #define __DBG_new(...)                                      __NDBG_new(__VA_ARGS__)
 #define __DBG_delete(...)                                   __NDBG_delete(__VA_ARGS__)
+#define __DBG_delete_remove(...)                            __NDBG_delete_remove(__VA_ARGS__)
 #define __DBG_new_array(...)                                __NDBG_new_array(__VA_ARGS__)
 #define __DBG_delete_array(...)                             __NDBG_delete_array(__VA_ARGS__)
 #define __DBG_malloc(...)                                   __NDBG_malloc(__VA_ARGS__)
@@ -298,6 +307,7 @@ static inline int DEBUG_OUTPUT_flush() {
 
 #define __LDBG_new(...)                                     __NDBG_new(__VA_ARGS__)
 #define __LDBG_delete(...)                                  __NDBG_delete(__VA_ARGS__)
+#define __LDBG_delete_remove(...)                           __NDBG_delete_remove(__VA_ARGS__)
 #define __LDBG_new_array(...)                               __NDBG_new_array(__VA_ARGS__)
 #define __LDBG_delete_array(...)                            __NDBG_delete_array(__VA_ARGS__)
 #define __LDBG_malloc(...)                                  __NDBG_malloc(__VA_ARGS__)

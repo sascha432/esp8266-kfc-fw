@@ -22,6 +22,7 @@
 
 class Form;
 class FormField;
+class PrintInterface;
 
 namespace FormUI {
 
@@ -263,7 +264,8 @@ namespace FormUI {
 			_type = ui._type;
 			_label = ui._label;
 			_suffix = ui._suffix;
-			_attributes = std::move(ui._attributes);
+			// _attributes = std::move(ui._attributes);
+			_attributesVector = std::move(ui._attributesVector);
 			_items = ui._items;
 			ui._items = nullptr;
 			return *this;
@@ -331,16 +333,21 @@ namespace FormUI {
 
 		bool _compareValue(const String &value) const;
 		void _setItems(const ItemsList &items);
-		const char *_getAttributes();
+		// const char *_getAttributes();
 		char _hasLabel() const;
 		char _hasSuffix() const;
 
+		void _printAttributeTo(PrintInterface &output) const;
+
 	private:
+		using FPStrStringPairVector = std::vector<std::pair<const __FlashStringHelper *, const char *>>;
+
 		FormField *_parent;
 		Type _type;
 		const char *_label;
 		const char *_suffix;
-		String _attributes;
+		// String _attributes;
+		FPStrStringPairVector _attributesVector;
 		StringPairList *_items;
 	};
 

@@ -255,15 +255,15 @@ public:
     long long toLongLong(uint16_t num, long long defaultValue = 0) const;
 
     template<class T>
-    T toIntMinMax(uint16_t num, T min, T max, T defaultValue) {
+    T toIntMinMax(uint16_t num, T min, T max, T defaultValue) const {
         if (!exists(num)) {
             return defaultValue;
         }
-        return defaultValue;
+        return std::max(min, std::min(max, (T)toLongLong(num)));
     }
 
     template<class T>
-    T toIntMinMax(uint16_t num, T min, T max) {
+    T toIntMinMax(uint16_t num, T min, T max) const {
         return toIntMinMax(num, min, max, min);
     }
 
@@ -273,15 +273,15 @@ public:
     }
 
     template<class T>
-    T toFloatMinMax(uint16_t num, T min, T max, T defaultValue) {
+    T toFloatMinMax(uint16_t num, T min, T max, T defaultValue) const {
         if (!exists(num)) {
             return defaultValue;
         }
-        return defaultValue;
+        return std::max(min, std::min(max, (T)toDouble(num)));
     }
 
     template<class T>
-    T toFloatMinMax(uint16_t num, T min, T max) {
+    T toFloatMinMax(uint16_t num, T min, T max) const {
         return toFloatMinMax(num, min, max, min);
     }
 
@@ -362,7 +362,7 @@ public:
         return arg[0] == ch && arg[1] == 0;
     }
 
-    bool startsWith(uint16_t num, const __FlashStringHelper *str) {
+    bool startsWith(uint16_t num, const __FlashStringHelper *str) const {
         ArgumentPtr arg;
         if (nullptr == (arg = get(num))) {
             return false;
@@ -420,7 +420,7 @@ public:
     }
 
 public:
-    bool requireArgs(uint16_t min, uint16_t max = ~0) {
+    bool requireArgs(uint16_t min, uint16_t max = ~0) const {
         if (_queryMode && min) {
             at_mode_print_invalid_arguments(_output, 0, min, max);
             return false;

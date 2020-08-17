@@ -117,7 +117,6 @@ void MQTTAutoDiscoveryQueue::_timerCallback(EventScheduler::TimerPtr timer)
             }
         }
         delete discovery;
-        discovery = nullptr;
         return;
     }
 

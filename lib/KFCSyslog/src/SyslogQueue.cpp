@@ -4,6 +4,7 @@
 
 #include <Arduino_compat.h>
 #include <algorithm>
+#include <memory>
 #include "SyslogParameter.h"
 #include "Syslog.h"
 #include "SyslogQueue.h"

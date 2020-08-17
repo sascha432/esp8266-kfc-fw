@@ -107,20 +107,8 @@
         "use_counter": 3,
         "default": "WARNING! Default password has not been changed"
     },
-    "log_file_messages": {
-        "use_counter": 2,
-        "default": "log://messages"
-    },
-    "log_file_debug": {
-        "use_counter": 2,
-        "default": "log://debug"
-    },
-    "log_file_access": {
-        "use_counter": 2,
-        "default": "log://access"
-    },
     "__pure_virtual": {
-        "use_counter": 8,
+        "use_counter": 7,
         "default": "pure virtual call: %s\\n"
     },
     "yes": {
@@ -613,7 +601,7 @@
     },
     "weather_station_webui_id": {
         "use_counter": 3,
-        "default": "weather_station"
+        "default": "ws_tft"
     },
     "SPIFFS_tmp_dir": {
         "use_counter": 0,
@@ -832,7 +820,7 @@
         "default": "/webui/.listings"
     },
     "_html": {
-        "use_counter": 5,
+        "use_counter": 7,
         "default": ".html"
     },
     "Authorization": {
@@ -1982,5 +1970,29 @@
     "ping_monitor_service": {
         "use_counter": 2,
         "default": "Ping Monitor Service"
+    },
+    "logger_filename_debug": {
+        "use_counter": 1,
+        "default": "/.logs/debug"
+    },
+    "logger_filename_access": {
+        "use_counter": 1,
+        "default": "/.logs/access"
+    },
+    "logger_filename_error": {
+        "use_counter": 1,
+        "default": "/.logs/error"
+    },
+    "logger_filename_security": {
+        "use_counter": 1,
+        "default": "/.logs/security"
+    },
+    "logger_filename_messags": {
+        "use_counter": 1,
+        "default": "/.logs/messages"
+    },
+    "logger_filename_warning": {
+        "use_counter": 1,
+        "default": "/.logs/warning"
     }
 }

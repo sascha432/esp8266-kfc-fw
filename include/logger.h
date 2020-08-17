@@ -23,12 +23,6 @@
 #define Logger_access                   _logger.access
 #define Logger_debug                    _logger.debug
 
-PROGMEM_STRING_DECL(log_file_messages);
-PROGMEM_STRING_DECL(log_file_access);
-#if DEBUG
-PROGMEM_STRING_DECL(log_file_debug);
-#endif
-
 class Logger;
 class SyslogStream;
 
@@ -39,8 +33,8 @@ typedef enum {
     LOGLEVEL_SECURITY,
     LOGLEVEL_WARNING,
     LOGLEVEL_NOTICE,
-    LOGLEVEL_ACCESS,
     LOGLEVEL_DEBUG,
+    LOGLEVEL_MAX
 } LogLevel;
 
 class Logger {
@@ -55,8 +49,6 @@ public:
     void warning(const __FlashStringHelper *message, ...);
     void notice(const String &message, ...);
     void notice(const __FlashStringHelper *message, ...);
-    void access(const String &message, ...);
-    void access(const __FlashStringHelper *message, ...);
     void debug(const String &message, ...);
     void debug(const __FlashStringHelper *message, ...);
     void log(LogLevel level, const String &message, ...);
@@ -69,13 +61,11 @@ public:
     void setSyslog(SyslogStream *syslog);
 #endif
 
-    File openLog(const char *filename);
-    File openMessagesLog();
-    File openAccessLog();
-#if DEBUG
-    File openDebugLog();
-#endif
-    void getLogs(StringVector &logs);
+    bool isExtraFileEnabled(LogLevel level) const;
+    void setExtraFileEnabled(LogLevel level, bool state);
+
+    File __openLog(LogLevel logLevel, bool write);
+    void __rotate(LogLevel logLevel);
 
 protected:
     void writeLog(LogLevel logLevel, const char *message, va_list arg);
@@ -87,16 +77,14 @@ protected:
     }
 
 private:
-    const String _getLogFilename(LogLevel logLevel);
-    bool _openLog(LogLevel logLevel, bool write = true);
-    void _closeLog();
+    String _getLogFilename(LogLevel logLevel);
+    String _getLogDevice(LogLevel logLevel);
+    String _getBackupFilename(String filename, int num);
+    void _closeLog(File file);
 
 private:
-    File _file;
-    size_t _messagesLogSize;
-    size_t _accessLogSize;
-    size_t _debugLogSize;
     LogLevel _logLevel;
+    uint8_t _enabled;
 #if SYSLOG_SUPPORT
     SyslogStream *_syslog;
 #endif
@@ -108,7 +96,6 @@ private:
 #define Logger_security(...)     ;
 #define Logger_warning(...)      ;
 #define Logger_notice(...)       ;
-#define Logger_access(...)       ;
 #define Logger_debug(...)        ;
 
 #endif

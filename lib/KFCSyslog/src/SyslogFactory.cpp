@@ -19,11 +19,11 @@ Syslog *SyslogFactory::create(SyslogParameter &parameter, SyslogProtocol protoco
 {
 	switch(protocol) {
 		case SyslogProtocol::UDP:
-			return new SyslogUDP(parameter, host, port == kDefaultPort ? SyslogUDP::kDefaultPort : port);
+			return __LDBG_new(SyslogUDP, parameter, host, port == kDefaultPort ? SyslogUDP::kDefaultPort : port);
 		case SyslogProtocol::TCP:
-			return new SyslogTCP(parameter, host, port == kDefaultPort ? SyslogTCP::kDefaultPort : port, false);
+			return __LDBG_new(SyslogTCP, parameter, host, port == kDefaultPort ? SyslogTCP::kDefaultPort : port, false);
 		case SyslogProtocol::TCP_TLS:
-			return new SyslogTCP(parameter, host, port == kDefaultPort ? SyslogTCP::kDefaultPortTLS : port, true);
+			return __LDBG_new(SyslogTCP, parameter, host, port == kDefaultPort ? SyslogTCP::kDefaultPortTLS : port, true);
 		case SyslogProtocol::NONE:
 		case SyslogProtocol::FILE:
 		default:

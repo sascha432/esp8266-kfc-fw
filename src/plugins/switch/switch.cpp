@@ -4,6 +4,7 @@
 
 #include "switch.h"
 #include <LoopFunctions.h>
+#include <fs_mapping.h>
 #include <PrintHtmlEntities.h>
 #include <KFCForms.h>
 #include <ESPAsyncWebServer.h>
@@ -18,8 +19,6 @@
 #else
 #include <debug_helper_disable.h>
 #endif
-
-PROGMEM_STRING_DEF(iot_switch_states_file, "/.pvt/switch.states");
 
 SwitchPlugin plugin;
 
@@ -260,7 +259,7 @@ void SwitchPlugin::_readConfig()
 void SwitchPlugin::_readStates()
 {
 #if IOT_SWITCH_STORE_STATES
-    File file = SPIFFS.open(FSPGM(iot_switch_states_file), fs::FileOpenMode::read);
+    File file = SPIFFSWrapper::open(FSPGM(iot_switch_states_file, "/.pvt/switch.states"), fs::FileOpenMode::read);
     if (file) {
         if (file.read(reinterpret_cast<uint8_t *>(&_states), sizeof(_states)) != sizeof(_states)) {
             _states = 0;
@@ -277,7 +276,7 @@ void SwitchPlugin::_writeStates()
     _delayedWrite.remove();
     _delayedWrite.add(IOT_SWITCH_STORE_STATES_WRITE_DELAY, false, [this](EventScheduler::TimerPtr) {
         __LDBG_printf("SwitchPlugin::_writeStates(): delayed write states=%s", String(_states, 2).c_str());
-        File file = SPIFFS.open(FSPGM(iot_switch_states_file), fs::FileOpenMode::write);
+        File file = SPIFFSWrapper::open(FSPGM(iot_switch_states_file), fs::FileOpenMode::write);
         if (file) {
             file.write(reinterpret_cast<const uint8_t *>(&_states), sizeof(_states));
         }

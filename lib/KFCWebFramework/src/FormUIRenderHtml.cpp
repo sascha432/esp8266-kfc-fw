@@ -55,6 +55,30 @@ void Form::createHtml(PrintInterface &output)
         break;
     }
 }
+
+static constexpr size_t kPrintArgsMaxArgCount = 14;
+static_assert(kPrintArgsMaxArgCount < FormField::PrintInterface::kMaximumPrintfArguments, "too many arguments");
+
+static const char **_outputOptions(FormField::PrintInterface &output, const char **buffer, const char **ptr)
+{
+    if (ptr != buffer) {
+        size_t count = (ptr - buffer);
+        auto format = PSTR(
+            "<option value=\"%s\">%s</option>"
+            "<option value=\"%s\">%s</option>"
+            "<option value=\"%s\">%s</option>"
+            "<option value=\"%s\">%s</option>"
+            "<option value=\"%s\">%s</option>"
+            "<option value=\"%s\">%s</option>"
+            "<option value=\"%s\">%s</option>"
+        );
+        auto i = strlen(format);
+        auto formatOfs = &format[(kPrintArgsMaxArgCount - count) * 30 / 2];
+        output.vprintf_P(formatOfs, buffer, count);
+    }
+    return buffer;
+}
+
 namespace FormUI {
 
     Suffix UI::createCheckBoxButton(FormField &hiddenField, const String &label, const __FlashStringHelper *onIcons, const __FlashStringHelper *offIcons)
@@ -247,13 +271,13 @@ namespace FormUI {
 
         case Type::HIDDEN: {
             output.printf_P(PSTR(
-                    "<input type=\"hidden\" name=\"%s\" id=\"%s\" value=\"%s\"%s>" FORMUI_CRLF
+                    "<input type=\"hidden\" name=\"%s\" id=\"%s\" value=\"%s\""
                 ),
                 name,
                 name,
-                ui.encodeHtmlEntities(_parent->getValue(), true),
-                _getAttributes()
+                ui.encodeHtmlEntities(_parent->getValue(), true)
             );
+            _printAttributeTo(output);
         } break;
 
         default: {
@@ -286,22 +310,43 @@ namespace FormUI {
 
             switch (_type) {
             case Type::SELECT:
-                output.printf_P(PSTR("<select class=\"form-control\" name=\"%s\" id=\"%s\"%s>" FORMUI_CRLF), name, name, _getAttributes());
+                output.printf_P(PSTR("<select class=\"form-control\" name=\"%s\" id=\"%s\""), name, name);
+                _printAttributeTo(output);
                 if (_items) {
-                    for (auto &item : *_items) {
+                    const char *buffer[kPrintArgsMaxArgCount];
+                    auto ptr = buffer;
+                    for(auto iterator = _items->begin(); iterator != _items->end(); ++iterator) {
+                        const auto &item = *iterator;
                         if (_compareValue(item.first)) {
+                            ptr = _outputOptions(output, buffer, ptr);
                             output.printf_P(PSTR("<option value=\"%s\" selected>%s</option>" FORMUI_CRLF),
                                 item.first,
                                 item.second
                             );
                         }
                         else {
-                            output.printf_P(PSTR("<option value=\"%s\">%s</option>" FORMUI_CRLF),
-                                item.first,
-                                item.second
-                            );
+                            *ptr++ = item.first;
+                            *ptr++ = item.second;
+                            if (ptr >= &buffer[kPrintArgsMaxArgCount - 1]) {
+                                ptr = _outputOptions(output, buffer, ptr);
+                            }
                         }
                     }
+                    _outputOptions(output, buffer, ptr);
+                    // for (auto &item : *_items) {
+                    //     if (_compareValue(item.first)) {
+                    //         output.printf_P(PSTR("<option value=\"%s\" selected>%s</option>" FORMUI_CRLF),
+                    //             item.first,
+                    //             item.second
+                    //         );
+                    //     }
+                    //     else {
+                    //         output.printf_P(PSTR("<option value=\"%s\">%s</option>" FORMUI_CRLF),
+                    //             item.first,
+                    //             item.second
+                    //         );
+                    //     }
+                    // }
                 }
                 output.printf_P(PSTR("</select>" FORMUI_CRLF));
                 break;
@@ -310,51 +355,51 @@ namespace FormUI {
             case Type::INTEGER:
             case Type::FLOAT:
                 output.printf_P(PSTR(
-                        "<input type=\"text\" class=\"form-control\" name=\"%s\" id=\"%s\" value=\"%s\"%s>" FORMUI_CRLF
+                        "<input type=\"text\" class=\"form-control\" name=\"%s\" id=\"%s\" value=\"%s\""
                     ),
                     name,
                     name,
-                    ui.encodeHtmlEntities(_parent->getValue(), true),
-                    _getAttributes()
+                    ui.encodeHtmlEntities(_parent->getValue(), true)
                 );
+                _printAttributeTo(output);
                 break;
             case Type::PASSWORD:
                 output.printf_P(PSTR(
-                        "<input type=\"password\" class=\"form-control visible-password\" name=\"%s\" id=\"%s\" value=\"%s\" autocomplete=\"current-password\" spellcheck=\"false\"%s>" FORMUI_CRLF
+                        "<input type=\"password\" class=\"form-control visible-password\" name=\"%s\" id=\"%s\" value=\"%s\" autocomplete=\"current-password\" spellcheck=\"false\""
                     ),
                     name,
                     name,
-                    ui.encodeHtmlEntities(_parent->getValue(), true),
-                    _getAttributes()
+                    ui.encodeHtmlEntities(_parent->getValue(), true)
                 );
+                _printAttributeTo(output);
                 break;
             case Type::NEW_PASSWORD:
                 output.printf_P(PSTR(
-                        "<input type=\"password\" class=\"form-control visible-password\" name=\"%s\" id=\"%s\" autocomplete=\"new-password\" spellcheck=\"false\"%s>" FORMUI_CRLF
+                        "<input type=\"password\" class=\"form-control visible-password\" name=\"%s\" id=\"%s\" autocomplete=\"new-password\" spellcheck=\"false\""
                     ),
                     name,
-                    name,
-                    _getAttributes()
+                    name
                 );
+                _printAttributeTo(output);
                 break;
             case Type::RANGE:
-                output.printf_P(PSTR("<input type=\"range\" class=\"custom-range\" value=\"%s\" name=\"%s\" id=\"%s\"%s>" FORMUI_CRLF),
+                output.printf_P(PSTR("<input type=\"range\" class=\"custom-range\" value=\"%s\" name=\"%s\" id=\"%s\""),
                     ui.encodeHtmlEntities(_parent->getValue(), true),
                     name,
-                    name,
-                    _getAttributes()
+                    name
                 );
+                _printAttributeTo(output);
                 break;
             case Type::RANGE_SLIDER:
                 output.printf_P(PSTR(
-                        "<div class=\"form-enable-slider\"><input type=\"range\" value=\"%s\" name=\"%s\" id=\"%s\"%s>"
-                        "</div>" FORMUI_CRLF
+                        "<div class=\"form-enable-slider\"><input type=\"range\" value=\"%s\" name=\"%s\" id=\"%s\""
                     ),
                     ui.encodeHtmlEntities(_parent->getValue(), true),
                     name,
-                    name,
-                    _getAttributes()
+                    name
                 );
+                _printAttributeTo(output);
+                output.printf_P(PSTR("</div>" FORMUI_CRLF));
                 break;
             default:
                 break;

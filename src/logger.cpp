@@ -5,7 +5,9 @@
 #if LOGGER
 
 #include "logger.h"
+#include <PrintString.h>
 #include <time.h>
+#include <vector>
 #if SYSLOG_SUPPORT
 #include <KFCSyslog.h>
 #endif
@@ -18,37 +20,22 @@
 #include <debug_helper_disable.h>
 #endif
 
-PROGMEM_STRING_DEF(log_file_messages, "log://messages");
-PROGMEM_STRING_DEF(log_file_access, "log://access");
-#if DEBUG
-PROGMEM_STRING_DEF(log_file_debug, "log://debug");
-#endif
-
 using KFCConfigurationClasses::System;
 
 Logger _logger;
 
-Logger::Logger()
-{
-    _logLevel = LOGLEVEL_ACCESS;
-#if SYSLOG_SUPPORT
-    _syslog = nullptr;
+Logger::Logger() :
+    _logLevel(LOGLEVEL_NOTICE),
+    // _logFileSize(),
+#if DEBUG
+    _enabled(_BV(LOGLEVEL_ERROR)|_BV(LOGLEVEL_WARNING)|_BV(LOGLEVEL_SECURITY))
+#else
+    _enabled(_BV(LOGLEVEL_ERROR)|_BV(LOGLEVEL_SECURITY))
 #endif
-    _messagesLogSize = 0;
-    _accessLogSize = 0;
-    _debugLogSize = 0;
-    if (_openLog(LOGLEVEL_ERROR, false)) {
-        _messagesLogSize = _file.size();
-        _closeLog();
-    }
-    if (_openLog(LOGLEVEL_ACCESS, false)) {
-        _accessLogSize = _file.size();
-        _closeLog();
-    }
-    if (_openLog(LOGLEVEL_DEBUG, false)) {
-        _debugLogSize = _file.size();
-        _closeLog();
-    }
+#if SYSLOG_SUPPORT
+    , _syslog(nullptr)
+#endif
+{
 }
 
 void Logger::error(const __FlashStringHelper *message, ...)
@@ -115,22 +102,6 @@ void Logger::notice(const String &message, ...)
     va_end(arg);
 }
 
-void Logger::access(const __FlashStringHelper *message, ...)
-{
-    va_list arg;
-    va_start(arg, message);
-    this->writeLog(LOGLEVEL_ACCESS, message, arg);
-    va_end(arg);
-}
-
-void Logger::access(const String &message, ...)
-{
-    va_list arg;
-    va_start(arg, message);
-    this->writeLog(LOGLEVEL_ACCESS, message, arg);
-    va_end(arg);
-}
-
 void Logger::debug(const __FlashStringHelper *message, ...)
 {
     va_list arg;
@@ -174,10 +145,10 @@ const String Logger::getLogLevelAsString(LogLevel logLevel)
             return F("WARNING");
         case LOGLEVEL_NOTICE:
             return F("NOTICE");
-        case LOGLEVEL_ACCESS:
-            return F("ACCESS");
         case LOGLEVEL_DEBUG:
             return F("DEBUG");
+        default:
+            break;
     }
     return emptyString;
 }
@@ -194,60 +165,18 @@ void Logger::setSyslog(SyslogStream * syslog)
 }
 #endif
 
-File Logger::openLog(const char *filename)
+bool Logger::isExtraFileEnabled(LogLevel level) const
 {
-    String logFile;
-    if (!strcmp_P(filename, SPGM(log_file_messages))) {
-        return openMessagesLog();
-    }
-#if DEBUG
-    else if (!strcmp_P(filename, SPGM(log_file_debug))) {
-        return openDebugLog();
-    }
-#endif
-    else if (!strcmp_P(filename, SPGM(log_file_access))) {
-        return openAccessLog();
-    }
-    return File();
+    return _enabled & (1 << level);
 }
 
-File Logger::openMessagesLog()
+void Logger::setExtraFileEnabled(LogLevel level, bool state)
 {
-    _openLog(LOGLEVEL_ERROR, false);
-    return _file;
-}
-
-#if DEBUG
-
-File Logger::openDebugLog()
-{
-    _openLog(LOGLEVEL_DEBUG, false);
-    return _file;
-}
-
-#endif
-
-File Logger::openAccessLog()
-{
-    _openLog(LOGLEVEL_ACCESS, false);
-    return _file;
-}
-
-void Logger::getLogs(StringVector &logs)
-{
-    logs.clear();
-    if (LOGLEVEL_ERROR <= _logLevel) {
-        logs.emplace_back(FSPGM(log_file_messages));
+    if (state) {
+        _enabled |= (1 << level);
+    } else {
+        _enabled &= ~(1 << level);
     }
-    if (LOGLEVEL_ACCESS <= _logLevel) {
-        logs.emplace_back(FSPGM(log_file_access));
-    }
-#if DEBUG
-    if (LOGLEVEL_DEBUG <= _logLevel) {
-        logs.emplace_back(FSPGM(log_file_debug));
-    }
-#endif
-    __LDBG_printf("Logger::getLogs(): %s", implode(',', logs).c_str());
 }
 
 void Logger::writeLog(LogLevel logLevel, const char *message, va_list arg)
@@ -257,66 +186,45 @@ void Logger::writeLog(LogLevel logLevel, const char *message, va_list arg)
         return;
     }
 
+    PrintString tmp;
     time_t now = time(nullptr);
-    char temp[128];
-    char* buffer = temp;
-    const String logLevelStr = getLogLevelAsString(logLevel);
-    bool isOpen = _openLog(logLevel);
-    struct tm *tm;
+    auto file = __openLog(logLevel, true);
+    if (!file) {
+        file = __openLog(LOGLEVEL_MAX, true); // try to log in "messages" if custom log files cannot be opened
+    }
 
-    tm = localtime(&now);
-    strftime_P(temp, sizeof(temp), PSTR("%FT%TZ"), tm);
-    if (isOpen) {
-        _file.write((const uint8_t *)temp, strlen(temp));
-    } else {
+    tmp.strftime_P(PSTR("%FT%TZ"), now);
+    tmp.print(F(" ["));
+    tmp.print(getLogLevelAsString(logLevel));
+    tmp.print(F("] "));
+    tmp.vprintf_P(message, arg);
+    tmp.println();
+
+    if (file) {
+        file.print(tmp);
+        if (logLevel == LOGLEVEL_ERROR || logLevel == LOGLEVEL_WARNING) {
+            file.flush();
+        }
+    }
+    else {
         __LDBG_printf("Cannot append to log file %s", _getLogFilename(logLevel).c_str());
     }
 
-    size_t len;
-    len = vsnprintf(temp, sizeof(temp), message, arg);
-    if (len > sizeof(temp) - 1) {
-        buffer = (char *)malloc(len + 1);
-        if (!buffer) {
-            buffer = temp; // just send the limited size
-            len = sizeof(temp) - 1;
-        } else {
-            len = vsnprintf(buffer, len + 1, message, arg);
-        }
-    }
-
-#if LOGGER_SERIAL_OUTPUT
-    if (System::Flags::getConfig().is_at_mode_enabled) {
-        char temp2[32];
-        strftime_P(temp2, sizeof(temp2), PSTR("%FT%TZ"), tm);
 #if DEBUG
-        debug_printf_P(PSTR("%s [%s] %s\n"), temp2, logLevelStr.c_str(), buffer);
-#else
-        Serial.printf_P(PSTR("+LOGGER: %s [%s] %s\n"), temp2, logLevelStr.c_str(), buffer);
-#endif
+        DEBUG_OUTPUT.print(tmp);
+#elif LOGGER_SERIAL_OUTPUT
+    if (System::Flags::getConfig().is_at_mode_enabled) {
+        Serial.print(F("+LOGGER="))
+        Serial.print(tmp);
     }
 #endif
 
-    if (isOpen) {
-        _file.write(' ');
-        _file.write('[');
-        _file.write((const uint8_t *)logLevelStr.c_str(), logLevelStr.length());
-        _file.write(']');
-        _file.write(' ');
-        _file.write((const uint8_t *)buffer, len);
-        _file.write('\n');
-    }
-
-    _closeLog();
+    _closeLog(file);
 
 #if SYSLOG_SUPPORT
     if (_syslog) {
-        _debug_println(F("sending message to syslog"));
+        __LDBG_print("sending message to syslog");
         switch(logLevel) {
-            default:
-            case LOGLEVEL_ERROR:
-                _syslog->setSeverity(SYSLOG_ERR);
-                _syslog->setFacility(SYSLOG_FACILITY_KERN);
-                break;
             case LOGLEVEL_SECURITY:
                 _syslog->setSeverity(SYSLOG_WARN);
                 _syslog->setFacility(SYSLOG_FACILITY_SECURE);
@@ -329,70 +237,100 @@ void Logger::writeLog(LogLevel logLevel, const char *message, va_list arg)
                 _syslog->setSeverity(SYSLOG_NOTICE);
                 _syslog->setFacility(SYSLOG_FACILITY_KERN);
                 break;
-            case LOGLEVEL_ACCESS:
-                _syslog->setSeverity(SYSLOG_NOTICE);
-                _syslog->setFacility(SYSLOG_FACILITY_SECURE);
-                break;
             case LOGLEVEL_DEBUG:
                 _syslog->setSeverity(SYSLOG_DEBUG);
                 _syslog->setFacility(SYSLOG_FACILITY_LOCAL0);
                 break;
+            case LOGLEVEL_ERROR:
+            default:
+                _syslog->setSeverity(SYSLOG_ERR);
+                _syslog->setFacility(SYSLOG_FACILITY_KERN);
+                break;
         }
-        _syslog->write((const uint8_t *)buffer, len);
+        _syslog->write(reinterpret_cast<const uint8_t *>(tmp.c_str()), String_rtrim(tmp));
         _syslog->flush();
     }
 #endif
-
-    if (buffer != temp) {
-        free(buffer);
-    }
 }
 
-const String Logger::_getLogFilename(LogLevel logLevel)
+String Logger::_getLogFilename(LogLevel logLevel)
 {
-    switch(logLevel) {
-        case LOGLEVEL_DEBUG:
-            return F("/debug");
-        case LOGLEVEL_ACCESS:
-            return F("/access");
-        default:
-            return F("/messages");
+    if (isExtraFileEnabled(logLevel)) {
+        switch(logLevel) {
+            case LOGLEVEL_DEBUG:
+                return FSPGM(logger_filename_debug, "/.logs/debug");
+            case LOGLEVEL_ERROR:
+                return FSPGM(logger_filename_error, "/.logs/error");
+            case LOGLEVEL_SECURITY:
+                return FSPGM(logger_filename_security, "/.logs/security");
+            case LOGLEVEL_WARNING:
+            case LOGLEVEL_NOTICE:
+                return FSPGM(logger_filename_warning, "/.logs/warning");
+            default:
+                break;
+        }
     }
+    return FSPGM(logger_filename_messags, "/.logs/messages");
 }
 
-bool Logger::_openLog(LogLevel logLevel, bool write)
+File Logger::__openLog(LogLevel logLevel, bool write)
 {
-    if (_file) {
-        _closeLog();
-    }
-#if DEBUG_LOGGER
-    DEBUG_OUTPUT.printf_P(PSTR("Logger::openLog(): open(): logLevel=%u\n"), logLevel);
-#endif
     auto fileName = _getLogFilename(logLevel);
-    _file = SPIFFS.open(fileName, write ? (SPIFFS.exists(fileName) ? fs::FileOpenMode::append : fs::FileOpenMode::write) : fs::FileOpenMode::read);
-    return (bool)_file;
+    __LDBG_printf("logLevel=%u filename=%s", logLevel, fileName.c_str());
+    return SPIFFS.open(fileName, write ? (SPIFFS.exists(fileName) ? fs::FileOpenMode::append : fs::FileOpenMode::write) : fs::FileOpenMode::read);
 }
 
-void Logger::_closeLog()
+void Logger::__rotate(LogLevel logLevel)
+{
+    __LDBG_printf("rotate=%u", logLevel);
+    _closeLog(__openLog(logLevel, true));
+}
+
+String Logger::_getBackupFilename(String filename, int num)
+{
+    if (num > 0) {
+        filename += '.';
+        filename += String(num);
+    }
+    return filename + F(".bak");
+}
+
+void Logger::_closeLog(File file)
 {
 #if LOGGER_MAX_FILESIZE
-    if (_file.size() >= LOGGER_MAX_FILESIZE) {
-        String filename = _file.name();
-        String backFilename = filename;
-        backFilename += F(".bak");
-#if DEBUG_LOGGER
-        DEBUG_OUTPUT.printf_P(PSTR("Logger::closeLog(): renaming %s to %s\n"), filename.c_str(), backFilename.c_str());
-#endif
-        _file.close();
+    if (file.size() >= LOGGER_MAX_FILESIZE) {
+        String filename = file.fullName();
+#if LOGGER_MAX_BACKUP_FILES
+        // rotation enabled
+        String backFilename;
+        int i;
+        for(i = 0; i < LOGGER_MAX_BACKUP_FILES; i++) {
+            backFilename = _getBackupFilename(filename, i);
+            if (!SPIFFS.exists(backFilename)) { // available?
+                __LDBG_printf("rotating num=%u max=%u", i, LOGGER_MAX_BACKUP_FILES);
+                SPIFFS.remove(_getBackupFilename(filename, i + 1)); // delete next logfile to keep rotating
+                break;
+            }
+        }
+        if (i == LOGGER_MAX_BACKUP_FILES) { // max. rotations reached, restarting with 0
+            __LDBG_printf("restarting rotation num=0 max=%u", LOGGER_MAX_BACKUP_FILES);
+            backFilename = _getBackupFilename(filename, 0);
+            SPIFFS.remove(backFilename);
+            SPIFFS.remove(_getBackupFilename(filename, 1));
+        }
+#else
+        // rotation enabled disabled
+        backFilename = _getBackupFilename(filename, 0);
         SPIFFS.remove(backFilename);
+#endif
+        __LDBG_printf("renaming %s to %s", filename.c_str(), backFilename.c_str());
+        file.close();
         SPIFFS.rename(filename, backFilename);
         return;
     }
 #endif
-#if DEBUG_LOGGER
-        DEBUG_OUTPUT.printf_P(PSTR("Logger::closeLog(): close(): filename=%s\n"), _file.name());
-#endif
-    _file.close();
+    __LDBG_printf("filename=%s", file.fullName());
+    file.close();
 }
 
 #endif

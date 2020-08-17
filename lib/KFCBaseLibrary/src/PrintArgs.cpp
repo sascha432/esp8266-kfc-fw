@@ -211,15 +211,15 @@ size_t PrintArgs::fillBuffer(uint8_t *data, size_t sizeIn)
     } while (true);
 }
 
-void PrintArgs::vprintf_P(const char *format, uintptr_t **args, size_t numArgs)
+void PrintArgs::vprintf_P(const char *format, const uintptr_t **args, size_t numArgs)
 {
 #if DEBUG_PRINT_ARGS
     _printfCalls++;
     _printfArgs += numArgs;
 #endif
-    _buffer.write((uint8_t)(numArgs + 1));
+    _buffer.write((uint8_t)numArgs);
     _writeFormat(format);
-    _buffer.write(reinterpret_cast<const uint8_t *>(&args), sizeof(uintptr_t) * numArgs);
+    _buffer.write(reinterpret_cast<const uint8_t *>(&args[0]), sizeof(uintptr_t) * numArgs);
 }
 
 
@@ -237,16 +237,7 @@ int PrintArgs::_snprintf_P(uint8_t *buffer, size_t size, void **args, uint8_t nu
     debug_printf(fmt.c_str(), (PGM_P)args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], args[10], args[11], args[12], args[13], args[14], args[15]);
 #endif
 
-#if defined(_MSC_VER)
-    // push all arguments to the stack at once
-    typedef struct {
-        void *args[kMaximumPrintfArguments + 1];
-    } Args_t;
-    typedef int(* snprintf_P_stack)(char *str, size_t strSize, Args_t args);
-    return ((snprintf_P_stack)(snprintf_P))(reinterpret_cast<char *>(buffer), size, *(Args_t *)(&args[0]));
-#else
     return snprintf_P(reinterpret_cast<char *>(buffer), size, (PGM_P)args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], args[10], args[11], args[12], args[13], args[14], args[15]);
-#endif
 }
 
 void PrintArgs::_copy(float value)

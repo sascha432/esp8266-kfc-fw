@@ -64,9 +64,10 @@ public:
     // enabled, but depending on the system load this does not work and adding a longer delay a couple
     // times per second solves the issue that WiFi disconnects
     static constexpr int kMinDelayMicros = 500;
-    static constexpr int kMaxDelayMicros = 10000;
-    static constexpr int kRepeatMaxDelayPerSecond = 5;
+    static constexpr int kMaxDelayMicros = 25000;
+    static constexpr int kRepeatMaxDelayPerSecond = 3;
     static constexpr int kMaxDelayYieldTimeMicros = 5000;
+
 
 private:
     class ResultQueue {
@@ -115,6 +116,11 @@ public:
     // return lower 32bit part
     uint32_t getLastUpdate() const;
 
+    void setMinDelayMicros(uint16_t minDelayMicros);
+    void setMaxDelayMicros(uint16_t maxDelayMicros);
+    void setRepeatMaxDelayPerSecond(uint8_t repeatMaxDelayPerSecond);
+    void setMaxDelayYieldTimeMicros(uint16_t maxDelayYieldTimeMicros);
+
 private:
     uint32_t _canRead() const;
     void _updateTimestamp();
@@ -128,4 +134,10 @@ private:
     uint64_t _lastUpdated;
     uint64_t _lastMaxDelay;
     ResultQueueList _queue;
+
+    uint16_t _minDelayMicros;
+    uint16_t _maxDelayMicros;
+    uint8_t _repeatMaxDelayPerSecond;
+    uint16_t _maxDelayYieldTimeMicros;
+
 };

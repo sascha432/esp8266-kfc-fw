@@ -269,6 +269,15 @@ void BlindsControl::_monitorMotor(ChannelAction &action)
     _updateAdc();
 
     if (_adcIntegral > _currentLimit) {
+
+        if (!_storeValues) { // store peak current and time
+            auto &tmp = _currentValues.back();
+            if (tmp._value < _adcIntegral) {
+                tmp._time = _startCurrentValues - millis();
+                tmp._value = _adcIntegral;
+            }
+        }
+
         if (_currentLimitTimer.reached()) {
             __LDBG_printf("current limit time=%u", _currentLimitTimer.getDelay());
             finished = true;
@@ -279,7 +288,10 @@ void BlindsControl::_monitorMotor(ChannelAction &action)
     }
     else if (_currentLimitTimer.isActive() && _adcIntegral < _currentLimit * 0.8) {   // reset current limit counter if current drops below 80%
         if (!_storeValues) {
-            __LDBG_printf("current limit timer reset=%dm", _currentLimitTimer.get());
+            auto &tmp = _currentValues.back(); // store reset time
+            tmp._timer = _currentLimitTimer.get();
+            _currentValues.emplace_back(0, 0, 0);
+            // __LDBG_printf("current limit timer reset=%dm", _currentLimitTimer.get());
         }
         _currentLimitTimer.disable();
     }
@@ -303,6 +315,19 @@ void BlindsControl::_monitorMotor(ChannelAction &action)
             _saveState();
         }
         _publishState();
+
+        if (!_storeValues && _currentValues.size()) {
+
+            if (_currentValues.front()._value) {
+                __DBG_print("Current peaks (time, current, duration):");
+                for(auto value: _currentValues) {
+                    if (value._value) {
+                        __DBG_printf("%ums %.1fmA %dµs", value.getTime(), value.getCurrent(), value.getTimer());
+                    }
+                }
+            }
+            _currentValues.clear();
+        }
     }
 }
 
@@ -471,7 +496,11 @@ void BlindsControl::_clearAdc()
     );
 
     _currentValues.clear();
-    _currentValues.reserve(768);
+    if (_storeValues) {
+        _currentValues.reserve(768);
+    } else {
+        _currentValues.emplace_back(0, 0, 0);
+    }
     _startCurrentValues = millis();
 #endif
 
@@ -502,7 +531,7 @@ void BlindsControl::_updateAdc()
     float count = micros * _adcIntegralMultiplier;
     _adcIntegral = ((count * _adcIntegral) + reading) / (float)(count + 1);
 #if IOT_BLINDS_CTRL_TESTMODE
-    if (_currentValues.size() < 760) {
+    if (_storeValues && _currentValues.size() < 760) {
         uint32_t ms = millis();
         uint8_t storeIntervalMillis;
         // adjust storage frequency by memory usage
@@ -526,7 +555,7 @@ void BlindsControl::_updateAdc()
         if (_currentLimitTimer.get() != -1 && storeIntervalMillis > 5) {
             storeIntervalMillis = 5;
         }
-        if (_storeValues && (ms / storeIntervalMillis) % 2 == _currentValues.size() % 2) {
+        if ((ms / storeIntervalMillis) % 2 == _currentValues.size() % 2) {
             if (_currentValues.size() + 1 >= _currentValues.capacity()) {
                 _currentValues.reserve(_currentValues.size() + 32);
             }
@@ -667,6 +696,12 @@ void BlindsControl::_readConfig()
 {
     _config = Plugins::Blinds::getConfig();
     _adcIntegralMultiplier = 1.0 / (1000.0 / _config.adc_divider);
+
+    _adc.setMinDelayMicros(_config.adc_read_interval);
+    _adc.setMaxDelayMicros(_config.adc_recovery_time);
+    _adc.setRepeatMaxDelayPerSecond(_config.adc_recoveries_per_second);
+    _adc.setMaxDelayYieldTimeMicros(_config.adc_recovery_time / 2);
+
     _loadState();
 }
 

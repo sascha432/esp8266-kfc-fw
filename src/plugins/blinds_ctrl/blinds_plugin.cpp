@@ -12,6 +12,7 @@
 #include "blinds_plugin.h"
 #include "blinds_defines.h"
 #include "BlindsControl.h"
+#include "plugins_menu.h"
 #include "../src/plugins/mqtt/mqtt_client.h"
 
 #if DEBUG_IOT_BLINDS_CTRL
@@ -31,11 +32,12 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     "blinds",           // name
     "Blinds Controller",// friendly name
     "",                 // web_templates
-    "blinds",           // config_forms
+    // config_forms
+    "channels,controller",
     "mqtt",             // reconfigure_dependencies
     PluginComponent::PriorityType::BLINDS,
     PluginComponent::RTCMemoryId::NONE,
-    static_cast<uint8_t>(PluginComponent::MenuType::AUTO),
+    static_cast<uint8_t>(PluginComponent::MenuType::CUSTOM),
     false,              // allow_safe_mode
     false,              // setup_after_deep_sleep
     true,               // has_get_status
@@ -100,6 +102,12 @@ void BlindsControlPlugin::getStatus(Print &output)
     }
 }
 
+void BlindsControlPlugin::createMenu()
+{
+    bootstrapMenu.addSubMenu(F("Blinds Channels"), F("blinds/channels.html"), navMenu.config);
+    bootstrapMenu.addSubMenu(getFriendlyName(), F("blinds/controller.html"), navMenu.config);
+}
+
 void BlindsControlPlugin::createWebUI(WebUI &webUI) {
 
     auto row = &webUI.addRow();
@@ -118,7 +126,6 @@ void BlindsControlPlugin::createWebUI(WebUI &webUI) {
 
         row = &webUI.addRow();
         row->addSwitch(prefix + F("_set"), String(F("Channel ")) + String(*channel));
-
     }
 }
 

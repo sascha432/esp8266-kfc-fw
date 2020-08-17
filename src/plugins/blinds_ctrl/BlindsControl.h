@@ -346,6 +346,7 @@ protected:
             return _timer;
         }
         private:
+        friend BlindsControl;
         struct __attribute__packed__ {
             uint16_t _time;
             uint16_t _value;

@@ -27,6 +27,7 @@ public:
     virtual void reconfigure(const String &source) override;
     virtual void shutdown() override;
     virtual void getStatus(Print &output) override;
+    virtual void createMenu() override;
 
     virtual void createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request) override;
 

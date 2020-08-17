@@ -8,6 +8,13 @@
         var currentDirectory = "/";
         var url = $.getHttpLocation("/file_manager/");
         var defaultParams = '?SID=' + $.getSessionId();
+        var cookie = Cookies.getJSON('filemgr', {
+            show_hidden: false
+        });
+
+        function save_cookie() {
+            Cookies.set('filemgr', cookie);
+        }
 
         function replace_vars(prototype, attrib, link, fullname, name, modified, size) {
             var _class;
@@ -59,12 +66,14 @@
 
             $('#files').hide();
             $('#spinner').show();
-            $.get(url + "list" + defaultParams + "&dir=" + currentDirectory, function (data) {
+            $.get(url + 'list' + defaultParams + '&dir=' + currentDirectory + '&hidden=' + (cookie.show_hidden ? 1 : 0), function (data) {
                 var dirs_prototype = $("#dirs_prototype").html();
                 var files_prototype = $("#files_prototype").html();
                 var dirs_ro_prototype = $("#dirs_ro_prototype").html();
                 var files_ro_prototype = $("#files_ro_prototype").html();
-                var html = '<li><a href="#" class="dir refresh-files breadcrumb-brand"><span class="oi oi-reload" title="Reload" aria-hidden="true"></span></a></li><span>&nbsp;&nbsp;&nbsp;&nbsp;</span>';
+
+                var html = '<li class="mr-4"><a href="#" id="refresh_files" class="dir"><span class="oi oi-reload" title="Reload" aria-hidden="true"></span></a></li>';
+                html += '<li class="mr-4"><a href="#" id="show_hidden_files"><span class="oi oi-eye" title="Show hidden files" aria-hidden="true"></span></a></li>';
                 $('#total_size').html(data.total);
                 $('#total_size').attr('title', data.total_b);
                 $('#used_space').html(data.used + " (" + data.usage + ")");
@@ -117,11 +126,36 @@
                 }
                 html += files_html;
                 $('#spinner').hide();
-                $('#files').html(html).show();
-                $('.refresh-files').attr('href', '#' + currentDirectory);
 
-                $('a.dir').off('click').on('click', function (e) {
+                var files = $('#files');
+                files.html(html).show();
+
+                // update refresh link
+                $('#refresh_files').attr('href', '#' + currentDirectory);
+
+                // handler for directory links
+                $('a.dir').on('click', function (e) {
                     refresh_files(decodeURI(e.currentTarget.hash.substring(1)));
+                });
+
+                // show hidden files link
+                var show_hidden_files = $('#show_hidden_files');
+                var icon = show_hidden_files.find('.oi');
+                function update_show_hidden_files() {
+                    if (cookie.show_hidden) {
+                        icon.removeClass('oi-disabled');
+                    }
+                    else {
+                        icon.addClass('oi-disabled');
+                    }
+                }
+                update_show_hidden_files();
+                $('#show_hidden_files').on('click', function(e) {
+                    e.preventDefault();
+                    cookie.show_hidden = !cookie.show_hidden;
+                    update_show_hidden_files();
+                    save_cookie();
+                    refresh_files(currentDirectory);
                 });
 
             }).fail(function (jqXHR, textStatus, error) {

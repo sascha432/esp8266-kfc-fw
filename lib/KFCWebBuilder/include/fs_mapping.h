@@ -51,7 +51,7 @@ public:
         _openByFilename();
     }
 
-    const File open(const char *mode) const;
+    File open(const char *mode) const;
 
     const char *getFilename() const {
         return _filename.c_str();
@@ -102,9 +102,9 @@ class SPIFFSWrapper {
 public:
     SPIFFSWrapper() {
     }
-    static const File open(Dir dir, const char *mode);
-    static const File open(const char *path, const char *mode);
-    static const File open(const String &path, const char *mode) {
+    static File open(Dir dir, const char *mode);
+    static File open(const char *path, const char *mode);
+    static File open(const String &path, const char *mode) {
         return open(path.c_str(), mode);
     }
 

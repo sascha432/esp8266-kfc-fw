@@ -13,7 +13,11 @@
 #if DEBUG_ASYNC_WEB_RESPONSE
 #include <debug_helper_enable.h>
 #else
+
 #include <debug_helper_disable.h>
+// enable partial debugging here
+#define DEBUG_ASYNC_WEB_RESPONSE_DIR_RESPONSE       0
+
 #endif
 
 AsyncBaseResponse::AsyncBaseResponse(bool chunked)
@@ -287,6 +291,10 @@ size_t AsyncProgmemFileResponse::_fillBuffer(uint8_t *data, size_t len)
     return _content.read(data, len);
 }
 
+#if DEBUG_ASYNC_WEB_RESPONSE_DIR_RESPONSE
+#include <debug_helper_enable.h>
+#endif
+
 AsyncDirResponse::AsyncDirResponse(const ListDir &dir, const String &dirName) : AsyncBaseResponse(true), _state(0), _dir(dir), _next(_dir.next()), _dirName(dirName)
 {
     _code = 200;
@@ -295,15 +303,8 @@ AsyncDirResponse::AsyncDirResponse(const ListDir &dir, const String &dirName) : 
     _contentType = FSPGM(mime_application_json);
     _chunked = true;
     append_slash(_dirName);
-    __LDBG_printf("AsyncDirResponse::AsyncDirResponse(%s)", _dirName.c_str());
+    __LDBG_printf("dir=%s hiddenFiles=%u", _dirName.c_str(), _dir.showHiddenFiles());
 
-    // if (!_next) {
-    //     _code = 404;
-    //     _sendContentLength = true;
-    //     _chunked = false;
-    //     _state = 2;
-    //     __LDBG_printf("listing %s isValid()==true, next state 2, sending 404", _dirName.c_str());
-    // }
 }
 
 bool AsyncDirResponse::_sourceValid() const
@@ -311,14 +312,53 @@ bool AsyncDirResponse::_sourceValid() const
     return true;
 }
 
+size_t AsyncDirResponse::_sendBufferPartially(uint8_t *data, uint8_t *dataPtr, size_t len)
+{
+    size_t fill = len - (dataPtr - data);
+    if (fill > _buffer.length()) {
+        fill = _buffer.length();
+    }
+    if (fill) {
+        memcpy(dataPtr, _buffer.c_str(), fill);
+        dataPtr += fill;
+        if (fill == _buffer.length()) {
+            _buffer = PrintString();
+        }
+        else {
+            _buffer.remove(0, fill);
+        }
+    }
+
+    __LDBG_IF(
+        DEBUG_OUTPUT.printf_P(PSTR("sending state=%u send=%u len=%u buffer=%u fill=%u data="), _state, (dataPtr - data), len, _buffer.length(), fill);
+        printable_string(DEBUG_OUTPUT, data, (dataPtr - data), (dataPtr - data));
+        DEBUG_OUTPUT.println();
+    );
+    return (dataPtr - data);
+}
+
 size_t AsyncDirResponse::_fillBuffer(uint8_t *data, size_t len)
 {
-    __LDBG_printf("AsyncDirResponse::_fillBuffer(%p, %d)", data, len);
-    char *ptr = reinterpret_cast<char *>(data);
-    char *sptr = ptr;
-    int16_t space = (int16_t)(len - 2); // reserve 2 byte
-    int16_t result = 0;
-    if (_state == 0) {
+    auto dataPtr = data;
+    size_t space = len;
+    __LDBG_printf("data=%p capacity=%u buffer=%u state=%u next=%u", data, len, _buffer.length(), _state, _next);
+
+    // do we have something left in _buffer?
+    if (_buffer.length()) {
+        size_t bufferLen = _buffer.length();
+        if (bufferLen >= len) {
+            goto sendBuffer;
+        }
+
+        // we have more space available in the data buffer
+        memcpy(data, _buffer.c_str(), bufferLen);
+        _buffer = PrintString();
+        dataPtr += bufferLen;
+        space -= bufferLen;
+        __LDBG_printf("state=%u capacity=%u space=%u", _state, len, space);
+    }
+
+    if (_state == 0) { // fill _buffer
         FSInfo info;
         SPIFFS_info(info);
 
@@ -326,106 +366,102 @@ size_t AsyncDirResponse::_fillBuffer(uint8_t *data, size_t len)
         //     _dirName.remove(_dirName.length() - 1, 1);
         // }
 
-        if ((result = snprintf_P(ptr, space, PSTR("{\"total\":\"%s\",\"total_b\":%d,\"used\":\"%s\",\"used_b\":%d,\"usage\":\"%.2f%%\",\"dir\":\"%s\",\"files\":["),
-                formatBytes(info.totalBytes).c_str(), info.totalBytes,
-                formatBytes(info.usedBytes).c_str(), info.usedBytes,
-                (float)info.usedBytes / (float)info.totalBytes * 100.0,
-                _dirName.c_str())) >= space)
-        { // buffer too small, abort response
-            __LDBG_printf("buffer too small %d", space);
-            _state = 2;
-            return 0;
+        _buffer.printf_P(PSTR("{\"total\":\"%s\",\"total_b\":%d,\"used\":\"%s\",\"used_b\":%d,\"usage\":\"%.2f%%\",\"dir\":\"%s\",\"files\":["),
+            formatBytes(info.totalBytes).c_str(), info.totalBytes,
+            formatBytes(info.usedBytes).c_str(), info.usedBytes,
+            (float)info.usedBytes / (float)info.totalBytes * 100.0,
+            _dirName.c_str()
+        );
+
+        if (_next) {
+            _state = 1; // read directory
+            __LDBG_printf("set state=%u", _state);
         }
-        ptr += result;
-        space -= result;
-        sptr = ptr;
+        else {
+            _state = 2; // end
+            __LDBG_printf("set state=%u", _state);
+            _buffer.print(F("]}")); // empty directory
+        }
 
-        _state = 1;
-        //_next = _dir.next();
-        __LDBG_printf("init list %s next=%d", _dirName.c_str(), _next);
+        if (_buffer.length() >= space) {
+            goto sendBuffer;
+        }
     }
+
     if (_state == 1) {
-        String tmp_dir = sys_get_temp_dir();
-        char modified[32];
-
-        __LDBG_printf("load list %s, tmp_dir %s", _dirName.c_str(), tmp_dir.c_str());
-
+        __LDBG_IF(auto maxDirs = 0xff);
+        auto tmp_dir = sys_get_temp_dir();
         String path;
         while (_next) {
-            path = _dir.fileName();
-            modified[0] = '0';
-            modified[1] = 0;
-
-            if (_dir.isMapping()) {
-                time_t time = _dir.fileTime();
-                auto tm = localtime(&time);
-                strftime_P(modified, sizeof(modified), PSTR("\"%Y-%m-%d %H:%M\""), tm);
-            }
-
-            // __LDBG_printf("%s: %d %d", path.c_str(), _dir.isDir(), _dir.isFile());
-
+            path = std::move(_dir.fileName());
             String name = path.substring(_dirName.length());
-            String location = url_encode(path).c_str();
+            String location = url_encode(path);
+            __LDBG_printf("dir=%s dir=%u file=%u name=%s", path.c_str(), _dir.isDirectory(), _dir.isFile(), name.c_str());
 
             if (_dir.isDirectory()) {
                 remove_trailing_slash(name);
                 remove_trailing_slash(location);
 
-                if ((result = snprintf_P(ptr, space, PSTR("{\"f\":\"%s\",\"n\":\"%s\",\"m\":%d,\"t\":%s,\"d\":1},"),
+                _buffer.printf_P(PSTR("{\"f\":\"%s\",\"n\":\"%s\",\"m\":%d,\"d\":1"),
                     location.c_str(),
                     name.c_str(),
-                    path.startsWith(tmp_dir) ? TYPE_TMP_DIR : (_dir.isMapping() ? TYPE_MAPPED_DIR : TYPE_REGULAR_DIR),
-                    modified)) >= space)
-                {
-                    break;
-                }
-                ptr += result;
-                space -= result;
-                sptr = ptr;
+                    String_startsWith(path, tmp_dir) ? TYPE_TMP_DIR : (_dir.isMapping() ? TYPE_MAPPED_DIR : TYPE_REGULAR_DIR)
+                );
             }
             else if (_dir.isFile()) {
-                if ((result = snprintf_P(ptr, space, PSTR("{\"f\":\"%s\",\"n\":\"%s\",\"s\":\"%s\",\"sb\":%d,\"m\":%d,\"t\":%s,\"d\":0},"),
+
+                _buffer.printf_P(PSTR("{\"f\":\"%s\",\"n\":\"%s\",\"s\":\"%s\",\"sb\":%d,\"m\":%d,\"d\":0"),
                     location.c_str(),
                     name.c_str(),
                     formatBytes(_dir.fileSize()).c_str(),
                     _dir.fileSize(),
-                    _dir.isMapping() ? TYPE_MAPPED_FILE : TYPE_REGULAR_FILE,
-                    modified)
-                ) >= space) {
+                    _dir.isMapping() ? TYPE_MAPPED_FILE : TYPE_REGULAR_FILE
+                );
+            }
+            if (_dir.isMapping()) {
+                _buffer.print(F(",\"t\":\""));
+                _buffer.strftime_P(PSTR("%Y-%m-%d %H:%M"), _dir.fileTime());
+                _buffer.print('"');
+            }
+
+            _next = _dir.next();
+            if (_next) {
+                _buffer.print(F("},"));
+            } else {
+                _state = 2; // end
+                __LDBG_printf("set state=%u", _state);
+                _buffer.print(F("}]}"));
+            }
+
+            __LDBG_IF(
+                // limit to avoid wdt triggering
+                if (--maxDirs == 0) {
                     break;
                 }
-                ptr += result;
-                space -= result;
-                sptr = ptr;
+            );
+
+            size_t bufferLen = _buffer.length();
+            if (bufferLen >= space) {
+                break;
             }
-#if DEBUG_ASYNC_WEB_RESPONSE
-            else {
-                __LDBG_printf("path %s invalid type", path.c_str());
-            }
-#endif
-            _next = _dir.next();
+
+            // cleanup _buffer for more directories
+            memcpy(dataPtr, _buffer.c_str(), bufferLen);
+            _buffer.remove(0, bufferLen); // does not change capacity
+            dataPtr += bufferLen;
+            space -= bufferLen;
         }
-        if (!_next) { // end of listing
-            if (sptr != reinterpret_cast<char *>(data)) { // any data added?
-                sptr--;
-                if (*sptr != ',') { // trailing comma?
-                    sptr++;
-                }
-            }
-            if (space >= 0) { // 2 byte have been reserved
-                *sptr++ = ']';
-                *sptr++ = '}';
-            }
-            _state = 2;
-        }
-        result = (sptr - reinterpret_cast<char *>(data));
-    } else if (_state == 2) {
-        __LDBG_printf("end list %s, EOF", _dirName.c_str());
-        result = 0;
     }
-    // __LDBG_printf("chunk %d state %d next %d '%-*.*s'", result, _state, _next, result, result, data);
-    return result;
+
+sendBuffer:
+    __LDBG_printf("state=%u capacity=%u space=%u buffer=%u", _state, len, space, _buffer.length());
+    return _sendBufferPartially(data, dataPtr, len); // send what fits in data
 }
+
+#if DEBUG_ASYNC_WEB_RESPONSE_DIR_RESPONSE
+#include <debug_helper_disable.h>
+#endif
+
 
 bool AsyncNetworkScanResponse::_locked = false;
 

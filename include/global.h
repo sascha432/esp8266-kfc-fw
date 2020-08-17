@@ -112,13 +112,23 @@
 #define LOGGER                                      1
 #endif
 
-#if LOGGER
 #ifndef LOGGER_MAX_FILESIZE
-// Max. size of the log file. if it exceeds the size, a copy is created and the
-// logfile truncated. The copy gets overwritten every time the file gets rotated.
-// 0 disables rotation
-#define LOGGER_MAX_FILESIZE                         0xffff
+// max. size of the log file. if the size is exceeded, a backup is created
+// and a new log started. 0 = no size limit
+#    if DEBUG
+#        define LOGGER_MAX_FILESIZE                 4096
+#    else
+#        define LOGGER_MAX_FILESIZE                 65535
+#    endif
 #endif
+
+#ifndef LOGGER_MAX_BACKUP_FILES
+// max. number of backup files to keep
+#    if DEBUG
+#        define LOGGER_MAX_BACKUP_FILES             32
+#    else
+#        define LOGGER_MAX_BACKUP_FILES             4
+#    endif
 #endif
 
 #ifndef AT_MODE_SUPPORTED

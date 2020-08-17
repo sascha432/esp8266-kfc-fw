@@ -2,9 +2,12 @@
  * Author: sascha_lammers@gmx.de
  */
 
-$.__prototypes = {
-    dismissible_alert: '<div><div class="alert alert-dismissible fade show" role="alert"><h4 class="alert-heading"></h4><span></span><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div></div>',
-    filemanager_upload_progress: '<p class="text-center">Uploading <span id="upload_percent"></span>...<div class="progress"><div class="progress-bar progress-bar-striped progress-bar-animated text-center" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="10000" style="width:0%;" id="upload_progress"></div></div></p>',
+ // generator in
+ // Resources/html/__prototypes.html
+ $.__prototypes = {
+    dismissible_alert: '<div class="pt-2"><div class="alert alert-dismissible fade show" role="alert"><h4 class="alert-heading"></h4><span></span><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div></div>',
+    modal_dialog: '<div class="modal" tabindex="-1" role="dialog"><div class="modal-dialog modal-lg" role="document"><div class="modal-content"><div class="modal-header"><h5 class="modal-title"></h5><button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button></div><div class="modal-body"></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button></div></div></div></div>',
+    filemanager_upload_progress: '<p class="text-center">Uploading <span id="upload_percent"></span>...</p><div class="progress"><div class="progress-bar progress-bar-striped progress-bar-animated text-center" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="10000" style="width:0%;" id="upload_progress"></div></div>',
 };
 
 window.dbg_console = {
@@ -97,26 +100,45 @@ function pop_error_clear(_target) {
 
 function pop_error(error_type, title, message, _target, clear) {
 	var id = "#alert-" + random_str();
-    var $html = $($.__prototypes.dismissible_alert);
-    $html.find('div').addClass('alert-' + error_type).attr('id', id.substr(1));
-    $html.find('h4').html(title);
-    $html.find('span:first').html(message);
+    var html = $($.__prototypes.dismissible_alert);
+    html.find('div').addClass('alert-' + error_type).attr('id', id.substr(1));
+    html.find('h4').html(title);
+    html.find('span:first').html(message);
     if (!_target) {
         _target = $('.container:first');
     }
     if (clear) {
         pop_error_clear(_target);
     }
-    _target.prepend('<div class="row"><div class="col">' + $html.html() + '</div></div>');
-    $html.on('closed.bs.alert', function () {
+    _target.prepend('<div class="row"><div class="col">' + html.html() + '</div></div>');
+    html.on('closed.bs.alert', function () {
         $(this).closest('div').remove();
     });
-    $html.alert();
+    html.alert();
 }
 
 function random_str() {
     return Math.random().toString(36).substring(7);
 }
+
+
+$.addModalDialog = function(id, title, body, onremove) {
+    $('#' + id).remove();
+    var html = $($.__prototypes.dismissible_alert);
+    html.find('.modal').attr('id', id);
+    html.find('.modal-title').html(title);
+    html.find('.modal-body').html(body);
+    $('body').append(html);
+    var dialog = $('#' + id);
+    dialog.on('hidden.bs.modal', function () {
+        dialog.remove();
+        if (onremove) {
+            onremove();
+        }
+    });
+    dialog.modal('show');
+    return dialog;
+};
 
 $.getSessionId = function() {
     try {

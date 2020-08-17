@@ -32,7 +32,6 @@ public:
 
     virtual void _respond(AsyncWebServerRequest* request);
     virtual size_t _ack(AsyncWebServerRequest* request, size_t len, uint32_t time);
-
     virtual size_t _fillBuffer(uint8_t* buf, size_t maxLen) = 0;
 
 protected:
@@ -164,16 +163,18 @@ public:
     static const uint8_t TYPE_REGULAR_FILE =    0;
 
     AsyncDirResponse(const ListDir &dir, const String &dirName);
-
-    bool _sourceValid() const;
-
+    virtual bool _sourceValid() const override;
     virtual size_t _fillBuffer(uint8_t *data, size_t len) override;
+
+private:
+    size_t _sendBufferPartially(uint8_t *data, uint8_t *dataPtr, size_t len);
 
 private:
     uint8_t _state;
     ListDir _dir;
     bool _next;
     String _dirName;
+    PrintString _buffer;
 };
 
 class AsyncNetworkScanResponse : public AsyncBaseResponse {
@@ -181,7 +182,7 @@ public:
     AsyncNetworkScanResponse(bool hidden);
     virtual ~AsyncNetworkScanResponse();
 
-    bool _sourceValid() const;
+    virtual bool _sourceValid() const override;
     virtual size_t _fillBuffer(uint8_t *data, size_t len) override;
 
     static bool isLocked();
@@ -208,7 +209,7 @@ public:
     AsyncFillBufferCallbackResponse(Callback callback);
     virtual ~AsyncFillBufferCallbackResponse();
 
-    bool _sourceValid() const;
+    virtual bool _sourceValid() const override;
     virtual size_t _fillBuffer(uint8_t *data, size_t len) override;
 
     Buffer &getBuffer() {

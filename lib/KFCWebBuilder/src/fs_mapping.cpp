@@ -51,7 +51,7 @@ void FileMapping::_openByFilename()
         _fileSize = SPIFFS.open(_filename, fs::FileOpenMode::read).size();
         _modificationTime = 0;
         _gzipped = 0;
-        _debug_printf_P(PSTR("file=%s uuid=%08x gz=%u size=%u mtime=%u\n"), _filename.c_str(), _uuid, _gzipped, _fileSize, _modificationTime);
+        __LDBG_printf("file=%s uuid=%08x gz=%u size=%u mtime=%u", _filename.c_str(), _uuid, _gzipped, _fileSize, _modificationTime);
     }
     else {
         _uuid = crc32b(_filename.c_str(), _filename.length());
@@ -61,35 +61,47 @@ void FileMapping::_openByFilename()
 
 void FileMapping::_openByUUID()
 {
-    char buf[33];
+    char buf[34];
     snprintf_P(buf, sizeof(buf) - 1, PSTR("%s%08x.lnk"), SPGM(fs_mapping_dir), _uuid);
     auto file = SPIFFS.open(buf, fs::FileOpenMode::read);
     if (file) {
         if (file.readBytes(reinterpret_cast<char *>(&_modificationTime), 8) == 8) {
             _filename = file.readString();
-            _debug_printf_P(PSTR("file=%s uuid=%08x gz=%u size=%u mtime=%u\n"), _filename.c_str(), _uuid, _gzipped, _fileSize, _modificationTime);
+            __LDBG_printf("file=%s uuid=%08x gz=%u size=%u mtime=%u", _filename.c_str(), _uuid, _gzipped, _fileSize, _modificationTime);
             return;
         }
     }
-    _debug_printf_P(PSTR("file=%s uuid=%08x buf=%s not found\n"), _filename.c_str(), _uuid, buf);
+    __LDBG_printf("file=%s uuid=%08x buf=%s not found", _filename.c_str(), _uuid, buf);
     _uuid = 0;
     _filename = String();
 }
 
-const File FileMapping::open(const char *mode) const
+File FileMapping::open(const char *mode) const
 {
-    _debug_printf_P(PSTR("file=%s uuid=%08x gz=%u size=%u mtime=%u\n"), _filename.c_str(), _uuid, _gzipped, _fileSize, _modificationTime);
+    __LDBG_printf("file=%s uuid=%08x gz=%u size=%u mtime=%u", _filename.c_str(), _uuid, _gzipped, _fileSize, _modificationTime);
+    const char *fnPtr;
+    char buf[34];
     if (_uuid) {
-        char buf[33];
         snprintf_P(buf, sizeof(buf) - 1, PSTR("%s%08x"), SPGM(fs_mapping_dir), _uuid);
-        return SPIFFS.open(buf, mode);
+        fnPtr = buf;
     }
     else {
-        return SPIFFS.open(_filename.c_str(), mode);
+        fnPtr = _filename.c_str();
     }
+    // if (strcmp_P(mode, PSTR("w+")) == 0 || strcmp_P(mode, PSTR("wb+")) || strcmp_P(mode, PSTR("w+b"))) {
+    //     // file will be replaced
+    //     // TODO update mappings file
+    // }
+    // else
+    if (strchr(mode, 'w') || strchr(mode, 'a') || strchr(mode, '+')) {
+        // deny any write/append access
+        __DBG_printf("write access denied to mapped file=%s", fnPtr);
+        return File();
+    }
+    return SPIFFS.open(fnPtr, mode);
 }
 
-const File SPIFFSWrapper::open(Dir dir, const char *mode)
+File SPIFFSWrapper::open(Dir dir, const char *mode)
 {
 #if ESP8266
     return dir.openFile(mode);
@@ -99,17 +111,8 @@ const File SPIFFSWrapper::open(Dir dir, const char *mode)
 #endif
 }
 
-const File SPIFFSWrapper::open(const char *path, const char *mode)
+File SPIFFSWrapper::open(const char *path, const char *mode)
 {
-#if LOGGER
-    auto ptr = path;
-    if (*ptr == '/') {
-        ptr++;
-    }
-    if (!strncmp_P(ptr, PSTR("log:"), 4)) {
-        return _logger.openLog(ptr);
-    }
-#endif
     auto file = SPIFFS.open(path, mode);
     if (file) {
         return file;

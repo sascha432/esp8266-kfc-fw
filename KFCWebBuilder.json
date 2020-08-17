@@ -24,6 +24,7 @@
         ],
         "conditional_excludes": {
             "#if 1": [
+                "./Resources/html/__prototypes.html",
                 "./Resources/html/fmtest.html",
                 "./Resources/html/fmtest.html",
                 "./Resources/html/webuitest.html",
@@ -78,7 +79,9 @@
             "#if !IOT_SSDP_SUPPORT": [
                 "./Resources/html/description.xml"
             ],
-            "#if !IOT_BLINDS_CTRL": "./Resources/html/blinds.html",
+            "#if !IOT_BLINDS_CTRL": [
+                "./Resources/html/blinds.html"
+            ],
             "#if !IOT_SENSOR": "./Resources/html/sensor.html",
             "#if !IOT_WEATHER_STATION": "./Resources/html/weather.html",
             "#if !IOT_REMOTE_CONTROL": "./Resources/html/remotectrl.html",
@@ -102,7 +105,7 @@
                     "/data/webui/js": [
                         "./lib/KFCWebBuilder/Resources/js/jquery-3.3.1.min.js",
                         "./lib/KFCWebBuilder/Resources/js/bootstrap.bundle.min.js",
-                        "./lib/KFCWebBuilder/Resources/js/js.cookie.min.js",
+                        "./lib/KFCWebBuilder/Resources/js/js.cookie.js",
                         "./lib/KFCWebBuilder/Resources/js/selectize.min.js",
                         "./lib/KFCWebBuilder/Resources/js/rangeslider.min.js",
                         "./Resources/js/jQuery.base64.js",

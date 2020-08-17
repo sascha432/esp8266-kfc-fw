@@ -9,12 +9,23 @@
 #include "debug_helper_disable.h"
 // #include "debug_helper_enable.h"
 
+ListDir::ListDir() : _listing({})
+{
+}
+
 #if ESP8266
 
-ListDir::ListDir(const String &dirName, bool filterSubdirs) : _dirName(dirName), _listings(SPIFFS.open(FSPGM(fs_mapping_listings), FileOpenMode::read)), _listing(), _isDir(false), _filterSubdirs(filterSubdirs), _dir(SPIFFS.openDir(dirName))
+ListDir::ListDir(const String &dirName, bool filterSubdirs, bool hiddenFiles) :
+    _dirName(dirName),
+    _listings(SPIFFS.open(FSPGM(fs_mapping_listings), FileOpenMode::read)),
+    _listing({}),
+    _isDir(false),
+    _filterSubdirs(filterSubdirs),
+    _hiddenFiles(hiddenFiles),
+    _dir(SPIFFS.openDir(dirName))
 {
     append_slash(_dirName);
-    _debug_printf_P(PSTR("dirName=%s\n"), _dirName.c_str());
+    __LDBG_printf("dirName=%s hiddenFiles=%u", _dirName.c_str(), _hiddenFiles);
 }
 
 File ListDir::openFile(const char* mode)
@@ -24,10 +35,17 @@ File ListDir::openFile(const char* mode)
 
 #elif ESP32
 
-ListDir::ListDir(const String &dirName, bool filterSubdirs) : _dirName(dirName), _listings(SPIFFS.open(FSPGM(fs_mapping_listings), FileOpenMode::read)), _listing(), _isDir(false), _filterSubdirs(filterSubdirs), _dir(SPIFFS.open(dirName))
+ListDir::ListDir(const String &dirName, bool filterSubdirs, bool hiddenFiles) :
+    _dirName(dirName),
+    _listings(SPIFFS.open(FSPGM(fs_mapping_listings), FileOpenMode::read)),
+    _listing({}),
+    _isDir(false),
+    _filterSubdirs(filterSubdirs),
+    _hiddenFiles(hiddenFiles),
+    _dir(SPIFFS.open(dirName))
 {
     append_slash(_dirName);
-    _debug_printf_P(PSTR("dirName=%s\n"), _dirName.c_str());
+    __LDBG_printf("dirName=%s", _dirName.c_str());
 }
 
 File ListDir::openFile(const char* mode)
@@ -69,25 +87,58 @@ time_t ListDir::fileTime()
 #endif
 }
 
-bool ListDir::_isSubdir(const String &dir) const
+// _dirName = "/mydir/subdir0/"
+// dir = "/mydir/subdir0/mystuff/many/files.txt"
+// returns "/mydir/subdir0/mystuff"
+//
+// _dirName = "/mydir/subdir0/"
+// dir = "/mydir/subdir0/anotherfile.txt"
+// returns String()
+String ListDir::_getFirstSubDirectory(const String &path) const
 {
-    if (!_filterSubdirs) {
+    auto ptr = strchr(path.c_str() + _dirName.length(), '/');
+    if (ptr) {
+        return path.substring(0, ptr - path.c_str());
+    }
+    return String();
+}
+
+bool ListDir::_showPath(const String &path) const
+{
+    if (_hiddenFiles) {
+        return true;
+    }
+#if !defined(ESP8266)
+    if (path.charAt(0) == '.') {
         return false;
     }
-    if (dir.startsWith(_dirName)) {
-        auto subdir = dir.substring(_dirName.length());
-        _debug_printf_P(PSTR("subdir=%s\n"), subdir.c_str());
-        auto pos = subdir.indexOf('/');
-        if (pos != -1) {
-            auto filename = subdir.substring(pos);
-            _debug_printf_P(PSTR("filename=%s pos=%u\n"), filename.c_str(), pos);
-            if (filename.equals(F("/."))) {
-                return false;
+#endif
+
+    auto pos = path.indexOf(F("/."));
+    return (
+        pos == -1 ||
+        pos == (int)path.length() - 2    // emulated directories end with "/." do not treat them as hidden files
+    );
+}
+
+uint8_t ListDir::_countSubDirs(const String &dir, uint8_t limit) const
+{
+    if (_filterSubdirs) {
+#if !defined(ESP8266)
+        if (dir.startsWith(_dirName))
+#endif
+        {
+            const char *ptr = dir.c_str() + _dirName.length(); // always ends with '/'
+            while(*ptr) {
+                if (*ptr == '/' && --limit == 0) {
+                    break;
+                }
+                ptr++;
             }
-            return true;
+            __LDBG_printf("is_sub=%u max=%u ptr=%s dir=%s dirName=%s", limit == 0, limit, ptr, dir.c_str(), _dirName.c_str());
         }
     }
-    return false;
+    return limit;
 }
 
 bool ListDir::next()
@@ -95,22 +146,22 @@ bool ListDir::next()
     if (_listings) {
         while(true) {
             if (_listings.readBytes(reinterpret_cast<char *>(&_listing.header), sizeof(_listing.header)) != sizeof(_listing.header)) {
+                __LDBG_printf("read failure: header pos=%u size=%u", _listings.position(), _listings.size());
                 _listings.close();
                 _listing = {};
-                _debug_println(F("read failure: header"));
                 break;
             }
             else {
                 _listing.filename = _listings.readStringUntil('\n');
                 if (!_listing.filename.length()) {
+                    __LDBG_printf("filename empty pos=%u size=%u", _listings.position(), _listings.size());
                     _listings.close();
                     _listing = {};
-                    _debug_println(F("read failure: filename"));
                     break;
                 }
                 else {
-                    _debug_printf_P(PSTR("uuid=%x filename=%s filesize=%u/%u mtime=%u gzipped=%u dir=%u skip=%u\n"), _listing.header.uuid, _listing.filename.c_str(), _listing.header.size, _listing.header.orgSize, _listing.header.mtime, _listing.header.gzipped, _listing.header.isDir, !_listing.filename.startsWith(_dirName));
-                    if (_listing.filename.startsWith(_dirName) && !_isSubdir(_listing.filename)) {
+                    __LDBG_printf("uuid=%x filename=%s filesize=%u/%u mtime=%u gzipped=%u dir=%u skip=%u", _listing.header.uuid, _listing.filename.c_str(), _listing.header.size, _listing.header.orgSize, _listing.header.mtime, _listing.header.gzipped, _listing.header.isDir, !_listing.filename.startsWith(_dirName));
+                    if (_listing.filename.startsWith(_dirName) && _countSubDirs(_listing.filename) >= 2 && _showPath(_listing.filename)) {
                         _listing.valid = true;
                         return true;
                     }
@@ -118,36 +169,89 @@ bool ListDir::next()
             }
         }
     }
-#if ESP8266
-    while (_dir.next()) {
+#if defined(ESP8266)
+    bool next;
+    if (_listing.valid && _listing.header.uuid == ~0U) {
+        next = true;
+        _listing = {};
+    } else {
+        next = _dir.next();
+    }
+    while (next) {
         _filename = _dir.fileName();
-#elif ESP32
+#elif defined(ESP32)
     File next;
     while((next = _dir.openNextFile())) {
         _filename = next.name();
 #endif
-        _debug_printf_P(PSTR("filename=%s\n"), _filename.c_str());
-        if (_isSubdir(_filename)) {
-            continue;
-        }
-        if (_filename.endsWith(F("/."))) {   // directory emulation
-            _isDir = true;
-            if (_filename.substring(0, _filename.length() - 1) == _dirName) {
-                continue;
+        while(true) {
+            if (!strncmp_P(_filename.c_str(), SPGM(fs_mapping_dir), strlen_P(SPGM(fs_mapping_dir)))) {
+                break;
             }
-            _filename.remove(_filename.length() - 2);
-        }
-        else {
             _isDir = false;
-        }
-#if ESP32
-        if (_file.isDirectory()) {
-            _isDir = true;
-        }
+            auto subDirCount = _countSubDirs(_filename);
+#if defined(ESP8266)
+            // this emulates one level of subdirecties only
+            String dir = _getFirstSubDirectory(_filename);
+            __LDBG_printf("file=%s subdirs=%u show=%u dir=%s add=%u",
+                _filename.c_str(),
+                subDirCount,
+                _showPath(_filename),
+                dir.c_str(),
+                (dir.length() && _showPath(dir) && std::find(_dirs.begin(), _dirs.end(), crc16_update(dir.c_str(), dir.length())) == _dirs.end())
+            );
+            if (dir.length() && _showPath(dir)) {
+                uint16_t crc = crc16_update(dir.c_str(), dir.length());
+                if (std::find(_dirs.begin(), _dirs.end(), crc) == _dirs.end()) {
+                    _listing.valid = true;
+                    _listing.filename = std::move(dir);
+                    _listing.header = {};
+                    _listing.header.isDir = true;
+                    _listing.header.uuid = ~0U;
+                    _dirs.push_back(crc);
+                    return true;
+                }
+            }
+#else
+            __LDBG_printf("file=%s subdirs=%u show=%u", _filename.c_str(), subDirCount, _showPath(_filename));
 #endif
-        if (strncmp_P(_filename.c_str(), SPGM(fs_mapping_dir), strlen_P(SPGM(fs_mapping_dir)))) {
+            if (subDirCount == 0 || !_showPath(_filename)) { // multiple subdirectories
+                break;
+            }
+#if defined(ESP8266)
+            if (String_endsWith(_filename, PSTR("/."))) {   // directory emulation
+                _filename.remove(_filename.length() - 1);
+                __LDBG_printf("file=%s is_dirname=%d is_dir=%d dirname=%s dir=%s",
+                    _filename.c_str(),
+                    _dirName.equals(_filename),
+                    dir.equals(_filename.substring(0, _filename.length() - 1)),
+                    _dirName.c_str(),
+                    dir.c_str()
+                );
+                if (_dirName.equals(_filename)) {
+                    break;
+                }
+                _filename.remove(_filename.length() - 1);
+                if (dir.equals(_filename)) {
+                    break;
+                }
+                _isDir = true;
+            }
+            else if (subDirCount == 1) { // file in a sub directory
+                break;
+            }
+
+#elif defined(ESP32)
+            if (_file.isDirectory()) {
+                _isDir = true;
+            }
+#endif
             return true;
         }
+
+#if defined(ESP8266)
+        next = _dir.next();
+#endif
     }
     return false;
 }
@@ -155,6 +259,8 @@ bool ListDir::next()
 bool ListDir::rewind()
 {
     _listings = SPIFFS.open(FSPGM(fs_mapping_listings), FileOpenMode::read);
+    _listing = {};
+    _isDir = false;
 #if ESP8266
     return _dir.rewind();
 #elif ESP32
@@ -186,5 +292,5 @@ bool ListDir::isDirectory() const
 
 bool ListDir::isMapping() const
 {
-    return _listing.valid;
+    return _listing.valid && _listing.header.uuid != ~0U; // ~0U is used for directory emulation
 }

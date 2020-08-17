@@ -114,7 +114,7 @@ ListDir FileManager::_getDir(const String &path)
     if (!path.length()) {
         return ListDir();
     }
-    return ListDir(path, true);
+    return ListDir(path, true, _request->arg(F("hidden")).toInt());
     // auto dir = ListDir(path, true);
     // if (!dir.next()) {
     //     _errors++;

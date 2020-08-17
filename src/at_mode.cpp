@@ -308,9 +308,9 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DLY, "DLY", "<milliseconds>", "Call delay(
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CAT, "CAT", "<filename>", "Display text file");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RM, "RM", "<filename>", "Delete file");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RN, "RN", "<filename>,<new filename>", "Rename file");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LS, "LS", "[<directory>]", "List files and directory");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LS, "LS", "[<directory>[,<hidden=true|false>,<subdirs=true|false>]]", "List files and directories");
 #if ESP8266
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LSR, "LSR", "[<directory>]", "List files and directory in raw mode");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LSR, "LSR", "[<directory>]", "List files and directories using SPIFFS.openDir()");
 #endif
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WIFI, "WIFI", "[<reset|on|off|ap_on|ap_off>]", "Modify WiFi settings");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(REM, "REM", "Ignore comment");
@@ -363,7 +363,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RTCQCC, "RTCQCC", "<0=channel/bssid|1=stat
 #endif
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WIMO, "WIMO", "<0=off|1=STA|2=AP|3=STA+AP>", "Set WiFi mode, store configuration and reboot");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LOG, "LOG", "<message>", "Send an error to the logger component");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LOGE, "LOGE", "<logger|debug>,<1|0>", "Enable/disable writing to file log://debug");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LOGDBG, "LOGDBG", "<1|0>", "Enable/disable writing debug output to log://debug");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(PANIC, "PANIC", "Cause an exception by calling panic()");
 
 #endif
@@ -435,7 +435,7 @@ void at_mode_help_commands()
 #endif
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(WIMO), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(LOG), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(LOGE), name);
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(LOGDBG), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(PANIC), name);
 #endif
 
@@ -982,6 +982,7 @@ void at_mode_serial_handle_event(String &commandString)
                 at_mode_generate_help(output, &findItems);
             }
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(METRICS))) {
+
                 args.printf_P(PSTR("Device name: %s"), System::Device::getName());
                 args.printf_P(PSTR("Uptime: %u seconds / %s"), getSystemUptime(), formatTime(getSystemUptime(), true).c_str());
                 args.printf_P(PSTR("Free heap/fragmentation: %u / %u"), ESP.getFreeHeap(), ESP.getHeapFragmentation());
@@ -1220,7 +1221,7 @@ void at_mode_serial_handle_event(String &commandString)
                 }
             }
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(LS))) {
-                auto dir = ListDir(args.toString(0));
+                auto dir = ListDir(args.toString(0), !args.isTrue(2, true), args.isFalse(1, true));
                 while(dir.next()) {
                     output.print(F("+LS: "));
                     if (dir.isFile()) {
@@ -1402,7 +1403,7 @@ void at_mode_serial_handle_event(String &commandString)
                 }
                 else
 */
-                if (args.requireArgs(2, 3)) {
+                if (args.requireArgs(2, 4)) {
                     auto pin = (uint8_t)args.toInt(0);
                     if (args.equalsIgnoreCase(1, F("input"))) {
                         digitalWrite(pin, LOW);
@@ -1666,35 +1667,31 @@ void at_mode_serial_handle_event(String &commandString)
                     Logger_error(F("+LOG: %s"), implode(',', args.getArgs()).c_str());
                 }
             }
-            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(LOGE))) {
-                if (args.requireArgs(2, 3)) {
-                    if (args.equalsIgnoreCase(0, F("debug"))) {
-                        bool enable = args.isTrue(1);
-                        auto filename = F("/debug.log");
-                        static File debugLog;
-                        if (enable) {
-                            if (!debugLog) {
-                                debugLog = SPIFFS.open(filename, fs::FileOpenMode::append);
-                                if (debugLog) {
-                                    debugStreamWrapper.add(&debugLog);
-                                }
-                            }
-                        }
-                        else {
+            else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(LOGDBG))) {
+                if (args.requireArgs(1, 1)) {
+                    bool enable = args.isTrue(0);
+                    static File debugLog;
+                    if (enable) {
+                        if (!debugLog) {
+                            _logger.setExtraFileEnabled(LOGLEVEL_DEBUG, true);
+                            _logger.__rotate(LOGLEVEL_DEBUG);
+                            debugLog = _logger.__openLog(LOGLEVEL_DEBUG, true);
                             if (debugLog) {
-                                debugStreamWrapper.remove(&debugLog);
-                                debugLog.close();
+                                debugStreamWrapper.add(&debugLog);
+                                args.printf_P(PSTR("enabled=%s"), debugLog.fullName());
                             }
                         }
-                        args.printf_P(PSTR("debug output file=%s enabled=%u"), RFPSTR(filename), (bool)debugLog);
-                    }
-                    else if (args.equalsIgnoreCase(0, F("logger"))) {
-                        bool enable = args.isTrue(1);
-                        _logger.setLogLevel(enable ? LOGLEVEL_DEBUG : LOGLEVEL_ACCESS);
-                        args.printf_P(PSTR("logger debug=%u"), enable);
                     }
                     else {
-                        args.print(F("argument 1: expected [debug|logger]"));
+                        if (debugLog) {
+                            debugStreamWrapper.remove(&debugLog);
+                            debugLog.close();
+                            _logger.__rotate(LOGLEVEL_DEBUG);
+                            _logger.setExtraFileEnabled(LOGLEVEL_DEBUG, false);
+                        }
+                    }
+                    if (!debugLog) {
+                        args.print(FSPGM(disabled));
                     }
                 }
             }
@@ -1731,7 +1728,6 @@ void at_mode_serial_handle_event(String &commandString)
         }
     }
 }
-
 
 void at_mode_serial_input_handler(Stream &client)
 {

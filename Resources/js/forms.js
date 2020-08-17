@@ -57,20 +57,6 @@ $.formValidator = {
 // $.formValidator.addErrors([{'target':'#colon_sp','error':'This fields value must be between 50 and 65535 or 0'}]);
 // $.formValidator.addErrors([{'target':'#brightness','error':'This fields value must be between 50 and 65535 or 0'}]);
 
-$.addModalDialog = function(id, title, body, onremove) {
-    $('#' + id).remove();
-    $('body').append('<div class="modal" tabindex="-1" role="dialog" id="' + id + '"><div class="modal-dialog modal-lg" role="document"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">' + title +  '</h5><button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button></div><div class="modal-body">' + body + '</div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button></div></div></div></div>');
-    var dialog = $('#' + id);
-    dialog.on('hidden.bs.modal', function () {
-        dialog.remove();
-        if (onremove) {
-            onremove();
-        }
-    });
-    dialog.modal('show');
-    return dialog;
-};
-
 $.urlParam = function(name, remove) {
     var results = new RegExp('([\?&])' + name + '=([^&#]*)([&#]?)').exec(window.location.href);
     if (results == null) {
@@ -178,11 +164,7 @@ $(function() {
                 if (name.length == 2) {
                     var cookie_name = 'card_state_' + parent.attr('id');
                     if (cookies[cookie_name] === undefined) {
-                        try {
-                            cookies[cookie_name] = JSON.parse(Cookies.get(cookie_name));
-                        } catch(e) {
-                            cookies[cookie_name] = {};
-                        }
+                        cookies[cookie_name] = Cookies.getJSON(cookie_name, {});
                     }
                     name = name[1];
                     if (cookies[cookie_name][name] === undefined) {
@@ -193,7 +175,7 @@ $(function() {
 
                     function save() {
                         // dbg_console.debug('set_cookie', cookie_name, JSON.stringify(cookies[cookie_name]));
-                        Cookies.set(cookie_name, JSON.stringify(cookies[cookie_name]));
+                        Cookies.set(cookie_name, cookies[cookie_name]);
                     }
                     card.on('hide.bs.collapse', function() {
                         cookies[cookie_name][name] = false;

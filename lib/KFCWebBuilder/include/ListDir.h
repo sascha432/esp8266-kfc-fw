@@ -28,8 +28,8 @@ public:
         String filename;
     } Listing_t;
 
-    ListDir() {}
-    ListDir(const String &dirName, bool filterSubdirs = false);
+    ListDir();
+    ListDir(const String &dirName, bool filterSubdirs = false, bool hiddenFiles = true);
 
     File openFile(const char *mode);
 
@@ -43,16 +43,31 @@ public:
     bool isDirectory() const;
     bool isMapping() const;
 
-private:
-    bool _isSubdir(const String &dir) const;
+    bool showHiddenFiles() const {
+        return _hiddenFiles;
+    }
 
 private:
+    // count number of subdirectories after _dirName
+    uint8_t _countSubDirs(const String &path, uint8_t limit = 2) const;
+    // returns true if path should be included
+    // for _hiddenFiles = true it is always true
+    bool _showPath(const String &path) const;
+    // return name of the first subdirectory after _dirName, including trailing /
+    String _getFirstSubDirectory(const String &path) const;
+
+
+private:
+    using DirectoryVector = std::vector<uint16_t>;
+
     String _filename;
     String _dirName;
     File _listings;
     Listing_t _listing;
-    bool _isDir;
-    bool _filterSubdirs;
+    DirectoryVector _dirs;
+    bool _isDir: 1;
+    bool _filterSubdirs: 1;
+    bool _hiddenFiles: 1;
 
 #if ESP8266
 
@@ -66,5 +81,6 @@ private:
     fs::File _file;
 #endif
 };
+
 
 #include <pop_pack.h>

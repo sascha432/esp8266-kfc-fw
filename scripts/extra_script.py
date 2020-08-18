@@ -100,6 +100,34 @@ def git_get_head():
 def copy_spiffs(source, target, env):
     copy_file(str(target[0]))
 
+def which(name, env, flags=os.F_OK):
+    result = []
+    extensions = env["ENV"]["PATHEXT"].split(os.pathsep)
+    if not extensions:
+        extensions = [".exe", ""]
+
+    for path in env["ENV"]["PATH"].split(os.pathsep):
+        path = os.path.join(path, name)
+        if os.access(path, flags):
+            result.append(os.path.normpath(path))
+        for ext in extensions:
+            whole = path + ext
+            if os.access(whole, os.X_OK):
+                result.append(os.path.normpath(whole))
+    return result
+
+def mem_analyzer(source, target, env):
+    # https://github.com/Sermus/ESP8266_memory_analyzer
+    args = [
+        os.path.realpath(os.path.join(env.subst("$PROJECT_DIR"), "./scripts/tools/MemAnalyzer.exe")),
+        which('xtensa-lx106-elf-objdump.exe', env)[0],
+        os.path.realpath(str(target[0]))
+    ]
+    print(' '.join(args))
+    p = subprocess.Popen(args, text=True)
+    p.wait()
+
+
 env.AddPreAction("upload", modify_upload_command)
 env.AddPreAction("uploadota", modify_upload_command)
 env.AddPreAction("uploadfs", modify_upload_command_fs)
@@ -107,6 +135,6 @@ env.AddPreAction("uploadfsota", modify_upload_command_fs)
 
 env.AlwaysBuild(env.Alias("newbuild", None, new_build))
 
-# env.AddPostAction("$BUILD_DIR/${PROGNAME}.elf", copy_firmware)
+env.AddPostAction("$BUILD_DIR/${PROGNAME}.elf", mem_analyzer)
 # env.AddPostAction("$BUILD_DIR/${PROGNAME}.bin", copy_firmware)
 

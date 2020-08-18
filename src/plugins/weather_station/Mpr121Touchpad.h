@@ -65,10 +65,16 @@ public:
     static constexpr bool kInvertX = true;
     static constexpr bool kInvertY = true;
 
-    typedef struct __attribute__packed__ {
-        uint16_t touched;
-        uint32_t time;
-    } TouchpadEvent_t;
+    class TouchpadEvent_t {
+    public:
+        TouchpadEvent_t() : touched(0), time(0) {}
+        TouchpadEvent_t(uint16_t aTouched, uint32_t aTime) : touched(aTouched), time(aTime) {}
+
+        struct __attribute__packed__ {
+            uint16_t touched;
+            uint32_t time;
+        };
+    };
 
     using ReadBuffer = FixedCircularBuffer<TouchpadEvent_t, 64> ;
 

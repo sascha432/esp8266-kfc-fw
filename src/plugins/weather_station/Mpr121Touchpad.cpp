@@ -30,7 +30,7 @@ void ICACHE_RAM_ATTR mpr121_timer(EventScheduler::TimerPtr timer)
 {
     if (mpr121_irq_callback_flag) {
         mpr121_irq_callback_flag = false;
-        buffer.push_back(Mpr121Touchpad::TouchpadEvent_t({touchpad->_mpr121.touched(), millis()}));
+        buffer.emplace_back(touchpad->_mpr121.touched(), millis());
     }
 }
 
@@ -164,7 +164,7 @@ void Mpr121Touchpad::Event::addMovement()
 {
     if (_movements.size() < 100) {
         if (_type != EventType::NONE) {
-            _movements.emplace_back(std::move(Movement(0, _position, _curEvent.time, _type)));
+            _movements.emplace_back(0, _position, static_cast<uint32_t>(_curEvent.time), _type);
             broadcastData(_movements.back());
         }
     }

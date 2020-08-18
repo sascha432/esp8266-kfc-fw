@@ -18,6 +18,12 @@
 
 #include "GFXCanvasCache.h"
 
+#if DEBUG_GFXCANVAS_MEM
+#include <debug_helper_enable_mem.h>
+#else
+#include <debug_helper_disable_mem.h>
+#endif
+
 using namespace GFXCanvas;
 
 Cache::Cache(Cache &&cache) : _buffer(cache._buffer), _y(cache._y), _width(cache._width), _flags(cache._flags)
@@ -25,7 +31,7 @@ Cache::Cache(Cache &&cache) : _buffer(cache._buffer), _y(cache._y), _width(cache
     cache.__reset();
 }
 
-Cache::Cache(uWidthType width, sYType y) : _buffer(__DBG_new_array(width, ColorType)), _y(y), _width(width), _flags(0)
+Cache::Cache(uWidthType width, sYType y) : _buffer(__LDBG_new_array(width, ColorType)), _y(y), _width(width), _flags(0)
 {
     if (!_buffer) {
         __DBG_panic("alloc failed, width=%u", width);
@@ -40,14 +46,14 @@ Cache::Cache(uWidthType width, nullptr_t) : _buffer(nullptr), _y(kYInvalid), _wi
 Cache::~Cache()
 {
     if (_buffer) {
-        __DBG_delete_array(_buffer);
+        __LDBG_delete_array(_buffer);
     }
 }
 
 Cache &Cache::operator=(Cache &&cache)
 {
     if (_buffer) {
-        __DBG_delete_array(_buffer);
+        __LDBG_delete_array(_buffer);
     }
     _buffer = cache._buffer;
     _y = cache._y;
@@ -60,7 +66,7 @@ Cache &Cache::operator=(Cache &&cache)
 void Cache::allocate()
 {
     if (!_buffer) {
-        _buffer = __DBG_new_array(_width, ColorType);
+        _buffer = __LDBG_new_array(_width, ColorType);
     }
     _y = kYInvalid;
     _flags = 0;
@@ -69,7 +75,7 @@ void Cache::allocate()
 void Cache::release()
 {
     if (_buffer) {
-        __DBG_delete_array(_buffer);
+        __LDBG_delete_array(_buffer);
     }
     _buffer = nullptr;
     _y = kYInvalid;
@@ -161,3 +167,4 @@ size_t SingleLineCache::length() const
 
 
 #include <pop_optimize.h>
+#include <debug_helper_disable_mem.h>

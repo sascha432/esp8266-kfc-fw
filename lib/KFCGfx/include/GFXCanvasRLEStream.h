@@ -19,16 +19,12 @@ public:
     GFXCanvasRLEStream(GFXCanvasCompressed &canvas);
 
     virtual int available();
-    virtual int read() {
-        return _read(false);
+    virtual int read();
+    virtual int peek();
+    virtual size_t readBytes(char *buffer, size_t length) {
+        return readBytes(reinterpret_cast<uint8_t *>(buffer), length);
     }
-    virtual int peek() {
-        if (_buffer.length()) {
-            return _buffer[0];
-        }
-        return _read(true);
-    }
-    virtual size_t readBytes(char *buffer, size_t length);
+    size_t readBytes(uint8_t *buffer, size_t length);
 
     virtual size_t write(uint8_t) {
         return 0;
@@ -36,8 +32,9 @@ public:
 
 private:
     int _read(bool peek);
+    uint8_t *_writeColor(uint8_t *buffer, uint8_t rle, uint16_t color);
     void _writeColor(uint8_t rle, uint16_t color);
-    uint8_t _sendBufferedByte(bool peek);
+    int _fillBuffer(uint8_t *buffer, size_t length);
 
 private:
     static const int16_t DONE = -1;

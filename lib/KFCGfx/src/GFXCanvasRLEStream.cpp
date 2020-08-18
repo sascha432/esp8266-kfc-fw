@@ -54,92 +54,134 @@ int GFXCanvasRLEStream::available()
     return _position != DONE ? 1 : 0;
 }
 
-size_t GFXCanvasRLEStream::readBytes(char *buffer, size_t length)
+size_t GFXCanvasRLEStream::readBytes(uint8_t *buffer, size_t length)
 {
-    size_t sent = 0;
-    while (available() && length) {
-        if (_buffer.length() == 0 && _read(true) == -1) { // fill the buffer by calling peek()
-            break;
+    // first, empty the buffer
+    auto begin = buffer;
+    size_t bufferLen = _buffer.length();
+    while(bufferLen) {
+        if (bufferLen > length) {
+            bufferLen = length;
         }
-        size_t canSend = _buffer.length();
-        if (canSend) { // we have some buffered data
-            if (canSend > length) {
-                canSend = length;
-            }
-            memcpy(buffer, _buffer.begin(), canSend);
-            _buffer.remove(0, canSend);
-            length -= canSend;
-            sent += canSend;
+        memcpy(begin, _buffer.begin(), bufferLen);
+        _buffer.remove(0, bufferLen);
+        begin += bufferLen;
+        length -= bufferLen;
+        if (length == 0) {
+            return begin - buffer;
         }
+        bufferLen = _buffer.length();
     }
-    return sent;
+    if (_position == DONE) {
+        return 0;
+    }
+
+    // now we can read directly into the provided buffer
+    int read = _fillBuffer(begin, length);
+    if (read < 0) { // error, stop reading
+        _position = DONE;
+        _buffer.clear();
+        return 0;
+    }
+    return read + (begin - buffer);
+}
+
+int GFXCanvasRLEStream::_fillBuffer(uint8_t *buffer, size_t length)
+{
+    int32_t imageSize = _header.width * _header.height;
+    uint16_t x = (_position % _header.width) + _header.x;
+    uint16_t y = (_position / _header.width) + _header.y;
+
+    auto begin = buffer;
+    uint8_t *end;
+    end = begin + length - 6; // we need 2x3 bytes reserved for _writeColor
+
+    // __DBG_printf("x=%u y=%u pos=%u image_size=%u", x, y, _position, imageSize);
+
+    __DBG_BOUNDS_ACTION(__DBG_BOUNDS_sy(y, _canvas.height()), return -1);
+    __DBG_BOUNDS_ACTION(__DBG_BOUNDS_sx(x, _canvas.width()), return -1);
+    if (!_cache.isY(y)) {
+        _cache.setY(y);
+        _canvas._decodeLine(_cache);
+    }
+    auto color = _canvas.getPaletteColor(_cache.getBuffer()[x]);
+    int16_t rle;
+    if (_position == 0) {
+        _lastColor = color;
+        rle = -1;
+    }
+    else {
+        rle = 0;
+    }
+    while (_position++ < imageSize) {
+        if (color == _lastColor && rle != 0xff) {
+            rle++;
+            if (_position == imageSize) {
+                break;
+            }
+        }
+        else {
+            begin = _writeColor(begin, (uint8_t)rle, _lastColor);
+            _lastColor = color;
+            rle = 0;
+            if (_position == imageSize) {
+                break;
+            }
+            if (begin >= end) {
+                return begin - buffer;
+            }
+        }
+
+        x = (_position % _header.width) + _header.x;
+        y = (_position / _header.width) + _header.y;
+
+        __DBG_BOUNDS_ACTION(__DBG_BOUNDS_sy(y, _canvas.height()), return -1);
+        __DBG_BOUNDS_ACTION(__DBG_BOUNDS_sx(x, _canvas.width()), return -1);
+        if (!_cache.isY(y)) {
+            _cache.setY(y);
+            _canvas._decodeLine(_cache);
+        }
+        color = _canvas.getPaletteColor(_cache.getBuffer()[x]);
+    }
+
+    begin = _writeColor(begin, (uint8_t)rle, color);
+    _position = DONE;
+    return begin - buffer;
+
+}
+int GFXCanvasRLEStream::read()
+{
+    if (_buffer.length()) {
+        return _buffer.read();
+    }
+    return _read(false);
+}
+
+int GFXCanvasRLEStream::peek()
+{
+    if (_buffer.length()) {
+        return _buffer[0];
+    }
+    return _read(true);
 }
 
 int GFXCanvasRLEStream::_read(bool peek)
 {
-    if (available()) {
-        if (_buffer.length()) {
-            return _sendBufferedByte(peek);
+    if (_buffer.length() == 0) {
+        if (_position == DONE) {
+            return -1;
         }
-        else {
-            int32_t imageSize = _header.width * _header.height;
-            uint16_t x = (_position % _header.width) + _header.x;
-            uint16_t y = (_position / _header.width) + _header.y;
-
-            // __DBG_printf("x=%u y=%u pos=%u image_size=%u", x, y, _position, imageSize);
-
-            __DBG_BOUNDS_ACTION(__DBG_BOUNDS_sy(y, _canvas.height()), return -1);
-            __DBG_BOUNDS_ACTION(__DBG_BOUNDS_sx(x, _canvas.width()), return -1);
-            if (!_cache.isY(y)) {
-                _cache.setY(y);
-                _canvas._decodeLine(_cache);
-            }
-            auto color = _canvas.getPaletteColor(_cache.getBuffer()[x]);
-            int16_t rle;
-            if (_position == 0) {
-                _lastColor = color;
-                rle = -1;
-            }
-            else {
-                rle = 0;
-            }
-            while (_position++ < imageSize) {
-                if (color == _lastColor && rle != 0xff) {
-                    rle++;
-                    if (_position == imageSize) {
-                        break;
-                    }
-                }
-                else {
-                    _writeColor((uint8_t)rle, _lastColor);
-                    _lastColor = color;
-                    rle = 0;
-                    if (_position == imageSize) {
-                        break;
-                    }
-                    if (_buffer.length() > 32) {
-                        return _sendBufferedByte(peek);
-                    }
-                }
-
-                x = (_position % _header.width) + _header.x;
-                y = (_position / _header.width) + _header.y;
-
-                __DBG_BOUNDS_ACTION(__DBG_BOUNDS_sy(y, _canvas.height()), return -1);
-                __DBG_BOUNDS_ACTION(__DBG_BOUNDS_sx(x, _canvas.width()), return -1);
-                if (!_cache.isY(y)) {
-                    _cache.setY(y);
-                    _canvas._decodeLine(_cache);
-                }
-                color = _canvas.getPaletteColor(_cache.getBuffer()[x]);
-            }
-
-            _writeColor((uint8_t)rle, color);
+        _buffer.reserve(128);
+        int read;
+        if ((read = _fillBuffer(_buffer.begin(), _buffer.size())) <= 0) {
+            // error, stop reading
+            _buffer.clear();
             _position = DONE;
-            return _sendBufferedByte(peek);
+            return -1;
         }
+        _buffer.setLength(read);
     }
-    return -1;
+    return peek ? _buffer.peek() : _buffer.read();
 }
 
 void GFXCanvasRLEStream::_writeColor(uint8_t rle, uint16_t color)
@@ -160,13 +202,23 @@ void GFXCanvasRLEStream::_writeColor(uint8_t rle, uint16_t color)
     }
 }
 
-uint8_t GFXCanvasRLEStream::_sendBufferedByte(bool peek)
+uint8_t *GFXCanvasRLEStream::_writeColor(uint8_t *buffer, uint8_t rle, uint16_t color)
 {
-    auto byte = *_buffer.get();
-    if (!peek) {
-        _buffer.remove(0, 1);
+    if (_header.paletteCount) {
+        if (rle >= 0xf) {
+            *buffer++ = (color << 4) | 0xf;
+            *buffer++ = rle;
+        }
+        else {
+            *buffer++ = (color << 4) | rle;
+        }
     }
-    return byte;
+    else {
+        *buffer++ = rle;
+        *buffer++ = color;
+        *buffer++ = color >> 8;
+    }
+    return buffer;
 }
 
 #include <pop_optimize.h>

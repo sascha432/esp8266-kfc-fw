@@ -15,14 +15,19 @@
 
 #include "GFXCanvasLines.h"
 
-using namespace GFXCanvas;
+#if DEBUG_GFXCANVAS_MEM
+#include <debug_helper_enable_mem.h>
+#else
+#include <debug_helper_disable_mem.h>
+#endif
 
+using namespace GFXCanvas;
 
 Lines::Lines() : _height(0), _lines(nullptr)
 {
 }
 
-Lines::Lines(uHeightType height, const LineBuffer *lines) : _height(height), _lines(__DBG_new_array(height, LineBuffer))
+Lines::Lines(uHeightType height, const LineBuffer *lines) : _height(height), _lines(__LDBG_new_array(height, LineBuffer))
 {
     if (!_lines) {
         __DBG_panic("failed to allocate height=%u", _height);
@@ -35,7 +40,7 @@ Lines::Lines(uHeightType height, const LineBuffer *lines) : _height(height), _li
     }
 }
 
-Lines::Lines(uHeightType height) : _height(height), _lines(__DBG_new_array(height, LineBuffer))
+Lines::Lines(uHeightType height) : _height(height), _lines(__LDBG_new_array(height, LineBuffer))
 {
     if (!_lines) {
         __DBG_panic("failed to allocate height=%u", height);
@@ -45,17 +50,17 @@ Lines::Lines(uHeightType height) : _height(height), _lines(__DBG_new_array(heigh
 Lines::~Lines()
 {
     if (_lines) {
-        __DBG_delete_array(_lines);
+        __LDBG_delete_array(_lines);
     }
 }
 
 Lines &Lines::operator=(const Lines &lines)
 {
     if (_lines) {
-        __DBG_delete_array(_lines);
+        __LDBG_delete_array(_lines);
     }
     _height = lines.height();
-    _lines = __DBG_new_array(_height, LineBuffer);
+    _lines = __LDBG_new_array(_height, LineBuffer);
     for(uYType i = 0; i < _height; i++) {
         __DBG_BOUNDS_ACTION(__DBG_BOUNDS_sy(i, _height), break);
         _lines[i] = lines.getLine(i);

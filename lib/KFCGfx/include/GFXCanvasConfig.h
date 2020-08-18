@@ -12,7 +12,7 @@
 #endif
 
 #ifndef DEBUG_GFXCANVAS_MEM
-#define DEBUG_GFXCANVAS_MEM                         1
+#define DEBUG_GFXCANVAS_MEM                         0
 #endif
 
 #ifndef DEBUG_GFXCANVAS_BOUNDS
@@ -34,7 +34,7 @@
 
 // enable for debugging only
 #ifndef DEBUG_GFXCANVASCOMPRESSED_BOUNDS_CHECK
-#define DEBUG_GFXCANVASCOMPRESSED_BOUNDS_CHECK      1
+#define DEBUG_GFXCANVASCOMPRESSED_BOUNDS_CHECK      DEBUG_GFXCANVAS_BOUNDS
 #endif
 
 #include <push_pack.h>

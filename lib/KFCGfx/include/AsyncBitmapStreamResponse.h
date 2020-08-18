@@ -11,13 +11,18 @@
 
 class AsyncBitmapStreamResponse : public AsyncAbstractResponse {
 public:
-    AsyncBitmapStreamResponse(GFXCanvasCompressed& canvas);
+    using Callback = std::function<void(AsyncBitmapStreamResponse *stream)>;
+
+public:
+    // callback is invaoked in the dtor
+    AsyncBitmapStreamResponse(GFXCanvasCompressed& canvas, Callback callback = nullptr);
     virtual ~AsyncBitmapStreamResponse();
     bool _sourceValid() const;
     virtual size_t _fillBuffer(uint8_t* buf, size_t maxLen) override;
 
 private:
     GFXCanvasBitmapStream _stream;
+    Callback _callback;
 };
 
 // use GFXCanvasCompressed::clone() to create the object

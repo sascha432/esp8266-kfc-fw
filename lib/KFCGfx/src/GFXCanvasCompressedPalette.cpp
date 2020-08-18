@@ -5,6 +5,7 @@
 
 #include <Arduino_compat.h>
 #include "GFXCanvasConfig.h"
+#include "GFXCanvasCompressedPalette.h"
 
 #include <push_optimize.h>
 #if DEBUG_GFXCANVAS
@@ -14,7 +15,11 @@
 #pragma GCC optimize ("O3")
 #endif
 
-#include "GFXCanvasCompressedPalette.h"
+#if DEBUG_GFXCANVAS_MEM
+#include <debug_helper_enable_mem.h>
+#else
+#include <debug_helper_disable_mem.h>
+#endif
 
 using namespace GFXCanvas;
 
@@ -28,7 +33,7 @@ GFXCanvasCompressedPalette::GFXCanvasCompressedPalette(const GFXCanvasCompressed
 
 GFXCanvasCompressed* GFXCanvasCompressedPalette::clone()
 {
-    return __DBG_new(GFXCanvasCompressedPalette, *this);
+    return __LDBG_new(GFXCanvasCompressedPalette, *this);
 }
 
 void GFXCanvasCompressedPalette::fillScreen(uint16_t color)

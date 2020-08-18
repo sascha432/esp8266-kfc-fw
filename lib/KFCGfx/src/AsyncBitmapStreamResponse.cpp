@@ -4,13 +4,16 @@
 
 #include "AsyncBitmapStreamResponse.h"
 
-#if 0
-#include <debug_helper_enable.h>
-#else
+#include "GFXCanvasConfig.h"
+
 #include <debug_helper_disable.h>
+#if DEBUG_GFXCANVAS_MEM
+#include <debug_helper_enable_mem.h>
+#else
+#include <debug_helper_disable_mem.h>
 #endif
 
-AsyncBitmapStreamResponse::AsyncBitmapStreamResponse(GFXCanvasCompressed& canvas) : AsyncAbstractResponse(nullptr), _stream(canvas)
+AsyncBitmapStreamResponse::AsyncBitmapStreamResponse(GFXCanvasCompressed& canvas, Callback callback) : AsyncAbstractResponse(nullptr), _stream(canvas), _callback(callback)
 {
 	_code = 200;
 	_contentLength = _stream.size();
@@ -19,7 +22,10 @@ AsyncBitmapStreamResponse::AsyncBitmapStreamResponse(GFXCanvasCompressed& canvas
 
 AsyncBitmapStreamResponse::~AsyncBitmapStreamResponse()
 {
-    __DBG_delete_remove(this);
+    if (_callback) {
+        _callback(this);
+    }
+    __LDBG_delete_remove(this);
 }
 
 bool AsyncBitmapStreamResponse::_sourceValid() const
@@ -47,5 +53,5 @@ AsyncClonedBitmapStreamResponse::AsyncClonedBitmapStreamResponse(GFXCanvasCompre
 
 AsyncClonedBitmapStreamResponse::~AsyncClonedBitmapStreamResponse()
 {
-    __DBG_delete(_canvasPtr);
+    __LDBG_delete(_canvasPtr);
 }

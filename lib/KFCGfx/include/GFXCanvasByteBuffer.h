@@ -7,9 +7,16 @@
 #include <Arduino_compat.h>
 #include "GFXCanvasConfig.h"
 
+#include <debug_helper.h>
+#if DEBUG_GFXCANVAS_MEM
+#include <debug_helper_enable_mem.h>
+#else
+#include <debug_helper_disable_mem.h>
+#endif
+
 namespace GFXCanvas {
 
-    using ByteBufferBase = std::vector<uint8_t>;
+    using ByteBufferBase = std::vector<uint8_t, __LDBG_track_allocator<uint8_t>>;
 
     class ByteBuffer : public ByteBufferBase {
     public:
@@ -54,18 +61,31 @@ namespace GFXCanvas {
             return ByteBufferBase::size();
         }
 
-    // avoid mixing up length() and size()
+
     private:
+        // to avoid mixing up length() and size()
         size_t size() const {
             return capacity();
         }
 
+        // allocation block size
         inline void checkCapacity() {
             size_t required = (ByteBufferBase::size() + kExpandBufferSize) & ~(kExpandBufferSize - 1);
             if (required > ByteBufferBase::capacity()) {
                 reserve(required);
             }
         }
+
+    public:
+        // allocation shrink block size
+        void shrink_to_fit() {
+            size_t space = ByteBufferBase::capacity() - ByteBufferBase::size();
+            if (space > kExpandBufferSize) {
+                ByteBufferBase::reserve((ByteBufferBase::size() + 7) & ~7);
+            }
+        }
     };
 
 }
+
+#include <debug_helper_disable_mem.h>

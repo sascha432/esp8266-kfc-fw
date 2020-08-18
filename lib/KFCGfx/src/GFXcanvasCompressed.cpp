@@ -2,17 +2,8 @@
 * Author: sascha_lammers@gmx.de
 */
 
-
 #include <Arduino_compat.h>
 #include "GFXCanvasConfig.h"
-
-#include <push_optimize.h>
-#if DEBUG_GFXCANVAS
-#include <debug_helper_enable.h>
-#else
-#include <debug_helper_disable.h>
-#pragma GCC optimize ("O3")
-#endif
 
 #include "GFXCanvas.h"
 #include "GFXCanvasCompressed.h"
@@ -22,6 +13,20 @@
 extern "C" {
     #include "user_interface.h"
 }
+#endif
+
+#include <push_optimize.h>
+#if DEBUG_GFXCANVAS
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
+#pragma GCC optimize ("O3")
+#endif
+
+#if DEBUG_GFXCANVAS_MEM
+#include <debug_helper_enable_mem.h>
+#else
+#include <debug_helper_disable_mem.h>
 #endif
 
 using namespace GFXCanvas;
@@ -40,7 +45,7 @@ GFXCanvasCompressed::~GFXCanvasCompressed()
 
 GFXCanvasCompressed *GFXCanvasCompressed::clone()
 {
-    return __DBG_new(GFXCanvasCompressed, width(), _lines);
+    return __LDBG_new(GFXCanvasCompressed, width(), _lines);
 }
 
 void GFXCanvasCompressed::setRotation(uint8_t r)
@@ -325,9 +330,7 @@ void GFXCanvasCompressed::_encodeLine(Cache &cache)
 //     free(temp);
 // #endif
 
-#if GFXCANVAS_MAX_CACHED_LINES > 1
     buffer.shrink_to_fit();
-#endif
     cache.setWriteFlag(false);
 
     __DBG_STATS(

@@ -535,14 +535,18 @@ var webUIComponent = {
             if (pos % 2) { // word alignment
                 pos++;
             }
-            var tmp = Uint16Array(data, pos, 5);
-            [x, y, width, height, paletteCount] = tmp;
+            var tmp = new Uint16Array(data, pos, 5);
             pos += tmp.byteLength;
+            x = tmp[0];
+            y = tmp[1];
+            width = tmp[2];
+            height = tmp[3];
+            paletteCount = tmp[4];
             if (paletteCount) {
                 var palettergb565 = new Uint16Array(data, pos, paletteCount);
                 pos += palettergb565.byteLength;
                 for (var i = 0; i < palettergb565.length; i++) {
-                    palette.push(_____rgb565_to_888(palettergb565[i]));
+                    palette.push(this._____rgb565_to_888(palettergb565[i]));
                 }
             }
             image = ctx.createImageData(width, height);
@@ -570,6 +574,7 @@ var webUIComponent = {
                 while(pos < data.byteLength) {
                     var tmp = new Uint8Array(data, pos++, 1)[0];
                     var index = (tmp >> 4); // palette index
+					tmp &= 0xf;
                     if (tmp == 0xe) { // 8 bit data marker
                         rle = new Uint8Array(data, pos++, 1)[0] + 0xe;
                     } else if (tmp == 0xf) { // 15 bit data marker, low-hi-byte
@@ -591,7 +596,7 @@ var webUIComponent = {
                     }
                     var tmp = new Uint8Array(data, pos, 2); // 16bit color rgb565
                     pos += tmp.byteLength;
-                    copy_rle_color(_____rgb565_to_888((tmp[1] << 8) | tmp[0]));
+                    copy_rle_color(this._____rgb565_to_888((tmp[1] << 8) | tmp[0]));
                 }
             }
 

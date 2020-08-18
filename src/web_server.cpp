@@ -28,7 +28,7 @@
 #include "WebUIAlerts.h"
 #include "kfc_fw_config.h"
 #if STK500V1
-#include "./plugins/stk500v1/STK500v1Programmer.h"
+#include "../src/plugins/stk500v1/STK500v1Programmer.h"
 #endif
 #include "./plugins/mdns/mdns_sd.h"
 #if IOT_REMOTE_CONTROL
@@ -40,6 +40,7 @@
 #else
 #include <debug_helper_disable.h>
 #endif
+#include <debug_helper_disable_mem.h>
 
 #define DEBUG_WEB_SERVER_SID                DEBUG_WEB_SERVER
 
@@ -166,6 +167,9 @@ const __FlashStringHelper *getContentType(const String &path)
 static void executeDelayed(AsyncWebServerRequest *request, std::function<void()> callback)
 {
     request->onDisconnect([callback]() {
+#if IOT_WEATHER_STATION
+        __weatherStationAttachCanvas();
+#endif
         Scheduler.addTimer(2000, false, [callback](EventScheduler::TimerPtr timer) {
             callback();
         });
@@ -729,6 +733,10 @@ bool WebServerPlugin::_sendFile(const FileMapping &mapping, const String &formNa
                 webTemplate = plugin->getWebTemplate(formName);
             }
             else if (nullptr != (plugin = PluginComponent::getForm(formName))) {
+#if IOT_WEATHER_STATION
+                __weatherStationDetachCanvas(true);
+                request->onDisconnect(__weatherStationAttachCanvas); // unlock on disconnect
+#endif
                 Form *form = new SettingsForm(nullptr);
                 plugin->createConfigureForm(PluginComponent::FormCallbackType::CREATE_GET, formName, *form, request);
                 webTemplate = new ConfigTemplate(form);
@@ -877,6 +885,9 @@ bool WebServerPlugin::_handleFileRead(String path, bool client_accepts_gzip, Asy
             // auto name = path.substring(1, path.length() - 5);
             auto plugin = PluginComponent::getForm(formName);
             if (plugin) {
+#if IOT_WEATHER_STATION
+                __weatherStationDetachCanvas(true);
+#endif
                 Form *form = new SettingsForm(request);
                 plugin->createConfigureForm(PluginComponent::FormCallbackType::CREATE_POST, formName, *form, request);
                 webTemplate = new ConfigTemplate(form);
@@ -892,6 +903,9 @@ bool WebServerPlugin::_handleFileRead(String path, bool client_accepts_gzip, Asy
                 else {
                     plugin->createConfigureForm(PluginComponent::FormCallbackType::DISCARD, formName, *form, request);
                     config.discard();
+#if IOT_WEATHER_STATION
+                request->onDisconnect(__weatherStationAttachCanvas); // unlock on disconnect
+#endif
                 }
             }
             else { // no plugin found
@@ -1106,11 +1120,11 @@ WebServerPlugin::AuthType WebServerPlugin::isAuthenticated(AsyncWebServerRequest
             const auto len = value.length() - 7;
             __SID(debug_printf_P(PSTR("token=%s device_token=%s len=%u\n"), token, System::Device::getToken(), len));
             if (len >= System::Device::kTokenMinSize && !strcmp(token, System::Device::getToken())) {
-                __SID(debug_println(F("valid BEARER token")));
+                __SID(__DBG_print("valid BEARER token"));
                 return AuthType::BEARER;
             }
         }
-        __SID(debug_println(F("Authorization header failed")));
+        __SID(__DBG_print("Authorization header failed"));
     }
     else {
         auto isRequestSID = request->hasArg(FSPGM(SID));
@@ -1123,10 +1137,10 @@ WebServerPlugin::AuthType WebServerPlugin::isAuthenticated(AsyncWebServerRequest
                 __SID(debug_printf_P(PSTR("valid SID=%s type=%s\n"), SID.c_str(), isRequestSID ? request->methodToString() : FSPGM(cookie, "cookie")));
                 return isRequestSID ? AuthType::SID : AuthType::SID_COOKIE;
             }
-            __SID(debug_printf_P(PSTR("invalid SID=%s\n"), SID.c_str()));
+            __SID(__DBG_printf("invalid SID=%s", SID.c_str()));
         }
         else {
-            __SID(debug_println(F("no SID")));
+            __SID(__DBG_print("no SID"));
         }
     }
     return AuthType::NONE;
@@ -1214,28 +1228,14 @@ void WebServerPlugin::RestRequest::writeBody(uint8_t *data, size_t len)
 
 bool WebServerPlugin::RestRequest::isUriMatch(const __FlashStringHelper *uri) const
 {
-    auto handlerUri = reinterpret_cast<PGM_P>(_handler.getURL());
-    auto matchUri = reinterpret_cast<PGM_P>(uri);
-    if (matchUri == nullptr || pgm_read_byte(matchUri) == 0) {
-        return strcmp_P(_request->url().c_str(), handlerUri) == 0;
-    }
-
-    // check if the length is ok
-    const auto handlerUriLen = strlen_P(handlerUri);
-    auto &requestUrl = _request->url();
-    if (handlerUriLen > requestUrl.length()) {
+    if (!uri) {
         return false;
     }
+    String baseUrl = _handler.getURL();
+    append_slash(baseUrl);
+    baseUrl += uri;
 
-    // pointer to the end of the base uri
-    auto ptr = _request->url().c_str() + handlerUriLen;
-    // check if the handler has a trailing slash
-    if (pgm_read_byte(&handlerUri[handlerUriLen - 1]) != '/') {
-        if (*ptr++ != '/') { // check if the url has a slash as well
-            return false;
-        }
-    }
-    return strcmp_P(ptr, matchUri) == 0;
+    return _request->url().equals(baseUrl);
 }
 
 

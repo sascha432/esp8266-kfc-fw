@@ -11,10 +11,10 @@
 
 class AsyncBitmapStreamResponse : public AsyncAbstractResponse {
 public:
-    using Callback = std::function<void(AsyncBitmapStreamResponse *stream)>;
+    using Callback = std::function<void()>;
 
 public:
-    // callback is invaoked in the dtor
+    // callback is invoked in the destructor
     AsyncBitmapStreamResponse(GFXCanvasCompressed& canvas, Callback callback = nullptr);
     virtual ~AsyncBitmapStreamResponse();
     bool _sourceValid() const;

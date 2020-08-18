@@ -75,13 +75,13 @@ bool WeatherStationPlugin::atModeHandler(AtModeArgs &args)
             else if (args.equalsIgnoreCase(0, F("attach"))) {
                 int mem = ESP.getFreeHeap();
                 if (_canvasLocked > 0) {
-                    attachCanvas();
+                    _attachCanvas();
                 }
                 args.printf_P(PSTR("canvasLocked=%d %s heap=%d"), _canvasLocked, _canvasLocked > 0 ? PSTR("attached") : PSTR("attaching failed"), mem - (int)ESP.getFreeHeap());
             }
             else if (args.equalsIgnoreCase(0, F("detach"))) {
                 int mem = ESP.getFreeHeap();
-                detachCanvas();
+                _detachCanvas(true);
                 args.printf_P(PSTR("canvasLocked=%d deattached heap=%d"), _canvasLocked, mem - (int)ESP.getFreeHeap());
             }
 #if WSDRAW_STATS

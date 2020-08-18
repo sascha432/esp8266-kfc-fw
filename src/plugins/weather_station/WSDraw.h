@@ -165,6 +165,7 @@ using WeatherStationCanvas = GFXCanvasCompressedPalette;
 
 using Adafruit_ST7735_Ex = GFXExtension<Adafruit_ST7735>;
 
+
 class WSDraw {
 public:
     WSDraw();
@@ -172,16 +173,15 @@ public:
 
 public:
     // reattach canvas object
-    bool attachCanvas();
+    bool _attachCanvas();
     // detach canvas object and free memory
     // calling it multiple times will lock the object until attachCanvas has been called the same amount of times
-    bool detachCanvas(bool release = true);
+    bool _detachCanvas(bool release = true);
 
     // check if canvas is attached
     bool isCanvasAttached() const;
-
     WeatherStationCanvas *getCanvasAndLock();
-    void releaseLockedCanvas();
+    void releaseCanvasLock();
 
     // can be called while the canvas is detached
     // without a canvas, it is using the TFT directly and clear is forced true
@@ -196,21 +196,6 @@ public:
             //     _displayMessage(title, message, ST77XX_YELLOW, ST77XX_WHITE, timeout);
             // });
         }
-    }
-
-    void callOnce(LoopFunctions::Callback callback) {
-        if (!_attachedCallback) {
-            _attachedCallback = callback;
-        }
-        else {
-            auto prevCallback = _attachedCallback;
-            _attachedCallback = [prevCallback, callback]() {
-                __DBG_printf("callbacks %p %p", &prevCallback, &callback);
-                prevCallback();
-                callback();
-            };
-        }
-
     }
 
 public:
@@ -240,8 +225,7 @@ public:
 protected:
     Adafruit_ST7735_Ex _tft;
     WeatherStationCanvas *_canvas;
-    volatile uint32_t _canvasLocked;
-    LoopFunctions::Callback _attachedCallback;
+    uint16_t _canvasLocked;
 
 public:
     void _drawTime();

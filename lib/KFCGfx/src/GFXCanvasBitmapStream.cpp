@@ -83,7 +83,7 @@ void GFXCanvasBitmapStream::_createHeader()
 {
     _available = 2UL * _width * _height + sizeof(_header.h);
 
-    memset(&_header, 0, sizeof(_header));
+    _header = {};
     _header.h.bfh.bfType = 'B' | ('M' << 8);
     _header.h.bfh.bfSize = _available;
     _header.h.bfh.bfReserved2 = sizeof(_header.h);

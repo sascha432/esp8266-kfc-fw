@@ -69,6 +69,17 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     0                   // __reserved
 );
 
+void __weatherStationDetachCanvas(bool release)
+{
+    plugin._detachCanvas(release);
+}
+
+void __weatherStationAttachCanvas()
+{
+    plugin._attachCanvas();
+}
+
+
 WeatherStationPlugin::WeatherStationPlugin() :
     PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(WeatherStationPlugin)),
     WSDraw(),
@@ -109,29 +120,28 @@ void WeatherStationPlugin::_sendScreenCaptureBMP(AsyncWebServerRequest *request)
 
     if (WebServerPlugin::getInstance().isAuthenticated(request) == true) {
         auto canvas = plugin.getCanvasAndLock();
-        if (!canvas) {
-            request->send(503);
-        }
-        else {
+        if (canvas) {
             SpeedBooster speedBooster;
 #if 1
-            auto response = __DBG_new(AsyncBitmapStreamResponse, *canvas, [](AsyncBitmapStreamResponse *) {
-                plugin.releaseLockedCanvas();
-            });
+            auto response = __DBG_new(AsyncBitmapStreamResponse, *canvas, __weatherStationAttachCanvas);
 #else
             __LDBG_IF(
                 auto mem = ESP.getFreeHeap()
                 );
-            auto response = __DBG_new(AsyncClonedBitmapStreamResponse, plugin.getCanvas()->clone());
+            auto response = __DBG_new(AsyncClonedBitmapStreamResponse, lock.getCanvas().clone());
             __LDBG_IF(
                 auto usage = mem - ESP.getFreeHeap();
                 __DBG_printf("AsyncClonedBitmapStreamResponse memory usage %u", usage);
             );
+            plugin.releaseCanvasLock();
 #endif
             HttpHeaders httpHeaders;
             httpHeaders.addNoCache();
             httpHeaders.setAsyncWebServerResponseHeaders(response);
             request->send(response);
+        }
+        else {
+            request->send(503);
         }
     }
     else {
@@ -375,7 +385,9 @@ void WeatherStationPlugin::shutdown()
     _touchpad.end();
 #endif
     _fadeTimer.remove();
-    detachCanvas();
+    _canvasLocked++;
+    __DBG_delete(_canvas);
+    _canvas = nullptr;
     LoopFunctions::remove(loop);
     // SerialHandler::getInstance().removeHandler(serialHandler);
 
@@ -730,33 +742,25 @@ void WeatherStationPlugin::canvasUpdatedEvent(int16_t x, int16_t y, int16_t w, i
         }
 
         // takes 42ms for 128x160 using GFXCanvasCompressedPalette
-        auto start = micros();
+        // auto start = micros();
 
         auto canvas = getCanvasAndLock();
         if (canvas) {
             GFXCanvasRLEStream stream(*canvas, x, y, w, h);
-#if 1
             char buf[128];
             size_t read;
             while((read = stream.readBytes(buf, sizeof(buf))) != 0) {
                 buffer.write(buf, read);
             }
-#else
-            int read;
-            while((read = stream.read()) != -1) {
-                buffer.write(read);
-            }
-#endif
-
-            releaseLockedCanvas();
+            releaseCanvasLock();
         }
         else {
-            __DBG_printf("could not lock canvas=%p", canvas);
+            __DBG_printf("could not lock canvas");
             return;
         }
 
-        auto dur = micros() - start;
-        __DBG_printf("dur %u us", dur);
+        // auto dur = micros() - start;
+        // __DBG_printf("dur %u us", dur);
         // if (!canvas) {
         //     __DBG_printf("canvas was removed during update");
         //     return;

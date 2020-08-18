@@ -237,14 +237,14 @@ void GFXCanvasCompressed::_RLEencode(ColorType *data, ByteBuffer &buffer)
         }
         else {
             __DBG_BOUNDS(count += rle);
-            buffer.push(rle, lastColor);
+            buffer.push_bw(rle, lastColor);
             lastColor = color;
             rle = 1;
         }
     }
     if (begin == end) {
         __DBG_BOUNDS(count += rle);
-        buffer.push(rle, lastColor);
+        buffer.push_bw(rle, lastColor);
     }
     else {
         __DBG_printf("begin=%p != end=%p rle=%u ???", begin, end, rle); //TODO remove
@@ -315,20 +315,6 @@ void GFXCanvasCompressed::_encodeLine(Cache &cache)
     auto &buffer = _lines.getBuffer(cache.getY());
     buffer.clear();
     _RLEencode(cache.getBuffer(), buffer);
-
-// #if 0
-//     uint16_t *temp2 = (uint16_t *)calloc(_width * 2, 2);
-//     memcpy(temp2, cache.getBuffer(), _width * 2);
-//     uint16_t *temp = (uint16_t *)calloc(_width*2, 2);
-//     _RLEdecode(buffer, temp);
-//     for (int i = 0; i < _width; i++) {
-//         if (temp[i] != temp2[i]) {
-//             __debugbreak();
-//         }
-//     }
-//     free(temp2);
-//     free(temp);
-// #endif
 
     buffer.shrink_to_fit();
     cache.setWriteFlag(false);

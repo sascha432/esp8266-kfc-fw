@@ -23,7 +23,7 @@ AsyncBitmapStreamResponse::AsyncBitmapStreamResponse(GFXCanvasCompressed& canvas
 AsyncBitmapStreamResponse::~AsyncBitmapStreamResponse()
 {
     if (_callback) {
-        _callback(this);
+        _callback();
     }
     __LDBG_delete_remove(this);
 }

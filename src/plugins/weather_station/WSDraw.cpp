@@ -77,7 +77,6 @@ const unsigned char icon_house[] PROGMEM = {
             __DBG_panic("canvas not attached"); \
         }
 
-
 WSDraw::WSDraw() :
     _tft(TFT_PIN_CS, TFT_PIN_DC, TFT_PIN_RST),
     // _canvas(_tft.width(), _tft.height()),
@@ -117,71 +116,56 @@ WSDraw::~WSDraw()
     }
 }
 
-bool WSDraw::attachCanvas()
+bool WSDraw::_attachCanvas()
 {
-    bool attached;
-    noInterrupts();
-    attached = (--_canvasLocked == 0);
-    interrupts();
-    __DBG_printf("locked=%d attached=%u canvas=%p", _canvasLocked, attached, _canvas);
-    if (attached) {
+    if (_canvasLocked > 0) {
+        _canvasLocked--;
+    }
+    // __DBG_printf("locked=%u canvas=%p", _canvasLocked, _canvas);
+    if (_canvasLocked == 0) {
         if (!_canvas) {
             _canvas = __DBG_new(WeatherStationCanvas, _tft.width(), _tft.height());
-            __DBG_printf("locked=%d, new canvas=%p, invoking redraw", _canvasLocked, _canvas);
+            __DBG_printf("new canvas=%p invoking redraw", _canvas);
+        }
+        else {
+            __DBG_printf("canvas=%p invoking redraw", _canvas);
         }
         redraw();
     }
-    return attached;
+    return (_canvasLocked == 0);
 }
 
-bool WSDraw::detachCanvas(bool release)
+bool WSDraw::_detachCanvas(bool release)
 {
-    bool dettached = false;
-    noInterrupts();
-    dettached = (_canvasLocked++ == 0);
-    interrupts();
-    __DBG_printf("locked=%d dettached=%u canvas=%p", _canvasLocked, dettached, _canvas);
-    if (dettached && release && _canvas) {
+    if (_canvasLocked++ == 0 && release) {
+        __DBG_printf("canvas released=%p", _canvas);
         __DBG_delete(_canvas);
         _canvas = nullptr;
-        __DBG_printf("canvas released=%p", _canvas);
     }
-    return dettached;
+    __DBG_printf("locked=%d release=%u canvas=%p", _canvasLocked, release, _canvas);
+    return (_canvasLocked == 1);
 }
 
 bool WSDraw::isCanvasAttached() const
 {
-    bool locked;
-    noInterrupts();
-    locked = (_canvasLocked != 0);
-    interrupts();
-    return (_canvas != nullptr) && !locked;
+    return (_canvas != nullptr) && _canvasLocked == 0;
 }
 
 WeatherStationCanvas *WSDraw::getCanvasAndLock()
 {
-    bool locked = true;
-    noInterrupts();
-    if (_canvasLocked == 0) {
-        _canvasLocked++;
-        locked = false;
-    }
-    interrupts();
-    if (locked) {
-        return nullptr;
-    }
-    return _canvas;
+    return _canvasLocked++ == 0 ? _canvas : nullptr;
 }
 
-void WSDraw::releaseLockedCanvas()
+void WSDraw::releaseCanvasLock()
 {
-    noInterrupts();
     if (_canvasLocked) {
         _canvasLocked--;
     }
-    interrupts();
-    redraw();
+    if (_canvasLocked == 0) {
+
+    }
 }
+
 
 void WSDraw::drawText(const String &text, const GFXfont *font, uint16_t color, bool clear)
 {

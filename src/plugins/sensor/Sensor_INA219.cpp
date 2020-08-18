@@ -28,12 +28,12 @@ Sensor_INA219::Sensor_INA219(const JsonString &name, TwoWire &wire, uint8_t addr
     setUpdateRate(IN219_WEBUI_UPDATE_RATE);
     LoopFunctions::add([this]() {
         this->_loop();
-    }, reinterpret_cast<LoopFunctions::CallbackPtr_t>(this));
+    }, this);
 }
 
 Sensor_INA219::~Sensor_INA219()
 {
-    LoopFunctions::remove(reinterpret_cast<LoopFunctions::CallbackPtr_t>(this));
+    LoopFunctions::remove(this);
     UNREGISTER_SENSOR_CLIENT(this);
 }
 

@@ -21,10 +21,6 @@
 #include <debug_helper_disable_mem.h>
 #endif
 
-#if SAVE_CRASH_HAVE_ALLOC_POINTERS
-#include <EspSaveCrash.h>
-#endif
-
 using namespace GFXCanvas;
 
 Lines::Lines() : _height(0), _lines(nullptr)
@@ -36,15 +32,13 @@ Lines::Lines(uHeightType height, const LineBuffer *lines) : _height(height), _li
     if (!_lines) {
         __DBG_panic("failed to allocate height=%u", _height);
     }
-#if SAVE_CRASH_HAVE_ALLOC_POINTERS
-    EspSaveCrash::addPointer(_lines);
-#endif
-    auto begin = lines;
-    auto end = &lines[_height];
-    auto dst = _lines;
-    while(begin < end) {
-        *dst++ = *begin++;
-    }
+    std::copy(lines, &lines[_height], _lines);
+    // auto begin = lines;
+    // auto end = &lines[_height];
+    // auto dst = _lines;
+    // while(begin < end) {
+    //     *dst++ = *begin++;
+    // }
 }
 
 Lines::Lines(uHeightType height) : _height(height), _lines(__LDBG_new_array(height, LineBuffer))
@@ -52,17 +46,11 @@ Lines::Lines(uHeightType height) : _height(height), _lines(__LDBG_new_array(heig
     if (!_lines) {
         __DBG_panic("failed to allocate height=%u", height);
     }
-#if SAVE_CRASH_HAVE_ALLOC_POINTERS
-    EspSaveCrash::addPointer(_lines);
-#endif
 }
 
 Lines::~Lines()
 {
     if (_lines) {
-#if SAVE_CRASH_HAVE_ALLOC_POINTERS
-        EspSaveCrash::removePointer(_lines);
-#endif
         __LDBG_delete_array(_lines);
     }
 }
@@ -70,9 +58,6 @@ Lines::~Lines()
 Lines &Lines::operator=(const Lines &lines)
 {
     if (_lines) {
-#if SAVE_CRASH_HAVE_ALLOC_POINTERS
-        EspSaveCrash::removePointer(_lines);
-#endif
         __LDBG_delete_array(_lines);
     }
     _height = lines.height();

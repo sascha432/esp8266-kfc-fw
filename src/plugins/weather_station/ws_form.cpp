@@ -17,14 +17,7 @@ using KFCConfigurationClasses::Plugins;
 
 void WeatherStationPlugin::createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request)
 {
-    if (type == FormCallbackType::CREATE_GET || type == FormCallbackType::CREATE_POST) {
-        detachCanvas();
-
-        request->onDisconnect([this]() {
-            attachCanvas();
-        });
-    }
-    else if (!isCreateFormCallbackType(type)) {
+    if (!isCreateFormCallbackType(type)) {
         return;
     }
 

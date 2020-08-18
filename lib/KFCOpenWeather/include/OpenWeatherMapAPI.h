@@ -23,9 +23,7 @@ public:
 
     class Forecast_t {
     public:
-        Forecast_t() {
-            memset(&val, 0, sizeof(val));
-        }
+        Forecast_t() : val({}) {}
 
         struct {
             time_t time;
@@ -41,7 +39,8 @@ public:
     class WeatherInfo {
     public:
 
-        WeatherInfo();
+        WeatherInfo() : val({}) {}
+
         bool hasData() const;
         time_t getSunRiseAsGMT() const;
         time_t getSunSetAsGMT() const;
@@ -69,7 +68,7 @@ public:
 
     class WeatherForecast {
     public:
-        WeatherForecast();
+        WeatherForecast() : val({}) {};
 
     public:
         bool hasData() const;

@@ -113,12 +113,10 @@ private:
 
     void _fadeBacklight(uint16_t fromLevel, uint16_t toLevel, int8_t step = 16);
     void _fadeStatusLED();
-    void _broadcastCanvas(int16_t x, int16_t y, int16_t w, int16_t h);
 
+    virtual void canvasUpdatedEvent(int16_t x, int16_t y, int16_t w, int16_t h) override;
     // safely redraw in next main loop
-    virtual void _redraw() override {
-        _redrawFlag = true;
-    }
+    virtual void redraw() override;
 
 private:
     // uint32_t _updateTimer;

@@ -18,6 +18,8 @@
 #include "fonts/fonts.h"
 #include "moon_phase.h"
 
+#define WSDRAW_STATS            0
+
 #ifndef TFT_PIN_CS
 #define TFT_PIN_CS              -1
 #endif
@@ -160,20 +162,96 @@
 
 using WeatherStationCanvas = GFXCanvasCompressedPalette;
 
+using Adafruit_ST7735_Ex = GFXExtension<Adafruit_ST7735>;
+
 class WSDraw {
 public:
     WSDraw();
     virtual ~WSDraw();
 
+public:
+    // reattach canvas object
+    bool attachCanvas();
+    // detach canvas object and free memory
+    // calling it multiple times will lock the object until attachCanvas has been called the same amount of times
+    bool detachCanvas(bool release = true);
+
+    // check if canvas is attached
+    bool isCanvasAttached() const;
+
+    WeatherStationCanvas *getCanvasAndLock();
+    void releaseLockedCanvas();
+
+    // can be called while the canvas is detached
+    // without a canvas, it is using the TFT directly and clear is forced true
+    void drawText(const String &text, const GFXfont *font, uint16_t color, bool clear = false);
+
+    void displayMessage(const String &title, const String &message, uint16_t titleColor, uint16_t messageColor, uint32_t timeout) {
+        if (isCanvasAttached()) {
+            _displayMessage(title, message, ST77XX_YELLOW, ST77XX_WHITE, timeout);
+        }
+        else {
+            // this->callOnce([&]() {
+            //     _displayMessage(title, message, ST77XX_YELLOW, ST77XX_WHITE, timeout);
+            // });
+        }
+    }
+
+    void callOnce(LoopFunctions::Callback callback) {
+        if (!_attachedCallback) {
+            _attachedCallback = callback;
+        }
+        else {
+            auto prevCallback = _attachedCallback;
+            _attachedCallback = [prevCallback, callback]() {
+                __DBG_printf("callbacks %p %p", &prevCallback, &callback);
+                prevCallback();
+                callback();
+            };
+        }
+
+    }
+
+public:
+    // called for partial or full updates of the screen
+    virtual void canvasUpdatedEvent(int16_t x, int16_t y, int16_t w, int16_t h);
+
+    // call to redraw the entire screen
+    virtual void redraw();
+
+    Adafruit_ST7735_Ex& getST7735();
+    WeatherStationCanvas *getCanvas();
+    void setScreen(uint8_t screen);
+    uint8_t getScreen() const;
+
+public:
+    void _initScreen() {
+        if (isCanvasAttached()) {
+            _draw();
+        }
+    }
+
+    void setText(const String &text, const GFXfont *textFont) {
+        _text = text;
+        _textFont = textFont;
+    }
+
+protected:
+    Adafruit_ST7735_Ex _tft;
+    WeatherStationCanvas *_canvas;
+    volatile uint32_t _canvasLocked;
+    LoopFunctions::Callback _attachedCallback;
+
+public:
     void _drawTime();
     void _updateTime();
 
     void _drawWeather();
-    void _drawWeather(GFXCanvasCompressed &canvas, int16_t top);
-    void _drawWeatherIndoor(GFXCanvasCompressed &canvas, int16_t top);
+    void _drawWeather(GFXCanvasCompressed *canvas, int16_t top);
+    void _drawWeatherIndoor(GFXCanvasCompressed *canvas, int16_t top);
     void _updateWeatherIndoor();
     void _drawIndoor();
-    void _drawIndoor(GFXCanvasCompressed &canvas, int16_t top);
+    void _drawIndoor(GFXCanvasCompressed *canvas, int16_t top);
     void _drawSunAndMoon();
 
     void _drawScreenMain();
@@ -193,25 +271,6 @@ public:
     void _draw();
 
     void _displayScreen(int16_t x, int16_t y, int16_t w, int16_t h);
-    virtual void _broadcastCanvas(int16_t x, int16_t y, int16_t w, int16_t h);
-    virtual void _redraw() {
-        _draw();
-    }
-
-    Adafruit_ST7735& getST7735() {
-        return _tft;
-    }
-
-    GFXCanvasCompressed &getCanvas() {
-        return _canvas;
-    }
-
-    void setScreen(uint8_t screen) {
-        _currentScreen = screen;
-    }
-    uint8_t getScreen() const {
-        return _currentScreen;
-    }
 
 public:
     class ScrollCanvas {
@@ -249,11 +308,12 @@ public:
         EventScheduler::Timer _timer;
     };
 
+#if WSDRAW_STATS
 private:
     void _statsBegin();
     void _statsEnd(const __FlashStringHelper *name);
     MicrosTimer _statsTimer;
-
+#endif
 public:
     typedef enum {
         MAIN = 0,
@@ -280,16 +340,9 @@ public:
 protected:
     using WeatherStationConfigType = KFCConfigurationClasses::Plugins::WeatherStation::ConfigStructType;
 
-    void setText(const String &text, const GFXfont *textFont) {
-        _text = text;
-        _textFont = textFont;
-    }
-
     String _getTemperature(float value, bool kelvin = false/*celsius = true*/);
     virtual void _getIndoorValues(float *data);
 
-    Adafruit_ST7735 _tft;
-    WeatherStationCanvas &_canvas;
     ScrollCanvas *_scrollCanvas;
     uint8_t _scrollPosition;
     OpenWeatherMapAPI _weatherApi;
@@ -307,8 +360,9 @@ protected:
 
     EventScheduler::Timer _displayMessageTimer;
 
+#if WSDRAW_STATS
     bool _debug_stats;
-
     using StatsBuffer = FixedCircularBuffer<float, 10>;
     std::map<String, StatsBuffer> _stats;
+#endif
 };

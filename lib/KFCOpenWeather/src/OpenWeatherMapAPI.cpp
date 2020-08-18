@@ -100,10 +100,6 @@ OpenWeatherMapAPI::WeatherForecast &OpenWeatherMapAPI::getWeatherForecast()
     return _forecast;
 }
 
-OpenWeatherMapAPI::WeatherInfo::WeatherInfo() : val()
-{
-}
-
 bool OpenWeatherMapAPI::WeatherInfo::hasData() const
 {
     // _debug_printf_P(PSTR("location=%s weather=%u\n"), location.c_str(), weather.size());
@@ -156,10 +152,6 @@ void OpenWeatherMapAPI::WeatherInfo::dump(Print &output) const
     for (auto &rain : rain_mm) {
         output.printf_P(PSTR("Rain: %s - %.2f mm\n"), rain.first.c_str(), rain.second);
     }
-}
-
-OpenWeatherMapAPI::WeatherForecast::WeatherForecast() : val()
-{
 }
 
 bool OpenWeatherMapAPI::WeatherForecast::hasData() const

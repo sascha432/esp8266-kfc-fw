@@ -144,6 +144,7 @@ private:
 
     uint32_t _toggleScreenTimer;
     bool _redrawFlag;
+    uint32_t _lockCanvasUpdateEvents;
 
 #if IOT_ALARM_PLUGIN_ENABLED
 public:

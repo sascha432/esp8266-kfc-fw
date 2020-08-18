@@ -78,7 +78,8 @@ WeatherStationPlugin::WeatherStationPlugin() :
     _pollTimer(0),
     _httpClient(nullptr),
     _toggleScreenTimer(0),
-    _redrawFlag(false)
+    _redrawFlag(false),
+    _lockCanvasUpdateEvents(0)
 {
 #if DEBUG_IOT_WEATHER_STATION
     _debugDisplayCanvasBorder = false;
@@ -88,7 +89,7 @@ WeatherStationPlugin::WeatherStationPlugin() :
     _touchpadDebug = false;
 #endif
 
-#if SAVE_CRASH_HAVE_CALLBACKS 
+#if SAVE_CRASH_HAVE_CALLBACKS
     auto nextCallback = EspSaveCrash::getCallback();
     EspSaveCrash::setCallback([this, nextCallback](const EspSaveCrash::ResetInfo_t &info) {
         if (_canvas) {
@@ -422,7 +423,7 @@ void WeatherStationPlugin::createWebUI(WebUI &webUI)
     row = &webUI.addRow();
     row->addSlider(F("bl_brightness"), F("Backlight Brightness"), 0, 1023);
 
-    if (_config.show_webui) {
+    if (_config.show_webui && isCanvasAttached()) {
         row = &webUI.addRow();
         row->addScreen(FSPGM(weather_station_webui_id, "ws_tft"), _canvas->width(), _canvas->height());
    }
@@ -445,10 +446,7 @@ void WeatherStationPlugin::getValues(JsonArray &array)
         __DBG_printf("adding callOnce this=%p", this);
         // broadcast entire screen for each new client that connects
         LoopFunctions::callOnce([this]() {
-            __DBG_printf("calling _broadcastCanvas attached=%u this=%p", isCanvasAttached(), this);
-            if (isCanvasAttached()) {
-                canvasUpdatedEvent(0, 0, TFT_WIDTH, TFT_HEIGHT);
-            }
+            canvasUpdatedEvent(0, 0, TFT_WIDTH, TFT_HEIGHT);
         });
     }
 }
@@ -702,6 +700,18 @@ void WeatherStationPlugin::canvasUpdatedEvent(int16_t x, int16_t y, int16_t w, i
     if (!_config.show_webui) {
         return;
     }
+    if (_lockCanvasUpdateEvents && millis() < _lockCanvasUpdateEvents) {
+        return;
+    }
+    __LDBG_S_IF(
+        // debug
+        if (_lockCanvasUpdateEvents) {
+            __DBG_printf("queue lock removed");
+            _lockCanvasUpdateEvents = 0;
+        },
+        // no debug
+        _lockCanvasUpdateEvents = 0;
+    )
 
     auto webSocketUI = WsWebUISocket::getWsWebUI();
     // __DBG_printf("x=%d y=%d w=%d h=%d ws=%p empty=%u", x, y, w, h, webSocketUI, webSocketUI->getClients().isEmpty());
@@ -720,7 +730,7 @@ void WeatherStationPlugin::canvasUpdatedEvent(int16_t x, int16_t y, int16_t w, i
         }
 
         // takes 42ms for 128x160 using GFXCanvasCompressedPalette
-        // auto start = micros();
+        auto start = micros();
 
         auto canvas = getCanvasAndLock();
         if (canvas) {
@@ -737,7 +747,6 @@ void WeatherStationPlugin::canvasUpdatedEvent(int16_t x, int16_t y, int16_t w, i
                 buffer.write(read);
             }
 #endif
-            buffer.write(0);
 
             releaseLockedCanvas();
         }
@@ -746,23 +755,31 @@ void WeatherStationPlugin::canvasUpdatedEvent(int16_t x, int16_t y, int16_t w, i
             return;
         }
 
-        // auto dur = micros() - start;
-        // __DBG_printf("dur %u us", dur);
+        auto dur = micros() - start;
+        __DBG_printf("dur %u us", dur);
         // if (!canvas) {
         //     __DBG_printf("canvas was removed during update");
         //     return;
         // }
 
         uint8_t *ptr;
-        len = buffer.length();
+        buffer.write(0); // terminate with NUL byte
+        len = buffer.length() - 1;
         buffer.move(&ptr);
 
         auto wsBuffer = webSocketUI->makeBuffer(ptr, len, false);
         // __LDBG_printf("buf=%p len=%u", wsBuffer, buffer.length());
         if (wsBuffer) {
+
             wsBuffer->lock();
             for(auto socket: webSocketUI->getClients()) {
+                if (!socket->canSend()) { // queue full
+                    _lockCanvasUpdateEvents = millis() + 5000;
+                    __LDBG_printf("queue lock added");
+                    break;
+                }
                 if (socket->status() == WS_CONNECTED && socket->_tempObject && reinterpret_cast<WsClient *>(socket->_tempObject)->isAuthenticated()) {
+                    socket->client()->setRxTimeout(10); // lower timeout
                     socket->binary(wsBuffer);
                 }
             }

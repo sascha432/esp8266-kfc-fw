@@ -8,6 +8,7 @@
 #include "GFXCanvasConfig.h"
 
 class GFXCanvasCompressed;
+class GFXCanvasRLEStream;
 
 namespace GFXCanvas {
 
@@ -103,6 +104,8 @@ namespace GFXCanvas {
         void setPixel(sXType x, ColorType color);
 
     protected:
+        friend GFXCanvasRLEStream;
+
         ColorType *_buffer;
         sYType _y;
         uWidthType _width;

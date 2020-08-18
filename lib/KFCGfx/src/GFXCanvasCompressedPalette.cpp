@@ -48,14 +48,15 @@ void GFXCanvasCompressedPalette::_RLEdecode(ByteBuffer &buffer, ColorType *outpu
     auto begin = buffer.begin();
     auto end = buffer.end();
     while(begin < end) {
-        auto rle = *begin++;
+        uint16_t rle = *begin++;
         uint8_t index = (rle >> 4);
         if ((rle & 0xf) == 0) {
             __DBG_BOUNDS_RETURN(__DBG_BOUNDS_buffer_end(begin, end));
             rle = *begin++;
+            rle += 0xf;
         }
         else {
-            rle &= 0x0f;
+            rle &= 0xf;
         }
         __DBG_BOUNDS(count += rle);
         __DBG_BOUNDS_RETURN(__DBG_BOUNDS_buffer_end(&output[rle - 1], &output[_width]));
@@ -66,13 +67,13 @@ void GFXCanvasCompressedPalette::_RLEdecode(ByteBuffer &buffer, ColorType *outpu
 
 void GFXCanvasCompressedPalette::_RLEencode(ColorType *data, ByteBuffer &buffer)
 {
-    // 4 bit: length, 0 indicates additional 8 bit
+    // 4 bit: rle = data [0x0-0xe], 0xf indicates that a byte follows
     // 4 bit: palette index
-    // if length = 0: extra byte for length
+    // 8 bit: rle = data + 0x0f
 
     // _debug_printf("_encodeLine(%u): %p %p %u\n", y, ptr, end, _width);
 
-    uint8_t rle = 0;
+    uint16_t rle = 0;
     auto begin = data;
     auto end = &data[_width];
     auto lastColor = *data;
@@ -80,7 +81,7 @@ void GFXCanvasCompressedPalette::_RLEencode(ColorType *data, ByteBuffer &buffer)
 
     while(begin < end) {
         auto color = *begin++;
-        if (color == lastColor && rle != 0xff) {
+        if (color == lastColor && rle != (0xff + 0x0f)) {
             rle++;
         }
         else {
@@ -88,7 +89,7 @@ void GFXCanvasCompressedPalette::_RLEencode(ColorType *data, ByteBuffer &buffer)
             auto index = _palette.addColor(lastColor);
             __DBG_BOUNDS_RETURN(__DBG_BOUNDS_assert(index != -1));
             if (rle > 0xf) {
-                buffer.push2(index << 4, rle);
+                buffer.push2(index << 4, rle - 0xf);
             }
             else {
                 buffer.push(rle | (index << 4));
@@ -102,7 +103,7 @@ void GFXCanvasCompressedPalette::_RLEencode(ColorType *data, ByteBuffer &buffer)
         auto index = _palette.addColor(lastColor);
         __DBG_BOUNDS_RETURN(__DBG_BOUNDS_assert(index != -1));
         if (rle > 0xf) {
-            buffer.push2(index << 4, rle);
+            buffer.push2(index << 4, rle - 0xf);
         }
         else {
             buffer.push(rle | (index << 4));

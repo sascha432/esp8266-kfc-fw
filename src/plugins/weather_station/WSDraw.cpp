@@ -155,13 +155,6 @@ bool WSDraw::isCanvasAttached() const
     noInterrupts();
     locked = (_canvasLocked != 0);
     interrupts();
-    // if (locked) {
-    //     static size_t counter = 0;
-    //     if ((millis()/100)%2==counter%2) {
-    //         counter++;
-    //         __DBG_printf("canvas not attach canvas=%p locked=%d counter=%u", _canvas, locked, _canvasLocked);
-    //     }
-    // }
     return (_canvas != nullptr) && !locked;
 }
 

@@ -506,110 +506,99 @@ var webUIComponent = {
         }, 'json');
     },
 
+    _____rgb565_to_888: function (color) {
+        var b5 = (color & 0x1f);
+        var g6 = (color >> 5) & 0x3f;
+        var r5 = (color >> 11);
+        return [(r5 * 527 + 23) >> 6, (g6 * 259 + 33) >> 6, (b5 * 527 + 23) >> 6];
+    },
+
     handleRLECompressedBitmap: function(data, pos) {
 
-        function rgb565_to_888(color) {
-            var b5 = (color & 0x1f);
-            var g6 = (color >> 5) & 0x3f;
-            var r5 = (color >> 11);
-            return [(r5 * 527 + 23) >> 6, (g6 * 259 + 33) >> 6, (b5 * 527 + 23) >> 6];
-        }
+        var x, y, width, height, ctx, image, palette = [], paletteCount, writePos = 0, maxWritePos;
+        try {
 
-        var len = new Uint8Array(data, pos++, 1)[0];
-        // var debug = true;
-        // if (debug) console.log('len', len);
-        var canvasId = new Uint8Array(data, pos, len);
-        pos += canvasId.byteLength;
-        // if (debug) console.log('pos', pos);
-        var canvasIdStr = new TextDecoder("utf-8").decode(canvasId);
-        // if (debug) console.log('canvasIdStr', canvasIdStr);
-        var canvas = $('#'+canvasIdStr);
-        // if (debug) console.log('canvas', canvas);
-        if (canvas.length == 0) {
-            dbg_console.error('cannot find canvas for', canvasIdStr);
-            return;
-        }
-        var ctx = canvas[0].getContext('2d');
-        // if (debug) console.log('ctx', ctx);
-        if (!ctx) {
-            dbg_console.error('cannot get 2d context for', canvas);
-            return;
-        }
-        if (pos % 2) {
-            pos++;
-        }
-        // if (debug) console.log('pos', pos);
-        var dim = new Uint16Array(data, pos, 5);
-        // if (debug) console.log('dim', dim);
-        pos += dim.byteLength;
-        var x = dim[0];
-        var y = dim[1];
-        var width = dim[2];
-        var height = dim[3];
-        var paletteCount = dim[4];
-        var palette = [];
-        if (paletteCount) {
-            palettergb565 = new Uint16Array(data, pos, paletteCount);
-            pos += palettergb565.byteLength;
-            for (var i = 0; i < palettergb565.length; i++) {
-                palette.push(rgb565_to_888(palettergb565[i]));
+            var len = new Uint8Array(data, pos++, 1)[0];
+            var canvasId = new Uint8Array(data, pos, len);
+            pos += canvasId.byteLength;
+            var canvasIdStr = new TextDecoder("utf-8").decode(canvasId);
+            var canvas = $('#' + canvasIdStr);
+            if (canvas.length == 0) {
+                dbg_console.error('cannot find canvas for', canvasIdStr);
+                return;
             }
-        }
-        // if (debug) console.log('x', x, 'y', y, 'w', width, 'h', height, 'palette', paletteCount, palette, 'pos', pos);
-        var image = ctx.createImageData(width, height);
-        // if (debug) console.log('image',image);
-        var writePos = 0;
-
-        function copy_rle_color(color) {
-            do {
-                image.data[writePos++] = color[0];
-                image.data[writePos++] = color[1];
-                image.data[writePos++] = color[2];
-                image.data[writePos++] = 0xff;
-            } while(rle--);
-        }
-
-
-        if (paletteCount) {
-            while(pos < data.byteLength) {
-                // if (debug) console.log('pos', pos, 'len', data.byteLength, 'writePos', writePos);
-                var tmp = new Uint8Array(data, pos++, 1)[0];
-                // if (debug) console.log('tmp', tmp);
-                var index = (tmp >> 4); // palette index
-                var rle = tmp & 0xf;
-                if (rle == 0xf) {
-                    // if (debug) console.log('pos', pos);
-                    rle = new Uint8Array(data, pos++, 1)[0];
-                    // if (debug) console.log('rle:8', rle);
-                } else {
-                    // if (debug) console.log('rle:4', rle);
+            ctx = canvas[0].getContext('2d');
+            if (!ctx) {
+                dbg_console.error('cannot get 2d context for', canvas);
+                return;
+            }
+            if (pos % 2) { // word alignment
+                pos++;
+            }
+            var tmp = Uint16Array(data, pos, 5);
+            [x, y, width, height, paletteCount] = tmp;
+            pos += tmp.byteLength;
+            if (paletteCount) {
+                var palettergb565 = new Uint16Array(data, pos, paletteCount);
+                pos += palettergb565.byteLength;
+                for (var i = 0; i < palettergb565.length; i++) {
+                    palette.push(_____rgb565_to_888(palettergb565[i]));
                 }
-                // if (debug) console.log('color', palette[index], 'index', index, 'palette', palette);
-                copy_rle_color(palette[index]);
             }
+            image = ctx.createImageData(width, height);
+            maxWritePos = width * height * 4;
+
+        } catch(e) {
+            dbg_console.error('failed to decode header', e);
+            return;
         }
-        else {
-            while(pos < data.byteLength) {
-                var tmp = new Uint8Array(data, pos, 3);
-                pos += tmp.byteLength;
-                var rle = tmp[0];
-                copy_rle_color(rgb565_to_888((tmp[2] << 8) | tmp[1]));
-                // var b5 = (color & 0x1f);
-                // var g6 = (color >> 5) & 0x3f;
-                // var r5 = (color >> 11); // & 0x1f;
-                // var r8 = ( r5 * 527 + 23 ) >> 6;
-                // var g8 = ( g6 * 259 + 33 ) >> 6;
-                // var b8 = ( b5 * 527 + 23 ) >> 6;
-                // console.log("rle",rle,d"color",r8,g8,b8,"writePos",writePos,"color",color);
-                // do {
-                //     image.data[writePos++] = color[0];
-                //     image.data[writePos++] = color[1];
-                //     image.data[writePos++] = color[2];
-                //     image.data[writePos++] = 0xff;
-                // } while(rle--);
+
+        try {
+            function copy_rle_color(color) {
+                do {
+                    image.data[writePos++] = color[0];
+                    image.data[writePos++] = color[1];
+                    image.data[writePos++] = color[2];
+                    image.data[writePos++] = 0xff;
+                    if (writePos > maxWritePos) {
+                        throw 'image size exceeded';
+                    }
+                } while(rle--);
             }
+
+            if (paletteCount) {
+                while(pos < data.byteLength) {
+                    var tmp = new Uint8Array(data, pos++, 1)[0];
+                    var index = (tmp >> 4); // palette index
+                    if (tmp == 0xe) { // 8 bit data marker
+                        rle = new Uint8Array(data, pos++, 1)[0] + 0xe;
+                    } else if (tmp == 0xf) { // 15 bit data marker, low-hi-byte
+                        var tmp = new Uint8Array(data, pos, 2);
+                        pos += tmp.byteLength;
+                        rle = tmp[0] | (tmp[1] << 8);
+                    }
+                    else { // 4 bit data
+                        rle = tmp;
+                    }
+                    copy_rle_color(palette[index]);
+                }
+            }
+            else {
+                while(pos < data.byteLength) {
+                    var rle = new Uint8Array(data, pos++, 1)[0];
+                    if (rle & 0x80) { // marker for 15bit, hi-low-byte
+                        rle = ((rle & 0x7f) << 8) | (new Uint8Array(data, pos++, 1)[0]);
+                    }
+                    var tmp = new Uint8Array(data, pos, 2); // 16bit color rgb565
+                    pos += tmp.byteLength;
+                    copy_rle_color(_____rgb565_to_888((tmp[1] << 8) | tmp[0]));
+                }
+            }
+
+        } catch(e) {
+            dbg_console.error('failed to decode image data', e);
         }
-        // console.log("pixel", writePos/4, "height", writePos/4/width, "left over x", (writePos/4)%width);
+
         ctx.putImageData(image, x, y);
     },
 

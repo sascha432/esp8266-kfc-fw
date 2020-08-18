@@ -26,6 +26,9 @@ namespace GFXCanvas {
     class ColorPalette;
 }
 
+class GFXCanvasRLEStream;
+class GFXCanvasBitmapStream;
+
 class GFXCanvasCompressed : public AdafruitGFXExtension {
 public:
     typedef std::function<void(uXType x, uYType y, uWidthType width, ColorType *pcolors)> DrawLineCallback_t;
@@ -108,9 +111,9 @@ public:
     Cache &getLine(sYType y);
 
 private:
-    friend class GFXCanvasBitmapStream;
-    friend class GFXCanvasRLEStream;
-    friend class GFXCanvas::SingleLineCache;
+    friend GFXCanvasBitmapStream;
+    friend GFXCanvasRLEStream;
+    friend GFXCanvas::SingleLineCache;
 
     // Cache &_getCache(sYType y);
     void _decodeLine(Cache &);

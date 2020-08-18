@@ -9,6 +9,7 @@
 #include "GFXCanvasLineBuffer.h"
 
 class GFXCanvasCompressed;
+class GFXCanvasRLEStream;
 
 namespace GFXCanvas {
 
@@ -42,6 +43,7 @@ namespace GFXCanvas {
 
     private:
         friend GFXCanvasCompressed;
+        friend GFXCanvasRLEStream;
 
         uHeightType _height;
         LineBuffer *_lines;

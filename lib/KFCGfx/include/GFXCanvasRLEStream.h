@@ -32,12 +32,12 @@ public:
 
 private:
     int _read(bool peek);
-    uint8_t *_writeColor(uint8_t *buffer, uint8_t rle, uint16_t color);
-    void _writeColor(uint8_t rle, uint16_t color);
+    uint8_t *_writeColor(uint8_t *buffer, uint16_t rle, uint16_t color);
     int _fillBuffer(uint8_t *buffer, size_t length);
 
 private:
-    static const int16_t DONE = -1;
+    static const int32_t DONE = -1;
+    static const int32_t LAST = (1 << 31);
 
     GFXCanvasCompressed &_canvas;
     GFXCanvas::Cache _cache;

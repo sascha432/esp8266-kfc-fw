@@ -161,6 +161,7 @@
 #endif
 
 using WeatherStationCanvas = GFXCanvasCompressedPalette;
+// using WeatherStationCanvas = GFXCanvasCompressed;
 
 using Adafruit_ST7735_Ex = GFXExtension<Adafruit_ST7735>;
 

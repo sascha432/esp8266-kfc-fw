@@ -93,8 +93,15 @@ int GFXCanvasRLEStream::_fillBuffer(uint8_t *buffer, size_t length)
     uint16_t y = (_position / _header.width) + _header.y;
 
     auto begin = buffer;
-    uint8_t *end;
-    end = begin + length - 6; // we need 2x3 bytes reserved for _writeColor
+    static constexpr size_t kWriteColorSpace = 4;
+    uint8_t *end = begin + length - kWriteColorSpace; // _writeColor writes a maximum number of 4 bytes
+
+    if (_position & LAST) {
+        int16_t rle = static_cast<int16_t>(_position);
+        _position = DONE;
+        __LDBG_printf("continuing after no space rle=%d color=%x", rle, _lastColor);
+        return _writeColor(begin, (uint8_t)rle, _lastColor) - buffer;
+    }
 
     // __DBG_printf("x=%u y=%u pos=%u image_size=%u", x, y, _position, imageSize);
 
@@ -114,14 +121,24 @@ int GFXCanvasRLEStream::_fillBuffer(uint8_t *buffer, size_t length)
         rle = 0;
     }
     while (_position++ < imageSize) {
-        if (color == _lastColor && rle != 0xff) {
+        if (color == _lastColor && rle != 0x7fff) {
+            if (x == 1) {
+                // check if the line is filled with the same color
+                auto &line = _canvas._lines.getLine(y);
+                if (line.length() == 0) {
+                    // we can advance to the end of it
+                    uint16_t left = _canvas.width() - 2;
+                    _position += left;
+                    rle += left;
+                }
+            }
             rle++;
             if (_position == imageSize) {
                 break;
             }
         }
         else {
-            begin = _writeColor(begin, (uint8_t)rle, _lastColor);
+            begin = _writeColor(begin, rle, _lastColor);
             _lastColor = color;
             rle = 0;
             if (_position == imageSize) {
@@ -143,8 +160,13 @@ int GFXCanvasRLEStream::_fillBuffer(uint8_t *buffer, size_t length)
         }
         color = _canvas.getPaletteColor(_cache.getBuffer()[x]);
     }
+    if (begin >= (end + kWriteColorSpace)) {
+        _position = (static_cast<uint16_t>(rle) | LAST); // store rle in position
+        __LDBG_printf("no space rle=%d color=%x", rle, _lastColor);
+        return begin - buffer;
+    }
 
-    begin = _writeColor(begin, (uint8_t)rle, color);
+    begin = _writeColor(begin, rle, _lastColor);
     _position = DONE;
     return begin - buffer;
 
@@ -184,36 +206,26 @@ int GFXCanvasRLEStream::_read(bool peek)
     return peek ? _buffer.peek() : _buffer.read();
 }
 
-void GFXCanvasRLEStream::_writeColor(uint8_t rle, uint16_t color)
+uint8_t *GFXCanvasRLEStream::_writeColor(uint8_t *buffer, uint16_t rle, uint16_t color)
 {
     if (_header.paletteCount) {
-        if (rle >= 0xf) {
-            _buffer.write((color << 4) | 0xf);
-            _buffer.write(rle);
-        }
-        else {
-            _buffer.write((color << 4) | rle);
-        }
-    }
-    else {
-        _buffer.write(rle);
-        _buffer.write((uint8_t)color);
-        _buffer.write((uint8_t)(color >> 8));
-    }
-}
-
-uint8_t *GFXCanvasRLEStream::_writeColor(uint8_t *buffer, uint8_t rle, uint16_t color)
-{
-    if (_header.paletteCount) {
-        if (rle >= 0xf) {
+        if (rle >= (0xff + 0xe)) {
             *buffer++ = (color << 4) | 0xf;
             *buffer++ = rle;
+            *buffer++ = rle >> 8;
+        }
+        else if (rle >= 0xe) {
+            *buffer++ = (color << 4) | 0xe;
+            *buffer++ = (rle - 0xe);
         }
         else {
             *buffer++ = (color << 4) | rle;
         }
     }
     else {
+        if (rle > 0x7f) {
+            *buffer++ = (rle >> 8) | 0x80; // high byte first, last bit marks 2 bytes
+        }
         *buffer++ = rle;
         *buffer++ = color;
         *buffer++ = color >> 8;

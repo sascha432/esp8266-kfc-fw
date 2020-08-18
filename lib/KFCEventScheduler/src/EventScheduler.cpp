@@ -26,13 +26,8 @@ void EventScheduler::end()
 {
     LoopFunctions::remove(loop);
     noInterrupts();
-    TimerVector timers;
-    timers.swap(_timers);
-    for(const auto &timer: timers) {
-        timer->detach();
-    }
+    _timers.clear();
     interrupts();
-    // _timers.clear();
 }
 
 // EventScheduler::Timer
@@ -53,7 +48,9 @@ EventScheduler::Timer::~Timer()
 EventScheduler::Timer &EventScheduler::Timer::operator=(Timer &&timer)
 {
     //debug_printf_P(PSTR("_timer=%p.swap(%p)\n"), _timer.get(), timer._timer.get());
-    remove();
+    if (_timer) {
+        _timer->_remove();
+    }
     _timer = std::exchange(timer._timer, nullptr);
     return *this;
 }
@@ -64,19 +61,15 @@ void EventScheduler::Timer::add(int64_t delayMillis, RepeatType repeat, Callback
     if (_timer) {
         remove();
     }
-    if (deleter) {
-        _timer = Scheduler.addTimer(delayMillis, repeat, callback, priority, [this, deleter](EventTimer *timer) {
+    _timer = Scheduler.addTimer(delayMillis, repeat, callback, priority, [this, deleter](EventTimer *timer) {
+        if (deleter) {
             deleter(timer);
-            _timer = nullptr;
-        });
-
-    }
-    else {
-        _timer = Scheduler.addTimer(delayMillis, repeat, callback, priority, [this](EventTimer *timer) {
+        }
+        else {
             delete timer;
-            _timer = nullptr;
-        });
-    }
+        }
+        _timer = nullptr;
+    });
     __SLDBG_printf("timer=%p hasTimer=%u", _timer, Scheduler.hasTimer(_timer));
 }
 
@@ -85,7 +78,7 @@ bool EventScheduler::Timer::remove()
     __SLDBG_printf("timer=%p hasTimer=%u", _timer, Scheduler.hasTimer(_timer));
     if (_timer) {
         _timer->_remove();
-#if 1
+#if 0
         if (_timer) {
             __DBG_panic("_timer=%p after remove", _timer);
         }
@@ -98,9 +91,11 @@ bool EventScheduler::Timer::remove()
 
 EventTimer *EventScheduler::Timer::operator->() const
 {
+#if 0
     if (!_timer || !Scheduler.hasTimer(_timer)) {
         __SLDBG_panic("_timer=%p hasTimer=%u", _timer, Scheduler.hasTimer(_timer));
     }
+#endif
     return _timer;
 }
 

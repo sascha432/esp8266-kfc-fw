@@ -27,6 +27,10 @@
 #include "spi_flash.h"
 #endif
 
+#if SAVE_CRASH_HAVE_ALLOC_POINTERS
+#include <EspSaveCrash.h>
+#endif
+
 #ifdef NO_GLOBAL_EEPROM
 EEPROMClass EEPROM((SECTION_EEPROM_START_ADDRESS) / SPI_FLASH_SEC_SIZE);
 #endif
@@ -140,6 +144,9 @@ void ConfigurationHelper::EEPROMAccess::begin(uint16_t size)
         _isInitialized = true;
         __LDBG_printf("size=%u", _size);
         EEPROM.begin(_size);
+#if SAVE_CRASH_HAVE_ALLOC_POINTERS
+        EspSaveCrash::addPointer((void *)EEPROM.getConstDataPtr());
+#endif
         __DBG__addFlashReadSize(0, _size);
     }
 }
@@ -148,6 +155,9 @@ void ConfigurationHelper::EEPROMAccess::end()
 {
     if (_isInitialized) {
         __LDBG_printf("size=%u", _size);
+#if SAVE_CRASH_HAVE_ALLOC_POINTERS
+        EspSaveCrash::removePointer((void *)EEPROM.getConstDataPtr());
+#endif
 #if DEBUG_CONFIGURATION_GETHANDLE
         bool dirty = static_cast<EEPROMClassEx &>(EEPROM).getDirty();
         auto writeSize = static_cast<EEPROMClassEx &>(EEPROM).getWriteSize();
@@ -167,6 +177,9 @@ void ConfigurationHelper::EEPROMAccess::commit()
 {
     if (_isInitialized) {
         __LDBG_printf("size=%u", _size);
+#if SAVE_CRASH_HAVE_ALLOC_POINTERS
+        EspSaveCrash::removePointer((void *)EEPROM.getConstDataPtr());
+#endif
 #if DEBUG_CONFIGURATION_GETHANDLE
         bool dirty = static_cast<EEPROMClassEx &>(EEPROM).getDirty();
         auto writeSize = static_cast<EEPROMClassEx &>(EEPROM).getWriteSize();

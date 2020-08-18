@@ -21,19 +21,26 @@ EventTimer::EventTimer(EventScheduler::Callback loopCallback, int64_t delay, Eve
     _callbackScheduled(false),
     _disarmed(true)
 {
-    if (delay < kMinDelay) {
-        __SLDBG_panic("delay %lu < %u", (ulong)delay, kMinDelay);
-    }
+    __LDBG_IF(
+        if (delay < kMinDelay) {
+            __SLDBG_panic("delay %lu < %u", (ulong)delay, kMinDelay);
+        }
+    );
 }
 
 EventTimer::~EventTimer()
 {
-    auto hasTimer = Scheduler.hasTimer(this);
-    if (hasTimer || _etsTimer.timer_func || !_disarmed)  {
-        __SLDBG_printf("timer=%p timer_func=%p callback=%p hasTimer=%u disarmed=%d object deleted while active", this, _etsTimer.timer_func, lambda_target(_loopCallback), hasTimer, _disarmed);
-        // __DBG_panic("timer=%p timer_func=%p callback=%p hasTimer=%u disarmed=%d object deleted while active", this, _etsTimer.timer_func, lambda_target(_loopCallback), hasTimer, _disarmed);
+    __LDBG_IF(
+        auto hasTimer = Scheduler.hasTimer(this);
+        if (hasTimer || _etsTimer.timer_func || !_disarmed)  {
+            __SLDBG_printf("timer=%p timer_func=%p callback=%p hasTimer=%u disarmed=%d object deleted while active", this, _etsTimer.timer_func, lambda_target(_loopCallback), hasTimer, _disarmed);
+            // __DBG_panic("timer=%p timer_func=%p callback=%p hasTimer=%u disarmed=%d object deleted while active", this, _etsTimer.timer_func, lambda_target(_loopCallback), hasTimer, _disarmed);
+        }
+        // detach();
+    );
+    if (_etsTimer.timer_func) {
+        ets_timer_disarm(&_etsTimer);
     }
-    // detach();
     ets_timer_done(&_etsTimer);
 }
 

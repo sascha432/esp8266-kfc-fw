@@ -4,6 +4,8 @@
 
 #pragma once
 
+#if HAVE_MEM_DEBUG
+
 #include <push_pack.h>
 
 class AllocPointerInfo {
@@ -101,3 +103,5 @@ private:
 };
 
 #include <pop_pack.h>
+
+#endif

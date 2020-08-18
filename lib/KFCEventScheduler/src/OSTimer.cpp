@@ -13,7 +13,7 @@
 #include <debug_helper_disable.h>
 #endif
 
-OSTimer::OSTimer() : _etsTimer()
+OSTimer::OSTimer() : _etsTimer({})
 {
 }
 

@@ -4,6 +4,8 @@
 
 #pragma once
 
+#if HAVE_MEM_DEBUG
+
 template<class T>
 class __DebugAllocator : public std::allocator<T>
 {
@@ -59,3 +61,5 @@ public:
     }
 
 };
+
+#endif

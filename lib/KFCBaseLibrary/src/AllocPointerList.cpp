@@ -2,6 +2,8 @@
   Author: sascha_lammers@gmx.de
 */
 
+#if HAVE_MEM_DEBUG
+
 #include <Arduino_compat.h>
 #include <DumpBinary.h>
 #include "AllocPointerList.h"
@@ -210,3 +212,4 @@ void AllocPointerList::dump(Print &output, AllocType type)
     }
 }
 
+#endif

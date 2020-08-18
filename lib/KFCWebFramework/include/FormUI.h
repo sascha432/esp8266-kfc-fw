@@ -63,7 +63,7 @@ namespace FormUI {
 
 		template <typename Ta, typename Tb>
 		void emplace_back(Ta &&key, Tb &&val) {
-			ItemsListVector::emplace_back(std::move(_enumConverter(key)), std::move(_enumConverter(val)));
+			ItemsListVector::emplace_back(_enumConverter(std::move(key)), _enumConverter(std::move(val)));
 		}
 
 		void emplace_back_pair(const String &key, const String &val) {
@@ -71,7 +71,7 @@ namespace FormUI {
 		}
 
 		void emplace_back_pair(int key, int val) {
-			ItemsListVector::emplace_back(std::move(String(key)), std::move(String(val)));
+			ItemsListVector::emplace_back(String(key), String(val));
 		}
 
 		void dump(Print &output) {
@@ -132,9 +132,10 @@ namespace FormUI {
 		Label() : String() {}
 
 		// adds ":" at the end if not found and encodes html entities
-		Label(const String &label) : Label(label, false) {}
+		Label(const String &label) : String(label) {}
+		Label(const __FlashStringHelper *label) : String(label) {}
 
-		Label(const __FlashStringHelper *label, bool raw = false) : Label(String(label), raw) {}
+		Label(const __FlashStringHelper *label, bool raw) : Label(String(label), raw) {}
 
 		// if raw is set to true, the output is not modified
 		Label(const String &label, bool raw) : String(raw ? String('\xff') : label) {
@@ -148,27 +149,38 @@ namespace FormUI {
 
 	};
 
-	class Suffix : public String {
+	class FPStrSuffix {
 	public:
-		Suffix(char suffix) : String(suffix) {}
-		Suffix(const String &suffix) : String(suffix) {}
-		Suffix(String &&suffix) : String(std::move(suffix)) {}
-		Suffix(const __FlashStringHelper *suffix) : String(suffix) {}
-	};
-
-	class FPSuffix {
-	public:
-		FPSuffix(const __FlashStringHelper *str) : _str(str) {}
+		FPStrSuffix(const __FlashStringHelper *str) : _str(str) {}
 
 	private:
 		friend UI;
-
 		const __FlashStringHelper *_str;
 	};
 
-	class ZeroconfSuffix : public FPSuffix {
+	class StringSuffix : public String {
 	public:
-		ZeroconfSuffix() : FPSuffix(F("<button type=\"button\" class=\"btn btn-default resolve-zerconf-button\" data-color=\"primary\">Resolve Zeroconf</button>")) {}
+		StringSuffix(const String &suffix) : String(suffix) {}
+		StringSuffix(String &&suffix) : String(std::move(suffix)) {}
+	};
+
+	static inline FPStrSuffix Suffix(const __FlashStringHelper *suffix) {
+		return FPStrSuffix(suffix);
+	}
+	static inline StringSuffix Suffix(const String &suffix) {
+		return StringSuffix(suffix);
+	}
+	static inline StringSuffix Suffix(String &&suffix) {
+		return StringSuffix(std::move(suffix));
+	}
+	template<class T>
+	static inline StringSuffix Suffix(T suffix) {
+		return StringSuffix(std::move(String(suffix)));
+	}
+
+	class ZeroconfSuffix : public FPStrSuffix {
+	public:
+		ZeroconfSuffix() : FPStrSuffix(F("<button type=\"button\" class=\"btn btn-default resolve-zerconf-button\" data-color=\"primary\">Resolve Zeroconf</button>")) {}
 	};
 
 	class PlaceHolder : public String {
@@ -176,6 +188,7 @@ namespace FormUI {
 		PlaceHolder(int placeholder) : String(placeholder) {}
 		PlaceHolder(double placeholder, uint8_t digits) : String(placeholder, digits) {}
 		PlaceHolder(const String &placeholder) : String(placeholder) {}
+		PlaceHolder(String &&placeholder) : String(std::move(placeholder)) {}
 	};
 
 	class MinMax
@@ -183,6 +196,7 @@ namespace FormUI {
 	public:
 		MinMax(int min, int max) : _min(min), _max(max) {}
 		MinMax(const String &min, const String &max) : _min(min), _max(max) {}
+		MinMax(String &&min, String &&max) : _min(std::move(min)), _max(std::move(max)) {}
 
 	private:
 		friend UI;
@@ -195,6 +209,7 @@ namespace FormUI {
 	{
 	public:
 		Attribute(const __FlashStringHelper *key, const String &value) : _key(key), _value(value) {}
+		Attribute(const __FlashStringHelper *key, String &&value) : _key(key), _value(std::move(value)) {}
 
 	private:
 		friend UI;
@@ -214,6 +229,7 @@ namespace FormUI {
 	public:
 		BoolItems() : _false(FSPGM(Disabled)), _true(FSPGM(Enabled)) {}
 		BoolItems(const String &pTrue, const String &pFalse) : _false(pFalse), _true(pTrue) {}
+		BoolItems(String &&pTrue, String &&pFalse) : _false(std::move(pFalse)), _true(std::move(pTrue)) {}
 
 	private:
 		friend UI;
@@ -225,6 +241,7 @@ namespace FormUI {
 	class Conditional {
 	public:
 		Conditional(bool condition, const T &value) : _value(value), _condition(condition) {}
+		Conditional(bool condition, T &&value) : _value(std::move(value)), _condition(condition) {}
 
 	private:
 		friend UI;
@@ -236,6 +253,7 @@ namespace FormUI {
 	class ConditionalAttribute : public Conditional<Attribute> {
 	public:
 		ConditionalAttribute(bool condition, const __FlashStringHelper *key, const String &value) : Conditional<Attribute>(condition, Attribute(key, value)) {}
+		ConditionalAttribute(bool condition, const __FlashStringHelper *key, String &&value) : Conditional<Attribute>(condition, Attribute(key, std::move(value))) {}
 	};
 
 	class UI {
@@ -248,7 +266,7 @@ namespace FormUI {
 		{
 			_addAll(args...);
 		}
-		UI(UI &&ui) noexcept
+		UI(UI &&ui) noexcept : _items(nullptr)
 		{
 			*this = std::move(ui);
 		}
@@ -260,21 +278,23 @@ namespace FormUI {
 		}
 
 		UI &operator=(UI &&ui) noexcept {
+			if (_items) {
+				delete _items;
+			}
 			_parent = ui._parent;
 			_type = ui._type;
 			_label = ui._label;
 			_suffix = ui._suffix;
 			// _attributes = std::move(ui._attributes);
 			_attributesVector = std::move(ui._attributesVector);
-			_items = ui._items;
-			ui._items = nullptr;
+			_items = std::exchange(ui._items, nullptr);
 			return *this;
 		}
 
 		const __FlashStringHelper *kIconsNone = FPSTR(emptyString.c_str());
 		static constexpr __FlashStringHelper *kIconsDefault = nullptr;
 
-		static Suffix createCheckBoxButton(FormField &hiddenField, const String &label, const __FlashStringHelper *onIcons = nullptr, const __FlashStringHelper *offIcons = nullptr);
+		static StringSuffix createCheckBoxButton(FormField &hiddenField, const String &label, const __FlashStringHelper *onIcons = nullptr, const __FlashStringHelper *offIcons = nullptr);
 
 		// DEPRECATED METHODS
 
@@ -299,8 +319,8 @@ namespace FormUI {
 		void _addItem(Type type);
 		void _addItem(const __FlashStringHelper *label);
 		void _addItem(const Label &label);
-		void _addItem(const Suffix &suffix);
-		void _addItem(const FPSuffix &suffix);
+		void _addItem(const StringSuffix &suffix);
+		void _addItem(const FPStrSuffix &suffix);
 		void _addItem(const PlaceHolder &placeholder);
 		void _addItem(const MinMax &minMax);
 		void _addItem(const Attribute &attribute);
@@ -318,12 +338,12 @@ namespace FormUI {
 		}
 
 		template <typename T>
-		void _addall(T &&t) {
+		void _addall(const T &t) {
 			_addItem(t);
 		}
 
 		template <typename T, typename... Args>
-		void _addAll(T &&t, Args &&... args) {
+		void _addAll(const T &t, Args &&... args) {
 			_addItem(t);
 			_addAll(args...);
 		}

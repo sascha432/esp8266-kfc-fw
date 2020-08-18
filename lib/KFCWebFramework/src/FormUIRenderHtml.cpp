@@ -72,7 +72,6 @@ static const char **_outputOptions(FormField::PrintInterface &output, const char
             "<option value=\"%s\">%s</option>"
             "<option value=\"%s\">%s</option>"
         );
-        auto i = strlen(format);
         auto formatOfs = &format[(kPrintArgsMaxArgCount - count) * 30 / 2];
         output.vprintf_P(formatOfs, buffer, count);
     }
@@ -81,7 +80,7 @@ static const char **_outputOptions(FormField::PrintInterface &output, const char
 
 namespace FormUI {
 
-    Suffix UI::createCheckBoxButton(FormField &hiddenField, const String &label, const __FlashStringHelper *onIcons, const __FlashStringHelper *offIcons)
+    StringSuffix UI::createCheckBoxButton(FormField &hiddenField, const String &label, const __FlashStringHelper *onIcons, const __FlashStringHelper *offIcons)
     {
         PrintHtmlEntitiesString _suffix;
         _suffix.setMode(PrintHtmlEntities::Mode::RAW);
@@ -111,7 +110,7 @@ namespace FormUI {
         _suffix.setMode(PrintHtmlEntities::Mode::RAW);
         _suffix += F("</button></span>");
 
-        return Suffix(std::move(_suffix));
+        return StringSuffix(std::move(_suffix));
     }
 
     Type UI::getType() const
@@ -447,12 +446,12 @@ namespace FormUI {
 		_label = _parent->getFormUIConfig().strings().attachString(label);
 	}
 
-	void UI::_addItem(const Suffix &suffix)
+	void UI::_addItem(const StringSuffix &suffix)
     {
 		_suffix = _parent->getFormUIConfig().strings().attachString(suffix);
 	}
 
-    void UI::_addItem(const FPSuffix &suffix)
+    void UI::_addItem(const FPStrSuffix &suffix)
     {
         _suffix = _parent->getFormUIConfig().strings().attachString(suffix._str);
     }

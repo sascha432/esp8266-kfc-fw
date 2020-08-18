@@ -22,6 +22,11 @@
 
 class FileMapping;
 
+#if IOT_WEATHER_STATION
+extern void __weatherStationDetachCanvas(bool release);
+extern void __weatherStationAttachCanvas();
+#endif
+
 class WebServerSetCPUSpeedHelper : public SpeedBooster {
 public:
     WebServerSetCPUSpeedHelper();

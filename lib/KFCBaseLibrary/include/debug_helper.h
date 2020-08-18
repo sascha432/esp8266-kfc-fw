@@ -47,6 +47,8 @@ extern unsigned long millis(void);
 #define __NDBG_delete_remove(ptr)                           ;
 #define __NDBG_new_array(num, name, ...)                    new name[num](__VA_ARGS__)
 #define __NDBG_delete_array(ptr)                            delete[] ptr
+#define __NDBG_track_new(...)                               ;
+#define __NDBG_track_delete(...)                            ;
 #define __NDBG_malloc(size)                                 malloc(size)
 #define __NDBG_realloc(ptr, size)                           realloc(ptr, size)
 #define __NDBG_calloc(num, size)                            calloc(num, size)
@@ -115,6 +117,8 @@ extern const char ___debugPrefix[] PROGMEM;
 #define __DBG_track_allocator                               __TrackAllocator
 #define __DBG_operator_new(...)                             KFCMemoryDebugging::_new(DEBUG_HELPER_POSITION, (__VA_ARGS__), __NDBG_operator_new(__VA_ARGS__))
 #define __DBG_operator_delete(ptr)                          __NDBG_operator_delete(KFCMemoryDebugging::_delete(DEBUG_HELPER_POSITION, ptr))
+#define __DBG_track_new(size)                               KFCMemoryDebugging::_track_new(size)
+#define __DBG_track_delete(size)                            KFCMemoryDebugging::_track_delete(nullptr, size)
 #define __DBG_new(name, ...)                                KFCMemoryDebugging::_new(DEBUG_HELPER_POSITION, sizeof(name), new name(__VA_ARGS__))
 #define __DBG_delete(ptr)                                   delete KFCMemoryDebugging::_delete(DEBUG_HELPER_POSITION, ptr)
 #define __DBG_delete_remove(ptr)                            KFCMemoryDebugging::_delete(DEBUG_HELPER_POSITION, ptr)
@@ -132,6 +136,8 @@ extern const char ___debugPrefix[] PROGMEM;
 #define __DBG_allocator                                     __NDBG_allocator
 #define __DBG_operator_new(...)                             __NDBG_operator_new(__VA_ARGS__)
 #define __DBG_operator_delete(...)                          __NDBG_operator_delete(__VA_ARGS__)
+#define __DBG_track_new(...)                                __NDBG_track_new(__VA_ARGS__)
+#define __DBG_track_delete(...)                             __NDBG_track_delete(__VA_ARGS__)
 #define __DBG_new(...)                                      __NDBG_new(__VA_ARGS__)
 #define __DBG_delete(...)                                   __NDBG_delete(__VA_ARGS__)
 #define __DBG_delete_remove(...)                            __NDBG_delete_remove(__VA_ARGS__)
@@ -152,6 +158,8 @@ extern const char ___debugPrefix[] PROGMEM;
 #define __LDBG_track_allocator                              __LMDBG_S_IF(__DBG_track_allocator, __NDBG_allocator)
 #define __LDBG_operator_new(...)                            __LMDBG_S_IF(__DBG_operator_new(__VA_ARGS__), __NDBG_operator_new(__VA_ARGS__))
 #define __LDBG_operator_delete(...)                         __LMDBG_S_IF(__DBG_operator_delete(__VA_ARGS__), __NDBG_operator_delete(__VA_ARGS__))
+#define __LDBG_track_new(...)                               __LMDBG_S_IF(__DBG_track_new(__VA_ARGS__), __NDBG_track_new(__VA_ARGS__))
+#define __LDBG_track_delete(...)                            __LMDBG_S_IF(__DBG_track_delete(__VA_ARGS__), __NDBG_track_delete(__VA_ARGS__))
 #define __LDBG_new(...)                                     __LMDBG_S_IF(__DBG_new(__VA_ARGS__), __NDBG_new(__VA_ARGS__))
 #define __LDBG_delete(...)                                  __LMDBG_S_IF(__DBG_delete(__VA_ARGS__), __NDBG_delete(__VA_ARGS__))
 #define __LDBG_delete_remove(...)                           __LMDBG_S_IF(__DBG_delete_remove(__VA_ARGS__), __NDBG_delete_remove(__VA_ARGS__))
@@ -202,8 +210,13 @@ extern const char ___debugPrefix[] PROGMEM;
 // local functions that need to be activated by including debug_helper_[enable|disable].h
 #define __LDBG_IF(...)
 #define __LDBG_N_IF(...)                                    __VA_ARGS__
+#if HAVE_MEM_DEBUG
 #define __LMDBG_IF(...)
 #define __LMDBG_N_IF(...)                                   __VA_ARGS__
+#else
+#define __LMDBG_IF(...)                                     __VA_ARGS__
+#define __LMDBG_N_IF(...)
+#endif
 #define __LDBG_S_IF(a, b)                                   __LDBG_IF(a) __LDBG_N_IF(b)
 #define __LMDBG_S_IF(a, b)                                  __LMDBG_IF(a) __LMDBG_N_IF(b)
 #define __LDBG_panic(...)                                   __LDBG_IF(__DBG_panic(__VA_ARGS__))

@@ -24,6 +24,7 @@ uint32_t KFCMemoryDebugging::_freeCount = 0;
 uint32_t KFCMemoryDebugging::_failCount = 0;
 uint32_t KFCMemoryDebugging::_freeNullCount = 0;
 uint32_t KFCMemoryDebugging::_heapSize = 0;
+uint32_t KFCMemoryDebugging::_startTime = 0;
 KFCMemoryDebugging KFCMemoryDebugging::_instance;
 
 
@@ -93,6 +94,7 @@ void KFCMemoryDebugging::reset()
     _freeCount = 0;
     _failCount = 0;
     _freeNullCount = 0;
+    _startTime = millis();
 }
 
 void KFCMemoryDebugging::dump(Print &output, AllocType type)
@@ -112,12 +114,11 @@ void KFCMemoryDebugging::__dumpShort(Print &output)
             }
         }
 
-        size_t msize = sizeof(list[0]) * list.capacity();
-        heapSize += KFCMemoryDebugging::getHeapUsage(msize);
+        // size_t msize = sizeof(list[0]) * list.capacity();
+        // heapSize += KFCMemoryDebugging::getHeapUsage(msize);
 
-        output.printf_P(PSTR(" msize=%u alloc=%u free=%u null=%u heap=%u"),
-            msize,
-            _allocCount, _freeCount, _freeNullCount, _heapSize
+        output.printf_P(PSTR(" alloc=%u free=%u null=%u heap=%u ops=%.2f"),
+            _allocCount, _freeCount, _freeNullCount, _heapSize,  (_allocCount + _freeCount) / ((millis() - _startTime) / 1000.0)
         );
     }
 }

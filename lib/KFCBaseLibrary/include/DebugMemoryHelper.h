@@ -110,6 +110,8 @@ private:
 
     static uint32_t _heapSize;
 
+    static uint32_t _startTime;
+
     static KFCMemoryDebugging _instance;
 };
 

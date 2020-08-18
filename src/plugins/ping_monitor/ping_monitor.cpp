@@ -311,7 +311,7 @@ void PingMonitorPlugin::createConfigureForm(FormCallbackType type, const String 
     form.addValidator(FormRangeValidator(Plugins::PingConfig::PingConfig_t::kRepeatCountMin, Plugins::PingConfig::PingConfig_t::kRepeatCountMax));
 
     form.add(F("pt"), _H_W_STRUCT_VALUE(cfg, timeout));
-    form.addFormUI(FSPGM(Timeout), FormUI::FPSuffix(FSPGM(milliseconds)));
+    form.addFormUI(FSPGM(Timeout), FormUI::Suffix(FSPGM(milliseconds)));
     form.addValidator(FormRangeValidator(Plugins::PingConfig::PingConfig_t::kTimeoutMin, Plugins::PingConfig::PingConfig_t::kTimeoutMax));
 
     mainGroup.end();
@@ -328,7 +328,7 @@ void PingMonitorPlugin::createConfigureForm(FormCallbackType type, const String 
     }
 
     form.add(F("pi"), _H_W_STRUCT_VALUE(cfg, interval));
-    form.addFormUI(FSPGM(Interval), FormUI::FPSuffix(FSPGM(minutes)));
+    form.addFormUI(FSPGM(Interval), FormUI::Suffix(FSPGM(minutes)));
     form.addValidator(FormRangeValidator(Plugins::PingConfig::PingConfig_t::kIntervalMin, Plugins::PingConfig::PingConfig_t::kIntervalMax));
 
     serviceGroup.end();

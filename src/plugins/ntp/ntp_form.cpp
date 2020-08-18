@@ -58,7 +58,7 @@ void NTPPlugin::createConfigureForm(FormCallbackType type, const String &formNam
     form.addValidator(FormHostValidator(FormHostValidator::AllowedType::ALLOW_EMPTY));
 
     form.addMemberVariable(F("ntpri"), ntp, &Plugins::NTPClient::ConfigStructType::refreshInterval);
-    form.addFormUI(FormUI::Type::INTEGER, FSPGM(Refresh_Interval, "Refresh Interval"), FormUI::FPSuffix(FSPGM(minutes__5_, "minutes \u00b15%")));
+    form.addFormUI(FormUI::Type::INTEGER, FSPGM(Refresh_Interval, "Refresh Interval"), FormUI::Suffix(FSPGM(minutes__5_, "minutes \u00b15%")));
     form.addValidator(FormRangeValidator(F("Invalid refresh interval: %min%-%max% minutes"), ntp.kRefreshIntervalMin, ntp.kRefreshIntervalMax));
 
     group.end();

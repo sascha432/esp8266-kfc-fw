@@ -80,7 +80,7 @@ void MQTTPlugin::createConfigureForm(FormCallbackType type, const String &formNa
     form.addValidator(FormNetworkPortValidator(true));
 
     form.add<uint8_t>(FSPGM(keepalive), _H_W_STRUCT_VALUE(cfg, keepalive));
-    form.addFormUI(FSPGM(Keep_Alive), FormUI::FPSuffix(FSPGM(seconds)));
+    form.addFormUI(FSPGM(Keep_Alive), FormUI::Suffix(FSPGM(seconds)));
     form.addValidator(FormRangeValidatorType<decltype(cfg.keepalive)>());
 
     auto &serverGroup = connGroup.end().addCardGroup(FSPGM(mqtt), F("Server Settings"), true);
@@ -116,7 +116,7 @@ void MQTTPlugin::createConfigureForm(FormCallbackType type, const String &formNa
     form.addValidator(FormLengthValidator(0, ClientConfig::kAutoDiscoveryPrefixMaxSize));
 
     form.add(F("adrb"), _H_W_STRUCT_VALUE(cfg, auto_discovery_rebroadcast_interval));
-    form.addFormUI(F("Auto Discovery Rebroadcast"), FormUI::FPSuffix(FSPGM(minutes)));
+    form.addFormUI(F("Auto Discovery Rebroadcast"), FormUI::Suffix(FSPGM(minutes)));
     form.addValidator(FormRangeValidator(15, std::numeric_limits<decltype(cfg.auto_discovery_rebroadcast_interval)>::max()));
 
 

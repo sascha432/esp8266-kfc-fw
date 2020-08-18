@@ -71,13 +71,13 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
             form.addFormUI(FSPGM(Name), FormUI::PlaceHolder(name));
 
             form.add(prefix + F("ot"), _H_W_STRUCT_VALUE(cfg, channels[i].open_time, i));
-            form.addFormUI(F("Open Time Limit"), FormUI::FPSuffix(FSPGM(ms)));
+            form.addFormUI(F("Open Time Limit"), FormUI::Suffix(FSPGM(ms)));
 
             form.add(prefix + F("ct"), _H_W_STRUCT_VALUE(cfg, channels[i].close_time, i));
-            form.addFormUI(F("Close Time Limit"), FormUI::FPSuffix(FSPGM(ms)));
+            form.addFormUI(F("Close Time Limit"), FormUI::Suffix(FSPGM(ms)));
 
             form.add(prefix + F("il"), _H_W_STRUCT_VALUE(cfg, channels[i].current_limit, i));
-            form.addFormUI(F("Current Limit"), FormUI::FPSuffix(FSPGM(mA)));
+            form.addFormUI(F("Current Limit"), FormUI::Suffix(FSPGM(mA)));
             form.addValidator(FormRangeValidator(BlindsControllerConversion::kMinCurrent, BlindsControllerConversion::kMaxCurrent));
 
             form.add(prefix + F("ilt"), _H_W_STRUCT_VALUE(cfg, channels[i].current_limit_time, i));
@@ -100,10 +100,10 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
 
             form.add(prefix + String('d'), _H_W_STRUCT_VALUE(cfg, open[i].delay, i));
             if (i == 0) {
-                form.addFormUI(FormUI::Label(FSPGM(Delay_After_Execution_br_explanation, "Delay After Execution:<br><small>The delay is skipped if the action is not executed</small>"), true), FormUI::FPSuffix(FSPGM(seconds)));
+                form.addFormUI(FormUI::Label(FSPGM(Delay_After_Execution_br_explanation, "Delay After Execution:<br><small>The delay is skipped if the action is not executed</small>"), true), FormUI::Suffix(FSPGM(seconds)));
             }
             else {
-                form.addFormUI(FSPGM(Delay, "Delay"), FormUI::FPSuffix(FSPGM(seconds)));
+                form.addFormUI(FSPGM(Delay, "Delay"), FormUI::Suffix(FSPGM(seconds)));
             }
             form.addValidator(FormRangeValidator(0, 3600));
 
@@ -118,10 +118,10 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
 
             form.add(prefix + String('d'), _H_W_STRUCT_VALUE(cfg, close[i].delay, i));
             if (i == 0) {
-                form.addFormUI(FormUI::Label(FSPGM(Delay_After_Execution_br_explanation), true), FormUI::FPSuffix(FSPGM(seconds)));
+                form.addFormUI(FormUI::Label(FSPGM(Delay_After_Execution_br_explanation), true), FormUI::Suffix(FSPGM(seconds)));
             }
             else {
-                form.addFormUI(FSPGM(Delay), FormUI::FPSuffix(FSPGM(seconds)));
+                form.addFormUI(FSPGM(Delay), FormUI::Suffix(FSPGM(seconds)));
             }
             form.addValidator(FormRangeValidator(0, 3600));
 
@@ -158,23 +158,23 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
         auto &motorGroup = form.addCardGroup(F("ctrl"), F("Controller Configuration"), true);
 
         form.add(F("pwm"), _H_W_STRUCT_VALUE(cfg, pwm_frequency));
-        form.addFormUI(F("PWM Frequency"), FormUI::Type::INTEGER, FormUI::PlaceHolder(Plugins::Blinds::ConfigStructType::kPwmFrequencyDefault), FormUI::FPSuffix(F("Hz")));
+        form.addFormUI(F("PWM Frequency"), FormUI::Type::INTEGER, FormUI::PlaceHolder(Plugins::Blinds::ConfigStructType::kPwmFrequencyDefault), FormUI::Suffix(F("Hz")));
         form.addValidator(FormRangeValidator(1000, 40000));
 
         form.add(F("adca"), _H_W_STRUCT_VALUE(cfg, adc_divider));
-        form.addFormUI(F("ADC Averaging"), FormUI::Type::INTEGER, FormUI::PlaceHolder(Plugins::Blinds::ConfigStructType::kAdcDividerDefault), FormUI::FPSuffix(F("period in milliseconds")));
+        form.addFormUI(F("ADC Averaging"), FormUI::Type::INTEGER, FormUI::PlaceHolder(Plugins::Blinds::ConfigStructType::kAdcDividerDefault), FormUI::Suffix(F("period in milliseconds")));
         form.addValidator(FormRangeValidator(1, 1000));
 
         form.add(F("adci"), _H_W_STRUCT_VALUE(cfg, adc_read_interval));
-        form.addFormUI(F("ADC Read Interval"), FormUI::Type::INTEGER, FormUI::PlaceHolder(Plugins::Blinds::ConfigStructType::kAdcReadIntervalDefault), FormUI::FPSuffix(F("microseconds")));
+        form.addFormUI(F("ADC Read Interval"), FormUI::Type::INTEGER, FormUI::PlaceHolder(Plugins::Blinds::ConfigStructType::kAdcReadIntervalDefault), FormUI::Suffix(F("microseconds")));
         form.addValidator(FormRangeValidator(500, 20000));
 
         form.add(F("adcrt"), _H_W_STRUCT_VALUE(cfg, adc_recovery_time));
-        form.addFormUI(F("ADC Recovery Time"), FormUI::Type::INTEGER, FormUI::PlaceHolder(Plugins::Blinds::ConfigStructType::kAdcRecoveryTimeDefault), FormUI::FPSuffix(F("microseconds")));
+        form.addFormUI(F("ADC Recovery Time"), FormUI::Type::INTEGER, FormUI::PlaceHolder(Plugins::Blinds::ConfigStructType::kAdcRecoveryTimeDefault), FormUI::Suffix(F("microseconds")));
         form.addValidator(FormRangeValidator(2000, 50000));
 
         form.add(F("adcrr"), _H_W_STRUCT_VALUE(cfg, adc_recoveries_per_second));
-        form.addFormUI(F("ADC Repeat Recovery"), FormUI::Type::INTEGER, FormUI::PlaceHolder(Plugins::Blinds::ConfigStructType::kAdcRecoveriesPerSecDefault), FormUI::FPSuffix(F("per second")));
+        form.addFormUI(F("ADC Repeat Recovery"), FormUI::Type::INTEGER, FormUI::PlaceHolder(Plugins::Blinds::ConfigStructType::kAdcRecoveriesPerSecDefault), FormUI::Suffix(F("per second")));
         form.addValidator(FormRangeValidator(1, 20));
 
         motorGroup.end();

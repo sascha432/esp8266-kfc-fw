@@ -120,8 +120,8 @@ public:
         return iter2._iterator - iter1._iterator;
     }
 
-    inline __attribute__((always_inline)) void push_back(T value) {
-        _values[_write_position++] = value;
+    inline __attribute__((always_inline)) void push_back(T &&value) {
+        _values[_write_position++] = std::move(value);
         _write_position %= SIZE;
         _count++;
         if (_count - _read_position > SIZE) {
@@ -129,13 +129,19 @@ public:
         }
     }
 
-    inline __attribute__((always_inline)) void push_back_no_block(T value) {
+    template<typename... Args>
+    void emplace_back(Args &&... args) {
+        push_back(std::move(T(std::forward<Args>(args)...)));
+    }
+
+
+    inline __attribute__((always_inline)) void push_back_no_block(T &&value) {
         if (!_locked) {
-            push_back(value);
+            push_back(std::move(value));
         }
     }
 
-    bool push_back_timeout(T value, uint32_t timeoutMicros) {
+    bool push_back_timeout(T &&value, uint32_t timeoutMicros) {
         if (_locked) {
             uint32_t start = micros();
             while(_locked) {
@@ -144,7 +150,7 @@ public:
                 }
             }
         }
-        push_back(value);
+        push_back(std::move(value));
         return true;
     }
 

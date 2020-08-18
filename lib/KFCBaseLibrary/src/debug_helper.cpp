@@ -23,6 +23,7 @@ uint32_t KFCMemoryDebugging::_reallocCount = 0;
 uint32_t KFCMemoryDebugging::_freeCount = 0;
 uint32_t KFCMemoryDebugging::_failCount = 0;
 uint32_t KFCMemoryDebugging::_freeNullCount = 0;
+uint32_t KFCMemoryDebugging::_heapSize = 0;
 KFCMemoryDebugging KFCMemoryDebugging::_instance;
 
 
@@ -99,6 +100,33 @@ void KFCMemoryDebugging::dump(Print &output, AllocType type)
     _instance.__dump(output, 0, type);
 }
 
+void KFCMemoryDebugging::__dumpShort(Print &output)
+{
+    if (_allocCount) {
+        size_t heapSize = _heapSize;
+
+        auto &list = AllocPointerList::getList();
+        for(const auto &info: list) {
+            if (info == AllocType::ALL) {
+                heapSize += KFCMemoryDebugging::getHeapUsage(info.getSize());
+            }
+        }
+
+        size_t msize = sizeof(list[0]) * list.capacity();
+        heapSize += KFCMemoryDebugging::getHeapUsage(msize);
+
+        output.printf_P(PSTR(" msize=%u alloc=%u free=%u null=%u heap=%u"),
+            msize,
+            _allocCount, _freeCount, _freeNullCount, _heapSize
+        );
+    }
+}
+
+void KFCMemoryDebugging::dumpShort(Print &output)
+{
+    _instance.__dumpShort(output);
+}
+
 void KFCMemoryDebugging::markAllNoLeak()
 {
     _instance.__markAllNoLeak();
@@ -110,15 +138,20 @@ void KFCMemoryDebugging::__dump(Print &output, size_t dumpBinaryMaxSize, AllocPo
     auto ra = _allocCount / (float)getSystemUptime();
     auto rf = _freeCount / (float)getSystemUptime();
     output.printf_P(PSTR(
-            "alloc: %u\nfree: %u\n---\nrealloc: %u\nnew: %u\ndelete: %u\nfailed: %u\n:nullptr freed: %u\nalloc/time ratio: %.3f\nfree/time ratio: %.3f\nratio/ratio: %.3f\n"
+            "alloc: %u\nfree: %u\n---\nrealloc: %u\nnew: %u\ndelete: %u\nfailed: %u\n:nullptr freed: %u\nalloc/time ratio: %.3f\nfree/time ratio: %.3f\nratio/ratio: %.3f\nheap tracking: %u\n"
         ),
-        _allocCount, _freeCount, _reallocCount, _newCount, _deleteCount, _failCount, _freeNullCount, ra, rf, ra / rf
+        _allocCount, _freeCount, _reallocCount, _newCount, _deleteCount, _failCount, _freeNullCount, ra, rf, ra / rf, _heapSize
     );
 }
 
 void KFCMemoryDebugging::__markAllNoLeak()
 {
     AllocPointerList::markAllNoLeak(true);
+}
+
+size_t KFCMemoryDebugging::getHeapUsage(size_t size, bool addOverhead)
+{
+    return ((size + 7) & ~7) + (addOverhead ? 4 : 0);
 }
 
 KFCMemoryDebugging &KFCMemoryDebugging::getInstance()

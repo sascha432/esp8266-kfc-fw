@@ -150,6 +150,13 @@ public:
         return written;
     }
 
+    // read one byte and remove it from the buffer
+    // release memory after reading the last byte
+    // returns -1 if no data is available
+    int read();
+    // reads one byte without removing
+    int peek();
+
     void remove(size_t index, size_t count);
     // reduce size if more than minFree bytes are available
     void removeAndShrink(size_t index, size_t count, size_t minFree = 32);

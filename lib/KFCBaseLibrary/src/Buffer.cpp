@@ -223,6 +223,30 @@ size_t Buffer::write_P(PGM_P data, size_t len)
     return len;
 }
 
+int Buffer::read()
+{
+    if (_length) {
+        auto tmp = *_buffer;
+        if (--_length) {
+            memmove(_buffer, _buffer + 1, _length);
+        }
+        else {
+            clear();
+        }
+        return tmp;
+    }
+    return -1;
+
+}
+
+int Buffer::peek()
+{
+    if (_length) {
+        return *_buffer;
+    }
+    return -1;
+}
+
 void Buffer::remove(size_t index, size_t count)
 {
     // __LDBG_printf("index=%d count=%d", index, count);

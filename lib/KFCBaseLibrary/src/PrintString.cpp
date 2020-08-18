@@ -49,7 +49,7 @@ PrintString::PrintString(const __FlashBufferHelper *buffer, size_t len)
 size_t PrintString::print(double n, int digits, bool trimTrailingZeros)
 {
     if (trimTrailingZeros) {
-        char buf[64];
+        char buf[std::numeric_limits<double>::digits + 1];
         snprintf_P(buf, sizeof(buf), PSTR("%.*f"), digits, n);
         auto endPtr = strchr(buf, '.');
         if (endPtr) {
@@ -169,7 +169,7 @@ size_t PrintString::print(int64_t value)
 {
     return concat_to_string(*this, value);
 }
- 
+
 size_t PrintString::strftime(const char *format, struct tm *tm)
 {
     char temp[64];

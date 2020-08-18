@@ -108,7 +108,7 @@ StringBufferPool::StringBufferPool() : _pool()
 
 void StringBufferPool::clear()
 {
-#if DEBUG_STRING_DEDUPLICATOR
+#if DEBUG_STRING_DEDUPLICATOR && 0
     if (_pool.size()) {
         StringVector list;
         for(const auto &buffer: _pool) {

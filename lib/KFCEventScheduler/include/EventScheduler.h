@@ -80,15 +80,10 @@ public:
         ~Timer();
 
         Timer(const Timer &timer) = delete;
-        Timer(Timer &&timer);
+        Timer &operator=(const Timer &timer) = delete;
 
-        Timer &operator=(Timer &&timer)
-        {
-            //debug_printf_P(PSTR("_timer=%p.swap(%p)\n"), _timer.get(), timer._timer.get());
-            _timer = timer._timer;
-            timer._timer = nullptr;
-            return *this;
-        }
+        Timer(Timer &&timer);
+        Timer &operator=(Timer &&timer);
 
         void add(int64_t delayMillis, RepeatType repeat, Callback callback, Priority_t priority = PRIO_LOW, DeleterCallback deleter = nullptr);
         bool remove();

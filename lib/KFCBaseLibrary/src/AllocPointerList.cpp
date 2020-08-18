@@ -165,15 +165,26 @@ void AllocPointerList::dump(Print &output, size_t dumpBinarySize, AllocType type
     dump.disablePerLine();
 
     output.println(F("---"));
-    output.printf_P(PSTR("count=%u capacity=%u size=%u\n"), _list.size(), _list.capacity(), sizeof(_list[0]) * _list.capacity());
+    size_t sumAlloc = 0, sumHeap = 0;
     for (const auto &info : _list) {
         if (info == type) {
+            sumAlloc += info.getSize();
+            sumHeap += KFCMemoryDebugging::getHeapUsage(info.getSize());
             info.printTo(output);
             output.print(' ');
             dump.dump(info.getPointer(), std::min(info.getSize(), dumpBinarySize));
             output.printf_P(PSTR(" (%s:%u)\n"), info.getFile(), info.getLine());
         }
     }
+    output.printf_P(PSTR("count=%u capacity=%u size=%u - allocated=%u malloc=%u heap=%u\n"),
+        _list.size(),
+        _list.capacity(),
+        sizeof(_list[0]) * _list.capacity(),
+        sumAlloc,
+        sumHeap,
+        sumHeap + KFCMemoryDebugging::getHeapUsage(sizeof(_list[0]) * _list.capacity())
+    );
+    output.println(F("---"));
 }
 
 void AllocPointerList::markAllNoLeak(bool state)
@@ -181,6 +192,11 @@ void AllocPointerList::markAllNoLeak(bool state)
     for (auto &info : _list) {
         info.setNoLeak(state);
     }
+}
+
+AllocPointerList::AllocPointerInfoVector &AllocPointerList::getList()
+{
+    return _list;
 }
 
 void AllocPointerList::dump(Print &output, AllocType type)

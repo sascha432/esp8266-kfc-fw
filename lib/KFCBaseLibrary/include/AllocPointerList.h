@@ -94,6 +94,8 @@ public:
     void dump(Print &output, size_t dumpBinarySize, AllocType type);
     void markAllNoLeak(bool state);
 
+    AllocPointerInfoVector &getList();
+
 private:
     AllocPointerInfoVector _list;
 };

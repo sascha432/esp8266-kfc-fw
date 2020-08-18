@@ -532,6 +532,7 @@ DisplayTimer displayTimer;
 static void print_heap()
 {
     Serial.printf_P(PSTR("+HEAP: free=%u cpu=%dMHz"), ESP.getFreeHeap(), ESP.getCpuFreqMHz());
+    KFCMemoryDebugging::dumpShort(Serial);
 }
 
 static void heap_timer_callback(EventScheduler::TimerPtr timer)

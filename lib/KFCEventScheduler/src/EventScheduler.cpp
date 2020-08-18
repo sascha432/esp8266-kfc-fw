@@ -37,7 +37,11 @@ void EventScheduler::end()
 
 // EventScheduler::Timer
 
-EventScheduler::Timer::Timer() : _timer(nullptr)
+EventScheduler::Timer::Timer(): _timer(nullptr)
+{
+}
+
+EventScheduler::Timer::Timer(Timer &&timer) : _timer(std::exchange(timer._timer, nullptr))
 {
 }
 
@@ -46,25 +50,33 @@ EventScheduler::Timer::~Timer()
     remove();
 }
 
-EventScheduler::Timer::Timer(Timer &&timer)
+EventScheduler::Timer &EventScheduler::Timer::operator=(Timer &&timer)
 {
-    *this = std::move(timer);
+    //debug_printf_P(PSTR("_timer=%p.swap(%p)\n"), _timer.get(), timer._timer.get());
+    remove();
+    _timer = std::exchange(timer._timer, nullptr);
+    return *this;
 }
+
 
 void EventScheduler::Timer::add(int64_t delayMillis, RepeatType repeat, Callback callback, Priority_t priority, DeleterCallback deleter)
 {
     if (_timer) {
         remove();
     }
-    _timer = Scheduler.addTimer(delayMillis, repeat, callback, priority, [this, deleter](EventTimer *timer) {
-        if (deleter) {
+    if (deleter) {
+        _timer = Scheduler.addTimer(delayMillis, repeat, callback, priority, [this, deleter](EventTimer *timer) {
             deleter(timer);
-        }
-        else {
+            _timer = nullptr;
+        });
+
+    }
+    else {
+        _timer = Scheduler.addTimer(delayMillis, repeat, callback, priority, [this](EventTimer *timer) {
             delete timer;
-        }
-        _timer = nullptr;
-    });
+            _timer = nullptr;
+        });
+    }
     __SLDBG_printf("timer=%p hasTimer=%u", _timer, Scheduler.hasTimer(_timer));
 }
 
@@ -73,6 +85,11 @@ bool EventScheduler::Timer::remove()
     __SLDBG_printf("timer=%p hasTimer=%u", _timer, Scheduler.hasTimer(_timer));
     if (_timer) {
         _timer->_remove();
+#if 1
+        if (_timer) {
+            __DBG_panic("_timer=%p after remove", _timer);
+        }
+#endif
         _timer = nullptr;
         return true;
     }
@@ -101,7 +118,12 @@ EventTimer *EventScheduler::addTimer(int64_t delay, RepeatType repeat, Callback 
 {
     __SLDBG_printf("delay=%.0f repeat=%d prio=%u callback=%u deleter=%u", delay / 1.0, repeat._maxRepeat, priority, callback ? 1 : 0, deleter ? 1 : 0);
     auto timer = new EventTimer(callback, delay, repeat, priority);
-    _timers.push_back(deleter ? TimerPtr(timer, deleter) : TimerPtr(timer));
+    if (deleter) {
+        _timers.emplace_back(timer, deleter);
+    }
+    else {
+        _timers.emplace_back(timer);
+    }
 #if DEBUG_EVENT_SCHEDULER
     Scheduler._list();
 #endif

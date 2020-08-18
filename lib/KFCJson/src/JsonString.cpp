@@ -4,6 +4,18 @@
 
 #include "JsonString.h"
 
+#if 1
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
+#endif
+
+JsonString::JsonString() : _raw{}
+{
+    // _setType(STORED);
+    // *_raw = 0;
+}
+
 JsonString::JsonString(const JsonString &str) : JsonString()
 {
    *this = str;
@@ -14,41 +26,35 @@ JsonString::JsonString(JsonString &&str) : JsonString()
    *this = std::move(str);
 }
 
-JsonString::JsonString()
-{
-    _setType(STORED);
-    *_raw = 0;
-}
-
-JsonString::JsonString(const String &str)
+JsonString::JsonString(const String &str) : JsonString()
 {
     _init(str.c_str(), (length_t)str.length());
 }
 
-JsonString::JsonString(const char *str, bool forceCopy)
+JsonString::JsonString(const char *str, bool forceCopy) : JsonString()
 {
     _init(str, (length_t)strlen(str));
 }
 
-JsonString::JsonString(const char *str)
+JsonString::JsonString(const char *str) : JsonString()
 {
     if (*str) {
         _setType(POINTER);
         _setPtr(str);
         _setLength((length_t)strlen(str));
     }
-    else {
-        _setType(STORED);
-        *_raw = 0;
-    }
+    // else {
+    //     _setType(STORED);
+    //     *_raw = 0;
+    // }
 }
 
-JsonString::JsonString(char ch)
+JsonString::JsonString(char ch) : JsonString()
 {
     _init(&ch, 1);
 }
 
-JsonString::JsonString(const __FlashStringHelper *str)
+JsonString::JsonString(const __FlashStringHelper *str) : JsonString()
 {
     // while checking string length we can copy already from slow flash
     PGM_P lptr = RFPSTR(str);
@@ -71,7 +77,7 @@ JsonString::JsonString(const __FlashStringHelper *str)
     }
 }
 
-JsonString::JsonString(const __FlashStringHelper *str, bool forceFlash)
+JsonString::JsonString(const __FlashStringHelper *str, bool forceFlash) : JsonString()
 {
     _setType(FLASH);
     _setPtr(reinterpret_cast<const char *>(str));
@@ -81,14 +87,14 @@ JsonString::JsonString(const __FlashStringHelper *str, bool forceFlash)
 JsonString::~JsonString()
 {
     if (_getType() == ALLOC) {
-        free(_getPtr());
+        __LDBG_free(_getPtr());
     }
 }
 
 JsonString &JsonString::operator=(const JsonString &str)
 {
     if (_getType() == ALLOC) {
-        free(_getPtr());
+        __LDBG_free(_getPtr());
     }
     if (str._getType() == ALLOC) {
         _init(str._getConstPtr(), str._getLength());
@@ -102,7 +108,7 @@ JsonString &JsonString::operator=(const JsonString &str)
 JsonString & JsonString::operator=(JsonString &&str)
 {
     if (_getType() == ALLOC) {
-        free(_getPtr());
+        __LDBG_free(_getPtr());
     }
     if (str._getType() == ALLOC) {
         _setType(ALLOC);
@@ -177,7 +183,7 @@ bool JsonString::equals(const __FlashStringHelper *str) const
 void JsonString::clear()
 {
     if (_getType() == ALLOC) {
-        free(_getPtr());
+        __LDBG_free(_getPtr());
     }
     _setType(STORED);
     *_raw = 0;
@@ -229,7 +235,8 @@ size_t JsonString::printTo(Print &p) const
 char *JsonString::_allocate(length_t length)
 {
     _setType(ALLOC);
-    auto ptr = (char *)malloc(length + 1);
+
+    auto ptr = __LDBG_malloc_str(length + 1);
     _setPtr(ptr);
     return ptr;
 }

@@ -53,17 +53,23 @@ public:
     AbstractJsonValue &add(std::nullptr_t value) {
         return add(new JsonUnnamedVariant<std::nullptr_t>(value));
     }
-    AbstractJsonValue &add(int value) {
-        return add(new JsonUnnamedVariant<long>((long)value));
+    AbstractJsonValue &add(uint32_t value) {
+        return add(new JsonUnnamedVariant<uint32_t>(value));
     }
-    AbstractJsonValue &add(unsigned int value) {
-        return add(new JsonUnnamedVariant<unsigned long>((unsigned long)value));
-    }
-    AbstractJsonValue &add(long value) {
-        return add(new JsonUnnamedVariant<long>(value));
+    AbstractJsonValue &add(int32_t value) {
+        return add(new JsonUnnamedVariant<int32_t>(value));
     }
     AbstractJsonValue &add(unsigned long value) {
-        return add(new JsonUnnamedVariant<unsigned long>(value));
+        return add(new JsonUnnamedVariant<uint32_t>((uint32_t)value));
+    }
+    AbstractJsonValue &add(long value) {
+        return add(new JsonUnnamedVariant<int32_t>((int32_t)value));
+    }
+    AbstractJsonValue &add(uint64_t value) {
+        return add(new JsonUnnamedVariant<uint64_t>(value));
+    }
+    AbstractJsonValue &add(int64_t value) {
+        return add(new JsonUnnamedVariant<int64_t>(value));
     }
     AbstractJsonValue &add(double value) {
         return add(new JsonUnnamedVariant<double>(value));

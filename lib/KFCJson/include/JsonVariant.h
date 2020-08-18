@@ -6,6 +6,7 @@
 
 #include <Arduino_compat.h>
 #include <misc.h>
+#include <int64_to_string.h>
 #include "JsonValue.h"
 #include "JsonString.h"
 #include "JsonNumber.h"
@@ -13,32 +14,22 @@
 template <class T>
 class JsonUnnamedVariant : public AbstractJsonValue {
 public:
-    JsonUnnamedVariant(const __FlashStringHelper *value) : _value(value) {
-    }
-    JsonUnnamedVariant(const char *value) : _value(value) {
-    }
-    JsonUnnamedVariant(const JsonNumber &value) : _value(value) {
-    }
-    JsonUnnamedVariant(JsonNumber &&value) : _value(std::move(value)) {
-    }
-    JsonUnnamedVariant(const JsonVar &value) : _value(value) {
-    }
-    JsonUnnamedVariant(const JsonString &value) : _value(value) {
-    }
-    JsonUnnamedVariant(JsonString &&value) : _value(std::move(value)) {
-    }
-    JsonUnnamedVariant(const String &value) : _value(value) {
-    }
-    JsonUnnamedVariant(bool value) : _value(value) {
-    }
-    JsonUnnamedVariant(std::nullptr_t value) : _value(value) {
-    }
-    JsonUnnamedVariant(long value) : _value(value) {
-    }
-    JsonUnnamedVariant(unsigned long value) : _value(value) {
-    }
-    JsonUnnamedVariant(double value) : _value(value) {
-    }
+    JsonUnnamedVariant(const __FlashStringHelper *value) : _value(value) {}
+    JsonUnnamedVariant(const char *value) : _value(value) {}
+    JsonUnnamedVariant(const JsonNumber &value) : _value(value) {}
+    JsonUnnamedVariant(JsonNumber &&value) : _value(std::move(value)) {}
+    JsonUnnamedVariant(const JsonVar &value) : _value(value) {}
+    JsonUnnamedVariant(const JsonString &value) : _value(value) {}
+    JsonUnnamedVariant(JsonString &&value) : _value(std::move(value)) {}
+    JsonUnnamedVariant(const String &value) : _value(value) {}
+    JsonUnnamedVariant(String &&value) : _value(std::move(value)) {}
+    JsonUnnamedVariant(bool value) : _value(value) {}
+    JsonUnnamedVariant(std::nullptr_t value) : _value(value) {}
+    JsonUnnamedVariant(uint32_t value) : _value(value) {}
+    JsonUnnamedVariant(int32_t value) : _value(value) {}
+    JsonUnnamedVariant(uint64_t value) : _value(value) {}
+    JsonUnnamedVariant(int64_t value) : _value(value) {}
+    JsonUnnamedVariant(double value) : _value(value) {}
     virtual ~JsonUnnamedVariant() {
         _destroy(_value);
     }
@@ -88,11 +79,17 @@ protected:
     size_t _printTo(Print &output, std::nullptr_t value) const {
         return output.print(FSPGM(null));
     }
-    size_t _printTo(Print &output, long value) const {
+    size_t _printTo(Print &output, uint32_t value) const {
         return output.print(value);
     }
-    size_t _printTo(Print &output, unsigned long value) const {
+    size_t _printTo(Print &output, int32_t value) const {
         return output.print(value);
+    }
+    size_t _printTo(Print &output, uint64_t value) const {
+        return print_string(output, value);
+    }
+    size_t _printTo(Print &output, int64_t value) const {
+        return print_string(output, value);
     }
     size_t _printTo(Print &output, double value) const {
         return printTrimmedDouble(&output, value);
@@ -134,11 +131,19 @@ protected:
     size_t _length(std::nullptr_t value) const {
         return 4;
     }
-    size_t _length(long value) const {
-        return snprintf_P(nullptr, 0, PSTR("%ld"), value);
+    size_t _length(uint32_t value) const {
+        return snprintf_P(nullptr, 0, PSTR("%u"), value);
     }
-    size_t _length(unsigned long value) const {
-        return snprintf_P(nullptr, 0, PSTR("%lu"), value);
+    size_t _length(int32_t value) const {
+        return snprintf_P(nullptr, 0, PSTR("%d"), value);
+    }
+    size_t _length(uint64_t value) const {
+        char buffer[kInt64ToStringBufferSize];
+        return &buffer[kInt64ToStringBufferSize - 1] - ulltoa(value, buffer);
+    }
+    size_t _length(int64_t value) const {
+        char buffer[kInt64ToStringBufferSize];
+        return &buffer[kInt64ToStringBufferSize - 1] - lltoa(value, buffer);
     }
     size_t _length(double value) const {
         return printTrimmedDouble(nullptr, value);
@@ -175,32 +180,22 @@ private:
 template <class T>
 class JsonNamedVariant : public JsonUnnamedVariant<T> {
 public:
-    JsonNamedVariant(const JsonString &name, const __FlashStringHelper *value) : JsonUnnamedVariant<T>(value), _name(name) {
-    }
-    JsonNamedVariant(const JsonString &name, const char *value) : JsonUnnamedVariant<T>(value), _name(name) {
-    }
-    JsonNamedVariant(const JsonString &name, const JsonVar &value) : JsonUnnamedVariant<T>(value), _name(name) {
-    }
-    JsonNamedVariant(const JsonString &name, const JsonString &value) : JsonUnnamedVariant<T>(value), _name(name) {
-    }
-    JsonNamedVariant(const JsonString &name, JsonString &&value) : JsonUnnamedVariant<T>(std::move(value)), _name(name) {
-    }
-    JsonNamedVariant(const JsonString &name, const JsonNumber &value) : JsonUnnamedVariant<T>(value), _name(name) {
-    }
-    JsonNamedVariant(const JsonString &name, JsonNumber &&value) : JsonUnnamedVariant<T>(std::move(value)), _name(name) {
-    }
-    JsonNamedVariant(const JsonString &name, const String &value) : JsonUnnamedVariant<T>(value), _name(name) {
-    }
-    JsonNamedVariant(const JsonString &name, bool value) : JsonUnnamedVariant<T>(value), _name(name) {
-    }
-    JsonNamedVariant(const JsonString &name, std::nullptr_t value) : JsonUnnamedVariant<T>(value), _name(name) {
-    }
-    JsonNamedVariant(const JsonString &name, long value) : JsonUnnamedVariant<T>(value), _name(name) {
-    }
-    JsonNamedVariant(const JsonString &name, unsigned long value) : JsonUnnamedVariant<T>(value), _name(name) {
-    }
-    JsonNamedVariant(const JsonString &name, double value) : JsonUnnamedVariant<T>(value), _name(name) {
-    }
+    JsonNamedVariant(const JsonString &name, const __FlashStringHelper *value) : JsonUnnamedVariant<T>(value), _name(name) {}
+    JsonNamedVariant(const JsonString &name, const char *value) : JsonUnnamedVariant<T>(value), _name(name) {}
+    JsonNamedVariant(const JsonString &name, const JsonVar &value) : JsonUnnamedVariant<T>(value), _name(name) {}
+    JsonNamedVariant(const JsonString &name, const JsonString &value) : JsonUnnamedVariant<T>(value), _name(name) {}
+    JsonNamedVariant(const JsonString &name, JsonString &&value) : JsonUnnamedVariant<T>(std::move(value)), _name(name) {}
+    JsonNamedVariant(const JsonString &name, const JsonNumber &value) : JsonUnnamedVariant<T>(value), _name(name) {}
+    JsonNamedVariant(const JsonString &name, JsonNumber &&value) : JsonUnnamedVariant<T>(std::move(value)), _name(name) {}
+    JsonNamedVariant(const JsonString &name, const String &value) : JsonUnnamedVariant<T>(value), _name(name) {}
+    JsonNamedVariant(const JsonString &name, String &&value) : JsonUnnamedVariant<T>(std::move(value)), _name(name) {}
+    JsonNamedVariant(const JsonString &name, bool value) : JsonUnnamedVariant<T>(value), _name(name) {}
+    JsonNamedVariant(const JsonString &name, std::nullptr_t value) : JsonUnnamedVariant<T>(value), _name(name) {}
+    JsonNamedVariant(const JsonString &name, uint32_t value) : JsonUnnamedVariant<T>(value), _name(name) {}
+    JsonNamedVariant(const JsonString &name, int32_t value) : JsonUnnamedVariant<T>(value), _name(name) {}
+    JsonNamedVariant(const JsonString &name, uint64_t value) : JsonUnnamedVariant<T>(value), _name(name) {}
+    JsonNamedVariant(const JsonString &name, int64_t value) : JsonUnnamedVariant<T>(value), _name(name) {}
+    JsonNamedVariant(const JsonString &name, double value) : JsonUnnamedVariant<T>(value), _name(name) {}
 protected:
     JsonNamedVariant(const JsonString &name, AbstractJsonValue::JsonVariantVector *value, size_t reserve = 0) : JsonUnnamedVariant<T>(value, reserve), _name(name) {
     }

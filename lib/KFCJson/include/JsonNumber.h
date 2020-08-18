@@ -14,6 +14,10 @@ public:
     using JsonString::JsonString;
 
     JsonNumber(double value, uint8_t decimalPlaces);
+    JsonNumber(uint32_t value);
+    JsonNumber(int32_t value);
+    JsonNumber(uint64_t value);
+    JsonNumber(int64_t value);
 
     bool validate();
     void invalidate();

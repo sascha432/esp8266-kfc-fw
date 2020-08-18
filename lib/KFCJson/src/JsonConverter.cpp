@@ -76,7 +76,7 @@ bool JsonConverter::processElement()
             value = new JsonNamedVariant<JsonNumber>(_keyStr, JsonNumber(_valueStr));
             break;
         case JSON_TYPE_INT:
-            value = new JsonNamedVariant<long>(_keyStr, _valueStr.toInt());
+            value = new JsonNamedVariant<int32_t>(_keyStr, (int32_t)_valueStr.toInt());
             break;
         case JSON_TYPE_NULL:
             value = new JsonNamedVariant<std::nullptr_t>(_keyStr, nullptr);
@@ -98,7 +98,7 @@ bool JsonConverter::processElement()
             value = new JsonUnnamedVariant<JsonNumber>(JsonNumber(_valueStr));
             break;
         case JSON_TYPE_INT:
-            value = new JsonUnnamedVariant<long>(_valueStr.toInt());
+            value = new JsonUnnamedVariant<int32_t>((int32_t)_valueStr.toInt());
             break;
         case JSON_TYPE_NULL:
             value = new JsonUnnamedVariant<std::nullptr_t>(nullptr);

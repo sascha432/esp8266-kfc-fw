@@ -53,17 +53,23 @@ public:
     AbstractJsonValue &add(const JsonString &name, std::nullptr_t value) {
         return add(new JsonNamedVariant<std::nullptr_t>(name, value));
     }
-    AbstractJsonValue &add(const JsonString &name, int value) {
-        return add(new JsonNamedVariant<long>(name, (long)value));
+    AbstractJsonValue &add(const JsonString &name, uint32_t value) {
+        return add(new JsonNamedVariant<uint32_t>(name, value));
     }
-    AbstractJsonValue &add(const JsonString &name, unsigned int value) {
-        return add(new JsonNamedVariant<unsigned long>(name, (unsigned long)value));
-    }
-    AbstractJsonValue &add(const JsonString &name, long value) {
-        return add(new JsonNamedVariant<long>(name, value));
+    AbstractJsonValue &add(const JsonString &name, int32_t value) {
+        return add(new JsonNamedVariant<int32_t>(name, value));
     }
     AbstractJsonValue &add(const JsonString &name, unsigned long value) {
-        return add(new JsonNamedVariant<unsigned long>(name, value));
+        return add(new JsonNamedVariant<uint32_t>(name, (uint32_t)value));
+    }
+    AbstractJsonValue &add(const JsonString &name, long value) {
+        return add(new JsonNamedVariant<int32_t>(name, (int32_t)value));
+    }
+    AbstractJsonValue &add(const JsonString &name, uint64_t value) {
+        return add(new JsonNamedVariant<uint64_t>(name, value));
+    }
+    AbstractJsonValue &add(const JsonString &name, int64_t value) {
+        return add(new JsonNamedVariant<int64_t>(name, value));
     }
     AbstractJsonValue &add(const JsonString &name, double value) {
         return add(new JsonNamedVariant<double>(name, value));
@@ -102,17 +108,23 @@ public:
     AbstractJsonValue &replace(const JsonString &name, std::nullptr_t value) {
         return replace(name, new JsonNamedVariant<std::nullptr_t>(name, value));
     }
-    AbstractJsonValue &replace(const JsonString &name, int value) {
-        return replace(name, new JsonNamedVariant<long>(name, (long)value));
+    AbstractJsonValue &replace(const JsonString &name, uint32_t value) {
+        return replace(name, new JsonNamedVariant<uint32_t>(name, value));
     }
-    AbstractJsonValue &replace(const JsonString &name, unsigned int value) {
-        return replace(name, new JsonNamedVariant<unsigned long>(name, (unsigned long)value));
-    }
-    AbstractJsonValue &replace(const JsonString &name, long value) {
-        return replace(name, new JsonNamedVariant<long>(name, value));
+    AbstractJsonValue &replace(const JsonString &name, int32_t value) {
+        return replace(name, new JsonNamedVariant<int32_t>(name, value));
     }
     AbstractJsonValue &replace(const JsonString &name, unsigned long value) {
-        return replace(name, new JsonNamedVariant<unsigned long>(name, value));
+        return replace(name, new JsonNamedVariant<uint32_t>(name, (uint32_t)value));
+    }
+    AbstractJsonValue &replace(const JsonString &name, long value) {
+        return replace(name, new JsonNamedVariant<int32_t>(name, (int32_t)value));
+    }
+    AbstractJsonValue &replace(const JsonString &name, uint64_t value) {
+        return replace(name, new JsonNamedVariant<uint64_t>(name, value));
+    }
+    AbstractJsonValue &replace(const JsonString &name, int64_t value) {
+        return replace(name, new JsonNamedVariant<int64_t>(name, value));
     }
     AbstractJsonValue &replace(const JsonString &name, double value) {
         return replace(name, new JsonNamedVariant<double>(name, value));

@@ -7,6 +7,8 @@
 #include <Arduino.h>
 #include <String.h>
 
+static constexpr size_t kInt64ToStringBufferSize = 22;
+
 size_t concat_to_string(String &str, const int64_t value);
 size_t concat_to_string(String &str, const uint64_t value);
 
@@ -17,6 +19,11 @@ String to_string(const int64_t value);
 String to_string(const uint64_t value);
 
 // buffer must be at least 22 byte
+//
+// char buffer[kInt64ToStringBufferSize];
+// uint64_t value = 100;
+// char *str = ulltoa(value, buffer);
+// strlen(str) = &buf[kInt64ToStringBufferSize - 1] - str;
 char *ulltoa(unsigned long long value, char *buffer);
 char *lltoa(long long value, char *buffer);
 

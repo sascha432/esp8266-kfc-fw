@@ -89,7 +89,8 @@ uint8_t *ConfigurationHelper::Pool::allocate(uint16_t length)
     auto endPtr = _ptr + _length;
     _length += length;
     _count++;
-    memset(endPtr, 0, length);
+    std::fill(endPtr, _end(), 0);
+    __LDBG_assert_panic(endPtr < _end(), "begin=%p end=%p ptr=%p len=%d size=%d alloc_len=%d", _ptr, _end(), endPtr, _length, _size, length);
     return endPtr;
 }
 
@@ -193,6 +194,7 @@ uint16_t ConfigurationHelper::EEPROMAccess::read(uint8_t *dst, uint16_t offset, 
     // if the EEPROM is not intialized, copy data from flash directly
     if (_isInitialized) {
         memcpy(dst, EEPROM.getConstDataPtr() + offset, length); // data is already in RAM
+        assert(dst + length <= dst + size);
         return 0;
     }
 
@@ -218,6 +220,7 @@ uint16_t ConfigurationHelper::EEPROMAccess::read(uint8_t *dst, uint16_t offset, 
             interrupts();
             if (result == SPI_FLASH_RESULT_OK) {
                 memcpy(dst, buf + alignment, length); // copy to destination
+                assert(dst + length <= dst + size);
             }
         }
         else {
@@ -230,6 +233,7 @@ uint16_t ConfigurationHelper::EEPROMAccess::read(uint8_t *dst, uint16_t offset, 
                 interrupts();
                 if (result == SPI_FLASH_RESULT_OK) {
                     memcpy(dst, ptr + alignment, length); // copy to destination
+                    assert(dst + length <= dst + size);
                 }
                 ::free(ptr);
             }
@@ -241,11 +245,13 @@ uint16_t ConfigurationHelper::EEPROMAccess::read(uint8_t *dst, uint16_t offset, 
         interrupts();
         if (result == SPI_FLASH_RESULT_OK && alignment) { // move to beginning of the destination
             memmove(dst, dst + alignment, length);
+            assert(dst + length <= dst + size);
         }
-        memset(dst + length, 0, readSize - length); // clear the rest
     }
-    if (result != SPI_FLASH_RESULT_OK) {
-        memset(dst, 0, length);
+    if (result == SPI_FLASH_RESULT_OK) {
+        std::fill(dst + length, dst + size, 0);
+    } else {
+        std::fill(dst, dst + size, 0);
     }
     __LDBG_printf("spi_flash_read(%08x, %d) = %d, offset %u", eeprom_start_address, readSize, result, offset);
 

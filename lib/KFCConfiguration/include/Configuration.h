@@ -199,6 +199,10 @@ namespace ConfigurationHelper {
         void *getPtr() const;
 
     private:
+        uint8_t *_end() const {
+            return _ptr + _size;
+        }
+
         struct __attribute__packed__ {
             uint8_t *_ptr;
             uint32_t _length: 12;

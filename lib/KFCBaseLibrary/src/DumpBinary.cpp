@@ -4,6 +4,16 @@
 
 #include "DumpBinary.h"
 
+extern "C" {
+
+    void __dump_binary(const void *ptr, size_t len, size_t perLine)
+    {
+        DumpBinary d(Serial);
+        d.setPerLine(perLine).dump(ptr, len);
+    }
+
+}
+
 DumpBinary::DumpBinary(Print &output) : _output(output)
 {
     _perLine = 16;

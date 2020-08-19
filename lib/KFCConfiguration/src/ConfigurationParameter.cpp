@@ -390,7 +390,7 @@ bool ConfigurationParameter::_readDataTo(Configuration *conf, uint16_t offset, u
 #if DEBUG_CONFIGURATION_GETHANDLE
         auto readSize =
 #endif
-        conf->_eeprom.read(ptr, offset, _param.length, ConfigurationHelper::Pool::align(size));
+        conf->_eeprom.read(ptr, offset, _param.length, size);
         __DBG__addFlashReadSize(_param.handle, readSize);
     }
 
@@ -419,7 +419,7 @@ bool ConfigurationParameter::_readData(Configuration *conf, uint16_t offset)
         conf->setLastReadAccess();
     }
 
-    if (!_readDataTo(conf, offset, ptr, ConfigurationHelper::Pool::align(_info.size))) {
+    if (!_readDataTo(conf, offset, ptr, _info.size)) {
         return false;
     }
 

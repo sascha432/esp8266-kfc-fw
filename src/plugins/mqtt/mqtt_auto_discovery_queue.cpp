@@ -3,7 +3,7 @@
  */
 
 #include <Arduino_compat.h>
-#include <EventTimer.h>
+#include <EventScheduler.h>
 #include <MicrosTimer.h>
 #include "mqtt_client.h"
 
@@ -21,9 +21,6 @@ MQTTAutoDiscoveryQueue::MQTTAutoDiscoveryQueue(MQTTClient &client) : _client(cli
 
 MQTTAutoDiscoveryQueue::~MQTTAutoDiscoveryQueue()
 {
-    if (_timer.active()) {
-        _timer.remove();
-    }
 }
 
 void MQTTAutoDiscoveryQueue::clear()
@@ -48,13 +45,13 @@ void MQTTAutoDiscoveryQueue::publish()
         (*_next)->rewindAutoDiscovery();
 
         auto intialDelay = MQTT_AUTO_DISCOVERY_QUEUE_INITIAL_DELAY + ((MQTT_AUTO_DISCOVERY_QUEUE_INITIAL_DELAY / 10) == 0 ? 0 : (rand() % (MQTT_AUTO_DISCOVERY_QUEUE_INITIAL_DELAY / 10)));
-        _timer.add(intialDelay, true, [this](EventScheduler::TimerPtr timer) {
+        _Timer(_timer).add(intialDelay, true, [this](Event::TimerPtr &timer) {
             _timerCallback(timer);
         });
     }
 }
 
-void MQTTAutoDiscoveryQueue::_timerCallback(EventScheduler::TimerPtr timer)
+void MQTTAutoDiscoveryQueue::_timerCallback(Event::TimerPtr &timer)
 {
 #if MQTT_AUTO_DISCOVERY_QUEUE_INITIAL_DELAY != MQTT_AUTO_DISCOVERY_QUEUE_DELAY
     // rearm timer if the first call
@@ -84,7 +81,7 @@ void MQTTAutoDiscoveryQueue::_timerCallback(EventScheduler::TimerPtr timer)
         do {
             if (++_next == _client._components.end()) {
                 _publishDone();
-                timer->detach();
+                timer.reset();
                 return;
             }
             __LDBG_printf("component #%u count=%u", std::distance(_client._components.begin(), _next), (*_next)->getAutoDiscoveryCount());
@@ -122,7 +119,7 @@ void MQTTAutoDiscoveryQueue::_timerCallback(EventScheduler::TimerPtr timer)
 
     if (++_next == _client._components.end()) {
         _publishDone();
-        timer->detach();
+        timer.reset();
     } else {
         (*_next)->rewindAutoDiscovery();
     }

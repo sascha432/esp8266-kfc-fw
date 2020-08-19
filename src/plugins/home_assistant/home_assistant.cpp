@@ -6,8 +6,7 @@
 
 #include <KFCForms.h>
 #include <KFCJson.h>
-#include <LoopFunctions.h>
-#include <EventTimer.h>
+#include <EventScheduler.h>
 #include "kfc_fw_config.h"
 #include "home_assistant.h"
 #include "../include/templates.h"
@@ -265,9 +264,9 @@ void HassPlugin::_mqttSet(const String &topic, int value)
 void HassPlugin::_mqttGet(const String &topic, std::function<void(bool, int)> callback)
 {
     int counter = 0;
-    Scheduler.addTimer(10, true, [this, topic, callback, counter](EventScheduler::TimerPtr timer) mutable {
+    _Scheduler.add(10, true, [this, topic, callback, counter](Event::TimerPtr &timer) mutable {
         if (counter++ == 200) {
-            timer->detach();
+            timer->reset();
             callback(false, 0);
         }
         else {
@@ -276,7 +275,7 @@ void HassPlugin::_mqttGet(const String &topic, std::function<void(bool, int)> ca
             });
             __LDBG_printf("topic=%s i=%u found=%u", topic.c_str(), counter, iterator != _topics.end());
             if (iterator != _topics.end()) {
-                timer->detach();
+                timer->reset();
                 __LDBG_printf("value=%u", iterator->value);
                 callback(true, iterator->value);
             }

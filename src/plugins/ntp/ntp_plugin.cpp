@@ -5,10 +5,7 @@
 #include <time.h>
 #include <sys/time.h>
 #include <EventScheduler.h>
-#include <EventTimer.h>
 #include <PrintHtmlEntitiesString.h>
-#include <LoopFunctions.h>
-#include <WiFiCallbacks.h>
 #include <MicrosTimer.h>
 #include "../include/templates.h"
 #include "logger.h"
@@ -103,7 +100,8 @@ void NTPPlugin::setup(SetupModeType mode)
 {
     if (System::Flags::getConfig().is_ntp_client_enabled) {
         execConfigTime();
-    } else {
+    }
+    else {
 		auto str = emptyString.c_str();
 		configTime(_GMT, str, str, str);
     }
@@ -161,7 +159,7 @@ void NTPPlugin::execConfigTime()
 
     // check time every minute
     // for some reason, NTP does not always update the time even with _ntpRefreshTimeMillis = 15seconds
-    plugin._checkTimer.add(15000, true, _checkTimerCallback);
+    _Timer(plugin._checkTimer).add(15000, true, _checkTimerCallback);
 }
 
 void NTPPlugin::updateNtpCallback()
@@ -192,18 +190,16 @@ void NTPPlugin::updateNtpCallback()
 #endif
 }
 
-void NTPPlugin::_checkTimerCallback(EventScheduler::TimerPtr timer)
+void NTPPlugin::_checkTimerCallback(Event::TimerPtr &timer)
 {
     if (IS_TIME_VALID(time(nullptr))) {
         __LDBG_printf("detaching NTP check timer");
-        timer->detach();
+        timer.reset();
     }
     else {
         __LDBG_printf("NTP did not update, calling configTime() again, delay=%u", timer->getDelayUInt32());
         execConfigTime();
-        if (timer->getDelayUInt32() < 60000U) { // change to 60 seconds after first attempt
-            timer->rearm(60000);
-        }
+        timer->updateInterval(Event::seconds(60));
     }
 }
 

@@ -42,5 +42,5 @@ private:
     }
 
     Serial2TcpConnection *_connection;
-    EventScheduler::Timer _timer;
+    Event::Timer _timer;
 };

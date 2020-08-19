@@ -13,6 +13,7 @@
 #include "WebUIComponent.h"
 #include "WSDraw.h"
 #include "NeoPixel_esp.h"
+#include "FadeTimer.h"
 #include "plugins.h"
 #if IOT_ALARM_PLUGIN_ENABLED
 #include "./plugins/alarm/alarm.h"
@@ -122,11 +123,11 @@ private:
     // uint32_t _updateTimer;
     uint32_t _updateCounter;
     uint16_t _backlightLevel;
+    FadeTimer *_fadeTimer;
 
 private:
     uint32_t _pollTimer;
     asyncHTTPrequest *_httpClient;
-    EventScheduler::Timer _fadeTimer;
 
 #if IOT_WEATHER_STATION_HAS_TOUCHPAD
     Mpr121Touchpad _touchpad;
@@ -134,7 +135,7 @@ private:
 #endif
 
 #if IOT_WEATHER_STATION_WS2812_NUM
-    EventScheduler::Timer _pixelTimer;
+    Event::Timer _pixelTimer;
     uint8_t _pixels[IOT_WEATHER_STATION_WS2812_NUM * 3];
 #endif
 
@@ -156,8 +157,8 @@ private:
     void _alarmCallback(Alarm::AlarmModeType mode, uint16_t maxDuration);
     bool _resetAlarm(); // returns true if alarm was reset
 
-    EventScheduler::Timer _alarmTimer;
-    EventScheduler::Callback _resetAlarmFunc;
+    Event::Timer _alarmTimer;
+    Event::Callback _resetAlarmFunc;
 #endif
 
 #if DEBUG_IOT_WEATHER_STATION

@@ -5,6 +5,7 @@
 #include "dimmer_base.h"
 #include <KFCJson.h>
 #include <ESPAsyncWebServer.h>
+#include <EventScheduler.h>
 #include <kfc_fw_config.h>
 #include "WebUISocket.h"
 #include "WebUIAlerts.h"
@@ -16,7 +17,6 @@
 #endif
 #include "../src/plugins/sensor/sensor.h"
 #include "serial_handler.h"
-#include "EventTimer.h"
 
 #include "firmware_protocol.h"
 
@@ -53,7 +53,7 @@ void Dimmer_Base::_begin()
     _wire.begin(DIMMER_I2C_ADDRESS + 1);
     _wire.onReceive(Dimmer_Base::onReceive);
 
-    Scheduler.addTimer(2000, false, [this](EventScheduler::TimerPtr timer) { // delay for 2 seconds
+    _Scheduler.add(2000, false, [this](Event::TimerPtr &timer) { // delay for 2 seconds
         if (_wire.lock()) {
             _wire.beginTransmission(DIMMER_I2C_ADDRESS);
             _wire.write(DIMMER_REGISTER_COMMAND);
@@ -143,10 +143,10 @@ void Dimmer_Base::_onReceive(size_t length)
 
 #else
 
-void Dimmer_Base::fetchMetrics(EventScheduler::TimerPtr timer)
+void Dimmer_Base::fetchMetrics(Event::TimerPtr &timer)
 {
     if (timer->getDelay() != METRICS_DEFAULT_UPDATE_RATE) {
-        timer->changeOptions(METRICS_DEFAULT_UPDATE_RATE, true);
+        timer->rearm(METRICS_DEFAULT_UPDATE_RATE);
     }
     // using dimmer_plugin avoids adding extra static variable to Dimmer_Base
     dimmer_plugin._fetchMetrics();

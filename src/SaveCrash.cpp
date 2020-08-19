@@ -4,6 +4,7 @@
 
 #include <Arduino_compat.h>
 #include <reset_detector.h>
+#include <EventScheduler.h>
 #include <ListDir.h>
 #include "SaveCrash.h"
 #include "kfc_fw_config.h"
@@ -40,7 +41,7 @@ namespace SaveCrash {
 
     void installRemoveCrashCounter(uint32_t delay_seconds)
     {
-        Scheduler.addTimer(delay_seconds * 1000UL, false, [](EventScheduler::TimerPtr timer) {
+        _Scheduler.add(Event::seconds(delay_seconds), false, [](Event::TimerPtr &timer) {
             removeCrashCounter();
             resetDetector.clearCounter();
         });
@@ -65,7 +66,7 @@ namespace SaveCrash {
 
     void installSafeCrashTimer(uint32_t delay_seconds)
     {
-        Scheduler.addTimer(delay_seconds * 1000UL, false, [](EventScheduler::TimerPtr timer) {
+        _Scheduler.add(Event::seconds(delay_seconds), false, [](Event::TimerPtr &timer) {
             if (espSaveCrash.count()) {
                 constexpr uint8_t max_limit = SAVECRASH_MAX_DUMPS;
                 uint8_t num = 0;

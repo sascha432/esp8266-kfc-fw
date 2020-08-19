@@ -3,9 +3,8 @@
  */
 
 #include <Arduino_compat.h>
+#include <EventScheduler.h>
 #include "clock.h"
-#include <LoopFunctions.h>
-#include <EventTimer.h>
 
 #if DEBUG_IOT_CLOCK
 #include <debug_helper_enable.h>
@@ -102,7 +101,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                 int interval = args.toInt(1, 500);
                 enable(false);
                 size_t num = 0;
-                Scheduler.addTimer(interval, true, [num, this](EventScheduler::TimerPtr timer) mutable {
+                _Scheduler.add(interval, true, [num, this](Event::TimerPtr &timer) mutable {
                     __LDBG_printf("pixel=%u", num);
                     if (num == _pixelOrder.size()) {
                         _display.clear();

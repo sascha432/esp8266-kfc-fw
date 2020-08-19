@@ -12,7 +12,6 @@
 #include <OpenWeatherMapAPI.h>
 #include <SpeedBooster.h>
 #include <EventScheduler.h>
-#include <EventTimer.h>
 #include "FixedCircularBuffer.h"
 #include "kfc_fw_config.h"
 #include "fonts/fonts.h"
@@ -161,10 +160,46 @@
 #endif
 
 using WeatherStationCanvas = GFXCanvasCompressedPalette;
+using Canvas = WeatherStationCanvas;
 // using WeatherStationCanvas = GFXCanvasCompressed;
 
 using Adafruit_ST7735_Ex = GFXExtension<Adafruit_ST7735>;
 
+#if 0
+
+class CanvasObject {
+public:
+    CanvasObject() {}
+    virtual void draw(Canvas *canvas, int x, int y) = 0;
+
+    int width() const{
+        return TFT_WIDTH;
+    }
+    int height() const{
+        return TFT_HEIGHT;
+    }
+};
+
+class TextObject : public CanvasObject
+{
+public:
+    TextObject(const String &text, const GFXfont *font, ColorType color) : _text(text), _font(font), _color(color) {}
+
+    virtual void draw(Canvas *canvas, int x, int y) {
+        canvas->fillScreen(COLORS_BACKGROUND);
+        canvas->setTextColor(_color);
+        canvas->setFont(_font);
+        GFXCanvasCompressed::Position_t pos;
+        canvas->drawTextAligned(width() / 2, height() / 2, _text, GFXCanvasCompressed::CENTER, GFXCanvasCompressed::MIDDLE, &pos);
+        _displayScreen(0, 0, width(), height());
+    }
+
+private:
+    String _text;
+    const GFXfont *_font;
+    ColorType _color;
+};
+#endif
 
 class WSDraw {
 public:
@@ -290,7 +325,7 @@ public:
     private:
         WSDraw &_draw;
         WeatherStationCanvas _canvas;
-        EventScheduler::Timer _timer;
+        Event::Timer _timer;
     };
 
 #if WSDRAW_STATS
@@ -343,7 +378,7 @@ protected:
     uint16_t _offsetX;
     int16_t _offsetY;
 
-    EventScheduler::Timer _displayMessageTimer;
+    Event::Timer _displayMessageTimer;
 
 #if WSDRAW_STATS
     bool _debug_stats;

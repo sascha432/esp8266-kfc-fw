@@ -3,10 +3,9 @@
  */
 
 #include <Arduino_compat.h>
-#include "clock.h"
-#include <LoopFunctions.h>
-#include <EventTimer.h>
+#include <EventScheduler.h>
 #include <ReadADC.h>
+#include "clock.h"
 
 #if DEBUG_IOT_CLOCK
 #include <debug_helper_enable.h>

@@ -4,8 +4,7 @@
 
 #if IOT_SENSOR_HAVE_HLW8012
 
-#include <LoopFunctions.h>
-#include <EventTimer.h>
+#include <EventScheduler.h>
 #include "Sensor_HLW8012.h"
 #include "sensor.h"
 #include "MQTTSensor.h"
@@ -510,7 +509,7 @@ bool Sensor_HLW8012::atModeHandler(AtModeArgs &args)
                         _calibrationU = 1;
                         _voltage = 0;
                         _setOutputMode(Sensor_HLW8012::OutputTypeEnum_t::VOLTAGE, 2000);
-                        _dumpTimer.add(500, true, [this, &serial, data](EventScheduler::TimerPtr timer) mutable {
+                        _Timer(_dumpTimer).add(500, true, [this, &serial, data](Event::TimerPtr &timer) mutable {
                             if (_voltage) {
                                 if (data.max-- == 0) {
                                     timer->detach();
@@ -532,7 +531,7 @@ bool Sensor_HLW8012::atModeHandler(AtModeArgs &args)
 #endif
                         _current = 0;
                         _setOutputMode(Sensor_HLW8012::OutputTypeEnum_t::CURRENT, 2000);
-                        _dumpTimer.add(500, true, [this, &serial, data, dimmingLevel](EventScheduler::TimerPtr timer) mutable {
+                        _Timer(_dumpTimer).add(500, true, [this, &serial, data, dimmingLevel](Event::TimerPtr &timer) mutable {
                             if (_current) {
                                 if (data.max-- == 0) {
                                     timer->detach();
@@ -552,7 +551,7 @@ bool Sensor_HLW8012::atModeHandler(AtModeArgs &args)
                         _calibrationP = 1;
                         _power = 0;
                         _setOutputMode(Sensor_HLW8012::OutputTypeEnum_t::CYCLE, 2000);
-                        _dumpTimer.add(500, true, [this, &serial, data](EventScheduler::TimerPtr timer) mutable {
+                        _Timer(_dumpTimer).add(500, true, [this, &serial, data](Event::TimerPtr &timer) mutable {
                             if (_power) {
                                 if (data.max-- == 0) {
                                     timer->detach();

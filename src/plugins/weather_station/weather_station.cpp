@@ -4,9 +4,7 @@
 
 #include "weather_station.h"
 #include <PrintHtmlEntitiesString.h>
-#include <LoopFunctions.h>
-#include <WiFiCallbacks.h>
-#include <EventTimer.h>
+#include <EventScheduler.h>
 #include <MicrosTimer.h>
 #include <HeapStream.h>
 #include <ProgmemStream.h>
@@ -86,6 +84,7 @@ WeatherStationPlugin::WeatherStationPlugin() :
     // _updateTimer(0),
     _updateCounter(0),
     _backlightLevel(1023),
+    _fadeTimer(nullptr),
     _pollTimer(0),
     _httpClient(nullptr),
     _toggleScreenTimer(0),
@@ -348,7 +347,7 @@ void WeatherStationPlugin::setup(SetupModeType mode)
     WsClient::addClientCallback([this](WsClient::ClientCallbackTypeEnum_t type, WsClient *client) {
         if (type == WsClient::ClientCallbackTypeEnum_t::AUTHENTICATED) {
             // draw sends the screen capture to the web socket, do it for each new client
-            Scheduler.addTimer(100, false, [this](EventScheduler::TimerPtr timer) {
+            _Scheduler.add(100, false, [this](Event::TimerPtr &timer) {
                 _redraw();
             });
         }
@@ -384,7 +383,9 @@ void WeatherStationPlugin::shutdown()
 #if IOT_WEATHER_STATION_HAS_TOUCHPAD
     _touchpad.end();
 #endif
-    _fadeTimer.remove();
+    if (_fadeTimer) {
+        delete _fadeTimer;
+    }
     _canvasLocked++;
     __DBG_delete(_canvas);
     _canvas = nullptr;
@@ -570,20 +571,11 @@ void WeatherStationPlugin::_getWeatherForecast(Callback_t finishedCallback)
 
 void WeatherStationPlugin::_fadeBacklight(uint16_t fromLevel, uint16_t toLevel, int8_t step)
 {
-    int8_t direction = fromLevel > toLevel ? -step : step;
-    analogWrite(TFT_PIN_LED, fromLevel);
-
-    if (fromLevel != toLevel) {
-        _fadeTimer.add(10, true, [fromLevel, toLevel, direction, step](EventScheduler::TimerPtr timer) mutable {
-            if (abs(toLevel - fromLevel) > step) {
-                fromLevel += direction;
-            } else {
-                fromLevel = toLevel;
-                timer->detach();
-            }
-            analogWrite(TFT_PIN_LED, fromLevel);
-        }, EventScheduler::PRIO_HIGH);
+    if (_fadeTimer) {
+        delete _fadeTimer;
+        __DBG_assert(_fadeTimer == nullptr);
     }
+    _fadeTimer = new FadeTimer(&_fadeTimer, fromLevel, toLevel, step);
 }
 
 void WeatherStationPlugin::_fadeStatusLED()
@@ -593,14 +585,14 @@ void WeatherStationPlugin::_fadeStatusLED()
     int16_t dir = 0x100;
     NeoPixel_fillColor(_pixels, sizeof(_pixels), color);
     NeoPixel_espShow(IOT_WEATHER_STATION_WS2812_PIN, _pixels, sizeof(_pixels), true);
-    _pixelTimer.add(50, true, [this, color, dir](EventScheduler::TimerPtr timer) mutable {
+    _Timer(_pixelTimer).add(50, true, [this, color, dir](Event::TimerPtr &timer) mutable {
         color += dir;
         if (color >= 0x003000) {
             dir = -dir;
             color = 0x003000;
         }
         else if (color == 0) {
-            timer->detach();
+            timer.reset();
         }
         NeoPixel_fillColor(_pixels, sizeof(_pixels), color);
         NeoPixel_espShow(IOT_WEATHER_STATION_WS2812_PIN, _pixels, sizeof(_pixels), true);
@@ -660,7 +652,7 @@ void WeatherStationPlugin::_loop()
     }
     else {
 
-        if (_displayMessageTimer.active()) {
+        if (_displayMessageTimer) {
             return;
         }
 
@@ -837,7 +829,7 @@ void WeatherStationPlugin::_alarmCallback(Alarm::AlarmModeType mode, uint16_t ma
         return;
     }
     if (!_resetAlarmFunc) {
-        _resetAlarmFunc = [this](EventScheduler::TimerPtr) {
+        _resetAlarmFunc = [this](Event::TimerPtr &timer) {
 #if IOT_WEATHER_STATION_WS2812_NUM
             BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::OFF);
 #endif
@@ -847,7 +839,7 @@ void WeatherStationPlugin::_alarmCallback(Alarm::AlarmModeType mode, uint16_t ma
     }
 
     // check if an alarm is already active
-    if (!_alarmTimer.active()) {
+    if (!_alarmTimer.isActive()) {
 #if IOT_WEATHER_STATION_WS2812_NUM
         BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::FAST, 0xff0000);
 #endif
@@ -858,14 +850,15 @@ void WeatherStationPlugin::_alarmCallback(Alarm::AlarmModeType mode, uint16_t ma
     }
     // reset time if alarms overlap
     __LDBG_printf("alarm duration %u", maxDuration);
-    _alarmTimer.add(maxDuration * 1000UL, false, _resetAlarmFunc);
+    _Timer(_alarmTimer).add(Event::seconds(maxDuration), false, _resetAlarmFunc);
 }
 
 bool WeatherStationPlugin::_resetAlarm()
 {
     debug_printf_P(PSTR("alarm_func=%u alarm_state=%u"), _resetAlarmFunc ? 1 : 0, AlarmPlugin::getAlarmState());
     if (_resetAlarmFunc) {
-        _resetAlarmFunc(nullptr);
+        Event::TimerPtr timer;
+        _resetAlarmFunc(timer);
         AlarmPlugin::resetAlarm();
         return true;
     }

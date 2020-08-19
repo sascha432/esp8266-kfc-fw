@@ -7,7 +7,6 @@
 #include <Arduino_compat.h>
 #include <AsyncMqttClient.h>
 #include <EventScheduler.h>
-#include <EventTimer.h>
 #include "mqtt_auto_discovery.h"
 
 // use abbreviations to reduce the size of the auto discovery

@@ -120,7 +120,7 @@ bool STK500v1Plugin::atModeHandler(AtModeArgs &args) {
                 stk500v1->setLogging(args.toInt(2, STK500v1Programmer::LOG_FILE));
 
                 // run in main loop
-                Scheduler.addTimer(1000, false, [this, serialPort](EventScheduler::TimerPtr timer) {
+                _Scheduler.add(1000, false, [this, serialPort](Event::TimerPtr &timer) {
                     stk500v1->begin([serialPort]() {
                         // if (serialPort != &Serial && serialPort != &Serial1) {
                         //     delete reinterpret_cast<SoftwareSerial *>(serialPort);

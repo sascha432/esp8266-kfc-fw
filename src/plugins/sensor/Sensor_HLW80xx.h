@@ -177,7 +177,7 @@ class Sensor_HLW8032;
 class Sensor_HLW80xx : public MQTTSensor {
 public:
     using EnergyCounterArray = std::array<uint64_t, IOT_SENSOR_HLW80xx_NUM_ENERGY_COUNTERS>;
-    
+
 public:
     Sensor_HLW80xx(const String &name);
 
@@ -256,7 +256,7 @@ protected:
     unsigned long _saveEnergyCounterTimeout;
 
 public:
-    EventScheduler::Timer _dumpTimer;
+    Event::Timer _dumpTimer;
 
     static void setExtraDigits(uint8_t digits);
     EnergyCounterArray _energyCounter;

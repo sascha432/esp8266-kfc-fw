@@ -21,12 +21,20 @@ Mpr121Touchpad *touchpad = nullptr;
 
 static Mpr121Touchpad::ReadBuffer buffer;
 
-void ICACHE_RAM_ATTR mpr121_irq_callback()
+extern "C" void ICACHE_RAM_ATTR mpr121_irq_callback()
 {
     mpr121_irq_callback_flag = true;
 }
 
-void ICACHE_RAM_ATTR mpr121_timer(EventScheduler::TimerPtr timer)
+// extern "C" void ICACHE_RAM_ATTR mpr121_timer()
+// {
+//     if (mpr121_irq_callback_flag) {
+//         mpr121_irq_callback_flag = false;
+//         buffer.emplace_back(touchpad->_mpr121.touched(), millis());
+//     }
+// }
+
+void ICACHE_RAM_ATTR Mpr121Timer::run()
 {
     if (mpr121_irq_callback_flag) {
         mpr121_irq_callback_flag = false;
@@ -523,10 +531,7 @@ bool Mpr121Touchpad::begin(uint8_t address, uint8_t irqPin, TwoWire *wire)
     attachInterrupt(digitalPinToInterrupt(_irqPin), mpr121_irq_callback, CHANGE);
 
     _mpr121.setThresholds(4, 4);
-
-    // hardware timer to read the data from the sensor into "buffer"
-    // min. time is 5ms
-    _timer.add(5, true, mpr121_timer, EventScheduler::PRIO_HIGH);
+    _timer.startTimer(5, true);
 
     LoopFunctions::add([this]() {
         _loop();
@@ -542,7 +547,7 @@ void Mpr121Touchpad::end()
         detachInterrupt(digitalPinToInterrupt(_irqPin));
         _irqPin = 0;
     }
-    _timer.remove();
+    _timer.detach();
     touchpad = nullptr;
 }
 

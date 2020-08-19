@@ -138,7 +138,7 @@ private:
     void _alarmCallback(Alarm::AlarmModeType mode, uint16_t maxDuration);
     bool _resetAlarm(); // returns true if alarm was reset
 
-    EventScheduler::Timer _alarmTimer;
+    Event::Timer _alarmTimer;
     EventScheduler::Callback _resetAlarmFunc;
 #endif
 
@@ -254,10 +254,10 @@ private:
     int16_t _autoBrightness;
     float _autoBrightnessValue;
     uint8_t _autoBrightnessLastValue;
-    EventScheduler::Timer _autoBrightnessTimer;
+    Event::Timer _autoBrightnessTimer;
 #endif
     Plugins::Clock::ConfigStructType _config;
-    EventScheduler::Timer _timer;
+    Event::Timer _timer;
     uint32_t _timerCounter;
 
 private:

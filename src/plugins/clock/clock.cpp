@@ -3,11 +3,10 @@
  */
 
 #include <Arduino_compat.h>
+#include <EventScheduler.h>
 #include "clock.h"
 #include <MicrosTimer.h>
 #include <ReadADC.h>
-#include <LoopFunctions.h>
-#include <EventTimer.h>
 #include <KFCForms.h>
 #include <WebUISocket.h>
 #include <WebUIAlerts.h>
@@ -194,7 +193,7 @@ void ClockPlugin::setup(SetupModeType mode)
 
     IF_LIGHT_SENSOR(
 
-        _autoBrightnessTimer.add(IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL, true, [this](EventScheduler::TimerPtr) {
+        _Timer(_autoBrightnessTimer).add(IOT_CLOCK_AUTO_BRIGHTNESS_INTERVAL, true, [this](Event::TimerPtr &timer) {
             _adjustAutobrightness();
         });
         _adjustAutobrightness();
@@ -203,7 +202,7 @@ void ClockPlugin::setup(SetupModeType mode)
 
     );
 
-    _timer.add(1000, true, [this](EventScheduler::TimerPtr) {
+    _Timer(_timer).add(1000, true, [this](Event::TimerPtr &timer) {
         _timerCounter++;
         IF_LIGHT_SENSOR(
             // update light sensor webui
@@ -546,7 +545,7 @@ void ClockPlugin::onButtonHeld(Button& btn, uint16_t duration, uint16_t repeatCo
         plugin._display.setBrightness(SevenSegmentDisplay::kMaxBrightness);
         plugin._setAnimation(new Clock::FlashingAnimation(*this, Color(255, 0, 0), 150));
 
-        Scheduler.addTimer(2000, false, [](EventScheduler::TimerPtr) {   // call restart if no reset occured
+        _Scheduler.add(2000, false, [](Event::TimerPtr &timer) {   // call restart if no reset occured
             __LDBG_printf("restarting device\n"));
             config.restartDevice();
         });
@@ -754,7 +753,7 @@ void ClockPlugin::_alarmCallback(Alarm::AlarmModeType mode, uint16_t maxDuration
         auto autoBrightness = _autoBrightness;
 
         __LDBG_printf("storing parameters brightness=%u auto_brightness=%d color=#%06x animation=%u", _brightness, _autoBrightness, _color.get(), animation);
-        _resetAlarmFunc = [this, animation, brightness, autoBrightness](EventScheduler::TimerPtr timer) {
+        _resetAlarmFunc = [this, animation, brightness, autoBrightness](Event::TimerPtr &timer) {
             _autoBrightness = autoBrightness;
             _brightness = brightness;
             _display.setBrightness(brightness);
@@ -784,7 +783,7 @@ void ClockPlugin::_alarmCallback(Alarm::AlarmModeType mode, uint16_t maxDuration
     }
     // reset time if alarms overlap
     __LDBG_printf("alarm duration %u", maxDuration);
-    _alarmTimer.add(maxDuration * 1000UL, false, _resetAlarmFunc);
+    _Timer(_alarmTimer).add(maxDuration * 1000UL, false, _resetAlarmFunc);
 }
 
 bool ClockPlugin::_resetAlarm()

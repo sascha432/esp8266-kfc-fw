@@ -203,7 +203,7 @@ bool Sensor_Battery::atModeHandler(AtModeArgs &args)
         _timer.remove();
 
         auto serial = &args.getStream();
-        auto printVoltage = [serial, this](EventScheduler::TimerPtr timer) {
+        auto printVoltage = [serial, this](Event::TimerPtr &timer) {
             auto value = Sensor_Battery::readSensor();
             serial->printf_P(PSTR("+SENSORPBV: %.4fV (calibration %f, offset=%f)\n"),
                 value,
@@ -211,10 +211,11 @@ bool Sensor_Battery::atModeHandler(AtModeArgs &args)
                 _config.offset
             );
         };
-        printVoltage(nullptr);
+        Event::TimerPtr timer;
+        printVoltage(timer);
         auto repeat = args.toMillis(AtModeArgs::FIRST, 500, ~0, 0, String('s'));
         if (repeat) {
-            _timer.add(repeat, true, printVoltage);
+            _Timer(_timer).add(repeat, true, printVoltage);
         }
         return true;
     }

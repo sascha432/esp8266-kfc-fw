@@ -533,7 +533,7 @@ void WSDraw::_displayMessage(const String &title, const String &message, uint16_
 
     SpeedBooster speedBooster;
     ScrollCanvas::destroy(this);
-    _displayMessageTimer.add(timeout * 1000, false, [this](EventScheduler::TimerPtr timer) {
+    _Timer(_displayMessageTimer).add(Event::seconds(timeout), false, [this](Event::TimerPtr &timer) {
         redraw();
     });
 
@@ -588,7 +588,7 @@ void WSDraw::_draw()
 {
     __LDBG_isCanvasAttached();
 
-    if (_displayMessageTimer.active()) {
+    if (_displayMessageTimer) {
         return;
     }
     if (_isScrolling()) {
@@ -634,9 +634,9 @@ void WSDraw::_draw()
         _drawText(_text, _textFont, COLORS_DEFAULT_TEXT, true);
         _currentScreen = TEXT;
 #ifndef _WIN32
-        Scheduler.addTimer(150, true, [this](EventScheduler::TimerPtr timer) {
+        _Scheduler.add(150, true, [this](Event::TimerPtr &timer) {
             if (_currentScreen != TEXT) {
-                timer->detach();
+                timer.reset();
             }
             else {
                 _drawText(_text, _textFont, COLORS_DEFAULT_TEXT);

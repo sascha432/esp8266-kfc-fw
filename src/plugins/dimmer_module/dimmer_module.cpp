@@ -3,9 +3,7 @@
  */
 
 #include "../include/templates.h"
-#include <LoopFunctions.h>
 #include <EventScheduler.h>
-#include <EventTimer.h>
 #include "plugins.h"
 #include "dimmer_module.h"
 #include "WebUISocket.h"
@@ -195,7 +193,7 @@ void Driver_DimmerModule::_getChannels()
 
 #if IOT_SENSOR_HLW80xx_ADJUST_CURRENT
     // sensors are initialized after the dimmer plugin
-    Scheduler.addTimer(100, false, [this](EventScheduler::TimerPtr) {
+    _Scheduler.add(100, false, [this](Event::TimerPtr &) {
         _setDimmingLevels();
     });
 #endif
@@ -360,7 +358,7 @@ void Driver_DimmerModule::_buttonShortPress(uint8_t channel, bool up)
         else {
             _turnOffLevel[channel] = getChannel(channel);
             _turnOffTimerRepeat[channel] = 0;
-            _turnOffTimer[channel].add(_config.shortpress_no_repeat_time, false, [this, channel](EventScheduler::TimerPtr timer) {
+            _Timer(_turnOffTimer[channel]).add(_config.shortpress_no_repeat_time, false, [this, channel](Event::TimerPtr &timer) {
                 __LDBG_printf("turn off channel=%u timer expired, repeat=%d", channel, _turnOffTimerRepeat[channel]);
                 if (_turnOffTimerRepeat[channel] == 0) { // single button down press detected, turn off
                     if (off(channel)) {

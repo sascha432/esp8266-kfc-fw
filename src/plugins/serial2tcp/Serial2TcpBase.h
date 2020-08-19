@@ -6,7 +6,6 @@
 
 #include <Arduino_compat.h>
 #include <EventScheduler.h>
-#include <EventTimer.h>
 #include <vector>
 #include "kfc_fw_config.h"
 #include "serial_handler.h"

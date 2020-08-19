@@ -62,7 +62,7 @@ public:
     static void setCallback(Callback callback);
     static bool getAlarmState();
     static void ntpCallback(time_t now);
-    static void timerCallback(EventScheduler::TimerPtr timer);
+    static void timerCallback(Event::TimerPtr &timer);
 
 public:
     enum class AlarmType : uint8_t {
@@ -72,10 +72,10 @@ public:
     };
 
 private:
-    void _installAlarms(EventScheduler::TimerPtr = nullptr);
+    void _installAlarms(Event::TimerPtr &timer);
     void _removeAlarms();
     void _ntpCallback(time_t now);
-    void _timerCallback(EventScheduler::TimerPtr timer);
+    void _timerCallback(Event::TimerPtr &timer);
     void _publishState();
     static String _formatTopic(const __FlashStringHelper *topic);
 
@@ -89,7 +89,7 @@ private:
 
     using ActiveAlarmVector = std::vector<ActiveAlarm>;
 
-    EventScheduler::Timer _timer;
+    Event::Timer _timer;
     ActiveAlarmVector _alarms;
     Callback _callback;
     Alarm::TimeType _nextAlarm;

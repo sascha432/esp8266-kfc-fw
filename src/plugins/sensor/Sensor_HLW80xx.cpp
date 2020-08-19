@@ -4,7 +4,7 @@
 
 #if IOT_SENSOR_HAVE_HLW8012 || IOT_SENSOR_HAVE_HLW8032
 
-#include <EventTimer.h>
+#include <EventScheduler.h>
 #include "Sensor_HLW80xx.h"
 #include "sensor.h"
 #include "MicrosTimer.h"
@@ -475,7 +475,7 @@ bool Sensor_HLW80xx::atModeHandler(AtModeArgs &args)
         auto interval = args.toMillis(0, 500, ~0, 0, String('s'));
         if (interval) {
             auto &serial = args.getStream();
-            _dumpTimer.add(interval, true, [this, &serial](EventScheduler::TimerPtr) {
+            _Timer(_dumpTimer).add(interval, true, [this, &serial](Event::TimerPtr &timer) {
                 SensorPlugin::for_each<Sensor_HLW80xx>(this, Sensor_HLW80xx::_compareFunc, [&serial](Sensor_HLW80xx &sensor) {
                     sensor.dump(serial);
                 });

@@ -25,7 +25,8 @@
 #include <FastLED.h>
 
 #endif
-#include <EventTimer.h>
+
+#include <EventScheduler.h>
 #include <avr/pgmspace.h>
 
 #ifndef IOT_CLOCK_LED_PIN
@@ -322,7 +323,7 @@ public:
                 steps = 1;
             }
             //__LDBG_printf("to=%u steps=%u time=%f", _brightness, steps, fadeTime);
-            _brightnessTimer.add(20, true, [this, steps, finishedCallback, refreshCallback](EventScheduler::TimerPtr timer) {
+            _Timer(_brightnessTimer).add(20, true, [this, steps, finishedCallback, refreshCallback](Event::TimerPtr &timer) {
                 int32_t tmp = _params.brightness;
                 if (tmp < _targetBrightness) {
                     tmp += steps;
@@ -349,7 +350,7 @@ public:
                     refreshCallback(_params.brightness);
                 }
 
-            }, EventScheduler::PRIO_HIGH);
+            }, EventScheduler::XXXXX);
         }
     }
 
@@ -484,6 +485,6 @@ private:
     DigitsArray _pixelAddress;
 
     BrightnessType _targetBrightness;
-    EventScheduler::Timer _brightnessTimer;
+    Event::Timer _brightnessTimer;
     Params_t _params;
 };

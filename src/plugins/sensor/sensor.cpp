@@ -59,7 +59,7 @@ void SensorPlugin::setValue(const String &id, const String &value, bool hasValue
 
 void SensorPlugin::setup(SetupModeType mode)
 {
-    _timer.add(1000, true, SensorPlugin::timerEvent);
+    _Timer(_timer).add(1000, true, SensorPlugin::timerEvent);
 #if IOT_SENSOR_HAVE_SYSTEM_METRICS
     _sensors.push_back(new Sensor_SystemMetrics());
 #endif
@@ -120,7 +120,7 @@ SensorPlugin &SensorPlugin::getInstance()
     return plugin;
 }
 
-void SensorPlugin::timerEvent(EventScheduler::TimerPtr timer)
+void SensorPlugin::timerEvent(Event::TimerPtr &timer)
 {
     plugin._timerEvent();
 }

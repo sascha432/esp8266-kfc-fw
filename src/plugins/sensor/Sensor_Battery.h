@@ -80,7 +80,7 @@ private:
     JsonString _name;
     String _topic;
     Plugins::Sensor::ConfigStructType::BatteryConfig_t _config;
-    EventScheduler::Timer _timer;
+    Event::Timer _timer;
 };
 
 #endif

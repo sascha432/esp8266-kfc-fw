@@ -112,7 +112,7 @@ private:
     uint8_t _running: 1;
     uint8_t _enabled: 1;
 #if MDNS_DELAYED_START_AFTER_WIFI_CONNECT
-    EventScheduler::Timer _delayedStart;
+    Event::Timer _delayedStart;
 #endif
 };
 

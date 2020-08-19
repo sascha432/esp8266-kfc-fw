@@ -7,8 +7,7 @@
 #include <Arduino_compat.h>
 #include "Sensor_INA219.h"
 #include "sensor.h"
-#include <LoopFunctions.h>
-#include <EventTimer.h>
+#include <EventScheduler.h>
 #include <MicrosTimer.h>
 
 #if DEBUG_IOT_SENSOR
@@ -171,11 +170,11 @@ bool Sensor_INA219::atModeHandler(AtModeArgs &args)
 {
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(SENSORINA219))) {
 
-        static EventScheduler::Timer timer;
+        static Event::Timer timer;
         timer.remove();
 
         auto &serial = args.getStream();
-        auto timerPrintFunc = [this, &serial](EventScheduler::TimerPtr) {
+        auto timerPrintFunc = [this, &serial](Event::TimerPtr &timer) {
             return SensorPlugin::for_each<Sensor_INA219>(this, [&serial](Sensor_INA219 &sensor) {
                 auto &ina219 = sensor.getSensor();
                 serial.printf_P(PSTR("+SENSORINA219: raw: U=%d, Vshunt=%d, I=%d, current: P=%d: %.3fV, %.1fmA, %.1fmW, average: %.3fV, %.1fmA, %.1fmW\n"),
@@ -199,7 +198,7 @@ bool Sensor_INA219::atModeHandler(AtModeArgs &args)
         else {
             auto repeat = args.toMillis(AtModeArgs::FIRST, 500, ~0, 0, String('s'));
             if (repeat) {
-                timer.add(repeat, true, timerPrintFunc);
+                _Timer(timer).add(repeat, true, timerPrintFunc);
             }
         }
         return true;

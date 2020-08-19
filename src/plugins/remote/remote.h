@@ -5,7 +5,6 @@
 #pragma once
 
 #include <EventScheduler.h>
-#include <EventTimer.h>
 #include <Button.h>
 #include <ButtonEventCallback.h>
 #include <PushButton.h>

@@ -6,9 +6,7 @@
 #include <algorithm>
 #include <vector>
 #include <functional>
-#include <LoopFunctions.h>
-#include <EventTimer.h>
-#include <WiFiCallbacks.h>
+#include <Event.h>
 #include <StreamWrapper.h>
 #include <PrintString.h>
 #include <ListDir.h>
@@ -265,7 +263,7 @@ void setup()
     }
 #endif
 
-    Scheduler.begin();
+    _Scheduler.begin();
 
     config.setSafeMode(safe_mode);
     config.read();
@@ -282,7 +280,7 @@ void setup()
         setup_plugins(PluginComponent::SetupModeType::SAFE_MODE);
 
         // check if wifi is up
-        Scheduler.addTimer(1000, true, [](EventScheduler::TimerPtr timer) {
+        _Scheduler.add(Event::seconds(1), true, [](Event::TimerPtr &timer) {
             timer->rearm(60000);
             if (!WiFi.isConnected()) {
                 _debug_println(F("WiFi not connected, restarting"));
@@ -294,7 +292,7 @@ void setup()
         if (rebootDelay) {
             __LDBG_printf("rebooting in %u minutes", rebootDelay);
             // restart device if running in safe mode for rebootDelay minutes
-            Scheduler.addTimer(rebootDelay * 60000U, false, [](EventScheduler::TimerPtr timer) {
+            _Scheduler.add(Event::minutes(rebootDelay), false, [](Event::TimerPtr &timer) {
                 Logger_notice(F("Rebooting device after safe mode timeout"));
                 config.restartDevice();
             });
@@ -303,7 +301,7 @@ void setup()
         auto flags = System::Flags::getConfig();
         if ((flags.is_softap_enabled || flags.is_softap_standby_mode_enabled) && !strcmp_P(Network::WiFi::getSoftApPassword(), SPGM(defaultPassword))) {
             Logger_warning(F("SoftAP is using default password and will be disabled in 15 minutes..."));
-            Scheduler.addTimer(15U * 60U * 1000U, false, [](EventScheduler::TimerPtr timer) {
+            _Scheduler.add(Event::minutes(15), false, [](Event::TimerPtr &timer) {
                 if (WiFi.getMode() & WIFI_AP) {
                     WiFi.enableAP(false);
                 }
@@ -344,17 +342,19 @@ void setup()
         );
 
         // check if wifi is up
-        Scheduler.addTimer(60000, true, [](EventScheduler::TimerPtr timer) {
+        _Scheduler.add(Event::seconds(60), true, [](Event::TimerPtr &timer) {
             if (System::Flags::getConfig().is_station_mode_enabled) {
                 if (!WiFi.isConnected()) {
-                    // WiFi is down, wait 30 seconds if it reconnects automatically
-                    Scheduler.addTimer(30000, false, [](EventScheduler::TimerPtr timer) {
-                        if (!WiFi.isConnected()) {
-                            // restart entire wifi subsystem
-                            config.reconfigureWiFi();
-                            Logger_notice(F("WiFi subsystem restarted"));
-                        }
-                    });
+                    if (timer->getInterval() == Event::seconds(60)) {
+                        // WiFi is down, wait 30 seconds if it reconnects automatically
+                        timer->setInterval(Event::seconds(30));
+                    }
+                    else {
+                        // restart entire wifi subsystem and reset check interval
+                        timer->setInterval(Event::seconds(60));
+                        config.reconfigureWiFi();
+                        Logger_notice(F("WiFi subsystem restarted"));
+                    }
                 }
             }
         });
@@ -379,16 +379,21 @@ float load_avg[3] = {0, 0, 0};
 void loop()
 {
     auto &loopFunctions = LoopFunctions::getVector();
+    bool cleanup = false;
     for(uint8_t i = 0; i < loopFunctions.size(); i++) { // do not use iterators since the vector can be modifed inside the callback
         if (loopFunctions[i].deleteCallback) {
-            loopFunctions.erase(loopFunctions.begin() + i);
-            i--;
+            cleanup = true;
         } else if (loopFunctions[i].callback) {
             loopFunctions[i].callback();
         } else {
             loopFunctions[i].callbackPtr();
         }
     }
+    if (cleanup) {
+        loopFunctions.erase(std::remove(loopFunctions.begin(), loopFunctions.end(), LoopFunctions::Entry::Type::DELETED), loopFunctions.end());
+        loopFunctions.shrink_to_fit();
+    }
+
 #if LOAD_STATISTICS
     load_avg_counter++;
     if (millis() >= load_avg_timer) {

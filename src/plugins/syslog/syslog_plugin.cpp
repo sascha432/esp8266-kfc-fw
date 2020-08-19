@@ -56,12 +56,12 @@ void SyslogPlugin::shutdown()
     _kill(250);
 }
 
-void SyslogPlugin::timerCallback(EventScheduler::TimerPtr timer)
+void SyslogPlugin::timerCallback(Event::TimerPtr &timer)
 {
     plugin._timerCallback(timer);
 }
 
-void SyslogPlugin::_timerCallback(EventScheduler::TimerPtr timer)
+void SyslogPlugin::_timerCallback(Event::TimerPtr &timer)
 {
 #if DEBUG
     if (!_stream) {
@@ -120,7 +120,7 @@ void SyslogPlugin::_zeroConfCallback(const String &hostname, const IPAddress &ad
     _stream = __LDBG_new(SyslogStream, filter, __LDBG_new(SyslogMemoryQueue, SYSLOG_PLUGIN_QUEUE_SIZE));
 
     _logger.setSyslog(_stream);
-    _timer.add(100, true, timerCallback);
+    _Timer(_timer).add(100, true, timerCallback);
 }
 
 void SyslogPlugin::_end()

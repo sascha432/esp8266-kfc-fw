@@ -7,10 +7,7 @@
 #include <EEPROM.h>
 #include <ReadADC.h>
 #include <PrintString.h>
-#include <LoopFunctions.h>
-#include <WiFiCallbacks.h>
 #include <EventScheduler.h>
-#include <EventTimer.h>
 #include <session.h>
 #include <misc.h>
 #include "SaveCrash.h"
@@ -170,9 +167,9 @@ void KFCFWConfiguration::_onWiFiDisconnectCb(const WiFiEventStationModeDisconnec
     }
 
     // work around for ESP32 losing the connection and not reconnecting automatically
-    static EventScheduler::Timer _reconnectTimer;
+    static Event::Timer _reconnectTimer;
     if (!_reconnectTimer.active()) {
-        _reconnectTimer.add(60000, true, [this](EventScheduler::TimerPtr timer) {
+        _Timer(_reconnectTimer).add(60000, true, [this](Event::TimerPtr &timer) {
             if (_wifiConnected) {
                 timer->detach();
             }
@@ -932,7 +929,7 @@ void KFCFWConfiguration::restartDevice(bool safeMode)
 
     WiFiCallbacks::clear();
     LoopFunctions::clear();
-    Scheduler.end();
+    __Scheduler.end();
 
 #if PIN_MONITOR
     __LDBG_printf("Pin monitor has %u pins attached", PinMonitor::getInstance() ? PinMonitor::getInstance()->size() : 0);

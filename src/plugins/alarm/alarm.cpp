@@ -5,8 +5,7 @@
 
 #include <PrintHtmlEntitiesString.h>
 #include <ESPAsyncWebServer.h>
-#include <EventTimer.h>
-#include <LoopFunctions.h>
+#include <EventScheduler.h>
 #include "../include/templates.h"
 #include "../src/plugins/ntp/ntp_plugin.h"
 #include "plugins.h"
@@ -49,7 +48,7 @@ AlarmPlugin::AlarmPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(AlarmPlu
 void AlarmPlugin::setup(SetupModeType mode)
 {
     _debug_println();
-    _installAlarms();
+    _installAlarms(_timer);
     addTimeUpdatedCallback(ntpCallback);
     dependsOn(FSPGM(mqtt), [this](const PluginComponent *plugin) {
         MQTTClient::safeRegisterComponent(this);
@@ -64,7 +63,7 @@ void AlarmPlugin::reconfigure(const String &source)
     }
     else {
         _removeAlarms();
-        _installAlarms();
+        _installAlarms(_timer);
     }
 }
 
@@ -219,12 +218,12 @@ void AlarmPlugin::ntpCallback(time_t now)
     plugin._ntpCallback(now);
 }
 
-void AlarmPlugin::timerCallback(EventScheduler::TimerPtr timer)
+void AlarmPlugin::timerCallback(Event::TimerPtr &timer)
 {
     plugin._timerCallback(timer);
 }
 
-void AlarmPlugin::_installAlarms(EventScheduler::TimerPtr timer)
+void AlarmPlugin::_installAlarms(Event::TimerPtr &timer)
 {
     _debug_println();
     Alarm::TimeType delay = 300;
@@ -276,7 +275,7 @@ void AlarmPlugin::_installAlarms(EventScheduler::TimerPtr timer)
     // run timer every 5min. in case time changed and we missed it
     // daylight savings time or any other issue with time changing without a callback
     __LDBG_printf("timer delay=%u timer=%s min_time=%d alarms=%u", (int)delay, timer ? PSTR("rearm") : PSTR("add"), (int)minAlarmTime, _alarms.size());
-    if (timer) {
+    if (static_cast<Event::Timer &>(timer).isActive()) {
         timer->rearm(delay * 1000UL); // rearm timer inside timer callback
     }
     else {
@@ -298,11 +297,11 @@ void AlarmPlugin::_ntpCallback(time_t now)
     if (IS_TIME_VALID(now)) {
         // reinstall alarms if time changed
         _removeAlarms();
-        _installAlarms();
+        _installAlarms(_timer);
     }
 }
 
-void AlarmPlugin::_timerCallback(EventScheduler::TimerPtr timer)
+void AlarmPlugin::_timerCallback(Event::TimerPtr &timer)
 {
     _debug_println();
     if (!_alarms.empty()) {

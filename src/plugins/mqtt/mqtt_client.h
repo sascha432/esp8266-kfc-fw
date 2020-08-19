@@ -173,7 +173,7 @@ public:
 
     // returns false if running
     bool publishAutoDiscovery();
-    static void publishAutoDiscoveryCallback(EventScheduler::TimerPtr timer);
+    static void publishAutoDiscoveryCallback(Event::TimerPtr &timer);
 
     // return values
     // 0: failed to send
@@ -272,7 +272,7 @@ private:
     void _queueTimerCallback();
 
     MQTTQueueVector _queue;
-    EventScheduler::Timer _queueTimer;
+    Event::Timer _queueTimer;
 
 private:
     friend MQTTAutoDiscoveryQueue;
@@ -289,7 +289,7 @@ private:
     String _password;
     MQTTConfigType _config;
     AsyncMqttClient *_client;
-    EventScheduler::Timer _timer;
+    Event::Timer _timer;
     uint32_t _autoReconnectTimeout;
     uint16_t _maxMessageSize;
     uint16_t _componentsEntityCount;
@@ -299,7 +299,7 @@ private:
     String _lastWillTopic;
     String _lastWillPayload;
     std::unique_ptr<MQTTAutoDiscoveryQueue> _autoDiscoveryQueue;
-    EventScheduler::Timer _autoDiscoveryRebroadcast;
+    Event::Timer _autoDiscoveryRebroadcast;
 
     static MQTTClient *_mqttClient;
 };

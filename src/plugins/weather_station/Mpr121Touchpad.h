@@ -8,6 +8,7 @@
 
 #include <Arduino_compat.h>
 #include <Adafruit_MPR121.h>
+#include <EventScheduler.h>
 #include <PrintString.h>
 #include <EventScheduler.h>
 #include <FixedCircularBuffer.h>
@@ -17,8 +18,15 @@
 #define DEBUG_TOUCHPAD                      0
 #endif
 
+using EventTimerPtr = Event::TimerPtr;
+
 class Mpr121Touchpad;
 class WeatherStationPlugin;
+
+class Mpr121Timer : public OSTimer {
+public:
+    virtual void ICACHE_RAM_ATTR run() override;
+};
 
 class Mpr121Touchpad {
 public:
@@ -296,11 +304,12 @@ private:
     void _loop();
     void _get();
     void _fireEvent();
-    void _timerCallback(EventScheduler::TimerPtr timer);
+    void _timerCallback(EventTimerPtr &timer);
 
 private:
     friend WeatherStationPlugin;
-    friend void mpr121_timer(EventScheduler::TimerPtr timer);
+    friend Mpr121Timer;
+    // friend void mpr121_timer();
 
     Adafruit_MPR121 _mpr121;
     uint8_t _address;
@@ -308,7 +317,7 @@ private:
 
     CallbackEventVector _callbacks;
     Event _event;
-    EventScheduler::Timer _timer;
+    Mpr121Timer _timer;
 };
 
 #endif

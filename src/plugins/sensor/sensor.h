@@ -94,7 +94,7 @@ public:
     virtual void createConfigureForm(FormCallbackType type, const String &formName, Form &form, AsyncWebServerRequest *request) override;
     virtual void createMenu() override;
 
-    static void timerEvent(EventScheduler::TimerPtr timer);
+    static void timerEvent(Event::TimerPtr &timer);
 
     static SensorVector &getSensors();
     static size_t getSensorCount();
@@ -111,7 +111,7 @@ private:
     void _timerEvent();
 
     SensorVector _sensors;
-    EventScheduler::Timer _timer;
+    Event::Timer _timer;
 
 public:
     template <class T>

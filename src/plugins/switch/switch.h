@@ -83,10 +83,10 @@ private:
     void _publishState(MQTTClient *client, int8_t channel = -1);
 
 #if IOT_SWITCH_PUBLISH_MQTT_INTERVAL
-    EventScheduler::Timer _updateTimer;
+    Event::Timer _updateTimer;
 #endif
 #if IOT_SWITCH_STORE_STATES
-    EventScheduler::Timer _delayedWrite;
+    Event::Timer _delayedWrite;
 #endif
 
 private:

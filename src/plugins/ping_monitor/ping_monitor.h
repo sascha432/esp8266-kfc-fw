@@ -133,7 +133,7 @@ private:
     uint8_t _successFlag : 1;
     uint16_t _interval;
     uint16_t _timeout;
-    EventScheduler::Timer _nextTimer;
+    Event::Timer _nextTimer;
     PingVector _pingHosts;
     AsyncPingPtr _ping;
     PingStatistics _stats;

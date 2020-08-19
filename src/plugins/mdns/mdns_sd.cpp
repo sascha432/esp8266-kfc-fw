@@ -4,8 +4,6 @@
 
 #include <PrintString.h>
 #include <EventScheduler.h>
-#include <EventTimer.h>
-#include <LoopFunctions.h>
 #include <misc.h>
 #include "mdns_plugin.h"
 #include "mdns_sd.h"

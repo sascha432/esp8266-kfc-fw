@@ -120,7 +120,7 @@ public:
     static void onData(Stream &client);
     static void onReceive(int length);
 #else
-    static void fetchMetrics(EventScheduler::TimerPtr timer);
+    static void fetchMetrics(Event::TimerPtr &timer);
 #endif
 
     virtual bool on(uint8_t channel = -1) = 0;
@@ -189,7 +189,7 @@ public:
     virtual void _onReceive(size_t length);
 #else
     DimmerTwoWireEx &_wire;
-    EventScheduler::Timer _timer;
+    Event::Timer _timer;
 
     void _fetchMetrics();
 #endif

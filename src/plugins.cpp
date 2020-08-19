@@ -169,7 +169,9 @@ void setup_plugins(PluginComponent::SetupModeType mode)
         if (runSetup) {
             plugin->setSetupTime();
             plugin->setup(mode);
+            // __DBG_printf("checkDependencies %s", plugin->getName_P());
             PluginComponent::checkDependencies();
+            // __DBG_printf("checkDependencies::end");
 
             if (plugin->hasWebUI()) {
                 enableWebUIMenu = true;
@@ -217,7 +219,7 @@ void setup_plugins(PluginComponent::SetupModeType mode)
 #ifndef DISABLE_EVENT_SCHEDULER
 #if ENABLE_DEEP_SLEEP
     if (mode == PluginComponent::PLUGIN_SETUP_AUTO_WAKE_UP) {
-        Scheduler.addTimer(PLUGIN_DEEP_SLEEP_DELAYED_START_TIME, false, [](EventScheduler::TimerPtr timer) {
+        _Scheduler.add(PLUGIN_DEEP_SLEEP_DELAYED_START_TIME, false, [](Event::TimerPtr &timer) {
             setup_plugins(PluginComponent::PLUGIN_SETUP_DELAYED_AUTO_WAKE_UP);
         });
     }

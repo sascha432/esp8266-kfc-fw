@@ -7,8 +7,6 @@
 #include "mdns_sd.h"
 #include <PrintString.h>
 #include <EventScheduler.h>
-#include <EventTimer.h>
-#include <LoopFunctions.h>
 #include <misc.h>
 #include "kfc_fw_config.h"
 #include "web_server.h"
@@ -115,7 +113,7 @@ void MDNSPlugin::_wifiCallback(WiFiCallbacks::EventType event, void *payload)
     if (event == WiFiCallbacks::EventType::CONNECTED) {
         _end();
 #if MDNS_DELAYED_START_AFTER_WIFI_CONNECT
-        _delayedStart.add(MDNS_DELAYED_START_AFTER_WIFI_CONNECT, false, [this](EventScheduler::TimerPtr) {
+        _Timer(_delayedStart).add(MDNS_DELAYED_START_AFTER_WIFI_CONNECT, false, [this](Event::TimerPtr &timer) {
             _begin();
         });
 #else

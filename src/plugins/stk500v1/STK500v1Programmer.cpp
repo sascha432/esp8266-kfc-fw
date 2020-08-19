@@ -88,7 +88,7 @@ void STK500v1Programmer::end()
 
         _status(F("Done\n"));
 
-        Scheduler.addTimer(1000, false, [this](EventScheduler::TimerPtr timer) {
+        _Scheduler.add(1000, false, [this](Event::TimerPtr &timer) {
             _callbackCleanup();
         });
     });

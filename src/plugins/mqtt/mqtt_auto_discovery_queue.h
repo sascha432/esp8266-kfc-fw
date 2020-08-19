@@ -42,14 +42,14 @@ public:
     void publish();
 
 private:
-    void _timerCallback(EventScheduler::TimerPtr timer);
+    void _timerCallback(Event::TimerPtr &timer);
     void _publishDone();
 
 private:
     friend MQTTClient;
 
     MQTTClient &_client;
-    EventScheduler::Timer _timer;
+    Event::Timer _timer;
     MQTTComponent::Vector::iterator _next;
     uint16_t _counter;
     uint32_t _size;

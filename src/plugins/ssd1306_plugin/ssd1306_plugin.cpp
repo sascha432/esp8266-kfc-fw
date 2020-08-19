@@ -137,9 +137,9 @@ private:
 Adafruit_SSD1306 Display(SSD1306_PLUGIN_WIDTH, SSD1306_PLUGIN_HEIGHT, &Wire, SSD1306_PLUGIN_RESET_PIN);
 GFXfontContainer::Ptr clockFont;
 
-static EventScheduler::Timer ssd1306_status_timer ;
+static Event::Timer ssd1306_status_timer ;
 
-void ssd1306_update_time(EventScheduler::TimerPtr timer) {
+void ssd1306_update_time(Event::TimerPtr &timer) {
     _debug_println(F("ssd1306_update_time()"));
     char buf[32];
     time_t now = time(nullptr);
@@ -213,7 +213,7 @@ void ssd1306_enable_status() {
     ssd1306_status_timer.remove();
     ssd1306_clear_display();
     ssd1306_update_status();
-    ssd1306_status_timer.add(1000, true, ssd1306_update_time);
+    _Timer(ssd1306_status_timer).add(1000, true, ssd1306_update_time);
 }
 
 void ssd1306_setup() {
@@ -250,7 +250,7 @@ void ssd1306_setup() {
     GFXfontContainer::readFromFile(F("/fonts/7digit"), clockFont);
 
 #if SSD1306_PLUGIN_DISPLAY_STATUS_DELAY
-    Scheduler.addTimer(SSD1306_PLUGIN_DISPLAY_STATUS_DELAY, false, [](EventScheduler::TimerPtr timer) {
+    _Scheduler.add(SSD1306_PLUGIN_DISPLAY_STATUS_DELAY, false, [](Event::TimerPtr &timer) {
         ssd1306_enable_status();
     });
 #endif

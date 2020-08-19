@@ -7,6 +7,7 @@
 class DebugContext {
 public:
 #if DEBUG_INCLUDE_SOURCE_INFO
+    DebugContext() : _file(nullptr), _line(0), _functionName(nullptr) {}
     DebugContext(const char* file, int line, const char* functionName) : _file(file), _line(line), _functionName(functionName) {}
     void prefix() const {
         DEBUG_OUTPUT.printf_P(___debugPrefix, millis(), _file, _line, ESP.getFreeHeap(), _functionName);
@@ -64,6 +65,8 @@ public:
     }
 
     static uint8_t __state;
+    static DebugContext __pos;
+    static bool __store_pos(DebugContext &&dctx);
     static const char* pretty_function(const char* name);
     static void activate(bool state = true) {
         __state = state ? DEBUG_HELPER_STATE_ACTIVE : DEBUG_HELPER_STATE_DISABLED;

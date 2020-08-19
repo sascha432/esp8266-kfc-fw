@@ -60,7 +60,6 @@ public:
         PRIO_NONE = -1,
         PRIO_LOW = 0,
         PRIO_NORMAL,                // below HIGH, the timer callback is executed in the main loop and might be considerably delayed
-        PRIO_HIGH,                  // HIGH runs the timer callback directly inside the timer interrupt/task without any delay
     } Priority_t;
 
     typedef std::shared_ptr<EventTimer> TimerPtr;

@@ -9,9 +9,6 @@
 #include <ProgmemStream.h>
 #include <ReadADC.h>
 #include <EventScheduler.h>
-#include <EventTimer.h>
-#include <LoopFunctions.h>
-#include <WiFiCallbacks.h>
 #include <MicrosTimer.h>
 #include <StreamString.h>
 #include <Cat.h>
@@ -522,7 +519,7 @@ public:
     }
 
 public:
-    EventScheduler::Timer _timer;
+    Event::Timer _timer;
     DisplayTypeEnum_t _type = HEAP;
     int32_t _rssiMin, _rssiMax;
 };
@@ -537,7 +534,7 @@ static void print_heap()
 #endif
 }
 
-static void heap_timer_callback(EventScheduler::TimerPtr timer)
+static void heap_timer_callback(Event::TimerPtr &timer)
 {
     if (displayTimer._type == DisplayTimer::HEAP) {
         print_heap();
@@ -572,10 +569,10 @@ static void heap_timer_callback(EventScheduler::TimerPtr timer)
 static void create_heap_timer(float seconds, DisplayTimer::DisplayTypeEnum_t type = DisplayTimer::HEAP)
 {
     displayTimer._type = type;
-    if (displayTimer._timer.active()) {
-        displayTimer._timer->rearm(seconds * 1000);
+    if (displayTimer._timer.isActive()) {
+        displayTimer._timer->rearm(Event::seconds(seconds));
     } else {
-        displayTimer._timer.add(seconds * 1000, true, heap_timer_callback, EventScheduler::PRIO_LOW);
+        _Timer(displayTimer)._timer.add(Event::seconds(seconds), true, heap_timer_callback);
     }
 }
 
@@ -599,95 +596,6 @@ void at_mode_wifi_callback(WiFiCallbacks::EventType event, void *payload)
     }
 }
 
-PROGMEM_STRING_DEF(atmode_file_autorun, "/autorun_atmode.cmd");
-void at_mode_serial_handle_event(String &commandString);
-
-static void at_mode_autorun()
-{
-    LoopFunctions::callOnce([]() {
-        File file = SPIFFS.open(FSPGM(atmode_file_autorun), FileOpenMode::read);
-        __LDBG_printf("autorun=%s size=%u", SPGM(atmode_file_autorun), file.size());
-        if (file) {
-            class CmdAt {
-            public:
-                CmdAt(uint32_t time, const String &command) : _time(time), _command(command) {
-                }
-                uint32_t _time;
-                String _command;
-            };
-            typedef std::vector<CmdAt> CmdAtVector;
-            CmdAtVector *commands = new CmdAtVector();
-
-            String cmd;
-            uint32_t atTime = 0, startTime = millis() + 50;
-            while(file.available()) {
-                cmd = file.readStringUntil('\n');
-                cmd.replace(F("\r"), emptyString);
-                cmd.replace(F("\n"), emptyString);
-                cmd.trim();
-                if (cmd.length()) {
-                    auto ptr = cmd.c_str();
-                    if (*ptr++ == '@') {
-                        if (*ptr == '+') {
-                            ptr++;
-                        }
-                        else {
-                            atTime = startTime;
-                        }
-                        atTime += atoi(ptr);
-                    }
-                    else {
-                        if (atTime) {
-                            commands->emplace_back(atTime, cmd);
-                        }
-                        else {
-                            at_mode_serial_handle_event(cmd);
-                        }
-                    }
-                }
-            }
-
-            if (commands->size()) {
-
-                Scheduler.addTimer(50, true, [commands](EventScheduler::TimerPtr timer) {
-                    uint32_t minCmdTime = UINT32_MAX;
-                    for(auto &cmd: *commands) {
-                        if (cmd._command.length()) {
-                            if (millis() >= cmd._time) {
-                                // debug_printf_P(PSTR("scheduled=%u cmd=%s\n"), cmd._time, cmd._command.c_str());
-                                at_mode_serial_handle_event(cmd._command);
-                                cmd._command = String();
-                            }
-                            else {
-                                minCmdTime = std::min(cmd._time, minCmdTime);
-                            }
-                        }
-                    }
-                    commands->erase(std::remove_if(commands->begin(), commands->end(), [](const CmdAt &cmd) {
-                        return cmd._command.length() == 0;
-                    }));
-                    if (!commands->size()) {
-                        timer->detach();
-                    }
-                    else {
-                        minCmdTime = std::max(minCmdTime, (uint32_t)millis() + 50) - millis();
-                        timer->rearm(minCmdTime, true);
-                    }
-
-                }, EventScheduler::PRIO_NORMAL, [commands](EventTimer *ptr) {
-                    debug_printf_P(PSTR("deleter for scheduled at commands called %p, commands %p\n"), ptr, commands);
-                    delete commands;
-                    delete ptr;
-                });
-
-            }
-            else {
-                delete commands;
-            }
-        }
-    });
-}
-
 SerialHandler::Client *_client;
 
 void at_mode_setup()
@@ -697,10 +605,6 @@ void at_mode_setup()
     _client = &serialHandler.addClient(at_mode_serial_input_handler, SerialHandler::EventType::READ);
 
     WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTION, at_mode_wifi_callback);
-
-    if (!config.isSafeMode()) {
-        at_mode_autorun();
-    }
 }
 
 void enable_at_mode(Stream &output)
@@ -792,9 +696,9 @@ void at_mode_list_ets_timers(Print &output)
     ETSTimer *cur = timer_list;
     while(cur) {
         void *callback = nullptr;
-        for(const auto &timer: Scheduler._timers) {
-            if (&timer->_etsTimer == cur) {
-                callback = lambda_target(timer->_loopCallback);
+        for(const auto &timer: __Scheduler.__getTimers()) {
+            if (&timer->__getETSTimer() == cur) {
+                callback = lambda_target(timer->__getLoopCallback());
                 break;
             }
         }
@@ -810,6 +714,9 @@ void at_mode_list_ets_timers(Print &output)
 
         cur = cur->timer_next;
     }
+#if DEBUG_EVENT_SCHEDULER
+    __Scheduler.__list(false);
+#endif
 }
 
 #endif
@@ -888,7 +795,7 @@ public:
         }
     }
 
-    EventScheduler::Timer &getTimer() {
+    Event::Timer &getTimer() {
         return _displayTimer;
     }
 
@@ -903,7 +810,7 @@ private:
     uint32_t _timerCount;
     uint32_t _lastUpdate;
     uint16_t _readDelay;
-    EventScheduler::Timer _displayTimer;
+    Event::Timer _displayTimer;
     ADCManager &_adc;
 };
 
@@ -1126,25 +1033,6 @@ void at_mode_serial_handle_event(String &commandString)
             else if (args.isCommand(F("I2CT")) || args.isCommand(F("I2CR"))) {
                 // ignore SerialTwoWire communication
             }
-#if 0
-            else if (args.isCommand(PSTR("DIMTEST"))) {
-                static EventScheduler::TimerPtr timer = nullptr;
-                static int channel, value;
-                value = 500;
-                channel = argc == 1 ? atoi(args[0]) : 0;
-                Serial.printf_P(PSTR("+i2ct=17,82,ff,00,00,00,00,00,00,10\n"));
-                Scheduler.removeTimer(timer);
-                Scheduler.addTimer(&timer, 4000, true, [&output](EventScheduler::TimerPtr timer) {
-                    value += 50;
-                    if (value > 8333) {
-                        value = 8333;
-                        timer->detach();
-                    }
-                    output.printf_P(PSTR("VALUE %u\n"), value);
-                    Serial.printf_P(PSTR("+i2ct=17,82,%02x,%02x,%02x,00,00,00,00,10\n"), channel&0xff, lowByte(value)&0xff, highByte(value)&0xff);
-                });
-            }
-#endif
             else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(WIFI))) {
                 if (!args.empty()) {
                     auto arg0 = args.toString(0);
@@ -1354,10 +1242,10 @@ void at_mode_serial_handle_event(String &commandString)
                     args.print(F("Pin monitor not initialized"));
                 }
                 else if (args.size() == 1) {
-                    static EventScheduler::Timer timer;
+                    static Event::Timer timer;
                     if (args.isTrue(0) && !timer.active()) {
                         args.print(FSPGM(started));
-                        timer.add(1000, true, [&output](EventScheduler::TimerPtr timer) {
+                        _Timer(timer).add(1000, true, [&output](Event::TimerPtr &timer) {
                             PinMonitor::getInstance()->dumpPins(output);
                         });
                     }
@@ -1454,7 +1342,7 @@ void at_mode_serial_handle_event(String &commandString)
                         args.printf_P(PSTR("%s(%u, %u) (%.2f/%.2fµs), f=%uHz"), type, pin, level, dc, period, freq);
                         if (duration) {
                             args.printf_P(PSTR("setting pin %u to low in %ums"), pin, duration);
-                            Scheduler.addTimer(duration, false, [pin](EventScheduler::TimerPtr) {
+                            _Scheduler.add(duration, false, [pin](Event::TimerPtr &) {
                                 digitalWrite(pin, LOW);
                             });
                         }
@@ -1484,7 +1372,7 @@ void at_mode_serial_handle_event(String &commandString)
 
                             args.printf_P(PSTR("ADC display interval %ums"), interval);
                             auto &stream = args.getStream();
-                            atModeADC->getTimer().add(interval, true, [&stream](EventScheduler::TimerPtr) {
+                            atModeADC->getTimer().add(interval, true, [&stream](Event::TimerPtr &) {
                                 stream.printf_P(PSTR("+ADC: %u (%umV) converted=%s "), atModeADC->getValue(), atModeADC->getValue(), atModeADC->getConvertedString().c_str());
                                 atModeADC->printInfo(stream);
                             });

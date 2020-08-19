@@ -4,7 +4,6 @@
 
 #ifndef ESP32
 
-#include <EventTimer.h>
 #include <EventScheduler.h>
 #include <FunctionalInterrupt.h>
 #include "VirtualPinDebug.h"
@@ -283,7 +282,7 @@ public:
         _iterator = _sequence.begin();
     }
 
-    void timerCallback(EventScheduler::TimerPtr timer) {
+    void timerCallback(Event::TimerPtr &timer) {
         _debug_printf("left %u value %u timeout %u\n", std::distance(_iterator, _sequence.end()), _iterator->_value, _iterator->_timeout);
         int timeout = _iterator->_timeout;
         _pinValues[_pin]._readValue = _iterator->_value;
@@ -315,15 +314,17 @@ void VirtualPinDebug::setReadValueSequence(const SequenceVector &sequence)
     int timeout = iterator->_timeout;
     setReadValue(iterator->_value);
 
-    TimerSequence *seq = new TimerSequence(*this, ++iterator, sequence.end());
+    // TimerSequence *seq = ;
+    std::shared_ptr<TimerSequence> seq(new TimerSequence(*this, ++iterator, sequence.end()));
 
-    _timer.add(timeout, true, [seq](EventScheduler::TimerPtr timer) {
+    _Timer(_timer).add(timeout, true, [seq](Event::TimerPtr &timer) {
         seq->timerCallback(timer);
-    }, EventScheduler::PRIO_NORMAL, [seq](EventTimer *ptr) {
-        debug_printf("deleter called %p seq %p\n", ptr, seq);
-        delete seq;
-        delete ptr;
     });
+    // , Event::PriorityType::NORMAL, [seq](EventTimer *ptr) {
+    //     debug_printf("deleter called %p seq %p\n", ptr, seq);
+    //     delete seq;
+    //     delete ptr;
+    // });
 }
 
 uint32_t VirtualPinDebug::getTimeout() const

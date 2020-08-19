@@ -90,7 +90,7 @@ private:
     uint8_t _pin;
     // int _value;
     // bool _hasValue;
-    EventScheduler::Timer _timer;
+    Event::Timer _timer;
 };
 
 

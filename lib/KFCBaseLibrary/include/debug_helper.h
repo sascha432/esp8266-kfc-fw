@@ -92,7 +92,7 @@ extern const char ___debugPrefix[] PROGMEM;
 #define __DBG_printf(fmt, ...)                              debug_printf(PSTR(fmt "\n"), ##__VA_ARGS__)
 #define __DBG_println()                                     debug_println()
 #define __DBG_panic(fmt, ...)                               (DEBUG_OUTPUT.printf_P(PSTR(fmt "\n"), ## __VA_ARGS__) && __debugbreak_and_panic())
-#define __DBG_assert(cond)                                  (!(cond) ? (__DBG_print("assert( " _STRINGIFY(cond) ")") && true) : false)
+#define __DBG_assert(cond)                                  (!(cond) ? (__DBG_print("assert( " _STRINGIFY(cond) ") FAILED") && true) : false)
 #define __DBG_assert_printf(cond, fmt, ...)                 (!(cond) ? (__DBG_print("assert( " _STRINGIFY(cond) ")") && __DBG_printf(fmt, ##__VA_ARGS__)) : false)
 #define __DBG_assert_panic(cond, fmt, ...)                  (!(cond) ? (__DBG_print("assert( " _STRINGIFY(cond) ")") && __DBG_panic(fmt, ##__VA_ARGS__)) : false)
 #define __DBG_print_result(result)                          debug_print_result(result)
@@ -262,6 +262,8 @@ static inline int DEBUG_OUTPUT_flush() {
 // to_string needs to convert result to a value that can be passed to (const String &) ...
 #define debug_prints_result(result, to_string)              DebugContext(__BASENAME_FILE__, __LINE__, __DEBUG_FUNCTION__).printsResult(result, to_string(result))
 #define debug_printf_result(result, fmt, ...)               DebugContext(__BASENAME_FILE__, __LINE__, __DEBUG_FUNCTION__).printfResult(result, fmt, #__VA_ARGS__)
+
+#define __DBG_store_position()                              DebugContext::__store_pos(std::move(DebugContext(__BASENAME_FILE__, __LINE__, __DEBUG_FUNCTION__)))
 
 #define __SDBG_printf(fmt, ...)                             ::printf(PSTR(fmt "\n"), ##__VA_ARGS__);
 

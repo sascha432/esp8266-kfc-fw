@@ -84,6 +84,7 @@ void WiFiCallbacks::callEvent(EventType event, void *payload)
         }
     }
     _callbacks.erase(std::remove(_callbacks.begin(), _callbacks.end(), EventType::NONE), _callbacks.end());
+    _callbacks.shrink_to_fit();
     _locked = false;
 }
 

@@ -3,7 +3,6 @@
 */
 
 #include "EventScheduler.h"
-#include "EventTimer.h"
 #include <thread>
 
 EventScheduler Scheduler;
@@ -59,7 +58,7 @@ bool EventScheduler::Timer::remove()
     return false;
 }
 
-bool EventScheduler::Timer::active() const 
+bool EventScheduler::Timer::active() const
 {
     return _timer && _timer->active();
 }

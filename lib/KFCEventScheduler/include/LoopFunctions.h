@@ -30,7 +30,15 @@ public:
 
     class Entry {
     public:
+        enum class Type {
+            DELETED,
+        };
+
         Entry(Callback pCallback, CallbackPtr pCallbackPtr, bool pDeleteCallback) : callback(pCallback), callbackPtr(pCallbackPtr), deleteCallback(pDeleteCallback) {}
+
+        bool operator==(Type type) const {
+            return (deleteCallback && type == Type::DELETED);
+        }
 
         Callback callback;
         CallbackPtr callbackPtr;

@@ -52,14 +52,10 @@ void EventTimer::_loop()
         if (_disarmed) {
             break;
         }
-        if (_priority == EventScheduler::PRIO_HIGH) {
+
+        LoopFunctions::callOnce([this, timerPtr]() {
             _loopCallback(timerPtr);
-        }
-        else {
-            LoopFunctions::callOnce([this, timerPtr]() {
-                _loopCallback(timerPtr);
-            });
-        }
+        });
         if (_disarmed) {
             break;
         }

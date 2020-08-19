@@ -748,3 +748,62 @@ inline uint32_t createIPv4Address(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
 #define CREATE_UINT8_BITFIELD(name, size)                   CREATE_BITFIELD_TYPE(name, size, uint8_t, bits)
 #define CREATE_UINT16_BITFIELD(name, size)                  CREATE_BITFIELD_TYPE(name, size, uint16_t, bits)
 #define CREATE_UINT32_BITFIELD(name, size)                  CREATE_BITFIELD_TYPE(name, size, uint32_t, bits)
+
+namespace std {
+
+    template<typename Ta, typename Tb, typename Tr = typename std::common_type<typename std::make_unsigned<Ta>::type, typename std::make_unsigned<Tb>::type>::type>
+    constexpr Tr max_unsigned(Ta a, Tb b) {
+        return max(static_cast<Tr>(b), static_cast<Tr>(b));
+    }
+
+    template<typename Ta, typename Tb, typename Tr = typename std::common_type<typename std::make_signed<Ta>::type, typename std::make_signed<Tb>::type>::type>
+    constexpr Tr max_signed(Ta a, Tb b) {
+        return max(static_cast<Tr>(b), static_cast<Tr>(b));
+    }
+
+    template<typename Ta, typename Tb, typename Tr = typename std::common_type<typename std::make_unsigned<Ta>::type, typename std::make_unsigned<Tb>::type>::type>
+    constexpr Tr min_unsigned(Ta a, Tb b) {
+        return min(static_cast<Tr>(b), static_cast<Tr>(b));
+    }
+
+    template<typename Ta, typename Tb, typename Tr = typename std::common_type<typename std::make_signed<Ta>::type, typename std::make_signed<Tb>::type>::type>
+    constexpr Tr min_signed(Ta a, Tb b) {
+        return min(static_cast<Tr>(b), static_cast<Tr>(b));
+    }
+
+    template<typename Ta, typename Tb, typename Tc, typename Tr = typename std::common_type<typename std::make_unsigned<Ta>::type, typename std::make_unsigned<Tb>::type, typename std::make_unsigned<Tc>::type>::type>
+    constexpr Tr clamp_unsigned(Ta v, Tb lo, Tc hi)
+    {
+        return (static_cast<Tr>(v) < static_cast<Tr>(lo)) ? static_cast<Tr>(lo) : (static_cast<Tr>(hi) < static_cast<Tr>(v)) ? static_cast<Tr>(hi) : static_cast<Tr>(v);
+    }
+
+    template<typename Ta, typename Tb, typename Tc, typename Tr = typename std::common_type<typename std::make_signed<Ta>::type, typename std::make_signed<Tb>::type, typename std::make_signed<Tc>::type>::type>
+    constexpr Tr clamp_signed(Ta v, Tb lo, Tc hi)
+    {
+        return (static_cast<Tr>(v) < static_cast<Tr>(lo)) ? static_cast<Tr>(lo) : (static_cast<Tr>(hi) < static_cast<Tr>(v)) ? static_cast<Tr>(hi) : static_cast<Tr>(v);
+    }
+
+
+
+    // std::vector<std:unique_ptr<Test>> _timers;
+    // Test *timer;
+    // auto iterator = std::find_if(_timers.begin(), _timers.end(), std::compare_unique_ptr(timer));
+
+    template <class Ta>
+    class compare_unique_ptr_function : unary_function<Ta, bool>
+    {
+    protected:
+        Ta *_ptr;
+    public:
+        explicit compare_unique_ptr_function(Ta *ptr) : _ptr(ptr) {}
+        bool operator() (const unique_ptr<Ta> &obj) const {
+            return obj.get() == _ptr;
+        }
+    };
+
+    template <class Ta>
+    static inline compare_unique_ptr_function<Ta> compare_unique_ptr(Ta *ptr) {
+        return compare_unique_ptr_function<Ta>(ptr);
+    }
+
+}

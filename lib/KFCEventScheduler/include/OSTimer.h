@@ -13,16 +13,26 @@
 #include <osapi.h>
 #endif
 
+extern "C" void ICACHE_RAM_ATTR _ostimer_callback(void *arg);
+extern "C" void ICACHE_RAM_ATTR _ostimer_detach(ETSTimer *etsTimer, void *timerArg);
+
 class OSTimer {
 public:
-    OSTimer();
-    virtual ~OSTimer();
+    OSTimer() : _etsTimer({}) {}
 
-    virtual ICACHE_RAM_ATTR void run() = 0;
+    virtual ~OSTimer() {
+        detach();
+    }
 
-    void startTimer(uint32_t delay, bool repeat);
+    virtual void run() = 0;
+
+    void startTimer(int32_t delay, bool repeat);
     virtual void detach();
 
-private:
+    bool isRunning() const {
+      return (_etsTimer.timer_arg != nullptr);
+    }
+
+protected:
     ETSTimer _etsTimer;
 };

@@ -10,7 +10,6 @@
 
 #ifndef DEBUG_WIFICALLBACKS
 #define DEBUG_WIFICALLBACKS                         0
-#include <debug_helper_enable.h>
 #endif
 
 class WiFiCallbacks {
@@ -61,5 +60,3 @@ private:
     static CallbackVector _callbacks;
     static bool _locked;
 };
-
-#include <debug_helper_disable.h>

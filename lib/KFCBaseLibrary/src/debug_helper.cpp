@@ -165,6 +165,14 @@ KFCMemoryDebugging &KFCMemoryDebugging::getInstance()
 // String DebugContext::__file;
 // String DebugContext::__function;
 uint8_t DebugContext::__state = DEBUG_HELPER_STATE_DISABLED; // needs to be disabled until the output stream has been initialized
+DebugContext DebugContext::__pos;
+
+bool DebugContext::__store_pos(DebugContext &&dctx)
+{
+    __pos = std::move(dctx);
+    return true;
+}
+
 // DebugContextFilterVector DebugContext::__filters;
 
 // FixedCircularBuffer<DebugContext::Positon_t,100> DebugContext::__pos;

@@ -3,8 +3,8 @@
  */
 
 #include <PrintString.h>
-#include "SyslogParameter.h"
 #include "Syslog.h"
+#include "SyslogQueue.h"
 #include "SyslogFile.h"
 
 #if DEBUG_SYSLOG
@@ -13,20 +13,24 @@
 #include <debug_helper_disable.h>
 #endif
 
-SyslogFile::SyslogFile(SyslogParameter &parameter, const String &filename, size_t maxSize, uint16_t maxRotate) : Syslog(parameter) {
-    _filename = filename;
-    _maxSize = maxSize;
-    _maxRotate = maxRotate;
+SyslogFile::SyslogFile(SyslogParameter &&parameter, SyslogQueue &queue, const String &filename, size_t maxSize, uint16_t maxRotate) :
+    Syslog(std::move(parameter), queue),
+    _filename(filename),
+    _maxSize(maxSize),
+    _maxRotate(maxRotate)
+{
 }
 
-void SyslogFile::addHeader(String& buffer) {
+String SyslogFile::_getHeader()
+{
+    PrintString buffer;
     _addTimestamp(buffer, PSTR(SYSLOG_FILE_TIMESTAMP_FORMAT));
     _addParameter(buffer, _parameter.getHostname());
-    const auto &appName = _parameter.getAppName();
-    if (!appName.length()) {
+    auto appName = _parameter.getAppName();
+    if (appName) {
         buffer += appName;
-        const auto &processId = _parameter.getProcessId();
-        if (!processId.length()) {
+        auto processId = _parameter.getProcessId();
+        if (processId) {
             buffer += '[';
             buffer += processId;
             buffer += ']';
@@ -34,36 +38,47 @@ void SyslogFile::addHeader(String& buffer) {
         buffer += ':';
         buffer += ' ';
     }
+    return buffer;
 }
 
-void SyslogFile::transmit(const String &message, Callback_t callback) {
-    _debug_printf_P(PSTR("SyslogFile::transmit '%s' length %d\n"), message.c_str(), message.length());
+void SyslogFile::transmit(const SyslogQueueItem &item)
+{
+    auto &message = item.getMessage();
+#if DEBUG_SYSLOG
+    if (!String_startsWith(message, F("::transmit '"))) {
+        __LDBG_printf("::transmit id=%u msg=%s", item.getId(), message.c_str());
+    }
+#endif
 
-    auto logFile = SPIFFS.open(_filename, fs::FileOpenMode::appendplus); // TODO "a+" required to get the file size with size() ?
+    auto logFile = SPIFFS.open(_filename, fs::FileOpenMode::appendplus);
     if (logFile) {
-        if (_maxSize && (message.length() + logFile.size() + 1) >= _maxSize) {
+        String header = _getHeader();
+        size_t msgLen = message.length() + header.length() + 1;
+        if (_maxSize && (msgLen + logFile.size()) >= _maxSize) {
             logFile.close();
             _rotateLogfile(_filename, _maxRotate);
             logFile = SPIFFS.open(_filename, fs::FileOpenMode::append); // if the rotation fails, just append to the existing file
         }
 		if (logFile) {
-            auto written = logFile.write((const uint8_t *)message.c_str(), message.length());
+            auto written = logFile.print(header);
+            written += logFile.print(message);
             written += logFile.write('\n');
             logFile.close();
 
-            callback(written == message.length() + 1);
+            _queue.remove(item.getId(), written == msgLen);
+            return;
 		}
-    } else {
-        callback(false);
     }
+    _queue.remove(item.getId(), false);
 }
 
-bool SyslogFile::canSend() const {
+bool SyslogFile::canSend() const
+{
     return true;
 }
 
-void SyslogFile::_rotateLogfile(const String &filename, uint16_t maxRotate) {
-
+void SyslogFile::_rotateLogfile(const String &filename, uint16_t maxRotate)
+{
 	for (uint16_t num = maxRotate; num >= 1; num--) {
 		String from, to;
 

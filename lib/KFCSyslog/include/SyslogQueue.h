@@ -4,103 +4,97 @@
 
 #pragma once
 
-#define SYSLOG_MEMORY_QUEUE_ITEM_SIZE               sizeof(SyslogQueueItem) + 1
+#include <Arduino_compat.h>
 
-
-typedef uint32_t SyslogQueueId_t;
-typedef uint16_t SyslogQueueIndex_t;
+class Syslog;
+class SyslogMemoryQueue;
 
 class SyslogQueueItem {
 public:
 	SyslogQueueItem();
-	SyslogQueueItem(const String &message, Syslog *syslog);
+	SyslogQueueItem(const String &message, uint32_t id = 1);
+
+    operator uint32_t() const {
+        return _id;
+    }
 
 	void clear();
-
-	void setId(SyslogQueueId_t id);
-	SyslogQueueId_t getId() const;
-
-	void setMessage(const String &message);
+	uint32_t getId() const;
 	const String &getMessage() const;
 
-	void setSyslog(Syslog *syslog);
-	Syslog *getSyslog();
-	bool isSyslog(Syslog *syslog) const;
-
-	bool lock();
-	bool unlock();
-	bool isLocked() const;
-
-	uint8_t incrFailureCount();
-	uint8_t getFailureCount();
-
-    void transmit(Syslog::Callback_t callback);
-
 private:
-    SyslogQueueId_t _id;
+    friend Syslog;
+    friend SyslogMemoryQueue;
+
     String _message;
-    Syslog *_syslog;
-    uint8_t _failureCount : 7;
-    uint8_t _locked : 1;
+    struct __attribute__packed__ {
+        uint32_t _id;
+        uint8_t _failureCount: 7;
+        uint8_t _locked: 1;
+    };
 };
 
 // Stores a single message in memory and supports only a single filter/destination
 class SyslogQueue {
 public:
-    typedef std::unique_ptr<SyslogQueueItem> SyslogQueueItemPtr;
+    using Item = SyslogQueueItem;
+
+    static constexpr size_t kSyslogQueueItemSize = sizeof(Item);
+    static constexpr uint32_t kFailureWaitDelay = 1000U;        // delay before retrying in milliseconds
+    static constexpr uint8_t kFailureRetryLimit = 60;           // number of times before discarding a message or the entire queue
 
     SyslogQueue();
-    virtual ~SyslogQueue() {
-    }
+    virtual ~SyslogQueue();
 
-    virtual SyslogQueueId_t add(const String &message, Syslog *syslog);
-    virtual void remove(SyslogQueueItemPtr &item, bool success);
-    virtual size_t size() const;
+    // returns the id
+    virtual uint32_t add(const String &message) = 0;
 
-    virtual SyslogQueueItemPtr &at(SyslogQueueIndex_t index);
+    // return true if queue is ready to send a new item
+    virtual bool canSend() = 0;
 
-    // gets called after a new message has been added and each time the queue is checked
-    virtual void cleanUp() {
-    }
+    // get one item from the queue
+    // canSend() must be checked before
+    virtual const Item &get() = 0;
 
-    virtual void clear() {
-        while(size()) {
-            remove(at(0), false);
-        }
-    }
+    // remove item after it has been delivered
+    virtual void remove(uint32_t id, bool success) = 0;
 
-    // called before restarting
-    // leave data to avoid dangling pointers
-    void kill() {
-        _reportEmpty = true;
-    }
+    // return size of the queue
+    virtual size_t size() const = 0;
+
+    // clear queue
+    virtual void clear() = 0;
+
+    // dump queue in human readable format
+    virtual void dump(Print &output) const = 0;
 
 protected:
-    bool _reportEmpty;
-
-private:
-    SyslogQueueItemPtr _item;
+    // get size of SyslogQueueItem::Ptr for a particular message
+    size_t _getQueueItemSize(const String &msg) const;
 };
 
 
 // Stores multiple messages in memory to resend them if an error occurs. If it runs out of space, new messages are dropped
 class SyslogMemoryQueue : public SyslogQueue {
 public:
-    typedef std::vector<SyslogQueueItemPtr> SyslogMemoryQueueVector;
+    typedef std::vector<Item> QueueVector;
 
     SyslogMemoryQueue(size_t maxSize);
 
-    SyslogQueueId_t add(const String &message, Syslog *syslog) override;
-    void remove(SyslogQueueItemPtr &item, bool success) override;
-    size_t size() const override;
-
-    SyslogQueueItemPtr &at(SyslogQueueIndex_t index) override;
+    virtual bool canSend() override;
+    virtual const Item &get() override;
+    virtual uint32_t add(const String &message) override;
+    virtual size_t size() const override;
+    virtual void remove(uint32_t id, bool success);
+    virtual void clear() override;
+    virtual void dump(Print &output) const;
 
 private:
+    QueueVector _items;
+    uint32_t _timer;
     size_t _maxSize;
     size_t _curSize;
-    SyslogMemoryQueueVector _items;
-    SyslogQueueIndex_t _uniqueId;
+    uint32_t _uniqueId;
 };
 
 
@@ -114,23 +108,21 @@ public:
         _filename = filename;
     }
 
-    SyslogQueueId_t add(const String &message, Syslog *syslog) override {
+    virtual IdType add(const String &message) override {
     }
 
-    void remove(SyslogQueueItemPtr &item, bool success) override {
+    virtual void remove(uint32_t id, bool success) override {
     }
 
-    size_t size() const override {
+    virtual size_t size() const override {
         return 0;
     }
-
-    SyslogQueueItemPtr &at(SyslogQueueIndex_t index) override;
 
 private:
     String _filename;
     File _file;
     size_t _maxSize;
-    SyslogQueueId_t _uniqueId;
+    uint32_t _uniqueId;
 };
 
 #endif

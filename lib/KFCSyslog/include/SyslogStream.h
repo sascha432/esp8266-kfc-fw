@@ -32,45 +32,46 @@
 
 class SyslogStream : public Stream {
 public:
-	SyslogStream(SyslogParameter &parameter, SyslogProtocol protocol, const String &host, uint16_t port = SyslogFactory::kDefaultPort, uint16_t queueSize = 1024);
-    SyslogStream(SyslogFilter *filter, SyslogQueue *queue);
+    SyslogStream(Syslog *syslog);
     virtual ~SyslogStream();
 
     void setFacility(SyslogFacility facility);
     void setSeverity(SyslogSeverity severity);
 
-    size_t write(uint8_t data) override;
-    size_t write(const uint8_t *buffer, size_t len) override;
-    void flush() override;
+    virtual size_t write(uint8_t data) override;
+    virtual size_t write(const uint8_t *buffer, size_t len) override;
+    virtual void flush() override;
 
     bool hasQueuedMessages();
+    void deliverQueue();
+    void clearQueue();
+    size_t queueSize() const;
+    void dumpQueue(Print &print) const;
 
-    int available() override;
-    int read() override;
-    int peek() override;
+    virtual int available() override;
+    virtual int read() override;
+    virtual int peek() override;
 
-    void deliverQueue(Syslog *syslog = nullptr);
+    // void transmitCallback(const SyslogQueue::ItemPtr &item, bool success);
 
-    void transmitCallback(SyslogQueue::SyslogQueueItemPtr &item, bool success);
+    // String getLevel() const;
 
-    String getLevel() const;
-
-    SyslogQueue *getQueue() {
-        return _queue;
-    }
-    void setQueue(SyslogQueue *queue) {
-        _queue = queue;
-    }
-    SyslogFilter *getFilter() {
-        return _filter;
-    }
-    SyslogParameter &getParameter() {
-        return _parameter;
-    }
+    // SyslogQueue &getQueue() {
+    //     return _queue;
+    // }
+    // void setQueue(SyslogQueue *queue) {
+    //     _queue = queue;
+    // }
+    // SyslogFilter *getFilter() {
+    //     return _filter;
+    // }
+    // const SyslogParameter &getParameter() const {
+    //     return _syslog._parameter;
+    // }
 
 private:
-    SyslogParameter &_parameter;
-    SyslogFilter *_filter;
-    SyslogQueue *_queue;
+    // SyslogParameter &_parameter;
+    // SyslogFilter *_filter;
+    Syslog &_syslog;
     String _message;
 };

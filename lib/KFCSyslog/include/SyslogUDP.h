@@ -4,16 +4,20 @@
 
 #pragma once
 
+#include "Syslog.h"
+
 class SyslogUDP : public Syslog {
 public:
     static constexpr uint16_t kDefaultPort = 514;
 
-    SyslogUDP(SyslogParameter &parameter, const String &host, uint16_t port = kDefaultPort);
+    SyslogUDP(SyslogParameter &&parameter, SyslogQueue &queue, const String &host, uint16_t port = kDefaultPort);
+    virtual ~SyslogUDP();
 
-    void transmit(const String &message, Callback_t callback) override;
+    virtual void transmit(const SyslogQueueItem &item);
 
 private:
-    String _host;
+    char *_host;
+    IPAddress _address;
     uint16_t _port;
     WiFiUDP _udp;
 };

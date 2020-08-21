@@ -15,159 +15,208 @@
 #include <debug_helper_disable.h>
 #endif
 
-SyslogQueue::SyslogQueue() : _reportEmpty(false) {
+// ------------------------------------------------------------------------
+// SyslogQueueItem
+// ------------------------------------------------------------------------
+
+
+SyslogQueueItem::SyslogQueueItem() : _id(0), _failureCount(0), _locked(false)
+{
 }
 
-SyslogQueueId_t SyslogQueue::add(const String &message, Syslog *syslog) {
-    SyslogQueueItemPtr newItem(new SyslogQueueItem(message, syslog));
-    newItem->setId(_item ? _item->getId() + 1 : 1); // id only increases above 2 if add is called multiple times without remove, which resets the id to 1
-    _item.swap(newItem);
-    return _item->getId();
+SyslogQueueItem::SyslogQueueItem(const String &message, uint32_t id) : _message(message), _id(id), _failureCount(0), _locked(false)
+{
 }
 
-void SyslogQueue::remove(SyslogQueueItemPtr &item, bool success) {
-    if (item) {
-        item.reset();
+uint32_t SyslogQueueItem::getId() const
+{
+	return _id;
+}
+
+// void SyslogQueueItem::setMessage(const String &message)
+// {
+// 	_message = message;
+// }
+
+const String &SyslogQueueItem::getMessage() const
+{
+	return _message;
+}
+
+// ------------------------------------------------------------------------
+// SyslogQueue
+// ------------------------------------------------------------------------
+
+
+SyslogQueue::SyslogQueue()
+{
+}
+
+SyslogQueue::~SyslogQueue()
+{
+}
+
+// SyslogQueue::IdType SyslogQueue::add(const String &message, Syslog *syslog)
+// {
+//     _item.reset(new SyslogQueueItem(message, syslog, _item ? _item->getId() + 1 : 1)); // id can only be 1 or 2, if a queued item is replaced before sending
+//     return _item->getId();
+// }
+
+// void SyslogQueue::remove(const ItemPtr &item, bool success)
+// {
+//     if (item) {
+//         if (_item.get() == item.get()) {
+//             _item.reset();
+//         }
+//         else {
+//             __LDBG_print("item=%p not _item=%p", item.get(), _item.get());
+//         }
+//     }
+//     else {
+//         __LDBG_print("invalid item");
+//     }
+// }
+
+// size_t SyslogQueue::size() const
+// {
+//     return _reportEmpty ? 0 : (_item ? 1 : 0);
+// }
+
+// SyslogQueue::ItemPtr SyslogQueue::at(IndexType index)
+// {
+//     return _item;
+// }
+
+// void SyslogQueue::clear()
+// {
+//     _item.reset();
+// }
+
+#if defined(ESP8266)
+
+class StringAllocSize : public String {
+public:
+    static size_t getAllocSize(size_t len) {
+        if (len < String::SSOSIZE) {
+            return 0;
+        }
+        return (len + 16) & ~0xf;
     }
+};
+
+#else
+
+class StringAllocSize {
+public:
+    static size_t getAllocSize(size_t len) {
+        return (len + 8) & ~7;
+    }
+};
+
+#endif
+
+size_t SyslogQueue::_getQueueItemSize(const String &msg) const
+{
+    return StringAllocSize::getAllocSize(msg.length()) + kSyslogQueueItemSize;
 }
 
-size_t SyslogQueue::size() const {
-    return _reportEmpty ? 0 : (_item ? 1 : 0);
+// ------------------------------------------------------------------------
+// SyslogMemoryQueue
+// ------------------------------------------------------------------------
+
+SyslogMemoryQueue::SyslogMemoryQueue(size_t maxSize) : _timer(0), _maxSize(maxSize), _curSize(0), _uniqueId(0)
+{
 }
 
-SyslogQueue::SyslogQueueItemPtr &SyslogQueue::at(SyslogQueueIndex_t index) {
-    return _item;
-}
+uint32_t SyslogMemoryQueue::add(const String &message)
+{
+    size_t size = _getQueueItemSize(message);
+    __LDBG_printf("id=%d items=%u size=%u item_size=%u msg=%s", (_uniqueId + 1), _items.size(), _curSize, size, message.c_str());
 
-
-SyslogMemoryQueue::SyslogMemoryQueue(size_t maxSize) {
-    _maxSize = maxSize;
-    _curSize = 0;
-    _uniqueId = 0;
-}
-
-SyslogQueueId_t SyslogMemoryQueue::add(const String &message, Syslog *syslog) {
-    _debug_printf_P(PSTR("SyslogMemoryQueue::add(): id=%d,queue_size=%u,mem_size=%u,message='%s'\n"), (_uniqueId + 1), _items.size(), _curSize, message.c_str());
-    size_t size = message.length() + SYSLOG_MEMORY_QUEUE_ITEM_SIZE;
+    // check if the queue can store more messages
     if (size + _curSize > _maxSize) {
-        _debug_printf_P(PSTR("SyslogMemoryQueue::add(): queue full (%d > %d), discarding last message\n"), size + _curSize, _maxSize);
-        return 0;  // no space left, discard message
+        __LDBG_printf("queue full size=%u msg=%u max=%u", _curSize, size, _maxSize);
+        return 0;
     }
-    ;
-    _items.push_back(SyslogQueueItemPtr(new SyslogQueueItem(message, syslog)));
-    _items.back()->setId(++_uniqueId);
+    _items.emplace_back(message, ++_uniqueId);
     _curSize += size;
     return _uniqueId;
 }
 
-void SyslogMemoryQueue::remove(SyslogQueue::SyslogQueueItemPtr &removeItem, bool success) {
-    if (!removeItem) {
-        __DBG_print("invalid pointer");
-    }
-    _debug_printf_P(PSTR("SyslogMemoryQueue::remove(): id=%d,success=%d,queue_size=%u,mem_size=%u,message='%s'\n"), removeItem->getId(), success, _items.size(), _curSize, removeItem->getMessage().c_str());
-    _items.erase(std::remove_if(_items.begin(), _items.end(), [this, &removeItem](const SyslogQueueItemPtr &item) {
-        if (item == removeItem) {
-            _curSize -= removeItem->getMessage().length() + SYSLOG_MEMORY_QUEUE_ITEM_SIZE;
-            return true;
+size_t SyslogMemoryQueue::size() const
+{
+    size_t count = 0;
+    for(const auto &item: _items) {
+        if (!item._locked) {
+            count++;
         }
-        return false;
-    }), _items.end());
-}
-
-size_t SyslogMemoryQueue::size() const {
-    return _reportEmpty ? 0 : _items.size();
-}
-
-SyslogQueue::SyslogQueueItemPtr &SyslogMemoryQueue::at(SyslogQueueIndex_t index) {
-    return _items.at(index);
-}
-
-
-
-SyslogQueueItem::SyslogQueueItem() {
-    _id = 0;
-    _syslog = nullptr;
-}
-
-SyslogQueueItem::SyslogQueueItem(const String &message, Syslog *syslog) {
-	_id = 1;
-	_message = message;
-	_locked = 0;
-	_failureCount = 0;
-	_syslog = syslog;
-}
-
-void SyslogQueueItem::setId(SyslogQueueId_t id) {
-	_id = id;
-}
-
-SyslogQueueId_t SyslogQueueItem::getId() const {
-	return _id;
-}
-
-void SyslogQueueItem::setMessage(const String &message) {
-	_message = message;
-}
-
-const String & SyslogQueueItem::getMessage() const {
-	return _message;
-}
-
-void SyslogQueueItem::setSyslog(Syslog *syslog) {
-	_syslog = syslog;
-}
-
-Syslog * SyslogQueueItem::getSyslog() {
-	return _syslog;
-}
-
-bool SyslogQueueItem::isSyslog(Syslog *syslog) const {
-	return (syslog == nullptr || syslog == _syslog);
-}
-
-bool SyslogQueueItem::lock() {
-    _debug_printf_P(PSTR("SyslogMemoryQueueItem::lock(): locked=%d,id=%d\n"), _locked, getId());
-	if (_locked) {
-		return false;
-	}
-	_locked = 1;
-	return true;
-}
-
-bool SyslogQueueItem::unlock() {
-    _debug_printf_P(PSTR("SyslogMemoryQueueItem::unlock(): locked=%d,id=%d\n"), _locked, getId());
-	if (_locked) {
-		_locked = 0;
-        return true;
     }
-	return false;
+    return count;
 }
 
-bool SyslogQueueItem::isLocked() const {
-	return !!_locked;
+void SyslogMemoryQueue::clear()
+{
+    _items.clear();
+    _curSize = 0;
 }
 
-uint8_t SyslogQueueItem::incrFailureCount() {
-    _debug_printf_P(PSTR("SyslogMemoryQueueItem::incrFailureCount(): id=%u,failure_count=%u\n"), getId(), _failureCount);
-	return ++_failureCount;
+void SyslogMemoryQueue::dump(Print &output) const
+{
+    if (_timer) {
+        uint32_t ms = millis();
+        if (ms <= _timer) {
+            output.printf_P(PSTR("Locked for %.3f seconds, "), (_timer - ms) / 1000.0);
+        }
+    }
+    output.printf_P(PSTR("%u bytes, %u message(s)\n"), _curSize, _items.size());
+    for(const auto &item: _items) {
+        output.printf_P(PSTR("id=%08x locked=%u errors=%u msg="), item._id, item._locked, item._failureCount);
+        output.println(item._message);
+    }
 }
 
-uint8_t SyslogQueueItem::getFailureCount() {
-	return _failureCount;
+bool SyslogMemoryQueue::canSend()
+{
+    if (_timer && millis() >= _timer) {
+        // unlock all messages after the timer has expired
+        for(auto &item: _items) {
+            item._locked = false;
+        }
+        _timer = 0;
+    }
+    return _timer == 0 && size() != 0;
 }
 
-void SyslogQueueItem::transmit(Syslog::Callback_t callback) {
-    _debug_printf_P(PSTR("SyslogMemoryQueueItem::transmit(): canSend=%d, callback %p\n"), _syslog->canSend(), &callback);
-	if (_syslog->canSend()) {
-		if (lock()) {
-            _syslog->transmit(_message, [this, callback](bool success) {
-				if (unlock()) {
-                    _debug_printf_P(PSTR("SyslogMemoryQueueItem::transmit(): callback=%p, success=%d\n"), &callback, success);
-                    callback(success);
-				} else {
-                    _debug_printf_P(PSTR("SyslogMemoryQueueItem::transmit(): callback=%p, success=%d, item unlocked\n"), &callback, success);
-                }
-			});
-		}
-	}
+const SyslogQueue::Item &SyslogMemoryQueue::get()
+{
+    for(auto &item: _items) {
+        if (!item._locked) {
+            item._locked = true;
+            return item;
+        }
+    }
+    assert(false);
+    return _items.at(0);
+}
+
+void SyslogMemoryQueue::remove(uint32_t id, bool success)
+{
+    auto iterator = std::find(_items.begin(), _items.end(), id);
+    // auto iterator = std::find_if(_items.begin(), _items.end(), [id](const Item &item) {
+    //     return item._id == id && item._locked;
+    // });
+    if (iterator != _items.end()) {
+        if (success == false && iterator->_failureCount < kFailureRetryLimit) {
+            iterator->_failureCount++;
+            // delay sending next message
+            _timer = millis() + kFailureWaitDelay;
+        }
+        else {
+            _curSize -= _getQueueItemSize(iterator->_message);
+            _items.erase(iterator);
+            if (_items.empty()) {
+                _timer = 0;
+            }
+        }
+    }
 }

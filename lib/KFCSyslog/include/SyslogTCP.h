@@ -5,6 +5,7 @@
 #pragma once
 
 #include <Buffer.h>
+#include "Syslog.h"
 
 #if defined(ESP8266)
 #include <ESPAsyncTCP.h>
@@ -12,28 +13,19 @@
 #include <AsyncTCP.h>
 #endif
 
-
 class SyslogTCP : public Syslog {
 public:
     static constexpr uint16_t kDefaultPort = 514;
     static constexpr uint16_t kDefaultPortTLS = 6514;
     static constexpr uint16_t kMaxIdleSeconds = 15;
 
-    typedef struct {
-        Buffer message;                 // data to write
-        uint16_t written;               // bytes written
-        uint16_t sentAck;               // bytes sent
-        uint8_t isSending: 1;           // currently sending the message
-        uint8_t isDisconnecting: 1;     // tcp connection closed
-        ulong idleTimeout;              // millis() > timeout = close idle connection
-        Callback_t callback;
-    } Queue_t;
+public:
+    SyslogTCP(SyslogParameter &&parameter, SyslogQueue &queue, const String &host, uint16_t port = kDefaultPort, bool useTLS = false);
+    virtual ~SyslogTCP();
 
-    SyslogTCP(SyslogParameter &parameter, const String &host, uint16_t port = kDefaultPort, bool useTLS = false);
-    ~SyslogTCP();
-
-	void transmit(const String &message, Callback_t callback) override;
-	bool isSending() override;
+	virtual void transmit(const SyslogQueueItem &item);
+    virtual void clear() override;
+	virtual bool isSending() override;
 
 public:
     static void _onDisconnect(void *arg, AsyncClient *client);
@@ -49,14 +41,19 @@ private:
 
 private:
     void _connect();
-    void _disconnect(bool now);
-    void _queueWritten(bool ack);
-    void _queueWriteError(IF_DEBUG(const char *reason));
-    void _queueInvalidState();
+    void _disconnect();
+#if DEBUG_SYSLOG
+    void _status(bool success, const char *reason = nullptr);
+#else
+    void _status(bool success);
+#endif
 
-    String _host;
-    uint16_t _port;
-    bool _useTLS;
-    Queue_t _queue;
+    char *_host;
+    IPAddress _address;
     AsyncClient _client;
+    Buffer _buffer;                     // data to write for _queueid
+    uint32_t _queueId;                  // queue id
+    uint32_t _port: 16;
+    uint32_t _useTLS: 1;
+    uint32_t _ack: 15;                  // number of bytes waiting for ack
 };

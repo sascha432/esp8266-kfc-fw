@@ -8,7 +8,6 @@
 #include <SyslogParameter.h>
 #include <Syslog.h>
 #include <SyslogFactory.h>
-#include <SyslogFilter.h>
 #include <SyslogQueue.h>
 #include <SyslogStream.h>
 #include <SyslogUDP.h>

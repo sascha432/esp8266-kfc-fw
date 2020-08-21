@@ -12,59 +12,94 @@
 #include <debug_helper_disable.h>
 #endif
 
-SyslogParameter::SyslogParameter()
+SyslogParameter::SyslogParameter(SyslogParameter &&move) :
+    _facility(move._facility),
+    _severity(move._severity),
+    _hostname(std::exchange(move._hostname, nullptr)),
+    _appName(move._appName),
+    _processId(std::exchange(move._processId, nullptr))
 {
-    _facility = SYSLOG_FACILITY_KERN;
-    _severity = SYSLOG_ERR;
+    __LDBG_printf("hostname=%s appname=%s procid=%s", __S(_hostname), __S(_appName), __S(_processId));
 }
 
-SyslogParameter::SyslogParameter(const String &hostname, const String &appName) {
-    _hostname = hostname;
-    _appName = appName;
+SyslogParameter::SyslogParameter(const char *hostname, const __FlashStringHelper *appName, const char *processId) :
+    _facility(SYSLOG_FACILITY_KERN),
+    _severity(SYSLOG_NOTICE),
+    _hostname(strdup(hostname)),
+    _appName(appName),
+    _processId(processId ? strdup(processId) : nullptr)
+{
+    __LDBG_printf("hostname=%s appname=%s procid=%s", __S(_hostname), __S(_appName), __S(_processId));
 }
 
-SyslogParameter::SyslogParameter(const String &hostname, const String &appName, const String &processId) {
-    _hostname = hostname;
-    _appName = appName;
-    _processId = processId;
+SyslogParameter::~SyslogParameter()
+{
+    if (_processId) {
+        free(_processId);
+    }
+    if (_hostname) {
+        free(_hostname);
+    }
 }
 
-void SyslogParameter::setFacility(SyslogFacility facility) {
+void SyslogParameter::setFacility(SyslogFacility facility)
+{
     _facility = facility;
 }
 
-SyslogFacility SyslogParameter::getFacility() {
+SyslogFacility SyslogParameter::getFacility() const
+{
     return _facility;
 }
 
-void SyslogParameter::setSeverity(SyslogSeverity severity) {
+void SyslogParameter::setSeverity(SyslogSeverity severity)
+{
     _severity = severity;
 }
 
-SyslogSeverity SyslogParameter::getSeverity() {
+SyslogSeverity SyslogParameter::getSeverity() const
+{
     return _severity;
 }
 
-void SyslogParameter::setAppName(const String &appName) {
+void SyslogParameter::setAppName(const __FlashStringHelper *appName)
+{
     _appName = appName;
+    __LDBG_printf("appname=%s", __S(_appName));
 }
 
-const String& SyslogParameter::getAppName() {
+const __FlashStringHelper *SyslogParameter::getAppName() const
+{
     return _appName;
 }
 
-void SyslogParameter::setHostname(const String &hostname) {
-    _hostname = hostname;
+void SyslogParameter::setHostname(const char *hostname)
+{
+    if (_hostname) {
+        free(_hostname);
+    }
+    _hostname = strdup(hostname);
+    __LDBG_printf("hostname=%s", __S(_hostname));
 }
 
-const String& SyslogParameter::getHostname() {
+const char *SyslogParameter::getHostname() const
+{
     return _hostname;
 }
 
-void SyslogParameter::setProcessId(const String &processId) {
-    _processId = processId;
+void SyslogParameter::setProcessId(const char *processId)
+{
+    if (_processId) {
+        free(_processId);
+        _processId = nullptr;
+    }
+    if (processId) {
+        _processId = strdup(processId);
+    }
+    __LDBG_printf("procid=%s", __S(_processId));
 }
 
-const String& SyslogParameter::getProcessId() {
+const char *SyslogParameter::getProcessId() const
+{
     return _processId;
 }

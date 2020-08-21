@@ -3,15 +3,16 @@
  */
 
 #include <Arduino_compat.h>
-#include "SyslogParameter.h"
 #include "Syslog.h"
-#include "SyslogFilter.h"
+#include "SyslogQueue.h"
 
 #if DEBUG_SYSLOG
 #include <debug_helper_enable.h>
 #else
 #include <debug_helper_disable.h>
 #endif
+
+#if 0
 
 PROGMEM_STRING_DEF(kern, "kern");
 PROGMEM_STRING_DEF(user, "user");
@@ -77,6 +78,10 @@ const SyslogFilterItemPair syslogFilterSeverityItems[] PROGMEM = {
 	{ nullptr, 0xff },
 };
 
+#endif
+
+#if 0
+
 SyslogFilterItem::SyslogFilterItem(const String &facility, const String &severity) : SyslogFilterItem(Syslog::facilityToInt(facility), Syslog::severityToInt(severity)) {
 }
 
@@ -118,45 +123,62 @@ void SyslogFileFilterItem::_parseFilter(const String &filter, SyslogFilterItemVe
     } while (startPos);
 }
 
-
-Syslog::Syslog(SyslogParameter &parameter) : _parameter(parameter)
-{
-	_debug_printf_P(PSTR("Syslog::Syslog(%s,%s,%s)\n"), parameter.getHostname().c_str(), parameter.getAppName().c_str(), parameter.getProcessId().c_str());
-}
-
-void Syslog::transmit(const String &message, Callback_t callback)
-{
-	_debug_printf_P(PSTR("Syslog::transmit(%s)\n"), message.c_str());
-	callback(true);
-}
-
-void Syslog::_addTimestamp(String& buffer, PGM_P format)
-{
-	auto now = time(nullptr);
-	auto tm = localtime(&now);
-	if (tm && IS_TIME_VALID(now)) {
-		char buf[40];
-		strftime_P(buf, sizeof(buf), format, tm);
-		buffer += buf;
-#if SEND_NILVALUE_IF_INVALID_TIMESTAMP == 0
-		buffer += ' ';
 #endif
-	}
+
+PROGMEM_STRING_DEF(syslog_nil_value, "- ");
+
+Syslog::Syslog(SyslogParameter &&parameter, SyslogQueue &queue) : _parameter(std::move(parameter)), _queue(queue)
+{
+	__LDBG_printf("host=%s app=%s process=%s queue=%p", __S(_parameter.getHostname()), __S(_parameter.getAppName()), __S(_parameter.getProcessId()), &_queue);
+	assert(&_queue != nullptr);
+}
+
+Syslog::~Syslog()
+{
+	__LDBG_free(&_queue);
+}
+
+// void Syslog::transmit(const SyslogQueueItem &item)
+// {
+// 	__LDBG_printf("id=%u msg=%s", id, message.c_str());
+// 	_queue.remove(item.id, true);
+// }
+
+void Syslog::_addTimestamp(PrintString &buffer, PGM_P format)
+{
+	time_t now = time(nullptr);
+#ifdef SYSLOG_TIMESTAMP_FRAC_FMT
+    uint32_t frac = SYSLOG_TIMESTAMP_FRAC_FUNC;
+#endif
 #if SEND_NILVALUE_IF_INVALID_TIMESTAMP
-	else {
-		buffer += '-';
+	if (!IS_TIME_VALID(now)) {
+		buffer.print(FSPGM(syslog_nil_value));
+		return;
 	}
-	buffer += ' ';
+#endif
+    auto tm = localtime(&now);
+    buffer.strftime_P(format, tm);
+#ifdef SYSLOG_TIMESTAMP_FRAC_FMT
+    buffer.printf_P(PSTR(SYSLOG_TIMESTAMP_FRAC_FMT), frac);
+    char buf[8];
+    strftime_P(buf, sizeof(buf), PSTR("%z "), tm);
+    buffer.write(buf, 3);
+    buffer.write(':');
+    buffer.print(buf + 3);
 #endif
 }
 
-void Syslog::_addParameter(String& buffer, const String& value) {
-	if (value.length() == 0) {
-		buffer += '-';
-	} else {
-		buffer += value;
+void Syslog::_addParameter(PrintString &buffer, PGM_P value)
+{
+	if (value) {
+        size_t len = strlen_P(value);
+        if (len) {
+            buffer.write_P((const char *)value, len);
+            buffer.write(' ');
+            return;
+        }
 	}
-	buffer += ' ';
+    buffer.print(FSPGM(syslog_nil_value));
 }
 
 /*
@@ -165,8 +187,7 @@ The syslog message has the following ABNF [RFC5234] definition:
 
 SYSLOG-MSG      = HEADER SP STRUCTURED-DATA [SP MSG]
 
-HEADER          = PRI VERSION SP TIMESTAMP SP HOSTNAME
-SP APP-NAME SP PROCID SP MSGID
+HEADER          = PRI VERSION SP TIMESTAMP SP HOSTNAME SP APP-NAME SP PROCID SP MSGID
 PRI             = "<" PRIVAL ">"
 PRIVAL          = 1*3DIGIT ; range 0 .. 191
 VERSION         = NONZERO-DIGIT 0*2DIGIT
@@ -218,50 +239,71 @@ DIGIT           = %d48 / NONZERO-DIGIT
 NILVALUE        = "-"
 */
 
-void Syslog::addHeader(String& buffer) {
+String Syslog::_getHeader()
+{
 #if SYSLOG_USE_RFC5424
 
-	buffer += '<';
-	buffer += String(_parameter.getFacility() << 3 | _parameter.getSeverity());
-	buffer += '>';
-	_addParameter(buffer, F(SYSLOG_VERSION));
-	_addTimestamp(buffer);
-	_addParameter(buffer, _parameter.getHostname());
-	_addParameter(buffer, _parameter.getAppName());
-	_addParameter(buffer, _parameter.getProcessId());
-	buffer += F("- - ");  // NIL values for message id & structured data
+    // currently not working
+    //   <3>1 2020-08-21T10:20:38.967-07:00 KFCAC52DB kfcfw - - - It is a test
+    //   <5>1 2020-08-21T10:29:09.726-07:00 KFCAC52DB kfcfw - - - MQTT auto discovery published
+    // <165>1 2003-08-24T05:14:15.000003-07:00 192.0.2.1 myproc 8710 - - %% It's time to make the do-nuts.
+    //  <34>1 2003-10-11T22:14:15.003Z mymachine.example.com appname - ID47 - BOM'su root' failed for lonvick on /dev/pts/8
+    // "<" PRIVAL ">" VERSION SP TIMESTAMP SP HOSTNAME SP APP-NAME SP PROCID SP MSGID SP STRUCTURED-DATA [SP MSG]
+
+	PrintString buffer(F("<%u>" SYSLOG_VERSION " "), (_parameter.getFacility() << 3) | _parameter.getSeverity()); // <PRIVAL> VERSION SP
+	_addTimestamp(buffer, PSTR(SYSLOG_TIMESTAMP_FORMAT)); // TIMESTAMP SP
+	_addParameter(buffer, _parameter.getHostname()); // HOSTNAME SP
+	_addParameter(buffer, (PGM_P)_parameter.getAppName()); // APP-NAME SP
+	_addParameter(buffer, _parameter.getProcessId()); // PROCID SP
+	buffer.print(FSPGM(syslog_nil_value)); // MSGID SP
+	buffer.print(FSPGM(syslog_nil_value)); // STRUCTURED-DATA SP
+#if SYSLOG_SEND_BOM
+    buffer.write(0xef);
+    buffer.write(0xbb);
+    buffer.write(0xbf);
+#endif
+	// followed by MSG
 
 #else
 
 	// format used by "rsyslog/stable,now 8.24.0-1 armhf"
-	// <PRIVAL> SP TIMESTAMP SP HOSTNAME SP APPNAME ["[" PROCESSID "]"] ":" SP MESSAGE
-	// the process id part is optional
+	// <PRIVAL> TIMESTAMP SP HOSTNAME SP APPNAME ["[" PROCESSID "]"] ":" SP MESSAGE
 
-	buffer += '<';
-	buffer += String((_parameter.getFacility() << 3) | _parameter.getSeverity());
-	buffer += '>';
-	_addTimestamp(buffer);
-	_addParameter(buffer, _parameter.getHostname());
-	if (_parameter.getAppName().length()) {
-		buffer += _parameter.getAppName();
-		if (_parameter.getProcessId().length()) {
-			buffer += '[';
-			buffer += _parameter.getProcessId();
-			buffer += ']';
-		}
-		buffer += ':';
-		buffer += ' ';
-	}
+	PrintString buffer(F("<%u>"), (_parameter.getFacility() << 3) | _parameter.getSeverity()); // <PRIVAL>
+	_addTimestamp(buffer, PSTR(SYSLOG_TIMESTAMP_FORMAT)); // TIMESTAMP SP
+	_addParameter(buffer, _parameter.getHostname()); // HOSTNAME SP
+    if (_parameter.getAppName()) {
+        buffer.print(_parameter.getAppName()); // APP-NAME
+        if (_parameter.getProcessId()) {
+            buffer.print('[');
+	        _addParameter(buffer, _parameter.getProcessId()); // [PROCID]
+            buffer.print(']');
+        }
+        buffer.print(F(": "));
+    }
+	// followed by MSG
+
 #endif
+    return buffer;
 }
 
-bool Syslog::canSend() const {
+void Syslog::clear()
+{
+    __LDBG_print("clear");
+    _queue.clear();
+}
+
+bool Syslog::canSend() const
+{
 	return WiFi.isConnected();
 }
 
-bool Syslog::isSending() {
+bool Syslog::isSending()
+{
 	return false;
 }
+
+#if 0
 
 bool Syslog::isNumeric(const char *str) {
     while (*str) {
@@ -299,3 +341,5 @@ SyslogSeverity Syslog::severityToInt(const String &str) {
     }
     return SYSLOG_SEVERITY_ANY;
 }
+
+#endif

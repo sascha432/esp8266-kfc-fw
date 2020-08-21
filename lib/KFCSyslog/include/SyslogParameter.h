@@ -4,7 +4,9 @@
 
 #pragma once
 
-typedef enum {
+#include <Arduino_compat.h>
+
+typedef enum  : uint8_t {
     SYSLOG_EMERG = 0,
     SYSLOG_ALERT,
     SYSLOG_CRIT,
@@ -13,10 +15,10 @@ typedef enum {
     SYSLOG_NOTICE,
     SYSLOG_INFO,
     SYSLOG_DEBUG,
-    SYSLOG_SEVERITY_ANY = 0xff,
+    SYSLOG_SEVERITY_MAX
 } SyslogSeverity;
 
-typedef enum {
+typedef enum : uint8_t {
     SYSLOG_FACILITY_KERN = 0,
     SYSLOG_FACILITY_USER,
     SYSLOG_FACILITY_MAIL,
@@ -32,34 +34,36 @@ typedef enum {
     SYSLOG_FACILITY_LOCAL5,
     SYSLOG_FACILITY_LOCAL6,
     SYSLOG_FACILITY_LOCAL7,
-    SYSLOG_FACILITY_ANY = 0xff,
+    SYSLOG_FACILITY_MAX,
 } SyslogFacility;
 
 class SyslogParameter {
 public:
-    SyslogParameter();
-    SyslogParameter(const String &hostname, const String &appName);
-    SyslogParameter(const String &hostname, const String &appName, const String &processId);
+    SyslogParameter(SyslogParameter &&move);
+    SyslogParameter(const SyslogParameter &) = delete;
+
+    SyslogParameter(const char *hostname, const __FlashStringHelper *appName = nullptr, const char *processId = nullptr);
+    ~SyslogParameter();
 
     void setFacility(SyslogFacility facility);
-    SyslogFacility getFacility();
+    SyslogFacility getFacility() const;
 
     void setSeverity(SyslogSeverity severity);
-    SyslogSeverity getSeverity();
+    SyslogSeverity getSeverity() const;
 
-    void setHostname(const String &hostname);
-    const String &getHostname();
+    void setHostname(const char *hostname);
+    const char *getHostname() const;
 
-    void setAppName(const String &appName);
-    const String &getAppName();
+    void setAppName(const __FlashStringHelper *appName = nullptr);
+    const __FlashStringHelper *getAppName() const;
 
-    void setProcessId(const String &processId);
-    const String &getProcessId();
+    void setProcessId(const char *processId = nullptr);
+    const char *getProcessId() const;
 
 private:
     SyslogFacility _facility;
     SyslogSeverity _severity;
-    String _hostname;
-    String _appName;
-    String _processId;
+    char *_hostname;
+    const __FlashStringHelper *_appName;
+    char *_processId;
 };

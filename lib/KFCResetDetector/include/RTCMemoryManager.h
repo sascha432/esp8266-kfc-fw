@@ -64,12 +64,6 @@ public:
     static bool write(RTCMemoryId id, void *, uint8_t maxSize);
     static bool clear();
 
-    static inline void freeMemPtr(uint32_t *memPtr) {
-#if !defined(ESP32)
-        free(memPtr);
-#endif
-    }
-
 #if DEBUG
     static void dump(Print &output);
 #endif

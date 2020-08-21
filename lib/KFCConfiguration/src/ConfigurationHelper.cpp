@@ -38,7 +38,7 @@ ConfigurationHelper::Pool::Pool(uint16_t size) : _ptr(nullptr), _length(0), _siz
 ConfigurationHelper::Pool::~Pool()
 {
     if (_ptr) {
-        free(_ptr);
+        __LDBG_delete_array(_ptr);
     }
 }
 
@@ -60,7 +60,9 @@ ConfigurationHelper::Pool &ConfigurationHelper::Pool::operator=(Pool &&pool) noe
 
 void ConfigurationHelper::Pool::init()
 {
-    _ptr = (uint8_t *)calloc(_size, 1);
+    _ptr = __LDBG_new_array(_size, uint8_t);
+    // _ptr = (uint8_t *)malloc(_size);
+    std::fill_n(_ptr, _size, 0);
 }
 
 bool ConfigurationHelper::Pool::space(uint16_t length) const
@@ -89,8 +91,8 @@ uint8_t *ConfigurationHelper::Pool::allocate(uint16_t length)
     auto endPtr = _ptr + _length;
     _length += length;
     _count++;
-    std::fill(endPtr, _end(), 0);
-    __LDBG_assert_panic(endPtr < _end(), "begin=%p end=%p ptr=%p len=%d size=%d alloc_len=%d", _ptr, _end(), endPtr, _length, _size, length);
+    std::fill_n(endPtr, length, 0);
+    __LDBG_assert_panic(endPtr + length < _end(), "begin=%p end=%p ptr=%p len=%d size=%d alloc_len=%d", _ptr, _end(), endPtr, _length, _size, length);
     return endPtr;
 }
 
@@ -193,8 +195,9 @@ uint16_t ConfigurationHelper::EEPROMAccess::read(uint8_t *dst, uint16_t offset, 
 #if defined(ESP8266)
     // if the EEPROM is not intialized, copy data from flash directly
     if (_isInitialized) {
-        memcpy(dst, EEPROM.getConstDataPtr() + offset, length); // data is already in RAM
+        // memcpy(dst, EEPROM.getConstDataPtr() + offset, length); // data is already in RAM
         assert(dst + length <= dst + size);
+        std::copy_n(EEPROM.getConstDataPtr() + offset, length, dst);
         return 0;
     }
 
@@ -219,12 +222,13 @@ uint16_t ConfigurationHelper::EEPROMAccess::read(uint8_t *dst, uint16_t offset, 
             result = spi_flash_read(eeprom_start_address, reinterpret_cast<uint32_t *>(buf), readSize);
             interrupts();
             if (result == SPI_FLASH_RESULT_OK) {
-                memcpy(dst, buf + alignment, length); // copy to destination
+                // memcpy(dst, buf + alignment, length); // copy to destination
                 assert(dst + length <= dst + size);
+                std::copy_n(buf + alignment, length, dst);
             }
         }
         else {
-            auto ptr = reinterpret_cast<uint8_t *>(malloc(readSize));
+            auto ptr = __LDBG_new_array(readSize, uint8_t);
             // large read operation should have an aligned address or enough extra space to avoid memory allocations
             __LDBG_printf("allocating read buffer read_size=%d len=%d size=%u ptr=%p", readSize, length, size, ptr);
             if (ptr) {
@@ -232,10 +236,11 @@ uint16_t ConfigurationHelper::EEPROMAccess::read(uint8_t *dst, uint16_t offset, 
                 result = spi_flash_read(eeprom_start_address, reinterpret_cast<uint32_t *>(ptr), readSize);
                 interrupts();
                 if (result == SPI_FLASH_RESULT_OK) {
-                    memcpy(dst, ptr + alignment, length); // copy to destination
+                    // memcpy(dst, ptr + alignment, length); // copy to destination
                     assert(dst + length <= dst + size);
+                    std::copy_n(ptr + alignment, length, dst);
                 }
-                ::free(ptr);
+                __LDBG_delete_array(ptr);
             }
         }
     }
@@ -244,8 +249,9 @@ uint16_t ConfigurationHelper::EEPROMAccess::read(uint8_t *dst, uint16_t offset, 
         result = spi_flash_read(eeprom_start_address, reinterpret_cast<uint32_t *>(dst), readSize);
         interrupts();
         if (result == SPI_FLASH_RESULT_OK && alignment) { // move to beginning of the destination
-            memmove(dst, dst + alignment, length);
+            // memmove(dst, dst + alignment, length);
             assert(dst + length <= dst + size);
+            std::copy_n(dst + alignment, length, dst);
         }
     }
     if (result == SPI_FLASH_RESULT_OK) {

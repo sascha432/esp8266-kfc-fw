@@ -36,7 +36,8 @@ uint8_t *ConfigurationParameter::_allocate(Configuration *conf)
     }
     if (_info.data && _info.size == _param.getSize()) { // can we reuse the pointer?
         __LDBG_printf("%s pointer reused", toString().c_str());
-        memset(_info.data, 0, _info.size);
+        // memset(_info.data, 0, _info.size);
+        std::fill_n(_info.data, _info.size, 0);
         return _info.data;
     }
     conf->__release(_info.data);
@@ -60,7 +61,7 @@ void ConfigurationParameter::_free()
         __DBG_panic("%s free called on parameter without heap allocation", toString().c_str());
     }
     if (_info.data) {
-        free(_info.data);
+        __LDBG_delete_array(_info.data);
     }
     _info = Info_t();
 }
@@ -174,10 +175,14 @@ void ConfigurationParameter::_makeWriteable(Configuration *conf, uint16_t size)
         if (_param.getSize(size) != _info.size) {
             uint16_t oldSize = _info.size;
             _info.size = _param.getSize(size);
-            _info.data = reinterpret_cast<uint8_t *>(realloc(_info.data, _info.size));
-            if (_info.size > oldSize) {
-                memset(_info.data + oldSize, 0, _info.size - oldSize);
-            }
+            auto tmp = __LDBG_new_array(_info.size, uint8_t);
+            std::fill(std::copy_n(_info.data, std::min(oldSize, _info.size), tmp), tmp + _info.size, 0);
+            __LDBG_delete_array(_info.data);
+            _info.data = tmp;
+            // _info.data = reinterpret_cast<uint8_t *>(x_r_ealloc(_info.data, _info.size));
+            // if (_info.size > oldSize) {
+            //     memset(_info.data + oldSize, 0, _info.size - oldSize);
+            // }
         }
     }
     else {
@@ -188,7 +193,8 @@ void ConfigurationParameter::_makeWriteable(Configuration *conf, uint16_t size)
             auto ptr = _info.data;
             auto oldSize = _param.getSize();
             conf->_writeAllocate(*this, size);                                  // allocate new memory
-            memcpy(_info.data, ptr, std::min(oldSize, size));                   // copy data
+            // memcpy(_info.data, ptr, std::min(oldSize, size));                   // copy data
+            std::copy_n(ptr, std::min(oldSize, size), _info.data);
             conf->__release(ptr);                                               // release pool ptr
         }
         _info.dirty = 1;
@@ -351,7 +357,8 @@ bool ConfigurationParameter::hasDataChanged(Configuration *conf) const
     auto alignedSize = Configuration::Pool::align(size);
     // get original size and allocate aligned blocked
     auto tmp = conf->_allocate(_param.getSize());
-    // auto tmp = reinterpret_cast<uint8_t *>(calloc(alignedSize, 1));
+    // auto tmp = reinterpret_cast<uint8_t *>(malloc(alignedSize));
+    // std::fill_n(tmp, alignedSize, 0);
     if (!tmp) {
         __DBG_printf("%s allocate failed", toString().c_str());
         return true;

@@ -76,11 +76,13 @@ uint32_t *RTCMemoryManager::_readMemory(uint16_t &length) {
         }
 #else
         uint16_t size = __memorySize - offset;
-        memPtr = (uint32_t *)calloc(1, size);
+        auto buf = new uint8_t[size];
+        std::fill_n(buf, size, 0);
+        memPtr = (uint32_t *)buf;
         uint16_t crc = -1;
         if (!system_rtc_mem_read(offset / __blockSize, memPtr, size) || ((crc = crc16_update(memPtr, header.length + sizeof(header) - sizeof(header.crc))) != header.crc)) {
             _debug_printf(PSTR("RTC memory: CRC mismatch %04x != %04x, length %d\n"), crc, header.crc, size);
-            freeMemPtr(memPtr);
+            delete[] buf;
             return nullptr;
         }
 #endif
@@ -90,7 +92,7 @@ uint32_t *RTCMemoryManager::_readMemory(uint16_t &length) {
 
 bool RTCMemoryManager::read(RTCMemoryId id, void *dataPtr, uint8_t maxSize)
 {
-    memset(dataPtr, 0, maxSize);
+    std::fill_n((uint8_t *)dataPtr, maxSize, 0);
     _debug_printf_P(PSTR("plugin_read_rtc_memory(%d, %d)\n"), id, maxSize);
     uint16_t length;
 
@@ -112,13 +114,13 @@ bool RTCMemoryManager::read(RTCMemoryId id, void *dataPtr, uint8_t maxSize)
             if (entry->length > maxSize) {
                 entry->length = maxSize;
             }
-            memcpy(dataPtr, ptr, entry->length);
-            freeMemPtr(memPtr);
+            std::copy_n(ptr, entry->length, (uint8_t *)dataPtr);
+            delete[] (uint8_t *)(memPtr);
             return true;
         }
         ptr += entry->length;
     }
-    freeMemPtr(memPtr);
+    delete[] (uint8_t *)(memPtr);
     return false;
 
 }
@@ -145,7 +147,7 @@ bool RTCMemoryManager::write(RTCMemoryId id, void *dataPtr, uint8_t dataLength)
             }
             ptr += entry->length;
         }
-        freeMemPtr(memPtr);
+        delete[] (uint8_t *)(memPtr);
     }
 
     // append new data
@@ -249,6 +251,6 @@ void RTCMemoryManager::dump(Print &output) {
         ptr += entry->length;
     }
 
-    freeMemPtr(memPtr);
+    delete[] (uint8_t *)(memPtr);
 }
 #endif

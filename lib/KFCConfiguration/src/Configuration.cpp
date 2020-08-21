@@ -408,7 +408,7 @@ void Configuration::discard()
     __LDBG_printf("params=%u", _params.size());
     for (auto &parameter : _params) {
         if (parameter.isDirty()) {
-            free(parameter._info.data);
+            __LDBG_delete_array(parameter._info.data);
             parameter._info = ConfigurationParameter::Info_t();
         }
         else {
@@ -471,7 +471,7 @@ bool Configuration::write()
     for (auto &parameter : _params) {
         //if (parameter.isDirty()) {
             if (parameter.hasDataChanged(this)) {
-                __LDBG_printf("%s dirty", parameter.toString().c_str())
+                __LDBG_printf("%s dirty", parameter.toString().c_str());
                 dirty = true;
                 //break;
             }
@@ -665,8 +665,9 @@ void Configuration::_writeAllocate(ConfigurationParameter &param, uint16_t size)
 {
     //param._param.length = size;
     param._info.size = param._param.getSize(size);
-    param._info.data = reinterpret_cast<uint8_t*>(calloc(param._info.size, 1));
-    __LDBG_printf("calloc %s", param.toString().c_str());
+    param._info.data = __LDBG_new_array(param._info.size, uint8_t);
+    std::fill_n(param._info.data, param._info.size, 0);
+    __LDBG_printf("malloc %s", param.toString().c_str());
 }
 
 uint8_t *Configuration::_allocate(uint16_t size, PoolVector *poolVector)
@@ -731,7 +732,9 @@ void Configuration::_shrinkStorage()
     PoolVector newPool;
     for (auto &param: _params) {
         if (param._info.data && param._info.dirty == 0) {
-            param._info.data = reinterpret_cast<uint8_t *>(memcpy(_allocate(param.getSize(), &newPool), param._info.data, param.getLength()));
+            auto tmp = _allocate(param.getSize(), &newPool);
+            std::copy_n(param._info.data, param.getLength(), tmp);
+            param._info.data = tmp;
         }
     }
     _storage = std::move(newPool);

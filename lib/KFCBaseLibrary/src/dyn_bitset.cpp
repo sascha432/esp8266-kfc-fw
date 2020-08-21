@@ -30,7 +30,7 @@ dynamic_bitset::dynamic_bitset(const char *fromBytes, uint8_t length, uint8_t si
 
 dynamic_bitset::~dynamic_bitset() {
     if (_buffer) {
-        free(_buffer);
+        delete[] _buffer;
     }
 }
 
@@ -93,7 +93,7 @@ const uint8_t dynamic_bitset::size() const {
 void dynamic_bitset::setMaxSize(uint8_t maxSize) {
     _maxSize = maxSize;
     if (_buffer) {
-        free(_buffer);
+        delete[] _buffer;
         _buffer = nullptr;
     }
     if (_maxSize) {
@@ -181,9 +181,12 @@ String dynamic_bitset::generateCode(const char *variable, bool setBytes) const {
     return code;
 }
 
-void dynamic_bitset::_init() {
+void dynamic_bitset::_init()
+{
     _size = std::min(_size, _maxSize);
-    _buffer = (uint8_t *)calloc(((_maxSize + 7) >> 3), 1);
+    auto sz = ((_maxSize + 7) >> 3);
+    _buffer = new uint8_t[sz];
+    std::fill_n(_buffer, sz, 0);
 }
 
  dynamic_bitset::bit_helper::bit_helper(dynamic_bitset *bitset, uint8_t index) {

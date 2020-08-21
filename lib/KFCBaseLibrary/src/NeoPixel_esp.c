@@ -14,7 +14,11 @@
 #include <push_optimize.h>
 #pragma GCC optimize ("O2")
 
-void ICACHE_RAM_ATTR NeoPixel_fillColor(uint8_t *pixels, uint16_t numBytes, uint32_t color)
+#ifdef __cplusplus
+#include <algorithm>
+#endif
+
+void NeoPixel_fillColor(uint8_t *pixels, uint16_t numBytes, uint32_t color)
 {
     uint8_t *ptr = pixels;
     for(uint8_t i = 0; i < numBytes; i += 3) {
@@ -32,6 +36,8 @@ static inline uint32_t _getCycleCount(void)
                          : "=a"(ccount));
     return ccount;
 }
+
+// 213 byte IRAM
 
 void ICACHE_RAM_ATTR espShow(uint8_t pin, uint8_t *pixels, uint32_t numBytes, boolean is800KHz) {
 

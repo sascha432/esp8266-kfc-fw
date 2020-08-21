@@ -238,9 +238,13 @@ const char *DebugContext::pretty_function(const char* name)
     }
     ptr = strchr_P(start, '(');
     if (ptr) {
-        static String buf;
-        buf = std::move(PrintString(reinterpret_cast<const __FlashBufferHelper *>(start), ptr - start));
-        return buf.c_str();
+        static char buf[32];
+        size_t len = ptr - start;
+        if (len >= sizeof(buf)) {
+            len = sizeof(buf) - 1;
+        }
+        strncpy_P(buf, start, len)[len] = 0;
+        return buf;
     }
     return start;
 }

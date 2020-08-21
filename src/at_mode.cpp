@@ -569,11 +569,7 @@ static void heap_timer_callback(Event::TimerPtr &timer)
 static void create_heap_timer(float seconds, DisplayTimer::DisplayTypeEnum_t type = DisplayTimer::HEAP)
 {
     displayTimer._type = type;
-    if (displayTimer._timer.isActive()) {
-        displayTimer._timer->rearm(Event::seconds(seconds));
-    } else {
-        _Timer(displayTimer)._timer.add(Event::seconds(seconds), true, heap_timer_callback);
-    }
+    _Timer(displayTimer._timer).add(Event::seconds(seconds), true, heap_timer_callback);
 }
 
 void at_mode_create_heap_timer(float seconds)
@@ -822,6 +818,14 @@ void at_mode_adc_loop() {
     }
 }
 
+class StringSSOSize : public String
+{
+public:
+    static size_t getSSOSize() {
+        return String::SSOSIZE;
+    }
+};
+
 void at_mode_serial_handle_event(String &commandString)
 {
     auto &output = Serial;
@@ -907,7 +911,7 @@ void at_mode_serial_handle_event(String &commandString)
                 args.printf_P(PSTR("WiFiCallbacks: size=%u count=%u"), sizeof(WiFiCallbacks::Entry), WiFiCallbacks::getVector().size());
                 args.printf_P(PSTR("LoopFunctions: size=%u count=%u"), sizeof(LoopFunctions::Entry), LoopFunctions::getVector().size());
 
-                args.printf_P(PSTR("sizeof(String): %u"), sizeof(String));
+                args.printf_P(PSTR("sizeof(String) / SSOSIZE: %u / %u"), sizeof(String), StringSSOSize::getSSOSize());
                 args.printf_P(PSTR("sizeof(std::vector<int>): %u"), sizeof(std::vector<int>));
                 args.printf_P(PSTR("sizeof(std::vector<double>): %u"), sizeof(std::vector<double>));
                 args.printf_P(PSTR("sizeof(std::list<int>): %u"), sizeof(std::list<int>));

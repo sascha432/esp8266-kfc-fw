@@ -37,6 +37,67 @@ __DBGTM(
 
 static ClockPlugin plugin;
 
+#if HAVE_SMOOTH_BRIGHTNESS_ADJUSTMENT == 0
+
+#include <OSTimer.h>
+
+class BrightnessTimer : public OSTimer {
+public:
+    using BrightnessType = Clock::SevenSegmentDisplay::BrightnessType;
+    using FadingFinishedCallback = Clock::SevenSegmentDisplay::FadingFinishedCallback;
+    using FadingRefreshCallback = Clock::SevenSegmentDisplay::FadingRefreshCallback;
+
+    static constexpr double kInterval = 1000 / 20.0; // 20ms/50Hz refresh rate
+
+    BrightnessTimer() {}
+
+    BrightnessTimer(BrightnessType targetBrightness, float fadeTime, FadingFinishedCallback finishedCallback = nullptr, FadingRefreshCallback refreshCallback = nullptr) :
+        _finishedCallback(finishedCallback),
+        _refreshCallback(refreshCallback),
+        _targetBrightness(targetBrightness),
+        _stepSize(std::max_unsigned( 1, (BrightnessType)(Clock::SevenSegmentDisplay::kMaxBrightness / (fadeTime * kInterval)) ))
+    {
+        startTimer(kInterval, true);
+    }
+
+    virtual void ICACHE_RAM_ATTR run() override;
+
+private:
+    FadingFinishedCallback _finishedCallback;
+    FadingRefreshCallback _refreshCallback;
+    BrightnessType _targetBrightness;
+    uint16_t _stepSize;
+};
+
+void ICACHE_RAM_ATTR BrightnessTimer::run()
+{
+    int32_t tmp = plugin._display._params.brightness;
+    if (tmp < _targetBrightness) {
+        tmp += _stepSize;
+        if (tmp > _targetBrightness) {
+            tmp = _targetBrightness;
+        }
+    }
+    else if (tmp > _targetBrightness) {
+        tmp -= _stepSize;
+        if (tmp < _targetBrightness) {
+            tmp = _targetBrightness;
+        }
+    }
+    else {
+        detach();
+        if (_finishedCallback) {
+            _finishedCallback(tmp);
+        }
+        return;
+    }
+    if (_refreshCallback) {
+        _refreshCallback(tmp);
+    }
+}
+
+#endif
+
 PROGMEM_DEFINE_PLUGIN_OPTIONS(
     ClockPlugin,
     "clock",            // name
@@ -341,6 +402,9 @@ void ClockPlugin::shutdown()
     AlarmPlugin::setCallback(nullptr);
 #endif
     _timer.remove();
+#if HAVE_SMOOTH_BRIGHTNESS_ADJUSTMENT == 0
+    _displayBrightnessTimer.detach();
+#endif
     IF_LIGHT_SENSOR(
         _autoBrightnessTimer.remove();
     );
@@ -700,14 +764,31 @@ void ClockPlugin::_setSevenSegmentDisplay()
 
 void ClockPlugin::_setBrightness()
 {
-    // smooth brightness change
-    // NOTE: callbacks are called inside ISR, do not call any code without IRAM attribute or schedule the function
+#if HAVE_SMOOTH_BRIGHTNESS_ADJUSTMENT
     _display.setBrightness(_getBrightness(), 2.5, [this](uint16_t) {
         _schedulePublishState = true;
     }, [this](uint16_t) {
         _forceUpdate = true;
     });
     _schedulePublishState = true;
+#else
+    // smooth brightness change
+    // NOTE: callbacks are called inside ISR, do not call any code without IRAM attribute or schedule the function
+    if (_displayBrightnessTimer.isRunning()) {
+        _displayBrightnessTimer.setTargetBrightness(_getBrightness());
+    }
+    else {
+        _displayBrightnessTimer = BrightnessTimer(_getBrightness(), 2.5 fadeTime, [this](uint16_t brightness) {
+            _schedulePublishState = true;
+            _display.setBrightness(brightness);
+        }, [this](uint16_t brightness) {
+            _forceUpdate = true;
+            _display.setBrightness(brightness);
+        });
+        _displayBrightnessTimer.start();
+
+    }
+#endif
 }
 
 void ClockPlugin::_setBrightness(uint16_t brightness)
@@ -759,18 +840,13 @@ void ClockPlugin::_alarmCallback(Alarm::AlarmModeType mode, uint16_t maxDuration
             _display.setBrightness(brightness);
             setAnimation(animation);
             __LDBG_printf("restored parameters brightness=%u auto_brightness=%d color=#%06x animation=%u timer=%u", _brightness, _autoBrightness, _color.get(), animation, (bool)timer);
-            if (timer) {
-                timer->detach();
-            }
-            else {
-                _alarmTimer.remove();
-            }
+            __Scheduler.remove(timer);
             _resetAlarmFunc = nullptr;
         };
     }
 
     // check if an alarm is already active
-    if (!_alarmTimer.active()) {
+    if (!_alarmTimer.isActive()) {
         __LDBG_printf("alarm brightness=%u auto_brightness=%d color=#%06x", _brightness, _autoBrightness, _color.get());
         _autoBrightness = kAutoBrightnessOff;
         _brightness = SevenSegmentDisplay::kMaxBrightness;
@@ -783,7 +859,7 @@ void ClockPlugin::_alarmCallback(Alarm::AlarmModeType mode, uint16_t maxDuration
     }
     // reset time if alarms overlap
     __LDBG_printf("alarm duration %u", maxDuration);
-    _Timer(_alarmTimer).add(maxDuration * 1000UL, false, _resetAlarmFunc);
+    _Timer(_alarmTimer).add(Event::seconds(maxDuration), false, _resetAlarmFunc);
 }
 
 bool ClockPlugin::_resetAlarm()
@@ -791,7 +867,7 @@ bool ClockPlugin::_resetAlarm()
     __LDBG_printf("alarm_func=%u alarm_state=%u", _resetAlarmFunc ? 1 : 0, AlarmPlugin::getAlarmState());
     if (_resetAlarmFunc) {
         // reset prior clock settings
-        _resetAlarmFunc(nullptr);
+        _resetAlarmFunc(_timer);
         AlarmPlugin::resetAlarm();
         _schedulePublishState = true;
         return true;

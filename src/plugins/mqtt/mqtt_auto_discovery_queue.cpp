@@ -81,7 +81,6 @@ void MQTTAutoDiscoveryQueue::_timerCallback(Event::TimerPtr &timer)
         do {
             if (++_next == _client._components.end()) {
                 _publishDone();
-                timer.reset();
                 return;
             }
             __LDBG_printf("component #%u count=%u", std::distance(_client._components.begin(), _next), (*_next)->getAutoDiscoveryCount());
@@ -119,7 +118,6 @@ void MQTTAutoDiscoveryQueue::_timerCallback(Event::TimerPtr &timer)
 
     if (++_next == _client._components.end()) {
         _publishDone();
-        timer.reset();
     } else {
         (*_next)->rewindAutoDiscovery();
     }
@@ -133,7 +131,7 @@ void MQTTAutoDiscoveryQueue::_publishDone()
 #endif
     uint32_t delay;
     if ((delay = Plugins::MQTTClient::getConfig().auto_discovery_rebroadcast_interval) != 0) {
-        _client._autoDiscoveryRebroadcast.add(delay * 60000U, false, MQTTClient::publishAutoDiscoveryCallback);
+        _Timer(_client._autoDiscoveryRebroadcast).add(Event::minutes(delay), false, MQTTClient::publishAutoDiscoveryCallback);
     }
 
     auto message = PrintString(F("MQTT auto discovery published [components=%u, size="), _discoveryCount);
@@ -145,5 +143,4 @@ void MQTTAutoDiscoveryQueue::_publishDone()
 
     Logger_notice(message);
     _client._autoDiscoveryQueue.reset();
-
 }

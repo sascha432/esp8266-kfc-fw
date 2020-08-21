@@ -275,19 +275,25 @@ void AlarmPlugin::_installAlarms(Event::TimerPtr &timer)
     // run timer every 5min. in case time changed and we missed it
     // daylight savings time or any other issue with time changing without a callback
     __LDBG_printf("timer delay=%u timer=%s min_time=%d alarms=%u", (int)delay, timer ? PSTR("rearm") : PSTR("add"), (int)minAlarmTime, _alarms.size());
-    if (static_cast<Event::Timer &>(timer).isActive()) {
-        timer->rearm(delay * 1000UL); // rearm timer inside timer callback
-    }
-    else {
-        _timer.add(delay * 1000UL, true, timerCallback);
-    }
+
+    // Timer.add() is rearming if the timer exists
+    _Timer(_timer).add(Event::seconds(delay), true, timerCallback);
+
+    // if (timer) {
+    //     timer->rearm(Event::seconds(delay));
+    // }
+    // else {
+    //     _Timer(_timer).add(Event::seconds(delay), true, timerCallback);
+    // }
 }
 
 void AlarmPlugin::_removeAlarms()
 {
     _debug_println();
     _nextAlarm = 0;
-    _timer.remove();
+    if (_timer) {
+        _timer->stop();
+    }
     _alarms.clear();
 }
 

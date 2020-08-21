@@ -169,9 +169,7 @@ void setup_plugins(PluginComponent::SetupModeType mode)
         if (runSetup) {
             plugin->setSetupTime();
             plugin->setup(mode);
-            // __DBG_printf("checkDependencies %s", plugin->getName_P());
             PluginComponent::checkDependencies();
-            // __DBG_printf("checkDependencies::end");
 
             if (plugin->hasWebUI()) {
                 enableWebUIMenu = true;

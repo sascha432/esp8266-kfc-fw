@@ -37,7 +37,13 @@
 #define IOT_CLOCK_USE_FAST_LED_BRIGHTNESS                           0
 #endif
 
+#ifndef HAVE_SMOOTH_BRIGHTNESS_ADJUSTMENT
+#define HAVE_SMOOTH_BRIGHTNESS_ADJUSTMENT                           1
+#endif
+
 static constexpr char _digits2SegmentsTable[]  = { 0x3f, 0x06, 0x5b, 0x4f, 0x66, 0x6d, 0x7d, 0x07, 0x7f, 0x6f, 0x77, 0x7c, 0x39, 0x5e, 0x79, 0x71 };  // 0-F
+
+#include <OSTimer.h>
 
 template<typename PIXEL_TYPE, size_t NUM_DIGITS, size_t NUM_DIGIT_PIXELS, size_t NUM_COLONS, size_t NUM_COLON_PIXELS>
 class SevenSegmentPixel {
@@ -116,6 +122,9 @@ public:
         _pixels(getTotalPixels(), IOT_CLOCK_LED_PIN, NEO_GRB|NEO_KHZ800),
 #else
         _controller( FastLED.addLeds<IOT_CLOCK_FASTLED_CHIPSET, IOT_CLOCK_LED_PIN>(_pixels.data(), _pixels.size()) ),
+#endif
+#if HAVE_SMOOTH_BRIGHTNESS_ADJUSTMENT
+        _targetBrightness(0),
 #endif
         _params({0, kMaxBrightness / 3})
     {
@@ -313,11 +322,10 @@ public:
         _params.brightness = brightness;
     }
 
-    // finishedCallback and refreshCallback are called from inside an ISR
-    // make sure they are in RAM or have ICACHE_RAM_ATTR
+#if HAVE_SMOOTH_BRIGHTNESS_ADJUSTMENT
     void setBrightness(BrightnessType brightness, float fadeTime, FadingFinishedCallback finishedCallback = nullptr, FadingRefreshCallback refreshCallback = nullptr) {
         _targetBrightness = brightness;
-        if (!_brightnessTimer.active()) {
+        if (!_brightnessTimer.isActive()) {
             auto steps = (BrightnessType)(kMaxBrightness / (fadeTime * (1000 / 20.0))); // 20ms/50Hz refresh rate
             if (!steps) {
                 steps = 1;
@@ -340,7 +348,7 @@ public:
                     _params.brightness = tmp;
                 }
                 else {
-                    timer->detach();
+                    timer->stop();
                     if (finishedCallback) {
                         finishedCallback(_params.brightness);
                     }
@@ -350,9 +358,10 @@ public:
                     refreshCallback(_params.brightness);
                 }
 
-            }, EventScheduler::XXXXX);
+            }, Event::PriorityType::HIGHER);
         }
     }
+#endif
 
     char getSegmentChar(int segment) {
         return 'a' + (segment % SegmentEnum_t::NUM);
@@ -466,6 +475,7 @@ public:
 
 private:
     friend class ClockPlugin;
+    friend class BrightnessTimer;
 
 #if IOT_CLOCK_NEOPIXEL
     Adafruit_NeoPixel _pixels;
@@ -484,7 +494,9 @@ private:
 
     DigitsArray _pixelAddress;
 
+#if HAVE_SMOOTH_BRIGHTNESS_ADJUSTMENT
     BrightnessType _targetBrightness;
     Event::Timer _brightnessTimer;
+#endif
     Params_t _params;
 };

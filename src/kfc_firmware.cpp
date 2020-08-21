@@ -263,8 +263,6 @@ void setup()
     }
 #endif
 
-    _Scheduler.begin();
-
     config.setSafeMode(safe_mode);
     config.read();
     if (safe_mode) {
@@ -281,7 +279,7 @@ void setup()
 
         // check if wifi is up
         _Scheduler.add(Event::seconds(1), true, [](Event::TimerPtr &timer) {
-            timer->rearm(60000);
+            timer->updateInterval(Event::seconds(60));
             if (!WiFi.isConnected()) {
                 _debug_println(F("WiFi not connected, restarting"));
                 config.reconfigureWiFi();
@@ -345,13 +343,11 @@ void setup()
         _Scheduler.add(Event::seconds(60), true, [](Event::TimerPtr &timer) {
             if (System::Flags::getConfig().is_station_mode_enabled) {
                 if (!WiFi.isConnected()) {
-                    if (timer->getInterval() == Event::seconds(60)) {
-                        // WiFi is down, wait 30 seconds if it reconnects automatically
-                        timer->setInterval(Event::seconds(30));
+                    if (timer->updateInterval(Event::seconds(60)) == false) {
+                        timer->setInterval(Event::seconds(30)); // change interval to 30 seconds if it is 60
                     }
                     else {
-                        // restart entire wifi subsystem and reset check interval
-                        timer->setInterval(Event::seconds(60));
+                        // restart entire wifi subsystem. the interval was reset back to 60 seconds
                         config.reconfigureWiFi();
                         Logger_notice(F("WiFi subsystem restarted"));
                     }
@@ -376,6 +372,8 @@ uint32_t load_avg_counter = 0;
 float load_avg[3] = {0, 0, 0};
 #endif
 
+#undef HIGH
+
 void loop()
 {
     auto &loopFunctions = LoopFunctions::getVector();
@@ -383,16 +381,21 @@ void loop()
     for(uint8_t i = 0; i < loopFunctions.size(); i++) { // do not use iterators since the vector can be modifed inside the callback
         if (loopFunctions[i].deleteCallback) {
             cleanup = true;
-        } else if (loopFunctions[i].callback) {
-            loopFunctions[i].callback();
         } else {
-            loopFunctions[i].callbackPtr();
+            __Scheduler.run(Event::PriorityType::NORMAL); // check priority above NORMAL after every loop function
+            if (loopFunctions[i].callback) {
+                loopFunctions[i].callback();
+            }
+            else {
+                loopFunctions[i].callbackPtr();
+            }
         }
     }
     if (cleanup) {
         loopFunctions.erase(std::remove(loopFunctions.begin(), loopFunctions.end(), LoopFunctions::Entry::Type::DELETED), loopFunctions.end());
         loopFunctions.shrink_to_fit();
     }
+    __Scheduler.run(); // check all events
 
 #if LOAD_STATISTICS
     load_avg_counter++;

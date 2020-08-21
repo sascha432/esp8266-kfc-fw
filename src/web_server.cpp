@@ -87,11 +87,15 @@ FailureCounterContainer &loginFailures = plugin._loginFailures;
 #endif
 #endif
 
-struct UploadStatus_t {
+class UploadStatus_t
+{
+public:
     AsyncWebServerResponse *response;
     bool error;
     uint8_t command;
     size_t size;
+
+    UploadStatus_t() : response(nullptr), error(0), command(0), size(0) {}
 };
 
 WebServerSetCPUSpeedHelper::WebServerSetCPUSpeedHelper() : SpeedBooster(
@@ -536,7 +540,7 @@ void WebServerPlugin::handlerUploadUpdate(AsyncWebServerRequest *request, String
     static File firmwareTempFile;
 #endif
     if (index == 0 && !request->_tempObject && plugin.isAuthenticated(request) == true) {
-        request->_tempObject = calloc(sizeof(UploadStatus_t), 1);
+        request->_tempObject = new UploadStatus_t();
         Logger_notice(F("Firmware upload started"));
 #if IOT_REMOTE_CONTROL
         RemoteControlPlugin::disableAutoSleep();

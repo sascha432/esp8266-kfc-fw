@@ -14,10 +14,6 @@
 #include <push_optimize.h>
 #pragma GCC optimize ("O2")
 
-#ifdef __cplusplus
-#include <algorithm>
-#endif
-
 void NeoPixel_fillColor(uint8_t *pixels, uint16_t numBytes, uint32_t color)
 {
     uint8_t *ptr = pixels;

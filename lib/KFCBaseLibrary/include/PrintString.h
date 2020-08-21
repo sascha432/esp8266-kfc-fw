@@ -22,10 +22,8 @@
 #endif
 class PrintString : public String, public Print {
 public:
-    PrintString() {
-    }
-    PrintString(const String &str) : String(str) {
-    }
+    PrintString();
+    PrintString(const String &str);
 
     PrintString(const char *format, ...);
     PrintString(const char *format, va_list arg);
@@ -42,6 +40,9 @@ public:
 
     size_t print(uint64_t value);
     size_t print(int64_t value);
+    size_t print(const __FlashStringHelper *str);
+    size_t print(const String &str);
+    size_t print(const char *str);
     using Print::print;
 
     size_t strftime_P(PGM_P format, struct tm *tm);

@@ -20,7 +20,7 @@
 #if defined(ESP32)
 #define SYSLOG_PLUGIN_QUEUE_SIZE            4096
 #elif defined(ESP8266)
-#define SYSLOG_PLUGIN_QUEUE_SIZE            512
+#define SYSLOG_PLUGIN_QUEUE_SIZE            1024
 #endif
 
 class SyslogPlugin : public PluginComponent {
@@ -55,7 +55,7 @@ private:
 private:
     void _begin();
     void _end();
-    void _kill(uint16_t timeout);
+    void _kill(uint32_t timeout);
     void _timerCallback(Event::TimerPtr &timer);
 
 private:

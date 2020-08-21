@@ -53,7 +53,7 @@ void SyslogPlugin::reconfigure(const String &source)
 
 void SyslogPlugin::shutdown()
 {
-    _kill(250);
+    _kill(500);
 }
 
 void SyslogPlugin::timerCallback(Event::TimerPtr &timer)
@@ -87,40 +87,37 @@ void SyslogPlugin::_begin()
         _hostname = SyslogClient::getHostname();
         _port = cfg.getPort();
 
-        if (config.hasZeroConf(_hostname)) {
-            config.resolveZeroConf(getFriendlyName(), _hostname, _port, [](const String &hostname, const IPAddress &address, uint16_t port, const String &resolved, MDNSResolver::ResponseType type) {
-                plugin._zeroConfCallback(hostname, address, port, type);
-            });
-        }
-        else {
-            _zeroConfCallback(_hostname, IPAddress(), _port, MDNSResolver::ResponseType::NONE);
-        }
+        //TODO support for zeroconf
+
+        _stream = __LDBG_new(SyslogStream, SyslogFactory::create(
+            SyslogParameter(System::Device::getName(), FSPGM(kfcfw)),
+            __LDBG_new(SyslogMemoryQueue, SYSLOG_PLUGIN_QUEUE_SIZE), cfg.protocol_enum, _hostname, _port)
+        );
+        _logger.setSyslog(_stream);
+        _Timer(_timer).add(100, true, timerCallback);
+
+        // if (config.hasZeroConf(_hostname)) {
+        //     config.resolveZeroConf(getFriendlyName(), _hostname, _port, [](const String &hostname, const IPAddress &address, uint16_t port, const String &resolved, MDNSResolver::ResponseType type) {
+        //         plugin._zeroConfCallback(hostname, address, port, type);
+        //     });
+        // }
+        // else {
+        //     _zeroConfCallback(_hostname, IPAddress(), _port, MDNSResolver::ResponseType::NONE);
+        // }
     }
 }
 
 void SyslogPlugin::_zeroConfCallback(const String &hostname, const IPAddress &address, uint16_t port, MDNSResolver::ResponseType type)
 {
-    _hostname = address.isSet() ? address.toString() : hostname;
-    _port = port;
-    auto cfg = SyslogClient::getConfig();
-
-    // SyslogParameter parameter;
-    // parameter.setHostname(System::Device::getName());
-    // parameter.setAppName(FSPGM(kfcfw));
-    // parameter.setFacility(SYSLOG_FACILITY_KERN);
-    // parameter.setSeverity(SYSLOG_NOTICE);
-
-    SyslogFilter *filter = __DBG_new(SyslogFilter, System::Device::getName(), FSPGM(kfcfw));
-    auto &parameter = filter->getParameter();
-    parameter.setFacility(SYSLOG_FACILITY_KERN);
-    parameter.setSeverity(SYSLOG_NOTICE);
-
-    filter->addFilter(F("*.*"), SyslogFactory::create(parameter, cfg.protocol_enum, _hostname, _port));
-
-    _stream = __LDBG_new(SyslogStream, filter, __LDBG_new(SyslogMemoryQueue, SYSLOG_PLUGIN_QUEUE_SIZE));
-
-    _logger.setSyslog(_stream);
-    _Timer(_timer).add(100, true, timerCallback);
+    // _hostname = address.isSet() ? address.toString() : hostname;
+    // _port = port;
+    // auto cfg = SyslogClient::getConfig();
+    // _stream = __LDBG_new(SyslogStream, SyslogFactory::create(
+    //     SyslogParameter(System::Device::getName(), FSPGM(kfcfw)),
+    //     __LDBG_new(SyslogMemoryQueue, SYSLOG_PLUGIN_QUEUE_SIZE), cfg.protocol_enum, _hostname, _port)
+    // );
+    // _logger.setSyslog(_stream);
+    // _Timer(_timer).add(100, true, timerCallback);
 }
 
 void SyslogPlugin::_end()
@@ -133,16 +130,18 @@ void SyslogPlugin::_end()
     }
 }
 
-void SyslogPlugin::_kill(uint16_t timeout)
+void SyslogPlugin::_kill(uint32_t timeout)
 {
     if (_stream) {
         _timer.remove();
-        auto endTime = millis() + timeout;
-        while(_stream->hasQueuedMessages() && millis() < endTime) {
+
+        _stream->setTimeout(timeout);
+        timeout += millis();
+        while(millis() < timeout && _stream->hasQueuedMessages()) {
             _stream->deliverQueue();
-            delay(1);
+            delay(10); // let system process tcp buffers etc...
         }
-        _stream->getQueue()->kill();
+        _stream->clearQueue();
     }
 }
 
@@ -196,25 +195,18 @@ void SyslogPlugin::atModeHelpGenerator()
 bool SyslogPlugin::atModeHandler(AtModeArgs &args)
 {
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(SQ))) {
-        if (_stream) {
+        if (_stream && args.size() >= 1) {
             int cmd = stringlist_find_P_P(PSTR("clear|info|queue"), args.get(0), '|');
-            if (cmd == 0) {
-                _stream->getQueue()->clear();
+            if (cmd == 0) { // clear
+                _stream->clearQueue();
                 args.print(F("Queue cleared"));
             }
-            else if (cmd == 2) {
-                auto queue = _stream->getQueue();
-                size_t index = 0;
-                args.printf_P(PSTR("Messages in queue %d"), queue->size());
-                while(index < queue->size()) {
-                    auto &item = queue->at(index++);
-                    if (item) {
-                        args.printf_P(PSTR("Id %d (failures %d): %s"), item->getId(), item->getFailureCount(), item->getMessage().c_str());
-                    }
-                }
+            else if (cmd == 2) { // queue
+                args.printf_P(PSTR("Messages in queue %d"), _stream->queueSize());
+                _stream->dumpQueue(args.getStream());
             }
             else {
-                args.printf_P(PSTR("%d"), _stream->getQueue()->size());
+                args.printf_P(PSTR("%d"), _stream->queueSize());
             }
         }
         else {

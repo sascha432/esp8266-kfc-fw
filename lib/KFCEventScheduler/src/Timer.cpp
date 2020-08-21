@@ -14,78 +14,72 @@
 
 using namespace Event;
 
-Timer::Timer() : TimerPtr(nullptr)
+Timer::Timer() : _timer(nullptr)
 {
 }
 
-Timer::Timer(CallbackTimer *timer) : TimerPtr(timer)
+Timer::Timer(CallbackTimer *timer) : _timer(timer)
 {
-
 }
 
-// Timer::Timer(Timer &&timer) : TimerPtr(std::move(timer))
-// {
-// }
+Timer::Timer(Timer &&move) : _timer(std::exchange(move._timer, nullptr))
+{
+}
 
 Timer::~Timer()
 {
-    remove();
+    __Scheduler._removeTimer(_timer);
 }
 
-void Timer::add(int64_t delayMillis, RepeatType repeat, Callback callback, PriorityType priority)
+void Timer::add(int64_t intervalMillis, RepeatType repeat, Callback callback, PriorityType priority)
 {
-    auto ptr = get();
-    if (ptr && __Scheduler._hasTimer(ptr)) {
-        ptr->rearm(delayMillis, repeat, callback, priority);
+    if (_isActive()) {
+        _timer->rearm(intervalMillis, repeat, callback);
     }
     else {
-        reset(__Scheduler.add(delayMillis, repeat, callback, ((priority == PriorityType::NONE) ? PriorityType::NORMAL : priority)).get());
+        _timer = __Scheduler._add(intervalMillis, repeat, callback, priority).get();
     }
 }
 
-void Timer::add(milliseconds delay, RepeatType repeat, Callback callback, PriorityType priority)
+void Timer::add(milliseconds interval, RepeatType repeat, Callback callback, PriorityType priority)
 {
-    add(delay.count(), repeat, callback, priority);
+    add(interval.count(), repeat, callback, priority);
 }
 
 bool Timer::remove()
 {
-    auto ptr = get();
-    if (ptr) {
-        __LDBG_printf("remote timer=%p", ptr);
-        auto result = __Scheduler._removeTimer(ptr);
-        release();
-        __LDBG_printf("remove=%u release=%p", result, get());
+    if (_timer) {
+        auto result = __Scheduler._removeTimer(_timer);
+        __LDBG_printf("remove_timer=%u timer=%p", result, _timer);
+        _timer = nullptr;
         return result;
     }
     return false;
 }
 
-bool Timer::isActive() const
+bool Timer::_isActive() const
 {
-    CallbackTimer *ptr;
-    return ((ptr = get()) != nullptr) && __Scheduler._hasTimer(ptr);
+    return _timer && __Scheduler._hasTimer(_timer);
 }
 
-bool Timer::isActive()
+bool Timer::_isActive()
 {
-    auto ptr = get();
-    if (ptr) {
-        if (__Scheduler._hasTimer(ptr)) {
+    if (_timer) {
+        if (__Scheduler._hasTimer(_timer)) {
             return true;
         }
         // pointer was not found, release it
-        release();
+        _timer = nullptr;
     }
     return false;
 }
 
 Timer::operator bool() const
 {
-    return isActive();
+    return _isActive();
 }
 
 Timer::operator bool()
 {
-    return isActive();
+    return _isActive();
 }

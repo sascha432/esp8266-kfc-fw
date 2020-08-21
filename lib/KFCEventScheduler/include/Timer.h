@@ -9,26 +9,31 @@
 
 namespace Event {
 
-    class Timer : public TimerPtr {
+    // nullptr safe "shared_ptr" version of TimerPtr
+    class Timer {
     public:
-        using TimerPtr::TimerPtr;
-
-        Timer(CallbackTimer *timer);
-
         Timer(const TimerPtr &timer) = delete;
-        // Timer(Timer &&timer);
+        Timer &operator=(const TimerPtr &timer) = delete;
 
         Timer();
+        Timer(CallbackTimer *timer);
+        Timer(Timer &&timer);
         ~Timer();
 
-        void add(int64_t delayMillis, RepeatType repeat, Callback callback, PriorityType priority = PriorityType::NONE);
-        void add(milliseconds delay, RepeatType repeat, Callback callback, PriorityType priority = PriorityType::NONE);
+        // add() is using rearm() if the timer already exists
+        // to change priority, use remove() and add()
+        void add(int64_t intervalMillis, RepeatType repeat, Callback callback, PriorityType priority = PriorityType::NORMAL);
+        void add(milliseconds interval, RepeatType repeat, Callback callback, PriorityType priority = PriorityType::NORMAL);
         bool remove();
 
-        bool isActive() const;
-        bool isActive();
         operator bool() const;
         operator bool();
+
+    private:
+        bool _isActive() const;
+        bool _isActive();
+
+        CallbackTimer *_timer;
     };
 
 }

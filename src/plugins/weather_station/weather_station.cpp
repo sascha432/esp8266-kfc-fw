@@ -596,7 +596,7 @@ void WeatherStationPlugin::_fadeStatusLED()
         }
         NeoPixel_fillColor(_pixels, sizeof(_pixels), color);
         NeoPixel_espShow(IOT_WEATHER_STATION_WS2812_PIN, _pixels, sizeof(_pixels), true);
-    });
+    }, PriorityType::HIGHER);
 #endif
 }
 

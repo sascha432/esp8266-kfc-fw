@@ -25,7 +25,7 @@ class WeatherStationPlugin;
 
 class Mpr121Timer : public OSTimer {
 public:
-    virtual void ICACHE_RAM_ATTR run() override;
+    virtual void run() override;
 };
 
 class Mpr121Touchpad {

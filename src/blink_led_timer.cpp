@@ -72,7 +72,7 @@ BlinkLEDTimer::BlinkLEDTimer() : _pin(INVALID_PIN)//, _on(false)
 {
 }
 
-void ICACHE_RAM_ATTR BlinkLEDTimer::run()
+void /*ICACHE_RAM_ATTR*/ BlinkLEDTimer::run()
 {
     digitalWrite(_pin, BUILTIN_LED_STATE(_pattern.test(_counter++ % _pattern.size())));
 }

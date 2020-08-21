@@ -29,7 +29,7 @@ public:
 
     BlinkLEDTimer();
 
-    virtual ICACHE_RAM_ATTR void run() override;
+    virtual void run() override;
     void set(uint32_t delay, int8_t pin, dynamic_bitset &&pattern);
     virtual void detach() override;
 

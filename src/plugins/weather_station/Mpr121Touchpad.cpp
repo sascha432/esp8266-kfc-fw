@@ -34,7 +34,7 @@ extern "C" void ICACHE_RAM_ATTR mpr121_irq_callback()
 //     }
 // }
 
-void ICACHE_RAM_ATTR Mpr121Timer::run()
+void Mpr121Timer::run()
 {
     if (mpr121_irq_callback_flag) {
         mpr121_irq_callback_flag = false;
@@ -433,7 +433,8 @@ void Mpr121Touchpad::Event::read(ReadBuffer::iterator &iterator)
         // __map[PrintString("% 4.4s", touchedY)] = y;
 
         if (!_coords) {
-            _coords = (int8_t *)calloc(kMaxX+4, kMaxY+4);
+            _coords = (int8_t *)malloc((kMaxX+4) * (kMaxY+4));
+            std::fill_n(_coords, (kMaxX+4) * (kMaxY+4), 0);
         }
 // +plgi=weather
         if (x > 0 && y >0) {

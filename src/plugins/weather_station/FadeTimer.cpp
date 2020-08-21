@@ -8,7 +8,7 @@
 #include "WSDraw.h"
 #endif
 
-void ICACHE_RAM_ATTR FadeTimer::run()
+void FadeTimer::run()
 {
     if (abs(_toLevel - _fromLevel) > _step) {
         _fromLevel += _direction;
@@ -16,21 +16,16 @@ void ICACHE_RAM_ATTR FadeTimer::run()
         _fromLevel = _toLevel;
         detach();
     }
-    analogWrite(TFT_PIN_LED, _fromLevel);
+    _analogWrite.update = true;
 }
 
-void ICACHE_RAM_ATTR FadeTimer::detach()
+void FadeTimer::detach()
 {
-    if (_timerPtr) {
+    if (_timerPtr && _analogWrite.done == false) {
         // detach timer
+        // OSTimer::detach();
         _ostimer_detach(&_etsTimer, this);
-        // get pointer to object, after deleting the member variable will become invalid
-        volatile auto tmp = _timerPtr;
-        // remove pointer that the destructor won't run this again
-        _timerPtr = nullptr;
-        // delete itself
-        delete *tmp;
-        // set pointer to timer to null
-        *tmp = nullptr;
+        // mark as done
+        _analogWrite.done = true;
     }
 }

@@ -18,7 +18,7 @@ extern "C" void ICACHE_RAM_ATTR _ostimer_callback(void *arg)
     reinterpret_cast<OSTimer *>(arg)->run();
 }
 
-extern "C" void ICACHE_RAM_ATTR _ostimer_detach(ETSTimer *etsTimer, void *timerArg)
+extern "C" void _ostimer_detach(ETSTimer *etsTimer, void *timerArg)
 {
     if (etsTimer->timer_arg == timerArg) {
         ets_timer_disarm(etsTimer);
@@ -29,7 +29,7 @@ extern "C" void ICACHE_RAM_ATTR _ostimer_detach(ETSTimer *etsTimer, void *timerA
 
 void OSTimer::startTimer(int32_t delay, bool repeat)
 {
-    delay = std::max(1, std::min(Event::kMaxDelay, delay));
+    delay = std::clamp_signed(delay, Event::kMinDelay, Event::kMaxDelay);
     ets_timer_disarm(&_etsTimer);
     ets_timer_setfn(&_etsTimer, reinterpret_cast<ETSTimerFunc *>(_ostimer_callback), reinterpret_cast<void *>(this));
     ets_timer_arm_new(&_etsTimer, delay, repeat, true);

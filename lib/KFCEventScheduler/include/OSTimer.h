@@ -14,7 +14,7 @@
 #endif
 
 extern "C" void ICACHE_RAM_ATTR _ostimer_callback(void *arg);
-extern "C" void ICACHE_RAM_ATTR _ostimer_detach(ETSTimer *etsTimer, void *timerArg);
+extern "C" void _ostimer_detach(ETSTimer *etsTimer, void *timerArg);
 
 class OSTimer {
 public:
@@ -30,7 +30,7 @@ public:
     virtual void detach();
 
     bool isRunning() const {
-      return (_etsTimer.timer_arg != nullptr);
+      return (_etsTimer.timer_arg == this);
     }
 
 protected:

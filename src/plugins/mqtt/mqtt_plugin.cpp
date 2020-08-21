@@ -128,7 +128,7 @@ bool MQTTPlugin::atModeHandler(AtModeArgs &args)
                 case 3: // dis
                     client.setAutoReconnect(args.isTrue(1) ? MQTT_AUTO_RECONNECT_TIMEOUT : 0);
                     client.disconnect(false);
-                    args.print(F("disconnectd"));
+                    args.print(F("disconnected"));
                     break;
                 case 4: // set
                     if  (args.isTrue(1)) {

@@ -186,22 +186,23 @@ void Logger::writeLog(LogLevel logLevel, const char *message, va_list arg)
         return;
     }
 
-    PrintString tmp;
+    PrintString header, msg;
     time_t now = time(nullptr);
     auto file = __openLog(logLevel, true);
     if (!file) {
         file = __openLog(LOGLEVEL_MAX, true); // try to log in "messages" if custom log files cannot be opened
     }
 
-    tmp.strftime_P(PSTR("%FT%TZ"), now);
-    tmp.print(F(" ["));
-    tmp.print(getLogLevelAsString(logLevel));
-    tmp.print(F("] "));
-    tmp.vprintf_P(message, arg);
-    tmp.println();
+    header.strftime_P(PSTR("%FT%TZ"), now);
+    header.print(F(" ["));
+    header.print(getLogLevelAsString(logLevel));
+    header.print(F("] "));
+
+    msg.vprintf_P(message, arg);
 
     if (file) {
-        file.print(tmp);
+        file.print(header);
+        file.println(msg);
         if (logLevel == LOGLEVEL_ERROR || logLevel == LOGLEVEL_WARNING) {
             file.flush();
         }
@@ -211,11 +212,15 @@ void Logger::writeLog(LogLevel logLevel, const char *message, va_list arg)
     }
 
 #if DEBUG
-        DEBUG_OUTPUT.print(tmp);
+    if (DebugContext::__state == DEBUG_HELPER_STATE_ACTIVE) {
+        debug_prefix();
+        DEBUG_OUTPUT.println(msg);
+    }
 #elif LOGGER_SERIAL_OUTPUT
     if (System::Flags::getConfig().is_at_mode_enabled) {
         Serial.print(F("+LOGGER="))
-        Serial.print(tmp);
+        Serial.print(header);
+        Serial.print(msg);
     }
 #endif
 
@@ -247,7 +252,7 @@ void Logger::writeLog(LogLevel logLevel, const char *message, va_list arg)
                 _syslog->setFacility(SYSLOG_FACILITY_KERN);
                 break;
         }
-        _syslog->write(reinterpret_cast<const uint8_t *>(tmp.c_str()), String_rtrim(tmp));
+        _syslog->write(reinterpret_cast<const uint8_t *>(msg.c_str()), msg.length());
         _syslog->flush();
     }
 #endif

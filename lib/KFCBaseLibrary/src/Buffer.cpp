@@ -59,7 +59,7 @@ Buffer::~Buffer()
 {
     __LDBG_printf("len=%u size=%u ptr=%p this=%p", _length, _size, _buffer, this);
     if (_buffer) {
-        free(_buffer);
+        __LDBG_free(_buffer);
     }
     CHECK_MEMORY();
 }
@@ -82,7 +82,7 @@ Buffer::Buffer(const String &str) : Buffer()
 Buffer &Buffer::operator =(Buffer &&buffer) noexcept
 {
     if (_buffer) {
-        free(_buffer);
+        __LDBG_free(_buffer);
     }
     _buffer = buffer._buffer;
     _length = buffer._length;
@@ -133,7 +133,7 @@ void Buffer::clear()
 {
     // __LDBG_printf("len=%u size=%u ptr=%p", _length, _size, _buffer);
     if (_buffer) {
-        free(_buffer);
+        __LDBG_free(_buffer);
         _buffer = nullptr;
     }
     _size = 0;
@@ -305,17 +305,12 @@ bool Buffer::_changeBuffer(size_t newSize)
         // __LDBG_printf("size=%d", _size);
         if (_size == 0) {
             if (_buffer) {
-                free(_buffer);
+                __LDBG_free(_buffer);
                 _buffer = nullptr;
             }
         }
         else {
-            if (_buffer == nullptr) {
-                _buffer = (uint8_t *)malloc(_size);
-            }
-            else {
-                _buffer = (uint8_t *)realloc(_buffer, _size);
-            }
+            _buffer = reinterpret_cast<uint8_t *>(_buffer ? __LDBG_realloc(_buffer, _size) : __LDBG_malloc(_size));
             if (_buffer == nullptr) {
                 __LDBG_printf("alloc failed");
                 _size = 0;
@@ -350,7 +345,7 @@ bool Buffer::reserve(size_t size)
     //    return true;
     //}
     //_size = _alignSize(size);
-    //if (nullptr == (_buffer = (uint8_t *)realloc(_buffer, _size))) {
+    //if (nullptr == (_buffer = (uint8_t *)x_r_ealloc(_buffer, _size))) {
     //    _size = 0;
     //    start_length = 0;
     //    return false;
@@ -366,9 +361,5 @@ bool Buffer::shrink(size_t newSize)
     if (newSize == 0) {
         newSize = _length;
     }
-    if (_changeBuffer(newSize)) {
-        return true;
-    }
-    clear();
-    return false;
+    return _changeBuffer(newSize);
 }

@@ -26,7 +26,7 @@ namespace Event {
         void add(milliseconds interval, RepeatType repeat, Callback callback, PriorityType priority = PriorityType::NORMAL);
 
         // remove timer
-        void remove(TimerPtr &timer);
+        void remove(CallbackTimerPtr timer);
 
         // returns number of scheduled timers
         size_t size() const;
@@ -43,11 +43,11 @@ namespace Event {
         friend CallbackTimer;
         friend Timer;
 
-        TimerPtr &_add(int64_t intervalMillis, RepeatType repeat, Callback callback, PriorityType priority = PriorityType::NORMAL);
+        CallbackTimer *_add(int64_t intervalMillis, RepeatType repeat, Callback callback, PriorityType priority = PriorityType::NORMAL);
 
-        TimerVectorIterator _getTimer(CallbackTimer *timer);
-        bool _hasTimer(CallbackTimer *timer) const;
-        bool _removeTimer(CallbackTimer *timer);
+        TimerVectorIterator _getTimer(CallbackTimerPtr timer);
+        bool _hasTimer(CallbackTimerPtr timer) const;
+        bool _removeTimer(CallbackTimerPtr timer);
         void _run(PriorityType runAbovePriority);
         void _cleanup();
 

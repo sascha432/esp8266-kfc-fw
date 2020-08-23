@@ -4,6 +4,7 @@
 
 #include "Event.h"
 #include "Timer.h"
+#include "ManagedTimer.h"
 #include "Scheduler.h"
 
 #if DEBUG_EVENT_SCHEDULER
@@ -14,30 +15,39 @@
 
 using namespace Event;
 
-Timer::Timer() : _timer(nullptr)
+Timer::Timer() : _managedCallbackTimer()
 {
 }
 
-Timer::Timer(CallbackTimer *timer) : _timer(timer)
+Timer::Timer(CallbackTimerPtr &&callbackTimer) : _managedCallbackTimer(std::move(callbackTimer), this)
 {
 }
 
-Timer::Timer(Timer &&move) : _timer(std::exchange(move._timer, nullptr))
+Timer &Timer::operator=(CallbackTimerPtr &&callbackTimer)
 {
+    _managedCallbackTimer = ManangedCallbackTimer(std::move(callbackTimer), this);
+    return *this;
 }
+
+// Timer::Timer(Timer &&move) : _managedCallbackTimer(std::move(move))
+// {
+// //     __DBG_assert(_timer->_timer == nullptr || _timer->_timer == &move);
+// //     _timer->_timer = this;
+//  }
 
 Timer::~Timer()
 {
-    __Scheduler._removeTimer(_timer);
+    remove();
 }
 
 void Timer::add(int64_t intervalMillis, RepeatType repeat, Callback callback, PriorityType priority)
 {
     if (_isActive()) {
-        _timer->rearm(intervalMillis, repeat, callback);
+        _managedCallbackTimer->rearm(intervalMillis, repeat, callback);
     }
     else {
-        _timer = __Scheduler._add(intervalMillis, repeat, callback, priority).get();
+        auto callbackTimer = __Scheduler._add(intervalMillis, repeat, callback, priority);
+        _managedCallbackTimer = ManangedCallbackTimer(callbackTimer, this);
     }
 }
 
@@ -48,38 +58,18 @@ void Timer::add(milliseconds interval, RepeatType repeat, Callback callback, Pri
 
 bool Timer::remove()
 {
-    if (_timer) {
-        auto result = __Scheduler._removeTimer(_timer);
-        __LDBG_printf("remove_timer=%u timer=%p", result, _timer);
-        _timer = nullptr;
-        return result;
+    if (_managedCallbackTimer) {
+        return __Scheduler._removeTimer(_managedCallbackTimer.get());
     }
-    return false;
+    return  false;
 }
 
 bool Timer::_isActive() const
 {
-    return _timer && __Scheduler._hasTimer(_timer);
-}
-
-bool Timer::_isActive()
-{
-    if (_timer) {
-        if (__Scheduler._hasTimer(_timer)) {
-            return true;
-        }
-        // pointer was not found, release it
-        _timer = nullptr;
-    }
-    return false;
+    return _managedCallbackTimer != nullptr;
 }
 
 Timer::operator bool() const
-{
-    return _isActive();
-}
-
-Timer::operator bool()
 {
     return _isActive();
 }

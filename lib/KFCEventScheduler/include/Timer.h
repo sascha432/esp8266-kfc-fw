@@ -6,19 +6,25 @@
 
 #include "Event.h"
 #include "CallbackTimer.h"
+#include "ManagedTimer.h"
 
 namespace Event {
 
-    // nullptr safe "shared_ptr" version of TimerPtr
+    class Scheduler;
+    class ManangedCallbackTimer;
+    class CallbackTimer;
+
     class Timer {
     public:
-        Timer(const TimerPtr &timer) = delete;
-        Timer &operator=(const TimerPtr &timer) = delete;
+        Timer(const Timer &timer) = delete;
+        Timer &operator=(const Timer &timer) = delete;
 
         Timer();
-        Timer(CallbackTimer *timer);
-        Timer(Timer &&timer);
+        Timer(CallbackTimerPtr &&callbackTimer);
+        Timer(Timer &&timer) = delete;
         ~Timer();
+
+        Timer &operator=(CallbackTimerPtr &&callbackTimer);
 
         // add() is using rearm() if the timer already exists
         // to change priority, use remove() and add()
@@ -27,13 +33,15 @@ namespace Event {
         bool remove();
 
         operator bool() const;
-        operator bool();
 
     private:
-        bool _isActive() const;
-        bool _isActive();
+        friend CallbackTimer;
+        friend ManangedCallbackTimer;
+        friend Scheduler;
 
-        CallbackTimer *_timer;
+        bool _isActive() const;
+
+        ManangedCallbackTimer _managedCallbackTimer;
     };
 
 }

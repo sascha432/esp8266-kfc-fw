@@ -10,6 +10,8 @@
 namespace Event {
 
     class Scheduler;
+    class Timer;
+    class ManangedCallbackTimer;
 
     class CallbackTimer {
     public:
@@ -22,14 +24,6 @@ namespace Event {
 
         // make sure the delay does not exceed UINT32_MAX
         uint32_t getShortInterval() const;
-
-        // void setCallback(Callback loopCallback) {
-        //     _callback = loopCallback;
-        // }
-
-        // Callback getCallback() const {
-        //     return _callback;
-        // }
 
         // set new interval and restart timer
         void setInterval(milliseconds interval);
@@ -44,28 +38,28 @@ namespace Event {
 
         void rearm(milliseconds interval, RepeatType repeat = RepeatType(), Callback callback = nullptr);
 
+        // disarm timer inside callback
+        // once exiting the callback it is being removed
+        void disarm();
+
     private:
+        friend Timer;
+        friend ManangedCallbackTimer;
         friend Scheduler;
 
-        // void _setScheduleCallback(bool enable);
         void _initTimer();
         void _rearm();
         void _disarm();
         void _invokeCallback(TimerPtr &timer);
-        void _remove();
 
     public:
         ETSTimer &__getETSTimer() { return _etsTimer; }
         Callback &__getLoopCallback() { return _callback; }
         int64_t __getRemainingDelayMillis() const { return (_remainingDelay == 0) ?  0 : ((_remainingDelay == 1) ? (_delay % kMaxDelay) : ((_remainingDelay - 1) * kMaxDelay)); }
 
-#if DEBUG_EVENT_SCHEDULER
-        const char *_file;
-        uint32_t _line;
-#endif
-
     private:
         ETSTimer _etsTimer;
+        Timer *_timer;
         Callback _callback;
         int64_t _delay;
         RepeatType _repeat;
@@ -73,6 +67,12 @@ namespace Event {
         uint32_t _remainingDelay: 17;
         volatile uint32_t _callbackScheduled: 1;
         uint32_t ____free: 14;
+
+#if DEBUG_EVENT_SCHEDULER
+    public:
+        const char *_file;
+        uint32_t _line;
+#endif
     };
 
 }

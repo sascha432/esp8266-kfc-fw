@@ -48,8 +48,9 @@ namespace Event {
     // - if system_timer_reinit has been called, the timer value allowed range from 100 to 0x689D0.
     // - if didn’t call system_timer_reinit has NOT been called, the timer value allowed range from 5 to 0x68D7A3.
 
-    using TimerPtr = std::unique_ptr<CallbackTimer> ;
-    using TimerVector = std::vector<TimerPtr>;
+    using CallbackTimerPtr = CallbackTimer *;
+    using TimerPtr = CallbackTimerPtr;
+    using TimerVector = std::vector<CallbackTimerPtr>;
     using TimerVectorIterator = TimerVector::iterator;
     using Callback = std::function<void(TimerPtr &timer)>;
 

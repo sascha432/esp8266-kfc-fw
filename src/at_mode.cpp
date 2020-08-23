@@ -711,6 +711,7 @@ void at_mode_list_ets_timers(Print &output)
         cur = cur->timer_next;
     }
 #if DEBUG_EVENT_SCHEDULER
+    output.println(F("Event::Scheduler"));
     __Scheduler.__list(false);
 #endif
 }

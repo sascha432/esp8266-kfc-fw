@@ -194,7 +194,7 @@ void NTPPlugin::_checkTimerCallback(Event::TimerPtr &timer)
 {
     if (IS_TIME_VALID(time(nullptr))) {
         __LDBG_printf("detaching NTP check timer");
-        timer.reset();
+        timer->disarm();
     }
     else {
         __LDBG_printf("NTP did not update, calling configTime() again, delay=%u", timer->getDelayUInt32());

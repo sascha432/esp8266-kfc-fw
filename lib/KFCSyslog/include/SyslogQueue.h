@@ -73,9 +73,12 @@ public:
     // return true if the queue is empty and all messages have been delivered
     virtual bool empty() const = 0;
 
+    uint32_t getDropped() const;
+
 protected:
     // get size of SyslogQueueItem::Ptr for a particular message
     size_t _getQueueItemSize(const String &msg) const;
+    uint32_t _dropped;
 };
 
 

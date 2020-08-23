@@ -183,7 +183,15 @@ void SyslogTCP::__onPoll(AsyncClient *client)
         auto written = client->write(_buffer.cstr_begin(), toSend);
         __LDBG_printf("buffer=%u send=%u written=%u", _buffer.length(), toSend, written);
         if (written == toSend) {
-            _buffer.removeAndShrink(0, toSend); // remove what has been written already
+            // remove what has been written to the socket
+            if (written == _buffer.length()) {
+                _buffer.clear();
+                __LDBG_printf("remove(clear)=%u length=%u", written, _buffer.length());
+            }
+            else {
+                _buffer.removeAndShrink(0, written);
+                __LDBG_printf("remove=%u length=%u", written, _buffer.length());
+            }
         }
         else {
             _status(false __LDBG_IF(, PSTR("write")));

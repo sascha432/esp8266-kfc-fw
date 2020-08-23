@@ -54,7 +54,6 @@ void SyslogPlugin::reconfigure(const String &source)
 void SyslogPlugin::shutdown()
 {
     _kill(500);
-    _end();
 }
 
 void SyslogPlugin::timerCallback(Event::CallbackTimerPtr timer)
@@ -173,6 +172,9 @@ void SyslogPlugin::getStatus(Print &output)
         }
         else {
             output.printf_P(PSTR(" - %u message(s) queued, state %s"), queue.size(), syslog.isSending() ? PSTR("sending") : PSTR("waiting"));
+        }
+        if (queue.getDropped()) {
+            output.printf_P(PSTR(", %u dropped"), queue.getDropped());
         }
     }
     else {

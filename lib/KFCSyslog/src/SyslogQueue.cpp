@@ -48,12 +48,17 @@ const String &SyslogQueueItem::getMessage() const
 // ------------------------------------------------------------------------
 
 
-SyslogQueue::SyslogQueue()
+SyslogQueue::SyslogQueue() : _dropped(0)
 {
 }
 
 SyslogQueue::~SyslogQueue()
 {
+}
+
+uint32_t SyslogQueue::getDropped() const
+{
+    return _dropped;
 }
 
 #if defined(ESP8266)
@@ -99,7 +104,8 @@ uint32_t SyslogMemoryQueue::add(const String &message)
 
     // check if the queue can store more messages
     if (size + _curSize > _maxSize) {
-        __LDBG_printf("queue full size=%u msg=%u max=%u", _curSize, size, _maxSize);
+        _dropped++;
+        __LDBG_printf("queue full size=%u msg=%u max=%u dropped=%u", _curSize, size, _maxSize, _dropped);
         return 0;
     }
     _items.emplace_back(message, ++_uniqueId);
@@ -179,8 +185,13 @@ void SyslogMemoryQueue::remove(uint32_t id, bool success)
             iterator->_failureCount++;
             // delay sending next message
             _timer = millis() + kFailureWaitDelay;
+            __LDBG_printf("retry=%u in %ums", iterator->_failureCount, kFailureWaitDelay);
         }
         else {
+            __LDBG_printf("erase success=%u retry=%u max=%u", success, iterator->_failureCount, kFailureRetryLimit);
+            if (success == false && iterator->_failureCount >= kFailureRetryLimit) {
+                _dropped++;
+            }
             _curSize -= _getQueueItemSize(iterator->_message);
             _items.erase(iterator);
             if (_items.empty()) {

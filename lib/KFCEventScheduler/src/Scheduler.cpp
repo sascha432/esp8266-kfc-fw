@@ -72,13 +72,20 @@ void Scheduler::end()
     __LDBG_print("terminating scheduler");
     // disarm all timers to ensure __TimerCallback is not called while deleting them
     for(const auto &timer: _timers) {
-        timer->_disarm();
+        if (timer) {
+            timer->_disarm();
+            if (timer->_timer) {
+                timer->_timer->_managedTimer.clear();
+            }
+        }
     }
     // move vector before deleting all CallbackTimer objects
     auto tmp = std::move(_timers);
     std::swap(_timers, tmp);
     for(auto timer: tmp) {
-        delete timer;
+        if (timer) {
+            delete timer;
+        }
     }
     _hasEvent = (int8_t)PriorityType::NONE;
 }
@@ -110,7 +117,7 @@ bool Scheduler::_removeTimer(CallbackTimerPtr timer)
             __LDBG_printf("timer=%p iterator=%p managed=%p iterator_managed=%p %s:%u", timer, *iterator, timer->_timer, (*iterator)->_timer, __S(timer->_file), timer->_line);
 
             // if (timer->_timer) {
-            //     timer->_timer->_managedCallbackTimer.clear();
+            //     timer->_timer->_managedTimer.clear();
             // }
 
             // mark as deleted in vector

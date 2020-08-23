@@ -42,7 +42,7 @@ namespace Event {
 
         bool _isActive() const;
 
-        ManangedCallbackTimer _managedCallbackTimer;
+        ManangedCallbackTimer _managedTimer;
     };
 
 }

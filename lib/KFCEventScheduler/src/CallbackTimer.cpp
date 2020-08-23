@@ -35,7 +35,7 @@ CallbackTimer::~CallbackTimer()
 
     if (_timer) {
         __LDBG_printf("removing managed timer=%p", _timer);
-        _timer->_managedCallbackTimer.clear();
+        _timer->_managedTimer.clear();
     }
 
     // the Timer object must be nullptr
@@ -178,7 +178,7 @@ void CallbackTimer::_invokeCallback(CallbackTimerPtr timer)
     // else {
     //     if (timer->_timer) {
     //         __LDBG_printf("timer %p _timer=%p removing managed timer", timer, timer->_timer);
-    //         timer->_timer->_managedCallbackTimer.clear();
+    //         timer->_timer->_managedTimer.clear();
     //     }
     // }
 }

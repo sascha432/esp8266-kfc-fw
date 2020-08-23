@@ -30,8 +30,7 @@ ManangedCallbackTimer::ManangedCallbackTimer(CallbackTimerPtr callbackTimer, Tim
     if (callbackTimer) {
         if (callbackTimer->_timer) {
             __LDBG_printf("removing managed timer=%p", callbackTimer->_timer);
-            //callbackTimer->_timer->_managedCallbackTimer._callbackTimer = nullptr;
-            callbackTimer->_timer->_managedCallbackTimer.clear();
+            callbackTimer->_timer->_managedTimer.clear();
         }
         _callbackTimer->_timer = timer;
     }
@@ -39,24 +38,25 @@ ManangedCallbackTimer::ManangedCallbackTimer(CallbackTimerPtr callbackTimer, Tim
 
 ManangedCallbackTimer &ManangedCallbackTimer::operator=(ManangedCallbackTimer &&move) noexcept
 {
+    __LDBG_assert(move._callbackTimer != nullptr);
     if (_callbackTimer) {
         if (_callbackTimer->_timer) {
             __LDBG_printf("removing managed timer=%p", _callbackTimer->_timer);
-            _callbackTimer->_timer->_managedCallbackTimer.clear();
+            _callbackTimer->_timer->_managedTimer.clear();
         }
     }
+    __LDBG_assert(move._callbackTimer != nullptr);
     _callbackTimer = std::exchange(move._callbackTimer, nullptr);
     return *this;
 }
 
 ManangedCallbackTimer::~ManangedCallbackTimer()
 {
-    __LDBG_printf("this=%p callback_timer=%p timer=%p", this, _callbackTimer, _callbackTimer ?_callbackTimer->_timer : nullptr);
+    __LDBG_printf("this=%p callback_timer=%p timer=%p", this, _callbackTimer, _callbackTimer ? _callbackTimer->_timer : nullptr);
 
     if (_callbackTimer) {
         if (_callbackTimer->_timer) {
-            _callbackTimer->_timer->_managedCallbackTimer._callbackTimer = nullptr;
-            // _callbackTimer->_timer->_managedCallbackTimer.clear();
+            _callbackTimer->_timer->_managedTimer._callbackTimer = nullptr;
         }
         __LDBG_printf("remove callback_timer=%p", _callbackTimer);
         __Scheduler.remove(_callbackTimer);
@@ -82,11 +82,11 @@ void ManangedCallbackTimer::clear()
 {
     if (_callbackTimer) {
         if (_callbackTimer->_timer) {
-            __LDBG_printf("this=%p timer=%p managed=%p", this, _callbackTimer, _callbackTimer->_timer->_managedCallbackTimer._callbackTimer);
+            __LDBG_printf("this=%p timer=%p managed=%p", this, _callbackTimer, _callbackTimer->_timer->_managedTimer._callbackTimer);
             _callbackTimer->_timer = nullptr;
             // _callbackTimer = nullptr;
             // auto callbackTimer = _callbackTimer;
-            // callbackTimer->_timer->_managedCallbackTimer._callbackTimer = nullptr;
+            // callbackTimer->_timer->_managedTimer._callbackTimer = nullptr;
             // callbackTimer->_timer = nullptr;
             // __LDBG_assert(_callbackTimer == nullptr);
         }

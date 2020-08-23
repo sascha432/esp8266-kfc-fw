@@ -15,21 +15,21 @@
 
 using namespace Event;
 
-Timer::Timer() : _managedCallbackTimer()
+Timer::Timer() : _managedTimer()
 {
 }
 
-Timer::Timer(CallbackTimerPtr &&callbackTimer) : _managedCallbackTimer(std::move(callbackTimer), this)
+Timer::Timer(CallbackTimerPtr &&callbackTimer) : _managedTimer(std::move(callbackTimer), this)
 {
 }
 
 Timer &Timer::operator=(CallbackTimerPtr &&callbackTimer)
 {
-    _managedCallbackTimer = ManangedCallbackTimer(std::move(callbackTimer), this);
+    _managedTimer = ManangedCallbackTimer(std::move(callbackTimer), this);
     return *this;
 }
 
-// Timer::Timer(Timer &&move) : _managedCallbackTimer(std::move(move))
+// Timer::Timer(Timer &&move) : _managedTimer(std::move(move))
 // {
 // //     __DBG_assert(_timer->_timer == nullptr || _timer->_timer == &move);
 // //     _timer->_timer = this;
@@ -43,11 +43,11 @@ Timer::~Timer()
 void Timer::add(int64_t intervalMillis, RepeatType repeat, Callback callback, PriorityType priority)
 {
     if (_isActive()) {
-        _managedCallbackTimer->rearm(intervalMillis, repeat, callback);
+        _managedTimer->rearm(intervalMillis, repeat, callback);
     }
     else {
         auto callbackTimer = __Scheduler._add(intervalMillis, repeat, callback, priority);
-        _managedCallbackTimer = ManangedCallbackTimer(callbackTimer, this);
+        _managedTimer = ManangedCallbackTimer(callbackTimer, this);
     }
 }
 
@@ -58,15 +58,15 @@ void Timer::add(milliseconds interval, RepeatType repeat, Callback callback, Pri
 
 bool Timer::remove()
 {
-    if (_managedCallbackTimer) {
-        return __Scheduler._removeTimer(_managedCallbackTimer.get());
+    if (_managedTimer) {
+        return __Scheduler._removeTimer(_managedTimer.get());
     }
     return false;
 }
 
 bool Timer::_isActive() const
 {
-    return (bool)_managedCallbackTimer;
+    return (bool)_managedTimer;
 }
 
 Timer::operator bool() const
@@ -76,5 +76,5 @@ Timer::operator bool() const
 
 CallbackTimerPtr Timer::operator->() const noexcept
 {
-    return _managedCallbackTimer.get();
+    return _managedTimer.get();
 }

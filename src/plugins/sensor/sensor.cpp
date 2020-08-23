@@ -120,7 +120,7 @@ SensorPlugin &SensorPlugin::getInstance()
     return plugin;
 }
 
-void SensorPlugin::timerEvent(Event::TimerPtr &timer)
+void SensorPlugin::timerEvent(Event::CallbackTimerPtr timer)
 {
     plugin._timerEvent();
 }

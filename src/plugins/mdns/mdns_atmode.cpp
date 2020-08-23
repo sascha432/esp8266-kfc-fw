@@ -94,7 +94,7 @@ bool MDNSPlugin::atModeHandler(AtModeArgs &args)
                 serviceCallback(*services, false, mdnsServiceInfo, answerType, p_bSetContent);
             });
 
-            _Scheduler.add(timeout, false, [args, serviceQuery, services, this](Event::TimerPtr &timer) mutable {
+            _Scheduler.add(timeout, false, [args, serviceQuery, services, this](Event::CallbackTimerPtr timer) mutable {
                 _IF_DEBUG(auto result = ) MDNS.removeServiceQuery(serviceQuery);
                 __LDBG_printf("removeServiceQuery=%u", result);
                 if (services->empty()) {

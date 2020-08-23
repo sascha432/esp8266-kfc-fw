@@ -28,8 +28,6 @@ namespace Event {
         ~ManangedCallbackTimer();
 
         operator bool() const;
-        bool operator==(nullptr_t) const;
-        bool operator!=(nullptr_t) const;
 
         CallbackTimerPtr operator->() const noexcept;
         CallbackTimerPtr get() const noexcept;

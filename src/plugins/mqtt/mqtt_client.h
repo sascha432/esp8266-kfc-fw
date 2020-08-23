@@ -173,7 +173,7 @@ public:
 
     // returns false if running
     bool publishAutoDiscovery();
-    static void publishAutoDiscoveryCallback(Event::TimerPtr &timer);
+    static void publishAutoDiscoveryCallback(Event::CallbackTimerPtr timer);
 
     // return values
     // 0: failed to send

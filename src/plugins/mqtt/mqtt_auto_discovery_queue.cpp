@@ -45,13 +45,13 @@ void MQTTAutoDiscoveryQueue::publish()
         (*_next)->rewindAutoDiscovery();
 
         auto intialDelay = MQTT_AUTO_DISCOVERY_QUEUE_INITIAL_DELAY + ((MQTT_AUTO_DISCOVERY_QUEUE_INITIAL_DELAY / 10) == 0 ? 0 : (rand() % (MQTT_AUTO_DISCOVERY_QUEUE_INITIAL_DELAY / 10)));
-        _Timer(_timer).add(intialDelay, true, [this](Event::TimerPtr &timer) {
+        _Timer(_timer).add(intialDelay, true, [this](Event::CallbackTimerPtr timer) {
             _timerCallback(timer);
         });
     }
 }
 
-void MQTTAutoDiscoveryQueue::_timerCallback(Event::TimerPtr &timer)
+void MQTTAutoDiscoveryQueue::_timerCallback(Event::CallbackTimerPtr timer)
 {
 #if MQTT_AUTO_DISCOVERY_QUEUE_INITIAL_DELAY != MQTT_AUTO_DISCOVERY_QUEUE_DELAY
     // rearm timer if the first call

@@ -139,7 +139,7 @@ GFXfontContainer::Ptr clockFont;
 
 static Event::Timer ssd1306_status_timer ;
 
-void ssd1306_update_time(Event::TimerPtr &timer) {
+void ssd1306_update_time(Event::CallbackTimerPtr timer) {
     _debug_println(F("ssd1306_update_time()"));
     char buf[32];
     time_t now = time(nullptr);
@@ -250,7 +250,7 @@ void ssd1306_setup() {
     GFXfontContainer::readFromFile(F("/fonts/7digit"), clockFont);
 
 #if SSD1306_PLUGIN_DISPLAY_STATUS_DELAY
-    _Scheduler.add(SSD1306_PLUGIN_DISPLAY_STATUS_DELAY, false, [](Event::TimerPtr &timer) {
+    _Scheduler.add(SSD1306_PLUGIN_DISPLAY_STATUS_DELAY, false, [](Event::CallbackTimerPtr timer) {
         ssd1306_enable_status();
     });
 #endif

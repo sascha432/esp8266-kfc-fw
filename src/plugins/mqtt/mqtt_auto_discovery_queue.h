@@ -42,7 +42,7 @@ public:
     void publish();
 
 private:
-    void _timerCallback(Event::TimerPtr &timer);
+    void _timerCallback(Event::CallbackTimerPtr timer);
     void _publishDone();
 
 private:

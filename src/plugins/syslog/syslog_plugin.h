@@ -47,7 +47,7 @@ public:
 #endif
 
 public:
-    static void timerCallback(Event::TimerPtr &timer);
+    static void timerCallback(Event::CallbackTimerPtr timer);
 
 private:
     void _zeroConfCallback(const String &hostname, const IPAddress &address, uint16_t port, MDNSResolver::ResponseType type);
@@ -56,7 +56,7 @@ private:
     void _begin();
     void _end();
     void _kill(uint32_t timeout);
-    void _timerCallback(Event::TimerPtr &timer);
+    void _timerCallback(Event::CallbackTimerPtr timer);
 
 private:
     SyslogStream *_stream;

@@ -120,7 +120,7 @@ public:
     static void onData(Stream &client);
     static void onReceive(int length);
 #else
-    static void fetchMetrics(Event::TimerPtr &timer);
+    static void fetchMetrics(Event::CallbackTimerPtr timer);
 #endif
 
     virtual bool on(uint8_t channel = -1) = 0;

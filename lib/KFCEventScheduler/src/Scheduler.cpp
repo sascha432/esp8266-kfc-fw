@@ -264,7 +264,7 @@ void Scheduler::__list(bool debug)
         int deleted = 0;
         for(const auto timer: _timers) {
             if (timer) {
-                output.printf_P(PSTR("ETSTimer=%p func=%p arg=%p timer=%p dly=%.0f (%.3fs) repeat=%d prio=%d scheduled=%d %s:%u\n"),
+                output.printf_P(PSTR("ETSTimer=%p func=%p arg=%p managed=%p dly=%.0f (%.3fs) repeat=%d prio=%d scheduled=%d %s:%u\n"),
                     &timer->_etsTimer, timer->_etsTimer.timer_func, timer, timer->_timer, timer->_delay / 1.0, timer->_delay / 1000.0, timer->_repeat._repeat, timer->_priority, timer->_callbackScheduled, __S(timer->_file), timer->_line
                 );
                 if (timer->_callbackScheduled) {

@@ -534,7 +534,7 @@ static void print_heap()
 #endif
 }
 
-static void heap_timer_callback(Event::TimerPtr &timer)
+static void heap_timer_callback(Event::CallbackTimerPtr timer)
 {
     if (displayTimer._type == DisplayTimer::HEAP) {
         print_heap();
@@ -1250,7 +1250,7 @@ void at_mode_serial_handle_event(String &commandString)
                     static Event::Timer timer;
                     if (args.isTrue(0) && !timer.active()) {
                         args.print(FSPGM(started));
-                        _Timer(timer).add(1000, true, [&output](Event::TimerPtr &timer) {
+                        _Timer(timer).add(1000, true, [&output](Event::CallbackTimerPtr timer) {
                             PinMonitor::getInstance()->dumpPins(output);
                         });
                     }
@@ -1347,7 +1347,7 @@ void at_mode_serial_handle_event(String &commandString)
                         args.printf_P(PSTR("%s(%u, %u) (%.2f/%.2fµs), f=%uHz"), type, pin, level, dc, period, freq);
                         if (duration) {
                             args.printf_P(PSTR("setting pin %u to low in %ums"), pin, duration);
-                            _Scheduler.add(duration, false, [pin](Event::TimerPtr &) {
+                            _Scheduler.add(duration, false, [pin](Event::CallbackTimerPtr) {
                                 digitalWrite(pin, LOW);
                             });
                         }
@@ -1377,7 +1377,7 @@ void at_mode_serial_handle_event(String &commandString)
 
                             args.printf_P(PSTR("ADC display interval %ums"), interval);
                             auto &stream = args.getStream();
-                            atModeADC->getTimer().add(interval, true, [&stream](Event::TimerPtr &) {
+                            atModeADC->getTimer().add(interval, true, [&stream](Event::CallbackTimerPtr) {
                                 stream.printf_P(PSTR("+ADC: %u (%umV) converted=%s "), atModeADC->getValue(), atModeADC->getValue(), atModeADC->getConvertedString().c_str());
                                 atModeADC->printInfo(stream);
                             });

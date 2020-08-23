@@ -50,7 +50,7 @@ namespace Event {
         void _initTimer();
         void _rearm();
         void _disarm();
-        void _invokeCallback(TimerPtr &timer);
+        void _invokeCallback(CallbackTimerPtr timer);
 
     public:
         ETSTimer &__getETSTimer() { return _etsTimer; }

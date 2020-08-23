@@ -66,7 +66,7 @@ bool Timer::remove()
 
 bool Timer::_isActive() const
 {
-    return _managedCallbackTimer != nullptr;
+    return (bool)_managedCallbackTimer;
 }
 
 Timer::operator bool() const

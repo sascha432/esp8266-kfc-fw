@@ -220,14 +220,14 @@ void RemoteControlPlugin::_onButtonHeld(Button& btn, uint16_t duration, uint16_t
                 else if (buttonNum == 1) {
                     __LDBG_printf("restart");
                     shutdown();
-                    _Scheduler.add(3000, false, [](Event::TimerPtr &timer) {
+                    _Scheduler.add(3000, false, [](Event::CallbackTimerPtr timer) {
                         config.restartDevice();
                     });
                 }
                 else if (buttonNum == 2) {
                     __LDBG_printf("restore factory settings");
                     shutdown();
-                    _Scheduler.add(3000, false, [](Event::TimerPtr &timer) {
+                    _Scheduler.add(3000, false, [](Event::CallbackTimerPtr timer) {
                         config.restoreFactorySettings();
                         config.write();
                         config.restartDevice();
@@ -316,7 +316,7 @@ void RemoteControlPlugin::deepSleepHandler(AsyncWebServerRequest *request)
         BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::FLICKER);
         disableAutoSleep();
 
-        _Scheduler.add(2000, false, [](Event::TimerPtr &timer) {
+        _Scheduler.add(2000, false, [](Event::CallbackTimerPtr timer) {
             __LDBG_printf("deep sleep=%us", plugin._config.deepSleepTime);
             config.enterDeepSleep(KFCFWConfiguration::seconds(plugin._config.deepSleepTime), RF_DEFAULT, 1);
         });

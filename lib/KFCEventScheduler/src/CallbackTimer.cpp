@@ -148,26 +148,31 @@ void CallbackTimer::_disarm()
     }
 }
 
-void CallbackTimer::_invokeCallback(TimerPtr &timer)
+void CallbackTimer::_invokeCallback(CallbackTimerPtr timer)
 {
-    auto callbackTimer = timer; // copy pointer in case it is modified inside the callback.. TODO remove reference later
     _callback(timer);
 
-    if (__Scheduler._hasTimer(callbackTimer)) {
-        if (callbackTimer->isArmed() == false) { // check if timer is still armed (calling stop() disarms the timer)
+    if (__Scheduler._hasTimer(timer)) {
+        if (timer->isArmed() == false) { // check if timer is still armed
             __LDBG_printf("arg=%p this=%p fn=%p armed=%u cb=%p %s:%u", _etsTimer.timer_arg, this, _etsTimer.timer_func, isArmed(), lambda_target(_callback), __S(_file), _line);
             // reset can be safely
-            __Scheduler._removeTimer(callbackTimer);
+            __Scheduler._removeTimer(timer);
         }
-        else if (_repeat._doRepeat() == false) { // check if the timer has any repititons left
+        else if (_repeat._doRepeat() == false) { // check if the timer has any repetitions left
             __LDBG_printf("arg=%p this=%p fn=%p armed=%u cb=%p %s:%u", _etsTimer.timer_arg, this, _etsTimer.timer_func, isArmed(), lambda_target(_callback), __S(_file), _line);
-            __Scheduler._removeTimer(callbackTimer);
+            __Scheduler._removeTimer(timer);
         }
         else if (_delay > kMaxDelay) {
             // if max delay is exceeded we need to manually reschedule
             __LDBG_printf("arg=%p this=%p fn=%p armed=%u cb=%p %s:%u", _etsTimer.timer_arg, this, _etsTimer.timer_func, isArmed(), lambda_target(_callback), __S(_file), _line);
             _disarm();
             _rearm();
+        }
+    }
+    else {
+        if (timer->_timer) {
+            __LDBG_printf("timer %p _timer=%p removing managed timer", timer, timer->_timer);
+            timer->_timer->_managedCallbackTimer.clear();
         }
     }
 }

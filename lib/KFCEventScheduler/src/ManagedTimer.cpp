@@ -37,6 +37,12 @@ ManangedCallbackTimer::ManangedCallbackTimer(CallbackTimerPtr callbackTimer, Tim
 
 ManangedCallbackTimer &ManangedCallbackTimer::operator=(ManangedCallbackTimer &&move) noexcept
 {
+    if (_callbackTimer) {
+        __LDBG_printf("removing managed timer=%p", _callbackTimer->_timer);
+        if (_callbackTimer->_timer) {
+            _callbackTimer->_timer->_managedCallbackTimer.clear();
+        }
+    }
     _callbackTimer = std::exchange(move._callbackTimer, nullptr);
     return *this;
 }
@@ -55,16 +61,6 @@ ManangedCallbackTimer::~ManangedCallbackTimer()
 }
 
 ManangedCallbackTimer::operator bool() const
-{
-    return _callbackTimer != nullptr;
-}
-
-bool ManangedCallbackTimer::operator==(nullptr_t) const
-{
-    return _callbackTimer == nullptr;
-}
-
-bool ManangedCallbackTimer::operator!=(nullptr_t) const
 {
     return _callbackTimer != nullptr;
 }

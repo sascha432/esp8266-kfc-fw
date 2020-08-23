@@ -44,7 +44,7 @@ void SwitchPlugin::setup(SetupModeType mode)
         mqttClient->registerComponent(this);
     }
 #if IOT_SWITCH_PUBLISH_MQTT_INTERVAL
-    _Timer(_updateTimer).add(IOT_SWITCH_PUBLISH_MQTT_INTERVAL, true, [this](Event::TimerPtr &timer) {
+    _Timer(_updateTimer).add(IOT_SWITCH_PUBLISH_MQTT_INTERVAL, true, [this](Event::CallbackTimerPtr timer) {
         _publishState(MQTTClient::getClient());
     });
 #endif
@@ -273,7 +273,7 @@ void SwitchPlugin::_writeStates()
     __LDBG_printf("states=%s", String(_states, 2).c_str());
 #if IOT_SWITCH_STORE_STATES
     _delayedWrite.remove();
-    _Timer(_delayedWrite).add(IOT_SWITCH_STORE_STATES_WRITE_DELAY, false, [this](Event::TimerPtr &timer) {
+    _Timer(_delayedWrite).add(IOT_SWITCH_STORE_STATES_WRITE_DELAY, false, [this](Event::CallbackTimerPtr timer) {
         __LDBG_printf("SwitchPlugin::_writeStates(): delayed write states=%s", String(_states, 2).c_str());
         File file = SPIFFSWrapper::open(FSPGM(iot_switch_states_file), fs::FileOpenMode::write);
         if (file) {

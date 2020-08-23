@@ -358,7 +358,7 @@ void Driver_DimmerModule::_buttonShortPress(uint8_t channel, bool up)
         else {
             _turnOffLevel[channel] = getChannel(channel);
             _turnOffTimerRepeat[channel] = 0;
-            _Timer(_turnOffTimer[channel]).add(_config.shortpress_no_repeat_time, false, [this, channel](Event::TimerPtr &timer) {
+            _Timer(_turnOffTimer[channel]).add(_config.shortpress_no_repeat_time, false, [this, channel](Event::CallbackTimerPtr timer) {
                 __LDBG_printf("turn off channel=%u timer expired, repeat=%d", channel, _turnOffTimerRepeat[channel]);
                 if (_turnOffTimerRepeat[channel] == 0) { // single button down press detected, turn off
                     if (off(channel)) {

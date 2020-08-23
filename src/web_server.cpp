@@ -174,7 +174,7 @@ static void executeDelayed(AsyncWebServerRequest *request, std::function<void()>
 #if IOT_WEATHER_STATION
         __weatherStationAttachCanvas();
 #endif
-        _Scheduler.add(2000, false, [callback](Event::TimerPtr &timer) {
+        _Scheduler.add(2000, false, [callback](Event::CallbackTimerPtr timer) {
             callback();
         });
     });
@@ -456,7 +456,7 @@ void WebServerPlugin::handlerUpdate(AsyncWebServerRequest *request)
                 stk500v1->setFile(FSPGM(stk500v1_tmp_file));
                 stk500v1->setLogging(STK500v1Programmer::LOG_FILE);
 
-                _Scheduler.add(3500, false, [](Event::TimerPtr &timer) {
+                _Scheduler.add(3500, false, [](Event::CallbackTimerPtr timer) {
                     stk500v1->begin([]() {
                         delete stk500v1;
                         stk500v1 = nullptr;

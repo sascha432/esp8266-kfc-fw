@@ -218,12 +218,12 @@ void AlarmPlugin::ntpCallback(time_t now)
     plugin._ntpCallback(now);
 }
 
-void AlarmPlugin::timerCallback(Event::TimerPtr &timer)
+void AlarmPlugin::timerCallback(Event::CallbackTimerPtr timer)
 {
     plugin._timerCallback(timer);
 }
 
-void AlarmPlugin::_installAlarms(Event::TimerPtr &timer)
+void AlarmPlugin::_installAlarms(Event::CallbackTimerPtr timer)
 {
     _debug_println();
     Alarm::TimeType delay = 300;
@@ -307,7 +307,7 @@ void AlarmPlugin::_ntpCallback(time_t now)
     }
 }
 
-void AlarmPlugin::_timerCallback(Event::TimerPtr &timer)
+void AlarmPlugin::_timerCallback(Event::CallbackTimerPtr timer)
 {
     _debug_println();
     if (!_alarms.empty()) {

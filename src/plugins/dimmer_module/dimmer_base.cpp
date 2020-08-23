@@ -53,7 +53,7 @@ void Dimmer_Base::_begin()
     _wire.begin(DIMMER_I2C_ADDRESS + 1);
     _wire.onReceive(Dimmer_Base::onReceive);
 
-    _Scheduler.add(2000, false, [this](Event::TimerPtr &timer) { // delay for 2 seconds
+    _Scheduler.add(2000, false, [this](Event::CallbackTimerPtr timer) { // delay for 2 seconds
         if (_wire.lock()) {
             _wire.beginTransmission(DIMMER_I2C_ADDRESS);
             _wire.write(DIMMER_REGISTER_COMMAND);
@@ -143,7 +143,7 @@ void Dimmer_Base::_onReceive(size_t length)
 
 #else
 
-void Dimmer_Base::fetchMetrics(Event::TimerPtr &timer)
+void Dimmer_Base::fetchMetrics(Event::CallbackTimerPtr timer)
 {
     if (timer->getDelay() != METRICS_DEFAULT_UPDATE_RATE) {
         timer->rearm(METRICS_DEFAULT_UPDATE_RATE);

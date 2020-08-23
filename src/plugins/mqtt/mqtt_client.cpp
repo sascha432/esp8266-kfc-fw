@@ -269,7 +269,7 @@ void MQTTClient::autoReconnect(uint32_t timeout)
 {
     __LDBG_printf("timeout=%u", timeout);
     if (timeout) {
-        _Timer(_timer).add(timeout, false, [this](Event::TimerPtr &timer) {
+        _Timer(_timer).add(timeout, false, [this](Event::CallbackTimerPtr timer) {
             __LDBG_printf("isConnected=%d", this->isConnected());
             if (!this->isConnected()) {
                 this->connect();
@@ -485,7 +485,7 @@ bool MQTTClient::publishAutoDiscovery()
     return false;
 }
 
-void MQTTClient::publishAutoDiscoveryCallback(Event::TimerPtr &timer)
+void MQTTClient::publishAutoDiscoveryCallback(Event::CallbackTimerPtr timer)
 {
     if (_mqttClient) {
         _mqttClient->publishAutoDiscovery();
@@ -634,7 +634,7 @@ void MQTTClient::_addQueue(MQTTQueueEnum_t type, MQTTComponent *component, const
     }
 
     _queue.emplace_back(type, component, topic, qos, retain, payload);
-    _Timer(_queueTimer).add(MQTT_QUEUE_RETRY_DELAY, (MQTT_QUEUE_TIMEOUT / MQTT_QUEUE_RETRY_DELAY), [this](Event::TimerPtr &timer) {
+    _Timer(_queueTimer).add(MQTT_QUEUE_RETRY_DELAY, (MQTT_QUEUE_TIMEOUT / MQTT_QUEUE_RETRY_DELAY), [this](Event::CallbackTimerPtr timer) {
         _queueTimerCallback();
     });
 }

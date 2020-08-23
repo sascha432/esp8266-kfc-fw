@@ -31,7 +31,7 @@ public:
     // sets the callback and executes configTime()
     static void execConfigTime();
     static void updateNtpCallback();
-    static void _checkTimerCallback(Event::TimerPtr &timer);
+    static void _checkTimerCallback(Event::CallbackTimerPtr timer);
 
 public:
     static uint32_t _ntpRefreshTimeMillis;

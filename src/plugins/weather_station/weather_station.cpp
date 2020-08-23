@@ -347,7 +347,7 @@ void WeatherStationPlugin::setup(SetupModeType mode)
     WsClient::addClientCallback([this](WsClient::ClientCallbackTypeEnum_t type, WsClient *client) {
         if (type == WsClient::ClientCallbackTypeEnum_t::AUTHENTICATED) {
             // draw sends the screen capture to the web socket, do it for each new client
-            _Scheduler.add(100, false, [this](Event::TimerPtr &timer) {
+            _Scheduler.add(100, false, [this](Event::CallbackTimerPtr timer) {
                 _redraw();
             });
         }
@@ -585,7 +585,7 @@ void WeatherStationPlugin::_fadeStatusLED()
     int16_t dir = 0x100;
     NeoPixel_fillColor(_pixels, sizeof(_pixels), color);
     NeoPixel_espShow(IOT_WEATHER_STATION_WS2812_PIN, _pixels, sizeof(_pixels), true);
-    _Timer(_pixelTimer).add(50, true, [this, color, dir](Event::TimerPtr &timer) mutable {
+    _Timer(_pixelTimer).add(50, true, [this, color, dir](Event::CallbackTimerPtr timer) mutable {
         color += dir;
         if (color >= 0x003000) {
             dir = -dir;
@@ -829,7 +829,7 @@ void WeatherStationPlugin::_alarmCallback(Alarm::AlarmModeType mode, uint16_t ma
         return;
     }
     if (!_resetAlarmFunc) {
-        _resetAlarmFunc = [this](Event::TimerPtr &timer) {
+        _resetAlarmFunc = [this](Event::CallbackTimerPtr timer) {
 #if IOT_WEATHER_STATION_WS2812_NUM
             BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::OFF);
 #endif

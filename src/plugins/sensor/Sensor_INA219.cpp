@@ -174,7 +174,7 @@ bool Sensor_INA219::atModeHandler(AtModeArgs &args)
         timer.remove();
 
         auto &serial = args.getStream();
-        auto timerPrintFunc = [this, &serial](Event::TimerPtr &timer) {
+        auto timerPrintFunc = [this, &serial](Event::CallbackTimerPtr timer) {
             return SensorPlugin::for_each<Sensor_INA219>(this, [&serial](Sensor_INA219 &sensor) {
                 auto &ina219 = sensor.getSensor();
                 serial.printf_P(PSTR("+SENSORINA219: raw: U=%d, Vshunt=%d, I=%d, current: P=%d: %.3fV, %.1fmA, %.1fmW, average: %.3fV, %.1fmA, %.1fmW\n"),

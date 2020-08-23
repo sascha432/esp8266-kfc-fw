@@ -264,7 +264,7 @@ void HassPlugin::_mqttSet(const String &topic, int value)
 void HassPlugin::_mqttGet(const String &topic, std::function<void(bool, int)> callback)
 {
     int counter = 0;
-    _Scheduler.add(10, true, [this, topic, callback, counter](Event::TimerPtr &timer) mutable {
+    _Scheduler.add(10, true, [this, topic, callback, counter](Event::CallbackTimerPtr timer) mutable {
         if (counter++ == 200) {
             timer->reset();
             callback(false, 0);

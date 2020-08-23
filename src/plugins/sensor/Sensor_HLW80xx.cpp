@@ -475,7 +475,7 @@ bool Sensor_HLW80xx::atModeHandler(AtModeArgs &args)
         auto interval = args.toMillis(0, 500, ~0, 0, String('s'));
         if (interval) {
             auto &serial = args.getStream();
-            _Timer(_dumpTimer).add(interval, true, [this, &serial](Event::TimerPtr &timer) {
+            _Timer(_dumpTimer).add(interval, true, [this, &serial](Event::CallbackTimerPtr timer) {
                 SensorPlugin::for_each<Sensor_HLW80xx>(this, Sensor_HLW80xx::_compareFunc, [&serial](Sensor_HLW80xx &sensor) {
                     sensor.dump(serial);
                 });

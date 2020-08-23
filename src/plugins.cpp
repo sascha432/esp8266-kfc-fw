@@ -217,7 +217,7 @@ void setup_plugins(PluginComponent::SetupModeType mode)
 #ifndef DISABLE_EVENT_SCHEDULER
 #if ENABLE_DEEP_SLEEP
     if (mode == PluginComponent::PLUGIN_SETUP_AUTO_WAKE_UP) {
-        _Scheduler.add(PLUGIN_DEEP_SLEEP_DELAYED_START_TIME, false, [](Event::TimerPtr &timer) {
+        _Scheduler.add(PLUGIN_DEEP_SLEEP_DELAYED_START_TIME, false, [](Event::CallbackTimerPtr timer) {
             setup_plugins(PluginComponent::PLUGIN_SETUP_DELAYED_AUTO_WAKE_UP);
         });
     }

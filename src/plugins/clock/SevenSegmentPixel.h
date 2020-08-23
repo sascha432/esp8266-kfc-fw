@@ -331,7 +331,7 @@ public:
                 steps = 1;
             }
             //__LDBG_printf("to=%u steps=%u time=%f", _brightness, steps, fadeTime);
-            _Timer(_brightnessTimer).add(20, true, [this, steps, finishedCallback, refreshCallback](Event::TimerPtr &timer) {
+            _Timer(_brightnessTimer).add(20, true, [this, steps, finishedCallback, refreshCallback](Event::CallbackTimerPtr timer) {
                 int32_t tmp = _params.brightness;
                 if (tmp < _targetBrightness) {
                     tmp += steps;

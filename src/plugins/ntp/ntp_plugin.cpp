@@ -190,7 +190,7 @@ void NTPPlugin::updateNtpCallback()
 #endif
 }
 
-void NTPPlugin::_checkTimerCallback(Event::TimerPtr &timer)
+void NTPPlugin::_checkTimerCallback(Event::CallbackTimerPtr timer)
 {
     if (IS_TIME_VALID(time(nullptr))) {
         __LDBG_printf("detaching NTP check timer");

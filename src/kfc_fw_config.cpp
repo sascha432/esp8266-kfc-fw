@@ -169,7 +169,7 @@ void KFCFWConfiguration::_onWiFiDisconnectCb(const WiFiEventStationModeDisconnec
     // work around for ESP32 losing the connection and not reconnecting automatically
     static Event::Timer _reconnectTimer;
     if (!_reconnectTimer.active()) {
-        _Timer(_reconnectTimer).add(60000, true, [this](Event::TimerPtr &timer) {
+        _Timer(_reconnectTimer).add(60000, true, [this](Event::CallbackTimerPtr timer) {
             if (_wifiConnected) {
                 timer->detach();
             }

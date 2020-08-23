@@ -147,7 +147,7 @@ void DebugHandle::init()
         _handles->emplace_back(PSTR("<EEPROM>"), 0);
         _handles->emplace_back(PSTR("<INVALID>"), ~0);
 #if DEBUG_CONFIGURATION_GETHANDLE_LOG_INTERVAL
-        _Scheduler.add(Event::minutes(DEBUG_CONFIGURATION_GETHANDLE_LOG_INTERVAL), true, [](Event::TimerPtr &timer) {
+        _Scheduler.add(Event::minutes(DEBUG_CONFIGURATION_GETHANDLE_LOG_INTERVAL), true, [](Event::CallbackTimerPtr timer) {
             DebugHandle::logUsage();
         });
 #endif

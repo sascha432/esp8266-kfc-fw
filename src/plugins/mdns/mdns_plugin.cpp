@@ -113,7 +113,7 @@ void MDNSPlugin::_wifiCallback(WiFiCallbacks::EventType event, void *payload)
     if (event == WiFiCallbacks::EventType::CONNECTED) {
         _end();
 #if MDNS_DELAYED_START_AFTER_WIFI_CONNECT
-        _Timer(_delayedStart).add(MDNS_DELAYED_START_AFTER_WIFI_CONNECT, false, [this](Event::TimerPtr &timer) {
+        _Timer(_delayedStart).add(MDNS_DELAYED_START_AFTER_WIFI_CONNECT, false, [this](Event::CallbackTimerPtr timer) {
             _begin();
         });
 #else

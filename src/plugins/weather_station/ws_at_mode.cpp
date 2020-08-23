@@ -63,7 +63,7 @@ bool WeatherStationPlugin::atModeHandler(AtModeArgs &args)
             //     if (!_isScrolling()) {
             //         _doScroll();
             //         _drawEnvironmentalSensor(_scrollCanvas->getCanvas(), 0);
-            //         _Scheduler.add(20, true, [this](Event::TimerPtr &timer) {
+            //         _Scheduler.add(20, true, [this](Event::CallbackTimerPtr timer) {
             //             _scrollTimer(*this);
             //         });
             //     }

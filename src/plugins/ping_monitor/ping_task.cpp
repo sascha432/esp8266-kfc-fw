@@ -183,7 +183,7 @@ void PingMonitorTask::_next(bool error)
     _successFlag = false;
     uint32_t interval = error ? 10000U : _interval * 60000U;
 
-    _Timer(_nextTimer).add(interval, false, [this](Event::TimerPtr &timer) {
+    _Timer(_nextTimer).add(interval, false, [this](Event::CallbackTimerPtr timer) {
         _begin();
     });
     __LDBG_printf("server=%d error=%u interval=%u", _currentServer, error, interval);

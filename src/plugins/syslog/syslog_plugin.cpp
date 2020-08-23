@@ -56,12 +56,12 @@ void SyslogPlugin::shutdown()
     _kill(500);
 }
 
-void SyslogPlugin::timerCallback(Event::TimerPtr &timer)
+void SyslogPlugin::timerCallback(Event::CallbackTimerPtr timer)
 {
     plugin._timerCallback(timer);
 }
 
-void SyslogPlugin::_timerCallback(Event::TimerPtr &timer)
+void SyslogPlugin::_timerCallback(Event::CallbackTimerPtr timer)
 {
 #if DEBUG
     if (!_stream) {

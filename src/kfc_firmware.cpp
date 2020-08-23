@@ -278,7 +278,7 @@ void setup()
         setup_plugins(PluginComponent::SetupModeType::SAFE_MODE);
 
         // check if wifi is up
-        _Scheduler.add(Event::seconds(1), true, [](Event::TimerPtr &timer) {
+        _Scheduler.add(Event::seconds(1), true, [](Event::CallbackTimerPtr timer) {
             timer->updateInterval(Event::seconds(60));
             if (!WiFi.isConnected()) {
                 _debug_println(F("WiFi not connected, restarting"));
@@ -290,7 +290,7 @@ void setup()
         if (rebootDelay) {
             __LDBG_printf("rebooting in %u minutes", rebootDelay);
             // restart device if running in safe mode for rebootDelay minutes
-            _Scheduler.add(Event::minutes(rebootDelay), false, [](Event::TimerPtr &timer) {
+            _Scheduler.add(Event::minutes(rebootDelay), false, [](Event::CallbackTimerPtr timer) {
                 Logger_notice(F("Rebooting device after safe mode timeout"));
                 config.restartDevice();
             });
@@ -299,7 +299,7 @@ void setup()
         auto flags = System::Flags::getConfig();
         if ((flags.is_softap_enabled || flags.is_softap_standby_mode_enabled) && !strcmp_P(Network::WiFi::getSoftApPassword(), SPGM(defaultPassword))) {
             Logger_warning(F("SoftAP is using default password and will be disabled in 15 minutes..."));
-            _Scheduler.add(Event::minutes(15), false, [](Event::TimerPtr &timer) {
+            _Scheduler.add(Event::minutes(15), false, [](Event::CallbackTimerPtr timer) {
                 if (WiFi.getMode() & WIFI_AP) {
                     WiFi.enableAP(false);
                 }
@@ -340,7 +340,7 @@ void setup()
         );
 
         // check if wifi is up
-        _Scheduler.add(Event::seconds(60), true, [](Event::TimerPtr &timer) {
+        _Scheduler.add(Event::seconds(60), true, [](Event::CallbackTimerPtr timer) {
             if (System::Flags::getConfig().is_station_mode_enabled) {
                 if (!WiFi.isConnected()) {
                     if (timer->updateInterval(Event::seconds(60)) == false) {
